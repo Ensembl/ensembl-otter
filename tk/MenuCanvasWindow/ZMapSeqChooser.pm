@@ -435,7 +435,7 @@ sub zMapBlixemDefaults {
             homol_max   0
         },
         protein_featuresets => [qw{ SwissProt TrEMBL }],
-        # dna_featuresets    => "",
+        dna_featuresets    => [qw{ EST_Human EST_Mouse EST_Other vertebrate_mRNA }],
         transcript_featuresets => [qw{
             Coding
             Known_CDS
@@ -817,6 +817,7 @@ sub zmap_feature_evidence_xml {
     }
     my $used_subseq_names = [];
     SUBSEQ: foreach my $subseq (@$subseq_list) {
+        warn "Looking at: ", $subseq->name;
         my $evi_hash = $subseq->evidence_hash();
 
         # evidence_hash looks like this
@@ -830,18 +831,22 @@ sub zmap_feature_evidence_xml {
         foreach my $evi_type (keys %$evi_hash) {
             my $evi_array = $evi_hash->{$evi_type};
             foreach my $evi_name (@$evi_array) {
-                next unless $feat_name eq $evi_name;
-                # check overlapping to see if it really is used.
-                if (!(($info->{'start'} > $subseq->end) &&
-                     ($info->{'end'}    < $subseq->start)))
-                {
+                if ($feat_name eq $evi_name) {
                     push(@$used_subseq_names, $subseq->name);
                     next SUBSEQ;
-                } else {
-                    warn sprintf("Transcript '%s' does not overlap '%s'",
-                        $subseq->name,
-                        $evi_name);
                 }
+                # next unless $feat_name eq $evi_name;
+                # # check overlapping to see if it really is used.
+                # if (!(($info->{'start'} > $subseq->end) &&
+                #      ($info->{'end'}    < $subseq->start)))
+                # {
+                #     push(@$used_subseq_names, $subseq->name);
+                #     next SUBSEQ;
+                # } else {
+                #     warn sprintf("Transcript '%s' does not overlap '%s'",
+                #         $subseq->name,
+                #         $evi_name);
+                # }
             }
         }
     }
