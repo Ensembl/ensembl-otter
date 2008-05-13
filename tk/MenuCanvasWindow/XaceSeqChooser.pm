@@ -1302,6 +1302,10 @@ sub edit_new_subsequence {
     }
     
     my $assembly = $self->Assembly;
+    # Check that our coordinate is not off the end of the assembly
+    if ($most_3prime and ($most_3prime < 0 or $most_3prime > $assembly->Sequence->sequence_length)) {
+        $most_3prime = undef;
+    }
     my $region_name = $most_3prime
         ? $assembly->clone_name_overlapping($most_3prime)
         : $assembly->name;
@@ -1815,10 +1819,10 @@ sub add_SubSeq {
     my( $self, $sub ) = @_;
     
     my $name = $sub->name;
+    #cluck("Adding SubSeq '$name'");
     if ($self->{'_subsequence_cache'}{$name}) {
         confess "already have SubSeq '$name'";
     } else {
-
         $self->{'_subsequence_cache'}{$name} = $sub;
     }
 }

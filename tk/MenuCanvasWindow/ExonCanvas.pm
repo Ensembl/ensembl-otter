@@ -1946,7 +1946,7 @@ sub focus_on_current_text {
     my( $self ) = @_;
     
     my $canvas = $self->canvas;
-    my ($obj)  = $canvas->find('withtag', 'current')  or return;
+    my ($obj) = $canvas->find('withtag', 'current') or return;
     if (grep /translation_region|exon_pos/, $canvas->gettags($obj) ) {
         $canvas->focus($obj);
 
@@ -2106,17 +2106,54 @@ sub middle_button_paste {
     
     $self->deselect_all;
     if (my ($obj)  = $canvas->find('withtag', 'current')) {
-        my $type = $canvas->type($obj) or return;
-        if ($type eq 'text') {
+        my %obj_tags = map {$_ => 1} $canvas->gettags($obj);
+        #warn "Clicked on object with tags: ", join(', ', map "'$_'", sort keys %obj_tags);
+        if ($obj_tags{'exon_pos'} or $obj_tags{'translation_region'}) {
             $canvas->itemconfigure($obj, 
                 -text   => $ints[0],
                 );
             $self->highlight($obj);
         }
-        ### Could set coordinates with middle button on strand indicator
+        elsif ($obj_tags{'exon_furniture'}) {
+            # Set coordinates with middle button on strand indicator
+            my ($start, $end) = @ints;
+            return unless $start and $end;
+            if ($start > $end) {
+                ($start, $end) = ($end, $start);
+            }
+            my ($exon_num) = map /exon_id-(\d+)/, keys %obj_tags;
+            warn "start=$start end=$end exon=$exon_num";
+            my $pp = ($self->position_pairs)[$exon_num - 1];
+            $self->set_position_pair_text($pp, [$start, $end]);
+            $self->highlight(@$pp[0,1]);
+        }
     } else {
+        my @pos = $self->all_position_pair_text;
+
+        # If there is only 1 <empty> pair, write to it
+        my $was_empty = 0;
+        if (@pos == 1 and $pos[0][0] == 0 and $pos[0][1] == 0) {
+            $self->trim_position_pairs(1);
+            $was_empty = 1;
+        }
+
         for (my $i = 0; $i < @ints; $i += 2) {
             $self->add_coordinate_pair(@ints[$i, $i + 1]);
+        }
+        
+        # Set the translation region if the ExonCanvas was empty
+        if ($was_empty and $self->get_GeneMethod_from_tk->transcript_type eq 'coding') {
+            my @sorted = sort {$a <=> $b} @ints;
+            my $t_start = $sorted[0];
+            my $t_end   = $sorted[$#sorted];
+            if ($self->strand_from_tk == -1) {
+                ($t_start, $t_end) = ($t_end, $t_start);
+            }
+            my $start_obj = $canvas->find('withtag', 't_start');
+            my $end_obj   = $canvas->find('withtag', 't_end');
+            $canvas->itemconfigure($start_obj, -text => $t_start);
+            $canvas->itemconfigure($end_obj,   -text => $t_end);
+            $self->highlight($start_obj, $end_obj);
         }
         #$self->set_scroll_region_and_maxsize;
         $self->fix_window_min_max_sizes;
@@ -2344,7 +2381,7 @@ sub strand_from_tk {
             $meth = $sub->GeneMethod;
             $strand = $sub->strand;
         } else {
-            $meth = $self->get_GeneMethod_from_tk;#no
+            $meth = $self->get_GeneMethod_from_tk;
             $strand = $self->strand_from_tk;
         }
         return unless $meth->transcript_type eq 'coding'; 
