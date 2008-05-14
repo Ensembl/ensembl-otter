@@ -44,13 +44,10 @@ use GeneHist::WidgetUtils qw (
                              );
 use Hum::Sort ('ace_sort');
 
-my $dataset;
-Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset);
-
-my $client   = Bio::Otter::Lace::Defaults::make_Client(); # Bio::Otter::Lace::Client
-my $dset     = $client->get_DataSet_by_name($dataset);    # Bio::Otter::Lace::DataSet
-my $otter_db = $dset->make_Vega_DBAdaptor;                # Bio::Vega::DBSQL::DBAdaptor
-my $ga       = $otter_db->get_GeneAdaptor;
+my $client;
+my $dset  ;
+my $otter_db;
+my $ga ;
 
 #----------------
 #     Layout
@@ -65,22 +62,23 @@ $mw->geometry('1250x600');
 my $font_hl = $mw->fontCreate(-family=>'helvetica', -size=>9);
 my $font_cr = $mw->X11Font('-*-courier-medium-r-*-*-12-*-*-*-*-*-*-*'); # play with xfontsel
 
-my $tool_f = $mw->Frame(-relief => 'groove', -borderwidth => 1)
-    -> pack(-side=>'top', -fill=>'x');
-
 my $btm_f = $mw->Frame(-relief => 'groove', -borderwidth => 1)
-      -> pack(-side=>'left', -fill=>'both', -expand=>1);
+-> pack(-side=>'top', -fill=>'x');
 
-$tool_f->Button(-text=>'GH', -font=>$font_hl, -command=>\&gene_history_srch)->pack(-side=>'left');
-$tool_f->Button(-text=>'DG', -font=>$font_hl, -command=>\&dead_gene_overview)->pack(-side=>'left');
-$tool_f->Button(-text=>'Quit', -command=>sub{exit}, -foreground=>'#8B2323')->pack(-side=>'right' );
+gene_history_srch();
 
-my($query_f, $query, $entry1, $ds, $entry2);
+my($query_f, $query, $entry1, $ds_entry);
 my ($btn_f, $btn_cmp, $btn_all_nodes, $btn_V_nodes, $btn_GT_nodes, $srchtxt, $srch_entry, $src_btn);
 my ($data_f, $tree, $xml_f);
 my ($nb, $tab, $page, $pagetxt, $page_txtobj);
 my ($browser, $asm_var, $mlist);
 my ($dg_stat, $dginfo);
+
+MainLoop();
+
+#--------------------------
+#     subroutines
+#--------------------------
 
 sub gene_history_srch {
 
@@ -93,9 +91,9 @@ sub gene_history_srch {
   }
 
   # query frame globals
-  ($query_f, $query, $entry1, $ds, $entry2) = add_GH_qry_frm($btm_f, $font_hl, \&get_gene_history);
+  ($query_f, $query, $entry1, $ds_entry) = add_GH_qry_frm($btm_f, $font_hl, \&get_gene_history);
 
-  # button frame globals
+  # button frame globals (hosting buttons to display results)
   ($btn_f, $btn_cmp, $btn_all_nodes, $btn_V_nodes, $btn_GT_nodes, $srchtxt, $srch_entry, $src_btn) =
     add_GH_btn_frm($font_hl, $btm_f, \&compare_gene_versions,
                    \&open_or_close_all_nodes, \&open_close_V_nodes,
@@ -111,74 +109,6 @@ sub gene_history_srch {
   #------------------------------------------------
   ($nb, $tab, $page, $pagetxt, $page_txtobj);
 }
-
-sub dead_gene_overview {
-
-  #----------------------------
-  # dead genes overview layout
-  #----------------------------
-  if ( $btm_f ){
-    $btm_f = refresh_gui($btm_f);
-  }
-
-  $mlist   = add_DG_MListbox($btm_f, $font_hl);
-  my $dg_top_f = $btm_f->Frame(-borderwidth=>1)->pack(-side=>'top', -fill=>'x');
-  $browser = $dg_top_f->BrowseEntry(
-                                 -label => "View dead genes by assembly: ",
-                                 -browsecmd => \&fetch_dead_genes,
-                                 -variable => \$asm_var,
-                                 -listwidth => 50,
-                                 -width => 20,
-                               )->pack(-side => 'left',
-                                      # -anchor => 'nw',
-                                       -padx => 5,
-                                      );
-
-  $dginfo = $dg_top_f->Text(-padx=>5, -font=>$font_hl, -height=>1, -width=>52, -bg=>'white')->pack(-side=>'left');
-
-  my @sets;
-  foreach ( @{$dset->get_all_visible_SequenceSets}) {
-    push(@sets, $_->name);
-  }
-  foreach ( sort { ace_sort($a, $b) } @sets){
-    $browser->insert('end', $_);
-  }
-
-  $mlist->pack(-side=>'top',-anchor=>'nw',  -expand=>1, -fill=>'both');
-}
-
-MainLoop();
-
-#--------------------------
-#     subroutines
-#--------------------------
-sub fetch_dead_genes {
-
-  my $obsolete_genes = get_list_of_obsolete_genes_by_assembly($otter_db, $ga, $asm_var);
-
-  # look for dead genes:
-  # definition: if an obsolete gene has never been replaced
-  #             by another gene, it is dead gene
-  my @dg_list;
-  foreach my $og ( @$obsolete_genes ) {
-    my $found_gsids = process_query($og->stable_id, $otter_db, undef);
-    if ( @$found_gsids == 1 ) {
-      push(@dg_list, add_mlist_items($og));
-    }
-  }
-
-  $mlist->columnDelete(0,'end');
- foreach (qw(Stable_id dbID Gene_name Gene_synonym Created Modified Transcritps) ) {
-    $mlist->columnInsert('end',-text=>$_);
-  }
-  foreach ( @dg_list ){
-    $mlist->insert('end', $_);
-  }
-
-  $dginfo->delete('1.0', 'end');
-  $dginfo->insert('end', "Found ". scalar @dg_list . " obsolete gene(s) not being replaced by other gene(s)");
-}
-
 
 sub search_xml {
   #$page = $nb->raised;     # NoteBook, returns name
@@ -365,6 +295,13 @@ sub open_close_V_nodes {
 }
 
 sub get_gene_history {
+
+  my $ds_name = ${$ds_entry->cget(-textvariable)};
+  warn "DS: $ds_name----------";
+  $client   = Bio::Otter::Lace::Defaults::make_Client(); # Bio::Otter::Lace::Client
+  my $dset  = $client->get_DataSet_by_name($ds_name);    # Bio::Otter::Lace::DataSet
+  $otter_db = $dset->make_Vega_DBAdaptor;                # Bio::Vega::DBSQL::DBAdaptor
+  $ga       = $otter_db->get_GeneAdaptor;
 
   # remove notebook tabs (pages) if exist
   if ($nb){
