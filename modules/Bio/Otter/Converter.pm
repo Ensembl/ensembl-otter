@@ -1284,20 +1284,13 @@ sub ace_to_otter {
                 #  AGP_Fragment "AL160051.22" 484808 514439 Align 484808 1001
                 #  AGP_Fragment "AL353662.19" 514440 680437 Align 514440 2001
 
-                elsif (/^AGP_Fragment $STRING $INT $INT \s+Align $INT $INT/x) {
+                elsif (/^AGP_Fragment $STRING $INT $INT \s+Align $INT $INT $INT/x) {
                     my $name  = ace_unescape($1);
-                    my $start = $2;
-                    my $end   = $3;
 
-                    # Don't need $4
-                    my $offset = $5;
-
-                    ### Not yet tested for reverse strand!
-                    my $strand = 1;
-                    if ($start > $end) {
-                        $strand = -1;
-                        ($start, $end) = ($end, $start);
-                    }
+                    my ($group_start, $group_end, $start_or_end, $offset, $tile_length) = ($2, $3, $4, $5, $6);
+                    my ($strand, $start, $end) = ($group_start<$group_end)
+                               ? ( 1, $start_or_end, $start_or_end+($tile_length-1) )
+                               : (-1, $start_or_end-($tile_length-1), $start_or_end );
 
                     push @frags, {
                         name   => $name,
