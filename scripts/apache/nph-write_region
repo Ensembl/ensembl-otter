@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-05-14 16:09:34 $
-# Id:            $Id: nph-write_region,v 1.14 2008-05-14 16:09:34 lg4 Exp $
+# Last modified: $Date: 2008-05-14 16:18:02 $
+# Id:            $Id: nph-write_region,v 1.15 2008-05-14 16:18:02 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-write_region,v $
 
 use strict;
@@ -82,7 +82,7 @@ use Bio::Vega::Transform::XML;
             }
 
                 ## hash the [db_contig, xml_ci_attribs] pairs for saving the attributes after the locks are obtained
-            $ci_hash{$xml_ctg_slice->seq_region_id()} = [ $db_ctg_slice, $xml_ci_attribs ];
+            $ci_hash{$xml_ctg_slice->seq_region_name()} = [ $db_ctg_slice, $xml_ci_attribs ];
         }
 
     };
