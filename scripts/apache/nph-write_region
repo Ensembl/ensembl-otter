@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-05-14 14:24:12 $
-# Id:            $Id: nph-write_region,v 1.13 2008-05-14 14:24:12 lg4 Exp $
+# Last modified: $Date: 2008-05-14 16:09:34 $
+# Id:            $Id: nph-write_region,v 1.14 2008-05-14 16:09:34 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-write_region,v $
 
 use strict;
@@ -60,7 +60,9 @@ use Bio::Vega::Transform::XML;
 
         for(my $i=0; $i<scalar(@db_tiles); $i++) {
 
-            my ($db_asm_start, $db_asm_end, $db_ctg_slice) = @{ $db_tiles[$i] };
+            my $db_asm_start = $db_tiles[$i]->from_start() + $db_slice->start() - 1;
+            my $db_asm_end   = $db_tiles[$i]->from_end()   + $db_slice->start() - 1;
+            my $db_ctg_slice = $db_tiles[$i]->to_Slice();
             my ($xml_asm_start, $xml_asm_end, $xml_ctg_slice, $xml_ci_attribs) = @{ $xml_tiles[$i] };
 
             if($db_asm_start != $xml_asm_start) {
