@@ -1217,7 +1217,7 @@ sub ace_to_otter {
         %genes,        # Accumulates Locus information keyed by locus name
         %genenames,    # Links Sequence names to Locus names
         %authors,      # Bio::Otter::Author objects keyed by author name
-        %frags,        # hashes used to capture genomic fragment tiling data
+        @frags,        # hashes used to capture genomic fragment tiling data
         %logic_ana,    # Analysis objects for SimpleFeatures keyed by logic name
         $slice_name,   # Name of the parent Genomic sequence
         $dataset_name,
@@ -1299,7 +1299,8 @@ sub ace_to_otter {
                         ($start, $end) = ($end, $start);
                     }
 
-                    $frags{$name} = {
+                    push @frags, {
+                        name   => $name,
                         start  => $start,
                         end    => $end,
                         offset => $offset,
@@ -1858,11 +1859,11 @@ sub ace_to_otter {
         $gene->type($type);
     }
 
-    # Turn %frags into a Tiling Path
+    # Turn @frags into a Tiling Path
     my @tile_path = ();
-    foreach my $ctg_name (keys %frags) {
-        my $fragment = $frags{$ctg_name};
+    foreach my $fragment (@frags) {
 
+        my $ctg_name = $fragment->{name} or die "Contig has no name";
         my $offset   = $fragment->{offset} or die "No offset for '$ctg_name'";
         my $start    = $fragment->{start} or die "No start for '$ctg_name'";
         my $end      = $fragment->{end} or die "No end for '$ctg_name'";
@@ -2053,7 +2054,7 @@ sub exon_hash_key {
 }
 
 sub path_to_XML {
-  my ($chr,$chrstart,$chrend,$assembly_type,$path) = @_;
+  my ($chr, $chrstart, $chrend, $assembly_type, $path) = @_;
   my $xmlstr;
 
   $xmlstr .= "  <assembly_type>" . $assembly_type . "<\/assembly_type>\n";
