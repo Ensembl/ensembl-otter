@@ -7,7 +7,7 @@ use Bio::Vega::Utils::GeneTranscriptBiotypeStatus 'biotype_status2method';
 
 
 sub get_geneXML {
-  my ($self,$gene)=@_;
+  my ($self, $gene)=@_;
 
   my $ppobj=$self->generate_Locus($gene,2);
   my $gene_xml=$self->formatxml($ppobj);
@@ -16,25 +16,25 @@ sub get_geneXML {
 }
 
 sub generate_OtterXML {
-  my ($self,$slices,$odb,$indent,$genes,$sf)=@_;
+  my ($self, $slices, $odb, $indent, $genes, $sf)=@_;
 
   my $ot=$self->prettyprint('otter');
   $ot->indent($indent);
   foreach my $slice (@$slices){
-	 $ot->attribobjs($self->generate_SequenceSet($slice,$odb,$genes,$sf));
+	 $ot->attribobjs($self->generate_SequenceSet($slice, $odb, $genes,$sf));
   }
   return $self->formatxml($ot);
 }
 
 sub generate_SequenceSet {
-  my ($self,$slice,$odb,$genes,$features)=@_;
+  my ($self, $slice, $odb, $genes, $features)=@_;
 
   my $ss=$self->prettyprint('sequence_set');
   $ss->attribvals($self->generate_AssemblyType($slice));
 
   my $slice_projection = $slice->project('contig');
   foreach my $contig_seg (@$slice_projection) {
-	 $ss->attribobjs($self->generate_SequenceFragment($contig_seg,$slice,$odb));
+	 $ss->attribobjs($self->generate_SequenceFragment($contig_seg, $slice, $odb));
   }
 
   $features ||= $slice->get_all_SimpleFeatures;
@@ -83,7 +83,7 @@ sub generate_SequenceFragment {
             throw("Chromosome Slice: $slice has more than one value for name attrib, cannot generate xml");
         }
         my $chr_name = $chrs->[0] && $chrs->[0]->value;
-        $sf->attribvals($self->prettyprint('chromosome',$chr_name));
+        $sf->attribvals($self->prettyprint('chromosome', $chr_name));
     }
 
     my ($clone_seg) = @{ $contig_slice->project('clone') };

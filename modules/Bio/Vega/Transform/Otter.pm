@@ -35,13 +35,13 @@ my (
     %feature_list,
 	%logic_ana,
 	%coord_system,
-	%slice,
+	%tiles,
+	%chrslice,
 	%seen_transcript_name,
 	%seen_gene_name,
 	%assembly_type,
     %chromosome_name,
 	%dna,
-	%assembly,
     %author_cache,
 );
 
@@ -57,13 +57,13 @@ sub DESTROY {
     delete $feature_list{$self};
     delete $logic_ana{$self};
     delete $coord_system{$self};
-    delete $slice{$self};
+    delete $tiles{$self};
+    delete $chrslice{$self};
     delete $seen_gene_name{$self};
     delete $seen_transcript_name{$self};
     delete $assembly_type{$self};
     delete $chromosome_name{$self};
     delete $dna{$self};
-    delete $assembly{$self};
     delete $author_cache{$self};
 
         # So that DESTROY gets called in baseclass:
@@ -106,22 +106,7 @@ sub initialize {
 								vega                   => 'init_CoordSystem_Version',
 							  }
 							 );
-
-    # means we do not want to load the assembly:
-  $self->Assembly('no');
 }
-
-    # 'yes'||'no' shows whether the assembly is to be loaded into the DB
-sub Assembly {
-  my ($self,$value)=@_;
-
-  if(defined $value) {
-	 $assembly{$self} = ($value eq 'yes') ? 1 : 0;
-  }
-  return $assembly{$self};
-
-}
-
 
 sub init_CoordSystem_Version {
     my ($self,$value)=@_;
@@ -136,68 +121,55 @@ sub build_SequenceFragment {
     my ($self, $data) = @_;
 
     my $assembly_type = $assembly_type{$self};
-    my $chrname       = $chromosome_name{$self} ||= $data->{'chromosome'}; # cached from the previous SequenceFragments
-
-    if(!defined $assembly_type) {
+    unless($assembly_type) {
         die "cannot make chromosome slice without assembly type name\n";
     }
-    if($chrname ne $data->{'chromosome'}) {
-        die " Chromosome names are different - can't make slice [$chrname][".$data->{'chromosome'}."]\n";
+
+    if(my $chrname = $self->get_ChromosomeName()) { # cached from the previous SequenceFragments
+        if($chrname ne $data->{'chromosome'}) {
+            die "Chromosome names '$chrname' and '".$data->{'chromosome'}."' are different - can't join in 1 slice";
+        }
+    } else { # cache it now
+        $chromosome_name{$self} = $data->{'chromosome'};
     }
 
-    my $offset = $data->{'fragment_offset'};
-    my $start  = $data->{'assembly_start'};
-    my $end    = $data->{'assembly_end'};
-    my $strand = $data->{'fragment_ori'};
+    my $frag_offset= $data->{'fragment_offset'};
+    my $start      = $data->{'assembly_start'};
+    my $end        = $data->{'assembly_end'};
+    my $strand     = $data->{'fragment_ori'};
+    my $ctg_name   = $data->{'id'};
+    my $cln_length = $data->{'clone_length'};
+
+    unless ($assembly_type && $start && $end && $frag_offset && $strand && $ctg_name && $cln_length) {
+        die "XML does not contain information needed to create slice:\n"
+           ."assembly_type='$assembly_type' start='$start' end='$end' frag_offset='$frag_offset' strand='$strand' "
+           ."ctg_name='$ctg_name' cln_length='$cln_length'";
+    }
 
     my $cln_coord_system=$self->make_CoordSystem('clone');
     my $ctg_coord_system=$self->make_CoordSystem('contig');
     my $chr_coord_system=$self->make_CoordSystem('chromosome');
 
-    my $chrslice=$self->get_ChromosomeSlice;
+    my $chr_slice=$self->get_ChromosomeSlice;
 
-    if($chrslice) {
+    if(!$chr_slice) { # create the first verson of the slice:
 
-            # extend the cached slice:
-        my $slice_start = ($start < $chrslice->start()) ? $start : $chrslice->start();
-        my $slice_end   = ($end > $chrslice->end()) ? $end : $chrslice->end();
+        $chr_slice = $self->make_Slice($assembly_type, $start, $end,
+                                                $end, 1, $chr_coord_system);
+        $self->set_ChromosomeSlice($chr_slice);
 
-        unless ($chrname and $start and $end and $offset and $strand) {
-        die "XML does not contain information needed to create slice:\n"
-           ."chr_name='$chrname'  chr_start='$start'  chr_end='$end' offset='$offset' strand = '$strand'";
-        }
-        my $new_chr_slice = $self->make_Slice( $assembly_type,
-                                            ($self->Assembly() ? 1 : $slice_start),
-                                            $slice_end,$slice_end,1,$chr_coord_system);
+    } else { # extend the cached version of the slice:
+
+        my $slice_start = ($start < $chr_slice->start()) ? $start : $chr_slice->start();
+        my $slice_end   = ($end > $chr_slice->end()) ? $end : $chr_slice->end();
+
+        my $new_chr_slice = $self->make_Slice( $assembly_type, $slice_start, $slice_end,
+                                                $slice_end, 1, $chr_coord_system);
         $self->set_ChromosomeSlice($new_chr_slice);
-
-    } else {
-
-        $chrslice = $self->make_Slice($assembly_type,
-                                      ($self->Assembly() ? 1 : $start),
-                                      $end,$end,1,$chr_coord_system);
-        $self->set_ChromosomeSlice($chrslice);
-
-            # The following happens only once, and is the only use for $chrname:
-        my $chr_attrib=$self->make_Attribute('chr','Chromosome Name','Chromosome Name Contained in the Assembly',$chrname);
-        my $chr_attrib_list = $slice{$self}{'chr_attrib'} ||= [];
-        push @$chr_attrib_list,$chr_attrib;
     }
 
-    my $cmp_start  = $offset;
-    my $cmp_end    = $offset + $end - $start;
-    my $ctg_name   = $data->{'id'};
-    my $cln_length = $data->{'clone_length'};
-
-    ## This now becomes obsolete, because we extended XML with 'clone_length' tag
-    #
-    #if ($ctg_name =~ /\S+\.\d+\.\d+\.(\d+)/){
-    #    $cln_length=$1;
-    #}
-
-    unless($start && $end && $strand && $offset && $ctg_name) {
-        die "ERROR: Either start:$start or end:$end or strand:$strand or offset:$offset or contig_id:$ctg_name not defined in the xml file\n";
-    }
+    my $cmp_start  = $frag_offset;
+    my $cmp_end    = $frag_offset + $end - $start;
 
     my $clone_sr_name  = $data->{'accession'}.'.'.$data->{'version'};
 
@@ -232,22 +204,15 @@ sub build_SequenceFragment {
         push @$cln_attrib_list,$cln_attrib;
     }
 
-        ##make clone - contig slice
-    my $cln_slice = $self->make_Slice($clone_sr_name,1,$cln_length,$cln_length,$strand,$cln_coord_system);
-    my $ctg_slice = $self->make_Slice($ctg_name,1,$cln_length,$cln_length,$strand,$ctg_coord_system);
+        ## FIXME: $cln_author may be passed in the XML, but is ultimately ignored by write_region
+    #my $cln_author=$self->make_Author($data->{'author'}, $data->{'author_email'});
 
-    my $cln_ctg_piece=[$cln_slice,$ctg_slice];
-    my $cln_ctg_list = $slice{$self}{'cln_ctg'} ||= [];
-    push @$cln_ctg_list,$cln_ctg_piece;
+        ## create tiles (offset_in_slice + contig_component_slice + attributes)
+    my $ctg_cmp_slice = $self->make_Slice($ctg_name, $cmp_start, $cmp_end, $cmp_end, $strand, $ctg_coord_system);
 
-        ##make chromosome - contig slice
-    my $chr_asm_slice = $self->make_Slice($assembly_type,$start,$end,$end,$strand,$chr_coord_system);
-    my $ctg_cmp_slice = $self->make_Slice($ctg_name,$cmp_start,$cmp_end,$cmp_end,$strand,$ctg_coord_system);
-    my $cln_author=$self->make_Author($data->{'author'}, $data->{'author_email'});
-
-    my $chr_ctg_piece = [$chr_asm_slice,$ctg_cmp_slice,$cln_attrib_list,$cln_author];
-    my $chr_ctg_list = $slice{$self}{'chr_ctg'} ||= [];
-    push @$chr_ctg_list,$chr_ctg_piece;
+    my $tile = [$start, $end, $ctg_cmp_slice, $cln_attrib_list];
+    my $tile_list = $tiles{$self} ||= [];
+    push @$tile_list, $tile;
 }
 
 
@@ -272,10 +237,10 @@ sub build_Feature {
     my ($self, $data) = @_;
 
     my $ana = $logic_ana{$self}{$data->{'type'}} ||= Bio::EnsEMBL::Analysis->new(-logic_name => $data->{'type'});
-    my $slice = $self->get_ChromosomeSlice;
+    my $chr_slice = $self->get_ChromosomeSlice;
 
        ##convert xml coordinates which are in chromosomal coords - to feature coords
-    my $slice_offset = $slice->start - 1;
+    my $slice_offset = $chr_slice->start - 1;
 
     my $feature = Bio::EnsEMBL::SimpleFeature->new(
         -start         => $data->{'start'} - $slice_offset,
@@ -284,7 +249,7 @@ sub build_Feature {
         -analysis      => $ana,
         -score         => $data->{'score'},
         -display_label => $data->{'label'},
-        -slice         => $slice,
+        -slice         => $chr_slice,
     );
     my $list = $feature_list{$self} ||= [];
     push @$list, $feature;
@@ -293,10 +258,10 @@ sub build_Feature {
 sub build_AssemblyTag {
     my ($self, $data) = @_;
 
-    my $slice = $self->get_ChromosomeSlice;
+    my $chr_slice = $self->get_ChromosomeSlice;
 
     #convert xml coordinates which are in chromosomal coords - to tag coords
-    my $slice_offset = $slice->start - 1;
+    my $slice_offset = $chr_slice->start - 1;
 
     my $at = Bio::Vega::AssemblyTag->new(
         -start     => $data->{'contig_start'} - $slice_offset,
@@ -304,7 +269,7 @@ sub build_AssemblyTag {
         -strand    => $data->{'contig_strand'},
         -tag_type  => $data->{'tag_type'},
         -tag_info  => $data->{'tag_info'},
-        -slice     => $slice,
+        -slice     => $chr_slice,
     );
 
     my $list = $assembly_tag_list{$self} ||= [];
@@ -319,14 +284,14 @@ sub build_AssemblyType {
 sub build_Exon {
     my ($self, $data) = @_;
 
-    my $slice = $self->get_ChromosomeSlice;
+    my $chr_slice = $self->get_ChromosomeSlice;
 
     my $exon = Bio::Vega::Exon->new(
         -start     => $data->{'start'},
         -end       => $data->{'end'},
         -strand    => $data->{'strand'},
         -stable_id => $data->{'stable_id'},
-        -slice     => $slice,
+        -slice     => $chr_slice,
     );
     my $frame=$data->{'frame'};
     if (defined($frame)) {
@@ -346,14 +311,14 @@ sub build_Transcript {
     my ($self, $data) = @_;
 
     my $exons = delete $exon_list{$self};
-    my $slice = $self->get_ChromosomeSlice;
+    my $chr_slice = $self->get_ChromosomeSlice;
 
     my $ana = $logic_ana{$self}{'Otter'} ||= Bio::EnsEMBL::Analysis->new(-logic_name => 'Otter');
 
     my $transcript = Bio::Vega::Transcript->new(
         -stable_id => $data->{'stable_id'},
         -analysis  => $ana,
-        -slice     => $slice,
+        -slice     => $chr_slice,
     );
 
   ##translation start - end
@@ -409,11 +374,8 @@ sub build_Transcript {
   $transcript->biotype($biotype);
   $transcript->status($status);
 
-  my $author_name       = $data->{'author'};
-  my $author_email      = $data->{'author_email'};
-  my $transcript_author = $self->make_Author($author_name, $author_email);
+  my $transcript_author = $self->make_Author($data->{'author'}, $data->{'author_email'});
   $transcript->transcript_author($transcript_author);
-
 
   ##transcript attributes
   my $transcript_attributes;
@@ -474,14 +436,14 @@ sub build_Transcript {
 
 sub translation_pos {
   my ($self,$loc,$exon) = @_;
-  if ($loc <= $exon->end && $loc >= $exon->start) {
+  if (($exon->start <= $loc) && ($loc <= $exon->end)) {
 	 if ($exon->strand == 1) {
-		return (($loc - $exon->start) + 1);
+		return $loc - $exon->start + 1;
 	 } else {
-		return (($exon->end - $loc) + 1);
+		return $exon->end - $loc + 1;
 	 }
   } else {
-	 return (undef);
+	 return undef;
   }
 }
 
@@ -492,11 +454,11 @@ sub build_Locus {
 	my $transcripts = delete $transcript_list{$self};
 	## transcript author group has been temporarily set to 'anything' ??
 
-	my $slice = $self->get_ChromosomeSlice;
+	my $chr_slice = $self->get_ChromosomeSlice;
 	my $ana = $logic_ana{$self}{'Otter'} ||= Bio::EnsEMBL::Analysis->new(-logic_name => 'Otter');
 	my $gene = Bio::Vega::Gene->new(
 		-stable_id => $data->{'stable_id'},
-		-slice => $slice,
+		-slice => $chr_slice,
 		-description => $data->{'description'},
 		-analysis => $ana,
 		);
@@ -523,12 +485,7 @@ sub build_Locus {
 	$gene->biotype($biotype);
 	$gene->status($status);
 
-	##gene author
-	my ($gene_author,$author_name,$author_email);
-	$author_name  = $data->{'author'};
-	$author_email = $data->{'author_email'};
-	$gene_author  = $self->make_Author($author_name, $author_email);
-
+    my $gene_author = $self->make_Author($data->{'author'}, $data->{'author_email'});
 	$gene->gene_author($gene_author);
 
 	##gene attributes name,synonym,remark
@@ -579,7 +536,7 @@ sub build_Locus {
 
 	#convert coordinates from chromosomal coordinates to slice coordinates
 
-	my $slice_offset = $slice->start - 1;
+	my $slice_offset = $chr_slice->start - 1;
 
 	foreach my $exon (@{$gene->get_all_Exons}) {
 		$exon->start($exon->start - $slice_offset);
@@ -601,34 +558,28 @@ sub build_Locus {
 sub do_nothing {
 }
 
-sub get_AssemblyType {
-  my $self=shift;
-  return $assembly_type{$self};
+sub get_ChromosomeName {
+    my $self = shift;
+
+    return $chromosome_name{$self};
 }
 
 sub set_ChromosomeSlice {
-  my ($self,$slice)=@_;
-  $slice{$self}{'chr'}=$slice;
+  my ($self, $chr_slice)=@_;
+
+  $chrslice{$self} = $chr_slice;
 }
 
 sub get_ChromosomeSlice {
-  my $self=shift;
-  return $slice{$self}{'chr'};
+  my $self = shift;
+
+  return $chrslice{$self};
 }
 
-sub get_AssemblySlices {
-  my $self=shift;
-  return $slice{$self};
-}
+sub get_Tiles {
+  my $self = shift;
 
-sub get_CloneSlices {
-  my $self=shift;
-  my $clones=[];
-  foreach my $piece ($slice{$self}{'cln_ctg'}){
-	 my $cln_slice=$piece->[0];
-	 push @$clones,$cln_slice;
-  }
-  return $clones;
+  return $tiles{$self};
 }
 
 sub get_Genes {
@@ -646,11 +597,6 @@ sub get_SimpleFeatures {
   return $feature_list{$self} || [];
 }
 
-sub get_SequenceSet_AssemblyType {
-  my $self=shift;
-  return;
-}
-
 
 ##make Otter objects methods
 
@@ -664,31 +610,6 @@ sub make_Attribute{
 	  -VALUE => $value
 	 );
   return $attrib;
-}
-
-sub make_ContigInfo{
-  my ($self,$ctg_slice,$ctg_author,$author,$attributes) = @_;
-  if (defined $ctg_author->name && ! defined $ctg_author->email){
-	 die "contig author name set but not email";
-  }
-  if (!defined $ctg_author->name && defined $ctg_author->email){
-	 die "contig author name not set but email is set";
-  }
-  unless ($ctg_author->name && $ctg_author->email) {
-	 $ctg_author->name($author->name);
-	 $ctg_author->email($author->email);
-	 warn "contig author not set and setting author to client author\n";
-  }
-
-        # created_date is only set for contig_info objects that either come directly
-        # from the DB or have just been stored.
-        # Since the date is not a part of XML, the XML->Vega parser will leave the created_date unset.
-  my $ctg_info = Bio::Vega::ContigInfo->new (
-	  -slice => $ctg_slice,
-	  -author => $ctg_author,
-	  -attributes => $attributes
-  );
-  return $ctg_info;
 }
 
 sub make_CoordSystem {
