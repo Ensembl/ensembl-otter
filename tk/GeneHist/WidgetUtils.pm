@@ -19,7 +19,7 @@ use vars qw{ @ISA @EXPORT_OK };
                 );
 
 use strict;
-
+use Hum::Sort ('ace_sort');
 
 sub adjust_scrollbar_width {
   my ($widget, $size) = @_;
@@ -51,14 +51,16 @@ sub add_GH_qry_frm {
 
   $query_f->Label(-text=>'Dataset (eg, human)')->pack(-side=>'left');
 
-  my $ds = ''; # default
-  my $entry2 = $query_f->Entry(-textvariable=>\$ds, -width => 18, -bg=>'white')->pack(-side=>'left');
+  my $dataset = 'human'; # default
+  my $entry2 = $query_f->Entry(-textvariable=>\$dataset, -width => 18, -bg=>'white')->pack(-side=>'left');
+
   # reset
   $query_f->Button(-text=>'Clear', -font=>$font, -command=>sub {$entry2->delete('0.0', 'end')})->pack(-side=>'left');
 
   $query_f->Button(-text=>'Submit', -command=>$get_gene_history)->pack(-side=>'left');
+  $query_f->Button(-text=>'Quit', -command=>sub{exit}, -foreground=>'#8B2323')->pack(-side=>'right' );
 
-  return ($query_f, $query, $entry1, $ds, $entry2);
+  return ($query_f, $query, $entry1, $entry2);
 }
 
 sub add_GH_btn_frm {
@@ -154,7 +156,7 @@ sub add_DG_MListbox {
                                 -resizeable=>1,
                                 -selectmode=>"browse",
                                 -font=>$font,
-                                -height=>600,
+                                -height=> 0,
                                 -textwidth => 20,
                                 -width => 0,
                                 -separatorcolor=>'gray',
