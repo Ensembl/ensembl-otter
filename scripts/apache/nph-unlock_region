@@ -3,12 +3,14 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-05-14 14:24:12 $
-# Id:            $Id: nph-unlock_region,v 1.13 2008-05-14 14:24:12 lg4 Exp $
+# Last modified: $Date: 2008-05-15 10:51:16 $
+# Id:            $Id: nph-unlock_region,v 1.14 2008-05-15 10:51:16 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-unlock_region,v $
 
 use strict;
-use SangerPaths qw{ core bioperl123 ensembl48 otter49 };
+use warnings;
+
+use SangerPaths qw{ core bioperl123 ensembl49 otter49 };
 
 use Bio::Otter::ServerScriptSupport;
 use Bio::Vega::ContigLockBroker;
@@ -43,19 +45,19 @@ use Bio::Vega::Transform::Otter;
   if ($@) {
 	 $server->error_exit("Failed converting XML to otter [$@]");
   }
-  $server->log("Checking region is locked...");
+  $server->log('Checking region is locked...');
   my $cb=Bio::Vega::ContigLockBroker->new;
   eval { $cb->check_locks_exist_by_slice($slice,$author_obj,$odba); };
   if ($@) {
 	 $server->error_exit("Failed checking locks [$@]");
   }
-  $server->log("Done checking region is locked.");
-  $server->log("Unlocking clones...");
+  $server->log('Done checking region is locked.');
+  $server->log('Unlocking clones...');
   eval{ $cb->remove_by_slice($slice,$author_obj,$odba); };
   if ($@) {
       $server->error_exit("Failed to unlock clones\n $@\n***\n");
   }
-  $server->log("Done unlocking clones.");
+  $server->log('Done unlocking clones.');
   $server->send_response("<response>\n</response>\n", 1);
 
 }

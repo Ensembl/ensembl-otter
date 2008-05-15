@@ -3,17 +3,17 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-05-14 14:24:12 $
-# Id:            $Id: nph-lock_region,v 1.12 2008-05-14 14:24:12 lg4 Exp $
+# Last modified: $Date: 2008-05-15 10:51:16 $
+# Id:            $Id: nph-lock_region,v 1.13 2008-05-15 10:51:16 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-lock_region,v $
 
 use strict;
-use SangerPaths qw{ core bioperl123 ensembl48 otter49 };
+use warnings;
+
+use SangerPaths qw{ core bioperl123 ensembl49 otter49 };
 
 use Bio::Otter::ServerScriptSupport;
 use Bio::Vega::ContigLockBroker;
-#use Bio::Otter::CloneLockBroker;
-#use Bio::Vega::Transform::Otter;
 use Bio::Vega::Transform::XML;
 
 my $server = Bio::Otter::ServerScriptSupport->new;
@@ -38,7 +38,7 @@ eval {
     my $slice = $server->get_slice($odba, $cs, $name, $type, $start, $end, $strand, $csver);
     my $author_obj = $server->make_Author_obj();
 
-    $server->log("Attempting to lock clones...");
+    $server->log('Attempting to lock clones...');
     $cb->lock_clones_by_slice($slice, $author_obj, $odba);
     $xml = Bio::Vega::Transform::XML->generate_OtterXML([$slice], $odba, 0, [], []);
 };
@@ -47,7 +47,7 @@ if ($@) {
     $server->log("Error getting locks: $@");
     $server->error_exit("Clones locked - exiting [$@]");
 } else {
-    $server->log("Obtained the locks.");
+    $server->log('Obtained the locks.');
     $server->send_response($xml);
 }
 
