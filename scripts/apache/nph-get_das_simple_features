@@ -3,14 +3,14 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-04-25 09:43:10 $
-# Id:            $Id: nph-get_das_simple_features,v 1.13 2008-04-25 09:43:10 jgrg Exp $
+# Last modified: $Date: 2008-05-15 10:51:16 $
+# Id:            $Id: nph-get_das_simple_features,v 1.14 2008-05-15 10:51:16 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_das_simple_features,v $
 
 my $http_proxy = $ENV{http_proxy};
 
 use strict;
-use SangerPaths qw{ core bioperl123 ensembl48 otter49 };
+use SangerPaths qw{ core bioperl123 ensembl49 otter49 };
 
 use Bio::Das;
 use Bio::EnsEMBL::SimpleFeature;
