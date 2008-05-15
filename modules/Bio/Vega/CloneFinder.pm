@@ -6,6 +6,7 @@ package Bio::Vega::CloneFinder;
 #
 
 use strict;
+use warnings;
 use Bio::Otter::Lace::Locator;
 
 my $component = 'clone'; # this is the type of components we want the found matches mapped on

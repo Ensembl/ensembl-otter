@@ -4,6 +4,7 @@
 package Bio::Otter::SQL::Clause::KeyDefinition;
 
 use strict;
+use warnings;
 use base 'Bio::Otter::SQL::Clause';
 use Bio::Otter::SQL::Clause::KeyDefinition::Column;
 

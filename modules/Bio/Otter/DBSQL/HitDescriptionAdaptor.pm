@@ -4,6 +4,7 @@
 package Bio::Otter::DBSQL::HitDescriptionAdaptor;
 
 use strict;
+use warnings;
 use Bio::Otter::HitDescription;
 use base 'Bio::EnsEMBL::DBSQL::BaseAdaptor';
 

@@ -1,6 +1,7 @@
 package Bio::Otter::DBSQL::GeneRemarkAdaptor;
 
 use strict;
+use warnings;
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 use Bio::Otter::GeneRemark;
 

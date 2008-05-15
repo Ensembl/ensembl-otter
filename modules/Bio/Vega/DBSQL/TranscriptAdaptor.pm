@@ -1,6 +1,7 @@
 package Bio::Vega::DBSQL::TranscriptAdaptor;
 
 use strict;
+use warnings;
 
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 use Bio::Vega::Transcript;

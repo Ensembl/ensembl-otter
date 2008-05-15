@@ -4,6 +4,7 @@
 package Bio::Otter::Lace::CloneSequence;
 
 use strict;
+use warnings;
 
 sub new {
     my( $pkg ) = @_;

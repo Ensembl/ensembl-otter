@@ -24,6 +24,7 @@ package Bio::Otter::Compatibility;
 # Author: lg4
 
 use strict;
+use warnings;
 
 use Exporter 'import';
 our @EXPORT_OK = qw( running_headcode );

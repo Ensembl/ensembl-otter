@@ -4,6 +4,7 @@
 package Bio::Otter::Lace::SequenceSet;
 
 use strict;
+use warnings;
 use Carp;
 
 sub new {

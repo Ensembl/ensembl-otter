@@ -1,6 +1,7 @@
 package Bio::Vega::DBSQL::StableIdAdaptor;
 
 use strict;
+use warnings;
 
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::Vega::Author;

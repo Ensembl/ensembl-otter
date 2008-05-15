@@ -1,6 +1,7 @@
 package Bio::Vega::DBSQL::GeneAdaptor;
 
 use strict;
+use warnings;
 
 use Bio::Vega::Gene;
 use Bio::Vega::Transcript;

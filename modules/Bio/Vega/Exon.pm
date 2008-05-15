@@ -1,6 +1,7 @@
 package Bio::Vega::Exon;
 
 use strict;
+use warnings;
 use base 'Bio::EnsEMBL::Exon';
 
 sub adjust_start_end {

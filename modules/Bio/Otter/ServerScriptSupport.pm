@@ -1,5 +1,6 @@
 
 use strict;
+use warnings;
 
 package Bio::EnsEMBL::DBSQL::StatementHandle;
 
@@ -21,6 +22,7 @@ sub bind_param {
 package Bio::Otter::ServerScriptSupport;
 
 use strict;
+use warnings;
 
 use Bio::Otter::Author;
 use Bio::Vega::Author;
@@ -46,7 +48,7 @@ sub new {
     
     my $self = $pkg->SUPER::new(@_);
     if ($self->show_restricted_datasets or ! $self->local_user) {
-        $self->authorized_user
+        $self->authorized_user;
     } else {
         $self->authenticate_user;
     }

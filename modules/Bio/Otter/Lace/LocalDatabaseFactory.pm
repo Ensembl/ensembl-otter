@@ -1,6 +1,7 @@
 package Bio::Otter::Lace::LocalDatabaseFactory;
 
 use strict;
+use warnings;
 use Bio::Otter::Lace::AceDatabase;
 use File::Path 'rmtree';
 

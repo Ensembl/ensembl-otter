@@ -54,6 +54,7 @@ package OtterTestDB;
 use Bio::Otter::DBSQL::DBAdaptor;
 use vars qw(@ISA);
 use strict;
+use warnings;
 use Sys::Hostname 'hostname';
 use DBI;
 use Carp;

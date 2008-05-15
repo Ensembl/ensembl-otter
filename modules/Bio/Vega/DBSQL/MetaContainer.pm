@@ -1,6 +1,7 @@
 package Bio::Vega::DBSQL::MetaContainer;
 
 use strict;
+use warnings;
 use Bio::EnsEMBL::DBSQL::MetaContainer;
 use base 'Bio::EnsEMBL::DBSQL::MetaContainer';
 

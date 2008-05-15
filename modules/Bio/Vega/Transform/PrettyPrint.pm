@@ -3,6 +3,7 @@ package Bio::Vega::Transform::PrettyPrint;
 use Bio::EnsEMBL::Utils::Argument qw ( rearrange );
 
 use strict;
+use warnings;
 
 sub new {
   my($class,@args) = @_;

@@ -4,6 +4,7 @@
 package Bio::Vega::Transform;
 
 use strict;
+use warnings;
 use XML::Parser;
 use Data::Dumper;   # For debugging
 

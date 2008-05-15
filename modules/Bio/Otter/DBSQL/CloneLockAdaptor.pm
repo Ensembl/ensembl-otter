@@ -1,6 +1,7 @@
 package Bio::Otter::DBSQL::CloneLockAdaptor;
 
 use strict;
+use warnings;
 
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 use Bio::Otter::DBSQL::AuthorAdaptor;

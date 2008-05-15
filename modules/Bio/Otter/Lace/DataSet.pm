@@ -4,6 +4,7 @@
 package Bio::Otter::Lace::DataSet;
 
 use strict;
+use warnings;
 use Carp;
 use Bio::Otter::Lace::Defaults;
 use Scalar::Util 'weaken';

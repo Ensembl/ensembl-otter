@@ -4,6 +4,7 @@
 package Bio::Otter::SQL::Parser;
 
 use strict;
+use warnings;
 use Symbol 'gensym';
 use Text::ParseWords 'quotewords';
 use Bio::Otter::SQL::StatementSet;

@@ -1,6 +1,7 @@
 package Bio::Otter::OldConverter;
 
 use strict;
+use warnings;
 
 
 sub StaticGoldenPath_to_XML {

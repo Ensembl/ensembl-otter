@@ -1,7 +1,9 @@
 package Bio::Otter::DBSQL::SimpleBindingAdaptor;
 
+use strict;
+use warnings;
+
 use DBI;
-# use strict;
 
 #sub connect_with_params {
 #	my %params = @_;

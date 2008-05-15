@@ -4,6 +4,7 @@
 package Bio::Vega::Utils::GeneTranscriptBiotypeStatus;
 
 use strict;
+use warnings;
 use base 'Exporter';
 our @EXPORT_OK = qw{ method2biotype_status biotype_status2method };
 

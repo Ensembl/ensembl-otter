@@ -4,6 +4,7 @@
 package Bio::Otter::LogFile;
 
 use strict;
+use warnings;
 use Symbol 'gensym';
 use Carp;
 

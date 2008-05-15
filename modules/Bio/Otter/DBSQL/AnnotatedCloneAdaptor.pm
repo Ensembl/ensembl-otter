@@ -1,6 +1,7 @@
 package Bio::Otter::DBSQL::AnnotatedCloneAdaptor;
 
 use strict;
+use warnings;
 
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 

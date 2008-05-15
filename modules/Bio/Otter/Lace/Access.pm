@@ -3,6 +3,7 @@
 package Bio::Otter::Lace::Access;
 
 use strict;
+use warnings;
 use Carp;
 
 sub new {

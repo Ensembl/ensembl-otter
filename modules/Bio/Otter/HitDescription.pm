@@ -4,6 +4,7 @@
 package Bio::Otter::HitDescription;
 
 use strict;
+use warnings;
 
 sub new {
     return bless {}, shift;

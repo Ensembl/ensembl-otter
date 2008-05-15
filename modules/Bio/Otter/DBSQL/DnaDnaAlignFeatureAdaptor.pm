@@ -4,6 +4,7 @@
 package Bio::Otter::DBSQL::DnaDnaAlignFeatureAdaptor;
 
 use strict;
+use warnings;
 
 use Bio::Otter::DnaDnaAlignFeature;
 use base 'Bio::EnsEMBL::DBSQL::DnaAlignFeatureAdaptor';

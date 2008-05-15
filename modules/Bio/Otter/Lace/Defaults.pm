@@ -4,6 +4,7 @@
 package Bio::Otter::Lace::Defaults;
 
 use strict;
+use warnings;
 use Carp;
 use Getopt::Long 'GetOptions';
 use Symbol 'gensym';

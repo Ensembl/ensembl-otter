@@ -2,6 +2,9 @@
 
 package Bio::Otter::Lace::ViaText;
 
+use strict;
+use warnings;
+
 use base ('Exporter');
 
 our @EXPORT    = ();

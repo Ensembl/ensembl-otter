@@ -4,6 +4,7 @@
 package Bio::Otter::Lace::TempFile;
 
 use strict;
+use warnings;
 use Carp;
 use Symbol 'gensym';
 use Fcntl qw{ O_WRONLY O_CREAT O_RDONLY };

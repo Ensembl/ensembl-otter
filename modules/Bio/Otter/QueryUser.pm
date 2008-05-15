@@ -2,6 +2,7 @@ package Bio::Otter::QueryUser;
 
 use vars qw(@ISA);
 use strict;
+use warnings;
 
 use OtterDefs;
 use Bio::EnsEMBL::Root;

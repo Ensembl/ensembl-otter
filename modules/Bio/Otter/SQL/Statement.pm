@@ -4,6 +4,7 @@
 package Bio::Otter::SQL::Statement;
 
 use strict;
+use warnings;
 use Bio::Otter::SQL::Clause;
 use Bio::Otter::SQL::Qualifier;
 

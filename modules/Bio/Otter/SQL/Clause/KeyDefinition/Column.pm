@@ -4,6 +4,7 @@
 package Bio::Otter::SQL::Clause::KeyDefinition::Column;
 
 use strict;
+use warnings;
 
 sub new {
     return bless {}, shift;

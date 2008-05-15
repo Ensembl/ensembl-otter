@@ -4,6 +4,7 @@
 package Bio::Otter::Lace::AceDatabase;
 
 use strict;
+use warnings;
 use Carp;
 use File::Path 'rmtree';
 use Symbol 'gensym';

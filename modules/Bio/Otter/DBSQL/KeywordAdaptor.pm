@@ -1,6 +1,7 @@
 package Bio::Otter::DBSQL::KeywordAdaptor;
 
 use strict;
+use warnings;
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 use Bio::Otter::Keyword;
 

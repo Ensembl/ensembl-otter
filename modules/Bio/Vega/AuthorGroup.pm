@@ -1,6 +1,7 @@
 package Bio::Vega::AuthorGroup;
 
 use strict;
+use warnings;
 use Bio::EnsEMBL::Utils::Argument qw ( rearrange );
 use base qw(Bio::EnsEMBL::Storable);
 

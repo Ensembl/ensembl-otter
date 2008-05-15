@@ -4,6 +4,7 @@
 package Bio::Otter::Lace::SatelliteDB;
 
 use strict;
+use warnings;
 use Carp;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::Otter::DBSQL::DBAdaptor;

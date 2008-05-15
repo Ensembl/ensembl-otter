@@ -1,6 +1,7 @@
 package Bio::Vega::DBSQL::ContigInfoAdaptor;
 
 use strict;
+use warnings;
 use Bio::Vega::ContigInfo;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::Vega::Utils::Comparator qw(compare);

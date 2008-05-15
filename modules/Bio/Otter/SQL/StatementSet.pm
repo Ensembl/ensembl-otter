@@ -4,6 +4,7 @@
 package Bio::Otter::SQL::StatementSet;
 
 use strict;
+use warnings;
 use Bio::Otter::SQL::Statement;
 
 sub new {

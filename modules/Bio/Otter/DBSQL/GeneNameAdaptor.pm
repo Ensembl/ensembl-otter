@@ -1,6 +1,7 @@
 package Bio::Otter::DBSQL::GeneNameAdaptor;
 
 use strict;
+use warnings;
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 use Bio::Otter::GeneName;
 

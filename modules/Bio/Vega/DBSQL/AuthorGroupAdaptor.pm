@@ -3,6 +3,7 @@
 package Bio::Vega::DBSQL::AuthorGroupAdaptor;
 
 use strict;
+use warnings;
 use Bio::Vega::AuthorGroup;
 use Bio::EnsEMBL::Utils::Exception qw ( throw warning );
 use base 'Bio::EnsEMBL::DBSQL::BaseAdaptor';

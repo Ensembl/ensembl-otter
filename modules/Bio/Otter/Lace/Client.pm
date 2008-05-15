@@ -3,6 +3,7 @@
 package Bio::Otter::Lace::Client;
 
 use strict;
+use warnings;
 use Carp qw{ confess cluck };
 use Sys::Hostname qw{ hostname };
 use LWP;

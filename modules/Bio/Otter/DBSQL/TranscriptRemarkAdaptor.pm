@@ -1,6 +1,7 @@
 package Bio::Otter::DBSQL::TranscriptRemarkAdaptor;
 
 use strict;
+use warnings;
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 use Bio::Otter::TranscriptRemark;
 

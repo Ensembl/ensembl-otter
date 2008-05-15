@@ -2,6 +2,7 @@ package Bio::Otter::TranscriptRemark;
 
 use vars qw(@ISA);
 use strict;
+use warnings;
 use Bio::EnsEMBL::Root;
 
 @ISA = qw(Bio::EnsEMBL::Root);

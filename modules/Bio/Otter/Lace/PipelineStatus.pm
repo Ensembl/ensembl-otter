@@ -4,6 +4,7 @@
 package Bio::Otter::Lace::PipelineStatus;
 
 use strict;
+use warnings;
 use Carp;
 use Bio::EnsEMBL::Analysis;
 

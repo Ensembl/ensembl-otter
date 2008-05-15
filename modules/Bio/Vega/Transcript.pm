@@ -1,6 +1,7 @@
 package Bio::Vega::Transcript;
 
 use strict;
+use warnings;
 use Bio::EnsEMBL::Utils::Argument qw ( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use base 'Bio::EnsEMBL::Transcript';

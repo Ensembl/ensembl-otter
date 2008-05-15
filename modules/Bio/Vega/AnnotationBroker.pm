@@ -1,6 +1,7 @@
 package Bio::Vega::AnnotationBroker;
 
 use strict;
+use warnings;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::Vega::Utils::Comparator qw(compare);
 use base 'Bio::EnsEMBL::DBSQL::BaseAdaptor';

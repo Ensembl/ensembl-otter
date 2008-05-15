@@ -4,6 +4,7 @@
 package Bio::Otter::DBSQL::AnnotatedExonAdaptor;
 
 use strict;
+use warnings;
 use base 'Bio::EnsEMBL::DBSQL::ExonAdaptor';
 
 # override fetch_by_stable_id to get most recent
