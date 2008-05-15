@@ -710,15 +710,13 @@ sub write_pipeline_data {
     my ($dsname, $ssname, $chr_name, $chr_start, $chr_end) = $ss->selected_CloneSequences_parameters;
 
     my $ds = $self->Client()->get_DataSet_by_name($dsname);
-    my $ds_alias = $ds->ALIAS(); # defaults to $dsname if not set
+    my $ds_list = $ds->ALIAS() ? [$ds->ALIAS(), $dsname] : [$dsname];
         # It is a means to create a 'species alias' to reuse the otter_config for one species without duplication.
         # For example, if you need a test_human database that would fetch all human analyses from the pipeline
-        # it is the shortest way to go.
+        # it is the shortest way to go. However, by using test_human filters or module settings you'll override
+        # the behaviour of the master database.
         #
-        # Feel free to revert back to the original behaviour.
-        #
-    # my $factory = $self->make_otterpipe_DataFactory($dsname);
-    my $factory = $self->make_otterpipe_DataFactory($ds_alias);
+    my $factory = $self->make_otterpipe_DataFactory($ds_list);
 
     # create file for output and add it to the acedb object
     my $ace_filename = $self->home . '/rawdata/pipeline.ace';
@@ -737,10 +735,10 @@ sub write_pipeline_data {
 }
 
 sub make_otterpipe_DataFactory {
-    my( $self, $ds_alias ) = @_;
+    my( $self, $ds_list ) = @_;
 
     my $client = $self->Client();
-    warn "Making DataFactory for '$ds_alias' species\n";
+    warn "Making pipeline DataFactory for ".join('->', map {"'$_'"} @$ds_list)."\n";
 
     # create new datafactory object - contains all ace filters and produces the data from these
     my $factory = Bio::EnsEMBL::Ace::DataFactory->new();
@@ -749,16 +747,21 @@ sub make_otterpipe_DataFactory {
 
     my $debug = $client->debug();
     
-    my $logic_to_load  = $client->option_from_array([ $ds_alias, 'use_filters' ]);
-    my $module_options = $client->option_from_array([ $ds_alias, 'filter' ]);
+        # loading the filters in the priority order (latter overrides the former)
+    my %logic_to_load  = ();
+    my %module_options = ();
+    foreach my $ds_name (@$ds_list) {
+        %logic_to_load  = (%logic_to_load,  %{ $client->option_from_array([ $ds_name, 'use_filters' ]) } );
+        %module_options = (%module_options, %{ $client->option_from_array([ $ds_name, 'filter' ]) } );
+    }
 
-    my @analysis_names = grep $logic_to_load->{$_}, keys %$logic_to_load;
+    my @analysis_names = grep $logic_to_load{$_}, keys %logic_to_load;
 
     my $collect = $self->MethodCollection;
 
     foreach my $logic_name (@analysis_names) {
 
-        my $param_ref = $module_options->{$logic_name}
+        my $param_ref = $module_options{$logic_name}
             or die "No parameters for '$logic_name'";
 
         # Take a copy of the parameters so that we can delete from it.
