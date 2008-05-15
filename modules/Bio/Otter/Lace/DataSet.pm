@@ -421,7 +421,7 @@ sub ALIAS {
     if(defined($ALIAS)) {
         $self->{'_ALIAS'} = $ALIAS;
     }
-    return $self->{'_ALIAS'} || $self->name();
+    return $self->{'_ALIAS'};
 }
 
 1;
