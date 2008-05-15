@@ -1,6 +1,7 @@
 package Bio::Vega::Slice;
 
 use strict;
+use warnings;
 use base 'Bio::EnsEMBL::Slice';
 
 sub new {

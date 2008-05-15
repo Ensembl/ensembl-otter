@@ -1,6 +1,7 @@
 package Bio::Otter::ServerSide;
 
 use strict;
+use warnings;
 use Exporter;
 
 use OtterDefs;

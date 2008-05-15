@@ -4,6 +4,7 @@
 package Bio::Otter::DnaDnaAlignFeature;
 
 use strict;
+use warnings;
 use base 'Bio::EnsEMBL::DnaDnaAlignFeature';
 
 sub get_HitDescription {

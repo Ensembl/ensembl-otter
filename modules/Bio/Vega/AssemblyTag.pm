@@ -1,6 +1,7 @@
 package Bio::Vega::AssemblyTag;
 
 use strict;
+use warnings;
 use Bio::EnsEMBL::Utils::Argument qw ( rearrange );
 use base 'Bio::EnsEMBL::Feature';
 

@@ -1,4 +1,8 @@
+
 package Bio::Vega::DBSQL::AttributeAdaptor;
+
+use strict;
+use warnings;
 
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use base 'Bio::EnsEMBL::DBSQL::AttributeAdaptor';

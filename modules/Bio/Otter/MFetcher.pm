@@ -8,6 +8,7 @@ package Bio::Otter::MFetcher;
 # Author: lg4
 
 use strict;
+use warnings;
 
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::Otter::DBSQL::DBAdaptor;
@@ -198,7 +199,7 @@ sub satellite_dba {
 
         # not the most beautiful way (and place) to do it :(
     my ($asm_def) = @{ $sdba->get_MetaContainer()->list_value_by_key('assembly.default') };
-    if($asm_def =~ /^otter$/i) {
+    if ($asm_def and $asm_def =~ /^otter$/i) {
         bless $sdba,'Bio::Vega::DBSQL::DBAdaptor';
     }
 
@@ -428,14 +429,16 @@ sub fetch_mapped_features {
                     $target_feature->slice($projected_slice_on_mapper);
                 }
 
+                my $fname = sprintf( "%s [%d..%d]", 
+                                    $target_feature->display_id(),
+                                    $target_feature->start(),
+                                    $target_feature->end() );
+                $self->log("Transferring $feature_name $fname from {".$target_feature->slice->name."} onto {".$original_slice_on_mapper->name.'}');
                 if( my $transferred = $target_feature->transfer($original_slice_on_mapper) ) {
                     push @$features, $transferred;
+                    $self->log("Transfer OK");
                 } else {
-                    my $fname = sprintf( "%s [%d..%d]", 
-                                        $target_feature->display_id(),
-                                        $target_feature->start(),
-                                        $target_feature->end() );
-                    $self->log("Could not transfer $feature_name $fname from {".$target_feature->slice->name."} onto {".$original_slice_on_mapper->name.'}');
+                    $self->log("Transfer failed");
                 }
             }
         }

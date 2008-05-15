@@ -1,6 +1,7 @@
 package Bio::Vega::Writer;
 
 use strict;
+use warnings;
 use Bio::Vega::Transform::PrettyPrint;
 use Bio::Vega::Utils::XmlEscape qw (xml_escape);
 

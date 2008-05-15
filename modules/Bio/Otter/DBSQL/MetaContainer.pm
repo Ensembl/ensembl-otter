@@ -1,6 +1,7 @@
 package Bio::Otter::DBSQL::MetaContainer;
 
 use strict;
+use warnings;
 use Bio::EnsEMBL::DBSQL::MetaContainer;
 
 use vars qw(@ISA);

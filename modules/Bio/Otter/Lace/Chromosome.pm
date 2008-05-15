@@ -4,6 +4,7 @@
 package Bio::Otter::Lace::Chromosome;
 
 use strict;
+use warnings;
 
 # Not used by Otter Client, but still used by some scripts.
 

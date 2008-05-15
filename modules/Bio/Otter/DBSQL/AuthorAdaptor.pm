@@ -1,6 +1,7 @@
 package Bio::Otter::DBSQL::AuthorAdaptor;
 
 use strict;
+use warnings;
 use Carp;
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 use Bio::Otter::Author;

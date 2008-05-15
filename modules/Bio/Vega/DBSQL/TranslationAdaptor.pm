@@ -1,6 +1,7 @@
 package Bio::Vega::DBSQL::TranslationAdaptor;
 
 use strict;
+use warnings;
 
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 use Bio::Vega::Translation;

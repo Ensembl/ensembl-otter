@@ -1,6 +1,7 @@
 package Bio::Vega::DBSQL::ExonAdaptor;
 
 use strict;
+use warnings;
 use base 'Bio::EnsEMBL::DBSQL::ExonAdaptor';
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 

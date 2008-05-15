@@ -6,6 +6,7 @@ package Bio::Otter::CloneFinder;
 #
 
 use strict;
+use warnings;
 use Bio::Otter::Lace::Locator;
 
 my $DEBUG=0; # do not show all SQL statements

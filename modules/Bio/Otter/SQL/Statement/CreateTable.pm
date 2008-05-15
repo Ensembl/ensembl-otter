@@ -4,6 +4,7 @@
 package Bio::Otter::SQL::Statement::CreateTable;
 
 use strict;
+use warnings;
 use Carp;
 use base 'Bio::Otter::SQL::Statement';
 use Bio::Otter::SQL::Clause;

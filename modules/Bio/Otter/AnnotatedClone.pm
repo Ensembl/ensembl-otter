@@ -2,6 +2,7 @@ package Bio::Otter::AnnotatedClone;
 
 use vars qw(@ISA);
 use strict;
+use warnings;
 use Bio::EnsEMBL::Clone;
 
 @ISA = qw(Bio::EnsEMBL::Clone);

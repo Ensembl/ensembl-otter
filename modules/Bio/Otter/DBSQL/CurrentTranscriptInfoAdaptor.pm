@@ -1,6 +1,7 @@
 package Bio::Otter::DBSQL::CurrentTranscriptInfoAdaptor;
 
 use strict;
+use warnings;
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 use Bio::Otter::Author;
 

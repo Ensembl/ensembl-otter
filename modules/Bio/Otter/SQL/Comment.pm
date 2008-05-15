@@ -4,6 +4,7 @@
 package Bio::Otter::SQL::Comment;
 
 use strict;
+use warnings;
 use Carp;
 
 sub new {

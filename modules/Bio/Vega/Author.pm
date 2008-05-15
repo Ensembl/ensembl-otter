@@ -3,6 +3,7 @@ package Bio::Vega::Author;
 use Bio::EnsEMBL::Utils::Exception qw ( throw warning );
 use Bio::EnsEMBL::Utils::Argument qw ( rearrange );
 use strict;
+use warnings;
 
 use base qw(Bio::EnsEMBL::Storable);
 

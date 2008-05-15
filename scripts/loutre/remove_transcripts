@@ -5,6 +5,8 @@
 use strict;
 use Bio::Otter::Lace::Defaults;
 use Bio::Vega::DBSQL::DBAdaptor;
+use Bio::Vega::ContigLockBroker;
+use Sys::Hostname 'hostname';
 
 {
     my $dsname;
@@ -22,15 +24,23 @@ use Bio::Vega::DBSQL::DBAdaptor;
     my $dba = $ds->get_cached_DBAdaptor;
     my $gene_dba = $dba->get_GeneAdaptor;
 
+    my $locker = Bio::Vega::ContigLockBroker->new(
+        -HOSTNAME   => hostname(),
+        );
+    my $author = Bio::Vega::Author->new(
+        -NAME       => $cl->author,
+        -EMAIL      => $cl->email,
+        );
+
     while (<>) {
         foreach my $t_stable_id (split) {
-            delete_transcript($t_stable_id, $gene_dba);
+            delete_transcript($t_stable_id, $gene_dba, $locker, $author);
         }
     }
 }
 
 sub delete_transcript {
-    my ($t_stable_id, $gene_dba) = @_;
+    my ($t_stable_id, $gene_dba, $locker, $author) = @_;
     
     my $gene = $gene_dba->fetch_by_transcript_stable_id($t_stable_id);
     unless ($gene) {
@@ -56,11 +66,16 @@ sub delete_transcript {
     unless ($found) {
         die "Failed to find transcript '$t_stable_id' in gene";
     }
-    if (@$tsct_list) {
-        $gene_dba->store($gene);
-    } else {
-        $gene_dba->remove($gene);
-    }
+    eval {
+        $locker->lock_by_object($gene, $author);
+        if (@$tsct_list) {
+            $gene_dba->store($gene);
+        } else {
+            $gene_dba->remove($gene);
+        }
+        $locker->remove_by_object($gene, $author);
+    };
+    warn $@ if $@;
 }
 
 

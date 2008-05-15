@@ -1,6 +1,7 @@
 package Bio::Otter::DBSQL::AssemblyTagAdaptor;
 
 use strict;
+use warnings;
 use Bio::Otter::AssemblyTag;
 use base 'Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor';
 

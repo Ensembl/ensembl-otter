@@ -1,4 +1,8 @@
+
 package Bio::Vega::DBSQL::DBAdaptor;
+
+use strict;
+use warnings;
 
 use Bio::Vega::DBSQL::ContigInfoAdaptor;
 use Bio::Vega::DBSQL::AuthorAdaptor;

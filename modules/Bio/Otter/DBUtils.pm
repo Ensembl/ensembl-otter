@@ -4,6 +4,7 @@
 package Bio::Otter::DBUtils;
 
 use strict;
+use warnings;
 use base 'Exporter';
 
 # Subroutines to export on request:

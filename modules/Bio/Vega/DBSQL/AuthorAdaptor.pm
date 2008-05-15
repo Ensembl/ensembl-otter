@@ -1,6 +1,7 @@
 package Bio::Vega::DBSQL::AuthorAdaptor;
 
 use strict;
+use warnings;
 use Bio::Vega::Author;
 use Bio::Vega::AuthorGroup;
 use Bio::EnsEMBL::Utils::Exception qw ( throw warning );

@@ -1,6 +1,7 @@
 package Bio::Vega::DBSQL::ContigLockAdaptor;
 
 use strict;
+use warnings;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 use Bio::Vega::DBSQL::AuthorAdaptor;

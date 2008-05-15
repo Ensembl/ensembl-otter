@@ -1,6 +1,7 @@
 package Bio::Otter::DBSQL::EvidenceAdaptor;
 
 use strict;
+use warnings;
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 use Bio::EnsEMBL::DBEntry;
 use Bio::Otter::Evidence;

@@ -6,6 +6,7 @@ package Bio::Otter::SpeciesDat;
 # Author: lg4
 
 use strict;
+use warnings;
 
 sub species_dat_filename {
     my( $self, $filename ) = @_;

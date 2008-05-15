@@ -5,6 +5,7 @@ package Bio::Otter::CloneLock;
 ### (instead of a clone_id)?
 
 use strict;
+use warnings;
 use Bio::EnsEMBL::Root;
 use vars qw(@ISA);
 @ISA = qw(Bio::EnsEMBL::Root);

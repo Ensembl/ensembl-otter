@@ -1,6 +1,7 @@
 package Bio::Otter::ServerQuery;
 
 use strict;
+use warnings;
 use Getopt::Long;
 use base 'CGI';
 

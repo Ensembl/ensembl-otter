@@ -1,6 +1,7 @@
 package ToXML; # a module, but not really a class
 
 use strict;
+use warnings;
 use Bio::Vega::Utils::GeneTranscriptBiotypeStatus 'biotype_status2method';
 
 # ----------------[simplify some formatting]----------------------

@@ -34,6 +34,7 @@ Note, many of the object attributes only need to be set if using the
 package Bio::Otter::EMBL::Factory;
 
 use strict;
+use warnings;
 use Carp;
 use Hum::EMBL;
 use Hum::EMBL::FeatureSet;

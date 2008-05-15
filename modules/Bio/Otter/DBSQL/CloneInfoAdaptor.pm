@@ -1,6 +1,7 @@
 package Bio::Otter::DBSQL::CloneInfoAdaptor;
 
 use strict;
+use warnings;
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 use Bio::Otter::DBSQL::AuthorAdaptor;
 use Bio::Otter::CloneInfo;

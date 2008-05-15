@@ -2,6 +2,7 @@ package Bio::Otter::EnsEMBL2SQL::Base;
 
 use vars qw(@ISA);
 use strict;
+use warnings;
 
 use FileHandle;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;

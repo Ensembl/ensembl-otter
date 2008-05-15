@@ -5,6 +5,7 @@ package Bio::Otter::Lace::PipelineDB;
 
 use Bio::Otter::Lace::SatelliteDB;
 use strict;
+use warnings;
 use Carp;
 
 

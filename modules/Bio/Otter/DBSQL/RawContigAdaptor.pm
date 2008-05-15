@@ -1,6 +1,7 @@
 package Bio::Otter::DBSQL::RawContigAdaptor;
 
 use strict;
+use warnings;
 
 use Bio::EnsEMBL::DBSQL::RawContigAdaptor;
 

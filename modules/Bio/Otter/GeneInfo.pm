@@ -4,6 +4,7 @@ package Bio::Otter::GeneInfo;
 
 use vars qw(@ISA);
 use strict;
+use warnings;
 use Bio::EnsEMBL::Root;
 
 @ISA = qw(Bio::EnsEMBL::Root);

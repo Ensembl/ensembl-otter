@@ -1,6 +1,7 @@
 package Bio::Vega::Evidence;
 
 use strict;
+use warnings;
 use Bio::EnsEMBL::Utils::Argument qw ( rearrange );
 use base 'Bio::EnsEMBL::Storable';
 

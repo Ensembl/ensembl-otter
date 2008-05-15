@@ -1,6 +1,7 @@
 package Bio::Otter::DBSQL::AnnotatedTranscriptAdaptor;
 
 use strict;
+use warnings;
 
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 

@@ -4,6 +4,7 @@
 package Bio::Otter::SQL::TokenList;
 
 use strict;
+use warnings;
 use Carp;
 
 sub new {

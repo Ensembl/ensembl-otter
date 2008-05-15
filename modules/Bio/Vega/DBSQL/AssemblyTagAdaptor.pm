@@ -1,6 +1,7 @@
 package Bio::Vega::DBSQL::AssemblyTagAdaptor;
 
 use strict;
+use warnings;
 use Bio::Vega::AssemblyTag;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 

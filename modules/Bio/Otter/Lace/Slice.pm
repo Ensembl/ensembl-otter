@@ -1,6 +1,7 @@
 package Bio::Otter::Lace::Slice;
 
 use strict;
+use warnings;
 use Carp qw{ confess cluck };
 
 use Bio::EnsEMBL::Analysis;

@@ -2,6 +2,7 @@ package Bio::Otter::EnsEMBL2SQL::Core;
 
 use vars qw(@ISA);
 use strict;
+use warnings;
 
 use Bio::Otter::EnsEMBL2SQL::Base;
 

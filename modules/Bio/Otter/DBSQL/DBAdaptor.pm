@@ -1,5 +1,8 @@
 package Bio::Otter::DBSQL::DBAdaptor;
 
+use strict;
+use warnings;
+
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 
 @ISA = qw ( Bio::EnsEMBL::DBSQL::DBAdaptor);

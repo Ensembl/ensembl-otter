@@ -4,6 +4,7 @@
 package Bio::Otter::Lace::PersistentFile;
 
 use strict;
+use warnings;
 use Carp;
 use Bio::Otter::Lace::TempFile;
 

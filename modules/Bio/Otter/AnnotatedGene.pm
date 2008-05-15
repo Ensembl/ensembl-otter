@@ -3,6 +3,7 @@ package Bio::Otter::AnnotatedGene;
 
 use vars qw(@ISA);
 use strict;
+use warnings;
 use base 'Bio::EnsEMBL::Gene';
 
 use Bio::Vega::Utils::XmlEscape qw{ xml_escape xml_unescape };

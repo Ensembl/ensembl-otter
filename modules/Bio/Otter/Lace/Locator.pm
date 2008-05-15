@@ -5,6 +5,7 @@
 package Bio::Otter::Lace::Locator;
 
 use strict;
+use warnings;
 
 sub new {
     my( $pkg ) = shift @_;

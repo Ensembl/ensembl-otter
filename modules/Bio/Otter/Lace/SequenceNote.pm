@@ -4,6 +4,7 @@
 package Bio::Otter::Lace::SequenceNote;
 
 use strict;
+use warnings;
 
 sub new {
     my( $pkg ) = @_;

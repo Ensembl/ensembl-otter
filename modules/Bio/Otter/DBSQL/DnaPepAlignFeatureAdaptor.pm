@@ -4,6 +4,7 @@
 package Bio::Otter::DBSQL::DnaPepAlignFeatureAdaptor;
 
 use strict;
+use warnings;
 
 use Bio::Otter::DnaPepAlignFeature;
 use base 'Bio::EnsEMBL::DBSQL::ProteinAlignFeatureAdaptor';
