@@ -3,9 +3,7 @@ package Bio::Otter::DBSQL::DBAdaptor;
 use strict;
 use warnings;
 
-use Bio::EnsEMBL::DBSQL::DBAdaptor;
-
-@ISA = qw ( Bio::EnsEMBL::DBSQL::DBAdaptor);
+use base 'Bio::EnsEMBL::DBSQL::DBAdaptor';
 
 sub new {
   my ($class,@args) = @_;
