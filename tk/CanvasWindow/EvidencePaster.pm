@@ -318,7 +318,7 @@ sub type_and_name_from_clipboard {
                                     # Something that looks like an accession:
                   [A-Z]+\d{5,}      # one or more letters followed by 5 or more digits
                   |                 # or, for TrEMBL,
-                  [A-Z]\d[A-Z\d]{4} # a capital letter, a digit, then 4 letters and digits.
+                  [A-Z]\d[A-Z\d]{4} # a capital letter, a digit, then 4 letters or digits.
               )
               (\-\d+)?              # Optional VARSPLICE suffix
               (\.\d+)?              # Optional .SV
@@ -327,7 +327,7 @@ sub type_and_name_from_clipboard {
         {
             my $prefix = $1 || '*';
             my $acc    = $2;
-            $acc .= $3 if $3;
+            $acc      .= $3 if $3;
             my $sv     = $4 || '*';
 
             #warn "Got name '$prefix$acc$sv'";
