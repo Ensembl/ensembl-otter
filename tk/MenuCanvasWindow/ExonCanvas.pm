@@ -2141,20 +2141,20 @@ sub middle_button_paste {
             $self->add_coordinate_pair(@ints[$i, $i + 1]);
         }
         
-        # Set the translation region if the ExonCanvas was empty
-        if ($was_empty and $self->get_GeneMethod_from_tk->transcript_type eq 'coding') {
-            my @sorted = sort {$a <=> $b} @ints;
-            my $t_start = $sorted[0];
-            my $t_end   = $sorted[$#sorted];
-            if ($self->strand_from_tk == -1) {
-                ($t_start, $t_end) = ($t_end, $t_start);
-            }
-            my $start_obj = $canvas->find('withtag', 't_start');
-            my $end_obj   = $canvas->find('withtag', 't_end');
-            $canvas->itemconfigure($start_obj, -text => $t_start);
-            $canvas->itemconfigure($end_obj,   -text => $t_end);
-            $self->highlight($start_obj, $end_obj);
-        }
+        # # Set the translation region if the ExonCanvas was empty
+        # if ($was_empty and $self->get_GeneMethod_from_tk->transcript_type eq 'coding') {
+        #     my @sorted = sort {$a <=> $b} @ints;
+        #     my $t_start = $sorted[0];
+        #     my $t_end   = $sorted[$#sorted];
+        #     if ($self->strand_from_tk == -1) {
+        #         ($t_start, $t_end) = ($t_end, $t_start);
+        #     }
+        #     my $start_obj = $canvas->find('withtag', 't_start');
+        #     my $end_obj   = $canvas->find('withtag', 't_end');
+        #     $canvas->itemconfigure($start_obj, -text => $t_start);
+        #     $canvas->itemconfigure($end_obj,   -text => $t_end);
+        #     $self->highlight($start_obj, $end_obj);
+        # }
         #$self->set_scroll_region_and_maxsize;
         $self->fix_window_min_max_sizes;
     }
