@@ -16,7 +16,7 @@ use Bio::Otter::Lace::Defaults;
     Bio::Otter::Lace::Defaults::do_getopt(
         'h|help!'     => \$help,
         'key=s'       => \$key,
-        'show'        => \$view,
+        'show|view!'  => \$view,
         'sathost=s'   => \$sathost,
         'satport=s'   => \$satport,
         'satuser=s'   => \$satuser,
@@ -35,7 +35,7 @@ use Bio::Otter::Lace::Defaults;
     my $current =
       Bio::Otter::Lace::SatelliteDB::get_options_for_key($otter_db, $key);
     if ($view) {
-        print show_current($current, $key);
+        print STDERR show_current($current, $dataset_name);
         exit;
     }
     my $sat_opts = $current || {};
@@ -69,9 +69,10 @@ use Bio::Otter::Lace::Defaults;
 }
 
 sub show_current {
-    my ($settings, $name, $ret) = @_;
-    $ret = "Settings for $name:\n";
-    foreach my $key (keys(%$settings)) {
+    my ($settings, $name) = @_;
+
+    my $ret = "Settings for $name:\n";
+    foreach my $key (sort keys %$settings) {
         $ret .= "$key   =  " . $settings->{$key} . "\n";
     }
     return $ret;
