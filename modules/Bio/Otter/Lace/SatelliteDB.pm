@@ -67,12 +67,13 @@ sub save_options_hash {
     confess "missing key argument"          unless $key;
     confess "missing options hash argument" unless $options_hash;
     
-    my $opt_str = '';
-    while (my ($key, $val) = each %$options_hash) {
-        $opt_str .= "'$key' => '$val',\n";
+    my @opt_str;
+    foreach my $key (sort keys %$options_hash) {
+        my $val = $options_hash->{$key};
+        push(@opt_str, sprintf "'%s' => '%s'", lc($key), $val);
     }
     my $sth = $db->prepare("INSERT INTO meta(meta_key, meta_value) VALUES (?,?)");
-    $sth->execute($key, $opt_str);    
+    $sth->execute($key, join(", ", @opt_str));    
 }
 
 # Here as insurance in case more circular references that
