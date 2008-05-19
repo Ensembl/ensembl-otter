@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-05-15 10:51:16 $
-# Id:            $Id: nph-get_das_simple_features,v 1.14 2008-05-15 10:51:16 lg4 Exp $
+# Last modified: $Date: 2008-05-19 15:24:01 $
+# Id:            $Id: nph-get_das_simple_features,v 1.15 2008-05-19 15:24:01 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_das_simple_features,v $
 
 my $http_proxy = $ENV{http_proxy};
@@ -12,7 +12,7 @@ my $http_proxy = $ENV{http_proxy};
 use strict;
 use SangerPaths qw{ core bioperl123 ensembl49 otter49 };
 
-use Bio::Das;
+use Bio::Das::Lite;
 use Bio::EnsEMBL::SimpleFeature;
 use Bio::Otter::ServerScriptSupport;
 use Bio::Otter::Lace::ViaText ('%OrderOfOptions');
@@ -30,29 +30,39 @@ sub Bio::EnsEMBL::Slice::get_all_DasFeatures {
     }
 
     $server->log( sprintf ("GET  %s/features?segment=%s%s\n",
-                            $das->default_url, $segment_name,
+                            #$das->default_url,
+                            $das->basename,
+                            $segment_name,
                             $analysis ? ";type=$analysis" : '') );
 
-    my $segment = $das->segment($chr_name, $chr_start, $chr_end);
-    unless($segment) {
-        $server->log( "DAS source refused to serve the segment={$segment_name}");
-        return [];
-    }  
-
-    my @feature_type  = $analysis ? ('-type' => $analysis) : ();
-    my $iterator = $segment->features(-iterator => 1, @feature_type);
-
     my @dsfs = ();
-    while (my $das_feature = $iterator->next_seq) {
-        my $simple_feature = Bio::EnsEMBL::SimpleFeature->new();
-        $simple_feature->slice(   $slice );
-        $simple_feature->start(   $das_feature->start() - $chr_start + 1 );
-        $simple_feature->end(     $das_feature->stop()  - $chr_start + 1 );
-        $simple_feature->strand( ($das_feature->orientation() eq '-') ? -1 : 1 );
-        $simple_feature->score(  ($das_feature->score() eq '-') ? 100 : $das_feature->score() );
-        $simple_feature->display_label( $das_feature->id() );
+    my $response = $das->features({
+                'segment' => $segment_name,
+                $analysis ? ('type' => $analysis) : (),
+    });
 
-        push @dsfs, $simple_feature;
+    foreach my $das_features (values %$response) {
+        if(!$das_features || ref($das_features) ne 'ARRAY') {
+            next;
+        }
+        while(my $das_feature = shift @$das_features) {
+            #my $simple_feature = Bio::EnsEMBL::SimpleFeature->new();
+            #$simple_feature->slice(   $slice );
+            #$simple_feature->start(   $das_feature->start() - $chr_start + 1 );
+            #$simple_feature->end(     $das_feature->stop()  - $chr_start + 1 );
+            #$simple_feature->strand( ($das_feature->orientation() eq '-') ? -1 : 1 );
+            #$simple_feature->score(  ($das_feature->score() eq '-') ? 100 : $das_feature->score() );
+            #$simple_feature->display_label( $das_feature->id() );
+
+            my $simple_feature = Bio::EnsEMBL::SimpleFeature->new();
+            $simple_feature->slice($slice);
+            $simple_feature->start(   $das_feature->{'start'} - $chr_start + 1 );
+            $simple_feature->end(     $das_feature->{'end'}   - $chr_start + 1 );
+            $simple_feature->strand( ($das_feature->{'orientation'} eq '-') ? -1 : 1 );
+            $simple_feature->score(  ($das_feature->{'score'} eq '-') ? 100 : $das_feature->{'score'} );
+            $simple_feature->display_label( $das_feature->{'feature_label'} );
+            push @dsfs, $simple_feature;
+        }
     }
 
     return \@dsfs;
@@ -72,11 +82,10 @@ my $source   = $server->require_argument('source');
 my $dsn      = $server->require_argument('dsn');
 my $analysis = $server->param('analysis'); # defaults to *everything*
 
-my $das = Bio::Das->new(
-    -source => $source,
-    -dsn    => $dsn,
-);
-$das->proxy($http_proxy) if $http_proxy;
+my $das = Bio::Das::Lite->new({
+    'dsn' => $source.'/'.$dsn,
+    $http_proxy ? ('http_proxy' => '$http_proxy') : (),
+});
 
 my $dsfs = $server->fetch_mapped_features('das_simple_feature', 'get_all_DasFeatures', [$server, $das, $chr_name, $analysis],
     map { defined($server->param($_)) ? $server->param($_) : '' } qw(cs name type start end metakey csver csver_remote)
