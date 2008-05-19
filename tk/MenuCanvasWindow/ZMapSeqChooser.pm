@@ -817,7 +817,7 @@ sub zmap_feature_evidence_xml {
     }
     my $used_subseq_names = [];
     SUBSEQ: foreach my $subseq (@$subseq_list) {
-        warn "Looking at: ", $subseq->name;
+        #warn "Looking at: ", $subseq->name;
         my $evi_hash = $subseq->evidence_hash();
 
         # evidence_hash looks like this

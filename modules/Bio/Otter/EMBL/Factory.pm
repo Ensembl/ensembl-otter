@@ -621,7 +621,6 @@ sub make_embl_ft {
 
     my $chr_slice = $self->chromosome_Slice;
 
-    warn $
     my $set = 'Hum::EMBL::FeatureSet'->new;
 
     my $genes = $chr_slice->get_all_Genes;
