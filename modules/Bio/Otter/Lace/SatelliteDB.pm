@@ -55,7 +55,7 @@ sub get_options_for_key {
 
 sub remove_options_hash_for_key{
     my ($db, $key) = @_;
-    my $sth = $db->prepare("DELETE FROM meta where meta_key = ?");
+    my $sth = $db->dbc->prepare("DELETE FROM meta where meta_key = ?");
     $sth->execute($key);
     $sth->finish();
     return;
@@ -72,7 +72,7 @@ sub save_options_hash {
         my $val = $options_hash->{$key};
         push(@opt_str, sprintf "'%s' => '%s'", lc($key), $val);
     }
-    my $sth = $db->prepare("INSERT INTO meta(meta_key, meta_value) VALUES (?,?)");
+    my $sth = $db->dbc->prepare("INSERT INTO meta(meta_key, meta_value) VALUES (?,?)");
     $sth->execute($key, join(", ", @opt_str));    
 }
 
