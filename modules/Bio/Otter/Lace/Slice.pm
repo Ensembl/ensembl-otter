@@ -290,7 +290,7 @@ sub get_all_SimpleFeatures { # get simple features from otter/pipeline/ensembl d
 }
 
 sub get_all_DAS_SimpleFeatures { # get simple features from DAS source (via mapping Otter server)
-    my( $self, $analysis_name, $pipehead, $metakey, $source, $dsn ) = @_;
+    my( $self, $analysis_name, $pipehead, $csver_remote, $source, $dsn ) = @_;
 
     if(!$analysis_name) {
         die "Analysis name must be specified!";
@@ -306,7 +306,8 @@ sub get_all_DAS_SimpleFeatures { # get simple features from DAS source (via mapp
             %{$self->toHash},
             'analysis' => $analysis_name,
             'pipehead' => $pipehead ? 1 : 0,
-            $metakey   ? ('metakey' => $metakey) : (), # if you forget it, it will be 'Otter' by default!
+            'metakey'  => '.', # let's pretend to be taking things from otter database
+            $csver_remote   ? ('csver_remote' => $csver_remote) : (), # if you forget it, the assembly will be Otter by default!
             'source'   => $source,
             'dsn'      => $dsn,
         },
