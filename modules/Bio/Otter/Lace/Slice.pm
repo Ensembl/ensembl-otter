@@ -816,3 +816,12 @@ sub get_all_Genes { # non-default :)
 
 1;
 
+__END__
+
+
+=head1 NAME - Bio::Otter::Lace::Slice
+
+=head1 AUTHOR
+
+Leo Gordon B<email> lg4@sanger.ac.uk
+
