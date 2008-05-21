@@ -244,48 +244,6 @@ sub get_slice { # codebase-independent version for scripts
             1,      # somehow strand parameter is needed
             $csver,
         );
-
-    } else { # not running_headcode()
-
-        $self->error_exit("$cs 'name' attribute not set") unless $name;
-
-        if($cs eq 'chromosome') {
-            $start ||= 1;
-
-            eval {
-                my $chr_obj = $dba->get_ChromosomeAdaptor()->fetch_by_chr_name($name);
-                $end ||= $chr_obj->length();
-            };
-            if($@) {
-                $self->log("Could not get chromosome '$name', returning an empty list");
-                $self->return_emptyhanded();
-            }
-
-            $slice = $dba->get_SliceAdaptor()->fetch_by_chr_start_end(
-                $name,
-                $start,
-                $end,
-            );
-
-            if($slice and ! @{ $slice->get_tiling_path() } ) {
-                $self->log('Could not get a slice, probably not (yet) loaded into satellite db');
-                $self->return_emptyhanded();
-            }
-        } elsif($cs eq 'contig') {
-            eval {
-                $slice = $dba->get_RawContigAdaptor()->fetch_by_name(
-                    $name,
-                );
-            };
-            if($@) {
-                $self->log("Could not get contig '$name', returning an empty list");
-                $self->return_emptyhanded();
-            }
-
-        } else {
-            $self->error_exit("Other coordinate systems are not supported");
-        }
-
     }
 
     if(not $slice) {
@@ -304,52 +262,8 @@ sub return_emptyhanded { # we probably only want to know about it only if using 
     exit(0);
 }
 
-
-sub cached_csver { # with optional override
-
-    my ($self, $metakey, $cs, $override) = @_; # metakey can even be '.' or ''
-
-    return $self->{_target_asm}{$metakey}{$cs}
-         = $override
-        || $self->{_target_asm}{$metakey}{$cs}
-        || (   ($cs eq 'chromosome')
-            && eval { # FIXME: why does it have to be 'eval'?
-                my ($asm_def) = @{ $self->satellite_dba($metakey)
-                                   ->get_MetaContainer()->list_value_by_key('assembly.default') };
-                $asm_def;
-           }
-           )
-        || 'UNKNOWN';
-}
-
-sub get_mapper_dba {
-    my ($self, $metakey, $cs, $csver_orig, $csver_remote, $name, $type) = @_;
-
-    if(!$metakey) {
-        $self->log("Working with pipeline_db directly, no remapping is needed.");
-        return (undef, $csver_orig);
-    } elsif($metakey eq '.') {
-        $self->log("Working with otter_db directly, no remapping is needed.");
-        return (undef, $csver_orig);
-    }
-
-    $csver_remote = $self->cached_csver($metakey, $cs, $csver_remote);
-    if($cs eq 'chromosome') {
-        if($csver_remote =~/^otter$/i) {
-            $self->log("Working with another Otter database, no remapping is needed.");
-            return (undef, $csver_remote);
-        } elsif($csver_remote eq 'UNKNOWN') {
-            $self->log("The database's default assembly is not set correctly, but you can override it manually");
-            return (undef, undef);
-        }
-    }
-
-    if(!$self->running_headcode()) {
-        $self->log("Working with unknown OLD API database, please do the remapping on client side.");
-        return (undef, $csver_remote);
-    }
-
-    ## What remains is head version of a non-otter satellite_db
+sub otter_assemby_is_equivalent { # to the desired $csver_remote
+    my ($self, $cs, $name, $type, $csver_orig, $csver_remote) = @_;
 
     my $edba = $self->satellite_dba( 'equiv_asm_db' ); # the value is either '=otter' (for new schema)
                                                        # or '=pipeline' (for old schema DB with new schema pipeline)
@@ -360,99 +274,145 @@ sub get_mapper_dba {
 
     my %asm_is_equiv = map { ($_->value() => 1) } @{ $equiv_slice->get_all_Attributes('equiv_asm') };
 
-    if($asm_is_equiv{$csver_remote}) { # we can simply rename instead of mapping
+    return $asm_is_equiv{$csver_remote};
+}
 
-        $self->log("This $cs is equivalent to '$name' in our reference '$csver_remote' assembly");
-        return (undef, $csver_remote);
+sub init_csver {
+    my ($self, $cs, $metakey) = @_; # metakey can even be '.' or ''
 
-    } else { # assemblies are guaranteed to differ!
-
-        my $mapper_metakey = "mapper_db.${csver_remote}";
-
-        if( my $mdba = $self->satellite_dba($mapper_metakey) ) {
-            return ($mdba, $csver_remote);
+    if($cs eq 'chromosome') {
+        if(!$metakey || ($metakey eq '.')) {
+            return 'Otter'; # just for saving time,
+                            # as we know already that otter and pipeline databases should have 'Otter'
+                            # as their meta.'assembly.default' value
         } else {
-            $self->log("No '$mapper_metakey' defined in meta table => cannot map between assemblies => exiting");
-            return (undef, undef);
+            my ($asm_def) = @{ $self->satellite_dba($metakey)
+                               ->get_MetaContainer()->list_value_by_key('assembly.default') };
+            return $asm_def || 'UNKNOWN';
         }
+    } else {
+        return undef;  # defaults to NULL in the DB
     }
 }
 
 sub fetch_mapped_features {
     my ($self, $feature_name, $fetching_method, $call_parms,
         $cs, $name, $type, $start, $end, $metakey, $csver_orig, $csver_remote,
+        $das_style_mapping,
     ) = @_;
 
-    $metakey      ||= '';    # defaults to pipeline
-    $csver_orig   ||= undef; # defaults to NULL in the DB
-    $csver_remote ||= undef; # defaults to NULL in the DB
-
-    my $sdba = $self->satellite_dba( $metakey );
-    my ($mdba, $csver_target) = $self->get_mapper_dba( $metakey, $cs, $csver_orig, $csver_remote, $name, $type);
+    $metakey      ||= ''; # defaults to pipeline
+    $cs           ||= 'chromosome';
+    $csver_orig   ||= $self->init_csver($cs, '');
+    $csver_remote ||= $self->init_csver($cs, $metakey);
 
     my $features = [];
 
-    if($mdba) {
-        $self->log("Proceeding with mapping code");
+    if(  ($cs ne 'chromosome') || ($csver_orig eq $csver_remote)
+       || $self->otter_assemby_is_equivalent($cs, $name, $type, $csver_orig, $csver_remote) ) {
+                # no mapping, just (cross)-fetching:
 
-        my $original_slice_on_mapper = $self->get_slice($mdba, $cs, $name, $type, $start, $end, $csver_orig);
-        my $proj_segments_on_mapper = $original_slice_on_mapper->project( $cs, $csver_target );
+        my $csver_target = ($cs ne 'chromosome') ? $csver_orig : $csver_remote;
+        
+        $self->log("Assuming the mappings to be identical, just fetching from {$metakey}$cs:$csver_target");
 
-        my $sa_on_target = $sdba->get_SliceAdaptor();
-
-        foreach my $segment (@$proj_segments_on_mapper) {
-            my $projected_slice_on_mapper = $segment->to_Slice();
-
-            my $target_slice_on_target = $sa_on_target->fetch_by_region(
-                $projected_slice_on_mapper->coord_system()->name(),
-                $projected_slice_on_mapper->seq_region_name(),
-                $projected_slice_on_mapper->start(),
-                $projected_slice_on_mapper->end(),
-                $projected_slice_on_mapper->strand(),
-                $projected_slice_on_mapper->coord_system()->version(),
-            );
-
-            my $target_fs_on_target_segment
-                = $target_slice_on_target->$fetching_method(@$call_parms) ||
-                $self->error_exit("Could not fetch anything - analysis may be missing from the DB");
-
-            $self->log('***** : '.scalar(@$target_fs_on_target_segment)." ${feature_name}s found on the slice");
-
-            # foreach my $target_feature (@$target_fs_on_target_segment) {
-            ## this is supposed to be faster:
-            #
-            while (my $target_feature = shift @$target_fs_on_target_segment) {
-
-                if($target_feature->can('propagate_slice')) {
-                    $target_feature->propagate_slice($projected_slice_on_mapper);
-                } else {
-                    $target_feature->slice($projected_slice_on_mapper);
-                }
-
-                my $fname = sprintf( "%s [%d..%d]", 
-                                    $target_feature->display_id(),
-                                    $target_feature->start(),
-                                    $target_feature->end() );
-                $self->log("Transferring $feature_name $fname from {".$target_feature->slice->name."} onto {".$original_slice_on_mapper->name.'}');
-                if( my $transferred = $target_feature->transfer($original_slice_on_mapper) ) {
-                    push @$features, $transferred;
-                    $self->log("Transfer OK");
-                } else {
-                    $self->log("Transfer failed");
-                }
-            }
-        }
-
-    } elsif(($cs ne 'chromosome') || defined($csver_target)) {
-        $self->log("Assuming the mappings to be identical, just cross-fetching");
-
+        my $sdba = $self->satellite_dba( $metakey );
         my $original_slice = $self->get_slice($sdba, $cs, $name, $type, $start, $end, $csver_target);
 
         $features = $original_slice->$fetching_method(@$call_parms)
             || $self->error_exit("Could not fetch anything - analysis may be missing from the DB");
-    } else {
-            # some not-so-critical mapping error,
-            # $features == []
+
+    } else { # let's try to do the mapping:
+
+        my $mapper_metakey = "mapper_db.${csver_remote}";
+
+        if( my $mdba = $self->satellite_dba($mapper_metakey) ) {
+
+            $self->log("Proceeding with mapping code");
+
+            my $original_slice_on_mapper = $self->get_slice($mdba, $cs, $name, $type, $start, $end, $csver_orig);
+            my $proj_segments_on_mapper = $original_slice_on_mapper->project( $cs, $csver_remote );
+
+            if($das_style_mapping) { # In this mode there is no target_db involved.
+                                     # Features are put directly on the mapper target slice and then mapped back.
+                foreach my $segment (@$proj_segments_on_mapper) {
+                    my $projected_slice_on_mapper = $segment->to_Slice();
+
+                    my $target_fs_on_mapper_segment
+                        = $projected_slice_on_mapper->$fetching_method(@$call_parms) ||
+                            $self->error_exit("Could not fetch anything - analysis may be missing from the DB");
+
+                    $self->log('***** : '.scalar(@$target_fs_on_mapper_segment)." ${feature_name}s created on the slice");
+
+                    while (my $target_feature = shift @$target_fs_on_mapper_segment) {
+                        my $fname = sprintf( "%s [%d..%d]", 
+                                            $target_feature->display_id(),
+                                            $target_feature->start(),
+                                            $target_feature->end() );
+                        $self->log("Transferring $feature_name $fname from {".$target_feature->slice->name
+                                   ."} onto {".$original_slice_on_mapper->name.'}');
+                        if( my $transferred = $target_feature->transfer($original_slice_on_mapper) ) {
+                            push @$features, $transferred;
+                            $self->log("Transfer OK");
+                        } else {
+                            $self->log("Transfer failed");
+                        }
+                    }
+                }
+
+            } else { # full mapping with target database involved
+
+                my $sdba = $self->satellite_dba( $metakey );
+                my $sa_on_target = $sdba->get_SliceAdaptor();
+
+                foreach my $segment (@$proj_segments_on_mapper) {
+                    my $projected_slice_on_mapper = $segment->to_Slice();
+
+                    my $target_slice_on_target = $sa_on_target->fetch_by_region(
+                        $projected_slice_on_mapper->coord_system()->name(),
+                        $projected_slice_on_mapper->seq_region_name(),
+                        $projected_slice_on_mapper->start(),
+                        $projected_slice_on_mapper->end(),
+                        $projected_slice_on_mapper->strand(),
+                        $projected_slice_on_mapper->coord_system()->version(),
+                    );
+
+                    my $target_fs_on_target_segment
+                        = $target_slice_on_target->$fetching_method(@$call_parms) ||
+                        $self->error_exit("Could not fetch anything - analysis may be missing from the DB");
+
+                    $self->log('***** : '.scalar(@$target_fs_on_target_segment)." ${feature_name}s found on the slice");
+
+                    # foreach my $target_feature (@$target_fs_on_target_segment) {
+                    ## this is supposed to be faster:
+                    #
+                    while (my $target_feature = shift @$target_fs_on_target_segment) {
+
+                        if($target_feature->can('propagate_slice')) {
+                            $target_feature->propagate_slice($projected_slice_on_mapper);
+                        } else {
+                            $target_feature->slice($projected_slice_on_mapper);
+                        }
+
+                        my $fname = sprintf( "%s [%d..%d]", 
+                                            $target_feature->display_id(),
+                                            $target_feature->start(),
+                                            $target_feature->end() );
+                        $self->log("Transferring $feature_name $fname from {".$target_feature->slice->name
+                                   ."} onto {".$original_slice_on_mapper->name.'}');
+                        if( my $transferred = $target_feature->transfer($original_slice_on_mapper) ) {
+                            push @$features, $transferred;
+                            $self->log("Transfer OK");
+                        } else {
+                            $self->log("Transfer failed");
+                        }
+                    } # for each feature
+                } # for each segment
+            }
+
+        } else { # if it wasn't possible to connect to the mapper
+            $self->error_exit("No '$mapper_metakey' defined in meta table => cannot map between assemblies");
+        }
     }
 
     $self->log("Total of ".scalar(@$features).' '.join('/', grep { defined($_) && !ref($_) } @$call_parms)
