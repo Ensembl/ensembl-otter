@@ -14,7 +14,7 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::Otter::DBSQL::DBAdaptor;
 use Bio::Vega::DBSQL::DBAdaptor;
 
-use base ('Bio::Otter::Compatibility', 'Bio::Otter::SpeciesDat');
+use base ('Bio::Otter::SpeciesDat');
 
 sub new { # just to make it possible to instantiate an object
     my $pkg = shift @_;
@@ -40,13 +40,6 @@ sub current_dataset_param {
     return $self->get_dataset_param( $self->dataset_name() , $param_name);
 }
 
-sub dataset_headcode {
-    my $self = shift @_;
-
-    return $self->current_dataset_param('HEADCODE');
-}
-
-
 sub otter_dba {
     my $self = shift @_;
 
@@ -54,20 +47,7 @@ sub otter_dba {
         return $self->{'_odba'};
     }
 
-    ########## CODEBASE tricks ########################################
-
-    my $running_headcode = $self->running_headcode();
-    my $dataset_headcode = $self->dataset_headcode();
-
-    my $adaptor_class = $running_headcode
-        ? ( $dataset_headcode
-                ? 'Bio::Vega::DBSQL::DBAdaptor'     # headcode anyway, get the best adaptor
-                : 'Bio::EnsEMBL::DBSQL::DBAdaptor'  # new pipeline of the old otter, get the minimal adaptor
-          )
-        : ( $dataset_headcode
-                ? 'Bio::EnsEMBL::DBSQL::DBAdaptor'  # old pipeline of the new otter, get the minimal adaptor
-                : 'Bio::Otter::DBSQL::DBAdaptor'    # oldcode anyway, get the best adaptor
-        );
+    my $adaptor_class = 'Bio::Vega::DBSQL::DBAdaptor';
 
     if(@_) { # let's check that the class is ok
         my $odba = shift @_;
@@ -78,7 +58,6 @@ sub otter_dba {
         }
     }
 
-    ########## AND DB CONNECTION #######################################
 
     my( $odba, $dnadb );
 
@@ -120,12 +99,16 @@ sub otter_dba {
     return $self->{'_odba'} = $odba;
 }
 
-sub satellite_dba {
-    my ($self, $metakey, $satehead) = @_;
+sub default_assembly {
+    my ($self, $dba) = @_;
 
-    if(!defined($satehead)) { # not just 'false', but truly undefined
-        $satehead = $self->running_headcode();
-    }
+    my ($asm_def) = @{ $dba->get_MetaContainer()->list_value_by_key('assembly.default') };
+
+    return $asm_def || 'UNKNOWN';
+}
+
+sub satellite_dba {
+    my ($self, $metakey) = @_;
 
     # Note: as multiple satellite_db's can be used, we have to explicitly send $metakey
 
@@ -138,18 +121,16 @@ sub satellite_dba {
 
     if($metakey eq '.') {
         $self->log("Connecting to the otter_db itself");
-        return $self->otter_dba();      # so $satehead is ignored
+        return $self->otter_dba();
     }
 
     my $kind;
 
     if(! $metakey) {
-        $metakey = $satehead
-            ? 'pipeline_db_head'
-            : 'pipeline_db';
-        $kind = 'pipeline DB'
+        $metakey = 'pipeline_db_head';
+        $kind    = 'pipeline DB'
     } else {
-        $kind = 'satellite DB';
+        $kind    = 'satellite DB';
     }
 
     if($self->{_sdba}{$metakey}) {
@@ -157,23 +138,20 @@ sub satellite_dba {
         return $self->{_sdba}{$metakey};
     }
 
-    $self->log("connecting to the ".($satehead?'NEW':'OLD')." schema $kind using [$metakey] meta entry...");
+    $self->log("connecting to the $kind using [$metakey] meta entry...");
 
-    my $running_headcode = $self->running_headcode();
-    my $adaptor_class = ($running_headcode || $satehead)
-            ? 'Bio::EnsEMBL::DBSQL::DBAdaptor'  # get the minimal adaptor (may be extended to Vega in future)
-            : 'Bio::Otter::DBSQL::DBAdaptor';   # get the best adaptor for old API satellite
+    my $adaptor_class = 'Bio::EnsEMBL::DBSQL::DBAdaptor'; # get the minimal adaptor (may be extended to Vega in future)
 
     my ($opt_str) = @{ $self->otter_dba()->get_MetaContainer()->list_value_by_key($metakey) };
 
     if(!$opt_str) {
         $self->error_exit("Could not find meta entry for '$metakey' satellite db");
-    } elsif($opt_str =~ /^\=otter/) { # can't guarantee it is specifically '_head'
-        return $self->otter_dba();    # and can't pass it further
-    } elsif($opt_str =~ /^\=pipeline/) { # can't guarantee it is specifically '_head'
-        return $self->satellite_dba('', $satehead);
+    } elsif($opt_str =~ /^\=otter/) {
+        return $self->otter_dba();
+    } elsif($opt_str =~ /^\=pipeline/) {
+        return $self->satellite_dba('');
     } elsif($opt_str =~ /^\=(\w+)$/) {
-        return $self->satellite_dba($1, $satehead);
+        return $self->satellite_dba($1);
     }
 
     my %anycase_options = (
@@ -196,16 +174,10 @@ sub satellite_dba {
     my $sdba = $adaptor_class->new(%uppercased_options)
         || $self->error_exit("Couldn't connect to '$metakey' satellite db");
 
-
-        # not the most beautiful way (and place) to do it :(
-    my ($asm_def) = @{ $sdba->get_MetaContainer()->list_value_by_key('assembly.default') };
-    if ($asm_def and $asm_def =~ /^otter$/i) {
+        # Unfortunately we can only do it once the connection established, hence re-blessing:
+    if( lc($self->default_assembly($sdba)) eq 'otter') {
         bless $sdba,'Bio::Vega::DBSQL::DBAdaptor';
     }
-
-
-        # if it's needed AND we can...
-    $sdba->assembly_type($self->otter_dba()->assembly_type()) unless ($satehead || $running_headcode);
 
     $self->log("... with parameters: ".join(', ', map { "$_=".$uppercased_options{$_} } keys %uppercased_options ));
 
@@ -219,32 +191,29 @@ sub get_slice { # codebase-independent version for scripts
 
     $cs ||= 'chromosome'; # can't make a slice without cs
 
-    if($self->running_headcode()) {
-
-        if(!$csver && ($cs eq 'chromosome')) {
-            $csver = 'Otter';
-        }
-
-            # The following statement ensures
-            # that we use 'assembly type' as the chromosome name
-            # only for Otter chromosomes.
-            # EnsEMBL chromosomes will have simple names.
-        my ($segment_attr, $segment_name);
-        ($segment_attr, $segment_name) = (($cs eq 'chromosome') && ($csver eq 'Otter'))
-            ? ('type', $type)
-            : ('name', $name);
-
-        $self->error_exit("$cs '$segment_attr' attribute not set ") unless $segment_name;
-
-        $slice =  $dba->get_SliceAdaptor()->fetch_by_region(
-            $cs,
-	        $segment_name,
-            $start,
-            $end,
-            1,      # somehow strand parameter is needed
-            $csver,
-        );
+    if(!$csver && ($cs eq 'chromosome')) {
+        $csver = 'Otter';
     }
+
+        # The following statement ensures
+        # that we use 'assembly type' as the chromosome name
+        # only for Otter chromosomes.
+        # EnsEMBL chromosomes will have simple names.
+    my ($segment_attr, $segment_name);
+    ($segment_attr, $segment_name) = (($cs eq 'chromosome') && ($csver eq 'Otter'))
+        ? ('type', $type)
+        : ('name', $name);
+
+    $self->error_exit("$cs '$segment_attr' attribute not set ") unless $segment_name;
+
+    $slice =  $dba->get_SliceAdaptor()->fetch_by_region(
+        $cs,
+        $segment_name,
+        $start,
+        $end,
+        1,      # somehow strand parameter is needed
+        $csver,
+    );
 
     if(not $slice) {
         $self->log('Could not get a slice, probably not (yet) loaded into satellite db');
@@ -286,9 +255,7 @@ sub init_csver {
                             # as we know already that otter and pipeline databases should have 'Otter'
                             # as their meta.'assembly.default' value
         } else {
-            my ($asm_def) = @{ $self->satellite_dba($metakey)
-                               ->get_MetaContainer()->list_value_by_key('assembly.default') };
-            return $asm_def || 'UNKNOWN';
+            return $self->default_assembly($self->satellite_dba($metakey));
         }
     } else {
         return undef;  # defaults to NULL in the DB

@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-05-15 10:51:16 $
-# Id:            $Id: nph-get_ditag_features,v 1.13 2008-05-15 10:51:16 lg4 Exp $
+# Last modified: $Date: 2008-05-21 16:06:06 $
+# Id:            $Id: nph-get_ditag_features,v 1.14 2008-05-21 16:06:06 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_ditag_features,v $
 
 use strict;
@@ -14,10 +14,6 @@ use Bio::Otter::ServerScriptSupport;
 use Bio::Otter::Lace::ViaText ('%OrderOfOptions');
 
 my $server = Bio::Otter::ServerScriptSupport->new;
-
-if(!$server->running_headcode()) {
-    $server->error_exit("This kind of data is only available from new API databases. Set pipehead to 1");
-}
 
 my $analysis_name = $server->param('analysis');
 my $ditypes       = $server->param('ditypes');

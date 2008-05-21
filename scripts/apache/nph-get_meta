@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-05-15 10:51:16 $
-# Id:            $Id: nph-get_meta,v 1.10 2008-05-15 10:51:16 lg4 Exp $
+# Last modified: $Date: 2008-05-21 16:06:06 $
+# Id:            $Id: nph-get_meta,v 1.11 2008-05-21 16:06:06 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_meta,v $
 
 use strict;
@@ -21,9 +21,7 @@ my $dba = ($which eq 'pipe')
     ? $server->satellite_dba( '' )
     : $server->otter_dba();
 
-my $dbc = $server->running_headcode() ? $dba->dbc() : $dba;
-
-my $sth = $dbc->prepare(qq{
+my $sth = $dba->dbc()->prepare(qq{
     SELECT meta_key, meta_value
       FROM meta
 }.($key ? qq{   WHERE meta_key = '$key' } : '')
