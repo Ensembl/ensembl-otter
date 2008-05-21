@@ -558,15 +558,12 @@ sub status_refresh_for_DataSet_SequenceSet{
 
     # return unless Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
 
-    my $pipehead = Bio::Otter::Lace::Defaults::pipehead();
-
     my $response = $self->otter_response_content(
         'GET',
         'get_analyses_status',
         {
             'dataset'  => $ds->name(),
             'type'     => $ss->name(),
-            'pipehead'  => $pipehead ? 1 : 0,
         },
     );
 
@@ -615,7 +612,6 @@ sub find_string_match_in_clones {
         'find_clones',
         {
             'dataset'  => $dsname,
-            'pipehead' => $ds->HEADCODE(),
             'qnames'   => $qnames_string,
             'unhide'   => $unhide_flag || 0,
             defined($ssname) ? ('type' => $ssname ) : (),
@@ -637,8 +633,6 @@ sub find_string_match_in_clones {
 sub get_meta {
     my ( $self, $dsname, $which, $key) = @_;
 
-    my $pipehead = Bio::Otter::Lace::Defaults::pipehead();
-
     my $response = $self->otter_response_content(
         'GET',
         'get_meta',
@@ -646,7 +640,6 @@ sub get_meta {
             'dataset'  => $dsname,
             defined($which) ? ('which' => $which ) : (),
             defined($key)   ? ('key' => $key ) : (),
-            'pipehead'  => $pipehead ? 1 : 0,
         },
     );
 
@@ -668,7 +661,6 @@ sub lock_refresh_for_DataSet_SequenceSet {
         {
             'dataset'  => $ds->name(),
             'type'     => $ss->name(),
-            'pipehead' => $ds->HEADCODE(),
         },
     );
 
@@ -720,7 +712,6 @@ sub fetch_all_SequenceNotes_for_DataSet_SequenceSet {
         {
             'type'     => $ss->name(),
             'dataset'  => $ds->name(),
-            'pipehead' => $ds->HEADCODE(),
         },
     );
 
@@ -785,7 +776,6 @@ sub _sequence_note_action {
         'set_sequence_note',
         {
             'dataset'   => $dsname,
-            'pipehead'  => $ds->HEADCODE(),
             'action'    => $action,
             'contig'    => $contig_name,
             'email'     => $self->email(),
@@ -813,7 +803,6 @@ sub lock_region {
             'name'     => $chr_name,
             'start'    => $chr_start,
             'end'      => $chr_end,
-            'pipehead' => $ds->HEADCODE(),
         }
     );
 }
@@ -837,7 +826,6 @@ sub get_xml_region {
             'name'     => $chr_name,
             'start'    => $chr_start,
             'end'      => $chr_end,
-            'pipehead' => $ds->HEADCODE(),
         }
     );
 
@@ -908,7 +896,6 @@ sub get_all_SequenceSets_for_DataSet {
 					   'get_sequencesets',
 					   {
 					    'dataset'  => $ds->name(),
-                        'pipehead' => $ds->HEADCODE(),
 					   }
 					  );
   # stream parsing expat non-validating parser
@@ -930,7 +917,6 @@ sub get_SequenceSet_AccessList_for_DataSet {
 					   'get_sequenceset_accesslist',
 					   {
 					    'dataset'  => $ds->name,
-                        'pipehead' => $ds->HEADCODE(),
 					   }
 					  );
   # stream parsing expat non-validating parser
@@ -953,7 +939,6 @@ sub get_all_CloneSequences_for_DataSet_SequenceSet {
         {
             'dataset'     => $ds->name(),
             'sequenceset' => $ss->name(),
-            'pipehead'    => $ds->HEADCODE(),
         }
     );
   # stream parsing expat non-validating parser
@@ -997,7 +982,6 @@ sub save_otter_xml {
         {
             'email'    => $self->email,
             'dataset'  => $dsname,
-            'pipehead' => $ds->HEADCODE(),
             'data'     => $xml,
         }
     );
@@ -1018,7 +1002,6 @@ sub unlock_otter_xml {
         {
             'email'    => $self->email,
             'dataset'  => $dsname,
-            'pipehead' => $ds->HEADCODE(),
             'data'     => $xml,
         }
     );
