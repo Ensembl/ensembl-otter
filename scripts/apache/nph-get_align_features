@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-05-15 10:51:16 $
-# Id:            $Id: nph-get_align_features,v 1.13 2008-05-15 10:51:16 lg4 Exp $
+# Last modified: $Date: 2008-05-21 16:06:06 $
+# Id:            $Id: nph-get_align_features,v 1.14 2008-05-21 16:06:06 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_align_features,v $
 
 use strict;
@@ -35,9 +35,8 @@ foreach my $af (@$afs) {
     $hd_hash{$af->hseqname()} = '';
 }
 
-    # Fetch the hit descriptions from a pipeline (depending on $running_headcode):
-my $sdba = $server->satellite_dba( '' );
-my $sdbc = $server->running_headcode() ? $sdba->dbc() : $sdba;
+    # Fetch the hit descriptions from the pipeline
+my $sdbc = $server->satellite_dba( '' )->dbc();
 my $hd_adaptor = Bio::Otter::DBSQL::SimpleBindingAdaptor->new( $sdbc );
 $hd_adaptor->fetch_into_hash(
     'hit_description',

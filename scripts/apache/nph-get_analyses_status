@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-05-15 10:51:16 $
-# Id:            $Id: nph-get_analyses_status,v 1.10 2008-05-15 10:51:16 lg4 Exp $
+# Last modified: $Date: 2008-05-21 16:06:06 $
+# Id:            $Id: nph-get_analyses_status,v 1.11 2008-05-21 16:06:06 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_analyses_status,v $
 
 use strict;
@@ -53,50 +53,30 @@ my $server = Bio::Otter::ServerScriptSupport->new;
 my $assembly = $server->require_argument('type');
 my $component_cs = $server->param('component_cs') || 'contig';
 
-my $running_headcode = $server->running_headcode();
-my $pdba = $server->satellite_dba( '' ); # pipeline
-my $pdbc = $running_headcode ? $pdba->dbc() : $pdba;
+my $pdbc = $server->satellite_dba( '' )->dbc();  # pipeline dbc
 
 my @input_ids = ();
 
-if($running_headcode) {
+my $sth = $pdbc->prepare(qq{
+    SELECT cmp.name, cs.version
+    FROM coord_system cs
+      , seq_region cmp
+      , assembly a
+      , seq_region asm
+    WHERE asm.name = '$assembly'
+      AND asm.seq_region_id = a.asm_seq_region_id
+      AND a.cmp_seq_region_id = cmp.seq_region_id
+      AND cmp.coord_system_id = cs.coord_system_id
+      AND cs.name = '$component_cs'
+});
+$sth->execute();
 
-    my $sth = $pdbc->prepare(qq{
-        SELECT cmp.name, cs.version
-        FROM coord_system cs
-          , seq_region cmp
-          , assembly a
-          , seq_region asm
-        WHERE asm.name = '$assembly'
-          AND asm.seq_region_id = a.asm_seq_region_id
-          AND a.cmp_seq_region_id = cmp.seq_region_id
-          AND cmp.coord_system_id = cs.coord_system_id
-          AND cs.name = '$component_cs'
-    });
-    $sth->execute();
-
-    while (my ($cmp_name, $cs_version) = $sth->fetchrow) {
-        my @syll = split(/\./, $cmp_name);
-        my $to = pop @syll;
-        my $from = pop @syll;
-        if(!defined($cs_version)) { $cs_version = ''; }
-        push @input_ids, join(':', $component_cs, $cs_version, $cmp_name, $from, $to, 1);
-    }
-
-} else {
-
-    my $sth = $pdbc->prepare(qq{
-        SELECT c.name
-        FROM assembly a
-          , contig c
-        WHERE a.type = '$assembly'
-          AND a.contig_id = c.contig_id
-    });
-    $sth->execute();
-
-    while (my ($cmp_name) = $sth->fetchrow) {
-        push @input_ids, $cmp_name;
-    }
+while (my ($cmp_name, $cs_version) = $sth->fetchrow) {
+    my @syll = split(/\./, $cmp_name);
+    my $to = pop @syll;
+    my $from = pop @syll;
+    if(!defined($cs_version)) { $cs_version = ''; }
+    push @input_ids, join(':', $component_cs, $cs_version, $cmp_name, $from, $to, 1);
 }
 
 my %skeleton_hash = map { ($_ => []) } get_possible_analyses($pdbc);

@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-05-15 10:51:16 $
-# Id:            $Id: nph-get_cons_simple_features,v 1.13 2008-05-15 10:51:16 lg4 Exp $
+# Last modified: $Date: 2008-05-21 16:06:06 $
+# Id:            $Id: nph-get_cons_simple_features,v 1.14 2008-05-21 16:06:06 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_cons_simple_features,v $
 
 use strict;
@@ -79,10 +79,6 @@ sub Bio::EnsEMBL::Slice::get_all_ConsFeatures {
 }
 
 my $server = Bio::Otter::ServerScriptSupport->new;
-
-if(!$server->running_headcode()) {
-    $server->error_exit("This kind of data can only be fetched in pipehead==1 mode");
-}
 
 my $cutoff = $server->param('cutoff') || 0;
 

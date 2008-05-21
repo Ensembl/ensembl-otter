@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-05-15 10:51:16 $
-# Id:            $Id: nph-get_locks,v 1.11 2008-05-15 10:51:16 lg4 Exp $
+# Last modified: $Date: 2008-05-21 16:06:06 $
+# Id:            $Id: nph-get_locks,v 1.12 2008-05-21 16:06:06 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_locks,v $
 
 use strict;
@@ -14,15 +14,10 @@ use Bio::Otter::ServerScriptSupport;
 
 my $server = Bio::Otter::ServerScriptSupport->new;
 
-my $running_headcode = $server->running_headcode();
-my $odba = $server->otter_dba();
-my $odbc = $running_headcode ? $odba->dbc() : $odba;
-
 my $asm_type = $server->param('type');
 my $aut_name = $server->param('author');
 
-my $sql = $running_headcode
-? qq{
+my $sql = qq{
     SELECT DISTINCT cl.name, concat(embl_acc.value, '.', embl_version.value), ctg.name,
            l.hostname, l.timestamp, aut.author_name, aut.author_email
       FROM seq_region cl,
@@ -49,26 +44,9 @@ my $sql = $running_headcode
 .qq{
        AND l.contig_lock_id IS NOT NULL
   ORDER BY l.timestamp
-}
-: qq{
-    SELECT cl.name, concat(cl.embl_acc, '.', cl.embl_version), ctg.name,
-           l.hostname, l.timestamp, aut.author_name, aut.author_email
-      FROM clone cl,
-           contig ctg }
-.($asm_type ? qq{ , assembly asm } : '' )
-.qq{
- LEFT JOIN clone_lock l ON cl.clone_id = l.clone_id
- LEFT JOIN author aut ON aut.author_id = l.author_id
-    WHERE ctg.clone_id = cl.clone_id
-}
-.($asm_type ? qq{ AND asm.contig_id = ctg.contig_id AND asm.type = "$asm_type" } : '')
-.($aut_name ? qq{ AND aut.author_name = "$aut_name" } : '')
-.qq{
-       AND l.clone_lock_id IS NOT NULL
-  ORDER BY l.timestamp
 };
 
-my $sth = $odbc->prepare($sql);
+my $sth = $server->otter_dba()->dbc()->prepare($sql);
 $sth->execute();
 
 my $output_string = '';

@@ -24,7 +24,6 @@ package Bio::Otter::ServerScriptSupport;
 use strict;
 use warnings;
 
-use Bio::Otter::Author;
 use Bio::Vega::Author;
 use Bio::Otter::Version;
 use Bio::Otter::Lace::TempFile;
@@ -336,19 +335,14 @@ sub make_Author_obj {
     $author_name ||= $self->authorized_user;
     
     #my $author_email = $self->require_argument('email');
-    my $class        = $self->running_headcode() ? 'Bio::Vega::Author' : 'Bio::Otter::Author';
 
-    return $class->new(-name => $author_name, -email => $author_name);
+    return Bio::Vega::Author->new(-name => $author_name, -email => $author_name);
 }
 
 sub fetch_Author_obj {
     my ($self, $author_name) = @_;
 
     $author_name ||= $self->authorized_user;
-
-    if($self->running_headcode() != $self->dataset_headcode()) {
-        $self->error_exit("RunningHeadcode != DatasetHeadcode, cannot fetch Author");
-    }
 
     my $author_adaptor = $self->otter_dba()->get_AuthorAdaptor();
 

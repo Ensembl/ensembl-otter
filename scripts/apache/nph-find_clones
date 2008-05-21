@@ -3,16 +3,15 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-05-15 10:51:16 $
-# Id:            $Id: nph-find_clones,v 1.10 2008-05-15 10:51:16 lg4 Exp $
+# Last modified: $Date: 2008-05-21 16:06:06 $
+# Id:            $Id: nph-find_clones,v 1.11 2008-05-21 16:06:06 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-find_clones,v $
 
 use strict;
 use SangerPaths qw{ core bioperl123 ensembl49 otter49 };
 
 use Bio::Otter::ServerScriptSupport;
-use Bio::Otter::CloneFinder; # $server->running_headcode()==0 version
-use Bio::Vega::CloneFinder;  # $server->running_headcode()==1 version
+use Bio::Vega::CloneFinder;
 
 my $server = Bio::Otter::ServerScriptSupport->new;
 
@@ -20,11 +19,7 @@ my $qnames       = $server->require_argument('qnames');
 my $filter_atype = $server->param('type')   || '';
 my $unhide       = $server->param('unhide') || 0;
 
-my $finder_class = $server->running_headcode()
-    ? 'Bio::Vega::CloneFinder'
-    : 'Bio::Otter::CloneFinder';
-
-my $finder = $finder_class->new( $server->otter_dba(), [ split(',', $qnames) ]);
+my $finder = Bio::Vega::CloneFinder->new( $server->otter_dba(), [ split(',', $qnames) ]);
 
 $finder->find($unhide);
 
