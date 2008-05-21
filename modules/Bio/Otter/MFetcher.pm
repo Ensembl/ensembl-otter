@@ -312,12 +312,10 @@ sub fetch_mapped_features {
        || $self->otter_assemby_is_equivalent($cs, $name, $type, $csver_orig, $csver_remote) ) {
                 # no mapping, just (cross)-fetching:
 
-        my $csver_target = ($cs ne 'chromosome') ? $csver_orig : $csver_remote;
-        
-        $self->log("Assuming the mappings to be identical, just fetching from {$metakey}$cs:$csver_target");
+        $self->log("Assuming the mappings to be identical, just fetching from {$metakey}$cs:$csver_orig");
 
         my $sdba = $self->satellite_dba( $metakey );
-        my $original_slice = $self->get_slice($sdba, $cs, $name, $type, $start, $end, $csver_target);
+        my $original_slice = $self->get_slice($sdba, $cs, $name, $type, $start, $end, $csver_orig);
 
         $features = $original_slice->$fetching_method(@$call_parms)
             || $self->error_exit("Could not fetch anything - analysis may be missing from the DB");
