@@ -331,7 +331,14 @@ sub fetch_mapped_features {
             $self->log("Proceeding with mapping code");
 
             my $original_slice_on_mapper = $self->get_slice($mdba, $cs, $name, $type, $start, $end, $csver_orig);
-            my $proj_segments_on_mapper = $original_slice_on_mapper->project( $cs, $csver_remote );
+
+            my $proj_segments_on_mapper;
+            eval {
+                $proj_segments_on_mapper = $original_slice_on_mapper->project( $cs, $csver_remote );
+            };
+            if($@) {
+                die "Unable to project: $type:$csver_orig($start..$end)->$csver_remote. Check the mapping.";
+            }
 
             if($das_style_mapping) { # In this mode there is no target_db involved.
                                      # Features are put directly on the mapper target slice and then mapped back.
