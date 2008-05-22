@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-05-22 10:40:44 $
-# Id:            $Id: nph-get_clonesequences_fast,v 1.11 2008-05-22 10:40:44 jgrg Exp $
+# Last modified: $Date: 2008-05-22 10:44:21 $
+# Id:            $Id: nph-get_clonesequences_fast,v 1.12 2008-05-22 10:44:21 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_clonesequences_fast,v $
 
 use strict;
@@ -17,7 +17,7 @@ my $server = Bio::Otter::ServerScriptSupport->new;
 my $dataset     =  $server->require_argument('dataset');
 my $sequenceset =  $server->require_argument('sequenceset');
 
-my $odba = $server->otter_dba();
+my $dbc = $server->otter_dba->dbc;
 
 # Allow local scripts to access without authorization
 unless ($server->local_user) {
@@ -97,7 +97,7 @@ my $sql = q{
     ORDER BY chr2ctg.asm_start
     };
 
-my $sth = $odbc->dbc->prepare($sql);
+my $sth = $dbc->prepare($sql);
 $sth->execute($sequenceset);
 while (my ($cl_name, $intl_name, $acc,  $sv,
        $ctg_name,  $ctg_length,
