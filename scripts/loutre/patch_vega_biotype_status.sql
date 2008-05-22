@@ -55,3 +55,15 @@
    UPDATE transcript
     SET biotype = 'transcribed_pseudogene'
     WHERE biotype = 'expressed_pseudogene';
+
+   UPDATE transcript
+    SET biotype = 'IG_gene'
+    WHERE biotype = 'ig_gene'
+
+   UPDATE transcript
+    SET biotype = 'IG_pseudogene'
+    WHERE biotype = 'ig_pseudogene'
+
+   UPDATE transcript
+    SET biotype = 'transcribed_pseudogene'
+    WHERE biotype = 'expressed_pseudogene'
