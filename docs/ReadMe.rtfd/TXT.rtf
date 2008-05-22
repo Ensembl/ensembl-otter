@@ -1,4 +1,4 @@
-{\rtf1\mac\ansicpg10000\cocoartf824\cocoasubrtf440
+{\rtf1\mac\ansicpg10000\cocoartf824\cocoasubrtf470
 {\fonttbl\f0\fnil\fcharset77 LucidaGrande-Bold;\f1\fnil\fcharset77 LucidaGrande;\f2\fnil\fcharset77 Monaco;
 \f3\fswiss\fcharset77 Helvetica;}
 {\colortbl;\red255\green255\blue255;}
@@ -53,6 +53,8 @@ When you have done this, send the email address you signed up with to {\field{\*
 \f0\b\fs28 Pfetch server
 \f1\b0\fs24 \
 \
+Choose the "Restart local pfetch server" menu option if blixem or dotter are failing to fetch sequence (DNA or peptide) data.\
+\
 The distribution uses a Sanger service called pfetch to fetch EMBL, Genbank and Uniprot entries.  A local process called "local_pfetch" which is forked by the script, but since it binds to an IP socket on the local machine, only 1 copy of it can run at time.  This might be a problem if you have more than 1 person running otterlace on a server machine.  The local_pfetch will exit as soon as a request fails, eg: when the authentication for that user has expired.  You will then be able start your own copy by choosing "Restart local pfetch server" from the "Tools" menu in the lace transcript chooser window.\
 \
 
@@ -90,7 +92,7 @@ in a terminal.\
 \f0\b\fs28 Mac OS 10.5 (Leopard)
 \f1\b0\fs24 \
 \
-This distribution works on Mac OS 10.5 Leopard (tested on 10.5.2), but you should install the latest version of {\field{\*\fldinst{HYPERLINK "http://trac.macosforge.org/projects/xquartz"}}{\fldrslt XQuartz}} (which was version 2.1.4 released on the 15th February 2008).\
+This distribution works on Mac OS 10.5 Leopard (tested on 10.5.2), but you should install the latest version of {\field{\*\fldinst{HYPERLINK "http://trac.macosforge.org/projects/xquartz"}}{\fldrslt XQuartz}} (which was version 2.2.1 released on the 1st May 2008 when this document was last updated).\
 \
 
 \f0\b\fs28 Known problems with the Mac otterlace client\
