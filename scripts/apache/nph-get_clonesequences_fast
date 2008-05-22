@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-05-22 10:44:21 $
-# Id:            $Id: nph-get_clonesequences_fast,v 1.12 2008-05-22 10:44:21 jgrg Exp $
+# Last modified: $Date: 2008-05-22 10:53:02 $
+# Id:            $Id: nph-get_clonesequences_fast,v 1.13 2008-05-22 10:53:02 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_clonesequences_fast,v $
 
 use strict;
@@ -96,6 +96,9 @@ my $sql = q{
                                          WHERE code = 'embl_version')
     ORDER BY chr2ctg.asm_start
     };
+
+# If a clone is missing from the results, check that it has embl_acc and embl_version attributes.
+# If the whole chromosome is missing, check that it has the chr attribute.
 
 my $sth = $dbc->prepare($sql);
 $sth->execute($sequenceset);
