@@ -265,10 +265,6 @@ sub fetch_pipeline_switch {
     return option_from_array([ $CLIENT_STANZA, 'pipeline' ]) ? 1 : 0;
 }
 
-sub pipehead {
-    return option_from_array([ $CLIENT_STANZA, 'pipehead' ]) ? 1 : 0;
-}
-
 sub misc_acefile {
     return option_from_array([ $CLIENT_STANZA, 'misc_acefile' ]);
 }
@@ -281,9 +277,7 @@ sub pipe_name {
 
     return (!fetch_pipeline_switch())
                 ? 'no pipeline'
-                : pipehead()
-                    ? 'new pipeline'
-                    : 'old pipeline';
+                : 'pipeline';
 }
 
 
@@ -489,6 +483,5 @@ version=49
 write_access=0
 debug=1
 pipeline=1 
-pipehead=1
 show_zmap=1
 logdir=.otter
