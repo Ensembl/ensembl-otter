@@ -2,6 +2,7 @@ package Bio::Vega::Transform::XML;
 
 use strict;
 use warnings;
+
 use Bio::EnsEMBL::Utils::Exception qw (throw);
 use base 'Bio::Vega::Writer';
 use Bio::Vega::Utils::GeneTranscriptBiotypeStatus 'biotype_status2method';

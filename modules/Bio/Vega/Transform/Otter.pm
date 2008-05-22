@@ -4,6 +4,7 @@ package Bio::Vega::Transform::Otter;
 
 use strict;
 use warnings;
+
 use Carp;
 use Bio::Vega::Exon;
 use Bio::Vega::Transcript;
@@ -556,6 +557,7 @@ sub build_Locus {
 }
 
 sub do_nothing {
+    return;
 }
 
 sub get_ChromosomeName {
