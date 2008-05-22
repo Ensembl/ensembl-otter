@@ -164,7 +164,11 @@ my $sth1 = $dba->dbc->prepare(qq(
 
 my @gene_stable_ids = $support->param('gene_stable_id');
 my %gene_stable_ids = map { $_, 1 } @gene_stable_ids;
+
+#get chromosomes
+#my $chr_length = $support->get_chrlength($dba,undef,'chromosome'); #sometimes needed
 my $chr_length = $support->get_chrlength($dba);
+
 my @chr_sorted = $support->sort_chromosomes($chr_length);
 my %analysis = map { $_->logic_name => $_ } @{ $aa->fetch_all };
 my %ftype = (
@@ -191,6 +195,8 @@ foreach my $chr (@chr_sorted) {
 	my %chr_stats;
     $support->log_stamped("> Chromosome $chr (".$chr_length->{$chr}."bp).\n\n");
 
+#	next unless $chr eq 'X';
+
     # fetch genes from db
     $support->log("Fetching genes...\n");
     my $slice = $sa->fetch_by_region('toplevel', $chr);
@@ -201,6 +207,8 @@ foreach my $chr (@chr_sorted) {
     foreach my $gene (@$genes) {
         my $gsi = $gene->stable_id;
         my $gid = $gene->dbID;
+
+#		next unless $gsi eq 'OTTHUMG00000021239';
 
 		#use original loutre name attributes since likely to be reporting back to Havana
         my $gene_name = $gene->get_all_Attributes('name')->[0]->value;
@@ -251,6 +259,9 @@ foreach my $chr (@chr_sorted) {
             $stats->{$source}{'transcripts'}++;
             $chr_stats{'transcripts'}++;
 			my $tsid = $trans->stable_id;
+
+#			next unless $tsid eq 'OTTHUMT00000056031';
+
             $support->log_verbose("Transcript $tsid...\n", 1);
 
             # loop over evidence added by annotators for this transcript
@@ -269,7 +280,7 @@ foreach my $chr (@chr_sorted) {
 				my $acc_ver = $acc;
                 $acc =~ s/\.[0-9]*$//;
 				my $acc_type = $evi->type;
-				$all_evidence->{$source}{$acc_type}{"$acc:$tsid:$acc_ver"}++;
+				$all_evidence->{$source}{$acc_type}{"$acc: $tsid:$acc_ver"}++;
                 my $ana = $analysis{$evi->type . "_evidence"};
                 $support->log_verbose("Evidence $acc...\n", 2);
                 # loop over similarity features on the slice, compare name with
@@ -277,8 +288,10 @@ foreach my $chr (@chr_sorted) {
                 my $match = 0;
                 foreach my $hitname (keys %$sf) {
                     if ($hitname eq $acc) {
+#						warn "\n\nLooking at hit $hitname";
                         foreach my $hit (@{ $sf->{$hitname} }) {
                             # store transcript supporting evidence
+#							warn $trans->end."--".$hit->[0]." --- ".$trans->start."--".$hit->[1];
                             if ($trans->end >= $hit->[0] && $trans->start <= $hit->[1]) {
                                 # store unique evidence identifier in hash
                                 $tse_hash{$trans->dbID.":".$hit->[2].":".$hit->[3]} = 1;
@@ -291,6 +304,7 @@ foreach my $chr (@chr_sorted) {
                             # loop over exons and look for overlapping
                             # similarity features
                             foreach my $exon (@exons) {
+#								warn $exon->stable_id.":".$exon->end."--".$hit->[0]." --- ".$exon->start."--".$hit->[1];
                                 if ($exon->end >= $hit->[0] && $exon->start <= $hit->[1]) {
                                     $support->log_verbose("Matches similarity feature with dbID ".$hit->[2].".\n", 3);
                                     # store unique evidence identifier in hash
@@ -314,6 +328,9 @@ foreach my $chr (@chr_sorted) {
                 push @{$transcripts_without_evidence{$source}}, $id;
             }
         }
+
+#		exit;
+
 		my $id = "$gsi (chr $chr)";
 		unless ($gene_has_support) {
 			$stats->{$source}{'genes_without_support'}++;
