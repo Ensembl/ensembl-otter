@@ -71,6 +71,26 @@ sub fetch_by_name {
   return $gene;
 }
 
+sub fetch_consortiumID_by_dbID {
+  my ($self, $dbID) = @_;
+
+  my $sth=$self->prepare(q{
+     SELECT consortium_id
+     FROM gene_name_update
+     WHERE gene_id = ?
+     });
+
+  $sth->execute($dbID);
+  if ( my $consortiumID = $sth->fetchrow ){
+#    warn "gene_id $dbID: $consortiumID";
+    return $consortiumID;
+  }
+  else {
+    # Consortium ID is available only when there is update from HGNC
+    return 0;
+  }
+}
+
 sub fetch_by_attribute_code_value {
   my ($self, $attrib_code, $attrib_value) = @_;
 
