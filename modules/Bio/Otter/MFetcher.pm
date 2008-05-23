@@ -262,6 +262,58 @@ sub init_csver {
     }
 }
 
+    # fetch things from Otter chromosome and map it to another assembly
+sub fetch_and_export {
+    my ($self, $fetching_method, $call_parms,
+        $cs, $name, $type, $start, $end, $csver_orig, $csver_target,
+    ) = @_;
+
+    my $odba = $self->otter_dba();
+    my $original_slice = $self->get_slice($odba, $cs, $name, $type, $start, $end, $csver_orig);
+
+    my $orig_features = $original_slice->$fetching_method(@$call_parms) || die "Could not fetch anything";
+
+    if($self->otter_assemby_is_equivalent($cs, $name, $type, $csver_orig, $csver_target)) {
+        # no transformation is needed:
+
+        return $orig_features;
+
+        # do the transformation if it is needed:
+    } else {
+
+        my $mapper_metakey = "mapper_db.${csver_target}";
+        if(my $mdba = $self->satellite_dba($mapper_metakey) ) {
+            my $original_slice_on_mapper = $self->get_slice($mdba, $cs, $name, $type, $start, $end, $csver_orig);
+
+            my @transformed_features = ();
+
+            foreach my $orig_feature (@$orig_features) {
+
+                    # move each feature to the mapper first:
+                if($orig_feature->can('propagate_slice')) {
+                    $orig_feature->propagate_slice($original_slice_on_mapper);
+                } else {
+                    $orig_feature->slice($original_slice_on_mapper);
+                }
+
+                if( my $target_feature = $orig_feature->transform($cs, $csver_target) ) {
+                    push @transformed_features, $target_feature;
+                    warn "Transformed $csver_orig:".$orig_feature->start().'..'.$orig_feature->end()
+                        ." --> $csver_target:".$target_feature->start().'..'.$target_feature->end()."\n";
+                } else {
+                    warn "Could not transform the feature ".$orig_feature->start().'..'.$orig_feature->end();
+                }
+            }
+
+            return \@transformed_features;
+
+        } else {
+            die "Can't connect to the mapper ($mapper_metakey)";
+        }
+
+    }
+}
+
 sub fetch_mapped_features {
     my ($self, $feature_name, $fetching_method, $call_parms,
         $cs, $name, $type, $start, $end, $metakey, $csver_orig, $csver_remote,
