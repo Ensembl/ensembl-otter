@@ -102,7 +102,7 @@ sub truncate_to_Slice {
 	 my $exon_end   = $exon->end;
 	 # now compare slice names instead of slice references
 	 # slice references can be different not the slice names
-	 if ($exon->slice->name != $slice->name or $exon_end < 1 or $exon_start > $slice_length) {
+	 if ($exon->slice->name ne $slice->name or $exon_end < 1 or $exon_start > $slice_length) {
 		#warn "removing exon that is off slice";
 		### This won't work if get_all_Exons() ceases to return
 		### a ref to the actual array of exons in the transcript.
