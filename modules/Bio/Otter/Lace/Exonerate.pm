@@ -154,7 +154,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.3 $ ';
+$revision='$Revision: 1.4 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -468,9 +468,9 @@ sub run_exonerate {
     my ($self, $masked, $smasked, $unmasked) = @_;
 
     my $analysis = $self->analysis();
-    my $exo_options = $self->query_type() eq 'dna' ?
-    	'-m e2g --forcescan q --softmasktarget yes  -M 1500 --dnahspthreshold 120 -s 2000 --geneseed 300' :
-    	'-m p2g --forcescan q --softmasktarget yes -M 1500  --score 150';
+    my $exo_options = $self->query_type() eq 'protein' ?
+    	'-m p2g --forcescan q --softmasktarget yes -M 1500  --score 150' :
+    	'-m e2g --forcescan q --softmasktarget yes  -M 1500 --dnahspthreshold 120 -s 2000 --geneseed 300' ;
 
     my $runnable = Bio::EnsEMBL::Pipeline::Runnable::Finished_Exonerate->new(
         -analysis => $self->analysis(),
