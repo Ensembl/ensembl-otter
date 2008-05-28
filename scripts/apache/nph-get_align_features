@@ -3,17 +3,15 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-05-21 16:06:06 $
-# Id:            $Id: nph-get_align_features,v 1.14 2008-05-21 16:06:06 lg4 Exp $
+# Last modified: $Date: 2008-05-28 18:23:53 $
+# Id:            $Id: nph-get_align_features,v 1.15 2008-05-28 18:23:53 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_align_features,v $
 
 use strict;
 use SangerPaths qw{ core bioperl123 ensembl49 otter49 };
 
 use Bio::Otter::ServerScriptSupport;
-use Bio::Otter::Lace::ViaText ('%OrderOfOptions');
-use Bio::Otter::DBSQL::SimpleBindingAdaptor;
-use Bio::Otter::HitDescription;
+use Bio::Otter::Lace::ViaText::ToText ('&GenerateAlignFeatures');
 
 my $server = Bio::Otter::ServerScriptSupport->new;
 
@@ -29,65 +27,10 @@ my $afs = $server->fetch_mapped_features('align_feature', $method, [$analysis_na
     map { defined($server->param($_)) ? $server->param($_) : '' } qw(cs name type start end metakey csver csver_remote)
 );
 
-    # Put the names into the hit_description hash:
-my %hd_hash = ();
-foreach my $af (@$afs) {
-    $hd_hash{$af->hseqname()} = '';
-}
+    # Fetch the hit descriptions from the pipeline:
+my $pdbc = $server->satellite_dba( '' )->dbc();
 
-    # Fetch the hit descriptions from the pipeline
-my $sdbc = $server->satellite_dba( '' )->dbc();
-my $hd_adaptor = Bio::Otter::DBSQL::SimpleBindingAdaptor->new( $sdbc );
-$hd_adaptor->fetch_into_hash(
-    'hit_description',
-    'hit_name',
-    { qw(
-        hit_length _hit_length
-        hit_description _description
-        hit_taxon _taxon_id
-        hit_db _db_name
-    )},
-    'Bio::Otter::HitDescription',
-    \%hd_hash,
-);
-
-my @af_optnames = @{ $OrderOfOptions{AlignFeature} };
-my @hd_optnames = @{ $OrderOfOptions{HitDescription} };
-
-my $output_string = '';
-
-    # Stringify only the simple fields:
-my %hit_seen = (); # collect the seen hit names here
-foreach my $af (@$afs) {
-    my $hit_name = $af->hseqname();
-    my $hd = $hd_hash{$hit_name};
-    if($hd) {
-        if(!exists($hit_seen{$hit_name})) { # a new one
-
-                # output a HitDescription line
-            my @hd_optvalues = ('HitDescription', $hit_name);
-            for my $opt (@hd_optnames) {
-                push @hd_optvalues, $hd->$opt();
-            }
-            $output_string .= join("\t", @hd_optvalues)."\n";
-
-            $hit_seen{$hit_name} = 1;
-        }
-    }
-    
-        # output an AlignFeature line
-    my @af_optvalues = ('AlignFeature');
-    for my $opt (@af_optnames) {
-        push @af_optvalues, $af->$opt();
-    }
-    push @af_optvalues, $af->cigar_string();
-
-    if(!$analysis_name) {
-        push @af_optvalues, $af->analysis()->logic_name();
-    }
-
-    $output_string .= join("\t", @af_optvalues)."\n";
-}
+my $output_string = GenerateAlignFeatures($afs, $analysis_name, $pdbc);
 
 $server->send_response($output_string, 1);
 
