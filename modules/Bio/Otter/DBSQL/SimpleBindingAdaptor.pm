@@ -69,3 +69,11 @@ sub DESTROY {
 
 1;
 
+__END__
+
+=head1 NAME - Bio::Otter::DBSQL::SimpleBindingAdaptor;
+
+=head1 AUTHOR
+
+Leo Gordon B<email> lg4@sanger.ac.uk
+
