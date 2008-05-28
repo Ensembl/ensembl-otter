@@ -6,7 +6,6 @@ use strict;
 use warnings;
 
 use Bio::Otter::Lace::ViaText ('%OrderOfOptions');
-use Bio::Otter::DBSQL::SimpleBindingAdaptor;
 
 use base ('Exporter');
 our @EXPORT    = ();
@@ -42,6 +41,9 @@ sub GenerateSimpleFeatures {
 
 sub GenerateAlignFeatures {
     my ($afs, $analysis_name, $sdbc) = @_;
+
+    require 'Bio::Otter::DBSQL::SimpleBindingAdaptor';
+    require 'Bio::Otter::HitDescription';
 
         # Put the names into the hit_description hash:
     my %hd_hash = ();
