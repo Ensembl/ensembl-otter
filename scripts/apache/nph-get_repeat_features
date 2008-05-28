@@ -3,15 +3,15 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-05-15 10:51:16 $
-# Id:            $Id: nph-get_repeat_features,v 1.13 2008-05-15 10:51:16 lg4 Exp $
+# Last modified: $Date: 2008-05-28 18:41:37 $
+# Id:            $Id: nph-get_repeat_features,v 1.14 2008-05-28 18:41:37 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_repeat_features,v $
 
 use strict;
 use SangerPaths qw{ core bioperl123 ensembl49 otter49 };
 
 use Bio::Otter::ServerScriptSupport;
-use Bio::Otter::Lace::ViaText ('%OrderOfOptions');
+use Bio::Otter::Lace::ViaText::ToText ('&GenerateRepeatFeatures');
 
 my $server = Bio::Otter::ServerScriptSupport->new;
 
@@ -21,42 +21,7 @@ my $rfs = $server->fetch_mapped_features('repeat_feature', 'get_all_RepeatFeatur
     map { defined($server->param($_)) ? $server->param($_) : '' } qw(cs name type start end metakey csver csver_remote)
 );
 
-my @rf_optnames = @{ $OrderOfOptions{RepeatFeature} };
-my @rc_optnames = @{ $OrderOfOptions{RepeatConsensus} };
-
-my $output_string = '';
-
-    # Stringify only the simple fields:
-my %rc_seen = (); # collect the seen repeat consensus ids here
-foreach my $rf (@$rfs) {
-    my $rc = $rf->repeat_consensus(); # object
-    my $rc_id = $rc->dbID();
-
-    if(!exists($rc_seen{$rc_id})) { # a new one
-
-            # output a repeat consensus line
-        my @rc_optvalues = ('RepeatConsensus');
-        for my $opt (@rc_optnames) {
-            push @rc_optvalues, $rc->$opt() || 0;
-        }
-        $output_string .= join("\t", @rc_optvalues)."\n";
-
-        $rc_seen{$rc_id} = 1;
-    }
-    
-        # output a repeat feature line
-    my @rf_optvalues = ('RepeatFeature');
-    for my $opt (@rf_optnames) {
-        push @rf_optvalues, $rf->$opt();
-    }
-    push @rf_optvalues, $rc_id;
-
-    if(!$analysis_name) {
-        push @rf_optvalues, $rf->analysis()->logic_name();
-    }
-
-    $output_string .= join("\t", @rf_optvalues)."\n";
-}
+my $output_string = GenerateRepeatFeatures($rfs, $analysis_name);
 
 $server->send_response($output_string, 1);
 
