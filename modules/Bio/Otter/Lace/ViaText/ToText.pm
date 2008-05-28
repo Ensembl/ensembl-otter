@@ -6,6 +6,7 @@ use strict;
 use warnings;
 
 use Bio::Otter::Lace::ViaText ('%OrderOfOptions');
+use Bio::Otter::DBSQL::SimpleBindingAdaptor;
 
 use base ('Exporter');
 our @EXPORT    = ();
