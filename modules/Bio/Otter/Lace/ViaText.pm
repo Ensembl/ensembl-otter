@@ -1,4 +1,6 @@
 # Disassemble and Reassemble objects to push them through a text channel
+#
+# This file is common for both new and old schema
 
 package Bio::Otter::Lace::ViaText;
 
@@ -6,23 +8,24 @@ use strict;
 use warnings;
 
 use base ('Exporter');
-
 our @EXPORT    = ();
-our @EXPORT_OK = qw( %OrderOfOptions );
+our @EXPORT_OK = qw( %OrderOfOptions &ParseSimpleFeatures &ParseAlignFeatures &ParseRepeatFeatures
+                     &ParseMarkerFeatures &ParseDitagFeatureGroups &ParsePredictionTranscripts );
 
 our %OrderOfOptions = (
     'HitDescription' => [
-                ## Special treatment: 'name'
+            ## Special treatment: 'name'
         qw(db_name taxon_id hit_length description)
     ],
     'AlignFeature' => [
         qw(start end strand hseqname hstart hend hstrand percent_id score),
-                ## Special treatment: 'cigar_string', 'analysis->logic_name'
-                ## Not sent (cached): 'seqname'
+            ## Special treatment: 'cigar_string', 'analysis->logic_name'
+            ## Not sent (passed): 'seqname'
     ],
 
     'SimpleFeature' => [
         qw(start end strand display_label score),
+            ## Not sent (passed): 'seqname'
     ],
 
     'MarkerFeature' => [
@@ -67,4 +70,12 @@ our %OrderOfOptions = (
 );
 
 1;
+
+__END__
+
+=head1 NAME - Bio::Otter::Lace::ViaText
+
+=head1 AUTHOR
+
+Leo Gordon B<email> lg4@sanger.ac.uk
 
