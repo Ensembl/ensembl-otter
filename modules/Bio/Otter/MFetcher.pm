@@ -19,7 +19,7 @@ use base ('Bio::Otter::SpeciesDat');
 sub new { # just to make it possible to instantiate an object
     my $pkg = shift @_;
 
-    my $self = bless {}, $pkg;
+    my $self = bless { @_ }, $pkg;
 
     return $self;
 }
