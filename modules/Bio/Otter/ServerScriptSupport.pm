@@ -45,13 +45,20 @@ END {
 sub new {
     my $pkg = shift;
     
-    my $self = $pkg->SUPER::new(@_);
+    my $self = $pkg->CGI::new();    # CGI part of the object needs initialization
+
+    my %params = @_;
+    while(my ($k,$v) = each %params) { # and this is how we set the rest of the parameters
+        $self->{$k}=$v;
+    }
+
     if ($self->show_restricted_datasets or ! $self->local_user) {
         $self->authorized_user;
     } else {
         $self->authenticate_user;
     }
 
+    map {print "$_ : ", $self->{$_} } keys %$self;
     # '/GPFS/data1/WWW/SANGER_docs/data/otter/48/species.dat';
     $self->species_dat_filename($self->data_dir . '/species.dat');
 
