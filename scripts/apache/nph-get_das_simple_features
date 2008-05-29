@@ -3,21 +3,21 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-05-28 17:21:11 $
-# Id:            $Id: nph-get_das_simple_features,v 1.19 2008-05-28 17:21:11 lg4 Exp $
+# Last modified: $Date: 2008-05-29 15:43:49 $
+# Id:            $Id: nph-get_das_simple_features,v 1.20 2008-05-29 15:43:49 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_das_simple_features,v $
-
-my $http_proxy = $ENV{http_proxy};
 
 use strict;
 use SangerPaths qw{ core bioperl123 ensembl49 otter49 };
+
+my $http_proxy = $ENV{http_proxy};
 
 use Bio::Das;
 use Bio::EnsEMBL::SimpleFeature;
 use Bio::Otter::ServerScriptSupport;
 use Bio::Otter::Lace::ViaText::ToText ('&GenerateSimpleFeatures');
 
-sub Bio::EnsEMBL::Slice::get_all_DasFeatures {
+sub Bio::EnsEMBL::Slice::get_all_SimpleFeatures_via_DAS {
     my ($slice, $server, $das, $chr_name, $analysis_name) = @_;
 
     my $chr_start = $slice->start();
@@ -61,27 +61,35 @@ sub Bio::EnsEMBL::Slice::get_all_DasFeatures {
 
 my $server = Bio::Otter::ServerScriptSupport->new;
 
-my $chr_name = $server->param('name');  ## Since in our new schema name is substituted for type,
-                                     ## we need it clean for outer sources
+my $output_string = '';
 
-my $source        = $server->require_argument('source');
-my $dsn           = $server->require_argument('dsn');
-my $analysis_name = $server->param('analysis'); # defaults to *everything*
+eval {
+    my $chr_name      = $server->param('name');  ## Since in our new schema name is substituted for type,
+                                                 ## we need it clean for outer sources
 
-my $das = Bio::Das->new(
-    -source => $source,
-    -dsn    => $dsn,
-);
-$das->proxy($http_proxy) if $http_proxy;
+    my $source        = $server->require_argument('source');
+    my $dsn           = $server->require_argument('dsn');
+    my $analysis_name = $server->param('analysis'); # defaults to *everything*
 
-my $dsfs = $server->fetch_mapped_features('das_simple_feature', 'get_all_DasFeatures', [$server, $das, $chr_name, $analysis_name],
-    (map { defined($server->param($_)) ? $server->param($_) : '' } qw(cs name type start end metakey csver csver_remote)),
-    1, # do the short version of mapping, without the target database
-);
+    my $das = Bio::Das->new(
+        -source => $source,
+        -dsn    => $dsn,
+    );
+    $das->proxy($http_proxy) if $http_proxy;
 
-my $output_string = GenerateSimpleFeatures($dsfs, $analysis_name);
+    my $dsfs = $server->fetch_mapped_features('das_simple_feature', 'get_all_SimpleFeatures_via_DAS', [$server, $das, $chr_name, $analysis_name],
+        (map { defined($server->param($_)) ? $server->param($_) : '' } qw(cs name type start end metakey csver csver_remote)),
+        1, # do the short version of mapping, without the target database
+    );
 
-$server->send_response($output_string, 1);
+    $output_string = GenerateSimpleFeatures($dsfs, $analysis_name);
+};
+
+if ($@) {
+    $server->error_exit($@);
+} else {
+    $server->send_response($output_string, 1);
+}
 
 1;
 

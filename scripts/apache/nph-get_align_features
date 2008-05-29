@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-05-28 18:23:53 $
-# Id:            $Id: nph-get_align_features,v 1.15 2008-05-28 18:23:53 lg4 Exp $
+# Last modified: $Date: 2008-05-29 15:43:49 $
+# Id:            $Id: nph-get_align_features,v 1.16 2008-05-29 15:43:49 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_align_features,v $
 
 use strict;
@@ -15,24 +15,31 @@ use Bio::Otter::Lace::ViaText::ToText ('&GenerateAlignFeatures');
 
 my $server = Bio::Otter::ServerScriptSupport->new;
 
-my $analysis_name = $server->param('analysis') || undef; # which means 'all analyses'
+my $output_string = '';
 
-my $kind          = $server->param('kind');
-my $method = {
-    'dafs' => 'get_all_DnaAlignFeatures',
-    'pafs' => 'get_all_ProteinAlignFeatures',
-}->{$kind};
+eval {
+    my $analysis_name = $server->param('analysis') || undef; # which means 'all analyses'
+    my $kind          = $server->param('kind');
 
-my $afs = $server->fetch_mapped_features('align_feature', $method, [$analysis_name],
-    map { defined($server->param($_)) ? $server->param($_) : '' } qw(cs name type start end metakey csver csver_remote)
-);
+    my $method = {
+        'dafs' => 'get_all_DnaAlignFeatures',
+        'pafs' => 'get_all_ProteinAlignFeatures',
+    }->{$kind};
 
-    # Fetch the hit descriptions from the pipeline:
-my $pdbc = $server->satellite_dba( '' )->dbc();
+    my $afs = $server->fetch_mapped_features('align_feature', $method, [$analysis_name],
+        map { defined($server->param($_)) ? $server->param($_) : '' } qw(cs name type start end metakey csver csver_remote)
+    );
 
-my $output_string = GenerateAlignFeatures($afs, $analysis_name, $pdbc);
+        # Fetch the hit descriptions from the pipeline:
+    my $pdbc = $server->satellite_dba( '' )->dbc();
 
-$server->send_response($output_string, 1);
+    $output_string = GenerateAlignFeatures($afs, $analysis_name, $pdbc);
+};
+
+if ($@) {
+    $server->error_exit($@);
+} else {
+    $server->send_response($output_string, 1);
+}
 
 1;
-

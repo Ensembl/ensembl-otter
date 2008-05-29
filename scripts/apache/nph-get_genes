@@ -3,15 +3,15 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-05-15 10:51:16 $
-# Id:            $Id: nph-get_genes,v 1.13 2008-05-15 10:51:16 lg4 Exp $
+# Last modified: $Date: 2008-05-29 15:43:49 $
+# Id:            $Id: nph-get_genes,v 1.14 2008-05-29 15:43:49 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_genes,v $
 
 use strict;
 use SangerPaths qw{ core bioperl123 ensembl49 otter49 };
 
 use Bio::Otter::ServerScriptSupport;
-use Bio::Otter::ToXML;
+use Bio::Otter::Lace::ViaText::ToText ('&GenerateGenes');
 
 sub Bio::EnsEMBL::Gene::propagate_slice {
     my ($gene, $slice) = @_;
@@ -27,12 +27,13 @@ sub Bio::EnsEMBL::Gene::propagate_slice {
 
 my $server = Bio::Otter::ServerScriptSupport->new;
 
-my $analysis             = $server->param('analysis');
-my $transcript_analyses  = $server->param('transcript_analyses')  || '';
-my $translation_xref_dbs = $server->param('translation_xref_dbs') || '';
-
 my $output_string = '';
+
 eval {
+    my $analysis_name        = $server->param('analysis');
+    my $transcript_analyses  = $server->param('transcript_analyses')  || '';
+    my $translation_xref_dbs = $server->param('translation_xref_dbs') || '';
+
     my $allowed_transcript_analyses_hash = $transcript_analyses
         ? { map { $_ => 1 } split(/,/, $transcript_analyses) }
         : '';
@@ -41,16 +42,11 @@ eval {
         : '';
 
         # third parameter of $slice->get_all_Genes() helps preventing lazy-loading of transcripts
-    my $genes = $server->fetch_mapped_features('gene', 'get_all_Genes', [$analysis, undef, 1],
+    my $genes = $server->fetch_mapped_features('gene', 'get_all_Genes', [$analysis_name, undef, 1],
         map { defined($server->param($_)) ? $server->param($_) : '' } qw(cs name type start end metakey csver csver_remote)
     );
 
-    foreach my $gene (@$genes) {
-        $output_string .= $gene->toXMLstring(
-                                        $allowed_transcript_analyses_hash,
-                                        $allowed_translation_xref_db_hash
-                                    );
-    }
+    $output_string = GenerateGenes($genes, $allowed_transcript_analyses_hash, $allowed_translation_xref_db_hash);
 };
 
 if ($@) {

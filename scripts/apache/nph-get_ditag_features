@@ -3,68 +3,40 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-05-21 16:06:06 $
-# Id:            $Id: nph-get_ditag_features,v 1.14 2008-05-21 16:06:06 lg4 Exp $
+# Last modified: $Date: 2008-05-29 15:43:49 $
+# Id:            $Id: nph-get_ditag_features,v 1.15 2008-05-29 15:43:49 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_ditag_features,v $
 
 use strict;
 use SangerPaths qw{ core bioperl123 ensembl49 otter49 };
 
 use Bio::Otter::ServerScriptSupport;
-use Bio::Otter::Lace::ViaText ('%OrderOfOptions');
+use Bio::Otter::Lace::ViaText::ToText ('&GenerateDitagFeatureGroups');
 
 my $server = Bio::Otter::ServerScriptSupport->new;
 
-my $analysis_name = $server->param('analysis');
-my $ditypes       = $server->param('ditypes');
-
-if($ditypes) {
-    $ditypes = [ split(',', $ditypes) ];
-}
-
-my $dfs = $server->fetch_mapped_features('ditag_feature', 'get_all_DitagFeatures', [$ditypes, $analysis_name],
-    map { defined($server->param($_)) ? $server->param($_) : '' } qw(cs name type start end metakey csver csver_remote)
-);
-
-my @df_optnames = @{ $OrderOfOptions{DitagFeature} };
-my @do_optnames = @{ $OrderOfOptions{DitagObject} };
 my $output_string = '';
 
-    # Stringify only the simple fields:
-my %do_seen = (); # collect the seen ditag object ids here
+eval {
+    my $analysis_name = $server->param('analysis');
+    my $ditypes       = $server->param('ditypes');
 
-foreach my $df (@$dfs) {
-
-    my $do = $df->ditag(); # object
-    my $do_id = $do->dbID();
-
-    if(!exists($do_seen{$do_id})) { # a new one
-
-            # output a ditag object line:
-        my @do_optvalues = ('DitagObject');
-        for my $opt (@do_optnames) {
-            push @do_optvalues, $do->$opt() || 0;
-        }
-        $output_string .= join("\t", @do_optvalues)."\n";
-
-        $do_seen{$do_id}++;
+    if($ditypes) {
+        $ditypes = [ split(',', $ditypes) ];
     }
 
-        # output a ditag feature line:
-    my @df_optvalues = ('DitagFeature');
-    for my $opt (@df_optnames) {
-        push @df_optvalues, $df->$opt();
-    }
-    push @df_optvalues, $do_id;
+    my $dfs = $server->fetch_mapped_features('ditag_feature', 'get_all_DitagFeatures', [$ditypes, $analysis_name],
+        map { defined($server->param($_)) ? $server->param($_) : '' } qw(cs name type start end metakey csver csver_remote)
+    );
 
-    if(!$analysis_name) {
-        push @df_optvalues, $df->analysis()->logic_name();
-    }
+    $output_string = GenerateDitagFeatureGroups($dfs, $analysis_name);
+};
 
-    $output_string .= join("\t", @df_optvalues)."\n";
+if ($@) {
+    $server->error_exit($@);
+} else {
+    $server->send_response($output_string, 1);
 }
-
-$server->send_response($output_string, 1);
 
 1;
 
