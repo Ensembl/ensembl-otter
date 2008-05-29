@@ -87,14 +87,15 @@ sub csn {   # needed by logging mechanism
 sub otter_version {
     my ($self) = @_;
     
-    my $ver;
-    unless ($ver = $self->{'_otter_version'}) {
-        ($ver) = $ENV{'SCRIPT_NAME'} =~ m{/otter/(\d+)/};
+    if(@_) {
+        $self->{'_otter_version'} = shift @_;
+    } elsif(!$self->{'_otter_version'}) {
+        my ($ver) = $ENV{'SCRIPT_NAME'} =~ m{/otter/(\d+)/};
         die "Unexpected script location '$ENV{SCRIPT_NAME}'"
           unless $ver;
         $self->{'_otter_version'} = $ver;
     }
-    return $ver;
+    return  $self->{'_otter_version'}
 }
 
 sub server_root {
