@@ -1,0 +1,25 @@
+#!/usr/bin/env perl -w
+
+### extract_ace_data_from_otterlace_logfile
+
+use strict;
+
+while (<>) {
+    if (/Sending:$/) {
+        while (<>) {
+            last if /Sending:/;
+            print substr($_, 26);
+        }
+    }
+}
+
+
+
+__END__
+
+=head1 NAME - extract_ace_data_from_otterlace_logfile
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
