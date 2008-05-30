@@ -369,6 +369,8 @@ sub ParsePredictionTranscripts {
                 $analyses{$logic_name} ||= Bio::EnsEMBL::Analysis->new(-logic_name => $logic_name)
             );
 
+            $pt->dbID($curr_pt_linkid);
+
             $curr_pt = $pt;
 
             push @pts, $pt;
@@ -384,7 +386,7 @@ sub ParsePredictionTranscripts {
                 $pe->$method($optvalues[$ind]);
             }
 
-            if($pt_linkid == $curr_pt_linkid) {
+            if($pt_linkid eq $curr_pt_linkid) {
                     # copy over:
                 $pe->analysis( $curr_pt->analysis() );
 
