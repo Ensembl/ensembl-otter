@@ -94,13 +94,13 @@ sub ParseAlignFeatures {
 
         if($linetype eq 'HitDescription') {
 
-            my $hit_name = shift @optvalues;
+            my $hitname_linkid = shift @optvalues;
             my $hd = Bio::Otter::HitDescription->new();
             for my $ind (0..@hd_optnames-1) {
                 my $method = $hd_optnames[$ind];
                 $hd->$method($optvalues[$ind]);
             }
-            $hds{$hit_name} = $hd;
+            $hds{$hitname_linkid} = $hd;
 
         } elsif($linetype eq 'AlignFeature') {
 
@@ -129,12 +129,12 @@ sub ParseAlignFeatures {
                 # Now add the HitDescriptions to Bio::EnsEMBL::DnaXxxAlignFeatures
                 # and re-bless them into Bio::Otter::DnaXxxAlignFeatures,
                 # IF the HitDescription is available
-            my $hit_name = $af->hseqname();
-            if(my $hd = $hds{$hit_name}) {
+            my $hitname_linkid = $af->hseqname();
+            if(my $hd = $hds{$hitname_linkid}) {
                 bless $af, $subclass;
                 $af->{'_hit_description'} = $hd;
             } else {
-                # warn "No HitDescription for '$hit_name'";
+                # warn "No HitDescription for '$hitname_linkid'";
             }
 
             push @afs, $af;
@@ -156,7 +156,7 @@ sub ParseRepeatFeatures {
         # cached values:
     my $analysis = Bio::EnsEMBL::Analysis->new( -logic_name => $analysis_name );
 
-    my %rcs = (); # cached repeat consensi, keyed by rc_id
+    my %rcs = (); # cached repeat consensi, keyed by rc_linkid
     my @rfs = (); # repeat features in a list
     foreach my $respline (@$resplines_ref) {
 
@@ -165,21 +165,21 @@ sub ParseRepeatFeatures {
 
         if($linetype eq 'RepeatConsensus') {
 
-            my $rc_id = pop @optvalues;
+            my $rc_linkid = pop @optvalues;
 
             my $rc = Bio::EnsEMBL::RepeatConsensus->new();
             for my $ind (0..@rc_optnames-1) {
                 my $method = $rc_optnames[$ind];
                 $rc->$method($optvalues[$ind]);
             }
-            $rcs{$rc_id} = $rc;
+            $rcs{$rc_linkid} = $rc;
 
         } elsif($linetype eq 'RepeatFeature') {
 
+            my $rc_linkid = pop @optvalues;
+
                 # note this is optional now, depending on trueness of $analysis_name:
             my $logic_name    = $analysis_name || pop @optvalues;
-
-            my $rc_id = pop @optvalues;
 
             my $rf = Bio::EnsEMBL::RepeatFeature->new();
 
@@ -194,7 +194,7 @@ sub ParseRepeatFeatures {
             );
 
                 # use the cached values:
-            $rf->repeat_consensus( $rcs{$rc_id} );
+            $rf->repeat_consensus( $rcs{$rc_linkid} );
 
             push @rfs, $rf;
         }
@@ -213,7 +213,7 @@ sub ParseMarkerFeatures {
     my @mo_optnames = @{ $OrderOfOptions{MarkerObject} };
     my @ms_optnames = @{ $OrderOfOptions{MarkerSynonym} };
 
-    my %mos  = (); # cached marker objects, keyed by mo_id
+    my %mos  = (); # cached marker objects, keyed by mo_linkid
     my @mfs  = (); # marker features in a list
     foreach my $respline (@$resplines_ref) {
 
@@ -222,19 +222,19 @@ sub ParseMarkerFeatures {
 
         if($linetype eq 'MarkerObject') {
 
-            my $mo_id = pop @optvalues;
+            my $mo_linkid = pop @optvalues;
 
             my $mo = Bio::EnsEMBL::Map::Marker->new();
             for my $ind (0..@mo_optnames-1) {
                 my $method = $mo_optnames[$ind];
                 $mo->$method($optvalues[$ind]);
             }
-            $mos{mo_id} = $mo;
+            $mos{$mo_linkid} = $mo;
 
         } elsif($linetype eq 'MarkerSynonym') {
 
-            my $mo_id = pop @optvalues;
-            my $mo = $mos{mo_id}; # should have been defined earlier!
+            my $mo_linkid = pop @optvalues;
+            my $mo = $mos{$mo_linkid}; # should have been defined earlier!
 
             my $ms = Bio::EnsEMBL::Map::MarkerSynonym->new();
             for my $ind (0..@ms_optnames-1) {
@@ -245,11 +245,12 @@ sub ParseMarkerFeatures {
 
         } elsif($linetype eq 'MarkerFeature') {
 
+            my $mo_linkid = pop @optvalues;
+
                 # note this is optional now, depending on trueness of $analysis_name:
             my $logic_name    = $analysis_name || pop @optvalues;
 
-            my $mo_id = pop @optvalues;
-            my $mo = $mos{mo_id}; # should have been defined earlier!
+            my $mo = $mos{$mo_linkid}; # should have been defined earlier!
 
             my $mf = Bio::EnsEMBL::Map::MarkerFeature->new();
 
@@ -258,7 +259,7 @@ sub ParseMarkerFeatures {
                 $mf->$method($optvalues[$ind]);
             }
             $mf->marker( $mo );
-            $mf->_marker_id( $mo_id );
+            $mf->_marker_id( $mo_linkid );
 
                 # cache if needed, otherwise use the cached value:
             $mf->analysis(
@@ -288,7 +289,7 @@ sub ParseDitagFeatureGroups {
     my @df_optnames = @{ $OrderOfOptions{DitagFeature} };
     my @do_optnames = @{ $OrderOfOptions{DitagObject} };
 
-    my %dos  = (); # cached ditag objects, keyed by do_id
+    my %dos  = (); # cached ditag objects, keyed by do_linkid
     my %dfs  = (); # ditag features in a HoHoL {ditag_id}{ditag_pair_id} -> [L,R]
     foreach my $respline (@$resplines_ref) {
 
@@ -297,21 +298,22 @@ sub ParseDitagFeatureGroups {
 
         if($linetype eq 'DitagObject') {
 
-            my $do_id = pop @optvalues;
+            my $do_linkid = pop @optvalues;
 
             my $do = Bio::EnsEMBL::Map::Ditag->new(
                 map { ("-$do_optnames[$_]" => $optvalues[$_]) }
                     (0..@do_optnames-1)
             );
-            $dos{do_id} = $do;
+            $dos{$do_linkid} = $do;
 
         } elsif($linetype eq 'DitagFeature') {
+
+            my $do_linkid = pop @optvalues;
 
                 # note this is optional now, depending on trueness of $analysis_name:
             my $logic_name    = $analysis_name || pop @optvalues;
 
-            my $do_id = pop @optvalues;
-            my $do = $dos{do_id}; # should have been defined earlier!
+            my $do = $dos{$do_linkid}; # should have been defined earlier!
 
             my $df = Bio::EnsEMBL::Map::DitagFeature->new(
                 map { ("-$df_optnames[$_]" => $optvalues[$_]) }
@@ -324,7 +326,7 @@ sub ParseDitagFeatureGroups {
                 $analyses{$logic_name} ||= Bio::EnsEMBL::Analysis->new(-logic_name => $logic_name)
             );
 
-            my $uniq_group_id = $do_id.'.'.$df->ditag_pair_id;
+            my $uniq_group_id = $do_linkid.'.'.$df->ditag_pair_id;
             push @{$dfs{$uniq_group_id}}, $df;
         }
     }
@@ -343,13 +345,15 @@ sub ParsePredictionTranscripts {
 
     my @pts = (); # prediction transcripts in a list
     my $curr_pt;
-    my $curr_ptid;
+    my $curr_pt_linkid;
     foreach my $respline (@$resplines_ref) {
 
         my @optvalues = split(/\t/,$respline);
         my $linetype      = shift @optvalues; # 'PredictionTranscript' || 'PredictionExon'
 
         if($linetype eq 'PredictionTranscript') {
+
+            $curr_pt_linkid = pop @optvalues; # the id that groups exons under the same transcript
 
                 # note this is optional now, depending on trueness of $analysis_name:
             my $logic_name    = $analysis_name || pop @optvalues;
@@ -366,13 +370,12 @@ sub ParsePredictionTranscripts {
             );
 
             $curr_pt = $pt;
-            $curr_ptid = $pt->dbID();
 
             push @pts, $pt;
 
         } elsif($linetype eq 'PredictionExon') {
 
-            my $pt_id = pop @optvalues;
+            my $pt_linkid = pop @optvalues;
 
             my $pe = Bio::EnsEMBL::Exon->new(); # there is no PredictionExon in v.19 code!
 
@@ -381,7 +384,7 @@ sub ParsePredictionTranscripts {
                 $pe->$method($optvalues[$ind]);
             }
 
-            if($pt_id == $curr_ptid) {
+            if($pt_linkid == $curr_pt_linkid) {
                     # copy over:
                 $pe->analysis( $curr_pt->analysis() );
 

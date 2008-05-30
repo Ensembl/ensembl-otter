@@ -379,6 +379,29 @@ sub get_all_PredictionTranscripts { # get prediction transcripts from otter/pipe
     return ParsePredictionTranscripts(\$response, $analysis_name);
 }
 
+sub get_all_DAS_PredictionTranscripts { # get simple features from DAS source (via mapping Otter server)
+    my( $self, $analysis_name, $csver_remote, $source, $dsn ) = @_;
+
+    if(!$analysis_name) {
+        die "Analysis name must be specified!";
+    }
+
+    my $response = $self->Client()->otter_response_content(
+        'GET',
+        'get_das_prediction_transcripts',
+        {
+            %{$self->toHash},
+            'analysis' => $analysis_name,
+            'metakey'  => '.', # let's pretend to be taking things from otter database
+            $csver_remote   ? ('csver_remote' => $csver_remote) : (), # if you forget it, the assembly will be Otter by default!
+            'source'   => $source,
+            'dsn'      => $dsn,
+        },
+    );
+
+    return ParsePredictionTranscripts(\$response, $analysis_name);
+}
+
 sub get_all_PipelineGenes { # get genes from otter/pipeline/ensembl db
     my( $self, $analysis_name, $metakey, $transcript_analyses, $translation_xref_dbs ) = @_;
 

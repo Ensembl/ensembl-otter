@@ -75,19 +75,19 @@ sub GenerateAlignFeatures {
         # Stringify only the simple fields:
     my %hit_seen = (); # collect the seen hit names here
     foreach my $af (@$afs) {
-        my $hit_name = $af->hseqname();
-        my $hd = $hd_hash{$hit_name};
+        my $hitname_linkid = $af->hseqname();
+        my $hd = $hd_hash{$hitname_linkid};
         if($hd) {
-            if(!exists($hit_seen{$hit_name})) { # a new one
+            if(!exists($hit_seen{$hitname_linkid})) { # a new one
 
                     # output a HitDescription line
-                my @hd_optvalues = ('HitDescription', $hit_name);
+                my @hd_optvalues = ('HitDescription', $hitname_linkid);
                 for my $opt (@hd_optnames) {
                     push @hd_optvalues, $hd->$opt();
                 }
                 $output_string .= join("\t", @hd_optvalues)."\n";
 
-                $hit_seen{$hit_name} = 1;
+                $hit_seen{$hitname_linkid} = 1;
             }
         }
 
@@ -120,9 +120,9 @@ sub GenerateRepeatFeatures {
     my %rc_seen = (); # collect the seen repeat consensus ids here
     foreach my $rf (@$rfs) {
         my $rc = $rf->repeat_consensus(); # object
-        my $rc_id = $rc->dbID();
+        my $rc_linkid = $rc->dbID();
 
-        if(!exists($rc_seen{$rc_id})) { # a new one
+        if(!exists($rc_seen{$rc_linkid})) { # a new one
 
                 # output a repeat consensus line
             my @rc_optvalues = ('RepeatConsensus');
@@ -131,7 +131,7 @@ sub GenerateRepeatFeatures {
             }
             $output_string .= join("\t", @rc_optvalues)."\n";
 
-            $rc_seen{$rc_id} = 1;
+            $rc_seen{$rc_linkid} = 1;
         }
 
             # output a repeat feature line
@@ -139,11 +139,11 @@ sub GenerateRepeatFeatures {
         for my $opt (@rf_optnames) {
             push @rf_optvalues, $rf->$opt();
         }
-        push @rf_optvalues, $rc_id;
 
         if(!$analysis_name) {
             push @rf_optvalues, $rf->analysis()->logic_name();
         }
+        push @rf_optvalues, $rc_linkid;
 
         $output_string .= join("\t", @rf_optvalues)."\n";
     }
@@ -164,9 +164,9 @@ sub GenerateMarkerFeatures {
     my %mo_seen = (); # collect the seen marker object ids here
     foreach my $mf (@$mfs) {
         my $mo = $mf->marker(); # object
-        my $mo_id = $mo->dbID();
+        my $mo_linkid = $mo->dbID();
 
-        if(!exists($mo_seen{$mo_id})) { # a new one
+        if(!exists($mo_seen{$mo_linkid})) { # a new one
 
                 # output a marker object line:
             my @mo_optvalues = ('MarkerObject');
@@ -182,11 +182,11 @@ sub GenerateMarkerFeatures {
                 for my $opt (@ms_optnames) {
                     push @ms_optvalues, $ms->$opt() || 0;
                 }
-                push @ms_optvalues, $mo_id;
+                push @ms_optvalues, $mo_linkid;
                 $output_string .= join("\t", @ms_optvalues)."\n";
             }
 
-            $mo_seen{$mo_id} = 1;
+            $mo_seen{$mo_linkid} = 1;
         }
 
             # output a marker feature line:
@@ -194,11 +194,11 @@ sub GenerateMarkerFeatures {
         for my $opt (@mf_optnames) {
             push @mf_optvalues, $mf->$opt();
         }
-        push @mf_optvalues, $mo_id;
 
         if(!$analysis_name) {
             push @mf_optvalues, $mf->analysis()->logic_name();
         }
+        push @mf_optvalues, $mo_linkid;
 
         $output_string .= join("\t", @mf_optvalues)."\n";
     }
@@ -220,9 +220,9 @@ sub GenerateDitagFeatureGroups {
     foreach my $df (@$dfs) {
 
         my $do = $df->ditag(); # object
-        my $do_id = $do->dbID();
+        my $do_linkid = $do->dbID();
 
-        if(!exists($do_seen{$do_id})) { # a new one
+        if(!exists($do_seen{$do_linkid})) { # a new one
 
                 # output a ditag object line:
             my @do_optvalues = ('DitagObject');
@@ -231,7 +231,7 @@ sub GenerateDitagFeatureGroups {
             }
             $output_string .= join("\t", @do_optvalues)."\n";
 
-            $do_seen{$do_id}++;
+            $do_seen{$do_linkid}++;
         }
 
             # output a ditag feature line:
@@ -239,11 +239,11 @@ sub GenerateDitagFeatureGroups {
         for my $opt (@df_optnames) {
             push @df_optvalues, $df->$opt();
         }
-        push @df_optvalues, $do_id;
 
         if(!$analysis_name) {
             push @df_optvalues, $df->analysis()->logic_name();
         }
+        push @df_optvalues, $do_linkid;
 
         $output_string .= join("\t", @df_optvalues)."\n";
     }
@@ -261,6 +261,8 @@ sub GeneratePredictionTranscripts {
 
     foreach my $pt (@$pts) {
 
+        my $pt_linkid = $pt->display_label || $pt->dbID();
+
             # output a predictioin transcipt line:
         my @pt_optvalues = ('PredictionTranscript');
         for my $opt (@pt_optnames) {
@@ -269,9 +271,9 @@ sub GeneratePredictionTranscripts {
         if(!$analysis_name) {
             push @pt_optvalues, $pt->analysis()->logic_name();
         }
-        $output_string .= join("\t", @pt_optvalues)."\n";
+        push @pt_optvalues, $pt_linkid;
 
-        my $pt_id = $pt->dbID();
+        $output_string .= join("\t", @pt_optvalues)."\n";
 
         for my $pe (@{$pt->get_all_Exons}) {
                 # output an exon line
@@ -279,7 +281,7 @@ sub GeneratePredictionTranscripts {
             for my $opt (@pe_optnames) {
                 push @pe_optvalues, $pe->$opt || 0;
             }
-            push @pe_optvalues, $pt_id;
+            push @pe_optvalues, $pt_linkid;
 
             $output_string .= join("\t", @pe_optvalues)."\n";
         }
