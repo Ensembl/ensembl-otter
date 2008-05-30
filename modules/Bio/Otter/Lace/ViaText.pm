@@ -13,6 +13,13 @@ our @EXPORT_OK = qw( %OrderOfOptions &ParseSimpleFeatures &ParseAlignFeatures &P
                      &ParseMarkerFeatures &ParseDitagFeatureGroups &ParsePredictionTranscripts );
 
 our %OrderOfOptions = (
+
+    'SimpleFeature' => [
+        qw(start end strand display_label score),
+            ## Not sent (passed): 'seqname'
+    ],
+
+        # Fixme: hit_name is a linking field and should be sent last in the line
     'HitDescription' => [
             ## Special treatment: 'name'
         qw(db_name taxon_id hit_length description)
@@ -23,9 +30,13 @@ our %OrderOfOptions = (
             ## Not sent (passed): 'seqname'
     ],
 
-    'SimpleFeature' => [
-        qw(start end strand display_label score),
-            ## Not sent (passed): 'seqname'
+    'RepeatFeature' => [
+        qw(start end strand hstart hend score),
+            ## Special treatment: repeat_consensus_id
+            ## Not sent (cached): analysis, slice
+    ],
+    'RepeatConsensus' => [ # 'slave' to RepeatFeature
+        qw(name repeat_class repeat_consensus length dbID),
     ],
 
     'MarkerFeature' => [
@@ -49,22 +60,14 @@ our %OrderOfOptions = (
         qw(name type sequence dbID),
     ],
 
-    'RepeatFeature' => [
-        qw(start end strand hstart hend score),
-            ## Special treatment: repeat_consensus_id
-            ## Not sent (cached): analysis, slice
-    ],
-    'RepeatConsensus' => [ # 'slave' to RepeatFeature
-        qw(name repeat_class repeat_consensus length dbID),
-    ],
-
     'PredictionTranscript' => [
-        qw(start end dbID),
+        qw(start end),
+            ## Special treatment: label = display_label() || dbID()
             ## Not sent (cached): analysis
     ],
     'PredictionExon' => [
         qw(start end strand phase p_value score),
-            ## Special treatment: prediction_transcript_id
+            ## Special treatment: label = pt->display_label() || pt->dbID()
             ## Not sent (cached): analysis
     ],
 );
