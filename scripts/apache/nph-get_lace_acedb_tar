@@ -3,15 +3,15 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-05-15 10:51:16 $
-# Id:            $Id: nph-get_lace_acedb_tar,v 1.7 2008-05-15 10:51:16 lg4 Exp $
+# Last modified: $Date: 2008-06-03 14:09:44 $
+# Id:            $Id: nph-get_lace_acedb_tar,v 1.8 2008-06-03 14:09:44 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_lace_acedb_tar,v $
 
 ### nph-get_lace_acedb_tar
 
 use strict;
 
-use SangerPaths qw{ core bioperl123 ensembl49 otter49 };
+use SangerPaths qw{ core bioperl123 ensembl49 otter50 };
 
 use Bio::Otter::ServerScriptSupport;
 

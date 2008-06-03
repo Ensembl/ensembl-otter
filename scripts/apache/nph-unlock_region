@@ -3,14 +3,14 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-05-15 10:51:16 $
-# Id:            $Id: nph-unlock_region,v 1.14 2008-05-15 10:51:16 lg4 Exp $
+# Last modified: $Date: 2008-06-03 14:09:45 $
+# Id:            $Id: nph-unlock_region,v 1.15 2008-06-03 14:09:45 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-unlock_region,v $
 
 use strict;
 use warnings;
 
-use SangerPaths qw{ core bioperl123 ensembl49 otter49 };
+use SangerPaths qw{ core bioperl123 ensembl49 otter50 };
 
 use Bio::Otter::ServerScriptSupport;
 use Bio::Vega::ContigLockBroker;

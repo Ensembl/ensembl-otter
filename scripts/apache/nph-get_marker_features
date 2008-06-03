@@ -3,12 +3,12 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-05-29 15:43:49 $
-# Id:            $Id: nph-get_marker_features,v 1.14 2008-05-29 15:43:49 lg4 Exp $
+# Last modified: $Date: 2008-06-03 14:09:44 $
+# Id:            $Id: nph-get_marker_features,v 1.15 2008-06-03 14:09:44 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_marker_features,v $
 
 use strict;
-use SangerPaths qw{ core bioperl123 ensembl49 otter49 };
+use SangerPaths qw{ core bioperl123 ensembl49 otter50 };
 
 use Bio::Otter::ServerScriptSupport;
 use Bio::Otter::Lace::ViaText::ToText ('&GenerateMarkerFeatures');
