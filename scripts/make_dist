@@ -8,23 +8,30 @@ use File::Path qw{ rmtree };
 use Getopt::Long qw{ GetOptions };
 
 {
-    my $version = 49;
-    my $release = "humpub-release-$version";
+    my $version = '';
     my $ensembl_tag = "branch-ensembl-19";
     my $otter_home = $ENV{'OTTER_HOME'};
-    my $ace_dir = '/nfs/team71/acedb/zmap/BIN.DEVELOPMENT/LINUX';
+    my $ace_dir = '/nfs/team71/acedb/zmap/BIN.DEVELOPMENT/Linux';
     my $ace_bin_dir = "$ace_dir/bin";
     my $usage = sub { exec('perldoc', $0) };
     my $internal_flag = 0;
     my $dist_name = 'otterlace_linux';
+    my $dist_dir  = '/nfs/team71/analysis/jgrg/dist';
     GetOptions(
         'internal!'     => \$internal_flag,
         'h|help!'       => $usage,
         'ace-bin=s'     => \$ace_bin_dir,
         'name=s'        => \$dist_name,
+        'version=s'     => \$version,
         ) or $usage->();
+
+    if($version eq '') {
+        die "Please provide the version (0 for HEAD)\n";
+    }
+
+    my $release = $version ? "humpub-release-$version" : 'HEAD';
     
-    unless ($otter_home) {
+    unless ($otter_home || $internal_flag) {
         die "OTTER_HOME environment variable must be set to get config files\n";
     }
     unless (-d $ace_bin_dir) {
@@ -35,7 +42,7 @@ use Getopt::Long qw{ GetOptions };
     my $release_dir;
     if ($internal_flag) {
         umask(002);
-        $release_dir = "otter_rel$version";
+        $release_dir = $version ? "otter_rel$version" : 'otter_HEAD';
         if (-e $release_dir) {
             rmtree($release_dir);
         }
@@ -51,27 +58,23 @@ use Getopt::Long qw{ GetOptions };
     chdir($release_dir) or die "Failed to enter directory '$release_dir' : $!";
     warn "Made release directory '$release_dir'\n";
     
-    # The ReadMe file
-    warn "Copying ReadMe.txt\n";
-    my $readme = 'ReadMe.txt';
-    copy("../$readme", $readme) or die "Error copying '../$readme'; $!";
-    
-    # Get config files
-    my @otter_home_files = qw{
-        acedbrc
-        otterlace
+    unless($internal_flag) {
+        # The ReadMe file
+        warn "Copying ReadMe.txt\n";
+        my $readme = 'ReadMe.txt';
+        copy("../$readme", $readme) or die "Error copying '../$readme'; $!";
+
+            # Get config files
+        my @otter_home_files = qw{
+            acedbrc
+            otterlace
         };
-    if ($internal_flag) {
-        warn "Copying config files from: $otter_home\n";
-    } else {
-        warn "Copying config files and otterlace sh script from: $otter_home\n";
-        push(@otter_home_files, 'otterlace');
+        foreach my $config (@otter_home_files) {
+            my $from = "$otter_home/$config";
+            copy($from, $config) or die "Failed to copy $from to $config; $!";
+        }
+        chmod $exe_mod, 'otterlace';
     }
-    foreach my $config (@otter_home_files) {
-        my $from = "$otter_home/$config";
-        copy($from, $config) or die "Failed to copy $from to $config; $!";
-    }
-    chmod $exe_mod, 'otterlace';
     
     # Acedb and zmap binaries
     warn "Copying acedb binaries from $ace_bin_dir\n";
@@ -123,7 +126,7 @@ use Getopt::Long qw{ GetOptions };
     
     my @bio_dist = ('bioperl-0.7.2', 'bioperl-1.2.3-patched', 'biodas-1.02');
     foreach my $dist (@bio_dist) {
-        my @tar = ('tar', 'xzf', "../$dist.tar.gz");
+        my @tar = ('tar', 'xzf', "$dist_dir/$dist.tar.gz");
         system(@tar) == 0 or die "Error from '@tar'; exit $?";
         warn "Expanding tar dist of $dist\n";
     }
