@@ -24,36 +24,14 @@ use EditWindow::Clone;
 use EditWindow::LocusName;
 use MenuCanvasWindow::ExonCanvas;
 use MenuCanvasWindow::GenomicFeatures;
+use MenuCanvasWindow::ZMapSeqChooser;
 use Bio::Otter::Lace::Defaults;
 
 use base 'MenuCanvasWindow';
 
-# Work out whether or not we can use ZMap
-{
-    my $show;
-
-    eval {
-        require MenuCanvasWindow::ZMapSeqChooser;
-    };
-
-    if ($@) {
-        warn "ZMap not available\n$@";
-        $show = 0;
-    }
-
-    sub show_zmap {
-        unless (defined $show) {
-            $show = Bio::Otter::Lace::Defaults::option_from_array(['client', 'show_zmap'])
-              || 0;
-        }
-        return $show;
-    }
-}
-
 sub new {
     my( $pkg, $tk ) = @_;
     
-    #my $self = $pkg->SUPER::new($tk, 380, 200);
     my $self = $pkg->SUPER::new($tk);
 
     $self->populate_menus;
@@ -116,7 +94,7 @@ sub initialize {
 
     $self->draw_subseq_list;
     $self->populate_clone_menu;
-    $self->launch_xace;
+    $self->zMapLaunchZmap;
     $self->top_window->raise;
 }
 
@@ -187,26 +165,6 @@ sub get_default_mutable_GeneMethod {
     }
 }
 
-sub update_ace_display {
-    my ($self, $ace) = @_ ;
-    
-    
-    my $xr = $self->xace_remote;
-    
-    if ($xr) {
-        print STDERR "Sending:\n$ace";
-        $xr->load_ace($ace);
-        $xr->save;
-        $xr->send_command('gif ; seqrecalc');
-        
-        return 1;
-    } else {
-        $self->message("No xace attached");
-        print STDERR "not able to send .ace file - no xace attached";
-        return 0;
-    }    
-}
-
 sub get_Locus {
     my( $self, $name ) = @_;
     
@@ -254,9 +212,6 @@ sub empty_Locus_cache {
 
 sub update_Locus {
     my( $self, $new_locus ) = @_;
-    
-    ### Maybe we could rename a locus by passing in an optional additional
-    ### parameter of the old locus name to this method?
      
     $self->set_Locus($new_locus);
     
@@ -327,8 +282,6 @@ sub attach_xace {
     if (my $xwid = $self->get_xace_window_id) {
         my $xrem = Hum::Ace::XaceRemote->new($xwid);
         $self->xace_remote($xrem);
-        #$xrem->send_command('save');
-        $xrem->send_command('writeaccess -gain');
     } else {
         warn "no xwindow id: $xwid";
     }
@@ -419,8 +372,6 @@ sub get_xwindow_id_from_readlock {
     if ($xwid) {
         my $xrem = Hum::Ace::XaceRemote->new($xwid);
         $self->xace_remote($xrem);
-        #$xrem->send_command('save');
-        $xrem->send_command('writeaccess -gain');
         return 1;
     } else {
         warn "WindowID was not found in lock file - outdated version of xace?";
@@ -614,27 +565,22 @@ sub populate_menus {
     my $tools_menu = $self->make_menu("Tools");
 
     # Launch Zmap
-    my $showing_zmap = 0;
-    if($self->show_zmap) {
-        my $zmap_launch_command = sub { $self->zMapLaunchZmap };
-        $tools_menu->add('command',
-                   -label          => 'Launch ZMap',
-                   -command        => $zmap_launch_command,
-                   -accelerator    => 'Ctrl+Z',
-                   -underline      => 7,
-                   );
-        $top->bind('<Control-z>', $zmap_launch_command);
-        $top->bind('<Control-Z>', $zmap_launch_command);
+    my $zmap_launch_command = sub { $self->zMapLaunchZmap };
+    $tools_menu->add('command',
+               -label          => 'Launch ZMap',
+               -command        => $zmap_launch_command,
+               -accelerator    => 'Ctrl+Z',
+               -underline      => 7,
+               );
+    $top->bind('<Control-z>', $zmap_launch_command);
+    $top->bind('<Control-Z>', $zmap_launch_command);
 
-        $zmap_launch_command = sub { $self->zMapLaunchInAZmap };
-        $tools_menu->add('command',
-                   -label          => 'Launch In A ZMap',
-                   -command        => $zmap_launch_command,
-                   -underline      => 7,
-                   );
-
-        $showing_zmap = 1;
-    }
+    $zmap_launch_command = sub { $self->zMapLaunchInAZmap };
+    $tools_menu->add('command',
+               -label          => 'Launch In A ZMap',
+               -command        => $zmap_launch_command,
+               -underline      => 7,
+               );
 
     # Launce xace
     my $xace_launch_command = sub { $self->launch_xace };
@@ -672,7 +618,7 @@ sub populate_menus {
     ## Spawn dotter Ctrl .
     my $run_dotter_command = sub { $self->run_dotter };
     $tools_menu->add('command',
-        -label          => 'Dotter fMap' . ($showing_zmap ? '/ZMap' : '').' hit',
+        -label          => 'Dotter Zmap hit',
         -command        => $run_dotter_command,
         -accelerator    => 'Ctrl+.',
         -underline      => 0,
@@ -973,17 +919,9 @@ sub close_all_edit_windows {
 
 sub save_data {
     my( $self, $update_ace ) = @_;
-    ## update_ace should be true unless object is exiting 
-    ## i.e. when called from ->exit_save_data()
-    #warn "SAVING DATA";
 
-    if (my $xr = $self->xace_remote) {
-        
-        #warn "XACE SAVE";
-        # This will fail if xace has been
-        # exited, so we ignore error.
-        eval{ $xr->save; };
-    }
+    # update_ace should be true unless object is exiting 
+    # i.e. when called from ->exit_save_data()
 
     unless ($self->AceDatabase->write_access) {
         warn "Read only session - not saving\n";
@@ -994,15 +932,10 @@ sub save_data {
     $top->Busy;
 
     eval{
-        if ($self->show_zmap) {
-            # exit zmap
-            $self->zMapKillZmap;
-        }
         my $ace_data = $self->AceDatabase->save_ace_to_otter;
-        ## update_ace should be true unless this object is exiting
+        # update_ace should be true unless this object is exiting
         if ($update_ace and $ace_data) {
-            $self->launch_xace;
-            $self->update_ace_display($ace_data);
+            $self->save_ace($ace_data);
             # resync here!
             $self->resync_with_db;
         }
@@ -1010,7 +943,7 @@ sub save_data {
     my $err = $@;
     
     $top->Unbusy;
-    $top->raise;
+    # $top->raise;  # Not needed, now that we don't restart xace
     
     if ($err) {
         $self->exception_message($err, 'Error saving to otter');
@@ -1063,10 +996,6 @@ sub make_search_panel {
     my $search_frame = $top->Frame();
     $search_frame->pack(-side => 'top');
     
-    #my $label = $search_frame->Label(-text => 'Search text:');
-    #$label->pack(-side => 'left');
-    #$search_frame->Frame(-width => 6)->pack(-side => 'left');
-    
     my $search_box = $search_frame->Entry(
         -width => 22,
         );
@@ -1074,7 +1003,7 @@ sub make_search_panel {
     
     $search_frame->Frame(-width => 6)->pack(-side => 'left');
     
-    ## Is hunting in CanvasWindow?
+    # Is hunting in CanvasWindow?
     my $hunter = sub{
 	    $top->Busy;
 	    $self->hunt_for_Entry_text($search_box);
@@ -1109,9 +1038,11 @@ sub make_search_panel {
 
 sub hunt_for_Entry_text{
     my ($self, $entry) = @_; 
-#   Finds the text given in the supplied Entry in $self->canvas
-#   Very similar to hunt_for_selection in SequenceNotes.pm
-#   potential for refactoring...
+
+    # Finds the text given in the supplied Entry in $self->canvas
+    # Very similar to hunt_for_selection in SequenceNotes.pm
+    # potential for refactoring...
+
     my $canvas = $self->canvas;
     my( $query_str, $regex );
     eval{
@@ -1120,8 +1051,8 @@ sub hunt_for_Entry_text{
 	    $regex =  qr/($query_str)/i;
     };
     return unless $query_str;
-#    warn $query_str;
-#    warn $regex;
+    # warn $query_str;
+    # warn $regex;
     $canvas->delete('msg');
     $self->deselect_all();
     my @all_text_obj = $canvas->find('withtag', 'searchable');
@@ -1135,7 +1066,7 @@ sub hunt_for_Entry_text{
     my $found = 0;
     foreach my $obj (@all_text_obj) {
         my $text = $canvas->itemcget($obj, 'text');
-#        warn "matching $text against $regex\n";
+        # warn "matching $text against $regex\n";
         if (my ($hit) = $text =~ /$regex/) {
             $found = $obj;
 	        $self->highlight($obj);
@@ -1159,6 +1090,12 @@ sub ace_path {
     return $self->AceDatabase->home;
 }
 
+sub save_ace {
+    my $self = shift;
+    
+    return $self->AceDatabase->ace_server->save_ace(@_);
+}
+
 sub resync_with_db {
     my( $self ) = @_;
     
@@ -1171,19 +1108,6 @@ sub resync_with_db {
     $self->canvas->Busy(
         -recurse => 0,
         );
-
-    if ($self->show_zmap) {
-        $self->zMapKillZmap(1);
-    }
-    eval {
-        $self->AceDatabase->ace_server->restart_server;
-    };
-    if ($@) {
-        my $time_to_die = 10;
-        $self->message("Failed to restart sgifaceserver. Will self-destruct in $time_to_die seconds:\n$@");
-        sleep $time_to_die;
-        kill TERM => -$$;
-    }
     
     $self->empty_Assembly_cache;
     $self->empty_SubSeq_cache;
@@ -1403,12 +1327,6 @@ sub edit_new_subsequence {
 sub delete_subsequences {
     my( $self ) = @_;
     
-    my $xr = $self->xace_remote;
-    unless ($xr) {
-        $self->message('No xace attached');
-        return;
-    }
-    
     # Make a list of editable SubSeqs from those selected,
     # which we are therefore allowed to delete.
     my @sub_names = $self->list_selected_subseq_names;
@@ -1432,7 +1350,6 @@ sub delete_subsequences {
     }
     
     # Check that the user really wants to delete them
-    
     my( $question );
     if (@to_die > 1) {
         $question = join('',
@@ -1465,22 +1382,18 @@ sub delete_subsequences {
     }
     
     # Delete from acedb database
-    $xr->load_ace($ace);
-    $xr->save;
-    $xr->send_command('gif ; seqrecalc');
+    $self->save_ace($ace);
     
     # Delete from ZMap
-    if ($self->show_zmap) {
-        my @xml;
-        foreach my $sub (@to_die) {
-            # Only attempt to delete sequences from Zmap
-            # which have actually been saved!
-            if ($sub->is_archival) {
-                push @xml, $sub->zmap_delete_xml_string;
-            }
+    my @xml;
+    foreach my $sub (@to_die) {
+        # Only attempt to delete sequences from Zmap
+        # which have actually been saved!
+        if ($sub->is_archival) {
+            push @xml, $sub->zmap_delete_xml_string;
         }
-        $self->send_zmap_commands(@xml);
     }
+    $self->send_zmap_commands(@xml);
     
     # Remove from our objects
     foreach my $sub (@to_die) {
@@ -1699,7 +1612,7 @@ sub get_all_Subseq_clusters {
     }
     
     foreach my $c (@clust) {
-        $c = [sort {$a->name cmp $b->name} @$c];
+        $c = [sort { ace_sort($a->name cmp $b->name) } @$c];
     }
     
     return sort {$a->[0]->start <=> $b->[0]->start} @clust;
@@ -2074,7 +1987,7 @@ sub send_zmap_commands {
     my $xr = $self->zMapGetXRemoteClientForView();
     unless ($xr) {
         warn "No current window.";
-        return ;
+        return;
     }
     warn "Sending window '", $xr->window_id, "' this xml:\n", @xml;
 

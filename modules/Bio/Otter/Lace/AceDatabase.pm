@@ -358,9 +358,9 @@ sub get_slicename_dsname {
 sub save_ace_to_otter {
     my( $self ) = @_;
 
-    # Make sure we don't have a stale database handle
-    $self->ace_server->kill_server;
-    $self->ace_server->start_server;
+    # # Make sure we don't have a stale database handle
+    # $self->ace_server->kill_server;
+    # $self->ace_server->start_server;
 
     my $ace    = $self->aceperl_db_handle;
     my $client = $self->Client or confess "No Client attached";
@@ -442,10 +442,8 @@ sub save_ace_to_otter {
 
 sub update_with_stable_ids {
     my ($self, $xml, $anything_else) = @_;
-    return unless $xml;
 
-    ## get an aceperl handle
-    my $ace = $self->aceperl_db_handle();
+    return unless $xml;
 
     ## write the temp/persisent file
     my $fileObj;

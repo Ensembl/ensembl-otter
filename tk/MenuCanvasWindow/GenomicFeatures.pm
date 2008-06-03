@@ -543,10 +543,8 @@ sub save_to_ace {
         
         my $xc = $self->XaceSeqChooser;
         
-        if ($xc->show_zmap) {
-            my @xml = $new_assembly->zmap_SimpleFeature_xml($self->Assembly);
-            $self->XaceSeqChooser->send_zmap_commands(@xml);
-        }
+        my @xml = $new_assembly->zmap_SimpleFeature_xml($self->Assembly);
+        $self->XaceSeqChooser->send_zmap_commands(@xml);
         
         if($xc->update_ace_display($new_ace)) {    # And zmap updated OK    
             print STDERR "Genomic features successfully saved to acedb\n";

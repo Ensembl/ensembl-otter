@@ -479,7 +479,7 @@ __DATA__
 [client]
 host=www.sanger.ac.uk
 port=80
-version=49
+version=50
 write_access=0
 debug=1
 pipeline=1 
