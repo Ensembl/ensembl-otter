@@ -3,12 +3,12 @@
 # Author:        lg4
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-06-03 14:11:56 $
-# Id:            $Id: nph-get_das_prediction_transcripts,v 1.1 2008-06-03 14:11:56 lg4 Exp $
+# Last modified: $Date: 2008-06-03 14:16:10 $
+# Id:            $Id: nph-get_das_prediction_transcripts,v 1.2 2008-06-03 14:16:10 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_das_prediction_transcripts,v $
 
 use strict;
-use SangerPaths qw{ core bioperl123 ensembl49 otter49 };
+use SangerPaths qw{ core bioperl123 ensembl49 otter50 };
 
 my $http_proxy = $ENV{http_proxy};
 
