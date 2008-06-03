@@ -59,7 +59,7 @@ information about database matches that is not
 provided by the AlignFeature objects to which it
 is attached.
 
-=head1 MEHTODS
+=head1 METHODS
 
 =over 4
 

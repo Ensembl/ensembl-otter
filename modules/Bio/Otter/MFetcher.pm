@@ -409,7 +409,7 @@ sub fetch_mapped_features {
                         = $target_slice_on_target->$fetching_method(@$call_parms) ||
                         $self->error_exit("Could not fetch anything - analysis may be missing from the DB");
 
-                    $self->log('***** : '.scalar(@$target_fs_on_target_segment)." ${feature_name}s found on the slice");
+                    $self->log('***** : '.scalar(@$target_fs_on_target_segment)." ${feature_name}s found on the slice $metakey:".$target_slice_on_target->start().'..'.$target_slice_on_target->end());
 
                     # foreach my $target_feature (@$target_fs_on_target_segment) {
                     ## this is supposed to be faster:
