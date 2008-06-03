@@ -1,0 +1,100 @@
+#!/usr/local/bin/perl -Tw
+
+# Author:        lg4
+# Group:         anacode
+# Maintainer:    jgrg
+# Last modified: $Date: 2008-06-03 14:11:56 $
+# Id:            $Id: nph-get_das_prediction_transcripts,v 1.1 2008-06-03 14:11:56 lg4 Exp $
+# Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_das_prediction_transcripts,v $
+
+use strict;
+use SangerPaths qw{ core bioperl123 ensembl49 otter49 };
+
+my $http_proxy = $ENV{http_proxy};
+
+use Bio::Das;
+use Bio::EnsEMBL::PredictionExon;
+use Bio::EnsEMBL::PredictionTranscript;
+use Bio::Otter::ServerScriptSupport;
+use Bio::Otter::Lace::ViaText::ToText ('&GeneratePredictionTranscripts');
+
+sub Bio::EnsEMBL::Slice::get_all_PredictionTranscripts_via_DAS {
+    my ($slice, $server, $das, $chr_name, $analysis_name) = @_;
+
+    my $chr_start = $slice->start();
+    my $chr_end   = $slice->end();
+    my $segment_name  = "$chr_name:$chr_start,$chr_end";
+
+    # DAS servers will give all features if a "type=" argument is not present
+    if ($analysis_name and $analysis_name eq 'all') {
+        $analysis_name = undef;
+    }
+
+    $server->log( sprintf ("GET  %s/features?segment=%s%s\n",
+                            $das->default_url, $segment_name,
+                            $analysis_name ? ";type=$analysis_name" : '') );
+
+    my $segment = $das->segment($chr_name, $chr_start, $chr_end);
+    unless($segment) {
+        $server->log( "DAS source refused to serve the segment={$segment_name}");
+        return [];
+    }  
+
+    my @feature_type  = $analysis_name ? ('-type' => $analysis_name) : ();
+    my $iterator = $segment->features(-iterator => 1, @feature_type);
+
+    my %dpts = (); # hash of prediction_transcripts
+    while (my $das_feature = $iterator->next_seq) {
+        my $prediction_exon = Bio::EnsEMBL::PredictionExon->new();
+        $prediction_exon->slice(   $slice );
+        $prediction_exon->start(   $das_feature->start() - $chr_start + 1 );
+        $prediction_exon->end(     $das_feature->stop()  - $chr_start + 1 );
+        $prediction_exon->strand( ($das_feature->orientation() eq '-') ? -1 : 1 );
+        $prediction_exon->score(  ($das_feature->score() eq '-') ? 100 : $das_feature->score() );
+            ## should we fake it if it's not available anyway?
+
+        my $pt_label = $das_feature->id();
+
+        my $pt = $dpts{$pt_label} ||= Bio::EnsEMBL::PredictionTranscript->new( -display_label => $pt_label );
+
+        $pt->add_Exon($prediction_exon);
+    }
+
+    return [ values %dpts ];
+}
+
+
+my $server = Bio::Otter::ServerScriptSupport->new;
+
+my $output_string = '';
+
+eval {
+    my $chr_name      = $server->param('name');  ## Since in our new schema name is substituted for type,
+                                                 ## we need it clean for outer sources
+
+    my $source        = $server->require_argument('source');
+    my $dsn           = $server->require_argument('dsn');
+    my $analysis_name = $server->param('analysis'); # defaults to *everything*
+
+    my $das = Bio::Das->new(
+        -source => $source,
+        -dsn    => $dsn,
+    );
+    $das->proxy($http_proxy) if $http_proxy;
+
+    my $dpts = $server->fetch_mapped_features('das_prediction_transcript', 'get_all_PredictionTranscripts_via_DAS', [$server, $das, $chr_name, $analysis_name],
+        (map { defined($server->param($_)) ? $server->param($_) : '' } qw(cs name type start end metakey csver csver_remote)),
+        1, # do the short version of mapping, without the target database
+    );
+
+    $output_string = GeneratePredictionTranscripts($dpts, $analysis_name);
+};
+
+if ($@) {
+    $server->error_exit($@);
+} else {
+    $server->send_response($output_string, 1);
+}
+
+1;
+
