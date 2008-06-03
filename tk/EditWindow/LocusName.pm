@@ -83,11 +83,11 @@ sub do_rename {
     warn "Renaming Locus '$old_name' to '$new_name'\n";
     
     my $xc = $self->XaceSeqChooser;
-    my $xr = $xc->xace_remote;
-    unless ($xr) {
-        $xc->message('No xace attached');
-        return;
-    }
+    # my $xr = $xc->xace_remote;
+    # unless ($xr) {
+    #     $xc->message('No xace attached');
+    #     return;
+    # }
 
     my $locus_cache = $xc->{'_locus_cache'}
         or confess "Did not get locus cache from XaceSeqChooser";
@@ -103,8 +103,9 @@ sub do_rename {
     $xc->set_Locus($locus);
     
     # Send the rename command to xace
-    $xr->load_ace(qq{\n-R Locus "$old_name" "$new_name"\n\n});
-    $xr->save;
+    # $xr->load_ace(qq{\n-R Locus "$old_name" "$new_name"\n\n});
+    # $xr->save;
+    $xc->save_ace(qq{\n-R Locus "$old_name" "$new_name"\n\n});
     
     # Now we need to update Zmap with the new locus names
     my @xml;

@@ -927,6 +927,7 @@ sub next_message_id {
 
 {
     my $sel_tag = 'SelectedThing';
+    my $was_tag = 'WasSelected';
 
     sub highlight {
         my( $self, @obj ) = @_;

@@ -722,59 +722,35 @@ sub window_close {
 sub show_subseq {
     my( $self ) = @_;
 
-    my $xc = $self->XaceSeqChooser();
-    if ($xc->show_zmap) {
-        # Show in Zmap if it is running
-        
-        my $client;
+    # We can't  rely on the cached object  here... The explanation
+    # is  long and tedious  but boils  down to  the fact  that the
+    # window  that receives  the  events changes  within zmap.  We
+    # therefore need to remove  the ZMapWindow cached clients, ask
+    # for the current list  from the window that knows, repopulate
+    # the cache and find a window that can zoom_to
 
-        # We can't  rely on the cached object  here... The explanation
-        # is  long and tedious  but boils  down to  the fact  that the
-        # window  that receives  the  events changes  within zmap.  We
-        # therefore need to remove  the ZMapWindow cached clients, ask
-        # for the current list  from the window that knows, repopulate
-        # the cache and find a window that can zoom_to
-
-        if (my $cache = $xc->xremote_cache) {
-            my $id = $cache->lookup_value('ZMapWindow');
-            $cache->remove_client_with_id($id);
-            for (my $i = 0; $i < 10; $i++) {
-                if ($id = $cache->lookup_value('ZMapWindow.'.$i)) {
-                    $cache->remove_client_with_id($id);
-                }
-            }
-
-            if ($client = $xc->zMapGetXRemoteClientByAction('list_windows', 1)) {
-                $xc->zMapDoRequest($client, "list_windows", qq{<zmap action="list_windows" />});
-            }
-            if ($client = $xc->zMapGetXRemoteClientByAction('zoom_to', 1)) {
-                my $xml = Hum::XmlWriter->new;
-                $xml->open_tag('zmap', {action => 'zoom_to'});
-                $xml->open_tag('featureset');
-                $self->SubSeq->zmap_xml_feature_tag($xml);
-                $xml->close_all_open_tags;
-                $xc->zMapDoRequest($client, "zoom_to", $xml->flush);
-            } else {
-                $self->message("Zmap not running");
+    my $xc = $self->XaceSeqChooser;
+    if (my $cache = $xc->xremote_cache) {
+        my $id = $cache->lookup_value('ZMapWindow');
+        $cache->remove_client_with_id($id);
+        for (my $i = 0; $i < 10; $i++) {
+            if ($id = $cache->lookup_value('ZMapWindow.'.$i)) {
+                $cache->remove_client_with_id($id);
             }
         }
-    } else {
-        # Show it in fMap
-        my $xr = $self->XaceSeqChooser->xace_remote;
-        if ($xr) {
-            my $sub = $self->SubSeq;
-            unless ($sub->is_archival) {
-                $self->message("Not yet saved");
-                return;
-            }
-        
-            if ($sub->get_all_Exons) {
-                $xr->show_SubSeq($sub);
-            } else {
-                $self->message("Can't show an empty SubSequence");
-            }
+
+        if (my $client = $xc->zMapGetXRemoteClientByAction('list_windows', 1)) {
+            $xc->zMapDoRequest($client, "list_windows", qq{<zmap action="list_windows" />});
+        }
+        if (my $client = $xc->zMapGetXRemoteClientByAction('zoom_to', 1)) {
+            my $xml = Hum::XmlWriter->new;
+            $xml->open_tag('zmap', {action => 'zoom_to'});
+            $xml->open_tag('featureset');
+            $self->SubSeq->zmap_xml_feature_tag($xml);
+            $xml->close_all_open_tags;
+            $xc->zMapDoRequest($client, "zoom_to", $xml->flush);
         } else {
-            $self->message("No xace attached");
+            $self->message("Zmap not running");
         }
     }
 }
@@ -2631,44 +2607,21 @@ sub xace_save {
     
     my $xc = $self->XaceSeqChooser;
 
-    # For now we need xace running in order to save the subseq.
-    # If we save to zmap, but fail to save to xace and confess
-    # then the replace_SubSeq etc doesn't get run.  This means
-    # zmap has the changes but otterlace and xace don't and still
-    # consider the changes unsaved.  Next save attempts to delete
-    # the original again, but this fails in zmap as the feature
-    # is already deleted and changed.  It is for this reason we
-    # do the $xr->save() before the $self->zmap_save($sub);
-    
-    # Add ace_string method from locus with rename as above
-    
     print STDERR "Sending:\n$ace";
-    
-    my $xr = $xc->xace_remote;
-    if ($xr) {
-        if ($xc->show_zmap) {
-            $xr->save();       # throws if no xace.
-            $self->zmap_save($sub);
-        }
-        $xr->load_ace($ace);
-        $xr->save;
-        $xr->send_command('gif ; seqrecalc');
-        $xc->replace_SubSeq($sub, $old_name);
-        $self->SubSeq($sub);
-        $self->update_transcript_remark_widget($sub);        
-        $self->name($new_name);
-        $self->evidence_hash($sub->clone_evidence_hash);
+    $xc->save_ace($ace);
+    $self->zmap_save($sub);
+    $xc->replace_SubSeq($sub, $old_name);
+    $self->SubSeq($sub);
+    $self->update_transcript_remark_widget($sub);        
+    $self->name($new_name);
+    $self->evidence_hash($sub->clone_evidence_hash);
 
-        # update_Locus in this object will be called
-        # from update_Locus in the XaceSeqChooser
-        $xc->update_Locus($sub->Locus);
+    # update_Locus in this object will be called
+    # from update_Locus in the XaceSeqChooser
+    $xc->update_Locus($sub->Locus);
 
-        $sub->is_archival(1);
-        return 1;
-    } else {
-        $self->message("No xace attached");
-        return 0;
-    }
+    $sub->is_archival(1);
+    return 1;
 }
 
 sub zmap_save {
