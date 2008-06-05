@@ -221,11 +221,12 @@ sub exists {
     return @$geneNames ? $geneNames->[0] : undef; # not sure this is right, previous behaviour though
 
 }
+
 1;
 
-	
+__END__
 
+=head1 AUTHOR
 
-
-
+Ana Code B<email> anacode@sanger.ac.uk
 

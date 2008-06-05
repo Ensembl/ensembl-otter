@@ -422,3 +422,7 @@ sub build_Gene_array {
 
 __END__
 
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
+

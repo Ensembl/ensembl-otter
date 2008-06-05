@@ -59,17 +59,10 @@ sub import {
                   
                   SOFT_MASKING => 0,
                   );
-    if ($^O eq 'linux') {
-        $Config{'BIN_DIR'} = '/nfs/disk100/humpub/LINUXbin';
-    }
-    elsif ($^O eq 'dec_osf') {
-        $Config{'BIN_DIR'} = '/nfs/disk100/humpub/OSFbin';
-    }
-    else {
-        my $bin_dir = '/usr/local/bin';
-        warn "Guessing BIN_DIR is '$bin_dir' for operating system '$^O'\n";
-        $Config{'BIN_DIR'} = $bin_dir;
-    }
+
+    my $bin_dir = '/usr/local/bin';
+    warn "Guessing BIN_DIR is '$bin_dir' for operating system '$^O'\n";
+    $Config{'BIN_DIR'} = $bin_dir;
 
     # Get list of variables supplied, or else all
     my @vars = @_ ? @_ : keys(%Config);
@@ -154,7 +147,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.19 $ ';
+$revision='$Revision: 1.20 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -750,3 +743,10 @@ sub lib_path{
 }
 
 1;
+
+__END__
+
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
+

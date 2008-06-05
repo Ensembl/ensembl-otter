@@ -45,3 +45,9 @@ sub fetch_by_Transcript  {
 
 1;
 
+__END__
+
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
+

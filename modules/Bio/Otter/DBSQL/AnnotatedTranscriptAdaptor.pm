@@ -168,9 +168,9 @@ sub fetch_by_translation_stable_id{
 
 1;
 
-	
+__END__
 
+=head1 AUTHOR
 
-
-
+Ana Code B<email> anacode@sanger.ac.uk
 

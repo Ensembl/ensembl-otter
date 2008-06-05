@@ -373,24 +373,12 @@ sub history{
 
 
 }
+
 1;
 
+__END__
 
+=head1 AUTHOR
 
-#	 my ($t_stable_version,$t_slice_name,$t_start,$t_end,$t_strand,$t_biotype,$t_status,$t_exon_count,$t_desc,$t_name,$t_att_count,$t_msnf,$t_menf,$t_csnf,$t_cenf,$t_evi_count);
-#	$gene_count++; 
-#	 foreach my $t (@$trans) {
-#		$i++;
-#		$alltxs->[$i]=$t;
-		
+Ana Code B<email> anacode@sanger.ac.uk
 
-#	 }
-#	 foreach my $t (@$trans){
-#		my $stable_version=$t->stable_id.".".$t->version;
-#		my $slice_name = $t->slice->name;
-#		my $start      = $t->start;
-#		my $end        = $t->end;
-
-
-
-#	 }

@@ -69,3 +69,9 @@ sub VirtualContig_to_XML {
 
 1;
 
+__END__
+
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
+

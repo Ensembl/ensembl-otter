@@ -455,3 +455,10 @@ sub by_stable_id_or_name {
 }
 
 1;
+
+__END__
+
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
+

@@ -43,3 +43,12 @@ sub DESTROY{
     #print STDERR "File $name is not being removed even though it's being DESTROY'd\n";
     # $self->close(); # not needed as Perl will close it automagically
 }
+
+1;
+
+__END__
+
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
+
