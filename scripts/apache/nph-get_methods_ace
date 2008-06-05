@@ -1,10 +1,10 @@
-#!/usr/local/bin/perl -w
+#!/usr/local/bin/perl -Tw
 
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-06-03 14:09:44 $
-# Id:            $Id: nph-get_methods_ace,v 1.6 2008-06-03 14:09:44 jgrg Exp $
+# Last modified: $Date: 2008-06-05 09:18:32 $
+# Id:            $Id: nph-get_methods_ace,v 1.7 2008-06-05 09:18:32 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_methods_ace,v $
 
 ### nph-get_methods_ace
