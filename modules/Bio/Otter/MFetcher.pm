@@ -451,3 +451,10 @@ sub fetch_mapped_features {
 
 1;
 
+__END__
+
+=head1 AUTHOR
+
+Leo Gordon B<email> lg4@sanger.ac.uk
+
+

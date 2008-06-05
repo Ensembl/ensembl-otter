@@ -111,3 +111,10 @@ sub fetch_new_stable_ids_for_Gene {
 }
 
 1;
+
+__END__
+
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
+

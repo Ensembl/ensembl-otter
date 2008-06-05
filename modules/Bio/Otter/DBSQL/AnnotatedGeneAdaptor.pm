@@ -748,3 +748,10 @@ sub fetch_all_by_DBEntry {
 }
 
 1;
+
+__END__
+
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
+

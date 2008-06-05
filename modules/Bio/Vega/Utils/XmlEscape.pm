@@ -31,5 +31,11 @@ sub xml_unescape {
     return $str;
 }
 
-
 1;
+
+__END__
+
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
+

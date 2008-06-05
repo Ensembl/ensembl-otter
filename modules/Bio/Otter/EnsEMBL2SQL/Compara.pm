@@ -184,4 +184,12 @@ sub species_name {
 
     return $self->{_species_name};
 }
+
 1;
+
+__END__
+
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
+

@@ -114,6 +114,6 @@ sub store {
 
 __END__
 
+=head1 AUTHOR
 
-
-Chao-Kung Chen ck1@sanger.ac.uk
+Chao-Kung Chen B<email> ck1@sanger.ac.uk

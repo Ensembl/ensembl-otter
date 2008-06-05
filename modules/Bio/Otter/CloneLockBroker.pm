@@ -182,5 +182,11 @@ sub get_CloneLockAdaptor {
     return $self->db->get_CloneLockAdaptor;
 }
 
-
 1;
+
+__END__
+
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
+

@@ -55,3 +55,11 @@ sub swap_slice {
 
 1;
 
+__END__
+
+=head1 NAME - Bio::Vega::Exon
+
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
+
