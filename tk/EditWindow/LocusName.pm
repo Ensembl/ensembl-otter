@@ -80,9 +80,14 @@ sub do_rename {
     if ($old_name eq $new_name) {
         return;
     }
+    my $xc = $self->XaceSeqChooser;
+    my $xr = $xc->xace_remote;
+    unless ($xr) {
+        $xc->message('No xace attached');
+        return;
+    }
     warn "Renaming Locus '$old_name' to '$new_name'\n";
     
-    my $xc = $self->XaceSeqChooser;
 
     eval {
         my @xml;
@@ -121,7 +126,9 @@ sub do_rename {
         }
         $xc->send_zmap_commands(@xml);    
 
-        $xc->save_ace($ace);
+        # Send the rename command to xace
+        $xr->load_ace($ace);
+        $xr->save;
     };
     if ($@) {
         $xc->exception_message("Error renaming locus '$old_name' to '$new_name'; ". $@);
