@@ -2445,7 +2445,7 @@ sub get_SubSeq_if_changed {
         return;
     }
     
-    #printf STDERR "OLD:\n>%s<\nNEW:>%s<\n", $old->ace_string, $new->ace_string;
+    printf STDERR "OLD:\n>%s<\nNEW:>%s<\n", $old->ace_string, $new->ace_string;
 
     my $new_name = $new->name;
     if ($new_name ne $self->name) {
