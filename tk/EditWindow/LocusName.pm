@@ -83,38 +83,49 @@ sub do_rename {
     warn "Renaming Locus '$old_name' to '$new_name'\n";
     
     my $xc = $self->XaceSeqChooser;
-    # my $xr = $xc->xace_remote;
-    # unless ($xr) {
-    #     $xc->message('No xace attached');
-    #     return;
-    # }
 
-    my $locus_cache = $xc->{'_locus_cache'}
-        or confess "Did not get locus cache from XaceSeqChooser";
+    eval {
+        my @xml;
+        foreach my $sub ($xc->fetch_SubSeqs_by_locus_name($old_name)) {
+            push @xml, $sub->zmap_delete_xml_string;
+        }
 
-    if ($locus_cache->{$new_name}) {
-        $xc->message("Cannot rename to '$new_name'; Locus already exists");
-        return;
-    }
+        my $locus_cache = $xc->{'_locus_cache'}
+            or confess "Did not get locus cache from XaceSeqChooser";
 
-    my $locus = delete $locus_cache->{$old_name}
-        or confess "No locus called '$old_name'";
-    $locus->name($new_name);
-    $xc->set_Locus($locus);
+        if ($locus_cache->{$new_name}) {
+            $xc->message("Cannot rename to '$new_name'; Locus already exists");
+            return;
+        }
+
+        my $locus = delete $locus_cache->{$old_name}
+            or confess "No locus called '$old_name'";
+        $locus->name($new_name);
+        $xc->set_Locus($locus);
+
+        my $ace = qq{\n-R Locus "$old_name" "$new_name"\n};
+
+        # Need to deal with gene type prefix, incase the rename
+        # invoves a prefix being added, removed or changed.
+        if (my ($pre) = $new_name =~ /^([^:]+):/) {
+            $locus->gene_type_prefix($pre);
+            $ace .= qq{\nLocus "$new_name"\nType_prefix "$pre"\n};
+        } else {
+            $locus->gene_type_prefix('');
+            $ace .= qq{\nLocus "$new_name"\n-D Type_prefix\n};
+        }
     
-    # Send the rename command to xace
-    # $xr->load_ace(qq{\n-R Locus "$old_name" "$new_name"\n\n});
-    # $xr->save;
-    $xc->save_ace(qq{\n-R Locus "$old_name" "$new_name"\n\n});
-    
-    # Now we need to update Zmap with the new locus names
-    my @xml;
-    foreach my $sub ($xc->fetch_SubSeqs_by_locus_name($new_name)) {
-        push @xml,
-            $sub->zmap_delete_xml_string,
-            $sub->zmap_create_xml_string;
+        # Now we need to update Zmap with the new locus names
+        foreach my $sub ($xc->fetch_SubSeqs_by_locus_name($new_name)) {
+            push @xml, $sub->zmap_create_xml_string;
+        }
+        $xc->send_zmap_commands(@xml);    
+
+        $xc->save_ace($ace);
+    };
+    if ($@) {
+        $xc->exception_message("Error renaming locus '$old_name' to '$new_name'; ". $@);
     }
-    $xc->send_zmap_commands(@xml);
     
     $self->top->destroy;
 }

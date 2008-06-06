@@ -584,12 +584,13 @@ sub populate_menus {
 
     # Launce xace
     my $xace_launch_command = sub { $self->launch_xace };
-    $tools_menu->add('command',
-        -label          => 'Launch Xace',
-        -command        => $xace_launch_command,
-        -accelerator    => 'Ctrl+L',
-        -underline      => 7,
-        );
+    # Hide menu item, but keep keyboard shortcut:
+    # $tools_menu->add('command',
+    #     -label          => 'Launch Xace',
+    #     -command        => $xace_launch_command,
+    #     -accelerator    => 'Ctrl+L',
+    #     -underline      => 7,
+    #     );
     $top->bind('<Control-l>', $xace_launch_command);
     $top->bind('<Control-L>', $xace_launch_command);
      
@@ -1036,18 +1037,20 @@ sub make_search_panel {
         });
 }
 
-sub hunt_for_Entry_text{
+
+sub hunt_for_Entry_text {
     my ($self, $entry) = @_; 
 
-    # Finds the text given in the supplied Entry in $self->canvas
-    # Very similar to hunt_for_selection in SequenceNotes.pm
-    # potential for refactoring...
+    # Searches for the text given in the supplied Entry in
+    # the acedb string representation of all the subsequences.
 
     my $canvas = $self->canvas;
     my( $query_str, $regex );
     eval{
 	    $query_str = $entry->get();
-	    $query_str =~ s{(\W)}{\\$1}g;
+	    $query_str =~ s{([^\w\*\?\\])}{\\$1}g;
+	    $query_str =~ s{\*}{.*}g;
+	    $query_str =~ s{\?}{.}g;
 	    $regex =  qr/($query_str)/i;
     };
     return unless $query_str;
@@ -1055,28 +1058,65 @@ sub hunt_for_Entry_text{
     # warn $regex;
     $canvas->delete('msg');
     $self->deselect_all();
-    my @all_text_obj = $canvas->find('withtag', 'searchable');
-    unless (@all_text_obj) {
-        ### Sometimes a weird error occurs where the first call to find
-        ### doesn't return anything - warn user if this happens.
-        $self->message('No searchable text on canvas - is it empty?');
-        return;
-    }
 
-    my $found = 0;
-    foreach my $obj (@all_text_obj) {
-        my $text = $canvas->itemcget($obj, 'text');
-        # warn "matching $text against $regex\n";
-        if (my ($hit) = $text =~ /$regex/) {
-            $found = $obj;
-	        $self->highlight($obj);
+    my @matching_sub_names;
+    foreach my $name ($self->list_all_SubSeq_names) {
+        my $sub = $self->get_SubSeq($name);
+        my $str = $sub->ace_string;
+        if (my ($hit) = $str =~ /$regex/) {
+            push(@matching_sub_names, $name);
         }
     }
-    unless ($found) {
+    if (@matching_sub_names) {
+        $self->highlight_by_name(@matching_sub_names);
+    } else {
         $self->message("Can't find '$query_str'");
-        return;
+        return;        
     }
 }
+
+
+# sub hunt_for_Entry_text{
+#     my ($self, $entry) = @_; 
+# 
+#     # Finds the text given in the supplied Entry in $self->canvas
+#     # Very similar to hunt_for_selection in SequenceNotes.pm
+#     # potential for refactoring...
+# 
+#     my $canvas = $self->canvas;
+#     my( $query_str, $regex );
+#     eval{
+#       $query_str = $entry->get();
+#       $query_str =~ s{(\W)}{\\$1}g;
+#       $regex =  qr/($query_str)/i;
+#     };
+#     return unless $query_str;
+#     # warn $query_str;
+#     # warn $regex;
+#     $canvas->delete('msg');
+#     $self->deselect_all();
+#     my @all_text_obj = $canvas->find('withtag', 'searchable');
+#     unless (@all_text_obj) {
+#         ### Sometimes a weird error occurs where the first call to find
+#         ### doesn't return anything - warn user if this happens.
+#         $self->message('No searchable text on canvas - is it empty?');
+#         return;
+#     }
+# 
+#     my $found = 0;
+#     foreach my $obj (@all_text_obj) {
+#         my $text = $canvas->itemcget($obj, 'text');
+#         # warn "matching $text against $regex\n";
+#         if (my ($hit) = $text =~ /$regex/) {
+#             $found = $obj;
+#           $self->highlight($obj);
+#         }
+#     }
+#     unless ($found) {
+#         $self->message("Can't find '$query_str'");
+#         return;
+#     }
+# }
 
 sub ace_handle {
     my( $self ) = @_;
@@ -1946,6 +1986,7 @@ sub rename_locus {
     
     unless ($self->close_all_subseq_edit_windows) {
         $self->message('Must close all clone editing windows before renaming locus');
+        return;
     }
     
     if (my $ren_window = $self->{'_locus_rename_window'}) {
