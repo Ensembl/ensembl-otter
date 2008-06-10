@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-06-03 14:09:45 $
-# Id:            $Id: nph-show_mapping,v 1.11 2008-06-03 14:09:45 jgrg Exp $
+# Last modified: $Date: 2008-06-10 08:41:11 $
+# Id:            $Id: nph-show_mapping,v 1.12 2008-06-10 08:41:11 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-show_mapping,v $
 
 use strict;
@@ -40,11 +40,13 @@ my $output_string = '';
 
 my $sth = $mdbc->prepare(qq{
     SELECT asm.name, cmp.name, a.asm_start, a.asm_end, a.cmp_start, a.cmp_end
-    FROM assembly a, seq_region asm, seq_region cmp
+    FROM assembly a, seq_region asm, seq_region cmp, coord_system cs_asm, coord_system cs_cmp
     WHERE a.asm_seq_region_id=asm.seq_region_id
     AND a.cmp_seq_region_id=cmp.seq_region_id
-    AND asm.coord_system_id = (select coord_system_id from coord_system where version='$csver_asm')
-    AND cmp.coord_system_id = (select coord_system_id from coord_system where version='$csver_cmp')
+    AND cs_asm.version='$csver_asm'
+    AND cs_cmp.version='$csver_cmp'
+    AND asm.coord_system_id in (cs_asm.coord_system_id, cs_cmp.coord_system_id)
+    AND cmp.coord_system_id in (cs_asm.coord_system_id, cs_cmp.coord_system_id)
     ORDER BY asm.name, a.asm_start
 });
 $sth->execute;
