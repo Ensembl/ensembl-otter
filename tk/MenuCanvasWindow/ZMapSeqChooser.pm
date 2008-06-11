@@ -417,6 +417,8 @@ sub zMapZMapDefaults {
     return $self->formatZmapDefaults(
         'ZMap',
         show_mainwindow  => $show_main,
+        pfetch      => sprintf(qq{"%s"}, $self->AceDatabase->Client->url_root . '/nph-pfetch'),
+        cookie_jar  => sprintf(qq{"$ENV{'OTTERLACE_COOKIE_JAR'}"}),
     );
 }
 
