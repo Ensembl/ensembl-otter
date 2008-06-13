@@ -5,7 +5,7 @@ package Bio::Otter::Lace::ViaText::ToText;
 use strict;
 use warnings;
 
-use Bio::Otter::Lace::ViaText ('%OrderOfOptions');
+use Bio::Otter::Lace::ViaText ('%LangDesc');
 use Bio::Otter::DBSQL::SimpleBindingAdaptor;
 use Bio::Otter::HitDescription;
 use Bio::Otter::ToXML;
@@ -21,7 +21,7 @@ our @EXPORT_OK = qw( &GenerateSimpleFeatures &GenerateAlignFeatures &GenerateRep
 sub GenerateSimpleFeatures {
     my ($sfs, $analysis_name) = @_;
 
-    my @sf_optnames = @{ $OrderOfOptions{SimpleFeature} };
+    my @sf_optnames = @{ $LangDesc{SimpleFeature}{-optnames} };
 
     my $output_string = '';
 
@@ -45,7 +45,6 @@ sub GenerateSimpleFeatures {
 sub GenerateAlignFeatures {
     my ($afs, $analysis_name, $sdbc) = @_;
 
-
         # Put the names into the hit_description hash:
     my %hd_hash = ();
     foreach my $af (@$afs) {
@@ -58,6 +57,7 @@ sub GenerateAlignFeatures {
         'hit_description',
         'hit_name',
         { qw(
+            hit_name _hit_name
             hit_length _hit_length
             hit_description _description
             hit_taxon _taxon_id
@@ -67,8 +67,7 @@ sub GenerateAlignFeatures {
         \%hd_hash,
     );
 
-    my @af_optnames = @{ $OrderOfOptions{AlignFeature} };
-    my @hd_optnames = @{ $OrderOfOptions{HitDescription} };
+    my @hd_optnames = @{ $LangDesc{HitDescription}{-optnames} };
 
     my $output_string = '';
 
@@ -81,7 +80,7 @@ sub GenerateAlignFeatures {
             if(!exists($hit_seen{$hitname_linkid})) { # a new one
 
                     # output a HitDescription line
-                my @hd_optvalues = ('HitDescription', $hitname_linkid);
+                my @hd_optvalues = ('HitDescription');
                 for my $opt (@hd_optnames) {
                     push @hd_optvalues, $hd->$opt();
                 }
@@ -92,7 +91,10 @@ sub GenerateAlignFeatures {
         }
 
             # output an AlignFeature line
-        my @af_optvalues = ($af->isa('Bio::EnsEMBL::DnaDnaAlignFeature') ? 'DnaAlignFeature' : 'PepAlignFeature');
+        my $feature_type = UNIVERSAL::isa($af,'Bio::EnsEMBL::DnaDnaAlignFeature') ? 'DnaAlignFeature' : 'PepAlignFeature';
+        my @af_optnames = @{ $LangDesc{$feature_type}{-optnames} };
+
+        my @af_optvalues = ($feature_type);
         for my $opt (@af_optnames) {
             push @af_optvalues, $af->$opt();
         }
@@ -110,8 +112,8 @@ sub GenerateAlignFeatures {
 sub GenerateRepeatFeatures {
     my ($rfs, $analysis_name) = @_;
 
-    my @rf_optnames = @{ $OrderOfOptions{RepeatFeature} };
-    my @rc_optnames = @{ $OrderOfOptions{RepeatConsensus} };
+    my @rf_optnames = @{ $LangDesc{RepeatFeature}{-optnames} };
+    my @rc_optnames = @{ $LangDesc{RepeatConsensus}{-optnames} };
 
     my $output_string = '';
 
@@ -153,9 +155,9 @@ sub GenerateRepeatFeatures {
 sub GenerateMarkerFeatures {
     my ($mfs, $analysis_name) = @_;
 
-    my @mf_optnames = @{ $OrderOfOptions{MarkerFeature} };
-    my @mo_optnames = @{ $OrderOfOptions{MarkerObject} };
-    my @ms_optnames = @{ $OrderOfOptions{MarkerSynonym} };
+    my @mf_optnames = @{ $LangDesc{MarkerFeature}{-optnames} };
+    my @mo_optnames = @{ $LangDesc{MarkerObject}{-optnames} };
+    my @ms_optnames = @{ $LangDesc{MarkerSynonym}{-optnames} };
 
     my $output_string = '';
 
@@ -208,8 +210,8 @@ sub GenerateMarkerFeatures {
 sub GenerateDitagFeatureGroups {
     my ($dfs, $analysis_name) = @_;
 
-    my @df_optnames = @{ $OrderOfOptions{DitagFeature} };
-    my @do_optnames = @{ $OrderOfOptions{DitagObject} };
+    my @df_optnames = @{ $LangDesc{DitagFeature}{-optnames} };
+    my @do_optnames = @{ $LangDesc{DitagObject}{-optnames} };
 
     my $output_string = '';
 
@@ -253,8 +255,8 @@ sub GenerateDitagFeatureGroups {
 sub GeneratePredictionTranscripts {
     my ($pts, $analysis_name) = @_;
 
-    my @pt_optnames = @{ $OrderOfOptions{PredictionTranscript} };
-    my @pe_optnames = @{ $OrderOfOptions{PredictionExon} };
+    my @pt_optnames = @{ $LangDesc{PredictionTranscript}{-optnames} };
+    my @pe_optnames = @{ $LangDesc{PredictionExon}{-optnames} };
 
     my $output_string = '';
 
