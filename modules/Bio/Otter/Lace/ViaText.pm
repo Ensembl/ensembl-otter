@@ -101,8 +101,8 @@ our %LangDesc = (
 
     'PredictionTranscript' => {
         -constructor => 'Bio::EnsEMBL::PredictionTranscript',
-        -optnames    => [ qw(start end display_label) ],
-        -hash_by     => 'display_label',
+        -optnames    => [ qw(start end dbID) ],
+        -hash_by     => 'dbID',
     },
     'PredictionExon' => {
         -constructor => 'Bio::EnsEMBL::Exon', # there was no PredictionExon in EnsEMBL v.19 code
