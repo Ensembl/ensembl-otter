@@ -142,8 +142,9 @@ sub ParseFeatures {
         if(my $link = $feature_subhash->{-link}) {
             my ($linked_feature_type, $link_sub) = @$link;
             my $linked_id      = $optvalues[$i++];
-            my $linked_feature = $feature_hash{$linked_feature_type}{$linked_id};
-            &$link_sub($feature,$linked_feature);
+            if(my $linked_feature = $feature_hash{$linked_feature_type}{$linked_id}) {
+                &$link_sub($feature,$linked_feature);
+            }
         }
 
         if($feature->can('analysis')) {

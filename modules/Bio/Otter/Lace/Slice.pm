@@ -237,7 +237,7 @@ sub get_all_SimpleFeatures { # get simple features from otter/pipeline/ensembl d
         },
     );
 
-    return ParseFeatures(\$response, $self->name(), $analysis_name)->{SimpleFeature};
+    return ParseFeatures(\$response, $self->name(), $analysis_name)->{SimpleFeature} || [];
 }
 
 sub get_all_DAS_SimpleFeatures { # get simple features from DAS source (via mapping Otter server)
@@ -260,7 +260,7 @@ sub get_all_DAS_SimpleFeatures { # get simple features from DAS source (via mapp
         },
     );
 
-    return ParseFeatures(\$response, $self->name(), $analysis_name)->{SimpleFeature};
+    return ParseFeatures(\$response, $self->name(), $analysis_name)->{SimpleFeature} || [];
 }
 
 sub get_all_Cons_SimpleFeatures { # get simple features from Compara 'GERP_CONSERVATION_SCORE'
@@ -281,7 +281,7 @@ sub get_all_Cons_SimpleFeatures { # get simple features from Compara 'GERP_CONSE
         },
     );
 
-    return ParseFeatures(\$response, $self->name(), $analysis_name)->{SimpleFeature};
+    return ParseFeatures(\$response, $self->name(), $analysis_name)->{SimpleFeature} || [];
 }
 
 sub get_all_DnaAlignFeatures { # get dna align features from otter/pipeline/ensembl db
@@ -311,7 +311,7 @@ sub get_all_AlignFeatures { # get align features from otter/pipeline/ensembl db
         },
     );
 
-    return ParseFeatures(\$response, $self->name(), $analysis_name)->{ $kind eq 'dafs' ? 'DnaAlignFeature' : 'PepAlignFeature'};
+    return ParseFeatures(\$response, $self->name(), $analysis_name)->{ $kind eq 'dafs' ? 'DnaAlignFeature' : 'PepAlignFeature'} || [];
 }
 
 sub get_all_RepeatFeatures { # get repeat features from otter/pipeline/ensembl db
@@ -328,7 +328,7 @@ sub get_all_RepeatFeatures { # get repeat features from otter/pipeline/ensembl d
         },
     );
 
-    return ParseFeatures(\$response, $self->name(), $analysis_name)->{RepeatFeature};
+    return ParseFeatures(\$response, $self->name(), $analysis_name)->{RepeatFeature} || [];
 }
 
 sub get_all_MarkerFeatures { # get marker features from otter/pipeline/ensembl db
@@ -345,7 +345,7 @@ sub get_all_MarkerFeatures { # get marker features from otter/pipeline/ensembl d
         },
     );
 
-    return ParseFeatures(\$response, $self->name(), $analysis_name)->{MarkerFeature};
+    return ParseFeatures(\$response, $self->name(), $analysis_name)->{MarkerFeature} || [];
 }
 
     #
@@ -384,7 +384,7 @@ sub get_all_PredictionTranscripts { # get prediction transcripts from otter/pipe
         },
     );
 
-    return ParseFeatures(\$response, $self->name(), $analysis_name)->{PredictionTranscript};
+    return ParseFeatures(\$response, $self->name(), $analysis_name)->{PredictionTranscript} || [];
 }
 
 sub get_all_DAS_PredictionTranscripts { # get simple features from DAS source (via mapping Otter server)
@@ -407,7 +407,7 @@ sub get_all_DAS_PredictionTranscripts { # get simple features from DAS source (v
         },
     );
 
-    return ParseFeatures(\$response, $self->name(), $analysis_name)->{PredictionTranscript};
+    return ParseFeatures(\$response, $self->name(), $analysis_name)->{PredictionTranscript} || [];
 }
 
 sub get_all_PipelineGenes { # get genes from otter/pipeline/ensembl db
