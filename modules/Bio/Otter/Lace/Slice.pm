@@ -386,7 +386,9 @@ sub get_all_PredictionTranscripts { # get prediction transcripts from otter/pipe
         },
     );
 
-    return ParseFeatures(\$response, $self->name(), $analysis_name)->{PredictionTranscript} || [];
+    my $pt_subhash = ParseFeatures(\$response, $self->name(), $analysis_name)->{PredictionTranscript};
+
+    return $pt_subhash ? [ values %$pt_subhash ] : [];
 }
 
 sub get_all_DAS_PredictionTranscripts { # get simple features from DAS source (via mapping Otter server)
@@ -409,7 +411,9 @@ sub get_all_DAS_PredictionTranscripts { # get simple features from DAS source (v
         },
     );
 
-    return ParseFeatures(\$response, $self->name(), $analysis_name)->{PredictionTranscript} || [];
+    my $pt_subhash = ParseFeatures(\$response, $self->name(), $analysis_name)->{PredictionTranscript};
+
+    return $pt_subhash ? [ values %$pt_subhash ] : [];
 }
 
 sub get_all_PipelineGenes { # get genes from otter/pipeline/ensembl db
