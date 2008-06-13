@@ -41,7 +41,7 @@ our %LangDesc = (
     },
     'DnaAlignFeature'=> {
         -constructor => sub{ return Bio::EnsEMBL::DnaDnaAlignFeature->new_fast({}); },
-        -optnames    => [ qw(start end strand hseqname hstart hend hstrand percent_id score cigar_string) ],
+        -optnames    => [ qw(start end strand hstart hend hstrand percent_id score cigar_string hseqname) ],
         -link        => ['HitDescription', sub{ my($af,$hd)=@_;
                                                  if($hd) {
                                                     bless $af,'Bio::Otter::DnaDnaAlignFeature';
@@ -51,7 +51,7 @@ our %LangDesc = (
     },
     'PepAlignFeature'=> {
         -constructor => sub{ return Bio::EnsEMBL::DnaPepAlignFeature->new_fast({}); },
-        -optnames    => [ qw(start end strand hseqname hstart hend hstrand percent_id score cigar_string) ],
+        -optnames    => [ qw(start end strand hstart hend hstrand percent_id score cigar_string hseqname) ],
         -link        => ['HitDescription', sub{ my($af,$hd)=@_;
                                                  if($hd) {
                                                     bless $af,'Bio::Otter::DnaPepAlignFeature';
@@ -133,15 +133,14 @@ sub ParseFeatures {
         my $feature = ref $constructor ? &$constructor() : $constructor->new();
 
         my $optnames        = $feature_subhash->{-optnames};
-        my $i=0; # we will need it outside
-        for(; $i < @$optnames; $i++) {
+        for(my $i=0; $i < @$optnames; $i++) {
             my $method = $optnames->[$i];
             $feature->$method($optvalues[$i]);
         }
         
         if(my $link = $feature_subhash->{-link}) {
             my ($linked_feature_type, $link_sub) = @$link;
-            my $linked_id      = $optvalues[$i++];
+            my $linked_id      = pop @optvalues;
             if(my $linked_feature = $feature_hash{$linked_feature_type}{$linked_id}) {
                 &$link_sub($feature,$linked_feature);
             }
@@ -180,7 +179,7 @@ our %OrderOfOptions = (
         qw(db_name taxon_id hit_length description)
     ],
     'AlignFeature' => [
-        qw(start end strand hseqname hstart hend hstrand percent_id score),
+        qw(start end strand hstart hend hstrand percent_id score hseqname),
             ## Special treatment: 'cigar_string'
             ## Not sent (passed): 'seqname'
     ],

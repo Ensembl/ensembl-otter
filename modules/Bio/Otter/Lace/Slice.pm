@@ -367,7 +367,9 @@ sub get_all_DitagFeatureGroups { # get ditag features from otter/pipeline/ensemb
         },
     );
 
-    return [ values %{ ParseFeatures(\$response, $self->name(), $analysis_name)->{DitagFeature}} ];
+    my $ditag_subhash = ParseFeatures(\$response, $self->name(), $analysis_name)->{DitagFeature};
+
+    return $ditag_subhash ? [ values %$ditag_subhash ] : [];
 }
 
 sub get_all_PredictionTranscripts { # get prediction transcripts from otter/pipeline/ensembl db
