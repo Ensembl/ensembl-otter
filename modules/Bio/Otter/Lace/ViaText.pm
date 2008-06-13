@@ -36,8 +36,8 @@ our %LangDesc = (
 
     'HitDescription' => {
         -constructor => 'Bio::Otter::HitDescription',
-        -optnames    => [ qw(db_name taxon_id hit_length description hit_name) ],
-        -hash_by     => 'hit_name',
+        -optnames    => [ qw(db_name taxon_id hit_length description) ],
+        -hash_by     => 'db_name',
     },
     'DnaAlignFeature'=> {
         -constructor => sub { return Bio::EnsEMBL::DnaDnaAlignFeature->new_fast({}); },
