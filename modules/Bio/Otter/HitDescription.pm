@@ -10,6 +10,15 @@ sub new {
     return bless {}, shift;
 }
 
+sub hit_name {
+    my( $self, $hit_name ) = @_;
+    
+    if ($hit_name) {
+        $self->{'_hit_name'} = $hit_name;
+    }
+    return $self->{'_hit_name'};
+}
+
 sub hit_length {
     my( $self, $hit_length ) = @_;
     
