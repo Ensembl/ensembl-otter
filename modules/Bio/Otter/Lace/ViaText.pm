@@ -40,7 +40,7 @@ our %LangDesc = (
         -hash_by     => 'db_name',
     },
     'DnaAlignFeature'=> {
-        -constructor => sub { return Bio::EnsEMBL::DnaDnaAlignFeature->new_fast({}); },
+        -constructor => sub{ return Bio::EnsEMBL::DnaDnaAlignFeature->new_fast({}); },
         -optnames    => [ qw(start end strand hseqname hstart hend hstrand percent_id score cigar_string) ],
         -link        => ['HitDescription', sub{ my($af,$hd)=@_;
                                                  if($hd) {
@@ -50,7 +50,7 @@ our %LangDesc = (
                                               } ],
     },
     'PepAlignFeature'=> {
-        -constructor => sub { return Bio::EnsEMBL::DnaPepAlignFeature->new_fast({}); },
+        -constructor => sub{ return Bio::EnsEMBL::DnaPepAlignFeature->new_fast({}); },
         -optnames    => [ qw(start end strand hseqname hstart hend hstrand percent_id score cigar_string) ],
         -link        => ['HitDescription', sub{ my($af,$hd)=@_;
                                                  if($hd) {
@@ -88,12 +88,12 @@ our %LangDesc = (
     },
 
     'DitagObject'    => {
-        -constructor => 'Bio::EnsEMBL::Map::Ditag',
+        -constructor => sub{ return Bio::EnsEMBL::Map::Ditag->new_fast({}); },
         -optnames    => [ qw(name type sequence dbID) ],
         -hash_by     => 'dbID',
     },
     'DitagFeature'   => {
-        -constructor => 'Bio::EnsEMBL::Map::DitagFeature',
+        -constructor => sub{ return Bio::EnsEMBL::Map::DitagFeature->new_fast({}); },
         -optnames    => [ qw(start end strand hit_start hit_end hit_strand ditag_side ditag_pair_id) ],
         -link        => [ 'DitagObject', sub{ my($df,$do)=@_; $df->ditag($do);} ],
         -hash_by     => sub{ my $self=shift; return $self->ditag()->dbID().'.'.$self->ditag_pair_id();},
