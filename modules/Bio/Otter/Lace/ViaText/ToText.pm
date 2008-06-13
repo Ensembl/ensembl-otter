@@ -262,7 +262,7 @@ sub GeneratePredictionTranscripts {
 
     foreach my $pt (@$pts) {
 
-        my $pt_linkid = $pt->display_label || $pt->dbID();
+        my $pt_linkid = $pt->dbID();
 
             # output a predictioin transcipt line:
         my @pt_optvalues = ('PredictionTranscript');
@@ -272,7 +272,6 @@ sub GeneratePredictionTranscripts {
         if(!$analysis_name) {
             push @pt_optvalues, $pt->analysis()->logic_name();
         }
-        push @pt_optvalues, $pt_linkid;
 
         $output_string .= join("\t", @pt_optvalues)."\n";
 
