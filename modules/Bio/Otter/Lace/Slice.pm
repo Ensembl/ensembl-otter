@@ -3,12 +3,13 @@ package Bio::Otter::Lace::Slice;
 use strict;
 use warnings;
 
-    # all the parsing is now performed by a separate module ...
-use Bio::Otter::Lace::ViaText::FromText qw( &ParseSimpleFeatures &ParseAlignFeatures &ParseRepeatFeatures
-                                            &ParseMarkerFeatures &ParseDitagFeatureGroups
-                                            &ParsePredictionTranscripts &ParseGenes );
+    # parsing is now performed by a table-driven parser:
+use Bio::Otter::Lace::ViaText qw( &ParseFeatures );
 
-    # ... apart from parsing the tiling path
+    # parsing of genes is done separately:
+use Bio::Otter::FromXML;
+
+    # so we only parse the tiling path here:
 use Bio::Otter::Lace::CloneSequence;
 
 sub new {
@@ -236,7 +237,7 @@ sub get_all_SimpleFeatures { # get simple features from otter/pipeline/ensembl d
         },
     );
 
-    return ParseSimpleFeatures(\$response, $self->name(), $analysis_name);
+    return ParseFeatures(\$response, $self->name(), $analysis_name)->{SimpleFeature};
 }
 
 sub get_all_DAS_SimpleFeatures { # get simple features from DAS source (via mapping Otter server)
@@ -259,7 +260,7 @@ sub get_all_DAS_SimpleFeatures { # get simple features from DAS source (via mapp
         },
     );
 
-    return ParseSimpleFeatures(\$response, $self->name(), $analysis_name);
+    return ParseFeatures(\$response, $self->name(), $analysis_name)->{SimpleFeature};
 }
 
 sub get_all_Cons_SimpleFeatures { # get simple features from Compara 'GERP_CONSERVATION_SCORE'
@@ -280,7 +281,7 @@ sub get_all_Cons_SimpleFeatures { # get simple features from Compara 'GERP_CONSE
         },
     );
 
-    return ParseSimpleFeatures(\$response, $self->name(), $analysis_name);
+    return ParseFeatures(\$response, $self->name(), $analysis_name)->{SimpleFeature};
 }
 
 sub get_all_DnaAlignFeatures { # get dna align features from otter/pipeline/ensembl db
@@ -310,7 +311,7 @@ sub get_all_AlignFeatures { # get align features from otter/pipeline/ensembl db
         },
     );
 
-    return ParseAlignFeatures(\$response, $kind, $self->name(), $analysis_name);
+    return ParseFeatures(\$response, $self->name(), $analysis_name)->{ $kind eq 'dafs' ? 'DnaAlignFeature' : 'PepAlignFeature'};
 }
 
 sub get_all_RepeatFeatures { # get repeat features from otter/pipeline/ensembl db
@@ -327,7 +328,7 @@ sub get_all_RepeatFeatures { # get repeat features from otter/pipeline/ensembl d
         },
     );
 
-    return ParseRepeatFeatures(\$response, $analysis_name);
+    return ParseFeatures(\$response, $self->name(), $analysis_name)->{RepeatFeature};
 }
 
 sub get_all_MarkerFeatures { # get marker features from otter/pipeline/ensembl db
@@ -344,7 +345,7 @@ sub get_all_MarkerFeatures { # get marker features from otter/pipeline/ensembl d
         },
     );
 
-    return ParseMarkerFeatures(\$response, $analysis_name);
+    return ParseFeatures(\$response, $self->name(), $analysis_name)->{MarkerFeature};
 }
 
     #
@@ -366,7 +367,7 @@ sub get_all_DitagFeatureGroups { # get ditag features from otter/pipeline/ensemb
         },
     );
 
-    return ParseDitagFeatureGroups(\$response, $analysis_name);
+    return [ values %{ ParseFeatures(\$response, $self->name(), $analysis_name)->{DitagFeature}} ];
 }
 
 sub get_all_PredictionTranscripts { # get prediction transcripts from otter/pipeline/ensembl db
@@ -383,7 +384,7 @@ sub get_all_PredictionTranscripts { # get prediction transcripts from otter/pipe
         },
     );
 
-    return ParsePredictionTranscripts(\$response, $analysis_name);
+    return ParseFeatures(\$response, $self->name(), $analysis_name)->{PredictionTranscript};
 }
 
 sub get_all_DAS_PredictionTranscripts { # get simple features from DAS source (via mapping Otter server)
@@ -406,7 +407,7 @@ sub get_all_DAS_PredictionTranscripts { # get simple features from DAS source (v
         },
     );
 
-    return ParsePredictionTranscripts(\$response, $analysis_name);
+    return ParseFeatures(\$response, $self->name(), $analysis_name)->{PredictionTranscript};
 }
 
 sub get_all_PipelineGenes { # get genes from otter/pipeline/ensembl db
@@ -431,7 +432,8 @@ sub get_all_PipelineGenes { # get genes from otter/pipeline/ensembl db
 
     my $slice = $self->create_detached_slice();
 
-    return ParseGenes(\$response, $slice);
+    my $gene_parser = Bio::Otter::FromXML->new([ split(/\n/, $response ], $slice);
+    return $gene_parser->build_Gene_array($slice);
 }
 
 sub get_all_Genes { # currently unused by ensembl-ace, but is retained for interface-compatibility with Slice
