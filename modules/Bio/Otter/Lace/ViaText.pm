@@ -158,7 +158,11 @@ sub ParseFeatures {
 
             # either double-hash it or hash-push it:
         if(my $hash_by = $feature_subhash->{-hash_by}) {
-            $feature_hash{$feature_type}{$feature->$hash_by()} = $feature;
+            if(ref $hash_by) {
+                push @{ $feature_hash{$feature_type}{&$hash_by($feature)} }, $feature;
+            } else {
+                $feature_hash{$feature_type}{$feature->$hash_by()} = $feature;
+            }
         } else {
             push @{ $feature_hash{$feature_type} }, $feature;
         }
