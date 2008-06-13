@@ -179,8 +179,7 @@ our %OrderOfOptions = (
         qw(db_name taxon_id hit_length description)
     ],
     'AlignFeature' => [
-        qw(start end strand hstart hend hstrand percent_id score hseqname),
-            ## Special treatment: 'cigar_string'
+        qw(start end strand hstart hend hstrand percent_id score cigar_string hseqname),
             ## Not sent (passed): 'seqname'
     ],
 

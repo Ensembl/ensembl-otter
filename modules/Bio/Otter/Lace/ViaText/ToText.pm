@@ -96,7 +96,6 @@ sub GenerateAlignFeatures {
         for my $opt (@af_optnames) {
             push @af_optvalues, $af->$opt();
         }
-        push @af_optvalues, $af->cigar_string();
 
         if(!$analysis_name) {
             push @af_optvalues, $af->analysis()->logic_name();
