@@ -432,7 +432,7 @@ sub get_all_PipelineGenes { # get genes from otter/pipeline/ensembl db
 
     my $slice = $self->create_detached_slice();
 
-    my $gene_parser = Bio::Otter::FromXML->new([ split(/\n/, $response ], $slice);
+    my $gene_parser = Bio::Otter::FromXML->new([ split(/\n/, $response) ], $slice);
     return $gene_parser->build_Gene_array($slice);
 }
 
