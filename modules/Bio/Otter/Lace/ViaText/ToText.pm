@@ -92,7 +92,7 @@ sub GenerateAlignFeatures {
         }
 
             # output an AlignFeature line
-        my @af_optvalues = ('AlignFeature');
+        my @af_optvalues = ($af->isa('Bio::EnsEMBL::DnaDnaAlignFeature') ? 'DnaAlignFeature' : 'PepAlignFeature');
         for my $opt (@af_optnames) {
             push @af_optvalues, $af->$opt();
         }
