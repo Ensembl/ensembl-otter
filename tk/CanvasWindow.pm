@@ -933,6 +933,7 @@ sub next_message_id {
         my( $self, @obj ) = @_;
 
         my $canvas = $self->canvas;
+        $canvas->delete($was_tag);
         foreach my $o (@obj) {
             my @bbox = $canvas->bbox($o);
             $bbox[0] -= 1;
@@ -992,7 +993,12 @@ sub next_message_id {
         my( $self ) = @_;
 
         my $canvas = $self->canvas;
-        $canvas->delete($sel_tag);
+        foreach my $rect ($canvas->find('withtag', $sel_tag)) {
+            $canvas->configure($rect,
+                -fill   => '#cccccc',
+                -tags   => [$was_tag],
+                );
+        }
         $self->{'_selected_list'} = undef;
     }
 
