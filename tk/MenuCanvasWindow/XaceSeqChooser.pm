@@ -636,7 +636,18 @@ sub populate_menus {
         -accelerator    => 'Ctrl+Shift+L',
         -underline      => 1,
         );
-    $top->bind('<Control-Shift-L>',     $rename_locus);
+    $top->bind('<Control-Shift-L>', $rename_locus);
+    
+
+    # Show dialog for renaming the locus attached to this subseq
+    my $re_authorize = sub { $self->AceDatabase->Client->do_authentication; };
+    $tools_menu->add('command',
+        -label          => 'Re-authorize',
+        -command        => $re_authorize,
+        -accelerator    => 'Ctrl+Shift+A',
+        # -underline      => 1,
+        );
+    $top->bind('<Control-Shift-A>', $re_authorize);
     
 
     # (Re)start local pfetch server
