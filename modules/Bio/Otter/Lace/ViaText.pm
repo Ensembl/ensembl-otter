@@ -39,25 +39,27 @@ our %LangDesc = (
         -optnames    => [ qw(hit_name db_name taxon_id hit_length description) ],
         -hash_by     => 'hit_name',
     },
-    'DnaAlignFeature'=> {
+    'DnaDnaAlignFeature'=> {
         -constructor => sub{ return Bio::EnsEMBL::DnaDnaAlignFeature->new_fast({}); },
         -optnames    => [ qw(start end strand hstart hend hstrand percent_id score cigar_string hseqname) ],
-        -link        => ['HitDescription', sub{ my($af,$hd)=@_;
-                                                 if($hd) {
+        -reference   => ['HitDescription', sub{ my($af,$hd)=@_;
                                                     bless $af,'Bio::Otter::DnaDnaAlignFeature';
                                                     $af->{'_hit_description'} = $hd;
-                                                 }
-                                              } ],
+                                           },
+                                           sub{ my $af = shift @_;
+                                                return $af->can('get_HitDescription') ? $af->get_HitDescription() : undef;
+                                           } ],
     },
-    'PepAlignFeature'=> {
+    'DnaPepAlignFeature'=> {
         -constructor => sub{ return Bio::EnsEMBL::DnaPepAlignFeature->new_fast({}); },
         -optnames    => [ qw(start end strand hstart hend hstrand percent_id score cigar_string hseqname) ],
-        -link        => ['HitDescription', sub{ my($af,$hd)=@_;
-                                                 if($hd) {
+        -reference   => ['HitDescription', sub{ my($af,$hd)=@_;
                                                     bless $af,'Bio::Otter::DnaPepAlignFeature';
                                                     $af->{'_hit_description'} = $hd;
-                                                 }
-                                              } ],
+                                           },
+                                           sub{ my $af = shift @_;
+                                                return $af->can('get_HitDescription') ? $af->get_HitDescription() : undef;
+                                           } ],
     },
 
     'RepeatConsensus'=> {
@@ -68,23 +70,24 @@ our %LangDesc = (
     'RepeatFeature'  => {
         -constructor => 'Bio::EnsEMBL::RepeatFeature',
         -optnames    => [ qw(start end strand hstart hend score) ],
-        -link        => [ 'RepeatConsensus', sub{ my($rf,$rc)=@_; $rf->repeat_consensus($rc);} ],
+        -reference   => [ 'RepeatConsensus', 'repeat_consensus' ],
     },
 
-    'MarkerObject'   => {
-        -constructor => 'Bio::EnsEMBL::Map::Marker',
-        -optnames    => [ qw(left_primer right_primer min_primer_dist max_primer_dist dbID) ],
-        -hash_by     => 'dbID',
+    'MarkerObject'    => {
+        -constructor  => 'Bio::EnsEMBL::Map::Marker',
+        -optnames     => [ qw(left_primer right_primer min_primer_dist max_primer_dist dbID) ],
+        -hash_by      => 'dbID',
+        -get_all_cmps => [ 'MarkerSynonym', 'get_all_MarkerSynonyms' ],
     },
     'MarkerSynonym'  => {
         -constructor => 'Bio::EnsEMBL::Map::MarkerSynonym',
         -optnames    => [ qw(source name) ],
-        -link        => [ 'MarkerObject', sub{ my($ms,$mo)=@_; $mo->add_MarkerSynonyms($ms);} ],
+        -add_one_cmp => [ 'MarkerObject', 'add_MarkerSynonyms' ],
     },
     'MarkerFeature'  => {
         -constructor => 'Bio::EnsEMBL::Map::MarkerFeature',
         -optnames    => [ qw(start end map_weight) ],
-        -link        => [ 'MarkerObject', sub{ my($mf,$mo)=@_; $mf->marker($mo);} ],
+        -reference   => [ 'MarkerObject', 'marker' ],
     },
 
     'DitagObject'    => {
@@ -95,19 +98,20 @@ our %LangDesc = (
     'DitagFeature'   => {
         -constructor => sub{ return Bio::EnsEMBL::Map::DitagFeature->new_fast({}); },
         -optnames    => [ qw(start end strand hit_start hit_end hit_strand ditag_side ditag_pair_id) ],
-        -link        => [ 'DitagObject', sub{ my($df,$do)=@_; $df->ditag($do);} ],
+        -reference   => [ 'DitagObject', 'ditag' ],
         -hash_by     => sub{ my $self=shift; return $self->ditag()->dbID().'.'.$self->ditag_pair_id();},
     },
 
     'PredictionTranscript' => {
-        -constructor => 'Bio::EnsEMBL::PredictionTranscript',
-        -optnames    => [ qw(start end dbID) ],
-        -hash_by     => 'dbID',
+        -constructor  => 'Bio::EnsEMBL::PredictionTranscript',
+        -optnames     => [ qw(start end dbID) ],
+        -hash_by      => 'dbID',
+        -get_all_cmps => [ 'PredictionExon', 'get_all_Exons' ],
     },
     'PredictionExon' => {
         -constructor => 'Bio::EnsEMBL::Exon', # there was no PredictionExon in EnsEMBL v.19 code
         -optnames    => [ qw(start end strand phase p_value score) ],
-        -link        => [ 'PredictionTranscript', sub{ my($pe,$pt)=@_; $pt->add_Exon($pe);} ],
+        -add_one_cmp => [ 'PredictionTranscript', 'add_Exon' ],
     },
 );
 
@@ -138,11 +142,17 @@ sub ParseFeatures {
             $feature->$method($optvalues[$i]);
         }
         
-        if(my $link = $feature_subhash->{-link}) {
-            my ($linked_feature_type, $link_sub) = @$link;
-            my $linked_id      = pop @optvalues;
-            if(my $linked_feature = $feature_hash{$linked_feature_type}{$linked_id}) {
-                &$link_sub($feature,$linked_feature);
+        if(my $ref_link = $feature_subhash->{-reference}) { # reference link is one-way (the referenced object doesn't know its referees)
+            my ($referenced_feature_type, $ref_setter, $ref_getter ) = @$ref_link;
+            my $referenced_id      = pop @optvalues;
+            if(my $referenced_feature = $feature_hash{$referenced_feature_type}{$referenced_id}) {
+                $feature->$ref_setter($referenced_feature);
+            }
+        } elsif(my $cmp_link = $feature_subhash->{-add_one_cmp}) { # component link is two-way (parent keeps a list of its components)
+            my ($parent_feature_type, $add_sub) = @$cmp_link;
+            my $parent_id      = pop @optvalues;
+            if(my $parent_feature = $feature_hash{$parent_feature_type}{$parent_id}) {
+                $parent_feature->$add_sub($feature);
             }
         }
 
@@ -156,14 +166,19 @@ sub ParseFeatures {
             $feature->seqname($seqname);
         }
 
-            # either double-hash it or hash-push it:
+            # --------- different ways of storing features: ----------------
         if(my $hash_by = $feature_subhash->{-hash_by}) {
-            if(ref $hash_by) {
+            #
+            ## Beware: this distinction by ref/nonref may look deceptive.
+            ##         It was purely by coincidence that things hashed by subroutines have to be stored in a different way,
+            ##         so I didn't bother to create another flag to indicate whether we want HoHoL or HoH type of storage.
+            #
+            if(ref $hash_by) { # double-hash-push it into HoHoL:
                 push @{ $feature_hash{$feature_type}{&$hash_by($feature)} }, $feature;
-            } else {
+            } else { # double-hash it into HoH:
                 $feature_hash{$feature_type}{$feature->$hash_by()} = $feature;
             }
-        } else {
+        } else { # push it into HoL:
             push @{ $feature_hash{$feature_type} }, $feature;
         }
     }

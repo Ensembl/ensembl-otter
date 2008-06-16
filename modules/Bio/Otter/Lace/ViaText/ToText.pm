@@ -91,7 +91,7 @@ sub GenerateAlignFeatures {
         }
 
             # output an AlignFeature line
-        my $feature_type = UNIVERSAL::isa($af,'Bio::EnsEMBL::DnaDnaAlignFeature') ? 'DnaAlignFeature' : 'PepAlignFeature';
+        my $feature_type = UNIVERSAL::isa($af,'Bio::EnsEMBL::DnaDnaAlignFeature') ? 'DnaDnaAlignFeature' : 'DnaPepAlignFeature';
         my @af_optnames = @{ $LangDesc{$feature_type}{-optnames} };
 
         my @af_optvalues = ($feature_type);
