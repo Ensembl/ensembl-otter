@@ -311,7 +311,7 @@ sub get_all_AlignFeatures { # get align features from otter/pipeline/ensembl db
         },
     );
 
-    return ParseFeatures(\$response, $self->name(), $analysis_name)->{ $kind eq 'dafs' ? 'DnaAlignFeature' : 'PepAlignFeature'} || [];
+    return ParseFeatures(\$response, $self->name(), $analysis_name)->{ $kind eq 'dafs' ? 'DnaDnaAlignFeature' : 'DnaPepAlignFeature'} || [];
 }
 
 sub get_all_RepeatFeatures { # get repeat features from otter/pipeline/ensembl db
