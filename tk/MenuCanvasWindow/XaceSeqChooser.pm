@@ -645,7 +645,7 @@ sub populate_menus {
         -label          => 'Re-authorize',
         -command        => $re_authorize,
         -accelerator    => 'Ctrl+Shift+A',
-        # -underline      => 1,
+        -underline      => 3,
         );
     $top->bind('<Control-Shift-A>', $re_authorize);
     

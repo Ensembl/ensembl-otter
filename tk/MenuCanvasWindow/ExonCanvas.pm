@@ -1673,22 +1673,6 @@ sub start_not_found_from_tk {
     return ${$self->{'_start_not_found_variable'}} || 0;
 }
 
-#sub continued_from_from_tk {
-#    my( $self ) = @_;
-#    
-#    my $txt = $self->{'_continued_from_Entry'}->get;
-#    $txt =~ s/\s+//g;
-#    return $txt || '';
-#}
-#
-#sub continues_as_from_tk {
-#    my( $self ) = @_;
-#    
-#    my $txt = $self->{'_continues_as_Entry'}->get;
-#    $txt =~ s/\s+//g;
-#    return $txt || '';
-#}
-
 sub end_not_found_from_tk {
     my( $self ) = @_;
     
@@ -2510,60 +2494,60 @@ sub new_SubSeq_from_tk {
     return $new;
 }
 
-sub otter_Transcript_from_tk {
-    my( $self ) = @_;
-    
-    # Creates mininmal AnnotatedTranscript for use by EviDisplay
-    my $tsct = Bio::Otter::AnnotatedTranscript->new;
-    my $strand = $self->strand_from_tk;
-    foreach my $ex ($self->Exons_from_canvas) {
-        my $exon = Bio::EnsEMBL::Exon->new;
-        $exon->start($ex->start);
-        $exon->end($ex->end);
-        $exon->strand($strand);
-        $tsct->add_Exon($exon);
-    }
-    
-    my ($tl_start, $tl_end) = $self->translation_region_from_tk;
-    if ($tl_start and $tl_end) {
-        if ($strand == -1) {
-            ($tl_start, $tl_end) = ($tl_end, $tl_start);
-        }
-
-        # Add coding region
-        my ($start_exon, $start_pos) = Bio::Otter::Converter::exon_pos($tsct, $tl_start);
-        my ($end_exon,   $end_pos)   = Bio::Otter::Converter::exon_pos($tsct, $tl_end);
-        
-        if ($start_exon and $end_exon) {
-            my $tsl = Bio::EnsEMBL::Translation->new;
-            $tsl->start_Exon($start_exon);
-            $tsl->start($start_pos);
-            $tsl->end_Exon($end_exon);
-            $tsl->end($end_pos);
-            
-            ### Set exon phases?
-            
-            
-            $tsct->translation($tsl);
-        }
-    }
-    
-    my $info = Bio::Otter::TranscriptInfo->new;
-    $info->name($self->get_subseq_name);
-    my $evi = $self->evidence_hash;
-    foreach my $type (sort keys %$evi) {
-        foreach my $name (@{$evi->{$type}}) {
-            my $supp = Bio::Otter::Evidence->new;
-            $supp->type($type);
-            $supp->name($name);
-            warn qq{Adding evidence: $type "$name"\n};
-            $info->add_Evidence($supp);
-        }
-    }
-    $tsct->transcript_info($info);
-    
-    return $tsct;
-}
+# sub otter_Transcript_from_tk {
+#     my( $self ) = @_;
+#     
+#     # Creates mininmal AnnotatedTranscript for use by EviDisplay
+#     my $tsct = Bio::Otter::AnnotatedTranscript->new;
+#     my $strand = $self->strand_from_tk;
+#     foreach my $ex ($self->Exons_from_canvas) {
+#         my $exon = Bio::EnsEMBL::Exon->new;
+#         $exon->start($ex->start);
+#         $exon->end($ex->end);
+#         $exon->strand($strand);
+#         $tsct->add_Exon($exon);
+#     }
+#     
+#     my ($tl_start, $tl_end) = $self->translation_region_from_tk;
+#     if ($tl_start and $tl_end) {
+#         if ($strand == -1) {
+#             ($tl_start, $tl_end) = ($tl_end, $tl_start);
+#         }
+# 
+#         # Add coding region
+#         my ($start_exon, $start_pos) = Bio::Otter::Converter::exon_pos($tsct, $tl_start);
+#         my ($end_exon,   $end_pos)   = Bio::Otter::Converter::exon_pos($tsct, $tl_end);
+#         
+#         if ($start_exon and $end_exon) {
+#             my $tsl = Bio::EnsEMBL::Translation->new;
+#             $tsl->start_Exon($start_exon);
+#             $tsl->start($start_pos);
+#             $tsl->end_Exon($end_exon);
+#             $tsl->end($end_pos);
+#             
+#             ### Set exon phases?
+#             
+#             
+#             $tsct->translation($tsl);
+#         }
+#     }
+#     
+#     my $info = Bio::Otter::TranscriptInfo->new;
+#     $info->name($self->get_subseq_name);
+#     my $evi = $self->evidence_hash;
+#     foreach my $type (sort keys %$evi) {
+#         foreach my $name (@{$evi->{$type}}) {
+#             my $supp = Bio::Otter::Evidence->new;
+#             $supp->type($type);
+#             $supp->name($name);
+#             warn qq{Adding evidence: $type "$name"\n};
+#             $info->add_Evidence($supp);
+#         }
+#     }
+#     $tsct->transcript_info($info);
+#     
+#     return $tsct;
+# }
 
 sub save_if_changed {
     my( $self ) = @_;
