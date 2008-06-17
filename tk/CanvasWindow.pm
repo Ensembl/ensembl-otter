@@ -994,7 +994,7 @@ sub next_message_id {
 
         my $canvas = $self->canvas;
         foreach my $rect ($canvas->find('withtag', $sel_tag)) {
-            $canvas->configure($rect,
+            $canvas->itemconfigure($rect,
                 -fill   => '#cccccc',
                 -tags   => [$was_tag],
                 );
