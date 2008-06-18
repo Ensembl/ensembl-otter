@@ -3,15 +3,15 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-06-03 14:09:45 $
-# Id:            $Id: nph-get_repeat_features,v 1.16 2008-06-03 14:09:45 jgrg Exp $
+# Last modified: $Date: 2008-06-18 17:08:54 $
+# Id:            $Id: nph-get_repeat_features,v 1.17 2008-06-18 17:08:54 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_repeat_features,v $
 
 use strict;
 use SangerPaths qw{ core bioperl123 ensembl49 otter50 };
 
 use Bio::Otter::ServerScriptSupport;
-use Bio::Otter::Lace::ViaText::ToText ('&GenerateRepeatFeatures');
+use Bio::Otter::Lace::ViaText ('&GenerateFeatures');
 
 my $server = Bio::Otter::ServerScriptSupport->new;
 
@@ -24,7 +24,7 @@ eval {
         map { defined($server->param($_)) ? $server->param($_) : '' } qw(cs name type start end metakey csver csver_remote)
     );
 
-    $output_string = GenerateRepeatFeatures($rfs, $analysis_name);
+    $output_string = GenerateFeatures($rfs, $analysis_name);
 };
 
 if ($@) {
