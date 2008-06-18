@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-06-11 10:03:49 $
-# Id:            $Id: nph-get_das_simple_features,v 1.22 2008-06-11 10:03:49 lg4 Exp $
+# Last modified: $Date: 2008-06-18 17:08:54 $
+# Id:            $Id: nph-get_das_simple_features,v 1.23 2008-06-18 17:08:54 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_das_simple_features,v $
 
 use strict;
@@ -15,7 +15,7 @@ my $http_proxy = $ENV{http_proxy};
 use Bio::Das;
 use Bio::EnsEMBL::SimpleFeature;
 use Bio::Otter::ServerScriptSupport;
-use Bio::Otter::Lace::ViaText::ToText ('&GenerateSimpleFeatures');
+use Bio::Otter::Lace::ViaText ('&GenerateFeatures');
 
 sub Bio::EnsEMBL::Slice::get_all_SimpleFeatures_via_DAS {
     my ($slice, $server, $das, $chr_name, $analysis_name) = @_;
@@ -82,7 +82,7 @@ eval {
         1, # do the short version of mapping, without the target database
     );
 
-    $output_string = GenerateSimpleFeatures($dsfs, $analysis_name);
+    $output_string = GenerateFeatures($dsfs, $analysis_name);
 };
 
 if ($@) {

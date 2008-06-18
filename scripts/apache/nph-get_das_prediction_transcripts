@@ -3,8 +3,8 @@
 # Author:        lg4
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-06-11 16:08:20 $
-# Id:            $Id: nph-get_das_prediction_transcripts,v 1.4 2008-06-11 16:08:20 lg4 Exp $
+# Last modified: $Date: 2008-06-18 17:08:54 $
+# Id:            $Id: nph-get_das_prediction_transcripts,v 1.5 2008-06-18 17:08:54 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_das_prediction_transcripts,v $
 
 use strict;
@@ -16,7 +16,7 @@ use Bio::Das;
 use Bio::EnsEMBL::PredictionExon;
 use Bio::EnsEMBL::PredictionTranscript;
 use Bio::Otter::ServerScriptSupport;
-use Bio::Otter::Lace::ViaText::ToText ('&GeneratePredictionTranscripts');
+use Bio::Otter::Lace::ViaText ('&GenerateFeatures');
 
 sub Bio::EnsEMBL::Slice::get_all_PredictionTranscripts_via_DAS {
     my ($slice, $server, $das, $chr_name, $analysis_name) = @_;
@@ -60,7 +60,7 @@ sub Bio::EnsEMBL::Slice::get_all_PredictionTranscripts_via_DAS {
                         || $das_feature->label()
                         || $das_feature->id();
 
-        my $pt = $dpts{$pt_label} ||= Bio::EnsEMBL::PredictionTranscript->new( -display_label => $pt_label );
+        my $pt = $dpts{$pt_label} ||= Bio::EnsEMBL::PredictionTranscript->new( -dbID => $pt_label );
 
         $pt->add_Exon($prediction_exon);
     }
@@ -92,7 +92,7 @@ eval {
         1, # do the short version of mapping, without the target database
     );
 
-    $output_string = GeneratePredictionTranscripts($dpts, $analysis_name);
+    $output_string = GenerateFeatures($dpts, $analysis_name);
 };
 
 if ($@) {

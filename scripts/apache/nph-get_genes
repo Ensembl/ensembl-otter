@@ -3,15 +3,15 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-06-03 14:09:44 $
-# Id:            $Id: nph-get_genes,v 1.15 2008-06-03 14:09:44 jgrg Exp $
+# Last modified: $Date: 2008-06-18 17:08:54 $
+# Id:            $Id: nph-get_genes,v 1.16 2008-06-18 17:08:54 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_genes,v $
 
 use strict;
 use SangerPaths qw{ core bioperl123 ensembl49 otter50 };
 
 use Bio::Otter::ServerScriptSupport;
-use Bio::Otter::Lace::ViaText::ToText ('&GenerateGenes');
+use Bio::Otter::ToXML;
 
 sub Bio::EnsEMBL::Gene::propagate_slice {
     my ($gene, $slice) = @_;
@@ -46,7 +46,12 @@ eval {
         map { defined($server->param($_)) ? $server->param($_) : '' } qw(cs name type start end metakey csver csver_remote)
     );
 
-    $output_string = GenerateGenes($genes, $allowed_transcript_analyses_hash, $allowed_translation_xref_db_hash);
+    foreach my $gene (@$genes) {
+        $output_string .= $gene->toXMLstring(
+            $allowed_transcript_analyses_hash,
+            $allowed_translation_xref_db_hash
+        );
+    }
 };
 
 if ($@) {
