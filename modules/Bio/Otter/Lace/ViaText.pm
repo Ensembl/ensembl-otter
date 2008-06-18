@@ -26,7 +26,7 @@ use Bio::Otter::HitDescription;
 
 use base ('Exporter');
 our @EXPORT    = ();
-our @EXPORT_OK = qw( %LangDesc &ParseFeatures );
+our @EXPORT_OK = qw( %LangDesc &ParseFeatures &GenerateFeatures );
 
 our %LangDesc = (
     'SimpleFeature' => {
@@ -42,7 +42,8 @@ our %LangDesc = (
     'DnaDnaAlignFeature'=> {
         -constructor => sub{ return Bio::EnsEMBL::DnaDnaAlignFeature->new_fast({}); },
         -optnames    => [ qw(start end strand hstart hend hstrand percent_id score cigar_string hseqname) ],
-        -reference   => ['HitDescription', sub{ my($af,$hd)=@_;
+        -reference   => ['HitDescription', 'hseqname',
+                                           sub{ my($af,$hd)=@_;
                                                     bless $af,'Bio::Otter::DnaDnaAlignFeature';
                                                     $af->{'_hit_description'} = $hd;
                                            },
@@ -53,7 +54,8 @@ our %LangDesc = (
     'DnaPepAlignFeature'=> {
         -constructor => sub{ return Bio::EnsEMBL::DnaPepAlignFeature->new_fast({}); },
         -optnames    => [ qw(start end strand hstart hend hstrand percent_id score cigar_string hseqname) ],
-        -reference   => ['HitDescription', sub{ my($af,$hd)=@_;
+        -reference   => ['HitDescription', 'hseqname',
+                                           sub{ my($af,$hd)=@_;
                                                     bless $af,'Bio::Otter::DnaPepAlignFeature';
                                                     $af->{'_hit_description'} = $hd;
                                            },
@@ -70,27 +72,27 @@ our %LangDesc = (
     'RepeatFeature'  => {
         -constructor => 'Bio::EnsEMBL::RepeatFeature',
         -optnames    => [ qw(start end strand hstart hend score) ],
-        -reference   => [ 'RepeatConsensus', 'repeat_consensus' ],
+        -reference   => [ 'RepeatConsensus', '', 'repeat_consensus' ],
     },
 
-    'MarkerObject'    => {
+    'Marker'          => {
         -constructor  => 'Bio::EnsEMBL::Map::Marker',
         -optnames     => [ qw(left_primer right_primer min_primer_dist max_primer_dist dbID) ],
         -hash_by      => 'dbID',
-        -get_all_cmps => [ 'MarkerSynonym', 'get_all_MarkerSynonyms' ],
+        -get_all_cmps => 'get_all_MarkerSynonyms',
     },
     'MarkerSynonym'  => {
         -constructor => 'Bio::EnsEMBL::Map::MarkerSynonym',
         -optnames    => [ qw(source name) ],
-        -add_one_cmp => [ 'MarkerObject', 'add_MarkerSynonyms' ],
+        -add_one_cmp => [ 'Marker', 'add_MarkerSynonyms' ],
     },
     'MarkerFeature'  => {
         -constructor => 'Bio::EnsEMBL::Map::MarkerFeature',
         -optnames    => [ qw(start end map_weight) ],
-        -reference   => [ 'MarkerObject', 'marker' ],
+        -reference   => [ 'Marker', '', 'marker' ],
     },
 
-    'DitagObject'    => {
+    'Ditag'          => {
         -constructor => sub{ return Bio::EnsEMBL::Map::Ditag->new_fast({}); },
         -optnames    => [ qw(name type sequence dbID) ],
         -hash_by     => 'dbID',
@@ -98,15 +100,17 @@ our %LangDesc = (
     'DitagFeature'   => {
         -constructor => sub{ return Bio::EnsEMBL::Map::DitagFeature->new_fast({}); },
         -optnames    => [ qw(start end strand hit_start hit_end hit_strand ditag_side ditag_pair_id) ],
-        -reference   => [ 'DitagObject', 'ditag' ],
-        -hash_by     => sub{ my $self=shift; return $self->ditag()->dbID().'.'.$self->ditag_pair_id();},
+        -reference   => [ 'Ditag', '', 'ditag' ],
+            # group_by is used *only* by the parser for storing things in arrays in the feature_hash
+            #          Hashing is similar to hash_by, but there is an additinal level of structure.
+        -group_by    => sub{ my $self=shift; return $self->ditag()->dbID().'.'.$self->ditag_pair_id();},
     },
 
     'PredictionTranscript' => {
         -constructor  => 'Bio::EnsEMBL::PredictionTranscript',
         -optnames     => [ qw(start end dbID) ],
         -hash_by      => 'dbID',
-        -get_all_cmps => [ 'PredictionExon', 'get_all_Exons' ],
+        -get_all_cmps => 'get_all_Exons',
     },
     'PredictionExon' => {
         -constructor => 'Bio::EnsEMBL::Exon', # there was no PredictionExon in EnsEMBL v.19 code
@@ -114,6 +118,85 @@ our %LangDesc = (
         -add_one_cmp => [ 'PredictionTranscript', 'add_Exon' ],
     },
 );
+
+sub GenerateFeatures {
+    my ($features, $analysis_name) = @_;
+
+    my %seen_hash     = (); # we don't store objects here, just count them
+    my $cumulative_output = ''; # alternatively we can print things out into a FileHandle/Socket as they arrive
+
+    foreach my $feature (@$features) {
+        my ($feature_output, $hash_key) = generate_unless_hashed($feature, '', \%seen_hash, $analysis_name);
+        $cumulative_output .= $feature_output;
+    }
+
+    return $cumulative_output;
+}
+
+sub generate_unless_hashed {
+    my ($feature, $parent_hash_key, $seen_hash, $analysis_name) = @_;
+
+    ref($feature) =~ /::(\w+)$/;
+    my $feature_type = $1;
+
+    my $feature_subhash = $LangDesc{$feature_type};
+
+    my $hash_key;    # will be included in @optvalues if set
+
+    if(my $hash_by = $feature_subhash->{-hash_by}) { # only output hashable feature once:
+        $hash_key = $feature->$hash_by();
+        if($seen_hash->{$feature_type}{$hash_key}++) {
+            return ('', $hash_key);
+        }
+    }
+
+    my $cumulative_output = ''; # alternatively we can print things out into a FileHandle/Socket as they arrive
+
+        ## now let's generate our own fields:
+
+    my $optnames  = $feature_subhash->{-optnames};
+    my @optvalues = ($feature_type);
+    for my $opt (@$optnames) {
+        push @optvalues, $feature->$opt() || 0;
+    }
+
+    if(my $ref_link = $feature_subhash->{-reference}) { # reference link is one-way (the referenced object doesn't know its referees)
+        my ($referenced_feature_type, $ref_field, $ref_setter, $ref_getter ) = @$ref_link;
+        $ref_getter ||= $ref_setter; # let's avoid duplication, since in most cases getter is the same method as setter
+
+        my $ref_hash_key;
+        if(my $referenced_feature = $feature->$ref_getter()) { # we allow it to be false too
+            my $reference_output;
+            ($reference_output, $ref_hash_key) =  generate_unless_hashed($referenced_feature, '', $seen_hash, $analysis_name);
+            $cumulative_output .= $reference_output;
+        }
+
+        if(not $ref_field) {
+            push @optvalues, $ref_hash_key || 0;
+        }
+    }
+
+    if($parent_hash_key) {
+        push @optvalues, $parent_hash_key;
+    }
+
+    if(!$analysis_name) {
+        push @optvalues, $feature->analysis()->logic_name();
+    }
+
+    $cumulative_output .= join("\t", @optvalues)."\n";
+
+        # after outputting itself a parent lists all of its components:
+        #
+    if(my $cmps_getter = $feature_subhash->{-get_all_cmps}) { # component link is two-way (parent keeps a list of its components)
+        foreach my $component_feature (@{ $feature->$cmps_getter() }) {
+            my ($component_output, $to_be_ignored) = generate_unless_hashed($component_feature, $hash_key, $seen_hash, $analysis_name);
+            $cumulative_output .= $component_output;
+        }
+    }
+
+    return ($cumulative_output, $hash_key);
+}
 
 sub ParseFeatures {
     my ($response_ref, $seqname, $analysis_name) = @_;
@@ -143,14 +226,14 @@ sub ParseFeatures {
         }
         
         if(my $ref_link = $feature_subhash->{-reference}) { # reference link is one-way (the referenced object doesn't know its referees)
-            my ($referenced_feature_type, $ref_setter, $ref_getter ) = @$ref_link;
-            my $referenced_id      = pop @optvalues;
+            my ($referenced_feature_type, $ref_field, $ref_setter, $ref_getter ) = @$ref_link;
+            my $referenced_id  = $ref_field ? $feature->$ref_field() : pop @optvalues; # it can either be named or nameless
             if(my $referenced_feature = $feature_hash{$referenced_feature_type}{$referenced_id}) {
                 $feature->$ref_setter($referenced_feature);
             }
-        } elsif(my $cmp_link = $feature_subhash->{-add_one_cmp}) { # component link is two-way (parent keeps a list of its components)
-            my ($parent_feature_type, $add_sub) = @$cmp_link;
-            my $parent_id      = pop @optvalues;
+        } elsif(my $cmp_uplink = $feature_subhash->{-add_one_cmp}) { # component link is two-way (parent keeps a list of its components)
+            my ($parent_feature_type, $add_sub) = @$cmp_uplink;
+            my $parent_id = pop @optvalues; # always nameless
             if(my $parent_feature = $feature_hash{$parent_feature_type}{$parent_id}) {
                 $parent_feature->$add_sub($feature);
             }
@@ -167,18 +250,16 @@ sub ParseFeatures {
         }
 
             # --------- different ways of storing features: ----------------
-        if(my $hash_by = $feature_subhash->{-hash_by}) {
-            #
-            ## Beware: this distinction by ref/nonref may look deceptive.
-            ##         It was purely by coincidence that things hashed by subroutines have to be stored in a different way,
-            ##         so I didn't bother to create another flag to indicate whether we want HoHoL or HoH type of storage.
-            #
-            if(ref $hash_by) { # double-hash-push it into HoHoL:
-                push @{ $feature_hash{$feature_type}{&$hash_by($feature)} }, $feature;
-            } else { # double-hash it into HoH:
-                $feature_hash{$feature_type}{$feature->$hash_by()} = $feature;
-            }
-        } else { # push it into HoL:
+        if(my $hash_by = $feature_subhash->{-hash_by}) { # double-hash it into HoH (referenced objects):
+
+            $feature_hash{$feature_type}{$feature->$hash_by()} = $feature;
+
+        } elsif(my $group_by = $feature_subhash->{-group_by}) { # double-hash-push it into HoHoL (ditag_features):
+
+            push @{ $feature_hash{$feature_type}{$feature->$group_by()} }, $feature;
+
+        } else { # push it into HoL (any non-ditag '*_features'):
+
             push @{ $feature_hash{$feature_type} }, $feature;
         }
     }
