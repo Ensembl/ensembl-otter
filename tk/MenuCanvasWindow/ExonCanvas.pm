@@ -973,22 +973,29 @@ sub evidence_hash {
 sub select_evidence {
     my( $self ) = @_;
     
+    my $paster_top = $self->EvidencePaster->canvas->toplevel;
+    $paster_top->deiconify;
+    $paster_top->raise;
+    return $paster_top;
+}
+
+sub EvidencePaster {
+    my ($self) = @_;
+    
     my $evi = $self->evidence_hash;
     
-    my( $paster_top );
-    if (my $paster = $self->{'_evi_window'}) {
+    my $paster;
+    if ($paster = $self->{'_evi_window'}) {
         $paster->evidence_hash($evi);
         $paster->draw_evidence;
-        $paster_top = $paster->canvas->toplevel;
     } else {
-        $paster_top = $self->canvas->Toplevel;
+        my $paster_top = $self->canvas->Toplevel;
         $paster_top->transient($self->canvas->toplevel);
-        my $paster = $self->{'_evi_window'} = CanvasWindow::EvidencePaster->new($paster_top);
+        $paster = $self->{'_evi_window'} = CanvasWindow::EvidencePaster->new($paster_top);
         $paster->ExonCanvas($self);
         $paster->initialise($evi);
     }
-    $paster_top->deiconify;
-    $paster_top->raise;
+    return $paster;
 }
 
 ## Commented out for tropicalis cDNA annotation workshop
@@ -2429,7 +2436,7 @@ sub get_SubSeq_if_changed {
         return;
     }
     
-    printf STDERR "OLD:\n>%s<\nNEW:>%s<\n", $old->ace_string, $new->ace_string;
+    # printf STDERR "OLD:\n>%s<\nNEW:>%s<\n", $old->ace_string, $new->ace_string;
 
     my $new_name = $new->name;
     if ($new_name ne $self->name) {

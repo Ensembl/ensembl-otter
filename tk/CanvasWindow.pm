@@ -9,6 +9,7 @@ use CanvasWindow::MainWindow;
 use CanvasWindow::Utils 'expand_bbox';
 use Tk::HeadedCanvas;
 use Hum::Sort 'ace_sort';
+use Hum::ClipboardUtils 'integers_from_text';
 
 sub new {
     my( $pkg, $tk, $x, $y, $where_scrollbars, $canvas_class) = @_;
@@ -999,6 +1000,7 @@ sub next_message_id {
                 -tags   => [$was_tag],
                 );
         }
+        $self->{'_was_selected_list'} = $self->{'_selected_list'};
         $self->{'_selected_list'} = undef;
     }
 
@@ -1029,7 +1031,19 @@ sub next_message_id {
     sub list_selected {
         my( $self ) = @_;
 
-        if (my $sel = $self->{'_selected_list'}) {
+        return $self->list_with_tag('_selected_list');
+    }
+
+    sub list_was_selected {
+        my( $self ) = @_;
+
+        return $self->list_with_tag('_was_selected_list');
+    }
+
+    sub list_with_tag {
+        my ($self, $tag) = @_;
+        
+        if (my $sel = $self->{$tag}) {
             my @selected = sort { ace_sort($a,$b) } keys %$sel;
             return @selected;
         } else {
@@ -1098,28 +1112,7 @@ sub integers_from_clipboard {
 
     my $text = $self->get_clipboard_text or return;
 
-    #warn "Trying to parse: [$text]\n";
-
-    my (@ints);
-
-    # match fMap "blue box" DNA selection
-    if (@ints = $text =~ /Selection -?(\d+) ---> -?(\d+)/) {
-        if ($ints[0] == $ints[1]) {
-
-            # user clicked on single base pair
-            @ints = ($ints[0]);
-        }
-    }
-    else {
-
-        # match general fMap "blue box" pattern
-        unless (@ints = $text =~ /^\S+\s+-?(\d+)\s+-?(\d+)\s+\(\d+\)/mg) {
-
-            # or just get all the integers
-            @ints = grep !/\./, $text =~ /([\.\d]+)/g;
-        }
-    }
-    return @ints;
+    return integers_from_text($text);
 }
 
 sub class_object_start_end_from_clipboard {

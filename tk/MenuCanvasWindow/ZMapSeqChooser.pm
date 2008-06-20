@@ -713,18 +713,14 @@ sub zMapHighlight{
     if ($xml_hash->{"action"} eq 'single_select') {
         $self->deselect_all();
         my $feature = $xml_hash->{'featureset'}->{'feature'} || {};
-        $self->set_clipboard_on_highlight(0);
         foreach my $name(keys(%$feature)){
-            $self->highlight_by_name($name);
+            $self->highlight_by_name_without_owning_clipboard($name);
         }
-        $self->set_clipboard_on_highlight(1);
     } elsif($xml_hash->{"action"} eq 'multiple_select') {
         my $feature = $xml_hash->{'featureset'}->{'feature'} || {};
-        $self->set_clipboard_on_highlight(0);
         foreach my $name(keys(%$feature)){
-            $self->highlight_by_name($name);
+            $self->highlight_by_name_without_owning_clipboard($name);
         }
-        $self->set_clipboard_on_highlight(1);
     } else { confess "Not a 'select' action\n"; }
 
     return (200, q{<response handled="true" />});
