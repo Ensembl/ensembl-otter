@@ -6,6 +6,8 @@ package CanvasWindow::EvidencePaster;
 use strict;
 use Scalar::Util 'weaken';
 use Hum::Ace::AceText;
+use Hum::Sort 'ace_sort';
+use Hum::ClipboardUtils 'evidence_type_and_name_from_text';
 use base 'CanvasWindow';
 
 sub initialise {
@@ -205,22 +207,38 @@ sub draw_evidence {
 sub paste_type_and_name {
     my( $self ) = @_;
     
-    if (my $clip_evi = $self->type_and_name_from_clipboard) {
-        foreach my $type (keys %$clip_evi) {
-            my $clip_list = $clip_evi->{$type};
-            my $evi = $self->evidence_hash;
-            my $list = $evi->{$type} ||= [];
+    if (my $clip = $self->get_clipboard_text) {
+        $self->add_evidence_from_text($clip);
+    }
+}
 
-            # Hmm, perhaps evidence hash should be two level hash?
-            my %uniq = map {$_, 1} (@$list, @$clip_list);
-            @$list = sort keys %uniq;
-        }
-        $self->draw_evidence;
-        foreach my $type (keys %$clip_evi) {
-            my $clip_list = $clip_evi->{$type};
-            foreach my $name (@$clip_list) {
-                $self->highlight_evidence_by_type_name($type, $name);
-            }
+sub add_evidence_from_text {
+    my ($self, $text) = @_;
+    
+    my $ace = $self->ExonCanvas->XaceSeqChooser->ace_handle;
+
+    if (my $clip_evi = evidence_type_and_name_from_text($ace, $text)) {
+        $self->add_evidence_type_name_hash($clip_evi);
+    }
+}
+
+sub add_evidence_type_name_hash {
+    my ($self, $clip_evi) = @_;
+    
+    foreach my $type (keys %$clip_evi) {
+        my $clip_list = $clip_evi->{$type};
+        my $evi = $self->evidence_hash;
+        my $list = $evi->{$type} ||= [];
+
+        # Hmm, perhaps evidence hash should be two level hash?
+        my %uniq = map {$_, 1} (@$list, @$clip_list);
+        @$list = sort {ace_sort($a, $b)} keys %uniq;
+    }
+    $self->draw_evidence;
+    foreach my $type (keys %$clip_evi) {
+        my $clip_list = $clip_evi->{$type};
+        foreach my $name (@$clip_list) {
+            $self->highlight_evidence_by_type_name($type, $name);
         }
     }
 }
@@ -246,122 +264,6 @@ sub highlight {
         -command    => sub{ $self->deselect_all },
         );
     weaken $self;
-}
-
-
-sub type_and_name_from_clipboard {
-    my ($self) = @_;
-
-    my $clip = $self->get_clipboard_text or return;
-
-    # Eeek!  Zmap puts lots of lines on the clipboard:
-    # 
-    #     "Em:AB210029.1"    -239446 -238473 (973)
-    #     "Em:AB210029.1"    -298966 -298888 (79)
-    #     "Em:AB210029.1"    -287517 -287424 (94)
-    #     "Em:AB210029.1"    -295809 -295676 (134)
-    #     "Em:AB210029.1"    -314017 -313941 (77)
-    #     "Em:AB210029.1"    -283202 -283065 (138)
-    #     "Em:AB210029.1"    -261873 -261750 (128)
-    #     "Em:AB210029.1"    -309805 -309694 (112)
-    #     "Em:AB210029.1"    -307814 -307749 (66)
-    #     "Em:AB210029.1"    -322519 -322352 (168)
-    # 
-    # type_and_name_from_text gets called for each line!
-
-    my $clip_hash = {};
-    foreach my $text (split /\n+/, $clip) {
-        my ($type, $name) = $self->type_and_name_from_text($text);
-        if ($type) {
-            my $list = $clip_hash->{$type} ||= [];
-            push(@$list, $name);
-        }
-    }
-    return $clip_hash;
-}
-
-{
-    my %column_type = (
-        EST             => 'EST',
-        vertebrate_mRNA => 'cDNA',
-        BLASTX          => 'Protein',
-        SwissProt       => 'Protein',
-        TrEMBL          => 'Protein',
-    );
-
-    sub type_and_name_from_text {
-        my ($self, $text) = @_;
-
-
-        #warn "Trying to parse: [$text]\n";
-
-        # Sequence:Em:BU533776.1    82637 83110 (474)  EST_Human 99.4 (3 - 478) Em:BU533776.1
-        # Sequence:Em:AB042555.1    85437 88797 (3361)  vertebrate_mRNA 99.3 (709 - 4071) Em:AB042555.1
-        # Protein:Tr:Q7SYC3    75996 76703 (708)  BLASTX 77.0 (409 - 641) Tr:Q7SYC3
-        # Protein:"Sw:Q16635-4.1"    14669 14761 (93)  BLASTX 100.0 (124 - 154) Sw:Q16635-4.1
-
-        if ($text =~
-    /^(?:Sequence|Protein):"?(\w\w:[\-\.\w]+)"?[\d\(\)\s]+(EST|vertebrate_mRNA|BLASTX)/
-          )
-        {
-            my $name   = $1;
-            my $column = $2;
-            my $type   = $column_type{$column} or die "Can't match '$column'";
-
-            #warn "Got blue box $type:$name\n";
-            return ($type, $name);
-        }
-        elsif (
-            $text =~ /
-              ([A-Za-z]{2}:)?       # Optional prefix
-              (
-                                    # Something that looks like an accession:
-                  [A-Z]+\d{5,}      # one or more letters followed by 5 or more digits
-                  |                 # or, for TrEMBL,
-                  [A-Z]\d[A-Z\d]{4} # a capital letter, a digit, then 4 letters or digits.
-              )
-              (\-\d+)?              # Optional VARSPLICE suffix
-              (\.\d+)?              # Optional .SV
-                /x
-          )
-        {
-            my $prefix = $1 || '*';
-            my $acc    = $2;
-            $acc      .= $3 if $3;
-            my $sv     = $4 || '*';
-
-            #warn "Got name '$prefix$acc$sv'";
-            my $ace = $self->ExonCanvas->XaceSeqChooser->ace_handle;
-            my ($type, $name);
-            foreach my $class (qw{ Sequence Protein }) {
-                $ace->raw_query(qq{find $class "$prefix$acc$sv"});
-                my $txt =
-                  Hum::Ace::AceText->new(
-                    $ace->raw_query(qq{show -a DNA_homol}));
-                print STDERR $$txt;
-                my @seq = map $_->[1], $txt->get_values($class) or next;
-                if (@seq > 1) {
-                    $self->message(join '', "Got multiple matches:\n",
-                        map "  $_\n", @seq);
-                    last;
-                }
-                $name = $seq[0];
-                my $homol_method = ($txt->get_values('DNA_homol'))[0]->[1];
-                $homol_method =~ s/^(EST)_.+/$1/;
-                $type = $column_type{$homol_method};
-            }
-            if ($type and $name) {
-                return ($type, $name);
-            }
-            else {
-                return;
-            }
-        }
-        else {
-            #warn "Didn't match: '$text'\n";
-            return;
-        }
-    }
 }
 
 sub DESTROY {

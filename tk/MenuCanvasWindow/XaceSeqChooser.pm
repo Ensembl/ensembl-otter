@@ -19,6 +19,7 @@ use Hum::Ace;
 use Hum::Analysis::Factory::ExonLocator;
 use Hum::Conf qw{ PFETCH_SERVER_LIST };
 use Hum::Sort qw{ ace_sort };
+use Hum::ClipboardUtils qw{ evidence_type_and_name_from_text };
 use EditWindow::Dotter;
 use EditWindow::Clone;
 use EditWindow::LocusName;
@@ -38,7 +39,6 @@ sub new {
     $self->make_search_panel;
     $self->bind_events;
     $self->minimum_scroll_bbox(0,0, 380,200);
-    $self->set_clipboard_on_highlight(1);
 
     return $self;
 }
@@ -722,29 +722,16 @@ sub bind_events {
         });
 }
 
-sub set_clipboard_on_highlight{
-    my ($self, $sets) = @_;
-    $self->{'_include_clipboard'} = ( $sets ? 0 : 1 );
-    return $sets;
-}
-
-sub highlight_sets_clipboard{
-    my ($self) = @_;
-    return ($self->{'_include_clipboard'} ? 0 : 1);
-}
-
 sub highlight {
     my $self = shift;
     
     $self->SUPER::highlight(@_);
     
-    if($self->highlight_sets_clipboard()){
-        my $canvas = $self->canvas;
-        $canvas->SelectionOwn(
-                              -command    => sub{ $self->deselect_all; },
-                              );
-        weaken $self;
-    }
+    my $canvas = $self->canvas;
+    $canvas->SelectionOwn(
+        -command    => sub{ $self->deselect_all; },
+    );
+    weaken $self;
 }
 
 sub GenomicFeatures {
@@ -1204,6 +1191,7 @@ sub edit_subsequences {
         if (my $sub = $self->get_SubSeq($sub_name)) {
             my $edit = $sub->clone;
             $edit->otter_id($sub->otter_id);
+            $edit->translation_otter_id($sub->translation_otter_id);
             $edit->is_archival($sub->is_archival);
         
             $self->make_exoncanvas_edit_window($edit);
@@ -1217,90 +1205,25 @@ sub edit_new_subsequence {
     my( $self ) = @_;
     
     my @sub_names = $self->list_selected_subseq_names;
+    my $clip      = $self->get_clipboard_text || '';
+
     my( @subseq );
     foreach my $sn (@sub_names) {
         my $sub = $self->get_SubSeq($sn);
         push(@subseq, $sub);
     }
-
-    my( @ints, $most_3prime );
+    
+    my ($new);
     if (@subseq) {
-        # Find 3' most coordinate in subsequences
-        foreach my $sub (@subseq) {
-            my( $this_3prime );
-            if ($sub->strand == 1) {
-                $this_3prime = $sub->end;
-                if ($most_3prime) {
-                    next unless $this_3prime > $most_3prime;
-                }
-            } else {
-                $this_3prime = $sub->start;
-                if ($most_3prime) {
-                    next unless $this_3prime < $most_3prime;
-                }
-            }
-            $most_3prime = $this_3prime;
-        }
-    } else {
-        # Get 3' most coordinate from those on clipboard
-        # (feature highlighted in xace fMap)
-        @ints = $self->integers_from_clipboard;
-
-        # Reverse strand features from Zmap have pairs of coordinates
-        # where the first is larger than the second.
-        my $strand = 1;
-        my $fwd = 0;
-        my $rev = 0;
-        for (my $i = 0; $i < @ints; $i += 2) {
-            my ($l, $r) = @ints[$i, $i+1];
-            if ($l and $r) {
-                if ($l < $r) {
-                    $fwd++; # This pair votes forward
-                }
-                elsif ($l > $r) {
-                    $rev++; # This pari votes reverse
-                }
-            }
-        }
-        warn "Guessing strand is ", $rev > $fwd ? "reverse" : "forward";
-        $strand = -1 if $rev > $fwd;
-        $most_3prime = $ints[0];
-        if ($strand == 1) {
-            foreach my $i (@ints) {
-                $most_3prime = $i if $i > $most_3prime;
-            }
-        } else {
-            foreach my $i (@ints) {
-                $most_3prime = $i if $i < $most_3prime;
-            }            
-        }
+        $new = Hum::Ace::SubSeq->new_from_subseq_list(@subseq);
+    }
+    else {
+        $new = Hum::Ace::SubSeq->new_from_clipboard_text($clip);
+        $new->clone_Sequence($self->Assembly->Sequence);
     }
     
-    my $assembly = $self->Assembly;
-    # Check that our coordinate is not off the end of the assembly
-    if ($most_3prime and ($most_3prime < 0 or $most_3prime > $assembly->Sequence->sequence_length)) {
-        $most_3prime = undef;
-    }
-    my $region_name = $most_3prime
-        ? $assembly->clone_name_overlapping($most_3prime)
-        : $assembly->name;
-    warn "Looking for clone overlapping '$most_3prime' found '$region_name'";
+    my ($region_name, $max) = $self->region_name_and_next_locus_number($new);
     
-    # Trim sequence version from accession if clone_name ends .SV
-    $region_name =~ s/\.\d+$//;
-
-    my $regex = qr{^(?:[^:]+:)?$region_name\.(\d+)}; # qr is a Perl 5.6 feature
-    my $max = 0;
-    foreach my $sub ($assembly->get_all_SubSeqs) {
-        my ($n) = $sub->name =~ /$regex/;
-        if ($n and $n > $max) {
-            $max = $n;
-        }
-    }
-    $max++;
-    
-    
-    # Now get the maximum locus number for this root
     my $prefix = Bio::Otter::Lace::Defaults::fetch_gene_type_prefix() || '';
     my $loc_name = $prefix ? "$prefix:$region_name.$max" : "$region_name.$max";
     my $locus = $self->get_Locus($loc_name);
@@ -1315,64 +1238,59 @@ sub edit_new_subsequence {
         return;
     }
 
-    #warn "Making '$seq_name'\n";
-    my( $new );
-    if (@subseq) {
-        $new = $subseq[0]->clone;
-        for (my $i = 1; $i < @subseq; $i++) {
-            my $extra_sub = $subseq[$i]->clone;
-            foreach my $ex ($extra_sub->get_all_Exons) {
-                $new->add_Exon($ex);
-            }
-        }
-    }
-    else {
-        $new = Hum::Ace::SubSeq->new;
-        $new->strand(1);
-        $new->clone_Sequence($assembly->Sequence);
-        
-        if (@ints > 1) {
-            # Make exons from coordinates from clipboard
-            for (my $i = 0; $i < @ints; $i += 2) {
-                my $start = $ints[$i];
-                my $end   = $ints[$i + 1] or last;
-                if ($start > $end) {
-                    ($start, $end) = ($end, $start);
-                    $new->strand(-1);
-                }
-                my $ex = $new->new_Exon;
-                $ex->start($start);
-                $ex->end  ($end);
-            }
-        } else {
-            # Need to have at least 1 exon
-            my $ex = $new->new_Exon;
-            $ex->start(1);
-            $ex->end  (2);
-        }
-    }
     $new->name($seq_name);
     $new->Locus($locus);
-    $new->empty_evidence_hash;
-    $new->empty_remarks;
-    $new->empty_annotation_remarks;
-    $new->drop_all_exon_otter_id;
-    my $gm = $self->get_default_mutable_GeneMethod or confess "No default mutable GeneMethod";
-    
-
-    ## problem where translation was not being set on newly created 'Coding' SubSeq's
-    if ($gm->transcript_type eq 'coding'){        
-        $new->translation_region( $new->start , $new->end) ;
-    }
-    
+    my $gm = $self->get_default_mutable_GeneMethod or confess "No default mutable GeneMethod";    
     $new->GeneMethod($gm);
+    # Need to initialise translation region for coding transcripts
+    if ($gm->transcript_type eq 'coding') {
+        $new->translation_region($new->translation_region);
+    }
 
-    $assembly->add_SubSeq($new);
+    $self->Assembly->add_SubSeq($new);
 
     $self->add_SubSeq($new);
     $self->draw_subseq_list;
     $self->highlight_by_name($seq_name);
-    $self->make_exoncanvas_edit_window($new);
+    
+    my $ec = $self->make_exoncanvas_edit_window($new);
+    $ec->merge_position_pairs;  # Helpful when annotator has chosen multiple overlapping ESTs in Zmap
+    my $clip_evi = evidence_type_and_name_from_text($self->ace_handle, $clip);
+    if (keys %$clip_evi) {
+        $ec->EvidencePaster->add_evidence_type_name_hash($clip_evi);
+    }
+}
+
+sub region_name_and_next_locus_number {
+    my ($self, $new) = @_;
+    
+    my $most_3prime = $new->strand == 1 ? $new->end : $new->start;
+    
+    my $assembly = $self->Assembly;
+    # Check that our coordinate is not off the end of the assembly
+    if ($most_3prime and ($most_3prime < 0 or $most_3prime > $assembly->Sequence->sequence_length)) {
+        $most_3prime = undef;
+    }
+    my $region_name = $most_3prime
+        ? $assembly->clone_name_overlapping($most_3prime)
+        : $assembly->name;
+    warn "Looking for clone overlapping '$most_3prime' found '$region_name'";
+    
+    # Trim sequence version from accession if clone_name ends .SV
+    $region_name =~ s/\.\d+$//;
+
+    # Now get the maximum locus number for this root
+    my $regex = qr{^(?:[^:]+:)?$region_name\.(\d+)}; # qr is a Perl 5.6 feature
+    my $max = 0;
+    foreach my $sub ($assembly->get_all_SubSeqs) {
+        my ($n) = $sub->name =~ /$regex/;
+        if ($n and $n > $max) {
+            $max = $n;
+        }
+    }
+    $max++;
+    
+    return ($region_name, $max);
 }
 
 sub delete_subsequences {
@@ -1424,26 +1342,21 @@ sub delete_subsequences {
     
     # Make ace delete command for subsequences
     my $ace = '';
-    foreach my $sub (@to_die) {
-        my $sub_name   = $sub->name;
-        my $clone_name = $sub->clone_Sequence->name;
-        $ace .= qq{\n\-D Sequence "$sub_name"\n}
-            . qq{\nSequence "$clone_name"\n}
-            . qq{-D Subsequence "$sub_name"\n};
-    }
-    
-    # Delete from acedb database
-    $self->save_ace($ace);
-    
-    # Delete from ZMap
     my @xml;
     foreach my $sub (@to_die) {
-        # Only attempt to delete sequences from Zmap
-        # which have actually been saved!
+        # Only attempt to delete sequences which have been saved
         if ($sub->is_archival) {
+            my $sub_name   = $sub->name;
+            my $clone_name = $sub->clone_Sequence->name;
+            $ace .= qq{\n\-D Sequence "$sub_name"\n}
+                . qq{\nSequence "$clone_name"\n}
+                . qq{-D Subsequence "$sub_name"\n};
             push @xml, $sub->zmap_delete_xml_string;
         }
     }
+    
+    # Delete from acedb database and Zmap
+    $self->save_ace($ace);
     $self->send_zmap_commands(@xml);
     
     # Remove from our objects
@@ -1457,13 +1370,8 @@ sub delete_subsequences {
 sub make_variant_subsequence {
     my( $self ) = @_;
     
-    my $xr = $self->xace_remote;
-    unless ($xr) {
-        $self->message("no xace attached");
-        return;
-    }
-    
-    my @sub_names = $self->list_selected_subseq_names;
+    my @sub_names = $self->list_selected_subseq_names || $self->list_was_selected_subseq_names;
+    warn "Got subseq names: (@sub_names)";
     unless (@sub_names) {
         $self->message("No subsequence selected");
         return;
@@ -1962,6 +1870,20 @@ sub get_xace_window_id {
 sub highlight_by_name {
     my( $self, @names ) = @_;
 
+    $self->highlight($self->subseq_names_to_canvas_obj(@names));
+}
+
+sub highlight_by_name_without_owning_clipboard {
+    my ($self, @names) = @_;
+    
+    if (my @obj_list = $self->subseq_names_to_canvas_obj(@names)) {
+        $self->CanvasWindow::highlight(@obj_list);
+    }
+}
+
+sub subseq_names_to_canvas_obj {
+    my ($self, @names) = @_;
+    
     my $canvas = $self->canvas;
     my %select_name = map {$_, 1} @names;
     
@@ -1972,22 +1894,34 @@ sub highlight_by_name {
             push(@to_select, $obj);
         }
     }
-    
-    $self->highlight(@to_select);
+    return @to_select;
 }
 
-sub list_selected_subseq_names {
-    my( $self ) = @_;
+sub canvas_obj_to_subseq_names {
+    my ($self, @obj_list) = @_;
     
     my $canvas = $self->canvas;
+
     my( @names );
-    foreach my $obj ($self->list_selected) {
+    foreach my $obj (@obj_list) {
         if (grep $_ eq 'subseq', $canvas->gettags($obj)) {
             my $n = $canvas->itemcget($obj, 'text');
             push(@names, $n);
         }
     }
-    return @names;
+    return @names;    
+}
+
+sub list_selected_subseq_names {
+    my( $self ) = @_;
+    
+    return $self->canvas_obj_to_subseq_names($self->list_selected);
+}
+
+sub list_was_selected_subseq_names {
+    my( $self ) = @_;
+    
+    return $self->canvas_obj_to_subseq_names($self->list_was_selected);
 }
 
 sub rename_locus {
