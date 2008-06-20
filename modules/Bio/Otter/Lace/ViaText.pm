@@ -32,6 +32,7 @@ our %LangDesc = (
     'SimpleFeature' => {
         -constructor => 'Bio::EnsEMBL::SimpleFeature',
         -optnames    => [ qw(start end strand display_label score) ],
+        -call_args   => [['analysis' => undef]],
     },
 
     'HitDescription' => {
@@ -50,6 +51,7 @@ our %LangDesc = (
                                            sub{ my $af = shift @_;
                                                 return $af->can('get_HitDescription') ? $af->get_HitDescription() : undef;
                                            } ],
+         -call_args  => [['analysis' => undef], ['score' => undef], ['dbtype' => undef]],
     },
     'DnaPepAlignFeature'=> {
         -constructor => sub{ return Bio::EnsEMBL::DnaPepAlignFeature->new_fast({}); },
@@ -62,6 +64,7 @@ our %LangDesc = (
                                            sub{ my $af = shift @_;
                                                 return $af->can('get_HitDescription') ? $af->get_HitDescription() : undef;
                                            } ],
+         -call_args  => [['analysis' => undef], ['score' => undef], ['dbtype' => undef]],
     },
 
     'RepeatConsensus'=> {
@@ -73,6 +76,7 @@ our %LangDesc = (
         -constructor => 'Bio::EnsEMBL::RepeatFeature',
         -optnames    => [ qw(start end strand hstart hend score) ],
         -reference   => [ 'RepeatConsensus', '', 'repeat_consensus' ],
+        -call_args   => [['analysis' => undef], ['repeat_type' => undef], ['dbtype' => undef]],
     },
 
     'Marker'          => {
@@ -90,6 +94,7 @@ our %LangDesc = (
         -constructor => 'Bio::EnsEMBL::Map::MarkerFeature',
         -optnames    => [ qw(start end map_weight) ],
         -reference   => [ 'Marker', '', 'marker' ],
+        -call_args   => [['analysis' => undef], ['priority' => undef], ['map_weight' => undef]],
     },
 
     'Ditag'          => {
@@ -104,6 +109,7 @@ our %LangDesc = (
             # group_by is used *only* by the parser for storing things in arrays in the feature_hash
             #          Hashing is similar to hash_by, but there is an additinal level of structure.
         -group_by    => sub{ my $self=shift; return $self->ditag()->dbID().'.'.$self->ditag_pair_id();},
+        -call_args   => [['ditypes'  => undef], ['analysis' => undef]],
     },
 
     'PredictionTranscript' => {
@@ -111,6 +117,7 @@ our %LangDesc = (
         -optnames     => [ qw(start end dbID) ],
         -hash_by      => 'dbID',
         -get_all_cmps => 'get_all_Exons',
+        -call_args   => [['analysis' => undef], ['load_exons' => 1]],
     },
     'PredictionExon' => {
         -constructor => 'Bio::EnsEMBL::Exon', # there was no PredictionExon in EnsEMBL v.19 code

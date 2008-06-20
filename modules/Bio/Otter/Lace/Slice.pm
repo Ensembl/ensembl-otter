@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
     # parsing is now performed by a table-driven parser:
-use Bio::Otter::Lace::ViaText qw( &ParseFeatures );
+use Bio::Otter::Lace::ViaText qw( %LangDesc &ParseFeatures );
 
     # parsing of genes is done separately:
 use Bio::Otter::FromXML;
@@ -221,6 +221,29 @@ sub get_all_tiles_as_Slices {
         push @subslices, $newslice;
     }
     return \@subslices;
+}
+
+sub get_all_features { # get Simple|DnaAlign|ProteinAlign|Repeat|Marker|Ditag|PredictionTranscript features from otter|pipe|ensembl db
+    my( $self, $feature_kind, $analysis_name, $metakey, $csver_remote ) = @_;
+
+    my $response = $self->Client()->otter_response_content(
+        'GET',
+        'get_features',
+        {
+            %{$self->toHash},
+            ('kind' => $feature_kind),
+            $analysis_name ? ('analysis' => $analysis_name) : (),
+            $metakey ? ('metakey' => $metakey) : (),
+            $csver_remote   ? ('csver_remote' => $csver_remote) : (), # if you forget it, the assembly will be Otter by default!
+        },
+    );
+
+    my $features = ParseFeatures(\$response, $self->name(), $analysis_name)->{$feature_kind};
+
+    return ( ($LangDesc{$feature_kind}{-hash_by}||$LangDesc{$feature_kind}{-group_by})
+        ? [values %$features ]
+        : $features
+    ) || [];
 }
 
 sub get_all_SimpleFeatures { # get simple features from otter/pipeline/ensembl db
