@@ -224,7 +224,27 @@ sub get_all_tiles_as_Slices {
 }
 
 sub get_all_features { # get Simple|DnaAlign|ProteinAlign|Repeat|Marker|Ditag|PredictionTranscript features from otter|pipe|ensembl db
-    my( $self, $feature_kind, $analysis_name, $metakey, $csver_remote ) = @_;
+    my $self            = shift @_;
+    my $feature_kind    = shift @_;
+    my $call_arg_values = \@_; # contains $metakey, $csver_remote and all call parameters
+
+    my $analysis_name = '';
+    my @args = (); # key-value pairs of call parameters in the order of the 'original' (B::E::Slice-based) call
+
+    my $call_arg_descs = $LangDesc{$feature_kind}{-call_args};
+    unshift @$call_arg_descs, ['metakey', ''], ['csver_remote', '']; # now is in sync with $call_arg_values
+
+    for(my $i=0;$i<scalar(@$call_arg_descs);$i++) {
+        my ($arg_name, $arg_def_value) = @{ $call_arg_descs->[$i] };
+        my $arg_value = defined($call_arg_values->[$i]) ? $call_arg_values->[$i] : $arg_def_value;
+        if(defined($arg_value)) {
+            push @args, $arg_name => $arg_value;
+
+            if($arg_name eq 'analysis') {
+                $analysis_name = $arg_value;
+            }
+        }
+    }
 
     my $response = $self->Client()->otter_response_content(
         'GET',
@@ -232,9 +252,7 @@ sub get_all_features { # get Simple|DnaAlign|ProteinAlign|Repeat|Marker|Ditag|Pr
         {
             %{$self->toHash},
             ('kind' => $feature_kind),
-            $analysis_name ? ('analysis' => $analysis_name) : (),
-            $metakey ? ('metakey' => $metakey) : (),
-            $csver_remote   ? ('csver_remote' => $csver_remote) : (), # if you forget it, the assembly will be Otter by default!
+            @args,
         },
     );
 
