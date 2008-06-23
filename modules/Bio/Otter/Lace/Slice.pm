@@ -239,6 +239,7 @@ sub get_all_features { # get Simple|DnaAlign|ProteinAlign|Repeat|Marker|Ditag|Pr
         my $arg_value = defined($call_arg_values->[$i]) ? $call_arg_values->[$i] : $arg_def_value;
         if(defined($arg_value)) {
             push @args, $arg_name => $arg_value;
+            warn "pushing '$arg_name' and '$arg_value'\n";
 
             if($arg_name eq 'analysis') {
                 $analysis_name = $arg_value;
