@@ -3,8 +3,8 @@
 # Author:        lg4
 # Group:         anacode
 # Maintainer:    lg4
-# Last modified: $Date: 2008-06-20 15:58:38 $
-# Id:            $Id: nph-get_features,v 1.1 2008-06-20 15:58:38 lg4 Exp $
+# Last modified: $Date: 2008-06-23 16:10:18 $
+# Id:            $Id: nph-get_features,v 1.2 2008-06-23 16:10:18 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_features,v $
 
 use strict;
@@ -76,20 +76,23 @@ my $output_string = '';
 
 eval {
     my $feature_kind  = $server->require_argument('kind');
-    my $analysis_name = $server->param('analysis') || undef;
+    my $analysis_name = $server->param('analysis')         || undef;
 
     my $param_descs = $LangDesc{$feature_kind}{-call_args};
     my $getter_method = "get_all_${feature_kind}s";
 
     my @param_list = ();
     foreach my $param_desc (@$param_descs) {
-        my ($param_name, $param_def_value) = @$param_desc;
+        my ($param_name, $param_def_value, $param_separator) = @$param_desc;
 
         my $param_value = (scalar(@$param_desc)==1)
             ? $server->require_argument($param_name)
             : defined($server->param($param_name))
                 ? $server->param($param_name)
                 : $param_def_value;
+        if($param_value && $param_separator) {
+            $param_value = [split(/$param_separator/,$param_value)];
+        }
 
         push @param_list, $param_value;
     }
