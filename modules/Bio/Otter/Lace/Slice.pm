@@ -229,17 +229,15 @@ sub get_all_features { # get Simple|DnaAlign|ProteinAlign|Repeat|Marker|Ditag|Pr
     my $call_arg_values = \@_; # contains $metakey, $csver_remote and all call parameters
 
     my $analysis_name = '';
-    my @args = (); # key-value pairs of call parameters in the order of the 'original' (B::E::Slice-based) call
+    my @arg_pairs = (); # key-value pairs of call parameters in the order of the 'original' (B::E::Slice-based) call
 
-    my $call_arg_descs = $LangDesc{$feature_kind}{-call_args};
-    unshift @$call_arg_descs, ['metakey', ''], ['csver_remote', '']; # now is in sync with $call_arg_values
+    my @call_arg_descs = ( ['metakey', ''], ['csver_remote', ''], @{$LangDesc{$feature_kind}{-call_args}});
 
-    for(my $i=0;$i<scalar(@$call_arg_descs);$i++) {
-        my ($arg_name, $arg_def_value) = @{ $call_arg_descs->[$i] };
+    for(my $i=0;$i<scalar(@call_arg_descs);$i++) {
+        my ($arg_name, $arg_def_value) = @{ $call_arg_descs[$i] };
         my $arg_value = defined($call_arg_values->[$i]) ? $call_arg_values->[$i] : $arg_def_value;
         if(defined($arg_value)) {
-            push @args, $arg_name => $arg_value;
-            warn "pushing '$arg_name' and '$arg_value'\n";
+            push @arg_pairs, $arg_name => $arg_value;
 
             if($arg_name eq 'analysis') {
                 $analysis_name = $arg_value;
@@ -253,7 +251,7 @@ sub get_all_features { # get Simple|DnaAlign|ProteinAlign|Repeat|Marker|Ditag|Pr
         {
             %{$self->toHash},
             ('kind' => $feature_kind),
-            @args,
+            @arg_pairs,
         },
     );
 
