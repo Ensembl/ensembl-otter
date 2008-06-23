@@ -109,7 +109,7 @@ our %LangDesc = (
             # group_by is used *only* by the parser for storing things in arrays in the feature_hash
             #          Hashing is similar to hash_by, but there is an additinal level of structure.
         -group_by    => sub{ my $self=shift; return $self->ditag()->dbID().'.'.$self->ditag_pair_id();},
-        -call_args   => [['ditypes'  => undef], ['analysis' => undef]],
+        -call_args   => [['ditypes'  => undef => ','], ['analysis' => undef]],
     },
 
     'PredictionTranscript' => {
