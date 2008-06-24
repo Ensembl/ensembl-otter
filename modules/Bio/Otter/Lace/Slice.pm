@@ -224,23 +224,26 @@ sub get_all_tiles_as_Slices {
 }
 
 sub get_all_features { # get Simple|DnaAlign|ProteinAlign|Repeat|Marker|Ditag|PredictionTranscript features from otter|pipe|ensembl db
-    my $self            = shift @_;
-    my $feature_kind    = shift @_;
-    my $call_arg_values = \@_; # contains $metakey, $csver_remote and all call parameters
+    my ($self, $kind_and_args, $metakey, $csver_remote) = @_;
 
-    my $analysis_name = '';
-    my @arg_pairs = (); # key-value pairs of call parameters in the order of the 'original' (B::E::Slice-based) call
+    my @feature_kinds = map { $_->[0] } @$kind_and_args;
 
-    my @call_arg_descs = ( ['metakey', ''], ['csver_remote', ''], @{$LangDesc{$feature_kind}{-call_args}});
+    my %arg_pairs = (
+        %{$self->toHash},
+        'kind' => join(',', @feature_kinds),
+        $metakey      ? ('metakey'      => $metakey) : (),
+        $csver_remote ? ('csver_remote' => $csver_remote) : (),
+    ); # key-value pairs of mixed call parameters
 
-    for(my $i=0;$i<scalar(@call_arg_descs);$i++) {
-        my ($arg_name, $arg_def_value) = @{ $call_arg_descs[$i] };
-        my $arg_value = defined($call_arg_values->[$i]) ? $call_arg_values->[$i] : $arg_def_value;
-        if(defined($arg_value)) {
-            push @arg_pairs, $arg_name => $arg_value;
+    foreach my $ka_pair (@$kind_and_args) {
+        my ($feature_kind, $call_arg_values) = @$ka_pair;
+        my $call_arg_descs = $LangDesc{$feature_kind}{-call_args};
 
-            if($arg_name eq 'analysis') {
-                $analysis_name = $arg_value;
+        for(my $i=0;$i<scalar(@$call_arg_descs);$i++) {
+            my ($arg_name, $arg_def_value) = @{ $call_arg_descs->[$i] };
+            my $arg_value = defined($call_arg_values->[$i]) ? $call_arg_values->[$i] : $arg_def_value;
+            if($arg_value) {
+                $arg_pairs{$arg_name} = $arg_value;
             }
         }
     }
@@ -248,19 +251,22 @@ sub get_all_features { # get Simple|DnaAlign|ProteinAlign|Repeat|Marker|Ditag|Pr
     my $response = $self->Client()->otter_response_content(
         'GET',
         'get_features',
-        {
-            %{$self->toHash},
-            ('kind' => $feature_kind),
-            @arg_pairs,
-        },
+        \%arg_pairs,
     );
 
-    my $features = ParseFeatures(\$response, $self->name(), $analysis_name)->{$feature_kind};
+    my $all_features = ParseFeatures(\$response, $self->name(), $arg_pairs{'analysis'});
+    my @result = ();
 
-    return ( ($LangDesc{$feature_kind}{-hash_by}||$LangDesc{$feature_kind}{-group_by})
-        ? [values %$features ]
-        : $features
-    ) || [];
+    foreach my $feature_kind (@feature_kinds) {
+        my $features = $all_features->{$feature_kind};
+
+        push @result, ( ($LangDesc{$feature_kind}{-hash_by}||$LangDesc{$feature_kind}{-group_by})
+                        ? [values %$features ]
+                        : $features
+                      ) || [];
+    }
+
+    return @result;
 }
 
 sub get_all_SimpleFeatures { # get simple features from otter/pipeline/ensembl db
