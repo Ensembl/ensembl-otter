@@ -269,23 +269,6 @@ sub get_all_features { # get Simple|DnaAlign|ProteinAlign|Repeat|Marker|Ditag|Pr
     return @result;
 }
 
-sub get_all_SimpleFeatures { # get simple features from otter/pipeline/ensembl db
-    my( $self, $analysis_name, $metakey, $csver_remote ) = @_;
-
-    my $response = $self->Client()->otter_response_content(
-        'GET',
-        'get_simple_features',
-        {
-            %{$self->toHash},
-            $analysis_name ? ('analysis' => $analysis_name) : (),
-            $metakey ? ('metakey' => $metakey) : (),
-            $csver_remote   ? ('csver_remote' => $csver_remote) : (), # if you forget it, the assembly will be Otter by default!
-        },
-    );
-
-    return ParseFeatures(\$response, $self->name(), $analysis_name)->{SimpleFeature} || [];
-}
-
 sub get_all_DAS_SimpleFeatures { # get simple features from DAS source (via mapping Otter server)
     my( $self, $analysis_name, $source, $dsn, $csver_remote ) = @_;
 
@@ -307,134 +290,6 @@ sub get_all_DAS_SimpleFeatures { # get simple features from DAS source (via mapp
     );
 
     return ParseFeatures(\$response, $self->name(), $analysis_name)->{SimpleFeature} || [];
-}
-
-sub get_all_Cons_SimpleFeatures { # get simple features from Compara 'GERP_CONSERVATION_SCORE'
-    my( $self, $analysis_name, $metakey, $csver_remote ) = @_;
-
-    if(!$analysis_name) {
-        die "Analysis name must be specified!";
-    }
-
-    my $response = $self->Client()->otter_response_content(
-        'GET',
-        'get_cons_simple_features',
-        {
-            %{$self->toHash},
-            'analysis' => $analysis_name,
-            $metakey   ? ('metakey' => $metakey) : (), # if you forget it, it will be 'Otter' by default!
-            $csver_remote   ? ('csver_remote' => $csver_remote) : (), # if you forget it, the assembly will be Otter by default!
-        },
-    );
-
-    return ParseFeatures(\$response, $self->name(), $analysis_name)->{SimpleFeature} || [];
-}
-
-sub get_all_DnaAlignFeatures { # get dna align features from otter/pipeline/ensembl db
-    my( $self, $analysis_name, $metakey, $csver_remote ) = @_;
-
-    return $self->get_all_AlignFeatures( 'dafs', $analysis_name, $metakey, $csver_remote );
-}
-
-sub get_all_ProteinAlignFeatures { # get protein align features from otter/pipeline/ensembl db
-    my( $self, $analysis_name, $metakey, $csver_remote ) = @_;
-
-    return $self->get_all_AlignFeatures( 'pafs', $analysis_name, $metakey, $csver_remote );
-}
-
-sub get_all_AlignFeatures { # get align features from otter/pipeline/ensembl db
-    my( $self, $kind, $analysis_name, $metakey, $csver_remote ) = @_;
-
-    my $response = $self->Client()->otter_response_content(
-        'GET',
-        'get_align_features',
-        {
-            %{$self->toHash},
-            'kind'     => $kind,
-            $analysis_name ? ('analysis' => $analysis_name) : (),
-            $metakey ? ('metakey' => $metakey) : (),
-            $csver_remote   ? ('csver_remote' => $csver_remote) : (), # if you forget it, the assembly will be Otter by default!
-        },
-    );
-
-    return ParseFeatures(\$response, $self->name(), $analysis_name)->{ $kind eq 'dafs' ? 'DnaDnaAlignFeature' : 'DnaPepAlignFeature'} || [];
-}
-
-sub get_all_RepeatFeatures { # get repeat features from otter/pipeline/ensembl db
-    my( $self, $analysis_name, $metakey, $csver_remote ) = @_;
-
-    my $response = $self->Client()->otter_response_content(
-        'GET',
-        'get_repeat_features',
-        {
-            %{$self->toHash},
-            $analysis_name ? ('analysis' => $analysis_name) : (),
-            $metakey ? ('metakey' => $metakey) : (),
-            $csver_remote   ? ('csver_remote' => $csver_remote) : (), # if you forget it, the assembly will be Otter by default!
-        },
-    );
-
-    return ParseFeatures(\$response, $self->name(), $analysis_name)->{RepeatFeature} || [];
-}
-
-sub get_all_MarkerFeatures { # get marker features from otter/pipeline/ensembl db
-    my( $self, $analysis_name, $metakey, $csver_remote ) = @_;
-
-    my $response = $self->Client()->otter_response_content(
-        'GET',
-        'get_marker_features',
-        {
-            %{$self->toHash},
-            $analysis_name ? ('analysis' => $analysis_name) : (),
-            $metakey ? ('metakey' => $metakey) : (),
-            $csver_remote   ? ('csver_remote' => $csver_remote) : (), # if you forget it, the assembly will be Otter by default!
-        },
-    );
-
-    return ParseFeatures(\$response, $self->name(), $analysis_name)->{MarkerFeature} || [];
-}
-
-    #
-    # the returned list is 2d, with features grouped by ditag_id.ditag_pair_id
-    # (even if there was only one feature per group)
-    #
-sub get_all_DitagFeatureGroups { # get ditag features from otter/pipeline/ensembl db
-    my( $self, $analysis_name, $metakey, $csver_remote, $ditypes ) = @_;
-
-    my $response = $self->Client()->otter_response_content(
-        'GET',
-        'get_ditag_features',
-        {
-            %{$self->toHash},
-            $analysis_name ? ('analysis' => $analysis_name) : (),
-            $metakey ? ('metakey' => $metakey) : (),
-            $csver_remote   ? ('csver_remote' => $csver_remote) : (), # if you forget it, the assembly will be Otter by default!
-            $ditypes ? ('ditypes' => $ditypes) : (),
-        },
-    );
-
-    my $ditag_subhash = ParseFeatures(\$response, $self->name(), $analysis_name)->{DitagFeature};
-
-    return $ditag_subhash ? [ values %$ditag_subhash ] : [];
-}
-
-sub get_all_PredictionTranscripts { # get prediction transcripts from otter/pipeline/ensembl db
-    my( $self, $analysis_name, $metakey, $csver_remote ) = @_;
-
-    my $response = $self->Client()->otter_response_content(
-        'GET',
-        'get_prediction_transcripts',
-        {
-            %{$self->toHash},
-            $analysis_name ? ('analysis' => $analysis_name) : (),
-            $metakey ? ('metakey' => $metakey) : (),
-            $csver_remote   ? ('csver_remote' => $csver_remote) : (), # if you forget it, the assembly will be Otter by default!
-        },
-    );
-
-    my $pt_subhash = ParseFeatures(\$response, $self->name(), $analysis_name)->{PredictionTranscript};
-
-    return $pt_subhash ? [ values %$pt_subhash ] : [];
 }
 
 sub get_all_DAS_PredictionTranscripts { # get simple features from DAS source (via mapping Otter server)
@@ -486,14 +341,6 @@ sub get_all_PipelineGenes { # get genes from otter/pipeline/ensembl db
 
     my $gene_parser = Bio::Otter::FromXML->new([ split(/\n/, $response) ], $slice);
     return $gene_parser->build_Gene_array($slice);
-}
-
-sub get_all_Genes { # currently unused by ensembl-ace, but is retained for interface-compatibility with Slice
-    my( $self, $analysis_name ) = @_;
-
-    $analysis_name ||= 'otter';
-
-    return $self->get_all_PipelineGenes($analysis_name, '.');
 }
 
 1;
