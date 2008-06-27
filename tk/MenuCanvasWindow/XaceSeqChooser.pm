@@ -1969,9 +1969,7 @@ sub DESTROY {
     
     warn "Destroying XaceSeqChooser for ", $self->ace_path, "\n";
 
-    if($self->__hasEverZMap){
-        $self->zMapKillZmap() if $self->can('zMapKillZmap');
-    }
+    $self->zMapKillZmap();
 
     $self->drop_AceDatabase;
     if (my $sn = $self->SequenceNotes){
