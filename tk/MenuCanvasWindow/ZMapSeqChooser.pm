@@ -60,7 +60,7 @@ sub zMap_make_exoncanvas_edit_window{
     return $ec;
 }
 
-=head1 _launchZMapZMap
+=head1 _launchZMap
 
 The guts of the code to launch and display the features in a zmap.
 
@@ -70,9 +70,6 @@ sub _launchZMap{
     my ($self) = @_;
 
     my $z = $self->zMapInsertZmapConnector();
-    $self->zMapWriteDotZmap();
-    $self->zMapWriteDotGtkrc();
-    $self->isZMap(1);
 
     unless($self->xremote_cache()){
         $self->xremote_cache(ZMap::XRemoteCache->new());
@@ -84,7 +81,7 @@ sub _launchZMap{
     warn "export PATH=$ENV{PATH}\nexport LD_LIBRARY_PATH=$ENV{LD_LIBRARY_PATH}\n@e\n" if $ZMAP_DEBUG;
 
     # this makes it a lot easier to debug with ddd
-    if(my $command_file = $ENV{DEBUG_WITH_DDD}){
+    if (my $command_file = $ENV{DEBUG_WITH_DDD}) {
         my $ddd_file = $self->zMapZmapDir() . "/xremote.ddd";
         eval{
             unlink($ddd_file);
@@ -228,20 +225,19 @@ zmap might be launched again.
 
 =cut
 
-sub zMapRelaunchZMap{
+sub zMapRelaunchZMap {
     my ($self, $xml) = @_;
 
-    my $relaunch = ($self->{'_relaunch_zmap'} ? 1 : 0);
-    warn "In zMapRelaunchZMap $self $relaunch" if $ZMAP_DEBUG;
 
-    if($self->{'_relaunch_zmap'}){
+    if ($self->{'_relaunch_zmap'}) {
         $self->_launchZMap();
         $self->{'_relaunch_zmap'} = 0;
-    }else { 
-	if(my $zmap = $self->zMapZmapConnector()){
-	    $zmap->post_respond_handler(\&post_response_client_cleanup, [$self]);
-	}
-	# calling this here creates a race condition.
+        warn "Relaunching zmap..." if $ZMAP_DEBUG;
+    } else { 
+    	if (my $zmap = $self->zMapZmapConnector()) {
+    	    $zmap->post_respond_handler(\&post_response_client_cleanup, [$self]);
+    	}
+    	# calling this here creates a race condition.
         # $self->xremote_cache->remove_clients_to_bad_windows();
         warn "Relaunch was not requested..." if $ZMAP_DEBUG; 
     }

@@ -19,7 +19,7 @@ use Hum::Ace;
 use Hum::Analysis::Factory::ExonLocator;
 use Hum::Conf qw{ PFETCH_SERVER_LIST };
 use Hum::Sort qw{ ace_sort };
-use Hum::ClipboardUtils qw{ evidence_type_and_name_from_text };
+use Hum::ClipboardUtils qw{ text_is_zmap_clip evidence_type_and_name_from_text };
 use EditWindow::Dotter;
 use EditWindow::Clone;
 use EditWindow::LocusName;
@@ -94,6 +94,8 @@ sub initialize {
 
     $self->draw_subseq_list;
     $self->populate_clone_menu;
+    $self->zMapWriteDotZmap;
+    $self->zMapWriteDotGtkrc;
     $self->zMapLaunchZmap;
     $self->top_window->raise;
 }
@@ -1074,48 +1076,6 @@ sub hunt_for_Entry_text {
 }
 
 
-# sub hunt_for_Entry_text{
-#     my ($self, $entry) = @_; 
-# 
-#     # Finds the text given in the supplied Entry in $self->canvas
-#     # Very similar to hunt_for_selection in SequenceNotes.pm
-#     # potential for refactoring...
-# 
-#     my $canvas = $self->canvas;
-#     my( $query_str, $regex );
-#     eval{
-#       $query_str = $entry->get();
-#       $query_str =~ s{(\W)}{\\$1}g;
-#       $regex =  qr/($query_str)/i;
-#     };
-#     return unless $query_str;
-#     # warn $query_str;
-#     # warn $regex;
-#     $canvas->delete('msg');
-#     $self->deselect_all();
-#     my @all_text_obj = $canvas->find('withtag', 'searchable');
-#     unless (@all_text_obj) {
-#         ### Sometimes a weird error occurs where the first call to find
-#         ### doesn't return anything - warn user if this happens.
-#         $self->message('No searchable text on canvas - is it empty?');
-#         return;
-#     }
-# 
-#     my $found = 0;
-#     foreach my $obj (@all_text_obj) {
-#         my $text = $canvas->itemcget($obj, 'text');
-#         # warn "matching $text against $regex\n";
-#         if (my ($hit) = $text =~ /$regex/) {
-#             $found = $obj;
-#           $self->highlight($obj);
-#         }
-#     }
-#     unless ($found) {
-#         $self->message("Can't find '$query_str'");
-#         return;
-#     }
-# }
-
 sub ace_handle {
     my( $self ) = @_;
     
@@ -1247,18 +1207,7 @@ sub edit_new_subsequence {
         $new->translation_region($new->translation_region);
     }
 
-    $self->Assembly->add_SubSeq($new);
-
-    $self->add_SubSeq($new);
-    $self->draw_subseq_list;
-    $self->highlight_by_name($seq_name);
-    
-    my $ec = $self->make_exoncanvas_edit_window($new);
-    $ec->merge_position_pairs;  # Helpful when annotator has chosen multiple overlapping ESTs in Zmap
-    my $clip_evi = evidence_type_and_name_from_text($self->ace_handle, $clip);
-    if (keys %$clip_evi) {
-        $ec->EvidencePaster->add_evidence_type_name_hash($clip_evi);
-    }
+    $self->add_SubSeq_and_paste_evidence($new, $clip);
 }
 
 sub region_name_and_next_locus_number {
@@ -1291,6 +1240,91 @@ sub region_name_and_next_locus_number {
     $max++;
     
     return ($region_name, $max);
+}
+
+sub make_variant_subsequence {
+    my( $self ) = @_;
+    
+    my $clip      = $self->get_clipboard_text || '';
+    my @sub_names = $self->list_selected_subseq_names;
+    unless (@sub_names) {
+        @sub_names = $self->list_was_selected_subseq_names;
+    }
+
+    # warn "Got subseq names: (@sub_names)";
+    unless (@sub_names) {
+        $self->message("No subsequence selected");
+        return;
+    }
+    elsif (@sub_names > 1) {
+        $self->message("Can't make a variant from more than one selected sequence");
+        return;
+    }
+    my $name = $sub_names[0];
+    my $sub = $self->get_SubSeq($name);
+    my $assembly = $self->Assembly;
+    
+    # Work out a name for the new variant
+    my $var_name = $name;
+    if ($var_name =~ s/-(\d{3,})$//) {
+        my $root = $var_name;
+
+        # Now get the maximum variant number for this root
+        my $regex = qr{^$root-(\d{3,})$};
+        my $max = 0;
+        foreach my $sub ($assembly->get_all_SubSeqs) {
+            my ($n) = $sub->name =~ /$regex/;
+            if ($n and $n > $max) {
+                $max = $n;
+            }
+        }
+
+        $var_name = sprintf "%s-%03d", $root, $max + 1;
+    
+        # Check we don't already have the variant we are trying to create
+        if ($self->get_SubSeq($var_name)) {
+            $self->message("Tried to create variant '$var_name', but it already exists! (Should be impossible)");
+            return;
+        }
+    } else {
+        $self->message(
+            "SubSequence name '$name' is not in the expected format " .
+            "(ending with a dash followed by three or more digits).",
+            "Perhaps you want to use the \"New\" funtion instead?",
+            );
+        return;
+    }
+    
+    # Make the variant
+    my $var = $sub->clone;
+    $var->name($var_name);
+    $var->empty_evidence_hash;
+    $var->empty_remarks;
+    $var->empty_annotation_remarks;
+    
+    if (text_is_zmap_clip($clip)) {
+        my $clip_sub = Hum::Ace::SubSeq->new_from_clipboard_text($clip);
+        $var->replace_all_Exons($clip_sub->get_all_Exons);
+    }
+    
+    $self->add_SubSeq_and_paste_evidence($var, $clip);
+}
+
+sub add_SubSeq_and_paste_evidence {
+    my ($self, $sub, $clip) = @_;
+    
+    $self->Assembly->add_SubSeq($sub);
+
+    $self->add_SubSeq($sub);
+    $self->draw_subseq_list;
+    $self->highlight_by_name($sub->name);
+    
+    my $ec = $self->make_exoncanvas_edit_window($sub);
+    $ec->merge_position_pairs;  # Useful if multiple overlapping evidence selected
+    my $clip_evi = evidence_type_and_name_from_text($self->ace_handle, $clip);
+    if (keys %$clip_evi) {
+        $ec->EvidencePaster->add_evidence_type_name_hash($clip_evi);
+    }    
 }
 
 sub delete_subsequences {
@@ -1365,68 +1399,6 @@ sub delete_subsequences {
     }
     
     $self->draw_subseq_list;
-}
-
-sub make_variant_subsequence {
-    my( $self ) = @_;
-    
-    my @sub_names = $self->list_selected_subseq_names || $self->list_was_selected_subseq_names;
-    warn "Got subseq names: (@sub_names)";
-    unless (@sub_names) {
-        $self->message("No subsequence selected");
-        return;
-    }
-    elsif (@sub_names > 1) {
-        $self->message("Can't make a variant from more than one selected sequence");
-        return;
-    }
-    my $name = $sub_names[0];
-    my $sub = $self->get_SubSeq($name);
-    my $assembly = $self->Assembly;
-    
-    # Work out a name for the new variant
-    my $var_name = $name;
-    if ($var_name =~ s/-(\d{3,})$//) {
-        my $root = $var_name;
-
-        # Now get the maximum variant number for this root
-        my $regex = qr{^$root-(\d{3,})$};
-        my $max = 0;
-        foreach my $sub ($assembly->get_all_SubSeqs) {
-            my ($n) = $sub->name =~ /$regex/;
-            if ($n and $n > $max) {
-                $max = $n;
-            }
-        }
-
-        $var_name = sprintf "%s-%03d", $root, $max + 1;
-    
-        # Check we don't already have the variant we are trying to create
-        if ($self->get_SubSeq($var_name)) {
-            $self->message("Tried to create variant '$var_name', but it already exists! (Should be impossible)");
-            return;
-        }
-    } else {
-        $self->message(
-            "SubSequence name '$name' is not in the expected format " .
-            "(ending with a dash followed by three or more digits).",
-            "Perhaps you want to use the \"New\" funtion instead?",
-            );
-        return;
-    }
-    
-    # Make the variant
-    my $var = $sub->clone;
-    $var->empty_evidence_hash;
-    $var->empty_remarks;
-    $var->empty_annotation_remarks;
-    $var->name($var_name);
-    $self->add_SubSeq($var);
-    $assembly->add_SubSeq($var);
-    
-    $self->draw_subseq_list;
-    $self->highlight_by_name($name, $var_name);
-    $self->edit_subsequences($var_name);
 }
 
 sub make_exoncanvas_edit_window {
@@ -1990,20 +1962,6 @@ sub send_zmap_commands {
             die $error;
         }
     }    
-}
-
-sub isZMap{
-    my($self, $x_or_z) = @_;
-    if(defined($x_or_z)){
-        $self->{'xace_or_zmap'} = $x_or_z;
-        $self->__hasEverZMap(1) if $x_or_z;
-    }
-    return ($self->{'xace_or_zmap'} ? 1 : 0);
-}
-sub __hasEverZMap{
-    my($self, $zmapped) = @_;
-    $self->{'zmapped'} = $zmapped if defined($zmapped);
-    return ($self->{'zmapped'} ? 1 : 0);
 }
 
 sub DESTROY {

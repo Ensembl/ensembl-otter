@@ -935,6 +935,7 @@ sub next_message_id {
 
         my $canvas = $self->canvas;
         $canvas->delete($was_tag);
+        $self->{'_was_selected_list'} = undef;
         foreach my $o (@obj) {
             my @bbox = $canvas->bbox($o);
             $bbox[0] -= 1;
@@ -993,15 +994,17 @@ sub next_message_id {
     sub deselect_all {
         my( $self ) = @_;
 
-        my $canvas = $self->canvas;
-        foreach my $rect ($canvas->find('withtag', $sel_tag)) {
-            $canvas->itemconfigure($rect,
-                -fill   => '#cccccc',
-                -tags   => [$was_tag],
-                );
+        if (my $sel = $self->{'_selected_list'}) {
+            my $canvas = $self->canvas;
+            foreach my $rect (values %$sel) {
+                $canvas->itemconfigure($rect,
+                    -fill   => '#cccccc',
+                    -tags   => [$was_tag],
+                    );
+            }
+            $self->{'_selected_list'} = undef;
+            $self->{'_was_selected_list'} = $sel;
         }
-        $self->{'_was_selected_list'} = $self->{'_selected_list'};
-        $self->{'_selected_list'} = undef;
     }
 
     sub add_selected {
