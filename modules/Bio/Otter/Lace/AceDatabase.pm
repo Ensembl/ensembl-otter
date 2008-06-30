@@ -374,7 +374,10 @@ sub save_ace_to_otter {
     $ace->raw_query(qq{find Assembly "$slice_name"});
 
     my $ace_txt = $ace->raw_query('show -a');
-    $ace_txt =~ s/^Feature\s+"phastCons".*\n//mg;
+    my $editable = join '|', map $_->name,
+        $self->MethodCollection->get_all_mutable_non_transcript_Methods;
+    # Remove all Feature lines which aren't editable types
+    $ace_txt =~ s/^Feature\s+"(?!($editable)).*\n//mg;
 
     # ... its SubSequences ...
     $ace->raw_query('query follow SubSequence where ! CDS_predicted_by');

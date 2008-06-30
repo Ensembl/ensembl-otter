@@ -443,10 +443,8 @@ sub general_http_dialog {
             # Unauthorized (We are swtiching from 403 to 401 from humpub-release-49.)
             $self->authorize;
             $password_attempts--;
-        } elsif ($code == 500) {
-            die "Error on server ($code). Please inform anacode\@sanger.ac.uk\n", $response->decoded_content;
-        } elsif ($code == 502) {
-            warn "\nGot timeout (502 error) from the server, retrying...\n\n";
+        } elsif ($code == 500 or $code == 502) {
+            printf STDERR "\nGot error %s (%s)\nretrying...\n", $code, $response->decoded_content;
             $timeout_attempts--;
         } elsif ($code == 503 or $code == 504) {
             die "The server timed out ($code). Please try again.\n";
