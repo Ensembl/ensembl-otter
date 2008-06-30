@@ -764,7 +764,10 @@ sub show_peptide {
         my $top = $master->Toplevel;
         $top->transient($master);
         
-        my $peptext = $self->{'_pep_peptext'} = $top->ROText(
+        
+        my $peptext = $self->{'_pep_peptext'} = $top->Scrolled(
+            'ROText',
+            -scrollbars         => 'oe',
             -font           => $self->font_fixed,
             #-justify        => 'left',
             -padx                   => 6,
@@ -946,10 +949,23 @@ sub update_translation {
     # Size widget to fit
     my ($lines) = $peptext->index('end') =~ /(\d+)\./;    
     $lines--;
-    $peptext->configure(
-        -width  => 60,
-        -height => $lines,
-        );
+    if ($lines > 40) {
+        $peptext->configure(
+            -width  => 60,
+            -height => 40,
+            -scrollbars => 'e',
+            );
+    } else {
+        # This has slightly odd behaviour if the ROText starts off
+        # big to accomodate a large translation, and is then made
+        # smaller.  Does not seem to shrink below a certain minimum
+        # height.
+        $peptext->configure(
+            -width  => 60,
+            -height => $lines,
+            -scrollbars => '',
+            );
+    }
     
     # Set the window title
     $peptext->toplevel->configure( -title => $sub->name . " translation" );
