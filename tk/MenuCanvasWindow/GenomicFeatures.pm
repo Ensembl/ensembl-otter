@@ -545,15 +545,8 @@ sub save_to_ace {
         
         my @xml = $new_assembly->zmap_SimpleFeature_xml($self->Assembly);
         $self->XaceSeqChooser->send_zmap_commands(@xml);
-        
-        if($xc->update_ace_display($new_ace)) {    # And zmap updated OK    
-            print STDERR "Genomic features successfully saved to acedb\n";
-
-            # Save the new SimpleFeatures in the attached Assembly object
-            $self->Assembly->set_SimpleFeature_list($new_assembly->get_all_SimpleFeatures);
-        } else {
-            $self->message("There was an error saving genomic features to acedb\n");
-        }
+        $self->XaceSeqChooser->save_ace($new_ace);
+        $self->Assembly->set_SimpleFeature_list($new_assembly->get_all_SimpleFeatures);
     }
 }
 
