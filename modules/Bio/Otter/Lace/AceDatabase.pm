@@ -100,12 +100,13 @@ sub error_flag {
 }
 
 sub MethodCollection {
-    my ($self, $coll) = @_;
+    my ($self, $collect) = @_;
     
-    if ($coll) {
-        $self->{'_MethodCollection'} = $coll;
+    if ($collect) {
+        $self->{'_MethodCollection'} = $collect;
     }
-    return $self->{'_MethodCollection'};
+    $collect = $self->{'_MethodCollection'} ||= $self->get_default_MethodCollection;
+    return $collect;
 }
 
 sub get_default_MethodCollection {
@@ -153,8 +154,6 @@ sub init_AceDatabase {
     unless(defined($with_pipeline)) {
         $with_pipeline = Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
     }
-    
-    $self->MethodCollection($self->get_default_MethodCollection);
 
     $self->add_misc_acefile;
     $self->add_zmap_styles_acefile;
