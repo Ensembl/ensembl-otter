@@ -144,6 +144,10 @@ sub register_slice {
 sub find_by_stable_ids {
     my ($self, $qtype_prefix, $metakey) = @_;
 
+    unless( my ($opt_str) = @{ $self->otter_dba()->get_MetaContainer()->list_value_by_key($metakey) } ) {
+        return; # could not connect (which is normal: not every DB may have this metakey)
+    }
+
     my $satellite_dba = $self->satellite_dba($metakey);
 
     my $meta_con   = bless $satellite_dba->get_MetaContainer(), 'Bio::Vega::DBSQL::MetaContainer';
@@ -274,7 +278,9 @@ sub find {
 
     $self->find_by_stable_ids('', '.');
 
-    $self->find_by_stable_ids('ensembl:','ens_livemirror_core_db_head');
+    $self->find_by_stable_ids('EnsEMBL:','ens_livemirror_core_db_head');
+
+    $self->find_by_stable_ids('EnsEMBL_EST:','ens_livemirror_estgene_db_head');
 
     my $in_quoted_list = $self->in_quoted_list();
 
