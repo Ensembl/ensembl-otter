@@ -9,30 +9,21 @@ use strict;
 use warnings;
 use Bio::Otter::Lace::Locator;
 
+use base ('Bio::Otter::MFetcher');
+
 my $component = 'clone'; # this is the type of components we want the found matches mapped on
 my $DEBUG=0; # do not show all SQL statements
 
 sub new {
-    my ($class, $dba, $qnames) = @_;
+    my ($class, $otter_dba, $qnames, $unhide) = @_;
 
-    my $self = bless {
-        '_dba' => $dba,
-        '_ql'  => ($qnames ? {map {(uc($_) => [])} @$qnames } : {}),
-    }, $class;
+    my $self = $class->SUPER::new(
+        '_odba'         => $otter_dba,
+        '_ql'           => ($qnames ? {map {(uc($_) => [])} @$qnames } : {}),
+        '_unhide'       => ($unhide ? 1 : 0),
+    );
 
     return $self;
-}
-
-sub dba {
-    my $self = shift @_;
-
-    return $self->{_dba};
-}
-
-sub dbc {
-    my $self = shift @_;
-
-    return $self->dba->dbc();
 }
 
 sub qnames_locators {
@@ -45,13 +36,19 @@ sub qnames_locators {
     return $self->{_ql};
 }
 
+sub in_quoted_list {
+    my $self = shift @_;
+
+    return $self->{_in_quoted_list} ||= 'in ('. join(', ', map {"'$_'"} keys %{$self->qnames_locators()} ) .' ) ';
+}
+
 sub find_containing_chromosomes {
     my ($self, $slice) = @_;
 
         # EnsEMBL as of rel46 cannot perform ambigous clone|subregion->contig->chromosome mapping correctly.
         # So we prefer to do it using direct SQL:
         
-    my $sa = $self->dba()->get_SliceAdaptor();
+    my $sa = $slice->adaptor();
 
         # map the original slice onto contig_ids
     my $seq_level_slice_ids = [ $slice->coord_system->is_sequence_level()
@@ -76,7 +73,7 @@ sub find_containing_chromosomes {
      GROUP BY chr.name
     };
 
-    my $sth = $self->dbc()->prepare($sql);
+    my $sth = $sa->dbc()->prepare($sql);
     $sth->execute();
 
     my @chr_slices = ();
@@ -85,7 +82,8 @@ sub find_containing_chromosomes {
         my @cmps = split(/,/, $joined_cmps);
 
         if(scalar(@cmps) == scalar(@$seq_level_slice_ids)) {
-            my $chr_slice = $sa->fetch_by_region('chromosome', $atype, undef, undef, undef, 'Otter');
+                    # let's hope the default coord_system_version is set correctly:
+            my $chr_slice = $sa->fetch_by_region('chromosome', $atype);
             push @chr_slices, $chr_slice;
         }
     }
@@ -93,27 +91,38 @@ sub find_containing_chromosomes {
     return \@chr_slices;
 }
 
-sub register_feature {
-    my ($self, $qname, $qtype, $feature) = @_;
+sub register_slices {
+    my ($self, $qname, $qtype, $feature_slices) = @_;
 
+    foreach my $feature_slice (@$feature_slices) {
+        if($feature_slice->adaptor->db() != $self->otter_dba()) {
+            my $mapped_slices = $self->map_remote_slice_back($feature_slice);
+            foreach my $mapped_slice (@$mapped_slices) {
+                $self->register_slice($qname, $qtype, $mapped_slice);
+            }
+        } else {
+            $self->register_slice($qname, $qtype, $feature_slice);
+        }
+    }
+}
 
-    my $unhide = $self->{_unhide};
+sub register_slice {
+    my ($self, $qname, $qtype, $feature_slice) = @_;
 
-    my $feature_slice = $feature->isa('Bio::EnsEMBL::Slice')
-        ? $feature
-        : $feature->feature_Slice();
     my $cs_name = $feature_slice->coord_system_name();
 
     my $component_names = [ ($cs_name eq $component)
         ? $feature_slice->seq_region_name
         : map { $_->to_Slice()->seq_region_name() }
                     # NOTE: order of projection segments WAS strand-dependent
-                sort { ($a->from_start() <=> $b->from_start())*$feature->strand() }
+                sort { ($a->from_start() <=> $b->from_start())*$feature_slice->strand() }
                     @{ $feature_slice->project($component) } ];
 
     my $found_chromosome_slices = ($cs_name eq 'chromosome')
         ? [ $feature_slice ]
         : $self->find_containing_chromosomes($feature_slice);
+
+    my $unhide = $self->{_unhide};
 
     foreach my $chr_slice (@$found_chromosome_slices) {
 
@@ -133,20 +142,19 @@ sub register_feature {
 }
 
 sub find_by_stable_ids {
-    my $self = shift @_;
+    my ($self, $qtype_prefix, $metakey) = @_;
 
-    my $dba      = $self->dba();
-    my $meta_con = $dba->get_MetaContainer();
+    my $satellite_dba = $self->satellite_dba($metakey);
 
-    my $prefix_primary = $meta_con->get_primary_prefix()
-        || die "'prefix.primary' missing from meta table";
+    my $meta_con   = bless $satellite_dba->get_MetaContainer(), 'Bio::Vega::DBSQL::MetaContainer';
 
-    my $prefix_species = $meta_con->get_species_prefix()
-        || die "'prefix.species' missing from meta table";
+    my $prefix_primary = $meta_con->get_primary_prefix() || 'ENS';
 
-    my $gene_adaptor           = $dba->get_GeneAdaptor();
-    my $transcript_adaptor     = $dba->get_TranscriptAdaptor();
-    my $exon_adaptor           = $dba->get_ExonAdaptor();
+    my $prefix_species = $meta_con->get_species_prefix() || '\w{0,6}';
+
+    my $gene_adaptor           = $satellite_dba->get_GeneAdaptor();
+    my $transcript_adaptor     = $satellite_dba->get_TranscriptAdaptor();
+    my $exon_adaptor           = $satellite_dba->get_ExonAdaptor();
 
     foreach my $qname (keys %{$self->qnames_locators()}) {
         if(uc($qname) =~ /^$prefix_primary$prefix_species([TPGE])\d+/i){ # try stable_ids
@@ -156,16 +164,16 @@ sub find_by_stable_ids {
 
             eval {
                 if($typeletter eq 'G') {
-                    $qtype = 'gene_stable_id';
+                    $qtype = $qtype_prefix.'gene_stable_id';
                     $feature = $gene_adaptor->fetch_by_stable_id($qname);
                 } elsif($typeletter eq 'T') {
-                    $qtype = 'transcript_stable_id';
+                    $qtype = $qtype_prefix.'transcript_stable_id';
                     $feature = $transcript_adaptor->fetch_by_stable_id($qname);
                 } elsif($typeletter eq 'P') {
-                    $qtype = 'translation_stable_id';
+                    $qtype = $qtype_prefix.'translation_stable_id';
                     $feature = $transcript_adaptor->fetch_by_translation_stable_id($qname);
                 } elsif($typeletter eq 'E') {
-                    $qtype = 'exon_stable_id';
+                    $qtype = $qtype_prefix.'exon_stable_id';
                     $feature = $exon_adaptor->fetch_by_stable_id($qname);
                 }
             };
@@ -175,7 +183,9 @@ sub find_by_stable_ids {
                 # warn "'$qname' looks like a stable id, but wasn't found.";
                 # warn ($@) if $DEBUG;
             } elsif($feature) { # however watch out, sometimes we just silently get nothing!
-                $self->register_feature($qname, $qtype, $feature);
+                my $feature_slice = $feature->feature_Slice();
+
+                $self->register_slices($qname, $qtype, [$feature_slice]);
             }
         }
     } # foreach $qname
@@ -191,18 +201,18 @@ sub find_by_feature_attributes {
           AND value $condition
     };
 
-    my $dbc      = $self->dbc();
+    my $dbc      = $self->otter_dba()->dbc();
     my $sth = $dbc->prepare($sql);
     $sth->execute();
 
     my $adaptor;
     while( my ($feature_id, $qname) = $sth->fetchrow() ) {
-        $adaptor ||= $self->dba()->$adaptor_call; # only do it if we found something
+        $adaptor ||= $self->otter_dba()->$adaptor_call; # only do it if we found something
 
         my $feature = $adaptor->fetch_by_dbID($feature_id);
 
         if($feature->is_current()) {
-            $self->register_feature($qname, $qtype, $feature);
+            $self->register_slice($qname, $qtype, $feature->feature_Slice());
         }
     }
 }
@@ -210,7 +220,7 @@ sub find_by_feature_attributes {
 sub find_by_seqregion_names {
     my ($self, $condition) = @_;
 
-    my $dbc      = $self->dbc();
+    my $dbc      = $self->otter_dba()->dbc();
     my $adaptor;
 
     my $sql = qq{
@@ -224,11 +234,11 @@ sub find_by_seqregion_names {
     my $sth = $dbc->prepare($sql);
     $sth->execute();
     while( my ($cs_name, $sr_name) = $sth->fetchrow() ) {
-        $adaptor ||= $self->dba()->get_SliceAdaptor();
+        $adaptor ||= $self->otter_dba()->get_SliceAdaptor();
 
         my $slice = $adaptor->fetch_by_region($cs_name, $sr_name);
 
-        $self->register_feature($sr_name, $cs_name.'_name', $slice);
+        $self->register_slice($sr_name, $cs_name.'_name', $slice);
     }
 }
 
@@ -245,28 +255,28 @@ sub find_by_seqregion_attributes {
           AND sra.value $condition
     };
 
-    my $dbc      = $self->dbc();
+    my $dbc      = $self->otter_dba()->dbc();
     my $sth = $dbc->prepare($sql);
     $sth->execute();
 
     my $adaptor;
     while( my ($sr_name, $qname) = $sth->fetchrow() ) {
-        $adaptor ||= $self->dba()->get_SliceAdaptor();
+        $adaptor ||= $self->otter_dba()->get_SliceAdaptor();
 
         my $slice = $adaptor->fetch_by_region($cs_name, $sr_name);
 
-        $self->register_feature($qname, $qtype, $slice);
+        $self->register_slice($qname, $qtype, $slice);
     }
 }
 
 sub find {
-    my ($self, $unhide) = @_;
+    my $self = shift @_;
 
-    $self->{_unhide} = $unhide;
+    $self->find_by_stable_ids('', '.');
 
-    my $in_quoted_list = 'in ('. join(', ', map {"'$_'"} keys %{$self->qnames_locators()} ) .' ) ';
+    $self->find_by_stable_ids('ensembl:','ens_livemirror_core_db_head');
 
-    $self->find_by_stable_ids();
+    my $in_quoted_list = $self->in_quoted_list();
 
     $self->find_by_seqregion_names($in_quoted_list);
 
@@ -281,10 +291,12 @@ sub find {
 
     foreach my $qname (keys %{$self->qnames_locators()}) {
 
-        $self->find_by_feature_attributes("like '%:$qname'", 'prefixed_gene_name',
+        my $like_prefixed_qname = "like '%:$qname'";
+
+        $self->find_by_feature_attributes($like_prefixed_qname, 'prefixed_gene_name',
             'gene_attrib', 'gene_id', 'name', 'get_GeneAdaptor');
 
-        $self->find_by_feature_attributes("like '%:$qname'", 'prefixed_transcript_name',
+        $self->find_by_feature_attributes($like_prefixed_qname, 'prefixed_transcript_name',
             'transcript_attrib', 'transcript_id', 'name', 'get_TranscriptAdaptor');
     }
 
