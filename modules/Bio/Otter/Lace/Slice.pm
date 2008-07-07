@@ -223,6 +223,52 @@ sub get_all_tiles_as_Slices {
     return \@subslices;
 }
 
+sub get_region_xml {
+    my $self = shift @_;
+
+    my $client = $self->Client();
+
+    if($client->debug()) {
+        warn sprintf("Fetching data from chr %s %s-%s\n", $self->seqname(), $self->start(), $self->end() );
+    }
+
+    my $xml = $client->http_response_content( # should be unified with 'otter_response_content'
+        'GET',
+        'get_region',
+        {
+            %{$self->toHash},
+            'email'  => $client->email(),
+        },
+    );
+
+    if ($client->debug) {
+        my $debug_file = Bio::Otter::Lace::PersistentFile->new();
+        $debug_file->name("otter-debug.$$.fetch.xml");
+        my $fh = $debug_file->write_file_handle();
+        print $fh $xml;
+        close $fh;
+    }
+
+    return $xml;
+}
+
+sub lock_region_xml {
+    my $self = shift @_;
+
+    my $client = $self->Client();
+
+    return $client->http_response_content(
+        'GET',
+        'lock_region',
+        {
+            %{$self->toHash},
+            'email'    => $client->email(),
+            'hostname' => $client->client_hostname(),
+        }
+    );
+}
+
+
 sub get_all_features { # get Simple|DnaAlign|ProteinAlign|Repeat|Marker|Ditag|PredictionTranscript features from otter|pipe|ensembl db
     my ($self, $kind_and_args, $metakey, $csver_remote) = @_;
 
