@@ -786,59 +786,6 @@ sub _sequence_note_action {
     # I guess we simply have to ignore the response
 }
 
-sub lock_region {
-    my($self, $dsname, $ssname, $chr_name, $chr_start, $chr_end ) = @_;
-    
-    my $ds = $self->get_DataSet_by_name($dsname);
-
-    return $self->http_response_content(
-        'GET',
-        'lock_region',
-        {
-            'email'    => $self->email,
-            'hostname' => $self->client_hostname,
-            'dataset'  => $dsname,
-            'type'     => $ssname,
-            'name'     => $chr_name,
-            'start'    => $chr_start,
-            'end'      => $chr_end,
-        }
-    );
-}
-
-sub get_xml_region {
-    my( $self, $dsname, $ssname, $chr_name, $chr_start, $chr_end ) = @_;
-
-    if($self->debug()) {
-        warn sprintf("Fetching data from chr %s %s-%s\n", $chr_name, $chr_start, $chr_end);
-    }
-
-    my $ds = $self->get_DataSet_by_name($dsname);
-
-    my $xml = $self->http_response_content(
-        'GET',
-        'get_region',
-        {
-            'email'    => $self->email,
-            'dataset'  => $dsname,
-            'type'     => $ssname,
-            'name'     => $chr_name,
-            'start'    => $chr_start,
-            'end'      => $chr_end,
-        }
-    );
-
-    if ($self->debug) {
-        my $debug_file = Bio::Otter::Lace::PersistentFile->new();
-        $debug_file->name("otter-debug.$$.fetch.xml");
-        my $fh = $debug_file->write_file_handle();
-        print $fh $xml;
-        close $fh;
-    }
-    
-    return $xml;
-}
-
 sub get_all_DataSets {
     my( $self ) = @_;
 

@@ -308,47 +308,40 @@ sub initialise {
         $self->extend_selection;
         });
     
-    # Don't need now that non-contiguous selections in
-    # SequenceNotes don't open in multiple contigs
-    #$canvas->CanvasBind('<Control-Button-1>', sub {
-    #    return if $self->delete_message;
-    #    $self->toggle_current;
-    #    });
-
-    my ( $comment, $comment_label );
-    my ( $button_frame_1, $button_frame_2 );
+    my $button_frame_navi = $top->Frame->pack(-side => 'top');
+    my $button_frame_cmds = $top->Frame->pack(-side => 'bottom');
 
     if ($initial_write_access) {
-        $button_frame_1 = $top->Frame->pack(-side => 'top');
+        my $button_frame_notes = $top->Frame->pack(-side => 'top');
 
-        $button_frame_2 = $top->Frame->pack(-side => 'top');
+        # $button_frame_cmds = $top->Frame->pack(-side => 'top');
 
-        $comment_label = $button_frame_1->Label(-text => 'Note text:',);
+        my $comment_label = $button_frame_notes->Label(-text => 'Note text:',);
         $comment_label->pack(-side => 'left',);
         my $comment_text = '';
         $self->set_note_ref(\$comment_text);
-        $comment = $button_frame_1->Entry(-width        => 55,
+        my $comment = $button_frame_notes->Entry(-width        => 55,
                                           -textvariable => $self->set_note_ref(),
                                           -font         => ['Helvetica', $self->font_size, 'normal'],
         );
         $comment->pack(-side => 'left');
-        my $clear_button = $button_frame_1->Button(-text    => 'clear'   ,
+        my $clear_button = $button_frame_notes->Button(-text    => 'clear'   ,
                                                    -command => sub { my $ref = $self->set_note_ref(); $$ref = undef; }
                                                    )->pack(-side => 'right');
 	
         # Remove Control-H binding from Entry
         $comment->bind(ref($comment), '<Control-h>', '');
         $comment->bind(ref($comment), '<Control-H>', '');
-        $button_frame_1->bind('<Destroy>', sub { $self = undef });
+        $button_frame_notes->bind('<Destroy>', sub { $self = undef });
 
         my $set_reviewed = sub{
             $self->save_sequence_notes($comment);
         };
-        $self->make_button($button_frame_1, 'Set note', $set_reviewed, 0);
+        $self->make_button($button_frame_notes, 'Set note', $set_reviewed, 0);
         $top->bind('<Control-s>', $set_reviewed);
         $top->bind('<Control-S>', $set_reviewed);
 
-        $button_frame_2->Checkbutton(
+        $button_frame_cmds->Checkbutton(
             -variable    => $self->write_access_var_ref(),
             -text        => 'write access',
             -borderwidth => 2,
@@ -356,10 +349,10 @@ sub initialise {
         )->pack(-side => 'left', -pady => 2, -fill => 'x');
 
     } else {
-        $button_frame_2 = $top->Frame->pack(-side => 'top');
-        $button_frame_2->Label(-text => 'Read Only   ', 
+        # $button_frame_cmds = $top->Frame->pack(-side => 'top');
+        $button_frame_cmds->Label(-text => 'Read Only   ', 
                                -foreground => 'red')->pack(-side => 'left');
-        $button_frame_2->bind('<Destroy>', sub { $self = undef });
+        $button_frame_cmds->bind('<Destroy>', sub { $self = undef });
     }
 
     ### Is hunting in CanvasWindow?
@@ -376,13 +369,13 @@ sub initialise {
             $self->draw_range();
             $top->Unbusy;
         };
-        $self->make_button($button_frame_2, 'Show Range [F7]', $open_range);
+        $self->make_button($button_frame_cmds, 'Show Range [F7]', $open_range);
         $top->bind('<F7>', $open_range);
     }
     ## First call to this returns empty list!
     #my @all_text_obj = $canvas->find('withtag', 'contig_text');
     
-    $self->make_button($button_frame_2, 'Hunt selection', $hunter, 0);
+    $self->make_button($button_frame_cmds, 'Hunt selection', $hunter, 0);
     $top->bind('<Control-h>', $hunter);
     $top->bind('<Control-H>', $hunter);
     
@@ -392,7 +385,7 @@ sub initialise {
 	    $self->refresh_column(8) ;
         $top->Unbusy;
     };
-    $self->make_button($button_frame_2, 'Refresh Locks', $refresh_locks, 0);
+    $self->make_button($button_frame_cmds, 'Refresh Locks', $refresh_locks, 0);
     $top->bind('<Control-r>', $refresh_locks);
     $top->bind('<Control-R>', $refresh_locks);
     $top->bind('<F5>',        $refresh_locks);
@@ -404,7 +397,7 @@ sub initialise {
 	    $self->draw();
 	    $top->Unbusy;
     };
-    $self->make_button($button_frame_2, 'Refresh Ana. Status', $refresh_all, 8);
+    $self->make_button($button_frame_cmds, 'Refresh Ana. Status', $refresh_all, 8);
     $top->bind('<Control-a>', $refresh_all);
     $top->bind('<Control-A>', $refresh_all);
     $top->bind('<F6>',        $refresh_all);
@@ -412,7 +405,7 @@ sub initialise {
     my $run_lace_on_slice = sub{
 	    $self->slice_window;
     };
-    $self->make_button($button_frame_2, 'Open from chr coords', $run_lace_on_slice);
+    $self->make_button($button_frame_cmds, 'Open from chr coords', $run_lace_on_slice);
 
     my $conditional_refresh_analyses = sub{
         my ($flag_ref) = @_;
@@ -422,7 +415,7 @@ sub initialise {
             $top->Unbusy;
         }
     };
-    $button_frame_2->Checkbutton(
+    $button_frame_cmds->Checkbutton(
         -variable    => $self->fetch_pipeline_var_ref(),
         -text        => 'Load pipeline data',
         -borderwidth => 2,
@@ -435,7 +428,7 @@ sub initialise {
 	    $self->run_lace;
 	    $top->Unbusy;
     };
-    $self->make_button($button_frame_2, 'Run lace', $run_lace, 4);
+    $self->make_button($button_frame_cmds, 'Run lace', $run_lace, 4);
     $top->bind('<Control-l>', $run_lace);
     $top->bind('<Control-L>', $run_lace);
 
@@ -459,9 +452,36 @@ sub initialise {
     my $close_window = $self->bind_close_window($top);
 
     # close window button in second button frame
-    $self->make_button($button_frame_2, 'Close', $close_window , 0);
-    
+    $self->make_button($button_frame_cmds, 'Close', $close_window , 0);
+
+
+    #my $go_left = $self->make_button($button_frame_navi, '<PrevPg', [\&go_left, $self], 1);
+    #$button_frame_navi->Label(-text => "Page ")->pack(-side  => 'left');
+    #$button_frame_navi->Label(-textvariable => $self->current_page_var_ref() )->pack(-side => 'left');
+    #my $go_right = $self->make_button($button_frame_navi, 'NextPg>', [\&go_right, $self], 0);
+
     return $self;
+}
+
+sub current_page_var_ref {
+    my $self = shift @_;
+
+    unless(exists($self->{'_curr_page_var'})) {
+        $self->{'_curr_page_var'} = 1;
+    }
+    return \$self->{'_curr_page_var'};
+}
+
+sub go_left {
+    my $self = shift @_;
+    ${$self->current_page_var_ref}--;
+    warn "Go_left button pressed\n";
+}
+
+sub go_right {
+    my $self = shift @_;
+    ${$self->current_page_var_ref}++;
+    warn "Go_right button pressed\n";
 }
 
 sub bind_close_window{
@@ -672,6 +692,11 @@ sub _open_SequenceSet{
     my $cl = $self->Client;
     my $ss = $self->SequenceSet;
 
+        # using Lace::Slice instead of Lace::SequenceSet is incouraged wherever possible
+    my ($dsname, $ssname, $chr_name, $chr_start, $chr_end) = $ss->selected_CloneSequences_parameters;
+    my $smart_slice = Bio::Otter::Lace::Slice->new($cl, $dsname, $ssname,
+        'chromosome', 'Otter', $chr_name, $chr_start, $chr_end);
+
     my $adb_write_access = ${$self->write_access_var_ref()};
     my $adb = $self->LocalDatabaseFactory->new_AceDatabase($adb_write_access);
     $adb->error_flag(1);
@@ -681,7 +706,7 @@ sub _open_SequenceSet{
     if($adb_write_access){
         # only lock the region if we have write access.
         eval{
-            $adb->try_and_lock_the_block($ss);
+            $adb->try_and_lock_the_block($smart_slice);
         };
         
         if($@){ 
@@ -708,7 +733,7 @@ sub _open_SequenceSet{
     # now initialise the database
     eval{
         my $with_pipeline = ${$self->fetch_pipeline_var_ref()};
-        $adb->init_AceDatabase($ss, $with_pipeline);
+        $adb->init_AceDatabase($smart_slice, $with_pipeline);
     };
     if ($@) {
         $adb->error_flag(0);
@@ -1332,6 +1357,8 @@ my $count ;
 sub layout_columns_and_rows {
     my( $self, $max_col, $max_row ) = @_;
 
+warn "LayOut started...\n";
+
     if (defined $count)  { ($count ++ )} else { $count  = 0};
     
     my $canvas = $self->canvas;
@@ -1361,6 +1388,9 @@ sub layout_columns_and_rows {
         $canvas->move($row_tag, 0, $y_shift);
         $y = $y2 + $y_shift + $y_pad;
     }
+
+warn "LayOut finished.\n";
+
 }
 
 sub save_sequence_notes {

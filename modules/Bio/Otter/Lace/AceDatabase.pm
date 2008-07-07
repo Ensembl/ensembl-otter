@@ -148,20 +148,19 @@ sub add_zmap_styles_acefile {
 }
 
 sub init_AceDatabase {
-    my( $self, $ss, $with_pipeline ) = @_;
+    my( $self, $smart_slice, $with_pipeline ) = @_;
 
-        # For compatibility:
     unless(defined($with_pipeline)) {
         $with_pipeline = Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
     }
 
     $self->add_misc_acefile;
     $self->add_zmap_styles_acefile;
-    $self->write_otter_acefile($ss);
-    $self->write_dna_data($ss);
+    $self->write_otter_acefile($smart_slice);
+    $self->write_dna_data($smart_slice);
 
     if($with_pipeline) {
-        $self->write_pipeline_data($ss);
+        $self->write_pipeline_data($smart_slice);
     }
 
     $self->write_methods_acefile;
@@ -267,11 +266,11 @@ sub write_local_blast {
 }
 
 sub write_otter_acefile {
-    my( $self, $ss ) = @_;
+    my( $self, $smart_slice ) = @_;
 
     # Getting XML from the Client
     my $client = $self->Client or confess "No otter Client attached";
-    my $xml_string = $client->get_xml_region($ss->selected_CloneSequences_parameters);
+    my $xml_string = $smart_slice->get_region_xml();
 
     # Storing that XML in a temp.file
     my $xml_file = Bio::Otter::Lace::TempFile->new;
@@ -281,12 +280,13 @@ sub write_otter_acefile {
     # If we're here we now have all the locks!!!
 
         # XML->otter->ace conversion:
-    my ($genes, $slice, $sequence, $tiles, $feature_set, $assembly_tag_set) =
+    my ($genes, $old_schema_slice, $sequence, $tiles, $feature_set, $assembly_tag_set) =
         Bio::Otter::Converter::XML_to_otter($xml_file->read_file_handle);
     #
-    #  We should have dsname contained in XML, really!
+    #  Should we or should we not have dsname contained in XML?
     #  
-    my $ace_text .= Bio::Otter::Converter::otter_to_ace($ss->dataset_name, $genes, $slice, $sequence, $tiles, $feature_set, $assembly_tag_set);
+    my $ace_text .= Bio::Otter::Converter::otter_to_ace($smart_slice->dsname,
+        $genes, $old_schema_slice, $sequence, $tiles, $feature_set, $assembly_tag_set);
 
         # Storing ace_text in a file
     my $ace_filename = $self->home . '/rawdata/otter.ace';
@@ -298,11 +298,9 @@ sub write_otter_acefile {
 }
 
 sub try_and_lock_the_block {
-    my ($self, $ss) = @_;
+    my ($self, $smart_slice) = @_;
 
-    my $client = $self->Client or confess "No otter Client attached";
-
-    my $lock_xml = $client->lock_region($ss->selected_CloneSequences_parameters);
+    my $lock_xml = $smart_slice->lock_region_xml();
 
     if ($lock_xml) {
         my $lock_xml_file = Bio::Otter::Lace::PersistentFile->new();
@@ -313,10 +311,10 @@ sub try_and_lock_the_block {
         print $write_fh $lock_xml;
 
         my $read = $lock_xml_file->read_file_handle();
-        my ($genes,$slice,$seqstr,$tiles) = Bio::Otter::Converter::XML_to_otter($read);
+        my ($genes, $old_schema_slice, $seqstr, $tiles) = Bio::Otter::Converter::XML_to_otter($read);
 
-        my $slice_name = $slice->display_id(); # it must be the same as the one kept in AceDB (retrievable by get_slicename_dsname)
-        my $dsname = $ss->dataset_name;
+        my $slice_name = $old_schema_slice->display_id(); # it must be the same as the one kept in AceDB (retrievable by get_slicename_dsname)
+        my $dsname = $smart_slice->dsname();
 
         $lock_xml_file->mv(".${slice_name}${dsname}${LOCK_REGION_XML_FILE}");
 
@@ -463,7 +461,7 @@ sub update_with_stable_ids {
     my $read  = $fileObj->read_file_handle();
 
     ## convert the xml returned from the server into otter stuff
-    my ($genes, $slice, $seqstr, $tiles) = Bio::Otter::Converter::XML_to_otter($read);
+    my ($genes, $old_schema_slice, $seqstr, $tiles) = Bio::Otter::Converter::XML_to_otter($read);
 
     ## this should only contain the CHANGED genes.
     unless (@$genes) {
@@ -474,7 +472,7 @@ sub update_with_stable_ids {
     warn "Some genes changed\n";
     ## need to do genes, transcripts, translations and exons
 
-    return Bio::Otter::Converter::ace_transcripts_locus_people($genes, $slice);
+    return Bio::Otter::Converter::ace_transcripts_locus_people($genes, $old_schema_slice);
 }
 
 sub unlock_otter_slice {
@@ -682,10 +680,7 @@ sub db_initialized {
 }
 
 sub write_dna_data {
-    my( $self, $ss ) = @_;
-
-    my $client  = $self->Client();
-    my ($dsname, $ssname, $chr_name, $chr_start, $chr_end) = $ss->selected_CloneSequences_parameters;
+    my( $self, $smart_slice ) = @_;
 
     require Bio::EnsEMBL::Ace::Otter_Filter::DNA;
     my $dna_filter = Bio::EnsEMBL::Ace::Otter_Filter::DNA->new;
@@ -696,19 +691,15 @@ sub write_dna_data {
     my $ace_fh = gensym();
     open $ace_fh, "> $ace_filename" or confess "Can't write to '$ace_filename' : $!";
 
-    my $smart_slice = Bio::Otter::Lace::Slice->new($client, $dsname, $ssname,
-        'chromosome', 'Otter', $chr_name, $chr_start, $chr_end);
     print $ace_fh $dna_filter->ace_data($smart_slice);
 
     close $ace_fh;
 }
 
 sub write_pipeline_data {
-    my( $self, $ss ) = @_;
+    my( $self, $smart_slice ) = @_;
 
-    my $client  = $self->Client();
-    my ($dsname, $ssname, $chr_name, $chr_start, $chr_end) = $ss->selected_CloneSequences_parameters;
-
+    my $dsname = $smart_slice->dsname();
     my $ds = $self->Client()->get_DataSet_by_name($dsname);
     my $ds_list = $ds->ALIAS() ? [$ds->ALIAS(), $dsname] : [$dsname];
         # It is a means to create a 'species alias' to reuse the otter_config for one species without duplication.
@@ -725,9 +716,6 @@ sub write_pipeline_data {
     $self->add_acefile($ace_filename);
     open $ace_fh, "> $ace_filename" or confess "Can't write to '$ace_filename' : $!";
     $factory->file_handle($ace_fh);
-
-    my $smart_slice = Bio::Otter::Lace::Slice->new($client, $dsname, $ssname,
-        'chromosome', 'Otter', $chr_name, $chr_start, $chr_end);
 
     $factory->ace_data_from_slice($smart_slice);
     $factory->drop_file_handle;
