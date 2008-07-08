@@ -1,8 +1,9 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl
 
 ### pfetch
 
 use strict;
+use warnings;
 use LWP;
 use HTTP::Cookies::Netscape;
 use URI::Escape qw{ uri_escape };

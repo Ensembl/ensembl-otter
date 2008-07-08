@@ -1,8 +1,9 @@
-#!/usr/bin/perl -w
+#!/usr/bin/env perl
 
 ### local_pfetch
 
 use strict;
+use warnings;
 use IO::Socket;
 use LWP;
 use HTTP::Cookies::Netscape;
