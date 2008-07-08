@@ -160,6 +160,8 @@ sub find_by_stable_ids {
     my $transcript_adaptor     = $satellite_dba->get_TranscriptAdaptor();
     my $exon_adaptor           = $satellite_dba->get_ExonAdaptor();
 
+    my @slices = ();
+
     foreach my $qname (keys %{$self->qnames_locators()}) {
         if(uc($qname) =~ /^$prefix_primary$prefix_species([TPGE])\d+/i){ # try stable_ids
             my $typeletter = $1;
@@ -168,16 +170,16 @@ sub find_by_stable_ids {
 
             eval {
                 if($typeletter eq 'G') {
-                    $qtype = $qtype_prefix.'gene_stable_id';
+                    $qtype = 'gene_stable_id';
                     $feature = $gene_adaptor->fetch_by_stable_id($qname);
                 } elsif($typeletter eq 'T') {
-                    $qtype = $qtype_prefix.'transcript_stable_id';
+                    $qtype = 'transcript_stable_id';
                     $feature = $transcript_adaptor->fetch_by_stable_id($qname);
                 } elsif($typeletter eq 'P') {
-                    $qtype = $qtype_prefix.'translation_stable_id';
+                    $qtype = 'translation_stable_id';
                     $feature = $transcript_adaptor->fetch_by_translation_stable_id($qname);
                 } elsif($typeletter eq 'E') {
-                    $qtype = $qtype_prefix.'exon_stable_id';
+                    $qtype = 'exon_stable_id';
                     $feature = $exon_adaptor->fetch_by_stable_id($qname);
                 }
             };
@@ -189,7 +191,7 @@ sub find_by_stable_ids {
             } elsif($feature) { # however watch out, sometimes we just silently get nothing!
                 my $feature_slice = $feature->feature_Slice();
 
-                $self->register_slices($qname, $qtype, [$feature_slice]);
+                $self->register_slices($qname, $qtype_prefix.$qtype, [$feature_slice]);
             }
         }
     } # foreach $qname
@@ -273,6 +275,56 @@ sub find_by_seqregion_attributes {
     }
 }
 
+sub find_by_xref {
+    my ($self, $qtype_prefix, $metakey, $condition) = @_;
+
+    unless( my ($opt_str) = @{ $self->otter_dba()->get_MetaContainer()->list_value_by_key($metakey) } ) {
+        return; # could not connect (which is normal: not every DB may have this metakey)
+    }
+
+    my $satellite_dba = $self->satellite_dba($metakey);
+
+    my $sql = qq{
+        SELECT DISTINCT edb.db_name, x.dbprimary_acc,
+                        sr.name, cs.name, cs.version,
+                        (CASE ox.ensembl_object_type
+                         WHEN 'Gene' THEN g.seq_region_start
+                         WHEN 'Transcript' THEN t.seq_region_start
+                         WHEN 'Translation' THEN t2p.seq_region_start END),
+                        (CASE ox.ensembl_object_type
+                         WHEN 'Gene' THEN g.seq_region_end
+                         WHEN 'Transcript' THEN t.seq_region_end
+                         WHEN 'Translation' THEN t2p.seq_region_end END)
+                  FROM external_db edb, xref x, object_xref ox
+             LEFT JOIN gene g ON g.gene_id=ox.ensembl_id
+             LEFT JOIN transcript t ON t.transcript_id=ox.ensembl_id
+             LEFT JOIN translation p ON p.translation_id=ox.ensembl_id
+             LEFT JOIN transcript t2p ON p.transcript_id=t2p.transcript_id
+             LEFT JOIN seq_region sr ON sr.seq_region_id=
+                        (CASE ox.ensembl_object_type
+                         WHEN 'Gene' THEN g.seq_region_id
+                         WHEN 'Transcript' THEN t.seq_region_id
+                         WHEN 'Translation' THEN t2p.seq_region_id END)
+             LEFT JOIN coord_system cs ON cs.coord_system_id=sr.coord_system_id
+                 WHERE edb.external_db_id=x.external_db_id
+                   AND x.xref_id=ox.xref_id
+                   AND x.dbprimary_acc $condition
+    };
+
+    my $dbc = $satellite_dba->dbc();
+    my $sth = $dbc->prepare($sql);
+    $sth->execute();
+
+    my $adaptor;
+    while( my ($qtype, $qname, $sr_name, $cs_name, $cs_version, $start, $end) = $sth->fetchrow() ) {
+        $adaptor ||= $satellite_dba->get_SliceAdaptor();
+
+        my $slice = $adaptor->fetch_by_region($cs_name, $sr_name, $start, $end, 1, $cs_version);
+
+        $self->register_slices($qname, $qtype_prefix.$qtype, [ $slice ]);
+    }
+}
+
 sub find {
     my $self = shift @_;
 
@@ -283,6 +335,8 @@ sub find {
     $self->find_by_stable_ids('EnsEMBL_EST:','ens_livemirror_estgene_db_head');
 
     my $in_quoted_list = $self->in_quoted_list();
+
+    $self->find_by_xref('CCDS_db:','ens_livemirror_ccds_db', $in_quoted_list);
 
     $self->find_by_seqregion_names($in_quoted_list);
 
