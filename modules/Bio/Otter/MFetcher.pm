@@ -231,19 +231,72 @@ sub return_emptyhanded { # we probably only want to know about it only if using 
     exit(0);
 }
 
-sub otter_assemby_is_equivalent { # to the desired $csver_remote
-    my ($self, $cs, $name, $type, $csver_orig, $csver_remote) = @_;
+sub otter_assembly_equiv_hash { # $self->{_aeh}{NCBI36}{11} = 'chr11-02';
+    my $self = shift @_;
+
+    if(my $aeh = $self->{_aeh}) {
+        return $aeh;
+    }
 
     my $edba = $self->satellite_dba( 'equiv_asm_db' ); # the value is either '=otter' (for new schema)
                                                        # or '=pipeline' (for old schema DB with new schema pipeline)
+    my $sql = qq{
+        SELECT ae_val.value, cn_val.value, sr.name
+          FROM seq_region sr, seq_region_attrib ae_val, seq_region_attrib cn_val, attrib_type ae_at, attrib_type cn_at
+         WHERE sr.seq_region_id=ae_val.seq_region_id
+           AND sr.seq_region_id=cn_val.seq_region_id
+           AND ae_val.attrib_type_id=ae_at.attrib_type_id
+           AND cn_val.attrib_type_id=cn_at.attrib_type_id
+           AND ae_at.code='equiv_asm'
+           AND cn_at.code='chr'
+    };
 
-        # this slice does not have to be completely defined (no start/end/strand),
-        # as we only need it to get the attributes
-    my $equiv_slice = $self->get_slice($edba, $cs, $name, $type, undef, undef, undef, $csver_orig);
+    my $sth = $edba->dbc()->prepare($sql);
+    $sth->execute();
 
-    my %asm_is_equiv = map { ($_->value() => 1) } @{ $equiv_slice->get_all_Attributes('equiv_asm') };
+    my %aeh = ();
+    while( my ($equiv_asm, $equiv_chr, $atype) = $sth->fetchrow()) {
+        $aeh{$equiv_asm}{$equiv_chr} = $atype;
+    }
+    return $self->{_aeh} = \%aeh;
+}
 
-    return $asm_is_equiv{$csver_remote};
+sub otter_assembly_mapping_hash { ## $self->{_amh}{NCBIM37}{11} = 'chr11-07';
+                                  ## Note that 1st level hashes are filled independently.
+    my ($self, $csver_remote) = @_;
+
+    my $amh_sub;
+    if($amh_sub = $self->{_amh}{$csver_remote}) {
+        return $amh_sub;
+    } else { # $self->{_amh} gets autovivified anyway, but it may not be true for the next level
+        $amh_sub = $self->{_amh}{$csver_remote} = {};
+    }
+
+    my $mapper_metakey = "mapper_db.${csver_remote}";
+    if(my $mdba = $self->satellite_dba($mapper_metakey) ) {
+        my $sql = qq{
+            SELECT DISTINCT cmp.name,asm.name
+              FROM assembly a, seq_region asm, seq_region cmp, coord_system asm_cs, coord_system cmp_cs
+             WHERE a.asm_seq_region_id=asm.seq_region_id
+               AND a.cmp_seq_region_id=cmp.seq_region_id
+               AND asm.coord_system_id=asm_cs.coord_system_id
+               AND cmp.coord_system_id=cmp_cs.coord_system_id
+               AND asm_cs.name='chromosome'
+               AND asm_cs.version='Otter'
+               AND cmp_cs.name='chromosome'
+               AND cmp_cs.version=?
+          ORDER BY cmp_cs.version, cmp.name
+        };
+        my $sth = $mdba->dbc()->prepare($sql);
+        $sth->execute($csver_remote);
+
+        while( my ($remote_chr, $atype) = $sth->fetchrow()) {
+            $amh_sub->{$remote_chr} = $atype;
+        }
+        return $amh_sub;
+    } else {
+        die "Can't connect to the mapper ($mapper_metakey)";
+    }
 }
 
 sub init_csver {
@@ -273,7 +326,7 @@ sub fetch_and_export {
 
     my $orig_features = $original_slice->$fetching_method(@$call_parms) || die "Could not fetch anything";
 
-    if($self->otter_assemby_is_equivalent($cs, $name, $type, $csver_orig, $csver_target)) {
+    if($self->otter_assembly_equiv_hash()->{$csver_target}{$name} eq $type) {
         # no transformation is needed:
 
         return $orig_features;
@@ -314,6 +367,80 @@ sub fetch_and_export {
     }
 }
 
+sub map_remote_slice_back {
+    my ($self, $remote_slice) = @_;
+
+    my $cs              = $remote_slice->coord_system()->name();
+    my $csver_remote    = $remote_slice->coord_system()->version();
+
+    unless($cs eq 'chromosome') {
+        $self->log("We do not yet perform mapping from $cs:$csver_remote to Otter chromosomes");
+        return [];
+    }
+
+    my $remote_chr_name = $remote_slice->seq_region_name();
+    my $local_sa = $self->otter_dba()->get_SliceAdaptor();
+
+    if(my $otter_chr_name = $self->otter_assembly_equiv_hash()->{$csver_remote}{$remote_chr_name}) {
+            # chromosomes are equivalent, re-create the slice on loutre_db:
+
+        my $local_slice = $local_sa->fetch_by_region(
+            'chromosome',
+            $otter_chr_name,
+            $remote_slice->start(),
+            $remote_slice->end(),
+            $remote_slice->strand(),
+            'Otter',
+        );
+
+        return [ $local_slice ];
+        
+    } else {
+        # otherwise perform the mapping back:
+
+        my $mapper_metakey = "mapper_db.${csver_remote}";
+        if(my $mdba = $self->satellite_dba($mapper_metakey) ) {
+
+            my $remote_slice_on_mapper = $mdba->get_SliceAdaptor()->fetch_by_region(
+                $remote_slice->coord_system()->name(),
+                $remote_slice->seq_region_name(),
+                $remote_slice->start(),
+                $remote_slice->end(),
+                $remote_slice->strand(),
+                $remote_slice->coord_system()->version(),
+            );
+
+            my @local_slices = ();
+            foreach my $proj_segment (@{ $remote_slice_on_mapper->project('chromosome', 'Otter') }) {
+                my $local_slice_on_mapper = $proj_segment->to_Slice();
+
+                my $local_slice = $local_sa->fetch_by_region(
+                    $local_slice_on_mapper->coord_system()->name(),
+                    $local_slice_on_mapper->seq_region_name(),
+                    $local_slice_on_mapper->start(),
+                    $local_slice_on_mapper->end(),
+                    $local_slice_on_mapper->strand(),
+                    $local_slice_on_mapper->coord_system()->version(),
+                );
+                push @local_slices, $local_slice;
+            }
+
+            if(my $results = scalar(@local_slices)) {
+                if($results>1) {
+                    $self->log("Could not uniquely map '$csver_remote' slice to 'Otter' (got $results pieces)");
+                }
+            } else {
+                $self->log("Could not map '$csver_remote' slice to 'Otter' at all");
+            }
+            return \@local_slices;
+
+        } else { # if it wasn't possible to connect to the mapper
+            $self->error_exit("No '$mapper_metakey' defined in meta table => cannot map between assemblies");
+        }
+    }
+
+}
+
 sub fetch_mapped_features {
     my ($self, $feature_name, $fetching_method, $call_parms,
         $cs, $name, $type, $start, $end, $metakey, $csver_orig, $csver_remote,
@@ -328,7 +455,7 @@ sub fetch_mapped_features {
     my $features = [];
 
     if( ($cs ne 'chromosome') || ($csver_orig eq $csver_remote)
-       || $self->otter_assemby_is_equivalent($cs, $name, $type, $csver_orig, $csver_remote) ) {
+       || ($self->otter_assembly_equiv_hash()->{$csver_remote}{$name} eq $type) ) {
                 # no mapping, just (cross)-fetching:
 
         my $csver_target = (!$metakey || ($metakey eq '.'))
@@ -357,9 +484,14 @@ sub fetch_mapped_features {
             eval {
                 $proj_segments_on_mapper = $original_slice_on_mapper->project( $cs, $csver_remote );
             };
-            if($@) {
+            if($@
+            ## should we be so strict?
+            #    || (!scalar(@$proj_segments_on_mapper))
+            ## should we be so strict?
+            ) {
                 die "Unable to project: $type:$csver_orig($start..$end)->$csver_remote. Check the mapping.";
             }
+            $self->log("Found ".scalar(@$proj_segments_on_mapper)." projection segments on mapper when projecting to $cs:$csver_remote");
 
             if($das_style_mapping) { # In this mode there is no target_db involved.
                                      # Features are put directly on the mapper target slice and then mapped back.
@@ -393,7 +525,7 @@ sub fetch_mapped_features {
                 my $sdba = $self->satellite_dba( $metakey );
                 my $sa_on_target = $sdba->get_SliceAdaptor();
 
-                foreach my $segment (@$proj_segments_on_mapper) {
+                SEGMENT: foreach my $segment (@$proj_segments_on_mapper) {
                     my $projected_slice_on_mapper = $segment->to_Slice();
 
                     my $target_slice_on_target = $sa_on_target->fetch_by_region(
@@ -404,6 +536,23 @@ sub fetch_mapped_features {
                         $projected_slice_on_mapper->strand(),
                         $projected_slice_on_mapper->coord_system()->version(),
                     );
+
+                    unless($target_slice_on_target) {
+                        warn "MFetcher: cannot create the slice ["
+                                .$projected_slice_on_mapper->coord_system()->name()
+                                .':'
+                                .$projected_slice_on_mapper->seq_region_name()
+                                .':'
+                                .$projected_slice_on_mapper->start()
+                                .':'
+                                .$projected_slice_on_mapper->end()
+                                .':'
+                                .$projected_slice_on_mapper->strand()
+                                .':'
+                                .$projected_slice_on_mapper->coord_system()->version()
+                                ."] on target, please check the target.\n";
+                        next SEGMENT; # it may be mappable, but not applicable!
+                    }
 
                     my $target_fs_on_target_segment
                         = $target_slice_on_target->$fetching_method(@$call_parms) ||
