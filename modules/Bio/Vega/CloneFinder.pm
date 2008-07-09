@@ -144,11 +144,7 @@ sub register_slice {
 sub find_by_stable_ids {
     my ($self, $qtype_prefix, $metakey) = @_;
 
-    unless( my ($opt_str) = @{ $self->otter_dba()->get_MetaContainer()->list_value_by_key($metakey) } ) {
-        return; # could not connect (which is normal: not every DB may have this metakey)
-    }
-
-    my $satellite_dba = $self->satellite_dba($metakey);
+    my $satellite_dba = $self->satellite_dba($metakey, 1) || return;
 
     my $meta_con   = bless $satellite_dba->get_MetaContainer(), 'Bio::Vega::DBSQL::MetaContainer';
 
@@ -191,6 +187,7 @@ sub find_by_stable_ids {
             } elsif($feature) { # however watch out, sometimes we just silently get nothing!
                 my $feature_slice = $feature->feature_Slice();
 
+                warn "find_stable_ids: Trying to register slices ($qname, $qtype_prefix.$qtype)";
                 $self->register_slices($qname, $qtype_prefix.$qtype, [$feature_slice]);
             }
         }
@@ -278,11 +275,7 @@ sub find_by_seqregion_attributes {
 sub find_by_xref {
     my ($self, $qtype_prefix, $metakey, $condition) = @_;
 
-    unless( my ($opt_str) = @{ $self->otter_dba()->get_MetaContainer()->list_value_by_key($metakey) } ) {
-        return; # could not connect (which is normal: not every DB may have this metakey)
-    }
-
-    my $satellite_dba = $self->satellite_dba($metakey);
+    my $satellite_dba = $self->satellite_dba($metakey, 1) || return;
 
     my $sql = qq{
         SELECT DISTINCT edb.db_name, x.dbprimary_acc,

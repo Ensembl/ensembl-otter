@@ -108,7 +108,7 @@ sub default_assembly {
 }
 
 sub satellite_dba {
-    my ($self, $metakey) = @_;
+    my ($self, $metakey, $may_be_absent) = @_;
 
     # Note: as multiple satellite_db's can be used, we have to explicitly send $metakey
 
@@ -145,7 +145,12 @@ sub satellite_dba {
     my ($opt_str) = @{ $self->otter_dba()->get_MetaContainer()->list_value_by_key($metakey) };
 
     if(!$opt_str) {
-        $self->error_exit("Could not find meta entry for '$metakey' satellite db");
+        if($may_be_absent) {
+            $self->log("cannot connect to metakey='$metakey' as this key is not defined in the meta table.");
+            return;
+        } else {
+            $self->error_exit("Could not find meta entry for '$metakey' satellite db");
+        }
     } elsif($opt_str =~ /^\=otter/) {
         return $self->otter_dba();
     } elsif($opt_str =~ /^\=pipeline/) {
