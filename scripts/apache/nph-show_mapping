@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-06-10 08:41:11 $
-# Id:            $Id: nph-show_mapping,v 1.12 2008-06-10 08:41:11 lg4 Exp $
+# Last modified: $Date: 2008-07-11 11:22:44 $
+# Id:            $Id: nph-show_mapping,v 1.13 2008-07-11 11:22:44 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-show_mapping,v $
 
 use strict;
@@ -16,7 +16,7 @@ use Bio::Otter::ServerScriptSupport;
 my $server = Bio::Otter::ServerScriptSupport->new;
 
 my $dataset   = $server->param('dataset');
-my $csver_cmp = $server->param('csver') || ($dataset=~/mouse/ ? 'NCBIM36' : 'NCBI36');
+my $csver_cmp = $server->param('csver') || ($dataset=~/mouse/ ? 'NCBIM37' : 'NCBI36');
 my $csver_asm = 'Otter';
 my $mapper_metakey = "mapper_db.${csver_cmp}";
 
