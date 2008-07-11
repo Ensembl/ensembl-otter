@@ -767,7 +767,7 @@ sub show_peptide {
         
         my $peptext = $self->{'_pep_peptext'} = $top->Scrolled(
             'ROText',
-            -scrollbars         => 'oe',
+            -scrollbars         => 'e',
             -font           => $self->font_fixed,
             #-justify        => 'left',
             -padx                   => 6,
@@ -953,7 +953,6 @@ sub update_translation {
         $peptext->configure(
             -width  => 60,
             -height => 40,
-            -scrollbars => 'e',
             );
     } else {
         # This has slightly odd behaviour if the ROText starts off
@@ -963,7 +962,6 @@ sub update_translation {
         $peptext->configure(
             -width  => 60,
             -height => $lines,
-            -scrollbars => '',
             );
     }
     
