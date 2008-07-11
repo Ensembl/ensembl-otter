@@ -94,14 +94,32 @@ sub find_containing_chromosomes {
 sub register_slices {
     my ($self, $qname, $qtype, $feature_slices) = @_;
 
+    my $odba     = $self->otter_dba();
+    my $pdba;
+    my $local_sa;
+
     foreach my $feature_slice (@$feature_slices) {
-        if($feature_slice->adaptor->db() != $self->otter_dba()) {
+        my $fdba = $feature_slice->adaptor->db();
+
+        if($fdba == $odba) {
+            $self->register_slice($qname, $qtype, $feature_slice);
+        } elsif($fdba == ($pdba ||= $self->satellite_dba(''))) {
+            $local_sa ||= $odba->get_SliceAdaptor();
+            my $local_slice = $local_sa->fetch_by_region(
+                $feature_slice->coord_system_name(),
+                $feature_slice->seq_region_name(),
+                $feature_slice->start(),
+                $feature_slice->end(),
+                $feature_slice->strand(),
+                $feature_slice->coord_system()->version(),
+            );
+
+            $self->register_slice($qname, $qtype, $local_slice);
+        } else {
             my $mapped_slices = $self->map_remote_slice_back($feature_slice);
             foreach my $mapped_slice (@$mapped_slices) {
                 $self->register_slice($qname, $qtype, $mapped_slice);
             }
-        } else {
-            $self->register_slice($qname, $qtype, $feature_slice);
         }
     }
 }
@@ -318,6 +336,48 @@ sub find_by_xref {
     }
 }
 
+sub find_by_hit_name {
+    my ($self, $qtype_prefix, $metakey, $kind, $condition) = @_;
+
+    ## kind = 'dna'|'protein'
+    #
+    my $table_name = $kind.'_align_feature';
+
+    # NB: $condition only can be equality, otherwise you'll annoy the users!
+
+    my $satellite_dba = $self->satellite_dba($metakey, 1) || return;
+
+    my $sql = qq{
+        SELECT af.hit_name, sr.name, cs.name, cs.version, af.seq_region_start, af.seq_region_end, af.seq_region_strand
+             , a.logic_name
+             , SUM(af.score) score_sum
+          FROM $table_name af
+             , seq_region sr
+             , coord_system cs
+             , analysis a
+         WHERE af.seq_region_id = sr.seq_region_id
+           AND cs.coord_system_id = sr.coord_system_id
+           AND a.analysis_id = af.analysis_id
+           AND af.hit_name $condition
+         GROUP BY af.hit_name, af.seq_region_id
+         ORDER BY score_sum DESC
+         LIMIT 10
+    };
+
+    my $dbc = $satellite_dba->dbc();
+    my $sth = $dbc->prepare($sql);
+    $sth->execute();
+
+    my $adaptor;
+    while( my ($qname, $sr_name, $cs_name, $cs_version, $start, $end, $strand, $analysis_name, $score) = $sth->fetchrow() ) {
+        $adaptor ||= $satellite_dba->get_SliceAdaptor();
+
+        my $slice = $adaptor->fetch_by_region($cs_name, $sr_name, $start, $end, $strand, $cs_version);
+
+        $self->register_slices($qname, $qtype_prefix.$analysis_name, [ $slice ]);
+    }
+}
+
 sub find {
     my $self = shift @_;
 
@@ -328,6 +388,9 @@ sub find {
     $self->find_by_stable_ids('EnsEMBL_EST:','ens_livemirror_estgene_db_head');
 
     my $in_quoted_list = $self->in_quoted_list();
+
+    $self->find_by_hit_name('Pipeline_dna_hit:', '', 'dna', $in_quoted_list);
+    $self->find_by_hit_name('Pipeline_protein_hit:', '', 'protein', $in_quoted_list);
 
     $self->find_by_xref('CCDS_db:','ens_livemirror_ccds_db', $in_quoted_list);
 
