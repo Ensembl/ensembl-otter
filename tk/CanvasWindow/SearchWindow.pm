@@ -181,8 +181,11 @@ sub new {
     $help_frame->Label(
         -text => "Search for:\n\n"
                 ."* Locus names or synonyms,\n"
-                ."* Gene/Transcript/Translation/Exon stable_IDs or\n"
-                ."* international or EMBL clone names",
+                ."* international or EMBL clone names,\n"
+                ."* Otter Gene/Transcript/Translation/Exon OTT... stable_IDs,\n"
+                ."* EnsEMBL Gene/Transcript/Translation/Exon ENS... stable_IDs,\n"
+                ."* CCDS names or\n"
+                ."* Pipeline hit names.\n",
         -justify => 'left',
     )->pack(-side => 'top', -fill => 'both');
 
