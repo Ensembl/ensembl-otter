@@ -168,6 +168,7 @@ sub read_user_file {
             s/(^\s+|\s+$)//g;   # Remove leading or trailing spaces
             next if /^$/;       # Skip lines which are now blank
             my ($user_name, @allowed_datasets) = split;
+            $user_name = lc($user_name);
             foreach my $ds (@allowed_datasets) {
                 $usr_hash->{$user_name}{$ds} = 1;
             }
@@ -182,7 +183,7 @@ sub authenticate_user {
     
     my $sw = SangerWeb->new({ cgi => $self });
     
-    if (my $user = $sw->username) {
+    if (my $user = lc($sw->username)) {
         my $auth_flag     = 0;
         my $internal_flag = 0;
 
