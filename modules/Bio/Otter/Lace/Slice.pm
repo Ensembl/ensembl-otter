@@ -315,6 +315,29 @@ sub get_all_features { # get Simple|DnaAlign|ProteinAlign|Repeat|Marker|Ditag|Pr
     return @result;
 }
 
+    # not yet in operation
+sub get_all_DAS_features { # get SimpleFeatures or PredictionExons from DAS source (via mapping Otter server)
+    my( $self, $kind, $source, $dsn, $csver_remote, $analysis_name, $sieve, $grouplabel ) = @_;
+
+    my $response = $self->Client()->otter_response_content(
+        'GET',
+        'get_das_simple_features',
+        {
+            %{$self->toHash},
+            'kind'     => $kind,
+            'metakey'  => '.', # let's pretend to be taking things from otter database
+            'source'   => $source,
+            'dsn'      => $dsn,
+            $csver_remote   ? ('csver_remote' => $csver_remote) : (), # if you forget it, the assembly will be Otter by default!
+            $analysis_name  ? ('analysis'   => $analysis_name) : (),
+            $sieve          ? ('sieve'      => $sieve) : (),
+            $grouplabel     ? ('grouplabel' => $grouplabel) : (),
+        },
+    );
+
+    return ParseFeatures(\$response, $self->name(), $analysis_name)->{SimpleFeature} || [];
+}
+
 sub get_all_DAS_SimpleFeatures { # get simple features from DAS source (via mapping Otter server)
     my( $self, $analysis_name, $source, $dsn, $csver_remote ) = @_;
 
