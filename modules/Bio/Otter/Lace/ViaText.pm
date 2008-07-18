@@ -120,7 +120,8 @@ our %LangDesc = (
         -call_args   => [['analysis' => undef], ['load_exons' => 1]],
     },
     'PredictionExon' => {
-        -constructor => 'Bio::EnsEMBL::Exon', # there was no PredictionExon in EnsEMBL v.19 code
+     -oldconstructor => 'Bio::EnsEMBL::Exon', # there was no PredictionExon in EnsEMBL v.19 code
+        -constructor => 'Bio::EnsEMBL::PredictionExon',
         -optnames    => [ qw(start end strand phase p_value score) ],
         -add_one_cmp => [ 'PredictionTranscript', 'add_Exon' ],
     },
@@ -223,7 +224,7 @@ sub ParseFeatures {
         my $feature_type    = shift @optvalues; # 'SimpleFeature'|'HitDescription'|...|'PredictionExon'
         my $feature_subhash = $LangDesc{$feature_type};
 
-        my $constructor     = $feature_subhash->{-constructor};
+        my $constructor     =  $feature_subhash->{-oldconstructor} || $feature_subhash->{-constructor};
         my $feature = ref $constructor ? &$constructor() : $constructor->new();
 
         my $optnames        = $feature_subhash->{-optnames};
