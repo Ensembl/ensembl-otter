@@ -315,7 +315,6 @@ sub get_all_features { # get Simple|DnaAlign|ProteinAlign|Repeat|Marker|Ditag|Pr
     return @result;
 }
 
-    # not yet in operation
 sub get_all_DAS_features { # get SimpleFeatures or PredictionExons from DAS source (via mapping Otter server)
     my( $self, $kind, $source, $dsn, $csver_remote, $analysis_name, $sieve, $grouplabel ) = @_;
 
@@ -335,7 +334,7 @@ sub get_all_DAS_features { # get SimpleFeatures or PredictionExons from DAS sour
         },
     );
 
-    return ParseFeatures(\$response, $self->name(), $analysis_name)->{SimpleFeature} || [];
+    return ParseFeatures(\$response, $self->name(), $analysis_name)->{$kind} || [];
 }
 
 sub get_all_DAS_SimpleFeatures { # get simple features from DAS source (via mapping Otter server)
