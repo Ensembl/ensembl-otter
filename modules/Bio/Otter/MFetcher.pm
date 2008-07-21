@@ -460,7 +460,7 @@ sub fetch_mapped_features {
     my $features = [];
 
     if( ($cs ne 'chromosome') || ($csver_orig eq $csver_remote)
-       || ($self->otter_assembly_equiv_hash()->{$csver_remote}{$name} eq $type) ) {
+       || ( ($self->otter_assembly_equiv_hash()->{$csver_remote}{$name} || '') eq $type) ) {
                 # no mapping, just (cross)-fetching:
 
         my $csver_target = (!$metakey || ($metakey eq '.'))
