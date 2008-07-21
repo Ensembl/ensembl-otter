@@ -321,12 +321,12 @@ sub get_all_DAS_features { # get SimpleFeatures or PredictionExons from DAS sour
 
     my $response = $self->Client()->otter_response_content(
         'GET',
-        'get_das_simple_features',
+        'get_das_features',
         {
             %{$self->toHash},
             'kind'     => $kind,
             'metakey'  => '.', # let's pretend to be taking things from otter database
-            'source'   => $source,
+            $source         ? ('source'     => $source) : (),
             'dsn'      => $dsn,
             $csver_remote   ? ('csver_remote' => $csver_remote) : (), # if you forget it, the assembly will be Otter by default!
             $analysis_name  ? ('analysis'   => $analysis_name) : (),
