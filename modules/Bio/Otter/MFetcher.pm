@@ -505,7 +505,7 @@ sub fetch_mapped_features {
 
                     my $target_fs_on_mapper_segment
                         = $projected_slice_on_mapper->$fetching_method(@$call_parms) ||
-                            $self->error_exit("Could not fetch anything - analysis may be missing from the DB");
+                            $self->error_exit("Could not fetch anything - DAS server may be temporarily down");
 
                     $self->log('***** : '.scalar(@$target_fs_on_mapper_segment)." ${feature_name}s created on the slice");
 
