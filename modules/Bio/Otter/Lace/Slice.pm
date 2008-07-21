@@ -334,7 +334,8 @@ sub get_all_DAS_features { # get SimpleFeatures or PredictionExons from DAS sour
         },
     );
 
-    return ParseFeatures(\$response, $self->name(), $analysis_name)->{$kind} || [];
+    my $filter_kind = $kind eq 'SimpleFeature' ? 'SimpleFeature' : 'PredictionTranscript';
+    return ParseFeatures(\$response, $self->name(), $analysis_name);
 }
 
 sub get_all_DAS_SimpleFeatures { # get simple features from DAS source (via mapping Otter server)
