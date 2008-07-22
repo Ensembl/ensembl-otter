@@ -101,7 +101,7 @@ sub error_flag {
 
 sub MethodCollection {
     my ($self, $collect) = @_;
-    
+
     if ($collect) {
         $self->{'_MethodCollection'} = $collect;
     }
@@ -140,7 +140,7 @@ sub empty_acefile_list {
 
 sub add_zmap_styles_acefile {
     my ($self) = @_;
-    
+
     my $styles_file = $self->home . "/rawdata/zmap_styles.ace";
     confess "Missing Zmap_Styles file: '$styles_file'"
         unless -e $styles_file;
@@ -166,29 +166,20 @@ sub init_AceDatabase {
     $self->write_methods_acefile;
     $self->initialize_database;
 
-    my $restart = 0;
     eval {
         my $cl = $self->Client;
         if ($cl->option_from_array([ 'local_exonerate', 'database' ])) {
             $self->write_local_exonerate;
-            $restart = 1;
+
         }
         elsif ($cl->option_from_array([ 'local_blast', 'database' ])) {
             $self->write_local_blast;
-            $restart = 1;
         }
     };
     if ($@) {
         warn $@;
     }
-	elsif ($restart) {
-        # Must parse in new acefile
-        $self->initialize_database;
 
-        # Need to restart the read-only sgifaceserver
-        # or it will not see any data added by blast.
-        $self->ace_server->restart_server;
-    }
 }
 
 sub write_local_exonerate {
@@ -223,18 +214,18 @@ sub write_local_exonerate {
     my $method = $exon->ace_Method;
     unless ($coll->get_Method_by_name($method->name)) {
         $coll->add_Method($method);
-        $self->write_methods_acefile;
+        $self->ace_server->save_ace($coll->ace_string());
     }
 
-    $self->add_acefile($ace_filename);
+	$self->ace_server->save_ace($ace_text);
 }
 
 sub write_local_blast {
     my ($self) = @_;
-    
+
     # Do not have local blast searching working on the Mac yet
     return if $^O eq 'darwin';
-    
+
     eval {
         require Bio::Otter::Lace::Blast;
     };
@@ -259,10 +250,10 @@ sub write_local_blast {
     my $method = $blast->ace_Method;
     unless ($coll->get_Method_by_name($method->name)) {
         $coll->add_Method($method);
-        $self->write_methods_acefile;
+        $self->ace_server->save_ace($coll->ace_string());
     }
 
-    $self->add_acefile($ace_filename);
+	$self->ace_server->save_ace($ace_text);
 }
 
 sub write_otter_acefile {
@@ -284,7 +275,7 @@ sub write_otter_acefile {
         Bio::Otter::Converter::XML_to_otter($xml_file->read_file_handle);
     #
     #  Should we or should we not have dsname contained in XML?
-    #  
+    #
     my $ace_text .= Bio::Otter::Converter::otter_to_ace($smart_slice->dsname,
         $genes, $old_schema_slice, $sequence, $tiles, $feature_set, $assembly_tag_set);
 
@@ -363,7 +354,7 @@ sub save_ace_to_otter {
     my $client = $self->Client or confess "No Client attached";
 
     my ($slice_name, $dsname) = $self->get_slicename_dsname();
-    
+
     # Get the Assembly object ...
     ### Need to change this query if we add lots of non-otter features to the assembly object.
     ### (Or change the layout of the data in acedb, so that non-otter features are in a
@@ -416,7 +407,7 @@ sub save_ace_to_otter {
     }else{
         warn "Debug switch is false\n";
     }
-    
+
     my $ace_file = Bio::Otter::Lace::TempFile->new;
     $ace_file->name('lace_edited.ace');
     my $write_fh = $ace_file->write_file_handle;
@@ -497,7 +488,7 @@ sub unlock_otter_slice {
 
 sub ace_server {
     my( $self ) = @_;
-    
+
     my $sgif;
     unless ($sgif = $self->{'_ace_server'}) {
         $sgif = Hum::Ace::LocalServer->new($self->home);
@@ -546,7 +537,7 @@ sub make_database_directory {
 
 sub write_methods_acefile {
     my( $self ) = @_;
-    
+
     my $methods_file = $self->home . '/rawdata/methods.ace';
     my $collect = $self->MethodCollection;
     $collect->process_for_otterlace;
@@ -608,9 +599,9 @@ sub edit_displays_wrm {
 
 sub add_misc_acefile {
     my( $self ) = @_;
-    
+
     return unless my $file = Bio::Otter::Lace::Defaults::misc_acefile();
-    
+
     confess "No such file '$file'" unless -e $file;
     $self->add_acefile($file);
 }
@@ -672,7 +663,7 @@ sub initialize_database {
 
 sub db_initialized {
     my( $self, $db_initialized ) = @_;
-    
+
     if (defined $db_initialized) {
         $self->{'_db_initialized'} = $db_initialized ? 1 : 0;
     }
@@ -734,7 +725,7 @@ sub make_otterpipe_DataFactory {
     ##----------code to add all of the ace filters to data factory-----------------------------------
 
     my $debug = $client->debug();
-    
+
         # loading the filters in the priority order (latter overrides the former)
     my %logic_to_load  = ();
     my %module_options = ();
@@ -797,9 +788,9 @@ sub make_otterpipe_DataFactory {
 
 sub DESTROY {
     my( $self ) = @_;
-    
+
     #warn "Debug - leaving database intact"; return;
-    
+
     my $home = $self->home;
     print STDERR "DESTROY has been called for AceDatabase.pm with home $home\n";
     if ($self->error_flag) {
