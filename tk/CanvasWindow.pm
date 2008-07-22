@@ -1007,6 +1007,15 @@ sub next_message_id {
         }
     }
 
+    sub delete_was_selected {
+        my ($self) = @_;
+        
+        if ($self->{'_was_selected_list'}) {
+            $self->canvas->delete($was_tag);
+            $self->{'_was_selected_list'} = undef;
+        }
+    }
+
     sub add_selected {
         my( $self, $obj, $rect ) = @_;
 

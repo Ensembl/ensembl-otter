@@ -1061,7 +1061,7 @@ sub hunt_for_Entry_text {
 
     my @matching_sub_names;
     foreach my $name ($self->list_all_SubSeq_names) {
-        my $sub = $self->get_SubSeq($name);
+        my $sub = $self->get_SubSeq($name) or next;
         my $str = $sub->ace_string;
         if (my ($hit) = $str =~ /$regex/) {
             push(@matching_sub_names, $name);
@@ -1091,7 +1091,14 @@ sub ace_path {
 sub save_ace {
     my $self = shift;
     
-    return $self->AceDatabase->ace_server->save_ace(@_);
+    my $val;
+    eval { $val = $self->AceDatabase->ace_server->save_ace(@_) };
+    if ($@) {
+        $self->exception_message($@, "Error saving to acedb");
+        confess "Error saving to acedb: $@";
+    } else {
+        return $val;
+    }
 }
 
 sub resync_with_db {
