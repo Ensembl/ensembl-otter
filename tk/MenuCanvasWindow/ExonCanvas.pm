@@ -504,6 +504,7 @@ sub set_all_position_pair_text {
 sub sort_all_coordinates {
     my( $self ) = @_;
     
+    $self->delete_was_selected;
     $self->sort_position_pairs;
     $self->sort_translation_region;
 }
@@ -622,6 +623,7 @@ sub delete_selected_exons {
     
     $self->trim_position_pairs($trim, $strand);
     $self->set_all_position_pair_text(@keep);
+    $self->delete_was_selected;
     
     # Put in an empty exon holder if we have deleted them all
     unless ($self->position_pairs) {
