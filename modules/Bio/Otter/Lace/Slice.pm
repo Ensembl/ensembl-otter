@@ -338,54 +338,6 @@ sub get_all_DAS_features { # get SimpleFeatures or PredictionExons from DAS sour
     return ParseFeatures(\$response, $self->name(), $analysis_name);
 }
 
-sub get_all_DAS_SimpleFeatures { # get simple features from DAS source (via mapping Otter server)
-    my( $self, $analysis_name, $source, $dsn, $csver_remote ) = @_;
-
-    if(!$analysis_name) {
-        die "Analysis name must be specified!";
-    }
-
-    my $response = $self->Client()->otter_response_content(
-        'GET',
-        'get_das_simple_features',
-        {
-            %{$self->toHash},
-            'analysis' => $analysis_name,
-            'metakey'  => '.', # let's pretend to be taking things from otter database
-            $csver_remote   ? ('csver_remote' => $csver_remote) : (), # if you forget it, the assembly will be Otter by default!
-            'source'   => $source,
-            'dsn'      => $dsn,
-        },
-    );
-
-    return ParseFeatures(\$response, $self->name(), $analysis_name)->{SimpleFeature} || [];
-}
-
-sub get_all_DAS_PredictionTranscripts { # get simple features from DAS source (via mapping Otter server)
-    my( $self, $analysis_name, $source, $dsn, $csver_remote ) = @_;
-
-    if(!$analysis_name) {
-        die "Analysis name must be specified!";
-    }
-
-    my $response = $self->Client()->otter_response_content(
-        'GET',
-        'get_das_prediction_transcripts',
-        {
-            %{$self->toHash},
-            'analysis' => $analysis_name,
-            'metakey'  => '.', # let's pretend to be taking things from otter database
-            $csver_remote   ? ('csver_remote' => $csver_remote) : (), # if you forget it, the assembly will be Otter by default!
-            'source'   => $source,
-            'dsn'      => $dsn,
-        },
-    );
-
-    my $pt_subhash = ParseFeatures(\$response, $self->name(), $analysis_name)->{PredictionTranscript};
-
-    return $pt_subhash ? [ values %$pt_subhash ] : [];
-}
-
 sub get_all_PipelineGenes { # get genes from otter/pipeline/ensembl db
     my( $self, $analysis_name, $metakey, $csver_remote, $transcript_analyses, $translation_xref_dbs ) = @_;
 
