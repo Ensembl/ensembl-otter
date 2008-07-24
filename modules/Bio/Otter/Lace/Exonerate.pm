@@ -154,7 +154,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.5 $ ';
+$revision='$Revision: 1.6 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -295,6 +295,7 @@ sub query_type {
 
     if ($query_type) {
     	my $type = lc($query_type);
+    	$type =~ s/\s//g;
 	    unless( $type eq 'dna' || $type eq 'protein' ){
 	      confess "not the right query type: $type";
 	    }
