@@ -3,8 +3,8 @@
 # Author:        lg4
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-07-21 11:00:49 $
-# Id:            $Id: nph-get_das_features,v 1.1 2008-07-21 11:00:49 lg4 Exp $
+# Last modified: $Date: 2008-07-25 12:49:02 $
+# Id:            $Id: nph-get_das_features,v 1.2 2008-07-25 12:49:02 lg4 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_das_features,v $
 
 use strict;
@@ -64,7 +64,7 @@ sub struct_show_path {
 }
 
 sub Bio::EnsEMBL::Slice::get_all_features_via_DAS { # $kind = 'SimpleFeature' || 'PredictionExon'
-    my ($slice, $server, $das, $chr_name, $analysis_name, $kind, $sieve, $grouplabel) = @_;
+    my ($slice, $server, $das, $chr_name, $analysis_name, $kind, $sieve, $grouplabel, $dump) = @_;
 
     my $feature_subhash     = $LangDesc{$kind};
     my $feature_constructor = $feature_subhash->{-constructor};
@@ -84,10 +84,10 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS { # $kind = 'SimpleFeature' ||
     my $chr_end   = $slice->end();
     my $segment_name  = "$chr_name:$chr_start,$chr_end";
 
-    my ($sieve_field_path, $sieve_sign, $sieve_value) = split(/(:CONTAINS:|:LACKS:)/, $sieve);
-    $sieve_field_path &&= [ split(/:THEN:/,$sieve_field_path) ];
+    my ($sieve_field_path, $sieve_sign, $sieve_value) = split(/(--CONTAINS--|--LACKS--)/, $sieve);
+    $sieve_field_path &&= [ split(/--THEN--/,$sieve_field_path) ];
 
-    my $grouplabel_field_path = $grouplabel ? [ map { [ split(/:THEN:/,$_) ] } split(/:JOIN:/,$grouplabel) ] : '';
+    my $grouplabel_field_path = $grouplabel ? [ map { [ split(/--THEN--/,$_) ] } split(/:JOIN:/,$grouplabel) ] : '';
 
     # DAS servers will give all features if a "type=" argument is not present
     if ($analysis_name and $analysis_name eq 'all') {
@@ -106,7 +106,9 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS { # $kind = 'SimpleFeature' ||
 
     ## This is VERY useful for finding out some protocol pecularities/discrepancies:
     #
-    #die "The whole structure of the response is: '".Dumper($response)."'\n";
+    if($dump) {
+        die "The whole structure of the response is: '".Dumper($response)."'\n";
+    }
 
     my $feature_coll; # collection(hash/array) of top-level features (prediction_transcripts | simple_features)
 
@@ -120,8 +122,8 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS { # $kind = 'SimpleFeature' ||
                 # Filter out introns and other features that may be sent by the server but irrelevant for us:
             if($sieve) {
                 my $sieve_field = struct_traverse_path($das_feature, $sieve_field_path);
-                if( (($sieve_sign eq ':CONTAINS:') && ($sieve_field!~/$sieve_value/i)) # wanted to include it, but it's not here
-                 || (($sieve_sign eq ':LACKS:') && ($sieve_field=~/$sieve_value/i)) # wanted to exclude it, but it's here
+                if( (($sieve_sign eq '--CONTAINS--') && ($sieve_field!~/$sieve_value/i)) # wanted to include it, but it's not here
+                 || (($sieve_sign eq '--LACKS--') && ($sieve_field=~/$sieve_value/i)) # wanted to exclude it, but it's here
                 ) {
                     next FEATURE;
                 }
@@ -201,13 +203,14 @@ eval {
     my $kind          = $server->param('kind')  || 'SimpleFeature';
     my $sieve         = $server->param('sieve') || '';
     my $grouplabel    = $server->param('grouplabel') || '';
+    my $dump          = $server->param('dump') || 0;
 
     my $das = Bio::Das::Lite->new({
         'dsn' => $source ? $source.'/'.$dsn : $dsn,
         $http_proxy ? ('http_proxy' => $http_proxy) : (),
     });
 
-    my $feature_array = $server->fetch_mapped_features('das_prediction_transcript', 'get_all_features_via_DAS', [$server, $das, $chr_name, $analysis_name, $kind, $sieve, $grouplabel],
+    my $feature_array = $server->fetch_mapped_features('das_prediction_transcript', 'get_all_features_via_DAS', [$server, $das, $chr_name, $analysis_name, $kind, $sieve, $grouplabel, $dump],
         (map { defined($server->param($_)) ? $server->param($_) : '' } qw(cs name type start end metakey csver csver_remote)),
         1, # do the short version of mapping, without the target database
     );
