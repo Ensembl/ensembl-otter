@@ -727,20 +727,18 @@ sub make_otterpipe_DataFactory {
     my $debug = $client->debug();
 
         # loading the filters in the priority order (latter overrides the former)
-    my %logic_to_load  = ();
-    my %module_options = ();
+    my %use_filters    = ();
+    my %filter_options = ();
     foreach my $ds_name (@$ds_list) {
-        %logic_to_load  = (%logic_to_load,  %{ $client->option_from_array([ $ds_name, 'use_filters' ]) } );
-        %module_options = (%module_options, %{ $client->option_from_array([ $ds_name, 'filter' ]) } );
+        %use_filters    = (%use_filters  ,  %{ $client->option_from_array([ $ds_name, 'use_filters' ]) } );
+        %filter_options = (%filter_options, %{ $client->option_from_array([ $ds_name, 'filter' ]) } );
     }
-
-    my @analysis_names = grep $logic_to_load{$_}, keys %logic_to_load;
 
     my $collect = $self->MethodCollection;
 
-    foreach my $logic_name (@analysis_names) {
+    while ( my($logic_name, $filter_wanted) = each %use_filters   ) {
 
-        my $param_ref = $module_options{$logic_name}
+        my $param_ref = $filter_options{$logic_name}
             or die "No parameters for '$logic_name'";
 
         # Take a copy of the parameters so that we can delete from it.
@@ -758,7 +756,10 @@ sub make_otterpipe_DataFactory {
             die "Error attempting to load filter module '$file'\n$@";
         }
 
-        my $pipe_filter = $class->new;
+            # we create all available filters and load all corresponding methods
+            # irrespectively of whether they are 'wanted' or not,
+            # so that we would be able to run them at a later time if needed
+        my $pipe_filter = $class->new( $filter_wanted );
 
         # analysis_name MUST be set, whether it is defined in the config or not:
         $param{analysis_name} ||= $logic_name;
