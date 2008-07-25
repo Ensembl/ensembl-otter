@@ -374,7 +374,7 @@ sub find_by_hit_name {
 
         my $slice = $adaptor->fetch_by_region($cs_name, $sr_name, $start, $end, $strand, $cs_version);
 
-        $self->register_slices($qname, $qtype_prefix.$analysis_name, [ $slice ]);
+        $self->register_slices($qname, "${qtype_prefix}${analysis_name}(score=$score)", [ $slice ]);
     }
 }
 

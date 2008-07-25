@@ -472,8 +472,12 @@ sub fetch_mapped_features {
         my $sdba = $self->satellite_dba( $metakey );
         my $original_slice = $self->get_slice($sdba, $cs, $name, $type, $start, $end, $csver_target);
 
-        $features = $original_slice->$fetching_method(@$call_parms)
-            || $self->error_exit("Could not fetch anything - analysis may be missing from the DB");
+        $features = $original_slice->$fetching_method(@$call_parms);
+
+        unless($features) {
+            warn "Could not fetch anything - analysis may be missing from the DB";
+            $features = [];
+        }
 
     } else { # let's try to do the mapping:
 
@@ -504,8 +508,12 @@ sub fetch_mapped_features {
                     my $projected_slice_on_mapper = $segment->to_Slice();
 
                     my $target_fs_on_mapper_segment
-                        = $projected_slice_on_mapper->$fetching_method(@$call_parms) ||
-                            $self->error_exit("Could not fetch anything - DAS server may be temporarily down");
+                        = $projected_slice_on_mapper->$fetching_method(@$call_parms);
+
+                    unless($target_fs_on_mapper_segment) {
+                        warn "Could not fetch anything - DAS server may be temporarily down";
+                        $target_fs_on_mapper_segment = [];
+                    }
 
                     $self->log('***** : '.scalar(@$target_fs_on_mapper_segment)." ${feature_name}s created on the slice");
 
@@ -561,7 +569,7 @@ sub fetch_mapped_features {
 
                     my $target_fs_on_target_segment
                         = $target_slice_on_target->$fetching_method(@$call_parms) ||
-                        $self->error_exit("Could not fetch anything - analysis may be missing from the DB");
+                        $self->error_exit("Could not fetch anything - possible problem with external source");
 
                     $self->log('***** : '.scalar(@$target_fs_on_target_segment)." ${feature_name}s found on the slice $metakey:".$target_slice_on_target->start().'..'.$target_slice_on_target->end());
 
