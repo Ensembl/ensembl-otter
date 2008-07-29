@@ -507,10 +507,6 @@ sub fetch_mapped_features {
                     my $target_fs_on_mapper_segment
                         = $projected_slice_on_mapper->$fetching_method(@$call_parms);
 
-                    unless($target_fs_on_mapper_segment) {
-                        die "Could not fetch anything - DAS server may be temporarily down";
-                    }
-
                     $self->log('***** : '.scalar(@$target_fs_on_mapper_segment)." ${feature_name}s created on the slice");
 
                     while (my $target_feature = shift @$target_fs_on_mapper_segment) {
@@ -565,7 +561,7 @@ sub fetch_mapped_features {
 
                     my $target_fs_on_target_segment
                         = $target_slice_on_target->$fetching_method(@$call_parms) ||
-                        $self->error_exit("Could not fetch anything - possible problem with external source");
+                            die "Could not fetch anything - possible problem with external source";
 
                     $self->log('***** : '.scalar(@$target_fs_on_target_segment)." ${feature_name}s found on the slice $metakey:".$target_slice_on_target->start().'..'.$target_slice_on_target->end());
 
