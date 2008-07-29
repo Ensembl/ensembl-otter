@@ -475,8 +475,7 @@ sub fetch_mapped_features {
         $features = $original_slice->$fetching_method(@$call_parms);
 
         unless($features) {
-            warn "Could not fetch anything - analysis may be missing from the DB";
-            $features = [];
+            die "Could not fetch anything - analysis may be missing from the DB";
         }
 
     } else { # let's try to do the mapping:
@@ -494,9 +493,7 @@ sub fetch_mapped_features {
                 $proj_segments_on_mapper = $original_slice_on_mapper->project( $cs, $csver_remote );
             };
             if($@
-            ## should we be so strict?
-            #    || (!scalar(@$proj_segments_on_mapper))
-            ## should we be so strict?
+               || (!scalar(@$proj_segments_on_mapper))
             ) {
                 die "Unable to project: $type:$csver_orig($start..$end)->$csver_remote. Check the mapping.";
             }
@@ -511,8 +508,7 @@ sub fetch_mapped_features {
                         = $projected_slice_on_mapper->$fetching_method(@$call_parms);
 
                     unless($target_fs_on_mapper_segment) {
-                        warn "Could not fetch anything - DAS server may be temporarily down";
-                        $target_fs_on_mapper_segment = [];
+                        die "Could not fetch anything - DAS server may be temporarily down";
                     }
 
                     $self->log('***** : '.scalar(@$target_fs_on_mapper_segment)." ${feature_name}s created on the slice");
