@@ -2483,7 +2483,8 @@ sub manage_locus_otter_ids {
             my $prefix_pat = qr{^(\w+:)};
             my ($old_pre) = $old_locus_name =~ /$prefix_pat/;
             my ($new_pre) = $new_locus_name =~ /$prefix_pat/;
-            if ($new_pre and $new_pre || '' ne $old_pre) {
+            if ($new_pre and ($new_pre || '') ne $old_pre) {
+                # warn "'$new_pre' ne '$old_pre'";
                 confess "New locus with '$new_pre' prefix would steal Otter ID from locus '$old_locus_name'\n";
             }
             # Looks like a rename, so we steal the otter_id from the old locus.
