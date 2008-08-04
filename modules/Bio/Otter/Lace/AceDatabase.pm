@@ -160,7 +160,15 @@ sub init_AceDatabase {
     $self->write_dna_data($smart_slice);
 
     if($with_pipeline) {
-        $self->write_pipeline_data($smart_slice);
+        $self->write_pipeline_data_into_ace_file($smart_slice);
+    } else {
+        $self->pipeline_DataFactory($smart_slice);
+            #
+            # The only reason we create this object at this point
+            # is to make the $smart_slice known to the DataFactory
+            # so that it could be contacted from the lace window.
+            #
+            # We should probably cache the $smart_slice in the AceDatabase
     }
 
     $self->write_methods_acefile;
@@ -687,18 +695,10 @@ sub write_dna_data {
     close $ace_fh;
 }
 
-sub write_pipeline_data {
+sub write_pipeline_data_into_ace_file {
     my( $self, $smart_slice ) = @_;
 
-    my $dsname = $smart_slice->dsname();
-    my $ds = $self->Client()->get_DataSet_by_name($dsname);
-    my $ds_list = $ds->ALIAS() ? [$ds->ALIAS(), $dsname] : [$dsname];
-        # It is a means to create a 'species alias' to reuse the otter_config for one species without duplication.
-        # For example, if you need a test_human database that would fetch all human analyses from the pipeline
-        # it is the shortest way to go. However, by using test_human filters or module settings you'll override
-        # the behaviour of the master database.
-        #
-    my $factory = $self->make_otterpipe_DataFactory($ds_list);
+    my $factory = $self->pipeline_DataFactory($smart_slice);
 
     # create file for output and add it to the acedb object
     my $ace_filename = $self->home . '/rawdata/pipeline.ace';
@@ -706,21 +706,55 @@ sub write_pipeline_data {
     my $ace_fh = gensym();
     $self->add_acefile($ace_filename);
     open $ace_fh, "> $ace_filename" or confess "Can't write to '$ace_filename' : $!";
-    $factory->file_handle($ace_fh);
 
-    $factory->ace_data_from_slice($smart_slice);
-    $factory->drop_file_handle;
+    $factory->ace_string_callback( sub{ print $ace_fh @_; } );
+    my $filters_fetched_data = $factory->topup_pipeline();
+    $factory->ace_string_callback( undef );
+
     close $ace_fh;
+
+    return $filters_fetched_data;
 }
 
-sub make_otterpipe_DataFactory {
-    my( $self, $ds_list ) = @_;
+sub topup_pipeline_data_into_ace_server {
+    my( $self, $smart_slice ) = @_;
+
+    my $factory = $self->pipeline_DataFactory($smart_slice);
+
+        # closure will probably work better:
+    my $ace_server = $self->ace_server();
+
+    $factory->ace_string_callback( sub{ $ace_server->save_ace(@_); } );
+    my $filters_fetched_data = $factory->topup_pipeline();
+    $factory->ace_string_callback( undef );
+
+    return $filters_fetched_data;
+}
+
+sub pipeline_DataFactory {
+    my( $self, $smart_slice ) = @_;
+
+    my $factory;
+
+    if($factory = $self->{_pipeline_DataFactory}) {
+        warn "\nTopping up the existing pipeline DataFactory.\n";
+        return $factory;
+    }
 
     my $client = $self->Client();
-    warn "Making pipeline DataFactory for ".join('->', map {"'$_'"} @$ds_list)."\n";
 
-    # create new datafactory object - contains all ace filters and produces the data from these
-    my $factory = Bio::EnsEMBL::Ace::DataFactory->new();
+    my $ds_orig_name  = $smart_slice->dsname();
+    my $ds_alias_name = $client->get_DataSet_by_name($ds_orig_name)->ALIAS();
+    my @ds_list = $ds_alias_name ? ($ds_alias_name, $ds_orig_name) : ($ds_orig_name);
+        # It is a means to create a 'species alias' to reuse the otter_config for one species without duplication.
+        # For example, if you need a test_human database that would fetch all human analyses from the pipeline
+        # it is the shortest way to go. However, by using test_human filters or module settings you'll override
+        # the behaviour of the master database.
+        #
+
+    warn "\nCreating a pipeline DataFactory for ".join('->', map {"'$_'"} @ds_list)."\n";
+
+    $factory = Bio::EnsEMBL::Ace::DataFactory->new($smart_slice);
 
     ##----------code to add all of the ace filters to data factory-----------------------------------
 
@@ -729,7 +763,7 @@ sub make_otterpipe_DataFactory {
         # loading the filters in the priority order (latter overrides the former)
     my %use_filters    = ();
     my %filter_options = ();
-    foreach my $ds_name (@$ds_list) {
+    foreach my $ds_name (@ds_list) {
         %use_filters    = (%use_filters  ,  %{ $client->option_from_array([ $ds_name, 'use_filters' ]) } );
         %filter_options = (%filter_options, %{ $client->option_from_array([ $ds_name, 'filter' ]) } );
     }
@@ -766,24 +800,28 @@ sub make_otterpipe_DataFactory {
 
         # Options in the config file are methods on filter objects:
         while (my ($option, $value) = each %param) {
-            #warn "setting '$option' to '$value'\n";
-            $pipe_filter->$option($value);
+            if($pipe_filter->can($option)) {
+                $pipe_filter->$option($value);
+            } else {
+                die "Wrong configuration for '$logic_name' analysis - check your '.otter_config' file. If it looks correct you might be running an outdated version of the client.\n";
+            }
         }
 
         # does the filter need a method?
         my $req = $pipe_filter->required_ace_method_names;
         foreach my $tag (@$req) {
-            #print STDERR "Trying to get a method Object with tag '$tag' ... filter '$class' ... ";
+                #print STDERR "Trying to get a method Object with tag '$tag' ... filter '$class' ... ";
             my $methObj = $collect->get_Method_by_name($tag);
-            #print STDERR $methObj ? "found one\n" : "find failed\n";
+                #print STDERR $methObj ? "found one\n" : "find failed\n";
             $pipe_filter->add_method_object($methObj);    # or some other place
         }
 
         # add the filter to the factory
-        $factory->add_AceFilter($pipe_filter);
+        $factory->add_filter($logic_name, $pipe_filter);
     }
 
-    return $factory;
+        # cache it for future reference
+    return $self->{_pipeline_DataFactory} = $factory;
 }
 
 
