@@ -6,6 +6,7 @@ use strict;
 use 5.006_001;  # For qr support
 use Carp qw{ cluck confess };
 use Tk::Dialog;
+use Tk::DialogBox;
 use Symbol 'gensym';
 use Scalar::Util 'weaken';
 
@@ -94,7 +95,6 @@ sub initialize {
 
     $self->draw_subseq_list;
     $self->populate_clone_menu;
-    $self->populate_pipeline_menu;
     $self->zMapWriteDotZmap;
     $self->zMapWriteDotGtkrc;
     $self->zMapLaunchZmap;
@@ -117,15 +117,6 @@ sub clone_menu {
         $self->{'_clone_menu'} = $clone_menu;
     }
     return $self->{'_clone_menu'};
-}
-
-sub pipeline_menu {
-    my( $self, $pipeline_menu ) = @_;
-    
-    if ($pipeline_menu) {
-        $self->{'_pipeline_menu'} = $pipeline_menu;
-    }
-    return $self->{'_pipeline_menu'};
 }
 
 sub set_known_GeneMethods{
@@ -679,13 +670,51 @@ sub populate_menus {
             );
     }
 
-    my $pipeline_menu = $self->make_menu("Pipeline", '', -tearoff => 1);
-
-    $self->pipeline_menu($pipeline_menu);
+    $tools_menu->add('command',
+               -label          => 'Load column data',
+               -command        => sub {
+                                    if($self->show_lcd_dialog() eq 'Load') {
+                                        $top->Busy;
+                                            # assuming DataFactory has already been initialized by AceDatabase.pm
+                                        if($self->AceDatabase->topup_pipeline_data_into_ace_server()) {
+                                            $self->resync_with_db;
+                                            $self->zMapLaunchZmap;
+                                        }
+                                        $top->Unbusy;
+                                    }
+                                },
+    );
 
     $subseq->bind('<Destroy>', sub{
         $self = undef;
     });
+}
+
+sub show_lcd_dialog {
+    my ($self) = @_;
+
+    my $lcd_dialog = $self->top_window()->DialogBox( -title => 'Load column data', -buttons => ['Load', 'Cancel'] );
+
+    my $DataFactory = $self->AceDatabase->pipeline_DataFactory();
+    my $n2f = $DataFactory->get_names2filters();
+    foreach my $filter_name (@{ $DataFactory->get_all_filter_names() }) {
+        my $filter = $n2f->{$filter_name};
+        my $cb = $lcd_dialog->add('Checkbutton',
+            -text => $filter_name,
+            -variable => \$filter->{_wanted},
+            -onvalue => 1,
+            -offvalue => 0,
+            -anchor => 'w',
+            $filter->done() ? ( -selectcolor => 'green' ) : (),
+        )->pack(-side=>'top', -fill => 'x', -expand => 1);
+
+            # keep it permanently selected:
+        if($filter->done()) {
+            $cb->configure(-command => sub { $cb->select(); });   
+        }
+    }
+
+    return $lcd_dialog->Show();
 }
 
 sub populate_clone_menu {
@@ -705,59 +734,6 @@ sub populate_clone_menu {
     $clone_menu->bind('<Destroy>', sub{
         $self = undef;
     });
-}
-
-sub populate_pipeline_menu {
-    my ($self) = @_;
-    
-    my $pipeline_menu = $self->pipeline_menu;
-    my $top = $self->top_window();
-
-    $pipeline_menu->add('command',
-               -label          => 'Top-up the pipeline',
-               -command        => sub {
-                                    $Tk::event->W->unpost(); # get rid of the torn-off menu entry (won't close by itself)
-                                    $top->Busy;
-                                        # assuming DataFactory has already been initialized by AceDatabase.pm
-                                    if($self->AceDatabase->topup_pipeline_data_into_ace_server()) {
-                                        $self->resync_with_db;
-                                        $self->refresh_pipeline_menu_states();
-                                        $self->zMapLaunchZmap;
-                                    }
-                                    $top->Unbusy;
-                                },
-    );
-
-    $pipeline_menu->add('separator');
-
-    my $DataFactory = $self->AceDatabase->pipeline_DataFactory();
-    my $n2f = $DataFactory->get_names2filters();
-    foreach my $filter_name (@{ $DataFactory->get_all_filter_names() }) {
-        my $filter = $n2f->{$filter_name};
-        $pipeline_menu->add('checkbutton',
-            -label => $filter_name,
-            -variable => \$filter->{_wanted},
-            -onvalue => 1,
-            -offvalue => 0,
-            -state       => $filter->done() ? 'disabled' : 'normal',
-            -selectcolor => $filter->done() ? 'green' : '',
-            -command => sub { print "$filter_name: ".$filter->wanted()."\n"; },
-        );
-    }
-}
-
-sub refresh_pipeline_menu_states {
-    my ($self) = @_;
-
-    my $pipeline_menu = $self->pipeline_menu();
-
-    my $DataFactory = $self->AceDatabase->pipeline_DataFactory();
-    my $n2f = $DataFactory->get_names2filters();
-    foreach my $filter_name (@{ $DataFactory->get_all_filter_names() }) {
-        my $filter = $n2f->{$filter_name};
-        $pipeline_menu->entryconfigure($filter_name, -state       => $filter->done() ? 'disabled' : 'normal');
-        $pipeline_menu->entryconfigure($filter_name, -selectcolor => $filter->done() ? 'green' : '');
-    }
 }
 
 sub bind_events {
