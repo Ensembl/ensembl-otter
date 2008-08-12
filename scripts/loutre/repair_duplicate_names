@@ -1,23 +1,16 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/env perl
 
 # Eliminate repetitions in new schema gene names (attributes)
 
 # NB: currently you need all the users out (no locks on the database)
 #     to safely run the script
 
-BEGIN {
-    foreach my $path (@INC) {
-        unless( $path=~s{ensembl/modules}{ensembl_head/modules}g ) {
-            $path=~s{ensembl_head/modules}{ensembl/modules}g;
-        };
-    }
-}
-
 use strict;
+use warnings;
 use Bio::Otter::Lace::Defaults;
 
 {
-    my $dsname  = 'mouse';
+    my $dsname  = '';
     my $notsets = '';
     my $onlysets = '';
     my $change  = 0; # dry run
