@@ -1,8 +1,9 @@
-#!/usr/bin/env perl -w
+#!/usr/bin/env perl
 
 ### genome_canvas
 
 use strict;
+use warnings;
 
 use GenomeCanvas;
 use GenomeCanvas::Band::TilingPath;
