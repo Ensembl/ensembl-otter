@@ -149,9 +149,9 @@ sub add_zmap_styles_acefile {
 }
 
 sub init_AceDatabase {
-    my( $self, $smart_slice, $with_pipeline ) = @_;
+    my( $self, $with_pipeline ) = @_;
 
-    $self->smart_slice($smart_slice); # just store it for future use
+    # $self->smart_slice() must to be set prior to running the following subroutines!
 
     $self->add_misc_acefile;
     $self->add_zmap_styles_acefile;

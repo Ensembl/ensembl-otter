@@ -702,6 +702,7 @@ sub _open_SequenceSet{
     $adb->error_flag(1);
     $adb->title($title);
     $adb->make_database_directory;
+    $adb->smart_slice($smart_slice);
 
     if($adb_write_access){
         # only lock the region if we have write access.
@@ -734,7 +735,7 @@ sub _open_SequenceSet{
     # now initialise the database
     eval{
         my $with_pipeline = ${$self->fetch_pipeline_var_ref()};
-        $adb->init_AceDatabase($smart_slice, $with_pipeline);
+        $adb->init_AceDatabase($with_pipeline);
     };
     if ($@) {
         $adb->error_flag(0);
