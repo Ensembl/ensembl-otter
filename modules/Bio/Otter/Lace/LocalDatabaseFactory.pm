@@ -80,7 +80,7 @@ sub sessions_needing_recovery {
 sub first_occurence {
     my ($self, $filename, $pattern) = @_;
 
-    warn "Looking for a value in $filename\n";
+    # warn "Looking for a value in $filename\n";
     open ( FILE, $filename ) || die "$!";
     foreach my $line (<FILE>) {
         my ($value) = ($line =~ /$pattern/);
@@ -88,7 +88,7 @@ sub first_occurence {
             return $value;
         }
     }
-    warn "\n\nNo value found in $filename\n\n";
+    warn "\n\nNo value for '$pattern' found in $filename\n\n";
 }
 
 sub make_title {

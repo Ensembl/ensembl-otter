@@ -11,6 +11,7 @@ use Symbol 'gensym';
 use Fcntl qw{ O_WRONLY O_CREAT };
 
 use Bio::Otter::Converter;
+use Bio::Otter::Lace::Slice;
 use Bio::Otter::Lace::Defaults;
 use Bio::Otter::Lace::PipelineDB;
 use Bio::Otter::Lace::SatelliteDB;
@@ -150,25 +151,19 @@ sub add_zmap_styles_acefile {
 sub init_AceDatabase {
     my( $self, $smart_slice, $with_pipeline ) = @_;
 
+    $self->smart_slice($smart_slice); # just store it for future use
+
+    $self->add_misc_acefile;
+    $self->add_zmap_styles_acefile;
+    $self->write_otter_acefile();
+    $self->write_dna_data();
+
     unless(defined($with_pipeline)) {
         $with_pipeline = Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
     }
 
-    $self->add_misc_acefile;
-    $self->add_zmap_styles_acefile;
-    $self->write_otter_acefile($smart_slice);
-    $self->write_dna_data($smart_slice);
-
     if($with_pipeline) {
-        $self->write_pipeline_data_into_ace_file($smart_slice);
-    } else {
-        $self->pipeline_DataFactory($smart_slice);
-            #
-            # The only reason we create this object at this point
-            # is to make the $smart_slice known to the DataFactory
-            # so that it could be contacted from the lace window.
-            #
-            # We should probably cache the $smart_slice in the AceDatabase
+        $self->write_pipeline_data_into_ace_file();
     }
 
     $self->write_methods_acefile;
@@ -265,11 +260,12 @@ sub write_local_blast {
 }
 
 sub write_otter_acefile {
-    my( $self, $smart_slice ) = @_;
+    my( $self ) = @_;
 
     # Getting XML from the Client
-    my $client = $self->Client or confess "No otter Client attached";
-    my $xml_string = $smart_slice->get_region_xml();
+    my $client      = $self->Client or confess "No otter Client attached";
+    my $smart_slice = $self->smart_slice();
+    my $xml_string  = $smart_slice->get_region_xml();
 
     # Storing that XML in a temp.file
     my $xml_file = Bio::Otter::Lace::TempFile->new;
@@ -297,9 +293,10 @@ sub write_otter_acefile {
 }
 
 sub try_and_lock_the_block {
-    my ($self, $smart_slice) = @_;
+    my ($self) = @_;
 
-    my $lock_xml = $smart_slice->lock_region_xml();
+    my $smart_slice = $self->smart_slice();
+    my $lock_xml    = $smart_slice->lock_region_xml();
 
     if ($lock_xml) {
         my $lock_xml_file = Bio::Otter::Lace::PersistentFile->new();
@@ -312,43 +309,79 @@ sub try_and_lock_the_block {
         my $read = $lock_xml_file->read_file_handle();
         my ($genes, $old_schema_slice, $seqstr, $tiles) = Bio::Otter::Converter::XML_to_otter($read);
 
-        my $slice_name = $old_schema_slice->display_id(); # it must be the same as the one kept in AceDB (retrievable by get_slicename_dsname)
-        my $dsname = $smart_slice->dsname();
+        my $slice_name = $smart_slice->name();
+        my $dsname     = $smart_slice->dsname();
 
+            # we may need this for compatibility with sessions recovered from prev.releases!
         $lock_xml_file->mv(".${slice_name}${dsname}${LOCK_REGION_XML_FILE}");
-
-        $self->{_slicename_dsname} = [ $slice_name, $dsname ];
+            # otherwise this renaming could have been skipped
     }
 }
 
-sub get_slicename_dsname {
-    my ($self) = @_;
+sub smart_slice {
+        #
+        # we either have an AceDB and create the smart_slice from it
+        # or have a smart_slice and create an AceDB
+        #
+    my $self = shift @_;
 
-    unless( $self->{_slicename_dsname} ) {
-        my $ace_handle = $self->aceperl_db_handle;
+        # should we "allow" the slice to be reset for an existing database?
+    $self->{_smart_slice} = shift @_ if(@_);
 
-        my ($slice_name, $dsname);
-
-            ## NOTE: The following query assumes we only have one Assembly per DB!
-        $ace_handle->raw_query('find Assembly *');
-        my $ace_text = $ace_handle->AceText_from_tag('Species');
-
-        if (my ($species_values) = $ace_text->get_values('Species')) {
-            $dsname = $species_values->[0];
-        } else {
-            die "'Species' not defined in ace database";
-        }
-
-        if (my ($assembly_slice_name_values) = $ace_text->get_values('Sequence')) {
-            $slice_name = $assembly_slice_name_values->[1]; # the 0'th element is a colon
-        } else {
-            die "Could not retrieve the name of the Assembly from AceDB";
-        }
-
-        $self->{_slicename_dsname} = [ $slice_name, $dsname ];
+    if($self->{_smart_slice}) {
+        return $self->{_smart_slice};
     }
 
-    return @{ $self->{_slicename_dsname} };
+    warn "Deriving smart_slice object from the AceDB\n";
+
+    my $ace_handle = $self->aceperl_db_handle;
+    my ($dsname, $ssname, $chr_name, $chr_start, $chr_end);
+
+        ## NOTE: The following queries assume we only have one Assembly per DB!
+    $ace_handle->raw_query('find Assembly *');
+    my $ace_text = $ace_handle->AceText_from_tag('Species');
+
+    if (my ($assembly_slice_name_values) = $ace_text->get_values('Sequence')) {
+        my $slice_name = $assembly_slice_name_values->[1]; # the 0'th element is a colon
+        if($slice_name=~/^([^\.]+)\.(\d+)\-(\d+)/) {
+            ($chr_name, $chr_start, $chr_end) = ($1, $2, $3);
+        } else {
+            die "Could not parse the slice name '$slice_name'";
+        }
+    } else {
+        die "Could not retrieve the name of the Assembly from AceDB";
+    }
+
+    if (my ($dsname_values) = $ace_text->get_values('Species')) {
+        $dsname = $dsname_values->[0];
+    } else {
+        die "'Species' not defined in ace database";
+    }
+
+    $ace_text = $ace_handle->AceText_from_tag('Assembly_name');
+
+    if (my ($ssname_values) = $ace_text->get_values('Assembly_name')) {
+        $ssname = $ssname_values->[0];
+    } else {
+        die "'Assembly_name' not defined in ace database";
+    }
+
+    my $cl = $self->Client() or die "Client not set in AceDatabase";
+
+    return $self->{_smart_slice} = Bio::Otter::Lace::Slice->new(
+                $cl, $dsname, $ssname, 'chromosome', 'Otter', $chr_name, $chr_start, $chr_end);
+}
+
+sub get_filter_loaded_states_from_pipeline {
+    my $self = shift @_;
+
+    my $ace_handle = $self->aceperl_db_handle;
+    $ace_handle->raw_query('find Assembly *');
+    my $ace_text = $ace_handle->AceText_from_tag('Filter');
+
+    my %filter_loaded = map { ($_->[0] => 1) } $ace_text->get_values('Filter');
+
+    return \%filter_loaded;
 }
 
 sub save_ace_to_otter {
@@ -361,7 +394,9 @@ sub save_ace_to_otter {
     my $ace    = $self->aceperl_db_handle;
     my $client = $self->Client or confess "No Client attached";
 
-    my ($slice_name, $dsname) = $self->get_slicename_dsname();
+    my $smart_slice = $self->smart_slice();
+    my $slice_name  = $smart_slice->name();
+    my $dsname      = $smart_slice->dsname();
 
     # Get the Assembly object ...
     ### Need to change this query if we add lots of non-otter features to the assembly object.
@@ -477,12 +512,20 @@ sub update_with_stable_ids {
 sub unlock_otter_slice {
     my( $self ) = @_;
 
-    my ($slice_name, $dsname) = $self->get_slicename_dsname();
+    my $smart_slice = $self->smart_slice();
+    my $slice_name  = $smart_slice->name();
+    my $dsname      = $smart_slice->dsname();
+
     my $client   = $self->Client or confess "No Client attached";
 
     my $xml_file = Bio::Otter::Lace::PersistentFile->new;
     $xml_file->root($self->home);
+
+            # we may need this for compatibility with sessions recovered from prev.releases!
     $xml_file->name(".${slice_name}${dsname}${LOCK_REGION_XML_FILE}");
+            # otherwise we could use the simplified name:
+    #$xml_file->name($LOCK_REGION_XML_FILE);
+
     return unless -e $xml_file->full_name();
     my $xml_text = '';
     my $read = $xml_file->read_file_handle;
@@ -679,7 +722,9 @@ sub db_initialized {
 }
 
 sub write_dna_data {
-    my( $self, $smart_slice ) = @_;
+    my( $self ) = @_;
+
+    my $smart_slice = $self->smart_slice();
 
     require Bio::EnsEMBL::Ace::Otter_Filter::DNA;
     my $dna_filter = Bio::EnsEMBL::Ace::Otter_Filter::DNA->new;
@@ -696,9 +741,10 @@ sub write_dna_data {
 }
 
 sub write_pipeline_data_into_ace_file {
-    my( $self, $smart_slice ) = @_;
+    my( $self ) = @_;
 
-    my $factory = $self->pipeline_DataFactory($smart_slice);
+    my $smart_slice = $self->smart_slice();
+    my $factory     = $self->pipeline_DataFactory();
 
     # create file for output and add it to the acedb object
     my $ace_filename = $self->home . '/rawdata/pipeline.ace';
@@ -717,9 +763,10 @@ sub write_pipeline_data_into_ace_file {
 }
 
 sub topup_pipeline_data_into_ace_server {
-    my( $self, $smart_slice ) = @_;
+    my( $self ) = @_;
 
-    my $factory = $self->pipeline_DataFactory($smart_slice);
+    my $smart_slice = $self->smart_slice();
+    my $factory     = $self->pipeline_DataFactory();
 
         # closure will probably work better:
     my $ace_server = $self->ace_server();
@@ -732,7 +779,7 @@ sub topup_pipeline_data_into_ace_server {
 }
 
 sub pipeline_DataFactory {
-    my( $self, $smart_slice ) = @_;
+    my( $self ) = @_;
 
     my $factory;
 
@@ -741,7 +788,8 @@ sub pipeline_DataFactory {
         return $factory;
     }
 
-    my $client = $self->Client();
+    my $client      = $self->Client();
+    my $smart_slice = $self->smart_slice();
 
     my $ds_orig_name  = $smart_slice->dsname();
     my $ds_alias_name = $client->get_DataSet_by_name($ds_orig_name)->ALIAS();
@@ -760,6 +808,8 @@ sub pipeline_DataFactory {
 
     my $debug = $client->debug();
 
+    my $filter_loaded = $self->get_filter_loaded_states_from_pipeline();
+
         # loading the filters in the priority order (latter overrides the former)
     my %use_filters    = ();
     my %filter_options = ();
@@ -770,17 +820,17 @@ sub pipeline_DataFactory {
 
     my $collect = $self->MethodCollection;
 
-    while ( my($logic_name, $filter_wanted) = each %use_filters   ) {
+    while ( my($filter_name, $filter_wanted) = each %use_filters   ) {
 
-        my $param_ref = $filter_options{$logic_name}
-            or die "No parameters for '$logic_name'";
+        my $param_ref = $filter_options{$filter_name}
+            or die "No parameters for '$filter_name'";
 
         # Take a copy of the parameters so that we can delete from it.
         my %param = %$param_ref;
 
         # class successfully required already.
         my $class = delete $param{'module'}
-          or confess "Module class for '$logic_name' missing from config";
+          or confess "Module class for '$filter_name' missing from config";
 
         # Load the filter module
         my $file = "$class.pm";
@@ -793,17 +843,17 @@ sub pipeline_DataFactory {
             # we create all available filters and load all corresponding methods
             # irrespectively of whether they are 'wanted' or not,
             # so that we would be able to run them at a later time if needed
-        my $pipe_filter = $class->new( $filter_wanted );
+        my $pipe_filter = $class->new( $filter_wanted, $filter_loaded->{$filter_name} );
 
         # analysis_name MUST be set, whether it is defined in the config or not:
-        $param{analysis_name} ||= $logic_name;
+        $param{analysis_name} ||= $filter_name;
 
         # Options in the config file are methods on filter objects:
         while (my ($option, $value) = each %param) {
             if($pipe_filter->can($option)) {
                 $pipe_filter->$option($value);
             } else {
-                die "Wrong configuration for '$logic_name' analysis - check your '.otter_config' file. If it looks correct you might be running an outdated version of the client.\n";
+                die "Wrong configuration for '$filter_name' analysis - check your '.otter_config' file. If it looks correct you might be running an outdated version of the client.\n";
             }
         }
 
@@ -817,7 +867,7 @@ sub pipeline_DataFactory {
         }
 
         # add the filter to the factory
-        $factory->add_filter($logic_name, $pipe_filter);
+        $factory->add_filter($filter_name, $pipe_filter);
     }
 
         # cache it for future reference
@@ -865,5 +915,4 @@ __END__
 =head1 AUTHOR
 
 Ana Code B<email> anacode@sanger.ac.uk
-
 
