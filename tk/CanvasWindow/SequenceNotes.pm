@@ -692,7 +692,7 @@ sub _open_SequenceSet{
     my $cl = $self->Client;
     my $ss = $self->SequenceSet;
 
-        # using Lace::Slice instead of Lace::SequenceSet is incouraged wherever possible
+        # using Lace::Slice instead of Lace::SequenceSet is encouraged wherever possible
     my ($dsname, $ssname, $chr_name, $chr_start, $chr_end) = $ss->selected_CloneSequences_parameters;
     my $smart_slice = Bio::Otter::Lace::Slice->new($cl, $dsname, $ssname,
         'chromosome', 'Otter', $chr_name, $chr_start, $chr_end);
@@ -706,7 +706,8 @@ sub _open_SequenceSet{
     if($adb_write_access){
         # only lock the region if we have write access.
         eval{
-            $adb->try_and_lock_the_block($smart_slice);
+            #$adb->try_and_lock_the_block($smart_slice);
+            $adb->try_and_lock_the_block();
         };
         
         if($@){ 

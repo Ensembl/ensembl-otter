@@ -5,6 +5,7 @@ package CanvasWindow::DataSetChooser;
 
 use strict;
 use Carp;
+use Tk::DialogBox;
 use base 'CanvasWindow';
 use CanvasWindow::SequenceSetChooser;
 use Bio::Otter::Lace::LocalDatabaseFactory;
@@ -48,20 +49,12 @@ sub new {
         },
     )->pack(-side => 'left');
 
-=comment
-
-    ## This button should either disappear or become inactive after (some) sessions have been recovered. Or else.
-
-    if( my $to_be_rec = scalar(@{$self->LocalDatabaseFactory()->sessions_needing_recovery()}) ) {
-        my $recover = $button_frame->Button(
-            -text       => "Recover ($to_be_rec)",
-            -command    => sub{
-                $self->recover_old_sessions_dialogue();
-            },
-        )->pack(-side => 'left');
-    }
-
-=cut
+    my $recover = $button_frame->Button(
+        -text       => "Recover sessions",
+        -command    => sub{
+            $self->recover_some_sessions(1);
+        },
+    )->pack(-side => 'left');
 
     my $quit = $button_frame->Button(
         -text       => 'Quit',
@@ -104,7 +97,7 @@ sub select_dataset {
 sub open_dataset {
     my( $self ) = @_;
     
-    return if $self->recover_old_sessions_dialogue;
+    return if $self->recover_some_sessions(1);
     
     my ($obj) = $self->list_selected;
     return unless $obj;
@@ -170,35 +163,48 @@ sub draw {
     $self->fix_window_min_max_sizes;
 }
 
-sub recover_old_sessions_dialogue {
-    my( $self ) = @_;
+sub recover_some_sessions {
+    my $self          = shift @_;
+    my $default_state = shift @_ || 0;
 
     my $ldf = $self->LocalDatabaseFactory();
+    my $recoverable_sessions = $ldf->sessions_needing_recovery();
     
-    my $lace_sessions = $ldf->sessions_needing_recovery();
-    
-    if (@$lace_sessions) {
-        my $text = "Recover these lace sessions?\n\n"
-          . join('', map $ldf->make_title($_) . "\n  in $_\n", @$lace_sessions);
-        
-        # Ask the user if changes should be saved
-        my $dialog = $self->canvas->toplevel->Dialog(
-            -title          => 'Recover sessions?',
-            -bitmap         => 'question',
-            -text           => $text,
-            -default_button => 'Yes',
-            -buttons        => [qw{ Yes No }],
-            );
-        my $ans = $dialog->Show;
+    if (@$recoverable_sessions) {
+        my %session_wanted = map { ($_ => $default_state) } @$recoverable_sessions;
 
-        if ($ans eq 'No') {
-            return 0;
-        } elsif ($ans eq 'Yes') {
+        my $rss_dialog = $self->canvas->toplevel->DialogBox(
+            -title => 'Recover sessions',
+            -buttons => ['Recover selected sessions', 'Not at this time, thanks']
+        );
+
+        $rss_dialog->add('Label',
+            -wrap    => 400,
+            -justify => 'left',
+            -text    => "You have one or more lace sessions on this computer which are not associated with a running otterlace process.\n\n This should not happen, except where lace has crashed or it has been exited by pressing the exit button in the dataset chooser window.\n\n You will need to recover and exit these sessions, or there may be locks left in the otter database or some of your work which has not been saved.\n\n Please contact anacode if you still get an error when you attempt to exit the session, or have information about the error which caused a session to be left.\n\n" 
+        )->pack(-side=>'top', -fill=>'x', -expand=>1);
+
+        foreach my $session_dir (@$recoverable_sessions) {
+            my $full_session_title = $ldf->make_title($session_dir).' in '.$session_dir;
+            my $cb = $rss_dialog->add('Checkbutton',
+                -text     => $full_session_title,
+                -variable => \$session_wanted{$session_dir},
+                -onvalue  => 1,
+                -offvalue => 0,
+                -anchor   => 'w',
+            )->pack(-side=>'top', -fill=>'x', -expand=>1);
+        }
+
+        my $answer = $rss_dialog->Show();
+
+        my @selected_dirs = grep { $session_wanted{$_} } @$recoverable_sessions;
+
+        if($answer=~/recover/i && @selected_dirs) {
             eval{
                 my $canvas = $self->canvas;
 
-                foreach my $dir (@$lace_sessions) {
-                    my $adb = $ldf->recover_session($dir);
+                foreach my $session_dir (@selected_dirs) {
+                    my $adb = $ldf->recover_session($session_dir);
 
                     # Bring up GUI
                     my $top = $canvas->Toplevel(
@@ -213,6 +219,8 @@ sub recover_old_sessions_dialogue {
                 $self->exception_message($@, 'Error recovering lace sessions');
             }
             return 1;
+        } else {
+            return 0;
         }
     } else {
         return 0;
