@@ -537,6 +537,12 @@ sub unlock_otter_slice {
     return $client->unlock_otter_xml($xml_text, $dsname);
 }
 
+sub ace_server_registered {
+    my( $self ) = @_;
+
+    return $self->{'_ace_server'};
+}
+
 sub ace_server {
     my( $self ) = @_;
 
@@ -743,7 +749,6 @@ sub write_dna_data {
 sub write_pipeline_data_into_ace_file {
     my( $self ) = @_;
 
-    my $smart_slice = $self->smart_slice();
     my $factory     = $self->pipeline_DataFactory();
 
     # create file for output and add it to the acedb object
@@ -765,7 +770,6 @@ sub write_pipeline_data_into_ace_file {
 sub topup_pipeline_data_into_ace_server {
     my( $self ) = @_;
 
-    my $smart_slice = $self->smart_slice();
     my $factory     = $self->pipeline_DataFactory();
 
         # closure will probably work better:
@@ -808,7 +812,9 @@ sub pipeline_DataFactory {
 
     my $debug = $client->debug();
 
-    my $filter_loaded = $self->get_filter_loaded_states_from_pipeline();
+    my $filter_loaded = $self->ace_server_registered()
+        ? $self->get_filter_loaded_states_from_pipeline()
+        : {};
 
         # loading the filters in the priority order (latter overrides the former)
     my %use_filters    = ();
