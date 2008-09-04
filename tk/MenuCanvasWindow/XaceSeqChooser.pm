@@ -22,6 +22,7 @@ use Hum::Conf qw{ PFETCH_SERVER_LIST };
 use Hum::Sort qw{ ace_sort };
 use Hum::ClipboardUtils qw{ text_is_zmap_clip evidence_type_and_name_from_text };
 use EditWindow::Dotter;
+use EditWindow::Exonerate;
 use EditWindow::Clone;
 use EditWindow::LocusName;
 use MenuCanvasWindow::ExonCanvas;
@@ -631,6 +632,16 @@ sub populate_menus {
     $top->bind('<Control-period>',  $run_dotter_command);
     $top->bind('<Control-greater>', $run_dotter_command);
     
+    ## Spawn exonerate Ctrl .
+    my $run_exon_command = sub { $self->run_exonerate };
+    $tools_menu->add('command',
+        -label          => 'Exonerate Zmap hit/Column',
+        -command        => $run_exon_command,
+        -accelerator    => 'Ctrl+X',
+        -underline      => 0,
+        );
+    $top->bind('<Control-x>', $run_exon_command);
+    $top->bind('<Control-X>', $run_exon_command);
         
     # Show dialog for renaming the locus attached to this subseq
     my $rename_locus = sub { $self->rename_locus };
@@ -1987,6 +1998,23 @@ sub run_dotter {
     }
     $dw->update_from_XaceSeqChooser($self);
     
+    return 1;
+}
+
+sub run_exonerate {
+    my( $self ) = @_;
+
+    my $ew = $self->{'_exonerate_window'};
+    unless ($ew) {
+        my $parent = $self->top_window();
+        my $top = $parent->Toplevel(-title => 'run exonerate');
+        $top->transient($parent);
+        $ew = EditWindow::Exonerate->new($top);
+        $ew->initialise($self->AceDatabase);
+        $self->{'_exonerate_window'} = $ew;
+    }
+    $ew->update_from_XaceSeqChooser($self);
+
     return 1;
 }
 
