@@ -14,10 +14,12 @@ my $DNA_SCORE = 2000;
 my $DNAHSP =	120;
 
 sub initialise {
-	my ($self,$ad) = @_;
+	my ($self,$ad,$xa) = @_;
 	my $top    = $self->top;
 	my $exon   = Bio::Otter::Lace::Exonerate->new;
 	$exon->AceDatabase($ad);
+	$exon->Xace($xa);
+	$exon->Top($top);
 	$self->exonerate($exon);
 
 	### Query frame
