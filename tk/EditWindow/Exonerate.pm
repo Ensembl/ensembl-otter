@@ -8,27 +8,24 @@ use Bio::Otter::Lace::Exonerate;
 use Tk::LabFrame;
 use Tk::FileDialog;
 use base 'EditWindow';
-
 my $PROT_SCORE = 150;
-my $DNA_SCORE = 2000;
-my $DNAHSP =	120;
+my $DNA_SCORE  = 2000;
+my $DNAHSP     = 120;
 
 sub initialise {
-	my ($self,$ad,$xa) = @_;
-	my $top    = $self->top;
-	my $exon   = Bio::Otter::Lace::Exonerate->new;
+	my ( $self, $ad, $xa ) = @_;
+	my $top  = $self->top;
+	my $exon = Bio::Otter::Lace::Exonerate->new;
 	$exon->AceDatabase($ad);
 	$exon->Xace($xa);
 	$exon->Top($top);
 	$self->exonerate($exon);
-
 	### Query frame
 	my $query_frame = $top->LabFrame(
 									  -borderwidth => 3,
 									  -label       => 'Query sequences',
 									  -labelside   => 'acrosstop',
 	)->pack( -side => 'top', );
-
 	## Molecule type
 	my $type_frame =
 	  $query_frame->Frame( -border => 3, )->pack( -side => 'top', );
@@ -45,14 +42,19 @@ sub initialise {
 	my $type = 'dna';
 	$exon->query_type($type);
 	my $mol_type = sub {
-		if($type eq 'dna'){
-			$self->set_entry('score',$DNA_SCORE);
-			$self->dnahsp->configure(-state => 'normal');
-			$self->set_entry('dnahsp',$DNAHSP);
-		} else {
-			$self->set_entry('score',$PROT_SCORE);
-			$self->set_entry('dnahsp',0);
-			$self->dnahsp->configure(-state => 'disable');
+		if ( $type eq 'dna' ) {
+			$self->set_entry( 'score', $DNA_SCORE );
+			$self->dnahsp->configure( -state => 'normal' );
+			$self->set_entry( 'dnahsp', $DNAHSP );
+			$self->set_entry( 'method_tag', 'Exon_DNA' );
+			$self->set_entry( 'logic_name', 'Exon_DNA' );
+		}
+		else {
+			$self->set_entry( 'score',  $PROT_SCORE );
+			$self->set_entry( 'dnahsp', 0 );
+			$self->dnahsp->configure( -state => 'disable' );
+			$self->set_entry( 'method_tag', 'Exon_PROT' );
+			$self->set_entry( 'logic_name', 'Exon_PROT' );
 		}
 		$exon->query_type($type);
 	};
@@ -64,7 +66,6 @@ sub initialise {
 								  -command  => $mol_type
 		)->pack( -side => 'right' );
 	}
-
 	## Accession entry box
 	my $match_frame =
 	  $query_frame->Frame( -border => 3, )->pack( -side => 'top', );
@@ -75,7 +76,6 @@ sub initialise {
 	)->pack( -side => 'left' );
 	$self->match(
 				$match_frame->Entry( -width => 24, )->pack( -side => 'left' ) );
-
 	## Fasta file entry box
 	my $fname;
 	my $Horiz      = 1;
@@ -89,36 +89,31 @@ sub initialise {
 
 	# Pad between entries
 	$file_frame->Frame( -width => 10, )->pack( -side => 'top' );
-	my $LoadDialog = $file_frame->FileDialog( -Title  => 'Select a Fasta file',
-											  -Create => 0,
+	my $LoadDialog = $file_frame->FileDialog(
+											  -Title   => 'Select a Fasta file',
+											  -Create  => 0,
 											  -FPat    => '*fa',
-											  -ShowAll => 'NO'  );
-	$file_frame->Entry( -textvariable => \$fname )->pack( -side => 'left' );
+											  -ShowAll => 'NO'
+	);
+	$self->fasta_file(
+		 $file_frame->Entry( -textvariable => \$fname )->pack( -side => 'left' ) );
 	$file_frame->Button(
 		-text    => 'Browse...',
 		-command => sub {
 			$fname = $LoadDialog->Show( -Horiz => $Horiz );
-			if ( defined($fname) ) {
-				$self->fasta_file($fname);
-			}
 		}
 	)->pack( -side => 'left' );
-
 	## Sequence text box
-
 	my $txt_frame =
 	  $query_frame->Frame( -border => 3, )->pack( -side => 'top', );
 	$txt_frame->Label(
-						-text   => 'OR Fasta sequences',
-						-anchor => 's',
-						-padx   => 6,
+					   -text   => 'OR Fasta sequences',
+					   -anchor => 's',
+					   -padx   => 6,
 	)->pack( -side => 'top' );
-
-	$self->fasta_txt (
-		$txt_frame->Scrolled("Text", -background => 'white', -height => 12)->pack(-side => 'top', )
-	);
-
-
+	$self->fasta_txt(
+		   $txt_frame->Scrolled( "Text", -background => 'white', -height => 12 )
+			 ->pack( -side => 'top', ) );
 	### Exonerate and diplay parameters
 	my $param_frame = $top->LabFrame(
 									  -borderwidth => 3,
@@ -126,88 +121,84 @@ sub initialise {
 									  -labelside   => 'acrosstop',
 	)->pack( -side => 'top', );
 	## Score and dna hsp thresholds
-	my $threshold_frame = $param_frame->Frame( -border => 3, )->pack( -side => 'top', );
+	my $threshold_frame =
+	  $param_frame->Frame( -border => 3, )->pack( -side => 'top', );
 	$threshold_frame->Label(
-						-text   => 'Threshold ',
-						-anchor => 's',
-						-padx   => 6,
+							 -text   => 'Threshold ',
+							 -anchor => 's',
+							 -padx   => 6,
 	)->pack( -side => 'left' );
 	$threshold_frame->Label(
-						-text   => 'Score:',
-						-anchor => 's',
-						-padx   => 6,
+							 -text   => 'Score:',
+							 -anchor => 's',
+							 -padx   => 6,
 	)->pack( -side => 'left' );
 	$self->score(
-						$threshold_frame->Entry(
-									   -width   => 9,
-									   -justify => 'right',
-						  )->pack( -side => 'left' )
+				  $threshold_frame->Entry(
+										   -width   => 9,
+										   -justify => 'right',
+					)->pack( -side => 'left' )
 	);
-	$self->set_entry('score',$DNA_SCORE);
+	$self->set_entry( 'score', $DNA_SCORE );
 	$threshold_frame->Label(
-						-text   => 'Dna hsp:',
-						-anchor => 's',
-						-padx   => 6,
+							 -text   => 'Dna hsp:',
+							 -anchor => 's',
+							 -padx   => 6,
 	)->pack( -side => 'left' );
 	$self->dnahsp(
-						$threshold_frame->Entry(
-									   -width   => 9,
-									   -justify => 'right',
-						  )->pack( -side => 'left' )
+				   $threshold_frame->Entry(
+											-width   => 9,
+											-justify => 'right',
+					 )->pack( -side => 'left' )
 	);
-	$self->set_entry('dnahsp',$DNAHSP);
-
+	$self->set_entry( 'dnahsp', $DNAHSP );
 	## ace method tag/color and logic_name
-	my $display_frame = $param_frame->Frame( -border => 3, )->pack( -side => 'top', );
+	my $display_frame =
+	  $param_frame->Frame( -border => 3, )->pack( -side => 'top', );
 	$display_frame->Label(
-						-text   => 'Method ',
-						-anchor => 's',
-						-padx   => 6,
+						   -text   => 'Method ',
+						   -anchor => 's',
+						   -padx   => 6,
 	)->pack( -side => 'left' );
-
 	$display_frame->Label(
-						-text   => 'Tag:',
-						-anchor => 's',
-						-padx   => 6,
+						   -text   => 'Tag:',
+						   -anchor => 's',
+						   -padx   => 6,
 	)->pack( -side => 'left' );
 	$self->method_tag(
-						$display_frame->Entry(
-									   -width   => 9,
-									   -justify => 'right',
-						  )->pack( -side => 'left' )
+					   $display_frame->Entry(
+											  -width   => 9,
+											  -justify => 'right',
+						 )->pack( -side => 'left' )
 	);
 	$display_frame->Label(
-						-text   => 'Color:',
-						-anchor => 's',
-						-padx   => 6,
+						   -text   => 'Color:',
+						   -anchor => 's',
+						   -padx   => 6,
 	)->pack( -side => 'left' );
 	$self->method_color(
-						$display_frame->Entry(
-									   -width   => 9,
-									   -justify => 'right',
-						  )->pack( -side => 'left' )
+						 $display_frame->Entry(
+												-width   => 9,
+												-justify => 'right',
+						   )->pack( -side => 'left' )
 	);
 	$display_frame->Label(
-						-text   => 'Logic_name:',
-						-anchor => 's',
-						-padx   => 6,
+						   -text   => 'Logic_name:',
+						   -anchor => 's',
+						   -padx   => 6,
 	)->pack( -side => 'left' );
 	$self->logic_name(
-						$display_frame->Entry(
-									   -width   => 9,
-									   -justify => 'right',
-						  )->pack( -side => 'left' )
+					   $display_frame->Entry(
+											  -width   => 9,
+											  -justify => 'right',
+						 )->pack( -side => 'left' )
 	);
-
-	$self->set_entry( 'method_tag', 'Exon_EST' );
+	$self->set_entry( 'method_tag',   'Exon_DNA' );
 	$self->set_entry( 'method_color', 'RED' );
-	$self->set_entry( 'logic_name', 'Exon_EST' );
-
-
+	$self->set_entry( 'logic_name',   'Exon_DNA' );
 	### Commands
 	my $button_frame = $top->Frame->pack(    -side => 'top',
 										  -fill => 'x', );
-
 	my $launch = sub {
 		$self->launch_exonerate or return;
 		$top->withdraw;
@@ -242,7 +233,6 @@ sub initialise {
 	$top->bind( '<Control-W>', $close_window );
 	$top->protocol( 'WM_DELETE_WINDOW', $close_window );
 	$top->bind( '<Destroy>', sub { $self = undef } );
-
 }
 
 sub update_from_XaceSeqChooser {
@@ -339,7 +329,6 @@ sub dnahsp {
 	return $self->{'_dnahsp'};
 }
 
-
 sub match {
 	my ( $self, $match ) = @_;
 	if ($match) {
@@ -397,22 +386,18 @@ sub exonerate {
 }
 
 sub launch_exonerate {
-	my ($self)     = @_;
+	my ($self) = @_;
 	my $seq = $self->get_query_seq();
-
-	print STDOUT "Found ".scalar(@$seq)." sequences\n";
-
-	my $score	   = $self->get_entry('score');
-	my $dnahsp	   = $self->get_entry('dnahsp');
-	my $m_tag	   = $self->get_entry('method_tag');
-	my $m_color	   = $self->get_entry('method_color');
-	my $l_name	   = $self->get_entry('logic_name');
-
+	print STDOUT "Found " . scalar(@$seq) . " sequences\n";
+	my $score   = $self->get_entry('score');
+	my $dnahsp  = $self->get_entry('dnahsp');
+	my $m_tag   = $self->get_entry('method_tag');
+	my $m_color = $self->get_entry('method_color');
+	my $l_name  = $self->get_entry('logic_name');
 	unless ( $score and $m_tag and $m_color and $l_name ) {
 		warn "Missing parameters\n";
 		return;
 	}
-
 
 	my $exonerate = $self->exonerate;
 	$exonerate->query_seq($seq);
@@ -421,29 +406,25 @@ sub launch_exonerate {
 	$exonerate->method_tag($m_tag);
 	$exonerate->method_color($m_color);
 	$exonerate->logic_name($l_name);
-
-
 	return $exonerate->fork_exonerate;
 }
 
 sub get_query_seq {
-	my ($self)     = @_;
+	my ($self) = @_;
 	my @seq;
-	if($self->get_entry('match')) {
+	if ( $self->get_entry('match') ) {
 		my @accessions = split /\,|\;/, $self->get_entry('match');
-		if(@accessions){
+		if (@accessions) {
 			push @seq, Hum::Pfetch::get_Sequences(@accessions);
 		}
 	}
-	if(my $string = $self->fasta_txt->get('1.0', 'end')) {
+	if ( my $string = $self->fasta_txt->get( '1.0', 'end' ) ) {
 		push @seq, Hum::FastaFileIO->new_String_IO($string)->read_all_sequences;
-
 	}
-
-	if($self->fasta_file) {
-		push @seq, Hum::FastaFileIO->new($self->fasta_file)->read_all_sequences;
+	if ( $self->get_entry('fasta_file') ) {
+		push @seq, Hum::FastaFileIO->new( $self->get_entry('fasta_file') )
+		  ->read_all_sequences;
 	}
-
 	return \@seq;
 }
 
