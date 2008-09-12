@@ -154,7 +154,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.6 $ ';
+$revision='$Revision: 1.7 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -213,6 +213,7 @@ use Bio::EnsEMBL::Pipeline::Config::General;
 use Bio::Seq;
 use Hum::Ace::AceText;
 use Hum::Ace::Method;
+use Hum::FastaFileIO;
 use Bio::Otter::Lace::PersistentFile;
 
 use Bio::EnsEMBL::Ace::Filter::Cigar_ace_parser;
@@ -223,13 +224,27 @@ sub new{
 }
 
 sub initialise {
-    my ($self) = @_;
+    my ($self,$fasta_file) = @_;
 
     my $cl = $self->AceDatabase->Client();
 
-    # Just return if a blast database hasn't been defined
-    my $fasta_file = $cl->option_from_array([ 'local_exonerate', 'database' ]);
-    return unless $fasta_file;
+    if(!$fasta_file) {
+    	# Just return if a blast database hasn't been defined
+    	$fasta_file = $cl->option_from_array([ 'local_exonerate', 'database' ]);
+    	return unless $fasta_file;
+    	# Get all the other configuration options
+	    foreach my $attribute (qw{
+	        homol_tag
+	        method_tag
+	        method_color
+	        logic_name
+	        query_type
+	      })
+	    {
+	        my $value = $cl->option_from_array([ 'local_exonerate', $attribute ]);
+	        $self->$attribute($value);
+	    }
+    }
 
     unless ($fasta_file =~ m{^/}) {
         confess "fasta file '$fasta_file' is not an absolute path";
@@ -241,19 +256,7 @@ sub initialise {
     }
     warn "Found exonerate database: '$fasta_file'\n";
 
-
-    # Get all the other configuration options
-    foreach my $attribute (qw{
-        homol_tag
-        method_tag
-        method_color
-        logic_name
-        query_type
-      })
-    {
-        my $value = $cl->option_from_array([ 'local_exonerate', $attribute ]);
-        $self->$attribute($value);
-    }
+    $self->homol_tag(($self->query_type eq 'protein') ? 'Pep_homol' : 'DNA_homol');
 
     # Make the analysis object needed by the Runnable
     my $ana_obj = Bio::EnsEMBL::Pipeline::Analysis->new(
@@ -269,6 +272,49 @@ sub initialise {
 
 }
 
+sub launch_exonerate {
+	my ($self) = @_;
+
+	eval{
+		my $query_file   = "/tmp/query_seq.$$.fa";
+	    # Write out the query sequence
+	    my $seq = $self->query_seq();
+	    if(@$seq) {
+	    	my $query_out = Hum::FastaFileIO->new("> $query_file");
+	        for(@$seq) {
+	        	$query_out->write_sequences($_);
+	        }
+	        $query_out = undef;
+	        $self->initialise($query_file);
+	        my $ace_text = $self->run or return;
+			# delete query file
+			unlink $query_file;
+
+			$self->Top->Busy;
+			# Need to add new method to collection if we don't have it already
+	    	my $coll = $self->AceDatabase->MethodCollection;
+	    	my $coll_zmap = $self->Xace->Assembly->MethodCollection;
+	    	my $method = $self->ace_Method;
+	    	unless ($coll->get_Method_by_name($method->name) ||
+	    			$coll_zmap->get_Method_by_name($method->name)) {
+	        	$coll->add_Method($method);
+	        	$coll_zmap->add_Method($method);
+	        	$self->Xace->save_ace($coll->ace_string());
+	    	}
+
+			$self->Xace->save_ace($ace_text);
+			$self->Xace->zMapWriteDotZmap;
+			$self->Xace->resync_with_db();
+			$self->Xace->zMapLaunchZmap;
+
+			$self->Top->Unbusy;
+		}
+	};
+	if ($@) {
+		warn $@;
+	}
+}
+
 # Attribute methods
 
 
@@ -281,6 +327,24 @@ sub AceDatabase {
     return $self->{'_AceDatabase'};
 }
 
+sub Xace {
+    my( $self, $xa ) = @_;
+
+    if ($xa) {
+        $self->{'_Xace'} = $xa;
+    }
+    return $self->{'_Xace'};
+}
+
+sub Top {
+    my( $self, $top ) = @_;
+
+    if ($top) {
+        $self->{'_Top'} = $top;
+    }
+    return $self->{'_Top'};
+}
+
 sub analysis {
     my( $self, $analysis ) = @_;
 
@@ -288,6 +352,15 @@ sub analysis {
         $self->{'_analysis'} = $analysis;
     }
     return $self->{'_analysis'};
+}
+
+sub query_seq {
+    my( $self, $seq ) = @_;
+
+    if ($seq) {
+        $self->{'_query_seq'} = $seq;
+    }
+    return $self->{'_query_seq'};
 }
 
 sub query_type {
@@ -301,6 +374,7 @@ sub query_type {
 	    }
         $self->{'_query_type'} = $type;
     }
+
     return $self->{'_query_type'};
 }
 
@@ -312,6 +386,23 @@ sub database {
     }
     return $self->{'_database'};
 }
+
+sub score {
+	my ( $self, $score ) = @_;
+	if ($score) {
+		$self->{'_score'} = $score;
+	}
+	return $self->{'_score'};
+}
+
+sub dnahsp {
+	my ( $self, $dnahsp ) = @_;
+	if ($dnahsp) {
+		$self->{'_dnahsp'} = $dnahsp;
+	}
+	return $self->{'_dnahsp'};
+}
+
 
 sub db_basename {
     my ($self) = @_;
@@ -380,22 +471,21 @@ sub sequence_fetcher {
 sub ace_Method {
     my ($self) = @_;
 
-    my $method = $self->{'_ace_method'};
-    unless ($method) {
-        $method = $self->{'_ace_method'} = Hum::Ace::Method->new;
-        $method->name(  $self->method_tag   );
-        $method->color( $self->method_color );
+	my $method = $self->{'_ace_method'} = Hum::Ace::Method->new;
+	$method->name(  $self->method_tag   );
+    $method->color( $self->method_color );
+    $method->show_up_strand(1);
 
-        # This will put the results next to the annotated genes
-        $method->zone_number(2);
+    # This will put the results next to the annotated genes
+    $method->zone_number(2);
 
-        $method->gapped(1);
-        $method->blixem_type('N');
-        $method->width(2.0);
-        $method->score_method('width');
-        $method->score_bounds(70, 130);
-        $method->max_mag(4000);
-    }
+    $method->gapped(0);
+    $method->blixem_type( ($self->query_type eq 'dna') ? 'N' : 'P');
+    $method->width(2.0);
+    $method->score_method('width');
+    $method->score_bounds(70, 130);
+    $method->max_mag(4000);
+
     return $method;
 }
 
@@ -408,6 +498,7 @@ sub _remove_files {
     $filestamp->rm();
     rmtree($self->indicate_index());
 }
+
 
 sub run {
     my( $self ) = @_;
@@ -431,10 +522,10 @@ sub run {
         foreach my $hit_name (@$names) {
             my $seq = $fetcher->get_Seq_by_acc($hit_name)
                 or confess "Failed to fetch '$hit_name' by Acc using a '", ref($fetcher), "'";
-            if($self->query_type eq 'dna') {
-            	$ace .= $self->ace_DNA($hit_name, $seq);
-            } else {
+            if($self->query_type eq 'protein') {
             	$ace .= $self->ace_PEPTIDE($hit_name, $seq);
+            } else {
+            	$ace .= $self->ace_DNA($hit_name, $seq);
         	}
     	}
     }
@@ -469,9 +560,11 @@ sub run_exonerate {
     my ($self, $masked, $smasked, $unmasked) = @_;
 
     my $analysis = $self->analysis();
+    my $score = $self->score() || ( $self->query_type() eq 'protein' ? 150 : 2000 );
+    my $dnahsp = $self->dnahsp || 120 ;
     my $exo_options = $self->query_type() eq 'protein' ?
-    	'-m p2g --forcescan q --softmasktarget yes -M 1500  --score 150' :
-    	'-m e2g --forcescan q --softmasktarget yes  -M 1500 --dnahspthreshold 120 -s 2000 --geneseed 300' ;
+    	"-m p2g --forcescan q --softmasktarget yes -M 1500  --score $score" :
+    	"-m e2g --forcescan q --softmasktarget yes  -M 1500 --dnahspthreshold $dnahsp -s $score --geneseed 300" ;
 
     my $runnable = Bio::EnsEMBL::Pipeline::Runnable::Finished_Exonerate->new(
         -analysis => $self->analysis(),
@@ -532,18 +625,26 @@ sub format_ace_output {
             # est2genome has strand info from splice sites, which we are losing.
             # contig_strand is always 1 at the moment
             # align_coords() will break if we fix this
-            my $strand = ($fp->hstrand || 1) * $fp->strand;
+            my $strand = $fp->strand;
 
             # Transforms the gapped alignment information in the cigar string
             # into a series of Align blocks for acedb's Smap system. This
             # enables gapped alignments to be displayed in blixem.
             my ($seq_coord, $target_coord, $other) = Bio::EnsEMBL::Ace::Filter::Cigar_ace_parser::align_coords(
-                $fp->cigar_string, $fp->start, $fp->end, $fp->hstart, $strand, $is_protein);
+                $fp->cigar_string, $fp->start, $fp->end, $fp->hstart, $fp->hend, $strand, $fp->hstrand, $is_protein);
+
+
+            #print STDOUT "Parse ".join(" ",$fp->cigar_string, $fp->start, $fp->end, $fp->hstart, $fp->hend, $strand, $fp->hstrand, $is_protein)."\n";
 
             # In acedb strand is encoded by start being greater
             # than end if the feature is on the negative strand.
             my $start = $fp->start;
             my $end   = $fp->end;
+
+			if($fp->hstrand ==-1){
+            	$fp->hstrand(1);
+            	$strand *= -1;
+            }
 
             if ($strand == -1){
                 ($start, $end) = ($end, $start);
@@ -553,6 +654,9 @@ sub format_ace_output {
             $hit_ace .= sprintf qq{Homol %s "%s" "%s" %.3f %d %d %d %d\n},
               $homol_tag, $contig_name, $method_tag, $fp->percent_id,
               $fp->hstart, $fp->hend, $start, $end;
+              #print STDOUT sprintf qq{Homol %s "%s" "%s" %.3f %d %d %d %d\n},
+              #$homol_tag, $contig_name, $method_tag, $fp->percent_id,
+              #$fp->hstart, $fp->hend, $start, $end;
 
             # The first part of the line is all we need if there are no
             # gaps in the alignment between genomic sequence and hit.
@@ -567,9 +671,11 @@ sub format_ace_output {
                 # they are parsed into acedb.
                 for (my $i = 0; $i < @$seq_coord; $i++){
                     $ace .=  $query_line . " Align $seq_coord->[$i] $target_coord->[$i] $other->[$i]\n";
+                    #print STDOUT $query_line . " Align $seq_coord->[$i] $target_coord->[$i] $other->[$i]\n";
                 }
             } else {
                 $ace .= $query_line . "\n";
+                #print STDOUT $query_line ."\n";
             }
         }
 
@@ -605,8 +711,27 @@ sub get_masked_unmasked_seq {
 
     $ace->raw_query("find Sequence $name");
 
+	# Make sure trf and repeatmasker are loaded before masking
+	my $DataFactory = $self->AceDatabase->pipeline_DataFactory();
+	my $filters = $DataFactory->get_names2filters();
+
+	foreach (keys %$filters) { $filters->{$_}->wanted(0); }
+	my ($rm,$trf) = ('repeatmasker','trf');
+	my $load;
+	for ($rm,$trf) {
+		if(!$filters->{$_}->done) {
+			$filters->{$_}->wanted(1);
+			$load = 1;
+		}
+	}
+	$self->AceDatabase->topup_pipeline_data_into_ace_server() if $load;
+	foreach (keys %$filters) { $filters->{$_}->wanted(1); }
+
+	$self->Xace->resync_with_db if $load;
+
     # Mask DNA with trf features
     my $feat_list = $ace->raw_query('show -a Feature');
+
     #warn "Features: $feat_list";
     my $feat_txt = Hum::Ace::AceText->new($feat_list);
     foreach my $f ($feat_txt->get_values('Feature."?trf')) {
@@ -662,5 +787,5 @@ __END__
 
 =head1 AUTHOR
 
-Ana Code B<email> anacode@sanger.ac.uk
+Anacode B<email> anacode@sanger.ac.uk
 
