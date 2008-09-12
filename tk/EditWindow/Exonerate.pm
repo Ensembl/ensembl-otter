@@ -7,6 +7,7 @@ use Hum::FastaFileIO;
 use Bio::Otter::Lace::Exonerate;
 use Tk::LabFrame;
 use Tk::FileDialog;
+use Tk::Balloon;
 use base 'EditWindow';
 my $PROT_SCORE = 150;
 my $DNA_SCORE  = 2000;
@@ -176,12 +177,22 @@ sub initialise {
 						   -anchor => 's',
 						   -padx   => 6,
 	)->pack( -side => 'left' );
-	$self->method_color(
-						 $display_frame->Entry(
-												-width   => 9,
-												-justify => 'right',
-						   )->pack( -side => 'left' )
-	);
+
+	$self->method_color('red');
+	my $button_color;
+	my $balloon    = $display_frame->Balloon(-bg => "khaki2", -initwait => 500);
+	my $show = sub { $self->show_color_panel($button_color); };
+	$button_color = $display_frame->Button(
+						   -background => 'red',
+						   -activebackground => 'red',
+						   -relief => 'flat',
+						   -borderwidth => 1,
+						   -width   => 5,
+						   -command => $show
+	)->pack( -side => 'left' );
+	$balloon->attach($button_color, -msg => "click to change color");
+
+
 	$display_frame->Label(
 						   -text   => 'Logic_name:',
 						   -anchor => 's',
@@ -194,7 +205,6 @@ sub initialise {
 						 )->pack( -side => 'left' )
 	);
 	$self->set_entry( 'method_tag',   'Exon_DNA' );
-	$self->set_entry( 'method_color', 'RED' );
 	$self->set_entry( 'logic_name',   'Exon_DNA' );
 	### Commands
 	my $button_frame = $top->Frame->pack(    -side => 'top',
@@ -385,6 +395,36 @@ sub exonerate {
 	return $self->{'_exonerate'};
 }
 
+sub show_color_panel {
+	my ($self,$button_color) = @_;
+	my $color_dialog = $self->top()->DialogBox( -title => 'Choose a color', -buttons => ['Cancel'] );
+	my @color_name = Hum::Ace::Colors::list_all_color_names_by_value();
+	my $balloon    = $color_dialog->Balloon(-bg => "khaki2", -initwait => 700);
+	for (my $i = 0; $i < @color_name; $i++) {
+       my $name = $color_name[$i];
+        my $hex = Hum::Ace::Colors::acename_to_webhex($name);
+        my $color = sub {
+        	$button_color->configure(
+        					-background => $hex,
+        					-activebackground => $hex);
+			$self->method_color($name);
+			$color_dialog->Exit();
+        };
+        my $button = $color_dialog->add("Button",
+        				   -background => $hex,
+						   -activebackground => $hex,
+						   -relief => 'flat',
+						   -borderwidth => 1,
+						   -width   => 3,
+						   -command => $color)->pack;
+		$balloon->attach($button, -msg => "$name");
+
+
+	}
+
+	return $color_dialog->Show();
+}
+
 sub launch_exonerate {
 	my ($self) = @_;
 	my $seq = $self->get_query_seq();
@@ -392,13 +432,12 @@ sub launch_exonerate {
 	my $score   = $self->get_entry('score');
 	my $dnahsp  = $self->get_entry('dnahsp');
 	my $m_tag   = $self->get_entry('method_tag');
-	my $m_color = $self->get_entry('method_color');
+	my $m_color = $self->method_color();
 	my $l_name  = $self->get_entry('logic_name');
-	unless ( $score and $m_tag and $m_color and $l_name ) {
+	unless ( $score and $m_tag and $m_color and $l_name and $seq) {
 		warn "Missing parameters\n";
 		return;
 	}
-
 	my $exonerate = $self->exonerate;
 	$exonerate->query_seq($seq);
 	$exonerate->score($score);
@@ -406,8 +445,11 @@ sub launch_exonerate {
 	$exonerate->method_tag($m_tag);
 	$exonerate->method_color($m_color);
 	$exonerate->logic_name($l_name);
-	return $exonerate->fork_exonerate;
+
+	return $exonerate->launch_exonerate;
 }
+
+my $seq_tag = 1;
 
 sub get_query_seq {
 	my ($self) = @_;
@@ -419,7 +461,10 @@ sub get_query_seq {
 		}
 	}
 	if ( my $string = $self->fasta_txt->get( '1.0', 'end' ) ) {
-		push @seq, Hum::FastaFileIO->new_String_IO($string)->read_all_sequences;
+		if( $string =~ /\S/ && !($string =~ />/)) {
+			$string = ">Unknow_$seq_tag\n".$string; $seq_tag++;
+			push @seq, Hum::FastaFileIO->new_String_IO($string)->read_all_sequences;
+		}
 	}
 	if ( $self->get_entry('fasta_file') ) {
 		push @seq, Hum::FastaFileIO->new( $self->get_entry('fasta_file') )
@@ -463,5 +508,5 @@ __END__
 
 =head1 AUTHOR
 
-MustaB<email> jgrg@sanger.ac.uk
+Anacode B<email> anacode@sanger.ac.uk
 
