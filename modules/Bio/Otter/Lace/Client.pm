@@ -341,6 +341,7 @@ sub get_UserAgent {
     my $ua;
     unless ($ua = $self->{'_lwp_useragent'}) {
         $ua = LWP::UserAgent->new(timeout => 9000);
+        $ua->env_proxy;
         $ua->protocols_allowed([qw{ http https }]);
         $ua->agent('LoginTest/0.1 ');
         push @{ $ua->requests_redirectable }, 'POST';
