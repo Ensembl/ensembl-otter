@@ -37,26 +37,26 @@ sub import {
 
     # had to put this inline here
     my %Config = (
-                  
+
                   DATA_DIR => '/data/blastdb/Supported',
                   LIB_DIR  => '/usr/local/ensembl/lib',
                   ENS_DIR  => '/usr/local/ensembl/data',
-                  
+
                   # location of output and error files
                   # (can also be specified on RuleManager command line)
                   PIPELINE_OUTPUT_DIR => '/out',
-                  
+
                   # temporary working space (e.g. /tmp)
                   PIPELINE_WORK_DIR   => '/tmp',
-                  
+
                   # default runner script
                   PIPELINE_RUNNER_SCRIPT => 'runner.pl',
-                  
+
                   # automatic update in input_id_analysis of completed jobs
                   AUTO_JOB_UPDATE     => 1,
-                  
+
                   PIPELINE_REPEAT_MASKING => ['RepeatMask','trf'],
-                  
+
                   SOFT_MASKING => 0,
                   );
 
@@ -147,7 +147,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.20 $ ';
+$revision='$Revision: 1.21 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -216,21 +216,21 @@ sub initialise {
     my ($self) = @_;
 
     my $cl = $self->AceDatabase->Client();
-    
+
     # Just return if a blast database hasn't been defined
     my $fasta_file = $cl->option_from_array([ 'local_blast', 'database' ]);
     return unless $fasta_file;
-    
+
     unless ($fasta_file =~ m{^/}) {
         confess "fasta file '$fasta_file' is not an absolute path";
     }
-    
+
     $self->database($fasta_file);
     unless (-e $fasta_file) {
         confess "Fasta file '$fasta_file' defined in config does not exist";
     }
     warn "Found blast database: '$fasta_file'\n";
-    
+
 
     # Get all the other configuration options
     foreach my $attribute (qw{
@@ -246,7 +246,7 @@ sub initialise {
         my $value = $cl->option_from_array([ 'local_blast', $attribute ]);
         $self->$attribute($value);
     }
-    
+
     # Make the analysis object needed by the Runnable
     my $ana_obj = Bio::EnsEMBL::Pipeline::Analysis->new(
         -LOGIC_NAME    => $self->logic_name,
@@ -260,7 +260,7 @@ sub initialise {
         -DB          => $self->indicate_index,
     );
     $self->analysis($ana_obj);
-    
+
     # check for the file, & last modified
     # the function returns true if file is newer i.e. needs reindexing
     if ($self->_file_needs_indexing($fasta_file)) {
@@ -284,7 +284,7 @@ sub initialise {
 
 sub AceDatabase {
     my( $self, $AceDatabase ) = @_;
-    
+
     if ($AceDatabase) {
         $self->{'_AceDatabase'} = $AceDatabase;
     }
@@ -293,7 +293,7 @@ sub AceDatabase {
 
 sub analysis {
     my( $self, $analysis ) = @_;
-    
+
     if ($analysis) {
         $self->{'_analysis'} = $analysis;
     }
@@ -302,7 +302,7 @@ sub analysis {
 
 sub database {
     my( $self, $database ) = @_;
-    
+
     if ($database) {
         $self->{'_database'} = $database;
     }
@@ -311,19 +311,19 @@ sub database {
 
 sub db_basename {
     my ($self) = @_;
-    
+
     return basename($self->database);
 }
 
 sub db_dirname{
     my ($self) = @_;
-    
+
     return dirname($self->database);
 }
 
 sub homol_tag {
     my( $self, $homol_tag ) = @_;
-    
+
     if ($homol_tag) {
         $self->{'_homol_tag'} = $homol_tag;
     }
@@ -332,7 +332,7 @@ sub homol_tag {
 
 sub method_tag {
     my( $self, $method_tag ) = @_;
-    
+
     if ($method_tag) {
         $self->{'_method_tag'} = $method_tag;
     }
@@ -347,7 +347,7 @@ sub method_tag {
 
 sub method_color {
     my( $self, $method_color ) = @_;
-    
+
     if ($method_color) {
         $self->{'_method_color'} = $method_color;
     }
@@ -356,7 +356,7 @@ sub method_color {
 
 sub logic_name {
     my( $self, $logic_name ) = @_;
-    
+
     if ($logic_name) {
         $self->{'_logic_name'} = $logic_name;
     }
@@ -376,7 +376,7 @@ sub indicate {
 
 sub indicate_parser {
     my( $self, $indicate_parser ) = @_;
-    
+
     if ($indicate_parser) {
         $self->{'_indicate_parser'} = $indicate_parser;
     }
@@ -385,7 +385,7 @@ sub indicate_parser {
 
 sub blast_indexer {
     my( $self, $blast_indexer ) = @_;
-    
+
     if ($blast_indexer) {
         $self->{'_blast_indexer'} = $blast_indexer;
     }
@@ -394,7 +394,7 @@ sub blast_indexer {
 
 sub sequence_fetcher {
     my( $self, $sequence_fetcher ) = @_;
-    
+
     if ($sequence_fetcher) {
         $self->{'_sequence_fetcher'} = $sequence_fetcher;
     }
@@ -403,16 +403,16 @@ sub sequence_fetcher {
 
 sub ace_Method {
     my ($self) = @_;
-    
+
     my $method = $self->{'_ace_method'};
     unless ($method) {
         $method = $self->{'_ace_method'} = Hum::Ace::Method->new;
         $method->name(  $self->method_tag   );
         $method->color( $self->method_color );
-        
+
         # This will put the results next to the annotated genes
         $method->zone_number(2);
-        
+
         $method->gapped(1);
         $method->blixem_type('N');
         $method->width(2.0);
@@ -463,17 +463,17 @@ sub _remove_files {
 
 sub run {
     my( $self ) = @_;
-    
+
     my $ace = '';
     foreach my $name ($self->list_GenomeSequence_names) {
         warn "Genomic query sequence: '$name'\n";
         my ($masked, $unmasked) = $self->get_masked_unmasked_seq($name);
-        
+
         unless ($masked->seq =~ /[acgtACGT]{5}/) {
             warn "Sequence '$name' is entirely repeat\n";
             next;
         }
-        
+
         my $features = $self->run_blast($masked, $unmasked);
         $ace .= $self->format_ace_output($name, $features);
     }
@@ -491,9 +491,9 @@ sub run {
 
 sub ace_DNA {
     my ($self, $name, $seq) = @_;
-    
+
     my $ace = qq{\nSequence "$name"\n\nDNA "$name"\n};
-    
+
     my $dna_string = $seq->seq;
     while ($dna_string =~ /(.{1,60})/g) {
         $ace .= $1 . "\n";
@@ -518,13 +518,13 @@ sub run_blast {
 
 sub add_hit_name {
     my( $self, $name ) = @_;
-    
+
     $self->{'_hit_names'}{$name} = 1;
 }
 
 sub delete_all_hit_names {
     my ($self) = @_;
-    
+
     my $hit_names = [ sort keys %{$self->{'_hit_names'}} ];
     $self->{'_hit_names'} = undef;
     return $hit_names;
@@ -541,7 +541,7 @@ sub format_ace_output {
     my $is_protein = 0;
     my $homol_tag   = $self->homol_tag;
     my $method_tag  = $self->method_tag;
-    
+
     my %name_fp_list;
     foreach my $fp (@$fp_list) {
         my $hname = $fp->hseqname;
@@ -557,26 +557,26 @@ sub format_ace_output {
 
         $ace       .= qq{\nSequence : "$contig_name"\n};
         my $hit_ace = qq{\nSequence : "$hname"\n};
-        
+
         foreach my $fp (@{ $name_fp_list{$hname} }) {
-        
+
             # est2genome has strand info from splice sites, which we are losing.
             # contig_strand is always 1 at the moment
             # align_coords() will break if we fix this
-            my $strand = ($fp->hstrand || 1) * $fp->strand;
+            #my $strand = ($fp->hstrand || 1) * $fp->strand;
 
             # Transforms the gapped alignment information in the cigar string
             # into a series of Align blocks for acedb's Smap system. This
             # enables gapped alignments to be displayed in blixem.
             my ($seq_coord, $target_coord, $other) = Bio::EnsEMBL::Ace::Filter::Cigar_ace_parser::align_coords(
-                $fp->cigar_string, $fp->start, $fp->end, $fp->hstart, $strand, $is_protein);
+                $fp->cigar_string, $fp->start, $fp->end, $fp->hstart, $fp->hend, $fp->strand, $fp->hstrand, $is_protein);
 
             # In acedb strand is encoded by start being greater
             # than end if the feature is on the negative strand.
             my $start = $fp->start;
             my $end   = $fp->end;
 
-            if ($strand == -1){
+            if ($fp->strand == -1){
                 ($start, $end) = ($end, $start);
             }
 
@@ -603,23 +603,23 @@ sub format_ace_output {
                 $ace .= $query_line . "\n";
             }
         }
-        
+
         $ace .= $hit_ace;
     }
-    
+
     return $ace;
 }
 
 sub list_GenomeSequence_names {
     my ($self) = @_;
-    
+
     my $ace_dbh = $self->AceDatabase->aceperl_db_handle;
     return map $_->name, $ace_dbh->fetch(Genome_Sequence => '*');
 }
 
 sub get_masked_unmasked_seq {
     my ($self, $name) = @_;
-    
+
     my $ace = $self->AceDatabase->aceperl_db_handle;
     my ($dna_obj) = $ace->fetch(DNA => $name)
         or confess "Failed to get DNA object '$name' from acedb database";
@@ -646,7 +646,7 @@ sub get_masked_unmasked_seq {
         my $length = $end - $start + 1;
         substr($dna_str, $start - 1, $length) = 'n' x $length;
     }
-    
+
     # Mask DNA with RepeatMakser features
     my $repeat_list = $ace->raw_query('show -a Motif_homol');
     #warn "Repeats: $repeat_list";
@@ -659,13 +659,13 @@ sub get_masked_unmasked_seq {
         my $length = $end - $start + 1;
         substr($dna_str, $start - 1, $length) = 'n' x $length;
     }
-    
+
     my $masked = Bio::Seq->new(
         -id         => $name,
         -seq        => $dna_str,
         -alphabet   => 'dna',
         );
-    
+
     return ($masked, $unmasked);
 }
 
@@ -675,7 +675,7 @@ sub pressdb_fasta{
 
     my $pressdb = $self->blast_indexer;
     my $fasta   = $self->database;
-    (system($pressdb, 
+    (system($pressdb,
             '-t', "'otterlace on-the-fly blast database'",
             $fasta
             ) == 0) || confess "Can't pressdb";
@@ -683,7 +683,7 @@ sub pressdb_fasta{
 
 sub create_bioperl_OBDA_index {
     my ($self) = @_;
-    
+
     my $index = Bio::DB::Flat::OBDAIndex->new;
     $index->format('fasta');
     $index->start_pattern('^>');
@@ -716,13 +716,13 @@ sub indicate_fasta{
 
 sub indicate_index {
     my ($self) = @_;
-    
+
     return $self->db_dirname . '/' . $self->OBDA_dir;
 }
 
 sub OBDA_dir {
     my ($self) = @_;
-    
+
     my $dir = $self->{'_OBDA_dir'};
     unless ($dir) {
         my $base = $self->db_basename;
@@ -730,7 +730,7 @@ sub OBDA_dir {
         $dir = "local_search_$base";
         $self->{'_OBDA_dir'} = $dir;
     }
-    return $dir;   
+    return $dir;
 }
 
 sub lib_path{
