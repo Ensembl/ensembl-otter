@@ -154,7 +154,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.7 $ ';
+$revision='$Revision: 1.8 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -263,7 +263,7 @@ sub initialise {
         -LOGIC_NAME    => $self->logic_name,
         -INPUT_ID_TYPE => 'CONTIG',
         -PARAMETERS    => '',
-        -PROGRAM     => '/software/anacode/bin/exonerate',
+        -PROGRAM     => 'exonerate',
         -GFF_SOURCE  => 'exonerate',
         -GFF_FEATURE => 'similarity',
         -DB_FILE     => $fasta_file,
