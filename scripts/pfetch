@@ -19,6 +19,7 @@ use URI::Escape qw{ uri_escape };
     my $req_str = "request=" . uri_escape($argv);
 
     my $pfetch = LWP::UserAgent->new;
+    $pfetch->env_proxy;
     $pfetch->protocols_allowed([qw{ http https }]);
     $pfetch->agent('local_pfetch/0.1 ');
     push @{ $pfetch->requests_redirectable }, 'POST';
