@@ -65,11 +65,11 @@ use Bio::Otter::Lace::Defaults;
     .qq{        AND o.is_current
            --   AND oa.value rlike '^[A-Z]{1,4}[0-9]{5,9}\.[0-9]{1,2}'
            GROUP BY oa.value
-                  , sr.name
+                  , sr.seq_region_id
              HAVING cnt>1
         };
 
-#        print "$sql;\n";
+       # print "$sql;\n";  next;
         
         my $sth = $loutre_dbc->prepare($sql);
         $sth->execute();

@@ -1,0 +1,133 @@
+#!/usr/bin/env perl
+
+### clone_annotation_status
+
+use strict;
+use warnings;
+use Bio::Otter::Lace::Defaults;
+
+{
+    my $dsname = 'mouse';
+    my $switch = 'get';
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'get'           => sub { $switch = 'get' },
+        'set'           => sub { $switch = 'set' },
+        'dataset=s'     => \$dsname,
+    );
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dsname);
+    
+    my $loutre_dbc = $ds->get_cached_DBAdaptor->dbc();
+
+
+    if ($switch eq 'set') {
+        set_clone_annotation_status($loutre_dbc);
+    } else {                                   
+        get_clone_annotation_status($ds, $loutre_dbc);
+    }
+}
+
+sub get_clone_annotation_status {
+    my ($ds, $dbc) = @_;
+
+    my $annot_clone_id_name = fetch_annotated_clones($dbc);
+    my $list_clones_in_visible_sets = $dbc->prepare(q{
+        SELECT chr.name, clone.seq_region_id
+        FROM seq_region chr
+          , seq_region clone
+          , assembly chr_asm
+          , assembly ctg_asm
+          , seq_region_attrib atr
+        WHERE chr.seq_region_id = chr_asm.asm_seq_region_id
+          AND chr_asm.cmp_seq_region_id = ctg_asm.cmp_seq_region_id
+          AND ctg_asm.asm_seq_region_id = clone.seq_region_id
+          AND chr.seq_region_id = atr.seq_region_id
+          AND chr.coord_system_id = (SELECT coord_system_id FROM coord_system WHERE name = 'chromosome' AND version = 'Otter')
+          AND clone.coord_system_id = (SELECT coord_system_id FROM coord_system WHERE name = 'clone')
+          AND atr.attrib_type_id = (SELECT attrib_type_id FROM attrib_type WHERE code = 'hidden')
+          AND atr.value = '0'
+        ORDER BY chr.seq_region_id, chr_asm.asm_start
+    });
+    $list_clones_in_visible_sets->execute;
+    
+    my ($zone_chr, $zone_start, $zone_end) = ('', '', '');
+    while (my ($chr_name, $clone_id) = $list_clones_in_visible_sets->fetchrow) {
+        if ($zone_chr ne $chr_name) {
+            print join("\t", $zone_chr, $zone_start, $zone_end), "\n"
+                if $zone_start;
+            $zone_start = $zone_end = '';
+            $zone_chr = $chr_name;
+        }
+        if (my $clone_name = $annot_clone_id_name->{$clone_id}) {
+            $zone_end = $clone_name;
+            $zone_start = $clone_name unless $zone_start;
+        } elsif ($zone_start) {
+            print join("\t", $zone_chr, $zone_start, $zone_end), "\n"
+                if $zone_start;
+            $zone_start = $zone_end = '';            
+        }
+    }
+    if ($zone_start) {
+        print join("\t", $zone_chr, $zone_start, $zone_end), "\n";
+    }
+}
+
+sub fetch_annotated_clones {
+    my ($dbc) = @_;
+
+    # This is the old place to mark clones as "annotated" - the contig_info/attrib tables
+    my $get_contig_annot = $dbc->prepare(q{
+        SELECT clone.seq_region_id, clone.name
+        FROM contig_info ci
+          , contig_attrib ca
+          , assembly asm
+          , seq_region clone
+        WHERE ca.contig_info_id = ci.contig_info_id
+          AND ci.seq_region_id = asm.cmp_seq_region_id
+          AND asm.asm_seq_region_id = clone.seq_region_id
+          AND clone.coord_system_id = (SELECT coord_system_id FROM coord_system WHERE name = 'clone')
+          AND ci.is_current = 1
+          AND ca.attrib_type_id = (SELECT attrib_type_id FROM attrib_type WHERE code = 'annotated')
+          AND ca.value = 'T'
+    });
+    $get_contig_annot->execute;
+    
+    my $annot_clone_id_name = {};
+    while (my ($clone_id, $clone_name) = $get_contig_annot->fetchrow) {
+        $annot_clone_id_name->{$clone_id} = $clone_name;
+    }
+    
+    # Get the list of clones marked with an annotated attrib
+    my $get_clone_annot = $dbc->prepare(q{
+        SELECT clone.seq_region_id, clone.name
+        FROM seq_region clone
+          , seq_region_attrib atr
+        WHERE clone.seq_region_id = atr.seq_region_id
+          AND atr.attrib_type_id = (SELECT attrib_type_id FROM attrib_type WHERE code = 'annotated')
+          AND atr.value = 'T'
+    });
+    $get_clone_annot->execute;
+    while (my ($clone_id, $clone_name) = $get_clone_annot->fetchrow) {
+        $annot_clone_id_name->{$clone_id} = $clone_name;
+    }
+    
+    return $annot_clone_id_name;
+}
+
+sub set_clone_annotation_status {
+    my ($dbc, $annot_type_id) = @_;
+    
+}
+
+__END__
+
+=head1 NAME - clone_annotation_status
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
