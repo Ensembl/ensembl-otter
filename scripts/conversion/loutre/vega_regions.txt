@@ -76,8 +76,9 @@ chr18	18	Chromosome 18	External		18
 chr19	19	Chromosome 19	External		19
 chrX	X	Chromosome X	External		X
 chrY	Y	Chromosome Y	External		Y
-129_IDD3	3-IDD3.1_129	IDD3.1 region of chromosome 3 (129 strain)	External
-NOD_IDD3	3-IDD3.1_DIL	IDD3.1 region of chromosome 3 (DIL NOD strain)	External
+129_IDD3.1	3-IDD3.1_129	IDD3.1 region of chromosome 3 (129 strain)	External
+NOD_IDD3.1	3-IDD3.1_DIL	IDD3.1 region of chromosome 3 (DIL NOD strain)	External
+NOD_IDD4.1	11-IDD4.1_DIL	IDD4.1 region of chromosome 11 (DIL NOD strain)	External
 NOD_IDD4.2	11-IDD4.2_DIL	IDD4.2 region of chromosome 11 (DIL NOD strain)	External
 CHO_IDD4.2Q	11-IDD4.2Q_CHO	IDD4.2Q region of chromosome 11 (CHORI-29 strain)	External
 NOD_IDD5.1	1-IDD5.1_DIL	IDD5.1 region of chromosome 1 (DIL NOD strain)	External
@@ -89,7 +90,7 @@ NOD_IDD9.1	4-IDD9.1_DIL	IDD9.1 region of chromosome 4 (DIL NOD strain)	External
 NOD_IDD9.1M	4-IDD9.1M_DIL	IDD9.1M region of chromosome 4 (DIL NOD strain)	External
 NOD_IDD9.2	4-IDD9.2_DIL	IDD9.2 region of chromosome 4 (DIL NOD strain)	External
 NOD_IDD9.3	4-IDD9.3_DIL	IDD9.3 region of chromosome 4 (DIL NOD strain)	External
-NOD_IDD10	3-IDD10.1_DIL	IDD10.1 region of chromosome 3 (DIL NOD strain)	External
+NOD_IDD10.1	3-IDD10.1_DIL	IDD10.1 region of chromosome 3 (DIL NOD strain)	External
 CHO_IDD16.1	17-IDD16.1_CHO	IDD16.1 region of chromosome 17 (CHORI-29 NOD strain)	External
-NOD_IDD18	3-IDD18.1_DIL	IDD18.1 region of chromosome 3 (DIL NOD strain)	External
+NOD_IDD18.1	3-IDD18.1_DIL	IDD18.1 region of chromosome 3 (DIL NOD strain)	External
 NOD_IDD18.2	3-IDD18.2_DIL	IDD18.2 region of chromosome 3 (DIL NOD strain)	External
