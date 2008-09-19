@@ -175,58 +175,63 @@ while (my ($analysis_id,$logic_name) = $gtn->fetchrow){
 
 #read all tables;
 my %table_constraints;
-map { $_ =~ s/`//g; $table_constraints{$_} = 's'; } $pdbh->tables;
+my $pipe_db = $support->param('pipedbname');
+map { $_ =~ s/`//g;  $_ =~ s/$pipe_db.//g; $table_constraints{$_} = 's'; } $pdbh->tables;
+
+#warn Dumper(\%table_constraints);
 
 #read details of constrained tables from HEREDOC
 my $txt = &constraints;
+#warn $txt;
 TABLE:
 foreach my $line (split(/\n/,$txt)){
-	next if ($line =~ /^\s*$/);
-	next if ($line =~ /^\#/);
-	if ($line=~/^(.+)\#/){
-		$line=$1;
-	}
+    next if ($line =~ /^\s*$/);
+    next if ($line =~ /^\#/);
+    if ($line=~/^(.+)\#/){
+	$line=$1;
+    }
+
+    my ($table,$constraint) = split(/\s+/,$line);
+#    $table =  $support->param('pipedbname').'.'.$table;
+
+    #sanity check
+    if ($table && (! exists($table_constraints{$table}))) {
+	$support->log_warning("You have definitions for a table ($table) that is not found in the pipeline database. Skipping\n\n");
+	next TABLE;
+    }
+
+    #skip tables to ignore
+    if ($constraint eq 'i') {
+	$table_constraints{$table} = 'i';
+	next TABLE;
+    }
 		
-	my ($table,$constraint) = split(/\s+/,$line);
-		
-	#sanity check
-	if ($table && (! exists($table_constraints{$table}))) {
-		$support->log_warning("You have definitions for a table ($table) that is not found in the pipeline database. Skipping\n\n");
-		next TABLE;
+    #if we don't want to dump align_features features then set type to 's'
+    if ($table=~/align_feature$/ && $no_feature) {
+	$support->log("\'no_feature\' option used: skipping features from $table\n");
+	$table_constraints{$table} = 's';
+	next TABLE;
 	}
 
-	#skip tables to ignore
-	if ($constraint eq 'i') {
-		$table_constraints{$table} = 'i';
-		next TABLE;
+    #are any constraints by analysis_id defined
+    if ($analysis_ids{$table}) {
+	if ($constraint eq 'analysis_id') {
+	    $table_constraints{$table} = $analysis_ids{$table};
 	}
-		
-	#if we don't want to dump align_features features then set type to 's'
-	if ($table=~/align_feature$/ && $no_feature) {
-		$support->log("\'no_feature\' option used: skipping features from $table\n");
-		$table_constraints{$table} = 's';
-		next TABLE;
+	else {
+	    $support->log_warning("Don't understand what to do with table $table\n");
 	}
+	next TABLE;
+    }
 
-	#are any constraints by analysis_id defined
-	if ($analysis_ids{$table}) {
-		if ($constraint eq 'analysis_id') {
-			$table_constraints{$table} = $analysis_ids{$table};
-		}
-		else {
-			$support->log_warning("Don't understand what to do with table $table\n");
-		}
-		next TABLE;
-	}
-
-	if ($constraint eq 'd') {
-		$table_constraints{$table} = 'd';
-	}
-	#further sanity check
-	elsif ($constraint ne 'a') {
-		$support->log_warning("Constraint ($constraint) for table ($table)not understood. Skipping\n\n");
-		next TABLE;
-	}
+    if ($constraint eq 'd') {
+	$table_constraints{$table} = 'd';
+    }
+    #further sanity check
+    elsif ($constraint ne 'a') {
+	$support->log_warning("Constraint ($constraint) for table ($table)not understood. Skipping\n\n");
+	next TABLE;
+    }
 }
 
 #warn Dumper(\%table_constraints);
@@ -234,31 +239,31 @@ foreach my $line (split(/\n/,$txt)){
 #Do some logging		
 my $log = "The following tables will be ignored (ie not put into Vega):\n";
 foreach my $table (keys %table_constraints) {
-	$log .="\t$table\n" if ($table_constraints{$table} eq 'i');
+    $log .="\t$table\n" if ($table_constraints{$table} eq 'i');
 }
 $log .= "The following tables will be dumped with all their data:\n";
 foreach my $table (keys %table_constraints) {
-	$log .= "\t$table\n" if ($table_constraints{$table} eq 'd');
+    $log .= "\t$table\n" if ($table_constraints{$table} eq 'd');
 }
 
 $log .= "The following tables will be dumped with some of their data:\n";
 foreach my $table (keys %table_constraints) {
-	if (ref($table_constraints{$table}) eq 'HASH') {
-		foreach my $cons (keys %{$table_constraints{$table}}) {
-			$log .= "\t$table (constrained on $cons)\n";
-		}
+    if (ref($table_constraints{$table}) eq 'HASH') {
+	foreach my $cons (keys %{$table_constraints{$table}}) {
+	    $log .= "\t$table (constrained on $cons)\n";
 	}
+    }
 }
 
 $log .= "The rest of the pipeline tables will be copied just with their structure (no data):\n";
 foreach my $table (keys %table_constraints) {
-	$log .= "\t$table\n" if ($table_constraints{$table} eq 's');
+    $log .= "\t$table\n" if ($table_constraints{$table} eq 's');
 }
 
 $support->log($log);
 
 unless ($support->user_proceed("$log\nDo you want to proceed ?")) {
-	exit;
+    exit;
 }
 
 #########################
@@ -280,20 +285,20 @@ my $mcom   = "mysqldump --opt --skip-lock-tables $sei $cs --single-transaction -
 #create statements
 my @mysql_commands;
 while (my ($table,$condition) = each (%table_constraints) ) {
-	next if ($condition eq 'i');
-	if ($condition eq 's') {
-		push @mysql_commands, "$mcom -d $table";
+    next if ($condition eq 'i');
+    if ($condition eq 's') {
+	push @mysql_commands, "$mcom -d $table";
+    }
+    elsif ($condition eq 'd') {
+	push @mysql_commands, "$mcom $table";
+    }
+    elsif (ref($table_constraints{$table}) eq 'HASH') {
+	foreach my $cons (keys %{$table_constraints{$table}}) {
+	    my $ids = join ',',@{$table_constraints{$table}{$cons}};
+	    my $extra = qq( --where "$cons in ($ids)");
+	    push @mysql_commands, "$mcom $extra $table";
 	}
-	elsif ($condition eq 'd') {
-		push @mysql_commands, "$mcom $table";
-	}
-	elsif (ref($table_constraints{$table}) eq 'HASH') {
-		foreach my $cons (keys %{$table_constraints{$table}}) {
-			my $ids = join ',',@{$table_constraints{$table}{$cons}};
-			my $extra = qq( --where "$cons in ($ids)");
-			push @mysql_commands, "$mcom $extra $table";
-		}
-	}
+    }
 }
 
 ##################
@@ -303,33 +308,33 @@ while (my ($table,$condition) = each (%table_constraints) ) {
 #warn Dumper(\@mysql_commands);
 	
 if (!$support->param('dry_run')) {
-	foreach my $command (@mysql_commands) {
-		open(MYSQL,"$command |") || die "cannot open mysql";
-		my $enable;
-		my $flag_disable;
-		while (<MYSQL>) {
-			s/(TYPE|ENGINE)=(\w+)/$1=$dbtype/;
-			if (/ALTER\sTABLE\s\S+\sENABLE\sKEYS/){
-				$enable=$_;
-			}
-			elsif (/ALTER\sTABLE\s\S+\sDISABLE\sKEYS/){
-				if(!$flag_disable){
-					# only write once
-					$flag_disable=1;
-					print OUT;
-				}
-			}
-			else {
-				print OUT;
-			}
+    foreach my $command (@mysql_commands) {
+	open(MYSQL,"$command |") || die "cannot open mysql";
+	my $enable;
+	my $flag_disable;
+	while (<MYSQL>) {
+	    s/(TYPE|ENGINE)=(\w+)/$1=$dbtype/;
+	    if (/ALTER\sTABLE\s\S+\sENABLE\sKEYS/){
+		$enable=$_;
+	    }
+	    elsif (/ALTER\sTABLE\s\S+\sDISABLE\sKEYS/){
+		if(!$flag_disable){
+		    # only write once
+		    $flag_disable=1;
+		    print OUT;
 		}
-		print OUT $enable if ($enable);
-		close(MYSQL);
+	    }
+	    else {
+		print OUT;
+	    }
 	}
-	$support->log("SQL for dumped to $file\n");
+	print OUT $enable if ($enable);
+	close(MYSQL);
+    }
+    $support->log("SQL for dumped to $file\n");
 }
 else {
-	$support->log("\nNo SQL dumped since this is a dry run\n");
+    $support->log("\nNo SQL dumped since this is a dry run\n");
 }
 
 close(OUT);
@@ -346,8 +351,8 @@ $support->finish_log;
 # are also defined
 
 sub constraints {
-	my $txt;
-	$txt=<<ENDOFTEXT;
+    my $txt;
+    $txt=<<ENDOFTEXT;
 dna_align_feature_history        i
 hit_description                  i
 input_id_analysis                i
@@ -376,5 +381,5 @@ repeat_consensus                 d
 repeat_feature                   d
 simple_feature                   d
 ENDOFTEXT
-	return $txt;
+    return $txt;
 }
