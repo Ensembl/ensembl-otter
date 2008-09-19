@@ -133,36 +133,38 @@ my $vdbh = $vdba->dbc->db_handle;
 # - if there are no backups of the originals make them
 # - if this is the first time the script has been run then offer to run in 'dry_run' mode
 my @tables = qw(coord_system
-				meta
-				seq_region
-				analysis
-				gene
-				transcript
-				gene_attrib
-				transcript_attrib
-				seq_region_attrib
+		meta
+		seq_region
+		analysis
+		gene
+		transcript
+		gene_attrib
+		transcript_attrib
+		seq_region_attrib
                 exon_stable_id_pool
                 simple_feature);
 my (%tabs);
-map { $_ =~ s/`//g; $tabs{$_} += 1; } $vdbh->tables;
+my $dbname = $support->param('dbname');
+map { $_ =~ s/`//g; $_ =~ s/$dbname.//g; $tabs{$_} += 1; } $vdbh->tables;
+
 my $ask = 1;
 foreach my $name (@tables) {
-	my $backup_name = 'backup_original_'.$name;
-	if (! exists($tabs{$backup_name})) {
-		if (! $support->param('dry_run') && $ask) {
-			if ($support->user_proceed("It seems as though this is the first time you've run this script so I'd advise running it in \'dry_run\' mode. Shall I set this for you (select 'N' to proceed anyway?)\n")) {
-				$support->param('dry_run',1);
-				$support->log("Set to dry_run mode\n");
-			}
-			else {
-				$ask = 0;
-			}
-			$vdbh->do("CREATE table $backup_name SELECT * from $name");
-		}
-		else {
-			$vdbh->do("CREATE table $backup_name SELECT * from $name");
-		}
+    my $backup_name = 'backup_original_'.$name;
+    if (! exists($tabs{$backup_name})) {
+	if (! $support->param('dry_run') && $ask) {
+	    if ($support->user_proceed("It seems as though this is the first time you've run this script so I'd advise running it in \'dry_run\' mode. Shall I set this for you (select 'N' to proceed anyway?)\n")) {
+		$support->param('dry_run',1);
+		$support->log("Set to dry_run mode\n");
+	    }
+	    else {
+		$ask = 0;
+	    }
+	    $vdbh->do("CREATE table $backup_name SELECT * from $name");
 	}
+	else {
+	    $vdbh->do("CREATE table $backup_name SELECT * from $name");
+	}
+    }
 }
 
 # undo changes from previous runs of this script
@@ -181,13 +183,13 @@ if ($support->param('prune') && $support->user_proceed("\nDo you want to undo al
 # delete unwanted loutre-derived simple_features                         #
 ##########################################################################
 my %lns_to_stay = map {$_,1} qw(CpG
-								  Eponine
-								  polyA_signal
-								  polyA_site
-								  pseudo_polyA
-								  RSS
-								  tRNAscan
-								  EUCOMM );
+				Eponine
+				polyA_signal
+				polyA_site
+				pseudo_polyA
+				RSS
+				tRNAscan
+				EUCOMM );
 my %lns_to_go = map {$_,1}	 qw(TATA_box EUCOMM_AUTO);
 
 my $s = $vdbh->prepare(qq(
@@ -199,29 +201,29 @@ my $s = $vdbh->prepare(qq(
 $s->execute;
 my %sf_features;
 while (my ($logic_name,$analysis_id,$c) = $s->fetchrow) {
-	$sf_features{$logic_name} = $c;
+    $sf_features{$logic_name} = $c;
 }
 my $problem = 0;
 foreach my $ln (keys %sf_features) {
-	if (! exists($lns_to_stay{$ln}) ) {
-		if (! exists($lns_to_go{$ln}) ) {
-			$support->log_warning("I don't know what to do with $ln simple features, please help me out\n");
-			$problem = 1;
-		}
-		else {
-			$support->log("Will delete $ln simple_features\n");
-		}
+    if (! exists($lns_to_stay{$ln}) ) {
+	if (! exists($lns_to_go{$ln}) ) {
+	    $support->log_warning("I don't know what to do with $ln simple features, please help me out\n");
+	    $problem = 1;
 	}
 	else {
-		$support->log("Keeping $ln simple_features\n");
+	    $support->log("Will delete $ln simple_features\n");
 	}
+    }
+    else {
+	$support->log("Keeping $ln simple_features\n");
+    }
 }
 
 if ($problem) {
-	if (! $support->user_proceed("There are features with logic names that I don't know what to do with, please look at the logs. Do you really want to proceed?\n")) {
-		exit;
-	}
-	$support->log_warning("There are logic_names that will be deleted even though this is not specifically defined\n");
+    if (! $support->user_proceed("There are features with logic names that I don't know what to do with, please look at the logs. Do you really want to proceed?\n")) {
+	exit;
+    }
+    $support->log_warning("There are logic_names that will be kept even though this is not specifically defined\n");
 }
 
 if (! $support->param('dry_run')) {
@@ -566,8 +568,9 @@ push @sql_fixes, "DELETE from meta WHERE meta_key = \'patch\';\n";
 push @sql_fixes, "UPDATE gene SET biotype = 'IG_gene' WHERE biotype = 'ig_gene';\n";
 push @sql_fixes, "UPDATE gene SET biotype = 'IG_pseudogene' WHERE biotype = 'ig_pseudogene';\n";
 push @sql_fixes, "UPDATE gene SET biotype = 'TEC' WHERE biotype = 'tec';\n";
-push @sql_fixes, "UPDATE gene SET biotype = 'processed_transcript' WHERE biotype = 'novel_transcript';\n");
+push @sql_fixes, "UPDATE gene SET biotype = 'processed_transcript' WHERE biotype = 'novel_transcript';\n";
 push @sql_fixes, "UPDATE gene SET biotype = 'transcribed_pseudogene' WHERE biotype = 'expressed_pseudogene';\n";
+push @sql_fixes, "UPDATE gene SET biotype = 'polymorphic_pseudogene' WHERE biotype = 'polymorphic';\n";
 push @sql_fixes, "UPDATE gene SET status = 'NOVEL' WHERE status = 'UNKNOWN';\n";
 push @sql_fixes, "UPDATE transcript SET biotype = 'transcribed_pseudogene' WHERE biotype = 'expressed_pseudogene';\n";
 push @sql_fixes, "UPDATE transcript SET biotype = 'IG_gene' WHERE biotype = 'ig_gene';\n";
