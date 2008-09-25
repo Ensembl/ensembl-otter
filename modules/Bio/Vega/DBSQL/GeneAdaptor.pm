@@ -16,6 +16,18 @@ use constant NEW       => 2;
 use constant RESTORED  => 3;
 use constant DELETED   => 5;
 
+sub list_current_dbIDs {
+    my ($self) = @_;
+    
+    my $sth = $self->prepare(q{ SELECT gene_id FROM gene WHERE is_current = 1 });
+    $sth->execute;
+    my $gene_id_list = [];
+    while (my ($id) = $sth->fetchrow) {
+        push(@$gene_id_list, $id);
+    }
+    return $gene_id_list;
+}
+
 sub fetch_by_dbID {
     my ($self, $db_id) = @_;
 
