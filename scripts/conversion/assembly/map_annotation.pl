@@ -150,7 +150,7 @@ $support->allowed_params(
     'evegapass',
     'evegadbname',
     'chromosomes',
-	'logic_names',
+    'logic_names',
     'prune',
 );
 
@@ -161,6 +161,7 @@ if ($support->param('help') or $support->error) {
 
 $support->comma_to_list('chromosomes');
 $support->comma_to_list('logic_names');
+my @logic_names = ( $support->param('logic_names'));
 
 # ask user to confirm parameters to proceed
 $support->confirm_params;
@@ -181,20 +182,6 @@ my $E_ga = $E_dba->get_GeneAdaptor;
 my $E_pfa = $E_dba->get_ProteinFeatureAdaptor;
 my $cs_adaptor = $E_dba->get_CoordSystemAdaptor;
 my $asmap_adaptor = $E_dba->get_AssemblyMapperAdaptor;
-
-#get all logic names if none specified
-if (! $support->param('logic_names')) {
-	my $sth = $V_dbh->prepare(qq(SELECT distinct(a.logic_name)
-                                 FROM gene g, analysis a
-                                 WHERE g.analysis_id = a.analysis_id));
-	$sth->execute;
-	my @lns;
-	while ( (my $ln) = $sth->fetchrow_array) {
-		push @lns,$ln;
-	}	
-		
-	$support->param('logic_names',\@lns);
-}
 
 my $E_cs = $cs_adaptor->fetch_by_name('chromosome',
     $support->param('ensemblassembly'));
@@ -237,7 +224,7 @@ if ($support->param('prune') && $support->user_proceed("Do you want to delete al
 }
 
 
-my (%stat_hash,%trans_numbers);
+		    my (%stat_hash,%trans_numbers);
 
 # loop over chromosomes
 $support->log("Looping over chromosomes...\n");
@@ -265,78 +252,71 @@ foreach my $V_chr ($support->sort_chromosomes($V_chrlength)) {
     my $genes = $V_ga->fetch_all_by_Slice($V_slice);
  GENE:
     foreach my $gene (@{ $genes }) {
-		my $gsi = $gene->stable_id;
-		my $ln = $gene->analysis->logic_name;
-		my $name = $gene->display_xref->display_id;
-		unless (grep {$ln eq $_} $support->param('logic_names')) {
-			$support->log_verbose("Skipping gene $gsi/$name (logic_name $ln)\n",2);
-			next GENE;
-		}
+	my $gsi = $gene->stable_id;
+	my $ln = $gene->analysis->logic_name;
+	my $name = $gene->display_xref->display_id;
+	if ($support->param('logic_names')) {
+	    unless (grep {$ln eq $_} @logic_names) {
+		$support->log_verbose("Skipping gene $gsi/$name (logic_name $ln)\n",2);
+		next GENE;
+	    }
+	}
         $support->log("Gene $gsi/$name (logic_name $ln)\n", 2);
-
-        # is this gene annotated by 'Sick_kids' ? If so, we don't want it
- #       my @gene_attribs= @{$gene->get_all_Attributes('author')};
- #       foreach my $attrib(@gene_attribs){
- #           if($attrib->value eq 'Sick_Kids'){
- #               $support->log("skipping gene $gsi as it has a Sick_Kids attribute\n");
- #               next GENE;
- #           }
- #       }
 
         my $transcripts = $gene->get_all_Transcripts;
         my (@finished, %all_protein_features);
-		my $c = 0;
+	my $c = 0;
         foreach my $transcript (@{ $transcripts }) {
-			$c++;
-												
+	    $c++;
+	    
             my $interim_transcript = transfer_transcript($transcript, $mapper,
-                $V_cs, $V_pfa, $E_slice);
+							 $V_cs, $V_pfa, $E_slice);
             my ($finished_transcripts, $protein_features) =
                 create_transcripts($interim_transcript, $E_sa, $gsi);
-
+	    
             # set the translation stable identifier on the finished transcripts
             foreach my $tr (@{ $finished_transcripts }) {
                 if ($tr->translation && $transcript->translation) {
                     $tr->translation->stable_id($transcript->translation->stable_id);
                     $tr->translation->version($transcript->translation->version);
-					$tr->translation->created_date($transcript->translation->created_date);
-					$tr->translation->modified_date($transcript->translation->modified_date);
+		    $tr->translation->created_date($transcript->translation->created_date);
+		    $tr->translation->modified_date($transcript->translation->modified_date);
                 }
             }
-
-            push @finished, @$finished_transcripts;
+			
+	    push @finished, @$finished_transcripts;
             map { $all_protein_features{$_} = $protein_features->{$_} }
                 keys %{ $protein_features || {} };
         }
 
-       # if there are no finished transcripts, count this gene as being NOT transfered
+	# if there are no finished transcripts, count this gene as being NOT transfered
         my $num_finished_t= @finished;
         if(! $num_finished_t){
             push @{$stat_hash{$V_chr}->{'failed'}}, [$gene->stable_id,$gene->seq_region_start,$gene->seq_region_end];
-			next GENE;
+	    next GENE;
         }
 
-		#make a note of the number of transcripts per gene
-		$trans_numbers{$gsi}->{'vega'} = scalar(@{$transcripts});
-		$trans_numbers{$gsi}->{'evega'} = $num_finished_t;
-
-		#count gene and transcript if it's been transferred
+	#make a note of the number of transcripts per gene
+	$trans_numbers{$gsi}->{'vega'} = scalar(@{$transcripts});
+	$trans_numbers{$gsi}->{'evega'} = $num_finished_t;
+	
+	#count gene and transcript if it's been transferred
         $stat_hash{$V_chr}->{'genes'}++;
-		$stat_hash{$V_chr}->{'transcripts'} += $c;
-
+	$stat_hash{$V_chr}->{'transcripts'} += $c;
+	
         unless ($support->param('dry_run')) {
             Gene::store_gene($support, $E_slice, $E_ga, $E_pfa, $gene,
-                \@finished, \%all_protein_features);
+			     \@finished, \%all_protein_features);
         }
     }
     $support->log("Done with chromosome $V_chr.\n", 1);
 }
-
-# write out to statslog file
-do_stats_logging();
+		    
+		    # write out to statslog file
+		    do_stats_logging();
 
 #see if any transcripts / gene are different
-foreach my $gsi (keys %trans_numbers) {
+		    foreach my $gsi (keys %trans_numbers) {
 	if ($trans_numbers{$gsi}->{'vega'} != $trans_numbers{$gsi}->{'evega'}) {
 		my $v_num = $trans_numbers{$gsi}->{'vega'};
 		my $e_num = $trans_numbers{$gsi}->{'evega'};
