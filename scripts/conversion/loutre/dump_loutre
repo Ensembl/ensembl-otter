@@ -563,19 +563,20 @@ foreach my $name (@{$chr_names_wanted}) {
   GENE:
     foreach my $lgene (@{$lga->fetch_all_by_Slice($lslice)} ) {
 
+	my $lgsi = $lgene->stable_id;
 	#filter on stable id
 	if ($support->param('add_genes')) {
 	    unless (grep { $lgene->stable_id eq $_ } @{$genes_to_dump}) {
 		next GENE;
 	    }
-	    $support->log("Doing specific dump of gene ".$lgene->stable_id,2);
+	    $support->log("Doing specific dump of gene $lgsi",2);
 	}
 
 	my $gname = $lgene->get_all_Attributes('name')->[0]->value;
 	#filter on source	
 	if ($support->param('filter_prefix')) {
 	    if (grep { $lgene->source eq $_} $support->param('filter_prefix')) {
-		$support->log("Skipping gene $gname because of incorrect source\n",2);
+		$support->log("Skipping gene $gname ($lgsi) because of incorrect source\n",2);
 		next GENE;
 	    }
 	}
@@ -583,7 +584,7 @@ foreach my $name (@{$chr_names_wanted}) {
 	#filter on biotype
 	if ($support->param('filter_biotype') ) {
 	    if (grep {lc($lgene->biotype) eq lc($_)} $support->param('filter_biotype') ) {
-		$support->log("Skipping gene $gname because of incorrect biotype (".$lgene->biotype.")\n",2);
+		$support->log("Skipping gene $gname ($lgsi) because of incorrect biotype (".$lgene->biotype.")\n",2);
 		next GENE;
 			}
 	}
@@ -591,7 +592,8 @@ foreach my $name (@{$chr_names_wanted}) {
 	#ignore genes by particular authors
 	if ($support->param('ignore_authors')) {
 	    if (grep { $lgene->gene_author->name eq $_} @{$ignore_authors}) {
-		$support->log("Skipping gene $gname because of untrusted author (".$lgene->gene_author->name.")\n",2);
+		$support->log("Skipping gene $gname ($lgsi) because of untrusted author (".$lgene->gene_author->name.")\n",2);
+		next GENE;
 	    }
 	}
 
