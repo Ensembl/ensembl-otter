@@ -429,7 +429,7 @@ if ($support->param('check_evidence_table')) {
 				else {
 					$c++;
 					$no_match++;
-					$support->log_verbose("$c. $acc:$acc_ver ($tsi)\n",2);
+					$support->log("$c. $acc:$acc_ver ($tsi)\n",2);
 				}
 			}
 			$support->log("$source $type: $match accessions match, $no_match accessions do not match to align_features\n",1);

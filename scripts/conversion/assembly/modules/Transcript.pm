@@ -19,13 +19,12 @@ use Bio::EnsEMBL::Exon;
 use constant MAX_INTRON_LEN => 2e6;
 
 #these are long genes that have been OKeyed by Havana
-my %long_genes = map {$_,1 } qw(
-								OTTHUMG00000086796
-								OTTHUMG00000030300
-								OTTMUSG00000022667
-								OTTMUSG00000031222
-								OTTMUSG00000026145
-							);
+my %long_genes = map {$_,1 } qw(OTTHUMG00000086796
+				OTTHUMG00000030300
+				OTTMUSG00000022667
+				OTTMUSG00000031222
+				OTTMUSG00000026145
+			    );
 
 #
 # sanity checks the interim exons, and splits this
@@ -35,7 +34,7 @@ my %long_genes = map {$_,1 } qw(
 sub check_iexons {
     my $support = shift;
     my $itranscript = shift;
-	my $gsi = shift;
+    my $gsi = shift;
     my $itranscript_array = shift;
 
     my $prev_start = undef;
@@ -43,7 +42,7 @@ sub check_iexons {
     my $transcript_seq_region = undef;
     my $transcript_strand     = undef;
 
-	my $tsi = $itranscript->stable_id;
+    my $tsi = $itranscript->stable_id;
 
     $support->log_verbose("checking exons for $tsi\n", 4);
 
@@ -54,7 +53,7 @@ sub check_iexons {
     foreach my $iexon (@{ $itranscript->get_all_Exons }) {
 
         if ($iexon->fail || $iexon->is_fatal) {
-            $support->log("Exon ".$iexon->stable_id." failed to transfer. Skipping transcript.\n", 4);
+            $support->log_warning("Exon ".$iexon->stable_id." failed to transfer. Skipping transcript $tsi.\n", 4);
             $fail_flag = 1;
             last EXON;
         }
@@ -62,13 +61,13 @@ sub check_iexons {
         # sanity check: expect first exon to have cdna_start = 1
         if($first && $iexon->cdna_start != 1) {
             print_exon($support, $iexon);
-            $support->log_error("Unexpected: first exon does not have cdna_start = 1\n", 6);
+            $support->log_error("Unexpected ($tsi): first exon does not have cdna_start = 1\n", 6);
         }
         $first = 0;
 
         # sanity check: start must be less than or equal to end
         if ($iexon->end < $iexon->start) {
-            $support->log_warning("Unexpected: exon start less than end: ".$iexon->stable_id.": ".$iexon->start.'-'.$iexon->end."\n", 6);
+            $support->log_warning("Unexpected ($tsi): exon start less than end: ".$iexon->stable_id.": ".$iexon->start.'-'.$iexon->end."\n", 6);
         }
 
         # sanity check: cdna length must equal length
@@ -87,7 +86,7 @@ sub check_iexons {
                     $prev_end > $iexon->start) ||
                 (defined($prev_start) && $iexon->strand == -1 &&
                  $prev_start < $iexon->end)) {
-            $support->log_warning("Exon ".$iexon->stable_id." in wrong order. Skipping transcript.\n", 4);
+            $support->log_warning("Exon ".$iexon->stable_id." in wrong order. Skipping transcript $tsi.\n", 4);
             $fail_flag = 1;
             last EXON;
         }
@@ -95,7 +94,7 @@ sub check_iexons {
         if (!defined($transcript_strand)) {
             $transcript_strand = $iexon->strand;
         } elsif ($transcript_strand != $iexon->strand) {
-            $support->log_warning("Exon ".$iexon->stable_id." on wrong strand. Skipping transcript.\n", 4);
+            $support->log_warning("Exon ".$iexon->stable_id." on wrong strand. Skipping transcript $tsi.\n", 4);
             $fail_flag = 1;
             last EXON;
         }
@@ -158,7 +157,7 @@ sub make_Transcript {
     $transcript->version($itrans->version);
     $transcript->biotype($itrans->biotype);
     $transcript->status($itrans->status);
-	$transcript->analysis($itrans->analysis);
+    $transcript->analysis($itrans->analysis);
     $transcript->description($itrans->description);
     $transcript->created_date($itrans->created_date);
     $transcript->modified_date($itrans->modified_date);
@@ -193,7 +192,7 @@ sub make_Transcript {
         }
     }
     foreach my $iexon (@{ $itrans->get_all_Exons }) {
-		my $E_slice = $E_sa->fetch_by_seq_region_id($iexon->seq_region);
+	my $E_slice = $E_sa->fetch_by_seq_region_id($iexon->seq_region);
 
         my $exon = Bio::EnsEMBL::Exon->new
             (-START         => $iexon->start,
