@@ -318,27 +318,27 @@ sub delete_genes {
                     tlsi,
                     e,
                     pf
-            FROM
-                    gene g,
+            FROM    (((((((
+                    ( gene g,
                     gene_stable_id gsi,
                     gene_author gau,
                     transcript t,
                     transcript_stable_id tsi,
-                    transcript_author tau
+                    transcript_author tau )
             LEFT JOIN
-                    gene_attrib ga ON g.gene_id = ga.gene_id
+                    gene_attrib ga ON g.gene_id = ga.gene_id )
             LEFT JOIN
-                    transcript_attrib ta ON t.transcript_id = ta.transcript_id
+                    transcript_attrib ta ON t.transcript_id = ta.transcript_id )
             LEFT JOIN
-                    evidence e ON t.transcript_id = e.transcript_id
+                    evidence e ON t.transcript_id = e.transcript_id )
             LEFT JOIN
-                    translation tl ON t.transcript_id = tl.transcript_id
+                    translation tl ON t.transcript_id = tl.transcript_id )
             LEFT JOIN
-                    translation_attrib tla ON tl.translation_id = tla.translation_id
+                    translation_attrib tla ON tl.translation_id = tla.translation_id )
             LEFT JOIN
-                    translation_stable_id tlsi ON tl.translation_id = tlsi.translation_id
+                    translation_stable_id tlsi ON tl.translation_id = tlsi.translation_id )
             LEFT JOIN
-                    protein_feature pf ON tl.translation_id = pf.translation_id
+                    protein_feature pf ON tl.translation_id = pf.translation_id )
             WHERE   g.gene_id $condition ('$gi_string')
             AND     g.gene_id = gsi.gene_id
             AND     g.gene_id = gau.gene_id
@@ -360,23 +360,23 @@ sub delete_genes {
                     tla,
                     tlsi,
                     pf
-            FROM
-                    gene g,
+            FROM    ((((((
+                    ( gene g,
                     gene_stable_id gsi,
                     transcript t,
-                    transcript_stable_id tsi
+                    transcript_stable_id tsi )
             LEFT JOIN
-                    gene_attrib ga ON g.gene_id = ga.gene_id
+                    gene_attrib ga ON g.gene_id = ga.gene_id )
             LEFT JOIN
-                    transcript_attrib ta ON t.transcript_id = ta.transcript_id
+                    transcript_attrib ta ON t.transcript_id = ta.transcript_id )
             LEFT JOIN
-                    translation tl ON t.transcript_id = tl.transcript_id
+                    translation tl ON t.transcript_id = tl.transcript_id )
             LEFT JOIN
-                    translation_attrib tla ON tl.translation_id = tla.translation_id
+                    translation_attrib tla ON tl.translation_id = tla.translation_id )
             LEFT JOIN
-                    translation_stable_id tlsi ON tl.translation_id = tlsi.translation_id
+                    translation_stable_id tlsi ON tl.translation_id = tlsi.translation_id )
             LEFT JOIN
-                    protein_feature pf ON tl.translation_id = pf.translation_id
+                    protein_feature pf ON tl.translation_id = pf.translation_id )
             WHERE   g.gene_id $condition ('$gi_string')
             AND     g.gene_id = gsi.gene_id
             AND     t.gene_id = g.gene_id
