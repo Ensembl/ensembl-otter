@@ -139,6 +139,9 @@ Uses an existing ZMap to display the features of $self->slice_name().
 sub zMapLaunchInAZmap{
     my ($self) = @_;
 
+    # If we already have a Zmap attached, shut it down
+    $self->zMapKillZmap;
+
     # return undef if($self->zMapPID()); # 
 
     my $xremote_cache = $self->xremote_cache;
