@@ -3,8 +3,8 @@
 # Author:        lg4
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-09-30 16:29:25 $
-# Id:            $Id: nph-get_das_features,v 1.5 2008-09-30 16:29:25 jgrg Exp $
+# Last modified: $Date: 2008-09-30 16:33:19 $
+# Id:            $Id: nph-get_das_features,v 1.6 2008-09-30 16:33:19 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_das_features,v $
 
 use strict;
@@ -130,7 +130,7 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS { # $kind = 'SimpleFeature' ||
             }
             
             # Skip features that don't overlap segment (eg: exons in transcript which does overlap)
-            if ($das_feature->{'end'} < $chr_start or $das_feature->start > $chr_end) {
+            if ($das_feature->{'end'} < $chr_start or $das_feature->{'start'} > $chr_end) {
                 next FEATURE;
             }
 
