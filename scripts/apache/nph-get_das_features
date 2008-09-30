@@ -3,8 +3,8 @@
 # Author:        lg4
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2008-08-04 15:07:10 $
-# Id:            $Id: nph-get_das_features,v 1.4 2008-08-04 15:07:10 lg4 Exp $
+# Last modified: $Date: 2008-09-30 16:29:25 $
+# Id:            $Id: nph-get_das_features,v 1.5 2008-09-30 16:29:25 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_das_features,v $
 
 use strict;
@@ -23,7 +23,7 @@ use Bio::Otter::Lace::ViaText qw( &GenerateFeatures %LangDesc );
 sub struct_traverse_path {
     my ($struct, $path) = @_;
 
-    if(ref($path->[0]) eq 'ARRAY') { # recoursive application of self to the parts
+    if(ref($path->[0]) eq 'ARRAY') { # recursive application of self to the parts
         my $join = join(';', map { my $foo = struct_traverse_path($struct, $_); defined($foo) ? $foo : 'UnDeF' } @$path );
         return ($join=~/UnDeF/) ? undef : $join;
     }
@@ -128,6 +128,11 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS { # $kind = 'SimpleFeature' ||
                     next FEATURE;
                 }
             }
+            
+            # Skip features that don't overlap segment (eg: exons in transcript which does overlap)
+            if ($das_feature->{'end'} < $chr_start or $das_feature->start > $chr_end) {
+                next FEATURE;
+            }
 
             # warn "DAS_feature = ".Dumper($das_feature)."\n";
 
@@ -158,9 +163,10 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS { # $kind = 'SimpleFeature' ||
             my $feature = $feature_constructor->new();
 
             $feature->slice(   $slice );
-            $feature->start(   $das_feature->{'start'} - $chr_start + 1 );
-            $feature->end(     $das_feature->{'end'}   - $chr_start + 1 );
-            $feature->strand( ($das_feature->{'orientation'} =~ /^-/ ) ? -1 : 1 );
+            # Set feature start and end to start and end of segment if it extends beyond
+            $feature->start( $das_feature->{'start'} < $chr_start ? 1        : $das_feature->{'start'} - $chr_start + 1 );
+            $feature->end(   $das_feature->{'end'}   > $chr_end   ? $chr_end : $das_feature->{'end'}   - $chr_start + 1 );
+            $feature->strand( $das_feature->{'orientation'} =~ /^-/ ? -1 : 1 );
             if($feature->can('score')) {
                     ## should we fake the value when it is not available? :
                 my $score = $das_feature->{'score'} || '-';
