@@ -597,6 +597,22 @@ foreach my $name (@{$chr_names_wanted}) {
 	    }
 	}
 
+	#filter out genes on non-anotated clones and without fsv tags
+	if ($support->param('dbname') =~ /danio/) {
+	    my $annotated_clone = 0;
+	    foreach my $proj_clone (@{$gene->feature_Slice->project('clone')}) {
+		my $clone = $proj_clone->to_Slice();
+		if ($clone->get_all_Attributes('annotated')->[0]->value eq 'T') {
+		    $annotated_clone = 1;
+		    last;
+		}
+	    }
+	    next GENE unless ($annotated_clone == 1);
+	    next GENE unless (##check all remarks and hidden_remark attributes  for value of fsv
+
+	    }
+	}		
+		
 	if (&transfer_gene($lgene,$vsa,$vga)) {
 	    $c++;
 	}
@@ -612,7 +628,8 @@ foreach my $name (@{$chr_names_wanted}) {
 	
 	#transfer seq_region_attributes
 	&transfer_sra($lslice,$vslice,$att_types_wanted);
-	
+
+	####can almost certainly remove these, should all be on clones now####	
 	#transform contig_attribs into seq_region_attribs
 	my $attribs_to_move = ['annotated'];
 	&transfer_contig_attribs($lslice,$vslice,$attribs_to_move);
