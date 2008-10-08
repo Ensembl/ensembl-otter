@@ -1,7 +1,12 @@
+
 ### EditWindow::Exonerate
+
 package EditWindow::Exonerate;
+
 use strict;
+use warnings;
 use Carp;
+
 use Hum::Pfetch;
 use Hum::FastaFileIO;
 use Bio::Otter::Lace::Exonerate;
@@ -421,6 +426,7 @@ sub show_color_panel {
 
 
 	}
+	$color_dialog->bind( '<Destroy>', sub { $self = undef } );
 
 	return $color_dialog->Show();
 }
@@ -498,8 +504,9 @@ sub name_start_end_from_fMap_blue_box {
 }
 
 sub DESTROY {
+    my ($self) = shift;
 
-	#warn "Freeing exonerateWindow\n";
+	warn "Freeing exonerateWindow '$self'\n";
 }
 1;
 __END__
