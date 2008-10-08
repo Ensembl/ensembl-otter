@@ -1,8 +1,9 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/env perl
 
 ### show_acedb_colors
 
 use strict;
+use warnings;
 use CanvasWindow;
 use Hum::Ace::Colors;
 
