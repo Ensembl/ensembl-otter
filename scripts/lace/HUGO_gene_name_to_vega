@@ -43,47 +43,41 @@ sub update_otter {
   my $gene_aptr = $loutre_dba->get_GeneAdaptor;
   foreach my $hugo (@$hugo_data) {
 
-    my $trans_SID = $hugo->{'otter_tsct_id'};
+    my $gene_SID = $hugo->{'otter_gene_sid'};
     my $hgnc_id   = $hugo->{'hgnc_id'};
 
-    # warn "Working on $trans_SID\n";
-
-    if ( $trans_SID =~ /OTTHUMG/ ) {
-      my $t = $gene_aptr->fetch_longest_transcript_by_stable_id($trans_SID);
-      my $bad_gene = $gene_aptr->fetch_by_stable_id($trans_SID);
-      printf STDERR ("%s %s source: %s (HGNC %d) should be %s\n\n", "BAD_VEGA ", $trans_SID, $bad_gene->source, $hgnc_id, $t->stable_id);
-      next;
-    }
-
-    my $gene = $gene_aptr->fetch_by_transcript_stable_id($trans_SID);
+    # warn "Working on $gene_SID\n";
+    my $gene = $gene_aptr->fetch_by_stable_id($gene_SID);
 
     # human intervention for obsolete genes
     # send genes found here to HGNC for update
     unless ( $gene ){
-      print STDERR "$trans_SID is obsolete\n";
-      my $genes = $gene_aptr->fetch_by_transcript_stable_id_constraint($trans_SID);
+      print STDERR "$gene_SID is obsolete\n";
 
-      foreach my $g ( @$genes ) {
-        # tracking gene history
-        my $found_gsids = process_query($g->stable_id, $loutre_dba, undef, 1);
+      # tracking gene history for obsolete genes
+      my $found_gsids;
+      eval {
+        $found_gsids = process_query($gene_SID, $loutre_dba, undef, 1);
+      };
+      if ( $@ ){
+        print STDERR "Cannot follow history of $gene_SID ... non-existent ID\n\n";
+        next;
+      }
+      else {
         foreach my $gsid ( @$found_gsids ){
           # want only current genes
           if ( $gene_aptr->fetch_by_stable_id($gsid) ){
-            print STDERR "LOOK INTO: $gsid\n";
+            print STDERR "==> $gsid has replaced $gene_SID\n";
           }
           else {
-            print STDERR "DEAD_GENE: $gsid\n";
+            print STDERR "==> $gsid is OBSOLETE\n";
           }
         }
+        print STDERR "\n";
+        next;
       }
-      print STDERR "\n\n";
-      next;
     }
-
-    if ( $gene->source ne 'havana' and $gene->source ne 'WU' ){
-      printf STDERR ("%s %s %s %s\n", "SKIP SOURCE: ", $gene->source, $gene->stable_id, $trans_SID);
-      next;
-    }
+    next if $gene->source ne 'havana';
 
     if (unexpected_gene_type($gene)) {
       printf STDERR "#Unexpected gene type '%s' in gene '%s' from HUGO: %s\n",
@@ -107,7 +101,7 @@ sub unexpected_gene_type {
 }
 sub parse_hugo_input {
   my @field_names = qw{
-                       locus_symbol locus_description hgnc_id category otter_tsct_id locus_type notes
+                       locus_symbol locus_description hgnc_id category otter_gene_sid locus_type notes
                      };
 
     my $hugo_data = [];
@@ -116,6 +110,7 @@ sub parse_hugo_input {
         next if /^\s*$/;                # Skip empty lines
         next if /^Approved Symbol/;     # The header
         chomp;
+
         my @fields = split /\t/, $_;    # Fields should be tab separated
         my $original_line = $_;
 
@@ -154,20 +149,52 @@ sub update_gene_name_and_description {
   my $current_desc = $gene->description;
   my $flag = 0;
   my $gsid = $gene->stable_id;
+  my $curr_gene_id = $gene->dbID;
+  my $biotype = $gene->biotype;
+  my $status  = $gene->status;
+  my $info = '';
 
   if ( $hugo_name and $current_name ne $hugo_name) {
     $flag = 1;
     $name_attr->value($hugo_name);
-    warn "#NAME CHANGE from $current_name to ", $name_attr->value, "\n";
+    $info .= "NAME CHANGE from '$current_name' to '" . $name_attr->value . "' ($biotype : $status)\n";
+
+    # all protein_coding genes should be known if got HGNC name
+    if ( $biotype eq 'protein_coding' and $status ne 'KNOWN' ){
+      $info .= "TYPE CHANGE from $status to 'KNOWN'\n";
+      $gene->status('KNOWN');
+    }
+    elsif ( $biotype =~ /pseudo/i and $status ne 'UNKNOWN' ){
+      $info .= "TYPE CHANGE from $status to 'UNKNOWN'\n";
+      $gene->status('UNKNOWN');
+    }
+
+    # taking care of NcRNA
+    if ( $hugo_name =~ /NCRNA/i ){
+      # transcript type for these needs to be non-coding
+      foreach my $trans (@{ $gene->get_all_Transcripts }) {
+        my $t_biotype = $trans->biotype;
+        my $tsid = $trans->stable_id;
+
+        unless ( $t_biotype eq 'non_coding' ){
+          print STDERR "TYPE CHANGE from $t_biotype to 'non_coding' ($tsid)\n";
+          $trans->biotype('non_coding');
+        }
+      }
+    }
   }
   if ( $hugo_desc and $hugo_desc ne $current_desc ){
     $flag = 1;
     $gene->description($hugo_desc);
-    warn "#DESC CHANGE from $current_desc to ", $gene->description, "\n";
+    $info .= "DESC CHANGE from '$current_desc' to '" . $gene->description . "'\n";
   }
 
+  print STDERR "CHECKING: $gsid $current_name (V) $hugo_name (H)\n" . $info . "\n" if $flag == 1;
+
+  return if $test;
+
   # store gene
-  if ( $flag == 1 and ! $test ){
+  if ( $flag == 1 ){
 
     # check lock before saving
     # use project as some genes span multiple clones
@@ -175,24 +202,29 @@ sub update_gene_name_and_description {
       print STDERR "LOCK: $gsid is locked on @$contig_lock\n";
     }
     else {
-      warn "Storing ", $gene->stable_id, " ...\n";
-
-      my $curr_gene_id = $gene->dbID;
-
-      # make sure status becomes KNOWN
-      $gene->status('KNOWN') unless $gene->status eq 'KNOWN';
+      print STDERR "Storing $gsid ...\n";
       $gene_aptr->store($gene);
 
       my $new_gene_id  = $gene_aptr->fetch_by_stable_id($gsid)->dbID;
       printf STDERR ("Storing %s ==> Old dbID: %d New dbID: %d\n", $gsid, $curr_gene_id, $new_gene_id);
-
-      my $curdate = "now()";
-      my $params = sprintf("%d, %s, %s", $new_gene_id, "'".$hgnc_id."'", $curdate);
-      my $sql = qq{INSERT INTO gene_name_update (gene_id, consortium_id, update_date) VALUES($params)};
-      my $update = $loutre_dba->dbc->prepare($sql);
-      $update->execute;
+      store_geneId_consortiumID_mapping($loutre_dba, $new_gene_id, $hgnc_id);
     }
   }
+  else {
+    printf STDERR ("Storing %s ==> dbID: %d HGNC_ID: %d\n", $gsid, $curr_gene_id, $hgnc_id);
+    store_geneId_consortiumID_mapping($loutre_dba, $curr_gene_id, $hgnc_id);
+  }
+}
+
+sub store_geneId_consortiumID_mapping {
+  my ($loutre_dba, $geneID, $hgncID) = @_;
+
+  my $curdate = "now()";
+  my $params = sprintf("%d, %s, %s", $geneID, "'".$hgncID."'", $curdate);
+  my $sql = qq{REPLACE INTO gene_name_update (gene_id, consortium_id, update_date) VALUES($params)};
+  my $update = $loutre_dba->dbc->prepare($sql);
+  $update->execute;
+
 }
 
 sub check_contig_lock {
