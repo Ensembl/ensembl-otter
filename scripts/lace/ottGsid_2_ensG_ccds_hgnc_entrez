@@ -1,0 +1,78 @@
+#!/usr/local/bin/perl -w
+
+
+# author: ck1@sanger.ac.uk
+# ottGsid_2_ensGsid_ccdsID_hgncID
+# Use a VEGA db and get the id mapping between
+# OTTG - ENSG - CCDS - HGNC
+
+
+use strict;
+use Getopt::Long 'GetOptions';
+use Bio::EnsEMBL::DBSQL::DBAdaptor;
+
+my ( $dbhost, $dbname, $dbpass);
+my $dbport = 5317;
+my $dbuser = 'ensro';
+my $dbhost = 'ensdb-1-11';
+
+GetOptions('dbhost=s' => \$dbhost,
+           'dbname=s' => \$dbname,
+          );
+
+my $db_adaptor = new Bio::EnsEMBL::DBSQL::DBAdaptor('-host'   => $dbhost,
+                                                    '-port'   => $dbport,
+                                                    '-user'   => $dbuser,
+                                                    '-dbname' => $dbname);
+
+my $db_entry_Ad = $db_adaptor->get_DBEntryAdaptor();
+my $geneAd      = $db_adaptor->get_GeneAdaptor();
+my $gsids       = $geneAd->list_stable_ids();
+
+printf("%-20s %-12s %10s %13s %-17s %-12s %s\n", 'VEGA_ID', 'BIOTYPE', 'SYMBOL', 'HGNC_ID', 'ENS_ID', 'CCDS_ID', 'ENTREZ_ID');
+print '-' x 125, "\n";
+foreach my $gsid ( @$gsids ){
+  #my $gsid = 'OTTHUMG00000001094';
+  my $gene       = $geneAd->fetch_by_stable_id($gsid);
+  next if $gene->biotype ne 'protein_coding' and $gene->biotype !~ /^ig_/;
+
+  my ($hgnc_id, $ens_gsid, $ccds_id, $entrez_id, $symbol);
+  $hgnc_id = $ens_gsid = $ccds_id = $entrez_id = $symbol = 'NA';
+
+  foreach my $e (@{$gene->get_all_DBLinks()}){
+
+    # this does not fetch CCDS
+    #my @db_entries = $db_entry_Ad->fetch_all_by_Gene($gene);
+
+    if ( $e->dbname eq 'HGNC' ){
+      $hgnc_id = $e->primary_id;
+      $symbol  = $e->display_id;
+    }
+    elsif ( $e->dbname eq 'Ens_Hs_gene' ){
+      $ens_gsid = $e->primary_id;
+    }
+    elsif ( $e->dbname eq 'CCDS' ){
+      $ccds_id = $e->primary_id;
+    }
+    elsif ( $e->dbname eq 'EntrezGene' ){
+      $entrez_id = $e->primary_id;
+    }
+  }
+  #printf("%s\t%s\t%s\t%s\n", $gene->stable_id, $e->dbname, $e->primary_id, $e->display_id);
+  printf("%-20s %-16s %-12s %-7s %-17s %-12s %s\n", $gene->stable_id, $gene->biotype, $symbol, $hgnc_id, $ens_gsid, $ccds_id, $entrez_id);
+}
+
+__END__
+
+NOTE:
+
+my $geneAd = $db_adaptor->get_GeneAdaptor();
+
+my @gene_ids = $db_entry_Ad->list_gene_ids_by_extids('CCDS30547');#ENSG00000000003');#FAM138A',);
+
+foreach my $gene_id (@gene_ids) {
+
+ my $gene = $geneAd->fetch_by_dbID($gene_id);
+ print $gene->stable_id() . "\n";
+
+}
