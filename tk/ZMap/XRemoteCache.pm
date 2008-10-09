@@ -8,7 +8,7 @@ use X11::XRemote;
 use Data::Dumper;
 
 my $CLIENT_DEBUG = 1;
-my $CACHE_DEBUG  = 0;
+my $CACHE_DEBUG  = 1;
 
 my $object_cache = {
     # 'window_id' => { object  => X11::XRemote, 
@@ -206,15 +206,15 @@ sub remove_clients_to_bad_windows{
     my ($self) = @_;
     my $cache = $self->_get_clients_cache();
 
-    warn "bad window cleaning" if $CACHE_DEBUG;
+    warn "cleaning up any bad windows" if $CACHE_DEBUG;
     foreach my $id(keys(%$cache)){
         if(my $xr = $cache->{$id}->{'object'}){
-            if(!$xr->ping()){
-                warn sprintf "client %s bad removing", $id if $CACHE_DEBUG;
+            if ($xr->ping) {
+                warn sprintf "  client '%s' not bad", $id if $CACHE_DEBUG;
+            } else {
+                warn sprintf "  removing bad client '%s'", $id if $CACHE_DEBUG;
                 delete $cache->{$id};
                 delete $self->{'_self_windows'}->{$id};
-            }else{
-                warn sprintf "client %s not bad", $id if $CACHE_DEBUG;
             }
         }else{
             delete $cache->{$id};

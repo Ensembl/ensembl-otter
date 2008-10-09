@@ -27,7 +27,7 @@ our @EXPORT_OK = (@ZMap::ConnectUtils::EXPORT_OK);
 our %EXPORT_TAGS = (%ZMap::ConnectUtils::EXPORT_TAGS,
                     'noutils' => []);
 
-my $DEBUG_CALLBACK = 0;
+my $DEBUG_CALLBACK = 1;
 my $DEBUG_EVENTS   = 0;
 
 =head1 METHODS

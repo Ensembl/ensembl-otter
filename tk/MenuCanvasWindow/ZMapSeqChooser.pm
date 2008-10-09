@@ -159,8 +159,8 @@ sub zMapLaunchInAZmap{
                 my $sequence = $self->slice_name;
                 my $server   = $self->AceDatabase->ace_server;
                 my $protocol = 'acedb';
-                my $username = 'any';
-                my $password = 'any';
+                my $username = $server->user;
+                my $password = $server->pass;
                 
                 my $url = sprintf(q{%s://%s:%s@%s:%d},
                                   $protocol,
