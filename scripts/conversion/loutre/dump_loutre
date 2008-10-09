@@ -101,9 +101,11 @@ use vars qw($SERVERROOT);
 BEGIN {
     $SERVERROOT = "$Bin/../../../..";
     unshift(@INC, "$SERVERROOT/ensembl-otter/modules");
-    unshift(@INC, "$SERVERROOT/ensembl/modules");
+    unshift(@INC, "$SERVERROOT/branch-vega-49-dev/ensembl/modules");
+#    unshift(@INC, "$SERVERROOT/ensembl/modules");
     unshift(@INC, "modules");
-    unshift(@INC, "$SERVERROOT/bioperl-live");
+    unshift(@INC, "/software/anacode/pipeline/bioperl-1.2.3-patched");
+#    unshift(@INC, "$SERVERROOT/bioperl-live");
 }
 
 use Getopt::Long;
@@ -552,6 +554,7 @@ if ( ! exists($current_vega_tables{'author'} )) {
 # do the real work and copy the genes and other features across #
 #################################################################
 
+my ($fsv,$non_fsv);
 foreach my $name (@{$chr_names_wanted}) {
     my $lslice = $lsa->fetch_by_region('chromosome',$name,undef,undef,undef,'Otter');
     my $vslice = $vsa->fetch_by_region('chromosome',$name,undef,undef,undef,'Otter');
@@ -600,18 +603,40 @@ foreach my $name (@{$chr_names_wanted}) {
 	#filter out genes on non-anotated clones and without fsv tags
 	if ($support->param('dbname') =~ /danio/) {
 	    my $annotated_clone = 0;
-	    foreach my $proj_clone (@{$gene->feature_Slice->project('clone')}) {
+	    my $fsv_gene        = 0;
+            
+            foreach my $proj_clone (@{$lgene->feature_Slice->project('clone')}) {
 		my $clone = $proj_clone->to_Slice();
-		if ($clone->get_all_Attributes('annotated')->[0]->value eq 'T') {
-		    $annotated_clone = 1;
-		    last;
-		}
+                my $attr = $clone->get_all_Attributes('annotated');
+                if (exists $attr->[0]) {
+		    if ($attr->[0]->value eq 'T') {
+		        $annotated_clone = 1;
+		        last;
+		    }
+                }
 	    }
-	    next GENE unless ($annotated_clone == 1);
-	    next GENE unless (##check all remarks and hidden_remark attributes  for value of fsv
-
-	    }
-	}		
+            my $gene_rem = $lgene->get_all_Attributes('remark');
+            if (exists $gene_rem->[0]) {
+                if ($gene_rem->[0]->value eq 'fsv') {
+                    $fsv_gene = 1;
+                }
+            }
+            my $gene_hidrem = $lgene->get_all_Attributes('hidden_remark');  
+            if (exists $gene_hidrem->[0]) {
+                if ($gene_hidrem->[0]->value eq 'fsv') {
+                    $fsv_gene = 1;
+                }
+            }
+            if ($fsv_gene || $annotated_clone) {
+                $support->log("Taking gene $gname ($lgsi) with annotation flag\n");
+                $fsv++;
+            }
+            else {
+                $support->log("Skipping gene $gname ($lgsi) because no annotation flag present\n"); 
+                $non_fsv++;
+                next GENE;
+            }
+        }		
 		
 	if (&transfer_gene($lgene,$vsa,$vga)) {
 	    $c++;
@@ -641,6 +666,7 @@ foreach my $name (@{$chr_names_wanted}) {
 	}
     }
 }
+$support->log("got $fsv fsv genes and $non_fsv non_fsv genes\n");
 $support->finish_log;
 
 
