@@ -508,7 +508,9 @@ sub DESTROY {
 
 	warn "Freeing exonerateWindow '$self'\n";
 }
+
 1;
+
 __END__
 
 =head1 NAME - EditWindow::Exonerate
