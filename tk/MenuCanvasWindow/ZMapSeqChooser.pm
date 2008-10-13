@@ -69,7 +69,7 @@ The guts of the code to launch and display the features in a zmap.
 sub _launchZMap{
     my ($self) = @_;
 
-    my $z = $self->zMapInsertZmapConnector();
+    my $zmap_conn = $self->zMapInsertZmapConnector();
 
     unless($self->xremote_cache()){
         $self->xremote_cache(ZMap::XRemoteCache->new());
@@ -77,28 +77,7 @@ sub _launchZMap{
 
     my @e = ('zmap', 
              '--conf_dir' => $self->zMapZmapDir,
-             '--win_id'   => $z->server_window_id);
-    warn "export PATH=$ENV{PATH}\nexport LD_LIBRARY_PATH=$ENV{LD_LIBRARY_PATH}\n@e\n" if $ZMAP_DEBUG;
-
-    # this makes it a lot easier to debug with ddd
-    if (my $command_file = $ENV{DEBUG_WITH_DDD}) {
-        my $ddd_file = $self->zMapZmapDir() . "/xremote.ddd";
-        eval{
-            unlink($ddd_file);
-            open(my $ddd, ">$ddd_file");
-            open(my $input, "<$command_file");
-            while(<$input>){ print $ddd $_ }
-            close $input;
-            my $ld_library_path = "/nfs/team71/acedb/zmap/prefix/LINUX/lib";
-            print $ddd "set environment LD_LIBRARY_PATH $ld_library_path\n";
-            print $ddd "run --conf_dir ".$self->zMapZmapDir." --win_id ".$z->server_window_id. "\n";
-            close $ddd;
-        };
-        if(!$@){
-            @e = ('ddd', '--nx', '--command', $ddd_file, 'zmap');
-        }
-        sleep(2);   ### Why?
-    }
+             '--win_id'   => $zmap_conn->server_window_id);
 
     my $pid = fork_exec(\@e);
 
@@ -140,13 +119,22 @@ sub zMapLaunchInAZmap{
     my ($self) = @_;
 
     # If we already have a Zmap attached, shut it down
-    $self->zMapKillZmap;
+    if(!$self->zMapKillZmap(0, 1)){
+	$self->_launchInAZMap();
+    }
+}
 
-    # return undef if($self->zMapPID()); # 
+=head1 _launchInAZMap
+
+The real part of zMapLaunchInAZmap()
+
+=cut
+
+sub _launchInAZMap{
+    my ($self) = @_;
 
     my $xremote_cache = $self->xremote_cache;
     $xremote_cache  ||= $self->xremote_cache(ZMap::XRemoteCache->new());
-    $xremote_cache->remove_clients_to_bad_windows();
 
     if(my $pid_list = $xremote_cache->get_pid_list()){
         if(scalar(@$pid_list) == 1){
@@ -159,23 +147,18 @@ sub zMapLaunchInAZmap{
                 my $sequence = $self->slice_name;
                 my $server   = $self->AceDatabase->ace_server;
                 my $protocol = 'acedb';
-                my $username = $server->user;
-                my $password = $server->pass;
                 
                 my $url = sprintf(q{%s://%s:%s@%s:%d},
                                   $protocol,
-                                  $username, $password,
+                                  $server->user, 
+				  $server->pass,
                                   $server->host, 
                                   $server->port);
                 
-                my $source_stanza = $self->zMapServerDefaults;
-                $source_stanza =~ s/\&/&amp;/g; # needs fully xml escaping really
-
-                my $config = sprintf(q!ZMap{
-sequence_server = "%s %s"
-}
-%s
-                                     !, $sequence, $url, $source_stanza);
+                my $config = $self->formatZmapDefaults('ZMap',
+						       sources => "$sequence");
+		$config .= $self->zMapServerDefaults();
+		$config =~ s/\&/&amp;/g; # needs fully xml escaping really
                 
                 my $xml = sprintf(q!<zmap action="new_view">
  <segment sequence="%s" start="1" end="0">
@@ -183,7 +166,7 @@ sequence_server = "%s %s"
   </segment>
 </zmap>
                                   !, $sequence, $config);
-                
+                warn $xml;
                 $self->zMapDoRequest($xr, "new_view", $xml);
                 
                 if($xr = $self->zMapGetXRemoteClientByName($self->slice_name())){
@@ -220,6 +203,22 @@ sub post_response_client_cleanup{
     return ;
 }
 
+=head1 post_response_client_cleanup_launch_in_a_zmap
+
+Cleanup any bad windows that might exist & call _launchInAZMap
+
+=cut
+
+sub post_response_client_cleanup_launch_in_a_zmap{
+    my ($zmap, $self) = @_;
+
+    post_response_client_cleanup($zmap, $self);
+
+    $self->_launchInAZMap();
+
+    return ;
+}
+
 =head1 zMapRelaunchZMap
 
 A  handler to  handle finalise  requests. ZMap  sends these  when it's
@@ -236,6 +235,11 @@ sub zMapRelaunchZMap {
         $self->_launchZMap();
         $self->{'_relaunch_zmap'} = 0;
         warn "Relaunching zmap..." if $ZMAP_DEBUG;
+    } elsif($self->{'_launch_in_a_zmap'}){
+    	if (my $zmap = $self->zMapZmapConnector()) {
+    	    $zmap->post_respond_handler(\&post_response_client_cleanup_launch_in_a_zmap, [$self]);
+    	}
+	$self->{'_launch_in_a_zmap'} = 0;
     } else { 
     	if (my $zmap = $self->zMapZmapConnector()) {
     	    $zmap->post_respond_handler(\&post_response_client_cleanup, [$self]);
@@ -253,24 +257,28 @@ sub zMapRelaunchZMap {
 Attempts  to kill  zmap,  return true  if  it succeeded  and false  on
 failure.  If relaunch = true and zMapKillZmap returns true then zmap 
 should relaunch, any other combination probably means no relaunch will
-occur.
+occur. There will still be a call to RelaunchZMap though as a finalised
+request will be sent from zmap.
 
 =cut
 
 sub zMapKillZmap {
-    my( $self, $relaunch ) = @_;
+    my( $self, $relaunch, $in_a_zmap ) = @_;
     
     ### We're only using the pid as marker for zmap having been started
     if (my $pid = $self->zMapPID) {
         my $rval = 0;
         my $main_window_name = $self->main_window_name();
+
+	warn "Looking for $main_window_name";
         
         if(my $xr = $self->zMapGetXRemoteClientByName($main_window_name)){
             # check we can ping...
             if($xr->ping()){
                 warn "Ping OK - sending 'shutdown'";
-                $self->{'_relaunch_zmap'} = $relaunch;
-                
+                $self->{'_relaunch_zmap'}    = $relaunch;
+                $self->{'_launch_in_a_zmap'} = $in_a_zmap;
+
                 $xr->send_commands('<zmap action="shutdown" />');
                 
                 $rval = 1; # everything has been as successful as can be
@@ -286,8 +294,7 @@ sub zMapKillZmap {
             $self->xremote_cache->remove_client_with_id($xr->window_id());
         }
 
-        # always remove the clients...
-        #$self->xremote_cache->remove_clients_to_bad_windows();
+	warn sprintf "finishing %s", "zMapKillZmap";
 
         return $rval;
     }
@@ -371,21 +378,22 @@ sub zMapServerDefaults {
     
     my $protocol    = 'acedb';
 
-    my $url = sprintf q{"%s://%s:%s@%s:%d"},
+    my $url = sprintf q{%s://%s:%s@%s:%d},
         $protocol,
         $server->user, $server->pass,
         $server->host, $server->port;
     
     return $self->formatZmapDefaults(
-        'source',
+        $self->slice_name,
         url             => $url,
+        use_methods     => 'true',
         writeback       => 'false',
         sequence        => 'true',
         use_zmap_styles => 'false',
         # navigator_sets specifies the feature sets to draw in the navigator pane.
         # so far the requested columns are just scale, genomic_canonical and locus
         # in line with keeping the columns to a minimum to save screen space.
-        navigator_sets => qq{"scale genomic_canonical locus"},
+        navigator_sets => qq{scale genomic_canonical locus},
 
         featuresets => $self->double_quote_escaped_list([$self->zMapListMethodNames_ordered]),
         # Can specify a stylesfile instead of featuresets
@@ -396,9 +404,9 @@ sub zMapServerDefaults {
 sub double_quote_escaped_list {
     my ($self, $list) = @_;
     
-    return sprintf(q{"%s"},
+    return sprintf(q{%s},
         join ' ',
-        map qq{\\"$_\\"},
+        map qq{"$_"},
         @$list);
 }
 
@@ -415,6 +423,7 @@ sub zMapZMapDefaults {
     
     return $self->formatZmapDefaults(
         'ZMap',
+	sources     => $self->slice_name,
         show_mainwindow  => $show_main,
         pfetch      => sprintf(qq{"%s"}, $self->AceDatabase->Client->url_root . '/nph-pfetch'),
         cookie_jar  => sprintf(qq{"$ENV{'OTTERLACE_COOKIE_JAR'}"}),
@@ -459,11 +468,11 @@ sub zMapWindowDefaults {
         qw{
             feature_line_width          1
             feature_spacing             4.0
-            colour_column_highlight     "CornSilk"
-            colour_item_highlight       "gold"
-            colour_frame_0              "#ffe6e6"
-            colour_frame_1              "#e6ffe6"
-            colour_frame_2              "#e6e6ff"
+            colour_column_highlight     CornSilk
+            colour_item_highlight       gold
+            colour_frame_0              #ffe6e6
+            colour_frame_1              #e6ffe6
+            colour_frame_2              #e6e6ff
             canvas_maxsize              10000
         }
     );
@@ -472,13 +481,13 @@ sub zMapWindowDefaults {
 sub formatZmapDefaults {
     my ($self, $key, %defaults) = @_;
     
-    my $def_str = "\n$key\n{\n";
+    my $def_str = "\n[$key]\n";
     while (my ($setting, $value) = each %defaults) {
         $value = $self->double_quote_escaped_list($value)
             if ref($value);
         $def_str .= qq{$setting = $value\n};
     }
-    $def_str .= "}\n";
+    $def_str .= "\n";
     
     return $def_str;
 }
@@ -978,6 +987,7 @@ sub open_clones{
         return ;
     }
 
+    #sleep 20;
     $zmap->post_respond_handler(); # clear the handler...
 
     my ($chr, $start, $end) = split(/\.|\-/, $self->slice_name);
