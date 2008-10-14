@@ -154,7 +154,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.8 $ ';
+$revision='$Revision: 1.9 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -272,47 +272,22 @@ sub initialise {
 
 }
 
-sub launch_exonerate {
+sub write_seq_file {
 	my ($self) = @_;
-
-	eval{
-		my $query_file   = "/tmp/query_seq.$$.fa";
-	    # Write out the query sequence
-	    my $seq = $self->query_seq();
-	    if(@$seq) {
-	    	my $query_out = Hum::FastaFileIO->new("> $query_file");
-	        for(@$seq) {
-	        	$query_out->write_sequences($_);
-	        }
-	        $query_out = undef;
-	        $self->initialise($query_file);
-	        my $ace_text = $self->run or return;
-			# delete query file
-			unlink $query_file;
-
-			$self->Top->Busy;
-			# Need to add new method to collection if we don't have it already
-	    	my $coll = $self->AceDatabase->MethodCollection;
-	    	my $coll_zmap = $self->Xace->Assembly->MethodCollection;
-	    	my $method = $self->ace_Method;
-	    	unless ($coll->get_Method_by_name($method->name) ||
-	    			$coll_zmap->get_Method_by_name($method->name)) {
-	        	$coll->add_Method($method);
-	        	$coll_zmap->add_Method($method);
-	        	$self->Xace->save_ace($coll->ace_string());
-	    	}
-
-			$self->Xace->save_ace($ace_text);
-			$self->Xace->zMapWriteDotZmap;
-			$self->Xace->resync_with_db();
-			$self->Xace->zMapLaunchZmap;
-
-			$self->Top->Unbusy;
+	my $query_file   = "/tmp/query_seq.$$.fa";
+	# Write out the query sequence
+	my $seq = $self->query_seq();
+	if(@$seq) {
+		my $query_out = Hum::FastaFileIO->new("> $query_file");
+	    for(@$seq) {
+	    	$query_out->write_sequences($_);
 		}
-	};
-	if ($@) {
-		warn $@;
+	    $query_out = undef;
+
+	    return $query_file;
 	}
+
+	return undef;
 }
 
 # Attribute methods
@@ -325,24 +300,6 @@ sub AceDatabase {
         $self->{'_AceDatabase'} = $AceDatabase;
     }
     return $self->{'_AceDatabase'};
-}
-
-sub Xace {
-    my( $self, $xa ) = @_;
-
-    if ($xa) {
-        $self->{'_Xace'} = $xa;
-    }
-    return $self->{'_Xace'};
-}
-
-sub Top {
-    my( $self, $top ) = @_;
-
-    if ($top) {
-        $self->{'_Top'} = $top;
-    }
-    return $self->{'_Top'};
 }
 
 sub analysis {
@@ -727,7 +684,6 @@ sub get_masked_unmasked_seq {
 	$self->AceDatabase->topup_pipeline_data_into_ace_server() if $load;
 	foreach (keys %$filters) { $filters->{$_}->wanted(1); }
 
-	$self->Xace->resync_with_db if $load;
 
     # Mask DNA with trf features
     my $feat_list = $ace->raw_query('show -a Feature');

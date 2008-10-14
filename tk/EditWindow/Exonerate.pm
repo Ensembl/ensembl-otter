@@ -13,18 +13,18 @@ use Bio::Otter::Lace::Exonerate;
 use Tk::LabFrame;
 use Tk::FileDialog;
 use Tk::Balloon;
+
 use base 'EditWindow';
+
 my $PROT_SCORE = 150;
 my $DNA_SCORE  = 2000;
 my $DNAHSP     = 120;
 
 sub initialise {
-	my ( $self, $ad, $xa ) = @_;
+	my ( $self ) = @_;
 	my $top  = $self->top;
 	my $exon = Bio::Otter::Lace::Exonerate->new;
-	$exon->AceDatabase($ad);
-	$exon->Xace($xa);
-	$exon->Top($top);
+	$exon->AceDatabase($self->XaceSeqChooser->AceDatabase);
 	$self->exonerate($exon);
 	### Query frame
 	my $query_frame = $top->LabFrame(
@@ -247,11 +247,11 @@ sub initialise {
 	$top->bind( '<Control-w>', $close_window );
 	$top->bind( '<Control-W>', $close_window );
 	$top->protocol( 'WM_DELETE_WINDOW', $close_window );
-	$top->bind( '<Destroy>', sub { $self = undef } );
+	$top->bind( '<Destroy>', sub {	$self = undef ;  } );
 }
 
 sub update_from_XaceSeqChooser {
-	my ( $self, $xc ) = @_;
+	my ( $self ) = @_;
 	$self->update_from_clipboard;
 	my $top = $self->top;
 	$top->deiconify;
@@ -431,6 +431,14 @@ sub show_color_panel {
 	return $color_dialog->Show();
 }
 
+sub XaceSeqChooser {
+	my ($self,$xc) = @_;
+	if ($xc) {
+		$self->{'_xc'} = $xc;
+	}
+	return $self->{'_xc'};
+}
+
 sub launch_exonerate {
 	my ($self) = @_;
 	my $seq = $self->get_query_seq();
@@ -451,8 +459,30 @@ sub launch_exonerate {
 	$exonerate->method_tag($m_tag);
 	$exonerate->method_color($m_color);
 	$exonerate->logic_name($l_name);
+	my $seq_file = $exonerate->write_seq_file();
+	if($seq_file){
+		$exonerate->initialise($seq_file);
+		my $ace_text = $exonerate->run or return;
+		# delete query file
+		unlink $seq_file;
+		$self->top->Busy;
+		# Need to add new method to collection if we don't have it already
+    	my $coll = $exonerate->AceDatabase->MethodCollection;
+    	my $coll_zmap = $self->XaceSeqChooser->Assembly->MethodCollection;
+    	my $method = $exonerate->ace_Method;
+    	unless ($coll->get_Method_by_name($method->name) ||
+    			$coll_zmap->get_Method_by_name($method->name)) {
+        	$coll->add_Method($method);
+        	$coll_zmap->add_Method($method);
+        	$self->XaceSeqChooser->save_ace($coll->ace_string());
+    	}
 
-	return $exonerate->launch_exonerate;
+		$self->XaceSeqChooser->save_ace($ace_text);
+		$self->XaceSeqChooser->zMapWriteDotZmap;
+		$self->XaceSeqChooser->resync_with_db();
+		$self->XaceSeqChooser->zMapLaunchZmap;
+		$self->top->Unbusy;
+	}
 }
 
 my $seq_tag = 1;
