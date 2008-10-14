@@ -2010,10 +2010,12 @@ sub run_exonerate {
         my $top = $parent->Toplevel(-title => 'run exonerate');
         $top->transient($parent);
         $ew = EditWindow::Exonerate->new($top);
-        $ew->initialise($self->AceDatabase, $self);
+        $ew->XaceSeqChooser($self);
+        $ew->initialise();
         $self->{'_exonerate_window'} = $ew;
+        weaken($self->{'_exonerate_window'});
     }
-    $ew->update_from_XaceSeqChooser($self);
+    $ew->update_from_XaceSeqChooser();
 
     return 1;
 }
