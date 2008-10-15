@@ -154,7 +154,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.9 $ ';
+$revision='$Revision: 1.10 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -332,7 +332,7 @@ sub query_type {
         $self->{'_query_type'} = $type;
     }
 
-    return $self->{'_query_type'};
+    return $self->{'_query_type'} || 'dna';
 }
 
 sub database {
@@ -684,6 +684,8 @@ sub get_masked_unmasked_seq {
 	$self->AceDatabase->topup_pipeline_data_into_ace_server() if $load;
 	foreach (keys %$filters) { $filters->{$_}->wanted(1); }
 
+	# must reset the sequence in the current list
+	$ace->raw_query("find Sequence $name");
 
     # Mask DNA with trf features
     my $feat_list = $ace->raw_query('show -a Feature');
