@@ -105,7 +105,7 @@ sub check_intron_junctions {
       # valid consensus boundaries: **/GT AG/** or *G/GC AG/**
       if ( $intronLBdr !~ /G[TC]/ ){
 
-        next if $intronLBdr eq 'GC' and $preExonBdr1 eq 'G';
+        next if $intronLBdr eq 'GC' and $preExonBdr1 eq 'G' and $intronRBdr eq 'AG';
         $found = 1;
 
         my @remarks = get_trans_remarks($t);
