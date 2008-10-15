@@ -1,0 +1,153 @@
+#!/usr/local/bin/perl -w
+
+# check_exon_intron_junctions
+# create a list of transcripts with exon/intron borders having bad or non-consensus sequences
+
+# ck1@sanger.ac.uk
+
+use strict;
+use Bio::Otter::Lace::Defaults;
+use Bio::Vega::DBSQL::DBAdaptor;
+
+{
+  my ($dataset);
+
+
+  my $usage = sub { exec('perldoc', $0) };
+  Bio::Otter::Lace::Defaults::do_getopt(
+                                        'h|help!'      => $usage,
+                                        'dataset|ds=s' => \$dataset,
+                                       )
+      or $usage->();
+  $usage->() unless $dataset;
+
+  my $cl         = Bio::Otter::Lace::Defaults::make_Client();
+  my $ds         = $cl->get_DataSet_by_name($dataset);
+  my $loutre_dba = $ds->get_cached_DBAdaptor;
+  my $slice_Ad   = $loutre_dba->get_SliceAdaptor;
+  my $gene_Ad    = $loutre_dba->get_GeneAdaptor;
+
+  my @sets;
+  foreach my $set ( @{$ds->get_all_visible_SequenceSets} ){
+    push(@sets, $set->name);
+  }
+  my $setNum = scalar @sets;
+
+  my $caption = sprintf("%-18s %-18s %-6s %-6s %-5s %-5s %s\n", 'Gene_stable_id', 'Trans_stable_id', 'Strand', 'Intron', 'Left', 'Right', 'Remark');
+  $caption .= '-' x 100 . "\n";
+
+  my $warnings = '';
+  my $setcount = 0;
+
+  foreach my $setname ( @sets ){
+    #next if $setname ne '129_IDD3.1-02';
+    $setcount++;
+
+    my $slice = $slice_Ad->fetch_by_region('chromosome', $setname, undef, undef, undef, 'Otter');
+    my $genes = $gene_Ad->Bio::EnsEMBL::DBSQL::GeneAdaptor::fetch_all_by_Slice($slice);
+    my $geneNum = scalar @$genes;
+
+    my $counter = 0;
+
+    while ( my $gene = shift @$genes ) {
+      $counter++;
+      warn "[$setcount / $setNum ssets - $setname] checking gene $counter of $geneNum ....\n";
+      if ( my $found =  check_intron_junctions($gene_Ad, $gene) ){
+        $warnings .= $found;
+      }
+    }
+  }
+
+  if ( $warnings ){
+    print $caption, $warnings;
+  }
+  else {
+    print 'No transcript with bad exon/intron juctions found';
+  }
+}
+
+sub check_intron_junctions {
+  my ($geneAd, $gene) = @_;
+
+  my $slice_seq = $gene->slice->seq;
+  my $warnings = '';
+
+  foreach my $t ( @{$gene->get_all_Transcripts} ) {
+    #warn $t->stable_id, "\n";
+
+    my $t_strand = $t->strand;
+
+    my @exons   = @{$t->get_all_Exons};
+    my @introns = @{$t->get_all_Introns};
+
+    return if scalar @exons == 1;
+
+    my $found = 0;
+
+    for (my $i=0; $i< scalar @introns; $i++) {
+
+      my $it = $introns[$i];
+
+      my $preExonSeq = $it->prev_Exon->seq->seq;
+      my $intronSeq  = substr($slice_seq, $it->start -1, $it->end - $it->start +1);
+      my $nxtExonSeq = $it->next_Exon->seq->seq;
+
+      if ( $t_strand == -1 ){
+        $intronSeq  = revcomp($intronSeq);
+      }
+
+      my $preExonBdr2 = substr($preExonSeq, -2, 2);
+      my $preExonBdr1 = substr($preExonSeq, -1, 1);
+      my $intronLBdr  = substr($intronSeq,   0, 2);
+      my $intronRBdr  = substr($intronSeq,  -2, 2);
+      my $nxtExonBdr  = substr($nxtExonSeq,  0, 2);
+
+      # valid consensus boundaries: **/GT AG/** or *G/GC AG/**
+      if ( $intronLBdr !~ /G[TC]/ ){
+
+        next if $intronLBdr eq 'GC' and $preExonBdr1 eq 'G';
+        $found = 1;
+
+        my @remarks = get_trans_remarks($t);
+
+        $warnings .= sprintf("%s %s %-6d %-6d %s/%s %s/%s @remarks\n",
+               $gene->stable_id,
+               $t->stable_id,
+               $t_strand,
+               $i+1,
+               $preExonBdr2, $intronLBdr, $intronRBdr, $nxtExonBdr
+              );
+      }
+    }
+
+    $warnings .= "\n" if $found == 1;
+  }
+  #warn $warnings if $warnings;
+  return $warnings;
+}
+
+sub revcomp {
+  my ($seq) = @_;
+  $seq = reverse($seq);
+  $seq =~ tr/ATCG/TAGC/;
+  return $seq;
+}
+
+sub get_trans_remarks {
+  my ($t) = @_;
+
+  my @remarks;
+
+  foreach my $rmk ('remark', 'hidden_remark'){
+    my @attrs = @{$t->get_all_Attributes($rmk)};
+    next unless $attrs[0];
+    #warn "Got: ", scalar @attrs;
+    foreach my $grmkattr ( @attrs ){
+      push(@remarks, sprintf("%s: %s\n", $rmk, $grmkattr->value));
+    }
+  }
+
+  @remarks = 'NA' unless @remarks;
+
+  return @remarks;
+}
