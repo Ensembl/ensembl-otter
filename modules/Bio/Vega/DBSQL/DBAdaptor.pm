@@ -16,6 +16,7 @@ use Bio::Vega::DBSQL::TranscriptAdaptor;
 use Bio::Vega::DBSQL::AssemblyTagAdaptor;
 use Bio::Vega::DBSQL::ContigLockAdaptor;
 use Bio::Vega::DBSQL::MetaContainer;
+use Bio::Vega::DBSQL::SliceAdaptor;
 use base 'Bio::EnsEMBL::DBSQL::DBAdaptor';
 
 sub get_GeneAdaptor {
@@ -25,6 +26,14 @@ sub get_GeneAdaptor {
 	 $self->{'VegaGene'}=$ad;
   }
   return $self->{'VegaGene'};
+}
+sub get_SliceAdaptor {
+  my $self = shift;
+  if ( !exists $self->{'VegaSlice'} ){
+	 my $ad=Bio::Vega::DBSQL::SliceAdaptor->new($self);
+	 $self->{'VegaSlice'}=$ad;
+  }
+  return $self->{'VegaSlice'};
 }
 
 sub get_ContigInfoAdaptor {
