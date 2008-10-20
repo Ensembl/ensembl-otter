@@ -8,6 +8,7 @@ use Bio::Vega::DBSQL::DBAdaptor;
 use Symbol 'gensym';
 use Hum::Sort ('ace_sort');
 use URI::Escape;
+use Bio::Otter::MFetcher;
 
 {
   my ($dataset_name);
@@ -17,12 +18,16 @@ use URI::Escape;
   my $corf           = 0;
   my $sanger         = 1;
   my $want_author;
+  my $do_encode = 0;
+  my $ncbi_version;
 
   my $usage = sub { exec('perldoc', $0) };
   Bio::Otter::Lace::Defaults::do_getopt(
                                         'h|help!'      => $usage,
                                         'dataset|ds=s' => \$dataset_name,
-                                        'author'       => \$want_author
+                                        'author'       => \$want_author,
+                                        'encode'       => \$do_encode,
+                                        'ncbi=s'       => \$ncbi_version # dump in NCBI coords, eg, 36 or M36
                                        )
       or $usage->();
   $usage->() unless $dataset_name;
@@ -31,62 +36,108 @@ use URI::Escape;
   my $cl = Bio::Otter::Lace::Defaults::make_Client();
 
   # DataSet interacts directly with an otter database
-  my $ds = $cl->get_DataSet_by_name($dataset_name);
+  my $dataset = $cl->get_DataSet_by_name($dataset_name);
+  my $loutre_dba  = $dataset->get_cached_DBAdaptor;
+  my $slice_Ad = $loutre_dba->get_SliceAdaptor;
+  my $gene_Ad  = $loutre_dba->get_GeneAdaptor;
 
+  my $mfetcher  = Bio::Otter::MFetcher->new();
+  $mfetcher->otter_dba($loutre_dba);
 
-  my $otter_dba  = $ds->get_cached_DBAdaptor;
-  my $slice_aptr = $otter_dba->get_SliceAdaptor;
-  my $gene_aptr  = $otter_dba->get_GeneAdaptor;
+  #my $pipe_dba = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($loutre_dba);
 
-  #my $pipe_dba = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($otter_dba);
+  my @sets;
+  my $ssets = $dataset->get_all_visible_SequenceSets;
 
-  unless ( @ARGV ) {
-    foreach ( @{$ds->get_all_visible_SequenceSets} ) {
-      push(@ARGV, $_->name);
-      @ARGV = sort { ace_sort($a, $b) } @ARGV;
+  if ( $dataset_name eq 'human' and $do_encode ){
+    # get list of encode regions names
+    foreach my $sset ( @$ssets ){
+      next if $sset->write_access != 1;
+      if ( my @subset = @{$sset->get_subset_names} ){
+        foreach (@subset){
+          push(@sets, $_) if $_ =~ /encode/;
+        }
+      }
+    }
+  }
+  elsif ( $dataset_name eq 'mouse' and $do_encode ){
+    # code still missing
+
+  }
+  else {
+    foreach my $sset ( @$ssets ){
+      push(@sets, $sset->name) if $sset->write_access == 1;
     }
   }
 
+  my ($fh, $file_name);
 
-  # Write GFF3 to one single file
-  my $fh = gensym();
-  my $file_name = "$dataset_name.gff3";
+  foreach my $set_name (@sets) {
 
-  open $fh, "> $file_name" or die "Can't write to '$file_name' : $!";
-  warn "Writing GFF3 data to '$file_name'\n";
+    next if $set_name ne 'encode-ENm005-02';
 
-  # this is required as the first line for GFF3
-  print $fh "##gff-version 3\n";
+    # Write GFF3 to one single file
+    my $suffix = $ncbi_version ? "_NCBI$ncbi_version".".gff3" : ".gff3";
+    $file_name = $set_name.$suffix;
+    open ($fh,">$file_name") or die $!;
+    warn "Writing GFF3 data to '$file_name'\n";
 
-  foreach my $set_name (@ARGV) {
+    # this is required as the first line for GFF3
+    print $fh "##gff-version 3\n";
 
-    # only dump reference chromosomes
-    next if $set_name !~ /^chr/i;
+    my $slice;
+    if ( $do_encode ){
+      next if $set_name ne 'encode-ENm005-02';
+      #next if $set_name ne 'encode-ENr232-02';#encode-ENr333-02';
 
-    my $slice = $slice_aptr->fetch_by_region('chromosome', $set_name, undef, undef, undef, 'Otter');
+      $slice = $slice_Ad->fetch_by_subregion($set_name);
+      #printf("## %s %s %d %d\n", $slice->seq_region_name, $set_name, $slice->start, $slice->end);
+    }
+    else {
+      next if $set_name ne 'chr21-03';
+      $slice = $slice_Ad->fetch_by_region('chromosome', $set_name, undef, undef, undef, 'Otter');
+    }
 
-    # this is much faster via EnsEMBL
-    my $genes = $gene_aptr->Bio::EnsEMBL::DBSQL::GeneAdaptor::fetch_all_by_Slice($slice);
-    #my $genes = $gene_aptr->get_current_Gene_by_slice($slice); # very slow
+    my $chrname = $slice->seq_region_name;
+    my $genes;
 
-    $set_name =~ /(Chr(\d+|\w+))-.*/i;
+    if ( $ncbi_version ){
+
+      my ($ncbi_chr) = $chrname =~ /Chr(\d+|\w+)-.*/i;
+      #  my $ncbi_chr   = '22';        # num or x, y
+      #  my $otter_chr  = 'chr22-07'; # sset name
+      my $ncbi_genes = $gene_Ad->fetch_all_genes_on_ncbi_slice($ncbi_chr, $chrname, $slice, $ncbi_version);
+      $genes = $ncbi_genes;
+      my $ncbi_slice = $genes->[0]->slice;
+      $slice = $ncbi_slice;       # want to use ncbi_slice from now on
+
+      #warn "NCBI S/E: ", $slice->start, ' ', $slice->end;
+    }
+    else {
+      #my $genes = $gene_Ad->get_current_Gene_by_slice($slice); # very slow
+      # this is much faster via EnsEMBL
+      $genes = $gene_Ad->Bio::EnsEMBL::DBSQL::GeneAdaptor::fetch_all_by_Slice($slice);
+    }
+
+    $chrname =~ /(Chr(\d+|\w+))-.*/i;
     my $idstr = ucfirst $1;
 
     while ( my $gene = shift @$genes ) {
 
-
-      $gene = $gene_aptr->reincarnate_gene($gene);
+      $gene = $gene_Ad->reincarnate_gene($gene);
 
       next if $gene->biotype eq 'obsolete';
       next if $gene->source ne 'havana' and $gene->source ne 'WU';
-    #  next if $gene->biotype !~ /pseudogene/i;
+
+      #printf("%s %d %d %d %d\n", $gene->stable_id, $gene->slice->start, $gene->slice->end, $gene->seq_region_start, $gene->seq_region_end);
+
 
       my $strand = $gene->strand == 1 ? '+' : '-';
 
       #--------- gene line -----------
       my $gline = sprintf("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\tID=%s;Name=%s",
                   $idstr, $gene->biotype, 'gene',
-                  $gene->start, $gene->end, '.', $strand, '.',
+                  $gene->seq_region_start, $gene->seq_region_end, '.', $strand, '.',
                   $gene->stable_id .".". $gene->version,
                   $gene->get_all_Attributes("name")->[0]->value,
                  );
@@ -192,7 +243,7 @@ sub write_transcript_gtf {
 
   my $trans_line = sprintf("%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\tID=%s;Parent=%s;Name=%s",
               $idstr, $transcript->biotype, 'transcript',
-              $transcript->start, $transcript->end, '.', $strand, '.',
+              $transcript->seq_region_start, $transcript->seq_region_end, '.', $strand, '.',
               $transcript->stable_id,
               $gene->stable_id .".".$gene->version,
               $transcript->get_all_Attributes("name")->[0]->value
