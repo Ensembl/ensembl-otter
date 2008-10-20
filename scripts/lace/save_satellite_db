@@ -1,8 +1,9 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/env perl
 
 ### save_satellite_db
 
 use strict;
+use warnings;
 use Getopt::Long;
 use Bio::Otter::Lace::SatelliteDB;
 use Bio::Otter::Lace::Defaults;
@@ -51,6 +52,11 @@ use Bio::Otter::Lace::Defaults;
     # Check we can connect to the Satellite database with options supplied
     eval {
         my $sat_db = Bio::EnsEMBL::DBSQL::DBAdaptor->new(%$sat_opts);
+        my $sth = $sat_db->dbc->prepare(q{SHOW TABLES});
+        $sth->execute;
+        while (my ($name) = $sth->fetchrow) {
+            print STDERR "  $name\n";
+        }
         $sat_db = undef;
     };
     if ($@) {
