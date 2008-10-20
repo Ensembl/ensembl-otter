@@ -37,7 +37,6 @@ use Bio::Otter::Lace::Defaults;
       Bio::Otter::Lace::SatelliteDB::get_options_for_key($otter_db, $key);
     if ($view) {
         print STDERR show_current($current, $dataset_name);
-        exit;
     }
     my $sat_opts = $current || {};
     $sat_opts->{'-HOST'}   = $sathost   if $sathost;
@@ -52,10 +51,10 @@ use Bio::Otter::Lace::Defaults;
     # Check we can connect to the Satellite database with options supplied
     eval {
         my $sat_db = Bio::EnsEMBL::DBSQL::DBAdaptor->new(%$sat_opts);
-        my $sth = $sat_db->dbc->prepare(q{SHOW TABLES});
+        my $sth = $sat_db->dbc->prepare(q{SELECT meta_value FROM meta WHERE meta_key = 'assembly.default'});
         $sth->execute;
-        while (my ($name) = $sth->fetchrow) {
-            print STDERR "  $name\n";
+        while (my ($value) = $sth->fetchrow) {
+            print STDERR "  assembly.default = '$value'\n";
         }
         $sat_db = undef;
     };
@@ -64,6 +63,8 @@ use Bio::Otter::Lace::Defaults;
           . show_current($sat_opts, 'SatelliteDB')
           . $@;
     }
+
+    exit 0 if $view;
 
     # delete the key
     Bio::Otter::Lace::SatelliteDB::remove_options_hash_for_key($otter_db, $key);
@@ -79,7 +80,7 @@ sub show_current {
 
     my $ret = "Settings for $name:\n";
     foreach my $key (sort keys %$settings) {
-        $ret .= "$key   =  " . $settings->{$key} . "\n";
+        $ret .= sprintf "%12s = %s\n", $key, $settings->{$key};
     }
     return $ret;
 }
