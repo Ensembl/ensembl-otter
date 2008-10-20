@@ -49,6 +49,7 @@ use Bio::Otter::MFetcher;
   #my $pipe_dba = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($loutre_dba);
 
   my @sets;
+  my $mouse_set_slice = {};
   my $ssets = $dataset->get_all_visible_SequenceSets;
 
   if ( $dataset_name eq 'human' and $do_encode ){
@@ -64,7 +65,11 @@ use Bio::Otter::MFetcher;
   }
   elsif ( $dataset_name eq 'mouse' and $do_encode ){
     # code still missing
-
+    my @clone_list = qw(AC126671.3 AC144408.3);
+    my $slice = $slice_Ad->fetch_by_clone_list(\@clone_list);
+    my $seq_region_name = $slice->seq_region_name;
+    push(@sets, $seq_region_name);
+    $mouse_set_slice->{$seq_region_name} = $slice;
   }
   else {
     foreach my $sset ( @$ssets ){
@@ -76,7 +81,7 @@ use Bio::Otter::MFetcher;
 
   foreach my $set_name (@sets) {
 
-    next if $set_name ne 'encode-ENm005-02';
+    #next if $set_name ne 'encode-ENm005-02';
 
     # Write GFF3 to one single file
     my $suffix = $ncbi_version ? "_NCBI$ncbi_version".".gff3" : ".gff3";
@@ -88,40 +93,44 @@ use Bio::Otter::MFetcher;
     print $fh "##gff-version 3\n";
 
     my $slice;
-    if ( $do_encode ){
-      next if $set_name ne 'encode-ENm005-02';
+    if ( $dataset_name eq 'human' and $do_encode ){
+      #next if $set_name ne 'encode-ENm005-02';
       #next if $set_name ne 'encode-ENr232-02';#encode-ENr333-02';
 
       $slice = $slice_Ad->fetch_by_subregion($set_name);
       #printf("## %s %s %d %d\n", $slice->seq_region_name, $set_name, $slice->start, $slice->end);
+      $set_name = $slice->seq_region_name;
+    }
+    elsif ( $dataset_name eq 'mouse' and $do_encode ){
+      $slice = $mouse_set_slice->{$set_name};
     }
     else {
-      next if $set_name ne 'chr21-03';
+      #next if $set_name ne 'chr21-03';
       $slice = $slice_Ad->fetch_by_region('chromosome', $set_name, undef, undef, undef, 'Otter');
     }
 
-    my $chrname = $slice->seq_region_name;
     my $genes;
 
     if ( $ncbi_version ){
 
-      my ($ncbi_chr) = $chrname =~ /Chr(\d+|\w+)-.*/i;
+      my ($ncbi_chr) = $set_name =~ /Chr(\d+|\w+)-.*/i;
       #  my $ncbi_chr   = '22';        # num or x, y
       #  my $otter_chr  = 'chr22-07'; # sset name
-      my $ncbi_genes = $gene_Ad->fetch_all_genes_on_ncbi_slice($ncbi_chr, $chrname, $slice, $ncbi_version);
+      my $ncbi_genes = $gene_Ad->fetch_all_genes_on_ncbi_slice($ncbi_chr, $set_name, $slice, $ncbi_version);
       $genes = $ncbi_genes;
       my $ncbi_slice = $genes->[0]->slice;
       $slice = $ncbi_slice;       # want to use ncbi_slice from now on
 
-      #warn "NCBI S/E: ", $slice->start, ' ', $slice->end;
+      warn "NCBI S/E: ", $slice->start, ' ', $slice->end;
     }
     else {
       #my $genes = $gene_Ad->get_current_Gene_by_slice($slice); # very slow
       # this is much faster via EnsEMBL
       $genes = $gene_Ad->Bio::EnsEMBL::DBSQL::GeneAdaptor::fetch_all_by_Slice($slice);
+      warn "Found ", scalar @$genes, " genes";
     }
 
-    $chrname =~ /(Chr(\d+|\w+))-.*/i;
+    $set_name =~ /(Chr(\d+|\w+))-.*/i;
     my $idstr = ucfirst $1;
 
     while ( my $gene = shift @$genes ) {

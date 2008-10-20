@@ -21,8 +21,49 @@ sub fetch_by_subregion {
   # to work out the chromosome start/end of the subregion
 
   my $ctg_projection = $subr_slice->project('contig');
+  my ($chr_name, @chr_coords) = $self->_fetch_chr_coords_by_contig_projection($ctg_projection);
 
-  my ($chr_name, $chr_slice, @chr_coords);
+  my $slice = $self->fetch_by_region('chromosome', $chr_name, $chr_coords[0], $chr_coords[-1]);
+
+  return $slice ? $slice : throw("Could not fetch chromosome slice for $subregion_name");
+}
+
+sub fetch_by_clone_list {
+  # Given a list of clones (acc.sv)
+  # returns the chr. slice of the region
+  # spanning from start to end of the ordered clones
+  # Useful to get the chr. subregion of mouse encodes,
+  # because they are not defined as subregions like those of the human ones
+
+  my ($self, $clones) = @_;
+
+  my $counter = 0;
+  my @coords;
+  my ($chr_start, $chr_end);
+  my $seq_region_name;
+  my @chr_coords;
+
+  foreach my $acc_sv (@$clones){
+
+    my $clone_slice = $self->fetch_by_region('clone', $acc_sv);
+    my $ctg_projection = $clone_slice->project('contig');
+
+    my($chrname, @coords) = $self->_fetch_chr_coords_by_contig_projection($ctg_projection);
+    push(@chr_coords, @coords);
+    $seq_region_name = $chrname;
+  }
+
+  my @sorted = sort {$a<=>$b} @chr_coords;
+  my $slice = $self->fetch_by_region('chromosome', $seq_region_name, $sorted[0], $sorted[-1]);
+
+  return $slice ? $slice : throw("Could not fetch chromosome slice from clone list");
+}
+
+sub _fetch_chr_coords_by_contig_projection {
+
+  my($self, $ctg_projection) = @_;
+
+  my ($seq_region_name, $chr_slice, @chr_coords);
 
   foreach my $seg (@$ctg_projection) {
     my $ctg = $seg->to_Slice();
@@ -30,9 +71,9 @@ sub fetch_by_subregion {
 
     # now find the chromosome name of current assembly
     # only do this once as all contigs in this projection will be on same chr.
-    unless ( $chr_name ){
-      $chr_name = $self->_fetch_chr_name_by_contig_name($ctg->seq_region_name);
-      $chr_slice = $self->fetch_by_region('chromosome', $chr_name, undef, undef, undef, 'otter');
+    unless ( $seq_region_name ){
+      $seq_region_name = $self->_fetch_chr_name_by_contig_name($ctg->seq_region_name);
+      $chr_slice = $self->fetch_by_region('chromosome', $seq_region_name, undef, undef, undef, 'otter');
     }
 
     # now project the contig to current chr. slice
@@ -43,11 +84,9 @@ sub fetch_by_subregion {
       #printf("%s %d %d\n\n", $pchr_slice->seq_region_name, $pchr_slice->start, $pchr_slice->end);
     }
   }
-  my @sorted = sort {$a<=>$b} @chr_coords;
 
-  my $slice = $self->fetch_by_region('chromosome', $chr_name, $sorted[0], $sorted[-1]);
-
-  return $slice ? $slice : throw("Could not fetch chromosome slice for $subregion_name");
+  my @sorted_coords = sort {$a<=>$b} @chr_coords;
+  return ($seq_region_name, @sorted_coords);
 }
 
 sub _fetch_chr_name_by_contig_name {
