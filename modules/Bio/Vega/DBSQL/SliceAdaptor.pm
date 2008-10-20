@@ -15,9 +15,9 @@ sub fetch_by_subregion {
   my $subr_slice = $self->fetch_by_region('subregion', $subregion_name, undef, undef, undef, undef);
 
   # as there is no mapping defined between chromosome and subregion
-  # we need to firstly project subregion slice to contig
+  # we need to first project subregion slice to contig
   # and find all the contigs in the projection;
-  # then find the chromosome start/end of currently assembly for each contig
+  # then find the start/end of the latest chromosome assembly for the contigs
   # to work out the chromosome start/end of the subregion
 
   my $ctg_projection = $subr_slice->project('contig');
