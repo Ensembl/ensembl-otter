@@ -1,6 +1,8 @@
 #!/usr/local/bin/perl -w
 
-### dump_gff3 (modified from dump_gtf)
+# dump_gff3 (modified from dump_gtf)
+# can dump loutre coords or NCBI coords
+
 
 use strict;
 use Bio::Otter::Lace::Defaults;

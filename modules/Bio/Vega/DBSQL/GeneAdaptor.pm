@@ -8,6 +8,8 @@ use Bio::Vega::Transcript;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::Vega::Utils::Comparator qw(compare);
 use Bio::Vega::AnnotationBroker;
+use Bio::Otter::MFetcher;
+
 use base 'Bio::EnsEMBL::DBSQL::GeneAdaptor';
 
 use constant UNCHANGED => 0;
@@ -16,9 +18,10 @@ use constant NEW       => 2;
 use constant RESTORED  => 3;
 use constant DELETED   => 5;
 
+
 sub list_current_dbIDs {
     my ($self) = @_;
-    
+
     my $sth = $self->prepare(q{ SELECT gene_id FROM gene WHERE is_current = 1 });
     $sth->execute;
     my $gene_id_list = [];
@@ -722,6 +725,50 @@ sub resurrect { # make a particular gene current (without touching the previousl
         }
     }
 }
+
+sub fetch_all_genes_on_ncbi_slice {
+
+  # returns a list reference to loutre genes 
+  # converted to the coords of the specified NCBI version
+  # $ncbi_ver is eg, 36, M36
+
+  my ($self, $ncbi_chr, $otter_chr, $loutre_slice, $ncbi_ver) = @_;
+
+  #  ncbi_chr, eg '22';        (num or x, y)
+  #  otter_chr, eg, 'chr22-07' (sset name)
+
+  my $mfetcher  = Bio::Otter::MFetcher->new();
+
+  $mfetcher->otter_dba($self->db);
+
+  my $start = $loutre_slice->start;
+  my $end   = $loutre_slice->end;
+  my $ncbi = "NCBI$ncbi_ver";
+
+  my $transformed_genes = $mfetcher->fetch_and_export('get_all_Genes', ['otter', undef, 1],
+                                                      'chromosome', $ncbi_chr, $otter_chr, $start, $end, 'Otter', $ncbi);
+
+  #warn "Got ", scalar @$transformed_genes, " genes\n";
+  #my $ncbi_slice = $transformed_genes->[0]->loutre_slice;
+
+  return $transformed_genes;
+}
+
+# called by MFetcher, so that the transformed genes will have exons
+sub Bio::EnsEMBL::Gene::propagate_slice {
+    my ($gene, $slice) = @_;
+
+    foreach my $transcript (@{ $gene->get_all_Transcripts() }) {
+        foreach my $exon (@{ $transcript->get_all_Exons() }) {
+            $exon->slice($slice);
+        }
+        $transcript->slice($slice);
+    }
+    $gene->slice($slice);
+}
+
+
+
 
 1;
 __END__
