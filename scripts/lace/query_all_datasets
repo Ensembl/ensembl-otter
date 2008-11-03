@@ -1,0 +1,43 @@
+#!/usr/bin/env perl
+
+### query_all_datasets
+
+use strict;
+use warnings;
+use Bio::Otter::Lace::Defaults;
+
+{
+    my $sql;
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'query=s' => \$sql,
+        );
+    unless ($sql) {
+        $sql = join(' ', <>);
+    }
+    die "No query" unless $sql;
+    
+    print "$sql\n";
+    
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    foreach my $ds ($cl->get_all_DataSets) {
+        printf "Querying dataset %s\n", $ds->name;
+        my $otter_db = $ds->get_cached_DBAdaptor;
+        my $sth = $otter_db->dbc->prepare($sql);
+        $sth->execute;
+        while (my @row = $sth->fetchrow) {
+            print join("\t", @row), "\n";
+        }
+    }
+}
+
+
+
+
+__END__
+
+=head1 NAME - query_all_datasets
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+

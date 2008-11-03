@@ -101,7 +101,8 @@ sub exon_hash_key {
     
     # This assumes that all the exons we
     # compare will be on the same contig
-    return sprintf("%6d - %6d %2d <%2d %2d>",
+    return sprintf("%6d %6d - %6d %2d <%2d %2d>",
+        $exon->seq_region_id,
         $exon->start,
         $exon->end,
         $exon->strand,
