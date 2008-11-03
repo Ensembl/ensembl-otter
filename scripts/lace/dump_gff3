@@ -130,8 +130,13 @@ use Bio::Otter::MFetcher;
       warn "Found ", scalar @$genes, " genes";
     }
 
-    $set_name =~ /(Chr(\d+|\w+))-.*/i;
-    my $idstr = ucfirst $1;
+    my $idstr;
+    if ( $set_name =~ /(Chr(\d+|\w+))-.*/i ){
+      $idstr = ucfirst $1;
+    }
+    else {
+      $idstr = $set_name;
+    }
 
     while ( my $gene = shift @$genes ) {
 
