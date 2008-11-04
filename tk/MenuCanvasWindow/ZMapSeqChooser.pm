@@ -421,13 +421,20 @@ sub zMapZMapDefaults {
         ? 'true'
         : 'false';
     
-    return $self->formatZmapDefaults(
+    my @config = (
         'ZMap',
-	sources     => $self->slice_name,
-        show_mainwindow  => $show_main,
-        pfetch      => sprintf(qq{"%s"}, $self->AceDatabase->Client->url_root . '/nph-pfetch'),
-        cookie_jar  => sprintf(qq{"$ENV{'OTTERLACE_COOKIE_JAR'}"}),
-    );
+	    sources         => $self->slice_name,
+        show_mainwindow => $show_main,
+        );
+    if (1) {
+        push(@config, 
+        pfetch          => sprintf(qq{"%s"}, $self->AceDatabase->Client->url_root . '/nph-pfetch'),
+        pfetch_mode     => q{"http"},
+        cookie_jar      => sprintf(qq{"$ENV{'OTTERLACE_COOKIE_JAR'}"}),
+            );
+    }
+
+    return $self->formatZmapDefaults(@config);
 }
 
 sub zMapBlixemDefaults {
@@ -438,7 +445,7 @@ sub zMapBlixemDefaults {
         netid  => qq{"$PFETCH_SERVER_LIST->[0][0]"},
         port   =>     $PFETCH_SERVER_LIST->[0][1],
         qw{
-            script      "blixem"
+            script      "blixemh"
             scope       200000
             homol_max   0
         },

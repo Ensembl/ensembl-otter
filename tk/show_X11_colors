@@ -1,14 +1,22 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/env perl
 
 ### show_X11_colors
 
 use strict;
-
+use warnings;
+use Getopt::Long 'GetOptions';
 use Hum::Ace::Colors qw{ webhex_to_acename };
 use CanvasWindow;
 
 {
-    my $rgb_txt_file = shift || '/usr/X11R6/lib/X11/rgb.txt';
+    my $rgb_txt_file = '/usr/X11R6/lib/X11/rgb.txt';
+    my $hex_on_clip = 0;
+    my $help = sub { exec('perldoc', $0) };
+    GetOptions(
+        'rgb=s' => \$rgb_txt_file,
+        'hex!'  => \$hex_on_clip,
+        'help!' => $help,
+        ) or $help->();
 
     my $mw = CanvasWindow::MainWindow->new;
     $mw->title('X11 colors');
@@ -43,7 +51,7 @@ use CanvasWindow;
         my $hex = sprintf "#%02x%02x%02x", $red, $green, $blue;
         my $ace = webhex_to_acename($hex);
 
-        #warn "$name = $hex\n";
+        # warn "$name = $hex\n";
         
         my $tags = [$name];
 
@@ -74,7 +82,7 @@ use CanvasWindow;
             );
 
         $canvas->bind($name, '<Button-1>', sub{
-            set_selection($name);
+            set_selection($hex_on_clip ? $hex : $name);
             $canvas->SelectionOwn;
             });
 
@@ -106,6 +114,24 @@ use CanvasWindow;
 __END__
 
 =head1 NAME - show_X11_colors
+
+=head1 SYNOPSIS
+
+  show_X11_colors [-hex] [-rgb FILE]
+
+=head1 OPTIONS
+
+=over 4
+
+=item B<-hex>
+
+Put hex code on clipboard rather than X11 name.
+
+=item B<-rgb FILE>
+
+Use specified file instead of default C</usr/X11R6/lib/X11/rgb.txt>
+
+=back
 
 =head1 AUTHOR
 

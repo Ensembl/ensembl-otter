@@ -818,7 +818,13 @@ sub show_peptide {
             );
         $peptext->tagBind('goldmeth' , '<Button-3>' , 
             sub{ $self->check_kozak} 
-            ); 
+            );
+        
+        # Green for selenocysteines
+        $peptext->tagConfigure('greenseleno' ,
+            -background => '#',
+            -foreground => 'white',
+        );
         
         # Frame for buttons
         my $frame = $top->Frame(
@@ -915,6 +921,7 @@ sub update_translation {
             *   redstop
             X   blueunk
             M   goldmeth
+            U   greenseleno
             };
         if ($self->{'_highlight_hydrophobic'}) {
             %style = (%style, qw{
