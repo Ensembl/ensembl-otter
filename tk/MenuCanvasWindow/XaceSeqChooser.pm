@@ -1241,6 +1241,10 @@ sub edit_new_subsequence {
     }
     else {
         $new = Hum::Ace::SubSeq->new_from_clipboard_text($clip);
+        unless ($new) {
+            $self->message("Need a highlighted transcript or a coordinate on the clipboard to make SubSeq");
+            return;
+        }
         $new->clone_Sequence($self->Assembly->Sequence);
     }
 
