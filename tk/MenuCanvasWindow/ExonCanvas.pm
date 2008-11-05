@@ -834,10 +834,10 @@ sub show_peptide {
 
         # Green for selenocysteines
         $peptext->tagConfigure('greenseleno' ,
-            -background => '#',
-            -foreground => 'white',
+            -background => '#32cd32',
+            -foreground => 'black',
         );
-        
+
         # Frame for buttons
         my $frame = $top->Frame(
             -border => 6,
