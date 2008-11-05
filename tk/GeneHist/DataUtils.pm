@@ -70,9 +70,10 @@ sub process_query {
 	#----------------------------------------------------------------------
     print STDERR "[1] GETTING ALL gsids VIA gene/trans NAMES OF @$gsids . . .\n" if $verbose;
 	
-	my $found_gsids = get_all_gsids_via_geneTransNames_of_gsid($otter_db, $ga, $gsids);
+	my $found_gsids = get_all_gsids_via_geneTransNames_of_gsid($otter_db, $ga, $gsids, $verbose);
 	print STDERR "[5] GENE HISTORY: @$found_gsids\n\n" if $verbose;
 
+    print STDERR "Found @$found_gsids\n";
 	return $found_gsids;
 }
 
