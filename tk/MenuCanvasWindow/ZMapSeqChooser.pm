@@ -445,7 +445,7 @@ sub zMapBlixemDefaults {
         netid  => qq{"$PFETCH_SERVER_LIST->[0][0]"},
         port   =>     $PFETCH_SERVER_LIST->[0][1],
         qw{
-            script      "blixemh"
+            script      "blixem"
             scope       200000
             homol_max   0
         },
