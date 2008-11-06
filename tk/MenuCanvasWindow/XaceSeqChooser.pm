@@ -1471,8 +1471,6 @@ sub make_exoncanvas_edit_window {
     my( $self, $sub ) = @_;
 
     my $sub_name = $sub->name;
-#    warn "subsequence-name $sub_name " ;
-#    warn "locus " . $sub->Locus->name ;
     my $canvas = $self->canvas;
 
     # Make a new window
