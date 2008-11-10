@@ -44,16 +44,19 @@ sub fetch_by_clone_list {
   my @chr_coords;
 
   foreach my $acc_sv (@$clones){
-
+    #warn $acc_sv;
     my $clone_slice = $self->fetch_by_region('clone', $acc_sv);
     my $ctg_projection = $clone_slice->project('contig');
 
     my($chrname, @coords) = $self->_fetch_chr_coords_by_contig_projection($ctg_projection);
-    push(@chr_coords, @coords);
-    $seq_region_name = $chrname;
+    if ( @coords ){
+      push(@chr_coords, @coords);
+      $seq_region_name = $chrname unless $seq_region_name;
+    }
   }
 
   my @sorted = sort {$a<=>$b} @chr_coords;
+
   my $slice = $self->fetch_by_region('chromosome', $seq_region_name, $sorted[0], $sorted[-1]);
 
   return $slice ? $slice : throw("Could not fetch chromosome slice from clone list");
@@ -72,8 +75,13 @@ sub _fetch_chr_coords_by_contig_projection {
     # now find the chromosome name of current assembly
     # only do this once as all contigs in this projection will be on same chr.
     unless ( $seq_region_name ){
-      $seq_region_name = $self->_fetch_chr_name_by_contig_name($ctg->seq_region_name);
-      $chr_slice = $self->fetch_by_region('chromosome', $seq_region_name, undef, undef, undef, 'otter');
+      eval{
+        $seq_region_name = $self->_fetch_chr_name_by_contig_name($ctg->seq_region_name);
+        $chr_slice = $self->fetch_by_region('chromosome', $seq_region_name, undef, undef, undef, 'otter')
+      };
+      if ( $@ ){
+        die "Cannot project ", $ctg->seq_region_name, " to seq_region ... please check that your list is up-to-date\n";
+      }
     }
 
     # now project the contig to current chr. slice

@@ -22,6 +22,7 @@ use Bio::Otter::MFetcher;
   my $want_author;
   my $do_encode = 0;
   my $ncbi_version;
+  my @clones;
 
   my $usage = sub { exec('perldoc', $0) };
   Bio::Otter::Lace::Defaults::do_getopt(
@@ -29,7 +30,8 @@ use Bio::Otter::MFetcher;
                                         'dataset|ds=s' => \$dataset_name,
                                         'author'       => \$want_author,
                                         'encode'       => \$do_encode,
-                                        'ncbi=s'       => \$ncbi_version # dump in NCBI coords, eg, 36 or M36
+                                        'ncbi=s'       => \$ncbi_version,  # dump in NCBI coords, eg, 36 or M36
+                                        'clone=s@'     => \@clones
                                        )
       or $usage->();
   $usage->() unless $dataset_name;
@@ -50,6 +52,8 @@ use Bio::Otter::MFetcher;
 
   my @sets;
   my $mouse_set_slice = {};
+  my $mouse_subregion_accSvs = {};
+
   my $ssets = $dataset->get_all_visible_SequenceSets;
 
   if ( $dataset_name eq 'human' and $do_encode ){
@@ -64,12 +68,27 @@ use Bio::Otter::MFetcher;
     }
   }
   elsif ( $dataset_name eq 'mouse' and $do_encode ){
-    # code still missing
-    my @clone_list = qw(AC126671.3 AC144408.3);
-    my $slice = $slice_Ad->fetch_by_clone_list(\@clone_list);
-    my $seq_region_name = $slice->seq_region_name;
-    push(@sets, $seq_region_name);
-    $mouse_set_slice->{$seq_region_name} = $slice;
+    if ( @clones ) {
+      # dump some clones only
+      my $slice = $slice_Ad->fetch_by_clone_list(\@clones);
+      my $seq_region_name = $slice->seq_region_name;
+      push(@sets, $seq_region_name);
+      $mouse_set_slice->{$seq_region_name} = $slice;
+    }
+    else {
+      # dump all encode
+      #read from external file for list of mouse encode regions
+      open(my $fh, "/nfs/team71/analysis/ck1/DATAMINE/adam/mouse_encode_regions/mouse_encode_regions_no_flank.txt") or die $!;
+      my $seen;
+
+      while(<$fh>){
+        next if $_ =~ /^\s+/ or $_ =~ /^#/;;
+        my($seqregion_rank, $acc_sv, $subregion) = split(/\s+/, $_);
+        push(@{$mouse_subregion_accSvs->{$subregion}}, $acc_sv);
+        $seen->{$subregion}++;
+        push(@sets, $subregion) if $seen->{$subregion} == 1;
+      }
+    }
   }
   else {
     foreach my $sset ( @$ssets ){
@@ -81,7 +100,8 @@ use Bio::Otter::MFetcher;
 
   foreach my $set_name (@sets) {
 
-    #next if $set_name ne 'encode-ENm005-02';
+    #next if $set_name ne 'ENm001_2-chr1'; #can be chr... or subregion
+    warn $set_name;
 
     # Write GFF3 to one single file
     my $suffix = $ncbi_version ? "_NCBI$ncbi_version".".gff3" : ".gff3";
@@ -95,14 +115,17 @@ use Bio::Otter::MFetcher;
     my $slice;
     if ( $dataset_name eq 'human' and $do_encode ){
       #next if $set_name ne 'encode-ENm005-02';
-      #next if $set_name ne 'encode-ENr232-02';#encode-ENr333-02';
 
       $slice = $slice_Ad->fetch_by_subregion($set_name);
       #printf("## %s %s %d %d\n", $slice->seq_region_name, $set_name, $slice->start, $slice->end);
       $set_name = $slice->seq_region_name;
     }
-    elsif ( $dataset_name eq 'mouse' and $do_encode ){
+    elsif ( $dataset_name eq 'mouse' and $do_encode and @clones ){
       $slice = $mouse_set_slice->{$set_name};
+    }
+    elsif ( $dataset_name eq 'mouse' and $do_encode ){
+      $slice = $slice_Ad->fetch_by_clone_list($mouse_subregion_accSvs->{$set_name});
+      $set_name = $slice->seq_region_name;
     }
     else {
       #next if $set_name ne 'chr21-03';
@@ -116,18 +139,26 @@ use Bio::Otter::MFetcher;
       my ($ncbi_chr) = $set_name =~ /Chr(\d+|\w+)-.*/i;
       #  my $ncbi_chr   = '22';        # num or x, y
       #  my $otter_chr  = 'chr22-07'; # sset name
+
       my $ncbi_genes = $gene_Ad->fetch_all_genes_on_ncbi_slice($ncbi_chr, $set_name, $slice, $ncbi_version);
       $genes = $ncbi_genes;
-      my $ncbi_slice = $genes->[0]->slice;
-      $slice = $ncbi_slice;       # want to use ncbi_slice from now on
 
-      warn "NCBI S/E: ", $slice->start, ' ', $slice->end;
+      my $ncbi_slice;
+      if ( $genes->[0] ){
+        $ncbi_slice = $genes->[0]->slice;
+        $slice = $ncbi_slice;       # want to use ncbi_slice from now on
+        #warn "NCBI S/E: ", $slice->start, ' ', $slice->end, " GOT ", scalar @$genes, " genes";
+      }
+      else {
+        warn "WARNING: $set_name returns no genes\n";
+        next;
+      }
     }
     else {
       #my $genes = $gene_Ad->get_current_Gene_by_slice($slice); # very slow
       # this is much faster via EnsEMBL
       $genes = $gene_Ad->Bio::EnsEMBL::DBSQL::GeneAdaptor::fetch_all_by_Slice($slice);
-      warn "Found ", scalar @$genes, " genes";
+      #warn "Found ", scalar @$genes, " genes";
     }
 
     my $idstr;
@@ -186,6 +217,7 @@ use Bio::Otter::MFetcher;
   }
 
   close $fh or die "Error writing to '$file_name' : $!";
+  print "\n\nEnd of parsing\n";
 }
 
 sub do_escape {
