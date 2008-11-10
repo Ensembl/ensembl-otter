@@ -67,7 +67,7 @@ sub _fetch_chr_coords_by_contig_projection {
 
   foreach my $seg (@$ctg_projection) {
     my $ctg = $seg->to_Slice();
-    #printf("== %s %d %d\n", $ctg->seq_region_name, $ctg->start, $ctg->end);
+    printf("== %s %d %d\n", $ctg->seq_region_name, $ctg->start, $ctg->end);
 
     # now find the chromosome name of current assembly
     # only do this once as all contigs in this projection will be on same chr.
@@ -108,8 +108,8 @@ sub _fetch_chr_name_by_contig_name {
                                            )
                                            AND sr.seq_region_id = sa.seq_region_id
                                            AND sa.attrib_type_id = at.attrib_type_id
-                                           AND at.code = 'write_access'
-                                           AND sa.value = 1
+                                           AND at.code = 'hidden'
+                                           AND sa.value = 0
                                          });
   $chrqry->execute($ctgname);
 
