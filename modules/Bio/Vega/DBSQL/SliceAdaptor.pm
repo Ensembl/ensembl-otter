@@ -67,7 +67,7 @@ sub _fetch_chr_coords_by_contig_projection {
 
   foreach my $seg (@$ctg_projection) {
     my $ctg = $seg->to_Slice();
-    printf("== %s %d %d\n", $ctg->seq_region_name, $ctg->start, $ctg->end);
+    #printf("== %s %d %d\n", $ctg->seq_region_name, $ctg->start, $ctg->end);
 
     # now find the chromosome name of current assembly
     # only do this once as all contigs in this projection will be on same chr.
