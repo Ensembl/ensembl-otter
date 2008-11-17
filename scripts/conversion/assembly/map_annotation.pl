@@ -62,7 +62,7 @@ ensure that the resulting gene structures are identical to the original ones.
 For future release, there are plans to store incomplete matches by using the
 Ensembl API's SeqEdit facilities.
 
-Genes transferred can be restricted to on logic_names using the --logic_names
+Genes transferred can be restricted on logic_name using the --logic_names
 option.
 
 Script is currently hardcoded to ignore 'Sick_kids' genes
@@ -139,7 +139,7 @@ $support->parse_extra_options(
     'evegapass=s',
     'evegadbname=s',
     'chromosomes|chr=s@',
-	'logic_names=s@',
+    'logic_names=s@',
     'prune=s',
 );
 $support->allowed_params(
@@ -223,8 +223,7 @@ if ($support->param('prune') && $support->user_proceed("Do you want to delete al
     $support->log("Done.\n");
 }
 
-
-		    my (%stat_hash,%trans_numbers);
+my (%stat_hash,%trans_numbers);
 
 # loop over chromosomes
 $support->log("Looping over chromosomes...\n");
@@ -268,12 +267,12 @@ foreach my $V_chr ($support->sort_chromosomes($V_chrlength)) {
 	my $c = 0;
         foreach my $transcript (@{ $transcripts }) {
 	    $c++;
-	    
+	
             my $interim_transcript = transfer_transcript($transcript, $mapper,
 							 $V_cs, $V_pfa, $E_slice);
             my ($finished_transcripts, $protein_features) =
                 create_transcripts($interim_transcript, $E_sa, $gsi);
-	    
+	
             # set the translation stable identifier on the finished transcripts
             foreach my $tr (@{ $finished_transcripts }) {
                 if ($tr->translation && $transcript->translation) {
@@ -311,17 +310,17 @@ foreach my $V_chr ($support->sort_chromosomes($V_chrlength)) {
     }
     $support->log("Done with chromosome $V_chr.\n", 1);
 }
-		    
-		    # write out to statslog file
-		    do_stats_logging();
+
+# write out to statslog file
+do_stats_logging();
 
 #see if any transcripts / gene are different
-		    foreach my $gsi (keys %trans_numbers) {
-	if ($trans_numbers{$gsi}->{'vega'} != $trans_numbers{$gsi}->{'evega'}) {
-		my $v_num = $trans_numbers{$gsi}->{'vega'};
-		my $e_num = $trans_numbers{$gsi}->{'evega'};
-		$support->log("There are different numbers of transcripts for gene $gsi in vega ($v_num) and ensembl_vega ($e_num)\n");
-	}
+foreach my $gsi (keys %trans_numbers) {
+    if ($trans_numbers{$gsi}->{'vega'} != $trans_numbers{$gsi}->{'evega'}) {
+	my $v_num = $trans_numbers{$gsi}->{'vega'};
+	my $e_num = $trans_numbers{$gsi}->{'evega'};
+	$support->log("There are different numbers of transcripts for gene $gsi in vega ($v_num) and ensembl_vega ($e_num)\n");
+    }
 }
 
 # finish logfile

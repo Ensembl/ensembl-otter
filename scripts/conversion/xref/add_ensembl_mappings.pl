@@ -128,31 +128,31 @@ my $esa  = $edba->get_SliceAdaptor();
 
 # delete all ensembl xrefs if --prune option is used
 if (!$support->param('dry_run')) {
-	if ($support->param('prune') and $support->user_proceed("Would you really like to delete all previously added ENST xrefs before running this script?")) {
-		my $num;
-		# xrefs
-		$support->log("Deleting all ensembl_id xrefs...\n");
-		$num = $dba->dbc->do(qq(
+    if ($support->param('prune') and $support->user_proceed("Would you really like to delete all previously added ENST xrefs before running this script?")) {
+	my $num;
+	# xrefs
+	$support->log("Deleting all ensembl_id xrefs...\n");
+	$num = $dba->dbc->do(qq(
            DELETE x
            FROM xref x, external_db ed
            WHERE x.external_db_id = ed.external_db_id
            AND ed.db_name like \'ENST%\'
 		));
-		$support->log("Done deleting $num entries.\n");
+	$support->log("Done deleting $num entries.\n");
 
-		# object_xrefs
-		$support->log("Deleting orphan object_xrefs...\n");
-		$num = $dba->dbc->do(qq(
+	# object_xrefs
+	$support->log("Deleting orphan object_xrefs...\n");
+	$num = $dba->dbc->do(qq(
            DELETE ox
            FROM object_xref ox
            LEFT JOIN xref x ON ox.xref_id = x.xref_id
            WHERE x.xref_id IS NULL
         ));
-		$support->log("Done deleting $num entries.\n");
-	}
+	$support->log("Done deleting $num entries.\n");
+    }
 }
 elsif ($support->param('prune')){
-	$support->log("Not deleting any xrefs since this is a dry run.\n");
+    $support->log("Not deleting any xrefs since this is a dry run.\n");
 }
 	
 my @gene_stable_ids = $support->param('gene_stable_id');
@@ -164,99 +164,98 @@ my %assigned_xrefs;
 my $ens_ids;
 CHR:
 foreach my $slice (@{$esa->fetch_all('toplevel')}) {
-	my $chr_name = $slice->seq_region_name;
-	next CHR if ($chr_name =~ /^NT|MT/);
-	$support->log("Retrieving Ensembl genes from chromosome $chr_name...\n");		
+    my $chr_name = $slice->seq_region_name;
+    next CHR if ($chr_name =~ /^NT|MT/);
+    $support->log("Retrieving Ensembl genes from chromosome $chr_name...\n");		
  GENE:
-	foreach my $g (@{$slice->get_all_Genes()}) {
-		next GENE unless ($g->analysis->logic_name =~ /havana/);
-		foreach my $t (@{$g->get_all_Transcripts}) {
-			my $tsi = $t->stable_id;
-		XREF:
-			foreach my $x (@{$t->get_all_DBEntries}){
-				my $dbname = $x->dbname;
-				my $name = $x->display_id;
-				next XREF unless ($dbname =~ /OTTT/);
-				next XREF unless ($name =~ /OTT/);
-				$assigned_xrefs{$dbname}->{$t->biotype}++;
-				$ens_ids->{$name}{$tsi}{$dbname}++;
-			}
-		}
+    foreach my $g (@{$slice->get_all_Genes()}) {
+	next GENE unless ($g->analysis->logic_name =~ /havana/);
+	foreach my $t (@{$g->get_all_Transcripts}) {
+	    my $tsi = $t->stable_id;
+	  XREF:
+	    foreach my $x (@{$t->get_all_DBEntries}){
+		my $dbname = $x->dbname;
+		my $name = $x->display_id;
+		next XREF unless ($dbname =~ /OTTT/);
+		next XREF unless ($name =~ /OTT/);
+		$assigned_xrefs{$dbname}->{$t->biotype}++;
+		$ens_ids->{$name}{$tsi}{$dbname}++;
+	    }
 	}
+    }
 #	last;
 }
 
 warn Dumper($ens_ids);
 my $external_db;
 
-
 #this defines the order in which the e! xrefs will be used, and which external_db 
 #they match in Vega
 my @priorities = qw(
-				shares_CDS_and_UTR_with_OTTT:ENST_ident
-				shares_CDS_with_OTTT:ENST_CDS
-				OTTT:ENST_ident
-				);
+		  shares_CDS_and_UTR_with_OTTT:ENST_ident
+		  shares_CDS_with_OTTT:ENST_CDS
+		  OTTT:ENST_ident
+		);
 
 #add one xref to each E! transcript
 foreach my $v_id (keys %$ens_ids) {
-	my $transcript = $ta->fetch_by_stable_id($v_id);
-	unless ($transcript) {
-		$support->log_warning("Can't retrieve transcript $v_id from Vega\n");
-		next;
-	}
-	$support->log("Studying transcript $v_id\n");
-	my @c = ();
-	while ( my ($e_id, $xrefs) =  each %{$ens_ids->{$v_id}} ) {
-		push @c, $e_id;
-		my $found = 0;
-		foreach my $db (@priorities) {
-			my ($edb,$vdb) = split ':',$db;
-			last if $found;
-			if ($xrefs->{$edb}) {
-				my $dbentry = Bio::EnsEMBL::DBEntry->new(
-					-primary_id => $e_id,
-					-display_id => $e_id,
-					-version    => 1,
-					-release    => 1,
-					-dbname     => $vdb,
-				);
+    my $transcript = $ta->fetch_by_stable_id($v_id);
+    unless ($transcript) {
+	$support->log_warning("Can't retrieve transcript $v_id from Vega\n");
+	next;
+    }
+    $support->log("Studying transcript $v_id\n");
+    my @c = ();
+    while ( my ($e_id, $xrefs) =  each %{$ens_ids->{$v_id}} ) {
+	push @c, $e_id;
+	my $found = 0;
+	foreach my $db (@priorities) {
+	    my ($edb,$vdb) = split ':',$db;
+	    last if $found;
+	    if ($xrefs->{$edb}) {
+		my $dbentry = Bio::EnsEMBL::DBEntry->new(
+		    -primary_id => $e_id,
+		    -display_id => $e_id,
+		    -version    => 1,
+		    -release    => 1,
+		    -dbname     => $vdb,
+		);
 				$assigned_xrefs{$vdb}->{$transcript->biotype}++;
-				$transcript->add_DBEntry($dbentry);
-				if ($support->param('dry_run')) {
-					$support->log("Would store $vdb xref $e_id for transcript $v_id.\n", 1);
-					$found = 1;
-				}
-				else {
-					my $dbID = $ea->store($dbentry, $transcript->dbID, 'transcript');
-		
-					# apparently, this xref had been stored already, so get
-					# xref_id from db
-					unless ($dbID) {
-						my $sql = qq(
+		$transcript->add_DBEntry($dbentry);
+		if ($support->param('dry_run')) {
+		    $support->log("Would store $vdb xref $e_id for transcript $v_id.\n", 1);
+		    $found = 1;
+		}
+		else {
+		    my $dbID = $ea->store($dbentry, $transcript->dbID, 'transcript');
+		    
+		    # apparently, this xref had been stored already, so get
+		    # xref_id from db
+		    unless ($dbID) {
+			my $sql = qq(
                          SELECT x.xref_id
                          FROM xref x, external_db ed
                          WHERE x.external_db_id = ed.external_db_id
                          AND x.dbprimary_acc = '$e_id'
                          AND ed.db_name = '$vdb'
                          );
-						($dbID) = @{ $dbh->selectall_arrayref($sql) || [] };
-						$support->log_verbose
-					}
-					if ($dbID) {
-						$support->log("Stored $vdb xref $e_id for transcript $v_id.\n", 1);
-						$found = 1;
-					} else {
-						$support->log_warning("No dbID for $vdb xref ($e_id) transcript $v_id\n", 1);
-					}
-				}
-			}
+			($dbID) = @{ $dbh->selectall_arrayref($sql) || [] };
+			$support->log_verbose
+		    }
+		    if ($dbID) {
+			$support->log("Stored $vdb xref $e_id for transcript $v_id.\n", 1);
+			$found = 1;
+		    } else {
+			$support->log_warning("No dbID for $vdb xref ($e_id) transcript $v_id\n", 1);
+		    }
 		}
+	    }
 	}
-	if (scalar(@c) > 1) {
-		my $ids = join ' ',@c;
-		$support->log("Vega transcript $v_id matches to multiple Ensembl transcripts: $ids\n");
-	}
+    }
+    if (scalar(@c) > 1) {
+	my $ids = join ' ',@c;
+	$support->log("Vega transcript $v_id matches to multiple Ensembl transcripts: $ids\n");
+    }
 }
 
 warn Dumper(\%assigned_xrefs);
