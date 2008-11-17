@@ -332,49 +332,6 @@ $sql = qq(
 $c = $dbh->{'vega'}->do($sql) unless ($support->param('dry_run'));
 $support->log_stamped("Done transfering $c attrib_type entries.\n\n");
 
-#transfer encode misc sets, features and attribs from Ensembl db
-$support->log_stamped("Transfering Ensembl Encode misc_sets and features...\n");
-$sql = qq(
-    INSERT INTO $evega_db.misc_set
-    SELECT * from misc_set
-    WHERE code = \'encode\'
-);
-$c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
-$support->log_stamped("Done transfering $c misc_sets entries.\n");
-$sth = $dbh->{'evega'}->prepare(qq(
-                                  SELECT misc_set_id from misc_set
-                                  WHERE code = \'encode\'
-));
-$sth->execute;
-my ($ms_id) = $sth->fetchrow_array;
-$sql = qq(
-   INSERT into $evega_db.misc_feature_misc_set
-   SELECT * from misc_feature_misc_set
-   WHERE misc_set_id = $ms_id
-);
-
-$c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run') || (! defined($ms_id)) );
-
-$support->log_stamped("Done transfering $c misc_feature_misc_sets entries.\n");
-$sql = qq(
-   INSERT into $evega_db.misc_feature
-   SELECT mf.misc_feature_id, mf.seq_region_id+$sri_adjust, mf.seq_region_start, mf.seq_region_end, mf.seq_region_strand
-   FROM misc_feature mf, misc_feature_misc_set mfms
-   WHERE mf.misc_feature_id = mfms.misc_feature_id
-   AND mfms.misc_set_id = $ms_id
-);
-$c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run')  || (! defined($ms_id)));
-$support->log_stamped("Done transfering $c misc_feature entries.\n");
-$sql = qq(
-   INSERT into $evega_db.misc_attrib
-   SELECT ma.*
-   FROM misc_attrib ma, misc_feature_misc_set mfms
-   WHERE ma.misc_feature_id = mfms.misc_feature_id
-   AND mfms.misc_set_id = $ms_id
-);
-$c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run')  || (! defined($ms_id)));
-$support->log_stamped("Done transfering $c misc_attrib entries.\n\n");
-
 # transfer assembly from Ensembl db
 $support->log_stamped("Transfering Ensembl assembly...\n");
 $sql = qq(
