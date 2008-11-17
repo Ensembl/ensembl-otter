@@ -79,10 +79,10 @@ use FindBin qw($Bin);
 use vars qw($SERVERROOT);
 
 BEGIN {
-    $SERVERROOT = "$Bin/../../..";
-    unshift(@INC, "$SERVERROOT/ensembl/modules");
-    unshift(@INC, "$SERVERROOT/bioperl-live");
-	unshift(@INC, "$SERVERROOT/ensembl-otter/scripts/conversion/modules");
+  $SERVERROOT = "$Bin/../../..";
+  unshift(@INC, "$SERVERROOT/ensembl/modules");
+  unshift(@INC, "$SERVERROOT/bioperl-live");
+  unshift(@INC, "$SERVERROOT/ensembl-otter/scripts/conversion/modules");
 }
 
 use Getopt::Long;
@@ -97,28 +97,28 @@ my $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
 # parse options
 $support->parse_common_options(@_);
 $support->parse_extra_options(
-    'keep=s',
-    'delete=s',
-    'outfile=s',
-    'find_missing',
-	'schematype=s',
-	'gene_stable_ids=s@',
-	'transcript_stable_ids=s@',
+  'keep=s',
+  'delete=s',
+  'outfile=s',
+  'find_missing',
+  'schematype=s',
+  'gene_stable_ids=s@',
+  'transcript_stable_ids=s@',
 );
 $support->allowed_params(
-    $support->get_common_params,
-    'keep',
-    'delete',
-    'outfile',
-    'find_missing',
-    'schematype',
-	'gene_stable_ids',
-	'transcript_stable_ids',
+  $support->get_common_params,
+  'keep',
+  'delete',
+  'outfile',
+  'find_missing',
+  'schematype',
+  'gene_stable_ids',
+  'transcript_stable_ids',
 );
 
 if ($support->param('help') or $support->error) {
-    warn $support->error if $support->error;
-    pod2usage(1);
+  warn $support->error if $support->error;
+  pod2usage(1);
 }
 
 $support->comma_to_list('gene_stable_ids');
@@ -137,35 +137,35 @@ my $dbh = $dba->dbc->db_handle;
 # find out if we are dealing with an Ensembl or Vega schema
 my $schema;
 if ($schema = $support->param('schematype')) {
-	unless ($schema eq 'vega' || $schema eq 'ensembl') {
-		$support->log("schematype argument can only be \'ensembl\' or \'vega\'. Aborting\n");
-		exit(0);
-	}
+  unless ($schema eq 'vega' || $schema eq 'ensembl') {
+    $support->log("schematype argument can only be \'ensembl\' or \'vega\'. Aborting\n");
+    exit(0);
+  }
 }
 else {
-	my %tabs;
-	map { $_ =~ s/`//g; $tabs{$_} = 1; } $dbh->tables;
-	$schema = $tabs{'gene_author'} ? 'vega' : 'ensembl';
+  my %tabs;
+  map { $_ =~ s/`//g; $tabs{$_} = 1; } $dbh->tables;
+  $schema = $tabs{'gene_author'} ? 'vega' : 'ensembl';
 }
 
 # sanity check: you can must choose to either keep or to delete
 my ($action, $condition, $infile);
 if ($support->param('keep')) {
-    $infile = $support->param('keep');
-    $action = 'keep';
-    $condition = "NOT IN";
+  $infile = $support->param('keep');
+  $action = 'keep';
+  $condition = "NOT IN";
 } elsif ($support->param('delete')) {
-    $infile = $support->param('delete');
-    $action = 'delete';
-    $condition = "IN";
+  $infile = $support->param('delete');
+  $action = 'delete';
+  $condition = "IN";
 } elsif ($support->param('gene_stable_ids')) {
-	$action = 'delete';
-    $condition = "IN";
+  $action = 'delete';
+  $condition = "IN";
 } elsif ($support->param('transcript_stable_ids')) {
-	$action = 'delete';
-    $condition = "IN";
+  $action = 'delete';
+  $condition = "IN";
 } else {
-    $support->log_error("You must choose to either delete or keep genes by their stable_ids.\n");
+  $support->log_error("You must choose to either delete or keep genes by their stable_ids.\n");
 }
 
 # make sure user knows what he's doing
@@ -174,15 +174,15 @@ exit unless ($support->user_proceed("You decided to ".uc($action)." all genes an
 my ($gene_stable_ids, $trans_stable_ids);
 # read list of stable IDs to keep or delete
 if ($support->param('gene_stable_ids')) {
-	$gene_stable_ids = [$support->param('gene_stable_ids')];
-	$trans_stable_ids = [];
+  $gene_stable_ids = [$support->param('gene_stable_ids')];
+  $trans_stable_ids = [];
 }
 elsif ($support->param('transcript_stable_ids')) {
-	$trans_stable_ids = [$support->param('transcript_stable_ids')];
-	$gene_stable_ids = [];
+  $trans_stable_ids = [$support->param('transcript_stable_ids')];
+  $gene_stable_ids = [];
 }
 else {
-	($gene_stable_ids, $trans_stable_ids) = &read_infile($action, $infile); 
+  ($gene_stable_ids, $trans_stable_ids) = &read_infile($action, $infile); 
 }
 
 # sanity check: check if all genes in the list are also in the database
@@ -274,64 +274,56 @@ sub read_infile {
 =cut
 
 sub check_missing {
-    my ($gene_stable_ids, $trans_stable_ids) = @_;
+  my ($gene_stable_ids, $trans_stable_ids) = @_;
+  
+  $support->log("Checking for missing genes and/or transcripts...\n");
 
-    $support->log("Checking for missing genes and/or transcripts...\n");
-
-    # genes
-    my $gsi_string = join("', '", @{ $gene_stable_ids });
-    my $sql = qq(
+  # genes
+  my $gsi_string = join("', '", @{ $gene_stable_ids });
+  my $sql = qq(
         SELECT  stable_id
         FROM    gene_stable_id
         WHERE   stable_id IN ('$gsi_string')
     );
-    my @genes_in_db = map { $_->[0] } @{ $dbh->selectall_arrayref($sql) || [] };
-    my $gdiff = scalar(@{ $gene_stable_ids }) - scalar(@genes_in_db);
+  my %genes_in_db = map { $_->[0] => 1 } @{ $dbh->selectall_arrayref($sql) || [] };
+  my $gdiff = scalar(@{ $gene_stable_ids }) - scalar(keys %genes_in_db);
 
-    # transcripts
-    my $tsi_string = join("', '", @{ $trans_stable_ids });
-    $sql = qq(
+  # transcripts
+  my $tsi_string = join("', '", @{ $trans_stable_ids });
+  $sql = qq(
         SELECT  stable_id
         FROM    transcript_stable_id
         WHERE   stable_id IN ('$tsi_string')
     );
-    my @trans_in_db = map { $_->[0] } @{ $dbh->selectall_arrayref($sql) || [] };
-    my $tdiff = scalar(@{ $trans_stable_ids }) - scalar(@trans_in_db);
-    
-    if ($gdiff or $tdiff) {
-        $support->log_warning("Not all genes and/or transcripts in the input file could be found in the db ($gdiff genes, $tdiff transcripts missing).\n");
-        # print list of missing stable IDs
-        if ($support->param('find_missing')) {
-            $support->log("Printing list of missing stable IDs to file...\n", 1);
-            my $out = $support->filehandle('>', $support->param('outfile'));
+  my %trans_in_db = map { $_->[0] => 1 } @{ $dbh->selectall_arrayref($sql) || [] };
+  my $tdiff = scalar(@{ $trans_stable_ids }) - scalar(keys %trans_in_db);
 
-            # genes
-            my %gseen;
-            @gseen{@genes_in_db} = (1) x @genes_in_db;
-            foreach my $gsi (@{ $gene_stable_ids }) {
-                print $out "$gsi\n" unless $gseen{$gsi};
-            }
+  if ($gdiff or $tdiff) {
+    $support->log_warning("Not all genes and/or transcripts in the input file could be found in the db ($gdiff genes, $tdiff transcripts missing).\n");
+    # print list of missing stable IDs
+    if ($support->param('find_missing')) {
+      $support->log("Printing list of missing stable IDs...\n", 1);
+      # genes
+      foreach my $gsi (@{ $gene_stable_ids }) {
+	$support->log("$gsi\n") unless $genes_in_db{$gsi};
+      }
+      # transcripts
+      foreach my $tsi (@{ $trans_stable_ids }) {
+	$support->log("$tsi\n") unless $trans_in_db{$tsi};
+      }
+      $support->log("Done.\n", 1);
 
-            # transcripts
-            my %tseen;
-            @tseen{@trans_in_db} = (1) x @trans_in_db;
-            foreach my $tsi (@{ $trans_stable_ids }) {
-                print $out "$tsi\n" unless $tseen{$tsi};
-            }
-
-            $support->log("Done.\n", 1);
-
-        # suggest to run with --find_missing option
-        } else {
-            $support->log("Please run the script with the --find_missing option and check to see what's wrong.\n");
-        }
-
-        # ask user if he wants to proceed regardless of the potential problem
-        unless ($support->user_proceed("\nPotential data inconsistencies (see logfile). Would you like to proceed anyway?")) {
-            exit(0);
-        }
+      # suggest to run with --find_missing option
+    } else {
+      $support->log("Please run the script with the --find_missing option and check to see what's wrong.\n");
     }
-    $support->log("Done.\n\n");
+
+    # ask user if he wants to proceed regardless of the potential problem
+    unless ($support->user_proceed("\nPotential data inconsistencies (see logfile). Would you like to proceed anyway?")) {
+      exit(0);
+    }
+  }
+  $support->log("Done.\n\n");
 }
 
 =head2 delete_genes
