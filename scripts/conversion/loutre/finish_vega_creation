@@ -183,14 +183,20 @@ if ($support->param('prune') && $support->user_proceed("\nDo you want to undo al
 # delete unwanted loutre-derived simple_features                         #
 ##########################################################################
 my %lns_to_stay = map {$_,1} qw(CpG
-				Eponine
-				polyA_signal
-				polyA_site
-				pseudo_polyA
-				RSS
-				tRNAscan
-				EUCOMM );
-my %lns_to_go = map {$_,1}	 qw(TATA_box EUCOMM_AUTO);
+			 Eponine
+			 polyA_signal
+			 polyA_site
+			 pseudo_polyA
+			 RSS
+			 tRNAscan
+			 EUCOMM );
+my %lns_to_go = map {$_,1} qw(TATA_box
+			 EUCOMM_AUTO
+			 phastCons
+			 ComparaCons
+			 evigan_predictions
+			 NovelLoci
+			 Yale_Pseudogene );
 
 my $s = $vdbh->prepare(qq(
                 SELECT a.logic_name, a.analysis_id, count(*)
@@ -358,7 +364,7 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
 	my $ssth = $vdbh->prepare(qq(
                    UPDATE gene
                    SET    source = ?
-                   WHERE  g.gene_id = ?
+                   WHERE  gene_id = ?
         ));	
 	
 	#loop through genes
