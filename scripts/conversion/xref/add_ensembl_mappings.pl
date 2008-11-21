@@ -65,15 +65,16 @@ use FindBin qw($Bin);
 use vars qw($SERVERROOT);
 
 BEGIN {
-    $SERVERROOT = "$Bin/../../../..";
-    unshift(@INC, "$SERVERROOT/ensembl/modules");
-    unshift(@INC, "$SERVERROOT/bioperl-live");
+  $SERVERROOT = "$Bin/../../../..";
+  unshift(@INC, "$SERVERROOT/ensembl/modules");
+  unshift(@INC, "$SERVERROOT/bioperl-live");
 }
 
 use Getopt::Long;
 use Pod::Usage;
 use Bio::EnsEMBL::Utils::ConversionSupport;
 use Data::Dumper;
+use Storable;
 
 $| = 1;
 
@@ -82,37 +83,36 @@ our $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
 # parse options
 $support->parse_common_options(@_);
 $support->parse_extra_options(
-    'chromosomes|chr=s@',
-    'gene_stable_id|gsi=s@',
-    'ensemblhost=s',
-    'ensemblport=s',
-    'ensembluser=s',
-    'ensemblpass=s',
-    'ensembldbname=s',
-    'prune',
+  'chromosomes|chr=s@',
+  'gene_stable_id|gsi=s@',
+  'ensemblhost=s',
+  'ensemblport=s',
+  'ensembluser=s',
+  'ensemblpass=s',
+  'ensembldbname=s',
+  'prune',
 );
 $support->allowed_params(
-    $support->get_common_params,
-    'chromosomes',
-    'gene_stable_id',
-    'ensemblhost',
-    'ensemblport',
-    'ensembluser',
-    'ensemblpass',
-    'ensembldbname',
-    'prune',
+  $support->get_common_params,
+  'chromosomes',
+  'gene_stable_id',
+  'ensemblhost',
+  'ensemblport',
+  'ensembluser',
+  'ensemblpass',
+  'ensembldbname',
+  'prune',
 );
 
 if ($support->param('help') or $support->error) {
-    warn $support->error if $support->error;
-    pod2usage(1);
+  warn $support->error if $support->error;
+  pod2usage(1);
 }
 
 $support->comma_to_list('chromosomes');
 
 # ask user to confirm parameters to proceed
 $support->confirm_params;
-
 
 # get log filehandle and print heading and parameters to logfile
 $support->init_log;
@@ -128,31 +128,31 @@ my $esa  = $edba->get_SliceAdaptor();
 
 # delete all ensembl xrefs if --prune option is used
 if (!$support->param('dry_run')) {
-    if ($support->param('prune') and $support->user_proceed("Would you really like to delete all previously added ENST xrefs before running this script?")) {
-	my $num;
-	# xrefs
-	$support->log("Deleting all ensembl_id xrefs...\n");
-	$num = $dba->dbc->do(qq(
+  if ($support->param('prune') and $support->user_proceed("Would you really like to delete all previously added ENST xrefs before running this script?")) {
+    my $num;
+    # xrefs
+    $support->log("Deleting all ensembl_id xrefs...\n");
+    $num = $dba->dbc->do(qq(
            DELETE x
            FROM xref x, external_db ed
            WHERE x.external_db_id = ed.external_db_id
            AND ed.db_name like \'ENST%\'
 		));
-	$support->log("Done deleting $num entries.\n");
-
-	# object_xrefs
-	$support->log("Deleting orphan object_xrefs...\n");
-	$num = $dba->dbc->do(qq(
+    $support->log("Done deleting $num entries.\n");
+    
+    # object_xrefs
+    $support->log("Deleting orphan object_xrefs...\n");
+    $num = $dba->dbc->do(qq(
            DELETE ox
            FROM object_xref ox
            LEFT JOIN xref x ON ox.xref_id = x.xref_id
            WHERE x.xref_id IS NULL
         ));
-	$support->log("Done deleting $num entries.\n");
-    }
+    $support->log("Done deleting $num entries.\n");
+  }
 }
 elsif ($support->param('prune')){
-    $support->log("Not deleting any xrefs since this is a dry run.\n");
+  $support->log("Not deleting any xrefs since this is a dry run.\n");
 }
 	
 my @gene_stable_ids = $support->param('gene_stable_id');
@@ -160,30 +160,39 @@ my %gene_stable_ids = map { $_, 1 } @gene_stable_ids;
 
 #links xrefs andf the biotypes they link to
 my %assigned_xrefs;
-#get xrefs from E! db for wanted chromosomes
-my $ens_ids;
-CHR:
-foreach my $slice (@{$esa->fetch_all('toplevel')}) {
+
+#retrieve mappings from disc or parse database
+my $ens_ids = {};
+my $xref_file    = $SERVERROOT.'/'.$support->param('dbname')."-ensembl-mappings.file";
+if (-e $xref_file) {
+  if ($support->user_proceed("Read xref records from a previously saved files - $xref_file ?\n")) {
+    $ens_ids = retrieve($xref_file);
+  }
+}
+if (! %$ens_ids) {
+ CHR:
+  foreach my $slice (@{$esa->fetch_all('chromosome',undef,1)}) {
     my $chr_name = $slice->seq_region_name;
     next CHR if ($chr_name =~ /^NT|MT/);
-    $support->log("Retrieving Ensembl genes from chromosome $chr_name...\n");		
- GENE:
+    $support->log("Retrieving Ensembl genes from chromosome $chr_name...\n");
+  GENE:
     foreach my $g (@{$slice->get_all_Genes()}) {
-	next GENE unless ($g->analysis->logic_name =~ /havana/);
-	foreach my $t (@{$g->get_all_Transcripts}) {
-	    my $tsi = $t->stable_id;
-	  XREF:
-	    foreach my $x (@{$t->get_all_DBEntries}){
-		my $dbname = $x->dbname;
-		my $name = $x->display_id;
-		next XREF unless ($dbname =~ /OTTT/);
-		next XREF unless ($name =~ /OTT/);
-		$assigned_xrefs{$dbname}->{$t->biotype}++;
-		$ens_ids->{$name}{$tsi}{$dbname}++;
-	    }
+      next GENE unless ($g->analysis->logic_name =~ /havana/);
+      foreach my $t (@{$g->get_all_Transcripts}) {
+	my $tsi = $t->stable_id;
+      XREF:
+	foreach my $x (@{$t->get_all_DBEntries}){
+	  my $dbname = $x->dbname;
+	  my $name = $x->primary_id;
+	  next XREF unless ($dbname =~ /OTTT/);
+	  next XREF unless ($name =~ /OTT/);
+	  $assigned_xrefs{$dbname}->{$t->biotype}++;
+	  $ens_ids->{$name}{$tsi}{$dbname}++;
 	}
+      }
     }
-#	last;
+  }
+  store($ens_ids,$xref_file);
 }
 
 warn Dumper($ens_ids);
