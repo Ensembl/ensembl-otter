@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2007-07-05 16:29:56 $
-# Id:            $Id: nph-pfetch,v 1.3 2007-07-05 16:29:56 jgrg Exp $
+# Last modified: $Date: 2008-11-24 16:28:28 $
+# Id:            $Id: nph-pfetch,v 1.4 2008-11-24 16:28:28 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-pfetch,v $
 
 use strict;
@@ -44,13 +44,16 @@ eval {
 
     die "Empty request\n" unless $req =~ /\S/;
 
-    $socket = IO::Socket::INET->new(
-        PeerAddr 	=> '172.18.62.3',
-        PeerPort 	=> 22400,
-        Proto    	=> 'tcp',
-        Type     	=> SOCK_STREAM,
-        Timeout  	=> 10,
-        ) or die "Connect to pfetch server failed";
+    foreach my $ip_addr (qw{ 172.17.62.2 172.17.62.3 }){
+        last if $socket = IO::Socket::INET->new(
+            PeerAddr 	=> $ip_addr,
+            PeerPort 	=> 22400,
+            Proto    	=> 'tcp',
+            Type     	=> SOCK_STREAM,
+            Timeout  	=> 10,
+            );
+    }
+    die "Connect to pfetch server failed" unless $socket;
     
     print $socket $req, "\n";
 };
