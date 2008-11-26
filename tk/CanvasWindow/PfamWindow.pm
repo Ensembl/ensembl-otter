@@ -153,12 +153,23 @@ sub open_url {
 	my ($self) = @_;
 	my $url = $self->pfam->result_url;
 	$url =~ s/output=xml&//;
+	print STDOUT "Pfam search result for " . $self->name . "\n$url\n";
 	if ( $^O eq 'darwin' ) {
 		system("open '$url'");
 	}
 	else {
-		print STDOUT "Pfam search result for " . $self->name . "\n$url\n";
-		system(qq{firefox -remote "openFile($url,new-tab)"});
+		my @commands = (qq{firefox -remote "openURL($url,new-tab)"},
+						qq{iceape -remote "openURL($url,new-tab)"},
+						qq{mozilla -remote "openURL($url,new-tab)"},
+						qq{firefox $url},
+						qq{iceape $url},
+						qq{mozilla $url},
+						qq{echo 'you must install firefox web browser'});
+		my $success = 1;
+
+		for(my $i = 0;($i < scalar(@commands) && $success != 0); $i++) {
+			$success = system($commands[$i]);
+		}
 	}
 }
 
