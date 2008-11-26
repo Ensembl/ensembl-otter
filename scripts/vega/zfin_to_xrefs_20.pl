@@ -7,13 +7,21 @@ use strict;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Getopt::Long;
 
-my $host   = 'ecs3f';
-my $user   = 'ensadmin';
-my $pass   = 'ensembl';
-my $port   = 3310;
-my $dbname = 'vega_danio_rerio_20060330';
-my $zfinfile='/nfs/disk100/zfishpub/ZFIN/downloads/zfin_genes.txt';
-my $vegafile='/nfs/disk100/zfishpub/ZFIN/downloads/vega.txt';
+my $host   = 'vegabuild';
+my $user   = 'ottadmin';
+my $pass   = 'wibble';
+my $port   = 3304;
+my $dbname = 'vega_danio_rerio_20080717';
+
+#my $host   = 'ecs3f';
+#my $user   = 'ensadmin';
+#my $pass   = 'ensembl';
+#my $port   = 3310;
+#my $dbname = 'vega_danio_rerio_ext_20060725_v40';
+
+my $zfinfile; # lives in /lustre/cbi4/work1/zfish/ZFIN/downloads/ftp/zfin_genes.txt
+my $vegafile;
+my $alias;    # lives in /lustre/cbi4/work1/zfish/ZFIN/downloads/web/aliases.txt
 
 my @chromosomes;
 my $do_store = 0;
@@ -29,6 +37,7 @@ $| = 1;
   'chromosomes:s' => \@chromosomes,
   'zfinfile:s'    => \$zfinfile,
   'vegafile:s'    => \$vegafile,
+  'alias:s'       => \$alias, 
   'store'         => \$do_store,
 );
 
@@ -41,14 +50,14 @@ my $db = new Bio::EnsEMBL::DBSQL::DBAdaptor(
   -user   => $user,
   -port   => $port,
   -pass   => $pass,
-  -dbname => $dbname
+  -dbname => $dbname,
 );
 my $dbc = new Bio::EnsEMBL::DBSQL::DBConnection(
   -host   => $host,
   -user   => $user,
   -port   => $port,
   -pass   => $pass,
-  -dbname => $dbname
+  -dbname => $dbname,
 );
 
 my $adx = $db->get_DBEntryAdaptor();
@@ -89,6 +98,16 @@ while (<IN>) {
     }
     $crossrefs{$newname}->{zfinid} = $zfinid;
     $crossrefs{$newname}->{desc}   = $desc;
+}
+
+# get ZFIN aliases 
+open(AL,$alias) or die "cannot open $alias";
+my %alias;
+while (<AL>) {
+    chomp;
+    next unless (/ZDB-GENE/);
+    my ($zfinid,$desc,$name,$alias) = split /\t/;
+    $alias{$zfinid}->{$alias}++; 
 }
 
 ###########################
@@ -199,9 +218,18 @@ sub create_entry {
                                         );
     $dbentry->status('KNOWN');
     $dbentry->description($desc);
+    if (exists $alias{$zfin_id}) {
+        print "*";
+        foreach my $alias (keys %{$alias{$zfin_id}}) {
+            $dbentry->add_synonym($alias);           
+            print "added alias $alias to $zfin_id\n";         
+        }
+    }
+    
+    
     $gene->add_DBEntry($dbentry);
     if ($do_store) {
-      $adx->store($dbentry,$gene,'Gene') or die "Couldn't store entry\n";
+      $adx->store($dbentry,$gene->dbID,'Gene') or die "Couldn't store entry\n";
     }    
     #print "generated ",$dbentry->display_id(),"\n" if $do_store;
 
