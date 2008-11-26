@@ -79,6 +79,7 @@ use Bio::Otter::MFetcher;
       # dump all encode
       #read from external file for list of mouse encode regions
       open(my $fh, "/nfs/team71/analysis/ck1/DATAMINE/adam/mouse_encode_regions/mouse_encode_regions_no_flank.txt") or die $!;
+
       my $seen;
 
       while(<$fh>){
