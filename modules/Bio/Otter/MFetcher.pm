@@ -9,6 +9,7 @@ package Bio::Otter::MFetcher;
 
 use strict;
 use warnings;
+use Carp qw{ confess longmess };
 
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::Otter::DBSQL::DBAdaptor;
@@ -149,7 +150,7 @@ sub satellite_dba {
             $self->log("cannot connect to metakey='$metakey' as this key is not defined in the meta table.");
             return;
         } else {
-            $self->error_exit("Could not find meta entry for '$metakey' satellite db");
+            $self->error_exit("Could not find meta entry for '$metakey' satellite db\n" . longmess());
         }
     } elsif($opt_str =~ /^\=otter/) {
         return $self->otter_dba();
