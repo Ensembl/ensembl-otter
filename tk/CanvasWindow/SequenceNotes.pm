@@ -10,6 +10,7 @@ use MenuCanvasWindow::XaceSeqChooser;
 use CanvasWindow::SequenceNotes::History;
 use CanvasWindow::SequenceNotes::Status;
 use TransientWindow::OpenRange;
+use TransientWindow::OpenSlice;
 use Evi::EviCollection;
 use POSIX qw(ceil);
 use Tk::Checkbutton;
@@ -641,7 +642,7 @@ sub set_selected_from_canvas {
     }
 }
 
-sub run_lace{
+sub run_lace {
     my ($self) = @_ ;
     
     ### Prevent opening of sequences already in lace sessions
@@ -650,6 +651,7 @@ sub run_lace{
     my $title = 'lace '. $self->name . $self->selected_sequence_string;
     $self->_open_SequenceSet($title) ;
 }
+
 sub run_lace_on_slice{
     my ($self, $start, $end) = @_;
     
@@ -1652,7 +1654,6 @@ sub slice_window{
     unless (defined ($slice_window) ){
         ## make a new window
         my $master = $self->canvas->toplevel;
-        use TransientWindow::OpenSlice;
         $self->{'_slice_window'} = 
             $slice_window = TransientWindow::OpenSlice->new($master, 'Open a slice');
         my $cs_list = $self->SequenceSet->CloneSequence_list();

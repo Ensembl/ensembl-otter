@@ -301,7 +301,9 @@ sub open_sequence_set {
 
             my $ss = $self->DataSet->get_SequenceSet_by_name($ss_name);
 
+            $canvas->toplevel->Busy;
             $self->open_sequence_set_by_ssname_subset($ss_name, $subset_name);
+            $canvas->toplevel->Unbusy;
             return 1;
         }
     }
@@ -310,8 +312,6 @@ sub open_sequence_set {
 
 sub open_sequence_set_by_ssname_subset {
     my ($self, $ss_name, $subset_name) = @_;
-    
-    $self->watch_cursor();
 
     my $sn = $self->find_cached_SequenceNotes_by_name($ss_name);
 
@@ -337,8 +337,6 @@ sub open_sequence_set_by_ssname_subset {
     } elsif(! $sn->canvas->find('withtag', 'all')) {
         $sn->draw_all();    
     }
-
-    $self->default_cursor();
 }
 
 # brings up a window for searching for loci / clones

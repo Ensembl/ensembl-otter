@@ -79,6 +79,7 @@ sub add_default_options {
         CanvasWindow*Scrollbar.width            11
         CanvasWindow*Menubutton.padX            6
         CanvasWindow*Menubutton.padY            6
+        CanvasWindow*Balloon*background         #ffffcc
         };
     
     for (my $i = 0; $i < @opt_val; $i += 2) {

@@ -69,25 +69,7 @@ sub new {
 sub top_window {
 	my $self = shift @_;
 
-	return $self->canvas()->toplevel();
-}
-
-sub watch_cursor {
-    my( $self ) = @_;
-
-    my $w = $self->top_window();
-
-    $w->configure( -cursor => 'watch' );
-    $w->update;
-}
-
-sub default_cursor {
-    my( $self ) = @_;
-
-    my $w = $self->top_window();
-
-    $w->configure( -cursor => undef );
-    $w->update;
+	return $self->canvas->toplevel;
 }
 
 sub icon_pixmap {
@@ -1038,6 +1020,12 @@ sub next_message_id {
         my( $self, $obj ) = @_;
 
         return $self->{'_selected_list'}{$obj} ? 1 : 0;
+    }
+    
+    sub was_selected {
+        my ($self, $obj) = @_;
+        
+        return $self->{'_was_selected_list'}{$obj} ? 1 : 0;
     }
 
     sub list_selected {
