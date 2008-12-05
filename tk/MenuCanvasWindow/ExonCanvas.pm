@@ -12,7 +12,6 @@ use Tk::LabFrame;
 use Tk::ComboBox;
 use Tk::SmartOptionmenu;
 use Hum::Ace::SubSeq;
-use Hum::Translator;
 use MenuCanvasWindow;
 use Hum::Ace::DotterLauncher;
 use CanvasWindow::EvidencePaster;
@@ -49,178 +48,217 @@ sub initialize {
         }
     };
 
-    my $file_menu = $self->make_menu('File');
+    # FILE MENU
+    {
+        my $file_menu = $self->make_menu('File');
 
-    # Show the subsequence in fMap
-    my $show_subseq = sub{ $self->show_subseq };
-    $file_menu->add('command',
-        -label          => 'Show SubSequence',
-        -command        => $show_subseq,
-        -accelerator    => 'Ctrl+H',
-        -underline      => 1,
-        );
-    $top->bind('<Control-h>',   $show_subseq);
-    $top->bind('<Control-H>',   $show_subseq);
+        # Show the peptide
+        my $show_pep_command = sub{ $self->show_peptide };
+        $file_menu->add('command',
+            -label          => 'Show Peptide',
+            -command        => $show_pep_command,
+            -accelerator    => 'Ctrl+Spacebar',
+            -underline      => 5,
+            );
+        $top->bind('<Control-p>',       $show_pep_command);
+        $top->bind('<Control-P>',       $show_pep_command);
+        $top->bind('<Control-space>',   $show_pep_command);
+        $canvas->Tk::bind('<space>',    $show_pep_command);
 
-    # Show the peptide
-    my $show_pep_command = sub{ $self->show_peptide };
-    $file_menu->add('command',
-        -label          => 'Show Peptide',
-        -command        => $show_pep_command,
-        -accelerator    => 'Ctrl+Spacebar',
-        -underline      => 5,
-        );
-    $top->bind('<Control-p>',       $show_pep_command);
-    $top->bind('<Control-P>',       $show_pep_command);
-    $top->bind('<Control-space>',   $show_pep_command);
-    $canvas->Tk::bind('<space>',    $show_pep_command);
+        # Save changes on window close
+        my $window_close = sub {
+            $self->window_close or return;
+            };
 
-    # Search Pfam
-    my $search_pfam_command = sub{ $self->search_pfam };
-    $file_menu->add('command',
-        -label          => 'Search Pfam',
-        -command        => $search_pfam_command,
-        -accelerator    => 'Ctrl+F',
-        -underline      => 5,
-        );
-    $top->bind('<Control-f>',       $search_pfam_command);
-    $top->bind('<Control-F>',       $search_pfam_command);
+        # Trap window close
+        $top->protocol('WM_DELETE_WINDOW', $window_close);
+        $top->bind('<Control-w>',   $window_close);
+        $top->bind('<Control-W>',   $window_close);
 
-    # Run dotter
-    my $run_dotter = sub{ $self->run_dotter };
-    $file_menu->add('command',
-        -label          => 'Dotter',
-        -command        => $run_dotter,
-        -accelerator    => 'Ctrl+.',
-        -underline      => 0,
-        );
-    $top->bind('<Control-period>',  $run_dotter);
-    $top->bind('<Control-greater>', $run_dotter);
+        if ($self->is_mutable) {
 
-    # Save changes on window close
-    my $window_close = sub {
-        $self->window_close or return;
-        };
+            # Select supporting evidence for the transcript
+            my $select_evidence = sub{ $self->select_evidence };
+            $file_menu->add('command',
+                -label          => 'Select evidence',
+                -command        => $select_evidence,
+                -accelerator    => 'Ctrl+E',
+                -underline      => 1,
+                );
+            $canvas->Tk::bind('<Control-e>',   $select_evidence);
+            $canvas->Tk::bind('<Control-E>',   $select_evidence);
 
-    # Trap window close
-    $top->protocol('WM_DELETE_WINDOW', $window_close);
-    $top->bind('<Control-w>',   $window_close);
-    $top->bind('<Control-W>',   $window_close);
+            # Save into db via sgifaceserver
+            my $save_command = sub{ $self->save_if_changed };
+            $file_menu->add('command',
+                -label          => 'Save',
+                -command        => $save_command,
+                -accelerator    => 'Ctrl+S',
+                -underline      => 0,
+                );
+            $top->bind('<Control-s>',       $save_command);
+            $top->bind('<Control-S>',       $save_command);
+            $top->bind('<Control-Return>',  $save_command);
+            $top->bind('<KP_Enter>',        $save_command);
+            $canvas->Tk::bind('<Return>',   $save_command);
+            $canvas->Tk::bind('<KP_Enter>', $save_command);
+        }
+        
+        $file_menu->add('separator');
 
-    my $edit_menu = $self->make_menu('Edit');
+        # To close window
+        $file_menu->add('command',
+            -label          => 'Close',
+            -command        => $window_close,
+            -accelerator    => 'Ctrl+W',
+            -underline      => 0,
+            );
+    }
 
-    # Select all positions
-    $edit_menu->add('command',
-        -label          => 'Select All',
-        -command        => $select_all_sub,
-        -accelerator    => 'Ctrl+A',
-        -underline      => 7,
-        );
-    $canvas->Tk::bind('<Control-a>', $select_all_sub);
-    $canvas->Tk::bind('<Control-A>', $select_all_sub);
+    # EXON MENU
+    {
+        my $exon_menu = $self->make_menu('Exon');
 
+        # Select all positions
+        $exon_menu->add('command',
+            -label          => 'Select All',
+            -command        => $select_all_sub,
+            -accelerator    => 'Ctrl+A',
+            -underline      => 7,
+            );
+        $canvas->Tk::bind('<Control-a>', $select_all_sub);
+        $canvas->Tk::bind('<Control-A>', $select_all_sub);
 
-    # Deselect all
-    $canvas->Tk::bind('<Escape>', sub{ $self->deselect_all });
+        # Deselect all
+        $canvas->Tk::bind('<Escape>', sub{ $self->deselect_all });
+
+        if ($self->is_mutable) {
+
+            # Flip strands
+            my $reverse_command = sub { $self->toggle_tk_strand };
+            $exon_menu->add('command',
+                -label          => 'Reverse',
+                -command        => $reverse_command,
+                -accelerator    => 'Ctrl+R',
+                -underline      => 0,
+                );
+            $canvas->Tk::bind('<Control-r>', $reverse_command);
+            $canvas->Tk::bind('<Control-R>', $reverse_command);
+
+            # Trim CDS coords to first stop character
+            my $trim_cds_sub = sub { $self->trim_cds_coord_to_first_stop };
+            $exon_menu->add('command',
+                -label          => 'Trim CDS',
+                -command        => $trim_cds_sub,
+                -accelerator    => 'Ctrl+T',
+                -underline      => 0,
+                );
+            $canvas->Tk::bind('<Control-t>', $trim_cds_sub);
+            $canvas->Tk::bind('<Control-T>', $trim_cds_sub);
+
+            # Add editing facilities for editable SubSeqs
+            $exon_menu->add('separator');
+
+            # Sort the positions
+            my $sort_command = sub{ $self->sort_all_coordinates };
+            $exon_menu->add('command',
+                -label          => 'Sort',
+                -command        => $sort_command,
+                -accelerator    => 'Ctrl+O',
+                -underline      => 0,
+                );
+            $top->bind('<Control-o>',   $sort_command);
+            $top->bind('<Control-O>',   $sort_command);
+
+            # Merge overlapping exon coordinates
+            my $merge_overlapping_exons = sub{ $self->merge_position_pairs };
+            $exon_menu->add('command',
+                -label          => 'Merge',
+                -command        => $merge_overlapping_exons,
+                -accelerator    => 'Ctrl+M',
+                -underline      => 0,
+                );
+            $canvas->Tk::bind('<Control-m>', $merge_overlapping_exons);
+            $canvas->Tk::bind('<Control-M>', $merge_overlapping_exons);
+
+            # Delete selected Exons
+            my $delete_exons = sub{ $self->delete_selected_exons };
+            $exon_menu->add('command',
+                -label          => 'Delete',
+                -command        => $delete_exons,
+                -accelerator    => 'Ctrl+D',
+                -underline      => 0,
+                );
+            $canvas->Tk::bind('<Control-d>', $delete_exons);
+            $canvas->Tk::bind('<Control-D>', $delete_exons);
+        }
+    }
+
+    # TOOLS MENU
+    {
+        my $tools_menu = $self->make_menu('Tools');
+
+        if ($self->is_mutable) {
+            # Check for annotation errors
+            my $error_check = sub { $self->check_for_errors };
+            $tools_menu->add('command',
+                -label          => 'Check annotation',
+                -command        => $error_check,
+                -accelerator    => 'Ctrl+C',
+                -underline      => 0,
+                );
+            $top->bind('<Control-c>',   $error_check);
+            $top->bind('<Control-C>',   $error_check);
+        }
+
+        # Show the subsequence in fMap
+        my $show_subseq = sub{ $self->show_subseq };
+        $tools_menu->add('command',
+            -label          => 'Hunt in Zmap',
+            -command        => $show_subseq,
+            -accelerator    => 'Ctrl+H',
+            -underline      => 0,
+            );
+        $top->bind('<Control-h>',   $show_subseq);
+        $top->bind('<Control-H>',   $show_subseq);
+
+        # Run dotter
+        my $run_dotter = sub{ $self->run_dotter };
+        $tools_menu->add('command',
+            -label          => 'Dotter',
+            -command        => $run_dotter,
+            -accelerator    => 'Ctrl+.',
+            -underline      => 0,
+            );
+        $top->bind('<Control-period>',  $run_dotter);
+        $top->bind('<Control-greater>', $run_dotter);
+
+        # Search Pfam
+        my $search_pfam_command = sub{ $self->search_pfam };
+        $tools_menu->add('command',
+            -label          => 'Search Pfam',
+            -command        => $search_pfam_command,
+            -accelerator    => 'Ctrl+P',
+            -underline      => 7,
+            );
+        $top->bind('<Control-p>',       $search_pfam_command);
+        $top->bind('<Control-P>',       $search_pfam_command);
+
+        if ($self->is_mutable) {
+            # Show dialog for renaming the locus attached to this subseq
+            my $rename_locus = sub { $self->rename_locus };
+            $tools_menu->add('command',
+                -label          => 'Rename locus',
+                -command        => $rename_locus,
+                -accelerator    => 'Ctrl+L',
+                -underline      => 0,
+                );
+            $top->bind('<Control-l>',  $rename_locus);
+            $top->bind('<Control-L>',  $rename_locus);
+        }
+    }
 
     if ($self->is_mutable) {
-
-        # Select supporting evidence for the transcript
-        my $select_evidence = sub{ $self->select_evidence };
-        $file_menu->add('command',
-            -label          => 'Select evidence',
-            -command        => $select_evidence,
-            -accelerator    => 'Ctrl+E',
-            -underline      => 1,
-            );
-        $canvas->Tk::bind('<Control-e>',   $select_evidence);
-        $canvas->Tk::bind('<Control-E>',   $select_evidence);
-
-
-        # Show dialog for renaming the locus attached to this subseq
-        my $rename_locus = sub { $self->rename_locus };
-        $file_menu->add('command',
-            -label          => 'Rename locus',
-            -command        => $rename_locus,
-            -accelerator    => 'Ctrl+Shift+L',
-            -underline      => 1,
-            );
-        $top->bind('<Control-Shift-L>',  $rename_locus);
-
-        # Save into db via xace
-        my $save_command = sub{ $self->save_if_changed };
-        $file_menu->add('command',
-            -label          => 'Save',
-            -command        => $save_command,
-            -accelerator    => 'Ctrl+S',
-            -underline      => 0,
-            );
-        $top->bind('<Control-s>',       $save_command);
-        $top->bind('<Control-S>',       $save_command);
-        $top->bind('<Control-Return>',  $save_command);
-        $top->bind('<KP_Enter>',        $save_command);
-        $canvas->Tk::bind('<Return>',   $save_command);
-        $canvas->Tk::bind('<KP_Enter>', $save_command);
-
-        ### Additions to Edit menu
-
-        # Flip strands
-        my $reverse_command = sub { $self->toggle_tk_strand };
-        $edit_menu->add('command',
-            -label          => 'Reverse',
-            -command        => $reverse_command,
-            -accelerator    => 'Ctrl+R',
-            -underline      => 1,
-            );
-        $canvas->Tk::bind('<Control-r>', $reverse_command);
-        $canvas->Tk::bind('<Control-R>', $reverse_command);
-
-        # Trim CDS coords to first stop character
-        my $trim_cds_sub = sub { $self->trim_cds_coord_to_first_stop };
-        $edit_menu->add('command',
-            -label          => 'Trim CDS',
-            -command        => $trim_cds_sub,
-            -accelerator    => 'Ctrl+T',
-            -underline      => 1,
-            );
-        $canvas->Tk::bind('<Control-t>', $trim_cds_sub);
-        $canvas->Tk::bind('<Control-T>', $trim_cds_sub);
-
-        # Add editing facilities for editable SubSeqs
-        $edit_menu->add('separator');
-
-        # Sort the positions
-        my $sort_command = sub{ $self->sort_all_coordinates };
-        $edit_menu->add('command',
-            -label          => 'Sort',
-            -command        => $sort_command,
-            -accelerator    => 'Ctrl+O',
-            -underline      => 1,
-            );
-        $top->bind('<Control-o>',   $sort_command);
-        $top->bind('<Control-O>',   $sort_command);
-
-        # Merge overlapping exon coordinates
-        my $merge_overlapping_exons = sub{ $self->merge_position_pairs };
-        $edit_menu->add('command',
-            -label          => 'Merge',
-            -command        => $merge_overlapping_exons,
-            -accelerator    => 'Ctrl+M',
-            -underline      => 0,
-            );
-        $canvas->Tk::bind('<Control-m>', $merge_overlapping_exons);
-        $canvas->Tk::bind('<Control-M>', $merge_overlapping_exons);
-
-        # Delete selected Exons
-        my $delete_exons = sub{ $self->delete_selected_exons };
-        $edit_menu->add('command',
-            -label          => 'Delete',
-            -command        => $delete_exons,
-            -accelerator    => 'Ctrl+D',
-            -underline      => 0,
-            );
-        $canvas->Tk::bind('<Control-d>', $delete_exons);
-        $canvas->Tk::bind('<Control-D>', $delete_exons);
 
         # Keyboard editing commands
         $canvas->Tk::bind('<Left>',      sub{ $self->canvas_text_go_left   });
@@ -318,7 +356,6 @@ sub initialize {
                 );
         $self->add_locus_editing_widgets($locus_frame);
 
-
     } else {
         # SubSeq with an immutable method - won't display entry widgets for updating things
 
@@ -330,17 +367,6 @@ sub initialize {
             }
         });
     }
-
-    $file_menu->add('separator');
-
-    # To close window
-    $file_menu->add('command',
-        -label          => 'Close',
-        -command        => $window_close,
-        -accelerator    => 'Ctrl+W',
-        -underline      => 1,
-        );
-
 
     # For extending selection
     $canvas->Tk::bind('<Shift-Button-1>', sub{
@@ -688,9 +714,7 @@ sub window_close {
     if ($self->is_mutable && $xc->AceDatabase->write_access) {
         my( $sub );
         eval{
-            if ($sub = $self->get_SubSeq_if_changed) {
-                $sub->validate;
-            }
+            $sub = $self->get_SubSeq_if_changed;
         };
 
         my $name = $self->name;
@@ -815,7 +839,7 @@ sub show_peptide {
             );
 
         # Gold for methionine codons
-        $peptext->tagConfigure('goldmeth' ,
+        $peptext->tagConfigure('goldmeth',
             -background => '#ffd700',
             -foreground => 'black',
         );
@@ -833,9 +857,9 @@ sub show_peptide {
             );
 
         # Green for selenocysteines
-        $peptext->tagConfigure('greenseleno' ,
+        $peptext->tagConfigure('greenseleno',
             -background => '#32cd32',
-            -foreground => 'black',
+            -foreground => 'white',
         );
 
         # Frame for buttons
@@ -912,7 +936,7 @@ sub search_pfam {
     if ($@) {
         $self->exception_message($@, 'Invalid transcript');
     } else {
-        my $pep = $self->translator->translate($sub->translatable_Sequence);
+        my $pep = $sub->translator->translate($sub->translatable_Sequence);
 		my $name = $pep->name;
         my $str = $pep->sequence_string;
         my $pfam;
@@ -965,7 +989,7 @@ sub update_translation {
     } else {
         # Put the new translation into the Text widget
 
-        my $pep = $self->translator->translate($sub->translatable_Sequence);
+        my $pep = $sub->translator->translate($sub->translatable_Sequence);
         $peptext->insert('end', sprintf(">%s\n", $pep->name));
 
         my $line_length = 60;
@@ -1285,7 +1309,7 @@ sub trim_cds_coord_to_first_stop {
 
     # Translate the subsequence
     $sub = $self->new_SubSeq_from_tk;
-    my $pep = $self->translator->translate($sub->translatable_Sequence);
+    my $pep = $sub->translator->translate($sub->translatable_Sequence);
     my $pep_str = $pep->sequence_string;
 
     # Find the first stop character
@@ -1327,17 +1351,6 @@ sub trim_cds_coord_to_first_stop {
         $pos = $exon_end;
     }
     $self->message("Failed to map coordinate");
-}
-
-sub translator {
-    my( $self ) = @_;
-
-    # Cache a copy of a translator object
-    my( $tlr );
-    unless ($tlr = $self->{'_translator'}) {
-        $self->{'_translator'} = $tlr = Hum::Translator->new;
-    }
-    return $tlr;
 }
 
 sub add_locus_editing_widgets {
@@ -1698,14 +1711,18 @@ sub add_start_end_method_widgets {
         )->pack(-side => 'left');
 
     # Menu
-    my( $snf );
-    my $om = $frame->Optionmenu(
+    my $snf = $self->SubSeq->start_not_found;
+    unless ($snf) {
+        $snf = 'utr' if $self->SubSeq->utr_start_not_found;
+    }
+    my $om = $frame->SmartOptionmenu(
         -variable   => \$snf,
         -options    => [
-                ['Found'          => 0],
-                ['Not found - 1'  => 1],
-                ['Not found - 2'  => 2],
-                ['Not found - 3'  => 3],
+                ['Found'                =>     0],    
+                ['CDS not found - 1'    =>     1],    
+                ['CDS not found - 2'    =>     2],    
+                ['CDS not found - 3'    =>     3],    
+                ['UTR incomplete'       => 'utr'],
             ],
         -takefocus  => 0, # Doesn't work ...
         -command    => sub{
@@ -1715,9 +1732,6 @@ sub add_start_end_method_widgets {
         )->pack(
             -side => 'left',
             );
-    $snf = $self->SubSeq->start_not_found;
-    $om->menu->invoke($snf);
-    #warn "snf = $snf";
 
     # Pad between Start and End not found widgets
     $frame->Frame(
@@ -1753,13 +1767,11 @@ sub add_start_end_method_widgets {
 
 sub start_not_found_from_tk {
     my( $self ) = @_;
-
     return ${$self->{'_start_not_found_variable'}} || 0;
 }
 
 sub end_not_found_from_tk {
     my( $self ) = @_;
-
     return ${$self->{'_end_not_found_variable'}} || 0;
 }
 
@@ -2399,14 +2411,11 @@ sub strand_from_tk {
     sub draw_translation_region {
         my( $self, $sub ) = @_;
 
-        if ($sub) {
-            return unless $sub->translation_region_is_set;
-        }
-
         # Get the translation region from the
         # canvas or the SubSequence
         my( @trans );
         if ($sub) {
+            return unless $sub->translation_region_is_set;  ### Why is this needed?
             @trans = $sub->translation_region;
         } else {
             @trans = $self->translation_region_from_tk;
@@ -2415,9 +2424,17 @@ sub strand_from_tk {
             }
         }
 
-        # Delete the existing translation region
+        # Delete the existing translation region and any highlights or lowlights
         my $canvas = $self->canvas;
-        $canvas->delete($tr_tag);
+        if (my @tr_coord = $canvas->find('withtag', $tr_tag)) {
+            $self->remove_selected(@tr_coord);
+            foreach my $obj (@tr_coord) {
+                if ($self->was_selected($obj)) {
+                    $self->delete_was_selected($obj);
+                }
+            }
+            $canvas->delete(@tr_coord);
+        }
 
         # Don't draw anything if it isn't coding
         my( $meth, $strand );
@@ -2439,14 +2456,14 @@ sub strand_from_tk {
             @trans = reverse @trans;
         }
 
-        my $t1 = $canvas->createText(
+        $canvas->createText(
             $half + $text_len, $size,
             -anchor => 'e',
             -text   => $trans[0],
             -font   => $font,
             -tags   => ['t_start', $tr_tag],
             );
-        my $t2 = $canvas->createText(
+        $canvas->createText(
             (3 * $text_len) + (4 * $size), $size,
             -anchor => 'w',
             -text   => $trans[1],
@@ -2521,6 +2538,9 @@ sub get_SubSeq_if_changed {
             confess "Error: SubSeq '$new_name' already exists\n";
         }
     }
+    
+    $new->validate;
+    $new->set_seleno_remark_from_translation;
     return $new;
 }
 
@@ -2544,7 +2564,7 @@ sub manage_locus_otter_ids {
             my $prefix_pat = qr{^(\w+:)};
             my ($old_pre) = $old_locus_name =~ /$prefix_pat/;
             my ($new_pre) = $new_locus_name =~ /$prefix_pat/;
-            if ($new_pre and ($new_pre || '') ne $old_pre) {
+            if ($new_pre and $new_pre ne ($old_pre || '')) {
                 # warn "'$new_pre' ne '$old_pre'";
                 confess "New locus with '$new_pre' prefix would steal Otter ID from locus '$old_locus_name'\n";
             }
@@ -2567,15 +2587,21 @@ sub new_SubSeq_from_tk {
     $new->replace_all_Exons      ( $self->Exons_from_canvas           );
     $new->GeneMethod             ( $self->get_GeneMethod_from_tk      );
     $new->strand                 ( $self->strand_from_tk              );
-    $new->start_not_found        ( $self->start_not_found_from_tk     );
     $new->end_not_found          ( $self->end_not_found_from_tk       );
     $new->evidence_hash          ( $self->evidence_hash               );
     $new->Locus                  ( $self->get_Locus_from_tk           );
     $self->get_transcript_remarks($new);
 
+    my $snf = $self->start_not_found_from_tk;
+    if ($snf eq 'utr') {
+        $new->utr_start_not_found(1);
+        $new->start_not_found(0);
+    } else {
+        $new->start_not_found($snf);
+    }
 
-    #warn "Start not found ", $self->start_not_found_from_tk, "\n",
-    #    "End not found ", $self->end_not_found_from_tk, "\n";
+    # warn "Start not found ", $self->start_not_found_from_tk, "\n",
+    #      "  End not found ", $self->end_not_found_from_tk,   "\n";
     return $new;
 }
 
@@ -2639,7 +2665,6 @@ sub save_if_changed {
 
     eval {
         if (my $sub = $self->get_SubSeq_if_changed) {
-            $sub->validate;
             $self->xace_save($sub);
         }
     };
@@ -2738,6 +2763,18 @@ sub Exons_from_canvas {
     }
 
     return @exons;
+}
+
+sub check_for_errors {
+    my ($self) = @_;
+    
+    my $sub = $self->new_SubSeq_from_tk;
+    if (my $err = $sub->pre_otter_save_error) {
+        $err =~ s/\n$//;
+        $self->message($err);
+    } else {
+        $self->message('Transcript OK');
+    }
 }
 
 sub run_dotter {

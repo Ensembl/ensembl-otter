@@ -12,7 +12,7 @@ use Hum::Conf qw{ PFETCH_SERVER_LIST };
 use XML::Simple;
 
 
-my $ZMAP_DEBUG = 1;
+my $ZMAP_DEBUG = 0;
 
 #==============================================================================#
 #
@@ -148,7 +148,7 @@ sub _launchInAZMap{
                 my $server   = $self->AceDatabase->ace_server;
                 my $protocol = 'acedb';
                 
-                my $url = sprintf(q{%s://%s:%s@%s:%d},
+                my $url = sprintf(q{%s://%s:%s@%s:%d?use_methods=true},
                                   $protocol,
                                   $server->user, 
 				  $server->pass,
@@ -378,7 +378,7 @@ sub zMapServerDefaults {
     
     my $protocol    = 'acedb';
 
-    my $url = sprintf q{%s://%s:%s@%s:%d},
+    my $url = sprintf q{%s://%s:%s@%s:%d?use_methods=true},
         $protocol,
         $server->user, $server->pass,
         $server->host, $server->port;
@@ -405,8 +405,8 @@ sub double_quote_escaped_list {
     my ($self, $list) = @_;
     
     return sprintf(q{%s},
-        join ' ',
-        map qq{"$_"},
+        join ';',
+        map qq{$_},
         @$list);
 }
 

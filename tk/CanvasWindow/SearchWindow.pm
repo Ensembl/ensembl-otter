@@ -61,6 +61,8 @@ sub search_field {
 sub do_search {
     my ($self) = @_;
 
+    $self->top_window->Busy;
+
     foreach my $oldresult (@{$self->found_elements}) {
         $oldresult->packForget();
     }
@@ -68,7 +70,6 @@ sub do_search {
 
     my $qnames = [ split(/[\s,]+/, ${$self->search_field()} ) ];
 
-    $self->watch_cursor();
 
     my $results_list = $self->Client()->find_string_match_in_clones($self->DataSet->name(), $qnames);
     
@@ -156,7 +157,7 @@ sub do_search {
 
     $self->fix_window_min_max_sizes;
 
-    $self->default_cursor();
+    $self->top_window->Unbusy;
 }
 
 sub new {

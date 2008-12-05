@@ -5,10 +5,12 @@ package MenuCanvasWindow::XaceSeqChooser;
 use strict;
 use 5.006_001;  # For qr support
 use Carp qw{ cluck confess };
-use Tk::Dialog;
-use Tk::DialogBox;
 use Symbol 'gensym';
 use Scalar::Util 'weaken';
+
+use Tk::Dialog;
+use Tk::DialogBox;
+use Tk::Balloon;
 
 use Hum::Ace::SubSeq;
 use Hum::Ace::Locus;
@@ -118,6 +120,15 @@ sub clone_menu {
         $self->{'_clone_menu'} = $clone_menu;
     }
     return $self->{'_clone_menu'};
+}
+
+sub balloon {
+    my( $self ) = @_;
+    
+    $self->{'_balloon'} ||= $self->top_window->Balloon(
+        -state  => 'balloon',
+        );
+    return $self->{'_balloon'};
 }
 
 sub set_known_GeneMethods{
@@ -1223,6 +1234,10 @@ sub edit_subsequences {
     }
 }
 
+sub default_locus_prefix {
+    return Bio::Otter::Lace::Defaults::fetch_gene_type_prefix() || '';
+}
+
 sub edit_new_subsequence {
     my( $self ) = @_;
 
@@ -1250,7 +1265,7 @@ sub edit_new_subsequence {
 
     my ($region_name, $max) = $self->region_name_and_next_locus_number($new);
 
-    my $prefix = Bio::Otter::Lace::Defaults::fetch_gene_type_prefix() || '';
+    my $prefix = $self->default_locus_prefix;
     my $loc_name = $prefix ? "$prefix:$region_name.$max" : "$region_name.$max";
     my $locus = $self->get_Locus($loc_name);
     $locus->gene_type_prefix($prefix);
@@ -1814,12 +1829,20 @@ sub draw_sequence_list {
 
     my $x = 0;
     my $y = 0;
+    my $err_hash = {};
+    my $locus_type_pattern;
+    if (my $pre = $self->default_locus_prefix) {
+        $locus_type_pattern = qr{^$pre:};
+    } else {
+        $locus_type_pattern = qr{^[^:]+$};
+    }
     for (my $i = 0; $i < @$slist; $i++) {
         if (my $sub = $slist->[$i]) {
             # Have a subseq - and not a gap in the list.
 
             my $style = 'bold';
             my $color = 'black';
+            my $error = '';
 
             if ($sub->GeneMethod->name =~ /_trunc$/) {
                 $color = '#999999';
@@ -1827,8 +1850,16 @@ sub draw_sequence_list {
             elsif (! $sub->is_mutable) {
                 $style = 'normal';
             }
+            elsif ($error = $sub->pre_otter_save_error) {
+                # Don't highlight errors in transcripts from other centres
+                if ($sub->Locus->name =~ /$locus_type_pattern/) {
+                    $color = "#ee2c2c";     # firebrick2
+                } else {
+                    $error = undef;
+                }
+            }
 
-	        $canvas->createText(
+	        my $txt = $canvas->createText(
 		        $x, $y,
 		        -anchor     => 'nw',
 		        -text       => $sub->name,
@@ -1836,6 +1867,10 @@ sub draw_sequence_list {
 		        -tags       => ['subseq', 'searchable'],
 		        -fill       => $color,
 		        );
+		    if ($error) {
+		        $error =~ s/\n$//;
+		        $err_hash->{$txt} = $error;
+		    }
         }
 
         if (($i + 1) % $rows) {
@@ -1845,6 +1880,13 @@ sub draw_sequence_list {
             my $x_max = ($canvas->bbox('subseq'))[2];
             $x = $x_max + ($size * 2);
         }
+    }
+    if (keys %$err_hash) {
+        # $balloon->detatch($canvas);
+        $self->balloon->attach($canvas,
+            -balloonposition => 'mouse',
+            -msg => $err_hash,
+            );
     }
 
     # Raise messages above everything else
