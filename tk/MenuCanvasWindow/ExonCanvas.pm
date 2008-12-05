@@ -15,7 +15,7 @@ use Hum::Ace::SubSeq;
 use MenuCanvasWindow;
 use Hum::Ace::DotterLauncher;
 use CanvasWindow::EvidencePaster;
-use CanvasWindow::PfamWindow;
+use EditWindow::PfamWindow;
 #use Evi::EviDisplay;
 use vars ('@ISA');
 use Hum::Ace;
@@ -952,11 +952,14 @@ sub search_pfam {
 	    		$pfam->query($str);
 	    		$pfam->initialize();
 	    	} else {
-	    		$pfam->open_url();
+	    		$pfam->canvas->toplevel->deiconify;
+				$pfam->canvas->toplevel->raise;
+				$pfam->canvas->toplevel->focus;
+	    		#$pfam->open_url();
 
 	    	}
 	    } else {
-			$pfam = CanvasWindow::PfamWindow->new($self->canvas->Toplevel(-title => "Pfam $name"), 1 , 1 , 1);
+			$pfam = EditWindow::PfamWindow->new($self->canvas->Toplevel(-title => "Pfam $name"));
 			$pfam->query($str);
 			$pfam->name($name);
 			$self->{'_pfam'} = $pfam;
