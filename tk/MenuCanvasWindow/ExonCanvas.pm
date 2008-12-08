@@ -771,7 +771,7 @@ sub show_subseq {
     if (my $cache = $xc->xremote_cache) {
         my $id = $cache->lookup_value('ZMapWindow');
         $cache->remove_client_with_id($id);
-        for (my $i = 0; $i < 10; $i++) {
+        for (my $i = 0; $i < 10; $i++) {    ### Why 10?
             if ($id = $cache->lookup_value('ZMapWindow.'.$i)) {
                 $cache->remove_client_with_id($id);
             }

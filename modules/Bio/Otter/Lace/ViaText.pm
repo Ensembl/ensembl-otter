@@ -6,6 +6,7 @@ package Bio::Otter::Lace::ViaText;
 
 use strict;
 use warnings;
+use Carp;
 
     # objects that can be created by the parser:
 use Bio::EnsEMBL::Analysis;
@@ -218,6 +219,10 @@ sub ParseFeatures {
 
     foreach my $respline (@$resplines_ref) {
         my @optvalues  = split(/\t/,$respline);
+
+        unless (@optvalues) {
+            confess "Blank line in output - due to newline on end of hit description?";
+        }
 
         my $logic_name = $analysis_name || pop @optvalues;
 

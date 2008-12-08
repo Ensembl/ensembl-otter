@@ -35,6 +35,7 @@ sub new {
     my( $pkg ) = @_;
     
     $ENV{'OTTERLACE_COOKIE_JAR'} ||= "$ENV{HOME}/.otter/ns_cookie_jar";
+    $ENV{'BLIXEM_CONFIG_FILE'}   ||= "$ENV{HOME}/.otter/etc/blixemrc";
     return bless {}, $pkg;
 }
 
@@ -343,7 +344,7 @@ sub get_UserAgent {
         $ua = LWP::UserAgent->new(timeout => 9000);
         $ua->env_proxy;
         $ua->protocols_allowed([qw{ http https }]);
-        $ua->agent('LoginTest/0.1 ');
+        $ua->agent('otterlace/50.0 ');
         push @{ $ua->requests_redirectable }, 'POST';
         $ua->cookie_jar(HTTP::Cookies::Netscape->new(
             file => $ENV{'OTTERLACE_COOKIE_JAR'},

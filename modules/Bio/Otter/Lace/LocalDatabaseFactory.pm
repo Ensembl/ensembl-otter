@@ -81,13 +81,14 @@ sub first_occurence {
     my ($self, $filename, $pattern) = @_;
 
     # warn "Looking for a value in $filename\n";
-    open ( FILE, $filename ) || die "$!";
-    foreach my $line (<FILE>) {
+    open ( my $fh, $filename ) or die "Can't read file '$filename'; $!";
+    foreach my $line (<$fh>) {
         my ($value) = ($line =~ /$pattern/);
         if($value) {
             return $value;
         }
     }
+    close $fh;
     warn "\n\nNo value for '$pattern' found in $filename\n\n";
 }
 
@@ -105,15 +106,12 @@ sub make_title {
 sub recover_session {
     my ($self, $dir) = @_;
 
-    my $readonly_tag = $self->ace_readonly_tag();
-    $readonly_tag    =~ s{(\W)}{\\$1}g;
-
-    my $write_flag = ($dir =~ /$readonly_tag/ ? 0 : 1);
+    my $write_flag = $dir =~ /\.ro/ ? 0 : 1;
 
     my $adb = $self->new_AceDatabase($write_flag);
     $adb->error_flag(1);
     my $home = $adb->home;
-    rename($dir, $home) or die "Cannot move '$dir' to '$home' : $!";
+    rename($dir, $home) or die "Cannot move '$dir' to '$home'; $!";
     my $title = "Recovered lace ". $self->make_title($adb);
     $adb->title($title);
 
@@ -122,22 +120,22 @@ sub recover_session {
 
 ############## Session recovery methods end here ############################
 
-sub ace_readonly_tag {
-    my $self = shift @_;
-
-    return '.ro';
-}
-
 sub new_AceDatabase {
     my( $self, $write_access ) = @_;
 
     my $adb = Bio::Otter::Lace::AceDatabase->new;
     $adb->write_access($write_access);
     $adb->Client( $self->Client() );
-    my $home = $adb->home();
-    my $i = ++$self->{'_last_db'};
-    $adb->home("${home}_$i");
+    $adb->home($self->make_home_path($write_access));
     return $adb;
+}
+
+sub make_home_path {
+    my ($self, $write_access) = @_;
+    
+    my $readonly_tag = $write_access ? '' : '.ro';
+    my $i = ++$self->{'_last_db'};
+    return "/var/tmp/lace.${$}${readonly_tag}_$i";
 }
 
 1;
