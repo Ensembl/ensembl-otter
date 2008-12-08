@@ -17,6 +17,7 @@ use Bio::Otter::Lace::PipelineDB;
 use Bio::Otter::Lace::SatelliteDB;
 use Bio::Otter::Lace::PersistentFile;
 use Bio::Otter::Lace::Slice; # a new kind of Slice that knows how to get pipeline data
+use Bio::Otter::Lace::Exonerate;
 
 use Bio::EnsEMBL::Ace::DataFactory;
 
@@ -50,24 +51,12 @@ sub write_access {
 }
 
 sub home {
-    my( $self, $home, $write_flag ) = @_;
-
+    my( $self, $home ) = @_;
+    
     if ($home) {
         $self->{'_home'} = $home;
-    } elsif (! $self->{'_home'}) {
-        if(!defined($write_flag)) { # if it's defined, follow it, ignore the client
-            $write_flag = $self->Client->write_access();
-        }
-        my $readonly_tag = $write_flag ? '' : $self->readonly_tag();
-        # warn "readonly_tag '$readonly_tag'\n";
-        $self->{'_home'} = "/var/tmp/lace.${$}${readonly_tag}";
     }
     return $self->{'_home'};
-}
-
-sub readonly_tag{
-    my ($self) = @_;
-    return '.ro';
 }
 
 sub title {
@@ -173,10 +162,6 @@ sub init_AceDatabase {
         my $cl = $self->Client;
         if ($cl->option_from_array([ 'local_exonerate', 'database' ])) {
             $self->write_local_exonerate;
-
-        }
-        elsif ($cl->option_from_array([ 'local_blast', 'database' ])) {
-            $self->write_local_blast;
         }
     };
     if ($@) {
@@ -188,17 +173,7 @@ sub init_AceDatabase {
 sub write_local_exonerate {
     my ($self) = @_;
 
-    # Do not have local blast searching working on the Mac yet
-    return if $^O eq 'darwin';
-
-    eval {
-        require Bio::Otter::Lace::Exonerate;
-    };
-    print "Exonerate error [$@]\n" if $@;
-
-    return 0 if $@;
-
-    # The Blast object gets all its configuration
+    # The Exonerate object gets all its configuration
     # information from Lace::Defaults
     ### Should be able to specify mulitple databases to search,
     ### the results of each go into separate columns.
@@ -215,42 +190,6 @@ sub write_local_exonerate {
     # Need to add new method to collection if we don't have it already
     my $coll = $self->MethodCollection;
     my $method = $exon->ace_Method;
-    unless ($coll->get_Method_by_name($method->name)) {
-        $coll->add_Method($method);
-        $self->ace_server->save_ace($coll->ace_string());
-    }
-
-	$self->ace_server->save_ace($ace_text);
-}
-
-sub write_local_blast {
-    my ($self) = @_;
-
-    # Do not have local blast searching working on the Mac yet
-    return if $^O eq 'darwin';
-
-    eval {
-        require Bio::Otter::Lace::Blast;
-    };
-    return 0 if $@;
-
-    # The Blast object gets all its configuration
-    # information from Lace::Defaults
-    ### Should be able to specify mulitple databases to search,
-    ### the results of each go into separate columns.
-    my $blast = Bio::Otter::Lace::Blast->new;
-    $blast->AceDatabase($self);
-    $blast->initialise or return;
-    my $ace_text = $blast->run or return;
-
-    my $ace_filename = $self->home . '/rawdata/local_blast_search.ace';
-    open(my $ace_fh, "> $ace_filename") or die "Can't write to '$ace_filename' : $!";
-    print $ace_fh $ace_text;
-    close $ace_fh or confess "Error writing to '$ace_filename' : $!";
-
-    # Need to add new method to collection if we don't have it already
-    my $coll = $self->MethodCollection;
-    my $method = $blast->ace_Method;
     unless ($coll->get_Method_by_name($method->name)) {
         $coll->add_Method($method);
         $self->ace_server->save_ace($coll->ace_string());

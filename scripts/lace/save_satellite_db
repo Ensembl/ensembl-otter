@@ -49,7 +49,7 @@ use Bio::Otter::Lace::Defaults;
     delete($sat_opts->{'-PASS'}) unless $satpass;
 
     # Check we can connect to the Satellite database with options supplied
-    eval {
+    # eval {
         my $sat_db = Bio::EnsEMBL::DBSQL::DBAdaptor->new(%$sat_opts);
         my $sth = $sat_db->dbc->prepare(q{SELECT meta_value FROM meta WHERE meta_key = 'assembly.default'});
         $sth->execute;
@@ -57,7 +57,7 @@ use Bio::Otter::Lace::Defaults;
             print STDERR "  assembly.default = '$value'\n";
         }
         $sat_db = undef;
-    };
+    # };
     if ($@) {
         die "Couldn't connect to SatelliteDB selected:\n"
           . show_current($sat_opts, 'SatelliteDB')

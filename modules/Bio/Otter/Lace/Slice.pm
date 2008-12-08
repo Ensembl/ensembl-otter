@@ -334,7 +334,7 @@ sub get_all_DAS_features { # get SimpleFeatures or PredictionExons from DAS sour
         },
     );
 
-    my $filter_kind = $kind eq 'SimpleFeature' ? 'SimpleFeature' : 'PredictionTranscript';
+    # my $filter_kind = $kind eq 'SimpleFeature' ? 'SimpleFeature' : 'PredictionTranscript';
     return ParseFeatures(\$response, $self->name(), $analysis_name);
 }
 
