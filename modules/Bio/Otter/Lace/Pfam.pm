@@ -155,8 +155,9 @@ sub parse_results {
 		  . scalar @locations
 		  . ' location(s) for '
 		  . $match_node->getAttribute('accession') . "\n";
-		$results->{ $match_node->getAttribute('accession') }->{id} = $match_node->getAttribute('id');
-		$results->{ $match_node->getAttribute('accession') }->{class} = $match_node->getAttribute('class');
+
+		next unless @locations;
+
 		foreach my $location_node (@locations) {
 			my $location = {
 							 start => $location_node->getAttribute('start'),
@@ -164,6 +165,9 @@ sub parse_results {
 			};
 			push @{ $results->{ $match_node->getAttribute('accession') }->{locations} }, $location;
 		}
+
+		$results->{ $match_node->getAttribute('accession') }->{id} = $match_node->getAttribute('id');
+		$results->{ $match_node->getAttribute('accession') }->{class} = $match_node->getAttribute('class');
 	}
 	print "done parsing search results\n";
 	return $results;
