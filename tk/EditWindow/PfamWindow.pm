@@ -58,14 +58,14 @@ sub initialize {
 	my $pfam = Bio::Otter::Lace::Pfam->new();
 	$self->pfam($pfam);
 
-	my $top       = $self->top;
 	my $quit_command = sub {
 		$self->top->toplevel->withdraw;
 	};
-	$top->Tk::bind( '<Control-q>', $quit_command );
-	$top->Tk::bind( '<Control-Q>', $quit_command );
-	$top->toplevel->protocol( 'WM_DELETE_WINDOW', $quit_command );
-	my $top = $top->toplevel;
+	$self->top->Tk::bind( '<Control-q>', $quit_command );
+	$self->top->Tk::bind( '<Control-Q>', $quit_command );
+	$self->top->toplevel->protocol( 'WM_DELETE_WINDOW', $quit_command );
+
+	my $top = $self->top->toplevel;
 	$top->configure(    -background         => 'grey',
 						   -highlightthickness => 0 );
 
