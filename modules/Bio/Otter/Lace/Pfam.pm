@@ -23,7 +23,7 @@ my $HMM_URL    = 'http://pfam.sanger.ac.uk/family/hmm';
 my $SEED_URL   = 'http://pfam.sanger.ac.uk/family/alignment/download/format';
 
 # full path for hmmalign
-my $HMMALIGN = '/software/pfam/bin/hmmalign';
+my $HMMALIGN = 'hmmalign';
 
 sub new {
 	my ($self) = @_;
