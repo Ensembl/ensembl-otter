@@ -58,16 +58,16 @@ sub initialize {
 	my $pfam = Bio::Otter::Lace::Pfam->new();
 	$self->pfam($pfam);
 
-	my $quit_command = sub {
-		$self->top->toplevel->withdraw;
-	};
-	$self->top->Tk::bind( '<Control-q>', $quit_command );
-	$self->top->Tk::bind( '<Control-Q>', $quit_command );
-	$self->top->toplevel->protocol( 'WM_DELETE_WINDOW', $quit_command );
+	my $top = $self->top;
 
-	my $top = $self->top->toplevel;
-	$top->configure(    -background         => 'grey',
-						   -highlightthickness => 0 );
+	my $quit_command = sub {
+		$top->withdraw;
+	};
+	$top->bind( '<Control-q>', $quit_command );
+	$top->bind( '<Control-Q>', $quit_command );
+	$top->protocol( 'WM_DELETE_WINDOW', $quit_command );
+
+
 
 	$WIDGETS{'Progress_bar'} = $top->ProgressBar(
 					   -width       => 20,
@@ -92,9 +92,6 @@ sub initialize {
 	my ( $result_url, $estimated_time ) = $pfam->check_submission($xml);
 	$self->status("searching pfam (wait $estimated_time sec)");
 	my $wait = $estimated_time * 1000 / 30;
-
-	print STDOUT $self->top->toplevel."\n";
-	print STDOUT $self->top->toplevel->winfo('width')."\n";
 
 	for ( my $block = 1 ; $block <= 30 ; $block++ ) {
 		$self->progress($block);
@@ -149,9 +146,10 @@ sub initialize {
 		}
 
 		$self->fill_progressBar(100);
-		$self->status("Significant Pfam-A Matches");
+		$self->status("Significant Pfam-A Matches :");
 		$self->top->toplevel->update;
 
+		$WIDGETS{'Padding_frame'} = $top->Frame->pack( -side => 'top', -fill => 'both');
 		$WIDGETS{'Result_frame'} = $top->Frame->pack( -side => 'top', -fill => 'both');
 
 		# display result
@@ -159,14 +157,12 @@ sub initialize {
 
 			# Widget Pfam_label isa Label
 			$WIDGETS{'Pfam_label'} = $WIDGETS{Result_frame}->Label(
-			   -relief      => 'ridge',
 			   -text        => 'Pfam',
 			   -width       => 10,
 			  )->grid(-column => 0 , -row => 0);
 
 			# Widget ID_label isa Label
 			$WIDGETS{'ID_Class_label'} = $WIDGETS{Result_frame}->Label(
-			   -relief => 'ridge',
 			   -text   => 'ID & Class',
 			   -width  => 20,
 			  )->grid(
@@ -174,19 +170,8 @@ sub initialize {
 			   -column => 1,
 			  );
 
-#			# Widget Class_label isa Label
-#			$WIDGETS{'Class_label'} = $WIDGETS{Result_frame}->Label(
-#			   -relief => 'ridge',
-#			   -text   => 'Class',
-#			   -width  => 10,
-#			  )->grid(
-#			   -row    => 0,
-#			   -column => 2,
-#			  );
-
 			# Widget Locations_label isa Label
 			$WIDGETS{'Locations_label'} = $WIDGETS{Result_frame}->Label(
-			   -relief     => 'ridge',
 			   -text       => 'Locations',
 			   -width      => 10,
 			  )->grid(
@@ -196,7 +181,6 @@ sub initialize {
 
 			# Widget Alignments_label isa Label
 			$WIDGETS{'Alignments_label'} = $WIDGETS{Result_frame}->Label(
-			   -relief => 'ridge',
 			   -text   => 'Alignments',
 			   -width  => 10,
 			  )->grid(
@@ -220,7 +204,6 @@ sub initialize {
 			$WIDGETS{'Pfam_entry_${domain}'} = $WIDGETS{Result_frame}->Entry(
 			   -highlightthickness => 0,
 			   -justify            => 'center',
-			   -relief             => 'flat',
 			   -state              => 'readonly',
 			   -text               => $domain,
 			   -width              => 10,
@@ -229,11 +212,10 @@ sub initialize {
 			   -column => 0,
 			  );
 
-			# Widget ID_entry isa Entry
+			# Widget ID_Class_entry isa Entry
 			$WIDGETS{'ID_Class_entry_${domain}'} = $WIDGETS{Result_frame}->Entry(
 			   -highlightthickness => 0,
 			   -justify            => 'center',
-			   -relief             => 'flat',
 			   -state              => 'readonly',
 			   -width              => 20,
 			   -text		       => $matches->{$domain}->{id}." ".$matches->{$domain}->{class},
@@ -242,23 +224,10 @@ sub initialize {
 			   -column => 1,
 			  );
 
-			# Widget Class_entry isa Entry
-#			$WIDGETS{'Class_entry_${domain}'} = $WIDGETS{Result_frame}->Entry(
-#			   -highlightthickness => 0,
-#			   -justify            => 'center',
-#			   -relief             => 'flat',
-#			   -state              => 'readonly',
-#			   -width              => 10,
-#			   -text		       => $matches->{$domain}->{class},
-#			  )->grid(
-#			   -row    => $row,
-#			   -column => 2,
-#			  );
 
 			# Widget Locations_entry isa Entry
 			$WIDGETS{'Locations_entry_${domain}'} = $WIDGETS{Result_frame}->Entry(
 			   -highlightthickness => 0,
-			   -relief             => 'flat',
 			   -state              => 'readonly',
 			   -width              => 10,
 			   -text		       => $locations,
@@ -363,6 +332,7 @@ sub DESTROY {
 	my ($self) = @_;
 	$self = undef;    # $self gets nicely DESTROY'd with this
 }
+
 1;
 __END__
 

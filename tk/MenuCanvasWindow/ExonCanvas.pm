@@ -103,7 +103,7 @@ sub initialize {
             $canvas->Tk::bind('<Return>',   $save_command);
             $canvas->Tk::bind('<KP_Enter>', $save_command);
         }
-        
+
         $file_menu->add('separator');
 
         # To close window
@@ -940,23 +940,21 @@ sub search_pfam {
 		my $name = $pep->name;
         my $str = $pep->sequence_string;
         my $pfam;
-        my $content;
 
 	    if($self->{'_pfam'}) {
 	    	$pfam = $self->{'_pfam'};
 
 	    	if($pfam->query() ne $str) {
-	    		$pfam->canvas->toplevel->deiconify;
-				$pfam->canvas->toplevel->raise;
-				$pfam->canvas->toplevel->focus;
-	    		$pfam->query($str);
-	    		$pfam->initialize();
+				$pfam->top->destroy;
+	    		$pfam = EditWindow::PfamWindow->new($self->canvas->Toplevel(-title => "Pfam $name"));
+				$pfam->query($str);
+				$pfam->name($name);
+				$self->{'_pfam'} = $pfam;
+				$pfam->initialize();
 	    	} else {
-	    		$pfam->canvas->toplevel->deiconify;
-				$pfam->canvas->toplevel->raise;
-				$pfam->canvas->toplevel->focus;
-	    		#$pfam->open_url();
-
+	    		$pfam->top->deiconify;
+				$pfam->top->raise;
+				$pfam->top->focus;
 	    	}
 	    } else {
 			$pfam = EditWindow::PfamWindow->new($self->canvas->Toplevel(-title => "Pfam $name"));
@@ -1721,10 +1719,10 @@ sub add_start_end_method_widgets {
     my $om = $frame->SmartOptionmenu(
         -variable   => \$snf,
         -options    => [
-                ['Found'                =>     0],    
-                ['CDS not found - 1'    =>     1],    
-                ['CDS not found - 2'    =>     2],    
-                ['CDS not found - 3'    =>     3],    
+                ['Found'                =>     0],
+                ['CDS not found - 1'    =>     1],
+                ['CDS not found - 2'    =>     2],
+                ['CDS not found - 3'    =>     3],
                 ['UTR incomplete'       => 'utr'],
             ],
         -takefocus  => 0, # Doesn't work ...
@@ -2541,7 +2539,7 @@ sub get_SubSeq_if_changed {
             confess "Error: SubSeq '$new_name' already exists\n";
         }
     }
-    
+
     $new->validate;
     $new->set_seleno_remark_from_translation;
     return $new;
@@ -2770,7 +2768,7 @@ sub Exons_from_canvas {
 
 sub check_for_errors {
     my ($self) = @_;
-    
+
     my $sub = $self->new_SubSeq_from_tk;
     if (my $err = $sub->pre_otter_save_error) {
         $err =~ s/\n$//;
