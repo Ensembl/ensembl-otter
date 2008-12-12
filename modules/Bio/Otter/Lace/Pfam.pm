@@ -334,7 +334,11 @@ sub align_to_seed {
     system( $cmd ) == 0
       or print "couldn't run hmmalign for $domain hits: $!";
 
-      return $output_filename;
+    # delete tmp files
+    unlink $seed_file ,  $hmm_file , $seq_file;
+    $self->output_files($output_filename);
+
+    return $output_filename;
 
 }
 
@@ -353,6 +357,21 @@ sub create_filename{
     $file = $dir."/".$stem.".".$$.".".$num.".".$ext;
   }
   return $file;
+}
+
+sub output_files {
+	my ($self,$file) = @_;
+	if ($file) {
+		push @{$self->{_result_files}} , $file;
+	}
+	return $self->{_result_files};
+}
+
+sub DESTROY {
+	my ($self) = @_;
+	foreach (@{$self->output_files}) {
+		unlink $_;
+	}
 }
 
 
