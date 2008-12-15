@@ -171,14 +171,14 @@ $num = $dbh->do(qq(INSERT ignore INTO protein_align_feature SELECT * FROM paf_tm
 $support->log_stamped("Done inserting $num rows.\n\n");
 
 # drop temporary tables
-if ($support->user_proceed("Would you like to drop the temporary tables daf_tmp and paf_tmp?")) {
-    $support->log_stamped("Dropping daf_tmp...\n");
-    $dbh->do(qq(DROP TABLE daf_tmp));
-    $support->log_stamped("Done.\n\n");
-    $support->log_stamped("Dropping paf_tmp...\n");
-    $dbh->do(qq(DROP TABLE paf_tmp));
-    $support->log_stamped("Done.\n\n");
-}
+#if ($support->user_proceed("Would you like to drop the temporary tables daf_tmp and paf_tmp?")) {
+#    $support->log_stamped("Dropping daf_tmp...\n");
+#    $dbh->do(qq(DROP TABLE daf_tmp));
+#    $support->log_stamped("Done.\n\n");
+#    $support->log_stamped("Dropping paf_tmp...\n");
+#    $dbh->do(qq(DROP TABLE paf_tmp));
+#    $support->log_stamped("Done.\n\n");
+#}
 
 # log row counts after trimming
 $sth = $dbh->prepare("SELECT COUNT(*) FROM dna_align_feature");
