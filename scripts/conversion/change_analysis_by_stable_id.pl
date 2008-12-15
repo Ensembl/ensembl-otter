@@ -63,9 +63,9 @@ use FindBin qw($Bin);
 use vars qw($SERVERROOT);
 
 BEGIN {
-    $SERVERROOT = "$Bin/../../..";
-    unshift(@INC, "$SERVERROOT/ensembl/modules");
-    unshift(@INC, "$SERVERROOT/bioperl-live");
+  $SERVERROOT = "$Bin/../../..";
+  unshift(@INC, "$SERVERROOT/ensembl/modules");
+  unshift(@INC, "$SERVERROOT/bioperl-live");
 }
 
 use Getopt::Long;
@@ -80,22 +80,22 @@ our $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
 # parse options
 $support->parse_common_options(@_);
 $support->parse_extra_options(
-    'infile=s',
-    'logic_name=s',
-    'outfile=s',
-    'find_missing',
+  'infile=s',
+  'logic_name=s',
+  'outfile=s',
+  'find_missing',
 );
 $support->allowed_params(
-    $support->get_common_params,
-    'infile',
-    'logic_name',
-    'outfile',
-    'find_missing',
+  $support->get_common_params,
+  'infile',
+  'logic_name',
+  'outfile',
+  'find_missing',
 );
 
 if ($support->param('help') or $support->error) {
-    warn $support->error if $support->error;
-    pod2usage(1);
+  warn $support->error if $support->error;
+  pod2usage(1);
 }
 
 # ask user to confirm parameters to proceed
@@ -119,8 +119,8 @@ my ($gene_stable_ids) = &read_infile($support->param('infile'));
 
 # nothing else to be done for dry runs
 if ($support->param('dry_run')) {
-    $support->log("Nothing else to be done for dry run. Aborting.\n");
-    exit(0);
+  $support->log("Nothing else to be done for dry run. Aborting.\n");
+  exit(0);
 }
 
 # change analysis of gene and transcripts
@@ -145,23 +145,21 @@ $support->finish_log;
 =cut
 
 sub read_infile {
-    my $infile = shift;
+  my $infile = shift;
 
-    $support->log_stamped("Reading stable IDs from file...\n");
+  $support->log_stamped("Reading stable IDs from file...\n");
 
-    my $in = $support->filehandle('<', $infile);
-    my @gene_stable_ids = ();
-    while (<$in>) {
-        chomp;
-        if ($_ =~ /^OTT...G/) {
-            push @gene_stable_ids, $_;
-        }
+  my $in = $support->filehandle('<', $infile);
+  my @gene_stable_ids = ();
+  while (<$in>) {
+    chomp;
+    if ($_ =~ /^OTT...G/) {
+      push @gene_stable_ids, $_;
     }
-    close($in);
-
-    $support->log_stamped("Done reading ".scalar(@gene_stable_ids)." genes, \n\n");
-
-    return \@gene_stable_ids;
+  }
+  close($in);
+  $support->log_stamped("Done reading ".scalar(@gene_stable_ids)." genes, \n\n");
+  return \@gene_stable_ids;
 }
 
 =head2 check_missing
@@ -178,47 +176,47 @@ sub read_infile {
 =cut
 
 sub check_missing {
-    my $gene_stable_ids = shift;
+  my $gene_stable_ids = shift;
 
-    $support->log("Checking for missing genes...\n");
+  $support->log("Checking for missing genes...\n");
 
-    # genes
-    my $gsi_string = join("', '", @{ $gene_stable_ids });
-    my $sql = qq(
+  # genes
+  my $gsi_string = join("', '", @{ $gene_stable_ids });
+  my $sql = qq(
         SELECT  stable_id
         FROM    gene_stable_id
         WHERE   stable_id IN ('$gsi_string')
     );
-    my @genes_in_db = map { $_->[0] } @{ $dbh->selectall_arrayref($sql) || [] };
-    my $gdiff = scalar(@{ $gene_stable_ids }) - scalar(@genes_in_db);
+  my @genes_in_db = map { $_->[0] } @{ $dbh->selectall_arrayref($sql) || [] };
+  my $gdiff = scalar(@{ $gene_stable_ids }) - scalar(@genes_in_db);
 
-    if ($gdiff) {
-        $support->log_warning("Not all genes in the input file could be found in the db ($gdiff genes missing).\n");
-        # print list of missing stable IDs
-        if ($support->param('find_missing')) {
-            $support->log("Printing list of missing stable IDs to file...\n", 1);
-            my $out = $support->filehandle('>', $support->param('outfile'));
+  if ($gdiff) {
+    $support->log_warning("Not all genes in the input file could be found in the db ($gdiff genes missing).\n");
+    # print list of missing stable IDs
+    if ($support->param('find_missing')) {
+      $support->log("Printing list of missing stable IDs to file...\n", 1);
+      my $out = $support->filehandle('>', $support->param('outfile'));
 
-            # genes
-            my %gseen;
-            @gseen{@genes_in_db} = (1) x @genes_in_db;
-            foreach my $gsi (@{ $gene_stable_ids }) {
-                print $out "$gsi\n" unless $gseen{$gsi};
-            }
+      # genes
+      my %gseen;
+      @gseen{@genes_in_db} = (1) x @genes_in_db;
+      foreach my $gsi (@{ $gene_stable_ids }) {
+	print $out "$gsi\n" unless $gseen{$gsi};
+      }
 
-            $support->log("Done.\n", 1);
-            
-        # suggest to run with --find_missing option
-        } else {
-            $support->log("Please run the script with the --find_missing option and check to see what's wrong.\n");
-        }
+      $support->log("Done.\n", 1);
 
-        # ask user if he wants to proceed regardless of the potential problem
-        unless ($support->user_proceed("\nPotential data inconsistencies (see logfile). Would you like to proceed anyway?")) {
-            exit(0);
-        }
+      # suggest to run with --find_missing option
+    } else {
+      $support->log("Please run the script with the --find_missing option and check to see what's wrong.\n");
     }
-    $support->log("Done.\n\n");
+
+    # ask user if he wants to proceed regardless of the potential problem
+    unless ($support->user_proceed("\nPotential data inconsistencies (see logfile). Would you like to proceed anyway?")) {
+      exit(0);
+    }
+  }
+  $support->log("Done.\n\n");
 }
 
 =head2 change_analysis
@@ -235,46 +233,45 @@ sub check_missing {
 =cut
 
 sub change_analysis {
-    my $gene_stable_ids = shift;
+  my $gene_stable_ids = shift;
 
-    if (!$gene_stable_ids or ref($gene_stable_ids) ne 'ARRAY') {
-        $support->log_error("You must provide a list of stable IDs\n");
-    }
+  if (!$gene_stable_ids or ref($gene_stable_ids) ne 'ARRAY') {
+    $support->log_error("You must provide a list of stable IDs\n");
+  }
 
-    # add analysis
-    $support->log("Adding analysis...\n");
-    my $analysis = new Bio::EnsEMBL::Analysis (
-        -program     => "change_analysis_by_stable_id.pl",
-        -logic_name  => $support->param('logic_name'),
-    );
-    my $analysis_id = $dba->get_AnalysisAdaptor->store($analysis);
-    $support->log_error("Couldn't store analysis ".$support->param('analysis').".\n") unless $analysis_id;
-    
-    $support->log("Done.\n\n");
+  # add analysis
+  $support->log("Adding analysis...\n");
+  my $analysis = new Bio::EnsEMBL::Analysis (
+    -program     => "change_analysis_by_stable_id.pl",
+    -logic_name  => $support->param('logic_name'),
+  );
+  my $analysis_id = $dba->get_AnalysisAdaptor->store($analysis);
+  $support->log_error("Couldn't store analysis ".$support->param('analysis').".\n") unless $analysis_id;
+  $support->log("Done.\n\n");
 
-    # change analysis for genes in list
-    $support->log("Updating analysis of genes in list...\n");
-    my $gsi_string = join("', '", @{ $gene_stable_ids });
-    my $num = $dbh->do(qq(
+  # change analysis for genes in list
+  $support->log("Updating analysis of genes in list...\n");
+  my $gsi_string = join("', '", @{ $gene_stable_ids });
+  my $num = $dbh->do(qq(
         UPDATE gene g, gene_stable_id gsi
         SET analysis_id = $analysis_id
         WHERE g.gene_id = gsi.gene_id
         AND gsi.stable_id in ('$gsi_string')
     ));
-    $support->log("Done updating $num genes.\n\n");
+  $support->log("Done updating $num genes.\n\n");
 
-	#change analysis_ids of transcripts
-	if ($support->user_proceed("\nSet all transcript analysis_ids to equal those of their genes ?")) {	
-		$support->log("Updating analysis of corresponding transcripts...\n");
-		$dbh->do(qq(
+  #change analysis_ids of transcripts
+  if ($support->user_proceed("\nSet all transcript analysis_ids to equal those of their genes ?")) {	
+    $support->log("Updating analysis of corresponding transcripts...\n");
+    $dbh->do(qq(
             UPDATE transcript t, gene g
             SET t.analysis_id = g.analysis_id
             WHERE g.gene_id = t.gene_id
         ));
-		$support->log("Done updating transcripts.\n\n");
-	}
-	else {
-		$support->log("Transcripts analysis_ids not updated.\n\n");
-	}
+    $support->log("Done updating transcripts.\n\n");
+  }
+  else {
+    $support->log("Transcripts analysis_ids not updated.\n\n");
+  }
 }
 
