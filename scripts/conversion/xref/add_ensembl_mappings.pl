@@ -208,63 +208,64 @@ my @priorities = qw(
 
 #add one xref to each E! transcript
 foreach my $v_id (keys %$ens_ids) {
-    my $transcript = $ta->fetch_by_stable_id($v_id);
-    unless ($transcript) {
-	$support->log_warning("Can't retrieve transcript $v_id from Vega\n");
-	next;
-    }
-    $support->log("Studying transcript $v_id\n");
-    my @c = ();
-    while ( my ($e_id, $xrefs) =  each %{$ens_ids->{$v_id}} ) {
-	push @c, $e_id;
-	my $found = 0;
-	foreach my $db (@priorities) {
-	    my ($edb,$vdb) = split ':',$db;
-	    last if $found;
-	    if ($xrefs->{$edb}) {
-		my $dbentry = Bio::EnsEMBL::DBEntry->new(
-		    -primary_id => $e_id,
-		    -display_id => $e_id,
-		    -version    => 1,
-		    -release    => 1,
-		    -dbname     => $vdb,
-		);
-				$assigned_xrefs{$vdb}->{$transcript->biotype}++;
-		$transcript->add_DBEntry($dbentry);
-		if ($support->param('dry_run')) {
-		    $support->log("Would store $vdb xref $e_id for transcript $v_id.\n", 1);
-		    $found = 1;
-		}
-		else {
-		    my $dbID = $ea->store($dbentry, $transcript->dbID, 'transcript');
-		    
-		    # apparently, this xref had been stored already, so get
-		    # xref_id from db
-		    unless ($dbID) {
-			my $sql = qq(
+  my $transcript = $ta->fetch_by_stable_id($v_id);
+  unless ($transcript) {
+    $support->log_warning("Can't retrieve transcript $v_id from Vega\n");
+    next;
+  }
+  $support->log("Studying transcript $v_id\n");
+  my @c = ();
+  while ( my ($e_id, $xrefs) =  each %{$ens_ids->{$v_id}} ) {
+    push @c, $e_id;
+    my $found = 0;
+  DB:
+    foreach my $db (@priorities) {
+      my ($edb,$vdb) = split ':',$db;
+      next DB if $found;
+      if ($xrefs->{$edb}) {
+	my $dbentry = Bio::EnsEMBL::DBEntry->new(
+	  -primary_id => $e_id,
+	  -display_id => $e_id,
+	  -version    => 1,
+	  -release    => 1,
+	  -dbname     => $vdb,
+	);
+	$assigned_xrefs{$vdb}->{$transcript->biotype}++;
+	$transcript->add_DBEntry($dbentry);
+	if ($support->param('dry_run')) {
+	  $support->log("Would store $vdb xref $e_id for transcript $v_id.\n", 1);
+	  $found = 1;
+	}
+	else {
+	  my $dbID = $ea->store($dbentry, $transcript->dbID, 'transcript');
+	  
+	  # apparently, this xref had been stored already, so get
+	  # xref_id from db
+	  unless ($dbID) {
+	    my $sql = qq(
                          SELECT x.xref_id
                          FROM xref x, external_db ed
                          WHERE x.external_db_id = ed.external_db_id
                          AND x.dbprimary_acc = '$e_id'
                          AND ed.db_name = '$vdb'
                          );
-			($dbID) = @{ $dbh->selectall_arrayref($sql) || [] };
-			$support->log_verbose
-		    }
-		    if ($dbID) {
-			$support->log("Stored $vdb xref $e_id for transcript $v_id.\n", 1);
-			$found = 1;
-		    } else {
-			$support->log_warning("No dbID for $vdb xref ($e_id) transcript $v_id\n", 1);
-		    }
-		}
-	    }
+	    ($dbID) = @{ $dbh->selectall_arrayref($sql) || [] };
+	    $support->log_verbose
+	  }
+	  if ($dbID) {
+	    $support->log("Stored $vdb xref $e_id for transcript $v_id.\n", 1);
+	    $found = 1;
+	  } else {
+	    $support->log_warning("No dbID for $vdb xref ($e_id) transcript $v_id\n", 1);
+	  }
 	}
+      }
     }
-    if (scalar(@c) > 1) {
-	my $ids = join ' ',@c;
-	$support->log("Vega transcript $v_id matches to multiple Ensembl transcripts: $ids\n");
-    }
+  }
+  if (scalar(@c) > 1) {
+    my $ids = join ' ',@c;
+    $support->log_warning("Vega transcript $v_id matches to multiple Ensembl transcripts: $ids\n");
+  }
 }
 
 warn Dumper(\%assigned_xrefs);
