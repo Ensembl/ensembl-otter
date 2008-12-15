@@ -180,7 +180,7 @@ my $sth_case = $dba->dbc->prepare("UPDATE xref set display_label = ? WHERE displ
 if ($support->param('prune') and $support->user_proceed('Would you really like to delete xrefs from previous runs of this script that have used these options?')) {
   my %refs_to_delete = (
     tcag     => qq(= 'TCAG'),
-    imgt_hla => qq(= 'IMGT'),
+    imgt_hla => qq(= 'IMGT_HLA'),
     imgt_gdb => qq(= 'IMGT/GENE_DB'),
   );
   
@@ -946,15 +946,10 @@ sub parse_imgt_hla {
     "Couldn't open ".$support->param('imgt_hlafile')." for reading: $!\n");
   # read header
   my $line = <IMGT>;
-  chomp $line;
   my @fieldnames = split /\t/, $line;
   while (<IMGT>) {
+    chomp;
     my @fields = split /\t/, $_;
-		#skip multiple header lines
-##for new format file
-#		next if ($fields[0] eq $fieldnames[1]);
-#		my $xid  = $fields[0];
-#		my $gsi = $fields[2];
     my $xid  = $fields[1];
     my $gsi = $fields[0];
     my $pid = $xid;
