@@ -78,7 +78,7 @@ sub _launchZMap{
     my @e = ('zmap', 
              '--conf_dir' => $self->zMapZmapDir,
              '--win_id'   => $zmap_conn->server_window_id);
-
+    warn "Running @e";
     my $pid = fork_exec(\@e);
 
     if($pid){
@@ -329,7 +329,7 @@ sub zMapInsertZmapConnector{
     if(!$zc){
         my $mb   = $self->menu_bar();
         my $zmap = ZMap::Connect->new( -server => 1 );
-        $zmap->init($mb, \&RECEIVE_FILTER, [ $self, qw( register_client edit single_select multiple_select finalised feature_details) ]);
+        $zmap->init($mb, \&RECEIVE_FILTER, [ $self, qw() ]);
         my $id = $zmap->server_window_id();
         $zc = $self->{'_zMap_ZMAP_CONNECTOR'} = $zmap;
     }
@@ -724,6 +724,8 @@ returns a basic response.
 sub zMapHighlight{
     my ($self, $xml_hash) = @_;
 
+    my $z = $self->zMapZmapConnector();
+
     # Needs to do something interesting to find the object to highlight.
     if ($xml_hash->{"action"} eq 'single_select') {
         $self->deselect_all();
@@ -738,7 +740,7 @@ sub zMapHighlight{
         }
     } else { confess "Not a 'select' action\n"; }
 
-    return (200, q{<response handled="true" />});
+    return (200, $z->handled_response(1));
 }
 
 =head1 zMapTagValues
@@ -876,7 +878,26 @@ sub zmap_feature_evidence_xml {
     }
 }
 
+sub zMapRemoveView {
+    my ($self, $xml) = @_;
 
+    # I guess all we need to do here is remove the associated xid from the cache...
+
+    my ($client_tag, $xid);
+
+    my $z = $self->zMapZmapConnector();
+
+    if($client_tag = $xml->{'client'}){
+	$xid = $client_tag->{'xwid'};
+    }
+
+    if($xid){
+	warn sprintf "... going to remove %s", $xid;
+	$self->xremote_cache->remove_client_with_id($xid);
+    }
+
+    return (200, $z->handled_response(1));
+}
 
 #===========================================================
 
@@ -892,10 +913,11 @@ sub RECEIVE_FILTER {
         multiple_select => 'zMapHighlight',
         finalised       => 'zMapRelaunchZMap',
         feature_details => 'zMapTagValues',
+	view_closed     => 'zMapRemoveView',
     };
 
     # @list could be dynamically created...
-    # @list = keys(%$lookup);
+    @list = keys(%$lookup);
 
     # find the action in the request XML
     #warn "Request = '$request'";
@@ -1003,23 +1025,31 @@ sub open_clones{
     # first open a zmap window...
     my $xremote = $self->zMapGetXRemoteClientByName($self->main_window_name());
 
-    $self->zMapDoRequest($xremote, "new_zmap", qq!<zmap action="new_zmap" />!);
+    my $zmap_success = $self->zMapDoRequest($xremote, "new_zmap", qq!<zmap action="new_zmap" />!);
 
-    # now open a view
-    my $seg = newXMLObj(  'segment'  );
-    setObjNameValue($seg, 'sequence', $self->slice_name);
-    setObjNameValue($seg, 'start',    1);
-    setObjNameValue($seg, 'end',     '0');
+    if($zmap_success == 0){
+	# now open a view
+	my $seg = newXMLObj(  'segment'  );
+	setObjNameValue($seg, 'sequence', $self->slice_name);
+	setObjNameValue($seg, 'start',    1);
+	setObjNameValue($seg, 'end',     '0');
+	
+	$xremote = $self->zMapGetXRemoteClientByName("ZMap");
+	
+	$self->zMapRegisterClientRequest($xremote);
 
-    $xremote = $self->zMapGetXRemoteClientByName("ZMap");
+	my $view_success = $self->zMapDoRequest($xremote, "new_view", obj_make_xml($seg, "new_view"));
 
-    $self->zMapRegisterClientRequest($xremote);
-
-    $self->zMapDoRequest($xremote, "new_view", obj_make_xml($seg, "new_view"));
-
-    $xremote = $self->zMapGetXRemoteClientByName($self->slice_name());
-
-    $self->zMapRegisterClientRequest($xremote);
+	if($view_success == 0){
+	    $xremote = $self->zMapGetXRemoteClientByName($self->slice_name());
+	    
+	    $self->zMapRegisterClientRequest($xremote);
+	} else {
+	    warn "new_view request failed!";
+	}
+    } else {
+	warn "new_zmap request failed!"
+    }
 
     return ;
 }
@@ -1029,17 +1059,29 @@ sub zMapRegisterClientRequest{
 
     my $zmap = $self->zMapZmapConnector();
 
-    $self->zMapDoRequest($xremote, "register_client", $zmap->connect_request());
+    my $register_success = $self->zMapDoRequest($xremote, "register_client", $zmap->connect_request());
+
+    if($register_success != 0){
+	warn "register_client failed";
+    }
 
     return ;
 }
 
+=head1 zMapDoRequest
+
+return = -1, 0, 1 for fail, response, or error respectively
+
+=cut
+
 sub zMapDoRequest{
     my ($self, $xremote, $action, @commands) = @_;
+    
+    my $response_error_fail = -1;
 
     unless($xremote && UNIVERSAL::isa($xremote, 'X11::XRemote')){ 
         cluck "Usage: $self->zMapDoRequest(X11::XRemote, '<action>', (<commands>)" if $ZMAP_DEBUG;
-        return 0;
+	return $response_error_fail;
     }
     
     if($ZMAP_DEBUG){
@@ -1059,13 +1101,15 @@ sub zMapDoRequest{
         my ($status, $xmlHash) = parse_response($a[$i]);
         if($status =~ /^2\d\d/){ # 200s
             $self->RESPONSE_HANDLER($action, $xmlHash);
+	    $response_error_fail = 0;
         }else{
             $self->ERROR_HANDLER($action, $status, $xmlHash);
+	    $response_error_fail = 1;
             last;
         }
     }
 
-    return 1;
+    return $response_error_fail;
 }
 
 sub zMapProcessNewClientXML{
