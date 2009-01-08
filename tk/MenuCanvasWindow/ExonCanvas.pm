@@ -6,6 +6,7 @@ package MenuCanvasWindow::ExonCanvas;
 use strict;
 use Carp;
 use Scalar::Util 'weaken';
+use Tk;
 use Tk::Dialog;
 use Tk::ROText;
 use Tk::LabFrame;
@@ -941,7 +942,7 @@ sub search_pfam {
         my $str = $pep->sequence_string;
         my $pfam;
 
-	    if($self->{'_pfam'}) {
+	    if($self->{'_pfam'} && Tk::Exists($self->{'_pfam'}->top)) {
 	    	$pfam = $self->{'_pfam'};
 
 	    	if($pfam->query() ne $str) {

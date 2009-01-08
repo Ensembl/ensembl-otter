@@ -369,6 +369,7 @@ sub output_files {
 
 sub DESTROY {
 	my ($self) = @_;
+	return unless $self->output_files;
 	foreach (@{$self->output_files}) {
 		unlink $_;
 	}
