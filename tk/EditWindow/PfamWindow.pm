@@ -63,9 +63,14 @@ sub initialize {
 	my $quit_command = sub {
 		$top->withdraw;
 	};
-	$top->bind( '<Control-q>', $quit_command );
-	$top->bind( '<Control-Q>', $quit_command );
-	$top->protocol( 'WM_DELETE_WINDOW', $quit_command );
+
+	my $cancel_command = sub {
+		$top->destroy;
+	};
+
+	$top->bind( '<Control-q>', $cancel_command );
+	$top->bind( '<Control-Q>', $cancel_command );
+	$top->protocol( 'WM_DELETE_WINDOW', $cancel_command );
 
 
 
@@ -86,17 +91,22 @@ sub initialize {
 				 -textvariable => \$self->{_status}
 	)->pack( -side => 'top', -fill => 'x' );
 
+	$WIDGETS{'Cancel_button'} = $top->Button(
+				-text    => 'Cancel',
+				-command => $cancel_command,
+	)->pack( -side => 'top' );
+
 
 
 	my $xml = $pfam->submit_search( $self->query );
 	my ( $result_url, $estimated_time ) = $pfam->check_submission($xml);
 	$self->status("searching pfam (wait $estimated_time sec)");
-	my $wait = $estimated_time * 1000 / 30;
+	my $wait = $estimated_time / 30;
 
 	for ( my $block = 1 ; $block <= 30 ; $block++ ) {
 		$self->progress($block);
 		$self->top->toplevel->update;
-		$self->top->toplevel->after($wait);
+		$self->top->toplevel->after($wait * 1000);
 	}
 	my $tries = 1;
 	$wait = 0;
@@ -112,7 +122,13 @@ sub initialize {
 		$self->top->toplevel->update;
 		$wait += $tries;
 		$tries++;
-		sleep $wait;
+		eval {
+			$self->top->toplevel->after($wait * 1000);
+  		};
+  		if ($@) {
+    		# catch "XStoSubCmd: Not a Tk Window" error when the search is canceled
+    		return;
+  		}
 	}
 
 	if ($res) {
@@ -272,6 +288,7 @@ sub initialize {
 	}
 
 	$WIDGETS{'Progress_bar'}->packForget;
+	$WIDGETS{'Cancel_button'}->packForget;
 
 	$WIDGETS{'Button_frame'} = $top->Frame->pack( -side => 'top', -fill => 'x' );
 
@@ -286,6 +303,10 @@ sub initialize {
 									  -text    => 'Close',
 									  -command => $quit_command,
 	)->pack( -side => 'right' );
+
+	$top->bind( '<Control-q>', $quit_command );
+	$top->bind( '<Control-Q>', $quit_command );
+	$top->protocol( 'WM_DELETE_WINDOW', $quit_command );
 
 	# need to call configure to resize the window.
 	# the values in width and height are not important
