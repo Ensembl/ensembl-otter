@@ -1,5 +1,4 @@
 
-
 package MenuCanvasWindow::XaceSeqChooser;
 
 use strict;
@@ -1816,6 +1815,7 @@ sub row_count {
 sub draw_sequence_list {
     my( $self, $slist ) = @_;
 
+    $self->Assembly->set_SubSeq_locus_level_errors;
 
     my $canvas = $self->canvas;
     my $size = $self->font_size;

@@ -399,8 +399,8 @@ sub SubSeq {
 
     if ($sub) {
         my $expected = 'Hum::Ace::SubSeq';
-        unless ($sub->isa($expected)) {
-            confess "Expected a '$expected', but got a '$sub'";
+        unless (UNIVERSAL::isa($sub, $expected)) {
+            confess "Expected a '$expected', but got '$sub'";
         }
         $self->{'_SubSeq'} = $sub;
         $self->canvas->toplevel->configure(-title => $sub->name);
