@@ -53,6 +53,14 @@ sub status {
 	return $self->{_status};
 }
 
+sub result_url {
+	my ( $self, $u ) = @_;
+	if ($u) {
+		$self->{_url} = $u;
+	}
+	return $self->{_url};
+}
+
 sub initialize {
 	my ($self) = @_;
 	my $pfam = Bio::Otter::Lace::Pfam->new();
@@ -96,10 +104,15 @@ sub initialize {
 				-command => $cancel_command,
 	)->pack( -side => 'top' );
 
+	my ( $result_url, $estimated_time );
+	if($self->result_url) {
+		( $result_url, $estimated_time ) = ($self->result_url , 1);
+	} else {
+		my $xml = $pfam->submit_search( $self->query );
+		( $result_url, $estimated_time ) = $pfam->check_submission($xml);
+		$self->result_url($result_url);
+	}
 
-
-	my $xml = $pfam->submit_search( $self->query );
-	my ( $result_url, $estimated_time ) = $pfam->check_submission($xml);
 	$self->status("searching pfam (wait $estimated_time sec)");
 	my $wait = $estimated_time / 30;
 
@@ -114,7 +127,7 @@ sub initialize {
 	until ( $tries >= $POLL_ATTEMPTS ) {
 		$self->status("searching pfam (querying server)");
 		$self->progress( 30 + $tries );
-		$res = $pfam->poll_results($result_url);
+		$res = $pfam->poll_results($self->result_url);
 		if ($res) {
 			$self->fill_progressBar(60);
 			last;
@@ -327,7 +340,7 @@ sub fill_progressBar {
 
 sub open_url {
 	my ($self) = @_;
-	my $url = $self->pfam->result_url;
+	my $url = $self->result_url;
 	$url =~ s/output=xml&//;
 	print STDOUT "Pfam search result for " . $self->name . "\n$url\n";
 	if ( $^O eq 'darwin' ) {
