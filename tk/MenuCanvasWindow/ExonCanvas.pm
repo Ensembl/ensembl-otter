@@ -1021,6 +1021,11 @@ sub update_translation {
                 });
         }
         my $pep_genomic = $self->{'_peptext_index_to_genomic_position'} = {};
+        
+        # If we are showing an "X" amino acid at the start due to a partial
+        # codon we need to take 1 off the index into the codon_start_map
+        my $offset = $str =~ /^X/ ? 1 : 0;
+        
         for (my $i = 0; $i < length($str); $i++) {
             my $char = substr($str, $i, 1);
             my $tag = $style{$char};
@@ -1029,7 +1034,7 @@ sub update_translation {
             if ($char eq 'M') {
                 my $index = $peptext->index('insert - 1 chars');
                 #printf STDERR "$index  $map->[$i]\n";
-                $pep_genomic->{$index} = $map->[$i];
+                $pep_genomic->{$index} = $map->[$i - $offset];
             }
 
             unless (($i + 1) % $line_length) {
@@ -1136,22 +1141,6 @@ sub save_OtterTranscript_evidence {
     }
     $self->evidence_hash($evi_hash);
 }
-
-sub trim_cds_coord_to_current_methionine {
-    my( $self ) = @_;
-
-    my $peptext = $self->{'_pep_peptext'} or return;
-    my $index = $peptext->index('current');
-    my $new = $self->{'_peptext_index_to_genomic_position'}{$index} or return;
-
-    $self->deselect_all;
-    my $original = $self->tk_t_start;
-    $self->tk_t_start($new);
-
-    # Highlight the translation end if we have changed it
-    $self->highlight('t_start') if $new != $original;
-}
-
 
 
 sub check_kozak{
@@ -1295,6 +1284,21 @@ sub check_kozak{
 
 }
 
+sub trim_cds_coord_to_current_methionine {
+    my( $self ) = @_;
+
+    my $peptext = $self->{'_pep_peptext'} or return;
+    my $index = $peptext->index('current');
+    my $new = $self->{'_peptext_index_to_genomic_position'}{$index} or return;
+
+    $self->deselect_all;
+    my $original = $self->tk_t_start;
+    $self->tk_t_start($new);
+
+    # Highlight the translation end if we have changed it
+    $self->highlight('t_start') if $new != $original;
+}
+
 sub trim_cds_coord_to_first_stop {
     my( $self ) = @_;
 
@@ -1317,6 +1321,9 @@ sub trim_cds_coord_to_first_stop {
     $sub = $self->new_SubSeq_from_tk;
     my $pep = $sub->translator->translate($sub->translatable_Sequence);
     my $pep_str = $pep->sequence_string;
+    
+    # Trim leading partial amino acid if present
+    $pep_str =~ s/^X//;
 
     # Find the first stop character
     my $stop_pos = index($pep_str, '*', 0);
@@ -1324,10 +1331,12 @@ sub trim_cds_coord_to_first_stop {
         $self->message("No stop codon found");
         return;
     }
+    $stop_pos++;
 
     # Convert from peptide to CDS coordinates
-    $stop_pos++;
-    my $cds_coord = ($stop_pos * 3) + $sub->start_phase - 1;
+    my $cds_coord = $sub->start_phase - 1 + ($stop_pos * 3);
+    printf STDERR "CDS coord = (%d x 3) + %d - 1 = $cds_coord\n",
+        $stop_pos, $sub->start_phase, $cds_coord;
 
     # Get a list of exons in translation order
     my @exons = $sub->get_all_CDS_Exons;
