@@ -30,14 +30,6 @@ sub new {
 	return bless {}, $self;
 }
 
-sub result_url {
-	my ( $self, $r ) = @_;
-	if ($r) {
-		$self->{_result} = $r;
-	}
-	return $self->{_result};
-}
-
 # submits the sequence search and returns the XML that comes back from the
 # server
 sub submit_search {
@@ -98,7 +90,6 @@ sub check_submission {
 	my $estimated_time = $xc->findvalue('/p:jobs/p:job/p:estimated_time');
 	$result_url     =~ s/\s//g;
 	$estimated_time =~ s/\s//g;
-	$self->result_url($result_url);
 	return ( $result_url, $estimated_time );
 }
 
