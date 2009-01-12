@@ -944,26 +944,30 @@ sub search_pfam {
 
 	    if($self->{'_pfam'} && Tk::Exists($self->{'_pfam'}->top)) {
 	    	$pfam = $self->{'_pfam'};
-
 	    	if($pfam->query() ne $str) {
 				$pfam->top->destroy;
 	    		$pfam = EditWindow::PfamWindow->new($self->canvas->Toplevel(-title => "Pfam $name"));
-				$pfam->query($str);
-				$pfam->name($name);
-				$self->{'_pfam'} = $pfam;
-				$pfam->initialize();
 	    	} else {
 	    		$pfam->top->deiconify;
 				$pfam->top->raise;
 				$pfam->top->focus;
+
+				return 1;
 	    	}
+	    } elsif($self->{'_pfam'} && !Tk::Exists($self->{'_pfam'}->top)) {
+	    	$pfam = $self->{'_pfam'};
+	    	my $result_url = $pfam->result_url;
+	    	my $prev_query = $pfam->query();
+	    	$pfam = EditWindow::PfamWindow->new($self->canvas->Toplevel(-title => "Pfam $name"));
+	    	$pfam->result_url($result_url) unless $prev_query ne $str;
 	    } else {
 			$pfam = EditWindow::PfamWindow->new($self->canvas->Toplevel(-title => "Pfam $name"));
-			$pfam->query($str);
-			$pfam->name($name);
-			$self->{'_pfam'} = $pfam;
-			$pfam->initialize();
 	    }
+
+    	$pfam->query($str);
+		$pfam->name($name);
+		$self->{'_pfam'} = $pfam;
+		$pfam->initialize();
     }
 }
 
