@@ -655,7 +655,7 @@ sub make_embl_ft {
 
 sub get_ctg_coordinate_details {
     my ($self, $ens_db, $acc) = @_;
-    
+    warn "$acc\n";
     my $get_ctg_coords = $ens_db->dbc->prepare(q{
         SELECT chr.name
           , a.asm_start
@@ -671,7 +671,7 @@ sub get_ctg_coordinate_details {
           AND hide.attrib_type_id =
             (SELECT attrib_type_id
                 FROM attrib_type
-                WHERE code = 'hidden')
+                WHERE code = 'write_access')
         WHERE ctg.seq_region_id = a.cmp_seq_region_id
           AND a.asm_seq_region_id = chr.seq_region_id
           AND ctg.coord_system_id =
@@ -683,11 +683,12 @@ sub get_ctg_coordinate_details {
                 FROM coord_system
                 WHERE name = 'chromosome'
                   AND version = 'Otter')
-          AND hide.value = 0
+          AND hide.value = 1
           AND ctg.name like ?
     });
-    
+
     $get_ctg_coords->execute("$acc%");  # Fix Nedit syntax highlight with a "    
+
     if ($get_ctg_coords->rows > 1) {
         my $err = "Too many rows from coordinate fetching query:\n";
         while (my @row = $get_ctg_coords->fetchrow) {
