@@ -693,6 +693,7 @@ sub get_ctg_coordinate_details {
         my $err = "Too many rows from coordinate fetching query:\n";
         while (my @row = $get_ctg_coords->fetchrow) {
             $err .= quote_row(@row);
+          }
         }
         die $err;
     }
