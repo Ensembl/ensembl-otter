@@ -23,9 +23,7 @@ my $DNAHSP     = 120;
 sub initialise {
 	my ( $self ) = @_;
 	my $top  = $self->top;
-	my $exon = Bio::Otter::Lace::Exonerate->new;
-	$exon->AceDatabase($self->XaceSeqChooser->AceDatabase);
-	$self->exonerate($exon);
+
 	### Query frame
 	my $query_frame = $top->LabFrame(
 									  -borderwidth => 3,
@@ -392,14 +390,6 @@ sub revcomp_ref {
 	return $self->{'_revcomp_ref'};
 }
 
-sub exonerate {
-	my ( $self, $exonerate ) = @_;
-	if ($exonerate) {
-		$self->{'_exonerate'} = $exonerate;
-	}
-	return $self->{'_exonerate'};
-}
-
 sub show_color_panel {
 	my ($self,$button_color) = @_;
 	my $color_dialog = $self->top()->DialogBox( -title => 'Choose a color', -buttons => ['Cancel'] );
@@ -452,7 +442,10 @@ sub launch_exonerate {
 		warn "Missing parameters\n";
 		return;
 	}
-	my $exonerate = $self->exonerate;
+
+	my $exonerate = Bio::Otter::Lace::Exonerate->new;
+	$exonerate->AceDatabase($self->XaceSeqChooser->AceDatabase);
+	$exonerate->genomic_seq($self->XaceSeqChooser->clone_Sequence);
 	$exonerate->query_seq($seq);
 	$exonerate->score($score);
 	$exonerate->dnahsp($dnahsp);

@@ -154,7 +154,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.11 $ ';
+$revision='$Revision: 1.12 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -311,6 +311,15 @@ sub analysis {
     return $self->{'_analysis'};
 }
 
+sub genomic_seq {
+    my( $self, $genomic_seq ) = @_;
+    
+    if ($genomic_seq) {
+        $self->{'_genomic_seq'} = $genomic_seq;
+    }
+    return $self->{'_genomic_seq'};
+}
+
 sub query_seq {
     my( $self, $seq ) = @_;
 
@@ -461,18 +470,16 @@ sub run {
     my( $self ) = @_;
 
     my $ace = '';
-    foreach my $name ($self->list_GenomeSequence_names) {
-        warn "Genomic query sequence: '$name'\n";
-        my ($masked, $smasked, $unmasked) = $self->get_masked_unmasked_seq($name);
+    my ($masked, $smasked, $unmasked) = $self->get_masked_unmasked_seq;
 
-        unless ($masked->seq =~ /[acgtACGT]{5}/) {
-            warn "Sequence '$name' is entirely repeat\n";
-            next;
-        }
-
-        my $features = $self->run_exonerate($masked, $smasked, $unmasked);
-        $ace .= $self->format_ace_output($name, $features);
+    unless ($masked->seq =~ /[acgtACGT]{5}/) {
+        warn "Sequence '$name' is entirely repeat\n";
+        return $ace;
     }
+
+    my $features = $self->run_exonerate($masked, $smasked, $unmasked);
+    $ace .= $self->format_ace_output($name, $features);
+
     if ($ace) {
         my $fetcher = $self->sequence_fetcher;
         my $names = $self->delete_all_hit_names;
@@ -650,12 +657,10 @@ sub list_GenomeSequence_names {
 }
 
 sub get_masked_unmasked_seq {
-    my ($self, $name) = @_;
+    my ($self) = @_;
 
-    my $ace = $self->AceDatabase->aceperl_db_handle;
-    my ($dna_obj) = $ace->fetch(DNA => $name)
-        or confess "Failed to get DNA object '$name' from acedb database";
-    my $dna_str = $dna_obj->fetch->at->name;
+    my $name = $self->genomic_seq->name;
+    my $dna_str = $self->genomic_seq->sequence_string;
     my $sm_dna_str = uc $dna_str;
 
     warn "Got DNA string ", length($dna_str), " long";
