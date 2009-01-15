@@ -154,7 +154,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.12 $ ';
+$revision='$Revision: 1.13 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -313,7 +313,7 @@ sub analysis {
 
 sub genomic_seq {
     my( $self, $genomic_seq ) = @_;
-    
+
     if ($genomic_seq) {
         $self->{'_genomic_seq'} = $genomic_seq;
     }
@@ -470,10 +470,11 @@ sub run {
     my( $self ) = @_;
 
     my $ace = '';
+    my $name = $self->genomic_seq->name;
     my ($masked, $smasked, $unmasked) = $self->get_masked_unmasked_seq;
 
     unless ($masked->seq =~ /[acgtACGT]{5}/) {
-        warn "Sequence '$name' is entirely repeat\n";
+        warn "The genomic sequence is entirely repeat\n";
         return $ace;
     }
 
@@ -659,6 +660,7 @@ sub list_GenomeSequence_names {
 sub get_masked_unmasked_seq {
     my ($self) = @_;
 
+	my $ace = $self->AceDatabase->aceperl_db_handle;
     my $name = $self->genomic_seq->name;
     my $dna_str = $self->genomic_seq->sequence_string;
     my $sm_dna_str = uc $dna_str;

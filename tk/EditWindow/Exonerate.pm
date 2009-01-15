@@ -44,7 +44,7 @@ sub initialise {
 
 	# dna or protein sequence
 	my $type = 'dna';
-	$exon->query_type($type);
+	$self->query_type($type);
 	my $mol_type = sub {
 		if ( $type eq 'dna' ) {
 			$self->set_entry( 'score', $DNA_SCORE );
@@ -60,7 +60,7 @@ sub initialise {
 			$self->set_entry( 'method_tag', 'Exon_PROT' );
 			$self->set_entry( 'logic_name', 'Exon_PROT' );
 		}
-		$exon->query_type($type);
+		$self->query_type($type);
 	};
 	foreach (qw/dna protein/) {
 		$type_frame->Radiobutton(
@@ -318,6 +318,14 @@ sub method_color {
 	return $self->{'_method_color'};
 }
 
+sub query_type {
+	my ( $self, $type ) = @_;
+	if ($type) {
+		$self->{'_type'} = $type;
+	}
+	return $self->{'_type'};
+}
+
 sub logic_name {
 	my ( $self, $match ) = @_;
 	if ($match) {
@@ -437,6 +445,7 @@ sub launch_exonerate {
 	my $dnahsp  = $self->get_entry('dnahsp');
 	my $m_tag   = $self->get_entry('method_tag');
 	my $m_color = $self->method_color();
+	my $query_type = $self->query_type();
 	my $l_name  = $self->get_entry('logic_name');
 	unless ( $score and $m_tag and $m_color and $l_name and $seq) {
 		warn "Missing parameters\n";
@@ -445,8 +454,9 @@ sub launch_exonerate {
 
 	my $exonerate = Bio::Otter::Lace::Exonerate->new;
 	$exonerate->AceDatabase($self->XaceSeqChooser->AceDatabase);
-	$exonerate->genomic_seq($self->XaceSeqChooser->clone_Sequence);
+	$exonerate->genomic_seq($self->XaceSeqChooser->Assembly->Sequence);
 	$exonerate->query_seq($seq);
+	$exonerate->query_type($query_type);
 	$exonerate->score($score);
 	$exonerate->dnahsp($dnahsp);
 	$exonerate->method_tag($m_tag);
