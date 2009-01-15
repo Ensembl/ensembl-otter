@@ -604,10 +604,18 @@ sub merge_position_pairs {
     $self->sort_position_pairs;
     my @pos = $self->all_position_pair_text;
     my $i = 0;
+    my $strand = $self->strand_from_tk;
     while (1) {
         my $this = $pos[$i];
         my $next = $pos[$i + 1] or last;
-        if ($this->[0] <= $next->[1] and $this->[1] >= $next->[0]) {
+        # Merge overlapping or abutting Exons
+        if (
+            ($this->[0] <= $next->[1] and $this->[1] >= $next->[0])
+            or ($strand == 1
+                ? ($this->[1] + 1) == $next->[0]
+                : $this->[0] == ($next->[1] + 1))
+            )
+        {
             $this->[0] = ($this->[0] < $next->[0]) ? $this->[0] : $next->[0];
             $this->[1] = ($this->[1] > $next->[1]) ? $this->[1] : $next->[1];
             splice(@pos, $i + 1, 1);
