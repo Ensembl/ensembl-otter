@@ -25,7 +25,7 @@ chr3	3	Chromosome 3	External	BCM	3
 chr4	4	Chromosome 4	External	Havana	4
 chr5	5	Chromosome 5	External	Havana	5
 chr6	6	Chromosome 6	External	Havana	6
-chr7	7	Chromosome 7	External	Wash. U. / SK	7
+chr7	7	Chromosome 7	External	Wash. U.	7
 chr8	8	Chromosome 8	External	Broad	8
 chr9	9	Chromosome 9	External	Havana	9
 chr10	10	Chromosome 10	External	Havana	10
@@ -94,3 +94,11 @@ NOD_IDD10.1	3-IDD10.1_DIL	IDD10.1 region of chromosome 3 (DIL NOD strain)	Extern
 CHO_IDD16.1	17-IDD16.1_CHO	IDD16.1 region of chromosome 17 (CHORI-29 NOD strain)	External
 NOD_IDD18.1	3-IDD18.1_DIL	IDD18.1 region of chromosome 3 (DIL NOD strain)	External
 NOD_IDD18.2	3-IDD18.2_DIL	IDD18.2 region of chromosome 3 (DIL NOD strain)	External
+--end--
+
+--gorilla--
+MHC	6-MHC	MHC region of Chromosome 6	External
+--end--
+
+--wallaby--
+mhc	1	MHC region of Chromosome 1	External
