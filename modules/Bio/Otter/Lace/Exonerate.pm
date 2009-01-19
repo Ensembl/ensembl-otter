@@ -154,7 +154,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.13 $ ';
+$revision='$Revision: 1.14 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -446,6 +446,7 @@ sub ace_Method {
     $method->zone_number(2);
 
     $method->gapped(0);
+    $method->join_aligns(0);
     $method->blixem_type( ($self->query_type eq 'dna') ? 'N' : 'P');
     $method->width(2.0);
     $method->score_method('width');
