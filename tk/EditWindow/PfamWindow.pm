@@ -119,7 +119,13 @@ sub initialize {
 	for ( my $block = 1 ; $block <= 30 ; $block++ ) {
 		$self->progress($block);
 		$self->top->toplevel->update;
-		$self->top->toplevel->after($wait * 1000);
+		eval {
+			$self->top->toplevel->after($wait * 1000);
+  		};
+  		if ($@) {
+    		# catch "XStoSubCmd: Not a Tk Window" error when the search is canceled
+    		return;
+  		}
 	}
 	my $tries = 1;
 	$wait = 0;
