@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-dump_pipeline - script to dump pipeline database to a .sql file
+dump_pipeline - script to dump pipeline database to a .sql file, create and populate a vega db
 
 =head1 SYNOPSIS
 
@@ -31,21 +31,21 @@ Options:
 
 =head1 DESCRIPTION
 
-This script uses MySQLdump to read a pipeline database (InnoDB) into a file that can be used
-to create a new Vega (MyISAM) database. By default only the structure for the tables will be
-read into the file - the exceptions are tables defined in the HEREDOC at the end of the script
-- tables to be completely ignored ('i'), tables where all data is also dumped ('d'), and
-tables where the features being dumped are restricted by analysis_id ('analysis_id'). This
-last filter is just for *_raw features for *_align_feature tables - if you want to transfer
-all align_features then just edit the HEREDOC.
+This script uses MySQLdump to read a pipeline database (InnoDB) into a file that can be used,
+either by this script or subsequently, to create a new Vega (MyISAM) database. The user is
+prompted as to whether to automatically create and populate the new Vega db.
+
+By default only the structure for tables will be read into the file - the exceptions are tables
+defined in the HEREDOC at the end of the script - tables to be completely ignored ('i'), 
+tables where all data is also dumped ('d'), and tables where the features being dumped are
+restricted by analysis_id ('analysis_id'). This last filter is just for *_raw features for 
+*_align_feature tables - if you want to transfer all align_features then just edit the HEREDOC.
 Note that earlier versions of this script (eg 1.6) attempted to restrict the transfer of all
 features on analysis_id and seq_region_id - this worked for small database but fell over with
 human.
 
 Transfer of features from the dna_ and protein_align_feature tables can be completely
 prevented using the -no_feature option to the script.
-
-To do: create database and load from .sql file
 
 =head1 LICENCE
 
@@ -70,11 +70,11 @@ use FindBin qw($Bin);
 use vars qw($SERVERROOT);
 
 BEGIN {
-    $SERVERROOT = "$Bin/../../../..";
-    unshift(@INC, "$SERVERROOT/ensembl-otter/modules");
-    unshift(@INC, "$SERVERROOT/ensembl/modules");
-    unshift(@INC, "modules");
-    unshift(@INC, "$SERVERROOT/bioperl-live");
+  $SERVERROOT = "$Bin/../../../..";
+  unshift(@INC, "$SERVERROOT/ensembl-otter/modules");
+  unshift(@INC, "$SERVERROOT/ensembl/modules");
+  unshift(@INC, "modules");
+  unshift(@INC, "$SERVERROOT/bioperl-live");
 }
 
 use POSIX qw(strftime);
@@ -91,46 +91,44 @@ my $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
 # parse options
 $support->parse_common_options(@_);
 $support->parse_extra_options(
-	'pipedbname=s',
-	'pipehost=s',
-	'pipeport=s',
-	'pipeuser=s',
-	'no_feature=s',
-	'sql_dump_location=s',
-	'file_name=s',
+  'pipedbname=s',
+  'pipehost=s',
+  'pipeport=s',
+  'pipeuser=s',
+  'no_feature=s',
+  'sql_dump_location=s',
+  'file_name=s',
+  $support->get_loutre_params,
 );
 $support->allowed_params(
-	'pipedbname',
-	'pipehost',
-	'pipeport',
-	'pipeuser',
-	'no_feature',
-	'sql_dump_location',
-	'file_name',
-	$support->get_common_params,
+  'pipedbname',
+  'pipehost',
+  'pipeport',
+  'pipeuser',
+  'no_feature',
+  'sql_dump_location',
+  'file_name',
+  $support->get_common_params,
 );
 $support->check_required_params(
-	'pipedbname',
-	'pipehost',
-	'pipeport',
-	'pipeuser',
-	'dbname',
+  'pipedbname',
+  'pipehost',
+  'pipeport',
+  'pipeuser',
 );
 if ($support->param('help') or $support->error) {
-    warn $support->error if $support->error;
-    pod2usage(1);
+  warn $support->error if $support->error;
+  pod2usage(1);
 }
-
-$support->remove_vega_params;
 
 #set defaults if not specified otherwise
 if (! $support->param('sql_dump_location')) {
-	$support->param('sql_dump_location','/GPFS/tmp/vega_prep');
+  $support->param('sql_dump_location','/tmp/vega_prep');
 }
 my $date = strftime "%Y_%m_%d", localtime;
 if (! $support->param('file_name')) {
-	my $file_name = $support->param('pipedbname').'_'.$date.'_create.sql';
-	$support->param('file_name',$file_name);
+  my $file_name = $support->param('pipedbname').'_'.$date.'_create.sql';
+  $support->param('file_name',$file_name);
 }
 
 # ask user to confirm parameters to proceed
@@ -138,6 +136,12 @@ $support->confirm_params;
 
 # get log filehandle and print heading and parameters to logfile
 $support->init_log;
+
+#are we going to create the database and populate it from the sql dump
+my $create_db = 0;
+if ($support->user_proceed("Do you want to automatically create and populate the vega database from the sql dump?\n")) {
+  $create_db = 1;
+}
 
 #for debugging, are we dumping align_features (can be slow) or just the table structure
 my $no_feature = $support->param('no_feature') || '';
@@ -164,11 +168,11 @@ my $gtn = $pdbh->prepare(qq(
     ));
 $gtn->execute();
 while (my ($analysis_id,$logic_name) = $gtn->fetchrow){
-	#exclude for align_features
-	next if ($logic_name=~/\_raw$/);
-	foreach my $t qw(analysis protein_align_feature dna_align_feature) {
-		push @{$analysis_ids{$t}{'analysis_id'}}, $analysis_id;
-	}
+  #exclude for align_features
+  next if ($logic_name=~/\_raw$/);
+  foreach my $t qw(analysis protein_align_feature dna_align_feature) {
+    push @{$analysis_ids{$t}{'analysis_id'}}, $analysis_id;
+  }
 }
 
 #warn Dumper(\%analysis_ids);
@@ -185,53 +189,53 @@ my $txt = &constraints;
 #warn $txt;
 TABLE:
 foreach my $line (split(/\n/,$txt)){
-    next if ($line =~ /^\s*$/);
-    next if ($line =~ /^\#/);
-    if ($line=~/^(.+)\#/){
-	$line=$1;
-    }
+  next if ($line =~ /^\s*$/);
+  next if ($line =~ /^\#/);
+  if ($line=~/^(.+)\#/){
+    $line=$1;
+  }
 
-    my ($table,$constraint) = split(/\s+/,$line);
+  my ($table,$constraint) = split(/\s+/,$line);
 #    $table =  $support->param('pipedbname').'.'.$table;
 
-    #sanity check
-    if ($table && (! exists($table_constraints{$table}))) {
-	$support->log_warning("You have definitions for a table ($table) that is not found in the pipeline database. Skipping\n\n");
-	next TABLE;
-    }
+  #sanity check
+  if ($table && (! exists($table_constraints{$table}))) {
+    $support->log_warning("You have definitions for a table ($table) that is not found in the pipeline database. Skipping\n\n");
+    next TABLE;
+  }
 
-    #skip tables to ignore
-    if ($constraint eq 'i') {
-	$table_constraints{$table} = 'i';
-	next TABLE;
-    }
+  #skip tables to ignore
+  if ($constraint eq 'i') {
+    $table_constraints{$table} = 'i';
+    next TABLE;
+  }
 		
-    #if we don't want to dump align_features features then set type to 's'
-    if ($table=~/align_feature$/ && $no_feature) {
-	$support->log("\'no_feature\' option used: skipping features from $table\n");
-	$table_constraints{$table} = 's';
-	next TABLE;
-	}
+  #if we don't want to dump align_features features then set type to 's'
+  if ($table=~/align_feature$/ && $no_feature) {
+    $support->log("\'no_feature\' option used: skipping features from $table\n");
+    $table_constraints{$table} = 's';
+    next TABLE;
+  }
 
-    #are any constraints by analysis_id defined
-    if ($analysis_ids{$table}) {
-	if ($constraint eq 'analysis_id') {
-	    $table_constraints{$table} = $analysis_ids{$table};
-	}
-	else {
-	    $support->log_warning("Don't understand what to do with table $table\n");
-	}
-	next TABLE;
+  #are any constraints by analysis_id defined
+  if ($analysis_ids{$table}) {
+    if ($constraint eq 'analysis_id') {
+      $table_constraints{$table} = $analysis_ids{$table};
+    }
+    else {
+      $support->log_warning("Don't understand what to do with table $table\n");
+    }
+    next TABLE;
     }
 
-    if ($constraint eq 'd') {
-	$table_constraints{$table} = 'd';
-    }
-    #further sanity check
-    elsif ($constraint ne 'a') {
-	$support->log_warning("Constraint ($constraint) for table ($table)not understood. Skipping\n\n");
-	next TABLE;
-    }
+  if ($constraint eq 'd') {
+    $table_constraints{$table} = 'd';
+  }
+  #further sanity check
+  elsif ($constraint ne 'a') {
+    $support->log_warning("Constraint ($constraint) for table ($table)not understood. Skipping\n\n");
+    next TABLE;
+  }
 }
 
 #warn Dumper(\%table_constraints);
@@ -239,31 +243,31 @@ foreach my $line (split(/\n/,$txt)){
 #Do some logging		
 my $log = "The following tables will be ignored (ie not put into Vega):\n";
 foreach my $table (keys %table_constraints) {
-    $log .="\t$table\n" if ($table_constraints{$table} eq 'i');
+  $log .="\t$table\n" if ($table_constraints{$table} eq 'i');
 }
 $log .= "The following tables will be dumped with all their data:\n";
 foreach my $table (keys %table_constraints) {
-    $log .= "\t$table\n" if ($table_constraints{$table} eq 'd');
+  $log .= "\t$table\n" if ($table_constraints{$table} eq 'd');
 }
 
 $log .= "The following tables will be dumped with some of their data:\n";
 foreach my $table (keys %table_constraints) {
-    if (ref($table_constraints{$table}) eq 'HASH') {
-	foreach my $cons (keys %{$table_constraints{$table}}) {
-	    $log .= "\t$table (constrained on $cons)\n";
-	}
+  if (ref($table_constraints{$table}) eq 'HASH') {
+    foreach my $cons (keys %{$table_constraints{$table}}) {
+      $log .= "\t$table (constrained on $cons)\n";
     }
+  }
 }
 
 $log .= "The rest of the pipeline tables will be copied just with their structure (no data):\n";
 foreach my $table (keys %table_constraints) {
-    $log .= "\t$table\n" if ($table_constraints{$table} eq 's');
+  $log .= "\t$table\n" if ($table_constraints{$table} eq 's');
 }
 
 $support->log($log);
 
 unless ($support->user_proceed("$log\nDo you want to proceed ?")) {
-    exit;
+  exit;
 }
 
 #########################
@@ -285,20 +289,20 @@ my $mcom   = "mysqldump --opt --skip-lock-tables $sei $cs --single-transaction -
 #create statements
 my @mysql_commands;
 while (my ($table,$condition) = each (%table_constraints) ) {
-    next if ($condition eq 'i');
-    if ($condition eq 's') {
-	push @mysql_commands, "$mcom -d $table";
+  next if ($condition eq 'i');
+  if ($condition eq 's') {
+    push @mysql_commands, "$mcom -d $table";
+  }
+  elsif ($condition eq 'd') {
+    push @mysql_commands, "$mcom $table";
+  }
+  elsif (ref($table_constraints{$table}) eq 'HASH') {
+    foreach my $cons (keys %{$table_constraints{$table}}) {
+      my $ids = join ',',@{$table_constraints{$table}{$cons}};
+      my $extra = qq( --where "$cons in ($ids)");
+      push @mysql_commands, "$mcom $extra $table";
     }
-    elsif ($condition eq 'd') {
-	push @mysql_commands, "$mcom $table";
-    }
-    elsif (ref($table_constraints{$table}) eq 'HASH') {
-	foreach my $cons (keys %{$table_constraints{$table}}) {
-	    my $ids = join ',',@{$table_constraints{$table}{$cons}};
-	    my $extra = qq( --where "$cons in ($ids)");
-	    push @mysql_commands, "$mcom $extra $table";
-	}
-    }
+  }
 }
 
 ##################
@@ -308,36 +312,52 @@ while (my ($table,$condition) = each (%table_constraints) ) {
 #warn Dumper(\@mysql_commands);
 	
 if (!$support->param('dry_run')) {
-    foreach my $command (@mysql_commands) {
-	open(MYSQL,"$command |") || die "cannot open mysql";
-	my $enable;
-	my $flag_disable;
-	while (<MYSQL>) {
-	    s/(TYPE|ENGINE)=(\w+)/$1=$dbtype/;
-	    if (/ALTER\sTABLE\s\S+\sENABLE\sKEYS/){
-		$enable=$_;
-	    }
-	    elsif (/ALTER\sTABLE\s\S+\sDISABLE\sKEYS/){
-		if(!$flag_disable){
-		    # only write once
-		    $flag_disable=1;
-		    print OUT;
-		}
-	    }
-	    else {
-		print OUT;
-	    }
+  foreach my $command (@mysql_commands) {
+    open(MYSQL,"$command |") || die "cannot open mysql";
+    my $enable;
+    my $flag_disable;
+    while (<MYSQL>) {
+      s/(TYPE|ENGINE)=(\w+)/$1=$dbtype/;
+      if (/ALTER\sTABLE\s\S+\sENABLE\sKEYS/){
+	$enable=$_;
+      }
+      elsif (/ALTER\sTABLE\s\S+\sDISABLE\sKEYS/){
+	if(!$flag_disable){
+	  # only write once
+	  $flag_disable=1;
+	  print OUT;
 	}
-	print OUT $enable if ($enable);
-	close(MYSQL);
+      }
+      else {
+	print OUT;
+      }
     }
-    $support->log("SQL for dumped to $file\n");
+    print OUT $enable if ($enable);
+    close(MYSQL);
+  }
+  $support->log("SQL for dumped to $file\n");
 }
 else {
-    $support->log("\nNo SQL dumped since this is a dry run\n");
+  $support->log("\nNo SQL dumped since this is a dry run\n");
 }
 
 close(OUT);
+
+#create and populate vega db
+if ($create_db && (!$support->param('dry_run'))) {
+  my $user   = $support->param('user');
+  my $dbname = $support->param('dbname');
+  my $host   = $support->param('host');
+  my $port   = $support->param('port');
+  my $pass   = $support->param('pass');
+
+  $support->log("Creating new Vega database $dbname on $host\n");
+  my $mysql = "mysql -u $user -P $port -p$pass -h $host -e 'create database $dbname'";
+  `$mysql`;
+  $support->log("Populating $dbname\n");
+  $mysql = "mysql -u $user -P $port -p$pass -h $host $dbname < $file";
+  `$mysql`;
+}
 
 $support->finish_log;
 
@@ -351,8 +371,8 @@ $support->finish_log;
 # are also defined
 
 sub constraints {
-    my $txt;
-    $txt=<<ENDOFTEXT;
+  my $txt;
+  $txt=<<ENDOFTEXT;
 dna_align_feature_history        i
 hit_description                  i
 input_id_analysis                i
@@ -381,5 +401,5 @@ repeat_consensus                 d
 repeat_feature                   d
 simple_feature                   d
 ENDOFTEXT
-    return $txt;
+  return $txt;
 }
