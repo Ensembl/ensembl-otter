@@ -2703,6 +2703,9 @@ sub xace_save {
 
     confess "Missing SubSeq argument" unless $sub;
 
+    my $top = $self->top_window;
+    $top->grab;     # Stop user closing window before save is finished
+
     my $old = $self->SubSeq;
     my $old_name = $old->name;
     my $new_name = $sub->name;
@@ -2710,6 +2713,7 @@ sub xace_save {
     my $clone_name = $sub->clone_Sequence->name;
     if ($clone_name eq $new_name) {
         $self->message("Can't have SubSequence with same name as clone!");
+        $top->grabRelease;
         return;
     }
 
@@ -2738,6 +2742,9 @@ sub xace_save {
     $xc->update_Locus($sub->Locus);
 
     $sub->is_archival(1);
+    
+    $top->grabRelease;
+    
     return 1;
 }
 

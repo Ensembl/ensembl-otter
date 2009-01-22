@@ -5,16 +5,13 @@ package Bio::Otter::Lace::Client;
 use strict;
 use warnings;
 use Carp qw{ confess cluck };
-use Sys::Hostname qw{ hostname };
+use Net::Domain qw{ hostname };
 use LWP;
 use Symbol 'gensym';
 use URI::Escape qw{ uri_escape };
 use MIME::Base64;
 use HTTP::Cookies::Netscape;
 use Term::ReadKey qw{ ReadMode ReadLine };
-
-
-use Hum::Conf qw{ PFETCH_SERVER_LIST };
 
 use Bio::Otter::Author;
 use Bio::Otter::CloneLock;
@@ -124,16 +121,6 @@ sub timeout_attempts {
     return $self->{'_timeout_attempts'} || 5;
 }
 
-sub pfetch_server_pid {
-    my( $self, $pfetch_server_pid ) = @_;
-    
-    if ($pfetch_server_pid) {
-        $self->{'_pfetch_server_pid'} = $pfetch_server_pid;
-    }
-    return $self->{'_pfetch_server_pid'};
-}
-
-
 sub get_log_dir {
     my( $self ) = @_;
     
@@ -207,6 +194,7 @@ sub option_from_array{
     return unless $array;
     return Bio::Otter::Lace::Defaults::option_from_array($array);
 }
+
 sub client_hostname {
     my( $self, $client_hostname ) = @_;
     
@@ -241,34 +229,6 @@ sub get_DataSet_by_name {
         }
     }
     confess "No such DataSet '$name'";
-}
-
-sub fork_local_pfetch_server {
-    my ($self) = @_;
-    
-    my ($host, $port) = @{$PFETCH_SERVER_LIST->[0]};
-    if ($host ne 'localhost') {
-        # Only run local_pfetch if host is set to localhost
-        return 0;
-    }
-    
-    if (my $pid = $self->pfetch_server_pid) {
-        # 15 is TERM
-        kill 15, $pid;
-    }
-    
-    if (my $pid = fork) {
-        $self->pfetch_server_pid($pid);
-        return 1;
-    }
-    elsif (defined $pid) {
-        no warnings;
-        exec('local_pfetch', -port => $port);
-        exit(1);    # If exec fails
-    }
-    else {
-        die "Can't fork local_pfetch server: $!";
-    }
 }
 
 sub password_prompt{

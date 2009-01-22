@@ -10,7 +10,7 @@ use ZMap::XRemoteCache;
 use Data::Dumper;
 use Hum::Conf qw{ PFETCH_SERVER_LIST };
 use XML::Simple;
-
+use File::Path 'mkpath';
 
 my $ZMAP_DEBUG = 0;
 
@@ -340,24 +340,43 @@ sub zMapZmapConnector{
     return shift->zMapInsertZmapConnector(@_);
 }
 
-sub zMapWriteDotZmap{
+sub zMapWriteDotBlixemrc {
     my ($self) = @_;
-    my $dir    = $self->zMapZmapDir();
-    my $file   = "${dir}/ZMap";
     
-    my $fh;
-    eval{
-        # directory should be made already
-        open($fh, ">$file") or die "write_dot_zmap: error writing file '$file', $!";
-    };
-    warn "Error in :$@" if $@;
-    unless($@){
-        my $content = $self->zMapDotZmapContent();
-        print $fh $content;
-        return 1;
-    }
-    close $fh;
-    return 0;
+    my $file = $ENV{'BLIXEM_CONFIG_FILE'};
+    my ($dir) = $file =~ m{(.+)/[^/]+$};
+    mkpath($dir);   # Fatal if fails
+    open my $blixem_rc, "> $file" or confess "Can't write to '$file'; $!";
+    print $blixem_rc
+        $self->formatZmapDefaults(
+            'blixem',
+            default_fetch_mode => $ENV{'PFETCH_WWW'} ? 'pfetch_http' : 'pfetch_socket',
+            ),
+        $self->formatZmapDefaults(
+            'pfetch_http',
+            pfetch_mode     => 'http',
+            pfetch          => $self->AceDatabase->Client->url_root . '/nph-pfetch',
+            cookie_jar      => $ENV{'OTTERLACE_COOKIE_JAR'},
+            port            => 80,
+            ),
+        $self->formatZmapDefaults(
+            'pfetch_socket',
+            pfetch_mode => 'socket',
+            node        => $PFETCH_SERVER_LIST->[0][0],
+            port        => $PFETCH_SERVER_LIST->[0][1],
+            );
+}
+
+sub zMapWriteDotZmap {
+    my ($self) = @_;
+
+    my $file = $self->zMapZmapDir . "/ZMap";
+    
+    open my $fh, "> $file"
+        or confess "Can't write to '$file'; $!";
+    print $fh $self->zMapDotZmapContent;
+    close $fh
+        or confess "Error writing to '$file'; $!";
 }
 
 sub zMapDotZmapContent{
@@ -425,12 +444,18 @@ sub zMapZMapDefaults {
         'ZMap',
 	    sources         => $self->slice_name,
         show_mainwindow => $show_main,
-        );
-    if (1) {
-        push(@config, 
-        pfetch          => $self->AceDatabase->Client->url_root . '/nph-pfetch',
-        pfetch_mode     => q{http},
         cookie_jar      => $ENV{'OTTERLACE_COOKIE_JAR'},
+        );
+
+    if ($ENV{'PFETCH_WWW'}) {
+        push(@config,
+            pfetch_mode => 'http',
+            pfetch      => $self->AceDatabase->Client->url_root . '/nph-pfetch',            
+            );
+    } else {
+        push(@config,
+            pfetch_mode => 'pipe',
+            pfetch      => 'pfetch',
             );
     }
 
@@ -442,10 +467,9 @@ sub zMapBlixemDefaults {
     
     return $self->formatZmapDefaults(
         'blixem',
-        netid  => $PFETCH_SERVER_LIST->[0][0],
-        port   => $PFETCH_SERVER_LIST->[0][1],
+        config_file => $ENV{'BLIXEM_CONFIG_FILE'},
         qw{
-            script      blixem
+            script      blixemh
             scope       200000
             homol_max   0
         },
