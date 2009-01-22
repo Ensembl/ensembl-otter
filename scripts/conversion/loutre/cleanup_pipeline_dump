@@ -20,11 +20,11 @@ Options:
 
     --count_rows=1                      if enabled then counts entries in tables and exits
 
-    --pipedumpdbname=NAME               use pipeline dump database NAME
-    --pipedumphost=HOST                 use pipeline dump database host HOST
-    --pipedumpport=PORT                 use pipeline dump database port PORT
-    --pipedumpuser=USER                 use pipeline dump database user USER
-    --pipedumppass=PASS                 use pipeline dump database password PASS
+    --dbname, db_name=NAME              use database NAME for the pipeline dump
+    --host, --dbhost, --db_host=HOST    use database host HOST for the pipeline dump db
+    --port, --dbport, --db_port=PORT    use database port PORT for the pipeline dump db
+    --user, --dbuser, --db_user=USER    use database username USER for the pipeline dump db
+    --pass, --dbpass, --db_pass=PASS    use database passwort PASS for the pipeline dump db
 
     --loutredbname=NAME                 use loutre database NAME
     --loutrehost=HOST                   use loutre database host HOST
@@ -90,11 +90,11 @@ use FindBin qw($Bin);
 use vars qw($SERVERROOT);
 
 BEGIN {
-    $SERVERROOT = "$Bin/../../../..";
-    unshift(@INC, "$SERVERROOT/ensembl-otter/modules");
-    unshift(@INC, "$SERVERROOT/ensembl/modules");
-    unshift(@INC, "modules");
-    unshift(@INC, "$SERVERROOT/bioperl-live");
+  $SERVERROOT = "$Bin/../../../..";
+  unshift(@INC, "$SERVERROOT/ensembl-otter/modules");
+  unshift(@INC, "$SERVERROOT/ensembl/modules");
+  unshift(@INC, "modules");
+  unshift(@INC, "$SERVERROOT/bioperl-live");
 }
 
 use Getopt::Long;
@@ -107,34 +107,34 @@ $| = 1;
 
 #define tables and logic_names for features that are to be kept
 my %lns_to_stay = (
-	'prediction_transcript' => { map {$_,1} qw(Augustus Genscan) },
-	'simple_feature'        => { map {$_,1} qw(CpG Eponine tRNAscan) },
-	'repeat_feature'        => { map {$_,1} qw(RepeatMasker trf) },
+  'prediction_transcript' => { map {$_,1} qw(Augustus Genscan) },
+  'simple_feature'        => { map {$_,1} qw(CpG Eponine tRNAscan) },
+  'repeat_feature'        => { map {$_,1} qw(RepeatMasker trf) },
 );
 
 #define logic names that we know are to be deleted
 my %lns_to_go = map {$_,1}
-	qw(Est2genome_clusters_raw
-	   Est2genome_clusters
-	   Est2genome_fish_raw
-	   Est2genome_fish
-	   Est2genome_other_raw
-	   Est2genome_other
-	   Est2genome_human_raw
-	   Est2genome_human
-	   Est2genome_mouse_raw
-	   Est2genome_mouse
-	   Uniprot_raw
-	   Uniprot
-	   Uniprot_TR
-	   Uniprot_SW
-	   vertrna_raw
-	   vertrna
-	   Augustus_svar
-	   Fgenesh
-	   Halfwise
-	   RepeatMasker_new
-	   trf_new
+  qw(Est2genome_clusters_raw
+     Est2genome_clusters
+     Est2genome_fish_raw
+     Est2genome_fish
+     Est2genome_other_raw
+     Est2genome_other
+     Est2genome_human_raw
+     Est2genome_human
+     Est2genome_mouse_raw
+     Est2genome_mouse
+     Uniprot_raw
+     Uniprot
+     Uniprot_TR
+     Uniprot_SW
+     vertrna_raw
+     vertrna
+     Augustus_svar
+     Fgenesh
+     Halfwise
+     RepeatMasker_new
+     trf_new
    );
 
 #define which attrib_types are to be deleted
@@ -145,53 +145,39 @@ my $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
 # parse options
 $support->parse_common_options(@_);
 $support->parse_extra_options(
-	'pipedumpdbname=s',
-	'pipedumphost=s',
-	'pipedumpport=s',
-	'pipedumpuser=s',
-	'vega_release=s',
-	'release_type=s',
-	'count_rows=s',
-    'chr=s',
-	'ignore_chr=s',
-	$support->get_loutre_params,
+  'vega_release=s',
+  'release_type=s',
+  'count_rows=s',
+  'chr=s',
+  'ignore_chr=s',
+  $support->get_loutre_params,
 );
 $support->allowed_params(
-	'pipedumpdbname',
-	'pipedumphost',
-	'pipedumpport',
-	'pipedumpuser',
-	'vega_release',
-	'release_type',
-	'count_rows',
-	'chr',
-	'ignore_chr',
-	$support->get_loutre_params,
-	$support->get_common_params,
+  'vega_release',
+  'release_type',
+  'count_rows',
+  'chr',
+  'ignore_chr',
+  $support->get_loutre_params,
+  $support->get_common_params,
 );
 $support->check_required_params(
-	'pipedumpdbname',
-	'pipedumphost',
-	'pipedumpport',
-	'pipedumpuser',
-	'vega_release',
-	'release_type',
-	$support->get_loutre_params,
+  'vega_release',
+  'release_type',
+  $support->get_loutre_params,
 );
 if ($support->param('help') or $support->error) {
-    warn $support->error if $support->error;
-    pod2usage(1);
+  warn $support->error if $support->error;
+  pod2usage(1);
 }
 
 $support->comma_to_list('ignore_chr');
 $support->comma_to_list('chr');
-
-$support->remove_vega_params;
 $support->confirm_params;
 $support->init_log;
 
 # connect to dump of pipeline database and get adaptors
-my $pddba = $support->get_database('core','pipedump');
+my $pddba = $support->get_database('core');
 my $pdsa  = $pddba->get_SliceAdaptor();
 my $pdaa  = $pddba->get_AttributeAdaptor();
 my $pddbh = $pddba->dbc->db_handle;
@@ -203,49 +189,49 @@ my $laa  = $ldba->get_AttributeAdaptor();
 
 #these are tables that will be cleaned up (defined here just for logging, nothng else)
 my @target_tables = qw(analysis
-					   assembly
-					   dna
-					   dna_align_feature
-					   protein_align_feature
-					   simple_feature
-					   meta_coord
-					   prediction_exon
-					   prediction_transcript
-					   repeat_feature
-					   repeat_consensus
-					   seq_region
-					   seq_region_attrib
-					   meta_coord
-					);
+		       assembly
+		       dna
+		       dna_align_feature
+		       protein_align_feature
+		       simple_feature
+		       meta_coord
+		       prediction_exon
+		       prediction_transcript
+		       repeat_feature
+		       repeat_consensus
+		       seq_region
+		       seq_region_attrib
+		       meta_coord
+		     );
 
 #store counts of original number of features in each table
 my %table_rows;
 foreach my $t (@target_tables) {
-	($table_rows{$t}{'original'}) = $pddbh->selectrow_array("SELECT COUNT(*) FROM $t");
+  ($table_rows{$t}{'original'}) = $pddbh->selectrow_array("SELECT COUNT(*) FROM $t");
 }
 
 #dump a count of entries in all the relevant tables if requested
 if ($support->param('count_rows')) {
-	my %report;
-	foreach my $t (@target_tables) {
-		if ($t =~ /_feature/) {	
-			my $s = $pddbh->prepare(qq(
+  my %report;
+  foreach my $t (@target_tables) {
+    if ($t =~ /_feature/) {	
+      my $s = $pddbh->prepare(qq(
                    SELECT a.logic_name, count(*)
                    FROM analysis a, $t
                    WHERE a.analysis_id = $t.analysis_id
                    GROUP BY a.logic_name
                 ));
-			$s->execute;
-			while (my ($logic_name,$c) = $s->fetchrow){
-				$report{$t}{$logic_name} = $c;
-			}
-		}
-		else {
-			$report{$t} = 	$table_rows{$t}{'original'};
-		}
-	}	
-#	warn Dumper(\%report);
-	exit;
+      $s->execute;
+      while (my ($logic_name,$c) = $s->fetchrow){
+	$report{$t}{$logic_name} = $c;
+      }
+    }
+    else {
+      $report{$t} = 	$table_rows{$t}{'original'};
+    }
+  }	
+  #	warn Dumper(\%report);
+  exit;
 }
 
 #get wanted chromosomes - non-hidden ones with the correct attributes for export mode and release number
@@ -254,15 +240,15 @@ my $export_mode = $support->param('release_type');
 my $release = $support->param('vega_release');
 my $chr_names_wanted;
 if ($support->param('chr')) {
-	$chr_names_wanted = [ $support->param('chr') ];
+  $chr_names_wanted = [ $support->param('chr') ];
 }
 else {
-	$chr_names_wanted = $support->get_wanted_chromosomes($laa,$lsa);
+  $chr_names_wanted = $support->get_wanted_chromosomes($laa,$lsa);
 }
 
 my $seq_regions = join "\n", @{$chr_names_wanted};
 if (! $support->user_proceed("Data on the following assemblies will be retained in the pipeline database dump, proceed ?\n\n$seq_regions\n")) {
-	exit;
+  exit;
 }
 $support->log("Will retain data on the following assemblies\n$seq_regions\n\n");
 
@@ -272,8 +258,8 @@ $support->log("Will retain data on the following assemblies\n$seq_regions\n\n");
 my $noentry_tables = join("','",qw(gene transcript exon));
 
 if (! $support->param('dry_run')) {
-	my $c = $pddbh->do(qq(DELETE FROM meta_coord where table_name in ('$noentry_tables')));
-	$support->log("Removed $c entries from meta_coord table\n\n");
+  my $c = $pddbh->do(qq(DELETE FROM meta_coord where table_name in ('$noentry_tables')));
+  $support->log("Removed $c entries from meta_coord table\n\n");
 }
 
 ################
@@ -285,16 +271,16 @@ $support->log("Generating constraints for deletions:\n");
 #make a note of analysis_ids, and numbers of original features grouped by logic_name
 my %original_lncounts;
 foreach my $t (keys %lns_to_stay) {
-	my $s = $pddbh->prepare(qq(
+  my $s = $pddbh->prepare(qq(
                 SELECT a.logic_name, a.analysis_id, count(*)
                 FROM analysis a, $t
                 WHERE a.analysis_id = $t.analysis_id
                 GROUP BY a.logic_name
 ));
-	$s->execute;
-	while (my ($logic_name,$analysis_id,$c) = $s->fetchrow){
-		$original_lncounts{$t}{$logic_name} = $c;
-	}
+  $s->execute;
+  while (my ($logic_name,$analysis_id,$c) = $s->fetchrow){
+    $original_lncounts{$t}{$logic_name} = $c;
+  }
 }
 #warn Dumper(\%original_lncounts);
 
@@ -302,27 +288,27 @@ foreach my $t (keys %lns_to_stay) {
 #and those that we know we are going to delete -> will identify any new ones
 my $problem = 0;
 foreach my $t (keys %original_lncounts) {
-	foreach my $ln (keys %{$original_lncounts{$t}}) {
-		if (! exists($lns_to_stay{$t}{$ln}) ) {
-			if (! exists($lns_to_go{$ln}) ) {
-				$support->log_warning("I don't know what to do with logic name $ln for table $t, please help me out\n");
-				$problem = 1;
-			}
-			else {
-				$support->log("Will delete features of logic name $ln from table $t\n",1);
-			}
-		}
-		else {
-			$support->log("Will keep features of logic name $ln from table $t\n",1);
-		}
-	}
+  foreach my $ln (keys %{$original_lncounts{$t}}) {
+    if (! exists($lns_to_stay{$t}{$ln}) ) {
+      if (! exists($lns_to_go{$ln}) ) {
+	$support->log_warning("I don't know what to do with logic name $ln for table $t, please help me out\n");
+	$problem = 1;
+      }
+      else {
+	$support->log("Will delete features of logic name $ln from table $t\n",1);
+      }
+    }
+    else {
+      $support->log("Will keep features of logic name $ln from table $t\n",1);
+    }
+  }
 }
 
 if ($problem) {
-	if (! $support->user_proceed("There are features with logic names that I don't know what to do with, please look at the logs. Do you really want to proceed?\n")) {
-		exit;
-	}
-	$support->log_warning("There are logic_names that will be deleted even though this is not specifically defined\n");
+  if (! $support->user_proceed("There are features with logic names that I don't know what to do with, please look at the logs. Do you really want to proceed?\n")) {
+    exit;
+  }
+  $support->log_warning("There are logic_names that will be deleted even though this is not specifically defined\n");
 }
 
 #calculate analysis_ids that are to be kept
@@ -333,28 +319,28 @@ my $idsth = $pddbh->prepare(qq(
 $idsth->execute();
 my %ids_to_stay;
 while (my ($analysis_id,$logic_name) = $idsth->fetchrow){
-	foreach my $t (keys %lns_to_stay) {
-		foreach my $ln (keys %{$lns_to_stay{$t}}) {
-			if ($logic_name eq $ln) {				
-				push @{$ids_to_stay{$t}}, $analysis_id;
-				#make a note of all analysis_ids for cleaning up analysis table
-				unless (grep {$_ eq $analysis_id} @{$ids_to_stay{'analysis'}} ) {
-					push @{$ids_to_stay{'analysis'}}, $analysis_id;
-				}
-			}
-		}
+  foreach my $t (keys %lns_to_stay) {
+    foreach my $ln (keys %{$lns_to_stay{$t}}) {
+      if ($logic_name eq $ln) {				
+	push @{$ids_to_stay{$t}}, $analysis_id;
+	#make a note of all analysis_ids for cleaning up analysis table
+	unless (grep {$_ eq $analysis_id} @{$ids_to_stay{'analysis'}} ) {
+	  push @{$ids_to_stay{'analysis'}}, $analysis_id;
 	}
+      }
+    }
+  }
 }
 
 #add analysis_ids from *_align_feature tables
 foreach my $t ('dna_align_feature','protein_align_feature') {
-	$idsth = $pddbh->prepare(qq(SELECT distinct(analysis_id) from $t));
-	$idsth->execute;
-	while (my ($analysis_id) = $idsth->fetchrow) {
-		unless (grep {$_ eq $analysis_id} @{$ids_to_stay{'analysis'}} ) {
-			push @{$ids_to_stay{'analysis'}}, $analysis_id;
-		}
-	}
+  $idsth = $pddbh->prepare(qq(SELECT distinct(analysis_id) from $t));
+  $idsth->execute;
+  while (my ($analysis_id) = $idsth->fetchrow) {
+    unless (grep {$_ eq $analysis_id} @{$ids_to_stay{'analysis'}} ) {
+      push @{$ids_to_stay{'analysis'}}, $analysis_id;
+    }
+  }
 }
 
 #warn "lns to stay ",Dumper(\%ids_to_stay);
@@ -363,21 +349,21 @@ $support->log("Doing the deletions:\n");
 
 #delete by analysis_id - faster to create tmp tables and truncate rather than delete
 foreach my $t (keys %ids_to_stay) {
-	my $ids_to_keep = join("','",@{$ids_to_stay{$t}});
-	my $sql = qq(CREATE TABLE tmp_$t SELECT * from $t WHERE analysis_id in ('$ids_to_keep'));
-	if (! $support->param('dry_run')) {
-		$support->log_stamped("Deleting from $t by analysis_id...\n",1);
-		$pddbh->do($sql);
-		$pddbh->do(qq(TRUNCATE $t));
-		$pddbh->do(qq(INSERT into $t select * from tmp_$t));
-		$pddbh->do(qq(DROP TABLE tmp_$t));
-		$support->log_stamped("...finished deleting from $t by analysis_id.\n\n",1);
-	}
+  my $ids_to_keep = join("','",@{$ids_to_stay{$t}});
+  my $sql = qq(CREATE TABLE tmp_$t SELECT * from $t WHERE analysis_id in ('$ids_to_keep'));
+  if (! $support->param('dry_run')) {
+    $support->log_stamped("Deleting from $t by analysis_id...\n",1);
+    $pddbh->do($sql);
+    $pddbh->do(qq(TRUNCATE $t));
+    $pddbh->do(qq(INSERT into $t select * from tmp_$t));
+    $pddbh->do(qq(DROP TABLE tmp_$t));
+    $support->log_stamped("...finished deleting from $t by analysis_id.\n\n",1);
+  }
 }
 foreach my $t (keys %ids_to_stay) {
-	my $c1 = $table_rows{$t}{'original'};
-	my $c2 = $pddbh->selectrow_array("SELECT COUNT(*) FROM $t");
-	$table_rows{$t}{'deleted_by_analysis_id'} = $c1-$c2;
+  my $c1 = $table_rows{$t}{'original'};
+  my $c2 = $pddbh->selectrow_array("SELECT COUNT(*) FROM $t");
+  $table_rows{$t}{'deleted_by_analysis_id'} = $c1-$c2;
 }
 
 #########################
@@ -385,14 +371,14 @@ foreach my $t (keys %ids_to_stay) {
 #########################
 
 if (!$support->param('dry_run')) {
-	$support->log_stamped("Deleting unwanted seq_region_attributes...\n",1);
-	$table_rows{'seq_region_attib'}{'deleted_by_attrib_type_id'} = $pddbh->do(
-		qq(DELETE sra 
+  $support->log_stamped("Deleting unwanted seq_region_attributes...\n",1);
+  $table_rows{'seq_region_attib'}{'deleted_by_attrib_type_id'} = $pddbh->do(
+    qq(DELETE sra 
            FROM seq_region_attrib sra, attrib_type at
            WHERE sra.attrib_type_id = at.attrib_type_id
            AND at.code IN ('$codes_to_go')
     ));
-	$support->log_stamped("...finished deleting unwanted seq_region_attributes...\n\n",1);
+  $support->log_stamped("...finished deleting unwanted seq_region_attributes...\n\n",1);
 }
 
 ##################
@@ -440,20 +426,20 @@ my %seqregions;
 my @all_ids;
 my @assembled_ids;
 while ((my ($id, $cs_id, $csname) = $sth->fetchrow_array)) {
-	push @{$seqregions{$csname}},$id;
-	push @all_ids,$id;
-	push @assembled_ids,$id;
-	$sth1->execute($id);
-	while ((my ($id, $csname) = $sth1->fetchrow_array)) {
-		push @{$seqregions{$csname}},$id;
-		push @all_ids,$id;
-		$sth2->execute($id,$cs_id);
-		while ((my ($id, $csname) = $sth2->fetchrow_array)) {
-			push @{$seqregions{$csname}},$id;
-			push @all_ids,$id;
-			push @assembled_ids,$id;
-		}
-	}	
+  push @{$seqregions{$csname}},$id;
+  push @all_ids,$id;
+  push @assembled_ids,$id;
+  $sth1->execute($id);
+  while ((my ($id, $csname) = $sth1->fetchrow_array)) {
+    push @{$seqregions{$csname}},$id;
+    push @all_ids,$id;
+    $sth2->execute($id,$cs_id);
+    while ((my ($id, $csname) = $sth2->fetchrow_array)) {
+      push @{$seqregions{$csname}},$id;
+      push @all_ids,$id;
+      push @assembled_ids,$id;
+    }
+  }	
 }
 
 #warn Dumper(\%seqregions);
@@ -467,13 +453,13 @@ $cssth->execute();
 
 #delete from feature tables
 while (my ($t, $cs_name) = $cssth->fetchrow_array){
-	if (! $support->param('dry_run')) {
-		my $ids_to_keep = join("','",@{$seqregions{$cs_name}});
-		my $sql = qq(DELETE from $t WHERE seq_region_id not in ('$ids_to_keep'));
-		$support->log_stamped("Deleting from $t by seq_region_id...\n",1);
-		$table_rows{$t}{'deleted_by_seq_region_id'} = $pddbh->do($sql);
-		$support->log_stamped("...finished deleting from $t by seq_region_id.\n\n",1);
-	}
+  if (! $support->param('dry_run')) {
+    my $ids_to_keep = join("','",@{$seqregions{$cs_name}});
+    my $sql = qq(DELETE from $t WHERE seq_region_id not in ('$ids_to_keep'));
+    $support->log_stamped("Deleting from $t by seq_region_id...\n",1);
+    $table_rows{$t}{'deleted_by_seq_region_id'} = $pddbh->do($sql);
+    $support->log_stamped("...finished deleting from $t by seq_region_id.\n\n",1);
+  }
 }
 
 ##################
@@ -481,63 +467,63 @@ while (my ($t, $cs_name) = $cssth->fetchrow_array){
 ##################
 my $all_ids_to_stay = join("','",@all_ids);
 if (! $support->param('dry_run')) {
-	foreach my $t (qw(seq_region seq_region_attrib dna)) {
-		$support->log_stamped("Deleting from $t by seq_region_id...\n",1);
-		my $sql = qq(DELETE FROM $t where seq_region_id not in ('$all_ids_to_stay'));
-		$table_rows{$t}{'deleted_by_seq_region_id'} = $pddbh->do($sql);
-		$support->log_stamped("...finished deleting from $t by seq_region_id...\n\n",1);
-	}
-	my $assembled_ids_to_stay = join("','",@assembled_ids);
-	#assembly
-	$support->log_stamped("Deleting from assembly by seq_region_id...\n",1);	
-	my $sql = qq(DELETE FROM assembly where asm_seq_region_id not in ('$assembled_ids_to_stay'));
-	$table_rows{'assembly'}{'deleted_by_seq_region_id'} = $pddbh->do($sql);
-	$support->log_stamped("...finished deleting from assembly by seq_region_id.\n\n",1);
+  foreach my $t (qw(seq_region seq_region_attrib dna)) {
+    $support->log_stamped("Deleting from $t by seq_region_id...\n",1);
+    my $sql = qq(DELETE FROM $t where seq_region_id not in ('$all_ids_to_stay'));
+    $table_rows{$t}{'deleted_by_seq_region_id'} = $pddbh->do($sql);
+    $support->log_stamped("...finished deleting from $t by seq_region_id...\n\n",1);
+  }
+  my $assembled_ids_to_stay = join("','",@assembled_ids);
+  #assembly
+  $support->log_stamped("Deleting from assembly by seq_region_id...\n",1);	
+  my $sql = qq(DELETE FROM assembly where asm_seq_region_id not in ('$assembled_ids_to_stay'));
+  $table_rows{'assembly'}{'deleted_by_seq_region_id'} = $pddbh->do($sql);
+  $support->log_stamped("...finished deleting from assembly by seq_region_id.\n\n",1);
 
-	################
-	# other tables #
-	################
+  ################
+  # other tables #
+  ################
 	
-	#repeat consensus
-	$support->log_stamped("Deleting from repeat_consensus by null values...\n",1);
-	$sql = qq(DELETE    rc
+  #repeat consensus
+  $support->log_stamped("Deleting from repeat_consensus by null values...\n",1);
+  $sql = qq(DELETE    rc
               FROM      repeat_consensus rc
               LEFT JOIN repeat_feature rf
               ON        rc.repeat_consensus_id = rf.repeat_consensus_id
               WHERE     rf.repeat_consensus_id IS NULL);
-	$table_rows{'repeat_consensus'}{'deleted_by_null_values'} = $pddbh->do($sql);
-	$support->log_stamped("...finished deleting from repeat_consensus by null values.\n\n",1);
-
-	#prediction exon
-	$support->log_stamped("Deleting from prediction exon by null values...\n",1);
-	$sql = qq(DELETE    pe
+  $table_rows{'repeat_consensus'}{'deleted_by_null_values'} = $pddbh->do($sql);
+  $support->log_stamped("...finished deleting from repeat_consensus by null values.\n\n",1);
+  
+  #prediction exon
+  $support->log_stamped("Deleting from prediction exon by null values...\n",1);
+  $sql = qq(DELETE    pe
               FROM      prediction_exon pe
               LEFT JOIN prediction_transcript pt
               ON        pe.prediction_transcript_id = pt.prediction_transcript_id
               WHERE     pt.prediction_transcript_id IS NULL);
-	$table_rows{'prediction_exon'}{'deleted_by_null_values'} = $pddbh->do($sql);
-	$support->log_stamped("...finished deleting from prediction_exon by null values.\n\n",1);
+  $table_rows{'prediction_exon'}{'deleted_by_null_values'} = $pddbh->do($sql);
+  $support->log_stamped("...finished deleting from prediction_exon by null values.\n\n",1);
 }
 
 #count no of entries left
 foreach my $t (@target_tables) {
-	($table_rows{$t}{'final'}) = $pddbh->selectrow_array("SELECT COUNT(*) FROM $t");
+  ($table_rows{$t}{'final'}) = $pddbh->selectrow_array("SELECT COUNT(*) FROM $t");
 }
 
 $support->log("\nSUMMARY\\n=======\n");
 foreach my $t (sort keys %table_rows) {
-	my $c = '-' x length($t);
-	$support->log("\nTable $t\n$c\n");
-	foreach my $type (sort keys %{$table_rows{$t}}) {
-		next unless ($type =~ /original|final/);
-		$support->log("$type number of entries = $table_rows{$t}{$type}\n",1);
-	}
-	foreach my $type (keys %{$table_rows{$t}}) {
-		next if ($type =~ /original|final/);
-		$support->log("$type = $table_rows{$t}{$type}\n",2);
-	}
+  my $c = '-' x length($t);
+  $support->log("\nTable $t\n$c\n");
+  foreach my $type (sort keys %{$table_rows{$t}}) {
+    next unless ($type =~ /original|final/);
+    $support->log("$type number of entries = $table_rows{$t}{$type}\n",1);
+  }
+  foreach my $type (keys %{$table_rows{$t}}) {
+    next if ($type =~ /original|final/);
+    $support->log("$type = $table_rows{$t}{$type}\n",2);
+  }
 }
-	
+
 #warn Dumper(\%table_rows);
 
 $support->finish_log;
