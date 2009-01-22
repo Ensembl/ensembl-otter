@@ -4,43 +4,24 @@
 
 use strict;
 use warnings;
-use LWP;
-use HTTP::Cookies::Netscape;
-use URI::Escape qw{ uri_escape };
+use Hum::Pfetch qw{ do_query };
 
 {
-    my $jar_file = $ENV{'OTTERLACE_COOKIE_JAR'}
-        or die "OTTERLACE_COOKIE_JAR not set\n";
-
-    # The pfetch command line client understands "--client=blah"
-    # but the server only accepts "--client blah".
-    my $argv = "@ARGV";
-	$argv =~ s/--(\w+)=/--$1 /g;
-    my $req_str = "request=" . uri_escape($argv);
-
-    my $pfetch = LWP::UserAgent->new;
-    $pfetch->env_proxy;
-    $pfetch->protocols_allowed([qw{ http https }]);
-    $pfetch->agent('local_pfetch/0.1 ');
-    push @{ $pfetch->requests_redirectable }, 'POST';
-    $pfetch->cookie_jar(HTTP::Cookies::Netscape->new( file => $jar_file ));
-
-    my $request = HTTP::Request->new;
-    $request->method('POST');
-    $request->uri('http://www.sanger.ac.uk/cgi-bin/otter/49/nph-pfetch');
-    $request->content($req_str);
-
-    my $response = $pfetch->request($request);
-
-    print $response->content;
+    my $query = join(' ', @ARGV) . "\n";
+    my $fh = do_query($query);
+    while (<$fh>) {
+        print;
+    }
 }
-
-
 
 
 __END__
 
 =head1 NAME - pfetch
+
+=head1 DESCRIPTION
+
+This version of pfetch is only used by otterlace on the Mac when at the Sanger.
 
 =head1 AUTHOR
 
