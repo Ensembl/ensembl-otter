@@ -11,6 +11,8 @@ use Symbol 'gensym';
 use Config::IniFiles;
 use Data::Dumper;
 use Bio::Otter::Lace::Client;
+use Net::Domain qw{ hostfqdn };
+
 
 my $CLIENT_STANZA   = 'client';
 my $DEFAULT_TAG     = 'default';
@@ -156,6 +158,12 @@ sub do_getopt {
     ############################################################################
 
     push(@$CONFIG_INIFILES, $GETOPT);
+
+    # Should be using pfetch via HTTP proxy if we are outside Sanger
+    my $hostname = hostfqdn();
+    unless ($hostname =~ /\.sanger\.ac\.uk$/) {
+        $ENV{'PFETCH_WWW'} = 1;
+    }
 
     # now safe to call any subs which are required to setup stuff
 

@@ -10,6 +10,7 @@ use Scalar::Util 'weaken';
 use Tk::Dialog;
 use Tk::DialogBox;
 use Tk::Balloon;
+use Tk::LabFrame;
 
 use Hum::Ace::SubSeq;
 use Hum::Ace::Locus;
@@ -99,6 +100,7 @@ sub initialize {
     $self->populate_clone_menu;
     $self->zMapWriteDotZmap;
     $self->zMapWriteDotGtkrc;
+    $self->zMapWriteDotBlixemrc;
     $self->zMapLaunchZmap;
     $self->top_window->raise;
 }
@@ -674,23 +676,6 @@ sub populate_menus {
         );
     $top->bind('<Control-Shift-A>', $re_authorize);
 
-
-    # (Re)start local pfetch server
-    if ($PFETCH_SERVER_LIST->[0][0] eq 'localhost') {
-        $tools_menu->add('command',
-            -label          => 'Restart local pfetch server',
-            -command        => sub{
-                my $client = $self->AceDatabase->Client;
-                # Make sure that we are authorized here by running a query against the server
-                my $user = $client->do_authentication;
-                warn "User '$user' is authenticated\n";
-                $client->fork_local_pfetch_server;
-                },
-            #-accelerator    => 'Ctrl+P',
-            -underline      => 0,
-            );
-    }
-
     $tools_menu->add('command',
                -label          => 'Load column data',
                -command        => sub {
@@ -734,6 +719,15 @@ sub show_lcd_dialog {
             $cb->configure(-command => sub { $cb->select(); });
         }
     }
+
+    # my $but_frame = $lcd_dialog->LabFrame(
+    #     -label  => 'Select',
+    #     -border => 3,
+    #     )->pack(-side => 'top', -fill => 'x', -expand => 1);
+    # $but_frame->Button(-text => 'Default')->pack(-side => 'left');
+    # $but_frame->Button(-text => 'All')->pack(-side => 'left');
+    # $but_frame->Button(-text => 'None')->pack(-side => 'left');
+    # $but_frame->Button(-text => 'Inverse')->pack(-side => 'left');
 
     return $lcd_dialog->Show();
 }
