@@ -97,8 +97,8 @@ NOD_IDD18.2	3-IDD18.2_DIL	IDD18.2 region of chromosome 3 (DIL NOD strain)	Extern
 --end--
 
 --gorilla--
-MHC	6-MHC	MHC region of Chromosome 6	External
+MHC	5-MHC	MHC region of Chromosome 5	External
 --end--
 
 --wallaby--
-mhc	1	MHC region of Chromosome 1	External
+mhc	2-MHC	MHC region of Chromosome 2	External
