@@ -120,9 +120,10 @@ my $aa  = $dba->get_AttributeAdaptor;
 my $dbh = $dba->dbc->db_handle;
 
 # make a backup tables the first time the script is run
+my $dbname = $support->param('dbname');
 my @tables = qw(transcript xref transcript_attrib gene_attrib);
 my %tabs;
-map { $_ =~ s/`//g; $tabs{$_} += 1; } $dbh->tables;
+map { $_ =~ s/`//g; $_ =~ s/$dbname.//g; $tabs{$_} += 1; } $dbh->tables;
 if (! exists ($tabs{'backup_ftn_transcript'})) {
   foreach my $table (@tables) {
     my $t = 'backup_ftn_'.$table;
