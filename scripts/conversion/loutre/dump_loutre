@@ -99,11 +99,11 @@ use FindBin qw($Bin);
 use vars qw($SERVERROOT);
 
 BEGIN {
-    $SERVERROOT = "$Bin/../../../..";
-    unshift(@INC, "$SERVERROOT/ensembl-otter/modules");
-    unshift(@INC, "$SERVERROOT/ensembl/modules");
-    unshift(@INC, "modules");
-    unshift(@INC, "$SERVERROOT/bioperl-live");
+  $SERVERROOT = "$Bin/../../../..";
+  unshift(@INC, "$SERVERROOT/ensembl-otter/modules");
+  unshift(@INC, "$SERVERROOT/ensembl/modules");
+  unshift(@INC, "modules");
+  unshift(@INC, "$SERVERROOT/bioperl-live");
 }
 
 use Getopt::Long;
@@ -136,29 +136,29 @@ $support->parse_extra_options(
   $support->get_loutre_params,
 );
 $support->allowed_params(
-    'vega_release',
-    'release_type',
-    'chr',
-    'ignore_chr',
-    'filter_prefix',
-    'filter_biotype',
-    'prune',
-    'dump_assembly_tags',
-    'ignore_authors',
-    'add_genes',
-    $support->get_loutre_params,
-    $support->get_common_params,
+  'vega_release',
+  'release_type',
+  'chr',
+  'ignore_chr',
+  'filter_prefix',
+  'filter_biotype',
+  'prune',
+  'dump_assembly_tags',
+  'ignore_authors',
+  'add_genes',
+  $support->get_loutre_params,
+  $support->get_common_params,
 );
 
 $support->check_required_params(
-    $support->get_loutre_params,
-    'vega_release',
-    'release_type',
-    'dbname',
+  $support->get_loutre_params,
+  'vega_release',
+  'release_type',
+  'dbname',
 );
 if ($support->param('help') or $support->error) {
-    warn $support->error if $support->error;
-    pod2usage(1);
+  warn $support->error if $support->error;
+  pod2usage(1);
 }
 
 $support->comma_to_list('ignore_chr');
@@ -168,18 +168,18 @@ $support->comma_to_list('add_genes');
 
 #set gene prefixes to ignore for transfer if they are not already defined by the user
 if (! $support->param('filter_prefix')) {
-    if ($support->param('loutredbname') =~ /human/) {
-	$support->param('filter_prefix','OLD_MIT,HMIT,Em,ERI,GT,GH,API,DG,CCDS,MGC,MPI,SK');
-    }
-    elsif ($support->param('loutredbname') =~ /mouse/) {
-	$support->param('filter_prefix','INT');
-    }
+  if ($support->param('loutredbname') =~ /human/) {
+    $support->param('filter_prefix','OLD_MIT,HMIT,Em,ERI,GT,GH,API,DG,CCDS,MGC,MPI,SK');
+  }
+  elsif ($support->param('loutredbname') =~ /mouse/) {
+    $support->param('filter_prefix','INT');
+  }
 }
 $support->comma_to_list('filter_prefix');
 
 #define gene types to ignore
 if (! $support->param('filter_biotype')) {
-    $support->param('filter_biotype','artifact,obsolete');
+  $support->param('filter_biotype','artifact,obsolete');
 }
 $support->comma_to_list('filter_biotype');
 
@@ -216,25 +216,25 @@ my $vdbh = $vdba->dbc->db_handle;
 #(note that the -ignore_chr is used in get_wanted_chromosomes)
 my $chr_names_wanted;
 if ($support->param('chr')) {
-    $chr_names_wanted = [ $support->param('chr') ];
+  $chr_names_wanted = [ $support->param('chr') ];
 }
 else {
-    $chr_names_wanted = $support->get_wanted_chromosomes($laa,$lsa);
+  $chr_names_wanted = $support->get_wanted_chromosomes($laa,$lsa);
 }
 
 my $seq_regions = join "\n", @{$chr_names_wanted}; 
 if (! $support->user_proceed("\nAnnotation on the following seq_regions will be dumped from loutre, proceed ?\n$seq_regions")) {
-    exit;
+  exit;
 }
 
 my $ignore_authors;
 if ($support->param('ignore_authors')) {
-    $ignore_authors = [ $support->param('ignore_authors') ];
+  $ignore_authors = [ $support->param('ignore_authors') ];
 }
 
 my $genes_to_dump = [];
 if ($support->param('add_genes')) {
-    $genes_to_dump = [ $support->param('add_genes') ] ;
+  $genes_to_dump = [ $support->param('add_genes') ] ;
 }
 
 ################################
@@ -252,40 +252,40 @@ my @ignored_tables;
 my $txt = &constraints;
 TABLE:
 foreach my $line (split(/\n/,$txt)){
-    next if ($line =~ /^\s*$/);
-    next if ($line =~ /^\#/);
-    if($line=~/^(.+)\#/){
-	$line=$1;
-    }
+  next if ($line =~ /^\s*$/);
+  next if ($line =~ /^\#/);
+  if($line=~/^(.+)\#/){
+    $line=$1;
+  }
 
-    my ($table,@constraints) = split(/\s+/,$line);
+  my ($table,@constraints) = split(/\s+/,$line);
 
-    #sanity check
-    if (! exists($constraints{$table})) {
-	$support->log_warning("You have definitions for a table ($table) that is not found in the loutre database. Skipping\n\n");
-	next TABLE;
-    }
+  #sanity check
+  if (! exists($constraints{$table})) {
+    $support->log_warning("You have definitions for a table ($table) that is not found in the loutre database. Skipping\n\n");
+    next TABLE;
+  }
 	
-    #tables to dump structure
-    if ($constraints[0] eq 's'){
-	$constraints{$table} = 's';
-	next TABLE;
-    }
-    #tables to dump all data
-    if ($constraints[0] eq 'd'){
-	$constraints{$table} = 'd';
-	next TABLE;
-    }
-    #tables that are to be ignored
-    if ($constraints[0] eq 'i'){
-	$constraints{$table} = 'i';
-	next TABLE;
-    }
-    #tables that are to be checked and updated
-    if ($constraints[0] eq 'u'){
-	$constraints{$table} = 'u';
-	next TABLE;
-    }
+  #tables to dump structure
+  if ($constraints[0] eq 's'){
+    $constraints{$table} = 's';
+    next TABLE;
+  }
+  #tables to dump all data
+  if ($constraints[0] eq 'd'){
+    $constraints{$table} = 'd';
+    next TABLE;
+  }
+  #tables that are to be ignored
+  if ($constraints[0] eq 'i'){
+    $constraints{$table} = 'i';
+    next TABLE;
+  }
+  #tables that are to be checked and updated
+  if ($constraints[0] eq 'u'){
+    $constraints{$table} = 'u';
+    next TABLE;
+  }
 }
 
 #warn Dumper(\%constraints);
@@ -295,9 +295,9 @@ my $vdbname = $support->param('dbname');
 my %vega_tables;
 map { $_ =~ s/`//g;  $_ =~ s/$vdbname.//g; $vega_tables{$_} = 1; } $vdbh->tables;
 foreach my $t (keys %constraints) {
-    if (! exists($vega_tables{$t}) && ! $constraints{$t}) {
-	$support->log_warning("Loutre contains a table $t that you haven't defined what to do with\n");
-    }
+  if (! exists($vega_tables{$t}) && ! $constraints{$t}) {
+    $support->log_warning("Loutre contains a table $t that you haven't defined what to do with\n");
+  }
 }
 
 
@@ -318,49 +318,49 @@ my $lsth = $ldbh->prepare($sql);
 $lsth->execute;
 
 while (my ($name,$group1,$group2,$group_email) = $lsth->fetchrow_array ) {
-    if (! $group_email) {
-	$support->log_warning("Author $name in loutre is not properly linked to an author_group. Please fix as soon as you can\n");
-    }
+  if (! $group_email) {
+    $support->log_warning("Author $name in loutre is not properly linked to an author_group. Please fix as soon as you can\n");
+  }
 }
 
 ####
 #check all attrib_type.attrib_type_ids in loutre are in the newly created vega db
 ####
 if ($constraints{'attrib_type'} ne 'u') {
-    if (! $support->user_proceed("You haven't defined that the attrib_type table be checked and updated. Is that really correct ?\n")){
-	exit;
-    }
+  if (! $support->user_proceed("You haven't defined that the attrib_type table be checked and updated. Is that really correct ?\n")){
+    exit;
+  }
 }
 else {
-    my $vsth = $vdbh->prepare(qq(select attrib_type_id, code from attrib_type));
-    $vsth->execute;
-    my (%v_attrib_codes,%v_attrib_ids);
-    while (my ($id,$code) = $vsth->fetchrow_array) {
-	$v_attrib_codes{$id} = $code;
-	$v_attrib_ids{$code} = $id
-    }
-    my $lsth = $ldbh->prepare(qq(select * from attrib_type));
-    $lsth->execute;
-    while (my ($id,$code,$name,$desc) = $lsth->fetchrow_array) {
-	#is this entry completely missing from Vega ?
-	if (! grep { $code eq $_} keys %v_attrib_ids) {
-	    if (! grep { $id eq $_} keys %v_attrib_codes) {
-		if ( ! $support->param('dry_run') && ! $support->param('add_genes')) {		
-		    my $r = $vdbh->do(qq(
+  my $vsth = $vdbh->prepare(qq(select attrib_type_id, code from attrib_type));
+  $vsth->execute;
+  my (%v_attrib_codes,%v_attrib_ids);
+  while (my ($id,$code) = $vsth->fetchrow_array) {
+    $v_attrib_codes{$id} = $code;
+    $v_attrib_ids{$code} = $id
+  }
+  my $lsth = $ldbh->prepare(qq(select * from attrib_type));
+  $lsth->execute;
+  while (my ($id,$code,$name,$desc) = $lsth->fetchrow_array) {
+    #is this entry completely missing from Vega ?
+    if (! grep { $code eq $_} keys %v_attrib_ids) {
+      if (! grep { $id eq $_} keys %v_attrib_codes) {
+	if ( ! $support->param('dry_run') && ! $support->param('add_genes')) {		
+	  my $r = $vdbh->do(qq(
                                     insert into attrib_type
                                     values (?,?,?,?)),
-				      {},
-				      ($id,$code,$name,$desc)
-				  );
-		    $support->log("Inserted attrib_type_id $id, code $code into vega database\n");
-		}
-	    }
+			    {},
+			    ($id,$code,$name,$desc)
+			  );
+	  $support->log("Inserted attrib_type_id $id, code $code into vega database\n");
 	}
-	elsif ($v_attrib_ids{$code} ne $id) {
-	    $support->log_warning("attrib_type.code $code has a different attrib_type_id in vega (".$v_attrib_ids{$code}.") and loutre ($id). Please fix before continuing\n");
-	    exit;
-	}
+      }
     }
+    elsif ($v_attrib_ids{$code} ne $id) {
+      $support->log_warning("attrib_type.code $code has a different attrib_type_id in vega (".$v_attrib_ids{$code}.") and loutre ($id). Please fix before continuing\n");
+      exit;
+    }
+  }
 }
 
 ####
@@ -374,14 +374,14 @@ $lsth = $ldbh->prepare(qq(
 $lsth->execute;
 my @new_seq_region_attribs;
 while (my ($code) = $lsth->fetchrow_array) {
-    unless (grep {$_ eq $code} (@{$att_types_wanted},@{$att_types_to_ignore})) {
-	push @new_seq_region_attribs, $code;
-    }
+  unless (grep {$_ eq $code} (@{$att_types_wanted},@{$att_types_to_ignore})) {
+    push @new_seq_region_attribs, $code;
+  }
 }
 if ( @new_seq_region_attribs ) {
-    my $names = join ', ', @new_seq_region_attribs;
-    $support->log_warning("There are new seq_region_attribs in loutre ($names), please investigate and decide what to do with them\n");
-    exit;
+  my $names = join ', ', @new_seq_region_attribs;
+  $support->log_warning("There are new seq_region_attribs in loutre ($names), please investigate and decide what to do with them\n");
+  exit;
 }
 
 ######################################################
@@ -392,15 +392,15 @@ if ( @new_seq_region_attribs ) {
 # from the pipeline db in a backup table, make a backup of meta_coord table
 
 if (! exists ($vega_tables{'backup_simple_feature_names'})) {
-    $support->log_verbose("Creating backup table of simple_feature logic_names\n\n");
-    $vdbh->do("CREATE table backup_simple_feature_names
+  $support->log_verbose("Creating backup table of simple_feature logic_names\n\n");
+  $vdbh->do("CREATE table backup_simple_feature_names
                SELECT distinct(a.logic_name)
                FROM   simple_feature sf, analysis a
                WHERE  sf.analysis_id = a.analysis_id");
 }
 if (! exists ($vega_tables{'backup_meta_coord'})) {
-    $support->log_verbose("Creating backup of meta_coord table\n\n");
-    $vdbh->do("CREATE table backup_meta_coord
+  $support->log_verbose("Creating backup of meta_coord table\n\n");
+  $vdbh->do("CREATE table backup_meta_coord
                SELECT *
                FROM   meta_coord");
 }
@@ -410,13 +410,13 @@ my $vsth = $vdbh->prepare(qq(
                FROM   backup_simple_feature_names));
 $vsth->execute;
 while (my ($logic_name) = $vsth->fetchrow_array) {
-    push @pipeline_features, $logic_name;
+  push @pipeline_features, $logic_name;
 }
 my $features_to_keep =  "('" . (join '\',\'',@pipeline_features) . "\')";
 
 if (! exists ($vega_tables{'backup_attrib_types'})) {
-    $support->log_verbose("Creating table of attrib_types\n\n");
-    $vdbh->do(qq(CREATE table backup_attrib_types
+  $support->log_verbose("Creating table of attrib_types\n\n");
+  $vdbh->do(qq(CREATE table backup_attrib_types
                  SELECT distinct(attrib_type_id)
                  FROM   attrib_type));
 }
@@ -426,56 +426,56 @@ $vsth = $vdbh->prepare(qq(
                 FROM   backup_attrib_types));
 $vsth->execute;
 while (my ($logic_name) = $vsth->fetchrow_array) {
-	push @attrib_types_to_keep, $logic_name;
+  push @attrib_types_to_keep, $logic_name;
 }
 my $attribs_to_keep = "('" . (join '\',\'',@attrib_types_to_keep) . "\')"; 
 
 # do the deletions
 if ($support->param('prune') && $support->user_proceed("\nDo you want to delete all entries from all previous runs of this script?")) {
-    $support->log("Deleting db entries from previous runs of this script...\n");
-    $vdbh->do(qq(DELETE FROM exon));
-    $vdbh->do(qq(DELETE FROM exon_stable_id));
-    $vdbh->do(qq(DELETE FROM exon_transcript));
-    $vdbh->do(qq(DELETE FROM gene));
-    $vdbh->do(qq(DELETE FROM gene_stable_id));
-    $vdbh->do(qq(DELETE FROM protein_feature));
-    $vdbh->do(qq(DELETE FROM transcript));
-    $vdbh->do(qq(DELETE FROM transcript_stable_id));
-    $vdbh->do(qq(DELETE FROM translation));
-    $vdbh->do(qq(DELETE FROM translation_stable_id));
-    $vdbh->do(qq(DELETE FROM interpro));
-    $vdbh->do(qq(DELETE FROM object_xref));
-    $vdbh->do(qq(DELETE FROM xref));
-    $vdbh->do(qq(DELETE FROM gene_attrib));
-    $vdbh->do(qq(DELETE FROM transcript_attrib));
-    $vdbh->do(qq(DELETE FROM translation_attrib));
-    $vdbh->do(qq(
+  $support->log("Deleting db entries from previous runs of this script...\n");
+  $vdbh->do(qq(DELETE FROM exon));
+  $vdbh->do(qq(DELETE FROM exon_stable_id));
+  $vdbh->do(qq(DELETE FROM exon_transcript));
+  $vdbh->do(qq(DELETE FROM gene));
+  $vdbh->do(qq(DELETE FROM gene_stable_id));
+  $vdbh->do(qq(DELETE FROM protein_feature));
+  $vdbh->do(qq(DELETE FROM transcript));
+  $vdbh->do(qq(DELETE FROM transcript_stable_id));
+  $vdbh->do(qq(DELETE FROM translation));
+  $vdbh->do(qq(DELETE FROM translation_stable_id));
+  $vdbh->do(qq(DELETE FROM interpro));
+  $vdbh->do(qq(DELETE FROM object_xref));
+  $vdbh->do(qq(DELETE FROM xref));
+  $vdbh->do(qq(DELETE FROM gene_attrib));
+  $vdbh->do(qq(DELETE FROM transcript_attrib));
+  $vdbh->do(qq(DELETE FROM translation_attrib));
+  $vdbh->do(qq(
            DELETE sra
            FROM seq_region_attrib sra, attrib_type at
            WHERE sra.attrib_type_id = at.attrib_type_id
            AND at.code NOT IN $attribs_to_keep
         ));
-    $vdbh->do(qq(
+  $vdbh->do(qq(
            DELETE sf
            FROM simple_feature sf, analysis a
            WHERE sf.analysis_id = a.analysis_id
            AND a.logic_name NOT IN $features_to_keep
         ));
-    $vdbh->do(qq(DELETE FROM misc_feature));
-    $vdbh->do(qq(DELETE FROM misc_feature_misc_set));
-    $vdbh->do(qq(DELETE FROM misc_set));
-    $vdbh->do(qq(DELETE FROM misc_attrib));
-    foreach my $t (keys %constraints) {
-	if ($constraints{$t} =~ /d|s/) {
-	    $vdbh->do(qq(DROP table $t));
-	}
-    }	
-    $vdbh->do(qq(DELETE FROM meta_coord));
-    $vdbh->do(qq(INSERT INTO meta_coord SELECT * FROM backup_meta_coord));
+  $vdbh->do(qq(DELETE FROM misc_feature));
+  $vdbh->do(qq(DELETE FROM misc_feature_misc_set));
+  $vdbh->do(qq(DELETE FROM misc_set));
+  $vdbh->do(qq(DELETE FROM misc_attrib));
+  foreach my $t (keys %constraints) {
+    if ($constraints{$t} =~ /d|s/) {
+      $vdbh->do(qq(DROP table $t));
+    }
+  }	
+  $vdbh->do(qq(DELETE FROM meta_coord));
+  $vdbh->do(qq(INSERT INTO meta_coord SELECT * FROM backup_meta_coord));
 
-    $support->log("Done deleting previous entries.\n");
+  $support->log("Done deleting previous entries.\n");
 }
-	
+
 ###################################################################
 # create extra tables from loutre using MySQLdump direct transfer #
 ###################################################################
@@ -486,65 +486,65 @@ my %current_vega_tables;
 map { $_ =~ s/`//g; $current_vega_tables{$_} = 1; } $vdbh->tables;
 if ( ! exists($current_vega_tables{'author'} )) {
 	
-    #initialise mysqldump statements
-    my $character_set='latin1';
-    my $dbtype='MyISAM';
-    my $cs;
-    if($character_set) {
-	$cs="--default-character-set=\"$character_set\"";
-    }
-    my $luser   = $support->param('loutreuser');
-    my $ldbname = $support->param('loutredbname');
-    my $lhost   = $support->param('loutrehost');
-    my $lport   = $support->param('loutreport');
-    my $lpass   = $support->param('loutrepass');
+  #initialise mysqldump statements
+  my $character_set='latin1';
+  my $dbtype='MyISAM';
+  my $cs;
+  if($character_set) {
+    $cs="--default-character-set=\"$character_set\"";
+  }
+  my $luser   = $support->param('loutreuser');
+  my $ldbname = $support->param('loutredbname');
+  my $lhost   = $support->param('loutrehost');
+  my $lport   = $support->param('loutreport');
+  my $lpass   = $support->param('loutrepass');
 
-    my @mysql_commands;
-    my $mcom   = "mysqldump --opt --skip-lock-tables $cs --single-transaction -q -u $luser -P $lport -p$lpass -h $lhost $ldbname";
+  my @mysql_commands;
+  my $mcom   = "mysqldump --opt --skip-lock-tables $cs --single-transaction -q -u $luser -P $lport -p$lpass -h $lhost $ldbname";
 
-    #read constraints
-    my %tables_to_report;
-    while (my ($table,$condition) = each (%constraints) ) {
-	if ($condition eq 's') {
-	    push @mysql_commands, "$mcom -d $table ";
-	    push @{$tables_to_report{'structure'}}, $table;
-	}
-	elsif ($condition eq 'd') {
-	    push @mysql_commands, "$mcom $table ";
-	    push @{$tables_to_report{'data'}}, $table;
-	}
+  #read constraints
+  my %tables_to_report;
+  while (my ($table,$condition) = each (%constraints) ) {
+    if ($condition eq 's') {
+      push @mysql_commands, "$mcom -d $table ";
+      push @{$tables_to_report{'structure'}}, $table;
     }
-	
-    #initialise mysql statements
-    my $user   = $support->param('user');
-    my $dbname = $support->param('dbname');
-    my $host   = $support->param('host');
-    my $port   = $support->param('port');
-    my $pass   = $support->param('pass');
-    my $dest = "mysql -u $user -P $port -h $host -p$pass $dbname";
-    open(OUT,"| $dest") || die "cannot open pipe for $dest";
+    elsif ($condition eq 'd') {
+      push @mysql_commands, "$mcom $table ";
+      push @{$tables_to_report{'data'}}, $table;
+    }
+  }
 
-    #do the table structure transfer
-    if ( ! $support->param('dry_run') && ! $support->param('add_genes')) {
-	foreach my $command (@mysql_commands) {
-	    open(MYSQL,"$command |") || die "cannot open mysql";
-	    my $enable;
-	    my $flag_disable;
-	    while (<MYSQL>) {
-		s/(TYPE|ENGINE)=(\w+)/$1=$dbtype/;
-		print OUT;
-	    }
-	    close(MYSQL);
-	}
-	close(OUT);
-	my $table_s = join ',',@{$tables_to_report{'structure'}};
-	$support->log("\nDefinitions data for extra tables ($table_s) transferred from loutre to Vega database\n");
-	my $table_d = join ',',@{$tables_to_report{'data'}};
-	$support->log("\nData for extra tables ($table_d) transferred from loutre to Vega database\n");
+  #initialise mysql statements
+  my $user   = $support->param('user');
+  my $dbname = $support->param('dbname');
+  my $host   = $support->param('host');
+  my $port   = $support->param('port');
+  my $pass   = $support->param('pass');
+  my $dest = "mysql -u $user -P $port -h $host -p$pass $dbname";
+  open(OUT,"| $dest") || die "cannot open pipe for $dest";
+
+  #do the table structure transfer
+  if ( ! $support->param('dry_run') && ! $support->param('add_genes')) {
+    foreach my $command (@mysql_commands) {
+      open(MYSQL,"$command |") || die "cannot open mysql";
+      my $enable;
+      my $flag_disable;
+      while (<MYSQL>) {
+	s/(TYPE|ENGINE)=(\w+)/$1=$dbtype/;
+	print OUT;
+      }
+      close(MYSQL);
     }
-    else {
-	$support->log("\nNo extra table definitions transferred since this is a dry run (or we're just adding to it)\n");
-    }
+    close(OUT);
+    my $table_s = join ',',@{$tables_to_report{'structure'}};
+    $support->log("\nDefinitions data for extra tables ($table_s) transferred from loutre to Vega database\n");
+    my $table_d = join ',',@{$tables_to_report{'data'}};
+    $support->log("\nData for extra tables ($table_d) transferred from loutre to Vega database\n");
+  }
+  else {
+    $support->log("\nNo extra table definitions transferred since this is a dry run (or we're just adding to it)\n");
+  }
 }
 
 #################################################################
@@ -553,115 +553,109 @@ if ( ! exists($current_vega_tables{'author'} )) {
 
 my ($fsv,$non_fsv);
 foreach my $name (@{$chr_names_wanted}) {
-    my $lslice = $lsa->fetch_by_region('chromosome',$name,undef,undef,undef,'Otter');
-    my $vslice = $vsa->fetch_by_region('chromosome',$name,undef,undef,undef,'Otter');
+  my $lslice = $lsa->fetch_by_region('chromosome',$name,undef,undef,undef,'Otter');
+  my $vslice = $vsa->fetch_by_region('chromosome',$name,undef,undef,undef,'Otter');
 
-    $support->log_stamped("Looking at Chromosome $name...\n");
-    my $c = 0;
+  $support->log_stamped("Looking at Chromosome $name...\n");
+  my $c = 0;
 
-    #transfer genes and associated features
-  GENE:
-    foreach my $lgene (@{$lga->fetch_all_by_Slice($lslice)} ) {
-
-	my $lgsi = $lgene->stable_id;
-	#filter on stable id
-	if ($support->param('add_genes')) {
-	    unless (grep { $lgene->stable_id eq $_ } @{$genes_to_dump}) {
-		next GENE;
-	    }
-	    $support->log("Doing specific dump of gene $lgsi",2);
-	}
-
-	my $gname = $lgene->get_all_Attributes('name')->[0]->value;
-	#filter on source	
-	if ($support->param('filter_prefix')) {
-	    if (grep { $lgene->source eq $_} $support->param('filter_prefix')) {
-		$support->log("Skipping gene $gname ($lgsi) because of incorrect source\n",2);
-		next GENE;
-	    }
-	}
-	
-	#filter on biotype
-	if ($support->param('filter_biotype') ) {
-	    if (grep {lc($lgene->biotype) eq lc($_)} $support->param('filter_biotype') ) {
-		$support->log("Skipping gene $gname ($lgsi) because of incorrect biotype (".$lgene->biotype.")\n",2);
-		next GENE;
-			}
-	}
-
-	#ignore genes by particular authors
-	if ($support->param('ignore_authors')) {
-	    if (grep { $lgene->gene_author->name eq $_} @{$ignore_authors}) {
-		$support->log("Skipping gene $gname ($lgsi) because of untrusted author (".$lgene->gene_author->name.")\n",2);
-		next GENE;
-	    }
-	}
-
-	#filter out genes on non-anotated clones and without fsv tags
-	if ($support->param('dbname') =~ /danio/) {
-	    my $annotated_clone = 0;
-	    my $fsv_gene        = 0;
-            
-            foreach my $proj_clone (@{$lgene->feature_Slice->project('clone')}) {
-		my $clone = $proj_clone->to_Slice();
-                my $attr = $clone->get_all_Attributes('annotated');
-                if (exists $attr->[0]) {
-		    if ($attr->[0]->value eq 'T') {
-		        $annotated_clone = 1;
-		        last;
-		    }
-                }
-	    }
-            my $gene_rem = $lgene->get_all_Attributes('remark');
-            if (exists $gene_rem->[0]) {
-                if ($gene_rem->[0]->value eq 'fsv') {
-                    $fsv_gene = 1;
-                }
-            }
-            my $gene_hidrem = $lgene->get_all_Attributes('hidden_remark');  
-            if (exists $gene_hidrem->[0]) {
-                if ($gene_hidrem->[0]->value eq 'fsv') {
-                    $fsv_gene = 1;
-                }
-            }
-            if ($fsv_gene || $annotated_clone) {
-                $support->log("Taking gene $gname ($lgsi) with annotation flag\n");
-                $fsv++;
-            }
-            else {
-                $support->log("Skipping gene $gname ($lgsi) because no annotation flag present\n"); 
-                $non_fsv++;
-                next GENE;
-            }
-        }		
-		
-	if (&transfer_gene($lgene,$vsa,$vga)) {
-	    $c++;
-	}
-
+  #transfer genes and associated features
+ GENE:
+  foreach my $lgene (@{$lga->fetch_all_by_Slice($lslice)} ) {
+    my $lgsi = $lgene->stable_id;
+    #filter on stable id
+    if ($support->param('add_genes')) {
+      unless (grep { $lgene->stable_id eq $_ } @{$genes_to_dump}) {
+	next GENE;
+      }
+      $support->log("Doing specific dump of gene $lgsi",2);
     }
-    $support->log("Transferred $c genes from chromosome $name\n");
-
-    #transfer other seq_region based features
-    if (! $support->param('dry_run') && ! $support->param('add_genes') ) {
-		
-	#transfer simple features 
-	&transfer_simple_features($lslice,$vslice);
-	
-	#transfer seq_region_attributes
-	&transfer_sra($lslice,$vslice,$att_types_wanted);
-
-	####can almost certainly remove these, should all be on clones now####	
-	#transform contig_attribs into seq_region_attribs
-	my $attribs_to_move = ['annotated'];
-	&transfer_contig_attribs($lslice,$vslice,$attribs_to_move);
-	
-	#transfer assembly_tag misc_features
-	if ($support->param('dump_assembly_tags')) {
-	    my $features_to_copy = ['atag_CLE','atag_CRE','atag_Misc','atag_Unsure'];
-	    &transfer_misc_features($lslice,$vslice,$features_to_copy);
-	}
+    my $gname = $lgene->get_all_Attributes('name')->[0]->value;
+    #filter on source	
+    if ($support->param('filter_prefix')) {
+      if (grep { $lgene->source eq $_} $support->param('filter_prefix')) {
+	$support->log("Skipping gene $gname ($lgsi) because of incorrect source\n",2);
+	next GENE;
+      }
+    }	
+    #filter on biotype
+    if ($support->param('filter_biotype') ) {
+      if (grep {lc($lgene->biotype) eq lc($_)} $support->param('filter_biotype') ) {
+	$support->log("Skipping gene $gname ($lgsi) because of incorrect biotype (".$lgene->biotype.")\n",2);
+	next GENE;
+      }
     }
+    #ignore genes by particular authors
+    if ($support->param('ignore_authors')) {
+      if (grep { $lgene->gene_author->name eq $_} @{$ignore_authors}) {
+	$support->log("Skipping gene $gname ($lgsi) because of untrusted author (".$lgene->gene_author->name.")\n",2);
+	next GENE;
+      }
+    }
+    #filter out genes on non-anotated clones and without fsv tags
+    if ($support->param('dbname') =~ /danio/) {
+      my $annotated_clone = 0;
+      my $fsv_gene        = 0;
+      foreach my $proj_clone (@{$lgene->feature_Slice->project('clone')}) {
+	my $clone = $proj_clone->to_Slice();
+	my $attr = $clone->get_all_Attributes('annotated');
+	if (exists $attr->[0]) {
+	  if ($attr->[0]->value eq 'T') {
+	    $annotated_clone = 1;
+	    last;
+	  }
+	}
+      }
+      my $gene_rem = $lgene->get_all_Attributes('remark');
+      if (exists $gene_rem->[0]) {
+	if ($gene_rem->[0]->value eq 'fsv') {
+	  $fsv_gene = 1;
+	}
+      }
+      my $gene_hidrem = $lgene->get_all_Attributes('hidden_remark');  
+      if (exists $gene_hidrem->[0]) {
+	if ($gene_hidrem->[0]->value eq 'fsv') {
+	  $fsv_gene = 1;
+	}
+      }
+      if ($fsv_gene || $annotated_clone) {
+	$support->log("Taking gene $gname ($lgsi) with annotation flag\n");
+	$fsv++;
+      }
+      else {
+	$support->log("Skipping gene $gname ($lgsi) because no annotation flag present\n"); 
+	$non_fsv++;
+	next GENE;
+      }
+    }		
+
+    if (&transfer_gene($lgene,$vsa,$vga)) {
+      $c++;
+    }
+
+  }
+  $support->log("Transferred $c genes from chromosome $name\n");
+
+  #transfer other seq_region based features
+  if (! $support->param('dry_run') && ! $support->param('add_genes') ) {
+
+    #transfer simple features 
+    &transfer_simple_features($lslice,$vslice);
+
+    #transfer seq_region_attributes
+    &transfer_sra($lslice,$vslice,$att_types_wanted);
+
+    ####can almost certainly remove these, should all be on clones now####	
+    #transform contig_attribs into seq_region_attribs
+    my $attribs_to_move = ['annotated'];
+    &transfer_contig_attribs($lslice,$vslice,$attribs_to_move);
+
+    #transfer assembly_tag misc_features
+    if ($support->param('dump_assembly_tags')) {
+      my $features_to_copy = ['atag_CLE','atag_CRE','atag_Misc','atag_Unsure'];
+      &transfer_misc_features($lslice,$vslice,$features_to_copy);
+    }
+  }
 }
 $support->log("got $fsv fsv genes and $non_fsv non_fsv genes\n");
 $support->finish_log;
@@ -680,56 +674,55 @@ $support->finish_log;
 =cut
 
 sub transfer_gene {
-    my $lgene = shift;
-    my $vsa = shift;  #no need to transfer
-    my $vga = shift;  #no need to transfer
-    my $l_gene_slice = $lgene->slice;
-    my $v_gene_slice = $vsa->fetch_by_region($l_gene_slice->coord_system->name,
-					     $l_gene_slice->seq_region_name,
-					     $l_gene_slice->start,
-					     $l_gene_slice->end);
-
-    if(!$l_gene_slice) {		
-	$support->log_warning("Couldn't fetch loutre gene slice\n");
-	return 0;
+  my $lgene = shift;
+  my $vsa = shift;  #no need to transfer
+  my $vga = shift;  #no need to transfer
+  my $l_gene_slice = $lgene->slice;
+  my $v_gene_slice = $vsa->fetch_by_region($l_gene_slice->coord_system->name,
+					   $l_gene_slice->seq_region_name,
+					   $l_gene_slice->start,
+					   $l_gene_slice->end);
+  if(!$l_gene_slice) {		
+    $support->log_warning("Couldn't fetch loutre gene slice\n");
+    return 0;
+  }
+  if(!$v_gene_slice) {		
+    $support->log_warning("Couldn't fetch vega gene slice\n");
+    return 0;
+  }
+  if(!@{$lgene->get_all_Transcripts}){
+    $support->log_warning("No transcripts for loutre gene ".$lgene->dbID."\n");
+    return 0;
+  }
+  foreach my $transcript (@{$lgene->get_all_Transcripts}){
+    $transcript->slice($v_gene_slice);
+    $transcript->is_current(1);
+    if($transcript->translation){
+      $transcript->translation;
     }
-    if(!$v_gene_slice) {		
-	$support->log_warning("Couldn't fetch vega gene slice\n");
-	return 0;
+    $transcript->stable_id;
+    my @exons= @{$transcript->get_all_Exons};
+    foreach my $exon (@exons) {
+      $exon->slice($v_gene_slice);
+      $exon->is_current(1);
+      $exon->get_all_supporting_features;
+      $exon->stable_id;
     }
-    if(!@{$lgene->get_all_Transcripts}){
-	$support->log_warning("No transcripts for loutre gene ".$lgene->dbID."\n");
-	return 0;
-    }
-    foreach my $transcript (@{$lgene->get_all_Transcripts}){
-	$transcript->slice($v_gene_slice);
-	$transcript->is_current(1);
-	if($transcript->translation){
-	    $transcript->translation;
-	}
-	$transcript->stable_id;
-	my @exons= @{$transcript->get_all_Exons};
-	foreach my $exon (@exons) {
-	    $exon->slice($v_gene_slice);
-	    $exon->is_current(1);
-	    $exon->get_all_supporting_features;
-	    $exon->stable_id;
-	}
-    }
-    $lgene->slice($v_gene_slice);
-    if (! $support->param('dry_run')) {
-	if ($vga->store_only($lgene)) {
-	    $support->log("Stored gene ".$lgene->stable_id."\n",1);
-	    return 1;
-	}
-	else {
-	    $support->log_warning("Failed to store gene ".$lgene->stable_id."\n",1);
-	    return 0;
-	}
+  }
+  $lgene->slice($v_gene_slice);
+  if (! $support->param('dry_run')) {
+    if ($vga->store_only($lgene)) {
+      $support->log("Stored gene ".$lgene->stable_id."\n",1);
+      return 1;
     }
     else {
-	return 0;
+      $support->log_warning("Failed to store gene ".$lgene->stable_id."\n",1);
+      return 0;
     }
+  }
+  else {
+    return 0;
+  }
 }
 
 
@@ -746,31 +739,31 @@ sub transfer_gene {
 =cut
 
 sub transfer_sra {
-    my $lslice  = shift;
-    my $vslice  = shift;
-    my $types   = shift;
-    my $attribs;
-    my $c = 0;
+  my $lslice  = shift;
+  my $vslice  = shift;
+  my $types   = shift;
+  my $attribs;
+  my $c = 0;
 
-    foreach my $type (@{$types}) {
-	my $l_attributes = $lslice->get_all_Attributes($type);
-	
-	#create a new attribute if necc; add attributes to feature
-	#(actually could do the same as contig_attribs and reuse the one coming from loutre)
-	foreach my $l_attribute (@{$l_attributes}) {
-	    $c++;
-	    my $v_attribute = Bio::EnsEMBL::Attribute->new(
-		-NAME        => $l_attribute->name,
-		-CODE        => $l_attribute->code,
-		-VALUE       => $l_attribute->value,
-		-DESCRIPTION => $l_attribute->description,
-	    );
-	    push @{$attribs}, $v_attribute;
-	}
+  foreach my $type (@{$types}) {
+    my $l_attributes = $lslice->get_all_Attributes($type);
+
+    #create a new attribute if necc; add attributes to feature
+    #(actually could do the same as contig_attribs and reuse the one coming from loutre)
+    foreach my $l_attribute (@{$l_attributes}) {
+      $c++;
+      my $v_attribute = Bio::EnsEMBL::Attribute->new(
+	-NAME        => $l_attribute->name,
+	-CODE        => $l_attribute->code,
+	-VALUE       => $l_attribute->value,
+	-DESCRIPTION => $l_attribute->description,
+      );
+      push @{$attribs}, $v_attribute;
     }
-    #store all features on this slice
-    $vata->store_on_Slice($vslice,$attribs);
-    $support->log("Transferred $c seq_region_attributes for chromosome ".$lslice->seq_region_name."\n");	
+  }
+  #store all features on this slice
+  $vata->store_on_Slice($vslice,$attribs);
+  $support->log("Transferred $c seq_region_attributes for chromosome ".$lslice->seq_region_name."\n");	
 }
 
 
@@ -787,39 +780,39 @@ sub transfer_sra {
 =cut
 
 sub transfer_contig_attribs {
-    my $lslice  = shift;
-    my $vslice  = shift;
-    my $attribs = shift;
-    my $c_tot = 0;
-  SEG:
-    foreach my $seg (@{$lslice->project('contig')}) {
-	my $c = 0;
-	my $contig = $seg->to_Slice;
-	my $srname = $contig->seq_region_name();
-	my $vega_contig = $vsa->fetch_by_region('contig',$srname);
-	if (! $vega_contig ) {
-	    $support->log_warning("Cannot retrieve contig $srname from Vega");
-	    next SEG;
-	}
-	my $dbID = $lsa->get_seq_region_id($contig);
-	my $contig_info = $lcia->fetch_by_seq_region_id($dbID);
-	if (! $contig_info) {
-	    #no point in having a warning since this is common
-	    next SEG;
-	}
-	my $attribs_to_store;
-	foreach my $l_attribute (@{$laa->fetch_all_by_ContigInfo($contig_info)}) {
-	    next unless (grep {$l_attribute->code eq $_} @$attribs);
-	    push @{$attribs_to_store},$l_attribute;
-	    $c++;
-	    $c_tot++;
-	}
-	if ($attribs_to_store) {
-	    $vata->store_on_('Slice',$vega_contig,$attribs_to_store);
-	}
-	$support->log_verbose("Transferred $c contig attribs for contig $srname (dbID = $dbID)\n",1);
+  my $lslice  = shift;
+  my $vslice  = shift;
+  my $attribs = shift;
+  my $c_tot = 0;
+ SEG:
+  foreach my $seg (@{$lslice->project('contig')}) {
+    my $c = 0;
+    my $contig = $seg->to_Slice;
+    my $srname = $contig->seq_region_name();
+    my $vega_contig = $vsa->fetch_by_region('contig',$srname);
+    if (! $vega_contig ) {
+      $support->log_warning("Cannot retrieve contig $srname from Vega");
+      next SEG;
     }
-    $support->log("Transferred $c_tot contig attribs for ".$lslice->seq_region_name."\n");
+    my $dbID = $lsa->get_seq_region_id($contig);
+    my $contig_info = $lcia->fetch_by_seq_region_id($dbID);
+    if (! $contig_info) {
+      #no point in having a warning since this is common
+      next SEG;
+    }
+    my $attribs_to_store;
+    foreach my $l_attribute (@{$laa->fetch_all_by_ContigInfo($contig_info)}) {
+      next unless (grep {$l_attribute->code eq $_} @$attribs);
+      push @{$attribs_to_store},$l_attribute;
+      $c++;
+      $c_tot++;
+    }
+    if ($attribs_to_store) {
+      $vata->store_on_('Slice',$vega_contig,$attribs_to_store);
+    }
+    $support->log_verbose("Transferred $c contig attribs for contig $srname (dbID = $dbID)\n",1);
+  }
+  $support->log("Transferred $c_tot contig attribs for ".$lslice->seq_region_name."\n");
 }
 
 
@@ -836,55 +829,55 @@ sub transfer_contig_attribs {
 =cut
 
 sub transfer_misc_features {
-    my $lslice = shift;
-    my $vslice = shift;
-    my $types   = shift;
-    my @v_features;
-    my $c = 0;
-    foreach my $l_feature (@{$lslice->get_all_MiscFeatures()}) {
-      TYPE:
-	foreach my $type (@$types) {
-	    next TYPE if (! grep {$_->code =~ /$type/} @{$l_feature->get_all_MiscSets($type)});
-	    $c++;
-	    #create feature
-	    my $v_feature = Bio::EnsEMBL::MiscFeature->new(
-		-start    => $l_feature->start,
-		-end      => $l_feature->end,
-		-strand   => $l_feature->strand,
-		-slice    => $vslice,
-	    );
+  my $lslice = shift;
+  my $vslice = shift;
+  my $types   = shift;
+  my @v_features;
+  my $c = 0;
+  foreach my $l_feature (@{$lslice->get_all_MiscFeatures()}) {
+  TYPE:
+    foreach my $type (@$types) {
+      next TYPE if (! grep {$_->code =~ /$type/} @{$l_feature->get_all_MiscSets($type)});
+      $c++;
+      #create feature
+      my $v_feature = Bio::EnsEMBL::MiscFeature->new(
+	-start    => $l_feature->start,
+	-end      => $l_feature->end,
+	-strand   => $l_feature->strand,
+	-slice    => $vslice,
+      );
 	
-	    #create a new misc set if necc; add misc sets to features
-	    foreach my $l_miscset (@{$l_feature->get_all_MiscSets}) {
-		my $v_miscset = $vmsa->fetch_by_code($l_miscset->code);
-		if (! $v_miscset) {
-		    $v_miscset = Bio::EnsEMBL::MiscSet->new(
-			-CODE            => $l_miscset->code,
-			-NAME            => $l_miscset->name,
-			-DESCRIPTION     => $l_miscset->description,
-			-LONGEST_FEATURE => $l_miscset->longest_feature,
-		    );
-		    $vmsa->store($v_miscset);
-		}
-		$v_feature->add_MiscSet($v_miscset);
-	    }			
-	
-	    #create a new attribute if necc; add attributes to feature
-	    foreach my $l_attribute (@{$l_feature->get_all_Attributes}) {
-		my $v_attribute = Bio::EnsEMBL::Attribute->new(
-		    -NAME        => $l_attribute->name,
-		    -CODE        => $l_attribute->code,
-		    -VALUE       => $l_attribute->value,
-		    -DESCRIPTION => $l_attribute->description,
-		);
-		$v_feature->add_Attribute($v_attribute);	
-	    }
-	    push @v_features, $v_feature;
+      #create a new misc set if necc; add misc sets to features
+      foreach my $l_miscset (@{$l_feature->get_all_MiscSets}) {
+	my $v_miscset = $vmsa->fetch_by_code($l_miscset->code);
+	if (! $v_miscset) {
+	  $v_miscset = Bio::EnsEMBL::MiscSet->new(
+	    -CODE            => $l_miscset->code,
+	    -NAME            => $l_miscset->name,
+	    -DESCRIPTION     => $l_miscset->description,
+	    -LONGEST_FEATURE => $l_miscset->longest_feature,
+	  );
+	  $vmsa->store($v_miscset);
 	}
+	$v_feature->add_MiscSet($v_miscset);
+      }			
+
+      #create a new attribute if necc; add attributes to feature
+      foreach my $l_attribute (@{$l_feature->get_all_Attributes}) {
+	my $v_attribute = Bio::EnsEMBL::Attribute->new(
+	  -NAME        => $l_attribute->name,
+	  -CODE        => $l_attribute->code,
+	  -VALUE       => $l_attribute->value,
+	  -DESCRIPTION => $l_attribute->description,
+	);
+	$v_feature->add_Attribute($v_attribute);	
+      }
+      push @v_features, $v_feature;
     }
-    #store all features on this slice
-    $vmfa->store(@v_features);
-    $support->log("Transferred $c misc_features for chromosome ".$lslice->seq_region_name."\n");	
+    }
+  #store all features on this slice
+  $vmfa->store(@v_features);
+  $support->log("Transferred $c misc_features for chromosome ".$lslice->seq_region_name."\n");	
 }
 
 =head2 transfer_simple_features
@@ -899,35 +892,35 @@ sub transfer_misc_features {
 =cut
 
 sub transfer_simple_features {
-    my $lslice = shift;
-    my $vslice = shift;
-    my $c = 0;
-    my @features;
-    foreach my $l_feature (@{$lslice->get_all_SimpleFeatures()}) {
-	my $l_analysis = $l_feature->analysis;
-	my $l_logic_name = $l_analysis->logic_name;
-	my ($v_feature,$v_analysis);
-	$v_analysis = $vaa->fetch_by_logic_name($l_logic_name);
-	if (!$v_analysis) {
-	    $v_analysis = Bio::EnsEMBL::Analysis->new(
-		-logic_name      => $l_logic_name,
-		-created         => $l_analysis->created,
-	    );			
-	}
-	$v_feature = Bio::EnsEMBL::SimpleFeature->new(
-	    -start    => $l_feature->start,
-            -end      => $l_feature->end,
-	    -strand   => $l_feature->strand,
-	    -slice    => $vslice,
-	    -analysis => $v_analysis,
-	    -score    => $l_feature->score,
-	    -display_label => $l_feature->display_label,
-	);
-	push @features,$v_feature;
-	$c++;
+  my $lslice = shift;
+  my $vslice = shift;
+  my $c = 0;
+  my @features;
+  foreach my $l_feature (@{$lslice->get_all_SimpleFeatures()}) {
+    my $l_analysis = $l_feature->analysis;
+    my $l_logic_name = $l_analysis->logic_name;
+    my ($v_feature,$v_analysis);
+    $v_analysis = $vaa->fetch_by_logic_name($l_logic_name);
+    if (!$v_analysis) {
+      $v_analysis = Bio::EnsEMBL::Analysis->new(
+	-logic_name      => $l_logic_name,
+	-created         => $l_analysis->created,
+      );			
     }
-    $vsfa->store(@features) if (@features);
-    $support->log("$c simple features transferred for chromosome ".$lslice->seq_region_name."\n",1);
+    $v_feature = Bio::EnsEMBL::SimpleFeature->new(
+      -start    => $l_feature->start,
+      -end      => $l_feature->end,
+      -strand   => $l_feature->strand,
+      -slice    => $vslice,
+      -analysis => $v_analysis,
+      -score    => $l_feature->score,
+      -display_label => $l_feature->display_label,
+    );
+    push @features,$v_feature;
+    $c++;
+  }
+  $vsfa->store(@features) if (@features);
+  $support->log("$c simple features transferred for chromosome ".$lslice->seq_region_name."\n",1);
 }
 
 =head2 constraints
@@ -940,8 +933,8 @@ sub transfer_simple_features {
 =cut
 
 sub constraints {
-    my $txt;
-    $txt=<<ENDOFTEXT;
+  my $txt;
+  $txt=<<ENDOFTEXT;
 attrib_type                   u   #should be identical to pipeline but checked anyway
 
 author                        d   #author_group info is not accurate so no point in parsing it
@@ -964,6 +957,6 @@ translation_stable_id_pool    i
 tmp_align                     i
 test_contig_info              i
 ENDOFTEXT
-    return $txt;
+  return $txt;
 }
 
