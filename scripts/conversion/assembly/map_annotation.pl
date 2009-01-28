@@ -103,10 +103,10 @@ use FindBin qw($Bin);
 use vars qw($SERVERROOT);
 
 BEGIN {
-    $SERVERROOT = "$Bin/../../../..";
-    unshift(@INC, "./modules");
-    unshift(@INC, "$SERVERROOT/ensembl/modules");
-    unshift(@INC, "$SERVERROOT/bioperl-live");
+  $SERVERROOT = "$Bin/../../../..";
+  unshift(@INC, "./modules");
+  unshift(@INC, "$SERVERROOT/ensembl/modules");
+  unshift(@INC, "$SERVERROOT/bioperl-live");
 }
 
 use Getopt::Long;
@@ -133,30 +133,30 @@ $SIG{INT}= 'do_stats_logging';      # signal handler for Ctrl-C, i.e. will call 
 # parse options
 $support->parse_common_options(@_);
 $support->parse_extra_options(
-    'evegahost=s',
-    'evegaport=s',
-    'evegauser=s',
-    'evegapass=s',
-    'evegadbname=s',
-    'chromosomes|chr=s@',
-    'logic_names=s@',
-    'prune=s',
+  'evegahost=s',
+  'evegaport=s',
+  'evegauser=s',
+  'evegapass=s',
+  'evegadbname=s',
+  'chromosomes|chr=s@',
+  'logic_names=s@',
+  'prune=s',
 );
 $support->allowed_params(
-    $support->get_common_params,
-    'evegahost',
-    'evegaport',
-    'evegauser',
-    'evegapass',
-    'evegadbname',
-    'chromosomes',
-    'logic_names',
-    'prune',
+  $support->get_common_params,
+  'evegahost',
+  'evegaport',
+  'evegauser',
+  'evegapass',
+  'evegadbname',
+  'chromosomes',
+  'logic_names',
+  'prune',
 );
 
 if ($support->param('help') or $support->error) {
-    warn $support->error if $support->error;
-    pod2usage(1);
+  warn $support->error if $support->error;
+  pod2usage(1);
 }
 
 $support->comma_to_list('chromosomes');
@@ -195,32 +195,32 @@ $mapper->register_all;
 
 # if desired, delete entries from previous runs of this script
 if ($support->param('prune') && $support->user_proceed("Do you want to delete all entries from previous runs of this script?")) {
-    $support->log("Deleting db entries from previous runs of this script...\n");
-    $E_dbh->do(qq(DELETE FROM analysis));
-    $E_dbh->do(qq(DELETE FROM dna_align_feature));
-    $E_dbh->do(qq(DELETE FROM exon));
-    $E_dbh->do(qq(DELETE FROM exon_stable_id));
-    $E_dbh->do(qq(DELETE FROM exon_transcript));
-    $E_dbh->do(qq(DELETE FROM gene));
-    $E_dbh->do(qq(DELETE FROM gene_stable_id));
-    $E_dbh->do(qq(DELETE FROM gene_attrib));
-    $E_dbh->do(qq(DELETE FROM object_xref));
-    $E_dbh->do(qq(DELETE FROM protein_align_feature));
-    $E_dbh->do(qq(DELETE FROM protein_feature));
-    $E_dbh->do(qq(DELETE FROM transcript_supporting_feature));
-    $E_dbh->do(qq(DELETE FROM supporting_feature));
-    $E_dbh->do(qq(DELETE FROM transcript));
-    $E_dbh->do(qq(DELETE FROM transcript_stable_id));
-    $E_dbh->do(qq(DELETE FROM transcript_attrib));
-    $E_dbh->do(qq(DELETE FROM translation));
-    $E_dbh->do(qq(DELETE FROM translation_stable_id));
-    $E_dbh->do(qq(DELETE FROM translation_attrib));
-    $E_dbh->do(qq(DELETE x
+  $support->log("Deleting db entries from previous runs of this script...\n");
+  $E_dbh->do(qq(DELETE FROM analysis));
+  $E_dbh->do(qq(DELETE FROM dna_align_feature));
+  $E_dbh->do(qq(DELETE FROM exon));
+  $E_dbh->do(qq(DELETE FROM exon_stable_id));
+  $E_dbh->do(qq(DELETE FROM exon_transcript));
+  $E_dbh->do(qq(DELETE FROM gene));
+  $E_dbh->do(qq(DELETE FROM gene_stable_id));
+  $E_dbh->do(qq(DELETE FROM gene_attrib));
+  $E_dbh->do(qq(DELETE FROM object_xref));
+  $E_dbh->do(qq(DELETE FROM protein_align_feature));
+  $E_dbh->do(qq(DELETE FROM protein_feature));
+  $E_dbh->do(qq(DELETE FROM transcript_supporting_feature));
+  $E_dbh->do(qq(DELETE FROM supporting_feature));
+  $E_dbh->do(qq(DELETE FROM transcript));
+  $E_dbh->do(qq(DELETE FROM transcript_stable_id));
+  $E_dbh->do(qq(DELETE FROM transcript_attrib));
+  $E_dbh->do(qq(DELETE FROM translation));
+  $E_dbh->do(qq(DELETE FROM translation_stable_id));
+  $E_dbh->do(qq(DELETE FROM translation_attrib));
+  $E_dbh->do(qq(DELETE x
                   FROM xref x, external_db ed
                   WHERE x.external_db_id = ed.external_db_id
                   AND ed.db_name NOT IN ('Interpro')
      ));
-    $support->log("Done.\n");
+  $support->log("Done.\n");
 }
 
 my (%stat_hash,%trans_numbers);
@@ -232,83 +232,83 @@ my $E_chrlength = $support->get_chrlength($E_dba, $support->param('ensemblassemb
 my $ensembl_chr_map = $support->get_ensembl_chr_mapping($V_dba, $support->param('assembly'));
 
 foreach my $V_chr ($support->sort_chromosomes($V_chrlength)) {
-    $support->log_stamped("Chromosome $V_chr...\n", 1);
+  $support->log_stamped("Chromosome $V_chr...\n", 1);
 
-    # skip non-ensembl chromosomes
-    my $E_chr = $ensembl_chr_map->{$V_chr};
-    unless ($E_chrlength->{$E_chr}) {
-        $support->log_warning("Chromosome $E_chr not in Ensembl. Skipping.\n", 1);
-        next;
-    }
+  # skip non-ensembl chromosomes
+  my $E_chr = $ensembl_chr_map->{$V_chr};
+  unless ($E_chrlength->{$E_chr}) {
+    $support->log_warning("Chromosome $E_chr not in Ensembl. Skipping.\n", 1);
+    next;
+  }
 
-    # fetch chromosome slices
-    my $V_slice = $V_sa->fetch_by_region('chromosome', $V_chr, undef, undef,
-        undef, $support->param('assembly'));
-    my $E_slice = $E_sa->fetch_by_region('chromosome', $E_chr, undef, undef,
-        undef, $support->param('ensemblassembly'));
+  # fetch chromosome slices
+  my $V_slice = $V_sa->fetch_by_region('chromosome', $V_chr, undef, undef,
+				       undef, $support->param('assembly'));
+  my $E_slice = $E_sa->fetch_by_region('chromosome', $E_chr, undef, undef,
+				       undef, $support->param('ensemblassembly'));
 
-    $support->log("Looping over genes...\n", 1);
-    my $genes = $V_ga->fetch_all_by_Slice($V_slice);
+  $support->log("Looping over genes...\n", 1);
+  my $genes = $V_ga->fetch_all_by_Slice($V_slice);
  GENE:
-    foreach my $gene (@{ $genes }) {
-	my $gsi = $gene->stable_id;
-	my $ln = $gene->analysis->logic_name;
-	my $name = $gene->display_xref->display_id;
-	if ($support->param('logic_names')) {
-	    unless (grep {$ln eq $_} @logic_names) {
-		$support->log_verbose("Skipping gene $gsi/$name (logic_name $ln)\n",2);
-		next GENE;
-	    }
-	}
-        $support->log("Gene $gsi/$name (logic_name $ln)\n", 2);
-
-        my $transcripts = $gene->get_all_Transcripts;
-        my (@finished, %all_protein_features);
-	my $c = 0;
-        foreach my $transcript (@{ $transcripts }) {
-	    $c++;
-	
-            my $interim_transcript = transfer_transcript($transcript, $mapper,
-							 $V_cs, $V_pfa, $E_slice);
-            my ($finished_transcripts, $protein_features) =
-                create_transcripts($interim_transcript, $E_sa, $gsi);
-	
-            # set the translation stable identifier on the finished transcripts
-            foreach my $tr (@{ $finished_transcripts }) {
-                if ($tr->translation && $transcript->translation) {
-                    $tr->translation->stable_id($transcript->translation->stable_id);
-                    $tr->translation->version($transcript->translation->version);
-		    $tr->translation->created_date($transcript->translation->created_date);
-		    $tr->translation->modified_date($transcript->translation->modified_date);
-                }
-            }
-			
-	    push @finished, @$finished_transcripts;
-            map { $all_protein_features{$_} = $protein_features->{$_} }
-                keys %{ $protein_features || {} };
-        }
-
-	# if there are no finished transcripts, count this gene as being NOT transfered
-        my $num_finished_t= @finished;
-        if(! $num_finished_t){
-            push @{$stat_hash{$V_chr}->{'failed'}}, [$gene->stable_id,$gene->seq_region_start,$gene->seq_region_end];
-	    next GENE;
-        }
-
-	#make a note of the number of transcripts per gene
-	$trans_numbers{$gsi}->{'vega'} = scalar(@{$transcripts});
-	$trans_numbers{$gsi}->{'evega'} = $num_finished_t;
-	
-	#count gene and transcript if it's been transferred
-        $stat_hash{$V_chr}->{'genes'}++;
-	$stat_hash{$V_chr}->{'transcripts'} += $c;
-	
-        unless ($support->param('dry_run')) {
-            Gene::store_gene($support, $E_slice, $E_ga, $E_pfa, $gene,
-			     \@finished, \%all_protein_features);
-        }
+  foreach my $gene (@{ $genes }) {
+    my $gsi = $gene->stable_id;
+    my $ln = $gene->analysis->logic_name;
+    my $name = $gene->display_xref->display_id;
+    if ($support->param('logic_names')) {
+      unless (grep {$ln eq $_} @logic_names) {
+	$support->log_verbose("Skipping gene $gsi/$name (logic_name $ln)\n",2);
+	next GENE;
+      }
     }
-    $support->log("Done with chromosome $V_chr.\n", 1);
+    $support->log("Gene $gsi/$name (logic_name $ln)\n", 2);
+
+    my $transcripts = $gene->get_all_Transcripts;
+    my (@finished, %all_protein_features);
+    my $c = 0;
+    foreach my $transcript (@{ $transcripts }) {
+      $c++;
+
+      my $interim_transcript = transfer_transcript($transcript, $mapper,
+						   $V_cs, $V_pfa, $E_slice);
+      my ($finished_transcripts, $protein_features) =
+	create_transcripts($interim_transcript, $E_sa, $gsi);
+
+      # set the translation stable identifier on the finished transcripts
+      foreach my $tr (@{ $finished_transcripts }) {
+	if ($tr->translation && $transcript->translation) {
+	  $tr->translation->stable_id($transcript->translation->stable_id);
+	  $tr->translation->version($transcript->translation->version);
+	  $tr->translation->created_date($transcript->translation->created_date);
+	  $tr->translation->modified_date($transcript->translation->modified_date);
+	}
+      }
+			
+      push @finished, @$finished_transcripts;
+      map { $all_protein_features{$_} = $protein_features->{$_} }
+	keys %{ $protein_features || {} };
+    }
+
+    # if there are no finished transcripts, count this gene as being NOT transfered
+    my $num_finished_t= @finished;
+    if(! $num_finished_t){
+      push @{$stat_hash{$V_chr}->{'failed'}}, [$gene->stable_id,$gene->seq_region_start,$gene->seq_region_end];
+      next GENE;
+    }
+
+    #make a note of the number of transcripts per gene
+    $trans_numbers{$gsi}->{'vega'} = scalar(@{$transcripts});
+    $trans_numbers{$gsi}->{'evega'} = $num_finished_t;
+
+    #count gene and transcript if it's been transferred
+    $stat_hash{$V_chr}->{'genes'}++;
+    $stat_hash{$V_chr}->{'transcripts'} += $c;
+	
+    unless ($support->param('dry_run')) {
+      Gene::store_gene($support, $E_slice, $E_ga, $E_pfa, $gene,
+		       \@finished, \%all_protein_features);
+    }
+  }
+  $support->log("Done with chromosome $V_chr.\n", 1);
 }
 
 # write out to statslog file
@@ -316,11 +316,11 @@ do_stats_logging();
 
 #see if any transcripts / gene are different
 foreach my $gsi (keys %trans_numbers) {
-    if ($trans_numbers{$gsi}->{'vega'} != $trans_numbers{$gsi}->{'evega'}) {
-	my $v_num = $trans_numbers{$gsi}->{'vega'};
-	my $e_num = $trans_numbers{$gsi}->{'evega'};
-	$support->log("There are different numbers of transcripts for gene $gsi in vega ($v_num) and ensembl_vega ($e_num)\n");
-    }
+  if ($trans_numbers{$gsi}->{'vega'} != $trans_numbers{$gsi}->{'evega'}) {
+    my $v_num = $trans_numbers{$gsi}->{'vega'};
+    my $e_num = $trans_numbers{$gsi}->{'evega'};
+    $support->log("There are different numbers of transcripts for gene $gsi in vega ($v_num) and ensembl_vega ($e_num)\n");
+  }
 }
 
 # finish logfile
@@ -347,146 +347,143 @@ $support->finish_log;
 =cut
 
 sub transfer_transcript {
-    my $transcript = shift;
-    my $mapper = shift;
-    my $V_cs = shift;
-    my $V_pfa = shift;
-    my $E_slice = shift;
+  my $transcript = shift;
+  my $mapper = shift;
+  my $V_cs = shift;
+  my $V_pfa = shift;
+  my $E_slice = shift;
 
-    $support->log_verbose("Transcript: " . $transcript->stable_id."\n", 3);
+  $support->log_verbose("Transcript: " . $transcript->stable_id."\n", 3);
 
-    my $V_exons = $transcript->get_all_Exons;
-    my $E_cdna_pos = 0;
-    my $cdna_exon_start = 1;
+  my $V_exons = $transcript->get_all_Exons;
+  my $E_cdna_pos = 0;
+  my $cdna_exon_start = 1;
 
-    my $E_transcript = InterimTranscript->new;
-    $E_transcript->stable_id($transcript->stable_id);
-    $E_transcript->version($transcript->version);
-    $E_transcript->biotype($transcript->biotype);
-    $E_transcript->status($transcript->status);
-    $E_transcript->description($transcript->description);
-    $E_transcript->created_date($transcript->created_date);
-    $E_transcript->modified_date($transcript->modified_date);
-    $E_transcript->cdna_coding_start($transcript->cdna_coding_start);
-    $E_transcript->cdna_coding_end($transcript->cdna_coding_end);
-    $E_transcript->transcript_attribs($transcript->get_all_Attributes);
-	$E_transcript->analysis($transcript->analysis);
+  my $E_transcript = InterimTranscript->new;
+  $E_transcript->stable_id($transcript->stable_id);
+  $E_transcript->version($transcript->version);
+  $E_transcript->biotype($transcript->biotype);
+  $E_transcript->status($transcript->status);
+  $E_transcript->description($transcript->description);
+  $E_transcript->created_date($transcript->created_date);
+  $E_transcript->modified_date($transcript->modified_date);
+  $E_transcript->cdna_coding_start($transcript->cdna_coding_start);
+  $E_transcript->cdna_coding_end($transcript->cdna_coding_end);
+  $E_transcript->transcript_attribs($transcript->get_all_Attributes);
+  $E_transcript->analysis($transcript->analysis);
 
-    # transcript supporting evidence
-    foreach my $sf (@{ $transcript->get_all_supporting_features }) {
-        # map coordinates
-        my @coords = $mapper->map(
-                $sf->seq_region_name,
-                $sf->seq_region_start,
-                $sf->seq_region_end,
-                $sf->seq_region_strand,
-                $V_cs,
-        );
-        if (@coords == 1) {
-            my $c = $coords[0];
-            unless ($c->isa('Bio::EnsEMBL::Mapper::Gap')) {
-                $sf->start($c->start);
-                $sf->end($c->end);
-                $sf->strand($c->strand);
-                $sf->slice($E_slice);
-                $E_transcript->add_TranscriptSupportingFeature($sf);
-            }
-        }
+  # transcript supporting evidence
+  foreach my $sf (@{ $transcript->get_all_supporting_features }) {
+    # map coordinates
+    my @coords = $mapper->map(
+      $sf->seq_region_name,
+      $sf->seq_region_start,
+      $sf->seq_region_end,
+      $sf->seq_region_strand,
+      $V_cs,
+    );
+    if (@coords == 1) {
+      my $c = $coords[0];
+      unless ($c->isa('Bio::EnsEMBL::Mapper::Gap')) {
+	$sf->start($c->start);
+	$sf->end($c->end);
+	$sf->strand($c->strand);
+	$sf->slice($E_slice);
+	$E_transcript->add_TranscriptSupportingFeature($sf);
+      }
+    }
+  }
+
+  # protein features
+  if (defined($transcript->translation)) {
+    $E_transcript->add_ProteinFeatures(@{ $V_pfa->fetch_all_by_translation_id($transcript->translation->dbID) });
+  }
+
+  my @E_exons;
+
+ EXON:
+  foreach my $V_exon (@{ $V_exons }) {
+    $support->log_verbose("Exon: " . $V_exon->stable_id . " chr=" . 
+			    $V_exon->slice->seq_region_name . " start=". 
+			      $V_exon->seq_region_start."\n", 4);
+
+    my $E_exon = InterimExon->new;
+    $E_exon->stable_id($V_exon->stable_id);
+    $E_exon->version($V_exon->version);
+    $E_exon->created_date($V_exon->created_date);
+    $E_exon->modified_date($V_exon->modified_date);
+    $E_exon->cdna_start($cdna_exon_start);
+    $E_exon->start_phase($V_exon->phase);
+    $E_exon->end_phase($V_exon->end_phase);
+
+    # supporting evidence
+    foreach my $sf (@{ $V_exon->get_all_supporting_features }) {
+      # map coordinates
+      my @coords = $mapper->map(
+	$sf->seq_region_name,
+	$sf->seq_region_start,
+	$sf->seq_region_end,
+	$sf->seq_region_strand,
+	$V_cs,
+      );
+      if (@coords == 1) {
+	my $c = $coords[0];
+	unless ($c->isa('Bio::EnsEMBL::Mapper::Gap')) {
+	  $sf->start($c->start);
+	  $sf->end($c->end);
+	  $sf->strand($c->strand);
+	  $sf->slice($E_slice);
+	  $E_exon->add_SupportingFeature($sf);
+	}
+      }
     }
 
-    # protein features
-    if (defined($transcript->translation)) {
-        $E_transcript->add_ProteinFeatures(@{ $V_pfa->fetch_all_by_translation_id($transcript->translation->dbID) });
+    # map exon coordinates
+    my @coords = $mapper->map(
+      $V_exon->seq_region_name,
+      $V_exon->seq_region_start,
+      $V_exon->seq_region_end,
+      $V_exon->seq_region_strand,
+      $V_cs,
+    );
+
+    if (@coords == 1) {
+      my $c = $coords[0];
+
+      if ($c->isa('Bio::EnsEMBL::Mapper::Gap')) {
+	#
+	# Case 1: Complete failure to map exon
+	#
+	$E_exon->fail(1);
+	$E_transcript->add_Exon($E_exon);
+
+      } else {
+	#
+	# Case 2: Exon mapped perfectly
+	#
+	$E_exon->start($c->start);
+	$E_exon->end($c->end);
+	$E_exon->cdna_start($cdna_exon_start);
+	$E_exon->cdna_end($cdna_exon_start + $E_exon->length - 1);
+	$E_exon->strand($c->strand);
+	$E_exon->seq_region($c->id);
+	
+	$E_cdna_pos += $c->length;
+      }
+
+    } else {
+      #
+      # Case 3 : Exon mapped partially
+      #
+      $E_exon->fail(1);
+      $E_transcript->add_Exon($E_exon);
     }
 
-    my @E_exons;
+    $cdna_exon_start = $E_cdna_pos + 1;
 
-    EXON:
-    foreach my $V_exon (@{ $V_exons }) {
-        $support->log_verbose("Exon: " . $V_exon->stable_id . " chr=" . 
-                $V_exon->slice->seq_region_name . " start=". 
-                $V_exon->seq_region_start."\n", 4);
-
-        my $E_exon = InterimExon->new;
-        $E_exon->stable_id($V_exon->stable_id);
-        $E_exon->version($V_exon->version);
-		$E_exon->created_date($V_exon->created_date);
-        $E_exon->modified_date($V_exon->modified_date);
-        $E_exon->cdna_start($cdna_exon_start);
-        $E_exon->start_phase($V_exon->phase);
-        $E_exon->end_phase($V_exon->end_phase);
-
-        # supporting evidence
-        foreach my $sf (@{ $V_exon->get_all_supporting_features }) {
-            # map coordinates
-            my @coords = $mapper->map(
-                    $sf->seq_region_name,
-                    $sf->seq_region_start,
-                    $sf->seq_region_end,
-                    $sf->seq_region_strand,
-                    $V_cs,
-            );
-            if (@coords == 1) {
-                my $c = $coords[0];
-                unless ($c->isa('Bio::EnsEMBL::Mapper::Gap')) {
-                    $sf->start($c->start);
-                    $sf->end($c->end);
-                    $sf->strand($c->strand);
-                    $sf->slice($E_slice);
-                    $E_exon->add_SupportingFeature($sf);
-                }
-            }
-        }
-
-        # map exon coordinates
-        my @coords = $mapper->map(
-                $V_exon->seq_region_name,
-                $V_exon->seq_region_start,
-                $V_exon->seq_region_end,
-                $V_exon->seq_region_strand,
-                $V_cs,
-        );
-
-        if (@coords == 1) {
-            my $c = $coords[0];
-
-            if ($c->isa('Bio::EnsEMBL::Mapper::Gap')) {
-            #
-            # Case 1: Complete failure to map exon
-            #
-
-                $E_exon->fail(1);
-                $E_transcript->add_Exon($E_exon);
-
-            } else {
-            #
-            # Case 2: Exon mapped perfectly
-            #
-
-                $E_exon->start($c->start);
-                $E_exon->end($c->end);
-                $E_exon->cdna_start($cdna_exon_start);
-                $E_exon->cdna_end($cdna_exon_start + $E_exon->length - 1);
-                $E_exon->strand($c->strand);
-                $E_exon->seq_region($c->id);
-
-                $E_cdna_pos += $c->length;
-            }
-        } else {
-        #
-        # Case 3 : Exon mapped partially
-        #
-            
-            $E_exon->fail(1);
-            $E_transcript->add_Exon($E_exon);
-        }
-
-        $cdna_exon_start = $E_cdna_pos + 1;
-
-        $E_transcript->add_Exon($E_exon);
-    } # foreach exon
-
-    return $E_transcript;
+    $E_transcript->add_Exon($E_exon);
+  } # foreach exon
+  return $E_transcript;
 }
 
 
@@ -505,56 +502,54 @@ sub transfer_transcript {
 =cut
 
 sub create_transcripts {
-    my $itranscript   = shift;
-    my $E_sa = shift;
-	my $gsi = shift;
+  my $itranscript   = shift;
+  my $E_sa = shift;
+  my $gsi = shift;
 
-    # check the exons and split transcripts where exons are bad
-    my $itranscripts = Transcript::check_iexons($support, $itranscript, $gsi);
+  # check the exons and split transcripts where exons are bad
+  my $itranscripts = Transcript::check_iexons($support, $itranscript, $gsi);
 
-    my @finished_transcripts;
-    my %protein_features;
-    foreach my $itrans (@{ $itranscripts }) {
-        # if there are any exons left in this transcript add it to the list
-        if (@{ $itrans->get_all_Exons }) {
-            my ($tr, $pf) = Transcript::make_Transcript($support, $itrans,
-                $E_sa);
-            push @finished_transcripts, $tr;
-            $protein_features{$tr->stable_id} = $pf;
-        } else {
-            $support->log("Transcript ". $itrans->stable_id . " has no exons left.\n", 3);
-        }
+  my @finished_transcripts;
+  my %protein_features;
+  foreach my $itrans (@{ $itranscripts }) {
+    # if there are any exons left in this transcript add it to the list
+    if (@{ $itrans->get_all_Exons }) {
+      my ($tr, $pf) = Transcript::make_Transcript($support, $itrans,
+						  $E_sa);
+      push @finished_transcripts, $tr;
+      $protein_features{$tr->stable_id} = $pf;
+    } else {
+      $support->log("Transcript ". $itrans->stable_id . " has no exons left.\n", 3);
     }
-
-    return \@finished_transcripts, \%protein_features;
+  }
+  return \@finished_transcripts, \%protein_features;
 }
-
 
 sub do_stats_logging{
 
-    #writes the number of genes and transcripts processed to the log file
-    #note: this can be called as an interrupt handler for ctrl-c,
-    #so can also give current stats if script terminated
+  #writes the number of genes and transcripts processed to the log file
+  #note: this can be called as an interrupt handler for ctrl-c,
+  #so can also give current stats if script terminated
 
-	my %failed;
-	my $format = "%-20s%-10s%-10s\n";
-	$support->log(sprintf($format,'Chromosome','Genes','Transcripts'));
-	my $sep = '-'x41;
-	$support->log("$sep\n");
-    foreach my $chrom(sort keys %stat_hash){
-        my $num_genes= $stat_hash{$chrom}->{'genes'};
-        my $num_transcripts= $stat_hash{$chrom}->{'transcripts'};
-        if(defined($stat_hash{$chrom}->{'failed'})){
-            $failed{$chrom} = $stat_hash{$chrom}->{'failed'};
-        }
-        $support->log(sprintf($format,$chrom,$num_genes,$num_transcripts));
-	}
-	$support->log("\n");
-	foreach my $failed_chr (keys %failed){
-		my $no = scalar @{$failed{$failed_chr}};
-		$support->log("$no genes not transferred on chromosome $failed_chr:\n");
-		foreach my $g (@{$failed{$failed_chr}}) {
-			$support->log("  ".$g->[0].": ".$g->[1]."-".$g->[2]."\n");
-		}
+  my %failed;
+  my $format = "%-20s%-10s%-10s\n";
+  $support->log(sprintf($format,'Chromosome','Genes','Transcripts'));
+  my $sep = '-'x41;
+  $support->log("$sep\n");
+  foreach my $chrom(sort keys %stat_hash){
+    my $num_genes= $stat_hash{$chrom}->{'genes'};
+    my $num_transcripts= $stat_hash{$chrom}->{'transcripts'};
+    if(defined($stat_hash{$chrom}->{'failed'})){
+      $failed{$chrom} = $stat_hash{$chrom}->{'failed'};
     }
+    $support->log(sprintf($format,$chrom,$num_genes,$num_transcripts));
+  }
+  $support->log("\n");
+  foreach my $failed_chr (keys %failed){
+    my $no = scalar @{$failed{$failed_chr}};
+    $support->log("$no genes not transferred on chromosome $failed_chr:\n");
+    foreach my $g (@{$failed{$failed_chr}}) {
+      $support->log("  ".$g->[0].": ".$g->[1]."-".$g->[2]."\n");
+    }
+  }
 }
