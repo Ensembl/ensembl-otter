@@ -107,6 +107,7 @@ use Getopt::Long;
 use Pod::Usage;
 use Bio::EnsEMBL::Utils::ConversionSupport;
 use Bio::EnsEMBL::Attribute;
+use Data::Dumper;
 
 $| = 1;
 
@@ -162,7 +163,6 @@ my $E_dba = $support->get_database('evega', 'evega');
 my $E_dbh = $E_dba->dbc->db_handle;
 my $E_sa = $E_dba->get_SliceAdaptor;
 my $E_aa = $E_dba->get_AttributeAdaptor;
-
 my $Ens_dba = $support->get_database('ensembl', 'ensembl');
 
 # create temporary table for storing non-aligned blocks
@@ -188,9 +188,6 @@ unless ($support->param('dry_run')) {
 my $V_chrlength = $support->get_chrlength($E_dba, $support->param('assembly'),'chromosome',1);
 my $E_chrlength = $support->get_chrlength($E_dba, $support->param('ensemblassembly'),'chromosome',1);
 my $ensembl_chr_map = $support->get_ensembl_chr_mapping($V_dba, $support->param('assembly'));
-
-use Data::Dumper;
-warn Dumper($ensembl_chr_map);
 
 # loop over chromosomes
 $support->log_stamped("Looping over chromosomes...\n");
