@@ -372,8 +372,62 @@ $sql = qq(
 $c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
 $support->log_stamped("Done transfering $c repeat_feature entries.\n\n");
 
-# transfer Interpro xrefs from Vega db
-$support->log_stamped("Transfering Vega Interpro xrefs (Vega_*)...\n");
+# transfer Encode misc features from Ensembl db
+$support->log_stamped("Transfering Ensembl encode misc_features...\n");
+$sql = qq(
+    INSERT INTO $evega_db.misc_set
+    SELECT * from misc_set
+     WHERE misc_set.code = 'encode'
+);
+$c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
+$sql = qq(
+    INSERT INTO $evega_db.misc_feature_misc_set
+    SELECT mfms.*
+      FROM misc_feature_misc_set mfms, misc_set ms
+     WHERE mfms.misc_set_id = ms.misc_set_id
+       AND ms.code = 'encode'
+);
+$c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
+$sql = qq(
+    INSERT INTO $evega_db.misc_feature
+    SELECT mf.misc_feature_id, mf.seq_region_id+$sri_adjust, mf.seq_region_start,
+           mf.seq_region_end, mf.seq_region_strand
+      FROM misc_feature mf, misc_feature_misc_set mfms, misc_set ms
+     WHERE mf.misc_feature_id = mfms.misc_feature_id
+       AND mfms.misc_set_id = ms.misc_set_id
+       AND ms.code = 'encode'
+);
+$c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
+$support->log_stamped("Transfered $c misc_features.\n\n");
+$sql = qq(
+    INSERT INTO $evega_db.misc_attrib
+    SELECT ma.*
+      FROM misc_attrib ma, misc_feature_misc_set mfms, misc_set ms
+     WHERE ma.misc_feature_id = mfms.misc_feature_id
+       AND mfms.misc_set_id = ms.misc_set_id
+       AND ms.code = 'encode'
+);
+$c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
+$support->log_stamped("Transfered $c misc_attribs.\n\n");
+
+# transfer ensembl karyotype data
+$support->log_stamped("Tranfering karyotype info from Ensembl...\n");
+$sql = qq(
+    INSERT into $evega_db.karyotype
+    SELECT karyotype_id, seq_region_id+$sri_adjust, seq_region_start,
+           seq_region_end, band, stain from karyotype
+);
+$c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
+$sql = qq(
+    INSERT into $evega_db.meta_coord
+    SELECT table_name, coord_system_id+$csi_adjust, max_length
+      FROM meta_coord where table_name = 'karyotype'
+);
+$c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
+$support->log_stamped("Done inserting Ensembl karyotype data.\n\n");
+
+# transfer Interpro xrefs and table from Vega db
+$support->log_stamped("Transfering Vega Interpro xrefs...\n");
 $sql = qq(
     INSERT INTO $evega_db.xref
     SELECT x.*
@@ -381,12 +435,9 @@ $sql = qq(
     WHERE x.external_db_id = ed.external_db_id
     AND ed.db_name = 'Interpro'
 );
-
 $c = $dbh->{'vega'}->do($sql) unless ($support->param('dry_run'));
-$support->log_stamped("Done transfering $c xref entries.\n\n");
-
-# transfer interpro from Vega db
-$support->log_stamped("Transfering Vega interpro...\n");
+$support->log_stamped("Done transfering $c Interpro xrefs.\n\n");
+$support->log_stamped("Transfering Vega Interpro table...\n");
 $sql = qq(
     INSERT INTO $evega_db.interpro
     SELECT * FROM interpro
@@ -447,20 +498,6 @@ $sql = qq(
 );
 $c = $dbh->{'vega'}->do($sql) unless ($support->param('dry_run'));
 $support->log_stamped("Done updating genebuild.version meta entry.\n\n");
-
-#add ensembl karyotype data
-$support->log_stamped("Tranfering karyotype info from Ensembl...\n");
-$sql = qq(
-    INSERT into $evega_db.karyotype
-    SELECT * from karyotype
-);
-$c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
-$sql = qq(
-    INSERT into $evega_db.meta_coord
-    SELECT * from meta_coord where table_name = 'karyotype'
-);
-$c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
-$support->log_stamped("Done inserting Ensembl karyotype data.\n\n");
 
 # add assembly.mapping to meta table
 # get the values for vega_assembly and ensembl_assembly from the db
