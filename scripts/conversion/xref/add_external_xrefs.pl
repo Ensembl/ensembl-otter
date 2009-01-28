@@ -972,10 +972,22 @@ sub parse_imgt_gdb {
                    FROM gene_stable_id gsi, gene g, xref x
                   WHERE gsi.gene_id = g.gene_id
                     AND g.display_xref_id = x.xref_id
-                    AND (x.display_label like 'IGH%' or x.display_label like 'IGL%' or x.display_label like 'IGK%') 
+                    AND (x.display_label like 'IGH%' or x.display_label like 'IGL%' or x.display_label like 'IGK%')
                     AND g.source = 'havana'
                     AND gsi.stable_id != 'OTTHUMG00000150673');
   my $sth = $dba->dbc->prepare($sql);
+  $sth->execute;
+  while ( my ($gsi, $id) = $sth->fetchrow_array) {		
+    push @{$xrefs->{$gsi}->{'IMGT/GENE_DB'}} , $id.'||'.$id;
+  }
+  $sql = qq(SELECT gsi.stable_id, x.display_label
+                   FROM gene_stable_id gsi, gene g, xref x
+                  WHERE gsi.gene_id = g.gene_id
+                    AND g.display_xref_id = x.xref_id
+                    AND x.display_label like 'TRG%'
+                    AND g.source = 'havana'
+                    AND g.biotype like 'IG%');
+  $sth = $dba->dbc->prepare($sql);
   $sth->execute;
   while ( my ($gsi, $id) = $sth->fetchrow_array) {		
     push @{$xrefs->{$gsi}->{'IMGT/GENE_DB'}} , $id.'||'.$id;
