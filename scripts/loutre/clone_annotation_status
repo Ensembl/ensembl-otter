@@ -7,12 +7,16 @@ use warnings;
 use Bio::Otter::Lace::Defaults;
 
 {
-    my $dsname = 'mouse';
+    my $dsname = 'human';
     my $switch = 'get';
+    my $chr_name = '';
+    my $note_date = '';
     Bio::Otter::Lace::Defaults::do_getopt(
         'get'           => sub { $switch = 'get' },
         'set'           => sub { $switch = 'set' },
         'dataset=s'     => \$dsname,
+        'chr=s'         => \$chr_name,
+        'date=s'        => \$note_date,
     );
     
     # Client communicates with otter HTTP server
@@ -24,7 +28,10 @@ use Bio::Otter::Lace::Defaults;
     my $loutre_dba = $ds->get_cached_DBAdaptor;
     my $loutre_dbc = $loutre_dba->dbc;
 
-    if ($switch eq 'set') {
+    if ($chr_name and $note_date) {
+        get_region_with_sequence_note_before_date($loutre_dbc, $chr_name, $note_date);
+    }
+    elsif ($switch eq 'set') {
         $loutre_dba->begin_work;
         eval {
             set_clone_annotation_status($loutre_dbc);
@@ -202,6 +209,39 @@ sub fetch_annotated_clones {
     $get_clone_annot->execute($annot_id);
     while (my ($clone_id, $clone_name) = $get_clone_annot->fetchrow) {
         $annot_clone_id_name->{$clone_id} = $clone_name;
+    }
+}
+
+sub get_region_with_sequence_note_before_date {
+    my ($dbc, $chr_name, $date) = @_;
+    
+    my $sth = $dbc->prepare(q{
+        SELECT clone.name
+          , sn.seq_region_id
+        FROM assembly chr_asm
+          , seq_region ctg
+          , seq_region chr
+          , seq_region clone
+          , assembly ctg_asm
+        LEFT JOIN sequence_note sn
+          ON ctg.seq_region_id = sn.seq_region_id
+          AND sn.note_time < '2008-09-25'
+          AND sn.note LIKE '% %'
+        WHERE chr.seq_region_id = chr_asm.asm_seq_region_id
+          AND chr_asm.cmp_seq_region_id = ctg.seq_region_id
+          AND ctg.seq_region_id = ctg_asm.cmp_seq_region_id
+          AND ctg_asm.asm_seq_region_id = clone.seq_region_id
+          AND clone.coord_system_id = (SELECT coord_system_id FROM coord_system WHERE name = 'clone')
+          AND chr.name = ?
+        GROUP BY ctg.seq_region_id
+        ORDER BY chr_asm.asm_start ASC
+    });
+    
+    $sth->execute($chr_name);
+    
+    my $i = 0;
+    while (my ($clone_name, $has_note) = $sth->fetchrow) {
+        printf "%6d  %3s  %s  %s\n", ++$i, $has_note ? 'ann' : '---', $chr_name, $clone_name;
     }
 }
 
