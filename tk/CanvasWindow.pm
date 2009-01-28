@@ -811,7 +811,7 @@ sub message {
     # We have to make the message narrower if the
     # visible area of the canvas is smaller than
     # the desired message width.
-    my $message_width = 200;
+    my $message_width = 250;
     my $smallest_width = 100;
     if ($visible_width < $message_width) {
         $message_width = $visible_width - 10;

@@ -2694,7 +2694,7 @@ sub save_if_changed {
 
     # Make sure the annotators see the messages!
     if ($@) {
-        $self->exception_message($@, 'Error saving to acedb');
+        $self->exception_message($@, 'Error saving transcript');
     }
 }
 
@@ -2799,6 +2799,7 @@ sub check_for_errors {
     my ($self) = @_;
 
     my $sub = $self->new_SubSeq_from_tk;
+    $sub->locus_level_errors($self->SubSeq->locus_level_errors);
     if (my $err = $sub->pre_otter_save_error) {
         $err =~ s/\n$//;
         $self->message($err);

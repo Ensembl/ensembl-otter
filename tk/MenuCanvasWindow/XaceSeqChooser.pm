@@ -1219,6 +1219,7 @@ sub edit_subsequences {
             $edit->otter_id($sub->otter_id);
             $edit->translation_otter_id($sub->translation_otter_id);
             $edit->is_archival($sub->is_archival);
+            $edit->locus_level_errors($sub->locus_level_errors);
 
             $self->make_exoncanvas_edit_window($edit);
         } else {
@@ -1806,10 +1807,21 @@ sub row_count {
     return $rows;
 }
 
+sub update_SubSeq_locus_level_errors {
+    my ($self) = @_;
+    
+    $self->Assembly->set_SubSeq_locus_level_errors;
+    foreach my $sub_name ($self->list_all_subseq_edit_window_names) {
+        my $ec = $self->get_subseq_edit_window($sub_name) or next;
+        my $sub = $self->get_SubSeq($sub_name) or next;
+        $ec->SubSeq->locus_level_errors($sub->locus_level_errors);
+    }
+}
+
 sub draw_sequence_list {
     my( $self, $slist ) = @_;
 
-    $self->Assembly->set_SubSeq_locus_level_errors;
+    $self->update_SubSeq_locus_level_errors;
 
     my $canvas = $self->canvas;
     my $size = $self->font_size;
