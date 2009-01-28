@@ -18,6 +18,12 @@ Options:
     --pipeuser=USER                     use pipeline database user USER
     --pipepass=PASS                     use pipeline database password PASS
 
+    --dbname, db_name=NAME              use database NAME for the pipeline dump
+    --host, --dbhost, --db_host=HOST    use database host HOST for the pipeline dump db
+    --port, --dbport, --db_port=PORT    use database port PORT for the pipeline dump db
+    --user, --dbuser, --db_user=USER    use database username USER for the pipeline dump db
+    --pass, --dbpass, --db_pass=PASS    use database passwort PASS for the pipeline dump db
+
     --logfile, --log=FILE               log to FILE (default: *STDOUT)
     --logpath=PATH                      write logfile to PATH (default: .)
     -v, --verbose                       verbose logging (default: false)
