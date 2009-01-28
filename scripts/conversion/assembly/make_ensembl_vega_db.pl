@@ -372,23 +372,26 @@ $sql = qq(
 $c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
 $support->log_stamped("Done transfering $c repeat_feature entries.\n\n");
 
-# transfer Encode misc features from Ensembl db
-$support->log_stamped("Transfering Ensembl encode misc_features...\n");
-$sql = qq(
+#not sure what to do with these - nice to have them for mart but no good for web display
+# - how can we switch them off for web ?
+while (0) {
+  # transfer Encode misc features from Ensembl db
+  $support->log_stamped("Transfering Ensembl encode misc_features...\n");
+  $sql = qq(
     INSERT INTO $evega_db.misc_set
     SELECT * from misc_set
      WHERE misc_set.code = 'encode'
 );
-$c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
-$sql = qq(
+  $c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
+  $sql = qq(
     INSERT INTO $evega_db.misc_feature_misc_set
     SELECT mfms.*
       FROM misc_feature_misc_set mfms, misc_set ms
      WHERE mfms.misc_set_id = ms.misc_set_id
        AND ms.code = 'encode'
 );
-$c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
-$sql = qq(
+  $c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
+  $sql = qq(
     INSERT INTO $evega_db.misc_feature
     SELECT mf.misc_feature_id, mf.seq_region_id+$sri_adjust, mf.seq_region_start,
            mf.seq_region_end, mf.seq_region_strand
@@ -397,9 +400,9 @@ $sql = qq(
        AND mfms.misc_set_id = ms.misc_set_id
        AND ms.code = 'encode'
 );
-$c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
-$support->log_stamped("Transfered $c misc_features.\n\n");
-$sql = qq(
+  $c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
+  $support->log_stamped("Transfered $c misc_features.\n\n");
+  $sql = qq(
     INSERT INTO $evega_db.misc_attrib
     SELECT ma.*
       FROM misc_attrib ma, misc_feature_misc_set mfms, misc_set ms
@@ -407,8 +410,9 @@ $sql = qq(
        AND mfms.misc_set_id = ms.misc_set_id
        AND ms.code = 'encode'
 );
-$c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
-$support->log_stamped("Transfered $c misc_attribs.\n\n");
+  $c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
+  $support->log_stamped("Transfered $c misc_attribs.\n\n");
+}
 
 # transfer ensembl karyotype data
 $support->log_stamped("Tranfering karyotype info from Ensembl...\n");
