@@ -91,9 +91,9 @@ use FindBin qw($Bin);
 use vars qw($SERVERROOT);
 
 BEGIN {
-    $SERVERROOT = "$Bin/../../../..";
-    unshift(@INC, "$SERVERROOT/ensembl/modules");
-    unshift(@INC, "$SERVERROOT/bioperl-live");
+  $SERVERROOT = "$Bin/../../../..";
+  unshift(@INC, "$SERVERROOT/ensembl/modules");
+  unshift(@INC, "$SERVERROOT/bioperl-live");
 }
 
 use Getopt::Long;
@@ -107,26 +107,26 @@ my $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
 # parse options
 $support->parse_common_options(@_);
 $support->parse_extra_options(
-    'evegahost=s',
-    'evegaport=s',
-    'evegauser=s',
-    'evegapass=s',
-    'evegadbname=s',
-    'ensembldbname=s',
+  'evegahost=s',
+  'evegaport=s',
+  'evegauser=s',
+  'evegapass=s',
+  'evegadbname=s',
+  'ensembldbname=s',
 );
 $support->allowed_params(
-    $support->get_common_params,
-    'evegahost',
-    'evegaport',
-    'evegauser',
-    'evegapass',
-    'evegadbname',
-    'ensembldbname',
+  $support->get_common_params,
+  'evegahost',
+  'evegaport',
+  'evegauser',
+  'evegapass',
+  'evegadbname',
+  'ensembldbname',
 );
 
 if ($support->param('help') or $support->error) {
-    warn $support->error if $support->error;
-    pod2usage(1);
+  warn $support->error if $support->error;
+  pod2usage(1);
 }
 
 # ask user to confirm parameters to proceed
@@ -137,8 +137,8 @@ $support->init_log;
 
 # there is nothing to do for a dry run, so exit
 if ($support->param('dry_run')) {
-    $support->log("Nothing to do for a dry run. Aborting.\n");
-    exit;
+  $support->log("Nothing to do for a dry run. Aborting.\n");
+  exit;
 }
 
 # connect to database and get adaptors
@@ -178,10 +178,10 @@ my $E_csi_adjust = 10**(length($max_csi));
 
 ## transfer Ensembl chromosomes and whole genome alignment into Vega
 if ($support->user_proceed("Would you like to transfer the whole genome alignment back into Vega?")) {
-    $support->log_stamped("Transfer whole genome alignment into Vega...\n");
-    # seq_region
-    $support->log("Seq regions...\n", 1);
-    $sql = qq(
+  $support->log_stamped("Transfer whole genome alignment into Vega...\n");
+  # seq_region
+  $support->log("Seq regions...\n", 1);
+  $sql = qq(
         INSERT INTO $vega_db.seq_region
         SELECT sr.*
         FROM seq_region sr, coord_system cs
@@ -189,22 +189,22 @@ if ($support->user_proceed("Would you like to transfer the whole genome alignmen
         AND cs.name = 'chromosome'
         AND cs.version = '$ensemblassembly'
     );
-    $c = $dbh->{'evega'}->do($sql);
-    $support->log_stamped("Done storing $c seq_region entries.\n", 1);
-    # coord_system
-    $support->log("Coordinate system...\n", 1);
-    $sql = qq(
+  $c = $dbh->{'evega'}->do($sql);
+  $support->log_stamped("Done storing $c seq_region entries.\n", 1);
+  # coord_system
+  $support->log("Coordinate system...\n", 1);
+  $sql = qq(
         INSERT INTO $vega_db.coord_system
         SELECT cs.coord_system_id, cs.name, cs.version, cs.rank+100, cs.attrib
         FROM coord_system cs
         WHERE cs.name = 'chromosome'
         AND cs.version = '$ensemblassembly'
     );
-    $c = $dbh->{'evega'}->do($sql);
-    $support->log_stamped("Done storing $c coord_system entries.\n", 1);
-    # assembly
-    $support->log("Assembly...\n", 1);
-    $sql = qq(
+  $c = $dbh->{'evega'}->do($sql);
+  $support->log_stamped("Done storing $c coord_system entries.\n", 1);
+  # assembly
+  $support->log("Assembly...\n", 1);
+  $sql = qq(
         INSERT INTO $vega_db.assembly
         SELECT a.*
         FROM    assembly a,
@@ -221,21 +221,21 @@ if ($support->user_proceed("Would you like to transfer the whole genome alignmen
         AND cs1.version = '$vegaassembly'
         AND cs2.version = '$ensemblassembly'
     );
-    $c = $dbh->{'evega'}->do($sql);
-    $support->log_stamped("Done storing $c assembly entries.\n", 1);
-    # transfer assembly mapping into Vega
-    $support->log_stamped("Meta assembly.mapping...\n", 1);
-    my $mappingstring = 'chromosome:'.$support->param('assembly').'#chromosome:'.$support->param('ensemblassembly');
-    $sql = qq(
+  $c = $dbh->{'evega'}->do($sql);
+  $support->log_stamped("Done storing $c assembly entries.\n", 1);
+  # transfer assembly mapping into Vega
+  $support->log_stamped("Meta assembly.mapping...\n", 1);
+  my $mappingstring = 'chromosome:'.$support->param('assembly').'#chromosome:'.$support->param('ensemblassembly');
+  $sql = qq(
         INSERT INTO $vega_db.meta (meta_key, meta_value)
         ( SELECT meta_key, meta_value
           FROM meta
           WHERE meta_key = 'assembly.mapping'
           AND meta_value = '$mappingstring')
     );
-    $c = $dbh->{'evega'}->do($sql);
-    $support->log_stamped("Done storing $c meta entries.\n", 1);
-    $support->log_stamped("Done.\n");
+  $c = $dbh->{'evega'}->do($sql);
+  $support->log_stamped("Done storing $c meta entries.\n", 1);
+  $support->log_stamped("Done.\n");
 }
 
 # store Vega chromosome seq_regions and Ensembl-Vega assembly in temporary tables
@@ -424,30 +424,30 @@ $support->log_stamped("Done adding $c3 seq_region and $c4 assembly entries.\n\n"
 
 # now adjust all seq_region_ids
 $support->log_stamped("Updating seq_region_ids on all tables:\n");
-    # exon
-    $support->log_stamped("exon...\n", 1);
-    $sql = qq(UPDATE exon SET seq_region_id = seq_region_id-$E_sri_adjust);
-    $c = $dbh->{'evega'}->do($sql);
-    # gene
-    $support->log_stamped("gene...\n", 1);
-    $sql = qq(UPDATE gene SET seq_region_id = seq_region_id-$E_sri_adjust);
-    $c = $dbh->{'evega'}->do($sql);
-    # transcript
-    $support->log_stamped("transcript...\n", 1);
-    $sql = qq(UPDATE transcript SET seq_region_id = seq_region_id-$E_sri_adjust);
-    $c = $dbh->{'evega'}->do($sql);
-    # dna_align_feature
-    $support->log_stamped("dna_align_feature...\n", 1);
-    $sql = qq(UPDATE dna_align_feature SET seq_region_id = seq_region_id-$E_sri_adjust);
-    $c = $dbh->{'evega'}->do($sql);
-    # protein_align_feature
-    $support->log_stamped("protein_align_feature...\n", 1);
-    $sql = qq(UPDATE protein_align_feature SET seq_region_id = seq_region_id-$E_sri_adjust);
-    $c = $dbh->{'evega'}->do($sql);
-    # misc_feature
-    $support->log_stamped("misc_feature...\n", 1);
-    $sql = qq(UPDATE misc_feature SET seq_region_id = seq_region_id-$E_sri_adjust);
-    $c = $dbh->{'evega'}->do($sql);
+# exon
+$support->log_stamped("exon...\n", 1);
+$sql = qq(UPDATE exon SET seq_region_id = seq_region_id-$E_sri_adjust);
+$c = $dbh->{'evega'}->do($sql);
+# gene
+$support->log_stamped("gene...\n", 1);
+$sql = qq(UPDATE gene SET seq_region_id = seq_region_id-$E_sri_adjust);
+$c = $dbh->{'evega'}->do($sql);
+# transcript
+$support->log_stamped("transcript...\n", 1);
+$sql = qq(UPDATE transcript SET seq_region_id = seq_region_id-$E_sri_adjust);
+$c = $dbh->{'evega'}->do($sql);
+# dna_align_feature
+$support->log_stamped("dna_align_feature...\n", 1);
+$sql = qq(UPDATE dna_align_feature SET seq_region_id = seq_region_id-$E_sri_adjust);
+$c = $dbh->{'evega'}->do($sql);
+# protein_align_feature
+$support->log_stamped("protein_align_feature...\n", 1);
+$sql = qq(UPDATE protein_align_feature SET seq_region_id = seq_region_id-$E_sri_adjust);
+$c = $dbh->{'evega'}->do($sql);
+# misc_feature
+$support->log_stamped("misc_feature...\n", 1);
+$sql = qq(UPDATE misc_feature SET seq_region_id = seq_region_id-$E_sri_adjust);
+$c = $dbh->{'evega'}->do($sql);
 
 $support->log_stamped("Done.\n\n");
 
