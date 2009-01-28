@@ -143,15 +143,15 @@ if ($support->param('dry_run')) {
 
 # connect to database and get adaptors
 my ($dba, $dbh, $sql, $c);
-$dba->{'vega'} = $support->get_database('core');
-$dbh->{'vega'} = $dba->{'vega'}->dbc->db_handle;
+$dba->{'vega'}  = $support->get_database('core');
+$dbh->{'vega'}  = $dba->{'vega'}->dbc->db_handle;
 $dba->{'evega'} = $support->get_database('evega', 'evega');
 $dbh->{'evega'} = $dba->{'evega'}->dbc->db_handle;
-my $ensembl_db = $support->param('ensembldbname');
-my $vega_db = $support->param('dbname');
+my $ensembl_db  = $support->param('ensembldbname');
+my $vega_db     = $support->param('dbname');
 
 my $ensemblassembly = $support->param('ensemblassembly');
-my $vegaassembly = $support->param('assembly');
+my $vegaassembly    = $support->param('assembly');
 
 # determine adjustment factors for Ensembl seq_region_ids and coord_system_ids
 $sql = qq(
