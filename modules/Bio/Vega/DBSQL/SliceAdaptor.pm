@@ -74,6 +74,7 @@ sub _fetch_chr_coords_by_contig_projection {
 
     # now find the chromosome name of current assembly
     # only do this once as all contigs in this projection will be on same chr.
+
     unless ( $seq_region_name ){
       eval{
         $seq_region_name = $self->_fetch_chr_name_by_contig_name($ctg->seq_region_name);
@@ -102,22 +103,24 @@ sub _fetch_chr_name_by_contig_name {
   my ($self, $ctgname) = @_;
   my $loutre_db = $self->db;
 
-  my $chrqry = $loutre_db->dbc->prepare(qq{ SELECT sr.name FROM
-                                         seq_region sr,
-                                         seq_region_attrib sa,
-                                         attrib_type at WHERE
-                                         sr.seq_region_id IN ( SELECT
-                                         asm_seq_region_id FROM
-                                         assembly WHERE
-                                         cmp_seq_region_id IN (
-                                         SELECT seq_region_id FROM
-                                         seq_region WHERE name = ?  )
-                                         ) AND sr.seq_region_id =
-                                         sa.seq_region_id AND
-                                         sa.attrib_type_id =
-                                         at.attrib_type_id AND
-                                         sa.value =1 and
-                                         at.code='write_access'; });
+  my $chrqry = $loutre_db->dbc->prepare(qq{SELECT sr.name
+                                           FROM seq_region sr,
+                                                seq_region_attrib sa,
+                                                attrib_type at
+                                           WHERE sr.name
+                                           LIKE 'chr%'
+                                           AND sr.seq_region_id
+                                           IN (SELECT asm_seq_region_id
+                                               FROM assembly
+                                               WHERE cmp_seq_region_id
+                                           IN (SELECT seq_region_id
+                                               FROM seq_region
+                                               WHERE name = ?))
+                                           AND sr.seq_region_id = sa.seq_region_id
+                                           AND sa.attrib_type_id = at.attrib_type_id
+                                           AND sa.value =1
+                                           AND at.code='write_access'
+                                         });
 
   $chrqry->execute($ctgname);
 
