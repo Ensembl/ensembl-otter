@@ -159,7 +159,7 @@ sub do_getopt {
 
     push(@$CONFIG_INIFILES, $GETOPT);
 
-    # Should be using pfetch via HTTP proxy if we are outside Sanger
+    # Need to use pfetch via HTTP proxy if we are outside Sanger
     my $hostname = hostfqdn();
     unless ($hostname =~ /\.sanger\.ac\.uk$/) {
         $ENV{'PFETCH_WWW'} = 1;
