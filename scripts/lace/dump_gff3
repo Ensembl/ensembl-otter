@@ -2,7 +2,7 @@
 
 # dump_gff3 (modified from dump_gtf)
 # can dump loutre coords or NCBI coords
-
+# also handles encode regions for human and mouse
 
 use strict;
 use Bio::Otter::Lace::Defaults;
@@ -23,6 +23,7 @@ use Bio::Otter::MFetcher;
   my $do_encode = 0;
   my $ncbi_version;
   my @clones;
+  my $verbose;
 
   my $usage = sub { exec('perldoc', $0) };
   Bio::Otter::Lace::Defaults::do_getopt(
@@ -30,8 +31,9 @@ use Bio::Otter::MFetcher;
                                         'dataset|ds=s' => \$dataset_name,
                                         'author'       => \$want_author,
                                         'encode'       => \$do_encode,
-                                        'ncbi=s'       => \$ncbi_version,  # dump in NCBI coords, eg, 36 or M36
-                                        'clone=s@'     => \@clones
+                                        'ncbi=s'       => \$ncbi_version,  # dump in NCBI coords, eg, 36 (human) or M36 (mouse)
+                                        'clone=s@'     => \@clones,
+                                        'v|verbose'    => \$verbose
                                        )
       or $usage->();
   $usage->() unless $dataset_name;
@@ -59,9 +61,11 @@ use Bio::Otter::MFetcher;
   if ( $dataset_name eq 'human' and $do_encode ){
     # get list of encode regions names
     foreach my $sset ( @$ssets ){
-      next if $sset->write_access != 1;
+      #next if $sset->write_access != 1;
       if ( my @subset = @{$sset->get_subset_names} ){
+        warn $sset->name, " ------------- ", $sset->write_access, "\n";
         foreach (@subset){
+          warn "$_\n" if $_ =~ /encode/;
           push(@sets, $_) if $_ =~ /encode/;
         }
       }
@@ -77,7 +81,8 @@ use Bio::Otter::MFetcher;
     }
     else {
       # dump all encode
-      #read from external file for list of mouse encode regions
+      # read from external file for list of mouse encode regions
+      # not optimal, but this turns out to be the only source
       open(my $fh, "/nfs/team71/analysis/ck1/DATAMINE/adam/mouse_encode_regions/mouse_encode_regions_no_flank.txt") or die $!;
 
       my $seen;
@@ -99,10 +104,9 @@ use Bio::Otter::MFetcher;
 
   my ($fh, $file_name);
 
-  foreach my $set_name (@sets) {
+  foreach my $set_name (sort { ace_sort($a, $b) } @sets) {
 
-    #next if $set_name ne 'ENm001_2-chr1'; #can be chr... or subregion
-    warn $set_name;
+    warn "\n$set_name";;
 
     # Write GFF3 to one single file
     my $suffix = $ncbi_version ? "_NCBI$ncbi_version".".gff3" : ".gff3";
@@ -118,7 +122,7 @@ use Bio::Otter::MFetcher;
       #next if $set_name ne 'encode-ENm005-02';
 
       $slice = $slice_Ad->fetch_by_subregion($set_name);
-      #printf("## %s %s %d %d\n", $slice->seq_region_name, $set_name, $slice->start, $slice->end);
+      printf("## %s %s %d %d\n", $slice->seq_region_name, $set_name, $slice->start, $slice->end) if $verbose;
       $set_name = $slice->seq_region_name;
     }
     elsif ( $dataset_name eq 'mouse' and $do_encode and @clones ){
@@ -129,7 +133,6 @@ use Bio::Otter::MFetcher;
       $set_name = $slice->seq_region_name;
     }
     else {
-      #next if $set_name ne 'chr21-03';
       $slice = $slice_Ad->fetch_by_region('chromosome', $set_name, undef, undef, undef, 'Otter');
     }
 
@@ -148,7 +151,7 @@ use Bio::Otter::MFetcher;
       if ( $genes->[0] ){
         $ncbi_slice = $genes->[0]->slice;
         $slice = $ncbi_slice;       # want to use ncbi_slice from now on
-        #warn "NCBI S/E: ", $slice->start, ' ', $slice->end, " GOT ", scalar @$genes, " genes";
+        warn "NCBI S/E: ", $slice->start, ' ', $slice->end, " GOT ", scalar @$genes, " genes";
       }
       else {
         warn "WARNING: $set_name returns no genes\n";
@@ -177,7 +180,7 @@ use Bio::Otter::MFetcher;
       next if $gene->biotype eq 'obsolete';
       next if $gene->source ne 'havana' and $gene->source ne 'WU';
 
-      #printf("%s %d %d %d %d\n", $gene->stable_id, $gene->slice->start, $gene->slice->end, $gene->seq_region_start, $gene->seq_region_end);
+      printf("%s %d %d %d %d\n", $gene->stable_id, $gene->slice->start, $gene->slice->end, $gene->seq_region_start, $gene->seq_region_end) if $verbose;
 
 
       my $strand = $gene->strand == 1 ? '+' : '-';
