@@ -44,8 +44,13 @@ sub author {
 sub check_locks_exist_by_slice {
     my ($self, $slice, $author, $db) = @_;
 
-    if(!UNIVERSAL::isa($slice, 'Bio::EnsEMBL::Slice')) {
-        throw("[$slice] is not a Bio::EnsEMBL::Slice");
+    if(UNIVERSAL::isa($slice, 'Bio::EnsEMBL::Slice')) {
+        $slice = [$slice];
+    } elsif(UNIVERSAL::isa($slice, 'ARRAY') &&
+    		UNIVERSAL::isa($slice->[0], 'Bio::EnsEMBL::Slice')) {
+    	# do nothing
+    } else {
+    	throw("[$slice] should be Bio::EnsEMBL::Slice or an array of Bio::EnsEMBL::Slice");
     }
     $author ||= $self->author() || throw("An author object needs to be passed either on creation or on use");
 
@@ -70,8 +75,13 @@ sub check_locks_exist_by_slice {
 sub check_no_locks_exist_by_slice {
     my ($self, $slice, $author, $db) = @_;
 
-    if(!UNIVERSAL::isa($slice, 'Bio::EnsEMBL::Slice')) {
-        throw("[$slice] is not a Bio::EnsEMBL::Slice");
+    if(UNIVERSAL::isa($slice, 'Bio::EnsEMBL::Slice')) {
+        $slice = [$slice];
+    } elsif(UNIVERSAL::isa($slice, 'ARRAY') &&
+    		UNIVERSAL::isa($slice->[0], 'Bio::EnsEMBL::Slice')) {
+    	# do nothing
+    } else {
+    	throw("[$slice] should be Bio::EnsEMBL::Slice or an array of Bio::EnsEMBL::Slice");
     }
     $author ||= $self->author() || throw("An author object needs to be passed either on creation or on use");
 
@@ -89,15 +99,20 @@ sub check_no_locks_exist_by_slice {
 
 sub lock_by_object {
     my ($self, $obj, $author) = @_;
-    
+
     return $self->lock_clones_by_slice($obj->feature_Slice, $author, $obj->adaptor->db);
 }
 
 sub lock_clones_by_slice {
     my ($self, $slice, $author, $db) = @_;
 
-    if(!UNIVERSAL::isa($slice, 'Bio::EnsEMBL::Slice')) {
-        throw("[$slice] is not a Bio::EnsEMBL::Slice");
+    if(UNIVERSAL::isa($slice, 'Bio::EnsEMBL::Slice')) {
+        $slice = [$slice];
+    } elsif(UNIVERSAL::isa($slice, 'ARRAY') &&
+    		UNIVERSAL::isa($slice->[0], 'Bio::EnsEMBL::Slice')) {
+    	# do nothing
+    } else {
+    	throw("[$slice] should be Bio::EnsEMBL::Slice or an array of Bio::EnsEMBL::Slice");
     }
     $author ||= $self->author() || throw("An author object needs to be passed either on creation or on use");
 
@@ -137,7 +152,7 @@ sub lock_clones_by_slice {
 		    push(@successful_locks, $lock);
 	    }
     }
-  
+
     if ($lock_error_str) {
         # Unlock any that we just locked (could do this with rollback?)
         foreach my $lock (@successful_locks) {
@@ -149,15 +164,20 @@ sub lock_clones_by_slice {
 
 sub remove_by_object {
     my ($self, $obj, $author) = @_;
-    
+
     return $self->remove_by_slice($obj->feature_Slice, $author, $obj->adaptor->db);
 }
 
 sub remove_by_slice {
     my ($self, $slice, $author, $db) = @_;
 
-    if(!UNIVERSAL::isa($slice, 'Bio::EnsEMBL::Slice')) {
-        throw("[$slice] is not a Bio::EnsEMBL::Slice");
+    if(UNIVERSAL::isa($slice, 'Bio::EnsEMBL::Slice')) {
+        $slice = [$slice];
+    } elsif(UNIVERSAL::isa($slice, 'ARRAY') &&
+    		UNIVERSAL::isa($slice->[0], 'Bio::EnsEMBL::Slice')) {
+    	# do nothing
+    } else {
+    	throw("[$slice] should be Bio::EnsEMBL::Slice or an array of Bio::EnsEMBL::Slice");
     }
     $author ||= $self->author() || throw("An author object needs to be passed either on creation or on use");
 
@@ -180,17 +200,18 @@ sub remove_by_slice {
 }
 
 sub Contig_hashref_from_Slice {
-    my ($self, $slice, $db) = @_;
+    my ($self, $slices, $db) = @_;
 
     my $sa          = $db->get_SliceAdaptor;
     my %contig_hash = ();
-
-    foreach my $contig_seg (@{ $slice->project('contig') }) {
-        my $contig_slice = $contig_seg->to_Slice();
-        my $contig_id    = $sa->get_seq_region_id($contig_slice);
-        my $contig_name  = $contig_slice->seq_region_name();
-        $contig_hash{$contig_id} = $contig_name;
-    }
+	foreach my $slice (@$slices) {
+	    foreach my $contig_seg (@{ $slice->project('contig') }) {
+	        my $contig_slice = $contig_seg->to_Slice();
+	        my $contig_id    = $sa->get_seq_region_id($contig_slice);
+	        my $contig_name  = $contig_slice->seq_region_name();
+	        $contig_hash{$contig_id} = $contig_name;
+	    }
+	}
 
     return \%contig_hash;
 }
