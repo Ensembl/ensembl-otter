@@ -139,7 +139,7 @@ sub satellite_dba {
         return $self->{_sdba}{$metakey};
     }
 
-    $self->log("connecting to the $kind using [$metakey] meta entry...");
+    $self->log("connecting to the '$kind' using [$metakey] meta entry...");
 
     my $adaptor_class = 'Bio::EnsEMBL::DBSQL::DBAdaptor'; # get the minimal adaptor (may be extended to Vega in future)
 
@@ -150,7 +150,7 @@ sub satellite_dba {
             $self->log("cannot connect to metakey='$metakey' as this key is not defined in the meta table.");
             return;
         } else {
-            $self->error_exit("Could not find meta entry for '$metakey' satellite db\n" . longmess());
+            $self->error_exit(longmess("Could not find meta entry for '$metakey' satellite db"));
         }
     } elsif($opt_str =~ /^\=otter/) {
         return $self->otter_dba();
