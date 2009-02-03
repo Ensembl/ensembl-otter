@@ -360,7 +360,7 @@ $sql = qq(
     SELECT * FROM repeat_consensus
 );
 $c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
-$support->log_stamped("Done transfering $c repeat_consensus entries.\n");
+$support->log_stamped("Done transfering $c repeat_consensus entries.\n\n");
 $support->log_stamped("Transfering Ensembl repeat_feature...\n");
 $sql = qq(
     INSERT INTO $evega_db.repeat_feature
@@ -562,6 +562,11 @@ if (! $support->param('dry_run') ) {
   $support->log_stamped("\nUpdating attrib_type table on ".$support->param('evegadbname')."...\n");
   system("../xref/update_external_dbs.pl $options") == 0
     or $support->throw("Error running update_external_dbs.pl: $!");
+  $support->log_stamped("Done.\n\n");
+
+  $support->log_stamped("\nCalculating %GC for ".$support->param('evegadbname')."...\n");
+  system("../../../../sanger-plugins/vega/utils/vega_percent_gc_calc.pl $options") == 0
+    or $support->throw("Error running vega_percent_gc_calc.pl: $!");
   $support->log_stamped("Done.\n\n");
 
 }
