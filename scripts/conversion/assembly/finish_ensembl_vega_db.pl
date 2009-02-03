@@ -489,12 +489,20 @@ $sql = qq(DELETE ta
 $c = $dbh->{'evega'}->do($sql);
 $support->log_stamped("Deleted $c ccds transcript_attrib entries.\n\n");
 
-# set source to 'vega'
-if ($support->user_proceed("Would you like to ensure that all genes have a source of \'vega\'?")) {
-	$sql = qq(UPDATE gene set source = 'vega');
-	$c = $dbh->{'evega'}->do($sql);
-}
-$support->log_stamped("Updated $c gene.source entries.\n\n");
+#delete orphan analysis_description table entries
+$sql = qq(DELETE ad
+            FROM analysis_description ad left join analysis a on ad.analysis_id = a.analysis_id
+           WHERE a.analysis_id IS NULL
+);
+$c = $dbh->{'evega'}->do($sql);
+$support->log_stamped("Deleted $c orphan analysis_description entries.\n\n");
+
+# set source to 'vega' - don't do this, take 'WU' or 'havana' from vega
+#if ($support->user_proceed("Would you like to ensure that all genes have a source of \'vega\'?")) {
+#	$sql = qq(UPDATE gene set source = 'vega');
+#	$c = $dbh->{'evega'}->do($sql);
+#}
+#$support->log_stamped("Updated $c gene.source entries.\n\n");
 
 if ($support->user_proceed("Would you like to delete orphan entries from object_xref?")) {
     $sql = qq(DELETE ox
