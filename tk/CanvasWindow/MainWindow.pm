@@ -24,9 +24,9 @@ sub new {
         -background     => '#bebebe',
         );
     $mw->scaling(1);    # Sets 1 screen pixel = 1 point.
-                        # This is important or text and objects print
-                        # in different proportions from the Canvas
-                        # compared to their appearance on screen.
+                        # This is important. Without it text and objects
+                        # on the canvas are rendered with different
+                        # relative sizes on screen and when printed.
     
     if (@command_line) {
         $mw->command([@command_line]);

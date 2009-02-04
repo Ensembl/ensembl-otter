@@ -93,7 +93,7 @@ sub initialise {
 
 	# Pad between entries
 	$file_frame->Frame( -width => 10, )->pack( -side => 'top' );
-	my $LoadDialog = $file_frame->FileDialog(
+	my $LoadDialog = $top->FileDialog(
 											  -Title   => 'Select a Fasta file',
 											  -Create  => 0,
 											  -FPat    => '*fa',
