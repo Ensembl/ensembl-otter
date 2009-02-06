@@ -3,8 +3,8 @@
 # Author:        lg4
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2009-02-03 14:15:52 $
-# Id:            $Id: nph-get_das_features,v 1.7 2009-02-03 14:15:52 jgrg Exp $
+# Last modified: $Date: 2009-02-06 15:30:22 $
+# Id:            $Id: nph-get_das_features,v 1.8 2009-02-06 15:30:22 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_das_features,v $
 
 use strict;
@@ -103,9 +103,16 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS { # $kind = 'SimpleFeature' ||
         'segment' => $segment_name,
         $analysis_name ? ('type' => $analysis_name) : (),
     });
+    
+    # Bio::DAS::Lite object can do many requests.  We only do one, so we
+    # get the value from the statuscodes hash, since the key may change
+    # if Bio::DAS::Lite changes how it constructs its URLs.
+    my ($code) = values %{$das->statuscodes};
+    unless ($code =~ /^200/) {
+        die "Error from DAS request: $code\n";
+    }
 
-    ## This is VERY useful for finding out some protocol pecularities/discrepancies:
-    #
+    ### This is VERY useful for finding out some protocol pecularities/discrepancies:
     if($dump) {
         die "The whole structure of the response is: '".Dumper($response)."'\n";
     }
@@ -215,6 +222,9 @@ eval {
         'dsn' => $source ? $source.'/'.$dsn : $dsn,
         $http_proxy ? ('http_proxy' => $http_proxy) : (),
     });
+
+    # Default timeout was 5 seconds, which is not long enough for UCSC!  Could make it a parmeter.
+    $das->timeout(2 * 60);
 
     my $feature_array = $server->fetch_mapped_features('das_'.$kind, 'get_all_features_via_DAS', [$server, $das, $chr_name, $analysis_name, $kind, $sieve, $grouplabel, $dump],
         (map { defined($server->param($_)) ? $server->param($_) : '' } qw(cs name type start end metakey csver csver_remote)),
