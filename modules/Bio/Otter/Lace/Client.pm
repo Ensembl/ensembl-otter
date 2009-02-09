@@ -5,7 +5,8 @@ package Bio::Otter::Lace::Client;
 use strict;
 use warnings;
 use Carp qw{ confess cluck };
-use Net::Domain qw{ hostname };
+use Net::Domain qw{ hostname hostfqdn };
+
 use LWP;
 use Symbol 'gensym';
 use URI::Escape qw{ uri_escape };
@@ -341,6 +342,24 @@ sub url_root {
     my $version = $self->version or confess "version not set";
     $port =~ s/\D//g; # port only wants to be a number! no spaces etc
     return "http://$host:$port/cgi-bin/otter/$version";
+}
+
+sub pfetch_url {
+    my ($self) = @_;
+    
+    return $self->url_root . '/nph-pfetch';
+}
+
+sub setup_pfetch_env {
+    my ($self) = @_;
+
+    # Need to use pfetch via HTTP proxy if we are outside Sanger
+    my $hostname = hostfqdn();
+    if ($hostname =~ /\.sanger\.ac\.uk$/) {
+        delete($ENV{'PFETCH_WWW'});
+    } else {
+        $ENV{'PFETCH_WWW'} = $self->pfetch_url;
+    }
 }
 
 # Returns the content string from the http response object
