@@ -1,3 +1,4 @@
+
 package Bio::Vega::DBSQL::SliceAdaptor;
 
 use strict;
@@ -129,4 +130,16 @@ sub _fetch_chr_name_by_contig_name {
 
 
 1;
+
+__END__
+
+=head1 NAME - Bio::Vega::DBSQL::SliceAdaptor;
+
+=head1 DESCRIPTION
+
+Not sure if this is actually used!
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
 
