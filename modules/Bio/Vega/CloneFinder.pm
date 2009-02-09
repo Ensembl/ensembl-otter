@@ -383,9 +383,9 @@ sub find {
 
     $self->find_by_stable_ids('', '.');
 
-    $self->find_by_stable_ids('EnsEMBL:','ens_livemirror_core_db_head');
+    $self->find_by_stable_ids('EnsEMBL:','ensembl_core_db_head');
 
-    $self->find_by_stable_ids('EnsEMBL_EST:','ens_livemirror_estgene_db_head');
+    $self->find_by_stable_ids('EnsEMBL_EST:','ensembl_estgene_db_head');
 
     my $in_quoted_list = $self->in_quoted_list();
 
