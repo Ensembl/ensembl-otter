@@ -59,31 +59,45 @@ sub fetch_by_name {
   my $gene;
   my $dbid;
   if ($genes){
-	 my $stable_id;
-	 foreach my $g (@$genes){
-		if ($stable_id && $stable_id ne $g->stable_id){
-            ### Does this make sense? Why not return a list of genes?
-		  die "more than one gene has the same name\n";
-		}
-		$stable_id=$g->stable_id;
-		if ($dbid ){
-		  if ($g->dbID > $dbid){
-            ## Why not just keep the gene?
-			 $dbid=$g->dbID;
-		  }
-		}
-		else {
-		  $dbid=$g->dbID;
-		}
-	 }
+    my $stable_id;
+    foreach my $g (@$genes){
+      if ($stable_id && $stable_id ne $g->stable_id){
+	### Does this make sense? Why not return a list of genes?
+	die "more than one gene has the same name\n";
+      }
+      $stable_id=$g->stable_id;
+      if ($dbid ){
+	if ($g->dbID > $dbid){
+	  ## Why not just keep the gene?
+	  $dbid=$g->dbID;
+	}
+      }
+      else {
+	$dbid=$g->dbID;
+      }
+    }
   }
   if ($dbid){
-	 print STDOUT "gene found\n";
-	 $gene=$self->fetch_by_dbID($dbid);
-	 $self->reincarnate_gene($gene);
+    print STDOUT "gene found\n";
+    $gene=$self->fetch_by_dbID($dbid);
+    $self->reincarnate_gene($gene);
   }
-
+  
   return $gene;
+}
+
+sub fetch_all_current_by_name {
+  my ($self,$genename)=@_;
+  unless ($genename) {
+	 throw("Must enter a gene name to fetch Genes");
+  }
+  my $genes = [];
+  foreach my $g (@{$self->fetch_by_attribute_code_value('name',$genename)}) {
+    next unless $g->is_current;
+    $self->reincarnate_gene($g);
+    push @{$genes},$g;
+  }
+  return $genes;
 }
 
 sub fetch_consortiumID_by_dbID {
@@ -120,7 +134,6 @@ sub fetch_by_attribute_code_value {
   $sth->execute($attrib_code,$attrib_value);
   my $geneids = [map {$_->[0]} @{$sth->fetchall_arrayref()}];
   $sth->finish();
-
   if (@$geneids){
 	return $self->fetch_all_by_dbID_list($geneids);
   }
