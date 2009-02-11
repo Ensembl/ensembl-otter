@@ -8,8 +8,6 @@ use Bio::Vega::DBSQL::DBAdaptor;
 use Sys::Hostname qw{ hostname };
 use Bio::Otter::Lace::Defaults;
 use Bio::Vega::ContigLockBroker;
-use Bio::Vega::Transform::XML;
-use Bio::Vega::Transform::Otter;
 
 {
     my $dsname = 'mouse';
