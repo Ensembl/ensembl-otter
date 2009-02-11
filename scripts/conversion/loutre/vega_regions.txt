@@ -86,6 +86,7 @@ CHORI29_IDD5.1_test	1-IDD5.1_CHO	IDD5.1 region of chromosome 1 (CHORI-29 NOD str
 NOD_IDD5.3	1-IDD5.3_DIL	IDD5.3 region of chromosome 1 (DIL NOD strain)	External
 NOD_IDD5.4	1-IDD5.4_DIL	IDD5.4 region of chromosome 1 (DIL NOD strain)	External
 CHO_IDD6.1_2	6-IDD6.1_2_CHO	IDD6.1+2 regions of chromosome 6 (CHORI-29 NOD strain)	External
+CHO_IDD6.3	6-IDD6.3_CHO	IDD6.3 region of chromosome 6 (CHORI-29 NOD strain)	External
 NOD_IDD9.1	4-IDD9.1_DIL	IDD9.1 region of chromosome 4 (DIL NOD strain)	External
 NOD_IDD9.1M	4-IDD9.1M_DIL	IDD9.1M region of chromosome 4 (DIL NOD strain)	External
 NOD_IDD9.2	4-IDD9.2_DIL	IDD9.2 region of chromosome 4 (DIL NOD strain)	External
@@ -97,7 +98,8 @@ NOD_IDD18.2	3-IDD18.2_DIL	IDD18.2 region of chromosome 3 (DIL NOD strain)	Extern
 --end--
 
 --gorilla--
-MHC	5-MHC	MHC region of Chromosome 5	External
+MHC	6-MHC	MHC region of Chromosome 6	External
+KIR	19-LRC	LRC region of Chromosome 19	External
 --end--
 
 --wallaby--
