@@ -3,10 +3,15 @@
 ### patch_nmd_genes
 
 use strict;
-use Sys::Hostname qw{ hostname };
-use Bio::Vega::DBSQL::DBAdaptor;
+use Net::Domain qw{ hostname };
+
 use Bio::Otter::Lace::Defaults;
+use Bio::Vega::DBSQL::DBAdaptor;
 use Bio::Vega::ContigLockBroker;
+use Bio::Vega::Transform::Otter;
+use Bio::Vega::Transform::XML;
+
+my $time_now = time();
 
 {
     my $dsname;
@@ -146,15 +151,27 @@ sub recover_coding_region {
     if ($found_tsl) {
         $dba->begin_work;
         eval {
-            $locker->lock_by_object($gene, $author);
-            $gene_aptr->store($gene);
-            $locker->remove_by_object($gene, $author);
+            my $gene_xml = Bio::Vega::Transform::XML->new->get_geneXML($gene);
+            my $parser = Bio::Vega::Transform::Otter->new;
+            $parser->parse($gene_xml);
+            my $xml_gene;
+            if (my $g_list = $parser->get_Genes) {
+                die sprintf "Weird - put 1 gene into XML but got %d out", scalar @$g_list;
+                $xml_gene = $g_list->[0];
+            } else {
+                die "Did not get any gene out from XML";
+            }
+            $xml_gene->slice($gene->slice);
+
+            $locker->lock_by_object($xml_gene, $author);
+            $gene_aptr->store($xml_gene, $time_now);
+            $locker->remove_by_object($xml_gene, $author);
         };
         if ($@) {
             $dba->rollback;
             warn $@;
         } else {
-            $dba->commit;
+            $dba->rollback;
             return $found_tsl + $already_tsl;
         }    
     } else {
