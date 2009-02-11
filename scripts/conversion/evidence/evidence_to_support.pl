@@ -84,8 +84,6 @@ Please see http://www.ensembl.org/code_licence.html for details
 =head1 AUTHOR
 
 Steve Trevanion <st3@sanger.ac.uk>
-Patrick Meidl <meidl@ebi.ac.uk>
-
 
 =head1 CONTACT
 
@@ -211,7 +209,7 @@ foreach my $chr (@chr_sorted) {
     my $source = $gene->source;
 
     #skip KO genes since they shouldn't have supporting evidence
-    next if ($gene->analysis->logic_name eq 'otter_eucomm');
+    next if ($gene->analysis->logic_name =~ /eucomm|komp/);
 
     # filter to user-specified gene_stable_ids
     if (scalar(@gene_stable_ids)){
