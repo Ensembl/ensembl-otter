@@ -63,7 +63,7 @@ sub fetch_by_name {
     foreach my $g (@$genes){
       if ($stable_id && $stable_id ne $g->stable_id){
 	### Does this make sense? Why not return a list of genes?
-	die "more than one gene has the same name\n";
+	warn "more than one gene has the same name [$genename]\n";
       }
       $stable_id=$g->stable_id;
       if ($dbid ){
@@ -91,13 +91,16 @@ sub fetch_all_current_by_name {
   unless ($genename) {
 	 throw("Must enter a gene name to fetch Genes");
   }
-  my $genes = [];
-  foreach my $g (@{$self->fetch_by_attribute_code_value('name',$genename)}) {
-    next unless $g->is_current;
-    $self->reincarnate_gene($g);
-    push @{$genes},$g;
+  my $genes=$self->fetch_by_attribute_code_value('name',$genename);
+  my $current_genes;
+  if ($genes) {
+    foreach my $g (@{$genes}){
+      next unless $g->is_current;
+      $self->reincarnate_gene($g);
+      push @{$current_genes},$g;
+    }
   }
-  return $genes;
+  return $current_genes || [];
 }
 
 sub fetch_consortiumID_by_dbID {
@@ -135,13 +138,13 @@ sub fetch_by_attribute_code_value {
   my $geneids = [map {$_->[0]} @{$sth->fetchall_arrayref()}];
   $sth->finish();
   if (@$geneids){
-	return $self->fetch_all_by_dbID_list($geneids);
+    return $self->fetch_all_by_dbID_list($geneids);
   }
   else {
-	 return 0;
+    return 0;
   }
-
 }
+
 sub fetch_stable_id_by_name {
 
   # can search either genename or transname by name or synonym,
