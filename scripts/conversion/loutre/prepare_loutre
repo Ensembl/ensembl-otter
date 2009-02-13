@@ -85,7 +85,7 @@ my $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
 # parse options
 $support->parse_common_options(@_);
 $support->parse_extra_options(
-  $support->get_loutre_params,
+  $support->get_loutre_params(1),
   'definition_file=s',
   'vega_release=s',
   'release_type=s',
@@ -146,14 +146,14 @@ while (my $rec = <$IN>) {
   next REC unless $active_record;
 
   #parse details, removing any trailing whitespace
-  my ($loutre_id,$vega_id,$human_id,$type,$ack,$ensembl_name) = map { s/\s$//; $_; } split '\t', $rec;
-  unless ($loutre_id && $vega_id && $human_id && $type) {
+  my ($loutre_id,$vega_id,$human_id,$ack,$ensembl_name) = map { s/\s$//; $_; } split '\t', $rec;
+  unless ($loutre_id && $vega_id && $human_id) {
     $support->log_warning("Parsing input file failed, check tab spacing for line $loutre_id\n");
   }
   $regions_wanted_details->{$loutre_id} =  {
     vega_name        => $vega_id,
     name             => $human_id,
-    vega_export_mod  => $type,
+    vega_export_mod  => $rel_type,
     ack              => $ack,
     vega_release     => $support->param('vega_release'),
     ensembl_name     => $ensembl_name,
@@ -227,7 +227,7 @@ foreach my $k (keys %$regions_wanted_details ) {
   my $export_mode = $attribs_wanted->{$attrib};
 
   if (! @{$support->get_attrib_values($attribs_present,$attrib,$export_mode)} ) {
-    unless ($support->user_proceed("Do you want to use $sr_name_to_use for vega export (ie set attrib code = $attrib to value \'$rel_type\' ?")) {
+    unless ($support->user_proceed("Do you want to use $sr_name_to_use for $export_mode (ie set attrib code = $attrib to value \'$rel_type\') ?")) {
       next SLICE;
     }
   }
@@ -293,7 +293,7 @@ my $template = "%-23s%-17s%-57s%-15s%-12s%-10s%-7s%-30s\n";
 my $txt = sprintf $template, qw(loutre_id vega_id name ensembl_name ack toplevel hidden releases);
 $txt .= "-"x147 . "\n";
 
-#get attributes of chromosomes with a vega_export_mod of External
+#get attributes of chromosomes with the relevant export_mod
 my %final_attribs = map {$_=> 1} qw(
 				    vega_name
 				    name
