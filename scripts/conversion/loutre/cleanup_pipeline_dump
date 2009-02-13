@@ -145,12 +145,12 @@ my $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
 # parse options
 $support->parse_common_options(@_);
 $support->parse_extra_options(
+  $support->get_loutre_params(1),
   'vega_release=s',
   'release_type=s',
   'count_rows=s',
   'chr=s',
   'ignore_chr=s',
-  $support->get_loutre_params,
 );
 $support->allowed_params(
   'vega_release',
