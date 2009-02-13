@@ -13,7 +13,7 @@ Options:
     --conffile, --conf=FILE             read script parameters from FILE
                                         (default: conf/Conversion.ini)
     --vega_release=NUM                  vega release number
-    --release_type=STRING               type of release, ie External
+    --release_type=STRING               type of release, External
     --chr=LIST                          comma seperated list of chromsomes to use (optional)
     --ignore_chr=LIST                   comma seperated list of chromsomes to ignore (optional)
     --filter_prefix=LIST                comma seperated list of gene name prefixes to ignore (optional)
@@ -159,6 +159,11 @@ $support->check_required_params(
 if ($support->param('help') or $support->error) {
   warn $support->error if $support->error;
   pod2usage(1);
+}
+
+if ($support->param('release_type' ne 'External')) {
+  $support->log_warning("You haven't set \'release_type\' to be \'External\' using prepare_loutre.pl. Please do so before proceeding\n");
+  exit;
 }
 
 $support->comma_to_list('ignore_chr');

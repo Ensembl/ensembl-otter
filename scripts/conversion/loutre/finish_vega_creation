@@ -20,7 +20,7 @@ Options:
     --pass=PASS                         use Vega database password PASS
 
     --vega_release=NUM                  vega release number
-    --release_type=STRING               type of release, ie External
+    --release_type=STRING               type of release, External
     --no_feature=BOOLEAN                choose to dump *align_features or not
 
     --prune
@@ -121,6 +121,12 @@ $support->confirm_params;
 
 # get log filehandle and print heading and parameters to logfile
 $support->init_log;
+
+if ($support->param('release_type' ne 'External')) {
+  $support->log_warning("You haven't set \'release_type\' to be \'External\' using prepare_loutre.pl. Please do so before proceeding\n");
+  exit;
+}
+
 
 # connect to vega database and get adaptors
 my $vdba = $support->get_database('ensembl');
