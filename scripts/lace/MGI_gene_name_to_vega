@@ -8,15 +8,19 @@ use Date::Calc qw(Date_to_Days);
 use Hum::Chromoview::Utils qw(unixtime2YYYYMMDD);
 
 my %updated_gsid;
-
+my $scriptdir = "/nfs/team71/analysis/ck1/SCRIPT_CVS/ensembl-otter/scripts/lace";
+my $duplicate_file = "/var/tmp/ids_to_skip.".$$;
+my @GENE_NAMEs;
 {
-  my ($dataset_name, $last_update_date);
+  my $dataset_name = 'mouse'; # this script is tailored to mouse anyway
   my $test = 1; # default is doing test
+  my $has_duplicates = 0;
 
   Bio::Otter::Lace::Defaults::do_getopt(
-                                        'ds|dataset=s' => \$dataset_name,
                                         'test!'        => \$test,
-                                        'last_update=s' => \$last_update_date, # eg, 2008-09-25
+                                        'name=s@'      => \@GENE_NAMEs,    # useful to update only certain names
+                                        'duplicates'   => \$has_duplicates # need to have 2 files prepared before hand
+                                                                           # see script filter_vega_ids
                                        );
   Bio::Otter::Lace::Defaults::show_help() unless $dataset_name;
 
@@ -25,13 +29,13 @@ my %updated_gsid;
   my $loutre_dba = $ds->make_Vega_DBAdaptor;
   my $geneAd     = $loutre_dba->get_GeneAdaptor;
 
-  print STDERR my $msg = $test ? "\nTEST RUN update...\n\n" : "\nLIVE update....\n\n";
+  print STDERR my $msg = $test ? "\nTEST mode update...\n\n" : "\nLIVE mode update....\n\n";
 
-  my ($mgi_data, $problem_symbol) = parse_mgi_input($loutre_dba, $geneAd);
+  my ($mgi_data, $mgiSymbol_2_vegaIDs) = parse_mgi_input($loutre_dba, $geneAd);
 
   $loutre_dba->begin_work;
   eval{
-    update_loutre($loutre_dba, $mgi_data, $test, $problem_symbol, $last_update_date);
+    update_loutre($loutre_dba, $mgi_data, $test, $mgiSymbol_2_vegaIDs, $has_duplicates);
   };
   if ($@) {
     $loutre_dba->rollback;
@@ -39,6 +43,9 @@ my %updated_gsid;
   } else {
     $loutre_dba->commit;
   }
+
+  #remove temp file for duplicates
+  unlink $duplicate_file or warn "Failed to remove $duplicate_file";
 }
 
 #--------------------------------
@@ -70,73 +77,42 @@ sub parse_mgi_input {
     }
 
     my $vega_id_from_mgi = $fields[5];
-    #next if $vega_id_from_mgi ne 'OTTMUSG00000023870';
-    #next if $vega_id_from_mgi ne 'OTTMUSG00000025863';
-    #next if $vega_id_from_mgi ne 'OTTMUSG00000021752';
-    #next if $vega_id_from_mgi ne 'OTTMUSG00000025863';
-    #next if $vega_id_from_mgi ne 'OTTMUSG00000015824';
-    #next if $vega_id_from_mgi ne 'OTTMUSG00000025704';
-    #my @wanted = qw(
-#                    OTTMUSG00000023192
-#                    OTTMUSG00000026047
-#                    OTTMUSG00000023388
-#                    OTTMUSG00000023280
-#                    OTTMUSG00000024377
-#                    OTTMUSG00000009664
-#                    OTTMUSG00000009660
-#                    OTTMUSG00000009513
-#                    OTTMUSG00000009561
-#                    OTTMUSG00000010951
-#                   );
-#my @wanted = qw{
-#                OTTMUSG00000019887
-#                OTTMUSG00000028338
-#                OTTMUSG00000025666
-#                OTTMUSG00000027255
-#                OTTMUSG00000027256
-#                OTTMUSG00000027267
-#                OTTMUSG00000027268
-#                OTTMUSG00000027272
-#                OTTMUSG00000029203
-#                OTTMUSG00000021648
-#              };
-#    next unless ( grep /$vega_id_from_mgi/, @wanted);
+    my $mgi_symbol = $fields[1];
 
+    # does only gene_names specifed
+    my %nameSet = map {($_,1)} @GENE_NAMEs;
+    next unless $nameSet{$mgi_symbol};
 
-
-
-    #warn $vega_id_from_mgi;
+    print STDERR "Parsing MGI: $vega_id_from_mgi ( $mgi_symbol ) ----- ";
 
     my $curr_gene = $geneAd->fetch_by_stable_id($vega_id_from_mgi);
 
     unless ( $curr_gene ){
-      print STDERR "ERROR: $vega_id_from_mgi NOT CURRENT in database\n";
+      print STDERR "ERROR: $vega_id_from_mgi is NOT in current database\n";
 
-      # tracking gene history for obsolete genes
-      my $found_gsids;
-      eval {
-        $found_gsids = process_query($vega_id_from_mgi, $loutre_dba, undef, 1);
-      };
-      if ( $@ ) {
-        print STDERR "Cannot follow history of $vega_id_from_mgi ... non-existent ID\n\n";
-        next;
-      }
-      else {
-        foreach my $gsid ( @$found_gsids ) {
-          # want only current genes
-          if ( $geneAd->fetch_by_stable_id($gsid) ) {
-            print STDERR "==> $gsid has replaced $vega_id_from_mgi\n";
-          } else {
-            print STDERR "==> $gsid is OBSOLETE\n";
-          }
-        }
-        print STDERR "\n";
-        next;
-      }
+#    #  # tracking gene history for obsolete genes
+#      my $found_gsids;
+#      eval {
+#        $found_gsids = process_query($vega_id_from_mgi, $loutre_dba, undef, 1);
+#      };
+#      if ( $@ ) {
+#        print STDERR "Cannot follow history of $vega_id_from_mgi ... non-existent ID\n\n";
+#        next;
+#      }
+#      else {
+#        foreach my $gsid ( @$found_gsids ) {
+#          # want only current genes
+#          if ( $geneAd->fetch_by_stable_id($gsid) ) {
+#            print STDERR "==> $gsid has replaced $vega_id_from_mgi\n";
+#          } else {
+#            print STDERR "==> $gsid is OBSOLETE\n";
+#          }
+#        }
+#        print STDERR "\n";
+#        next;
+#      }
       next;
     }
-
-    my $mgi_symbol = $fields[1];
 
     my $source = $curr_gene->source;
     # double check that MGI update only contains genes which source is 'havana/WU'
@@ -148,7 +124,7 @@ sub parse_mgi_input {
     my $parsed_line = {};
 
     # currently, lots of MGI names are still bad names!
-    my $ok = check_for_good_symbols($mgi_symbol, $vega_id_from_mgi);
+    my $ok = check_for_good_symbols($mgi_symbol);
 
     if ( $ok ){
       for (my $i = 0 ; $i < @field_names ; $i++) {
@@ -170,97 +146,128 @@ sub parse_mgi_input {
     }
   }
 
-  # checking symbols linked to multiple VEGA id
-  my $problem_symbol = [];
+  print STDERR "\n-------------------  END OF PARSING  -----------------------\n\n";	
 
+  # checking symbols linked to multiple VEGA id
+
+  my $duplcate_list;
+  my $fh;
+
+  if ( keys %$mgiSymbol_2_vegaIDs > 0 ){
+    $duplcate_list = "MGI_2_multiple_vega_ids";
+    open($fh, ">$duplcate_list") or die $!;
+  }
   foreach my $symbol ( keys %$mgiSymbol_2_vegaIDs ){
     if ( @{$mgiSymbol_2_vegaIDs->{$symbol}} > 1 ){
 
-      my $val = check_for_good_symbols($symbol) ? 'good' : 'bad';
+      my $dups = sprintf("%s\t%s\t%s\n", 'MGI_2_MULTILE_IDs', $symbol,
+                     join("\t", @{$mgiSymbol_2_vegaIDs->{$symbol}})
+                    );
 
-      print STDERR "MGI_2_MULTILE_IDs $symbol: ($val) @{$mgiSymbol_2_vegaIDs->{$symbol}}\n";
-      # don't want to update loutre with such gene names.
-      # give annotators to look at them first
-      push(@$problem_symbol, $symbol);
+      print $fh $dups; # the annotators need to revise this list, ie, pick the right ID for update
+      print STDERR $dups;
     }
   }
 
-  return ($mgi_data, $problem_symbol);
+  return ($mgi_data, $mgiSymbol_2_vegaIDs);
 }
 
 sub check_for_good_symbols {
-  my ($mgi_symbol, $gsid_from_mgi) = @_;
+  my ($mgi_symbol) = @_;
 
-  my @ok_symbols = qw(P140 C9 T F2 H13 H19 H47 F10 F7 F8 F9);
-  if ( grep(/$mgi_symbol/, @ok_symbols) ){
+  # symbols considered OK
+  my @ok_symbols = qw(P140 C9 T F2 H13 H19 H47 F10 F7 F8 F9 Fcgbp);
+  my %ok_syms = map {($_, 1)} @ok_symbols;
+
+  # skip these for now
+  my @skip_list = qw(Tcra-V8);
+  my %ok_skip = map {($_, 1)} @skip_list;
+
+  if ( $ok_syms{$mgi_symbol} ){
+    print STDERR "cat-1: SYMBOL_OK\n";
     return 1;
   }
+  elsif ( $ok_skip{$mgi_symbol} ){
+    print STDERR "cat-2: SYMBOL_SKIP\n";
+    return 0;
+  }
 
-  # also ignore these:
+  # Ignore these symbols:
   #   clone based names - starting with two capital letters
   #   names that are Gene models - starting with Gm
   #   riken based names - end with Rik
 
-  elsif ( $mgi_symbol =~ /^Gm|Rik$|OTTMUS/ ) {
-    #warn "0: $mgi_symbol";
+  elsif ( $mgi_symbol =~ /^Gm|Rik$|OTTMUS|^[A-Z]{2,}/ ) {
+    print STDERR "cat-3: SYMBOL_BAD\n";
     return 0;
   }
 
- # # hand-check names with '-'
-#  elsif ( $mgi_symbol =~ /-|_/ ){
-#    print STDERR "SYMBOL_TO_CHECK: $gsid_from_mgi $mgi_symbol\n";
-#    return 0;
-#  }
-
   # hand-check first letter is capital and followed by digits only
   # or single capital letter only
-  elsif ( $mgi_symbol =~ /^[A-Z]{1,1}\d+$/ || $mgi_symbol =~ /^[A-Z]{1,1}$/ ) {
-    print STDERR "SYMBOL_TO_CHECK: $gsid_from_mgi $mgi_symbol\n";
+  #elsif ( $mgi_symbol =~ /^[A-Z]{1,1}\d+$/ || $mgi_symbol =~ /^[A-Z]{1,1}$/ ) {
+  elsif ( $mgi_symbol =~ /^[A-Z]{1,1}\d*$/ ){
+    print STDERR "cat-5: SYMBOL_BAD\n";
     return 0;
   }
 
   # want first letter is capital and do not have internal captial letter(s)
   elsif ( $mgi_symbol =~ /^[A-Z]{1,1}\w+/ and $mgi_symbol !~ /\w+([A-Z]+).*/ ) {
-    #warn "2: OK names: $mgi_symbol $1";
+    print STDERR "cat-6: SYMBOL_OK\n";
     return 1;
   }
 
   # ignore internal captital letter(s)
   elsif ( $mgi_symbol =~ /\w+([A-Z]+)/) {
-    #warn "3: $mgi_symbol $1";
+    print STDERR "cat-7: SYMBOL_BAD\n";
     return 0;
   }
 
   # ignore pure digits
   elsif ($mgi_symbol =~ /^\d+$/ ) {
-    #warn "4: $mgi_symbol";
+    print STDERR "cat-8: SYMBOL_BAD\n";
+    return 0;
+  }
+
+  # hand-check names with '-' or '_'
+  # they should all be fine, given the above patterns have all been checked
+  # but just leave these for now
+  elsif ( $mgi_symbol =~ /-|_/ ){
+    print STDERR "cat-4: SYMBOL_CHECK\n";
     return 0;
   }
 
   # the rest is also bad
   else {
-    print STDERR "BAD_NAME: $gsid_from_mgi $mgi_symbol\n";
+    print STDERR "cat-9: SYMBOL_BAD\n";
     return 0;
   }
 }
 
 sub update_loutre {
-  my ($loutre_dba, $mgi_data, $test, $problem_symbol, $last_update_date) = @_;
+  my ($loutre_dba, $mgi_data, $test, $mgiSymbol_2_vegaIDs, $has_duplicates) = @_;
+
+  print STDERR "\n---------------- BEGINNING NAME/DESC UPDATE-----------------\n\n";
 
   my $geneAd  = $loutre_dba->get_GeneAdaptor;
   my $sliceAd = $loutre_dba->get_SliceAdaptor;
 
+  my @ids_to_skip;
+  if ( $has_duplicates ){
+    my @vega_ids_to_skip = `$scriptdir/filter_vega_ids $duplicate_file`;
+    open(my $fh, "$duplicate_file") or die $!;
+    my $ids = <$fh>;
+    @ids_to_skip = split('\s', $ids);
+  }
+
   foreach my $mgi (@$mgi_data) {
 
+    my $mgi_symbol = $mgi->{'locus_symbol'};
     my $gene_SID   = $mgi->{'vega_id'};
 
-    if ( $mgi->{'locus_symbol'} eq 'Tcra-V8' ){ # temporarily
-      warn "SKIP Tcra-8 for now\n\n";
-      next;
-    }
+    print STDERR "UPDATING with MGI data: $gene_SID ($mgi_symbol) ...";
 
-    my $mgi_symbol = $mgi->{'locus_symbol'};
-    if ( grep(/$mgi_symbol/, @$problem_symbol) ){
+    if ( @ids_to_skip and grep(/$gene_SID/, @ids_to_skip) ) {
+      print STDERR "SKIP DUPLICATE $gene_SID - another gene is already linked to $mgi_symbol\n";
       next;
     }
 
@@ -271,10 +278,6 @@ sub update_loutre {
     my $curr_gene = $geneAd->fetch_by_stable_id($gene_SID);
 
     my $last_modified_date = unixtime2YYYYMMDD($curr_gene->modified_date);
-
-    # skip gene names newer than last update date
-    next if Date_to_Days(split(/-/, $last_modified_date)) > Date_to_Days(split(/-/, $last_update_date));
-
 
     # double check MGI VEGA chr
     $curr_gene->slice->seq_region_name =~ /^chr(\w+)-/;
@@ -287,8 +290,11 @@ sub update_loutre {
     my $curr_gene_name  = $curr_gene->get_all_Attributes('name')->[0]->value;
 
     if ( $curr_gene_name ne $mgi_symbol ){
-      print STDERR "CHECKING: $gene_SID $curr_gene_name (V) $mgi_symbol (M)\n";
+      print STDERR "\nCHECKING: $gene_SID $curr_gene_name (V) $mgi_symbol (M)\n";
       update_gene_name_and_description($chr, $loutre_dba, $geneAd, $curr_gene, $curr_gene_name, $mgi_id, $mgi_symbol, $mgi_desc, $test);
+    }
+    else {
+      print STDERR " already up-to-date\n";
     }
   }
 }
@@ -308,7 +314,7 @@ sub update_gene_name_and_description {
   my $gids = find_genes_with_gene_names_from_prefixed_names_and_haplotype($loutre_dba, $vega_name, $chr);
 
   if ( ! $gids ){
-    print STDERR "NO matching gene_name from prefixed_names or haplotypes for $vega_name\n";
+    print STDERR "NO matching gene_name found via prefixed_names and haplotypes by $vega_name\n";
     store_update($loutre_dba, $geneAd, $gene, $mgi_symbol, $mgi_desc, $mgi_id, $test);
     print STDERR "\n";
   }
@@ -319,7 +325,7 @@ sub update_gene_name_and_description {
     if ( $vega_name =~ /:(\w+)/ ){
       $search_name = $1;
     }
-    print STDERR "MULTIPLE OCCURRENCE for $search_name with prefix: $num [@$gids]\n" if $num > 1;
+    print STDERR "MULTIPLE OCCURRENCE for $search_name: $num [@$gids]\n" if $num > 1;
 
     foreach my $gene_id ( @$gids ){
 
@@ -328,7 +334,7 @@ sub update_gene_name_and_description {
 
       # reason see store_gene() below
       if ( $updated_gsid{$gsid} ){
-        print STDERR "SKIP $gsid ($gene_id)\n";
+        print STDERR "SKIP $gsid ($gene_id): already updated\n";
         next;
       }
       store_update($loutre_dba, $geneAd, $curr_gene, $mgi_symbol, $mgi_desc, $mgi_id, $test);
@@ -344,14 +350,15 @@ sub find_genes_with_gene_names_from_prefixed_names_and_haplotype {
   if ( $vega_name =~ /\w+:(\w+)/ ){
     $search_name = $1;
   }
-  warn "SEARCH for gene_names from prefixed_names and haplotype via $search_name\n";
+  warn "SEARCHING for gene_names via prefixed_names and haplotype by $search_name\n";
 
   my $mapping = get_expected_haplotype_from_chr($chr);
 
-  my $sql = qq{SELECT sr.name, g.gene_id
-               FROM gene_attrib ga, gene g, seq_region sr, attrib_type at
+  my $sql = qq{SELECT sr.name, g.gene_id, gsi.stable_id, g.source
+               FROM gene_attrib ga, gene_stable_id gsi, gene g, seq_region sr, attrib_type at
                WHERE sr.seq_region_id=g.seq_region_id
                AND g.gene_id=ga.gene_id
+               AND g.gene_id=gsi.gene_id
                AND ga.attrib_type_id=at.attrib_type_id
                AND at.code='name'
                AND g.is_current = 1
@@ -360,50 +367,87 @@ sub find_genes_with_gene_names_from_prefixed_names_and_haplotype {
   my $prefix_match = qq{ AND ga.value like "%:$search_name"}; # look for prefixed gene names
   my $name_match   = qq{ AND ga.value = "$search_name"};      # look for identical gene names
 
-  my $gids;
-
-  # do haplotype
   my $qryA = $loutre_dba->dbc->prepare($sql.$name_match);
-#warn $sql.$name_match;
-  $qryA->execute();
-  while ( my ( $seq_region_name, $gid ) = $qryA->fetchrow ){
-    #warn "A: $seq_region_name, $gid";
-    if ( $mapping->[0] and $seq_region_name !~ /^chr/i ){
-      push(@$gids, $gid) if find_from_expected_haplotype($chr, $seq_region_name, $vega_name, $mapping);
-    }
-  }
-
-  # do prefixed name match from main chr.
   my $qryB = $loutre_dba->dbc->prepare($sql.$prefix_match);
-#warn $sql.$prefix_match;
-  $qryB->execute();
-  while ( my ( $seq_region_name, $gid ) = $qryB->fetchrow ){
-    #warn "B: $seq_region_name, $gid";
-    if ( $seq_region_name =~ /^chr/i ){
-      print STDERR "FOUND ASSEMBLY TO UPDATE: $seq_region_name\n";
-      push(@$gids, $gid);
-    }
-  }
 
+  my $gids = get_gids($qryA, $qryB, $chr, $vega_name, $mapping);
   return $gids;
+
+#  my $qryA = $loutre_dba->dbc->prepare($sql.$name_match);
+#  #warn $sql.$name_match;
+#  $qryA->execute();
+#  get_gids($qryA, $
+
+#  while ( my ( $seq_region_name, $gid, $gsid ) = $qryA->fetchrow ){
+#    #warn "A: $seq_region_name, $gid";
+#    if ( $seq_region_name !~ /^chr/i ){
+#      push(@$gids, $gid) if find_from_expected_haplotype($chr, $seq_region_name, $vega_name, $mapping, $gsid, $gid);
+#    }
+#    else {
+#      print STDERR "FOUND $gsid (gene_id: $gid) in ASSEMBLY $seq_region_name\n";
+#      push(@$gids, $gid);
+#    }
+#  }
+
+#  my $qryB = $loutre_dba->dbc->prepare($sql.$prefix_match);
+#  #warn $sql.$prefix_match;
+#  $qryB->execute();
+#  while ( my ( $seq_region_name, $gid, $gsid ) = $qryB->fetchrow ){
+#    #warn "B: $seq_region_name, $gid";
+#    if ( $seq_region_name =~ /^chr/i ){
+#      print STDERR "FOUND $gsid (gene_id: $gid) in ASSEMBLY $seq_region_name\n";
+#      push(@$gids, $gid);
+#    }
+#    else {
+#      push(@$gids, $gid) if find_from_expected_haplotype($chr, $seq_region_name, $vega_name, $mapping, $gsid, $gid);
+#    }
+#  }
+
+#  return $gids;
 }
 
+sub get_gids {
+  my ($qryA, $qryB, $chr, $vega_name, $mapping) = @_;
+
+  my $gids = [];
+  foreach my $qry ($qryA, $qryB) {
+    $qry->execute;
+
+    while ( my ( $seq_region_name, $gid, $gsid, $source ) = $qry->fetchrow ){
+      # prefix can only be KO or WU for now
+      if ( $source !~ /KO|WU|havana/ ){
+        print STDERR "ERROR: FOUND unexpected $gsid in $seq_region_name, gid: $gid, source: $source\n";
+	next;
+      }
+      if ( $mapping->[0] and $seq_region_name !~ /^chr/i  ){
+        push(@$gids, $gid) if find_from_expected_haplotype($chr, $seq_region_name, $vega_name, $mapping, $gsid, $gid, $source);
+      }
+      else {
+        print STDERR "FOUND $gsid (gene_id: $gid, source: $source) in ASSEMBLY $seq_region_name\n";
+        push(@$gids, $gid);
+      }
+    }
+  }
+  return $gids;
+}
 sub find_from_expected_haplotype {
 
-  my ($chr, $seq_region, $vega_name, $mapping) = @_;
-
-  warn "SEARCHING FOR HAPLOTYPE(s): @$mapping\n";
+  my ($chr, $seq_region_name, $vega_name, $mapping, $gsid, $gid, $source) = @_;
+	
+  warn "SEARCHING for HAPLOTYPE(s) in ", join(', ', @$mapping), "\n";
   my $match;
   foreach ( @$mapping ) {
     #warn "$_ vs $seq_region --------\n";
-    if ( index($seq_region, $_) == 0 ){
+    if ( index($seq_region_name, $_) == 0 ){
       $match = 1;
-      print STDERR "FOUND HAPLOTYPE TO UPDATE: $seq_region\n";
-      return 1;
+      print STDERR "FOUND $gsid (gene_id: $gid, source: $source) in HAPLOTYPE $seq_region_name\n";
     }
   }
-  unless ( $match ){
-    print STDERR "ERROR: $seq_region as haplotype unexpected for VEGA symbol $vega_name\n";
+  if ( $match ){
+    return 1;
+  }
+  else {
+    print STDERR "ERROR: $seq_region_name as haplotype unexpected for VEGA symbol $vega_name, source: $source\n";
     return 0;
   }
 }
@@ -415,6 +459,7 @@ sub store_update {
   my $name_attr  = $gene->get_all_Attributes('name')->[0];
   my $curr_name  = $name_attr->value;
   my $curr_desc  = $gene->description || 'NA';
+  my $curr_stable_id = $gene->stable_id;
   my $source     = $gene->source;
   my $status     = $gene->status;
   my $biotype    = $gene->biotype;
@@ -426,22 +471,25 @@ sub store_update {
     if ( $curr_name ne $prefixed_mgi_symbol ){
       $need_update = 1;
       $name_attr->value($prefixed_mgi_symbol);  # also update WashU and KO genes
-      print STDERR "NAME CHANGE from $curr_name to $prefixed_mgi_symbol ($biotype : $status) (non-havana)\n";
+      print STDERR "NAME CHANGE from $curr_name ($curr_stable_id) to $prefixed_mgi_symbol ($biotype : $status) (non-havana)\n";
     }
     else {
-      print STDERR "UP-TO-DATE: $source gene: $curr_name\n";
+      print STDERR "NAME UP-TO-DATE: $source gene: $curr_name ($curr_stable_id)\n";
     }
   }
   else {
     $need_update = 1;
     $name_attr->value($mgi_symbol);
-    print STDERR "NAME CHANGE from $curr_name to $mgi_symbol => $assembly\n";
+    print STDERR "NAME CHANGE from $curr_name ($curr_stable_id) to $mgi_symbol => $assembly\n";
   }
 
   if ( $mgi_desc and $mgi_desc ne $curr_desc ){
     $need_update = 1;
     $gene->description($mgi_desc);
     print STDERR "DESC CHANGE from '$curr_desc' to '$mgi_desc' => $assembly\n";
+  }
+  else {
+    print STDERR "DESC UP-TO-DATE: $source gene: $curr_name ($curr_stable_id)\n";	
   }
 
   if ($need_update){
@@ -510,14 +558,13 @@ sub check_single_transcript_status {
     $t->status($status);
   }
   else {
-    print"TRAN STATUS: ", $curr_g->stable_id ,
-      " has ", scalar @trans, " variants - annotator to check\n";
+    print STDERR "TRAN STATUS: ", $curr_g->stable_id ,
+      " (becomes $status) has ", scalar @trans, " variants - annotator to check\n";
   }
   return $curr_g;
 }
 
 sub store_gene {
-  warn "@_";
 
   my ($loutre_dba, $geneAd, $gene, $mgi_id, $old_name) = @_;
 
@@ -554,6 +601,7 @@ sub store_gene {
     # Here, Hba-a1 is used to find all genes in haplotype and gene_names with
     #  "prefix:Hba-a1", which we also need to update.
     # So without excluding updated gsids, this will pick up Hba-a1 of OTTMUSG00000005377 and changes back to Hba-a2
+
     $updated_gsid{$gsid}++;
     #---------------------------------------------------------------------------------------------------------------
   }
@@ -563,12 +611,13 @@ sub get_expected_haplotype_from_chr {
 
   my $chr = shift;
 
-  my $map = {1  => [qw(NOD_IDD5.1 CHO_IDD5 CHORI29_IDD5.1_test NOD_IDD5.3 NOD_IDD5.4)],
+  my $map = {1  => [qw(NOD_IDD5.1 CHORI29_IDD5.1_test NOD_IDD5.3 NOD_IDD5.4)],
              3  => [qw(129_IDD3 NOD_IDD3 NOD_IDD10 NOD_IDD18)],
-             4  => [qw(129_MUP B6_MUP NOD_IDD9 mrc4)],
-             6  => [qw(chr6_steel deafness_1 CHO_IDD6)],
+             4  => [qw(129_MUP B6_MUP NOD_IDD9)],
+             5  => [qw(chr5_steel)],
+             6  => [qw(chr6_steel CHO_IDD6)],
              11 => [qw(CHO_IDD4 NOD_IDD4)],
-             17 => [qw(CHO_IDD16 mhc_4 CHO_IDD1 NOD_IDD1)]
+             17 => [qw(CHO_IDD16)]
             };
 
   return $map->{$chr};
@@ -651,37 +700,3 @@ Chao-Kung Chen B<email> ck1@sanger.ac.uk
 #    print STDERR "BAD_NAMEs: $gsid_from_mgi $mgi_symbol\n";
 #    return 0;
 #  }
-
-     # my $name_attr  = $curr_gene->get_all_Attributes('name')->[0];
-#      my $curr_name  = $name_attr->value;
-#      my $curr_desc  = $curr_gene->description || 'NA';
-#      my $seq_region = $curr_gene->slice->seq_region_name;
-#      my $source     = $curr_gene->source;
-#      my $status     = $curr_gene->status;
-#      my $biotype    = $curr_gene->biotype;
-#      my $assembly   = $curr_gene->slice->seq_region_name;
-
-#      #print STDERR "INFO: $seq_region SOURCE $source\n";
-
-#      if ( $source ne 'havana' ){
-#        my $prefixed_mgi_symbol = $source . ":" . $mgi_symbol;
-
-#        unless ( $curr_name eq $prefixed_mgi_symbol ){
-#          print STDERR "NAME CHANGE from $curr_name to $prefixed_mgi_symbol ($biotype : $status) (non-havana)\n";
-#          #$name_attr->value($prefixed_mgi_symbol);  # notice WashU, we don't do the update
-#        }
-#        else {
-#          print STDERR "SKIP WU update from $curr_name to $prefixed_mgi_symbol\n";
-#        }
-#      }
-
-#      if ( $mgi_desc and $mgi_desc ne $curr_desc ){
-#        $curr_gene->description($mgi_desc);
-#        print STDERR "DESC CHANGE from '$curr_desc' to '$mgi_desc' => $assembly\n";
-#      }
-
-#      # see subroutine for rules applied to status change
-#      $curr_gene = change_gene_trans_status($loutre_dba, $geneAd, $curr_gene);
-
-#      # store gene if not already locked on contig
-#      store_gene($loutre_dba, $geneAd, $curr_gene, $mgi_id) unless $test;
