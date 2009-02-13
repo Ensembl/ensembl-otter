@@ -1,8 +1,9 @@
-#!/usr/bin/env perl -w
+#!/usr/bin/env perl
 
 ### patch_nmd_genes
 
 use strict;
+use warnings;
 use Net::Domain qw{ hostname };
 
 use Bio::Otter::Lace::Defaults;
@@ -25,6 +26,10 @@ my $time_now = time();
     }
 
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
+
+    # For testing, so that we see restricted datasets
+    $0 = 'otterlace';
+
     my $ds = $cl->get_DataSet_by_name($dsname);
     my $dba = $ds->get_cached_DBAdaptor;
     
@@ -83,6 +88,8 @@ sub recover_coding_region {
     my $tsct_aptr = $dba->get_TranscriptAdaptor;
 
     my $gene = $gene_aptr->fetch_by_dbID($g_dbID);
+
+    ### Make XML gene here
 
     # Need to make a fresh transcript array because the old one
     # is cached inside the TranscriptAdaptor.
@@ -151,13 +158,15 @@ sub recover_coding_region {
     if ($found_tsl) {
         $dba->begin_work;
         eval {
-            my $gene_xml = Bio::Vega::Transform::XML->new->get_geneXML($gene);
+            my $gene_xml = Bio::Vega::Transform::XML->new->generate_OtterXML([$gene->slice], $gene->adaptor->db, 1, [$gene], []);
+            print STDERR $gene_xml;
             my $parser = Bio::Vega::Transform::Otter->new;
             $parser->parse($gene_xml);
             my $xml_gene;
             if (my $g_list = $parser->get_Genes) {
                 die sprintf "Weird - put 1 gene into XML but got %d out", scalar @$g_list;
                 $xml_gene = $g_list->[0];
+                use Data::Dumper; print Dumper($xml_gene);
             } else {
                 die "Did not get any gene out from XML";
             }
