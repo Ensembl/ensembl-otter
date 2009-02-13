@@ -123,6 +123,7 @@ my $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
 # parse options
 $support->parse_common_options(@_);
 $support->parse_extra_options(
+  $support->get_loutre_params(1),
   'vega_release=s',
   'release_type=s',
   'chr=s',
@@ -133,7 +134,6 @@ $support->parse_extra_options(
   'dump_assembly_tags=s',
   'ignore_authors=s',
   'add_genes=s',
-  $support->get_loutre_params,
 );
 $support->allowed_params(
   'vega_release',
