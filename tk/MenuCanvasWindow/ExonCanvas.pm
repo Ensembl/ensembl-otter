@@ -2624,8 +2624,8 @@ sub new_SubSeq_from_tk {
         $new->start_not_found($snf);
     }
 
-    warn "Start not found ", $self->start_not_found_from_tk, "\n",
-         "  End not found ", $self->end_not_found_from_tk,   "\n";
+    # warn "Start not found ", $self->start_not_found_from_tk, "\n",
+    #      "  End not found ", $self->end_not_found_from_tk,   "\n";
     return $new;
 }
 
