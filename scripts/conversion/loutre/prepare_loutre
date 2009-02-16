@@ -32,17 +32,12 @@ Options:
 
 Using definition_file, this script defines the loutre seq_regions that are to
 be exported to Vega, and adds/updates relevant seq_region attributes for these
-to the loutre database. In addition it adds toplevel and vega_release
-attributes to each loutre region that is going to be exported. The latter are
-defined in the script parameters and acts as a log of which regions were
-dumped for which website release.
+to the loutre database. In addition it adds toplevel attributes to each loutre
+region that is going to be exported.
 
 Since API support for B::E::Attributes is very rudimentary, modification of
 attributes is done using MySQL. Consequently the attribute table in the
 loutre database must be upto date before running this script.
-
-Support for setting attrib_type export_mode to a value of 'Internal' has not been
-tested and is not guaranteed.
 
 =head1 LICENCE
 
