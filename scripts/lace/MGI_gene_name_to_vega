@@ -11,6 +11,15 @@ my %updated_gsid;
 my $scriptdir = "/nfs/team71/analysis/ck1/SCRIPT_CVS/ensembl-otter/scripts/lace";
 my $duplicate_file = "/var/tmp/ids_to_skip.".$$;
 my @GENE_NAMEs;
+
+
+#----------------- IMPORTANT ------------------------------------------------------------------------------------------
+# run this script in test mode which is default
+# (1) grep "also used for" in the output file -> send those to annotator to fix problem in db first before live update
+# (2) check the output file "MGI_2_multiple_vega_ids.ori" -> annotator to check, remove the bad id in list
+#      and rename that file as "MGI_2_multiple_vega_ids.rev"
+#-----------------------------------------------------------------------------------------------------------------------
+
 {
   my $dataset_name = 'mouse'; # this script is tailored to mouse anyway
   my $test = 1; # default is doing test
@@ -20,6 +29,7 @@ my @GENE_NAMEs;
                                         'test!'        => \$test,
                                         'name=s@'      => \@GENE_NAMEs,    # useful to update only certain names
                                         'duplicates'   => \$has_duplicates # need to have 2 files prepared before hand
+                                                                           # as in (2) above
                                                                            # see script filter_vega_ids
                                        );
   Bio::Otter::Lace::Defaults::show_help() unless $dataset_name;
@@ -31,7 +41,7 @@ my @GENE_NAMEs;
 
   print STDERR my $msg = $test ? "\nTEST mode update...\n\n" : "\nLIVE mode update....\n\n";
 
-  my ($mgi_data, $mgiSymbol_2_vegaIDs) = parse_mgi_input($loutre_dba, $geneAd);
+  my ($mgi_data, $mgiSymbol_2_vegaIDs) = parse_mgi_input($loutre_dba, $geneAd, $test);
 
   $loutre_dba->begin_work;
   eval{
@@ -54,10 +64,15 @@ my @GENE_NAMEs;
 
 sub parse_mgi_input {
 
-  my ($loutre_dba, $geneAd) = @_;
+  my ($loutre_dba, $geneAd, $test) = @_;
   my @field_names = qw{
                        mgi_id locus_symbol locus_description score chromosome vega_id
                      };
+
+  my %nameSet;
+  if ( @GENE_NAMEs ){
+    %nameSet = map {($_,1)} @GENE_NAMEs;
+  }
 
   my $mgi_data = [];
   my $mgiSymbol_2_vegaIDs = {}; # for checking symbols linked to multiple VEGA ids
@@ -80,8 +95,9 @@ sub parse_mgi_input {
     my $mgi_symbol = $fields[1];
 
     # does only gene_names specifed
-    my %nameSet = map {($_,1)} @GENE_NAMEs;
-    next unless $nameSet{$mgi_symbol};
+    if ( keys %nameSet > 0 ){
+      next unless $nameSet{$mgi_symbol};
+    }
 
     print STDERR "Parsing MGI: $vega_id_from_mgi ( $mgi_symbol ) ----- ";
 
@@ -139,6 +155,10 @@ sub parse_mgi_input {
         $parsed_line->{$field_name} = $data;
       }
 
+      # check this in the test mode and send it to annotator
+      # before doing Live update
+      check_MGI_symbol_is_unique_in_loutre($loutre_dba, $mgi_symbol, $curr_gene) if $test;
+
       push(@{$mgiSymbol_2_vegaIDs->{$mgi_symbol}}, $vega_id_from_mgi);
 
       $parsed_line->{'original_line'} = $original_line;
@@ -154,7 +174,7 @@ sub parse_mgi_input {
   my $fh;
 
   if ( keys %$mgiSymbol_2_vegaIDs > 0 ){
-    $duplcate_list = "MGI_2_multiple_vega_ids";
+    $duplcate_list = "MGI_2_multiple_vega_ids.ori";
     open($fh, ">$duplcate_list") or die $!;
   }
   foreach my $symbol ( keys %$mgiSymbol_2_vegaIDs ){
@@ -170,6 +190,42 @@ sub parse_mgi_input {
   }
 
   return ($mgi_data, $mgiSymbol_2_vegaIDs);
+}
+
+sub check_MGI_symbol_is_unique_in_loutre {
+  my ($loutre_dba, $mgi_symbol, $curr_gene) = @_;
+
+  my $seq_region_name = $curr_gene->slice->seq_region_name;
+  my $curr_gsid = $curr_gene->stable_id;
+
+  print STDERR "DUP_SYMBOL_CHK for MGI $mgi_symbol ($curr_gsid) --- ";
+
+  my $dup = $loutre_dba->dbc->prepare(qq{
+                                         SELECT gsi.stable_id, sr.name
+                                         FROM gene_stable_id gsi, gene g, gene_attrib ga, attrib_type at, seq_region sr
+                                         WHERE g.is_current = 1
+                                         AND sr.seq_region_id=g.seq_region_id
+                                         AND gsi.gene_id=g.gene_id
+                                         AND g.gene_id=ga.gene_id
+                                         AND ga.attrib_type_id=at.attrib_type_id
+                                         AND at.code='name'
+                                         AND ga.value=?
+                                       });
+  $dup->execute($mgi_symbol);
+
+  if ( $dup->rows != 0 ){
+    my $failed = 0;
+    while(my ($gsid, $seqRname)= $dup->fetchrow){
+      if ( $gsid ne $curr_gsid and $seqRname eq $seq_region_name ){
+        $failed = 1;
+        print STDERR "also used for $gsid in loutre db\n";
+      }
+    }
+    print STDERR "PASSED\n" unless $failed;
+  }
+  else {
+    print STDERR "PASSED\n";
+  }
 }
 
 sub check_for_good_symbols {
@@ -206,39 +262,31 @@ sub check_for_good_symbols {
   # or single capital letter only
   #elsif ( $mgi_symbol =~ /^[A-Z]{1,1}\d+$/ || $mgi_symbol =~ /^[A-Z]{1,1}$/ ) {
   elsif ( $mgi_symbol =~ /^[A-Z]{1,1}\d*$/ ){
-    print STDERR "cat-5: SYMBOL_BAD\n";
+    print STDERR "cat-4: SYMBOL_BAD\n";
     return 0;
   }
 
   # want first letter is capital and do not have internal captial letter(s)
   elsif ( $mgi_symbol =~ /^[A-Z]{1,1}\w+/ and $mgi_symbol !~ /\w+([A-Z]+).*/ ) {
-    print STDERR "cat-6: SYMBOL_OK\n";
+    print STDERR "cat-5: SYMBOL_OK\n";
     return 1;
   }
 
   # ignore internal captital letter(s)
   elsif ( $mgi_symbol =~ /\w+([A-Z]+)/) {
-    print STDERR "cat-7: SYMBOL_BAD\n";
+    print STDERR "cat-6: SYMBOL_BAD\n";
     return 0;
   }
 
   # ignore pure digits
   elsif ($mgi_symbol =~ /^\d+$/ ) {
-    print STDERR "cat-8: SYMBOL_BAD\n";
-    return 0;
-  }
-
-  # hand-check names with '-' or '_'
-  # they should all be fine, given the above patterns have all been checked
-  # but just leave these for now
-  elsif ( $mgi_symbol =~ /-|_/ ){
-    print STDERR "cat-4: SYMBOL_CHECK\n";
+    print STDERR "cat-7: SYMBOL_BAD\n";
     return 0;
   }
 
   # the rest is also bad
   else {
-    print STDERR "cat-9: SYMBOL_BAD\n";
+    print STDERR "cat-8: SYMBOL_BAD\n";
     return 0;
   }
 }
