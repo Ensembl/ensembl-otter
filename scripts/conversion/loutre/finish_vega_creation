@@ -586,7 +586,7 @@ push @sql_fixes, "UPDATE transcript SET biotype = 'IG_pseudogene' WHERE biotype 
 push @sql_fixes, "UPDATE transcript SET biotype = 'TEC' WHERE biotype = 'tec';\n";
 push @sql_fixes, "UPDATE gene SET biotype = 'processed_transcript' WHERE biotype = 'novel_transcript';\n";
 push @sql_fixes, "UPDATE gene SET biotype = 'transcribed_pseudogene' WHERE biotype = 'expressed_pseudogene';\n";
-push @sql_fixes, "UPDATE gene SET biotype = 'polymorphic_pseudogene' WHERE biotype = 'polymorphic';\n";
+#push @sql_fixes, "UPDATE gene SET biotype = 'polymorphic_pseudogene' WHERE biotype = 'polymorphic';\n";
 push @sql_fixes, "UPDATE transcript SET biotype = 'transcribed_pseudogene' WHERE biotype = 'expressed_pseudogene';\n";
 push @sql_fixes, "UPDATE transcript SET biotype = 'IG_gene' WHERE biotype = 'ig_gene';\n";
 push @sql_fixes, "UPDATE transcript SET biotype = 'processed_transcript', status  = 'PUTATIVE' WHERE biotype = 'putative' AND status  = 'UNKNOWN';\n";
