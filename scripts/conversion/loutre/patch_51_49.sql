@@ -1,5 +1,8 @@
 #patch_51_50i.sql
+
+#first patch was needed for gorilla but not mouse... pipeline db difference? Just comment out if it fails
 ALTER TABLE meta DROP INDEX species_key_value_idx;
+
 ALTER TABLE meta CHANGE COLUMN meta_value meta_value VARCHAR(255) NOT NULL;
 
 #patch_51_50h.sql
