@@ -191,6 +191,15 @@ my $pddbh = $pddba->dbc->db_handle;
 my $ldba = $support->get_database('loutre','loutre');
 my $lsa  = $ldba->get_SliceAdaptor();
 my $laa  = $ldba->get_AttributeAdaptor();
+my $ldbh = $ldba->dbc->db_handle;
+
+#sanity check to ensure the correct configuration file is being read
+(my $pipe_sp) = $pddbh->selectrow_array(qq(select meta_value from meta where meta_key = 'species.ensembl_alias_name'));
+(my $loutre_sp) = $ldbh->selectrow_array(qq(select meta_value from meta where meta_key = 'species.ensembl_alias_name'));
+if ($pipe_sp ne $loutre_sp) {
+  $support->log_warning("You're reading different species for the loutre ($loutre_sp) and the pipeline dump ($pipe_sp) databases. Please check your configuration file\n");
+  exit;
+}
 
 #these are tables that will be cleaned up (defined here just for logging, nothng else)
 my @target_tables = qw(analysis
