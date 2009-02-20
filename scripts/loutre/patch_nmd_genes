@@ -15,7 +15,7 @@ use Bio::SeqIO;
 
 my $pep_out = Bio::SeqIO->new(
     -FORMAT => 'fasta',
-    -FH     => \*STDERR,
+    -FH     => \*STDOUT,
     );
 
 my $time_now = time();
@@ -109,7 +109,7 @@ sub recover_coding_region {
         next unless $tsct->biotype eq 'nonsense_mediated_decay';
         if ($tsct->translation) {
             printf STDERR "Transcript %s already has translation\n", $tsct->stable_id;
-            # print_translation($tsct);
+            print_translation($tsct, $gene->stable_id . "." . $gene->version);
             $already_tsl++;
             next;
         }
@@ -121,7 +121,7 @@ sub recover_coding_region {
             next;
         }
         my $tsct_tsl = $tsct_aptr->fetch_by_dbID($tsct_dbID);
-        print_translation($tsct_tsl);
+        # print_translation($tsct_tsl);
         my $tsl = $tsct_tsl->translation;
         
         # Check exon coords are the same
@@ -162,7 +162,7 @@ sub recover_coding_region {
                 $tsl->adaptor(undef);
                 
                 $tsct->translation($tsl);
-                print_translation($tsct);
+                print_translation($tsct, $gene->stable_id);
             } else {
                 print STDERR " ... but failed to find start and end exons\n";
             }
@@ -193,7 +193,7 @@ sub recover_coding_region {
 }
 
 sub print_translation {
-    my ($tsct) = @_;
+    my ($tsct, $desc) = @_;
 
     # my $desc = join(' | ', @ele);
     # $pep->id($t_name);
@@ -206,7 +206,8 @@ sub print_translation {
         $tsl->end_Exon->stable_id, $tsl->end;
     
     my $pep = $tsct->translate;
-    $pep->desc($tsl_pat);
+    $pep->id($tsct->stable_id);
+    $pep->desc($desc);
     $pep_out->write_seq($pep);
 }
 

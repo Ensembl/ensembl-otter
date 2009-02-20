@@ -40,7 +40,6 @@ my (
 	%chrslice,
 	%seen_transcript_name,
 	%seen_gene_name,
-	%assembly_type,
     %chromosome_name,
 	%dna,
     %author_cache,
@@ -62,12 +61,11 @@ sub DESTROY {
     delete $chrslice{$self};
     delete $seen_gene_name{$self};
     delete $seen_transcript_name{$self};
-    delete $assembly_type{$self};
     delete $chromosome_name{$self};
     delete $dna{$self};
     delete $author_cache{$self};
 
-        # So that DESTROY gets called in baseclass:
+    # So that DESTROY gets called in baseclass:
     bless $self, 'Bio::Vega::Transform';
 }
 
@@ -85,7 +83,6 @@ sub initialize {
 								  feature             => 'build_Feature',
 								  assembly_tag        => 'build_AssemblyTag',
 								  sequence_fragment   => 'build_SequenceFragment',
-								  assembly_type       => 'build_AssemblyType',
 								  dna                 => 'build_DNA',
 								  # We don't currently do anything on encountering
 								  # these end tags:
@@ -121,12 +118,12 @@ sub init_CoordSystem_Version {
 sub build_SequenceFragment {
     my ($self, $data) = @_;
 
-    my $assembly_type = $assembly_type{$self};
-    unless($assembly_type) {
+    my $assembly_type = $self->parent_data->{'assembly_type'};
+    unless ($assembly_type) {
         die "cannot make chromosome slice without assembly type name\n";
     }
 
-    if(my $chrname = $self->get_ChromosomeName()) { # cached from the previous SequenceFragments
+    if (my $chrname = $chromosome_name{$self}) { # cached from the previous SequenceFragments
         if($chrname ne $data->{'chromosome'}) {
             die "Chromosome names '$chrname' and '".$data->{'chromosome'}."' are different - can't join in 1 slice";
         }
@@ -134,12 +131,12 @@ sub build_SequenceFragment {
         $chromosome_name{$self} = $data->{'chromosome'};
     }
 
-    my $frag_offset= $data->{'fragment_offset'};
-    my $start      = $data->{'assembly_start'};
-    my $end        = $data->{'assembly_end'};
-    my $strand     = $data->{'fragment_ori'};
-    my $ctg_name   = $data->{'id'};
-    my $cln_length = $data->{'clone_length'};
+    my $frag_offset    = $data->{'fragment_offset'};
+    my $start          = $data->{'assembly_start'};
+    my $end            = $data->{'assembly_end'};
+    my $strand         = $data->{'fragment_ori'};
+    my $ctg_name       = $data->{'id'};
+    my $cln_length     = $data->{'clone_length'};
 
     unless ($assembly_type && $start && $end && $frag_offset && $strand && $ctg_name && $cln_length) {
         die "XML does not contain information needed to create slice:\n"
@@ -275,11 +272,6 @@ sub build_AssemblyTag {
 
     my $list = $assembly_tag_list{$self} ||= [];
     push @$list, $at;
-}
-
-sub build_AssemblyType {
-    my($self, $data) = @_;
-    $assembly_type{$self} = $data;
 }
 
 sub build_Exon {
@@ -558,12 +550,6 @@ sub build_Locus {
 
 sub do_nothing {
     return;
-}
-
-sub get_ChromosomeName {
-    my $self = shift;
-
-    return $chromosome_name{$self};
 }
 
 sub set_ChromosomeSlice {

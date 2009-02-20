@@ -126,6 +126,18 @@ sub dissociate {
     }
 }
 
+sub attach_slice {
+    my ($self, $slice) = @_;
+    
+    $self->slice($slice);
+    foreach my $tsct (@{$self->get_all_Transcripts}) {
+        $tsct->slice($slice);
+    }
+    foreach my $exon (@{$self->get_all_Exons}) {
+        $exon->slice($slice);
+    }
+}
+
 # keep track of all unique exons found so far to avoid making duplicates
 # share exons of a gene among all transcripts
 # need to be very careful about translation->start_exon and translation->end_Exon

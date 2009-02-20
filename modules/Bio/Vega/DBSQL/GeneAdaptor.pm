@@ -221,7 +221,7 @@ sub reincarnate_gene {
 
     my $this_class = 'Bio::Vega::Gene';
 
-    if($gene->isa($this_class)) {
+    if ($gene->isa($this_class)) {
         # warn "Gene is already a $this_class, possibly due to caching";
     } else {
         bless $gene, $this_class;
@@ -512,13 +512,7 @@ sub fetch_latest_by_stable_id {
  Args    :
          : $gene to be stored (mandatory)
          :
-         : $on_whole_chromosome (optional, default==false)
-         : is a binary flag that controls whether the object to be stored is attached to slice
-         : (and in this case all the fetching of components for comparison also happens from that slice)
-         : or, if the slice is not known, everything is stored on whole chromosomes (as when we convert old otter
-         : databases into new lutra ones).
-         :
-         : $time_now is the time to be considered the current time. Also useful when converting otter->lutra.
+         : $time_now is the time to be considered the current time.
 
 =cut
 
