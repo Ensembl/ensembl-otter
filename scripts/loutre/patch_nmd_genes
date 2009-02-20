@@ -9,8 +9,14 @@ use Net::Domain qw{ hostname };
 use Bio::Otter::Lace::Defaults;
 use Bio::Vega::DBSQL::DBAdaptor;
 use Bio::Vega::ContigLockBroker;
-use Bio::Vega::Transform::Otter;
-use Bio::Vega::Transform::XML;
+use Bio::Vega::Utils::XML qw{ freeze_thaw_gene };
+
+use Bio::SeqIO;
+
+my $pep_out = Bio::SeqIO->new(
+    -FORMAT => 'fasta',
+    -FH     => \*STDERR,
+    );
 
 my $time_now = time();
 
@@ -67,15 +73,13 @@ my $time_now = time();
 
     my $recovered = 0;
     my $not_recov = 0;
-    eval {
-        while (my ($g_dbID) = $list_nmd->fetchrow) {
-            if (my $count = recover_coding_region($g_dbID, $dba, $latest_with_translation, $locker, $author)) {
-                $recovered += $count;
-            } else {
-                $not_recov++;
-            }
+    while (my ($g_dbID) = $list_nmd->fetchrow) {
+        if (my $count = recover_coding_region($g_dbID, $dba, $latest_with_translation, $locker, $author)) {
+            $recovered += $count;
+        } else {
+            $not_recov++;
         }
-    };
+    }
     print STDERR "Found $gene_count Genes with nonsense_mediated_decay Transcripts\n",
       "Found or recovered Translation for $recovered nonsense_mediated_decay Transcripts\n",
       "Leaves $not_recov Genes with 1 or more nonsense_mediated_decay Transcripts missing Translation\n";
@@ -84,17 +88,19 @@ my $time_now = time();
 sub recover_coding_region {
     my ($g_dbID, $dba, $latest_with_translation, $locker, $author) = @_;
     
-    my $gene_aptr = $dba->get_GeneAdaptor;
-    my $tsct_aptr = $dba->get_TranscriptAdaptor;
+    my $gene_aptr  = $dba->get_GeneAdaptor;
+    my $tsct_aptr  = $dba->get_TranscriptAdaptor;
 
-    my $gene = $gene_aptr->fetch_by_dbID($g_dbID);
+    # my $gene = $gene_aptr->fetch_by_dbID($g_dbID);
+    my $gene = freeze_thaw_gene($gene_aptr->fetch_by_dbID($g_dbID));
 
     ### Make XML gene here
-
-    # Need to make a fresh transcript array because the old one
-    # is cached inside the TranscriptAdaptor.
-    my $tsct_list = [ @{$gene->get_all_Transcripts} ];
-    $gene->{'_transcript_array'} = $tsct_list;
+    # 
+    # # Need to make a fresh transcript array because the old one
+    # # is cached inside the TranscriptAdaptor.
+    # my $tsct_list = [ @{$gene->get_all_Transcripts} ];
+    # $gene->{'_transcript_array'} = $tsct_list;
+    my $tsct_list = $gene->get_all_Transcripts;
     
     my $found_tsl = 0;
     my $already_tsl = 0;
@@ -103,6 +109,7 @@ sub recover_coding_region {
         next unless $tsct->biotype eq 'nonsense_mediated_decay';
         if ($tsct->translation) {
             printf STDERR "Transcript %s already has translation\n", $tsct->stable_id;
+            # print_translation($tsct);
             $already_tsl++;
             next;
         }
@@ -114,6 +121,7 @@ sub recover_coding_region {
             next;
         }
         my $tsct_tsl = $tsct_aptr->fetch_by_dbID($tsct_dbID);
+        print_translation($tsct_tsl);
         my $tsl = $tsct_tsl->translation;
         
         # Check exon coords are the same
@@ -135,10 +143,11 @@ sub recover_coding_region {
                 last;
             }
             if ($ex2 == $tsl->start_Exon) {
+                $ex1->phase($ex2->phase);
                 $tsl->start_Exon($ex1);
                 $found_start_exon = 1;
             }
-            if ($ex2 = $tsl->end_Exon) {
+            if ($ex2 == $tsl->end_Exon) {
                 $tsl->end_Exon($ex1);
                 $found_end_exon = 1;
             }
@@ -147,7 +156,13 @@ sub recover_coding_region {
             printf STDERR "Found matching translation for Transcript %s\n", $tsct->stable_id;
             if ($found_start_exon and $found_end_exon) {
                 $found_tsl++;
-                $tsct->translation($tsct_tsl->translation);
+                
+                # Dissociate translation from database
+                $tsl->dbID(undef);
+                $tsl->adaptor(undef);
+                
+                $tsct->translation($tsl);
+                print_translation($tsct);
             } else {
                 print STDERR " ... but failed to find start and end exons\n";
             }
@@ -155,39 +170,45 @@ sub recover_coding_region {
             printf STDERR "No matching translation for Transcript %s\n", $tsct->stable_id;
         }
     }
+
+    return $found_tsl + $already_tsl;
+
     if ($found_tsl) {
         $dba->begin_work;
         eval {
-            my $gene_xml = Bio::Vega::Transform::XML->new->generate_OtterXML([$gene->slice], $gene->adaptor->db, 1, [$gene], []);
-            print STDERR $gene_xml;
-            my $parser = Bio::Vega::Transform::Otter->new;
-            $parser->parse($gene_xml);
-            my $xml_gene;
-            if (my $g_list = $parser->get_Genes) {
-                die sprintf "Weird - put 1 gene into XML but got %d out", scalar @$g_list;
-                $xml_gene = $g_list->[0];
-                use Data::Dumper; print Dumper($xml_gene);
-            } else {
-                die "Did not get any gene out from XML";
-            }
-            $xml_gene->slice($gene->slice);
-
-            $locker->lock_by_object($xml_gene, $author);
-            $gene_aptr->store($xml_gene, $time_now);
-            $locker->remove_by_object($xml_gene, $author);
+            $locker->lock_by_object($gene, $author);
+            ### Test translation for stops
+            $gene_aptr->store($gene, $time_now);
+            $locker->remove_by_object($gene, $author);
         };
         if ($@) {
+            my $err = $@;
             $dba->rollback;
-            warn $@;
+            die $err;
         } else {
             $dba->rollback;
-            return $found_tsl + $already_tsl;
         }    
-    } else {
-        return $already_tsl;
     }
+    return $found_tsl + $already_tsl;
 }
 
+sub print_translation {
+    my ($tsct) = @_;
+
+    # my $desc = join(' | ', @ele);
+    # $pep->id($t_name);
+    # $pep->desc($desc);
+    # $pep_out->write_seq($pep);
+
+    my $tsl = $tsct->translation;
+    my $tsl_pat = sprintf "%s(%d)  %s(%d)",
+        $tsl->start_Exon->stable_id, $tsl->start,
+        $tsl->end_Exon->stable_id, $tsl->end;
+    
+    my $pep = $tsct->translate;
+    $pep->desc($tsl_pat);
+    $pep_out->write_seq($pep);
+}
 
 
 
