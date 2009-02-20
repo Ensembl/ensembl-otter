@@ -1,3 +1,7 @@
+
+# This module is badly named.  It is nothing to do with Bio::Vega::Transform
+# It does not parse XML, it creates XML.
+
 package Bio::Vega::Transform::XML;
 
 use strict;
@@ -18,12 +22,12 @@ sub get_geneXML {
 }
 
 sub generate_OtterXML {
-  my ($self, $slices, $odb, $indent, $genes, $sf)=@_;
+  my ($self, $slices, $odba, $indent, $genes, $sf)=@_;
 
   my $ot=$self->prettyprint('otter');
   $ot->indent($indent);
   foreach my $slice (@$slices){
-	 $ot->attribobjs($self->generate_SequenceSet($slice, $odb, $genes,$sf));
+	 $ot->attribobjs($self->generate_SequenceSet($slice, $odba, $genes,$sf));
   }
   return $self->formatxml($ot);
 }
@@ -125,19 +129,15 @@ sub generate_SequenceFragment {
     }
     $sf->attribvals($self->prettyprint('clone_name',$clone_name));
 
-    my $ci = $odb->get_ContigInfoAdaptor->fetch_by_contigSlice($contig_slice);
+    if (my $ci = $odb->get_ContigInfoAdaptor->fetch_by_contigSlice($contig_slice)) {
+        my $author_name;
+        my $author_email;
+        if (my $contig_author = $ci->author) {
+            $sf->attribvals($self->prettyprint('author', $contig_author->name));
+            $sf->attribvals($self->prettyprint('author_email', $contig_author->email));
+        }
 
-    my $author_name;
-    my $author_email;
-    if(my $contig_author = $ci && $ci->author) {
-        $author_name  = $contig_author->name;
-        $author_email = $contig_author->email;
-    }
-    $sf->attribvals($self->prettyprint('author', $author_name));
-    $sf->attribvals($self->prettyprint('author_email', $author_email));
-
-    if($ci) {
-	    my $ci_attribs = $ci->get_all_Attributes;
+ 	    my $ci_attribs = $ci->get_all_Attributes;
 
         foreach my $cia (@$ci_attribs) {
             if ($cia->code eq 'remark'
