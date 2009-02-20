@@ -28,7 +28,7 @@ sub new { # just to make it possible to instantiate an object
     # to be overloaded by ServerScriptSupport
 sub dataset_name {
     my( $self, $dataset_name ) = @_;
-    
+
     if($dataset_name) {
         $self->{'_dataset_name'} = $dataset_name;
     }
@@ -93,7 +93,7 @@ sub otter_dba {
         };
         $self->error_exit("Failed opening dna database [$@]") if $@;
         $odba->dnadb($dnadb);
-        
+
         $self->log("Connected to dna database");
     }
 
@@ -173,7 +173,7 @@ sub satellite_dba {
     while( my ($k,$v) = each %anycase_options) {
         $uppercased_options{uc($k)} = $v;
     }
-    
+
     $self->error_exit("No connection parameters for '$metakey' in otter database")
         unless (keys %uppercased_options);
 
@@ -400,7 +400,7 @@ sub map_remote_slice_back {
         );
 
         return [ $local_slice ];
-        
+
     } else {
         # otherwise perform the mapping back:
 
@@ -492,6 +492,7 @@ sub fetch_mapped_features {
             my $proj_segments_on_mapper;
             eval {
                 $proj_segments_on_mapper = $original_slice_on_mapper->project( $cs, $csver_remote );
+                $proj_segments_on_mapper = $original_slice_on_mapper->project( 'scaffold', $csver_remote ) unless @$proj_segments_on_mapper;
             };
             if($@
                || (!scalar(@$proj_segments_on_mapper))
@@ -511,7 +512,7 @@ sub fetch_mapped_features {
                     $self->log('***** : '.scalar(@$target_fs_on_mapper_segment)." ${feature_name}s created on the slice");
 
                     while (my $target_feature = shift @$target_fs_on_mapper_segment) {
-                        my $fname = sprintf( "%s [%d..%d]", 
+                        my $fname = sprintf( "%s [%d..%d]",
                                             $target_feature->display_id(),
                                             $target_feature->start(),
                                             $target_feature->end() );
@@ -577,7 +578,7 @@ sub fetch_mapped_features {
                             $target_feature->slice($projected_slice_on_mapper);
                         }
 
-                        my $fname = sprintf( "%s [%d..%d]", 
+                        my $fname = sprintf( "%s [%d..%d]",
                                             $target_feature->display_id(),
                                             $target_feature->start(),
                                             $target_feature->end() );
