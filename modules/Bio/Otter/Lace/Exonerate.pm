@@ -154,7 +154,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.14 $ ';
+$revision='$Revision: 1.15 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -664,6 +664,7 @@ sub get_masked_unmasked_seq {
 	my $ace = $self->AceDatabase->aceperl_db_handle;
     my $name = $self->genomic_seq->name;
     my $dna_str = $self->genomic_seq->sequence_string;
+    $dna_str =~ s/-/N/g;
     my $sm_dna_str = uc $dna_str;
 
     warn "Got DNA string ", length($dna_str), " long";
