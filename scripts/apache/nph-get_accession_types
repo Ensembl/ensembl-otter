@@ -1,0 +1,31 @@
+#!/usr/local/bin/perl -Tw
+
+use strict;
+use SangerPaths qw{ core bioperl123 ensembl51 otter51 };
+
+use Bio::Otter::ServerScriptSupport;
+use Bio::Otter::Utils::MM;
+
+my $server = Bio::Otter::ServerScriptSupport->new;
+
+my $accs = $server->param('accessions');
+
+my @acc_list = split /,/, $accs;
+
+my $mm = Bio::Otter::Utils::MM->new;
+
+my $types;
+
+eval ($types = $mm->get_accession_type(\@acc_list););
+
+$types = {} if $@;
+
+my $response = '';
+
+for my $key (%$types) {
+	$response .= $key."\t".$types{$key}."\n";
+}
+
+$server->send_response($response);
+
+1;

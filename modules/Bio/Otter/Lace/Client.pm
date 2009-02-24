@@ -897,6 +897,40 @@ sub get_methods_ace {
     return $self->{'_methods_ace'};
 }
 
+sub get_accession_types {
+	
+	my ( $self, $accessions ) = @_;
+	
+	my @uncached = ();
+	my %res = ();
+	
+	for my $acc (@$accessions) {
+		if (defined $self->{_accession_types}->{$acc}) {
+			$res{$acc} = $self->{_accession_types}->{$acc};
+		}
+		else {
+			push @uncached, $acc;
+		}	
+	}
+	
+	if (@uncached) {
+		
+		my $response = $self->http_response_content(
+							'GET', 
+							'get_accession_types', 
+							{accessions => join ',', @uncached}
+						);
+	
+		map { my ($k, $v) = split /\t/; $res{$k} = $v } split /\n/, $response;
+	
+		for my $acc (keys %res) {
+			$self->{_accession_types}->{$acc} = $res{$acc}; 
+		}
+	}
+	
+	return \%res;
+}
+
 sub save_otter_xml {
     my( $self, $xml, $dsname ) = @_;
     
