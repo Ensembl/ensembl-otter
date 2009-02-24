@@ -1,7 +1,7 @@
 package Bio::Otter::Utils::MM;
 
 use strict;
-use Hum::ClipboardUtils '$magic_evi_name_matcher';
+#use Hum::ClipboardUtils '$magic_evi_name_matcher';
 use DBI;
 use Data::Dumper;
 
@@ -10,6 +10,18 @@ my @DB_CATEGORIES = (	'emblrelease',
 						'emblnew',
 						#'refseq'
 					);
+
+my $magic_evi_name_matcher = qr{
+    ([A-Za-z]{2}:)?       # Optional prefix
+    (
+                          # Something that looks like an accession:
+        [A-Z]+\d{5,}      # one or more letters followed by 5 or more digits
+        |                 # or, for TrEMBL,
+        [A-Z]\d[A-Z\d]{4} # a capital letter, a digit, then 4 letters or digits.
+    )
+    (\-\d+)?              # Optional VARSPLICE suffix
+    (\.\d+)?              # Optional .SV            
+}x;
 
 sub new {
     my ( $class, @args ) = @_;
