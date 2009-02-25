@@ -526,12 +526,12 @@ elsif ($count == 2) {
 					            FROM   coord_system
                       				    WHERE  name = 'chromosome'
                                                     AND  version NOT IN ('Otter')));
-  if ($other_coord_version =~ /NCBI/) {
-    my $ncbi_used =  $vdbh->selectrow_array(qq(
+  if ($other_coord_version =~ /NCBI|Zv/) {
+    my $other_used =  $vdbh->selectrow_array(qq(
                              SELECT count(*) 
                              FROM   seq_region
                              WHERE  coord_system_id = $other_coord_id));
-    if (! $ncbi_used) {
+    if (! $other_used) {
       $support->log("\nDeleting $other_coord_version coordinate system\n");			
       push @sql_fixes, "DELETE from coord_system WHERE coord_system_id = $other_coord_id;\n";
     }
