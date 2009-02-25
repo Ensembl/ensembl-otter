@@ -562,7 +562,9 @@ if ($chr_coord_id == $otter_coord_id) {
   push @sql_fixes, "UPDATE coord_system set version = NULL WHERE version = \'none\' and name = \'contig\';\n";
   push @sql_fixes, "INSERT into meta (meta_key,meta_value) VALUES (\'assembly.default\',\'VEGA\');\n";
   push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA|contig\' WHERE meta_value = \'chromosome:Otter|contig\';\n";
-  push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA|contig|clone\' WHERE meta_value = \'chromosome:Otter|contig|clone\';\n";	
+  push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA|contig|clone\' WHERE meta_value = \'chromosome:Otter|contig|clone\';\n";
+  push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA#contig\' WHERE meta_value = \'chromosome:Otter#contig\';\n";
+  push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA#contig#clone\' WHERE meta_value = \'chromosome:Otter#contig#clone\';\n";	
 }
 else {
   $support->log_error("Otter assembly not used for longest chromosome in seq_region table - check what\'s going on\n");
