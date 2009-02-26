@@ -136,6 +136,9 @@ if ($support->param('help') or $support->error) {
 $support->comma_to_list('chromosomes');
 $support->list_or_file('gene_stable_id');
 
+#check evidence table by default
+$support->param('check_evidence_table',1) unless defined($support->param('check_evidence_table'));
+
 # ask user to confirm parameters to proceed
 $support->confirm_params;
 
