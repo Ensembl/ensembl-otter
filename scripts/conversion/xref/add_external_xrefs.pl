@@ -44,6 +44,7 @@ Specific options:
     --prune                             reset to the state before running this
                                         script (i.e. after running
                                         add_vega_xrefs.pl)
+    --verbose                           dump data structure from parsing of input file
 
 =head1 DESCRIPTION
 
@@ -183,7 +184,7 @@ if ($support->param('prune') and $support->user_proceed('Would you really like t
     imgt_hla => qq(= 'IMGT_HLA'),
     imgt_gdb => qq(= 'IMGT/GENE_DB'),
   );
-  
+
   my $num;
   # xrefs
   $support->log("Deleting  external xrefs...\n");
@@ -242,7 +243,7 @@ if (-e $xref_file) {
     $support->log_stamped("Reading xref input files...\n");
     my $parser = "parse_$format";
     &$parser($parsed_xrefs, $lcmap);
-    
+
     #only look at Ensembl db if the file to be parsed is hgnc
     if ($support->param('xrefformat') eq 'hgnc') {	
       &parse_ensdb($parsed_xrefs);
@@ -258,7 +259,7 @@ else {
   $support->log_stamped("Reading xref input files...\n");
   my $parser = "parse_$format";
   &$parser($parsed_xrefs, $lcmap);
-    
+
   #only look at Ensembl db if the file to be parsed is hgnc
   if ($support->param('xrefformat') eq 'hgnc') {	
     &parse_ensdb($parsed_xrefs);
@@ -271,7 +272,6 @@ else {
 if ($support->param('verbose')) {
   $support->log("Parsed xrefs are ".Dumper($parsed_xrefs)."\n");
   $support->log("Parsed lc xrefs are ".Dumper($lcmap)."\n");
-#    	exit;
 }
 
 use strict 'refs';
