@@ -75,10 +75,10 @@ use FindBin qw($Bin);
 use vars qw($SERVERROOT);
 
 BEGIN {
-    $SERVERROOT = "$Bin/../../../..";
-    unshift(@INC, "$SERVERROOT/ensembl/modules");
-    unshift(@INC, "$SERVERROOT/bioperl-live");
-    unshift(@INC, "$SERVERROOT/ensembl-otter/modules");
+  $SERVERROOT = "$Bin/../../../..";
+  unshift(@INC, "$SERVERROOT/ensembl/modules");
+  unshift(@INC, "$SERVERROOT/bioperl-live");
+  unshift(@INC, "$SERVERROOT/ensembl-otter/modules");
 }
 
 use Getopt::Long;
@@ -161,7 +161,7 @@ foreach my $chr ($support->sort_chromosomes) {
     my $g_name = $gene->get_all_Attributes('name')->[0]->value;
     #		my $g_name = $gene->display_xref->display_id;
     my $source = $gene->source;
-    
+
     $support->log("\n$g_name ($gsi)\n");
 
     #check for identical names in loutre
