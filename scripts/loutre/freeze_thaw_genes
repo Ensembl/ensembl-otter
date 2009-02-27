@@ -1,0 +1,99 @@
+#!/usr/bin/env perl
+
+### freeze_thaw_genes
+
+use strict;
+use warnings;
+use Net::Domain qw{ hostname };
+# use Algorithm::Diff;
+
+use Bio::Otter::Lace::Defaults;
+use Bio::Vega::Transform::Otter;
+use Bio::Vega::Transform::XML;
+
+
+{
+    my $dsname;
+
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'dataset=s'     => \$dsname,
+    );
+    
+    unless ($dsname) {
+        Bio::Otter::Lace::Defaults::show_help();
+    }
+
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+
+    # For testing, so that we see restricted datasets
+    $0 = 'otterlace';
+
+    my $ds = $cl->get_DataSet_by_name($dsname);
+    my $dba = $ds->get_cached_DBAdaptor;
+    my $gene_aptr = $dba->get_GeneAdaptor;
+
+    foreach my $gsid (@ARGV) {
+        my $gene = $gene_aptr->fetch_by_stable_id($gsid);
+        my $slice = $gene->feature_Slice;
+        $gene = $gene->transfer($slice);
+        my $before_xml = Bio::Vega::Transform::XML->new->generate_OtterXML(
+            [$slice],
+            $dba,
+            1,
+            [$gene],
+            [],
+            );
+        # print $before_xml;
+        my $parser = Bio::Vega::Transform::Otter->new;
+        $parser->parse($before_xml);
+        my $xml_gene_list = $parser->get_Genes;
+        unless (@$xml_gene_list == 1) {
+            die sprintf "Weird.  Put 1 gene into XML but got %d out", scalar @$xml_gene_list;
+        }
+        my $xml_gene = $xml_gene_list->[0];
+        print Data::Dumper::Dumper($xml_gene);
+        my $after_xml = Bio::Vega::Transform::XML->new->generate_OtterXML(
+            [$slice],
+            $dba,
+            1,
+            [$xml_gene],
+            [],
+            );
+        printf "$gsid before and after%s match\n", $before_xml eq $after_xml ? '' : ' do not';
+        # if ($before_xml ne $after_xml) {
+        #     compare_xml($before_xml, $after_xml);
+        # }
+    }
+}
+
+sub compare_xml {
+    my ($before, $after) = @_;
+    
+    my $before_file = write_file("before", $before);
+    my $after_file  = write_file("after",  $after);
+    
+    system('sdiff', $before_file, $after_file);
+    unlink($before_file, $after_file);
+}
+
+sub write_file {
+    my ($root, $xml) = @_;
+    
+    my $filename = "/tmp/$root-$$.xml";
+    
+    open my $fh, "> $filename" or die "Can't write to '$filename'; $!";
+    print $fh $xml;
+    close $fh or die "Error writing to '$filename'; $!";
+
+    return $filename;
+}
+
+
+__END__
+
+=head1 NAME - freeze_thaw_genes
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+

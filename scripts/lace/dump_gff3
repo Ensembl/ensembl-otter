@@ -106,7 +106,7 @@ use Bio::Otter::MFetcher;
 
   foreach my $set_name (sort { ace_sort($a, $b) } @sets) {
 
-    warn "\n$set_name";;
+    warn "\n$set_name";
 
     # Write GFF3 to one single file
     my $suffix = $ncbi_version ? "_NCBI$ncbi_version".".gff3" : ".gff3";

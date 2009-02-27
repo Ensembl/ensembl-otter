@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2009-02-20 10:50:20 $
-# Id:            $Id: nph-write_region,v 1.20 2009-02-20 10:50:20 jgrg Exp $
+# Last modified: $Date: 2009-02-27 17:07:44 $
+# Id:            $Id: nph-write_region,v 1.21 2009-02-27 17:07:44 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-write_region,v $
 
 use strict;
@@ -113,7 +113,7 @@ use Bio::Vega::Transform::XML;
         }
 
         ## strip_incomplete_genes for the xml genes
-        my $xml_genes = $parser->get_Genes || [];
+        my $xml_genes = $parser->get_Genes;
         strip_incomplete_genes($odba, $server, $xml_genes);
 
         ##fetch database genes and compare to find the new/modified/deleted genes
@@ -127,9 +127,9 @@ use Bio::Vega::Transform::XML;
 
         my $changed_genes = [];
         foreach my $gene (@$xml_genes) {
-            ##attach gene and its components to the right slice
+            # attach gene and its components to the right slice
             $gene->slice($db_slice);
-            ##update author in gene and transcript
+            # update author in gene and transcript
             $gene->gene_author($author_obj);
             my $tref = $gene->get_all_Transcripts();
             foreach my $tran (@$tref) {
@@ -139,7 +139,7 @@ use Bio::Vega::Transform::XML;
                     $exon->slice($db_slice);
                 }
             }
-            ##update all gene and its components in db (new/mod)
+            # update all gene and its components in db (new/mod)
             $gene->is_current(1);
             if ($gene_adaptor->store($gene, $time_now)) {
                 push(@$changed_genes, $gene);
