@@ -154,7 +154,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.15 $ ';
+$revision='$Revision: 1.16 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -256,7 +256,8 @@ sub initialise {
     }
     warn "Found exonerate database: '$fasta_file'\n";
 
-    $self->homol_tag(($self->query_type eq 'protein') ? 'Pep_homol' : 'DNA_homol');
+    #$self->homol_tag(($self->query_type eq 'protein') ? 'Pep_homol' : 'DNA_homol');
+	$self->homol_tag('DNA_homol');
 
     # Make the analysis object needed by the Runnable
     my $ana_obj = Bio::EnsEMBL::Pipeline::Analysis->new(
@@ -359,6 +360,14 @@ sub score {
 		$self->{'_score'} = $score;
 	}
 	return $self->{'_score'};
+}
+
+sub bestn {
+	my ( $self, $bestn) = @_;
+	if ($bestn) {
+		$self->{'_bestn'} = $bestn;
+	}
+	return $self->{'_bestn'};
 }
 
 sub dnahsp {
@@ -528,9 +537,10 @@ sub run_exonerate {
     my $analysis = $self->analysis();
     my $score = $self->score() || ( $self->query_type() eq 'protein' ? 150 : 2000 );
     my $dnahsp = $self->dnahsp || 120 ;
+    my $bestn = $self->bestn || 0;
     my $exo_options = $self->query_type() eq 'protein' ?
-    	"-m p2g --forcescan q --softmasktarget yes -M 500  --score $score" :
-    	"-m e2g --forcescan q --softmasktarget yes  -M 500 --dnahspthreshold $dnahsp -s $score --geneseed 300" ;
+    	"-m p2g --forcescan q --softmasktarget yes -M 500  --score $score --bestn $bestn" :
+    	"-m e2g --forcescan q --softmasktarget yes  -M 500 --dnahspthreshold $dnahsp -s $score --bestn $bestn --geneseed 300" ;
 
     my $runnable = Bio::EnsEMBL::Pipeline::Runnable::Finished_Exonerate->new(
         -analysis => $self->analysis(),
@@ -583,8 +593,10 @@ sub format_ace_output {
         # each hit from the fasta file using the OBDA index.
         $self->add_hit_name($hname);
 
+		my $prefix = $is_protein ? 'Protein' : 'Sequence';
+
         $ace       .= qq{\nSequence : "$contig_name"\n};
-        my $hit_ace = qq{\nSequence : "$hname"\n};
+        my $hit_ace = qq{\n$prefix : "$hname"\n};
 
         foreach my $fp (@{ $name_fp_list{$hname} }) {
 
@@ -615,19 +627,23 @@ sub format_ace_output {
             if ($strand == -1){
                 ($start, $end) = ($end, $start);
             }
-
+			
+			my $hit_homol_tag = 'DNA_homol';
+			
             # Show coords in hit back to genomic sequence. (The annotators like this.)
             $hit_ace .= sprintf qq{Homol %s "%s" "%s" %.3f %d %d %d %d\n},
-              $homol_tag, $contig_name, $method_tag, $fp->percent_id,
+              $hit_homol_tag, $contig_name, $method_tag, $fp->percent_id,
               $fp->hstart, $fp->hend, $start, $end;
               #print STDOUT sprintf qq{Homol %s "%s" "%s" %.3f %d %d %d %d\n},
               #$homol_tag, $contig_name, $method_tag, $fp->percent_id,
               #$fp->hstart, $fp->hend, $start, $end;
-
+			
+			my $query_homol_tag = $is_protein ? 'Pep_homol' : 'DNA_homol';
+			
             # The first part of the line is all we need if there are no
             # gaps in the alignment between genomic sequence and hit.
             my $query_line = sprintf qq{Homol %s "%s" "%s" %.3f %d %d %d %d},
-              $homol_tag, $hname, $method_tag, $fp->percent_id,
+              $query_homol_tag, $hname, $method_tag, $fp->percent_id,
               $start, $end, $fp->hstart, $fp->hend;
 
             if (@$seq_coord > 1) {

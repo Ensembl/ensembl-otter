@@ -5,12 +5,15 @@ use strict;
 use DBI;
 use Data::Dumper;
 
+# NB: databases will be searched in the order in which they appear in this list
 my @DB_CATEGORIES = (	'emblrelease', 
 						'uniprot', 
 						'emblnew',
+						'uniprot_archive',
 						#'refseq'
 					);
 
+# pinched from Hum::ClipboardUtils.pm (copied here due to server PERL5LIB issues)
 my $magic_evi_name_matcher = qr{
     ([A-Za-z]{2}:)?       # Optional prefix
     (
@@ -34,7 +37,6 @@ sub new {
     $self->port($port || 3306);
     $self->user($user || 'genero');
     $self->name($name || 'mm_ini');
-    $self->{_dbhs} = { map { $_ => undef } @DB_CATEGORIES };
 
     return $self;
 }
@@ -42,22 +44,30 @@ sub new {
 sub _get_connection {
 	my ( $self, $category ) = @_;
 	
-	my $dsn_mm_ini = "DBI:mysql:host=".$self->host.":".$self->name;
-	my $dbh_mm_ini = DBI->connect( $dsn_mm_ini, $self->user, '',{ 'RaiseError' => 1 } );
-	my $db;
-	my $query = q(	SELECT database_name FROM ini
-				 	WHERE database_category = ?
-				 	AND current = 'yes'
-				 	AND available = 'yes' );
-	my $ini_sth = $dbh_mm_ini->prepare($query);
-	$ini_sth->execute($category) or die "Couldn't execute statement: " . $ini_sth->errstr;
-	while(my $hash = $ini_sth->fetchrow_hashref()) {
-		$db = $hash->{'database_name'};
+	my $dbh;
+	
+	if ($category eq 'uniprot_archive') {
+		my $dsn = "DBI:mysql:host=".$self->host.":uniprot_archive";
+		$dbh = DBI->connect( $dsn, $self->user, '',{ 'RaiseError' => 1 } );
 	}
-	$ini_sth->finish();
-	my $dsn = "DBI:mysql:host=".$self->host.":$db";
-	my $dbh = DBI->connect( $dsn, $self->user, '',{ 'RaiseError' => 1 } );
-
+	else {
+		# look up the current version
+		my $dsn_mm_ini = "DBI:mysql:host=".$self->host.":".$self->name;
+		my $dbh_mm_ini = DBI->connect( $dsn_mm_ini, $self->user, '',{ 'RaiseError' => 1 } );
+		my $db;
+		my $query = q(	SELECT database_name FROM ini
+					 	WHERE database_category = ?
+					 	AND current = 'yes'
+					 	AND available = 'yes' );
+		my $ini_sth = $dbh_mm_ini->prepare($query);
+		$ini_sth->execute($category) or die "Couldn't execute statement: " . $ini_sth->errstr;
+		while(my $hash = $ini_sth->fetchrow_hashref()) {
+			$db = $hash->{'database_name'};
+		}
+		$ini_sth->finish();
+		my $dsn = "DBI:mysql:host=".$self->host.":$db";
+		$dbh = DBI->connect( $dsn, $self->user, '',{ 'RaiseError' => 1 } );
+	}
 	return $dbh;
 }
 
@@ -67,7 +77,7 @@ sub dbh {
 	die "DB category required" unless $category;
 	
 	die "Invalid DB category: $category" unless 
-		grep {/^$category$/} keys %{ $self->{_dbhs} };
+		grep {/^$category$/} @DB_CATEGORIES;
 	
 	if ($dbh) {
 		die "Not a valid DB handle: ".(ref $dbh) unless ref $dbh eq 'DBI::db';
@@ -90,22 +100,34 @@ sub get_accession_types {
 				FROM entry e, accession a
 				WHERE e.entry_id = a.entry_id
 				AND a.accession = ? ';
+				
+	my $uniprot_archive_sql = ' SELECT molecule_type, data_class
+        						FROM entry
+        						WHERE accession_version LIKE ?';	
 	
 	my %acc_hash = map {$_ => (/$magic_evi_name_matcher/g ? $2.($3?$3:'') : '') } @$accs; 
 
 	my %res = map {$_ => ''} @$accs;
 
-	for my $db (keys %{ $self->{_dbhs} }) {
-        	
-        # try each database in turn
-        	
-		my $sth = $self->dbh($db)->prepare($sql);
+	for my $db (@DB_CATEGORIES) {
+		
+		#print "trying: $db\n";
+        
+        my $archive = $db eq 'uniprot_archive';
+        
+       	my $query = $archive ? $uniprot_archive_sql : $sql;
+        
+		my $sth = $self->dbh($db)->prepare($query);
 			
 		for my $key (keys %acc_hash) {
 				
 			next unless $acc_hash{$key};
 			
-			$sth->execute($acc_hash{$key}) or die "Couldn't execute statement: " . $sth->errstr;
+			my $acc = $acc_hash{$key};
+			
+			$acc .= '%' if $archive; # uniprot_archive accessions have versions appended
+			
+			$sth->execute($acc) or die "Couldn't execute statement: " . $sth->errstr;
 			
 			if (my ($type, $class) = $sth->fetchrow_array()) {
 						
@@ -114,7 +136,7 @@ sub get_accession_types {
 				if ($class eq 'EST') {
 					$res{$key} = 'EST';
 				}
-				elsif ($type eq 'mRNA' and $class eq 'STD') {
+				elsif ($type eq 'mRNA') {
 					$res{$key} = 'mRNA';
 				}
 				elsif ($type eq 'protein') {
@@ -125,6 +147,8 @@ sub get_accession_types {
 				delete $acc_hash{$key};
 			}
 		}
+		
+		last unless %acc_hash;
 	}
 	
 	return \%res;	
