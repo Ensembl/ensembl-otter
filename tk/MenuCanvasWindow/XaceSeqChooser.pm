@@ -647,7 +647,7 @@ sub populate_menus {
     ## Spawn exonerate Ctrl .
     my $run_exon_command = sub { $self->run_exonerate };
     $tools_menu->add('command',
-        -label          => 'Exonerate Zmap hit/Column',
+        -label          => 'On The Fly (OTF) Alignment',
         -command        => $run_exon_command,
         -accelerator    => 'Ctrl+X',
         -underline      => 0,
@@ -2057,7 +2057,9 @@ sub run_exonerate {
     my $ew = $self->{'_exonerate_window'};
     unless ($ew) {
         my $parent = $self->top_window();
-        my $top = $parent->Toplevel(-title => 'run exonerate');
+        my $top = $parent->Toplevel(
+        	-title => 'On The Fly (OTF) Alignment - brought to you by exonerate'
+        	);
         $top->transient($parent);
         $ew = EditWindow::Exonerate->new($top);
         $ew->XaceSeqChooser($self);

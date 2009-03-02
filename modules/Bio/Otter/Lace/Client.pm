@@ -899,12 +899,14 @@ sub get_methods_ace {
 
 sub get_accession_types {
 	
-	my ( $self, $accessions ) = @_;
+	my $self = shift;
+	
+	my @accessions = @_;
 	
 	my @uncached = ();
 	my %res = ();
 	
-	for my $acc (@$accessions) {
+	for my $acc (@accessions) {
 		if (defined $self->{_accession_types}->{$acc}) {
 			$res{$acc} = $self->{_accession_types}->{$acc};
 		}
