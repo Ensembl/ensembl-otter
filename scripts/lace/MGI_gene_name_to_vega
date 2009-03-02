@@ -105,28 +105,6 @@ sub parse_mgi_input {
 
     unless ( $curr_gene ){
       print STDERR "ERROR: $vega_id_from_mgi is NOT in current database\n";
-
-#    #  # tracking gene history for obsolete genes
-#      my $found_gsids;
-#      eval {
-#        $found_gsids = process_query($vega_id_from_mgi, $loutre_dba, undef, 1);
-#      };
-#      if ( $@ ) {
-#        print STDERR "Cannot follow history of $vega_id_from_mgi ... non-existent ID\n\n";
-#        next;
-#      }
-#      else {
-#        foreach my $gsid ( @$found_gsids ) {
-#          # want only current genes
-#          if ( $geneAd->fetch_by_stable_id($gsid) ) {
-#            print STDERR "==> $gsid has replaced $vega_id_from_mgi\n";
-#          } else {
-#            print STDERR "==> $gsid is OBSOLETE\n";
-#          }
-#        }
-#        print STDERR "\n";
-#        next;
-#      }
       next;
     }
 
@@ -361,7 +339,7 @@ sub update_gene_name_and_description {
 
   my $gids = find_genes_with_gene_names_from_prefixed_names_and_haplotype($loutre_dba, $vega_name, $chr);
 
-  if ( ! $gids ){
+  if ( ! $gids->[0] ){
     print STDERR "NO matching gene_name found via prefixed_names and haplotypes by $vega_name\n";
     store_update($loutre_dba, $geneAd, $gene, $mgi_symbol, $mgi_desc, $mgi_id, $test);
     print STDERR "\n";
@@ -420,38 +398,6 @@ sub find_genes_with_gene_names_from_prefixed_names_and_haplotype {
 
   my $gids = get_gids($qryA, $qryB, $chr, $vega_name, $mapping);
   return $gids;
-
-#  my $qryA = $loutre_dba->dbc->prepare($sql.$name_match);
-#  #warn $sql.$name_match;
-#  $qryA->execute();
-#  get_gids($qryA, $
-
-#  while ( my ( $seq_region_name, $gid, $gsid ) = $qryA->fetchrow ){
-#    #warn "A: $seq_region_name, $gid";
-#    if ( $seq_region_name !~ /^chr/i ){
-#      push(@$gids, $gid) if find_from_expected_haplotype($chr, $seq_region_name, $vega_name, $mapping, $gsid, $gid);
-#    }
-#    else {
-#      print STDERR "FOUND $gsid (gene_id: $gid) in ASSEMBLY $seq_region_name\n";
-#      push(@$gids, $gid);
-#    }
-#  }
-
-#  my $qryB = $loutre_dba->dbc->prepare($sql.$prefix_match);
-#  #warn $sql.$prefix_match;
-#  $qryB->execute();
-#  while ( my ( $seq_region_name, $gid, $gsid ) = $qryB->fetchrow ){
-#    #warn "B: $seq_region_name, $gid";
-#    if ( $seq_region_name =~ /^chr/i ){
-#      print STDERR "FOUND $gsid (gene_id: $gid) in ASSEMBLY $seq_region_name\n";
-#      push(@$gids, $gid);
-#    }
-#    else {
-#      push(@$gids, $gid) if find_from_expected_haplotype($chr, $seq_region_name, $vega_name, $mapping, $gsid, $gid);
-#    }
-#  }
-
-#  return $gids;
 }
 
 sub get_gids {
@@ -602,7 +548,7 @@ sub check_single_transcript_status {
   # if a gene has only 1 transcript, make sure its status is same as gene
   if ( @trans == 1 ){
     my $t = $trans[0];
-    print STDERR "TRANS STATUS change from ", $t->status, " to $status\n";
+    print STDERR "TRAN STATUS change from ", $t->status, " to $status\n";
     $t->status($status);
   }
   else {
@@ -701,50 +647,3 @@ Modified from HUGO_gene_name_to_vega
 
 Chao-Kung Chen B<email> ck1@sanger.ac.uk
 
-
-  # symbols to ignore (per info from HAVANA: Jane L.)
-  #my @ignore_list = qw(D1Ertd622e D1Ertd471e D1Pas1 D2Bwg1335e D2Ertd391e
-#                       U46068 N28178 D4Wsu132e D4Bwg0951e C87499 C77080 D4Ertd196e C79267
-#                       D4Ertd22e C87977 D4Wsu114e D6Mm5e D8Ertd457e C86695 P140 X83328
-#                       D11Wsu99e D11Wsu47e D11Bwg0517e C79407 D12Ertd647e D16Ertd472e D17Wsu92e
-#                       C77370);
-
-  # non-standard, but ok (per info from HAVANA: Jane L.)
-#  my @usable_list = qw(B3gat2 C4bp B3galt2 C8g S100a7a C1qc C1qdc2 C1qtnf
-#                       P2rx7 B3gnt4 B3galtl C1galt1 H1fx B4galnt3 M6pr E2f8 p P4ha3 B3gat1
-#                       C1qtnf5 H2afv C1d B3gnt2 C1qtnf2 G3bp1 B9d1 B4galnt2 B3gntl1 B4galt7
-#                       C1qtnf9 R3hcc1 C9 C1qtnf3 B3gnt5 B4galt4 N6amt1 T L3mbtl4 F9 P2ry10);
-
-
- # if ( $mgi_symbol =~ /^[A-Z]{2,2}|^Gm|Rik$|OTTMUS/ ){
-#    #    print STDERR "TO ignore: $mgi_symbol";
-#    return 0;
-#  }
-#  if ( $mgi_symbol =~ /^\w+[A-Z]+/ ){
-#    #    print STDERR "TO ignore: $mgi_symbol";
-#    return 0;
-#  }
-# # elsif ( grep(/$mgi_symbol/, @ignore_list) ){
-##    #print STDERR $mgi_symbol;
-##    return 0;
-##  }
-#  elsif ( ( $mgi_symbol =~ /^[A-Z]{1,1}\d+$/ or $mgi_symbol =~ /^[A-Z]{1,1}$/ ) ){
-##          ! grep(/$mgi_symbol/, @usable_list) ){
-#    warn "--------$mgi_symbol---------" if $mgi_symbol eq 'T';
-#    # give these names to HAVANA, as some could be usable
-#    print STDERR "SYMBOL_TO_CHECK: $gsid_from_mgi $mgi_symbol\n";
-#    return 0;
-#  }
-#  elsif ( $mgi_symbol =~ /^[A-Z]{1,1}[0-9a-z]+/ ){
-
-#    # standard names we want
-#    return 1;
-#  }
-#  elsif ( $mgi_symbol =~ /^\d+$/ ){
-#    #genenames represented by digits, eg. MGI:3780709	100039994
-#    return 0;
-#  }
-#  else {
-#    print STDERR "BAD_NAMEs: $gsid_from_mgi $mgi_symbol\n";
-#    return 0;
-#  }
