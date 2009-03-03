@@ -316,25 +316,28 @@ sub launch_exonerate {
 
 	my %params = ();
 	
-	$params{EST}->{method_tag} = 'OTF_EST';
-	$params{EST}->{query_type} = 'dna';
-	$params{EST}->{method_color} = 'red';
-	
-	$params{mRNA}->{method_tag} = 'OTF_mRNA';
-	$params{mRNA}->{query_type} = 'dna';
-	$params{mRNA}->{method_color} = 'blue';
+	# These methods are now in the methods.ace file, so the auto-generated
+	# method in Bio::Otter::Lace::Exonerate is not used.
 	
 	$params{Protein}->{method_tag} = 'OTF_Protein';
 	$params{Protein}->{query_type} = 'protein';
-	$params{Protein}->{method_color} = 'green';
-	
-	$params{Unknown_DNA}->{method_tag} = 'Unknown_DNA';
-	$params{Unknown_DNA}->{query_type} = 'dna';
-	$params{Unknown_DNA}->{method_color} = 'yellow';
+	$params{Protein}->{method_color} = 'GREEN';
 	
 	$params{Unknown_Protein}->{method_tag} = 'Unknown_Protein';
 	$params{Unknown_Protein}->{query_type} = 'protein';
-	$params{Unknown_Protein}->{method_color} = 'brown';
+	$params{Unknown_Protein}->{method_color} = 'BROWN';
+	
+	$params{mRNA}->{method_tag} = 'OTF_mRNA';
+	$params{mRNA}->{query_type} = 'dna';
+	$params{mRNA}->{method_color} = 'BLUE';
+	
+	$params{EST}->{method_tag} = 'OTF_EST';
+	$params{EST}->{query_type} = 'dna';
+	$params{EST}->{method_color} = 'RED';
+	
+	$params{Unknown_DNA}->{method_tag} = 'Unknown_DNA';
+	$params{Unknown_DNA}->{query_type} = 'dna';
+	$params{Unknown_DNA}->{method_color} = 'YELLOW';
 	
 	my %seqs_by_type = ();
 	

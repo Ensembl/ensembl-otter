@@ -777,10 +777,8 @@ sub Bio::EnsEMBL::Gene::propagate_slice {
     $gene->slice($slice);
 }
 
-
-
-
 1;
+
 __END__
 
 =head1 NAME - Bio::Vega::DBSQL::GeneAdaptor

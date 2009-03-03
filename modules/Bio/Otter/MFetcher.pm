@@ -201,16 +201,15 @@ sub get_slice { # codebase-independent version for scripts
         $csver = 'Otter';
     }
 
-        # The following statement ensures
-        # that we use 'assembly type' as the chromosome name
-        # only for Otter chromosomes.
-        # EnsEMBL chromosomes will have simple names.
-    my ($segment_attr, $segment_name);
-    ($segment_attr, $segment_name) = (($cs eq 'chromosome') && ($csver eq 'Otter'))
+    # The following statement ensures
+    # that we use 'assembly type' as the chromosome name
+    # only for Otter chromosomes.
+    # EnsEMBL chromosomes will have simple names.
+    my ($segment_attr, $segment_name) = (($cs eq 'chromosome') && ($csver eq 'Otter'))
         ? ('type', $type)
         : ('name', $name);
 
-    $self->error_exit("$cs '$segment_attr' attribute not set ") unless $segment_name;
+    $self->error_exit("$cs '$segment_attr' attribute not set") unless $segment_name;
 
     $slice =  $dba->get_SliceAdaptor()->fetch_by_region(
         $cs,
@@ -238,33 +237,39 @@ sub return_emptyhanded { # we probably only want to know about it only if using 
 }
 
 sub otter_assembly_equiv_hash { # $self->{_aeh}{NCBI36}{11} = 'chr11-02';
-    my $self = shift @_;
+    my $self = shift;
 
-    if(my $aeh = $self->{_aeh}) {
+    if (my $aeh = $self->{'_aeh'}) {
         return $aeh;
     }
 
     my $edba = $self->satellite_dba( 'equiv_asm_db' ); # the value is either '=otter' (for new schema)
                                                        # or '=pipeline' (for old schema DB with new schema pipeline)
     my $sql = qq{
-        SELECT ae_val.value, cn_val.value, sr.name
-          FROM seq_region sr, seq_region_attrib ae_val, seq_region_attrib cn_val, attrib_type ae_at, attrib_type cn_at
-         WHERE sr.seq_region_id=ae_val.seq_region_id
-           AND sr.seq_region_id=cn_val.seq_region_id
-           AND ae_val.attrib_type_id=ae_at.attrib_type_id
-           AND cn_val.attrib_type_id=cn_at.attrib_type_id
-           AND ae_at.code='equiv_asm'
-           AND cn_at.code='chr'
-    };
+        SELECT ae_val.value
+          , cn_val.value
+          , sr.name
+        FROM seq_region sr
+          , seq_region_attrib ae_val
+          , seq_region_attrib cn_val
+          , attrib_type ae_at
+          , attrib_type cn_at
+        WHERE sr.seq_region_id = ae_val.seq_region_id
+          AND ae_val.attrib_type_id = ae_at.attrib_type_id
+          AND ae_at.code = 'equiv_asm'
+          AND sr.seq_region_id = cn_val.seq_region_id
+          AND cn_val.attrib_type_id = cn_at.attrib_type_id
+          AND cn_at.code = 'chr'
+        };
 
     my $sth = $edba->dbc()->prepare($sql);
     $sth->execute();
 
-    my %aeh = ();
+    my $aeh = $self->{'_aeh'} = {};
     while( my ($equiv_asm, $equiv_chr, $atype) = $sth->fetchrow()) {
-        $aeh{$equiv_asm}{$equiv_chr} = $atype;
+        $aeh->{$equiv_asm}{$equiv_chr} = $atype;
     }
-    return $self->{_aeh} = \%aeh;
+    return $aeh;
 }
 
 sub otter_assembly_mapping_hash { ## $self->{_amh}{NCBIM37}{11} = 'chr11-07';
@@ -321,7 +326,7 @@ sub init_csver {
     }
 }
 
-    # fetch things from Otter chromosome and map it to another assembly
+    # fetch things from Otter chromosome and map them to another assembly
 sub fetch_and_export {
     my ($self, $fetching_method, $call_parms,
         $cs, $name, $type, $start, $end, $csver_orig, $csver_target,
@@ -331,20 +336,20 @@ sub fetch_and_export {
     my $original_slice = $self->get_slice($odba, $cs, $name, $type, $start, $end, $csver_orig);
 
     my $orig_features = $original_slice->$fetching_method(@$call_parms) || die "Could not fetch anything";
-
-    if($self->otter_assembly_equiv_hash()->{$csver_target}{$name} eq $type) {
+    
+    if ($self->otter_assembly_equiv_hash()->{$csver_target}{$name} eq $type) {
         # no transformation is needed:
 
         return $orig_features;
 
-        # do the transformation if it is needed:
     } else {
+        # do the transformation if it is needed:
 
         my $mapper_metakey = "mapper_db.${csver_target}";
-        if(my $mdba = $self->satellite_dba($mapper_metakey) ) {
+        if (my $mdba = $self->satellite_dba($mapper_metakey) ) {
             my $original_slice_on_mapper = $self->get_slice($mdba, $cs, $name, $type, $start, $end, $csver_orig);
 
-            my @transformed_features = ();
+            my $transformed_features = [];
 
             foreach my $orig_feature (@$orig_features) {
 
@@ -356,7 +361,7 @@ sub fetch_and_export {
                 }
 
                 if( my $target_feature = $orig_feature->transform($cs, $csver_target) ) {
-                    push @transformed_features, $target_feature;
+                    push @$transformed_features, $target_feature;
                     warn "Transformed $csver_orig:".$orig_feature->start().'..'.$orig_feature->end()
                         ." --> $csver_target:".$target_feature->start().'..'.$target_feature->end()."\n";
                 } else {
@@ -364,12 +369,11 @@ sub fetch_and_export {
                 }
             }
 
-            return \@transformed_features;
+            return $transformed_features;
 
         } else {
             die "Can't connect to the mapper ($mapper_metakey)";
         }
-
     }
 }
 
