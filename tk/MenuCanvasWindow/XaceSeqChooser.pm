@@ -31,6 +31,7 @@ use MenuCanvasWindow::ExonCanvas;
 use MenuCanvasWindow::GenomicFeatures;
 use MenuCanvasWindow::ZMapSeqChooser;
 use Bio::Otter::Lace::Defaults;
+use Text::Wrap qw{ wrap };
 
 use base 'MenuCanvasWindow';
 
@@ -1856,15 +1857,18 @@ sub draw_sequence_list {
             elsif (! $sub->is_mutable) {
                 $style = 'normal';
             }
-            elsif ($error = $sub->pre_otter_save_error) {
-                # Don't highlight errors in transcripts from other centres
-                if ($sub->Locus->name =~ /$locus_type_pattern/) {
-                    $color = "#ee2c2c";     # firebrick2
-                } else {
-                    $error = undef;
+            else {
+                eval{ $error = $sub->pre_otter_save_error };
+                $error = $@ ? $@ : $error;
+                if ($error) {
+                    # Don't highlight errors in transcripts from other centres
+                    if ($sub->Locus->name =~ /$locus_type_pattern/) {
+                        $color = "#ee2c2c";     # firebrick2
+                    } else {
+                        $error = undef;
+                    }
                 }
             }
-
 	        my $txt = $canvas->createText(
 		        $x, $y,
 		        -anchor     => 'nw',
@@ -1875,7 +1879,12 @@ sub draw_sequence_list {
 		        );
 		    if ($error) {
 		        $error =~ s/\n$//;
-		        $err_hash->{$txt} = $error;
+		        $Text::Wrap::columns = 60;
+		        my @fmt;
+		        foreach my $line (split /\n/, $error) {
+		            push(@fmt, wrap('', '  ', $line));
+		        }
+		        $err_hash->{$txt} = join "\n", @fmt;
 		    }
         }
 

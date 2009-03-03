@@ -424,6 +424,8 @@ sub launch_exonerate {
 	}
 	
 	$self->top->Unbusy;
+	
+	return 1;
 }
 
 my $seq_tag = 1;
