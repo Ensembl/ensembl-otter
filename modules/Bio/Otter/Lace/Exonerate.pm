@@ -154,7 +154,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.16 $ ';
+$revision='$Revision: 1.17 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -280,9 +280,7 @@ sub write_seq_file {
 	my $seq = $self->query_seq();
 	if(@$seq) {
 		my $query_out = Hum::FastaFileIO->new("> $query_file");
-	    for(@$seq) {
-	    	$query_out->write_sequences($_);
-		}
+    	$query_out->write_sequences(@$seq);
 	    $query_out = undef;
 
 	    return $query_file;
