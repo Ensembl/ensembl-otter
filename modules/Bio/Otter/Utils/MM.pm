@@ -1,7 +1,11 @@
+
+### Bio::Otter::Utils::MM
+
 package Bio::Otter::Utils::MM;
 
 use strict;
-#use Hum::ClipboardUtils '$magic_evi_name_matcher';
+use warnings;
+
 use DBI;
 use Data::Dumper;
 
@@ -179,4 +183,15 @@ sub user {
     return $self->{_user};
 }
 
+
+
 1;
+
+__END__
+
+=head1 NAME - Bio::Otter::Utils::MM
+
+=head1 AUTHOR
+
+Graham Ritchie B<email> gr5@sanger.ac.uk
+
