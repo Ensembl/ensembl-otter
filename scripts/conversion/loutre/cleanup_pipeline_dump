@@ -119,16 +119,20 @@ my %lns_to_go = map {$_,1}
      Est2genome_fish_raw
      Est2genome_fish
      Est2genome_other_raw
+     Est2genome_other_new
      Est2genome_other
      Est2genome_human_raw
+     Est2genome_human_new
      Est2genome_human
      Est2genome_mouse_raw
+     Est2genome_mouse_new
      Est2genome_mouse
      Uniprot_raw
      Uniprot
      Uniprot_TR
      Uniprot_SW
      vertrna_raw
+     vertrna_new
      vertrna
      Augustus_svar
      Fgenesh
