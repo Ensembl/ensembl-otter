@@ -11,8 +11,8 @@ use Hum::Pfetch;
 use Hum::FastaFileIO;
 use Bio::Otter::Lace::Exonerate;
 use Bio::Otter::Lace::Client;
+use Hum::Sort qw{ ace_sort };
 use Tk::LabFrame;
-use Tk::FileDialog;
 use Tk::Balloon;
 
 use base 'EditWindow';
@@ -21,6 +21,8 @@ my $PROT_SCORE = 100;
 my $DNA_SCORE  = 100;
 my $DNAHSP     = 120;
 my $BEST_N	   = 1;
+
+my $INITIAL_DIR = (getpwuid($<))[7];
 
 sub initialise {
 	my ( $self ) = @_;
@@ -56,18 +58,40 @@ sub initialise {
 
 	# Pad between entries
 	$file_frame->Frame( -width => 10, )->pack( -side => 'top' );
-	my $LoadDialog = $top->FileDialog(
-											  -Title   => 'Select a Fasta file',
-											  -Create  => 0,
-											  -FPat    => '*fa',
-											  -ShowAll => 'NO'
-	);
 	$self->fasta_file(
 		 $file_frame->Entry( -textvariable => \$fname )->pack( -side => 'left' ) );
 	$file_frame->Button(
 		-text    => 'Browse...',
 		-command => sub {
-			$fname = $LoadDialog->Show( -Horiz => $Horiz );
+			$fname = $top->getOpenFile(
+			    -title          => 'Choose fasta file',
+			    -initialdir     => $INITIAL_DIR,
+                -filetypes      => [
+                    ['Fasta Files'  => [qw{ .seq .pep .fasta .fa }]],
+                    ['All Files'    => '*'],
+
+                    ### Do not want to show hidden files.
+                    # ['Fasta Files' => sub {
+                    #     my ($widget, $file, $dir) = @_;
+                    #     # Skip hidden files
+                    #     return if $file =~ /^\./;
+                    #     return $file =~ /\.(seq|pep|fasta|fa)$/;
+                    # } ],
+                    # ['All Files' => sub {
+                    #     my ($widget, $file, $dir) = @_;
+                    #     # Skip hidden files
+                    #     return $file !~ /^\./;
+                    # } ],
+                ],
+
+                -sortcmd        => sub { ace_sort(@_) },
+			    );
+			if ($fname) {
+			    if (my ($dir) = $fname =~ m{^(.+?)[^/]+$}) {
+                    # warn "Setting inital dir to '$dir'";
+			        $INITIAL_DIR = $dir;
+			    }
+			}
 		}
 	)->pack( -side => 'left' );
 	## Sequence text box
