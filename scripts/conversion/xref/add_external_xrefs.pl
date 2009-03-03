@@ -984,7 +984,6 @@ sub parse_imgt_gdb {
                    FROM gene_stable_id gsi, gene g, xref x
                   WHERE gsi.gene_id = g.gene_id
                     AND g.display_xref_id = x.xref_id
-                    AND x.display_label like 'TRG%'
                     AND g.source = 'havana'
                     AND g.biotype like 'IG%');
   $sth = $dba->dbc->prepare($sql);
