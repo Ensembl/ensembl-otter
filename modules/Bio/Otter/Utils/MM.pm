@@ -80,7 +80,8 @@ sub dbh {
 		grep {/^$category$/} @DB_CATEGORIES;
 	
 	if ($dbh) {
-		die "Not a valid DB handle: ".(ref $dbh) unless ref $dbh eq 'DBI::db';
+		eval { $dbh->isa('DBI::db') };
+		die "Not a valid DB handle: ".(ref $dbh) if $@;
 		$self->{_dbhs}->{$category} = $dbh;
 	}
 	
