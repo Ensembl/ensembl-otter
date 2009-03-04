@@ -1162,7 +1162,6 @@ sub hash_from_clipboard {
     return $results;
 }
 
-
 1;
 
 __END__

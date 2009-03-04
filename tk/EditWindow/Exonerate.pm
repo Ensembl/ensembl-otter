@@ -9,6 +9,7 @@ use Carp;
 
 use Hum::Pfetch;
 use Hum::FastaFileIO;
+use Hum::ClipboardUtils qw{ accessions_from_text };
 use Bio::Otter::Lace::Exonerate;
 use Bio::Otter::Lace::Client;
 use Hum::Sort qw{ ace_sort };
@@ -26,40 +27,55 @@ my $INITIAL_DIR = (getpwuid($<))[7];
 
 sub initialise {
 	my ( $self ) = @_;
+	
+    my @frame_pack = (-side => 'top', -fill => 'x');
+    my @frame_expand = (-side => 'top', -fill => 'both', -expand => 1);
+
 	my $top  = $self->top;
 
 	### Query frame
 	my $query_frame = $top->LabFrame(
-									  -borderwidth => 3,
-									  -label       => 'Query sequences',
-									  -labelside   => 'acrosstop',
-	)->pack( -side => 'top', );
+        -label      => 'Query sequences',
+        -labelside  => 'acrosstop',
+        -border     => 3,
+	)->pack(@frame_expand);
 	
 	## Accession entry box
-	my $match_frame =
-	  $query_frame->Frame( -border => 3, )->pack( -side => 'top', );
+	my $match_frame = $query_frame->Frame( -border => 3 )->pack(@frame_pack);
 	$match_frame->Label(
-						 -text   => 'Accessions:',
-						 -anchor => 's',
-						 -padx   => 6,
+        -text   => 'Accessions:',
+        -anchor => 's',
+        -padx   => 6,
 	)->pack( -side => 'left' );
-	$self->match(
-				$match_frame->Entry( -width => 24, )->pack( -side => 'left' ) );
+	$self->match( $match_frame->Entry( -width => 40, )->pack( -side => 'left' ) );
+	$match_frame->Frame( -width => 6, )->pack( -side => 'left' );
+	
+	my $update = sub {
+		$self->accessions_from_clipboard;
+	};
+	$match_frame->Button(
+        -text      => 'Fetch from clipboard',
+        -underline => 0,
+        -command   => $update,
+	)->pack( -side => 'left' );
+	$top->bind( '<Control-u>', $update );
+	$top->bind( '<Control-U>', $update );
+	
+
 	## Fasta file entry box
 	my $fname;
-	my $Horiz      = 1;
-	my $file_frame =
-	  $query_frame->Frame( -border => 3, )->pack( -side => 'top', );
+	my $file_frame = $query_frame->Frame( -border => 3 )->pack(@frame_pack);
 	$file_frame->Label(
-						-text   => 'Fasta file:',
-						-anchor => 's',
-						-padx   => 6,
+        -text   => 'Fasta file:',
+        -anchor => 's',
+        -padx   => 6,
 	)->pack( -side => 'left' );
 
+	$self->fasta_file( $file_frame->Entry( -width => 45, -textvariable => \$fname )->pack( -side => 'left' ) );
+
 	# Pad between entries
-	$file_frame->Frame( -width => 10, )->pack( -side => 'top' );
-	$self->fasta_file(
-		 $file_frame->Entry( -textvariable => \$fname )->pack( -side => 'left' ) );
+	$file_frame->Frame( -width => 6, )->pack( -side => 'left' );
+
 	$file_frame->Button(
 		-text    => 'Browse...',
 		-command => sub {
@@ -67,21 +83,20 @@ sub initialise {
 			    -title          => 'Choose fasta file',
 			    -initialdir     => $INITIAL_DIR,
                 -filetypes      => [
-                    ['Fasta Files'  => [qw{ .seq .pep .dna .fasta .fa }]],
-                    ['All Files'    => '*'],
+                    # ['Fasta Files'  => [qw{ .seq .pep .dna .fasta .fa }]],
+                    # ['All Files'    => '*'],
 
-                    ### Do not want to show hidden files.
-                    # ['Fasta Files' => sub {
-                    #     my ($widget, $file, $dir) = @_;
-                    #     # Skip hidden files
-                    #     return if $file =~ /^\./;
-                    #     return $file =~ /\.(seq|pep|fasta|fa)$/;
-                    # } ],
-                    # ['All Files' => sub {
-                    #     my ($widget, $file, $dir) = @_;
-                    #     # Skip hidden files
-                    #     return $file !~ /^\./;
-                    # } ],
+                    # Do not want to show hidden files.
+                    ['Fasta Files (*.seq,*.pep,*.dna,*.fasta,*.fa)' => sub {
+                        my ($widget, $file, $dir) = @_;
+                        # Match non-hidden files which end with one of our extensions
+                        return $file =~ /^[^\.].*\.(seq|pep|dna|fasta|fa)$/;
+                    } ],
+                    ['All Files (*)' => sub {
+                        my ($widget, $file, $dir) = @_;
+                        # Match non-hidden files
+                        return $file !~ /^\./;
+                    } ],
                 ],
 
                 -sortcmd        => sub { ace_sort(@_) },
@@ -94,44 +109,46 @@ sub initialise {
 			}
 		}
 	)->pack( -side => 'left' );
+	
 	## Sequence text box
-	my $txt_frame =
-	  $query_frame->Frame( -border => 3, )->pack( -side => 'top', );
-	$txt_frame->Label(
-					   -text   => 'Fasta sequences',
-					   -anchor => 's',
-					   -padx   => 6,
-	)->pack( -side => 'top' );
+	my $txt_frame = $query_frame->Frame( -border => 3 )->pack(@frame_expand);
+    $txt_frame->Label(
+                     -text   => 'Fasta sequence:',
+                     -anchor => 'w',
+                     -padx   => 6,
+    )->pack(@frame_pack);
 	$self->fasta_txt(
 		   $txt_frame->Scrolled( "Text",
-		   	-background => 'white',
+            -background => 'white',
 		   	-height => 12,
+		   	-width  => 62,
+		   	-scrollbars => 'se',
 		   	-font	=> $self->XaceSeqChooser->font_fixed,
-		   	 )->pack( -side => 'top', ) );
+		   	 )->pack(@frame_expand)
+    );
 	
 	### Parameters
 	my $param_frame = $top->LabFrame(
-									  -borderwidth => 3,
-									  -label       => 'Parameters',
-									  -labelside   => 'acrosstop',
-	)->pack( -side => 'top', );
+        -label      => 'Parameters',
+        -labelside  => 'acrosstop',
+        -border     => 3,
+	)->pack(@frame_pack);
 	
-	$param_frame->Label(
-							 -text   => 'Number of matches to report (0 for all):',
-							 -anchor => 's',
-							 -padx   => 6,
-	)->pack( -side => 'left' );
-	$self->bestn(
-				  $param_frame->Entry(
-										   -width   => 9,
-										   -justify => 'right',
-					)->pack( -side => 'left' )
-	);
+    $self->bestn(
+        $param_frame->Entry(
+            -width   => 4,
+            -justify => 'right',
+            )->pack( -side => 'right' )
+        );
 	$self->set_entry( 'bestn', $BEST_N );
+	$param_frame->Label(
+        -text   => 'Number of transcript alignments to report (0 for all):',
+        -anchor => 's',
+        -padx   => 6,
+	)->pack( -side => 'right' );
 	
 	### Commands
-	my $button_frame = $top->Frame->pack(    -side => 'top',
-										  -fill => 'x', );
+	my $button_frame = $top->Frame->pack(@frame_pack);
 	my $launch = sub {
 		$self->launch_exonerate or return;
 		$top->withdraw;
@@ -144,17 +161,6 @@ sub initialise {
 	$top->bind( '<Control-l>', $launch );
 	$top->bind( '<Control-L>', $launch );
 
-	# Update coords
-	my $update = sub {
-		$self->update_from_clipboard;
-	};
-	$button_frame->Button(
-						   -text      => 'Update',
-						   -underline => 0,
-						   -command   => $update,
-	)->pack( -side => 'left' );
-	$top->bind( '<Control-u>', $update );
-	$top->bind( '<Control-U>', $update );
 
 	# Manage window closes and destroys
 	my $close_window = sub { $top->withdraw };
@@ -166,11 +172,12 @@ sub initialise {
 	$top->bind( '<Control-W>', $close_window );
 	$top->protocol( 'WM_DELETE_WINDOW', $close_window );
 	$top->bind( '<Destroy>', sub {	$self = undef ;  } );
+	$self->set_minsize;
 }
 
 sub update_from_XaceSeqChooser {
 	my ( $self ) = @_;
-	$self->update_from_clipboard;
+	$self->accessions_from_clipboard;
 	my $top = $self->top;
 	$top->deiconify;
 	$top->raise;
@@ -182,6 +189,15 @@ sub query_Sequence {
 		$self->{'_query_Sequence'} = $query_Sequence;
 	}
 	return $self->{'_query_Sequence'};
+}
+
+sub accessions_from_clipboard {
+    my ($self) = @_;
+    
+    my $text = $self->get_clipboard_text or return;
+    if (my @acc = accessions_from_text($text)) {
+        $self->set_entry('match', join ' ', @acc);
+    }
 }
 
 sub update_from_clipboard {
@@ -210,8 +226,8 @@ sub set_entry {
 
 sub get_entry {
 	my ( $self, $method ) = @_;
+
 	my $txt = $self->$method()->get or return;
-	$txt =~ s/\s//g;
 	return $txt;
 }
 
@@ -305,8 +321,19 @@ sub XaceSeqChooser {
 
 sub launch_exonerate {
 	my ($self) = @_;
+	
 	my $seqs = $self->get_query_seq();
 	print STDOUT "Found " . scalar(@$seqs) . " sequences\n";
+	
+	unless (@$seqs) {
+	    $self->top->messageBox(
+	        -title      => 'No sequence',
+	        -icon       => 'warning',
+	        -message    => 'Did not get any sequence data',
+	        -type       => 'OK',
+	        );
+	    return;
+	}
 
 	# identify the types of the sequences
 	
@@ -425,7 +452,17 @@ sub launch_exonerate {
 	
 	$self->top->Unbusy;
 	
-	return 1;
+	if ($need_relaunch) {	    
+    	return 1;
+	} else {
+	    $self->top->messageBox(
+	        -title      => 'No matches',
+	        -icon       => 'warning',
+	        -message    => 'Exonerate did not find any matches on genomic sequence',
+	        -type       => 'OK',
+	        );
+	    return 0;
+	}
 }
 
 my $seq_tag = 1;
@@ -434,16 +471,18 @@ sub get_query_seq {
 	my ($self) = @_;
 	my @seq;
 	
-	if ( $self->get_entry('match') ) {
-		my @accessions = split /\,|\;/, $self->get_entry('match');
+	if (my $txt = $self->get_entry('match')) {
+		my @accessions = split /[,;\|\s]+/, $txt;
 		if (@accessions) {
+		    warn "Going to fetch accessions: ", join(', ', map "'$_'", @accessions);
 			push @seq, Hum::Pfetch::get_Sequences(@accessions);
 		}
 	}
 	if ( my $string = $self->fasta_txt->get( '1.0', 'end' ) ) {
-		if( $string =~ /\S/ && !($string =~ />/)) {
+		if ($string =~ /\S/ and $string !~ />/) {
 			print "creating new seq tag num: $seq_tag\n";
-			$string = ">Unknown_$seq_tag\n".$string; $seq_tag++;
+			$string = ">OTF_seq_$seq_tag\n" . $string;
+			$seq_tag++;
 		}
 		push @seq, Hum::FastaFileIO->new_String_IO($string)->read_all_sequences;
 	}
@@ -453,30 +492,6 @@ sub get_query_seq {
 	}
 	
 	return \@seq;
-}
-
-sub name_start_end_from_fMap_blue_box {
-	my ($self) = @_;
-	my $tk = $self->top;
-	my $text = $self->get_clipboard_text or return;
-
-	#warn "clipboard: $text";
-	# Match fMap "blue box"
-	if ( $text =~
-/^(?:<?(?:Protein|Sequence)[:>]?)?\"?([^\"\s]+)\"?\s+-?(\d+)\s+-?(\d+)\s+\(\d+\)/
-	  )
-	{
-		my $name  = $1;
-		my $start = $2;
-		my $end   = $3;
-		( $start, $end ) = ( $end, $start ) if $start > $end;
-
-		#warn "Got ($name, $start, $end)";
-		return ( $name, $start, $end );
-	}
-	else {
-		return;
-	}
 }
 
 sub DESTROY {
