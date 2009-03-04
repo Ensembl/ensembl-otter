@@ -67,7 +67,7 @@ sub initialise {
 			    -title          => 'Choose fasta file',
 			    -initialdir     => $INITIAL_DIR,
                 -filetypes      => [
-                    ['Fasta Files'  => [qw{ .seq .pep .fasta .fa }]],
+                    ['Fasta Files'  => [qw{ .seq .pep .dna .fasta .fa }]],
                     ['All Files'    => '*'],
 
                     ### Do not want to show hidden files.
