@@ -119,7 +119,7 @@ sub initialise {
     )->pack(@frame_pack);
 	$self->fasta_txt(
 		   $txt_frame->Scrolled( "Text",
-            -background => 'white',
+            # -background => 'white',
 		   	-height => 12,
 		   	-width  => 62,
 		   	-scrollbars => 'se',
@@ -340,31 +340,6 @@ sub launch_exonerate {
 	$self->{_client} = Bio::Otter::Lace::Client->new unless $self->{_client};
 	my $types = $self->{_client}->get_accession_types(map { $_->name } @$seqs);
 	map { $_->type($types->{$_->name}) } @$seqs;
-
-	my %params = ();
-	
-	# These methods are now in the methods.ace file, so the auto-generated
-	# method in Bio::Otter::Lace::Exonerate is not used.
-	
-	$params{Protein}->{method_tag} = 'OTF_Protein';
-	$params{Protein}->{query_type} = 'protein';
-	$params{Protein}->{method_color} = 'GREEN';
-	
-	$params{Unknown_Protein}->{method_tag} = 'Unknown_Protein';
-	$params{Unknown_Protein}->{query_type} = 'protein';
-	$params{Unknown_Protein}->{method_color} = 'BROWN';
-	
-	$params{mRNA}->{method_tag} = 'OTF_mRNA';
-	$params{mRNA}->{query_type} = 'dna';
-	$params{mRNA}->{method_color} = 'BLUE';
-	
-	$params{EST}->{method_tag} = 'OTF_EST';
-	$params{EST}->{query_type} = 'dna';
-	$params{EST}->{method_color} = 'RED';
-	
-	$params{Unknown_DNA}->{method_tag} = 'Unknown_DNA';
-	$params{Unknown_DNA}->{query_type} = 'dna';
-	$params{Unknown_DNA}->{method_color} = 'YELLOW';
 	
 	my %seqs_by_type = ();
 	
@@ -392,32 +367,25 @@ sub launch_exonerate {
 		
 		print STDOUT "Running exonerate for sequence(s) of type: $type\n";
 			
-		my $score   = $type =~ /Protein/ ? $PROT_SCORE : $DNA_SCORE;
-		my $dnahsp  = $DNAHSP;
-		my $m_tag   = $params{$type}->{method_tag};
-		my $m_color = $params{$type}->{method_color};
-		my $query_type = $params{$type}->{query_type};
-		my $l_name  = $params{$type}->{method_tag};
-		my $best_n = $self->get_entry('bestn');
+		my $score    = $type =~ /Protein/ ? $PROT_SCORE : $DNA_SCORE;
+		my $ana_name = $type =~ /^Unknown/ ? $type : "OTF_$type";
+		my $dnahsp   = $DNAHSP;
+		my $best_n   = $self->get_entry('bestn');
 		
-		unless ( $score and $m_tag and $m_color and $l_name and $seqs_by_type{$type}) {
-			warn "Missing parameters\n";
-			next;
-		}
-	
 		my $exonerate = Bio::Otter::Lace::Exonerate->new;
 		$exonerate->AceDatabase($self->XaceSeqChooser->AceDatabase);
 		$exonerate->genomic_seq($self->XaceSeqChooser->Assembly->Sequence);
 		$exonerate->query_seq($seqs_by_type{$type});
-		$exonerate->query_type($query_type);
+		$exonerate->query_type($type =~ /Protein/ ? 'protein' : 'dna');
 		$exonerate->score($score);
 		$exonerate->dnahsp($dnahsp);
 		$exonerate->bestn($best_n);
-		$exonerate->method_tag($m_tag);
-		$exonerate->method_color($m_color);
-		$exonerate->logic_name($l_name);
+		$exonerate->method_tag($ana_name);
+		$exonerate->logic_name($ana_name);
+
 		my $seq_file = $exonerate->write_seq_file();
-		if($seq_file){
+
+		if ($seq_file) {
 			$exonerate->initialise($seq_file);
 			my $ace_text = $exonerate->run;
 			# delete query file

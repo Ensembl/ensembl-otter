@@ -84,22 +84,21 @@ sub initialise {
     $self->keyword_text(
         $self->make_labelled_text_widget(
         	$edit_frame, 
-        	"Keywords: \n(one per\nline)",     
-        	16,
+        	"Keywords: \n(one per \nline )",     
+        	8,
         	undef,
         	undef,
-        	-expand => 0,
         	-fill => 'x')
         );
         
     $self->description_text(
         $self->make_labelled_text_widget(
-        	$edit_frame, 
+            $edit_frame, 
         	'Description: ',   
-        	8,
+        	12,
         	'Generate',
-        	 sub { $self->generate_desc },
-        	-expand => 1, 
+        	sub { $self->generate_desc },
+        	-expand => 1,
         	-fill => 'both')
         );
    
@@ -110,7 +109,6 @@ sub initialise {
         	4,
         	undef,
         	undef,
-        	-expand => 0,
         	-fill => 'x')
         );
     
@@ -166,33 +164,36 @@ sub make_labelled_text_widget {
     my $std_border = 3;
     my $frame = $widget->Frame(
         -border => $std_border,
-        )->pack( -anchor => 'ne', @fill);
+        )->pack( -side => 'top', @fill);
 
     my $text = $frame->Scrolled('Text',
         -scrollbars         => 'e',
         -width              => 45,
         -height             => $height,
         -exportselection    => 1,
-        -background         => 'white', ### Add to Tk defaults
+        # -background         => 'white', ### Add to Tk defaults
         -wrap               => 'word',
-        )->pack( -side => 'right', @fill );
+        )->pack( -side => 'right', -expand => 1, @fill );
 
     my $tw = $text->Subwidget('text');
     $tw->bind(ref($tw), '<Key>', '');
     $tw->bind("<Key>", [\&insert_char, Tk::Ev('A')]);
+    
+    my $label_frame = $frame->Frame->pack(-side => 'right', -fill => 'y', -expand => 0);
 
-    $frame->Label(
+    $label_frame->Label(
         -text       => $name,
         -anchor     => 'ne',
         -justify    => 'right',
-        )->pack(-side   => 'top', -fill => 'none', -expand => 0);
+        -width      => 12,
+        )->pack(-side => 'top');
             
     if ($button_text) {
-    	$frame->Button(
-        -text       => $button_text,
-        -command    => $button_cmd,
-        -anchor => 'e',
-        )->pack(-side => 'top', -fill => 'none', -expand => 0);
+    	$label_frame->Button(
+            -text       => $button_text,
+            -command    => $button_cmd,
+            -anchor => 'e',
+            )->pack(-side => 'top');
     }
     
     return $text;
