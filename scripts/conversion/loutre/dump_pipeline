@@ -175,7 +175,7 @@ my $gtn = $pdbh->prepare(qq(
 $gtn->execute();
 while (my ($analysis_id,$logic_name) = $gtn->fetchrow){
   #exclude for align_features
-  next if ($logic_name=~/\_raw$/);
+  next if ($logic_name=~/\_raw|_new$/);
   foreach my $t qw(analysis protein_align_feature dna_align_feature) {
     push @{$analysis_ids{$t}{'analysis_id'}}, $analysis_id;
   }
