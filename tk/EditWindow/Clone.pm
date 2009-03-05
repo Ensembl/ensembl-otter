@@ -24,6 +24,8 @@ use Hum::Ace::Clone;
 
     -- Annotation --
     
+    Keywords (Printable non-punctuation chars)
+    
     Description
     
     Remarks
@@ -78,6 +80,16 @@ sub initialise {
         -labelside  => 'acrosstop',
         -border     => 3,
         )->pack(@frame_pack, -expand => 1, -fill => 'both' );
+    
+    $self->keyword_text(
+        $self->make_labelled_text_widget(
+        	$edit_frame, 
+        	"Keywords: \n(one per \nline )",     
+        	8,
+        	undef,
+        	undef,
+        	-fill => 'x')
+        );
         
     $self->description_text(
         $self->make_labelled_text_widget(
@@ -131,6 +143,10 @@ sub fill_Properties {
 
     my ($clone) = $self->Clone
       or confess "No clone attached";
+    
+    my $key = $self->keyword_text;
+    $key->delete('1.0', 'end');
+    $key->insert('end', join '', map("$_\n", $clone->get_all_keywords));
     
     my $desc = $self->description_text;
     $desc->delete('1.0', 'end');
@@ -274,8 +290,13 @@ sub get_new_Clone_if_changed {
     
     my $old = $self->Clone;
     my $new = $old->clone;
+    $new->drop_all_keywords;
     $new->drop_all_remarks;
     $new->drop_description;
+    
+    foreach my $key ($self->get_cleaned_text($self->keyword_text)) {
+        $new->add_keyword($key);
+    }
     
     my $desc = join(' ', $self->get_cleaned_text($self->description_text));
     $new->description($desc);
@@ -308,6 +329,15 @@ sub get_cleaned_text {
         push(@text, $line);
     }
     return @text;
+}
+
+sub keyword_text {
+    my( $self, $keyword_text ) = @_;
+    
+    if ($keyword_text) {
+        $self->{'_keyword_text'} = $keyword_text;
+    }
+    return $self->{'_keyword_text'};
 }
 
 sub description_text {
