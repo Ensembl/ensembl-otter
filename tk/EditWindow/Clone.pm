@@ -82,13 +82,36 @@ sub initialise {
         )->pack(@frame_pack, -expand => 1, -fill => 'both' );
     
     $self->keyword_text(
-        $self->make_labelled_text_widget($edit_frame, "Keywords: \n(one per\nline)",     16, -expand => 1, -fill => 'y')
+        $self->make_labelled_text_widget(
+        	$edit_frame, 
+        	"Keywords: \n(one per\nline)",     
+        	16,
+        	undef,
+        	undef,
+        	-expand => 0,
+        	-fill => 'x')
         );
+        
     $self->description_text(
-        $self->make_labelled_text_widget($edit_frame, 'Description: ',   8)
+        $self->make_labelled_text_widget(
+        	$edit_frame, 
+        	'Description: ',   
+        	8,
+        	'Generate',
+        	 sub { $self->generate_desc },
+        	-expand => 1, 
+        	-fill => 'both')
         );
+   
     $self->remark_text(
-        $self->make_labelled_text_widget($edit_frame, 'Remarks: ',       4)
+        $self->make_labelled_text_widget(
+        	$edit_frame, 
+        	'Remarks: ',       
+        	4,
+        	undef,
+        	undef,
+        	-expand => 0,
+        	-fill => 'x')
         );
     
     my $button_frame = $top->Frame->pack(@frame_pack);
@@ -137,12 +160,13 @@ sub fill_Properties {
 }
 
 sub make_labelled_text_widget {
-    my( $self, $widget, $name, $height, @fill ) = @_;
+    my( $self, $widget, $name, $height, 
+    	$button_text, $button_cmd, @fill ) = @_;
     
     my $std_border = 3;
     my $frame = $widget->Frame(
         -border => $std_border,
-        )->pack( -anchor => 'ne', @fill );
+        )->pack( -anchor => 'ne', @fill);
 
     my $text = $frame->Scrolled('Text',
         -scrollbars         => 'e',
@@ -161,13 +185,42 @@ sub make_labelled_text_widget {
         -text       => $name,
         -anchor     => 'ne',
         -justify    => 'right',
-        )->pack(
-            -side   => 'right',
-            -fill   => 'y',
-            @fill,
-            );
+        )->pack(-side   => 'top', -fill => 'none', -expand => 0);
+            
+    if ($button_text) {
+    	$frame->Button(
+        -text       => $button_text,
+        -command    => $button_cmd,
+        -anchor => 'e',
+        )->pack(-side => 'top', -fill => 'none', -expand => 0);
+    }
     
     return $text;
+}
+
+sub generate_desc {
+	my ($self) = @_;
+	
+	my $desc = $self->XaceSeqChooser->Assembly->
+			generate_description_for_clone($self->Clone);
+	
+	unless ($desc) {
+		$self->top->messageBox(
+	        -title      => 'No description',
+	        -icon       => 'warning',
+	        -message    => "I didn't find anything to describe",
+	        -type       => 'OK',
+	        );
+	        
+	    return;
+	}
+	
+	# delete any existing text that is highlighted (we have to eval
+	# because if nothing is highlighted this errors)
+	eval{$self->description_text->delete('sel.first', 'sel.last')};
+	
+	# and insert the new text
+	$self->description_text->insert('insert', $desc);
 }
 
 sub xace_save {
