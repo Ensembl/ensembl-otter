@@ -80,6 +80,7 @@ sub add_default_options {
         CanvasWindow*Menubutton.padX            6
         CanvasWindow*Menubutton.padY            6
         CanvasWindow*Balloon*background         #ffffcc
+        CanvasWindow*Text*background            white
         };
     
     for (my $i = 0; $i < @opt_val; $i += 2) {
