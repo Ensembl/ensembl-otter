@@ -584,9 +584,9 @@ sub store {
         ##
         ###
 
-        ##add synonym if old gene name is not a current gene synonym
-        $broker->compare_synonyms_add($db_gene, $gene);
-
+        # Add synonym if old gene name is not a current gene synonym
+        # Commented out since it causes problems.  Synonyms are only added by nomenclature scripts.
+        # $broker->compare_synonyms_add($db_gene, $gene);
 
             # mark the existing gene non-current:
 		$db_gene->is_current(0);
