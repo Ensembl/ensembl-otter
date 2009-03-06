@@ -13,7 +13,7 @@ use Data::Dumper;
 my @DB_CATEGORIES = (	'emblrelease', 
 						'uniprot', 
 						'emblnew',
-						'uniprot_archive',
+						#'uniprot_archive',
 						#'refseq'
 					);
 
@@ -101,7 +101,7 @@ sub get_accession_types {
 	
 	my $accs = shift;
 	
-	my $sql = '	SELECT molecule_type, data_class 
+	my $sql = '	SELECT molecule_type, data_class, accession_version 
 				FROM entry e, accession a
 				WHERE e.entry_id = a.entry_id
 				AND a.accession = ? ';
@@ -109,13 +109,27 @@ sub get_accession_types {
 	my $uniprot_archive_sql = ' SELECT molecule_type, data_class
         						FROM entry
         						WHERE accession_version LIKE ?';	
+        						
+	my %acc_hash = ();
 	
-	my %acc_hash = map {$_ => (/$magic_evi_name_matcher/g ? $2.($3?$3:'') : '') } @$accs; 
-
-	my %res = map {$_ => ''} @$accs;
+	for my $text (@$accs) {
+       	if ($text =~ /$magic_evi_name_matcher/g) {
+       		my $prefix = $1 || '*';
+        	my $acc    = $2;
+            $acc      .= $3 if $3;
+       		my $sv     = $4 || '*';
+       		
+       		$acc_hash{$text} = [$acc, $sv];	
+	   	}
+	   	else {
+	   		$acc_hash{$text} = '';
+	   	}
+	}
+	
+	my %res = map {$_ => []} @$accs;
 
 	for my $db (@DB_CATEGORIES) {
-		
+	    
 		#print "trying: $db\n";
         
         my $archive = $db eq 'uniprot_archive';
@@ -128,26 +142,42 @@ sub get_accession_types {
 				
 			next unless $acc_hash{$key};
 			
-			my $acc = $acc_hash{$key};
+			my ($acc, $sv) = @{ $acc_hash{$key} };
 			
 			$acc .= '%' if $archive; # uniprot_archive accessions have versions appended
 			
 			$sth->execute($acc) or die "Couldn't execute statement: " . $sth->errstr;
 			
-			if (my ($type, $class) = $sth->fetchrow_array()) {
-						
+			if (my ($type, $class, $version) = $sth->fetchrow_array()) {
+				
+				my ($db_sv) = $version =~ /.+(\.\d+)/;
+				
+				next unless ($sv eq '*') || ($sv eq $db_sv); 
+				
 				# found an entry, so establish if the type is one we're expecting
 						
 				if ($class eq 'EST') {
-					$res{$key} = 'EST';
+					$res{$key} = ['EST', "Em:$version"];
 				}
 				elsif ($type eq 'mRNA') {
-					$res{$key} = 'mRNA';
+					$res{$key} = ['mRNA', "Em:$version"];
 				}
 				elsif ($type eq 'protein') {
-					$res{$key} = 'Protein';
+					
+					my $prefix;
+					
+					if ($class eq 'STD') {
+						$prefix = 'Sw';
+					}
+					elsif ($class eq 'PRE') {
+						$prefix = 'Tr';
+					}
+					else {
+						die "Unexpected data class for uniprot entry: $class";
+					}
+					
+					$res{$key} = ['Protein', "$prefix:$version"];
 				}
-				#else {$res{$key} = "(Unrecognised: $type)";}
 				
 				delete $acc_hash{$key};
 			}
@@ -182,8 +212,6 @@ sub user {
     $self->{_user} = $user if $user;
     return $self->{_user};
 }
-
-
 
 1;
 
