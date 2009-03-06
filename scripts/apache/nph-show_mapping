@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2009-03-06 18:32:06 $
-# Id:            $Id: nph-show_mapping,v 1.18 2009-03-06 18:32:06 jgrg Exp $
+# Last modified: $Date: 2009-03-06 18:38:12 $
+# Id:            $Id: nph-show_mapping,v 1.19 2009-03-06 18:38:12 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-show_mapping,v $
 
 use strict;
@@ -25,7 +25,7 @@ my $odba = $server->otter_dba();
 my ($mapper_val) = @{$odba->get_MetaContainer()->list_value_by_key($mapper_metakey)};
 my $mdba;
 
-if(!$mapper_val) {
+if (!$mapper_val) {
     $server->error_exit("'$mapper_metakey' is not properly defined");
 } elsif($mapper_val eq '=otter_head') {
     $mdba = $odba;
@@ -64,7 +64,7 @@ $sth->execute($csver_asm, $csver_cmp);
 
 my $output_string = '';
 while (my ($asm_name, $cmp_name, $asm_start, $asm_end, $cmp_start, $cmp_end) = $sth->fetchrow) {
-    $output_string .= sprintf "%s:%s [ %11s  %11s ]  %s:%s [ %11s  %11s ]\n",
+    $output_string .= sprintf "%s:%s [ %11s  %11s ] - %s:%s [ %11s  %11s ]\n",
         $csver_asm, $asm_name, comma_separate_thousands($asm_start), comma_separate_thousands($asm_end),
         $csver_cmp, $cmp_name, comma_separate_thousands($cmp_start), comma_separate_thousands($cmp_end);
 }
