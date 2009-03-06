@@ -47,7 +47,7 @@ sub initialise {
         -anchor => 's',
         -padx   => 6,
 	)->pack( -side => 'left' );
-	$self->match( $match_frame->Entry( -width => 35, )->pack( -side => 'left' ) );
+	$self->match( $match_frame->Entry->pack( -side => 'left', -expand => 1, -fill => 'x' ) );
 	$match_frame->Frame( -width => 6, )->pack( -side => 'left' );
 	
 	my $update = sub {
@@ -71,7 +71,7 @@ sub initialise {
         -padx   => 6,
 	)->pack( -side => 'left' );
 
-	$self->fasta_file( $file_frame->Entry( -width => 45, -textvariable => \$fname )->pack( -side => 'left' ) );
+	$self->fasta_file( $file_frame->Entry( -textvariable => \$fname )->pack( -side => 'left', -expand => 1, -fill => 'x' ) );
 
 	# Pad between entries
 	$file_frame->Frame( -width => 6, )->pack( -side => 'left' );
