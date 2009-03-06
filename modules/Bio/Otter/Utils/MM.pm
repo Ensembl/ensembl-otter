@@ -121,12 +121,11 @@ sub get_accession_types {
        		
        		$acc_hash{$text} = [$acc, $sv];	
 	   	}
-	   	else {
-	   		$acc_hash{$text} = '';
-	   	}
 	}
 	
 	my %res = map {$_ => []} @$accs;
+	
+	return \%res unless %acc_hash;
 
 	for my $db (@DB_CATEGORIES) {
 	    
@@ -140,8 +139,6 @@ sub get_accession_types {
 			
 		for my $key (keys %acc_hash) {
 				
-			next unless $acc_hash{$key};
-			
 			my ($acc, $sv) = @{ $acc_hash{$key} };
 			
 			$acc .= '%' if $archive; # uniprot_archive accessions have versions appended
