@@ -2076,7 +2076,7 @@ sub run_exonerate {
         $self->{'_exonerate_window'} = $ew;
         weaken($self->{'_exonerate_window'});
     }
-    $ew->update_from_XaceSeqChooser();
+    $ew->update;
 
     return 1;
 }
