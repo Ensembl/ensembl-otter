@@ -47,7 +47,7 @@ sub initialise {
         -anchor => 's',
         -padx   => 6,
 	)->pack( -side => 'left' );
-	$self->match( $match_frame->Entry( -width => 40, )->pack( -side => 'left' ) );
+	$self->match( $match_frame->Entry( -width => 35, )->pack( -side => 'left' ) );
 	$match_frame->Frame( -width => 6, )->pack( -side => 'left' );
 	
 	my $update = sub {
@@ -107,6 +107,9 @@ sub initialise {
 			        $INITIAL_DIR = $dir;
 			    }
 			}
+			# Show the end of the Entry, so that when the file path is long the
+			# user can see the name of the file which was chosen.
+			$self->fasta_file->xviewMoveto(1);
 		}
 	)->pack( -side => 'left' );
 	
@@ -175,8 +178,9 @@ sub initialise {
 	$self->set_minsize;
 }
 
-sub update_from_XaceSeqChooser {
+sub update {
 	my ( $self ) = @_;
+
 	$self->accessions_from_clipboard;
 	my $top = $self->top;
 	$top->deiconify;
@@ -195,17 +199,21 @@ sub accessions_from_clipboard {
     my ($self) = @_;
     
     my $text = $self->get_clipboard_text or return;
+    
+    # Add clipboard text to existing entry text so that annotator
+    # can easily build up a list of accessions to search
+    if (my $entry_txt = $self->get_entry('match')) {
+        $text = join(' ', $entry_txt, $text);
+    }
+    
+    # accessions_from_text extracts all the accessions from its
+    # text argument and removes duplicates from the list
     if (my @acc = accessions_from_text($text)) {
         $self->set_entry('match', join ' ', @acc);
+        # Show the end of the Entry so that the annotator sees
+        # the latest accessions added.
+        $self->match->xviewMoveto(1);
     }
-}
-
-sub update_from_clipboard {
-	my ($self) = @_;
-	if ( my ( $name, $start, $end ) = $self->name_start_end_from_fMap_blue_box )
-	{
-		$self->set_entry( 'match', $name );
-	}
 }
 
 sub set_entry {
