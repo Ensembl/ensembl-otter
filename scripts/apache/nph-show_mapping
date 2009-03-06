@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2009-02-20 10:50:20 $
-# Id:            $Id: nph-show_mapping,v 1.16 2009-02-20 10:50:20 jgrg Exp $
+# Last modified: $Date: 2009-03-06 18:31:30 $
+# Id:            $Id: nph-show_mapping,v 1.17 2009-03-06 18:31:30 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-show_mapping,v $
 
 use strict;
@@ -15,8 +15,8 @@ use Bio::Otter::ServerScriptSupport;
 
 my $server = Bio::Otter::ServerScriptSupport->new;
 
-my $dataset   = $server->param('dataset');
-my $csver_cmp = $server->param('csver') || ($dataset=~/mouse/ ? 'NCBIM37' : 'NCBI36');
+my $dataset   = $server->require_argument('dataset');
+my $csver_cmp = $server->require_argument('csver');
 my $csver_asm = 'Otter';
 my $mapper_metakey = "mapper_db.${csver_cmp}";
 
@@ -36,25 +36,49 @@ if(!$mapper_val) {
 }
 
 my $mdbc = $mdba->dbc();
-my $output_string = '';
 
-my $sth = $mdbc->prepare(qq{
-    SELECT asm.name, cmp.name, a.asm_start, a.asm_end, a.cmp_start, a.cmp_end
-    FROM assembly a, seq_region asm, seq_region cmp, coord_system cs_asm, coord_system cs_cmp
-    WHERE a.asm_seq_region_id=asm.seq_region_id
-    AND a.cmp_seq_region_id=cmp.seq_region_id
-    AND cs_asm.version='$csver_asm'
-    AND cs_cmp.version='$csver_cmp'
-    AND asm.coord_system_id in (cs_asm.coord_system_id, cs_cmp.coord_system_id)
-    AND cmp.coord_system_id in (cs_asm.coord_system_id, cs_cmp.coord_system_id)
-    ORDER BY asm.name, a.asm_start
+my $sth = $mdbc->prepare(q{
+    SELECT asm.name
+      , cmp.name
+      , a.asm_start
+      , a.asm_end
+      , a.cmp_start
+      , a.cmp_end
+    FROM assembly a
+      , seq_region asm
+      , seq_region cmp
+      , coord_system cs_asm
+      , coord_system cs_cmp
+    WHERE a.asm_seq_region_id = asm.seq_region_id
+      AND a.cmp_seq_region_id = cmp.seq_region_id
+      AND cs_asm.version = ?
+      AND cs_cmp.version = ?
+      AND asm.coord_system_id IN (cs_asm.coord_system_id
+          , cs_cmp.coord_system_id)
+      AND cmp.coord_system_id IN (cs_asm.coord_system_id
+          , cs_cmp.coord_system_id)
+    ORDER BY asm.name
+      , a.asm_start
 });
-$sth->execute;
+$sth->execute($csver_asm, $csver_cmp);
+
+my $output_string = '';
 while (my ($asm_name, $cmp_name, $asm_start, $asm_end, $cmp_start, $cmp_end) = $sth->fetchrow) {
-    $output_string .= "$asm_name($asm_start..$asm_end) <-- $cmp_name($cmp_start..$cmp_end)\n";
+    $output_string .= sprintf "%s:%s [ %11s  %11s ]  %s:%s [ %11s  %11s ]\n",
+        $csver_asm, $asm_name, comma_separate_thousands($asm_start), comma_separate_thousands($asm_end),
+        $csver_cmp, $cmp_name, comma_separate_thousands($cmp_start), comma_separate_thousands($cmp_end);
 }
 
 $server->send_response($output_string, 1);
+
+sub comma_separate_thousands {
+    my ($num) = @_;
+    
+    for (my $i = length($num) - 3; $i > 0; $i -= 3) {
+        substr($num, $i, 0) = ',';
+    }
+    return $num;
+}
 
 1;
 
