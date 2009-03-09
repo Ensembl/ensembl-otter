@@ -345,8 +345,8 @@ sub launch_exonerate {
 
 	# identify the types of the sequences
 	
-	$self->{_client} = Bio::Otter::Lace::Client->new unless $self->{_client};
-	my $types = $self->{_client}->get_accession_types(map { $_->name } @$seqs);
+	my $client = $self->XaceSeqChooser->AceDatabase->Client;
+	my $types = $client->get_accession_types(map { $_->name } @$seqs);
 	map { $_->type($types->{$_->name}) } @$seqs;
 	
 	my %seqs_by_type = ();
