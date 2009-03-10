@@ -3,8 +3,8 @@
 # Author:        lg4
 # Group:         anacode
 # Maintainer:    lg4
-# Last modified: $Date: 2009-02-20 10:50:20 $
-# Id:            $Id: nph-get_features,v 1.6 2009-02-20 10:50:20 jgrg Exp $
+# Last modified: $Date: 2009-03-10 16:54:03 $
+# Id:            $Id: nph-get_features,v 1.7 2009-03-10 16:54:03 ml6 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_features,v $
 
 use strict;
@@ -76,35 +76,39 @@ my $output_string = '';
 
 eval {
     my @feature_kinds  = split(/,/, $server->require_argument('kind'));
-    my $analysis_name = $server->param('analysis') || undef;
+    my @analysis_names = $server->param('analysis') ? split /,/ , $server->param('analysis') :
+    												  ( undef );
 
-    foreach my $feature_kind (@feature_kinds) {
-        my $param_descs = $LangDesc{$feature_kind}{-call_args};
-        my $getter_method = "get_all_${feature_kind}s";
+	foreach my $analysis_name (@analysis_names) {
 
-        my @param_list = ();
-        foreach my $param_desc (@$param_descs) {
-            my ($param_name, $param_def_value, $param_separator) = @$param_desc;
+	    foreach my $feature_kind (@feature_kinds) {
+	        my $param_descs = $LangDesc{$feature_kind}{-call_args};
+	        my $getter_method = "get_all_${feature_kind}s";
 
-            my $param_value = (scalar(@$param_desc)==1)
-                ? $server->require_argument($param_name)
-                : defined($server->param($param_name))
-                    ? $server->param($param_name)
-                    : $param_def_value;
-            if($param_value && $param_separator) {
-                $param_value = [split(/$param_separator/,$param_value)];
-            }
+	        my @param_list = ();
+	        foreach my $param_desc (@$param_descs) {
+	            my ($param_name, $param_def_value, $param_separator) = @$param_desc;
 
-            push @param_list, $param_value;
-        }
+	            my $param_value = (scalar(@$param_desc)==1)
+	                ? $server->require_argument($param_name)
+	                : defined($server->param($param_name))
+	                    ? $analysis_name
+	                    : $param_def_value;
+	            if($param_value && $param_separator) {
+	                $param_value = [split(/$param_separator/,$param_value)];
+	            }
 
-        my $features = $server->fetch_mapped_features($feature_kind, $getter_method, \@param_list,
-            map { defined($server->param($_)) ? $server->param($_) : '' }
-                qw(cs name type start end metakey csver csver_remote)
-        );
+	            push @param_list, $param_value;
+	        }
 
-        $output_string .= GenerateFeatures($features, $analysis_name);
-    }
+	        my $features = $server->fetch_mapped_features($feature_kind, $getter_method, \@param_list,
+	            map { defined($server->param($_)) ? $server->param($_) : '' }
+	                qw(cs name type start end metakey csver csver_remote)
+	        );
+
+	        $output_string .= GenerateFeatures($features, $server->param('analysis'));
+	    }
+	}
 };
 
 if ($@) {
