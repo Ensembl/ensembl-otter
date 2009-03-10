@@ -15,6 +15,7 @@ use Bio::Otter::Lace::Client;
 use Hum::Sort qw{ ace_sort };
 use Tk::LabFrame;
 use Tk::Balloon;
+use Data::Dumper;
 
 use base 'EditWindow';
 
@@ -331,6 +332,7 @@ sub launch_exonerate {
 	my ($self) = @_;
 	
 	my $seqs = $self->get_query_seq();
+	
 	print STDOUT "Found " . scalar(@$seqs) . " sequences\n";
 	
 	unless (@$seqs) {
@@ -342,12 +344,6 @@ sub launch_exonerate {
 	        );
 	    return;
 	}
-
-	# identify the types of the sequences
-	
-	my $client = $self->XaceSeqChooser->AceDatabase->Client;
-	my $types = $client->get_accession_types(map { $_->name } @$seqs);
-	map { $_->type($types->{$_->name}) } @$seqs;
 	
 	my %seqs_by_type = ();
 	
@@ -445,29 +441,106 @@ my $seq_tag = 1;
 
 sub get_query_seq {
 	my ($self) = @_;
-	my @seq;
+	my @seqs;
 	
-	if (my $txt = $self->get_entry('match')) {
-		my @accessions = split /[,;\|\s]+/, $txt;
-		if (@accessions) {
-		    warn "Going to fetch accessions: ", join(', ', map "'$_'", @accessions);
-			push @seq, Hum::Pfetch::get_Sequences(@accessions);
-		}
-	}
+	# get seqs from fasta file and text box
+	
 	if ( my $string = $self->fasta_txt->get( '1.0', 'end' ) ) {
 		if ($string =~ /\S/ and $string !~ />/) {
 			print "creating new seq tag num: $seq_tag\n";
 			$string = ">OTF_seq_$seq_tag\n" . $string;
 			$seq_tag++;
 		}
-		push @seq, Hum::FastaFileIO->new_String_IO($string)->read_all_sequences;
+		push @seqs, Hum::FastaFileIO->new_String_IO($string)->read_all_sequences;
 	}
 	if ( $self->get_entry('fasta_file') ) {
-		push @seq, Hum::FastaFileIO->new( $self->get_entry('fasta_file') )
+		push @seqs, Hum::FastaFileIO->new( $self->get_entry('fasta_file') )
 		  	->read_all_sequences;
 	}
 	
-	return \@seq;
+	my @accessions = map { $_->name } @seqs;
+	
+	# get seqs from accession numbers supplied by the user
+	
+	my @supplied_accs;
+	
+	if (my $txt = $self->get_entry('match')) {
+		@supplied_accs = split(/[,;\|\s]+/, $txt);
+		push @accessions, @supplied_accs;
+	}
+	
+	# identify the types of all the accessions supplied
+	
+	$self->{_client} = Bio::Otter::Lace::Client->new unless $self->{_client};
+	my $types = $self->{_client}->get_accession_types(@accessions);
+	
+	# add type and full accession information to the existing sequences
+	
+	for my $seq (@seqs) {
+		my ($type, $full_acc) = @{ $types->{$seq->name} };
+		$seq->type($type);
+		$seq->name($full_acc);
+	}
+	
+	# map between the corrected and supplied accessions
+	
+	my %correct_to_supplied = ();
+	
+	map { $correct_to_supplied{ $types->{$_}->[1] } = $_ } @supplied_accs; 
+	
+	# build a list of all the correct accessions for pfetch
+	
+	my @correct_accs = map { $types->{$_}->[1] } @supplied_accs;
+	
+	@correct_accs = grep {$_} @correct_accs; # filter empty strings
+	
+	# build a list of accessions we didn't find anything for
+	
+	my $missing_msg = '';
+	
+	map { $missing_msg .= "\t$_\n" unless $types->{$_}->[1] } @supplied_accs;
+	
+	if ($missing_msg) {
+		$missing_msg  = "I did not find any sequences for the following ".
+				 "accessions:\n\n".$missing_msg;
+	}
+	
+	my $remapped_msg = '';
+	
+	# and pfetch the remaining sequences using the corrected accessions
+	
+	for my $seq (Hum::Pfetch::get_Sequences(@correct_accs)) {
+		
+		# add the type information to the sequence
+		
+		$seq->type($types->{$correct_to_supplied{$seq->name}}->[0]);
+		push @seqs, $seq;
+		
+		# flag to the user that we changed the accession if necessary
+		
+		unless ($seq->name =~ $correct_to_supplied{$seq->name}) {
+			$remapped_msg .= "  ".$correct_to_supplied{$seq->name}.
+							 " to ".$seq->name."\n";	
+		}
+	}
+	
+	if ($missing_msg || $remapped_msg) {
+		
+		$remapped_msg = "The following supplied accessions have been ".
+						"mapped to more recent accessions as shown ".
+						"below\n\n".$remapped_msg if $remapped_msg;
+		
+		$missing_msg .= "\n" if ($missing_msg && $remapped_msg);
+		
+		$self->top->messageBox(
+	        -title      => 'Problems with accessions supplied',
+	        -icon       => 'warning',
+	        -message    => $missing_msg.$remapped_msg,
+	        -type       => 'OK',
+		);
+	}
+	
+	return \@seqs;
 }
 
 sub DESTROY {
