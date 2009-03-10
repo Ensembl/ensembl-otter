@@ -529,8 +529,8 @@ sub get_query_seq {
 	if ($missing_msg || $remapped_msg) {
 		
 		$remapped_msg = "The following supplied accessions have been ".
-						"mapped to more recent accessions as shown ".
-						"below\n\n".$remapped_msg if $remapped_msg;
+						"mapped to more recent accessions\n\n".$remapped_msg 
+							if $remapped_msg;
 		
 		$missing_msg .= "\n" if ($missing_msg && $remapped_msg);
 		
