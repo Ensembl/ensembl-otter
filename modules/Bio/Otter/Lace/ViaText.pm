@@ -189,7 +189,7 @@ sub generate_unless_hashed {
         push @optvalues, $parent_hash_key;
     }
 
-    if(!$analysis_name) {
+    if($feature->can('analysis') && (!$analysis_name || scalar(split(/,/,$analysis_name)) > 1)) {
         push @optvalues, $feature->analysis()->logic_name();
     }
 
@@ -224,7 +224,6 @@ sub ParseFeatures {
             confess "Blank line in output - due to newline on end of hit description?";
         }
 
-        my $logic_name = $analysis_name || pop @optvalues;
 
         my $feature_type    = shift @optvalues; # 'SimpleFeature'|'HitDescription'|...|'PredictionExon'
         my $feature_subhash = $LangDesc{$feature_type};
@@ -232,12 +231,17 @@ sub ParseFeatures {
         my $constructor     =  $feature_subhash->{-oldconstructor} || $feature_subhash->{-constructor};
         my $feature = ref $constructor ? &$constructor() : $constructor->new();
 
+        my $logic_name = $analysis_name;
+        if($feature->can('analysis') && (!$analysis_name || scalar( split(/,/,$analysis_name)) > 1 )) {
+        	$logic_name = pop @optvalues;
+    	}
+
         my $optnames        = $feature_subhash->{-optnames};
         for(my $i=0; $i < @$optnames; $i++) {
             my $method = $optnames->[$i];
             $feature->$method($optvalues[$i]);
         }
-        
+
         if(my $ref_link = $feature_subhash->{-reference}) { # reference link is one-way (the referenced object doesn't know its referees)
             my ($referenced_feature_type, $ref_field, $ref_setter, $ref_getter ) = @$ref_link;
             my $referenced_id  = $ref_field ? $feature->$ref_field() : pop @optvalues; # it can either be named or nameless
