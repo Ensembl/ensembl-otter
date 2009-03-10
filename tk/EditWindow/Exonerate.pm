@@ -179,9 +179,8 @@ sub initialise {
 	$self->set_minsize;
 }
 
-sub update {
+sub update_from_XaceSeqChooser {
 	my ( $self ) = @_;
-
 	$self->accessions_from_clipboard;
 	my $top = $self->top;
 	$top->deiconify;
@@ -507,20 +506,23 @@ sub get_query_seq {
 	
 	my $remapped_msg = '';
 	
-	# and pfetch the remaining sequences using the corrected accessions
 	
-	for my $seq (Hum::Pfetch::get_Sequences(@correct_accs)) {
+	if (@correct_accs) {
 		
-		# add the type information to the sequence
-		
-		$seq->type($types->{$correct_to_supplied{$seq->name}}->[0]);
-		push @seqs, $seq;
-		
-		# flag to the user that we changed the accession if necessary
-		
-		unless ($seq->name =~ $correct_to_supplied{$seq->name}) {
-			$remapped_msg .= "  ".$correct_to_supplied{$seq->name}.
-							 " to ".$seq->name."\n";	
+		# and pfetch the remaining sequences using the corrected accessions
+		for my $seq (Hum::Pfetch::get_Sequences(@correct_accs)) {
+			
+			# add the type information to the sequence
+			
+			$seq->type($types->{$correct_to_supplied{$seq->name}}->[0]);
+			push @seqs, $seq;
+			
+			# flag to the user that we changed the accession if necessary
+			
+			unless ($seq->name =~ $correct_to_supplied{$seq->name}) {
+				$remapped_msg .= "  ".$correct_to_supplied{$seq->name}.
+								 " to ".$seq->name."\n";	
+			}
 		}
 	}
 	
