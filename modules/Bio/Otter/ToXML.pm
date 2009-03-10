@@ -83,6 +83,7 @@ sub Bio::EnsEMBL::Gene::toXMLstring {
     my $str  = emit_opening_tag('locus',0);
        $str .= emit_tagpair('stable_id', $gene->stable_id, 2);
        $str .= emit_tagpair('description', $gene->description, 2);
+       $str .= emit_tagpair('analysis', $gene->analysis->logic_name, 2);
        $str .= emit_tagpair('type', ($gene->can('biotype') ? $gene->biotype() : $gene->type()) , 2);
 
     for my $dbentry (@{$gene->get_all_DBEntries}) {
@@ -134,7 +135,7 @@ sub Bio::EnsEMBL::Transcript::toXMLstring {
 
     my $str  = emit_opening_tag('transcript', 2);
        $str .= emit_tagpair('stable_id', $transcript->stable_id(), 4);
-
+	   $str .= emit_tagpair('analysis', $transcript->analysis->logic_name, 4);
     for my $dbentry (@{$transcript->get_all_DBEntries}) {
        $str .= $dbentry->toXMLstring();
     }
@@ -285,7 +286,7 @@ sub Bio::Otter::TranscriptInfo::toXMLstring {
         $remstr =~ s/\n/ /g;
         $str .= emit_tagpair('remark', $remstr, 6);
     }
-	   
+
     foreach my $method (qw{
             cds_start_not_found
             cds_end_not_found
@@ -305,7 +306,7 @@ sub Bio::Otter::TranscriptInfo::toXMLstring {
     }
 
     $str .= emit_closing_tag('transcript_info', 4);
-	    
+
     return $str;
 }
 
@@ -410,7 +411,7 @@ sub Bio::Vega::Transcript::toXMLstring_info {
     }
 
     $str .= emit_closing_tag('transcript_info', 4);
-	    
+
     return $str;
 }
 
@@ -437,7 +438,7 @@ sub by_stable_id_or_name {
 
   if (defined($a->stable_id)) {$astableid = $a->stable_id;}
   if (defined($b->stable_id)) {$bstableid = $b->stable_id;}
-  
+
   my $cmpVal = ($astableid cmp $bstableid);
 
   if (!$cmpVal) {
