@@ -514,7 +514,7 @@ sub get_query_seq {
 			
 			# add the type information to the sequence
 			
-			$seq->type($types->{$correct_to_supplied{$seq->name}}->[0]);
+			$seq->type($types->{ $correct_to_supplied{$seq->name} }->[0]);
 			push @seqs, $seq;
 			
 			# flag to the user that we changed the accession if necessary
