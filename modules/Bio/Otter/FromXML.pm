@@ -195,9 +195,9 @@ sub build_Exon {
 
 sub exon_pos {      # map translation onto the exons:
   my ($tran, $loc) = @_;
- 
+
   foreach my $exon (@{ $tran->get_all_Exons }) {
- 
+
     if ($loc <= $exon->end && $loc >= $exon->start) {
       if ($exon->strand == 1) {
         return ($exon, ($loc - $exon->start) + 1);
@@ -241,20 +241,20 @@ sub build_Translation {
         # if there is one. We need to do this after we have all the
         # exons
       if (defined($tl_start) && defined($tl_end)) {
-                                                                                           
+
         my ($start_exon, $start_pos) = exon_pos($transcript, $tl_start);
         my ($end_exon,   $end_pos)   = exon_pos($transcript, $tl_end);
-                                                                                           
+
         if (!defined($start_exon) || !defined($end_exon)) {
-                                                                                           
+
           if (!defined($start_exon)) {warn "no start exon"};
           if (!defined($end_exon)) {warn "no end exon"};
-                                                                                           
+
           print STDERR "ERROR: Failed mapping translation to transcript\n";
         } else {
           $translation->start_Exon($start_exon);
           $translation->start($start_pos);
-                                                                                           
+
           if ($start_exon->strand == 1 && $start_exon->start != $tl_start) {
             #$start_exon->phase(-1);
             $start_exon->end_phase(($start_exon->length-$start_pos+1)%3);
@@ -262,10 +262,10 @@ sub build_Translation {
             #$start_exon->phase(-1);
             $start_exon->end_phase(($start_exon->length-$start_pos+1)%3);
           }
-                                                                                           
+
           $translation->end_Exon($end_exon);
           $translation->end($end_pos);
-                                                                                           
+
           if ($end_exon->length >= $end_pos) {
             $end_exon->end_phase(-1);
           }
@@ -290,6 +290,8 @@ sub build_Transcript {
                 $transcript->stable_id($data);
                     # next 1 line is copied from Converter.pm without understanding:
                 # $transcript->version(1);
+            } elsif($tag eq 'analysis') {
+            	$transcript->analysis(Bio::EnsEMBL::Analysis->new(-logic_name => $data));
             }
         } elsif($kind eq 'o') {
             if($tag eq 'xref') {
@@ -383,6 +385,8 @@ sub build_Gene {
                 $gene->type($data);
             } elsif($tag eq 'description') {
                 $gene->description($data);
+            } elsif($tag eq 'analysis') {
+                $gene->analysis(Bio::EnsEMBL::Analysis->new(-logic_name => $data));
             }
         } elsif($kind eq 'o') {
             if($tag eq 'xref') {
