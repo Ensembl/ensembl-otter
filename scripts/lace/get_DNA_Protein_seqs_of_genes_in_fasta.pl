@@ -1,4 +1,7 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/env perl
+
+use warnings;
+
 
 ### get_DNA_Protein_seqs_of_genes_in_fasta
 

@@ -1,4 +1,7 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/env perl
+
+use warnings;
+
 
 # Shows contigs that do not belong to any assembly
 # and tries to give a possible hint

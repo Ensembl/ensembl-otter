@@ -1,4 +1,7 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/env perl
+
+use warnings;
+
 
 # Need to point at ensembl head API
 use lib '/nfs/team71/analysis/jgrg/work/ensembl-head/modules';

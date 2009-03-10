@@ -1,4 +1,7 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/env perl
+
+use warnings;
+
 
 # Re-initialize the values of stable_id auto_increment pools by skipping all existing stable_ids.
 

@@ -1,4 +1,7 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/env perl
+
+use warnings;
+
 # contact: ck1@sanger.ac.uk
 
 use strict;

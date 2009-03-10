@@ -1,4 +1,7 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/env perl
+
+use warnings;
+
 
 # Show the orphane current_transcript_info entries and the recommended changes
 # (the script itself does not make any changes, but you can copy-and-paste MySQL commands).

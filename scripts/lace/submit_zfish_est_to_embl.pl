@@ -1,5 +1,8 @@
 
-#!/usr/local/ensembl/bin/perl -w
+#!/usr/local/ensembl/bin/perl
+
+use warnings;
+
 
 use strict;
 use EST_DB::Utils::Clone_Library_directions qw(%library_clone_info);

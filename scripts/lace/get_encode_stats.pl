@@ -1,5 +1,8 @@
 
-#!/usr/local/bin/perl -w
+#!/usr/bin/env perl
+
+use warnings;
+
 
 # get_encode_stats
 # Author: ck1@sanger.ac.uk

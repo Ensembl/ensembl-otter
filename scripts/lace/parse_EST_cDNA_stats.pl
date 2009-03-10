@@ -1,4 +1,7 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/env perl
+
+use warnings;
+
 
 ### parse all EST/cDNA submitted to EMBL - based on files prepared by Hans
 ### run script on machine: cbi3

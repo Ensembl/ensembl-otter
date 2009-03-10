@@ -1,4 +1,7 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/env perl
+
+use warnings;
+
 
 # Show the transcript_info_id-s that do not correspond to any transcript.
 # You may want to back them up in a separate table before removal.

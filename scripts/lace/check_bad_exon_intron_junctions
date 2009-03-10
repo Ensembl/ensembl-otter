@@ -1,4 +1,7 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/env perl
+
+use warnings;
+
 
 # check_exon_intron_junctions
 # create a list of transcripts with exon/intron borders having bad or non-consensus sequences

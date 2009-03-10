@@ -1,4 +1,7 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/env perl
+
+use warnings;
+
 
 ### transfer_MHC_annotation
 ### Author ck1@sanger.ac.uk
