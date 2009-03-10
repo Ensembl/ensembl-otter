@@ -1,4 +1,7 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/env perl
+
+use warnings;
+
 
 # Transfer the hidden attribute from one dataset to another (from 'old_human' to 'new_human')
 # Note they are datasets, not database names. Both have to be available on the same server.

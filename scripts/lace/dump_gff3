@@ -1,4 +1,7 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/env perl
+
+use warnings;
+
 
 # dump_gff3 (modified from dump_gtf)
 # can dump loutre coords or NCBI coords

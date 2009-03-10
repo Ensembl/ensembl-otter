@@ -1,4 +1,7 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/env perl
+
+use warnings;
+
 
 ### backup_all_otter_submissions_databases from otterslave and archive on cbi1
 ### running this script as a cron job on cbi1

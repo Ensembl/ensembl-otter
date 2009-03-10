@@ -1,4 +1,7 @@
-#!/usr/bin/env perl -w
+#!/usr/bin/env perl
+
+use warnings;
+
 
 ### extract_ace_data_from_otterlace_logfile
 

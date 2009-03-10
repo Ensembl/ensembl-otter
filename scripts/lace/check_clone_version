@@ -1,4 +1,7 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/env perl
+
+use warnings;
+
 
 ### author: ck1
 ### check version of clones in AGP is in sync with pfetch server

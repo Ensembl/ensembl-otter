@@ -1,6 +1,12 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/env perl
 
-#!/usr/local/bin/perl -w
+use warnings;
+
+
+#!/usr/bin/env perl
+
+use warnings;
+
 
 use strict;
 use Getopt::Long 'GetOptions';
