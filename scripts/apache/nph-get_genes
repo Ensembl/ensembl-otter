@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2009-02-20 10:50:20 $
-# Id:            $Id: nph-get_genes,v 1.19 2009-02-20 10:50:20 jgrg Exp $
+# Last modified: $Date: 2009-03-10 16:51:06 $
+# Id:            $Id: nph-get_genes,v 1.20 2009-03-10 16:51:06 ml6 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_genes,v $
 
 use strict;
@@ -30,7 +30,8 @@ my $server = Bio::Otter::ServerScriptSupport->new;
 my $output_string = '';
 
 eval {
-    my $analysis_name        = $server->param('analysis');
+    my @analysis_names = $server->param('analysis') ? split /,/ , $server->param('analysis') :
+    												  ( undef );
     my $transcript_analyses  = $server->param('transcript_analyses')  || '';
     my $translation_xref_dbs = $server->param('translation_xref_dbs') || '';
 
@@ -41,16 +42,18 @@ eval {
         ? { map { $_ => 1 } split(/,/, $translation_xref_dbs) }
         : '';
 
-        # third parameter of $slice->get_all_Genes() helps preventing lazy-loading of transcripts
-    my $genes = $server->fetch_mapped_features('gene', 'get_all_Genes', [$analysis_name, undef, 1],
-        map { defined($server->param($_)) ? $server->param($_) : '' } qw(cs name type start end metakey csver csver_remote)
-    );
+	foreach my $analysis_name (@analysis_names) {
+	    # third parameter of $slice->get_all_Genes() helps preventing lazy-loading of transcripts
+	    my $genes = $server->fetch_mapped_features('gene', 'get_all_Genes', [$analysis_name, undef, 1],
+	        map { defined($server->param($_)) ? $server->param($_) : '' } qw(cs name type start end metakey csver csver_remote)
+	    );
 
-    foreach my $gene (@$genes) {
-        $output_string .= $gene->toXMLstring(
-            $allowed_transcript_analyses_hash,
-            $allowed_translation_xref_db_hash
-        );
+	    foreach my $gene (@$genes) {
+	        $output_string .= $gene->toXMLstring(
+	            $allowed_transcript_analyses_hash,
+	            $allowed_translation_xref_db_hash
+	        );
+	    }
     }
 };
 
