@@ -291,7 +291,8 @@ sub build_Transcript {
                     # next 1 line is copied from Converter.pm without understanding:
                 # $transcript->version(1);
             } elsif($tag eq 'analysis') {
-            	$transcript->analysis(Bio::EnsEMBL::Analysis->new(-logic_name => $data));
+            	# no transcript->analysis method in ensembl V.19
+            	$transcript->{analysis} = Bio::EnsEMBL::Analysis->new(-logic_name => $data);
             }
         } elsif($kind eq 'o') {
             if($tag eq 'xref') {
