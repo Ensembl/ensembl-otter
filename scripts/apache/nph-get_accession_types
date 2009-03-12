@@ -4,8 +4,8 @@
 # Author:        gr5
 # Group:         anacode
 # Maintainer:    gr5
-# Last modified: $Date: 2009-03-12 14:41:08 $
-# Id:            $Id: nph-get_accession_types,v 1.11 2009-03-12 14:41:08 gr5 Exp $
+# Last modified: $Date: 2009-03-12 14:53:35 $
+# Id:            $Id: nph-get_accession_types,v 1.12 2009-03-12 14:53:35 gr5 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_accession_types,v $
 
 use strict;
@@ -27,7 +27,7 @@ my @acc_list = split /,/, $accs;
 #	$response .= $key."\t".$types->{$key}->[0]."\t".$types->{$key}->[1]."\n";
 #}
 
-mu $response = 'The Sanger Institute Web service you requested is temporarily unavailable';
+my $response = 'The Sanger Institute Web service you requested is temporarily unavailable';
 
 $server->send_response($response);
 
