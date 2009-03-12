@@ -4,8 +4,8 @@
 # Author:        gr5
 # Group:         anacode
 # Maintainer:    gr5
-# Last modified: $Date: 2009-03-12 14:53:35 $
-# Id:            $Id: nph-get_accession_types,v 1.12 2009-03-12 14:53:35 gr5 Exp $
+# Last modified: $Date: 2009-03-12 15:08:36 $
+# Id:            $Id: nph-get_accession_types,v 1.13 2009-03-12 15:08:36 gr5 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_accession_types,v $
 
 use strict;
@@ -18,16 +18,17 @@ my $server = Bio::Otter::ServerScriptSupport->new;
 
 my $accs = $server->param('accessions');
 
-my @acc_list = split /,/, $accs;
+my @acc_list = split /,/, $accs; #/
 
-#my $mm = Bio::Otter::Utils::MM->new;
-#my $types = $mm->get_accession_types(\@acc_list);
-#my $response = '';
-#for my $key (keys %$types) {
-#	$response .= $key."\t".$types->{$key}->[0]."\t".$types->{$key}->[1]."\n";
-#}
+my $mm = Bio::Otter::Utils::MM->new;
 
-my $response = 'The Sanger Institute Web service you requested is temporarily unavailable';
+my $types = $mm->get_accession_types(\@acc_list);
+
+my $response = '';
+
+for my $key (keys %$types) {
+	$response .= $key."\t".$types->{$key}->[0]."\t".$types->{$key}->[1]."\n";
+}
 
 $server->send_response($response);
 
