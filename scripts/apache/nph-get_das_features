@@ -3,8 +3,8 @@
 # Author:        lg4
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2009-03-12 15:06:17 $
-# Id:            $Id: nph-get_das_features,v 1.11 2009-03-12 15:06:17 gr5 Exp $
+# Last modified: $Date: 2009-03-12 16:04:03 $
+# Id:            $Id: nph-get_das_features,v 1.12 2009-03-12 16:04:03 gr5 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_das_features,v $
 
 use strict;
@@ -116,6 +116,8 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS { # $kind = 'SimpleFeature' ||
     if($dump) {
         die "The whole structure of the response is: '".Dumper($response)."'\n";
     }
+    
+    print "The whole structure of the response is: '".Dumper($response)."'\n";
 
     my $feature_coll; # collection(hash/array) of top-level features (prediction_transcripts | simple_features)
 
