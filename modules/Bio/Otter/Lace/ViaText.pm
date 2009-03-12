@@ -188,8 +188,8 @@ sub generate_unless_hashed {
     if($parent_hash_key) {
         push @optvalues, $parent_hash_key;
     }
-
-    if($feature->can('analysis') && (!$analysis_name || scalar(split(/,/,$analysis_name)) > 1)) {
+	my @analysis = split(/,/,$analysis_name);
+    if($feature->can('analysis') && (!$analysis_name || scalar(@analysis) > 1)) {
         push @optvalues, $feature->analysis()->logic_name();
     }
 
@@ -232,7 +232,8 @@ sub ParseFeatures {
         my $feature = ref $constructor ? &$constructor() : $constructor->new();
 
         my $logic_name = $analysis_name;
-        if($feature->can('analysis') && (!$analysis_name || scalar( split(/,/,$analysis_name)) > 1 )) {
+        my @analysis = split(/,/,$analysis_name);
+        if($feature->can('analysis') && (!$analysis_name || scalar(@analysis) > 1 )) {
         	$logic_name = pop @optvalues;
     	}
 
