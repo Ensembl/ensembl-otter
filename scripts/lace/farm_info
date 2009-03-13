@@ -17,7 +17,7 @@ GetOptions('u|user=s' => \$buser);
 
 my $sep = '-' x 75 . "\n";
 
-my $pipebin = '/usr/local/lsf/bin/';
+my $pipebin = '/usr/local/lsf/6.1/linux2.6-glibc2.3-x86/bin/';
 
 #--------------------
 #    LSF busers
@@ -38,7 +38,7 @@ foreach (@busers ) {
 	if ( $jobs != 0 ) {
 	  if ( $user eq $buser ){
 		set_color("red", $user);
-		$user = ''; 
+		$user = '';
 	  }
 	  printf("%-10s\t%s\t%s\t%s\t%s\t%s\n", $user, $jobs, $pend, $run, $SSUSP, $USUSP);
 	}
@@ -120,9 +120,9 @@ print "\n";
 
 printf("%-27s%-25s%-15s%s\n", "DATABASE", "ANALYSIS", "STATUS", "JOBS");
 
-my @status = `$pipebin/bjobs -l -u $buser | /bin/egrep "(^Job|Status)"`;
+my @status = `$pipebin/bjobs -l -u $buser | /bin/egrep "(^Job|Status|tatus)"`;
 
-# This output format depends on user bsub command and 
+# This output format depends on user bsub command and
 # works on our current setting
 #Job <3684107>, Job Name <human_finished:Est2genome_other>, User <ck1>, Project
 
@@ -135,7 +135,7 @@ foreach ( @status ) {
 	$db = $1;
 	$logic_name = $2;
   }
-  if ( $_ =~ /Status <(\w+)>,.+/ ){
+  if ( $_ =~ /tatus <(\w+)>,.+/ ){
 	my $status = $1;
 	$db_logic_name_jobs_status->{$db}{$logic_name}{$status}++;
   }
@@ -175,4 +175,4 @@ select[tmp>1000] rusage[tmp=1000]
 
 Since you also need a memory requirement, say, 1.5GB, you probably should include mem statements as well, and also a memory limit so that LSF will kill the job if it explodes:
 
-bsub -M 1500000 -R'select[mem>1500 && tmp>1000] rusage[mem=1500:tmp=1000]' ... 
+bsub -M 1500000 -R'select[mem>1500 && tmp>1000] rusage[mem=1500:tmp=1000]' ...
