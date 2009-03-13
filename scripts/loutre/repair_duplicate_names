@@ -11,6 +11,7 @@ use Sys::Hostname;
 use Bio::Vega::Author;
 use Bio::Vega::ContigLockBroker;
 use Bio::Otter::Lace::Defaults;
+use Bio::EnsEMBL::Utils::Exception qw(warning);
 
 {
     my $dsname  = '';
