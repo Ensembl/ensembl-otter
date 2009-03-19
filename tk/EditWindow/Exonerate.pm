@@ -469,9 +469,8 @@ sub get_query_seq {
 	}
 	
 	# identify the types of all the accessions supplied
-	
-	$self->{_client} = Bio::Otter::Lace::Client->new unless $self->{_client};
-	my $types = $self->{_client}->get_accession_types(@accessions);
+    my $client = $self->XaceSeqChooser->AceDatabase->Client;
+    my $types = $client->get_accession_types(@accessions);
 	
 	# add type and full accession information to the existing sequences
 	
