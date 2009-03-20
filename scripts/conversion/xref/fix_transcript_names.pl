@@ -40,9 +40,8 @@ These should be reported to Havana for double
 checking they are not meant to be fragmented (see below). Using the verbose option
 will also report on non-havana loci.
 
-The only transcripts who's names should not be patched are those from fragmented genes
-- these have a 'fragmented locus' gene_attrib hidden_remark, or a '%fragmen%'
-transcript_attrib remark or hidden_remark. For these a human readable gene_attrib remark
+For fragmented genes - these have a 'fragmented locus' gene_attrib hidden_remark,
+or a '%fragmen%' transcript_attrib remark or hidden_remark, a human readable gene_attrib remark
 is also added. For genes that don't have such a remark on the gene or a transcript,
 the stable_id is first compared against a list of previously curated fragmented genes -
 if any are seen then this is logged as they really shouldn't be seen.
@@ -205,7 +204,7 @@ foreach my $chr ($support->sort_chromosomes) {
       my $base_name = $transcripts{$t_name}->[1];
       my $tsi    =  $trans->stable_id;
       my $t_dbID = $trans->dbID;		
-      #			if ($t_name =~ /(\-\d{3})_\d{1}$/) { #hack used for patching mouse duplicate transcript names
+#      if ($t_name =~ /(\-\d{3})_\d{1}$/) { #hack used for patching mouse duplicate transcript names
       if ($t_name =~ /(\-\d{3})$/) {
 	my $new_name = "$g_name$1";
 	push @{$transnames->{$new_name}}, "$t_name|$tsi";
