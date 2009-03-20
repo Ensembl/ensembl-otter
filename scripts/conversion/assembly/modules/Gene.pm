@@ -51,6 +51,7 @@ sub store_gene {
     $E_gene->status($V_gene->status);
     $E_gene->description($V_gene->description);
     $E_gene->source($V_gene->source);
+    $E_gene->canonical_transcript($V_gene->canonical_transcript);
     $E_gene->add_Attributes(@{ $V_gene->get_all_Attributes });
 
     # add reference to the original Vega gene
