@@ -178,7 +178,6 @@ else {
 
 if ($support->param('verbose')) {
   $support->log("Parsed xrefs are ".Dumper($parsed_xrefs)."\n");
-  exit;
 }
 
 $support->log_stamped("Done.\n\n");
@@ -285,8 +284,9 @@ sub parse_go {
     #sanity checks
     if ( ($tlsi !~ /^OTT[A-Z]{3}P/) || ( $xid !~ /^GO:/) ) {
       $support->log_warning("Check format of input file ($tlsi -- $xid)\n");
-      exit;
     }
-    push @{$xrefs->{$tlsi}->{'GO'}} , $xid.'||'.$ev_type;
+    else {
+      push @{$xrefs->{$tlsi}->{'GO'}} , $xid.'||'.$ev_type;
+    }
   }
 }
