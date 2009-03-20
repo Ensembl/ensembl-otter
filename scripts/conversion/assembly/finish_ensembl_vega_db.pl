@@ -448,6 +448,10 @@ $c = $dbh->{'evega'}->do($sql);
 $support->log_stamped("misc_feature...\n", 1);
 $sql = qq(UPDATE misc_feature SET seq_region_id = seq_region_id-$E_sri_adjust);
 $c = $dbh->{'evega'}->do($sql);
+# misc_feature
+$support->log_stamped("karyotype...\n", 1);
+$sql = qq(UPDATE karyotype SET seq_region_id = seq_region_id-$E_sri_adjust);
+$c = $dbh->{'evega'}->do($sql);
 
 $support->log_stamped("Done.\n\n");
 
