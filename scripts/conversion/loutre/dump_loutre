@@ -647,10 +647,11 @@ foreach my $name (@{$chr_names_wanted}) {
     #transfer simple features 
     &transfer_simple_features($lslice,$vslice);
 
+    ####does this transfer 'annotated' seq_region_attributes on clones ????####
     #transfer seq_region_attributes
     &transfer_sra($lslice,$vslice,$att_types_wanted);
 
-    ####can almost certainly remove these, should all be on clones now####	
+    ####remove this when we're sure they're in as seq_region_attribs on clones####	
     #transform contig_attribs into seq_region_attribs
     my $attribs_to_move = ['annotated'];
     &transfer_contig_attribs($lslice,$vslice,$attribs_to_move);
