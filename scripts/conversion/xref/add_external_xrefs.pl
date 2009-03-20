@@ -326,6 +326,7 @@ foreach my $chr (@chr_sorted) {
   foreach my $gene (@$genes) {
     my $gsi = $gene->stable_id;
     my $gid = $gene->dbID;
+
     my $gene_name;
     
     # filter to user-specified gene_stable_ids
@@ -370,7 +371,8 @@ foreach my $chr (@chr_sorted) {
     }
     else {
       #get all names to search on
-      push my @gene_names, $real_name;
+      my @gene_names;
+      push @gene_names, $real_name;
 	    
       #use previously set MarkerSymbol xrefs as searchable names
       if ( $support->param('xrefformat') eq 'mgi') {
@@ -864,17 +866,17 @@ sub parse_mgi {
 	push @{$xrefs->{$gene_name}->{'RefSeq_peptide'}}, $id.'||'.$id ;
       }
     }
-    
+
     #add swissprot entry
     my $swissptrots = $fields[22];
     my ($first_id) = split ',',$swissptrots; 
     $xrefs->{$gene_name}->{'Uniprot/SWISSPROT'} = [ $first_id .'||'.$first_id ];
-    
+
     #add entrezgene entry
     my $entrezgenes = $fields[4];
     ($first_id) = split ',',$entrezgenes; 
     $xrefs->{$gene_name}->{'EntrezGene'} = [ $first_id .'||'. $first_id ];
-    
+
     #add ensembl xrefs
     my $ensid = $fields[9];
     if ( $ensid =~ /^ENSMUSG/ ) {
@@ -883,7 +885,7 @@ sub parse_mgi {
     elsif ($ensid) {
       $support->log_warning("Gene $gene_name from MGI has a non-mouse Ensembl ID ($ensid)\n");
     }
-    
+
     #store lower case name to catch case mismatches
     push @{ $lcmap->{lc($gene_name)} }, $gene_name;
   }
@@ -960,8 +962,7 @@ sub parse_imgt_hla {
 
 =head2 parse_imgt_gdb
 
-this is the way to do it but needs biotypes in loutre sorting out
-for now use the method below
+first sql query works if loutre biotypes in loutre become foobarred again
 
 =cut
 
@@ -976,10 +977,10 @@ sub parse_imgt_gdb {
                     AND g.source = 'havana'
                     AND gsi.stable_id != 'OTTHUMG00000150673');
   my $sth = $dba->dbc->prepare($sql);
-  $sth->execute;
-  while ( my ($gsi, $id) = $sth->fetchrow_array) {		
-    push @{$xrefs->{$gsi}->{'IMGT/GENE_DB'}} , $id.'||'.$id;
-  }
+#  $sth->execute;
+#  while ( my ($gsi, $id) = $sth->fetchrow_array) {		
+#    push @{$xrefs->{$gsi}->{'IMGT/GENE_DB'}} , $id.'||'.$id;
+#  }
   $sql = qq(SELECT gsi.stable_id, x.display_label
                    FROM gene_stable_id gsi, gene g, xref x
                   WHERE gsi.gene_id = g.gene_id
