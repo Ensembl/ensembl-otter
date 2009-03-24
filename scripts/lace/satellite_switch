@@ -1,0 +1,94 @@
+#!/usr/bin/env perl
+
+### satellite_switch
+
+use strict;
+use warnings;
+
+use Bio::Otter::Lace::Defaults;
+
+{
+    my $switch;
+
+    my $usage = sub { exec('perldoc', $0) };
+    # This do_getopt() call is needed to parse the otter config files
+    # even if you aren't giving any arguments on the command line.
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        'slave!'        => sub{ $switch = 'slave' },
+        'master!'       => sub{ $switch = 'master' },
+        ) or $usage->();
+    $usage->() unless $switch;
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    my $meta_key = 'pipeline_db_head';
+    foreach my $ds ($cl->get_all_DataSets) {
+        my $name = $ds->name;
+        my $dba = $ds->make_DBAdaptor;
+        my $meta = $dba->get_MetaContainer;
+        my ($connect) = @{$meta->list_value_by_key($meta_key)};
+        unless ($connect) {
+            warn "Missing '$meta_key' for '$name'\n";
+            next;
+        }
+        # warn "$name: Looking at $connect\n";
+        my ($sathost, $satport);
+        if ($switch eq 'slave' and $connect =~ /(330[23])/) {
+            print STDERR "\nSwitching $name to slave\n";
+            $sathost = 'otterslave';
+            if ($1 eq '3302') {
+                $satport = '3312';
+            }
+            elsif ($1 eq '3303') {
+                $sathost = '3313';
+            }
+            else {
+                die "Bad port: $1";
+            }
+        }
+        elsif ($switch eq 'master' and $connect =~ /(331[23])/) {
+            print STDERR "\nSwitching $name to master\n";
+            if ($1 eq '3312') {
+                $sathost = 'otterpipe1';
+                $satport = '3302';
+            }
+            elsif ($1 eq '3313') {
+                $sathost = 'otterpipe2';
+                $satport = '3303';
+            }
+            else {
+                die "Bad port: $1";
+            }
+        }
+        
+        next unless $sathost and $satport;
+        
+        my @command = ('./save_satellite_db',
+            -dataset    => $name,
+            -key        => $meta_key,
+            -sathost    => $sathost,
+            -satport    => $satport,
+            );
+        warn "Running: @command\n";
+        system(@command);
+    }
+    
+}
+
+
+
+
+__END__
+
+=head1 NAME - satellite_switch
+
+=head1 USAGE
+
+  satellite_switch <-slave|-master>
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
