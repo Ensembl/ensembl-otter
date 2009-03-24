@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2009-02-20 10:50:20 $
-# Id:            $Id: nph-get_sequencesets,v 1.24 2009-02-20 10:50:20 jgrg Exp $
+# Last modified: $Date: 2009-03-24 15:25:49 $
+# Id:            $Id: nph-get_sequencesets,v 1.25 2009-03-24 15:25:49 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_sequencesets,v $
 
 use strict;
@@ -31,31 +31,52 @@ eval {
 
         # mapping between subregions and chromosomes:
     my $sql = qq{
-        SELECT sub.name, chr.name, count(*) cnt, group_concat(cln.name ORDER BY sub_ctg.asm_start SEPARATOR ','), sub_hdn.value
-        FROM seq_region sub,
-             assembly sub_ctg,
-             seq_region ctg,
-             assembly chr_ctg,
-             seq_region chr,
-             assembly cln_ctg,
-             seq_region cln,
-             seq_region_attrib sub_hdn
-        WHERE sub.coord_system_id=(SELECT coord_system_id FROM coord_system where name='subregion')
-          AND sub_hdn.seq_region_id=sub.seq_region_id
-          AND sub_hdn.attrib_type_id=(SELECT attrib_type_id FROM attrib_type where code='hidden')
-          AND sub.seq_region_id=sub_ctg.asm_seq_region_id
-          AND ctg.seq_region_id=sub_ctg.cmp_seq_region_id
-          AND ctg.coord_system_id=(SELECT coord_system_id FROM coord_system where name='contig')
-          AND cln.seq_region_id=cln_ctg.asm_seq_region_id
-          AND ctg.seq_region_id=cln_ctg.cmp_seq_region_id
-          AND cln.coord_system_id=(SELECT coord_system_id FROM coord_system where name='clone')
-          AND sub_ctg.cmp_seq_region_id=chr_ctg.cmp_seq_region_id
-          AND chr.seq_region_id=chr_ctg.asm_seq_region_id
-          AND (chr.coord_system_id=(SELECT coord_system_id FROM coord_system where name='chromosome' and version='Otter')
-               OR chr.seq_region_id=sub.seq_region_id)
+
+        SELECT sub.name
+          , chr.name
+          , count(*) cnt
+          , group_concat(cln.name ORDER BY sub_ctg.asm_start SEPARATOR ',')
+          , sub_hdn.value
+        FROM seq_region sub
+          , assembly sub_ctg
+          , seq_region ctg
+          , assembly chr_ctg
+          , seq_region chr
+          , assembly cln_ctg
+          , seq_region cln
+          , seq_region_attrib sub_hdn
+        WHERE sub.coord_system_id = (SELECT coord_system_id
+                                     FROM coord_system
+                                     WHERE name = 'subregion')
+        
+          AND sub_hdn.seq_region_id = sub.seq_region_id
+          AND sub_hdn.attrib_type_id = (SELECT attrib_type_id
+                                        FROM attrib_type
+                                        WHERE code = 'hidden')
+       
+          AND sub.seq_region_id = sub_ctg.asm_seq_region_id
+          AND ctg.seq_region_id = sub_ctg.cmp_seq_region_id
+          AND ctg.coord_system_id = (SELECT coord_system_id
+                                     FROM coord_system
+                                     WHERE name = 'contig')
+        
+          AND cln.seq_region_id = cln_ctg.asm_seq_region_id
+          AND ctg.seq_region_id = cln_ctg.cmp_seq_region_id
+          AND cln.coord_system_id = (SELECT coord_system_id
+                                     FROM coord_system
+                                     WHERE name = 'clone')
+        
+          AND sub_ctg.cmp_seq_region_id = chr_ctg.cmp_seq_region_id
+          AND chr.seq_region_id = chr_ctg.asm_seq_region_id
+          AND (chr.coord_system_id = (SELECT coord_system_id
+                                      FROM coord_system
+                                      WHERE name = 'chromosome'
+                                        AND version = 'Otter')
+               OR chr.seq_region_id = sub.seq_region_id)
+            
         GROUP BY sub.name, chr.name
         ORDER BY sub.name, cnt DESC
-    };
+      };
 
     my $sth = $odba->dbc()->prepare($sql);
     $sth->execute();
@@ -80,6 +101,8 @@ eval {
     $xml   .= qq`  <dataset name="$dataset">\n`;
     $xml   .= qq`    <sequencesets>\n`;
 
+    # SliceAdaptor always uses the dnadb connection so visible
+    # sequencesets will always be the ones in the dnadb.
     my $slice_adaptor     = $odba->get_SliceAdaptor();
     my $attribute_adaptor = $odba->get_AttributeAdaptor();
 
@@ -108,7 +131,7 @@ eval {
               FROM sequence_set_access acc,
                    seq_region sr,
                    author au
-             WHERE acc.seq_region_id=sr.seq_region_id
+             WHERE acc.seq_region_id = sr.seq_region_id
                AND acc.author_id = au.author_id
                AND au.author_name = ?
                AND sr.name        = ?
