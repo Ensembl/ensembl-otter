@@ -27,6 +27,7 @@ use EditWindow::Dotter;
 use EditWindow::Exonerate;
 use EditWindow::Clone;
 use EditWindow::LocusName;
+use EditWindow::LoadColumns;
 use MenuCanvasWindow::ExonCanvas;
 use MenuCanvasWindow::GenomicFeatures;
 use MenuCanvasWindow::ZMapSeqChooser;
@@ -679,17 +680,7 @@ sub populate_menus {
 
     $tools_menu->add('command',
                -label          => 'Load column data',
-               -command        => sub {
-                                    if($self->show_lcd_dialog() eq 'Load') {
-                                        $top->Busy;
-                                            # assuming DataFactory has already been initialized by AceDatabase.pm
-                                        if($self->AceDatabase->topup_pipeline_data_into_ace_server()) {
-                                            $self->resync_with_db;
-                                            $self->zMapLaunchZmap;
-                                        }
-                                        $top->Unbusy;
-                                    }
-                                },
+               -command        => sub {$self->show_lcd_dialog()},
     );
 
     $subseq->bind('<Destroy>', sub{
@@ -697,40 +688,36 @@ sub populate_menus {
     });
 }
 
+sub LoadColumns {
+    my( $self, $lc ) = @_;
+    
+    if ($lc) {
+    	$self->{'_LoadColumns'} = $lc;
+    	weaken($self->{'_LoadColumns'});
+    }
+    
+    return $self->{'_LoadColumns'};
+}
+
 sub show_lcd_dialog {
     my ($self) = @_;
 
-    my $lcd_dialog = $self->top_window()->DialogBox( -title => 'Load column data', -buttons => ['Load', 'Cancel'] );
-
-    my $DataFactory = $self->AceDatabase->pipeline_DataFactory();
-    my $n2f = $DataFactory->get_names2filters();
-    foreach my $filter_name (@{ $DataFactory->get_all_filter_names() }) {
-        my $filter = $n2f->{$filter_name};
-        my $cb = $lcd_dialog->add('Checkbutton',
-            -text => $filter_name,
-            -variable => \$filter->{_wanted},
-            -onvalue => 1,
-            -offvalue => 0,
-            -anchor => 'w',
-            $filter->done() ? ( -selectcolor => 'green' ) : (),
-        )->pack(-side=>'top', -fill => 'x', -expand => 1);
-
-            # keep it permanently selected:
-        if($filter->done()) {
-            $cb->configure(-command => sub { $cb->select(); });
-        }
+    my $lc;
+    unless ($lc = $self->LoadColumns) {
+        $lc = EditWindow::LoadColumns->new($self->top_window->Toplevel(
+            	-title => 'Load column data',
+        	)
+       	);
+        $lc->XaceSeqChooser($self);
+        $lc->initialize;
+        $self->LoadColumns($lc);
     }
-
-    # my $but_frame = $lcd_dialog->LabFrame(
-    #     -label  => 'Select',
-    #     -border => 3,
-    #     )->pack(-side => 'top', -fill => 'x', -expand => 1);
-    # $but_frame->Button(-text => 'Default')->pack(-side => 'left');
-    # $but_frame->Button(-text => 'All')->pack(-side => 'left');
-    # $but_frame->Button(-text => 'None')->pack(-side => 'left');
-    # $but_frame->Button(-text => 'Inverse')->pack(-side => 'left');
-
-    return $lcd_dialog->Show();
+    
+    my $top = $lc->top;
+    # we need to force a redraw
+    $lc->show_filters;
+    $top->deiconify;
+    $top->raise;
 }
 
 sub populate_clone_menu {

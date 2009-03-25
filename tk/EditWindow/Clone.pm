@@ -220,7 +220,7 @@ sub generate_desc {
 	# because if nothing is highlighted this errors)
 	eval{$self->description_text->delete('sel.first', 'sel.last')};
 	
-	# and insert the new text
+	# and insert the new text at the current cursor position
 	$self->description_text->insert('insert', $desc);
 }
 

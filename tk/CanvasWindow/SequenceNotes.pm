@@ -51,6 +51,7 @@ sub SequenceSetChooser {
     return $self->{'_SequenceSetChooser'};
 }
 
+
 sub LocalDatabaseFactory {
     my $self = shift @_;
 
@@ -274,15 +275,6 @@ sub max_column_width {
     return $self->{'_max_column_width'} || 40 * $self->font_size;
 }
 
-sub fetch_pipeline_var_ref {
-    my $self = shift @_;
-
-    unless(exists($self->{'_fetch_pipeline_var'})) {
-        $self->{'_fetch_pipeline_var'} = Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
-    }
-    return \$self->{'_fetch_pipeline_var'};
-}
-
 sub write_access_var_ref {
     my $self = shift @_;
 
@@ -408,22 +400,6 @@ sub initialise {
     };
     $self->make_button($button_frame_cmds, 'Open from chr coords', $run_lace_on_slice);
 
-    my $conditional_refresh_analyses = sub{
-        my ($flag_ref) = @_;
-        if($$flag_ref) {
-            $top->Busy;
-            $self->refresh_column(3) ;
-            $top->Unbusy;
-        }
-    };
-    $button_frame_cmds->Checkbutton(
-        -variable    => $self->fetch_pipeline_var_ref(),
-        -text        => 'Load pipeline data',
-        -borderwidth => 2,
-        -relief      => 'groove',
-        -command     => [ $conditional_refresh_analyses , $self->fetch_pipeline_var_ref() ],
-    )->pack(-side => 'left', -pady => 2, -fill => 'x');
-
     my $run_lace = sub{
 	    $top->Busy;
 	    $self->run_lace;
@@ -446,9 +422,8 @@ sub initialise {
     $top->bind('<Control-P>', $print_to_file);
     
     $canvas->Tk::bind('<Double-Button-1>',  sub{ $self->popup_ana_seq_history });
-    if (Bio::Otter::Lace::Defaults::fetch_pipeline_switch()) {
-        $canvas->Tk::bind('<Button-3>',  sub{ $self->popup_missing_analysis });
-    }    
+    
+    $canvas->Tk::bind('<Button-3>',  sub{ $self->popup_missing_analysis });    
     
     my $close_window = $self->bind_close_window($top);
 
@@ -736,8 +711,7 @@ sub _open_SequenceSet{
     }
     # now initialise the database
     eval{
-        my $with_pipeline = ${$self->fetch_pipeline_var_ref()};
-        $adb->init_AceDatabase($with_pipeline);
+        $adb->init_AceDatabase;
     };
     if ($@) {
         $adb->error_flag(0);
@@ -747,14 +721,25 @@ sub _open_SequenceSet{
     }    
 
     warn "Making XaceSeqChooser";
-    my $top = $self->canvas->Toplevel(
-        -title  => $title,
-    );
-    my $xc = MenuCanvasWindow::XaceSeqChooser->new($top);
-    $xc->SequenceNotes($self);
-    $xc->AceDatabase($adb);
+    #my $top = $self->canvas->Toplevel(
+    #    -title  => $title,
+    #);
+    #my $xc = MenuCanvasWindow::XaceSeqChooser->new($top);
+    #$xc->SequenceNotes($self);
+    #$xc->AceDatabase($adb);
 #    $xc->EviCollection($ec);
-    $xc->initialize;
+    #$xc->initialize;
+    
+    my $top = $self->canvas->Toplevel(
+   	    -title  => 'Select column data to load',
+    );
+   	my $lc = EditWindow::LoadColumns->new($top);
+   		
+   	$lc->AceDatabase($adb);
+   	$lc->SequenceNotes($self);
+   	$lc->DataSetChooser($self->SequenceSetChooser->DataSetChooser);
+	$lc->initialize;
+  
     $self->refresh_column(7) ; # 7 is the locks column
     $self->refresh_column(8) ; # 8 is the locks authors column
     

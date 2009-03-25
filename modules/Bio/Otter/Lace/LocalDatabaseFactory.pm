@@ -78,14 +78,28 @@ sub first_occurence {
 }
 
 sub make_title {
-    my ($self, $adb_or_dir ) = @_ ;
+    my ($self, $adb_or_dir) = @_ ;
 
-    my $dir = ref($adb_or_dir) ? $adb_or_dir->home : $adb_or_dir;
-
-    my $tail    = $self->first_occurence($dir.'/wspec/displays.wrm', qr{_DDtMain.*-t\s*"(?:lace\s+)(.*)"});
-    my $species = $self->first_occurence($dir.'/rawdata/otter.ace', qr{^Species\s+"(.*)"});
+    my $tail    = $self->get_tail($adb_or_dir);
+    my $species = $self->get_species($adb_or_dir);
 
     return "$species $tail";
+}
+
+sub get_species {
+	my ($self, $adb_or_dir) = @_;
+	
+	my $dir = ref($adb_or_dir) ? $adb_or_dir->home : $adb_or_dir;
+	
+	return $self->first_occurence($dir.'/rawdata/otter.ace', qr{^Species\s+"(.*)"});
+}
+
+sub get_tail {
+	my ($self, $adb_or_dir) = @_;
+	
+	my $dir = ref($adb_or_dir) ? $adb_or_dir->home : $adb_or_dir;
+	
+	return $self->first_occurence($dir.'/wspec/displays.wrm', qr{_DDtMain.*-t\s*"(?:lace\s+)(.*)"});
 }
 
 sub recover_session {

@@ -330,7 +330,9 @@ sub XaceSeqChooser {
 sub launch_exonerate {
 	my ($self) = @_;
 	
-	my $seqs = $self->get_query_seq();
+	my $seqs;
+	
+	$seqs = $self->get_query_seq();
 	
 	print STDOUT "Found " . scalar(@$seqs) . " sequences\n";
 	
@@ -469,7 +471,9 @@ sub get_query_seq {
 	}
 	
 	# identify the types of all the accessions supplied
+
     my $client = $self->XaceSeqChooser->AceDatabase->Client;
+    
     my $types = $client->get_accession_types(@accessions);
 	
 	# add type and full accession information to the existing sequences
@@ -504,7 +508,6 @@ sub get_query_seq {
 	}
 	
 	my $remapped_msg = '';
-	
 	
 	if (@correct_accs) {
 		

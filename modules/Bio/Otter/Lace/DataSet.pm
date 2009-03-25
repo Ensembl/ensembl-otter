@@ -183,10 +183,7 @@ sub fetch_all_CloneSequences_for_SequenceSet {
         $client->fetch_all_SequenceNotes_for_DataSet_SequenceSet($self, $ss);
         $client->lock_refresh_for_DataSet_SequenceSet($self, $ss);
 
-            # only if the flag is set
-        if(Bio::Otter::Lace::Defaults::fetch_pipeline_switch()) {
-            $client->status_refresh_for_DataSet_SequenceSet($self, $ss);
-        }
+        $client->status_refresh_for_DataSet_SequenceSet($self, $ss);
     }
 
     return $cs_list;

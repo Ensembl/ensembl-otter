@@ -319,8 +319,7 @@ sub open_sequence_set_by_ssname_subset {
         $sn->top_window()->deiconify();
         $sn->top_window()->raise();
     } else {
-        my $pipe_name = Bio::Otter::Lace::Defaults::pipe_name();
-        my $top = $self->top_window()->Toplevel(-title => "SequenceSet $ss_name [$pipe_name]");
+        my $top = $self->top_window()->Toplevel(-title => "SequenceSet $ss_name");
         my $ss = $self->DataSet->get_SequenceSet_by_name($ss_name);
       
         $sn = CanvasWindow::SequenceNotes->new($top, 820, 100);

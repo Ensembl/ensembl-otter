@@ -115,8 +115,7 @@ sub open_dataset {
                 $top->deiconify;
                 $top->raise;
             } else {
-                my $pipe_name = Bio::Otter::Lace::Defaults::pipe_name();
-                $top = $canvas->Toplevel(-title => "DataSet $name [$pipe_name]");
+                $top = $canvas->Toplevel(-title => "DataSet $name");
                 my $ssc = CanvasWindow::SequenceSetChooser->new($top);
 
                 $ssc->name($name);
@@ -163,6 +162,27 @@ sub draw {
     $self->fix_window_min_max_sizes;
 }
 
+sub last_selection {
+    my( $self, $species, $last ) = @_;
+    
+    print "setting last selection for: $species\n" if $last;
+    
+    $self->{'_last_selection'}->{$species} = $last if $last;
+    
+    return $self->{'_last_selection'}->{$species};
+}
+
+sub default_selection {
+    my( $self, $species, $default ) = @_;
+    
+    print "setting default selection for: $species\n" if $default;
+    
+    $self->{'_default_selection'}->{$species} = $default if $default;
+    
+    return $self->{'_default_selection'}->{$species};
+}
+
+
 sub recover_some_sessions {
     my $self          = shift @_;
     my $default_state = shift @_ || 0;
@@ -183,7 +203,10 @@ sub recover_some_sessions {
             -justify => 'left',
             -text    => "You have one or more lace sessions on this computer which are not associated with a running otterlace process.\n\n This should not happen, except where lace has crashed or it has been exited by pressing the exit button in the dataset chooser window.\n\n You will need to recover and exit these sessions, or there may be locks left in the otter database or some of your work which has not been saved.\n\n Please contact anacode if you still get an error when you attempt to exit the session, or have information about the error which caused a session to be left.\n\n" 
         )->pack(-side=>'top', -fill=>'x', -expand=>1);
-
+		
+		# this sort is inefficient, but the list shouldn't be too long...
+		$recoverable_sessions = [sort {$ldf->make_title($a) cmp $ldf->make_title($b)} @$recoverable_sessions];
+		
         foreach my $session_dir (@$recoverable_sessions) {
             my $full_session_title = $ldf->make_title($session_dir).' in '.$session_dir;
             my $cb = $rss_dialog->add('Checkbutton',
@@ -204,15 +227,18 @@ sub recover_some_sessions {
                 my $canvas = $self->canvas;
 
                 foreach my $session_dir (@selected_dirs) {
+                	# Bring up GUI
                     my $adb = $ldf->recover_session($session_dir);
-
-                    # Bring up GUI
-                    my $top = $canvas->Toplevel(
-                        -title  => $adb->title(),
-                    );
-                    my $xc = MenuCanvasWindow::XaceSeqChooser->new($top);
-                    $xc->AceDatabase($adb);
-                    $xc->initialize;
+					
+					my $top = $self->canvas->Toplevel(
+   	    				-title  => 'Select column data to load',
+    				);
+   					
+   					my $lc = EditWindow::LoadColumns->new($top);
+   		
+   					$lc->AceDatabase($adb);
+   					$lc->DataSetChooser($self);
+					$lc->initialize($ldf->get_species($adb));
                 }
             };
             if ($@) {

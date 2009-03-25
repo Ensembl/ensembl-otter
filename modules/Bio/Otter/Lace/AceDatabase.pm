@@ -138,7 +138,7 @@ sub add_zmap_styles_acefile {
 }
 
 sub init_AceDatabase {
-    my( $self, $with_pipeline ) = @_;
+    my( $self ) = @_;
 
     # $self->smart_slice() must to be set prior to running the following subroutines!
 
@@ -146,14 +146,6 @@ sub init_AceDatabase {
     $self->add_zmap_styles_acefile;
     $self->write_otter_acefile();
     $self->write_dna_data();
-
-    unless(defined($with_pipeline)) {
-        $with_pipeline = Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
-    }
-
-    if($with_pipeline) {
-        $self->write_pipeline_data_into_ace_file();
-    }
 
     $self->write_methods_acefile;
     $self->initialize_database;
@@ -683,27 +675,6 @@ sub write_dna_data {
     print $ace_fh $dna_filter->ace_data($smart_slice);
 
     close $ace_fh;
-}
-
-sub write_pipeline_data_into_ace_file {
-    my( $self ) = @_;
-
-    my $factory     = $self->pipeline_DataFactory();
-
-    # create file for output and add it to the acedb object
-    my $ace_filename = $self->home . '/rawdata/pipeline.ace';
-
-    my $ace_fh = gensym();
-    $self->add_acefile($ace_filename);
-    open $ace_fh, "> $ace_filename" or confess "Can't write to '$ace_filename' : $!";
-
-    $factory->ace_string_callback( sub{ print $ace_fh @_; } );
-    my $filters_fetched_data = $factory->topup_pipeline();
-    $factory->ace_string_callback( undef );
-
-    close $ace_fh;
-
-    return $filters_fetched_data;
 }
 
 sub topup_pipeline_data_into_ace_server {

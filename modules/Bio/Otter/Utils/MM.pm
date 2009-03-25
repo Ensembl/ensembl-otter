@@ -129,7 +129,7 @@ sub get_accession_types {
 
 	for my $db (@DB_CATEGORIES) {
 	    
-		#print "trying: $db\n";
+		print "trying: $db\n";
         
         my $archive = $db eq 'uniprot_archive';
         
