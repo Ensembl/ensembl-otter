@@ -164,21 +164,13 @@ sub draw {
 
 sub last_selection {
     my( $self, $species, $last ) = @_;
-    
-    print "setting last selection for: $species\n" if $last;
-    
     $self->{'_last_selection'}->{$species} = $last if $last;
-    
     return $self->{'_last_selection'}->{$species};
 }
 
 sub default_selection {
     my( $self, $species, $default ) = @_;
-    
-    print "setting default selection for: $species\n" if $default;
-    
     $self->{'_default_selection'}->{$species} = $default if $default;
-    
     return $self->{'_default_selection'}->{$species};
 }
 
