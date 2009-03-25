@@ -720,15 +720,7 @@ sub _open_SequenceSet{
         return;
     }    
 
-    warn "Making XaceSeqChooser";
-    #my $top = $self->canvas->Toplevel(
-    #    -title  => $title,
-    #);
-    #my $xc = MenuCanvasWindow::XaceSeqChooser->new($top);
-    #$xc->SequenceNotes($self);
-    #$xc->AceDatabase($adb);
-#    $xc->EviCollection($ec);
-    #$xc->initialize;
+    warn "Making LoadColumns";
     
     my $top = $self->canvas->Toplevel(
    	    -title  => 'Select column data to load',

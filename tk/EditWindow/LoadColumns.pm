@@ -80,8 +80,8 @@ sub initialize {
 	$hlist->header('create', $i++,  
     	-itemtype => 'resizebutton', 
     	-command => sub {
-    		# (schwartzian) hack to get done filters sorted before wanted but 
-    		# undone filters - note that '/' is ascii-betically before 1 or 0!
+    		# hack to get done filters sorted before wanted but undone 
+    		# filters - note that '/' is ascii-betically before 1 or 0!
     		map {$self->n2f->{$_}->wanted('/') if $self->n2f->{$_}->done} keys %{ $self->n2f };
     		$self->sort_by_filter_method('wanted');
     		map {$self->n2f->{$_}->wanted(1) if $self->n2f->{$_}->done} keys %{ $self->n2f };
