@@ -259,6 +259,22 @@ sub password_prompt{
     return $callback;
 }
 
+sub fatal_error_prompt {
+	my ($self, $callback) = @_;
+	
+	if ($callback) {
+        $self->{'_fatal_error_callback'} = $callback;
+    }
+    
+    $callback = $self->{'_fatal_error_callback'} ||=
+        sub {
+            my $msg = shift;
+            die $msg;
+        };
+        
+    return $callback;
+}
+
 sub authorize {
     my ($self) = @_;
     
@@ -415,6 +431,8 @@ sub general_http_dialog {
     my $password_attempts = $self->password_attempts;
     my $timeout_attempts  = $self->timeout_attempts;
     my $response;
+    
+    my $timed_out = 0;
 
     while ($password_attempts and $timeout_attempts) {
         $response = $self->do_http_request($method, $scriptname, $params);
@@ -425,20 +443,20 @@ sub general_http_dialog {
             $self->authorize;
             $password_attempts--;
         } elsif ($code == 500 or $code == 502) {
-            printf STDERR "\nGot error %s (%s)\nretrying...\n", $code, $response->decoded_content;
+            printf STDERR "\nGot error %s \nretrying...\n", $code; #, $response->decoded_content;
             $timeout_attempts--;
+            $timed_out = ($timeout_attempts == 0);
         } elsif ($code == 503 or $code == 504) {
-            die "The server timed out ($code). Please try again.\n";
+            $self->fatal_error_prompt->("The server timed out ($code). Please try again.\n");
         } else {
-            confess sprintf "%d (%s)", $response->code, $response->decoded_content;
+            $self->fatal_error_prompt->(sprintf "%d (%s)", $response->code, $response->decoded_content);
         }
     }
     
-#    if ($response->content =~ /The Sanger Institute Web service you requested is temporarily unavailable/) {
-#    	print STDERR "The web server is down\n";
-#    	$response = '';
-#    }
-    
+    if ($timed_out || $response->content =~ /The Sanger Institute Web service you requested is temporarily unavailable/) {
+    	$self->fatal_error_prompt->("Problem with the web server\n");
+    }
+     
     return $response;
 }
 
@@ -928,7 +946,7 @@ sub get_accession_types {
 							'get_accession_types', 
 							{accessions => join ',', @uncached}
 						);
-
+						
 		for my $line (split /\n/, $response) {
 			my ($acc, $type, $full_acc) = split /\t/, $line;
 			$res{$acc} = [$type, $full_acc];
