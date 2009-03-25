@@ -31,7 +31,7 @@ use Bio::Otter::Lace::Defaults;
         @datasets = $cl->get_all_DataSets();
     }
 
-    for my $ds (@datasets) {
+    while (my $ds = shift @datasets) {
 
         $dataset_name = $ds->name();
         next if $dataset_name eq "cow"; # cow does not have clones - it has fake clones
@@ -43,24 +43,27 @@ use Bio::Otter::Lace::Defaults;
 
         # Make a connection to the otter database
         my $otter_db = $ds->get_cached_DBAdaptor;
+        
+        eval {
+            if(($which_db eq 'otter')
+             ||($which_db eq 'all') ) {
+                my $dbh = $otter_db->can('dbc') ? $otter_db->dbc : $otter_db;
+                repair_one_db($dbh, $headcode, $rescan_flag, $change_flag, $dataset_name,
+                    $headcode ? 'head_otter' : 'otter');
+            }
 
-        if(($which_db eq 'otter')
-         ||($which_db eq 'all') ) {
-            my $dbh = $otter_db->can('dbc') ? $otter_db->dbc : $otter_db;
-            repair_one_db($dbh, $headcode, $rescan_flag, $change_flag, $dataset_name,
-                $headcode ? 'head_otter' : 'otter');
-        }
+            if(($which_db eq 'newpipe')
+             ||($which_db eq 'all') ) {
 
-        if(($which_db eq 'newpipe')
-         ||($which_db eq 'all') ) {
-
-            my ($newpipe_db, $newpipedb_options) =
-                Bio::Otter::Lace::SatelliteDB::_get_DBAdaptor_and_options(
-                    $otter_db,
-                    'pipeline_db_rw_head',
-            );
-            repair_one_db($newpipe_db->dbc, 1, $rescan_flag, $change_flag, $dataset_name, 'newpipe');
-        }
+                my ($newpipe_db, $newpipedb_options) =
+                    Bio::Otter::Lace::SatelliteDB::_get_DBAdaptor_and_options(
+                        $otter_db,
+                        'pipeline_db_rw_head',
+                );
+                repair_one_db($newpipe_db->dbc, 1, $rescan_flag, $change_flag, $dataset_name, 'newpipe');
+            }
+        };
+        warn $@ if $@;
     }
 }
 
