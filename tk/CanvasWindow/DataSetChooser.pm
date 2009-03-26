@@ -197,7 +197,11 @@ sub recover_some_sessions {
         )->pack(-side=>'top', -fill=>'x', -expand=>1);
 		
 		# this sort is inefficient, but the list shouldn't be too long...
-		$recoverable_sessions = [sort {$ldf->make_title($a) cmp $ldf->make_title($b)} @$recoverable_sessions];
+		$recoverable_sessions = [
+			sort {
+				$ldf->make_title($a) cmp $ldf->make_title($b)
+			} @$recoverable_sessions
+		];
 		
         foreach my $session_dir (@$recoverable_sessions) {
             my $full_session_title = $ldf->make_title($session_dir).' in '.$session_dir;
@@ -222,7 +226,7 @@ sub recover_some_sessions {
                 	# Bring up GUI
                     my $adb = $ldf->recover_session($session_dir);
 					
-					my $top = $self->canvas->Toplevel(
+					my $top = $canvas->Toplevel(
    	    				-title  => 'Select column data to load',
     				);
    					
@@ -230,7 +234,7 @@ sub recover_some_sessions {
    		
    					$lc->AceDatabase($adb);
    					$lc->DataSetChooser($self);
-					$lc->initialize($ldf->get_species($adb));
+					$lc->initialize;
                 }
             };
             if ($@) {

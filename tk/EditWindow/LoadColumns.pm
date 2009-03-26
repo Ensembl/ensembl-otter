@@ -5,12 +5,15 @@ package EditWindow::LoadColumns;
 
 use strict;
 use Carp;
+use Scalar::Util 'weaken';
 
 use Tk::HListplus;
 use Tk::Checkbutton;
 use Tk::LabFrame;
 
 use base 'EditWindow';
+
+
 
 sub initialize {
     my( $self ) = @_;
@@ -163,6 +166,10 @@ sub initialize {
     $self->{_default_sort_method} = 'method_tag';
     
     $self->sort_by_filter_method('method_tag');
+    
+    $top->bind('<Destroy>', sub{
+        $self = undef;
+    });
 }
 
 sub load_filters {
@@ -204,10 +211,10 @@ sub load_filters {
 		}
 	}
 	else {
-		# we need to set up and show an XaceSeChooser
+		# we need to set up and show an XaceSeqChooser
         
         $self->AceDatabase->topup_pipeline_data_into_ace_server();
-        my $xc = MenuCanvasWindow::XaceSeqChooser->new(
+       	my $xc = MenuCanvasWindow::XaceSeqChooser->new(
         	$self->top->Toplevel(
             	-title => $self->AceDatabase->title,
             )
@@ -387,12 +394,18 @@ sub n2f {
 sub hlist {
 	my ($self, $hlist) = @_;
 	$self->{_hlist} = $hlist if $hlist;
+	weaken($self->{_hlist}) if $hlist;
 	return $self->{_hlist};
 }
 
 sub XaceSeqChooser {
     my ($self , $xc) = @_ ;
-    $self->{_XaceSeqChooser} = $xc if $xc;
+    
+    if ($xc) {
+    	$self->{_XaceSeqChooser} = $xc;
+    	weaken($self->{_XaceSeqChooser});
+    }
+    
     return $self->{_XaceSeqChooser} ;
 }
 
@@ -412,6 +425,12 @@ sub DataSetChooser {
     my ($self , $dc) = @_ ;
     $self->{_DataSetChooser} = $dc if $dc;
     return $self->{_DataSetChooser} ;
+}
+
+sub DESTROY {
+    my( $self ) = @_;
+
+    print STDERR "\n**********\nDestroying LoadColumns\n**********\n\n";
 }
 
 1;
