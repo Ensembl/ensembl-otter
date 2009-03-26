@@ -12,6 +12,9 @@ use Tk::DialogBox;
 use Tk::Balloon;
 use Tk::LabFrame;
 
+use Devel::Cycle;  
+use Devel::Peek;  
+
 use Hum::Ace::SubSeq;
 use Hum::Ace::Locus;
 use Hum::Ace::Method;
@@ -440,7 +443,7 @@ sub populate_menus {
     # Close window
     my $exit_command = sub {
         $self->exit_save_data or return;
-        $self->top_window->destroy;
+        $self->LoadColumns->top->destroy;
         };
     $file->add('command',
         -label          => 'Close',
@@ -691,10 +694,7 @@ sub populate_menus {
 sub LoadColumns {
     my( $self, $lc ) = @_;
     
-    if ($lc) {
-    	$self->{'_LoadColumns'} = $lc;
-    	weaken($self->{'_LoadColumns'});
-    }
+    $self->{'_LoadColumns'} = $lc if $lc;
     
     return $self->{'_LoadColumns'};
 }
@@ -702,17 +702,7 @@ sub LoadColumns {
 sub show_lcd_dialog {
     my ($self) = @_;
 
-    my $lc;
-    unless ($lc = $self->LoadColumns) {
-        $lc = EditWindow::LoadColumns->new($self->top_window->Toplevel(
-            	-title => 'Load column data',
-        	)
-       	);
-        $lc->XaceSeqChooser($self);
-        $lc->initialize;
-        $self->LoadColumns($lc);
-    }
-    
+    my $lc = $self->LoadColumns;
     my $top = $lc->top;
     # we need to force a redraw
     $lc->show_filters;
