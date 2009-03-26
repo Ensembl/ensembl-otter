@@ -13,8 +13,6 @@ use Tk::LabFrame;
 
 use base 'EditWindow';
 
-
-
 sub initialize {
     my( $self ) = @_;
     
@@ -429,8 +427,7 @@ sub DataSetChooser {
 
 sub DESTROY {
     my( $self ) = @_;
-
-    print STDERR "\n**********\nDestroying LoadColumns\n**********\n\n";
+    warn "Destroying LoadColumns\n";
 }
 
 1;

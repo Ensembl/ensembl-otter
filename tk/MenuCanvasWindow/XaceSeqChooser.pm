@@ -12,9 +12,6 @@ use Tk::DialogBox;
 use Tk::Balloon;
 use Tk::LabFrame;
 
-use Devel::Cycle;  
-use Devel::Peek;  
-
 use Hum::Ace::SubSeq;
 use Hum::Ace::Locus;
 use Hum::Ace::Method;
