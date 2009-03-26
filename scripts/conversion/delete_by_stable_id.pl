@@ -200,20 +200,20 @@ $deleted += &delete_genes($gene_stable_ids, $schema, $condition);
 
 # delete transcripts
 if (@{$trans_stable_ids}) {
-	$deleted += &delete_transcripts($trans_stable_ids, $schema, $condition);
+  $deleted += &delete_transcripts($trans_stable_ids, $schema, $condition);
 }
 
 # only try to delete exons and xrefs if you actually deleted genes and/or
 # transcripts
 if ($deleted) {
-    # delete exons
-    &Deletion::delete_exons($support,$dbh);
+  # delete exons
+  &Deletion::delete_exons($support,$dbh);
 
-    # delete xrefs
-    &Deletion::delete_xrefs($support,$dbh);
+  # delete xrefs
+  &Deletion::delete_xrefs($support,$dbh);
 
-    # optimize tables
-    &Deletion::optimize_tables($support,$dbh);
+  # optimize tables
+  &Deletion::optimize_tables($support,$dbh);
 }
 
 # finish logfile
@@ -235,27 +235,27 @@ $support->finish_log;
 =cut
 
 sub read_infile {
-    my ($action, $infile) = @_;
+  my ($action, $infile) = @_;
 
-    $support->log_stamped("Reading stable IDs to ".$action." from file...\n");
+  $support->log_stamped("Reading stable IDs to ".$action." from file...\n");
 
-    my $in = $support->filehandle('<', $infile);
-    my @gene_stable_ids = ();
-    my @trans_stable_ids = ();
-    while (<$in>) {
-        chomp $_;
-		my ($id) = $_ =~ /(\w+)/;
-        if ($id =~ /^OTT...G/) {
-            push @gene_stable_ids, $id;
-        } elsif ($id =~ /^OTT...T/) {
-            push @trans_stable_ids, $id;
-        }
+  my $in = $support->filehandle('<', $infile);
+  my @gene_stable_ids = ();
+  my @trans_stable_ids = ();
+  while (<$in>) {
+    chomp $_;
+    my ($id) = $_ =~ /(\w+)/;
+    if ($id =~ /^OTT...G/) {
+      push @gene_stable_ids, $id;
+    } elsif ($id =~ /^OTT...T/) {
+      push @trans_stable_ids, $id;
     }
-    close($in);
+  }
+  close($in);
 
-    $support->log_stamped("Done reading ".scalar(@gene_stable_ids)." genes, ".scalar(@trans_stable_ids)." transcripts.\n\n");
+  $support->log_stamped("Done reading ".scalar(@gene_stable_ids)." genes, ".scalar(@trans_stable_ids)." transcripts.\n\n");
 
-    return \@gene_stable_ids, \@trans_stable_ids;
+  return \@gene_stable_ids, \@trans_stable_ids;
 }
 
 =head2 check_missing
@@ -275,7 +275,7 @@ sub read_infile {
 
 sub check_missing {
   my ($gene_stable_ids, $trans_stable_ids) = @_;
-  
+
   $support->log("Checking for missing genes and/or transcripts...\n");
 
   # genes
@@ -342,20 +342,20 @@ sub check_missing {
 =cut
 
 sub delete_genes {
-    my ($gene_stable_ids, $schema, $condition) = @_;
+  my ($gene_stable_ids, $schema, $condition) = @_;
 
-    unless ($gene_stable_ids) {
-        $support->log("No genes to delete.\n");
-        return(0);
-    }
+  unless ($gene_stable_ids) {
+    $support->log("No genes to delete.\n");
+    return(0);
+  }
 
-    $support->log_stamped("Deleting genes, transcripts and translations by stable ID (and their features, attributes and authors) ...\n");
+  $support->log_stamped("Deleting genes, transcripts and translations by stable ID (and their features, attributes and authors) ...\n");
 
-    my $gsi_string = join("', '", @{ $gene_stable_ids });
-    my $sql;
-    if ($schema eq 'vega') {
-        # delete statement for Vega schema
-        $sql = qq(
+  my $gsi_string = join("', '", @{ $gene_stable_ids });
+  my $sql;
+  if ($schema eq 'vega') {
+    # delete statement for Vega schema
+    $sql = qq(
             DELETE QUICK IGNORE
                     g,
                     gsi,
@@ -436,9 +436,9 @@ sub delete_genes {
             AND     t.gene_id = g.gene_id
             AND     t.transcript_id = tsi.transcript_id
         );
-    }
-    my $num = $dbh->do($sql);
-    $support->log_stamped("Done deleting $num records.\n\n");
+      }
+  my $num = $dbh->do($sql);
+  $support->log_stamped("Done deleting $num records.\n\n");
 
     return($num);
 }
@@ -459,20 +459,20 @@ sub delete_genes {
 =cut
 
 sub delete_transcripts {
-    my ($trans_stable_ids, $schema, $condition) = @_;
+  my ($trans_stable_ids, $schema, $condition) = @_;
 
-    unless ($trans_stable_ids) {
-        $support->log("No transcripts to delete.\n");
-        return(0);
-    }
+  unless ($trans_stable_ids) {
+    $support->log("No transcripts to delete.\n");
+    return(0);
+  }
 
-    $support->log_stamped("Deleting transcripts by stable ID (and their translations) ...\n");
+  $support->log_stamped("Deleting transcripts by stable ID (and their translations) ...\n");
 
-    my $tsi_string = join("', '", @{ $trans_stable_ids });
-    my $sql;
-    if ($schema eq 'vega') {
-        # delete statement for Vega schema
-        $sql = qq(
+  my $tsi_string = join("', '", @{ $trans_stable_ids });
+  my $sql;
+  if ($schema eq 'vega') {
+    # delete statement for Vega schema
+    $sql = qq(
             DELETE QUICK IGNORE
                     t,
                     tsi,
@@ -504,9 +504,9 @@ sub delete_transcripts {
             AND     t.transcript_id = tsi.transcript_id
             AND     t.transcript_id = tau.transcript_id
         );
-    } else {
-        # delete statement for Ensembl schema
-        $sql = qq(
+  } else {
+    # delete statement for Ensembl schema
+    $sql = qq(
             DELETE QUICK IGNORE
                     t,
                     tsi,
@@ -532,27 +532,27 @@ sub delete_transcripts {
             WHERE   tsi.stable_id $condition ('$tsi_string')
             AND     t.transcript_id = tsi.transcript_id
         );
-    }
-    my $num = $dbh->do($sql);
-    $support->log_stamped("Done deleting $num records.\n\n");
+  }
+  my $num = $dbh->do($sql);
+  $support->log_stamped("Done deleting $num records.\n\n");
 
-    # now look for orphan genes and delete them
-    $support->log_stamped("Looking for orphan genes...\n");
-    $sql = qq(
+  # now look for orphan genes and delete them
+  $support->log_stamped("Looking for orphan genes...\n");
+  $sql = qq(
         SELECT g.gene_id
         FROM gene g
         LEFT JOIN transcript t ON g.gene_id = t.gene_id
         WHERE t.gene_id IS NULL;
     );
-    my @orphan_genes = map { $_->[0] } @{ $dbh->selectall_arrayref($sql) || [] };
+  my @orphan_genes = map { $_->[0] } @{ $dbh->selectall_arrayref($sql) || [] };
 
-    if (@orphan_genes) {
-        $support->log_stamped("Deleting orphan genes...\n", 1);
+  if (@orphan_genes) {
+    $support->log_stamped("Deleting orphan genes...\n", 1);
 
-        my $gi_string = join("', '", @orphan_genes);
-        if ($schema eq 'vega') {
-            # delete statement for Vega schema
-            $sql = qq(
+    my $gi_string = join("', '", @orphan_genes);
+    if ($schema eq 'vega') {
+      # delete statement for Vega schema
+      $sql = qq(
                 DELETE QUICK IGNORE
                         g,
                         gsi,
@@ -569,9 +569,9 @@ sub delete_transcripts {
                 AND     g.gene_id = gsi.gene_id
                 AND     g.gene_id = gau.gene_id
             );
-        } else {
-            # delete statement for Ensembl schema
-            $sql = qq(
+    } else {
+      # delete statement for Ensembl schema
+      $sql = qq(
                 DELETE QUICK IGNORE
                         g,
                         gsi
@@ -584,16 +584,14 @@ sub delete_transcripts {
                 AND     g.gene_id = gsi.gene_id
                 AND     g.gene_id = gs.gene_id
             );
-        }
-        my $num1 = $dbh->do($sql);
-        $num += $num1;
-        $support->log_stamped("Done deleting $num1 records.\n", 1);
-    } else {
-        $support->log("No orphan genes found.\n", 1);
     }
-    
-    $support->log_stamped("Done.\n\n");
-
-    return($num);
+    my $num1 = $dbh->do($sql);
+    $num += $num1;
+    $support->log_stamped("Done deleting $num1 records.\n", 1);
+  } else {
+    $support->log("No orphan genes found.\n", 1);
+  }
+  $support->log_stamped("Done.\n\n");
+  return($num);
 }
 
