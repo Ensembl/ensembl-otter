@@ -265,7 +265,12 @@ foreach my $V_chr ($support->sort_chromosomes($V_chrlength)) {
     my $transcripts = $gene->get_all_Transcripts;
     my (@finished, %all_protein_features);
     my $c = 0;
+  TRANS:
     foreach my $transcript (@{ $transcripts }) {
+      if ($transcript->biotype eq 'artifact') {
+	$support->log_warning("Skipping \'artifact\' transcript ",$transcript->stable_id,"\n", 2);
+	next TRANS;
+      }
       $c++;
 
       my $interim_transcript = transfer_transcript($transcript, $mapper,
