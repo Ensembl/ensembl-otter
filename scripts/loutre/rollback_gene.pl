@@ -35,7 +35,6 @@ here is an example commandline
 
     -stable_id	list of gene stable ids, comma separated
     -author	author login to lock the region of interest
-    -force	proceed without user confirmation
     -help|h	displays this documentation with PERLDOC
 
 =head1 CONTACT
@@ -59,7 +58,6 @@ my $host			= 'otterlive';
 my $user			= '';
 my $port            = '';
 my $pass            = '';
-my $force;
 my $help;
 my $author;
 my @ids;
@@ -67,11 +65,13 @@ my @ids;
 my $usage = sub { exec( 'perldoc', $0 ); };
 
 my $list_sql = qq{
-	SELECT g.gene_id, s.name, g.description, g.is_current, gsi.version, gsi.modified_date
-	FROM gene g, gene_stable_id gsi, seq_region s
+	SELECT g.gene_id, s.name, g.description, g.is_current, gsi.version, gsi.modified_date,a.author_name
+	FROM gene g, gene_stable_id gsi,gene_author ga, seq_region s, author a
 	WHERE gsi.stable_id = ?
 	AND gsi.gene_id = g.gene_id
 	AND s.seq_region_id = g.seq_region_id
+    AND ga.gene_id = g.gene_id
+    AND ga.author_id = a.author_id
 	ORDER BY gsi.modified_date DESC
 };
 
@@ -83,7 +83,6 @@ GetOptions(
            'pass=s'        => \$pass,
            'author=s'	   => \$author,
            'stable_id=s'   => \@ids,
-           'force'		   => \$force,
            'h|help!' 		   => $usage,
 )
 or $usage->();
@@ -131,18 +130,20 @@ GSI: foreach my $id (@sids) {
 
 	my $current_gene_id = shift @$genes;
 
-	if(scalar @$genes) {
+	warning("There is only one version of gene $id\n") unless @$genes;
+
+	GENE:while(scalar @$genes) {
 		my $previous_gene_id = shift @$genes;
 		my $cur_gene = $gene_adaptor->fetch_by_dbID($current_gene_id);
 		my $prev_gene = $gene_adaptor->fetch_by_dbID($previous_gene_id);
-		if($force || &proceed() =~ /^y$|^yes$/ ) {
+		if(&proceed($current_gene_id) =~ /^y$|^yes$/ ) {
 
 			my ($cb,$author_obj);
 			eval {
 				$cb = Bio::Vega::ContigLockBroker->new(-hostname => hostname);
 				$author_obj = Bio::Vega::Author->new(-name => $author, -email => $author);
-				print STDOUT "Locking gene slice ".$cur_gene->slice->seq_region_name."\n";
-				$cb->lock_clones_by_slice($cur_gene->slice,$author_obj,$db);
+				printf STDOUT "Locking gene slice %s <%d-%d>\n",$cur_gene->seq_region_name,$cur_gene->seq_region_start,$cur_gene->seq_region_end;
+				$cb->lock_clones_by_slice([$cur_gene->feature_Slice,$prev_gene->feature_Slice],$author_obj,$db);
 			};
 			if($@){
 				warning("Problem locking gene slice with author name $author\n$@\n");
@@ -154,21 +155,23 @@ GSI: foreach my $id (@sids) {
 			print STDOUT "gene_id $current_gene_id REMOVED !!!!!!\n";
 
 			eval {
-				print STDOUT "Unlocking gene slice ".$cur_gene->slice->seq_region_name."\n";
-				$cb->remove_by_slice($cur_gene->slice,$author_obj,$db);
+				printf STDOUT "Unlocking gene slice %s <%d-%d>\n",$cur_gene->seq_region_name,$cur_gene->seq_region_start,$cur_gene->seq_region_end;
+				$cb->remove_by_slice([$cur_gene->feature_Slice,$prev_gene->feature_Slice],$author_obj,$db);
 			};
 			if($@){
 				warning("Cannot remove locks from gene slice with author name $author\n$@\n");
 			}
+		} else {
+			last GENE;
 		}
+		$current_gene_id = $previous_gene_id;
 
-	} else {
-		warning("There is only one version of gene $id\n");
 	}
 }
 
 sub proceed {
-	print STDOUT "remove the current version ? [no]";
+	my ( $id ) = @_;
+	print STDOUT "remove gene $id ? [no]";
 	my $answer = <STDIN>;chomp $answer;
 	$answer ||= 'no';
 	return $answer;
@@ -183,7 +186,7 @@ sub get_history {
 	$sth->execute($sid);
 
 	while(my @arr = $sth->fetchrow_array){
-		print STDOUT "gene_id\tassembly name\tdescription\tis_current\tversion\tmodified_date\n" unless $tag;
+		print STDOUT "gene_id\tassembly name\tdescription\tis_current\tversion\tmodified_date\tauthor\n" unless $tag;
 		print STDOUT join("\t",@arr)."\n";
 		push @$gene_ids, $arr[0];
 		$tag = 1;
