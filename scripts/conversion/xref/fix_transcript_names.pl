@@ -158,7 +158,9 @@ foreach my $chr ($support->sort_chromosomes) {
     my %seen_names;
     my %transcripts;
     my $g_name = $gene->get_all_Attributes('name')->[0]->value;
-    #		my $g_name = $gene->display_xref->display_id;
+#    if ( $support->param('dbname') =~ /rerio/) {
+#      $g_name = $gene->display_xref->display_id;
+#    }
     my $source = $gene->source;
 
     $support->log("\n$g_name ($gsi)\n");
@@ -166,14 +168,17 @@ foreach my $chr ($support->sort_chromosomes) {
     #check for identical names in loutre
     foreach my $trans (@{$gene->get_all_Transcripts()}) {
       my $t_name = $trans->get_all_Attributes('name')->[0]->value;
-
+ #     $t_name = $trans->display_xref->display_id;
       #remove unexpected extensions but report them for fixing
       my $base_name = $t_name;
       if ( ($base_name =~ s/-\d{1,2}$//)
 	     || ($base_name =~ s/__\d{1,2}$//)
-	       || ($base_name =~ s/__\d{1,2}$//) 
-		 || ($base_name =~ s/_\d$//)) {
-	$support->log_warning("Transcript names like $t_name shouldn't be used any more\n");
+	       || ($base_name =~ s/__\d{1,2}$//)
+		 || ($base_name =~ s/_\d$//)
+	           || ($base_name =~ s/\.\d+$//)) {
+	unless ( ($support->param('dbname') =~ /rerio/) && ($chr eq 'AB')) {
+	  $support->log_warning("UNEXPECTED transcript name $t_name\n");
+	}
       }
 			
       #warn only Havana genes with duplicated names unless we're verbose
@@ -204,8 +209,7 @@ foreach my $chr ($support->sort_chromosomes) {
       my $base_name = $transcripts{$t_name}->[1];
       my $tsi    =  $trans->stable_id;
       my $t_dbID = $trans->dbID;		
-#      if ($t_name =~ /(\-\d{3})_\d{1}$/) { #hack used for patching mouse duplicate transcript names
-      if ($t_name =~ /(\-\d{3})$/) {
+      if ( ($t_name =~ /([\-\.]\d{3})$/) || ($t_name =~ /(\-\d{3})[_-]\d{1}$/) ) { #hack to patch dodgy names that haven't been fixed (esp Danio)
 	my $new_name = "$g_name$1";
 	push @{$transnames->{$new_name}}, "$t_name|$tsi";
 	next if ($new_name eq $t_name);
@@ -236,20 +240,20 @@ foreach my $chr ($support->sort_chromosomes) {
                         AND     ed.db_name = "Vega_transcript"
                     ));
 	}
-	$support->log(sprintf("%-20s%-3s%-20s", "$t_name", "->", " $new_name")."\n", 1);
+	$support->log(sprintf("%-20s%-3s%-20s", "$t_name", "--->", " $new_name")."\n", 1);
       }
 
       #log unexpected names (ie don't have -001 etc after removing Leo's extension
       elsif ( $support->param('dbname') =~ /sapiens/) {
 	if ( $source =~ /GD|havana/) {
-	  $support->log_warning("UNEXPECTED transcript name $t_name ($tsi)\n");
+	  $support->log_warning("Can't patch transcript $t_name ($tsi) because name is wrong\n");
 	}
 	elsif ($support->param('verbose')) {
-	  $support->log_warning("UNEXPECTED transcript name $t_name ($tsi)\n");
+	  $support->log_warning("Can't patch $source transcript $t_name ($tsi) because name is wrong\n");
 	}
       }
       else {
-	$support->log_warning("UNEXPECTED transcript name $t_name ($tsi)\n");
+	$support->log_warning("Can't patch transcript $t_name ($tsi) because name is wrong\n");
       }
     }
 
