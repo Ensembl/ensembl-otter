@@ -13,14 +13,10 @@ use Net::Netrc;
 
 {
     umask(002);
-    {
-        my $path = $ENV{'PATH'};
-        $ENV{'PATH'} = "/usr/local/mysql-standard-4.1.14-dec-osf5.1b-alphaev67/bin:usr/local/bin:/usr/apps/bin:$path";
-    }
 
-    my $host = 'otterslave';
+    my $host = 'otterlive';
     my $mach = Net::Netrc->lookup($host);
-    my $port = '3311';
+    my $port = '3301';
     my $base_dir = '/lustre/cbi4/work1/humpub/data/mysql_backup/otter_submissions';
     my $archive_dir = "$base_dir/OTTER_SUBMISSIONS_ARCHIVE";
 
