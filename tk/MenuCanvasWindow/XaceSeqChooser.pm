@@ -170,7 +170,7 @@ sub get_all_mutable_GeneMethods {
 sub get_default_mutable_GeneMethod {
     my( $self ) = @_;
 
-    my @possible = grep $_->transcript_type eq 'coding', $self->get_all_mutable_GeneMethods;
+    my @possible = grep $_->coding, $self->get_all_mutable_GeneMethods;
     if (my ($supp) = grep $_->name eq 'Coding', @possible) {
         # "Coding" is the default method, if it is there
         return $supp;
@@ -1253,7 +1253,7 @@ sub edit_new_subsequence {
     my $gm = $self->get_default_mutable_GeneMethod or confess "No default mutable GeneMethod";
     $new->GeneMethod($gm);
     # Need to initialise translation region for coding transcripts
-    if ($gm->transcript_type eq 'coding') {
+    if ($gm->coding) {
         $new->translation_region($new->translation_region);
     }
 

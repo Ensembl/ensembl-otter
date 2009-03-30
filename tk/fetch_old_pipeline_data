@@ -1,4 +1,7 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/env perl
+
+use warnings;
+
 
 use lib '/Users/jgrg/work/ensembl-branch-6/modules';
 use lib '/Users/jgrg/work/bioperl-0.7.2';

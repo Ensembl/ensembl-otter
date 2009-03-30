@@ -1,4 +1,7 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/env perl
+
+use warnings;
+
 
 # gene_history_viewer.pl
 # Author: ck1@sanger.ac.uk
