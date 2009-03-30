@@ -9,7 +9,7 @@
 #ack              = Acknowledgement for group doing annotation
 #ensembl_name     = Name of equivalent seqregion in Ensembl
 
-#loutre_id	#vega_name	#name	#vega_export_mode	#ack #ensembl_name	
+#loutre_id	#vega_name	#name	#ack	#ensembl_name	
 
 --pig--
 mhc	7-MHC	MHC region of Chromosome 7	Havana
