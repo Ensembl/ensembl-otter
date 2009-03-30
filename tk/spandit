@@ -1,5 +1,11 @@
-#!/usr/local/bin/perl -w
-#!/nfs/humace2/hum/bin/perl -w
+#!/usr/bin/env perl
+
+use warnings;
+
+#!/nfs/humace2/hum/bin/perl
+
+use warnings;
+
 
 use lib '/nfs/team71/analysis/jgrg/work/tk';
 

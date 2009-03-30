@@ -151,14 +151,14 @@ sub _launchInAZMap{
                 my $url = sprintf(q{%s://%s:%s@%s:%d?use_methods=true},
                                   $protocol,
                                   $server->user, 
-				  $server->pass,
+                                  $server->pass,
                                   $server->host, 
                                   $server->port);
                 
                 my $config = $self->formatZmapDefaults('ZMap',
-						       sources => "$sequence");
-		$config .= $self->zMapServerDefaults();
-		$config =~ s/\&/&amp;/g; # needs fully xml escaping really
+                                                       sources => "$sequence");
+                $config .= $self->zMapServerDefaults();
+                $config =~ s/\&/&amp;/g; # needs fully xml escaping really
                 
                 my $xml = sprintf(q!<zmap action="new_view">
  <segment sequence="%s" start="1" end="0">
@@ -236,15 +236,15 @@ sub zMapRelaunchZMap {
         $self->{'_relaunch_zmap'} = 0;
         warn "Relaunching zmap..." if $ZMAP_DEBUG;
     } elsif($self->{'_launch_in_a_zmap'}){
-    	if (my $zmap = $self->zMapZmapConnector()) {
-    	    $zmap->post_respond_handler(\&post_response_client_cleanup_launch_in_a_zmap, [$self]);
-    	}
-	$self->{'_launch_in_a_zmap'} = 0;
+        if (my $zmap = $self->zMapZmapConnector()) {
+            $zmap->post_respond_handler(\&post_response_client_cleanup_launch_in_a_zmap, [$self]);
+        }
+    $self->{'_launch_in_a_zmap'} = 0;
     } else { 
-    	if (my $zmap = $self->zMapZmapConnector()) {
-    	    $zmap->post_respond_handler(\&post_response_client_cleanup, [$self]);
-    	}
-    	# calling this here creates a race condition.
+        if (my $zmap = $self->zMapZmapConnector()) {
+            $zmap->post_respond_handler(\&post_response_client_cleanup, [$self]);
+        }
+        # calling this here creates a race condition.
         # $self->xremote_cache->remove_clients_to_bad_windows();
         warn "Relaunch was not requested..." if $ZMAP_DEBUG; 
     }
@@ -270,7 +270,7 @@ sub zMapKillZmap {
         my $rval = 0;
         my $main_window_name = $self->main_window_name();
 
-	warn "Looking for $main_window_name";
+        warn "Looking for $main_window_name";
         
         if(my $xr = $self->zMapGetXRemoteClientByName($main_window_name)){
             # check we can ping...
@@ -408,7 +408,7 @@ sub zMapServerDefaults {
         use_methods     => 'true',
         writeback       => 'false',
         sequence        => 'true',
-        use_zmap_styles => 'false',
+        use_zmap_styles => 'true',
         # navigator_sets specifies the feature sets to draw in the navigator pane.
         # so far the requested columns are just scale, genomic_canonical and locus
         # in line with keeping the columns to a minimum to save screen space.
@@ -442,7 +442,7 @@ sub zMapZMapDefaults {
     
     my @config = (
         'ZMap',
-	    sources         => $self->slice_name,
+        sources         => $self->slice_name,
         show_mainwindow => $show_main,
         cookie_jar      => $ENV{'OTTERLACE_COOKIE_JAR'},
         );
@@ -619,8 +619,7 @@ sub zMapListMethodNames_ordered{
     my $self = shift;
     my @list = ();
     my $collection = $self->Assembly->MethodCollection;
-    $collection->order_by_right_priority;
-    return map $_->name, @{$collection->get_all_Methods};
+    return map $_->name, $collection->get_all_top_level_Methods;
 }
 
 #===========================================================

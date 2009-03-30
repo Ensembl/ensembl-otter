@@ -1,4 +1,7 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/env perl
+
+use warnings;
+
 
 # Collect the EviChains that match in a particular area,
 # combine them into matching chains

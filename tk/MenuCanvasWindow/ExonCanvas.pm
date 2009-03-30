@@ -4,6 +4,7 @@
 package MenuCanvasWindow::ExonCanvas;
 
 use strict;
+use warnings;
 use Carp;
 use Scalar::Util 'weaken';
 use Tk;
@@ -936,7 +937,7 @@ sub search_pfam {
 	my( $self ) = @_;
 
 	my $sub = $self->is_mutable ? $self->new_SubSeq_from_tk : $self->SubSeq;
-    unless ($sub->GeneMethod->transcript_type eq 'coding') {
+    unless ($sub->GeneMethod->coding) {
         $self->message("non-coding method");
         return;
     }
@@ -985,7 +986,7 @@ sub update_translation {
     my $peptext = $self->{'_pep_peptext'} or return;
 
     my $sub = $self->is_mutable ? $self->new_SubSeq_from_tk : $self->SubSeq;
-    unless ($sub->GeneMethod->transcript_type eq 'coding') {
+    unless ($sub->GeneMethod->coding) {
         if ($peptext) {
             $peptext->toplevel->withdraw;
         }
@@ -1310,7 +1311,7 @@ sub trim_cds_coord_to_current_methionine {
 sub trim_cds_coord_to_first_stop {
     my( $self ) = @_;
 
-    unless ($self->get_GeneMethod_from_tk->transcript_type eq 'coding') {
+    unless ($self->get_GeneMethod_from_tk->coding) {
         $self->message('non-coding method');
         return;
     }
@@ -2221,7 +2222,7 @@ sub middle_button_paste {
         }
 
         # # Set the translation region if the ExonCanvas was empty
-        # if ($was_empty and $self->get_GeneMethod_from_tk->transcript_type eq 'coding') {
+        # if ($was_empty and $self->get_GeneMethod_from_tk->coding) {
         #     my @sorted = sort {$a <=> $b} @ints;
         #     my $t_start = $sorted[0];
         #     my $t_end   = $sorted[$#sorted];
@@ -2468,9 +2469,7 @@ sub strand_from_tk {
             $meth = $self->get_GeneMethod_from_tk;
             $strand = $self->strand_from_tk;
         }
-        return unless $meth->transcript_type eq 'coding';
-
-        my $color = $meth->cds_color;
+        return unless $meth->coding;
 
         my( $size, $half, $pad, $text_len ) = $self->_coord_matrix;
         my $font = $self->font_fixed_bold;
