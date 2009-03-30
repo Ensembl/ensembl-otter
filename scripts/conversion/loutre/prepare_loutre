@@ -170,35 +170,50 @@ SLICE:
 foreach my $k (keys %$regions_wanted_details ) {
   my $sr_name_to_use;
   my $saved_extra = '';
-  my %possibles = map {$_->seq_region_name => $_} grep { $_->seq_region_name =~ /^$k-/ } @$chroms;
-  if (scalar(keys %possibles) > 1) {
-    my $max_version = 0;
-    foreach my $sr_name ( keys %possibles ) {
-      my ($assembly,$version,$extra) = $sr_name =~ /(.*)-(\d*)(\D*)/;
-      if ($assembly && $version) {
-	if ( (! $extra) && ($version > $max_version) ) {
-	  $max_version = $version;
-	  $sr_name_to_use = $sr_name;
-	}
-	#not sure what to do with non-numerical suffixes - try this for now
-	elsif ($extra) {
-	  if ($version >= $max_version) {
-	    if ($extra gt $saved_extra) {
-	      $max_version = $version;
-	      $sr_name_to_use = $sr_name;
-	      $saved_extra = $extra;
-	      $support->log_warning("There is a non numerical assembly version you might want to check- $sr_name");
-	    }
-	  }
-	}
-      }
-      else {
-	$support->log_warning("There is a non standard assembly name in loutre which has been ignored - $sr_name\n");
-      }
+  my %possibles;
+  if ($species eq 'zebrafish') {
+    %possibles = map {$_->seq_region_name => $_} grep { $_->seq_region_name =~ /$k/} @$chroms;
+    if (scalar (keys %possibles) > 1) {
+      $support->log_warning("Found more than one unhidden chromosome called $k in otter\n");
+    }
+    elsif (scalar (keys %possibles) == 0) {
+      $support->log_warning("Found NO unhidden chromosome called $k in otter\n");
+    }
+    else {
+      ($sr_name_to_use) = keys %possibles;
     }
   }
-  else {		
-    ($sr_name_to_use) = keys %possibles;
+  else {
+    %possibles = map {$_->seq_region_name => $_} grep { $_->seq_region_name =~ /^$k-/ } @$chroms;
+    if (scalar(keys %possibles) > 1) {
+      my $max_version = 0;
+      foreach my $sr_name ( keys %possibles ) {
+        my ($assembly,$version,$extra) = $sr_name =~ /(.*)-(\d*)(\D*)/;
+        if ($assembly && $version) {
+	  if ( (! $extra) && ($version > $max_version) ) {
+	    $max_version = $version;
+            $sr_name_to_use = $sr_name;
+          }
+          #not sure what to do with non-numerical suffixes - try this for now
+	  elsif ($extra) {
+	    if ($version >= $max_version) {
+	      if ($extra gt $saved_extra) {
+	        $max_version = $version;
+	        $sr_name_to_use = $sr_name;
+	        $saved_extra = $extra;
+	        $support->log_warning("There is a non numerical assembly version you might want to check- $sr_name");
+	      }
+	    }
+	  }
+        }
+        else {
+	  $support->log_warning("There is a non standard assembly name in loutre which has been ignored - $sr_name\n");
+        }
+      }
+    }
+    else {		
+      ($sr_name_to_use) = keys %possibles;
+    }
   }
 
   if ($sr_name_to_use) {
