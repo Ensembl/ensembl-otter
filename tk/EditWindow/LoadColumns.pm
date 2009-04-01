@@ -49,6 +49,12 @@ sub initialize {
 	# a last selection
 	
 	$self->{_last_selection} = $dsc_last || $self->default_selection;
+	
+	# reset the last sorted by
+	
+	my $dsc_last_sorted = $self->DataSetChooser->last_sorted_by($self->species);
+	
+	$self->{_last_sorted_by} = $dsc_last_sorted || $self->default_selection;
     
     # and actually set the wanted flags on the filters accordingly
     
@@ -81,11 +87,7 @@ sub initialize {
 	$hlist->header('create', $i++,  
     	-itemtype => 'resizebutton', 
     	-command => sub {
-    		# hack to get done filters sorted before wanted but undone 
-    		# filters - note that '/' is ascii-betically before 1 or 0!
-    		map {$self->n2f->{$_}->wanted('/') if $self->n2f->{$_}->done} keys %{ $self->n2f };
     		$self->sort_by_filter_method('wanted');
-    		map {$self->n2f->{$_}->wanted(1) if $self->n2f->{$_}->done} keys %{ $self->n2f };
     	}
 	);
 	
@@ -156,6 +158,8 @@ sub initialize {
 	    -command => sub { $self->load_filters },
 	)->pack(-side => 'left', -expand => 0);
 	
+	# the close button just 'withdraw's the window, we will actually
+	# get 'destroy'ed by the associated XaceSeqChooser
 	$control_frame->Button(
 	    -text => 'Close', 
 	    -command => sub { $top->withdraw }
@@ -163,7 +167,10 @@ sub initialize {
     
     $self->{_default_sort_method} = 'method_tag';
     
-    $self->sort_by_filter_method('method_tag');
+    $self->sort_by_filter_method(
+    	$self->DataSetChooser->last_sorted_by($self->species) ||
+    	$self->{_default_sort_method}
+    );
     
     $top->bind('<Destroy>', sub{
         $self = undef;
@@ -241,6 +248,12 @@ sub sort_by_filter_method {
 	
 	my $method = shift || $self->{_default_sort_method};
 	
+	if ($method =~ /wanted/) {
+		# hack to get done filters sorted before wanted but undone 
+    	# filters - note that '/' is ascii-betically before 1 or 0!
+    	map {$self->n2f->{$_}->wanted('/') if $self->n2f->{$_}->done} keys %{ $self->n2f };
+	}
+	
 	my %n2f = %{ $self->n2f };
 	
 	my $cmp_filters = sub {
@@ -265,16 +278,35 @@ sub sort_by_filter_method {
 		return $invert ? $res * -1 : $res;
 	};
 	
-	$self->{_sorted_by} ||= '';
+	print "method: $method\n";
 	
-	my $flip = $self->{_sorted_by} eq $method;
+	my $flip = 0;
+	
+	if ($self->{_internally_sorted}) {
+		$flip = $self->last_sorted_by eq $method;
+	}
+	else {
+		$self->{_internally_sorted} = 1;
+	}
+	
+	if ($method =~  s/_rev$//) {
+		$flip = 1;
+	}
 	
 	my @sorted_names = sort { 
 		$cmp_filters->($n2f{$a}, $n2f{$b}, $method, $flip) || 
 		$cmp_filters->($n2f{$a}, $n2f{$b}, $self->{_default_sort_method})	
 	} keys %n2f;
 	
-	$self->{_sorted_by} = $flip ? $method.'_rev' : $method;
+	$self->last_sorted_by($flip ? $method.'_rev' : $method);
+	
+	print "flip: $flip\n";
+	print "sorted_by: ",$self->last_sorted_by, "\n";
+	
+	if ($method =~ /wanted/) {
+		# patch the real values back again!
+    	map {$self->n2f->{$_}->wanted(1) if $self->n2f->{$_}->done} keys %{ $self->n2f };
+	}
 	
     $self->show_filters(\@sorted_names);
 }
@@ -355,6 +387,24 @@ sub last_selection {
 	}
 	
 	return $self->{_last_selection};
+}
+
+sub last_sorted_by {
+	my ($self, $last) = @_;
+	
+	if ($last) {
+		
+		$self->{_last_sorted_by} = $last;
+		
+		# also update the DataSetChooser
+		
+		$self->DataSetChooser->last_sorted_by(
+			$self->species,
+			$last,
+		);
+	}
+	
+	return $self->{_last_sorted_by};
 }
 
 sub default_selection {
