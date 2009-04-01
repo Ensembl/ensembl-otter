@@ -174,6 +174,11 @@ sub default_selection {
     return $self->{'_default_selection'}->{$species};
 }
 
+sub last_sorted_by {
+    my( $self, $species, $last ) = @_;
+    $self->{'_last_sorted_by'}->{$species} = $last if $last;
+    return $self->{'_last_sorted_by'}->{$species};
+}
 
 sub recover_some_sessions {
     my $self          = shift @_;
