@@ -248,13 +248,13 @@ sub sort_by_filter_method {
 	
 	my $method = shift || $self->{_default_sort_method};
 	
+	my %n2f = %{ $self->n2f };
+	
 	if ($method =~ /wanted/) {
 		# hack to get done filters sorted before wanted but undone 
     	# filters - note that '/' is ascii-betically before 1 or 0!
-    	map {$self->n2f->{$_}->wanted('/') if $self->n2f->{$_}->done} keys %{ $self->n2f };
+    	map { $n2f{$_}->wanted('/') if $n2f{$_}->done } keys %n2f;
 	}
-	
-	my %n2f = %{ $self->n2f };
 	
 	my $cmp_filters = sub {
 		
@@ -305,7 +305,7 @@ sub sort_by_filter_method {
 	
 	if ($method =~ /wanted/) {
 		# patch the real values back again!
-    	map {$self->n2f->{$_}->wanted(1) if $self->n2f->{$_}->done} keys %{ $self->n2f };
+    	map { $n2f{$_}->wanted(1) if $n2f{$_}->done } keys %n2f;
 	}
 	
     $self->show_filters(\@sorted_names);
