@@ -282,6 +282,9 @@ sub sort_by_filter_method {
 	
 	my $flip = 0;
 	
+	# if we are being launched for the first time we don't want 
+	# to reverse the last_sorted_by method, but if the user has
+	# clicked on the button twise we do - this flag marks this
 	if ($self->{_internally_sorted}) {
 		$flip = $self->last_sorted_by eq $method;
 	}
