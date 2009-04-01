@@ -278,8 +278,6 @@ sub sort_by_filter_method {
 		return $invert ? $res * -1 : $res;
 	};
 	
-	print "method: $method\n";
-	
 	my $flip = 0;
 	
 	# if we are being launched for the first time we don't want 
@@ -302,9 +300,6 @@ sub sort_by_filter_method {
 	} keys %n2f;
 	
 	$self->last_sorted_by($flip ? $method.'_rev' : $method);
-	
-	print "flip: $flip\n";
-	print "sorted_by: ",$self->last_sorted_by, "\n";
 	
 	if ($method =~ /wanted/) {
 		# patch the real values back again!
