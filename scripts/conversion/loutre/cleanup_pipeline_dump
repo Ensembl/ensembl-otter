@@ -110,31 +110,13 @@ my %lns_to_stay = (
   'prediction_transcript' => { map {$_,1} qw(Augustus Genscan) },
   'simple_feature'        => { map {$_,1} qw(CpG Eponine tRNAscan) },
   'repeat_feature'        => { map {$_,1} qw(RepeatMasker trf) },
+  'dna_align_feature'     => { map {$_,1} qw(Est2genome_clusters Est2genome_fish Est2genome_other Est2genome_human Est2genome_mouse vertrna refseq_human) },
+  'protein_align_feature' => { map {$_,1} qw(Uniprot Uniprot_TR Uniprot_SW) },
 );
 
 #define logic names that we know are to be deleted
 my %lns_to_go = map {$_,1}
-  qw(Est2genome_clusters_raw
-     Est2genome_clusters
-     Est2genome_fish_raw
-     Est2genome_fish
-     Est2genome_other_raw
-     Est2genome_other_new
-     Est2genome_other
-     Est2genome_human_raw
-     Est2genome_human_new
-     Est2genome_human
-     Est2genome_mouse_raw
-     Est2genome_mouse_new
-     Est2genome_mouse
-     Uniprot_raw
-     Uniprot
-     Uniprot_TR
-     Uniprot_SW
-     vertrna_raw
-     vertrna_new
-     vertrna
-     Augustus_svar
+  qw(Augustus_svar
      Fgenesh
      Halfwise
      RepeatMasker_new
@@ -142,7 +124,7 @@ my %lns_to_go = map {$_,1}
    );
 
 #define which attrib_types are to be deleted
-my $codes_to_go = join "','", qw(equiv_asm htg description write_access chr hidden);
+my $sr_codes_to_go = join "','", qw(equiv_asm htg description write_access chr hidden);
 
 my $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
 
@@ -205,7 +187,7 @@ if ($pipe_sp ne $loutre_sp) {
   exit;
 }
 
-#these are tables that will be cleaned up (defined here just for logging, nothng else)
+#these are tables that will be cleaned up (defined here just for logging, nothing else)
 my @target_tables = qw(analysis
 		       assembly
 		       dna
@@ -248,7 +230,7 @@ if ($support->param('count_rows')) {
       $report{$t} = 	$table_rows{$t}{'original'};
     }
   }	
-  #	warn Dumper(\%report);
+  warn Dumper(\%report);
   exit;
 }
 
@@ -270,16 +252,6 @@ if (! $support->user_proceed("Data on the following assemblies will be retained 
 }
 $support->log("Will retain data on the following assemblies\n$seq_regions\n\n");
 
-#####################################################
-# delete any unwanted entries from meta_coord table #
-#####################################################
-my $noentry_tables = join("','",qw(gene transcript exon));
-
-if (! $support->param('dry_run')) {
-  my $c = $pddbh->do(qq(DELETE FROM meta_coord where table_name in ('$noentry_tables')));
-  $support->log("Removed $c entries from meta_coord table\n\n");
-}
-
 ################
 # analysis ids #
 ################
@@ -293,8 +265,7 @@ foreach my $t (keys %lns_to_stay) {
                 SELECT a.logic_name, a.analysis_id, count(*)
                 FROM analysis a, $t
                 WHERE a.analysis_id = $t.analysis_id
-                GROUP BY a.logic_name
-));
+                GROUP BY a.logic_name));
   $s->execute;
   while (my ($logic_name,$analysis_id,$c) = $s->fetchrow){
     $original_lncounts{$t}{$logic_name} = $c;
@@ -309,7 +280,8 @@ foreach my $t (keys %original_lncounts) {
   foreach my $ln (keys %{$original_lncounts{$t}}) {
     if (! exists($lns_to_stay{$t}{$ln}) ) {
       if (! exists($lns_to_go{$ln}) ) {
-	$support->log_warning("I don't know what to do with logic name $ln for table $t, please help me out\n");
+	$support->log_warning("I don't know what to do with logic name $ln for table $t, I suggest keeping them but please help me out\n");
+	$lns_to_stay{$t}{$ln} = 1;
 	$problem = 1;
       }
       else {
@@ -323,7 +295,7 @@ foreach my $t (keys %original_lncounts) {
 }
 
 if ($problem) {
-  if (! $support->user_proceed("There are features with logic names that I don't know what to do with, please look at the logs. Do you really want to proceed?\n")) {
+  if (! $support->user_proceed("There are features with logic names that I don't know what to do with, please look at the logs. Do you really want to proceed with keeping them?\n")) {
     exit;
   }
   $support->log_warning("There are logic_names that will be deleted even though this is not specifically defined\n");
@@ -350,18 +322,7 @@ while (my ($analysis_id,$logic_name) = $idsth->fetchrow){
   }
 }
 
-#add analysis_ids from *_align_feature tables
-foreach my $t ('dna_align_feature','protein_align_feature') {
-  $idsth = $pddbh->prepare(qq(SELECT distinct(analysis_id) from $t));
-  $idsth->execute;
-  while (my ($analysis_id) = $idsth->fetchrow) {
-    unless (grep {$_ eq $analysis_id} @{$ids_to_stay{'analysis'}} ) {
-      push @{$ids_to_stay{'analysis'}}, $analysis_id;
-    }
-  }
-}
-
-#warn "lns to stay ",Dumper(\%ids_to_stay);
+warn Dumper(\%ids_to_stay);
 
 $support->log("Doing the deletions:\n");
 
@@ -384,6 +345,17 @@ foreach my $t (keys %ids_to_stay) {
   $table_rows{$t}{'deleted_by_analysis_id'} = $c1-$c2;
 }
 
+#####################################################
+# delete any unwanted entries from meta_coord table #
+#####################################################
+
+my $noentry_tables = join("','",qw(gene transcript exon));
+
+if (! $support->param('dry_run')) {
+  my $c = $pddbh->do(qq(DELETE FROM meta_coord where table_name in ('$noentry_tables')));
+  $support->log("Removed $c entries from meta_coord table\n\n");
+}
+
 #########################
 # seq_region_attributes #
 #########################
@@ -394,7 +366,7 @@ if (!$support->param('dry_run')) {
     qq(DELETE sra 
            FROM seq_region_attrib sra, attrib_type at
            WHERE sra.attrib_type_id = at.attrib_type_id
-           AND at.code IN ('$codes_to_go')
+           AND at.code IN ('$sr_codes_to_go')
     ));
   $support->log_stamped("...finished deleting unwanted seq_region_attributes...\n\n",1);
 }
@@ -498,9 +470,9 @@ if (! $support->param('dry_run')) {
   $table_rows{'assembly'}{'deleted_by_seq_region_id'} = $pddbh->do($sql);
   $support->log_stamped("...finished deleting from assembly by seq_region_id.\n\n",1);
 
-  ################
-  # other tables #
-  ################
+  #######################################
+  # other tables (now with NULL entries #
+  #######################################
 	
   #repeat consensus
   $support->log_stamped("Deleting from repeat_consensus by null values...\n",1);
@@ -511,7 +483,7 @@ if (! $support->param('dry_run')) {
               WHERE     rf.repeat_consensus_id IS NULL);
   $table_rows{'repeat_consensus'}{'deleted_by_null_values'} = $pddbh->do($sql);
   $support->log_stamped("...finished deleting from repeat_consensus by null values.\n\n",1);
-  
+
   #prediction exon
   $support->log_stamped("Deleting from prediction exon by null values...\n",1);
   $sql = qq(DELETE    pe
