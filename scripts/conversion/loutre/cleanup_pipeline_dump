@@ -322,7 +322,7 @@ while (my ($analysis_id,$logic_name) = $idsth->fetchrow){
   }
 }
 
-warn Dumper(\%ids_to_stay);
+#warn Dumper(\%ids_to_stay);
 
 $support->log("Doing the deletions:\n");
 
@@ -353,7 +353,7 @@ my $noentry_tables = join("','",qw(gene transcript exon));
 
 if (! $support->param('dry_run')) {
   my $c = $pddbh->do(qq(DELETE FROM meta_coord where table_name in ('$noentry_tables')));
-  $support->log("Removed $c entries from meta_coord table\n\n");
+  $support->log("Removed $c entries from meta_coord table\n\n",1);
 }
 
 #########################
@@ -362,11 +362,11 @@ if (! $support->param('dry_run')) {
 
 if (!$support->param('dry_run')) {
   $support->log_stamped("Deleting unwanted seq_region_attributes...\n",1);
-  $table_rows{'seq_region_attib'}{'deleted_by_attrib_type_id'} = $pddbh->do(
+  $table_rows{'seq_region_attrib'}{'deleted_by_attrib_type_id'} = $pddbh->do(
     qq(DELETE sra 
-           FROM seq_region_attrib sra, attrib_type at
-           WHERE sra.attrib_type_id = at.attrib_type_id
-           AND at.code IN ('$sr_codes_to_go')
+         FROM seq_region_attrib sra, attrib_type at
+        WHERE sra.attrib_type_id = at.attrib_type_id
+          AND at.code IN ('$sr_codes_to_go')
     ));
   $support->log_stamped("...finished deleting unwanted seq_region_attributes...\n\n",1);
 }
