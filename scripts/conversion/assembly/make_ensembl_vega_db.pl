@@ -454,7 +454,7 @@ if ($c eq '0E0') { $support->log_warning("No Vega interpro entries transferred\n
 $support->log_stamped("Adding coord_system entries...\n");
 $sql = qq(
     INSERT INTO $evega_db.coord_system
-    SELECT coord_system_id, name, version, rank+100, attrib
+    SELECT coord_system_id, species_id, name, version, rank+100, attrib
     FROM coord_system cs
     WHERE cs.name = 'chromosome'
     AND cs.version = '$vegaassembly'
@@ -462,7 +462,7 @@ $sql = qq(
 $c = $dbh->{'vega'}->do($sql) unless ($support->param('dry_run'));
 $sql = qq(
     INSERT INTO $evega_db.coord_system
-    SELECT coord_system_id+$csi_adjust, name, version, rank, attrib
+    SELECT coord_system_id+$csi_adjust, species_id, name, version, rank, attrib
     FROM coord_system
 );
 $c += $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
@@ -585,55 +585,31 @@ sub delete_mappings{
   while (@row = $sth->fetchrow_array()) {
     push @db_types, {coord_system_id => $row[0], name => $row[1], version => $row[2]};
   }
+  $sth = $dbh->prepare("select meta_value from meta where meta_key = 'assembly.default'");
+  $sth->execute() or $support->log_error("Couldn't execute statement: " . $sth->errstr);
+  my ($assembly_version) = $sth->fetchrow_array;
+  foreach my $assembly (@db_types) {
+    if ($assembly->{'version'} ne $assembly_version) {
+      my $version_to_delete = $assembly->{'version'};
+      my $id_to_delete = $assembly->{'coord_system_id'};
+      if ($support->user_proceed("Remove $version_to_delete assembly mappings from $db_type database?")) {
+	$support->log("Removing $version_to_delete assembly mappings from $db_type database\n");
 	
-  # we expect 1 or 2 assembly mappings: check
-  my $num_rows = @db_types;
-  if($num_rows > 2){
-    $support->log_error("There are $num_rows assembly_mappings in the $db_type database and I can only work with 1 or 2, please investigate\n");
-  }
-  if($num_rows == 1){
-    $support->log("Only $num_rows assembly_mappings in the $db_type database, nothing to remove \n");
-  }
-
-  #go ahead and remove
-  else {
-    # compare the versions of each row, we assume the higher one is the one we want to keep and the lower one
-    # the one we want to remove
-    my $cmp_val= $db_types[0] cmp $db_types[1];
-    my $id_to_delete;
-    my $version_to_delete;
-    if($cmp_val < 0){
-      # first comes before second, i.e. the one to delete is at index 0
-      $id_to_delete= $db_types[0]->{'coord_system_id'};
-      $version_to_delete= $db_types[0]->{'version'};
-    }
-    elsif($cmp_val > 0){
-      # second comes before first, i.e. the one to delete is at index 1
-      $id_to_delete= $db_types[1]->{'coord_system_id'};
-      $version_to_delete= $db_types[1]->{'version'};
-    }
-    else{
-      # identical: database error
-      $support->log_error("When trying to remove mappings, got identical dbs; they must be different\n");
-    }
-
-    if ($support->user_proceed("Remove $version_to_delete assembly mappings from $db_type database?")) {
-      $support->log("Removing $version_to_delete assembly mappings from $db_type database\n");
-
-      # delete old seq_regions and assemblies that contain them
-      my $query= "delete a, sr from seq_region sr left join assembly a on sr.seq_region_id = a.cmp_seq_region_id where sr.coord_system_id = $id_to_delete";
-      $dbh->do($query) or $support->log_error("Query failed to delete old seq regions and assembies");
-      $support->log("Deleted $version_to_delete assemblies and seq_regions\n");		
+	# delete old seq_regions and assemblies that contain them
+	my $query= "delete a, sr from seq_region sr left join assembly a on sr.seq_region_id = a.cmp_seq_region_id where sr.coord_system_id = $id_to_delete";
+	$dbh->do($query) or $support->log_error("Query failed to delete old seq regions and assembies");
+	$support->log("Deleted $version_to_delete assemblies and seq_regions\n");		
 		
-      # delete the old coord_system from the coord_system table
-      $query= "delete from coord_system where coord_system_id = $id_to_delete";
-      $dbh->do($query) or $support->log_error("Query failed to delete old coord_system");
-      $support->log("Deleted $version_to_delete coord_system\n");
+	# delete the old coord_system from the coord_system table
+	$query= "delete from coord_system where coord_system_id = $id_to_delete";
+	$dbh->do($query) or $support->log_error("Query failed to delete old coord_system");
+	$support->log("Deleted $version_to_delete coord_system\n");
 
-      # delete from the meta table
-      $query= "delete from meta where meta_value like '%:$version_to_delete%'";
-      $dbh->do($query) or $support->log_error("Query failed to delete old meta entries");
-      $support->log("Deleted $version_to_delete meta table entries\n");
+	# delete from the meta table
+	$query= "delete from meta where meta_value like '%:$version_to_delete%'";
+	$dbh->do($query) or $support->log_error("Query failed to delete old meta entries");
+	$support->log("Deleted $version_to_delete meta table entries\n");
+      }
     }
   }
   return;
