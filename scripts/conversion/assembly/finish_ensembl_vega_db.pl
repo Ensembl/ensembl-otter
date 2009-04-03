@@ -195,7 +195,7 @@ if ($support->user_proceed("Would you like to transfer the whole genome alignmen
   $support->log("Coordinate system...\n", 1);
   $sql = qq(
         INSERT INTO $vega_db.coord_system
-        SELECT cs.coord_system_id, cs.name, cs.version, cs.rank+100, cs.attrib
+        SELECT cs.coord_system_id, cs.species_id, cs.name, cs.version, cs.rank+100, cs.attrib
         FROM coord_system cs
         WHERE cs.name = 'chromosome'
         AND cs.version = '$ensemblassembly'
@@ -454,6 +454,20 @@ $sql = qq(UPDATE karyotype SET seq_region_id = seq_region_id-$E_sri_adjust);
 $c = $dbh->{'evega'}->do($sql);
 
 $support->log_stamped("Done.\n\n");
+
+#fixing gene start/end (since we have not transferred al transcript they may have changed)
+$support->log_stamped("Updating gene starts and ends...\n", 1);
+$sql = qq(CREATE TEMPORARY TABLE gene_coords
+          SELECT g.gene_id, min(t.seq_region_start) as seq_region_start, max(t.seq_region_end) as seq_region_end
+            FROM gene g, transcript t
+           WHERE g.gene_id = t.gene_id
+           GROUP by g.gene_id);
+$dbh->{'evega'}->do($sql);
+$sql = qq(UPDATE gene g, gene_coords gc
+             SET g.seq_region_start = gc.seq_region_start, g.seq_region_end = gc.seq_region_end
+           WHERE g.gene_id = gc.gene_id);
+$c = $dbh->{'evega'}->do($sql);
+$support->log_stamped("Updated $c gene starts and ends...\n", 1);
 
 #analysis_description;
 $support->log_stamped("Updating analysis_description table for external genes");
