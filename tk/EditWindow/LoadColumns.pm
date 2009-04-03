@@ -172,6 +172,8 @@ sub initialize {
     	$self->{_default_sort_method}
     );
     
+    $top->protocol( 'WM_DELETE_WINDOW', sub { $top->withdraw } );
+    
     $top->bind('<Destroy>', sub{
         $self = undef;
     });
