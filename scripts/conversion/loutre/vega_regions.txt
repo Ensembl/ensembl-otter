@@ -73,13 +73,13 @@ chr21	21	Chromosome 21	Havana	21
 chr22	22	Chromosome 22	Sanger	22
 chrX	X	Chromosome X	Havana / GAG	X
 chrY	Y	Chromosome Y	Havana	Y
-MHC_COX	6-COX	Chromosome 6-COX	Havana	c6_COX
-MHC_QBL	6-QBL	Chromosome 6-QBL	Havana	c6_QBL
-MHC_APD	6-APD	Chromosome 6-APD	Havana
-MHC_DBB	6-DBB	Chromosome 6-DBB	Havana
-MHC_MANN	6-MANN	Chromosome 6-MANN	Havana
-MHC_MCF	6-MCF	Chromosome 6-MCF	Havana
-MHC_SSTO	6-SSTO	Chromosome 6-SSTO	Havana
+MHC_COX	6-COX	Chromosome 6-COX	Havana	HSCHR6_MHC_COX
+MHC_QBL	6-QBL	Chromosome 6-QBL	Havana	HSCHR6_MHC_QBL
+MHC_APD	6-APD	Chromosome 6-APD	Havana	HSCHR6_MHC_APD
+MHC_DBB	6-DBB	Chromosome 6-DBB	Havana	HSCHR6_MHC_DBB
+MHC_MANN	6-MANN	Chromosome 6-MANN	Havana	HSCHR6_MHC_MANN
+MHC_MCF	6-MCF	Chromosome 6-MCF	Havana	HSCHR6_MHC_MCF
+MHC_SSTO	6-SSTO	Chromosome 6-SSTO	Havana	HSCHR6_MHC_SSTO
 LRC_COX_1	19-COX	Chromosome 19-COX	Havana
 LRC_PGF_1	19-PGF_1	Chromosome 19-PGF_1	Havana
 --end--
