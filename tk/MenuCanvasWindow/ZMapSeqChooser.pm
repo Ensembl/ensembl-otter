@@ -397,7 +397,7 @@ sub zMapServerDefaults {
     
     my $protocol    = 'acedb';
 
-    my $url = sprintf q{%s://%s:%s@%s:%d?use_methods=true},
+    my $url = sprintf q{%s://%s:%s@%s:%d},
         $protocol,
         $server->user, $server->pass,
         $server->host, $server->port;
@@ -405,10 +405,8 @@ sub zMapServerDefaults {
     return $self->formatZmapDefaults(
         $self->slice_name,
         url             => $url,
-        use_methods     => 'true',
         writeback       => 'false',
         sequence        => 'true',
-        use_zmap_styles => 'true',
         # navigator_sets specifies the feature sets to draw in the navigator pane.
         # so far the requested columns are just scale, genomic_canonical and locus
         # in line with keeping the columns to a minimum to save screen space.

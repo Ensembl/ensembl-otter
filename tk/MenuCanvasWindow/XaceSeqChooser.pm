@@ -27,7 +27,6 @@ use EditWindow::Dotter;
 use EditWindow::Exonerate;
 use EditWindow::Clone;
 use EditWindow::LocusName;
-use EditWindow::LoadColumns;
 use MenuCanvasWindow::ExonCanvas;
 use MenuCanvasWindow::GenomicFeatures;
 use MenuCanvasWindow::ZMapSeqChooser;

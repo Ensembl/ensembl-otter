@@ -7,6 +7,7 @@ use strict;
 use Carp;
 use Tk::DialogBox;
 use base 'CanvasWindow';
+use EditWindow::LoadColumns;
 use CanvasWindow::SequenceSetChooser;
 use Bio::Otter::Lace::LocalDatabaseFactory;
 

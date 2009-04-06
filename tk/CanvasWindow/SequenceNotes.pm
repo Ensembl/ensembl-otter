@@ -5,13 +5,13 @@ package CanvasWindow::SequenceNotes;
 
 use strict;
 use Carp;
+
 use base 'CanvasWindow';
-use MenuCanvasWindow::XaceSeqChooser;
 use CanvasWindow::SequenceNotes::History;
 use CanvasWindow::SequenceNotes::Status;
 use TransientWindow::OpenRange;
 use TransientWindow::OpenSlice;
-use Evi::EviCollection;
+use EditWindow::LoadColumns;
 use POSIX qw(ceil);
 use Tk::Checkbutton;
 
