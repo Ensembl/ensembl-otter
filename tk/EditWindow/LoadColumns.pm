@@ -11,6 +11,8 @@ use Tk::HListplus;
 use Tk::Checkbutton;
 use Tk::LabFrame;
 
+use MenuCanvasWindow::XaceSeqChooser;
+
 use base 'EditWindow';
 
 sub initialize {

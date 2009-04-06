@@ -143,7 +143,7 @@ sub init_AceDatabase {
     # $self->smart_slice() must to be set prior to running the following subroutines!
 
     $self->add_misc_acefile;
-    $self->add_zmap_styles_acefile;
+    # $self->add_zmap_styles_acefile;
     $self->write_otter_acefile();
     $self->write_dna_data();
 
