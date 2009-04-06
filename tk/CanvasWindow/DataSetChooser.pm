@@ -240,6 +240,9 @@ sub recover_some_sessions {
    					$lc->AceDatabase($adb);
    					$lc->DataSetChooser($self);
 					$lc->initialize;
+					$lc->change_checkbutton_state('deselect');
+					$lc->load_filters;
+					$lc->top->withdraw;
                 }
             };
             if ($@) {
