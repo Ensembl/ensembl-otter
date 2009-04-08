@@ -55,7 +55,7 @@ chr3	3	Chromosome 3	BCM	3
 chr4	4	Chromosome 4	Havana	4
 chr5	5	Chromosome 5	Havana	5
 chr6	6	Chromosome 6	Havana	6
-chr7	7	Chromosome 7	Wash. U.	7
+chr7	7	Chromosome 7	Havana / Wash. U.	7
 chr8	8	Chromosome 8	Broad	8
 chr9	9	Chromosome 9	Havana	9
 chr10	10	Chromosome 10	Havana	10
@@ -70,7 +70,7 @@ chr18	18	Chromosome 18	Broad	18
 chr19	19	Chromosome 19	JGI	19
 chr20	20	Chromosome 20	Havana	20
 chr21	21	Chromosome 21	Havana	21
-chr22	22	Chromosome 22	Sanger	22
+chr22	22	Chromosome 22	Havana / Sanger	22
 chrX	X	Chromosome X	Havana / GAG	X
 chrY	Y	Chromosome Y	Havana	Y
 MHC_COX	6-COX	Chromosome 6-COX	Havana	HSCHR6_MHC_COX
