@@ -15,8 +15,16 @@ use Net::Netrc;
     umask(002);
 
     my $host = 'otterlive';
-    my $mach = Net::Netrc->lookup($host);
     my $port = '3301';
+    my $mach = Net::Netrc->lookup($host);
+    my $user = $mach->login;
+    my $password = $mach->password;
+
+    my $dbh = DBI->connect(
+        "DBI:mysql:host=$host:port=$port",
+        $user, $password, {RaiseError => 1});
+    my $dbs = list_otter_databases($dbh);
+
     my $base_dir = '/lustre/cbi4/work1/humpub/data/mysql_backup/otter_submissions';
     my $archive_dir = "$base_dir/OTTER_SUBMISSIONS_ARCHIVE";
 
@@ -25,13 +33,6 @@ use Net::Netrc;
     my $working_dir = "$base_dir/$date_dir";
     mkdir($working_dir) or die "Can't create '$working_dir' directory : $!";
     chdir($working_dir) or die "Can't chdir to '$working_dir' : $!";
-    my $user = $mach->login;
-    my $password = $mach->password;
-
-    my $dbh = DBI->connect(
-        "DBI:mysql:host=$host:port=3311",
-        $user, $password, {RaiseError => 1});
-    my $dbs = list_otter_databases($dbh);
   
     # As all tables are Innodb skip locking with single transaction would give
     # a consistent backup
