@@ -1,0 +1,179 @@
+#!/usr/bin/env perl
+
+### defensin_tata_boxes
+
+use strict;
+use warnings;
+
+use Bio::Otter::Lace::Defaults;
+
+{
+    my $dataset_name = 'mouse';
+
+    my $usage = sub { exec('perldoc', $0) };
+    # This do_getopt() call is needed to parse the otter config files
+    # even if you aren't giving any arguments on the command line.
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        ) or $usage->();
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    
+    my $dbc = $ds->get_cached_DBAdaptor->dbc;
+
+    my $defensin_stable_list = join(', ', map qq{'$_'}, qw{
+        OTTMUSG00000018258
+        OTTMUSG00000018259
+        OTTMUSG00000018260
+        OTTMUSG00000018344
+        OTTMUSG00000019488
+        OTTMUSG00000019489
+        OTTMUSG00000019742
+        OTTMUSG00000019762
+        OTTMUSG00000019763
+        OTTMUSG00000019782
+        OTTMUSG00000019785
+        OTTMUSG00000019786
+        OTTMUSG00000019792
+        OTTMUSG00000019856
+        OTTMUSG00000019859
+        OTTMUSG00000019860
+        OTTMUSG00000019892
+        OTTMUSG00000019893
+        OTTMUSG00000019924
+        OTTMUSG00000019927
+        OTTMUSG00000019980
+        OTTMUSG00000019981
+        OTTMUSG00000019983
+        OTTMUSG00000020595
+        OTTMUSG00000020599
+        OTTMUSG00000020827
+        OTTMUSG00000020830        
+    });
+    
+    my $list_all_defensin = $dbc->prepare(qq{
+        SELECT g.seq_region_start
+          , g.seq_region_end
+          , g.seq_region_strand
+          , gsid.stable_id
+        FROM gene g
+          , gene_stable_id gsid
+        WHERE g.gene_id = gsid.gene_id
+          AND g.is_current = 1
+          AND gsid.stable_id IN ($defensin_stable_list)
+        ORDER BY g.seq_region_start
+    });
+    
+    $list_all_defensin->execute;
+    my (@fwd_gene, @rev_gene);
+    while (my ($start, $end, $strand, $gsid) = $list_all_defensin->fetchrow) {
+        my $info = {
+            stable_id   => $gsid,
+            gene_start  => $start,
+            gene_end    => $end,
+            strand      => $strand,
+        };
+        if ($strand == 1) {
+            push(@fwd_gene, $info);
+        }
+        elsif ($strand == -1) {
+            push(@rev_gene, $info);
+        }
+        else {
+            die "bad strand '$strand'";
+        }
+    }
+    # @fwd_gene = sort {$a->{'gene_start'} <=> $b->{'gene_start'}} @fwd_gene;
+    # @rev_gene = sort {$b->{'gene_end'}   <=> $a->{'gene_end'}}   @rev_gene;
+    
+    my $get_sr_id = q{SELECT seq_region_id FROM seq_region WHERE name = 'chr8-03'};
+    my $get_ana_id = q{SELECT analysis_id FROM analysis WHERE logic_name = 'TATA_box'};
+    
+    my $list_all_TATA = $dbc->prepare(qq{
+        SELECT seq_region_start
+          , seq_region_end
+          , seq_region_strand
+        FROM simple_feature
+        WHERE seq_region_id = ($get_sr_id)
+          AND analysis_id = ($get_ana_id)
+    });
+    $list_all_TATA->execute;
+    
+    my $window = 1000;
+    my @unplaced;
+    TATA: while (my ($start, $end, $strand) = $list_all_TATA->fetchrow) {
+        if ($strand == 1) {
+            for (my $i = 0; $i < @fwd_gene; $i++) {
+                my $info = $fwd_gene[$i];
+                next if $info->{'tata_start'};
+                if ($start <= $info->{'gene_end'} and $end >= ($info->{'gene_start'} - $window)) {
+                    $info->{'tata_start'} = $start;
+                    $info->{'tata_end'}   = $end;
+                    next TATA;
+                }
+            }
+        }
+        elsif ($strand == -1) {
+            for (my $i = 0; $i < @rev_gene; $i++) {
+                my $info = $rev_gene[$i];
+                next if $info->{'tata_start'};
+                if ($start <= ($info->{'gene_end'} + $window) and $end >= $info->{'gene_start'}) {
+                    $info->{'tata_start'} = $start;
+                    $info->{'tata_end'}   = $end;
+                    next TATA;
+                }
+            }
+        }
+        else {
+            die "bad strand '$strand'";
+        }
+        # Unplaced TATA
+        push(@unplaced, {
+            tata_start  => $start,
+            tata_end    => $end,
+            strand      => $strand,
+        });
+    }
+    
+    foreach my $info (@fwd_gene) {
+        my $t_end   = $info->{'tata_end'};
+        my $g_start = $info->{'gene_start'};
+        if ($t_end and $g_start) {
+            $info->{'distance'} = $g_start - $t_end;
+        }
+    }
+    
+    foreach my $info (@rev_gene) {
+        my $t_end   = $info->{'tata_start'};
+        my $g_start = $info->{'gene_end'};
+        if ($t_end and $g_start) {
+            $info->{'distance'} = $t_end - $g_start;
+        }
+    }
+    
+    my @table_rows = (@fwd_gene, {}, @rev_gene, {}, @unplaced);
+    
+    my @fields = qw{ stable_id gene_start gene_end tata_start tata_end strand distance };
+    
+    print join("\t", @fields), "\n";
+    
+    foreach my $info (@table_rows) {
+        no warnings 'uninitialized';
+        print join("\t", map $info->{$_}, @fields), "\n";
+    }
+}
+
+
+
+__END__
+
+=head1 NAME - defensin_tata_boxes
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
