@@ -154,7 +154,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.17 $ ';
+$revision='$Revision: 1.18 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -650,7 +650,7 @@ sub format_ace_output {
                 # each block so that they all end up under the same tag once
                 # they are parsed into acedb.
                 for (my $i = 0; $i < @$seq_coord; $i++){
-                    $ace .=  $query_line . " Align $seq_coord->[$i] $target_coord->[$i] $other->[$i]\n";
+                    $ace .=  $query_line . ($is_protein ? " AlignDNAPep" : " Align") . " $seq_coord->[$i] $target_coord->[$i] $other->[$i]\n";
                     #print STDOUT $query_line . " Align $seq_coord->[$i] $target_coord->[$i] $other->[$i]\n";
                 }
             } else {
