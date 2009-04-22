@@ -65,7 +65,8 @@ Ensembl API's SeqEdit facilities.
 Genes transferred can be restricted on logic_name using the --logic_names
 option.
 
-Script is currently hardcoded to ignore 'Sick_kids' genes
+Look in the logs for 'Set coordinates' and check exon coordinates of any examples
+- untested code.
 
 =head1 RELATED SCRIPTS
 
@@ -119,9 +120,6 @@ use InterimExon;
 use Deletion;
 use Transcript;
 use Gene;
-
-#use Data::Dumper;
-#$Data::Dumper::Maxdepth=2;
 
 $| = 1;
 
@@ -268,7 +266,7 @@ foreach my $V_chr ($support->sort_chromosomes($V_chrlength)) {
   TRANS:
     foreach my $transcript (@{ $transcripts }) {
       if ($transcript->biotype eq 'artifact') {
-	$support->log_warning("Skipping \'artifact\' transcript ",$transcript->stable_id,"\n", 2);
+	$support->log("Transcript: ".$transcript->stable_id." skipping because it's an 'artifact'\n", 3);
 	next TRANS;
       }
       $c++;
@@ -460,36 +458,83 @@ sub transfer_transcript {
 	# Case 1: Complete failure to map exon
 	#
 	$E_exon->fail(1);
-	$E_transcript->add_Exon($E_exon);
 
-      } else {
+      }
+      else {
 	#
 	# Case 2: Exon mapped perfectly
 	#
 	$E_exon->start($c->start);
 	$E_exon->end($c->end);
-	$E_exon->cdna_start($cdna_exon_start);
-	$E_exon->cdna_end($cdna_exon_start + $E_exon->length - 1);
 	$E_exon->strand($c->strand);
 	$E_exon->seq_region($c->id);
-	
+
+	$E_exon->cdna_start($cdna_exon_start);
+	$E_exon->cdna_end($cdna_exon_start + $E_exon->length - 1);
 	$E_cdna_pos += $c->length;
       }
-
-    } else {
+    }
+    else {
+      my ($start,$end,$strand,$seq_region);
+      my $gap = 0;	
+      foreach my $c (@coords) {
       #
       # Case 3 : Exon mapped partially
       #
-      $E_exon->fail(1);
-      $E_transcript->add_Exon($E_exon);
-    }
+	if ($c->isa('Bio::EnsEMBL::Mapper::Gap')) {
+	  $E_exon->fail(1);
+	  $support->log_warning("Reason: Exon mapping has a gap\n",4);
+	  $gap = 1;
+	  last;
+	}
+      }
+      #
+      # Case 4 : Multiple mappings for exon, but no gaps
+      #
+      unless ($gap) {
+	my ($last_end);
+	foreach my $c (sort {$a->start <=> $b->start} @coords) {
+	  if ($last_end) {
+	    if ($c->start != $last_end) {
+	      $E_exon->fail(1);
+	      $support->log_warning("Reason: Exon mapping has a mismatch in coords\n",4);
+	      last;
+	    }
+	  }
+	  $start = ! $start ? $c->start
+	           : $start > $c->start ? $c->start
+	           : $start;
+	  $end = ! $end ? $c->end
+	         : $end < $c->end ? $c->end
+	         : $end;
+	  $strand = $c->strand;
+	  $seq_region = $c->id;
+	  $last_end = $c->end;
+	}
+	
+	$E_exon->start($start);
+	$E_exon->end($end);
+	$E_exon->strand($strand);
+	$E_exon->seq_region($seq_region);
 
+	$E_exon->cdna_start($cdna_exon_start);	
+	my $length = $end-$start+1;
+	$E_exon->cdna_end($cdna_exon_start + $length);
+	$E_cdna_pos += $length+1;
+
+	unless ($E_exon->fail) {
+	  $support->log_warning("Set coordinates but this is untested code, please check\n");
+	}
+
+      }
+    }
     $cdna_exon_start = $E_cdna_pos + 1;
 
     $E_transcript->add_Exon($E_exon);
-  } # foreach exon
+  }
   return $E_transcript;
 }
+
 
 
 =head2 create_transcripts
