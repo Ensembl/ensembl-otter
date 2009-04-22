@@ -287,6 +287,7 @@ sub find_best_alignment {
 
 sub parse_blastz_output {
     my $self = shift;
+    my $mismatch_allowed = shift;
 
     # read file
     my $tmpdir = $self->tempdir;
@@ -295,7 +296,7 @@ sub parse_blastz_output {
 
     # initialize stats
     $self->init_stats(qw(match mismatch gap alignments bp));
-    
+
     my $i = 1;
     my ($header, $e_seq, $v_seq);
 
@@ -321,32 +322,46 @@ sub parse_blastz_output {
             ($coords{'strand'} eq '+') ? ($coords{'strand'} = 1) :
                                          ($coords{'strand'} = -1);
             for (my $j = 0; $j < scalar(@e_arr); $j++) {
-                # gap
-                if ($e_arr[$j] eq '-' or $v_arr[$j] eq '-') {
-                    $self->stats_incr('gap', 1);
-                    $self->stats_incr('e_gap', 1) if ($e_arr[$j] eq '-');
-                    $self->stats_incr('v_gap', 1) if ($v_arr[$j] eq '-');
-                    $match_flag = 0;
-                } else {
-                    # match
-                    if ($e_arr[$j] eq $v_arr[$j]) {
-                        $self->found_match($match_flag, $j, \%coords);
-                        $self->stats_incr('match', 1);
-                        $match_flag = 1;
-                    # mismatch
-                    } else {
-                        $self->stats_incr('mismatch', 1);
-                        $match_flag = 0;
-                    }
-                }
+	      # gap
+	      if ($e_arr[$j] eq '-' or $v_arr[$j] eq '-') {
+		$self->stats_incr('gap', 1);
+		$self->stats_incr('e_gap', 1) if ($e_arr[$j] eq '-');
+		$self->stats_incr('v_gap', 1) if ($v_arr[$j] eq '-');
+		$match_flag = 0;
+	      }
+	      elsif ($mismatch_allowed) {
+		$self->found_match($match_flag, $j, \%coords);
+		$match_flag = 1;
+		
+		# match
+		if ($e_arr[$j] eq $v_arr[$j]) {
+		  $self->stats_incr('match', 1);
+		  # mismatch
+		} else {
+		  $self->stats_incr('mismatch', 1);
+		}
+	      }	
+	      else {
+		# match
+		if ($e_arr[$j] eq $v_arr[$j]) {
+		  $self->found_match($match_flag, $j, \%coords);
+		  $self->stats_incr('match', 1);
+		  $match_flag = 1;
+		  # mismatch
+		} else {
+		  $self->stats_incr('mismatch', 1);
+		  $match_flag = 0;
+		}
+	      }
             }
             $self->stats_incr('bp', scalar(@e_arr));
             $self->stats_incr('alignments', 1);
         }
-        
+
         $i++;
     }
 }
+
 
 =head2 cleanup_tmpfiles
 
