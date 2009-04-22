@@ -37,6 +37,7 @@ Specific options:
     --evegapass=PASS                    use ensembl-vega (target) database
                                         passwort PASS
     --chromosomes, --chr=LIST           only process LIST chromosomes
+    --mismatch_allowed                  allow for mismatches in alignment (default is NO)
     --bindir=DIR                        look for program binaries in DIR
     --tmpfir=DIR                        use DIR for temporary files (useful for
                                         re-runs after failure)
@@ -59,7 +60,7 @@ Alignments are calculated by this algorithm:
     3. align using blastz
     4. filter best hits (for query sequences, i.e. Ensembl regions) using
        axtBest
-    5. parse blastz output to create blocks of exact matches only
+    5. parse blastz output to create blocks of exact (or mismatched) matches
     6. remove overlapping target (Vega) alignments
     7. write alignments to assembly table
 
@@ -124,6 +125,7 @@ $support->parse_extra_options(
     'bindir=s',
     'tmpdir=s',
     'chromosomes|chr=s@',
+    'mismatch_allowed=s',
 );
 $support->allowed_params(
     $support->get_common_params,
@@ -135,12 +137,15 @@ $support->allowed_params(
     'bindir',
     'tmpdir',
     'chromosomes',
+    'mismatch_allowed',
 );
 
 if ($support->param('help') or $support->error) {
     warn $support->error if $support->error;
     pod2usage(1);
 }
+
+my $mismatch_allowed = $support->param('mismatch_allowed') ? $support->param('mismatch_allowed') : 0 ;
 
 # ask user to confirm parameters to proceed
 $support->confirm_params;
@@ -231,7 +236,7 @@ while (my $row = $sth->fetchrow_hashref) {
     # parse blastz output, and convert relative alignment coordinates to
     # chromosomal coords
     $support->log("Parsing blastz output...\n", 2);
-    $aligner->parse_blastz_output;
+    $aligner->parse_blastz_output($mismatch_allowed);
     $aligner->adjust_coords(
         $row->{'e_start'},
         $row->{'e_end'},
@@ -256,9 +261,11 @@ while (my $row = $sth->fetchrow_hashref) {
 }
 $support->log_stamped("Done.\n");
 
-# filter overlapping Vega alignment regions
-$support->log_stamped("Filtering overlapping Vega alignment regions...\n");
-$aligner->filter_overlaps;
+# filter overlapping Vega alignment regions if we're not allowing mismatches (otherwise need to remove them using fix_overlaps.pl)
+unless ($mismatch_allowed) {
+  $support->log_stamped("Filtering overlapping Vega alignment regions...\n");
+  $aligner->filter_overlaps;
+}
 $support->log_stamped("Done.\n");
 
 # write alignments to assembly table
