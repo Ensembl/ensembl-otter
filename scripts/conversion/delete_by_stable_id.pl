@@ -578,11 +578,11 @@ sub delete_transcripts {
                         ga
                 FROM
                         gene g,
-                        gene_stable_id gsi
+                        gene_stable_id gsi,
                         gene_attrib ga
                 WHERE   g.gene_id $condition ('$gi_string')
                 AND     g.gene_id = gsi.gene_id
-                AND     g.gene_id = gs.gene_id
+                AND     g.gene_id = ga.gene_id
             );
     }
     my $num1 = $dbh->do($sql);
@@ -591,7 +591,22 @@ sub delete_transcripts {
   } else {
     $support->log("No orphan genes found.\n", 1);
   }
+
+  # delete any orphan gene_stable_ids
+  $support->log_stamped("Looking for orphan gene stable_ids...\n");
+  $sql = qq(
+            DELETE QUICK IGNORE
+                    gsi,
+                    g
+            FROM
+                    gene_stable_id gsi
+            LEFT JOIN
+                    gene g ON gsi.gene_id = g.gene_id
+            WHERE   g.gene_id IS NULL
+            );
+  $num = $dbh->do($sql);
+  $support->log_stamped("Done deleting $num records.\n", 1);
+
   $support->log_stamped("Done.\n\n");
   return($num);
 }
-
