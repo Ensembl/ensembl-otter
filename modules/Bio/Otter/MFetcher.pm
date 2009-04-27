@@ -498,10 +498,8 @@ sub fetch_mapped_features {
                 $proj_segments_on_mapper = $original_slice_on_mapper->project( $cs, $csver_remote );
                 $proj_segments_on_mapper = $original_slice_on_mapper->project( 'scaffold', $csver_remote ) unless @$proj_segments_on_mapper;
             };
-            if($@
-               || (!scalar(@$proj_segments_on_mapper))
-            ) {
-                die "Unable to project: $type:$csver_orig($start..$end)->$csver_remote. Check the mapping.";
+            if ($@ || ! @$proj_segments_on_mapper) {
+                die "Unable to project: $type:$csver_orig($start..$end)->$csver_remote. Check the mapping.\n$@";
             }
             $self->log("Found ".scalar(@$proj_segments_on_mapper)." projection segments on mapper when projecting to $cs:$csver_remote");
 
