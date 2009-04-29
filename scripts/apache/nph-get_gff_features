@@ -15,67 +15,65 @@ my $server       = Bio::Otter::ServerScriptSupport->new;
 
 my $output_string = '';
 
-#sub to_gff {
-#	my ($features, $analysis) = @_;
-#	
-#	my $gff = '';
-#	
-#	for my $feature (@$features) {
-#		$gff .= 
-#			$feature->slice->name . ' ' . 
-#			$analysis . ' ' .
-#			$feature->start . ' ' .
-#			$feature->end . ' ' .
-#			$feature->score . ' ' .
-#			$feature->strand . ' ' .
-#			0 . ' '.
-#			"\n";
-#	}
-#}
-#
-#eval {
-#    my @feature_kinds  = split(/,/, $server->require_argument('kind'));
-#    my $analysis_list = $server->param('analysis');
-#    my @analysis_names = $analysis_list ? split /,/ , $analysis_list : ( undef );
-#
-#	foreach my $analysis_name (@analysis_names) {
-#	    foreach my $feature_kind (@feature_kinds) {
-#	        my $param_descs = $LangDesc{$feature_kind}{-call_args};
-#	        my $getter_method = "get_all_${feature_kind}s";
-#
-#	        my @param_list = ();
-#	        foreach my $param_desc (@$param_descs) {
-#	            my ($param_name, $param_def_value, $param_separator) = @$param_desc;
-#
-#	            my $param_value = (scalar(@$param_desc)==1)
-#	                ? $server->require_argument($param_name)
-#	                : defined($server->param($param_name))
-#	                    ? $server->param($param_name)
-#	                    : $param_def_value;
-#	            if($param_value && $param_separator) {
-#	                $param_value = [split(/$param_separator/,$param_value)];
-#	            }
-#				$param_value = $analysis_name if $param_value =~ /$analysis_name/;
-#	            push @param_list, $param_value;
-#	        }
-#
-#	        my $features = $server->fetch_mapped_features($feature_kind, $getter_method, \@param_list,
-#	            map { defined($server->param($_)) ? $server->param($_) : '' }
-#	                qw(cs name type start end metakey csver csver_remote)
-#	        );
-#
-#	        $output_string .= to_gff($features, $analysis_list);
-#	    }
-#	}
-#};
-#
-#if ($@) {
-#    $server->error_exit($@);
-#} else {
-#    $server->send_response($output_string, 1);
-#}
+sub to_gff {
+	my ($features, $analysis) = @_;
+	
+	my $gff = '';
+	
+	for my $feature (@$features) {
+		$gff .= 
+			$feature->slice->name . ' ' . 
+			$analysis . ' ' .
+			$feature->start . ' ' .
+			$feature->end . ' ' .
+			$feature->score . ' ' .
+			$feature->strand . ' ' .
+			0 . ' '.
+			"\n";
+	}
+}
 
-$server->send_response('Hello world', 1);
+eval {
+    my @feature_kinds  = split(/,/, $server->require_argument('kind'));
+    my $analysis_list = $server->param('analysis');
+    my @analysis_names = $analysis_list ? split /,/ , $analysis_list : ( undef );
+
+	foreach my $analysis_name (@analysis_names) {
+	    foreach my $feature_kind (@feature_kinds) {
+	        my $param_descs = $LangDesc{$feature_kind}{-call_args};
+	        my $getter_method = "get_all_${feature_kind}s";
+
+	        my @param_list = ();
+	        foreach my $param_desc (@$param_descs) {
+	            my ($param_name, $param_def_value, $param_separator) = @$param_desc;
+
+	            my $param_value = (scalar(@$param_desc)==1)
+	                ? $server->require_argument($param_name)
+	                : defined($server->param($param_name))
+	                    ? $server->param($param_name)
+	                    : $param_def_value;
+	            if($param_value && $param_separator) {
+	                $param_value = [split(/$param_separator/,$param_value)];
+	            }
+				$param_value = $analysis_name if $param_value =~ /$analysis_name/;
+	            push @param_list, $param_value;
+	        }
+
+	        my $features = $server->fetch_mapped_features($feature_kind, $getter_method, \@param_list,
+	            map { defined($server->param($_)) ? $server->param($_) : '' }
+	                qw(cs name type start end metakey csver csver_remote)
+	        );
+
+	        $output_string .= to_gff($features, $analysis_list);
+	    }
+	}
+};
+
+if ($@) {
+    $server->error_exit($@);
+} else {
+    $server->send_response($output_string, 1);
+}
 
 1;
 
