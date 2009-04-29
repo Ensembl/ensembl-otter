@@ -76,7 +76,7 @@ sub to_gff {
 	
 	for my $feature (@$features) {
 		$gff .= 
-			$feature->slice->name . ' ' . 
+			$feature->slice->seq_region_name . ' ' . 
 			$analysis . ' ' .
 			$feature->start . ' ' .
 			$feature->end . ' ' .
