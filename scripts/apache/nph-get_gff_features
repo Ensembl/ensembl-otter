@@ -85,6 +85,8 @@ sub to_gff {
 			0 . ' '.
 			"\n";
 	}
+	
+	return $gff;
 }
 
 eval {
