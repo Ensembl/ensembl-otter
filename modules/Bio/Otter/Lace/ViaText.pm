@@ -34,6 +34,7 @@ our %LangDesc = (
         -constructor => 'Bio::EnsEMBL::SimpleFeature',
         -optnames    => [ qw(start end strand display_label score) ],
         -call_args   => [['analysis' => undef]],
+        -gff_feature_type => 'misc_feature',
     },
 
     'HitDescription' => {
@@ -53,6 +54,7 @@ our %LangDesc = (
                                                 return $af->can('get_HitDescription') ? $af->get_HitDescription() : undef;
                                            } ],
          -call_args  => [['analysis' => undef], ['score' => undef], ['dbtype' => undef]],
+         -gff_feature_type => 'similarity',
     },
     'DnaPepAlignFeature'=> {
         -constructor => sub{ return Bio::EnsEMBL::DnaPepAlignFeature->new_fast({}); },
@@ -66,6 +68,7 @@ our %LangDesc = (
                                                 return $af->can('get_HitDescription') ? $af->get_HitDescription() : undef;
                                            } ],
          -call_args  => [['analysis' => undef], ['score' => undef], ['dbtype' => undef]],
+         -gff_feature_type => 'similarity',
     },
 
     'RepeatConsensus'=> {
