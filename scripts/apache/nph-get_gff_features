@@ -78,6 +78,7 @@ sub to_gff {
 		$gff .= 
 			$feature->slice->seq_region_name . ' ' . 
 			$analysis . ' ' .
+			'similarity' .
 			$feature->start . ' ' .
 			$feature->end . ' ' .
 			$feature->score . ' ' .
