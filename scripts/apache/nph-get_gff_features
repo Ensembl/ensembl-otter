@@ -74,8 +74,6 @@ sub to_gff {
 	
 	my $gff = '';
 	
-	
-	
 	for my $feature (@$features) {
 		
 		my ($feature_type) = ref($feature) =~ /::(\w+)$/;
@@ -83,6 +81,7 @@ sub to_gff {
 		$gff .= 
 			$feature->slice->seq_region_name . ' ' . 
 			$LangDesc{$feature_type}->{-gff_feature_type} . ' ' .
+			$feature_type . ' ' .
 			$feature->start . ' ' .
 			$feature->end . ' ' .
 			$feature->score . ' ' .
