@@ -74,16 +74,21 @@ sub to_gff {
 	
 	my $gff = '';
 	
+	
+	
 	for my $feature (@$features) {
+		
+		my ($feature_type) = ref($feature) =~ /::(\w+)$/;
+		
 		$gff .= 
 			$feature->slice->seq_region_name . ' ' . 
-			$analysis . ' ' .
-			'similarity' .
+			$LangDesc{$feature_type} . ' ' .
 			$feature->start . ' ' .
 			$feature->end . ' ' .
 			$feature->score . ' ' .
-			$feature->strand . ' ' .
-			0 . ' '.
+			($feature->strand ? '+' : '-') . ' ' .
+			'.' . ' '.
+			($feature->can('hseqname') ? 'Target: "'.$feature->hseqname).'" '
 			"\n";
 	}
 	
