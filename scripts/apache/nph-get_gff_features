@@ -87,7 +87,7 @@ sub to_gff {
 			($feature->strand ? '+' : '-') . ' ' .
 			'.' . ' '.
 			($feature->can('hseqname') ? 'Target "'.$feature->hseqname.'" ' : '') .
-			($feature->can('seqname') ? 'Clone "'.$feature->hseqname.'" ' : '') .
+			($feature->can('seqname') ? 'Clone "'.$feature->seqname.'" ' : '') .
 			"\n";
 	}
 	
