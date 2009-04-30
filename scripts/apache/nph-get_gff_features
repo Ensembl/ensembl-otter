@@ -82,13 +82,13 @@ sub to_gff {
 		
 		$gff .= 
 			$feature->slice->seq_region_name . ' ' . 
-			$LangDesc{$feature_type} . ' ' .
+			$LangDesc{$feature_type}->{-gff_feature-type} . ' ' .
 			$feature->start . ' ' .
 			$feature->end . ' ' .
 			$feature->score . ' ' .
 			($feature->strand ? '+' : '-') . ' ' .
 			'.' . ' '.
-			($feature->can('hseqname') ? 'Target: "'.$feature->hseqname.'" ' : '') .
+			($feature->can('hseqname') ? 'Target "'.$feature->hseqname.'" ' : '') .
 			"\n";
 	}
 	
