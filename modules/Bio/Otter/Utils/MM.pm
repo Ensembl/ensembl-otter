@@ -13,7 +13,7 @@ use Data::Dumper;
 my @DB_CATEGORIES = (	'emblrelease', 
 						'uniprot', 
 						'emblnew',
-						#'uniprot_archive',
+						'uniprot_archive',
 						#'refseq'
 					);
 
@@ -129,8 +129,6 @@ sub get_accession_types {
 
 	for my $db (@DB_CATEGORIES) {
 	    
-		print "trying: $db\n";
-        
         my $archive = $db eq 'uniprot_archive';
         
        	my $query = $archive ? $uniprot_archive_sql : $sql;
