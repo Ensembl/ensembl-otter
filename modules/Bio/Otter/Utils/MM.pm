@@ -121,7 +121,9 @@ sub get_accession_types {
             $acc      .= $3 if $3;
        		my $sv     = $4 || '*';
        		
-       		$acc_hash{$text} = [$acc, $sv];	
+       		$acc_hash{$text} = [$acc, $sv];
+       		
+       		die "acc: $acc";
 	   	}
 	}
 	
