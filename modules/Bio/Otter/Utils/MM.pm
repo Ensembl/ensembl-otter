@@ -171,6 +171,9 @@ sub get_accession_types {
 					elsif ($class eq 'PRE') {
 						$prefix = 'Tr';
 					}
+					elsif ($class eq 'ISO') { # we don't think swissprot can have isoforms
+						$prefix = 'Sw';
+					}
 					else {
 						die "Unexpected data class for uniprot entry: $class";
 					}
