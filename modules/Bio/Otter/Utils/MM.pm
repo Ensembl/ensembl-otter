@@ -108,7 +108,7 @@ sub get_accession_types {
 				WHERE e.entry_id = a.entry_id
 				AND a.accession = ? ';
 				
-	my $uniprot_archive_sql = ' SELECT molecule_type, data_class
+	my $uniprot_archive_sql = ' SELECT molecule_type, data_class, accession_version
         						FROM entry
         						WHERE accession_version LIKE ?';	
         						
@@ -148,7 +148,7 @@ sub get_accession_types {
 			$sth->execute($acc) or die "Couldn't execute statement: " . $sth->errstr;
 			
 			if (my ($type, $class, $version) = $sth->fetchrow_array()) {
-				
+			
 				my ($db_sv) = $version =~ /.+(\.\d+)/;
 				
 				next unless ($sv eq '*') || ($sv eq $db_sv); 
