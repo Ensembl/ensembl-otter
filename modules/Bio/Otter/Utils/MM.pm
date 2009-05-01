@@ -9,6 +9,8 @@ use warnings;
 use DBI;
 use Data::Dumper;
 
+use CGI::Carp qw(fatalsToBrowser);
+
 # NB: databases will be searched in the order in which they appear in this list
 my @DB_CATEGORIES = (	'emblrelease', 
 						'uniprot', 
