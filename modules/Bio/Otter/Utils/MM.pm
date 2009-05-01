@@ -122,8 +122,6 @@ sub get_accession_types {
        		my $sv     = $4 || '*';
        		
        		$acc_hash{$text} = [$acc, $sv];
-       		
-       		die "acc: $acc";
 	   	}
 	}
 	
