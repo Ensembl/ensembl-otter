@@ -244,7 +244,7 @@ if (! $support->param('dry_run')) {
   $support->log("Deleting from simple_feature by analysis_id\n");
   my $c = 0;
   foreach my $ln (keys %lns_to_go) {
-    $c += $vdbh->do(qq(DELETE sf
+    $c += $vdbh->do(qq(DELETE a, sf
                              FROM simple_feature sf, analysis a
                             WHERE a.analysis_id = sf.analysis_id
                               AND a.logic_name = \'$ln\'));
@@ -252,6 +252,11 @@ if (! $support->param('dry_run')) {
   $support->log("Removed $c simple_features\n");
 }
 
+#cleanup any other analysis table entries that might be around
+my @orphan_lns_to_go = qw(SubmitTranscript SubmitTranscriptChunk SubmitProteome SubmitContig SubmitChunk SubmitTranslation full_dbsts gc);
+my $lns_to_go = join("','",@orphan_lns_to_go);
+my $c = $vdbh->do(qq(DELETE FROM analysis WHERE logic_name in = $lns_to_go));
+$support->log("Delete $c other orphan analysis table entries\n");
 
 ##########################################################################
 # - patch analysis_ids of genes and transcripts according to gene.source #
