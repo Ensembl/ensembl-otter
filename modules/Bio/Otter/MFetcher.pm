@@ -252,14 +252,20 @@ sub otter_assembly_equiv_hash { # $self->{_aeh}{NCBI36}{11} = 'chr11-02';
         FROM seq_region sr
           , seq_region_attrib ae_val
           , seq_region_attrib cn_val
+          , seq_region_attrib hi_val
           , attrib_type ae_at
           , attrib_type cn_at
+          , attrib_type hi_at
         WHERE sr.seq_region_id = ae_val.seq_region_id
           AND ae_val.attrib_type_id = ae_at.attrib_type_id
           AND ae_at.code = 'equiv_asm'
           AND sr.seq_region_id = cn_val.seq_region_id
           AND cn_val.attrib_type_id = cn_at.attrib_type_id
           AND cn_at.code = 'chr'
+          AND hi_at.code = 'hidden'
+          AND hi_val.attrib_type_id = hi_at.attrib_type_id
+          AND sr.seq_region_id = hi_val.seq_region_id
+          AND hi_val.value = 0
         };
 
     my $sth = $edba->dbc()->prepare($sql);
