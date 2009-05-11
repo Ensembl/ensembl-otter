@@ -108,7 +108,7 @@ sub Bio::Otter::DnaDnaAlignFeature::to_gff {
 		$self->hstart,
 		$self->hend,
 		';',
-		'Clone "'.$self->seqname.'"'i,
+		'Clone "'.$self->seqname.'"',
 		';',
 		'Length',
 		$self->length,
