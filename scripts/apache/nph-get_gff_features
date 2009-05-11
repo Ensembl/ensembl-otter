@@ -89,6 +89,8 @@ sub to_gff {
 	return $gff;
 }
 
+# insert some to_gff methods into the necessary feature classes
+
 sub Bio::Otter::DnaDnaAlignFeature::to_gff {
 	my $self = shift;
 	
@@ -99,14 +101,14 @@ sub Bio::Otter::DnaDnaAlignFeature::to_gff {
 		'similarity',
 		$self->start,
 		$self->end,
-		$self->score,
+		$self->percent_id,
 		($self->strand ? '+' : '-'),
 		'.',
 		'Target "'.$self->hseqname.'"',
 		$self->hstart,
 		$self->hend,
 		';',
-		'Clone "'.$self->seq_region_name.'"'
+		'Clone "'.$self->seqname.'"'
 	);
 	
 	return $gff;
