@@ -78,18 +78,49 @@ sub to_gff {
 		
 		my ($feature_type) = ref($feature) =~ /::(\w+)$/;
 		
-		$gff .= 
-			$feature->slice->seq_region_name . ' ' . 
-			$LangDesc{$feature_type}->{'-gff_feature_type'} . ' ' .
-			$feature->start . ' ' .
-			$feature->end . ' ' .
-			$feature->score . ' ' .
-			($feature->strand ? '+' : '-') . ' ' .
-			'.' . ' '.
-			($feature->can('hseqname') ? 'Target "'.$feature->hseqname.'" ' : '') .
-			($feature->can('seqname') ? 'Clone "'.$feature->seqname.'" ' : '') .
-			"\n";
+		if ($feature->can('to_gff')) {
+			$gff .= $feature->to_gff."\n";
+		}
+		else {
+			
+		}
 	}
+	
+	return $gff;
+}
+
+sub Bio::Otter::DnaDnaAlignFeature::to_gff {
+	my $self = shift;
+	
+	my $gff = join (
+		' ',
+		$self->slice->seq_region_name,
+		'similarity',
+		$self->start,
+		$self->end,
+		$self->score,
+		($self->strand ? '+' : '-'),
+		'.',
+		'Target "'.$self->hseqname.'"',
+		'Clone "'.$self->seqname.'"'
+	);
+	
+	return $gff;
+}
+
+sub Bio::EnsEMBL::SimpleFeature::to_gff {
+	my $self = shift;
+	
+	my $gff = join (
+		' ',
+		$self->slice->seq_region_name,
+		'misc_feature',
+		$self->start,
+		$self->end,
+		$self->score,
+		($self->strand ? '+' : '-'),
+		'.'
+	);
 	
 	return $gff;
 }
