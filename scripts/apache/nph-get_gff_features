@@ -94,6 +94,14 @@ sub to_gff {
 sub Bio::Otter::DnaDnaAlignFeature::to_gff {
 	my $self = shift;
 	
+	my $fps = $self->ungapped_features;
+	
+	my $gap_string = '';
+	
+	for my $fp (@$fps) {
+		$gap_string .= join(' ', $fp->hstart, $fp->hend, $fp->start, $fp->end);
+	}
+	
 	my $gff = join (
 		' ',
 		$self->slice->seq_region_name,
@@ -110,6 +118,7 @@ sub Bio::Otter::DnaDnaAlignFeature::to_gff {
 		';',
 		'Clone "'.$self->seqname.'"',
 		';',
+		($gap_string ? 'Gap '.$gap_string : ''),
 		'Length',
 		$self->length,
 	);
