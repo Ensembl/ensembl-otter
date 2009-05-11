@@ -94,11 +94,11 @@ sub to_gff {
 sub Bio::Otter::DnaDnaAlignFeature::to_gff {
 	my $self = shift;
 	
-	my $fps = $self->ungapped_features;
+	my @fps = $self->ungapped_features;
 	
 	my $gap_string = '';
 	
-	for my $fp (@$fps) {
+	for my $fp (@fps) {
 		$gap_string .= join(' ', $fp->hstart, $fp->hend, $fp->start, $fp->end);
 	}
 	
