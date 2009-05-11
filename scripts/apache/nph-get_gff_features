@@ -95,6 +95,7 @@ sub Bio::Otter::DnaDnaAlignFeature::to_gff {
 	my $gff = join (
 		' ',
 		$self->slice->seq_region_name,
+		$self->analysis,
 		'similarity',
 		$self->start,
 		$self->end,
