@@ -98,8 +98,10 @@ sub Bio::Otter::DnaDnaAlignFeature::to_gff {
 	
 	my $gap_string = '';
 	
-	for my $fp (@fps) {
-		$gap_string .= join(' ', $fp->hstart, $fp->hend, $fp->start, $fp->end);
+	if (@fps > 1) {
+		for my $fp (@fps) {
+			$gap_string .= join(' ', $fp->hstart, $fp->hend, $fp->start, $fp->end);
+		}
 	}
 	
 	my $gff = join (
