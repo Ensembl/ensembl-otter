@@ -100,7 +100,7 @@ sub Bio::Otter::DnaDnaAlignFeature::to_gff {
 	
 	if (@fps > 1) {
 		for my $fp (@fps) {
-			$gap_string .= join(' ', $fp->hstart, $fp->hend, $fp->start, $fp->end);
+			$gap_string .= join(' ', $fp->hstart, $fp->hend, $fp->start, $fp->end). ' ';
 		}
 	}
 	
