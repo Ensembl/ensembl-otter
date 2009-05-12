@@ -92,6 +92,7 @@ sub to_gff {
 # insert some to_gff methods into the necessary feature classes
 
 sub Bio::Otter::DnaDnaAlignFeature::to_gff {
+	
 	my $self = shift;
 	
 	my @fps = $self->ungapped_features;
@@ -99,9 +100,8 @@ sub Bio::Otter::DnaDnaAlignFeature::to_gff {
 	my $gap_string = '';
 	
 	if (@fps > 1) {
-		for my $fp (@fps) {
-			$gap_string .= join(' ', $fp->hstart, $fp->hend, $fp->start, $fp->end). ' ';
-		}
+		my @gaps = map { join(' ', $_->hstart, $_->hend, $_->start, $_->end) } @fps;
+		$gap_string = join(',', @gaps);
 	}
 	
 	my $gff = join (
@@ -120,9 +120,10 @@ sub Bio::Otter::DnaDnaAlignFeature::to_gff {
 		';',
 		'Clone "'.$self->seqname.'"',
 		';',
-		($gap_string ? 'Gap '.$gap_string : ''),
+		($gap_string ? 'Gaps '.$gap_string : ''),
 		'Length',
-		$self->length,
+		$self->get_HitDescription->hit_length,
+		$self->get_HitDescription->hit_name,
 	);
 	
 	return $gff;
