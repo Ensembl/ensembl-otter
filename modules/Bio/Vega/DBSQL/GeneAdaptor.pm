@@ -82,7 +82,7 @@ sub fetch_by_name {
     $gene=$self->fetch_by_dbID($dbid);
     $self->reincarnate_gene($gene);
   }
-  
+
   return $gene;
 }
 
@@ -344,7 +344,7 @@ sub fetch_all_by_Slice  {
 			 }
 		  };
 		  if ($@) {
-			 die sprintf("Error getting name of %s %s (%d):\n$@", 
+			 die sprintf("Error getting name of %s %s (%d):\n$@",
 							 ref($transcript), $transcript->stable_id, $transcript->dbID);
 		  }
 		  my $exons_truncated = $transcript->truncate_to_Slice($slice);
@@ -361,7 +361,7 @@ sub fetch_all_by_Slice  {
 				  $message .= ' that is not in this slice';
 				}
 				$truncated=1;
-				
+
 			 }
 		  } else {
 			 # This will fail if get_all_Transcripts() ceases to return a ref
@@ -575,7 +575,7 @@ sub store {
             print STDERR "UNCHANGED gene:".$db_gene->stable_id.".".$db_gene->version."\n-------------------------------------------\n\n";
             return 0;
         }
-                    
+
         ###
         ##
         # Start of code where order is critical.
@@ -694,7 +694,7 @@ sub store {
 
 sub store_only {
     my ($self, $gene) = @_;
-    
+
     # Here we assume that the parent method will update all is_current() fields,
     # trusting the values that we have just set.
     $self->SUPER::store($gene);
@@ -707,14 +707,60 @@ sub store_only {
     $author_adaptor->store_gene_author($gene->dbID, $gene_author->dbID);
 }
 
+sub set_obsolete { # set an existing gene to obsolete (non-current)
+				   # code copied from the above store method
+	my ($self, $gene) = @_;
+	my $time_now = time;
+    my $broker=$self->db->get_AnnotationBroker();
+    $broker->fetch_new_stable_ids_or_prefetch_latest_db_components($gene);
+
+	if(my $db_gene=$gene->last_db_version() ) {
+		$db_gene->is_current(0);
+        $self->update($db_gene);
+        my $ta = $self->db->get_TranscriptAdaptor();
+        foreach my $db_gene_tran (@{ $db_gene->get_all_Transcripts() }) {
+            $db_gene_tran->is_current(0);
+            $ta->update($db_gene_tran);
+        }
+        my $ea = $self->db->get_ExonAdaptor();
+        foreach my $db_gene_exon (@{ $db_gene->get_all_Exons() }) {
+                $db_gene_exon->is_current(0);
+                $ea->update($db_gene_exon);
+        }
+        if($gene->dbID() && ($gene->dbID() == $db_gene->dbID())) {
+            $gene->dissociate();
+        }
+        $gene->is_current(0);
+        $gene->biotype('obsolete');
+        foreach my $del_tran (@{ $gene->get_all_Transcripts() }) {
+        	$del_tran->is_current(0);
+        }
+	    foreach my $del_exon (@{$gene->get_all_Exons}) {
+        	$del_exon->is_current(0);
+		}
+        $gene->version($db_gene->version());
+        $gene->created_date($db_gene->created_date());
+
+        $gene->modified_date($time_now);
+
+    	# Actually save the gene to the database
+    	$self->store_only($gene);
+
+	} else {
+		throw("Gene must be in the database\n");
+	}
+
+	return 1;
+}
+
 sub remove {
     my ($self, $gene) = @_;
-    
+
     # Author
     if (my $author = $gene->gene_author) {
         $self->db->get_AuthorAdaptor->remove_gene_author($gene->dbID, $author->dbID);
     }
-    
+
     $self->SUPER::remove($gene);
 }
 
@@ -738,7 +784,7 @@ sub resurrect { # make a particular gene current (without touching the previousl
 
 sub fetch_all_genes_on_ncbi_slice {
 
-  # returns a list reference to loutre genes 
+  # returns a list reference to loutre genes
   # converted to the coords of the specified NCBI version
   # $ncbi_ver is eg, 36, M36
 
