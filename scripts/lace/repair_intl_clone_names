@@ -8,8 +8,14 @@ use Carp;
 use Hum::Tracking;
 use Bio::Otter::Lace::PipelineDB;
 use Bio::Otter::Lace::Defaults;
+use Hum::Submission;
 
 {
+
+    # Stop another repair_intl_clone_names running at the same time
+	my $project = "repair_intl_clone_names";
+  	Hum::Submission::create_lock($project);
+
     my $dataset_name = undef;
     my $which_db    = 'all'; # possible values: 'otter', 'newpipe', 'all'
     my $rescan_flag = 0;     # Re-scan the names even if they are already in the database
@@ -43,7 +49,7 @@ use Bio::Otter::Lace::Defaults;
 
         # Make a connection to the otter database
         my $otter_db = $ds->get_cached_DBAdaptor;
-        
+
         eval {
             if(($which_db eq 'otter')
              ||($which_db eq 'all') ) {
@@ -65,6 +71,8 @@ use Bio::Otter::Lace::Defaults;
         };
         warn $@ if $@;
     }
+
+    Hum::Submission::destroy_lock($project);
 }
 
 # --------------------------------- main() ends here -----------------
@@ -164,7 +172,7 @@ sub repair_one_db {
               AND embl_version = ?
         });
     }
-    
+
 
         # the actual update loop:
     my $scanned_count = 0;
@@ -205,6 +213,7 @@ sub repair_one_db {
                     $op_update_pipe_query->execute($new_intl, $acc, $ver);
                     $done_count++;
                 }
+
                 $changed_delim = '--->';
             }
             $old_intl ||= '(unknown)';
@@ -244,12 +253,12 @@ sub repair_one_db {
               AND cs.is_current = 1
             });
         $sth->execute($acc);
-        
+
         my ($clone, $int_pre, $ext_pre) = $sth->fetchrow;
         $sth->finish;
-        
+
         return unless $clone;
-        
+
         my $intl = uc $clone;
         $int_pre ||= '';
         $ext_pre ||= 'XX';
@@ -283,7 +292,7 @@ old schema pipeline database (default behaviour) OR
 new schema pipeline database (use with -head).
 
 It uses the tracking database to find the int. clone name
-for those clones  that have name = embl_acc.embl_version. 
+for those clones  that have name = embl_acc.embl_version.
 Connection details come from $OTTER_HOME/.otter_config or
 ~/.otter_config or command line in a similar manner
 to the rest of the scripts in this directory.
