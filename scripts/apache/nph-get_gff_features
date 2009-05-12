@@ -134,6 +134,7 @@ sub Bio::EnsEMBL::SimpleFeature::to_gff {
 	my $gff = join (
 		' ',
 		$self->slice->seq_region_name,
+		$self->analysis->logic_name,
 		'misc_feature',
 		$self->start,
 		$self->end,
