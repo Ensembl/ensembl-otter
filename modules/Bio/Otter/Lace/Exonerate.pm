@@ -154,7 +154,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.19 $ ';
+$revision='$Revision: 1.20 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -520,10 +520,10 @@ sub ace_DNA {
 sub ace_PEPTIDE {
     my ($self, $name, $seq) = @_;
 
-    my $ace = qq{\nSequence "$name"\n\nPEPTIDE "$name"\n};
+    my $ace = qq{\nProtein "$name"\n\nPEPTIDE "$name"\n};
 
-    my $dna_string = $seq->seq;
-    while ($dna_string =~ /(.{1,60})/g) {
+    my $prot_string = $seq->seq;
+    while ($prot_string =~ /(.{1,60})/g) {
         $ace .= $1 . "\n";
     }
     return $ace;
@@ -625,9 +625,9 @@ sub format_ace_output {
             if ($strand == -1){
                 ($start, $end) = ($end, $start);
             }
-			
+
 			my $hit_homol_tag = 'DNA_homol';
-			
+
             # Show coords in hit back to genomic sequence. (The annotators like this.)
             $hit_ace .= sprintf qq{Homol %s "%s" "%s" %.3f %d %d %d %d\n},
               $hit_homol_tag, $contig_name, $method_tag, $fp->percent_id,
@@ -635,9 +635,9 @@ sub format_ace_output {
               #print STDOUT sprintf qq{Homol %s "%s" "%s" %.3f %d %d %d %d\n},
               #$homol_tag, $contig_name, $method_tag, $fp->percent_id,
               #$fp->hstart, $fp->hend, $start, $end;
-			
+
 			my $query_homol_tag = $is_protein ? 'Pep_homol' : 'DNA_homol';
-			
+
             # The first part of the line is all we need if there are no
             # gaps in the alignment between genomic sequence and hit.
             my $query_line = sprintf qq{Homol %s "%s" "%s" %.3f %d %d %d %d},
