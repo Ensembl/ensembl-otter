@@ -1,0 +1,100 @@
+#!/usr/bin/env perl
+
+### show_acedb_colors
+
+use strict;
+use warnings;
+use CanvasWindow;
+use Hum::Ace::Colors;
+use Graphics::ColorObject;
+
+{
+    my $mw = CanvasWindow::MainWindow->new;
+    $mw->title('acedb colors');
+    my $cw = CanvasWindow->new($mw);
+    my $canvas = $cw->canvas;
+
+    my $color = 'SlateBlue';
+    my $color_ref = \$color;
+
+    my $frame = $cw->top_window->Frame->pack(-side => 'bottom');
+    my $entry = $frame->Entry(-width => 24, -textvariable => $color_ref)->pack(-side => 'left');
+    my $redraw = sub{ render($canvas, $color_ref) };
+    $entry->bind('<Return>', $redraw);
+    my $calc = $frame->Button(-text => 'draw', -command => $redraw)->pack(-side => 'left');
+    
+    render($canvas, $color_ref);
+
+    $cw->fix_window_min_max_sizes;
+
+    Tk::MainLoop();
+       
+}
+
+sub render {
+    my ($canvas, $color_ref) = @_;
+    
+    $canvas->delete('all');
+    
+    my $original = $$color_ref;
+    my ($max) = $canvas->rgb('white');
+    my $rgb = [map $_ / $max, $canvas->rgb($original)];
+    warn "$max RGB = [@$rgb]\n";
+    my $color = Graphics::ColorObject->new_RGB($rgb);
+    # my @color_list = ('#' . $color->as_RGBhex);
+    my @color_list = ($original);
+    my $step = 0.125;
+    for (my $f = 1 - $step; $f > 0; $f -= $step) {
+        my $faded = dullen($color, $f);
+        push (@color_list, '#' . lc $faded->as_RGBhex);
+    }
+    
+    my $size = 15;
+    my $pad = $size / 2;
+    my $font = ['Helvetica', $size, 'normal'];
+    for (my $i = 0; $i < @color_list; $i++) {
+        my $dulled = $color_list[$i];
+        my $x1 = $size;
+        my $x2 = $x1 + $size;
+        my $y1 = $size + (($size + $pad) * $i);
+        my $y2 = $y1 + $size;
+        $canvas->createRectangle(
+            $x1, $y1, $x2, $y2,
+            -fill       => $original,
+            -outline    => $dulled,
+            );
+        
+        $canvas->createRectangle(
+            $x2 + $pad, $y1, $x2 + $pad + $size, $y2,
+            -fill       => $dulled,
+            -outline    => $original,
+            );
+        
+        $canvas->createText(
+            $x2 + $size + $size, $y1,
+            -text   => $dulled,
+            -anchor => 'nw',
+            -font   => $font,
+            );
+    }
+
+}
+
+sub dullen {
+    my ($color, $factor) = @_;
+    
+    my $lch = $color->as_LCHab;
+    $lch->[0] *= $factor;
+    $lch->[1] *= $factor;
+    print STDERR "$factor LCHab = [@$lch]\n";
+    return Graphics::ColorObject->new_LCHab($lch);
+}
+
+__END__
+
+=head1 NAME - dullen_colors
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+

@@ -350,20 +350,20 @@ sub zMapWriteDotBlixemrc {
     print $blixem_rc
         $self->formatZmapDefaults(
             'blixem',
-            default_fetch_mode => $ENV{'PFETCH_WWW'} ? 'pfetch_http' : 'pfetch_socket',
+            'default-fetch-mode' => $ENV{'PFETCH_WWW'} ? 'pfetch_http' : 'pfetch_socket',
             ),
         $self->formatZmapDefaults(
-            'pfetch_http',
-            pfetch_mode     => 'http',
-            pfetch          => $self->AceDatabase->Client->url_root . '/nph-pfetch',
-            cookie_jar      => $ENV{'OTTERLACE_COOKIE_JAR'},
-            port            => 80,
+            'pfetch-http',
+            'pfetch-mode'     => 'http',
+            'pfetch'          => $self->AceDatabase->Client->url_root . '/nph-pfetch',
+            'cookie-jar'      => $ENV{'OTTERLACE_COOKIE_JAR'},
+            'port'            => 80,
             ),
         $self->formatZmapDefaults(
-            'pfetch_socket',
-            pfetch_mode => 'socket',
-            node        => $PFETCH_SERVER_LIST->[0][0],
-            port        => $PFETCH_SERVER_LIST->[0][1],
+            'pfetch-socket',
+            'pfetch-mode' => 'socket',
+            'node'        => $PFETCH_SERVER_LIST->[0][0],
+            'port'        => $PFETCH_SERVER_LIST->[0][1],
             );
 }
 
@@ -410,7 +410,7 @@ sub zMapServerDefaults {
         # navigator_sets specifies the feature sets to draw in the navigator pane.
         # so far the requested columns are just scale, genomic_canonical and locus
         # in line with keeping the columns to a minimum to save screen space.
-        navigator_sets => qq{scale;genomic_canonical;locus},
+        'navigator-sets' => qq{scale;genomic_canonical;locus},
 
         featuresets => $self->double_quote_escaped_list([$self->zMapListMethodNames_ordered]),
         # Can specify a stylesfile instead of featuresets
@@ -422,7 +422,7 @@ sub double_quote_escaped_list {
     my ($self, $list) = @_;
     
     return sprintf(q{%s},
-        join ';',
+        join ' ; ',
         map qq{$_},
         @$list);
 }
@@ -440,20 +440,20 @@ sub zMapZMapDefaults {
     
     my @config = (
         'ZMap',
-        sources         => $self->slice_name,
-        show_mainwindow => $show_main,
-        cookie_jar      => $ENV{'OTTERLACE_COOKIE_JAR'},
+        'sources'           => $self->slice_name,
+        'show-mainwindow'   => $show_main,
+        'cookie-jar'        => $ENV{'OTTERLACE_COOKIE_JAR'},
         );
 
     if ($ENV{'PFETCH_WWW'}) {
         push(@config,
-            pfetch_mode => 'http',
-            pfetch      => $self->AceDatabase->Client->url_root . '/nph-pfetch',            
+            'pfetch-mode' => 'http',
+            'pfetch'      => $self->AceDatabase->Client->url_root . '/nph-pfetch',            
             );
     } else {
         push(@config,
-            pfetch_mode => 'pipe',
-            pfetch      => 'pfetch',
+            'pfetch-mode' => 'pipe',
+            'pfetch'      => 'pfetch',
             );
     }
 
@@ -465,15 +465,15 @@ sub zMapBlixemDefaults {
     
     return $self->formatZmapDefaults(
         'blixem',
-        config_file => $ENV{'BLIXEM_CONFIG_FILE'},
+        'config-file' => $ENV{'BLIXEM_CONFIG_FILE'},
         qw{
             script      blixemh
             scope       200000
-            homol_max   0
+            homol-max   0
         },
-        protein_featuresets => [qw{ SwissProt TrEMBL }],
-        dna_featuresets    => [qw{ EST_Human EST_Mouse EST_Other vertebrate_mRNA }],
-        transcript_featuresets => [qw{
+        'protein-featuresets' => [qw{ SwissProt TrEMBL }],
+        'dna-featuresets'    => [qw{ EST_Human EST_Mouse EST_Other vertebrate_mRNA }],
+        'transcript-featuresets' => [qw{
             Coding
             Known_CDS
             Novel_CDS
@@ -495,14 +495,14 @@ sub zMapWindowDefaults {
     return $self->formatZmapDefaults(
         'ZMapWindow',
         qw{
-            feature_line_width          1
-            feature_spacing             4.0
-            colour_column_highlight     CornSilk
-            colour_item_highlight       gold
-            colour_frame_0              #ffe6e6
-            colour_frame_1              #e6ffe6
-            colour_frame_2              #e6e6ff
-            canvas_maxsize              10000
+            feature-line-width          1
+            feature-spacing             4.0
+            colour-column-highlight     CornSilk
+            colour-item-highlight       gold
+            colour-frame-0              #ffe6e6
+            colour-frame-1              #e6ffe6
+            colour-frame-2              #e6e6ff
+            canvas-maxsize              10000
         }
     );
 }
