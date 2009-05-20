@@ -28,7 +28,7 @@ my $INITIAL_DIR = (getpwuid($<))[7];
 
 sub initialise {
 	my ( $self ) = @_;
-	
+
     my @frame_pack = (-side => 'top', -fill => 'x');
     my @frame_expand = (-side => 'top', -fill => 'both', -expand => 1);
 
@@ -40,7 +40,7 @@ sub initialise {
         -labelside  => 'acrosstop',
         -border     => 3,
 	)->pack(@frame_expand);
-	
+
 	## Accession entry box
 	my $match_frame = $query_frame->Frame( -border => 3 )->pack(@frame_pack);
 	$match_frame->Label(
@@ -50,7 +50,7 @@ sub initialise {
 	)->pack( -side => 'left' );
 	$self->match( $match_frame->Entry->pack( -side => 'left', -expand => 1, -fill => 'x' ) );
 	$match_frame->Frame( -width => 6, )->pack( -side => 'left' );
-	
+
 	my $update = sub {
 		$self->accessions_from_clipboard;
 	};
@@ -61,7 +61,7 @@ sub initialise {
 	)->pack( -side => 'left' );
 	$top->bind( '<Control-u>', $update );
 	$top->bind( '<Control-U>', $update );
-	
+
 
 	## Fasta file entry box
 	my $fname;
@@ -113,7 +113,7 @@ sub initialise {
 			$self->fasta_file->xviewMoveto(1);
 		}
 	)->pack( -side => 'left' );
-	
+
 	## Sequence text box
 	my $txt_frame = $query_frame->Frame( -border => 3 )->pack(@frame_expand);
     $txt_frame->Label(
@@ -130,14 +130,14 @@ sub initialise {
 		   	-font	=> $self->XaceSeqChooser->font_fixed,
 		   	 )->pack(@frame_expand)
     );
-	
+
 	### Parameters
 	my $param_frame = $top->LabFrame(
         -label      => 'Parameters',
         -labelside  => 'acrosstop',
         -border     => 3,
 	)->pack(@frame_pack);
-	
+
     $self->bestn(
         $param_frame->Entry(
             -width   => 4,
@@ -150,7 +150,7 @@ sub initialise {
         -anchor => 's',
         -padx   => 6,
 	)->pack( -side => 'right' );
-	
+
 	### Commands
 	my $button_frame = $top->Frame->pack(@frame_pack);
 	my $launch = sub {
@@ -197,15 +197,15 @@ sub query_Sequence {
 
 sub accessions_from_clipboard {
     my ($self) = @_;
-    
+
     my $text = $self->get_clipboard_text or return;
-    
+
     # Add clipboard text to existing entry text so that annotator
     # can easily build up a list of accessions to search
     if (my $entry_txt = $self->get_entry('match')) {
         $text = join(' ', $entry_txt, $text);
     }
-    
+
     # accessions_from_text extracts all the accessions from its
     # text argument and removes duplicates from the list
     if (my @acc = accessions_from_text($text)) {
@@ -219,16 +219,16 @@ sub accessions_from_clipboard {
 sub set_entry {
 	my ( $self, $method, $txt ) = @_;
 	my $entry = $self->$method();
-	
+
 	my $reset = 0;
 	if ($entry->cget('-state') eq 'readonly') {
 		$entry->configure( -state => 'normal' );
 		$reset = 1;
 	}
-	
+
 	$entry->delete( 0, 'end' );
 	$entry->insert( 0, $txt );
-	
+
 	$entry->configure( -state => 'readonly' ) if $reset;
 }
 
@@ -329,13 +329,13 @@ sub XaceSeqChooser {
 
 sub launch_exonerate {
 	my ($self) = @_;
-	
+
 	my $seqs;
-	
+
 	$seqs = $self->get_query_seq();
-	
+
 	print STDOUT "Found " . scalar(@$seqs) . " sequences\n";
-	
+
 	unless (@$seqs) {
 	    $self->top->messageBox(
 	        -title      => 'No sequence',
@@ -345,14 +345,14 @@ sub launch_exonerate {
 	        );
 	    return;
 	}
-	
+
 	my %seqs_by_type = ();
-	
+
 	for my $seq (@$seqs) {
-		
+
 		if ($seq->type &&
-			($seq->type eq 'EST' || 
-			 $seq->type eq 'mRNA' || 
+			($seq->type eq 'EST' ||
+			 $seq->type eq 'mRNA' ||
 			 $seq->type eq 'Protein')) {
 			push @{ $seqs_by_type{$seq->type} }, $seq;
 		}
@@ -363,20 +363,20 @@ sub launch_exonerate {
 			push @{ $seqs_by_type{Unknown_Protein} }, $seq;
 		}
 	}
-	
+
 	$self->top->Busy;
-	
+
 	my $need_relaunch = 0;
-	
+
 	for my $type (keys %seqs_by_type) {
-		
+
 		print STDOUT "Running exonerate for sequence(s) of type: $type\n";
-			
+
 		my $score    = $type =~ /Protein/ ? $PROT_SCORE : $DNA_SCORE;
 		my $ana_name = $type =~ /^Unknown/ ? $type : "OTF_$type";
 		my $dnahsp   = $DNAHSP;
 		my $best_n   = $self->get_entry('bestn');
-		
+
 		my $exonerate = Bio::Otter::Lace::Exonerate->new;
 		$exonerate->AceDatabase($self->XaceSeqChooser->AceDatabase);
 		$exonerate->genomic_seq($self->XaceSeqChooser->Assembly->Sequence);
@@ -395,13 +395,13 @@ sub launch_exonerate {
 			my $ace_text = $exonerate->run;
 			# delete query file
 			unlink $seq_file;
-			
+
 			next unless $ace_text;
-			
+
 			$need_relaunch = 1;
-			
+
 			#print "ACE_TEXT:\n\n$ace_text\n\n";
-			
+
 			# Need to add new method to collection if we don't have it already
 	    	my $coll = $exonerate->AceDatabase->MethodCollection;
 	    	my $coll_zmap = $self->XaceSeqChooser->Assembly->MethodCollection;
@@ -412,20 +412,20 @@ sub launch_exonerate {
 	        	$coll_zmap->add_Method($method);
 	        	$self->XaceSeqChooser->save_ace($coll->ace_string());
 	    	}
-	
+
 			$self->XaceSeqChooser->save_ace($ace_text);
 			$self->XaceSeqChooser->zMapWriteDotZmap;
 		}
 	}
-	
+
 	if ($need_relaunch) {
 		$self->XaceSeqChooser->resync_with_db();
 		$self->XaceSeqChooser->zMapLaunchZmap;
 	}
-	
+
 	$self->top->Unbusy;
-	
-	if ($need_relaunch) {	    
+
+	if ($need_relaunch) {
     	return 1;
 	} else {
 	    $self->top->messageBox(
@@ -443,9 +443,9 @@ my $seq_tag = 1;
 sub get_query_seq {
 	my ($self) = @_;
 	my @seqs;
-	
+
 	# get seqs from fasta file and text box
-	
+
 	if ( my $string = $self->fasta_txt->get( '1.0', 'end' ) ) {
 		if ($string =~ /\S/ and $string !~ />/) {
 			print "creating new seq tag num: $seq_tag\n";
@@ -458,84 +458,84 @@ sub get_query_seq {
 		push @seqs, Hum::FastaFileIO->new( $self->get_entry('fasta_file') )
 		  	->read_all_sequences;
 	}
-	
+
 	my @accessions = map { $_->name } @seqs;
-	
+
 	# get seqs from accession numbers supplied by the user
-	
+
 	my @supplied_accs;
-	
+
 	if (my $txt = $self->get_entry('match')) {
 		@supplied_accs = split(/[,;\|\s]+/, $txt);
 		push @accessions, @supplied_accs;
 	}
-	
+
 	# identify the types of all the accessions supplied
 
     my $client = $self->XaceSeqChooser->AceDatabase->Client;
-    
+
     my $types = $client->get_accession_types(@accessions);
-	
+
 	# add type and full accession information to the existing sequences
-	
+
 	for my $seq (@seqs) {
 		my ($type, $full_acc) = @{ $types->{$seq->name} };
 		$seq->type($type);
 		$seq->name($full_acc);
 	}
-	
+
 	# map between the corrected and supplied accessions
-	
+
 	my %correct_to_supplied = ();
-	
-	map { $correct_to_supplied{ $types->{$_}->[1] } = $_ } @supplied_accs; 
-	
+
+	map { $correct_to_supplied{ $types->{$_}->[1] } = $_ } @supplied_accs;
+
 	# build a list of all the correct accessions for pfetch
-	
+
 	my @correct_accs = map { $types->{$_}->[1] } @supplied_accs;
-	
+
 	@correct_accs = grep {$_} @correct_accs; # filter empty strings
-	
+
 	# build a list of accessions we didn't find anything for
-	
+
 	my $missing_msg = '';
-	
+
 	map { $missing_msg .= "\t$_\n" unless $types->{$_}->[1] } @supplied_accs;
-	
+
 	if ($missing_msg) {
 		$missing_msg  = "I did not find any sequences for the following ".
 				 "accessions:\n\n".$missing_msg;
 	}
-	
+
 	my $remapped_msg = '';
-	
+
 	if (@correct_accs) {
-		
+
 		# and pfetch the remaining sequences using the corrected accessions
 		for my $seq (Hum::Pfetch::get_Sequences(@correct_accs)) {
-			
+
 			# add the type information to the sequence
-			
+
 			$seq->type($types->{ $correct_to_supplied{$seq->name} }->[0]);
 			push @seqs, $seq;
-			
+
 			# flag to the user that we changed the accession if necessary
-			
+
 			unless ($seq->name =~ $correct_to_supplied{$seq->name}) {
 				$remapped_msg .= "  ".$correct_to_supplied{$seq->name}.
-								 " to ".$seq->name."\n";	
+								 " to ".$seq->name."\n";
 			}
 		}
 	}
-	
+
 	if ($missing_msg || $remapped_msg) {
-		
+
 		$remapped_msg = "The following supplied accessions have been ".
-						"mapped to more recent accessions\n\n".$remapped_msg 
+						"mapped to more recent accessions\n\n".$remapped_msg
 							if $remapped_msg;
-		
+
 		$missing_msg .= "\n" if ($missing_msg && $remapped_msg);
-		
+
 		$self->top->messageBox(
 	        -title      => 'Problems with accessions supplied',
 	        -icon       => 'warning',
@@ -543,13 +543,12 @@ sub get_query_seq {
 	        -type       => 'OK',
 		);
 	}
-	
+
 
 	# lower case query polyA/T tails to avoid spurious exons
 	foreach my $seq (@seqs) {
 		my $s = $seq->uppercase;
-		# lc polyA/T tail
-		$s =~ s/(^T{6,}|A{6,}$)/lc($1)/ge;;
+		$s =~ s/(^T{6,}|A{6,}$)/lc($1)/ge;
 
 		$seq->sequence_string($s);
 	}
