@@ -178,7 +178,7 @@ BEGIN {
         $bbox[3] += 1;
         my $rec = $canvas->createRectangle(
             @bbox,
-            -fill       => '#ffff00',
+            -fill       => 'lavender',
             -outline    => undef,
             -tags       => [$sel_tag],
             );
@@ -188,9 +188,11 @@ BEGIN {
     sub deal_with_double_click {
         my( $canvas, $x, $y ) = @_;
 
+        warn "Double click";
+
         $canvas->selectClear;
         
-        my $obj = $canvas->find('withtag', 'current')
+        my ($obj) = $canvas->find('withtag', 'current')
             or return;
         my $focus = $canvas->focus
             or return;
