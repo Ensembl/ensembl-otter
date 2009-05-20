@@ -12,34 +12,35 @@ use Graphics::ColorObject;
     my $mw = CanvasWindow::MainWindow->new;
     $mw->title('acedb colors');
     my $cw = CanvasWindow->new($mw);
-    my $canvas = $cw->canvas;
+    $cw->canvas->SelectionHandle( sub{ $cw->selected_text_to_clipboard(@_); });
 
     my $color = 'SlateBlue';
     my $color_ref = \$color;
 
     my $frame = $cw->top_window->Frame->pack(-side => 'bottom');
     my $entry = $frame->Entry(-width => 24, -textvariable => $color_ref)->pack(-side => 'left');
-    my $redraw = sub{ render($canvas, $color_ref) };
+    my $redraw = sub{ render($cw, $color_ref) };
     $entry->bind('<Return>', $redraw);
-    my $calc = $frame->Button(-text => 'draw', -command => $redraw)->pack(-side => 'left');
+    my $calc = $frame->Button(-text => 'Draw', -command => $redraw)->pack(-side => 'left');
     
-    render($canvas, $color_ref);
+    render($cw, $color_ref);
 
     $cw->fix_window_min_max_sizes;
 
     Tk::MainLoop();
-       
+
 }
 
 sub render {
-    my ($canvas, $color_ref) = @_;
+    my ($cw, $color_ref) = @_;
     
+    my $canvas = $cw->canvas;
     $canvas->delete('all');
     
     my $original = $$color_ref;
     my ($max) = $canvas->rgb('white');
     my $rgb = [map $_ / $max, $canvas->rgb($original)];
-    warn "$max RGB = [@$rgb]\n";
+    # warn "$max RGB = [@$rgb]\n";
     my $color = Graphics::ColorObject->new_RGB($rgb);
     # my @color_list = ('#' . $color->as_RGBhex);
     my @color_list = ($original);
@@ -58,26 +59,36 @@ sub render {
         my $x2 = $x1 + $size;
         my $y1 = $size + (($size + $pad) * $i);
         my $y2 = $y1 + $size;
+        my $tags = [$dulled];
+
         $canvas->createRectangle(
             $x1, $y1, $x2, $y2,
             -fill       => $original,
             -outline    => $dulled,
+            -tags       => $tags,
             );
         
         $canvas->createRectangle(
             $x2 + $pad, $y1, $x2 + $pad + $size, $y2,
             -fill       => $dulled,
             -outline    => $original,
+            -tags       => $tags,
             );
         
-        $canvas->createText(
+        my $txt = $canvas->createText(
             $x2 + $size + $size, $y1,
             -text   => $dulled,
             -anchor => 'nw',
             -font   => $font,
+            -tags       => $tags,
             );
-    }
 
+        $canvas->bind($dulled, '<Button-1>', sub{
+            $cw->deselect_all;
+            $cw->highlight($txt);
+            $canvas->SelectionOwn(-command => sub{ $cw->deselect_all });
+            });
+    }
 }
 
 sub dullen {
@@ -86,7 +97,7 @@ sub dullen {
     my $lch = $color->as_LCHab;
     $lch->[0] *= $factor;
     $lch->[1] *= $factor;
-    print STDERR "$factor LCHab = [@$lch]\n";
+    # print STDERR "$factor LCHab = [@$lch]\n";
     return Graphics::ColorObject->new_LCHab($lch);
 }
 
