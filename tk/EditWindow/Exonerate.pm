@@ -544,6 +544,16 @@ sub get_query_seq {
 		);
 	}
 	
+
+	# lower case query polyA/T tails to avoid spurious exons
+	foreach my $seq (@seqs) {
+		my $s = $seq->uppercase;
+		# lc polyA/T tail
+		$s =~ s/(^T{6,}|A{6,}$)/lc($1)/ge;;
+
+		$seq->sequence_string($s);
+	}
+
 	return \@seqs;
 }
 
