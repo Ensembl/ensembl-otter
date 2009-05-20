@@ -10,9 +10,15 @@ use Graphics::ColorObject;
 
 {
     my $mw = CanvasWindow::MainWindow->new;
-    $mw->title('acedb colors');
+    $mw->title('dull colors');
     my $cw = CanvasWindow->new($mw);
-    $cw->canvas->SelectionHandle( sub{ $cw->selected_text_to_clipboard(@_); });
+    # $cw->canvas->SelectionHandle(
+    #     -selection  => 'PRIMARY',
+    #     sub{
+    #         warn "Selection requested\n";
+    #         $cw->selected_text_to_clipboard(@_);
+    #         
+    #     });
 
     my $color = 'SlateBlue';
     my $color_ref = \$color;
@@ -28,7 +34,6 @@ use Graphics::ColorObject;
     $cw->fix_window_min_max_sizes;
 
     Tk::MainLoop();
-
 }
 
 sub render {
@@ -84,9 +89,15 @@ sub render {
             );
 
         $canvas->bind($dulled, '<Button-1>', sub{
-            $cw->deselect_all;
-            $cw->highlight($txt);
-            $canvas->SelectionOwn(-command => sub{ $cw->deselect_all });
+            # $cw->deselect_all;
+            # $cw->highlight($txt);
+            $canvas->selectClear;
+            $canvas->selectFrom($txt, 0);
+            $canvas->selectTo  ($txt, 'end');
+            $canvas->SelectionOwn(
+                # -command => sub{ $cw->deselect_all },
+                -command => sub{ $canvas->selectClear },
+                );
             });
     }
 }
