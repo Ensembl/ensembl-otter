@@ -133,7 +133,7 @@ sub balloon {
     return $self->{'_balloon'};
 }
 
-sub set_known_GeneMethods{
+sub set_known_GeneMethods {
     my ($self) = @_ ;
 
     my $lst = $self->{'_gene_methods_list'} = [
@@ -162,8 +162,7 @@ sub get_all_GeneMethods {
 sub get_all_mutable_GeneMethods {
     my( $self ) = @_;
 
-    my $list = $self->{'_gene_methods_list'} || [];
-    return grep $_->mutable, @$list;
+    return $self->Assembly->MethodCollection->get_all_mutable_GeneMethods;
 }
 
 sub get_default_mutable_GeneMethod {
@@ -1649,6 +1648,7 @@ sub Assembly {
         eval {
             $assembly = Hum::Ace::Assembly->new;
             $assembly->name($slice_name);
+            $assembly->MethodCollection($self->AceDatabase->MethodCollection);
             $assembly->express_data_fetch($ace);
         };
         if ($@) {

@@ -201,14 +201,14 @@ sub recover_some_sessions {
             -justify => 'left',
             -text    => "You have one or more lace sessions on this computer which are not associated with a running otterlace process.\n\n This should not happen, except where lace has crashed or it has been exited by pressing the exit button in the dataset chooser window.\n\n You will need to recover and exit these sessions, or there may be locks left in the otter database or some of your work which has not been saved.\n\n Please contact anacode if you still get an error when you attempt to exit the session, or have information about the error which caused a session to be left.\n\n" 
         )->pack(-side=>'top', -fill=>'x', -expand=>1);
-		
-		# this sort is inefficient, but the list shouldn't be too long...
-		$recoverable_sessions = [
-			sort {
-				$ldf->make_title($a) cmp $ldf->make_title($b)
-			} @$recoverable_sessions
-		];
-		
+        
+        # this sort is inefficient, but the list shouldn't be too long...
+        $recoverable_sessions = [
+            sort {
+                $ldf->make_title($a) cmp $ldf->make_title($b)
+            } @$recoverable_sessions
+        ];
+        
         foreach my $session_dir (@$recoverable_sessions) {
             my $full_session_title = $ldf->make_title($session_dir).' in '.$session_dir;
             my $cb = $rss_dialog->add('Checkbutton',
@@ -229,21 +229,21 @@ sub recover_some_sessions {
                 my $canvas = $self->canvas;
 
                 foreach my $session_dir (@selected_dirs) {
-                	# Bring up GUI
+                    # Bring up GUI
                     my $adb = $ldf->recover_session($session_dir);
-					
-					my $top = $canvas->Toplevel(
-   	    				-title  => 'Select column data to load',
-    				);
-   					
-   					my $lc = EditWindow::LoadColumns->new($top);
-   		
-   					$lc->AceDatabase($adb);
-   					$lc->DataSetChooser($self);
-					$lc->initialize;
-					$lc->change_checkbutton_state('deselect');
-					$lc->load_filters;
-					$lc->top->withdraw;
+                    
+                    my $top = $canvas->Toplevel(
+                        -title  => 'Select column data to load',
+                    );
+                    
+                    my $lc = EditWindow::LoadColumns->new($top);
+                    
+                    $lc->AceDatabase($adb);
+                    $lc->DataSetChooser($self);
+                    $lc->initialize;
+                    $lc->change_checkbutton_state('deselect');
+                    $lc->load_filters;
+                    $lc->top->withdraw;
                 }
             };
             if ($@) {
