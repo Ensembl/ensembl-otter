@@ -455,8 +455,8 @@ $c = $dbh->{'evega'}->do($sql);
 
 $support->log_stamped("Done.\n\n");
 
-#fixing gene start/end (since we have not transferred al transcript they may have changed)
-$support->log_stamped("Updating gene starts and ends...\n", 1);
+#fixing gene start/end (since we have not transferred all transcripts some may have changed)
+$support->log_stamped("Updating gene starts and ends...\n");
 $sql = qq(CREATE TEMPORARY TABLE gene_coords
           SELECT g.gene_id, min(t.seq_region_start) as seq_region_start, max(t.seq_region_end) as seq_region_end
             FROM gene g, transcript t
@@ -467,7 +467,7 @@ $sql = qq(UPDATE gene g, gene_coords gc
              SET g.seq_region_start = gc.seq_region_start, g.seq_region_end = gc.seq_region_end
            WHERE g.gene_id = gc.gene_id);
 $c = $dbh->{'evega'}->do($sql);
-$support->log_stamped("Updated $c gene starts and ends...\n", 1);
+$support->log_stamped("Updated $c gene starts and ends...\n");
 
 #analysis_description;
 $support->log_stamped("Updating analysis_description table for external genes");
