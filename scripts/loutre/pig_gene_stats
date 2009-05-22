@@ -1,0 +1,98 @@
+#!/usr/bin/env perl
+
+### pig_gene_stats
+
+use strict;
+use warnings;
+use Bio::Otter::Lace::Defaults;
+use Time::Local qw{ timelocal };
+
+{
+
+    my $usage = sub { exec('perldoc', $0) };
+    # This do_getopt() call is needed to parse the otter config files
+    # even if you aren't giving any arguments on the command line.
+    Bio::Otter::Lace::Defaults::do_getopt() or $usage->();
+    my $dataset_name = 'pig';
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    my $otter_dba = $ds->get_cached_DBAdaptor;
+    
+    my $sth = $otter_dba->dbc->prepare(q{
+        SELECT g.biotype
+          , a.author_email
+          , gsid.stable_id
+          , UNIX_TIMESTAMP(gsid.created_date)
+        FROM gene g
+          , gene_stable_id gsid
+          , gene_author ga
+          , author a
+        WHERE g.gene_id = gsid.gene_id
+          AND g.gene_id = ga.gene_id
+          AND ga.author_id = a.author_id
+        ORDER BY gsid.created_date ASC
+    });
+    $sth->execute;
+    
+    my $jamboree_start = timelocal( 0,  0,  0, 16, 6, 2008);
+    my $jamboree_end   = timelocal(59, 59, 23, 18, 6, 2008);
+    printf STDERR "Jamboree time is from '%s' to '%s'\n",
+        scalar localtime($jamboree_start),
+        scalar localtime($jamboree_end);
+    
+    my (%gene_data);
+    while (my ($biotype, $email, $stable_id, $created) = $sth->fetchrow) {
+        my $data = $gene_data{$stable_id} ||= [$biotype, $email, $created];
+        $data->[0] = $biotype;  # Show the current biotype in results
+    }
+    
+    my %gene_slots;
+    foreach my $data (values %gene_data) {
+        my ($biotype, $email, $created) = @$data;
+        my $when;
+        if ($created < $jamboree_start) {
+            $when = 'Pre Jamboree';
+        }
+        elsif ($created <= $jamboree_end) {
+            $when = 'During Jamboree';
+        }
+        else {
+            $when = 'Post Jamboree';
+        }
+        my $who = $email =~ /\@/ ? 'external' : 'havana';
+        $gene_slots{$when}{$who}{$biotype}++;
+    }
+    
+    my $pat = "%40s  %3d\n";
+    foreach my $when ('Pre Jamboree', 'During Jamboree', 'Post Jamboree') {
+        print "\n$when:\n";
+        my $when_data = $gene_slots{$when};
+        foreach my $who (keys %$when_data) {
+            print "\n$who\n";
+            my $biotype_data = $when_data->{$who};
+            my $total = 0;
+            foreach my $biotype (sort keys %$biotype_data) {
+                next if $biotype eq 'obsolete';
+                $total += $biotype_data->{$biotype};
+                printf $pat, $biotype, $biotype_data->{$biotype};
+            }
+            printf $pat, 'TOTAL', $total;
+        }
+    }
+}
+
+
+
+
+__END__
+
+=head1 NAME - pig_gene_stats
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
