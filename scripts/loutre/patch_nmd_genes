@@ -91,16 +91,16 @@ sub recover_coding_region {
     my $gene_aptr  = $dba->get_GeneAdaptor;
     my $tsct_aptr  = $dba->get_TranscriptAdaptor;
 
-    # my $gene = $gene_aptr->fetch_by_dbID($g_dbID);
-    my $gene = freeze_thaw_gene($gene_aptr->fetch_by_dbID($g_dbID));
+    my $gene = $gene_aptr->fetch_by_dbID($g_dbID);
 
-    ### Make XML gene here
+    # my $gene = freeze_thaw_gene($gene_aptr->fetch_by_dbID($g_dbID));
+    # my $tsct_list = $gene->get_all_Transcripts;
+
     # 
     # # Need to make a fresh transcript array because the old one
     # # is cached inside the TranscriptAdaptor.
-    # my $tsct_list = [ @{$gene->get_all_Transcripts} ];
-    # $gene->{'_transcript_array'} = $tsct_list;
-    my $tsct_list = $gene->get_all_Transcripts;
+    my $tsct_list = [ @{$gene->get_all_Transcripts} ];
+    $gene->{'_transcript_array'} = $tsct_list;
     
     my $found_tsl = 0;
     my $already_tsl = 0;
@@ -109,7 +109,7 @@ sub recover_coding_region {
         next unless $tsct->biotype eq 'nonsense_mediated_decay';
         if ($tsct->translation) {
             printf STDERR "Transcript %s already has translation\n", $tsct->stable_id;
-            print_translation($tsct, $gene->stable_id . "." . $gene->version);
+            # print_translation($tsct, $gene->stable_id . "." . $gene->version);
             $already_tsl++;
             next;
         }
@@ -153,16 +153,20 @@ sub recover_coding_region {
             }
         }
         if ($match) {
-            printf STDERR "Found matching translation for Transcript %s\n", $tsct->stable_id;
-            if ($found_start_exon and $found_end_exon) {
-                $found_tsl++;
-                
+            printf STDERR "Found matching translation for Transcript %s", $tsct->stable_id;
+            if ($found_start_exon and $found_end_exon) {            
                 # Dissociate translation from database
                 $tsl->dbID(undef);
                 $tsl->adaptor(undef);
-                
+            
                 $tsct->translation($tsl);
-                print_translation($tsct, $gene->stable_id);
+                if ($tsct->translate->seq =~ /\*/) {
+                    print STDERR " ... but found stops in translation\n";
+                } else {
+                    print STDERR "\n";
+                    $found_tsl++;
+                    print_translation($tsct, $gene->stable_id);
+                }
             } else {
                 print STDERR " ... but failed to find start and end exons\n";
             }
@@ -171,13 +175,12 @@ sub recover_coding_region {
         }
     }
 
-    return $found_tsl + $already_tsl;
+    # return $found_tsl + $already_tsl;
 
     if ($found_tsl) {
         $dba->begin_work;
         eval {
             $locker->lock_by_object($gene, $author);
-            ### Test translation for stops
             $gene_aptr->store($gene, $time_now);
             $locker->remove_by_object($gene, $author);
         };
@@ -186,7 +189,7 @@ sub recover_coding_region {
             $dba->rollback;
             die $err;
         } else {
-            $dba->rollback;
+            $dba->commit;
         }    
     }
     return $found_tsl + $already_tsl;
@@ -210,7 +213,6 @@ sub print_translation {
     $pep->desc($desc);
     $pep_out->write_seq($pep);
 }
-
 
 
 __END__
