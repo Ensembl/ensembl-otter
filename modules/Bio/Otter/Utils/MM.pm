@@ -177,12 +177,7 @@ sub get_accession_types {
 					}
 
 					$res{$key} = ['Protein', "$prefix:$version"];
-				} 
-				
-#				elsif($type && $class) {
-#					# deal here with the remaining EMBL molecule type (tRNA, rRNA, other DNA, etc...)
-#					$res{$key} = ['Other', "Em:$version"];
-#				}
+				}
 
 				delete $acc_hash{$key};
 			}
