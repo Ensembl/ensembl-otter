@@ -328,6 +328,7 @@ sub XaceSeqChooser {
 }
 
 sub launch_exonerate {
+	
 	my ($self) = @_;
 
 	my $seqs;
@@ -399,8 +400,6 @@ sub launch_exonerate {
 			next unless $ace_text;
 
 			$need_relaunch = 1;
-
-			#print "ACE_TEXT:\n\n$ace_text\n\n";
 
 			# Need to add new method to collection if we don't have it already
 	    	my $coll = $exonerate->AceDatabase->MethodCollection;
@@ -479,39 +478,31 @@ sub get_query_seq {
 	# add type and full accession information to the existing sequences
 
 	for my $seq (@seqs) {
-		my ($type, $full_acc) = @{ $types->{$seq->name} };
-		$seq->type($type);
-		$seq->name($full_acc);
+		if ($types->{$seq->name}) {
+			my ($type, $full_acc) = @{ $types->{$seq->name} };
+			$seq->type($type);
+			$seq->name($full_acc);
+		}
 	}
 
 	# map between the corrected and supplied accessions
 
 	my %correct_to_supplied = ();
 
-	map { $correct_to_supplied{ $types->{$_}->[1] } = $_ } @supplied_accs;
+	map { $correct_to_supplied{ $types->{$_}->[1] || $_ } = $_ } @supplied_accs;
 
 	# build a list of all the correct accessions for pfetch
 
-	my @correct_accs = map { $types->{$_}->[1] } @supplied_accs;
-
-	@correct_accs = grep {$_} @correct_accs; # filter empty strings
-
-	# build a list of accessions we didn't find anything for
-
-	my $missing_msg = '';
-
-	map { $missing_msg .= "\t$_\n" unless $types->{$_}->[1] } @supplied_accs;
-
-	if ($missing_msg) {
-		$missing_msg  = "I did not find any sequences for the following ".
-				 "accessions:\n\n".$missing_msg;
-	}
+	my @correct_accs = map { $types->{$_}->[1] || $_ } @supplied_accs;
 
 	my $remapped_msg = '';
+
+	my %seq_fetched = map { $_ => 0 } @correct_accs;
 
 	if (@correct_accs) {
 
 		# and pfetch the remaining sequences using the corrected accessions
+		
 		for my $seq (Hum::Pfetch::get_Sequences(@correct_accs)) {
 
 			# add the type information to the sequence
@@ -525,8 +516,23 @@ sub get_query_seq {
 				$remapped_msg .= "  ".$correct_to_supplied{$seq->name}.
 								 " to ".$seq->name."\n";
 			}
+			
+			# and flag that we have found a sequence for this accession
+			
+			$seq_fetched{$seq->name} = 1;
 		}
 	}
+	
+	# build a list of accessions we didn't find anything for
+
+	my $missing_msg = '';
+	
+	map { $missing_msg .= "\t$_\n" unless $seq_fetched{$_} } @correct_accs;
+
+	$missing_msg = "I did not find any sequences for the following accessions:\n\n" . $missing_msg 
+		if $missing_msg;
+
+	# tell the user about any missing sequences or remapped accessions
 
 	if ($missing_msg || $remapped_msg) {
 
@@ -546,6 +552,7 @@ sub get_query_seq {
 
 
 	# lower case query polyA/T tails to avoid spurious exons
+	
 	foreach my $seq (@seqs) {
 		my $s = $seq->uppercase;
 		$s =~ s/(^T{6,}|A{6,}$)/lc($1)/ge;
