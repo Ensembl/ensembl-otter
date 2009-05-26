@@ -169,7 +169,7 @@ sub get_accession_types {
 					elsif ($class eq 'PRE') {
 						$prefix = 'Tr';
 					}
-					elsif ($class eq 'ISO') { # we don't think swissprot can have isoforms
+					elsif ($class eq 'ISO') { # we don't think trembl can have isoforms
 						$prefix = 'Sw';
 					}
 					else {
@@ -177,10 +177,12 @@ sub get_accession_types {
 					}
 
 					$res{$key} = ['Protein', "$prefix:$version"];
-				} elsif($type && $class) {
-					# deal here with the remaining EMBL molecule type (tRNA, rRNA, other DNA, etc...)
-					$res{$key} = ['Other', "Em:$version"];
-				}
+				} 
+				
+#				elsif($type && $class) {
+#					# deal here with the remaining EMBL molecule type (tRNA, rRNA, other DNA, etc...)
+#					$res{$key} = ['Other', "Em:$version"];
+#				}
 
 				delete $acc_hash{$key};
 			}
