@@ -154,7 +154,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.22 $ ';
+$revision='$Revision: 1.23 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -487,7 +487,7 @@ sub run {
     }
 
     my $features = $self->run_exonerate($masked, $smasked, $unmasked);
-    $self->append_polyA_tail($features);
+    $self->append_polyA_tail($features) unless $self->query_type eq 'protein' ;
 
     $ace .= $self->format_ace_output($name, $features);
 
