@@ -342,7 +342,7 @@ sub fetch_and_export {
     my $original_slice = $self->get_slice($odba, $cs, $name, $type, $start, $end, $csver_orig);
 
     my $orig_features = $original_slice->$fetching_method(@$call_parms) || die "Could not fetch anything";
-    
+
     if ($self->otter_assembly_equiv_hash()->{$csver_target}{$name} eq $type) {
         # no transformation is needed:
 
@@ -502,7 +502,11 @@ sub fetch_mapped_features {
             my $proj_segments_on_mapper;
             eval {
                 $proj_segments_on_mapper = $original_slice_on_mapper->project( $cs, $csver_remote );
-                $proj_segments_on_mapper = $original_slice_on_mapper->project( 'scaffold', $csver_remote ) unless @$proj_segments_on_mapper;
+                # Try to map to scaffold if coordinate system exists and mapping to chromosome failed
+                # allow getting ensembl objects from Zfish scaffolds
+                if(!@$proj_segments_on_mapper && $mdba->get_CoordSystemAdaptor->fetch_by_name('scaffold',$csver_remote)) {
+					$proj_segments_on_mapper = $original_slice_on_mapper->project( 'scaffold', $csver_remote );
+                }
             };
             if ($@ || ! @$proj_segments_on_mapper) {
                 die "Unable to project: $type:$csver_orig($start..$end)->$csver_remote. Check the mapping.\n$@";
