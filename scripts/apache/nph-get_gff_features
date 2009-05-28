@@ -72,11 +72,11 @@ my $output_string = '';
 sub to_gff {
 	my ($features, $analysis) = @_;
 	
-	my $gff = '';
+	my $gff = "##gff-version 2\n##source-version pipeline_database 1.0\n".
+			"##date 2009-04-30\n##sequence-region ".
+			$features[0]->slice->seq_region_name."\n";
 	
 	for my $feature (@$features) {
-		
-		my ($feature_type) = ref($feature) =~ /::(\w+)$/;
 		
 		if ($feature->can('to_gff')) {
 			$gff .= $feature->to_gff."\n";
@@ -120,10 +120,9 @@ sub Bio::Otter::DnaDnaAlignFeature::to_gff {
 		';',
 		'Clone "'.$self->seqname.'"',
 		';',
-		($gap_string ? 'Gaps '.$gap_string : ''),
+		($gap_string ? 'Gaps "'.$gap_string.'" ; ' : ''),
 		'Length',
 		$self->get_HitDescription->hit_length,
-		$self->get_HitDescription->hit_name,
 	);
 	
 	return $gff;
@@ -141,7 +140,7 @@ sub Bio::EnsEMBL::SimpleFeature::to_gff {
 		$self->end,
 		$self->score,
 		($self->strand ? '+' : '-'),
-		'.'
+		'.',
 	);
 	
 	return $gff;
