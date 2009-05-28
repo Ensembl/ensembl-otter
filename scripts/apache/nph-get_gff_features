@@ -74,7 +74,7 @@ sub to_gff {
 	
 	my $gff = "##gff-version 2\n##source-version pipeline_database 1.0\n".
 			"##date 2009-04-30\n##sequence-region ".
-			$features[0]->slice->seq_region_name."\n";
+			$features->[0]->slice->seq_region_name."\n";
 	
 	for my $feature (@$features) {
 		
