@@ -187,7 +187,7 @@ eval {
 if ($@) {
     $server->error_exit($@);
 } else {
-    $server->send_response($output_string, 1);
+    $server->send_response($output_string);
 }
 
 1;
