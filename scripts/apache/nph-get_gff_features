@@ -72,9 +72,11 @@ my $output_string = '';
 sub to_gff {
 	my ($features, $analysis) = @_;
 	
+	my $slice = $features->[0]->slice;
+	
 	my $gff = "##gff-version 2\n##source-version pipeline_database 1.0\n".
 			"##date 2009-04-30\n##sequence-region ".
-			$features->[0]->slice->seq_region_name."\n";
+			$slice->seq_region_name." ".$slice->start." ".$slice->end."\n";
 	
 	for my $feature (@$features) {
 		
