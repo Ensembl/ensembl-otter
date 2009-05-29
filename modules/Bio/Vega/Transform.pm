@@ -21,7 +21,6 @@ my (
     %object_builders,
     %object_data,
     %is_multiple,
-    %init_builders,
     );
 
 sub DESTROY {
@@ -37,7 +36,6 @@ sub DESTROY {
         warn "Unused data after parse: ", Dumper($data);
     }
     delete $is_multiple{$self};
-    delete $init_builders{$self};
 }
 
 sub new {
@@ -112,15 +110,6 @@ sub object_builders {
     return $object_builders{$self};
 }
 
-sub init_builders {
-    my ($self, $value) = @_;
-
-    if ($value) {
-        $init_builders{$self} = $value;
-    }
-    return $init_builders{$self};
-}
-
 sub set_multi_value_tags {
     my ($self, $value) = @_;
 
@@ -154,16 +143,6 @@ sub handle_start {
             "This parser cannot handle attributes in '$element' tags:\n"
             . Dumper({@_})
             );
-    }
-
-    if (my $m = $init_builders{$self}{$element}){
-        # print STDERR "initialize method called for $element\n";
-        if ($element eq 'otter'){
-            $self->$m('otter');
-        }
-        elsif ($element eq 'vega'){
-            $self->$m('vega');
-        }
     }
 }
 

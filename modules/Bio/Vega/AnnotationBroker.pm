@@ -243,37 +243,6 @@ sub hide_unused_exons {
     }
 }
 
-sub compare_synonyms_add {
-    my ($self,$db_obj,$obj)=@_;
-
-    my $db_name_attrib = $db_obj->get_all_Attributes('name');
-    my $db_name = $db_name_attrib && $db_name_attrib->[0] && $db_name_attrib->[0]->value();
-
-    my $name_attrib = $obj->get_all_Attributes('name');
-    my $name = $name_attrib && $name_attrib->[0] && $name_attrib->[0]->value();
-
-    if(!$db_name or ($db_name eq $name)) {
-        return;
-    }
-
-    my %synonym =  map {$_->value, $_} @{ $obj->get_all_Attributes('synonym') };
-    if (!exists $synonym{$db_name}){
-        $obj->add_Attributes( $self->make_Attribute('synonym','Synonym','',$db_name) );
-    }
-}
-
-sub make_Attribute {
-  my ($self,$code,$name,$description,$value) = @_;
-  my $attrib = Bio::EnsEMBL::Attribute->new
-	 (
-	  -CODE => $code,
-	  -NAME => $name,
-	  -DESCRIPTION => $description,
-	  -VALUE => $value
-	 );
-  return $attrib;
-}
-
 	 ##check to see if the start_Exon,end_Exon has been assigned right after comparisons
 	 ##this check is needed since we reuse exons
      #
@@ -370,7 +339,6 @@ sub transcripts_diff {
         $tran->created_date($db_transcript->created_date);
 
         if($this_transcript_any_changes) {
-            $self->compare_synonyms_add($db_transcript,$tran);
             $tran->is_current(1);
             $tran->modified_date($self->current_time);
 

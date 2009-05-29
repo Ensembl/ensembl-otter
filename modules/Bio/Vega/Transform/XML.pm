@@ -40,6 +40,8 @@ sub generate_SequenceSet {
 
   my $slice_projection = $slice->project('contig');
   foreach my $contig_seg (@$slice_projection) {
+      ### I think we will generate contig attributes multiple times
+      ### for contigs which appear multiple times in the assembly
 	 $ss->attribobjs($self->generate_SequenceFragment($contig_seg, $slice, $odb));
   }
 
