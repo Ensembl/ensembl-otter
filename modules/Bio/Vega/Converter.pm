@@ -27,6 +27,8 @@ sub XML_to_ace {
     my $parser = Bio::Vega::Transform::Otter->new;
     $parser->parse($xml);
 
+    ### Where should we add "-D" commands to the ace data?
+
     # Assembly object from chromosome slice
     my $ace_str = make_ace_assembly($parser, $dataset_name);
     
@@ -197,15 +199,25 @@ sub fill_transcript_AceText {
 sub fill_locus_AceText {
     my ($gene, $ace) = @_;
     
-    if (my $)
-    $ace->add_tag()
+    if (my $stable = $gene->stable_id) {
+        $ace->add_tag('Locus_id', $stable);
+    }
     add_attributes_to_Ace($gene, 'synonym', $ace, 'Alias');
     $ace->add_tag('Known')     if $gene->is_known;
     $ace->add_tag('Truncated') if $gene->truncated_flag;
     if (my $author = $gene->gene_author) {
         $ace->add_tag('Locus_author', $author->email);
     }
+    if (my $desc = $gene->description) {
+        $ace->add_tag('Full_name', $desc);
+    }
+    add_attributes_to_Ace($gene, 'remark',        $ace, 'Remark');
+    add_attributes_to_Ace($gene, 'hidden_remark', $ace, 'Annotation_remark');
     
+    my $source = $gene->source;
+    if ($source ne 'havana') {
+        $ace->add_tag('Type_prefix', "$source:");
+    }
 }
 
 sub make_ace_assembly {

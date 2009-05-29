@@ -22,14 +22,12 @@ sub get_geneXML {
 }
 
 sub generate_OtterXML {
-  my ($self, $slices, $odba, $indent, $genes, $sf)=@_;
+    my ($self, $slice, $odba, $indent, $genes, $sf_list) = @_;
 
-  my $ot=$self->prettyprint('otter');
-  $ot->indent($indent);
-  foreach my $slice (@$slices){
-	 $ot->attribobjs($self->generate_SequenceSet($slice, $odba, $genes,$sf));
-  }
-  return $self->formatxml($ot);
+    my $ot=$self->prettyprint('otter');
+    $ot->indent($indent);
+    $ot->attribobjs($self->generate_SequenceSet($slice, $odba, $genes, $sf_list));
+    return $self->formatxml($ot);
 }
 
 sub generate_SequenceSet {
