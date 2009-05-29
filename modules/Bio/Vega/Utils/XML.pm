@@ -31,7 +31,7 @@ sub freeze_thaw_gene {
     my $slice = $gene->feature_Slice;
     $gene = $gene->transfer($slice);
     my $xml = Bio::Vega::Transform::XML->new->generate_OtterXML(
-        [$slice],
+        $slice,
         $gene->adaptor->db,
         1,
         [$gene],
