@@ -38,8 +38,12 @@ sub XML_to_ace {
     # Genes and transcripts
     $ace_str .= make_ace_genes_transcripts($parser);
     
-    # Authors
+    # Authors - we only store the author name
+    
     # Genomic features
+    $ace_str .= make_ace_genomic_features($parser);
+    
+    
     # Assembly tags
 }
 
@@ -356,6 +360,33 @@ sub mRNA_posn {
     }
     return;
 }
+
+sub make_ace_genomic_features {
+    my ($parser) = @_;
+    
+    
+}
+
+
+# # Features (polyA signals and sites etc...)
+# if (defined $feature_set->[0]) {
+#     foreach my $sf (@$feature_set) {
+#         my $start = $sf->start;
+#         my $end   = $sf->end;
+#         if ($sf->strand == -1) {
+#             ($start, $end) = ($end, $start);
+#         }
+#         my $type  = $sf->analysis->logic_name or die "no logic_name on analysis object";
+#         my $score = $sf->score;
+#         $score = 1 unless defined $score;
+#         if (my $label = $sf->display_label) {
+#             $str .= qq{Feature "$type" $start $end $score "$label"\n};
+#         } else {
+#             $str .= qq{Feature "$type" $start $end $score\n};
+#         }
+#     }
+# }
+
 
 1;
 
