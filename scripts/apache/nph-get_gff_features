@@ -62,7 +62,7 @@ sub Bio::EnsEMBL::SimpleFeature::to_gff {
 		$self->start,
 		$self->end,                    
 		$self->score,
-		( $self->strand ? '+' : '-' ), 
+		( $self->strand == 1 ? '+' : ($self->strand == -1 ? '-' : '.' )), 
 		'.',
 		($self->display_label ? 'Note "'.$self->display_label.'"' : '')
 	);
