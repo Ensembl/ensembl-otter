@@ -145,12 +145,12 @@ sub Bio::EnsEMBL::SimpleFeature::to_gff {
 	return $gff;
 }
 
+my $gff_string = '';
+
 eval {
     my @feature_kinds  = split(/,/, $server->require_argument('kind'));
     my $analysis_list = $server->param('analysis');
     my @analysis_names = $analysis_list ? split /,/ , $analysis_list : ( undef );
-
-	my $gff_string = '';
 
 	foreach my $analysis_name (@analysis_names) {
 	    foreach my $feature_kind (@feature_kinds) {
