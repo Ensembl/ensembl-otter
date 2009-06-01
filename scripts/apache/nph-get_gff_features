@@ -73,7 +73,7 @@ sub convert_features_to_gff {
 	
 	my ($features, $analysis) = @_;
 	
-	
+	my $gff = '';
 	
 	for my $feature (@$features) {
 		
