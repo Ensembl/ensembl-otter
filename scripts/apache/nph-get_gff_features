@@ -96,7 +96,7 @@ sub Bio::EnsEMBL::FeaturePair::to_gff {
 		$self->hstart,
 		$self->hend,
 		';',
-		'Clone "'.$self->seqname.'"',
+		'Clone "'.$self->slice->seq_region_name.'"',
 		';',
 		($gap_string ? 'Gaps "'.$gap_string.'" ; ' : ''),
 		'Length',
