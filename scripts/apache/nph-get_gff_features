@@ -184,7 +184,7 @@ eval {
 		
 			for my $feature (@$features) {
 				if ($feature->can('to_gff')) {
-					$gff .= $feature->to_gff."\n";
+					$gff_string .= $feature->to_gff."\n";
 				}
 			}
 	    }
