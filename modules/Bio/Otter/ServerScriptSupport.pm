@@ -363,6 +363,105 @@ sub fetch_Author_obj {
     return $author_obj;
 }
 
+#################### ideally the following snippet should live in an Otter/Vega adaptor ############
+
+sub enrich {
+    my ($afs, $enriched_class) = @_;
+
+        # Put the names into the hit_description hash:
+    my %hd_hash = ();
+    foreach my $af (@$afs) {
+        $hd_hash{$af->hseqname()} = '';
+    }
+
+        # Fetch the hit descriptions from the pipeline
+    my $pdbc = $server->satellite_dba( '' )->dbc();
+    my $hd_adaptor = Bio::Otter::DBSQL::SimpleBindingAdaptor->new( $pdbc );
+    $hd_adaptor->fetch_into_hash(
+        'hit_description',
+        'hit_name',
+        { qw(
+            hit_name _hit_name
+            hit_length _hit_length
+            hit_description _description
+            hit_taxon _taxon_id
+            hit_db _db_name
+        )},
+        'Bio::Otter::HitDescription',
+        \%hd_hash,
+    );
+
+    foreach my $af (@$afs) {
+        if(my $hd = $hd_hash{$af->hseqname()}) {
+            bless $af, $enriched_class;
+            $af->{'_hit_description'} = $hd;
+        }
+    }
+
+    return $afs;
+}
+
+    # It is a coincidence that these two classed need to be enriched
+    # and their fetching methods in Bio::EnsEMBL::Slice are differently named.
+    # We are making use of this coincidence by enriching the methods without subclassing Bio::EnsEMBL::Slice :
+    #
+sub Bio::EnsEMBL::Slice::get_all_DnaDnaAlignFeatures {
+    my $self = shift @_;
+    my $naked_features = $self->get_all_DnaAlignFeatures(@_);
+    return enrich($naked_features, 'Bio::Otter::DnaDnaAlignFeature');
+}
+
+sub Bio::EnsEMBL::Slice::get_all_DnaPepAlignFeatures {
+    my $self = shift @_;
+    my $naked_features = $self->get_all_ProteinAlignFeatures(@_);
+    return enrich($naked_features, 'Bio::Otter::DnaPepAlignFeature');
+}
+
+#################### ideally the preceding snippet should live in an Otter/Vega adaptor ############
+
+sub get_features {
+	
+	my $self = shift;
+	
+	my @feature_kinds  = split(/,/, $self->require_argument('kind'));
+    my $analysis_list = $self->param('analysis');
+    my @analysis_names = $analysis_list ? split /,/ , $analysis_list : ( undef );
+	
+	my @feature_list = ();
+	
+	foreach my $analysis_name (@$analyses) {
+	    foreach my $feature_kind (@feature_kinds) {
+	        my $param_descs = $LangDesc{$feature_kind}{-call_args};
+	        my $getter_method = "get_all_${feature_kind}s";
+
+	        my @param_list = ();
+	        foreach my $param_desc (@$param_descs) {
+	            my ($param_name, $param_def_value, $param_separator) = @$param_desc;
+
+	            my $param_value = (scalar(@$param_desc)==1)
+	                ? $self->require_argument($param_name)
+	                : defined($self->param($param_name))
+	                    ? $self->param($param_name)
+	                    : $param_def_value;
+	            if($param_value && $param_separator) {
+	                $param_value = [split(/$param_separator/,$param_value)];
+	            }
+				$param_value = $analysis_name if $param_value =~ /$analysis_name/;
+	            push @param_list, $param_value;
+	        }
+
+	        my $features = $self->fetch_mapped_features($feature_kind, $getter_method, \@param_list,
+	            map { defined($self->param($_)) ? $self->param($_) : '' }
+	                qw(cs name type start end metakey csver csver_remote)
+	        );
+
+	        push @feature_list, @$features;
+	    }
+	}
+	
+	return \@feature_list;
+}
+
 1;
 
 __END__
