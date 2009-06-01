@@ -8,11 +8,8 @@ use strict;
 use SangerPaths qw{ core bioperl123 ensembl51 otter52 };
 
 use Bio::Otter::ServerScriptSupport;
-use Bio::Otter::DBSQL::SimpleBindingAdaptor;
-use Bio::Otter::Lace::ViaText qw( %LangDesc &GenerateFeatures );
-use
 
-  use CGI::Carp 'fatalsToBrowser';
+use CGI::Carp 'fatalsToBrowser';
 
 my $server = Bio::Otter::ServerScriptSupport->new;
 
