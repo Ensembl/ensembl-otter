@@ -67,16 +67,13 @@ sub Bio::EnsEMBL::Slice::get_all_DnaPepAlignFeatures {
     return enrich($naked_features, 'Bio::Otter::DnaPepAlignFeature');
 }
 
-my $output_string = '';
 
-sub to_gff {
+
+sub convert_features_to_gff {
+	
 	my ($features, $analysis) = @_;
 	
-	my $slice = $features->[0]->slice;
 	
-	my $gff = "##gff-version 2\n##source-version pipeline_database 1.0\n".
-			"##date 2009-04-30\n##sequence-region ".
-			$slice->seq_region_name." ".$slice->start." ".$slice->end."\n";
 	
 	for my $feature (@$features) {
 		
@@ -153,6 +150,8 @@ eval {
     my $analysis_list = $server->param('analysis');
     my @analysis_names = $analysis_list ? split /,/ , $analysis_list : ( undef );
 
+	my $gff_string = '';
+
 	foreach my $analysis_name (@analysis_names) {
 	    foreach my $feature_kind (@feature_kinds) {
 	        my $param_descs = $LangDesc{$feature_kind}{-call_args};
@@ -178,8 +177,29 @@ eval {
 	            map { defined($server->param($_)) ? $server->param($_) : '' }
 	                qw(cs name type start end metakey csver csver_remote)
 	        );
-
-	        $output_string .= to_gff($features, $analysis_list);
+			
+			if (!$gff_string) {
+				# we need to add the gff header
+				
+				# build the date string in the correct format
+				
+				my ($sec, $min, $hr, $mday, $mon, $year) = localtime;
+				$year += 1900; # correct the year
+				$mon++; # months start at 0
+				my $date = "$year-$mon-$mday";
+				
+				# use the first feature's slice as the sequence-region
+				
+				my $slice = $features->[0]->slice;
+				
+				$gff_string = "##gff-version 2\n".
+							  "##source-version nph-get_gff_features 1.0\n".
+							  "##date $date\n".
+							  "##sequence-region ".$slice->seq_region_name." ".
+							  $slice->start." ".$slice->end."\n";
+			}
+			
+	        $gff_string .= convert_features_to_gff($features, $analysis_list);
 	    }
 	}
 };
