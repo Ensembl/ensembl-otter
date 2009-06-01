@@ -27,6 +27,7 @@ use warnings;
 use Bio::Vega::Author;
 use Bio::Otter::Version;
 use Bio::Otter::Lace::TempFile;
+use Bio::Otter::Lace::ViaText qw( %LangDesc &GenerateFeatures );
 
 use SangerWeb;
 
@@ -368,13 +369,15 @@ sub fetch_Author_obj {
 sub enrich {
     my ($afs, $enriched_class) = @_;
 
+	my $server = Bio::Otter::ServerScriptSupport->new;
+
         # Put the names into the hit_description hash:
     my %hd_hash = ();
     foreach my $af (@$afs) {
         $hd_hash{$af->hseqname()} = '';
     }
 
-        # Fetch the hit descriptions from the pipeline
+    # Fetch the hit descriptions from the pipeline
     my $pdbc = $server->satellite_dba( '' )->dbc();
     my $hd_adaptor = Bio::Otter::DBSQL::SimpleBindingAdaptor->new( $pdbc );
     $hd_adaptor->fetch_into_hash(
@@ -429,7 +432,7 @@ sub get_features {
 	
 	my @feature_list = ();
 	
-	foreach my $analysis_name (@$analyses) {
+	foreach my $analysis_name (@analysis_names) {
 	    foreach my $feature_kind (@feature_kinds) {
 	        my $param_descs = $LangDesc{$feature_kind}{-call_args};
 	        my $getter_method = "get_all_${feature_kind}s";
