@@ -38,7 +38,7 @@ sub Bio::EnsEMBL::FeaturePair::to_gff {
 		$self->percent_id,
 		( $self->strand ? '+' : '-' ),
 		'.',
-		'Target "' . $self->hseqname . '"',
+		'Target "Sequence:' . $self->hseqname . '"',
 		$self->hstart,
 		$self->hend,
 		';',
