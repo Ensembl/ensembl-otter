@@ -29,7 +29,7 @@ sub Bio::EnsEMBL::FeaturePair::to_gff {
 		$gap_string = join( ',', @gaps );
 	}
 
-	my $gff = join( ' ',
+	my $gff = join( "\t",
 		$self->slice->seq_region_name,
 		$self->analysis->logic_name,
 		'similarity',
@@ -55,7 +55,7 @@ sub Bio::EnsEMBL::FeaturePair::to_gff {
 sub Bio::EnsEMBL::SimpleFeature::to_gff {
 	my $self = shift;
 
-	my $gff = join( ' ',
+	my $gff = join( "\t",
 		$self->slice->seq_region_name, 
 		$self->analysis->logic_name,
 		'misc_feature',                
