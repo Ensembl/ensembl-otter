@@ -67,30 +67,9 @@ sub Bio::EnsEMBL::Slice::get_all_DnaPepAlignFeatures {
     return enrich($naked_features, 'Bio::Otter::DnaPepAlignFeature');
 }
 
-
-
-sub convert_features_to_gff {
-	
-	my ($features, $analysis) = @_;
-	
-	my $gff = '';
-	
-	for my $feature (@$features) {
-		
-		if ($feature->can('to_gff')) {
-			$gff .= $feature->to_gff."\n";
-		}
-		else {
-			
-		}
-	}
-	
-	return $gff;
-}
-
 # insert some to_gff methods into the necessary feature classes
 
-sub Bio::Otter::DnaDnaAlignFeature::to_gff {
+sub Bio::EnsEMBL::FeaturePair::to_gff {
 	
 	my $self = shift;
 	
@@ -143,6 +122,10 @@ sub Bio::EnsEMBL::SimpleFeature::to_gff {
 	);
 	
 	return $gff;
+}
+
+sub get_features {
+	
 }
 
 my $gff_string = '';
@@ -198,8 +181,12 @@ eval {
 							  "##sequence-region ".$slice->seq_region_name." ".
 							  $slice->start." ".$slice->end."\n";
 			}
-			
-	        $gff_string .= convert_features_to_gff($features, $analysis_list);
+		
+			for my $feature (@$features) {
+				if ($feature->can('to_gff')) {
+					$gff .= $feature->to_gff."\n";
+				}
+			}
 	    }
 	}
 };
