@@ -28,6 +28,7 @@ use Bio::Vega::Author;
 use Bio::Otter::Version;
 use Bio::Otter::Lace::TempFile;
 use Bio::Otter::Lace::ViaText qw( %LangDesc &GenerateFeatures );
+use Bio::Otter::DBSQL::SimpleBindingAdaptor;
 
 use SangerWeb;
 
