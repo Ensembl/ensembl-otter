@@ -423,7 +423,7 @@ sub Bio::EnsEMBL::Slice::get_all_DnaPepAlignFeatures {
 
 #################### ideally the preceding snippet should live in an Otter/Vega adaptor ############
 
-sub get_features {
+sub get_requested_features {
 	
 	my $self = shift;
 	

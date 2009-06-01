@@ -74,11 +74,11 @@ my $gff_string = '';
 
 eval {
 	
-	my $features = $server->get_features;
+	my $features = $server->get_requested_features;
 
 	if (@$features) {
 
-		# we need to add the gff header
+		# add the gff header
 
 		# build the date string in the correct format
 
