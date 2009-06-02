@@ -39,7 +39,7 @@ sub new {
 
 	my ( $host , $port , $user, $name ) = @args;
 
-    $self->host($host || 'cbi3');
+    $self->host($host || 'cbi3d');
     $self->port($port || 3306);
     $self->user($user || 'genero');
     $self->name($name || 'mm_ini');
