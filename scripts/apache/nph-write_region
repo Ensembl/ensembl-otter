@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2009-02-27 17:07:44 $
-# Id:            $Id: nph-write_region,v 1.21 2009-02-27 17:07:44 jgrg Exp $
+# Last modified: $Date: 2009-06-03 13:59:08 $
+# Id:            $Id: nph-write_region,v 1.22 2009-06-03 13:59:08 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-write_region,v $
 
 use strict;
@@ -38,27 +38,26 @@ use Bio::Vega::Transform::XML;
     my ($db_slice);
     my %ci_hash = ();
     eval {
-        my $xml_slice    = $parser->get_ChromosomeSlice;
-        my $seq_reg_name = $xml_slice->seq_region_name;
-        my $start        = $xml_slice->start;
-        my $end          = $xml_slice->end;
-        my $strand       = $xml_slice->strand;
-        my $cs           = $xml_slice->coord_system->name;
-        my $cs_version   = $xml_slice->coord_system->version;
-
+        my $xml_slice = $parser->get_ChromosomeSlice;
         $db_slice = $odba->get_SliceAdaptor()->fetch_by_region(
-                            $cs, $seq_reg_name, $start, $end, $strand, $cs_version);
+            $xml_slice->coord_system->name,
+            $xml_slice->seq_region_name,
+            $xml_slice->start,
+            $xml_slice->end,
+            $xml_slice->strand,
+            $xml_slice->coord_system->version,
+            );
 
         my @db_tiles = sort { $a->from_start() <=> $b->from_start() }
                            @{ $db_slice->project('contig') };
 
-        my @xml_tiles = sort { $a->[0] <=> $b->[0] } @{ $parser->get_Tiles() };
+        my @xml_tiles = $parser->get_Tiles;
 
-        if(scalar(@db_tiles) != scalar(@xml_tiles)) {
+        if (@db_tiles != @xml_tiles) {
             die "The numbers of tiles in XML_slice and DB_slice do not match";
         }
 
-        for(my $i=0; $i<scalar(@db_tiles); $i++) {
+        for (my $i = 0; $i < @db_tiles; $i++) {
 
             my $db_asm_start = $db_tiles[$i]->from_start() + $db_slice->start() - 1;
             my $db_asm_end   = $db_tiles[$i]->from_end()   + $db_slice->start() - 1;
@@ -73,10 +72,10 @@ use Bio::Vega::Transform::XML;
                 die "In tile number $i 'asm_end' is different (xml_value='$xml_asm_end', db_value='$db_asm_end') ";
             }
 
-            foreach my $method ('seq_region_name', 'start', 'end', 'strand') {
+            foreach my $method (qw{ seq_region_name start end strand }) {
                 my $db_value  = $db_ctg_slice->$method();
                 my $xml_value = $xml_ctg_slice->$method();
-                if($db_value ne $xml_value) {
+                if ($db_value ne $xml_value) {
                     die "In tile number $i '$method' is different (xml_value='$xml_value', db_value='$db_value') ";
                 }
             }
@@ -205,7 +204,7 @@ use Bio::Vega::Transform::XML;
         ##the response xml has all the above changes done in this session
 
         ##pass on to the xml generator the current set of genes , simple features
-        $output_xml =  Bio::Vega::Transform::XML->new->generate_OtterXML([$db_slice], $odba, 0, $changed_genes, $xml_simple_features);
+        $output_xml =  Bio::Vega::Transform::XML->new->generate_OtterXML($db_slice, $odba, 0, $changed_genes, $xml_simple_features);
     };
     if ($@) {
         $server->error_exit("Failed writing annotations [$@]");

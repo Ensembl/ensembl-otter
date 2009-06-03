@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2009-02-20 10:50:20 $
-# Id:            $Id: nph-get_region,v 1.14 2009-02-20 10:50:20 jgrg Exp $
+# Last modified: $Date: 2009-06-03 13:59:08 $
+# Id:            $Id: nph-get_region,v 1.15 2009-06-03 13:59:08 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_region,v $
 
 use strict;
@@ -30,7 +30,7 @@ my $slice = $server->get_slice($odba, $cs, $name, $type, $start, $end, $strand, 
 
 $server->log("Converting slice to XML...");
 
-my $xml=Bio::Vega::Transform::XML->new->generate_OtterXML([$slice],$odba,0);
+my $xml=Bio::Vega::Transform::XML->new->generate_OtterXML($slice, $odba, 0);
 
 $server->log("Done converting slice to XML. Length of XML = " . length($xml) );
 
