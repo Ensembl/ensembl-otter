@@ -368,10 +368,11 @@ sub fetch_and_export {
 
                 if( my $target_feature = $orig_feature->transform($cs, $csver_target) ) {
                     push @$transformed_features, $target_feature;
-                    warn "Transformed $csver_orig:".$orig_feature->start().'..'.$orig_feature->end()
+                    warn "Transformed $csver_orig:".$original_slice_on_mapper->name.":".$orig_feature->start().'..'.$orig_feature->end()
                         ." --> $csver_target:".$target_feature->start().'..'.$target_feature->end()."\n";
                 } else {
-                    warn "Could not transform the feature ".$orig_feature->start().'..'.$orig_feature->end();
+                    warn "Could not transform the feature ".$original_slice_on_mapper->name." ".
+		          $orig_feature->start().'..'.$orig_feature->end();
                 }
             }
 
