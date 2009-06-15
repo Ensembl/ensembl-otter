@@ -15,6 +15,7 @@ use Bio::Otter::Lace::Client;
 use Hum::Sort qw{ ace_sort };
 use Tk::LabFrame;
 use Tk::Balloon;
+use Tk::Checkbutton;
 use Data::Dumper;
 
 use base 'EditWindow';
@@ -58,6 +59,11 @@ sub initialise {
         -text      => 'Fetch from clipboard',
         -underline => 0,
         -command   => $update,
+	)->pack( -side => 'left' );
+	$match_frame->Button(
+        -text      => 'Clear',
+        -underline => 0,
+        -command   => sub {$self->set_entry('match', '');},
 	)->pack( -side => 'left' );
 	$top->bind( '<Control-u>', $update );
 	$top->bind( '<Control-U>', $update );
@@ -150,6 +156,11 @@ sub initialise {
         -anchor => 's',
         -padx   => 6,
 	)->pack( -side => 'right' );
+	
+	$param_frame->Checkbutton(
+    	-variable => \$self->{_clear_existing},
+        -text => 'Clear existing alignments of same type'
+     )->pack( -side => 'right' );
 
 	### Commands
 	my $button_frame = $top->Frame->pack(@frame_pack);
@@ -382,6 +393,7 @@ sub launch_exonerate {
 		$exonerate->AceDatabase($self->XaceSeqChooser->AceDatabase);
 		$exonerate->genomic_seq($self->XaceSeqChooser->Assembly->Sequence);
 		$exonerate->query_seq($seqs_by_type{$type});
+		$exonerate->acedb_homol_tag($ana_name.'_homol');
 		$exonerate->query_type($type =~ /Protein/ ? 'protein' : 'dna');
 		$exonerate->score($score);
 		$exonerate->dnahsp($dnahsp);
@@ -399,6 +411,16 @@ sub launch_exonerate {
 
 			next unless $ace_text;
 
+			if ($self->{_clear_existing}) {
+				
+				my $delete_cmd = "Sequence : \"".$exonerate->genomic_seq->name."\"\n".
+							     "-D Homol ".$exonerate->acedb_homol_tag."\n";
+				
+				$ace_text = $delete_cmd.$ace_text; 
+			}
+
+			#print "ACE text:\n\n$ace_text\n\n";
+			
 			$need_relaunch = 1;
 
 			# Need to add new method to collection if we don't have it already
