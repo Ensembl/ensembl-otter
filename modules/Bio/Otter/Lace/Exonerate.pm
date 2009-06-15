@@ -154,7 +154,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.23 $ ';
+$revision='$Revision: 1.24 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -341,6 +341,16 @@ sub query_type {
     }
 
     return $self->{'_query_type'} || 'dna';
+}
+
+sub acedb_homol_tag {
+    my( $self, $tag ) = @_;
+
+    if ($tag) {
+        $self->{'_acedb_homol_tag'} = $tag;
+    }
+
+    return $self->{'_acedb_homol_tag'};
 }
 
 sub database {
@@ -711,12 +721,10 @@ sub format_ace_output {
               #$homol_tag, $contig_name, $method_tag, $fp->percent_id,
               #$fp->hstart, $fp->hend, $start, $end;
 
-			my $query_homol_tag = $is_protein ? 'Pep_homol' : 'DNA_homol';
-
             # The first part of the line is all we need if there are no
             # gaps in the alignment between genomic sequence and hit.
             my $query_line = sprintf qq{Homol %s "%s" "%s" %.3f %d %d %d %d},
-              $query_homol_tag, $hname, $method_tag, $fp->percent_id,
+              $self->acedb_homol_tag, $hname, $method_tag, $fp->percent_id,
               $start, $end, $fp->hstart, $fp->hend;
 
             if (@$seq_coord > 1) {
