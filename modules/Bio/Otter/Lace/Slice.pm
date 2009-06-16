@@ -142,23 +142,23 @@ sub toHash {
     };
 }
 
-# sub create_detached_slice {
-#     my $self = shift @_;
-# 
-#     my $slice = Bio::EnsEMBL::Slice->new(
-#         -seq_region_name    => $self->ssname,
-#         -start              => $self->start,
-#         -end                => $self->end,
-#         -coord_system   => Bio::EnsEMBL::CoordSystem->new(
-#             -name           => $self->csname,
-#             -version        => $self->csver,
-#             -rank           => 2,
-#             -sequence_level => 0,
-#             -default        => 1,
-#         ),
-#     );
-#     return $slice;
-# }
+sub create_detached_slice {
+    my $self = shift @_;
+
+    my $slice = Bio::EnsEMBL::Slice->new(
+        -seq_region_name    => $self->ssname,
+        -start              => $self->start,
+        -end                => $self->end,
+        -coord_system   => Bio::EnsEMBL::CoordSystem->new(
+            -name           => $self->csname,
+            -version        => $self->csver,
+            -rank           => 2,
+            -sequence_level => 0,
+            -default        => 1,
+        ),
+    );
+    return $slice;
+}
 
 # ----------------------------------------------------------------------------------
 
@@ -363,7 +363,7 @@ sub get_all_PipelineGenes { # get genes from otter/pipeline/ensembl db
         die "Analysis name must be specified!";
     }
 
-    my $response = $self->Client()->otter_response_content(
+    my $response = $self->Client()->http_response_content(
         'GET',
         'get_genes',
         {
@@ -381,10 +381,14 @@ sub get_all_PipelineGenes { # get genes from otter/pipeline/ensembl db
     # my $gene_parser = Bio::Otter::FromXML->new([ split(/\n/, $response) ], $slice);
     # return $gene_parser->build_Gene_array($slice);
     
-    my $parser = Bio::Vega::Transform::Otter->new;
-    $parser->parse($response);
-    
-    return $parser->get_Genes;
+    if ($response) {
+        my $parser = Bio::Vega::Transform::Otter->new;
+        $parser->set_ChromosomeSlice($self->create_detached_slice);
+        $parser->parse($response);
+        return $parser->get_Genes;
+    } else {
+        return [];
+    }
 }
 
 1;
