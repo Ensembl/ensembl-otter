@@ -67,35 +67,15 @@ sub Bio::EnsEMBL::Gene::toXMLstring {
 
         # determine if gene is on a slice
     my $exons = $gene->get_all_Exons;
-    if (scalar(@$exons) && (my $firstexon=$exons->[0])) {
-        if($firstexon->can('slice')) { # new API
-            $coord_offset = $firstexon->slice()->start()-1;
-            $slice_length = $firstexon->slice()->length();
-        } else {    # old API
-            my $contig = $firstexon->contig();
-            if (defined($contig) && $contig->isa("Bio::EnsEMBL::Slice")) {
-                $coord_offset = $contig->chr_start()-1;
-                $slice_length = $contig->chr_end() - $contig->chr_start() + 1;
-            }
-        }
+    if (@$exons) {
+        my $slice = $exons->[0]->slice;
+        $coord_offset = $slice->start - 1;
+        $slice_length = $slice->length;
+    } else {
+        return '';
     }
 
-    my $str  = emit_opening_tag('locus',0);
-       $str .= emit_tagpair('stable_id', $gene->stable_id, 2);
-       $str .= emit_tagpair('description', $gene->description, 2);
-       $str .= emit_tagpair('analysis', $gene->analysis->logic_name, 2);
-       $str .= emit_tagpair('type', ($gene->can('biotype') ? $gene->biotype() : $gene->type()) , 2);
-
-
-    if($gene->can('gene_info')) {   # do we have an AnnotatedGene?
-            # was it originally a Gene re-blessed into AnnotatedGene?
-        if(my $ginfo = $gene->gene_info()) {
-            $str .= $ginfo->toXMLstring();
-        }
-    } elsif($gene->can('toXMLstring_info')) { # do we have a Loutre gene?
-        $str .= $gene->toXMLstring_info();
-    }
-
+    my $tsct_str = '';
     foreach my $transcript (sort by_stable_id_or_name @{$gene->get_all_Transcripts}) {
         if(!$allowed_transcript_analyses_hash
             or ($transcript->can('analysis')
@@ -113,14 +93,27 @@ sub Bio::EnsEMBL::Gene::toXMLstring {
                         }
                     }
                 }
-
             }
 
-            if($clear) {
-                $str .= $transcript->toXMLstring($coord_offset, $slice_length);
+            if ($clear) {
+                $tsct_str .= $transcript->toXMLstring($coord_offset, $slice_length);
             }
         }
     }
+    unless ($tsct_str) {
+        # A gene is nothing without transcripts!
+        return '';
+    }
+
+    my $str  = emit_opening_tag('locus',0);
+       $str .= emit_tagpair('stable_id', $gene->stable_id, 2);
+       $str .= emit_tagpair('description', $gene->description, 2);
+       $str .= emit_tagpair('analysis', $gene->analysis->logic_name, 2);
+       $str .= emit_tagpair('type', ($gene->can('biotype') ? $gene->biotype() : $gene->type()) , 2);
+    
+    $str .= $tsct_str;
+
+    $str .= $gene->toXMLstring_info();
 
     # We have to add the locus xrefs after the transcript xrefs or
     # the transcript will use the gene's xrefs when parsed on the client.
@@ -143,14 +136,7 @@ sub Bio::EnsEMBL::Transcript::toXMLstring {
        $str .= $dbentry->toXMLstring();
     }
 
-    if($transcript->can('transcript_info')) {   # do we have an AnnotatedTranscript?
-            # was it originally a Transcript re-blessed into AnnotatedTranscript?
-        if(my $tinfo = $transcript->transcript_info()) {
-            $str .= $tinfo->toXMLstring();
-        }
-    } elsif($transcript->can('toXMLstring_info')) { # do we have a Loutre transcript?
-        $str .= $transcript->toXMLstring_info();
-    }
+    $str .= $transcript->toXMLstring_info();
 
     my ($tsl, $translation_ok, $tran_low, $tran_high, $tl_start, $tl_end, $tl_stable_id);
     if($tsl = $transcript->translation()) {
@@ -167,6 +153,7 @@ sub Bio::EnsEMBL::Transcript::toXMLstring {
     }
 
     ### Trimming exons should not be part of XML formatting code.
+    my $exon_count = 0;
     EXON: foreach my $exon (@{$transcript->get_all_Exons()}) {
 
         # print STDERR "start=".$exon->start." end=".$exon->end." slice->length=".$slice_length."\n";
@@ -189,6 +176,7 @@ sub Bio::EnsEMBL::Transcript::toXMLstring {
             $translation_ok = 0;
         }
 
+        $exon_count++;
         $str .= emit_opening_tag('exon', 4);
         $str .= emit_tagpair('stable_id', $exon->stable_id(), 6);
 if($exon->start()<=0) { print STDERR "exon start is negative\n";}
@@ -225,7 +213,8 @@ if($exon->end()<=0) { print STDERR "exon end is negative\n";}
 
     $str .= emit_closing_tag('transcript', 2);
 
-    return $str;
+    # A transcript is nothing without exons!
+    return $exon_count ? $str : '';
 }
 
 
