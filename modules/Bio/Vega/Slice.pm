@@ -10,6 +10,21 @@ sub new {
   return $self;
 }
 
+# sub new_from_name {
+#     my ($pkg, $name) = @_;
+#     
+#     # chromosome:Otter:chr6-17:2666323:2834369:1
+#     my ($cs, $cs_ver, $sr_name, $start, $end, $strand) = split /:/, $name;
+# 
+#     return $pkg->new(
+#         -coord_system       => $cs,
+#         -start              => $start,
+#         -end                => $end
+#         -strand             => $strand,
+#         -seq_region_name    => $sr_name,
+#         );
+# }
+
 sub get_all_Clone_Info  {
 
   my ($self, $dbtype) = @_;

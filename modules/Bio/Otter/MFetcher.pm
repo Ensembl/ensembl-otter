@@ -12,7 +12,6 @@ use warnings;
 use Carp qw{ confess longmess };
 
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
-use Bio::Otter::DBSQL::DBAdaptor;
 use Bio::Vega::DBSQL::DBAdaptor;
 
 use base ('Bio::Otter::SpeciesDat');
@@ -190,7 +189,7 @@ sub satellite_dba {
     return $self->{_sdba}{$metakey} = $sdba;
 }
 
-sub get_slice { # codebase-independent version for scripts
+sub get_slice {
     my ($self, $dba, $cs, $name, $type, $start, $end, $csver) = @_;
 
     my $slice;
@@ -220,7 +219,7 @@ sub get_slice { # codebase-independent version for scripts
         $csver,
     );
 
-    if(not $slice) {
+    unless ($slice) {
         $self->log('Could not get a slice, probably not (yet) loaded into satellite db');
         $self->return_emptyhanded();
     }

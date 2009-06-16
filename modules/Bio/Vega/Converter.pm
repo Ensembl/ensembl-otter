@@ -21,16 +21,13 @@ my %ens2ace_phase = (
     );
 
 
-sub XML_to_ace {
-    my ($xml, $dataset_name) = @_;
+### Where should we add "-D" commands to the ace data?
 
-    my $parser = Bio::Vega::Transform::Otter->new;
-    $parser->parse($xml);
-
-    ### Where should we add "-D" commands to the ace data?
+sub make_ace {
+    my ($parser) = @_;
 
     # Assembly object from chromosome slice
-    my $ace_str = make_ace_assembly($parser, $dataset_name);
+    my $ace_str = make_ace_assembly($parser);
     
     # Objects for each genomic clone
     $ace_str .= make_ace_contigs($parser);
@@ -44,21 +41,26 @@ sub XML_to_ace {
     $ace_str .= make_ace_genomic_features($parser);
     
     
-    # Assembly tags
+    # # Assembly tags
+    # $ace_str .= make_ace_assembly_tags($parser);
 }
 
 sub make_ace_genes_transcripts {
     my ($parser) = @_;
     
-    my $slice_name = $parser->get_ChromosomeSlice->name;
-    my $slice_ace = Hum::Ace::AceText->new_from_class_and_name('Sequence', $slice_name);
-    my $tsct_str  = '';
-    my $gene_str  = '';
+    my $slice_ace   = new_slice_ace_object($parser);
+    my $slice_name  = make_assembly_name($parser);
+    my $tsct_str = '';
+    my $gene_str = '';
     
     foreach my $gene (@{$parser->get_Genes}) {
-        my $gene_name = $gene->name;
+        my $gene_name = get_first_attrib_value($gene, 'name');
         my $gene_ace = Hum::Ace::AceText->new_from_class_and_name('Locus', $gene_name);
         fill_locus_AceText($gene, $gene_ace);
+        
+        my $prefix = $gene->source eq 'havana'
+            ? ''
+            : $gene->source . ':';
         
         foreach my $tsct (@{$gene->get_all_Transcripts}) {
             my $name = get_first_attrib_value($tsct, 'name') || $tsct->stable_id;
@@ -73,11 +75,15 @@ sub make_ace_genes_transcripts {
             my $tsct_ace = Hum::Ace::AceText->new_from_class_and_name('Sequence', $name);
             $tsct_ace->add_tag('Source', $slice_name);
             $tsct_ace->add_tag('Locus', $gene_name);
+            my $method = $prefix . biotype_status2method($tsct->biotype, $tsct->status);
+            $tsct_ace->add_tag('Method', $method);
                         
             fill_transcript_AceText($tsct, $tsct_ace);
             
             $tsct_str .= $tsct_ace->ace_string;
         }
+        
+        $gene_str .= $gene_ace->ace_string;
     }
     
     return join("\n", $slice_ace->ace_string, $tsct_str, $gene_str);
@@ -94,18 +100,12 @@ sub add_attributes_to_Ace {
 sub get_first_attrib_value {
     my ($obj, $attrib_code) = @_;
     
-    if (my ($attrib) = @{$obj->get_all_Attributes($attrib_code)} {
+    if (my ($attrib) = @{$obj->get_all_Attributes($attrib_code)}) {
         return $attrib->value;
     } else {
         return;
     }
 }
-
-my %ens2ace_phase = (
-    0   => 1,
-    2   => 2,
-    1   => 3,
-    );
 
 sub fill_transcript_AceText {
     my ($tsct, $ace) = @_;
@@ -118,40 +118,31 @@ sub fill_transcript_AceText {
         $ace->add_tag('Transcript_author', $author->name);
     }
     
-    my $prefix = $tsct->source eq 'havana'
-        ? ''
-        : $tsct->source . ':';
-    my $method = $prefix . biotype_status2method($tsct->biotype, $tsct->status)
-    $ace->add_tag('Method', $method);
-
     add_attributes_to_Ace($tsct, 'remark',        $ace, 'Remark');
     add_attributes_to_Ace($tsct, 'hidden_remark', $ace, 'Annotation_remark');
     
     # Translation start and end
-    if (my $translation = $tran->translation) {
+    if (my $translation = $tsct->translation) {
         $ace->add_tag('Translation_id', $translation->stable_id);
-        $acc
-        $str .= sprintf qq{Translation_id "%s"\n}, $translation->stable_id;
-        $str .= "CDS ";
-        if ($strand == 1) {
+        if ($tsct->strand == 1) {
             $ace->add_tag('CDS',
-                mRNA_posn($tsct, $tran->coding_region_start),
-                mRNA_posn($tsct, $tran->coding_region_end),
+                mRNA_posn($tsct, $tsct->coding_region_start),
+                mRNA_posn($tsct, $tsct->coding_region_end),
                 );
         } else {
             $ace->add_tag('CDS',
-                mRNA_posn($tsct, $tran->coding_region_end),
-                mRNA_posn($tsct, $tran->coding_region_start),
+                mRNA_posn($tsct, $tsct->coding_region_end),
+                mRNA_posn($tsct, $tsct->coding_region_start),
                 );
         }
     }
-    elsif ($method =~ /pseudo/i) {
+    elsif ($tsct->biotype =~ /pseudo/i) {
         $ace->add_tag('CDS');
         $ace->add_tag('Pseudogene');
     }
     
     # Exon locations and stable IDs
-    my $exons = $tran->get_all_Exons;
+    my $exons = $tsct->get_all_Exons;
     if ($tsct->strand == 1) {
         my $tsct_offset = $tsct->start - 1;
         foreach my $exon (@$exons) {
@@ -226,17 +217,33 @@ sub fill_locus_AceText {
     }
 }
 
-sub make_ace_assembly {
-    my ($parser, $dataset_name) = @_;
+sub new_slice_ace_object {
+    my ($parser) = @_;
+    
+    my $slice_name = make_assembly_name($parser);
+    return Hum::Ace::AceText->new_from_class_and_name('Sequence', $slice_name);
+}
+
+sub make_assembly_name {
+    my ($parser) = @_;
     
     my $chr_slice = $parser->get_ChromosomeSlice;
-    my $slice_name = $chr_slice->name;
+    return sprintf "%s_%d-%d",
+        $chr_slice->seq_region_name,
+        $chr_slice->start,
+        $chr_slice->end;
+}
 
-    my $ace = Hum::Ace::AceText->new_from_class_and_name('Sequence', $slice_name);
+sub make_ace_assembly {
+    my ($parser) = @_;
+    
+    my $dataset_name = $parser->species or die "species tag is missing";
+
+    my $ace = new_slice_ace_object($parser);
     $ace->add_tag('Assembly');
     $ace->add_tag('Species', $dataset_name);
     
-    $ace->add_tag('Assembly_name', $chr_slice->seq_region_name);
+    $ace->add_tag('Assembly_name', $parser->get_ChromosomeSlice->seq_region_name);
     
     # Tiles are returned sorted in ascending order by their starts
     my @asm_tiles = $parser->get_Tiles;
@@ -262,7 +269,7 @@ sub make_ace_assembly {
     foreach my $tile ($parser->get_Tiles) {
         my ($chr_start, $chr_end, $ctg_slice, $attrib_list) = @$tile;
         my $name = $ctg_slice->seq_region_name;
-        my ($span_start, $span_end) = $ctg_spans{$name};
+        my ($span_start, $span_end) = @{$ctg_spans{$name}};
         if ($ctg_slice->strand == 1) {
             $ace->add_tag('AGP_Fragment', $name,
                 $span_start - $chr_offset,
@@ -298,12 +305,14 @@ sub make_ace_contigs {
 }
 
 sub make_ace_ctg {
-    my ($chr_start, $chr_end, $ctg_slice, $attrib_list) = @{shift};
+    my $tile = shift;
+    
+    my ($chr_start, $chr_end, $ctg_slice, $attrib_list) = @$tile;
     
     ### Authors don't get parsed from the XML
     
-    my $ace = Hum::Ace::Text->new_from_class_and_name('Sequence', $ctg_slice->seq_region_name);
-    foreach my $at ($attrib_list) {
+    my $ace = Hum::Ace::AceText->new_from_class_and_name('Sequence', $ctg_slice->seq_region_name);
+    foreach my $at (@$attrib_list) {
         my $code  = $at->code;
         my $value = $at->value;
         if ($code eq 'description') {
@@ -364,27 +373,54 @@ sub mRNA_posn {
 sub make_ace_genomic_features {
     my ($parser) = @_;
     
-    
+    my $feat_list = $parser->get_SimpleFeatures;
+    return unless @$feat_list;
+    my $ace = new_slice_ace_object($parser);
+    foreach my $feat (@$feat_list) {
+        # Ace format encodes strand by order of start + end
+        my $start = $feat->start;
+        my $end   = $feat->end;
+        if ($feat->strand == -1) {
+            ($start, $end) = ($end, $start);
+        }
+
+        my $score = $feat->score;
+        $score = 1 unless defined $score;
+
+        my $type;
+        if (my $ana = $feat->analysis) {
+            $type = $ana->logic_name
+                or confess "No logic name attached to Analysis object of Feature";
+        } else {
+            confess "No Analysis object attached to Feature";
+        }
+
+        if (my $label = $feat->display_label) {
+            $ace->add_tag('Feature', $type, $start, $end, $score, $label);
+        } else {
+            $ace->add_tag('Feature', $type, $start, $end, $score);
+        }
+    }
 }
 
+# sub make_ace_assembly_tags {
+#     my ($parser) = @_;
+#     
+# }
 
-# # Features (polyA signals and sites etc...)
-# if (defined $feature_set->[0]) {
-#     foreach my $sf (@$feature_set) {
-#         my $start = $sf->start;
-#         my $end   = $sf->end;
-#         if ($sf->strand == -1) {
-#             ($start, $end) = ($end, $start);
-#         }
-#         my $type  = $sf->analysis->logic_name or die "no logic_name on analysis object";
-#         my $score = $sf->score;
-#         $score = 1 unless defined $score;
-#         if (my $label = $sf->display_label) {
-#             $str .= qq{Feature "$type" $start $end $score "$label"\n};
-#         } else {
-#             $str .= qq{Feature "$type" $start $end $score\n};
-#         }
-#     }
+# # assembly tag data
+# if (defined $assembly_tag_set->[0]) {
+#   foreach my $at (@$assembly_tag_set) {
+# 
+#     # coords are same as XML from otter db (ie, all -1 <-> 1 and all start coord <= end coord)
+#     my ($start, $end);
+#     ($at->strand == 1) ? ($start = $at->start, $end = $at->end) : ($start=$at->end, $end=$at->start);
+# 
+#     my $tag_type = $at->tag_type;
+#     my $tag_info = $at->tag_info;
+# 
+#     $str .= qq{Assembly_tags "$tag_type" $start $end "$tag_info"\n};
+#   }
 # }
 
 

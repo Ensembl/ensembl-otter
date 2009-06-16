@@ -350,7 +350,7 @@ sub zMapWriteDotBlixemrc {
     print $blixem_rc
         $self->formatZmapDefaults(
             'blixem',
-            'default-fetch-mode' => $ENV{'PFETCH_WWW'} ? 'pfetch_http' : 'pfetch_socket',
+            'default-fetch-mode' => $ENV{'PFETCH_WWW'} ? 'pfetch-http' : 'pfetch-socket',
             ),
         $self->formatZmapDefaults(
             'pfetch-http',
@@ -497,8 +497,7 @@ sub zMapWindowDefaults {
         qw{
             feature-line-width          1
             feature-spacing             4.0
-            colour-column-highlight     CornSilk
-            colour-item-highlight       gold
+            colour-column-highlight     cornsilk
             colour-frame-0              #ffe6e6
             colour-frame-1              #e6ffe6
             colour-frame-2              #e6e6ff
@@ -1039,9 +1038,6 @@ sub open_clones{
 
     #sleep 20;
     $zmap->post_respond_handler(); # clear the handler...
-
-    my ($chr, $start, $end) = split(/\.|\-/, $self->slice_name);
-    warn "Running open_clones [$chr, $start, $end]...\n" if $ZMAP_DEBUG;
 
     # first open a zmap window...
     my $xremote = $self->zMapGetXRemoteClientByName($self->main_window_name());

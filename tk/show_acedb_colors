@@ -20,6 +20,7 @@ use Hum::Ace::Colors;
     for (my $i = 0; $i < @color_name; $i++) {
         my $name = $color_name[$i];
         my $hex = Hum::Ace::Colors::acename_to_webhex($name);
+        warn "$name = $hex\n";
         my $x1 = $size;
         my $x2 = $x1 + $size;
         my $y1 = $size + (($size + $pad) * $i);

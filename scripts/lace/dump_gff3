@@ -246,8 +246,8 @@ sub is_corf_transcript {
   my( $tsct ) = @_;
 
   my $is_corf = 0;
-  foreach my $at ( @{$tsct->get_all_Attributes('remark')} ) {
-    if ( $at->description eq "Annotation_remark" and $at->value =~ /corf/ ) {
+  foreach my $at ( @{$tsct->get_all_Attributes('hidden_remark')} ) {
+    if ($at->value =~ /corf/ ) {
       $is_corf = 1;
       last;
     }
@@ -320,11 +320,8 @@ sub write_transcript_gtf {
 
   my @rmks;
   foreach my $at ( @{$transcript->get_all_Attributes('remark')} ) {
-    my $rem = $at->description;
     my $val = do_escape($at->value);
-    unless ($rem eq "Annotation_remark") {
       push(@rmks, do_escape(",transcript_remark=$val") );
-    }
   }
   $notes .= join(', ', @rmks) if @rmks;
 

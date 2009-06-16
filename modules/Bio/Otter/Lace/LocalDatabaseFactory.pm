@@ -44,13 +44,15 @@ sub sessions_needing_recovery {
             my $pid = $1;
             next if $existing_pid{$pid};
             my $lace_dir = "$tmp_dir/$_";
-                # Skip if directory is not ours
-            my $owner = (stat($lace_dir))[4];
+
+            # Skip if directory is not ours
+            my ($owner, $mtime) = (stat($lace_dir))[4,9];
             next if $< != $owner;
 
             my $ace_wrm = "$lace_dir/database/ACEDB.wrm";
             if (-e $ace_wrm) {
-                push(@$to_recover, $lace_dir);
+                my $title = $self->get_title($lace_dir);
+                push(@$to_recover, [$lace_dir, $mtime, $title]);
             } else {
                 print STDERR "\nNo such file: '$ace_wrm'\nDeleting uninitialized database '$lace_dir'\n";
                 rmtree($lace_dir);
@@ -59,47 +61,31 @@ sub sessions_needing_recovery {
     }
     closedir VAR_TMP or die "Error reading directory '$tmp_dir' : $!";
 
+    # Sort by modification date, ascending
+    $to_recover = [sort {$a->[1] <=> $b->[1]} @$to_recover];
+    
     return $to_recover;
 }
 
-sub first_occurence {
-    my ($self, $filename, $pattern) = @_;
-
-    # warn "Looking for a value in $filename\n";
-    open ( my $fh, $filename ) or die "Can't read file '$filename'; $!";
-    foreach my $line (<$fh>) {
-        my ($value) = ($line =~ /$pattern/);
-        if($value) {
-            return $value;
+sub get_title {
+    my ($self, $home_dir) = @_;
+    
+    my $displays_file = "$home_dir/wspec/displays.wrm";
+    open my $DISP, $displays_file or die "Can't read '$displays_file'; $!";
+    my $title;
+    while (<$DISP>) {
+        if (/_DDtMain.*-t\s*"([^"]+)/) {
+            $title = $1;
+            last;
         }
     }
-    close $fh;
-    warn "\n\nNo value for '$pattern' found in $filename\n\n";
-}
-
-sub make_title {
-    my ($self, $adb_or_dir) = @_ ;
-
-    my $tail    = $self->get_tail($adb_or_dir);
-    my $species = $self->get_species($adb_or_dir);
-
-    return "$species $tail";
-}
-
-sub get_species {
-	my ($self, $adb_or_dir) = @_;
-	
-	my $dir = ref($adb_or_dir) ? $adb_or_dir->home : $adb_or_dir;
-	
-	return $self->first_occurence($dir.'/rawdata/otter.ace', qr{^Species\s+"(.*)"});
-}
-
-sub get_tail {
-	my ($self, $adb_or_dir) = @_;
-	
-	my $dir = ref($adb_or_dir) ? $adb_or_dir->home : $adb_or_dir;
-	
-	return $self->first_occurence($dir.'/wspec/displays.wrm', qr{_DDtMain.*-t\s*"(?:lace\s+)(.*)"});
+    close $DISP or die "Error reading '$displays_file'; $!";
+    
+    if ($title) {
+        return $title;
+    } else {
+        die "Failed to fetch title from '$displays_file'";        
+    }
 }
 
 sub recover_session {
@@ -113,7 +99,16 @@ sub recover_session {
     $adb->error_flag(1);
     my $home = $adb->home;
     rename($dir, $home) or die "Cannot move '$dir' to '$home'; $!";
-    my $title = "Recovered lace ". $self->make_title($adb);
+    
+    # All the info we need about the genomic region
+    # in the lace database is saved in the region XML
+    # dot file.
+    $adb->recover_smart_slice_from_region_xml_file;
+
+    my $title = $self->get_title($adb->home);
+    unless ($title =~ /^Recovered/) {
+        $title = "Recovered $title";
+    }
     $adb->title($title);
 
     return $adb;
@@ -149,7 +144,9 @@ sub make_home_path {
     my ($self, $write_access) = @_;
     
     my $readonly_tag = $write_access ? '' : '.ro';
-    my $i = ++$self->{'_last_db'};
+    my $i = ++$self->{'_last_db'};  # Could just use a class variable,
+                                    # then we wouldn't have to make sure that
+                                    # we only create one LocalDatabaseFactory
     return "/var/tmp/lace.${$}${readonly_tag}_$i";
 }
 

@@ -701,7 +701,6 @@ sub otter_to_ace {
       $path = $slice->get_tiling_path;
     }
 
-    my $chr                   = $slice->chr_name;
     my $start_of_slice_in_chr = $slice->chr_start;
 
         # multiple contig occurences with identical names must be grouped

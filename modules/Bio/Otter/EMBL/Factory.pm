@@ -801,8 +801,8 @@ sub get_keywords_from_otter {
 
     my @keywords_txt;
 
-    foreach my $desc ( @{$ctginfo->get_all_Attributes} ){
-      push(@keywords_txt, $desc->value) if $desc->code eq 'keyword';
+    foreach my $desc ( @{$ctginfo->get_all_Attributes('keyword')} ){
+      push(@keywords_txt, $desc->value);
     }
 
     unless (@keywords_txt) {
@@ -848,14 +848,14 @@ sub _do_assembly_tag {
   foreach my $mf (@$misc_feats) {
 
     foreach my $atag ( @{$mf->get_all_Attributes} ){
-
+        my $code = $atag->code;
       my $feat = $set->newFeature;
 
       # assembly_tag types: Clone_left_end, Clone_right_end and Misc
       #                     are assigned "misc_feature" key,
       #                     whereas type "unsure" is assigned "unsure" key
 
-      if ( $atag->code eq "atag_Unsure" ){
+      if ( $code eq "atag_Unsure" ){
         $feat->key('unsure');
       }
       else {
@@ -870,11 +870,11 @@ sub _do_assembly_tag {
       }
 
       # add qualifier
-      if ( $atag->name =~ /^Clone.+/ ){
-        $feat->addQualifierStrings('note', $&.": ".$atag->value)
+      if ($code eq 'atag_CLE' or $code eq 'atag_CRE') {
+        $feat->addQualifierStrings('note', $atag->name . ": " . $atag->value);
       }
       else {
-        $feat->addQualifierStrings('note', $atag->value)
+        $feat->addQualifierStrings('note', $atag->value);
       }
     }
   }

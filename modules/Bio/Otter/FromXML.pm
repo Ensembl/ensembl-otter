@@ -1,5 +1,10 @@
 package Bio::Otter::FromXML;
 
+# This module is used by Bio::Otter::Lace::Slice to create
+# genes from XML.  It should be eliminated and the code in
+# Bio::VEGA::Transform::Otter used instead.  (I think it was
+# written because we still had the old API on the client side.)
+
 use strict;
 use warnings;
 use Carp qw{ cluck confess };

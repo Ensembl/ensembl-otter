@@ -3,6 +3,8 @@ package Bio::Otter::Lace::Slice;
 use strict;
 use warnings;
 
+use Bio::EnsEMBL::Slice;
+
     # parsing is now performed by a table-driven parser:
 use Bio::Otter::Lace::ViaText qw( %LangDesc &ParseFeatures );
 
@@ -11,6 +13,9 @@ use Bio::Otter::FromXML;
 
     # so we only parse the tiling path here:
 use Bio::Otter::Lace::CloneSequence;
+
+use Bio::Vega::Transform::Otter;
+
 
 sub new {
     my( $pkg,
@@ -24,6 +29,9 @@ sub new {
         $start,  # in the given coordinate system
         $end,    # in the given coordinate system
     ) = @_;
+    
+    # chromosome:Otter:chr6-17:2666323:2834369:1
+    
     
     return bless {
         '_Client'   => $Client,
@@ -111,7 +119,11 @@ sub length {
 
 sub name {
     my( $self ) = @_;
-    return $self->seqname().'.'.$self->start().'-'.$self->end();
+
+    return sprintf "%s_%d-%d",
+        $self->ssname,
+        $self->start,
+        $self->end;
 }
 
 
@@ -130,17 +142,23 @@ sub toHash {
     };
 }
 
-sub create_detached_slice {
-    my $self = shift @_;
-
-    my $slice = Bio::EnsEMBL::Slice->new(
-        -chr_name      => $self->seqname(),
-        -chr_start     => $self->start(),
-        -chr_end       => $self->end(),
-        -assembly_type => $self->ssname(),
-    );
-    return $slice;
-}
+# sub create_detached_slice {
+#     my $self = shift @_;
+# 
+#     my $slice = Bio::EnsEMBL::Slice->new(
+#         -seq_region_name    => $self->ssname,
+#         -start              => $self->start,
+#         -end                => $self->end,
+#         -coord_system   => Bio::EnsEMBL::CoordSystem->new(
+#             -name           => $self->csname,
+#             -version        => $self->csver,
+#             -rank           => 2,
+#             -sequence_level => 0,
+#             -default        => 1,
+#         ),
+#     );
+#     return $slice;
+# }
 
 # ----------------------------------------------------------------------------------
 
@@ -358,10 +376,15 @@ sub get_all_PipelineGenes { # get genes from otter/pipeline/ensembl db
         },
     );
 
-    my $slice = $self->create_detached_slice();
-
-    my $gene_parser = Bio::Otter::FromXML->new([ split(/\n/, $response) ], $slice);
-    return $gene_parser->build_Gene_array($slice);
+    # my $slice = $self->create_detached_slice();
+    # 
+    # my $gene_parser = Bio::Otter::FromXML->new([ split(/\n/, $response) ], $slice);
+    # return $gene_parser->build_Gene_array($slice);
+    
+    my $parser = Bio::Vega::Transform::Otter->new;
+    $parser->parse($response);
+    
+    return $parser->get_Genes;
 }
 
 1;

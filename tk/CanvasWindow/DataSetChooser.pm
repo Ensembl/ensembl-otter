@@ -78,9 +78,9 @@ sub Client {
 sub LocalDatabaseFactory {
     my $self = shift @_;
 
-    $self->{_ldf} ||= Bio::Otter::Lace::LocalDatabaseFactory->new();
+    $self->{'_ldf'} ||= Bio::Otter::Lace::LocalDatabaseFactory->new();
 
-    return $self->{_ldf};
+    return $self->{'_ldf'};
 }
 
 sub select_dataset {
@@ -193,7 +193,7 @@ sub recover_some_sessions {
 
         my $rss_dialog = $self->canvas->toplevel->DialogBox(
             -title => 'Recover sessions',
-            -buttons => ['Recover selected sessions', 'Not at this time, thanks']
+            -buttons => ['Recover', 'Cancel'],
         );
 
         $rss_dialog->add('Label',
@@ -202,15 +202,9 @@ sub recover_some_sessions {
             -text    => "You have one or more lace sessions on this computer which are not associated with a running otterlace process.\n\n This should not happen, except where lace has crashed or it has been exited by pressing the exit button in the dataset chooser window.\n\n You will need to recover and exit these sessions, or there may be locks left in the otter database or some of your work which has not been saved.\n\n Please contact anacode if you still get an error when you attempt to exit the session, or have information about the error which caused a session to be left.\n\n" 
         )->pack(-side=>'top', -fill=>'x', -expand=>1);
         
-        # this sort is inefficient, but the list shouldn't be too long...
-        $recoverable_sessions = [
-            sort {
-                $ldf->make_title($a) cmp $ldf->make_title($b)
-            } @$recoverable_sessions
-        ];
-        
-        foreach my $session_dir (@$recoverable_sessions) {
-            my $full_session_title = $ldf->make_title($session_dir).' in '.$session_dir;
+        foreach my $rec (@$recoverable_sessions) {
+            my ($session_dir, $date, $title) = @$rec;
+            my $full_session_title = sprintf "%s - %s", scalar localtime($date), $title;
             my $cb = $rss_dialog->add('Checkbutton',
                 -text     => $full_session_title,
                 -variable => \$session_wanted{$session_dir},
@@ -222,13 +216,15 @@ sub recover_some_sessions {
 
         my $answer = $rss_dialog->Show();
 
-        my @selected_dirs = grep { $session_wanted{$_} } @$recoverable_sessions;
+        my @selected_recs = grep { $session_wanted{$_->[0]} } @$recoverable_sessions;
 
-        if($answer=~/recover/i && @selected_dirs) {
+        if ($answer=~/recover/i && @selected_recs) {
             eval{
                 my $canvas = $self->canvas;
 
-                foreach my $session_dir (@selected_dirs) {
+                foreach my $rec (@selected_recs) {
+                    my ($session_dir, $date, $title) = @$rec;
+                    
                     # Bring up GUI
                     my $adb = $ldf->recover_session($session_dir);
                     
@@ -244,6 +240,8 @@ sub recover_some_sessions {
                     $lc->change_checkbutton_state('deselect');
                     $lc->load_filters;
                     $lc->top->withdraw;
+
+                    $self->{'_recovered'}{$lc} = $lc;
                 }
             };
             if ($@) {
