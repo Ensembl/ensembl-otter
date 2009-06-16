@@ -113,7 +113,8 @@ sub Bio::EnsEMBL::Gene::toXMLstring {
     
     $str .= $tsct_str;
 
-    $str .= $gene->toXMLstring_info();
+    $str .= $gene->toXMLstring_info
+        if $gene->can('toXMLstring_info');
 
     # We have to add the locus xrefs after the transcript xrefs or
     # the transcript will use the gene's xrefs when parsed on the client.
@@ -136,7 +137,8 @@ sub Bio::EnsEMBL::Transcript::toXMLstring {
        $str .= $dbentry->toXMLstring();
     }
 
-    $str .= $transcript->toXMLstring_info();
+    $str .= $transcript->toXMLstring_info
+        if $transcript->can('toXMLstring_info');
 
     my ($tsl, $translation_ok, $tran_low, $tran_high, $tl_start, $tl_end, $tl_stable_id);
     if($tsl = $transcript->translation()) {
