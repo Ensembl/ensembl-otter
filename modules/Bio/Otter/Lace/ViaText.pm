@@ -13,6 +13,7 @@ use Bio::EnsEMBL::Analysis;
 use Bio::EnsEMBL::DnaDnaAlignFeature;
 use Bio::EnsEMBL::DnaPepAlignFeature;
 use Bio::EnsEMBL::PredictionTranscript;
+use Bio::EnsEMBL::PredictionExon;
 use Bio::EnsEMBL::RepeatConsensus;
 use Bio::EnsEMBL::RepeatFeature;
 use Bio::EnsEMBL::SimpleFeature;
@@ -23,7 +24,7 @@ use Bio::EnsEMBL::Map::Ditag;
 use Bio::EnsEMBL::Map::DitagFeature;
 use Bio::Otter::DnaDnaAlignFeature;
 use Bio::Otter::DnaPepAlignFeature;
-use Bio::Otter::HitDescription;
+use Bio::Vega::HitDescription;
 
 use base ('Exporter');
 our @EXPORT    = ();
@@ -38,7 +39,7 @@ our %LangDesc = (
     },
 
     'HitDescription' => {
-        -constructor => 'Bio::Otter::HitDescription',
+        -constructor => 'Bio::Vega::HitDescription',
         -optnames    => [ qw(hit_name db_name taxon_id hit_length description) ],
         -hash_by     => 'hit_name',
     },
@@ -101,19 +102,20 @@ our %LangDesc = (
         -call_args   => [['analysis' => undef], ['priority' => undef], ['map_weight' => undef]],
     },
 
-    'Ditag'          => {
-        -constructor => sub{ return Bio::EnsEMBL::Map::Ditag->new_fast({}); },
-        -optnames    => [ qw(name type sequence dbID) ],
-        -hash_by     => 'dbID',
+    'Ditag' => {
+        -constructor    => 'Bio::EnsEMBL::Map::Ditag',
+        -optnames       => [ qw(name type sequence dbID) ],
+        -hash_by        => 'dbID',
+        -fast           => 1
     },
     'DitagFeature'   => {
-        -constructor => sub{ return Bio::EnsEMBL::Map::DitagFeature->new_fast({}); },
+        -constructor => 'Bio::EnsEMBL::Map::DitagFeature',
         -optnames    => [ qw(start end strand hit_start hit_end hit_strand ditag_side ditag_pair_id) ],
         -reference   => [ 'Ditag', '', 'ditag' ],
             # group_by is used *only* by the parser for storing things in arrays in the feature_hash
             #          Hashing is similar to hash_by, but there is an additinal level of structure.
         -group_by    => sub{ my $self=shift; return $self->ditag()->dbID().'.'.$self->ditag_pair_id();},
-        -call_args   => [['ditypes'  => undef => ','], ['analysis' => undef]],
+        -call_args   => [['ditypes'  => undef], ['analysis' => undef]],
     },
 
     'PredictionTranscript' => {
@@ -124,7 +126,6 @@ our %LangDesc = (
         -call_args   => [['analysis' => undef], ['load_exons' => 1]],
     },
     'PredictionExon' => {
-     -oldconstructor => 'Bio::EnsEMBL::Exon', # there was no PredictionExon in EnsEMBL v.19 code
         -constructor => 'Bio::EnsEMBL::PredictionExon',
         -optnames    => [ qw(start end strand phase p_value score) ],
         -add_one_cmp => [ 'PredictionTranscript', 'add_Exon' ],
@@ -221,7 +222,7 @@ sub ParseFeatures {
     my $resplines_ref = [ split(/\n/,$$response_ref) ];
 
     foreach my $respline (@$resplines_ref) {
-        my @optvalues  = split(/\t/,$respline);
+        my @optvalues  = split(/\t/, $respline);
 
         unless (@optvalues) {
             confess "Blank line in output - due to newline on end of hit description?";
@@ -231,20 +232,32 @@ sub ParseFeatures {
         my $feature_type    = shift @optvalues; # 'SimpleFeature'|'HitDescription'|...|'PredictionExon'
         my $feature_subhash = $LangDesc{$feature_type};
 
-        my $constructor     =  $feature_subhash->{-oldconstructor} || $feature_subhash->{-constructor};
-        my $feature = ref $constructor ? &$constructor() : $constructor->new();
+        my $constructor = $feature_subhash->{-constructor};
+        my $optnames    = $feature_subhash->{-optnames};
+        my $feature;
+        if (ref $constructor) {
+            $feature = $constructor->();
+            for(my $i=0; $i < @$optnames; $i++) {
+                my $method = $optnames->[$i];
+                $feature->$method($optvalues[$i]);
+            }
+        } else {
+            my @args = ();
+            for (my $i = 0; $i < @$optnames; $i++) {
+                my $method = $optnames->[$i];
+                my $value  = $optvalues[$i];
+                # EnsEMBL appears to stick to the convention that the labelled
+                # arguments to new are of the form "-method_name"
+                push(@args, "-$method", $value);
+            }
+            $feature = $constructor->new(@args);
+        }
 
         my $logic_name = $analysis_name;
         my @analysis = split(/,/,$analysis_name);
         if($feature->can('analysis') && (!$analysis_name || scalar(@analysis) > 1 )) {
         	$logic_name = pop @optvalues;
     	}
-
-        my $optnames        = $feature_subhash->{-optnames};
-        for(my $i=0; $i < @$optnames; $i++) {
-            my $method = $optnames->[$i];
-            $feature->$method($optvalues[$i]);
-        }
 
         if(my $ref_link = $feature_subhash->{-reference}) { # reference link is one-way (the referenced object doesn't know its referees)
             my ($referenced_feature_type, $ref_field, $ref_setter, $ref_getter ) = @$ref_link;
@@ -272,7 +285,7 @@ sub ParseFeatures {
 
             # --------- different ways of storing features: ----------------
         if(my $hash_by = $feature_subhash->{-hash_by}) { # double-hash it into HoH (referenced objects):
-
+            
             $feature_hash{$feature_type}{$feature->$hash_by()} = $feature;
 
         } elsif(my $group_by = $feature_subhash->{-group_by}) { # double-hash-push it into HoHoL (ditag_features):

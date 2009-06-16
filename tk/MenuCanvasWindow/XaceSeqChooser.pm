@@ -772,10 +772,10 @@ sub GenomicFeatures {
     my ($self, $gfs) = @_ ;
 
     if(defined($gfs)){
-        $self->{_gfs} = $gfs;
-        weaken($self->{_gfs});
+        $self->{'_gfs'} = $gfs;
+        weaken($self->{'_gfs'});
     }
-    return $self->{_gfs};
+    return $self->{'_gfs'};
 }
 
 sub launch_GenomicFeatures {
@@ -2092,9 +2092,6 @@ sub DESTROY {
         # warn "lock refresh should now happen\n";
         $sn->refresh_column(7) ; ## locks column
         # warn "lock refresh should have happened\n";
-        # need to clean up the sequenceNotes reference
-        ### No you don't!
-        ###delete $self->{'_sequence_notes'} ;
     }
 }
 

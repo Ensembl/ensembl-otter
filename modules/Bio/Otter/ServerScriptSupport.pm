@@ -127,7 +127,7 @@ sub data_dir {
 
     # overloading because certain species may need to be masked
 sub load_species_dat_file {
-    my ($self) = @_;
+    my $self = shift;
 
     $self->SUPER::load_species_dat_file(@_);
 
@@ -135,11 +135,8 @@ sub load_species_dat_file {
         # External users only see datasets listed after their names in users.txt file
         $self->keep_only_datasets($self->allowed_datasets);
     }
-    if ($self->show_restricted_datasets) {
-        $self->remove_restricted_datasets($self->allowed_datasets);
-    } else {
-        $self->remove_restricted_datasets({});
-    }
+    my $datasets_to_keep = $self->show_restricted_datasets ? $self->allowed_datasets : {};
+    $self->remove_restricted_datasets($datasets_to_keep);
 }
 
 sub allowed_datasets {

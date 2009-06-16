@@ -15,10 +15,11 @@ use Bio::EnsEMBL::Analysis;
 use Bio::EnsEMBL::Slice;
 use Bio::EnsEMBL::CoordSystem;
 use Bio::EnsEMBL::Attribute;
+use Bio::EnsEMBL::DBEntry;
 use Bio::Vega::Author;
 use Bio::Vega::ContigInfo;
 use Bio::Vega::Evidence;
-use Bio::Vega::AssemblyTag;
+# use Bio::Vega::AssemblyTag;
 use Bio::Vega::Utils::GeneTranscriptBiotypeStatus 'method2biotype_status';
 
 #use Data::Dumper;   # For debugging
@@ -28,12 +29,14 @@ use Bio::Vega::Utils::GeneTranscriptBiotypeStatus 'method2biotype_status';
 use base 'Bio::Vega::Transform';
 
 my (
+    %species,
     %exon_list,
     %evidence_list,
     %gene_list,
-    %assembly_tag_list,
+    # %assembly_tag_list,
     %transcript_list,
     %feature_list,
+    %xref_list,
     %logic_ana,
     %coord_system,
     %tiles,
@@ -51,12 +54,14 @@ my (
 sub DESTROY {
     my ($self) = @_;
 
+    delete $species{$self};
     delete $exon_list{$self};
     delete $evidence_list{$self};
     delete $gene_list{$self};
-    delete $assembly_tag_list{$self};
+    # delete $assembly_tag_list{$self};
     delete $transcript_list{$self};
     delete $feature_list{$self};
+    delete $xref_list{$self};
     delete $logic_ana{$self};
     delete $coord_system{$self};
     delete $tiles{$self};
@@ -86,15 +91,17 @@ sub initialize {
             locus               => 'build_Locus',
             evidence            => 'build_Evidence',
             feature             => 'build_Feature',
-            assembly_tag        => 'build_AssemblyTag',
+            xref                => 'build_XRef',
+            # assembly_tag        => 'build_AssemblyTag',
             sequence_fragment   => 'build_SequenceFragment',
             dna                 => 'build_DNA',
+            otter               => 'save_species',
+
             # We don't currently do anything on encountering
             # these end tags:
             exon_set            => 'do_nothing',
             evidence_set        => 'do_nothing',
             feature_set         => 'do_nothing',
-            otter               => 'do_nothing',
         }
     );
 
@@ -108,10 +115,10 @@ sub initialize {
     # private to this instance so it is free to mess with them.
     $chr_coord_system{$self} = Bio::EnsEMBL::CoordSystem->new(
         -name           => 'chromosome',
+        -version        => 'Otter',
         -rank           => 2,
         -sequence_level => 0,
         -default        => 1,
-        -version        => 'Otter',
     );
     
     $ctg_coord_system{$self} = Bio::EnsEMBL::CoordSystem->new(
@@ -123,6 +130,25 @@ sub initialize {
 }
 
 ## parser builder methods to build otter objects
+
+
+sub save_species {
+    my ($self, $data) = @_;
+    
+    $species{$self} = $data->{'species'};
+}
+
+sub species {
+    my ($self) = @_;
+    
+    return $species{$self};
+}
+
+sub chromosome_name {
+    my ($self) = @_;
+    
+    return $chromosome_name{$self};
+}
 
 sub build_SequenceFragment {
     my ($self, $data) = @_;
@@ -232,6 +258,12 @@ sub build_SequenceFragment {
     push @$tile_list, $tile;
 }
 
+sub get_Analysis {
+    my ($self, $name) = @_;
+    
+    my $ana = $logic_ana{$self}{$name} ||= Bio::EnsEMBL::Analysis->new(-logic_name => $name);
+    return $ana;
+}
 
 sub build_Evidence {
     my ($self, $data) = @_;
@@ -244,6 +276,21 @@ sub build_Evidence {
     push @$list, $evidence;
 }
 
+sub build_XRef {
+    my ($self, $data) = @_;
+
+    my $xref = Bio::EnsEMBL::DBEntry->new(
+        -primary_id     => $data->{'primary_id'},
+        -display_id     => $data->{'display_id'},
+        -version        => $data->{'version'},
+        -release        => $data->{'release'},
+        -dbname         => $data->{'dbname'},
+        );
+    
+    my $list = $xref_list{$self} ||= [];
+    push @$list, $xref;
+}
+
 sub build_DNA {
     my ($self, $data) = @_;
 
@@ -253,7 +300,7 @@ sub build_DNA {
 sub build_Feature {
     my ($self, $data) = @_;
 
-    my $ana = $logic_ana{$self}{$data->{'type'}} ||= Bio::EnsEMBL::Analysis->new(-logic_name => $data->{'type'});
+    my $ana = $self->get_Analysis($data->{'type'});
     my $chr_slice = $self->get_ChromosomeSlice;
 
        ##convert xml coordinates which are in chromosomal coords - to feature coords
@@ -272,26 +319,26 @@ sub build_Feature {
     push @$list, $feature;
 }
 
-sub build_AssemblyTag {
-    my ($self, $data) = @_;
-
-    my $chr_slice = $self->get_ChromosomeSlice;
-
-    #convert xml coordinates which are in chromosomal coords - to tag coords
-    my $slice_offset = $chr_slice->start - 1;
-
-    my $at = Bio::Vega::AssemblyTag->new(
-        -start     => $data->{'contig_start'} - $slice_offset,
-        -end       => $data->{'contig_end'}   - $slice_offset,
-        -strand    => $data->{'contig_strand'},
-        -tag_type  => $data->{'tag_type'},
-        -tag_info  => $data->{'tag_info'},
-        -slice     => $chr_slice,
-    );
-
-    my $list = $assembly_tag_list{$self} ||= [];
-    push @$list, $at;
-}
+# sub build_AssemblyTag {
+#     my ($self, $data) = @_;
+# 
+#     my $chr_slice = $self->get_ChromosomeSlice;
+# 
+#     #convert xml coordinates which are in chromosomal coords - to tag coords
+#     my $slice_offset = $chr_slice->start - 1;
+# 
+#     my $at = Bio::Vega::AssemblyTag->new(
+#         -start     => $data->{'contig_start'} - $slice_offset,
+#         -end       => $data->{'contig_end'}   - $slice_offset,
+#         -strand    => $data->{'contig_strand'},
+#         -tag_type  => $data->{'tag_type'},
+#         -tag_info  => $data->{'tag_info'},
+#         -slice     => $chr_slice,
+#     );
+# 
+#     my $list = $assembly_tag_list{$self} ||= [];
+#     push @$list, $at;
+# }
 
 sub build_Exon {
     my ($self, $data) = @_;
@@ -305,6 +352,7 @@ sub build_Exon {
         -stable_id => $data->{'stable_id'},
         -slice     => $chr_slice,
     );
+        
     my $frame=$data->{'frame'};
     if (defined($frame)) {
         $exon->phase((3-$frame)%3);
@@ -319,19 +367,31 @@ sub build_Exon {
     push @$list, $exon;
 }
 
+sub add_xrefs_to_object {
+    my ($self, $obj) = @_;
+    
+    my $xref_list = delete($xref_list{$self})
+        or return;
+    foreach my $xref (@$xref_list) {
+        $obj->add_DBEntry($xref);
+    }
+}
+
 sub build_Transcript {
     my ($self, $data) = @_;
 
     my $exons = delete $exon_list{$self};
     my $chr_slice = $self->get_ChromosomeSlice;
 
-    my $ana = $logic_ana{$self}{'Otter'} ||= Bio::EnsEMBL::Analysis->new(-logic_name => 'Otter');
-
+    my $ana = $self->get_Analysis($data->{'analysis'} || 'Otter');
+    
     my $transcript = Bio::Vega::Transcript->new(
         -stable_id => $data->{'stable_id'},
         -analysis  => $ana,
         -slice     => $chr_slice,
     );
+
+    $self->add_xrefs_to_object($transcript);
 
   ##translation start - end
   my $tran_start_pos = $data->{'translation_start'};
@@ -467,7 +527,7 @@ sub build_Locus {
     ## transcript author group has been temporarily set to 'anything' ??
 
     my $chr_slice = $self->get_ChromosomeSlice;
-    my $ana = $logic_ana{$self}{'Otter'} ||= Bio::EnsEMBL::Analysis->new(-logic_name => 'Otter');
+    my $ana = $self->get_Analysis($data->{'analysis'} || 'Otter');
     my $gene = Bio::Vega::Gene->new(
         -stable_id => $data->{'stable_id'},
         -slice => $chr_slice,
@@ -475,6 +535,7 @@ sub build_Locus {
         -analysis => $ana,
         );
 
+    $self->add_xrefs_to_object($gene);
 
     # biotype, source & status framed from gene type
     my ($source, $type);
@@ -593,11 +654,11 @@ sub get_Genes {
     return $gene_list{$self} || [];
 }
 
-sub get_AssemblyTags {
-    my $self=shift;
-
-    return $assembly_tag_list{$self} || [];
-}
+# sub get_AssemblyTags {
+#     my $self=shift;
+# 
+#     return $assembly_tag_list{$self} || [];
+# }
 
 sub get_SimpleFeatures {
     my $self=shift;

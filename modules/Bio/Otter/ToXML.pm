@@ -86,9 +86,6 @@ sub Bio::EnsEMBL::Gene::toXMLstring {
        $str .= emit_tagpair('analysis', $gene->analysis->logic_name, 2);
        $str .= emit_tagpair('type', ($gene->can('biotype') ? $gene->biotype() : $gene->type()) , 2);
 
-    for my $dbentry (@{$gene->get_all_DBEntries}) {
-        $str .= $dbentry->toXMLstring();
-    }
 
     if($gene->can('gene_info')) {   # do we have an AnnotatedGene?
             # was it originally a Gene re-blessed into AnnotatedGene?
@@ -125,6 +122,12 @@ sub Bio::EnsEMBL::Gene::toXMLstring {
         }
     }
 
+    # We have to add the locus xrefs after the transcript xrefs or
+    # the transcript will use the gene's xrefs when parsed on the client.
+    for my $dbentry (@{$gene->get_all_DBEntries}) {
+        $str .= $dbentry->toXMLstring();
+    }
+    
     $str .= emit_closing_tag('locus',0);
 
     return $str;
@@ -210,16 +213,14 @@ if($exon->end()<=0) { print STDERR "exon end is negative\n";}
     }
 
     if( $translation_ok ) {
-        $str .= emit_opening_tag('translation', 4);
-            $str .= emit_tagpair('start', $tl_start, 6);
-            $str .= emit_tagpair('end', $tl_end, 6);
-            $str .= emit_tagpair('stable_id', $tl_stable_id, 6);
+        $str .= emit_tagpair('translation_start', $tl_start, 6);
+        $str .= emit_tagpair('translation_end', $tl_end, 6);
+        $str .= emit_tagpair('translation_stable_id', $tl_stable_id, 6);
 
-            for my $dbentry (@{$tsl->get_all_DBEntries}) {
-                $str .= $dbentry->toXMLstring();
-            }
+        # for my $dbentry (@{$tsl->get_all_DBEntries}) {
+        #     $str .= $dbentry->toXMLstring();
+        # }
 
-        $str .= emit_closing_tag('translation', 4);
     }
 
     $str .= emit_closing_tag('transcript', 2);

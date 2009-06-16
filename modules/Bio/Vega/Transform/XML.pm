@@ -26,8 +26,8 @@ sub generate_OtterXML {
 
     my $ot=$self->prettyprint('otter');
     $ot->indent($indent);
-    my $ds_name = $odba->species;
-    $ot->attribvals($self->prettyprint('species', $ds_name));
+    my $dataset_name = $odba->species;
+    $ot->attribvals($self->prettyprint('species', $dataset_name));
     $ot->attribobjs($self->generate_SequenceSet($slice, $odba, $genes, $sf_list));
     return $self->formatxml($ot);
 }

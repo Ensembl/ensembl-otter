@@ -623,7 +623,11 @@ sub run_lace {
     ### Prevent opening of sequences already in lace sessions
     return unless $self->set_selected_from_canvas;
 
-    my $title = 'lace '. $self->name . $self->selected_sequence_string;
+    my $title = join(' ',
+        $self->SequenceSetChooser->DataSet->name,
+        $self->name,
+        $self->selected_clones_string,
+        );
     $self->_open_SequenceSet($title) ;
 }
 
@@ -663,7 +667,7 @@ sub run_lace_on_slice{
 }
 
 ## allows Searched SequenceNotes.pm to inherit the main part of the run_lace method
-sub _open_SequenceSet{
+sub _open_SequenceSet {
     my ($self, $title) = @_ ;
         
     my $cl = $self->Client;
@@ -681,17 +685,16 @@ sub _open_SequenceSet{
     $adb->make_database_directory;
     $adb->smart_slice($smart_slice);
 
-    if($adb_write_access){
+    if ($adb_write_access) {
         # only lock the region if we have write access.
         eval{
-            #$adb->try_and_lock_the_block($smart_slice);
-            $adb->try_and_lock_the_block();
+            $adb->try_to_lock_the_block;
         };
         
-        if($@){ 
+        if ($@) { 
             $adb->error_flag(0);
             $adb->write_access(0);  # Stops AceDatabase DESTROY from trying to unlock clones
-            if ($@ =~ /Clones locked/){
+            if ($@ =~ /Clones locked/) {
                 # if our error is because of locked clones, display these to the user
                 my $message = "Some of the clones you are trying to open are locked\n";
                 my @lines = split /\n/ , $@ ;
@@ -702,7 +705,7 @@ sub _open_SequenceSet{
                     }
                 }
                 $self->message( $message  );
-            }else{
+            } else {
                 $self->exception_message($@, 'Error initialising database');
                 print $@;
             }
@@ -718,7 +721,7 @@ sub _open_SequenceSet{
         $self->exception_message($@, 'Error initialising database');
         ### Explicitly call cleanup
         return;
-    }    
+    }
 
     warn "Making LoadColumns";
     
@@ -726,7 +729,7 @@ sub _open_SequenceSet{
    	    -title  => 'Select column data to load',
     );
    	my $lc = EditWindow::LoadColumns->new($top);
-   		
+   
    	$lc->AceDatabase($adb);
    	$lc->SequenceNotes($self);
    	$lc->DataSetChooser($self->SequenceSetChooser->DataSetChooser);
@@ -764,40 +767,20 @@ sub _open_SequenceSet{
 #       );
 #}
 
-# creates a string based on the selected clones, with commas seperating individual values or dots to represent a continous sequence
-sub selected_sequence_string{
+# creates a string based on the selected clones
+sub selected_clones_string {
     my ($self ) = @_ ;
     
     my $selected = $self->selected_CloneSequence_indices;
-   
-    my $prev = shift @$selected;
-    my $string;
-    
-    if (scalar(@$selected) == 0){ 
-        $string = ", clone " . ($prev + 1);
-    }
-    else{
-        $string = ", clones " . ($prev + 1);
-        my $continous = 0 ;
 
-        foreach my $element (@$selected){
-            if (($element  eq ($prev + 1))){
-                if ($element == $selected->[$#$selected]){
-                    $string .= (".." . ($element + 1));
-                }
-                $continous = 1;
-            }
-            else{                                       
-                if ($continous){
-                    $string .= (".." . ($prev + 1)) ;
-                    $continous = 0;
-                }
-                $string .= (", " . ($element + 1)) ; 
-            }
-            $prev = $element ;
-        }
+    if (@$selected == 1) {
+        return sprintf "clone %d",
+            1 + $selected->[0];
+    } else {
+        return sprintf "clones %d..%d",
+            1 + $selected->[0],
+            1 + $selected->[$#$selected];
     }
-    return $string ;
 }
 
 

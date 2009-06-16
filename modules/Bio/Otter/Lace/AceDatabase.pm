@@ -7,10 +7,12 @@ use strict;
 use warnings;
 use Carp;
 use File::Path 'rmtree';
-use Symbol 'gensym';
 use Fcntl qw{ O_WRONLY O_CREAT };
 
-use Bio::Otter::Converter;
+# use Bio::Otter::Converter;
+use Bio::Vega::Converter;
+use Bio::Vega::Transform::Otter;
+
 use Bio::Otter::Lace::Slice;
 use Bio::Otter::Lace::Defaults;
 use Bio::Otter::Lace::PipelineDB;
@@ -19,11 +21,13 @@ use Bio::Otter::Lace::PersistentFile;
 use Bio::Otter::Lace::Slice; # a new kind of Slice that knows how to get pipeline data
 use Bio::Otter::Lace::Exonerate;
 
+
 use Bio::EnsEMBL::Ace::DataFactory;
 
 use Hum::Ace::LocalServer;
 use Hum::Ace::MethodCollection;
 
+my      $REGION_XML_FILE =      '.region.xml';
 my $LOCK_REGION_XML_FILE = '.lock_region.xml';
 
 sub new {
@@ -90,19 +94,18 @@ sub error_flag {
 }
 
 sub MethodCollection {
-    my ($self, $collect) = @_;
+    my ($self) = @_;
 
-    if ($collect) {
-        $self->{'_MethodCollection'} = $collect;
-    }
-    $collect = $self->{'_MethodCollection'} ||= $self->get_default_MethodCollection;
+    my $collect = $self->{'_MethodCollection'} ||= $self->get_default_MethodCollection;
     return $collect;
 }
 
 sub get_default_MethodCollection {
     my( $self ) = @_;
 
-    return Hum::Ace::MethodCollection->new_from_string($self->Client->get_methods_ace);
+    my $collect = Hum::Ace::MethodCollection->new_from_string($self->Client->get_methods_ace);
+    $collect->process_for_otterlace;
+    return $collect;
 }
 
 sub add_acefile {
@@ -140,12 +143,16 @@ sub add_zmap_styles_acefile {
 sub init_AceDatabase {
     my( $self ) = @_;
 
-    # $self->smart_slice() must to be set prior to running the following subroutines!
-
     $self->add_misc_acefile;
-    # $self->add_zmap_styles_acefile;
-    $self->write_otter_acefile();
-    $self->write_dna_data();
+
+    my $xml_string = $self->smart_slice->get_region_xml;
+    my $parser = Bio::Vega::Transform::Otter->new;
+    $parser->parse($xml_string);
+    $self->write_otter_acefile($parser);
+    
+    $self->write_region_xml_file($xml_string);
+    
+    $self->write_dna_data;
 
     $self->write_methods_acefile;
     $self->initialize_database;
@@ -190,121 +197,108 @@ sub write_local_exonerate {
 	$self->ace_server->save_ace($ace_text);
 }
 
-sub write_otter_acefile {
-    my( $self ) = @_;
 
+sub get_region_xml {
+    my ($self) = @_;
+    
     # Getting XML from the Client
-    my $client      = $self->Client or confess "No otter Client attached";
-    my $smart_slice = $self->smart_slice();
+    my $client      = $self->Client
+        or confess "No otter Client attached";
+    my $smart_slice = $self->smart_slice
+        or confess "No smart_slice attached";
+
     my $xml_string  = $smart_slice->get_region_xml();
+    
+    # my $save = "/var/tmp/slice.xml";
+    # open my $tmp, "> $save" or die "Can't write to '$save'; $!";
+    # print $tmp $xml_string;
+    # close $tmp or die "Error writing to '$save'; $!";
 
-    # Storing that XML in a temp.file
-    my $xml_file = Bio::Otter::Lace::TempFile->new;
-    $xml_file->name('lace.xml');
-    my $write_fh = $xml_file->write_file_handle();
-    print $write_fh $xml_string;
-    # If we're here we now have all the locks!!!
+    my $parser = Bio::Vega::Transform::Otter->new;
+    $parser->parse($xml_string);
+    return $parser;
+}
 
-        # XML->otter->ace conversion:
-    my ($genes, $old_schema_slice, $sequence, $tiles, $feature_set, $assembly_tag_set) =
-        Bio::Otter::Converter::XML_to_otter($xml_file->read_file_handle);
-    #
-    #  Should we or should we not have dsname contained in XML?
-    #
-    my $ace_text .= Bio::Otter::Converter::otter_to_ace($smart_slice->dsname,
-        $genes, $old_schema_slice, $sequence, $tiles, $feature_set, $assembly_tag_set);
+sub write_otter_acefile {
+    my( $self, $parser ) = @_;
+        
+    my $ace_str = Bio::Vega::Converter::make_ace($parser);
 
-        # Storing ace_text in a file
+    # Storing ace_text in a file
     my $ace_filename = $self->home . '/rawdata/otter.ace';
-    my $ace_fh = gensym();
-    open $ace_fh, "> $ace_filename" or die "Can't write to '$ace_filename'";
-    print $ace_fh $ace_text;
+    open my $ace_fh, "> $ace_filename" or die "Can't write to '$ace_filename'";
+    print $ace_fh $ace_str;
     close $ace_fh or confess "Error writing to '$ace_filename' : $!";
     $self->add_acefile($ace_filename);
 }
 
-sub try_and_lock_the_block {
+sub try_to_lock_the_block {
     my ($self) = @_;
 
-    my $smart_slice = $self->smart_slice();
-    my $lock_xml    = $smart_slice->lock_region_xml();
-
-    if ($lock_xml) {
-        my $lock_xml_file = Bio::Otter::Lace::PersistentFile->new();
-        $lock_xml_file->root($self->home);
-        $lock_xml_file->name($LOCK_REGION_XML_FILE);
-
-        my $write_fh = $lock_xml_file->write_file_handle();
-        print $write_fh $lock_xml;
-
-        my $read = $lock_xml_file->read_file_handle();
-        my ($genes, $old_schema_slice, $seqstr, $tiles) = Bio::Otter::Converter::XML_to_otter($read);
-
-        my $slice_name = $smart_slice->name();
-        my $dsname     = $smart_slice->dsname();
-
-            # we may need this for compatibility with sessions recovered from prev.releases!
-        $lock_xml_file->mv(".${slice_name}${dsname}${LOCK_REGION_XML_FILE}");
-            # otherwise this renaming could have been skipped
+    if (my $lock_xml = $self->smart_slice->lock_region_xml) {
+        $self->write_file($LOCK_REGION_XML_FILE, $lock_xml);
     }
 }
 
+sub write_file {
+    my ($self, $file_name, $content) = @_;
+    
+    my $full_file = join('/', $self->home, $file_name);
+    open my $LF, "> $full_file" or die "Can't write to '$full_file'; $!";
+    print $LF $content;
+    close $LF or die "Error writing to '$full_file'; $!";
+}
+
+sub write_region_xml_file {
+    my ($self, $xml) = @_;
+    
+    # Remove the locus and features to make file smaller
+    $xml =~ s{<locus>.*</locus>}{}s;
+    $xml =~ s{<feature_set>.*</feature_set>}{}s;    # Might not be valid otter XML
+                                                    # without an (empty) featuerset?
+    
+    $self->write_file($REGION_XML_FILE, $xml);
+}
+
+sub recover_smart_slice_from_region_xml_file {
+    my ($self) = @_;
+    
+    my $client = $self->Client or die "No Client attached";
+    
+    my $region_file = join('/', $self->home, $REGION_XML_FILE);
+    
+    my $parser = Bio::Vega::Transform::Otter->new;
+    $parser->parsefile($region_file);
+    
+    my $slice = $parser->get_ChromosomeSlice;
+    
+    my $smart_slice = Bio::Otter::Lace::Slice->new(
+        $client,
+        $parser->species,
+        $slice->seq_region_name,
+        $slice->coord_system->name,
+        $slice->coord_system->version,
+        $parser->chromosome_name,
+        $slice->start,
+        $slice->end,
+        );
+    $self->smart_slice($smart_slice);
+}
+
+
 sub smart_slice {
-        #
-        # we either have an AceDB and create the smart_slice from it
-        # or have a smart_slice and create an AceDB
-        #
-    my $self = shift @_;
-
-        # should we "allow" the slice to be reset for an existing database?
-    $self->{_smart_slice} = shift @_ if(@_);
-
-    if($self->{_smart_slice}) {
-        return $self->{_smart_slice};
+    my( $self, $smart_slice ) = @_;
+    
+    if ($smart_slice) {
+        $self->{'_smart_slice'} = $smart_slice;
     }
-
-    warn "Deriving smart_slice object from the AceDB\n";
-
-    my $ace_handle = $self->aceperl_db_handle;
-    my ($dsname, $ssname, $chr_name, $chr_start, $chr_end);
-
-        ## NOTE: The following queries assume we only have one Assembly per DB!
-    $ace_handle->raw_query('find Assembly *');
-    my $ace_text = $ace_handle->AceText_from_tag('Species');
-
-    if (my ($assembly_slice_name_values) = $ace_text->get_values('Sequence')) {
-        my $slice_name = $assembly_slice_name_values->[1]; # the 0'th element is a colon
-        if($slice_name=~/^([^\.]+)\.(\d+)\-(\d+)/) {
-            ($chr_name, $chr_start, $chr_end) = ($1, $2, $3);
-        } else {
-            die "Could not parse the slice name '$slice_name'";
-        }
-    } else {
-        die "Could not retrieve the name of the Assembly from AceDB";
-    }
-
-    if (my ($dsname_values) = $ace_text->get_values('Species')) {
-        $dsname = $dsname_values->[0];
-    } else {
-        die "'Species' not defined in ace database";
-    }
-
-    $ace_text = $ace_handle->AceText_from_tag('Assembly_name');
-
-    if (my ($ssname_values) = $ace_text->get_values('Assembly_name')) {
-        $ssname = $ssname_values->[0];
-    } else {
-        die "'Assembly_name' not defined in ace database";
-    }
-
-    my $cl = $self->Client() or die "Client not set in AceDatabase";
-
-    return $self->{_smart_slice} = Bio::Otter::Lace::Slice->new(
-                $cl, $dsname, $ssname, 'chromosome', 'Otter', $chr_name, $chr_start, $chr_end);
+    return $self->{'_smart_slice'};
 }
 
 sub get_filter_loaded_states_from_pipeline {
     my $self = shift @_;
+    
+    warn "Fetching filters from acedb\n";
 
     my $ace_handle = $self->aceperl_db_handle;
     $ace_handle->raw_query('find Assembly *');
@@ -342,6 +336,9 @@ sub save_ace_to_otter {
     $ace_txt =~ s/^Feature\s+"(?!($editable)).*\n//mg;
 
     # ... its SubSequences ...
+    # I think we could switch to a positive filter on Predicted_gene instead
+    # of the negative filter on CDS_predicted_by.  (And we could even use
+    # a more sensible tag name than "Predicted_gene".)
     $ace->raw_query('query follow SubSequence where ! CDS_predicted_by');
     $ace_txt .= $ace->raw_query('show -a');
 
@@ -528,7 +525,6 @@ sub write_methods_acefile {
 
     my $methods_file = $self->home . '/rawdata/methods.ace';
     my $collect = $self->MethodCollection;
-    $collect->process_for_otterlace;
     $collect->write_to_file($methods_file);
     $self->add_acefile($methods_file);
 }
@@ -541,8 +537,7 @@ sub make_passwd_wrm {
     my $real_name      = ( getpwuid($<) )[0];
     my $effective_name = ( getpwuid($>) )[0];
 
-    my $fh = gensym();
-    sysopen($fh, $passWrm, O_CREAT | O_WRONLY, 0644)
+    sysopen(my $fh, $passWrm, O_CREAT | O_WRONLY, 0644)
         or confess "Can't write to '$passWrm' : $!";
     print $fh "// PASSWD.wrm generated by $prog\n\n";
 
@@ -566,8 +561,7 @@ sub edit_displays_wrm {
 
     my $displays = "$home/wspec/displays.wrm";
 
-    my $disp_in = gensym();
-    open $disp_in, $displays or confess "Can't read '$displays' : $!";
+    open my $disp_in, $displays or confess "Can't read '$displays' : $!";
     my @disp = <$disp_in>;
     close $disp_in;
 
@@ -579,8 +573,7 @@ sub edit_displays_wrm {
         last;
     }
 
-    my $disp_out = gensym();
-    open $disp_out, "> $displays" or confess "Can't write to '$displays' : $!";
+    open my $disp_out, "> $displays" or confess "Can't write to '$displays' : $!";
     print $disp_out @disp;
     close $disp_out;
 }
@@ -605,8 +598,7 @@ sub initialize_database {
     my $parse_log = "$home/init_parse.log";
     my $pipe = "| $tace $home >> $parse_log";
 
-    my $pipe_fh = gensym();
-    open $pipe_fh, $pipe
+    open my $pipe_fh, $pipe
         or die "Can't open pipe '$pipe' : $!";
     # Say "yes" to "initalize database?" question.
     print $pipe_fh "y\n" unless $self->db_initialized;
@@ -615,8 +607,7 @@ sub initialize_database {
     }
     close $pipe_fh or die "Error initializing database exit($?)\n";
 
-    my $fh = gensym();
-    open $fh, $parse_log or die "Can't open '$parse_log' : $!";
+    open my $fh, $parse_log or die "Can't open '$parse_log' : $!";
     my $file_log = '';
     my $in_parse = 0;
     my $errors = 0;
@@ -669,8 +660,7 @@ sub write_dna_data {
 
     my $ace_filename = $self->home . '/rawdata/dna.ace';
     $self->add_acefile($ace_filename);
-    my $ace_fh = gensym();
-    open $ace_fh, "> $ace_filename" or confess "Can't write to '$ace_filename' : $!";
+    open my $ace_fh, "> $ace_filename" or confess "Can't write to '$ace_filename' : $!";
 
     print $ace_fh $dna_filter->ace_data($smart_slice);
 
@@ -722,9 +712,10 @@ sub pipeline_DataFactory {
 
     my $debug = $client->debug();
 
-    my $filter_loaded = $self->ace_server_registered()
-        ? $self->get_filter_loaded_states_from_pipeline()
-        : {};
+    # my $filter_loaded = $self->ace_server_registered()
+    #     ? $self->get_filter_loaded_states_from_pipeline()
+    #     : {};
+    my $filter_loaded = $self->get_filter_loaded_states_from_pipeline();
 
         # loading the filters in the priority order (latter overrides the former)
     my %use_filters    = ();

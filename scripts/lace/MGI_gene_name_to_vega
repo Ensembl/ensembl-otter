@@ -7,7 +7,6 @@ use strict;
 use Bio::Otter::Lace::Defaults;
 use Bio::Vega::DBSQL::DBAdaptor;
 use GeneHist::DataUtils qw (process_query);
-use Date::Calc qw(Date_to_Days);
 use Hum::Chromoview::Utils qw(unixtime2YYYYMMDD);
 
 my %updated_gsid;
@@ -67,110 +66,106 @@ my @GENE_NAMEs;
 
 sub parse_mgi_input {
 
-  my ($loutre_dba, $geneAd, $test) = @_;
-  my @field_names = qw{
-                       mgi_id locus_symbol locus_description score chromosome vega_id
-                     };
+    my ($loutre_dba, $geneAd, $test) = @_;
+    #my @field_names = qw{ mgi_id locus_symbol locus_description score chromosome vega_id };
+    my @field_names = qw{ vega_id locus_symbol mgi_id old_locus_symbol locus_description };
 
-  my %nameSet;
-  if ( @GENE_NAMEs ){
-    %nameSet = map {($_,1)} @GENE_NAMEs;
-  }
-
-  my $mgi_data = [];
-  my $mgiSymbol_2_vegaIDs = {}; # for checking symbols linked to multiple VEGA ids
-                               # as there were quite a few in MGI data
-
-  # bad vega ids (obsolte or source is not 'havana') are filtered
-  while (<>) {
-    chomp;
-
-    my @fields = split /\t/, $_; # Fields should be tab separated
-    my $original_line = $_;
-
-    # There's something wrong with the line if we
-    # don't have the right number of fields.
-    unless (@fields == @field_names) {
-      die 'Bad line: ', fmt_list(@fields);
+    my %nameSet;
+    if ( @GENE_NAMEs ){
+        %nameSet = map {($_,1)} @GENE_NAMEs;
     }
 
-    my $vega_id_from_mgi = $fields[5];
-    my $mgi_symbol = $fields[1];
+    my $mgi_data = [];
+    my $mgiSymbol_2_vegaIDs = {}; # for checking symbols linked to multiple VEGA ids
+    # as there were quite a few in MGI data
 
-    # does only gene_names specifed
-    if ( keys %nameSet > 0 ){
-      next unless $nameSet{$mgi_symbol};
-    }
+    # bad vega ids (obsolte or source is not 'havana') are filtered
+    while (<>) {
+        next if /^$/;       # Blank lines
+        next if /^\s*#/;    # Comment lines
+        chomp;
 
-    print STDERR "Parsing MGI: $vega_id_from_mgi ( $mgi_symbol ) ----- ";
+        my @fields = split /\t/, $_; # Fields should be tab separated
+        my $original_line = $_;
 
-    my $curr_gene = $geneAd->fetch_by_stable_id($vega_id_from_mgi);
-
-    unless ( $curr_gene ){
-      print STDERR "ERROR: $vega_id_from_mgi is NOT in current database\n";
-      next;
-    }
-
-    my $source = $curr_gene->source;
-    # double check that MGI update only contains genes which source is 'havana/WU'
-    if ( $source ne 'havana' and $source ne 'WU'){
-      print STDERR "SKIP: $vega_id_from_mgi source is $source\n";
-      next;
-    }
-
-    my $parsed_line = {};
-
-    # currently, lots of MGI names are still bad names!
-    my $ok = check_for_good_symbols($mgi_symbol);
-
-    if ( $ok ){
-      for (my $i = 0 ; $i < @field_names ; $i++) {
-        my $field_name = $field_names[$i];
-        my $data = $fields[$i];
-        $data =~ s/(^\s+)|(\s+$)//g; # Trim leading and trailing whitespace
-        unless ($data) {
-          die 'Bad data element: ', fmt_list(@fields);
+        # There's something wrong with the line if we
+        # don't have the right number of fields.
+        unless (@fields == @field_names) {
+            die 'Bad line: ', fmt_list(@fields);
         }
-        next if $data eq 'NULL';
 
-        $parsed_line->{$field_name} = $data;
-      }
+        my $parsed_line = {};
+        for (my $i = 0 ; $i < @field_names ; $i++) {
+            my $field_name = $field_names[$i];
+            my $data = $fields[$i];
+            $data =~ s/(^\s+)|(\s+$)//g; # Trim leading and trailing whitespace
+            unless ($data) {
+                die 'Bad data element: ', fmt_list(@fields);
+            }
+            next if $data eq 'NULL';
 
-      # check this in the test mode and send it to annotator
-      # before doing Live update
-      check_MGI_symbol_is_unique_in_loutre($loutre_dba, $mgi_symbol, $curr_gene) if $test;
+            $parsed_line->{$field_name} = $data;
+        }
 
-      push(@{$mgiSymbol_2_vegaIDs->{$mgi_symbol}}, $vega_id_from_mgi);
+        my $vega_id_from_mgi = $parsed_line->{'vega_id'};
+        my $mgi_symbol       = $parsed_line->{'locus_symbol'};
 
-      $parsed_line->{'original_line'} = $original_line;
-      push(@$mgi_data, $parsed_line);
+        # does only gene_names specifed
+        if ( keys %nameSet ){
+            next unless $nameSet{$mgi_symbol};
+        }
+
+        my $curr_gene = $geneAd->fetch_by_stable_id($vega_id_from_mgi);
+
+        unless ( $curr_gene ){
+            print STDERR "ERROR: $vega_id_from_mgi is NOT in current database\n";
+            next;
+        }
+
+        my $source = $curr_gene->source;
+        # double check that MGI update only contains genes which source is 'havana/WU'
+        if ( $source ne 'havana' and $source ne 'WU'){
+            print STDERR "SKIP: $vega_id_from_mgi source is $source\n";
+            next;
+        }
+
+        # currently, lots of MGI names are still bad names!
+        next unless check_for_good_symbols($mgi_symbol);
+
+        # check this in the test mode and send it to annotator
+        # before doing Live update
+        check_MGI_symbol_is_unique_in_loutre($loutre_dba, $mgi_symbol, $curr_gene) if $test;
+
+        push(@{$mgiSymbol_2_vegaIDs->{$mgi_symbol}}, $vega_id_from_mgi);
+
+        $parsed_line->{'original_line'} = $original_line;
+        push(@$mgi_data, $parsed_line);
     }
-  }
 
-  print STDERR "\n-------------------  END OF PARSING  -----------------------\n\n";	
+    print STDERR "\n-------------------  END OF PARSING  -----------------------\n\n";	
 
-  # checking symbols linked to multiple VEGA id
+    # checking symbols linked to multiple VEGA id
 
-  my $duplcate_list;
-  my $fh;
+    my $duplcate_list;
+    my $fh;
 
-  if ( keys %$mgiSymbol_2_vegaIDs > 0 ){
-    $duplcate_list = "MGI_2_multiple_vega_ids.ori";
-    open($fh, ">$duplcate_list") or die $!;
-  }
-  foreach my $symbol ( keys %$mgiSymbol_2_vegaIDs ){
-    if ( @{$mgiSymbol_2_vegaIDs->{$symbol}} > 1 ){
-
-      my $dups = sprintf("%s\t%s\t%s\n", 'MGI_2_MULTILE_IDs', $symbol,
-                     join("\t", @{$mgiSymbol_2_vegaIDs->{$symbol}})
-                    );
-
-      print $fh $dups; # the annotators need to revise this list, ie, pick the right ID for update
-      print STDERR $dups;
+    if ( keys %$mgiSymbol_2_vegaIDs > 0 ){
+        $duplcate_list = "MGI_2_multiple_vega_ids.ori";
+        open($fh, ">$duplcate_list") or die $!;
     }
-  }
+    foreach my $symbol ( keys %$mgiSymbol_2_vegaIDs ){
+        if ( @{$mgiSymbol_2_vegaIDs->{$symbol}} > 1 ){
 
-  return ($mgi_data, $mgiSymbol_2_vegaIDs);
+            my $dups = sprintf("%s\t%s\t%s\n", 'MGI_2_MULTILE_IDs', $symbol,
+            join("\t", @{$mgiSymbol_2_vegaIDs->{$symbol}})
+            );
+
+            print $fh $dups; # the annotators need to revise this list, ie, pick the right ID for update
+            print STDERR $dups;
+        }
+    }
+
+    return ($mgi_data, $mgiSymbol_2_vegaIDs);
 }
 
 sub check_MGI_symbol_is_unique_in_loutre {
@@ -182,16 +177,21 @@ sub check_MGI_symbol_is_unique_in_loutre {
   print STDERR "DUP_SYMBOL_CHK for MGI $mgi_symbol ($curr_gsid) --- ";
 
   my $dup = $loutre_dba->dbc->prepare(qq{
-                                         SELECT gsi.stable_id, sr.name
-                                         FROM gene_stable_id gsi, gene g, gene_attrib ga, attrib_type at, seq_region sr
-                                         WHERE g.is_current = 1
-                                         AND sr.seq_region_id=g.seq_region_id
-                                         AND gsi.gene_id=g.gene_id
-                                         AND g.gene_id=ga.gene_id
-                                         AND ga.attrib_type_id=at.attrib_type_id
-                                         AND at.code='name'
-                                         AND ga.value=?
-                                       });
+    SELECT gsi.stable_id
+      , sr.name
+    FROM gene_stable_id gsi
+      , gene g
+      , gene_attrib ga
+      , attrib_type at
+      , seq_region sr
+    WHERE g.is_current = 1
+      AND sr.seq_region_id = g.seq_region_id
+      AND gsi.gene_id = g.gene_id
+      AND g.gene_id = ga.gene_id
+      AND ga.attrib_type_id = at.attrib_type_id
+      AND at.code = 'name'
+      AND ga.value = ?
+      });
   $dup->execute($mgi_symbol);
 
   if ( $dup->rows != 0 ){
@@ -248,13 +248,13 @@ sub check_for_good_symbols {
   }
 
   # want first letter is capital and do not have internal captial letter(s)
-  elsif ( $mgi_symbol =~ /^[A-Z]{1,1}\w+/ and $mgi_symbol !~ /\w+([A-Z]+).*/ ) {
+  elsif ( $mgi_symbol =~ /^[A-Z]{1,1}\w+/ and $mgi_symbol !~ /^.+[A-Z]/ ) {
     print STDERR "cat-5: SYMBOL_OK\n";
     return 1;
   }
 
   # ignore internal captital letter(s)
-  elsif ( $mgi_symbol =~ /\w+([A-Z]+)/) {
+  elsif ( $mgi_symbol =~ /^.+[A-Z]/) {
     print STDERR "cat-6: SYMBOL_BAD\n";
     return 0;
   }
@@ -278,7 +278,6 @@ sub update_loutre {
   print STDERR "\n---------------- BEGINNING NAME/DESC UPDATE-----------------\n\n";
 
   my $geneAd  = $loutre_dba->get_GeneAdaptor;
-  my $sliceAd = $loutre_dba->get_SliceAdaptor;
 
   my @ids_to_skip;
   if ( $has_duplicates ){
@@ -311,7 +310,7 @@ sub update_loutre {
     # double check MGI VEGA chr
     $curr_gene->slice->seq_region_name =~ /^chr(\w+)-/;
     my $chr = $1;
-    unless ( $chr eq $mgi_chr ){
+    if ( $mgi_chr and $chr ne $mgi_chr ){
       print STDERR "ERROR: chromosome diff: $chr (V) vs $mgi_chr (M)\n";
       next;
     }

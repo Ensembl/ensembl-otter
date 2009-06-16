@@ -25,7 +25,7 @@ sub initialize {
 	if ($dsc_default) {
 		$self->default_selection($dsc_default);
 	}
-	else {	
+	else {
 		# this is the first time we've opened a slice from this species, so make
 		# the current 'wanted' settings (which come from the otter_config) the
 		# default selection 
@@ -216,7 +216,7 @@ sub load_filters {
 	        	-icon       => 'warning',
 	        	-message    => 'All selected columns have already been loaded',
 	        	-type       => 'OK',
-	    	);							
+	    	);
 		}
 	}
 	else {
@@ -420,61 +420,54 @@ sub default_selection {
 sub species {
 	my ($self) = @_;
 	
-	unless ($self->{_species}) {
-		$self->{_species} = 
-			$self->DataSetChooser->LocalDatabaseFactory->get_species(
-				$self->AceDatabase
-			);
-	}
-	
-	return $self->{_species};
+	return $self->AceDatabase->smart_slice->dsname;
 }
 
 sub n2f {
 	my ($self, $n2f) = @_;
 	
-	unless ($self->{_n2f}) {
-		$self->{_n2f} = $self->AceDatabase->
+	unless ($self->{'_n2f'}) {
+		$self->{'_n2f'} = $self->AceDatabase->
 			pipeline_DataFactory->get_names2filters();
 	}
 	
-	return $self->{_n2f};
+	return $self->{'_n2f'};
 }
 
 sub hlist {
 	my ($self, $hlist) = @_;
-	$self->{_hlist} = $hlist if $hlist;
-	weaken($self->{_hlist}) if $hlist;
-	return $self->{_hlist};
+	$self->{'_hlist'} = $hlist if $hlist;
+    # weaken($self->{'_hlist'}) if $hlist;
+	return $self->{'_hlist'};
 }
 
 sub XaceSeqChooser {
-    my ($self , $xc) = @_ ;
+    my ($self, $xc) = @_ ;
     
     if ($xc) {
-    	$self->{_XaceSeqChooser} = $xc;
-    	weaken($self->{_XaceSeqChooser});
+    	$self->{'_XaceSeqChooser'} = $xc;
+        weaken($self->{'_XaceSeqChooser'});
     }
     
-    return $self->{_XaceSeqChooser} ;
+    return $self->{'_XaceSeqChooser'} ;
 }
 
 sub AceDatabase {
-    my ($self , $db) = @_ ;
-    $self->{_AceDatabase} = $db if $db;
-    return $self->{_AceDatabase} ;
+    my ($self, $db) = @_ ;
+    $self->{'_AceDatabase'} = $db if $db;
+    return $self->{'_AceDatabase'} ;
 }
 
 sub SequenceNotes {
-    my ($self , $sn) = @_ ;
-    $self->{_SequenceNotes} = $sn if $sn;
-    return $self->{_SequenceNotes} ;
+    my ($self, $sn) = @_ ;
+    $self->{'_SequenceNotes'} = $sn if $sn;
+    return $self->{'_SequenceNotes'} ;
 }
 
 sub DataSetChooser {
-    my ($self , $dc) = @_ ;
-    $self->{_DataSetChooser} = $dc if $dc;
-    return $self->{_DataSetChooser} ;
+    my ($self, $dc) = @_ ;
+    $self->{'_DataSetChooser'} = $dc if $dc;
+    return $self->{'_DataSetChooser'} ;
 }
 
 sub DESTROY {
