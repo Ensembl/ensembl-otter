@@ -88,10 +88,12 @@ sub delete_old_assembly_tags {
       push(@$misc_feat_ids, $mf->dbID);
     }
   }
-  my $ids = join(',', @$misc_feat_ids);
-  foreach my $t ( qw(misc_feature misc_attrib misc_feature_misc_set) ) {
-    my $del_misc_feat = $loutre_db->dbc->prepare(qq{DELETE FROM $t WHERE misc_feature_id in ($ids)});
-    $del_misc_feat->execute;
+  if($misc_feat_ids) {
+	  my $ids = join(',', @$misc_feat_ids);
+	  foreach my $t ( qw(misc_feature misc_attrib misc_feature_misc_set) ) {
+	    my $del_misc_feat = $loutre_db->dbc->prepare(qq{DELETE FROM $t WHERE misc_feature_id in ($ids)});
+	    $del_misc_feat->execute;
+	  }
   }
   foreach my $t ( qw(assembly_tag assembly_tagged_contig) ) {
     my $del_atag = $loutre_db->dbc->prepare("DELETE FROM $t");
@@ -289,7 +291,7 @@ sub parse_ace {
       $ctg_strand = 1;
      # $tag_info   =~ s/\"//g;
       $tag_info   = trim($tag_info);
-	
+
       # replace internal Sanger name (= $tag_info) with international clone name
       my $name = $tag_info." (Sanger name) ";
       $tag_info = Hum::Tracking::intl_clone_name($tag_info); # info in Oracle Trackings db
