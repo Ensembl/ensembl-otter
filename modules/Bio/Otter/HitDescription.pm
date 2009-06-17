@@ -6,8 +6,23 @@ package Bio::Otter::HitDescription;
 use strict;
 use warnings;
 
+use warnings;
+
+use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
+
 sub new {
-    return bless {}, shift;
+    my ($caller, @args) = @_;
+
+    my ($hit_name, $hit_length, $description, $taxon_id, $db_name) = rearrange(
+      [ 'HIT_NAME', 'HIT_LENGTH', 'DESCRIPTION', 'TAXON_ID', 'DB_NAME' ], @args);
+    my $class = ref($caller) || $caller;
+    return bless {
+        _hit_name       => $hit_name,
+        _hit_length     => $hit_length,
+        _description    => $description,
+        _taxon_id       => $taxon_id,
+        _db_name        => $db_name,
+    }, $class;
 }
 
 sub hit_name {
@@ -54,6 +69,7 @@ sub db_name {
     }
     return $self->{'_db_name'};
 }
+
 
 1;
 

@@ -633,9 +633,15 @@ sub do_nothing {
 }
 
 sub get_ChromosomeSlice {
-  my $self = shift;
+    my $self = shift;
 
-  return $chrslice{$self};
+    return $chrslice{$self};
+}
+
+sub set_ChromosomeSlice {
+    my ($self, $slice) = @_;
+    
+    $chrslice{$self} = $slice;
 }
 
 sub get_Tiles {
