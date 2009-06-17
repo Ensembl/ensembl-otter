@@ -24,7 +24,7 @@ use Bio::EnsEMBL::Map::Ditag;
 use Bio::EnsEMBL::Map::DitagFeature;
 use Bio::Otter::DnaDnaAlignFeature;
 use Bio::Otter::DnaPepAlignFeature;
-use Bio::Vega::HitDescription;
+use Bio::Otter::HitDescription;
 
 use base ('Exporter');
 our @EXPORT    = ();
@@ -39,7 +39,7 @@ our %LangDesc = (
     },
 
     'HitDescription' => {
-        -constructor => 'Bio::Vega::HitDescription',
+        -constructor => 'Bio::Otter::HitDescription',
         -optnames    => [ qw(hit_name db_name taxon_id hit_length description) ],
         -hash_by     => 'hit_name',
     },

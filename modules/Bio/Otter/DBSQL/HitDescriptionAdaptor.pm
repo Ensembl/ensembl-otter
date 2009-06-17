@@ -35,6 +35,7 @@ sub fetch_HitDescriptions_into_hash {
     while ($sth->fetch) {
         $hash->{$name} = bless
             {
+                _hit_name       => $name,
                 _hit_length     => $length,
                 _description    => $desc,
                 _taxon_id       => $taxon_id,

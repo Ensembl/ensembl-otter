@@ -39,8 +39,9 @@ sub sessions_needing_recovery {
     local *VAR_TMP;
     opendir VAR_TMP, $tmp_dir or die "Cannot read '$tmp_dir' : $!";
     my $to_recover = [];
+    my $version = $self->Client->version;
     foreach (readdir VAR_TMP) {
-        if (/^lace\.(\d+)/) {
+        if (/^lace_$version\.(\d+)/o) {
             my $pid = $1;
             next if $existing_pid{$pid};
             my $lace_dir = "$tmp_dir/$_";
@@ -143,11 +144,12 @@ sub new_AceDatabase {
 sub make_home_path {
     my ($self, $write_access) = @_;
     
+    my $version = $self->Client->version;
     my $readonly_tag = $write_access ? '' : '.ro';
     my $i = ++$self->{'_last_db'};  # Could just use a class variable,
                                     # then we wouldn't have to make sure that
                                     # we only create one LocalDatabaseFactory
-    return "/var/tmp/lace.${$}${readonly_tag}_$i";
+    return "/var/tmp/lace_${version}.${$}${readonly_tag}.$i";
 }
 
 1;

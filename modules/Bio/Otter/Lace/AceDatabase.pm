@@ -69,9 +69,6 @@ sub title {
     if ($title) {
         $self->{'_title'} = $title;
     }
-    elsif (! $self->{'_title'}) {
-        $self->{'_title'} = "lace.$$";
-    }
     return $self->{'_title'};
 }
 
