@@ -14,8 +14,8 @@ use MIME::Base64;
 use HTTP::Cookies::Netscape;
 use Term::ReadKey qw{ ReadMode ReadLine };
 
-use Bio::Otter::Author;
-use Bio::Otter::CloneLock;
+use Bio::Vega::Author;
+use Bio::Vega::ContigLock;
 
 use Bio::Otter::Lace::DataSet;
 use Bio::Otter::Lace::Locator;
@@ -675,31 +675,23 @@ sub lock_refresh_for_DataSet_SequenceSet {
         my ($intl_name, $embl_name, $ctg_name, $hostname, $timestamp, $aut_name, $aut_email)
             = split(/\t/, $line);
 
-        $author_hash{$aut_name} ||= Bio::Otter::Author->new(
+        $author_hash{$aut_name} ||= Bio::Vega::Author->new(
             -name  => $aut_name,
             -email => $aut_email,
         );
 
-        # Which name should we use as the key? $intl_name or $embl_name?
-        #
-        # $lock_hash{$intl_name} ||= Bio::Otter::CloneLock->new(
-        # $lock_hash{$embl_name} ||= Bio::Otter::CloneLock->new(
-
-        $lock_hash{$ctg_name} ||= Bio::Otter::CloneLock->new(
+        $lock_hash{$ctg_name} ||= Bio::Vega::ContigLock->new(
             -author    => $author_hash{$aut_name},
             -hostname  => $hostname,
             -timestamp => $timestamp,
-            # SHOULDN'T WE HAVE ANY REFERENCE TO THE CLONE BEING LOCKED???
         );
     }
 
     foreach my $cs (@{$ss->CloneSequence_list()}) {
-        my $hashkey = $cs->contig_name();
-
-        if(my $lock = $lock_hash{$hashkey}) {
+        if (my $lock = $lock_hash{$cs->contig_name}) {
             $cs->set_lock_status($lock);
         } else {
-            $cs->set_lock_status(0) ;
+            $cs->set_lock_status(undef);
         }
     }
 }

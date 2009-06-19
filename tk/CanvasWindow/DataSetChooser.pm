@@ -53,7 +53,7 @@ sub new {
     my $recover = $button_frame->Button(
         -text       => "Recover sessions",
         -command    => sub{
-            $self->recover_some_sessions(1);
+            $self->recover_some_sessions;
         },
     )->pack(-side => 'left');
 
@@ -98,7 +98,7 @@ sub select_dataset {
 sub open_dataset {
     my( $self ) = @_;
     
-    return if $self->recover_some_sessions(1);
+    return if $self->recover_some_sessions;
     
     my ($obj) = $self->list_selected;
     return unless $obj;
@@ -182,14 +182,13 @@ sub last_sorted_by {
 }
 
 sub recover_some_sessions {
-    my $self          = shift @_;
-    my $default_state = shift @_ || 0;
+    my ($self) = @_;
 
     my $ldf = $self->LocalDatabaseFactory();
     my $recoverable_sessions = $ldf->sessions_needing_recovery();
     
     if (@$recoverable_sessions) {
-        my %session_wanted = map { ($_ => $default_state) } @$recoverable_sessions;
+        my %session_wanted = map { $_->[0] => 1 } @$recoverable_sessions;
 
         my $rss_dialog = $self->canvas->toplevel->DialogBox(
             -title => 'Recover sessions',
@@ -199,7 +198,22 @@ sub recover_some_sessions {
         $rss_dialog->add('Label',
             -wrap    => 400,
             -justify => 'left',
-            -text    => "You have one or more lace sessions on this computer which are not associated with a running otterlace process.\n\n This should not happen, except where lace has crashed or it has been exited by pressing the exit button in the dataset chooser window.\n\n You will need to recover and exit these sessions, or there may be locks left in the otter database or some of your work which has not been saved.\n\n Please contact anacode if you still get an error when you attempt to exit the session, or have information about the error which caused a session to be left.\n\n" 
+            -text    => join("\n\n",
+                "You have one or more lace sessions on this computer which are not"
+                . " associated with a running otterlace process.",
+
+                "This should not happen, except where lace has crashed or it has"
+                . " been exited by pressing the exit button in the 'Choose Dataset'"
+                . " window.",
+
+                "You will need to recover and exit these sessions. There may be"
+                . " locks left in the otter database or some of your work which has"
+                . " not been saved.",
+                
+                "Please contact anacode if you still get an error when you attempt"
+                . " to exit the session, or have information about the error which"
+                . " caused a session to be left.",
+                ), 
         )->pack(-side=>'top', -fill=>'x', -expand=>1);
         
         foreach my $rec (@$recoverable_sessions) {
@@ -240,8 +254,6 @@ sub recover_some_sessions {
                     $lc->change_checkbutton_state('deselect');
                     $lc->load_filters;
                     $lc->top->withdraw;
-
-                    $self->{'_recovered'}{$lc} = $lc;
                 }
             };
             if ($@) {

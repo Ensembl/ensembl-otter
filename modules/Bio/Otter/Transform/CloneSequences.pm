@@ -36,10 +36,10 @@ sub start_handler{
       $cl->chromosome($attr->{name});
     }
     if($ele eq 'lock'){
-      my $authorObj = Bio::Otter::Author->new(
+      my $authorObj = Bio::Vega::Author->new(
 					      -name  => $attr->{'author_name'},
 					      -email => $attr->{'email'});
-      my $cloneLock = Bio::Otter::CloneLock->new(-author   => $authorObj,
+      my $cloneLock = Bio::Vega::ContigLock->new(-author   => $authorObj,
 						 -hostname => $attr->{'host_name'},
 						 -dbID     => $attr->{'lock_id'});
       my $cs = $self->objects;

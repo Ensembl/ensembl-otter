@@ -442,12 +442,16 @@ sub build_Transcript {
   }
 
   # biotype and status from transcript class name
-  my ($biotype, $status) = method2biotype_status($data->{'transcript_class'});
-  $transcript->biotype($biotype);
-  $transcript->status($status);
+  if (my $class = $data->{'transcript_class'}) {
+      my ($biotype, $status) = method2biotype_status($class);
+      $transcript->biotype($biotype);
+      $transcript->status($status);      
+  }
 
-  my $transcript_author = $self->make_Author($data->{'author'}, $data->{'author_email'});
-  $transcript->transcript_author($transcript_author);
+  if ($data->{'author'}) {
+      my $transcript_author = $self->make_Author($data->{'author'}, $data->{'author_email'});
+      $transcript->transcript_author($transcript_author);
+  }
 
   ##transcript attributes
   my $transcript_attributes;
@@ -558,8 +562,10 @@ sub build_Locus {
     $gene->biotype($biotype);
     $gene->status($status);
 
-    my $gene_author = $self->make_Author($data->{'author'}, $data->{'author_email'});
-    $gene->gene_author($gene_author);
+    if ($data->{'author'}) {
+        my $gene_author = $self->make_Author($data->{'author'}, $data->{'author_email'});
+        $gene->gene_author($gene_author);
+    }
 
     ##gene attributes name,synonym,remark
     my $gene_attributes=[];
@@ -687,7 +693,6 @@ sub make_Attribute {
 sub make_Author {
     my ($self, $name, $email) = @_;
 
-    $name  ||= 'nobody';
     $email ||= $name;
 
     my $author;

@@ -701,7 +701,7 @@ sub _open_SequenceSet {
                 print STDERR $@ ;
                 foreach my $line (@lines ){
                     if (my ($clone_name , $author) = $line =~ m/(\S+) has been locked by \'(\S+)\'/ ){            
-                        $message  .= "$clone_name is locked by $author \n" ;
+                        $message  .= "$clone_name is locked by $author \n";
                     }
                 }
                 $self->message( $message  );
@@ -712,16 +712,6 @@ sub _open_SequenceSet {
             return;
         }
     }
-    # now initialise the database
-    eval{
-        $adb->init_AceDatabase;
-    };
-    if ($@) {
-        $adb->error_flag(0);
-        $self->exception_message($@, 'Error initialising database');
-        ### Explicitly call cleanup
-        return;
-    }
 
     warn "Making LoadColumns";
     
@@ -729,15 +719,14 @@ sub _open_SequenceSet {
    	    -title  => 'Select column data to load',
     );
    	my $lc = EditWindow::LoadColumns->new($top);
-   
+   	$lc->init_flag(1);
    	$lc->AceDatabase($adb);
    	$lc->SequenceNotes($self);
    	$lc->DataSetChooser($self->SequenceSetChooser->DataSetChooser);
 	$lc->initialize;
-  
+	
     $self->refresh_column(7) ; # 7 is the locks column
     $self->refresh_column(8) ; # 8 is the locks authors column
-    
 }
 
 #sub make_EviCollection {
