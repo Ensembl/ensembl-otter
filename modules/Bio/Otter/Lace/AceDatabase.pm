@@ -292,7 +292,7 @@ sub smart_slice {
     return $self->{'_smart_slice'};
 }
 
-sub get_filter_loaded_states_from_pipeline {
+sub get_filter_loaded_states_from_acedb {
     my $self = shift @_;
     
     warn "Fetching filters from acedb\n";
@@ -684,7 +684,7 @@ sub pipeline_DataFactory {
 
     my $factory;
 
-    if($factory = $self->{_pipeline_DataFactory}) {
+    if ($factory = $self->{_pipeline_DataFactory}) {
         warn "\nTopping up the existing pipeline DataFactory.\n";
         return $factory;
     }
@@ -709,10 +709,9 @@ sub pipeline_DataFactory {
 
     my $debug = $client->debug();
 
-    # my $filter_loaded = $self->ace_server_registered()
-    #     ? $self->get_filter_loaded_states_from_pipeline()
-    #     : {};
-    my $filter_loaded = $self->get_filter_loaded_states_from_pipeline();
+    my $filter_loaded = $self->ace_server_registered()
+        ? $self->get_filter_loaded_states_from_acedb()
+        : {};
 
         # loading the filters in the priority order (latter overrides the former)
     my %use_filters    = ();

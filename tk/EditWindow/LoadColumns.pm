@@ -160,12 +160,15 @@ sub initialize {
 	    -command => sub { $self->load_filters },
 	)->pack(-side => 'left', -expand => 0);
 	
-	# the close button just 'withdraw's the window, we will actually
-	# get 'destroy'ed by the associated XaceSeqChooser
+	# The user can press the Cancel button either before the AceDatabase is made
+	# (in which case we destroy ourselves) or during an edit session (in which
+	# case we just withdraw the window).
+	my $wod_cmd = sub { $self->withdraw_or_destroy };
 	$control_frame->Button(
-	    -text => 'Close', 
-	    -command => sub { $top->withdraw }
+	    -text => 'Cancel', 
+	    -command => $wod_cmd,
 	)->pack(-side => 'right', -expand => 0);
+    $top->protocol( 'WM_DELETE_WINDOW', $wod_cmd );
     
     $self->{_default_sort_method} = 'method_tag';
     
@@ -174,20 +177,54 @@ sub initialize {
     	$self->{_default_sort_method}
     );
     
-    $top->protocol( 'WM_DELETE_WINDOW', sub { $top->withdraw } );
-    
     $top->bind('<Destroy>', sub{
         $self = undef;
     });
 }
 
+sub withdraw_or_destroy {
+    my ($self) = @_;
+    
+    if ($self->init_flag) {
+        # Destroy ourselves
+        $self->AceDatabase->error_flag(0);
+        $self->top->destroy;
+    } else {
+        $self->top->withdraw;
+    }
+}
+
+sub init_flag {
+    my( $self, $flag ) = @_;
+    
+    if (defined $flag) {
+        $self->{'_init_flag'} = $flag ? 1 : 0;
+    }
+    return $self->{'_init_flag'};
+}
+
+
 sub load_filters {
-	
 	my $self = shift;
-	
+
 	my $top = $self->top;
-	
 	$top->Busy;
+
+    if ($self->init_flag) {
+        my $adb = $self->AceDatabase;
+        # now initialise the database
+        eval{
+            $adb->init_AceDatabase;
+        };
+        if ($@) {
+            $self->SequenceNotes->exception_message($@, "Error initialising database");
+            $adb->error_flag(0);
+            $top->destroy;
+            return;
+        } else {
+            $self->init_flag(0);
+        }
+    }
 	
 	# save off the current selection as the last selection
 	
@@ -456,6 +493,12 @@ sub AceDatabase {
     my ($self, $db) = @_ ;
     $self->{'_AceDatabase'} = $db if $db;
     return $self->{'_AceDatabase'} ;
+}
+
+sub drop_AceDatabase {
+    my ($self) = @_;
+    
+    $self->{'_AceDatabase'} = undef;
 }
 
 sub SequenceNotes {

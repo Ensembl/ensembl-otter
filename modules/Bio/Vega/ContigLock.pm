@@ -10,20 +10,19 @@ use Bio::EnsEMBL::Utils::Argument qw ( rearrange );
 use base qw(Bio::EnsEMBL::Storable);
 
 sub new {
-  my($class,@args) = @_;
-  my $self = $class->SUPER::new(@args);
+    my($class, @args) = @_;
+    
+    my $self = $class->SUPER::new(@args);
 
-  my ($contig_id,$author,$timestamp,$hostname)  = rearrange([qw(
-																					 CONTIG_ID
-																					 AUTHOR
-																					 TIMESTAMP
-																					 HOSTNAME
-																					)],@args);
-  $self->contig_id($contig_id);
-  $self->author($author);
-  $self->timestamp($timestamp);
-  $self->hostname($hostname);
-  return $self;
+    my ($contig_id, $author, $timestamp, $hostname) = rearrange(
+        [qw{ CONTIG_ID AUTHOR TIMESTAMP HOSTNAME }], @args);
+
+    $self->contig_id($contig_id);
+    $self->author($author);
+    $self->timestamp($timestamp);
+    $self->hostname($hostname);
+
+    return $self;
 }
 
 sub contig_id {

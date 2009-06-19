@@ -220,21 +220,21 @@ sub current_SequenceNote {
     return $self->{'_current_SequenceNote'};
 }
 
-sub set_lock_status{
-    my ($self , $lock) = @_ ;
-    if (defined $lock ){
-        $self->{'_lock_status'} = $lock ;
-    }
+sub set_lock_status {
+    my $self = shift;
+    
+    $self->{'_lock_status'} = shift;
 }
 
-sub get_lock_status{
+sub get_lock_status {
     my $self = shift;
     warn "get_lock_status is 'Get' only" if @_;
     return $self->{'_lock_status'} ? 1 : 0 ;
 }
 
-sub get_lock_as_CloneLock{
+sub get_lock_as_CloneLock {
     my ($self) = @_;
+    
     return $self->{'_lock_status'};
 }
 
