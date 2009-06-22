@@ -9,6 +9,180 @@
 
 =cut
 
+## BEGIN Block to avoid some hassle with pipeline configuration
+
+BEGIN{
+# or put %Config here and modify symbol table as below
+#     *{"Bio::EnsEMBL::Pipeline::Config::General::Config"} = \%Config;
+#     *{"Bio::EnsEMBL::Pipeline::Config::Blast::Config"} = \%Config;
+
+    my @fake_modules = qw(
+                          BlastableVersion.pm
+                          Bio/EnsEMBL/Pipeline/Config/General.pm
+                          Bio/EnsEMBL/Pipeline/Config/Blast.pm
+                          );
+    map { $INC{$_} = 1 } @fake_modules;
+}
+
+####
+package Bio::EnsEMBL::Pipeline::Config::General;
+
+use strict;
+
+sub import {
+
+    my ($callpack) = caller(0); # Name of the calling package
+    my $pack = shift; # Need to move package off @_
+
+    # had to put this inline here
+    my %Config = (
+
+                  DATA_DIR => '/data/blastdb/Supported',
+                  LIB_DIR  => '/usr/local/ensembl/lib',
+                  ENS_DIR  => '/usr/local/ensembl/data',
+
+                  # location of output and error files
+                  # (can also be specified on RuleManager command line)
+                  PIPELINE_OUTPUT_DIR => '/out',
+
+                  # temporary working space (e.g. /tmp)
+                  PIPELINE_WORK_DIR   => '/tmp',
+
+                  # default runner script
+                  PIPELINE_RUNNER_SCRIPT => 'runner.pl',
+
+                  # automatic update in input_id_analysis of completed jobs
+                  AUTO_JOB_UPDATE     => 1,
+
+                  PIPELINE_REPEAT_MASKING => ['RepeatMask','trf'],
+
+                  SOFT_MASKING => 0,
+                  );
+
+    my $bin_dir = '/usr/local/bin';
+    warn "Guessing BIN_DIR is '$bin_dir' for operating system '$^O'\n";
+    $Config{'BIN_DIR'} = $bin_dir;
+
+    # Get list of variables supplied, or else all
+    my @vars = @_ ? @_ : keys(%Config);
+    return unless @vars;
+
+    # Predeclare global variables in calling package
+    eval "package $callpack; use vars qw("
+         . join(' ', map { '$'.$_ } @vars) . ")";
+    die $@ if $@;
+
+
+    foreach (@vars) {
+        if (defined $Config{$_}) {
+            no strict 'refs';
+
+            # Exporter does a similar job to the following
+            # statement, but for function names, not
+            # scalar variables:
+            *{"${callpack}::$_"} = \$Config{$_};
+        }
+        else {
+            die "Error: Config: $_ not known (See Bio::Otter::Lace::Blast)\n";
+        }
+    }
+}
+
+1;
+
+package Bio::EnsEMBL::Pipeline::Config::Blast;
+
+use strict;
+
+
+sub import {
+
+    my ($callpack) = caller(0); # Name of the calling package
+    my $pack = shift; # Need to move package off @_
+
+    # had to put this inline here.
+    my %Config = (
+                  DB_CONFIG => [{name =>'empty'}],
+                  UNKNOWN_ERROR_STRING => 'WHAT',
+                  );
+
+
+    # Get list of variables supplied, or else all
+    my @vars = @_ ? @_ : keys(%Config);
+    return unless @vars;
+
+    # Predeclare global variables in calling package
+    eval "package $callpack; use vars qw("
+         . join(' ', map { '$'.$_ } @vars) . ")";
+    die $@ if $@;
+
+
+    foreach (@vars) {
+	    if (defined $Config{ $_ }) {
+                no strict 'refs';
+	        # Exporter does a similar job to the following
+	        # statement, but for function names, not
+	        # scalar variables:
+	        *{"${callpack}::$_"} = \$Config{ $_ };
+	    } else {
+	        die "Error: Config: $_ not known (See Bio::Otter::Lace::Blast)\n";
+	    }
+    }
+}
+
+1;
+
+package BlastableVersion;
+
+#### Configurable variables
+
+my $cache_file = '/var/tmp/blast_versions';
+my $tracking_db = 'mysql:blastdb;cbi2.internal.sanger.ac.uk';
+my $tracking_user = 'blastdbro';
+my $tracking_pass = '';
+
+#### No more configurable variables
+
+use vars qw(%versions $debug $revision);
+
+$debug = 0;
+$revision='$Revision: 1.30 $ ';
+$revision =~ s/\$.evision: (\S+).*/$1/;
+
+#### CONSTRUCTORS
+
+sub new {
+    my $proto = shift;
+    my $self = { };
+    bless ($self, ref($proto) || $proto);
+    return $self;
+}
+
+#### ACCESSOR METHODS
+
+sub date { localtime; }
+sub name { $0; }
+sub version { 1.0.0; }
+sub sanger_version { 1.0.0; }
+
+#### PUBLIC METHODS
+
+sub force_dbi { }
+sub set_hostname { }
+sub get_version { }
+1;
+
+
+##########################################################################
+##########################################################################
+##########################################################################
+
+# START of Bio::Otter::Lace::Exonerate
+
+##########################################################################
+##########################################################################
+##########################################################################
+
 package Bio::Otter::Lace::Exonerate;
 
 use strict;
