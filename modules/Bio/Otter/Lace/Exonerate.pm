@@ -154,7 +154,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.24 $ ';
+$revision='$Revision: 1.25 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -203,7 +203,6 @@ use Carp;
 use File::Basename;
 use File::Path 'rmtree';
 
-use Bio::DB::Flat::OBDAIndex;
 
 use Bio::EnsEMBL::Pipeline::Analysis;
 use Bio::EnsEMBL::Pipeline::Runnable::Finished_Exonerate;
@@ -260,7 +259,7 @@ sub initialise {
 	$self->homol_tag('DNA_homol');
 
     # Make the analysis object needed by the Runnable
-    my $ana_obj = Bio::EnsEMBL::Pipeline::Analysis->new(
+    my $ana_obj = Bio::EnsEMBL::Analysis->new(
         -LOGIC_NAME    => $self->logic_name,
         -INPUT_ID_TYPE => 'CONTIG',
         -PARAMETERS    => '',
@@ -625,7 +624,7 @@ sub run_exonerate {
     	"-m p2g --softmasktarget yes -M 500 --score $score --bestn $bestn" :
     	"-m e2g --softmasktarget yes --softmaskquery yes -M 500 --dnahspthreshold $dnahsp -s $score --bestn $bestn --geneseed 300" ;
 
-    my $runnable = Bio::EnsEMBL::Pipeline::Runnable::Finished_Exonerate->new(
+    my $runnable = Bio::EnsEMBL::Analyis::Runnable::Finished::Exonerate->new(
         -analysis => $self->analysis(),
         -target    => $smasked,
         -query_db	=> 	$self->database(),
