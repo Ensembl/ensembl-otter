@@ -23,7 +23,7 @@ use Hum::Ace::AceText;
 use Hum::Ace::Method;
 use Hum::FastaFileIO;
 use Bio::Otter::Lace::PersistentFile;
-
+use Bio::EnsEMBL::Analyis::Runnable::Finished::Exonerate;
 use Bio::EnsEMBL::Ace::Filter::Cigar_ace_parser;
 
 sub new{
