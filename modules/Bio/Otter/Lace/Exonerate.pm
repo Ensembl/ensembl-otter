@@ -154,7 +154,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.25 $ ';
+$revision='$Revision: 1.26 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -202,11 +202,6 @@ use warnings;
 use Carp;
 use File::Basename;
 use File::Path 'rmtree';
-
-
-use Bio::EnsEMBL::Pipeline::Analysis;
-use Bio::EnsEMBL::Pipeline::Runnable::Finished_Exonerate;
-use Bio::EnsEMBL::Pipeline::Config::General;
 
 
 use Bio::Seq;
