@@ -18,14 +18,14 @@ BEGIN{
 
     my @fake_modules = qw(
                           BlastableVersion.pm
-                          Bio/EnsEMBL/Pipeline/Config/General.pm
-                          Bio/EnsEMBL/Pipeline/Config/Blast.pm
+                          Bio/EnsEMBL/Analysis/Config/General.pm
+                          Bio/EnsEMBL/Analysis/Config/Blast.pm
                           );
     map { $INC{$_} = 1 } @fake_modules;
 }
 
 ####
-package Bio::EnsEMBL::Pipeline::Config::General;
+package Bio::EnsEMBL::Analysis::Config::General;
 
 use strict;
 
@@ -90,7 +90,7 @@ sub import {
 
 1;
 
-package Bio::EnsEMBL::Pipeline::Config::Blast;
+package Bio::EnsEMBL::Analysis::Config::Blast;
 
 use strict;
 
@@ -146,7 +146,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.30 $ ';
+$revision='$Revision: 1.31 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
