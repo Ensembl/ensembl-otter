@@ -682,8 +682,9 @@ sub _open_SequenceSet {
     my $adb = $self->LocalDatabaseFactory->new_AceDatabase($adb_write_access);
     $adb->error_flag(1);
     $adb->title($title);
-    $adb->make_database_directory;
     $adb->smart_slice($smart_slice);
+    $adb->make_database_directory;
+    $adb->make_pipeline_DataFactory;
 
     if ($adb_write_access) {
         # only lock the region if we have write access.
