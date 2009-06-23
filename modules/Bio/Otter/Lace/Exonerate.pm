@@ -134,7 +134,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.32 $ ';
+$revision='$Revision: 1.33 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -595,7 +595,7 @@ sub run_exonerate {
     	"-m p2g --softmasktarget yes -M 500 --score $score --bestn $bestn" :
     	"-m e2g --softmasktarget yes --softmaskquery yes -M 500 --dnahspthreshold $dnahsp -s $score --bestn $bestn --geneseed 300" ;
 
-    my $runnable = Bio::EnsEMBL::Analyis::Runnable::Finished::Exonerate->new(
+    my $runnable = Bio::EnsEMBL::Analysis::Runnable::Finished::Exonerate->new(
         -analysis => $self->analysis(),
         -target    => $smasked,
         -query_db	=> 	$self->database(),
