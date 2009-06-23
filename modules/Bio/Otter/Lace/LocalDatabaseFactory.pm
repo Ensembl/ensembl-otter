@@ -105,6 +105,8 @@ sub recover_session {
     # in the lace database is saved in the region XML
     # dot file.
     $adb->recover_smart_slice_from_region_xml_file;
+    $adb->make_pipeline_DataFactory;
+    $adb->get_filter_loaded_states_from_acedb;
 
     my $title = $self->get_title($adb->home);
     unless ($title =~ /^Recovered/) {
