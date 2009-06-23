@@ -253,7 +253,8 @@ sub recover_some_sessions {
                     $lc->initialize;
                     $lc->change_checkbutton_state('deselect');
                     $lc->load_filters;
-                    $lc->top->withdraw;
+                    $top->update;
+                    $top->withdraw;
                 }
             };
             if ($@) {

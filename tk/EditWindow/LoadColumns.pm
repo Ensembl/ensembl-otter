@@ -259,7 +259,7 @@ sub load_filters {
 	else {
 		# we need to set up and show an XaceSeqChooser
         
-        $self->AceDatabase->topup_pipeline_data_into_ace_server();
+        # $self->AceDatabase->topup_pipeline_data_into_ace_server();
        	my $xc = MenuCanvasWindow::XaceSeqChooser->new(
         	$self->top->Toplevel(
             	-title => $self->AceDatabase->title,

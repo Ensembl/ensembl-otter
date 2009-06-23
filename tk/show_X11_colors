@@ -9,7 +9,7 @@ use Hum::Ace::Colors qw{ webhex_to_acename };
 use CanvasWindow;
 
 {
-    my $rgb_txt_file = '/usr/X11R6/lib/X11/rgb.txt';
+    my $rgb_txt_file = $^O eq 'linux' ? '/etc/X11/rgb.txt' : '/usr/X11R6/lib/X11/rgb.txt';
     my $hex_on_clip = 0;
     my $help = sub { exec('perldoc', $0) };
     GetOptions(
