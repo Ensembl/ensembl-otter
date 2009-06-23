@@ -407,18 +407,18 @@ sub zMapServerDefaults {
         url             => $url,
         writeback       => 'false',
         sequence        => 'true',
-        # navigator_sets specifies the feature sets to draw in the navigator pane.
+
+        # navigatorsets specifies the feature sets to draw in the navigator pane.
         # so far the requested columns are just scale, genomic_canonical and locus
         # in line with keeping the columns to a minimum to save screen space.
-        'navigator-sets' => qq{scale;genomic_canonical;locus},
+        navigatorsets   => $self->semi_colon_separated_list([qw{ scale genomic_canonical locus }]),
 
-        featuresets => $self->double_quote_escaped_list([$self->zMapListMethodNames_ordered]),
         # Can specify a stylesfile instead of featuresets
-
+        featuresets     => $self->semi_colon_separated_list([$self->zMapListMethodNames_ordered]),
     );
 }
 
-sub double_quote_escaped_list {
+sub semi_colon_separated_list {
     my ($self, $list) = @_;
     
     return sprintf(q{%s},
@@ -511,7 +511,7 @@ sub formatZmapDefaults {
     
     my $def_str = "\n[$key]\n";
     while (my ($setting, $value) = each %defaults) {
-        $value = $self->double_quote_escaped_list($value)
+        $value = $self->semi_colon_separated_list($value)
             if ref($value);
         $def_str .= qq{$setting = $value\n};
     }

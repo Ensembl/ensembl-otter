@@ -292,20 +292,6 @@ sub smart_slice {
     return $self->{'_smart_slice'};
 }
 
-sub get_filter_loaded_states_from_acedb {
-    my $self = shift @_;
-    
-    warn "Fetching filters from acedb\n";
-
-    my $ace_handle = $self->aceperl_db_handle;
-    $ace_handle->raw_query('find Assembly *');
-    my $ace_text = $ace_handle->AceText_from_tag('Filter');
-
-    my %filter_loaded = map { ($_->[0] => 1) } $ace_text->get_values('Filter');
-
-    return \%filter_loaded;
-}
-
 sub save_ace_to_otter {
     my( $self ) = @_;
 
@@ -667,7 +653,8 @@ sub write_dna_data {
 sub topup_pipeline_data_into_ace_server {
     my( $self ) = @_;
 
-    my $factory     = $self->pipeline_DataFactory();
+    my $factory = $self->pipeline_DataFactory
+        or confess "No pipeline_DataFactory";
 
         # closure will probably work better:
     my $ace_server = $self->ace_server();
@@ -679,41 +666,59 @@ sub topup_pipeline_data_into_ace_server {
     return $filters_fetched_data;
 }
 
-sub pipeline_DataFactory {
-    my( $self ) = @_;
+sub get_filter_loaded_states_from_acedb {
+    my ($self) = @_;
 
-    my $factory;
+    my $pdf = $self->pipeline_DataFactory
+        or confess "No pipeline_DataFactory";
+    my $n2f = $pdf->get_names2filters;
+    
+    warn "Fetching filters from acedb\n";
 
-    if ($factory = $self->{_pipeline_DataFactory}) {
-        warn "\nTopping up the existing pipeline DataFactory.\n";
-        return $factory;
+    my $ace_handle = $self->aceperl_db_handle;
+    $ace_handle->raw_query('find Assembly *');
+    my $ace_text = $ace_handle->AceText_from_tag('Filter');
+    foreach my $name (map $_->[0], $ace_text->get_values('Filter')) {
+        my $filt = $n2f->{$name}
+            or confess "No filter '$name'";
+        $filt->done(1);
     }
+}
+
+sub pipeline_DataFactory {
+    my( $self, $pipeline_DataFactory ) = @_;
+    
+    if ($pipeline_DataFactory) {
+        $self->{'_pipeline_DataFactory'} = $pipeline_DataFactory;
+    }
+    return $self->{'_pipeline_DataFactory'};
+}
+
+sub make_pipeline_DataFactory {
+    my( $self ) = @_;
 
     my $client      = $self->Client();
     my $smart_slice = $self->smart_slice();
 
     my $ds_orig_name  = $smart_slice->dsname();
+
+    # This is a means to create a 'species alias' to reuse the otter_config for
+    # one species without duplication. For example, if you need a test_human
+    # database that would fetch all human analyses from the pipeline it is the
+    # shortest way to go. However, by using test_human filters or module
+    # settings you'll override the behaviour of the master database.
     my $ds_alias_name = $client->get_DataSet_by_name($ds_orig_name)->ALIAS();
     my @ds_list = $ds_alias_name ? ($ds_alias_name, $ds_orig_name) : ($ds_orig_name);
-        # It is a means to create a 'species alias' to reuse the otter_config for one species without duplication.
-        # For example, if you need a test_human database that would fetch all human analyses from the pipeline
-        # it is the shortest way to go. However, by using test_human filters or module settings you'll override
-        # the behaviour of the master database.
-        #
 
     warn "\nCreating a pipeline DataFactory for ".join('->', map {"'$_'"} @ds_list)."\n";
 
-    $factory = Bio::EnsEMBL::Ace::DataFactory->new($smart_slice);
+    my $factory = Bio::EnsEMBL::Ace::DataFactory->new($smart_slice);
 
     ##----------code to add all of the ace filters to data factory-----------------------------------
 
     my $debug = $client->debug();
 
-    my $filter_loaded = $self->ace_server_registered()
-        ? $self->get_filter_loaded_states_from_acedb()
-        : {};
-
-        # loading the filters in the priority order (latter overrides the former)
+    # loading the filter configs in the priority order (latter overrides the former)
     my %use_filters    = ();
     my %filter_options = ();
     foreach my $ds_name (@ds_list) {
@@ -725,15 +730,15 @@ sub pipeline_DataFactory {
 
     while ( my($filter_name, $filter_wanted) = each %use_filters   ) {
 
-        my $param_ref = $filter_options{$filter_name}
-            or die "No parameters for '$filter_name'";
+        my $param = $filter_options{$filter_name}
+            or confess "No parameters for '$filter_name'";
 
-        # Take a copy of the parameters so that we can delete from it.
-        my %param = %$param_ref;
+        my $class = $param->{'module'}
+            or confess "Module class for '$filter_name' missing from config";
 
-        # class successfully required already.
-        my $class = delete $param{'module'}
-          or confess "Module class for '$filter_name' missing from config";
+        # analysis_name MUST be set, whether or not it is defined in the config
+        $param->{'analysis_name'} ||= $filter_name;
+
 
         # Load the filter module
         my $file = "$class.pm";
@@ -743,20 +748,23 @@ sub pipeline_DataFactory {
             die "Error attempting to load filter module '$file'\n$@";
         }
 
-            # we create all available filters and load all corresponding methods
-            # irrespectively of whether they are 'wanted' or not,
-            # so that we would be able to run them at a later time if needed
-        my $pipe_filter = $class->new( $filter_wanted, $filter_loaded->{$filter_name} );
+        # We create all available filters and load all corresponding methods
+        # irrespectively of whether they are 'wanted' or not, so that we can
+        # run them at a later time if needed.
 
-        # analysis_name MUST be set, whether it is defined in the config or not:
-        $param{analysis_name} ||= $filter_name;
+        my $pipe_filter = $class->new;
+        $pipe_filter->wanted($filter_wanted);
 
         # Options in the config file are methods on filter objects:
-        while (my ($option, $value) = each %param) {
-            if($pipe_filter->can($option)) {
+        while (my ($option, $value) = each %$param) {
+            next if $option eq 'module';
+            if ($pipe_filter->can($option)) {
                 $pipe_filter->$option($value);
             } else {
-                die "Wrong configuration for '$filter_name' analysis - check your '.otter_config' file. If it looks correct you might be running an outdated version of the client.\n";
+                die "Wrong configuration for '$filter_name' analysis.\n",
+                    "No such method '$option' in '$class'\n",
+                    "Check your '~/.otter_config' file.\n",
+                    "If it looks correct you might be running an outdated version of the client.\n";
             }
         }
 
@@ -773,8 +781,8 @@ sub pipeline_DataFactory {
         $factory->add_filter($filter_name, $pipe_filter);
     }
 
-        # cache it for future reference
-    return $self->{_pipeline_DataFactory} = $factory;
+    # cache it for future reference
+    return $self->pipeline_DataFactory($factory);
 }
 
 
