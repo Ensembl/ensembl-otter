@@ -38,9 +38,8 @@ sub import {
     my %Config = (
 
                   DATA_DIR => '/data/blastdb/Finished',
-                  LIB_DIR  => '/usr/local/ensembl/lib',
-                  ENS_DIR  => '/usr/local/ensembl/data',
-                  BIN_DIR  => '/usr/local/ensembl/bin',
+                  LIB_DIR  => '/software/anacode/lib',
+                  BIN_DIR  => '/software/anacode/bin',
 
 
                   # temporary working space (e.g. /tmp)
@@ -134,7 +133,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.33 $ ';
+$revision='$Revision: 1.34 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
