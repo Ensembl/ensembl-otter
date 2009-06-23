@@ -133,7 +133,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.34 $ ';
+$revision='$Revision: 1.35 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -599,7 +599,8 @@ sub run_exonerate {
         -target    => $smasked,
         -query_db	=> 	$self->database(),
         -query_type => $self->query_type() || 'dna',
-        -exo_options => $exo_options
+        -exo_options => $exo_options,
+        -program => $self->analysis->program
         );
     $runnable->run();
     $self->sequence_fetcher($runnable->seqfetcher);
