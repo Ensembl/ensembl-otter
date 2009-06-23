@@ -37,31 +37,19 @@ sub import {
     # had to put this inline here
     my %Config = (
 
-                  DATA_DIR => '/data/blastdb/Supported',
+                  DATA_DIR => '/data/blastdb/Finished',
                   LIB_DIR  => '/usr/local/ensembl/lib',
                   ENS_DIR  => '/usr/local/ensembl/data',
+                  BIN_DIR  => '/usr/local/ensembl/bin',
 
-                  # location of output and error files
-                  # (can also be specified on RuleManager command line)
-                  PIPELINE_OUTPUT_DIR => '/out',
 
                   # temporary working space (e.g. /tmp)
-                  PIPELINE_WORK_DIR   => '/tmp',
+                  ANALYSIS_WORK_DIR => '/tmp',
 
-                  # default runner script
-                  PIPELINE_RUNNER_SCRIPT => 'runner.pl',
-
-                  # automatic update in input_id_analysis of completed jobs
-                  AUTO_JOB_UPDATE     => 1,
-
-                  PIPELINE_REPEAT_MASKING => ['RepeatMask','trf'],
+                  ANALYSIS_REPEAT_MASKING => ['RepeatMasker','trf'],
 
                   SOFT_MASKING => 0,
                   );
-
-    my $bin_dir = '/usr/local/bin';
-    warn "Guessing BIN_DIR is '$bin_dir' for operating system '$^O'\n";
-    $Config{'BIN_DIR'} = $bin_dir;
 
     # Get list of variables supplied, or else all
     my @vars = @_ ? @_ : keys(%Config);
@@ -146,7 +134,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.31 $ ';
+$revision='$Revision: 1.32 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
