@@ -3,15 +3,16 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2009-03-10 16:51:06 $
-# Id:            $Id: nph-get_genes,v 1.20 2009-03-10 16:51:06 ml6 Exp $
+# Last modified: $Date: 2009-06-24 12:50:33 $
+# Id:            $Id: nph-get_genes,v 1.21 2009-06-24 12:50:33 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_genes,v $
 
 use strict;
-use SangerPaths qw{ core bioperl123 ensembl51 otter52 };
+use SangerPaths qw{ core bioperl123 ensembl53 otter52 };
 
 use Bio::Otter::ServerScriptSupport;
 use Bio::Otter::ToXML;
+
 
 sub Bio::EnsEMBL::Gene::propagate_slice {
     my ($gene, $slice) = @_;

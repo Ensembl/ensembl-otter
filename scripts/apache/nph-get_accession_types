@@ -4,12 +4,12 @@
 # Author:        gr5
 # Group:         anacode
 # Maintainer:    gr5
-# Last modified: $Date: 2009-03-25 16:20:36 $
-# Id:            $Id: nph-get_accession_types,v 1.18 2009-03-25 16:20:36 gr5 Exp $
+# Last modified: $Date: 2009-06-24 12:50:33 $
+# Id:            $Id: nph-get_accession_types,v 1.19 2009-06-24 12:50:33 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_accession_types,v $
 
 use strict;
-use SangerPaths qw{ core bioperl123 ensembl51 otter52 };
+use SangerPaths qw{ core bioperl123 ensembl53 otter52 };
 
 use Bio::Otter::ServerScriptSupport;
 use Bio::Otter::Utils::MM;
