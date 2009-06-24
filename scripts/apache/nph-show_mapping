@@ -3,12 +3,12 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2009-03-06 18:38:31 $
-# Id:            $Id: nph-show_mapping,v 1.20 2009-03-06 18:38:31 jgrg Exp $
+# Last modified: $Date: 2009-06-24 12:50:34 $
+# Id:            $Id: nph-show_mapping,v 1.21 2009-06-24 12:50:34 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-show_mapping,v $
 
 use strict;
-use SangerPaths qw{ core bioperl123 ensembl51 otter52 };
+use SangerPaths qw{ core bioperl123 ensembl53 otter52 };
 
 use Bio::Otter::ServerScriptSupport;
 
