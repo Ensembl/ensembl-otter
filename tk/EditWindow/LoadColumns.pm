@@ -205,10 +205,19 @@ sub init_flag {
 
 
 sub load_filters {
-	my $self = shift;
+    my $self = shift;
 
-	my $top = $self->top;
-	$top->Busy;
+    my $top = $self->top;
+    $top->Busy;
+    
+    # save off the current selection as the last selection
+    $self->last_selection(
+        { map { $_ => $self->n2f->{$_}->wanted } keys %{ $self->n2f } }
+    );
+
+    my @to_fetch = grep { 
+        $self->n2f->{$_}->wanted && !$self->n2f->{$_}->done 
+    } keys %{ $self->n2f };
 
     if ($self->init_flag) {
         my $adb = $self->AceDatabase;
@@ -225,57 +234,46 @@ sub load_filters {
             $self->init_flag(0);
         }
     }
-	
-	# save off the current selection as the last selection
-	
-	$self->last_selection(
-		{ map { $_ => $self->n2f->{$_}->wanted } keys %{ $self->n2f } }
-	);
-								
-	if ($self->XaceSeqChooser) {
-		# we already have an XaceSeqChooser attached
-		
-		my @to_fetch = grep { 
-			$self->n2f->{$_}->wanted && !$self->n2f->{$_}->done 
-		} keys %{ $self->n2f };
-							
-		if (@to_fetch) {
-    		# assuming DataFactory has already been initialized by AceDatabase.pm
-        	if($self->AceDatabase->topup_pipeline_data_into_ace_server()) {
-        		$self->XaceSeqChooser->resync_with_db;
-            	$self->XaceSeqChooser->zMapLaunchZmap;
-        	}
+    
+    my $fetched_new_data = 0;
+    if (@to_fetch) {
+        $fetched_new_data = $self->AceDatabase->topup_pipeline_data_into_ace_server;
+    }
+    
+    if ($self->XaceSeqChooser) {
+        if ($fetched_new_data) {
+            # We need to resync with the database and restart Zmap. We won't
+            # need to do this once we can add a column to Zmap without
+            # restarting
+            $self->XaceSeqChooser->resync_with_db;
+            $self->XaceSeqChooser->zMapLaunchZmap;
         }
-        else {
-			# don't need to fetch anything
-			$top->messageBox(
-	        	-title      => 'Nothing to fetch',
-	        	-icon       => 'warning',
-	        	-message    => 'All selected columns have already been loaded',
-	        	-type       => 'OK',
-	    	);
-		}
-	}
-	else {
-		# we need to set up and show an XaceSeqChooser
-        
-        # $self->AceDatabase->topup_pipeline_data_into_ace_server();
-       	my $xc = MenuCanvasWindow::XaceSeqChooser->new(
-        	$self->top->Toplevel(
-            	-title => $self->AceDatabase->title,
+        elsif (! @to_fetch) {
+            # Don't need to fetch anything
+            $top->messageBox(
+                -title      => 'Nothing to fetch',
+                -icon       => 'warning',
+                -message    => 'All selected columns have already been loaded',
+                -type       => 'OK',
+            );            
+        }
+    } else {
+        # we need to set up and show an XaceSeqChooser        
+        my $xc = MenuCanvasWindow::XaceSeqChooser->new(
+            $self->top->Toplevel(
+                -title => $self->AceDatabase->title,
             )
-       	);
-       	
+        );
+        
         $self->XaceSeqChooser($xc);
         $xc->AceDatabase($self->AceDatabase);
         $xc->SequenceNotes($self->SequenceNotes);
         $xc->LoadColumns($self);
         $xc->initialize;
-	}
-	
-	$top->Unbusy;
-	
-	$top->withdraw;
+    }
+    
+    $top->Unbusy;
+    $top->withdraw;
 }
 
 sub set_filters_wanted {
