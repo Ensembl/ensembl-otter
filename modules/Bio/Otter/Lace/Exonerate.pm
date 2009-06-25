@@ -133,7 +133,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.38 $ ';
+$revision='$Revision: 1.39 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -501,16 +501,16 @@ sub append_polyA_tail {
 								$b->hend <=> $a->hend || $a->hstart <=> $b->hstart		} @$hit_features;
 		$alt_exon = shift @$hit_features;
 		print STDOUT ($hit_strand == -1 ? "Reverse" : "Forward").
-			" strand: start ".$alt_exon->hstart." end ".$alt_exon->hend." length ".$seq->length."\n" if $debug;
+			" strand: start ".$alt_exon->hstart." end ".$alt_exon->hend." length ".$seq->sequence_length."\n" if $debug;
 		if($hit_strand == -1) {
 			next HITNAME unless $alt_exon->hstart > 1;
-			$sub_seq = $seq->subseq(1,($alt_exon->hstart-1));
+			$sub_seq = $seq->sub_sequence(1,($alt_exon->hstart-1));
 			print STDOUT "subseq <1-".($alt_exon->hstart-1)."> is\n$sub_seq\n" if $debug;
 			$pattern = '^(.*T{3,})$';  # <AGAGTTTTTTTTTTTTTTTTTTTTTT>ALT_EXON_START
 		} else {
-			next HITNAME unless $alt_exon->hend < $seq->length;
-			$sub_seq = $seq->subseq(($alt_exon->hend+1),$seq->length);
-			print STDOUT "subseq <".($alt_exon->hend+1)."-".$seq->length."> is\n$sub_seq\n" if $debug;
+			next HITNAME unless $alt_exon->hend < $seq->sequence_length;
+			$sub_seq = $seq->sub_sequence(($alt_exon->hend+1),$seq->sequence_length);
+			print STDOUT "subseq <".($alt_exon->hend+1)."-".$seq->sequence_length."> is\n$sub_seq\n" if $debug;
 			$pattern = '^(A{3,}.*)$';  # ALT_EXON_END<AAAAAAAAAAAAAAAAAAAAAAAACGAG>
 		}
 
