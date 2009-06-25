@@ -247,7 +247,6 @@ sub recover_some_sessions {
                     );
                     
                     my $lc = EditWindow::LoadColumns->new($top);
-                    
                     $lc->AceDatabase($adb);
                     $lc->DataSetChooser($self);
                     $lc->initialize;
@@ -258,6 +257,8 @@ sub recover_some_sessions {
                 }
             };
             if ($@) {
+                # The fork/exec when the sgifaceserver is launched seems
+                # to prevent $@ being set in the eval
                 $self->exception_message($@, 'Error recovering lace sessions');
             }
             return 1;
