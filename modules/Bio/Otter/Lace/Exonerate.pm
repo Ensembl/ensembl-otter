@@ -133,7 +133,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.36 $ ';
+$revision='$Revision: 1.37 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -567,7 +567,7 @@ sub run_exonerate {
         );
     $runnable->run();
 
-    return [$runnable->output];
+    return $runnable->output;
 }
 
 sub add_hit_name {
