@@ -393,6 +393,7 @@ sub launch_exonerate {
 		$exonerate->AceDatabase($self->XaceSeqChooser->AceDatabase);
 		$exonerate->genomic_seq($self->XaceSeqChooser->Assembly->Sequence);
 		$exonerate->query_seq($seqs_by_type{$type});
+		$exonerate->sequence_fetcher($self->{'_name_seq'});
 		$exonerate->acedb_homol_tag($ana_name.'_homol');
 		$exonerate->query_type($type =~ /Protein/ ? 'protein' : 'dna');
 		$exonerate->score($score);

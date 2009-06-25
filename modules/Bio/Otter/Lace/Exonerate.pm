@@ -133,7 +133,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.37 $ ';
+$revision='$Revision: 1.38 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -492,8 +492,7 @@ sub append_polyA_tail {
 		print STDOUT "Processing $hit_name with ".scalar(@$hit_features)." Features\n" if $debug;
 		# fetch the hit sequence
 		my $fetcher = $self->sequence_fetcher;
-		my $seq = $fetcher->get_Seq_by_acc($hit_name)
-                or confess "Failed to fetch '$hit_name' by Acc using a '", ref($fetcher), "'";
+		my $seq = $fetcher->{$hit_name};
 		# Get the AlignFeature that needs to be extended
 		# last exon if hit in forward strand, first if in reverse
 
