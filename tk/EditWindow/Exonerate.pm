@@ -605,7 +605,7 @@ sub ace_DNA {
 
     my $ace = qq{\nSequence "$name"\n\nDNA "$name"\n};
 
-    my $dna_string = $seq->seq;
+    my $dna_string = $seq->sequence_string;
     while ($dna_string =~ /(.{1,60})/g) {
         $ace .= $1 . "\n";
     }
@@ -617,7 +617,7 @@ sub ace_PEPTIDE {
 
     my $ace = qq{\nProtein "$name"\n\nPEPTIDE "$name"\n};
 
-    my $prot_string = $seq->seq;
+    my $prot_string = $seq->sequence_string;
     while ($prot_string =~ /(.{1,60})/g) {
         $ace .= $1 . "\n";
     }
