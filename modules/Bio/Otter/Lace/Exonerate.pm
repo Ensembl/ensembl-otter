@@ -133,7 +133,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.35 $ ';
+$revision='$Revision: 1.36 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -470,19 +470,6 @@ sub run {
 
     $ace .= $self->format_ace_output($name, $features);
 
-    if ($ace) {
-        my $fetcher = $self->sequence_fetcher;
-        my $names = $self->delete_all_hit_names;
-        foreach my $hit_name (@$names) {
-            my $seq = $fetcher->get_Seq_by_acc($hit_name)
-                or confess "Failed to fetch '$hit_name' by Acc using a '", ref($fetcher), "'";
-            if($self->query_type eq 'protein') {
-            	$ace .= $self->ace_PEPTIDE($hit_name, $seq);
-            } else {
-            	$ace .= $self->ace_DNA($hit_name, $seq);
-        	}
-    	}
-    }
     return $ace;
 }
 
@@ -559,30 +546,6 @@ sub append_polyA_tail {
 	}
 }
 
-sub ace_DNA {
-    my ($self, $name, $seq) = @_;
-
-    my $ace = qq{\nSequence "$name"\n\nDNA "$name"\n};
-
-    my $dna_string = $seq->seq;
-    while ($dna_string =~ /(.{1,60})/g) {
-        $ace .= $1 . "\n";
-    }
-    return $ace;
-}
-
-sub ace_PEPTIDE {
-    my ($self, $name, $seq) = @_;
-
-    my $ace = qq{\nProtein "$name"\n\nPEPTIDE "$name"\n};
-
-    my $prot_string = $seq->seq;
-    while ($prot_string =~ /(.{1,60})/g) {
-        $ace .= $1 . "\n";
-    }
-    return $ace;
-}
-
 sub run_exonerate {
     my ($self, $masked, $smasked, $unmasked) = @_;
 
@@ -603,7 +566,7 @@ sub run_exonerate {
         -program => $self->analysis->program
         );
     $runnable->run();
-    $self->sequence_fetcher($runnable->seqfetcher);
+
     return [$runnable->output];
 }
 
