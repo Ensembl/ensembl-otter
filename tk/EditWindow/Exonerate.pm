@@ -415,7 +415,7 @@ sub launch_exonerate {
 	        # add hit sequences into ace text
 	        my $names = $exonerate->delete_all_hit_names;
 	        foreach my $hit_name (@$names) {
-	            my $seq = $self>{'_name_seq'}->{$hit_name};
+	            my $seq = $self->{'_name_seq'}->{$hit_name};
 	            if($exonerate->query_type eq 'protein') {
 	            	$ace_text .= $self->ace_PEPTIDE($hit_name, $seq);
 	            } else {
