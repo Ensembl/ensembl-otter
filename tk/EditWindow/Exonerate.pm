@@ -156,7 +156,7 @@ sub initialise {
         -anchor => 's',
         -padx   => 6,
 	)->pack( -side => 'right' );
-	
+
 	$param_frame->Checkbutton(
     	-variable => \$self->{_clear_existing},
         -text => 'Clear existing alignments of same type'
@@ -339,7 +339,7 @@ sub XaceSeqChooser {
 }
 
 sub launch_exonerate {
-	
+
 	my ($self) = @_;
 
 	my $seqs;
@@ -411,16 +411,27 @@ sub launch_exonerate {
 
 			next unless $ace_text;
 
+	        # add hit sequences into ace text
+	        my $names = $exonerate->delete_all_hit_names;
+	        foreach my $hit_name (@$names) {
+	            my $seq = $self>{'_name_seq'}->{$hit_name};
+	            if($exonerate->query_type eq 'protein') {
+	            	$ace_text .= $self->ace_PEPTIDE($hit_name, $seq);
+	            } else {
+	            	$ace_text .= $self->ace_DNA($hit_name, $seq);
+	        	}
+	    	}
+
 			if ($self->{_clear_existing}) {
-				
+
 				my $delete_cmd = "Sequence : \"".$exonerate->genomic_seq->name."\"\n".
 							     "-D Homol ".$exonerate->acedb_homol_tag."\n";
-				
-				$ace_text = $delete_cmd.$ace_text; 
+
+				$ace_text = $delete_cmd.$ace_text;
 			}
 
 			#print "ACE text:\n\n$ace_text\n\n";
-			
+
 			$need_relaunch = 1;
 
 			# Need to add new method to collection if we don't have it already
@@ -524,7 +535,7 @@ sub get_query_seq {
 	if (@correct_accs) {
 
 		# and pfetch the remaining sequences using the corrected accessions
-		
+
 		for my $seq (Hum::Pfetch::get_Sequences(@correct_accs)) {
 
 			# add the type information to the sequence
@@ -538,20 +549,20 @@ sub get_query_seq {
 				$remapped_msg .= "  ".$correct_to_supplied{$seq->name}.
 								 " to ".$seq->name."\n";
 			}
-			
+
 			# and flag that we have found a sequence for this accession
-			
+
 			$seq_fetched{$seq->name} = 1;
 		}
 	}
-	
+
 	# build a list of accessions we didn't find anything for
 
 	my $missing_msg = '';
-	
+
 	map { $missing_msg .= "\t$_\n" unless $seq_fetched{$_} } @correct_accs;
 
-	$missing_msg = "I did not find any sequences for the following accessions:\n\n" . $missing_msg 
+	$missing_msg = "I did not find any sequences for the following accessions:\n\n" . $missing_msg
 		if $missing_msg;
 
 	# tell the user about any missing sequences or remapped accessions
@@ -574,15 +585,42 @@ sub get_query_seq {
 
 
 	# lower case query polyA/T tails to avoid spurious exons
-	
+
 	foreach my $seq (@seqs) {
 		my $s = $seq->uppercase;
 		$s =~ s/(^T{6,}|A{6,}$)/lc($1)/ge;
 
 		$seq->sequence_string($s);
+
+		# save seq in hash
+		$self->{'_name_seq'}->{$seq->name} = $seq;
 	}
 
 	return \@seqs;
+}
+
+sub ace_DNA {
+    my ($self, $name, $seq) = @_;
+
+    my $ace = qq{\nSequence "$name"\n\nDNA "$name"\n};
+
+    my $dna_string = $seq->seq;
+    while ($dna_string =~ /(.{1,60})/g) {
+        $ace .= $1 . "\n";
+    }
+    return $ace;
+}
+
+sub ace_PEPTIDE {
+    my ($self, $name, $seq) = @_;
+
+    my $ace = qq{\nProtein "$name"\n\nPEPTIDE "$name"\n};
+
+    my $prot_string = $seq->seq;
+    while ($prot_string =~ /(.{1,60})/g) {
+        $ace .= $1 . "\n";
+    }
+    return $ace;
 }
 
 sub DESTROY {
