@@ -133,7 +133,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.39 $ ';
+$revision='$Revision: 1.40 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -425,19 +425,6 @@ sub ace_Method {
 
 	my $method = $self->{'_ace_method'} = Hum::Ace::Method->new;
 	$method->name(  $self->method_tag   );
-    $method->color( $self->method_color );
-    $method->show_up_strand(1);
-
-    # This will put the results next to the annotated genes
-    $method->zone_number(2);
-
-    $method->gapped(0);
-    $method->join_aligns(0);
-    $method->blixem_type( ($self->query_type eq 'dna') ? 'N' : 'P');
-    $method->width(2.0);
-    $method->score_method('width');
-    $method->score_bounds(70, 130);
-    $method->max_mag(4000);
 
     return $method;
 }
