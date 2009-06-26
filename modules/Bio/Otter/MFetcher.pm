@@ -580,8 +580,7 @@ sub fetch_mapped_features {
                     $self->log('***** : '.scalar(@$target_fs_on_target_segment)." ${feature_name}s found on the slice $metakey:".$target_slice_on_target->start().'..'.$target_slice_on_target->end());
 
                     # foreach my $target_feature (@$target_fs_on_target_segment) {
-                    ## this is supposed to be faster:
-                    #
+                    # This is supposed to be faster:
                     while (my $target_feature = shift @$target_fs_on_target_segment) {
 
                         if($target_feature->can('propagate_slice')) {
@@ -608,6 +607,20 @@ sub fetch_mapped_features {
 
         } else { # if it wasn't possible to connect to the mapper
             $self->error_exit("No '$mapper_metakey' defined in meta table => cannot map between assemblies");
+        }
+    }
+    
+    # We get multiple copies of genes where genes overlap multiple mapping segments
+    my %seen_feat;
+    for (my $i = 0; $i < @$features;) {
+        my $feat = $features[$i];
+        my $class = ref $feat;
+        my $db_id = $feat->dbID;
+        if ($seen_feat{$class}{$db_id}) {
+            splice @$features, $i, 1;
+        } else {
+            $i++;
+            $seen_feat{$class}{$db_id} = 1;
         }
     }
 
