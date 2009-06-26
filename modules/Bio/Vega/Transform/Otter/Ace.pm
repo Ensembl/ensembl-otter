@@ -1,18 +1,15 @@
-package Bio::Vega::Converter;
+
+### Bio::Vega::Transform::Otter::Ace
+
+package Bio::Vega::Transform::Otter::Ace;
 
 use strict;
 use warnings;
 use Carp qw{ cluck confess };
-
-use Bio::Vega::Transform::Otter;
 use Hum::Ace::AceText;
 use Bio::Vega::Utils::GeneTranscriptBiotypeStatus 'biotype_status2method';
 
-my %ace2ens_phase = (
-    1   => 0,
-    2   => 2,
-    3   => 1,
-    );
+use base 'Bio::Vega::Transform::Otter';
 
 my %ens2ace_phase = (
     0   => 1,
@@ -424,9 +421,12 @@ sub make_ace_genomic_features {
 # }
 
 
+
 1;
 
 __END__
+
+=head1 NAME - Bio::Vega::Transform::Otter::Ace
 
 =head1 AUTHOR
 
