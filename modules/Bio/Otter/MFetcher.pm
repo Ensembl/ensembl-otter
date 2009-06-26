@@ -1,3 +1,4 @@
+
 package Bio::Otter::MFetcher;
 
 # Previously a part of ServerScriptSupport,
@@ -613,7 +614,7 @@ sub fetch_mapped_features {
     # We get multiple copies of genes where genes overlap multiple mapping segments
     my %seen_feat;
     for (my $i = 0; $i < @$features;) {
-        my $feat = $features[$i];
+        my $feat = $features->[$i];
         my $class = ref $feat;
         my $db_id = $feat->dbID;
         if ($seen_feat{$class}{$db_id}) {
