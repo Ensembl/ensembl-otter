@@ -1,3 +1,4 @@
+
 package Bio::Otter::Converter;
 
 use strict;

@@ -17,40 +17,52 @@ my %ens2ace_phase = (
     1   => 3,
     );
 
+my (
+    %ace_string,
+);
+
+sub DESTROY {
+    my ($self) = @_;
+
+    delete $ace_string{$self};
+
+    # So that DESTROY gets called in baseclass:
+    bless $self, 'Bio::Vega::Transform::Otter';
+}
+
 
 ### Where should we add "-D" commands to the ace data?
 
 sub make_ace {
-    my ($parser) = @_;
+    my ($self) = @_;
 
     # Assembly object from chromosome slice
-    my $ace_str = make_ace_assembly($parser);
+    my $ace_str = $self->make_ace_assembly;
     
     # Objects for each genomic clone
-    $ace_str .= make_ace_contigs($parser);
+    $ace_str .= $self->make_ace_contigs;
     
     # Genes and transcripts
-    $ace_str .= make_ace_genes_transcripts($parser);
+    $ace_str .= $self->make_ace_genes_transcripts;
     
     # Authors - we only store the author name
     
     # Genomic features
-    $ace_str .= make_ace_genomic_features($parser);
-    
+    $ace_str .= $self->make_ace_genomic_features;
     
     # # Assembly tags
     # $ace_str .= make_ace_assembly_tags($parser);
 }
 
 sub make_ace_genes_transcripts {
-    my ($parser) = @_;
+    my ($self) = @_;
     
-    my $slice_ace   = new_slice_ace_object($parser);
-    my $slice_name  = make_assembly_name($parser);
+    my $slice_ace   = $self->new_slice_ace_object;
+    my $slice_name  = $self->make_assembly_name;
     my $tsct_str = '';
     my $gene_str = '';
     
-    foreach my $gene (@{$parser->get_Genes}) {
+    foreach my $gene (@{$self->get_Genes}) {
         my $gene_name = get_first_attrib_value($gene, 'name');
         my $gene_ace = Hum::Ace::AceText->new_from_class_and_name('Locus', $gene_name);
         fill_locus_AceText($gene, $gene_ace);
@@ -215,16 +227,16 @@ sub fill_locus_AceText {
 }
 
 sub new_slice_ace_object {
-    my ($parser) = @_;
+    my ($self) = @_;
     
-    my $slice_name = make_assembly_name($parser);
+    my $slice_name = $self->make_assembly_name;
     return Hum::Ace::AceText->new_from_class_and_name('Sequence', $slice_name);
 }
 
 sub make_assembly_name {
-    my ($parser) = @_;
+    my ($self) = @_;
     
-    my $chr_slice = $parser->get_ChromosomeSlice;
+    my $chr_slice = $self->get_ChromosomeSlice;
     return sprintf "%s_%d-%d",
         $chr_slice->seq_region_name,
         $chr_slice->start,
@@ -232,18 +244,18 @@ sub make_assembly_name {
 }
 
 sub make_ace_assembly {
-    my ($parser) = @_;
+    my ($self) = @_;
     
-    my $dataset_name = $parser->species or die "species tag is missing";
+    my $dataset_name = $self->species or die "species tag is missing";
 
-    my $ace = new_slice_ace_object($parser);
+    my $ace = $self->new_slice_ace_object;
     $ace->add_tag('Assembly');
     $ace->add_tag('Species', $dataset_name);
     
-    $ace->add_tag('Assembly_name', $parser->get_ChromosomeSlice->seq_region_name);
+    $ace->add_tag('Assembly_name', $self->get_ChromosomeSlice->seq_region_name);
     
     # Tiles are returned sorted in ascending order by their starts
-    my @asm_tiles = $parser->get_Tiles;
+    my @asm_tiles = $self->get_Tiles;
     
     # For contigs which contribute more than once to the assembly
     # we need to record their spans for the Smap tags.
@@ -263,7 +275,7 @@ sub make_ace_assembly {
     # Create the Smap tags used by acedb to assemble the genomic region
     # from the contigs.
     my $chr_offset = $asm_tiles[0][0] - 1;
-    foreach my $tile ($parser->get_Tiles) {
+    foreach my $tile ($self->get_Tiles) {
         my ($chr_start, $chr_end, $ctg_slice, $attrib_list) = @$tile;
         my $name = $ctg_slice->seq_region_name;
         my ($span_start, $span_end) = @{$ctg_spans{$name}};
@@ -292,17 +304,17 @@ sub make_ace_assembly {
 }
 
 sub make_ace_contigs {
-    my ($parser) = @_;
+    my ($self) = @_;
     
     my $str = '';
-    foreach my $tile ($parser->get_Tiles) {
-        $str .= make_ace_ctg($tile);
+    foreach my $tile ($self->get_Tiles) {
+        $str .= $self->make_ace_ctg($tile);
     }
     return $str;
 }
 
 sub make_ace_ctg {
-    my $tile = shift;
+    my ($self, $tile) = @_;
     
     my ($chr_start, $chr_end, $ctg_slice, $attrib_list) = @$tile;
     
@@ -340,6 +352,7 @@ sub make_ace_ctg {
     return $ace->ace_string;
 }
 
+
 sub mRNA_posn {
     my ($tsct, $genomic) = @_;
 
@@ -368,11 +381,11 @@ sub mRNA_posn {
 }
 
 sub make_ace_genomic_features {
-    my ($parser) = @_;
+    my ($self) = @_;
     
-    my $feat_list = $parser->get_SimpleFeatures;
+    my $feat_list = $self->get_SimpleFeatures;
     return unless @$feat_list;
-    my $ace = new_slice_ace_object($parser);
+    my $ace = $self->new_slice_ace_object;
     foreach my $feat (@$feat_list) {
         # Ace format encodes strand by order of start + end
         my $start = $feat->start;
@@ -398,6 +411,8 @@ sub make_ace_genomic_features {
             $ace->add_tag('Feature', $type, $start, $end, $score);
         }
     }
+    
+    return $ace->ace_string;
 }
 
 # sub make_ace_assembly_tags {

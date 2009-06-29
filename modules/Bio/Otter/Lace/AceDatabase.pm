@@ -10,8 +10,7 @@ use File::Path 'rmtree';
 use Fcntl qw{ O_WRONLY O_CREAT };
 
 # use Bio::Otter::Converter;
-use Bio::Vega::Converter;
-use Bio::Vega::Transform::Otter;
+use Bio::Vega::Transform::Otter::Ace;
 
 use Bio::Otter::Lace::Slice;
 use Bio::Otter::Lace::Defaults;
@@ -142,16 +141,15 @@ sub init_AceDatabase {
 
     $self->add_misc_acefile;
 
-    my $xml_string = $self->smart_slice->get_region_xml;
-    my $parser = Bio::Vega::Transform::Otter->new;
+    my $xml_string = $self->get_region_xml;
+    my $parser = Bio::Vega::Transform::Otter::Ace->new;
     $parser->parse($xml_string);
-    $self->write_otter_acefile($parser);
-    
-    $self->write_region_xml_file($xml_string);
-    
-    $self->write_dna_data;
 
+    $self->write_otter_acefile($parser);    
+    $self->write_region_xml_file($xml_string);
+    $self->write_dna_data;
     $self->write_methods_acefile;
+
     $self->initialize_database;
 
     eval {
@@ -204,27 +202,21 @@ sub get_region_xml {
     my $smart_slice = $self->smart_slice
         or confess "No smart_slice attached";
 
-    my $xml_string  = $smart_slice->get_region_xml();
+    return $smart_slice->get_region_xml;
     
     # my $save = "/var/tmp/slice.xml";
     # open my $tmp, "> $save" or die "Can't write to '$save'; $!";
     # print $tmp $xml_string;
     # close $tmp or die "Error writing to '$save'; $!";
-
-    my $parser = Bio::Vega::Transform::Otter->new;
-    $parser->parse($xml_string);
-    return $parser;
 }
 
 sub write_otter_acefile {
     my( $self, $parser ) = @_;
-        
-    my $ace_str = Bio::Vega::Converter::make_ace($parser);
 
     # Storing ace_text in a file
     my $ace_filename = $self->home . '/rawdata/otter.ace';
     open my $ace_fh, "> $ace_filename" or die "Can't write to '$ace_filename'";
-    print $ace_fh $ace_str;
+    print $ace_fh $parser->make_ace;
     close $ace_fh or confess "Error writing to '$ace_filename' : $!";
     $self->add_acefile($ace_filename);
 }
@@ -298,6 +290,8 @@ sub save_ace_to_otter {
     # # Make sure we don't have a stale database handle
     # $self->ace_server->kill_server;
     # $self->ace_server->start_server;
+    
+    
 
     my $ace    = $self->aceperl_db_handle;
     my $client = $self->Client or confess "No Client attached";
@@ -307,9 +301,6 @@ sub save_ace_to_otter {
     my $dsname      = $smart_slice->dsname();
 
     # Get the Assembly object ...
-    ### Need to change this query if we add lots of non-otter features to the assembly object.
-    ### (Or change the layout of the data in acedb, so that non-otter features are in a
-    ### different object.)
     $ace->raw_query(qq{find Assembly "$slice_name"});
 
     my $ace_txt = $ace->raw_query('show -a');

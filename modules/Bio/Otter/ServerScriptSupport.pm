@@ -402,10 +402,11 @@ sub enrich {
     return $afs;
 }
 
-    # It is a coincidence that these two classed need to be enriched
-    # and their fetching methods in Bio::EnsEMBL::Slice are differently named.
-    # We are making use of this coincidence by enriching the methods without subclassing Bio::EnsEMBL::Slice :
-    #
+# It is  a lucky  coincidence that these  two classes need  to be  enriched, and
+# their fetching methods in Bio::EnsEMBL::Slice are not systematically named. We
+# make  use of  this coincidence  by enriching  the methods  without subclassing
+# Bio::EnsEMBL::Slice
+
 sub Bio::EnsEMBL::Slice::get_all_DnaDnaAlignFeatures {
     my $self = shift @_;
     my $naked_features = $self->get_all_DnaAlignFeatures(@_);
