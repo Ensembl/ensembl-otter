@@ -154,11 +154,14 @@ sub Bio::EnsEMBL::Slice::get_all_TranscriptBestSupportingFeatures {
     my $format = <<FORMAT;
 %s::%s()
   number of transcripts: %d
+  transcripts
+    %s
 Died
 FORMAT
 ;
     chomp $format;
-    die sprintf $format, __PACKAGE__, $method, scalar(@$transcripts);
+    die sprintf $format, __PACKAGE__, $method, scalar(@$transcripts),
+    join "\n    ", map { ref $_ } @{$transcripts->[0...10]};
 }
 
 sub GenerateFeatures {
