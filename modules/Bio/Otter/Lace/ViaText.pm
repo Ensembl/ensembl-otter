@@ -156,7 +156,7 @@ sub Bio::EnsEMBL::Slice::get_all_TranscriptBestSupportingFeatures {
     my $format = <<FORMAT;
 %s::%s()
   number of transcripts: %d
-  transcripts(#(supporting features))
+  transcript: sequence(#(supporting features))
     %s
 Died
 FORMAT
