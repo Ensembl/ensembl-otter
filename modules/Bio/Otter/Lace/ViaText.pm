@@ -139,8 +139,23 @@ our %LangDesc = (
 
 # a Bio::EnsEMBL::Slice method to handle the dummy TranscriptBestSupportingFeature feature type
 sub Bio::EnsEMBL::Slice::get_all_TranscriptBestSupportingFeatures {
+    my $self = shift;
+    my $load_exons = 1;
+    my $logic_name = shift;
+    my $dbtype     = shift;
+    if(!$self->adaptor()) {
+	warning('Cannot get Transcripts without attached adaptor');
+	return [];
+    }
+
+    my $transcripts = $self->get_all_Transcripts($load_exons, $logic_name, $dbtype);
+
     my $method = "get_all_TranscriptBestSupportingFeatures";
-    die sprintf "%s::%s()\nDied", __PACKAGE__, $method;
+    die sprintf chomp(<<FORMAT), __PACKAGE__, $method, scalar(@$transcripts);
+%s::%s()
+  number of transcripts: %d
+Died
+FORMAT
 }
 
 sub GenerateFeatures {
