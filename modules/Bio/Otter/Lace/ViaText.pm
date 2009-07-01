@@ -149,7 +149,7 @@ sub Bio::EnsEMBL::Slice::get_all_TranscriptBestSupportingFeatures {
     }
 
     my $transcript_feature_list =
-	[ map { ( $_, $_->get_all_supporting_features ) }
+	[ map [ $_, $_->get_all_supporting_features ],
 	  @{$self->get_all_Transcripts($load_exons, $logic_name, $dbtype)} ];
 
     my $method = "get_all_TranscriptBestSupportingFeatures";
