@@ -156,7 +156,9 @@ sub Bio::EnsEMBL::Slice::get_all_TranscriptBestSupportingFeatures {
   number of transcripts: %d
 Died
 FORMAT
-    die sprintf chomp($format), __PACKAGE__, $method, scalar(@$transcripts);
+;
+    chomp $format;
+    die sprintf $format, __PACKAGE__, $method, scalar(@$transcripts);
 }
 
 sub GenerateFeatures {
