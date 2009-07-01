@@ -164,7 +164,7 @@ FORMAT
     chomp $format;
     die sprintf $format, __PACKAGE__, $method,
     scalar(@$transcript_feature_list),
-    join "\n    ", map sprintf("%s(%d)", ref($_->[0]), scalar(@{$_->[1]})),
+    join "\n    ", map sprintf("%s(%d)", $_->[0]->seqname, scalar(@{$_->[1]})),
     @$transcript_feature_list[0...10];
 }
 
