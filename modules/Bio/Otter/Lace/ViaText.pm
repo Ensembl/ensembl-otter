@@ -148,23 +148,25 @@ sub Bio::EnsEMBL::Slice::get_all_TranscriptBestSupportingFeatures {
 	return [];
     }
 
-    my $transcripts = $self->get_all_Transcripts($load_exons, $logic_name, $dbtype);
-    my $transcript_features = map { $_->get_all_supporting_features } @$transcripts;
+    my $transcript_feature_list =
+	[ map { ( $_, $_->get_all_supporting_features ) }
+	  @{$self->get_all_Transcripts($load_exons, $logic_name, $dbtype)} ];
 
     my $method = "get_all_TranscriptBestSupportingFeatures";
     my $format = <<FORMAT;
 %s::%s()
   number of transcripts: %d
   number of supporting features: %d
-  transcripts
+  transcripts(#(supporting features))
     %s
 Died
 FORMAT
 ;
     chomp $format;
     die sprintf $format, __PACKAGE__, $method,
-    scalar(@$transcripts), scalar(@$transcript_features),
-    join "\n    ", map { ref $_ } @$transcripts[0...10];
+    scalar(@$transcript_feature_list),
+    join "\n    ", map sprintf("%s(%d)", ref($_->[0]), scalar(@{$_->[1]})),
+    @$transcript_feature_list[0...10];
 }
 
 sub GenerateFeatures {
