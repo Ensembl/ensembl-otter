@@ -118,6 +118,11 @@ our %LangDesc = (
         -call_args   => [['ditypes'  => undef], ['analysis' => undef]],
     },
 
+    # a dummy feature type, actually a list of BaseAlignFeatures
+    'TranscriptBestSupportingFeature' => {
+        -call_args   => [['load_exons' => 1]],
+    },
+
     'PredictionTranscript' => {
         -constructor  => 'Bio::EnsEMBL::PredictionTranscript',
         -optnames     => [ qw(start end dbID) ],
@@ -131,6 +136,12 @@ our %LangDesc = (
         -add_one_cmp => [ 'PredictionTranscript', 'add_Exon' ],
     },
 );
+
+# a Bio::EnsEMBL::Slice method to handle the dummy TranscriptBestSupportingFeature feature type
+sub Bio::EnsEMBL::Slice::get_all_TranscriptBestSupportingFeatures {
+    my $method = "get_all_TranscriptBestSupportingFeatures";
+    die sprintf "%s::%s()\nDied", __PACKAGE__, $method;
+}
 
 sub GenerateFeatures {
     my ($features, $analysis_name) = @_;
