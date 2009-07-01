@@ -151,11 +151,12 @@ sub Bio::EnsEMBL::Slice::get_all_TranscriptBestSupportingFeatures {
     my $transcripts = $self->get_all_Transcripts($load_exons, $logic_name, $dbtype);
 
     my $method = "get_all_TranscriptBestSupportingFeatures";
-    die sprintf chomp(<<FORMAT), __PACKAGE__, $method, scalar(@$transcripts);
+    my $format = <<FORMAT;
 %s::%s()
   number of transcripts: %d
 Died
 FORMAT
+    die sprintf chomp($format), __PACKAGE__, $method, scalar(@$transcripts);
 }
 
 sub GenerateFeatures {
