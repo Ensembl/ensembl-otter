@@ -161,7 +161,7 @@ FORMAT
 ;
     chomp $format;
     die sprintf $format, __PACKAGE__, $method, scalar(@$transcripts),
-    join "\n    ", map { ref $_ } @{$transcripts->[0...10]};
+    join "\n    ", map { ref $_ } @$transcripts[0...10];
 }
 
 sub GenerateFeatures {
