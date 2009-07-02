@@ -148,15 +148,24 @@ sub Bio::EnsEMBL::Slice::get_all_TranscriptBestSupportingFeatures {
 	return [];
     }
 
+    my $transcripts =
+	$self->get_all_Transcripts($load_exons, $logic_name, $dbtype);
     my $transcript_feature_list =
-	[ map [ $_, $_->get_all_supporting_features, $_->get_all_Exons ],
-	  @{$self->get_all_Transcripts($load_exons, $logic_name, $dbtype)} ];
+	[ map {
+	    my $supporting_features =
+		$_->get_all_supporting_features;
+	    my $exons =
+		$_->get_all_Exons;
+	    my $exon_supporting_features =
+		[ map @{$_->get_all_supporting_features}, @$exons ];
+	    [ $_, $supporting_features, $exons, $exon_supporting_features, ];
+	} @$transcripts ];
 
     my $method = "get_all_TranscriptBestSupportingFeatures";
     my $format = <<FORMAT;
 %s::%s()
   number of transcripts: %d
-  transcript: sequence(#(supporting features), #exons)
+  transcript: sequence(#(supporting features), #exons, #(exon supporting features))
     %s
 Died
 FORMAT
@@ -165,7 +174,12 @@ FORMAT
     die sprintf $format, __PACKAGE__, $method,
     scalar(@$transcript_feature_list),
     join "\n    ",
-    map sprintf("%s(%d, %d)", $_->[0]->seqname, scalar(@{$_->[1]}), scalar(@{$_->[2]})),
+    map sprintf("%s(%d, %d, %d)",
+		$_->[0]->seqname,
+		scalar(@{$_->[1]}),
+		scalar(@{$_->[2]}),
+		scalar(@{$_->[3]}),
+		),
     @$transcript_feature_list[0...10];
 }
 
