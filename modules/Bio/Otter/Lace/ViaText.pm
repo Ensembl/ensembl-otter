@@ -151,12 +151,14 @@ sub Bio::EnsEMBL::Slice::get_all_TranscriptBestSupportingFeatures {
     my $transcripts =
 	$self->get_all_Transcripts($load_exons, $logic_name, $dbtype);
     my $exon_count = 0;
+    my $bogus_exon_count = 0;
     my $transcript_feature_list =
 	[ map {
 	    my $supporting_features = $_->get_all_supporting_features;
 	    my $exons = $_->get_all_Exons;
 	    $exon_count += @$exons;
 	    my $bogus_exons = grep { @{$_->get_all_supporting_features} != 1 } @$exons;
+	    my $bogus_exon_count += $bogus_exons;
 	    [ $_, $supporting_features, $exons, $bogus_exons, ];
 	} @$transcripts ];
     my $bogus_transcript_count =
@@ -167,8 +169,9 @@ sub Bio::EnsEMBL::Slice::get_all_TranscriptBestSupportingFeatures {
 %s::%s()
   NB: "bogus" means "does not have exactly one supporting feature"
   number of transcripts: %d
-  number of exons: %d
   number of bogus transcripts: %d
+  number of exons: %d
+  number of bogus exons: %d
   transcript: sequence(#(supporting features), #exons, #(bogus exons))
     %s
 Died
@@ -177,8 +180,9 @@ FORMAT
     chomp $format;
     die sprintf $format, __PACKAGE__, $method,
     scalar(@$transcript_feature_list),
-    $exon_count,
     $bogus_transcript_count,
+    $exon_count,
+    $bogus_exon_count,
     join "\n    ",
     map sprintf("%s(%d, %d, %d)",
 		$_->[0]->seqname,
