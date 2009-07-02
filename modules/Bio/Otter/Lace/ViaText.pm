@@ -148,6 +148,14 @@ sub Bio::EnsEMBL::Slice::get_all_TranscriptBestSupportingFeatures {
 	return [];
     }
 
+    return
+	[ map { @{$_->get_all_supporting_features} }
+	  map { @{$_->get_all_Exons} }
+	  @{$self->get_all_Transcripts($load_exons, $logic_name, $dbtype)}
+	  ];
+
+    # debugging 
+
     my $transcripts =
 	$self->get_all_Transcripts($load_exons, $logic_name, $dbtype);
     my $exon_count = 0;
