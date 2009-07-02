@@ -181,6 +181,7 @@ sub Bio::EnsEMBL::Slice::get_all_TranscriptBestSupportingFeatures {
   number of exons: %d
   number of bogus exons: %d
   number of exon feature types: %d
+  exon feature types: %s
   transcript: sequence(#(supporting features), #exons, #(bogus exons))
     %s
 Died
@@ -193,6 +194,7 @@ FORMAT
     $exon_count,
     $bogus_exon_count,
     scalar keys %$exon_feature_types,
+    ( join ", ", (sort keys %$exon_feature_types)[0...10] ),
     join "\n    ",
     map sprintf("%s(%d, %d, %d)",
 		$_->[0]->seqname,
