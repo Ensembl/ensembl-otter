@@ -160,11 +160,14 @@ sub Bio::EnsEMBL::Slice::get_all_TranscriptBestSupportingFeatures {
 		[ map @{$_->get_all_supporting_features}, @$exons ];
 	    [ $_, $supporting_features, $exons, $exon_supporting_features, ];
 	} @$transcripts ];
+    my $bogus_transcript_count =
+	grep((@{$_->[0]} != 1), @$transcript_feature_list);
 
     my $method = "get_all_TranscriptBestSupportingFeatures";
     my $format = <<FORMAT;
 %s::%s()
   number of transcripts: %d
+  number of transcripts without exactly 1 supporting feature: %d
   transcript: sequence(#(supporting features), #exons, #(exon supporting features))
     %s
 Died
@@ -173,6 +176,7 @@ FORMAT
     chomp $format;
     die sprintf $format, __PACKAGE__, $method,
     scalar(@$transcript_feature_list),
+    $bogus_transcript_count,
     join "\n    ",
     map sprintf("%s(%d, %d, %d)",
 		$_->[0]->seqname,
