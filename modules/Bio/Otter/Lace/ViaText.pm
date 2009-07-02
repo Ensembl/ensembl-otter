@@ -161,7 +161,7 @@ sub Bio::EnsEMBL::Slice::get_all_TranscriptBestSupportingFeatures {
 	    my $bogus_exons = grep { @{$_->get_all_supporting_features} != 1 } @$exons;
 	    foreach (@$exons) {
 		my $this_exon_features = $_->get_all_supporting_features;
-		push @$exon_features, @$this_exon_features if @$this_exon_features != 1;
+		push @$exon_features, @$this_exon_features if @$this_exon_features == 1;
 	    }
 	    my $bogus_exon_count += $bogus_exons;
 	    [ $_, $supporting_features, $exons, $bogus_exons, ];
