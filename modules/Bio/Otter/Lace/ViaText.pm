@@ -177,7 +177,7 @@ FORMAT
     chomp $format;
     die sprintf $format, __PACKAGE__, $method,
     scalar(@$transcript_feature_list),
-    $exon_count;
+    $exon_count,
     $bogus_transcript_count,
     join "\n    ",
     map sprintf("%s(%d, %d, %d)",
