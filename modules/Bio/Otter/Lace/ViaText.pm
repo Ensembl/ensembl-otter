@@ -170,7 +170,10 @@ sub Bio::EnsEMBL::Slice::get_all_TranscriptBestSupportingFeatures {
 	grep((@{$_->[1]} != 1), @$transcript_feature_list);
 
     my $exon_feature_types = { };
-    $exon_feature_types->{ref $_}++ foreach @$exon_features;
+    foreach (@$exon_features) {
+	$exon_feature_types->{ref $_}++;
+	last if keys %$exon_feature_types >= 10;
+    }
 
     my $method = "get_all_TranscriptBestSupportingFeatures";
     my $format = <<FORMAT;
@@ -194,7 +197,7 @@ FORMAT
     $exon_count,
     $bogus_exon_count,
     scalar keys %$exon_feature_types,
-    ( join ", ", (sort keys %$exon_feature_types)[0...10] ),
+    (join ", ", sort keys %$exon_feature_types),
     join "\n    ",
     map sprintf("%s(%d, %d, %d)",
 		$_->[0]->seqname,
