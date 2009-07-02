@@ -161,7 +161,7 @@ sub Bio::EnsEMBL::Slice::get_all_TranscriptBestSupportingFeatures {
 	    [ $_, $supporting_features, $exons, $exon_supporting_features, ];
 	} @$transcripts ];
     my $bogus_transcript_count =
-	grep((@{$_->[0]} != 1), @$transcript_feature_list);
+	grep((@{$_->[1]} != 1), @$transcript_feature_list);
 
     my $method = "get_all_TranscriptBestSupportingFeatures";
     my $format = <<FORMAT;
