@@ -152,17 +152,25 @@ sub Bio::EnsEMBL::Slice::get_all_TranscriptBestSupportingFeatures {
 	$self->get_all_Transcripts($load_exons, $logic_name, $dbtype);
     my $exon_count = 0;
     my $bogus_exon_count = 0;
+    my $exon_features = [ ];
     my $transcript_feature_list =
 	[ map {
 	    my $supporting_features = $_->get_all_supporting_features;
 	    my $exons = $_->get_all_Exons;
 	    $exon_count += @$exons;
 	    my $bogus_exons = grep { @{$_->get_all_supporting_features} != 1 } @$exons;
+	    foreach (@$exons) {
+		my $this_exon_features = $_->get_all_supporting_features;
+		push @$exon_features, @$this_exon_features if @$this_exon_features != 1;
+	    }
 	    my $bogus_exon_count += $bogus_exons;
 	    [ $_, $supporting_features, $exons, $bogus_exons, ];
 	} @$transcripts ];
     my $bogus_transcript_count =
 	grep((@{$_->[1]} != 1), @$transcript_feature_list);
+
+    my $exon_feature_types = { };
+    $exon_feature_types->{ref $_}++ foreach @$exon_features;
 
     my $method = "get_all_TranscriptBestSupportingFeatures";
     my $format = <<FORMAT;
@@ -172,6 +180,7 @@ sub Bio::EnsEMBL::Slice::get_all_TranscriptBestSupportingFeatures {
   number of bogus transcripts: %d
   number of exons: %d
   number of bogus exons: %d
+  number of exon feature types: %d
   transcript: sequence(#(supporting features), #exons, #(bogus exons))
     %s
 Died
@@ -183,6 +192,7 @@ FORMAT
     $bogus_transcript_count,
     $exon_count,
     $bogus_exon_count,
+    scalar keys %$exon_feature_types,
     join "\n    ",
     map sprintf("%s(%d, %d, %d)",
 		$_->[0]->seqname,
