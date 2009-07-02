@@ -165,7 +165,7 @@ FORMAT
     die sprintf $format, __PACKAGE__, $method,
     scalar(@$transcript_feature_list),
     join "\n    ",
-    map sprintf("%s(%d)", $_->[0]->seqname, scalar(@{$_->[1]}), scalar(@{$_->[2]})),
+    map sprintf("%s(%d, %d)", $_->[0]->seqname, scalar(@{$_->[1]}), scalar(@{$_->[2]})),
     @$transcript_feature_list[0...10];
 }
 
