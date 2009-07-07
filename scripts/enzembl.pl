@@ -491,7 +491,7 @@ print $gff_fh $gff;
 
 # and run zmap...
 
-`$zmap_exe --conf_dir $zmap_dir`;
+system($zmap_exe, "--conf_dir", $zmap_dir);
 
 __END__
 	
