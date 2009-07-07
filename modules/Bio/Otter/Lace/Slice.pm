@@ -287,7 +287,14 @@ sub lock_region_xml {
 }
 
 
-sub get_all_features { # get Simple|DnaAlign|ProteinAlign|Repeat|Marker|Ditag|PredictionTranscript features from otter|pipe|ensembl db
+sub get_all_features_hash { # get Simple|DnaAlign|ProteinAlign|Repeat|Marker|Ditag|PredictionTranscript features from otter|pipe|ensembl db
+
+    # This returns features hashed by their actual Perl classes,
+    # rather than the feature types used in $kind_and_args. This
+    # supports dummy feature types (such as ExonSupportingFeature)
+    # that return features whose class is not the same as the feature
+    # type.
+
     my ($self, $kind_and_args, $metakey, $csver_remote) = @_;
 
     my @feature_kinds = map { $_->[0] } @$kind_and_args;
@@ -319,18 +326,26 @@ sub get_all_features { # get Simple|DnaAlign|ProteinAlign|Repeat|Marker|Ditag|Pr
     );
 
     my $all_features = ParseFeatures(\$response, $self->name(), $arg_pairs{'analysis'});
-    my @result = ();
 
-    foreach my $feature_kind (@feature_kinds) {
-        my $features = $all_features->{$feature_kind};
+    return {
+	map {
+	    my $feature_kind = $_;
+	    my $features_are_hashed =
+		$LangDesc{$feature_kind}{-hash_by} ||
+		$LangDesc{$feature_kind}{-group_by};
+	    my $features = $all_features->{$feature_kind};
+	    $features = [ $features ] if $features_are_hashed;
+	    $_ => ( $features || [] )
+	} keys %$all_features,
+    };
+}
 
-        push @result, ( ($LangDesc{$feature_kind}{-hash_by}||$LangDesc{$feature_kind}{-group_by})
-                        ? [values %$features ]
-                        : $features
-                      ) || [];
-    }
 
-    return @result;
+sub get_all_features { # get Simple|DnaAlign|ProteinAlign|Repeat|Marker|Ditag|PredictionTranscript features from otter|pipe|ensembl db
+    my ($self, $kind_and_args, $metakey, $csver_remote) = @_;
+    my @feature_kinds = map { $_->[0] } @$kind_and_args;
+    my $all_features = $self->get_all_features_hash($kind_and_args, $metakey, $csver_remote);
+    return @$all_features{@feature_kinds};
 }
 
 sub get_all_DAS_features { # get SimpleFeatures or PredictionExons from DAS source (via mapping Otter server)
