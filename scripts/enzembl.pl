@@ -144,7 +144,7 @@ my $host;
 my $user;
 my $dbname;
 my $analyses;
-my $regions;
+my $region;
 my $coords;
 my $styles_file;
 my $zmap_exe;
@@ -162,7 +162,7 @@ GetOptions(
 	'user:s',		\$user,
 	'db:s',  		\$dbname,
 	'analyses:s',	\$analyses,
-	'regions:s', 	\$regions,
+	'region:s', 	\$region,
 	'coords:s', 	\$coords,
 	'styles:s',		\$styles_file,
 	'cfg:s',		\$cfg_file,
@@ -189,11 +189,15 @@ if ($dbname) {
 	$dbs{$dbname}->{analyses} = [ split($CFG_DELIM, $analyses) ];
 }
 
-if ($regions) {	
-	for my $region (split($CFG_DELIM, $regions)) {
-		my ($cs, $id) = split /:/, $region;
-		$regions{$id} = $cs;
-	}
+if ($region) {
+	my ($cs, $id) = split /:/, $region;
+	$regions{$id} = $cs;	
+
+#	for my $region (split($CFG_DELIM, $regions)) {
+#		my ($cs, $id) = split /:/, $region;
+#		$regions{$id} = $cs;
+#	}
+
 }
 
 # read the config file
@@ -229,12 +233,16 @@ if (-e $cfg_file) {
 		
 		unless (%regions) {
 			
-			die "No region supplied!\n" unless $cfg->val('enzembl','regions');
+			die "No region supplied!\n" unless $cfg->val('enzembl','region');
 			
-			for my $region (split($CFG_DELIM, $cfg->val('enzembl','regions'))) {
-				my ($cs, $id) = split /:/, $region;
-				$regions{$id} = $cs;
-			}
+			my ($cs, $id) = split /:/, $cfg->val('enzembl','region');
+			$regions{$id} = $cs;
+			
+#			for my $region (split($CFG_DELIM, $cfg->val('enzembl','regions'))) {
+#				my ($cs, $id) = split /:/, $region;
+#				$regions{$id} = $cs;
+#			}
+		
 		}
 		
 		unless (defined $start && defined $end) {
@@ -534,9 +542,10 @@ Should be supplied here or in the config file if you want blixem to work.
 
 =item B<-db DATABASE -host HOST -port PORT -user USER -pass PASSWORD>
 
-Grab features from this (ensembl schema) database 
-(multiple databases can be specifed in the config file). 
-Must be supplied here or in the config file.
+Grab features from this (ensembl schema) database. Multiple databases can be specifed 
+in the config file, although no mapping between coordinate systems is (yet) supported, 
+so all features must lie in the same coordinate space. Must be supplied here or in the 
+config file.
 
 =head1 CONFIG FILE
 
