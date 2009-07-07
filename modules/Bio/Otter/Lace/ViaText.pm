@@ -120,7 +120,7 @@ our %LangDesc = (
 
     # a dummy feature type, actually returns a list of DnaDnaAlignFeatures
     'ExonSupportingFeature' => {
-        -call_args   => [['load_exons' => 1]],
+        -call_args   => [['analysis' => undef]],
     },
 
     'PredictionTranscript' => {
