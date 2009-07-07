@@ -118,8 +118,8 @@ our %LangDesc = (
         -call_args   => [['ditypes'  => undef], ['analysis' => undef]],
     },
 
-    # a dummy feature type, actually a list of BaseAlignFeatures
-    'TranscriptBestSupportingFeature' => {
+    # a dummy feature type, actually returns a list of DnaDnaAlignFeatures
+    'ExonSupportingFeature' => {
         -call_args   => [['load_exons' => 1]],
     },
 
@@ -137,8 +137,8 @@ our %LangDesc = (
     },
 );
 
-# a Bio::EnsEMBL::Slice method to handle the dummy TranscriptBestSupportingFeature feature type
-sub Bio::EnsEMBL::Slice::get_all_TranscriptBestSupportingFeatures {
+# a Bio::EnsEMBL::Slice method to handle the dummy ExonSupportingFeature feature type
+sub Bio::EnsEMBL::Slice::get_all_ExonSupportingFeatures {
     my $self = shift;
     my $load_exons = 1;
     my $logic_name = shift;
@@ -153,67 +153,6 @@ sub Bio::EnsEMBL::Slice::get_all_TranscriptBestSupportingFeatures {
 	  map { @{$_->get_all_Exons} }
 	  @{$self->get_all_Transcripts($load_exons, $logic_name, $dbtype)}
 	  ];
-
-    # debugging 
-
-    my $transcripts =
-	$self->get_all_Transcripts($load_exons, $logic_name, $dbtype);
-    my $exon_count = 0;
-    my $bogus_exon_count = 0;
-    my $exon_features = [ ];
-    my $transcript_feature_list =
-	[ map {
-	    my $supporting_features = $_->get_all_supporting_features;
-	    my $exons = $_->get_all_Exons;
-	    $exon_count += @$exons;
-	    my $bogus_exons = grep { @{$_->get_all_supporting_features} != 1 } @$exons;
-	    foreach (@$exons) {
-		my $this_exon_features = $_->get_all_supporting_features;
-		push @$exon_features, @$this_exon_features if @$this_exon_features == 1;
-	    }
-	    my $bogus_exon_count += $bogus_exons;
-	    [ $_, $supporting_features, $exons, $bogus_exons, ];
-	} @$transcripts ];
-    my $bogus_transcript_count =
-	grep((@{$_->[1]} != 1), @$transcript_feature_list);
-
-    my $exon_feature_types = { };
-    foreach (@$exon_features) {
-	$exon_feature_types->{ref $_}++;
-	last if keys %$exon_feature_types >= 10;
-    }
-
-    my $method = "get_all_TranscriptBestSupportingFeatures";
-    my $format = <<FORMAT;
-%s::%s()
-  NB: "bogus" means "does not have exactly one supporting feature"
-  number of transcripts: %d
-  number of bogus transcripts: %d
-  number of exons: %d
-  number of bogus exons: %d
-  number of exon feature types: %d
-  exon feature types: %s
-  transcript: sequence(#(supporting features), #exons, #(bogus exons))
-    %s
-Died
-FORMAT
-;
-    chomp $format;
-    die sprintf $format, __PACKAGE__, $method,
-    scalar(@$transcript_feature_list),
-    $bogus_transcript_count,
-    $exon_count,
-    $bogus_exon_count,
-    scalar keys %$exon_feature_types,
-    (join ", ", sort keys %$exon_feature_types),
-    join "\n    ",
-    map sprintf("%s(%d, %d, %d)",
-		$_->[0]->seqname,
-		scalar(@{$_->[1]}),
-		scalar(@{$_->[2]}),
-		$_->[3],
-		),
-    @$transcript_feature_list[0...10];
 }
 
 sub GenerateFeatures {
