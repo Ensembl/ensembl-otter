@@ -1,0 +1,228 @@
+#!/usr/bin/env perl
+
+### patch_olfactory_receptor_gene_biotype_status
+
+use strict;
+use warnings;
+
+use Bio::Otter::Lace::Defaults;
+
+{
+    my $usage = sub { exec('perldoc', $0) };
+    # This do_getopt() call is needed to parse the otter config files
+    # even if you aren't giving any arguments on the command line.
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        ) or $usage->();
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    my $dbc = $cl->get_DataSet_by_name('human')->make_Vega_DBAdaptor->dbc;
+    
+    my $get_gene_id = $dbc->prepare(q{
+        SELECT g.gene_id
+        FROM gene g
+          , gene_stable_id gsid
+        WHERE g.gene_id = gsid.gene_id
+        AND g.is_current = 1
+        AND gsid.stable_id = ?
+        });
+        
+    my $update = $dbc->prepare(q{
+        UPDATE gene
+        SET biotype = ?
+          , status = ?
+        WHERE gene_id = ?
+    });
+    
+    while (<DATA>) {
+        my ($stable_id, $biotype, $status) = split;
+        
+        $get_gene_id->execute($stable_id);
+        my ($gene_id) = $get_gene_id->fetchrow
+            or die "Can't get gene_id for '$stable_id'";
+        $update->execute($biotype, $status, $gene_id);
+    }
+}
+
+
+
+
+__DATA__
+OTTHUMG00000004767	protein_coding	KNOWN
+OTTHUMG00000004769	protein_coding	KNOWN
+OTTHUMG00000004772	processed_transcript	KNOWN
+OTTHUMG00000004773	protein_coding	KNOWN
+OTTHUMG00000004777	protein_coding	KNOWN
+OTTHUMG00000004779	protein_coding	KNOWN
+OTTHUMG00000004872	protein_coding	KNOWN
+OTTHUMG00000004912	protein_coding	KNOWN
+OTTHUMG00000004914	protein_coding	KNOWN
+OTTHUMG00000005021	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000005024	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000005025	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000005026	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000005027	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000005028	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000005029	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000005037	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000005042	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000012768	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000014506	pseudogene	UNKNOWN
+OTTHUMG00000014507	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000031040	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000031042	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000031048	protein_coding	KNOWN
+OTTHUMG00000031049	protein_coding	KNOWN
+OTTHUMG00000031050	protein_coding	KNOWN
+OTTHUMG00000031051	protein_coding	KNOWN
+OTTHUMG00000031052	protein_coding	KNOWN
+OTTHUMG00000031055	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000031062	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000031091	protein_coding	KNOWN
+OTTHUMG00000031092	protein_coding	KNOWN
+OTTHUMG00000031115	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000031141	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000031195	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000031199	protein_coding	KNOWN
+OTTHUMG00000031207	protein_coding	KNOWN
+OTTHUMG00000031224	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000031225	protein_coding	KNOWN
+OTTHUMG00000031226	protein_coding	KNOWN
+OTTHUMG00000031230	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000031233	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000031261	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000031262	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000031280	protein_coding	KNOWN
+OTTHUMG00000031310	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000031312	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000031318	protein_coding	KNOWN
+OTTHUMG00000031319	protein_coding	KNOWN
+OTTHUMG00000031320	protein_coding	KNOWN
+OTTHUMG00000031321	protein_coding	KNOWN
+OTTHUMG00000031322	protein_coding	KNOWN
+OTTHUMG00000031325	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000031332	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000031361	protein_coding	KNOWN
+OTTHUMG00000031362	protein_coding	KNOWN
+OTTHUMG00000031395	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000031421	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000031494	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000031500	protein_coding	KNOWN
+OTTHUMG00000031508	protein_coding	KNOWN
+OTTHUMG00000031524	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000031525	protein_coding	KNOWN
+OTTHUMG00000031526	protein_coding	KNOWN
+OTTHUMG00000031530	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000031533	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000031559	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000031560	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000031578	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000085937	protein_coding	KNOWN
+OTTHUMG00000085938	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000085939	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000085940	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000085941	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000085943	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000085944	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000085947	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000085949	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000085950	protein_coding	KNOWN
+OTTHUMG00000085953	protein_coding	KNOWN
+OTTHUMG00000085956	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000085957	protein_coding	KNOWN
+OTTHUMG00000129017	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000129077	protein_coding	KNOWN
+OTTHUMG00000129079	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000129080	protein_coding	KNOWN
+OTTHUMG00000129081	protein_coding	KNOWN
+OTTHUMG00000129084	protein_coding	KNOWN
+OTTHUMG00000129085	protein_coding	KNOWN
+OTTHUMG00000129086	protein_coding	KNOWN
+OTTHUMG00000148694	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000148695	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000148696	protein_coding	KNOWN
+OTTHUMG00000148698	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000148699	protein_coding	KNOWN
+OTTHUMG00000148701	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000148703	processed_transcript	KNOWN
+OTTHUMG00000148704	protein_coding	KNOWN
+OTTHUMG00000148708	protein_coding	KNOWN
+OTTHUMG00000148709	processed_transcript	KNOWN
+OTTHUMG00000148710	protein_coding	KNOWN
+OTTHUMG00000148762	protein_coding	KNOWN
+OTTHUMG00000148767	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000148769	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000148790	protein_coding	KNOWN
+OTTHUMG00000148792	protein_coding	KNOWN
+OTTHUMG00000148793	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000148856	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000148857	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000148858	protein_coding	KNOWN
+OTTHUMG00000148860	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000148861	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000148862	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000148863	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000148864	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000148865	protein_coding	KNOWN
+OTTHUMG00000148866	protein_coding	KNOWN
+OTTHUMG00000148868	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000148870	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000148872	processed_transcript	KNOWN
+OTTHUMG00000148873	protein_coding	KNOWN
+OTTHUMG00000148877	protein_coding	KNOWN
+OTTHUMG00000148878	protein_coding	KNOWN
+OTTHUMG00000148879	protein_coding	KNOWN
+OTTHUMG00000148972	protein_coding	KNOWN
+OTTHUMG00000148977	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000148979	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000149017	protein_coding	KNOWN
+OTTHUMG00000149019	protein_coding	KNOWN
+OTTHUMG00000149020	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000149021	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000149135	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000149136	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000149137	protein_coding	KNOWN
+OTTHUMG00000149139	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000149140	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000149141	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000149142	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000149143	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000149144	protein_coding	KNOWN
+OTTHUMG00000149146	protein_coding	KNOWN
+OTTHUMG00000149148	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000149150	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000149152	protein_coding	KNOWN
+OTTHUMG00000149153	protein_coding	KNOWN
+OTTHUMG00000149157	protein_coding	KNOWN
+OTTHUMG00000149158	protein_coding	KNOWN
+OTTHUMG00000149159	protein_coding	KNOWN
+OTTHUMG00000149257	protein_coding	KNOWN
+OTTHUMG00000149262	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000149264	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000149298	protein_coding	KNOWN
+OTTHUMG00000149300	protein_coding	KNOWN
+OTTHUMG00000149302	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000149303	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000149391	protein_coding	KNOWN
+OTTHUMG00000149392	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000149393	protein_coding	KNOWN
+OTTHUMG00000149394	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000149395	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000149396	protein_coding	KNOWN
+OTTHUMG00000149398	protein_coding	KNOWN
+OTTHUMG00000149400	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000149402	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000149404	protein_coding	KNOWN
+OTTHUMG00000149405	protein_coding	KNOWN
+OTTHUMG00000149409	protein_coding	KNOWN
+OTTHUMG00000149410	protein_coding	KNOWN
+OTTHUMG00000149411	protein_coding	KNOWN
+OTTHUMG00000149487	protein_coding	KNOWN
+OTTHUMG00000149492	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000149494	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000149531	protein_coding	KNOWN
+OTTHUMG00000149532	protein_coding	KNOWN
+OTTHUMG00000149533	unprocessed_pseudogene	UNKNOWN
+OTTHUMG00000149534	unprocessed_pseudogene	UNKNOWN
