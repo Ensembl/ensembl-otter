@@ -14,7 +14,7 @@ use File::HomeDir qw(my_home);
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::Vega::Utils::EnsEMBL2GFF;
 
-# this regex will be used to split multiple values from the config file
+# this regex defines the delimiter for options which can take multiple values
 my $CFG_DELIM = qr/[\s,;]+/;
 
 # globals
@@ -80,7 +80,7 @@ if ($dbname) {
 	
 	$dbs{$dbname}->{dbh} = $dbh;
 	
-	$dbs{$dbname}->{analyses} = [ split($CFG_DELIM, $analyses) ];
+	$dbs{$dbname}->{analyses} = [ split $CFG_DELIM, $analyses ];
 }
 
 if ($region) {
@@ -89,11 +89,11 @@ if ($region) {
 }
 
 if ($types) {
-	%feature_types = map { $_ => {} } split($CFG_DELIM, $types);
+	%feature_types = map { $_ => {} } split $CFG_DELIM, $types;
 }
 
 if ($coords) {
-	($start, $end) = split(/-/, $coords);	
+	($start, $end) = split /-/, $coords;	
 }
 
 # read the config file
@@ -105,12 +105,12 @@ if (-e $cfg_file) {
 	if ($cfg->SectionExists('enzembl')) {
 		
 		# the following settings are all 'unless'ed so that command line options 
-		# override config file options
+		# override config file settings
 		
 		unless ($dbname) {
 			die "No database specified!\n" unless $cfg->val('enzembl','dbs');
 			
-			for my $db (split($CFG_DELIM, $cfg->val('enzembl','dbs'))) {
+			for my $db (split $CFG_DELIM, $cfg->val('enzembl','dbs')) {
 				
 				my $dbh = new Bio::EnsEMBL::DBSQL::DBAdaptor(
 					-host 	=> $cfg->val($db,'host'),
@@ -127,7 +127,7 @@ if (-e $cfg_file) {
 				
 				$dbs{$db}->{analyses} ||= [];
 				
-				push @{ $dbs{$db}->{analyses} }, split($CFG_DELIM, $cfg->val($db,'analyses'));
+				push @{ $dbs{$db}->{analyses} }, split $CFG_DELIM, $cfg->val($db,'analyses');
 			}
 		}
 		
@@ -145,7 +145,7 @@ if (-e $cfg_file) {
 		unless (%feature_types) {
 			die "You must supply at least one feature type!\n" unless $cfg->val('enzembl','feature-types');
 			
-			for my $type (split($CFG_DELIM,$cfg->val('enzembl','feature-types'))) {
+			for my $type (split $CFG_DELIM, $cfg->val('enzembl','feature-types')) {
 				$feature_types{$type} = {};
 			}
 		}
@@ -156,7 +156,7 @@ if (-e $cfg_file) {
 			if ($cfg->SectionExists($type)) {
 				$feature_types{$type}->{parent_style} = $cfg->val($type,'parent-style');
 				$feature_types{$type}->{colours} = [
-					split($CFG_DELIM, $cfg->val($type,'colours'))
+					split $CFG_DELIM, $cfg->val($type,'colours')
 				];
 			}
 		}
@@ -175,6 +175,7 @@ if (-e $cfg_file) {
 
 die "No zmap executable supplied!\n" unless $zmap_exe;
 die "No zmap config supplied!\n" unless $zmap_config_file;
+die "No styles file supplied!\n" unless $styles_file;
 
 # ensure all paths are absolute
 
@@ -184,8 +185,8 @@ $styles_file = abs_path($styles_file);
 
 # pull the data from each of the databases
 
-my $gff = '';
-my %sources_to_types = ();
+my $gff;
+my %sources_to_types;
 my $sequence_name;
 
 for my $db (keys %dbs) {
@@ -241,7 +242,7 @@ for my $db (keys %dbs) {
 							unless ($sources_to_types{$source} eq $feature_type) {
 								die "Can't have multiple gff sources from one analysis:\n".
 									"('$analysis' seems to have both '".$sources_to_types{$source}.
-									"' and '$feature_type')";
+									"' and '$feature_type')\n";
 							}
 						}
 						else { 
@@ -267,15 +268,19 @@ my %provided_styles = map { $_ => 1 } $styles_cfg->Sections;
 my $styles_list = join (';', keys %provided_styles);
 	
 if ($create_missing_styles) {
-	# create the necessary styles
+	
+	# create a style for each source which doesn't have one
 	
 	for my $source (keys %sources_to_types) {
+		
+		# skip if there is a style already defined for this source
+		next if $styles_cfg->SectionExists($source);
 		
 		my $type = $sources_to_types{$source};
 		
 		my $type_settings = $feature_types{$type};
 		
-		die "No parent_style provided for type: $type\n" unless $type_settings->{parent_style};
+		die "No parent-style provided for type: $type\n" unless $type_settings->{parent_style};
 		die "No colours provided for type: $type\n" unless defined $type_settings->{colours};
 		
 		$styles_cfg->AddSection($source);
@@ -334,7 +339,7 @@ print $gff_fh $gff;
 
 my $sources_list = 'DNA;'.join(';', keys %sources_to_types); # always include DNA
 
-# zmap need to know whether each source is dna, protein or a transcript to use blixem 
+# zmap needs to know whether each source is dna, protein or a transcript to use blixem 
 # correctly, so we try to guess the correct type here
 
 my $dna_sources = join (';', 
@@ -352,7 +357,7 @@ my $tsct_sources = join (';',
 my $zmap_cfg = new Config::IniFiles( -file => $zmap_config_file );
 
 $zmap_cfg->newval('ZMap', 'default-sequence', $sequence_name);
-$zmap_cfg->newval('source', 'url','file://'. $gff_filename);
+$zmap_cfg->newval('source', 'url','file://'.$gff_filename);
 $zmap_cfg->newval('source', 'featuresets', $sources_list);
 $zmap_cfg->newval('source', 'styles', $styles_list);
 $zmap_cfg->newval('source', 'stylesfile', $styles_file);
@@ -366,7 +371,7 @@ my $zmap_dir = tempdir(
 	CLEANUP => 1
 );
 
-$zmap_cfg->WriteConfig($zmap_dir.'/ZMap') or die "Failed to write zmap config file";
+$zmap_cfg->WriteConfig($zmap_dir.'/ZMap') or die "Failed to write zmap config file\n";
 
 # and run zmap...
 
@@ -451,7 +456,7 @@ a working example file.
 
 =item B<-db DATABASE -host HOST -port PORT -user USER -pass PASSWORD>
 
-Grab features from this (ensembl schema) database. Multiple databases can be specifed 
+Grab features from this (ensembl schema) database. Multiple databases can be specified 
 in the config file, although no mapping between coordinate systems is (yet) supported, 
 so all features must lie in the same coordinate space. Must be supplied here or in the 
 config file.
