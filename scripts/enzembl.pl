@@ -171,6 +171,11 @@ if (-e $cfg_file) {
 	}
 }
 
+# make sure we have everything we need
+
+die "No zmap executable supplied!\n" unless $zmap_exe;
+die "No zmap config supplied!\n" unless $zmap_config_file;
+
 # ensure all paths are absolute
 
 $zmap_exe = abs_path($zmap_exe);
@@ -187,8 +192,8 @@ for my $db (keys %dbs) {
 
 	my $dbh = $dbs{$db}->{dbh};
 
-	my $analysis_adaptor = $dbh->get_AnalysisAdaptor();
-	my $slice_adaptor = $dbh->get_SliceAdaptor();
+	my $analysis_adaptor = $dbh->get_AnalysisAdaptor;
+	my $slice_adaptor = $dbh->get_SliceAdaptor;
 	
 	my @analyses = @{ $dbs{$db}->{analyses} };
 	
@@ -329,16 +334,19 @@ print $gff_fh $gff;
 
 my $sources_list = 'DNA;'.join(';', keys %sources_to_types); # always include DNA
 
+# zmap need to know whether each source is dna, protein or a transcript to use blixem 
+# correctly, so we try to guess the correct type here
+
 my $dna_sources = join (';', 
-	grep { $sources_to_types{$_} eq 'DnaAlignFeatures' } keys %sources_to_types
+	grep { $sources_to_types{$_} =~ /dna/i } keys %sources_to_types
 );
 
 my $protein_sources = join (';',
-	grep { $sources_to_types{$_} eq 'ProteinAlignFeatures' } keys %sources_to_types
+	grep { $sources_to_types{$_} =~ /protein/i } keys %sources_to_types
 );
 
 my $tsct_sources = join (';',
-	grep { $sources_to_types{$_} =~ /Genes|PredictionTranscripts/ } keys %sources_to_types
+	grep { $sources_to_types{$_} =~ /gene|transcript/i } keys %sources_to_types
 );
 
 my $zmap_cfg = new Config::IniFiles( -file => $zmap_config_file );
@@ -412,7 +420,7 @@ Grab features created by these analyses. Must be supplied here or in the config 
 
 =item B<-types type_name1,type_name2,...>
 
-Only look for features of these types (== EnsEMBL classes). Must be supplied here or in the config file.
+Only look for features of these types (== EnsEMBL feature classes). Must be supplied here or in the config file.
 
 =item B<-styles FILE>
 
@@ -430,9 +438,16 @@ Use this zmap executable. Must be supplied here or in the config file.
 
 =item B<-zmap_cfg FILE>
 
-Use settings from the given file as defaults for zmap. Note that this script automatically 
-fills in some parameters, if you specify any of these in this file they will be overidden. 
-See below for a working example file.
+Use the given file as the ZMap configuration file (normally found in ~/.ZMap/ZMap). Note that 
+this script automatically fills in the parameters shown below, if you specify any of these in 
+this file they will be ignored. All other settings are passed unaltered to zmap. See below for 
+a working example file.
+
+ stanza		parameters set by this script
+ ------------------------------------------------------------------------
+ [ZMap]		default-sequence
+ [source]	url, featuresets, styles, stylesfile
+ [blixem]	dna-featuresets, protein-featuresets, transcript-featuresets
 
 =item B<-db DATABASE -host HOST -port PORT -user USER -pass PASSWORD>
 
