@@ -467,7 +467,7 @@ If supplied, should look something like this:
 
  [enzembl]
  dbs = loutre_human, pipe_human
- zmap = /nfs/team71/analysis/rds/zmap-style-ini-fix
+ zmap = /software/anacode/otter/otter_production_main/bin/zmap
  zmap-config = /nfs/team71/analysis/gr5/.enzembl/ZMap
  feature-types = DnaAlignFeatures,ProteinAlignFeatures,Genes,SimpleFeatures,RepeatFeatures,PredictionTranscripts
  stylesfile = /nfs/team71/analysis/gr5/.enzembl/basic_styles.ini
@@ -578,16 +578,6 @@ A corresponding basic styles file to use is:
  parent-style=tsct
  colours=normal border purple4
 
-=head1 EXAMPLE BLIXEMRC
-
- [blixem]
- default_fetch_mode = pfetch_socket
-
- [pfetch_socket]
- pfetch_mode = socket
- port = 22400
- node = 172.18.62.3
-
 =head1 EXAMPLE ZMAP CONFIG FILE
 
  [ZMap]
@@ -618,6 +608,16 @@ A corresponding basic styles file to use is:
  config-file = /nfs/team71/analysis/gr5/.enzembl/blixemrc
  homol-max = 0
  scope = 200000
+ 
+=head1 EXAMPLE BLIXEMRC
+
+ [blixem]
+ default_fetch_mode = pfetch_socket
+
+ [pfetch_socket]
+ pfetch_mode = socket
+ port = 22400
+ node = 172.18.62.3
 
 =head1 AUTHOR
 
