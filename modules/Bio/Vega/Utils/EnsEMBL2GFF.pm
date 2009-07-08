@@ -12,9 +12,11 @@ sub gff_header {
 	
 	# create a generic GFF header in the format expected by ZMap
 	
-	my $slice = shift;
+	my %args = @_;
 	
-	my $include_dna = shift;
+	my $slice = $args{slice} || die "Must provide a slice to gff_header";
+	
+	my $include_dna = $args{include_dna};
 	
 	# build up a date string in the format specified by the GFF spec
 	
@@ -131,12 +133,10 @@ sub gff_header {
 		$gff->{score} = $self->score;
 		$gff->{feature}	= $self->analysis->gff_feature || 'similarity';
 		
-		#$gff->{strand} = '-' if ($self->hstrand == -1);
-		#$gff->{attributes}->{Target} = '"Sequence:'.$self->hseqname.'" '.$self->hstart.' '.$self->hend;
-		
 		$gff->{attributes}->{Target} = '"Sequence:'.$self->hseqname.'" '.
-			($self->hstrand == -1 ? $self->hend : $self->hstart).' '.
-			($self->hstrand == -1 ? $self->hstart : $self->hend);
+			($self->hstrand == -1 ? 
+				$self->hend.' '.$self->hstart : 
+				$self->hstart.' '.$self->hend);
 		
 		if ($gap_string) {
 			$gff->{attributes}->{Gaps} = qq("$gap_string");
