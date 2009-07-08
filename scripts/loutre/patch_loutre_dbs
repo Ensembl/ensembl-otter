@@ -1,0 +1,47 @@
+#!/usr/bin/env perl
+
+### patch_loutre_dbs
+
+use strict;
+use warnings;
+
+use Bio::Otter::Lace::Defaults;
+
+{
+    my( $dataset_name, $set_name );
+
+    my $usage = sub { exec('perldoc', $0) };
+    # This do_getopt() call is needed to parse the otter config files
+    # even if you aren't giving any arguments on the command line.
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        ) or $usage->();
+    
+    # Get all the statements from the magic <> filehandle
+    $/ = undef;
+    my @statements = grep /\w/, split /;\s*\n/, <>;
+    $/ = "\n";    
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    foreach my $ds ($cl->get_all_DataSets) {
+        printf STDERR "Patching '%s'\n", $ds->name;
+        my $dbh = $ds->make_Vega_DBAdaptor->dbc;
+        foreach my $sql (@statements) {
+            $dbh->do($sql);
+        }
+    }
+}
+
+
+
+
+__END__
+
+=head1 NAME - patch_loutre_dbs
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
