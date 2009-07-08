@@ -11,7 +11,7 @@ our @EXPORT_OK = qw{ method2biotype_status biotype_status2method };
 # Known_CDS will overwrite Known in %biotype_status_to_method, but
 # this does not matter since the gene type does not get transmitted
 # back to acedb.
-# Novel_transcript will only be found as a gene type, not a transcript.
+# Novel_Transcript will only be found as a gene type, not a transcript.
 my @method_biotype_status = qw{
 
     Known                           protein_coding          KNOWN
@@ -21,8 +21,8 @@ my @method_biotype_status = qw{
         Putative_CDS                protein_coding          PUTATIVE
         Nonsense_mediated_decay     =                       -
                                     
-    Novel_transcript                processed_transcript    KNOWN
-    Novel_transcript                processed_transcript    NOVEL
+    Novel_Transcript                processed_transcript    KNOWN
+    Novel_Transcript                processed_transcript    NOVEL
     Transcript                      processed_transcript    -
         Non_coding                  =                       -
         Ambiguous_ORF               =                       -
