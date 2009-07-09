@@ -8,7 +8,6 @@ use warnings;
 use Bio::Otter::Lace::Defaults;
 use Bio::Vega::DBSQL::DBAdaptor;
 use GeneHist::DataUtils qw (process_query);
-use Date::Calc qw(Date_to_Days);
 use Hum::Chromoview::Utils qw(unixtime2YYYYMMDD);
 
 # not doing gene type update anymore,
@@ -50,7 +49,7 @@ sub update_otter {
 
     $counter++;
 
-    print STDERR  "Working on hgncId $counter: $hgnc_vegaID\n";
+    print STDERR  "Working on row #$counter hgncId $hgnc_id: $hgnc_vegaID\n";
     my $gene = $geneAd->fetch_by_stable_id($hgnc_vegaID);
 
     # human intervention for obsolete genes
@@ -121,16 +120,21 @@ sub check_HUGO_symbol_is_unique_in_loutre {
   print STDERR "DUP_SYMBOL_CHK for HUGO symbol $hgnc_name ($curr_gsid) --- ";
 
   my $dup = $loutre_dba->dbc->prepare(qq{
-                                         SELECT gsi.stable_id, sr.name
-                                         FROM gene_stable_id gsi, gene g, gene_attrib ga, attrib_type at, seq_region sr
-                                         WHERE g.is_current = 1
-                                         AND sr.seq_region_id=g.seq_region_id
-                                         AND gsi.gene_id=g.gene_id
-                                         AND g.gene_id=ga.gene_id
-                                         AND ga.attrib_type_id=at.attrib_type_id
-                                         AND at.code='name'
-                                         AND ga.value=?
-                                       });
+    SELECT gsi.stable_id
+      , sr.name
+    FROM gene_stable_id gsi
+      , gene g
+      , gene_attrib ga
+      , attrib_type at
+      , seq_region sr
+    WHERE gsi.gene_id = g.gene_id
+      AND g.gene_id = ga.gene_id
+      AND ga.attrib_type_id = at.attrib_type_id
+      AND g.seq_region_id = sr.seq_region_id
+      AND at.code = 'name'
+      AND g.is_current = 1
+      AND ga.value = ?
+      });
   $dup->execute($hgnc_name);
 
   if ( $dup->rows != 0 ){
