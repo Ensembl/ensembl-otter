@@ -1,11 +1,10 @@
 #!/usr/bin/env perl
 
-use warnings;
-
-
 ### HUGO_gene_name_to_vega
 
 use strict;
+use warnings;
+
 use Bio::Otter::Lace::Defaults;
 use Bio::Vega::DBSQL::DBAdaptor;
 use GeneHist::DataUtils qw (process_query);
@@ -35,16 +34,7 @@ my %updated_gsid;
   my $ds         = $cl->get_DataSet_by_name($dataset_name);
   my $loutre_dba = $ds->make_Vega_DBAdaptor;
 
-  $loutre_dba->begin_work;
-  eval{
     update_otter($loutre_dba, $hugo_data, $test);
-  };
-  if ($@) {
-    $loutre_dba->rollback;
-    die $@, "\nNo changes saved to otter db\n";
-  } else {
-    $loutre_dba->commit;
-  }
 }
 
 sub update_otter {
@@ -104,9 +94,21 @@ sub update_otter {
       $chr = 19;
     }
 
-    update_gene_name_and_description($loutre_dba, $geneAd, $chr, $gene,
-                                     $hgnc_name, $hugo->{'locus_description'},
-                                     $hgnc_id, $test);
+    $loutre_dba->begin_work;
+    eval{
+        update_gene_name_and_description(
+            $loutre_dba, $geneAd, $chr, $gene,
+            $hgnc_name, $hugo->{'locus_description'},
+            $hgnc_id, $test,
+            );
+    };
+    if ($@) {
+        $loutre_dba->rollback;
+        print STDERR "Error updating gene name:\n$@";
+    } else {
+        $loutre_dba->commit;
+    }
+
   }
 }
 
@@ -204,7 +206,6 @@ sub update_gene_name_and_description {
   my $name_attr    = $gene->get_all_Attributes('name')->[0];
   my $current_name = $name_attr->value;
   my $current_desc = $gene->description;
-  my $flag = 0;
   my $gsid = $gene->stable_id;
   my $curr_gene_id = $gene->dbID;
   my $biotype = $gene->biotype;
@@ -221,36 +222,43 @@ sub update_gene_name_and_description {
   print STDERR "$cmp - $hgnc_name (H) vs $current_name (V)\n";
   my $gids;
 
-  print STDERR "SEARCHING for gene_names via prefixed_names and haplotype by $hgnc_name ... \n";
-  $gids = find_genes_with_gene_names_from_prefixed_names_and_haplotype($loutre_dba, $geneAd, $hgnc_name, $chr);
+  store_update($loutre_dba, $geneAd, $gene, $hgnc_name, $hugo_desc, $hgnc_id, $test);
+  print STDERR "\n";
 
-  if ( ! $gids->[0] ) {
-    print STDERR "NO matching gene_name found via prefixed_names and haplotypes by $hgnc_name\n";
-    store_update($loutre_dba, $geneAd, $gene, $hgnc_name, $hugo_desc, $hgnc_id, $test);
-    print STDERR "\n";
-  } else {
-    my $num = @$gids;
+  ### Commented out this section since I'm uneasy about updating
+  ### haplotypes to keep them in sync via their name, which is what
+  ### we are trying to keep in sync...
 
-    my $search_name = $hgnc_name;
-    if ( $hgnc_name =~ /:(\w+)/ ) {
-      $search_name = $1;
-    }
-    print STDERR "MULTIPLE OCCURRENCE for $search_name: $num [@$gids]\n" if $num > 1;
-
-    foreach my $gene_id ( @$gids ) {
-
-      my $curr_gene  = $geneAd->fetch_by_dbID($gene_id);
-      my $gsid       = $curr_gene->stable_id;
-
-      # reason see store_gene() below
-      if ( $updated_gsid{$gsid} ) {
-        print STDERR "SKIP $gsid ($gene_id): already updated\n";
-        next;
-      }
-      store_update($loutre_dba, $geneAd, $curr_gene, $hgnc_name, $hugo_desc, $hgnc_id, $test);
-    }
-    print STDERR "\n";
-  }
+  # print STDERR "SEARCHING for gene_names via prefixed_names and haplotype by $hgnc_name ... \n";
+  # $gids = find_genes_with_gene_names_from_prefixed_names_and_haplotype($loutre_dba, $geneAd, $hgnc_name, $chr);
+  # 
+  # if ( ! $gids->[0] ) {
+  #   print STDERR "NO matching gene_name found via prefixed_names and haplotypes by $hgnc_name\n";
+  #   store_update($loutre_dba, $geneAd, $gene, $hgnc_name, $hugo_desc, $hgnc_id, $test);
+  #   print STDERR "\n";
+  # } else {
+  #   my $num = @$gids;
+  # 
+  #   my $search_name = $hgnc_name;
+  #   if ( $hgnc_name =~ /:(\w+)/ ) {
+  #     $search_name = $1;
+  #   }
+  #   print STDERR "MULTIPLE OCCURRENCE for $search_name: $num [@$gids]\n" if $num > 1;
+  # 
+  #   foreach my $gene_id ( @$gids ) {
+  # 
+  #     my $curr_gene  = $geneAd->fetch_by_dbID($gene_id);
+  #     my $gsid       = $curr_gene->stable_id;
+  # 
+  #     # reason see store_gene() below
+  #     if ( $updated_gsid{$gsid} ) {
+  #       print STDERR "SKIP $gsid ($gene_id): already updated\n";
+  #       next;
+  #     }
+  #     store_update($loutre_dba, $geneAd, $curr_gene, $hgnc_name, $hugo_desc, $hgnc_id, $test);
+  #   }
+  #   print STDERR "\n";
+  # }
 }
 
 sub store_geneId_consortiumID_mapping {
@@ -274,15 +282,23 @@ sub find_genes_with_gene_names_from_prefixed_names_and_haplotype {
 
   my $mapping = get_expected_haplotype_from_chr($chr);
 
-  my $sql = qq{SELECT sr.name, g.gene_id, gsi.stable_id, g.source
-               FROM gene_attrib ga, gene_stable_id gsi, gene g, seq_region sr, attrib_type at
-               WHERE sr.seq_region_id=g.seq_region_id
-               AND g.gene_id=ga.gene_id
-               AND g.gene_id=gsi.gene_id
-               AND ga.attrib_type_id=at.attrib_type_id
-               AND at.code='name'
-               AND g.is_current = 1
-             };
+  my $sql = qq{
+    SELECT sr.name
+      , g.gene_id
+      , gsi.stable_id
+      , g.source
+    FROM gene_attrib ga
+      , gene_stable_id gsi
+      , gene g
+      , seq_region sr
+      , attrib_type at
+    WHERE sr.seq_region_id = g.seq_region_id
+      AND g.gene_id = ga.gene_id
+      AND g.gene_id = gsi.gene_id
+      AND ga.attrib_type_id = at.attrib_type_id
+      AND at.code = 'name'
+      AND g.is_current = 1
+      };
 
   my $prefix_match = qq{ AND ga.value like "%:$search_name"}; # look for prefixed gene names
   my $name_match   = qq{ AND ga.value = "$search_name"};      # look for identical gene names
@@ -363,18 +379,21 @@ sub store_update {
 
   my ($loutre_dba, $geneAd, $gene, $hgnc_symbol, $hgnc_desc, $hgnc_id, $test) = @_;
 
-  my $name_attr  = $gene->get_all_Attributes('name')->[0];
-  my $curr_name  = $name_attr->value;
-  my $curr_desc  = $gene->description || 'NA';
-  my $curr_stable_id = $gene->stable_id;
-  my $source     = $gene->source;
-  my $status     = $gene->status;
-  my $biotype    = $gene->biotype;
-  my $assembly   = $gene->slice->seq_region_name;
-  my $prefixed_hugo_symbol = $source . ":" . $hgnc_symbol;
+  my $name_attr         = $gene->get_all_Attributes('name')->[0];
+  my $curr_desc         = $gene->description || 'NA';
+  my $curr_stable_id    = $gene->stable_id;
+  my $source            = $gene->source;
+  my $status            = $gene->status;
+  my $biotype           = $gene->biotype;
+  my $assembly          = $gene->slice->seq_region_name;
+  
+  my $curr_name = $name_attr->value;
+  
+
   my $need_update = 0;
 
   # code can be used in the future
+  # my $prefixed_hugo_symbol = $source . ":" . $hgnc_symbol;
   #if ( $source =~ /KO|WU/  ){
 #    if ( $curr_name ne $prefixed_hugo_symbol ){
 #      $need_update = 1;
@@ -415,80 +434,20 @@ sub store_update {
 }
 
 sub change_gene_trans_status {
-
-  #----------------------------------------------------------------
-  # update status rules for genes/transcripts with consortium name:
-  # protein_coding  => KNOWN
-  # all_pseudogenes => UNKNOWN (IGNORE genes MHC/LRC: no change)
-  # all_transcripts => NOVEL
-  # IGNORE artifact, polymorphic
-  #----------------------------------------------------------------
-
   my ( $loutre_dba, $geneAd, $curr_gene, $hgnc_name ) = @_;
-
-
-  # taking care of NcRNA
-  if ( $hgnc_name =~ /NCRNA/i ){
-    # transcript type for these needs to be non-coding
-    foreach my $trans (@{ $curr_gene->get_all_Transcripts }) {
-      my $t_biotype = $trans->biotype;
-      my $tsid = $trans->stable_id;
-
-      unless ( $t_biotype eq 'non_coding' ){
-        print STDERR "TRAN TYPE CHANGE from $t_biotype to 'non_coding' ($tsid)\n";
-        $trans->biotype('non_coding');
-      }
-    }
-    return $curr_gene;
-  }
 
   my $g_biotype = $curr_gene->biotype;
   my $g_status  = $curr_gene->status;
 
-  if ( $g_biotype eq 'protein_coding' and $g_status ne 'KNOWN' ){
+  # Change status to KNOWN if it is not a pseudogene (or is a polymorphic_pseudogene)
+  if (($g_biotype !~ /pseudo/i or $g_biotype =~ /polymorphic/i) and $g_status ne 'KNOWN') {
     print STDERR "GENE TYPE CHANGE from $g_status to KNOWN\n";
     $curr_gene->status('KNOWN');
-    $curr_gene = check_single_transcript_status($curr_gene, 'KNOWN');
-  }
-  elsif ( $g_biotype eq 'polymorphic_pseudogene' and $g_status ne 'KNOWN' ){
-    print STDERR "GENE TYPE CHANGE from $g_status to KNOWN\n";
-    $curr_gene->status('KNOWN');
-    $curr_gene = check_single_transcript_status($curr_gene, 'KNOWN');
-  }
-  elsif ( $g_biotype =~ /pseudogene/ and $g_status ne 'UNKNOWN' ){
-    print STDERR "GENE TYPE CHANGE from $g_status to UNKNOWN\n";
-    $curr_gene->status('UNKNOWN');
-    $curr_gene = check_single_transcript_status($curr_gene, 'UNKNOWN');
-  }
-  elsif ( $g_biotype =~ /transcript/ and $g_status ne 'NOVEL') {
-    print STDERR "GENE TYPE CHANGE from $g_status to NOVEL\n";
-    $curr_gene->status('NOVEL');
-    $curr_gene = check_single_transcript_status($curr_gene, 'NOVEL');
-  }
-  else {
+  } else {
     print STDERR "GENE STATUS OK: $g_status\n";
-    $curr_gene = check_single_transcript_status($curr_gene, $g_status);
   }
 
   return $curr_gene;
-}
-
-sub check_single_transcript_status {
-
-  my ( $curr_g, $status ) = @_;
-  my @trans = @{$curr_g->get_all_Transcripts};
-
-  # if a gene has only 1 transcript, make sure its status is same as gene
-  if ( @trans == 1 ){
-    my $t = $trans[0];
-    print STDERR "TRAN STATUS change from ", $t->status, " to $status\n";
-    $t->status($status);
-  }
-  else {
-    print STDERR "TRAN STATUS: ", $curr_g->stable_id ,
-      " (becomes $status) has ", scalar @trans, " variants - annotator to check\n";
-  }
-  return $curr_g;
 }
 
 sub store_gene {
