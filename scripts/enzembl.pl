@@ -28,6 +28,7 @@ my $end;
 # command line/config file options
 
 my $help;
+my $verbose;
 my $port;
 my $pass;
 my $host;
@@ -63,6 +64,7 @@ GetOptions(
 	'zmap:s',		\$zmap_exe,
 	'zmap_cfg:s',	\$zmap_config_file,
 	'h|help',		\$help,
+	'v|verbose',	\$verbose,
 ) or $usage->();
 
 $usage->() if $help;
@@ -227,7 +229,12 @@ for my $db (keys %dbs) {
 			
 			for my $analysis (@analyses) {
 				my $features = $slice->$method($analysis);
-				for my $feature (@{ $features }) {
+				
+				if ($verbose && scalar(@$features)) {
+					print "Found ".scalar(@$features)." ".$feature_type." from $analysis in $db\n";
+				}
+				
+				for my $feature (@$features) {
 					if ( $feature->can('to_gff') ) {
 						
 						# add the gff of this feature
@@ -460,6 +467,14 @@ Grab features from this (ensembl schema) database. Multiple databases can be spe
 in the config file, although no mapping between coordinate systems is (yet) supported, 
 so all features must lie in the same coordinate space. Must be supplied here or in the 
 config file.
+
+=item B<-v | -verbose>
+
+Produce verbose output.
+
+=item B<-h | -help>
+
+Print these usage instructions.
 
 =head1 EXAMPLE CONFIG FILE
 
