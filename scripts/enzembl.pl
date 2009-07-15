@@ -10,6 +10,7 @@ use File::Temp qw(tempfile tempdir);
 use Config::IniFiles;
 use Cwd qw(abs_path);
 use File::HomeDir qw(my_home);
+use Pod::Usage;
 
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::Vega::Utils::EnsEMBL2GFF;
@@ -19,7 +20,9 @@ my $CFG_DELIM = qr/[\s,;]+/;
 
 # globals
 
-my %feature_types;
+my @feature_types;
+my @analyses;
+my %feature_type_settings;
 my %dbs;
 my %regions;
 my $start;
@@ -27,17 +30,12 @@ my $end;
 
 # command line/config file options
 
-my $help;
 my $verbose;
 my $port;
 my $pass;
 my $host;
 my $user;
 my $dbname;
-my $analyses;
-my $types;
-my $region;
-my $coords;
 my $styles_file;
 my $create_missing_styles;
 my $zmap_exe;
@@ -49,27 +47,26 @@ my $usage = sub { exec('perldoc', $0) };
 # parse the command line options
 
 GetOptions(	
+	'db:s',  		\$dbname,
 	'port:s',		\$port,
 	'pass:s',		\$pass,
 	'host:s',		\$host,
 	'user:s',		\$user,
-	'db:s',  		\$dbname,
-	'analyses:s',	\$analyses,
-	'region:s', 	\$region,
-	'coords:s', 	\$coords,
+	'analyses:s',	sub { @analyses = split $CFG_DELIM, $_[1] },
+	'region:s', 	sub { my ($cs, $id) = split /:/, $_[1]; $regions{$id} = $cs },
+	'coords:s', 	sub { ($start, $end) = split /-/, $_[1] },
 	'styles:s',		\$styles_file,
 	'create_styles',\$create_missing_styles,
-	'types:s',		\$types,
-	'cfg:s',		\$cfg_file,
+	'types:s',		sub { @feature_types = split $CFG_DELIM, $_[1] },
 	'zmap:s',		\$zmap_exe,
 	'zmap_cfg:s',	\$zmap_config_file,
-	'h|help',		\$help,
-	'v|verbose',	\$verbose,
-) or $usage->();
-
-$usage->() if $help;
+	'verbose|v',	\$verbose,
+	'help|h',		sub { exec('perldoc', $0) },	
+) or pod2usage(1);	
 
 if ($dbname) {
+	
+	die "You must supply a user along with a database\n" unless $user;
 	
 	my $dbh = new Bio::EnsEMBL::DBSQL::DBAdaptor(
 		-host 	=> $host,
@@ -82,20 +79,7 @@ if ($dbname) {
 	
 	$dbs{$dbname}->{dbh} = $dbh;
 	
-	$dbs{$dbname}->{analyses} = [ split $CFG_DELIM, $analyses ];
-}
-
-if ($region) {
-	my ($cs, $id) = split /:/, $region;
-	$regions{$id} = $cs;
-}
-
-if ($types) {
-	%feature_types = map { $_ => {} } split $CFG_DELIM, $types;
-}
-
-if ($coords) {
-	($start, $end) = split /-/, $coords;	
+	$dbs{$dbname}->{analyses} = \@analyses;
 }
 
 # read the config file
@@ -109,8 +93,20 @@ if (-e $cfg_file) {
 		# the following settings are all 'unless'ed so that command line options 
 		# override config file settings
 		
+		unless (@feature_types) {
+			if ($cfg->val('enzembl','feature-types')) {
+				@feature_types = split $CFG_DELIM, $cfg->val('enzembl','feature-types');
+			}
+		}
+		
+		unless (@analyses) {
+			if ($cfg->val('enzembl','analyses')) {
+				@analyses = split $CFG_DELIM, $cfg->val('enzembl','analyses');
+			}
+		}
+		
 		unless ($dbname) {
-			die "No database specified!\n" unless $cfg->val('enzembl','dbs');
+			die "No databases specified!\n" unless $cfg->val('enzembl','dbs');
 			
 			for my $db (split $CFG_DELIM, $cfg->val('enzembl','dbs')) {
 				
@@ -125,11 +121,29 @@ if (-e $cfg_file) {
 				
 				$dbs{$db}->{dbh} = $dbh;
 				
-				die "No analyses supplied for db: $db!\n" unless $cfg->val($db,'analyses');
+				# command line AND enzembl stanza settings override database specific settings
 				
-				$dbs{$db}->{analyses} ||= [];
+				if (@analyses) {
+					$dbs{$db}->{analyses} = \@analyses;
+				}
+				else {
+					die "No analyses supplied for $db\n" unless $cfg->val($db,'analyses');
 				
-				push @{ $dbs{$db}->{analyses} }, split $CFG_DELIM, $cfg->val($db,'analyses');
+					$dbs{$db}->{analyses} = [ split $CFG_DELIM, $cfg->val($db,'analyses') ];
+				}
+				
+				if (@feature_types) {
+					$dbs{$db}->{feature_types} = \@feature_types;
+				}
+				else {
+					die "No feature types supplied for $db\n" unless $cfg->val($db,'feature-types');
+					
+					$dbs{$db}->{feature_types} = [ split $CFG_DELIM, $cfg->val($db,'feature-types') ];
+				}
+				
+				# note the name of all feature_types
+				
+				map { $feature_type_settings{$_} ||= {} } @{ $dbs{$db}->{feature_types} };
 			}
 		}
 		
@@ -137,6 +151,7 @@ if (-e $cfg_file) {
 			die "No region supplied!\n" unless $cfg->val('enzembl','region');
 			
 			my ($cs, $id) = split /:/, $cfg->val('enzembl','region');
+	
 			$regions{$id} = $cs;
 		}
 		
@@ -144,20 +159,13 @@ if (-e $cfg_file) {
 			($start, $end) = split /-/, $cfg->val('enzembl','coords') if $cfg->val('enzembl','coords');
 		}
 		
-		unless (%feature_types) {
-			die "You must supply at least one feature type!\n" unless $cfg->val('enzembl','feature-types');
-			
-			for my $type (split $CFG_DELIM, $cfg->val('enzembl','feature-types')) {
-				$feature_types{$type} = {};
-			}
-		}
-		
-		# look up settings for the type seperately so that the user can supply types on the 
-		# command line but leave settings in the config file
-		for my $type (keys %feature_types) {
+		# look up settings for the feature types seperately so that the user can supply types 
+		# on the command line but leave settings in the config file
+		for my $type (keys %feature_type_settings, @feature_types) {
 			if ($cfg->SectionExists($type)) {
-				$feature_types{$type}->{parent_style} = $cfg->val($type,'parent-style');
-				$feature_types{$type}->{colours} = [
+				$feature_type_settings{$type} ||= {};
+				$feature_type_settings{$type}->{parent_style} = $cfg->val($type,'parent-style');
+				$feature_type_settings{$type}->{colours} = [
 					split $CFG_DELIM, $cfg->val($type,'colours')
 				];
 			}
@@ -195,73 +203,35 @@ for my $db (keys %dbs) {
 
 	my $dbh = $dbs{$db}->{dbh};
 
-	my $analysis_adaptor = $dbh->get_AnalysisAdaptor;
 	my $slice_adaptor = $dbh->get_SliceAdaptor;
-	
-	my @analyses = @{ $dbs{$db}->{analyses} };
 	
 	for my $region (keys %regions) {
 	
 		# get a slice for each region
 		
-		my $coord_system = $regions{$region};
+		my $coord_sys = $regions{$region};
 		
-		my $slice = $slice_adaptor->fetch_by_region($coord_system, $region, $start, $end);
+		my $slice = $slice_adaptor->fetch_by_region($coord_sys, $region, $start, $end);
 		
-		die "Failed to fetch slice for region: $coord_system:$region ".
+		die "Failed to fetch slice for region: $coord_sys:$region ".
 			($start && $end ? "$start-$end" : '')."\n" unless $slice;
 		
-		unless ($gff) {
-			# add a gff header if this is the first entry, including DNA
-			$gff = Bio::Vega::Utils::EnsEMBL2GFF::gff_header(slice => $slice, include_dna => 1);
-			
-			# save a sequence name to give to zmap later
-			$sequence_name = $slice->seq_region_name;
-		}
+		# and append the slice's gff representation
 		
-		for my $feature_type (keys %feature_types) {
-			
-			# grab features of each type we're interested in
-			
-			my $method = 'get_all_'.$feature_type;
-			
-			die "There is no method to retrieve $feature_type from a slice\n" unless $slice->can($method);
-			
-			for my $analysis (@analyses) {
-				my $features = $slice->$method($analysis);
-				
-				if ($verbose && scalar(@$features)) {
-					print "Found ".scalar(@$features)." ".$feature_type." from $analysis in $db\n";
-				}
-				
-				for my $feature (@$features) {
-					if ( $feature->can('to_gff') ) {
-						
-						# add the gff of this feature
-						
-						$gff .= $feature->to_gff . "\n";
-	
-						# and store the gff 'source' name of this feature
-	
-						my $source = $feature->_gff_hash->{source};
-						
-						if ($sources_to_types{$source}) {
-							unless ($sources_to_types{$source} eq $feature_type) {
-								die "Can't have multiple gff sources from one analysis:\n".
-									"('$analysis' seems to have both '".$sources_to_types{$source}.
-									"' and '$feature_type')\n";
-							}
-						}
-						else { 
-							$sources_to_types{$source} = $feature_type;
-						}
-					}
-					else {
-						warn "no to_gff method in $feature_type";
-					}
-				}
-			}
-		}
+		print "Database $db:\n" if $verbose;
+		
+		$gff .= $slice->to_gff(
+			analyses			=> $dbs{$db}->{analyses},
+			feature_types 		=> $dbs{$db}->{feature_types},
+			include_dna 		=> 1,
+			include_header 		=> !$gff,
+			sources_to_types	=> \%sources_to_types,
+			verbose				=> $verbose,
+		);
+		
+		# save off the first sequence name for zmap
+		
+		$sequence_name = $slice->seq_region_name unless $sequence_name;
 	}
 }
 
@@ -285,7 +255,7 @@ if ($create_missing_styles) {
 		
 		my $type = $sources_to_types{$source};
 		
-		my $type_settings = $feature_types{$type};
+		my $type_settings = $feature_type_settings{$type};
 		
 		die "No parent-style provided for type: $type\n" unless $type_settings->{parent_style};
 		die "No colours provided for type: $type\n" unless defined $type_settings->{colours};
@@ -361,6 +331,8 @@ my $tsct_sources = join (';',
 	grep { $sources_to_types{$_} =~ /gene|transcript/i } keys %sources_to_types
 );
 
+# add the necessary entries to the zmap config file, over-writing existing entries
+
 my $zmap_cfg = new Config::IniFiles( -file => $zmap_config_file );
 
 $zmap_cfg->newval('ZMap', 'default-sequence', $sequence_name);
@@ -388,11 +360,15 @@ __END__
 	
 =head1 NAME 
 
-enzembl 
+enzembl
+
+=head1 DESCRIPTION
+
+Connect to EnsEMBL schema databases and show features directly in ZMap.
 
 =head1 SYNOPSIS
 
-Connect to EnsEMBL schema databases and show features directly in ZMap.
+enzembl [options]
 
 =head1 EXAMPLE COMMAND LINES
 
@@ -414,8 +390,8 @@ B<NB:> All of these settings can also be set in the config file. Command line op
 
 =item B<-cfg FILE>
 
-Read configuration from the specified file (defaults to ~/.enzembl_config). See below for
-an example file.
+Read configuration from the specified file (defaults to ~/.enzembl_config). Supply '-h'
+on the command line to see an example file.
 
 =item B<-region coord_system:identifier>
 
@@ -442,7 +418,7 @@ Use provided zmap styles file.
 
 Automatically create a style for features from each feature type found. The parent style and
 some colours to use to differentiate features of the same type from different analyses can be
-specified in the config file (see below for examples).
+specified in the config file (supply '-h' on the command line to see an example styles file).
 
 =item B<-zmap /path/to/zmap>
 
@@ -452,8 +428,8 @@ Use this zmap executable. Must be supplied here or in the config file.
 
 Use the given file as the ZMap configuration file (normally found in ~/.ZMap/ZMap). Note that 
 this script automatically fills in the parameters shown below, if you specify any of these in 
-this file they will be ignored. All other settings are passed unaltered to zmap. See below for 
-a working example file.
+this file they will be ignored. All other settings are passed unaltered to zmap. Supply '-h'
+on the command line to see a working example file.
 
  stanza		parameters set by this script
  ------------------------------------------------------------------------
@@ -463,7 +439,7 @@ a working example file.
 
 =item B<-db DATABASE -host HOST -port PORT -user USER -pass PASSWORD>
 
-Grab features from this (ensembl schema) database. Multiple databases can be specified 
+Grab features from this (EnsEMBL schema) database. Multiple databases can be specified 
 in the config file, although no mapping between coordinate systems is (yet) supported, 
 so all features must lie in the same coordinate space. Must be supplied here or in the 
 config file.
@@ -474,7 +450,7 @@ Produce verbose output.
 
 =item B<-h | -help>
 
-Print these usage instructions.
+Print extended usage instructions, including example configuration and styles files.
 
 =head1 EXAMPLE CONFIG FILE
 
