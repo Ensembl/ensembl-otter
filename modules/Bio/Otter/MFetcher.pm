@@ -514,10 +514,40 @@ sub fetch_mapped_features {
             }
             $self->log("Found ".scalar(@$proj_segments_on_mapper)." projection segments on mapper when projecting to $cs:$csver_remote");
 
+	    # group the projected slices by their chromosome and,
+	    # for each chromosome, calculate the endpoints of the
+	    # slice that just covers all the projected slices on
+	    # that chromosome
+
+	    my $amalgamated_endpoints = { };
+	    my $proj_slices_on_mapper;
+
+	    foreach my $segment (@$proj_segments_on_mapper) {
+		my $slice = $segment->to_Slice;
+		my $chromosome = $slice->seq_region_name;
+		my $start0 = $amalgamated_endpoints->{$chromosome}[0];
+		my $start1 = $slice->start;
+		my $end0 = $amalgamated_endpoints->{$chromosome}[1];
+		my $end1 = $slice->end;
+		$amalgamated_endpoints->{$chromosome}[0] = $start1 unless
+		    defined $start0 && $start0 <= $start1;
+		$amalgamated_endpoints->{$chromosome}[1] = $end1 unless
+		    defined $end0 && $end0 >= $end1;
+	    }
+
+	    # create the amalgamated slices
+	    my $strand = $original_slice_on_mapper->strand;
+	    my $adaptor = $original_slice_on_mapper->adaptor;
+	    $proj_slices_on_mapper = [ map {
+		my $seq_region_name = $_;
+		my ( $start, $end ) = @{$amalgamated_endpoints->{$_}};
+		$adaptor->fetch_by_region($cs, $seq_region_name,
+					  $start, $end, $strand, $csver_remote,);
+	    } keys %$amalgamated_endpoints ];
+
             if($das_style_mapping) { # In this mode there is no target_db involved.
                                      # Features are put directly on the mapper target slice and then mapped back.
-                foreach my $segment (@$proj_segments_on_mapper) {
-                    my $projected_slice_on_mapper = $segment->to_Slice();
+                foreach my $projected_slice_on_mapper (@$proj_slices_on_mapper) {
 
                     my $target_fs_on_mapper_segment
                         = $projected_slice_on_mapper->$fetching_method(@$call_parms);
@@ -545,8 +575,7 @@ sub fetch_mapped_features {
                 my $sdba = $self->satellite_dba( $metakey );
                 my $sa_on_target = $sdba->get_SliceAdaptor();
 
-                SEGMENT: foreach my $segment (@$proj_segments_on_mapper) {
-                    my $projected_slice_on_mapper = $segment->to_Slice();
+                SEGMENT: foreach my $projected_slice_on_mapper (@$proj_slices_on_mapper) {
 
                     my $target_slice_on_target = $sa_on_target->fetch_by_region(
                         $projected_slice_on_mapper->coord_system()->name(),
@@ -608,20 +637,6 @@ sub fetch_mapped_features {
 
         } else { # if it wasn't possible to connect to the mapper
             $self->error_exit("No '$mapper_metakey' defined in meta table => cannot map between assemblies");
-        }
-    }
-    
-    # We get multiple copies of genes where genes overlap multiple mapping segments
-    my %seen_feat;
-    for (my $i = 0; $i < @$features;) {
-        my $feat = $features->[$i];
-        my $class = ref $feat;
-        my $db_id = $feat->dbID;
-        if ($seen_feat{$class}{$db_id}) {
-            splice @$features, $i, 1;
-        } else {
-            $i++;
-            $seen_feat{$class}{$db_id} = 1;
         }
     }
 
