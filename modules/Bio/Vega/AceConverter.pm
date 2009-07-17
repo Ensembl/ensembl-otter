@@ -364,6 +364,7 @@ sub set_gene_biotype_status {
         $status_count{ $tsct->status }++;
     }
     
+    # Have already set status to KNOWN if Known was set in acedb.
     unless ($gene->is_known) {
         # Not setting gene status to KNOWN if there is a transcript
         # with status KNOWN.  So KNOWN is only set if radio button in
