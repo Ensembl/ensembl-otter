@@ -311,8 +311,7 @@ foreach my $t (keys %constraints) {
 ##########################################
 
 ####
-#first of all check there are no missing links between author and author_group
-#in loutre since this will break the API
+#warn if there are missing links between author and author_group
 ####
 my $sql = qq(
     select a.author_name, a.group_id, ag.group_id, ag.group_email
@@ -352,11 +351,11 @@ else {
       if (! grep { $id eq $_} keys %v_attrib_codes) {
 	if ( ! $support->param('dry_run') && ! $support->param('add_genes')) {		
 	  my $r = $vdbh->do(qq(
-                                    insert into attrib_type
-                                    values (?,?,?,?)),
-			    {},
-			    ($id,$code,$name,$desc)
-			  );
+                    insert into attrib_type
+                    values (?,?,?,?)),
+		   {},
+		   ($id,$code,$name,$desc)
+		 );
 	  $support->log("Inserted attrib_type_id $id, code $code into vega database\n");
 	}
       }
@@ -373,9 +372,9 @@ else {
 ####
 
 $lsth = $ldbh->prepare(qq(
-               SELECT distinct(at.code)
-               FROM seq_region_attrib sra, attrib_type at
-               WHERE sra.attrib_type_id = at.attrib_type_id));
+          SELECT distinct(at.code)
+          FROM seq_region_attrib sra, attrib_type at
+          WHERE sra.attrib_type_id = at.attrib_type_id));
 $lsth->execute;
 my @new_seq_region_attribs;
 while (my ($code) = $lsth->fetchrow_array) {
@@ -399,15 +398,15 @@ if ( @new_seq_region_attribs ) {
 if (! exists ($vega_tables{'backup_simple_feature_names'})) {
   $support->log_verbose("Creating backup table of simple_feature logic_names\n\n");
   $vdbh->do("CREATE table backup_simple_feature_names
-               SELECT distinct(a.logic_name)
-               FROM   simple_feature sf, analysis a
-               WHERE  sf.analysis_id = a.analysis_id");
+             SELECT distinct(a.logic_name)
+               FROM simple_feature sf, analysis a
+              WHERE sf.analysis_id = a.analysis_id");
 }
 if (! exists ($vega_tables{'backup_meta_coord'})) {
   $support->log_verbose("Creating backup of meta_coord table\n\n");
   $vdbh->do("CREATE table backup_meta_coord
-               SELECT *
-               FROM   meta_coord");
+             SELECT *
+               FROM meta_coord");
 }
 my @pipeline_features;
 my $vsth = $vdbh->prepare(qq(
@@ -597,6 +596,7 @@ foreach my $name (@{$chr_names_wanted}) {
 	next GENE;
       }
     }
+
     #filter out genes on non-anotated clones and without fsv tags
     if ($support->param('dbname') =~ /danio/) {
       my $annotated_clone = 0;
