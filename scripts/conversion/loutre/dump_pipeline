@@ -50,6 +50,9 @@ Note that earlier versions of this script (eg 1.6) attempted to restrict the tra
 features on analysis_id and seq_region_id - this worked for small database but fell over with
 human.
 
+Move the table definitions at the end to dump halfwise genes once we worked out what to do with
+them.
+
 Transfer of features from the dna_ and protein_align_feature tables can be completely
 prevented using the -no_feature option to the script.
 
@@ -178,6 +181,27 @@ while (my ($analysis_id,$logic_name) = $gtn->fetchrow){
   next if ($logic_name=~/\_raw|_new$/);
   foreach my $t qw(analysis protein_align_feature dna_align_feature) {
     push @{$analysis_ids{$t}{'analysis_id'}}, $analysis_id;
+  }
+}
+
+#check we've only got halfwise xrefs
+$gtn = $pdbh->prepare(qq(SELECT distinct ensembl_object_type FROM object_xref));
+$gtn->execute();
+while (my $type = $gtn->fetchrow){
+  if ($type ne 'Gene') {
+    $support->log_warning("There are xrefs on objects ($type) other than genes, please find out what they are\n");
+  }
+}
+$gtn = $pdbh->prepare(qq(
+   SELECT distinct a.logic_name
+     FROM object_xref ox, gene g, analysis a
+    WHERE ox.ensembl_id = g.gene_id
+      AND g.analysis_id = a.analysis_id
+      AND ox.ensembl_object_type = 'Gene'));
+$gtn->execute();
+while (my $ln = $gtn->fetchrow){
+  if ($ln ne 'Halfwise') {
+    $support->log_warning("There are xrefs on objects other than Halfwise genes ($ln), please find out what they are\n");
   }
 }
 
@@ -409,3 +433,11 @@ simple_feature                   d
 ENDOFTEXT
   return $txt;
 }
+
+#add these tables to dump halfwise
+#object_xref                      d
+#xref                             d
+#gene                             d
+#transcript                       d
+#exon_transcript                  d
+#exon                             d
