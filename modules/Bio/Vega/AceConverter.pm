@@ -185,6 +185,7 @@ sub build_Features_spans_and_agp_fragments {
             $strand = -1;
             ($start, $end) = ($end, $start);
         }
+        $score =~ s/0+$//;  # Trim trailing zeroes from score
         my $ana = $analysis{$type} ||=
             Bio::EnsEMBL::Analysis->new(-LOGIC_NAME => $type);
         my $sf = Bio::EnsEMBL::SimpleFeature->new(
@@ -202,7 +203,7 @@ sub build_Features_spans_and_agp_fragments {
     foreach my $row ($ace->get_values('Subsequence')) {
         my ($tsct_name, $start, $end) = @$row;
         my $strand = 1;
-        if ($start < $end) {
+        if ($start > $end) {
             $strand = -1;
             ($start, $end) = ($end, $start);
         }
@@ -215,18 +216,18 @@ sub build_Features_spans_and_agp_fragments {
     my $chr_name = $smart_slice->seqname;
     my $ss_name  = $smart_slice->ssname;
     foreach my $row ($ace->get_values('AGP_Fragment')) {
-        my ($ctg_name, $group_start, $group_end, undef, $start_or_end, $offset, $tile_length) = @$row;
+        my ($ctg_name, $group_start, $group_end, undef, undef, $offset, $tile_length) = @$row;
 
         my ($ctg_strand, $ctg_start, $ctg_end);
         if ($group_start < $group_end) {
             $ctg_strand = 1;
-            $ctg_start = $start_or_end;
-            $ctg_end   = $start_or_end + $tile_length - 1;
+            $ctg_start = $offset;
+            $ctg_end   = $offset + $tile_length - 1;
         } else {
             ($group_start, $group_end) = ($group_end, $group_start);
             $ctg_strand = -1;
-            $ctg_start = $start_or_end - $tile_length - 1;
-            $ctg_end   = $start_or_end;
+            $ctg_start = $offset - $tile_length + 1;
+            $ctg_end   = $offset;
         }
 
         my $cs = Bio::Otter::Lace::CloneSequence->new;
@@ -318,7 +319,7 @@ sub build_Gene {
     $self->create_Attribute($gene, 'name', $name);
     
     $gene->truncated_flag(1) if $ace->count_tag('Truncated');
-    $gene->is_known(1)       if $ace->count_tag('Known');
+    $gene->status('KNOWN')   if $ace->count_tag('Known');
 
     $self->set_gene_biotype_status($gene);
     
@@ -360,17 +361,13 @@ sub set_gene_biotype_status {
         $status_count{ $tsct->status }++;
     }
     
-    my $status = 'UNKNOWN';
-    if ($gene->is_known) {
+    unless ($gene->is_known) {
         # Not setting gene status to KNOWN if there is a transcript
         # with status KNOWN.  So KNOWN is only set if radio button in
         # otterlace is checked.
-        $status = 'KNOWN';
+        my $status = $status_count{'NOVEL'} ? 'NOVEL' : 'UNKNOWN';
+        $gene->status($status);
     }
-    elsif ($status_count{'NOVEL'}) {
-        $status = 'NOVEL';
-    }
-    $gene->status($status);
 
     my $biotype = 'processed_transcript';
     if ($biotype_count{'protein_coding'}) {

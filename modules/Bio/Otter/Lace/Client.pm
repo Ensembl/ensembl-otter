@@ -119,7 +119,7 @@ sub timeout_attempts {
     if (defined $timeout_attempts) {
         $self->{'_timeout_attempts'} = $timeout_attempts;
     }
-    return $self->{'_timeout_attempts'} || 5;
+    return $self->{'_timeout_attempts'} || 1;
 }
 
 sub get_log_dir {
@@ -445,7 +445,7 @@ sub general_http_dialog {
         } elsif ($code == 500 or $code == 502) {
             printf STDERR "\nGot error %s \nretrying...\n", $code; #, $response->decoded_content;
             $timeout_attempts--;
-            $timed_out = ($timeout_attempts == 0);
+            $timed_out = ($timeout_attempts <= 0);
         } elsif ($code == 503 or $code == 504) {
             $self->fatal_error_prompt->("The server timed out ($code). Please try again.\n");
         } else {
