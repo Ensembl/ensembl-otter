@@ -368,7 +368,9 @@ sub set_gene_biotype_status {
         # Not setting gene status to KNOWN if there is a transcript
         # with status KNOWN.  So KNOWN is only set if radio button in
         # otterlace is checked.
-        my $status = $status_count{'NOVEL'} ? 'NOVEL' : 'UNKNOWN';
+        my $status = $status_count{'NOVEL'} || $biotype_count{'protein_coding'}
+            ? 'NOVEL'
+            : 'UNKNOWN';
         $gene->status($status);
     }
 
