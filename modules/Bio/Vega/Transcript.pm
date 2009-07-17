@@ -132,6 +132,17 @@ sub truncate_to_Slice {
   if ($exons_truncated) {
 	 $self->{'translation'}     = undef;
 	 $self->{'_translation_id'} = undef;
+	 my $attrib = $self->get_all_Attributes;
+	 for (my $i = 0; $i < @$attrib;) {
+	     my $this = $attrib->[$i];
+	     # Should not have CDS start/end not found attributes
+	     # if there is no CDS!
+	     if ($this->code =~ /^cds_(start|end)_NF$/) {
+	         splice(@$attrib, $i, 1);
+	     } else {
+	         $i++;
+	     }
+	 }
   }
   return $exons_truncated;
 }
