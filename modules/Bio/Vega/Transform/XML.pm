@@ -37,6 +37,10 @@ sub DESTROY {
     bless $self, 'Bio::Vega::Writer';
 }
 
+my $by_start_end_strand = sub {
+    return $a->start <=> $b->start || $a->end <=> $b->end || $a->strand <=> $b->strand;
+};
+
 # get/set methods exposed on object interface
 
 sub species {
@@ -197,17 +201,6 @@ sub get_geneXML {
   return $gene_xml;
 }
 
-sub old_generate_OtterXML {
-    my ($self, $slice, $odba, $indent, $genes, $sf_list) = @_;
-
-    my $ot=$self->prettyprint('otter');
-    $ot->indent($indent);
-    my $dataset_name = $odba->species;  ### DB ACCESS
-    $ot->attribvals($self->prettyprint('species', $dataset_name));
-    $ot->attribobjs($self->generate_SequenceSet($slice, $odba, $genes, $sf_list));
-    return $self->formatxml($ot);
-}
-
 sub generate_OtterXML {
     my ($self) = @_;
     
@@ -218,41 +211,6 @@ sub generate_OtterXML {
     $ot->attribobjs($self->generate_SequenceSet);
 
     return $self->formatxml($ot);
-}
-
-sub old_generate_SequenceSet {
-  my ($self, $slice, $odb, $genes, $features)=@_;
-
-  my $ss=$self->prettyprint('sequence_set');
-  $ss->attribvals($self->generate_AssemblyType($slice));
-
-  my $slice_projection = $slice->project('contig'); ### DB ACCESS
-  foreach my $contig_seg (@$slice_projection) {
-      ### I think we will generate contig attributes multiple times
-      ### for contigs which appear multiple times in the assembly
-	 $ss->attribobjs($self->generate_SequenceFragment($contig_seg, $slice, $odb));
-  }
-
-  $features ||= $slice->get_all_SimpleFeatures; ### DB ACCESS (if no $features passed)
-
-  # Now it is very important that we discard features that intersect the slice boundaries:
-
-    for (my $i = 0; $i < @$features; ) {
-        my $sf = $features->[$i];
-        if( ($sf->start()<1) || ($sf->end()>$slice->length()) ) {
-            splice(@$features, $i, 1);
-        } else {
-            $i++;
-        }
-    }
-  
-  $ss->attribobjs($self->generate_FeatureSet($features,$slice));
-
-  $genes ||= $slice->get_all_Genes; ### DB ACCESS (if no $genes)
-  foreach my $gene(@$genes){
-	 $ss->attribobjs($self->generate_Locus($gene));
-  }
-  return $ss;
 }
 
 sub generate_SequenceSet {
@@ -271,12 +229,11 @@ sub generate_SequenceSet {
     $ss->attribobjs($self->generate_FeatureSet);
 
     my $list_of_genes = $genes{$self} || [];
-    foreach my $gene (sort {$a->start <=> $b->start} @$list_of_genes) {
+    foreach my $gene (sort $by_start_end_strand @$list_of_genes) {
         $ss->attribobjs($self->generate_Locus($gene));
     }
     return $ss;
 }
-
 
 sub generate_AssemblyType {
     my ($self) = @_;
@@ -396,7 +353,7 @@ sub generate_Locus {
 
         my $coord_offset=$gene->get_all_Exons->[0]->slice->start-1;
 
-        foreach my $tran (@$transcripts){
+        foreach my $tran (sort $by_start_end_strand @$transcripts) {
             $g->attribobjs($self->generate_Transcript($tran, $coord_offset));
         }
     } else {
@@ -492,7 +449,7 @@ sub generate_Transcript {
     
         for (my $i = 0; $i < @attrib_tag; $i += 2) {
             my ($attrib, $tag) = @attrib_tag[$i, $i + 1];
-            if (defined(my $val = get_single_attrib_value($tran, $attrib))) {
+            if (my $val = get_single_attrib_value($tran, $attrib)) {
                 $t->attribvals($self->prettyprint($tag, $val));
             }
         }
@@ -525,23 +482,20 @@ sub generate_ExonSet {
 
 
 sub generate_EvidenceSet {
-  my ($self,$tran)=@_;
+    my ($self,$tran)=@_;
 
-  my $evidence=$tran->evidence_list();
-  my $es=$self->prettyprint('evidence_set');
-  foreach my $evi (@$evidence){
-	 my $e=$self->prettyprint('evidence');
-	 $e->attribvals($self->prettyprint('name',$evi->name));
-	 $e->attribvals($self->prettyprint('type',$evi->type));
-	 $es->attribobjs($e);
-  }
-  my $c = $evidence ? scalar(@$evidence) : 0;
+    my $evidence = $tran->evidence_list;
+    return unless @$evidence;
 
-  if ($c>0){
-	 return $es;
-  } else {
-	 return;
-  }
+    my $es = $self->prettyprint('evidence_set');
+    foreach my $evi (sort {$a->type cmp $b->type || $a->name cmp $b->name} @$evidence) {
+        my $e = $self->prettyprint('evidence');
+        $e->attribvals($self->prettyprint('name', $evi->name));
+        $e->attribvals($self->prettyprint('type', $evi->type));
+        $es->attribobjs($e);
+    }
+
+    return $es;
 }
 
 sub generate_FeatureSet {
