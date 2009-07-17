@@ -188,23 +188,21 @@ if ($support->param('prune') && $support->user_proceed("\nDo you want to undo al
 ##########################################################################
 # delete unwanted loutre-derived simple_features                         #
 ##########################################################################
-my %lns_to_stay = map {$_,1} qw(
-				CpG
-				Eponine
-				polyA_signal
-				polyA_site
-				pseudo_polyA
-				RSS
-				tRNAscan
-				EUCOMM );
-my %lns_to_go = map {$_,1} qw(
-			      TATA_box
-			      EUCOMM_AUTO
-			      phastCons
-			      ComparaCons
-			      evigan_predictions
-			      NovelLoci
-			      Yale_Pseudogene );
+my %lns_to_stay = map {$_,1} qw(CpG
+			     Eponine
+			     polyA_signal
+			     polyA_site
+			     pseudo_polyA
+			     RSS
+			     tRNAscan
+			     EUCOMM );
+my %lns_to_go = map {$_,1} qw(TATA_box
+			   EUCOMM_AUTO
+			   phastCons
+			   ComparaCons
+			   evigan_predictions
+			   NovelLoci
+			   Yale_Pseudogene );
 
 my $s = $vdbh->prepare(qq(
                 SELECT a.logic_name, a.analysis_id, count(*)
@@ -245,9 +243,9 @@ if (! $support->param('dry_run')) {
   my $c = 0;
   foreach my $ln (keys %lns_to_go) {
     $c += $vdbh->do(qq(DELETE a, sf
-                             FROM simple_feature sf, analysis a
-                            WHERE a.analysis_id = sf.analysis_id
-                              AND a.logic_name = \'$ln\'));
+                         FROM simple_feature sf, analysis a
+                        WHERE a.analysis_id = sf.analysis_id
+                          AND a.logic_name = \'$ln\'));
   }
   $support->log("Removed $c simple_features\n");
 }
@@ -255,7 +253,7 @@ if (! $support->param('dry_run')) {
 #cleanup any other analysis table entries that might be around
 my @orphan_lns_to_go = qw(SubmitTranscript SubmitTranscriptChunk SubmitProteome SubmitContig SubmitChunk SubmitTranslation full_dbsts gc);
 my $lns_to_go = join("','",@orphan_lns_to_go);
-my $c = $vdbh->do(qq(DELETE FROM analysis WHERE logic_name in = $lns_to_go));
+my $c = $vdbh->do(qq(DELETE FROM analysis WHERE logic_name in ('$lns_to_go')));
 $support->log("Delete $c other orphan analysis table entries\n");
 
 ##########################################################################
@@ -297,7 +295,9 @@ my $sth = $vdbh->prepare(qq(
 $sth->execute;
 while (my ($source) = $sth->fetchrow_array) {
   if (! exists($all_logic_names{$source})) {
+#    unless ($source eq 'ensembl') { #uncomment for halfwise
     $support->log_error("You haven't defined the analysis.logic_name to use with genes of source $source, please fix.\n");
+#    }
   }
   else {
     $used_logic_names{$source} = $all_logic_names{$source}[0];
@@ -353,10 +353,10 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
       $sth->execute($vega_name,$sr_id);
     }
   }
-  
+
   if (! $support->param('dry_run')) {
     $support->log("\nPatching analysis_ids for genes and transcripts...\n",1);
-    
+
     #SQL to update gene analysis_id
     my $gsth = $vdbh->prepare(qq(
                    UPDATE gene g, analysis a
@@ -382,10 +382,11 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
 	
     #loop through genes
     foreach my $gene (@{$chrom->get_all_Genes()}) {
+      my $source = $gene->source;
+#      next if $source eq 'ensembl'; #halfwise genes
       my $gsid = $gene->stable_id;
       my $gid  = $gene->dbID;
       my $gname = $gene->get_all_Attributes('name')->[0]->value;
-      my $source = $gene->source;
       if ($source ne 'havana') {
 	$source = uc($source);
 	if ($gene->source ne $source) {
@@ -395,7 +396,7 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
       }
       my $old_gln = $gene->analysis->logic_name;
       my $new_ln = $used_logic_names{$source};
-	    
+
       #patch analysis_ids
       if ($new_ln ne $old_gln) {
 	if ($gsth->execute($gid,$new_ln)) {
@@ -405,10 +406,10 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
       else {
 	$support->log_verbose("\nGene $gsid ($gname) logic name not changed\n",2);
       }
-	    
+
       # create attributes for author info
       my $gene_attribs = [];
-	    
+
       # author and author_email
       push @{ $gene_attribs }, Bio::EnsEMBL::Attribute->new(
 	-CODE => 'author',
@@ -425,7 +426,7 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
 			
       $support->log_verbose("Storing gene attributes for author and author_email.\n", 3);
       $vata->store_on_Gene($gid, $gene_attribs);
-	    
+
       #loop through transcripts
       foreach my $trans (@{$gene->get_all_Transcripts()}){
 	my $tsid = $trans->stable_id;
@@ -488,10 +489,10 @@ foreach my $table (keys %attribs_to_go) {
   foreach my $code (@{$attribs_to_go{$table}}) {
     if (! $support->param('dry_run')) {
       my $r = $vdbh->do(qq(
-                             DELETE t
-                             FROM   attrib_type at, $table t
-                             WHERE  at.attrib_type_id = t.attrib_type_id
-                             AND    at.code = \'$code\'
+                  DELETE t
+                    FROM attrib_type at, $table t
+                   WHERE at.attrib_type_id = t.attrib_type_id
+                     AND at.code = \'$code\'
                             ));
       $support->log("\nRemoved $r attribs of type $code from table $table\n");
     }
@@ -524,30 +525,37 @@ if ($count > 2) {
   $support->log_warning("There is an unexpected number ($count) of chromosome coordinate systems - you need to investigate\n");
   exit;
 }
+
+####
+#remove this block?
+####
+
 # remove NCBI* coordinates as long as they're not in the seq_region table (which would represent a mistake)
 elsif ($count == 2) {
   my ($other_coord_version,$other_coord_id) = $vdbh->selectrow_array(qq(
-                                                    SELECT version, coord_system_id
-					            FROM   coord_system
-                      				    WHERE  name = 'chromosome'
-                                                    AND  version NOT IN ('Otter')));
-  if ($other_coord_version =~ /NCBI|Zv/) {
+                                                  SELECT version, coord_system_id
+				                    FROM   coord_system
+                      				   WHERE  name = 'chromosome'
+                                                     AND  version NOT IN ('Otter')));
+  if ($other_coord_version =~ /NCBI|Zv|OtterArchive/) {
     my $other_used =  $vdbh->selectrow_array(qq(
-                             SELECT count(*) 
-                             FROM   seq_region
-                             WHERE  coord_system_id = $other_coord_id));
+                          SELECT count(*)
+                          FROM   seq_region
+                          WHERE  coord_system_id = $other_coord_id));
     if (! $other_used) {
       $support->log("\nDeleting $other_coord_version coordinate system\n");			
       push @sql_fixes, "DELETE from coord_system WHERE coord_system_id = $other_coord_id;\n";
     }
     else {
-      $support->log_error("Slices with a coord_system.version of $other_coord_version are present in the seq_region table. This should not happen, please investigate\n");
+      $support->log_warning("Slices with a coord_system.version of $other_coord_version are present in the seq_region table. This should not happen, please investigate\n");
     }
   }
   elsif ($other_coord_version) {
-    $support->log_error("There is an unexpected coord_system ($other_coord_version) - you need to investigate\n");
+    $support->log_warning("There is an unexpected coord_system ($other_coord_version) - you need to investigate\n");
   }
 }
+####
+
 
 #sanity check - if the Otter coord_system is actually used for the (longest) chromosome then rename it to Vega
 #also patch contig.version in coord_system
@@ -577,8 +585,8 @@ else {
 
 #add misc info to meta table
 my $date = strftime "%Y-%m", localtime;
-my $gene_build = $date.'-vega';
-push @sql_fixes, "INSERT ignore into meta (meta_key,meta_value) VALUES (\'genebuild.version\',\'$gene_build\');\n";
+my $gene_build = $date.'-Vega';
+push @sql_fixes, "INSERT ignore into meta (meta_key,meta_value) VALUES (\'genebuild.start_date\',\'$gene_build\');\n";
 push @sql_fixes, "INSERT into meta (meta_key,meta_value) VALUES ('genebuild.level','toplevel'),('transcriptbuild.level','toplevel'),('exonbuild.level','toplevel');\n";
 
 #delete patch script entries
