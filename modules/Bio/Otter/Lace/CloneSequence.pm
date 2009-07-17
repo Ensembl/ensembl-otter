@@ -165,6 +165,15 @@ sub pipeline_chromosome {
 # --------------------------------------------------------------------
 
 
+sub ContigInfo {
+    my( $self, $ContigInfo ) = @_;
+    
+    if ($ContigInfo) {
+        $self->{'_ContigInfo'} = $ContigInfo;
+    }
+    return $self->{'_ContigInfo'};
+}
+
 sub pipelineStatus {
     my( $self, $status ) = @_;
 

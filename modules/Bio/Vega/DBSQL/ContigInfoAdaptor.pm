@@ -51,7 +51,7 @@ sub fetch_by_contigSlice {
     );
 	 
     my $attributes = $self->db->get_AttributeAdaptor->fetch_all_by_ContigInfo($contig_info);
-    $contig_info->add_Attributes($attributes);
+    $contig_info->add_Attributes(@$attributes);
 
     return $contig_info;
 }

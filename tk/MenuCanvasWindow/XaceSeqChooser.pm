@@ -966,9 +966,9 @@ sub save_data {
 
     eval{
         my $ace_data = $self->AceDatabase->save_ace_to_otter;
+        $self->save_ace($ace_data);
         # update_ace should be true unless this object is exiting
-        if ($update_ace and $ace_data) {
-            $self->save_ace($ace_data);
+        if ($update_ace) {
             # resync here!
             $self->resync_with_db;
         }

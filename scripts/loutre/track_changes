@@ -1,4 +1,7 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/env perl
+
+use warnings;
+
 
 # 1. Find instances of genes that were saved without any change other than change of author.
 # 2. Also find genes whose only change was loss of gene/transcript remarks (while the code was broken)
