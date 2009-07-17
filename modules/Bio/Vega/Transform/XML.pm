@@ -6,11 +6,187 @@ package Bio::Vega::Transform::XML;
 
 use strict;
 use warnings;
+use Carp;
 
 use Bio::EnsEMBL::Utils::Exception qw (throw);
-use base 'Bio::Vega::Writer';
 use Bio::Vega::Utils::GeneTranscriptBiotypeStatus 'biotype_status2method';
+use Bio::Otter::Lace::CloneSequence;
 
+use base 'Bio::Vega::Writer';
+
+my (
+    %species,
+    %slice,
+    %otter_dba,
+    %genes,
+    %seq_features,
+    %clone_seq_list,
+    );
+
+sub DESTROY {
+    my ($self) = @_;
+    
+    delete(                 $species{$self} );
+    delete(                   $slice{$self} );
+    delete(               $otter_dba{$self} );
+    delete(                   $genes{$self} );
+    delete(            $seq_features{$self} );
+    delete(          $clone_seq_list{$self} );
+    
+    # So that any DESTROY methods in base classes get called:
+    bless $self, 'Bio::Vega::Writer';
+}
+
+# get/set methods exposed on object interface
+
+sub species {
+    my $self = shift;
+    
+    $species{$self} = shift if @_;
+    return $species{$self};
+}
+
+sub slice {
+    my $self = shift;
+    
+    $slice{$self} = shift if @_;
+    return $slice{$self};
+}
+
+sub otter_dba {
+    my $self = shift;
+    
+    $otter_dba{$self} = shift if @_;
+    return $otter_dba{$self};
+}
+
+sub genes {
+    my $self = shift;
+    
+    $genes{$self} = shift if @_;
+    return $genes{$self};
+}
+
+sub seq_features {
+    my $self = shift;
+    
+    $seq_features{$self} = shift if @_;
+    return $seq_features{$self};
+}
+
+sub clone_seq_list {
+    my $self = shift;
+    
+    $clone_seq_list{$self} = shift if @_;
+    return $clone_seq_list{$self};
+}
+
+# methods which fetch data from otter db
+
+sub fetch_data_from_otter_db {
+    my ($self) = @_;
+    
+    confess "Cannot fetch data without slice"     unless $slice{$self};
+    confess "Cannot fetch data without otter_dba" unless $otter_dba{$self};
+    
+    $self->fetch_species;
+    $self->fetch_SimpleFeatures;
+    $self->fetch_Genes;
+    $self->fetch_CloneSequences;
+}
+
+sub fetch_species {
+    my ($self) = @_;
+    
+    $species{$self} = $otter_dba{$self}->species;
+}
+
+sub fetch_SimpleFeatures {
+    my ($self) = @_;
+    
+    my $slice = $slice{$self};
+    my $features        = $slice->get_all_SimpleFeatures;
+    my $slice_length    = $slice->length;
+
+    # Discard features which overlap the ends of the slice
+    for (my $i = 0; $i < @$features; ) {
+        my $sf = $features->[$i];
+        if ($sf->start < 1 or $sf->end > $slice_length) {
+            splice(@$features, $i, 1);
+        } else {
+            $i++;
+        }
+    }
+    
+    $seq_features{$self} = $features;
+}
+
+sub fetch_Genes {
+    my ($self) = @_;
+    
+    $genes{$self} = $slice{$self}->get_all_Genes;
+}
+
+sub fetch_CloneSequences {
+    my ($self) = @_;
+    
+    my $slice_projection = $slice{$self}->project('contig');
+    my $cs_list = $clone_seq_list{$self} = [];
+    foreach my $contig_seg (@$slice_projection) {
+        my $cs = $self->fetch_CloneSeq($contig_seg);
+        push @$cs_list, $cs;
+    }
+}
+
+sub fetch_CloneSeq {
+    my ($self, $contig_seg) = @_;
+    
+    my $contig_slice = $contig_seg->to_Slice();
+    
+    my $cs = Bio::Otter::Lace::CloneSequence->new;
+    $cs->chromosome(get_single_attrib_value($slice{$self}, 'chr'));
+    $cs->contig_name($contig_slice->seq_region_name);
+    
+    my $clone_slice = $contig_slice->project('clone')->[0]->to_Slice;
+    $cs->accession(     get_single_attrib_value($clone_slice, 'embl_acc')           );
+    $cs->sv(            get_single_attrib_value($clone_slice, 'embl_version')       );
+    
+    if (my ($cna) = $contig_slice->get_all_Attributes('intl_clone_name')) {
+        $cs->clone_name($cna->value);
+    } else {
+        $cs->clone_name($cs->accession_dot_sv);
+    }
+
+    my $assembly_offset = $slice{$self}->start - 1;
+    $cs->chr_start( $contig_seg->from_start + $assembly_offset  );
+    $cs->chr_end(   $contig_seg->from_end   + $assembly_offset  );
+    $cs->contig_start(  $contig_slice->start                );
+    $cs->contig_end(    $contig_slice->end                  );
+    $cs->contig_strand( $contig_slice->strand               );
+    $cs->length(        $contig_slice->seq_region_length    );
+
+    if (my $ci = $otter_dba{$self}->get_ContigInfoAdaptor->fetch_by_contigSlice($contig_slice)) {
+        $cs->ContigInfo($ci);
+    }
+    
+    return $cs;
+}
+
+sub get_single_attrib_value {
+    my ($obj, $code) = @_;
+    
+    my $attr = $obj->get_all_Attributes($code);
+    if (@$attr == 1) {
+        return $attr->[0]->value;
+    }
+    elsif (@$attr == 0) {
+        return;
+    }
+    else {
+        confess sprintf("Got %d %s Attributes on %s",
+            scalar(@$attr), $code, ref($obj));
+    }
+}
 
 sub get_geneXML {
   my ($self, $gene)=@_;
@@ -21,31 +197,43 @@ sub get_geneXML {
   return $gene_xml;
 }
 
-sub generate_OtterXML {
+sub old_generate_OtterXML {
     my ($self, $slice, $odba, $indent, $genes, $sf_list) = @_;
 
     my $ot=$self->prettyprint('otter');
     $ot->indent($indent);
-    my $dataset_name = $odba->species;
+    my $dataset_name = $odba->species;  ### DB ACCESS
     $ot->attribvals($self->prettyprint('species', $dataset_name));
     $ot->attribobjs($self->generate_SequenceSet($slice, $odba, $genes, $sf_list));
     return $self->formatxml($ot);
 }
 
-sub generate_SequenceSet {
+sub generate_OtterXML {
+    my ($self) = @_;
+    
+    my $ot = $self->prettyprint('otter');
+    $ot->indent(1);
+    my $dataset_name = $species{$self} or confess "No species set";
+    $ot->attribvals($self->prettyprint('species', $dataset_name));
+    $ot->attribobjs($self->generate_SequenceSet);
+
+    return $self->formatxml($ot);
+}
+
+sub old_generate_SequenceSet {
   my ($self, $slice, $odb, $genes, $features)=@_;
 
   my $ss=$self->prettyprint('sequence_set');
   $ss->attribvals($self->generate_AssemblyType($slice));
 
-  my $slice_projection = $slice->project('contig');
+  my $slice_projection = $slice->project('contig'); ### DB ACCESS
   foreach my $contig_seg (@$slice_projection) {
       ### I think we will generate contig attributes multiple times
       ### for contigs which appear multiple times in the assembly
 	 $ss->attribobjs($self->generate_SequenceFragment($contig_seg, $slice, $odb));
   }
 
-  $features ||= $slice->get_all_SimpleFeatures;
+  $features ||= $slice->get_all_SimpleFeatures; ### DB ACCESS (if no $features passed)
 
   # Now it is very important that we discard features that intersect the slice boundaries:
 
@@ -60,83 +248,63 @@ sub generate_SequenceSet {
   
   $ss->attribobjs($self->generate_FeatureSet($features,$slice));
 
-  $genes ||= $slice->get_all_Genes;
+  $genes ||= $slice->get_all_Genes; ### DB ACCESS (if no $genes)
   foreach my $gene(@$genes){
 	 $ss->attribobjs($self->generate_Locus($gene));
   }
   return $ss;
 }
 
+sub generate_SequenceSet {
+    my ($self) = @_;
+
+    my $ss=$self->prettyprint('sequence_set');
+    $ss->attribvals($self->generate_AssemblyType);
+
+    my $cs_list = $clone_seq_list{$self} || [];
+    foreach my $cs (@$cs_list) {
+        ### I think we will generate contig attributes multiple times
+        ### for contigs which appear multiple times in the assembly
+        $ss->attribobjs($self->generate_SequenceFragment($cs));
+    }
+
+    $ss->attribobjs($self->generate_FeatureSet);
+
+    my $list_of_genes = $genes{$self} || [];
+    foreach my $gene (sort {$a->start <=> $b->start} @$list_of_genes) {
+        $ss->attribobjs($self->generate_Locus($gene));
+    }
+    return $ss;
+}
+
 
 sub generate_AssemblyType {
-    my ($self, $slice)=@_;
+    my ($self) = @_;
 
-    my $atype=$self->prettyprint('assembly_type', $slice->seq_region_name);
+    my $atype = $self->prettyprint('assembly_type', $slice{$self}->seq_region_name);
 
     return $atype;
 }
 
 sub generate_SequenceFragment {
-    my ($self, $contig_seg, $slice, $odb)=@_;
+    my ($self, $cs) = @_;
 
     my $sf = $self->prettyprint('sequence_fragment');
-    my $contig_slice = $contig_seg->to_Slice();
+    $sf->attribvals($self->prettyprint('id',                $cs->contig_name    ));
+    $sf->attribvals($self->prettyprint('chromosome',        $cs->chromosome     ));
+    $sf->attribvals($self->prettyprint('accession',         $cs->accession      ));
+    $sf->attribvals($self->prettyprint('version',           $cs->sv             ));
+    $sf->attribvals($self->prettyprint('clone_name',        $cs->clone_name     ));
+    $sf->attribvals($self->prettyprint('assembly_start',    $cs->chr_start      ));
+    $sf->attribvals($self->prettyprint('assembly_end',      $cs->chr_end        ));
+    $sf->attribvals($self->prettyprint('fragment_ori',      $cs->contig_strand  ));
+    $sf->attribvals($self->prettyprint('fragment_offset',   $cs->contig_start   ));
+    $sf->attribvals($self->prettyprint('clone_length',      $cs->length         ));
 
-    if($contig_slice->seq_region_name) {
-        $sf->attribvals($self->prettyprint('id',$contig_slice->seq_region_name));
-    }
-
-    if( my $chrs = $slice->get_all_Attributes('chr') ) {
-        if(@$chrs > 1) {
-            throw("Chromosome Slice: $slice has more than one value for name attrib, cannot generate xml");
-        }
-        my $chr_name = $chrs->[0] && $chrs->[0]->value;
-        $sf->attribvals($self->prettyprint('chromosome', $chr_name));
-    }
-
-    my ($clone_seg) = @{ $contig_slice->project('clone') };
-    my $clone_slice = $clone_seg->to_Slice();
-
-    my ($acc_name, $ver, $clone_name);
-    if( my $accs = $clone_slice->get_all_Attributes('embl_acc') ) {
-        if (@$accs > 1){
-            throw("Clone Slice:$clone_slice has more than one value for accession attrib, cannot generate xml");
-        }
-
-        $acc_name = $accs->[0] && $accs->[0]->value;
-        $sf->attribvals($self->prettyprint('accession',$acc_name));
-    } else {
-        throw("Missing clone accession, cannot generate xml:$clone_slice");
-    }
-
-    if( my $vers = $clone_slice->get_all_Attributes('embl_version') ) {
-        if (@$vers > 1){
-            throw("Clone Slice:$clone_slice has more than one value for version attrib, cannot generate xml");
-        }
-
-        $ver = $vers->[0] && $vers->[0]->value;
-        $sf->attribvals($self->prettyprint('version',$ver));
-    } else {
-        throw("Missing clone version, cannot generate xml:$clone_slice");
-    }
-
-    if( my $clnames = $clone_slice->get_all_Attributes('intl_clone_name') ) {
-        if (@$clnames > 1){
-            throw("Clone Slice:$clone_slice has more than one value for intl_clone_name attrib, cannot generate xml");
-        }
-
-        $clone_name = ($clnames->[0] && $clnames->[0]->value) || $acc_name. '.' .$ver
-    } else {
-        $clone_name = $acc_name. '.' .$ver ;
-    }
-    $sf->attribvals($self->prettyprint('clone_name',$clone_name));
-
-    if (my $ci = $odb->get_ContigInfoAdaptor->fetch_by_contigSlice($contig_slice)) {
-        my $author_name;
-        my $author_email;
+    if (my $ci = $cs->ContigInfo) {
         if (my $contig_author = $ci->author) {
-            $sf->attribvals($self->prettyprint('author', $contig_author->name));
-            $sf->attribvals($self->prettyprint('author_email', $contig_author->email));
+            $sf->attribvals($self->prettyprint('author',        $contig_author->name    ));
+            $sf->attribvals($self->prettyprint('author_email',  $contig_author->email   ));
         }
 
  	    my $ci_attribs = $ci->get_all_Attributes;
@@ -162,26 +330,6 @@ sub generate_SequenceFragment {
                 $sf->attribvals($self->prettyprint('keyword',$cia->value));
             }
         }
-    }
-
-    my $assembly_offset = $slice->start() - 1;
-    $sf->attribvals($self->prettyprint('assembly_start',$contig_seg->from_start + $assembly_offset));
-    $sf->attribvals($self->prettyprint('assembly_end',  $contig_seg->from_end   + $assembly_offset));
-
-    if ($contig_slice->strand) {
-        $sf->attribvals($self->prettyprint('fragment_ori',$contig_slice->strand));
-    } else {
-        throw("Missing fragment orientation, cannot generate xml:$contig_slice");
-    }
-    if ($contig_slice->start) {
-        $sf->attribvals($self->prettyprint('fragment_offset',$contig_slice->start));
-    } else {
-        throw("Missing fragment offset, cannot generate xml:$contig_slice");
-    }
-    if( my $clone_length = $clone_slice->seq_region_length()) {
-        $sf->attribvals($self->prettyprint('clone_length',$clone_length));
-    } else {
-        throw("Missing clone length, cannot generate xml:$clone_slice");
     }
 
     return $sf;
@@ -286,26 +434,8 @@ sub generate_Transcript {
 	 }
   }
 
-  my $mRNA_start_NF = $tran->get_all_Attributes('mRNA_start_NF') ;
-  my $mRNA_end_NF = $tran->get_all_Attributes('mRNA_end_NF') ;
-  my $cds_start_NF = $tran->get_all_Attributes('cds_start_NF') ;
-  my $cds_end_NF = $tran->get_all_Attributes('cds_end_NF') ;
-  if (defined $cds_start_NF){
-	 my $csNF=$cds_start_NF->[0]->value;
-	 $t->attribvals($self->prettyprint('cds_start_not_found',$csNF));
-  }
-  if (defined $cds_end_NF){
-	 my $ceNF=$cds_end_NF->[0]->value;
-	 $t->attribvals($self->prettyprint('cds_end_not_found',$ceNF));
-  }
-  if (defined $mRNA_start_NF){
-	 my $msNF=$mRNA_start_NF->[0]->value;
-	 $t->attribvals($self->prettyprint('mRNA_start_not_found',$msNF));
-  }
-  if (defined $mRNA_end_NF){
-	 my $meNF=$mRNA_end_NF->[0]->value;
-	 $t->attribvals($self->prettyprint('mRNA_end_not_found',$meNF));
-  }
+  $self->add_start_end_not_found_tags($t, $tran);
+  
   ##in future <transcript_class> tag will be replaced by trancript <biotype> and <status> tags
   ##<type> tag will be removed
   my ($class) = biotype_status2method($tran->biotype, $tran->status);
@@ -348,6 +478,26 @@ sub generate_Transcript {
   return $t;
 }
 
+{
+    # A bit of pointless mapping between EnsEMBL tag codes and XML tags!
+    my @attrib_tag = qw{
+        mRNA_start_NF       mRNA_start_not_found
+        mRNA_end_NF         mRNA_end_not_found
+        cds_start_NF        cds_start_not_found
+        cds_end_NF          cds_end_not_found
+    };
+
+    sub add_start_end_not_found_tags {
+        my ($self, $t, $tran) = @_;
+    
+        for (my $i = 0; $i < @attrib_tag; $i += 2) {
+            my ($attrib, $tag) = @attrib_tag[$i, $i + 1];
+            if (defined(my $val = get_single_attrib_value($tran, $attrib))) {
+                $t->attribvals($self->prettyprint($tag, $val));
+            }
+        }
+    }
+}
 
 sub generate_ExonSet {
   my ($self,$tran,$coord_offset,$tran_low, $tran_high)=@_;
@@ -395,9 +545,10 @@ sub generate_EvidenceSet {
 }
 
 sub generate_FeatureSet {
-  my ($self, $features,$slice) = @_;
+  my ($self) = @_;
 
-  return unless $features;
+  my $features = $seq_features{$self} or return;
+  my $slice = $slice{$self};
 
   my $fs=$self->prettyprint('feature_set');
   my $offset=$slice->start-1;

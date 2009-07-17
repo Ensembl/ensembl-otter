@@ -28,11 +28,10 @@ sub gene_author {
 }
 
 sub source  {
-
   my $self = shift;
+
   $self->{'source'} = shift if( @_ );
   return ( $self->{'source'} || "havana" );
-
 }
 
 # Duplicated in Bio::Vega::Transcript

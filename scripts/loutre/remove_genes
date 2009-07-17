@@ -1,17 +1,11 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/env perl
 
 ### remove_genes
 
-BEGIN {
-    foreach (@INC) {
-        s{ensembl/modules}{ensembl_head/modules}g;
-    }
-}
-
 use strict;
+use warnings;
 
 use Bio::Otter::Lace::Defaults;
-use Bio::Vega::DBSQL::DBAdaptor;
 
 {
     my $dsname  = 'human';

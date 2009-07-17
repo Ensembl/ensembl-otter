@@ -446,7 +446,7 @@ sub build_Transcript {
   if (my $class = $data->{'transcript_class'}) {
       my ($biotype, $status) = method2biotype_status($class);
       $transcript->biotype($biotype);
-      $transcript->status($status);      
+      $transcript->status($status);
   }
 
   if ($data->{'author'}) {

@@ -10,12 +10,12 @@ sub new {
     my $class = shift @_;
 
     my $self = $class->SUPER::new(@_);
-    my ($slice, $author, $attributes, $created_date, $current_status)  =
-        rearrange([qw(SLICE AUTHOR ATTRIBUTES CREATED_DATE CURRENT_STATUS)], @_);
+    my ($slice, $author, $attributes, $created_date )  =
+        rearrange([qw( SLICE AUTHOR ATTRIBUTES CREATED_DATE )], @_);
 
     $self->slice($slice)                    if $slice;
     $self->author($author)                  if $author;
-    $self->add_Attributes($attributes)      if $attributes;
+    $self->add_Attributes(@$attributes)     if $attributes;
     $self->created_date($created_date)      if $created_date;
 
     return $self;
@@ -58,15 +58,15 @@ sub created_date  {
 }
 
 sub add_Attributes {
-    my ($self, $attribref) = @_;
+    my ($self, @attrib_list) = @_;
 
-    $self->{'attributes'} ||= [];
+    my $al = $self->{'attributes'} ||= [];
 
-    foreach my $attrib ( @$attribref ) {
-        if(! $attrib->isa('Bio::EnsEMBL::Attribute')) {
+    foreach my $attrib ( @attrib_list ) {
+        if (! $attrib->isa('Bio::EnsEMBL::Attribute')) {
             $self->throw( "Argument to add_Attribute has to be an Bio::EnsEMBL::Attribute" );
         }
-        push( @{$self->{'attributes'}}, $attrib );
+        push( @$al, $attrib );
     }
 }
 

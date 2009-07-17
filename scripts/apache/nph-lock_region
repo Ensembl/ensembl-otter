@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2009-06-24 12:50:34 $
-# Id:            $Id: nph-lock_region,v 1.19 2009-06-24 12:50:34 jgrg Exp $
+# Last modified: $Date: 2009-07-17 13:41:23 $
+# Id:            $Id: nph-lock_region,v 1.20 2009-07-17 13:41:23 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-lock_region,v $
 
 use strict;
@@ -40,7 +40,12 @@ eval {
 
     $server->log('Attempting to lock clones...');
     $cb->lock_clones_by_slice($slice, $author_obj, $odba);
-    $xml = Bio::Vega::Transform::XML->generate_OtterXML($slice, $odba, 0, [], []);
+    my $formatter = Bio::Vega::Transform::XML->new;
+    $formatter->otter_dba($odba);
+    $formatter->slice($slice);
+    $formatter->fetch_species;
+    $formatter->fetch_CloneSequences;
+    $xml = $formatter->generate_OtterXML;
 };
 
 if ($@) {

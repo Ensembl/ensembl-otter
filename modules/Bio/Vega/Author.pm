@@ -36,7 +36,7 @@ sub email{
    if( defined $value) {
       $self->{'email'} = $value;
     }
-    return $self->{'email'};
+    return $self->{'email'} || $self->name;
 }
 
 =head2 name

@@ -11,8 +11,9 @@ use Fcntl qw{ O_WRONLY O_CREAT };
 
 # use Bio::Otter::Converter;
 use Bio::Vega::Transform::Otter::Ace;
+use Bio::Vega::AceConverter;
+use Bio::Vega::Transform::XML;
 
-use Bio::Otter::Lace::Slice;
 use Bio::Otter::Lace::Defaults;
 use Bio::Otter::Lace::PipelineDB;
 use Bio::Otter::Lace::SatelliteDB;
@@ -144,6 +145,8 @@ sub init_AceDatabase {
     my $xml_string = $self->get_region_xml;
     my $parser = Bio::Vega::Transform::Otter::Ace->new;
     $parser->parse($xml_string);
+    
+    $self->write_file('before.xml', $xml_string);
 
     $self->write_otter_acefile($parser);    
     $self->write_region_xml_file($xml_string);
@@ -238,6 +241,17 @@ sub write_file {
     close $LF or die "Error writing to '$full_file'; $!";
 }
 
+sub read_file {
+    my ($self, $file_name) = @_;
+    
+    local $/ = undef;
+    my $full_file = join('/', $self->home, $file_name);
+    open my $RF, $full_file or die "Can't read '$full_file'; $!";
+    my $content = <$RF>;
+    close $RF or die "Error reading '$full_file'; $!";
+    return $content;
+}
+
 sub write_region_xml_file {
     my ($self, $xml) = @_;
     
@@ -287,128 +301,42 @@ sub smart_slice {
 sub save_ace_to_otter {
     my( $self ) = @_;
 
-    # # Make sure we don't have a stale database handle
-    # $self->ace_server->kill_server;
-    # $self->ace_server->start_server;
-    
-    
-
-    my $ace    = $self->aceperl_db_handle;
     my $client = $self->Client or confess "No Client attached";
 
     my $smart_slice = $self->smart_slice();
     my $slice_name  = $smart_slice->name();
     my $dsname      = $smart_slice->dsname();
+    
+    # Make Ensembl objects from the acedb database
+    my $converter = Bio::Vega::AceConverter->new;
+    $converter->AceDatabase($self);
+    $converter->generate_vega_objects;
 
-    # Get the Assembly object ...
-    $ace->raw_query(qq{find Assembly "$slice_name"});
+    # Pass the Ensembl objects to the XML formatter
+    my $formatter = Bio::Vega::Transform::XML->new;
+    $formatter->species($dsname);
+    $formatter->slice(          $converter->slice           );
+    $formatter->clone_seq_list( $converter->clone_seq_list  );
+    $formatter->genes(          $converter->genes           );
+    $formatter->seq_features(   $converter->seq_features    );
+    
+    return $self->write_file('after.xml', $formatter->generate_OtterXML);
 
-    my $ace_txt = $ace->raw_query('show -a');
-    my $editable = join '|', map $_->name,
-        $self->MethodCollection->get_all_mutable_non_transcript_Methods;
-    # Remove all Feature lines which aren't editable types
-    $ace_txt =~ s/^Feature\s+"(?!($editable)).*\n//mg;
+    my $xml = $client->save_otter_xml($formatter->generate_OtterXML, $dsname);
 
-    # ... its SubSequences ...
-    # I think we could switch to a positive filter on Predicted_gene instead
-    # of the negative filter on CDS_predicted_by.  (And we could even use
-    # a more sensible tag name than "Predicted_gene".)
-    $ace->raw_query('query follow SubSequence where ! CDS_predicted_by');
-    $ace_txt .= $ace->raw_query('show -a');
-
-    # ... and all the Loci attached to the SubSequences.
-    $ace->raw_query('Follow Locus');
-    $ace_txt .= $ace->raw_query('show -a');
-
-    # List of people for Authors
-    $ace->raw_query(qq{find Person *});
-    $ace_txt .= $ace->raw_query('show -a');
-
-    # Then get the information for the TilePath
-    $ace->raw_query('find Assembly *');
-    $ace->raw_query('Follow AGP_Fragment');
-    # Do show -a on a restricted list of tags
-    foreach my $tag (qw{
-        Otter
-        DB_info
-        Annotation
-        Clone
-        DNA
-        })
-    {
-        $ace_txt .= $ace->raw_query("show -a $tag");
-    }
-
-    # Cleanup text
-    $ace_txt =~ s/\0//g;            # Remove nulls
-    $ace_txt =~ s{^\s*//.+}{\n}mg;  # Strip comments
-
-    if($self->Client->debug){
-        my $debug_file = Bio::Otter::Lace::PersistentFile->new();
-        $debug_file->name("otter-debug.$$.save.ace");
-        my $debug_ace_fh = $debug_file->write_file_handle();
-        print $debug_ace_fh $ace_txt;
-        close $debug_ace_fh;
-    }else{
-        warn "Debug switch is false\n";
-    }
-
-    my $ace_file = Bio::Otter::Lace::TempFile->new;
-    $ace_file->name('lace_edited.ace');
-    my $write_fh = $ace_file->write_file_handle;
-    print $write_fh $ace_txt;
-    my $xml = Bio::Otter::Converter::ace_to_XML($ace_file->read_file_handle);
-    close $write_fh;
-
-    if($self->Client->debug){
-        my $debug_file = Bio::Otter::Lace::PersistentFile->new();
-        $debug_file->name("otter-debug.$$.save.xml");
-        my $debug_xml_fh = $debug_file->write_file_handle();
-        print $debug_xml_fh $xml;
-        close $debug_xml_fh;
-    }else{
-        warn "Debug switch is false\n";
-    }
-
-    my $success = $client->save_otter_xml($xml, $dsname);
-
-    return $self->update_with_stable_ids($success);
+    return $self->update_with_stable_ids($xml);
 }
 
 
 sub update_with_stable_ids {
-    my ($self, $xml, $anything_else) = @_;
+    my ($self, $xml) = @_;
 
     return unless $xml;
-
-    ## write the temp/persisent file
-    my $fileObj;
-    if($self->Client->debug){
-        $fileObj = Bio::Otter::Lace::PersistentFile->new();
-        $fileObj->name("otter_response_$$.xml");
-        $fileObj->rm();
-    }else{
-        $fileObj = Bio::Otter::Lace::TempFile->new;
-    }
-
-    my $write = $fileObj->write_file_handle();
-    print $write (ref($xml) eq 'SCALAR' ? ${$xml} : $xml);
-
-    my $read  = $fileObj->read_file_handle();
-
-    ## convert the xml returned from the server into otter stuff
-    my ($genes, $old_schema_slice, $seqstr, $tiles) = Bio::Otter::Converter::XML_to_otter($read);
-
-    ## this should only contain the CHANGED genes.
-    unless (@$genes) {
-        warn "No genes changed\n";
-        return undef;
-    }
-
-    warn "Some genes changed\n";
-    ## need to do genes, transcripts, translations and exons
-
-    return Bio::Otter::Converter::ace_transcripts_locus_people($genes, $old_schema_slice);
+    
+    my $parser = Bio::Vega::Transform::Otter::Ace->new;
+    $parser->parse($xml);
+    
+    return $parser->make_ace_genes_transcripts;
 }
 
 sub unlock_otter_slice {
@@ -420,21 +348,7 @@ sub unlock_otter_slice {
 
     my $client   = $self->Client or confess "No Client attached";
 
-    my $xml_file = Bio::Otter::Lace::PersistentFile->new;
-    $xml_file->root($self->home);
-
-            # we may need this for compatibility with sessions recovered from prev.releases!
-    $xml_file->name(".${slice_name}${dsname}${LOCK_REGION_XML_FILE}");
-            # otherwise we could use the simplified name:
-    #$xml_file->name($LOCK_REGION_XML_FILE);
-
-    return unless -e $xml_file->full_name();
-    my $xml_text = '';
-    my $read = $xml_file->read_file_handle;
-    while(<$read>){
-        $xml_text .= $_;
-    }
-    return unless $xml_text;
+    my $xml_text = $self->read_file($LOCK_REGION_XML_FILE);
 
     return $client->unlock_otter_xml($xml_text, $dsname);
 }

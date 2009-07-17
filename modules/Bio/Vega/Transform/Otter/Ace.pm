@@ -17,14 +17,14 @@ my %ens2ace_phase = (
     1   => 3,
     );
 
-my (
-    %ace_string,
-);
+# my (
+#     %ace_string,
+# );
 
 sub DESTROY {
     my ($self) = @_;
 
-    delete $ace_string{$self};
+    # delete $ace_string{$self};
 
     # So that DESTROY gets called in baseclass:
     bless $self, 'Bio::Vega::Transform::Otter';
@@ -64,7 +64,7 @@ sub make_ace_genes_transcripts {
     
     foreach my $gene (@{$self->get_Genes}) {
         my $gene_name = get_first_attrib_value($gene, 'name');
-        my $gene_ace = Hum::Ace::AceText->new_from_class_and_name('Locus', $gene_name);
+        my $gene_ace = Hum::Ace::AceText->new_from_class_and_name_with_delete('Locus', $gene_name);
         fill_locus_AceText($gene, $gene_ace);
         
         my $prefix = $gene->source eq 'havana'
@@ -81,7 +81,7 @@ sub make_ace_genes_transcripts {
             }
             $slice_ace->add_tag('SubSequence', $name, @start_end);
 
-            my $tsct_ace = Hum::Ace::AceText->new_from_class_and_name('Sequence', $name);
+            my $tsct_ace = Hum::Ace::AceText->new_from_class_and_name_with_delete('Sequence', $name);
             $tsct_ace->add_tag('Source', $slice_name);
             $tsct_ace->add_tag('Locus', $gene_name);
             my $method = $prefix . biotype_status2method($tsct->biotype, $tsct->status);
