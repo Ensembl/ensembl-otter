@@ -151,7 +151,7 @@ sub fetch_CloneSeq {
     $cs->accession(     get_single_attrib_value($clone_slice, 'embl_acc')           );
     $cs->sv(            get_single_attrib_value($clone_slice, 'embl_version')       );
     
-    if (my ($cna) = $contig_slice->get_all_Attributes('intl_clone_name')) {
+    if (my ($cna) = @{$contig_slice->get_all_Attributes('intl_clone_name')}) {
         $cs->clone_name($cna->value);
     } else {
         $cs->clone_name($cs->accession_dot_sv);
