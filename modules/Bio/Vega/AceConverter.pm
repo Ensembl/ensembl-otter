@@ -185,7 +185,10 @@ sub build_Features_spans_and_agp_fragments {
             $strand = -1;
             ($start, $end) = ($end, $start);
         }
-        $score =~ s/0+$//;  # Trim trailing zeroes from score
+        
+        # Trim trailing zeroes from score
+        $score =~ s/0+$//;
+        
         my $ana = $analysis{$type} ||=
             Bio::EnsEMBL::Analysis->new(-LOGIC_NAME => $type);
         my $sf = Bio::EnsEMBL::SimpleFeature->new(

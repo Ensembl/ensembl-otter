@@ -146,7 +146,7 @@ sub init_AceDatabase {
     my $parser = Bio::Vega::Transform::Otter::Ace->new;
     $parser->parse($xml_string);
     
-    $self->write_file('before.xml', $xml_string);
+    $self->write_file('01_before.xml', $xml_string);
 
     $self->write_otter_acefile($parser);    
     $self->write_region_xml_file($xml_string);
@@ -320,7 +320,7 @@ sub save_ace_to_otter {
     $formatter->genes(          $converter->genes           );
     $formatter->seq_features(   $converter->seq_features    );
     
-    return $self->write_file('after.xml', $formatter->generate_OtterXML);
+    return $self->write_file('02_after.xml', $formatter->generate_OtterXML);
 
     my $xml = $client->save_otter_xml($formatter->generate_OtterXML, $dsname);
 
