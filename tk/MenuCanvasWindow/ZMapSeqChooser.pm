@@ -347,21 +347,22 @@ sub zMapWriteDotBlixemrc {
     my ($dir) = $file =~ m{(.+)/[^/]+$};
     mkpath($dir);   # Fatal if fails
     open my $blixem_rc, "> $file" or confess "Can't write to '$file'; $!";
+    ### Grr!  blixemrc needs underscores, not dashes
     print $blixem_rc
         $self->formatZmapDefaults(
             'blixem',
-            'default-fetch-mode' => $ENV{'PFETCH_WWW'} ? 'pfetch-http' : 'pfetch-socket',
+            'default_fetch_mode' => $ENV{'PFETCH_WWW'} ? 'pfetch_http' : 'pfetch_socket',
             ),
         $self->formatZmapDefaults(
-            'pfetch-http',
-            'pfetch-mode'     => 'http',
+            'pfetch_http',
+            'pfetch_mode'     => 'http',
             'pfetch'          => $self->AceDatabase->Client->url_root . '/nph-pfetch',
-            'cookie-jar'      => $ENV{'OTTERLACE_COOKIE_JAR'},
+            'cookie_jar'      => $ENV{'OTTERLACE_COOKIE_JAR'},
             'port'            => 80,
             ),
         $self->formatZmapDefaults(
-            'pfetch-socket',
-            'pfetch-mode' => 'socket',
+            'pfetch_socket',
+            'pfetch_mode' => 'socket',
             'node'        => $PFETCH_SERVER_LIST->[0][0],
             'port'        => $PFETCH_SERVER_LIST->[0][1],
             );
