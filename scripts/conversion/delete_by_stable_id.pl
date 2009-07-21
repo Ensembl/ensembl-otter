@@ -196,7 +196,9 @@ if ($support->param('dry_run')) {
 
 # delete genes
 my $deleted = 0;
-$deleted += &delete_genes($gene_stable_ids, $schema, $condition);
+if (@{$gene_stable_ids}) {
+  $deleted += &delete_genes($gene_stable_ids, $schema, $condition);
+}
 
 # delete transcripts
 if (@{$trans_stable_ids}) {
@@ -214,6 +216,9 @@ if ($deleted) {
 
   # optimize tables
   &Deletion::optimize_tables($support,$dbh);
+}
+else {
+  $support->log("exons and xrefs weren't deleted, you've found the bug if this is unexpected\n");
 }
 
 # finish logfile
