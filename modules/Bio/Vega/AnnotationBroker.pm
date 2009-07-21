@@ -133,9 +133,8 @@ sub translations_diff {
 sub exons_diff {
   my ($self, $transcript, $shared_exons) = @_;
   
-  ### DANGER: This code depends on get_all_Exons() returning
-  ### a ref to the actual list of exons in the object 
-  my $actual_exon_list = $transcript->get_all_Exons;
+  # Get a ref to the actual list of exons in the object 
+  my $actual_exon_list = $transcript->get_all_Exons_ref;
   my $transl = $transcript->translation;
   
   ### Why pass in $shared_exons as an argument?  Shouldn't it be a property of the AnnotationBroker?
@@ -255,7 +254,7 @@ sub check_start_and_end_of_translation {
         return 0;
     }
 
-	my $exons=$transcript->get_all_Exons;
+	my $exons=$transcript->get_all_Exons_ref;
 
     #make sure that the start and end exon are set correctly
     my $start_exon = $translation->start_Exon();
