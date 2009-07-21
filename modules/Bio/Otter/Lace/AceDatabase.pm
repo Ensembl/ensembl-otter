@@ -143,10 +143,11 @@ sub init_AceDatabase {
     $self->add_misc_acefile;
 
     my $xml_string = $self->get_region_xml;
+    $self->write_file('01_before.xml', $xml_string);
+
     my $parser = Bio::Vega::Transform::Otter::Ace->new;
     $parser->parse($xml_string);
     
-    $self->write_file('01_before.xml', $xml_string);
 
     $self->write_otter_acefile($parser);    
     $self->write_region_xml_file($xml_string);
