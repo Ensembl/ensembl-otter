@@ -3,12 +3,12 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2009-06-24 12:50:34 $
-# Id:            $Id: nph-get_sequenceset_accesslist,v 1.15 2009-06-24 12:50:34 jgrg Exp $
+# Last modified: $Date: 2009-07-21 13:55:08 $
+# Id:            $Id: nph-get_sequenceset_accesslist,v 1.16 2009-07-21 13:55:08 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_sequenceset_accesslist,v $
 
 use strict;
-use SangerPaths qw{ core bioperl123 ensembl53 otter52 };
+use SangerPaths qw{ core bioperl123 ensembl55 otter52 };
 
 use Bio::Otter::ServerScriptSupport;
 
