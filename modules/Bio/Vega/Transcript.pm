@@ -25,6 +25,7 @@ sub new {
 sub get_all_Exons_ref {
     my ($self) = @_;
     
+    $self->get_all_Exons;
     if (my $ref = $self->{'_trans_exon_array'}) {
         return $ref;
     } else {
