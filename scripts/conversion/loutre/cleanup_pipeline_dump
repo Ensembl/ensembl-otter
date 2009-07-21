@@ -112,15 +112,23 @@ my %lns_to_stay = (
   'repeat_feature'        => { map {$_,1} qw(RepeatMasker trf) },
   'dna_align_feature'     => { map {$_,1} qw(Est2genome_clusters Est2genome_fish Est2genome_other Est2genome_human Est2genome_mouse vertrna refseq_human) },
   'protein_align_feature' => { map {$_,1} qw(Uniprot Uniprot_TR Uniprot_SW) },
+#  'gene'                  => { map {$_,1} qw(Halfwise) },
+#  'transcript'            => { map {$_,1} qw(Halfwise) },
 );
 
-#define logic names that we know are to be deleted
+#define logic names that we know are to be deleted from other tables
 my %lns_to_go = map {$_,1}
   qw(Augustus_svar
      Fgenesh
-     Halfwise
      RepeatMasker_new
      trf_new
+     vertrna
+     Uniprot_TR
+     Est2genome_human
+     Est2genome_mouse
+     Uniprot_SW
+     Est2genome_other
+     Halfwise
    );
 
 #define which attrib_types are to be deleted
@@ -202,7 +210,14 @@ my @target_tables = qw(analysis
 		       seq_region
 		       seq_region_attrib
 		       meta_coord
+		       coord_system
 		     );
+##enable for halfwise
+#		       gene
+#		       transcript
+#		       exon_transcript
+#		       exon
+
 
 #store counts of original number of features in each table
 my %table_rows;
@@ -227,7 +242,7 @@ if ($support->param('count_rows')) {
       }
     }
     else {
-      $report{$t} = 	$table_rows{$t}{'original'};
+      $report{$t} = $table_rows{$t}{'original'};
     }
   }	
   warn Dumper(\%report);
@@ -262,8 +277,8 @@ $support->log("Generating constraints for deletions:\n");
 my %original_lncounts;
 foreach my $t (keys %lns_to_stay) {
   my $s = $pddbh->prepare(qq(
-                SELECT a.logic_name, a.analysis_id, count(*)
-                FROM analysis a, $t
+               SELECT a.logic_name, a.analysis_id, count(*)
+                 FROM analysis a, $t
                 WHERE a.analysis_id = $t.analysis_id
                 GROUP BY a.logic_name));
   $s->execute;
@@ -303,8 +318,8 @@ if ($problem) {
 
 #calculate analysis_ids that are to be kept
 my $idsth = $pddbh->prepare(qq(
-               SELECT distinct analysis_id,logic_name
-               FROM analysis
+                SELECT distinct analysis_id,logic_name
+                  FROM analysis
     ));
 $idsth->execute();
 my %ids_to_stay;
@@ -380,7 +395,7 @@ my $chr_to_keep = join("', '",@{$chr_names_wanted});
 
 #chr seq_region_ids
 my $sth = $pddbh->prepare(qq(
-        select seq_region_id, sr.coord_system_id, cs.name
+        select seq_region_id, sr.coord_system_id, cs.name, cs.coord_system_id
         from seq_region sr, coord_system cs
         where sr.coord_system_id = cs.coord_system_id
         and sr.name in ('$chr_to_keep')
@@ -388,7 +403,7 @@ my $sth = $pddbh->prepare(qq(
 
 #contig seq_region_ids
 my $sth1 =  $pddbh->prepare(qq(
-        select a.cmp_seq_region_id, cs.name
+        select a.cmp_seq_region_id, cs.name, cs.coord_system_id
         from assembly a, seq_region sr, coord_system cs
         where a.cmp_seq_region_id = sr.seq_region_id
         and sr.coord_system_id = cs.coord_system_id
@@ -397,14 +412,13 @@ my $sth1 =  $pddbh->prepare(qq(
 
 #clone seq_region_ids (links from contig_asm_seq_region_id to cmp_seq_region_id where the latter is not on the chromosome coord system
 my $sth2 =  $pddbh->prepare(qq(
-        select a.asm_seq_region_id, cs.name
+        select a.asm_seq_region_id, cs.name, cs.coord_system_id
         from assembly a, seq_region sr, coord_system cs
         where a.asm_seq_region_id = sr.seq_region_id
         and sr.coord_system_id = cs.coord_system_id
         and a.cmp_seq_region_id = ?
-        and sr.coord_system_id != ?
+        and cs.name = 'clone'
     ));
-$sth->execute;
 
 #####
 #there will need to be some code here for other coord systems such as zfish scaffolds.
@@ -415,24 +429,28 @@ $sth->execute;
 my %seqregions;
 my @all_ids;
 my @assembled_ids;
-while ((my ($id, $cs_id, $csname) = $sth->fetchrow_array)) {
+my %coord_systems;
+$sth->execute;
+while ((my ($id, $cs_id, $csname, $csversion) = $sth->fetchrow_array)) {
   push @{$seqregions{$csname}},$id;
   push @all_ids,$id;
   push @assembled_ids,$id;
+  $coord_systems{$csversion} = 1;
   $sth1->execute($id);
-  while ((my ($id, $csname) = $sth1->fetchrow_array)) {
-    push @{$seqregions{$csname}},$id;
-    push @all_ids,$id;
-    $sth2->execute($id,$cs_id);
-    while ((my ($id, $csname) = $sth2->fetchrow_array)) {
-      push @{$seqregions{$csname}},$id;
-      push @all_ids,$id;
-      push @assembled_ids,$id;
+  while ((my ($id1, $csname1, $csversion1) = $sth1->fetchrow_array)) {
+    push @{$seqregions{$csname1}},$id1;
+    push @all_ids,$id1;
+    $coord_systems{$csversion1} = 1;
+    $sth2->execute($id1);
+    while ((my ($id2, $csname2, $csversion2) = $sth2->fetchrow_array)) {
+      push @{$seqregions{$csname2}},$id2;
+      push @all_ids,$id2;
+      push @assembled_ids,$id2;
+      $coord_systems{$csversion2} = 1;
     }
-  }	
+  }
 }
 
-#warn Dumper(\%seqregions);
 # get coordinate systems used from meta_coord
 my $cssth = $pddbh->prepare(qq(
                SELECT mc.table_name, cs.name
@@ -463,12 +481,20 @@ if (! $support->param('dry_run')) {
     $table_rows{$t}{'deleted_by_seq_region_id'} = $pddbh->do($sql);
     $support->log_stamped("...finished deleting from $t by seq_region_id...\n\n",1);
   }
-  my $assembled_ids_to_stay = join("','",@assembled_ids);
+
   #assembly
+  my $assembled_ids_to_stay = join("','",@assembled_ids);
   $support->log_stamped("Deleting from assembly by seq_region_id...\n",1);	
   my $sql = qq(DELETE FROM assembly where asm_seq_region_id not in ('$assembled_ids_to_stay'));
   $table_rows{'assembly'}{'deleted_by_seq_region_id'} = $pddbh->do($sql);
   $support->log_stamped("...finished deleting from assembly by seq_region_id.\n\n",1);
+
+  #coord_system
+  my $coord_systems_to_stay = join("','",keys %coord_systems);
+  $support->log_stamped("Deleting from coord_system by coord_system_id...\n",1);	
+  my $sql = qq(DELETE FROM coord_system where coord_system_id not in ('$coord_systems_to_stay'));
+  $table_rows{'coord_system'}{'deleted_by_coord_system_id'} = $pddbh->do($sql);
+  $support->log_stamped("...finished deleting from coord_system by coord_sysetm_id.\n\n",1);
 
   #######################################
   # other tables (now with NULL entries #
@@ -500,7 +526,7 @@ foreach my $t (@target_tables) {
   ($table_rows{$t}{'final'}) = $pddbh->selectrow_array("SELECT COUNT(*) FROM $t");
 }
 
-$support->log("\nSUMMARY\\n=======\n");
+$support->log("\nSUMMARY\n=======\n");
 foreach my $t (sort keys %table_rows) {
   my $c = '-' x length($t);
   $support->log("\nTable $t\n$c\n");
