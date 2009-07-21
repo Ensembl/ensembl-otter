@@ -37,6 +37,8 @@ sub DESTROY {
     bless $self, 'Bio::Vega::Writer';
 }
 
+# Use this to sort SimpleFeatures, Genes and Transcripts
+# Not actually necessary, but useful when test XML parsing and generation.
 my $by_start_end_strand = sub {
     return $a->start <=> $b->start || $a->end <=> $b->end || $a->strand <=> $b->strand;
 };
@@ -259,10 +261,11 @@ sub generate_SequenceFragment {
     $sf->attribvals($self->prettyprint('clone_length',      $cs->length         ));
 
     if (my $ci = $cs->ContigInfo) {
-        if (my $contig_author = $ci->author) {
-            $sf->attribvals($self->prettyprint('author',        $contig_author->name    ));
-            $sf->attribvals($self->prettyprint('author_email',  $contig_author->email   ));
-        }
+        # Commented out adding author since this is ignored on client side
+        # if (my $contig_author = $ci->author) {
+        #     $sf->attribvals($self->prettyprint('author',        $contig_author->name    ));
+        #     $sf->attribvals($self->prettyprint('author_email',  $contig_author->email   ));
+        # }
 
  	    my $ci_attribs = $ci->get_all_Attributes;
 
@@ -507,7 +510,7 @@ sub generate_FeatureSet {
   my $fs=$self->prettyprint('feature_set');
   my $offset=$slice->start-1;
 
-  foreach my $feature(@$features){
+  foreach my $feature (sort $by_start_end_strand @$features) {
 
 	 my $f = $self->prettyprint('feature');
 	 if ($feature->analysis){
