@@ -3,12 +3,12 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2009-06-24 12:50:34 $
-# Id:            $Id: nph-test,v 1.17 2009-06-24 12:50:34 jgrg Exp $
+# Last modified: $Date: 2009-07-21 13:55:08 $
+# Id:            $Id: nph-test,v 1.18 2009-07-21 13:55:08 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-test,v $
 
 use strict;
-use SangerPaths qw{ core bioperl123 ensembl53 otter52 };
+use SangerPaths qw{ core bioperl123 ensembl55 otter52 };
 use SangerWeb;
 
 use Bio::Otter::ServerScriptSupport;
@@ -33,7 +33,7 @@ foreach my $var ($server->param) {
 $env .= sprintf "\nSangerWeb cgi = %s\n", $web->cgi;
 $env .= sprintf "\nSangerWeb username = %s\n", $web->username;
 
-if ($ENV{'localuser'} eq 'localuser') {
+if ($ENV{'localuser'} =~ /local/i) {
     $server->send_response($env);
 } else {
     $server->send_response("You are an external user\n");
