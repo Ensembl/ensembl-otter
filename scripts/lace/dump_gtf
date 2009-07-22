@@ -8,7 +8,6 @@ use warnings;
 use strict;
 use Bio::Otter::Lace::Defaults;
 use Bio::Vega::DBSQL::DBAdaptor;
-use Symbol 'gensym';
 
 {
     my ($dataset_name);
@@ -51,23 +50,21 @@ use Symbol 'gensym';
           $slice_aptr->fetch_by_chr_start_end($chr, $chr_start, $chr_end);
         
         # Write the AGP data into a separate file
-        my $agp = gensym();
         my $agp_file = "$dataset_name.$set_name.agp";
         if (-e $agp_file) {
             die "Error: file '$agp_file' already exists\n";
         }
-        open $agp, "> $agp_file" or die "Can't write to '$agp_file' : $!";
+        open my $agp, "> $agp_file" or die "Can't write to '$agp_file' : $!";
         warn "Creating AGP file '$agp_file'\n";
         print $agp @{$ss->agp_data};
         close $agp or die "Error writing to '$agp_file' : $!";
 
         # Create the GTF file to write the genes into
-        my $fh        = gensym();
         my $file_name = "$dataset_name.$set_name.gtf";
         if (-e $file_name) {
             die "Error: file '$file_name' already exists\n";
         }
-        open $fh, "> $file_name" or die "Can't write to '$file_name' : $!";
+        open my $fh, "> $file_name" or die "Can't write to '$file_name' : $!";
         warn "Writing GTF data to '$file_name'\n";
 
 
