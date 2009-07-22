@@ -1,0 +1,212 @@
+#!/usr/bin/env perl
+
+### fix_ens55_broken_translations
+
+use strict;
+use warnings;
+use Bio::Otter::Lace::Defaults;
+
+{
+    my $usage = sub { exec('perldoc', $0) };
+    # This do_getopt() call is needed to parse the otter config files
+    # even if you aren't giving any arguments on the command line.
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        ) or $usage->();
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    foreach my $ds ($cl->get_all_DataSets) {
+        my $dba = $ds->make_Vega_DBAdaptor;
+        
+        fix_gene_exons_missing_stable_ids($ds, $dba);
+        fix_translations_with_wrong_exon_ids($ds, $dba);
+    }
+}
+
+sub fix_translations_with_wrong_exon_ids {
+    my ($ds, $dba) = @_;
+    
+    my $sth = $dba->dbc->prepare(q{
+        SELECT l.transcript_id
+          , l.translation_id
+          , l.start_exon_id
+          , et1.exon_id
+          , l.end_exon_id
+          , et2.exon_id
+        FROM translation l
+        LEFT JOIN exon_transcript et1
+          ON l.transcript_id = et1.transcript_id
+          AND l.start_exon_id = et1.exon_id
+        LEFT JOIN exon_transcript et2
+          ON l.transcript_id = et2.transcript_id
+          AND l.end_exon_id = et2.exon_id
+        WHERE et1.exon_id IS NULL
+           OR et2.exon_id IS NULL
+    });
+    $sth->execute;
+    printf STDERR "Found %d translations with bad start or end exon in %s\n", $sth->rows, $ds->name;
+    
+    while (my ($tsct_id, $tsl_id, $start_exon_id, $start_found, $end_exon_id, $end_found) = $sth->fetchrow) {
+        unless ($start_found) {
+            if (my $exon_id = find_matching_exon($dba, $tsct_id, $start_exon_id)) {
+                warn "Changing start_exon_id from $start_exon_id to $exon_id in translation $tsl_id\n";
+                my $patch = $dba->dbc->prepare(q{
+                    UPDATE translation
+                    SET start_exon_id = ?
+                    WHERE translation_id = ?
+                });
+                $patch->execute($exon_id, $tsl_id);
+            } else {
+                warn "No matching exon for exon $start_exon_id in transcript $tsct_id for translation $tsl_id\n";
+            }
+        }
+        unless ($end_found) {
+            if (my $exon_id = find_matching_exon($dba, $tsct_id, $end_exon_id)) {
+                warn "Changing end_exon_id from $start_exon_id to $exon_id in translation $tsl_id\n";
+                my $patch = $dba->dbc->prepare(q{
+                    UPDATE translation
+                    SET end_exon_id = ?
+                    WHERE translation_id = ?
+                });
+                $patch->execute($exon_id, $tsl_id);
+            } else {
+                warn "No matching exon for exon $end_exon_id in transcript $tsct_id for translation $tsl_id\n";
+            }
+        }
+    }
+}
+
+sub find_matching_exon {
+    my ($dba, $tsct_id, $bad_exon_id) = @_;
+    
+    my $sth = $dba->dbc->prepare(q{
+        SELECT e2.exon_id
+        FROM exon e1
+          , exon e2
+          , exon_transcript et
+        WHERE e1.seq_region_id = e2.seq_region_id
+          AND e1.seq_region_start = e2.seq_region_start
+          AND e1.seq_region_end = e2.seq_region_end
+          AND e1.seq_region_strand = e2.seq_region_strand
+          AND e1.phase = e2.phase
+          AND e1.end_phase = e2.end_phase
+          AND e1.exon_id != e2.exon_id
+          AND e2.exon_id = et.exon_id
+          AND et.transcript_id = ?
+          AND e1.exon_id = ?
+    });
+    $sth->execute($tsct_id, $bad_exon_id);
+    
+    my ($exon_id) = $sth->fetchrow;
+    return $exon_id;
+}
+
+sub fix_gene_exons_missing_stable_ids {
+    my ($ds, $dba) = @_;
+    
+    my $sth = $dba->dbc->prepare(q{
+          SELECT distinct g.gene_id
+          FROM gene g
+            , transcript t
+            , exon_transcript et
+            , exon e
+          LEFT JOIN exon_stable_id esid
+            ON e.exon_id = esid.exon_id
+          WHERE esid.exon_id IS NULL
+            AND g.gene_id = t.gene_id
+            AND t.transcript_id = et.transcript_id
+            AND et.exon_id = e.exon_id
+    });
+    $sth->execute;
+    my @gene_id_fix;
+    while (my ($gene_id) = $sth->fetchrow) {
+        push (@gene_id_fix, $gene_id);
+    }
+    printf STDERR "Dataset %s has %d genes to fix\n", $ds->name, scalar @gene_id_fix;
+    
+    # Foreach gene ID
+    # Find exon IDs for matching exons in previous version of gene
+    # Patch exon_transcript table replacing exon_id with old Exon IDs
+    # Make sure exons in previous version of gene are current
+    foreach my $gene_id (@gene_id_fix) {
+        fix_gene_exons($dba, $gene_id);
+    }  
+}
+
+sub fix_gene_exons {
+    my ($dba, $bad_id) = @_;
+    
+    my $get_prev = $dba->dbc->prepare(q{
+        SELECT MAX(good.gene_id)
+        FROM gene_stable_id bad
+          , gene_stable_id good
+        WHERE bad.stable_id = good.stable_id
+          AND bad.gene_id = ?
+          AND bad.gene_id > good.gene_id
+    });
+    $get_prev->execute($bad_id);
+    my ($good_id) = $get_prev->fetchrow;
+    # warn "Need to fix $bad_id with exons from $good_id";
+    
+    my $beh = exons_hash($dba, $bad_id);
+    my $geh = exons_hash($dba, $good_id);
+    
+    my $fix_et = $dba->dbc->prepare(q{
+        UPDATE exon_transcript
+        SET exon_id = ?
+        WHERE exon_id = ?
+    });
+    
+    my $make_exon_current = $dba->dbc->prepare(q{
+        UPDATE exon
+        SET is_current = 1
+        WHERE exon_id = ?
+    });
+    
+    while (my ($key, $bad_exon) = each %$beh) {
+        if (my $good_exon = $geh->{$key}) {
+            $fix_et->execute($good_exon, $bad_exon);
+            $make_exon_current->execute($good_exon);
+        }
+    }
+}
+
+sub exons_hash {
+    my ($dba, $gene_id) = @_;
+    
+    my $sth = $dba->dbc->prepare(q{
+        SELECT e.exon_id
+          , e.seq_region_id
+          , e.seq_region_start
+          , e.seq_region_end
+          , e.seq_region_strand
+          , e.phase
+          , e.end_phase
+        FROM transcript t
+          , exon_transcript et
+          , exon e
+        WHERE t.transcript_id = et.transcript_id
+          AND et.exon_id = e.exon_id
+          AND t.gene_id = ?
+    });
+    $sth->execute($gene_id);
+    
+    my $exon_hash = {};
+    while (my ($exon_id, @rest) = $sth->fetchrow) {
+        my $key = join('^', @rest);
+        $exon_hash->{$key} = $exon_id;
+    }
+    return $exon_hash;
+}
+
+
+__END__
+
+=head1 NAME - fix_ens55_broken_translations
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
