@@ -33,7 +33,8 @@ sub sessions_needing_recovery {
     my $self = shift @_;
     
     my $proc_table = Proc::ProcessTable->new;
-    my %existing_pid = map {$_->pid, 1} @{$proc_table->table};
+    my @otterlace_procs = grep {$_->cmndline =~ /otterlace/} @{$proc_table->table};
+    my %existing_pid = map {$_->pid, 1} @otterlace_procs;
 
     my $tmp_dir = '/var/tmp';
     local *VAR_TMP;
