@@ -329,13 +329,9 @@ sub get_all_features_hash { # get Simple|DnaAlign|ProteinAlign|Repeat|Marker|Dit
 
     return {
 	map {
-	    my $feature_kind = $_;
-	    my $features_are_hashed =
-		$LangDesc{$feature_kind}{-hash_by} ||
-		$LangDesc{$feature_kind}{-group_by};
-	    my $features = $all_features->{$feature_kind};
-	    $features = [ values %$features ] if $features_are_hashed;
-	    $_ => ( $features || [] )
+	    my $features = $all_features->{$_} || [];
+	    $features = [ values %$features ] if ref($features) eq "HASH";
+	    $_ => $features;
 	} keys %$all_features,
     };
 }
