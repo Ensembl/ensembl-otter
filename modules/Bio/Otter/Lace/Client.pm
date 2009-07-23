@@ -90,7 +90,7 @@ sub fetch_truncated_genes {
     
     warn "Set using the Config file please.\n" if @_;
     
-    return $self->option_from_array([qw{ client fetch_truncated_genes }]) || 1;
+    return $self->option_from_array([qw{ client fetch_truncated_genes }]);
 }
 
 sub client_name {
