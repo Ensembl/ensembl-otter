@@ -85,6 +85,14 @@ sub email {
     return $self->option_from_array([qw( client email )]) || (getpwuid($<))[0];
 }
 
+sub fetch_truncated_genes {
+    my $self = shift;
+    
+    warn "Set using the Config file please.\n" if @_;
+    
+    return $self->option_from_array([qw{ client fetch_truncated_genes }]) || 1;
+}
+
 sub client_name {
     my ($self) = @_;
     
@@ -435,6 +443,7 @@ sub general_http_dialog {
     my $timed_out = 0;
 
     while ($password_attempts and $timeout_attempts) {
+        print STDERR "retrying...\n" if $timed_out;
         $response = $self->do_http_request($method, $scriptname, $params);
         last if $response->is_success;
         my $code = $response->code;
@@ -443,9 +452,9 @@ sub general_http_dialog {
             $self->authorize;
             $password_attempts--;
         } elsif ($code == 500 or $code == 502) {
-            printf STDERR "\nGot error %s \nretrying...\n", $code; #, $response->decoded_content;
+            printf STDERR "\nGot error %s \n", $code; # , $response->decoded_content;
             $timeout_attempts--;
-            $timed_out = ($timeout_attempts <= 0);
+            $timed_out = 1;
         } elsif ($code == 503 or $code == 504) {
             $self->fatal_error_prompt->("The server timed out ($code). Please try again.\n");
         } else {

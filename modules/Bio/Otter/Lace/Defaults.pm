@@ -48,6 +48,7 @@ my @CLIENT_OPTIONS = qw(
     debug=i
     misc_acefile=s
     logdir=s
+    fetch_truncated_genes!
     );
 
 # @CLIENT_OPTIONS is Getopt::GetOptions() keys which will be included in the 

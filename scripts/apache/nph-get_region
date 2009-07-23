@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2009-07-21 13:55:08 $
-# Id:            $Id: nph-get_region,v 1.19 2009-07-21 13:55:08 jgrg Exp $
+# Last modified: $Date: 2009-07-23 10:23:34 $
+# Id:            $Id: nph-get_region,v 1.20 2009-07-23 10:23:34 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_region,v $
 
 use strict;
@@ -15,13 +15,14 @@ use Bio::Vega::Transform::XML;
 
 my $server = Bio::Otter::ServerScriptSupport->new;
 
-my $cs     = $server->param('cs')     || 'chromosome';
-my $csver  = $server->param('csver')  || (($cs eq 'chromosome') ? 'Otter' : undef);
-my $name   = $server->require_argument('name');
-my $type   = $server->require_argument('type');
-my $start  = $server->require_argument('start');
-my $end    = $server->require_argument('end');
-my $strand = $server->param('strand') || undef;
+my $cs      = $server->param('cs')     || 'chromosome';
+my $csver   = $server->param('csver')  || (($cs eq 'chromosome') ? 'Otter' : undef);
+my $name    = $server->require_argument('name');
+my $type    = $server->require_argument('type');
+my $start   = $server->require_argument('start');
+my $end     = $server->require_argument('end');
+my $strand  = $server->param('strand') || undef;
+my $trunc   = $server->param('trunc') || 1;
 
 $server->log("Getting slice... [$name | $type] [$start] [$end]");
 
@@ -31,6 +32,7 @@ my $slice = $server->get_slice($odba, $cs, $name, $type, $start, $end, $strand, 
 $server->log("Converting slice to XML...");
 
 my $formatter = Bio::Vega::Transform::XML->new;
+$formatter->skip_truncated_genes(1) if $trunc;
 $formatter->otter_dba($odba);
 $formatter->slice($slice);
 $formatter->fetch_data_from_otter_db;

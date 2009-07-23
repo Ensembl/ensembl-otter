@@ -303,10 +303,13 @@ sub save_ace_to_otter {
     my( $self ) = @_;
 
     my $client = $self->Client or confess "No Client attached";
+    my $xml = $client->save_otter_xml($self->generate_XML_from_acedb, $self->smart_slice->dsname);
 
-    my $smart_slice = $self->smart_slice();
-    my $slice_name  = $smart_slice->name();
-    my $dsname      = $smart_slice->dsname();
+    return $self->update_with_stable_ids($xml);
+}
+
+sub generate_XML_from_acedb {
+    my ($self) = @_;
     
     # Make Ensembl objects from the acedb database
     my $converter = Bio::Vega::AceConverter->new;
@@ -315,19 +318,14 @@ sub save_ace_to_otter {
 
     # Pass the Ensembl objects to the XML formatter
     my $formatter = Bio::Vega::Transform::XML->new;
-    $formatter->species($dsname);
+    $formatter->species($self->smart_slice->dsname);
     $formatter->slice(          $converter->slice           );
     $formatter->clone_seq_list( $converter->clone_seq_list  );
     $formatter->genes(          $converter->genes           );
     $formatter->seq_features(   $converter->seq_features    );
     
-    return $self->write_file('02_after.xml', $formatter->generate_OtterXML);
-
-    my $xml = $client->save_otter_xml($formatter->generate_OtterXML, $dsname);
-
-    return $self->update_with_stable_ids($xml);
+    return $formatter->generate_OtterXML;
 }
-
 
 sub update_with_stable_ids {
     my ($self, $xml) = @_;
