@@ -221,17 +221,13 @@ sub build_Features_spans_and_agp_fragments {
     foreach my $row ($ace->get_values('AGP_Fragment')) {
         my ($ctg_name, $group_start, $group_end, undef, undef, $offset, $tile_length) = @$row;
 
-        my ($ctg_strand, $ctg_start, $ctg_end);
-        if ($group_start < $group_end) {
-            $ctg_strand = 1;
-            $ctg_start = $offset;
-            $ctg_end   = $offset + $tile_length - 1;
-        } else {
-            ($group_start, $group_end) = ($group_end, $group_start);
+        my $ctg_strand = 1;
+        if ($group_start > $group_end) {
             $ctg_strand = -1;
-            $ctg_start = $offset - $tile_length + 1;
-            $ctg_end   = $offset;
+            ($group_start, $group_end) = ($group_end, $group_start);
         }
+        my $ctg_start = $offset;
+        my $ctg_end   = $offset + $tile_length - 1;
 
         my $cs = Bio::Otter::Lace::CloneSequence->new;
         $cs->contig_name($ctg_name);
@@ -415,6 +411,7 @@ sub build_Transcript {
     
     my $method_name = $ace->get_single_value('Method');
     $method_name =~ s/^[^:]+://;    # Strip any prefix
+    $method_name =~ s/_trunc//;     # Strip _trunc suffix
     my ($biotype, $status) = method2biotype_status($method_name);
     
     my $tsct = Bio::Vega::Transcript->new(
@@ -510,7 +507,7 @@ sub set_exon_phases_translation_cds_start_end {
     
     my ($cds) = $ace->get_values('CDS');
 
-    unless ($cds) {
+    if (! $cds or @$cds == 0) {
         # No translation, so all exons get phase -1
         foreach my $exon (@{ $tsct->get_all_Exons }) {
             $exon->phase(-1);
@@ -535,15 +532,20 @@ sub set_exon_phases_translation_cds_start_end {
     # Set the phase of the exons
     my $start_phase = $ace->get_single_value('Start_not_found');
     if (defined $start_phase) {
+        my $ens_phase = $ace2ens_phase{$start_phase};
+        if (defined $ens_phase) {
+            $start_phase = $ens_phase;
+        } else {
+            confess sprintf "Error in transcript '%s'; bad value for Start_not_found '%s'\n",
+                $tsct->get_all_Attributes('name')->[0]->value, $start_phase;
+        }
+        $self->create_Attribute($tsct, 'cds_start_NF', 1);
         $self->create_Attribute($tsct, 'mRNA_start_NF', 1);
-        
-        ### Wrong test. Check if translation start equals transcript start too.
-        $self->create_Attribute($tsct, 'cds_start_NF', 1)
-            if $start_phase != -1;
     }
-    else {
-        $start_phase = 0;
+    elsif ($ace->count_tag('Start_not_found')) {
+        $self->create_Attribute($tsct, 'mRNA_start_NF', 1);
     }
+    $start_phase = 0 unless defined $start_phase;
 
     my $phase     = -1;
     my $in_cds    = 0;
