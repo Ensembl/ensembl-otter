@@ -71,6 +71,8 @@ sub make_ace_genes_transcripts {
             ? ''
             : $gene->source . ':';
         
+        my $trunc_suffix = $gene->truncated_flag ? '_trunc' : '';
+        
         foreach my $tsct (@{$gene->get_all_Transcripts}) {
             my $name = get_first_attrib_value($tsct, 'name') || $tsct->stable_id;
             confess "No name for transcript ", $tsct->dbID unless $name;
@@ -84,7 +86,8 @@ sub make_ace_genes_transcripts {
             my $tsct_ace = Hum::Ace::AceText->new_from_class_and_name_with_delete('Sequence', $name);
             $tsct_ace->add_tag('Source', $slice_name);
             $tsct_ace->add_tag('Locus', $gene_name);
-            my $method = $prefix . biotype_status2method($tsct->biotype, $tsct->status);
+            my $method = $prefix . biotype_status2method($tsct->biotype, $tsct->status) . $trunc_suffix;
+            
             $tsct_ace->add_tag('Method', $method);
                         
             fill_transcript_AceText($tsct, $tsct_ace);
