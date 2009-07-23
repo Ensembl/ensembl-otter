@@ -255,7 +255,8 @@ sub get_region_xml {
         'get_region',
         {
             %{$self->toHash},
-            'email'  => $client->email(),
+            'email'     => $client->email,
+            'trunc'     => $client->fetch_truncated_genes,
         },
     );
 
