@@ -354,10 +354,10 @@ sub gather_transcripts {
 sub set_gene_biotype_status {
     my ($self, $gene) = @_;
     
-    my (%biotype_count, %status_count);
+    my (%tsct_biotype, %tsct_status);
     foreach my $tsct (@{$gene->get_all_Transcripts}) {
-        $biotype_count{$tsct->biotype}++;
-        $status_count{ $tsct->status }++;
+        $tsct_biotype{$tsct->biotype}++;
+        $tsct_status{ $tsct->status }++;
     }
     
     # Have already set status to KNOWN if Known was set in acedb.
@@ -365,17 +365,21 @@ sub set_gene_biotype_status {
         # Not setting gene status to KNOWN if there is a transcript
         # with status KNOWN.  So KNOWN is only set if radio button in
         # otterlace is checked.
-        my $status = $status_count{'NOVEL'} || $biotype_count{'protein_coding'}
-            ? 'NOVEL'
-            : 'UNKNOWN';
+        my $status = 'UNKNOWN';
+        if ($tsct_status{'NOVEL'} || $tsct_biotype{'protein_coding'}) {
+            $status = 'NOVEL';
+        }
+        elsif ($tsct_status{'PUTATIVE'}) {
+            $status = 'PUTATIVE';
+        }
         $gene->status($status);
     }
 
     my $biotype = 'processed_transcript';
-    if ($biotype_count{'protein_coding'}) {
+    if ($tsct_biotype{'protein_coding'}) {
         $biotype = 'protein_coding';
     }
-    elsif (my @pseudo = grep /pseudo/i, keys %biotype_count) {
+    elsif (my @pseudo = grep /pseudo/i, keys %tsct_biotype) {
         if (@pseudo > 1) {
             confess sprintf "More than one psedogene type in gene %s (%s)",
                 $gene->get_all_Attributes('name')->[0]->value,
@@ -388,9 +392,9 @@ sub set_gene_biotype_status {
             $biotype = $pseudo[0];
         }
     }
-    elsif (keys %biotype_count == 1) {
+    elsif (keys %tsct_biotype == 1) {
         # If there is just 1 transcript biotype, then the gene gets it too.
-        ($biotype) = keys %biotype_count;
+        ($biotype) = keys %tsct_biotype;
     }
     $gene->biotype($biotype);
 }

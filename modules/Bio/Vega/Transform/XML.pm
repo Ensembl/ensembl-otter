@@ -42,7 +42,10 @@ sub DESTROY {
 # Use this to sort SimpleFeatures, Genes and Transcripts
 # Not actually necessary, but useful when test XML parsing and generation.
 my $by_start_end_strand = sub {
-    return $a->start <=> $b->start || $a->end <=> $b->end || $a->strand <=> $b->strand;
+    return $a->start      <=> $b->start
+        || $a->end        <=> $b->end
+        || $a->strand     <=> $b->strand
+        || $a->display_id cmp $b->display_id;
 };
 
 # get/set methods exposed on object interface

@@ -78,8 +78,7 @@ CREATE TABLE evidence (
    name                VARCHAR(40) NOT NULL,
    type                ENUM('EST','cDNA','Protein','Genomic','UNKNOWN'),
 
-   KEY ( transcript_id ),
-   KEY ( transcript_id,name,type )
+   PRIMARY KEY ( transcript_id,name,type )
 
 ) TYPE=InnoDB;
 
