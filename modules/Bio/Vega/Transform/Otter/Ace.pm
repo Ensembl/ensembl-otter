@@ -179,7 +179,10 @@ sub fill_transcript_AceText {
     
     # mRNA and CDS start not found tags
     if (get_first_attrib_value($tsct, 'cds_start_NF')) {
-        my $first_exon_phase = $exons->[0]->phase;
+        my $tsl = $tsct->translation
+            or confess sprintf("Transcript '%s' has 'CDS start not found' set, but does not have a Translation",
+                get_first_attrib_value($tsct, 'name'));
+        my $first_exon_phase = $tsl->start_Exon->phase;
         # Used to only issue a warning and set Start_not_found with no value
         # if the first exon phase is not 0, 1 or 2
         my $ace_phase = $ens2ace_phase{$first_exon_phase}
