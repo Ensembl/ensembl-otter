@@ -366,11 +366,25 @@ sub set_gene_biotype_status {
         # with status KNOWN.  So KNOWN is only set if radio button in
         # otterlace is checked.
         my $status = 'UNKNOWN';
-        if ($tsct_status{'NOVEL'} || $tsct_biotype{'protein_coding'}) {
-            $status = 'NOVEL';
-        }
-        elsif ($tsct_status{'PUTATIVE'}) {
+        if ($tsct_status{'PUTATIVE'} and keys(%tsct_status) == 1) {
+            # Gene status is PUTATIVE if that is the only kind of transcript
             $status = 'PUTATIVE';
+        }
+        elsif ($tsct_status{'NOVEL'}
+
+            or $tsct_biotype{'protein_coding'}
+            or $tsct_biotype{'nonsense_mediated_decay'}
+
+            or $tsct_biotype{'processed_transcript'}
+            or $tsct_biotype{'non_coding'}
+            or $tsct_biotype{'ambiguous_orf'}
+            or $tsct_biotype{'immature'}
+            or $tsct_biotype{'antisense'}
+            or $tsct_biotype{'retained_intron'}
+            or $tsct_biotype{'disrupted_domain'}
+            )
+        {
+            $status = 'NOVEL';
         }
         $gene->status($status);
     }

@@ -336,7 +336,7 @@ sub make_ace_ctg {
         elsif ($code eq 'annotated' and $value eq 'T') {
             $ace->add_tag('Annotation_remark', 'annotated');
         }
-        elsif ($code eq 'hidden_remark') {
+        elsif ($code eq 'hidden_remark' or $code eq 'remark') {
             $ace->add_tag('Annotation_remark', $value);
         }
         elsif ($code eq 'intl_clone_name') {
