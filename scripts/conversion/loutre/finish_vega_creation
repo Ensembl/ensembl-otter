@@ -127,7 +127,6 @@ if ($support->param('release_type' ne 'External')) {
   exit;
 }
 
-
 # connect to vega database and get adaptors
 my $vdba = $support->get_database('ensembl');
 my $vsa  = $vdba->get_SliceAdaptor();
@@ -586,8 +585,11 @@ else {
 #add misc info to meta table
 my $date = strftime "%Y-%m", localtime;
 my $gene_build = $date.'-Vega';
+my $release_no = $support->param{'vega_release');
 push @sql_fixes, "INSERT ignore into meta (meta_key,meta_value) VALUES (\'genebuild.version\',\'$gene_build\');\n";
 push @sql_fixes, "INSERT into meta (meta_key,meta_value) VALUES ('genebuild.level','toplevel'),('transcriptbuild.level','toplevel'),('exonbuild.level','toplevel');\n";
+push @sql_fixes, "INSERT ignore into meta (meta_key,meta_value) VALUES (\'initial_release.version\',\'$release_no\');\n"; #needed for blast config
+push @sql_fixes, "INSERT ignore into meta (meta_key,meta_value) VALUES (\'ensembl.link\','yes');\n"; # needed for front page hyperlink to e! so might be 'no' occasionally
 
 #delete patch script entries
 push @sql_fixes, "DELETE from meta WHERE meta_key = \'patch\';\n";
