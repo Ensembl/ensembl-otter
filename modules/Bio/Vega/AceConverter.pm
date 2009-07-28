@@ -186,8 +186,10 @@ sub build_Features_spans_and_agp_fragments {
             ($start, $end) = ($end, $start);
         }
         
-        # Trim trailing zeroes from score
-        $score =~ s/0+$//;
+        # Trim acedb's unnecessary extra precision from score
+        # 0.5000 becomes 0.5
+        # 1.0000 becomes 1
+        $score =~ s/\.?0+$//;
         
         my $ana = $analysis{$type} ||=
             Bio::EnsEMBL::Analysis->new(-LOGIC_NAME => $type);
@@ -378,10 +380,10 @@ sub set_gene_biotype_status {
             or $tsct_biotype{'processed_transcript'}
             or $tsct_biotype{'non_coding'}
             or $tsct_biotype{'ambiguous_orf'}
-            or $tsct_biotype{'immature'}
-            or $tsct_biotype{'antisense'}
             or $tsct_biotype{'retained_intron'}
+            or $tsct_biotype{'antisense'}
             or $tsct_biotype{'disrupted_domain'}
+            
             )
         {
             $status = 'NOVEL';
@@ -406,7 +408,15 @@ sub set_gene_biotype_status {
             $biotype = $pseudo[0];
         }
     }
-    elsif (keys %tsct_biotype == 1) {
+    elsif (keys %tsct_biotype == 1
+        and ($tsct_biotype{'ig_segment'}
+          or $tsct_biotype{'ig_gene'}     
+          or $tsct_biotype{'transposon'}  
+          or $tsct_biotype{'artifact'}    
+          or $tsct_biotype{'tec'}         
+            )
+        )
+    {
         # If there is just 1 transcript biotype, then the gene gets it too.
         ($biotype) = keys %tsct_biotype;
     }
