@@ -30,6 +30,7 @@ my @method_biotype_status = qw{
         Antisense                   =                       -
         Disrupted_domain            =                       -
         IG_segment                  =                       -
+        IG_gene                     =                       -
         Putative                    processed_transcript    PUTATIVE
                                     
     Pseudogene                      =                       -
