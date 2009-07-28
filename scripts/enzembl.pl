@@ -115,49 +115,45 @@ if (-e $cfg_file) {
 			@dbnames = split $CFG_DELIM, $cfg->val('enzembl','dbs');
 		}
 		
-		if (@dbnames) {
-			for my $db (@dbnames) {
+		for my $db (@dbnames) {
 				
-				die "Can't find any settings for $db in $cfg_file\n" unless $cfg->val($db,'user');
-				
-				my $dbh = new Bio::EnsEMBL::DBSQL::DBAdaptor(
-					-host 	=> $cfg->val($db,'host'),
-					-user 	=> $cfg->val($db,'user'),
-					-pass 	=> $cfg->val($db,'pass') || '',
-					-port 	=> $cfg->val($db,'port'),
-					-dbname	=> $db,
-					-driver	=> 'mysql'
-				);
-				
-				$dbs{$db}->{dbh} = $dbh;
-				
-				# command line AND [enzembl] stanza settings override database specific settings
-				# i.e. if the user supplies global analyses and feature types (in the [enzembl]
-				# stanza or on the command line), these will be searched for in all databases and
-				# database specific settings (in the [db_name] stanza) will be ignored
-				
-				if (@analyses) {
-					$dbs{$db}->{analyses} = \@analyses;
-				}
-				else {
-					die "No analyses supplied for $db\n" unless $cfg->val($db,'analyses');
-				
-					$dbs{$db}->{analyses} = [ split $CFG_DELIM, $cfg->val($db,'analyses') ];
-				}
-				
-				if (@feature_types) {
-					$dbs{$db}->{feature_types} = \@feature_types;
-				}
-				else {
-					die "No feature types supplied for $db\n" unless $cfg->val($db,'feature-types');
-					
-					$dbs{$db}->{feature_types} = [ split $CFG_DELIM, $cfg->val($db,'feature-types') ];
-				}
-				
-				# note the name of all feature_types
-				
-				map { $feature_type_settings{$_} ||= {} } @{ $dbs{$db}->{feature_types} };
+			die "Can't find any settings for $db in $cfg_file\n" unless $cfg->val($db,'user');
+			
+			my $dbh = new Bio::EnsEMBL::DBSQL::DBAdaptor(
+				-host 	=> $cfg->val($db,'host'),
+				-user 	=> $cfg->val($db,'user'),
+				-pass 	=> $cfg->val($db,'pass') || '',
+				-port 	=> $cfg->val($db,'port'),
+				-dbname	=> $db,
+				-driver	=> 'mysql'
+			);
+			
+			$dbs{$db}->{dbh} = $dbh;
+			
+			# command line AND [enzembl] stanza settings override database specific settings
+			# i.e. if the user supplies global analyses and feature types (in the [enzembl]
+			# stanza or on the command line), these will be searched for in all databases and
+			# database specific settings (in the [db_name] stanza) will be ignored
+			
+			if (@analyses) {
+				$dbs{$db}->{analyses} = \@analyses;
 			}
+			else {
+				die "No analyses supplied for $db\n" unless $cfg->val($db,'analyses');
+				$dbs{$db}->{analyses} = [ split $CFG_DELIM, $cfg->val($db,'analyses') ];
+			}
+			
+			if (@feature_types) {
+				$dbs{$db}->{feature_types} = \@feature_types;
+			}
+			else {
+				die "No feature types supplied for $db\n" unless $cfg->val($db,'feature-types');
+				$dbs{$db}->{feature_types} = [ split $CFG_DELIM, $cfg->val($db,'feature-types') ];
+			}
+			
+			# note the name of all feature_types
+			
+			map { $feature_type_settings{$_} ||= {} } @{ $dbs{$db}->{feature_types} };
 		}
 		
 		unless (%regions) {
