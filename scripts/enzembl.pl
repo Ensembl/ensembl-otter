@@ -24,6 +24,7 @@ my @feature_types;
 my @analyses;
 my %feature_type_settings;
 my %dbs;
+my @dbnames;
 my %regions;
 my $start;
 my $end;
@@ -47,7 +48,7 @@ my $usage = sub { exec('perldoc', $0) };
 # parse the command line options
 
 GetOptions(	
-	'db:s',  		\$dbname,
+	'db|dbs:s',  	\$dbname,
 	'port:s',		\$port,
 	'pass:s',		\$pass,
 	'host:s',		\$host,
@@ -61,12 +62,13 @@ GetOptions(
 	'zmap:s',		\$zmap_exe,
 	'zmap_cfg:s',	\$zmap_config_file,
 	'verbose|v',	\$verbose,
-	'help|h',		sub { exec('perldoc', $0) },	
+	'help|h',		sub { exec('perldoc', $0) },
 ) or pod2usage(1);	
 
-if ($dbname) {
+if ($dbname && $user) {
 	
-	die "You must supply a user along with a database\n" unless $user;
+	die "Can only supply settings for one database from the command line (try using a config file)\n" 
+		if $dbname =~ /$CFG_DELIM/;
 	
 	my $dbh = new Bio::EnsEMBL::DBSQL::DBAdaptor(
 		-host 	=> $host,
@@ -80,6 +82,9 @@ if ($dbname) {
 	$dbs{$dbname}->{dbh} = $dbh;
 	
 	$dbs{$dbname}->{analyses} = \@analyses;
+}
+elsif($dbname) {
+	@dbnames = split $CFG_DELIM, $dbname;
 }
 
 # read the config file
@@ -107,8 +112,13 @@ if (-e $cfg_file) {
 		
 		unless ($dbname) {
 			die "No databases specified!\n" unless $cfg->val('enzembl','dbs');
-			
-			for my $db (split $CFG_DELIM, $cfg->val('enzembl','dbs')) {
+			@dbnames = split $CFG_DELIM, $cfg->val('enzembl','dbs');
+		}
+		
+		if (@dbnames) {
+			for my $db (@dbnames) {
+				
+				die "Can't find any settings for $db in $cfg_file\n" unless $cfg->val($db,'user');
 				
 				my $dbh = new Bio::EnsEMBL::DBSQL::DBAdaptor(
 					-host 	=> $cfg->val($db,'host'),
@@ -121,7 +131,10 @@ if (-e $cfg_file) {
 				
 				$dbs{$db}->{dbh} = $dbh;
 				
-				# command line AND enzembl stanza settings override database specific settings
+				# command line AND [enzembl] stanza settings override database specific settings
+				# i.e. if the user supplies global analyses and feature types (in the [enzembl]
+				# stanza or on the command line), these will be searched for in all databases and
+				# database specific settings (in the [db_name] stanza) will be ignored
 				
 				if (@analyses) {
 					$dbs{$db}->{analyses} = \@analyses;
@@ -247,7 +260,7 @@ my $styles_list = join (';', keys %provided_styles);
 if ($create_missing_styles) {
 	
 	# create a style for each source which doesn't have one
-	
+		
 	for my $source (keys %sources_to_types) {
 		
 		# skip if there is a style already defined for this source
@@ -354,7 +367,7 @@ $zmap_cfg->WriteConfig($zmap_dir.'/ZMap') or die "Failed to write zmap config fi
 
 # and run zmap...
 
-!system($zmap_exe, "--conf_dir", $zmap_dir) or die "Failed to run $zmap_exe\n";
+system($zmap_exe, "--conf_dir", $zmap_dir);
 
 __END__
 	
@@ -437,12 +450,19 @@ on the command line to see a working example file.
  [source]	url, featuresets, styles, stylesfile
  [blixem]	dna-featuresets, protein-featuresets, transcript-featuresets
 
-=item B<-db DATABASE -host HOST -port PORT -user USER -pass PASSWORD>
+=item B<-db | -dbs dbname1,dbname2,...>
 
-Grab features from this (EnsEMBL schema) database. Multiple databases can be specified 
-in the config file, although no mapping between coordinate systems is (yet) supported, 
-so all features must lie in the same coordinate space. Must be supplied here or in the 
-config file.
+Grab features from these (EnsEMBL schema) databases. If you supply more than one database
+name you need to have supplied the necessary settings (host, user, and optionally port and 
+password) in the config file (you may also have done so for a single database). If you supply 
+a single database name you can supply these settings on the command line with the next set 
+of options described below. If you use multiple databases bear in mind that no mapping between 
+coordinate systems is (yet) supported, so all features are assumed to lie in the same 
+coordinate space. Must be supplied here or in the config file.
+
+=item B<-host HOST -port PORT -user USER -pass PASSWORD>
+
+Use these settings to connect to the (single) database name supplied with the -db option.
 
 =item B<-v | -verbose>
 
@@ -452,9 +472,9 @@ Produce verbose output.
 
 Print extended usage instructions, including example configuration and styles files.
 
-=head1 EXAMPLE CONFIG FILE
+=head1 CONFIG FILE
 
-If supplied, should look something like this:
+If supplied vith '-cfg' (or in ~/.enzembl_config), should look something like this:
 
  [enzembl]
  dbs = loutre_human, pipe_human
