@@ -611,17 +611,17 @@ push @sql_fixes, "UPDATE gene SET status = 'UNKNOWN' WHERE biotype in ('processe
 if (! $support->param('dry_run')) {
   $support->log("\nFixing meta table, updating gene / transcript types\n");
   foreach my $fix (@sql_fixes) {
-    if (my $r = $vdbh->do("$fix")) {
-      if ($r eq '0E0') {
-	$support->log("No rows affected for $fix");
+    eval {
+      if (my $r = $vdbh->do("$fix")) {
+	if ($r eq '0E0') {
+	  $support->log("No rows affected for $fix");
+	}
+	else {
+	  $support->log("Updated $r rows for $fix");
+	}
       }
-      else {
-	$support->log("Updated $r rows for $fix");
-      }
-    }
-    else {
-      $support->log_warning("Failed fix: $fix") if (!$r);
-    }
+    };
+    if ($@) { $support->log_warning("Failed fix: $fix $@"); }
   }
 }
 
