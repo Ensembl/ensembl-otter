@@ -1,0 +1,203 @@
+#!/usr/bin/env perl
+
+### fix_pseudogene_biotypes
+
+use strict;
+use warnings;
+use Bio::Otter::Lace::Defaults;
+
+{
+    my $usage = sub { exec('perldoc', $0) };
+    # This do_getopt() call is needed to parse the otter config files
+    # even if you aren't giving any arguments on the command line.
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        ) or $usage->();
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    # foreach my $ds ($cl->get_all_DataSets) {
+
+    # foreach my $ds ($cl->get_DataSet_by_name('human')) {
+
+    $0 = 'otterlace';   # In order to see restricted datasets
+    foreach my $ds ($cl->get_DataSet_by_name('human_test')) {
+
+        my $dba = $ds->make_Vega_DBAdaptor;
+        
+        fix_pseudogene_biotypes($ds, $dba);
+    }
+}
+
+sub fix_pseudogene_biotypes {
+    my ($ds, $dba) = @_;
+    
+    $dba->dbc->do(q{
+        UPDATE transcript
+        SET biotype = 'transcribed_processed_pseudogene'
+        WHERE biotype = 'processed_pseudogene'
+    });
+    $dba->dbc->do(q{
+        UPDATE transcript
+        SET biotype = 'transcribed_unprocessed_pseudogene'
+        WHERE biotype = 'unprocessed_pseudogene'
+    });
+    
+    my $sth = $dba->dbc->prepare(q{
+        SELECT gsid.stable_id
+          , g.gene_id
+          , g.biotype
+          , group_concat(t.biotype)
+        FROM gene g
+          , gene_stable_id gsid
+          , transcript t
+        WHERE g.gene_id = gsid.gene_id
+          AND g.gene_id = t.gene_id
+          AND g.is_current = 1
+          AND g.biotype like 'polymorphic%'
+          AND g.source = 'havana'
+        GROUP BY g.gene_id
+    });
+    $sth->execute;
+    
+    my $update_gene_biotype = $dba->dbc->prepare(q{
+        UPDATE gene
+        SET biotype = ?
+        WHERE gene_id = ?
+    });
+    
+    my %gene_type_pat;
+    while (my ($stable_id, $gene_id, $biotype, $t_types) = $sth->fetchrow) {
+        my %t_type_count;
+        foreach my $type (split /,/, $t_types) {
+            $t_type_count{$type}++;
+        }
+        
+        # my @counts = map "$_($t_type_count{$_})", sort keys %t_type_count;
+        my @counts = sort keys %t_type_count;
+        
+        my $pat = "$biotype {@counts}";
+        $gene_type_pat{$pat}++;
+        if ($pat =~ /(nonsense|coding)/
+            or $pat eq 'polymorphic_pseudogene {processed_pseudogene}'
+            or $pat eq 'polymorphic {artifact transcribed_processed_pseudogene}'
+            )
+        {
+            print "$stable_id\t$pat\n";
+        }
+        
+        my ($pseudo) = grep /pseudo/, @counts;
+        $update_gene_biotype->execute($pseudo, $gene_id);
+    }
+    printf STDERR "\nDataSet %s\n", $ds->name;
+    foreach my $pat (sort keys %gene_type_pat) {
+        my $count = $gene_type_pat{$pat};
+        printf STDERR "  %4d  %s\n", $count, $pat;
+    }
+}
+
+
+__END__
+
+=head1 NAME - fix_pseudogene_biotypes
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
+        From:       af2@sanger.ac.uk
+        Subject:    Re: What to do with "polymorphic" and "polymorphic_pseudogene" classes
+        Date:       29 July 2009 11:32:43 BDT
+        To:         jgrg@sanger.ac.uk
+
+Hi James
+
+This looks good - my version of your categories below:
+
+For these the gene biotype should be changed to the pseudogene transcript biotype present:
+
+    3  polymorphic {artifact processed_transcript retained_intron transcribed_unprocessed_pseudogene}
+    2  polymorphic {artifact processed_transcript transcribed_unprocessed_pseudogene}
+   54  polymorphic {processed_transcript transcribed_processed_pseudogene}
+  117  polymorphic {processed_transcript transcribed_unprocessed_pseudogene}
+   25  polymorphic {processed_transcript unitary_pseudogene}
+   21  polymorphic {processed_transcript retained_intron transcribed_unprocessed_pseudogene}
+    1  polymorphic_pseudogene {processed_transcript transcribed_processed_pseudogene}
+   15  polymorphic_pseudogene {processed_transcript transcribed_unprocessed_pseudogene}
+    5  polymorphic {retained_intron transcribed_unprocessed_pseudogene}
+    2  polymorphic {processed_transcript retained_intron transcribed_processed_pseudogene}
+    3  polymorphic {processed_transcript retained_intron unitary_pseudogene}
+    5  polymorphic_pseudogene {processed_transcript unitary_pseudogene}
+    1  polymorphic {processed_transcript tec transcribed_unprocessed_pseudogene}
+
+
+These should have their gene and pseudo-transcript biotypes changed to "transcribed_processed_pseudogene":
+
+   15  polymorphic {processed_pseudogene processed_transcript}
+    1  polymorphic_pseudogene {processed_pseudogene processed_transcript}
+
+
+These should have their gene and pseudo-transcript biotypes changed to "transcribed_unprocessed_pseudogene":
+
+   43  polymorphic {processed_transcript unprocessed_pseudogene}
+    2  polymorphic {processed_transcript retained_intron unprocessed_pseudogene}
+    3  polymorphic_pseudogene {processed_transcript unprocessed_pseudogene}
+
+
+These should have their gene biotypes changed to "polymorphic_pseudogene":
+
+    1  polymorphic {polymorphic_pseudogene processed_transcript retained_intron}
+    4  polymorphic {polymorphic_pseudogene processed_transcript}
+    1  polymorphic {polymorphic_pseudogene retained_intron}
+
+
+These are OK:
+
+    7  polymorphic_pseudogene {polymorphic_pseudogene}
+
+
+Which leaves 18 to be inspected by an annotator:
+
+    1  polymorphic {nonsense_mediated_decay polymorphic_pseudogene protein_coding retained_intron}
+    1  polymorphic {nonsense_mediated_decay polymorphic_pseudogene retained_intron}
+    1  polymorphic {nonsense_mediated_decay processed_transcript transcribed_unprocessed_pseudogene}
+    1  polymorphic {polymorphic_pseudogene processed_transcript protein_coding retained_intron}
+    1  polymorphic {polymorphic_pseudogene processed_transcript protein_coding}
+    1  polymorphic {polymorphic_pseudogene protein_coding retained_intron}
+    1  polymorphic_pseudogene {nonsense_mediated_decay processed_transcript retained_intron transcribed_unprocessed_pseudogene}
+    1  polymorphic_pseudogene {nonsense_mediated_decay transcribed_unprocessed_pseudogene}
+    1  polymorphic_pseudogene {nonsense_mediated_decay}
+    1  polymorphic_pseudogene {processed_pseudogene}
+    1  polymorphic {artifact transcribed_processed_pseudogene}
+    7  polymorphic_pseudogene {protein_coding transcribed_unprocessed_pseudogene}
+
+
+
+
+I have made only two changes - copying the two categories marked with a * from the first set (biotype should be changed to the pseudogene transcript biotype) to the last (inspected by an annotator).
+
+Would you send me the otter gene IDs for the loci requiring checking.
+
+    OTTHUMG00000012663      polymorphic_pseudogene {protein_coding transcribed_unprocessed_pseudogene}
+    OTTHUMG00000014462      polymorphic_pseudogene {nonsense_mediated_decay transcribed_unprocessed_pseudogene}
+    OTTHUMG00000017993      polymorphic_pseudogene {nonsense_mediated_decay}
+    OTTHUMG00000031080      polymorphic_pseudogene {protein_coding transcribed_unprocessed_pseudogene}
+    OTTHUMG00000031350      polymorphic_pseudogene {protein_coding transcribed_unprocessed_pseudogene}
+    OTTHUMG00000032770      polymorphic_pseudogene {processed_pseudogene}
+    OTTHUMG00000074101      polymorphic {polymorphic_pseudogene processed_transcript protein_coding}
+    OTTHUMG00000074128      polymorphic {nonsense_mediated_decay processed_transcript transcribed_unprocessed_pseudogene}
+    OTTHUMG00000074257      polymorphic_pseudogene {nonsense_mediated_decay processed_transcript retained_intron transcribed_unprocessed_pseudogene}
+    OTTHUMG00000097088      polymorphic {nonsense_mediated_decay polymorphic_pseudogene retained_intron}
+    OTTHUMG00000137617      polymorphic {polymorphic_pseudogene processed_transcript protein_coding retained_intron}
+    OTTHUMG00000140243      polymorphic_pseudogene {protein_coding transcribed_unprocessed_pseudogene}
+    OTTHUMG00000148839      polymorphic_pseudogene {protein_coding transcribed_unprocessed_pseudogene}
+    OTTHUMG00000149366      polymorphic_pseudogene {protein_coding transcribed_unprocessed_pseudogene}
+    OTTHUMG00000149627      polymorphic_pseudogene {protein_coding transcribed_unprocessed_pseudogene}
+    OTTHUMG00000156859      polymorphic {artifact transcribed_processed_pseudogene}
+    OTTHUMG00000157562      polymorphic {polymorphic_pseudogene protein_coding retained_intron}
+    OTTHUMG00000157886      polymorphic {nonsense_mediated_decay polymorphic_pseudogene protein_coding retained_intron}
+
+Many thanks
+
+Adam
