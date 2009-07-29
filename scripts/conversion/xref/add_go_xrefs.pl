@@ -277,6 +277,7 @@ sub parse_go {
   while (<GO>) {
     my @fields = split /\t/, $_;
     #skip non VEGA records
+    next if $fields[0] =~ /^#/;
     my $tlsi = $fields[0];
     my $xid  = $fields[1];
     my ($ev_type) = $fields[2] =~ /^([A-Z]*):/;
