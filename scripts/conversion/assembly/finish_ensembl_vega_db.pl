@@ -479,8 +479,8 @@ $sql = qq(UPDATE analysis a, analysis_description ad
 $c = $dbh->{'evega'}->do($sql);
 $support->log_stamped("Updated $c analysis_description entries.\n\n");
 
-# selenocysteines
-$support->log_stamped("Transfering Vega translation_attribs (selenocysteines)...\n");
+# selenocysteines / peptide statistics
+$support->log_stamped("Transfering Vega translation_attribs (selenocysteines & peptide statistics)...\n");
 $sql = qq(
     INSERT INTO translation_attrib
     SELECT tsi2.translation_id, at2.attrib_type_id, ta.value
@@ -496,7 +496,7 @@ $sql = qq(
     AND at.code = at2.code
 );
 $c = $dbh->{'evega'}->do($sql);
-$support->log_stamped("Transferred $c selenocysteine translation_attrib entries.\n\n");
+$support->log_stamped("Transferred $c translation_attrib entries.\n\n");
 
 # delete ccds transcript_attribs
 $sql = qq(DELETE ta
@@ -515,13 +515,6 @@ $sql = qq(DELETE ad
 $c = $dbh->{'evega'}->do($sql);
 $support->log_stamped("Deleted $c orphan analysis_description entries.\n\n");
 
-# set source to 'vega' - don't do this, take 'WU' or 'havana' from vega
-#if ($support->user_proceed("Would you like to ensure that all genes have a source of \'vega\'?")) {
-#	$sql = qq(UPDATE gene set source = 'vega');
-#	$c = $dbh->{'evega'}->do($sql);
-#}
-#$support->log_stamped("Updated $c gene.source entries.\n\n");
-
 if ($support->user_proceed("Would you like to delete orphan entries from object_xref?")) {
     $sql = qq(DELETE ox
               FROM object_xref ox
@@ -531,13 +524,11 @@ if ($support->user_proceed("Would you like to delete orphan entries from object_
 }
 $support->log_stamped("Deleted $c orphan object_xref entries.\n\n");
 
-#we never say no to this option!
-#if ($support->user_proceed("Would you like to drop the transient tables tmp_assembl and tmp_seq_region?")) {
-#    $sql = qq(DROP TABLE tmp_assembly);
-#    $c = $dbh->{'evega'}->do($sql);
-#    $sql = qq(DROP TABLE tmp_seq_region);
-#    $c = $dbh->{'evega'}->do($sql);
-#}
+#drop the transient tables tmp_assembly and tmp_seq_region
+$sql = qq(DROP TABLE tmp_assembly);
+$c = $dbh->{'evega'}->do($sql);
+$sql = qq(DROP TABLE tmp_seq_region);
+$c = $dbh->{'evega'}->do($sql);
 
 # finish logfile
 $support->finish_log;
