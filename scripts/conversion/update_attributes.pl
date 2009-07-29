@@ -152,7 +152,7 @@ if (check_consistency($dbh, \@rows)) {
   Arg[1]      : DBI $dbh - a database handle
   Arg[2]      : Hashref $attribs - hashref containing the attribute_types loaded
                 from the definition file
-  Description : 
+  Description :
   Return type : none
   Exceptions  : none
   Caller      : internal
@@ -214,7 +214,7 @@ sub repair {
     $dbh->do("DROP TABLE tmp_attrib_types");
 
     if (@{ $ref }) {
-        $support->log_warning("Missing codes: ".join(", ", map { $_->[0] } @{ $ref })."\n", 2);
+      $support->log_warning("These codes are in the db but the not the file, please check: '".join("','", map { $_->[0] } @{ $ref })."'\n", 2);
     }
 
     my %missing_codes = map { $_->[0], 1 } @{ $ref };
@@ -288,30 +288,30 @@ sub load_attribs {
 =cut
 
 sub check_consistency {
-    my $dbh = shift;
-    my $attribs = shift;
+  my $dbh = shift;
+  my $attribs = shift;
 
-    my (%db_codes, %file_codes);
-    map { $file_codes{$_->{'attrib_type_id'}} = $_->{'code'} } @$attribs;
+  my (%db_codes, %file_codes);
+  map { $file_codes{$_->{'attrib_type_id'}} = $_->{'code'} } @$attribs;
 
-    my $sth = $dbh->prepare(qq(
+  my $sth = $dbh->prepare(qq(
         SELECT attrib_type_id, code, name, description
         FROM attrib_type
-    ));
-    $sth->execute();
-    while (my $arr = $sth->fetchrow_arrayref) {
-        $db_codes{$arr->[0]} = $arr->[1];
-    }
+  ));
+  $sth->execute();
+  while (my $arr = $sth->fetchrow_arrayref) {
+    $db_codes{$arr->[0]} = $arr->[1];
+  }
 
-    # check if any ids in the database colide with the file
-    my $consistent = 1;
-    for my $dbid (keys %db_codes) {
-        if (!exists $file_codes{$dbid} || $file_codes{$dbid} ne $db_codes{$dbid}) {
-            $consistent = 0;
-        }
+  # check if any ids in the database collide with the file
+  my $consistent = 1;
+  for my $dbid (keys %db_codes) {
+    if (!exists $file_codes{$dbid} || $file_codes{$dbid} ne $db_codes{$dbid}) {
+      $consistent = 0;
     }
+  }
 
-    return $consistent;
+  return $consistent;
 }
 
 
