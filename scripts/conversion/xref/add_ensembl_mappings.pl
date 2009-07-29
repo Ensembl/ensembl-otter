@@ -26,7 +26,10 @@ General options:
     -h, --help, -?                      print help (this message)
 
 Specific options:
-
+    --ensemblhost=HOST                  use Ensembl database host HOST
+    --ensemblport=PORT                  use Ensembl database port PORT
+    --ensembluser=USER                  use Ensembl database username USER
+    --ensemblpass=PASS                  use Ensembl database password PASS
     --prune                             reset to the state before running this
                                         script
 
@@ -139,7 +142,7 @@ if (!$support->param('dry_run')) {
            AND ed.db_name like \'ENST%\'
 		));
     $support->log("Done deleting $num entries.\n");
-    
+
     # object_xrefs
     $support->log("Deleting orphan object_xrefs...\n");
     $num = $dba->dbc->do(qq(
@@ -180,6 +183,7 @@ if (! %$ens_ids) {
       next GENE unless ($g->analysis->logic_name =~ /havana/);
       foreach my $t (@{$g->get_all_Transcripts}) {
 	my $tsi = $t->stable_id;
+	unless ($tsi) { $support->log_error("No stable ID found for transcript ".$t->dbID."\n"); }
       XREF:
 	foreach my $x (@{$t->get_all_DBEntries}){
 	  my $dbname = $x->dbname;
@@ -195,7 +199,7 @@ if (! %$ens_ids) {
   store($ens_ids,$xref_file);
 }
 
-warn Dumper($ens_ids);
+#warn Dumper($ens_ids);
 my $external_db;
 
 #this defines the order in which the e! xrefs will be used, and which external_db 
