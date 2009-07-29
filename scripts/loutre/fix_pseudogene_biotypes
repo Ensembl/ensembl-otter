@@ -43,6 +43,16 @@ sub fix_pseudogene_biotypes {
         SET biotype = 'transcribed_unprocessed_pseudogene'
         WHERE biotype = 'unprocessed_pseudogene'
     });
+    $dba->dbc->do(q{
+        UPDATE gene
+        SET biotype = 'transcribed_processed_pseudogene'
+        WHERE biotype = 'processed_pseudogene'
+    });
+    $dba->dbc->do(q{
+        UPDATE gene
+        SET biotype = 'transcribed_unprocessed_pseudogene'
+        WHERE biotype = 'unprocessed_pseudogene'
+    });
     
     my $sth = $dba->dbc->prepare(q{
         SELECT gsid.stable_id

@@ -978,9 +978,7 @@ sub save_otter_xml {
         }
     );
 
-    ## return $content;
-    ## possibly should be
-    return \$content;
+    return $content;
 }
 
 sub unlock_otter_xml {
