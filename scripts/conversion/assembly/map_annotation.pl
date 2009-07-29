@@ -483,7 +483,7 @@ sub transfer_transcript {
       #
 	if ($c->isa('Bio::EnsEMBL::Mapper::Gap')) {
 	  $E_exon->fail(1);
-	  $support->log_warning("Reason: Exon mapping has a gap\n",4);
+	  $support->log_warning("Reason: Exon ".$E_exon->stable_id." mapping has a gap\n",4);
 	  $gap = 1;
 	  last;
 	}
@@ -564,8 +564,7 @@ sub create_transcripts {
   foreach my $itrans (@{ $itranscripts }) {
     # if there are any exons left in this transcript add it to the list
     if (@{ $itrans->get_all_Exons }) {
-      my ($tr, $pf) = Transcript::make_Transcript($support, $itrans,
-						  $E_sa);
+      my ($tr, $pf) = Transcript::make_Transcript($support, $itrans, $E_sa);
       push @finished_transcripts, $tr;
       $protein_features{$tr->stable_id} = $pf;
     } else {
