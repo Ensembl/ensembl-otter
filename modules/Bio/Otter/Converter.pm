@@ -2500,7 +2500,6 @@ when there are no transcript in the gene.
 sub gene_type_from_transcript_set {
     my( $transcripts, $known_flag ) = @_;
     
-    my $pseudo_count = 0;
     my $has_artifact = 0;
     my $class_set = {};
     foreach my $transcript (@$transcripts) {
@@ -2514,27 +2513,17 @@ sub gene_type_from_transcript_set {
                     # class in the gene.
         }
         $class_set->{$class}++;
-        if ($class =~ /pseudo/i) {
-            $pseudo_count++;
-        }
     }
     
     my( $type );
-    my @class_list = keys %$class_set;
-    # If there are any Pseudogene transcripts, the gene is either
-    # a Pseudogene, or it is a Polymorphic locus if there are other
-    # classes of transcripts present.
-    if ($pseudo_count) {
-        if ($pseudo_count == @$transcripts) {
-            if (@class_list > 1) {
-                confess("Have mix of pseudogene classes in gene:\n"
-                    . join('', map "  $_\n", @class_list));
-            } else {
-                ($type) = @class_list;
-            }
+    # If there are any Pseudogene transcripts, the gene type is set from
+    # the pseudogene type present (of which there can only be 1).
+    if (my @pseudo_class = grep /pseudo/i, keys %$class_set) {
+        if (@pseudo_class > 1) {
+            confess("Have mix of pseudogene classes in gene:\n"
+                . join('', map "  $_\n", @pseudo_class));
         } else {
-            ### May not have this any more now we have 1 gene object per haplotype.
-            $type = 'Polymorphic';
+            $type = $pseudo_class[0];
         }
     }
     # All genes containing protein coding transcripts are either Known or Novel_CDS
@@ -2566,7 +2555,7 @@ sub gene_type_from_transcript_set {
         $type = 'Novel_Transcript';
     }
     # All remaining gene types are only expected to have one class of transcript
-    elsif (@class_list > 1) {
+    elsif (keys(%$class_set) > 1) {
         confess("Have mix of transcript classes in gene where not expected:\n"
             . join('', map "  $_\n", @class_list));
     }

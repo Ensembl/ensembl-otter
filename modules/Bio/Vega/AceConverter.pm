@@ -390,30 +390,35 @@ sub set_gene_biotype_status {
         }
         $gene->status($status);
     }
+    
+    # For each polymorphic gene set the biotype according to that of it's transcripts:
+    # 1. transcribed_unprocessed_pseudogene will also have a transcript, call them 'transcribed_unprocessed_pseudogene'
+    # 2. same follows for 'transcribed_processed_pseudogene'.
+    # 3. unitary_pseudogene with a transcript will be 'transcribed_unitary_pseudogene'.
+    # 4. polymorphic_pseudogene with a coding transcript will be 'polymorphic'.
+    # 5. polymorphic_pseudogene with a transcript will be 'polymorphic_pseudogene'.
+    
 
     my $biotype = 'processed_transcript';
-    if ($tsct_biotype{'protein_coding'}) {
-        $biotype = 'protein_coding';
-    }
-    elsif (my @pseudo = grep /pseudo/i, keys %tsct_biotype) {
+    if (my @pseudo = grep /pseudo/i, keys %tsct_biotype) {
         if (@pseudo > 1) {
             confess sprintf "More than one psedogene type in gene %s (%s)",
                 $gene->get_all_Attributes('name')->[0]->value,
                 join(', ', @pseudo);
         }
-        elsif (@{$gene->get_all_Transcripts} > 1) {
-            $biotype = 'polymorphic_pseudogene';
-        }
         else {
             $biotype = $pseudo[0];
         }
     }
+    elsif ($tsct_biotype{'protein_coding'}) {
+        $biotype = 'protein_coding';
+    }
     elsif (keys %tsct_biotype == 1
         and ($tsct_biotype{'ig_segment'}
-          or $tsct_biotype{'ig_gene'}     
-          or $tsct_biotype{'transposon'}  
-          or $tsct_biotype{'artifact'}    
-          or $tsct_biotype{'tec'}         
+          or $tsct_biotype{'ig_gene'}
+          or $tsct_biotype{'transposon'}
+          or $tsct_biotype{'artifact'}
+          or $tsct_biotype{'tec'}
             )
         )
     {
