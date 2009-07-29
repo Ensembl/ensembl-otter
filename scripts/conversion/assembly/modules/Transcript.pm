@@ -48,7 +48,7 @@ sub check_iexons {
   foreach my $iexon (@{ $itranscript->get_all_Exons }) {
 
     if ($iexon->fail || $iexon->is_fatal) {
-      $support->log_warning("Exon ".$iexon->stable_id." failed to transfer. Skipping transcript $tsi.\n", 4);
+      $support->log("Exon ".$iexon->stable_id." failed to transfer. Skipping transcript $tsi.\n", 4);
       $fail_flag = 1;
       last EXON;
     }

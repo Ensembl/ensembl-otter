@@ -415,7 +415,7 @@ while (0) {
 }
 
 # transfer ensembl karyotype data
-$support->log_stamped("Tranfering karyotype info from Ensembl...\n");
+$support->log_stamped("Transfering karyotype info from Ensembl...\n");
 $sql = qq(
     INSERT into $evega_db.karyotype
     SELECT karyotype_id, seq_region_id+$sri_adjust, seq_region_start,
@@ -493,15 +493,19 @@ $sql = qq(
 $c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
 $support->log_stamped("Done transfering $c meta entries.\n\n");
 
-#add vega genebuild.version info
-$support->log_stamped("Tranfering genebuild info from Vega...\n");
+#add vega genebuild.start_date info
+$support->log_stamped("Updating random meta entries...\n");
 $sql = qq(
-    UPDATE $evega_db.meta
-       SET meta_value = (SELECT meta_value FROM meta WHERE meta_key = 'genebuild.version')
-     WHERE meta_key = 'genebuild.version'
+    INSERT IGNORE INTO $evega_db.meta
+    SELECT * FROM meta WHERE meta_key = 'genebuild.version'
 );
 $c = $dbh->{'vega'}->do($sql) unless ($support->param('dry_run'));
-$support->log_stamped("Done updating genebuild.version meta entry.\n\n");
+$sql = qq(
+    DELETE
+      FROM $evega_db.meta
+     WHERE meta_key in ('xref.timestamp','repeat.analysis','assembly.date','genebuild.id','genebuild.initial_release_date','genebuild.last_geneset_update'));
+$c += $dbh->{'vega'}->do($sql) unless ($support->param('dry_run'));
+$support->log_stamped("Done deleting / updating $c meta entries.\n\n");
 
 # add assembly.mapping to meta table
 # get the values for vega_assembly and ensembl_assembly from the db
