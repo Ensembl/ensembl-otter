@@ -180,7 +180,6 @@ my $sth_case = $dba->dbc->prepare("UPDATE xref set display_label = ? WHERE displ
 # delete external xrefs if --prune option is used; removes only those added using this source (hgnc, imgt etc)
 if ($support->param('prune') and $support->user_proceed('Would you really like to delete xrefs from previous runs of this script that have used these options?')) {
   my %refs_to_delete = (
-    tcag     => qq(= 'TCAG'),
     imgt_hla => qq(= 'IMGT_HLA'),
     imgt_gdb => qq(= 'IMGT/GENE_DB'),
   );
@@ -189,7 +188,7 @@ if ($support->param('prune') and $support->user_proceed('Would you really like t
   # xrefs
   $support->log("Deleting  external xrefs...\n");
   my $cond = $refs_to_delete{$support->param('xrefformat')}
-    || qq(not in ('Vega_gene','Vega_transcript','Vega_translation','Interpro','CCDS','Havana_gene','ENST','ENST_CDS','ENST_ident','IMGT','TCAG','IMGT/GENE_DB'));
+    || qq(not in ('Vega_gene','Vega_transcript','Vega_translation','Interpro','CCDS','Havana_gene','ENST','ENST_CDS','GO','ENST_ident','IMGT_HLA','IMGT/GENE_DB'));
 	
   $num = $dba->dbc->do(qq(
            DELETE x
@@ -962,32 +961,18 @@ sub parse_imgt_hla {
 
 =head2 parse_imgt_gdb
 
-first sql query works if loutre biotypes in loutre become foobarred again
-
 =cut
 
 sub parse_imgt_gdb {
   my ($xrefs, $lcmap) = @_;
   $support->log_stamped("IMGT_GDB...\n", 1);
   my $sql = qq(SELECT gsi.stable_id, x.display_label
-                   FROM gene_stable_id gsi, gene g, xref x
-                  WHERE gsi.gene_id = g.gene_id
-                    AND g.display_xref_id = x.xref_id
-                    AND (x.display_label like 'IGH%' or x.display_label like 'IGL%' or x.display_label like 'IGK%')
-                    AND g.source = 'havana'
-                    AND gsi.stable_id != 'OTTHUMG00000150673');
+                 FROM gene_stable_id gsi, gene g, xref x
+                WHERE gsi.gene_id = g.gene_id
+                  AND g.display_xref_id = x.xref_id
+                  AND g.source = 'havana'
+                  AND g.biotype in ('IG_gene','IG_pseudogene','TR_gene','TR_pseudogene'));
   my $sth = $dba->dbc->prepare($sql);
-#  $sth->execute;
-#  while ( my ($gsi, $id) = $sth->fetchrow_array) {		
-#    push @{$xrefs->{$gsi}->{'IMGT/GENE_DB'}} , $id.'||'.$id;
-#  }
-  $sql = qq(SELECT gsi.stable_id, x.display_label
-                   FROM gene_stable_id gsi, gene g, xref x
-                  WHERE gsi.gene_id = g.gene_id
-                    AND g.display_xref_id = x.xref_id
-                    AND g.source = 'havana'
-                    AND g.biotype like 'IG%');
-  $sth = $dba->dbc->prepare($sql);
   $sth->execute;
   while ( my ($gsi, $id) = $sth->fetchrow_array) {		
     push @{$xrefs->{$gsi}->{'IMGT/GENE_DB'}} , $id.'||'.$id;
