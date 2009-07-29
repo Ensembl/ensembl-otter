@@ -38,7 +38,7 @@ Specific options:
 =head1 DESCRIPTION
 
 This script identifies all CORF genes in a Vega database and dumps stable IDs to
-file for deletion. In addtion it identifies GD genes that are overlapped by Havana
+file for deletion. In addition it identifies GD genes that are overlapped by Havana
 annotation as being ready for deletion. It must be run after the vega xrefs have
 been set.
 
@@ -104,12 +104,14 @@ $support->parse_extra_options(
   'chromosomes|chr=s@',
   'corf_delete=s',
   'gd_delete=s',
+  'delete=s',
 );
 $support->allowed_params(
   $support->get_common_params,
   'chromosomes',
   'corf_delete',
   'gd_delete',
+  'delete',
 );
 
 if ($support->param('help') or $support->error) {
@@ -120,10 +122,10 @@ if ($support->param('help') or $support->error) {
 $support->comma_to_list('chromosomes');
 
 #set paths and names for ID files and get filehandles
-$support->param('corf_delete') || $support->param('corf_delete','/corf_IDs_togo.txt');
+$support->param('corf_delete') || $support->param('corf_delete','corf_IDs_togo.txt');
 $support->param('corf_delete',($support->param('logpath').$support->param('corf_delete')));
 my $corf_outfile = $support->filehandle('>', $support->param('corf_delete'));
-$support->param('gd_delete') || $support->param('gd_delete','/GD_IDs_togo.txt');
+$support->param('gd_delete') || $support->param('gd_delete','GD_IDs_togo.txt');
 $support->param('gd_delete',($support->param('logpath').$support->param('gd_delete')));
 my $gd_outfile = $support->filehandle('>', $support->param('gd_delete'));
 
@@ -159,8 +161,7 @@ foreach my $chr ($support->sort_chromosomes) {
 }
 
 ####################################################
-# look at all Genes to identify corf, log comments #
-# and set analysis IDs                             #
+# look at all Genes to identify corf / GD          #
 ####################################################
 
 $support->log("Examining GD genes to identify CORFs and redundant annotation...\n");
@@ -185,9 +186,9 @@ foreach my $slice (@chroms) {
     my $gsi = $gene->stable_id;
     my $name = $gene->display_xref->display_id;
     $tot_gd++ if ($name =~ /^GD:/);
-#    $support->log_verbose("Studying gene $gsi ($name) for remarks and name\n");
+    $support->log_verbose("Studying gene $gsi ($name) for remarks and name\n");
     my $found_corf_remark = 0;
-    
+
     #get all remarks
     my (@hidden_remarks,@remarks);
     foreach my $trans (@{$gene->get_all_Transcripts()}) {
@@ -199,7 +200,7 @@ foreach my $slice (@chroms) {
 	push @remarks,$remark->value;
       }
     }
-    
+
     #look for correctly formatted hidden remarks - these will be deleted if GD			
     if (grep {$_ =~ /^corf/i} @hidden_remarks ) {
       $found_corf_remark = 1;
@@ -212,7 +213,7 @@ foreach my $slice (@chroms) {
 	$non_GD_hidden{$chr_name}->{$gsi} = $name;
       }			
     }
-    
+
     #otherwise look for 'corf' type remarks
     if (! $found_corf_remark) {
       if (grep {$_ =~ /^corf/i} @remarks ) {
@@ -227,12 +228,12 @@ foreach my $slice (@chroms) {
 	}
       }
     }									
-    
+
     #look for overlap of GD with Havana.
     next GENE if ($name !~ /^GD:/);
     $tot_other_gd++ unless $corf{$chr_name}->{$gsi};
-    #		$support->log_verbose("Studying GD gene $gsi ($name) for overlap with Havana\n");
-    
+    $support->log_verbose("Studying GD gene $gsi ($name) for overlap with Havana\n");
+
     #get any overlapping Havana genes - defined by logicname of otter without a GD: name
     my $slice = $gene->feature_Slice;
     my $this_gene_strand = $gene->strand;
@@ -242,9 +243,9 @@ foreach my $slice (@chroms) {
       if ( ($gene->display_xref->display_id !~ /^GD:/)
 	     && ( $gene->strand == 1 ) ){
 	$to_go = 1;
-			}
+      }
     }
-    
+
     if ($to_go) {
       #if a GD gene overlaps Havana on the same strand then log its ID to delete it unless it's already been tagged as corf
       if (! $corf{$chr_name}->{$gsi}) {
@@ -365,13 +366,19 @@ close $gd_outfile;
 # delete genes #
 ################
 
+my $corf_genes = $support->param('corf_delete');
+my $gd_genes   = $support->param('gd_delete');
+
 if ($delete_corf_genes) {
-  $support->param('delete',$support->param('corf_delete'));
+  $support->param('delete',$corf_genes);
   my $options = $support->create_commandline_options({
     'allowed_params' => 1,
-    'schematype' => 'vega',
-    'exclude' => ['prune',
-		  'logic_name'],
+    'exclude' => [
+      'prune',
+      'logic_name',
+      'corf_delete',
+      'gd_delete'
+    ],
     'replace' => {
       'interactive' => 0,
       'logfile'     => 'cleanup_corf_genes_delete_by_stable_id.log',
@@ -383,18 +390,20 @@ if ($delete_corf_genes) {
 }
 
 if ($delete_gd_genes) {
-  $support->param('delete',$support->param('gd_delete'));
+  $support->param('delete',$gd_genes);
   my $options = $support->create_commandline_options({
     'allowed_params' => 1,
-    'schematype' => 'vega',
-    'exclude' => ['prune',
-		  'logic_name'],
+    'exclude' => [
+      'prune',
+      'logic_name',
+      'corf_delete',
+      'gd_delete'
+    ],
     'replace' => {
       'interactive' => 0,
       'logfile'     => 'cleanup_GD_genes_delete_by_stable_id.log',
-      
     }
-  });
+  }); 
   $support->log("\nDeleting unwanted GD genes from ".$support->param('dbname')."...\n");
   system("./delete_by_stable_id.pl $options") == 0
     or $support->throw("Error running delete_by_stable_id: $!");
