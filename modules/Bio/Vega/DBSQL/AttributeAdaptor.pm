@@ -41,7 +41,7 @@ sub _store_type {
   	my $attrib = shift;
 	
 	unless ($attrib->name) {
-    	fill_in_names_for_coded_Attributes([$attrib]);
+    	$self->fill_in_names_for_coded_Attributes([$attrib]);
     }
     
     return $self->SUPER::_store_type($attrib);
