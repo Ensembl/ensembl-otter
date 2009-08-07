@@ -72,6 +72,21 @@ sub store_on_ContigInfo  {
   return;
 }
 
+sub fill_in_names_for_coded_Attributes {
+	
+	my ($self, $attrs) = @_;
+	
+	my $sth = $self->prepare(qq{
+		SELECT name FROM attrib_type WHERE code = ?
+	});
+	
+	for my $attr (@$attrs) {
+		$sth->execute($attr->code);
+		my ($name) = $sth->fetchrow_array;
+		$attr->name($name);
+	}
+}
+
 1;
 __END__
 
