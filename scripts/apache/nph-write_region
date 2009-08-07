@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2009-08-07 12:52:37 $
-# Id:            $Id: nph-write_region,v 1.27 2009-08-07 12:52:37 gr5 Exp $
+# Last modified: $Date: 2009-08-07 14:37:02 $
+# Id:            $Id: nph-write_region,v 1.28 2009-08-07 14:37:02 gr5 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-write_region,v $
 
 use strict;
@@ -139,9 +139,11 @@ use Bio::Vega::Transform::XML;
                 foreach my $exon (@{ $tran->get_all_Exons }) {
                     $exon->slice($db_slice);
                 }
+                $odba->get_AttributeAdaptor->fill_in_names_for_coded_Attributes($tran->get_all_Attributes);
             }
             # update all gene and its components in db (new/mod)
             $gene->is_current(1);
+            $odba->get_AttributeAdaptor->fill_in_names_for_coded_Attributes($gene->get_all_Attributes);
             if ($gene_adaptor->store($gene, $time_now)) {
                 push(@$changed_genes, $gene);
             }
