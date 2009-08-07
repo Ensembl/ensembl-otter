@@ -37,11 +37,19 @@ sub fetch_all_by_ContigInfo  {
 }
 
 sub _store_type {
+	
+	# override superclass method to fill in missing names for Attributes
+	
 	my $self = shift;
   	my $attrib = shift;
 	
 	unless ($attrib->name) {
-    	$self->fill_in_names_for_coded_Attributes([$attrib]);
+		my $sth = $self->prepare(qq{
+			SELECT name FROM attrib_type WHERE code = ?
+		});
+		$sth->execute($attrib->code);
+		my ($name) = $sth->fetchrow_array;
+		$attrib->name($name);
     }
     
     return $self->SUPER::_store_type($attrib);
@@ -83,21 +91,6 @@ sub store_on_ContigInfo  {
     $sth->execute( $contiginfo_id, $atid, $attrib->value() );
   }
   return;
-}
-
-sub fill_in_names_for_coded_Attributes {
-	
-	my ($self, $attrs) = @_;
-	
-	my $sth = $self->prepare(qq{
-		SELECT name FROM attrib_type WHERE code = ?
-	});
-	
-	for my $attr (@$attrs) {
-		$sth->execute($attr->code);
-		my ($name) = $sth->fetchrow_array;
-		$attr->name($name);
-	}
 }
 
 1;
