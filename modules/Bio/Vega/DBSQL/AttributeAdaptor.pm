@@ -41,7 +41,6 @@ sub _store_type {
   	my $attrib = shift;
 	
 	unless ($attrib->name) {
-    	die "HERE";
     	fill_in_names_for_coded_Attributes([$attrib]);
     }
     
