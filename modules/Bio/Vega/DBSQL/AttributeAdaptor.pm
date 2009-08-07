@@ -36,6 +36,17 @@ sub fetch_all_by_ContigInfo  {
 
 }
 
+sub _store_type {
+	my $self = shift;
+  	my $attrib = shift;
+	
+	unless ($attrib->name) {
+    	die "HERE";
+    	fill_in_names_for_coded_Attributes([$attrib]);
+    }
+    
+    return $self->SUPER::_store_type($attrib);
+}
 
 
 sub store_on_ContigInfo  {
@@ -67,9 +78,7 @@ sub store_on_ContigInfo  {
 						 "argument expected.");
     }
     
-    unless ($attrib->name) {
-    	fill_in_names_for_coded_Attributes([$attrib]);
-    }
+   
     
     my $atid = $self->_store_type( $attrib );
     $sth->execute( $contiginfo_id, $atid, $attrib->value() );
