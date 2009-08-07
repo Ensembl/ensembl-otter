@@ -66,6 +66,11 @@ sub store_on_ContigInfo  {
       $self->throw("Reference to list of Bio::EnsEMBL::Attribute objects " .
 						 "argument expected.");
     }
+    
+    unless ($attrib->name) {
+    	fill_in_names_for_coded_Attributes([$attrib]);
+    }
+    
     my $atid = $self->_store_type( $attrib );
     $sth->execute( $contiginfo_id, $atid, $attrib->value() );
   }
