@@ -104,12 +104,6 @@ sub initialize {
     	-itemtype => 'resizebutton', 
     	-command => sub { $self->sort_by_filter_method('description') }
 	);
-	
-#	$hlist->header('create', $i++, 
-#		-text => 'Molecule type', 
-#    	-itemtype => 'resizebutton', 
-#    	-command => sub { $self->sort_by_filter_method('is_protein') }
-#	);
 
 	$self->hlist($hlist);
 
@@ -397,10 +391,6 @@ sub show_filters {
         $hlist->itemCreate($i, 2,
         	-text => $self->n2f->{$name}->description,
         );
-        
-#        $hlist->itemCreate($i, 3,
-#        	-text => $self->n2f->{$name}->is_protein ? 'Protein' : 'DNA',
-#        );
        	
         $i++;
     }
