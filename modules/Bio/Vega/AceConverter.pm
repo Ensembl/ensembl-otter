@@ -289,7 +289,7 @@ sub build_CloneSequence {
             $self->create_Attribute($ci, 'embl_acc', $acc);
         }
         if (my $sv = $ace->get_single_value('Sequence_version')) {
-            $self->create_Attribute($ci, 'embl_sv', $sv);
+            $self->create_Attribute($ci, 'embl_version', $sv);
         }
         foreach my $kw ($ace->get_values('Keyword')) {
             $self->create_Attribute($ci, 'keyword', $kw->[0]);
