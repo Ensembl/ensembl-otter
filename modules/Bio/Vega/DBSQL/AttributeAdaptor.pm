@@ -45,10 +45,15 @@ sub _store_type {
 	
 	unless ($attrib->name) {
 		my $sth = $self->prepare(qq{
-			SELECT name FROM attrib_type WHERE code = ?
+			SELECT name 
+			FROM   attrib_type 
+			WHERE  code = ?
 		});
 		$sth->execute($attrib->code);
 		my ($name) = $sth->fetchrow_array;
+		
+		die "Failed to find attribute name for code: ".$attrib->code unless $name;
+		
 		$attrib->name($name);
     }
     
