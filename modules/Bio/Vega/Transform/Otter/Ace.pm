@@ -345,7 +345,7 @@ sub make_ace_ctg {
         elsif ($code eq 'embl_acc') {
             $ace->add_tag('Accession', $value);
         }
-        elsif ($code eq 'embl_sv') {
+        elsif ($code eq 'embl_version') {
             $ace->add_tag('Sequence_version', $value);
         }
         elsif ($code eq 'keyword') {

@@ -212,7 +212,7 @@ sub build_SequenceFragment {
 
     my $cln_attrib_list = [
         $self->make_Attribute('embl_acc', $accession),
-        $self->make_Attribute('embl_sv', $sv),
+        $self->make_Attribute('embl_version', $sv),
         $self->make_Attribute('intl_clone_name', $intl_clone_name),
         ];
 
