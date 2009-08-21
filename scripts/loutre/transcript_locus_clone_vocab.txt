@@ -1,0 +1,54 @@
+
+Transcript
+
+    remarks (visible in VEGA)
+
+        alternative_5'_UTR
+
+
+    annotation remarks (not visible in VEGA)
+
+        readthrough
+        NMD exception - plus literature ref?
+        not organism-supported
+        not best-in-genome evidence
+        non-submitted evidence
+        for experimental confirmation
+
+    - the rest all require a data field:
+
+        upstream_ATG <distance in aa upstream>
+
+        selenocysteine <aa position> [<aa position>]
+            - already added, but does not work if you want NMD too!
+
+        CCDS <CCDS ID>
+        contains ncRNA <EMBL ACCESSION>
+
+        SNP                     <OTTER EXON STABLE ID>
+        genome sequence error   <OTTER EXON STABLE ID>
+        non-canonical splicing  <OTTER EXON STABLE ID> <5' or 3' end of exon>
+        nagnag splicing         <OTTER EXON STABLE ID> - always 5' end of exon
+            - these 4 can all occur multiple times
+
+Locus
+
+    remarks (visible in VEGA)
+
+        selenoprotein
+            - automatically added if it has a selenocysteine containing
+              transcript
+
+
+    annotation remarks (not visible in VEGA)
+
+        annotation completed
+        fragmented locus
+        overlapping locus
+        orphan
+        for experimental confirmation
+
+
+Clone annotation remarks (not visible in VEGA)
+
+    annotation completed
