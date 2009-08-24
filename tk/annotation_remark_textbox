@@ -6,7 +6,11 @@ use warnings;
 ### annotation_remark_textbox
 
 use strict;
+use Tk::ROText;
 use CanvasWindow;
+
+my $ann_tag = 'annotation';
+my $voc_tag = 'controlled_vocabulary';
 
 {
     my $widget = CanvasWindow::MainWindow->new('Annotation Remarks');
@@ -30,7 +34,6 @@ use CanvasWindow;
         @label_anchor,
         )->pack(@label_pack);
 
-    my $ann_tag = 'annotation';
 
     # Button for setting Visible/annotation remarks
     my @annotation_color = (-foreground => 'white', -background => 'IndianRed3');
@@ -50,13 +53,70 @@ use CanvasWindow;
         -background         => 'white',
         -wrap               => 'word',
         );
-    $text->pack(-side => 'left');
+    $text->pack(-side => 'left', -expand => 1, -fill => 'both');
     $text->tagConfigure($ann_tag, @annotation_color);
     $text->tagLower($ann_tag, 'sel');
+    $text->tagConfigure($voc_tag,
+            -foreground => 'black',
+            -background => 'GreenYellow',
+            );
+    $text->tagLower($voc_tag, 'sel');
 
     my $tw = $text->Subwidget('text');
-    $tw->bind(ref($tw), '<Key>', '');
-    $tw->bind("<Key>", [\&insert_char, Tk::Ev('A')]);
+    my $class = ref($tw);
+
+    my @disable = qw{
+
+        <Button-2>
+        <ButtonRelease-2>
+
+        <<Cut>>
+        <<Paste>>
+
+        <BackSpace>
+        <Control-Key-h>
+        <Meta-Key-BackSpace>
+
+        <Delete>
+        <Meta-Key-d>
+
+        <Control-Key-t>
+
+        <Return>
+        <Control-Key-o>
+
+        <Control-Key-k>
+        <Control-Key-d>
+        
+        <Tab>
+        <Control-Key-i>
+    };
+    foreach my $seq (@disable) {
+        # $tw->bind($class, $seq, '');
+        $tw->bind($seq, [\&ignore_in_controlled_vocab, Tk::Ev('K')]);
+    }
+    
+    $tw->bind($class, '<Button-3>', '');
+
+    $tw->bind($class, '<Key>', '');
+    $tw->bind('<Key>', [\&insert_char, Tk::Ev('A')]);
+
+
+    my (@tags) = $tw->bindtags;
+    warn "tags=(@tags)\n";
+    $tw->bindtags([@tags[1, 0, 2, 3]]);
+
+    # $tw->tagBind('annotation', '<BackSpace>', sub{ warn "BackSpace\n" });
+
+
+    foreach my $sequence ($tw->Tk::bind($class)) {
+        print "seq=$sequence\n";
+        # if ($sequence =~ /Key/) {
+        #     #print STDERR "seq=$sequence\n";
+        #     $canvas->Tk::bind($class, $sequence, '');
+        # }
+    }
+    
 
     #my $class = ref($text->Subwidget('text'));
     #foreach my $sequence ($text->bind($class)) {
@@ -75,9 +135,9 @@ use CanvasWindow;
         my @this_line = ("$line_start", "$line_start lineend");
         #warn "line start = $line_start";
         my $annotation_is_set = 0;
-        foreach my $tag ($text->tagNames("$line_start")) {
-            $annotation_is_set = 1 if $tag eq $ann_tag;
-            $text->tagRemove($tag, @this_line);
+        if (grep $_ eq $ann_tag, $text->tagNames("$line_start")) {
+            $annotation_is_set = 1;
+            $text->tagRemove($ann_tag, @this_line);
         }
         unless ($annotation_is_set) {
             $text->tagAdd($ann_tag, @this_line);
@@ -102,8 +162,25 @@ use CanvasWindow;
         )->pack(-side => 'left');
 
     $text->insert('1.0', "Line 1\nLine second is a really long line that will wrap\nLine the third\n");
+    $text->insert('2.0', "Controlled vocab", $voc_tag, "\n");
 
     Tk::MainLoop();
+}
+
+sub ignore_in_controlled_vocab {
+    my ($text, $keysym) = @_;
+    
+    # Need to choose "insert" for keyboard events
+    # and "current" for mouse events.
+    my $posn = $keysym ? 'insert' : 'current';
+    my $modifier = '';
+    if ($keysym and $keysym eq 'BackSpace') {
+        $modifier = ' - 1 chars';
+    }
+    if (grep $_ eq $voc_tag, $text->tagNames($posn . $modifier)) {
+        warn "Ignoring a $keysym\n";
+        $text->break;
+    }
 }
 
 # Inserts (printing) characters with the same style as the rest of the line
@@ -113,13 +190,17 @@ sub insert_char {
     # We only want to insert printing characters in the Text box!
     # [:print:] is the POSIX class of printing characters.
     return unless $char =~ /[[:print:]]/;
-    
+
+    # Do not edit controlled vocabulary
+    return if grep $_ eq $voc_tag, $text->tagNames('insert linestart');
+
     # Expected behaviour is that any selected text will
     # be replaced by what the user types.
     $text->deleteSelected;
     
     # There will only ever be one or zero tags per line in out Text box.
-    my ($tag) = $text->tagNames('insert linestart');
+    my ($tag) = grep $_ eq $ann_tag, $text->tagNames('insert linestart');
+    
     $text->insert('insert', $char, $tag);
 }
 
