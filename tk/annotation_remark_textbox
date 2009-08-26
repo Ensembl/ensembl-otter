@@ -73,20 +73,10 @@ my $voc_tag = 'controlled_vocabulary';
         <<Cut>>
         <<Paste>>
 
-        <BackSpace>
-        <Control-Key-h>
-        <Meta-Key-BackSpace>
-
-        <Delete>
-        <Meta-Key-d>
-
         <Control-Key-t>
 
         <Return>
         <Control-Key-o>
-
-        <Control-Key-k>
-        <Control-Key-d>
         
         <Tab>
         <Control-Key-i>
@@ -94,6 +84,30 @@ my $voc_tag = 'controlled_vocabulary';
     foreach my $seq (@disable) {
         # $tw->bind($class, $seq, '');
         $tw->bind($seq, [\&ignore_in_controlled_vocab, Tk::Ev('K')]);
+    }
+    
+    my @back_delete_sequences = qw{
+        
+        <BackSpace>
+        <Control-Key-h>
+        <Meta-Key-BackSpace>
+
+    };
+    foreach my $seq (@back_delete_sequences) {
+        $tw->bind($seq, [\&backspace_delete_whole_ctrl_vocab_line, Tk::Ev('K')]);
+    }
+
+    my @forward_delete_sequences = qw{
+        
+        <Delete>
+        <Meta-Key-d>
+
+        <Control-Key-k>
+        <Control-Key-d>
+
+    };
+    foreach my $seq (@forward_delete_sequences) {
+        $tw->bind($seq, [\&forward_delete_whole_ctrl_vocab_line, Tk::Ev('K')]);
     }
     
     $tw->bind($class, '<Button-3>', '');
@@ -110,7 +124,7 @@ my $voc_tag = 'controlled_vocabulary';
 
 
     foreach my $sequence ($tw->Tk::bind($class)) {
-        print "seq=$sequence\n";
+        print "        $sequence\n";
         # if ($sequence =~ /Key/) {
         #     #print STDERR "seq=$sequence\n";
         #     $canvas->Tk::bind($class, $sequence, '');
@@ -167,20 +181,86 @@ my $voc_tag = 'controlled_vocabulary';
     Tk::MainLoop();
 }
 
+sub backspace_delete_whole_ctrl_vocab_line {
+    my ($text, $keysym) = @_;
+
+    my $n = 1;
+    if ($text->compare('insert', '==', 'insert linestart')) {
+        # Need to check 2 chars back past "\n" if we are at linestart
+        $n = 2;
+    }
+    my $prev = $text->index("insert - $n chars");
+    if (is_ctrl_vocab_char($text, $prev)) {
+        $text->delete("$prev linestart", "$prev lineend");
+        if ($n == 2) {
+            $text->SetCursor('insert - 1 chars');
+        }
+        $text->break;
+    }
+    elsif ($n == 2 and is_ctrl_vocab_char($text, 'insert')) {
+        # We are at the start of a controlled vocab line
+        # so don't delete because it would join lines.
+        $text->break;
+    }
+}
+
+sub forward_delete_whole_ctrl_vocab_line {
+    my ($text, $keysym) = @_;
+    
+    my $modifier = '';
+    if ($text->compare('insert', '==', 'insert lineend')) {
+        $modifier = ' + 1 chars';
+    }
+    my $next = $text->index('insert' . $modifier);
+    if (is_ctrl_vocab_char($text, $next)) {
+        $text->delete("$next linestart", "$next lineend");
+        $text->break;
+    }
+    elsif ($modifier and is_ctrl_vocab_char($text, 'insert - 1 chars')) {
+        # We are at the end of a controlled vocab line
+        # so don't delete because it would join lines
+        $text->break;
+    }
+}
+
 sub ignore_in_controlled_vocab {
     my ($text, $keysym) = @_;
     
     # Need to choose "insert" for keyboard events
     # and "current" for mouse events.
     my $posn = $keysym ? 'insert' : 'current';
-    my $modifier = '';
-    if ($keysym and $keysym eq 'BackSpace') {
-        $modifier = ' - 1 chars';
+
+    if ($text->compare($posn, '==', "$posn linestart")) {
+        # Return at linestart is always OK
+        return if $keysym eq 'Return';
     }
-    if (grep $_ eq $voc_tag, $text->tagNames($posn . $modifier)) {
+
+    if ($text->compare($posn, '==', "$posn lineend")) {
+        if (is_ctrl_vocab_char($text, "$posn + 1 chars")) {
+            if ($keysym eq 'Delete'
+            or $keysym eq 'd'
+            or $keysym eq 'k')
+            {
+                # Delete not OK at line end where next line is Controlled Vocab
+                warn "Ignoring a delete at line end\n";
+                $text->break;
+            }
+            # elsif () {
+            #         
+            # }
+        }
+    }
+    
+    if (is_ctrl_vocab_char($text, $posn)) {
         warn "Ignoring a $keysym\n";
         $text->break;
     }
+}
+
+sub is_ctrl_vocab_char {
+    my ($text, $posn) = @_;
+    
+    return grep $_ eq $voc_tag, $text->tagNames($posn);
 }
 
 # Inserts (printing) characters with the same style as the rest of the line
