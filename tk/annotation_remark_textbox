@@ -65,7 +65,9 @@ my $voc_tag = 'controlled_vocabulary';
     my $tw = $text->Subwidget('text');
     my $class = ref($tw);
 
-    my @disable = qw{
+    # We need to ignore any sequences which edit text when inside
+    # controlled vocabulary tagged text
+    foreach my $seq (qw{
 
         <Button-2>
         <ButtonRelease-2>
@@ -80,24 +82,27 @@ my $voc_tag = 'controlled_vocabulary';
         
         <Tab>
         <Control-Key-i>
-    };
-    foreach my $seq (@disable) {
-        # $tw->bind($class, $seq, '');
+        
+        <F2>  <F3>
+
+    }) {
         $tw->bind($seq, [\&ignore_in_controlled_vocab, Tk::Ev('K')]);
     }
     
-    my @back_delete_sequences = qw{
+    # Keyboard sequences which delete backwards need to take out the whole
+    # line of controlled vocabulary in one go...
+    foreach my $seq (qw{
         
         <BackSpace>
         <Control-Key-h>
         <Meta-Key-BackSpace>
 
-    };
-    foreach my $seq (@back_delete_sequences) {
+    }) {
         $tw->bind($seq, [\&backspace_delete_whole_ctrl_vocab_line, Tk::Ev('K')]);
     }
 
-    my @forward_delete_sequences = qw{
+    # ... as do sequences which delete forwards.
+    foreach my $seq (qw{
         
         <Delete>
         <Meta-Key-d>
@@ -105,13 +110,16 @@ my $voc_tag = 'controlled_vocabulary';
         <Control-Key-k>
         <Control-Key-d>
 
-    };
-    foreach my $seq (@forward_delete_sequences) {
+    }) {
         $tw->bind($seq, [\&forward_delete_whole_ctrl_vocab_line, Tk::Ev('K')]);
     }
     
+    # Do not post the Text class's built in popup menu
     $tw->bind($class, '<Button-3>', '');
 
+    # Remove key binding for keyboard input and replace with our own which
+    # inserts characters using the same tag as the rest of the line, or
+    # which ignores characters with the controlled vocabulary tag.
     $tw->bind($class, '<Key>', '');
     $tw->bind('<Key>', [\&insert_char, Tk::Ev('A')]);
 
@@ -130,19 +138,7 @@ my $voc_tag = 'controlled_vocabulary';
         #     $canvas->Tk::bind($class, $sequence, '');
         # }
     }
-    
 
-    #my $class = ref($text->Subwidget('text'));
-    #foreach my $sequence ($text->bind($class)) {
-    #    if ($sequence =~ /Key/) {
-    #        print STDERR "seq=$sequence\n";
-    #        #$text->bind($class, $sequence, '');
-    #    } else {
-    #        print STDERR "non-key=$sequence\n";
-    #    }
-    #}
-
-    
     $annotation_button->configure(-command => sub {
         my ($line) = $text->index('insert') =~ /^(\d+)/;
         my $line_start = "$line.0";
@@ -184,42 +180,34 @@ my $voc_tag = 'controlled_vocabulary';
 sub backspace_delete_whole_ctrl_vocab_line {
     my ($text, $keysym) = @_;
 
-    my $n = 1;
-    if ($text->compare('insert', '==', 'insert linestart')) {
-        # Need to check 2 chars back past "\n" if we are at linestart
-        $n = 2;
-    }
-    my $prev = $text->index("insert - $n chars");
+    my $prev = $text->index('insert - 1 chars');
+
     if (is_ctrl_vocab_char($text, $prev)) {
         $text->delete("$prev linestart", "$prev lineend");
-        if ($n == 2) {
-            $text->SetCursor('insert - 1 chars');
-        }
         $text->break;
     }
-    elsif ($n == 2 and is_ctrl_vocab_char($text, 'insert')) {
-        # We are at the start of a controlled vocab line
-        # so don't delete because it would join lines.
-        $text->break;
+    elsif ($text->compare('insert', '==', 'insert linestart')) {
+        # If this or the previous line is controlled vocab, just move the cursor
+        if (is_ctrl_vocab_char($text, "$prev - 1 chars") or is_ctrl_vocab_char($text, 'insert')) {
+            $text->SetCursor('insert - 1 chars');
+            $text->break;
+        }
     }
 }
 
 sub forward_delete_whole_ctrl_vocab_line {
     my ($text, $keysym) = @_;
-    
-    my $modifier = '';
-    if ($text->compare('insert', '==', 'insert lineend')) {
-        $modifier = ' + 1 chars';
-    }
-    my $next = $text->index('insert' . $modifier);
-    if (is_ctrl_vocab_char($text, $next)) {
-        $text->delete("$next linestart", "$next lineend");
+
+    if (is_ctrl_vocab_char($text, 'insert')) {
+        $text->delete('insert linestart', 'insert lineend');
         $text->break;
     }
-    elsif ($modifier and is_ctrl_vocab_char($text, 'insert - 1 chars')) {
-        # We are at the end of a controlled vocab line
-        # so don't delete because it would join lines
-        $text->break;
+    elsif ($text->compare('insert', '==', 'insert lineend')) {
+        # If this or the next line is controlled vocab, just move the cursor
+        if (is_ctrl_vocab_char($text, 'insert + 1 chars') or is_ctrl_vocab_char($text, 'insert - 1 chars')) {
+            $text->SetCursor('insert + 1 chars');
+            $text->break;
+        }
     }
 }
 
@@ -234,25 +222,8 @@ sub ignore_in_controlled_vocab {
         # Return at linestart is always OK
         return if $keysym eq 'Return';
     }
-
-    if ($text->compare($posn, '==', "$posn lineend")) {
-        if (is_ctrl_vocab_char($text, "$posn + 1 chars")) {
-            if ($keysym eq 'Delete'
-            or $keysym eq 'd'
-            or $keysym eq 'k')
-            {
-                # Delete not OK at line end where next line is Controlled Vocab
-                warn "Ignoring a delete at line end\n";
-                $text->break;
-            }
-            # elsif () {
-            #         
-            # }
-        }
-    }
     
     if (is_ctrl_vocab_char($text, $posn)) {
-        warn "Ignoring a $keysym\n";
         $text->break;
     }
 }
