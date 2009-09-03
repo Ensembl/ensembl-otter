@@ -271,6 +271,7 @@ else {
 if ($support->param('verbose')) {
   $support->log("Parsed xrefs are ".Dumper($parsed_xrefs)."\n");
   $support->log("Parsed lc xrefs are ".Dumper($lcmap)."\n");
+  exit;
 }
 
 use strict 'refs';
@@ -755,17 +756,25 @@ sub parse_hgnc {
 	  push @{$xrefs->{$gene_name}->{$db}}, $record.'||'.$record;
 	}
       }
-      
+
       #get rest of xrefs where the pid is the same as the name
       else {
 	push @{$xrefs->{$gene_name}->{$db}}, $accessions{$db}.'||'. $accessions{$db};
       }
     }
-    
+
     #store lowercase name for matching
     push @{ $lcmap->{lc($gene_name)} }, $gene_name;
   }
-  
+
+  #remove withdrawn entry if the entry is also real!
+  while (my ($gene_name, $dets) = each %{$xrefs}) {
+    if ($dets->{'This symbol is withdrawn'} && $dets->{'HGNC'}) {
+      $support->log_verbose("Ggene $gene_name is not really withdrawn\n",2);
+      delete $xrefs->{$gene_name}{'This symbol is withdrawn'};
+    }
+  }
+
   close(NOM);
 
   $support->log_stamped("Done processing ".$stats{'total'}." records:\n", 1);
