@@ -114,7 +114,7 @@ sub make_xml{
 sub obj_make_xml{
     my ($obj, $action) = @_;
     return unless $obj && $action;
-    my $formatStr = '<zmap action="%s">%s</zmap>';
+    my $formatStr = '<zmap><request action="%s">%s</request></zmap>';
     return sprintf($formatStr, $action, xmlString($obj));
 }
 sub xml_escape{

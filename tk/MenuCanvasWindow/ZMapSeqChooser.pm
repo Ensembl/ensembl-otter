@@ -12,7 +12,7 @@ use Hum::Conf qw{ PFETCH_SERVER_LIST };
 use XML::Simple;
 use File::Path 'mkpath';
 
-my $ZMAP_DEBUG = 0;
+my $ZMAP_DEBUG = 1;
 
 #==============================================================================#
 #
@@ -160,10 +160,12 @@ sub _launchInAZMap{
                 $config .= $self->zMapServerDefaults();
                 $config =~ s/\&/&amp;/g; # needs fully xml escaping really
                 
-                my $xml = sprintf(q!<zmap action="new_view">
- <segment sequence="%s" start="1" end="0">
-%s
+                my $xml = sprintf(q!<zmap>
+ <request action="new_view">
+  <segment sequence="%s" start="1" end="0">
+   %s
   </segment>
+ </request>
 </zmap>
                                   !, $sequence, $config);
                 warn $xml;
@@ -279,7 +281,7 @@ sub zMapKillZmap {
                 $self->{'_relaunch_zmap'}    = $relaunch;
                 $self->{'_launch_in_a_zmap'} = $in_a_zmap;
 
-                $xr->send_commands('<zmap action="shutdown" />');
+                $xr->send_commands('<zmap><request action="shutdown"/></zmap>');
                 
                 $rval = 1; # everything has been as successful as can be
                 ### Check shutdown by checking property set by ZMap?
@@ -347,22 +349,21 @@ sub zMapWriteDotBlixemrc {
     my ($dir) = $file =~ m{(.+)/[^/]+$};
     mkpath($dir);   # Fatal if fails
     open my $blixem_rc, "> $file" or confess "Can't write to '$file'; $!";
-    ### Grr!  blixemrc needs underscores, not dashes
     print $blixem_rc
         $self->formatZmapDefaults(
             'blixem',
-            'default_fetch_mode' => $ENV{'PFETCH_WWW'} ? 'pfetch_http' : 'pfetch_socket',
+            'default-fetch-mode' => $ENV{'PFETCH_WWW'} ? 'pfetch-http' : 'pfetch-socket',
             ),
         $self->formatZmapDefaults(
-            'pfetch_http',
-            'pfetch_mode'     => 'http',
+            'pfetch-http',
+            'pfetch-mode'     => 'http',
             'pfetch'          => $self->AceDatabase->Client->url_root . '/nph-pfetch',
-            'cookie_jar'      => $ENV{'OTTERLACE_COOKIE_JAR'},
+            'cookie-jar'      => $ENV{'OTTERLACE_COOKIE_JAR'},
             'port'            => 80,
             ),
         $self->formatZmapDefaults(
-            'pfetch_socket',
-            'pfetch_mode' => 'socket',
+            'pfetch-socket',
+            'pfetch-mode' => 'socket',
             'node'        => $PFETCH_SERVER_LIST->[0][0],
             'port'        => $PFETCH_SERVER_LIST->[0][1],
             );
@@ -659,9 +660,9 @@ sub zMapRegisterClient {
     };
     $zmap->protocol_add_meta($out);
 
-    unless($xml->{'client'}->{'xwid'} 
-           && $xml->{'client'}->{'request_atom'}
-           && $xml->{'client'}->{'response_atom'}){
+    unless($xml->{'request'}->{'client'}->{'xwid'} 
+           && $xml->{'request'}->{'client'}->{'request_atom'}
+           && $xml->{'request'}->{'client'}->{'response_atom'}){
         warn "mismatched request for register_client:\n", 
           "id, request and response required\n",
           "Got '", Dumper($xml), "'\n";
@@ -675,7 +676,11 @@ sub zMapRegisterClient {
     # this feels convoluted
     $out->{'response'}->{'client'}->[0]->{'created'} = 1;
 
-    return (200, make_xml($out));
+	my $xml = make_xml($out);
+
+	warn "Sending response to register_client:\n$xml\n" if $ZMAP_DEBUG;
+
+    return (200, $xml);
 }
 
 =head1 zMapEdit
@@ -689,9 +694,9 @@ sub zMapEdit{
 
     my $response;
     my $z  = $self->zMapZmapConnector();
-    if ($xml_hash->{"action"} eq 'edit') {
+    if ($xml_hash->{'request'}->{'action'} eq 'edit') {
         #warn Dumper($xml_hash);
-        my $feat_hash = $xml_hash->{'featureset'}{'feature'}
+        my $feat_hash = $xml_hash->{'request'}->{'align'}->{'block'}->{'featureset'}{'feature'}
           or return return(200, $z->handled_response(0));
         
         # Are there any transcripts in the list of features?
@@ -748,14 +753,14 @@ sub zMapHighlight{
     my $z = $self->zMapZmapConnector();
 
     # Needs to do something interesting to find the object to highlight.
-    if ($xml_hash->{"action"} eq 'single_select') {
+    if ($xml_hash->{'request'}->{'action'} eq 'single_select') {
         $self->deselect_all();
-        my $feature = $xml_hash->{'featureset'}->{'feature'} || {};
+        my $feature = $xml_hash->{'request'}->{'align'}->{'block'}->{'featureset'}->{'feature'} || {};
         foreach my $name(keys(%$feature)){
             $self->highlight_by_name_without_owning_clipboard($name);
         }
-    } elsif($xml_hash->{"action"} eq 'multiple_select') {
-        my $feature = $xml_hash->{'featureset'}->{'feature'} || {};
+    } elsif($xml_hash->{'request'}->{'action'} eq 'multiple_select') {
+        my $feature = $xml_hash->{'request'}->{'align'}->{'block'}->{'featureset'}->{'feature'} || {};
         foreach my $name(keys(%$feature)){
             $self->highlight_by_name_without_owning_clipboard($name);
         }
@@ -777,15 +782,15 @@ sub zMapTagValues {
     # warn Dumper($xml_hash);
 
     my $pages = "";
-    if ($xml_hash->{'action'} eq 'feature_details') {
-        my $feature_hash = $xml_hash->{'featureset'}->{'feature'} || {};
+    if ($xml_hash->{'request'}->{'action'} eq 'feature_details') {
+        my $feature_hash = $xml_hash->{'request'}->{'align'}->{'block'}->{'featureset'}->{'feature'} || {};
 
         # There is only ever 1 feature in the XML from Zmap
         my ($name) = keys %$feature_hash;
         my $info = $feature_hash->{$name};
 
         unless ($name) {
-            warn "No feature in featurset of XML";
+            warn "No feature in featureset of XML";
         }
         elsif (my $subseq = $self->get_SubSeq($name)) {
             $pages .= $subseq->zmap_info_xml;
@@ -908,7 +913,7 @@ sub zMapRemoveView {
 
     my $z = $self->zMapZmapConnector();
 
-    if($client_tag = $xml->{'client'}){
+    if($client_tag = $xml->{'request'}->{'client'}){
 	$xid = $client_tag->{'xwid'};
     }
 
@@ -943,7 +948,21 @@ sub RECEIVE_FILTER {
     # find the action in the request XML
     #warn "Request = '$request'";
     my $reqXML = parse_request($request);
-    my $action = $reqXML->{'action'};
+    
+    unless ($reqXML->{'request'}) {
+    	#for my $k (keys %$reqXML) {
+    	#	$reqXML->{'request'}->{$k} = $reqXML->{$k};
+    	#	delete $reqXML->{$k};
+    	#}
+    	
+    	warn "INVALID REQUEST: no <request> block\n";
+    }
+    
+    my $action = $reqXML->{'request'}->{'action'};
+    
+    warn "REQUEST FROM ZMAP: $request\n" if $ZMAP_DEBUG;
+    
+    warn "PARSED REQUEST: ".Dumper($reqXML)."\n" if $ZMAP_DEBUG;
 
     warn "In RECEIVE_FILTER for action=$action\n" if $ZMAP_DEBUG;
 
@@ -995,7 +1014,7 @@ sub zMapGetXRemoteClientByName{
 
 
 
-sub zMapGetXRemoteClientByAction{
+sub zMapGetXRemoteClientByAction {
     my ($self, $action, $own_windows_only) = @_;
 
     my ($pid, $client, $method);
@@ -1043,7 +1062,7 @@ sub open_clones{
     # first open a zmap window...
     my $xremote = $self->zMapGetXRemoteClientByName($self->main_window_name());
 
-    my $zmap_success = $self->zMapDoRequest($xremote, "new_zmap", qq!<zmap action="new_zmap" />!);
+    my $zmap_success = $self->zMapDoRequest($xremote, "new_zmap", qq!<zmap><request action="new_zmap"/></zmap>!);
 
     if($zmap_success == 0){
 	# now open a view
@@ -1084,6 +1103,58 @@ sub zMapRegisterClientRequest{
     }
 
     return ;
+}
+
+sub zMapGetMark {
+	
+	my ($self) = @_;
+
+	if (my $client = $self->zMapGetXRemoteClientByAction('get_mark', 1)) {
+		
+		my $xml = qq(<zmap><request action="get_mark" /></zmap>);
+		
+		my @response = $client->send_commands($xml);
+	    
+	    my ($status, $hash) = parse_response($response[0]);
+	    
+        if ($status =~ /^2/ && $hash->{response}->{mark}->{exists} eq "true") {
+	    	return ( $hash->{response}->{mark}->{start}, $hash->{response}->{mark}->{end} );
+	    }
+	}
+	else {
+		warn "Failed to get client for 'get_mark'";
+	}
+    
+    return undef;
+}
+
+sub zMapZoomToSubSeq {
+    
+    my ($self, $subseq) = @_;
+    
+    if (my $client = $self->zMapGetXRemoteClientByAction('zoom_to', 1)) {
+        my $xml = Hum::XmlWriter->new;
+        $xml->open_tag('zmap');
+        $xml->open_tag('request', {action => 'zoom_to'}); 
+        $xml->open_tag('align');
+        $xml->open_tag('block');
+        $xml->open_tag('featureset', {name => $subseq->GeneMethod->name});
+        $subseq->zmap_xml_feature_tag($xml);
+        $xml->close_all_open_tags;
+        
+        my @response = $client->send_commands($xml->flush);
+        
+        my ($status, $hash) = parse_response($response[0]);
+        
+        if ($status =~ /^2/ && $hash->{response} =~ /executed/) {
+            return 1;
+        }
+    }
+    else {
+        warn "Failed to get client for 'zoom_to'";
+    }
+    
+    return undef;
 }
 
 =head1 zMapDoRequest
@@ -1140,7 +1211,7 @@ sub zMapProcessNewClientXML{
      if(exists($xml->{'response'})){
          $client_tag = $xml->{'response'}->{'client'};
      }else{
-         $client_tag = $xml->{'client'};
+         $client_tag = $xml->{'request'}->{'client'};
      }
 
      if($client_tag){
@@ -1202,7 +1273,10 @@ sub RESPONSE_HANDLER{
         warn "handled action '$action'" if $ZMAP_DEBUG;
     } elsif($action eq 'zoom_to'){
         #$self->message($xml->{'response'});
-    } else {
+    } elsif ($action eq 'get_mark') {
+    	
+    } 
+    else {
         cluck "RESPONSE_HANDLER knows nothing about how to handle actions of type '$action'";
     }
 

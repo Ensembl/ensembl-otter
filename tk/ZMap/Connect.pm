@@ -130,8 +130,10 @@ remote window.
 sub connect_request{
     my ($self) = @_;
 
-    my $fmt = q!<zmap action="%s">
+    my $fmt = q!<zmap>
+ <request action="%s">
   <client xwid="%s" request_atom="%s" response_atom="%s"/>
+ </request>
 </zmap>!;
 
     return sprintf($fmt, 
