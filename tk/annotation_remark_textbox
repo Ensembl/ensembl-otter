@@ -1,16 +1,15 @@
 #!/usr/bin/env perl
 
-use warnings;
-
-
 ### annotation_remark_textbox
 
 use strict;
+use warnings;
 use Tk::ROText;
 use CanvasWindow;
 
 my $ann_tag = 'annotation';
 my $voc_tag = 'controlled_vocabulary';
+my $ctrl_vocab_menu;
 
 {
     my $widget = CanvasWindow::MainWindow->new('Annotation Remarks');
@@ -116,6 +115,28 @@ my $voc_tag = 'controlled_vocabulary';
     
     # Do not post the Text class's built in popup menu
     $tw->bind($class, '<Button-3>', '');
+    $tw->bind('<Button-3>', [\&post_ctrl_vocab_menu, Tk::Ev('X'), Tk::Ev('Y')]);
+    # $tw->bind('<ButtonRelease-3>', sub{ $ctrl_vocab_menu->unpost });
+
+    $ctrl_vocab_menu = $tw->Menu(
+        -tearoff    => 0,
+        );
+    foreach my $phrase (
+        q{alternative_5'_UTR},
+        q{readthrough},
+        q{NMD exception},
+        q{not organism-supported},
+        q{not best-in-genome evidence},
+        q{non-submitted evidence},
+        q{for experimental confirmation},
+    ) {
+        $ctrl_vocab_menu->add('command',
+            -label      => $phrase,
+            -command    => sub {
+                insert_phrase($tw, $phrase);
+            },
+        );
+    }
 
     # Remove key binding for keyboard input and replace with our own which
     # inserts characters using the same tag as the rest of the line, or
@@ -175,6 +196,32 @@ my $voc_tag = 'controlled_vocabulary';
     $text->insert('2.0', "Controlled vocab", $voc_tag, "\n");
 
     Tk::MainLoop();
+}
+
+sub post_ctrl_vocab_menu {
+    my ($text, $x, $y) = @_;
+    
+    $ctrl_vocab_menu->Post($x, $y);
+}
+
+sub insert_phrase {
+    my ($text, $phrase) = @_;
+    
+    my @vocab_lines = $text->tagRanges($voc_tag);
+    my $see_i;
+    for (my $i = 0; $i < @vocab_lines; $i += 2) {
+        my ($a, $b) = @vocab_lines[$i, $i + 1];
+        my $text = $text->get($a, $b);
+        if ($text eq $phrase) {
+            $see_i = $a;
+            last;
+        }
+    }
+    unless ($see_i) {
+        $see_i = '1.0';
+        $text->insert($see_i, $phrase, $voc_tag, "\n", '');
+    }
+    $text->see($see_i);
 }
 
 sub backspace_delete_whole_ctrl_vocab_line {

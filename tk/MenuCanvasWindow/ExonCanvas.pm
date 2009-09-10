@@ -120,6 +120,7 @@ sub initialize {
     # EXON MENU
     {
         my $exon_menu = $self->make_menu('Exon');
+        $self->{'_exon_menu'} = $exon_menu;
 
         # Select all positions
         $exon_menu->add('command',
@@ -261,6 +262,22 @@ sub initialize {
     }
 
     if ($self->is_mutable) {
+        
+        my $attrib_menu = $self->make_menu('Attributes');
+
+        my $tsct_attrib_menu = $attrib_menu->Menu(-tearoff => 0);
+        $attrib_menu->add('cascade',
+            -menu       => $tsct_attrib_menu,
+            -label      => 'Transcript',
+            -underline  => 0,
+            );
+        
+        my $locus_attrib_menu = $attrib_menu->Menu(-tearoff => 0);
+        $attrib_menu->add('cascade',
+            -menu       => $locus_attrib_menu,
+            -label      => 'Locus',
+            -underline  => 0,
+            );
 
         # Keyboard editing commands
         $canvas->Tk::bind('<Left>',      sub{ $self->canvas_text_go_left   });
@@ -346,7 +363,8 @@ sub initialize {
         $self->add_start_end_method_widgets($frame);
 
         # Transcript remark widget
-        $self->add_transcript_remark_widget($frame);
+        $self->add_transcript_remark_widget($frame, $tsct_attrib_menu);
+        $self->populate_transcript_attribute_menu($tsct_attrib_menu);
 
         # Widget for changing locus properties
         my $locus_frame = $canvas->toplevel->LabFrame(
@@ -356,8 +374,8 @@ sub initialize {
                 -side => 'top',
                 -fill => 'x',
                 );
-        $self->add_locus_editing_widgets($locus_frame);
-
+        $self->add_locus_editing_widgets($locus_frame, $locus_attrib_menu);
+        $self->populate_locus_attribute_menu($locus_attrib_menu);
     } else {
         # SubSeq with an immutable method - won't display entry widgets for updating things
 
@@ -775,7 +793,6 @@ sub show_subseq {
     $self->message("Zmap not running") unless $success;
 }
 
-
 sub show_peptide {
     my( $self ) = @_;
 
@@ -906,9 +923,9 @@ sub show_peptide {
 }
 
 sub search_pfam {
-	my( $self ) = @_;
+    my( $self ) = @_;
 
-	my $sub = $self->is_mutable ? $self->new_SubSeq_from_tk : $self->SubSeq;
+    my $sub = $self->is_mutable ? $self->new_SubSeq_from_tk : $self->SubSeq;
     unless ($sub->GeneMethod->coding) {
         $self->message("non-coding method");
         return;
@@ -919,36 +936,36 @@ sub search_pfam {
         $self->exception_message($@, 'Invalid transcript');
     } else {
         my $pep = $sub->translator->translate($sub->translatable_Sequence);
-		my $name = $pep->name;
+        my $name = $pep->name;
         my $str = $pep->sequence_string;
         my $pfam;
 
-	    if($self->{'_pfam'} && Tk::Exists($self->{'_pfam'}->top)) {
-	    	$pfam = $self->{'_pfam'};
-	    	if($pfam->query() ne $str) {
-				$pfam->top->destroy;
-	    		$pfam = EditWindow::PfamWindow->new($self->canvas->Toplevel(-title => "Pfam $name"));
-	    	} else {
-	    		$pfam->top->deiconify;
-				$pfam->top->raise;
-				$pfam->top->focus;
+        if($self->{'_pfam'} && Tk::Exists($self->{'_pfam'}->top)) {
+            $pfam = $self->{'_pfam'};
+            if($pfam->query() ne $str) {
+                $pfam->top->destroy;
+                $pfam = EditWindow::PfamWindow->new($self->canvas->Toplevel(-title => "Pfam $name"));
+            } else {
+                $pfam->top->deiconify;
+                $pfam->top->raise;
+                $pfam->top->focus;
 
-				return 1;
-	    	}
-	    } elsif($self->{'_pfam'} && !Tk::Exists($self->{'_pfam'}->top)) {
-	    	$pfam = $self->{'_pfam'};
-	    	my $result_url = $pfam->result_url;
-	    	my $prev_query = $pfam->query();
-	    	$pfam = EditWindow::PfamWindow->new($self->canvas->Toplevel(-title => "Pfam $name"));
-	    	$pfam->result_url($result_url) unless $prev_query ne $str;
-	    } else {
-			$pfam = EditWindow::PfamWindow->new($self->canvas->Toplevel(-title => "Pfam $name"));
-	    }
+                return 1;
+            }
+        } elsif($self->{'_pfam'} && !Tk::Exists($self->{'_pfam'}->top)) {
+            $pfam = $self->{'_pfam'};
+            my $result_url = $pfam->result_url;
+            my $prev_query = $pfam->query();
+            $pfam = EditWindow::PfamWindow->new($self->canvas->Toplevel(-title => "Pfam $name"));
+            $pfam->result_url($result_url) unless $prev_query ne $str;
+        } else {
+            $pfam = EditWindow::PfamWindow->new($self->canvas->Toplevel(-title => "Pfam $name"));
+        }
 
-    	$pfam->query($str);
-		$pfam->name($name);
-		$self->{'_pfam'} = $pfam;
-		$pfam->initialize();
+        $pfam->query($str);
+        $pfam->name($name);
+        $self->{'_pfam'} = $pfam;
+        $pfam->initialize();
     }
 }
 
@@ -1091,24 +1108,6 @@ sub EvidencePaster {
     return $paster;
 }
 
-## Commented out for tropicalis cDNA annotation workshop
-#sub select_evidence {
-#    my( $self ) = @_;
-#
-#    my $evi_coll = $self->XaceSeqChooser->EviCollection
-#        or die "No EviCollection attatched to XaceSeqChooser";
-#    ### Need to close EviDisplay here if there is one already open
-#    my $otter_transcript = $self->otter_Transcript_from_tk;
-#    my $title = "Evidence: ". $otter_transcript->transcript_info->name;
-#    my $evi_disp = Evi::EviDisplay->new(
-#        $self->canvas->toplevel,
-#        $title,
-#        $evi_coll,
-#        $otter_transcript,
-#        );
-#    $evi_disp->ExonCanvas($self);
-#}
-
 sub save_OtterTranscript_evidence {
     my( $self, $transcript ) = @_;
 
@@ -1122,7 +1121,6 @@ sub save_OtterTranscript_evidence {
     }
     $self->evidence_hash($evi_hash);
 }
-
 
 sub check_kozak{
     my ($self ) = @_ ;
@@ -1350,7 +1348,7 @@ sub trim_cds_coord_to_first_stop {
 }
 
 sub add_locus_editing_widgets {
-    my( $self, $widget ) = @_;
+    my( $self, $widget, $locus_attrib_menu ) = @_;
 
     # Get the Locus name
     my( $locus_name, $locus_description, $locus_alias );
@@ -1429,7 +1427,7 @@ sub add_locus_editing_widgets {
     $self->locus_alias_Entry($ae);
 
     # Locus remark widget
-    my $re = $self->make_labelled_text_widget($widget, 'Remarks', 36, -anchor => 'se');
+    my $re = $self->make_labelled_text_widget($widget, 'Remarks', $locus_attrib_menu, -anchor => 'se');
     $self->locus_remark_Entry($re);
     if (my $locus = $self->SubSeq->Locus) {
         $self->update_locus_remark_widget($locus);
@@ -1527,35 +1525,67 @@ sub update_Locus {
     $self->SubSeq->Locus($locus);
 }
 
+my $ann_tag = 'Annotation';
+my $voc_tag = 'Controlled_Vocabulary';
+
+my $transcript_vocab = {
+    map {$_ => 1} (
+        q{alternative 5' UTR},
+        q{readthrough},
+        q{NMD exception},
+        q{not organism-supported},
+        q{not best-in-genome evidence},
+        q{non-submitted evidence},
+        q{for experimental confirmation},    
+    )
+};
+
+my $locus_vocab = {
+    map {$_ => 1} (
+        q{annotation completed},
+        q{fragmented locus},
+        q{overlapping locus},
+        q{orphan},
+        q{for experimental confirmation},
+    )
+};
+
 sub update_transcript_remark_widget {
     my( $self, $sub ) = @_;
 
-    $self->update_remark_Entry($self->transcript_remark_Entry, $sub);
+    $self->update_remark_Entry($self->transcript_remark_Entry, $transcript_vocab, $sub);
 }
 
 sub update_locus_remark_widget {
     my( $self, $locus ) = @_;
 
-    $self->update_remark_Entry($self->locus_remark_Entry, $locus);
+    $self->update_remark_Entry($self->locus_remark_Entry, $locus_vocab, $locus);
 }
 
 sub update_remark_Entry {
-    my( $self, $remark_text, $obj ) = @_;
+    my( $self, $remark_text, $vocab, $obj ) = @_;
 
     $remark_text->delete('1.0', 'end');
     foreach my $remark ($obj->list_remarks) {
-        $remark_text->insert('end', "$remark\n");
+        my $style = $vocab->{$remark} ? $voc_tag : '';
+        $remark_text->insert('end',
+            $remark     => $style,
+            "\n"        => '',
+        );
     }
     foreach my $remark ($obj->list_annotation_remarks) {
-        $remark_text->insert('end', $remark, 'Annotation');
-        $remark_text->insert('end', "\n");
+        my $style = $vocab->{$remark} ? $voc_tag : $ann_tag;
+        $remark_text->insert('end',
+            $remark     => $style,
+            "\n"        => '',
+        );
     }
 }
 
 sub add_transcript_remark_widget {
-    my( $self, $widget ) = @_;
+    my( $self, $widget, $tsct_attrib_menu ) = @_;
 
-    my $rt = $self->make_labelled_text_widget($widget, 'Remarks', 36, -anchor => 'se');
+    my $rt = $self->make_labelled_text_widget($widget, 'Remarks', $tsct_attrib_menu, -anchor => 'se');
     $self->transcript_remark_Entry($rt);
     $self->update_transcript_remark_widget($self->SubSeq);
 }
@@ -1568,8 +1598,33 @@ sub add_subseq_rename_widget {
         );
 }
 
+sub populate_transcript_attribute_menu {
+    my ($self, $menu) = @_;
+    
+    $self->populate_attribute_menu($menu, $self->transcript_remark_Entry, $transcript_vocab);
+}
+
+sub populate_locus_attribute_menu {
+    my ($self, $menu) = @_;
+    
+    $self->populate_attribute_menu($menu, $self->locus_remark_Entry, $locus_vocab);
+}
+
+sub populate_attribute_menu {
+    my ($self, $menu, $text, $attribs) = @_;
+    
+    foreach my $phrase (sort keys %$attribs) {
+        $menu->add('command',
+            -label      => $phrase,
+            -command    => sub {
+                insert_phrase($text, $phrase);
+            },
+        );
+    }
+}
+
 sub make_labelled_text_widget {
-    my( $self, $widget, $name, $size, @pack ) = @_;
+    my( $self, $widget, $name, $menu, @pack ) = @_;
 
     @pack = (-side => 'left') unless @pack;
 
@@ -1592,9 +1647,7 @@ sub make_labelled_text_widget {
         @label_anchor,
         )->pack(@label_pack);
 
-    my $ann_tag = 'Annotation';
-
-    # Button for setting Visible/Annotation remarks
+    # Button for setting Visible/annotation remarks
     my @annotation_color = (-foreground => 'white', -background => 'IndianRed3');
     my $annotation_button = $label_annotation_frame->Button(
         -text   => $ann_tag,
@@ -1606,29 +1659,87 @@ sub make_labelled_text_widget {
 
     my $text = $frame->Scrolled('Text',
         -scrollbars         => 'e',
-        -width              => $size,
+        -width              => 36,
         -height             => 4,
         -exportselection    => 1,
         -background         => 'white',
         -wrap               => 'word',
         );
-    $text->pack(-side => 'left');
+    $text->pack(-side => 'left', -expand => 1, -fill => 'both');
     $text->tagConfigure($ann_tag, @annotation_color);
     $text->tagLower($ann_tag, 'sel');
+    $text->tagConfigure($voc_tag,
+            -foreground => 'black',
+            -background => 'GreenYellow',
+            );
+    $text->tagLower($voc_tag, 'sel');
 
     my $tw = $text->Subwidget('text');
-    $tw->bind(ref($tw), '<Key>', '');
-    $tw->bind("<Key>", [\&insert_char, Tk::Ev('A')]);
+    my $class = ref($tw);
 
-    #my $class = ref($text->Subwidget('text'));
-    #foreach my $sequence ($text->bind($class)) {
-    #    if ($sequence =~ /Key/) {
-    #        print STDERR "seq=$sequence\n";
-    #        #$text->bind($class, $sequence, '');
-    #    } else {
-    #        print STDERR "non-key=$sequence\n";
-    #    }
-    #}
+    # We need to ignore any sequences which edit text when inside
+    # controlled vocabulary tagged text
+    foreach my $seq (qw{
+
+        <Button-2>
+        <ButtonRelease-2>
+
+        <<Cut>>
+        <<Paste>>
+
+        <Control-Key-t>
+
+        <Return>
+        <Control-Key-o>
+
+        <Tab>
+        <Control-Key-i>
+
+        <F2>  <F3>
+
+    }) {
+        $tw->bind($seq, [\&ignore_in_controlled_vocab, Tk::Ev('K')]);
+    }
+
+    # Keyboard sequences which delete backwards need to take out the whole
+    # line of controlled vocabulary in one go...
+    foreach my $seq (qw{
+
+        <BackSpace>
+        <Control-Key-h>
+        <Meta-Key-BackSpace>
+
+    }) {
+        $tw->bind($seq, [\&backspace_delete_whole_ctrl_vocab_line, Tk::Ev('K')]);
+    }
+
+    # ... as do sequences which delete forwards.
+    foreach my $seq (qw{
+
+        <Delete>
+        <Meta-Key-d>
+
+        <Control-Key-k>
+        <Control-Key-d>
+
+    }) {
+        $tw->bind($seq, [\&forward_delete_whole_ctrl_vocab_line, Tk::Ev('K')]);
+    }
+
+    # Do not post the Text class's built in popup menu
+    $tw->bind($class, '<Button-3>', '');
+    $tw->bind('<Button-3>', [\&post_ctrl_vocab_menu, $menu, Tk::Ev('X'), Tk::Ev('Y')]);
+
+    # Remove key binding for keyboard input and replace with our own which
+    # inserts characters using the same tag as the rest of the line, or
+    # which ignores characters with the controlled vocabulary tag.
+    $tw->bind($class, '<Key>', '');
+    $tw->bind('<Key>', [\&insert_char, Tk::Ev('A')]);
+
+
+    my (@tags) = $tw->bindtags;
+    warn "tags=(@tags)\n";
+    $tw->bindtags([@tags[1, 0, 2, 3]]);
 
     $annotation_button->configure(-command => sub {
         my ($line) = $text->index('insert') =~ /^(\d+)/;
@@ -1636,16 +1747,102 @@ sub make_labelled_text_widget {
         my @this_line = ("$line_start", "$line_start lineend");
         #warn "line start = $line_start";
         my $annotation_is_set = 0;
-        foreach my $tag ($text->tagNames("$line_start")) {
-            $annotation_is_set = 1 if $tag eq $ann_tag;
-            $text->tagRemove($tag, @this_line);
+        if (grep $_ eq $ann_tag, $text->tagNames("$line_start")) {
+            $annotation_is_set = 1;
+            $text->tagRemove($ann_tag, @this_line);
         }
         unless ($annotation_is_set) {
             $text->tagAdd($ann_tag, @this_line);
         }
     });
+    
+    return $tw;
+}
 
-    return $text;
+sub post_ctrl_vocab_menu {
+    my ($text, $menu, $x, $y) = @_;
+
+    $menu->Post($x, $y);
+}
+
+sub insert_phrase {
+    my ($text, $phrase) = @_;
+
+    my @vocab_lines = $text->tagRanges($voc_tag);
+    my $see_i;
+    for (my $i = 0; $i < @vocab_lines; $i += 2) {
+        my ($a, $b) = @vocab_lines[$i, $i + 1];
+        my $text = $text->get($a, $b);
+        if ($text eq $phrase) {
+            $see_i = $a;
+            last;
+        }
+    }
+    unless ($see_i) {
+        $see_i = '1.0';
+        $text->insert($see_i,
+            $phrase => $voc_tag,
+            "\n"    => '',
+            );
+    }
+    $text->see($see_i);
+}
+
+sub backspace_delete_whole_ctrl_vocab_line {
+    my ($text, $keysym) = @_;
+
+    my $prev = $text->index('insert - 1 chars');
+
+    if (is_ctrl_vocab_char($text, $prev)) {
+        $text->delete("$prev linestart", "$prev lineend");
+        $text->break;
+    }
+    elsif ($text->compare('insert', '==', 'insert linestart')) {
+        # If this or the previous line is controlled vocab, just move the cursor
+        if (is_ctrl_vocab_char($text, "$prev - 1 chars") or is_ctrl_vocab_char($text, 'insert')) {
+            $text->SetCursor('insert - 1 chars');
+            $text->break;
+        }
+    }
+}
+
+sub forward_delete_whole_ctrl_vocab_line {
+    my ($text, $keysym) = @_;
+
+    if (is_ctrl_vocab_char($text, 'insert')) {
+        $text->delete('insert linestart', 'insert lineend');
+        $text->break;
+    }
+    elsif ($text->compare('insert', '==', 'insert lineend')) {
+        # If this or the next line is controlled vocab, just move the cursor
+        if (is_ctrl_vocab_char($text, 'insert + 1 chars') or is_ctrl_vocab_char($text, 'insert - 1 chars')) {
+            $text->SetCursor('insert + 1 chars');
+            $text->break;
+        }
+    }
+}
+
+sub ignore_in_controlled_vocab {
+    my ($text, $keysym) = @_;
+
+    # Need to choose "insert" for keyboard events
+    # and "current" for mouse events.
+    my $posn = $keysym ? 'insert' : 'current';
+
+    if ($text->compare($posn, '==', "$posn linestart")) {
+        # Return at linestart is always OK
+        return if $keysym eq 'Return';
+    }
+
+    if (is_ctrl_vocab_char($text, $posn)) {
+        $text->break;
+    }
+}
+
+sub is_ctrl_vocab_char {
+    my ($text, $posn) = @_;
+
+    return grep $_ eq $voc_tag, $text->tagNames($posn);
 }
 
 # Inserts (printing) characters with the same style as the rest of the line
@@ -1655,14 +1852,17 @@ sub insert_char {
     # We only want to insert printing characters in the Text box!
     # [:print:] is the POSIX class of printing characters.
     return unless $char =~ /[[:print:]]/;
-    return if $char eq "\t";
+
+    # Do not edit controlled vocabulary
+    return if grep $_ eq $voc_tag, $text->tagNames('insert linestart');
 
     # Expected behaviour is that any selected text will
     # be replaced by what the user types.
     $text->deleteSelected;
 
     # There will only ever be one or zero tags per line in out Text box.
-    my ($tag) = $text->tagNames('insert linestart');
+    my ($tag) = grep $_ eq $ann_tag, $text->tagNames('insert linestart');
+
     $text->insert('insert', $char, $tag);
 }
 
@@ -1817,7 +2017,7 @@ sub get_locus_remarks {
 sub get_remarks_from_Entry {
     my( $self, $text, $obj ) = @_;
 
-    my %ann_index = $text->tagRanges('Annotation');
+    my %ann_index = $text->tagRanges($ann_tag);
     my $line = 0;
     my $rem     = [];
     my $ann_rem = [];
