@@ -1222,6 +1222,7 @@ sub edit_new_subsequence {
         $new = Hum::Ace::SubSeq->new_from_subseq_list(@subseq);
     }
     else {
+    	warn "CLIPBOARD: $clip\n";
         $new = Hum::Ace::SubSeq->new_from_clipboard_text($clip);
         unless ($new) {
             $self->message("Need a highlighted transcript or a coordinate on the clipboard to make SubSeq");
@@ -1960,6 +1961,7 @@ sub subseq_names_to_canvas_obj {
             push(@to_select, $obj);
         }
     }
+    
     return @to_select;
 }
 

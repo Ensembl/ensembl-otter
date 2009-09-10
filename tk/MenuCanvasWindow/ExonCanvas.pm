@@ -770,37 +770,9 @@ sub window_close {
 sub show_subseq {
     my( $self ) = @_;
 
-    # We can't  rely on the cached object  here... The explanation
-    # is  long and tedious  but boils  down to  the fact  that the
-    # window  that receives  the  events changes  within zmap.  We
-    # therefore need to remove  the ZMapWindow cached clients, ask
-    # for the current list  from the window that knows, repopulate
-    # the cache and find a window that can zoom_to
-
-    my $xc = $self->XaceSeqChooser;
-    if (my $cache = $xc->xremote_cache) {
-        my $id = $cache->lookup_value('ZMapWindow');
-        $cache->remove_client_with_id($id);
-        for (my $i = 0; $i < 10; $i++) {    ### Why 10?
-            if ($id = $cache->lookup_value('ZMapWindow.'.$i)) {
-                $cache->remove_client_with_id($id);
-            }
-        }
-
-        if (my $client = $xc->zMapGetXRemoteClientByAction('list_windows', 1)) {
-            $xc->zMapDoRequest($client, "list_windows", qq{<zmap action="list_windows" />});
-        }
-        if (my $client = $xc->zMapGetXRemoteClientByAction('zoom_to', 1)) {
-            my $xml = Hum::XmlWriter->new;
-            $xml->open_tag('zmap', {action => 'zoom_to'});
-            $xml->open_tag('featureset');
-            $self->SubSeq->zmap_xml_feature_tag($xml);
-            $xml->close_all_open_tags;
-            $xc->zMapDoRequest($client, "zoom_to", $xml->flush);
-        } else {
-            $self->message("Zmap not running");
-        }
-    }
+    my $success = $self->XaceSeqChooser->zMapZoomToSubSeq($self->SubSeq);
+    
+    $self->message("Zmap not running") unless $success;
 }
 
 
