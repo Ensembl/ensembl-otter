@@ -133,7 +133,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.40 $ ';
+$revision='$Revision: 1.41 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -286,6 +286,22 @@ sub genomic_seq {
         $self->{'_genomic_seq'} = $genomic_seq;
     }
     return $self->{'_genomic_seq'};
+}
+
+sub genomic_start {
+	my ( $self, $genomic_start ) = @_;
+	if ( defined $genomic_start ) {
+		$self->{'_genomic_start'} = $genomic_start;
+	}
+	return $self->{'_genomic_start'};
+}
+
+sub genomic_end {
+	my ( $self, $genomic_end ) = @_;
+	if ( defined $genomic_end ) {
+		$self->{'_genomic_end'} = $genomic_end;
+	}
+	return $self->{'_genomic_end'};
 }
 
 sub query_seq {
@@ -447,11 +463,15 @@ sub run {
     my $name = $self->genomic_seq->name;
     my ($masked, $smasked, $unmasked) = $self->get_masked_unmasked_seq;
 
-    unless ($masked->seq =~ /[acgtACGT]{5}/) {
+	# only run exonerate with the specified subsequence of the genomic sequence
+	
+	map { $_->seq($_->subseq($self->genomic_start, $self->genomic_end)) } ($masked, $smasked, $unmasked);
+	
+	unless ($masked->seq =~ /[acgtACGT]{5}/) {
         warn "The genomic sequence is entirely repeat\n";
         return $ace;
     }
-
+	
     my $features = $self->run_exonerate($masked, $smasked, $unmasked);
     $self->append_polyA_tail($features) unless $self->query_type eq 'protein' ;
 
@@ -582,11 +602,15 @@ sub format_ace_output {
     my $homol_tag   = $self->homol_tag;
     my $method_tag  = $self->method_tag;
 
+	my $offset = $self->genomic_start - 1;
+
     my %name_fp_list;
     foreach my $fp (@$fp_list) {
         my $hname = $fp->hseqname;
         my $list = $name_fp_list{$hname} ||= [];
         push @$list, $fp;
+        $fp->start($fp->start + $offset);
+        $fp->end($fp->end + $offset);
     }
 
     my $ace = '';
