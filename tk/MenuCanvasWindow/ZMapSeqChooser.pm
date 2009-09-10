@@ -12,7 +12,7 @@ use Hum::Conf qw{ PFETCH_SERVER_LIST };
 use XML::Simple;
 use File::Path 'mkpath';
 
-my $ZMAP_DEBUG = 1;
+my $ZMAP_DEBUG = 0;
 
 #==============================================================================#
 #
