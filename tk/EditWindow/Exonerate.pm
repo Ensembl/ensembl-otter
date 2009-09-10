@@ -157,10 +157,21 @@ sub initialise {
         -padx   => 6,
 	)->pack( -side => 'right' );
 
-	$param_frame->Checkbutton(
+	my $cb_frame = $param_frame->Frame->pack(@frame_pack);
+
+	$cb_frame->Checkbutton(
     	-variable => \$self->{_clear_existing},
-        -text => 'Clear existing alignments of same type'
-     )->pack( -side => 'right' );
+        -text => 'Clear existing alignments of same type',
+        -anchor => 'w',
+     )->pack( -side => 'top', -expand => 1, -fill => 'x' );
+     
+     $self->{_use_marked_region} = 1;
+     
+     $cb_frame->Checkbutton(
+    	-variable => \$self->{_use_marked_region},
+        -text => 'Only search within marked region',
+        -anchor => 'w',
+     )->pack( -side => 'top', -expand => 1, -fill => 'x' );
 
 	### Commands
 	my $button_frame = $top->Frame->pack(@frame_pack);
@@ -375,6 +386,18 @@ sub launch_exonerate {
 			push @{ $seqs_by_type{Unknown_Protein} }, $seq;
 		}
 	}
+	
+	# get marked region (if requested)
+
+	my ($genomic_start, $genomic_end) = (1, $self->XaceSeqChooser->Assembly->Sequence->sequence_length);
+	
+	if ($self->{_use_marked_region}) {
+		my ($mark_start, $mark_end) = $self->XaceSeqChooser->zMapGetMark;
+		if ($mark_start && $mark_end) {
+			warn "Setting exonerate genomic start & end to marked region: $mark_start - $mark_end";
+			($genomic_start, $genomic_end) = ($mark_start, $mark_end);
+		}
+	}
 
 	$self->top->Busy;
 
@@ -392,6 +415,8 @@ sub launch_exonerate {
 		my $exonerate = Bio::Otter::Lace::Exonerate->new;
 		$exonerate->AceDatabase($self->XaceSeqChooser->AceDatabase);
 		$exonerate->genomic_seq($self->XaceSeqChooser->Assembly->Sequence);
+		$exonerate->genomic_start($genomic_start);
+		$exonerate->genomic_end($genomic_end);
 		$exonerate->query_seq($seqs_by_type{$type});
 		$exonerate->sequence_fetcher($self->{'_name_seq'});
 		$exonerate->acedb_homol_tag($ana_name.'_homol');
@@ -450,9 +475,10 @@ sub launch_exonerate {
 			$self->XaceSeqChooser->zMapWriteDotZmap;
 		}
 	}
-
+	
+        
 	if ($need_relaunch) {
-		$self->XaceSeqChooser->resync_with_db();
+	    $self->XaceSeqChooser->resync_with_db();
 		$self->XaceSeqChooser->zMapLaunchZmap;
 	}
 
@@ -465,8 +491,8 @@ sub launch_exonerate {
 	        -title      => 'No matches',
 	        -icon       => 'warning',
 	        -message    => 'Exonerate did not find any matches on genomic sequence',
-	        -type       => 'OK',
-	        );
+	       -type       => 'OK',
+	    );
 	    return 0;
 	}
 }
@@ -518,7 +544,7 @@ sub get_query_seq {
 			$seq->name($full_acc);
 		}
 	}
-
+	
 	# map between the corrected and supplied accessions
 
 	my %correct_to_supplied = ();
@@ -606,9 +632,11 @@ sub ace_DNA {
     my $ace = qq{\nSequence "$name"\n\nDNA "$name"\n};
 
     my $dna_string = $seq->sequence_string;
+    
     while ($dna_string =~ /(.{1,60})/g) {
         $ace .= $1 . "\n";
     }
+    
     return $ace;
 }
 
