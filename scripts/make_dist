@@ -1,21 +1,23 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/env perl
 
 ### make_dist
 
 use strict;
+use warnings;
 use File::Copy qw{ copy };
 use File::Path qw{ rmtree };
 use Getopt::Long qw{ GetOptions };
 
 {
+    chomp(my $arch = `uname -m`);
     my $version = '';
-    my $ensembl_tag = "branch-ensembl-19";
+    my $ensembl_tag = "branch-ensembl-55";
     my $otter_home = $ENV{'OTTER_HOME'};
-    my $ace_dir = '/nfs/team71/acedb/zmap/BIN.DEVELOPMENT/Linux';
+    my $ace_dir = "/nfs/team71/acedb/zmap/BIN.DEVELOPMENT/Linux_$arch";
     my $ace_bin_dir = "$ace_dir/bin";
     my $usage = sub { exec('perldoc', $0) };
     my $internal_flag = 0;
-    my $dist_name = 'otterlace_linux';
+    my $dist_name = "otterlace_linux_$arch";
     my $dist_dir  = '/nfs/team71/analysis/jgrg/dist';
     GetOptions(
         'internal!'     => \$internal_flag,
@@ -25,11 +27,11 @@ use Getopt::Long qw{ GetOptions };
         'version=s'     => \$version,
         ) or $usage->();
 
-    if($version eq '') {
-        die "Please provide the version (0 for HEAD)\n";
+    if ($version eq '') {
+        die "Please specify a version (use HEAD for HEAD)\n";
     }
 
-    my $release = $version ? "humpub-release-$version" : 'HEAD';
+    my $release = $version eq 'HEAD' ? 'HEAD' : "humpub-release-$version";
     
     unless ($otter_home || $internal_flag) {
         die "OTTER_HOME environment variable must be set to get config files\n";
@@ -85,7 +87,7 @@ use Getopt::Long qw{ GetOptions };
         tace
         xace
         sgifaceserver
-        blixem
+        blixemh
         dotter
         xremote
         }
@@ -101,45 +103,24 @@ use Getopt::Long qw{ GetOptions };
     my $foo_copy = 'cp -p -d /software/acedb/lib/libfoocanvas.so* lib/';
     system($foo_copy) == 0
       or die "Foo canvas copy '$foo_copy' failed; exited $?";
-
-    # Special pfetch and server which use www.sanger
-    unless ($internal_flag) {
-        warn "Exporting special local pfetch scripts\n";
-        foreach my $script (qw{ pfetch local_pfetch }) {
-            my $pfetch = "ensembl-otter/scripts/$script";
-            my @pfetch_cvs = (
-                'cvs', '-Q',
-                  -d => ':ext:cvs.sanger.ac.uk:/cvsroot/ensembl',
-                'export',
-                  -r => $release,
-                $pfetch,
-                );
-            system(@pfetch_cvs) == 0
-                or die "Error running '@pfetch_cvs'; exit $?";
-            copy($pfetch, "$bin_dir/$script")
-                or die "Failed to copy $pfetch to $bin_dir/$script; $!";
-            chmod $exe_mod, "$bin_dir/$script";
-            rmtree('ensembl-otter')
-                or die "Failed to delete ensembl-otter directory; $!";
-        }
-    }
     
-    my @bio_dist = ('bioperl-0.7.2', 'bioperl-1.2.3-patched', 'biodas-1.02');
+    my @bio_dist = ('bioperl-1.4.tar.bz2', 'biodas-1.02.tar.gz');
     foreach my $dist (@bio_dist) {
-        my @tar = ('tar', 'xzf', "$dist_dir/$dist.tar.gz");
+        my $flag = $dist =~ /\.bz2$/ ? 'j' : 'z';
+        my @tar = ('tar', "x${flag}f", "$dist_dir/$dist");
         system(@tar) == 0 or die "Error from '@tar'; exit $?";
         warn "Expanding tar dist of $dist\n";
     }
     
     my %cvs_params = (
-	    #'ace_skeleton'          => ['/nfs/humace2/CVS_master', $release ],
-	    'PerlModules/Hum'           => ['/nfs/humace2/CVS_master', $release ],
-	    'tk'                        => ['/nfs/humace2/CVS_master', $release ],
-	    'ensembl-ace'               => [":ext:cvs.sanger.ac.uk:/cvsroot/ensembl", $release],
-	    'ensembl-otter/modules'     => [":ext:cvs.sanger.ac.uk:/cvsroot/ensembl", $release],
+        #'ace_skeleton'          => ['/nfs/humace2/CVS_master', $release ],
+        'PerlModules/Hum'           => [':ext:cvs.internal.sanger.ac.uk:/repos/cvs/anacode',    $release ],
+        'ensembl-ace'               => [':ext:cvs.sanger.ac.uk:/cvsroot/ensembl',               $release ],
+        'ensembl-otter/modules'     => [':ext:cvs.sanger.ac.uk:/cvsroot/ensembl',               $release ],
+        'ensembl-otter/tk'          => [':ext:cvs.sanger.ac.uk:/cvsroot/ensembl',               $release ],
 
-	    'ensembl/modules'           => [":ext:cvs.sanger.ac.uk:/cvsroot/ensembl", $ensembl_tag],
-	    'ensembl-pipeline/modules'  => [":ext:cvs.sanger.ac.uk:/cvsroot/ensembl", 'branch-finished-19'],
+        'ensembl/modules'           => [':ext:cvs.sanger.ac.uk:/cvsroot/ensembl', $ensembl_tag],
+        'ensembl-pipeline/modules'  => [':ext:cvs.sanger.ac.uk:/cvsroot/ensembl', $ensembl_tag],
     );
     
     my $co_command = $internal_flag ? 'checkout' : 'export';
