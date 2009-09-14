@@ -1,16 +1,14 @@
 #!/usr/bin/env perl
 
-use warnings;
-
-
 ### extract_ace_data_from_otterlace_logfile
 
 use strict;
+use warnings;
 
 while (<>) {
     if (/Sending:$/) {
         while (<>) {
-            last if /Sending:/;
+            last if /Active Objects/;
             print substr($_, 26);
         }
     }
