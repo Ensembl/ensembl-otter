@@ -676,11 +676,11 @@ sub zMapRegisterClient {
     # this feels convoluted
     $out->{'response'}->{'client'}->[0]->{'created'} = 1;
 
-	my $xml = make_xml($out);
+	my $response_xml = make_xml($out);
 
-	warn "Sending response to register_client:\n$xml\n" if $ZMAP_DEBUG;
+	warn "Sending response to register_client:\n$response_xml\n" if $ZMAP_DEBUG;
 
-    return (200, $xml);
+    return (200, $response_xml);
 }
 
 =head1 zMapEdit
