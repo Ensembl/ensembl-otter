@@ -133,7 +133,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.41 $ ';
+$revision='$Revision: 1.42 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -464,14 +464,14 @@ sub run {
     my ($masked, $smasked, $unmasked) = $self->get_masked_unmasked_seq;
 
 	# only run exonerate with the specified subsequence of the genomic sequence
-	
+
 	map { $_->seq($_->subseq($self->genomic_start, $self->genomic_end)) } ($masked, $smasked, $unmasked);
-	
+
 	unless ($masked->seq =~ /[acgtACGT]{5}/) {
         warn "The genomic sequence is entirely repeat\n";
         return $ace;
     }
-	
+
     my $features = $self->run_exonerate($masked, $smasked, $unmasked);
     $self->append_polyA_tail($features) unless $self->query_type eq 'protein' ;
 
@@ -644,10 +644,11 @@ sub format_ace_output {
             # than end if the feature is on the negative strand.
             my $start = $fp->start;
             my $end   = $fp->end;
+            my $hstart = $fp->hstart;
+            my $hend 	= $fp->hend;
 
 			if($fp->hstrand ==-1){
-            	$fp->hstrand(1);
-            	$strand *= -1;
+            	($hstart, $hend) = ($hend, $hstart);
             }
 
             if ($strand == -1){
@@ -659,7 +660,7 @@ sub format_ace_output {
             # Show coords in hit back to genomic sequence. (The annotators like this.)
             $hit_ace .= sprintf qq{Homol %s "%s" "%s" %.3f %d %d %d %d\n},
               $hit_homol_tag, $contig_name, $method_tag, $fp->percent_id,
-              $fp->hstart, $fp->hend, $start, $end;
+              $hstart, $hend, $start, $end;
               #print STDOUT sprintf qq{Homol %s "%s" "%s" %.3f %d %d %d %d\n},
               #$homol_tag, $contig_name, $method_tag, $fp->percent_id,
               #$fp->hstart, $fp->hend, $start, $end;
@@ -668,7 +669,7 @@ sub format_ace_output {
             # gaps in the alignment between genomic sequence and hit.
             my $query_line = sprintf qq{Homol %s "%s" "%s" %.3f %d %d %d %d},
               $self->acedb_homol_tag, $hname, $method_tag, $fp->percent_id,
-              $start, $end, $fp->hstart, $fp->hend;
+              $start, $end, $hstart, $hend;
 
             if (@$seq_coord > 1) {
                 # Gapped alignments need two or more Align blocks to describe

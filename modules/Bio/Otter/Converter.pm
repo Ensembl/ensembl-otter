@@ -61,7 +61,7 @@ sub XML_to_otter {
   my @cloneremarks;
   my @keywords;
   my @tiles;
-  my $slice; 
+  my $slice;
   my $accession;
   my $version;
   my $clone_name;
@@ -154,7 +154,7 @@ sub XML_to_otter {
       # print STDERR "Found dna\n";
       if (defined($seqstr)) {
         die "ERROR: Got more than one dna record\n";
-      } 
+      }
       $currentobj = 'dna';
     } elsif (/<transcript>/) {
 
@@ -170,9 +170,9 @@ sub XML_to_otter {
       $gene->add_Transcript($tran);
     } elsif (/<\/transcript>/) {
 
-      # At end of transcript section need to position translation 
+      # At end of transcript section need to position translation
       # if there is one. We need to do this after we have all the
-      # exons 
+      # exons
       if (defined($tl_start) && defined($tl_end)) {
 
         #print STDERR  "Setting translation to $tl_start and $tl_end\n";
@@ -572,7 +572,7 @@ sub XML_to_otter {
   # print STDERR "chrname = " . $chrname . " chrstart = " . $chrstart . " chrend = "
   #  . $chrend . "\n";
 
-  # If we have a database connection, check that our tile 
+  # If we have a database connection, check that our tile
   # is consistent with the assembly table in the database
   if (defined($db)) {
     if ($assembly_type) {
@@ -601,7 +601,7 @@ sub XML_to_otter {
   }
 
   # The xml coordinates are all in chromosomal coords - these
-  # Need to be converted back to slice coords 
+  # Need to be converted back to slice coords
   foreach my $gene (@genes) {
       foreach my $exon (@{ $gene->get_all_Exons }) {
         $exon->start($exon->start - $chrstart + 1);
@@ -728,7 +728,7 @@ sub otter_to_ace {
         # add SMap tags for assembly
     foreach my $tile (@$path) {
         my $ctg_name     = $tile->component_Seq->name;
-        
+
         my $tile_start_in_slice = $tile->assembled_start - $start_of_slice_in_chr + 1;
         my $tile_end_in_slice   = $tile->assembled_end   - $start_of_slice_in_chr + 1;
         my $tile_length         = $tile_end_in_slice - $tile_start_in_slice + 1;
@@ -738,7 +738,7 @@ sub otter_to_ace {
         my $cmp_start           = $tile->component_start;
 
         if ($tile->component_ori == 1) {
-            # ---------------------------------   ( in slice coords )   ----- 
+            # ---------------------------------   ( in slice coords )   -----
             $str .= qq{AGP_Fragment "$ctg_name" $group_start $group_end Align $tile_start_in_slice $cmp_start $tile_length\n};
         } else {
             # Clone in reverse orientaton in AGP is indicated
@@ -791,7 +791,7 @@ sub otter_to_ace {
         # coords are same as XML from otter db (ie, all -1 <-> 1 and all start coord <= end coord)
 	    my ($start, $end);
         ($at->strand == 1) ? ($start = $at->start, $end = $at->end) : ($start=$at->end, $end=$at->start);
-	
+
 	    my $tag_type = $at->tag_type;
 	    my $tag_info = $at->tag_info;
 
@@ -891,7 +891,7 @@ sub otter_to_ace {
             my $tile_length         = $tile_end_in_slice - $tile_start_in_slice + 1;
 
             if ($tile->component_ori == 1) {
-                # ---------------------------------- (in clone coords) ---- 
+                # ---------------------------------- (in clone coords) ----
                 $str .= qq{AGP_Fragment "$slice_name" 1 $clone_length Align $cmp_start $tile_start_in_slice $tile_length\n} ;
             } else {
                 $str .= qq{AGP_Fragment "$slice_name" $clone_length 1 Align $cmp_end $tile_start_in_slice $tile_length\n} ;
@@ -1410,7 +1410,7 @@ sub ace_to_otter {
                     $curr_seq->{transcript}->add_Exon($exon);
                 }
                 elsif (
-/^(cDNA_match|Protein_match|Genomic_match|EST_match) $STRING/x
+/^(cDNA_match|Protein_match|Genomic_match|EST_match|ncRNA_match) $STRING/x
                   )
                 {
                     my $matches = $curr_seq->{$1} ||= [];
@@ -1605,7 +1605,7 @@ sub ace_to_otter {
 
         # Evidence for the transcript
         my @evidence;
-        foreach my $type (qw{ EST cDNA Protein Genomic }) {
+        foreach my $type (qw{ EST ncRNA cDNA Protein Genomic }) {
             my $match_type = "${type}_match";
             if (my $ev_array = $seq_data->{$match_type}) {
                 foreach my $name (@$ev_array) {
@@ -1654,7 +1654,7 @@ sub ace_to_otter {
                 my $start_phase = $seq_data->{Start_not_found};
                 if (defined $start_phase) {
                     $traninfo->mRNA_start_not_found(1);
-                    
+
                     ### Wrong test. Check if translation start equals transcript start too.
                     $traninfo->cds_start_not_found(1) if $start_phase != -1;
                 }
@@ -1940,7 +1940,7 @@ sub ace_to_otter {
 
 sub decide_strand {
     my( $start, $end ) = @_;
-    
+
     my $strand = 0;	# Will stay 0 if start == end
     if ($start < $end) {
         $strand = 1;
@@ -2035,7 +2035,7 @@ sub prune_Exons {
 
 sub exon_hash_key {
     my( $exon ) = @_;
-    
+
     # This assumes that all the exons we
     # compare will be on the same contig
     return join(" ",
@@ -2281,7 +2281,7 @@ sub assembly_tags_to_XML {
     ### FIXME! These coordinates should be in chromosomal space!
     ### See features_to_XML()
     $str .= "<assembly_tag>\n"
- 	 . "  <contig_strand>" . $h->strand     . "</contig_strand>\n"	
+ 	 . "  <contig_strand>" . $h->strand     . "</contig_strand>\n"
      . "  <tag_type>"      . $h->tag_type   . "</tag_type>\n"
 	 . "  <contig_start>"  . $h->start      . "</contig_start>\n"
 	 . "  <contig_end>"    . $h->end        . "</contig_end>\n"
@@ -2317,15 +2317,15 @@ sub by_stable_id_or_name {
 }
 
 # This isn't nice
-# There is no way to create a slice (complete with sequence) 
+# There is no way to create a slice (complete with sequence)
 # and then store it.  We have to create insert statements
 # for the assembly and a
 
 ### Not used
 sub frags_to_slice {
   my ($chrname,$chrstart,$chrend,$assembly_type,$seqstr,$frags,$db) = @_;
- 
-   
+
+
   my %frags = %$frags;
   my $time = time;
   my $chrid;
@@ -2352,13 +2352,13 @@ sub frags_to_slice {
   print STDERR "Chromosome id $chrid\n";
 
   foreach my $f (keys %frags) {
-    
+
     if ($chrname eq "") {
       $chrname = $frags{$f}{chr};
     } elsif ($chrname ne $frags{$f}{chr}) {
       die " Chromosome names are different - can't make slice [$chrname][". $frags{$f}{chr} . "]\n";
     }
-    
+
     my $fstart = $frags{$f}{start};
     my $fend   = $frags{$f}{end};
     my $fori   = $frags{$f}{strand};
@@ -2375,43 +2375,43 @@ sub frags_to_slice {
       $clone->htg_phase(-1);
       $clone->created($time);
       $clone->modified($time);
-  
-  
+
+
       # Create contig
-  
+
       my $contig = new Bio::EnsEMBL::RawContig;
-  
+
       $contig->name($f);
       $contig->clone($clone);
       $contig->embl_offset(1);
       $contig->length($fend-$fstart+$foff);
-  
+
       my $subseq    = substr($seqstr,($fstart-$chrstart),($fend-$fstart+1));
-  
+
       my $contigseq = new Bio::Seq(-seq => $subseq);
 
       #print STDERR "Contigseq " . $contigseq->length . " " . length($seqstr) . " " . $fstart . " " . $fend . "\n";
-  
+
       if ($fori == -1) {
         $contigseq = $contigseq->revcom;
       }
-  
+
       my $padstr = 'N' x ($foff-1);
-      
+
       #print STDERR "Foff [$foff-1]\n";
-  
+
       my $newseq = $padstr . $contigseq->seq;
-  
+
       #print STDERR "newseq " . length($newseq) ."\n";
-  
+
       $contig->seq($newseq);
-  
+
       $clone->add_Contig($contig);
-  
+
       # Now store the clone
-  
+
       $db->get_CloneAdaptor->store($clone);
-    } 
+    }
 
     # Now for the assembly stuff
     my $contig = $db->get_RawContigAdaptor->fetch_by_name($f);
@@ -2430,7 +2430,7 @@ sub frags_to_slice {
         VALUES( ?,?,?
             ,?,1,?,1
             ,?,?,?,?
-            ,? ) 
+            ,? )
         };
     #print "SQL $sqlstr\n";
 
@@ -2447,7 +2447,7 @@ sub frags_to_slice {
 
 sub ace_escape {
     my $str = shift;
-    
+
     $str =~ s/^\s+//;       # Trim leading whitespace.
     $str =~ s/\s+$//;       # Trim trailing whitespace.
     $str =~ s/\n/\\n/g;     # Backslash escape newlines
@@ -2462,14 +2462,14 @@ sub ace_escape {
 
 sub ace_unescape {
     my $str = shift;
-    
+
     $str =~ s/^\s+//;       # Trim leading whitespace.
     $str =~ s/\s+$//;       # Trim trailing whitespace.
 
     # Unescape quotes, back and forward slashes,
     # % signs, and semi-colons.
     $str =~ s/\\([\/"%;\\])/$1/g;
-    
+
     return $str;
 }
 
@@ -2499,7 +2499,7 @@ when there are no transcript in the gene.
 
 sub gene_type_from_transcript_set {
     my( $transcripts, $known_flag ) = @_;
-    
+
     my $has_artifact = 0;
     my $class_set = {};
     foreach my $transcript (@$transcripts) {
@@ -2514,7 +2514,7 @@ sub gene_type_from_transcript_set {
         }
         $class_set->{$class}++;
     }
-    
+
     my( $type );
     # If there are any Pseudogene transcripts, the gene type is set from
     # the pseudogene type present (of which there can only be 1).

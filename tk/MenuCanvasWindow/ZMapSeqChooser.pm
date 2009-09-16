@@ -32,31 +32,31 @@ but this isn't a long term solution.
 
 =head1 zMapLaunchZmap
 
-This is where it all starts.  This is the method which gets called 
+This is where it all starts.  This is the method which gets called
 on 'Launch ZMap' menu item in xaceseqchooser window.
 
 =cut
 
 sub zMap_make_exoncanvas_edit_window{
     my( $self, $sub ) = @_;
-    
+
     my $sub_name = $sub->name;
     warn "subsequence-name $sub_name " ;
 #    warn "locus " . $sub->Locus->name ;
     my $canvas = $self->canvas;
-    
+
     # Make a new window
     my $top = $canvas->Toplevel;
-    
+
     # Make new MenuCanvasWindow::ExonCanvas object and initialize
     my $ec = MenuCanvasWindow::ZMapExonCanvas->new($top, 345, 50);
     $ec->name($sub_name);
     $ec->XaceSeqChooser($self);
     $ec->SubSeq($sub);
     $ec->initialize;
-    
+
     $self->save_subseq_edit_window($sub_name, $ec);
-    
+
     return $ec;
 }
 
@@ -75,7 +75,7 @@ sub _launchZMap{
         $self->xremote_cache(ZMap::XRemoteCache->new());
     }
 
-    my @e = ('zmap', 
+    my @e = ('zmap',
              '--conf_dir' => $self->zMapZmapDir,
              '--win_id'   => $zmap_conn->server_window_id);
     warn "Running @e";
@@ -143,23 +143,23 @@ sub _launchInAZMap{
                 $self->message(sprintf("Already launched in zmap with pid %d", $pid));
             }elsif(my $xr = $xremote_cache->get_client_for_action_pid("new_view", $pid)){
                 $self->zMapPID($pid);
-                
+
                 my $sequence = $self->slice_name;
                 my $server   = $self->AceDatabase->ace_server;
                 my $protocol = 'acedb';
-                
+
                 my $url = sprintf(q{%s://%s:%s@%s:%d?use_methods=true},
                                   $protocol,
-                                  $server->user, 
+                                  $server->user,
                                   $server->pass,
-                                  $server->host, 
+                                  $server->host,
                                   $server->port);
-                
+
                 my $config = $self->formatZmapDefaults('ZMap',
                                                        sources => "$sequence");
                 $config .= $self->zMapServerDefaults();
                 $config =~ s/\&/&amp;/g; # needs fully xml escaping really
-                
+
                 my $xml = sprintf(q!<zmap>
  <request action="new_view">
   <segment sequence="%s" start="1" end="0">
@@ -170,14 +170,14 @@ sub _launchInAZMap{
                                   !, $sequence, $config);
                 warn $xml;
                 $self->zMapDoRequest($xr, "new_view", $xml);
-                
+
                 if($xr = $self->zMapGetXRemoteClientByName($self->slice_name())){
                     $self->zMapRegisterClientRequest($xr);
                 }else{
                     cluck "Failed to find the new xremote client";
                 }
             }else{
-                # couldn't find a client who can new_view, probably need to 
+                # couldn't find a client who can new_view, probably need to
                 my $zmap = $self->zMapZmapConnector();
                 open_clones($zmap, $self);
             }
@@ -242,13 +242,13 @@ sub zMapRelaunchZMap {
             $zmap->post_respond_handler(\&post_response_client_cleanup_launch_in_a_zmap, [$self]);
         }
     $self->{'_launch_in_a_zmap'} = 0;
-    } else { 
+    } else {
         if (my $zmap = $self->zMapZmapConnector()) {
             $zmap->post_respond_handler(\&post_response_client_cleanup, [$self]);
         }
         # calling this here creates a race condition.
         # $self->xremote_cache->remove_clients_to_bad_windows();
-        warn "Relaunch was not requested..." if $ZMAP_DEBUG; 
+        warn "Relaunch was not requested..." if $ZMAP_DEBUG;
     }
 
     return (200, "all closed");
@@ -257,7 +257,7 @@ sub zMapRelaunchZMap {
 =head1 zMapKillZmap
 
 Attempts  to kill  zmap,  return true  if  it succeeded  and false  on
-failure.  If relaunch = true and zMapKillZmap returns true then zmap 
+failure.  If relaunch = true and zMapKillZmap returns true then zmap
 should relaunch, any other combination probably means no relaunch will
 occur. There will still be a call to RelaunchZMap though as a finalised
 request will be sent from zmap.
@@ -266,14 +266,14 @@ request will be sent from zmap.
 
 sub zMapKillZmap {
     my( $self, $relaunch, $in_a_zmap ) = @_;
-    
+
     ### We're only using the pid as marker for zmap having been started
     if (my $pid = $self->zMapPID) {
         my $rval = 0;
         my $main_window_name = $self->main_window_name();
 
         warn "Looking for $main_window_name";
-        
+
         if(my $xr = $self->zMapGetXRemoteClientByName($main_window_name)){
             # check we can ping...
             if($xr->ping()){
@@ -282,7 +282,7 @@ sub zMapKillZmap {
                 $self->{'_launch_in_a_zmap'} = $in_a_zmap;
 
                 $xr->send_commands('<zmap><request action="shutdown"/></zmap>');
-                
+
                 $rval = 1; # everything has been as successful as can be
                 ### Check shutdown by checking property set by ZMap?
                 ### This is done in zMapRelaunchZMap...
@@ -312,7 +312,7 @@ Stores the process id for zmap.
 
 sub zMapPID {
     my( $self, $zmap_process_id ) = @_;
-    
+
     if ($zmap_process_id) {
         $self->{'_zMap_ZMAP_PROCESS_ID'} = $zmap_process_id;
     }
@@ -344,7 +344,7 @@ sub zMapZmapConnector{
 
 sub zMapWriteDotBlixemrc {
     my ($self) = @_;
-    
+
     my $file = $ENV{'BLIXEM_CONFIG_FILE'};
     my ($dir) = $file =~ m{(.+)/[^/]+$};
     mkpath($dir);   # Fatal if fails
@@ -373,7 +373,7 @@ sub zMapWriteDotZmap {
     my ($self) = @_;
 
     my $file = $self->zMapZmapDir . "/ZMap";
-    
+
     open my $fh, "> $file"
         or confess "Can't write to '$file'; $!";
     print $fh $self->zMapDotZmapContent;
@@ -394,16 +394,16 @@ sub zMapDotZmapContent{
 
 sub zMapServerDefaults {
     my ($self) = @_;
-    
+
     my $server = $self->AceDatabase->ace_server;
-    
+
     my $protocol    = 'acedb';
 
     my $url = sprintf q{%s://%s:%s@%s:%d},
         $protocol,
         $server->user, $server->pass,
         $server->host, $server->port;
-    
+
     return $self->formatZmapDefaults(
         $self->slice_name,
         url             => $url,
@@ -422,7 +422,7 @@ sub zMapServerDefaults {
 
 sub semi_colon_separated_list {
     my ($self, $list) = @_;
-    
+
     return sprintf(q{%s},
         join ' ; ',
         map qq{$_},
@@ -439,7 +439,7 @@ sub zMapZMapDefaults {
       )
         ? 'true'
         : 'false';
-    
+
     my @config = (
         'ZMap',
         'sources'           => $self->slice_name,
@@ -450,7 +450,7 @@ sub zMapZMapDefaults {
     if ($ENV{'PFETCH_WWW'}) {
         push(@config,
             'pfetch-mode' => 'http',
-            'pfetch'      => $self->AceDatabase->Client->url_root . '/nph-pfetch',            
+            'pfetch'      => $self->AceDatabase->Client->url_root . '/nph-pfetch',
             );
     } else {
         push(@config,
@@ -464,7 +464,7 @@ sub zMapZMapDefaults {
 
 sub zMapBlixemDefaults {
     my ($self) = @_;
-    
+
     return $self->formatZmapDefaults(
         'blixem',
         'config-file' => $ENV{'BLIXEM_CONFIG_FILE'},
@@ -488,7 +488,7 @@ sub zMapBlixemDefaults {
 
 sub zMapWindowDefaults {
     my ($self) = @_;
-    
+
     # Turn off warning about "possible comment in qw()"
     # caused by #hex colour names
     no warnings 'qw';
@@ -510,7 +510,7 @@ sub zMapWindowDefaults {
 
 sub formatZmapDefaults {
     my ($self, $key, %defaults) = @_;
-    
+
     my $def_str = "\n[$key]\n";
     while (my ($setting, $value) = each %defaults) {
         $value = $self->semi_colon_separated_list($value)
@@ -518,7 +518,7 @@ sub formatZmapDefaults {
         $def_str .= qq{$setting = $value\n};
     }
     $def_str .= "\n";
-    
+
     return $def_str;
 }
 
@@ -556,19 +556,19 @@ sub zMapDotGtkrcContent{
     my ($self) = @_;
 
     # to create a coloured border for the focused view.
-    my $full_content = $self->formatGtkrcWidget("*.zmap-focus-view", 
+    my $full_content = $self->formatGtkrcWidget("*.zmap-focus-view",
                                                 "zmap-focus-view-frame",
                                                 qw{
                                                     bg[NORMAL]      gold
                                                 });
     # to make the info labels stand out and look like input boxes...
-    $full_content   .= $self->formatGtkrcWidget("*.zmap-control-infopanel", 
+    $full_content   .= $self->formatGtkrcWidget("*.zmap-control-infopanel",
                                                 "infopanel-labels",
                                                 qw{
                                                     bg[NORMAL]      white
                                                 });
     # to make the context menu titles blue
-    $full_content   .= $self->formatGtkrcWidget("*.zmap-menu-title.*", 
+    $full_content   .= $self->formatGtkrcWidget("*.zmap-menu-title.*",
                                                 "menu-titles",
                                                 qw{
                                                     fg[INSENSITIVE] blue
@@ -583,10 +583,10 @@ sub zMapDotGtkrcContent{
 
 sub zMapWriteDotGtkrc {
     my $self = shift;
-    
+
     my $dir = $self->zMapZmapDir;
     my $file = "$dir/.gtkrc";
-    
+
     my $fh;
     eval{
         # directory should be made already
@@ -628,15 +628,15 @@ sub xremote_cache{
 
     if($cache){ $self->{'_xremote_cache'} = $cache; }
     else{       $cache = $self->{'_xremote_cache'}; }
-    
+
     return $cache;
 }
 
 sub main_window_name{
     my ($self, $name) = @_;
-    
+
     $name = 'ZMap port #' . $self->AceDatabase->ace_server->port();
-    
+
     return $name;
 }
 
@@ -660,10 +660,10 @@ sub zMapRegisterClient {
     };
     $zmap->protocol_add_meta($out);
 
-    unless($xml->{'request'}->{'client'}->{'xwid'} 
+    unless($xml->{'request'}->{'client'}->{'xwid'}
            && $xml->{'request'}->{'client'}->{'request_atom'}
            && $xml->{'request'}->{'client'}->{'response_atom'}){
-        warn "mismatched request for register_client:\n", 
+        warn "mismatched request for register_client:\n",
           "id, request and response required\n",
           "Got '", Dumper($xml), "'\n";
         return (403, $zmap->basic_error("Bad Request!"));
@@ -698,7 +698,7 @@ sub zMapEdit{
         #warn Dumper($xml_hash);
         my $feat_hash = $xml_hash->{'request'}->{'align'}->{'block'}->{'featureset'}{'feature'}
           or return return(200, $z->handled_response(0));
-        
+
         # Are there any transcripts in the list of features?
         my ($genomic_canonical, @subseq_names);
       NAME: foreach my $name (keys %$feat_hash) {
@@ -722,7 +722,7 @@ sub zMapEdit{
                 }
             }
         }
-        
+
         if ($genomic_canonical) {
             $self->edit_Clone($genomic_canonical);
             return(200, $z->handled_response(1));
@@ -737,7 +737,7 @@ sub zMapEdit{
     } else {
         confess "Not an 'edit' action:\n", Dumper($xml_hash);
     }
-    
+
 }
 
 =head1 zMapHighlight
@@ -809,13 +809,13 @@ sub zMapTagValues {
         $xml->add_raw_data($pages);
     }
     $xml->close_all_open_tags;
-    
+
     return (200, $xml->flush);
 }
 
 sub zmap_feature_details_xml {
     my ($self, $name, $info) = @_;
-    
+
     my $ace = $self->ace_handle;
     my ($taxon_id, $desc);
     foreach my $class (qw{ Sequence Protein }) {
@@ -825,12 +825,12 @@ sub zmap_feature_details_xml {
         next unless $txt->get_values($class);
         ($taxon_id) = $txt->get_values('Taxon_id');
         ($desc) = $txt->get_values('Title');
-    }    
-    
+    }
+
     return '' unless $taxon_id or $desc;
-    
+
     my $xml = Hum::XmlWriter->new(5);
-    
+
     # Put this on the "Details" page which already exists.
     $xml->open_tag('page', {name => 'Details'});
     $xml->open_tag('subsection', {name => 'Feature'});
@@ -839,15 +839,15 @@ sub zmap_feature_details_xml {
         if $taxon_id;
     $xml->full_tag('tagvalue', {name => 'Description', type => 'scrolled_text'}, $desc->[0])
         if $desc;
-    
+
     $xml->close_all_open_tags;
-    
+
     return $xml->flush;
 }
 
 sub zmap_feature_evidence_xml {
     my ($self, $feat_name, $info) = @_;
-    
+
     my $subseq_list = [];
     foreach my $name ($self->list_all_SubSeq_names) {
         if (my $subseq = $self->get_SubSeq($name)) {
@@ -860,10 +860,11 @@ sub zmap_feature_evidence_xml {
         my $evi_hash = $subseq->evidence_hash();
 
         # evidence_hash looks like this
-        # evidence = { 
+        # evidence = {
         #   type    => [ qw(evidence names) ],
         #   EST     => [ qw(Em:BC01234.1 Em:CR01234.2) ],
         #   cDNA    => [ qw(Em:AB01221.3) ],
+        #   ncRNA	=> [ qw(Em:AF480562.1) ],
         #   Protein => [ qw(Sw:Q99IVF1) ]
         # }
 
@@ -890,7 +891,7 @@ sub zmap_feature_evidence_xml {
         }
     }
     if (@$used_subseq_names) {
-        my $xml = Hum::XmlWriter->new(5);    
+        my $xml = Hum::XmlWriter->new(5);
         $xml->open_tag('page', {name => 'Details'});
         $xml->open_tag('subsection', {name => 'Feature'});
         $xml->open_tag('paragraph', {name => 'Evidence', type => 'homogenous'});
@@ -948,20 +949,20 @@ sub RECEIVE_FILTER {
     # find the action in the request XML
     #warn "Request = '$request'";
     my $reqXML = parse_request($request);
-    
+
     unless ($reqXML->{'request'}) {
     	#for my $k (keys %$reqXML) {
     	#	$reqXML->{'request'}->{$k} = $reqXML->{$k};
     	#	delete $reqXML->{$k};
     	#}
-    	
+
     	warn "INVALID REQUEST: no <request> block\n";
     }
-    
+
     my $action = $reqXML->{'request'}->{'action'};
-    
+
     warn "REQUEST FROM ZMAP: $request\n" if $ZMAP_DEBUG;
-    
+
     warn "PARSED REQUEST: ".Dumper($reqXML)."\n" if $ZMAP_DEBUG;
 
     warn "In RECEIVE_FILTER for action=$action\n" if $ZMAP_DEBUG;
@@ -1024,8 +1025,8 @@ sub zMapGetXRemoteClientByAction {
 
     # warn Dumper $cache;
 
-    $method = ($own_windows_only ? 
-               'get_own_client_for_action_pid' : 
+    $method = ($own_windows_only ?
+               'get_own_client_for_action_pid' :
                'get_client_for_action_pid');
 
     if($cache){
@@ -1070,16 +1071,16 @@ sub open_clones{
 	setObjNameValue($seg, 'sequence', $self->slice_name);
 	setObjNameValue($seg, 'start',    1);
 	setObjNameValue($seg, 'end',     '0');
-	
+
 	$xremote = $self->zMapGetXRemoteClientByName("ZMap");
-	
+
 	$self->zMapRegisterClientRequest($xremote);
 
 	my $view_success = $self->zMapDoRequest($xremote, "new_view", obj_make_xml($seg, "new_view"));
 
 	if($view_success == 0){
 	    $xremote = $self->zMapGetXRemoteClientByName($self->slice_name());
-	    
+
 	    $self->zMapRegisterClientRequest($xremote);
 	} else {
 	    warn "new_view request failed!";
@@ -1106,17 +1107,17 @@ sub zMapRegisterClientRequest{
 }
 
 sub zMapGetMark {
-	
+
 	my ($self) = @_;
 
 	if (my $client = $self->zMapGetXRemoteClientByAction('get_mark', 1)) {
-		
+
 		my $xml = qq(<zmap><request action="get_mark" /></zmap>);
-		
+
 		my @response = $client->send_commands($xml);
-	    
+
 	    my ($status, $hash) = parse_response($response[0]);
-	    
+
         if ($status =~ /^2/ && $hash->{response}->{mark}->{exists} eq "true") {
 	    	return ( $hash->{response}->{mark}->{start}, $hash->{response}->{mark}->{end} );
 	    }
@@ -1124,28 +1125,28 @@ sub zMapGetMark {
 	else {
 		warn "Failed to get client for 'get_mark'";
 	}
-    
+
     return undef;
 }
 
 sub zMapZoomToSubSeq {
-    
+
     my ($self, $subseq) = @_;
-    
+
     if (my $client = $self->zMapGetXRemoteClientByAction('zoom_to', 1)) {
         my $xml = Hum::XmlWriter->new;
         $xml->open_tag('zmap');
-        $xml->open_tag('request', {action => 'zoom_to'}); 
+        $xml->open_tag('request', {action => 'zoom_to'});
         $xml->open_tag('align');
         $xml->open_tag('block');
         $xml->open_tag('featureset', {name => $subseq->GeneMethod->name});
         $subseq->zmap_xml_feature_tag($xml);
         $xml->close_all_open_tags;
-        
+
         my @response = $client->send_commands($xml->flush);
-        
+
         my ($status, $hash) = parse_response($response[0]);
-        
+
         if ($status =~ /^2/ && $hash->{response} =~ /executed/) {
             return 1;
         }
@@ -1153,7 +1154,7 @@ sub zMapZoomToSubSeq {
     else {
         warn "Failed to get client for 'zoom_to'";
     }
-    
+
     return undef;
 }
 
@@ -1165,23 +1166,23 @@ return = -1, 0, 1 for fail, response, or error respectively
 
 sub zMapDoRequest{
     my ($self, $xremote, $action, @commands) = @_;
-    
+
     my $response_error_fail = -1;
 
-    unless($xremote && UNIVERSAL::isa($xremote, 'X11::XRemote')){ 
+    unless($xremote && UNIVERSAL::isa($xremote, 'X11::XRemote')){
         cluck "Usage: $self->zMapDoRequest(X11::XRemote, '<action>', (<commands>)" if $ZMAP_DEBUG;
 	return $response_error_fail;
     }
-    
+
     if($ZMAP_DEBUG){
         my $substring = 1; # sometimes you don't need to see _all_ of the request
-        if($substring){ 
-            map{ warn substr($_, 0, 512), (length($_) > 512 ? "..." : "") } @commands; 
+        if($substring){
+            map{ warn substr($_, 0, 512), (length($_) > 512 ? "..." : "") } @commands;
         }else{
-            warn "@commands"; 
+            warn "@commands";
         }
     }
-    
+
     my @a = $xremote->send_commands(@commands);
 
     for(my $i = 0; $i < @commands; $i++){
@@ -1226,7 +1227,7 @@ sub zMapProcessNewClientXML{
          }else{
              $client_array = [$client_tag];
          }
-         
+
          foreach my $client(@{$client_array}){
              $full_key = "$lookup_key.$counter" if($add_counter);
              if($id = $client->{'xwid'}){
@@ -1236,7 +1237,7 @@ sub zMapProcessNewClientXML{
                  if(ref($client->{$subtag}) eq 'ARRAY'){
                      push(@actions, @{$client->{$subtag}});
                  }elsif(defined($client->{$subtag}) && !ref($client->{$subtag})){
-                     push(@actions, $client->{$subtag});             
+                     push(@actions, $client->{$subtag});
                  }else{
                      warn "Odd for a client to not have actions.";
                  }
@@ -1267,15 +1268,15 @@ sub RESPONSE_HANDLER{
         $self->zMapProcessNewClientXML($xml, $self->slice_name());
     } elsif ($action eq 'list_windows'){
         $self->zMapProcessNewClientXML($xml, "ZMapWindow");
-    } elsif($action eq 'register_client' || 
+    } elsif($action eq 'register_client' ||
             $action eq 'other actions') {
         # do these
         warn "handled action '$action'" if $ZMAP_DEBUG;
     } elsif($action eq 'zoom_to'){
         #$self->message($xml->{'response'});
     } elsif ($action eq 'get_mark') {
-    	
-    } 
+
+    }
     else {
         cluck "RESPONSE_HANDLER knows nothing about how to handle actions of type '$action'";
     }
@@ -1287,14 +1288,14 @@ sub ERROR_HANDLER{
     my ($self, $action, $status, $xml) = @_;
     my $message = "";
     if(exists($xml->{'error'})){
-        if((ref($xml->{'error'}) eq 'HASH') && 
+        if((ref($xml->{'error'}) eq 'HASH') &&
            (exists($xml->{'error'}->{'message'}))){
             $message = $xml->{'error'}->{'message'};
         }else{
             $message = $xml->{'error'};
         }
     }
-    
+
     warn "action=$action status=$status error=$message" if $ZMAP_DEBUG;
 
     if($status == 400){
@@ -1310,13 +1311,13 @@ sub ERROR_HANDLER{
     }elsif($status == 412){
         $self->xremote_cache->remove_clients_to_bad_windows();
     }elsif($status == 500){
-    
+
     }elsif($status == 501){
-    
+
     }elsif($status == 502){
-    
+
     }elsif($status == 503){
-    
+
     }else{
         warn "I know nothing about status $status\n";
     }

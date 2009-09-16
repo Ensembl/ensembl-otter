@@ -48,7 +48,7 @@ sub initialise {
         -text => 'Delete',
         -command => $delete,
         )->pack(-side => 'left');
-    
+
     my $close_window = sub{ $top->withdraw; };
     $top->bind('<Control-w>',           $close_window);
     $top->bind('<Control-W>',           $close_window);
@@ -68,7 +68,7 @@ sub initialise {
     $canvas->Tk::bind('<Shift-Button-1>',   sub{ $self->shift_left_button_handler });
 
     $canvas->Tk::bind('<Destroy>', sub{ $self = undef });
-    
+
 
     $self->evidence_hash($evidence_hash);
     $self->draw_evidence;
@@ -76,7 +76,7 @@ sub initialise {
 
 sub ExonCanvas {
     my( $self, $ExonCanvas ) = @_;
-    
+
     if ($ExonCanvas) {
         $self->{'_ExonCanvas'} = $ExonCanvas;
         weaken($self->{'_ExonCanvas'});
@@ -86,7 +86,7 @@ sub ExonCanvas {
 
 sub left_button_handler {
     my( $self ) = @_;
-    
+
     return if $self->delete_message;
     $self->deselect_all;
     $self->control_left_button_handler;
@@ -94,7 +94,7 @@ sub left_button_handler {
 
 sub control_left_button_handler {
     my( $self ) = @_;
-    
+
     my $canvas = $self->canvas;
 
     my ($obj)  = $canvas->find('withtag', 'current&&!IGNORE')
@@ -109,7 +109,7 @@ sub control_left_button_handler {
 
 sub shift_left_button_handler {
     my( $self ) = @_;
-    
+
     my $canvas = $self->canvas;
 
     return unless $canvas->find('withtag', 'current&&!IGNORE');
@@ -119,9 +119,9 @@ sub shift_left_button_handler {
 
 sub select_all {
     my( $self ) = @_;
-    
+
     my $canvas = $self->canvas;
-    
+
     $self->highlight(
         $canvas->find('withtag', '!IGNORE')
         );
@@ -129,7 +129,7 @@ sub select_all {
 
 sub evidence_hash {
     my( $self, $evidence_hash ) = @_;
-    
+
     if ($evidence_hash) {
         $self->{'_evidence_hash'} = $evidence_hash;
     }
@@ -138,7 +138,7 @@ sub evidence_hash {
 
 sub remove_selected_from_evidence_list {
     my( $self ) = @_;
-    
+
     my $canvas = $self->canvas;
     my $evi    = $self->evidence_hash;
     foreach my $obj ($self->list_selected) {
@@ -164,16 +164,16 @@ sub draw_evidence {
     my $evidence_hash = $self->evidence_hash;
     my $canvas = $self->canvas;
     $canvas->delete('all');
-    
+
     my $norm = $self->font_fixed;
     my $bold = $self->font_fixed_bold;
     my $size = $self->font_size;
     my $row_height = $size + int($size / 6);
     my $type_pad = $row_height / 2;
     my $x = $size;
-    
+
     my $y = 0;
-    foreach my $type (qw{ Protein cDNA EST }) {
+    foreach my $type (qw{ Protein ncRNA cDNA EST }) {
         my $name_list = $evidence_hash->{$type} or next;
         next unless @$name_list;
 
@@ -197,7 +197,7 @@ sub draw_evidence {
 
         $y += $type_pad
     }
-    
+
     $self->canvas->toplevel->configure(
         -title => 'Evi: ' . $self->ExonCanvas->SubSeq->name,
         );
@@ -206,7 +206,7 @@ sub draw_evidence {
 
 sub paste_type_and_name {
     my( $self ) = @_;
-    
+
     if (my $clip = $self->get_clipboard_text) {
         $self->add_evidence_from_text($clip);
     }
@@ -214,7 +214,7 @@ sub paste_type_and_name {
 
 sub add_evidence_from_text {
     my ($self, $text) = @_;
-    
+
     my $ace = $self->ExonCanvas->XaceSeqChooser->ace_handle;
 
     if (my $clip_evi = evidence_type_and_name_from_text($ace, $text)) {
@@ -224,7 +224,7 @@ sub add_evidence_from_text {
 
 sub add_evidence_type_name_hash {
     my ($self, $clip_evi) = @_;
-    
+
     foreach my $type (keys %$clip_evi) {
         my $clip_list = $clip_evi->{$type};
         my $evi = $self->evidence_hash;
@@ -245,7 +245,7 @@ sub add_evidence_type_name_hash {
 
 sub highlight_evidence_by_type_name {
     my( $self, $type, $name ) = @_;
-    
+
     my $canvas = $self->canvas;
     foreach my $obj ($canvas->find('withtag', $type)) {
         my $text = $canvas->itemcget($obj, 'text');
@@ -258,7 +258,7 @@ sub highlight_evidence_by_type_name {
 
 sub highlight {
     my $self = shift;
-    
+
     $self->SUPER::highlight(@_);
     $self->canvas->SelectionOwn(
         -command    => sub{ $self->deselect_all },

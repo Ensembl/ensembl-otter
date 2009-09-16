@@ -164,9 +164,9 @@ sub initialise {
         -text => 'Clear existing alignments of same type',
         -anchor => 'w',
      )->pack( -side => 'top', -expand => 1, -fill => 'x' );
-     
+
      $self->{_use_marked_region} = 1;
-     
+
      $cb_frame->Checkbutton(
     	-variable => \$self->{_use_marked_region},
         -text => 'Only search within marked region',
@@ -374,8 +374,9 @@ sub launch_exonerate {
 	for my $seq (@$seqs) {
 
 		if ($seq->type &&
-			($seq->type eq 'EST' ||
-			 $seq->type eq 'mRNA' ||
+			($seq->type eq 'EST'   ||
+			 $seq->type eq 'ncRNA' ||
+			 $seq->type eq 'mRNA'  ||
 			 $seq->type eq 'Protein')) {
 			push @{ $seqs_by_type{$seq->type} }, $seq;
 		}
@@ -386,11 +387,11 @@ sub launch_exonerate {
 			push @{ $seqs_by_type{Unknown_Protein} }, $seq;
 		}
 	}
-	
+
 	# get marked region (if requested)
 
 	my ($genomic_start, $genomic_end) = (1, $self->XaceSeqChooser->Assembly->Sequence->sequence_length);
-	
+
 	if ($self->{_use_marked_region}) {
 		my ($mark_start, $mark_end) = $self->XaceSeqChooser->zMapGetMark;
 		if ($mark_start && $mark_end) {
@@ -475,8 +476,8 @@ sub launch_exonerate {
 			$self->XaceSeqChooser->zMapWriteDotZmap;
 		}
 	}
-	
-        
+
+
 	if ($need_relaunch) {
 	    $self->XaceSeqChooser->resync_with_db();
 		$self->XaceSeqChooser->zMapLaunchZmap;
@@ -544,7 +545,7 @@ sub get_query_seq {
 			$seq->name($full_acc);
 		}
 	}
-	
+
 	# map between the corrected and supplied accessions
 
 	my %correct_to_supplied = ();
@@ -632,11 +633,11 @@ sub ace_DNA {
     my $ace = qq{\nSequence "$name"\n\nDNA "$name"\n};
 
     my $dna_string = $seq->sequence_string;
-    
+
     while ($dna_string =~ /(.{1,60})/g) {
         $ace .= $1 . "\n";
     }
-    
+
     return $ace;
 }
 

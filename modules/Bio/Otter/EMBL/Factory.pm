@@ -14,7 +14,7 @@ Hum::EMBL object (using the 'make_embl_ft' method). The EMBL entry
 constructed and populated by other modules using information retrieved
 from the Oracle Tracking database.
 
-and 
+and
 
 /ensembl-otter/scripts/lace/otter_embl_dump_generic
 
@@ -58,7 +58,7 @@ Constructor for the class.
     my $factory = Bio::Otter::EMBL::Factory->new;
 
 =cut
-	
+
 sub new {
     my( $pkg ) = @_;
 
@@ -66,7 +66,7 @@ sub new {
 }
 
 =head2 comments
- 
+
 For each block of CC lines, pass a reference to an array of the text
 lines. Each block will be separated by an XX line.
 
@@ -127,11 +127,11 @@ Creates a Hum::EMBL object, and sets many of its attributes based on those
 stored in the Hum::EMBL object. Will confess if required attributes have
 not been set. Fetches information from the Otter database, as necessary.
 
-=cut 
+=cut
 
 sub embl_setup {
     my ( $self ) = @_;
-    
+
     ### I think this subroutine hasn't been used for a long time - may be out of date or not work
     confess "Called embl_setup - this code has not been tested since move to schema 20+";
     $self->fetch_clone_and_chromosome_Slices;
@@ -144,7 +144,7 @@ sub embl_setup {
     if ($self->secondary_accs) {
         @sec = @{$self->secondary_accs};
     }
-    
+
     my $data_class      = $self->data_class or confess "data_class not set";
     my $mol_type        = $self->mol_type   or confess "mol_type not set";
     my $clone_lib       = $self->clone_lib;
@@ -292,11 +292,11 @@ sub add_sequence_from_otter {
 Get/set method for secondary accessions. Expects and returns an
 array reference.
 
-=cut 
+=cut
 
 sub secondary_accs {
     my ( $self, $value ) = @_;
-    
+
     if ($value) {
         unless (ref($value) =~ /ARRAY/) {
             confess "Must pass an array reference";
@@ -314,7 +314,7 @@ Get/set method for the accession of the clone.
 
 sub accession {
     my ( $self, $value ) = @_;
-    
+
     if ($value) {
         $self->{'_bio_otter_embl_factory_accession'} = $value;
     }
@@ -330,7 +330,7 @@ belongs.
 
 sub chromosome_name {
     my ( $self, $value ) = @_;
-    
+
     if ($value) {
         $self->{'_bio_otter_embl_factory_chromosome_name'} = $value;
     }
@@ -345,7 +345,7 @@ Get/set method for the sequence version of the clone.
 
 sub sequence_version {
     my ( $self, $value ) = @_;
-    
+
     if ($value) {
         $self->{'_bio_otter_embl_factory_sequence_version'} = $value;
     }
@@ -360,7 +360,7 @@ Get/set method for the EMBL DE line description.
 
 sub description {
     my ( $self, $value ) = @_;
-    
+
     if ($value) {
         $self->{'_bio_otter_embl_factory_description'} = $value;
     }
@@ -377,7 +377,7 @@ the keywords separated by spaces.
 
 sub keywords {
     my ( $self, $value ) = @_;
-    
+
     if ($value) {
         $self->{'_bio_otter_embl_factory_keywords'} = $value;
     }
@@ -500,23 +500,23 @@ sub clone_name {
 
 sub fetch_clone_and_chromosome_Slices {
     my ($self) = @_;
-    
+
     my $acc              = $self->accession;
     my $sequence_version = $self->sequence_version;
 
     my $ds = $self->DataSet
       or confess "DataSet must be set before calling make_embl";
-    
+
     my $ens_db = $ds->make_EnsEMBL_DBAdaptor;
     my ($chr_name, $chr_start, $chr_end,
         $ctg_name, $ctg_start, $ctg_end,
         ) = $self->get_ctg_coordinate_details($ens_db, "$acc.$sequence_version");
     warn "\nContig: ", join("\t", $chr_name, $chr_start, $chr_end, $ctg_name, $ctg_start, $ctg_end);
-    
+
     # Not sure if we need $ctg_ori
     my $chr_slice = $ens_db->get_SliceAdaptor->fetch_by_region('chromosome', $chr_name, $chr_start, $chr_end);
     my $ctg_slice = $ens_db->get_SliceAdaptor->fetch_by_region('contig', $ctg_name);
-    
+
     # Store contig name, start, end info
     $self->contig_name($ctg_name);
     $self->contig_start($ctg_start);
@@ -528,7 +528,7 @@ sub fetch_clone_and_chromosome_Slices {
 
 sub contig_name {
     my( $self, $contig_name ) = @_;
-    
+
     if ($contig_name) {
         $self->{'_contig_name'} = $contig_name;
     }
@@ -537,7 +537,7 @@ sub contig_name {
 
 sub contig_start {
     my( $self, $contig_start ) = @_;
-    
+
     if ($contig_start) {
         $self->{'_contig_start'} = $contig_start;
     }
@@ -546,7 +546,7 @@ sub contig_start {
 
 sub contig_end {
     my( $self, $contig_end ) = @_;
-    
+
     if ($contig_end) {
         $self->{'_contig_end'} = $contig_end;
     }
@@ -555,7 +555,7 @@ sub contig_end {
 
 sub chromosome_Slice {
     my( $self, $chromosome_Slice ) = @_;
-    
+
     if ($chromosome_Slice) {
         $self->{'_chromosome_Slice'} = $chromosome_Slice;
     }
@@ -564,7 +564,7 @@ sub chromosome_Slice {
 
 sub contig_Slice {
     my( $self, $contig_Slice ) = @_;
-    
+
     if ($contig_Slice) {
         $self->{'_contig_Slice'} = $contig_Slice;
     }
@@ -687,7 +687,7 @@ sub get_ctg_coordinate_details {
           AND ctg.name like ?
     });
 
-    $get_ctg_coords->execute("$acc%");  # Fix Nedit syntax highlight with a "    
+    $get_ctg_coords->execute("$acc%");  # Fix Nedit syntax highlight with a "
 
     if ($get_ctg_coords->rows > 1) {
         my $err = "Too many rows from coordinate fetching query:\n";
@@ -714,7 +714,7 @@ there is only one contig in the clone, otherwise confesses.
 
 sub get_clone_length_from_otter {
     my ( $self ) = @_;
-    
+
     return $self->contig_Slice->length;
 }
 
@@ -728,12 +728,12 @@ Confesses if nothing is returned.
 
 sub get_chromosome_name_from_otter {
     my ( $self ) = @_;
-    
+
     my $ds = $self->DataSet or confess "DataSet not set";
     my $ss = $self->SequenceSet or confess "SequencSet not set";
-    
+
     $ds->fetch_all_CloneSequences_for_SequenceSet($ss);
-    
+
     my $name = $ss->CloneSequence_list->[0]->chromosome->name
         or confess "Cloud not get chromosome name from Otter\n";
     return $name;
@@ -741,10 +741,10 @@ sub get_chromosome_name_from_otter {
 
 sub clone_contig {
     my ($self) = @_;
-    
+
     my $ctg;
     unless ($ctg = $self->{'_clone_contig'}) {
-        
+
     }
     return $ctg;
 }
@@ -785,7 +785,7 @@ as a list.
 
 Warns if no Keyword objects are fetched for the clone, returning undef.
 
-=cut 
+=cut
 
 sub get_keywords_from_otter {
 	my ( $self ) = @_;
@@ -986,13 +986,13 @@ my %ens2embl_phase = (
 
 sub process_gene {
     my ($self, $set, $gene) = @_;
-    
+
     my $ens_db   = $self->DataSet->make_EnsEMBL_DBAdaptor;
-    
+
     $gene = $ens_db->get_GeneAdaptor->fetch_by_dbID($gene->dbID);
 
     my $gtype = $gene->biotype;
-    
+
     foreach my $transcript (@{$gene->get_all_Transcripts}) {
         my $name = $transcript->get_all_Attributes('name')->[0]->value;
         if ($name =~ /[A-Z]+:/ ) {
@@ -1000,7 +1000,7 @@ sub process_gene {
             warn "Skipping non-Havana transcript '$name'\n";
             next;
         }
-        
+
         # Create mRNA feature
         my $mRNA_exonlocation = $self->make_ExonLocation($transcript->get_all_Exons)
             or next;
@@ -1025,9 +1025,9 @@ sub process_gene {
         if ($gtype =~ /pseudo/i) {
             $self->_supporting_evidence($transcript, $ft, 'Protein');
         } else {
-            $self->_supporting_evidence($transcript, $ft, 'EST', 'cDNA');
+            $self->_supporting_evidence($transcript, $ft, 'EST', 'ncRNA', 'cDNA');
         }
-        
+
         # Create CDS feature
         if ($ft->key eq 'mRNA'  # It isn't a weird type of transcript
             and $transcript->translation
@@ -1060,18 +1060,18 @@ sub process_gene {
 
 sub make_ExonLocation {
     my ($self, $exon_list) = @_;
-    
+
     my $ctg_name = $self->contig_name;
     #my $loc = Hum::EMBL::Location->new;
     my $loc = Hum::EMBL::ExonLocation->new;
-    
+
     my @all_exons;
     foreach my $exon (@$exon_list) {
         foreach my $seg (@{$exon->project('contig')}) {
             push(@all_exons, $self->make_Hum_EMBL_Exon($ctg_name, $seg->to_Slice));
         }
     }
-    
+
     # Check that there is an exon in the contig being dumped
     my $exon_in_ctg = 0;
     foreach my $exon (@all_exons) {
@@ -1092,17 +1092,17 @@ sub make_ExonLocation {
 
 sub make_Hum_EMBL_Exon {
     my ($self, $ctg_name, $obj) = @_;
-    
+
     my $embl_exon = Hum::EMBL::Exon->new;
     $embl_exon->start(  $obj->start  );
     $embl_exon->end(    $obj->end    );
     $embl_exon->strand( $obj->strand );
-    
+
     if ($obj->seq_region_name ne $ctg_name) {
         my ($acc_sv) = $obj->seq_region_name =~ /^(\w+\.\d+)/;
         $embl_exon->accession_version($acc_sv);
     }
-    
+
     return $embl_exon;
 }
 
@@ -1118,6 +1118,7 @@ Evidence types understood: 'EST', 'cDNA' and 'Protein'.
 Lines added to the EMBL entry generated will look like:
 
 FT                   /note="match: ESTs: Em:BQ776835.1"
+FT                   /note="match: ncRNAs: Em:AF480562.1"
 FT                   /note="match: cDNAs: Em:AK094249.1"
 FT                   /note="match: proteins: Sw:P26367"
 
@@ -1148,7 +1149,9 @@ sub _supporting_evidence {
       $evidence_hash{$evidence_type} = 'match: cDNAs: ' . $evidence_hash{$evidence_type};
     } elsif ($evidence_type eq 'Protein') {
       $evidence_hash{$evidence_type} = 'match: proteins: ' . $evidence_hash{$evidence_type};
-    } else {
+    } elsif ($evidence_type eq 'ncRNA') {
+      $evidence_hash{$evidence_type} = 'match: ncRNAs: ' . $evidence_hash{$evidence_type};
+    }else {
       confess "Unrecognised evidence_type: $evidence_type";
     }
     $ft->addQualifierStrings('note', $evidence_hash{$evidence_type});
@@ -1157,7 +1160,7 @@ sub _supporting_evidence {
 
 =head2 _add_gene_qualifiers
 
-Internal method called  by _do_gene. 
+Internal method called  by _do_gene.
 
 Passed a Gene object (Bio::Otter::AnnotatedGene) and a Feature
 (Hum::EMBL::Line::FT)
@@ -1168,7 +1171,7 @@ FT                   /pseudo
 
 by checking the Gene and Gene->gene_info properties.
 
-=cut 
+=cut
 
 sub _add_gene_qualifiers {
   my ( $self, $gene, $ft ) = @_;
@@ -1206,7 +1209,7 @@ sub SequenceSet {
 }
 
 =head2 DataSet
- 
+
 Get/set method for the Bio::Otter::Lace::DataSet object
 used to access the Otter database.
 
