@@ -29,10 +29,10 @@ sub name {
 sub type{
   my ($obj,$value) = @_;
   if( defined $value) {
-	 if ($value eq 'EST' || $value eq 'Protein' || $value eq 'cDNA' || $value eq 'Genomic' || $value eq 'UNKNOWN') {
+	 if ($value eq 'ncRNA' || $value eq 'EST' || $value eq 'Protein' || $value eq 'cDNA' || $value eq 'Genomic' || $value eq 'UNKNOWN') {
 	   $obj->{'type'} = $value;
 	 } else {
-	   $obj->throw("Invalid type [$value]. Must be one of EST,Protein,cDNA,Genomic");
+	   $obj->throw("Invalid type [$value]. Must be one of EST,ncRNA,Protein,cDNA,Genomic");
 	 }
   }
   return $obj->{'type'};
@@ -45,7 +45,7 @@ sub type{
  Usage   :
  Function:
  Example :
- Returns : 
+ Returns :
  Args    :
 
 
