@@ -40,7 +40,7 @@ my (
 
 DESTROY {
     my ($self) = @_;
-    
+
     delete(            $slice{$self}    );
     delete(     $ace_database{$self}    );
     delete(          $authors{$self}    );
@@ -55,20 +55,20 @@ DESTROY {
 
 sub new {
     my ($pkg) = @_;
-    
+
     my $self_str;
     return bless \$self_str, $pkg;
 }
 
 sub slice {
     my ($self) = @_;
-    
+
     return $slice{$self};
 }
 
 sub genes {
     my ($self) = @_;
-    
+
     return $genes{$self};
 }
 
@@ -86,7 +86,7 @@ sub clone_seq_list {
 
 sub AceDatabase {
     my( $self, $AceDatabase ) = @_;
-    
+
     if ($AceDatabase) {
         $ace_database{$self} = $AceDatabase;
     }
@@ -95,35 +95,35 @@ sub AceDatabase {
 
 sub generate_vega_objects {
     my ($self) = @_;
-    
+
     my $slice_name = $self->AceDatabase->smart_slice->name;
     my $ace        = $self->AceDatabase->aceperl_db_handle;
-    
+
     # We need a slice to attach to the exons, transcripts, and genes
     $slice{$self} = $self->AceDatabase->smart_slice->create_detached_slice;
-    
+
     # List of people for Authors
     $ace->raw_query(qq{find Person *});
     $self->parse('build_Author', $ace->raw_query('show -a'));
-    
+
     # Get the Assembly object ...
     my $find_assembly = qq{find Assembly "$slice_name"};
-    $ace->raw_query($find_assembly);    
+    $ace->raw_query($find_assembly);
     my $ace_txt = $ace->raw_query('show -a');
-    
+
     # Remove all Feature lines which aren't editable types
     my $editable = join '|', map $_->name,
         $self->AceDatabase->MethodCollection->get_all_mutable_non_transcript_Methods;
     $ace_txt =~ s/^Feature\s+"(?!($editable)).*\n//mg;
 
     $self->parse('build_Features_spans_and_agp_fragments', $ace_txt);
-    
+
     # I think we could switch to a positive filter on Predicted_gene instead
     # of the negative filter on CDS_predicted_by.  (And we could even use
     # a more sensible tag name than "Predicted_gene".)
     $ace->raw_query('query follow SubSequence where ! CDS_predicted_by');
     $self->parse('build_Transcript', $ace->raw_query('show -a'));
-    
+
     # ... and all the Loci attached to the SubSequences.
     $ace->raw_query('Follow Locus');
     $self->parse('build_Gene', $ace->raw_query('show -a'));
@@ -131,7 +131,7 @@ sub generate_vega_objects {
         confess "Unused transcripts after building genes:\n",
             map { sprintf "\t'%s'\n", $_ } @tsct_left_over;
     }
-    
+
     # Then get the information for the TilePath
     $ace->raw_query($find_assembly);
     $ace->raw_query('Follow AGP_Fragment');
@@ -150,10 +150,10 @@ sub generate_vega_objects {
 
 sub parse {
     my ($self, $method, $txt) = @_;
-    
+
     # Strip comments from text
     $txt =~ s{^\s*//.+}{\n}mg;
-    
+
     # The $method only gets given a single paragraph
     # ie: ace file "object"
     foreach my $obj_txt (grep /\w/, split /\n\n+/, $txt) {
@@ -164,7 +164,7 @@ sub parse {
 
 sub build_Author {
     my ($self, $ace) = @_;
-    
+
     my (undef, $name) = $ace->class_and_name;
     my $author = Bio::Vega::Author->new(
         -NAME   => $name,
@@ -174,9 +174,9 @@ sub build_Author {
 
 sub build_Features_spans_and_agp_fragments {
     my ($self, $ace) = @_;
-    
+
     my $slice = $slice{$self};
-    
+
     my $feat_list = $simple_features{$self} ||= [];
     foreach my $row ($ace->get_values('Feature')) {
         my ($type, $start, $end, $score, $label) = @$row;
@@ -185,12 +185,12 @@ sub build_Features_spans_and_agp_fragments {
             $strand = -1;
             ($start, $end) = ($end, $start);
         }
-        
+
         # Trim acedb's unnecessary extra precision from score
         # 0.5000 becomes 0.5
         # 1.0000 becomes 1
         $score =~ s/\.?0+$//;
-        
+
         my $ana = $analysis{$type} ||=
             Bio::EnsEMBL::Analysis->new(-LOGIC_NAME => $type);
         my $sf = Bio::EnsEMBL::SimpleFeature->new(
@@ -204,7 +204,7 @@ sub build_Features_spans_and_agp_fragments {
         );
         push(@$feat_list, $sf);
     }
-    
+
     foreach my $row ($ace->get_values('Subsequence')) {
         my ($tsct_name, $start, $end) = @$row;
         my $strand = 1;
@@ -245,7 +245,7 @@ sub build_Features_spans_and_agp_fragments {
                 -SLICE  => $slice{$self},
                 )
             );
-        
+
         push(@$cs_list, $cs);
     }
     @$cs_list = sort {$a->chr_start <=> $b->chr_start} @$cs_list;
@@ -253,9 +253,9 @@ sub build_Features_spans_and_agp_fragments {
 
 sub build_CloneSequence {
     my ($self, $ace) = @_;
-    
+
     my (undef, $name) = $ace->class_and_name;
-    
+
     # The same contig can appear more than once in the assembly
     foreach my $cs (grep $_->contig_name eq $name, @{$clone_sequences{$self}}) {
         if (my $acc = $ace->get_single_value('Accession')) {
@@ -270,7 +270,7 @@ sub build_CloneSequence {
         if (my ($dna) = $ace->get_values('DNA')) {
             $cs->length($dna->[1]);
         }
-        
+
         my $ci = $cs->ContigInfo;
         if (my $desc = $ace->get_single_value('EMBL_dump_info.DE_line')) {
             $self->create_Attribute($ci, 'description', $desc);
@@ -299,18 +299,18 @@ sub build_CloneSequence {
 
 sub build_Gene {
     my ($self, $ace) = @_;
-    
+
     my (undef, $name) = $ace->class_and_name;
-    
+
     my $stable_id   = $ace->get_single_value('Locus_id');
     my $desc        = $ace->get_single_value('Full_name');
     my $source      = $ace->get_single_value('Type_prefix');
-    
+
     my $tsct_list = $self->gather_transcripts($ace, $name);
     unless (@$tsct_list) {
         confess "No transcripts for gene '$name'";
     }
-    
+
     my $gene = Bio::Vega::Gene->new(
         -STABLE_ID      => $stable_id,
         -TRANSCRIPTS    => $tsct_list,
@@ -318,30 +318,30 @@ sub build_Gene {
         -SOURCE         => $source,
         );
     $self->create_Attribute($gene, 'name', $name);
-    
+
     $gene->truncated_flag(1) if $ace->count_tag('Truncated');
     $gene->status('KNOWN')   if $ace->count_tag('Known');
 
     $self->set_gene_biotype_status($gene);
-    
+
     foreach my $av ($ace->get_values('Alias')) {
         $self->create_Attribute($gene, 'synonym', $av->[0]);
     }
     $self->add_remarks($ace, $gene);
-    
+
     if (my $name = $ace->get_single_value('Locus_author')) {
         my $author = $authors{$self}{$name}
             or confess "No author object '$name'";
         $gene->gene_author($author);
     }
-    
+
     my $gene_list = $genes{$self} ||= [];
     push(@$gene_list, $gene);
 }
 
 sub gather_transcripts {
     my ($self, $ace, $name) = @_;
-    
+
     my $tsct_list = [];
     foreach my $tv ($ace->get_values('Positive_sequence')) {
         my ($tsct_name) = $tv->[0];
@@ -355,13 +355,13 @@ sub gather_transcripts {
 
 sub set_gene_biotype_status {
     my ($self, $gene) = @_;
-    
+
     my (%tsct_biotype, %tsct_status);
     foreach my $tsct (@{$gene->get_all_Transcripts}) {
         $tsct_biotype{$tsct->biotype}++;
         $tsct_status{ $tsct->status }++;
     }
-    
+
     # Have already set status to KNOWN if Known was set in acedb.
     unless ($gene->is_known) {
         # Not setting gene status to KNOWN if there is a transcript
@@ -383,21 +383,21 @@ sub set_gene_biotype_status {
             or $tsct_biotype{'retained_intron'}
             or $tsct_biotype{'antisense'}
             or $tsct_biotype{'disrupted_domain'}
-            
+
             )
         {
             $status = 'NOVEL';
         }
         $gene->status($status);
     }
-    
+
     # For each polymorphic gene set the biotype according to that of it's transcripts:
     # 1. transcribed_unprocessed_pseudogene will also have a transcript, call them 'transcribed_unprocessed_pseudogene'
     # 2. same follows for 'transcribed_processed_pseudogene'.
     # 3. unitary_pseudogene with a transcript will be 'transcribed_unitary_pseudogene'.
     # 4. polymorphic_pseudogene with a coding transcript will be 'polymorphic'.
     # 5. polymorphic_pseudogene with a transcript will be 'polymorphic_pseudogene'.
-    
+
 
     my $biotype = 'processed_transcript';
     if (my @pseudo = grep /pseudo/i, keys %tsct_biotype) {
@@ -430,23 +430,23 @@ sub set_gene_biotype_status {
 
 sub build_Transcript {
     my ($self, $ace) = @_;
-    
+
     my $slice = $slice{$self};
-    
+
     my (undef, $name) = $ace->class_and_name;
 
     my $span = $spans{$self}{$name}
         or confess "No start + end for transcript '$name'";
-    
+
     my $tsct_exons = $self->make_exons($ace, $span);
 
     my $stable_id   = $ace->get_single_value('Transcript_id');
-    
+
     my $method_name = $ace->get_single_value('Method');
     $method_name =~ s/^[^:]+://;    # Strip any prefix
     $method_name =~ s/_trunc//;     # Strip _trunc suffix
     my ($biotype, $status) = method2biotype_status($method_name);
-    
+
     my $tsct = Bio::Vega::Transcript->new(
         -EXONS          => $tsct_exons,
         -STABLE_ID      => $stable_id,
@@ -459,7 +459,7 @@ sub build_Transcript {
 
     # Add supporting evidence to transcript
     $self->add_supporting_evidence($ace, $tsct);
-    
+
     # Add remarks to transcript
     $self->add_remarks($ace, $tsct);
 
@@ -468,21 +468,21 @@ sub build_Transcript {
             or confess "No author object '$name'";
         $tsct->transcript_author($author);
     }
-    
+
     $transcripts{$self}{$name} = $tsct;
 }
 
 sub make_exons {
     my ($self, $ace, $span) = @_;
-    
+
     my ($tsct_start, $tsct_end, $strand) = @$span;
-    
+
     my $slice = $slice{$self};
-    
+
     my $tsct_exons = [];
     foreach my $row ($ace->get_values('Source_Exons')) {
         my ($ace_start, $ace_end, $stable_id) = @$row;
-        
+
         my ($start, $end);
         if ($strand == 1) {
             $start = $ace_start + $tsct_start - 1;
@@ -492,7 +492,7 @@ sub make_exons {
             $end   = $tsct_end - $ace_start + 1;
             $start = $tsct_end - $ace_end   + 1;
         }
-        
+
         my $exon = Bio::Vega::Exon->new(
             -START      => $start,
             -END        => $end,
@@ -507,7 +507,7 @@ sub make_exons {
 
 sub add_remarks {
     my ($self, $ace, $obj) = @_;
-    
+
     foreach my $value ($ace->get_values('Remark')) {
         $self->create_Attribute($obj, 'remark', $value->[0]);
     }
@@ -518,9 +518,9 @@ sub add_remarks {
 
 sub add_supporting_evidence {
     my ($self, $ace, $tsct) = @_;
-    
+
     my $evidence_list = [];
-    foreach my $type (qw{ cDNA Protein Genomic EST }) {
+    foreach my $type (qw{ cDNA ncRNA Protein Genomic EST }) {
         foreach my $value ($ace->get_values($type . '_match')) {
             my $ev = Bio::Vega::Evidence->new(
                 -TYPE   => $type,
@@ -534,10 +534,10 @@ sub add_supporting_evidence {
 
 sub set_exon_phases_translation_cds_start_end {
     my ($self, $ace, $tsct) = @_;
-    
+
     # Fetch the name for use in error messages
     my $name = $tsct->get_all_Attributes('name')->[0]->value;
-    
+
     my ($cds) = $ace->get_values('CDS');
 
     if (! $cds or @$cds == 0) {
