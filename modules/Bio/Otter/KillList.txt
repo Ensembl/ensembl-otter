@@ -11,3 +11,6 @@ Bio::Otter::DBSQL::AnnotatedCloneAdaptor
 # These do not even compile because they use the (now-nonexistent)
 # Bio::EnsEMBL::DBSQL::RawContigAdaptor module!
 Bio::Otter::DBSQL::RawContigAdaptor
+
+# This is obsoleted by Bio::Otter::Lace::Exonerate, and broken in many ways
+Bio::Otter::Lace::Blast
