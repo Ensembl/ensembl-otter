@@ -7,3 +7,7 @@ Bio::Otter::AnnotatedClone
 Bio::Otter::Converter
 Bio::Otter::QueryUser
 Bio::Otter::DBSQL::AnnotatedCloneAdaptor
+
+# These do not even compile because they use the (now-nonexistent)
+# Bio::EnsEMBL::DBSQL::RawContigAdaptor module!
+Bio::Otter::DBSQL::RawContigAdaptor
