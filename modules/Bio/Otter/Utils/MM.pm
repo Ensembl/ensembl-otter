@@ -159,6 +159,9 @@ sub get_accession_types {
 				elsif ($type eq 'mRNA') {
 					$res{$key} = ['mRNA', "Em:$version"];
 				}
+				elsif ($type eq 'other RNA') {
+					$res{$key} = ['ncRNA', "Em:$version"];
+				}
 				elsif ($type eq 'protein') {
 
 					my $prefix;
