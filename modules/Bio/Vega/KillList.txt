@@ -1,0 +1,5 @@
+# This is a list of obsolete modules.  Do not use any modules that
+# appear here!
+
+# This does not even compile!
+Bio::Vega::Slice
