@@ -133,7 +133,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.42 $ ';
+$revision='$Revision: 1.43 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -648,7 +648,8 @@ sub format_ace_output {
             my $hend 	= $fp->hend;
 
 			if($fp->hstrand ==-1){
-            	($hstart, $hend) = ($hend, $hstart);
+            	$fp->hstrand(1);
+            	$strand *= -1;
             }
 
             if ($strand == -1){
