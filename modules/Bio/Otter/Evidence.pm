@@ -28,18 +28,18 @@ sub new {
 }
 
 =head2 name
-    
- Title   : name 
+
+ Title   : name
  Usage   : $obj->name($newval)
  Function:
  Example :
- Returns : value of name 
+ Returns : value of name
  Args    : newvalue (optional)
 
- 
+
 =cut
- 
-sub name { 
+
+sub name {
    my ($obj,$value) = @_;
    if( defined $value) {
       $obj->{'name'} = $value;
@@ -53,8 +53,8 @@ sub name {
 
  Title   : dbID
  Usage   : $obj->dbID($newval)
- Function: 
- Example : 
+ Function:
+ Example :
  Returns : value of dbID
  Args    : newvalue (optional)
 
@@ -76,8 +76,8 @@ sub dbID{
 
  Title   : transcript_info_id
  Usage   : $obj->transcript_info_id($newval)
- Function: 
- Example : 
+ Function:
+ Example :
  Returns : value of transcript_info_id
  Args    : newvalue (optional)
 
@@ -96,8 +96,8 @@ sub transcript_info_id {
 
  Title   : type
  Usage   : $obj->type($newval)
- Function: 
- Example : 
+ Function:
+ Example :
  Returns : value of type
  Args    : newvalue (optional)
 
@@ -108,10 +108,10 @@ sub type{
    my ($obj,$value) = @_;
    if( defined $value) {
 
-       if ($value eq 'EST' || $value eq 'Protein' || $value eq 'cDNA' || $value eq 'Genomic' || $value eq 'UNKNOWN') {
+       if ($value eq 'ncRNA' || $value eq 'EST' || $value eq 'Protein' || $value eq 'cDNA' || $value eq 'Genomic' || $value eq 'UNKNOWN') {
 	   $obj->{'type'} = $value;
        } else {
-	   $obj->throw("Invalid type [$value]. Must be one of EST,Protein,cDNA,Genomic");
+	   $obj->throw("Invalid type [$value]. Must be one of EST,ncRNA,Protein,cDNA,Genomic");
        }
     }
     return $obj->{'type'};
@@ -125,7 +125,7 @@ sub type{
  Usage   :
  Function:
  Example :
- Returns : 
+ Returns :
  Args    :
 
 
