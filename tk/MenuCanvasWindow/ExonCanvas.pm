@@ -559,6 +559,7 @@ sub set_all_position_pair_text {
     for (my $i = 0; $i < @pp_list; $i++) {
         $self->set_position_pair_text($pp_list[$i], $coord[$i]);
     }
+    $self->update_splice_strings('exon_start');
 }
 
 sub sort_all_coordinates {
@@ -691,13 +692,14 @@ sub delete_selected_exons {
     $strand = $strand < 0 ? -1 : 1;
 
     $self->trim_position_pairs($trim, $strand);
-    $self->set_all_position_pair_text(@keep);
+    $self->set_all_position_pair_text(@keep);   # Also updates splice site strings
     $self->delete_was_selected;
 
     # Put in an empty exon holder if we have deleted them all
     unless ($self->position_pairs) {
         $self->add_exon_holder(undef, undef, 1);
     }
+        
     $self->fix_window_min_max_sizes;
 }
 
