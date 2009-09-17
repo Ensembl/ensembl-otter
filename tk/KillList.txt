@@ -1,5 +1,5 @@
 # This is a list of obsolete modules.  Do not use any modules that
 # appear here!
 
-# This uses the ChooserCanvas::History, which does not exist.
+# This uses the ChooserCanvas::History module, which does not exist.
 HistoryPopup
