@@ -13,7 +13,6 @@ use Tk::LabFrame;
 use Tk::Balloon;
 
 use MenuCanvasWindow::XaceSeqChooser;
-use EditWindow::PipelineProgressWindow;
 
 use base 'EditWindow';
 
