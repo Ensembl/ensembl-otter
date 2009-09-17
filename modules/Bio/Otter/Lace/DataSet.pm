@@ -97,25 +97,6 @@ sub sequence_sets_cached {
   return $self->{'_sequence_sets'};
 }
 
-sub sequence_set_access_list_cached {
-  my( $self, $al ) = @_;
-  if ($al) {
-    $self->{'_sequence_set_access_list'} = $al;
-  }
-  return $self->{'_sequence_set_access_list'};
-}
-
-sub get_sequence_set_access_list {
-    my( $self ) = @_;
-    my $al = $self->sequence_set_access_list_cached;
-    return $al if (defined $al && scalar(@$al));
-
-    my $client = $self->Client or confess "No otter Client attached";
-    $al = $client->get_SequenceSet_AccessList_for_DataSet($self);
-    $self->sequence_set_access_list_cached($al);
-    return $al;
-}
-
 sub get_all_visible_SequenceSets {
   my( $self) = @_;
   my $ss_list= $self->get_all_SequenceSets();

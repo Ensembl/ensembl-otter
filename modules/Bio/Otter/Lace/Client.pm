@@ -26,7 +26,6 @@ use Bio::Otter::Lace::TempFile;
 use Bio::Otter::LogFile;
 use Bio::Otter::Transform::DataSets;
 use Bio::Otter::Transform::SequenceSets;
-use Bio::Otter::Transform::AccessList;
 use Bio::Otter::Transform::CloneSequences;
 
 sub new {
@@ -268,9 +267,9 @@ sub password_prompt{
 }
 
 sub fatal_error_prompt {
-	my ($self, $callback) = @_;
-	
-	if ($callback) {
+    my ($self, $callback) = @_;
+    
+    if ($callback) {
         $self->{'_fatal_error_callback'} = $callback;
     }
     
@@ -463,7 +462,7 @@ sub general_http_dialog {
     }
     
     if ($timed_out || $response->content =~ /The Sanger Institute Web service you requested is temporarily unavailable/) {
-    	$self->fatal_error_prompt->("Problem with the web server\n");
+        $self->fatal_error_prompt->("Problem with the web server\n");
     }
      
     return $response;
@@ -844,12 +843,12 @@ sub get_all_SequenceSets_for_DataSet {
   return [] unless $ds;
 
   my $content = $self->http_response_content(
-					   'GET',
-					   'get_sequencesets',
-					   {
-					    'dataset'  => $ds->name(),
-					   }
-					  );
+                       'GET',
+                       'get_sequencesets',
+                       {
+                        'dataset'  => $ds->name(),
+                       }
+                      );
   # stream parsing expat non-validating parser
   my $ssp = Bio::Otter::Transform::SequenceSets->new();
   $ssp->set_property('dataset_name', $ds->name);
@@ -858,25 +857,6 @@ sub get_all_SequenceSets_for_DataSet {
   my $seq_sets = $ssp->objects;
 
   return $seq_sets;
-}
-
-sub get_SequenceSet_AccessList_for_DataSet {
-  my ($self,$ds) = @_;
-  return [] unless $ds;
-
-  my $content = $self->http_response_content(
-					   'GET',
-					   'get_sequenceset_accesslist',
-					   {
-					    'dataset'  => $ds->name,
-					   }
-					  );
-  # stream parsing expat non-validating parser
-  my $ssa = Bio::Otter::Transform::AccessList->new();
-  my $p   = $ssa->my_parser();
-  $p->parse($content);
-  my $al=$ssa->objects;
-  return $al;
 }
 
 sub get_all_CloneSequences_for_DataSet_SequenceSet {
@@ -923,42 +903,42 @@ sub get_methods_ace {
 }
 
 sub get_accession_types {
-	
-	my $self = shift;
-	
-	my @accessions = @_;
-	
-	my @uncached = ();
-	my %res = ();
-	
-	for my $acc (@accessions) {
-		if (defined $self->{_accession_types}->{$acc}) {
-			$res{$acc} = $self->{_accession_types}->{$acc};
-		}
-		else {
-			push @uncached, $acc;
-		}	
-	}
-	
-	if (@uncached) {
-		
-		my $response = $self->http_response_content(
-							'GET', 
-							'get_accession_types', 
-							{accessions => join ',', @uncached}
-						);
-						
-		for my $line (split /\n/, $response) {
-			my ($acc, $type, $full_acc) = split /\t/, $line;
-			$res{$acc} = [$type, $full_acc];
-		}
-		
-		for my $acc (keys %res) {
-			$self->{_accession_types}->{$acc} = $res{$acc}; 
-		}
-	}
-	
-	return \%res;
+    
+    my $self = shift;
+    
+    my @accessions = @_;
+    
+    my @uncached = ();
+    my %res = ();
+    
+    for my $acc (@accessions) {
+        if (defined $self->{_accession_types}->{$acc}) {
+            $res{$acc} = $self->{_accession_types}->{$acc};
+        }
+        else {
+            push @uncached, $acc;
+        }   
+    }
+    
+    if (@uncached) {
+        
+        my $response = $self->http_response_content(
+                            'GET', 
+                            'get_accession_types', 
+                            {accessions => join ',', @uncached}
+                        );
+                        
+        for my $line (split /\n/, $response) {
+            my ($acc, $type, $full_acc) = split /\t/, $line;
+            $res{$acc} = [$type, $full_acc];
+        }
+        
+        for my $acc (keys %res) {
+            $self->{_accession_types}->{$acc} = $res{$acc}; 
+        }
+    }
+    
+    return \%res;
 }
 
 sub save_otter_xml {
