@@ -533,7 +533,9 @@ sub show_filters {
             
             if (!$self->n2f->{$name}->failed) {
                 my $balloon = $self->top->Balloon;
-                $balloon->attach($cb, -balloonmsg => $self->n2f->{$name}->load_time.' secs');
+                if (defined $self->n2f->{$name}->load_time) {
+                    $balloon->attach($cb, -balloonmsg => 'Loaded in '.$self->n2f->{$name}->load_time.' seconds');
+                }
             }
         }
         
