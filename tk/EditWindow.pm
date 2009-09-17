@@ -23,6 +23,15 @@ sub top {
     return $self->{'_top'};
 }
 
+sub balloon {
+    my( $self ) = @_;
+    
+    $self->{'_balloon'} ||= $self->top->Balloon(
+        -state  => 'balloon',
+        );
+    return $self->{'_balloon'};
+}
+
 sub set_minsize {
     my ($self) = @_;
     

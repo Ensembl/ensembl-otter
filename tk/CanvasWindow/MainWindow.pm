@@ -82,7 +82,7 @@ sub add_default_options {
         CanvasWindow*Balloon*background         #ffffcc
         CanvasWindow*Text*background            white
         CanvasWindow*ProgressBar*troughColour   #aaaaaa
-        CanvasWindow*ProgressBar*relief         raised
+        CanvasWindow*ProgressBar*relief         sunken
         CanvasWindow*ProgressBar*foreground     gold
         };
     

@@ -11,8 +11,10 @@ use Tk::HListplus;
 use Tk::Checkbutton;
 use Tk::LabFrame;
 use Tk::Balloon;
+use Time::HiRes 'time';
 
 use MenuCanvasWindow::XaceSeqChooser;
+use Hum::Sort 'ace_sort';
 
 use base 'EditWindow';
 
@@ -200,10 +202,7 @@ sub initialize {
     my $prog_bar = $progress_frame->ProgressBar(
        -width       => 20,
        -from        => 0,
-       -blocks      => 100,
-       -gap         => 0,
-       -troughcolor => 'white',
-       -colors      => [ 0, 'blue' ],
+       -blocks      => 1,
        -variable    => \$self->{_filters_done}
     )->pack( 
         -fill   => 'x', 
@@ -227,7 +226,9 @@ sub num_filters {
     
     if (defined $num_filters) {
         $self->{_num_filters} = $num_filters;
-        $self->pipeline_progress_bar->configure(-to => $num_filters);
+        $self->pipeline_progress_bar->configure(
+            -to     => $num_filters,
+            );
     }
 
     return $self->{_num_filters};
@@ -250,7 +251,7 @@ sub reset_progress {
         $num_failed++ if $filter->failed;
     }
     
-    my $label_text = "$num_done filters loaded";
+    my $label_text = "$num_done columns loaded";
     $label_text .= " ($num_failed failed)" if $num_failed;
     
     $self->label_text($label_text);
@@ -439,7 +440,7 @@ sub sort_by_filter_method {
 			$res = 0;
 		}
 		else {
-			$res = lc($f1->$method) cmp lc($f2->$method);
+			$res = ace_sort($f1->$method, $f2->$method);
 		}
 		
 		return $invert ? $res * -1 : $res;
@@ -531,9 +532,11 @@ sub show_filters {
             }
             
             if (!$self->n2f->{$name}->failed) {
-                my $balloon = $self->top->Balloon;
+                my $balloon = $self->balloon;
                 if (defined $self->n2f->{$name}->load_time) {
-                    $balloon->attach($cb, -balloonmsg => 'Loaded in '.$self->n2f->{$name}->load_time.' seconds');
+                    $balloon->attach($cb,
+                        -balloonmsg => sprintf('Loaded in %.2f seconds', $self->n2f->{$name}->load_time),
+                        );
                 }
             }
         }
