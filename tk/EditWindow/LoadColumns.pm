@@ -10,10 +10,18 @@ use Scalar::Util 'weaken';
 use Tk::HListplus;
 use Tk::Checkbutton;
 use Tk::LabFrame;
+use Tk::Balloon;
 
 use MenuCanvasWindow::XaceSeqChooser;
+use EditWindow::PipelineProgressWindow;
 
 use base 'EditWindow';
+
+my %STATE_COLORS = (
+    default => 'gold',
+    done    => 'green',
+    failed  => 'red',
+);
 
 sub initialize {
     my( $self ) = @_;
@@ -80,7 +88,7 @@ sub initialize {
 			$hlist->anchorClear;
         	my $i = shift;
         	my $cb = $self->hlist->itemCget($i, 0, '-widget');
-        	$cb->toggle unless $cb->cget('-selectcolor') eq 'green';
+        	$cb->toggle if $cb->cget('-selectcolor') eq $STATE_COLORS{'default'};
         }
 	);
 
@@ -107,11 +115,17 @@ sub initialize {
 
 	$self->hlist($hlist);
 
-	my $but_frame = $top->Frame->pack(
-		-side => 'bottom', 
-		-expand => 0,
-		-fill => 'x'	
-	);
+    my $bottom_frame = $top->Frame->pack(
+        -side => 'bottom', 
+        -expand => 0,
+        -fill => 'x'    
+    );
+
+	my $but_frame = $bottom_frame->pack(
+	   -side => 'top',
+	   #-expand => 0,
+       #-fill => 'x'
+    );
     
     my $select_frame = $but_frame->Frame->pack(
     	-side => 'top', 
@@ -143,12 +157,18 @@ sub initialize {
 	    -command => sub { $self->change_checkbutton_state('toggle') },
 	)->pack(-side => 'right');
 
-	my $control_frame = $but_frame->Frame->pack(
+    my $progress_frame = $bottom_frame->Frame->pack(
+        -side   => 'bottom', 
+        -fill   => 'x', 
+        -expand => 1
+    );
+
+	my $control_frame = $progress_frame->Frame->pack(
 		-side => 'bottom', 
-		-expand => 1, 
+		-expand => 0, 
 		-fill => 'x'
 	);
-
+	
     $control_frame->Button(
 	    -text => 'Load',
 	    -command => sub { $self->load_filters },
@@ -171,9 +191,108 @@ sub initialize {
     	$self->{_default_sort_method}
     );
     
+    
+    $control_frame->Label(
+        -textvariable => \$self->{_label_text}
+    )->pack(-side => 'top');
+    
+    $self->{_filters_done} = 0;
+    
+    my $prog_bar = $progress_frame->ProgressBar(
+       -width       => 20,
+       -from        => 0,
+       -blocks      => 100,
+       -gap         => 0,
+       -troughcolor => 'white',
+       -colors      => [ 0, 'blue' ],
+       -variable    => \$self->{_filters_done}
+    )->pack( 
+        -fill   => 'x', 
+        -expand => 1, 
+        -padx   =>5, 
+        -pady   =>5, 
+        -side => 'top'
+    );
+    
+    $self->pipeline_progress_bar($prog_bar);
+    
+    $self->reset_progress;
+    
     $top->bind('<Destroy>', sub{
         $self = undef;
     });
+}
+
+sub num_filters {
+    my ( $self, $num_filters ) = @_;
+    
+    if (defined $num_filters) {
+        $self->{_num_filters} = $num_filters;
+        $self->pipeline_progress_bar->configure(-to => $num_filters);
+    }
+
+    return $self->{_num_filters};
+}
+
+sub pipeline_progress_bar {
+    my ( $self, $pipeline_progress_bar ) = @_;
+    $self->{_pipeline_progress_bar} = $pipeline_progress_bar if $pipeline_progress_bar;
+    return $self->{_pipeline_progress_bar};
+}
+
+sub reset_progress {
+    my ($self) = @_;
+    
+    my ($num_done, $num_failed) = (0, 0);
+    
+    for my $key (keys %{ $self->n2f }) {
+        my $filter = $self->n2f->{$key};
+        $num_done++ if $filter->done and !$filter->failed;
+        $num_failed++ if $filter->failed;
+    }
+    
+    my $label_text = "$num_done filters loaded";
+    $label_text .= " ($num_failed failed)" if $num_failed;
+    
+    $self->label_text($label_text);
+    $self->{_filters_done} = 0;
+    $self->{_num_filters} = 0;
+}
+
+sub label_text {
+    my ( $self, $label_text ) = @_;
+    $self->{_label_text} = $label_text if defined $label_text;
+    return $self->{_label_text};
+}
+
+sub loading_filter {
+    my ($self, $filter) = @_;
+    $self->{_current_filter} = $filter;
+    $filter->load_time(time);
+    $self->label_text("Loading: ".$filter->method_tag." (".($self->{_filters_done}+1)." of ".$self->{_num_filters}.")");
+    $self->top->update;
+}
+
+sub filter_done {
+    my ($self) = @_;
+    $self->{_filters_done}++;
+    $self->top->update; # to move the progress bar
+    #if ($self->{_filters_done} == $self->{_num_filters}) {}
+}
+
+sub filter_loaded {
+    my ($self, $filter) = @_;
+    $self->filter_done;
+    $filter->load_time(time - $filter->load_time);
+    $self->show_filters;
+}
+
+sub filter_failed {
+    my ($self, $filter, $msg) = @_;
+    $filter->failed(1);
+    $filter->fail_msg($msg);
+    $filter->done(1);
+    $self->filter_done;
 }
 
 sub withdraw_or_destroy {
@@ -210,7 +329,7 @@ sub load_filters {
     );
 
     my @to_fetch = grep { 
-        $self->n2f->{$_}->wanted && !$self->n2f->{$_}->done 
+        $self->n2f->{$_}->wanted && !$self->n2f->{$_}->done && !$self->n2f->{$_}->failed
     } keys %{ $self->n2f };
 
     if ($self->init_flag) {
@@ -231,7 +350,20 @@ sub load_filters {
     
     my $fetched_new_data = 0;
     if (@to_fetch) {
-        $fetched_new_data = $self->AceDatabase->topup_pipeline_data_into_ace_server;
+        
+        # replace the current fatal error prompt (because it waits for the user to acknowledge 
+        # each filter that fails to load)
+        my $old_callback = $self->DataSetChooser->Client->fatal_error_prompt;
+        $self->DataSetChooser->Client->fatal_error_prompt(sub {die shift});
+        
+        # create a new pipeline progress window to allow the user to see the data loading 
+        #my $ppw = EditWindow::PipelineProgressWindow->new($self->top->Toplevel);
+        
+        # actually fetch the data
+        $fetched_new_data = $self->AceDatabase->topup_pipeline_data_into_ace_server($self);
+        
+        # and put the old prompt back        
+        $self->DataSetChooser->Client->fatal_error_prompt($old_callback);
     }
     
     if ($self->XaceSeqChooser) {
@@ -268,6 +400,7 @@ sub load_filters {
     
     $top->Unbusy;
     $top->withdraw;
+    $self->reset_progress;
 }
 
 sub set_filters_wanted {
@@ -287,6 +420,8 @@ sub sort_by_filter_method {
 		# hack to get done filters sorted before wanted but undone 
     	# filters - note that '/' is ascii-betically before 1 or 0!
     	map { $n2f{$_}->wanted('/') if $n2f{$_}->done } keys %n2f;
+    	map { $n2f{$_}->wanted('9') if $n2f{$_}->failed } keys %n2f;
+    	$self->{_default_sort_method} = 'load_time';
 	}
 	
 	my $cmp_filters = sub {
@@ -346,7 +481,7 @@ sub change_checkbutton_state {
 	my ($self, $fn) = @_;
     for (my $i = 0; $i < scalar(keys %{ $self->n2f }); $i++) {
     	my $cb = $self->hlist->itemCget($i, 0, '-widget');
-        $cb->$fn unless $cb->cget('-selectcolor') eq 'green'; # don't touch done filters
+        $cb->$fn if $cb->cget('-selectcolor') eq $STATE_COLORS{'default'}; # don't touch done/failed filters
     }
 }
 
@@ -368,6 +503,15 @@ sub show_filters {
         
         $hlist->add($i);
         
+        my $cb_color = $STATE_COLORS{'default'};
+        
+        if ($self->n2f->{$name}->failed) {
+            $cb_color = $STATE_COLORS{'failed'};
+        }
+        elsif ($self->n2f->{$name}->done) {
+            $cb_color = $STATE_COLORS{'done'};
+        }
+        
         $hlist->itemCreate($i, 0, 
             -itemtype => 'window', 
             -widget => $hlist->Checkbutton(
@@ -375,13 +519,28 @@ sub show_filters {
                 -onvalue => 1,
             	-offvalue => 0,
             	-anchor => 'w',
-            	$self->n2f->{$name}->done ? ( -selectcolor => 'green' ) : (),
+            	-selectcolor => $cb_color,
             ),
         );
         
-        if($self->n2f->{$name}->done) {
+        if ($self->n2f->{$name}->done) {
         	my $cb = $hlist->itemCget($i, 0, '-widget');
             $cb->configure(-command => sub { $cb->select(); });
+            if (! $self->n2f->{$name}->{_wanted}) {
+                warn "filter '$name' done but not wanted ???";
+                $self->n2f->{$name}->{_wanted} = 1;
+            }
+            
+            if (!$self->n2f->{$name}->failed) {
+                my $balloon = $self->top->Balloon;
+                $balloon->attach($cb, -balloonmsg => $self->n2f->{$name}->load_time.' secs');
+            }
+        }
+        
+        if ($self->n2f->{$name}->failed) {
+            my $cb = $hlist->itemCget($i, 0, '-widget');
+            my $balloon = $self->top->Balloon;
+            $balloon->attach($cb, -balloonmsg => $self->n2f->{$name}->fail_msg || '');
         }
 
         $hlist->itemCreate($i, 1, 
