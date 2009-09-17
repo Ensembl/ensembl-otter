@@ -355,6 +355,7 @@ sub initialize {
             -variable => \$current_method,
             -command => sub{
                     $self->draw_translation_region;
+                    $self->fix_window_min_max_sizes;
                     $top->focus;  # Need this
                 },
             )->pack(-side => 'left');
@@ -544,6 +545,7 @@ sub set_position_pair_text {
         my $pos = $txt[$i] || $self->empty_string;
         $canvas->itemconfigure($obj, -text => $pos);
     }
+    $self->update_splice_strings($text_pair->[0]);
 }
 
 sub set_all_position_pair_text {
@@ -600,6 +602,7 @@ sub sort_position_pairs {
         $n++;
     }
     $self->highlight(@select) if @select;
+    $self->update_splice_strings('exon_start');
 }
 
 sub sort_translation_region {
@@ -695,6 +698,7 @@ sub delete_selected_exons {
     unless ($self->position_pairs) {
         $self->add_exon_holder(undef, undef, 1);
     }
+    $self->fix_window_min_max_sizes;
 }
 
 sub exon_strand_from_tk {
@@ -2114,6 +2118,7 @@ sub canvas_insert_character {
     my $text = $canvas->focus or return;
     $canvas->insert($text, 'insert', $char);
     $self->re_highlight($text);
+    $self->update_splice_strings($text);
 }
 
 sub increment_int {
@@ -2126,6 +2131,7 @@ sub increment_int {
         $num++;
         $canvas->itemconfigure($text, -text => $num);
         $self->re_highlight($text);
+        $self->update_splice_strings($text);
     }
 }
 
@@ -2139,6 +2145,7 @@ sub decrement_int {
         $num--;
         $canvas->itemconfigure($text, -text => $num);
         $self->re_highlight($text);
+        $self->update_splice_strings($text);
     }
 }
 
@@ -2169,6 +2176,7 @@ sub canvas_backspace {
         or return;  # Don't delete when at beginning of string
     $canvas->dchars($text, $pos - 1);
     $self->re_highlight($text);
+    $self->update_splice_strings($text);
 }
 
 sub select_all_exon_pos {
@@ -2221,25 +2229,22 @@ sub shift_left_button_handler {
     $canvas->focus("");
 
     my ($obj) = $canvas->find('withtag', 'current')  or return;
-    my $type  = $canvas->type($obj)                  or return;
-    my @tags  = $canvas->gettags($obj);
+    my %tags  = map {$_, 1} $canvas->gettags($obj);
 
     if ($self->is_selected($obj)) {
         $self->remove_selected($obj);
     }
-    elsif ($type eq 'text') {
+    elsif ($tags{'exon_pos'} or $tags{'translation_region'}) {
         $self->highlight($obj);
     }
-    elsif (grep $_ eq 'exon_furniture', @tags) {
-        my ($exon_id) = grep /^exon_id/, @tags;
+    elsif ($tags{'exon_furniture'}) {
+        my ($exon_id) = grep /^exon_id/, keys %tags;
         my( @select, @deselect );
-        foreach my $ex_obj ($canvas->find('withtag', $exon_id)) {
-            if ($canvas->type($ex_obj) eq 'text') {
-                if ($self->is_selected($ex_obj)) {
-                    push(@deselect, $ex_obj);
-                } else {
-                    push(@select,   $ex_obj);
-                }
+        foreach my $ex_obj ($canvas->find('withtag', "exon_pos&&$exon_id")) {
+            if ($self->is_selected($ex_obj)) {
+                push(@deselect, $ex_obj);
+            } else {
+                push(@select,   $ex_obj);
             }
         }
         $self->remove_selected(@deselect) if @deselect;
@@ -2259,6 +2264,7 @@ sub control_left_button_handler {
     elsif ($tags{'minus_strand'}) {
         $self->set_tk_strand(1);
     }
+    $self->update_splice_strings($obj);
 }
 
 sub set_tk_strand {
@@ -2279,7 +2285,7 @@ sub set_tk_strand {
         $canvas->delete($obj);
         my ($i) = map /exon_id-(\d+)/, @tags;
         #warn "Drawing strand indicator for exon $i\n";
-        my( $size, $half, $pad,
+        my( $size, $half, $pad, $text_len,
             $x1, $y1, $x2, $y2 ) = $self->exon_holder_coords($i - 1);
         $self->$draw_method($x1 + $half, $y1, $size, @tags);
     }
@@ -2365,6 +2371,7 @@ sub middle_button_paste {
                 -text   => $ints[0],
                 );
             $self->highlight($obj);
+            $self->update_splice_strings($obj) if $obj_tags{'exon_pos'};
         }
         elsif ($obj_tags{'exon_furniture'}) {
             # Set coordinates with middle button on strand indicator
@@ -2422,11 +2429,12 @@ sub next_exon_holder_coords {
 sub exon_holder_coords {
     my( $self, $i ) = @_;
 
+    $i++;   # Move exons down 1 line to make space for splice site sequence
     my( $size, $half, $pad, $text_len, @bbox ) = $self->_coord_matrix;
     my $y_offset = $i * ($size + (2 * $pad));
     $bbox[1] += $y_offset;
     $bbox[3] += $y_offset;
-    return( $size, $half, $pad, @bbox );
+    return( $size, $half, $pad, $text_len, @bbox );
 }
 
 sub _coord_matrix {
@@ -2455,8 +2463,8 @@ sub _coord_matrix {
         my $max_width = 4 * ($size + $text_len);
         #warn "max_width = $max_width\n";
         $canvas->createRectangle(
-            $half, $half,
-            $half + $max_width, $half + $size,
+            $half, $half + $size,
+            $half + $max_width, $half + (2 * $size),
             -fill       => undef,
             -outline    => undef,
             -tags       => ['max_width_rectangle'],
@@ -2466,9 +2474,70 @@ sub _coord_matrix {
     return @$m;
 }
 
+sub update_splice_strings {
+    my ($self, $tag_or_id) = @_;
+
+    my $canvas = $self->canvas;
+
+    my %exons_to_update;
+    foreach my $obj ($canvas->find('withtag', $tag_or_id)) {
+        my ($exon_id) = grep /^exon_id/, $canvas->gettags($obj);
+        $exons_to_update{$exon_id} = 1 if $exon_id;
+    }
+    
+    my @good = (
+        -font => $self->font_fixed,
+        -fill => 'YellowGreen',
+        );
+    my @bad  = (
+        -font => $self->font_fixed_bold,
+        -fill => "#ee2c2c",     # firebrick2
+        );
+
+    foreach my $exon_id (keys %exons_to_update) {
+        my ($start, $end) = map $canvas->itemcget($_, 'text'), $canvas->find('withtag', "$exon_id&&exon_pos");
+        if ($start > $end) {
+            ($start, $end) = ($end, $start);
+        }
+        my $strand = $self->exon_strand_from_tk($exon_id);
+        my ($acc_str, $don_str) = $self->get_splice_acceptor_donor_strings($start, $end, $strand);
+
+        my ($acceptor_txt) = $canvas->find('withtag', "$exon_id&&splice_acceptor");
+        my ($donor_txt)    = $canvas->find('withtag', "$exon_id&&splice_donor");
+
+        $canvas->itemconfigure($acceptor_txt,
+            -text => $acc_str,
+            $acc_str eq 'ag' ? @good : @bad,
+            );
+        $canvas->itemconfigure($donor_txt,
+            -text => substr($don_str, 1, 2),
+            # OK if first two bases in intron are "gt", or are "gc"
+            # preceeded by "g" at the last base of the exon.
+            $don_str =~ /(.gt|ggc)/ ? @good : @bad,
+            );
+    }
+}
+
+
+sub get_splice_acceptor_donor_strings {
+    my ($self, $start, $end, $strand) = @_;
+    
+    # Fetch the splice donor and acceptor sequences before switching start/end for reverse strand
+    my ($splice_acceptor_str, $splice_donor_str);
+    if ($start and $end) {
+        eval { $splice_acceptor_str = $self->SubSeq->splice_acceptor_seq_string($start, $end, $strand) };
+        # warn $@ if $@;
+        eval { $splice_donor_str    = $self->SubSeq->splice_donor_seq_string(   $start, $end, $strand) };
+        # warn $@ if $@;
+    }
+    $splice_acceptor_str ||= '??';
+    $splice_donor_str    ||= '???';
+
+    return ($splice_acceptor_str, $splice_donor_str);
+}
+
 sub add_exon_holder {
     my( $self, $start, $end, $strand ) = @_;
-
     $start ||= $self->empty_string;
     $end   ||= $self->empty_string;
 
@@ -2480,16 +2549,24 @@ sub add_exon_holder {
     my $canvas  = $self->canvas;
     my $font    = $self->font_fixed;
     my $exon_id = 'exon_id-'. $self->next_exon_number;
-    my( $size, $half, $pad,
+    my( $size, $half, $pad, $text_len,
         $x1, $y1, $x2, $y2 ) = $self->next_exon_holder_coords;
     my $arrow_size = $half - $pad;
+
+    $canvas->createText(
+        $x1 - $text_len, $y1 + $half,
+        -anchor     => 'e',
+        -text       => '..',
+        -font       => $font,
+        -tags       => [$exon_id, 'splice_acceptor'],
+        );
 
     my $start_text = $canvas->createText(
         $x1, $y1 + $half,
         -anchor     => 'e',
         -text       => $start,
         -font       => $font,
-        -tags       => [$exon_id, 'exon_start', 'exon_pos'],
+        -tags       => [$exon_id, 'exon_pos', 'exon_start'],
         );
 
     if ($strand == 1) {
@@ -2503,10 +2580,19 @@ sub add_exon_holder {
         -anchor     => 'w',
         -text       => $end,
         -font       => $font,
-        -tags       => [$exon_id, 'normal', 'exon_end', 'exon_pos'],
+        -tags       => [$exon_id, 'exon_pos', 'exon_end'],
         );
 
     $self->add_position_pair($start_text, $end_text, $exon_id);
+
+    $canvas->createText(
+        $x2 + $text_len, $y1 + $half,
+        -anchor     => 'w',
+        -text       => '..',
+        -font       => $font,
+        -tags       => [$exon_id, 'splice_donor'],
+        );
+
 
     my $bkgd = $canvas->createRectangle(
         $x1, $y1, $x2, $y2,
@@ -2515,6 +2601,8 @@ sub add_exon_holder {
         -tags       => [$exon_id, 'exon_furniture'],
         );
     $canvas->lower($bkgd, $start_text);
+
+    $self->update_splice_strings($exon_id);
 
     $self->position_mobile_elements;
 
@@ -2620,7 +2708,7 @@ sub strand_from_tk {
             }
         }
 
-        # Delete the existing translation region and any highlights or lowlights
+        # Delete the existing translation region, "CDS" label, and any highlights or lowlights
         my $canvas = $self->canvas;
         if (my @tr_coord = $canvas->find('withtag', $tr_tag)) {
             $self->remove_selected(@tr_coord);
@@ -2629,7 +2717,7 @@ sub strand_from_tk {
                     $self->delete_was_selected($obj);
                 }
             }
-            $canvas->delete(@tr_coord);
+            $canvas->delete(@tr_coord, 't_cds');
         }
 
         # Don't draw anything if it isn't coding
@@ -2643,7 +2731,7 @@ sub strand_from_tk {
         }
         return unless $meth->coding;
 
-        my( $size, $half, $pad, $text_len ) = $self->_coord_matrix;
+        my( $size, $half, $pad, $text_len, $x1, $y1, $x2, $y2 ) = $self->_coord_matrix;
         my $font = $self->font_fixed_bold;
 
         if ($strand == -1) {
@@ -2651,14 +2739,24 @@ sub strand_from_tk {
         }
 
         $canvas->createText(
-            $half + $text_len, $size,
+            $x1 - $text_len, $y1,
             -anchor => 'e',
             -text   => $trans[0],
             -font   => $font,
             -tags   => ['t_start', $tr_tag],
             );
+        
+        # Put the CDS label between start and end editable text
         $canvas->createText(
-            (3 * $text_len) + (4 * $size), $size,
+            $x1 + (($x2 - $x1) / 2), $y1,
+            -anchor => 'center',
+            -text   => 'CDS',
+            -font   => $font,
+            -tags   => ['t_cds'],
+            );
+
+        $canvas->createText(
+            $x2 + $text_len, $y1,
             -anchor => 'w',
             -text   => $trans[1],
             -font   => $font,

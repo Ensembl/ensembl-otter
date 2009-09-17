@@ -81,6 +81,9 @@ sub add_default_options {
         CanvasWindow*Menubutton.padY            6
         CanvasWindow*Balloon*background         #ffffcc
         CanvasWindow*Text*background            white
+        CanvasWindow*ProgressBar*troughColour   #aaaaaa
+        CanvasWindow*ProgressBar*relief         raised
+        CanvasWindow*ProgressBar*foreground     gold
         };
     
     for (my $i = 0; $i < @opt_val; $i += 2) {
