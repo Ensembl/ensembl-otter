@@ -34,6 +34,8 @@ here is an example commandline
     -port (check the ~/.netrc file)   For RDBs, what port to use (pport= in locator)
 
     -stable_id	list of gene stable ids, comma separated
+    -force	don't ask for confirmation
+    -once	roll to the previous version only
     -author	author login to lock the region of interest
     -help|h	displays this documentation with PERLDOC
 
@@ -59,6 +61,9 @@ my $user			= '';
 my $port            = '';
 my $pass            = '';
 my $help;
+my $force;
+my $once;
+my $lock = 1;
 my $author;
 my @ids;
 
@@ -82,6 +87,9 @@ GetOptions(
            'user=s'        => \$user,
            'pass=s'        => \$pass,
            'author=s'	   => \$author,
+           'force!'		   => \$force,
+           'once!'		   => \$once,
+           'lock!'		   => \$lock,
            'stable_id=s'   => \@ids,
            'h|help!' 		   => $usage,
 )
@@ -131,41 +139,46 @@ GSI: foreach my $id (@sids) {
 	my $current_gene_id = shift @$genes;
 
 	warning("There is only one version of gene $id\n") unless @$genes;
-
-	GENE:while(scalar @$genes) {
+	my $loop = 1;
+	GENE:while($loop && scalar @$genes) {
 		my $previous_gene_id = shift @$genes;
 		my $cur_gene = $gene_adaptor->fetch_by_dbID($current_gene_id);
 		my $prev_gene = $gene_adaptor->fetch_by_dbID($previous_gene_id);
-		if(&proceed($current_gene_id) =~ /^y$|^yes$/ ) {
+		if($force || &proceed($current_gene_id) =~ /^y$|^yes$/ ) {
 
 			my ($cb,$author_obj);
-			eval {
-				$cb = Bio::Vega::ContigLockBroker->new(-hostname => hostname);
-				$author_obj = Bio::Vega::Author->new(-name => $author, -email => $author);
-				printf STDOUT "Locking gene slice %s <%d-%d>\n",$cur_gene->seq_region_name,$cur_gene->seq_region_start,$cur_gene->seq_region_end;
-				$cb->lock_clones_by_slice([$cur_gene->feature_Slice,$prev_gene->feature_Slice],$author_obj,$db);
-			};
-			if($@){
-				warning("Problem locking gene slice with author name $author\n$@\n");
-				next GSI;
+			if($lock){
+				eval {
+					$cb = Bio::Vega::ContigLockBroker->new(-hostname => hostname);
+					$author_obj = Bio::Vega::Author->new(-name => $author, -email => $author);
+					printf STDOUT "Locking gene slice %s <%d-%d>\n",$cur_gene->seq_region_name,$cur_gene->seq_region_start,$cur_gene->seq_region_end;
+					$cb->lock_clones_by_slice([$cur_gene->feature_Slice,$prev_gene->feature_Slice],$author_obj,$db);
+				};
+				if($@){
+					warning("Problem locking gene slice with author name $author\n$@\n");
+					next GSI;
+				}
 			}
 
 			$gene_adaptor->remove($cur_gene);
 			$gene_adaptor->resurrect($prev_gene);
 			print STDOUT "gene_id $current_gene_id REMOVED !!!!!!\n";
 
-			eval {
-				printf STDOUT "Unlocking gene slice %s <%d-%d>\n",$cur_gene->seq_region_name,$cur_gene->seq_region_start,$cur_gene->seq_region_end;
-				$cb->remove_by_slice([$cur_gene->feature_Slice,$prev_gene->feature_Slice],$author_obj,$db);
-			};
-			if($@){
-				warning("Cannot remove locks from gene slice with author name $author\n$@\n");
+			if($lock){
+				eval {
+					printf STDOUT "Unlocking gene slice %s <%d-%d>\n",$cur_gene->seq_region_name,$cur_gene->seq_region_start,$cur_gene->seq_region_end;
+					$cb->remove_by_slice([$cur_gene->feature_Slice,$prev_gene->feature_Slice],$author_obj,$db);
+				};
+				if($@){
+					warning("Cannot remove locks from gene slice with author name $author\n$@\n");
+				}
 			}
 		} else {
 			last GENE;
 		}
 		$current_gene_id = $previous_gene_id;
 
+		$loop = 0 if($once);
 	}
 }
 
