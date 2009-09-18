@@ -782,13 +782,14 @@ sub resurrect { # make a particular gene current (without touching the previousl
     }
 }
 
-sub fetch_all_genes_on_ncbi_slice {
+sub fetch_all_genes_on_reference_slice {
 
+  #fka fetch_all_genes_on_ncbi_slice()
   # returns a list reference to loutre genes
-  # converted to the coords of the specified NCBI version
-  # $ncbi_ver is eg, 36, M36
+  # converted to the coords of the specified assembly version
+  # eg NCBI36 or GRCh37
 
-  my ($self, $ncbi_chr, $otter_chr, $loutre_slice, $ncbi_ver) = @_;
+  my ($self, $ncbi_chr, $otter_chr, $loutre_slice, $assembly) = @_;
 
   #  ncbi_chr, eg '22';        (num or x, y)
   #  otter_chr, eg, 'chr22-07' (sset name)
@@ -799,10 +800,9 @@ sub fetch_all_genes_on_ncbi_slice {
 
   my $start = $loutre_slice->start;
   my $end   = $loutre_slice->end;
-  my $ncbi = "NCBI$ncbi_ver";
 
   my $transformed_genes = $mfetcher->fetch_and_export('get_all_Genes', ['otter', undef, 1],
-                                                      'chromosome', $ncbi_chr, $otter_chr, $start, $end, 'Otter', $ncbi);
+                                                      'chromosome', $ncbi_chr, $otter_chr, $start, $end, 'Otter', $assembly);
 
   #warn "Got ", scalar @$transformed_genes, " genes\n";
   #my $ncbi_slice = $transformed_genes->[0]->loutre_slice;
