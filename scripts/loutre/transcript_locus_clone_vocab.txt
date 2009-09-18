@@ -29,7 +29,8 @@ Transcript
         genome sequence error   <OTTER EXON STABLE ID>
         non-canonical splicing  <OTTER EXON STABLE ID> <5' or 3' end of exon>
         nagnag splicing         <OTTER EXON STABLE ID> - always 5' end of exon
-            - these 4 can all occur multiple times
+            - these 4 exon properties can all occur multiple times
+
 
 Locus
 
