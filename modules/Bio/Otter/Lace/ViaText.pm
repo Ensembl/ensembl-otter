@@ -226,8 +226,10 @@ sub generate_unless_hashed {
         #
     if(my $cmps_getter = $feature_subhash->{-get_all_cmps}) { # component link is two-way (parent keeps a list of its components)
         foreach my $component_feature (@{ $feature->$cmps_getter() }) {
-            my ($component_output, $to_be_ignored) = generate_unless_hashed($component_feature, $hash_key, $seen_hash, $analysis_name);
-            $cumulative_output .= $component_output;
+            if ($component_feature ) { # gr5: temporary fix to resolve PredictionTranscripts with undef Exons due ensembl API issue
+                my ($component_output, $to_be_ignored) = generate_unless_hashed($component_feature, $hash_key, $seen_hash, $analysis_name);
+                $cumulative_output .= $component_output;
+            }
         }
     }
 
