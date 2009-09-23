@@ -133,7 +133,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.43 $ ';
+$revision='$Revision: 1.44 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -363,6 +363,14 @@ sub bestn {
 	return $self->{'_bestn'};
 }
 
+sub max_intron_length {
+    my ( $self, $max_intron_length) = @_;
+    if ($max_intron_length) {
+        $self->{'_max_intron_length'} = $max_intron_length;
+    }
+    return $self->{'_max_intron_length'};
+}
+
 sub dnahsp {
 	my ( $self, $dnahsp ) = @_;
 	if ($dnahsp) {
@@ -559,9 +567,13 @@ sub run_exonerate {
     my $score = $self->score() || ( $self->query_type() eq 'protein' ? 150 : 2000 );
     my $dnahsp = $self->dnahsp || 120 ;
     my $bestn = $self->bestn || 0;
-    my $exo_options = $self->query_type() eq 'protein' ?
-    	"-m p2g --softmasktarget yes -M 500 --score $score --bestn $bestn" :
-    	"-m e2g --softmasktarget yes --softmaskquery yes -M 500 --dnahspthreshold $dnahsp -s $score --bestn $bestn --geneseed 300" ;
+    my $max_intron_length = $self->max_intron_length || 200000;
+    
+    my $exo_options = "--softmasktarget yes -M 500 --bestn $bestn --maxintron $max_intron_length --score $score";
+    
+    $exo_options .= $self->query_type() eq 'protein' ?
+    	" -m p2g" :
+    	" -m e2g --softmaskquery yes --dnahspthreshold $dnahsp --geneseed 300" ;
 
     my $runnable = Bio::EnsEMBL::Analysis::Runnable::Finished::Exonerate->new(
         -analysis => $self->analysis(),
