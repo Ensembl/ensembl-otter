@@ -24,6 +24,7 @@ my $PROT_SCORE = 100;
 my $DNA_SCORE  = 100;
 my $DNAHSP     = 120;
 my $BEST_N	   = 1;
+my $MAX_INTRON_LENGTH = 200000;
 
 my $INITIAL_DIR = (getpwuid($<))[7];
 
@@ -144,20 +145,43 @@ sub initialise {
         -border     => 3,
 	)->pack(@frame_pack);
 
-    $self->bestn(
-        $param_frame->Entry(
-            -width   => 4,
-            -justify => 'right',
-            )->pack( -side => 'right' )
-        );
-	$self->set_entry( 'bestn', $BEST_N );
-	$param_frame->Label(
-        -text   => 'Number of transcript alignments to report (0 for all):',
-        -anchor => 's',
-        -padx   => 6,
-	)->pack( -side => 'right' );
+    my $option_frame = $param_frame->Frame->pack(-side => 'right', -fill => 'x');
 
-	my $cb_frame = $param_frame->Frame->pack(@frame_pack);
+    my $bestn_frame = $option_frame->Frame->pack(@frame_pack);
+
+    $self->bestn(
+        $bestn_frame->Entry(
+            -width   => 9,
+            -justify => 'right',
+        )->pack( -side => 'right' )
+    );
+	
+	$self->set_entry( 'bestn', $BEST_N );
+	
+	$bestn_frame->Label(
+        -text   => 'Number of transcript alignments to report (0 for all):',
+        -anchor => 'e',
+        -padx   => 6,
+	)->pack( -side => 'right', -fill => 'x' );
+	
+	my $intron_length_frame = $option_frame->Frame->pack(-side => 'bottom', -fill => 'x');
+	
+	$self->max_intron_length(
+	    $intron_length_frame->Entry(
+	       -width      => 9,
+	       -justify    => 'right',
+	    )->pack( -side => 'right' )
+	);
+
+    $self->set_entry( 'max_intron_length', $MAX_INTRON_LENGTH );
+    
+    $intron_length_frame->Label(
+        -text   => 'Maximum intron length:',
+        -anchor => 'e',
+        -padx   => 6,
+    )->pack( -side => 'right', -fill => 'x' );
+
+	my $cb_frame = $param_frame->Frame->pack(-side => 'left', -fill => 'x');
 
 	$cb_frame->Checkbutton(
     	-variable => \$self->{_clear_existing},
@@ -293,6 +317,14 @@ sub bestn {
 	return $self->{'_bestn'};
 }
 
+sub max_intron_length {
+    my ( $self, $max_intron_length ) = @_;
+    if ($max_intron_length) {
+        $self->{'_max_intron_length'} = $max_intron_length;
+    }
+    return $self->{'_max_intron_length'};
+}
+
 sub match {
 	my ( $self, $match ) = @_;
 	if ($match) {
@@ -412,6 +444,7 @@ sub launch_exonerate {
 		my $ana_name = $type =~ /^Unknown/ ? $type : "OTF_$type";
 		my $dnahsp   = $DNAHSP;
 		my $best_n   = $self->get_entry('bestn');
+		my $max_intron_length = $self->get_entry('max_intron_length');
 
 		my $exonerate = Bio::Otter::Lace::Exonerate->new;
 		$exonerate->AceDatabase($self->XaceSeqChooser->AceDatabase);
@@ -425,6 +458,7 @@ sub launch_exonerate {
 		$exonerate->score($score);
 		$exonerate->dnahsp($dnahsp);
 		$exonerate->bestn($best_n);
+		$exonerate->max_intron_length($max_intron_length);
 		$exonerate->method_tag($ana_name);
 		$exonerate->logic_name($ana_name);
 
