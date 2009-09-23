@@ -555,7 +555,7 @@ sub write_dna_data {
 }
 
 sub topup_pipeline_data_into_ace_server {
-    my( $self, $pipeline_progress_window ) = @_;
+    my( $self, $progress_monitor ) = @_;
 
     my $factory = $self->pipeline_DataFactory
         or confess "No pipeline_DataFactory";
@@ -565,11 +565,11 @@ sub topup_pipeline_data_into_ace_server {
 
     $factory->ace_string_callback( sub{ $ace_server->save_ace(@_); } );
     
-    $factory->pipeline_progress_window($pipeline_progress_window);
+    $factory->progress_monitor($progress_monitor);
     
     my $filters_fetched_data = $factory->topup_pipeline();
     $factory->ace_string_callback( undef );
-    $factory->pipeline_progress_window( undef );
+    $factory->progress_monitor( undef );
 
     return $filters_fetched_data;
 }
