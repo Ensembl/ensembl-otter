@@ -84,7 +84,7 @@ sub translations_diff {
             ##Remember to uncomment this after loading and remove the line/s after
             #	throw('translation stable_ids of the same two transcripts are different\n');
             #
-            
+
             my $existing_translation=$self->db->get_TranslationAdaptor->fetch_by_stable_id($translation->stable_id);
             if($existing_translation){
                 throw ("new translation stable_id(".$translation->stable_id
@@ -132,11 +132,11 @@ sub translations_diff {
 
 sub exons_diff {
   my ($self, $transcript, $shared_exons) = @_;
-  
-  # Get a ref to the actual list of exons in the object 
+
+  # Get a ref to the actual list of exons in the object
   my $actual_exon_list = $transcript->get_all_Exons_ref;
   my $transl = $transcript->translation;
-  
+
   ### Why pass in $shared_exons as an argument?  Shouldn't it be a property of the AnnotationBroker?
 
   my $exons_any_changes = 0;
@@ -173,7 +173,7 @@ sub exons_diff {
             $exon->modified_date($self->current_time);
 
             # has the sequence of the exon changed?
-            my $seq_diff = $db_exon->seq() ne $exon->seq();
+            my $seq_diff = $db_exon->seq()->seq ne $exon->seq()->seq;
             $exon->version($db_exon->version + $seq_diff);
             $exons_any_changes   = 1;
             $exons_seq_changes ||= $seq_diff;
@@ -198,7 +198,7 @@ sub exons_diff {
     if (! $shared_exons->{$exon->stable_id}) {
         $shared_exons->{$exon->stable_id} = $exon;
     }
-    
+
     # If we have used an exon from the database, we must
     # check to see if the translation uses it.
     if ($transl and $exon != $save_exon) {
@@ -209,7 +209,7 @@ sub exons_diff {
             $transl->end_Exon($exon);
         }
     }
-    
+
   }
 
   return ($exons_any_changes, $exons_seq_changes);
