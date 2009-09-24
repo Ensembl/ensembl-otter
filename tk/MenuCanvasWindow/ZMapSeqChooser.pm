@@ -704,7 +704,7 @@ sub zMapEdit{
       NAME: foreach my $name (keys %$feat_hash) {
             my $feat = $feat_hash->{$name};
             if (my $style = $feat->{'style'}) {
-                if ($style eq 'Genomic_canonical') {
+                if (lc($style) eq 'genomic_canonical') {
                     $genomic_canonical = $name;
                     last NAME;
                 }
