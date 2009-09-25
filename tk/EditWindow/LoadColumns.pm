@@ -89,7 +89,7 @@ sub initialize {
 			$hlist->anchorClear;
         	my $i = shift;
         	my $cb = $self->hlist->itemCget($i, 0, '-widget');
-        	$cb->toggle if $cb->cget('-selectcolor') eq $STATE_COLORS{'default'};
+        	$cb->invoke unless $cb->cget('-selectcolor') eq $STATE_COLORS{'done'}
         }
 	);
 
@@ -291,7 +291,6 @@ sub filter_failed {
     my ($self, $filter, $msg) = @_;
     $filter->failed(1);
     $filter->fail_msg($msg);
-    $filter->done(1);
     $self->filter_done;
 }
 
@@ -355,9 +354,6 @@ sub load_filters {
         # each filter that fails to load)
         my $old_callback = $self->DataSetChooser->Client->fatal_error_prompt;
         $self->DataSetChooser->Client->fatal_error_prompt(sub {die shift});
-        
-        # create a new pipeline progress window to allow the user to see the data loading 
-        #my $ppw = EditWindow::PipelineProgressWindow->new($self->top->Toplevel);
         
         # actually fetch the data
         $fetched_new_data = $self->AceDatabase->topup_pipeline_data_into_ace_server($self);
@@ -525,7 +521,7 @@ sub show_filters {
         
         if ($self->n2f->{$name}->done) {
         	my $cb = $hlist->itemCget($i, 0, '-widget');
-            $cb->configure(-command => sub { $cb->select(); });
+            $cb->configure(-command => sub { $cb->select() });
             if (! $self->n2f->{$name}->{_wanted}) {
                 warn "filter '$name' done but not wanted ???";
                 $self->n2f->{$name}->{_wanted} = 1;
@@ -545,6 +541,18 @@ sub show_filters {
             my $cb = $hlist->itemCget($i, 0, '-widget');
             my $balloon = $self->top->Balloon;
             $balloon->attach($cb, -balloonmsg => $self->n2f->{$name}->fail_msg || '');
+            
+            # configure the button such that the user can reselect 
+            # a failed filter to try again
+            $cb->configure(
+                -command => sub {
+                    $self->n2f->{$name}->failed(0);
+                    $cb->configure(
+                        -selectcolor => $STATE_COLORS{'default'}, 
+                        -command => undef,
+                    );
+                },
+            );
         }
 
         $hlist->itemCreate($i, 1, 
