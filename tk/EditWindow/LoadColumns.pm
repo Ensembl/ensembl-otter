@@ -156,7 +156,12 @@ sub initialize {
 	$select_frame->Button(
 	    -text => 'Invert', 
 	    -command => sub { $self->change_checkbutton_state('toggle') },
-	)->pack(-side => 'right');
+	)->pack(-side => 'left');
+	
+	$select_frame->Button(
+        -text => 'Reselect failed', 
+        -command => sub { $self->change_checkbutton_state('invoke', $STATE_COLORS{'failed'}) },
+    )->pack(-side => 'right');
 
     my $progress_frame = $bottom_frame->Frame->pack(
         -side   => 'bottom', 
@@ -474,10 +479,13 @@ sub sort_by_filter_method {
 }
 
 sub change_checkbutton_state {
-	my ($self, $fn) = @_;
+	my ($self, $fn, $state_color) = @_;
+	
+	$state_color ||= $STATE_COLORS{'default'};
+	
     for (my $i = 0; $i < scalar(keys %{ $self->n2f }); $i++) {
     	my $cb = $self->hlist->itemCget($i, 0, '-widget');
-        $cb->$fn if $cb->cget('-selectcolor') eq $STATE_COLORS{'default'}; # don't touch done/failed filters
+        $cb->$fn if $cb->cget('-selectcolor') eq $state_color;
     }
 }
 
@@ -532,7 +540,7 @@ sub show_filters {
                 if (defined $self->n2f->{$name}->load_time) {
                     $balloon->attach($cb,
                         -balloonmsg => sprintf('Loaded in %.2f seconds', $self->n2f->{$name}->load_time),
-                        );
+                    );
                 }
             }
         }
@@ -551,6 +559,7 @@ sub show_filters {
                         -selectcolor => $STATE_COLORS{'default'}, 
                         -command => undef,
                     );
+                    $cb->select;
                 },
             );
         }
