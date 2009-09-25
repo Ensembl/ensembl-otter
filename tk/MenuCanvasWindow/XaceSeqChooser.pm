@@ -700,6 +700,7 @@ sub show_lcd_dialog {
     my $lc = $self->LoadColumns;
     my $top = $lc->top;
     # we need to force a redraw
+    $lc->reset_progress;
     $lc->show_filters;
     $top->deiconify;
     $top->raise;
