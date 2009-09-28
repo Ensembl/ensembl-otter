@@ -34,11 +34,11 @@ sub process_query {
 
 	my ($query_str, $otter_db, $mw, $verbose) = @_;
 	my $ga = $otter_db->get_GeneAdaptor;
-	
+
 	my $gsids; # list ref
 
 	# first get relevant info of a gene from query
-	if ( $query_str =~ /OTT\w{3,3}G\d+/ and 
+	if ( $query_str =~ /OTT\w{3,3}G\d+/ and
          check_query_exists($otter_db, $mw, $query_str, 'gene') ){
       @$gsids = $query_str;
       print STDERR "[G query]: " if $verbose;
@@ -69,7 +69,7 @@ sub process_query {
 	# this should pull out obsolete genes in the history
 	#----------------------------------------------------------------------
     print STDERR "[1] GETTING ALL gsids VIA gene/trans NAMES OF @$gsids . . .\n" if $verbose;
-	
+
 	my $found_gsids = get_all_gsids_via_geneTransNames_of_gsid($otter_db, $ga, $gsids, $verbose);
 	print STDERR "[5] GENE HISTORY: @$found_gsids\n\n" if $verbose;
 
@@ -412,13 +412,13 @@ sub get_attributes {
 sub build_geneinfo_tree {
 
 	my ($tree, $top, $curr_gene, $gver, $mod_count) = @_;
-	
+
 	my $mtime       = convert_unix_time($curr_gene->modified_date);
 	my $trans_count = scalar @{$curr_gene->get_all_Transcripts};
 	my $exon_count  = scalar @{$curr_gene->get_all_Exons};
 	my $desc = $curr_gene->description;
 	$desc = 'NA' unless $desc;
-	
+
 	my $gname          = get_attributes($curr_gene,'name');
 	my $gsyms          = get_attributes($curr_gene,'synonym');
 	my $gremark        = get_attributes($curr_gene,'remark');
@@ -437,7 +437,7 @@ sub build_geneinfo_tree {
 sub build_geneinfo_nodes {
   my ($tree, $gene, $heirarchy, $space, $desc, $gname, $gsyms, $gremark, $g_annot_remark) = @_;
 
-  my $asm = $gene->project('Chromosome')->[0]->[2]->seq_region_name;
+  my $asm = $gene->slice->seq_region_name;
 
   $heirarchy .= '.GeneInfo';
   my @nodes = (
@@ -520,7 +520,7 @@ sub pretty_print_xmlcmp {
 	# greyout (tags) /highlight (data) of XML
 	$pagetxt->tagConfigure('greyout', -foreground=>'#616161');
 	$pagetxt->tagConfigure('highlight', -foreground=>'#8B0000');
-  
+
 	foreach my $line ( @xmlcmp ){
 
 		if ( $line =~ /locus|transcript|evidence_set|evidence|exon_set|exon/ ){
