@@ -125,6 +125,28 @@ sub initialise {
             -justify    => 'right',
             )->pack(-side => 'left')
         );
+        
+    # Get mark radio button
+    
+    $lab_frame->Checkbutton(
+        -variable => \$self->{_use_mark},
+        -command => sub {
+            if ($self->{_use_mark}) {
+                my ($mark_start, $mark_end) = $self->XaceSeqChooser->zMapGetMark;
+                if ($mark_start && $mark_end) {
+                    warn "Setting dotter genomic start & end to marked region: $mark_start - $mark_end";
+                    $self->set_entry('genomic_start', $mark_start);
+                    $self->set_entry('genomic_end', $mark_end);
+                }
+            }
+            else {
+                $self->set_entry('genomic_start', '');
+                $self->set_entry('genomic_end', '');
+            }
+        },
+        -text => 'Use coordinates of marked region',
+        -anchor => 'w',
+    )->pack(-side => 'bottom');
     
     $self->set_entry('flank', 50_000);
     
@@ -169,6 +191,12 @@ sub initialise {
     $top->protocol('WM_DELETE_WINDOW',  $close_window);
     
     $top->bind('<Destroy>', sub{ $self = undef });
+}
+
+sub XaceSeqChooser {
+    my ($self, $xc) = @_;
+    $self->{_XaceSeqChooser} = $xc if $xc;
+    return $self->{_XaceSeqChooser};
 }
 
 sub update_from_XaceSeqChooser {

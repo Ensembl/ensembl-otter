@@ -2029,6 +2029,7 @@ sub run_dotter {
         $top->transient($parent);
         $dw = EditWindow::Dotter->new($top);
         $dw->initialise;
+        $dw->XaceSeqChooser($self);
         $self->{'_dotter_window'} = $dw;
     }
     $dw->update_from_XaceSeqChooser($self);
