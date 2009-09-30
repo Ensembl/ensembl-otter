@@ -473,6 +473,7 @@ sub sort_by_filter_method {
 	if ($method =~ /wanted/) {
 		# patch the real values back again!
     	map { $n2f{$_}->wanted(1) if $n2f{$_}->done } keys %n2f;
+    	map { $n2f{$_}->wanted(1) if $n2f{$_}->failed } keys %n2f;
 	}
 	
     $self->show_filters(\@sorted_names);
