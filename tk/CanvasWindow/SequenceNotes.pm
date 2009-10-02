@@ -103,6 +103,15 @@ sub refresh_column {
     }
 }
 
+sub refresh_lock_columns {
+    my ($self) = @_;
+    
+    my $top = $self->canvas->toplevel;
+    $top->Busy;
+    $self->refresh_column(7);   # Padlock icon column
+    $self->refresh_column(8);   # Lock author name column
+    $top->Unbusy;
+}
 
 # this should be used by the refresh column method
 # some of the columns have had different queries written to speed up the refresh ,
@@ -373,10 +382,7 @@ sub initialise {
     $top->bind('<Control-H>', $hunter);
     
     my $refresh_locks = sub{
-	    $top->Busy;
-	    $self->refresh_column(7) ;
-	    $self->refresh_column(8) ;
-        $top->Unbusy;
+	    $self->refresh_lock_columns;
     };
     $self->make_button($button_frame_cmds, 'Refresh Locks', $refresh_locks, 0);
     $top->bind('<Control-r>', $refresh_locks);
@@ -726,8 +732,7 @@ sub _open_SequenceSet {
    	$lc->DataSetChooser($self->SequenceSetChooser->DataSetChooser);
 	$lc->initialize;
 	
-    $self->refresh_column(7) ; # 7 is the locks column
-    $self->refresh_column(8) ; # 8 is the locks authors column
+    $self->refresh_lock_columns;
 }
 
 #sub make_EviCollection {
@@ -1520,9 +1525,12 @@ sub _column_who_locked {
     my ($cs) = @_;
     
     if (my $lock = $cs->get_lock_as_CloneLock) {
-        return { -text => $lock->author->name() };
+        # Remove domain from full email addresses
+        my ($name) = $lock->author->name =~ /^([^@]+)/;
+        return { -text => $name };
     } else {
-        return {};
+        # Put in empty spaces to keep column padded
+        return { -text => ' ' x 12 };
     }
 }
 
