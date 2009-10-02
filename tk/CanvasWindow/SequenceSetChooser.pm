@@ -295,15 +295,16 @@ sub open_sequence_set {
     
     my ($obj) = $self->list_selected;
     my $canvas = $self->canvas;
+    my $top = $canvas->toplevel;
     foreach my $tag ($canvas->gettags($obj)) {
         if ($tag =~ /^SequenceSet=([^:]+):([^:]*)/) {
             my ($ss_name, $subset_name) = ($1, $2);
 
             my $ss = $self->DataSet->get_SequenceSet_by_name($ss_name);
 
-            $canvas->toplevel->Busy;
+            $top->Busy;
             $self->open_sequence_set_by_ssname_subset($ss_name, $subset_name);
-            $canvas->toplevel->Unbusy;
+            $top->Unbusy;
             return 1;
         }
     }

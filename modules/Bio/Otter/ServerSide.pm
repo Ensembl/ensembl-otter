@@ -4,7 +4,6 @@ use strict;
 use warnings;
 use Exporter;
 
-use OtterDefs;
 use Bio::Otter::ServerQuery;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::Otter::DBSQL::DBAdaptor;

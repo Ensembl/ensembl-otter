@@ -73,12 +73,15 @@ sub initialize {
     
     my $top = $self->top;
 
+    my $filter_count = scalar %{$self->n2f};
+    my $max_rows = 28;
+    my $height = $filter_count > $max_rows ? $max_rows : $filter_count;
 	my $hlist = $top->Scrolled("HListplus",
 		-header => 1,
 		-columns => 3,
 		-scrollbars => 'ose',
 		-width => 100,
-		-height => 51,
+		-height => $height,
         -selectmode => 'single',
         -selectbackground => 'light grey',
         -borderwidth => 1,
@@ -210,16 +213,18 @@ sub initialize {
        -blocks      => 1,
        -variable    => \$self->{_filters_done}
     )->pack( 
-        -fill   => 'x', 
-        -expand => 1, 
-        -padx   =>5, 
-        -pady   =>5, 
+        -fill   => 'x',
+        -expand => 1,
+        -padx   => 5,
+        -pady   => 5,
         -side => 'top'
     );
     
     $self->pipeline_progress_bar($prog_bar);
-    
     $self->reset_progress;
+    
+    # Prevents window being made so small that controls disappear
+    $self->set_minsize;
     
     $top->bind('<Destroy>', sub{
         $self = undef;

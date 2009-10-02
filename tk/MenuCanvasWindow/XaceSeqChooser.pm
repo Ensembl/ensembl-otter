@@ -425,13 +425,13 @@ sub populate_menus {
 
     # Resync with database
     my $resync_command = sub { $self->resync_with_db };
-    $file->add('command',
-        -label          => 'Resync',
-        -hidemargin     => 1,
-        -command        => $resync_command,
-        -accelerator    => 'Ctrl+R',
-        -underline      => 0,
-        );
+    # $file->add('command',
+    #     -label          => 'Resync',
+    #     -hidemargin     => 1,
+    #     -command        => $resync_command,
+    #     -accelerator    => 'Ctrl+R',
+    #     -underline      => 0,
+    #     );
     $top->bind('<Control-r>', $resync_command);
     $top->bind('<Control-R>', $resync_command);
 
@@ -2091,11 +2091,9 @@ sub DESTROY {
     $self->zMapKillZmap;
 
     $self->drop_AceDatabase;
-    if (my $sn = $self->SequenceNotes){
-        # then refresh locks
-        # warn "lock refresh should now happen\n";
-        $sn->refresh_column(7) ; ## locks column
-        # warn "lock refresh should have happened\n";
+    
+    if (my $sn = $self->SequenceNotes) {
+        $sn->refresh_lock_columns;
     }
 }
 
