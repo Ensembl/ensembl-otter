@@ -608,37 +608,15 @@ sub make_pipeline_DataFactory {
     my $client      = $self->Client();
     my $smart_slice = $self->smart_slice();
 
-    my $ds_orig_name  = $smart_slice->dsname();
-
-    # This is a means to create a 'species alias' to reuse the otter_config for
-    # one species without duplication. For example, if you need a test_human
-    # database that would fetch all human analyses from the pipeline it is the
-    # shortest way to go. However, by using test_human filters or module
-    # settings you'll override the behaviour of the master database.
-    my $ds_alias_name = $client->get_DataSet_by_name($ds_orig_name)->ALIAS();
-    my @ds_list = $ds_alias_name ? ($ds_alias_name, $ds_orig_name) : ($ds_orig_name);
-
-    warn "\nCreating a pipeline DataFactory for ".join('->', map {"'$_'"} @ds_list)."\n";
-
-    my $factory = Bio::EnsEMBL::Ace::DataFactory->new($smart_slice);
-
-    ##----------code to add all of the ace filters to data factory-----------------------------------
-
-    my $debug = $client->debug();
-
-    # loading the filter configs in the priority order (latter overrides the former)
-    my %use_filters    = ();
-    my %filter_options = ();
-    foreach my $ds_name (@ds_list) {
-        %use_filters    = (%use_filters  ,  %{ $client->option_from_array([ $ds_name, 'use_filters' ]) } );
-        %filter_options = (%filter_options, %{ $client->option_from_array([ $ds_name, 'filter' ]) } );
-    }
+    my $dataset = $smart_slice->DataSet;
+    my $use_filters     = $dataset->get_config('use_filters');
+    my $filter_options  = $dataset->get_config('filter');
 
     my $collect = $self->MethodCollection;
+    my $factory = Bio::EnsEMBL::Ace::DataFactory->new($smart_slice);
+    while ( my($filter_name, $filter_wanted) = each %$use_filters   ) {
 
-    while ( my($filter_name, $filter_wanted) = each %use_filters   ) {
-
-        my $param = $filter_options{$filter_name}
+        my $param = $filter_options->{$filter_name}
             or confess "No parameters for '$filter_name'";
 
         my $class = $param->{'module'}

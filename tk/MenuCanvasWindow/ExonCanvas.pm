@@ -1534,38 +1534,16 @@ sub update_Locus {
 my $ann_tag = 'Annotation';
 my $voc_tag = 'Controlled_Vocabulary';
 
-my $transcript_vocab = {
-    map {$_ => 1} (
-        q{alternative 5' UTR},
-        q{readthrough},
-        q{NMD exception},
-        q{not organism-supported},
-        q{not best-in-genome evidence},
-        q{non-submitted evidence},
-        q{for experimental confirmation},    
-    )
-};
-
-my $locus_vocab = {
-    map {$_ => 1} (
-        q{annotation completed},
-        q{fragmented locus},
-        q{overlapping locus},
-        q{orphan},
-        q{for experimental confirmation},
-    )
-};
-
 sub update_transcript_remark_widget {
     my( $self, $sub ) = @_;
 
-    $self->update_remark_Entry($self->transcript_remark_Entry, $transcript_vocab, $sub);
+    $self->update_remark_Entry($self->transcript_remark_Entry, $self->XaceSeqChooser->vocab_transcript, $sub);
 }
 
 sub update_locus_remark_widget {
     my( $self, $locus ) = @_;
 
-    $self->update_remark_Entry($self->locus_remark_Entry, $locus_vocab, $locus);
+    $self->update_remark_Entry($self->locus_remark_Entry, $self->XaceSeqChooser->vocab_locus, $locus);
 }
 
 sub update_remark_Entry {
@@ -1607,13 +1585,13 @@ sub add_subseq_rename_widget {
 sub populate_transcript_attribute_menu {
     my ($self, $menu) = @_;
     
-    $self->populate_attribute_menu($menu, $self->transcript_remark_Entry, $transcript_vocab);
+    $self->populate_attribute_menu($menu, $self->transcript_remark_Entry, $self->XaceSeqChooser->vocab_transcript);
 }
 
 sub populate_locus_attribute_menu {
     my ($self, $menu) = @_;
     
-    $self->populate_attribute_menu($menu, $self->locus_remark_Entry, $locus_vocab);
+    $self->populate_attribute_menu($menu, $self->locus_remark_Entry, $self->XaceSeqChooser->vocab_locus);
 }
 
 sub populate_attribute_menu {
