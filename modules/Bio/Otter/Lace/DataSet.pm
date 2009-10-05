@@ -32,6 +32,42 @@ sub name {
     return $self->{'_name'};
 }
 
+sub get_config {
+    my ($self, $section) = @_;
+    
+    my $conf = $self->{'_get_config_cache'}{$section}
+        ||= $self->_config_from_client($section);
+    return $conf;
+}
+
+sub _config_from_client {
+    my ($self, $section) = @_;
+    
+    my $client = $self->Client or confess "No Client attached";
+    
+    my $ds = $self;
+    my @name_list;
+    while ($ds) {
+        unshift(@name_list, $ds->name);
+        # Allow multiple levels of ALIAS inheritance
+        if (my $alias = $ds->ALIAS) {
+            $ds = $client->get_DataSet_by_name($alias);
+        } else {
+            $ds = undef;
+        }
+    }
+    
+    my $config = {};
+    foreach my $name (@name_list) {
+        my $nc = $client->option_from_array([$name, $section]);
+        while (my ($tag, $val) = each %$nc) {
+            $config->{$tag} = $val;
+        }
+    }
+    
+    return $config;
+}
+
 sub meta_hash {
     my ($self) = @_;
 
@@ -169,7 +205,6 @@ sub fetch_all_CloneSequences_for_SequenceSet {
 
     return $cs_list;
 }
-
 
 #
 # DB connection handling

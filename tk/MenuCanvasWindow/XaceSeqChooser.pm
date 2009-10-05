@@ -133,6 +133,19 @@ sub balloon {
     return $self->{'_balloon'};
 }
 
+sub vocab_locus {
+    my ($self) = @_;
+    
+    return $self->AceDatabase->smart_slice->DataSet->get_config('controlled_vocabulary_locus');
+}
+
+sub vocab_transcript {
+    my ($self) = @_;
+    
+    return $self->AceDatabase->smart_slice->DataSet->get_config('controlled_vocabulary_transcript');
+}
+
+
 sub set_known_GeneMethods {
     my ($self) = @_ ;
 

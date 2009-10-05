@@ -197,6 +197,7 @@ sub lock {
 
     return $self->write_access ? 'true' : 'false';
 }
+
 sub option_from_array{
     my ($self, $array) = @_;
     return unless $array;

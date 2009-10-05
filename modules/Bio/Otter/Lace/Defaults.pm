@@ -20,7 +20,6 @@ my $DEBUG_CONFIG    = 0;
 my $CONFIG_INIFILES = [];
 my %OPTIONS_TO_TIE  = (
                        -default     => $DEFAULT_TAG, 
-                       -nocase      => 1,
                        -reloadwarn  => 1,
                        );
 
