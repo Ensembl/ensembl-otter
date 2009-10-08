@@ -228,8 +228,13 @@ sub reincarnate_gene {
 
         my $author = $self->db->get_AuthorAdaptor->fetch_gene_author($gene->dbID);
         $gene->gene_author($author);
-
-        my $force_loading_and_reincarnation_of_transcripts = $gene->get_all_Transcripts();
+		# force loading of gene attributes
+		$gene->get_all_Attributes();
+        # force loading and reincarnation of transcripts
+        foreach my $t (@{$gene->get_all_Transcripts()}) {
+        	# force loading of transcript attributes
+        	$t->get_all_Attributes();
+		}
     }
 
     return $gene;
