@@ -490,7 +490,7 @@ sub get_current_Gene_by_slice {
 sub fetch_latest_by_stable_id {
     my ($self, $stable_id) = @_;
 
-    my $constraint = "gsi.stable_id = '$stable_id' ORDER BY gsi.modified_date DESC, gsi.gene_id DESC LIMIT 1";
+    my $constraint = "gsi.stable_id = '$stable_id' ORDER BY g.is_current DESC, gsi.modified_date DESC, gsi.gene_id DESC LIMIT 1";
     my ($gene) = @{ $self->generic_fetch($constraint) };
     if($gene) {
         $self->reincarnate_gene($gene);

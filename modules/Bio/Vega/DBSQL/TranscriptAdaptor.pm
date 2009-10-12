@@ -63,7 +63,7 @@ sub store_Evidence {
 
 sub remove_evidence {
     my ($self, $transcript) = @_;
-    
+
     my $sth = $self->prepare(q{
         DELETE FROM evidence WHERE transcript_id = ?
         });
@@ -79,10 +79,10 @@ sub reincarnate_transcript {
         # warn "Transcript is already $this_class, probably due to caching\n";
         return $transcript;
     }
-    
+
     bless $transcript, $this_class;
     $self->fetch_transcript_author($transcript);
-    
+
     if (my $transl = $transcript->translation) {
         bless $transl, 'Bio::Vega::Translation';
     }
@@ -194,7 +194,7 @@ sub get_current_Transcript_by_slice {
 sub fetch_latest_by_stable_id {
   my ($self, $stable_id) = @_;
 
-  my $constraint = "tsi.stable_id = '$stable_id' ORDER BY tsi.modified_date DESC, tsi.transcript_id DESC LIMIT 1";
+  my $constraint = "tsi.stable_id = '$stable_id' ORDER BY t.is_current DESC, tsi.modified_date DESC, tsi.transcript_id DESC LIMIT 1";
   my ($transcript) = @{ $self->generic_fetch($constraint) };
   if($transcript) {
     $self->reincarnate_transcript($transcript);
@@ -223,15 +223,15 @@ sub store {
 
 sub remove {
     my ($self, $transcript) = @_;
-    
+
     # Evidence
     $self->remove_evidence($transcript);
-    
+
     # Author
     if (my $author = $transcript->transcript_author) {
         $self->db->get_AuthorAdaptor->remove_transcript_author($transcript->dbID, $author->dbID);
     }
-    
+
     $self->SUPER::remove($transcript);
 }
 
