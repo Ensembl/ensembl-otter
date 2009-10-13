@@ -601,66 +601,64 @@ foreach my $name (@{$chr_names_wanted}) {
     if ($support->param('dbname') =~ /danio/) {
       my $annotated_clone = 0;
       my $fsv_gene        = 0;
-      foreach my $proj_clone (@{$lgene->feature_Slice->project('clone')}) {
-	my $clone = $proj_clone->to_Slice();
-	  
-	### just for logging
-	my $clone_nameT = $clone->seq_region_name();
-	$support->log("      current clone: $clone_nameT; \n");
-	  
-	my $attr = $clone->get_all_Attributes('annotated');
-	  
-	### just for logging
-	foreach my $at (@$attr) {
-	  $support->log("             has attribute annotated: " . $at->value . "\n");
+
+      my $gene_hidrem = $lgene->get_all_Attributes('hidden_remark');
+      if ( grep { $_->value eq 'fsv' } @$gene_hidrem ) {
+	$fsv_gene = 1;
+      }
+      if (! $fsv_gene ) {
+	my $gene_rem = $lgene->get_all_Attributes('remark');
+	if (grep { $_->value eq 'fsv' } @$gene_rem ) {
+	  $fsv_gene = 1;
 	}
-	  
-	if (exists $attr->[0]) {
-	  if ($attr->[0]->value eq 'T') {
+      }
+
+      if (! $fsv_gene) {
+	foreach my $proj_clone (@{$lgene->feature_Slice->project('clone')}) {
+	  my $clone = $proj_clone->to_Slice();
+
+	  ### just for logging
+	  my $clone_nameT = $clone->seq_region_name();
+	  $support->log("      current clone: $clone_nameT; \n");
+
+	  my $attr = $clone->get_all_Attributes('annotated');
+
+	  ### just for logging
+	  foreach my $at (@$attr) {
+	    $support->log("             has attribute annotated: " . $at->value . "\n");
+	  }
+	  if (grep { $_->value eq 'T'} @$attr) {
 	    $annotated_clone = 1;
 	    last;
-	  }
-	## amended this to get the newly annotated genes only annotated on contigs
-	} else {
-	  foreach my $proj_contig (@{$lgene->feature_Slice->project('contig')}) {
-	    my $contig      = $proj_contig->to_Slice();
-	    my $contig_id   = $contig->get_seq_region_id();
-	    my $contig_info = $lcia ->fetch_by_seq_region_id($contig_id);
-	  
-	    ### just for logging
-	    my $contig_nameT = $contig->seq_region_name();
-	    $support->log("      current contig: $contig_nameT; \n");
-	      
-	    if (defined $contig_info) {
-	      my $attr_c = $contig_info->get_all_Attributes('annotated');
-	  
+	    ## amended this to get the newly annotated genes only annotated on contigs
+	  } else {
+	    foreach my $proj_contig (@{$lgene->feature_Slice->project('contig')}) {
+	      my $contig      = $proj_contig->to_Slice();
+	      my $contig_id   = $contig->get_seq_region_id();
+	      my $contig_info = $lcia ->fetch_by_seq_region_id($contig_id);
+
 	      ### just for logging
-	      foreach my $at (@$attr_c) {
-		$support->log("             has attribute annotated: " . $at->value . "\n");
-	      }
+	      my $contig_nameT = $contig->seq_region_name();
+	      $support->log("      current contig: $contig_nameT; \n");
+
+	      if (defined $contig_info) {
+		my $attr_c = $contig_info->get_all_Attributes('annotated');
+
+		### just for logging
+		foreach my $at (@$attr_c) {
+		  $support->log("             has attribute annotated: " . $at->value . "\n");
+		}
 		
-	      if (exists $attr_c->[0]) {
-	        if ($attr_c->[0]->value eq 'T') {
-	          $annotated_clone = 1;
-	          last;
+		if ( grep {$_->value eq 'T'} @$attr_c) {
+		  $annotated_clone = 1;
+		  last;
 		}
 	      }
 	    }
 	  }
 	}
       }
-      my $gene_rem = $lgene->get_all_Attributes('remark');
-      if (exists $gene_rem->[0]) {
-	if ($gene_rem->[0]->value eq 'fsv') {
-	  $fsv_gene = 1;
-	}
-      }
-      my $gene_hidrem = $lgene->get_all_Attributes('hidden_remark');  
-      if (exists $gene_hidrem->[0]) {
-	if ($gene_hidrem->[0]->value eq 'fsv') {
-	  $fsv_gene = 1;
-	}
-      }
+
       if ($fsv_gene || $annotated_clone) {
 	$support->log("Taking gene $gname ($lgsi) with annotation flag\n");
 	$fsv++;
