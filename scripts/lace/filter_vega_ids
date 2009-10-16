@@ -1,0 +1,56 @@
+#!/software/bin/perl -w
+
+# this script reads in a file corrected by annotator in this format
+# (could be multiple OTTMUSG ids)
+# MGI_2_MULTILE_IDs Fam19a3: OTTMUSG00000029328
+
+# which is a revision of output created by MGI_gene_name_to_vega script
+# eg,
+# MGI_2_MULTILE_IDs Fam19a3: OTTMUSG00000029326 OTTMUSG00000029328
+
+# The difference tells that OTTMUSG00000029326 should be ignored for update
+
+# The result of this script is a list ref. of vega ids
+
+use strict;
+
+my $original = 'MGI_2_multiple_vega_ids.ori';
+my $revised  = 'MGI_2_multiple_vega_ids.rev';
+my $name_id;
+
+open(my $fh, "$revised") or die $!;
+while(<$fh>) {
+  chomp;
+  my(@cols) = split("\t", $_);
+  #warn $cols[1];
+  $name_id->{$cols[1]} = @cols[2..$#cols];
+}
+
+
+my @ids_to_skip;
+open($fh, "$original") or die $!;
+while(<$fh>) {
+  chomp;
+  my(@cols) = split("\t", $_);
+  my $symbol = $cols[1];
+  my @ids = $name_id->{$symbol};
+
+  if ( $ids[0] ){
+    #warn "$symbol links to @ids\n";
+    foreach my $id ( @cols[2..$#cols] ){
+      if ( ! grep /$id/, @ids ){
+        #warn "$symbol - skip $id\n";
+        push(@ids_to_skip, $id);
+      }
+    }
+  }
+  else {
+    # skip all ids not in revised version, too
+    #warn "skip also: @cols[2..$#cols]";
+    push(@ids_to_skip, @cols[2..$#cols]);
+  }
+}
+
+my $outfile = $ARGV[0];
+open($fh, ">$outfile") or die $!;
+print $fh "@ids_to_skip";
