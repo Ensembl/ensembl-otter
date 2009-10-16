@@ -6,11 +6,10 @@ use warnings;
 use strict;
 use Bio::Otter::Lace::Defaults;
 use Bio::Vega::DBSQL::DBAdaptor;
-use GeneHist::DataUtils qw (process_query);
 use Hum::Chromoview::Utils qw(unixtime2YYYYMMDD);
 
 my %updated_gsid;
-my $scriptdir = "/nfs/team71/analysis/ck1/SCRIPT_CVS/ensembl-otter/scripts/lace";
+my ($scriptdir) = $0 =~ m{^(.+)/[^/]+$};
 my $duplicate_file = "/var/tmp/ids_to_skip.".$$;
 my @GENE_NAMEs;
 
@@ -67,8 +66,8 @@ my @GENE_NAMEs;
 sub parse_mgi_input {
 
     my ($loutre_dba, $geneAd, $test) = @_;
-    #my @field_names = qw{ mgi_id locus_symbol locus_description score chromosome vega_id };
-    my @field_names = qw{ vega_id locus_symbol mgi_id old_locus_symbol locus_description };
+    my @field_names = qw{ mgi_id locus_symbol locus_description score chromosome vega_id };
+    # my @field_names = qw{ vega_id locus_symbol mgi_id old_locus_symbol locus_description };
 
     my %nameSet;
     if ( @GENE_NAMEs ){
@@ -184,11 +183,11 @@ sub check_MGI_symbol_is_unique_in_loutre {
       , gene_attrib ga
       , attrib_type at
       , seq_region sr
-    WHERE g.is_current = 1
-      AND sr.seq_region_id = g.seq_region_id
-      AND gsi.gene_id = g.gene_id
+    WHERE sr.seq_region_id = g.seq_region_id
+      AND g.gene_id = gsi.gene_id
       AND g.gene_id = ga.gene_id
       AND ga.attrib_type_id = at.attrib_type_id
+      AND g.is_current = 1
       AND at.code = 'name'
       AND ga.value = ?
       });

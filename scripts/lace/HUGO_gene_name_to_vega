@@ -438,7 +438,7 @@ sub store_update {
 }
 
 sub change_gene_trans_status {
-  my ( $loutre_dba, $geneAd, $curr_gene, $hgnc_name ) = @_;
+  my ( $loutre_dba, $geneAd, $curr_gene ) = @_;
 
   my $g_biotype = $curr_gene->biotype;
   my $g_status  = $curr_gene->status;
