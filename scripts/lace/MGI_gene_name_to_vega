@@ -281,7 +281,7 @@ sub update_loutre {
 
   my @ids_to_skip;
   if ( $has_duplicates ){
-    my @vega_ids_to_skip = `$scriptdir/filter_vega_ids $duplicate_file`;
+    system("$scriptdir/filter_vega_ids", $duplicate_file);
     open(my $fh, "$duplicate_file") or die $!;
     my $ids = <$fh>;
     @ids_to_skip = split('\s', $ids);
@@ -499,65 +499,22 @@ sub store_update {
 
 }
 
+
 sub change_gene_trans_status {
-
-  #----------------------------------------------------------------
-  # update status rules for genes/transcripts with consortium name:
-  # protein_coding  => KNOWN
-  # all_pseudogenes => UNKNOWN (IGNORE genes MHC/LRC: no change)
-  # all_transcripts => NOVEL
-  # IGNORE artifact, polymorphic
-  #----------------------------------------------------------------
-
   my ( $loutre_dba, $geneAd, $curr_gene ) = @_;
 
   my $g_biotype = $curr_gene->biotype;
   my $g_status  = $curr_gene->status;
 
-  if ( $g_biotype eq 'protein_coding' and $g_status ne 'KNOWN' ){
-    print STDERR "TYPE CHANGE from $g_status to KNOWN\n";
+  # Change status to KNOWN if it is not a pseudogene (or is a polymorphic_pseudogene)
+  if (($g_biotype !~ /pseudo/i or $g_biotype =~ /polymorphic/i) and $g_status ne 'KNOWN') {
+    print STDERR "GENE TYPE CHANGE from $g_status to KNOWN\n";
     $curr_gene->status('KNOWN');
-    $curr_gene = check_single_transcript_status($curr_gene, 'KNOWN');
-  }
-  elsif ( $g_biotype eq 'polymorphic_pseudogene' and $g_status ne 'KNOWN' ){
-    print STDERR "TYPE CHANGE from $g_status to KNOWN\n";
-    $curr_gene->status('KNOWN');
-    $curr_gene = check_single_transcript_status($curr_gene, 'KNOWN');
-  }
-  elsif ( $g_biotype =~ /pseudogene/ and $g_status ne 'UNKNOWN' ){
-    print STDERR "TYPE CHANGE from $g_status to UNKNOWN\n";
-    $curr_gene->status('UNKNOWN');
-    $curr_gene = check_single_transcript_status($curr_gene, 'UNKNOWN');
-  }
-  elsif ( $g_biotype =~ /transcript/ and $g_status ne 'NOVEL') {
-    print STDERR "TYPE CHANGE from $g_status to NOVEL\n";
-    $curr_gene->status('NOVEL');
-    $curr_gene = check_single_transcript_status($curr_gene, 'NOVEL');
-  }
-  else {
+  } else {
     print STDERR "GENE STATUS OK: $g_status\n";
-    $curr_gene = check_single_transcript_status($curr_gene, $g_status);
   }
 
   return $curr_gene;
-}
-
-sub check_single_transcript_status {
-
-  my ( $curr_g, $status ) = @_;
-  my @trans = @{$curr_g->get_all_Transcripts};
-
-  # if a gene has only 1 transcript, make sure its status is same as gene
-  if ( @trans == 1 ){
-    my $t = $trans[0];
-    print STDERR "TRAN STATUS change from ", $t->status, " to $status\n";
-    $t->status($status);
-  }
-  else {
-    print STDERR "TRAN STATUS: ", $curr_g->stable_id ,
-      " (becomes $status) has ", scalar @trans, " variants - annotator to check\n";
-  }
-  return $curr_g;
 }
 
 sub store_gene {
