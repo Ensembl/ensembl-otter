@@ -555,8 +555,9 @@ elsif ($count == 2) {
 }
 ####
 
+my $release_no = $support->param('vega_release');
 
-#sanity check - if the Otter coord_system is actually used for the (longest) chromosome then rename it to Vega
+#sanity check - if the Otter coord_system is actually used for the (longest) chromosome then rename it to VEGA_version
 #also patch contig.version in coord_system
 my $chr_coord_id   = $vdbh->selectrow_array(qq(
                          SELECT coord_system_id 
@@ -568,15 +569,15 @@ my $otter_coord_id = $vdbh->selectrow_array(qq(
 			 FROM   coord_system
 			 WHERE  version = 'Otter'));
 if ($chr_coord_id == $otter_coord_id) {
-  push @sql_fixes, "UPDATE coord_system set version = \'VEGA\' WHERE version = \'Otter\';\n";
-  push @sql_fixes, "UPDATE coord_system set attrib = \'default_version\' WHERE version = \'VEGA\';\n";
-  push @sql_fixes, "UPDATE coord_system set rank = 1 WHERE version = \'VEGA\' and name = \'chromosome\';\n";
+  push @sql_fixes, "UPDATE coord_system set version = \'VEGA$release_no\' WHERE version = \'Otter\';\n";
+  push @sql_fixes, "UPDATE coord_system set attrib = \'default_version\' WHERE version = \'VEGA$release_no\';\n";
+  push @sql_fixes, "UPDATE coord_system set rank = 1 WHERE version = \'VEGA$release_no\' and name = \'chromosome\';\n";
   push @sql_fixes, "UPDATE coord_system set version = NULL WHERE version = \'none\' and name = \'contig\';\n";
-  push @sql_fixes, "INSERT into meta (meta_key,meta_value) VALUES (\'assembly.default\',\'VEGA\');\n";
-  push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA|contig\' WHERE meta_value = \'chromosome:Otter|contig\';\n";
-  push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA|contig|clone\' WHERE meta_value = \'chromosome:Otter|contig|clone\';\n";
-  push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA#contig\' WHERE meta_value = \'chromosome:Otter#contig\';\n";
-  push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA#contig#clone\' WHERE meta_value = \'chromosome:Otter#contig#clone\';\n";	
+  push @sql_fixes, "INSERT into meta (meta_key,meta_value) VALUES (\'assembly.default\',\'VEGA$release_no\');\n";
+  push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA$release_no|contig\' WHERE meta_value = \'chromosome:Otter|contig\';\n";
+  push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA$release_no|contig|clone\' WHERE meta_value = \'chromosome:Otter|contig|clone\';\n";
+  push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA$release_no#contig\' WHERE meta_value = \'chromosome:Otter#contig\';\n";
+  push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA$release_no#contig#clone\' WHERE meta_value = \'chromosome:Otter#contig#clone\';\n";	
 }
 else {
   $support->log_error("Otter assembly not used for longest chromosome in seq_region table - check what\'s going on\n");
@@ -585,7 +586,6 @@ else {
 #add misc info to meta table
 my $date = strftime "%Y-%m", localtime;
 my $gene_build = $date.'-Vega';
-my $release_no = $support->param{'vega_release');
 push @sql_fixes, "INSERT ignore into meta (meta_key,meta_value) VALUES (\'genebuild.version\',\'$gene_build\');\n";
 push @sql_fixes, "INSERT into meta (meta_key,meta_value) VALUES ('genebuild.level','toplevel'),('transcriptbuild.level','toplevel'),('exonbuild.level','toplevel');\n";
 push @sql_fixes, "INSERT ignore into meta (meta_key,meta_value) VALUES (\'initial_release.version\',\'$release_no\');\n"; #needed for blast config
