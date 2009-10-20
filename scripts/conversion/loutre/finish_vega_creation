@@ -40,13 +40,14 @@ This script does a number of jobs:
 - adds attributes for gene / transcript author and author_email according to source (hard coded)
 - deletes transcript synonym attrib types
 - sets seq_region.name for chromosomes to that defined by the seq_region_attrib 'vega_name'
-- tidies up coord_system and related tables (meta), removes NCBI types [code can probably be removed -
-  need to test in mouse],  sets the default assembly version to 'Vega' from 'Otter' and patches meta
+- tidies up coord_system setting the default assembly version to 'VEGA$ver' from 'Otter'
 - tidies up meta table
+- adds assembly mappings for ensembl chromsosomes using either a loutre or an ensembl database
 - patches coord_system.version for contigs to NULL
 - synchronises attribute table with ensembl/misc-scripts/attribute_types/attrib_types.txt
 - synchronises external_db table with ensembl/misc-scripts/external_db/external_dbs.txt
-- populates exon_stable_id_pool with max value (might be needed for removing duplicate stable IDS
+- populates exon_stable_id_pool with max value (might be needed for removing duplicate stable IDS)
+- patches some biotypes
 
 The first time it is run it creates backup copies of the original tables; then when run
 subsequently with the -prune 1 option it restores these tables to their original state. Can
@@ -101,16 +102,35 @@ my $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
 # parse options
 $support->parse_common_options(@_);
 $support->parse_extra_options(
+  $support->get_loutre_params(1),
+  'ensemblhost=s',
+  'ensemblport=s',
+  'ensembluser=s',
+  'ensemblpass=s',
+  'ensembldbname=s',
+  'ensemblassembly=s',
   'prune=s',
 );
 $support->allowed_params(
   'prune',
+  'ensemblhost',
+  'ensemblport',
+  'ensembluser',
+  'ensemblpass',
+  'ensembldbname',
+  'ensemblassembly',
   $support->get_common_params,
+  $support->get_loutre_params,
 );
 
 $support->check_required_params(
   'dbname',
+  'ensembldbname',
+  'loutredbname',
+  'vega_release',
+#  $support->get_loutre_params,
 );
+
 if ($support->param('help') or $support->error) {
   warn $support->error if $support->error;
   pod2usage(1);
@@ -133,6 +153,19 @@ my $vsa  = $vdba->get_SliceAdaptor();
 my $vaa  = $vdba->get_AnalysisAdaptor();
 my $vata = $vdba->get_AttributeAdaptor();
 my $vdbh = $vdba->dbc->db_handle;
+my $v_dbname = $support->param('dbname');
+
+#loutre adaptors
+my $ldba = $support->get_database('loutre','loutre');
+my $lsa  = $ldba->get_SliceAdaptor();
+my $ldbh = $ldba->dbc->db_handle;
+my $l_dbname = $support->param('loutredbname');
+
+#ensembl adaptors
+my $edba = $support->get_database('ensembl','ensembl');
+my $esa  = $edba->get_SliceAdaptor();
+my $edbh = $edba->dbc->db_handle;
+my $e_dbname = $support->param('ensembldbname');
 
 #get tables from database
 # - if there are no backups of the originals make them
@@ -140,6 +173,7 @@ my $vdbh = $vdba->dbc->db_handle;
 my @tables = qw(coord_system
 		meta
 		seq_region
+		assembly
 		analysis
 		gene
 		transcript
@@ -252,8 +286,10 @@ if (! $support->param('dry_run')) {
 #cleanup any other analysis table entries that might be around
 my @orphan_lns_to_go = qw(SubmitTranscript SubmitTranscriptChunk SubmitProteome SubmitContig SubmitChunk SubmitTranslation full_dbsts gc);
 my $lns_to_go = join("','",@orphan_lns_to_go);
-my $c = $vdbh->do(qq(DELETE FROM analysis WHERE logic_name in ('$lns_to_go')));
-$support->log("Delete $c other orphan analysis table entries\n");
+if (! $support->param('dry_run')) {
+  my $c = $vdbh->do(qq(DELETE FROM analysis WHERE logic_name in ('$lns_to_go')));
+  $support->log("Delete $c other orphan analysis table entries\n");
+}
 
 ##########################################################################
 # - patch analysis_ids of genes and transcripts according to gene.source #
@@ -324,9 +360,140 @@ foreach my $source (keys %used_logic_names) {
   }
 }
 
+#################################
+# alternative assembly mappings #
+#################################
+
+# - if the vega chrom has an equiv_ass attribute in loutre, then add a 1:1 mapping of the chromosome from an ensembl database
+# I'd expect the lengths to be the same here but they aren't always: add the correct length and an assembly mapping over
+# just the length of the Vega chromosome
+# - alternatively take assembly_mappings from loutre
+
+
+#check the coord_system table to make sure there aren't any (should have been removed by cleanup_pipeline
+(my $count) = $vdbh->selectrow_array(qq(
+                SELECT count(*)
+		FROM   coord_system
+		WHERE  name = 'chromosome'));
+if ($count > 1) {
+  $support->log_warning("There is an unexpected number ($count) of chromosome coordinate systems - you need to investigate\n");
+  exit if (! $support->param('dry_run'));
+}
+
+if (my $alt_assembly = $support->param('ensemblassembly') ) {
+  my $offset = 100000; #offset e! seq_region ids to ensure no overlap with vega seq_region_ids
+  $support->log("Adding mappings for alternative assemblies\n");
+  my ($other_coord_system_id,$other_rank) = $ldbh->selectrow_array(qq(
+                                              SELECT coord_system_id, rank
+				                FROM coord_system
+                      			       WHERE name = 'chromosome'
+                                                 AND version = \'$alt_assembly\'));
+  my $sql = qq(INSERT into coord_system
+               VALUES ($other_coord_system_id, 1, 'chromosome', \'$alt_assembly\', $other_rank, ''));
+  unless ($support->param('dry_run')) {
+    $vdbh->do($sql);
+  }
+
+ CHROM:
+  foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
+    my $v_name  = $chrom->seq_region_name;
+    my $v_sr_id = $chrom->get_seq_region_id;
+    my $l_chrom = $lsa->fetch_by_region('chromosome',$v_name);
+    $support->log("Studying Vega chromosome $v_name\n",1);
+
+    my ($v_assembly_start)  = $vdbh->selectrow_array(qq(
+                SELECT min(asm_start)
+		FROM   assembly
+		WHERE  asm_seq_region_id = $v_sr_id));
+    my ($v_assembly_end)  = $vdbh->selectrow_array(qq(
+                SELECT max(asm_end)
+		FROM   assembly
+		WHERE  asm_seq_region_id = $v_sr_id));
+    my $v_length = $v_assembly_end - $v_assembly_start + 1;
+    my $e_attribs = $chrom->get_all_Attributes('ensembl_name');
+    unless (@$e_attribs) {
+      $support->log("No ensembl_name attribute found for chromosome $v_name, no mappings added\n",2);
+      next CHROM;
+    }
+    if ( my $e_name = $e_attribs->[0]->value) {
+      my $e_sr_id = $esa->fetch_by_region('chromosome',$e_name,'','','',$alt_assembly,)->get_seq_region_id;
+      if ( @{$l_chrom->get_all_Attributes('equiv_asm')} ) {
+	$support->log("Chromsome $v_name is the same for VEGA and $alt_assembly; adding seq_regions etc mapping from ensembl\n",2);
+	my ($e_assembly_start)  = $edbh->selectrow_array(qq(
+                SELECT min(asm_start)
+		FROM   assembly
+		WHERE  asm_seq_region_id = $e_sr_id));
+	my ($e_assembly_end)  = $edbh->selectrow_array(qq(
+                SELECT max(asm_end)
+		FROM   assembly
+		WHERE  asm_seq_region_id = $e_sr_id));
+	my $e_length = $e_assembly_end - $e_assembly_start + 1;
+	unless ( $v_length == $e_length) {
+	  $support->log("Assembly table entries for chromosome $v_name are different in Vega ($v_assembly_start->$v_assembly_end:$v_length) and Ensembl ($e_assembly_start->$e_assembly_end:$e_length). You might want to check what's done is correct\n",2);
+	}
+#	my ($assembly_start,$assembly_end,$length);
+#	if ($v_length > $e_length ) {
+#	  $support->log("Vega is longer than Ensembl, using Vega\n",2);
+#	  $length = $v_length;
+#	}
+#	elsif ($e_length > $v_length ) {
+#	  $support->log("Ensembl is longer than Vega, using Ensembl\n",2);
+#	  $length = $e_length;
+#	}
+	my $sql = qq(INSERT into $v_dbname.seq_region
+                     SELECT seq_region_id+$offset, name, $other_coord_system_id, length 
+                       FROM seq_region
+                      WHERE seq_region_id = $e_sr_id);
+	if (! $support->param('dry_run')) {
+	  $edbh->do($sql);
+	}
+	$sql = qq(INSERT into assembly
+                  VALUES ($v_sr_id,$e_sr_id+$offset,$v_assembly_start,$v_assembly_end,$v_assembly_start,$v_assembly_end,1));
+	if (! $support->param('dry_run')) {
+	  $vdbh->do($sql);
+	}
+      }
+      else {
+	$support->log("Taking assembly mappings for chromsome $v_name from loutre\n",2);
+	my $le_sr_id = $lsa->fetch_by_region('chromosome',$e_name,'','','',$alt_assembly,)->get_seq_region_id;
+	my $l_sr_id = $l_chrom->get_seq_region_id;
+	my $id_diff = $e_sr_id-$le_sr_id;
+	my $sql = qq(INSERT into $v_dbname.seq_region
+                     SELECT seq_region_id+$offset, name, $other_coord_system_id, length 
+                       FROM seq_region
+                      WHERE seq_region_id = $e_sr_id);
+	if (! $support->param('dry_run')) {
+	  $edbh->do($sql);
+	}
+	$sql = qq(SELECT asm_start, asm_end, cmp_start, cmp_end, ori
+                    FROM assembly
+                   WHERE asm_seq_region_id = $l_sr_id
+                     AND cmp_seq_region_id = $le_sr_id);
+	$sth = $ldbh->prepare($sql);
+	$sth->execute;
+	while (my ($asm_start,$asm_end,$cmp_start,$cmp_end,$ori) = $sth->fetchrow_array) {
+	  $sql = qq(INSERT into assembly
+                    VALUES ($v_sr_id,$e_sr_id+$offset,$asm_start,$asm_end,$cmp_start,$cmp_end,$ori));
+	  if (! $support->param('dry_run')) {
+	    $vdbh->do($sql);
+	  }
+	}
+      }
+    }
+    else {
+      $support->log("No ensembl_name attribute found for chromosome $v_name, no mappings added\n",2);
+    }
+  }
+}
+
+
+#####################################
+# Chromosome names, gene source etc #
+#####################################
+
 #SQL to update chromosome name
 $sth = $vdbh->prepare(qq(
-           UPDATE seq_region 
+           UPDATE seq_region
            SET    name = ?
            WHERE  seq_region_id = ?
 ));
@@ -399,7 +566,7 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
       #patch analysis_ids
       if ($new_ln ne $old_gln) {
 	if ($gsth->execute($gid,$new_ln)) {
-	  $support->log("\nGene $gsid ($gname) logic_name patched from $old_gln to $new_ln\n",2);
+	  $support->log_verbose("\nGene $gsid ($gname) logic_name patched from $old_gln to $new_ln\n",2);
 	}
       }
       else {
@@ -513,48 +680,6 @@ if ( ! $support->param('dry_run')) {
 ##############
 		
 my @sql_fixes;
-
-#check the coord_system table
-my $count = $vdbh->selectrow_array(qq(
-                SELECT count(*)
-		FROM   coord_system
-		WHERE  name = 'chromosome'));
-
-if ($count > 2) {
-  $support->log_warning("There is an unexpected number ($count) of chromosome coordinate systems - you need to investigate\n");
-  exit;
-}
-
-####
-#remove this block?
-####
-
-# remove NCBI* coordinates as long as they're not in the seq_region table (which would represent a mistake)
-elsif ($count == 2) {
-  my ($other_coord_version,$other_coord_id) = $vdbh->selectrow_array(qq(
-                                                  SELECT version, coord_system_id
-				                    FROM   coord_system
-                      				   WHERE  name = 'chromosome'
-                                                     AND  version NOT IN ('Otter')));
-  if ($other_coord_version =~ /NCBI|Zv|OtterArchive/) {
-    my $other_used =  $vdbh->selectrow_array(qq(
-                          SELECT count(*)
-                          FROM   seq_region
-                          WHERE  coord_system_id = $other_coord_id));
-    if (! $other_used) {
-      $support->log("\nDeleting $other_coord_version coordinate system\n");			
-      push @sql_fixes, "DELETE from coord_system WHERE coord_system_id = $other_coord_id;\n";
-    }
-    else {
-      $support->log_warning("Slices with a coord_system.version of $other_coord_version are present in the seq_region table. This should not happen, please investigate\n");
-    }
-  }
-  elsif ($other_coord_version) {
-    $support->log_warning("There is an unexpected coord_system ($other_coord_version) - you need to investigate\n");
-  }
-}
-####
-
 my $release_no = $support->param('vega_release');
 
 #sanity check - if the Otter coord_system is actually used for the (longest) chromosome then rename it to VEGA_version
@@ -580,7 +705,7 @@ if ($chr_coord_id == $otter_coord_id) {
   push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA$release_no#contig#clone\' WHERE meta_value = \'chromosome:Otter#contig#clone\';\n";	
 }
 else {
-  $support->log_error("Otter assembly not used for longest chromosome in seq_region table - check what\'s going on\n");
+  $support->log_warning("Otter assembly not used for longest chromosome in seq_region table - check what\'s going on\n");
 }
 
 #add misc info to meta table
@@ -629,11 +754,11 @@ if ($support->param('dry_run')) {
   $support->log("\nNo changes made to database since this is a dry run\n");
 }
 
-if (! $support->param('dry_run')) {
+if ( ! $support->param('dry_run')) {
   #update attribute table
   my $options = $support->create_commandline_options({
     'allowed_params' => 1,
-    'exclude' => ['prune'],
+    'exclude' => ['prune','ensemblhost','ensemblport','ensembluser','ensemblpass','ensembldbname','ensemblassembly','loutrehost','loutreport','loutreuser','loutredbname','loutrepass'],
     'replace' => {
       'interactive' => 0,	
       'logfile'     => 'finish_vega_creation_update_attributes.log',
@@ -645,7 +770,7 @@ if (! $support->param('dry_run')) {
 
   $options = $support->create_commandline_options({
     'allowed_params' => 1,
-    'exclude' => ['prune'],
+    'exclude' => ['prune','ensemblhost','ensemblport','ensembluser','ensemblpass','ensembldbname','ensemblassembly','loutrehost','loutreport','loutreuser','loutredbname','loutrepass'],
     'replace' => {
       'interactive' => 0,	
       'logfile'     => 'finish_vega_creation_update_external_dbs.log',
