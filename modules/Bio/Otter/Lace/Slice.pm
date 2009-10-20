@@ -348,7 +348,7 @@ sub get_all_features { # get Simple|DnaAlign|ProteinAlign|Repeat|Marker|Ditag|Pr
     my ($self, $kind_and_args, $metakey, $csver_remote) = @_;
     my @feature_kinds = map { $_->[0] } @$kind_and_args;
     my $all_features = $self->get_all_features_hash($kind_and_args, $metakey, $csver_remote);
-    return @$all_features{@feature_kinds};
+    return map { $all_features->{$_} || [] } @feature_kinds;
 }
 
 sub get_all_DAS_features { # get SimpleFeatures or PredictionExons from DAS source (via mapping Otter server)
