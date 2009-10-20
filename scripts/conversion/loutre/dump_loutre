@@ -617,16 +617,16 @@ foreach my $name (@{$chr_names_wanted}) {
 	foreach my $proj_clone (@{$lgene->feature_Slice->project('clone')}) {
 	  my $clone = $proj_clone->to_Slice();
 
-	  ### just for logging
-	  my $clone_nameT = $clone->seq_region_name();
-	  $support->log("      current clone: $clone_nameT; \n");
+##	  ### just for debuging
+##	  my $clone_nameT = $clone->seq_region_name();
+##	  $support->log("      current clone: $clone_nameT; \n");
 	  
 	  my $attr = $clone->get_all_Attributes('annotated');
 	  
-	  ### just for logging
-	  foreach my $at (@$attr) {
-	    $support->log("             has attribute annotated: " . $at->value . "\n");
-	  }
+##	  ### just for debuging
+##	  foreach my $at (@$attr) {
+##	    $support->log("             has attribute annotated: " . $at->value . "\n");
+##	  }
 	  if (grep { $_->value eq 'T'} @$attr) {
 	    $annotated_clone = 1;
 	    last;
@@ -639,17 +639,17 @@ foreach my $name (@{$chr_names_wanted}) {
 	    my $contig_id   = $contig->get_seq_region_id();
 	    my $contig_info = $lcia ->fetch_by_seq_region_id($contig_id);
 	    
-	    ### just for logging
-	    my $contig_nameT = $contig->seq_region_name();
-	    $support->log("      current contig: $contig_nameT; \n");
+##	    ### just for debuging
+##	    my $contig_nameT = $contig->seq_region_name();
+##	    $support->log("      current contig: $contig_nameT; \n");
 	    
 	    if (defined $contig_info) {
 	      my $attr_c = $contig_info->get_all_Attributes('annotated');
 	      
-	      ### just for logging
-	      foreach my $at (@$attr_c) {
-		$support->log("             has attribute annotated: " . $at->value . "\n");
-	      }
+##	      ### just for debuging
+##	      foreach my $at (@$attr_c) {
+##		$support->log("             has attribute annotated: " . $at->value . "\n");
+##	      }
 	      
 	      if ( grep {$_->value eq 'T'} @$attr_c) {
 		$annotated_clone = 1;
