@@ -1,0 +1,95 @@
+#!/usr/local/bin/perl -Tw
+
+### nph-get_gene_info
+
+# Author:        jgrg
+# Group:         anacode
+# Maintainer:    jgrg
+# Last modified: $Date: 2009-10-20 13:31:38 $
+# Id:            $Id: nph-get_gene_info,v 1.1 2009-10-20 13:31:38 jgrg Exp $
+# Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_gene_info,v $
+
+
+use strict;
+use SangerPaths qw{ core bioperl123 ensembl55 otter52 };
+
+use Bio::Otter::ServerScriptSupport;
+
+{
+    my $server = Bio::Otter::ServerScriptSupport->new;
+
+    my $output_string = '';
+    eval {
+        my $sql = q{
+            SELECT gnu.consortium_id
+              , gsid1.stable_id
+              , ga2.value as current_name
+            FROM gene_name_update gnu
+              , gene_stable_id gsid1
+              , gene_stable_id gsid2
+              , gene g2
+              , gene_attrib ga2
+            WHERE gnu.gene_id = gsid1.gene_id
+              AND gsid1.stable_id = gsid2.stable_id
+              AND gsid2.gene_id = g2.gene_id
+              AND g2.gene_id = ga2.gene_id
+              AND ga2.attrib_type_id = 4
+              AND g2.is_current = 1
+        };
+        
+        if (my $id_str = $server->param('idlist')) {
+            my @id_list;
+            foreach my $sid (split /,/, $id_str) {
+                $sid =~ s/[^A-Za-z0-9]//g;
+                next unless $sid;
+                push(@id_list, $sid);
+            }
+            my $id_query = join(', ', map "'$_'", @id_list);
+            $sql .= qq{
+                AND gsid1.stable_id in ($id_query)
+            };
+        }
+        
+        $sql .= q{
+            ORDER BY g2.gene_id DESC            
+        };
+    
+        my $otter = $server->otter_dba;
+        my $sth = $otter->dbc->prepare($sql);
+        $sth->execute;
+
+        my %seen_stable;
+        while (my ($consortium_id, $stable_id, $current_name) = $sth->fetchrow) {
+            next if $seen_stable{$stable_id};
+            $output_string .= join("\t", $consortium_id, $stable_id, $current_name) . "\n";
+            $seen_stable{$stable_id} = 1;
+        }
+    };
+
+    if ($@) {
+        print $server->header(
+            -status => 500,
+            -type   => 'text/plain',
+            ),
+            "ERROR: $@";
+        exit(1);
+    } else {
+        print $server->header(
+            -status => 200,
+            -type   => 'text/plain',
+            ),
+            $output_string;
+    }
+}
+
+
+
+
+__END__
+
+=head1 NAME - nph-get_gene_info
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+

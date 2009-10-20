@@ -3,8 +3,8 @@
 # Author:        lg4
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2009-07-21 13:55:08 $
-# Id:            $Id: nph-get_das_features,v 1.15 2009-07-21 13:55:08 jgrg Exp $
+# Last modified: $Date: 2009-10-20 13:31:38 $
+# Id:            $Id: nph-get_das_features,v 1.16 2009-10-20 13:31:38 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_das_features,v $
 
 use strict;
@@ -182,11 +182,12 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS { # $kind = 'SimpleFeature' ||
 
             if($parent_constructor) {
                 my $parent_feature = $feature_coll->{$pt_label} ||= $parent_constructor->new( -dbID => $pt_label, -slice => $slice );
-
+                
                 eval {
                     warn "adding feature with start=".$feature->start()." and end=".$feature->end()."\n";
                     $parent_feature->$add_sub($feature);
                 };
+
                 ## there may be a collision of exons - just ignore it for the moment
                 if($@) {
                     warn "Could not group feature: $@\n";

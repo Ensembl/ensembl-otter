@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2009-08-07 15:33:01 $
-# Id:            $Id: nph-write_region,v 1.30 2009-08-07 15:33:01 gr5 Exp $
+# Last modified: $Date: 2009-10-20 13:31:38 $
+# Id:            $Id: nph-write_region,v 1.31 2009-10-20 13:31:38 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-write_region,v $
 
 use strict;
@@ -92,7 +92,6 @@ use Bio::Vega::Transform::XML;
     $odba->begin_work;
 
     eval {
-    
             ##check if clones are locked or not
         my $cb = new Bio::Vega::ContigLockBroker;
         $server->log("Checking region is locked...");
@@ -106,7 +105,6 @@ use Bio::Vega::Transform::XML;
             ##update all contig_info and contig_info_attrib
         while (my ($contig_name, $pair) = each %ci_hash) {
             my ($db_ctg_slice, $xml_ci_attribs) = @$pair;
-
             insert_ContigInfo_Attributes($odba, $author_obj, $db_ctg_slice, $xml_ci_attribs, $time_now);
             $server->log("Updating contig info-attrib for '$contig_name'");
         }
@@ -123,6 +121,7 @@ use Bio::Vega::Transform::XML;
 
         my $gene_adaptor = $odba->get_GeneAdaptor;
         $server->log("Attaching gene to slice ");
+
 
         my $changed_genes = [];
         foreach my $gene (@$xml_genes) {
