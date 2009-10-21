@@ -108,7 +108,7 @@ $| = 1;
 #define tables and logic_names for features that are to be kept
 my %lns_to_stay = (
   'prediction_transcript' => { map {$_,1} qw(Augustus Genscan) },
-  'simple_feature'        => { map {$_,1} qw(CpG Eponine tRNAscan Est2genome_fish) },
+  'simple_feature'        => { map {$_,1} qw(CpG Eponine tRNAscan) },
   'repeat_feature'        => { map {$_,1} qw(RepeatMasker trf) },
   'dna_align_feature'     => { map {$_,1} qw(Est2genome_clusters Est2genome_fish Est2genome_other Est2genome_human Est2genome_mouse vertrna refseq_zebrafish refseq_human refseq_mouse vertrna_other) },
   'protein_align_feature' => { map {$_,1} qw(Uniprot Uniprot_TR Uniprot_SW) },
@@ -126,6 +126,7 @@ my %lns_to_go = map {$_,1}
      Uniprot_TR
      Est2genome_human
      Est2genome_mouse
+		 Est2genome_fish
      Uniprot_SW
      Est2genome_other
      Halfwise
