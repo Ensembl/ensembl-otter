@@ -703,10 +703,16 @@ if ($chr_coord_id == $otter_coord_id) {
   push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA$release_no|contig|clone\' WHERE meta_value = \'chromosome:Otter|contig|clone\';\n";
   push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA$release_no#contig\' WHERE meta_value = \'chromosome:Otter#contig\';\n";
   push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA$release_no#contig#clone\' WHERE meta_value = \'chromosome:Otter#contig#clone\';\n";	
+  if (my $alt_assembly = $support->param('ensemblassembly') ) {
+    push @sql_fixes, "INSERT into meta (meta_key,meta_value) VALUES (\'assembly.mapping\',\'VEGA$release_no:chromosome$alt_assembly\');\n";
+  }
+
 }
 else {
   $support->log_warning("Otter assembly not used for longest chromosome in seq_region table - check what\'s going on\n");
 }
+
+
 
 #add misc info to meta table
 my $date = strftime "%Y-%m", localtime;
