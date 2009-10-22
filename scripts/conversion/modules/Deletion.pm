@@ -294,7 +294,7 @@ sub optimize_tables {
 		  object_xref
 		  identity_xref
 		  external_synonym
-		  go_ref
+		  go_xref
 		);
   foreach my $table (@tables) {
     $support->log_stamped("$table...\n", 1);
