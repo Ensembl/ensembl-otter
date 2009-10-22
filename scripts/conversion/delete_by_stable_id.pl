@@ -609,8 +609,9 @@ sub delete_transcripts {
                     gene g ON gsi.gene_id = g.gene_id
             WHERE   g.gene_id IS NULL
             );
-  $num = $dbh->do($sql);
-  $support->log_stamped("Done deleting $num records.\n", 1);
+  my $num2 = $dbh->do($sql);
+  $num += $num1;
+  $support->log_stamped("Done deleting $num2 records.\n", 1);
 
   $support->log_stamped("Done.\n\n");
   return($num);
