@@ -91,7 +91,6 @@ use Getopt::Long;
 use Pod::Usage;
 use Data::Dumper;
 use Bio::EnsEMBL::Utils::ConversionSupport;
-use Slice;
 
 $| = 1;
 
