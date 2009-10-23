@@ -704,7 +704,7 @@ if ($chr_coord_id == $otter_coord_id) {
   push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA$release_no#contig\' WHERE meta_value = \'chromosome:Otter#contig\';\n";
   push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA$release_no#contig#clone\' WHERE meta_value = \'chromosome:Otter#contig#clone\';\n";	
   if (my $alt_assembly = $support->param('ensemblassembly') ) {
-    push @sql_fixes, "INSERT into meta (meta_key,meta_value) VALUES (\'assembly.mapping\',\'VEGA$release_no:chromosome$alt_assembly\');\n";
+    push @sql_fixes, "INSERT into meta (meta_key,meta_value) VALUES (\'assembly.mapping\',\'chromosome:VEGA$release_no#chromosome:$alt_assembly\');\n";
   }
 
 }
@@ -750,6 +750,8 @@ if (! $support->param('dry_run')) {
 	}
 	else {
 	  $support->log("Updated $r rows for $fix");
+	  if ($fix =~ /expressed_pseudogene/) {
+	    $support->log_warning("Please refer to Havana - should these be processed or unprocessed?\n");
 	}
       }
     };
