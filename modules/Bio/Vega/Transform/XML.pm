@@ -26,7 +26,7 @@ my (
 
 sub DESTROY {
     my ($self) = @_;
-    
+
     delete(                 $species{$self} );
     delete(                   $slice{$self} );
     delete(               $otter_dba{$self} );
@@ -34,7 +34,7 @@ sub DESTROY {
     delete(            $seq_features{$self} );
     delete(          $clone_seq_list{$self} );
     delete(              $skip_trunc{$self} );
-    
+
     # So that any DESTROY methods in base classes get called:
     bless $self, 'Bio::Vega::Writer';
 }
@@ -52,49 +52,49 @@ my $by_start_end_strand = sub {
 
 sub species {
     my $self = shift;
-    
+
     $species{$self} = shift if @_;
     return $species{$self};
 }
 
 sub slice {
     my $self = shift;
-    
+
     $slice{$self} = shift if @_;
     return $slice{$self};
 }
 
 sub otter_dba {
     my $self = shift;
-    
+
     $otter_dba{$self} = shift if @_;
     return $otter_dba{$self};
 }
 
 sub genes {
     my $self = shift;
-    
+
     $genes{$self} = shift if @_;
     return $genes{$self};
 }
 
 sub seq_features {
     my $self = shift;
-    
+
     $seq_features{$self} = shift if @_;
     return $seq_features{$self};
 }
 
 sub clone_seq_list {
     my $self = shift;
-    
+
     $clone_seq_list{$self} = shift if @_;
     return $clone_seq_list{$self};
 }
 
 sub skip_truncated_genes {
     my $self = shift;
-    
+
     $skip_trunc{$self} = shift if @_;
     return $skip_trunc{$self} || 0;
 }
@@ -103,10 +103,10 @@ sub skip_truncated_genes {
 
 sub fetch_data_from_otter_db {
     my ($self) = @_;
-    
+
     confess "Cannot fetch data without slice"     unless $slice{$self};
     confess "Cannot fetch data without otter_dba" unless $otter_dba{$self};
-    
+
     $self->fetch_species;
     $self->fetch_SimpleFeatures;
     $self->fetch_Genes;
@@ -115,13 +115,13 @@ sub fetch_data_from_otter_db {
 
 sub fetch_species {
     my ($self) = @_;
-    
+
     $species{$self} = $otter_dba{$self}->species;
 }
 
 sub fetch_SimpleFeatures {
     my ($self) = @_;
-    
+
     my $slice = $slice{$self};
     my $features        = $slice->get_all_SimpleFeatures;
     my $slice_length    = $slice->length;
@@ -135,19 +135,19 @@ sub fetch_SimpleFeatures {
             $i++;
         }
     }
-    
+
     $seq_features{$self} = $features;
 }
 
 sub fetch_Genes {
     my ($self) = @_;
-    
+
     $genes{$self} = $slice{$self}->get_all_Genes;
 }
 
 sub fetch_CloneSequences {
     my ($self) = @_;
-    
+
     my $slice_projection = $slice{$self}->project('contig');
     my $cs_list = $clone_seq_list{$self} = [];
     foreach my $contig_seg (@$slice_projection) {
@@ -158,17 +158,17 @@ sub fetch_CloneSequences {
 
 sub fetch_CloneSeq {
     my ($self, $contig_seg) = @_;
-    
+
     my $contig_slice = $contig_seg->to_Slice();
-    
+
     my $cs = Bio::Otter::Lace::CloneSequence->new;
     $cs->chromosome(get_single_attrib_value($slice{$self}, 'chr'));
     $cs->contig_name($contig_slice->seq_region_name);
-    
+
     my $clone_slice = $contig_slice->project('clone')->[0]->to_Slice;
     $cs->accession(     get_single_attrib_value($clone_slice, 'embl_acc')           );
     $cs->sv(            get_single_attrib_value($clone_slice, 'embl_version')       );
-    
+
     if (my ($cna) = @{$contig_slice->get_all_Attributes('intl_clone_name')}) {
         $cs->clone_name($cna->value);
     } else {
@@ -186,13 +186,13 @@ sub fetch_CloneSeq {
     if (my $ci = $otter_dba{$self}->get_ContigInfoAdaptor->fetch_by_contigSlice($contig_slice)) {
         $cs->ContigInfo($ci);
     }
-    
+
     return $cs;
 }
 
 sub get_single_attrib_value {
     my ($obj, $code) = @_;
-    
+
     my $attr = $obj->get_all_Attributes($code);
     if (@$attr == 1) {
         return $attr->[0]->value;
@@ -217,7 +217,7 @@ sub get_geneXML {
 
 sub generate_OtterXML {
     my ($self) = @_;
-    
+
     my $ot = $self->prettyprint('otter');
     $ot->indent(1);
     my $dataset_name = $species{$self} or confess "No species set";
@@ -414,7 +414,7 @@ sub generate_Transcript {
   }
 
   $self->add_start_end_not_found_tags($t, $tran);
-  
+
   ##in future <transcript_class> tag will be replaced by trancript <biotype> and <status> tags
   ##<type> tag will be removed
   my ($class) = biotype_status2method($tran->biotype, $tran->status);
@@ -468,7 +468,7 @@ sub generate_Transcript {
 
     sub add_start_end_not_found_tags {
         my ($self, $t, $tran) = @_;
-    
+
         for (my $i = 0; $i < @attrib_tag; $i += 2) {
             my ($attrib, $tag) = @attrib_tag[$i, $i + 1];
             if (my $val = get_single_attrib_value($tran, $attrib)) {
@@ -494,8 +494,10 @@ sub generate_ExonSet {
 	 if ( defined($tran_high) && $exon->start <= $tran_high &&
          defined($tran_low)  && $tran_low <= $exon->end){
 		my $phase = $exon->phase;
-		my $frame = $phase == -1 ? 0 : (3 - $phase) % 3;
-		$e->attribvals($self->prettyprint('frame',$frame));
+		my $end_phase = $exon->end_phase;
+		$e->attribvals($self->prettyprint('phase',$phase));
+		$e->attribvals($self->prettyprint('end_phase',$end_phase));
+
 	 }
 	 $exs->attribobjs($e);
   }

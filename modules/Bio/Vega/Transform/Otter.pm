@@ -111,7 +111,7 @@ sub initialize {
         [ transcript        => qw{ remark         } ],
         [ sequence_fragment => qw{ remark keyword } ],
     ]);
-    
+
     # These coordinate sytems could be class variables, but lets keep them
     # private to this instance so it is free to mess with them.
     $chr_coord_system{$self} = Bio::EnsEMBL::CoordSystem->new(
@@ -121,7 +121,7 @@ sub initialize {
         -sequence_level => 0,
         -default        => 1,
     );
-    
+
     $ctg_coord_system{$self} = Bio::EnsEMBL::CoordSystem->new(
         -name           => 'contig',
         -rank           => 5,
@@ -135,19 +135,19 @@ sub initialize {
 
 sub save_species {
     my ($self, $data) = @_;
-    
+
     $species{$self} = $data->{'species'};
 }
 
 sub species {
     my ($self) = @_;
-    
+
     return $species{$self};
 }
 
 sub chromosome_name {
     my ($self) = @_;
-    
+
     return $chromosome_name{$self};
 }
 
@@ -261,7 +261,7 @@ sub build_SequenceFragment {
 
 sub get_Analysis {
     my ($self, $name) = @_;
-    
+
     my $ana = $logic_ana{$self}{$name} ||= Bio::EnsEMBL::Analysis->new(-logic_name => $name);
     return $ana;
 }
@@ -287,7 +287,7 @@ sub build_XRef {
         -release        => $data->{'release'},
         -dbname         => $data->{'dbname'},
         );
-    
+
     my $list = $xref_list{$self} ||= [];
     push @$list, $xref;
 }
@@ -322,12 +322,12 @@ sub build_Feature {
 
 # sub build_AssemblyTag {
 #     my ($self, $data) = @_;
-# 
+#
 #     my $chr_slice = $self->get_ChromosomeSlice;
-# 
+#
 #     #convert xml coordinates which are in chromosomal coords - to tag coords
 #     my $slice_offset = $chr_slice->start - 1;
-# 
+#
 #     my $at = Bio::Vega::AssemblyTag->new(
 #         -start     => $data->{'contig_start'} - $slice_offset,
 #         -end       => $data->{'contig_end'}   - $slice_offset,
@@ -336,7 +336,7 @@ sub build_Feature {
 #         -tag_info  => $data->{'tag_info'},
 #         -slice     => $chr_slice,
 #     );
-# 
+#
 #     my $list = $assembly_tag_list{$self} ||= [];
 #     push @$list, $at;
 # }
@@ -353,15 +353,18 @@ sub build_Exon {
         -stable_id => $data->{'stable_id'},
         -slice     => $chr_slice,
     );
-        
-    my $frame=$data->{'frame'};
-    if (defined($frame)) {
-        $exon->phase((3-$frame)%3);
+
+    my $phase=$data->{'phase'};
+    my $end_phase=$data->{'end_phase'};
+
+    if (defined($phase)) {
+        $exon->phase($phase);
+    }else {
+    	$exon->phase(-1);
     }
-    if (defined $exon->phase){
-        $exon->end_phase(($exon->length + $exon->phase)%3);
+    if (defined($end_phase)){
+        $exon->end_phase($end_phase);
     } else {
-        $exon->phase(-1);
         $exon->end_phase(-1);
     }
     my $list = $exon_list{$self} ||= [];
@@ -370,7 +373,7 @@ sub build_Exon {
 
 sub add_xrefs_to_object {
     my ($self, $obj) = @_;
-    
+
     my $xref_list = delete($xref_list{$self})
         or return;
     foreach my $xref (@$xref_list) {
@@ -385,7 +388,7 @@ sub build_Transcript {
     my $chr_slice = $self->get_ChromosomeSlice;
 
     my $ana = $self->get_Analysis($data->{'analysis'} || 'Otter');
-    
+
     my $transcript = Bio::Vega::Transcript->new(
         -stable_id => $data->{'stable_id'},
         -analysis  => $ana,
@@ -647,7 +650,7 @@ sub get_ChromosomeSlice {
 
 sub set_ChromosomeSlice {
     my ($self, $slice) = @_;
-    
+
     $chrslice{$self} = $slice;
 }
 
@@ -669,7 +672,7 @@ sub get_Genes {
 
 # sub get_AssemblyTags {
 #     my $self=shift;
-# 
+#
 #     return $assembly_tag_list{$self} || [];
 # }
 
