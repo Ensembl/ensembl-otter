@@ -29,10 +29,10 @@ sub new {
         $start,  # in the given coordinate system
         $end,    # in the given coordinate system
     ) = @_;
-    
+
     # chromosome:Otter:chr6-17:2666323:2834369:1
-    
-    
+
+
     return bless {
         '_Client'   => $Client,
         '_dsname'   => $dsname,
@@ -162,7 +162,7 @@ sub create_detached_slice {
 
 sub DataSet {
     my ($self) = @_;
-    
+
     return $self->Client->get_DataSet_by_name($self->dsname);
 }
 
@@ -197,6 +197,8 @@ sub get_tiling_path_and_sequence {
             #
         },
     );
+    my %contig_dna;
+
     foreach my $respline ( split(/\n/,$response) ) {
         my ($embl_accession, $embl_version, $intl_clone_name, $contig_name,
             $chr_name, $asm_type, $asm_start, $asm_end,
@@ -220,8 +222,10 @@ sub get_tiling_path_and_sequence {
         $cs->contig_strand($cmp_ori);
         $cs->length($cmp_length);
 
+        if($dna) { $contig_dna{$contig_name} = $dna; }
+
         if($dna_wanted) {
-            $cs->sequence($dna);
+            $cs->sequence($contig_dna{$contig_name});
         }
 
         push @{ $self->{_tiling_path} }, $cs;
@@ -239,12 +243,12 @@ sub get_all_tiles_as_Slices {
     my %seen_contig;
     for my $cs (@$tiles) {
         my $ctg_name = $cs->contig_name();
-        
+
         # To prevent fetching of contig data more than once where
         # a contig appears multiple times in the assembly.
         next if $seen_contig{$ctg_name};
         $seen_contig{$ctg_name} = 1;
-        
+
         my $newslice = ref($self)->new(
             $self->Client(), $self->dsname(), $self->ssname(),
             'contig', '', $ctg_name,
@@ -403,10 +407,10 @@ sub get_all_PipelineGenes { # get genes from otter/pipeline/ensembl db
     );
 
     # my $slice = $self->create_detached_slice();
-    # 
+    #
     # my $gene_parser = Bio::Otter::FromXML->new([ split(/\n/, $response) ], $slice);
     # return $gene_parser->build_Gene_array($slice);
-    
+
     if ($response) {
         my $parser = Bio::Vega::Transform::Otter->new;
         $parser->set_ChromosomeSlice($self->create_detached_slice);
