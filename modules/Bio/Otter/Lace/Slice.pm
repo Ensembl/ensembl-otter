@@ -233,18 +233,26 @@ sub get_tiling_path_and_sequence {
 sub get_all_tiles_as_Slices {
     my ( $self, $dna_wanted ) = @_;
 
-    my @subslices = ();
+    my $subslices = [];
 
     my $tiles = $self->get_tiling_path_and_sequence($dna_wanted);
+    my %seen_contig;
     for my $cs (@$tiles) {
+        my $ctg_name = $cs->contig_name();
+        
+        # To prevent fetching of contig data more than once where
+        # a contig appears multiple times in the assembly.
+        next if $seen_contig{$ctg_name};
+        $seen_contig{$ctg_name} = 1;
+        
         my $newslice = ref($self)->new(
             $self->Client(), $self->dsname(), $self->ssname(),
-            'contig', '', $cs->contig_name(),
+            'contig', '', $ctg_name,
             1, $cs->length(), # assume we are interested in WHOLE contigs
         );
-        push @subslices, $newslice;
+        push @$subslices, $newslice;
     }
-    return \@subslices;
+    return $subslices;
 }
 
 sub get_region_xml {
