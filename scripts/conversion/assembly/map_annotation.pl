@@ -177,6 +177,7 @@ my $E_dba = $support->get_database('evega', 'evega');
 my $E_dbh = $E_dba->dbc->db_handle;
 my $E_sa = $E_dba->get_SliceAdaptor;
 my $E_ga = $E_dba->get_GeneAdaptor;
+my $E_ta = $E_dba->get_TranscriptAdaptor;
 my $E_pfa = $E_dba->get_ProteinFeatureAdaptor;
 my $cs_adaptor = $E_dba->get_CoordSystemAdaptor;
 my $asmap_adaptor = $E_dba->get_AssemblyMapperAdaptor;
@@ -307,7 +308,7 @@ foreach my $V_chr ($support->sort_chromosomes($V_chrlength)) {
     $stat_hash{$V_chr}->{'transcripts'} += $c;
 	
     unless ($support->param('dry_run')) {
-      Gene::store_gene($support, $E_slice, $E_ga, $E_pfa, $gene,
+      Gene::store_gene($support, $E_slice, $E_ga, $E_ta, $E_pfa, $gene,
 		       \@finished, \%all_protein_features);
     }
   }
