@@ -23,6 +23,7 @@ sub store_gene {
   my $support = shift;
   my $E_slice = shift;
   my $E_ga = shift;
+  my $E_ta = shift;
   my $E_pfa = shift;
   my $V_gene = shift;
   my $E_transcripts = shift;
@@ -51,11 +52,6 @@ sub store_gene {
   $E_gene->description($V_gene->description);
   $E_gene->source($V_gene->source);
   $E_gene->add_Attributes(@{ $V_gene->get_all_Attributes });
-
-  #add the canonical transcript
-  my $canonical_trans_id = $V_gene->canonical_transcript->stable_id;
-  my @e_canonical_trans = grep { $_->stable_id eq $canonical_trans_id } @$E_transcripts;
-  $E_gene->canonical_transcript($e_canonical_trans[0]);
 
   # add reference to the original Vega gene
   $E_gene->add_DBEntry(Bio::EnsEMBL::DBEntry->new
@@ -99,7 +95,19 @@ sub store_gene {
       }
     }
   };
+
   $support->log_warning("(this might be a fatal error, so please check!) ".$@) if ($@);
+
+  #add the canonical transcript
+  my $canonical_trans_id = $V_gene->canonical_transcript->stable_id;
+  my $e_canonical_trans = $E_ta->fetch_by_stable_id($canonical_trans_id);
+  if ( $e_canonical_trans ) {
+    $E_gene->canonical_transcript($e_canonical_trans);
+    $E_ga->update($E_gene);
+  }
+  else {
+    $support->log_warning("Canonical transcript has not transferred so you need to recalculate it\n");
+  }
   return;
 }
 
