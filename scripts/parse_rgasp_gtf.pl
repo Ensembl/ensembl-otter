@@ -99,6 +99,8 @@ sub load_gtf {
     my $ana_name = $file_to_ana_name{$file_name}
       or die "Cannot see an analysis name for file name '$file_name'";
     warn "Analysis logic name = '$ana_name'\n";
+    
+    delete_all_genes_by_type($db, $ana_name);
 
     # adaptor required
     my $csa = $db->get_CoordSystemAdaptor();
@@ -108,7 +110,7 @@ sub load_gtf {
 
     # create a new analysis with logic_name $analtype
     # so that we know where the genes come from
-    my $analysis = new Bio::EnsEMBL::Analysis(-logic_name => $ana_name);
+    my $analysis = Bio::EnsEMBL::Analysis->new(-logic_name => $ana_name);
 
     my %info;    # Everything stored in here!
     ### Should keep track of transcript and gene IDs to see
@@ -642,6 +644,24 @@ sub exon_hash_key {
     # This assumes that all the exons we
     # compare will be on the same contig
     return join(" ", $exon->start, $exon->end, $exon->strand, $exon->phase, $exon->end_phase);
+}
+
+sub delete_all_genes_by_type {
+    my ($db, $ana_name) = @_;
+    
+    my $analysis = $db->get_AnalysisAdaptor->fetch_by_logic_name($ana_name)
+        or return;
+    my $sth = $db->dbc->prepare(q{
+        SELECT gene_id FROM gene WHERE analysis_id = ?
+    });
+    $sth->execute($analysis->dbID);
+    
+    my $gene_aptr = $db->get_GeneAdaptor;
+    while (my ($gene_id) = $sth->fetchrow) {
+        my $gene = $gene_aptr->fetch_by_dbID($gene_id);
+        # warn "Removing gene '$gene_id'";
+        $gene_aptr->remove($gene);
+    }
 }
 
 __DATA__
