@@ -93,7 +93,7 @@ use warnings;
                       . $self->seq_region_name . "\n";
                 }
 
-                for my $feature (@$features) {
+               for my $feature (@$features) {
 
                     if ( $feature->can('to_gff') ) {
                         
@@ -107,7 +107,8 @@ use warnings;
                             my $truncated = $feature->truncate_to_Slice($self);
                             warn "Truncated transcript: ".$feature->display_id if $truncated;
                         }
-
+            
+                        
                         $gff .= $feature->to_gff . "\n";
 
                         if ($sources_to_types) {
@@ -299,6 +300,8 @@ use warnings;
     sub to_gff {
 
         my $self = shift;
+        
+        return '' unless @{ $self->get_all_Exons };
 
         my $gff = $self->SUPER::to_gff(@_);
 
