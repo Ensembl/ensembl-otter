@@ -11,12 +11,16 @@ use Config::IniFiles;
 use Cwd qw(abs_path);
 use File::HomeDir qw(my_home);
 use Pod::Usage;
+use List::Util qw(shuffle);
 
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::Vega::Utils::EnsEMBL2GFF;
 
 # this regex defines the delimiter for options which can take multiple values
 my $CFG_DELIM = qr/[\s,;]+/;
+
+# seed the RNG so that the colors are deterministic over runs
+#srand(1234);
 
 # globals
 
@@ -61,6 +65,7 @@ my $end;
 # command line/config file options
 
 my $verbose;
+my $persist;
 my $port;
 my $pass;
 my $host;
@@ -92,6 +97,7 @@ GetOptions(
 	'zmap:s',		\$zmap_exe,
 	'zmap_cfg:s',	\$zmap_config_file,
 	'verbose|v',	\$verbose,
+	'persist|p',    \$persist,
 	'help|h',		sub { exec('perldoc', $0) },
 ) or pod2usage(1);
 
@@ -200,15 +206,15 @@ if (-e $cfg_file) {
 		
 		# look up settings for the feature types seperately so that the user can supply types 
 		# on the command line but leave settings in the config file
-		for my $type (keys %feature_type_settings, @feature_types) {
-			if ($cfg->SectionExists($type)) {
-				$feature_type_settings{$type} ||= {};
-				$feature_type_settings{$type}->{parent_style} = $cfg->val($type,'parent-style');
-				$feature_type_settings{$type}->{colours} = [
-					split $CFG_DELIM, $cfg->val($type,'colours')
-				];
-			}
-		}
+        for my $type (keys %feature_type_settings, @feature_types) {
+            if ($cfg->SectionExists($type)) {
+                $feature_type_settings{$type} ||= {};
+		        $feature_type_settings{$type}->{parent_style} = $cfg->val($type,'parent-style');
+		        $feature_type_settings{$type}->{colours} = [
+		          split $CFG_DELIM, $cfg->val($type,'colours')
+			    ];
+		    }
+        }
 		
 		$zmap_exe = $cfg->val('enzembl','zmap') unless $zmap_exe;
 		$zmap_config_file = $cfg->val('enzembl','zmap-config') unless $zmap_config_file;
@@ -325,6 +331,45 @@ if ($create_missing_styles) {
 			'colours', 
 			"normal fill $colour"
 		);
+		
+		if ($type eq 'Genes' && $colour eq 'RANDOM') {
+		    
+		    my @vs = ('00', '33', '66', '99', 'CC', 'FF'); 
+		    
+		    
+		    
+		    my $r = hex($vs[rand(@vs)]);
+		    my $g = hex($vs[rand(@vs)]);
+		    my $b = hex($vs[rand(@vs)]);
+		    
+		    if ($r == 255 && $g == 255 && $b == 255) {
+		        shift @vs;
+		        $r = hex($vs[rand(@vs)]);
+		    }
+		    
+		    my $border = sprintf("#%02x%02x%02x", $r, $g, $b);
+		    my $cds_border = sprintf("#%02x%02x%02x", $r-10, $g-10, $b-10);
+		    my $fill = sprintf("#%02x%02x%02x", $r-30, $g-30, $b-30);
+		    
+		    $cds_border = $border;
+		    $fill = $border;
+		    
+	        $styles_cfg->newval(
+                $source, 
+                'colours', 
+                "normal fill $fill ; normal border $border"
+            );
+            
+            $styles_cfg->newval(
+                $source, 
+                'transcript-cds-colours', 
+                "normal fill white ; normal border $cds_border ; selected fill gold"
+            );
+		    
+		    # reset the colours list
+		    
+		    push @{ $type_settings->{colours} }, 'RANDOM';
+		}
 	}
 		
 	my $styles_fh;
@@ -332,7 +377,7 @@ if ($create_missing_styles) {
 	($styles_fh, $styles_file) = tempfile(
 		'enzembl_styles_XXXXXX', 
 		SUFFIX => '.ini', 
-		UNLINK => 1, 
+		UNLINK => !$persist, 
 		DIR => '/tmp'
 	);
 	
@@ -354,7 +399,7 @@ else {
 my ($gff_fh, $gff_filename) = tempfile(
 	'enzembl_gff_data_XXXXXX', 
 	SUFFIX => '.gff', 
-	UNLINK => 1, 
+	UNLINK => !$persist, 
 	DIR => '/tmp'
 );
 
@@ -395,7 +440,7 @@ $zmap_cfg->newval('blixem', 'transcript-featuresets', $tsct_sources);
 my $zmap_dir = tempdir(
 	'enzembl_zmap_XXXXXX', 
 	DIR => '/tmp', 
-	CLEANUP => 1
+	CLEANUP => !$persist
 );
 
 $zmap_cfg->WriteConfig($zmap_dir.'/ZMap') or die "Failed to write zmap config file\n";
@@ -403,6 +448,11 @@ $zmap_cfg->WriteConfig($zmap_dir.'/ZMap') or die "Failed to write zmap config fi
 # and run zmap...
 
 system($zmap_exe, "--conf_dir", $zmap_dir);
+
+if ($persist) {
+    print "\nFiles created by enzembl have been left in /tmp, remember to delete them! You can rerun this session with:\n\n";
+    print "$zmap_exe --conf_dir $zmap_dir\n\n";
+}
 
 __END__
 	

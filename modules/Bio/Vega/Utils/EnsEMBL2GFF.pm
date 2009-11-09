@@ -94,20 +94,29 @@ use warnings;
                 }
 
                for my $feature (@$features) {
-
+                    
+                    
+                    
                     if ( $feature->can('to_gff') ) {
                         
-                        if (ref $feature eq 'Bio::EnsEMBL::Gene') {
+                        if ($feature->isa('Bio::EnsEMBL::Gene')) {
                             map { 
                                 my $truncated = $_->truncate_to_Slice($self);
                                 warn "Truncated transcript: ".$_->display_id if $truncated;
                             } @{ $feature->get_all_Transcripts };
                         }
-                        elsif (ref $feature eq 'Bio::EnsEMBL::Transcript') {
+                        elsif ($feature->isa('Bio::EnsEMBL::Transcript')) {
                             my $truncated = $feature->truncate_to_Slice($self);
                             warn "Truncated transcript: ".$feature->display_id if $truncated;
                         }
             
+                        unless ($feature->start <= $feature->end) {
+                            warn "Buggy feature: start: ".$feature->start." end: ".$feature->end;
+                        }
+                        
+                        unless ($feature->start >= 0 && $feature->end <= $self->end) {
+                            warn "Buggy feature: start: ".$feature->start." end: ".$feature->end;
+                        }
                         
                         $gff .= $feature->to_gff . "\n";
 
@@ -302,6 +311,11 @@ use warnings;
         my $self = shift;
         
         return '' unless @{ $self->get_all_Exons };
+        
+        # XXX: hack to help differentiate the various otter transcripts
+        if ($self->analysis->logic_name eq 'Otter') {
+            $self->analysis->gff_source('Otter_'.$self->biotype);
+        }
 
         my $gff = $self->SUPER::to_gff(@_);
 
