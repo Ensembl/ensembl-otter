@@ -47,12 +47,13 @@ my $usage = sub { exec('perldoc', $0) };
 
 # parse the command line options
 
-GetOptions(	
+GetOptions(
 	'db|dbs:s',  	\$dbname,
 	'port:s',		\$port,
 	'pass:s',		\$pass,
 	'host:s',		\$host,
 	'user:s',		\$user,
+	'cfg:s',        \$cfg_file,
 	'analyses:s',	sub { @analyses = split $CFG_DELIM, $_[1] },
 	'region:s', 	sub { my ($cs, $id) = split /:/, $_[1]; $regions{$id} = $cs },
 	'coords:s', 	sub { ($start, $end) = split /-/, $_[1] },
@@ -63,7 +64,7 @@ GetOptions(
 	'zmap_cfg:s',	\$zmap_config_file,
 	'verbose|v',	\$verbose,
 	'help|h',		sub { exec('perldoc', $0) },
-) or pod2usage(1);	
+) or pod2usage(1);
 
 if ($dbname && $user) {
 	
@@ -220,8 +221,16 @@ for my $db (keys %dbs) {
 		
 		my $coord_sys = $regions{$region};
 		
+        if ($region =~/chr(\d+)/ && $db !~ /loutre/) {
+            $region = $1;
+            print "region patched to: $region\n";
+        }
+
 		my $slice = $slice_adaptor->fetch_by_region($coord_sys, $region, $start, $end);
 		
+		#print "cs name: ".$slice->coord_system->name." version: ".$slice->coord_system->version."\n";	
+		#$slice->project('chromosome', 'Otter');
+					
 		die "Failed to fetch slice for region: $coord_sys:$region ".
 			($start && $end ? "$start-$end" : '')."\n" unless $slice;
 		
@@ -323,7 +332,7 @@ print $gff_fh $gff;
 
 # build up ZMap file
 
-my $sources_list = 'DNA;'.join(';', keys %sources_to_types); # always include DNA
+my $sources_list = 'DNA;Locus;'.join(';', keys %sources_to_types); # always include DNA and Locus
 
 # zmap needs to know whether each source is dna, protein or a transcript to use blixem 
 # correctly, so we try to guess the correct type here
