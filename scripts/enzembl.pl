@@ -20,6 +20,35 @@ my $CFG_DELIM = qr/[\s,;]+/;
 
 # globals
 
+my $OTTER_CHROMS = {
+    human   => {
+        1   => 'chr1-14',
+        2   => 'chr2-04',
+        3   => 'chr3-03',
+        4   => 'chr4-04',
+        5   => 'chr5-03',
+        6   => 'chr6-18',
+        7   => 'chr7-04',
+        8   => 'chr8-03',
+        9   => 'chr9-18',
+        10  => 'chr10-10',
+        11  => 'chr11-03',
+        12  => 'chr12-03',
+        13  => 'chr13-13',
+        14  => 'chr14-04',
+        15  => 'chr15-03',
+        16  => 'chr16-03',
+        17  => 'chr17-03',
+        18  => 'chr18-04',
+        19  => 'chr19-03',
+        20  => 'chr20-13',
+        21  => 'chr21-04',
+        22  => 'chr22-08',
+        X   => 'chrX-11',
+        Y   => 'chrY-06'
+    },
+};
+
 my @feature_types;
 my @analyses;
 my %feature_type_settings;
@@ -221,8 +250,8 @@ for my $db (keys %dbs) {
 		
 		my $coord_sys = $regions{$region};
 		
-        if ($region =~/chr(\d+)/ && $db !~ /loutre/) {
-            $region = $1;
+        if ($db =~ /loutre_(\w+)/ && $coord_sys eq 'chromosome') {
+            $region = $OTTER_CHROMS->{$1}->{$region};
             print "region patched to: $region\n";
         }
 
