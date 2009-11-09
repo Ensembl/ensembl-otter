@@ -21,6 +21,8 @@ $Data::Dumper::Terse = 1;
 
 my %file_to_ana_name;
 while (<DATA>) {
+    next if /^\s*$/;
+    next if /^\s*#/;
     chomp;
     my ($file, $ana_name) = split;
     $file_to_ana_name{$file} = $ana_name;
@@ -31,7 +33,8 @@ while (<DATA>) {
     my $user   = '';
     my $pass   = '';
     my $port   = '';
-    my $dbname = 'gencode_homo_sapiens_rgasp_56_37';
+    # my $dbname = 'gencode_homo_sapiens_rgasp_56_37';
+    my $dbname = 'gencode_caenorhabditis_elegans_rgasp_56_200';
 
     # options to be read in from the commandline
     GetOptions(
@@ -106,7 +109,11 @@ sub load_gtf {
     my $csa = $db->get_CoordSystemAdaptor();
 
     # fetch coordinate system
-    my $cs = $csa->fetch_by_name('chromosome', 'GRCh37');
+    my @args;
+    if ($file =~ /_hum_/) {
+        @args = ('GRCh37');
+    }
+    my $cs = $csa->fetch_by_name('chromosome', @args);
 
     # create a new analysis with logic_name $analtype
     # so that we know where the genes come from
@@ -266,7 +273,8 @@ sub save_ensembl_gene {
     else {
 
         # Save $gene
-        # $db->get_GeneAdaptor->store($gene) if $gene;
+        $db->get_GeneAdaptor->store($gene) if $gene;
+        # warn "Not saving gene";
     }
 }
 
@@ -274,10 +282,17 @@ sub create_ensembl_gene {
     my ($db, $cs, $analysis, $geneid, $info) = @_;
 
     my $sequence = $info->{'sequence'};
-    $sequence =~ s/^chr//i;    # This code might still work when it isn't a chromosome!
+    
+    # This substitution may still leave a valid
+    # value when it isn't a chromosome!
+    $sequence =~ s/^chr(omosome)?[_-]?//i;
 
     # A number of submitters put "M" instead of "MT" for the mitochondrial genome
-    $sequence = 'MT' if $sequence eq 'M';
+    if ($sequence =~ /^M/) {
+        $sequence = $analysis->logic_name =~ /worm/
+            ? 'MtDNA'
+            : 'MT';
+    }
 
     if ($sequence =~ /^0/) {
         warn "Skipping gene '$geneid' on sequence '$sequence' ($info->{'sequence'}); spike-in?\n";
@@ -293,17 +308,15 @@ sub create_ensembl_gene {
     # For transcripts with CDS info but no exons, copy the CDS info to exons
     foreach my $tsctid (keys %{ $info->{'cds'} }) {
         my $cds_list = $info->{'cds'}{$tsctid};
-
-        # Don't need to merge abutting CDS features, since we only take the range, including stop codons
-        # merge_overlapping_or_abutting($cds_list);
-        if (my $exons = $info->{'exons'}{$tsctid}) {
-            merge_overlapping_or_abutting($exons);
-        }
-        else {
-
+        my $exons    = $info->{'exons'}{$tsctid};
+        unless ($exons) {
             # warn "No exons in transcript '$tsctid', copying CDS coordiates\n";
             @{ $info->{'exons'}{$tsctid} } = @$cds_list;
+            $exons = $info->{'exons'}{$tsctid};
         }
+
+        # Don't need to merge abutting CDS features, since we only take the range, including stop codons
+        merge_overlapping_or_abutting($exons);
     }
 
     # # #
@@ -500,11 +513,11 @@ sub merge_overlapping_or_abutting {
             # Discard $B
             splice(@$feat_list, $i, 1);
 
-            warn "Merging features: ", Dumper($A, $B);
+            # warn "Merging features: ", Dumper($A, $B);
 
             # Merge coordinate span of $B into $A
             $A->{'start'} = $A->{'start'} < $B->{'start'} ? $A->{'start'} : $B->{'start'};
-            $A->{'end'}   = $A->{'end'} < $B->{'end'}     ? $A->{'end'}   : $B->{'end'};
+            $A->{'end'}   = $A->{'end'} > $B->{'end'}     ? $A->{'end'}   : $B->{'end'};
 
             # Copy any keys from the $B value hash that $A doesn't have into $A
             if (my $b_val = $B->{'values'}) {
@@ -518,7 +531,7 @@ sub merge_overlapping_or_abutting {
                 }
             }
 
-            warn "Merged feature: ", Dumper($A);
+            # warn "Merged feature: ", Dumper($A);
         }
         else {
             $i++;
@@ -742,3 +755,134 @@ Sea_hum_qex_solid_K562solid_20091006_0936	Sea_hum_qex_solid_K562
 Sim_hum_qtr_solexa__20090921_1624	Sim_hum_qtr_solexa_K562
 Sim_hum_qtr_solexa__20090921_1628	Sim_hum_qtr_solexa_GM12878
 Sim_hum_qtr_solexa_hummul_20090921_1607	Sim_hum_qtr_solexa_hummul
+
+
+Jel_wor_qtr_solexa_SRX001872_20090926_0116	Jel_wor_qtr_solexa_SRX001872
+Jel_wor_qtr_solexa_SRX001873_20090926_0117	Jel_wor_qtr_solexa_SRX001873
+Jel_wor_qtr_solexa_SRX001874_20090926_0117	Jel_wor_qtr_solexa_SRX001874
+Jel_wor_qtr_solexa_SRX001875_20090926_0116	Jel_wor_qtr_solexa_SRX001875
+Jel_wor_qtr_solexa_SRX004863_20090926_0113	Jel_wor_qtr_solexa_SRX004863
+Jel_wor_qtr_solexa_SRX004866_20090926_0115	Jel_wor_qtr_solexa_SRX004866
+Jel_wor_qtr_solexa_SRX004867_20090926_0115	Jel_wor_qtr_solexa_SRX004867
+Jel_wor_qna_solexa_wormmul_20091009_1913	Jel_wor_qna_solexa_wormmul
+
+Tho_wor_qbo_solexa_SRX001872_20090928_0826	Tho_wor_qbo_solexa_SRX001872
+Tho_wor_qbo_solexa_SRX001873_20090928_0810	Tho_wor_qbo_solexa_SRX001873
+Tho_wor_qbo_solexa_SRX001874_20090928_0827	Tho_wor_qbo_solexa_SRX001874
+Tho_wor_qbo_solexa_SRX001875_20090928_0826	Tho_wor_qbo_solexa_SRX001875
+Tho_wor_qbo_solexa_SRX004863_20090928_0851	Tho_wor_qbo_solexa_SRX004863
+Tho_wor_qbo_solexa_SRX004865_20090928_0856	Tho_wor_qbo_solexa_SRX004865
+Tho_wor_qbo_solexa_SRX004867_20090928_0810	Tho_wor_qbo_solexa_SRX004867
+Tho_wor_qbo_solexa_wormmul_20090928_0913	Tho_wor_qbo_solexa_wormmul
+
+Tyl_wor_qbo_solexa_SRX001872_20090922_0403	Tyl_wor_qbo_solexa_SRX001872_1
+Tyl_wor_qbo_solexa_SRX001872_20090922_0420	Tyl_wor_qbo_solexa_SRX001872_2
+Tyl_wor_qbo_solexa_SRX001873_20090922_0410	Tyl_wor_qbo_solexa_SRX001873_1
+Tyl_wor_qbo_solexa_SRX001873_20090922_0426	Tyl_wor_qbo_solexa_SRX001873_2
+Tyl_wor_qbo_solexa_SRX001874_20090922_0424	Tyl_wor_qbo_solexa_SRX001874
+Tyl_wor_qbo_solexa_SRX001875_20090922_0407	Tyl_wor_qbo_solexa_SRX001875_1
+Tyl_wor_qbo_solexa_SRX001875_20090922_0422	Tyl_wor_qbo_solexa_SRX001875_2
+Tyl_wor_qbo_solexa_SRX004863_20090922_0400	Tyl_wor_qbo_solexa_SRX004863_1
+Tyl_wor_qbo_solexa_SRX004863_20090922_0415	Tyl_wor_qbo_solexa_SRX004863_2
+Tyl_wor_qbo_solexa_SRX004865_20090922_0417	Tyl_wor_qbo_solexa_SRX004865_1
+Tyl_wor_qbo_solexa_SRX004865_20090922_0624	Tyl_wor_qbo_solexa_SRX004865_2
+Tyl_wor_qbo_solexa_SRX004867_20090922_0419	Tyl_wor_qbo_solexa_SRX004867
+Tyl_wor_qna_solexa_SRX001874_20090922_0653	Tyl_wor_qna_solexa_SRX001874
+Tyl_wor_qna_solexa_SRX004867_20090922_0650	Tyl_wor_qna_solexa_SRX004867
+Tyl_wor_qna_solexa_wormmul_20090922_1032	Tyl_wor_qna_solexa_wormmul
+Tyl_wor_qna_solexa_wormmul_20091008_1641	Tyl_wor_qna_solexa_wormmul_base
+Tyl_hum_qbo_solexa_SRX004865_20090922_0622	Tyl_hum_qbo_solexa_SRX004865
+
+Mar_wor_qbo_solexa_SRX001872_20090921_1054	Mar_wor_qbo_solexa_SRX001872
+Mar_wor_qbo_solexa_SRX001873_20090921_1054	Mar_wor_qbo_solexa_SRX001873
+Mar_wor_qbo_solexa_SRX001874_20090921_1054	Mar_wor_qbo_solexa_SRX001874
+Mar_wor_qbo_solexa_SRX001875_20090921_1055	Mar_wor_qbo_solexa_SRX001875
+Mar_wor_qbo_solexa_SRX004863_20090921_1052	Mar_wor_qbo_solexa_SRX004863
+Mar_wor_qbo_solexa_SRX004864_20090921_1053	Mar_wor_qbo_solexa_SRX004864
+Mar_wor_qbo_solexa_SRX004865_20090921_1053	Mar_wor_qbo_solexa_SRX004865
+Mar_wor_qbo_solexa_SRX004866_20090921_1053	Mar_wor_qbo_solexa_SRX004866
+Mar_wor_qbo_solexa_SRX004867_20090921_1053	Mar_wor_qbo_solexa_SRX004867
+Mar_wor_qna_helicos_wormmul_20091008_1226	Mar_wor_qna_helicos_wormmul
+Mar_wor_qna_solexa_wormmul_20090921_1049	Mar_wor_qna_solexa_wormmul
+
+Vic_wor_qbo_solexa_SRX001872_20090922_0240	Vic_wor_qbo_solexa_SRX001872
+Vic_wor_qbo_solexa_SRX001873_20090922_0243	Vic_wor_qbo_solexa_SRX001873
+Vic_wor_qbo_solexa_SRX001874_20090922_0242	Vic_wor_qbo_solexa_SRX001874
+Vic_wor_qbo_solexa_SRX001875_20090922_0241	Vic_wor_qbo_solexa_SRX001875
+Vic_wor_qbo_solexa_SRX004867_20090922_0238	Vic_wor_qbo_solexa_SRX004867
+Vic_wor_qbo_solexa_wormmul_20090922_0234	Vic_wor_qbo_solexa_wormmul_1
+Vic_wor_qbo_solexa_wormmul_20090922_0236	Vic_wor_qbo_solexa_wormmul_2
+Vic_wor_qna_solexa_wormmul_20090922_0227	Vic_wor_qna_solexa_wormmul_3
+Vic_wor_qna_solexa_wormmul_20091009_1439	Vic_wor_qna_solexa_wormmul_base
+
+Ger_wor_qbo_solexa_SRX001872_20090928_1451	Ger_wor_qbo_solexa_SRX001872
+Ger_wor_qbo_solexa_SRX001873_20090928_1513	Ger_wor_qbo_solexa_SRX001873
+Ger_wor_qbo_solexa_SRX001874_20090928_1517	Ger_wor_qbo_solexa_SRX001874
+Ger_wor_qbo_solexa_SRX001875_20090928_1520	Ger_wor_qbo_solexa_SRX001875
+Ger_wor_qbo_solexa_SRX004863_20090928_1524	Ger_wor_qbo_solexa_SRX004863
+Ger_wor_qbo_solexa_SRX004867_20090928_1531	Ger_wor_qbo_solexa_SRX004867
+Ger_wor_qbo_solexa_wormmul_20090928_1755	Ger_wor_qbo_solexa_wormmul
+
+Gun_wor_qtr_solexa_SRX001872_20090921_1404	Gun_wor_qtr_solexa_SRX001872_1
+Gun_wor_qtr_solexa_SRX001872_20090921_1445	Gun_wor_qtr_solexa_SRX001872_2
+Gun_wor_qtr_solexa_SRX001872_20090921_1817	Gun_wor_qtr_solexa_SRX001872_3
+Gun_wor_qtr_solexa_SRX001872_20090921_1830	Gun_wor_qtr_solexa_SRX001872_4
+Gun_wor_qtr_solexa_SRX001872_20090921_1938	Gun_wor_qtr_solexa_SRX001872_5
+Gun_wor_qtr_solexa_SRX001872_20091013_1554	Gun_wor_qtr_solexa_SRX001872_6
+Gun_wor_qtr_solexa_SRX001872_20091014_1138	Gun_wor_qtr_solexa_SRX001872_7
+Gun_wor_qtr_solexa_SRX001873_20090921_1405	Gun_wor_qtr_solexa_SRX001873_1
+Gun_wor_qtr_solexa_SRX001873_20090921_1450	Gun_wor_qtr_solexa_SRX001873_2
+Gun_wor_qtr_solexa_SRX001873_20090921_1818	Gun_wor_qtr_solexa_SRX001873_3
+Gun_wor_qtr_solexa_SRX001873_20090921_1831	Gun_wor_qtr_solexa_SRX001873_4
+Gun_wor_qtr_solexa_SRX001873_20090921_1939	Gun_wor_qtr_solexa_SRX001873_5
+Gun_wor_qtr_solexa_SRX001873_20091014_1115	Gun_wor_qtr_solexa_SRX001873_6
+Gun_wor_qtr_solexa_SRX001873_20091014_1140	Gun_wor_qtr_solexa_SRX001873_7
+Gun_wor_qtr_solexa_SRX001874_20090921_1406	Gun_wor_qtr_solexa_SRX001874_1
+Gun_wor_qtr_solexa_SRX001874_20090921_1451	Gun_wor_qtr_solexa_SRX001874_2
+Gun_wor_qtr_solexa_SRX001874_20090921_1820	Gun_wor_qtr_solexa_SRX001874_3
+Gun_wor_qtr_solexa_SRX001874_20090921_1832	Gun_wor_qtr_solexa_SRX001874_4
+Gun_wor_qtr_solexa_SRX001874_20090921_1949	Gun_wor_qtr_solexa_SRX001874_5
+Gun_wor_qtr_solexa_SRX001874_20091014_1121	Gun_wor_qtr_solexa_SRX001874_6
+Gun_wor_qtr_solexa_SRX001874_20091014_1142	Gun_wor_qtr_solexa_SRX001874_7
+Gun_wor_qtr_solexa_SRX001875_20090921_1406	Gun_wor_qtr_solexa_SRX001875_1
+Gun_wor_qtr_solexa_SRX001875_20090921_1451	Gun_wor_qtr_solexa_SRX001875_2
+Gun_wor_qtr_solexa_SRX001875_20090921_1821	Gun_wor_qtr_solexa_SRX001875_3
+Gun_wor_qtr_solexa_SRX001875_20090921_1833	Gun_wor_qtr_solexa_SRX001875_4
+Gun_wor_qtr_solexa_SRX001875_20090921_1952	Gun_wor_qtr_solexa_SRX001875_5
+Gun_wor_qtr_solexa_SRX001875_20091014_1122	Gun_wor_qtr_solexa_SRX001875_6
+Gun_wor_qtr_solexa_SRX001875_20091014_1144	Gun_wor_qtr_solexa_SRX001875_7
+Gun_wor_qtr_solexa_SRX004863_20090921_1407	Gun_wor_qtr_solexa_SRX004863_1
+Gun_wor_qtr_solexa_SRX004863_20090921_1452	Gun_wor_qtr_solexa_SRX004863_2
+Gun_wor_qtr_solexa_SRX004863_20090921_1822	Gun_wor_qtr_solexa_SRX004863_3
+Gun_wor_qtr_solexa_SRX004863_20090921_1834	Gun_wor_qtr_solexa_SRX004863_4
+Gun_wor_qtr_solexa_SRX004863_20090921_1955	Gun_wor_qtr_solexa_SRX004863_5
+Gun_wor_qtr_solexa_SRX004863_20091014_1127	Gun_wor_qtr_solexa_SRX004863_6
+Gun_wor_qtr_solexa_SRX004863_20091014_1155	Gun_wor_qtr_solexa_SRX004863_7
+Gun_wor_qtr_solexa_SRX004865_20090921_1408	Gun_wor_qtr_solexa_SRX004865_1
+Gun_wor_qtr_solexa_SRX004865_20090921_1453	Gun_wor_qtr_solexa_SRX004865_2
+Gun_wor_qtr_solexa_SRX004865_20090921_1824	Gun_wor_qtr_solexa_SRX004865_3
+Gun_wor_qtr_solexa_SRX004865_20090921_1836	Gun_wor_qtr_solexa_SRX004865_4
+Gun_wor_qtr_solexa_SRX004865_20090921_2001	Gun_wor_qtr_solexa_SRX004865_5
+Gun_wor_qtr_solexa_SRX004865_20091014_1129	Gun_wor_qtr_solexa_SRX004865_6
+Gun_wor_qtr_solexa_SRX004865_20091014_1159	Gun_wor_qtr_solexa_SRX004865_7
+Gun_wor_qtr_solexa_SRX004867_20090921_1409	Gun_wor_qtr_solexa_SRX004867_1
+Gun_wor_qtr_solexa_SRX004867_20090921_1454	Gun_wor_qtr_solexa_SRX004867_2
+Gun_wor_qtr_solexa_SRX004867_20090921_1825	Gun_wor_qtr_solexa_SRX004867_3
+Gun_wor_qtr_solexa_SRX004867_20090921_1840	Gun_wor_qtr_solexa_SRX004867_4
+Gun_wor_qtr_solexa_SRX004867_20090921_2003	Gun_wor_qtr_solexa_SRX004867_5
+Gun_wor_qtr_solexa_SRX004867_20091014_1131	Gun_wor_qtr_solexa_SRX004867_6
+Gun_wor_qtr_solexa_SRX004867_20091014_1201	Gun_wor_qtr_solexa_SRX004867_7
+Gun_wor_qna_solexa_wormmul_20091015_0017	Gun_wor_qna_solexa_wormmul
+
+Wol_wor_qex_solexa_SRX004863_20090922_0832	Wol_wor_qex_solexa_SRX004863
+Wol_wor_qex_solexa_SRX004865_20090922_0842	Wol_wor_qex_solexa_SRX004865
+Wol_wor_qex_solexa_SRX004867_20090922_0907	Wol_wor_qex_solexa_SRX004867
+
+Lio_wor_qna_solexa_SRX001875_20090919_1855	Lio_wor_qna_solexa_SRX001875
+Lio_wor_qtr_solexa_SRX001872_20090926_0122	Lio_wor_qtr_solexa_SRX001872
+Lio_wor_qtr_solexa_SRX001873_20090926_0124	Lio_wor_qtr_solexa_SRX001873
+Lio_wor_qtr_solexa_SRX001874_20090926_0123	Lio_wor_qtr_solexa_SRX001874
+Lio_wor_qtr_solexa_SRX001875_20090926_0123	Lio_wor_qtr_solexa_SRX001875
+Lio_wor_qtr_solexa_SRX004863_20090926_0120	Lio_wor_qtr_solexa_SRX004863
+Lio_wor_qtr_solexa_SRX004866_20090926_0120	Lio_wor_qtr_solexa_SRX004866
+Lio_wor_qtr_solexa_SRX004867_20090926_0121	Lio_wor_qtr_solexa_SRX004867
