@@ -250,7 +250,8 @@ for my $db (keys %dbs) {
 		
 		my $coord_sys = $regions{$region};
 		
-        if ($db =~ /loutre_(\w+)/ && $coord_sys eq 'chromosome') {
+		# patch the region identifier if we're using a loutre database
+        if ($coord_sys eq 'chromosome' && $db =~ /loutre_(\w+)/) {
             $region = $OTTER_CHROMS->{$1}->{$region};
             print "region patched to: $region\n";
         }
