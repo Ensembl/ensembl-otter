@@ -42,7 +42,7 @@ use Bio::Otter::Lace::Defaults;
                 $satport = '3312';
             }
             elsif ($1 eq '3303') {
-                $sathost = '3313';
+                $satport = '3313';
             }
             else {
                 die "Bad port: $1";
@@ -62,8 +62,10 @@ use Bio::Otter::Lace::Defaults;
                 die "Bad port: $1";
             }
         }
-        
-        next unless $sathost and $satport;
+        else {
+            print STDERR "\nDataset $name is already on $switch\n";
+            next;
+        }
         
         my @command = ('./save_satellite_db',
             -dataset    => $name,
