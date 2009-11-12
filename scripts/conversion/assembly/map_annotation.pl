@@ -63,7 +63,9 @@ For future release, there are plans to store incomplete matches by using the
 Ensembl API's SeqEdit facilities.
 
 Genes transferred can be restricted on logic_name using the --logic_names
-option.
+option. Usage:
+human: --logic_names otter
+mouse: --logic_names otter,otter_external
 
 Look in the logs for 'Set coordinates' and check exon coordinates of any examples
 - untested code.
@@ -87,8 +89,8 @@ Please see http://www.ensembl.org/code_licence.html for details
 
 =head1 AUTHOR
 
-Patrick Meidl <pm2@sanger.ac.uk>
-Based on code originally wrote by Graham McVicker <mcvicker@ebi.ac.uk>
+Steve Trevanion <st3@sanger.ac.uk>
+Based on code originally wrote by Graham McVicker and Patrick Meidl
 
 =head1 CONTACT
 
@@ -125,7 +127,7 @@ $| = 1;
 
 our $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
 
-$SIG{INT}= 'do_stats_logging';      # signal handler for Ctrl-C, i.e. will call sub do_stats_logging
+#$SIG{INT}= 'do_stats_logging';      # signal handler for Ctrl-C, i.e. will call sub do_stats_logging
 
 
 # parse options
