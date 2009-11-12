@@ -95,8 +95,6 @@ use warnings;
 
                for my $feature (@$features) {
                     
-                    
-                    
                     if ( $feature->can('to_gff') ) {
                         
                         if ($feature->isa('Bio::EnsEMBL::Gene')) {
@@ -108,14 +106,6 @@ use warnings;
                         elsif ($feature->isa('Bio::EnsEMBL::Transcript')) {
                             my $truncated = $feature->truncate_to_Slice($self);
                             warn "Truncated transcript: ".$feature->display_id if $truncated;
-                        }
-            
-                        unless ($feature->start <= $feature->end) {
-                            warn "Buggy feature: start: ".$feature->start." end: ".$feature->end;
-                        }
-                        
-                        unless ($feature->start >= 0 && $feature->end <= $self->end) {
-                            warn "Buggy feature: start: ".$feature->start." end: ".$feature->end;
                         }
                         
                         $gff .= $feature->to_gff . "\n";
@@ -162,7 +152,12 @@ use warnings;
     sub to_gff {
 
         my $self = shift;
-
+        
+        # don't generate buggy features because zmap blows up
+        if ($self->start >= $self->end) {
+            return '';
+        }
+        
         # This parameter is assumed to be a hashref which includes extra attributes you'd
         # like to have appended onto the gff line for the feature
         my $extra_attrs = shift;
