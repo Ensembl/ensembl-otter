@@ -58,11 +58,13 @@ whole process.
 It prepares the initial Ensembl schema database to hold Vega annotation on the
 Ensembl assembly. Major steps are:
 
-    - optionally remove preexisting assembly mappings
+    - optionally remove preexisting assembly mappings from Ensembl - if they are left
+      in they will also be in ensembl-vega, probably OK but never tried
     - create a db with current Ensembl schema
     - transfer Vega chromosomes (with same seq_region_id and name as in
       source db)
     - transfer Ensembl seq_regions, assembly, dna, repeats
+    - transfer assembly mappings from Vega
     - transfer certain Vega xrefs
     - add coord_system entries
     - transfer Ensembl meta
@@ -73,8 +75,6 @@ Ensembl assembly. Major steps are:
 The whole Ensembl-vega database production process is done by these scripts:
 
     ensembl-otter/scripts/conversion/assembly/make_ensembl_vega_db.pl
-    ensembl-otter/scripts/conversion/assembly/align_by_clone_identity.pl
-    ensembl-otter/scripts/conversion/assembly/align_nonident_regions.pl
     ensembl-otter/scripts/conversion/assembly/map_annotation.pl
     ensembl-otter/scripts/conversion/assembly/finish_ensembl_vega_db.pl
 
@@ -87,7 +87,7 @@ Please see http://www.ensembl.org/code_licence.html for details
 
 =head1 AUTHOR
 
-Patrick Meidl <pm2@sanger.ac.uk>
+Steve Trevanion <st3@sanger.ac.uk>
 
 =head1 CONTACT
 
@@ -236,7 +236,6 @@ if ( (! $support->param('dry_run'))
 # delete any preexisting mappings
 if (! $support->param('dry_run')) {
   delete_mappings('ensembl',$dbh->{'ensembl'});
-  delete_mappings('vega',$dbh->{'vega'});
 }
 
 # create new ensembl-vega (target) database
@@ -338,7 +337,7 @@ $sql = qq(
     INSERT INTO $evega_db.assembly
     SELECT asm_seq_region_id+$sri_adjust, cmp_seq_region_id+$sri_adjust,
            asm_start, asm_end, cmp_start, cmp_end, ori
-    FROM assembly
+      FROM assembly
 );
 $c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
 $support->log_stamped("Done transfering $c assembly entries.\n\n");
@@ -531,6 +530,21 @@ $sql = qq(
 $c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
 $support->log_stamped("Done inserting $c meta entries.\n");
 
+
+#add assembly mappings from vega
+$support->log_stamped("Adding assembly mappings from vega database...\n");
+$sql = qq(
+    INSERT INTO $evega_db.assembly
+    SELECT a.asm_seq_region_id, a.cmp_seq_region_id, a.asm_start, a.asm_end, a.cmp_start, a.cmp_end, a.ori
+      FROM assembly a, seq_region sr, coord_system cs
+     WHERE a.cmp_seq_region_id = sr.seq_region_id
+       AND sr.coord_system_id = cs.coord_system_id
+       AND cs.version = \'$ensembl_assembly\'
+);
+
+$c = $dbh->{'vega'}->do($sql) unless ($support->param('dry_run'));
+$support->log_stamped("Done inserting $c assembly mapping entries.\n");
+
 #update external_db and attrib_type on ensembl_vega
 if (! $support->param('dry_run') ) {
   # run update_external_dbs.pl
@@ -563,11 +577,10 @@ if (! $support->param('dry_run') ) {
     or $support->throw("Error running update_external_dbs.pl: $!");
   $support->log_stamped("Done.\n\n");
 
-  $support->log_stamped("\nUpdating attrib_type table on ".$support->param('evegadbname')."...\n");
-  system("../xref/update_external_dbs.pl $options") == 0
-    or $support->throw("Error running update_external_dbs.pl: $!");
-  $support->log_stamped("Done.\n\n");
+  $options =~ s/make_ensembl_vega_update_external_dbs_ensvega\.log/ensembl_vega_percent_gc_calc\.log/;
 
+
+  #this bit is throwing lots of warnings but is running fine, cannot see the problem. Might be easiest to run it at the end (ie as part of finish_ensembl_veega_createion.pl) ?
   $support->log_stamped("\nCalculating %GC for ".$support->param('evegadbname')."...\n");
   system("../../../../sanger-plugins/vega/utils/vega_percent_gc_calc.pl $options") == 0
     or $support->throw("Error running vega_percent_gc_calc.pl: $!");
@@ -578,7 +591,7 @@ if (! $support->param('dry_run') ) {
 # finish logfile
 $support->finish_log;
 
-# delete all unwanted mappings e.g. references to NCBI35 in a NCBI36 db
+# delete all unwanted mappings e.g. references to NCBI36 in a GRCh37 db
 sub delete_mappings{
   my ($db_type,$dbh) = @_;
   my @db_types=();
@@ -596,7 +609,7 @@ sub delete_mappings{
     if ($assembly->{'version'} ne $assembly_version) {
       my $version_to_delete = $assembly->{'version'};
       my $id_to_delete = $assembly->{'coord_system_id'};
-      if ($support->user_proceed("Remove $version_to_delete assembly mappings from $db_type database?")) {
+      if ($support->user_proceed("Remove $version_to_delete assembly mappings from this copy of the $db_type database?")) {
 	$support->log("Removing $version_to_delete assembly mappings from $db_type database\n");
 	
 	# delete old seq_regions and assemblies that contain them
@@ -613,6 +626,24 @@ sub delete_mappings{
 	$query= "delete from meta where meta_value like '%:$version_to_delete%'";
 	$dbh->do($query) or $support->log_error("Query failed to delete old meta entries");
 	$support->log("Deleted $version_to_delete meta table entries\n");
+
+	#delete any other coord systems with the same version (eg supercontigs)
+	my $sth = $dbh->prepare("select coord_system_id, name, version from coord_system where version = \'$version_to_delete\'");
+	$sth->execute;
+	while (my ($id_to_delete, $name, $version) = $sth->fetchrow_array()) {
+	  $support->log("Removing additional $version ($name) assembly mappings from $db_type database\n");
+	  $query = "delete from seq_region where coord_system_id = $id_to_delete";
+	  $dbh->do($query) or $support->log_error("Query failed to delete old seq regions");
+	  $support->log("Deleted $version $name seq_regions\n");				
+	  $query = "delete from coord_system where coord_system_id = $id_to_delete";
+	  $dbh->do($query) or $support->log_error("Query failed to delete old coord_system");
+	  $support->log("Deleted $version $name coord_system\n");
+	}
+	$query = "delete a from assembly a left join seq_region sr on a.cmp_seq_region_id = sr.seq_region_id where sr.seq_region_id is null";
+	$dbh->do($query) or $support->log_error("Query failed to delete old cmp_seqregion ids from assembly");
+	$query = "delete a from assembly a left join seq_region sr on a.asm_seq_region_id = sr.seq_region_id where sr.seq_region_id is null";
+	$dbh->do($query) or $support->log_error("Query failed to delete old asm_seqregion ids from assembly");
+	$support->log("Removed any orphan seq_regions from assembly table of $db_type database\n");
       }
     }
   }
