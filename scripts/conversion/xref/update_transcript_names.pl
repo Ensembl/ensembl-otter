@@ -119,7 +119,7 @@ foreach my $chr ($support->sort_chromosomes) {
   my $chrom = $sa->fetch_by_region('toplevel', $chr);
  GENE:
   foreach my $gene (@{$chrom->get_all_Genes()}) {
-    next unless ($gene->source =~ /havana|KO/);
+    next unless ($gene->source =~ /havana|KO|WU/);
     my $gsi    = $gene->stable_id;
     my $g_name = $gene->display_xref->display_id;
     my $seen = 0;
