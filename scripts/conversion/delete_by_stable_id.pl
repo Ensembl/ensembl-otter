@@ -55,6 +55,10 @@ The script also checks if any genes/transcripts in the list are not in the
 database and optionally prints a list of these stable IDs (use --find_missing
 and --outfile=FILE).
 
+If you explicityl delete transcripts you amy find that gene start/end no longer
+match correctly the transcripts start/end. This can be easily fixed using sql -
+see assembly/finish_ensembl_vega.pl for details
+
 =head1 LICENCE
 
 This code is distributed under an Apache style licence:
@@ -610,7 +614,7 @@ sub delete_transcripts {
             WHERE   g.gene_id IS NULL
             );
   my $num2 = $dbh->do($sql);
-  $num += $num1;
+  $num += $num2;
   $support->log_stamped("Done deleting $num2 records.\n", 1);
 
   $support->log_stamped("Done.\n\n");
