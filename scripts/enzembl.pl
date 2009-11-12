@@ -211,11 +211,11 @@ if (-e $cfg_file) {
                 $feature_type_settings{$type} ||= {};
 		        $feature_type_settings{$type}->{parent_style} = $cfg->val($type,'parent-style');
 		        $feature_type_settings{$type}->{colours} = [
-		          split $CFG_DELIM, $cfg->val($type,'colours')
+                    split $CFG_DELIM, $cfg->val($type,'colours')
 			    ];
 		    }
         }
-		
+                    
 		$zmap_exe = $cfg->val('enzembl','zmap') unless $zmap_exe;
 		$zmap_config_file = $cfg->val('enzembl','zmap-config') unless $zmap_config_file;
 		$styles_file = $cfg->val('enzembl','stylesfile') unless $styles_file;
