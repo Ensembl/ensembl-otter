@@ -173,7 +173,7 @@ $support->comma_to_list('add_genes');
 #set gene prefixes to ignore for transfer if they are not already defined by the user
 if (! $support->param('filter_prefix')) {
   if ($support->param('loutredbname') =~ /human/) {
-    $support->param('filter_prefix','OLD_MIT,HMIT,Em,ERI,GT,GH,API,DG,CCDS,MGC,MPI,SK');
+    $support->param('filter_prefix','OLD_MIT,HMIT,Em,ERI,GT,GH,API,DG,CCDS,MGC,MPI,SK,WU');
   }
   elsif ($support->param('loutredbname') =~ /mouse/) {
     $support->param('filter_prefix','INT');
@@ -594,6 +594,10 @@ foreach my $name (@{$chr_names_wanted}) {
 	$support->log("Skipping gene $gname ($lgsi) because of untrusted author (".$lgene->gene_author->name.")\n",2);
 	next GENE;
       }
+    }
+    #ignore BCM genes on chr7
+    if ( ($chrom =~ /chr7-/) && ($lgene->source eq 'BCM') ) {
+      $support->log("Skipping gene $gname ($lgsi) because it's from an external source (".$lgene->source.")\n",2);
     }
 
     #filter out genes on non-anotated clones and without fsv tags
