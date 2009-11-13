@@ -300,9 +300,7 @@ sub authorize {
     $req->content_type('application/x-www-form-urlencoded');
     $req->content("credential_0=$user&credential_1=$password&destination=/");
 
-    my $web = $self->get_UserAgent;
-    my $response = $web->request($req);
-
+    my $response = $self->request($req);
     if ($response->is_success) {
         # Cookie will have been given to UserAgent
         warn sprintf "Authorized OK: %s\n",
@@ -320,6 +318,11 @@ sub authorize {
 }
 
 # ---- HTTP protocol related routines:
+
+sub request {
+    my( $self, $req ) = @_;
+    return $self->get_UserAgent->request($req);
+}
 
 sub get_UserAgent {
     my( $self ) = @_;
@@ -518,7 +521,7 @@ sub do_http_request {
         confess "method '$method' is not supported";
     }
 
-    return $self->get_UserAgent->request($request);
+    return $self->request($request);
 }
 
 # ---- specific HTTP-requests:
