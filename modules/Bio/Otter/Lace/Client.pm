@@ -33,7 +33,9 @@ sub new {
     
     $ENV{'OTTERLACE_COOKIE_JAR'} ||= "$ENV{HOME}/.otter/ns_cookie_jar";
     $ENV{'BLIXEM_CONFIG_FILE'}   ||= "$ENV{HOME}/.otter/etc/blixemrc";
-    return bless {}, $pkg;
+    return bless {
+        _cookie_jar_file => $ENV{'OTTERLACE_COOKIE_JAR'},
+    }, $pkg;
 }
 
 sub host {
@@ -348,13 +350,15 @@ sub get_CookieJar {
 } 
 
 sub create_CookieJar {
-    return HTTP::Cookies::Netscape->new(file => $ENV{'OTTERLACE_COOKIE_JAR'}); 
+    my( $self ) = @_;
+    my $jar = $self->{_cookie_jar_file};
+    return HTTP::Cookies::Netscape->new(file => $jar);
 }
 
 sub fix_cookie_jar_file_permission {
     my ($self) = @_;
     
-    my $jar = $ENV{'OTTERLACE_COOKIE_JAR'};
+    my $jar = $self->{_cookie_jar_file};
     if (-e $jar) {
         # Fix mode if not already mode 600
         my $mode = (stat(_))[2];
