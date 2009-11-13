@@ -307,9 +307,7 @@ sub authorize {
         # Cookie will have been given to UserAgent
         warn sprintf "Authorized OK: %s\n",
             $response->status_line;
-        $self->fix_cookie_jar_file_permission;
-        $self->get_CookieJar->save
-          or die "Failed to save cookie";
+        $self->save_CookieJar;
     } else {
         warn sprintf "Authorize failed: %s (%s)\n",
             $response->status_line,
@@ -355,7 +353,7 @@ sub create_CookieJar {
     return HTTP::Cookies::Netscape->new(file => $jar);
 }
 
-sub fix_cookie_jar_file_permission {
+sub save_CookieJar {
     my ($self) = @_;
     
     my $jar = $self->{_cookie_jar_file};
@@ -373,6 +371,9 @@ sub fix_cookie_jar_file_permission {
             or confess "Can't create '$jar'; $!";
         umask($save_mask);
     }
+
+    $self->get_CookieJar->save
+        or confess "Failed to save cookie";
 }
 
 sub url_root {
