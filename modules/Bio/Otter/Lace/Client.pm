@@ -323,18 +323,20 @@ sub authorize {
 
 sub get_UserAgent {
     my( $self ) = @_;
-    
-    my $ua;
-    unless ($ua = $self->{'_lwp_useragent'}) {
-        $ua = LWP::UserAgent->new(timeout => 9000);
-        $ua->env_proxy;
-        $ua->protocols_allowed([qw{ http https }]);
-        $ua->agent('otterlace/50.0 ');
-        push @{ $ua->requests_redirectable }, 'POST';
-        $ua->cookie_jar(HTTP::Cookies::Netscape->new(
-            file => $ENV{'OTTERLACE_COOKIE_JAR'},
-            ));
-    }
+    return $self->{'_lwp_useragent'} ||= $self->create_UserAgent;
+}
+
+sub create_UserAgent {
+    my( $self ) = @_;
+
+    my $ua = LWP::UserAgent->new(timeout => 9000);
+    $ua->env_proxy;
+    $ua->protocols_allowed([qw{ http https }]);
+    $ua->agent('otterlace/50.0 ');
+    push @{ $ua->requests_redirectable }, 'POST';
+    my $cookie_jar = HTTP::Cookies::Netscape->new(file => $ENV{'OTTERLACE_COOKIE_JAR'});
+    $ua->cookie_jar($cookie_jar);
+
     return $ua;
 }
 
