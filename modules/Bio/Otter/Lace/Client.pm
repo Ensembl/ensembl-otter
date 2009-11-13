@@ -310,13 +310,13 @@ sub authorize {
         $self->fix_cookie_jar_file_permission;
         $self->get_CookieJar->save
           or die "Failed to save cookie";
-        return 1;
     } else {
         warn sprintf "Authorize failed: %s (%s)\n",
             $response->status_line,
             $response->decoded_content;
-        return;
     }
+
+    return;
 }
 
 # ---- HTTP protocol related routines:
