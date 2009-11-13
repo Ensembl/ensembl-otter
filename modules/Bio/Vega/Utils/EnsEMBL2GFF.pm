@@ -100,12 +100,12 @@ use warnings;
                         if ($feature->isa('Bio::EnsEMBL::Gene')) {
                             map { 
                                 my $truncated = $_->truncate_to_Slice($self);
-                                warn "Truncated transcript: ".$_->display_id if $truncated;
+                                #warn "Truncated transcript: ".$_->display_id if $truncated;
                             } @{ $feature->get_all_Transcripts };
                         }
                         elsif ($feature->isa('Bio::EnsEMBL::Transcript')) {
                             my $truncated = $feature->truncate_to_Slice($self);
-                            warn "Truncated transcript: ".$feature->display_id if $truncated;
+                            #warn "Truncated transcript: ".$feature->display_id if $truncated;
                         }
                         
                         $gff .= $feature->to_gff . "\n";
@@ -140,6 +140,9 @@ use warnings;
                 }
             }
         }
+        
+        # remove any empty lines resulting from truncated transcripts etc.
+        $gff =~ s/\n\s*\n/\n/g;        
 
         return $gff;
     }
@@ -154,7 +157,7 @@ use warnings;
         my $self = shift;
         
         # don't generate buggy features because zmap blows up
-        if ($self->start >= $self->end) {
+        if ($self->seq_region_start >= $self->seq_region_end) {
             return '';
         }
         
@@ -204,8 +207,8 @@ use warnings;
             source =>
               ( $self->analysis->gff_source || $self->analysis->logic_name ),
             feature => ( $self->analysis->gff_feature || 'misc_feature' ),
-            start   => $self->start,
-            end     => $self->end,
+            start   => $self->seq_region_start,
+            end     => $self->seq_region_end,
             strand  => (
                 $self->strand == 1 ? '+' : ( $self->strand == -1 ? '-' : '.' )
             )
@@ -249,7 +252,7 @@ use warnings;
 
         if ( @fps > 1 ) {
             my @gaps =
-              map { join( ' ', $_->start, $_->end, $_->hstart, $_->hend ) }
+              map { join( ' ', $_->seq_region_start, $_->seq_region_end, $_->hseq_region_start, $_->hseq_region_end ) }
               @fps;
             $gap_string = join( ',', @gaps );
         }
@@ -262,8 +265,8 @@ use warnings;
         $gff->{attributes}->{Target} =
             '"Sequence:'
           . $self->hseqname . '" '
-          . $self->hstart . ' '
-          . $self->hend . ' '
+          . $self->hseq_region_start . ' '
+          . $self->hseq_region_end . ' '
           . ( $self->hstrand == -1 ? '-' : '+' );
 
         if ($gap_string) {
@@ -314,21 +317,20 @@ use warnings;
 
         my $gff = $self->SUPER::to_gff(@_);
 
-        if ( defined $self->coding_region_start ) {
-
-            # build up the CDS line (unfortunately there's not really an object we can hang this off
-            # so we have to build the whole line ourselves)
+        if ( $self->translation ) {
+            
+            # build up the CDS line - it's not really worth creating a Translation->to_gff method, 
+            # as most of the fields are derived from the Transcript
             $gff .= "\n" . join(
                 "\t",
                 $self->_gff_hash->{seqname},
                 $self->_gff_hash->{source},
                 'CDS',    # feature
-                $self->coding_region_start,
-                $self->coding_region_end,
+                $self->slice->start + $self->coding_region_start - 1,
+                $self->slice->start + $self->coding_region_end - 1,
                 '.',      # score
                 $self->_gff_hash->{strand},
-                '0'
-                , # frame - not really sure what we should put here, but giface always seems to use 0, so we will too!
+                '0', # frame - not really sure what we should put here, but giface always seems to use 0, so we will too!
                 'Sequence ' . $self->_gff_hash->{attributes}->{Sequence}
             );
         }
@@ -337,7 +339,6 @@ use warnings;
         # (adding lines for both seems a bit redundant to me, but zmap seems to like it!)
         for my $feat ( @{ $self->get_all_Exons }, @{ $self->get_all_Introns } )
         {
-
             # exons and introns don't have analyses attached, so give them the transcript's one
             $feat->analysis( $self->analysis );
 
