@@ -933,7 +933,7 @@ sub search_pfam {
 
     my $sub = $self->is_mutable ? $self->new_SubSeq_from_tk : $self->SubSeq;
     unless ($sub->GeneMethod->coding) {
-        $self->message("non-coding method");
+        $self->message("non-coding transcript type");
         return;
     }
 
@@ -985,7 +985,7 @@ sub update_translation {
         if ($peptext) {
             $peptext->toplevel->withdraw;
         }
-        $self->message("non-coding method");
+        $self->message("non-coding transcript type");
         return;
     }
 
@@ -1288,7 +1288,7 @@ sub trim_cds_coord_to_first_stop {
     my( $self ) = @_;
 
     unless ($self->get_GeneMethod_from_tk->coding) {
-        $self->message('non-coding method');
+        $self->message('non-coding transcript type');
         return;
     }
 

@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2009-10-20 13:31:38 $
-# Id:            $Id: nph-write_region,v 1.31 2009-10-20 13:31:38 jgrg Exp $
+# Last modified: $Date: 2009-11-13 17:09:38 $
+# Id:            $Id: nph-write_region,v 1.32 2009-11-13 17:09:38 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-write_region,v $
 
 use strict;
@@ -129,13 +129,12 @@ use Bio::Vega::Transform::XML;
             $gene->slice($db_slice);
             # update author in gene and transcript
             $gene->gene_author($author_obj);
-            my $tref = $gene->get_all_Transcripts();
-            foreach my $tran (@$tref) {
+            foreach my $tran (@{ $gene->get_all_Transcripts }) {
                 $tran->slice($db_slice);
                 $tran->transcript_author($author_obj);
-                foreach my $exon (@{ $tran->get_all_Exons }) {
-                    $exon->slice($db_slice);
-                }
+            }
+            foreach my $exon (@{ $gene->get_all_Exons }) {
+                $exon->slice($db_slice);
             }
             # update all gene and its components in db (new/mod)
             $gene->is_current(1);
@@ -155,13 +154,12 @@ use Bio::Vega::Transform::XML;
             $dbgene->slice($db_slice);
             ##update author in gene and transcript
             $dbgene->gene_author($author_obj);
-            my $tref = $dbgene->get_all_Transcripts();
-            foreach my $tran (@$tref) {
+            foreach my $tran (@{ $dbgene->get_all_Transcripts }) {
                 $tran->slice($db_slice);
                 $tran->transcript_author($author_obj);
-                foreach my $exon (@{ $tran->get_all_Exons }) {
-                    $exon->slice($db_slice);
-                }
+            }
+            foreach my $exon (@{ $dbgene->get_all_Exons }) {
+                $exon->slice($db_slice);
             }
             ##update all gene and its components in db (del)
             
@@ -175,9 +173,9 @@ use Bio::Vega::Transform::XML;
 
         my $ab = $odba->get_AnnotationBroker();
 
-            # Because exons can be shared (potentially between genes!),
-            # deleting them is a complex issue:
-        $ab->hide_unused_exons($db_genes, $xml_genes);
+        # Because exons are shared between transcripts, genes and gene versions
+        # setting which are current is not simple        
+        $ab->set_exon_current_flags($db_genes, $xml_genes);
 
         ##update feature_sets
         ##SimpleFeatures - deletes old features(features not in xml)

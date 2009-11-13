@@ -73,7 +73,7 @@ sub initialize {
     
     my $top = $self->top;
 
-    my $filter_count = scalar %{$self->n2f};
+    my $filter_count = scalar keys %{$self->n2f};
     my $max_rows = 28;
     my $height = $filter_count > $max_rows ? $max_rows : $filter_count;
 	my $hlist = $top->Scrolled("HListplus",
