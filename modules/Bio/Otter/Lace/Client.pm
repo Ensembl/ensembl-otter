@@ -308,7 +308,7 @@ sub authorize {
         warn sprintf "Authorized OK: %s\n",
             $response->status_line;
         $self->fix_cookie_jar_file_permission;
-        $web->cookie_jar->save
+        $self->get_CookieJar->save
           or die "Failed to save cookie";
         return 1;
     } else {
@@ -334,10 +334,18 @@ sub create_UserAgent {
     $ua->protocols_allowed([qw{ http https }]);
     $ua->agent('otterlace/50.0 ');
     push @{ $ua->requests_redirectable }, 'POST';
-    my $cookie_jar = HTTP::Cookies::Netscape->new(file => $ENV{'OTTERLACE_COOKIE_JAR'});
-    $ua->cookie_jar($cookie_jar);
+    $ua->cookie_jar($self->get_CookieJar);
 
     return $ua;
+}
+
+sub get_CookieJar {
+    my( $self ) = @_;
+    return $self->{'_cookie_jar'} ||= $self->create_CookieJar;
+} 
+
+sub create_CookieJar {
+    return HTTP::Cookies::Netscape->new(file => $ENV{'OTTERLACE_COOKIE_JAR'}); 
 }
 
 sub fix_cookie_jar_file_permission {
