@@ -326,6 +326,7 @@ sub request {
 
 sub get_UserAgent {
     my( $self ) = @_;
+
     return $self->{'_lwp_useragent'} ||= $self->create_UserAgent;
 }
 

@@ -17,6 +17,7 @@ use Bio::Vega::DBSQL::AssemblyTagAdaptor;
 use Bio::Vega::DBSQL::ContigLockAdaptor;
 use Bio::Vega::DBSQL::MetaContainer;
 use Bio::Vega::DBSQL::SliceAdaptor;
+
 use base 'Bio::EnsEMBL::DBSQL::DBAdaptor';
 
 sub get_GeneAdaptor {
@@ -157,29 +158,6 @@ sub commit {
 sub rollback {
   my $self = shift;
   $self->dbc->do('ROLLBACK');
-}
-
-
-sub rollback_to_savepoint {
-  my ($self,$savepoint) = @_;
-  unless ($savepoint){
-	 $savepoint='x';
-  }
-  $self->dbc->do('ROLLBACK TO SAVEPOINT '.$savepoint);
-}
-
-sub savepoint {
-  my ($self,$savepoint) = @_;
-  unless ($savepoint){
-	 $savepoint='x';
-  }
-  $self->dbc->do('SAVEPOINT '.$savepoint);
-}
-
-sub check_for_transaction{
-  my $self=shift;
-  my $dbh=$self->dbc->db_handle;
-  return $dbh->{AutoCommit};
 }
 
 

@@ -1,3 +1,4 @@
+
 package Bio::Vega::DBSQL::GeneAdaptor;
 
 use strict;
@@ -631,25 +632,25 @@ sub store {
             $ta->update($db_gene_tran);
         }
 
-        # exons CAN be shared between different versions of genes, so update the non-currency of the deleted ones
-        # (assuming that exons are never shared between genes with different stable_ids. IS THAT TRUE ACTUALLY?)
-        my $ea      = $self->db->get_ExonAdaptor();
-        my %old_set = map { $_->stable_id => $_ } @{ $db_gene->get_all_Exons() };
-        my %new_set = map { $_->stable_id => $_ } @{    $gene->get_all_Exons() };
-        while (my ($stable_id, $db_gene_exon) = each %old_set) {
-            unless ($new_set{$stable_id}) {
-                $db_gene_exon->is_current(0);
-                $ea->update($db_gene_exon);
-            }
-        }
-
-        # also, update the non-currency of the changed exons (marked by AnnotationBroker) :
-        while (my ($stable_id, $gene_exon) = each %new_set) {
-            my $db_exon = $gene_exon->last_db_version();
-            if ($db_exon && !$db_exon->is_current()) {
-                $ea->update($db_exon);
-            }
-        }
+        # # exons CAN be shared between different versions of genes, so update the non-currency of the deleted ones
+        # # (assuming that exons are never shared between genes with different stable_ids. IS THAT TRUE ACTUALLY?)
+        # my $ea      = $self->db->get_ExonAdaptor();
+        # my %old_set = map { $_->stable_id => $_ } @{ $db_gene->get_all_Exons() };
+        # my %new_set = map { $_->stable_id => $_ } @{    $gene->get_all_Exons() };
+        # while (my ($stable_id, $db_gene_exon) = each %old_set) {
+        #     unless ($new_set{$stable_id}) {
+        #         $db_gene_exon->is_current(0);
+        #         $ea->update($db_gene_exon);
+        #     }
+        # }
+        # 
+        # # also, update the non-currency of the changed exons (marked by AnnotationBroker) :
+        # while (my ($stable_id, $gene_exon) = each %new_set) {
+        #     my $db_exon = $gene_exon->last_db_version();
+        #     if ($db_exon && !$db_exon->is_current()) {
+        #         $ea->update($db_exon);
+        #     }
+        # }
 
         # If the gene is still associated with the last fetchable version,
         # (for example, if it is being DELETED or RESTORED)

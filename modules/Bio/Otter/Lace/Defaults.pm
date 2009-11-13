@@ -11,6 +11,7 @@ use Symbol 'gensym';
 use Config::IniFiles;
 use Data::Dumper;
 use Bio::Otter::Lace::Client;
+use POSIX 'uname';
 
 
 my $CLIENT_STANZA   = 'client';
@@ -31,7 +32,7 @@ push(@$CONFIG_INIFILES, $HARDWIRED);
 my $GETOPT = {};
 tie %$GETOPT, 'Config::IniFiles', (%OPTIONS_TO_TIE);
 
-my ($THIS_USER, $HOME_DIR) = (getpwuid($<))[0,7];    
+my ($THIS_USER, $HOME_DIR) = (getpwuid($<))[0,7];
 my $CALLED = "$0 @ARGV";
 
 our $GETOPT_ERRSTR  = undef;
@@ -72,6 +73,12 @@ sub save_deep_option {
     $GETOPT->{$opt_str}->{$param} = $value;
 }
 
+################################################
+#
+## PUBLIC METHODS
+#
+################################################
+
 sub client_name {
     if (my ($script) = $0 =~ m{([^/]+)$}) {
         return $script;
@@ -80,12 +87,10 @@ sub client_name {
     }
 }
 
-
-################################################
-#
-## PUBLIC METHODS
-#
-################################################
+sub platform_cpu {
+    my ($platform, $cpu) = (uname)[0, 4];
+    return "${platform}_$cpu";
+}
 
 
 =head1 do_getopt
@@ -188,11 +193,12 @@ sub make_Client {
     return $client;
 }
 
+### Not very happy with this subroutine.  It is difficult to understand.
 sub option_from_array{
     my ($array) = @_;
     $array    ||= [];
     my $value   = undef;
-    warn "\noption from array called // @$array //\n" if $DEBUG_CONFIG;
+    warn "\noption_from_array([@$array])\n" if $DEBUG_CONFIG;
 
     my @arr_copy = @{$array};
     my $first    = shift @arr_copy;
@@ -203,23 +209,26 @@ sub option_from_array{
         my ($conf_val, $found) = @_;
         my $value_is_hash    = ref($value)    eq 'HASH';
         my $conf_val_is_hash = ref($conf_val) eq 'HASH';
-        warn sprintf("got // value '%s', found '%s' //\n",$conf_val||'undef', $found) if $DEBUG_CONFIG;
+        if ($DEBUG_CONFIG) {
+            warn sprintf("got value '%s', found '%s'\n",
+                $conf_val || 'undef',
+                defined($found) ? $found : 'undef');
+        }
         return unless $found;
-        if(($value_is_hash || $allow_hash) && $conf_val_is_hash){
+        if (($value_is_hash || $allow_hash) && $conf_val_is_hash) {
             # initialise as first time it will be undef
             $value ||= {};
-            # overwrite the previous $value
-            $value   = { %$value, %$conf_val };
+            # overwrite existing keys in $value
+            while (my ($tag, $val) = each %$conf_val) {
+                $value->{$tag} = $val;
+            }
         }else{
             $value = $conf_val;
         }
         $allow_hash = 0;
     };
 
-    # get first file
-    #    - get default option from that
-    #    - get option from that (if exists) and overwrite
-    # get next file
+    # for each file
     #    - get default option from that and overwrite
     #    - get option from that (if exists) and overwrite
 
@@ -230,7 +239,7 @@ sub option_from_array{
             __internal_option_from_array($conf, [ $first,       @arr_copy ]));
     }
 
-    printf(STDERR "Returning value '%s' for [@$array]\n\n", $value || 'undef')
+    printf(STDERR "Returning value '%s' for [@$array]\n\n", defined($value) ? $value : 'undef')
         if $DEBUG_CONFIG;
 
     return $value;
