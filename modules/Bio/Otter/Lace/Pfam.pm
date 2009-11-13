@@ -182,7 +182,7 @@ sub retrieve_pfam_hmm {
     #----------------------------------------
     # get the HMM
 
-    print STDOUT "retrieving HMM for $domain";
+    print STDOUT "$domain: retrieve HMM model\n";
 
     # set up the request
     my $req = HTTP::Request->new( POST => $HMM_URL );
@@ -196,17 +196,11 @@ sub retrieve_pfam_hmm {
 
     # submit the request
     my $res = $ua->request( $req );
-    print STDOUT "HMM request submitted";
 
-    print "HMM retrieval failed: ". $res->status_line
+    print STDERR "$domain: HMM model retrieval failed: ". $res->status_line
       unless $res->is_success;
 
     $data{$domain} = $res->content;
-
-    print STDOUT "retrieved HMM for $domain\n";
-
-
-
   } # end of "foreach domain"
 
   return \%data;
@@ -227,7 +221,7 @@ sub retrieve_pfam_seed {
     #----------------------------------------
     # get the HMM
 
-    print STDOUT "retrieving seed alignments for $domain";
+    print STDOUT "$domain: retrieve seed alignments\n";
 
     # set up the request
     my $req = HTTP::Request->new( POST => $SEED_URL );
@@ -242,20 +236,14 @@ sub retrieve_pfam_seed {
 
     # submit the request
     my $res = $ua->request( $req );
-    print STDOUT "seed request submitted";
 
-    print "seed alignment retrieval failed: ". $res->status_line
+    print STDERR "$domain: seed alignment retrieval failed: ". $res->status_line
       unless $res->is_success;
 
     $data{$domain} = $res->content;
     # (need to strip out secondary structure and consensus lines,
     # otherwise hmmalign seg faults...)
     $data{$domain} =~ s/^\#=G[CR].*?\n//mg;
-
-    print STDOUT "retrieved seed for $domain\n";
-
-
-
   } # end of "foreach domain"
 
   return \%data;
@@ -315,15 +303,15 @@ sub align_to_seed {
 
 
     # build the hmmalign command
-    my $cmd = $HMMALIGN . ' --withali ' . $seed_file .
+    my $cmd = $HMMALIGN . ' --mapali ' . $seed_file .
                           ' -q '        . $hmm_file .
                           ' '           . $seq_file .
                           ' > '         . $output_filename;
 
-    print STDOUT "hmmalign command: |$cmd|";
+    print STDOUT "$domain: aligning\n";
 
     system( $cmd ) == 0
-      or print "couldn't run hmmalign for $domain hits: $!";
+      or print STDERR "$domain: couldn't run hmmalign '$cmd' [$!]\n";
 
     # delete tmp files
     unlink $seed_file ,  $hmm_file , $seq_file;
