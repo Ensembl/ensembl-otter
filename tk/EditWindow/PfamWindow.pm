@@ -128,13 +128,13 @@ sub initialize {
     $wait = 0;
     my $res;
     until ( $tries >= $POLL_ATTEMPTS ) {
-        $self->status("searching pfam (querying server)");
         $self->progress( 30 + $tries );
         $res = $pfam->poll_results($self->result_url);
-        if ($res) {
+        if ($res && $res =~ /<pfam/m ) {
             $self->fill_progressBar(60);
             last;
         }
+        $self->status("searching pfam (status $res)");
         $self->top->toplevel->update;
         $wait += $tries;
         $tries++;
@@ -344,7 +344,8 @@ sub fill_progressBar {
 sub open_url {
     my ($self) = @_;
     my $url = $self->result_url;
-    $url =~ s/output=xml&//;
+    $url =~ s/output=xml&?//;
+    $url =~ s/resultset/results/;
     print STDOUT "Pfam search result for " . $self->name . "\n$url\n";
     if ( $^O eq 'darwin' ) {
         system("open '$url'");
