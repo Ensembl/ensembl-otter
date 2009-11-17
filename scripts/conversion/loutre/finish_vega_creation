@@ -19,6 +19,13 @@ Options:
     --user=USER                         use Vega database username USER
     --pass=PASS                         use Vega database password PASS
 
+    --ensemblhost=NAME                  use Ensembl database NAME
+    --ensemblport=PORT                  use Ensembl database port PORT
+    --ensembluser=USER                  use Ensmebl database user USER
+    --ensemblpass=PASS                  use Ensembl database pass PASS
+    --ensembldbname=DBNAME              use Ensembl database DBNAME
+    --ensemblassembly=STRING            Ensembl assembly to map to
+
     --vega_release=NUM                  vega release number
     --release_type=STRING               type of release, External
     --no_feature=BOOLEAN                choose to dump *align_features or not
@@ -42,7 +49,9 @@ This script does a number of jobs:
 - sets seq_region.name for chromosomes to that defined by the seq_region_attrib 'vega_name'
 - tidies up coord_system setting the default assembly version to 'VEGA$ver' from 'Otter'
 - tidies up meta table
-- adds assembly mappings for ensembl chromsosomes using either a loutre or an ensembl database
+- adds assembly mappings for ensembl chromosomes using either a loutre or an ensembl database:
+    for identical assemblies the seq_region details are taken from ensembl and a 1:1 mapping added;
+    for non-identical assemblies assembly mapping details are taken from loutre
 - patches coord_system.version for contigs to NULL
 - synchronises attribute table with ensembl/misc-scripts/attribute_types/attrib_types.txt
 - synchronises external_db table with ensembl/misc-scripts/external_db/external_dbs.txt
@@ -364,11 +373,7 @@ foreach my $source (keys %used_logic_names) {
 # alternative assembly mappings #
 #################################
 
-# - if the vega chrom has an equiv_ass attribute in loutre, then add a 1:1 mapping of the chromosome from an ensembl database
-# I'd expect the lengths to be the same here but they aren't always: add the correct length and an assembly mapping over
-# just the length of the Vega chromosome
-# - alternatively take assembly_mappings from loutre
-
+## if the vega chrom has an equiv_asm attribute in loutre, then add a 1:1 mapping of the chromosome from an ensembl database. Alternatively take assembly_mappings from loutre
 
 #check the coord_system table to make sure there aren't any (should have been removed by cleanup_pipeline
 (my $count) = $vdbh->selectrow_array(qq(
