@@ -373,7 +373,7 @@ foreach my $source (keys %used_logic_names) {
 # alternative assembly mappings #
 #################################
 
-## if the vega chrom has an equiv_asm attribute in loutre, then add a 1:1 mapping of the chromosome from an ensembl database. Alternatively take assembly_mappings from loutre
+## if the vega chrom has an equiv_asm attribute in loutre, then add a 1:1 mapping of the chromosome from an ensembl database - if the seq_regions are of different lengths, which is perfectly allowable, just add the mapping over the length of the vega chromsosome. Alternatively take assembly_mappings from loutre
 
 #check the coord_system table to make sure there aren't any (should have been removed by cleanup_pipeline
 (my $count) = $vdbh->selectrow_array(qq(
@@ -480,6 +480,7 @@ if (my $alt_assembly = $support->param('ensemblassembly') ) {
 	while (my ($asm_start,$asm_end,$cmp_start,$cmp_end,$ori) = $sth->fetchrow_array) {
 	  $sql = qq(INSERT into assembly
                     VALUES ($v_sr_id,$e_sr_id+$offset,$asm_start,$asm_end,$cmp_start,$cmp_end,$ori));
+	  $support->log_verbose("SQL for assembly entries is $sql\n",2);
 	  if (! $support->param('dry_run')) {
 	    $vdbh->do($sql);
 	  }
