@@ -15,43 +15,20 @@ use List::Util qw(shuffle);
 
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::Vega::Utils::EnsEMBL2GFF;
+use Bio::EnsEMBL::Utils::Exception qw(verbose);
+
+my $STABLE_ID_REGEX = qr/^[A-Z]{3}([A-Z]{3})?([GTE])[\d]+$/;
+
+my $STABLE_ID_PREFIXES = {
+    G   => 'gene',
+    T   => 'transcript',
+    E   => 'exon',
+};
 
 # this regex defines the delimiter for options which can take multiple values
 my $CFG_DELIM = qr/[\s,;]+/;
 
-# seed the RNG so that the colors are deterministic over runs
-#srand(1234);
-
 # globals
-
-my $OTTER_CHROMS = {
-    human   => {
-        1   => 'chr1-14',
-        2   => 'chr2-04',
-        3   => 'chr3-03',
-        4   => 'chr4-04',
-        5   => 'chr5-03',
-        6   => 'chr6-18',
-        7   => 'chr7-04',
-        8   => 'chr8-03',
-        9   => 'chr9-18',
-        10  => 'chr10-10',
-        11  => 'chr11-03',
-        12  => 'chr12-03',
-        13  => 'chr13-13',
-        14  => 'chr14-04',
-        15  => 'chr15-03',
-        16  => 'chr16-03',
-        17  => 'chr17-03',
-        18  => 'chr18-04',
-        19  => 'chr19-03',
-        20  => 'chr20-13',
-        21  => 'chr21-04',
-        22  => 'chr22-08',
-        X   => 'chrX-11',
-        Y   => 'chrY-06'
-    },
-};
 
 my @feature_types;
 my @analyses;
@@ -59,8 +36,7 @@ my %feature_type_settings;
 my %dbs;
 my @dbnames;
 my %regions;
-my $start;
-my $end;
+my %features;
 
 # command line/config file options
 
@@ -71,6 +47,7 @@ my $pass;
 my $host;
 my $user;
 my $dbname;
+my $flank = 100;
 my $styles_file;
 my $create_missing_styles;
 my $zmap_exe;
@@ -78,6 +55,9 @@ my $zmap_config_file;
 my $cfg_file = my_home.'/.enzembl_config';
 
 my $usage = sub { exec('perldoc', $0) };
+
+my $requested_region = {};
+my $common_region = {};
 
 # parse the command line options
 
@@ -89,8 +69,28 @@ GetOptions(
 	'user:s',		\$user,
 	'cfg:s',        \$cfg_file,
 	'analyses:s',	sub { @analyses = split $CFG_DELIM, $_[1] },
-	'region:s', 	sub { my ($cs, $id) = split /:/, $_[1]; $regions{$id} = $cs },
-	'coords:s', 	sub { ($start, $end) = split /-/, $_[1] },
+	'region:s', 	sub { 
+	    my @parts = split /:/, $_[1];
+	    $requested_region->{cs_name} = $parts[0];
+	    $requested_region->{cs_version} = $parts[1];
+	    $requested_region->{name} = $parts[2];
+	    $requested_region->{start} = $parts[3];
+	    $requested_region->{end} = $parts[4];
+	    $requested_region->{strand} = $parts[5];
+	},
+	'features:s',   sub { 
+	    my ($t, $id) = split /:/, $_[1];
+	    if ($t =~ $STABLE_ID_REGEX) {
+	        $features{$t} = $STABLE_ID_PREFIXES->{$2};
+	    }
+	    elsif ($id) {
+	       $features{$id} = $t;
+	    }
+	    else {
+	        die "I don't know what type of feature $t is, try gene:$t or transcript:$t etc.\n";
+	    } 
+	},
+	'flank:s',      \$flank,
 	'styles:s',		\$styles_file,
 	'create_styles',\$create_missing_styles,
 	'types:s',		sub { @feature_types = split $CFG_DELIM, $_[1] },
@@ -119,7 +119,7 @@ if ($dbname && $user) {
 	
 	$dbs{$dbname}->{analyses} = \@analyses;
 }
-elsif($dbname) {
+elsif ($dbname) {
 	@dbnames = split $CFG_DELIM, $dbname;
 }
 
@@ -192,7 +192,7 @@ if (-e $cfg_file) {
 			map { $feature_type_settings{$_} ||= {} } @{ $dbs{$db}->{feature_types} };
 		}
 		
-		unless (%regions) {
+		unless (keys %$requested_region || %features) {
 			die "No region supplied!\n" unless $cfg->val('enzembl','region');
 			
 			my ($cs, $id) = split /:/, $cfg->val('enzembl','region');
@@ -200,9 +200,9 @@ if (-e $cfg_file) {
 			$regions{$id} = $cs;
 		}
 		
-		unless (defined $start && defined $end) {
-			($start, $end) = split /-/, $cfg->val('enzembl','coords') if $cfg->val('enzembl','coords');
-		}
+#		unless (defined $start && defined $end) {
+#			($start, $end) = split /-/, $cfg->val('enzembl','coords') if $cfg->val('enzembl','coords');
+#		}
 		
 		# look up settings for the feature types seperately so that the user can supply types 
 		# on the command line but leave settings in the config file
@@ -238,55 +238,252 @@ $zmap_exe = abs_path($zmap_exe);
 $zmap_config_file = abs_path($zmap_config_file);
 $styles_file = abs_path($styles_file);
 
+if (%features) {
+    
+    # try to find a slice which contains the supplied feature(s)
+    
+    DBS : for my $db (keys %dbs) {
+        
+        my $dbh = $dbs{$db}->{dbh};
+    
+        my $slice_adaptor = $dbh->get_SliceAdaptor;
+        
+        for my $feature (keys %features) {
+            
+            my $type = $features{$feature};
+            
+            my $method = 'fetch_by_'.$type.'_stable_id';
+            
+            if ($slice_adaptor->can($method)) {
+                
+                my $slice;
+                
+                eval {
+                    $slice = $slice_adaptor->$method($feature, $flank);
+                };
+                
+                if ($slice && !$@) {
+                    
+                    my $cs = $slice->coord_system_name;
+                    my $region = $slice->seq_region_name;
+                                  
+                    $requested_region->{cs_name} = $slice->coord_system->name;
+                    $requested_region->{cs_version} = $slice->coord_system->version;
+                    $requested_region->{name} = $slice->seq_region_name;
+                    $requested_region->{start} = $slice->start;
+                    $requested_region->{end} = $slice->end;
+                    $requested_region->{strand} = $slice->strand;
+                    
+                    print "Found slice: ".$slice->name."\n" if $verbose;
+                    
+                    last DBS;
+                }
+            }
+            else {
+                die "There doesn't seem to be a method $method on SliceAdaptors";
+            }
+        }
+    }
+    
+    die "Failed to find a region for supplied features\n" unless keys %$requested_region;
+}
+
+
+
 # pull the data from each of the databases
 
 my $gff;
 my %sources_to_types;
 my $sequence_name;
 
+my $loutre_slice_adaptor;
+my $loutre_slice;
+my $loutre_region_hash;
+
+# first try to find a coordinate system that all dbs support
+
+my %coord_systems;
+my $delim = '---';
+
+my $all_have_requested = 1;
+my $db_with_requested;
+my $mapper_db;
+
+for my $db (keys %dbs) {
+    
+    my $dbh = $dbs{$db}->{dbh};
+    my $csa = $dbh->get_CoordSystemAdaptor;
+    my $css = $csa->fetch_all;
+    
+    my $has_requested = 0;
+    
+    for my $cs (@$css) {
+        my $key = $cs->name.$delim.$cs->version;
+        $coord_systems{$key} ||= {};
+        $coord_systems{$key}->{cs} = $cs;
+        push @{ $coord_systems{$key}->{dbs} }, $db;
+    
+        if ($cs->name eq $requested_region->{cs_name} && $cs->version eq $requested_region->{cs_version}) {
+            $requested_region->{cs} ||= $cs;
+            $has_requested = 1;
+            $db_with_requested = $db;
+        }
+    }
+    
+    $all_have_requested = 0 unless $has_requested;
+}
+
+my $target_slice;
+my $common_slice;
+
+unless ($db_with_requested) {
+    die "None of the supplied databases support the requested coordinate system: ".
+        $requested_region->{cs_name}.":".$requested_region->{cs_version}."\n"; 
+}
+
+unless ($all_have_requested) {
+    
+    print "Not all databases support the requested coordinate system: ".
+        $requested_region->{cs}->name.":".$requested_region->{cs}->version, ", searching for common one...\n" if $verbose;
+    
+    my $found = 0;
+    
+    SEARCH : for my $cs (keys %coord_systems) {
+        
+        my @supporting_dbs = @{ $coord_systems{$cs}->{dbs} };
+        
+        if (@supporting_dbs == keys %dbs) {
+            
+            my $coord_sys = $coord_systems{$cs}->{cs};
+            
+            print "Found common coordinate system: ".$coord_sys->name.":".$coord_sys->version."\n" if $verbose;
+            
+            $found = 1;
+            
+            $common_region->{cs} = $coord_sys;
+            
+            for my $db (keys %dbs) {
+                my $dbh = $dbs{$db}->{dbh};
+                my $asma = $dbh->get_AssemblyMapperAdaptor;
+                
+                # stop ensembl moaning
+                my $old_verbose_level = verbose();
+                verbose(0);
+                
+                my $mapper = $asma->fetch_by_CoordSystems($coord_sys, $requested_region->{cs});
+                
+                verbose($old_verbose_level);
+                
+                if ($mapper) {
+                    print "Database $db can map ".$coord_sys->name.":".$coord_sys->version.
+                        " to ".$requested_region->{cs}->name.":".$requested_region->{cs}->version.
+                        "\n" if $verbose;
+                    $mapper_db = $db;
+                    
+                    my $slice_adaptor = $dbh->get_SliceAdaptor;
+                    
+                    $target_slice = $slice_adaptor->fetch_by_region(
+                        $requested_region->{cs}->name, 
+                        $requested_region->{name},
+                        $requested_region->{start}, 
+                        $requested_region->{end}, 
+                        $requested_region->{strand}, 
+                        $requested_region->{cs}->version
+                     );
+                     
+                     die "Failed to get slice on mapper DB" unless $target_slice;
+                     
+                     my $projection = $target_slice->project(
+                        $common_region->{cs}->name,
+                        $common_region->{cs}->version,
+                     );
+                     
+                     if ($projection && @$projection == 1) {
+                         $common_slice = $projection->[0]->to_Slice;
+                         print "Successfully mapped requested region to common region: ".$common_slice->name."\n" if $verbose;
+                         $common_region->{name} = $common_slice->seq_region_name;
+                         $common_region->{start} = $common_slice->start;
+                         $common_region->{end} = $common_slice->end;
+                         $common_region->{strand} = $common_slice->strand;
+                     }
+                     else {
+                         die "Funky mapping";
+                     }
+                    
+                     last SEARCH;
+                }
+            }
+        }
+    }
+    
+    die "Failed to find coordinate system supported by all databases\n" unless $found;
+}
+else {
+    print "Found common coordinate system: ".$requested_region->{cs}->name.":".$requested_region->{cs}->version."\n";
+    $common_region = $requested_region;
+}
+
 for my $db (keys %dbs) {
 
 	my $dbh = $dbs{$db}->{dbh};
 
 	my $slice_adaptor = $dbh->get_SliceAdaptor;
+    
+    my $slice;
+    my $t_slice;
+    my $c_slice;
+    
+    if ($db eq $mapper_db) {
+        $slice = $slice_adaptor->fetch_by_region(
+            $requested_region->{cs}->name, 
+            $requested_region->{name},
+            $requested_region->{start}, 
+            $requested_region->{end}, 
+            $requested_region->{strand}, 
+            $requested_region->{cs}->version
+       );
+       
+       $t_slice = undef;
+       $c_slice = undef;
+    }
+    else {
+        $slice = $slice_adaptor->fetch_by_region(
+            $common_region->{cs}->name, 
+            $common_region->{name},
+            $common_region->{start}, 
+            $common_region->{end}, 
+            $common_region->{strand}, 
+            $common_region->{cs}->version
+	   );
+	   
+	   $t_slice = $target_slice;
+       $c_slice = $common_slice;
+    }
+		
+	#print "cs name: ".$slice->coord_system->name." version: ".$slice->coord_system->version."\n";	
+	#$slice->project('chromosome', 'Otter');
+				
+	die "Failed to fetch slice for requested region\n" unless $slice;
 	
-	for my $region (keys %regions) {
+	# and append the slice's gff representation
 	
-		# get a slice for each region
-		
-		my $coord_sys = $regions{$region};
-		
-		# patch the region identifier if we're using a loutre database
-        if ($coord_sys eq 'chromosome' && $db =~ /loutre_(\w+)/) {
-            $region = $OTTER_CHROMS->{$1}->{$region};
-            print "region patched to: $region\n";
-        }
-
-		my $slice = $slice_adaptor->fetch_by_region($coord_sys, $region, $start, $end);
-		
-		#print "cs name: ".$slice->coord_system->name." version: ".$slice->coord_system->version."\n";	
-		#$slice->project('chromosome', 'Otter');
-					
-		die "Failed to fetch slice for region: $coord_sys:$region ".
-			($start && $end ? "$start-$end" : '')."\n" unless $slice;
-		
-		# and append the slice's gff representation
-		
-		print "Database $db:\n" if $verbose;
-		
-		$gff .= $slice->to_gff(
-			analyses			=> $dbs{$db}->{analyses},
-			feature_types 		=> $dbs{$db}->{feature_types},
-			include_dna 		=> 1,
-			include_header 		=> !$gff,
-			sources_to_types	=> \%sources_to_types,
-			verbose				=> $verbose,
-		);
-		
-		# save off the first sequence name for zmap
-		
-		$sequence_name = $slice->seq_region_name unless $sequence_name;
-	}
+	print "Database $db:\n" if $verbose;
+	
+	$gff .= $slice->to_gff(
+		analyses			=> $dbs{$db}->{analyses},
+		feature_types 		=> $dbs{$db}->{feature_types},
+		include_dna 		=> 1,
+		include_header 		=> !$gff,
+		sources_to_types	=> \%sources_to_types,
+		verbose				=> $verbose,
+		target_slice        => $t_slice,
+		common_slice        => $c_slice,	
+    );
+	
+	# save off the first sequence name for zmap
+	
+	$sequence_name = $slice->seq_region_name unless $sequence_name;
+	
 }
 
 # create the styles file
@@ -357,13 +554,13 @@ if ($create_missing_styles) {
 	        $styles_cfg->newval(
                 $source, 
                 'colours', 
-                "normal fill $fill ; normal border $border"
+                "normal fill white ; normal border $border"
             );
             
             $styles_cfg->newval(
                 $source, 
                 'transcript-cds-colours', 
-                "normal fill white ; normal border $cds_border ; selected fill gold"
+                "normal fill $fill ; normal border $cds_border ; selected fill gold"
             );
 		    
 		    # reset the colours list
@@ -491,14 +688,10 @@ B<NB:> All of these settings can also be set in the config file. Command line op
 Read configuration from the specified file (defaults to ~/.enzembl_config). Supply '-h'
 on the command line to see an example file.
 
-=item B<-region coord_system:identifier>
+=item B<-region coord_system:version:name:start:end:strand>
 
 Grab features from the specified region, e.g. clone:AC068644.15, chromosome:15 etc.
 Must be supplied here or in the config file
-
-=item B<-coords start-end>
-
-Limit search to specified coordinates (defaults to entire region).
 
 =item B<-analyses logic_name1,logic_name2,...>
 

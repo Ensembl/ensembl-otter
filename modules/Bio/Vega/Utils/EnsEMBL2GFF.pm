@@ -5,12 +5,15 @@ package Bio::Vega::Utils::EnsEMBL2GFF;
 use strict;
 use warnings;
 
+
 # This module allows conversion of ensembl/otter objects to GFF by inserting
 # to_gff (and supporting _gff_hash) methods into the necessary feature classes
 
 {
 
     package Bio::EnsEMBL::Slice;
+    
+    use Bio::EnsEMBL::Utils::Exception qw(verbose);
 
     sub gff_header {
 
@@ -56,20 +59,19 @@ use warnings;
 
         my %args = @_;
 
-        my $analyses = $args{analyses}
-          || ['']
-          ; # if we're not given any analyses, search for features from all analyses
+        my $analyses = $args{analyses} || ['']; # if we're not given any analyses, search for features from all analyses
         my $feature_types  = $args{feature_types};
         my $include_header = $args{include_header};
         my $include_dna    = $args{include_dna};
         my $verbose        = $args{verbose};
+        my $target_slice   = $args{target_slice} || $self;
+        my $common_slice   = $args{common_slice};
 
         my $sources_to_types = $args{sources_to_types};
 
-        my $gff =
-            $include_header
-          ? $self->gff_header( include_dna => $include_dna )
-          : '';
+        my $gff = $include_header ? 
+            $target_slice->gff_header( include_dna => $include_dna ) :
+            '';
 
         # grab features of each type we're interested in
 
@@ -89,23 +91,44 @@ use warnings;
                 if ( $verbose && scalar(@$features) ) {
                     print "Found "
                       . scalar(@$features)
-                      . " $feature_type from $analysis on slice "
-                      . $self->seq_region_name . "\n";
+                      . " $feature_type from $analysis\n";
                 }
 
-               for my $feature (@$features) {
+                for my $feature (@$features) {
                     
                     if ( $feature->can('to_gff') ) {
                         
+                        if ($common_slice) {
+                            
+                            # if we're passed a common slice we need to give it to each feature
+                            # and then transfer from this slice to the target slice
+                        
+                            $feature->slice($common_slice);
+                            
+                            my $id = $feature->display_id;
+                            
+                            my $old_verbose_level = verbose();
+                            verbose(0);
+                            
+                            $feature = $feature->transfer($target_slice);
+                            
+                            verbose($old_verbose_level);
+                            
+                            unless ($feature) {
+                                print "Failed to transform feature: $id\n" if $verbose;
+                                next;
+                            }
+                        }
+                        
                         if ($feature->isa('Bio::EnsEMBL::Gene')) {
                             map { 
-                                my $truncated = $_->truncate_to_Slice($self);
-                                #warn "Truncated transcript: ".$_->display_id if $truncated;
+                                my $truncated = $_->truncate_to_Slice($target_slice);
+                                print "Truncated transcript: ".$_->display_id."\n" if $truncated && $verbose;
                             } @{ $feature->get_all_Transcripts };
                         }
                         elsif ($feature->isa('Bio::EnsEMBL::Transcript')) {
-                            my $truncated = $feature->truncate_to_Slice($self);
-                            #warn "Truncated transcript: ".$feature->display_id if $truncated;
+                            my $truncated = $feature->truncate_to_Slice($target_slice);
+                            print "Truncated transcript: ".$feature->display_id."\n" if $truncated && $verbose;
                         }
                         
                         $gff .= $feature->to_gff . "\n";
@@ -252,7 +275,7 @@ use warnings;
 
         if ( @fps > 1 ) {
             my @gaps =
-              map { join( ' ', $_->seq_region_start, $_->seq_region_end, $_->hseq_region_start, $_->hseq_region_end ) }
+              map { join( ' ', $_->seq_region_start, $_->seq_region_end, $_->hstart, $_->hend ) }
               @fps;
             $gap_string = join( ',', @gaps );
         }
@@ -265,8 +288,8 @@ use warnings;
         $gff->{attributes}->{Target} =
             '"Sequence:'
           . $self->hseqname . '" '
-          . $self->hseq_region_start . ' '
-          . $self->hseq_region_end . ' '
+          . $self->hstart . ' '
+          . $self->hend . ' '
           . ( $self->hstrand == -1 ? '-' : '+' );
 
         if ($gap_string) {
@@ -427,23 +450,23 @@ use warnings;
         }
         
         ### Hack until we fiddle with translation stuff
-        if ($exons_truncated) {
-            $self->{'translation'}     = undef;
-            $self->{'_translation_id'} = undef;
-            my $attrib = $self->get_all_Attributes;
-            for ( my $i = 0 ; $i < @$attrib ; ) {
-                my $this = $attrib->[$i];
-
-                # Should not have CDS start/end not found attributes
-                # if there is no CDS!
-                if ( $this->code =~ /^cds_(start|end)_NF$/ ) {
-                    splice( @$attrib, $i, 1 );
-                }
-                else {
-                    $i++;
-                }
-            }
-        }
+#        if ($exons_truncated) {
+#            $self->{'translation'}     = undef;
+#            $self->{'_translation_id'} = undef;
+#            my $attrib = $self->get_all_Attributes;
+#            for ( my $i = 0 ; $i < @$attrib ; ) {
+#                my $this = $attrib->[$i];
+#
+#                # Should not have CDS start/end not found attributes
+#                # if there is no CDS!
+#                if ( $this->code =~ /^cds_(start|end)_NF$/ ) {
+#                    splice( @$attrib, $i, 1 );
+#                }
+#                else {
+#                    $i++;
+#                }
+#            }
+#        }
         
         $self->recalculate_coordinates;
         
