@@ -1,0 +1,80 @@
+#!/usr/bin/env perl
+
+### dump_supporting_evidence_info
+
+use strict;
+use warnings;
+use Hum::Sort qw{ ace_sort };
+
+use Bio::Otter::Lace::Defaults;
+
+{
+    my( $dataset_name );
+
+    my $usage = sub { exec('perldoc', $0) };
+    # This do_getopt() call is needed to parse the otter config files
+    # even if you aren't giving any arguments on the command line.
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        'dataset=s'     => \$dataset_name,
+        ) or $usage->();
+    $usage->() unless $dataset_name;
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    
+    my $otter_dba = $ds->get_cached_DBAdaptor;
+    
+    my $list_evidence = $otter_dba->dbc->prepare(qq{
+        SELECT gsid.stable_id
+          , g.biotype
+          , tsid.stable_id
+          , t.biotype
+          , ev.type
+          , ev.name
+        FROM seq_region sr
+          , gene g
+          , gene_stable_id gsid
+          , transcript t
+          , transcript_stable_id tsid
+          , evidence ev
+        WHERE sr.seq_region_id = g.seq_region_id
+          AND g.gene_id = gsid.gene_id
+          AND g.gene_id = t.gene_id
+          AND t.transcript_id = tsid.transcript_id
+          AND t.transcript_id = ev.transcript_id
+          AND g.source = 'havana'
+          AND g.is_current = 1
+          AND sr.name = ?
+        });
+    
+    foreach my $ss (sort { ace_sort($a->name, $b->name) } @{$ds->get_all_visible_SequenceSets}) {
+        my $name = $ss->name;
+        $list_evidence->execute($name);
+        
+        while (my @row = $list_evidence->fetchrow) {
+            print join("\t", $name, @row), "\n";
+        }
+    }
+}
+
+
+
+__END__
+
+=head1 NAME - dump_supporting_evidence_info
+
+=head1 DESCRIPTION
+
+Written to provide data to the HGNC group so that they could match otter IDs
+to HGNC symbols missing them. They will use the accession number of the
+evidence to link to Unigene identifiers, which they do have links to in their
+database.
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
