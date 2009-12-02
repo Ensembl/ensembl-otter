@@ -521,41 +521,54 @@ __END__
 
 =head1 NAME - HUGO_gene_name_to_vega
 
+=head1 USAGE
+
+  HUGO_gene_name_to_vega -dataset human [HGNC_FILE]
+
 =head1 HOWTO
 
-1st Step:
+=over 4
+
+=item 1st Step
+
 Get a fresh list of HUGO gene symbols/Gene Stable ID
-wget "http://www.genenames.org/cgi-bin/hgnc_downloads.cgi?title=VEGA+output&col=gd_app_sym&col=gd_app_name&col=gd_hgnc_id&col=gd_vega_ids&col=gd_locus_type&status=Approved&status_opt=2&level=pri&where=gd_vega_ids+IS+NOT+NULL+AND+gd_vega_ids%20NOT%20LIKE%20%27%25%2C%20%25%27&order_by=gd_app_sym_sort&limit=&format=text&submit=submit&.cgifields=&.cgifields=level&.cgifields=chr&.cgifields=status&.cgifields=hgnc_dbtag" -O [HGNC_FILE]
 
-URL -> Sting
-http://www.genenames.org/cgi-bin/hgnc_downloads.cgi?
-title=VEGA output&
-col=gd_app_sym&
-col=gd_app_name&
-col=gd_hgnc_id&
-col=gd_vega_ids&
-col=gd_locus_type&
-status=Approved&
-status_opt=2&
-level=pri&
-where=gd_vega_ids IS NOT NULL AND gd_vega_ids NOT LIKE '%, %'&
-order_by=gd_app_sym_sort&
-limit=&
-format=text&
-submit=submit&
-.cgifields=&
-.cgifields=level&
-.cgifields=chr&
-.cgifields=status&
-.cgifields=hgnc_dbtag
+  curl "http://www.genenames.org/cgi-bin/hgnc_downloads.cgi?title=VEGA+output&col=gd_app_sym&col=gd_app_name&col=gd_hgnc_id&col=gd_vega_ids&col=gd_locus_type&status=Approved&status_opt=2&level=pri&where=gd_vega_ids+IS+NOT+NULL+AND+gd_vega_ids%20NOT%20LIKE%20%27%25%2C%20%25%27&order_by=gd_app_sym_sort&limit=&format=text&submit=submit&.cgifields=&.cgifields=level&.cgifields=chr&.cgifields=status&.cgifields=hgnc_dbtag" > [HGNC_FILE]
 
-2nd Step:
+That URL string is:
+
+    http://www.genenames.org/cgi-bin/hgnc_downloads.cgi?
+    title=VEGA output&
+    col=gd_app_sym&
+    col=gd_app_name&
+    col=gd_hgnc_id&
+    col=gd_vega_ids&
+    col=gd_locus_type&
+    status=Approved&
+    status_opt=2&
+    level=pri&
+    where=gd_vega_ids IS NOT NULL AND gd_vega_ids NOT LIKE '%, %'&
+    order_by=gd_app_sym_sort&
+    limit=&
+    format=text&
+    submit=submit&
+    .cgifields=&
+    .cgifields=level&
+    .cgifields=chr&
+    .cgifields=status&
+    .cgifields=hgnc_dbtag
+
+=item 2nd Step
+
 Run the script in test mode with the freshly fetched list
 HUGO_gene_name_to_vega -test -dataset human [HGNC_FILE]
 
-3rd Step:
+=item 3rd Step
+
 Run the script when the annotators are happy with the modifications
 HUGO_gene_name_to_vega -notest -dataset human [HGNC_FILE]
+
+=back
 
 =head1 AUTHOR
 
