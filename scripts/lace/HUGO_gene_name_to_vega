@@ -7,9 +7,7 @@ use warnings;
 
 use Bio::Otter::Lace::Defaults;
 use Bio::Vega::DBSQL::DBAdaptor;
-use GeneHist::DataUtils qw (process_query);
 use Hum::Chromoview::Utils qw(unixtime2YYYYMMDD);
-
 
 # not doing gene type update anymore,
 # as HGNC no longer assign gene type and takes the data from Otter
