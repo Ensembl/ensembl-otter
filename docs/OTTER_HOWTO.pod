@@ -57,6 +57,8 @@ exhaustive list):
 
 =item DBI
 
+=item TermReadKey
+
 =item Digest-MD5
 
 =item MIME-Base64
