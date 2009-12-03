@@ -19,6 +19,7 @@ before using CPAN. Modules you are likely to need to install include:
 
   Tk
   LWP
+  Term::ReadKey
   Crypt::SSLeay
   Config::IniFiles
   Ace
