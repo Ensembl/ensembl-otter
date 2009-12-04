@@ -471,20 +471,41 @@ if (my $alt_assembly = $support->param('ensemblassembly') ) {
 	if (! $support->param('dry_run')) {
 	  $edbh->do($sql);
 	}
-	$sql = qq(SELECT asm_start, asm_end, cmp_start, cmp_end, ori
-                    FROM assembly
-                   WHERE asm_seq_region_id = $l_sr_id
-                     AND cmp_seq_region_id = $le_sr_id);
-	$sth = $ldbh->prepare($sql);
-	$sth->execute;
-	while (my ($asm_start,$asm_end,$cmp_start,$cmp_end,$ori) = $sth->fetchrow_array) {
-	  $sql = qq(INSERT into assembly
-                    VALUES ($v_sr_id,$e_sr_id+$offset,$asm_start,$asm_end,$cmp_start,$cmp_end,$ori));
-	  $support->log_verbose("SQL for assembly entries is $sql\n",2);
-	  if (! $support->param('dry_run')) {
-	    $vdbh->do($sql);
-	  }
-	}
+
+        # it's the other way round in zebrafish. do not ask...will make this more elegant later...
+        if ($l_dbname =~ /zebrafish/) {
+	    $sql = qq(SELECT asm_start, asm_end, cmp_start, cmp_end, ori
+                        FROM assembly
+                       WHERE asm_seq_region_id = $le_sr_id
+                         AND cmp_seq_region_id = $l_sr_id);
+	    $sth = $ldbh->prepare($sql);
+	    $sth->execute;
+	    while (my ($asm_start,$asm_end,$cmp_start,$cmp_end,$ori) = $sth->fetchrow_array) {
+	      $sql = qq(INSERT into assembly
+                        VALUES ($e_sr_id+$offset,$v_sr_id,$asm_start,$asm_end,$cmp_start,$cmp_end,$ori));
+	      $support->log_verbose("SQL for assembly entries is $sql\n",2);
+	      if (! $support->param('dry_run')) {
+	        $vdbh->do($sql);
+	      }
+	    }
+            
+        }
+        else {
+	    $sql = qq(SELECT asm_start, asm_end, cmp_start, cmp_end, ori
+                        FROM assembly
+                       WHERE asm_seq_region_id = $l_sr_id
+                         AND cmp_seq_region_id = $le_sr_id);
+	    $sth = $ldbh->prepare($sql);
+	    $sth->execute;
+	    while (my ($asm_start,$asm_end,$cmp_start,$cmp_end,$ori) = $sth->fetchrow_array) {
+	      $sql = qq(INSERT into assembly
+                        VALUES ($v_sr_id,$e_sr_id+$offset,$asm_start,$asm_end,$cmp_start,$cmp_end,$ori));
+	      $support->log_verbose("SQL for assembly entries is $sql\n",2);
+	      if (! $support->param('dry_run')) {
+	        $vdbh->do($sql);
+	      }
+	    }
+        }
       }
     }
     else {
@@ -748,22 +769,25 @@ push @sql_fixes, "UPDATE gene SET status = NULL WHERE biotype in ('processed_pse
 push @sql_fixes, "UPDATE transcript SET status = NULL WHERE status = 'UNKNOWN';\n";
 
 if (! $support->param('dry_run')) {
-  $support->log("\nFixing meta table, updating gene / transcript types\n");
-  foreach my $fix (@sql_fixes) {
-    eval {
-      if (my $r = $vdbh->do("$fix")) {
-	if ($r eq '0E0') {
-	  $support->log("No rows affected for $fix");
-	}
-	else {
-	  $support->log("Updated $r rows for $fix");
-	  if ($fix =~ /expressed_pseudogene/) {
-	    $support->log_warning("Please refer to Havana - should these be processed or unprocessed?\n");
-	}
-      }
-    };
-    if ($@) { $support->log_warning("Failed fix: $fix $@"); }
-  }
+    $support->log("\nFixing meta table, updating gene / transcript types\n");
+    foreach my $fix (@sql_fixes) {
+        eval {
+            if (my $r = $vdbh->do("$fix")) {
+                if ($r eq '0E0') {
+                    $support->log("No rows affected for $fix");
+                }
+            }
+            else {
+                $support->log("Updated $r rows for $fix");
+                if ($fix =~ /expressed_pseudogene/) {
+                    $support->log_warning("Please refer to Havana - should these be processed or unprocessed?\n");
+                }
+            }
+        };
+        if ($@) { 
+            $support->log_warning("Failed fix: $fix $@"); 
+        }
+    }
 }
 
 if ($support->param('dry_run')) {
