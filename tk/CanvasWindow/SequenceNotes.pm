@@ -719,7 +719,9 @@ sub _open_SequenceSet {
             return;
         }
     }
-
+    
+    $self->refresh_lock_columns;
+    
     warn "Making LoadColumns";
     
     my $top = $self->canvas->Toplevel(
@@ -731,8 +733,6 @@ sub _open_SequenceSet {
    	$lc->SequenceNotes($self);
    	$lc->DataSetChooser($self->SequenceSetChooser->DataSetChooser);
 	$lc->initialize;
-	
-    $self->refresh_lock_columns;
 }
 
 #sub make_EviCollection {
