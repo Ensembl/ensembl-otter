@@ -120,22 +120,25 @@ my $sth_gene = $dba->dbc->prepare("update gene set display_xref_id=? where gene_
 my $sth_trans = $dba->dbc->prepare("update transcript set display_xref_id=? where transcript_id=?");
 
 # delete all xrefs if --prune option is used
-if ($support->param('prune') and $support->user_proceed('Would you really like to delete all xrefs (except Interpro) before running this script?')) {
+if ($support->param('prune') and $support->user_proceed('Would you really like to delete all vega and external xrefs  before running this script?')) {
 
   my $num;
   # xrefs
-  $support->log("Deleting all xrefs (except Interpro)...\n");
+  $support->log("Deleting all vega and external xrefs...\n");
   $num = $dba->dbc->do(qq(
         DELETE x
         FROM xref x, external_db ed
         WHERE x.external_db_id = ed.external_db_id
-        AND ed.db_name <> 'Interpro'
+        AND ed.db_name in ('Ens_Mm_gene','EntrezGene','MGI','RefSeq_dna','RefSeq_peptide','Uniprot/SWISSPROT','Vega_gene','Vega_transcript','Vega_translation')
     ));
   $support->log("Done deleting $num entries.\n");
 
   # object_xrefs
   $support->log("Deleting all object_xrefs...\n");
-  $num = $dba->dbc->do(qq(DELETE FROM object_xref));
+  $num = $dba->dbc->do(qq(
+        DELETE FROM object_xref
+     LEFT JOIN xref x ON ox.xref_id = x.xref_id 
+         WHERE x.xref_id IS NULL));
   $support->log("Done deleting $num entries.\n");
 
   # gene.display_xref_id
