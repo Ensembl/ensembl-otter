@@ -267,6 +267,7 @@ sub reset_progress {
     $self->label_text($label_text);
     $self->{_filters_done} = 0;
     $self->{_num_filters} = 0;
+    
 }
 
 sub label_text {
@@ -279,7 +280,7 @@ sub loading_filter {
     my ($self, $filter) = @_;
     $self->{_current_filter} = $filter;
     $filter->load_time(time);
-    $self->label_text("Loading: ".$filter->method_tag." (".($self->{_filters_done}+1)." of ".$self->{_num_filters}.")");
+    $self->label_text("Loading: ".$filter->method_tag." (".($self->{_filters_done}+1)." of ".$self->{_num_filters}.")"); 
     $self->top->update;
 }
 
@@ -295,6 +296,10 @@ sub filter_loaded {
     $self->filter_done;
     $filter->load_time(time - $filter->load_time);
     $self->show_filters;
+    
+    $self->{_loaded_filters} ||= [];
+    
+    push @{ $self->{_loaded_filters} }, @{ $filter->required_ace_method_names };
 }
 
 sub filter_failed {
@@ -358,6 +363,9 @@ sub load_filters {
     }
     
     my $fetched_new_data = 0;
+    
+    $self->{_loaded_filters} = [];
+    
     if (@to_fetch) {
         
         # replace the current fatal error prompt (because it waits for the user to acknowledge 
@@ -374,11 +382,8 @@ sub load_filters {
     
     if ($self->XaceSeqChooser) {
         if ($fetched_new_data) {
-            # We need to resync with the database and restart Zmap. We won't
-            # need to do this once we can add a column to Zmap without
-            # restarting
             $self->XaceSeqChooser->resync_with_db;
-            $self->XaceSeqChooser->zMapLaunchZmap;
+            $self->XaceSeqChooser->zMapLoadFeatures(@{ $self->{_loaded_filters} });
         }
         elsif (! @to_fetch) {
             # Don't need to fetch anything
