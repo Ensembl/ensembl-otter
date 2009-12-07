@@ -524,7 +524,10 @@ sub launch_exonerate {
 	    }
 	    
 	    if ($self->{_use_marked_region}) {
-            $self->XaceSeqChooser->zMapLoadFeaturesInMark($method_name);
+	        # XXX: temporarily don't ask zmap to load in the marked region as this crashes
+	        # zmap when the view is reverse complemented
+            #$self->XaceSeqChooser->zMapLoadFeaturesInMark($method_name);
+            $self->XaceSeqChooser->zMapLoadFeatures($method_name);
 	    }
 	    else {
 	        $self->XaceSeqChooser->zMapLoadFeatures($method_name);
