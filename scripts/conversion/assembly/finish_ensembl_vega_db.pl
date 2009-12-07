@@ -467,10 +467,10 @@ $sql = qq(UPDATE gene g, gene_coords gc
              SET g.seq_region_start = gc.seq_region_start, g.seq_region_end = gc.seq_region_end
            WHERE g.gene_id = gc.gene_id);
 $c = $dbh->{'evega'}->do($sql);
-$support->log_stamped("Updated $c gene starts and ends...\n");
+$support->log_stamped("Updated $c gene starts and ends...\n\n");
 
 #analysis_description;
-$support->log_stamped("Updating analysis_description table for external genes");
+$support->log_stamped("Updating analysis_description table for external genes\n");
 $sql = qq(UPDATE analysis a, analysis_description ad
              SET ad.description = 'See <a href=\"http://vega.sanger.ac.uk/info/about/man_annotation.html\">the Vega website</a> for details of the approaches used for the annotation of external Vega genes'
           WHERE ad.analysis_id = a.analysis_id
