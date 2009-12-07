@@ -1119,7 +1119,15 @@ sub zMapGetMark {
 	    my ($status, $hash) = parse_response($response[0]);
 
         if ($status =~ /^2/ && $hash->{response}->{mark}->{exists} eq "true") {
-	    	return ( $hash->{response}->{mark}->{start}, $hash->{response}->{mark}->{end} );
+
+            my $start = abs($hash->{response}->{mark}->{start});
+            my $end = abs($hash->{response}->{mark}->{end});
+
+            if ($end < $start) {
+                ($start, $end) = ($end, $start);
+            }
+
+	    	return ( $start, $end );
 	    }
 	}
 	else {
@@ -1127,6 +1135,75 @@ sub zMapGetMark {
 	}
 
     return undef;
+}
+
+sub _zMapLoadFeatures {
+    my ($self, $featuresets, $use_mark) = @_;
+    
+    if (my $client = $self->zMapGetXRemoteClientByAction('load_features', 1)) {
+        
+        my $xml = Hum::XmlWriter->new;
+        $xml->open_tag('zmap');
+        $xml->open_tag('request', {action => 'load_features', $use_mark ? (load => 'mark') : ()});
+        $xml->open_tag('align');
+        $xml->open_tag('block');
+        for my $featureset (@$featuresets) {
+            $xml->open_tag('featureset', {name => $featureset});
+            $xml->close_tag;
+        }
+        $xml->close_all_open_tags;
+        
+        my @response = $client->send_commands($xml->flush);
+        
+        my ($status, $hash) = parse_response($response[0]);
+        
+        unless ($status =~ /^2/) {
+            warn "Problem loading featuresets";
+        }
+    }
+    else {
+        warn "Failed to get client for 'load_features'";
+    }
+}
+
+sub zMapLoadFeatures {
+    my ($self, @featuresets) = @_;
+    return $self->_zMapLoadFeatures(\@featuresets, 0);
+}
+
+sub zMapLoadFeaturesInMark {
+    my ($self, @featuresets) = @_;
+    return $self->_zMapLoadFeatures(\@featuresets, 1);
+}
+
+sub zMapDeleteFeaturesets {
+    my ($self, @featuresets) = @_;
+    
+    if (my $client = $self->zMapGetXRemoteClientByAction('delete_feature', 1)) {
+        
+        my $xml = Hum::XmlWriter->new;
+        $xml->open_tag('zmap');
+        $xml->open_tag('request', {action => 'delete_feature'});
+        $xml->open_tag('align');
+        $xml->open_tag('block');
+        
+        for my $featureset (@featuresets) {
+            $xml->open_tag('featureset', {name => $featureset});
+            $xml->close_tag;
+        }
+        $xml->close_all_open_tags;
+        
+        my @response = $client->send_commands($xml->flush);
+        
+        my ($status, $hash) = parse_response($response[0]);
+        
+        unless ($status =~ /^2/) {
+            warn "Problem deleting featuresets";
+        }
+    }
+    else {
+        warn "Failed to get client for 'delete_feature'";
+    }
 }
 
 sub zMapZoomToSubSeq {
