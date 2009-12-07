@@ -27,7 +27,7 @@ General options:
 
 =head1 DESCRIPTION
 
-This script updates vega transcript xrefs after changes to genes names - these can
+This script updates vega transcript xrefs after changes to gene names - these can
 occur after patching of case differences or patching of mouse names after reference
 to MGI records.
 
