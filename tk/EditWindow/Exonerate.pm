@@ -435,6 +435,8 @@ sub launch_exonerate {
 	$self->top->Busy;
 
 	my $need_relaunch = 0;
+	
+	my $method_name;
 
 	for my $type (keys %seqs_by_type) {
 
@@ -499,6 +501,7 @@ sub launch_exonerate {
 	    	my $coll = $exonerate->AceDatabase->MethodCollection;
 	    	my $coll_zmap = $self->XaceSeqChooser->Assembly->MethodCollection;
 	    	my $method = $exonerate->ace_Method;
+	    	$method_name = $method->name;	
 	    	unless ($coll->get_Method_by_name($method->name) ||
 	    			$coll_zmap->get_Method_by_name($method->name)) {
 	        	$coll->add_Method($method);
@@ -514,7 +517,18 @@ sub launch_exonerate {
 
 	if ($need_relaunch) {
 	    $self->XaceSeqChooser->resync_with_db();
-		$self->XaceSeqChooser->zMapLaunchZmap;
+	    
+	    if ($self->{_clear_existing}) {
+	        warn "Deleting featureset $method_name...";
+	        $self->XaceSeqChooser->zMapDeleteFeaturesets($method_name);
+	    }
+	    
+	    if ($self->{_use_marked_region}) {
+            $self->XaceSeqChooser->zMapLoadFeaturesInMark($method_name);
+	    }
+	    else {
+	        $self->XaceSeqChooser->zMapLoadFeatures($method_name);
+	    }
 	}
 
 	$self->top->Unbusy;
