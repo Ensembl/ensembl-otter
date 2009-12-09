@@ -10,8 +10,8 @@ use Getopt::Long;
 my $host   = 'vegabuild';
 my $user   = 'ottadmin';
 my $pass   = 'wibble';
-my $port   = 3304;
-my $dbname = 'vega_danio_rerio_20080717';
+my $port   = 5304;
+my $dbname = 'vega_danio_rerio_20091117';
 
 #my $host   = 'ecs3f';
 #my $user   = 'ensadmin';
@@ -116,11 +116,9 @@ while (<AL>) {
 
 my %genename;
 my $sth = $dbc->prepare(q{
-     select gsi.gene_id, gn.name 
-     from gene_stable_id gsi, current_gene_info cgi, gene_name gn 
-     where gsi.stable_id = cgi.gene_stable_id 
-     and cgi.gene_info_id = gn.gene_info_id
-});
+     select g.gene_id, x.display_label 
+     from gene g, xref x 
+     where g.display_xref_id = x.xref_id});
 $sth->execute();
 while (my @row = $sth->fetchrow_array) {
     $genename{$row[0]} = $row[1];
