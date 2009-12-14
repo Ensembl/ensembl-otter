@@ -73,9 +73,13 @@ exhaustive list):
 
 =item LWP
 
+=item LWP::Authen::Wsse
+
 =item Crypt::SSLeay
 
 =item Config::IniFiles
+
+=item Proc::ProcessTable
 
 =item Ace
 
