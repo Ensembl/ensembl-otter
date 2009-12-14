@@ -28,8 +28,10 @@ before using CPAN. Modules you are likely to need to install include:
   libnet
   libwww-perl
   LWP
+  LWP::Authen::Wsse
   Crypt::SSLeay
   Config::IniFiles
+  Proc::ProcessTable
   Ace
 
 "Ace" is AcePerl. It asks a couple of questions during installation. I say
