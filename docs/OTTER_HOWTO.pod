@@ -71,6 +71,14 @@ exhaustive list):
 
 =item libwww-perl
 
+=item LWP
+
+=item Crypt::SSLeay
+
+=item Config::IniFiles
+
+=item Ace
+
 =back
 
 =item Perl modules from CVS
