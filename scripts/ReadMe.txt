@@ -17,9 +17,17 @@ otterlace will compile. Some of these CPAN modules will be provided as
 optional components by most Linux distributions, so try your package manager
 before using CPAN. Modules you are likely to need to install include:
 
-  Tk
-  LWP
+  CGI
+  DBD-mysql
+  DBI
   Term::ReadKey
+  Digest-MD5
+  MIME-Base64
+  Tk
+  URI
+  libnet
+  libwww-perl
+  LWP
   Crypt::SSLeay
   Config::IniFiles
   Ace
