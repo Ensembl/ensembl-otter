@@ -23,9 +23,9 @@ $dbport = 3304;
 $dbuser = 'ottadmin';
 $dbpass = 'lutralutra';
 $dbname = 'vega_danio_rerio_20080717';
+
 # insert into repeat_class values (236343,'novel_transposon','novel_transposon',\N,\N);
 
-$repeat_class = 236343;
 
 my $db = Bio::EnsEMBL::DBSQL::DBConnection->new(
     -host   => $dbhost,
@@ -37,7 +37,14 @@ my $db = Bio::EnsEMBL::DBSQL::DBConnection->new(
 
 
 &help unless ($dbhost && $dbuser && $dbpass && $dbname);
+
+my $sth10 = $db->prepare(q{select max(repeat_consensus_id) from repeat_consensus});
+$sth10->execute;
+while (my $no = $sth10->fetchrow_array) {
+    $repeat_class = $no;
+}
 die "need repeatclass number for novel_transposon!\n" unless ($repeat_class);
+$db->do("insert into repeat_class values ($repeat_class,'novel_transposon','novel_transposon',\\N,\\N)");
 
 my $sth1 = $db->prepare(q{
     select t.gene_id, 
