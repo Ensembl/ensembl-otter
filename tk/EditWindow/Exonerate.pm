@@ -476,14 +476,19 @@ sub launch_exonerate {
 
 	        # add hit sequences into ace text
 	        my $names = $exonerate->delete_all_hit_names;
-	        foreach my $hit_name (@$names) {
-	            my $seq = $self->{'_name_seq'}->{$hit_name};
-	            if($exonerate->query_type eq 'protein') {
-	            	$ace_text .= $self->ace_PEPTIDE($hit_name, $seq);
-	            } else {
-	            	$ace_text .= $self->ace_DNA($hit_name, $seq);
-	        	}
-	    	}
+	        
+	        # only add the sequence to acedb if they are not pfetchable (i.e. they are unknown)
+            if ($type =~ /^Unknown/) {
+    	        foreach my $hit_name (@$names) {
+    	            my $seq = $self->{'_name_seq'}->{$hit_name};
+    	            
+    	            if($exonerate->query_type eq 'protein') {
+    	            	$ace_text .= $self->ace_PEPTIDE($hit_name, $seq);
+    	            } else {
+    	            	$ace_text .= $self->ace_DNA($hit_name, $seq);
+    	        	}
+    	    	}
+            }
 
 			if ($self->{_clear_existing}) {
 
