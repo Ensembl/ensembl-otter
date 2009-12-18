@@ -447,9 +447,12 @@ sub add_subseq_exons {
     }
 
     my $strand = $subseq->strand;
+    
     foreach my $ex ($subseq->get_all_Exons_in_transcript_order) {
         $self->add_exon_holder($ex->start, $ex->end, $strand);
     }
+    
+    $self->remove_spurious_splice_sites;
 }
 
 {
@@ -604,6 +607,7 @@ sub sort_position_pairs {
     }
     $self->highlight(@select) if @select;
     $self->update_splice_strings('exon_start');
+    $self->remove_spurious_splice_sites;
 }
 
 sub sort_translation_region {
@@ -655,6 +659,8 @@ sub merge_position_pairs {
         $self->trim_position_pairs($over);
         $self->fix_window_min_max_sizes;
     }
+    
+    $self->remove_spurious_splice_sites;
 }
 
 sub delete_selected_exons {
@@ -693,6 +699,7 @@ sub delete_selected_exons {
 
     $self->trim_position_pairs($trim, $strand);
     $self->set_all_position_pair_text(@keep);   # Also updates splice site strings
+    $self->remove_spurious_splice_sites;
     $self->delete_was_selected;
 
     # Put in an empty exon holder if we have deleted them all
@@ -2099,6 +2106,7 @@ sub canvas_insert_character {
     $canvas->insert($text, 'insert', $char);
     $self->re_highlight($text);
     $self->update_splice_strings($text);
+    $self->remove_spurious_splice_sites;
 }
 
 sub increment_int {
@@ -2112,6 +2120,7 @@ sub increment_int {
         $canvas->itemconfigure($text, -text => $num);
         $self->re_highlight($text);
         $self->update_splice_strings($text);
+        $self->remove_spurious_splice_sites;
     }
 }
 
@@ -2126,6 +2135,7 @@ sub decrement_int {
         $canvas->itemconfigure($text, -text => $num);
         $self->re_highlight($text);
         $self->update_splice_strings($text);
+        $self->remove_spurious_splice_sites;
     }
 }
 
@@ -2157,6 +2167,7 @@ sub canvas_backspace {
     $canvas->dchars($text, $pos - 1);
     $self->re_highlight($text);
     $self->update_splice_strings($text);
+    $self->remove_spurious_splice_sites;
 }
 
 sub select_all_exon_pos {
@@ -2245,6 +2256,7 @@ sub control_left_button_handler {
         $self->set_tk_strand(1);
     }
     $self->update_splice_strings($obj);
+    $self->remove_spurious_splice_sites;
 }
 
 sub set_tk_strand {
@@ -2271,6 +2283,7 @@ sub set_tk_strand {
     }
 
     $self->sort_all_coordinates;
+    $self->remove_spurious_splice_sites;
 }
 
 sub toggle_tk_strand {
@@ -2352,6 +2365,7 @@ sub middle_button_paste {
                 );
             $self->highlight($obj);
             $self->update_splice_strings($obj) if $obj_tags{'exon_pos'};
+            $self->remove_spurious_splice_sites;
         }
         elsif ($obj_tags{'exon_furniture'}) {
             # Set coordinates with middle button on strand indicator
@@ -2473,31 +2487,50 @@ sub update_splice_strings {
         -font => $self->font_fixed_bold,
         -fill => "#ee2c2c",     # firebrick2
         );
-
+        
     foreach my $exon_id (keys %exons_to_update) {
+        
         my ($start, $end) = map $canvas->itemcget($_, 'text'), $canvas->find('withtag', "$exon_id&&exon_pos");
         if ($start > $end) {
             ($start, $end) = ($end, $start);
         }
+        
         my $strand = $self->exon_strand_from_tk($exon_id);
         my ($acc_str, $don_str) = $self->get_splice_acceptor_donor_strings($start, $end, $strand);
-
+        
+       
         my ($acceptor_txt) = $canvas->find('withtag', "$exon_id&&splice_acceptor");
-        my ($donor_txt)    = $canvas->find('withtag', "$exon_id&&splice_donor");
-
         $canvas->itemconfigure($acceptor_txt,
             -text => $acc_str,
             $acc_str eq 'ag' ? @good : @bad,
-            );
+        );
+    
+        my ($donor_txt) = $canvas->find('withtag', "$exon_id&&splice_donor");
         $canvas->itemconfigure($donor_txt,
             -text => substr($don_str, 1, 2),
             # OK if first two bases in intron are "gt", or are "gc"
             # preceeded by "g" at the last base of the exon.
             $don_str =~ /(.gt|ggc)/ ? @good : @bad,
-            );
+        );
     }
 }
 
+sub remove_spurious_splice_sites {
+    my $self = shift;
+    
+    my $canvas = $self->canvas;
+    
+    my @pps = sort { $a->[0] <=> $b->[0] } $self->position_pairs;
+    
+    my $initial_exon_id = $pps[0]->[2];
+    my $terminal_exon_id = $pps[-1]->[2];
+    
+    my ($acceptor_txt) = $canvas->find('withtag', "$initial_exon_id&&splice_acceptor");
+    $canvas->itemconfigure($acceptor_txt, -text => '');
+    
+    my ($donor_txt) = $canvas->find('withtag', "$terminal_exon_id&&splice_donor");
+    $canvas->itemconfigure($donor_txt, -text => '');
+}
 
 sub get_splice_acceptor_donor_strings {
     my ($self, $start, $end, $strand) = @_;
@@ -2517,7 +2550,7 @@ sub get_splice_acceptor_donor_strings {
 }
 
 sub add_exon_holder {
-    my( $self, $start, $end, $strand ) = @_;
+    my( $self, $start, $end, $strand) = @_;
     $start ||= $self->empty_string;
     $end   ||= $self->empty_string;
 
