@@ -767,6 +767,8 @@ push @sql_fixes, "UPDATE transcript SET biotype = 'processed_transcript', status
 push @sql_fixes, "UPDATE gene SET status = 'NOVEL' WHERE biotype = 'processed_transcript' AND status = 'UNKNOWN';\n";
 push @sql_fixes, "UPDATE gene SET status = NULL WHERE biotype in ('processed_pseudogene','pseudogene','transcribed_processed_pseudogene','transcribed_unitary_pseudogene','transcribed_unprocessed_pseudogene','unprocessed_pseudogene');\n";
 push @sql_fixes, "UPDATE transcript SET status = NULL WHERE status = 'UNKNOWN';\n";
+push @sql_fixes, "UPDATE gene SET status = NULL WHERE status = 'UNKNOWN';\n";
+push @sql_fixes, "UPDATE gene SET status = 'NOVEL' WHERE status = 'PUTATIVE' and biotype = 'protein_coding';\n";
 
 if (! $support->param('dry_run')) {
     $support->log("\nFixing meta table, updating gene / transcript types\n");
