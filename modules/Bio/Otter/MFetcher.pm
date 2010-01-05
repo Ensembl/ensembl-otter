@@ -10,7 +10,7 @@ package Bio::Otter::MFetcher;
 
 use strict;
 use warnings;
-use Carp qw{ confess longmess };
+use Carp qw{ longmess };
 
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::Vega::DBSQL::DBAdaptor;
@@ -219,6 +219,8 @@ sub get_slice {
         1,      # somehow strand parameter is needed
         $csver,
     );
+    
+    $self->check_slice($slice);
 
     unless ($slice) {
         $self->log('Could not get a slice, probably not (yet) loaded into satellite db');
@@ -226,6 +228,32 @@ sub get_slice {
     }
 
     return $slice;
+}
+
+sub check_slice {
+    my ($self, $slice) = @_;
+    
+    my $slice_projection = $slice->project('contig');
+
+    my (%contig_strand, @both_strands_used);
+    foreach my $seg (@$slice_projection) {
+        my $contig_slice = $seg->to_Slice();
+        my $name    = $contig_slice->seq_region_name;
+        my $strand  = $contig_slice->strand;
+        if (my $ns = $contig_strand{$name}) {
+            if ($ns ne 'BOTH' and $ns != $strand) {
+                push(@both_strands_used, $name);
+                $contig_strand{$name} = 'BOTH';
+            }
+        }
+        else {
+            $contig_strand{$name} = $strand;
+        }
+    }
+    if (@both_strands_used) {
+        my $ctg = @both_strands_used == 1 ? 'this contig uses' : 'these contigs use';
+        $self->error_exit("Smap will fail because $ctg both strands in the assembly: @both_strands_used");
+    }
 }
 
 sub return_emptyhanded { # we probably only want to know about it only if using MFetcher directly,
