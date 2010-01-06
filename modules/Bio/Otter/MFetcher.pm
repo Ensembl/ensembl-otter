@@ -220,7 +220,7 @@ sub get_slice {
         $csver,
     );
     
-    $self->check_slice($slice);
+    # $self->check_slice($slice);
 
     unless ($slice) {
         $self->log('Could not get a slice, probably not (yet) loaded into satellite db');
