@@ -5,8 +5,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2009-10-20 13:31:38 $
-# Id:            $Id: nph-get_gene_info,v 1.1 2009-10-20 13:31:38 jgrg Exp $
+# Last modified: $Date: 2010-01-06 15:35:21 $
+# Id:            $Id: nph-get_gene_info,v 1.2 2010-01-06 15:35:21 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_gene_info,v $
 
 
@@ -24,17 +24,18 @@ use Bio::Otter::ServerScriptSupport;
             SELECT gnu.consortium_id
               , gsid1.stable_id
               , ga2.value as current_name
-            FROM gene_name_update gnu
-              , gene_stable_id gsid1
+            FROM gene_stable_id gsid1
               , gene_stable_id gsid2
               , gene g2
               , gene_attrib ga2
-            WHERE gnu.gene_id = gsid1.gene_id
-              AND gsid1.stable_id = gsid2.stable_id
+            LEFT JOIN gene_name_update gnu
+              ON gsid1.gene_id = gnu.gene_id
+            WHERE gsid1.stable_id = gsid2.stable_id
               AND gsid2.gene_id = g2.gene_id
               AND g2.gene_id = ga2.gene_id
               AND ga2.attrib_type_id = 4
               AND g2.is_current = 1
+              AND g2.source = 'havana'
         };
         
         if (my $id_str = $server->param('idlist')) {
@@ -61,7 +62,7 @@ use Bio::Otter::ServerScriptSupport;
         my %seen_stable;
         while (my ($consortium_id, $stable_id, $current_name) = $sth->fetchrow) {
             next if $seen_stable{$stable_id};
-            $output_string .= join("\t", $consortium_id, $stable_id, $current_name) . "\n";
+            $output_string .= join("\t", $consortium_id || '', $stable_id, $current_name) . "\n";
             $seen_stable{$stable_id} = 1;
         }
     };
