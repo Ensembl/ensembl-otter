@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2009-07-21 13:55:08 $
-# Id:            $Id: nph-get_clonesequences_fast,v 1.19 2009-07-21 13:55:08 jgrg Exp $
+# Last modified: $Date: 2010-01-06 14:30:27 $
+# Id:            $Id: nph-get_clonesequences_fast,v 1.20 2010-01-06 14:30:27 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_clonesequences_fast,v $
 
 use strict;
@@ -14,8 +14,8 @@ use Bio::Otter::ServerScriptSupport;
 
 my $server = Bio::Otter::ServerScriptSupport->new;
 
-my $dataset     =  $server->require_argument('dataset');
-my $sequenceset =  $server->require_argument('sequenceset');
+my $dataset     = $server->require_argument('dataset');
+my $sequenceset = $server->require_argument('sequenceset');
 
 my $dbc = $server->otter_dba->dbc;
 
@@ -23,11 +23,6 @@ my $dbc = $server->otter_dba->dbc;
 unless ($server->local_user) {
     $server->authorized_user;
 }
-
-my $xml = '';
-$xml   .= qq`  <dataset name="$dataset">\n`;
-$xml   .= qq`    <sequenceset name="$sequenceset">\n`;
-$xml   .= qq`      <clonesequences>\n`;
 
 my $sql = q{
     SELECT cl.name
@@ -102,41 +97,89 @@ my $sql = q{
 
 my $sth = $dbc->prepare($sql);
 $sth->execute($sequenceset);
-while (my ($cl_name, $intl_name, $acc,  $sv,
-       $ctg_name,  $ctg_length,
-       $chr_name, $chr_length, $chr_start,  $chr_end,
-       $ctg_start, $ctg_end, $ctg_strand,
-       $clone_lock_id, $hostname,
-       $author_name, $author_email ) = $sth->fetchrow) {
 
-  my $clone_name = $intl_name || $cl_name;
 
-  $xml .= qq`        <clonesequence>\n`;
-  $xml .= qq`          <clone_name>$clone_name</clone_name>\n`;
-  $xml .= qq`          <accession>$acc</accession>\n`;
-  $xml .= qq`          <sv>$sv</sv>\n`;
-  $xml .= qq`          <contig_name>$ctg_name</contig_name>\n`;
-  $xml .= qq`          <length>$ctg_length</length>\n`;
-  $xml .= qq`          <chr name="$chr_name" length="$chr_length"></chr>\n`;
-  $xml .= qq`          <chr_start>$chr_start</chr_start>\n`;
-  $xml .= qq`          <chr_end>$chr_end</chr_end>\n`;
-  $xml .= qq`          <contig_start>$ctg_start</contig_start>\n`;
-  $xml .= qq`          <contig_end>$ctg_end</contig_end>\n`;
-  $xml .= qq`          <contig_strand>$ctg_strand</contig_strand>\n`;
-  if (defined $clone_lock_id){
-    $xml .= qq`          <lock lock_id="$clone_lock_id" author_name="$author_name" email="$author_email" host_name="$hostname"> </lock>\n`;
-  } # endif
-  $xml .= qq`        </clonesequence>\n`;
-} # endwhile
+my @cs_list;
+while (
+    my (
+        $cl_name,    $intl_name,     $acc,       $sv,          $ctg_name,  $ctg_length,
+        $chr_name,   $chr_length,    $chr_start, $chr_end,     $ctg_start, $ctg_end,
+        $ctg_strand, $clone_lock_id, $hostname,  $author_name, $author_email
+    )
+    = $sth->fetchrow
+  )
+{
 
-$xml .= qq`      </clonesequences>\n`;
-$xml .= qq`    </sequenceset>\n`;
-$xml .= qq`  </dataset>\n`;
+    my $clone_name = $intl_name || $cl_name;
+    my $cs = {
+        clone_name  => $clone_name,
+        accession   => $acc,
+        sv          => $sv,
+        contig_name => $ctg_name,
+        length      => $ctg_length,
+        chr         => {
+            name   => $chr_name,
+            length => $chr_length,
+        },
+        chr_start     => $chr_start,
+        chr_end       => $chr_end,
+        contig_start  => $ctg_start,
+        contig_end    => $ctg_end,
+        contig_strand => $ctg_strand,
+    };
+    if ($clone_lock_id) {
+        $cs->{'lock'} => {
+            lock_id     => $clone_lock_id,
+            author_name => $author_name,
+            email       => $author_email,
+            host_name   => $host_name,
+        };
+    }
+
+    if (my $prev = $cs_list[$#cs_list]) {
+        # Merge adjacent segments of the same contig together.
+        if ($cs->{'contig_name'} eq $prev->{'contig_name'}) {
+            $prev->{'chr_end'} = $cs->{'chr_end'};
+            next;   # Skip to next row so that $cs is not added to list
+        }
+    }
+    push(@cs_list, $cs);
+}
+
+my $xml = '';
+$xml .= qq{  <dataset name="$dataset">\n};
+$xml .= qq{    <sequenceset name="$sequenceset">\n};
+$xml .= qq{      <clonesequences>\n};
+
+foreach my $cs (@cs_list) {
+    $xml .= qq{        <clonesequence>\n};
+    foreach my $tag (
+        qw{ clone_name accession sv contig_name length
+        chr chr_start chr_end
+        contig_start contig_end contig_strand lock }
+      )
+    {
+        my $value = $cs->{$tag};
+        if (ref($value)) {
+            my $att_str = join(' ', map qq{$_="$value->{$_}"} keys %$value);
+            $xml .= qq{        <$tag $att_srt></$tag>\n};
+        }
+        else {
+            $xml .= qq{        <$tag>$value</$tag>\n};
+        }
+    }
+    $xml .= qq{        </clonesequence>\n};
+}
+
+$xml .= qq{      </clonesequences>\n};
+$xml .= qq{    </sequenceset>\n};
+$xml .= qq{  </dataset>\n};
+
 $server->send_response($xml, 1);
 
 __END__
 
-=head1 NAME - get_clonesequences
+=head1 NAME - get_clonesequences_fast
 
 
 =head1 DESCRIPTION
