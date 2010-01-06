@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2010-01-06 14:30:27 $
-# Id:            $Id: nph-get_clonesequences_fast,v 1.20 2010-01-06 14:30:27 jgrg Exp $
+# Last modified: $Date: 2010-01-06 15:35:21 $
+# Id:            $Id: nph-get_clonesequences_fast,v 1.21 2010-01-06 15:35:21 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_clonesequences_fast,v $
 
 use strict;
@@ -104,7 +104,7 @@ while (
     my (
         $cl_name,    $intl_name,     $acc,       $sv,          $ctg_name,  $ctg_length,
         $chr_name,   $chr_length,    $chr_start, $chr_end,     $ctg_start, $ctg_end,
-        $ctg_strand, $clone_lock_id, $hostname,  $author_name, $author_email
+        $ctg_strand, $clone_lock_id, $host_name, $author_name, $author_email
     )
     = $sth->fetchrow
   )
@@ -140,6 +140,10 @@ while (
         # Merge adjacent segments of the same contig together.
         if ($cs->{'contig_name'} eq $prev->{'contig_name'}) {
             $prev->{'chr_end'} = $cs->{'chr_end'};
+            $prev->{'contig_start'} = $cs->{'contig_start'}
+                if $cs->{'contig_start'} < $prev->{'contig_start'};
+            $prev->{'contig_end'} = $cs->{'contig_end'}
+                if $cs->{'contig_end'} > $prev->{'contig_end'};
             next;   # Skip to next row so that $cs is not added to list
         }
     }
@@ -160,12 +164,13 @@ foreach my $cs (@cs_list) {
       )
     {
         my $value = $cs->{$tag};
+        next unless defined $value;
         if (ref($value)) {
-            my $att_str = join(' ', map qq{$_="$value->{$_}"} keys %$value);
-            $xml .= qq{        <$tag $att_srt></$tag>\n};
+            my $att_str = join(' ', map qq{$_="$value->{$_}"}, keys %$value);
+            $xml .= qq{          <$tag $att_str></$tag>\n};
         }
         else {
-            $xml .= qq{        <$tag>$value</$tag>\n};
+            $xml .= qq{          <$tag>$value</$tag>\n};
         }
     }
     $xml .= qq{        </clonesequence>\n};
