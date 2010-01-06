@@ -617,11 +617,13 @@ sub get_query_seq {
 	my %seq_fetched = map { $_ => 0 } @correct_accs;
 
 	if (@correct_accs) {
-
+        
 		# and pfetch the remaining sequences using the corrected accessions
 
 		for my $seq (Hum::Pfetch::get_Sequences(@correct_accs)) {
-
+            
+            next unless $seq; # Pfetch returns undef for accessions with no match
+            
 			# add the type information to the sequence
 
 			$seq->type($types->{ $correct_to_supplied{$seq->name} }->[0]);
