@@ -107,10 +107,10 @@ sub fetch_data_from_otter_db {
     confess "Cannot fetch data without slice"     unless $slice{$self};
     confess "Cannot fetch data without otter_dba" unless $otter_dba{$self};
 
+    $self->fetch_CloneSequences;
     $self->fetch_species;
     $self->fetch_SimpleFeatures;
     $self->fetch_Genes;
-    $self->fetch_CloneSequences;
 }
 
 sub fetch_species {
