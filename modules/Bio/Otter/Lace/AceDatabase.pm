@@ -149,7 +149,7 @@ sub init_AceDatabase {
     $parser->parse($xml_string);
     
 
-    $self->write_otter_acefile($parser);    
+    $self->write_otter_acefile($parser);
     $self->write_region_xml_file($xml_string);
     $self->write_dna_data;
     $self->write_methods_acefile;
@@ -539,17 +539,18 @@ sub db_initialized {
 sub write_dna_data {
     my( $self ) = @_;
 
-    my $smart_slice = $self->smart_slice();
-
-    require Bio::EnsEMBL::Ace::Otter_Filter::DNA;
-    my $dna_filter = Bio::EnsEMBL::Ace::Otter_Filter::DNA->new;
-    $dna_filter->method_tag('NonGolden');
+    my $filter_options = $self->DataSet->get_config('filter');
+    my $otter = $filter_options->{'otter'}
+        or confess "otter filter (used to fetch DNA) missing from otter_config";
+    my $class = $otter->{'module'}
+        or confess "Module class for 'otter' missing from otter_config";
+    $self->load_filter_module($class);
 
     my $ace_filename = $self->home . '/rawdata/dna.ace';
     $self->add_acefile($ace_filename);
     open my $ace_fh, "> $ace_filename" or confess "Can't write to '$ace_filename' : $!";
 
-    print $ace_fh $dna_filter->ace_data($smart_slice);
+    print $ace_fh $dna_filter->ace_data($self->smart_slice);
 
     close $ace_fh;
 }
@@ -625,14 +626,7 @@ sub make_pipeline_DataFactory {
         # analysis_name MUST be set, whether or not it is defined in the config
         $param->{'analysis_name'} ||= $filter_name;
 
-
-        # Load the filter module
-        my $file = "$class.pm";
-        $file =~ s{::}{/}g;
-        eval { require $file };
-        if ($@) {
-            die "Error attempting to load filter module '$file'\n$@";
-        }
+        $self->load_filter_module($class);
 
         # We create all available filters and load all corresponding methods
         # irrespectively of whether they are 'wanted' or not, so that we can
@@ -669,6 +663,18 @@ sub make_pipeline_DataFactory {
 
     # cache it for future reference
     return $self->pipeline_DataFactory($factory);
+}
+
+sub load_filter_module {
+    my ($self, $class) = @_;
+    
+    # Load the filter module
+    my $file = "$class.pm";
+    $file =~ s{::}{/}g;
+    eval { require $file };
+    if ($@) {
+        die "Error attempting to load filter module '$file'\n$@";
+    }
 }
 
 
