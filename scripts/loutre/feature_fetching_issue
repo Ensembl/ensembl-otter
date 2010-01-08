@@ -1,0 +1,57 @@
+#!/usr/bin/env perl
+
+### feature_fetching_issue
+
+use strict;
+use warnings;
+
+use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Lace::SatelliteDB;
+
+{
+    my $dataset_name = 'pig';
+    my $set_name     = 'chr17-04';
+
+    my $usage = sub { exec('perldoc', $0) };
+    # This do_getopt() call is needed to parse the otter config files
+    # even if you aren't giving any arguments on the command line.
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        'dataset=s'     => \$dataset_name,
+        'set|chr=s'     => \$set_name,
+        ) or $usage->();
+    $usage->() unless $dataset_name and $set_name;
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    
+    # SequenceSet contains a list of CloneSequence objects
+    # in the assembly.
+    # my $ss = $ds->get_SequenceSet_by_name($set_name);
+    
+    my $otter_dba = $ds->get_cached_DBAdaptor;
+    my $pipe_dba = Bio::Otter::Lace::SatelliteDB::get_DBAdaptor($otter_dba, 'pipeline_db_head')
+        or die "Can't fetch pipeline_db";
+    my $sa = $pipe_dba->get_SliceAdaptor;
+    my $slice = $sa->fetch_by_region('chromosome', $set_name, 1, 352278, 1, 'Otter');
+    my $r_list = $slice->get_all_RepeatFeatures;
+    foreach my $repeat (@$r_list) {
+        printf "  %7d - %7d\n", $repeat->start, $repeat->end;
+    }
+}
+
+
+
+
+
+__END__
+
+=head1 NAME - feature_fetching_issue
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
