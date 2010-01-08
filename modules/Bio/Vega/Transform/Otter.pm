@@ -286,6 +286,7 @@ sub build_XRef {
         -version        => $data->{'version'},
         -release        => $data->{'release'},
         -dbname         => $data->{'dbname'},
+        -description    => $data->{'description'},
         );
 
     my $list = $xref_list{$self} ||= [];
