@@ -24,7 +24,7 @@ use Getopt::Long qw{ GetOptions };
         'h|help!'       => $usage,
         'ace-bin=s'     => \$ace_bin_dir,
         'name=s'        => \$dist_name,
-        'version=s'     => \$version,
+        'version=i'     => \$version,
         ) or $usage->();
 
     if ($version eq '') {
