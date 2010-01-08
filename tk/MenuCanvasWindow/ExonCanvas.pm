@@ -2365,7 +2365,7 @@ sub middle_button_paste {
                 );
             $self->highlight($obj);
             $self->update_splice_strings($obj) if $obj_tags{'exon_pos'};
-            $self->remove_spurious_splice_sites;
+            #$self->remove_spurious_splice_sites;
         }
         elsif ($obj_tags{'exon_furniture'}) {
             # Set coordinates with middle button on strand indicator
@@ -2411,6 +2411,8 @@ sub middle_button_paste {
         #$self->set_scroll_region_and_maxsize;
         $self->fix_window_min_max_sizes;
     }
+    
+    $self->remove_spurious_splice_sites;
 }
 
 sub next_exon_holder_coords {
@@ -2524,6 +2526,8 @@ sub remove_spurious_splice_sites {
     
     my $initial_exon_id = $pps[0]->[2];
     my $terminal_exon_id = $pps[-1]->[2];
+    
+    $self->update_splice_strings('exon_end');
     
     my ($acceptor_txt) = $canvas->find('withtag', "$initial_exon_id&&splice_acceptor");
     $canvas->itemconfigure($acceptor_txt, -text => '');
