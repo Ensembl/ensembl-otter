@@ -539,19 +539,20 @@ sub db_initialized {
 sub write_dna_data {
     my( $self ) = @_;
 
-    my $filter_options = $self->DataSet->get_config('filter');
+    my $slice = $self->smart_slice;
+    my $filter_options = $slice->DataSet->get_config('filter');
     my $otter = $filter_options->{'otter'}
         or confess "otter filter (used to fetch DNA) missing from otter_config";
     my $class = $otter->{'module'}
         or confess "Module class for 'otter' missing from otter_config";
     $self->load_filter_module($class);
+    my $dna_filter = $class->new;
 
     my $ace_filename = $self->home . '/rawdata/dna.ace';
     $self->add_acefile($ace_filename);
+
     open my $ace_fh, "> $ace_filename" or confess "Can't write to '$ace_filename' : $!";
-
-    print $ace_fh $dna_filter->ace_data($self->smart_slice);
-
+    print $ace_fh $dna_filter->ace_data($slice);
     close $ace_fh;
 }
 
