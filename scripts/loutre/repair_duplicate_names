@@ -45,31 +45,30 @@ use Bio::EnsEMBL::Utils::Exception qw(warning);
         print "------- $component ---------\n";
 
         my $sql = qq{
-            SELECT
-                    oa.value,
-                    count(distinct stable_id) cnt,
-                    group_concat(concat(osi.${component}_id,':',stable_id,':',sr.name,':',o.seq_region_start,':',o.seq_region_end) ORDER BY osi.${component}_id ASC )
-            FROM
-                    ${component}_attrib oa,
-                    $component o,
-                    ${component}_stable_id osi,
-                    attrib_type at,
-                    seq_region sr
-            WHERE
-                    at.code='name'
-                AND oa.attrib_type_id=at.attrib_type_id
-                AND oa.${component}_id=o.${component}_id
-                AND o.${component}_id=osi.${component}_id
-                AND o.seq_region_id=sr.seq_region_id
+            SELECT oa.value
+              , COUNT(DISTINCT stable_id) cnt
+              , GROUP_CONCAT(CONCAT(osi.${component}_id,':',stable_id,':',sr.name,':',o.seq_region_start,':',o.seq_region_end)
+                ORDER BY osi.${component}_id ASC )
+            FROM ${component}_attrib oa
+              , $component o
+              , ${component}_stable_id osi
+              , attrib_type at
+              , seq_region sr
+            WHERE at.code = 'name'
+              AND oa.attrib_type_id = at.attrib_type_id
+              AND oa.${component}_id = o.${component}_id
+              AND o.${component}_id = osi.${component}_id
+              AND o.seq_region_id = sr.seq_region_id
         }
-          . ($notsets  ? '        AND sr.name NOT IN (' . join(',', map { "'$_'" } @not_sets) . ")\n"  : '')
-          . ($onlysets ? '        AND sr.name     IN (' . join(',', map { "'$_'" } @only_sets) . ")\n" : '')
-          . qq{        AND o.is_current
-           --   AND oa.value rlike '^[A-Z]{1,4}[0-9]{5,9}\.[0-9]{1,2}'
-           GROUP BY oa.value
-                  , sr.seq_region_id
-             HAVING cnt>1
+          . ($notsets  ? '  AND sr.name NOT IN (' . join(',', map { "'$_'" } @not_sets) . ")\n"  : '')
+          . ($onlysets ? '  AND sr.name     IN (' . join(',', map { "'$_'" } @only_sets) . ")\n" : '')
+          . qq{
+              AND o.is_current
+            GROUP BY oa.value
+              , sr.seq_region_id
+            HAVING cnt > 1
         };
+           # --   AND oa.value rlike '^[A-Z]{1,4}[0-9]{5,9}\.[0-9]{1,2}'
 
         # print "$sql;\n";  next;
 

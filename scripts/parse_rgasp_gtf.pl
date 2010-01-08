@@ -29,10 +29,11 @@ while (<DATA>) {
 }
 
 {
-    my $host   = 'mcs4a';
-    my $user   = '';
-    my $pass   = '';
-    my $port   = '';
+    my $host = 'mcs4a';
+    my $user = '';
+    my $pass = '';
+    my $port = '';
+
     # my $dbname = 'gencode_homo_sapiens_rgasp_56_37';
     my $dbname = 'gencode_caenorhabditis_elegans_rgasp_56_200';
 
@@ -102,7 +103,7 @@ sub load_gtf {
     my $ana_name = $file_to_ana_name{$file_name}
       or die "Cannot see an analysis name for file name '$file_name'";
     warn "Analysis logic name = '$ana_name'\n";
-    
+
     delete_all_genes_by_type($db, $ana_name);
 
     # adaptor required
@@ -274,6 +275,7 @@ sub save_ensembl_gene {
 
         # Save $gene
         $db->get_GeneAdaptor->store($gene) if $gene;
+
         # warn "Not saving gene";
     }
 }
@@ -282,16 +284,17 @@ sub create_ensembl_gene {
     my ($db, $cs, $analysis, $geneid, $info) = @_;
 
     my $sequence = $info->{'sequence'};
-    
+
     # This substitution may still leave a valid
     # value when it isn't a chromosome!
     $sequence =~ s/^chr(omosome)?[_-]?//i;
 
     # A number of submitters put "M" instead of "MT" for the mitochondrial genome
     if ($sequence =~ /^M/) {
-        $sequence = $analysis->logic_name =~ /worm/
-            ? 'MtDNA'
-            : 'MT';
+        $sequence =
+          $analysis->logic_name =~ /_wor_/
+          ? 'MtDNA'
+          : 'MT';
     }
 
     if ($sequence =~ /^0/) {
@@ -310,12 +313,15 @@ sub create_ensembl_gene {
         my $cds_list = $info->{'cds'}{$tsctid};
         my $exons    = $info->{'exons'}{$tsctid};
         unless ($exons) {
+
             # warn "No exons in transcript '$tsctid', copying CDS coordiates\n";
             @{ $info->{'exons'}{$tsctid} } = @$cds_list;
             $exons = $info->{'exons'}{$tsctid};
         }
 
-        # Don't need to merge abutting CDS features, since we only take the range, including stop codons
+        # Merge overlapping exon coordinates. Fixes files where exon lines are
+        # duplicated. We are only interested in the min and max coords from CDS
+        # features, so we don't bother merging them.
         merge_overlapping_or_abutting($exons);
     }
 
@@ -517,7 +523,7 @@ sub merge_overlapping_or_abutting {
 
             # Merge coordinate span of $B into $A
             $A->{'start'} = $A->{'start'} < $B->{'start'} ? $A->{'start'} : $B->{'start'};
-            $A->{'end'}   = $A->{'end'} > $B->{'end'}     ? $A->{'end'}   : $B->{'end'};
+            $A->{'end'}   = $A->{'end'}   > $B->{'end'}   ? $A->{'end'}   : $B->{'end'};
 
             # Copy any keys from the $B value hash that $A doesn't have into $A
             if (my $b_val = $B->{'values'}) {
@@ -564,7 +570,9 @@ sub set_coding_exon_phases {
             # The start phase of the translation has been stored in the first exon
             $phase = $ex->phase;
             if ($phase == -1) {
-                die "Error: Start phase not saved on first coding exon: ", Dumper($ex);
+                printf STDERR "Error: Start phase not saved on first coding exon '%s', setting phase to 0\n",
+                  exon_hash_key($ex);
+                $phase = 0;
             }
         }
 
@@ -661,17 +669,20 @@ sub exon_hash_key {
 
 sub delete_all_genes_by_type {
     my ($db, $ana_name) = @_;
-    
+
     my $analysis = $db->get_AnalysisAdaptor->fetch_by_logic_name($ana_name)
-        or return;
-    my $sth = $db->dbc->prepare(q{
+      or return;
+    my $sth = $db->dbc->prepare(
+        q{
         SELECT gene_id FROM gene WHERE analysis_id = ?
-    });
+    }
+    );
     $sth->execute($analysis->dbID);
-    
+
     my $gene_aptr = $db->get_GeneAdaptor;
     while (my ($gene_id) = $sth->fetchrow) {
         my $gene = $gene_aptr->fetch_by_dbID($gene_id);
+
         # warn "Removing gene '$gene_id'";
         $gene_aptr->remove($gene);
     }
