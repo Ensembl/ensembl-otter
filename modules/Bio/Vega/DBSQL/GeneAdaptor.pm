@@ -810,6 +810,23 @@ sub resurrect {    # make a particular gene current (without touching the previo
     }
 }
 
+sub hibernate { # make a particular gene non-current (take care of shared exons)
+	my ($self, $gene) = @_;
+
+	my $ta = $self->db->get_TranscriptAdaptor;
+    my $ea = $self->db->get_ExonAdaptor;
+
+    $gene->is_current(0);
+    $self->update($gene);
+    foreach my $transcript (@{ $gene->get_all_Transcripts() }) {
+        $transcript->is_current(0);
+        $ta->update($transcript);
+    }
+
+	my $broker   = $self->db->get_AnnotationBroker();
+	$broker->set_exon_current_flags([$gene]);
+}
+
 sub fetch_all_genes_on_reference_slice {
 
     #fka fetch_all_genes_on_ncbi_slice()
