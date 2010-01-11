@@ -436,7 +436,7 @@ sub launch_exonerate {
 
 	my $need_relaunch = 0;
 	
-	my $method_name;
+	my @method_names;
 
 	for my $type (keys %seqs_by_type) {
 
@@ -506,7 +506,7 @@ sub launch_exonerate {
 	    	my $coll = $exonerate->AceDatabase->MethodCollection;
 	    	my $coll_zmap = $self->XaceSeqChooser->Assembly->MethodCollection;
 	    	my $method = $exonerate->ace_Method;
-	    	$method_name = $method->name;	
+	    	push @method_names, $method->name;	
 	    	unless ($coll->get_Method_by_name($method->name) ||
 	    			$coll_zmap->get_Method_by_name($method->name)) {
 	        	$coll->add_Method($method);
@@ -524,18 +524,17 @@ sub launch_exonerate {
 	    $self->XaceSeqChooser->resync_with_db();
 	    
 	    if ($self->{_clear_existing}) {
-	        warn "Deleting featureset $method_name...";
-	        $self->XaceSeqChooser->zMapDeleteFeaturesets($method_name);
+	        $self->XaceSeqChooser->zMapDeleteFeaturesets(@method_names);
 	    }
 	    
 	    if ($self->{_use_marked_region}) {
 	        # XXX: temporarily don't ask zmap to load in the marked region as this crashes
 	        # zmap when the view is reverse complemented
             #$self->XaceSeqChooser->zMapLoadFeaturesInMark($method_name);
-            $self->XaceSeqChooser->zMapLoadFeatures($method_name);
+            $self->XaceSeqChooser->zMapLoadFeatures(@method_names);
 	    }
 	    else {
-	        $self->XaceSeqChooser->zMapLoadFeatures($method_name);
+	        $self->XaceSeqChooser->zMapLoadFeatures(@method_names);
 	    }
 	}
 
