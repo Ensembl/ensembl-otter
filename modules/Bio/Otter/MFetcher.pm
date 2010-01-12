@@ -654,8 +654,9 @@ sub fetch_mapped_features {
                         $self->log("Transferring $feature_name $fname from {".$target_feature->slice->name
                                    ."} onto {".$original_slice_on_mapper->name.'}');
                         if( my $transferred = $target_feature->transfer($original_slice_on_mapper) ) {
+                            
                             push @$features, $transferred;
-                            $self->log("Transfer OK");
+                            $self->log("Transfer OK".ref($transferred));
                         } else {
                             $self->log("Transfer failed");
                         }
