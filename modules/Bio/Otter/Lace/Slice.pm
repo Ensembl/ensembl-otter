@@ -183,7 +183,7 @@ sub get_assembly_dna {
     
     my ($seq, @tiles) = split /\n/, $response;
     for (my $i = 0; $i < @tiles; $i++) {
-        my ($start, $end, $ctg_name, $ctg_start, $ctg_end, $ctg_strand) = split /\t/, $tiles[$i];
+        my ($start, $end, $ctg_name, $ctg_start, $ctg_end, $ctg_strand, $ctg_length) = split /\t/, $tiles[$i];
         $tiles[$i] = {
             start       => $start,
             end         => $end,
@@ -191,6 +191,7 @@ sub get_assembly_dna {
             ctg_start   => $ctg_start,
             ctg_end     => $ctg_end,
             ctg_strand  => $ctg_strand,
+            ctg_length  => $ctg_length,
         };
     }
     return (lc $seq, @tiles);
