@@ -133,7 +133,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.46 $ ';
+$revision='$Revision: 1.47 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -736,7 +736,7 @@ sub get_masked_unmasked_seq {
 	my $filters = $DataFactory->get_names2filters();
 
 	foreach (keys %$filters) { $filters->{$_}->wanted(0);}
-	my ($rm,$trf) = ('repeatmasker','trf');
+	my ($rm,$trf) = ('RepeatMasker','trf');
 	my $load;
 	for ($rm,$trf) {
 		if(!$filters->{$_}->done) {
