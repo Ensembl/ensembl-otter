@@ -73,7 +73,7 @@ sub initialise {
     $self->insert_pad($assembly_frame);
     $self->make_entry($assembly_frame, 'End: ',     'assembly_end',             8);
     $self->insert_pad($assembly_frame);
-    $self->make_entry($assembly_frame, 'Strand: ',  'display_assembly_strand',  4);
+    $self->make_entry($assembly_frame, 'Strand: ',  'display_assembly_strand',  5);
     
     my $edit_frame = $top->LabFrame(
         -label      => 'Properties',
