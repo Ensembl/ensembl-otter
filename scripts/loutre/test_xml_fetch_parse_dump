@@ -1,0 +1,134 @@
+#!/usr/bin/env perl
+
+### test_xml_fetch_parse_dump
+
+use strict;
+use warnings;
+use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Lace::Slice;
+use Bio::Otter::Lace::LocalDatabaseFactory;
+
+{
+    my $dataset_name = 'human_test';
+    my $set_name = 'chr20-13';
+    my $start_i = 30;
+    my $end_i;
+    my $rand_test = 0;
+
+    $0 = 'otterlace';   # In order to see restricted datasets
+
+    my $usage = sub { exec('perldoc', $0) };
+    # This do_getopt() call is needed to parse the otter config files
+    # even if you aren't giving any arguments on the command line.
+
+    # Truncated genes confuse the diff
+    push(@ARGV, "-nofetch_truncated_genes");
+
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        'dataset=s'     => \$dataset_name,
+        'set|chr=s'     => \$set_name,
+        'start=i'       => \$start_i,
+        'end=i'         => \$end_i,
+        'rand_test!'    => \$rand_test,
+        ) or $usage->();
+    
+    $end_i ||= $start_i;
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    
+    if ($rand_test) {
+        my $ss_list = $ds->get_all_SequenceSets;
+        # for (my $i = 0; $i < 5; $i++) {
+        while (1) {
+            # Choose a random sequence set
+            my $ss = $ss_list->[int rand @$ss_list];
+            $cl->get_all_CloneSequences_for_DataSet_SequenceSet($ds, $ss);
+            ($start_i, $end_i) = select_rand_range(5, scalar @{$ss->CloneSequence_list});
+            my $title = select_CloneSequences($cl, $ds, $ss, $start_i, $end_i);
+            test_xml_fetch($cl, $ss, $title);
+        }
+    } else {
+        my $ss = $ds->get_SequenceSet_by_name($set_name);
+        my $title = select_CloneSequences($cl, $ds, $ss, $start_i, $end_i);
+        test_xml_fetch($cl, $ss, $title);
+    }    
+}
+
+sub select_rand_range {
+    my ($range_len, $length) = @_;
+    
+    my $i = 1 + int rand $length;
+    my $j = $i + $range_len - 1;
+    if ($j > $length) {
+        $j = $length;
+        $i = $j - $range_len + 1;
+    }
+    if ($i < 1) {
+        $i = 1;
+    }
+    return($i, $j);
+}
+
+sub select_CloneSequences {
+    my ($cl, $ds, $ss, $start_i, $end_i) = @_;
+    
+    # SequenceSet contains a list of CloneSequence objects
+    # in the assembly.
+    $cl->get_all_CloneSequences_for_DataSet_SequenceSet($ds, $ss);
+    my $cs_list = $ss->CloneSequence_list;
+    my $length = $end_i - $start_i + 1;
+    my $sel_list = [@$cs_list[$start_i - 1 .. $end_i - 1]];
+    unless (@$sel_list == $length) {
+        die sprintf "Invalid range %s[%d..%d] (Got array of length %d)",
+            $ss->name, $start_i, $end_i, scalar(@$sel_list);
+    }
+    $ss->selected_CloneSequences($sel_list);
+    
+    my $title = sprintf "%s clones %d..%d", $ss->name, $start_i, $end_i;
+    warn "Testing $title\n";
+    return $title;
+}
+
+sub test_xml_fetch {
+    my ($cl, $ss, $title) = @_;
+    
+    my ($dsname, $ssname, $chr_name, $chr_start, $chr_end) = $ss->selected_CloneSequences_parameters;
+    my $smart_slice = Bio::Otter::Lace::Slice->new($cl, $dsname, $ssname,
+        'chromosome', 'Otter', $chr_name, $chr_start, $chr_end);
+
+    my $ldf = Bio::Otter::Lace::LocalDatabaseFactory->new;
+    $ldf->Client($cl);
+    my $adb = $ldf->new_AceDatabase;
+    $adb->error_flag(1);    # Keep it if anything goes wrong
+    $adb->title($title);
+    $adb->smart_slice($smart_slice);
+    $adb->make_database_directory;
+    $adb->init_AceDatabase;
+    $adb->write_file('02_after.xml', $adb->generate_XML_from_acedb);
+    
+    my (@before_after) = map join("/", $adb->home, $_), qw{ 01_before.xml 02_after.xml };
+    
+    if (my $diff = qx{diff @before_after}) {
+        print $diff;
+        exit 1;
+    } else {
+        $adb->error_flag(0);
+    }
+}
+
+
+
+
+__END__
+
+=head1 NAME - test_xml_fetch_parse_dump
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
