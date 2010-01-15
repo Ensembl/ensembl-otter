@@ -494,7 +494,9 @@ sub build_transinfo_nodes {
                   );
       # *not_found tags
       foreach ( "mRNA_start_NF", "mRNA_end_NF", "cds_start_NF", "cds_end_NF" ) {
-        push(@nodes, ["$heirarchy.$tsid.TransInfo.$_", "$_ $space ".$t->get_all_Attributes("$_")->[0]->value]);
+        if (my $attr = $t->get_all_Attributes("$_")->[0]) {
+          push(@nodes, ["$heirarchy.$tsid.TransInfo.$_", "$_ $space ".$attr->value]);
+        }
       }
       $tree = add_tree_nodes($tree, \@nodes);
     }
