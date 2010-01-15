@@ -1,6 +1,6 @@
 #!/usr/local/bin/perl
 
-# enzembl - connect to ensembl schema databases and show features directly in zmap
+# enzembl - connect to EnsEMBL schema databases and show features directly in ZMap
 
 use strict;
 use warnings;
@@ -274,7 +274,7 @@ if (%features) {
                     $requested_region->{end} = $slice->end;
                     $requested_region->{strand} = $slice->strand;
                     
-                    print "Found slice: ".$slice->name."\n" if $verbose;
+                    print "Found slice for feature: ".$slice->name."\n" if $verbose;
                     
                     last DBS;
                 }
@@ -287,8 +287,6 @@ if (%features) {
     
     die "Failed to find a region for supplied features\n" unless keys %$requested_region;
 }
-
-
 
 # pull the data from each of the databases
 
@@ -319,6 +317,7 @@ for my $db (keys %dbs) {
     
     for my $cs (@$css) {
         my $key = $cs->name.$delim.$cs->version;
+        #print "$db has $key\n";
         $coord_systems{$key} ||= {};
         $coord_systems{$key}->{cs} = $cs;
         push @{ $coord_systems{$key}->{dbs} }, $db;
@@ -442,9 +441,6 @@ for my $db (keys %dbs) {
             $requested_region->{strand}, 
             $requested_region->{cs}->version
        );
-       
-       $t_slice = undef;
-       $c_slice = undef;
     }
     else {
         $slice = $slice_adaptor->fetch_by_region(
@@ -532,8 +528,6 @@ if ($create_missing_styles) {
 		if ($type eq 'Genes' && $colour eq 'RANDOM') {
 		    
 		    my @vs = ('00', '33', '66', '99', 'CC', 'FF'); 
-		    
-		    
 		    
 		    my $r = hex($vs[rand(@vs)]);
 		    my $g = hex($vs[rand(@vs)]);
@@ -690,7 +684,7 @@ on the command line to see an example file.
 
 =item B<-region coord_system:version:name:start:end:strand>
 
-Grab features from the specified region, e.g. clone:AC068644.15, chromosome:15 etc.
+Grab features from the specified region, e.g. chromosome:GRCh37:15:10000:30000:1 etc.
 Must be supplied here or in the config file
 
 =item B<-analyses logic_name1,logic_name2,...>
