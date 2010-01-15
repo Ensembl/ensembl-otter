@@ -179,15 +179,15 @@ use warnings;
 
         my $self = shift;
         
-        # don't generate buggy features because zmap blows up
+        # This parameter is assumed to be a hashref which includes extra attributes you'd
+        # like to have appended onto the gff line for the feature
+        my $extra_attrs = shift;
+        
+        # XXX: don't generate buggy features because zmap blows up
         if ($self->seq_region_start >= $self->seq_region_end) {
             return '';
         }
         
-        # This parameter is assumed to be a hashref which includes extra attributes you'd
-        # like to have appended onto the gff line for the feature
-        my $extra_attrs = shift;
-
         my $gff = $self->_gff_hash;
 
         $gff->{score}  = '.' unless defined $gff->{score};
@@ -215,7 +215,8 @@ use warnings;
             # that requires "Sequence" attributes to come before "Locus" attributes
             my @attrs =
               map  { $_ . ' ' . $gff->{attributes}->{$_} }
-              sort { $b cmp $a } keys %{ $gff->{attributes} };
+                sort { $b cmp $a } keys %{ $gff->{attributes} };
+                
             $gff_str .= "\t" . join( "\t;\t", @attrs );
         }
 
@@ -362,7 +363,7 @@ use warnings;
         # (adding lines for both seems a bit redundant to me, but zmap seems to like it!)
         for my $feat ( @{ $self->get_all_Exons }, @{ $self->get_all_Introns } )
         {
-            # exons and introns don't have analyses attached, so give them the transcript's one
+            # exons and introns don't have analyses attached, so temporarily give them the transcript's one
             $feat->analysis( $self->analysis );
 
             # and add the feature's gff line to our string, including the sequence information as an attribute
