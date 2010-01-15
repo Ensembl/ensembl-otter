@@ -390,7 +390,9 @@ sub make_ace_genomic_features {
     my ($self) = @_;
     
     my $feat_list = $self->get_SimpleFeatures;
-    return unless @$feat_list;
+    unless (@$feat_list) {
+        return '';
+    }
     my $ace = $self->new_slice_ace_object;
     foreach my $feat (@$feat_list) {
         # Ace format encodes strand by order of start + end
