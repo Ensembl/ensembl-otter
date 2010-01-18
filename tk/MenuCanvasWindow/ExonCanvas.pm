@@ -2356,10 +2356,16 @@ sub middle_button_paste {
     return unless @ints;
 
     $self->deselect_all;
+    
+    my $did_paste = 0;
     if (my ($obj)  = $canvas->find('withtag', 'current')) {
+        my $did_paste = 1;
         my %obj_tags = map {$_ => 1} $canvas->gettags($obj);
-        #warn "Clicked on object with tags: ", join(', ', map "'$_'", sort keys %obj_tags);
-        if ($obj_tags{'exon_pos'} or $obj_tags{'translation_region'}) {
+        # warn "Clicked on object with tags: ", join(', ', map "'$_'", sort keys %obj_tags);
+        if ($obj_tags{'max_width_rectangle'}) {
+            $did_paste = 0;
+        }
+        elsif ($obj_tags{'exon_pos'} or $obj_tags{'translation_region'}) {
             $canvas->itemconfigure($obj,
                 -text   => $ints[0],
                 );
@@ -2380,7 +2386,9 @@ sub middle_button_paste {
             $self->set_position_pair_text($pp, [$start, $end]);
             $self->highlight(@$pp[0,1]);
         }
-    } else {
+    }
+    
+    unless ($did_paste) {
         my @pos = $self->all_position_pair_text;
 
         # If there is only 1 <empty> pair, write to it
