@@ -2359,7 +2359,7 @@ sub middle_button_paste {
     
     my $did_paste = 0;
     if (my ($obj)  = $canvas->find('withtag', 'current')) {
-        my $did_paste = 1;
+        $did_paste = 1;
         my %obj_tags = map {$_ => 1} $canvas->gettags($obj);
         # warn "Clicked on object with tags: ", join(', ', map "'$_'", sort keys %obj_tags);
         if ($obj_tags{'max_width_rectangle'}) {
