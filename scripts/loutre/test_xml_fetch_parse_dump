@@ -37,6 +37,7 @@ use Bio::Otter::Lace::LocalDatabaseFactory;
     
     # Client communicates with otter HTTP server
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    $cl->get_server_otter_config;
     
     # DataSet interacts directly with an otter database
     my $ds = $cl->get_DataSet_by_name($dataset_name);
