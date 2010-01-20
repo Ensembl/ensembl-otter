@@ -221,13 +221,13 @@ sub build_Features_spans_and_agp_fragments {
     my $chr_name = $smart_slice->seqname;
     my $ss_name  = $smart_slice->ssname;
     foreach my $row ($ace->get_values('AGP_Fragment')) {
-        my ($ctg_name, $group_start, $group_end, undef, undef, $offset, $tile_length) = @$row;
+        my ($ctg_name, $group_start, $group_end, undef, $start_or_end, $offset, $tile_length) = @$row;
 
-        my $ctg_strand = 1;
-        if ($group_start > $group_end) {
-            $ctg_strand = -1;
-            ($group_start, $group_end) = ($group_end, $group_start);
-        }
+        my ($ctg_strand, $start, $end) =
+          $group_start < $group_end
+          ? ( 1, $start_or_end, $start_or_end + ($tile_length - 1))
+          : (-1, $start_or_end - ($tile_length - 1), $start_or_end);
+
         my $ctg_start = $offset;
         my $ctg_end   = $offset + $tile_length - 1;
 
@@ -237,14 +237,10 @@ sub build_Features_spans_and_agp_fragments {
         $cs->contig_end($ctg_end);
         $cs->contig_strand($ctg_strand);
         $cs->chromosome($chr_name);
-        $cs->chr_start($group_start + $chr_offset);
-        $cs->chr_end(  $group_end   + $chr_offset);
+        $cs->chr_start($start + $chr_offset);
+        $cs->chr_end($end + $chr_offset);
         $cs->assembly_type($ss_name);
-        $cs->ContigInfo(
-            Bio::Vega::ContigInfo->new(
-                -SLICE  => $slice{$self},
-                )
-            );
+        $cs->ContigInfo(Bio::Vega::ContigInfo->new(-SLICE => $slice{$self}));
 
         push(@$cs_list, $cs);
     }
