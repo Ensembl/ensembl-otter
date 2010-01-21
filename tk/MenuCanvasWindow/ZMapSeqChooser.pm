@@ -475,13 +475,12 @@ sub zMapBlixemDefaults {
         },
         'protein-featuresets' => [qw{ SwissProt TrEMBL }],
         'dna-featuresets'    => [qw{ EST_Human EST_Mouse EST_Other vertebrate_mRNA }],
-        'transcript-featuresets' => [qw{
-            Coding
-            Known_CDS
-            Novel_CDS
-            Putative_CDS
-            Nonsense_meditated_decay
-            }],
+        'transcript-featuresets' => [
+            'Coding Transcripts',
+            'Known CDS Transcripts',
+            'Novel CDS Transcripts',
+            'Putative and NMD',
+            ],
     );
     # script could also be "blixem_standalone" sh wrapper (if needed)
 }
@@ -1189,7 +1188,6 @@ sub zMapDeleteFeaturesets {
         
         for my $featureset (@featuresets) {
             $xml->open_tag('featureset', {name => $featureset});
-            $xml->close_tag;
         }
         $xml->close_all_open_tags;
         

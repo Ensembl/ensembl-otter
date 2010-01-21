@@ -195,7 +195,7 @@ sub initialise {
 
     $cb_frame->Checkbutton(
         -variable => \$self->{_clear_existing},
-        -text     => 'Clear existing alignments of same type',
+        -text     => 'Clear existing OTF alignments',
         -anchor   => 'w',
     )->pack(-side => 'top', -expand => 1, -fill => 'x');
 
@@ -403,7 +403,7 @@ sub launch_exonerate {
 
     $seqs = $self->get_query_seq();
 
-    print STDOUT "Found " . scalar(@$seqs) . " sequences\n";
+    print STDERR "Found " . scalar(@$seqs) . " sequences\n";
 
     unless (@$seqs) {
         $self->top->messageBox(
@@ -418,7 +418,6 @@ sub launch_exonerate {
     my %seqs_by_type = ();
 
     for my $seq (@$seqs) {
-
         if (
             $seq->type
             && (   $seq->type eq 'EST'
@@ -430,10 +429,10 @@ sub launch_exonerate {
             push @{ $seqs_by_type{ $seq->type } }, $seq;
         }
         elsif ($seq->sequence_string =~ /^[AGCTNagctn\s]*$/) {
-            push @{ $seqs_by_type{Unknown_DNA} }, $seq;
+            push @{ $seqs_by_type{'Unknown_DNA'} }, $seq;
         }
         else {
-            push @{ $seqs_by_type{Unknown_Protein} }, $seq;
+            push @{ $seqs_by_type{'Unknown_Protein'} }, $seq;
         }
     }
 
@@ -441,23 +440,40 @@ sub launch_exonerate {
 
     my ($genomic_start, $genomic_end) = (1, $self->XaceSeqChooser->Assembly->Sequence->sequence_length);
 
-    if ($self->{_use_marked_region}) {
+    if ($self->{'_use_marked_region'}) {
         my ($mark_start, $mark_end) = $self->XaceSeqChooser->zMapGetMark;
         if ($mark_start && $mark_end) {
-            warn "Setting exonerate genomic start & end to marked region: $mark_start - $mark_end";
+            warn "Setting exonerate genomic start & end to marked region: $mark_start - $mark_end\n";
             ($genomic_start, $genomic_end) = ($mark_start, $mark_end);
         }
     }
 
     $self->top->Busy;
+    
+    if ($self->{'_clear_existing'}) {
+        my $ace_text .= sprintf qq{\nSequence : "%s"\n}, $self->XaceSeqChooser->Assembly->Sequence->name;
+        foreach my $type (qw{ Unknown_DNA Unknown_Protein OTF_EST OTF_ncRNA OTF_mRNA OTF_Protein }) {
+            $ace_text .= qq{-D Homol ${type}_homol\n};
+        }
+        $self->XaceSeqChooser->save_ace($ace_text);
+        
+        ### This doesn't do anything
+        $self->XaceSeqChooser->zMapDeleteFeaturesets(qw{
+            OTF_Protein
+            Unknown_Protein
+            OTF_mRNA
+            OTF_ncRNA
+            OTF_EST
+            Unknown_DNA
+        });
+    }
 
     my $need_relaunch = 0;
-
     my @method_names;
-
+    my $ace_text = '';
     for my $type (keys %seqs_by_type) {
 
-        print STDOUT "Running exonerate for sequence(s) of type: $type\n";
+        print STDERR "Running exonerate for sequence(s) of type: $type\n";
 
         my $score    = $type =~ /Protein/  ? $PROT_SCORE : $DNA_SCORE;
         my $ana_name = $type =~ /^Unknown/ ? $type       : "OTF_$type";
@@ -485,12 +501,12 @@ sub launch_exonerate {
 
         if ($seq_file) {
             $exonerate->initialise($seq_file);
-            my $ace_text = $exonerate->run;
+            my $ace_output .= $exonerate->run;
 
             # delete query file
             unlink $seq_file;
 
-            next unless $ace_text;
+            next unless $ace_output;
 
             # add hit sequences into ace text
             my $names = $exonerate->delete_all_hit_names;
@@ -501,26 +517,13 @@ sub launch_exonerate {
                     my $seq = $self->{'_name_seq'}->{$hit_name};
 
                     if ($exonerate->query_type eq 'protein') {
-                        $ace_text .= $self->ace_PEPTIDE($hit_name, $seq);
+                        $ace_output .= $self->ace_PEPTIDE($hit_name, $seq);
                     }
                     else {
-                        $ace_text .= $self->ace_DNA($hit_name, $seq);
+                        $ace_output .= $self->ace_DNA($hit_name, $seq);
                     }
                 }
             }
-
-            if ($self->{_clear_existing}) {
-
-                my $delete_cmd =
-                    "Sequence : \""
-                  . $exonerate->genomic_seq->name . "\"\n"
-                  . "-D Homol "
-                  . $exonerate->acedb_homol_tag . "\n";
-
-                $ace_text = $delete_cmd . $ace_text;
-            }
-
-            #print "ACE text:\n\n$ace_text\n\n";
 
             $need_relaunch = 1;
 
@@ -536,18 +539,15 @@ sub launch_exonerate {
                 $coll_zmap->add_Method($method);
                 $self->XaceSeqChooser->save_ace($coll->ace_string());
             }
-
-            $self->XaceSeqChooser->save_ace($ace_text);
-            $self->XaceSeqChooser->zMapWriteDotZmap;
+            $ace_text .= $ace_output;
         }
     }
+    # print STDERR "Exonerate ace text:\n", $ace_text;
+    $self->XaceSeqChooser->save_ace($ace_text);
+    $self->XaceSeqChooser->zMapWriteDotZmap;    ### Is this needed now that we have dynamic column loading?
 
     if ($need_relaunch) {
-        $self->XaceSeqChooser->resync_with_db();
-
-        if ($self->{_clear_existing}) {
-            $self->XaceSeqChooser->zMapDeleteFeaturesets(@method_names);
-        }
+        # $self->XaceSeqChooser->resync_with_db();    ### Not necessary?
 
         if ($self->{_use_marked_region}) {
 
