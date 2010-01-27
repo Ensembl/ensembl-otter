@@ -108,7 +108,6 @@ Internal methods are usually preceded with a _
 =cut
 
 use strict;
-use English;
 use Getopt::Long;
 
 use Bio::SeqIO;
@@ -135,7 +134,7 @@ use Bio::EnsEMBL::RawContig;
 use Bio::EnsEMBL::Transcript;
 use Bio::EnsEMBL::Translation;
 
-$OUTPUT_AUTOFLUSH = 1;
+$| = 1;
 
 ###
 ### Script globals.
