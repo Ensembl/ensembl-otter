@@ -1,0 +1,105 @@
+#!/usr/bin/env perl
+
+### make_act_otter_config
+
+use strict;
+use warnings;
+
+my @db_names = qw{
+  loutre_act10_af2
+  loutre_act10_ahorton
+  loutre_act10_al1
+  loutre_act10_am9
+  loutre_act10_ca1
+  loutre_act10_cas
+  loutre_act10_cs10
+  loutre_act10_dm4
+  loutre_act10_dml
+  loutre_act10_ds8
+  loutre_act10_ek1
+  loutre_act10_erb
+  loutre_act10_gcf
+  loutre_act10_gdr
+  loutre_act10_gkl
+  loutre_act10_gm5
+  loutre_act10_gs6
+  loutre_act10_jel
+  loutre_act10_jla1
+  loutre_act10_jm12
+  loutre_act10_jr4
+  loutre_act10_lw2
+  loutre_act10_mms
+  loutre_act10_mpind
+  loutre_act10_mpk
+  loutre_act10_mt4
+  loutre_act10_rn4
+  loutre_act10_sb7
+  loutre_act10_test
+  loutre_act10_th2
+  loutre_act10_vb1
+};
+
+my @prefix_list = qw{
+    INT:
+    KO:
+    GD:
+    ERI:
+    JGI:
+    MIT:
+    OLD_MIT:
+    MPI:
+    RI:
+    SK:
+    MGC:
+    GC:
+    WU:
+    BCM:
+    C22:
+};
+
+my $filter_switch = qq{\n[human.use_filters]\n};
+my $filter_def = '';
+
+foreach my $db (@db_names) {
+    my ($annot) = $db =~ /([^_]+)$/;
+    
+    my $prefix = shift @prefix_list;
+    push(@prefix_list, $prefix);
+    
+    my $filt_name = "act10_$annot";
+    my $key       = "act10_${annot}_db";
+    
+    system(
+        "../lace/save_satellite_db",
+        -dataset    => 'human',
+        -key        => $key,
+        -sathost    => 'otterlive',
+        -satport    => 3301,
+        -satuser    => 'ottro',
+        -satdbname  => $db,
+        ) == 0 or die "Error saving metakey for $db";
+    
+    $filter_switch .= qq{$filt_name=0\n};
+
+    $filter_def .= qq{
+[filter.human.$filt_name]
+module=Bio::EnsEMBL::Ace::Otter_Filter::Gene
+metakey=act10_${annot}_db
+nameprefix=${annot}:
+gene_type_prefix=$prefix
+analysis_name=otter
+csver_remote=GRCh37
+};
+
+}
+
+print $filter_switch, $filter_def, "\n";
+
+__END__
+
+=head1 NAME - make_act_otter_config
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
