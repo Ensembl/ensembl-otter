@@ -357,7 +357,11 @@ sub get_all_features_hash { # get Simple|DnaAlign|ProteinAlign|Repeat|Marker|Dit
 
     foreach my $ka_pair (@$kind_and_args) {
         my ($feature_kind, $call_arg_values) = @$ka_pair;
-        my $call_arg_descs = $LangDesc{$feature_kind}{-call_args};
+        my $lang_desc = $LangDesc{$feature_kind};
+        if(!$lang_desc) {
+            die "Unknown feature kind ${feature_kind}!";
+        }
+        my $call_arg_descs = $lang_desc->{-call_args};
 
         for(my $i=0;$i<scalar(@$call_arg_descs);$i++) {
             my ($arg_name, $arg_def_value) = @{ $call_arg_descs->[$i] };
