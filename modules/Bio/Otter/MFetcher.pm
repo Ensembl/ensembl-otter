@@ -369,7 +369,11 @@ sub fetch_and_export {
     my $odba = $self->otter_dba();
     my $original_slice = $self->get_slice($odba, $cs, $name, $type, $start, $end, $csver_orig);
 
-    my $orig_features = $original_slice->$fetching_method(@$call_parms) || die "Could not fetch anything";
+    my $orig_features = $original_slice->$fetching_method(@$call_parms);
+
+    unless($orig_features) {
+        die "Fetching failed";
+    }
 
     if ($self->otter_assembly_equiv_hash()->{$csver_target}{$name} eq $type) {
         # no transformation is needed:
@@ -515,7 +519,7 @@ sub fetch_mapped_features {
         $features = $original_slice->$fetching_method(@$call_parms);
 
         unless($features) {
-            die "Could not fetch anything - analysis may be missing from the DB";
+            die "Fetching failed";
         }
 
     } else { # let's try to do the mapping:
@@ -632,8 +636,11 @@ sub fetch_mapped_features {
                     }
 
                     my $target_fs_on_target_segment
-                        = $target_slice_on_target->$fetching_method(@$call_parms) ||
-                            die "Could not fetch anything - possible problem with external source";
+                        = $target_slice_on_target->$fetching_method(@$call_parms);
+
+                    unless($target_fs_on_target_segment) {
+                        die "Fetching failed";
+                    }
 
                     $self->log('***** : '.scalar(@$target_fs_on_target_segment)." ${feature_name}s found on the slice $metakey:".$target_slice_on_target->start().'..'.$target_slice_on_target->end());
 
