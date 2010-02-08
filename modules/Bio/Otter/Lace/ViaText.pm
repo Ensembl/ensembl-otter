@@ -217,7 +217,12 @@ sub generate_unless_hashed {
     }
 	my @analysis = split(/,/,$analysis_name);
     if($feature->can('analysis') && (!$analysis_name || scalar(@analysis) > 1)) {
-        push @optvalues, $feature->analysis()->logic_name();
+        my $analysis = $feature->analysis();
+        my $logic_name =
+            defined $analysis
+            ? $analysis->logic_name()
+            : undef;
+        push @optvalues, $logic_name;
     }
 
     $cumulative_output .= join("\t", @optvalues)."\n";
@@ -298,7 +303,7 @@ sub ParseFeatures {
             }
         }
 
-        if($feature->can('analysis')) {
+        if($logic_name && $feature->can('analysis')) {
             $feature->analysis(
                 $analysis_hash{$logic_name} ||= Bio::EnsEMBL::Analysis->new(-logic_name => $logic_name)
             );
