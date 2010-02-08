@@ -106,7 +106,7 @@ our %LangDesc = (
 
     'Variation' => {
         -constructor => 'Bio::EnsEMBL::Variation::Variation',
-        -optnames    => [ qw(name source source_description dbID) ],
+        -optnames    => [ qw(name source dbID) ],
         -hash_by      => 'dbID',
     },
     'VariationFeature' => {
