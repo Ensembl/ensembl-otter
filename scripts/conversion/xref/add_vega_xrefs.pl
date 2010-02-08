@@ -136,8 +136,9 @@ if ($support->param('prune') and $support->user_proceed('Would you really like t
   # object_xrefs
   $support->log("Deleting all object_xrefs...\n");
   $num = $dba->dbc->do(qq(
-        DELETE FROM object_xref
-     LEFT JOIN xref x ON ox.xref_id = x.xref_id 
+        DELETE ox
+          FROM object_xref ox
+     LEFT JOIN xref x ON ox.xref_id = x.xref_id
          WHERE x.xref_id IS NULL));
   $support->log("Done deleting $num entries.\n");
 
