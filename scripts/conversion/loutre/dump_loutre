@@ -117,6 +117,8 @@ use Bio::EnsEMBL::Exon;
 
 $| = 1;
 
+our $AUTHOR;
+
 my $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
 
 # parse options
@@ -188,8 +190,8 @@ if (! $support->param('filter_biotype')) {
 $support->comma_to_list('filter_biotype');
 
 #loutre seq_region_attributes to transfer or ignore - add new ones here
-my $att_types_wanted = [qw(name toplevel ack vega_name vega_release vega_export_mod ensembl_name intl_clone_name annotated)];
-my $att_types_to_ignore = [qw(chr description embl_acc embl_version htg hidden write_access equiv_asm)];
+my $att_types_wanted = [qw(name toplevel ack vega_name vega_release vega_export_mod ensembl_name intl_clone_name annotated equiv_asm)];
+my $att_types_to_ignore = [qw(chr description embl_acc embl_version htg hidden write_access)];
 
 # ask user to confirm parameters to proceed
 $support->confirm_params;
@@ -596,9 +598,15 @@ foreach my $name (@{$chr_names_wanted}) {
       }
     }
     #ignore BCM genes on chr7
-    if ( ($chrom =~ /chr7-/) && ($lgene->source eq 'BCM') ) {
+    if ( ($name =~ /chr3-/) && ($lgene->source eq 'BCM') ) {
       $support->log("Skipping gene $gname ($lgsi) because it's from an external source (".$lgene->source.")\n",2);
+      next GENE;
     }
+    #hack - ignore everything by gdr on 5 and 17
+#    if ( ($name =~ /chr5-|chr17-/) && ($lgene->gene_author->name eq 'gdr')) {
+#      $support->log("Skipping gene $gname ($lgsi) because of untrusted author (".$lgene->gene_author->name.")\n",2);
+#      next GENE;
+#    }
 
     #filter out genes on non-anotated clones and without fsv tags
     if ($support->param('dbname') =~ /danio/) {
@@ -723,19 +731,35 @@ sub transfer_gene {
   my $lgene = shift;
   my $vsa = shift;  #no need to transfer
   my $vga = shift;  #no need to transfer
+
+
+  unless ($AUTHOR) {
+    if ($lgene->gene_author->group->name eq 'havana') {
+      $AUTHOR = $lgene->gene_author;
+    }
+  }
+
   my $l_gene_slice = $lgene->slice;
   my $v_gene_slice = $vsa->fetch_by_region($l_gene_slice->coord_system->name,
 					   $l_gene_slice->seq_region_name,
 					   $l_gene_slice->start,
 					   $l_gene_slice->end);
+
   if(!$l_gene_slice) {		
     $support->log_warning("Couldn't fetch loutre gene slice\n");
     return 0;
   }
+
   if(!$v_gene_slice) {		
     $support->log_warning("Couldn't fetch vega gene slice\n");
     return 0;
   }
+
+  unless ($lgene->gene_author) {
+    $support->log_warning("No author attached to ".$lgene->stable_id.". Using default Havana author\n");
+    $lgene->gene_author($AUTHOR);
+  }
+
   if(!@{$lgene->get_all_Transcripts}){
     $support->log_warning("No transcripts for loutre gene ".$lgene->dbID."\n");
     return 0;
