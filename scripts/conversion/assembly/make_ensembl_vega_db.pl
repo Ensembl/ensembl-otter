@@ -124,6 +124,7 @@ $support->parse_extra_options(
   'ensembluser=s',
   'ensemblpass=s',
   'ensembldbname=s',
+  'ensemblassembly=s',
   'evegahost=s',
   'evegaport=s',
   'evegauser=s',
@@ -137,6 +138,7 @@ $support->allowed_params(
   'ensembluser',
   'ensemblpass',
   'ensembldbname',
+  'ensemblassembly',
   'evegahost',
   'evegaport',
   'evegauser',
@@ -541,9 +543,19 @@ $sql = qq(
        AND sr.coord_system_id = cs.coord_system_id
        AND cs.version = \'$ensembl_assembly\'
 );
-
 $c = $dbh->{'vega'}->do($sql) unless ($support->param('dry_run'));
 $support->log_stamped("Done inserting $c assembly mapping entries.\n");
+
+$sql = qq(
+    INSERT INTO $evega_db.assembly
+    SELECT a.cmp_seq_region_id, a.asm_seq_region_id, a.cmp_start, a.cmp_end, a.asm_start, a.asm_end, a.ori
+      FROM assembly a, seq_region sr, coord_system cs
+     WHERE a.asm_seq_region_id = sr.seq_region_id
+       AND sr.coord_system_id = cs.coord_system_id
+       AND cs.version = \'$ensembl_assembly\'
+);
+$c = $dbh->{'vega'}->do($sql) unless ($support->param('dry_run'));
+$support->log_stamped("Done inserting $c reversed assembly mapping entries.\n");
 
 #update external_db and attrib_type on ensembl_vega
 if (! $support->param('dry_run') ) {
@@ -556,6 +568,7 @@ if (! $support->param('dry_run') ) {
       'ensembluser',
       'ensemblpass',
       'ensembldbname',
+      'ensemblassembly',
       'evegahost',
       'evegaport',
       'evegauser',
@@ -568,6 +581,7 @@ if (! $support->param('dry_run') ) {
       port        => $support->param('evegaport'),
       user        => $support->param('evegauser'),
       pass        => $support->param('evegapass'),
+      assembly    => $support->param('ensemblassembly'),
       logfile     => 'make_ensembl_vega_update_external_dbs_ensvega.log',
       interactive => 0,
     },
@@ -577,10 +591,9 @@ if (! $support->param('dry_run') ) {
     or $support->throw("Error running update_external_dbs.pl: $!");
   $support->log_stamped("Done.\n\n");
 
-  $options =~ s/make_ensembl_vega_update_external_dbs_ensvega\.log/ensembl_vega_percent_gc_calc\.log/;
-
 
   #this bit is throwing lots of warnings but is running fine, cannot see the problem. Might be easiest to run it at the end (ie as part of finish_ensembl_veega_createion.pl) ?
+  $options =~ s/make_ensembl_vega_update_external_dbs_ensvega\.log/ensembl_vega_percent_gc_calc\.log/;
   $support->log_stamped("\nCalculating %GC for ".$support->param('evegadbname')."...\n");
   system("../../../../sanger-plugins/vega/utils/vega_percent_gc_calc.pl $options") == 0
     or $support->throw("Error running vega_percent_gc_calc.pl: $!");
