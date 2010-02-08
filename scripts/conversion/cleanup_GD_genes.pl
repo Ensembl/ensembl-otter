@@ -123,10 +123,10 @@ $support->comma_to_list('chromosomes');
 
 #set paths and names for ID files and get filehandles
 $support->param('corf_delete') || $support->param('corf_delete','corf_IDs_togo.txt');
-$support->param('corf_delete',($support->param('logpath').$support->param('corf_delete')));
+$support->param('corf_delete',($support->param('logpath').'/'.$support->param('corf_delete')));
 my $corf_outfile = $support->filehandle('>', $support->param('corf_delete'));
 $support->param('gd_delete') || $support->param('gd_delete','GD_IDs_togo.txt');
-$support->param('gd_delete',($support->param('logpath').$support->param('gd_delete')));
+$support->param('gd_delete',($support->param('logpath').'/'.$support->param('gd_delete')));
 my $gd_outfile = $support->filehandle('>', $support->param('gd_delete'));
 
 # ask user to confirm parameters to proceed

@@ -385,7 +385,8 @@ if ($count > 1) {
   exit if (! $support->param('dry_run'));
 }
 
-if (my $alt_assembly = $support->param('ensemblassembly') ) {
+my $alt_assembly;
+if ($alt_assembly = $support->param('ensemblassembly') ) {
   my $offset = 100000; #offset e! seq_region ids to ensure no overlap with vega seq_region_ids
   $support->log("Adding mappings for alternative assemblies\n");
   my ($other_coord_system_id,$other_rank) = $ldbh->selectrow_array(qq(
@@ -451,16 +452,18 @@ if (my $alt_assembly = $support->param('ensemblassembly') ) {
                        FROM seq_region
                       WHERE seq_region_id = $e_sr_id);
 	if (! $support->param('dry_run')) {
-	  $edbh->do($sql);
+	  my $c = $edbh->do($sql);
+	  $support->log("Inserted $c seq_region entries\n",3);
 	}
 	$sql = qq(INSERT into assembly
                   VALUES ($v_sr_id,$e_sr_id+$offset,$v_assembly_start,$v_assembly_end,$v_assembly_start,$v_assembly_end,1));
 	if (! $support->param('dry_run')) {
-	  $vdbh->do($sql);
+	  my $c = $vdbh->do($sql);
+	  $support->log("Inserted $c assembly entries\n",3);
 	}
       }
       else {
-	$support->log("Taking assembly mappings for chromsome $v_name from loutre\n",2);
+	$support->log("Trying to take assembly mappings for chromsome $v_name from loutre\n",2);
 	my $le_sr_id = $lsa->fetch_by_region('chromosome',$e_name,'','','',$alt_assembly,)->get_seq_region_id;
 	my $l_sr_id = $l_chrom->get_seq_region_id;
 	my $id_diff = $e_sr_id-$le_sr_id;
@@ -469,43 +472,49 @@ if (my $alt_assembly = $support->param('ensemblassembly') ) {
                        FROM seq_region
                       WHERE seq_region_id = $e_sr_id);
 	if (! $support->param('dry_run')) {
-	  $edbh->do($sql);
+	  my $c = $edbh->do($sql);
+	  $support->log("Inserted $c seq_region entries\n",3);
 	}
 
         # it's the other way round in zebrafish. do not ask...will make this more elegant later...
         if ($l_dbname =~ /zebrafish/) {
-	    $sql = qq(SELECT asm_start, asm_end, cmp_start, cmp_end, ori
+	  $sql = qq(SELECT asm_start, asm_end, cmp_start, cmp_end, ori
                         FROM assembly
                        WHERE asm_seq_region_id = $le_sr_id
                          AND cmp_seq_region_id = $l_sr_id);
-	    $sth = $ldbh->prepare($sql);
-	    $sth->execute;
-	    while (my ($asm_start,$asm_end,$cmp_start,$cmp_end,$ori) = $sth->fetchrow_array) {
-	      $sql = qq(INSERT into assembly
-                        VALUES ($e_sr_id+$offset,$v_sr_id,$asm_start,$asm_end,$cmp_start,$cmp_end,$ori));
-	      $support->log_verbose("SQL for assembly entries is $sql\n",2);
-	      if (! $support->param('dry_run')) {
-	        $vdbh->do($sql);
-	      }
+	  $sth = $ldbh->prepare($sql);
+	  $sth->execute;
+	  my $c = 0;
+	  while (my ($asm_start,$asm_end,$cmp_start,$cmp_end,$ori) = $sth->fetchrow_array) {
+	    $sql = qq(INSERT into assembly
+                      VALUES ($e_sr_id+$offset,$v_sr_id,$asm_start,$asm_end,$cmp_start,$cmp_end,$ori));
+	    $support->log_verbose("SQL for assembly entries is $sql\n",2);
+	    if (! $support->param('dry_run')) {
+	      $c++;
+	      $vdbh->do($sql);
 	    }
-            
+	  }
+	  $support->log("Inserted $c assembly entries\n",3);
         }
         else {
-	    $sql = qq(SELECT asm_start, asm_end, cmp_start, cmp_end, ori
-                        FROM assembly
-                       WHERE asm_seq_region_id = $l_sr_id
-                         AND cmp_seq_region_id = $le_sr_id);
-	    $sth = $ldbh->prepare($sql);
-	    $sth->execute;
-	    while (my ($asm_start,$asm_end,$cmp_start,$cmp_end,$ori) = $sth->fetchrow_array) {
-	      $sql = qq(INSERT into assembly
-                        VALUES ($v_sr_id,$e_sr_id+$offset,$asm_start,$asm_end,$cmp_start,$cmp_end,$ori));
-	      $support->log_verbose("SQL for assembly entries is $sql\n",2);
-	      if (! $support->param('dry_run')) {
-	        $vdbh->do($sql);
-	      }
+	  $sql = qq(SELECT asm_start, asm_end, cmp_start, cmp_end, ori
+                      FROM assembly
+                     WHERE asm_seq_region_id = $l_sr_id
+                       AND cmp_seq_region_id = $le_sr_id);
+	  $sth = $ldbh->prepare($sql);
+	  $sth->execute;
+	  my $c = 0;
+	  while (my ($asm_start,$asm_end,$cmp_start,$cmp_end,$ori) = $sth->fetchrow_array) {
+	    $sql = qq(INSERT into assembly
+                      VALUES ($v_sr_id,$e_sr_id+$offset,$asm_start,$asm_end,$cmp_start,$cmp_end,$ori));
+	    $support->log_verbose("SQL for assembly entries is $sql\n",2);
+	    if (! $support->param('dry_run')) {
+	      $c++;
+	      $vdbh->do($sql);
 	    }
-        }
+	  }
+	  $support->log("Inserted $c assembly entries\n",3);
+	}
       }
     }
     else {
@@ -710,37 +719,19 @@ if ( ! $support->param('dry_run')) {
 my @sql_fixes;
 my $release_no = $support->param('vega_release');
 
-#sanity check - if the Otter coord_system is actually used for the (longest) chromosome then rename it to VEGA_version
-#also patch contig.version in coord_system
-my $chr_coord_id   = $vdbh->selectrow_array(qq(
-                         SELECT coord_system_id 
-			 FROM   seq_region 
-	         	 ORDER  by length desc 
-			 LIMIT  1));
-my $otter_coord_id = $vdbh->selectrow_array(qq(
-                         SELECT coord_system_id
-			 FROM   coord_system
-			 WHERE  version = 'Otter'));
-if ($chr_coord_id == $otter_coord_id) {
-  push @sql_fixes, "UPDATE coord_system set version = \'VEGA$release_no\' WHERE version = \'Otter\';\n";
-  push @sql_fixes, "UPDATE coord_system set attrib = \'default_version\' WHERE version = \'VEGA$release_no\';\n";
-  push @sql_fixes, "UPDATE coord_system set rank = 1 WHERE version = \'VEGA$release_no\' and name = \'chromosome\';\n";
-  push @sql_fixes, "UPDATE coord_system set version = NULL WHERE version = \'none\' and name = \'contig\';\n";
-  push @sql_fixes, "INSERT into meta (meta_key,meta_value) VALUES (\'assembly.default\',\'VEGA$release_no\');\n";
-  push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA$release_no|contig\' WHERE meta_value = \'chromosome:Otter|contig\';\n";
-  push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA$release_no|contig|clone\' WHERE meta_value = \'chromosome:Otter|contig|clone\';\n";
-  push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA$release_no#contig\' WHERE meta_value = \'chromosome:Otter#contig\';\n";
-  push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA$release_no#contig#clone\' WHERE meta_value = \'chromosome:Otter#contig#clone\';\n";	
-  if (my $alt_assembly = $support->param('ensemblassembly') ) {
-    push @sql_fixes, "INSERT into meta (meta_key,meta_value) VALUES (\'assembly.mapping\',\'chromosome:VEGA$release_no#chromosome:$alt_assembly\');\n";
-  }
-
+#rename Otter to VEGA_version. Also patch contig.version in coord_system
+push @sql_fixes, "UPDATE coord_system set version = \'VEGA$release_no\' WHERE version = \'Otter\';\n";
+push @sql_fixes, "UPDATE coord_system set attrib = \'default_version\' WHERE version = \'VEGA$release_no\';\n";
+push @sql_fixes, "UPDATE coord_system set rank = 1 WHERE version = \'VEGA$release_no\' and name = \'chromosome\';\n";
+push @sql_fixes, "UPDATE coord_system set version = NULL WHERE version = \'none\' and name = \'contig\';\n";
+push @sql_fixes, "INSERT into meta (meta_key,meta_value) VALUES (\'assembly.default\',\'VEGA$release_no\');\n";
+#push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA$release_no|contig\' WHERE meta_value = \'chromosome:Otter|contig\';\n";
+#push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA$release_no|contig|clone\' WHERE meta_value = \'chromosome:Otter|contig|clone\';\n";
+push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA$release_no#contig\' WHERE meta_value = \'chromosome:Otter#contig\';\n";
+push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA$release_no#contig#clone\' WHERE meta_value = \'chromosome:Otter#contig#clone\';\n";	
+if (my $alt_assembly = $support->param('ensemblassembly') ) {
+  push @sql_fixes, "INSERT into meta (meta_key,meta_value) VALUES (\'assembly.mapping\',\'chromosome:VEGA$release_no#chromosome:$alt_assembly\');\n";
 }
-else {
-  $support->log_warning("Otter assembly not used for longest chromosome in seq_region table - check what\'s going on\n");
-}
-
-
 
 #add misc info to meta table
 my $date = strftime "%Y-%m", localtime;
@@ -771,25 +762,28 @@ push @sql_fixes, "UPDATE gene SET status = NULL WHERE status = 'UNKNOWN';\n";
 push @sql_fixes, "UPDATE gene SET status = 'NOVEL' WHERE status = 'PUTATIVE' and biotype = 'protein_coding';\n";
 
 if (! $support->param('dry_run')) {
-    $support->log("\nFixing meta table, updating gene / transcript types\n");
-    foreach my $fix (@sql_fixes) {
-        eval {
-            if (my $r = $vdbh->do("$fix")) {
-                if ($r eq '0E0') {
-                    $support->log("No rows affected for $fix");
-                }
-            }
-            else {
-                $support->log("Updated $r rows for $fix");
-                if ($fix =~ /expressed_pseudogene/) {
-                    $support->log_warning("Please refer to Havana - should these be processed or unprocessed?\n");
-                }
-            }
-        };
-        if ($@) { 
-            $support->log_warning("Failed fix: $fix $@"); 
-        }
+  $support->log("\nFixing meta table, updating gene / transcript types\n");
+  foreach my $fix (@sql_fixes) {
+    eval {
+      if (my $r = $vdbh->do("$fix")) {
+	if ($r eq '0E0') {
+	  $support->log("No rows affected for $fix");
+	}
+	else {
+	  $support->log("Updated $r rows for $fix",1);
+	}
+      }
+      else {
+	$support->log("Updated $r rows for $fix");
+	if ($fix =~ /expressed_pseudogene/) {
+	  $support->log_warning("Please refer to Havana - should these be processed or unprocessed?\n");
+	}
+      }
+    };
+    if ($@) {
+      $support->log_warning("Failed fix: $fix $@"); 
     }
+  }
 }
 
 if ($support->param('dry_run')) {

@@ -492,7 +492,7 @@ if (! $support->param('dry_run')) {
   #coord_system
   my $coord_systems_to_stay = join("','",keys %coord_systems);
   $support->log_stamped("Deleting from coord_system by coord_system_id...\n",1);	
-  my $sql = qq(DELETE FROM coord_system where coord_system_id not in ('$coord_systems_to_stay'));
+  $sql = qq(DELETE FROM coord_system where coord_system_id not in ('$coord_systems_to_stay'));
   $table_rows{'coord_system'}{'deleted_by_coord_system_id'} = $pddbh->do($sql);
   $support->log_stamped("...finished deleting from coord_system by coord_sysetm_id.\n\n",1);
 
