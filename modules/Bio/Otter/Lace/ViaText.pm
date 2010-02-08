@@ -22,6 +22,8 @@ use Bio::EnsEMBL::Map::Marker;
 use Bio::EnsEMBL::Map::MarkerFeature;
 use Bio::EnsEMBL::Map::Ditag;
 use Bio::EnsEMBL::Map::DitagFeature;
+use Bio::EnsEMBL::Variation::Variation;
+use Bio::EnsEMBL::Variation::VariationFeature;
 use Bio::Otter::DnaDnaAlignFeature;
 use Bio::Otter::DnaPepAlignFeature;
 use Bio::Otter::HitDescription;
@@ -100,6 +102,19 @@ our %LangDesc = (
         -optnames    => [ qw(start end map_weight) ],
         -reference   => [ 'Marker', '', 'marker' ],
         -call_args   => [['analysis' => undef], ['priority' => undef], ['map_weight' => undef]],
+    },
+
+    'Variation' => {
+        -constructor => 'Bio::EnsEMBL::Variation::Variation',
+        -optnames    => [ qw(name source source_description dbID) ],
+        -hash_by      => 'dbID',
+    },
+    'VariationFeature' => {
+        -constructor => 'Bio::EnsEMBL::Variation::Feature',
+        -optnames    => [ qw(start end strand allele_string) ],
+        -reference   => [ 'Variation', '', 'variation' ],
+        # -call_args   => [['analysis' => undef]],
+        -call_args   => [],
     },
 
     'Ditag' => {
