@@ -257,7 +257,7 @@ foreach my $chr ($support->sort_chromosomes) {
       }
     }
 
-    #if there are duplicated names in Vega then check for remarks and patch if non fragmented
+    #if there are duplicated names in Vega then patch, add proper remark if they are fragmented
     if ( (grep { scalar(@{$transnames->{$_}}) > 1 } keys %{$transnames}) && $fix_names) {
       my $patched;
       ($patched,$c2,$c2) = $support->check_remarks_and_update_names($gene,$c2,$c3);
