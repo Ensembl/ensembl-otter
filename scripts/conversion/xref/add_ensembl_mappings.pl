@@ -124,6 +124,7 @@ $support->init_log;
 my $dba = $support->get_database('ensembl');
 my $dbh = $dba->dbc->db_handle;
 my $ta = $dba->get_TranscriptAdaptor();
+my $ga = $dba->get_GeneAdaptor();
 my $ea = $dba->get_DBEntryAdaptor();
 #ensembl db
 my $edba = $support->get_database('ensembl','ensembl');
@@ -162,16 +163,17 @@ my @gene_stable_ids = $support->param('gene_stable_id');
 my %gene_stable_ids = map { $_, 1 } @gene_stable_ids;
 
 #links xrefs andf the biotypes they link to
-my %assigned_xrefs;
+my (%assigned_txrefs, %assigned_gxrefs);
 
 #retrieve mappings from disc or parse database
 my $ens_ids = {};
-my $xref_file    = $SERVERROOT.'/'.$support->param('dbname')."-ensembl-mappings.file";
+my $xref_file    = $SERVERROOT.'/'.$support->param('ensembldbname')."-ensembl-mappings.file";
 if (-e $xref_file) {
-  if ($support->user_proceed("Read xref records from a previously saved files - $xref_file ?\n")) {
+  if ($support->user_proceed("Read xref records from a previously saved file ?\n")) {
     $ens_ids = retrieve($xref_file);
   }
 }
+
 if (! %$ens_ids) {
  CHR:
   foreach my $slice (@{$esa->fetch_all('chromosome',undef,1)}) {
@@ -181,17 +183,27 @@ if (! %$ens_ids) {
   GENE:
     foreach my $g (@{$slice->get_all_Genes()}) {
       next GENE unless ($g->analysis->logic_name =~ /havana/);
+      my $gsi = $g->stable_id;
+    GXREF:
+      foreach my $x (@{$g->get_all_DBEntries}){
+	my $dbname = $x->dbname;
+	my $name = $x->primary_id;
+	next GXREF unless ($x->type =~ /ALT/);
+	next GXREF unless ($name =~ /OTT/);
+	$assigned_gxrefs{$dbname}->{$g->biotype}++;
+	$ens_ids->{'genes'}{$name}{$gsi}{$dbname}++;
+      }
       foreach my $t (@{$g->get_all_Transcripts}) {
 	my $tsi = $t->stable_id;
 	unless ($tsi) { $support->log_error("No stable ID found for transcript ".$t->dbID."\n"); }
-      XREF:
+      TXREF:
 	foreach my $x (@{$t->get_all_DBEntries}){
 	  my $dbname = $x->dbname;
 	  my $name = $x->primary_id;
-	  next XREF unless ($dbname =~ /OTTT/);
-	  next XREF unless ($name =~ /OTT/);
-	  $assigned_xrefs{$dbname}->{$t->biotype}++;
-	  $ens_ids->{$name}{$tsi}{$dbname}++;
+	  next TXREF unless ($x->type =~ /ALT/);
+	  next TXREF unless ($name =~ /OTT/);
+	  $assigned_txrefs{$dbname}->{$t->biotype}++;
+	  $ens_ids->{'transcripts'}{$name}{$tsi}{$dbname}++;
 	}
       }
     }
@@ -199,79 +211,88 @@ if (! %$ens_ids) {
   store($ens_ids,$xref_file);
 }
 
-#warn Dumper($ens_ids);
-my $external_db;
-
 #this defines the order in which the e! xrefs will be used, and which external_db 
 #they match in Vega
 my @priorities = qw(
 		  shares_CDS_and_UTR_with_OTTT:ENST_ident
 		  shares_CDS_with_OTTT:ENST_CDS
 		  OTTT:ENST_ident
+		  OTTG:ENSG
 		);
 
-#add one xref to each E! transcript
-foreach my $v_id (keys %$ens_ids) {
-  my $transcript = $ta->fetch_by_stable_id($v_id);
-  unless ($transcript) {
-    $support->log_warning("Can't retrieve transcript $v_id from Vega\n");
-    next;
-  }
-  $support->log("Studying transcript $v_id\n");
-  my @c = ();
-  while ( my ($e_id, $xrefs) =  each %{$ens_ids->{$v_id}} ) {
-    push @c, $e_id;
-    my $found = 0;
-  DB:
-    foreach my $db (@priorities) {
-      my ($edb,$vdb) = split ':',$db;
-      next DB if $found;
-      if ($xrefs->{$edb}) {
-	my $dbentry = Bio::EnsEMBL::DBEntry->new(
-	  -primary_id => $e_id,
-	  -display_id => $e_id,
-	  -version    => 1,
-	  -release    => 1,
-	  -dbname     => $vdb,
-	);
-	$assigned_xrefs{$vdb}->{$transcript->biotype}++;
-	$transcript->add_DBEntry($dbentry);
-	if ($support->param('dry_run')) {
-	  $support->log("Would store $vdb xref $e_id for transcript $v_id.\n", 1);
-	  $found = 1;
-	}
-	else {
-	  my $dbID = $ea->store($dbentry, $transcript->dbID, 'transcript');
-	  
-	  # apparently, this xref had been stored already, so get
-	  # xref_id from db
-	  unless ($dbID) {
-	    my $sql = qq(
+#add one xref to each E! object
+#foreach my $type (qw(genes transcripts)) {
+foreach my $type (qw(transcripts)) {
+  my $ids = $ens_ids->{$type};
+  foreach my $v_id (keys %$ids) {
+    my $adaptor = $type eq 'genes' ? $ga : $ta;
+    my $object = $adaptor->fetch_by_stable_id($v_id);
+    unless ($object) {
+      $support->log_warning("Can't retrieve object $v_id from Vega\n");
+      next;
+    }
+    $support->log("Studying object $v_id\n");
+    my @c = ();
+    while ( my ($e_id, $xrefs) =  each %{$ids->{$v_id}} ) {
+      push @c, $e_id;
+      my $found = 0;
+    DB:
+      foreach my $db (@priorities) {
+	my ($edb,$vdb) = split ':',$db;
+	next DB if $found;
+	if ($xrefs->{$edb}) {
+	  my $dbentry = Bio::EnsEMBL::DBEntry->new(
+	    -primary_id => $e_id,
+	    -display_id => $e_id,
+	    -version    => 1,
+	    -release    => 1,
+	    -dbname     => $vdb,
+	  );
+	  $type eq 'genes' ? $assigned_gxrefs{$vdb}->{$object->biotype}++ : $assigned_txrefs{$vdb}->{$object->biotype}++;
+	  $object->add_DBEntry($dbentry);
+	  if ($support->param('dry_run')) {
+	    $support->log("Would store $vdb xref $e_id for $v_id.\n", 1);
+	    $found = 1;
+	  }
+	  else {
+	    my $dbID = $ea->store($dbentry, $object->dbID, $type eq 'genes' ? 'gene' : 'transcript');
+	    # apparently, this xref had been stored already, so get
+	    # xref_id from db
+	    if (! $dbID) {
+	      my $sql = qq(
                          SELECT x.xref_id
                          FROM xref x, external_db ed
                          WHERE x.external_db_id = ed.external_db_id
                          AND x.dbprimary_acc = '$e_id'
                          AND ed.db_name = '$vdb'
                          );
-	    ($dbID) = @{ $dbh->selectall_arrayref($sql) || [] };
-	    $support->log_verbose
-	  }
-	  if ($dbID) {
-	    $support->log("Stored $vdb xref $e_id for transcript $v_id.\n", 1);
-	    $found = 1;
-	  } else {
-	    $support->log_warning("No dbID for $vdb xref ($e_id) transcript $v_id\n", 1);
+	      ($dbID) = @{ $dbh->selectall_arrayref($sql) || [] };
+	      $support->log_warning("Reused $vdb xref $e_id for $v_id. Check why this should be\n");
+	    }
+
+	    if ($dbid) {
+	      $support->log("Stored $vdb xref $e_id for $v_id.\n", 1);
+	      $found = 1;
+	    } else {
+	      $support->log_warning("No dbID for $vdb xref ($e_id) $v_id.\n", 1);
+	    }
 	  }
 	}
       }
     }
-  }
-  if (scalar(@c) > 1) {
-    my $ids = join ' ',@c;
-    $support->log_warning("Vega transcript $v_id matches to multiple Ensembl transcripts: $ids\n");
+    if (scalar(@c) > 1) {
+      my $ids = join ' ',@c;
+      if ($type eq 'transcripts') {
+	$support->log_warning("Vega transcript $v_id matches to multiple Ensembl transcripts: $ids\n");
+      }
+      else {
+	$support->log_warning("Vega gene $v_id matches to multiple Ensembl genes: $ids\n");
+      }
+    }
   }
 }
 
-warn Dumper(\%assigned_xrefs);
+warn Dumper(\%assigned_txrefs);
+#warn Dumper(\%assigned_gxrefs);
 
 $support->finish_log;
