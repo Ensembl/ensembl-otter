@@ -91,24 +91,24 @@ my $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
 # parse options
 $support->parse_common_options(@_);
 $support->parse_extra_options(
-    'keep=s',
-    'delete=s',
-    'outfile=s',
-    'find_missing',
-	'schematype=s',
+  'keep=s',
+  'delete=s',
+  'outfile=s',
+  'find_missing',
+  'schematype=s',
 );
 $support->allowed_params(
-    $support->get_common_params,
-    'keep',
-    'delete',
-    'outfile',
-    'find_missing',
-	'schematype'
+  $support->get_common_params,
+  'keep',
+  'delete',
+  'outfile',
+  'find_missing',
+  'schematype'
 );
 
 if ($support->param('help') or $support->error) {
-    warn $support->error if $support->error;
-    pod2usage(1);
+  warn $support->error if $support->error;
+  pod2usage(1);
 }
 
 # ask user to confirm parameters to proceed
@@ -124,34 +124,34 @@ my $dbh = $dba->dbc->db_handle;
 # find out if we are dealing with an Ensembl or Vega schema
 my $schema;
 if ($schema = $support->param('schematype')) {
-	unless ($schema eq 'vega' || $schema eq 'ensembl') {
-		$support->log("schematype argument can only be \'ensembl\' or \'vega\'. Aborting\n");
-		exit(0);
-	}
+  unless ($schema eq 'vega' || $schema eq 'ensembl') {
+    $support->log("schematype argument can only be \'ensembl\' or \'vega\'. Aborting\n");
+    exit(0);
+  }
 }
 else {
-	my %tabs;
-	map { $_ =~ s/`//g; $tabs{$_} = 1; } $dbh->tables;
-	$schema = $tabs{'gene_author'} ? 'vega' : 'ensembl';
+  my %tabs;
+  map { $_ =~ s/`//g; $tabs{$_} = 1; } $dbh->tables;
+  $schema = $tabs{'gene_author'} ? 'vega' : 'ensembl';
 }
 
 # sanity check: you can must choose to either keep or to delete
 my ($action, $condition, $infile);
 if ($support->param('keep')) {
-    $infile = $support->param('keep');
-    $action = 'keep';
-    $condition = "NOT IN";
+  $infile = $support->param('keep');
+  $action = 'keep';
+  $condition = "NOT IN";
 } elsif ($support->param('delete')) {
-    $infile = $support->param('delete');
-    $action = 'delete';
-    $condition = "IN";
+  $infile = $support->param('delete');
+  $action = 'delete';
+  $condition = "IN";
 } else {
-    $support->log_error("You must choose to either delete or keep genes by their gene_ids.\n");
+  $support->log_error("You must choose to either delete or keep genes by their gene_ids.\n");
 }
 
 # make sure user knows what he's doing
 unless ($support->user_proceed("You decided to ".uc($action)." all genes $condition the list provided from the $schema database. Are you sure you want to proceed?")) {
-    exit(0);
+  exit(0);
 }
 
 # read list of gene IDs to keep or delete
@@ -173,14 +173,14 @@ $deleted += &delete_genes($gene_ids, $condition);
 # only try to delete exons and xrefs if you actually deleted genes and/or
 # transcripts
 if ($deleted) {
-    # delete exons
-    &Deletion::delete_exons($support,$dbh);
-
-    # delete xrefs
-    &Deletion::delete_xrefs($support,$dbh);
-
-    # optimize tables
-    &Deletion::optimize_tables($support,$dbh);
+  # delete exons
+  &Deletion::delete_exons($support,$dbh);
+  
+  # delete xrefs
+  &Deletion::delete_xrefs($support,$dbh);
+  
+  # optimize tables
+  &Deletion::optimize_tables($support,$dbh);
 }
 
 # finish logfile
@@ -202,21 +202,21 @@ $support->finish_log;
 =cut
 
 sub read_infile {
-    my ($action, $infile) = @_;
+  my ($action, $infile) = @_;
 
-    $support->log_stamped("Reading gene IDs to ".$action." from file...\n");
+  $support->log_stamped("Reading gene IDs to ".$action." from file...\n");
 
-    my $in = $support->filehandle('<', $infile);
-    my @gene_ids = ();
-    while (<$in>) {
-        chomp $_;
-		push @gene_ids, $_;
-    }
-    close($in);
-	
-    $support->log_stamped("Done reading ".scalar(@gene_ids)." genes.\n\n");
+  my $in = $support->filehandle('<', $infile);
+  my @gene_ids = ();
+  while (<$in>) {
+    chomp $_;
+    next unless ($_ =~ /^\d+$/);
+    push @gene_ids, $_;
 
-    return \@gene_ids;
+  }
+  close($in);
+  $support->log_stamped("Done reading ".scalar(@gene_ids)." genes.\n\n");
+  return \@gene_ids;
 }
 
 =head2 check_missing

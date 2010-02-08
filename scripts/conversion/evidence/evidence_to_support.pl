@@ -248,6 +248,7 @@ foreach my $chr (@chr_sorted) {
     $support->log_verbose("Done fetching ".(scalar @$similarity)." features\n", 1);
 
     # loop over transcripts
+    my ($e_match,$t_match) = 0,0;
     foreach my $trans (@{ $gene->get_all_Transcripts }) {
       my $transcript_has_support = 0;
       my $transcript_has_evidence = 0;
@@ -274,7 +275,7 @@ foreach my $chr (@chr_sorted) {
 	$support->log_verbose("Evidence $acc...\n", 2);
 	# loop over similarity features on the slice, compare name with
 	# evidence
-	my $match = 0;
+	my $hit_match = 0;
 	foreach my $hitname (keys %$sf) {
 	  if ($hitname eq $acc) {
 	    foreach my $hit (@{ $sf->{$hitname} }) {
@@ -284,7 +285,8 @@ foreach my $chr (@chr_sorted) {
 		# store unique evidence identifier in hash
 		$tse_hash{$trans->dbID.":".$hit->[2].":".$hit->[3]} = 1;
 
-		$match = 1;
+		$hit_match = 1;
+		$t_match = 1;
 		$gene_has_support++;
 		$transcript_has_support++;
 	      }
@@ -297,15 +299,22 @@ foreach my $chr (@chr_sorted) {
 		  $support->log_verbose("Matches similarity feature with dbID ".$hit->[2].".\n", 3);
 		  # store unique evidence identifier in hash
 		  $se_hash{$exon->dbID.":".$hit->[2].":".$hit->[3]} = 1;
+		  $e_match = 1;
 		}
 	      }
 	    }
 	  }
 	}
-	if (!$match) {
+	if (!$hit_match) {
 	  $support->log_verbose("No matching similarity feature found for $acc.\n", 3);
 	}
       }
+
+      #sanity check
+      if ($e_match && !$t_match) {
+	$support->log_warning("I don't understand how we can have supporting_features but no transcript_supporting_features for $tsid\n");
+      }
+
       my $id = $trans->stable_id." on gene $gsi (chr $chr)";
       unless ($transcript_has_support) {
 	$stats->{$source}{'transcripts_without_support'}++;
@@ -378,7 +387,7 @@ foreach my $source (keys %{$stats}) {
   if (my $t_no_support = $stats->{$source}{'transcripts_without_support'}) {
     my $tot_transcripts = $stats->{$source}{'transcripts'};
     my $perc_transcripts = $t_no_support / $tot_transcripts * 100;
-    $support->log("$source: No evidence for $t_no_support out of $tot_transcripts ($perc_transcripts) transcripts.\n", 1);
+    $support->log("$source: No supporting_features for $t_no_support out of $tot_transcripts ($perc_transcripts) transcripts.\n", 1);
     $support->log_verbose("Transcripts without supporting features:\n", 1);
     foreach my $t (@{$transcripts_without_support{$source}}) {
       #does this one have any evidence at all ?
