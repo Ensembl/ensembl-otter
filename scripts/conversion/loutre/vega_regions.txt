@@ -80,8 +80,14 @@ MHC_DBB	6-DBB	Chromosome 6-DBB	Havana	HSCHR6_MHC_DBB
 MHC_MANN	6-MANN	Chromosome 6-MANN	Havana	HSCHR6_MHC_MANN
 MHC_MCF	6-MCF	Chromosome 6-MCF	Havana	HSCHR6_MHC_MCF
 MHC_SSTO	6-SSTO	Chromosome 6-SSTO	Havana	HSCHR6_MHC_SSTO
-LRC_COX_1	19-COX	Chromosome 19-COX	Havana
+LRC_COX_1	19-COX_1	Chromosome 19-COX_1	Havana
+LRC_COX_2	19-COX_2	Chromosome 19-COX_2	Havana
 LRC_PGF_1	19-PGF_1	Chromosome 19-PGF_1	Havana
+LRC_PGF_2	19-PGF_2	Chromosome 19-PGF_2	Havana
+LRC_DM1A	19-DM1A	Chromosome 19-DM1A	Havana
+LRC_DM1B	19-DM1B	Chromosome 19-DM1B	Havana
+LRC_MC1A	19-MC1A	Chromosome 19-MC1A	Havana
+LRC_MC1B	19-MC1B	Chromosome 19-MC1B	Havana
 --end--
 
 --mouse--
