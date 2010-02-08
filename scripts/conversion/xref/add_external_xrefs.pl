@@ -59,9 +59,7 @@ case errors in the Vega gene_names. Then run it normally to add xrefs. Note that
 gene_names are found to have case errors then the transcript names must also be updated
 using patch_transcript_names.pl.
 
-HGNC and an Ensembl db are used at the same time for human. TCAG (The Centre for Applied
-Genomics) is used exclusively for human to add xrefs for externally annotated (Sick-Kids)
-genes on human chr 7. IMGT_HLA is used to add xrefs for HLA genes on human haplotypes.
+IMGT_HLA is used to add xrefs for HLA genes on human haplotypes.
 IMGT_GDB is used to add xrefs for IG genes
 
 For mouse, mgi xrefformat adds links both to MGI and to external databases.
@@ -73,7 +71,6 @@ Currently, these input formats are supported:
     mgi         => ftp://ftp.informatics.jax.org/pub/reports/MGI_MouseHumanSequence.rpt
     imgt_hla    => by email Steven Marsh <marsh@ebi.ac.uk>
     imgt_gdb    => use vega database
-    ensemblxref => use core ensembl database
 
 =head1 LICENCE
 
@@ -123,11 +120,6 @@ $support->parse_extra_options(
   'hgncfile=s',
   'mgifile=s',
   'imgt_hlafile=s',
-  'ensemblhost=s',
-  'ensemblport=s',
-  'ensembluser=s',
-  'ensemblpass=s',
-  'ensembldbname=s',
   'mismatch=s',
   'prune=s',
 );
@@ -139,11 +131,6 @@ $support->allowed_params(
   'hgncfile',
   'mgifile',
   'imgt_hlafile',
-  'ensemblhost',
-  'ensemblport',
-  'ensembluser',
-  'ensemblpass',
-  'ensembldbname',
   'mismatch',
   'prune',
 );
@@ -242,11 +229,6 @@ if (-e $xref_file) {
     $support->log_stamped("Reading xref input files...\n");
     my $parser = "parse_$format";
     &$parser($parsed_xrefs, $lcmap);
-
-    #only look at Ensembl db if the file to be parsed is hgnc
-    if ($support->param('xrefformat') eq 'hgnc') {	
-      &parse_ensdb($parsed_xrefs);
-    }		
     $support->log_stamped("Finished parsing xrefs, storing to file...\n");
     store($parsed_xrefs,$xref_file);
     store($lcmap,$lc_xref_file);
@@ -258,11 +240,6 @@ else {
   $support->log_stamped("Reading xref input files...\n");
   my $parser = "parse_$format";
   &$parser($parsed_xrefs, $lcmap);
-
-  #only look at Ensembl db if the file to be parsed is hgnc
-  if ($support->param('xrefformat') eq 'hgnc') {	
-    &parse_ensdb($parsed_xrefs);
-  }		
   $support->log_stamped("Finished parsing xrefs, storing to file...\n");
   store($parsed_xrefs,$xref_file);
   store($lcmap,$lc_xref_file);
@@ -295,8 +272,6 @@ my %extdb_def = (
   TCAG                     => ['KNOWN'    , 0],
   IMGT_HLA                 => ['KNOWN'    , 0],
   'IMGT/GENE_DB'           => ['KNOWN'    , 0],
-  Ens_Mm_gene              => ['XREF'     , 0],
-  Ens_Hs_gene              => ['XREF'     , 0],
 );
 
 # loop over chromosomes
