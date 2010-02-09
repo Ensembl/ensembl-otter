@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2010-02-09 16:38:33 $
-# Id:            $Id: nph-get_lace_acedb_tar,v 1.14 2010-02-09 16:38:33 jh13 Exp $
+# Last modified: $Date: 2010-02-09 16:46:19 $
+# Id:            $Id: nph-get_lace_acedb_tar,v 1.15 2010-02-09 16:46:19 jh13 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_lace_acedb_tar,v $
 
 ### nph-get_lace_acedb_tar
@@ -18,7 +18,7 @@ use Bio::Otter::ServerScriptSupport;
 {
     my $server = Bio::Otter::ServerScriptSupport->new;
     my $tar = $server->data_dir . "/lace_acedb.tar.gz";
-    open my $TAR_FH, $tar or
+    open my $TAR_FH, '<', $tar or
         $server->error_exit("Error getting empty acedb database directory structure\nCan't read '$tar' : $!");
 
     print $server->header(

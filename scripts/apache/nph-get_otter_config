@@ -11,7 +11,7 @@ use Bio::Otter::ServerScriptSupport;
 {
     my $server = Bio::Otter::ServerScriptSupport->new;
     my $otter_config = $server->data_dir . "/otter_config";
-    open my $CFG_FH, $otter_config or
+    open my $CFG_FH, '<', $otter_config or
         $server->error_exit("Error getting otter_config\nCan't read '$otter_config' : $!");
     local $/ = undef;
     my $ace_txt = <$CFG_FH>;
