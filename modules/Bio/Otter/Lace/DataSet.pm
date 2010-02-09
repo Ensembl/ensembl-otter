@@ -246,24 +246,24 @@ sub make_Otter_DBAdaptor {
     my( $self ) = @_;
 
     require Bio::Otter::DBSQL::DBAdaptor;
-    return $self->_make_DBAdptor_with_class('Bio::Otter::DBSQL::DBAdaptor');
+    return $self->_make_DBAdaptor_with_class('Bio::Otter::DBSQL::DBAdaptor');
 }
 
 sub make_EnsEMBL_DBAdaptor {
     my( $self ) = @_;
     
     require Bio::EnsEMBL::DBSQL::DBAdaptor;
-    return $self->_make_DBAdptor_with_class('Bio::EnsEMBL::DBSQL::DBAdaptor');
+    return $self->_make_DBAdaptor_with_class('Bio::EnsEMBL::DBSQL::DBAdaptor');
 }
 
 sub make_Vega_DBAdaptor {
     my( $self ) = @_;
 
     require Bio::Vega::DBSQL::DBAdaptor;
-    return $self->_make_DBAdptor_with_class('Bio::Vega::DBSQL::DBAdaptor');
+    return $self->_make_DBAdaptor_with_class('Bio::Vega::DBSQL::DBAdaptor');
 }
 
-sub _make_DBAdptor_with_class {
+sub _make_DBAdaptor_with_class {
     my( $self, $class ) = @_;
     
     my(@args) = (
