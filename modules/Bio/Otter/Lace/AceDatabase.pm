@@ -181,7 +181,7 @@ sub write_local_exonerate {
     my $ace_text = $exon->run or return;
 
     my $ace_filename = $self->home . '/rawdata/local_exonerate_search.ace';
-    open(my $ace_fh, "> $ace_filename") or die "Can't write to '$ace_filename' : $!";
+    open my $ace_fh, '>', $ace_filename or die "Can't write to '$ace_filename' : $!";
     print $ace_fh $ace_text;
     close $ace_fh or confess "Error writing to '$ace_filename' : $!";
 
@@ -209,7 +209,7 @@ sub get_region_xml {
     return $smart_slice->get_region_xml;
     
     # my $save = "/var/tmp/slice.xml";
-    # open my $tmp, "> $save" or die "Can't write to '$save'; $!";
+    # open my $tmp, '>', $save or die "Can't write to '$save'; $!";
     # print $tmp $xml_string;
     # close $tmp or die "Error writing to '$save'; $!";
 }
@@ -219,7 +219,7 @@ sub write_otter_acefile {
 
     # Storing ace_text in a file
     my $ace_filename = $self->home . '/rawdata/otter.ace';
-    open my $ace_fh, "> $ace_filename" or die "Can't write to '$ace_filename'";
+    open my $ace_fh, '>', $ace_filename or die "Can't write to '$ace_filename'";
     print $ace_fh $parser->make_ace;
     close $ace_fh or confess "Error writing to '$ace_filename' : $!";
     $self->add_acefile($ace_filename);
@@ -237,7 +237,7 @@ sub write_file {
     my ($self, $file_name, $content) = @_;
     
     my $full_file = join('/', $self->home, $file_name);
-    open my $LF, "> $full_file" or die "Can't write to '$full_file'; $!";
+    open my $LF, '>', $full_file or die "Can't write to '$full_file'; $!";
     print $LF $content;
     close $LF or die "Error writing to '$full_file'; $!";
 }
@@ -247,7 +247,7 @@ sub read_file {
     
     local $/ = undef;
     my $full_file = join('/', $self->home, $file_name);
-    open my $RF, $full_file or die "Can't read '$full_file'; $!";
+    open my $RF, '<', $full_file or die "Can't read '$full_file'; $!";
     my $content = <$RF>;
     close $RF or die "Error reading '$full_file'; $!";
     return $content;
@@ -448,7 +448,7 @@ sub edit_displays_wrm {
 
     my $displays = "$home/wspec/displays.wrm";
 
-    open my $disp_in, $displays or confess "Can't read '$displays' : $!";
+    open my $disp_in, '<', $displays or confess "Can't read '$displays' : $!";
     my @disp = <$disp_in>;
     close $disp_in;
 
@@ -460,7 +460,7 @@ sub edit_displays_wrm {
         last;
     }
 
-    open my $disp_out, "> $displays" or confess "Can't write to '$displays' : $!";
+    open my $disp_out, '>', $displays or confess "Can't write to '$displays' : $!";
     print $disp_out @disp;
     close $disp_out;
 }
@@ -494,7 +494,7 @@ sub initialize_database {
     }
     close $pipe_fh or die "Error initializing database exit($?)\n";
 
-    open my $fh, $parse_log or die "Can't open '$parse_log' : $!";
+    open my $fh, '<', $parse_log or die "Can't open '$parse_log' : $!";
     my $file_log = '';
     my $in_parse = 0;
     my $errors = 0;
@@ -551,7 +551,7 @@ sub write_dna_data {
     my $ace_filename = $self->home . '/rawdata/dna.ace';
     $self->add_acefile($ace_filename);
 
-    open my $ace_fh, "> $ace_filename" or confess "Can't write to '$ace_filename' : $!";
+    open my $ace_fh, '>', $ace_filename or confess "Can't write to '$ace_filename' : $!";
     print $ace_fh $dna_filter->ace_data($slice);
     close $ace_fh;
 }
