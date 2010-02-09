@@ -3,12 +3,12 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2010-01-06 15:35:21 $
-# Id:            $Id: nph-get_clonesequences_fast,v 1.21 2010-01-06 15:35:21 jgrg Exp $
+# Last modified: $Date: 2010-02-09 16:38:32 $
+# Id:            $Id: nph-get_clonesequences_fast,v 1.22 2010-02-09 16:38:32 jh13 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_clonesequences_fast,v $
 
 use strict;
-use SangerPaths qw{ core bioperl123 ensembl55 otter52 };
+use SangerPaths qw{ core bioperl123 ensembl56 otter52 };
 
 use Bio::Otter::ServerScriptSupport;
 

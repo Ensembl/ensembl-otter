@@ -4,7 +4,7 @@
 
 use strict;
 
-use SangerPaths qw{ core bioperl123 ensembl55 otter52 };
+use SangerPaths qw{ core bioperl123 ensembl56 otter52 };
 
 use Bio::Otter::ServerScriptSupport;
 
