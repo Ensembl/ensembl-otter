@@ -3,6 +3,7 @@
 ### nph-get_otter_config
 
 use strict;
+use warnings;
 
 use SangerPaths qw{ core bioperl123 ensembl56 otter52 };
 

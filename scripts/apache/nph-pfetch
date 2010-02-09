@@ -3,11 +3,12 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2009-10-20 13:31:38 $
-# Id:            $Id: nph-pfetch,v 1.5 2009-10-20 13:31:38 jgrg Exp $
+# Last modified: $Date: 2010-02-09 17:23:17 $
+# Id:            $Id: nph-pfetch,v 1.6 2010-02-09 17:23:17 jh13 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-pfetch,v $
 
 use strict;
+use warnings;
 
 use SangerPaths qw{ core };
 use SangerWeb;
