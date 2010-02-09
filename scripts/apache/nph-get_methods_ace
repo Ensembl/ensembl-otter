@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2010-02-09 16:38:33 $
-# Id:            $Id: nph-get_methods_ace,v 1.13 2010-02-09 16:38:33 jh13 Exp $
+# Last modified: $Date: 2010-02-09 16:48:44 $
+# Id:            $Id: nph-get_methods_ace,v 1.14 2010-02-09 16:48:44 jh13 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_methods_ace,v $
 
 ### nph-get_methods_ace
@@ -18,7 +18,7 @@ use Bio::Otter::ServerScriptSupport;
 {
     my $server = Bio::Otter::ServerScriptSupport->new;
     my $methods_ace = $server->data_dir . "/methods.ace";
-    open my $ACE_FH, $methods_ace or
+    open my $ACE_FH, '<', $methods_ace or
         $server->error_exit("Error getting methods.ace\nCan't read '$methods_ace' : $!");
     local $/ = undef;
     my $ace_txt = <$ACE_FH>;
