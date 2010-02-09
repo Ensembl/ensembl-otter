@@ -3,14 +3,14 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2009-07-21 13:55:08 $
-# Id:            $Id: nph-lock_region,v 1.21 2009-07-21 13:55:08 jgrg Exp $
+# Last modified: $Date: 2010-02-09 16:38:33 $
+# Id:            $Id: nph-lock_region,v 1.22 2010-02-09 16:38:33 jh13 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-lock_region,v $
 
 use strict;
 use warnings;
 
-use SangerPaths qw{ core bioperl123 ensembl55 otter52 };
+use SangerPaths qw{ core bioperl123 ensembl56 otter52 };
 
 use Bio::Otter::ServerScriptSupport;
 use Bio::Vega::ContigLockBroker;

@@ -3,12 +3,12 @@
 # Author:        lg4
 # Group:         anacode
 # Maintainer:    lg4
-# Last modified: $Date: 2010-02-09 16:29:03 $
-# Id:            $Id: nph-get_features,v 1.12 2010-02-09 16:29:03 jh13 Exp $
+# Last modified: $Date: 2010-02-09 16:38:33 $
+# Id:            $Id: nph-get_features,v 1.13 2010-02-09 16:38:33 jh13 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_features,v $
 
 use strict;
-use SangerPaths qw{ core bioperl123 ensembl55 otter52 };
+use SangerPaths qw{ core bioperl123 ensembl56 otter52 };
 
 use Bio::Otter::ServerScriptSupport;
 use Bio::Otter::DBSQL::SimpleBindingAdaptor;
