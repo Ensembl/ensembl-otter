@@ -3,12 +3,13 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2010-02-09 16:38:32 $
-# Id:            $Id: nph-get_assembly_dna,v 1.5 2010-02-09 16:38:32 jh13 Exp $
+# Last modified: $Date: 2010-02-09 17:25:42 $
+# Id:            $Id: nph-get_assembly_dna,v 1.6 2010-02-09 17:25:42 jh13 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_assembly_dna,v $
 
 use strict;
 use warnings;
+
 use SangerPaths qw{ core bioperl123 ensembl56 otter52 };
 
 use Bio::Otter::ServerScriptSupport;
