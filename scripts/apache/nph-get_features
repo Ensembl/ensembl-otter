@@ -3,8 +3,8 @@
 # Author:        lg4
 # Group:         anacode
 # Maintainer:    lg4
-# Last modified: $Date: 2010-02-09 17:23:17 $
-# Id:            $Id: nph-get_features,v 1.14 2010-02-09 17:23:17 jh13 Exp $
+# Last modified: $Date: 2010-02-10 11:34:07 $
+# Id:            $Id: nph-get_features,v 1.15 2010-02-10 11:34:07 jh13 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_features,v $
 
 use strict;
@@ -13,7 +13,6 @@ use warnings;
 use SangerPaths qw{ core bioperl123 ensembl56 otter52 };
 
 use Bio::Otter::ServerScriptSupport;
-use Bio::Otter::DBSQL::SimpleBindingAdaptor;
 use Bio::Otter::Lace::ViaText qw( %LangDesc &GenerateFeatures );
 
 my $server       = Bio::Otter::ServerScriptSupport->new;
