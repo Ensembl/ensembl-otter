@@ -301,14 +301,17 @@ sub widget{
         $widget = $tk->Label(
                              -text => "${qName}|${sName}|Widget",
                              )->pack(-side => 'left');
-        $widget->packForget();
+        
         $self->{'_widget'} = $widget;
-
+        
         my $id = $self->server_window_id();
-
-        my $xr = $self->xremote($id);
-        $xr->request_name($self->request_name);
-        $xr->response_name($self->response_name);
+        
+        $widget->bind('<Map>' => sub {
+            $widget->packForget();
+            my $xr = $self->xremote($id);
+            $xr->request_name($self->request_name);
+            $xr->response_name($self->response_name);
+        });
     }
     return $widget;
 }
