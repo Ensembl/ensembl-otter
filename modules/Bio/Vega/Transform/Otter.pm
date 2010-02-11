@@ -430,12 +430,15 @@ sub build_Transcript {
         $translation->start($start_Exon_Pos);
         $translation->end_Exon($end_Exon);
         $translation->end($end_Exon_Pos);
+
+        # TO DO: decide whether is this kludge is necessary and remove it if not
         ##probably add a check to see if $end_Exon_Pos is set or not
         if ($start_Exon->strand == 1 && $start_Exon->start != $tran_start_pos) {
           $start_Exon->end_phase(($start_Exon->length-$start_Exon_Pos+1)%3);
         } elsif ($start_Exon->strand == -1 && $start_Exon->end != $tran_start_pos) {
           $start_Exon->end_phase(($start_Exon->length-$start_Exon_Pos+1)%3);
         }
+
         if ($end_Exon->length >= $end_Exon_Pos) {
           $end_Exon->end_phase(-1);
         }
