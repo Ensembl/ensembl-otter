@@ -166,12 +166,19 @@ The xremote Object [C<<< X11::XRemote >>>].
 sub xremote{
     my ($self, $id) = @_;
     my $xr = $self->{'_xremote'};
-    if(!$xr){
-        if($self->_is_server){
-            $xr = X11::XRemote->new(-server => 1,
-                                    -id     => $id
-                                    );
-        }else{
+    if (!$xr) {
+        if ($self->_is_server) {
+            if (defined $id) {
+                $xr = X11::XRemote->new(
+                    -server => 1,
+                    -id     => $id
+                );
+            }
+            else {
+                die "ZMap::Connect::xremote called as server without providing a window ID";
+            }
+        }
+        else {
             $xr = X11::XRemote->new();
         }
         $self->{'_xremote'} = $xr;
