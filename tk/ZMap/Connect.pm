@@ -313,12 +313,23 @@ sub widget{
         
         my $id = $self->server_window_id();
         
+        # we need to wait until the widget is mapped by the x server so that we 
+        # can reliably initialise the xremote protocol so we must wait for the
+        # <Map> event
+        
+        my $mapped; # a flag used in waitVariable below to indicate that the widget is mapped
+        
         $widget->bind('<Map>' => sub {
-            $widget->packForget();
+            $widget->packForget;
             my $xr = $self->xremote($id);
             $xr->request_name($self->request_name);
             $xr->response_name($self->response_name);
+            $mapped = 1;
         });
+
+        # this call will essentially block until the widget is mapped and the
+        # xremote protocol is initialised (the tk event loop will continue though)
+        $widget->waitVariable(\$mapped);
     }
     return $widget;
 }
