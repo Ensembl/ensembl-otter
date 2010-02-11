@@ -491,14 +491,8 @@ sub generate_ExonSet {
 	 $e->attribvals($self->prettyprint('start',$exon->start + $coord_offset));
 	 $e->attribvals($self->prettyprint('end',$exon->end  + $coord_offset));
 	 $e->attribvals($self->prettyprint('strand',$exon->strand));
-	 if ( defined($tran_high) && $exon->start <= $tran_high &&
-         defined($tran_low)  && $tran_low <= $exon->end){
-		my $phase = $exon->phase;
-		my $end_phase = $exon->end_phase;
-		$e->attribvals($self->prettyprint('phase',$phase));
-		$e->attribvals($self->prettyprint('end_phase',$end_phase));
-
-	 }
+	 $e->attribvals($self->prettyprint('phase',$exon->phase));
+	 $e->attribvals($self->prettyprint('end_phase',$exon->end_phase));
 	 $exs->attribobjs($e);
   }
   return $exs;
