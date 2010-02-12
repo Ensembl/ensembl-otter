@@ -319,7 +319,6 @@ sub list_all_db_properties {
         DNA_USER
         DNA_DBNAME
         PORT
-        HEADCODE
         ALIAS
         };
 }
@@ -419,14 +418,6 @@ sub PORT {
         $self->{'_PORT'} = $PORT;
     }
     return $self->{'_PORT'};
-}
-sub HEADCODE {
-    my( $self, $HEADCODE ) = @_;
-    
-    if(defined($HEADCODE)) {
-        $self->{'_HEADCODE'} = $HEADCODE;
-    }
-    return $self->{'_HEADCODE'};
 }
 
 sub ALIAS {
