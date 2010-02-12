@@ -236,12 +236,6 @@ sub get_cached_DBAdaptor {
     return $self->{'_dba_cache'};
 }
 
-sub make_DBAdaptor {
-    my( $self ) = @_;
-
-    return $self->HEADCODE() ? $self->make_Vega_DBAdaptor() : $self->make_Otter_DBAdaptor();
-}
-
 sub make_EnsEMBL_DBAdaptor {
     my( $self ) = @_;
     
