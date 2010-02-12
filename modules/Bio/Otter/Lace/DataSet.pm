@@ -242,13 +242,6 @@ sub make_DBAdaptor {
     return $self->HEADCODE() ? $self->make_Vega_DBAdaptor() : $self->make_Otter_DBAdaptor();
 }
 
-sub make_Otter_DBAdaptor {
-    my( $self ) = @_;
-
-    require Bio::Otter::DBSQL::DBAdaptor;
-    return $self->_make_DBAdaptor_with_class('Bio::Otter::DBSQL::DBAdaptor');
-}
-
 sub make_EnsEMBL_DBAdaptor {
     my( $self ) = @_;
     
