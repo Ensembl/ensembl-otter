@@ -17,13 +17,10 @@ use Hum::Submission;
   	Hum::Submission::create_lock($project);
 
     my $dataset_name = undef;
-    my $which_db    = 'all'; # possible values: 'otter', 'newpipe', 'all'
     my $rescan_flag = 0;     # Re-scan the names even if they are already in the database
     my $change_flag = 0;     # Whether we should change or just show the stats
     Bio::Otter::Lace::Defaults::do_getopt(
 					  'dataset=s'   => \$dataset_name,
-                      'which=s'     => \$which_db,
-					  'rescan!'     => \$rescan_flag,
                       'change!'     => \$change_flag,
 					  ) || die "No arguments - don't know what to do";
 
@@ -49,14 +46,8 @@ use Hum::Submission;
         my $otter_db = $ds->get_cached_DBAdaptor;
 
         eval {
-            if(($which_db eq 'otter')
-             ||($which_db eq 'all') ) {
                 my $dbh = $otter_db->can('dbc') ? $otter_db->dbc : $otter_db;
                 repair_one_db($dbh, $rescan_flag, $change_flag, $dataset_name, 'head_otter');
-            }
-
-            if(($which_db eq 'newpipe')
-             ||($which_db eq 'all') ) {
 
                 my ($newpipe_db, $newpipedb_options) =
                     Bio::Otter::Lace::SatelliteDB::_get_DBAdaptor_and_options(
@@ -64,7 +55,6 @@ use Hum::Submission;
                         'pipeline_db_rw_head',
                 );
                 repair_one_db($newpipe_db->dbc, $rescan_flag, $change_flag, $dataset_name, 'newpipe');
-            }
         };
         warn $@ if $@;
     }
