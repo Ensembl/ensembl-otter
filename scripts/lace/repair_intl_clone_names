@@ -43,8 +43,6 @@ use Hum::Submission;
         next if $dataset_name eq "cow"; # cow does not have clones - it has fake clones
                                         # from whole genome shotgun
 
-        my $headcode  = $ds->HEADCODE() || 0;
-
         print STDERR "\n=================== $dataset_name ===============\n";
 
         # Make a connection to the otter database
@@ -54,8 +52,7 @@ use Hum::Submission;
             if(($which_db eq 'otter')
              ||($which_db eq 'all') ) {
                 my $dbh = $otter_db->can('dbc') ? $otter_db->dbc : $otter_db;
-                repair_one_db($dbh, $headcode, $rescan_flag, $change_flag, $dataset_name,
-                    $headcode ? 'head_otter' : 'otter');
+                repair_one_db($dbh, $rescan_flag, $change_flag, $dataset_name, 'head_otter');
             }
 
             if(($which_db eq 'newpipe')
@@ -66,7 +63,7 @@ use Hum::Submission;
                         $otter_db,
                         'pipeline_db_rw_head',
                 );
-                repair_one_db($newpipe_db->dbc, 1, $rescan_flag, $change_flag, $dataset_name, 'newpipe');
+                repair_one_db($newpipe_db->dbc, $rescan_flag, $change_flag, $dataset_name, 'newpipe');
             }
         };
         warn $@ if $@;
@@ -89,7 +86,7 @@ sub get_attrib_id_by_name {
 
 sub repair_one_db {
 
-    my ($dbh, $head_flag, $rescan_flag, $change_flag, $dataset_name, $which_db) = @_;
+    my ($dbh, $rescan_flag, $change_flag, $dataset_name, $which_db) = @_;
 
     if(! $dbh) {
         print STDERR "\n***** '$which_db' database of '$dataset_name' species does not seem to exist\n";
@@ -101,15 +98,12 @@ sub repair_one_db {
     my ($intl_attrib, $acc_attrib, $op_update_pipe_query,
         $np_select_srid_and_old_by_acc, $np_insert_pipe_query, $np_update_pipe_query);
 
-    if($head_flag) {
         $intl_attrib = get_attrib_id_by_name($dbh, 'intl_clone_name') || die "'intl_clone_name' attrib not defined";
         $acc_attrib  = get_attrib_id_by_name($dbh, 'embl_acc') || die "'embl_acc' attrib not defined";
-    }
 
         # find the clones that need their international name to be updated:
     my $clones_acc_query = $dbh->prepare(
-      $head_flag
-    ? qq{
+    qq{
         SELECT a_acc.value, a_ver.value, a_icn.value
         FROM seq_region s,
 	     seq_region_attrib a_acc,
@@ -127,18 +121,10 @@ sub repair_one_db {
           AND s.seq_region_id = a_ver.seq_region_id
           AND a_ver.attrib_type_id = (SELECT attrib_type_id FROM attrib_type WHERE code = 'embl_version')
         }
-    : qq{
-        SELECT embl_acc, embl_version, name
-        FROM clone
-        }.( $rescan_flag
-            ? ''
-            : " WHERE name = concat(embl_acc, '.', embl_version) "
-        )
     );
     $clones_acc_query->execute;
 
 
-    if($head_flag) {
             # find srid and old value via accession only:
         $np_select_srid_and_old_by_acc = $dbh->prepare(qq{
             SELECT a_acc.seq_region_id, a_icn.value
@@ -164,14 +150,6 @@ sub repair_one_db {
             WHERE seq_region_id = ?
               AND attrib_type_id = $intl_attrib
         });
-    } else {
-        $op_update_pipe_query = $dbh->prepare(q{
-            UPDATE clone
-            SET name = ?
-            WHERE embl_acc = ?
-              AND embl_version = ?
-        });
-    }
 
 
         # the actual update loop:
@@ -189,7 +167,7 @@ sub repair_one_db {
 
         my $changed_delim = '....';
 
-        if( ($new_intl ne $old_intl) && ($head_flag || $new_intl) ) {
+        if( $new_intl ne $old_intl ) {
 
                 # some stats about the discrepancy:
             if($new_intl) {
@@ -199,7 +177,6 @@ sub repair_one_db {
             }
 
             if($change_flag) { # be a man, change the world!
-                if($head_flag) {
                     $np_select_srid_and_old_by_acc->execute($acc);
                     while (my ($srid, $old) = $np_select_srid_and_old_by_acc->fetchrow) {
                         if($old) {
@@ -209,10 +186,6 @@ sub repair_one_db {
                         }
                         $done_count++;
                     }
-                } else {
-                    $op_update_pipe_query->execute($new_intl, $acc, $ver);
-                    $done_count++;
-                }
 
                 $changed_delim = '--->';
             }
