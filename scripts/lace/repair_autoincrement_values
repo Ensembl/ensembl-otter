@@ -30,13 +30,6 @@ use Bio::Otter::Lace::Defaults;
 
     # DataSet interacts directly with an otter database
     my $ds = $cl->get_DataSet_by_name($dsname);
-
-    # Sanity check:
-    if(!$ds->HEADCODE()) {
-        print STDERR "New dataset must be based on schema-20+\n";
-        exit(1);
-    }
-    
     my $loutre_dbc = $ds->get_cached_DBAdaptor->dbc();
 
     my $commandstack = '';

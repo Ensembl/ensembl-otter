@@ -36,7 +36,6 @@ use Bio::Vega::DBSQL::DBAdaptor;
     # in the assembly.
     my $ss = $ds->get_SequenceSet_by_name($set_name);
     $ds->fetch_all_CloneSequences_for_SequenceSet($ss);
-    $ds->HEADCODE(1);
     # $ds->fetch_pipeline_ctg_ids_for_SequenceSet($ss);
     
     my $otter_dba = $ds->get_cached_DBAdaptor;
