@@ -43,11 +43,6 @@ Bio::Otter::Lace::Defaults::do_getopt(
 
 my $cl = Bio::Otter::Lace::Defaults::make_Client();
 my $ds = $cl->get_DataSet_by_name($dsname);
-
-if(!$ds->HEADCODE()) {
-    die "Can only load things into a new API database";
-}
-
 my $loutre_dba = $ds->get_cached_DBAdaptor;
 my $mc  = $loutre_dba->get_MetaContainer();
 my $sa  = $loutre_dba->get_SliceAdaptor();
