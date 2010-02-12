@@ -32,7 +32,7 @@ use Hum::Ace::GeneMethod;
     my $ds = $cl->get_DataSet_by_name($dataset_name);
     my $ss = $ds->get_SequenceSet_by_name($sequence_set);
     
-    my $otter_db = $ds->make_DBAdaptor;
+    my $otter_db = $ds->make_Vega_DBAdaptor;
     my $gene_aptr  = $otter_db->get_GeneAdaptor;
     my $clone_aptr = $otter_db->get_CloneAdaptor;
     
