@@ -73,7 +73,7 @@ sub get_title {
     my ($self, $home_dir) = @_;
     
     my $displays_file = "$home_dir/wspec/displays.wrm";
-    open my $DISP, $displays_file or die "Can't read '$displays_file'; $!";
+    open my $DISP, '<', $displays_file or die "Can't read '$displays_file'; $!";
     my $title;
     while (<$DISP>) {
         if (/_DDtMain.*-t\s*"([^"]+)/) {
