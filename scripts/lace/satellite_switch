@@ -26,7 +26,7 @@ use Bio::Otter::Lace::Defaults;
     my $meta_key = 'pipeline_db_head';
     foreach my $ds ($cl->get_all_DataSets) {
         my $name = $ds->name;
-        my $dba = $ds->make_DBAdaptor;
+        my $dba = $ds->make_Vega_DBAdaptor;
         my $meta = $dba->get_MetaContainer;
         my ($connect) = @{$meta->list_value_by_key($meta_key)};
         unless ($connect) {
