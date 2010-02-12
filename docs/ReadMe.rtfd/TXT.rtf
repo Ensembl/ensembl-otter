@@ -1,6 +1,6 @@
-{\rtf1\mac\ansicpg10000\cocoartf824\cocoasubrtf480
-{\fonttbl\f0\fnil\fcharset77 LucidaGrande-Bold;\f1\fnil\fcharset77 LucidaGrande;\f2\fnil\fcharset77 Monaco;
-\f3\fswiss\fcharset77 Helvetica;}
+{\rtf1\ansi\ansicpg1252\cocoartf949\cocoasubrtf540
+{\fonttbl\f0\fnil\fcharset0 LucidaGrande;\f1\fnil\fcharset0 Monaco;\f2\fswiss\fcharset0 Helvetica;
+}
 {\colortbl;\red255\green255\blue255;}
 \paperw11900\paperh16840\margl1440\margr1440\vieww15900\viewh18940\viewkind0
 \pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\qc\pardirnatural
@@ -9,91 +9,106 @@
 Mac OS X otterlace client installation\
 \pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\ql\qnatural\pardirnatural
 
-\f1\b0\fs24 \cf0 \
+\b0\fs24 \cf0 \
 
-\f0\b\fs28 System Requirements\
+\b\fs28 System Requirements\
 
-\f1\b0\fs24 \
-This version of otterlace will only work on Mac OS X version 10.4 and later.\
+\b0\fs24 \
+This version of otterlace will only work on Mac OS X version 10.5 and later, and only on Intel CPU machines.\
 \
 
-\f0\b\fs28 Installation
-\f1\b0\fs24 \
+\b\fs28 Installation
+\b0\fs24 \
 \
 To install the otterlace client, drag the "otterlace" application from the installation disk to the Applications folder (or any other folder) on your Mac's hard disk.\
 \
-You will need to create a file "~/.otter_config" (ie: in your home directory) containing:\
+You will need to create a file "~/.otter_config" (ie: in your home directory). A reliable way to do this is to type the following two commands into a terminal:\
 \
 \pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\fi560\ql\qnatural\pardirnatural
 
-\f2 \cf0 [client]\
+\f1 \cf0 touch ~/.otter_config\
+open -a TextEdit ~/.otter_config
+\f0 \
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\ql\qnatural\pardirnatural
+\cf0 \
+Save the following text into the file:\
+\
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\fi560\ql\qnatural\pardirnatural
+
+\f1 \cf0 [client]\
 author=your@email.address\
 write_access=1\
 \pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\ql\qnatural\pardirnatural
 
-\f1 \cf0 \
+\f0 \cf0 \
 Leave off the "write_access" line if you don't need to make changes to the annotation.\
 \
 
-\f0\b\fs28 Sanger Authentication
-\f1\b0\fs24 \
+\b\fs28 Sanger Authentication
+\b0\fs24 \
 \
 In order to use the system each user will need to set up a Sanger website "Single Sign-On" account, which you can do this via this web page:\
 \
 \pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\ql\qnatural\pardirnatural
 
-\f2 \cf0   {\field{\*\fldinst{HYPERLINK "http://www.sanger.ac.uk/perl/ssomanager?action=requestcreate"}}{\fldrslt http://www.sanger.ac.uk/perl/ssomanager?action=requestcreate}}\
+\f1 \cf0   {\field{\*\fldinst{HYPERLINK "http://www.sanger.ac.uk/perl/ssomanager?action=requestcreate"}}{\fldrslt http://www.sanger.ac.uk/perl/ssomanager?action=requestcreate}}\
 \pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\ql\qnatural\pardirnatural
 
-\f1 \cf0 \
+\f0 \cf0 \
 When you have done this, send the email address you signed up with to {\field{\*\fldinst{HYPERLINK "mailto:anacode@sanger.ac.uk"}}{\fldrslt anacode@sanger.ac.uk}} to get added to the list of permitted users.\
 \
 
-\f0\b\fs28 Running otterlace\
+\b\fs28 Running otterlace\
 
-\f1\b0\fs24 \
+\b0\fs24 \
 To run otterlace double-click on the otterlace icon. It should start X11 if you don't already have it open. If the dataset chooser window:\
 \
 \pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\qc\pardirnatural
 
-\f3 \cf0 {{\NeXTGraphic Pasted Graphic.tiff \width5380 \height9400
+\f2 \cf0 {{\NeXTGraphic Pasted Graphic.tiff \width5380 \height9400
 }¬}\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\qc\pardirnatural
 
-\f1 \cf0 \
+\f0 \cf0 \
 \pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\ql\qnatural\pardirnatural
 \cf0 \
 doesn't appear, then something may have gone wrong. Open /Applications/Utilities/Console and try opening otterlace again. Any error messages will appear in Console. You can paste them into an email and send them to us: {\field{\*\fldinst{HYPERLINK "mailto:anacode@sanger.ac.uk"}}{\fldrslt anacode@sanger.ac.uk}}
-\f2 \
+\f1 \
 \
 
 \f0\b\fs28 X11 Tip\
 
-\f1\b0\fs24 \
+\b0\fs24 \
 To get "focus follows mouse" behaviour in X11, so that you don't have to click in a window to make it active, enter this command:\
 \
 \pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\ql\qnatural\pardirnatural
 
-\f2 \cf0   defaults write com.apple.x11 wm_ffm -bool true\
+\f1 \cf0   defaults write com.apple.x11 wm_ffm -bool true\
 \pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\ql\qnatural\pardirnatural
 
-\f1 \cf0 \
+\f0 \cf0 \
 in a terminal.\
 \
 
-\f0\b\fs28 Mac OS 10.5 (Leopard)
-\f1\b0\fs24 \
+\b\fs28 Mac OS 10.5 (Leopard)
+\b0\fs24 \
 \
-This distribution works on Mac OS 10.5 Leopard (tested on 10.5.2), but you should install the latest version of {\field{\*\fldinst{HYPERLINK "http://trac.macosforge.org/projects/xquartz"}}{\fldrslt XQuartz}} (which was version 
-\f3 2.3.2.1
-\f1  released on the 3rd January 2009 when this document was last updated).\
+This distribution works on Mac OS 10.5 Leopard (tested on 10.5.2), but you should install the latest version of {\field{\*\fldinst{HYPERLINK "http://trac.macosforge.org/projects/xquartz"}}{\fldrslt XQuartz}} (currently version 
+\f2 2.4.0
+\f0  released on the 14th August 2009).\
 \
 
-\f0\b\fs28 Known problems with the Mac otterlace client\
+\b\fs28 Mac OS 10.6 (Snow Leopard)
+\b0\fs24 \
+\
+This distribution hasn't yet been tested on Snow Leopard.\
+\
 
-\f1\b0\fs24 \
+\b\fs28 Known problems with the Mac otterlace client\
+
+\b0\fs24 \
 Copy-pasting transcripts doesn't work because it uses 
-\f2 cross_match
-\f1  to find non-identical exons. Due to licence restrictions, we are not allowed to distribute 
-\f2 cross_match
-\f1  with the application.\
+\f1 cross_match
+\f0  to find non-identical exons. Due to licence restrictions, we are not allowed to distribute 
+\f1 cross_match
+\f0  with the application.\
 }
