@@ -47,14 +47,14 @@ use Hum::Submission;
 
         eval {
                 my $dbh = $otter_db->can('dbc') ? $otter_db->dbc : $otter_db;
-                repair_one_db($dbh, $rescan_flag, $change_flag, $dataset_name, 'head_otter');
+                repair_one_db($dbh, $rescan_flag, $change_flag, $dataset_name, 'otter');
 
-                my ($newpipe_db, $newpipedb_options) =
+                my ($pipe_db, $pipedb_options) =
                     Bio::Otter::Lace::SatelliteDB::_get_DBAdaptor_and_options(
                         $otter_db,
                         'pipeline_db_rw_head',
                 );
-                repair_one_db($newpipe_db->dbc, $rescan_flag, $change_flag, $dataset_name, 'newpipe');
+                repair_one_db($pipe_db->dbc, $rescan_flag, $change_flag, $dataset_name, 'pipe');
         };
         warn $@ if $@;
     }
