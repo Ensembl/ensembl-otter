@@ -172,7 +172,7 @@ sub save_server_otter_config {
     my ($config) = @_;
     
     my $server_otter_config = "/tmp/server_otter_config.$$";
-    open my $SRV_CFG, "> $server_otter_config"
+    open my $SRV_CFG, '>', $server_otter_config
         or die "Can't write to '$server_otter_config'; $!";
     print $SRV_CFG $config;
     close $SRV_CFG or die "Error writing to '$server_otter_config'; $!";

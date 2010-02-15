@@ -368,7 +368,7 @@ sub save_CookieJar {
         # Create file with mode 600
         my $save_mask = umask;
         umask(066);
-        open my $fh, "> $jar"
+        open my $fh, '>', $jar
             or confess "Can't create '$jar'; $!";
         umask($save_mask);
     }
