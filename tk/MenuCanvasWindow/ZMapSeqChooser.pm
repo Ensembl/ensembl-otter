@@ -830,6 +830,8 @@ sub zmap_feature_details_xml {
 
     my $xml = Hum::XmlWriter->new(5);
 
+   
+
     # Put this on the "Details" page which already exists.
     $xml->open_tag('page', {name => 'Details'});
     $xml->open_tag('subsection', {name => 'Feature'});
@@ -1188,6 +1190,7 @@ sub zMapDeleteFeaturesets {
         
         for my $featureset (@featuresets) {
             $xml->open_tag('featureset', {name => $featureset});
+            $xml->close_tag;
         }
         $xml->close_all_open_tags;
         
@@ -1196,7 +1199,11 @@ sub zMapDeleteFeaturesets {
         my ($status, $hash) = parse_response($response[0]);
         
         unless ($status =~ /^2/) {
-            warn "Problem deleting featuresets";
+            unless ($hash->{error}->{message} =~ /Unknown FeatureSet/) {
+                # XXX: temporarily ignore this error message, as we want to be able to call
+                # delete_feature on featuresets that aren't currently in the zmap window
+                warn "Problem deleting featuresets: ".$hash->{error}->{message};
+            }
         }
     }
     else {
