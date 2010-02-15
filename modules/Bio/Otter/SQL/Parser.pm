@@ -20,7 +20,7 @@ sub parse_file {
     my( $self, $file_name ) = @_;
     
     my $fh = gensym();
-    open $fh, $file_name or die "Can't read '$file_name' : $!";
+    open $fh, '<', $file_name or die "Can't read '$file_name' : $!";
     my $set = parse_fh($fh);
     close $fh;
     return $set;
