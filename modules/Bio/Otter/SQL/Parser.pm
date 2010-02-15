@@ -7,6 +7,7 @@ use strict;
 use warnings;
 use Symbol 'gensym';
 use Text::ParseWords 'quotewords';
+use Bio::Otter::SQL::Comment;
 use Bio::Otter::SQL::StatementSet;
 use Bio::Otter::SQL::TokenList;
 use Bio::Otter::SQL::Statement::CreateTable;
