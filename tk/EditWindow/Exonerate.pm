@@ -700,6 +700,9 @@ sub get_query_seq {
                 push @confirmed_seqs, $seq;
             }
         }
+        else {
+            push @confirmed_seqs, $seq;
+        }
     }
     
     @seqs = @confirmed_seqs;
