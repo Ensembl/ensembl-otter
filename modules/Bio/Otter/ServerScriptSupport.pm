@@ -28,7 +28,7 @@ use Bio::Vega::Author;
 use Bio::Otter::Version;
 use Bio::Otter::Lace::TempFile;
 use Bio::Otter::Lace::ViaText qw( %LangDesc &GenerateFeatures );
-use Bio::Otter::DBSQL::SimpleBindingAdaptor;
+use Bio::Vega::DBSQL::SimpleBindingAdaptor;
 
 use SangerWeb;
 
@@ -377,7 +377,7 @@ sub enrich {
 
     # Fetch the hit descriptions from the pipeline
     my $pdbc = $server->satellite_dba( '' )->dbc();
-    my $hd_adaptor = Bio::Otter::DBSQL::SimpleBindingAdaptor->new( $pdbc );
+    my $hd_adaptor = Bio::Vega::DBSQL::SimpleBindingAdaptor->new( $pdbc );
     $hd_adaptor->fetch_into_hash(
         'hit_description',
         'hit_name',
