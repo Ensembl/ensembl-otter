@@ -34,7 +34,7 @@ sub make_log {
     }
     elsif (defined $pid) {
         my $log = gensym();
-        open $log, ">> $file" or confess "Can't append to logfile '$file': $!";
+        open $log, '>>', $file or confess "Can't append to logfile '$file': $!";
         
         # Unbuffer logfile
         $oldsel = select($log);
