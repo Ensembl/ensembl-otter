@@ -252,7 +252,7 @@ sub password_prompt{
         sub {
             my $self = shift;
             
-            unless (-t STDIN) {
+            unless (-t STDIN) { ## no critic InputOutput::ProhibitInteractiveTest
                 warn "Cannot prompt for password - not attached to terminal\n";
                 return;
             }
