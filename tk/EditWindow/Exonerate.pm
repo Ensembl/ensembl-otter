@@ -25,6 +25,7 @@ my $DNA_SCORE         = 100;
 my $DNAHSP            = 120;
 my $BEST_N            = 1;
 my $MAX_INTRON_LENGTH = 200000;
+my $MAX_QUERY_LENGTH  = 10000;
 
 my $INITIAL_DIR = (getpwuid($<))[7];
 
@@ -680,6 +681,28 @@ sub get_query_seq {
             -type    => 'OK',
         );
     }
+    
+    # check for unusually long query sequences
+    
+    my @confirmed_seqs;
+    
+    for my $seq (@seqs) {
+        if ($seq->sequence_length > $MAX_QUERY_LENGTH) {
+            my $response = $self->top->messageBox(
+                -title   => 'Unusually long query sequence',
+                -icon    => 'warning',
+                -message => $seq->name." is ".$seq->sequence_length." residues long.\n".
+                                "Are you sure you want to try to align it?",
+                -type    => 'YesNo',
+            );
+            
+            if ($response eq 'Yes') {
+                push @confirmed_seqs, $seq;
+            }
+        }
+    }
+    
+    @seqs = @confirmed_seqs;
 
     # lower case query polyA/T tails to avoid spurious exons
 
