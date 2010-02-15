@@ -40,9 +40,9 @@ sub add_analysis {
 
 sub all_analyses {
     my $self = shift @_;
-    return
-        sort { ($a eq $ana_root) ? -1 : ($b eq $ana_root) ? 1 : ($a cmp $b); }
-            keys %{$self->{_entries}};
+    my @analyses =
+        sort { ($a eq $ana_root) ? -1 : ($b eq $ana_root) ? 1 : ($a cmp $b); } keys %{$self->{_entries}};
+    return @analyses;
 }
 
 # Returns an array used by CanvasWindow::SequenceNotes::Status
