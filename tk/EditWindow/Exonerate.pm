@@ -454,18 +454,12 @@ sub launch_exonerate {
         my $ace_text .= sprintf qq{\nSequence : "%s"\n}, $self->XaceSeqChooser->Assembly->Sequence->name;
         foreach my $type (qw{ Unknown_DNA Unknown_Protein OTF_EST OTF_ncRNA OTF_mRNA OTF_Protein }) {
             $ace_text .= qq{-D Homol ${type}_homol\n};
+            
+            # just delete all types for now (we have to do this seperately at the moment because zmap errors
+            # out without deleting anything if any featureset does not currently exist in the zmap window)
+            $self->XaceSeqChooser->zMapDeleteFeaturesets($type);
         }
         $self->XaceSeqChooser->save_ace($ace_text);
-        
-        ### This doesn't do anything
-        $self->XaceSeqChooser->zMapDeleteFeaturesets(qw{
-            OTF_Protein
-            Unknown_Protein
-            OTF_mRNA
-            OTF_ncRNA
-            OTF_EST
-            Unknown_DNA
-        });
     }
 
     my $need_relaunch = 0;
@@ -542,13 +536,10 @@ sub launch_exonerate {
             $ace_text .= $ace_output;
         }
     }
-    # print STDERR "Exonerate ace text:\n", $ace_text;
+    
     $self->XaceSeqChooser->save_ace($ace_text);
-    $self->XaceSeqChooser->zMapWriteDotZmap;    ### Is this needed now that we have dynamic column loading?
 
     if ($need_relaunch) {
-        # $self->XaceSeqChooser->resync_with_db();    ### Not necessary?
-
         if ($self->{_use_marked_region}) {
 
             # XXX: temporarily don't ask zmap to load in the marked region as this crashes
