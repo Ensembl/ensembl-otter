@@ -6,6 +6,7 @@ package GenomeCanvas::DensityBand::SNP;
 use strict;
 use Carp;
 use GenomeCanvas::DensityBand;
+use GenomeCanvas::GD_StepMap;
 
 use vars '@ISA';
 @ISA = ('GenomeCanvas::DensityBand');
