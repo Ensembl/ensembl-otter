@@ -278,7 +278,7 @@ sub align_to_seed {
 
   # the sequence that we'll be aligning
   my $seq_file = $self->create_filename($domain,"seq");
-  open(my $seq_fh, ">$seq_file")
+  open(my $seq_fh, '>', $seq_file)
             || die "Error creating '$seq_file' : $!";
 
   print $seq_fh $seq; close $seq_fh;
@@ -286,14 +286,14 @@ sub align_to_seed {
 
     # the seed alignment
     my $seed_file = $self->create_filename($domain,"seed");
-    open(my $seed_fh, ">$seed_file")
+    open(my $seed_fh, '>', $seed_file)
             || die "Error creating '$seed_file' : $!";
 
     print $seed_fh $seed; close $seed_fh;
 
     # the HMM
     my $hmm_file = $self->create_filename($domain,"ls");
-    open(my $hmm_fh, ">$hmm_file")
+    open(my $hmm_fh, '>', $hmm_file)
             || die "Error creating '$hmm_file' : $!";
 
     print $hmm_fh $hmm; close $hmm_fh;
