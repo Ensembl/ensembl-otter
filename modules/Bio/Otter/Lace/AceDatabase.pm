@@ -9,7 +9,6 @@ use Carp;
 use File::Path 'rmtree';
 use Fcntl qw{ O_WRONLY O_CREAT };
 
-# use Bio::Otter::Converter;
 use Bio::Vega::Transform::Otter::Ace;
 use Bio::Vega::AceConverter;
 use Bio::Vega::Transform::XML;
