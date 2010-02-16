@@ -28,6 +28,8 @@ sub fetch_by_name {
         $group->name($name);
         $group->email($email);
     }
+
+    return;
 }
 
 sub store {
