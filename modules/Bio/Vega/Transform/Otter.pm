@@ -662,7 +662,8 @@ sub get_Tiles {
     my $self = shift;
 
     if (my $t = $tiles{$self}) {
-        return sort { $a->[0] <=> $b->[0] } @$t;
+        my @tiles = sort { $a->[0] <=> $b->[0] } @$t;
+        return @tiles;
     } else {
         return;
     }
