@@ -44,7 +44,7 @@ sub get_primary_prefix {
   if( my $arrRef = $sth->fetchrow_arrayref() ) {
     return $arrRef->[0];
   } else {
-    return undef;
+    return;
   }
 }
 
@@ -71,7 +71,7 @@ sub get_species_prefix {
   if( my $arrRef = $sth->fetchrow_arrayref() ) {
     return $arrRef->[0];
   } else {
-    return undef;
+    return;
   }
 }
 
@@ -98,7 +98,7 @@ sub get_stable_id_min {
   if( my $arrRef = $sth->fetchrow_arrayref() ) {
     return $arrRef->[0];
   } else {
-    return undef;
+    return;
   }
 }
 

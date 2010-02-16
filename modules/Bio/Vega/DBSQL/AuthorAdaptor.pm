@@ -253,7 +253,7 @@ sub fetch_gene_author {
         SELECT author_id from gene_author where gene_id=?
         });
   $sth->execute($gene_id);
-  return undef if($sth->rows() == 0);
+  return if($sth->rows() == 0);
   my $author_id=$sth->fetchrow_array();
   $sth->finish();
   my $author=$self->fetch_by_dbID($author_id);
@@ -269,7 +269,7 @@ sub fetch_transcript_author {
         SELECT author_id from transcript_author where transcript_id=?
         });
   $sth->execute($transcript_id);
-  return undef if($sth->rows() == 0);
+  return if($sth->rows() == 0);
   my $author_id=$sth->fetchrow_array();
   $sth->finish();
   my $author=$self->fetch_by_dbID($author_id);
