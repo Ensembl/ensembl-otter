@@ -94,6 +94,8 @@ sub store {
   my $contig_lock_id = $sth->{'mysql_insertid'}
 	 or throw('Failed to get new autoincremented ID for lock');
   $contig_lock->dbID($contig_lock_id);
+
+  return;
 }
 
 sub remove {
@@ -105,6 +107,7 @@ sub remove {
   my $sth = $self->prepare("DELETE FROM contig_lock WHERE seq_region_id = ?");
   $sth->execute($contig_id);
   $self->throw("Failed to remove ContigLock for contig " . $contig_id) unless $sth->rows;
+  return;
 }
 
 1;
