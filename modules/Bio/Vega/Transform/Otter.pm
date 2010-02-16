@@ -527,7 +527,7 @@ sub translation_pos {
         return $exon->end - $loc + 1;
      }
   } else {
-     return undef;
+     return;
   }
 }
 
