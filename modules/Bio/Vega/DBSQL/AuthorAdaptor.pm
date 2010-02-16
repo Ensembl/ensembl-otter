@@ -200,6 +200,8 @@ sub store {
 
     my $db_id = $sth->{'mysql_insertid'} || throw('Failed to get autoincremented ID from statement handle');
     $author->dbID($db_id);
+
+    return;
 }
 
 sub store_gene_author {
@@ -212,6 +214,7 @@ sub store_gene_author {
         INSERT INTO gene_author(gene_id, author_id) VALUES (?,?)
         });
   $sth->execute($gene_id,$author_id);
+  return;
 }
 
 sub remove_gene_author {
@@ -221,6 +224,7 @@ sub remove_gene_author {
         DELETE FROM gene_author where gene_id = ? AND author_id = ?
         });
     $sth->execute($gene_id, $author_id);
+    return;
 }
 
 sub store_transcript_author {
@@ -233,6 +237,7 @@ sub store_transcript_author {
         INSERT INTO transcript_author(transcript_id, author_id) VALUES (?,?)
         });
   $sth->execute($transcript_id,$author_id);
+  return;
 }
 
 sub remove_transcript_author {
@@ -242,6 +247,7 @@ sub remove_transcript_author {
         DELETE FROM transcript_author where transcript_id = ? AND author_id = ?
         });
     $sth->execute($transcript_id, $author_id);
+    return;
 }
 
 sub fetch_gene_author {
