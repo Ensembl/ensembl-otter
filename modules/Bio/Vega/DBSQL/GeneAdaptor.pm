@@ -732,6 +732,8 @@ sub store_only {
     my $gene_author    = $gene->gene_author;
     $author_adaptor->store($gene_author);
     $author_adaptor->store_gene_author($gene->dbID, $gene_author->dbID);
+
+    return;
 }
 
 sub set_obsolete {    # set an existing gene to obsolete (non-current)
@@ -790,6 +792,8 @@ sub remove {
     }
 
     $self->SUPER::remove($gene);
+
+    return;
 }
 
 sub resurrect {    # make a particular gene current (without touching the previously current one)
@@ -808,6 +812,8 @@ sub resurrect {    # make a particular gene current (without touching the previo
         $exon->is_current(1);
         $ea->update($exon);
     }
+
+    return;
 }
 
 sub hibernate { # make a particular gene non-current (take care of shared exons)
@@ -825,6 +831,8 @@ sub hibernate { # make a particular gene non-current (take care of shared exons)
 
 	my $broker   = $self->db->get_AnnotationBroker();
 	$broker->set_exon_current_flags([$gene]);
+
+        return;
 }
 
 sub fetch_all_genes_on_reference_slice {
@@ -869,6 +877,8 @@ sub Bio::EnsEMBL::Gene::propagate_slice {
         $transcript->slice($slice);
     }
     $gene->slice($slice);
+
+    return;
 }
 
 1;

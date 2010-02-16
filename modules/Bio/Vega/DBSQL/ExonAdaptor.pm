@@ -36,6 +36,8 @@ sub update  {
   });
 
   $sth->execute( $exon->is_current, $exon->dbID );
+
+  return;
 }
 
 sub fetch_by_stable_id_version {
