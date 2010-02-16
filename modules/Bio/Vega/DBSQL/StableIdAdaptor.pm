@@ -108,6 +108,8 @@ sub fetch_new_stable_ids_for_Gene {
         $exon->stable_id($self->fetch_new_exon_stable_id)
           unless $exon->stable_id;
     }
+
+    return;
 }
 
 1;
