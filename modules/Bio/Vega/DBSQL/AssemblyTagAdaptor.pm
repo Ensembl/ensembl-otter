@@ -51,7 +51,7 @@ sub check_seq_region_id_is_transferred {
 							 }
 						  );
   $sth->execute;
-  $sth->fetchrow ? (return 1) : (return 0);
+  return $sth->fetchrow ? 1 : 0;
 }
 
 sub remove {
