@@ -59,6 +59,8 @@ sub store_Evidence {
 	 my $type = $evidence->type;
 	 $sth->execute($transcript_id, $name, $type);
   }
+
+  return;
 }
 
 sub remove_evidence {
@@ -68,6 +70,7 @@ sub remove_evidence {
         DELETE FROM evidence WHERE transcript_id = ?
         });
     $sth->execute($transcript->dbID);
+    return;
 }
 
 sub reincarnate_transcript {
@@ -233,6 +236,8 @@ sub remove {
     }
 
     $self->SUPER::remove($transcript);
+
+    return;
 }
 
 1;

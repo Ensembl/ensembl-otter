@@ -65,6 +65,8 @@ sub DESTROY {
     my $self = shift @_;
 
     # $self->{_dbc}->disconnect();
+
+    return;
 }
 
 1;
