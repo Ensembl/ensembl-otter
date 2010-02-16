@@ -148,16 +148,19 @@ sub begin_work {
   my $self = shift;
   $self->dbc->db_handle->{AutoCommit}=0;
   $self->dbc->do('BEGIN');
+  return;
 }
 
 sub commit {
   my $self = shift;
   $self->dbc->do('COMMIT');
+  return;
 }
 
 sub rollback {
   my $self = shift;
   $self->dbc->do('ROLLBACK');
+  return;
 }
 
 
