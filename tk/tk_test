@@ -212,21 +212,6 @@ sub move_rectangle {
     $canvas->move($rec, $x, $y);
 }
 
-#my $hello = $mw->Label(
-#    -text   => 'Hello World!',
-#    #-width  => 300,
-#    #-height => 200,
-#    #-border => 20,
-#    -relief => 'groove',
-#    -background => 'gold',
-#    -padx  => 30,
-#    -pady  => 30,
-#    );
-#$hello->pack(
-#    -side   => 'left',
-#    -expand => 1,
-#    );
-
 __END__
 
 =head1 NAME - tk_test

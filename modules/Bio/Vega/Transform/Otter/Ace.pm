@@ -49,9 +49,6 @@ sub make_ace {
     
     # Genomic features
     $ace_str .= $self->make_ace_genomic_features;
-    
-    # # Assembly tags
-    # $ace_str .= make_ace_assembly_tags($parser);
 }
 
 sub make_ace_genes_transcripts {
@@ -422,27 +419,6 @@ sub make_ace_genomic_features {
     
     return $ace->ace_string;
 }
-
-# sub make_ace_assembly_tags {
-#     my ($parser) = @_;
-#     
-# }
-
-# # assembly tag data
-# if (defined $assembly_tag_set->[0]) {
-#   foreach my $at (@$assembly_tag_set) {
-# 
-#     # coords are same as XML from otter db (ie, all -1 <-> 1 and all start coord <= end coord)
-#     my ($start, $end);
-#     ($at->strand == 1) ? ($start = $at->start, $end = $at->end) : ($start=$at->end, $end=$at->start);
-# 
-#     my $tag_type = $at->tag_type;
-#     my $tag_info = $at->tag_info;
-# 
-#     $str .= qq{Assembly_tags "$tag_type" $start $end "$tag_info"\n};
-#   }
-# }
-
 
 
 1;

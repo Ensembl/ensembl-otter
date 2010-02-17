@@ -151,21 +151,7 @@ sub zoom {
     my @y_view = $canvas->yview;
     my $y_view_center_fraction = $y_view[0] + (($y_view[1] - $y_view[0]) / 2);
     my $y_view_center_coord = $y1 + (($y2 - $y1) * $y_view_center_fraction);
-    
 
-    # Used for debugging, this drew a small red square
-    # in the centre of the visible canvas:
-    #{
-    #    my $x = $x_view_center_coord;
-    #    my $y = $y_view_center_coord;
-    #    my @rectangle = ($x-2, $y-2, $x+2, $y+2);
-    #    $canvas->createRectangle(
-    #        @rectangle,
-    #        -fill       => 'red',
-    #        -outline    => undef,
-    #        );
-    #}
-    
     # Calculate the new number of residues per pixel
     my( $new_rpp );
     if ($zoom > 0) {

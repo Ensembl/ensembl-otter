@@ -876,18 +876,6 @@ sub zmap_feature_evidence_xml {
                     push(@$used_subseq_names, $subseq->name);
                     next SUBSEQ;
                 }
-                # next unless $feat_name eq $evi_name;
-                # # check overlapping to see if it really is used.
-                # if (!(($info->{'start'} > $subseq->end) &&
-                #      ($info->{'end'}    < $subseq->start)))
-                # {
-                #     push(@$used_subseq_names, $subseq->name);
-                #     next SUBSEQ;
-                # } else {
-                #     warn sprintf("Transcript '%s' does not overlap '%s'",
-                #         $subseq->name,
-                #         $evi_name);
-                # }
             }
         }
     }
