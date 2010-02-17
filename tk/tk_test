@@ -153,26 +153,6 @@ sub something_overlaps {
     return @list;
 }
 
-#my $ok = $mw->Button(
-#    -text   => 'OK',
-#    -underline  => 0,
-#    );
-#$ok->configure(
-#    -command    => sub {
-#        $ok->configure(
-#            -state  => 'disabled',
-#            );
-#        $ok->update;
-#        sleep 60;
-#        $ok->configure(
-#            -state  => 'active',
-#            );
-#        },
-#    );
-#$ok->pack(
-#    -side   => 'left',
-#    );
-
 my $exit = $frame->Button(
     -text   => 'Exit',
     -command    => sub { exit; },
