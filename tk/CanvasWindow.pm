@@ -346,18 +346,6 @@ sub bind_scroll_commands {
 	}
 }
 
-    #foreach my $key_seq ($x_scroll->bind($class)) {
-    #    my $x_com_ref = $x_scroll->bind($class, $key_seq);
-    #    my $y_com_ref = $y_scroll->bind($class, $key_seq);
-    #    if ($x_com_ref =~ /ARRAY/) {
-    #        my($x_method, @x_args) = @$x_com_ref;
-    #        my($y_method, @y_args) = @$y_com_ref;
-    #        warn "\nx: $key_seq [$x_method, @x_args]\n";
-    #        warn "y: $key_seq [$y_method, @y_args]\n";
-    #    }
-    #}
-
-
 sub scroll_to_obj {
     my( $self, $obj ) = @_;
 
