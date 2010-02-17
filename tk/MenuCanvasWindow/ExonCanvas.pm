@@ -21,7 +21,6 @@ use EditWindow::PfamWindow;
 #use Evi::EviDisplay;
 use vars ('@ISA');
 use Hum::Ace;
-# use Bio::Otter::Converter;
 @ISA = ('MenuCanvasWindow');
 
 my $highlight_hydrophobic = 0;
