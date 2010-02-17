@@ -188,24 +188,6 @@ sub zoom {
     $gc->fix_window_min_max_sizes;
 }
 
-#sub screen_dimensions {
-#    my( $gc, @max ) = @_;
-#    
-#    if (@max) {
-#        $gc->{'_screen_dimensions'} = [@max];
-#    }
-#    return @{$gc->{'_screen_dimensions'}};
-#}
-#
-#sub other_widgets_size {
-#    my( $gc, @other ) = @_;
-#    
-#    if (@other) {
-#        $gc->{'_other_widgets_size'} = [@other];
-#    }
-#    return @{$gc->{'_other_widgets_size'}};
-#}
-
 1;
 
 __END__
