@@ -63,33 +63,6 @@ sub evidence_list {
     return $stored_list;
 }
 
-# sub get_Evidence {
-#   my $self = shift;
-#   if ( ! exists $self->{'evidence' } ) {
-#     if (!$self->adaptor() ) {
-#       return [];
-#     }
-#
-#     my $ta = $self->adaptor->db->get_TranscriptAdaptor();
-#     $self->{'evidence'} = $ta->fetch_evidence($self);
-#   }
-#   return $self->{'evidence'};
-# }
-#
-# sub add_Evidence {
-#   my ($self,$evidence_list) = @_;
-#
-#   $self->{'evidence'} ||= [];
-#
-#   foreach my $evidence ( @$evidence_list ) {
-#     if( ! $evidence->isa( "Bio::Vega::Evidence" )) {
-# 		throw( "Argument to add_Evidence has to be an Bio::Vega::Evidence" );
-#     }
-#     push( @{$self->{'evidence'}}, $evidence );
-#   }
-#   return;
-# }
-
 sub truncate_to_Slice {
   my( $self, $slice ) = @_;
   # start and end exon are set to zero so that we can
