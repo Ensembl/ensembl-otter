@@ -131,9 +131,7 @@ BEGIN {
             -anchor => 'sw',
             -tags => ['contig_label', $name],
             );
-        
-        #$canvas->bind($name, '<1>', [\&clipboard_place_name, $canvas, $name]);
-        
+
         #$canvas->bind($rec, '<ButtonRelease-1>', [\&move_rectangle, $rec]);
         #$canvas->bind($rec, '<Enter>', \&cursor_arrow);
         #$canvas->bind($rec, '<Leave>', \&cursor_default);
@@ -150,23 +148,6 @@ sub nudge_into_free_space {
         $canvas->move($ac, 0, -5);
     }
 }
-
-#sub clipboard_place_name {
-#    my( $canvas, $frame, $name ) = @_;
-#    
-#    warn "Called with '$name'";
-#    
-#    $canvas->SelectionClear;
-#    $canvas->SelectionHandle(
-#        -selection => 'PRIMARY',
-#        -type      => 'STRING',
-#        '-format'  => 'STRING',
-#        sub {
-#            warn "Handling selection: @_";
-#            return $name
-#        }
-#        );
-#}
 
 __END__
 
