@@ -64,22 +64,7 @@ sub _config_from_client {
             $config->{$tag} = $val;
         }
     }
-    
-    # my $ds = $self;
-    # # Used to fetch config from both ALIAS dataset and this dataset
-    # # but this does not work because the "default" setting in
-    # # this dataaset override the settings in the ALIAS dataset.
-    # if (my $alias = $ds->ALIAS) {
-    #     $ds = $client->get_DataSet_by_name($alias);
-    # }
-    # 
-    # my $config = {};
-    # my $name = $ds->name;
-    # my $nc = $client->option_from_array([$name, $section]);
-    # while (my ($tag, $val) = each %$nc) {
-    #     $config->{$tag} = $val;
-    # }
-    
+
     return $config;
 }
 
