@@ -569,30 +569,6 @@ sub populate_menus {
     $top->bind('<Control-d>', $delete_command);
     $top->bind('<Control-D>', $delete_command);
 
-    ### Unimplemented methods
-    #$subseq->add('command',
-    #    -label          => 'Merge',
-    #    -command        => sub{ warn "Called Merge" },
-    #    -accelerator    => 'Ctrl+M',
-    #    -underline      => 0,
-    #    -state          => 'disabled',
-    #    );
-    #$subseq->add('command',
-    #    -label          => 'AutoMerge',
-    #    -command        => sub{ warn "Called AutoMerge" },
-    #    -accelerator    => 'Ctrl+U',
-    #    -underline      => 0,
-    #    -state          => 'disabled',
-    #    );
-    #
-    # What did I intend this command to do?
-    #$subseq->add('command',
-    #    -label          => 'Transcript',
-    #    -command        => sub{ warn "Called Transcript" },
-    #    -accelerator    => 'Ctrl+T',
-    #    -underline      => 0,
-    #    );
-
     my $clone_menu = $self->make_menu("Clone");
     $self->clone_menu($clone_menu);
 

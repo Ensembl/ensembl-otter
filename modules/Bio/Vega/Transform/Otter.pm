@@ -93,7 +93,6 @@ sub initialize {
             evidence            => 'build_Evidence',
             feature             => 'build_Feature',
             xref                => 'build_XRef',
-            # assembly_tag        => 'build_AssemblyTag',
             sequence_fragment   => 'build_SequenceFragment',
             dna                 => 'build_DNA',
             otter               => 'save_species',
@@ -320,27 +319,6 @@ sub build_Feature {
     my $list = $feature_list{$self} ||= [];
     push @$list, $feature;
 }
-
-# sub build_AssemblyTag {
-#     my ($self, $data) = @_;
-#
-#     my $chr_slice = $self->get_ChromosomeSlice;
-#
-#     #convert xml coordinates which are in chromosomal coords - to tag coords
-#     my $slice_offset = $chr_slice->start - 1;
-#
-#     my $at = Bio::Vega::AssemblyTag->new(
-#         -start     => $data->{'contig_start'} - $slice_offset,
-#         -end       => $data->{'contig_end'}   - $slice_offset,
-#         -strand    => $data->{'contig_strand'},
-#         -tag_type  => $data->{'tag_type'},
-#         -tag_info  => $data->{'tag_info'},
-#         -slice     => $chr_slice,
-#     );
-#
-#     my $list = $assembly_tag_list{$self} ||= [];
-#     push @$list, $at;
-# }
 
 sub build_Exon {
     my ($self, $data) = @_;

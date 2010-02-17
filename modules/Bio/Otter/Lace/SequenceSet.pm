@@ -154,28 +154,6 @@ sub selected_CloneSequences_as_contig_list {
     # if the annotator can open a single contig across a gap.
     # Just return all the selected clones in a single contig.
     return [$cs_list];
-    
-    #my $ctg = [];
-    #my $ctg_list = [$ctg];
-    #foreach my $this (sort {
-    #    $a->chromosome->chromosome_id <=> $b->chromosome->chromosome_id ||
-    #    $a->chr_start <=> $b->chr_start
-    #    } @$cs_list)
-    #{
-    #    my $last = $ctg->[$#$ctg];
-    #    if ($last) {
-    #        if ($last->chr_end + 50_001 >= $this->chr_start) {
-    #        #if ($last->chr_end + 1_000_001 >= $this->chr_start) {
-    #            push(@$ctg, $this);
-    #        } else {
-    #            $ctg = [$this];
-    #            push(@$ctg_list, $ctg);
-    #        }
-    #    } else {
-    #        push(@$ctg, $this);
-    #    }
-    #}
-    #return $ctg_list;
 }
 
 sub selected_CloneSequences_parameters {
