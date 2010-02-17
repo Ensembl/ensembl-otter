@@ -237,19 +237,7 @@ sub xace_save_Clone {
     my ($self, $clone) = @_;
     
     my $ace = $clone->ace_string;
-    
-    # my $xr = $self->XaceSeqChooser->xace_remote;
-    # unless ($xr) {
-    #     $self->top->Message(
-    #         -text => 'No xace attached',
-    #     );
-    #     return;
-    # }
-    # 
-    # print STDERR "Sending:\n$ace";
-    # $xr->load_ace($ace);
-    # $xr->save;
-    
+
     $self->XaceSeqChooser->save_ace($ace);
     $self->XaceSeqChooser->Assembly->replace_Clone($clone);
     $self->Clone($clone);
