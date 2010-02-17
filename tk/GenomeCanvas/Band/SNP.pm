@@ -125,19 +125,7 @@ sub draw_SNPs_on_virtual_contig {
 	$count = $max_expected_snps if $count > $max_expected_snps;
 
         my $bin_width = 1;
-        
-        #print STDERR "\n";
-        #if ($simplify) {
-        #    for (my $j = $i + 1; $j < @snp_count; $j++) {
-        #        my $j_count = $snp_count[$j] || 0;
-        #        warn "i=$i j=$j count=$count j_count=$j_count bin_width=$bin_width\n";
-        #        if ($j_count == $count) {
-        #            $bin_width++;
-        #        } else {
-        #            last;
-        #        }
-        #    }
-        #}
+
         $i += $bin_width;
         
         my $x1 = ( $i               * $binsize) / $rpp;

@@ -448,19 +448,6 @@ sub validate {
     if (!defined($self->name)) {
         $self->throw("No name for transcript " . $self->transcript_stable_id);
     }
-
-    #    if (!defined($self->cds_start_not_found)) {
-    #	$self->throw("No cds_start_not_found");
-    #    }
-    #    if (!defined($self->cds_end_not_found)) {
-    #	$self->throw("No cds_end_not_found");
-    #    }
-    #    if (!defined($self->mRNA_start_not_found)) {
-    #	$self->throw("No mRNA start not found");
-    #    }
-    #    if (!defined($self->mRNA_end_not_found)) {
-    #	$self->throw("No mRNA end not found");
-    #    }
 }
 
 sub equals {

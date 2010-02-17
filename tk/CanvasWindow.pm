@@ -640,20 +640,7 @@ sub print_postscript {
                 my $join = ($v_num && $h_num) ? '-' : '';
                 $ps_file_name = "$file_root-$h_num$join$v_num.ps";
             }
-            
-#            warn "\nps args =
-#  -file => $ps_file_name,
-#  '-x' => $x,
-#  '-y' => $y,
-#  -width  => $tile_width,
-#  -height => $tile_height,
-#  -pageanchor => 'nw',
-#  -pagex => $page_x,
-#  -pagey => $page_y,
-#  -rotate => $landscape,
-#  @ps_args,
-#";
-            
+
             $canvas->postscript(
                 -file => $ps_file_name,
                 '-x' => $x,
