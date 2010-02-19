@@ -16,3 +16,5 @@ sub truncated_3_prime {
     $self->{truncated_3_prime} = shift if @_;
     return $self->{truncated_3_prime};
 }
+
+1;

@@ -27,6 +27,7 @@ use Bio::EnsEMBL::Map::DitagFeature;
 use Bio::Otter::DnaDnaAlignFeature;
 use Bio::Otter::DnaPepAlignFeature;
 use Bio::Otter::HitDescription;
+use Bio::Vega::PredictionTranscript;
 
 use base ('Exporter');
 our @EXPORT    = ();
