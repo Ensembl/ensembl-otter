@@ -168,6 +168,7 @@ sub make_log_file {
         warn "Logging output to '$log_file'\n";
     }
     Bio::Otter::LogFile::make_log($log_file);
+    return;
 }
 
 sub cleanup_log_dir {
@@ -190,6 +191,7 @@ sub cleanup_log_dir {
         }
     }
     closedir $LOG or confess "Error reading directory '$log_dir' : $!";
+    return;
 }
 
 sub lock {
@@ -375,6 +377,8 @@ sub save_CookieJar {
 
     $self->get_CookieJar->save
         or confess "Failed to save cookie";
+
+    return;
 }
 
 sub url_root {
@@ -403,6 +407,8 @@ sub setup_pfetch_env {
     } else {
         $ENV{'PFETCH_WWW'} = $self->pfetch_url;
     }
+
+    return;
 }
 
 # Returns the content string from the http response object
@@ -631,6 +637,8 @@ sub status_refresh_for_DataSet_SequenceSet{
 
         $cs->pipelineStatus($status);
     }
+
+    return;
 }
 
 sub find_string_match_in_clones {
@@ -722,6 +730,8 @@ sub lock_refresh_for_DataSet_SequenceSet {
             $cs->set_lock_status(undef);
         }
     }
+
+    return;
 }
 
 sub fetch_all_SequenceNotes_for_DataSet_SequenceSet {
@@ -776,18 +786,23 @@ sub fetch_all_SequenceNotes_for_DataSet_SequenceSet {
         }
     }
 
+    return;
 }
 
 sub change_sequence_note {
     my $self = shift @_;
 
     $self->_sequence_note_action('change', @_);
+
+    return;
 }
 
 sub push_sequence_note {
     my $self = shift @_;
 
     $self->_sequence_note_action('push', @_);
+
+    return;
 }
 
 sub _sequence_note_action {
@@ -809,6 +824,7 @@ sub _sequence_note_action {
     );
 
     # I guess we simply have to ignore the response
+    return;
 }
 
 sub get_all_DataSets {
@@ -845,6 +861,8 @@ sub get_server_otter_config {
     );
     
     Bio::Otter::Lace::Defaults::save_server_otter_config($content);
+
+    return;
 }
 
 sub do_authentication {
