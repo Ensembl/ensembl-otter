@@ -3,8 +3,8 @@
 # Author:        lg4
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2010-02-19 15:00:50 $
-# Id:            $Id: nph-get_das_features,v 1.21 2010-02-19 15:00:50 gr5 Exp $
+# Last modified: $Date: 2010-02-19 15:21:00 $
+# Id:            $Id: nph-get_das_features,v 1.22 2010-02-19 15:21:00 gr5 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_das_features,v $
 
 use strict;
@@ -144,11 +144,13 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS { # $kind = 'SimpleFeature' ||
             
             if ($das_feature->{'end'} < $chr_start) {
                 $truncated_5_prime = 1;
+                warn "truncating feature at 5' end";
                 next FEATURE;
             }
             
             if ($das_feature->{'start'} > $chr_end) {
                 $truncated_3_prime = 1;
+                warn "truncating feature at 3' end";
                 next FEATURE;
             }
 
