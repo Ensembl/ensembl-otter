@@ -252,7 +252,7 @@ sub password_prompt{
         sub {
             my $self = shift;
             
-            unless (-t STDIN) { ## no critic InputOutput::ProhibitInteractiveTest
+            unless (-t STDIN) { ## no critic(InputOutput::ProhibitInteractiveTest)
                 warn "Cannot prompt for password - not attached to terminal\n";
                 return;
             }
@@ -361,7 +361,7 @@ sub save_CookieJar {
     if (-e $jar) {
         # Fix mode if not already mode 600
         my $mode = (stat(_))[2];
-        if ($mode != 0600) { ## no critic ValuesAndExpressions::ProhibitLeadingZeros
+        if ($mode != 0600) { ## no critic(ValuesAndExpressions::ProhibitLeadingZeros)
             chmod(0600, $jar) or confess "chmod(0600, '$jar') failed; $!";
         }
     } else {
