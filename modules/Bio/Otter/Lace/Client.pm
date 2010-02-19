@@ -87,9 +87,9 @@ sub email {
 }
 
 sub fetch_truncated_genes {
-    my( $self, @args ) = @_;
+    my( $self, $fetch_truncated_genes ) = @_;
     
-    warn "Set using the Config file please.\n" if @args;
+    warn "Set using the Config file please.\n" if $fetch_truncated_genes;
     
     return $self->option_from_array([qw{ client fetch_truncated_genes }]);
 }
