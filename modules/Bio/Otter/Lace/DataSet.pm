@@ -199,7 +199,6 @@ sub fetch_all_CloneSequences_for_SequenceSet {
     if($other_things_too) {
         $client->fetch_all_SequenceNotes_for_DataSet_SequenceSet($self, $ss);
         $client->lock_refresh_for_DataSet_SequenceSet($self, $ss);
-
         $client->status_refresh_for_DataSet_SequenceSet($self, $ss);
     }
 
