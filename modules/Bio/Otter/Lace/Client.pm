@@ -539,7 +539,7 @@ sub do_http_request {
 # ---- specific HTTP-requests:
 
 sub to_sliceargs { # not a method!
-    my $arg = shift @_;
+    my( $arg ) = @_;
 
     return (   UNIVERSAL::isa($arg, 'Bio::EnsEMBL::Slice')
             || UNIVERSAL::isa($arg, 'Bio::Otter::Lace::Slice') )
@@ -555,7 +555,7 @@ sub to_sliceargs { # not a method!
 }
 
 sub create_detached_slice_from_sa { # not a method!
-    my $arg = shift @_;
+    my( $arg ) = @_;
 
     if($arg->{cs} ne 'chromosome') {
         die "expecting a slice on a chromosome";
