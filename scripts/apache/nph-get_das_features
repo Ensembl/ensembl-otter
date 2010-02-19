@@ -3,8 +3,8 @@
 # Author:        lg4
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2010-02-19 15:31:27 $
-# Id:            $Id: nph-get_das_features,v 1.24 2010-02-19 15:31:27 gr5 Exp $
+# Last modified: $Date: 2010-02-19 15:33:57 $
+# Id:            $Id: nph-get_das_features,v 1.25 2010-02-19 15:33:57 gr5 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_das_features,v $
 
 use strict;
@@ -177,6 +177,22 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS { # $kind = 'SimpleFeature' ||
                     die "Could not guess a fitting group/label path, please specify it in the 'grouplabel=' parameter of the filter";
                 }
             }
+            
+            if($parent_constructor) {
+                my $parent_feature = $feature_coll->{$pt_label} ||= $parent_constructor->new( -dbID => $pt_label, -slice => $slice );
+                
+                if ($parent_feature->can('truncated_5_prime')) {
+                    warn "truncated_5_prime: $truncated_5_prime";
+                    $parent_feature->truncated_5_prime($truncated_5_prime);
+                    next FEATURE;
+                }
+                
+                if ($parent_feature->can('truncated_3_prime')) {
+                    warn "truncated_5_prime: $truncated_3_prime";
+                    $parent_feature->truncated_3_prime($truncated_3_prime);
+                    next FEATURE;
+                } 
+            }
 
             my $feature = $feature_constructor->new();
 
@@ -193,18 +209,6 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS { # $kind = 'SimpleFeature' ||
 
             if($parent_constructor) {
                 my $parent_feature = $feature_coll->{$pt_label} ||= $parent_constructor->new( -dbID => $pt_label, -slice => $slice );
-                
-                if ($parent_feature->can('truncated_5_prime')) {
-                    warn "truncated_5_prime: $truncated_5_prime";
-                    $parent_feature->truncated_5_prime($truncated_5_prime);
-                    next FEATURE;
-                }
-                
-                if ($parent_feature->can('truncated_3_prime')) {
-                    warn "truncated_5_prime: $truncated_3_prime";
-                    $parent_feature->truncated_3_prime($truncated_3_prime);
-                    next FEATURE;
-                } 
                 
                 eval {
                     warn "adding feature with start=".$feature->start()." and end=".$feature->end()."\n";
