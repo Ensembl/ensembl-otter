@@ -790,17 +790,17 @@ sub fetch_all_SequenceNotes_for_DataSet_SequenceSet {
 }
 
 sub change_sequence_note {
-    my $self = shift @_;
+    my( $self, @args ) = @_;
 
-    $self->_sequence_note_action('change', @_);
+    $self->_sequence_note_action('change', @args);
 
     return;
 }
 
 sub push_sequence_note {
-    my $self = shift @_;
+    my( $self, @args ) = @_;
 
-    $self->_sequence_note_action('push', @_);
+    $self->_sequence_note_action('push', @args);
 
     return;
 }
