@@ -87,9 +87,9 @@ sub email {
 }
 
 sub fetch_truncated_genes {
-    my $self = shift;
+    my( $self, @args ) = @_;
     
-    warn "Set using the Config file please.\n" if @_;
+    warn "Set using the Config file please.\n" if @args;
     
     return $self->option_from_array([qw{ client fetch_truncated_genes }]);
 }
@@ -195,9 +195,9 @@ sub cleanup_log_dir {
 }
 
 sub lock {
-    my $self = shift;
+    my( $self, @args ) = shift;
     
-    confess "lock takes no arguments" if @_;
+    confess "lock takes no arguments" if @args;
 
     return $self->write_access ? 'true' : 'false';
 }
@@ -942,9 +942,7 @@ sub get_methods_ace {
 
 sub get_accession_types {
     
-    my $self = shift;
-    
-    my @accessions = @_;
+    my( $self, @accessions ) = @_;
     
     my @uncached = ();
     my %res = ();
