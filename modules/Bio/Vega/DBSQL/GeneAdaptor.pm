@@ -31,6 +31,7 @@ sub fetch_by_dbID {
 
     if (my $gene = $self->SUPER::fetch_by_dbID($db_id)) {
         $self->reincarnate_gene($gene);
+        return $gene;
     }
     else {
         return;
