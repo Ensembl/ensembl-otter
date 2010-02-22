@@ -161,7 +161,7 @@ sub read_user_file {
     my ($self, $usr_file) = @_;
     
     my $usr_hash = {};
-    if (open my $list, $usr_file) {
+    if (open my $list, '<', $usr_file) {
         while (<$list>) {
             s/#.*//;            # Remove comments
             s/(^\s+|\s+$)//g;   # Remove leading or trailing spaces
