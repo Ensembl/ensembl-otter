@@ -51,6 +51,8 @@ sub DESTROY {
     delete(            $spans{$self}    );
     delete(    $agp_fragments{$self}    );
     delete(  $clone_sequences{$self}    );
+
+    return;
 }
 
 sub new {
@@ -146,6 +148,8 @@ sub generate_vega_objects {
     {
         $self->parse('build_CloneSequence', $ace->raw_query("show -a $tag"));
     }
+
+    return;
 }
 
 sub parse {
@@ -160,6 +164,8 @@ sub parse {
         my $ace = Hum::Ace::AceText->new($obj_txt);
         $self->$method($ace);
     }
+
+    return;
 }
 
 sub build_Author {
@@ -422,6 +428,8 @@ sub set_gene_biotype_status {
         ($biotype) = keys %tsct_biotype;
     }
     $gene->biotype($biotype);
+
+    return;
 }
 
 sub build_Transcript {
@@ -510,6 +518,8 @@ sub add_remarks {
     foreach my $value ($ace->get_values('Annotation_remark')) {
         $self->create_Attribute($obj, 'hidden_remark', $value->[0]);
     }
+
+    return;
 }
 
 sub add_supporting_evidence {
@@ -526,6 +536,8 @@ sub add_supporting_evidence {
         }
     }
     $tsct->evidence_list($evidence_list);
+
+    return;
 }
 
 sub set_exon_phases_translation_cds_start_end {
@@ -655,6 +667,8 @@ sub set_exon_phases_translation_cds_start_end {
             $self->create_Attribute($tsct, 'cds_end_NF', 1);
         }
     }
+
+    return;
 }
 
 sub create_Attribute {
@@ -668,6 +682,8 @@ sub create_Attribute {
             -VALUE  => $value,
         )
     );
+
+    return;
 }
 
 1;
