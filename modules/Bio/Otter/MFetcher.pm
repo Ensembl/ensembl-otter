@@ -356,7 +356,7 @@ sub init_csver {
             return $self->default_assembly($self->satellite_dba($metakey));
         }
     } else {
-        return undef;  # defaults to NULL in the DB
+        return;  # defaults to NULL in the DB
     }
 }
 
