@@ -64,7 +64,7 @@ sub fetch_into_hash {
 }
 
 sub DESTROY {
-    my $self = shift @_;
+    my ($self) = @_;
 
     # $self->{_dbc}->disconnect();
 
