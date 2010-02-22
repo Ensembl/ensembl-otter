@@ -231,8 +231,10 @@ sub generate_unless_hashed {
     if($parent_hash_key) {
         push @optvalues, $parent_hash_key;
     }
-	my @analysis = split(/,/,$analysis_name);
-    if($feature->can('analysis') && (!$analysis_name || scalar(@analysis) > 1)) {
+	my $multi_analysis =
+            defined $analysis_name
+            && $analysis_name =~ /,/;
+    if($feature->can('analysis') && (!$analysis_name || $multi_analysis)) {
         my $analysis = $feature->analysis();
         my $logic_name =
             defined $analysis
@@ -300,8 +302,10 @@ sub ParseFeatures {
         }
 
         my $logic_name = $analysis_name;
-        my @analysis = split(/,/,$analysis_name);
-        if($feature->can('analysis') && (!$analysis_name || scalar(@analysis) > 1 )) {
+	my $multi_analysis =
+            defined $analysis_name
+            && $analysis_name =~ /,/;
+        if($feature->can('analysis') && (!$analysis_name || $multi_analysis)) {
         	$logic_name = pop @optvalues;
     	}
 
