@@ -239,7 +239,7 @@ sub generate_unless_hashed {
         my $logic_name =
             defined $analysis
             ? $analysis->logic_name()
-            : undef;
+            : '';
         push @optvalues, $logic_name;
     }
 
