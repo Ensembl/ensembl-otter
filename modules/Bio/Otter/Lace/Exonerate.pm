@@ -133,7 +133,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.47 $ ';
+$revision='$Revision: 1.48 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -255,7 +255,7 @@ sub write_seq_file {
 	    return $query_file;
 	}
 
-	return undef;
+	return;
 }
 
 # Attribute methods
