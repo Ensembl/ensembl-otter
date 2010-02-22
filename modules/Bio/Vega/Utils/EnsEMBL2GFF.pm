@@ -389,6 +389,7 @@ use warnings;
             return $ref;
         } else {
             $self->throw("'_trans_exon_array' not set");
+            return; # unreached, but quietens "perlcritic --stern"
         }
     }
     
