@@ -371,7 +371,7 @@ sub history{
 	 print STDOUT "\n";
   }
 
-
+  return;
 }
 
 1;
