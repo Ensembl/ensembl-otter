@@ -43,6 +43,8 @@ sub store {
 	$sth->execute($group->name, $group->email);
 	my $id = $sth->{'mysql_insertid'} or $self->throw('Failed to get autoincremented ID from statement handle');
 	$group->dbID($id);
+
+   return $id;
 }
 
 sub exists_in_db {
