@@ -9,9 +9,9 @@ use Bio::Vega::Exon;
 
     # trying to substitute the class in all possible places at once (a hack)
 sub _objs_from_sth {
-    my $self = shift @_;
+    my ($self, @arguments) = @_;
 
-    my $array = $self->SUPER::_objs_from_sth(@_);
+    my $array = $self->SUPER::_objs_from_sth(@arguments);
 
     for my $exon (@$array) {
         bless $exon, 'Bio::Vega::Exon';
