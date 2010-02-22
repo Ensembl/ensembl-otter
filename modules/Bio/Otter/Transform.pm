@@ -112,7 +112,7 @@ sub char_handler{
 
 sub set_property{
     my ($self, $prop_name, $value) = @_;
-    return undef unless $prop_name;
+    return unless $prop_name;
     if($value){
         $self->{'_properties'}->{$prop_name} = $value;
     }
