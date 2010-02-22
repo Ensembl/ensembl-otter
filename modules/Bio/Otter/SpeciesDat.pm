@@ -30,7 +30,7 @@ sub load_species_dat_file {
 
     my $filename = $self->species_dat_filename();
 
-    open my $dat, $filename or $self->error_exit("Can't read species file '$filename' : $!");
+    open my $dat, '<', $filename or $self->error_exit("Can't read species file '$filename' : $!");
 
     my $cursect = undef;
     my $defhash = {};
