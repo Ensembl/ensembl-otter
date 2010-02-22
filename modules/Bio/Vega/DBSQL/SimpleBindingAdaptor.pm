@@ -19,9 +19,11 @@ sub new {
     my ($pkg, $dbc) = @_;
 
 
-    my $self = bless {
+    my $self = {
         '_dbc'  => $dbc,
-    }, $pkg;
+    };
+
+    bless $self, $pkg;
 
     return $self;
 }
