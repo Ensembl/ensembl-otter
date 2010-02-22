@@ -38,7 +38,7 @@ my (
     %clone_sequences,
     );
 
-DESTROY {
+sub DESTROY {
     my ($self) = @_;
 
     delete(            $slice{$self}    );
