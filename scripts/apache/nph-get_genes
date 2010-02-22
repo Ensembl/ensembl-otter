@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2010-02-09 17:23:17 $
-# Id:            $Id: nph-get_genes,v 1.25 2010-02-09 17:23:17 jh13 Exp $
+# Last modified: $Date: 2010-02-22 16:42:38 $
+# Id:            $Id: nph-get_genes,v 1.26 2010-02-22 16:42:38 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_genes,v $
 
 use strict;
@@ -19,10 +19,10 @@ use Bio::Otter::ToXML;
 sub Bio::EnsEMBL::Gene::propagate_slice {
     my ($gene, $slice) = @_;
 
-    foreach my $transcript (@{ $gene->get_all_Transcripts() }) {
-        foreach my $exon (@{ $transcript->get_all_Exons() }) {
-            $exon->slice($slice);
-        }
+    foreach my $exon (@{ $gene->get_all_Exons }) {
+        $exon->slice($slice);
+    }
+    foreach my $transcript (@{ $gene->get_all_Transcripts }) {
         $transcript->slice($slice);
     }
     $gene->slice($slice);

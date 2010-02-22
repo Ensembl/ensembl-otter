@@ -3,22 +3,34 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2010-02-09 17:23:17 $
-# Id:            $Id: nph-get_datasets,v 1.21 2010-02-09 17:23:17 jh13 Exp $
+# Last modified: $Date: 2010-02-22 16:42:38 $
+# Id:            $Id: nph-get_datasets,v 1.22 2010-02-22 16:42:38 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_datasets,v $
 
 use strict;
 use warnings;
-
 use SangerPaths qw{ core bioperl123 ensembl56 otter52 };
-
 use Bio::Otter::ServerScriptSupport;
+
+# For added security we don't show mysql connection details to clients outside
+# the Sanger. We only need connection details to for scripts running at Sanger.
+my %secret_params = map {$_, 1} qw{
+    HOST
+    PORT
+    USER
+    PASS
+    DNA_HOST
+    DNA_PORT
+    DNA_USER
+    DNA_PASS
+    DBNAME
+};
 
 my $server = Bio::Otter::ServerScriptSupport->new;
 
 my $xml;
 eval {
-    my $species_hash = $server->_species_hash(); # use of internal methods is generally discouraged
+    my $species_hash = $server->dataset_hash;
     
     # Only local users get to see mysql connection details
     my $show_details = $server->local_user;
@@ -29,13 +41,11 @@ eval {
 
         $xml .= qq{    <dataset name="$dataset">\n};
 
-        ### Once everything is "headcode=1" we can put an if ($show_details) around the foreach()
         foreach my $key (keys %$species_subhash) {
-            my $lckey = lc($key);
-            unless ($lckey eq 'headcode') {
-                # Don't send mysql user names and passwords over internet
-                next unless $show_details;
+            unless ($show_details) {
+                next if $secret_params{$key};
             }
+            my $lckey = lc($key);   ### Why do we bother lower casing this?
             $xml .= qq{      <$lckey>$species_subhash->{$key}</$lckey>\n};
         }
 
@@ -58,8 +68,8 @@ if ($@) {
 
 =head1 DESCRIPTION
 
-Returns a list of datasets to the Client.
-Will only return the list the user has access to see
-if the server has been setup (see ../../conf/README.user.pod).
+Returns a list of datasets to the Client. Returns a list of datasets which the
+user is permitted to access (determined by entries in the users.txt file for
+external users and restricted datasets).
 
 =cut

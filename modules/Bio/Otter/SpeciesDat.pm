@@ -1,3 +1,4 @@
+
 package Bio::Otter::SpeciesDat;
 
 # Read and maintain the hash from 'species.dat'.
@@ -8,6 +9,24 @@ package Bio::Otter::SpeciesDat;
 use strict;
 use warnings;
 
+
+sub get_dataset_param {
+    my ($self, $dataset_name, $param_name) = @_;
+
+    my $all_species = $self->dataset_hash;
+    my $subhash = $all_species->{$dataset_name} || $self->error_exit("Unknown Dataset '$dataset_name'");
+    return $subhash->{$param_name};
+}
+
+sub dataset_hash { # used by nph-get_datasets only
+    my ($self) = @_;
+
+    unless ($self->{'_species_dat_hash'}) {
+        $self->load_species_dat_file;
+    }
+    return $self->{'_species_dat_hash'};
+}
+
 sub species_dat_filename {
     my( $self, $filename ) = @_;
 
@@ -17,14 +36,6 @@ sub species_dat_filename {
     return $self->{'_species_dat_filename'};
 }
 
-sub make_sure_species_dat_file_loaded {
-    my ($self) = @_;
-
-    return if($self->{'_species_dat_hash'});
-
-    $self->load_species_dat_file();
-}
-    
 sub load_species_dat_file {
     my ($self) = @_;
 
@@ -61,8 +72,10 @@ sub load_species_dat_file {
             $sp->{$cursect} = $curhash;
 
         } elsif (/(\S+)\s+(\S+)/) {
-            $self->log("Reading entry $1 $2");
-            $curhash->{$1} = $2;
+            my $key   = uc $1;
+            my $value =    $2;
+            $self->log("Reading entry $key='$value'");
+            $curhash->{$key} = $value;
         }
     }
 
@@ -75,7 +88,7 @@ sub load_species_dat_file {
 sub keep_only_datasets {
     my ($self, $allowed_hash) = @_;
 
-    my $sp = $self->{'_species_dat_hash'};
+    my $sp = $self->dataset_hash;
 
     foreach my $dataset_name (keys %$sp) {
         $self->log(sprintf("Dataset %s is %sallowed", $dataset_name, $allowed_hash->{$dataset_name} ? '' : 'not '));
@@ -86,30 +99,13 @@ sub keep_only_datasets {
 sub remove_restricted_datasets {
     my ($self, $allowed_hash) = @_;
     
-    my $sp = $self->{'_species_dat_hash'};
+    my $sp = $self->dataset_hash;
 
     foreach my $dataset_name (keys %$sp) {
         next unless $sp->{$dataset_name}{'RESTRICTED'};
         $self->log(sprintf("Dataset %s is %srestricted", $dataset_name, $allowed_hash->{$dataset_name} ? 'not ' : ''));
         delete $sp->{$dataset_name} unless $allowed_hash->{$dataset_name};
     }
-}
-
-sub _species_hash { # used by nph-get_datasets only
-    my ($self) = @_;
-
-    $self->make_sure_species_dat_file_loaded();
-    return $self->{'_species_dat_hash'};
-}
-
-sub get_dataset_param {
-    my ($self, $dataset_name, $param_name) = @_;
-
-    $self->make_sure_species_dat_file_loaded();
-
-    my $subhash = $self->{'_species_dat_hash'}{$dataset_name} || $self->error_exit("Unknown Dataset '$dataset_name'");
-
-    return $subhash->{$param_name};
 }
 
 sub log { # to be overloaded
