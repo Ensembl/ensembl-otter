@@ -44,27 +44,22 @@ sub _config_from_client {
     my ($self, $section) = @_;
     
     my $client = $self->Client or confess "No Client attached";
-
+    
     my $ds = $self;
-    my @name_list;
-    while ($ds) {
-        unshift(@name_list, $ds->name);
-        # Allow multiple levels of ALIAS inheritance
-        if (my $alias = $ds->ALIAS) {
-            $ds = $client->get_DataSet_by_name($alias);
-        } else {
-            $ds = undef;
-        }
+    # Used to fetch config from both ALIAS dataset and this dataset
+    # but this does not work because the "default" setting in
+    # this dataaset override the settings in the ALIAS dataset.
+    if (my $alias = $ds->ALIAS) {
+        $ds = $client->get_DataSet_by_name($alias);
     }
     
     my $config = {};
-    foreach my $name (@name_list) {
-        my $nc = $client->option_from_array([$name, $section]);
-        while (my ($tag, $val) = each %$nc) {
-            $config->{$tag} = $val;
-        }
+    my $name = $ds->name;
+    my $nc = $client->option_from_array([$name, $section]);
+    while (my ($tag, $val) = each %$nc) {
+        $config->{$tag} = $val;
     }
-
+    
     return $config;
 }
 
