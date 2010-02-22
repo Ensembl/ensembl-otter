@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2010-02-22 16:42:38 $
-# Id:            $Id: nph-get_datasets,v 1.22 2010-02-22 16:42:38 jgrg Exp $
+# Last modified: $Date: 2010-02-22 16:49:44 $
+# Id:            $Id: nph-get_datasets,v 1.23 2010-02-22 16:49:44 jgrg Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_datasets,v $
 
 use strict;
@@ -19,11 +19,13 @@ my %secret_params = map {$_, 1} qw{
     PORT
     USER
     PASS
+    DBNAME
+
     DNA_HOST
     DNA_PORT
     DNA_USER
     DNA_PASS
-    DBNAME
+    DNA_DBNAME
 };
 
 my $server = Bio::Otter::ServerScriptSupport->new;
