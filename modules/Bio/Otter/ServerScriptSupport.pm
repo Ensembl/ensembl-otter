@@ -225,7 +225,13 @@ sub internal_user {
 }
 
 sub local_user {
-    return $ENV{'localuser'} =~ /local/ ? 1 : 0;
+    my ($self) = @_;
+
+    my $local_user;
+    unless ($local_user = $self->{'_local_user'}) {
+        $local_user = $ENV{'localuser'} =~ /local/ ? 1 : 0;
+    }
+    return $local_user;
 }
 
 sub show_restricted_datasets {
