@@ -3,8 +3,8 @@
 # Author:        lg4
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2010-02-19 15:45:47 $
-# Id:            $Id: nph-get_das_features,v 1.28 2010-02-19 15:45:47 gr5 Exp $
+# Last modified: $Date: 2010-02-23 10:59:21 $
+# Id:            $Id: nph-get_das_features,v 1.29 2010-02-23 10:59:21 gr5 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_das_features,v $
 
 use strict;
@@ -21,6 +21,7 @@ use Bio::EnsEMBL::PredictionExon;
 use Bio::Vega::PredictionTranscript;
 use Bio::Otter::ServerScriptSupport;
 use Bio::Otter::Lace::ViaText qw( &GenerateFeatures %LangDesc );
+
 
 sub struct_traverse_path {
     my ($struct, $path) = @_;
