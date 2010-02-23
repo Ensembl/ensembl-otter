@@ -122,7 +122,11 @@ sub server_root {
 sub data_dir {
     my ($self) = @_;
     
-    return join('/', $self->server_root, 'data', 'otter', $self->otter_version);
+    my $data_dir;
+    unless ($data_dir = $self->{'data_dir'}) {
+        $data_dir = join('/', $self->server_root, 'data', 'otter', $self->otter_version);
+    }
+    return $data_dir;
 }
 
     # overloading because certain species may need to be masked
