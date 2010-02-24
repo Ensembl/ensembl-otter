@@ -132,7 +132,7 @@ my $esa  = $edba->get_SliceAdaptor();
 
 # delete all ensembl xrefs if --prune option is used
 if (!$support->param('dry_run')) {
-  if ($support->param('prune') and $support->user_proceed("Would you really like to delete all previously added ENST xrefs before running this script?")) {
+  if ($support->param('prune') and $support->user_proceed("Would you really like to delete all previously added ENS xrefs before running this script?")) {
     my $num;
     # xrefs
     $support->log("Deleting all ensembl_id xrefs...\n");
@@ -163,7 +163,7 @@ my @gene_stable_ids = $support->param('gene_stable_id');
 my %gene_stable_ids = map { $_, 1 } @gene_stable_ids;
 
 #links xrefs andf the biotypes they link to
-my (%assigned_txrefs, %assigned_gxrefs);
+my (%assigned_txrefs, %assigned_gxrefs) = ({},{});
 
 #retrieve mappings from disc or parse database
 my $ens_ids = {};
@@ -221,8 +221,7 @@ my @priorities = qw(
 		);
 
 #add one xref to each E! object
-#foreach my $type (qw(genes transcripts)) {
-foreach my $type (qw(transcripts)) {
+foreach my $type (qw(genes transcripts)) {
   my $ids = $ens_ids->{$type};
   foreach my $v_id (keys %$ids) {
     my $adaptor = $type eq 'genes' ? $ga : $ta;
@@ -270,7 +269,7 @@ foreach my $type (qw(transcripts)) {
 	      $support->log_warning("Reused $vdb xref $e_id for $v_id. Check why this should be\n");
 	    }
 
-	    if ($dbid) {
+	    if ($dbID) {
 	      $support->log("Stored $vdb xref $e_id for $v_id.\n", 1);
 	      $found = 1;
 	    } else {
@@ -292,7 +291,7 @@ foreach my $type (qw(transcripts)) {
   }
 }
 
-warn Dumper(\%assigned_txrefs);
-#warn Dumper(\%assigned_gxrefs);
+warn "Transcript biotype are ".Dumper(\%assigned_txrefs);
+warn "Gene biotypes are ".Dumper(\%assigned_gxrefs);
 
 $support->finish_log;
