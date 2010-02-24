@@ -1,24 +1,4 @@
 
-use strict;
-use warnings;
-
-package Bio::EnsEMBL::DBSQL::StatementHandle;
-
-# Work around DBI/DBD::mysql bug on webservers
-sub bind_param {
-    my ($self, $pos, $value, $attr) = @_;
-
-    # Make $attr a hash ref if it is not
-    if (defined $attr) {
-        unless (ref $attr) {
-            $attr = {TYPE => $attr};
-        }
-        $self->SUPER::bind_param($pos, $value, $attr);
-    } else {
-        $self->SUPER::bind_param($pos, $value);
-    }
-}
-
 package Bio::Otter::ServerScriptSupport;
 
 use strict;
@@ -472,6 +452,26 @@ sub get_requested_features {
 	}
 	
 	return \@feature_list;
+}
+
+package Bio::EnsEMBL::DBSQL::StatementHandle;
+
+use strict;
+use warnings;
+
+# Work around DBI/DBD::mysql bug on webservers
+sub bind_param {
+    my ($self, $pos, $value, $attr) = @_;
+
+    # Make $attr a hash ref if it is not
+    if (defined $attr) {
+        unless (ref $attr) {
+            $attr = {TYPE => $attr};
+        }
+        $self->SUPER::bind_param($pos, $value, $attr);
+    } else {
+        $self->SUPER::bind_param($pos, $value);
+    }
 }
 
 1;
