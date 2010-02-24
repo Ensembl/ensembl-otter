@@ -454,6 +454,8 @@ sub get_requested_features {
 	return \@feature_list;
 }
 
+## no critic(Modules::ProhibitMultiplePackages)
+
 package Bio::EnsEMBL::DBSQL::StatementHandle;
 
 use strict;
