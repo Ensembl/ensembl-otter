@@ -89,6 +89,15 @@ sub error_flag {
     return ($self->{'_error_flag'} ? 1 : 0);
 }
 
+sub post_exit_callback {
+    my( $self, $post_exit_callback ) = @_;
+    
+    if ($post_exit_callback) {
+        $self->{'_post_exit_callback'} = $post_exit_callback;
+    }
+    return $self->{'_post_exit_callback'};
+}
+
 sub MethodCollection {
     my ($self) = @_;
 
@@ -685,6 +694,7 @@ sub DESTROY {
     #warn "Debug - leaving database intact"; return;
 
     my $home = $self->home;
+    my $callback = $self->post_exit_callback;
     print STDERR "DESTROY has been called for AceDatabase.pm with home $home\n";
     if ($self->error_flag) {
         warn "Not cleaning up '$home' because error flag is set\n";
@@ -692,11 +702,12 @@ sub DESTROY {
     }
     my $client = $self->Client;
     eval{
-        if($client) {
+        $self->ace_server->kill_server;
+        if ($client) {
             $self->unlock_otter_slice() if $self->write_access;
         }
     };
-    if($@) {
+    if ($@) {
         warn "Error in AceDatabase::DESTROY : $@";
     } else {
         # rmtree fails with:
@@ -709,6 +720,10 @@ sub DESTROY {
           or die "Can't chdir to /var/tmp : $!";
         rmtree($home)
           or die "Error removing lace database directory";
+    }
+    
+    if ($callback) {
+        $callback->();
     }
 }
 
