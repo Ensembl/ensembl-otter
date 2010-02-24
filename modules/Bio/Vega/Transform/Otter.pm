@@ -77,6 +77,8 @@ sub DESTROY {
 
     # So that DESTROY gets called in baseclass:
     bless $self, 'Bio::Vega::Transform';
+
+    return;
 }
 
 # initialize the parser with methods
@@ -358,6 +360,8 @@ sub add_xrefs_to_object {
     foreach my $xref (@$xref_list) {
         $obj->add_DBEntry($xref);
     }
+
+    return;
 }
 
 sub build_Transcript {
@@ -634,6 +638,8 @@ sub set_ChromosomeSlice {
     my ($self, $slice) = @_;
 
     $chrslice{$self} = $slice;
+
+    return;
 }
 
 sub get_Tiles {
