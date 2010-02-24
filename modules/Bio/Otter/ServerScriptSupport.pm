@@ -121,6 +121,8 @@ sub load_species_dat_file {
     }
     my $datasets_to_keep = $self->show_restricted_datasets ? $self->allowed_datasets : {};
     $self->remove_restricted_datasets($datasets_to_keep);
+
+    return;
 }
 
 sub allowed_datasets {
@@ -182,6 +184,8 @@ sub authenticate_user {
             $self->{'_internal_user'}   = $internal_flag;
         }
     }
+
+    return;
 }
 
 sub authorized_user {
@@ -232,6 +236,8 @@ sub log {
     return unless $self->param('log');
 
     print STDERR '['.$self->csn()."] $line\n";
+
+    return;
 }
 
 sub send_response{
@@ -247,6 +253,8 @@ sub send_response{
     } else {
         print $response;
     }
+
+    return;
 }
 
 sub wrap_response {
