@@ -47,13 +47,13 @@ sub end_handler{
     if($context eq 'subregion') {
         unless($subregion_hidden) {
             my $sss = $self->objects;
-            my $current_ss = $sss->[$#$sss];
+            my $current_ss = $sss->[-1];
             $current_ss->set_subset($subregion_name, [split(/,/, $value)]);
         }
     } elsif($SUB_ELE->{$context}){
         my $context_method = $context;
         my $sss = $self->objects;
-        my $current_ss = $sss->[$#$sss];
+        my $current_ss = $sss->[-1];
         if($current_ss->can($context_method)){
             $current_ss->$context_method($value);
         }else{
