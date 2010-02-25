@@ -18,9 +18,9 @@ use Bio::Vega::DBSQL::DBAdaptor;
 use base ('Bio::Otter::SpeciesDat');
 
 sub new { # just to make it possible to instantiate an object
-    my $pkg = shift @_;
+    my ($pkg, @arguments) = @_;
 
-    my $self = bless { @_ }, $pkg;
+    my $self = bless { @arguments }, $pkg;
 
     return $self;
 }
