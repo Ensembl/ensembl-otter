@@ -60,16 +60,6 @@ sub AceDatabase {
 sub drop_AceDatabase {
     my $self = shift;
 
-    # # do an explicit destroy to force the locks to be cleared before calling 
-    # # refresh_locks in this objects destructor
-    # $self->{'_AceDatabase'}->DESTROY if $self->{'_AceDatabase'};
-    if (my $sn = $self->SequenceNotes) {
-        my $adb = $self->{'_AceDatabase'};
-        $adb->post_exit_callback(sub{
-            $sn->refresh_lock_columns;    
-        });
-    }
-
     $self->{'_AceDatabase'} = undef;
 }
 
