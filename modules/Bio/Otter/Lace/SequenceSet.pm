@@ -191,7 +191,7 @@ sub CloneSequence_contigs_split_on_gaps {
         $a->chr_start <=> $b->chr_start
         } @$cs_list)
     {
-        my $last = $ctg->[$#$ctg];
+        my $last = $ctg->[-1];
         if ($last) {
             if ($last->chr_end + 1 >= $this->chr_start) {
                 push(@$ctg, $this);
