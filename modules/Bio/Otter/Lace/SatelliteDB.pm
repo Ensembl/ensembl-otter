@@ -75,14 +75,6 @@ sub save_options_hash {
     $sth->execute($key, join(", ", @opt_str));    
 }
 
-# Here as insurance in case more circular references that
-# are not cleaned up are introduced into the Ensembl API
-sub disconnect_DBAdaptor {
-    my( $dba ) = @_;
-    
-    $dba->db_handle->disconnect;
-}
-
 1;
 
 __END__
