@@ -538,22 +538,6 @@ sub do_http_request {
 
 # ---- specific HTTP-requests:
 
-sub create_detached_slice_from_sa { # not a method!
-    my( $arg ) = @_;
-
-    if($arg->{cs} ne 'chromosome') {
-        die "expecting a slice on a chromosome";
-    }
-
-    my $slice = Bio::EnsEMBL::Slice->new(
-        -chr_start     => $arg->{start},
-        -chr_end       => $arg->{end},
-        -chr_name      => $arg->{name},
-        -assembly_type => $arg->{type},
-    );
-    return $slice;
-}
-
 =pod
 
 For all of the get_X methods below the 'sliceargs'
