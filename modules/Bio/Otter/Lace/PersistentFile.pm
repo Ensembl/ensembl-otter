@@ -16,7 +16,7 @@ sub rm{
 }
 sub mv{
     my ($self, $name) = @_;
-    confess q`Cannot rename if $file->full_name('/path/to/file') was called` 
+    confess q{Cannot rename if $file->full_name('/path/to/file') was called}
         if $self->{'_full_name'};
     my $old_full_name = $self->full_name();
     #$self->close(); # no need to do this apparently
