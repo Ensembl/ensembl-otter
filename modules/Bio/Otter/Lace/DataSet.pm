@@ -270,6 +270,8 @@ sub _attach_DNA_DBAdaptor{
     }else{
         warn "No DNA_* options found. *** CHECK species.dat ***\n";
     }
+
+    return;
 }
 
 sub list_all_db_properties {
