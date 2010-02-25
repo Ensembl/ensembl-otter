@@ -229,7 +229,7 @@ sub chr_start_end_from_contig {
     
     my $chr_name  = $ctg->[0]->chromosome;
     my $start     = $ctg->[0]->chr_start;
-    my $end       = $ctg->[$#$ctg]->chr_end;
+    my $end       = $ctg->[-1]->chr_end;
     return($chr_name, $start, $end);
 }
 
