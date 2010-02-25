@@ -538,22 +538,6 @@ sub do_http_request {
 
 # ---- specific HTTP-requests:
 
-sub to_sliceargs { # not a method!
-    my( $arg ) = @_;
-
-    return (   UNIVERSAL::isa($arg, 'Bio::EnsEMBL::Slice')
-            || UNIVERSAL::isa($arg, 'Bio::Otter::Lace::Slice') )
-        ? {
-            'cs'    => 'chromosome',
-            'csver' => 'Otter',
-            'type'  => $arg->assembly_type(),
-            'name'  => $arg->chr_name(),
-            'start' => $arg->chr_start(),
-            'end'   => $arg->chr_end(),
-            'slicename' => $arg->name(),
-        } : $arg;
-}
-
 sub create_detached_slice_from_sa { # not a method!
     my( $arg ) = @_;
 
