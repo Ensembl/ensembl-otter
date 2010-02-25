@@ -73,6 +73,8 @@ sub save_options_hash {
     }
     my $sth = $db->dbc->prepare("INSERT INTO meta(meta_key, meta_value) VALUES (?,?)");
     $sth->execute($key, join(", ", @opt_str));    
+
+    return;
 }
 
 1;
