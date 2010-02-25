@@ -694,7 +694,14 @@ sub DataSetChooser {
 
 sub DESTROY {
     my( $self ) = @_;
+    
     warn "Destroying LoadColumns\n";
+    if (my $sn = $self->SequenceNotes) {
+        my $adb = $self->AceDatabase;
+        $adb->post_exit_callback(sub{
+            $sn->refresh_lock_columns;    
+        });
+    }
 }
 
 1;
