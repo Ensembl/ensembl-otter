@@ -52,34 +52,22 @@ sub type{
 =cut
 
 sub toString {
-    my ($self, @args) = @_;
+    my ($self) = @_;
 
     my $str = "";
-    if (scalar(@args) == 0) {
-        push(@args, $self);
-    }
-    foreach my $arg (@args) {
-        if ($arg->isa("Bio::Otter::Evidence")) {
-            my $dbID   = "";
-            my $infoid = "";
+    my $dbID   = "";
+    my $infoid = "";
 
-            if (defined($arg->dbID)) {
-                $dbID = $arg->dbID;
-            }
-            if (defined($arg->transcript_info_id)) {
-                $infoid = $arg->transcript_info_id;
-            }
-            $str = $str . "DbID                : " . $dbID . "\n";
-            $str = $str . "Name                : " . $arg->name . "\n";
-            $str = $str . "Transcript info id  : " . $infoid . "\n";
-            $str = $str . "Type                : " . $arg->type . "\n";
-        }
-        else {
-            $self->throw(
-                "Can't print string if object not Evidence.  Currently [$arg]\n"
-            );
-        }
+    if (defined($self->dbID)) {
+        $dbID = $self->dbID;
     }
+    if (defined($self->transcript_info_id)) {
+        $infoid = $self->transcript_info_id;
+    }
+    $str = $str . "DbID                : " . $dbID . "\n";
+    $str = $str . "Name                : " . $self->name . "\n";
+    $str = $str . "Transcript info id  : " . $infoid . "\n";
+    $str = $str . "Type                : " . $self->type . "\n";
     return $str;
 
 }
