@@ -175,7 +175,7 @@ sub region_coordinates {
 
     my $chr_name  = $ctg->[0]->chromosome;
     my $chr_start = $ctg->[0]->chr_start;
-    my $chr_end   = $ctg->[$#$ctg]->chr_end;
+    my $chr_end   = $ctg->[-1]->chr_end;
     return ($chr_name, $chr_start, $chr_end);
 }
 
