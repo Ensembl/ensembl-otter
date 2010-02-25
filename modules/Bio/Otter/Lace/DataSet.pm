@@ -171,11 +171,6 @@ sub selected_SequenceSet {
     return $self->{'_selected_SequenceSet'};
 }
 
-sub unselect_SequenceSet {
-    my( $self ) = @_;
-    $self->{'_selected_SequenceSet'} = undef;
-}
-
 sub fetch_all_CloneSequences_for_selected_SequenceSet {
     my( $self ) = @_;
     
