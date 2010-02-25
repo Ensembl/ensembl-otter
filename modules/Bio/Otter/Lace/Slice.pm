@@ -128,7 +128,7 @@ sub name {
 
 
 sub toHash {
-    my $self = shift @_;
+    my ($self) = @_;
 
     return {
             'dataset' => $self->dsname(),
@@ -143,7 +143,7 @@ sub toHash {
 }
 
 sub create_detached_slice {
-    my $self = shift @_;
+    my ($self) = @_;
 
     my $slice = Bio::EnsEMBL::Slice->new(
         -seq_region_name    => $self->ssname,
@@ -290,7 +290,7 @@ sub get_all_tiles_as_Slices {
 }
 
 sub get_region_xml {
-    my $self = shift @_;
+    my ($self) = @_;
 
     my $client = $self->Client();
 
@@ -320,7 +320,7 @@ sub get_region_xml {
 }
 
 sub lock_region_xml {
-    my $self = shift @_;
+    my ($self) = @_;
 
     my $client = $self->Client();
 
