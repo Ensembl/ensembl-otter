@@ -79,13 +79,12 @@ sub meta_hash {
 sub get_meta_value {
     my ($self, $key) = @_;
 
-    if (my $val = $self->meta_hash->{$key}) {
-        # Return string of all values (often just one!) in scalar context
-        return wantarray ? @$val : "@$val";
-    }
-    else {
-        warn "No entry in meta table under key '$key'";
-    }
+    my $values = $self->meta_hash->{$key};
+
+    confess "No entry in meta table under key '$key'" if ! @{$values};
+    confess "Multiple entries in meta table under key '$key'" if @{$values} > 1;
+
+    return $values->[0];
 }
 
 sub taxon {
