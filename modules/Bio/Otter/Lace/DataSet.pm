@@ -271,13 +271,6 @@ sub _attach_DNA_DBAdaptor{
         warn "No DNA_* options found. *** CHECK species.dat ***\n";
     }
 }
-sub disconnect_DBAdaptor {
-    my( $self ) = @_;
-    
-    if (my $dba = $self->{'_dba_cache'}) {
-        $self->{'_dba_cache'} = undef;
-    }
-}
 
 sub list_all_db_properties {
     return qw{
@@ -433,9 +426,7 @@ served by the otter server.
 
 The DataSet object has an Ensembl B<DBAdaptor> -
 it is the only object in the Lace system that
-does, and there is a method
-(B<disconnect_DBAdaptor>) to drop the database
-connection.  It contains methods for saving data
+does.  It contains methods for saving data
 to the extra tables defined in B<lace.sql>, and
 which are represented by the other Lace data
 objects.
