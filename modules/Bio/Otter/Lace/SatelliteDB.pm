@@ -38,7 +38,7 @@ sub get_options_for_key {
     if ($opt_str) {
         my %options_hash = (eval $opt_str);
         if ($@) {
-            die "Error evaluating '$opt_str' : $@";
+            confess "Error evaluating '$opt_str' : $@";
         }
 
         my %uppercased_hash = ();
