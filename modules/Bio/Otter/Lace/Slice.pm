@@ -132,7 +132,7 @@ sub name {
 sub toHash {
     my ($self) = @_;
 
-    return {
+    my $hash = {
             'dataset' => $self->dsname(),
             'type'    => $self->ssname(),
 
@@ -142,6 +142,8 @@ sub toHash {
             'start'   => $self->start(),
             'end'     => $self->end(),
     };
+
+    return $hash;
 }
 
 sub create_detached_slice {
