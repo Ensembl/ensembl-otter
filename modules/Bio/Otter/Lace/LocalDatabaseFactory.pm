@@ -130,6 +130,8 @@ sub kill_old_sgifaceserver {
         printf STDERR "Killing old sgifaceserver '%s'\n", $proc->cmndline;
         kill 9, $proc->pid;
     }    
+
+    return;
 }
 
 ############## Session recovery methods end here ############################
