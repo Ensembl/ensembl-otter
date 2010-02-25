@@ -9,9 +9,10 @@ sub new {
   my($class,@args) = @_;
   my $self = $class->SUPER::new(@args);
   my ($name,$type)  = rearrange([qw(
-												NAME
-												TYPE
-											  )],@args);
+NAME
+TYPE
+)
+                                ],@args);
 
   $self->name($name);
   $self->type($type);
