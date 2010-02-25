@@ -9,13 +9,6 @@ use Carp;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 
 sub get_DBAdaptor {
-
-    my ($satellite_db, $satellite_options) = _get_DBAdaptor_and_options( @_ );
-
-    return $satellite_db;
-}
-
-sub _get_DBAdaptor_and_options {
     my( $otter_db, $key, $class ) = @_;
 
     confess "Missing otter_db argument" unless $otter_db;
@@ -28,7 +21,7 @@ sub _get_DBAdaptor_and_options {
     my $satellite_db = $class->new(%$satellite_options)
         or confess "Couldn't connect to satellite db";
 
-    return ($satellite_db, $satellite_options);
+    return $satellite_db;
 }
 
 sub get_options_for_key {
