@@ -30,7 +30,7 @@ sub Client {
 ############## Session recovery methods ###################################
 
 sub sessions_needing_recovery {
-    my $self = shift @_;
+    my( $self ) = @_;
     
     my $proc_table = Proc::ProcessTable->new;
     my @otterlace_procs = grep {$_->cmndline =~ /otterlace/} @{$proc_table->table};
