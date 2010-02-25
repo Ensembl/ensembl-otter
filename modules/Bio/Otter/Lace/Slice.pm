@@ -33,7 +33,7 @@ sub new {
     # chromosome:Otter:chr6-17:2666323:2834369:1
 
 
-    return bless {
+    my $self = {
         '_Client'   => $Client,
         '_dsname'   => $dsname,
         '_ssname'   => $ssname,
@@ -43,7 +43,9 @@ sub new {
         '_seqname'  => $seqname,
         '_start'    => $start,
         '_end'      => $end,
-    }, $pkg;
+    }; 
+
+    return bless $self, $pkg;
 }
 
 sub Client {
