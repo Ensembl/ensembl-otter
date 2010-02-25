@@ -30,7 +30,7 @@ sub start_handler{
     }
     if($ele eq 'chr'){
       my $cs=$self->objects;
-      my $cl=$cs->[$#$cs];
+      my $cl=$cs->[-1];
 
         # from now on, just keep the chromosome's name
       $cl->chromosome($attr->{name});
@@ -43,7 +43,7 @@ sub start_handler{
 						 -hostname => $attr->{'host_name'},
 						 -dbID     => $attr->{'lock_id'});
       my $cs = $self->objects;
-      my $cl = $cs->[$#$cs];
+      my $cl = $cs->[-1];
       $cl->set_lock_status($cloneLock);
 
     }
@@ -58,7 +58,7 @@ sub end_handler{
     if($SUB_ELE->{$context}){
         my $context_method = $context;
         my $cs = $self->objects;
-        my $current = $cs->[$#$cs];
+        my $current = $cs->[-1];
         if($current->can($context_method)){
             $current->$context_method($value);
         }else{

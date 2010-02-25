@@ -49,7 +49,7 @@ sub char_handler{
         $context =~ tr/[a-z]/[A-Z]/;
         my $context_method = $context;
         my $ds = $self->objects;
-        my $current = $ds->[$#$ds];
+        my $current = $ds->[-1];
         if($current->can($context_method)){
             $current->$context_method($data);
         }
