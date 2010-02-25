@@ -662,7 +662,7 @@ sub set_exon_phases_translation_cds_start_end {
 
     if ($ace->count_tag('End_not_found')) {
         $self->create_Attribute($tsct, 'mRNA_end_NF', 1);
-        if ($exon_list->[$#$exon_list]->end_phase != -1) {
+        if ($exon_list->[-1]->end_phase != -1) {
             # End of last exon is coding
             $self->create_Attribute($tsct, 'cds_end_NF', 1);
         }
