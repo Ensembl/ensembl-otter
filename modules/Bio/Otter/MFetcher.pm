@@ -163,7 +163,7 @@ sub satellite_dba {
     my %anycase_options = (
          -group     => $metakey,
          -species   => $self->dataset_name,
-        eval $opt_str,
+        eval $opt_str, ## no critic(BuiltinFunctions::ProhibitStringyEval)
     );
     if ($@) {
         $self->error_exit("Error evaluating '$opt_str' : $@");
