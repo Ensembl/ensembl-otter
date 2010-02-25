@@ -37,11 +37,10 @@ sub sessions_needing_recovery {
     my %existing_pid = map {$_->pid, 1} @otterlace_procs;
 
     my $tmp_dir = '/var/tmp';
-    local *VAR_TMP;
-    opendir VAR_TMP, $tmp_dir or die "Cannot read '$tmp_dir' : $!";
+    opendir my $var_tmp, $tmp_dir or die "Cannot read '$tmp_dir' : $!";
     my $to_recover = [];
     my $version = $self->Client->version;
-    foreach (readdir VAR_TMP) {
+    foreach (readdir $var_tmp) {
         if (/^lace_$version\.(\d+)/o) {
             my $pid = $1;
             next if $existing_pid{$pid};
@@ -61,7 +60,7 @@ sub sessions_needing_recovery {
             }
         }
     }
-    closedir VAR_TMP or die "Error reading directory '$tmp_dir' : $!";
+    closedir $var_tmp or die "Error reading directory '$tmp_dir' : $!";
 
     # Sort by modification date, ascending
     $to_recover = [sort {$a->[1] <=> $b->[1]} @$to_recover];
