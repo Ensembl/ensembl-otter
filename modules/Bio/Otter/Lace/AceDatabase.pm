@@ -492,7 +492,7 @@ sub initialize_database {
         $self->list_all_acefiles;
 
     my $parse_log = "$home/init_parse.log";
-    my $pipe = "$tace $home >> $parse_log";
+    my $pipe = "'$tace' '$home' >> '$parse_log'";
 
     open my $pipe_fh, '|-', $pipe
         or die "Can't open pipe '$pipe' : $!";
