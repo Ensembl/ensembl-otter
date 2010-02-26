@@ -209,7 +209,7 @@ sub generate_unless_hashed {
     my $optnames  = $feature_subhash->{-optnames};
     my @optvalues = ($feature_type);
     for my $opt (@$optnames) {
-        if ($feature->can($opt) {
+        if ($feature->can($opt)) {
             push @optvalues, $feature->$opt() || 0;
         }
     }
