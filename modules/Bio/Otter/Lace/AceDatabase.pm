@@ -595,7 +595,8 @@ sub get_filter_loaded_states_from_acedb {
     my $ace_handle = $self->aceperl_db_handle;
     $ace_handle->raw_query('find Assembly *');
     my $ace_text = $ace_handle->AceText_from_tag('Filter');
-    foreach my $name (map $_->[0], $ace_text->get_values('Filter')) {
+    foreach ($ace_text->get_values('Filter')) {
+        my $name = $_->[0];
         my $filt = $n2f->{$name}
             or confess "No filter '$name'";
         $filt->done(1);
