@@ -394,7 +394,7 @@ sub make_database_directory {
         or confess "Client did not return tar file for local acedb database directory structure";
     mkdir($home, 0777) or die "Can't mkdir('$home') : $!\n";
 
-    my $tar_command = "cd '$home' ; tar xzf -";
+    my $tar_command = "cd '$home' && tar xzf -";
     eval {
         open my $expand, '|-', $tar_command or die "Can't open pipe '$tar_command'; $?";
         print $expand $tar;
