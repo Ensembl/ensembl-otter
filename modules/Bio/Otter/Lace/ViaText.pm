@@ -209,7 +209,9 @@ sub generate_unless_hashed {
     my $optnames  = $feature_subhash->{-optnames};
     my @optvalues = ($feature_type);
     for my $opt (@$optnames) {
-        push @optvalues, $feature->$opt() || 0;
+        if ($feature->can($opt) {
+            push @optvalues, $feature->$opt() || 0;
+        }
     }
 
     if(my $ref_link = $feature_subhash->{-reference}) { # reference link is one-way (the referenced object doesn't know its referees)
