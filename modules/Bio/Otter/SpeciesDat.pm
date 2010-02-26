@@ -83,6 +83,8 @@ sub load_species_dat_file {
 
     # Have finished with defaults, so we can remove them.
     delete $sp->{'defaults'};
+
+    return;
 }
 
 sub keep_only_datasets {
@@ -94,6 +96,8 @@ sub keep_only_datasets {
         $self->log(sprintf("Dataset %s is %sallowed", $dataset_name, $allowed_hash->{$dataset_name} ? '' : 'not '));
         delete $sp->{$dataset_name} unless $allowed_hash->{$dataset_name};
     }
+
+    return;
 }
 
 sub remove_restricted_datasets {
@@ -106,12 +110,16 @@ sub remove_restricted_datasets {
         $self->log(sprintf("Dataset %s is %srestricted", $dataset_name, $allowed_hash->{$dataset_name} ? 'not ' : ''));
         delete $sp->{$dataset_name} unless $allowed_hash->{$dataset_name};
     }
+
+    return;
 }
 
 sub log { # to be overloaded
     my ($self, $message) = @_;
 
     print STDERR $message."\n";
+
+    return;
 }
 
 sub error_exit { # to be overloaded
