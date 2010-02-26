@@ -488,8 +488,6 @@ sub initialize_database {
 
     my $home = $self->home;
     my $tace = $self->tace;
-    my @parse_commands = map "parse $_\n",
-        $self->list_all_acefiles;
 
     my $parse_log = "$home/init_parse.log";
     my $pipe = "'$tace' '$home' >> '$parse_log'";
@@ -498,8 +496,8 @@ sub initialize_database {
         or die "Can't open pipe '$pipe' : $!";
     # Say "yes" to "initalize database?" question.
     print $pipe_fh "y\n" unless $self->db_initialized;
-    foreach my $com (@parse_commands) {
-        print $pipe_fh $com;
+    foreach my $file ($self->list_all_acefiles) {
+        print $pipe_fh "parse $file\n";
     }
     close $pipe_fh or die "Error initializing database exit($?)\n";
 
