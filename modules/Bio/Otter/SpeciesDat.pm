@@ -114,7 +114,10 @@ sub remove_restricted_datasets {
     return;
 }
 
-sub log { # to be overloaded
+sub log { ## no critic(Subroutines::ProhibitBuiltinHomonyms)
+
+    # to be overloaded
+
     my ($self, $message) = @_;
 
     print STDERR $message."\n";
