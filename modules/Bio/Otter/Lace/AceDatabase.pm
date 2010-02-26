@@ -136,15 +136,6 @@ sub empty_acefile_list {
     $self->{'_acefile_list'} = undef;
 }
 
-sub add_zmap_styles_acefile {
-    my ($self) = @_;
-
-    my $styles_file = $self->home . "/rawdata/zmap_styles.ace";
-    confess "Missing Zmap_Styles file: '$styles_file'"
-        unless -e $styles_file;
-    $self->add_acefile($styles_file);
-}
-
 sub init_AceDatabase {
     my( $self ) = @_;
 
