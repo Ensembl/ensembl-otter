@@ -351,12 +351,6 @@ sub unlock_otter_slice {
     return $client->unlock_otter_xml($xml_text, $dsname);
 }
 
-sub ace_server_registered {
-    my( $self ) = @_;
-
-    return $self->{'_ace_server'};
-}
-
 sub ace_server {
     my( $self ) = @_;
 
