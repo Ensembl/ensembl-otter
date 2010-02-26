@@ -194,7 +194,7 @@ sub dump_table_SQL {
 
     my $command = $self->get_dump_stub($table);
 
-    open (IN,"$command |");
+    open (IN, '-|', $command);
     
     my $str;
 
