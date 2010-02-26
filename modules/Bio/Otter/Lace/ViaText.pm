@@ -22,12 +22,14 @@ use Bio::EnsEMBL::Map::Marker;
 use Bio::EnsEMBL::Map::MarkerFeature;
 use Bio::EnsEMBL::Map::Ditag;
 use Bio::EnsEMBL::Map::DitagFeature;
-#use Bio::EnsEMBL::Variation::Variation;
-#use Bio::EnsEMBL::Variation::VariationFeature;
+use Bio::EnsEMBL::Variation::Variation;
+use Bio::EnsEMBL::Variation::VariationFeature;
 use Bio::Otter::DnaDnaAlignFeature;
 use Bio::Otter::DnaPepAlignFeature;
 use Bio::Otter::HitDescription;
 use Bio::Vega::PredictionTranscript;
+
+use Bio::Otter::Registry;
 
 use base ('Exporter');
 our @EXPORT    = ();
@@ -152,6 +154,13 @@ our %LangDesc = (
         -add_one_cmp => [ 'PredictionTranscript', 'add_Exon' ],
     },
 );
+
+# a Bio::EnsEMBL::Slice method to handle Variation features
+sub Bio::EnsEMBL::Slice::get_all_RegistryVariationFeatures {
+    my $self = shift;
+
+    return $self->get_all_VariationFeatures;
+}
 
 # a Bio::EnsEMBL::Slice method to handle the dummy ExonSupportingFeature feature type
 sub Bio::EnsEMBL::Slice::get_all_ExonSupportingFeatures {
