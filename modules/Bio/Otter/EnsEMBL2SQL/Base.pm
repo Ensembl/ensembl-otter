@@ -194,13 +194,13 @@ sub dump_table_SQL {
 
     my $command = $self->get_dump_stub($table);
 
-    open (IN, '-|', $command);
+    open (my $in, '-|', $command);
     
     my $str;
 
     my $fh = $self->filehandle;
 
-    while (<IN>) {
+    while (<$in>) {
 	if (defined($fh)) {
 	    print $fh $_;
 	} else {
@@ -208,7 +208,7 @@ sub dump_table_SQL {
 	}
     }
 
-    close(IN);
+    close($in);
 
     return $str;
 }
