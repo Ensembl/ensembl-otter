@@ -9,6 +9,9 @@
 
 =cut
 
+use strict;
+use warnings;
+
 ## BEGIN Block to avoid some hassle with pipeline configuration
 
 BEGIN{
@@ -28,6 +31,7 @@ BEGIN{
 package Bio::EnsEMBL::Analysis::Config::General;
 
 use strict;
+use warnings;
 
 sub import {
 
@@ -80,7 +84,7 @@ sub import {
 package Bio::EnsEMBL::Analysis::Config::Blast;
 
 use strict;
-
+use warnings;
 
 sub import {
 
@@ -121,6 +125,9 @@ sub import {
 
 package BlastableVersion;
 
+use strict;
+use warnings;
+
 #### Configurable variables
 
 my $cache_file = '/var/tmp/blast_versions';
@@ -133,7 +140,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.48 $ ';
+$revision='$Revision: 1.49 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
