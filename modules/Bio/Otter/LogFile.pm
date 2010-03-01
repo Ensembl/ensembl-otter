@@ -7,6 +7,7 @@ use strict;
 use warnings;
 use Symbol 'gensym';
 use Carp;
+use IO::Handle;
 
 my $prefix_sub = sub {
     return scalar(localtime) . "  ";
@@ -23,9 +24,7 @@ sub make_log {
     $file = shift;
 
     # Unbuffer STDOUT
-    my $oldsel = select(STDOUT);
-    $| = 1;
-    select($oldsel);
+    STDOUT->autoflush(1);
 
     if (my $pid = open(STDOUT, "|-")) {
         # Send parent's STDERR to the same place as STDOUT.
@@ -37,10 +36,8 @@ sub make_log {
         open $log, '>>', $file or confess "Can't append to logfile '$file': $!";
         
         # Unbuffer logfile
-        $oldsel = select($log);
-        $| = 1;
-        select($oldsel);
-        
+        $log->autoflush(1);
+
         # Child filters output from parent
         while (<STDIN>) {
             print STDERR $_;    # Still print to STDERR
