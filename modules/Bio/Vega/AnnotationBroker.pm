@@ -441,8 +441,8 @@ sub transcripts_diff {
 
 sub compare_feature_sets {
     my ($self, $old_features, $new_features) = @_;
-    my %old = map { $self->SimpleFeature_key($_), $_ } @$old_features;
-    my %new = map { $self->SimpleFeature_key($_), $_ } @$new_features;
+    my %old = map { $self->SimpleFeature_key($_) => $_ } @$old_features;
+    my %new = map { $self->SimpleFeature_key($_) => $_ } @$new_features;
 
     # Features that were in the old, but not the new, should be deleted
     my @delete = ();
