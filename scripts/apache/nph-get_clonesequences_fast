@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2010-02-09 17:23:17 $
-# Id:            $Id: nph-get_clonesequences_fast,v 1.23 2010-02-09 17:23:17 jh13 Exp $
+# Last modified: $Date: 2010-03-01 11:38:51 $
+# Id:            $Id: nph-get_clonesequences_fast,v 1.24 2010-03-01 11:38:51 jh13 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_clonesequences_fast,v $
 
 use strict;
@@ -130,7 +130,7 @@ while (
         contig_strand => $ctg_strand,
     };
     if ($clone_lock_id) {
-        $cs->{'lock'} => {
+        $cs->{'lock'} = {
             lock_id     => $clone_lock_id,
             author_name => $author_name,
             email       => $author_email,
