@@ -39,7 +39,7 @@ sub make_log {
         $log->autoflush(1);
 
         # Child filters output from parent
-        while (<STDIN>) {
+        while (<STDIN>) { ## no critic(InputOutput::ProhibitExplicitStdin)
             print STDERR $_;    # Still print to STDERR
             print $log $prefix_sub->(), $_;
         }
