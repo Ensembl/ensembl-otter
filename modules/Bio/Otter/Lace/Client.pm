@@ -30,7 +30,9 @@ use Bio::Otter::Transform::CloneSequences;
 
 sub new {
     my( $pkg ) = @_;
-    
+
+    ## no critic(Variables::RequireLocalizedPunctuationVars)
+
     $ENV{'OTTERLACE_COOKIE_JAR'} ||= "$ENV{HOME}/.otter/ns_cookie_jar";
     $ENV{'BLIXEM_CONFIG_FILE'}   ||= "$ENV{HOME}/.otter/etc/blixemrc";
     return bless {
@@ -399,6 +401,8 @@ sub pfetch_url {
 
 sub setup_pfetch_env {
     my ($self) = @_;
+
+    ## no critic(Variables::RequireLocalizedPunctuationVars)
 
     # Need to use pfetch via HTTP proxy if we are outside Sanger
     my $hostname = hostfqdn();
