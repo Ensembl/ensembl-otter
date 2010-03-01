@@ -136,7 +136,7 @@ sub make_transactional {
 }
 
 {
-    my %is_key_type = map {$_, 1} qw{ KEY PRIMARY UNIQUE INDEX };
+    my %is_key_type = map {$_ => 1} qw{ KEY PRIMARY UNIQUE INDEX };
 
     sub process_TokenList {
         my( $self, $list ) = @_;
