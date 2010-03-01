@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2010-02-09 17:23:17 $
-# Id:            $Id: nph-get_analyses_status,v 1.19 2010-02-09 17:23:17 jh13 Exp $
+# Last modified: $Date: 2010-03-01 09:53:17 $
+# Id:            $Id: nph-get_analyses_status,v 1.20 2010-03-01 09:53:17 jh13 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_analyses_status,v $
 
 use strict;
@@ -20,7 +20,7 @@ sub get_possible_analyses {
     my $pdbc = shift @_;
 
     my %rule = ();
-    my $sth = $pdbc->prepare(qq{
+    my $rule_sth = $pdbc->prepare(qq{
         SELECT rc.rule_condition
              , a.logic_name
         FROM analysis a
@@ -29,8 +29,8 @@ sub get_possible_analyses {
         WHERE a.analysis_id = rg.goal
           AND rg.rule_id = rc.rule_id
         });
-    $sth->execute;
-    while (my ($condition, $logic_name) = $sth->fetchrow) {
+    $rule_sth->execute;
+    while (my ($condition, $logic_name) = $rule_sth->fetchrow) {
         push @{$rule{$condition}}, $logic_name;
     }
 
@@ -59,7 +59,7 @@ my $pdbc = $server->satellite_dba( '' )->dbc();  # pipeline dbc
 
 my @input_ids = ();
 
-my $sth = $pdbc->prepare(qq{
+my $cmp_sth = $pdbc->prepare(qq{
     SELECT cmp.name, cs.version
     FROM coord_system cs
       , seq_region cmp
@@ -71,9 +71,9 @@ my $sth = $pdbc->prepare(qq{
       AND cmp.coord_system_id = cs.coord_system_id
       AND cs.name = '$component_cs'
 });
-$sth->execute();
+$cmp_sth->execute();
 
-while (my ($cmp_name, $cs_version) = $sth->fetchrow) {
+while (my ($cmp_name, $cs_version) = $cmp_sth->fetchrow) {
     my @syll = split(/\./, $cmp_name);
     my $to = pop @syll;
     my $from = pop @syll;
@@ -101,10 +101,10 @@ my $sql_statement = qq{
         WHERE a.analysis_id = i.analysis_id
           AND i.input_id IN ($input_id_str)
         };
-my $sth = $pdbc->prepare($sql_statement);
-$sth->execute();
+my $input_sth = $pdbc->prepare($sql_statement);
+$input_sth->execute();
 
-while(my ($input_id, $logic_name, $created, $db_version) = $sth->fetchrow_array) {
+while(my ($input_id, $logic_name, $created, $db_version) = $input_sth->fetchrow_array) {
     $input_id=~s/^$component_cs:[^:]*:([^:]+):.*$/$1/;
 
     if(!exists($result_hash{$input_id})) {
