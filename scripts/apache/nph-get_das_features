@@ -3,8 +3,8 @@
 # Author:        lg4
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2010-02-23 11:58:51 $
-# Id:            $Id: nph-get_das_features,v 1.30 2010-02-23 11:58:51 gr5 Exp $
+# Last modified: $Date: 2010-03-01 14:29:54 $
+# Id:            $Id: nph-get_das_features,v 1.31 2010-03-01 14:29:54 gr5 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_das_features,v $
 
 use strict;
@@ -21,6 +21,8 @@ use Bio::EnsEMBL::PredictionExon;
 use Bio::Vega::PredictionTranscript;
 use Bio::Otter::ServerScriptSupport;
 use Bio::Otter::Lace::ViaText qw( &GenerateFeatures %LangDesc );
+
+use CGI::Carp qw(fatalsToBrowser);
 
 sub struct_traverse_path {
     my ($struct, $path) = @_;
@@ -70,10 +72,9 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS { # $kind = 'SimpleFeature' ||
 
     my $feature_subhash     = $LangDesc{$kind};
     my $feature_constructor = $feature_subhash->{-constructor};
-    my ($parent_constructor, $add_sub);
+    my ($parent_constructor, $add_sub, $parent_feature_type);
 
     if(my $cmp_uplink = $feature_subhash->{-add_one_cmp}) {  # component link is two-way (parent keeps a list of its components)
-        my $parent_feature_type;
         ($parent_feature_type, $add_sub) = @$cmp_uplink;
         $parent_constructor = $LangDesc{$parent_feature_type}{-constructor};
     }
@@ -141,10 +142,10 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS { # $kind = 'SimpleFeature' ||
             }
             
             # Skip features that don't overlap segment (eg: exons in transcript which does overlap)
+            # but flag that we have done so in the parent object (if any) 
             
             if ($das_feature->{'end'} < $chr_start) {
                 $truncated_5_prime = 1;
-
             }
             
             if ($das_feature->{'start'} > $chr_end) {
@@ -224,6 +225,18 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS { # $kind = 'SimpleFeature' ||
             } else {
                 $feature->display_label( $pt_label );
                 push @$feature_coll, $feature;
+            }
+        }
+    }
+
+    if (ref($feature_coll) eq 'HASH') {
+        # we need to remove any feature that has no components (so we don't end 
+        # up with exon-less transcripts)
+        if (my $getter = $LangDesc{$parent_feature_type}{-get_all_cmps}) {
+            for my $label (keys %$feature_coll) {
+                my $parent = $feature_coll->{$label};
+                my $cmps = $parent->$getter();
+                delete $feature_coll->{$label} unless $cmps;
             }
         }
     }
