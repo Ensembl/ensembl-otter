@@ -26,8 +26,8 @@ sub current_author {
 sub compare_feature_sets {
     my( $self, $old_features, $new_features ) = @_;
 
-    my %old = map {SimpleFeature_key($_), $_} @$old_features;
-    my %new = map {SimpleFeature_key($_), $_} @$new_features;
+    my %old = map {SimpleFeature_key($_) => $_} @$old_features;
+    my %new = map {SimpleFeature_key($_) => $_} @$new_features;
 
     # Features that were in the old, but not the new, should be deleted
     my $delete = [];
@@ -65,8 +65,8 @@ sub SimpleFeature_key {
 sub compare_assembly_tag_sets {
   my( $self, $old_tag_set, $new_tag_set ) = @_;
 
-  my %old = map {AssemblyTag_key($_), $_} @$old_tag_set;
-  my %new = map {AssemblyTag_key($_), $_} @$new_tag_set;
+  my %old = map {AssemblyTag_key($_) => $_} @$old_tag_set;
+  my %new = map {AssemblyTag_key($_) => $_} @$new_tag_set;
 
   # Features that were in the old, but not the new, should be deleted
   my $delete = [];
