@@ -33,13 +33,17 @@ sub import {
     return unless @vars;
 
     # Predeclare global variables in calling package
-    eval "package $callpack; use vars qw("
-         . join(' ', map { '$'.$_ } @vars) . ")";
-    die $@ if $@;
+    {
+        ## no critic(BuiltinFunctions::ProhibitStringyEval)
+        eval "package $callpack; use vars qw("
+            . join(' ', map { '$'.$_ } @vars) . ")";
+        die $@ if $@;
+    }
 
 
     foreach (@vars) {
         if (defined $Config{$_}) {
+            ## no critic(TestingAndDebugging::ProhibitNoStrict)
             no strict 'refs';
 
             # Exporter does a similar job to the following
