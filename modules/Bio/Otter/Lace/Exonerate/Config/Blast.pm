@@ -46,6 +46,8 @@ sub import {
 	        die "Error: Config: $_ not known (See Bio::Otter::Lace::Blast)\n";
 	    }
     }
+
+    return;
 }
 
 1;
