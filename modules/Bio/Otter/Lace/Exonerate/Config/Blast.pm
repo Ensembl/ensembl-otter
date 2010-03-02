@@ -1,4 +1,6 @@
 
+## no critic(Modules::RequireFilenameMatchesPackage)
+
 package Bio::EnsEMBL::Analysis::Config::Blast;
 
 use strict;
