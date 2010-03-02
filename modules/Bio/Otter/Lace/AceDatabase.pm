@@ -268,10 +268,26 @@ sub recover_smart_slice_from_region_xml_file {
     
     my $client = $self->Client or die "No Client attached";
     
-    my $region_file = join('/', $self->home, $REGION_XML_FILE);
+    # We try the LOCK_REGION_XML_FILE too, since uninitialised
+    # lace sessions sometimes have it becuase it is created
+    # before the REGION_XML_FILE, and we want to recover the
+    # session to remove the lock.
     
-    my $parser = Bio::Vega::Transform::Otter->new;
-    $parser->parsefile($region_file);
+    my ($error, $parser);
+    foreach my $f ($LOCK_REGION_XML_FILE, $REGION_XML_FILE) {
+        my $region_file = join('/', $self->home, $f);
+        $parser = Bio::Vega::Transform::Otter->new;
+        eval { $parser->parsefile($region_file) };
+        if ($error = $@) {
+            warn $error;
+            $parser = undef;
+        } else {
+            last;
+        }
+    }
+    if ($error) {
+        confess $error;
+    }
     
     my $slice = $parser->get_ChromosomeSlice;
     
@@ -343,6 +359,8 @@ sub unlock_otter_slice {
     my $smart_slice = $self->smart_slice();
     my $slice_name  = $smart_slice->name();
     my $dsname      = $smart_slice->dsname();
+    
+    warn "Unlocking $dsname:$slice_name\n";
 
     my $client   = $self->Client or confess "No Client attached";
 
@@ -363,6 +381,12 @@ sub ace_server {
         $self->{'_ace_server'} = $sgif;
     }
     return $sgif;
+}
+
+sub ace_server_registered {
+    my( $self ) = @_;
+
+    return $self->{'_ace_server'};
 }
 
 sub aceperl_db_handle {
@@ -514,18 +538,15 @@ sub initialize_database {
 
     confess "Error initializing database\n" if $errors;
     $self->empty_acefile_list;
-    $self->db_initialized(1);
     return 1;
 }
 
 
 sub db_initialized {
-    my( $self, $db_initialized ) = @_;
+    my( $self ) = @_;
 
-    if (defined $db_initialized) {
-        $self->{'_db_initialized'} = $db_initialized ? 1 : 0;
-    }
-    return $self->{'_db_initialized'};
+    my $init_file = join('/', $self->home, 'database/ACEDB.wrm');
+    return -e $init_file;
 }
 
 sub write_dna_data {
@@ -685,7 +706,9 @@ sub DESTROY {
     }
     my $client = $self->Client;
     eval{
-        $self->ace_server->kill_server;
+        if ($self->ace_server_registered) {
+            $self->ace_server->kill_server;
+        }
         if ($client) {
             $self->unlock_otter_slice() if $self->write_access;
         }
