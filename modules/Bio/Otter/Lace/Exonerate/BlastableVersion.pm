@@ -19,7 +19,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.1 $ ';
+$revision='$Revision: 1.2 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -33,10 +33,21 @@ sub new {
 
 #### ACCESSOR METHODS
 
-sub date { localtime; }
-sub name { $0; }
-sub version { 1.0.0; }
-sub sanger_version { 1.0.0; }
+sub date {
+    return localtime;
+}
+
+sub name {
+    return $0;
+}
+
+sub version {
+    return 1.0.0;
+}
+
+sub sanger_version {
+    return 1.0.0;
+}
 
 #### PUBLIC METHODS
 
