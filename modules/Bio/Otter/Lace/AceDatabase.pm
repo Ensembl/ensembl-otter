@@ -648,7 +648,6 @@ sub make_pipeline_DataFactory {
                 #print STDERR "Trying to get a method Object with tag '$tag' ... filter '$class' ... ";
             my $methObj = $collect->get_Method_by_name($tag);
                 #print STDERR $methObj ? "found one\n" : "find failed\n";
-            $pipe_filter->add_method_object($methObj);    # or some other place
         }
 
         # add the filter to the factory
