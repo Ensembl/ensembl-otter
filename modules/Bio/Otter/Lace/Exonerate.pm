@@ -317,9 +317,10 @@ sub run {
     my $name = $self->genomic_seq->name;
     my ($masked, $smasked, $unmasked) = $self->get_masked_unmasked_seq;
 
-	# only run exonerate with the specified subsequence of the genomic sequence
-
-	map { $_->seq($_->subseq($self->genomic_start, $self->genomic_end)) } ($masked, $smasked, $unmasked);
+    # only run exonerate with the specified subsequence of the genomic sequence
+    my $start = $self->genomic_start;
+    my $end = $self->genomic_end;
+    $_->seq($_->subseq($start, $end)) foreach $masked, $smasked, $unmasked;
 
 	unless ($masked->seq =~ /[acgtACGT]{5}/) {
         warn "The genomic sequence is entirely repeat\n";
