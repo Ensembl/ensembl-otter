@@ -1,4 +1,6 @@
 
+## no critic(Modules::RequireFilenameMatchesPackage)
+
 package BlastableVersion;
 
 use strict;
@@ -19,7 +21,7 @@ my $tracking_pass = '';
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.2 $ ';
+$revision='$Revision: 1.3 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
