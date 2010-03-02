@@ -12,6 +12,8 @@
 use strict;
 use warnings;
 
+use Bio::Otter::Lace::Exonerate::BlastableVersion;
+
 ## BEGIN Block to avoid some hassle with pipeline configuration
 
 BEGIN{
@@ -20,7 +22,6 @@ BEGIN{
 #     *{"Bio::EnsEMBL::Pipeline::Config::Blast::Config"} = \%Config;
 
     my @fake_modules = qw(
-                          BlastableVersion.pm
                           Bio/EnsEMBL/Analysis/Config/General.pm
                           Bio/EnsEMBL/Analysis/Config/Blast.pm
                           );
@@ -121,49 +122,6 @@ sub import {
     }
 }
 
-1;
-
-package BlastableVersion;
-
-use strict;
-use warnings;
-
-#### Configurable variables
-
-my $cache_file = '/var/tmp/blast_versions';
-my $tracking_db = 'mysql:blastdb;cbi2.internal.sanger.ac.uk';
-my $tracking_user = 'blastdbro';
-my $tracking_pass = '';
-
-#### No more configurable variables
-
-use vars qw(%versions $debug $revision);
-
-$debug = 0;
-$revision='$Revision: 1.49 $ ';
-$revision =~ s/\$.evision: (\S+).*/$1/;
-
-#### CONSTRUCTORS
-
-sub new {
-    my $proto = shift;
-    my $self = { };
-    bless ($self, ref($proto) || $proto);
-    return $self;
-}
-
-#### ACCESSOR METHODS
-
-sub date { localtime; }
-sub name { $0; }
-sub version { 1.0.0; }
-sub sanger_version { 1.0.0; }
-
-#### PUBLIC METHODS
-
-sub force_dbi { }
-sub set_hostname { }
-sub get_version { }
 1;
 
 
