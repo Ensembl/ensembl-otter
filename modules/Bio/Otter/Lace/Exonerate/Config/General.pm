@@ -10,9 +10,9 @@ use warnings;
 $INC{q(Bio/EnsEMBL/Analysis/Config/General.pm)}++;
 
 sub import {
+    my ( $pack, @vars ) = @_;
 
     my ($callpack) = caller(0); # Name of the calling package
-    my $pack = shift; # Need to move package off @_
 
     # had to put this inline here
     my %Config = (
@@ -31,7 +31,7 @@ sub import {
                   );
 
     # Get list of variables supplied, or else all
-    my @vars = @_ ? @_ : keys(%Config);
+    @vars = keys %Config unless @vars;
     return unless @vars;
 
     # Predeclare global variables in calling package
