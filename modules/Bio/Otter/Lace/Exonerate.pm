@@ -84,6 +84,7 @@ sub initialise {
     );
     $self->analysis($ana_obj);
 
+    return;
 }
 
 sub write_seq_file {
@@ -305,6 +306,7 @@ sub _remove_files {
     $filestamp->name('.efficient_indexing_'. $self->db_basename());
     $filestamp->rm();
     rmtree($self->indicate_index());
+    return;
 }
 
 
@@ -402,6 +404,8 @@ sub append_polyA_tail {
 			next HITNAME;
 		}
 	}
+
+        return;
 }
 
 sub run_exonerate {
@@ -436,6 +440,8 @@ sub add_hit_name {
     my( $self, $name ) = @_;
 
     $self->{'_hit_names'}{$name} = 1;
+
+    return;
 }
 
 sub delete_all_hit_names {
