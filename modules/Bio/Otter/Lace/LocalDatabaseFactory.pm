@@ -55,8 +55,24 @@ sub sessions_needing_recovery {
                 my $title = $self->get_title($lace_dir);
                 push(@$to_recover, [$lace_dir, $mtime, $title]);
             } else {
-                print STDERR "\nNo such file: '$ace_wrm'\nDeleting uninitialized database '$lace_dir'\n";
-                rmtree($lace_dir);
+                my $client = $self->Client;
+                my $save_sub = $client->fatal_error_prompt;
+                $client->fatal_error_prompt(sub{ die shift });
+                eval {
+                    # Attempt to release locks of uninitialised sessions
+                    my $adb = $self->recover_session($lace_dir);
+                    $lace_dir = $adb->home;
+                    if ($adb->write_access) {
+                        $adb->unlock_otter_slice;
+                        print STDERR "\nRemoved lock from uninitialised database in '$lace_dir'\n";
+                    }
+                    $adb->error_flag(0);
+                };
+                $client->fatal_error_prompt($save_sub);
+                if (-d $lace_dir) {
+                    print STDERR "\nNo such file: '$lace_dir/database/ACEDB.wrm'\nDeleting uninitialized database '$lace_dir'\n";
+                    rmtree($lace_dir);
+                }
             }
         }
     }
@@ -105,6 +121,9 @@ sub recover_session {
     # in the lace database is saved in the region XML
     # dot file.
     $adb->recover_smart_slice_from_region_xml_file;
+    unless ($adb->db_initialized) {
+        return $adb;
+    }
     $adb->make_pipeline_DataFactory;
     $adb->get_filter_loaded_states_from_acedb;
 
