@@ -13,74 +13,21 @@ use strict;
 use warnings;
 
 use Bio::Otter::Lace::Exonerate::BlastableVersion;
+use Bio::Otter::Lace::Exonerate::Config::General;
 
 ## BEGIN Block to avoid some hassle with pipeline configuration
 
 BEGIN{
 # or put %Config here and modify symbol table as below
-#     *{"Bio::EnsEMBL::Pipeline::Config::General::Config"} = \%Config;
 #     *{"Bio::EnsEMBL::Pipeline::Config::Blast::Config"} = \%Config;
 
     my @fake_modules = qw(
-                          Bio/EnsEMBL/Analysis/Config/General.pm
                           Bio/EnsEMBL/Analysis/Config/Blast.pm
                           );
     map { $INC{$_} = 1 } @fake_modules;
 }
 
 ####
-package Bio::EnsEMBL::Analysis::Config::General;
-
-use strict;
-use warnings;
-
-sub import {
-
-    my ($callpack) = caller(0); # Name of the calling package
-    my $pack = shift; # Need to move package off @_
-
-    # had to put this inline here
-    my %Config = (
-
-                  DATA_DIR => '/data/blastdb/Finished',
-                  LIB_DIR  => '/software/anacode/lib',
-                  BIN_DIR  => '/software/anacode/bin',
-
-
-                  # temporary working space (e.g. /tmp)
-                  ANALYSIS_WORK_DIR => '/tmp',
-
-                  ANALYSIS_REPEAT_MASKING => ['RepeatMasker','trf'],
-
-                  SOFT_MASKING => 0,
-                  );
-
-    # Get list of variables supplied, or else all
-    my @vars = @_ ? @_ : keys(%Config);
-    return unless @vars;
-
-    # Predeclare global variables in calling package
-    eval "package $callpack; use vars qw("
-         . join(' ', map { '$'.$_ } @vars) . ")";
-    die $@ if $@;
-
-
-    foreach (@vars) {
-        if (defined $Config{$_}) {
-            no strict 'refs';
-
-            # Exporter does a similar job to the following
-            # statement, but for function names, not
-            # scalar variables:
-            *{"${callpack}::$_"} = \$Config{$_};
-        }
-        else {
-            die "Error: Config: $_ not known (See Bio::Otter::Lace::Blast)\n";
-        }
-    }
-}
-
-1;
 
 package Bio::EnsEMBL::Analysis::Config::Blast;
 
