@@ -9,37 +9,6 @@
 
 =cut
 
-use strict;
-use warnings;
-
-use Bio::Otter::Lace::Exonerate::BlastableVersion;
-use Bio::Otter::Lace::Exonerate::Config::General;
-use Bio::Otter::Lace::Exonerate::Config::Blast;
-
-## BEGIN Block to avoid some hassle with pipeline configuration
-
-BEGIN{
-# or put %Config here and modify symbol table as below
-#     *{"Bio::EnsEMBL::Pipeline::Config::Blast::Config"} = \%Config;
-
-    my @fake_modules = qw(
-                          );
-    map { $INC{$_} = 1 } @fake_modules;
-}
-
-####
-
-
-##########################################################################
-##########################################################################
-##########################################################################
-
-# START of Bio::Otter::Lace::Exonerate
-
-##########################################################################
-##########################################################################
-##########################################################################
-
 package Bio::Otter::Lace::Exonerate;
 
 use strict;
@@ -48,6 +17,11 @@ use Carp;
 use File::Basename;
 use File::Path 'rmtree';
 
+# pipeline configuration
+# this must come before Bio::EnsEMBL::Analysis::Runnable::Finished::Exonerate
+use Bio::Otter::Lace::Exonerate::BlastableVersion;
+use Bio::Otter::Lace::Exonerate::Config::General;
+use Bio::Otter::Lace::Exonerate::Config::Blast;
 
 use Bio::Seq;
 use Hum::Ace::AceText;
