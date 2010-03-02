@@ -14,6 +14,7 @@ use warnings;
 
 use Bio::Otter::Lace::Exonerate::BlastableVersion;
 use Bio::Otter::Lace::Exonerate::Config::General;
+use Bio::Otter::Lace::Exonerate::Config::Blast;
 
 ## BEGIN Block to avoid some hassle with pipeline configuration
 
@@ -22,54 +23,11 @@ BEGIN{
 #     *{"Bio::EnsEMBL::Pipeline::Config::Blast::Config"} = \%Config;
 
     my @fake_modules = qw(
-                          Bio/EnsEMBL/Analysis/Config/Blast.pm
                           );
     map { $INC{$_} = 1 } @fake_modules;
 }
 
 ####
-
-package Bio::EnsEMBL::Analysis::Config::Blast;
-
-use strict;
-use warnings;
-
-sub import {
-
-    my ($callpack) = caller(0); # Name of the calling package
-    my $pack = shift; # Need to move package off @_
-
-    # had to put this inline here.
-    my %Config = (
-                  DB_CONFIG => [{name =>'empty'}],
-                  UNKNOWN_ERROR_STRING => 'WHAT',
-                  );
-
-
-    # Get list of variables supplied, or else all
-    my @vars = @_ ? @_ : keys(%Config);
-    return unless @vars;
-
-    # Predeclare global variables in calling package
-    eval "package $callpack; use vars qw("
-         . join(' ', map { '$'.$_ } @vars) . ")";
-    die $@ if $@;
-
-
-    foreach (@vars) {
-	    if (defined $Config{ $_ }) {
-                no strict 'refs';
-	        # Exporter does a similar job to the following
-	        # statement, but for function names, not
-	        # scalar variables:
-	        *{"${callpack}::$_"} = \$Config{ $_ };
-	    } else {
-	        die "Error: Config: $_ not known (See Bio::Otter::Lace::Blast)\n";
-	    }
-    }
-}
-
-1;
 
 
 ##########################################################################
