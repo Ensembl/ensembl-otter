@@ -6,7 +6,6 @@ package Bio::Otter::Lace::PipelineStatus;
 use strict;
 use warnings;
 use Carp;
-use Bio::EnsEMBL::Analysis;
 
 my $ana_root = 'SubmitContig';
 
