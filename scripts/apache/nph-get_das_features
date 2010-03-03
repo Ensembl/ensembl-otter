@@ -3,8 +3,8 @@
 # Author:        lg4
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2010-03-01 15:47:07 $
-# Id:            $Id: nph-get_das_features,v 1.33 2010-03-01 15:47:07 gr5 Exp $
+# Last modified: $Date: 2010-03-03 15:46:05 $
+# Id:            $Id: nph-get_das_features,v 1.34 2010-03-03 15:46:05 jh13 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_das_features,v $
 
 use strict;
@@ -235,7 +235,7 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS { # $kind = 'SimpleFeature' ||
         if (my $getter = $LangDesc{$parent_feature_type}{-get_all_cmps}) {
             for my $label (keys %$feature_coll) {
                 my $parent = $feature_coll->{$label};
-                delete $feature_coll->{$label} unless $parent->getter();
+                delete $feature_coll->{$label} unless $parent->$getter();
             }
         }
     }
