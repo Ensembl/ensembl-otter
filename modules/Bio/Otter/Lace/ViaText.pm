@@ -30,7 +30,6 @@ use Bio::Otter::HitDescription;
 use Bio::Vega::PredictionTranscript;
 
 use base ('Exporter');
-our @EXPORT    = ();
 our @EXPORT_OK = qw( %LangDesc &ParseFeatures &GenerateFeatures );
 
 our %LangDesc = (
