@@ -11,10 +11,13 @@ use Bio::EnsEMBL::Analysis;
 my $ana_root = 'SubmitContig';
 
 sub new {
-    return bless {
+    my( $pkg ) = @_;
+    my $self = {
         'completed_count' => 0,
         '_entries' => {},
-    }, shift;
+    };
+    bless $self, $pkg;
+    return $self;
 }
 
 sub entry {
