@@ -175,10 +175,19 @@ sub build_SequenceFragment {
     my $ctg_name       = $data->{'id'};
     my $cln_length     = $data->{'clone_length'};
 
-    unless ($assembly_type && $start && $end && $frag_offset && $strand && $ctg_name && $cln_length) {
+    ### We were checking that clone_length is given, but we don't need it.
+    # my $cln_length     = $data->{'clone_length'};
+    #
+    # unless ($assembly_type && $start && $end && $frag_offset && $strand && $ctg_name && $cln_length) {
+    #     die "XML does not contain information needed to create slice:\n"
+    #        ."assembly_type='$assembly_type' start='$start' end='$end' frag_offset='$frag_offset' strand='$strand' "
+    #        ."ctg_name='$ctg_name' cln_length='$cln_length'";
+    # }
+
+    unless ($assembly_type && $start && $end && $frag_offset && $strand && $ctg_name) {
         die "XML does not contain information needed to create slice:\n"
-           ."assembly_type='$assembly_type' start='$start' end='$end' frag_offset='$frag_offset' strand='$strand' "
-           ."ctg_name='$ctg_name' cln_length='$cln_length'";
+          . "assembly_type='$assembly_type' start='$start' end='$end' frag_offset='$frag_offset' strand='$strand' "
+          . "ctg_name='$ctg_name'";
     }
 
     if (my $chr_slice = $chrslice{$self}) {
