@@ -260,7 +260,9 @@ sub build_SequenceFragment {
         -start              => $cmp_start,
         -end                => $cmp_end,
         -strand             => $strand,
-        -seq_region_length  => $cln_length,
+        # -seq_region_length  => $cln_length,
+        ### Hack for pig workshop.  Value missing, but wanted by EnsEMBL API
+        -seq_region_length  => 1_000_000,
         -coord_system       => $ctg_coord_system{$self},
     );
 
