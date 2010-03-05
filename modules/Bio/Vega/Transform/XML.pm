@@ -452,7 +452,7 @@ sub generate_Transcript {
 
   }
 
-  $t->attribobjs($self->generate_ExonSet($tran,$coord_offset, $tran_low, $tran_high));
+  $t->attribobjs($self->generate_ExonSet($tran,$coord_offset));
 
   return $t;
 }
@@ -479,7 +479,7 @@ sub generate_Transcript {
 }
 
 sub generate_ExonSet {
-  my ($self,$tran,$coord_offset,$tran_low, $tran_high)=@_;
+  my ($self,$tran,$coord_offset)=@_;
 
   my $exon_set=$tran->get_all_Exons;
   my $exs=$self->prettyprint('exon_set');

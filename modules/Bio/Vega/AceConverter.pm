@@ -144,6 +144,7 @@ sub generate_vega_objects {
         Annotation
         Clone
         DNA
+        Length
         })
     {
         $self->parse('build_CloneSequence', $ace->raw_query("show -a $tag"));
@@ -268,6 +269,9 @@ sub build_CloneSequence {
         }
         if (my $clone_name = $ace->get_single_value('Clone')) {
             $cs->clone_name($clone_name);
+        }
+        if (my $length = $ace->get_single_value('Length')) {
+            $cs->length($length);
         }
         if (my ($dna) = $ace->get_values('DNA')) {
             $cs->length($dna->[1]);
