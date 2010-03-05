@@ -420,7 +420,7 @@ sub get_requested_features {
 	
 	my @feature_kinds  = split(/,/, $self->require_argument('kind'));
     my $analysis_list = $self->param('analysis');
-    my @analysis_names = $analysis_list ? split /,/ , $analysis_list : ( undef );
+    my @analysis_names = $analysis_list ? split(/,/, $analysis_list) : ( undef );
 	
 	my @feature_list = ();
 	
