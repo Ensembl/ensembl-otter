@@ -34,7 +34,7 @@ sub new {
         $self->{$k}=$v;
     }
 
-    if ($self->show_restricted_datasets or ! $self->local_user) {
+    if ($self->show_restricted_datasets || ! $self->local_user) {
         $self->authorized_user;
     } else {
         $self->authenticate_user;
