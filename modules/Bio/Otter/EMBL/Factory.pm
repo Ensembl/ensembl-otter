@@ -134,6 +134,12 @@ sub embl_setup {
 
     ### I think this subroutine hasn't been used for a long time - may be out of date or not work
     confess "Called embl_setup - this code has not been tested since move to schema 20+";
+}
+
+# original implementation of embl_setup, saved for reference
+sub embl_setup_ {
+    my ( $self ) = @_;
+
     $self->fetch_clone_and_chromosome_Slices;
 
     my $accession   = $self->accession;
