@@ -29,9 +29,7 @@ sub new {
     
     my $self = $pkg->CGI::new();    # CGI part of the object needs initialization
 
-    while(my ($k,$v) = each %params) { # and this is how we set the rest of the parameters
-        $self->{$k}=$v;
-    }
+    @{$self}{ keys %params } = values %params; # set the rest of the parameters
 
     if ($self->show_restricted_datasets || ! $self->local_user) {
         $self->authorized_user;
