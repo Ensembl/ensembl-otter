@@ -296,11 +296,10 @@ sub require_argument {
 
     my $value = $self->param($argname);
     
-    if (defined $value) {
-        return $value;
-    } else {
-        $self->error_exit("No '$argname' argument defined");
-    }
+    $self->error_exit("No '$argname' argument defined")
+        unless defined $value;
+
+    return $value;
 }
 
 sub return_emptyhanded {
