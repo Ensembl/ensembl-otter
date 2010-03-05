@@ -401,14 +401,14 @@ sub enrich {
 # Bio::EnsEMBL::Slice
 
 sub Bio::EnsEMBL::Slice::get_all_DnaDnaAlignFeatures {
-    my $self = shift @_;
-    my $naked_features = $self->get_all_DnaAlignFeatures(@_);
+    my ($self, @args) = @_;
+    my $naked_features = $self->get_all_DnaAlignFeatures(@args);
     return enrich($naked_features, 'Bio::Otter::DnaDnaAlignFeature');
 }
 
 sub Bio::EnsEMBL::Slice::get_all_DnaPepAlignFeatures {
-    my $self = shift @_;
-    my $naked_features = $self->get_all_ProteinAlignFeatures(@_);
+    my ($self, @args) = @_;
+    my $naked_features = $self->get_all_ProteinAlignFeatures(@args);
     return enrich($naked_features, 'Bio::Otter::DnaPepAlignFeature');
 }
 
