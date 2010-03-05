@@ -478,9 +478,9 @@ sub bind_param {
         unless (ref $attr) {
             $attr = {TYPE => $attr};
         }
-        $self->SUPER::bind_param($pos, $value, $attr);
+        return $self->SUPER::bind_param($pos, $value, $attr);
     } else {
-        $self->SUPER::bind_param($pos, $value);
+        return $self->SUPER::bind_param($pos, $value);
     }
 }
 
