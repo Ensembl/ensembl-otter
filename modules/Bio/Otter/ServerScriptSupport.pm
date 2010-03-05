@@ -25,11 +25,10 @@ END {
 }
 
 sub new {
-    my $pkg = shift;
+    my ( $pkg, %params ) = @_;
     
     my $self = $pkg->CGI::new();    # CGI part of the object needs initialization
 
-    my %params = @_;
     while(my ($k,$v) = each %params) { # and this is how we set the rest of the parameters
         $self->{$k}=$v;
     }
