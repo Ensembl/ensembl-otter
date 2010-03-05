@@ -57,7 +57,7 @@ sub dataset_name { # overloads the one provided by MFetch
 ############## getters: ###########################
 
 sub csn {   # needed by logging mechanism
-    my $self = shift @_;
+    my ($self) = @_;
 
     my $csn;
     unless ($csn = $self->{'_current_script_name'}) {
@@ -300,17 +300,16 @@ sub require_argument {
 }
 
 sub return_emptyhanded {
-    my $self = shift @_;
+    my ($self) = @_;
 
     $self->send_response('', 1);
     exit(0); # <--- this forces all the scripts to exit normally
 }
 
 sub tempfile_from_argument {
-    my $self      = shift @_;
-    my $argname   = shift @_;
+    my ($self, $argname, $file_name) = @_;
 
-    my $file_name = shift @_ || $self->csn().'_'.$self->require_argument('author').'.xml';
+    $file_name ||= $self->csn().'_'.$self->require_argument('author').'.xml';
 
     my $tmp_file = Bio::Otter::Lace::TempFile->new;
     $tmp_file->root('/tmp');
