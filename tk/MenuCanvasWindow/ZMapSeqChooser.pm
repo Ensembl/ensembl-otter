@@ -459,6 +459,8 @@ sub zMapZMapDefaults {
             );
     }
 
+    push @config, %{Bio::Otter::Lace::Defaults::fetch_zmap_stanza()};
+
     return $self->formatZmapDefaults(@config);
 }
 
@@ -481,6 +483,7 @@ sub zMapBlixemDefaults {
             'Novel CDS Transcripts',
             'Putative and NMD',
             ],
+        %{Bio::Otter::Lace::Defaults::fetch_blixem_stanza()},
     );
     # script could also be "blixem_standalone" sh wrapper (if needed)
 }
