@@ -4,7 +4,6 @@ use strict;
 use warnings;
 use Bio::Otter::Transform;
 use Bio::Otter::Lace::CloneSequence;
-# use Bio::Otter::Lace::Chromosome;
 
 our @ISA = qw(Bio::Otter::Transform);
 

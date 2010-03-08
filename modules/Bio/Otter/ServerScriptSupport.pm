@@ -13,7 +13,6 @@ use Bio::Vega::DBSQL::SimpleBindingAdaptor;
 use SangerWeb;
 
 use base ('CGI', 'Bio::Otter::MFetcher');
-#use CGI::Carp 'fatalsToBrowser';
 
 CGI->nph(1);
 
