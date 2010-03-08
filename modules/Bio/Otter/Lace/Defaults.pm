@@ -15,6 +15,9 @@ use POSIX 'uname';
 
 
 my $CLIENT_STANZA   = 'client';
+my $ZMAP_STANZA     = 'zmap';
+my $BLIXEM_STANZA   = 'blixem';
+
 my $DEFAULT_TAG     = 'default';
 my $DEBUG_CONFIG    = 0;
 #-------------------------------
@@ -281,6 +284,13 @@ sub methods_acefile {
     return option_from_array([ $CLIENT_STANZA, 'methods_acefile' ]);
 }
 
+sub fetch_zmap_stanza {
+    return __fetch_stanza($ZMAP_STANZA);
+}
+
+sub fetch_blixem_stanza {
+    return __fetch_stanza($BLIXEM_STANZA);
+}
 
 ################################################
 #
@@ -372,6 +382,16 @@ sub __internal_option_from_array {
         $found = 0;
     }
     return ($value, $found);
+}
+
+sub __fetch_stanza {
+    my ( $name ) = @_;
+    return {
+        map {
+            my $stanza= $_->{$name};
+            defined $stanza ? %{$stanza} : ( );
+        } @$CONFIG_INIFILES,
+    };
 }
 
 1;
