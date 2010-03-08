@@ -7,107 +7,28 @@
 use strict;
 use warnings;
 
-use SangerPaths qw{ core bioperl123 ensembl51 otter52 };
+use SangerPaths qw{ core bioperl123 ensembl56 otter52 };
 
 use Bio::Otter::ServerScriptSupport;
+use Bio::Vega::Utils::EnsEMBL2GFF;
 
 use CGI::Carp 'fatalsToBrowser';
 
 my $server = Bio::Otter::ServerScriptSupport->new;
 
-# insert some to_gff methods into the necessary feature classes
-
-sub Bio::EnsEMBL::FeaturePair::to_gff {
-
-	my $self = shift;
-
-	my @fps = $self->ungapped_features;
-
-	my $gap_string = '';
-
-	if ( @fps > 1 ) {
-		my @gaps =
-		  map { join( ' ', $_->hstart, $_->hend, $_->start, $_->end ) } @fps;
-		$gap_string = join( ',', @gaps );
-	}
-
-	my $gff = join( "\t",
-		$self->slice->seq_region_name,
-		$self->analysis->logic_name,
-		'similarity',
-		$self->start,
-		$self->end,
-		$self->percent_id,
-		( $self->hstrand == 1 ? '+' : ($self->hstrand == -1 ? '-' : '.' )),
-		'.',
-		'Target "Sequence:' . $self->hseqname . '"',
-		($self->hstrand == -1 ? $self->hend : $self->hstart),
-		($self->hstrand == -1 ? $self->hstart : $self->hend),
-		';',
-		'Clone "' . $self->slice->seq_region_name . '"',
-		';',
-		( $gap_string ? 'Gaps "' . $gap_string . '" ; ' : '' ),
-		'Length',
-		$self->get_HitDescription->hit_length,
-	);
-
-	return $gff;
-}
-
-sub Bio::EnsEMBL::SimpleFeature::to_gff {
-	my $self = shift;
-
-	my $gff = join( "\t",
-		$self->slice->seq_region_name, 
-		$self->analysis->logic_name,
-		'misc_feature',                
-		$self->start,
-		$self->end,                    
-		$self->score,
-		( $self->strand == 1 ? '+' : ($self->strand == -1 ? '-' : '.' )), 
-		'.',
-		($self->display_label ? 'Note "'.$self->display_label.'"' : '')
-	);
-
-	return $gff;
-}
-
 my $gff_string = '';
 
 eval {
-	
-	my $features = $server->get_requested_features;
-
-	if (@$features) {
-
-		# add the gff header
-
-		# build the date string in the correct format
-
-		my ( $sec, $min, $hr, $mday, $mon, $year ) = localtime;
-		$year += 1900;    # correct the year
-		$mon++;           # months start at 0
-		my $date = "$year-$mon-$mday";
-
-		# use the first feature's slice as the sequence-region
-
-		my $slice = $features->[0]->slice;
-
-		$gff_string =
-		    "##gff-version 2\n"
-		  . "##source-version nph-get_gff_features 1.0\n"
-		  . "##date $date\n"
-		  . "##sequence-region "
-		  . $slice->seq_region_name . " "
-		  . $slice->start . " "
-		  . $slice->end . "\n";
-		  
-		for my $feature (@$features) {
-			if ( $feature->can('to_gff') ) {
-				$gff_string .= $feature->to_gff . "\n";
-			}
-		}
-	}
+    my $analysis_list = $server->param('analysis');
+    my $features = $server->get_requested_features;
+    
+    if (@$features) {
+        my $slice = $features[0]->slice;
+        $gff_string = $slice->to_gff(
+            analyses        => $analysis_list, 
+            include_header  => 1,
+        );
+    }
 };
 
 if ($@) {
