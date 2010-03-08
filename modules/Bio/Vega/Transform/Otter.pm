@@ -23,10 +23,6 @@ use Bio::Vega::Evidence;
 # use Bio::Vega::AssemblyTag;
 use Bio::Vega::Utils::GeneTranscriptBiotypeStatus 'method2biotype_status';
 
-#use Data::Dumper;   # For debugging
-# This misses the "$VAR1 = " bit out from the Dumper() output
-#$Data::Dumper::Terse = 1;
-
 use base 'Bio::Vega::Transform';
 
 my (
