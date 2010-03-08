@@ -20,7 +20,6 @@ use Bio::EnsEMBL::DBEntry;
 use Bio::Vega::Author;
 use Bio::Vega::ContigInfo;
 use Bio::Vega::Evidence;
-# use Bio::Vega::AssemblyTag;
 use Bio::Vega::Utils::GeneTranscriptBiotypeStatus 'method2biotype_status';
 
 use base 'Bio::Vega::Transform';

@@ -12,7 +12,6 @@ use Bio::Vega::DBSQL::GeneAdaptor;
 use Bio::Vega::DBSQL::StableIdAdaptor;
 use Bio::Vega::DBSQL::ExonAdaptor;
 use Bio::Vega::DBSQL::TranscriptAdaptor;
-#use Bio::Vega::DBSQL::TranslationAdaptor;
 use Bio::Vega::DBSQL::AssemblyTagAdaptor;
 use Bio::Vega::DBSQL::ContigLockAdaptor;
 use Bio::Vega::DBSQL::MetaContainer;
