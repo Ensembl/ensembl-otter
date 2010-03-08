@@ -7,7 +7,6 @@ use strict;
 use warnings;
 
 use DBI;
-use Data::Dumper;
 
 use CGI::Carp qw(fatalsToBrowser);
 

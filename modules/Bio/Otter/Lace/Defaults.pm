@@ -9,7 +9,6 @@ use Carp;
 use Getopt::Long 'GetOptions';
 use Symbol 'gensym';
 use Config::IniFiles;
-use Data::Dumper;
 use Bio::Otter::Lace::Client;
 use POSIX 'uname';
 
