@@ -19,13 +19,16 @@ my $server = Bio::Otter::ServerScriptSupport->new;
 my $gff_string = '';
 
 eval {
-    my $analysis_list = $server->param('analysis');
+    my $analyses = $server->param('analysis');
+    my $types = $server->param('kind');
+ 
     my $features = $server->get_requested_features;
-    
+   
     if (@$features) {
-        my $slice = $features[0]->slice;
+        my $slice = $features->[0]->slice;
         $gff_string = $slice->to_gff(
-            analyses        => $analysis_list, 
+            analyses        => [split /,/, $analyses], 
+            feature_types   => [map {$_.'s'} split /,/, $types],
             include_header  => 1,
         );
     }
@@ -35,7 +38,7 @@ if ($@) {
 	$server->error_exit($@);
 }
 else {
-	$server->send_response($gff_string);
+    $server->send_response($gff_string);
 }
 
 1;
