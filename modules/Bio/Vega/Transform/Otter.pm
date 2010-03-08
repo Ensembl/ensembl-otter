@@ -174,7 +174,6 @@ sub build_SequenceFragment {
     my $strand         = $data->{'fragment_ori'};
     my $ctg_name       = $data->{'id'};
     my $cln_length     = $data->{'clone_length'};
-    my $cln_length     = $data->{'clone_length'};
 
     unless ($assembly_type && $start && $end && $frag_offset && $strand && $ctg_name && $cln_length) {
         die "XML does not contain information needed to create slice:\n"
