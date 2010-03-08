@@ -8,7 +8,6 @@ use Carp qw{ confess cluck };
 use Net::Domain qw{ hostname hostfqdn };
 
 use LWP;
-use Symbol 'gensym';
 use URI::Escape qw{ uri_escape };
 use MIME::Base64;
 use HTTP::Cookies::Netscape;
@@ -183,8 +182,7 @@ sub cleanup_log_dir {
     
     my $log_dir = $self->get_log_dir or return;
     
-    my $LOG = gensym();
-    opendir $LOG, $log_dir or confess "Can't open directory '$log_dir': $!";
+    opendir my $LOG, $log_dir or confess "Can't open directory '$log_dir': $!";
     foreach my $file (grep /^$file_root\./, readdir $LOG) {
         my $full = "$log_dir/$file"; #" comment soley for eclipses buggy parsing!
         if (-M $full > $days) {
