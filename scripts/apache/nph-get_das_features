@@ -3,8 +3,8 @@
 # Author:        lg4
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2010-03-03 15:46:05 $
-# Id:            $Id: nph-get_das_features,v 1.34 2010-03-03 15:46:05 jh13 Exp $
+# Last modified: $Date: 2010-03-08 17:15:51 $
+# Id:            $Id: nph-get_das_features,v 1.35 2010-03-08 17:15:51 jh13 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_das_features,v $
 
 use strict;
@@ -14,7 +14,6 @@ use SangerPaths qw{ core bioperl123 ensembl56 otter53 };
 
 my $http_proxy = $ENV{http_proxy};
 
-use Data::Dumper;
 use Bio::Das::Lite;
 use Bio::EnsEMBL::SimpleFeature;
 use Bio::EnsEMBL::PredictionExon;
