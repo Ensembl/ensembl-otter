@@ -6,7 +6,6 @@ package GenomeCanvas::Band::FileFeatures;
 use strict;
 use Carp;
 use GenomeCanvas::Band;
-use Symbol 'gensym';
 
 use vars '@ISA';
 @ISA = ('GenomeCanvas::Band');
@@ -56,8 +55,7 @@ sub render {
         or confess "feature_file not set";
     my $global_offset = $vc->chr_start - 1;
 
-    my $fh = gensym();
-    open $fh, $file or confess "Can't open '$file' : $!";
+    open my $fh, $file or confess "Can't open '$file' : $!";
     my @ind = $band->start_end_column_indices;
 
     my $height    = $band->height;

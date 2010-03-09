@@ -5,7 +5,6 @@ package GenomeCanvas::Band::FuzzyRegions;
 
 use strict;
 use Carp;
-use Symbol 'gensym';
 use base 'GenomeCanvas::Band';
 
 
@@ -36,8 +35,7 @@ sub render {
         or confess "regions_file not set";
     my $global_offset = $vc->chr_start - 1;
 
-    my $fh = gensym();
-    open $fh, $file or confess "Can't open '$file' : $!";
+    open my $fh, $file or confess "Can't open '$file' : $!";
 
     my $height    = $band->height;
     my $canvas    = $band->canvas;
