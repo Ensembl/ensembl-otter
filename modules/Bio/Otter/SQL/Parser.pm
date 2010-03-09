@@ -5,7 +5,6 @@ package Bio::Otter::SQL::Parser;
 
 use strict;
 use warnings;
-use Symbol 'gensym';
 use Text::ParseWords 'quotewords';
 use Bio::Otter::SQL::Comment;
 use Bio::Otter::SQL::StatementSet;
@@ -19,8 +18,7 @@ sub new {
 sub parse_file {
     my( $self, $file_name ) = @_;
     
-    my $fh = gensym();
-    open $fh, '<', $file_name or die "Can't read '$file_name' : $!";
+    open my $fh, '<', $file_name or die "Can't read '$file_name' : $!";
     my $set = parse_fh($fh);
     close $fh;
     return $set;
