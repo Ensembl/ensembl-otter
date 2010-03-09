@@ -5,7 +5,6 @@ package Bio::Otter::LogFile;
 
 use strict;
 use warnings;
-use Symbol 'gensym';
 use Carp;
 use IO::Handle;
 
@@ -32,8 +31,7 @@ sub make_log {
         return $pid; ### Could write a rotate_logfile sub if we record the pid.
     }
     elsif (defined $pid) {
-        my $log = gensym();
-        open $log, '>>', $file or confess "Can't append to logfile '$file': $!";
+        open my $log, '>>', $file or confess "Can't append to logfile '$file': $!";
         
         # Unbuffer logfile
         $log->autoflush(1);
