@@ -1128,7 +1128,7 @@ sub zMapGetMark {
 		warn "Failed to get client for 'get_mark'";
 	}
 
-    return undef;
+    return;
 }
 
 sub _zMapLoadFeatures {
@@ -1230,7 +1230,7 @@ sub zMapZoomToSubSeq {
         warn "Failed to get client for 'zoom_to'";
     }
 
-    return undef;
+    return;
 }
 
 =head1 zMapDoRequest
