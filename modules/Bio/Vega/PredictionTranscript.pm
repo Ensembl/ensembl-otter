@@ -36,3 +36,11 @@ sub truncated_3_prime {
 }
 
 1;
+
+__END__
+
+=head1 NAME - Bio::Vega::PredictionTranscript
+
+=head1 AUTHOR
+
+Graham Ritchie B<email> gr5@sanger.ac.uk
