@@ -1,0 +1,80 @@
+#!/usr/bin/env perl
+
+### dump_alignments
+
+use strict;
+use warnings;
+
+use Bio::Otter::Lace::Defaults;
+
+{
+    my( $dataset_name, $set_name, $ana_type );
+
+    my $usage = sub { exec('perldoc', $0) };
+    # This do_getopt() call is needed to parse the otter config files
+    # even if you aren't giving any arguments on the command line.
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        'dataset=s'     => \$dataset_name,
+        'set|chr=s'     => \$set_name,
+        'analysis=s'    => \$ana_type,
+        ) or $usage->();
+    $usage->() unless $dataset_name and $set_name and $ana_type;
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    
+    # SequenceSet contains a list of CloneSequence objects
+    # in the assembly.
+    my $ss = $ds->get_SequenceSet_by_name($set_name);
+    $ds->fetch_all_CloneSequences_for_SequenceSet($ss);
+    
+    foreach my $cs (@{ $ss->CloneSequence_list }) {
+        
+        # http://wwwdev.sanger.ac.uk:80/cgi-bin/otter/52/nph-get_features?
+        #     client    = otterlace
+        #     dataset   = pig
+        #     cs        = chromosome
+        #     csver     = Otter
+        #     name      = 4
+        #     type      = chr4-03
+        #     analysis  = Uniprot_SW
+        #     start     = 46226123
+        #     end       = 46296918
+        #     kind      = DnaPepAlignFeature%2CSimpleFeature
+        print $cl->otter_response_content('GET', 'get_features',
+            {
+                client      => 'dump_alignments',
+                dataset     => $ds->name,
+                cs          => 'chromosome',
+                csver       => 'Otter',
+                name        => $cs->chromosome,
+                start       => $cs->chr_start,
+                end         => $cs->chr_end,
+                type        => $set_name,
+                analysis    => $ana_type,
+                kind        => 'DnaDnaAlignFeature,SimpleFeature',
+            }
+        );
+    }
+    
+    # my $otter_dba = $ds->get_cached_DBAdaptor;
+    # my $pipe_dba = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($otter_dba);
+    
+    
+}
+
+
+
+
+__END__
+
+=head1 NAME - dump_alignments
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
