@@ -348,7 +348,8 @@ sub zMapWriteDotBlixemrc {
     my $file = $ENV{'BLIXEM_CONFIG_FILE'};
     my ($dir) = $file =~ m{(.+)/[^/]+$};
     mkpath($dir);   # Fatal if fails
-    open my $blixem_rc, "> $file" or confess "Can't write to '$file'; $!";
+    open my $blixem_rc, '>', $file
+        or confess "Can't write to '$file'; $!";
     print $blixem_rc
         $self->formatZmapDefaults(
             'blixem',
@@ -374,7 +375,7 @@ sub zMapWriteDotZmap {
 
     my $file = $self->zMapZmapDir . "/ZMap";
 
-    open my $fh, "> $file"
+    open my $fh, '>', $file
         or confess "Can't write to '$file'; $!";
     print $fh $self->zMapDotZmapContent;
     close $fh
@@ -592,7 +593,8 @@ sub zMapWriteDotGtkrc {
     my $fh;
     eval{
         # directory should be made already
-        open($fh, ">$file") or die "write_dot_zmap: error writing file '$file', $!";
+        open $fh, '>', $file
+            or die "write_dot_zmap: error writing file '$file', $!";
     };
     warn "Error in :$@" if $@;
     unless($@){
