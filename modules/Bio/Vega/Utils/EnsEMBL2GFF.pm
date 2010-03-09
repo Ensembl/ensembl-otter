@@ -511,7 +511,7 @@ use warnings;
         my $self = shift;
         my $gff  = $self->SUPER::_gff_hash;
         $gff->{attributes}->{Length} = $self->get_HitDescription->hit_length;
-        $gff->{attributes}->{Note} = $self->get_HitDescription->description;
+        $gff->{attributes}->{Note} = '"'.$self->get_HitDescription->description.'"';
         return $gff;
     }
 }
