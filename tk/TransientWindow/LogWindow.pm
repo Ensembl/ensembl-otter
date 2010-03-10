@@ -83,8 +83,8 @@ sub draw {
     return if $self->{'_drawn'};
 
     my $file      = $self->current_logfile;
-    my $tail_pipe = "tail -f -n 100 $file |";
-    my $pid       = open my $fh, $tail_pipe
+    my $tail_pipe = "tail -f -n 100 $file";
+    my $pid       = open my $fh, '-|', $tail_pipe
       or die "Can't open tail command '$tail_pipe': $!";
     $self->tail_process($pid);
     $self->logfile_handle($fh);
@@ -178,8 +178,8 @@ sub mail_contents {
     return unless $result eq 'Ok';
 
     my $mess      = $self->get_log_contents();
-    my $mail_pipe = qq{| mailx -s "$subj" $to};
-    open my $fh, $mail_pipe or die "Error opening '$mail_pipe' : $!";
+    my $mail_pipe = qq{mailx -s "$subj" $to};
+    open my $fh, '|-', $mail_pipe or die "Error opening '$mail_pipe' : $!";
     print $fh "$pre\n\n$mess";
     close $fh or warn "Error emailing with pipe '$mail_pipe' : exit($?)";
 }
