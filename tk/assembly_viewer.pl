@@ -49,7 +49,7 @@ use strict;
 use Getopt::Long;
 use Net::Netrc;
 use CanvasWindow::MainWindow;
-use Bio::EnsEMBL::DBSQL::DBAdaptor;
+use Bio::Vega::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use GeneHist::DataUtils qw(process_query);
 use strict;
@@ -97,7 +97,7 @@ if ( !$user || !$pass || !$port ) {
 	$pass = $param[1] unless $pass;
 	$port = $param[2] unless $port;
 }
-my $dba = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
+my $dba = Bio::Vega::DBSQL::DBAdaptor->new(
 											   -user   => $user,
 											   -dbname => $name,
 											   -host   => $host,
