@@ -4,7 +4,6 @@ package MenuCanvasWindow::XaceSeqChooser;
 use strict;
 use 5.006_001;  # For qr support
 use Carp qw{ cluck confess };
-use Symbol 'gensym';
 use Scalar::Util 'weaken';
 
 use Tk::Dialog;
