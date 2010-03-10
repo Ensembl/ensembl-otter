@@ -24,7 +24,8 @@ my $def_score = 0.5;
 sub order_coords_by_strand {
     my ($coord1, $coord2, $strand) = @_;
 
-    return sort { ($a <=> $b)*$strand } ($coord1, $coord2);
+    my @strands = sort { ($a <=> $b)*$strand } ($coord1, $coord2);
+    return @strands;
 }
 
 sub get_strand_from_order {
