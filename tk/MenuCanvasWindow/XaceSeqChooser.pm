@@ -360,8 +360,6 @@ sub kill_xace {
 sub get_xwindow_id_from_readlock {
     my( $self ) = @_;
 
-    local(*LOCK_DIR, *LOCK_FILE);
-
     my $pid  = $self->xace_process_id or confess "xace_process_id not set";
     my $path = $self->ace_path        or confess "ace_path not set";
 
@@ -370,9 +368,10 @@ sub get_xwindow_id_from_readlock {
     my( $lock_file );
     my $wait_seconds = 120;
     for (my $i = 0; $i < $wait_seconds; $i++, sleep 1) {
-        opendir LOCK_DIR, $lock_dir or confess "Can't opendir '$lock_dir' : $!";
-        ($lock_file) = grep /\.$pid$/, readdir LOCK_DIR;
-        closedir LOCK_DIR;
+        opendir my $lock_dir_h, $lock_dir
+            or confess "Can't opendir '$lock_dir' : $!";
+        ($lock_file) = grep /\.$pid$/, readdir $lock_dir_h;
+        closedir $lock_dir_h;
         if ($lock_file) {
             $lock_file = "$lock_dir/$lock_file";
             last;
@@ -386,15 +385,16 @@ sub get_xwindow_id_from_readlock {
     my( $xwid );
     for (my $i = 0; $i < $wait_seconds; $i++, sleep 1) {
         # Extract the WindowID from the readlock file
-        open LOCK_FILE, $lock_file or confess "Can't read '$lock_file' : $!";
-        while (<LOCK_FILE>) {
+        open my $lock_file_h, '<', $lock_file
+            or confess "Can't read '$lock_file' : $!";
+        while (<$lock_file_h>) {
             #warn "Looking at: $_";
             if (/WindowID: (\w+)/) {
                 $xwid = $1;
                 last;
             }
         }
-        close LOCK_FILE;
+        close $lock_file_h;
 
         last if $xwid;
     }
@@ -1879,11 +1879,11 @@ sub get_xace_window_id {
 
     my $mid = $self->message("Please click on the xace main window with the cross-hairs");
     $self->delete_message($mid);
-    local *XWID;
-    open XWID, "xwininfo |"
+
+    open my $xwid_h, '-|', 'xwininfo'
         or confess("Can't open pipe from xwininfo : $!");
     my( $xwid );
-    while (<XWID>) {
+    while (<$xwid_h>) {
         # xwininfo: Window id: 0x7c00026 "ACEDB 4_9c, lace bA314N13"
 
       # HACK
@@ -1905,7 +1905,7 @@ sub get_xace_window_id {
             }
         }
     }
-    if (close XWID) {
+    if (close $xwid_h) {
         return $xwid;
     } else {
         $self->message("Error running xwininfo: $?");
