@@ -253,11 +253,10 @@ sub get_zmap_window_id {
     
     my $mid = $self->message("Please click on the zMap main window with the cross-hairs");
     $self->delete_message($mid);
-    local *XWID;
-    open XWID, "xwininfo |"
+    open my $xwid_pipe, '-|', 'xwininfo'
         or confess("Can't open pipe from xwininfo : $!");
     my( $xwid );
-    while (<XWID>) {
+    while (<$xwid_pipe>) {
         # xwininfo: Window id: 0x7c00026 "ACEDB 4_9c, lace bA314N13"
 
         if (/Window id: (\w+)\s+(.+)/) {
@@ -268,7 +267,7 @@ sub get_zmap_window_id {
             $self->message("Attached to:\n$name");
         }
     }
-    if (close XWID) {
+    if (close $xwid_pipe) {
         return $xwid;
     } else {
         $self->message("Error running xwininfo: exit $?");
