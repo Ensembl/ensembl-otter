@@ -844,9 +844,9 @@ sub message_at_x_y {
     $canvas->lower($yellow_rec, $text);
     
     # Put a shadow under the yellow rectangle
-    @bbox = map {$_ += 3} @bbox;
+    my @shadow_bbox = map {$_ + 3} @bbox;
     my $grey_rec = $canvas->createRectangle(
-        @bbox,
+        @shadow_bbox,
         -outline    => undef,
         -fill       => '#666666',
         -tags       => [@tags],
