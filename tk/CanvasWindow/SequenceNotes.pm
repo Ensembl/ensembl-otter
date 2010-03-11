@@ -1087,7 +1087,7 @@ sub draw {
             my $col_tag = "col=$col";
             my ($draw_method, $data_method) = @{$methods->[$col]};
             
-	        my $opt_hash = $data_method->($cs, $i, $self, $ss) if $data_method;
+            my $opt_hash = $data_method ? $data_method->($cs, $i, $self, $ss) : {};
             $opt_hash->{'-anchor'} ||= 'nw';
 	        $opt_hash->{'-font'}   ||= $helv_def;
 	        $opt_hash->{'-width'}  ||= $max_width;
