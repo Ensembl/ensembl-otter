@@ -85,7 +85,7 @@ sub title {
 
 sub text_variable_ref {
     my ($self, $named, $default, $initialise) = @_;
-    return undef unless $named;
+    return unless $named;
     $default ||= '';
     if ($initialise) {
         $self->{'_text_variable_refs'}->{$named} = $default;
