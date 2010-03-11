@@ -229,7 +229,8 @@ sub get_all_Loci {
 
 sub list_Locus_names {
     my( $self ) = @_;
-    return sort {lc $a cmp lc $b} map $_->name, $self->get_all_Loci;
+    my @names = sort {lc $a cmp lc $b} map $_->name, $self->get_all_Loci;
+    return @names;
 }
 
 sub empty_Locus_cache {
@@ -1571,7 +1572,9 @@ sub get_all_Subseq_clusters {
         $c = [sort { ace_sort($a->name cmp $b->name) } @$c];
     }
 
-    return sort {$a->[0]->start <=> $b->[0]->start} @clust;
+    @clust = sort {$a->[0]->start <=> $b->[0]->start} @clust;
+
+    return @clust;
 }
 
 sub edit_Clone {
