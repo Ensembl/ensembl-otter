@@ -193,12 +193,11 @@ sub process_graph_data_file {
     
     my $test_graph = KaryotypeWindow::Graph->new;
     
-    local *DATA;
-    open DATA, $file or die "Can't read '$file' : $!";
+    open my $data_h, '<', $file or die "Can't read '$file' : $!";
     my $param = {};
     my $data  = {};
     my $bin_size = 0;
-    while (<DATA>) {
+    while (<$data_h>) {
         next if /^\s*$/;
         if (/^\s*#/) {
             while (/(\w+)="([^"]+)"/g){
@@ -226,7 +225,7 @@ sub process_graph_data_file {
         my $chr_data = $data->{$chr} ||= [];
         push(@$chr_data, [$start, $end, $value]);
     }
-    close DATA or die "Error reading data from '$file' : $!";
+    close $data_h or die "Error reading data from '$file' : $!";
     
     foreach my $chr ($self->get_all_Chromosomes) {
         my $graph = $chr->new_Graph;
