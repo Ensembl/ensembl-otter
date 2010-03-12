@@ -25,7 +25,7 @@ END {
 
 sub new {
     my ( $pkg, %params ) = @_;
-    
+
     my $self = $pkg->CGI::new();    # CGI part of the object needs initialization
 
     @{$self}{ keys %params } = values %params; # set the rest of the parameters
@@ -44,7 +44,7 @@ sub new {
 
 sub dataset_name { # overloads the one provided by MFetch
     my( $self ) = @_;
-    
+
     my $dataset_name;
     unless ($dataset_name = $self->{'_dataset_name'}) {
         $self->{'_dataset_name'} = $dataset_name = $self->require_argument('dataset');
@@ -70,7 +70,7 @@ sub csn {   # needed by logging mechanism
 
 sub otter_version {
     my ($self) = @_;
-    
+
     my $ver;
     unless($ver = $self->{'_otter_version'}) {
         ($ver) = $ENV{'SCRIPT_NAME'} =~ m{/otter/(\d+)/};
@@ -83,7 +83,7 @@ sub otter_version {
 
 sub server_root {
     my ($self) = @_;
-    
+
     my $root;
     unless ($root = $self->{'server_root'}) {
         $root = $ENV{'DOCUMENT_ROOT'};
@@ -97,7 +97,7 @@ sub server_root {
 
 sub data_dir {
     my ($self) = @_;
-    
+
     my $data_dir;
     unless ($data_dir = $self->{'data_dir'}) {
         $data_dir = join('/', $self->server_root, 'data', 'otter', $self->otter_version);
@@ -123,14 +123,14 @@ sub load_species_dat_file {
 
 sub allowed_datasets {
     my ($self) = @_;
-    
+
     my $user = $self->authorized_user;
     return $self->users_hash->{$user} || {};
 }
 
 sub users_hash {
     my ($self) = @_;
-    
+
     my $usr;
     unless ($usr = $self->{'_users_hash'}) {
         my $usr_file = join('/', $self->server_root, 'data', 'otter', $self->otter_version, 'users.txt');
@@ -141,7 +141,7 @@ sub users_hash {
 
 sub read_user_file {
     my ($self, $usr_file) = @_;
-    
+
     my $usr_hash = {};
     if (open my $list, '<', $usr_file) {
         while (<$list>) {
@@ -161,9 +161,9 @@ sub read_user_file {
 
 sub authenticate_user {
     my ($self) = @_;
-    
+
     my $sw = SangerWeb->new({ cgi => $self });
-    
+
     if (my $user = lc($sw->username)) {
         my $auth_flag     = 0;
         my $internal_flag = 0;
@@ -186,7 +186,7 @@ sub authenticate_user {
 
 sub authorized_user {
     my ($self) = @_;
-    
+
     my $user;
     unless ($user = $self->{'_authorized_user'}) {
         $self->authenticate_user;
@@ -198,7 +198,7 @@ sub authorized_user {
 
 sub internal_user {
     my ($self) = @_;
-    
+
     # authorized_user sets '_internal_user', and is called
     # by new(), so this hash key will be populated.
     return $self->{'_internal_user'};
@@ -216,7 +216,7 @@ sub local_user {
 
 sub show_restricted_datasets {
     my ($self) = @_;
-    
+
     if (my $client = $self->param('client')) {
         return $client =~ /otterlace/;
     } else {
@@ -255,7 +255,7 @@ sub send_response{
 
 sub wrap_response {
     my ($self, $response) = @_;
-    
+
     return qq{<?xml version="1.0" encoding="UTF-8"?>\n}
       . qq{<otter schemaVersion="$SCHEMA_VERSION" xmlVersion="$XML_VERSION">\n}
       . $response
@@ -264,7 +264,7 @@ sub wrap_response {
 
 sub unauth_exit {
     my ($self, $reason) = @_;
-    
+
     print $self->header(
         -status => 403,
         -type   => 'text/plain',
@@ -291,7 +291,7 @@ sub require_argument {
     my ($self, $argname) = @_;
 
     my $value = $self->param($argname);
-    
+
     $self->error_exit("No '$argname' argument defined")
         unless defined $value;
 
@@ -331,7 +331,7 @@ sub make_Author_obj {
     my ($self, $author_name) = @_;
 
     $author_name ||= $self->authorized_user;
-    
+
     #my $author_email = $self->require_argument('email');
 
     return Bio::Vega::Author->new(-name => $author_name, -email => $author_name);
@@ -414,15 +414,15 @@ sub Bio::EnsEMBL::Slice::get_all_DnaPepAlignFeatures {
 #################### ideally the preceding snippet should live in an Otter/Vega adaptor ############
 
 sub get_requested_features {
-	
+
 	my $self = shift;
-	
+
 	my @feature_kinds  = split(/,/, $self->require_argument('kind'));
     my $analysis_list = $self->param('analysis');
     my @analysis_names = $analysis_list ? split(/,/, $analysis_list) : ( undef );
-	
+
 	my @feature_list = ();
-	
+
 	foreach my $analysis_name (@analysis_names) {
 	    foreach my $feature_kind (@feature_kinds) {
 	        my $param_descs = $LangDesc{$feature_kind}{-call_args};
@@ -452,7 +452,7 @@ sub get_requested_features {
 	        push @feature_list, @$features;
 	    }
 	}
-	
+
 	return \@feature_list;
 }
 
