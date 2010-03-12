@@ -88,8 +88,7 @@ sub dbh {
       unless grep { /^$category$/ } @DB_CATEGORIES;
 
     if ($dbh) {
-        eval { $dbh->isa('DBI::db') };
-        die "Not a valid DB handle: " . (ref $dbh) if $@;
+        die "Not a valid DB handle: " . (ref $dbh) unless ref $dbh && $dbh->isa('DBI::db');
         $self->{_dbhs}->{$category} = $dbh;
     }
 
