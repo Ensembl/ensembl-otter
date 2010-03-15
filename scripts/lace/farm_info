@@ -114,43 +114,74 @@ if ( @lsload ) {
 #     LSF bjobs
 #--------------------
 
+
+
+my @status = `$pipebin/bjobs -l -u $buser`;
+map ($_ =~ s/^\s*//,@status);
+map (chomp $_ ,@status);
+@status = split(/-{20}/,join("",@status));
+
+# This output format depends on user bsub command and
+# works on our current setting
+#Job <3684107>, Job Name <human_finished:Est2genome_other>, User <ck1>, Project
+
+my ($db, $logic_name, $status,$queue);
+my $db_logic_name_jobs_status = {};
+
+foreach ( @status ) {
+  chomp;
+  $queue = undef;
+  if ( $_ =~ /Job Name <(.+):(\w+)>,.+/ ){
+	$db = $1;
+	$logic_name = $2;
+  }elsif($_ =~ /Job Name <script_(\w+)>,.+Queue <(\w+)>/){
+  	$db = "rulemanager";
+  	$logic_name = $1;
+  	$queue = $2;
+  }
+  if ( $_ =~ /tatus <(\w+)>,.+/ ){
+	my $status = $1;
+	$db_logic_name_jobs_status->{$db}{$logic_name}{$status}++;
+	$db_logic_name_jobs_status->{$db}{$logic_name}{$status} = $queue if $queue;
+
+  }
+}
+
+print $sep;
+set_color("magenta", "RULE_MANAGER SCRIPT - user $buser");
+print "\n";
+
+printf("%-27s%-25s%-15s%s\n", "SCRIPT", "PIPELINE", "STATUS", "QUEUE");
+
+foreach my $db ( sort keys %$db_logic_name_jobs_status ){
+  next unless $db =~ /rule/;
+  set_color("cyan", "$db\n");
+  foreach my $logicN ( keys %{$db_logic_name_jobs_status->{$db}} ){
+	printf("%-27s%-25s", "", $logicN);
+	foreach my $status ( keys %{$db_logic_name_jobs_status->{$db}{$logicN}} ){
+	  printf("%s%s%-15s%s\n","","", $status, $db_logic_name_jobs_status->{$db}{$logicN}{$status});
+	}
+  }
+}
+
 print $sep;
 set_color("magenta", "JOBS INFO - user $buser");
 print "\n";
 
 printf("%-27s%-25s%-15s%s\n", "DATABASE", "ANALYSIS", "STATUS", "JOBS");
 
-my @status = `$pipebin/bjobs -l -u $buser | /bin/egrep "(^Job|Status|tatus)"`;
-
-# This output format depends on user bsub command and
-# works on our current setting
-#Job <3684107>, Job Name <human_finished:Est2genome_other>, User <ck1>, Project
-
-my ($db, $logic_name, $status);
-my $db_logic_name_jobs_status = {};
-
-foreach ( @status ) {
-  chomp;
-  if ( $_ =~ /Job Name <(.+):(\w+)>,.+/ ){
-	$db = $1;
-	$logic_name = $2;
-  }
-  if ( $_ =~ /tatus <(\w+)>,.+/ ){
-	my $status = $1;
-	$db_logic_name_jobs_status->{$db}{$logic_name}{$status}++;
-  }
-}
-
 
 foreach my $db ( sort keys %$db_logic_name_jobs_status ){
+  next unless $db !~ /rule/;
   set_color("cyan", "$db\n");
   foreach my $logicN ( keys %{$db_logic_name_jobs_status->{$db}} ){
 	printf("%-27s%-25s\n", "", $logicN);
 	foreach my $status ( keys %{$db_logic_name_jobs_status->{$db}{$logicN}} ){
-	  printf("%-27s%-25s%-15s%d\n", "", "", $status, $db_logic_name_jobs_status->{$db}{$logicN}{$status});
+	  printf("%-27s%-25s%-15s%s\n","","", $status, $db_logic_name_jobs_status->{$db}{$logicN}{$status});
 	}
   }
 }
+
 
 sub set_color {
 
