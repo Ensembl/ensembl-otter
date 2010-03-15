@@ -141,7 +141,12 @@ sub satellite_dba {
 
     $self->log("connecting to the '$kind' using [$metakey] meta entry...");
 
-    my $adaptor_class = 'Bio::EnsEMBL::DBSQL::DBAdaptor'; # get the minimal adaptor (may be extended to Vega in future)
+    # get the minimal adaptor (may be extended to Vega in future)
+    my $is_variation = $metakey =~ /_variation$/;
+    my $adaptor_class =
+        $is_variation
+        ? 'Bio::EnsEMBL::Variation::DBSQL::DBAdaptor'
+        : 'Bio::EnsEMBL::DBSQL::DBAdaptor';
 
     my ($opt_str) = @{ $self->otter_dba()->get_MetaContainer()->list_value_by_key($metakey) };
 
@@ -186,6 +191,12 @@ sub satellite_dba {
     }
 
     $self->log("... with parameters: ".join(', ', map { "$_=".$uppercased_options{$_} } keys %uppercased_options ));
+
+    if ( ! $is_variation ) {
+        # create any variation database
+        my $vdba = $self->satellite_dba("${metakey}_variation", 1);
+        $vdba->dnadb($sdba) if $vdba;
+    }
 
     return $self->{_sdba}{$metakey} = $sdba;
 }
