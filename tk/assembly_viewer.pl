@@ -129,6 +129,8 @@ my $sth_select = $dbh->prepare($select);
 
 my $i            = 0;
 my $element_strings = [];
+my $c;
+my @colors = ('blue','DarkGreen','SkyBlue','cyan','SaddleBrown','ivory4','green1','tan1','orange1');
 
 for my $index ( 0 .. scalar(@ref_chr) - 1 ) {
 	my $R_chr           = $ref_chr[$index];
@@ -162,7 +164,7 @@ for my $index ( 0 .. scalar(@ref_chr) - 1 ) {
 	my $ref_length = $R_slice->length;
 	printf "%22s  %10d bp\n", $R_slice->name, $R_slice->length;
 	my $title =
-	  "AMap viewer: Reference $R_chr:$r_cs_version <=> Alternative "
+	  "Assembly viewer: Reference $R_chr:$r_cs_version <=> Alternative "
 	  . join( "/", @A_chrs )
 	  . ":$a_cs_version";
 
@@ -665,7 +667,7 @@ for my $index ( 0 .. scalar(@ref_chr) - 1 ) {
 	$canvas->CanvasBind(
 		'<Button-4>' => [\&zoom,$top_canvas,$left_canvas,2,Ev('x'), Ev('y'),undef,undef,\@box,\@top_box,\@left_box ]
 	);
-	# Zoom out X 1/2
+	# Zoom out X1/2
 	$canvas->Tk::bind(ref $canvas, '<Button-5>','');
 	$canvas->CanvasBind(
 		'<Button-5>' => [\&zoom,$top_canvas,$left_canvas,0.5,Ev('x'), Ev('y'),undef,undef,\@box,\@top_box,\@left_box ]
@@ -825,22 +827,26 @@ sub get_gene_objects {
 	GSI:foreach(@$found_gsids) {
 		my $gene = $ga->fetch_by_stable_id($_);
 		next GSI unless $gene;
-		my $seq_region_name = $gene->seq_region_name =~ /$R_chr/ ?
-							  	$R_chr : $gene->seq_region_name =~ /$A_chr/ ?
-							  		$A_chr : undef;
-		next GSI unless $seq_region_name;
+		my $seq_region_name = $gene->seq_region_name;
+		if($seq_region_name !~ /$R_chr|$A_chr/) {
+			print STDERR "$_ found on $seq_region_name\n";
+			next GSI;
+		}
 		next GSI if $current_gene_sid{$_};
+
+		my $gene_color = $colors[$c++];
+		$c = 0 unless $c < scalar @colors;
 		$gene_lb->insert(0, $seq_region_name.":".$_);
 		foreach my $t (@{$gene->get_all_Transcripts}) {
 			$gene_lb->insert(1, "    -".$t->stable_id);
-			&draw_transcript($t,$seq_region_name);
+			&draw_transcript($t,$seq_region_name,$gene_color);
 			$current_gene_sid{$_}->{$t->stable_id} = $t;
 		}
 	}
 }
 
 sub draw_transcript {
-	my ($transcript, $seq_region_name) = @_;
+	my ($transcript, $seq_region_name, $gene_color) = @_;
 	my ($c,$offset) = &chr2canvas($seq_region_name);
 	my $c_height = $c->cget('height');
 	my $c_width  = $c->cget('width');
@@ -875,11 +881,11 @@ sub draw_transcript {
 
 		# draw the joining line between two exons
 		if($exon_last_end){
-			$c->createLine(@$line_1,-width => 1, -fill => 'blue',-tags => ["transcript", $i,$transcript->stable_id]);
-			$c->createLine(@$line_2,-width => 1, -fill => 'blue',-tags => ["transcript", $i,$transcript->stable_id]);
+			$c->createLine(@$line_1,-width => 1, -fill => $gene_color,-tags => ["transcript", $i,$transcript->stable_id]);
+			$c->createLine(@$line_2,-width => 1, -fill => $gene_color,-tags => ["transcript", $i,$transcript->stable_id]);
 		}
 		# draw the exon
-		$c->createRectangle(@$coords,-width => 1, -fill => 'blue',-tags => ["transcript", $i,$transcript->stable_id]);
+		$c->createRectangle(@$coords,-width => 1, -fill => $gene_color,-tags => ["transcript", $i,$transcript->stable_id]);
 		$exon_last_end = $exon_end;
 	}
 	$i++;
