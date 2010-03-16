@@ -45,7 +45,7 @@ use strict;
 use warnings;
 
 use XML::Parser;
-use Bio::Otter::Version;
+use Bio::Otter::Version qw( $SCHEMA_VERSION $XML_VERSION );
 
 sub new{
     my $pkg = shift;
