@@ -10,6 +10,8 @@ use Bio::Otter::Lace::TempFile;
 use Bio::Otter::Lace::ViaText qw( %LangDesc &GenerateFeatures );
 use Bio::Vega::DBSQL::SimpleBindingAdaptor;
 
+use IO::Compress::Gzip qw(gzip);
+
 use SangerWeb;
 
 use base ('CGI', 'Bio::Otter::MFetcher');
@@ -236,18 +238,32 @@ sub log {
     return;
 }
 
-sub send_response{
-    my ($self, $response, $wrap) = @_;
+sub send_response {
 
-    print $self->header(
-        -status => 200,
-        -type   => 'text/plain',
+    my ($self, $response, $wrap, $compress) = @_;
+
+    if ($compress) {
+        print $self->header(
+            -status             => 200,
+            -type               => 'text/plain',
+            -content_encoding   => 'gzip',
         );
 
-    if ($wrap) {
-        print $self->wrap_response($response);
-    } else {
-        print $response;
+        my $gzipped;
+        gzip \$response => \$gzipped;
+        print $gzipped;
+    }
+    else {
+        print $self->header(
+            -status => 200,
+            -type   => 'text/plain',
+        );
+
+        if ($wrap) {
+            print $self->wrap_response($response);
+        } else {
+            print $response;
+        }
     }
 
     return;
