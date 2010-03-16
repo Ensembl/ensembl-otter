@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2010-02-09 17:23:17 $
-# Id:            $Id: nph-get_methods_ace,v 1.15 2010-02-09 17:23:17 jh13 Exp $
+# Last modified: $Date: 2010-03-16 11:05:47 $
+# Id:            $Id: nph-get_methods_ace,v 1.16 2010-03-16 11:05:47 jh13 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_methods_ace,v $
 
 ### nph-get_methods_ace
@@ -12,7 +12,7 @@
 use strict;
 use warnings;
 
-use SangerPaths qw{ core bioperl123 ensembl56 otter52 };
+use SangerPaths qw{ core bioperl123 ensembl56 otter53 };
 
 use Bio::Otter::ServerScriptSupport;
 
