@@ -159,15 +159,15 @@ sub Bio::EnsEMBL::Slice::get_all_ExonSupportingFeatures {
     my $logic_name = shift;
     my $dbtype     = shift;
     if(!$self->adaptor()) {
-	warning('Cannot get Transcripts without attached adaptor');
-	return [];
+        warning('Cannot get Transcripts without attached adaptor');
+        return [];
     }
 
     return
-	[ map { @{$_->get_all_supporting_features} }
-	  map { @{$_->get_all_Exons} }
-	  @{$self->get_all_Transcripts($load_exons, $logic_name, $dbtype)}
-	  ];
+        [ map { @{$_->get_all_supporting_features} }
+          map { @{$_->get_all_Exons} }
+          @{$self->get_all_Transcripts($load_exons, $logic_name, $dbtype)}
+          ];
 }
 
 sub GenerateFeatures {
@@ -232,7 +232,7 @@ sub generate_unless_hashed {
     if($parent_hash_key) {
         push @optvalues, $parent_hash_key;
     }
-	my $multi_analysis =
+        my $multi_analysis =
             defined $analysis_name
             && $analysis_name =~ /,/;
     if($feature->can('analysis') && (!$analysis_name || $multi_analysis)) {
@@ -303,12 +303,12 @@ sub ParseFeatures {
         }
 
         my $logic_name = $analysis_name;
-	my $multi_analysis =
+        my $multi_analysis =
             defined $analysis_name
             && $analysis_name =~ /,/;
         if($feature->can('analysis') && (!$analysis_name || $multi_analysis)) {
-        	$logic_name = pop @optvalues;
-    	}
+                $logic_name = pop @optvalues;
+        }
 
         if(my $ref_link = $feature_subhash->{-reference}) { # reference link is one-way (the referenced object doesn't know its referees)
             my ($referenced_feature_type, $ref_field, $ref_setter, $ref_getter ) = @$ref_link;
