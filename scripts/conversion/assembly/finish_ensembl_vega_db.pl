@@ -52,7 +52,6 @@ includes:
     - transfer selenocysteines
     - checking and setting the analysis_id and source for all genes and transcripts
     - update analysis_description for external_genes
-    - transfer the whole genome assembly information back into the Vega db
     - delete orphan entries from object_xref
 
 =head1 RELATED SCRIPTS
@@ -60,8 +59,6 @@ includes:
 The whole Ensembl-vega database production process is done by these scripts:
 
     ensembl-otter/scripts/conversion/assembly/make_ensembl_vega_db.pl
-    ensembl-otter/scripts/conversion/assembly/align_by_clone_identity.pl
-    ensembl-otter/scripts/conversion/assembly/align_nonident_regions.pl
     ensembl-otter/scripts/conversion/assembly/map_annotation.pl
     ensembl-otter/scripts/conversion/assembly/finish_ensembl_vega_db.pl
 
@@ -175,68 +172,6 @@ $sth = $dbh->{'evega'}->prepare($sql);
 $sth->execute;
 my ($max_csi) = $sth->fetchrow_array;
 my $E_csi_adjust = 10**(length($max_csi));
-
-## transfer Ensembl chromosomes and whole genome alignment into Vega
-if ($support->user_proceed("Would you like to transfer the whole genome alignment back into Vega?")) {
-  $support->log_stamped("Transfer whole genome alignment into Vega...\n");
-  # seq_region
-  $support->log("Seq regions...\n", 1);
-  $sql = qq(
-        INSERT INTO $vega_db.seq_region
-        SELECT sr.*
-        FROM seq_region sr, coord_system cs
-        WHERE sr.coord_system_id = cs.coord_system_id
-        AND cs.name = 'chromosome'
-        AND cs.version = '$ensemblassembly'
-    );
-  $c = $dbh->{'evega'}->do($sql);
-  $support->log_stamped("Done storing $c seq_region entries.\n", 1);
-  # coord_system
-  $support->log("Coordinate system...\n", 1);
-  $sql = qq(
-        INSERT INTO $vega_db.coord_system
-        SELECT cs.coord_system_id, cs.species_id, cs.name, cs.version, cs.rank+100, cs.attrib
-        FROM coord_system cs
-        WHERE cs.name = 'chromosome'
-        AND cs.version = '$ensemblassembly'
-    );
-  $c = $dbh->{'evega'}->do($sql);
-  $support->log_stamped("Done storing $c coord_system entries.\n", 1);
-  # assembly
-  $support->log("Assembly...\n", 1);
-  $sql = qq(
-        INSERT INTO $vega_db.assembly
-        SELECT a.*
-        FROM    assembly a,
-                seq_region sr1,
-                seq_region sr2,
-                coord_system cs1,
-                coord_system cs2
-        WHERE a.asm_seq_region_id = sr1.seq_region_id
-        AND a.cmp_seq_region_id = sr2.seq_region_id
-        AND sr1.coord_system_id = cs1.coord_system_id
-        AND sr2.coord_system_id = cs2.coord_system_id
-        AND cs1.name = 'chromosome'
-        AND cs2.name = 'chromosome'
-        AND cs1.version = '$vegaassembly'
-        AND cs2.version = '$ensemblassembly'
-    );
-  $c = $dbh->{'evega'}->do($sql);
-  $support->log_stamped("Done storing $c assembly entries.\n", 1);
-  # transfer assembly mapping into Vega
-  $support->log_stamped("Meta assembly.mapping...\n", 1);
-  my $mappingstring = 'chromosome:'.$support->param('assembly').'#chromosome:'.$support->param('ensemblassembly');
-  $sql = qq(
-        INSERT INTO $vega_db.meta (meta_key, meta_value)
-        ( SELECT meta_key, meta_value
-          FROM meta
-          WHERE meta_key = 'assembly.mapping'
-          AND meta_value = '$mappingstring')
-    );
-  $c = $dbh->{'evega'}->do($sql);
-  $support->log_stamped("Done storing $c meta entries.\n", 1);
-  $support->log_stamped("Done.\n");
-}
 
 # store Vega chromosome seq_regions and Ensembl-Vega assembly in temporary tables
 $support->log_stamped("Storing Vega chromosome seq_regions and Ensembl-Vega assembly in temporary tables...\n");
