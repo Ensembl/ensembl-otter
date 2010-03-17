@@ -110,7 +110,7 @@ our %LangDesc = (
         -hash_by      => 'dbID',
     },
     'VariationFeature' => {
-        -constructor => 'Bio::EnsEMBL::Variation::Feature',
+        -constructor => 'Bio::EnsEMBL::Variation::VariationFeature',
         -optnames    => [ qw(start end strand allele_string) ],
         -reference   => [ 'Variation', '', 'variation' ],
         # -call_args   => [['analysis' => undef]],
