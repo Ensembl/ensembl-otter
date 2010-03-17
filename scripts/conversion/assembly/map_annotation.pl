@@ -75,8 +75,6 @@ Look in the logs for 'Set coordinates' and check exon coordinates of any example
 The whole Ensembl-vega database production process is done by these scripts:
 
     ensembl-otter/scripts/conversion/assembly/make_ensembl_vega_db.pl
-    ensembl-otter/scripts/conversion/assembly/align_by_clone_identity.pl
-    ensembl-otter/scripts/conversion/assembly/align_nonident_regions.pl
     ensembl-otter/scripts/conversion/assembly/map_annotation.pl
     ensembl-otter/scripts/conversion/assembly/finish_ensembl_vega_db.pl
 
