@@ -257,7 +257,7 @@ sub reset_progress {
     
     for my $key (keys %{ $self->n2f }) {
         my $filter = $self->n2f->{$key};
-        $num_done++ if $filter->done and !$filter->failed;
+        $num_done++ if $filter->done && !$filter->failed;
         $num_failed++ if $filter->failed;
     }
     

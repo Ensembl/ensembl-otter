@@ -79,7 +79,7 @@ sub Bio::EnsEMBL::Gene::toXMLstring {
     my $tsct_str = '';
     foreach my $transcript (sort by_stable_id_or_name @{$gene->get_all_Transcripts}) {
         if(!$allowed_transcript_analyses_hash
-            or ($transcript->can('analysis')
+           || ($transcript->can('analysis')
                 and $allowed_transcript_analyses_hash->{$transcript->analysis()->logic_name()})
         ) {
             my $clear = ! $allowed_translation_xref_db_hash;
