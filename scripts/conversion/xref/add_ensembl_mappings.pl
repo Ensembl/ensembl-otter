@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-add_ensembl_mappings.pl - adds xrefs to ensembl transcripts
+add_ensembl_mappings.pl - adds xrefs to ensembl transcripts/genes
 
 =head1 SYNOPSIS
 
@@ -38,12 +38,16 @@ Specific options:
 This script extracts xrefs from an ensembl database that link OTT and ENST transcripts.
 For each pair of transcripts, the 'best' type is then added to Vega as an xref.
 
-Identify where a Vega transcript matches to more than one Ensembl one by:
+It also identifies links between genes and adds comparable ones to Vega
 
-   $ grep 'matches to multiple Ensembl transcripts' my_log.log
+Identify where a Vega gene matches to more than one Ensembl one (these should not happen) by:
+   $ grep 'matches to multiple Ensembl' my_log.log
 
-WARNINGS indicate where a Vega transcript used in Ensembl is no longer present in Vega,
-and also other problems such as failure to store an xref in the db for whatever reason
+Script will verbosely report on mappings between one Vega transcript and multiple Ensembl
+transcripts.
+
+WARNINGS also indicate where a Vega transcript used in Ensembl is no longer present in Vega,
+and other problems such as failure to store an xref in the db for whatever reason
 
 =head1 LICENCE
 
@@ -87,7 +91,6 @@ our $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
 $support->parse_common_options(@_);
 $support->parse_extra_options(
   'chromosomes|chr=s@',
-  'gene_stable_id|gsi=s@',
   'ensemblhost=s',
   'ensemblport=s',
   'ensembluser=s',
@@ -98,7 +101,6 @@ $support->parse_extra_options(
 $support->allowed_params(
   $support->get_common_params,
   'chromosomes',
-  'gene_stable_id',
   'ensemblhost',
   'ensemblport',
   'ensembluser',
@@ -140,7 +142,7 @@ if (!$support->param('dry_run')) {
            DELETE x
            FROM xref x, external_db ed
            WHERE x.external_db_id = ed.external_db_id
-           AND ed.db_name like \'ENST%\'
+           AND ed.db_name like \'ENS%\'
 		));
     $support->log("Done deleting $num entries.\n");
 
@@ -159,10 +161,7 @@ elsif ($support->param('prune')){
   $support->log("Not deleting any xrefs since this is a dry run.\n");
 }
 	
-my @gene_stable_ids = $support->param('gene_stable_id');
-my %gene_stable_ids = map { $_, 1 } @gene_stable_ids;
-
-#links xrefs andf the biotypes they link to
+#links xrefs and the biotypes they link to (reported just for info)
 my (%assigned_txrefs, %assigned_gxrefs) = ({},{});
 
 #retrieve mappings from disc or parse database
@@ -173,6 +172,9 @@ if (-e $xref_file) {
     $ens_ids = retrieve($xref_file);
   }
 }
+
+
+#warn Data::Dumper::Dumper($ens_ids); exit;
 
 if (! %$ens_ids) {
  CHR:
@@ -282,7 +284,7 @@ foreach my $type (qw(genes transcripts)) {
     if (scalar(@c) > 1) {
       my $ids = join ' ',@c;
       if ($type eq 'transcripts') {
-	$support->log_warning("Vega transcript $v_id matches to multiple Ensembl transcripts: $ids\n");
+	$support->log_verbose("Vega transcript $v_id matches to multiple Ensembl transcripts: $ids\n");
       }
       else {
 	$support->log_warning("Vega gene $v_id matches to multiple Ensembl genes: $ids\n");
