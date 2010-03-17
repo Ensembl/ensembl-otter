@@ -494,7 +494,7 @@ sub zMapWindowDefaults {
 
     # Turn off warning about "possible comment in qw()"
     # caused by #hex colour names
-    no warnings 'qw';
+    no warnings 'qw'; ## no critic(TestingAndDebugging::ProhibitNoWarnings)
 
     # The canvas_maxsize probably needs some thought here.
     return $self->formatZmapDefaults(
