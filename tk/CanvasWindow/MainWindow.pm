@@ -59,7 +59,7 @@ sub add_default_options {
     my ($mw) = @_;
     
     # Get warnings about "possible comments in qw"
-    no warnings "qw";
+    no warnings "qw"; ## no critic(TestingAndDebugging::ProhibitNoWarnings)
     
     # Priority level of 40 is equivalent to an
     # application specific startup file.
