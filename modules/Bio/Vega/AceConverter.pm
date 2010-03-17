@@ -552,7 +552,7 @@ sub set_exon_phases_translation_cds_start_end {
 
     my ($cds) = $ace->get_values('CDS');
 
-    if (! $cds or @$cds == 0) {
+    if (! $cds || @$cds == 0) {
         # No translation, so all exons get phase -1
         foreach my $exon (@{ $tsct->get_all_Exons }) {
             $exon->phase(-1);
@@ -607,7 +607,7 @@ sub set_exon_phases_translation_cds_start_end {
             $exon_cds_length = $exon->length;
             $exon->phase($phase);
         }
-        elsif (!$found_cds and $cds_start <= $exon_end) {
+        elsif (!$found_cds && $cds_start <= $exon_end) {
             $in_cds    = 1;
             $found_cds = 1;
             $phase     = $start_phase;

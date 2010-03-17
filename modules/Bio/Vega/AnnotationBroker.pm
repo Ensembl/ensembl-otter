@@ -284,10 +284,10 @@ sub set_exon_current_flags {
     });
     while (my ($exon_id, $exon_current, $transcript_current) = $find_exon_status->fetchrow) {
         delete $exon_db_id{$exon_id};
-        if ($transcript_current and ! $exon_current) {
+        if ($transcript_current && ! $exon_current) {
             $update_exon_current->execute(1, $exon_id);
         }
-        elsif ($exon_current and ! $transcript_current) {
+        elsif ($exon_current && ! $transcript_current) {
             $update_exon_current->execute(0, $exon_id);
         }
     }
