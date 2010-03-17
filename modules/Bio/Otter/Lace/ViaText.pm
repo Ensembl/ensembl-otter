@@ -271,7 +271,7 @@ sub ParseFeatures {
     my $resplines_ref = [ split(/\n/,$$response_ref) ];
 
     foreach my $respline (@$resplines_ref) {
-        my @optvalues  = split(/\t/, $respline);
+        my @optvalues  = split(/\t/, $respline, -1);
 
         unless (@optvalues) {
             confess "Blank line in output - due to newline on end of hit description?";
