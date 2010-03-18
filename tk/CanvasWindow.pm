@@ -262,6 +262,9 @@ sub bind_scroll_commands {
     $canvas->configure(
         -takefocus => 1,
         );
+    $canvas->Tk::bind('<Enter>', sub{
+        $canvas->Tk::focus;
+        });
     
     # Home and End keys
     $canvas->Tk::bind('<Home>', sub{
