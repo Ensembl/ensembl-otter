@@ -374,7 +374,6 @@ if ($delete_corf_genes) {
   my $options = $support->create_commandline_options({
     'allowed_params' => 1,
     'exclude' => [
-      'prune',
       'logic_name',
       'corf_delete',
       'gd_delete'
@@ -394,7 +393,6 @@ if ($delete_gd_genes) {
   my $options = $support->create_commandline_options({
     'allowed_params' => 1,
     'exclude' => [
-      'prune',
       'logic_name',
       'corf_delete',
       'gd_delete'
