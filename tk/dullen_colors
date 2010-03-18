@@ -54,10 +54,10 @@ sub render {
         my $faded = dullen($color, $f);
         push (@color_list, '#' . lc $faded->as_RGBhex);
     }
-    # for (my $f = $step; $f < 1; $f += $step) {
-    #     my $faded = lighten($color, $f);
-    #     push (@color_list, '#' . lc $faded->as_RGBhex);
-    # }
+    for (my $f = $step; $f < 1; $f += $step) {
+        my $faded = lighten($color, $f);
+        unshift (@color_list, '#' . lc $faded->as_RGBhex);
+    }
     
     my $size = 15;
     my $pad = $size / 2;

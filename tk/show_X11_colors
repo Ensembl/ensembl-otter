@@ -9,7 +9,19 @@ use Hum::Ace::Colors qw{ webhex_to_acename };
 use CanvasWindow;
 
 {
-    my $rgb_txt_file = $^O eq 'linux' ? '/etc/X11/rgb.txt' : '/usr/X11R6/lib/X11/rgb.txt';
+    my $rgb_txt_file;
+    foreach my $rgbf (qw{
+        /etc/X11/rgb.txt
+        /usr/X11R6/lib/X11/rgb.txt
+        /usr/X11/share/X11/rgb.txt
+    }) {
+        if (-e $rgbf) {
+            $rgb_txt_file = $rgbf;
+            last;
+        }
+    }
+    die "Can't find rgb.txt file\n" unless $rgb_txt_file;
+    
     my $hex_on_clip = 0;
     my $help = sub { exec('perldoc', $0) };
     GetOptions(
