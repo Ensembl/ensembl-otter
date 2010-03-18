@@ -280,14 +280,14 @@ sub loading_filter {
     my ($self, $filter) = @_;
     $self->{_current_filter} = $filter;
     $filter->load_time(time);
-    $self->label_text("Loading: ".$filter->method_tag." (".($self->{_filters_done}+1)." of ".$self->{_num_filters}.")"); 
-    $self->top->update;
+    $self->label_text("Loading: ".$filter->method_tag." (".($self->{_filters_done}+1)." of ".$self->{_num_filters}.")");
+    $self->update_tk_preserve_grab;
 }
 
 sub filter_done {
     my ($self) = @_;
     $self->{_filters_done}++;
-    $self->top->update; # to move the progress bar
+    $self->update_tk_preserve_grab; # to move the progress bar
     #if ($self->{_filters_done} == $self->{_num_filters}) {}
 }
 
@@ -335,7 +335,7 @@ sub load_filters {
     my $self = shift;
 
     my $top = $self->top;
-    $top->Busy;
+    $top->Busy(-recurse => 1);
     
     # save off the current selection as the last selection
     $self->last_selection(
@@ -412,6 +412,15 @@ sub load_filters {
     $top->Unbusy;
     $top->withdraw;
     $self->reset_progress;
+}
+
+sub update_tk_preserve_grab {
+    my ($self) = @_;
+    
+    my $top = $self->top;
+    printf STDERR "\nGrab status of top before update is: '%s'\n", $top->grabStatus;
+    $top->update;
+    printf STDERR "\nGrab status of top after update is:  '%s'\n", $top->grabStatus;
 }
 
 sub set_filters_wanted {

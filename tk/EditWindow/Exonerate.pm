@@ -114,6 +114,8 @@ sub initialise {
                     ],
                 ],
 
+                # This option is present in our patched Tk::FBox
+                # module which you can find in our Tk directory.
                 -sortcmd => sub { ace_sort(@_) },
             );
             if ($fname) {
@@ -450,12 +452,12 @@ sub launch_exonerate {
     }
 
     $self->top->Busy;
-    
+
     if ($self->{'_clear_existing'}) {
         my $ace_text .= sprintf qq{\nSequence : "%s"\n}, $self->XaceSeqChooser->Assembly->Sequence->name;
         foreach my $type (qw{ Unknown_DNA Unknown_Protein OTF_EST OTF_ncRNA OTF_mRNA OTF_Protein }) {
             $ace_text .= qq{-D Homol ${type}_homol\n};
-            
+
             # just delete all types for now (we have to do this seperately at the moment because zmap errors
             # out without deleting anything if any featureset does not currently exist in the zmap window)
             $self->XaceSeqChooser->zMapDeleteFeaturesets($type);
@@ -537,7 +539,7 @@ sub launch_exonerate {
             $ace_text .= $ace_output;
         }
     }
-    
+
     $self->XaceSeqChooser->save_ace($ace_text);
 
     if ($need_relaunch) {
@@ -681,21 +683,23 @@ sub get_query_seq {
             -type    => 'OK',
         );
     }
-    
+
     # check for unusually long query sequences
-    
+
     my @confirmed_seqs;
-    
+
     for my $seq (@seqs) {
         if ($seq->sequence_length > $MAX_QUERY_LENGTH) {
             my $response = $self->top->messageBox(
                 -title   => 'Unusually long query sequence',
                 -icon    => 'warning',
-                -message => $seq->name." is ".$seq->sequence_length." residues long.\n".
-                                "Are you sure you want to try to align it?",
-                -type    => 'YesNo',
+                -message => $seq->name . " is "
+                  . $seq->sequence_length
+                  . " residues long.\n"
+                  . "Are you sure you want to try to align it?",
+                -type => 'YesNo',
             );
-            
+
             if ($response eq 'Yes') {
                 push @confirmed_seqs, $seq;
             }
@@ -704,7 +708,7 @@ sub get_query_seq {
             push @confirmed_seqs, $seq;
         }
     }
-    
+
     @seqs = @confirmed_seqs;
 
     # lower case query polyA/T tails to avoid spurious exons
