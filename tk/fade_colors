@@ -49,14 +49,14 @@ sub render {
     my $color = Graphics::ColorObject->new_RGB($rgb);
     # my @color_list = ('#' . $color->as_RGBhex);
     my @color_list = ($original);
-    my $step = 1 / 20;
-    for (my $f = 1 - $step; $f > 0; $f -= $step) {
-        my $faded = dullen($color, $f);
-        push (@color_list, '#' . lc $faded->as_RGBhex);
-    }
+    my $step = 1 / 8;
     for (my $f = $step; $f < 1; $f += $step) {
         my $faded = lighten($color, $f);
         unshift (@color_list, '#' . lc $faded->as_RGBhex);
+    }
+    for (my $f = 1 - $step; $f > 0; $f -= $step) {
+        my $faded = dullen($color, $f);
+        push (@color_list, '#' . lc $faded->as_RGBhex);
     }
     
     my $size = 15;
@@ -130,7 +130,7 @@ sub lighten {
 
 __END__
 
-=head1 NAME - dullen_colors
+=head1 NAME - fade_colors
 
 =head1 AUTHOR
 
