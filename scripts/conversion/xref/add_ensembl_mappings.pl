@@ -30,7 +30,7 @@ Specific options:
     --ensemblport=PORT                  use Ensembl database port PORT
     --ensembluser=USER                  use Ensembl database username USER
     --ensemblpass=PASS                  use Ensembl database password PASS
-    --prune                             reset to the state before running this
+    --prune=0|1                         reset to the state before running this
                                         script
 
 =head1 DESCRIPTION
@@ -96,7 +96,7 @@ $support->parse_extra_options(
   'ensembluser=s',
   'ensemblpass=s',
   'ensembldbname=s',
-  'prune',
+  'prune=s',
 );
 $support->allowed_params(
   $support->get_common_params,
