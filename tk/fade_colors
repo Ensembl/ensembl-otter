@@ -10,7 +10,7 @@ use Graphics::ColorObject;
 
 {
     my $mw = CanvasWindow::MainWindow->new;
-    $mw->title('dull colors');
+    $mw->title('fade a color');
     my $cw = CanvasWindow->new($mw);
     # $cw->canvas->SelectionHandle(
     #     -selection  => 'PRIMARY',
@@ -49,7 +49,7 @@ sub render {
     my $color = Graphics::ColorObject->new_RGB($rgb);
     # my @color_list = ('#' . $color->as_RGBhex);
     my @color_list = ($original);
-    my $step = 1 / 8;
+    my $step = 1 / 7;
     for (my $f = $step; $f < 1; $f += $step) {
         my $faded = lighten($color, $f);
         unshift (@color_list, '#' . lc $faded->as_RGBhex);
@@ -112,7 +112,7 @@ sub dullen {
     my $lch = $color->as_HSL;
     $lch->[1] *= $factor;
     $lch->[2] *= $factor;
-    print STDERR "$factor HSL = [@$lch]\n";
+    # print STDERR "$factor HSL = [@$lch]\n";
     return Graphics::ColorObject->new_HSL($lch);
 }
 
@@ -121,10 +121,10 @@ sub lighten {
     
     my $lch = $color->as_HSL;
     # $lch->[0] = $lch->[0] + ($factor * (100 - $lch->[0]));
-    print STDERR "[@$lch]\n";
+    # print STDERR "[@$lch]\n";
     $lch->[1] = $lch->[1] + ($factor * (1 - $lch->[1]));
     $lch->[2] = $lch->[2] + ($factor * (1 - $lch->[2]));
-    print STDERR "$factor HSL = [@$lch]\n";
+    # print STDERR "$factor HSL = [@$lch]\n";
     return Graphics::ColorObject->new_HSL($lch);
 }
 
