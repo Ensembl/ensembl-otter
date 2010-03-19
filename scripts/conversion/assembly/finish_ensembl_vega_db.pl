@@ -433,15 +433,6 @@ $sql = qq(
 $c = $dbh->{'evega'}->do($sql);
 $support->log_stamped("Transferred $c translation_attrib entries.\n\n");
 
-# delete ccds transcript_attribs
-$sql = qq(DELETE ta
-            FROM attrib_type at, transcript_attrib ta
-           WHERE at.attrib_type_id = ta.attrib_type_id
-             AND at.code = 'ccds'
-);
-$c = $dbh->{'evega'}->do($sql);
-$support->log_stamped("Deleted $c ccds transcript_attrib entries.\n\n");
-
 #delete orphan analysis_description table entries
 $sql = qq(DELETE ad
             FROM analysis_description ad left join analysis a on ad.analysis_id = a.analysis_id
