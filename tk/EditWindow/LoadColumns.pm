@@ -76,7 +76,7 @@ sub initialize {
     my $filter_count = scalar keys %{$self->n2f};
     my $max_rows = 28;
     my $height = $filter_count > $max_rows ? $max_rows : $filter_count;
-	my $hlist = $top->Scrolled("HListplus",
+	my $hlist = $top->Scrolled("HListplusplus",
 		-header => 1,
 		-columns => 3,
 		-scrollbars => 'ose',
