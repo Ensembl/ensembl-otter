@@ -138,13 +138,13 @@ sub transcript_attribs {
   my $self = shift;
   my $attribs;
   if ( ($attribs) = @_) {
-	  my $new_attribs;
-	  foreach my $attrib (@{$attribs}) {
-		  #don't transfer ccds attribs
-		  next if ($attrib->code eq 'ccds');
-		  push @{$new_attribs},$attrib;
-	  }
-	  $self->{'transcript_attribs'} = $new_attribs;
+    my $new_attribs;
+    foreach my $attrib (@{$attribs}) {
+      #don't transfer ccds attribs since e! don't want them
+      next if ($attrib->code eq 'ccds');
+      push @{$new_attribs},$attrib;
+    }
+    $self->{'transcript_attribs'} = $new_attribs;
   }
   return $self->{'transcript_attribs'};
 }
