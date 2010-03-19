@@ -7,7 +7,7 @@ use strict;
 use Carp;
 use Scalar::Util 'weaken';
 
-use Tk::HListplus;
+use Tk::HListplusplus;
 use Tk::Checkbutton;
 use Tk::LabFrame;
 use Tk::Balloon;
