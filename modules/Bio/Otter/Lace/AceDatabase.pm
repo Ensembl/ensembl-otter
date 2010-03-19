@@ -603,9 +603,11 @@ sub get_filter_loaded_states_from_acedb {
     my $ace_text = $ace_handle->AceText_from_tag('Filter');
     foreach ($ace_text->get_values('Filter')) {
         my $name = $_->[0];
-        my $filt = $n2f->{$name}
-            or confess "No filter '$name'";
-        $filt->done(1);
+        if (my $filt = $n2f->{$name}) {
+            $filt->done(1);
+        } else {
+            warn "No filter '$name'";
+        }
     }
 }
 

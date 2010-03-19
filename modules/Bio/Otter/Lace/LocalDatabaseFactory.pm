@@ -108,7 +108,7 @@ sub get_title {
 
 sub recover_session {
     my ($self, $dir) = @_;
-
+    
     $self->kill_old_sgifaceserver($dir);
 
     my $write_flag = $dir =~ /\.ro/ ? 0 : 1;
