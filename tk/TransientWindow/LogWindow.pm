@@ -2,6 +2,8 @@
 package TransientWindow::LogWindow;
 
 use strict;
+
+use IO::Handle;
 use TransientWindow;
 use Bio::Otter::LogFile;
 
@@ -93,9 +95,7 @@ sub draw {
     $txt->bind('<Destroy>', sub { $self = undef });
 
     # Unbuffer filehandle
-    my $old_fh = select($fh);
-    $| = 1;
-    select($old_fh);
+    $fh->autoflush(1);
 
     #my $string = $self->get_log_contents();
     #$ROText->delete('1.0', 'end');
