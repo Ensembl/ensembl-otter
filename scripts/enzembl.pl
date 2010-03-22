@@ -620,10 +620,10 @@ my $tsct_sources = join (';',
 my $zmap_cfg = new Config::IniFiles( -file => $zmap_config_file );
 
 $zmap_cfg->newval('ZMap', 'default-sequence', $sequence_name);
-$zmap_cfg->newval('source', 'url','file://'.$gff_filename);
+$zmap_cfg->newval('ZMap', 'stylesfile', $styles_file);
+$zmap_cfg->newval('source', 'url','file:///'.$gff_filename);
 $zmap_cfg->newval('source', 'featuresets', $sources_list);
 $zmap_cfg->newval('source', 'styles', $styles_list);
-$zmap_cfg->newval('source', 'stylesfile', $styles_file);
 $zmap_cfg->newval('blixem', 'dna-featuresets', $dna_sources);
 $zmap_cfg->newval('blixem', 'protein-featuresets', $protein_sources);
 $zmap_cfg->newval('blixem', 'transcript-featuresets', $tsct_sources);
