@@ -200,11 +200,7 @@ if (-e $cfg_file) {
 			$regions{$id} = $cs;
 		}
 		
-#		unless (defined $start && defined $end) {
-#			($start, $end) = split /-/, $cfg->val('enzembl','coords') if $cfg->val('enzembl','coords');
-#		}
-		
-		# look up settings for the feature types seperately so that the user can supply types 
+		# look up settings for the feature types separately so that the user can supply types 
 		# on the command line but leave settings in the config file
         for my $type (keys %feature_type_settings, @feature_types) {
             if ($cfg->SectionExists($type)) {
@@ -623,7 +619,6 @@ $zmap_cfg->newval('ZMap', 'default-sequence', $sequence_name);
 $zmap_cfg->newval('ZMap', 'stylesfile', $styles_file);
 $zmap_cfg->newval('source', 'url','file:///'.$gff_filename);
 $zmap_cfg->newval('source', 'featuresets', $sources_list);
-$zmap_cfg->newval('source', 'styles', $styles_list);
 $zmap_cfg->newval('blixem', 'dna-featuresets', $dna_sources);
 $zmap_cfg->newval('blixem', 'protein-featuresets', $protein_sources);
 $zmap_cfg->newval('blixem', 'transcript-featuresets', $tsct_sources);
@@ -718,8 +713,8 @@ on the command line to see a working example file.
 
  stanza		parameters set by this script
  ------------------------------------------------------------------------
- [ZMap]		default-sequence
- [source]	url, featuresets, styles, stylesfile
+ [ZMap]		default-sequence, stylesfile
+ [source]	url, featuresets
  [blixem]	dna-featuresets, protein-featuresets, transcript-featuresets
 
 =item B<-db | -dbs dbname1,dbname2,...>
