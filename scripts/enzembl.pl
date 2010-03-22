@@ -432,7 +432,7 @@ for my $db (keys %dbs) {
     my $t_slice;
     my $c_slice;
     
-    if ($db eq $mapper_db) {
+    if ($mapper_db && $db eq $mapper_db) {
         $slice = $slice_adaptor->fetch_by_region(
             $requested_region->{cs}->name, 
             $requested_region->{name},
