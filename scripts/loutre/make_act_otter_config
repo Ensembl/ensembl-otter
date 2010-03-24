@@ -69,26 +69,27 @@ foreach my $db (@db_names) {
     my $filt_name = "act10_$annot";
     my $key       = "act10_${annot}_db";
     
-    system(
-        "../lace/save_satellite_db",
-        -dataset    => 'human',
-        -key        => $key,
-        -sathost    => 'otterlive',
-        -satport    => 3301,
-        -satuser    => 'ottro',
-        -satdbname  => $db,
-        ) == 0 or die "Error saving metakey for $db";
+    # system(
+    #     "../lace/save_satellite_db",
+    #     -dataset    => 'human',
+    #     -key        => $key,
+    #     -sathost    => 'otterlive',
+    #     -satport    => 3301,
+    #     -satuser    => 'ottro',
+    #     -satdbname  => $db,
+    #     ) == 0 or die "Error saving metakey for $db";
     
     $filter_switch .= qq{$filt_name=0\n};
 
     $filter_def .= qq{
-[filter.human.$filt_name]
+[human.filter.$filt_name]
 module=Bio::EnsEMBL::Ace::Otter_Filter::Gene
 metakey=act10_${annot}_db
 nameprefix=${annot}:
 gene_type_prefix=$prefix
 analysis_name=otter
-csver_remote=GRCh37
+csver_remote=Otter
+description=ACT $annot
 };
 
 }

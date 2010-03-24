@@ -45,7 +45,10 @@ use Bio::Otter::Lace::Defaults;
         #     start     = 46226123
         #     end       = 46296918
         #     kind      = DnaPepAlignFeature%2CSimpleFeature
-        print $cl->otter_response_content('GET', 'get_features',
+        
+        my $offset = $cs->chr_start - 1;
+        
+        my $data = $cl->otter_response_content('GET', 'get_features',
             {
                 client      => 'dump_alignments',
                 dataset     => $ds->name,
@@ -59,6 +62,11 @@ use Bio::Otter::Lace::Defaults;
                 kind        => 'DnaDnaAlignFeature,SimpleFeature',
             }
         );
+        
+        # Fix coordinates so that they are absolute, not relative.
+        $data =~ s{Feature\t(\d+)\t(\d+)}{ join("\t", 'Feature', $offset + $1, $offset + $2 ) }eg;
+
+        print $data;
     }
     
     # my $otter_dba = $ds->get_cached_DBAdaptor;
