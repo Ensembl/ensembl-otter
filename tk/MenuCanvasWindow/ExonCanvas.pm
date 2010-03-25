@@ -575,7 +575,7 @@ sub sort_all_coordinates {
 sub sort_position_pairs {
     my( $self ) = @_;
 
-    my %was_selected = map {$_, 1} $self->get_all_selected_text;
+    my %was_selected = map { $_ => 1 } $self->get_all_selected_text;
     $self->deselect_all;
 
     my $empty  = $self->empty_string;
@@ -2219,7 +2219,7 @@ sub shift_left_button_handler {
     $canvas->focus("");
 
     my ($obj) = $canvas->find('withtag', 'current')  or return;
-    my %tags  = map {$_, 1} $canvas->gettags($obj);
+    my %tags  = map { $_ => 1 } $canvas->gettags($obj);
 
     if ($self->is_selected($obj)) {
         $self->remove_selected($obj);
@@ -2247,7 +2247,7 @@ sub control_left_button_handler {
 
     my $canvas = $self->canvas;
     my ($obj) = $canvas->find('withtag', 'current') or return;
-    my %tags = map {$_, 1} $canvas->gettags($obj);
+    my %tags = map { $_ => 1 } $canvas->gettags($obj);
     if ($tags{'plus_strand'}) {
         $self->set_tk_strand(-1);
     }

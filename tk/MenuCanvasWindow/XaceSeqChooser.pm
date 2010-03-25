@@ -1933,7 +1933,7 @@ sub subseq_names_to_canvas_obj {
     my ($self, @names) = @_;
 
     my $canvas = $self->canvas;
-    my %select_name = map {$_, 1} @names;
+    my %select_name = map { $_ => 1 } @names;
 
     my( @to_select );
     foreach my $obj ($canvas->find('withtag', 'subseq')) {

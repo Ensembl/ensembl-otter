@@ -1160,7 +1160,7 @@ sub extend_selection {
     
     my( @new_select, %is_selected );
     if (@sel_rows) {
-        %is_selected = map {$_, 1} @sel_rows;
+        %is_selected = map { $_ => 1 } @sel_rows;
 
         # Find the row closest to the current row
         my( $closest, $distance );

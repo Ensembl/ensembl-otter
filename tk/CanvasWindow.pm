@@ -936,7 +936,7 @@ sub next_message_id {
         my $canvas = $self->canvas;
 
         my %in_region =
-          map { $_, 1 }
+          map { $_ => 1 }
           $canvas->find('overlapping',
             $canvas->bbox('current', $self->list_selected));
 
