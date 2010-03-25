@@ -231,7 +231,7 @@ sub add_evidence_type_name_hash {
         my $list = $evi->{$type} ||= [];
 
         # Hmm, perhaps evidence hash should be two level hash?
-        my %uniq = map {$_, 1} (@$list, @$clip_list);
+        my %uniq = map { $_ => 1 } (@$list, @$clip_list);
         @$list = sort {ace_sort($a, $b)} keys %uniq;
     }
     $self->draw_evidence;
