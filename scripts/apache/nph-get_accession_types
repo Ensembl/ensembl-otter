@@ -4,8 +4,8 @@
 # Author:        gr5
 # Group:         anacode
 # Maintainer:    gr5
-# Last modified: $Date: 2010-03-26 11:10:19 $
-# Id:            $Id: nph-get_accession_types,v 1.27 2010-03-26 11:10:19 gr5 Exp $
+# Last modified: $Date: 2010-03-26 11:27:54 $
+# Id:            $Id: nph-get_accession_types,v 1.28 2010-03-26 11:27:54 gr5 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_accession_types,v $
 
 use strict;
@@ -47,34 +47,32 @@ if ($@) {
                 Proto       => 'tcp',
                 Type        => SOCK_STREAM,
                 Timeout     => 10,
-                );
+            );
         }
         
         die "Connect to pfetch server failed" unless $socket;
     };
     
-    for my $acc (@acc_list) {
-        # de-taint
-        $acc =~ s/\s+/ /g;
-        $acc =~ s/[^\w\-\.\: ]//g;
+    # detaint and join the accession into one string
+
+    my $acc_string = join / /, map {$_ =~  s/\s+/ /g; $_ =~ s/[^\w\-\.\: ]//g;} @acc_list;
     
-        die "Empty request\n" unless $acc =~ /\S/;
-        
-        print $socket "-F $acc\n";
-        
-        while (<$socket>) {
-            if (/^ID/) {
-                if (/EST/) {
-                    $types->{$acc} = ['EST', $acc];
-                }
-                elsif (/mRNA/) {
-                    $types->{$acc} = ['mRNA', $acc];
-                }
-                elsif (/\d+\s+AA/) {
-                    $types->{$acc} = ['Protein', $acc];
-                }
-              
-                last;
+    print $socket "-F $acc_string\n";
+    
+    my $idx = 0;
+    
+    while (<$socket>) {
+        if (/^ID/) {
+            my $acc = $acc_list[$idx++];
+            
+            if (/EST/) {
+                $types->{$acc} = ['EST', $acc];
+            }
+            elsif (/mRNA/) {
+                $types->{$acc} = ['mRNA', $acc];
+            }
+            elsif (/\d+\s+AA/) {
+                $types->{$acc} = ['Protein', $acc];
             }
         }
     }
