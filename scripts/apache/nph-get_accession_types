@@ -4,8 +4,8 @@
 # Author:        gr5
 # Group:         anacode
 # Maintainer:    gr5
-# Last modified: $Date: 2010-03-26 11:44:29 $
-# Id:            $Id: nph-get_accession_types,v 1.33 2010-03-26 11:44:29 gr5 Exp $
+# Last modified: $Date: 2010-03-26 14:55:33 $
+# Id:            $Id: nph-get_accession_types,v 1.34 2010-03-26 14:55:33 gr5 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_accession_types,v $
 
 use strict;
@@ -59,6 +59,7 @@ if ($@) {
         $acc =~ s/\s+/ /g;
         $acc =~ s/[^\w\-\.\: ]//g;
         $acc_string .= "$acc ";
+        $types->{$acc} = [];
     }
     
     # chuck it down the pipe
@@ -93,6 +94,8 @@ if ($@) {
             $idx++;
         }
     }
+    
+    close $socket;
 }
 
 my $response = '';
