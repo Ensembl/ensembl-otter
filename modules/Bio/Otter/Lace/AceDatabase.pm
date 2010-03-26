@@ -578,13 +578,11 @@ sub topup_pipeline_data_into_ace_server {
         # closure will probably work better:
     my $ace_server = $self->ace_server();
 
-    $factory->ace_string_callback( sub{ $ace_server->save_ace(@_); } );
-    
-    $factory->progress_monitor($progress_monitor);
-    
-    my $filters_fetched_data = $factory->topup_pipeline();
-    $factory->ace_string_callback( undef );
-    $factory->progress_monitor( undef );
+    my $filters_fetched_data = $factory->topup_pipeline
+        (
+         progress_monitor => $progress_monitor,
+         callback => sub { $ace_server->save_ace(@_); },
+        );
 
     return $filters_fetched_data;
 }
