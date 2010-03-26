@@ -4,8 +4,8 @@
 # Author:        gr5
 # Group:         anacode
 # Maintainer:    gr5
-# Last modified: $Date: 2010-03-26 11:06:33 $
-# Id:            $Id: nph-get_accession_types,v 1.24 2010-03-26 11:06:33 gr5 Exp $
+# Last modified: $Date: 2010-03-26 11:08:52 $
+# Id:            $Id: nph-get_accession_types,v 1.25 2010-03-26 11:08:52 gr5 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_accession_types,v $
 
 use strict;
@@ -30,6 +30,7 @@ eval {
     $types = $mm->get_accession_types(\@acc_list);
 };
 if ($@) {
+    
     # mole and mushroom probably failed, so let's try to parse the pfetch header
     
     # XXX: nicked from nph-pfetch
@@ -57,7 +58,7 @@ if ($@) {
     
         die "Empty request\n" unless $acc =~ /\S/;
         
-        print $socket '-F '.$req, "\n";
+        print $socket "-F $acc\n";
         
         while (<$socket>) {
             if (/^ID/) {
