@@ -4,8 +4,8 @@
 # Author:        gr5
 # Group:         anacode
 # Maintainer:    gr5
-# Last modified: $Date: 2010-03-26 11:08:52 $
-# Id:            $Id: nph-get_accession_types,v 1.25 2010-03-26 11:08:52 gr5 Exp $
+# Last modified: $Date: 2010-03-26 11:09:35 $
+# Id:            $Id: nph-get_accession_types,v 1.26 2010-03-26 11:09:35 gr5 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_accession_types,v $
 
 use strict;
@@ -63,13 +63,13 @@ if ($@) {
         while (<$socket>) {
             if (/^ID/) {
                 if (/EST/) {
-                    $types{$acc} = ['EST', $acc];
+                    $types->{$acc} = ['EST', $acc];
                 }
                 elsif (/mRNA/) {
-                    $types{$acc} = ['mRNA', $acc];
+                    $types->{$acc} = ['mRNA', $acc];
                 }
                 elsif (/\d+\s+AA/) {
-                    $types{$acc} = ['Protein', $acc];
+                    $types->{$acc} = ['Protein', $acc];
                 }
               
                 last;
