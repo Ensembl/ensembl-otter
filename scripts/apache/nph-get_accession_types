@@ -4,8 +4,8 @@
 # Author:        gr5
 # Group:         anacode
 # Maintainer:    gr5
-# Last modified: $Date: 2010-03-26 11:30:29 $
-# Id:            $Id: nph-get_accession_types,v 1.31 2010-03-26 11:30:29 gr5 Exp $
+# Last modified: $Date: 2010-03-26 11:38:45 $
+# Id:            $Id: nph-get_accession_types,v 1.32 2010-03-26 11:38:45 gr5 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_accession_types,v $
 
 use strict;
@@ -35,33 +35,37 @@ if ($@) {
     
     # mole and mushroom probably failed, so let's try to parse the pfetch header
     
-    # XXX: nicked from nph-pfetch
+    # XXX: much of this code nicked from nph-pfetch but rejigged here
     
     my $socket;
 
-    eval {
-        foreach my $ip_addr (qw{ 172.17.62.2 172.17.62.3 }){
-            last if $socket = IO::Socket::INET->new(
-                PeerAddr    => $ip_addr,
-                PeerPort    => 22400,
-                Proto       => 'tcp',
-                Type        => SOCK_STREAM,
-                Timeout     => 10,
-            );
-        }
-        
-        die "Connect to pfetch server failed" unless $socket;
-    };
+    foreach my $ip_addr (qw{ 172.17.62.2 172.17.62.3 }){
+        last if $socket = IO::Socket::INET->new(
+            PeerAddr    => $ip_addr,
+            PeerPort    => 22400,
+            Proto       => 'tcp',
+            Type        => SOCK_STREAM,
+            Timeout     => 10,
+        );
+    }
     
-    # detaint and join the accession into one string
+    die "Connect to pfetch server failed" unless $socket;
+    
+    # detaint and join the accessions into one string
 
-    my $acc_string = join / /, map {s/\s+/ /g; s/[^\w\-\.\: ]//g} @acc_list;
+    my $acc_string;
+
+    for my $acc (@acc_list) {
+        $acc =~ s/\s+/ /g;
+        $acc =~ s/[^\w\-\.\: ]//g;
+        $acc_string .= "$acc ";
+    }
     
-    $server->send_response($acc_string);
-    
-    exit;
+    # chuck it down the pipe
     
     print $socket "-F $acc_string\n";
+    
+    # NB: I assume here that the results come back in the order requested
     
     my $idx = 0;
     
@@ -75,6 +79,9 @@ if ($@) {
             elsif (/mRNA/) {
                 $types->{$acc} = ['mRNA', $acc];
             }
+            elsif (/other RNA/) {
+                $types->{$acc} = ['ncRNA', $acc];
+            }
             elsif (/\d+\s+AA/) {
                 $types->{$acc} = ['Protein', $acc];
             }
@@ -85,7 +92,7 @@ if ($@) {
 my $response = '';
 
 for my $key (keys %$types) {
-	$response .= $key."\t".$types->{$key}->[0]."\t".$types->{$key}->[1]."\n";
+    $response .= $key."\t".$types->{$key}->[0]."\t".$types->{$key}->[1]."\n";
 }
 
 $server->send_response($response);
