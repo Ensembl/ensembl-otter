@@ -4,8 +4,8 @@
 # Author:        gr5
 # Group:         anacode
 # Maintainer:    gr5
-# Last modified: $Date: 2010-03-26 11:29:37 $
-# Id:            $Id: nph-get_accession_types,v 1.30 2010-03-26 11:29:37 gr5 Exp $
+# Last modified: $Date: 2010-03-26 11:30:29 $
+# Id:            $Id: nph-get_accession_types,v 1.31 2010-03-26 11:30:29 gr5 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_accession_types,v $
 
 use strict;
@@ -55,7 +55,7 @@ if ($@) {
     
     # detaint and join the accession into one string
 
-    my $acc_string = join / /, map {$_ =~  s/\s+/ /g; $_ =~ s/[^\w\-\.\: ]//g} @acc_list;
+    my $acc_string = join / /, map {s/\s+/ /g; s/[^\w\-\.\: ]//g} @acc_list;
     
     $server->send_response($acc_string);
     
