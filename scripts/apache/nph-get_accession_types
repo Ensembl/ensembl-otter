@@ -4,8 +4,8 @@
 # Author:        gr5
 # Group:         anacode
 # Maintainer:    gr5
-# Last modified: $Date: 2010-03-26 11:38:45 $
-# Id:            $Id: nph-get_accession_types,v 1.32 2010-03-26 11:38:45 gr5 Exp $
+# Last modified: $Date: 2010-03-26 11:44:29 $
+# Id:            $Id: nph-get_accession_types,v 1.33 2010-03-26 11:44:29 gr5 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_accession_types,v $
 
 use strict;
@@ -71,7 +71,7 @@ if ($@) {
     
     while (<$socket>) {
         if (/^ID/) {
-            my $acc = $acc_list[$idx++];
+            my $acc = $acc_list[$idx];
             
             if (/EST/) {
                 $types->{$acc} = ['EST', $acc];
@@ -85,6 +85,12 @@ if ($@) {
             elsif (/\d+\s+AA/) {
                 $types->{$acc} = ['Protein', $acc];
             }
+        }
+        
+        # it seems pfetch marks the next file with the line '//'
+        
+        if (/^\/\/$/) {
+            $idx++;
         }
     }
 }
