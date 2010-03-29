@@ -48,7 +48,6 @@ Mustapha Larbaoui B<email> ml6@sanger.ac.uk
 use strict;
 use Getopt::Long;
 use Net::Netrc;
-use CanvasWindow::MainWindow;
 use Bio::Vega::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use GeneHist::DataUtils qw(process_query);
@@ -156,7 +155,7 @@ for my $index ( 0 .. scalar(@ref_chr) - 1 ) {
 	my $total_alt_length = 0;
 	foreach my $A_chr (@A_chrs) {
 		my $A_slice =
-		  $slice_adaptor->fetch_by_region( $a_cs_name, $A_chr, undef, undef,
+		  $slice_adaptor->fetch_by_region( $a_cs_name, $A_chr, undef,undef,
 										   undef, $a_cs_version );
 		$total_alt_length += $A_slice->length;
 		throw("Alternative slice $A_chr:$a_cs_name:$a_cs_version cannot be found!") unless $A_slice;
@@ -164,7 +163,7 @@ for my $index ( 0 .. scalar(@ref_chr) - 1 ) {
 	my $ref_length = $R_slice->length;
 	printf "%22s  %10d bp\n", $R_slice->name, $R_slice->length;
 	my $title =
-	  "Assembly viewer: Reference $R_chr:$r_cs_version <=> Alternative "
+	  "Assembly Viewer: Reference $R_chr:$r_cs_version <=> Alternative "
 	  . join( "/", @A_chrs )
 	  . ":$a_cs_version";
 
@@ -301,7 +300,7 @@ for my $index ( 0 .. scalar(@ref_chr) - 1 ) {
 	foreach my $A_chr (@A_chrs) {
 		&chr2canvas($A_chr,$left_canvas,$chr_offset);
 		my $A_slice =
-		  $slice_adaptor->fetch_by_region( $a_cs_name, $A_chr, undef, undef,
+		  $slice_adaptor->fetch_by_region( $a_cs_name, $A_chr, undef,undef,
 										   undef, $a_cs_version );
 		my $alt_length = $A_slice->length;
 		my ( $x1, $y1 ) = ( 0, $chr_offset / $sequence_scale );
@@ -371,10 +370,10 @@ for my $index ( 0 .. scalar(@ref_chr) - 1 ) {
 
 		foreach my $r ( @{ $assembly->{$A_chr} } ) {
 			my $ori = $r->{'ori'};
-			my $X_1 = $r->{'asm_start'};
-			my $X_2 = $r->{'asm_end'};
-			my $Y_1 = $r->{'cmp_start'};
-			my $Y_2 = $r->{'cmp_end'};
+			my $X_1 = $r->{'asm_start'} ;
+			my $X_2 = $r->{'asm_end'} ;
+			my $Y_1 = $r->{'cmp_start'} ;
+			my $Y_2 = $r->{'cmp_end'} ;
 
 			push @{$hash_coords_equiv->{$R_chr}->{$A_chr}},"$X_1,$X_2=>$Y_1,$Y_2";
 			push @{$hash_coords_equiv->{$A_chr}->{$R_chr}},"$Y_1,$Y_2=>$X_1,$X_2";
@@ -526,10 +525,10 @@ for my $index ( 0 .. scalar(@ref_chr) - 1 ) {
 											  $ori == 1 ? ($X_2,$Y_2 + $chr_offset) :
 											  			  ($X_2,$Y_1 + $chr_offset, $X_1,$Y_2 + $chr_offset),
 											   0,$Y_2 + $chr_offset);
-			$canvas->createPolygon(@pos,-width => 1,
-										 -fill  => 'linen',
-										 -outline => 'lightGrey',
-										 -tags  => [ 'shading', $i ]);
+#			$canvas->createPolygon(@pos,-width => 1,
+#										 -fill  => 'linen',
+#										 -outline => 'lightGrey',
+#										 -tags  => [ 'shading', $i ]);
 			# a rectangle on the left and top canvas
 			@pos =  map $_ / $sequence_scale,(0,$Y_1 + $chr_offset,
 											  $AXIS_WIDTH * $sequence_scale,$Y_2 + $chr_offset);
@@ -851,9 +850,11 @@ sub draw_transcript {
 	my $c_height = $c->cget('height');
 	my $c_width  = $c->cget('width');
 	my $strand   = $transcript->strand;
-	my ($bot,$mid,$top) = $strand == 1 ?
+	my ($bot,$mid,$top) =
+			$strand * ( $c_height > $c_width == 1 ? -1 : 1) == 1 ?
 				(0,$AXIS_WIDTH/3,$AXIS_WIDTH/2):
 				($AXIS_WIDTH/2,3*$AXIS_WIDTH/4,$AXIS_WIDTH);
+
 	my ($exon_start,$exon_end,$exon_last_end,$exon_mid);
 
 	$element_strings->[$i] = join(":",
@@ -909,7 +910,7 @@ sub show_transcript {
 				my ($equiv_start,$equiv_end) = &get_equiv_coords($seq_region,$start,$end);
 				&outline_match($c,$t);
 				$start -= ($end-$start) * 1/3;
-				$end   += 100;
+				$end   += ($end-$start) * 1/3;
 				my @coords = $c eq $top ? ($start,$equiv_start,$end,$equiv_end):
 										  ($equiv_start,$start,$equiv_end,$end);
 				@coords = map ($_ / $sequence_scale * $zoom_scale , @coords );
@@ -956,6 +957,20 @@ sub show_align_match {
 					   -fill      => 'LemonChiffon',
 					   -tags      => ['shading_outline']);
 			$c->lower('shading_outline','scale');
+		}
+		foreach my $i ($c->find(  'withtag',"alignment&&$match")) {
+			my ($x1,$y1,$x2,$y2) = $c->coords($i);
+			my @coords = $x1 < $x2 ?
+					(0,$y1,$x1,$y1,$x1,0,$x2,0, $x2,$y2,0,$y2):
+					(0,$y1,$x2,$y1,$x2,0,$x1,0, $x1,$y1,$x2,$y2,0,$y2);
+			$c->createPolygon(
+					   @coords,
+					   -width     => 1,
+					   -outline => 'lightGrey',
+					   -fill      => 'LemonChiffon',
+					   -tags      => ['shading_outline']);
+			$c->lower('shading_outline','scale');
+
 		}
 	}
 
