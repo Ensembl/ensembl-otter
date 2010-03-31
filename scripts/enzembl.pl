@@ -699,12 +699,12 @@ enzembl [options]
 assuming you've specified some style settings and a zmap executable in your config file
 (see below for details):
 
-  enzembl -region clone:AC068644.15 -analyses Halfwise,vertrna -types Genes,DnaAlignFeatures\ 
+  enzembl -region clone::AC068644.15 -analyses Halfwise,vertrna -types Genes,DnaAlignFeatures\ 
           -db pipe_human -host otterpipe1 -port 3302 -user ottro
 
 or with databases and types specified in the config file:
 
-  enzembl -region chromosome:chr14-03 -coords 1000-2000 -analyses Est2genome_human
+  enzembl -region chromosome:GRCh37:chr14-03 -coords 1000-2000 -analyses Est2genome_human
 
 =head1 OPTIONS
 
