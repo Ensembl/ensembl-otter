@@ -28,6 +28,9 @@ my $STABLE_ID_PREFIXES = {
 # this regex defines the delimiter for options which can take multiple values
 my $CFG_DELIM = qr/[\s,;]+/;
 
+# this regex defines the delimiter for options with multiple parts
+my $PART_DELIM = qr/:/;
+
 # globals
 
 my @feature_types;
@@ -70,7 +73,7 @@ GetOptions(
 	'cfg:s',        \$cfg_file,
 	'analyses:s',	sub { @analyses = split $CFG_DELIM, $_[1] },
 	'region:s', 	sub { 
-	    my @parts = split /:/, $_[1];
+	    my @parts = split $PART_DELIM, $_[1];
 	    $requested_region->{cs_name} = $parts[0];
 	    $requested_region->{cs_version} = $parts[1];
 	    $requested_region->{name} = $parts[2];
@@ -79,7 +82,7 @@ GetOptions(
 	    $requested_region->{strand} = $parts[5];
 	},
 	'features:s',   sub { 
-	    my ($t, $id) = split /:/, $_[1];
+	    my ($t, $id) = split $PART_DELIM, $_[1];
 	    if ($t =~ $STABLE_ID_REGEX) {
 	        $features{$t} = $STABLE_ID_PREFIXES->{$2};
 	    }
@@ -195,7 +198,7 @@ if (-e $cfg_file) {
 		unless (keys %$requested_region || %features) {
 			die "No region supplied!\n" unless $cfg->val('enzembl','region');
 			
-			my ($cs, $id) = split /:/, $cfg->val('enzembl','region');
+			my ($cs, $id) = split $PART_DELIM, $cfg->val('enzembl','region');
 	
 			$regions{$id} = $cs;
 		}
