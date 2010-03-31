@@ -178,8 +178,11 @@ if (-e $cfg_file) {
 				$dbs{$db}->{analyses} = \@analyses;
 			}
 			else {
-				die "No analyses supplied for $db\n" unless $cfg->val($db,'analyses');
-				$dbs{$db}->{analyses} = [ split $CFG_DELIM, $cfg->val($db,'analyses') ];
+				# we do not require analyses to be specified
+				# - if they are not then to_gff will look for
+				# all analyses
+				my $analyses = $cfg->val($db,'analyses');
+				$dbs{$db}->{analyses} = [ split $CFG_DELIM, $analyses ] if $analyses;
 			}
 			
 			if (@feature_types) {
