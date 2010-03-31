@@ -1055,8 +1055,7 @@ sub draw {
             my $last = $cs_list->[$i - 1];
             
             my $gap = 0; # default for non SequenceNotes methods inheriting this method
-            #if ($cs->can('chr_start')){
-            if (UNIVERSAL::can($cs,'chr_start')){
+            if ( eval { $cs->can('chr_start'); } ){
                 $gap = $cs->chr_start - $last->chr_end - 1;
             }
             if ($gap > 0) {
