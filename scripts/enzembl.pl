@@ -62,6 +62,49 @@ my $usage = sub { exec('perldoc', $0) };
 my $requested_region = {};
 my $common_region = {};
 
+# subroutines
+
+sub dbh_from_cfg {
+    my ( $cfg, $db ) = @_;
+
+    return $cfg->val($db, "species")
+        ? dbh_from_registry($cfg, $db)
+        : dbh_from_db($cfg, $db);
+}
+
+sub dbh_from_registry {
+    my ( $cfg, $db ) = @_;
+
+    Bio::EnsEMBL::Registry->load_registry_from_db(
+        -db_version => 56,
+
+        -host 	=> $cfg->val($db,'host'),
+        -user 	=> $cfg->val($db,'user'),
+        -pass 	=> $cfg->val($db,'pass') || '',
+        -port 	=> $cfg->val($db,'port'),
+        -driver	=> 'mysql',
+        );
+
+    my $species = $cfg->val($db,'species');
+    my $sa = Bio::EnsEMBL::Registry->get_adaptor($species, 'core', 'slice');
+    my $dbh = $sa->db;
+
+    return $dbh;
+}
+
+sub dbh_from_db {
+    my ( $cfg, $db ) = @_;
+
+    return new Bio::EnsEMBL::DBSQL::DBAdaptor(
+        -host 	=> $cfg->val($db,'host'),
+        -user 	=> $cfg->val($db,'user'),
+        -pass 	=> $cfg->val($db,'pass') || '',
+        -port 	=> $cfg->val($db,'port'),
+        -dbname	=> $db,
+        -driver	=> 'mysql',
+        );
+}
+
 # parse the command line options
 
 GetOptions(
@@ -158,16 +201,7 @@ if (-e $cfg_file) {
 				
 			die "Can't find any settings for $db in $cfg_file\n" unless $cfg->val($db,'user');
 			
-			my $dbh = new Bio::EnsEMBL::DBSQL::DBAdaptor(
-				-host 	=> $cfg->val($db,'host'),
-				-user 	=> $cfg->val($db,'user'),
-				-pass 	=> $cfg->val($db,'pass') || '',
-				-port 	=> $cfg->val($db,'port'),
-				-dbname	=> $db,
-				-driver	=> 'mysql'
-			);
-			
-			$dbs{$db}->{dbh} = $dbh;
+			$dbs{$db}->{dbh} = dbh_from_cfg($cfg, $db);
 			
 			# command line AND [enzembl] stanza settings override database specific settings
 			# i.e. if the user supplies global analyses and feature types (in the [enzembl]
