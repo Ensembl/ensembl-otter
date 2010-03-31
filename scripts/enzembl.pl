@@ -78,11 +78,11 @@ sub dbh_from_registry {
     Bio::EnsEMBL::Registry->load_registry_from_db(
         -db_version => 56,
 
-        -host 	=> $cfg->val($db,'host'),
-        -user 	=> $cfg->val($db,'user'),
-        -pass 	=> $cfg->val($db,'pass') || '',
-        -port 	=> $cfg->val($db,'port'),
-        -driver	=> 'mysql',
+        -host   => $cfg->val($db,'host'),
+        -user   => $cfg->val($db,'user'),
+        -pass   => $cfg->val($db,'pass') || '',
+        -port   => $cfg->val($db,'port'),
+        -driver => 'mysql',
         );
 
     my $species = $cfg->val($db,'species');
@@ -96,170 +96,170 @@ sub dbh_from_db {
     my ( $cfg, $db ) = @_;
 
     return new Bio::EnsEMBL::DBSQL::DBAdaptor(
-        -host 	=> $cfg->val($db,'host'),
-        -user 	=> $cfg->val($db,'user'),
-        -pass 	=> $cfg->val($db,'pass') || '',
-        -port 	=> $cfg->val($db,'port'),
-        -dbname	=> $db,
-        -driver	=> 'mysql',
+        -host   => $cfg->val($db,'host'),
+        -user   => $cfg->val($db,'user'),
+        -pass   => $cfg->val($db,'pass') || '',
+        -port   => $cfg->val($db,'port'),
+        -dbname => $db,
+        -driver => 'mysql',
         );
 }
 
 # parse the command line options
 
 GetOptions(
-	'db|dbs:s',  	\$dbname,
-	'port:s',		\$port,
-	'pass:s',		\$pass,
-	'host:s',		\$host,
-	'user:s',		\$user,
-	'cfg:s',        \$cfg_file,
-	'analyses:s',	sub { @analyses = split $CFG_DELIM, $_[1] },
-	'region:s', 	sub { 
-	    my @parts = split $PART_DELIM, $_[1];
-	    $requested_region->{cs_name} = $parts[0];
-	    $requested_region->{cs_version} = $parts[1];
-	    $requested_region->{name} = $parts[2];
-	    $requested_region->{start} = $parts[3];
-	    $requested_region->{end} = $parts[4];
-	    $requested_region->{strand} = $parts[5];
-	},
-	'features:s',   sub { 
-	    my ($t, $id) = split $PART_DELIM, $_[1];
-	    if ($t =~ $STABLE_ID_REGEX) {
-	        $features{$t} = $STABLE_ID_PREFIXES->{$2};
-	    }
-	    elsif ($id) {
-	       $features{$id} = $t;
-	    }
-	    else {
-	        die "I don't know what type of feature $t is, try gene:$t or transcript:$t etc.\n";
-	    } 
-	},
-	'flank:s',      \$flank,
-	'styles:s',		\$styles_file,
-	'create_styles',\$create_missing_styles,
-	'types:s',		sub { @feature_types = split $CFG_DELIM, $_[1] },
-	'zmap:s',		\$zmap_exe,
-	'zmap_cfg:s',	\$zmap_config_file,
-	'verbose|v',	\$verbose,
-	'persist|p',    \$persist,
-	'help|h',		sub { exec('perldoc', $0) },
+        'db|dbs:s',     \$dbname,
+        'port:s',               \$port,
+        'pass:s',               \$pass,
+        'host:s',               \$host,
+        'user:s',               \$user,
+        'cfg:s',        \$cfg_file,
+        'analyses:s',   sub { @analyses = split $CFG_DELIM, $_[1] },
+        'region:s',     sub { 
+            my @parts = split $PART_DELIM, $_[1];
+            $requested_region->{cs_name} = $parts[0];
+            $requested_region->{cs_version} = $parts[1];
+            $requested_region->{name} = $parts[2];
+            $requested_region->{start} = $parts[3];
+            $requested_region->{end} = $parts[4];
+            $requested_region->{strand} = $parts[5];
+        },
+        'features:s',   sub { 
+            my ($t, $id) = split $PART_DELIM, $_[1];
+            if ($t =~ $STABLE_ID_REGEX) {
+                $features{$t} = $STABLE_ID_PREFIXES->{$2};
+            }
+            elsif ($id) {
+               $features{$id} = $t;
+            }
+            else {
+                die "I don't know what type of feature $t is, try gene:$t or transcript:$t etc.\n";
+            } 
+        },
+        'flank:s',      \$flank,
+        'styles:s',             \$styles_file,
+        'create_styles',\$create_missing_styles,
+        'types:s',              sub { @feature_types = split $CFG_DELIM, $_[1] },
+        'zmap:s',               \$zmap_exe,
+        'zmap_cfg:s',   \$zmap_config_file,
+        'verbose|v',    \$verbose,
+        'persist|p',    \$persist,
+        'help|h',               sub { exec('perldoc', $0) },
 ) or pod2usage(1);
 
 if ($dbname && $user) {
-	
-	die "Can only supply settings for one database from the command line (try using a config file)\n" 
-		if $dbname =~ /$CFG_DELIM/;
-	
-	my $dbh = new Bio::EnsEMBL::DBSQL::DBAdaptor(
-		-host 	=> $host,
-		-user 	=> $user,
-		-pass 	=> $pass,
-		-port 	=> $port,
-		-dbname	=> $dbname,
-		-driver	=> 'mysql'
-	);
-	
-	$dbs{$dbname}->{dbh} = $dbh;
-	
-	$dbs{$dbname}->{analyses} = \@analyses;
+        
+        die "Can only supply settings for one database from the command line (try using a config file)\n" 
+                if $dbname =~ /$CFG_DELIM/;
+        
+        my $dbh = new Bio::EnsEMBL::DBSQL::DBAdaptor(
+                -host   => $host,
+                -user   => $user,
+                -pass   => $pass,
+                -port   => $port,
+                -dbname => $dbname,
+                -driver => 'mysql'
+        );
+        
+        $dbs{$dbname}->{dbh} = $dbh;
+        
+        $dbs{$dbname}->{analyses} = \@analyses;
 }
 elsif ($dbname) {
-	@dbnames = split $CFG_DELIM, $dbname;
+        @dbnames = split $CFG_DELIM, $dbname;
 }
 
 # read the config file
 
 if (-e $cfg_file) {
-	my $cfg = new Config::IniFiles( -file => $cfg_file ) 
-		or die "'$cfg_file' doesn't look like a valid enzembl config file\n";
-	
-	if ($cfg->SectionExists('enzembl')) {
-		
-		# the following settings are all 'unless'ed so that command line options 
-		# override config file settings
-		
-		unless (@feature_types) {
-			if ($cfg->val('enzembl','feature-types')) {
-				@feature_types = split $CFG_DELIM, $cfg->val('enzembl','feature-types');
-			}
-		}
-		
-		unless (@analyses) {
-			if ($cfg->val('enzembl','analyses')) {
-				@analyses = split $CFG_DELIM, $cfg->val('enzembl','analyses');
-			}
-		}
-		
-		unless ($dbname) {
-			die "No databases specified!\n" unless $cfg->val('enzembl','dbs');
-			@dbnames = split $CFG_DELIM, $cfg->val('enzembl','dbs');
-		}
-		
-		for my $db (@dbnames) {
-				
-			die "Can't find any settings for $db in $cfg_file\n" unless $cfg->val($db,'user');
-			
-			$dbs{$db}->{dbh} = dbh_from_cfg($cfg, $db);
-			
-			# command line AND [enzembl] stanza settings override database specific settings
-			# i.e. if the user supplies global analyses and feature types (in the [enzembl]
-			# stanza or on the command line), these will be searched for in all databases and
-			# database specific settings (in the [db_name] stanza) will be ignored
-			
-			if (@analyses) {
-				$dbs{$db}->{analyses} = \@analyses;
-			}
-			else {
-				# we do not require analyses to be specified
-				# - if they are not then to_gff will look for
-				# all analyses
-				my $analyses = $cfg->val($db,'analyses');
-				$dbs{$db}->{analyses} = [ split $CFG_DELIM, $analyses ] if $analyses;
-			}
-			
-			if (@feature_types) {
-				$dbs{$db}->{feature_types} = \@feature_types;
-			}
-			else {
-				die "No feature types supplied for $db\n" unless $cfg->val($db,'feature-types');
-				$dbs{$db}->{feature_types} = [ split $CFG_DELIM, $cfg->val($db,'feature-types') ];
-			}
-			
-			# note the name of all feature_types
-			
-			map { $feature_type_settings{$_} ||= {} } @{ $dbs{$db}->{feature_types} };
-		}
-		
-		unless (keys %$requested_region || %features) {
-			die "No region supplied!\n" unless $cfg->val('enzembl','region');
-			
-			my ($cs, $id) = split $PART_DELIM, $cfg->val('enzembl','region');
-	
-			$regions{$id} = $cs;
-		}
-		
-		# look up settings for the feature types separately so that the user can supply types 
-		# on the command line but leave settings in the config file
+        my $cfg = new Config::IniFiles( -file => $cfg_file ) 
+                or die "'$cfg_file' doesn't look like a valid enzembl config file\n";
+        
+        if ($cfg->SectionExists('enzembl')) {
+                
+                # the following settings are all 'unless'ed so that command line options 
+                # override config file settings
+                
+                unless (@feature_types) {
+                        if ($cfg->val('enzembl','feature-types')) {
+                                @feature_types = split $CFG_DELIM, $cfg->val('enzembl','feature-types');
+                        }
+                }
+                
+                unless (@analyses) {
+                        if ($cfg->val('enzembl','analyses')) {
+                                @analyses = split $CFG_DELIM, $cfg->val('enzembl','analyses');
+                        }
+                }
+                
+                unless ($dbname) {
+                        die "No databases specified!\n" unless $cfg->val('enzembl','dbs');
+                        @dbnames = split $CFG_DELIM, $cfg->val('enzembl','dbs');
+                }
+                
+                for my $db (@dbnames) {
+                                
+                        die "Can't find any settings for $db in $cfg_file\n" unless $cfg->val($db,'user');
+                        
+                        $dbs{$db}->{dbh} = dbh_from_cfg($cfg, $db);
+                        
+                        # command line AND [enzembl] stanza settings override database specific settings
+                        # i.e. if the user supplies global analyses and feature types (in the [enzembl]
+                        # stanza or on the command line), these will be searched for in all databases and
+                        # database specific settings (in the [db_name] stanza) will be ignored
+                        
+                        if (@analyses) {
+                                $dbs{$db}->{analyses} = \@analyses;
+                        }
+                        else {
+                                # we do not require analyses to be specified
+                                # - if they are not then to_gff will look for
+                                # all analyses
+                                my $analyses = $cfg->val($db,'analyses');
+                                $dbs{$db}->{analyses} = [ split $CFG_DELIM, $analyses ] if $analyses;
+                        }
+                        
+                        if (@feature_types) {
+                                $dbs{$db}->{feature_types} = \@feature_types;
+                        }
+                        else {
+                                die "No feature types supplied for $db\n" unless $cfg->val($db,'feature-types');
+                                $dbs{$db}->{feature_types} = [ split $CFG_DELIM, $cfg->val($db,'feature-types') ];
+                        }
+                        
+                        # note the name of all feature_types
+                        
+                        map { $feature_type_settings{$_} ||= {} } @{ $dbs{$db}->{feature_types} };
+                }
+                
+                unless (keys %$requested_region || %features) {
+                        die "No region supplied!\n" unless $cfg->val('enzembl','region');
+                        
+                        my ($cs, $id) = split $PART_DELIM, $cfg->val('enzembl','region');
+        
+                        $regions{$id} = $cs;
+                }
+                
+                # look up settings for the feature types separately so that the user can supply types 
+                # on the command line but leave settings in the config file
         for my $type (keys %feature_type_settings, @feature_types) {
             if ($cfg->SectionExists($type)) {
                 $feature_type_settings{$type} ||= {};
-		        $feature_type_settings{$type}->{parent_style} = $cfg->val($type,'parent-style');
-		        $feature_type_settings{$type}->{colours} = [
+                        $feature_type_settings{$type}->{parent_style} = $cfg->val($type,'parent-style');
+                        $feature_type_settings{$type}->{colours} = [
                     split $CFG_DELIM, $cfg->val($type,'colours')
-			    ];
-		    }
+                            ];
+                    }
         }
                     
-		$zmap_exe = $cfg->val('enzembl','zmap') unless $zmap_exe;
-		$zmap_config_file = $cfg->val('enzembl','zmap-config') unless $zmap_config_file;
-		$styles_file = $cfg->val('enzembl','stylesfile') unless $styles_file;
-		$create_missing_styles = $cfg->val('enzembl','create-missing-styles') unless defined $create_missing_styles;
-	}
-	else {
-		die "Invalid config file: $cfg_file (no [enzembl] stanza)\n";
-	}
+                $zmap_exe = $cfg->val('enzembl','zmap') unless $zmap_exe;
+                $zmap_config_file = $cfg->val('enzembl','zmap-config') unless $zmap_config_file;
+                $styles_file = $cfg->val('enzembl','stylesfile') unless $styles_file;
+                $create_missing_styles = $cfg->val('enzembl','create-missing-styles') unless defined $create_missing_styles;
+        }
+        else {
+                die "Invalid config file: $cfg_file (no [enzembl] stanza)\n";
+        }
 }
 
 # make sure we have everything we need
@@ -460,9 +460,9 @@ else {
 
 for my $db (keys %dbs) {
 
-	my $dbh = $dbs{$db}->{dbh};
+        my $dbh = $dbs{$db}->{dbh};
 
-	my $slice_adaptor = $dbh->get_SliceAdaptor;
+        my $slice_adaptor = $dbh->get_SliceAdaptor;
     
     my $slice;
     my $t_slice;
@@ -486,102 +486,102 @@ for my $db (keys %dbs) {
             $common_region->{end}, 
             $common_region->{strand}, 
             $common_region->{cs}->version
-	   );
-	   
-	   $t_slice = $target_slice;
+           );
+           
+           $t_slice = $target_slice;
        $c_slice = $common_slice;
     }
-		
-	#print "cs name: ".$slice->coord_system->name." version: ".$slice->coord_system->version."\n";	
-	#$slice->project('chromosome', 'Otter');
-				
-	die "Failed to fetch slice for requested region\n" unless $slice;
-	
-	# and append the slice's gff representation
-	
-	print "Database $db:\n" if $verbose;
-	
-	$gff .= $slice->to_gff(
-		analyses			=> $dbs{$db}->{analyses},
-		feature_types 		=> $dbs{$db}->{feature_types},
-		include_dna 		=> 1,
-		include_header 		=> !$gff,
-		sources_to_types	=> \%sources_to_types,
-		verbose				=> $verbose,
-		target_slice        => $t_slice,
-		common_slice        => $c_slice,	
+                
+        #print "cs name: ".$slice->coord_system->name." version: ".$slice->coord_system->version."\n";  
+        #$slice->project('chromosome', 'Otter');
+                                
+        die "Failed to fetch slice for requested region\n" unless $slice;
+        
+        # and append the slice's gff representation
+        
+        print "Database $db:\n" if $verbose;
+        
+        $gff .= $slice->to_gff(
+                analyses                        => $dbs{$db}->{analyses},
+                feature_types           => $dbs{$db}->{feature_types},
+                include_dna             => 1,
+                include_header          => !$gff,
+                sources_to_types        => \%sources_to_types,
+                verbose                         => $verbose,
+                target_slice        => $t_slice,
+                common_slice        => $c_slice,        
     );
-	
-	# save off the first sequence name for zmap
-	
-	$sequence_name = $slice->seq_region_name unless $sequence_name;
-	
+        
+        # save off the first sequence name for zmap
+        
+        $sequence_name = $slice->seq_region_name unless $sequence_name;
+        
 }
 
 # create the styles file
 
 my $styles_cfg = new Config::IniFiles( -file => $styles_file ) 
-	or die "Failed to read styles file: $styles_file\n";
-	
+        or die "Failed to read styles file: $styles_file\n";
+        
 my %provided_styles = map { $_ => 1 } $styles_cfg->Sections;
-	
+        
 my $styles_list = join (';', keys %provided_styles);
-	
+        
 if ($create_missing_styles) {
-	
-	# create a style for each source which doesn't have one
-		
-	for my $source (keys %sources_to_types) {
-		
-		# skip if there is a style already defined for this source
-		next if $styles_cfg->SectionExists($source);
-		
-		my $type = $sources_to_types{$source};
-		
-		my $type_settings = $feature_type_settings{$type};
-		
-		die "No parent-style provided for type: $type\n" unless $type_settings->{parent_style};
-		die "No colours provided for type: $type\n" unless defined $type_settings->{colours};
-		
-		$styles_cfg->AddSection($source);
-		
-		$styles_cfg->newval(
-			$source, 
-			'parent-style', 
-			$type_settings->{parent_style}
-		);
-		
-		my $colour = shift @{ $type_settings->{colours} };
-	
-		die "Run out of colours for type: $type\n" unless $colour;
-		
-		$styles_cfg->newval(
-			$source, 
-			'colours', 
-			"normal fill $colour"
-		);
-		
-		if ($type eq 'Genes' && $colour eq 'RANDOM') {
-		    
-		    my @vs = ('00', '33', '66', '99', 'CC', 'FF'); 
-		    
-		    my $r = hex($vs[rand(@vs)]);
-		    my $g = hex($vs[rand(@vs)]);
-		    my $b = hex($vs[rand(@vs)]);
-		    
-		    if ($r == 255 && $g == 255 && $b == 255) {
-		        shift @vs;
-		        $r = hex($vs[rand(@vs)]);
-		    }
-		    
-		    my $border = sprintf("#%02x%02x%02x", $r, $g, $b);
-		    my $cds_border = sprintf("#%02x%02x%02x", $r-10, $g-10, $b-10);
-		    my $fill = sprintf("#%02x%02x%02x", $r-30, $g-30, $b-30);
-		    
-		    $cds_border = $border;
-		    $fill = $border;
-		    
-	        $styles_cfg->newval(
+        
+        # create a style for each source which doesn't have one
+                
+        for my $source (keys %sources_to_types) {
+                
+                # skip if there is a style already defined for this source
+                next if $styles_cfg->SectionExists($source);
+                
+                my $type = $sources_to_types{$source};
+                
+                my $type_settings = $feature_type_settings{$type};
+                
+                die "No parent-style provided for type: $type\n" unless $type_settings->{parent_style};
+                die "No colours provided for type: $type\n" unless defined $type_settings->{colours};
+                
+                $styles_cfg->AddSection($source);
+                
+                $styles_cfg->newval(
+                        $source, 
+                        'parent-style', 
+                        $type_settings->{parent_style}
+                );
+                
+                my $colour = shift @{ $type_settings->{colours} };
+        
+                die "Run out of colours for type: $type\n" unless $colour;
+                
+                $styles_cfg->newval(
+                        $source, 
+                        'colours', 
+                        "normal fill $colour"
+                );
+                
+                if ($type eq 'Genes' && $colour eq 'RANDOM') {
+                    
+                    my @vs = ('00', '33', '66', '99', 'CC', 'FF'); 
+                    
+                    my $r = hex($vs[rand(@vs)]);
+                    my $g = hex($vs[rand(@vs)]);
+                    my $b = hex($vs[rand(@vs)]);
+                    
+                    if ($r == 255 && $g == 255 && $b == 255) {
+                        shift @vs;
+                        $r = hex($vs[rand(@vs)]);
+                    }
+                    
+                    my $border = sprintf("#%02x%02x%02x", $r, $g, $b);
+                    my $cds_border = sprintf("#%02x%02x%02x", $r-10, $g-10, $b-10);
+                    my $fill = sprintf("#%02x%02x%02x", $r-30, $g-30, $b-30);
+                    
+                    $cds_border = $border;
+                    $fill = $border;
+                    
+                $styles_cfg->newval(
                 $source, 
                 'colours', 
                 "normal fill white ; normal border $border"
@@ -592,42 +592,42 @@ if ($create_missing_styles) {
                 'transcript-cds-colours', 
                 "normal fill $fill ; normal border $cds_border ; selected fill gold"
             );
-		    
-		    # reset the colours list
-		    
-		    push @{ $type_settings->{colours} }, 'RANDOM';
-		}
-	}
-		
-	my $styles_fh;
-	
-	($styles_fh, $styles_file) = tempfile(
-		'enzembl_styles_XXXXXX', 
-		SUFFIX => '.ini', 
-		UNLINK => !$persist, 
-		DIR => '/tmp'
-	);
-	
-	$styles_cfg->WriteConfig($styles_file) or die "Failed to write styles file: $styles_file\n";
-	
-	$styles_list = join (';', $styles_cfg->Sections);
+                    
+                    # reset the colours list
+                    
+                    push @{ $type_settings->{colours} }, 'RANDOM';
+                }
+        }
+                
+        my $styles_fh;
+        
+        ($styles_fh, $styles_file) = tempfile(
+                'enzembl_styles_XXXXXX', 
+                SUFFIX => '.ini', 
+                UNLINK => !$persist, 
+                DIR => '/tmp'
+        );
+        
+        $styles_cfg->WriteConfig($styles_file) or die "Failed to write styles file: $styles_file\n";
+        
+        $styles_list = join (';', $styles_cfg->Sections);
 }
 else {
-	# check that there is a style for every source
-	
-	my @missing = grep { ! $provided_styles{$_} } keys %sources_to_types;
-	
-	die "No style defined for the following sources in styles file: $styles_file:\n".
-		join("\n", @missing)."\n" if @missing;
+        # check that there is a style for every source
+        
+        my @missing = grep { ! $provided_styles{$_} } keys %sources_to_types;
+        
+        die "No style defined for the following sources in styles file: $styles_file:\n".
+                join("\n", @missing)."\n" if @missing;
 }
 
 # write out the gff file
 
 my ($gff_fh, $gff_filename) = tempfile(
-	'enzembl_gff_data_XXXXXX', 
-	SUFFIX => '.gff', 
-	UNLINK => !$persist, 
-	DIR => '/tmp'
+        'enzembl_gff_data_XXXXXX', 
+        SUFFIX => '.gff', 
+        UNLINK => !$persist, 
+        DIR => '/tmp'
 );
 
 print $gff_fh $gff;
@@ -640,15 +640,15 @@ my $sources_list = 'DNA;Locus;'.join(';', keys %sources_to_types); # always incl
 # correctly, so we try to guess the correct type here
 
 my $dna_sources = join (';', 
-	grep { $sources_to_types{$_} =~ /dna/i } keys %sources_to_types
+        grep { $sources_to_types{$_} =~ /dna/i } keys %sources_to_types
 );
 
 my $protein_sources = join (';',
-	grep { $sources_to_types{$_} =~ /protein/i } keys %sources_to_types
+        grep { $sources_to_types{$_} =~ /protein/i } keys %sources_to_types
 );
 
 my $tsct_sources = join (';',
-	grep { $sources_to_types{$_} =~ /gene|transcript/i } keys %sources_to_types
+        grep { $sources_to_types{$_} =~ /gene|transcript/i } keys %sources_to_types
 );
 
 # add the necessary entries to the zmap config file, over-writing existing entries
@@ -664,9 +664,9 @@ $zmap_cfg->newval('blixem', 'protein-featuresets', $protein_sources);
 $zmap_cfg->newval('blixem', 'transcript-featuresets', $tsct_sources);
 
 my $zmap_dir = tempdir(
-	'enzembl_zmap_XXXXXX', 
-	DIR => '/tmp', 
-	CLEANUP => !$persist
+        'enzembl_zmap_XXXXXX', 
+        DIR => '/tmp', 
+        CLEANUP => !$persist
 );
 
 $zmap_cfg->WriteConfig($zmap_dir.'/ZMap') or die "Failed to write zmap config file\n";
@@ -681,7 +681,7 @@ if ($persist) {
 }
 
 __END__
-	
+        
 =head1 NAME 
 
 enzembl
@@ -751,11 +751,11 @@ this script automatically fills in the parameters shown below, if you specify an
 this file they will be ignored. All other settings are passed unaltered to zmap. Supply '-h'
 on the command line to see a working example file.
 
- stanza		parameters set by this script
+ stanza         parameters set by this script
  ------------------------------------------------------------------------
- [ZMap]		default-sequence, stylesfile
- [source]	url, featuresets
- [blixem]	dna-featuresets, protein-featuresets, transcript-featuresets
+ [ZMap]         default-sequence, stylesfile
+ [source]       url, featuresets
+ [blixem]       dna-featuresets, protein-featuresets, transcript-featuresets
 
 =item B<-db | -dbs dbname1,dbname2,...>
 
