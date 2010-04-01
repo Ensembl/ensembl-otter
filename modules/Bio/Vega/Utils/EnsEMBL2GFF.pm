@@ -185,12 +185,6 @@ use warnings;
         # This parameter is assumed to be a hashref which includes extra attributes you'd
         # like to have appended onto the gff line for the feature
         my $extra_attrs = shift;
-        
-        # XXX: don't generate buggy features because zmap blows up
-        if ($self->seq_region_start >= $self->seq_region_end) {
-            return '';
-        }
-        
         my $gff = $self->_gff_hash;
 
         $gff->{score}  = '.' unless defined $gff->{score};
