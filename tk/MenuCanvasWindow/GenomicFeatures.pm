@@ -3,6 +3,7 @@
 package MenuCanvasWindow::GenomicFeatures;
 
 use strict;
+use warnings;
 use Carp;
 use base 'MenuCanvasWindow';
 

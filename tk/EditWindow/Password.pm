@@ -4,6 +4,7 @@
 package EditWindow::Password;
 
 use strict;
+use warnings;
 use Carp;
 use base 'EditWindow';
 

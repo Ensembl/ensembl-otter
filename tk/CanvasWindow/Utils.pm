@@ -4,6 +4,7 @@
 package CanvasWindow::Utils;
 
 use strict;
+use warnings;
 use Exporter;
 use vars ('@ISA', '@EXPORT_OK');
 

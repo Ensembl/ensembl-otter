@@ -4,6 +4,7 @@
 package EditWindow::LocusName;
 
 use strict;
+use warnings;
 use Carp;
 
 use Tk::SmartOptionmenu;

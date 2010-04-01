@@ -4,6 +4,7 @@
 package CanvasWindow::SequenceSetChooser;
 
 use strict;
+use warnings;
 use Carp;
 use base 'CanvasWindow';
 use CanvasWindow::SequenceNotes;

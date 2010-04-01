@@ -4,6 +4,7 @@
 package TransientWindow;
 
 use strict;
+use warnings;
 use Carp;
 
 sub new {

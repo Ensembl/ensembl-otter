@@ -4,7 +4,7 @@
 package EditWindow;
 
 use strict;
-
+use warnings;
 
 sub new {
     my( $pkg, $tk ) = @_;

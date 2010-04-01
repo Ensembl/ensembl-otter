@@ -3,6 +3,7 @@
 package CanvasWindow::SearchWindow;
 
 use strict;
+use warnings;
 use Carp;
 use base 'CanvasWindow';
 use Bio::Otter::Lace::Locator;

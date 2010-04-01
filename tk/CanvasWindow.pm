@@ -4,6 +4,7 @@
 package CanvasWindow;
 
 use strict;
+use warnings;
 use Carp;
 use CanvasWindow::MainWindow;
 use CanvasWindow::Utils 'expand_bbox';

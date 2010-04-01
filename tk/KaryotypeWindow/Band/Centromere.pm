@@ -4,6 +4,7 @@
 package KaryotypeWindow::Band::Centromere;
 
 use strict;
+use warnings;
 use Carp;
 use base 'KaryotypeWindow::Band';
 

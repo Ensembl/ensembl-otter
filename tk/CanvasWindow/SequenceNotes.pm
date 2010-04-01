@@ -4,6 +4,7 @@
 package CanvasWindow::SequenceNotes;
 
 use strict;
+use warnings;
 use Carp;
 
 use base 'CanvasWindow';

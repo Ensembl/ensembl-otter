@@ -4,6 +4,7 @@
 package CanvasWindow::MainWindow;
 
 use strict;
+use warnings;
 
 use vars '@ISA';
 use Tk;

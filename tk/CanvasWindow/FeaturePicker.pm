@@ -4,6 +4,7 @@
 package CanvasWindow::FeaturePicker;
 
 use strict;
+use warnings;
 use base 'CanvasWindow';
 use Carp;
 use Hum::Ace::XaceRemote;
