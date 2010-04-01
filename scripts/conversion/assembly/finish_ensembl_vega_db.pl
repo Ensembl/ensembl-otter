@@ -51,7 +51,6 @@ includes:
     - updating seq_region_ids to match those in the core Ensembl db
     - transfer selenocysteines
     - checking and setting the analysis_id and source for all genes and transcripts
-    - update analysis_description for external_genes
     - delete orphan entries from object_xref
 
 =head1 RELATED SCRIPTS
@@ -404,16 +403,6 @@ $sql = qq(UPDATE gene g, gene_coords gc
 $c = $dbh->{'evega'}->do($sql);
 $support->log_stamped("Updated $c gene starts and ends...\n\n");
 
-#analysis_description;
-$support->log_stamped("Updating analysis_description table for external genes\n");
-$sql = qq(UPDATE analysis a, analysis_description ad
-             SET ad.description = 'See <a href=\"http://vega.sanger.ac.uk/info/about/man_annotation.html\">the Vega website</a> for details of the approaches used for the annotation of external Vega genes'
-          WHERE ad.analysis_id = a.analysis_id
-            AND a.logic_name = 'otter_external'
-);
-$c = $dbh->{'evega'}->do($sql);
-$support->log_stamped("Updated $c analysis_description entries.\n\n");
-
 # selenocysteines / peptide statistics
 $support->log_stamped("Transfering Vega translation_attribs (selenocysteines & peptide statistics)...\n");
 $sql = qq(
@@ -433,21 +422,12 @@ $sql = qq(
 $c = $dbh->{'evega'}->do($sql);
 $support->log_stamped("Transferred $c translation_attrib entries.\n\n");
 
-#delete orphan analysis_description table entries
-$sql = qq(DELETE ad
-            FROM analysis_description ad left join analysis a on ad.analysis_id = a.analysis_id
-           WHERE a.analysis_id IS NULL
-);
+#delete any orphan object_xref entries
+$sql = qq(DELETE ox
+            FROM object_xref ox
+            LEFT JOIN xref x ON ox.xref_id = x.xref_id
+           WHERE x.xref_id IS NULL);	
 $c = $dbh->{'evega'}->do($sql);
-$support->log_stamped("Deleted $c orphan analysis_description entries.\n\n");
-
-if ($support->user_proceed("Would you like to delete orphan entries from object_xref?")) {
-    $sql = qq(DELETE ox
-              FROM object_xref ox
-              LEFT JOIN xref x ON ox.xref_id = x.xref_id
-              WHERE x.xref_id IS NULL);	
-	$c = $dbh->{'evega'}->do($sql);
-}
 $support->log_stamped("Deleted $c orphan object_xref entries.\n\n");
 
 #drop the transient tables tmp_assembly and tmp_seq_region
