@@ -4,6 +4,7 @@
 package KaryotypeWindow::Graph::Bin;
 
 use strict;
+use warnings;
 
 sub new {
     my( $pkg ) = @_;

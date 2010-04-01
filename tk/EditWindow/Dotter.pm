@@ -4,6 +4,7 @@
 package EditWindow::Dotter;
 
 use strict;
+use warnings;
 use Carp;
 use Hum::Ace::DotterLauncher;
 use Tk::LabFrame;

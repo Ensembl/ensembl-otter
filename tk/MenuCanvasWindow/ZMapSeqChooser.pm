@@ -3,6 +3,7 @@
 package MenuCanvasWindow::XaceSeqChooser;
 
 use strict;
+use warnings;
 use Carp qw{ cluck confess };
 use ZMap::Connect qw{ :all };
 use Sys::Hostname;

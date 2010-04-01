@@ -4,6 +4,7 @@
 package MenuCanvasWindow::Example;
 
 use strict;
+use warnings;
 use base 'MenuCanvasWindow';
 
 

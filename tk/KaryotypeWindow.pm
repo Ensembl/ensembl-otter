@@ -4,6 +4,7 @@
 package KaryotypeWindow;
 
 use strict;
+use warnings;
 use Carp;
 use base 'CanvasWindow';
 use KaryotypeWindow::Chromosome;

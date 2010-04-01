@@ -5,6 +5,7 @@ package GenomeCanvas;
 
 
 use strict;
+use warnings;
 use Carp;
 use Tk;
 use GenomeCanvas::Band;

@@ -1,6 +1,7 @@
 ### EditWindow::PfamWindow
 package EditWindow::PfamWindow;
 use strict;
+use warnings;
 use Carp;
 use Bio::Otter::Lace::Pfam;
 use Tk::ProgressBar;

@@ -4,6 +4,7 @@
 package MenuCanvasWindow;
 
 use strict;
+use warnings;
 use Carp;
 use CanvasWindow;
 use vars '@ISA';

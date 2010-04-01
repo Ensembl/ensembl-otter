@@ -4,6 +4,7 @@
 package CanvasWindow::SequenceNotes::History;
 
 use strict;
+use warnings;
 use Carp;
 use Data::Dumper;
 use Scalar::Util 'weaken';

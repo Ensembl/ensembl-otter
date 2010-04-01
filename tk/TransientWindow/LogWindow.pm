@@ -2,6 +2,7 @@
 package TransientWindow::LogWindow;
 
 use strict;
+use warnings;
 
 use IO::Handle;
 use TransientWindow;

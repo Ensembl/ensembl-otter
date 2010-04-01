@@ -4,6 +4,7 @@
 package KaryotypeWindow::Chromosome;
 
 use strict;
+use warnings;
 use Carp;
 use KaryotypeWindow::Band;
 use KaryotypeWindow::Graph;

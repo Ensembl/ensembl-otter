@@ -4,6 +4,7 @@
 package EditWindow::LoadColumns;
 
 use strict;
+use warnings;
 use Carp;
 use Scalar::Util 'weaken';
 

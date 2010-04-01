@@ -3,6 +3,7 @@
 package KaryotypeWindow::Graph;
 
 use strict;
+use warnings;
 use Carp;
 use KaryotypeWindow::Graph::Bin;
 
