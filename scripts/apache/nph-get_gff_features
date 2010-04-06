@@ -14,16 +14,24 @@ use Bio::Vega::Utils::EnsEMBL2GFF;
 
 use CGI::Carp 'fatalsToBrowser';
 
+use Time::HiRes qw(time);
+
 my $server = Bio::Otter::ServerScriptSupport->new;
 
 my $gff_string = '';
+
+my ($t0, $t1, $t2);
 
 eval {
     my $analyses = $server->param('analysis');
     my $types = $server->param('kind');
  
+    $t0 = time();
+
     my $features = $server->get_requested_features;
    
+    $t1 = time();
+
     if (@$features) {
         my $slice = $features->[0]->slice;
         $gff_string = $slice->to_gff(
@@ -31,14 +39,21 @@ eval {
             feature_types   => [map {$_.'s'} split /,/, $types],
             include_header  => 1,
         );
+        
+#        for my $f (@$features) {
+#            $gff_string .= $f->to_gff;
+#        }
     }
+
+    $t2 = time();
 };
 
 if ($@) {
 	$server->error_exit($@);
 }
 else {
-    $server->send_response($gff_string);
+    $server->send_response($gff_string, 0, 1);
+    #$server->send_response("db took: ".($t1-$t0)." gff took: ".($t2-$t1));
 }
 
 1;
