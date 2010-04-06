@@ -225,9 +225,8 @@ use warnings;
 
         my %gff = (
             seqname => $self->slice->seq_region_name,
-            source =>
-              ( $self->analysis->gff_source || $self->analysis->logic_name ),
-            feature => ( $self->analysis->gff_feature || 'misc_feature' ),
+            source  => $self->_gff_source,
+            feature => $self->_gff_feature,
             start   => $self->seq_region_start,
             end     => $self->seq_region_end,
             strand  => (
@@ -236,6 +235,22 @@ use warnings;
         );
 
         return \%gff;
+    }
+
+    sub _gff_source {
+        my $self = shift;
+
+        return
+            $self->analysis->gff_source
+            || $self->analysis->logic_name;
+    }
+
+    sub _gff_feature {
+        my $self = shift;
+
+        return
+            ( $self->analysis && $self->analysis->gff_feature )
+            || 'misc_feature';
     }
 }
 
@@ -494,6 +509,32 @@ use warnings;
         my $gff  = $self->SUPER::_gff_hash;
         $gff->{feature} = 'intron';
         return $gff;
+    }
+}
+
+{
+
+    package Bio::EnsEMBL::Variation::VariationFeature;
+
+    my $url_format =
+        'http://www.ensembl.org/Homo_sapiens/Variation/Summary?v=%s';
+
+    sub _gff_hash {
+        my $self = shift;
+
+        my $name = $self->variation->name;
+        my $allele = $self->allele_string;
+        my $url = sprintf $url_format, $name;
+
+        my $gff  = $self->SUPER::_gff_hash;
+        $gff->{attributes}->{Name} = qq("$name - $allele");
+        $gff->{attributes}->{URL} = qq("$url");
+
+        return $gff;
+    }
+
+    sub _gff_source {
+        return 'variation';
     }
 }
 
