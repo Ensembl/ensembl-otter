@@ -2997,10 +2997,7 @@ sub Exons_from_canvas {
     my $done_message = 0;
     my( @exons );
     foreach my $pp ($self->all_position_pair_text) {
-        if (grep $_ == 0, @$pp)  {
-            confess("Error: Empty coordinate");
-            return;
-        }
+        confess "Error: Empty coordinate" if grep $_ == 0, @$pp;
         my $ex = Hum::Ace::Exon->new;
         $ex->start($pp->[0]);
         $ex->end  ($pp->[1]);
