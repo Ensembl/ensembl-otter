@@ -228,7 +228,7 @@ sub show_restricted_datasets {
 
 ############## I/O: ################################
 
-sub log {
+sub log { ## no critic(Subroutines::ProhibitBuiltinHomonyms)
     my ($self, $line) = @_;
 
     return unless $self->param('log');
