@@ -369,7 +369,7 @@ sub get_xwindow_id_from_readlock {
     my $lock_dir = "$path/database/readlocks";
     my( $lock_file );
     my $wait_seconds = 120;
-    for (my $i = 0; $i < $wait_seconds; $i++, sleep 1) {
+    for (my $i = 0; $i < $wait_seconds; do { $i++; sleep 1; }) {
         opendir my $lock_dir_h, $lock_dir
             or confess "Can't opendir '$lock_dir' : $!";
         ($lock_file) = grep /\.$pid$/, readdir $lock_dir_h;
@@ -385,7 +385,7 @@ sub get_xwindow_id_from_readlock {
     }
 
     my( $xwid );
-    for (my $i = 0; $i < $wait_seconds; $i++, sleep 1) {
+    for (my $i = 0; $i < $wait_seconds; do { $i++; sleep 1; }) {
         # Extract the WindowID from the readlock file
         open my $lock_file_h, '<', $lock_file
             or confess "Can't read '$lock_file' : $!";
