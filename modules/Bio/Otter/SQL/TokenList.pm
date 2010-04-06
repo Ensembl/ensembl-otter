@@ -52,7 +52,7 @@ sub token_list {
     }
 }
 
-sub reset {
+sub reset { ## no critic(Subroutines::ProhibitBuiltinHomonyms)
     shift->{'_index'} = undef;
 }
 

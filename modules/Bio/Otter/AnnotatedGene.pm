@@ -208,7 +208,7 @@ sub detach_DBAdaptors {
     }
 }
 
-sub length {
+sub length { ## no critic(Subroutines::ProhibitBuiltinHomonyms)
     my( $self ) = @_;
     
     my $exons = $self->get_all_Exons;

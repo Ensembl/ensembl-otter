@@ -194,7 +194,7 @@ sub cleanup_log_dir {
     return;
 }
 
-sub lock {
+sub lock { ## no critic(Subroutines::ProhibitBuiltinHomonyms)
     my( $self, @args ) = shift;
     
     confess "lock takes no arguments" if @args;
