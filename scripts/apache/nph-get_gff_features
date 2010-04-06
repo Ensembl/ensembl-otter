@@ -35,7 +35,9 @@ eval {
     if (@$features) {
         my $slice = $features->[0]->slice;
         $gff_string = $slice->to_gff(
-            analyses        => [split(/,/, $analyses)], 
+            ( $analyses
+              ? ( analyses  => [split(/,/, $analyses)] )
+              : () ), 
             feature_types   => [map {$_.'s'} split(/,/, $types)],
             include_header  => 1,
         );
