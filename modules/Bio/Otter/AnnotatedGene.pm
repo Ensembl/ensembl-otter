@@ -36,6 +36,8 @@ sub flush_Transcripts {
     my( $self ) = @_;
     
     $self->{'_transcript_array'} = [];
+
+    return;
 }
 
 =head2 gene_info
@@ -206,6 +208,8 @@ sub detach_DBAdaptors {
             $transl->adaptor(undef);
         }
     }
+
+    return;
 }
 
 sub length { ## no critic(Subroutines::ProhibitBuiltinHomonyms)
