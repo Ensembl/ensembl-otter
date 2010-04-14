@@ -47,6 +47,7 @@ use GeneHist::WidgetUtils qw (
                              );
 use Hum::Sort ('ace_sort');
 
+Bio::Otter::Lace::Defaults::do_getopt();
 my $client;
 my $dset  ;
 my $otter_db;
