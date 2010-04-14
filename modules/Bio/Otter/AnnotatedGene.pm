@@ -23,9 +23,9 @@ sub new {
 }
 
 sub gene_type_prefix {
-    my $self = shift;
+    my ($self, @args) = @_;
     
-    $self->throw("Read only method") if @_;
+    $self->throw("Read only method") if @args;
     
     if ($self->type =~ /^([^:]+):/) {
         return $1;
