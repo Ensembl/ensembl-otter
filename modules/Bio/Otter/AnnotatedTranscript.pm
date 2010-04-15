@@ -69,6 +69,8 @@ sub flush_Translation {
 
   $self->{'translation'}     = undef;
   $self->{'_translation_id'} = undef;
+
+  return;
 }
 
 sub patch_Translation {
