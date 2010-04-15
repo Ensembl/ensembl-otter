@@ -498,7 +498,7 @@ sub toXMLString {
             $str .= $author->toXMLString;
         }
 
-        foreach my $remstr (sort map $_->remark, $tinfo->remark) {
+        foreach my $remstr (sort map { $_->remark } $tinfo->remark) {
             $remstr =~ s/\n/ /g;
             $str .= "    <remark>" . xml_escape($remstr) . "</remark>\n";
         }
