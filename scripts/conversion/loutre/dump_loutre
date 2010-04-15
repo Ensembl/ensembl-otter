@@ -102,8 +102,9 @@ BEGIN {
   $SERVERROOT = "$Bin/../../../..";
   unshift(@INC, "$SERVERROOT/ensembl-otter/modules");
   unshift(@INC, "$SERVERROOT/ensembl/modules");
-  unshift(@INC, "modules");
+  unshift(@INC, "$SERVERROOT/ensembl-variation/modules");
   unshift(@INC, "$SERVERROOT/bioperl-live");
+#  unshift(@INC, "modules");
 }
 
 use Getopt::Long;
@@ -681,12 +682,12 @@ foreach my $name (@{$chr_names_wanted}) {
 	next GENE;
       }
     }		
-
-    if (&transfer_gene($lgene,$vsa,$vga)) {
+    
+    if (&transfer_gene($lgene)) {
       $c++;
     }
-
-  }
+    
+				}
   $support->log("Transferred $c genes from chromosome $name\n");
 
   #transfer other seq_region based features
@@ -729,9 +730,6 @@ $support->finish_log;
 
 sub transfer_gene {
   my $lgene = shift;
-  my $vsa = shift;  #no need to transfer
-  my $vga = shift;  #no need to transfer
-
 
   unless ($AUTHOR) {
     if ($lgene->gene_author->group->name eq 'havana') {
@@ -744,8 +742,7 @@ sub transfer_gene {
 					   $l_gene_slice->seq_region_name,
 					   $l_gene_slice->start,
 					   $l_gene_slice->end);
-
-  if(!$l_gene_slice) {		
+  if(!$l_gene_slice) {
     $support->log_warning("Couldn't fetch loutre gene slice\n");
     return 0;
   }
@@ -764,7 +761,20 @@ sub transfer_gene {
     $support->log_warning("No transcripts for loutre gene ".$lgene->dbID."\n");
     return 0;
   }
+  my $found_trans = 0;
+
+ TRANS:
   foreach my $transcript (@{$lgene->get_all_Transcripts}){
+ 
+    #this really should work you'd have thought, however cannot get it to in the time I have (error deep within Slice Adaptor)
+    #for now continue to remove these after transfer
+    # - perhaps we have to recalculate start and stop at this stage ? surely not ?
+#    if ( grep { $_->value =~ /not[_ ]for[_ ]Vega/i } @{$transcript->get_all_Attributes('hidden_remark')} ) {
+#      $support->log("Didn't transfer 'not_for_Vega' transcript ".$transcript->stable_id."\n",2);
+#      next TRANS;
+#    }
+    $support->log_verbose("Will transfer ".$transcript->stable_id."\n",2);
+    $found_trans = 1;
     $transcript->slice($v_gene_slice);
     $transcript->is_current(1);
     if($transcript->translation){
@@ -779,9 +789,13 @@ sub transfer_gene {
       $exon->stable_id;
     }
   }
+  unless ($found_trans) {
+    $support->log_warning("No transcripts found for gene ".$lgene->stable_id,". Skipping...\n");
+    return 0;
+  }
   $lgene->slice($v_gene_slice);
   if (! $support->param('dry_run')) {
-    if ($vga->store_only($lgene)) {
+    if (eval { $vga->store_only($lgene); 1 } ) {
       $support->log("Stored gene ".$lgene->stable_id."\n",1);
       return 1;
     }
