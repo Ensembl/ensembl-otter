@@ -82,8 +82,9 @@ BEGIN {
   $SERVERROOT = "$Bin/../../../..";
   unshift(@INC, "$SERVERROOT/ensembl-otter/modules");
   unshift(@INC, "$SERVERROOT/ensembl/modules");
-  unshift(@INC, "modules");
+  unshift(@INC, "$SERVERROOT/ensembl-variation/modules");
   unshift(@INC, "$SERVERROOT/bioperl-live");
+  unshift(@INC, "modules");
 }
 
 use POSIX qw(strftime);
