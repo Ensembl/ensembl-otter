@@ -191,9 +191,8 @@ use warnings;
         
         # This parameter is assumed to be a hashref which includes extra attributes you'd
         # like to have appended onto the gff line for the feature
-        my $extra_attrs = $args{extra_attrs}
-        
-        my $extra_attrs = shift;
+        my $extra_attrs = $args{extra_attrs};
+
         my $gff = $self->_gff_hash($rebase);
 
         $gff->{score}  = '.' unless defined $gff->{score};
@@ -241,7 +240,7 @@ use warnings;
         my $end = $rebase ? $self->end : $self->seq_region_end;
 
         my %gff = (
-            seqname => $seqname
+            seqname => $seqname,
             source  => $self->_gff_source,
             feature => $self->_gff_feature,
             start   => $start,
