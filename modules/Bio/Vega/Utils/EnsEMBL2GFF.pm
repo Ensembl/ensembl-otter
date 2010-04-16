@@ -33,7 +33,7 @@ use warnings;
         my $date = "$year-$mon-$mday";
 
         my $start = $rebase ? 1 : $self->start;
-        my $end   = $rebase ? $self->start + $self->length : $self->end;
+        my $end   = $rebase ? $self->length : $self->end;
 
         my $hdr =
             "##gff-version 2\n"
