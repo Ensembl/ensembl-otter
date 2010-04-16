@@ -78,7 +78,7 @@ use warnings;
         my $sources_to_types = $args{sources_to_types};
 
         my $gff = $include_header ? 
-            $target_slice->gff_header( include_dna => $include_dna ) :
+            $target_slice->gff_header( include_dna => $include_dna, rebase => $rebase ) :
             '';
 
         # grab features of each type we're interested in
