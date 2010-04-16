@@ -69,6 +69,7 @@ use warnings;
         my $verbose        = $args{verbose};
         my $target_slice   = $args{target_slice} || $self;
         my $common_slice   = $args{common_slice};
+        my $rebase         = $args{rebase};
 
         my $sources_to_types = $args{sources_to_types};
 
@@ -133,6 +134,9 @@ use warnings;
                             my $truncated = $feature->truncate_to_Slice($target_slice);
                             print "Truncated transcript: ".$feature->display_id."\n" if $truncated && $verbose;
                         }
+                        
+                        $feature->start($feature->start - $self->start) if $rebase;
+                        $feature->end($feature->end - $self->start) if $rebase;
                         
                         $gff .= $feature->to_gff . "\n";
 

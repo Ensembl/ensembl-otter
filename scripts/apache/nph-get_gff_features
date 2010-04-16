@@ -40,6 +40,7 @@ eval {
               : () ), 
             feature_types   => [map {$_.'s'} split(/,/, $types)],
             include_header  => 1,
+            rebase          => 1,
         );
         
 #        for my $f (@$features) {
