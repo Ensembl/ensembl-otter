@@ -32,6 +32,7 @@ use warnings;
         $mon++;           # correct the month
         my $date = "$year-$mon-$mday";
 
+        my $name  = $rebase ? $self->seq_region_name.'_'.$self->start.'-'.$self->end : $self->seq_region_name;
         my $start = $rebase ? 1 : $self->start;
         my $end   = $rebase ? $self->length : $self->end;
 
@@ -39,10 +40,7 @@ use warnings;
             "##gff-version 2\n"
           . "##source-version EnsEMBL2GFF 1.0\n"
           . "##date $date\n"
-          . "##sequence-region "
-          . $self->seq_region_name . " "
-          . $start . " "
-          . $end . "\n";
+          . "##sequence-region $name $start $end\n";
 
         if ($include_dna) {
             $hdr .= "##DNA\n" . "##" . $self->seq . "\n" . "##end-DNA\n";
@@ -76,8 +74,6 @@ use warnings;
         my $rebase         = $args{rebase};
 
         my $sources_to_types = $args{sources_to_types};
-    
-        $target_slice->{seq_region_name} = $target_slice->{seq_region_name}.'_'.$target_slice->start.'-'.$target_slice->end if $rebase;
     
         my $gff = $include_header ? 
             $target_slice->gff_header( include_dna => $include_dna, rebase => $rebase ) :
@@ -141,10 +137,7 @@ use warnings;
                             print "Truncated transcript: ".$feature->display_id."\n" if $truncated && $verbose;
                         }
                         
-                        $feature->start($feature->start - $self->start) if $rebase;
-                        $feature->end($feature->end - $self->start) if $rebase;
-                        
-                        $gff .= $feature->to_gff . "\n";
+                        $gff .= $feature->to_gff(rebase => $rebase) . "\n";
 
                         if ($sources_to_types) {
 
@@ -192,10 +185,16 @@ use warnings;
 
         my $self = shift;
         
+        my %args = @_;
+        
+        my $rebase = $args{rebase};
+        
         # This parameter is assumed to be a hashref which includes extra attributes you'd
         # like to have appended onto the gff line for the feature
+        my $extra_attrs = $args{extra_attrs}
+        
         my $extra_attrs = shift;
-        my $gff = $self->_gff_hash;
+        my $gff = $self->_gff_hash($rebase);
 
         $gff->{score}  = '.' unless defined $gff->{score};
         $gff->{strand} = '.' unless defined $gff->{strand};
@@ -232,13 +231,21 @@ use warnings;
 
     sub _gff_hash {
         my $self = shift;
+        
+        my %args = @_;
+        
+        my $rebase = $args{rebase};
+
+        my $seqname = $rebase ? $self->slice->seq_region_name.'_'.$self->slice->start.'-'.$self->slice->end : $self->slice->seq_region_name;
+        my $start = $rebase ? $self->start : $self->seq_region_start;
+        my $end = $rebase ? $self->end : $self->seq_region_end;
 
         my %gff = (
-            seqname => $self->slice->seq_region_name,
+            seqname => $seqname
             source  => $self->_gff_source,
             feature => $self->_gff_feature,
-            start   => $self->seq_region_start,
-            end     => $self->seq_region_end,
+            start   => $start,
+            end     => $end,
             strand  => (
                 $self->strand == 1 ? '+' : ( $self->strand == -1 ? '-' : '.' )
             )
@@ -271,7 +278,7 @@ use warnings;
     sub _gff_hash {
         my $self = shift;
 
-        my $gff = $self->SUPER::_gff_hash;
+        my $gff = $self->SUPER::_gff_hash(@_);
 
         $gff->{source} .= "_simple_feature";
         $gff->{score}   = $self->score;
@@ -291,19 +298,23 @@ use warnings;
 
     sub _gff_hash {
         my $self = shift;
-
+        
+        my %args = @_;
+        
+        my $rebase = $args{rebase};
+        
         my $gap_string = '';
 
         my @fps = $self->ungapped_features;
 
         if ( @fps > 1 ) {
             my @gaps =
-              map { join( ' ', $_->seq_region_start, $_->seq_region_end, $_->hstart, $_->hend ) }
+              map { join( ' ', ($rebase ? $_->start : $_->seq_region_start), ($rebase ? $_->end : $_->seq_region_end), $_->hstart, $_->hend ) }
               @fps;
             $gap_string = join( ',', @gaps );
         }
 
-        my $gff = $self->SUPER::_gff_hash;
+        my $gff = $self->SUPER::_gff_hash(@_);
 
         $gff->{score} = $self->score;
         $gff->{feature} = $self->analysis->gff_feature || 'similarity';
@@ -329,11 +340,11 @@ use warnings;
 
     sub to_gff {
         my $self = shift;
-
+      
         # just concatenate the gff of each of the transcripts, joining them together
         # with the Locus attribute
         return join( "\n",
-            map { $_->to_gff( { Locus => '"' . $self->display_id . '"' } ) }
+            map { $_->to_gff( @_, extra_attrs => { Locus => '"' . $self->display_id . '"' } ) }
               @{ $self->get_all_Transcripts } );
     }
 }
@@ -344,7 +355,7 @@ use warnings;
 
     sub _gff_hash {
         my $self = shift;
-        my $gff  = $self->SUPER::_gff_hash;
+        my $gff  = $self->SUPER::_gff_hash(@_);
         $gff->{feature} = 'Sequence';
         $gff->{attributes}->{Sequence} = '"' . $self->display_id . '"';
         return $gff;
@@ -353,6 +364,10 @@ use warnings;
     sub to_gff {
 
         my $self = shift;
+        
+        my %args = @_;
+        
+        my $rebase = $args{rebase};
         
         return '' unless @{ $self->get_all_Exons };
         
@@ -367,13 +382,20 @@ use warnings;
             
             # build up the CDS line - it's not really worth creating a Translation->to_gff method, 
             # as most of the fields are derived from the Transcript
+            
+            my $start = $self->coding_region_start - 1;
+            $start += $self->slice->start unless $rebase;
+            
+            my $end = $self->coding_region_end - 1;
+            $end += $self->slice->start unless $rebase;
+            
             $gff .= "\n" . join(
                 "\t",
                 $self->_gff_hash->{seqname},
                 $self->_gff_hash->{source},
                 'CDS',    # feature
-                $self->slice->start + $self->coding_region_start - 1,
-                $self->slice->start + $self->coding_region_end - 1,
+                $start,
+                $end,
                 '.',      # score
                 $self->_gff_hash->{strand},
                 '0', # frame - not really sure what we should put here, but giface always seems to use 0, so we will too!
@@ -504,7 +526,7 @@ use warnings;
 
     sub _gff_hash {
         my $self = shift;
-        my $gff  = $self->SUPER::_gff_hash;
+        my $gff  = $self->SUPER::_gff_hash(@_);
         $gff->{feature} = 'exon';
         return $gff;
     }
@@ -516,7 +538,7 @@ use warnings;
 
     sub _gff_hash {
         my $self = shift;
-        my $gff  = $self->SUPER::_gff_hash;
+        my $gff  = $self->SUPER::_gff_hash(@_);
         $gff->{feature} = 'intron';
         return $gff;
     }
@@ -536,7 +558,7 @@ use warnings;
         my $allele = $self->allele_string;
         my $url = sprintf $url_format, $name;
 
-        my $gff  = $self->SUPER::_gff_hash;
+        my $gff  = $self->SUPER::_gff_hash(@_);
         $gff->{attributes}->{Name} = qq("$name - $allele");
         $gff->{attributes}->{URL} = qq("$url");
 
@@ -554,7 +576,7 @@ use warnings;
 
     sub _gff_hash {
         my $self = shift;
-        my $gff  = $self->SUPER::_gff_hash;
+        my $gff  = $self->SUPER::_gff_hash(@_);
         $gff->{attributes}->{Length} = $self->get_HitDescription->hit_length;
         $gff->{attributes}->{Note} = '"'.$self->get_HitDescription->description.'"';
         return $gff;
