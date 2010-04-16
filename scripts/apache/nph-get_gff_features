@@ -23,8 +23,9 @@ my $gff_string = '';
 my ($t0, $t1, $t2);
 
 eval {
-    my $analyses = $server->param('analysis');
-    my $types = $server->param('kind');
+    my $analyses    = $server->param('analysis');
+    my $types       = $server->param('kind');
+    my $rebase      = $server->param('rebase');
  
     $t0 = time();
 
@@ -40,7 +41,7 @@ eval {
               : () ), 
             feature_types   => [map {$_.'s'} split(/,/, $types)],
             include_header  => 1,
-            rebase          => 1,
+            rebase          => $rebase,
         );
         
 #        for my $f (@$features) {

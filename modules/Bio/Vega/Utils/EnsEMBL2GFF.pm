@@ -193,7 +193,7 @@ use warnings;
         # like to have appended onto the gff line for the feature
         my $extra_attrs = $args{extra_attrs};
 
-        my $gff = $self->_gff_hash($rebase);
+        my $gff = $self->_gff_hash(rebase => $rebase);
 
         $gff->{score}  = '.' unless defined $gff->{score};
         $gff->{strand} = '.' unless defined $gff->{strand};
