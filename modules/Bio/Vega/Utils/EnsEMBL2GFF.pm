@@ -23,6 +23,7 @@ use warnings;
         my $self        = shift;
         my %args        = @_;
         my $include_dna = $args{include_dna};
+        my $rebase      = $args{rebase};
 
         # build up a date string in the format specified by the GFF spec
 
@@ -31,14 +32,17 @@ use warnings;
         $mon++;           # correct the month
         my $date = "$year-$mon-$mday";
 
+        my $start = $rebase ? 1 : $self->start;
+        my $end   = $rebase ? $self->start + $self->length : $self->end;
+
         my $hdr =
             "##gff-version 2\n"
           . "##source-version EnsEMBL2GFF 1.0\n"
           . "##date $date\n"
           . "##sequence-region "
           . $self->seq_region_name . " "
-          . $self->start . " "
-          . $self->end . "\n";
+          . $start . " "
+          . $end . "\n";
 
         if ($include_dna) {
             $hdr .= "##DNA\n" . "##" . $self->seq . "\n" . "##end-DNA\n";
