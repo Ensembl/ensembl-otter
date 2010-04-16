@@ -77,7 +77,7 @@ use warnings;
 
         my $sources_to_types = $args{sources_to_types};
     
-        $target_slice->seq_region_name($target_slice->seq_region_name.'_'.$target_slice->start.'-'.$target_slice->end) if $rebase;
+        $target_slice->{seq_region_name} = $target_slice->{seq_region_name}.'_'.$target_slice->start.'-'.$target_slice->end) if $rebase;
     
         my $gff = $include_header ? 
             $target_slice->gff_header( include_dna => $include_dna, rebase => $rebase ) :
