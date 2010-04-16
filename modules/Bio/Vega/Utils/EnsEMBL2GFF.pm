@@ -76,11 +76,13 @@ use warnings;
         my $rebase         = $args{rebase};
 
         my $sources_to_types = $args{sources_to_types};
-
+    
+        $target_slice->name($target_slice->name.'_'.$target_slice->start.'-'.$target_slice->end) if $rebase;
+    
         my $gff = $include_header ? 
             $target_slice->gff_header( include_dna => $include_dna, rebase => $rebase ) :
             '';
-
+        
         # grab features of each type we're interested in
 
         for my $feature_type (@$feature_types) {
