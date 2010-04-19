@@ -285,7 +285,7 @@ eval {
 #        );
         
         for my $f (@$features) {
-            $gff_string .= $f->to_gff;
+            $gff_string .= $f->to_gff."\n";
         }
     }
 };
