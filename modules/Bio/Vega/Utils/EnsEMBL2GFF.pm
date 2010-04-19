@@ -371,7 +371,7 @@ use warnings;
         return '' unless @{ $self->get_all_Exons };
         
         # XXX: hack to help differentiate the various otter transcripts
-        if ($self->analysis->logic_name && $self->analysis->logic_name eq 'Otter') {
+        if ($self->analysis && $self->analysis->logic_name eq 'Otter') {
             $self->analysis->gff_source('Otter_'.$self->biotype);
         }
 
