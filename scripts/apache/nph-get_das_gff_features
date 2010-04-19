@@ -249,8 +249,8 @@ eval {
 
     my $source        = $server->param('source'); # let's slowly phase it out
     my $dsn           = $server->require_argument('dsn');
-    my $analysis_name = $server->param('analysis'); # defaults to *everything*
-    my $kind          = $server->param('kind')  || 'SimpleFeature';
+    my $analyses      = $server->param('analysis'); # defaults to *everything*
+    my $types         = $server->param('kind')  || 'SimpleFeature';
     my $sieve         = $server->param('sieve') || '';
     my $grouplabel    = $server->param('grouplabel') || '';
     my $dump          = $server->param('dump') || 0;
