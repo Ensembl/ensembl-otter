@@ -1338,29 +1338,38 @@ sub save_sequence_notes {
     }
     my $cl = $self->Client();
     my $ds = $self->SequenceSetChooser->DataSet;
+    my $time = time();
 
-    my $new_note = Bio::Otter::Lace::SequenceNote->new;
-    $new_note->author($cl->author); # will be ignored by the client anyway, but let it be known to the interface
-    $new_note->text($text);
-    $new_note->timestamp(time());
     my $seq_list = $self->SequenceSet->selected_CloneSequences;
     
-    foreach my $cs (@$seq_list) {
-        $cs->add_SequenceNote($new_note);    
-        $cs->current_SequenceNote($new_note);
-
-            # store new SequenceNote in the database
+    my $all_list = $self->SequenceSet->CloneSequence_list;
+    my $contig_string = join "|",map($_->contig_name,@$seq_list);
+    my %seq_hash;
+    foreach(grep($_->contig_name =~ /$contig_string/,@$all_list)){
+    	$seq_hash{$_->contig_name} ||= [];
+    	push @{$seq_hash{$_->contig_name}},$_;
+    }
+    
+    foreach my $contig_name (keys %seq_hash) {
+    	my $new_note = Bio::Otter::Lace::SequenceNote->new;
+        $new_note->author($cl->author);
+        $new_note->text($text);
+        $new_note->timestamp($time);
+    	# store new SequenceNote in the database
         $cl->push_sequence_note(
             $ds->name(),
-            $cs->contig_name(),
+            $contig_name,
             $new_note,
-        );
-
+        );    	
+    	foreach my $cs (@{$seq_hash{$contig_name}}){
+            $cs->add_SequenceNote($new_note);    
+            $cs->current_SequenceNote($new_note);
             # sync state of SequenceNote objects with database
-        for my $note (@{$cs->get_all_SequenceNotes()}) {
-            $note->is_current(0);
-        }
-        $new_note->is_current(1);
+            for my $note (@{$cs->get_all_SequenceNotes()}) {
+                $note->is_current(0);
+            }
+            $new_note->is_current(1);
+    	}
     } 
     $self->draw;
     $self->set_scroll_region_and_maxsize;
