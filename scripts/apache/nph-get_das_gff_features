@@ -251,8 +251,8 @@ eval {
 
     my $source        = $server->param('source'); # let's slowly phase it out
     my $dsn           = $server->require_argument('dsn');
-    my $analyses      = $server->param('analysis'); # defaults to *everything*
-    my $types         = $server->param('kind')  || 'SimpleFeature';
+    my $analysis_name = $server->param('analysis'); # defaults to *everything*
+    my $kind          = $server->param('kind')  || 'SimpleFeature';
     my $sieve         = $server->param('sieve') || '';
     my $grouplabel    = $server->param('grouplabel') || '';
     my $dump          = $server->param('dump') || 0;
@@ -274,11 +274,11 @@ eval {
         my $slice = $features->[0]->slice;
         $gff_string = $slice->to_gff(
             ( $analyses
-              ? ( analyses  => [split(/,/, $analyses)] )
+              ? ( analyses  => [split(/,/, $analysis_name)] )
               : () ), 
-            feature_types   => [map {$_.'s'} split(/,/, $types)],
+            feature_types   => [map {$_.'s'} split(/,/, $kind)],
             include_header  => 1,
-            rebase          => $rebase,
+            #rebase          => $rebase,
         );
     }
 };
