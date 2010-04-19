@@ -273,7 +273,7 @@ eval {
     if (@$features) {
         my $slice = $features->[0]->slice;
         $gff_string = $slice->to_gff(
-            ( $analyses
+            ( $analysis_name
               ? ( analyses  => [split(/,/, $analysis_name)] )
               : () ), 
             feature_types   => [map {$_.'s'} split(/,/, $kind)],
