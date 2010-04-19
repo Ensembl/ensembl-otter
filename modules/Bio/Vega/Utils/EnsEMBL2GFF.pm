@@ -392,10 +392,10 @@ use warnings;
             # build up the CDS line - it's not really worth creating a Translation->to_gff method, 
             # as most of the fields are derived from the Transcript
             
-            my $start = $self->coding_region_start;
+            my $start = $self->coding_region_start + 1;
             $start += $self->slice->start - 1 unless $rebase;
             
-            my $end = $self->coding_region_end;
+            my $end = $self->coding_region_end + 1;
             $end += $self->slice->start - 1 unless $rebase;
             
             my $gff_hash = $self->_gff_hash(@_);
