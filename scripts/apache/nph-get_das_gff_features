@@ -262,7 +262,7 @@ eval {
     # Default timeout was 5 seconds, which is not long enough for UCSC!  Could make it a parmeter.
     $das->timeout(2 * 60);
 
-    my $feature_array = $server->fetch_mapped_features('das_'.$kind, 'get_all_features_via_DAS', [$server, $das, $chr_name, $analysis_name, $kind, $sieve, $grouplabel, $dump],
+    my $features = $server->fetch_mapped_features('das_'.$kind, 'get_all_features_via_DAS', [$server, $das, $chr_name, $analysis_name, $kind, $sieve, $grouplabel, $dump],
         (map { defined($server->param($_)) ? $server->param($_) : '' } qw(cs name type start end metakey csver csver_remote)),
         1, # do the short version of mapping, without the target database
     );
