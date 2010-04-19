@@ -273,9 +273,9 @@ eval {
     if (@$features) {
         my $slice = $features->[0]->slice;
         $gff_string = $slice->to_gff(
-            ( $analysis_name
-              ? ( analyses  => [split(/,/, $analysis_name)] )
-              : () ), 
+            ( $analysis_name eq 'all'
+              ? ()
+              : ( analyses  => [split(/,/, $analysis_name)] ), 
             feature_types   => [map {$_.'s'} split(/,/, $kind)],
             include_header  => 1,
             #rebase          => $rebase,
@@ -286,7 +286,7 @@ eval {
 if ($@) {
     $server->error_exit($@);
 } else {
-    $server->send_response($gff_string, 1);
+    $server->send_response($gff_string, 0, 1);
 }
 
 1;
