@@ -275,7 +275,7 @@ eval {
         $gff_string = $slice->to_gff(
             ( $analysis_name eq 'all'
               ? ()
-              : ( analyses  => [split(/,/, $analysis_name)] ), 
+              : ( analyses  => [split(/,/, $analysis_name)] ) ), 
             feature_types   => [map {$_.'s'} split(/,/, $kind)],
             include_header  => 1,
             #rebase          => $rebase,
