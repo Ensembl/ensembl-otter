@@ -398,17 +398,19 @@ use warnings;
             my $end = $self->coding_region_end - 1;
             $end += $self->slice->start unless $rebase;
             
+            my $gff_hash = $self->_gff_hash(@_);
+            
             $gff .= "\n" . join(
                 "\t",
-                $self->_gff_hash->{seqname},
-                $self->_gff_hash->{source},
+                $gff_hash->{seqname},
+                $gff_hash->{source},
                 'CDS',    # feature
                 $start,
                 $end,
                 '.',      # score
-                $self->_gff_hash->{strand},
+                $gff_hash->{strand},
                 '0', # frame - not really sure what we should put here, but giface always seems to use 0, so we will too!
-                'Sequence ' . $self->_gff_hash->{attributes}->{Sequence}
+                'Sequence ' . $gff_hash->{attributes}->{Sequence}
             );
         }
 
