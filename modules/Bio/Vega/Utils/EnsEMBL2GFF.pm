@@ -255,10 +255,15 @@ use warnings;
 
     sub _gff_source {
         my $self = shift;
-
-        return
-            $self->analysis->gff_source
-            || $self->analysis->logic_name;
+        
+        if ($self->analysis) {
+            return
+                $self->analysis->gff_source
+                || $self->analysis->logic_name;
+        }
+        else {
+            return ref($self);
+        }
     }
 
     sub _gff_feature {
