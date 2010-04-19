@@ -393,10 +393,10 @@ use warnings;
             # as most of the fields are derived from the Transcript
             
             my $start = $self->coding_region_start - 1;
-            $start += $self->slice->start unless $rebase;
+            $start += $self->slice->start + 1 unless $rebase;
             
             my $end = $self->coding_region_end - 1;
-            $end += $self->slice->start unless $rebase;
+            $end += $self->slice->start + 1 unless $rebase;
             
             my $gff_hash = $self->_gff_hash(@_);
             
@@ -416,11 +416,12 @@ use warnings;
 
         # add gff lines for each of the introns and exons
         # (adding lines for both seems a bit redundant to me, but zmap seems to like it!)
-        for my $feat ( @{ $self->get_all_Exons }, @{ $self->get_all_Introns } )
-        {
+        for my $feat ( @{ $self->get_all_Exons }, @{ $self->get_all_Introns } ) {
+            
             # exons and introns don't have analyses attached, so temporarily give them the transcript's one
             $feat->analysis( $self->analysis );
             
+            # and also give them the transcript's gff source
             $feat->_gff_source( $self->_gff_source );
 
             # and add the feature's gff line to our string, including the sequence information as an attribute
