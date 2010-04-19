@@ -272,14 +272,21 @@ eval {
     
     if (@$features) {
         my $slice = $features->[0]->slice;
-        $gff_string = $slice->to_gff(
-            ( $analysis_name eq 'all'
-              ? ()
-              : ( analyses  => [split(/,/, $analysis_name)] ) ), 
-            feature_types   => [map {$_.'s'} split(/,/, $kind)],
-            include_header  => 1,
-            #rebase          => $rebase,
-        );
+        
+        $gff_string ||= $slice->gff_header;
+        
+#        $gff_string = $slice->to_gff(
+#            ( $analysis_name eq 'all'
+#              ? ()
+#              : ( analyses  => [split(/,/, $analysis_name)] ) ), 
+#            feature_types   => [map {$_.'s'} split(/,/, $kind)],
+#            include_header  => 1,
+#            #rebase          => $rebase,
+#        );
+        
+        for my $f (@$features) {
+            $gff_string .= $f->to_gff;
+        }
     }
 };
 
