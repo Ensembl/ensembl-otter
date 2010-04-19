@@ -285,6 +285,7 @@ eval {
 #        );
         
         for my $f (@$features) {
+            $f->_gff_source($dsn);
             $gff_string .= $f->to_gff."\n";
         }
     }
