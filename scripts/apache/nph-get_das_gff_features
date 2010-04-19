@@ -16,6 +16,7 @@ use Bio::EnsEMBL::SimpleFeature;
 use Bio::EnsEMBL::PredictionExon;
 use Bio::Vega::PredictionTranscript;
 use Bio::Otter::ServerScriptSupport;
+use Bio::Otter::Lace::ViaText qw( &GenerateFeatures %LangDesc );
 use Bio::Vega::Utils::EnsEMBL2GFF;
 
 sub struct_traverse_path {
