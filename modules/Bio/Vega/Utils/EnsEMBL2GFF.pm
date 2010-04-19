@@ -423,7 +423,7 @@ use warnings;
 
             # and add the feature's gff line to our string, including the sequence information as an attribute
             $gff .= "\n"
-              . $feat->to_gff( { Sequence => '"' . $self->display_id . '"' }, @_ );
+              . $feat->to_gff( @_, extra_attrs => { Sequence => '"' . $self->display_id . '"' } );
 
             # to be on the safe side, get rid of the analysis we temporarily attached
             # (someone might rely on there not being one later)
