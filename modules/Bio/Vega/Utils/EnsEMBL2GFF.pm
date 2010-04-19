@@ -418,6 +418,8 @@ use warnings;
         {
             # exons and introns don't have analyses attached, so temporarily give them the transcript's one
             $feat->analysis( $self->analysis );
+            
+            $feat->_gff_source( $self->_gff_source );
 
             # and add the feature's gff line to our string, including the sequence information as an attribute
             $gff .= "\n"
