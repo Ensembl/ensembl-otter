@@ -255,6 +255,11 @@ use warnings;
 
     sub _gff_source {
         my $self = shift;
+        my $source = shift;
+        
+        $self->{_gff_source} = $source if $source;
+        
+        return $self->{_gff_source} if $self->{_gff_source};
         
         if ($self->analysis) {
             return
