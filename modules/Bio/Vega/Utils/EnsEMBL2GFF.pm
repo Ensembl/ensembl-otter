@@ -315,7 +315,7 @@ use warnings;
 
         my $gff = $self->SUPER::_gff_hash(@_);
 
-        $gff->{score} = $self->score;
+        $gff->{score} = $self->percent_id;
         $gff->{feature} = $self->analysis->gff_feature || 'similarity';
 
         $gff->{attributes}->{Target} =
