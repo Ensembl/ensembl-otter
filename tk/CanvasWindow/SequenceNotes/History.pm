@@ -393,7 +393,6 @@ sub update_db_comment {
         return if ($confirm eq 'Cancel');
 
         $current_seq_note->text($new_string);    #change text
-        $clone_sequence->current_SequenceNote($current_seq_note);
 
         $cl->change_sequence_note(
             $dataset->name(),

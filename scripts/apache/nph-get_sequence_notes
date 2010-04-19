@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2010-03-16 11:05:47 $
-# Id:            $Id: nph-get_sequence_notes,v 1.20 2010-03-16 11:05:47 jh13 Exp $
+# Last modified: $Date: 2010-04-19 15:10:50 $
+# Id:            $Id: nph-get_sequence_notes,v 1.21 2010-04-19 15:10:50 ml6 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_sequence_notes,v $
 
 use strict;
@@ -41,6 +41,11 @@ my $sql = qq{
 .qq{       sn.seq_region_id = ctg.seq_region_id }
 .($aut_name ? qq{ AND aut.author_name = "$aut_name" } : '')
 .qq{   AND sn.author_id = aut.author_id
+  GROUP BY ctg.name,
+           aut.author_name,
+           sn.is_current,
+           sn.note_time,
+           sn.note
   ORDER BY ctg.name, sn.note_time ASC
 };
 
