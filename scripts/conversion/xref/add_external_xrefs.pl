@@ -248,7 +248,6 @@ else {
 if ($support->param('verbose')) {
   $support->log("Parsed xrefs are ".Dumper($parsed_xrefs)."\n");
   $support->log("Parsed lc xrefs are ".Dumper($lcmap)."\n");
-  exit;
 }
 
 use strict 'refs';
@@ -384,8 +383,13 @@ foreach my $chr (@chr_sorted) {
 	$support->log("Searching for name $name...\n",1);
 	if (my $links = $parsed_xrefs->{$name}) {
 	  if ($links->{'This symbol is withdrawn'}) {
-	    $support->log_warning("Vega name: $name ($gene_name) matches a withdrawn record\n",1);
-	    next NAME;
+
+	    #need to be done better than it is to not hide useless reports(eg ->log_verbose_warning)
+	    # - don't know why this commented out code should not work
+#	    if (! $prefix || $support->param('verbose') ) {
+	      $support->log_warning("Vega name: $name ($gene_name) matches a withdrawn record\n",1);
+	      next NAME;
+#	    }
 	  }
 	  $support->log("Match found for $name.\n",1);
 	  
