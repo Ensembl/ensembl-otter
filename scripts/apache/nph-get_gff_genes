@@ -35,6 +35,8 @@ eval {
                                                       ( undef );
     my $transcript_analyses  = $server->param('transcript_analyses')  || '';
     my $translation_xref_dbs = $server->param('translation_xref_dbs') || '';
+    my $rebase               = $server->param('rebase');
+    my $gff_source           = $server->param('gff_source');
 
     my $allowed_transcript_analyses_hash = $transcript_analyses
         ? { map { $_ => 1 } split(/,/, $transcript_analyses) }
@@ -48,14 +50,16 @@ eval {
         my $genes = $server->fetch_mapped_features('gene', 'get_all_Genes', [$analysis_name, undef, 1],
             map { defined($server->param($_)) ? $server->param($_) : '' } qw(cs name type start end metakey csver csver_remote)
         );
+        
+        $gff_string = $genes->[0]->slice->gff_header(rebase => $rebase) if @$genes;
 
         foreach my $gene (@$genes) {
 #            $gff_string .= $gene->toXMLstring(
 #                $allowed_transcript_analyses_hash,
 #                $allowed_translation_xref_db_hash
 #            );
-            
-            $gff_string .= $gene->to_gff(rebase => 1)."\n";
+            $gene->_gff_source($gff_source);
+            $gff_string .= $gene->to_gff(rebase => $rebase)."\n";
         }
     }
 };
