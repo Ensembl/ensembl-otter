@@ -356,6 +356,12 @@ use warnings;
             map { $_->to_gff( @_, extra_attrs => { Locus => '"' . $self->display_id . '"' } ) }
               @{ $self->get_all_Transcripts } );
     }
+    
+    sub _gff_source {
+        my $self = shift;
+        $self->SUPER::_gff_source(@_);
+        map { $_->_gff_source(@_) } @{ $self->get_all_Transcripts };
+    }
 }
 
 {
