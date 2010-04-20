@@ -11,6 +11,7 @@ use SangerPaths qw{ core bioperl123 ensembl56 otter53 };
 
 use Bio::Otter::ServerScriptSupport;
 use Bio::Otter::ToXML;
+use Bio::Vega::Utils::EnsEMBL2GFF;
 
 
 sub Bio::EnsEMBL::Gene::propagate_slice {
