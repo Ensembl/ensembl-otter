@@ -129,7 +129,7 @@ if ($support->param('prune') and $support->user_proceed('Would you really like t
         DELETE x
         FROM xref x, external_db ed
         WHERE x.external_db_id = ed.external_db_id
-        AND ed.db_name in ('Ens_Mm_gene','EntrezGene','MGI','RefSeq_dna','RefSeq_peptide','Uniprot/SWISSPROT','Vega_gene','Vega_transcript','Vega_translation')
+        AND ed.db_name != 'Interpro'
     ));
   $support->log("Done deleting $num entries.\n");
 
