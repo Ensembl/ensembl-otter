@@ -650,7 +650,20 @@ use warnings;
         my $self = shift;
         my $gff  = $self->SUPER::_gff_hash(@_);
         $gff->{attributes}->{Length} = $self->get_HitDescription->hit_length;
-        $gff->{attributes}->{Name} = '"'.$self->get_HitDescription->description.'"';
+        #$gff->{attributes}->{Name} = '"'.$self->get_HitDescription->description.'"';
+        return $gff;
+    }
+}
+
+{
+
+    package Bio::Otter::DnaPepAlignFeature;
+
+    sub _gff_hash {
+        my $self = shift;
+        my $gff  = $self->SUPER::_gff_hash(@_);
+        $gff->{attributes}->{Length} = $self->get_HitDescription->hit_length;
+        #$gff->{attributes}->{Name} = '"'.$self->get_HitDescription->description.'"';
         return $gff;
     }
 }
