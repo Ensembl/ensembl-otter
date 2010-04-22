@@ -293,7 +293,7 @@ use warnings;
         $gff->{feature} = 'misc_feature';
 
         if ( $self->display_label ) {
-            $gff->{attributes}->{Note} = '"' . $self->display_label . '"';
+            $gff->{attributes}->{Name} = '"' . $self->display_label . '"';
         }
 
         return $gff;
@@ -326,18 +326,28 @@ use warnings;
 
         $gff->{score} = $self->percent_id;
         $gff->{feature} = $self->analysis->gff_feature || 'similarity';
-
-        $gff->{attributes}->{Target} =
-            '"Sequence:'
-          . $self->hseqname . '" '
-          . $self->hstart . ' '
-          . $self->hend . ' '
-          . ( $self->hstrand == -1 ? '-' : '+' );
+        
+        $gff->{attributes}->{Class} = qq("Sequence");
+        $gff->{attributes}->{Name} = '"'.$self->hseqname.'"';
+        $gff->{attributes}->{Align} = $self->hstart.' '.$self->hend.' '.
+            ( $self->hstrand == -1 ? '-' : '+' );
 
         if ($gap_string) {
             $gff->{attributes}->{Gaps} = qq("$gap_string");
         }
 
+        return $gff;
+    }
+}
+
+{
+    
+    package Bio::EnsEMBL::DnaPepAlignFeature;
+    
+    sub _gff_hash {
+        my $self = shift;
+        my $gff = $self->SUPER::_gff_hash(@_);
+        $gff->{attributes}->{Class} = qq("Protein");
         return $gff;
     }
 }
@@ -371,7 +381,8 @@ use warnings;
         my $self = shift;
         my $gff  = $self->SUPER::_gff_hash(@_);
         $gff->{feature} = 'Sequence';
-        $gff->{attributes}->{Sequence} = '"' . $self->display_id . '"';
+        $gff->{attributes}->{Class} = qq("Sequence");
+        $gff->{attributes}->{Name} = '"'.$self->display_id.'"';
         return $gff;
     }
 
@@ -415,7 +426,9 @@ use warnings;
                 '.',      # score
                 $gff_hash->{strand},
                 '0', # frame - not really sure what we should put here, but giface always seems to use 0, so we will too!
-                'Sequence ' . $gff_hash->{attributes}->{Sequence}
+                'Class "Sequence"',
+                ';',
+                'Name ' . $gff_hash->{attributes}->{Sequence}
             );
         }
 
@@ -612,7 +625,9 @@ use warnings;
             
             my $hstrand = $self->hstrand == -1 ? '-' : '+';
             
-            $gff->{attributes}->{Name} = '"Motif '.$self->repeat_consensus->name.'" '.$self->hstart.' '.$self->hend.' '.$hstrand;
+            $gff->{attributes}->{Class} = qq("Motif");
+            $gff->{attributes}->{Name} = '"'.$self->repeat_consensus->name.'"'
+            $gff->{attributes}->{Align} = $self->hstart.' '.$self->hend.' '.$hstrand;
         }
         elsif ($self->analysis->logic_name =~ /trf/i) {
             $gff->{feature} = 'misc_feature';
@@ -620,7 +635,7 @@ use warnings;
             my $cons = $self->repeat_consensus->repeat_consensus;
             my $len = length($cons);
             my $copies = sprintf "%.1f", ($self->end - $self->start + 1) / $len;
-            $gff->{attributes}->{Note}  = qq("$copies copies $len mer $cons");
+            $gff->{attributes}->{Name}  = qq("$copies copies $len mer $cons");
         }
         
         return $gff;
@@ -635,7 +650,7 @@ use warnings;
         my $self = shift;
         my $gff  = $self->SUPER::_gff_hash(@_);
         $gff->{attributes}->{Length} = $self->get_HitDescription->hit_length;
-        $gff->{attributes}->{Note} = '"'.$self->get_HitDescription->description.'"';
+        $gff->{attributes}->{Name} = '"'.$self->get_HitDescription->description.'"';
         return $gff;
     }
 }
