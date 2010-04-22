@@ -597,7 +597,7 @@ use warnings;
         my $self = shift;
         my $gff  = $self->SUPER::_gff_hash(@_);
         
-        if ($self->analysis =~ /RepeatMasker/i) {
+        if ($self->analysis->logic_name =~ /RepeatMasker/i) {
             my $class = $self->repeat_consensus->repeat_class;
         
             if ($class =~ /LINE/) {
@@ -614,7 +614,7 @@ use warnings;
             
             $gff->{attributes}->{Name} = '"Motif '.$self->repeat_consensus->name.'" '.$self->hstart.' '.$self->hend.' '.$hstrand;
         }
-        elsif ($self->analysis =~ /trf/i) {
+        elsif ($self->analysis->logic_name =~ /trf/i) {
             $gff->{feature} = 'misc_feature';
             $gff->{strand} = $self->strand;
             my $cons = $self->repeat_consensus->repeat_consensus;
@@ -622,8 +622,6 @@ use warnings;
             my $copies = ($self->end - $self->start + 1) / $len;
             $gff->{attributes}->{Note}  = "$copies copies $len mer $cons";
         }
-        
-        $gff->{attributes}->{Note}  = $self->analysis;
         
         return $gff;
     }
