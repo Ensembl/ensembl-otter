@@ -289,7 +289,6 @@ use warnings;
 
         my $gff = $self->SUPER::_gff_hash(@_);
 
-        $gff->{source} .= "_simple_feature";
         $gff->{score}   = $self->score;
         $gff->{feature} = 'misc_feature';
 
