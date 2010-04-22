@@ -596,23 +596,32 @@ use warnings;
     sub _gff_hash {
         my $self = shift;
         my $gff  = $self->SUPER::_gff_hash(@_);
-    
-        my $class = $self->repeat_consensus->repeat_class;
-    
-        if ($class =~ /LINE/) {
-            $gff->{source} .= '_LINE'; 
+        
+        if ($self->analysis =~ /RepeatMasker/i) {
+            my $class = $self->repeat_consensus->repeat_class;
+        
+            if ($class =~ /LINE/) {
+                $gff->{source} .= '_LINE'; 
+            }
+            elsif ($class =~ /SINE/) {
+                $gff->{source} .= '_SINE';
+            }
+            
+            $gff->{feature} = 'similarity';
+            $gff->{score} = $self->score;
+            
+            my $hstrand = $self->hstrand == -1 ? '-' : '+';
+            
+            $gff->{attributes}->{Name} = '"Motif '.$self->repeat_consensus->name.'" '.$self->hstart.' '.$self->hend.' '.$hstrand;
         }
-        elsif ($class =~ /SINE/) {
-            $gff->{source} .= '_SINE';
+        elsif ($self->analysis =~ /trf/i) {
+            $gff->{feature} = 'misc_feature';
+            $gff->{strand} = $self->strand;
+            my $cons = $self->repeat_consensus->repeat_consensus;
+            my $len = length($cons);
+            my $copies = ($self->end - $self->start + 1) / $len;
+            $gff->{attributes}->{Note}  = "$copies copies $len mer $cons";
         }
-        
-        $gff->{feature} = 'similarity';
-        $gff->{score} = $self->score;
-        
-        my $hstrand = $self->hstrand == -1 ? '-' : '+';
-        
-        $gff->{attributes}->{Name} = '"Motif '.$self->repeat_consensus->name.'" '.$self->hstart.' '.$self->hend.' '.$hstrand;
-
         
         return $gff;
     }
