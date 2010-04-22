@@ -623,6 +623,8 @@ use warnings;
             $gff->{attributes}->{Note}  = "$copies copies $len mer $cons";
         }
         
+        $gff->{attributes}->{Note}  = $self->analysis;
+        
         return $gff;
     }
 }
