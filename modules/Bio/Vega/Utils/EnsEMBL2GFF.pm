@@ -619,7 +619,7 @@ use warnings;
             $gff->{score} = $self->score;
             my $cons = $self->repeat_consensus->repeat_consensus;
             my $len = length($cons);
-            my $copies = ($self->end - $self->start + 1) / $len;
+            my $copies = sprintf "%.1f", ($self->end - $self->start + 1) / $len;
             $gff->{attributes}->{Note}  = qq("$copies copies $len mer $cons");
         }
         
