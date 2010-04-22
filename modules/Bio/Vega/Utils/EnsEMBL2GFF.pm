@@ -590,6 +590,33 @@ use warnings;
 }
 
 {
+    
+    package Bio::EnsEMBL::RepeatFeature;
+    
+    sub _gff_hash {
+        my $self = shift;
+        my $gff  = $self->SUPER::_gff_hash(@_);
+    
+        my $class = $self->repeat_consensus->repeat_class;
+    
+        if ($class =~ /LINE/) {
+            $gff->{source} .= '_LINE'; 
+        }
+        elsif ($class =~ /SINE/) {
+            $gff->{source} .= '_SINE';
+        }
+        
+        $gff->{feature} = 'similarity';
+        $gff->{score} = $self->score;
+        
+        $gff->{attributes}->{Name} = '"Motif '.$self->repeat_consensus->name.'" '.$self->hstart.' '.$self->hend.' '.$self->hstrand;
+
+        
+        return $gff;
+    }
+}
+
+{
 
     package Bio::Otter::DnaDnaAlignFeature;
 
