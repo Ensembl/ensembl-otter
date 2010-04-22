@@ -616,11 +616,11 @@ use warnings;
         }
         elsif ($self->analysis->logic_name =~ /trf/i) {
             $gff->{feature} = 'misc_feature';
-            $gff->{strand} = $self->strand;
+            $gff->{score} = $self->score;
             my $cons = $self->repeat_consensus->repeat_consensus;
             my $len = length($cons);
             my $copies = ($self->end - $self->start + 1) / $len;
-            $gff->{attributes}->{Note}  = "$copies copies $len mer $cons";
+            $gff->{attributes}->{Note}  = qq("$copies copies $len mer $cons");
         }
         
         return $gff;
