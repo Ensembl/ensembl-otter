@@ -609,7 +609,9 @@ use warnings;
         $gff->{feature} = 'similarity';
         $gff->{score} = $self->score;
         
-        $gff->{attributes}->{Name} = '"Motif '.$self->repeat_consensus->name.'" '.$self->hstart.' '.$self->hend.' '.$self->hstrand;
+        my $hstrand = $self->hstrand == -1 ? '-' : '+';
+        
+        $gff->{attributes}->{Name} = '"Motif '.$self->repeat_consensus->name.'" '.$self->hstart.' '.$self->hend.' '.$hstrand;
 
         
         return $gff;
