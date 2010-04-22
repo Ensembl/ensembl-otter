@@ -626,7 +626,7 @@ use warnings;
             my $hstrand = $self->hstrand == -1 ? '-' : '+';
             
             $gff->{attributes}->{Class} = qq("Motif");
-            $gff->{attributes}->{Name} = '"'.$self->repeat_consensus->name.'"'
+            $gff->{attributes}->{Name} = '"'.$self->repeat_consensus->name.'"';
             $gff->{attributes}->{Align} = $self->hstart.' '.$self->hend.' '.$hstrand;
         }
         elsif ($self->analysis->logic_name =~ /trf/i) {
