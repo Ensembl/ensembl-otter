@@ -329,8 +329,7 @@ use warnings;
         
         $gff->{attributes}->{Class} = qq("Sequence");
         $gff->{attributes}->{Name} = '"'.$self->hseqname.'"';
-        $gff->{attributes}->{Align} = $self->hstart.' '.$self->hend.' '.
-            ( $self->hstrand == -1 ? '-' : '+' );
+        $gff->{attributes}->{Align} = $self->hstart.' '.$self->hend.' '.( $self->hstrand == -1 ? '-' : '+' );
 
         if ($gap_string) {
             $gff->{attributes}->{Gaps} = qq("$gap_string");
@@ -428,7 +427,7 @@ use warnings;
                 '0', # frame - not really sure what we should put here, but giface always seems to use 0, so we will too!
                 'Class "Sequence"',
                 ';',
-                'Name ' . $gff_hash->{attributes}->{Sequence}
+                'Name "' . $gff_hash->{attributes}->{Name}.'"'
             );
         }
 
