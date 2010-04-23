@@ -427,7 +427,7 @@ use warnings;
                 '0', # frame - not really sure what we should put here, but giface always seems to use 0, so we will too!
                 'Class "Sequence"',
                 ';',
-                'Name "' . $gff_hash->{attributes}->{Name}.'"'
+                'Name ' . $gff_hash->{attributes}->{Name}
             );
         }
 
