@@ -210,17 +210,12 @@ use warnings;
 
             # combine the extra attributes with any existing ones (duplicate keys will get squashed!)
             $gff->{attributes} = {} unless defined $gff->{attributes};
-            @{ $gff->{attributes} }{ keys %$extra_attrs } =
-              values %$extra_attrs;
+            @{ $gff->{attributes} }{ keys %$extra_attrs } = values %$extra_attrs;
         }
 
         if ( $gff->{attributes} ) {
 
-            # we only sort in reverse alphabetical order here for the moment to work around a bug in zmap
-            # that requires "Sequence" attributes to come before "Locus" attributes
-            my @attrs =
-              map  { $_ . ' ' . $gff->{attributes}->{$_} }
-                sort { $b cmp $a } keys %{ $gff->{attributes} };
+            my @attrs = map  { $_ . ' ' . $gff->{attributes}->{$_} } keys %{ $gff->{attributes} };
                 
             $gff_str .= "\t" . join( "\t;\t", @attrs );
         }
@@ -239,7 +234,7 @@ use warnings;
         my $start = $rebase ? $self->start : $self->seq_region_start;
         my $end = $rebase ? $self->end : $self->seq_region_end;
 
-        my %gff = (
+        my $gff = {
             seqname => $seqname,
             source  => $self->_gff_source,
             feature => $self->_gff_feature,
@@ -248,9 +243,9 @@ use warnings;
             strand  => (
                 $self->strand == 1 ? '+' : ( $self->strand == -1 ? '-' : '.' )
             )
-        );
+        };
 
-        return \%gff;
+        return $gff;
     }
 
     sub _gff_source {
@@ -404,8 +399,8 @@ use warnings;
 
         if ( $self->translation ) {
             
-            # build up the CDS line - it's not really worth creating a Translation->to_gff method, 
-            # as most of the fields are derived from the Transcript
+            # build up the CDS line - it's not really worth creating a Translation->to_gff method, as most
+            # of the fields are derived from the Transcript and Translation doesn't inherit from Feature
             
             my $start = $self->coding_region_start;
             $start += $self->slice->start - 1 unless $rebase;
@@ -441,9 +436,9 @@ use warnings;
             # and also give them the transcript's gff source
             $feat->_gff_source( $self->_gff_source );
 
-            # and add the feature's gff line to our string, including the sequence information as an attribute
+            # and add the feature's gff line to our string, including the sequence name information as an attribute
             $gff .= "\n"
-              . $feat->to_gff( @_, extra_attrs => { Sequence => '"' . $self->display_id . '"' } );
+              . $feat->to_gff( @_, extra_attrs => { Name => '"' . $self->display_id . '"' } );
 
             # to be on the safe side, get rid of the analysis we temporarily attached
             # (someone might rely on there not being one later)
@@ -559,6 +554,7 @@ use warnings;
         my $self = shift;
         my $gff  = $self->SUPER::_gff_hash(@_);
         $gff->{feature} = 'exon';
+        $gff->{attributes}->{Class} = qq("Sequence");
         return $gff;
     }
 }
@@ -571,6 +567,7 @@ use warnings;
         my $self = shift;
         my $gff  = $self->SUPER::_gff_hash(@_);
         $gff->{feature} = 'intron';
+        $gff->{attributes}->{Class} = qq("Sequence");
         return $gff;
     }
 }
@@ -649,7 +646,7 @@ use warnings;
         my $self = shift;
         my $gff  = $self->SUPER::_gff_hash(@_);
         $gff->{attributes}->{Length} = $self->get_HitDescription->hit_length;
-        #$gff->{attributes}->{Name} = '"'.$self->get_HitDescription->description.'"';
+        #$gff->{attributes}->{Note} = '"'.$self->get_HitDescription->description.'"';
         return $gff;
     }
 }
@@ -662,7 +659,7 @@ use warnings;
         my $self = shift;
         my $gff  = $self->SUPER::_gff_hash(@_);
         $gff->{attributes}->{Length} = $self->get_HitDescription->hit_length;
-        #$gff->{attributes}->{Name} = '"'.$self->get_HitDescription->description.'"';
+        #$gff->{attributes}->{Note} = '"'.$self->get_HitDescription->description.'"';
         return $gff;
     }
 }
