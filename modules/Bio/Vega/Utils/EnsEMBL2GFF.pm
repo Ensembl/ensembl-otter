@@ -24,6 +24,7 @@ use warnings;
         my %args        = @_;
         my $include_dna = $args{include_dna};
         my $rebase      = $args{rebase};
+        my $seqname     = $args{seqname};
 
         # build up a date string in the format specified by the GFF spec
 
@@ -32,7 +33,9 @@ use warnings;
         $mon++;           # correct the month
         my $date = "$year-$mon-$mday";
 
-        my $name  = $rebase ? $self->seq_region_name.'_'.$self->start.'-'.$self->end : $self->seq_region_name;
+        my $gff_name = $seqname || $self->seq_region_name;
+
+        my $name  = $rebase ? $gff_name.'_'.$self->start.'-'.$self->end : $gff_name;
         my $start = $rebase ? 1 : $self->start;
         my $end   = $rebase ? $self->length : $self->end;
 
