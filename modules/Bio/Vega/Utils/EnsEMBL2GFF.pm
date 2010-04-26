@@ -24,7 +24,7 @@ use warnings;
         my %args        = @_;
         my $include_dna = $args{include_dna};
         my $rebase      = $args{rebase};
-        my $seqname     = $args{seqname};
+        my $seqname     = $args{gff_seqname} || $self->seq_region_name;
 
         # build up a date string in the format specified by the GFF spec
 
@@ -33,9 +33,7 @@ use warnings;
         $mon++;           # correct the month
         my $date = "$year-$mon-$mday";
 
-        my $gff_name = $seqname || $self->seq_region_name;
-
-        my $name  = $rebase ? $gff_name.'_'.$self->start.'-'.$self->end : $gff_name;
+        my $name  = $rebase ? $seqname.'_'.$self->start.'-'.$self->end : $seqname;
         my $start = $rebase ? 1 : $self->start;
         my $end   = $rebase ? $self->length : $self->end;
 
@@ -75,11 +73,14 @@ use warnings;
         my $target_slice   = $args{target_slice} || $self;
         my $common_slice   = $args{common_slice};
         my $rebase         = $args{rebase};
+        my $gff_source     = $args{gff_source};
+        my $gff_seqname    = $args{gff_seqname};
+        
 
         my $sources_to_types = $args{sources_to_types};
     
         my $gff = $include_header ? 
-            $target_slice->gff_header( include_dna => $include_dna, rebase => $rebase ) :
+            $target_slice->gff_header( include_dna => $include_dna, rebase => $rebase, gff_seqname => $gff_seqname ) :
             '';
         
         # grab features of each type we're interested in
@@ -140,7 +141,7 @@ use warnings;
                             print "Truncated transcript: ".$feature->display_id."\n" if $truncated && $verbose;
                         }
                         
-                        $gff .= $feature->to_gff(rebase => $rebase) . "\n";
+                        $gff .= $feature->to_gff(rebase => $rebase, gff_source => $gff_source, gff_seqname => $gff_seqname) . "\n";
 
                         if ($sources_to_types) {
 
@@ -188,15 +189,11 @@ use warnings;
 
         my $self = shift;
         
-        my %args = @_;
-        
-        my $rebase = $args{rebase};
-        
         # This parameter is assumed to be a hashref which includes extra attributes you'd
         # like to have appended onto the gff line for the feature
         my $extra_attrs = $args{extra_attrs};
 
-        my $gff = $self->_gff_hash(rebase => $rebase);
+        my $gff = $self->_gff_hash(@_);
 
         $gff->{score}  = '.' unless defined $gff->{score};
         $gff->{strand} = '.' unless defined $gff->{strand};
@@ -231,15 +228,17 @@ use warnings;
         
         my %args = @_;
         
-        my $rebase = $args{rebase};
+        my $rebase      = $args{rebase};
+        my $gff_seqname = $args{gff_seqname} || $self->slice->seq_region_name;
+        my $gff_source  = $args{gff_source} || $self->_gff_source;
 
-        my $seqname = $rebase ? $self->_gff_seqname.'_'.$self->slice->start.'-'.$self->slice->end : $self->_gff_seqname;
+        my $seqname = $rebase ? $gff_seqname.'_'.$self->slice->start.'-'.$self->slice->end : $gff_seqname;
         my $start = $rebase ? $self->start : $self->seq_region_start;
         my $end = $rebase ? $self->end : $self->seq_region_end;
 
         my $gff = {
             seqname => $seqname,
-            source  => $self->_gff_source,
+            source  => $gff_source,
             feature => $self->_gff_feature,
             start   => $start,
             end     => $end,
@@ -253,11 +252,6 @@ use warnings;
 
     sub _gff_source {
         my $self = shift;
-        my $source = shift;
-        
-        $self->{_gff_source} = $source if $source;
-        
-        return $self->{_gff_source} if $self->{_gff_source};
         
         if ($self->analysis) {
             return
@@ -275,20 +269,6 @@ use warnings;
         return
             ( $self->analysis && $self->analysis->gff_feature )
             || 'misc_feature';
-    }
-    
-    sub _gff_seqname {
-        my $self = shift;
-        my $seqname = shift;
-        
-        $self->{_gff_seqname} = $seqname if $seqname;
-        
-        if ($self->{_gff_seqname}) {
-            return $self->{_gff_seqname}
-        }
-        else { 
-            return $self->slice->seq_region_name
-        }
     }
 }
 
@@ -376,18 +356,6 @@ use warnings;
             map { $_->to_gff( @_, extra_attrs => { Locus => '"' . $self->display_id . '"' } ) }
               @{ $self->get_all_Transcripts } );
     }
-    
-    sub _gff_source {
-        my $self = shift;
-        $self->SUPER::_gff_source(@_);
-        map { $_->_gff_source(@_) } @{ $self->get_all_Transcripts };
-    }
-    
-    sub _gff_seqname {
-        my $self = shift;
-        $self->SUPER::_gff_seqname(@_);
-        map { $_->_gff_seqname(@_) } @{ $self->get_all_Transcripts };
-    }
 }
 
 {
@@ -415,7 +383,7 @@ use warnings;
         
         # XXX: hack to help differentiate the various otter transcripts
         if ($self->analysis && $self->analysis->logic_name eq 'Otter') {
-            $self->_gff_source('Otter_'.$self->biotype);
+            $self->analysis->gff_source('Otter_'.$self->biotype);
         }
 
         my $gff = $self->SUPER::to_gff(@_);
@@ -455,10 +423,6 @@ use warnings;
             
             # exons and introns don't have analyses attached, so temporarily give them the transcript's one
             $feat->analysis( $self->analysis );
-            
-            # and also give them the transcript's gff source
-            $feat->_gff_source( $self->_gff_source );
-            $feat->_gff_seqname( $self->_gff_seqname );
 
             # and add the feature's gff line to our string, including the sequence name information as an attribute
             $gff .= "\n"

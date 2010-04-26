@@ -257,7 +257,8 @@ eval {
     my $grouplabel    = $server->param('grouplabel') || '';
     my $dump          = $server->param('dump') || 0;
     my $rebase        = $server->param('rebase');
-    my $gff_source    = $server->param('gff_source') || $dsn;
+    my $gff_source    = $server->param('gff_source');
+    my $gff_source    = $server->param('gff_seqname');
 
     my $das = Bio::Das::Lite->new({
         'dsn' => $source ? $source.'/'.$dsn : $dsn,
@@ -274,11 +275,10 @@ eval {
     
     if (@$features) {
         
-        $gff_string = $features->[0]->slice->gff_header(rebase => $rebase);
+        $gff_string = $features->[0]->slice->gff_header(rebase => $rebase, gff_seqname => $gff_seqname);
         
         for my $f (@$features) {
-            $f->_gff_source($gff_source);
-            $gff_string .= $f->to_gff(rebase => $rebase)."\n";
+            $gff_string .= $f->to_gff(rebase => $rebase, gff_source => $gff_source, gff_seqname => $gff_seqname)."\n";
         }
     }
 };
