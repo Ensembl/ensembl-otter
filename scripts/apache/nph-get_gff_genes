@@ -7,7 +7,7 @@
 use strict;
 use warnings;
 
-use SangerPaths qw{ core bioperl123 ensembl56 otter53 };
+use SangerPaths qw{ core bioperl123 ensembl56 otter54 };
 
 use Bio::Otter::ServerScriptSupport;
 use Bio::Otter::ToXML;
@@ -37,6 +37,7 @@ eval {
     my $translation_xref_dbs = $server->param('translation_xref_dbs') || '';
     my $rebase               = $server->param('rebase');
     my $gff_source           = $server->param('gff_source');
+    my $gff_seqname          = $server->param('gff_seqname');
 
     my $allowed_transcript_analyses_hash = $transcript_analyses
         ? { map { $_ => 1 } split(/,/, $transcript_analyses) }
@@ -59,6 +60,7 @@ eval {
 #                $allowed_translation_xref_db_hash
 #            );
             $gene->_gff_source($gff_source) if $gff_source;
+            $gene->_gff_source($gff_seqname) if $gff_seqname;
             $gff_string .= $gene->to_gff(rebase => $rebase)."\n";
         }
     }
