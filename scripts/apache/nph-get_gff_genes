@@ -60,7 +60,7 @@ eval {
 #                $allowed_translation_xref_db_hash
 #            );
             $gene->_gff_source($gff_source) if $gff_source;
-            $gene->_gff_source($gff_seqname) if $gff_seqname;
+            $gene->_gff_seqname($gff_seqname) if $gff_seqname;
             $gff_string .= $gene->to_gff(rebase => $rebase)."\n";
         }
     }
