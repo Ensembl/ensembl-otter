@@ -230,7 +230,7 @@ use warnings;
         
         my $rebase = $args{rebase};
 
-        my $seqname = $rebase ? $self->slice->seq_region_name.'_'.$self->slice->start.'-'.$self->slice->end : $self->slice->seq_region_name;
+        my $seqname = $rebase ? $self->_gff_seqname.'_'.$self->slice->start.'-'.$self->slice->end : $self->_gff_seqname;
         my $start = $rebase ? $self->start : $self->seq_region_start;
         my $end = $rebase ? $self->end : $self->seq_region_end;
 
@@ -272,6 +272,20 @@ use warnings;
         return
             ( $self->analysis && $self->analysis->gff_feature )
             || 'misc_feature';
+    }
+    
+    sub _gff_seqname {
+        my $self = shift;
+        my $seqname = shift;
+        
+        $self->{_gff_seqname} = $seqname if $seqname;
+        
+        if ($self->{_gff_seqname}) {
+            return $self->{_gff_seqname}
+        }
+        else { 
+            return $self->slice->seq_region_name
+        }
     }
 }
 
@@ -365,6 +379,12 @@ use warnings;
         $self->SUPER::_gff_source(@_);
         map { $_->_gff_source(@_) } @{ $self->get_all_Transcripts };
     }
+    
+    sub _gff_seqname {
+        my $self = shift;
+        $self->SUPER::_gff_seqname(@_);
+        map { $_->_gff_seqname(@_) } @{ $self->get_all_Transcripts };
+    }
 }
 
 {
@@ -392,7 +412,7 @@ use warnings;
         
         # XXX: hack to help differentiate the various otter transcripts
         if ($self->analysis && $self->analysis->logic_name eq 'Otter') {
-            $self->analysis->gff_source('Otter_'.$self->biotype);
+            $self->_gff_source('Otter_'.$self->biotype);
         }
 
         my $gff = $self->SUPER::to_gff(@_);
@@ -435,6 +455,7 @@ use warnings;
             
             # and also give them the transcript's gff source
             $feat->_gff_source( $self->_gff_source );
+            $feat->_gff_seqname( $self->_gff_seqname );
 
             # and add the feature's gff line to our string, including the sequence name information as an attribute
             $gff .= "\n"
@@ -619,11 +640,9 @@ use warnings;
             $gff->{feature} = 'similarity';
             $gff->{score} = $self->score;
             
-            my $hstrand = $self->hstrand == -1 ? '-' : '+';
-            
             $gff->{attributes}->{Class} = qq("Motif");
             $gff->{attributes}->{Name} = '"'.$self->repeat_consensus->name.'"';
-            $gff->{attributes}->{Align} = $self->hstart.' '.$self->hend.' '.$hstrand;
+            $gff->{attributes}->{Align} = $self->hstart.' '.$self->hend.' '.($self->hstrand == -1 ? '-' : '+');
         }
         elsif ($self->analysis->logic_name =~ /trf/i) {
             $gff->{feature} = 'misc_feature';
