@@ -26,6 +26,8 @@ eval {
     my $analyses    = $server->param('analysis');
     my $types       = $server->param('kind');
     my $rebase      = $server->param('rebase');
+    my $gff_source  = $server->param('gff_source');
+    my $gff_seqname = $server->param('gff_seqname');
  
     $t0 = time();
 
@@ -42,6 +44,8 @@ eval {
             feature_types   => [map {$_.'s'} split(/,/, $types)],
             include_header  => 1,
             rebase          => $rebase,
+            gff_source      => $gff_source,
+            gff_seqname     => $gff_seqname,
         );
         
 #        for my $f (@$features) {

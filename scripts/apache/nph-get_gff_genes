@@ -52,16 +52,14 @@ eval {
             map { defined($server->param($_)) ? $server->param($_) : '' } qw(cs name type start end metakey csver csver_remote)
         );
         
-        $gff_string ||= $genes->[0]->slice->gff_header(rebase => $rebase, seqname => $seqname) if @$genes;
+        $gff_string ||= $genes->[0]->slice->gff_header(rebase => $rebase, gff_seqname => $gff_seqname) if @$genes;
 
         foreach my $gene (@$genes) {
 #            $gff_string .= $gene->toXMLstring(
 #                $allowed_transcript_analyses_hash,
 #                $allowed_translation_xref_db_hash
 #            );
-            $gene->_gff_source($gff_source) if $gff_source;
-            $gene->_gff_seqname($gff_seqname) if $gff_seqname;
-            $gff_string .= $gene->to_gff(rebase => $rebase)."\n";
+            $gff_string .= $gene->to_gff(rebase => $rebase, gff_source => $gff_source, gff_seqname => $gff_seqname)."\n";
         }
     }
 };
