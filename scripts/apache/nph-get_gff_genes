@@ -52,7 +52,7 @@ eval {
             map { defined($server->param($_)) ? $server->param($_) : '' } qw(cs name type start end metakey csver csver_remote)
         );
         
-        $gff_string ||= $genes->[0]->slice->gff_header(rebase => $rebase) if @$genes;
+        $gff_string ||= $genes->[0]->slice->gff_header(rebase => $rebase, seqname => $seqname) if @$genes;
 
         foreach my $gene (@$genes) {
 #            $gff_string .= $gene->toXMLstring(
