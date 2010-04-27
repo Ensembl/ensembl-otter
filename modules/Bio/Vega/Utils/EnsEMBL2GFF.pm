@@ -189,6 +189,8 @@ use warnings;
 
         my $self = shift;
         
+        my %args = @_;
+        
         # This parameter is assumed to be a hashref which includes extra attributes you'd
         # like to have appended onto the gff line for the feature
         my $extra_attrs = $args{extra_attrs};
