@@ -258,7 +258,7 @@ eval {
     my $dump          = $server->param('dump') || 0;
     my $rebase        = $server->param('rebase');
     my $gff_source    = $server->param('gff_source');
-    my $gff_source    = $server->param('gff_seqname');
+    my $gff_seqname   = $server->param('gff_seqname');
 
     my $das = Bio::Das::Lite->new({
         'dsn' => $source ? $source.'/'.$dsn : $dsn,
