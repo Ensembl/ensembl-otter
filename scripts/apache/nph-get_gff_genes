@@ -65,11 +65,13 @@ eval {
                     
                     my $allowed = ! $allowed_translation_xref_db_hash;
                     
-                    if (!$allowed && my $trl = $tsct->translation) {
-                        for my $xr (@{ $trl->get_all_DBEntries }) {
-                            if($allowed_translation_xref_db_hash->{$xr->dbname}) {
-                                $allowed = 1;
-                                last;
+                    if (!$allowed) { 
+                        if (my $trl = $tsct->translation) {
+                            for my $xr (@{ $trl->get_all_DBEntries }) {
+                                if($allowed_translation_xref_db_hash->{$xr->dbname}) {
+                                    $allowed = 1;
+                                    last;
+                                }
                             }
                         }
                     }
