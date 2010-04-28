@@ -35,22 +35,18 @@ eval {
    
     $t1 = time();
 
+    my %gff_args = (
+        rebase      => $rebase,
+        gff_source  => $gff_source,
+        gff_seqname => $gff_seqname,
+    );
+
     if (@$features) {
-        my $slice = $features->[0]->slice;
-        $gff_string = $slice->to_gff(
-            ( $analyses
-              ? ( analyses  => [split(/,/, $analyses)] )
-              : () ), 
-            feature_types   => [map {$_.'s'} split(/,/, $types)],
-            include_header  => 1,
-            rebase          => $rebase,
-            gff_source      => $gff_source,
-            gff_seqname     => $gff_seqname,
-        );
+        $gff_string = $features->[0]->slice->gff_header(%gff_args);
         
-#        for my $f (@$features) {
-#            $gff_string .= $f->to_gff;
-#        }
+        for my $f (@$features) {
+            $gff_string .= $f->to_gff(%gff_args)."\n";
+        }
     }
     else {
         $gff_string = $server->empty_gff_header;
