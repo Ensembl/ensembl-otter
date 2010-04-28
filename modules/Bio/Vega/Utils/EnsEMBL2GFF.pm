@@ -636,6 +636,22 @@ sub gff_header {
 }
 
 {
+    
+    package Bio::EnsEMBL::Map::DitagFeature;
+    
+    sub _gff_hash {
+        my $self = shift;
+        my $gff  = $self->SUPER::_gff_hash(@_);
+        
+        $gff->{feature} = 'similarity';
+        
+        $gff->{attributes}->{Class} = qq("Sequence");
+        $gff->{attributes}->{Name} = '"'.$self->ditag->type.':'.$self->ditag->name.'"';
+        $gff->{attributes}->{Align} = $self->hstart.' '.$self->hend.' '.( $self->hstrand == -1 ? '-' : '+' );
+    }
+}
+
+{
 
     package Bio::Otter::DnaDnaAlignFeature;
 
