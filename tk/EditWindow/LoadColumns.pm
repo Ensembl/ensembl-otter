@@ -419,9 +419,9 @@ sub update_tk_preserve_grab {
     my ($self) = @_;
     
     my $top = $self->top;
-    printf STDERR "\nGrab status of top before update is: '%s'\n", $top->grabStatus;
+    # printf STDERR "\nGrab status of top before update is: '%s'\n", $top->grabStatus;
     $top->update;
-    printf STDERR "\nGrab status of top after update is:  '%s'\n", $top->grabStatus;
+    # printf STDERR "\nGrab status of top after update is:  '%s'\n", $top->grabStatus;
 }
 
 sub set_filters_wanted {
