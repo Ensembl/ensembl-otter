@@ -83,7 +83,7 @@ eval {
                             gff_source  => $gff_source, 
                             gff_seqname => $gff_seqname,
                             extra_attrs => { Locus => '"' . $gene->display_id . '"' },
-                        );
+                        )."\n";
                         
                     }
                 }
