@@ -9,6 +9,27 @@ use warnings;
 # This module allows conversion of ensembl/otter objects to GFF by inserting
 # to_gff (and supporting _gff_hash) methods into the necessary feature classes
 
+sub gff_header {
+    my ($name, $start, $end, $dna) = @_;
+    
+    # build up a date string in the format specified by the GFF spec
+
+    my ( $sec, $min, $hr, $mday, $mon, $year ) = localtime;
+    $year += 1900;    # correct the year
+    $mon++;           # correct the month
+    my $date = "$year-$mon-$mday";
+    
+    my $hdr =
+        "##gff-version 2\n"
+      . "##source-version EnsEMBL2GFF 1.0\n"
+      . "##date $date\n"
+      . "##sequence-region $name $start $end\n";
+
+    $hdr .= "##DNA\n##$dna\n##end-DNA\n" if $dna;
+
+    return $hdr;
+}
+
 
 ## no critic(Modules::ProhibitMultiplePackages)
 
@@ -26,28 +47,16 @@ use warnings;
         my $rebase      = $args{rebase};
         my $seqname     = $args{gff_seqname} || $self->seq_region_name;
 
-        # build up a date string in the format specified by the GFF spec
-
-        my ( $sec, $min, $hr, $mday, $mon, $year ) = localtime;
-        $year += 1900;    # correct the year
-        $mon++;           # correct the month
-        my $date = "$year-$mon-$mday";
-
         my $name  = $rebase ? $seqname.'_'.$self->start.'-'.$self->end : $seqname;
         my $start = $rebase ? 1 : $self->start;
         my $end   = $rebase ? $self->length : $self->end;
 
-        my $hdr =
-            "##gff-version 2\n"
-          . "##source-version EnsEMBL2GFF 1.0\n"
-          . "##date $date\n"
-          . "##sequence-region $name $start $end\n";
-
-        if ($include_dna) {
-            $hdr .= "##DNA\n" . "##" . $self->seq . "\n" . "##end-DNA\n";
-        }
-
-        return $hdr;
+        return Bio::Vega::Utils::EnsEMBL2GFF::gff_header(
+            $name, 
+            $start, 
+            $end, 
+            ($include_dna ? $self->seq : undef),
+        );      
     }
 
     sub to_gff {
