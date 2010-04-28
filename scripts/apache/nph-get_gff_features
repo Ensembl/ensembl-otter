@@ -10,7 +10,7 @@ use warnings;
 use SangerPaths qw{ core bioperl123 ensembl56 otter54 };
 
 use Bio::Otter::ServerScriptSupport;
-use Bio::Vega::Utils::EnsEMBL2GFF qw(gff_header);
+use Bio::Vega::Utils::EnsEMBL2GFF;
 
 use CGI::Carp 'fatalsToBrowser';
 
@@ -56,7 +56,7 @@ eval {
         my $start = $server->param('start');
         my $end = $server->param('end');
         my $name = $server->param('type').'_'.$start.'-'.$end;
-        return gff_header($name, 1, $end - $start + 1);
+        return Bio::Vega::Utils::EnsEMBL2GFF::gff_header($name, 1, $end - $start + 1);
     }
 
     $t2 = time();
