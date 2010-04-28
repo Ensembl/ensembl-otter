@@ -55,11 +55,39 @@ eval {
         $gff_string ||= $genes->[0]->slice->gff_header(rebase => $rebase, gff_seqname => $gff_seqname) if @$genes;
 
         foreach my $gene (@$genes) {
-#            $gff_string .= $gene->toXMLstring(
-#                $allowed_transcript_analyses_hash,
-#                $allowed_translation_xref_db_hash
-#            );
-            $gff_string .= $gene->to_gff(rebase => $rebase, gff_source => $gff_source, gff_seqname => $gff_seqname)."\n";
+
+            # filter the transcripts according to the transcript_analyses & translation_xref_db params
+
+            for my $tsct (@{ $gene->get_all_Transcripts } ) {
+                
+                if (!$allowed_transcript_analyses_hash || 
+                    $allowed_transcript_analyses_hash->{$tsct->analysis->logic_name}) {
+                    
+                    my $allowed = ! $allowed_translation_xref_db_hash;
+                    
+                    if (my $trl = $tsct->translation) {
+                        for my $xr (@{ $trl->get_all_DBEntries }) {
+                            if($allowed_translation_xref_db_hash->{$xr->dbname}) {
+                                $allowed = 1;
+                                last;
+                            }
+                        }
+                    }
+                    
+                    if ($allowed) {
+                        
+                        $gff_string .= $tsct->to_gff(
+                            rebase      => $rebase, 
+                            gff_source  => $gff_source, 
+                            gff_seqname => $gff_seqname,
+                            extra_attrs => { Locus => '"' . $gene->display_id . '"' },
+                        );
+                        
+                    }
+                }
+            }
+            
+            #$gff_string .= $gene->to_gff(rebase => $rebase, gff_source => $gff_source, gff_seqname => $gff_seqname)."\n";
         }
     }
     
