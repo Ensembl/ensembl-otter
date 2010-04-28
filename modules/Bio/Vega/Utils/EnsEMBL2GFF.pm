@@ -648,6 +648,8 @@ sub gff_header {
         $gff->{attributes}->{Class} = qq("Sequence");
         $gff->{attributes}->{Name} = '"'.$self->ditag->type.':'.$self->ditag->name.'"';
         $gff->{attributes}->{Align} = $self->hit_start.' '.$self->hit_end.' '.( $self->hit_strand == -1 ? '-' : '+' );
+        
+        return $gff;
     }
 }
 
