@@ -477,11 +477,11 @@ sub empty_gff_header {
     
     my $self = shift;
     
-    my $name    = $server->param('type');
-    my $start   = $server->param('start');
-    my $end     = $server->param('end');
+    my $name    = $self->param('type');
+    my $start   = $self->param('start');
+    my $end     = $self->param('end');
     
-    if ($rebase) {
+    if ($self->param('rebase')) {
         $name .= '_'.$start.'-'.$end;
         $end = $end - $start + 1;
         $start = 1;

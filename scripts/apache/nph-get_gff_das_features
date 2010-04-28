@@ -282,10 +282,7 @@ eval {
         }
     }
     else {
-        my $start   = $server->param('start');
-        my $end     = $server->param('end');
-        my $name    = $server->param('type').'_'.$start.'-'.$end;
-        $gff_string = Bio::Vega::Utils::EnsEMBL2GFF::gff_header($name, 1, $end - $start + 1);
+        $gff_string = $server->empty_gff_header;
     }
 };
 
