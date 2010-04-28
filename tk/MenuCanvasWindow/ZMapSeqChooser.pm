@@ -970,7 +970,7 @@ sub RECEIVE_FILTER {
     };
 
     # @list could be dynamically created...
-    @list = keys(%$lookup);
+    my @list = keys(%$lookup);
 
     # find the action in the request XML
     #warn "Request = '$request'";
