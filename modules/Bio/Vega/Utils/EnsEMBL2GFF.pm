@@ -586,6 +586,11 @@ sub gff_header {
         my $url = sprintf $url_format, $name;
 
         my $gff  = $self->SUPER::_gff_hash(@_);
+        my ( $start, $end ) = @{$gff}{qw( start end )};
+        if ( $start == $end - 1 ) {
+            @{$gff}{qw( start end )} = ( $end, $start );
+        }
+
         $gff->{attributes}->{Name} = qq("$name - $allele");
         $gff->{attributes}->{URL} = qq("$url");
 
