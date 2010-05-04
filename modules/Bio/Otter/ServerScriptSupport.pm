@@ -472,7 +472,7 @@ sub get_requested_features {
 	}
     
     if (my $module = $self->filter_module) {
-        require $module;
+        #require $module;
         my $filter = $module->new;
         @feature_list = $filter->run(\@feature_list);
     }
