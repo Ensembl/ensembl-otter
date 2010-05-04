@@ -475,15 +475,17 @@ sub get_requested_features {
         
         # detaint the module string
         
-        $filter_module =~ s/[^a-zA-Z0-9_:]//g;
+        my $chars = qr/a-zA-Z0-9_/;
+       
+        my ($module_name) = $filter_module =~ /($chars::)*$chars/;
         
-        if ($filter_module =~ /^Bio::Vega::ServerAnalysis::/) {
+        if ($module_name =~ /^Bio::Vega::ServerAnalysis::/) {
             
-            eval "require $filter_module";
+            eval "require $module_name";
             
-            die "Failed to 'require' module $filter_module: $@" if $@;
+            die "Failed to 'require' module $module_name: $@" if $@;
             
-            my $filter = $filter_module->new;
+            my $filter = $module_name->new;
             
             $self->log(scalar(@feature_list)." features before filtering...");
             
