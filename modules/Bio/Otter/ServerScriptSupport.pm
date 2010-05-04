@@ -469,7 +469,13 @@ sub get_requested_features {
 	        push @feature_list, @$features;
 	    }
 	}
-
+    
+    if (my $module = $self->filter_module) {
+        require $module;
+        my $filter = $module->new;
+        @feature_list = $filter->run(\@feature_list);
+    }
+    
 	return \@feature_list;
 }
 
