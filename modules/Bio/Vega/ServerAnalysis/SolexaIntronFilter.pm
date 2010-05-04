@@ -20,7 +20,7 @@ sub run {
     my %feats_by_introns;
  
     for my $af (@$features) {
-        my @ugfs = sort {$a->start <=> $b->start } @{ $af->ungapped_features };
+        my @ugfs = sort { $a->start <=> $b->start } $af->ungapped_features;
         next unless @ugfs > 1;
         my $first_exon = shift @ugfs;
         my $last_exon = pop @ugfs;
