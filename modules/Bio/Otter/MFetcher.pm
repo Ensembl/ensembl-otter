@@ -181,7 +181,7 @@ sub satellite_dba {
         $self->error_exit("Error evaluating '$opt_str' : $@");
     }
 
-    if (my $module = $anycase_options{filter_module}) {
+    if (my $module = $anycase_options{-filter_module}) {
         # if there is a filter_module specified, save it and delete from the param list
         $self->filter_module($module);
         delete $anycase_options{filter_module};
