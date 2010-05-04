@@ -41,12 +41,20 @@ my $time_now = time();
     
     my $list_nmd = $dba->dbc->prepare(q{
         SELECT DISTINCT g.gene_id
-        FROM gene g
-          , transcript t
-        WHERE g.gene_id = t.gene_id
-          AND t.biotype = 'nonsense_mediated_decay'
-          AND g.is_current = 1
+		FROM transcript t, transcript_stable_id tsi, gene g, gene_stable_id gsi, seq_region s
+		LEFT JOIN translation tr ON (t.transcript_id = tr.transcript_id)
+		WHERE t.biotype = 'nonsense_mediated_decay'
+		AND g.gene_id = t.gene_id
+		AND g.is_current
+		AND g.seq_region_id = s.seq_region_id
+		AND t.is_current
+		AND g.source = 'havana'
+		AND tsi.transcript_id = t.transcript_id
+		AND gsi.gene_id = g.gene_id
+		AND translation_id IS NULL
+		ORDER BY s.name, t.seq_region_start 
     });
+
     $list_nmd->execute;
     my $gene_count = $list_nmd->rows;
 
@@ -87,12 +95,11 @@ my $time_now = time();
 
 sub recover_coding_region {
     my ($g_dbID, $dba, $latest_with_translation, $locker, $author) = @_;
-    
     my $gene_aptr  = $dba->get_GeneAdaptor;
     my $tsct_aptr  = $dba->get_TranscriptAdaptor;
 
     my $gene = $gene_aptr->fetch_by_dbID($g_dbID);
-
+    
     # my $gene = freeze_thaw_gene($gene_aptr->fetch_by_dbID($g_dbID));
     # my $tsct_list = $gene->get_all_Transcripts;
 
@@ -118,9 +125,11 @@ sub recover_coding_region {
         my ($tsct_dbID) = $latest_with_translation->fetchrow;
         unless ($tsct_dbID) {
             printf STDERR "No previous version of Transcript %s with translation\n", $tsct->stable_id;
+            print_gene_info($gene,$tsct,"NOPROT");
             next;
         }
         my $tsct_tsl = $tsct_aptr->fetch_by_dbID($tsct_dbID);
+        
         # print_translation($tsct_tsl);
         my $tsl = $tsct_tsl->translation;
         
@@ -129,6 +138,7 @@ sub recover_coding_region {
         my $tsct_tsl_exons = $tsct_tsl->get_all_Exons;
         my $match = @$tsct_exons == @$tsct_tsl_exons ? 1 : 0;
         unless ($match) {
+        	print_gene_info($gene,$tsct,"NOMATCH");
             printf STDERR "Most recent previous version of Transcript %s with translation has different number of exons (%d not %d)\n",
                 $tsct->stable_id, scalar(@$tsct_tsl_exons), scalar(@$tsct_exons);
             next;
@@ -142,8 +152,15 @@ sub recover_coding_region {
                 $match = 0;
                 last;
             }
+            if($ex1->phase != $ex2->phase ||
+               $ex1->end_phase != $ex2->end_phase) {
+	            $ex1->dbID(undef); # remove dbID and adaptor to write new version of exon !!!
+	            $ex1->adaptor(undef);
+	            $ex1->phase($ex2->phase);
+	            $ex1->end_phase($ex2->end_phase);
+            }
+            
             if ($ex2 == $tsl->start_Exon) {
-                $ex1->phase($ex2->phase);
                 $tsl->start_Exon($ex1);
                 $found_start_exon = 1;
             }
@@ -158,19 +175,34 @@ sub recover_coding_region {
                 # Dissociate translation from database
                 $tsl->dbID(undef);
                 $tsl->adaptor(undef);
-            
                 $tsct->translation($tsl);
+
                 if ($tsct->translate->seq =~ /\*/) {
                     print STDERR " ... but found stops in translation\n";
+                    $tsct->translation(undef);
+                    print_gene_info($gene,$tsct,"STOP");
                 } else {
                     print STDERR "\n";
+                     # Copy the cds start/end not found tags if set
+	                foreach(qw/cds_start_NF cds_end_NF/){
+	                    if(my ($old_attrib) = @{$tsct_tsl->get_all_Attributes($_)}){
+	                        if(my ($attrib) = @{$tsct->get_all_Attributes($_)}){
+	                                $attrib->value($old_attrib->value);
+	                        } else {
+	                            $tsct->add_Attributes($old_attrib);
+	                        }
+	                    }
+	                }
+	                print_gene_info($gene,$tsct,"TOCHECK");
                     $found_tsl++;
-                    print_translation($tsct, $gene->stable_id);
+                    #print_translation($tsct, $gene->stable_id);
                 }
             } else {
                 print STDERR " ... but failed to find start and end exons\n";
+                print_gene_info($gene,$tsct,"NOEXON");
             }
         } else {
+        	print_gene_info($gene,$tsct,"NOMATCH");
             printf STDERR "No matching translation for Transcript %s\n", $tsct->stable_id;
         }
     }
@@ -187,13 +219,32 @@ sub recover_coding_region {
         if ($@) {
             my $err = $@;
             $dba->rollback;
-            die $err;
+            print STDERR "LOCK: $err\n";
         } else {
             $dba->commit;
         }    
     }
+    
+    
     return $found_tsl + $already_tsl;
 }
+
+sub print_gene_info {
+	my ($gene,$tsct,$tag) = @_;
+	my ($gene_name) = @{$gene->get_all_Attributes('name')};
+	printf STDOUT join(" ",
+	                   $gene->slice->seq_region_name,
+	                   $gene_name->value,
+	                   $gene->stable_id,
+	                   $tsct->stable_id,
+	                   $tsct->start,
+	                   $tsct->end,
+	                   $tsct->strand,
+	                   $tsct->biotype,
+	                   $tsct->status,
+	                   $tag)."\n";
+}
+
 
 sub print_translation {
     my ($tsct, $desc) = @_;
@@ -205,8 +256,8 @@ sub print_translation {
 
     my $tsl = $tsct->translation;
     my $tsl_pat = sprintf "%s(%d)  %s(%d)",
-        $tsl->start_Exon->stable_id, $tsl->start,
-        $tsl->end_Exon->stable_id, $tsl->end;
+        $tsl->start_Exon->stable_id || 'undef', $tsl->start,
+        $tsl->end_Exon->stable_id || 'undef', $tsl->end;
     
     my $pep = $tsct->translate;
     $pep->id($tsct->stable_id);
