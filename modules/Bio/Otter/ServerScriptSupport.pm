@@ -10,7 +10,6 @@ use Bio::Otter::Lace::TempFile;
 use Bio::Otter::Lace::ViaText qw( %LangDesc &GenerateFeatures );
 use Bio::Vega::DBSQL::SimpleBindingAdaptor;
 use Bio::Vega::Utils::EnsEMBL2GFF;
-use Bio::Vega::ServerAnalysis::SolexaDepth;
 
 use IO::Compress::Gzip qw(gzip);
 
@@ -472,7 +471,7 @@ sub get_requested_features {
 	}
     
     if (my $module = $self->filter_module) {
-        #require $module;
+        require $module;
         my $filter = $module->new;
         @feature_list = $filter->run(\@feature_list);
     }
