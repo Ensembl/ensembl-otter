@@ -467,6 +467,8 @@ sub get_requested_features {
 	        );
 
 	        push @feature_list, @$features;
+	        
+	        $self->log("Got ".scalar(@$features)." from analysis ".$analysis_name);
 	    }
 	}
     
