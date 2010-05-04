@@ -34,8 +34,13 @@ sub run {
     }
     
     for my $intron (keys %feats_by_introns) {
-        my @sorted = sort { $b->score <=> $a->score } @{ $feats_by_introns{$intron} };    
-        push @filtered, @sorted[0 .. ($MAX_PER_INTRON-1)];
+        my @sorted = sort { $b->score <=> $a->score } @{ $feats_by_introns{$intron} };
+        if (@sorted > $MAX_PER_INTRON) { 
+            push @filtered, @sorted[0 .. ($MAX_PER_INTRON-1)];
+        }
+        else {
+            push @filtered, @sorted;
+        }
     }
     
     return @filtered;
