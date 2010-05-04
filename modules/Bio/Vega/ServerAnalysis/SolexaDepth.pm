@@ -48,14 +48,15 @@ sub run {
         elsif ($b != $end+1) {
             # end this feature
           
+            my $score = ($tot_depth / ($end - $start));
+          
             my $sf = Bio::EnsEMBL::SimpleFeature->new(
                 -start         => $start,
                 -end           => $end+1,
                 -strand        => 1,
                 -slice         => $slice,
-                #-score         => log(($tot_depth / ($end - $start))+1),
-                -score         => ($tot_depth / ($end - $start)),
-                -display_label => 'solexa_summary_feature_'.$i++,
+                -score         => $score,
+                -display_label => sprintf("Average depth: %.2d", $score),
             );
             
             push @depth_features, $sf;
