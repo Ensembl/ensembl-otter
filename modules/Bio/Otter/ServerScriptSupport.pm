@@ -475,11 +475,11 @@ sub get_requested_features {
         
         # detaint the module string
         
-        my $chars = qr/a-zA-Z0-9_/;
+        my $chars = qr/[a-zA-Z0-9_]+/;
        
-        my ($module_name) = $filter_module =~ /($chars::)*$chars/;
+        my ($module_name) = $filter_module =~ /(($chars::)*$chars)/;
         
-        if ($module_name =~ /^Bio::Vega::ServerAnalysis::/) {
+        if ($module_name =~ /^Bio::Vega::ServerAnalysis::$chars/) {
             
             eval "require $module_name";
             
