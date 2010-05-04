@@ -13,7 +13,7 @@ use warnings;
 use Carp qw{ longmess };
 
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
-use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
+#use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
 use Bio::Vega::DBSQL::DBAdaptor;
 
 use base ('Bio::Otter::SpeciesDat');
@@ -109,6 +109,12 @@ sub default_assembly {
     return $asm_def || 'UNKNOWN';
 }
 
+sub filter_module {
+    my ($self, $filter_module) = @_;
+    $self->{_filter_module} = $filter_module if $filter_module;
+    return $self->{_filter_module};
+}
+
 sub satellite_dba {
     my ($self, $metakey, $may_be_absent) = @_;
 
@@ -173,6 +179,12 @@ sub satellite_dba {
     );
     if ($@) {
         $self->error_exit("Error evaluating '$opt_str' : $@");
+    }
+
+    if (my $module = $anycase_options{filter_module}) {
+        # if there is a filter_module specified, save it and delete from the param list
+        $self->filter_module($module);
+        delete $anycase_options{filter_module};
     }
 
     my %uppercased_options = ();
