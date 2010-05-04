@@ -19,6 +19,8 @@ sub run {
     
     my %feats_by_introns;
  
+    # group together features by intron
+ 
     for my $af (@$features) {
         my @ugfs = sort { $a->start <=> $b->start } $af->ungapped_features;
         next unless @ugfs > 1;
@@ -33,13 +35,16 @@ sub run {
         push @$equivs, $af; 
     }
     
+    # and only return the best scoring features per intron
+    
     for my $intron (keys %feats_by_introns) {
-        my @sorted = sort { $b->score <=> $a->score } @{ $feats_by_introns{$intron} };
-        if (@sorted > $MAX_PER_INTRON) { 
+        my @feats = @{ $feats_by_introns{$intron} };
+        if (@feats > $MAX_PER_INTRON) {
+            my @sorted = sort { $b->score <=> $a->score } @feats;
             push @filtered, @sorted[0 .. ($MAX_PER_INTRON-1)];
         }
         else {
-            push @filtered, @sorted;
+            push @filtered, @feats;
         }
     }
     
