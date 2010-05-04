@@ -437,6 +437,7 @@ sub get_requested_features {
 	my @feature_kinds  = split(/,/, $self->require_argument('kind'));
     my $analysis_list = $self->param('analysis');
     my @analysis_names = $analysis_list ? split(/,/, $analysis_list) : ( undef );
+    my $filter_module = $self->param('filter_module');
 
 	my @feature_list = ();
 
@@ -470,15 +471,29 @@ sub get_requested_features {
 	    }
 	}
     
-    if (my $module = $self->filter_module) {
+    if ($filter_module) {
         
-        $self->log(scalar(@feature_list)." features before filtering...");
+        # detaint the module string
         
-        eval "require $module";
-        my $filter = $module->new;
-        @feature_list = $filter->run(\@feature_list);
+        $filter_module =~ s/[^a-zA-Z0-9_:]//g;
         
-        $self->log(scalar(@feature_list)." features after filtering...");
+        if ($filter_module =~ /^Bio::Vega::ServerAnalysis::/) {
+            
+            eval "require $filter_module";
+            
+            die "Failed to 'require' module $filter_module: $@" if $@;
+            
+            my $filter = $filter_module->new;
+            
+            $self->log(scalar(@feature_list)." features before filtering...");
+            
+            @feature_list = $filter->run(\@feature_list);
+        
+            $self->log(scalar(@feature_list)." features after filtering...");
+        }
+        else {
+            die "Invalid filter module: $filter_module";
+        }
     }
     
 	return \@feature_list;
