@@ -10,7 +10,7 @@ use Data::Dumper;
 use Bio::EnsEMBL::SimpleFeature;
 
 sub new {
-    my ($self, $class) = @_;
+    my ($class) = @_;
     return bless {}, $class;
 }
 
