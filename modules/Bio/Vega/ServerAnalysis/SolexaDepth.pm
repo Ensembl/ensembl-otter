@@ -56,7 +56,7 @@ sub run {
                 -strand        => 1,
                 -slice         => $slice,
                 -score         => $score,
-                -display_label => sprintf("Average depth: %.2d", $score),
+                -display_label => sprintf("Average depth: %.2f", $score),
             );
             
             push @depth_features, $sf;
