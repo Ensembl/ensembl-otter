@@ -471,9 +471,14 @@ sub get_requested_features {
 	}
     
     if (my $module = $self->filter_module) {
+        
+        $self->log(scalar(@feature_list)." features before filtering...");
+        
         eval "require $module";
         my $filter = $module->new;
         @feature_list = $filter->run(\@feature_list);
+        
+        $self->log(scalar(@feature_list)." features after filtering...");
     }
     
 	return \@feature_list;
