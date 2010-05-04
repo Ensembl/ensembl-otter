@@ -475,12 +475,12 @@ sub get_requested_features {
         
         # detaint the module string
         
-        my $chars = qr/[a-zA-Z0-9_]+/;
-       
-        my ($module_name) = $filter_module =~ /(($chars::)*$chars)/;
-        
-        if ($module_name =~ /^Bio::Vega::ServerAnalysis::$chars/) {
-            
+        my ($module_name) = $filter_module =~ /^((\w+::)*\w+)$/;
+
+        # for the moment be very conservative in what we allow
+
+        if ($module_name =~ /^Bio::Vega::ServerAnalysis::\w+$/) {
+      
             eval "require $module_name";
             
             die "Failed to 'require' module $module_name: $@" if $@;
