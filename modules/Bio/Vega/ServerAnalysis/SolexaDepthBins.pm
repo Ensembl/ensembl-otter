@@ -1,6 +1,6 @@
-### Bio::Vega::ServerAnalysis::SolexaDepth
+### Bio::Vega::ServerAnalysis::SolexaDepthBins
 
-package Bio::Vega::ServerAnalysis::SolexaDepth;
+package Bio::Vega::ServerAnalysis::SolexaDepthBins;
 
 use strict;
 use warnings;
@@ -8,6 +8,8 @@ use warnings;
 use Data::Dumper;
 
 use Bio::EnsEMBL::SimpleFeature;
+
+my $BIN_SIZE = 10;
 
 sub new {
     my ($class) = @_;
@@ -39,37 +41,67 @@ sub run {
     
     my $i = 0;
     
+    my $bin_cnt = 0;
+    
     for my $b (sort { $a <=> $b } keys %depth) {
         
-        if (!$start) {
-            $start = $b;
-            $end = $b;
-        }
-        elsif ($b != $end+1) {
-            # end this feature
+        if (my $depth = $depth{$b}) {
+            
+            $bin_cnt++;
+            
+            if (!$start) {
+                $start = $b;
+                $end = $b;
+                $tot_depth += $depth;
+            }
+            elsif ($bin_cnt == $BIN_SIZE) {
+                
+                # end this feature
+                                
+                my $score = ($tot_depth / ($end - $start));
           
-            my $score = ($tot_depth / ($end - $start));
-          
-            my $sf = Bio::EnsEMBL::SimpleFeature->new(
-                -start         => $start,
-                -end           => $end+1,
-                -strand        => 1,
-                -slice         => $slice,
-                -score         => $score,
-                -display_label => sprintf("Average depth: %.2f", $score),
-            );
+                my $sf = Bio::EnsEMBL::SimpleFeature->new(
+                    -start         => $start,
+                    -end           => $end+1,
+                    -strand        => 1,
+                    -slice         => $slice,
+                    -score         => $score,
+                    -display_label => sprintf("Average depth: %.2f", $score),
+                );
             
-            push @depth_features, $sf;
+                push @depth_features, $sf;
             
-            #print "New feature: $start - $end\n";
-            
-            $start = $b;
-            $end = $b;
-            $tot_depth = 0;
+                $start = $b;
+                $end = $b;
+                $tot_depth = $depth;
+                $bin_cnt = 0;
+            }
+            else {
+                $end++;
+                $tot_depth += $depth;
+            }
         }
         else {
-            $end++;
-            $tot_depth += $depth{$b};
+            if ($start) {
+                # end this feature
+                                
+                my $score = ($tot_depth / ($end - $start));
+          
+                my $sf = Bio::EnsEMBL::SimpleFeature->new(
+                    -start         => $start,
+                    -end           => $end+1,
+                    -strand        => 1,
+                    -slice         => $slice,
+                    -score         => $score,
+                    -display_label => sprintf("Average depth: %.2f", $score),
+                );
+            
+                push @depth_features, $sf;
+            
+                $start = 0;
+                $tot_depth = 0;
+                $bin_cnt = 0;
+            }
         }
     }
     
@@ -83,5 +115,3 @@ __END__
 =head1 AUTHOR
 
 Graham Ritchie B<email> gr5@sanger.ac.uk
-
-
