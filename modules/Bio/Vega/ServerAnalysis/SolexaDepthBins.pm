@@ -43,63 +43,40 @@ sub run {
     
     for my $b (sort { $a <=> $b } keys %depth) {
         
-        if (my $depth = $depth{$b}) {
+        my $depth = $depth{$b};
+        
+        $bin_cnt++;
+        
+        if (!$start) {
+            $start = $b;
+            $end = $b;
+            $tot_depth = $depth;
+        }
+        elsif ( ($bin_cnt == $BIN_SIZE) || ($b != $end+1)) {
             
-            $bin_cnt++;
-            
-            if (!$start) {
-                $start = $b;
-                $end = $b;
-                $tot_depth = $depth;
-            }
-            elsif ($bin_cnt == $BIN_SIZE) {
-                
-                # end this feature
-                                
-                my $score = ($tot_depth / ($end - $start));
-          
-                my $sf = Bio::EnsEMBL::SimpleFeature->new(
-                    -start         => $start,
-                    -end           => $end,
-                    -strand        => 1,
-                    -slice         => $slice,
-                    -score         => $score,
-                    -display_label => sprintf("Average depth: %.2f", $score),
-                );
-            
-                push @depth_features, $sf;
-            
-                $start = $b;
-                $end = $b;
-                $tot_depth = $depth;
-                $bin_cnt = 0;
-            }
-            else {
-                $end++;
-                $tot_depth += $depth;
-            }
+            # end this feature
+                            
+            my $score = ($tot_depth / (($end - $start)+1));
+      
+            my $sf = Bio::EnsEMBL::SimpleFeature->new(
+                -start         => $start,
+                -end           => $end,
+                -strand        => 1,
+                -slice         => $slice,
+                -score         => $score,
+                -display_label => sprintf("Average depth: %.2f", $score),
+            );
+        
+            push @depth_features, $sf;
+        
+            $start = $b;
+            $end = $b;
+            $tot_depth = $depth;
+            $bin_cnt = 0;
         }
         else {
-            if ($start) {
-                # end this feature
-                                
-                my $score = ($tot_depth / ($end - $start));
-          
-                my $sf = Bio::EnsEMBL::SimpleFeature->new(
-                    -start         => $start,
-                    -end           => $end,
-                    -strand        => 1,
-                    -slice         => $slice,
-                    -score         => $score,
-                    -display_label => sprintf("Average depth: %.2f", $score),
-                );
-            
-                push @depth_features, $sf;
-            
-                $start = 0;
-                $tot_depth = 0;
-                $bin_cnt = 0;
-            }
+            $end++;
+            $tot_depth += $depth;
         }
     }
     
