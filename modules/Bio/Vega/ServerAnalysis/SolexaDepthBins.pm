@@ -29,11 +29,9 @@ sub run {
         $slice ||= $af->slice;
         my @fs = $af->ungapped_features;
         for my $f (@fs) {
-            #if ($f->start > 1 and $f->end < $slice->length) {
-                for (my $i = $f->start; $i < $f->end; $i++) {
-                    $depth{$i}++;    
-                }
-            #}
+            for (my $i = $f->start; $i < $f->end; $i++) {
+                $depth{$i}++;    
+            }
         }
     }
     
@@ -52,7 +50,7 @@ sub run {
             if (!$start) {
                 $start = $b;
                 $end = $b;
-                $tot_depth += $depth;
+                $tot_depth = $depth;
             }
             elsif ($bin_cnt == $BIN_SIZE) {
                 
@@ -62,7 +60,7 @@ sub run {
           
                 my $sf = Bio::EnsEMBL::SimpleFeature->new(
                     -start         => $start,
-                    -end           => $end+1,
+                    -end           => $end,
                     -strand        => 1,
                     -slice         => $slice,
                     -score         => $score,
@@ -89,7 +87,7 @@ sub run {
           
                 my $sf = Bio::EnsEMBL::SimpleFeature->new(
                     -start         => $start,
-                    -end           => $end+1,
+                    -end           => $end,
                     -strand        => 1,
                     -slice         => $slice,
                     -score         => $score,
