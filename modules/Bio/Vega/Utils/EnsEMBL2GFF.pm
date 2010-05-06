@@ -390,7 +390,7 @@ sub gff_header {
         
         my $rebase = $args{rebase};
         
-        return '' unless @{ $self->get_all_Exons };
+        return '' unless $self->get_all_Exons && @{ $self->get_all_Exons };
         
         # XXX: hack to help differentiate the various otter transcripts
         if ($self->analysis && $self->analysis->logic_name eq 'Otter') {
