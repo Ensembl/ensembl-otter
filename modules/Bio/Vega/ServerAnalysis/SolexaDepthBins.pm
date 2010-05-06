@@ -21,8 +21,8 @@ sub run {
     
     my @depth_features;
     
-    my $depth_forward;
-    my $depth_reverse;
+    my $depth_forward = {};
+    my $depth_reverse = {};
     
     my $slice;
     
