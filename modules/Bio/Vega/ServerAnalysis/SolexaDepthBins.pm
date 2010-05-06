@@ -45,7 +45,7 @@ sub run {
         
         my $bin_cnt = 0;
         
-        for my $b (sort { $a <=> $b } keys %depth) {
+        for my $b (sort { $a <=> $b } keys %$depth) {
             
             my $depth = $depth->{$b};
             
