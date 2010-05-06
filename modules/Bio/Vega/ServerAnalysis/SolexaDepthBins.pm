@@ -56,7 +56,7 @@ sub run {
             
             # end this feature
                             
-            my $score = ($tot_depth / (($end - $start)+1));
+            my $score = $tot_depth / ($end - $start +1);
       
             my $sf = Bio::EnsEMBL::SimpleFeature->new(
                 -start         => $start,
