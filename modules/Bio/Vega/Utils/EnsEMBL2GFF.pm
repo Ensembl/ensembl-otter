@@ -642,19 +642,90 @@ sub gff_header {
 
 {
     
+    package Bio::EnsEMBL::Map::Ditag;
+    
+    sub to_gff {
+        my $self = shift;
+        
+        return '' if $self->{_in_gff};
+        
+        my $dfs = $self->get_ditagFeatures;
+        
+        my ($slice, $start, $end, $strand, $hstart, $hend, $cigar_string); 
+        
+        my $name = $self->type.':'.$self->name;
+        
+        if (@$dfs == 1) {
+            my $df = $dfs->[0];
+            
+            $slice = $df->slice;
+            $start = $df->start;
+            $end = $df->end;
+            $strand = $df->strand;
+            $hstart = $df->hit_start;
+            $hend = $df->hit_end;
+            $cigar_string =  $df->cigar_line; 
+        }
+        elsif (@$dfs == 2) {
+            my $df1 = $dfs->[0];
+            my $df2 = $dfs->[1];
+            
+            ($df1, $df2) = ($df2, $df1) if $df1->start > $df2->start;
+            
+            $slice = $df1->slice;
+            $start = $df1->start;
+            $end = $df2->end;
+            $strand = $df1->strand;
+            $hstart = $df1->hit_start;
+            $hend = $df2->hit_end;
+            
+            my $insert = $df2->start - $df1->end + 1;
+            
+            $cigar_string = $df1->cigar_line.$insert.'I'.$df2->cigar_line;
+        }
+        else {
+            die "Don't know what to do with a ditag with more than 2 features!";
+        }
+        
+        my $daf = Bio::EnsEMBL::DnaDnaAlignFeature->new(
+            -slice        => $slice,
+            -start        => $start,
+            -end          => $end,
+            -strand       => $strand,
+            -hseqname     => $name,
+            -hstart       => $hstart,
+            -hend         => $hend,
+            -cigar_string => $cigar_string,
+        );
+        
+        $self->{_in_gff} = 1;
+        
+        return $daf->to_gff;
+    }
+}
+
+{
+    
     package Bio::EnsEMBL::Map::DitagFeature;
     
-    sub _gff_hash {
+    sub to_gff {
         my $self = shift;
-        my $gff  = $self->SUPER::_gff_hash(@_);
         
-        $gff->{feature} = 'similarity';
+        return $self->ditag->to_gff(@_);
+    }
+    
+    sub _gff_hash {
         
-        $gff->{attributes}->{Class} = qq("Sequence");
-        $gff->{attributes}->{Name} = '"'.$self->ditag->type.':'.$self->ditag->name.'"';
-        $gff->{attributes}->{Align} = $self->hit_start.' '.$self->hit_end.' '.( $self->hit_strand == -1 ? '-' : '+' );
-        
-        return $gff;
+#        my $self = shift;
+#        my $gff  = $self->SUPER::_gff_hash(@_);
+#        
+#        $gff->{feature} = 'similarity';
+#        
+#        $gff->{attributes}->{Class} = qq("Sequence");
+#        $gff->{attributes}->{Name} = '"'.$self->ditag->type.':'.$self->ditag->name.'"';
+#        $gff->{attributes}->{Align} = $self->hit_start.' '.$self->hit_end.' '.( $self->hit_strand == -1 ? '-' : '+' );
+#        
+#        return $gff;
     }
 }
 
