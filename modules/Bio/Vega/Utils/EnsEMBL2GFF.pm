@@ -651,7 +651,7 @@ sub gff_header {
         
         my $dfs = $self->get_ditagFeatures;
         
-        my ($slice, $start, $end, $strand, $hstart, $hend, $cigar_string); 
+        my ($slice, $start, $end, $strand, $hstart, $hend, $analysis, $cigar_string); 
         
         my $name = $self->type.':'.$self->name;
         
@@ -664,6 +664,7 @@ sub gff_header {
             $strand = $df->strand;
             $hstart = $df->hit_start;
             $hend = $df->hit_end;
+            $analysis = $df->analysis;
             $cigar_string =  $df->cigar_line; 
         }
         elsif (@$dfs == 2) {
@@ -678,6 +679,7 @@ sub gff_header {
             $strand = $df1->strand;
             $hstart = $df1->hit_start;
             $hend = $df2->hit_end;
+            $analysis = $df1->analysis;
             
             my $insert = $df2->start - $df1->end + 1;
             
@@ -695,6 +697,7 @@ sub gff_header {
             -hseqname     => $name,
             -hstart       => $hstart,
             -hend         => $hend,
+            -analyis      => $analysis,
             -cigar_string => $cigar_string,
         );
         
