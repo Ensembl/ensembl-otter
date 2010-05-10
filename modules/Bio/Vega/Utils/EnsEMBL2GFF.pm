@@ -328,7 +328,7 @@ sub gff_header {
         my $gff = $self->SUPER::_gff_hash(@_);
 
         $gff->{score} = $self->percent_id;
-        $gff->{feature} = $self->analysis->gff_feature || 'similarity';
+        $gff->{feature} = ($self->analysis && $self->analysis->gff_feature) || 'similarity';
         
         $gff->{attributes}->{Class} = qq("Sequence");
         $gff->{attributes}->{Name} = '"'.$self->hseqname.'"';
