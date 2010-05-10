@@ -677,8 +677,8 @@ sub gff_header {
             $start = $df1->start;
             $end = $df2->end;
             $strand = $df1->strand;
-            $hstart = $df1->hit_start;
-            $hend = $df2->hit_end;
+            $hstart = $df1->strand == 1 ? $df1->hit_start : $df2->hit_start;
+            $hend = $df1->strand == 1 ? $df2->hit_end : $df1->hit_end;
             $analysis = $df1->analysis;
             
             my $insert = $df2->start - $df1->end + 1;
@@ -686,7 +686,7 @@ sub gff_header {
             $cigar_string = $df1->cigar_line.$insert.'I'.$df2->cigar_line;
             
             unless ($hstart <= $hend) {
-                die "hstart not <= hend: $hstart - $hend: $name df1: ".$df1->hit_start." - "$df1->hit_end." df2: ".$df2->hit_start." - ".$df2->hit_end;
+                die "hstart not <= hend: $hstart - $hend: $name df1: ".$df1->hit_start." - ".$df1->hit_end." df2: ".$df2->hit_start." - ".$df2->hit_end;
             }
         }
         else {
