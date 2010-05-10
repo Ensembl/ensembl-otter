@@ -684,6 +684,10 @@ sub gff_header {
             my $insert = $df2->start - $df1->end + 1;
             
             $cigar_string = $df1->cigar_line.$insert.'I'.$df2->cigar_line;
+            
+            unless ($hstart <= $hend) {
+                die "hstart not <= hend: $hstart - $hend: $name df1: ".$df1->hit_start." - "$df1->hit_end." df2: ".$df2->hit_start." - ".$df2->hit_end;
+            }
         }
         else {
             die "Don't know what to do with a ditag with more than 2 features!";
