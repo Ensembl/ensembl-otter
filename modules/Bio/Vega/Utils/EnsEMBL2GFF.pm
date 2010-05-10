@@ -690,7 +690,7 @@ sub gff_header {
             }
         }
         else {
-            die "Don't know what to do with a ditag with more than 2 features!";
+            die "Don't know what to do with a ditag with more than 2 features ($name has ".scalar(@$dfs).")!";
         }
         
         my $daf = Bio::EnsEMBL::DnaDnaAlignFeature->new(
