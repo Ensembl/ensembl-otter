@@ -707,7 +707,7 @@ sub gff_header {
             -cigar_string => $cigar_string,
         );
         
-        return $daf->to_gff;
+        return $daf->to_gff(@_);
     }
     
 #    sub _gff_hash {
