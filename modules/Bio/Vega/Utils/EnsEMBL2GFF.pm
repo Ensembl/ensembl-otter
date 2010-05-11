@@ -673,6 +673,8 @@ sub gff_header {
                 die "Failed to find matching ditag pair: $@";
             }
             
+            die "Mismatching strands on in a ditag feature pair" unless $df1->strand == $df2->strand;
+            
             ($df1, $df2) = ($df2, $df1) if $df1->start > $df2->start;
             
             $start = $df1->start;
@@ -680,16 +682,19 @@ sub gff_header {
             my $fw = $df1->strand == 1;
             $hstart = $fw ? $df1->hit_start : $df2->hit_start;
             $hend = $fw ? $df2->hit_end : $df1->hit_end;
-            
-            my $diff = ($fw ? $df2->hit_start : $df1->hit_start) - ($fw ? $df1->hit_end : $df2->hit_end);
-            
+         
             my $insert = $df2->start - $df1->end - 1;
             
-            $insert -= 1 unless $diff;
+            # XXX: gr5: this generates GFF slightly differently from the ace server for 
+            # instances where the hit_end of df1 and the hit_start of df2 are the same
+            # e.g. 1-19, 19-37, which seems to occur fairly often. I don't really know
+            # what this means (do the pair share a base of the alignment?), but I do not
+            # cope with it here, and the GFF will show that such a pair have hit coords
+            # 1-19, 20-38. The coords on the genomic sequence will be correct though.
             
             $cigar_string = $df1->cigar_line.$insert.'I'.$df2->cigar_line;
             
-            die "Mismatching strands on in a ditag feature pair" unless $df1->strand == $df2->strand;
+            
         }
         else {
             
@@ -698,7 +703,7 @@ sub gff_header {
             return '';
         }
         
-        die $self->ditag->type.':'.$self->ditag->name."start: $start end: $end hstart: $hstart hend: $hend: cigar: $cigar_string";
+        # fake up a DAF which we then convert to GFF as this is the format produced by acedb
         
         my $daf = Bio::EnsEMBL::DnaDnaAlignFeature->new(
             -slice        => $self->slice,
