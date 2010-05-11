@@ -693,6 +693,8 @@ sub gff_header {
             return '';
         }
         
+        die $self->ditag->type.':'.$self->ditag->name."start: $start end: $end hstart: $hstart hend: $hend: cigar: $cigar_string";
+        
         my $daf = Bio::EnsEMBL::DnaDnaAlignFeature->new(
             -slice        => $self->slice,
             -start        => $start - $self->slice->start + 1,
