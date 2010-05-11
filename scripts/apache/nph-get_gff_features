@@ -45,7 +45,8 @@ eval {
         $gff_string = $features->[0]->slice->gff_header(%gff_args);
         
         for my $f (@$features) {
-            $gff_string .= $f->to_gff(%gff_args)."\n";
+             my $gff = $f->to_gff(%gff_args);
+            $gff_string .= $gff."\n" if $gff;
         }
     }
     else {
