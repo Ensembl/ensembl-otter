@@ -677,10 +677,15 @@ sub gff_header {
             
             $start = $df1->start;
             $end = $df2->end;
-            $hstart = $df1->strand == 1 ? $df1->hit_start : $df2->hit_start;
-            $hend = $df1->strand == 1 ? $df2->hit_end : $df1->hit_end;
+            my $fw = $df1->strand == 1;
+            $hstart = $fw ? $df1->hit_start : $df2->hit_start;
+            $hend = $fw ? $df2->hit_end : $df1->hit_end;
             
-            my $insert = $df2->start - $df1->end + 1;
+            my $diff = ($fw ? $df2->hit_start : $df1->hit_start) - ($fw ? $df1->hit_end : $df2->hit_end);
+            
+            my $insert = $df2->start - $df1->end - 1;
+            
+            $insert -= 1 unless $diff;
             
             $cigar_string = $df1->cigar_line.$insert.'I'.$df2->cigar_line;
             
@@ -704,7 +709,7 @@ sub gff_header {
             -hstart       => $hstart,
             -hend         => $hend,
             -hstrand      => $self->hit_strand,
-            -analyis      => $self->analysis,
+            -analysis     => $self->analysis,
             -cigar_string => $cigar_string,
         );
         
