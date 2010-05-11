@@ -690,7 +690,8 @@ sub gff_header {
             }
         }
         else {
-            die "Don't know what to do with a ditag with more than 2 features ($name has ".scalar(@$dfs).")!";
+            use Data::Dumper;
+            die "Don't know what to do with a ditag with more than 2 features ($name has ".scalar(@$dfs).")!\n".Dumper($dfs);
         }
         
         my $daf = Bio::EnsEMBL::DnaDnaAlignFeature->new(
@@ -717,6 +718,8 @@ sub gff_header {
     
     sub to_gff {
         my $self = shift;
+        
+        
         
         return $self->ditag->to_gff(@_);
     }
