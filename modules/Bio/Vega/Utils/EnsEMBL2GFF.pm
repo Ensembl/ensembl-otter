@@ -684,9 +684,7 @@ sub gff_header {
             
             $cigar_string = $df1->cigar_line.$insert.'I'.$df2->cigar_line;
             
-            unless ($hstart <= $hend) {
-                die "hstart not <= hend: $hstart - $hend: df1: ".$df1->hit_start." - ".$df1->hit_end." df2: ".$df2->hit_start." - ".$df2->hit_end;
-            }
+            die "Mismatching strands on in a ditag feature pair" unless $df1->strand == $df2->strand;
         }
         else {
             
@@ -703,6 +701,7 @@ sub gff_header {
             -hseqname     => $self->ditag->type.':'.$self->ditag->name,
             -hstart       => $hstart,
             -hend         => $hend,
+            -hstrand      => $self->hit_strand,
             -analyis      => $self->analysis,
             -cigar_string => $cigar_string,
         );
