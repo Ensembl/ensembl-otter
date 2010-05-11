@@ -695,8 +695,8 @@ sub gff_header {
         
         my $daf = Bio::EnsEMBL::DnaDnaAlignFeature->new(
             -slice        => $self->slice,
-            -start        => $start,
-            -end          => $end,
+            -start        => $start - $self->slice->start,
+            -end          => $end - $self->slice->start,
             -strand       => $self->strand,
             -hseqname     => $self->ditag->type.':'.$self->ditag->name,
             -hstart       => $hstart,
