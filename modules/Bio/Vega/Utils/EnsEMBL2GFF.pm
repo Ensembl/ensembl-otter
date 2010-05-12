@@ -683,6 +683,8 @@ sub gff_header {
             $hstart = $fw ? $df1->hit_start : $df2->hit_start;
             $hend = $fw ? $df2->hit_end : $df1->hit_end;
             
+            my $insert = $df2->start - $df1->end - 1;
+            
             # XXX: gr5: this generates GFF slightly differently from the ace server for 
             # instances where the hit_end of df1 and the hit_start of df2 are the same
             # e.g. 1-19, 19-37, which seems to occur fairly often. I don't really know
