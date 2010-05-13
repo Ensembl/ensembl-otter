@@ -39,7 +39,7 @@ sub new {
     my( $pkg, $tk ) = @_;
 
     my $self = $pkg->SUPER::new($tk);
-
+    
     $self->populate_menus;
     $self->make_search_panel;
     $self->bind_events;
@@ -683,6 +683,12 @@ sub show_lcd_dialog {
     $lc->show_filters;
     $top->deiconify;
     $top->raise;
+}
+
+sub gff_filters {
+    my ($self, $filters) = @_;    
+    $self->{'_gff_filters'} = $filters if $filters;
+    return $self->{'_gff_filters'};
 }
 
 sub populate_clone_menu {

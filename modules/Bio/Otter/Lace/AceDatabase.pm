@@ -25,6 +25,7 @@ use Bio::EnsEMBL::Ace::DataFactory;
 
 use Hum::Ace::LocalServer;
 use Hum::Ace::MethodCollection;
+use Hum::ZMapStyleCollection;
 
 my      $REGION_XML_FILE =      '.region.xml';
 my $LOCK_REGION_XML_FILE = '.lock_region.xml';
@@ -107,8 +108,9 @@ sub MethodCollection {
 
 sub get_default_MethodCollection {
     my( $self ) = @_;
-
-    my $collect = Hum::Ace::MethodCollection->new_from_string($self->Client->get_methods_ace);
+    
+    my $styles_collection = Hum::ZMapStyleCollection->new_from_string($self->Client->get_otter_styles);
+    my $collect = Hum::Ace::MethodCollection->new_from_string($self->Client->get_methods_ace, $styles_collection);
     $collect->process_for_otterlace;
     return $collect;
 }
@@ -330,7 +332,7 @@ sub generate_XML_from_acedb {
     my $converter = Bio::Vega::AceConverter->new;
     $converter->AceDatabase($self);
     $converter->generate_vega_objects;
-
+    
     # Pass the Ensembl objects to the XML formatter
     my $formatter = Bio::Vega::Transform::XML->new;
     $formatter->species($self->smart_slice->dsname);

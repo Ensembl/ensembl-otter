@@ -109,7 +109,7 @@ sub initialize {
 	$hlist->header('create', $i++, 
 		-text => 'Name', 
     	-itemtype => 'resizebutton', 
-    	-command => sub { $self->sort_by_filter_method('method_tag') }
+    	-command => sub { $self->sort_by_filter_method('name') }
 	);
 	
 	$hlist->header('create', $i++, 
@@ -194,7 +194,7 @@ sub initialize {
 	)->pack(-side => 'right', -expand => 0);
     $top->protocol( 'WM_DELETE_WINDOW', $wod_cmd );
     
-    $self->{_default_sort_method} = 'method_tag';
+    $self->{_default_sort_method} = 'name';
     
     $self->sort_by_filter_method(
     	$self->DataSetChooser->last_sorted_by($self->species) ||
@@ -281,7 +281,7 @@ sub loading_filter {
     my ($self, $filter) = @_;
     $self->{_current_filter} = $filter;
     $filter->load_time(time);
-    $self->label_text("Loading: ".$filter->method_tag." (".($self->{_filters_done}+1)." of ".$self->{_num_filters}.")");
+    $self->label_text("Loading: ".$filter->name." (".($self->{_filters_done}+1)." of ".$self->{_num_filters}.")");
     $self->update_tk_preserve_grab;
 }
 
@@ -300,7 +300,12 @@ sub filter_loaded {
     
     $self->{_loaded_filters} ||= [];
     
-    push @{ $self->{_loaded_filters} }, @{ $filter->required_ace_method_names };
+    if ($filter->can('required_ace_method_names')) {
+        push @{ $self->{_loaded_filters} }, @{ $filter->required_ace_method_names };
+    }
+    else {
+        push @{ $self->{_loaded_filters} }, $filter->name;
+    }
 }
 
 sub filter_failed {
@@ -369,6 +374,18 @@ sub load_filters {
     
     if (@to_fetch) {
         
+        for my $filter (@to_fetch) {
+            my $gff_filter = $self->gff_filters->{$filter};
+            if ($gff_filter) {
+                my @to_load = $gff_filter->featuresets;
+                push @{ $self->{_loaded_filters} }, @to_load;
+            }
+        }
+        
+        # save the state of each gff filter to disk so we can recover the session
+        
+        $self->AceDatabase->smart_slice->DataSet->save_gff_filter_state($self->gff_filters);
+        
         # replace the current fatal error prompt (because it waits for the user to acknowledge 
         # each filter that fails to load)
         my $old_callback = $self->DataSetChooser->Client->fatal_error_prompt;
@@ -384,6 +401,9 @@ sub load_filters {
     if ($self->XaceSeqChooser) {
         if ($fetched_new_data) {
             $self->XaceSeqChooser->resync_with_db;
+            $self->XaceSeqChooser->zMapLoadFeatures(@{ $self->{_loaded_filters} });
+        }
+        elsif (@to_fetch) {
             $self->XaceSeqChooser->zMapLoadFeatures(@{ $self->{_loaded_filters} });
         }
         elsif (! @to_fetch) {
@@ -407,6 +427,7 @@ sub load_filters {
         $xc->AceDatabase($self->AceDatabase);
         $xc->SequenceNotes($self->SequenceNotes);
         $xc->LoadColumns($self);
+        $xc->gff_filters($self->gff_filters);
         $xc->initialize;
     }
     
@@ -586,7 +607,7 @@ sub show_filters {
         }
 
         $hlist->itemCreate($i, 1, 
-        	-text => $self->n2f->{$name}->method_tag,
+        	-text => $self->n2f->{$name}->name,
         );
         
         $hlist->itemCreate($i, 2,
@@ -653,11 +674,23 @@ sub n2f {
 	my ($self, $n2f) = @_;
 	
 	unless ($self->{'_n2f'}) {
-		$self->{'_n2f'} = $self->AceDatabase->
-			pipeline_DataFactory->get_names2filters();
+		my $ace_filters = $self->AceDatabase->
+			pipeline_DataFactory->get_names2filters() || {};
+		
+		my $gff_filters = $self->gff_filters || {};
+			
+		# merge the two sets of filters	
+	   
+	    $self->{'_n2f'} = {%$ace_filters, %$gff_filters};
 	}
 	
 	return $self->{'_n2f'};
+}
+
+sub gff_filters {
+    my ($self, $filters) = @_;    
+    $self->{'_gff_filters'} = $filters if $filters;
+    return $self->{'_gff_filters'};
 }
 
 sub hlist {

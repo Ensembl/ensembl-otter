@@ -7,6 +7,10 @@ use strict;
 use warnings;
 use Carp;
 use Scalar::Util 'weaken';
+use Config::IniFiles;
+
+my $GFF_FILTERS_STATE_FILE = "gff_filters_state.ini";
+my @FILTER_STATES = qw(wanted done failed);
 
 sub new {
     my( $pkg ) = @_;
@@ -38,6 +42,131 @@ sub get_config {
     my $conf = $self->{'_get_config_cache'}{$section}
         ||= $self->_config_from_client($section);
     return $conf;
+}
+
+sub session_dir {
+    my ($self, $session_dir) = @_;
+    $self->{_session_dir} = $session_dir if $session_dir;
+    return $self->{_session_dir};
+}
+
+sub parse_gff_filters {
+    my ($self) = @_;
+    
+    unless ($self->{_gff_filters}) {
+    
+        my $use_filters = $self->get_config('use_filters');
+        my $filters     = $self->get_config('filter');
+        
+        my $gff_filters;
+        
+        for my $filter_name (keys %$use_filters) {
+            
+            my $params = $filters->{$filter_name};
+            
+            my $module = $params->{'module'};
+            
+            die "No module supplied for filter '$filter_name'" unless $module;
+            
+            #print "Trying to load $module for $filter_name...\n"; 
+            #use Data::Dumper;
+            #print Dumper $params;
+            
+            eval "require $module";
+            die "Failed to require module $module: $@" if $@;
+            
+            if ($module->isa('Bio::Otter::GFFFilter')) {
+                
+                delete $params->{'module'}; # so we don't try to call a method 'module' below
+                
+                print "Found a gff filter: $filter_name...\n";
+                
+                my $filter_obj = $module->new;
+                
+                $filter_obj->name($filter_name);
+                
+                for my $meth (keys %$params) {
+                    $filter_obj->$meth($params->{$meth});
+                }
+                
+                $filter_obj->wanted($use_filters->{$filter_name});
+                
+                if (scalar(@{ $filter_obj->featuresets }) > 1 && $filter_obj->zmap_style) {
+                    die "Filter $filter_name: You can't specify a zmap_style for a filter with multiple featuresets";
+                }
+                
+                $gff_filters->{$filter_obj->name} = $filter_obj;
+    
+                # delete them from the global hash so acedb doesn't try to load them
+                delete $filters->{$filter_name};
+                delete $use_filters->{$filter_name};
+            }
+        }
+        
+        $self->{_gff_filters} = $gff_filters;
+    }
+    
+    return $self->{_gff_filters}; 
+}
+
+sub reload_gff_filter_state {
+    my ($self, $filters) = @_;
+    
+    my $cfg = $self->_gff_filter_state;
+    
+    for my $filter_name ($cfg->Sections) {
+        print "Reloading $filter_name\n";
+        my $filter = $filters->{$filter_name};
+        for my $state (@FILTER_STATES) {
+            my $setting = $cfg->val($filter_name, $state);
+            $filter->$state($setting) if defined $setting;
+        } 
+    }
+}
+
+sub save_gff_filter_state {
+    my ($self, $filters) = @_;
+    
+    my $cfg = $self->_gff_filter_state;
+    
+    for my $filter (values %$filters) {
+        for my $state (@FILTER_STATES) {
+            if ($filter->$state) {
+                $cfg->AddSection($filter->name) unless $cfg->SectionExists($filter->name);
+                $cfg->newval($filter->name, $state, 1);
+            }
+        }
+    }
+    
+    $cfg->RewriteConfig;
+}
+
+sub _gff_filter_state {
+    my ($self) = @_;
+    
+    die "Need to specify session_dir to DataSet before calling" unless $self->session_dir;
+    
+    unless ($self->{_gff_filter_state}) {
+        my $file = $self->session_dir.'/'.$GFF_FILTERS_STATE_FILE;
+        my $cfg;
+        
+        # Config::IniFiles is fussy about being passed an empty file, so we have to  
+        # do things differently if the file exists or not, we should probably fix this...
+        
+        unless (-e $file) {
+            $cfg = Config::IniFiles->new;
+            $cfg->SetFileName($file);
+        }
+        else {
+            $cfg = Config::IniFiles->new( -file => $file );
+        }
+        
+        die "Failed to create Config object from $file" unless $cfg;
+        
+        $self->{_gff_filter_state} = $cfg;
+    }
+    
+    return $self->{_gff_filter_state};
 }
 
 sub _config_from_client {

@@ -241,13 +241,14 @@ sub recover_some_sessions {
                     my ($session_dir, $date, $title) = @$rec;
                     
                     # Bring up GUI
-                    my $adb = $ldf->recover_session($session_dir);
+                    my ($adb, $gff_filters) = $ldf->recover_session($session_dir);
                     
                     my $top = $canvas->Toplevel(
                         -title  => 'Select column data to load',
                     );
                     
                     my $lc = EditWindow::LoadColumns->new($top);
+                    $lc->gff_filters($gff_filters);
                     $lc->AceDatabase($adb);
                     $lc->DataSetChooser($self);
                     $lc->initialize;
