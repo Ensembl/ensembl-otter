@@ -79,8 +79,6 @@ sub parse_gff_filters {
                 
                 delete $params->{'module'}; # so we don't try to call a method 'module' below
                 
-                print "Found a gff filter: $filter_name...\n";
-                
                 my $filter_obj = $module->new;
                 
                 $filter_obj->name($filter_name);
