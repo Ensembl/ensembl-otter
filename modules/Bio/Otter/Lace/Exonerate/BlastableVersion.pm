@@ -12,7 +12,7 @@ $INC{q(BlastableVersion.pm)}++;
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.4 $ ';
+$revision='$Revision: 1.5 $ ';
 $revision =~ s/\$.evision: (\S+).*/$1/;
 
 #### CONSTRUCTORS
@@ -49,3 +49,11 @@ sub set_hostname { }
 sub get_version { }
 
 1;
+
+__END__
+
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
+
+
