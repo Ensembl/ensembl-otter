@@ -685,12 +685,18 @@ sub _open_SequenceSet {
     my $smart_slice = Bio::Otter::Lace::Slice->new($cl, $dsname, $ssname,
         'chromosome', 'Otter', $chr_name, $chr_start, $chr_end);
 
+    
     my $adb_write_access = ${$self->write_access_var_ref()};
     my $adb = $self->LocalDatabaseFactory->new_AceDatabase($adb_write_access);
     $adb->error_flag(1);
     $adb->title($title);
     $adb->smart_slice($smart_slice);
     $adb->make_database_directory;
+    
+    # we need to parse the gff filters first to stop ace trying to read them
+    $smart_slice->DataSet->session_dir($adb->home);
+    my $gff_filters = $smart_slice->DataSet->parse_gff_filters;
+    
     $adb->make_pipeline_DataFactory;
 
     if ($adb_write_access) {
@@ -730,6 +736,7 @@ sub _open_SequenceSet {
     );
    	my $lc = EditWindow::LoadColumns->new($top);
    	$lc->init_flag(1);
+   	$lc->gff_filters($gff_filters);
    	$lc->AceDatabase($adb);
    	$lc->SequenceNotes($self);
    	$lc->DataSetChooser($self->SequenceSetChooser->DataSetChooser);

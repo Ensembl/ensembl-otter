@@ -835,6 +835,16 @@ sub get_server_otter_config {
     return;
 }
 
+sub get_otter_styles {
+    my ($self) = @_;
+    
+    # We cache the whole otter_styles file in memory
+    unless ($self->{'_otter_styles'}) {
+        $self->{'_otter_styles'} = $self->http_response_content('GET', 'get_otter_styles', {});
+    }
+    return $self->{'_otter_styles'};
+}
+
 sub do_authentication {
     my ($self) = @_;
     
@@ -963,7 +973,7 @@ sub save_otter_xml {
             'data'     => $xml,
         }
     );
-
+    
     return $content;
 }
 
