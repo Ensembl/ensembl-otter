@@ -1069,7 +1069,6 @@ sub zMapRemoveView {
     return (200, $z->handled_response(1));
 }
 
-<<<<<<< ZMapSeqChooser.pm
 sub zMapFeaturesLoaded {
     my ($self, $xml) = @_;
     
