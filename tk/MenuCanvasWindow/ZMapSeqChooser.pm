@@ -475,8 +475,9 @@ sub zMapGffFilterDefaults {
         map { delete $params{$_} unless $params{$_} } keys %params;
         
         # we need to set these parameters for the gff fetching script itself
-        $params{session_dir} = $self->ace_path;
-        $params{url_root} = $self->AceDatabase->Client->url_root;
+        $params{session_dir}    = $self->ace_path;
+        $params{url_root}       = $self->AceDatabase->Client->url_root;
+        $params{cookie_jar}     = $ENV{'OTTERLACE_COOKIE_JAR'};
         
         my $param_string = join '&', map { $_.'='.$params{$_} } keys %params;
         
