@@ -128,7 +128,19 @@ else {
         }
     }
     elsif ($response) {
-        print STDERR "Error from webserver: ".$response->content."\n";
+        
+        my $res = $response->content;
+        
+        my $err_msg;
+        
+        if ($res =~ /ERROR: (.+)/) {
+            $err_msg = $1;
+        }
+        else {
+            $err_msg = $res;
+        }
+        
+        print STDERR "Error from webserver: $err_msg\n";
     }
     else {
         print STDERR "No response from webserver\n";
