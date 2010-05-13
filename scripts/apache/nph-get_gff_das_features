@@ -7,7 +7,7 @@
 use strict;
 use warnings;
 
-use SangerPaths qw{ core bioperl123 ensembl57 otter54 };
+use SangerPaths qw{ core bioperl123 ensembl57 otter53 };
 
 my $http_proxy = $ENV{http_proxy};
 
