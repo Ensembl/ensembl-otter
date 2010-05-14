@@ -13,7 +13,7 @@ use warnings;
 use Carp qw{ longmess };
 
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
-#use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
+use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
 use Bio::Vega::DBSQL::DBAdaptor;
 
 use base ('Bio::Otter::SpeciesDat');
