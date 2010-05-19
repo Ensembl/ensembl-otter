@@ -651,6 +651,7 @@ sub make_pipeline_DataFactory {
 
         my $pipe_filter = $class->new;
         $pipe_filter->wanted($filter_wanted);
+        $pipe_filter->name($filter_name);
 
         # Options in the config file are methods on filter objects:
         while (my ($option, $value) = each %$param) {
