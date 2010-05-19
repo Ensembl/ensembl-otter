@@ -375,7 +375,7 @@ sub load_filters {
     if (@to_fetch) {
         
         for my $filter (@to_fetch) {
-            my $gff_filter = $self->gff_filters->{$filter};
+            my $gff_filter = $self->gff_filters_hash->{$filter};
             if ($gff_filter) {
                 my @to_load = $gff_filter->featuresets;
                 push @{ $self->{_loaded_filters} }, @to_load;
@@ -677,7 +677,7 @@ sub n2f {
 		my $ace_filters = $self->AceDatabase->
 			pipeline_DataFactory->get_names2filters() || {};
 		
-		my $gff_filters = $self->gff_filters || {};
+		my $gff_filters = $self->gff_filters_hash || {};
 			
 		# merge the two sets of filters	
 	   
@@ -691,6 +691,14 @@ sub gff_filters {
     my ($self, $filters) = @_;    
     $self->{'_gff_filters'} = $filters if $filters;
     return $self->{'_gff_filters'};
+}
+
+sub gff_filters_hash {
+    my ($self) = @_;
+    unless ($self->{_gff_filters_hash}) {
+        $self->{_gff_filters_hash} = { map { $_->name => $_ } @{ $self->gff_filters } };
+    }
+    return $self->{_gff_filters_hash};
 }
 
 sub hlist {

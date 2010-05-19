@@ -68,12 +68,8 @@ sub parse_gff_filters {
             
             die "No module supplied for filter '$filter_name'" unless $module;
             
-            #print "Trying to load $module for $filter_name...\n"; 
-            #use Data::Dumper;
-            #print Dumper $params;
-            
             eval "require $module";
-            die "Failed to require module $module: $@" if $@;
+            die "Failed to require module '$module' for filter '$filter_name': $@" if $@;
             
             if ($module->isa('Bio::Otter::GFFFilter')) {
                 
@@ -84,7 +80,12 @@ sub parse_gff_filters {
                 $filter_obj->name($filter_name);
                 
                 for my $meth (keys %$params) {
-                    $filter_obj->$meth($params->{$meth});
+                    if ($filter_obj->can($meth)) {
+                        $filter_obj->$meth($params->{$meth});
+                    }
+                    else {
+                        die "Unrecognised configuration parameter '$meth' used in filter '$filter_name', check your .otter_config";
+                    }
                 }
                 
                 $filter_obj->wanted($use_filters->{$filter_name});
@@ -93,7 +94,7 @@ sub parse_gff_filters {
                     die "Filter $filter_name: You can't specify a zmap_style for a filter with multiple featuresets";
                 }
                 
-                $gff_filters->{$filter_obj->name} = $filter_obj;
+                push @$gff_filters, $filter_obj;
     
                 # delete them from the global hash so acedb doesn't try to load them
                 delete $filters->{$filter_name};
@@ -112,9 +113,11 @@ sub reload_gff_filter_state {
     
     my $cfg = $self->_gff_filter_state;
     
+    my %filter_hash = map {$_->name => $_} @$filters;
+    
     for my $filter_name ($cfg->Sections) {
         print "Reloading $filter_name\n";
-        my $filter = $filters->{$filter_name};
+        my $filter = $filter_hash{$filter_name};
         for my $state (@FILTER_STATES) {
             my $setting = $cfg->val($filter_name, $state);
             $filter->$state($setting) if defined $setting;
@@ -127,7 +130,7 @@ sub save_gff_filter_state {
     
     my $cfg = $self->_gff_filter_state;
     
-    for my $filter (values %$filters) {
+    for my $filter (@$filters) {
         for my $state (@FILTER_STATES) {
             if ($filter->$state) {
                 $cfg->AddSection($filter->name) unless $cfg->SectionExists($filter->name);

@@ -14,7 +14,7 @@ use XML::Simple;
 use File::Path 'mkpath';
 use Config::IniFiles;
 
-my $ZMAP_DEBUG = 0;
+my $ZMAP_DEBUG = 1;
 
 #==============================================================================#
 #
@@ -444,7 +444,7 @@ sub zMapAceServerDefaults {
         # Can specify a stylesfile instead of featuresets
 
         featuresets     => $self->semi_colon_separated_list([$self->zMapListMethodNames_ordered]),
-        'stylesfile'    => $stylesfile,
+        stylesfile      => $stylesfile,
     );
 }
 
@@ -462,9 +462,7 @@ sub zMapGffFilterDefaults {
     my %filter_styles;
     my %filter_descs;
     
-    for my $filter_name (keys %$gff_filters) {
-        
-        my $filter = $gff_filters->{$filter_name};
+    for my $filter (@$gff_filters) {
         
         my %params = ( %{ $self->AceDatabase->smart_slice->toHash }, %{ $filter->server_params } );
         
@@ -483,11 +481,11 @@ sub zMapGffFilterDefaults {
         
         $text .= $self->formatZmapDefaults(
             $filter->name,
-            'url'           => 'pipe:///'.$script.'?'.$param_string,
-            'featuresets'   => join(' ; ', $filter->featuresets),
-            'delayed'       => ($filter->wanted && !$filter->failed) ? 'false' : 'true',
-            'stylesfile'    => $stylesfile,
-            'group'         => 'always',
+            url             => 'pipe:///'.$script.'?'.$param_string,
+            featuresets     => join(' ; ', $filter->featuresets),
+            delayed         => ($filter->wanted && !$filter->failed) ? 'false' : 'true',
+            stylesfile      => $stylesfile,
+            group           => 'always',
         );
         
         if ($filter->zmap_column) {
@@ -504,7 +502,7 @@ sub zMapGffFilterDefaults {
         }
     }
     
-    if (keys %filter_columns && 0) {
+    if (keys %filter_columns) {
         
         # also add a columns stanza to group featuresets into columns
         
@@ -514,7 +512,7 @@ sub zMapGffFilterDefaults {
         );
     }
     
-    if (keys %filter_styles && 0) {
+    if (keys %filter_styles) {
         
         # and a featureset-styles stanza to specify the style for each featureset
         
@@ -555,11 +553,11 @@ sub zMapZMapDefaults {
         ? 'true'
         : 'false';
     
-    my $sources_string = join ' ; ', $self->slice_name, map { $_->name } values %{ $self->gff_filters };
+    my $sources_string = join ' ; ', $self->slice_name, map { $_->name } @{ $self->gff_filters };
     
     my $columns_string = join ' ; ', 
-        keys %{ { map { ($_->zmap_column || $_->name) => 1 } values %{ $self->gff_filters } } }, 
-        $self->zMapListMethodNames_ordered;
+        $self->zMapListMethodNames_ordered,
+        keys %{ { map { ($_->zmap_column || $_->name) => 1 } @{ $self->gff_filters } } };
     
     my @config = (
         'ZMap',
@@ -568,7 +566,7 @@ sub zMapZMapDefaults {
         'cookie-jar'        => $ENV{'OTTERLACE_COOKIE_JAR'},
         'script-dir'        => $ENV{'OTTER_HOME'}.'/ensembl-otter/scripts/',
         'xremote-debug'     => $ZMAP_DEBUG ? 'true' : 'false',
-        #'columns'           => $columns_string,
+        'columns'           => $columns_string,
         );
 
     if ($ENV{'PFETCH_WWW'}) {
@@ -878,8 +876,8 @@ sub zMapEdit {
             return (200, $z->handled_response(1));
         }
         elsif (@subseq_names) {
-            $self->edit_subsequences(@subseq_names);
-            return (200, $z->handled_response(1));
+            my $success = $self->edit_subsequences(@subseq_names);
+            return (200, $z->handled_response($success));
         }
         else {
             return (200, $z->handled_response(0));
@@ -1077,9 +1075,9 @@ sub zMapFeaturesLoaded {
     
     my @featuresets = split /;/, $xml->{request}->{featureset}->{names};
     
-    print "zmap loaded featuresets: ".$xml->{request}->{featureset}->{names}."\n";
-   
     my $status = $xml->{request}->{status}->{value};
+    
+    print "zmap loaded featuresets: ".$xml->{request}->{featureset}->{names}." status: $status\n";   
     
     my $msg = $xml->{request}->{status}->{message};
     
@@ -1088,7 +1086,7 @@ sub zMapFeaturesLoaded {
         
         my $gff_filters = $self->gff_filters;
         
-        for my $filter (values %$gff_filters) {
+        for my $filter (@$gff_filters) {
             for my $fset ($filter->featuresets) {
                 $filters_by_fset->{lc($fset)} = $filter; # lc because zmap does
             }
@@ -1119,7 +1117,7 @@ sub zMapFeaturesLoaded {
     if ($state_changed) {
         # save the state of each gff filter to disk so we can recover the session
         
-        $self->AceDatabase->smart_slice->DataSet->save_gff_filter_state($self->gff_filters) if $state_changed;
+        $self->AceDatabase->smart_slice->DataSet->save_gff_filter_state($self->gff_filters);
         
         # and update the delayed flags in the zmap config file
         
@@ -1134,7 +1132,7 @@ sub zMapUpdateConfigFile {
     
     my $cfg = $self->{_zmap_cfg} ||= Config::IniFiles->new( -file => $self->zMapZmapDir . '/ZMap' );
     
-    for my $filter (values %{ $self->gff_filters }) {
+    for my $filter (@{ $self->gff_filters }) {
         if ($filter->done) {
             $cfg->setval($filter->name,'delayed','false');
         }
