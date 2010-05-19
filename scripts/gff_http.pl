@@ -102,6 +102,8 @@ else {
 
     my $response = $ua->request($request);
 
+    my $source_name = $args{gff_source};
+
     if ($response && $response->is_success) {
 
         my $gff = $response->decoded_content;
@@ -124,7 +126,7 @@ else {
             print CACHE_FILE $gff;
         }
         else {
-            print STDERR "Got unexpected response from webserver: $gff\n";
+            print STDERR "Got unexpected response from web server for source $source_name: $gff\n";
         }
     }
     elsif ($response) {
@@ -143,10 +145,10 @@ else {
             $err_msg = $res;
         }
         
-        print STDERR "Error from webserver: $err_msg\n";
+        print STDERR "Web server error for source $source_name: $err_msg\n";
     }
     else {
-        print STDERR "No response from webserver\n";
+        print STDERR "No response from webserver for source $source_name\n";
     }
 }
 
