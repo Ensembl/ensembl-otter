@@ -56,7 +56,7 @@ sub run {
                 $end = $b;
                 $tot_depth = $depth;
             }
-            elsif ( ($bin_cnt == $BIN_SIZE) || ($b != $end+1)) {
+            elsif ( ($bin_cnt == $BIN_SIZE) || ($b != $end+1) ) {
                 
                 # end this feature
                                 

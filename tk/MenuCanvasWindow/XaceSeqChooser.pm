@@ -1166,6 +1166,8 @@ sub slice_name {
 sub edit_subsequences {
     my( $self, @sub_names ) = @_;
 
+    my $retval = 1;
+    
     @sub_names = $self->list_selected_subseq_names
         unless @sub_names;
     foreach my $sub_name (@sub_names) {
@@ -1183,8 +1185,11 @@ sub edit_subsequences {
             $self->make_exoncanvas_edit_window($edit);
         } else {
             warn "Failed to get_SubSeq($sub_name)";
+            $retval = 0;
         }
     }
+    
+    return $retval;
 }
 
 sub default_locus_prefix {
