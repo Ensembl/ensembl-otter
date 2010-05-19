@@ -136,6 +136,9 @@ else {
         if ($res =~ /ERROR: (.+)/) {
             $err_msg = $1;
         }
+        elsif ($res =~ /The Sanger Institute Web service you requested is temporarily unavailable/) {
+            $err_msg = "Problem with the web server";
+        }
         else {
             $err_msg = $res;
         }
