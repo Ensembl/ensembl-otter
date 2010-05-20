@@ -126,7 +126,7 @@ else {
             print CACHE_FILE $gff;
         }
         else {
-            print STDERR "Got unexpected response from web server for source $source_name: $gff\n";
+            print STDERR "Unexpected response for $source_name: $gff\n";
         }
     }
     elsif ($response) {
@@ -139,16 +139,16 @@ else {
             $err_msg = $1;
         }
         elsif ($res =~ /The Sanger Institute Web service you requested is temporarily unavailable/) {
-            $err_msg = "Problem with the web server";
+            $err_msg = "web service temporarily unavailable";
         }
         else {
             $err_msg = $res;
         }
         
-        print STDERR "Web server error for source $source_name: $err_msg\n";
+        print STDERR "Webserver error for $source_name: $err_msg\n";
     }
     else {
-        print STDERR "No response from webserver for source $source_name\n";
+        print STDERR "No response for $source_name\n";
     }
 }
 
