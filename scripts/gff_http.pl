@@ -113,10 +113,8 @@ else {
             print $gff;
             
             # zmap waits for STDOUT to be closed as an indication that all
-            # data has been sent, if we didn't explicitly close the handle
-            # it would be inherited and kept alive by the child when we fork 
-            # below and so zmap would not start drawing until after the 
-            # child exits, which is not what we want at all!
+            # data has been sent, so we close the handle now so that zmap
+            # can start processing the data while we create the cached copy
 
             close STDOUT;
             
