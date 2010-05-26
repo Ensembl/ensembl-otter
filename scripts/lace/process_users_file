@@ -1,0 +1,62 @@
+#!/usr/bin/env perl
+
+### process_users_file
+
+use strict;
+use warnings;
+use Getopt::Long qw{ GetOptions };
+
+{
+    my $target = undef;
+    my $usage = sub { exec('perldoc', $0) };
+    GetOptions(
+        'h|help!'   => $usage,
+        'target=s'  => \$target,
+        ) or $usage->();
+
+    my %domain_users_species;
+    my $max_email = 0;
+    while (<>) {
+        next if /^\s*#/;
+        s/#.*//;
+        next unless $_;
+        my ($email, @species) = split;
+        next unless $email and @species;
+        my $len = length($email);
+        $max_email = $len if $len > $max_email;
+        if ($target) {
+            next unless grep $_ eq $target, @species;
+        }
+        my ($user, $domain) = split /\@/, $email;
+        $domain ||= 'sanger.ac.uk';
+        $domain = flip($domain);
+        $domain_users_species{$domain}{$user} = [sort @species];
+    }
+    
+    my $pattern = "  \%${max_email}s  %s\n";
+    foreach my $domain (sort keys %domain_users_species) {
+        print "\n";
+        my $user_hash = $domain_users_species{$domain};
+        $domain = flip($domain);
+        foreach my $user (sort keys %$user_hash) {
+            my $species_list = $user_hash->{$user};
+            printf $pattern, "$user\@$domain", join(' ', @$species_list);
+        }
+    }
+}
+
+sub flip {
+    my ($domain) = @_;
+    
+    return join '.', reverse(split /\./, $domain);
+}
+
+
+__END__
+
+=head1 NAME - process_users_file
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
