@@ -12,9 +12,8 @@ use Data::Dumper;
 use Hum::Conf qw{ PFETCH_SERVER_LIST };
 use XML::Simple;
 use File::Path 'mkpath';
-use Config::IniFiles;
 
-my $ZMAP_DEBUG = 1;
+my $ZMAP_DEBUG = 0;
 
 #==============================================================================#
 #
@@ -386,43 +385,22 @@ sub zMapWriteDotZmap {
     my ($self) = @_;
 
     my $file = $self->zMapZmapDir . "/ZMap";
-    
-    my $stylesfile = $self->zMapZmapDir . "/styles.ini";
-    
-    $self->Assembly->MethodCollection->ZMapStyleCollection->write_to_file($stylesfile);
 
     open my $fh, '>', $file
-        or confess "Can't write to '$file'; $!";
-    print $fh $self->zMapDotZmapContent($stylesfile);
+      or confess "Can't write to '$file'; $!";
+    print $fh $self->zMapDotZmapContent;
     close $fh
       or confess "Error writing to '$file'; $!";
 }
 
-sub zMapDotZmapContent{
-    my ($self, $stylesfile) = @_;
-    
-    return
-        $self->zMapZMapDefaults
-      . $self->zMapWindowDefaults
-      . $self->zMapBlixemDefaults
-      . $self->zMapAceServerDefaults($stylesfile)
-      . $self->zMapGffFilterDefaults($stylesfile)
-      . $self->zMapGlyphDefaults
-      ;
+sub zMapDotZmapContent {
+    my ($self) = @_;
+
+    return $self->zMapZMapDefaults . $self->zMapWindowDefaults . $self->zMapBlixemDefaults . $self->zMapServerDefaults;
 }
 
-sub zMapGlyphDefaults {
-    my $self = shift;
-    
-    return $self->formatZmapDefaults(
-        'glyphs',
-        'up-tri'    => '<0,-4 ;-4,0 ;4,0 ;0,-4>',
-        'dn-tri'    => '<0,4; -4,0 ;4,0; 0,4>',
-    );
-}
-
-sub zMapAceServerDefaults {
-    my ($self, $stylesfile) = @_;
+sub zMapServerDefaults {
+    my ($self) = @_;
 
     my $server = $self->AceDatabase->ace_server;
 
@@ -443,97 +421,8 @@ sub zMapAceServerDefaults {
         navigatorsets => $self->semi_colon_separated_list([qw{ scale genomic_canonical locus }]),
 
         # Can specify a stylesfile instead of featuresets
-
-        featuresets     => $self->semi_colon_separated_list([$self->zMapListMethodNames_ordered]),
-        stylesfile      => $stylesfile,
+        featuresets => $self->semi_colon_separated_list([ $self->zMapListMethodNames_ordered ]),
     );
-}
-
-sub zMapGffFilterDefaults {
-    
-    my ($self, $stylesfile) = @_;
-    
-    my $gff_filters = $self->gff_filters;
-    
-    my $text;
-    
-    my $script = 'gff_http.pl';
-    
-    my %filter_columns;
-    my %filter_styles;
-    my %filter_descs;
-    
-    for my $filter (@$gff_filters) {
-        
-        my %params = ( %{ $self->AceDatabase->smart_slice->toHash }, %{ $filter->server_params } );
-        
-        $params{gff_seqname} = $params{type};
-        $params{gff_source} = $filter->name;
-        
-        # get rid of parameters with no value (shortens the URL)
-        map { delete $params{$_} unless $params{$_} } keys %params;
-        
-        # we need to set these parameters for the gff fetching script itself
-        $params{session_dir}    = $self->ace_path;
-        $params{url_root}       = $self->AceDatabase->Client->url_root;
-        $params{cookie_jar}     = $ENV{'OTTERLACE_COOKIE_JAR'};
-        
-        my $param_string = join '&', map { $_.'='.$params{$_} } keys %params;
-        
-        $text .= $self->formatZmapDefaults(
-            $filter->name,
-            url             => 'pipe:///'.$script.'?'.$param_string,
-            featuresets     => join(' ; ', $filter->featuresets),
-            delayed         => ($filter->wanted && !$filter->failed) ? 'false' : 'true',
-            stylesfile      => $stylesfile,
-            group           => 'always',
-        );
-        
-        if ($filter->zmap_column) {
-            my $fsets = $filter_columns{$filter->zmap_column} ||= [];
-            push @{ $fsets }, $filter->featuresets;
-        }
-        
-        if ($filter->zmap_style) {
-            $filter_styles{$filter->name} = $filter->zmap_style;
-        }
-        
-        if ($filter->description) {
-            $filter_descs{$filter->name} = $filter->description;
-        }
-    }
-    
-    if (keys %filter_columns) {
-        
-        # also add a columns stanza to group featuresets into columns
-        
-        $text .= $self->formatZmapDefaults(
-            'columns',
-            map { $_ => join ' ; ', @{ $filter_columns{$_} } } keys %filter_columns,
-        );
-    }
-    
-    if (keys %filter_styles) {
-        
-        # and a featureset-styles stanza to specify the style for each featureset
-        
-        $text .= $self->formatZmapDefaults(
-            'featureset-style',
-            map { $_ => $filter_styles{$_} } keys %filter_styles,
-        );
-    }
-    
-    if (keys %filter_descs && 0) {
-        
-        # and a filter description stanza
-        
-        $text .= $self->formatZmapDefaults(
-            'featureset-description',
-            map { $_ => $filter_descs{$_} } keys %filter_descs,
-        );
-    }
-    
-    return $text;
 }
 
 sub semi_colon_separated_list {
@@ -547,28 +436,17 @@ sub zMapZMapDefaults {
 
     # make this configurable for those users where zmap doesn't start
     # due to not having window id when doing XChangeProperty.
+    my $show_main =
+      Bio::Otter::Lace::Defaults::option_from_array([qw(client zmap_main_window)])
+      ? 'true'
+      : 'false';
 
-    my $show_main = Bio::Otter::Lace::Defaults::option_from_array(
-        [qw(client zmap_main_window)]
-      )
-        ? 'true'
-        : 'false';
-    
-    my $sources_string = join ' ; ', $self->slice_name, map { $_->name } @{ $self->gff_filters };
-    
-    my $columns_string = join ' ; ', 
-        $self->zMapListMethodNames_ordered,
-        keys %{ { map { ($_->zmap_column || $_->name) => 1 } @{ $self->gff_filters } } };
-    
     my @config = (
         'ZMap',
-        'sources'           => $sources_string,
-        'show-mainwindow'   => $show_main,
-        'cookie-jar'        => $ENV{'OTTERLACE_COOKIE_JAR'},
-        'script-dir'        => $ENV{'OTTER_HOME'}.'/ensembl-otter/scripts/',
-        'xremote-debug'     => $ZMAP_DEBUG ? 'true' : 'false',
-        'columns'           => $columns_string,
-        );
+        'sources'         => $self->slice_name,
+        'show-mainwindow' => $show_main,
+        'cookie-jar'      => $ENV{'OTTERLACE_COOKIE_JAR'},
+    );
 
     if ($ENV{'PFETCH_WWW'}) {
         push(
@@ -585,7 +463,7 @@ sub zMapZMapDefaults {
         );
     }
 
-    # push @config, %{ Bio::Otter::Lace::Defaults::fetch_zmap_stanza() };
+    push @config, %{ Bio::Otter::Lace::Defaults::fetch_zmap_stanza() };
 
     return $self->formatZmapDefaults(@config);
 }
@@ -597,19 +475,19 @@ sub zMapBlixemDefaults {
         'blixem',
         'config-file' => $ENV{'BLIXEM_CONFIG_FILE'},
         qw{
-            script      blixemh
-            scope       200000
-            homol-max   0
-        },
-        'protein-featuresets' => [qw{ SwissProt TrEMBL }],
-        'dna-featuresets'    => [qw{ EST_Human EST_Mouse EST_Other vertebrate_mRNA OTF_mRNA Unknown_DNA }],
+          script      blixemh
+          scope       200000
+          homol-max   0
+          },
+        'protein-featuresets'    => [qw{ SwissProt TrEMBL }],
+        'dna-featuresets'        => [qw{ EST_Human EST_Mouse EST_Other vertebrate_mRNA }],
         'transcript-featuresets' => [
             'Coding Transcripts',
             'Known CDS Transcripts',
             'Novel CDS Transcripts',
             'Putative and NMD',
         ],
-        # %{ Bio::Otter::Lace::Defaults::fetch_blixem_stanza() },
+        %{ Bio::Otter::Lace::Defaults::fetch_blixem_stanza() },
     );
 
     # script could also be "blixem_standalone" sh wrapper (if needed)
@@ -877,8 +755,8 @@ sub zMapEdit {
             return (200, $z->handled_response(1));
         }
         elsif (@subseq_names) {
-            my $success = $self->edit_subsequences(@subseq_names);
-            return (200, $z->handled_response($success));
+            $self->edit_subsequences(@subseq_names);
+            return (200, $z->handled_response(1));
         }
         else {
             return (200, $z->handled_response(0));
@@ -1069,87 +947,13 @@ sub zMapRemoveView {
     return (200, $z->handled_response(1));
 }
 
-sub zMapFeaturesLoaded {
-    my ($self, $xml) = @_;
-    
-    import Data::Dumper;
-    
-    my @featuresets = split /;/, $xml->{request}->{featureset}->{names};
-    
-    my $status = $xml->{request}->{status}->{value};
-    
-    print "zmap loaded featuresets: ".$xml->{request}->{featureset}->{names}." status: $status\n";   
-    
-    my $msg = $xml->{request}->{status}->{message};
-    
-    unless ($self->{_gff_filters_by_featureset}) {
-        my $filters_by_fset;
-        
-        my $gff_filters = $self->gff_filters;
-        
-        for my $filter (@$gff_filters) {
-            for my $fset ($filter->featuresets) {
-                $filters_by_fset->{lc($fset)} = $filter; # lc because zmap does
-            }
-        }
-        
-        $self->{_gff_filters_by_featureset} = $filters_by_fset;
-    }
-    
-    my $gff_filters_by_featureset = $self->{_gff_filters_by_featureset};
-    
-    my $state_changed = 0;
-    
-    for my $name (@featuresets) {;
-        if (my $filter = $gff_filters_by_featureset->{lc($name)}) { # lc here too in case zmap changes!
-            if ($status == 0 && !$filter->failed) {
-                $state_changed = 1;
-                $filter->failed(1);
-                $filter->fail_msg($msg);
-            }
-            elsif ($status == 1 && !$filter->done) {
-                $state_changed = 1;
-                $filter->done(1);
-                $filter->failed(0); # reset failed flag if filter succeeds
-            }
-        }
-    }
-    
-    if ($state_changed) {
-        # save the state of each gff filter to disk so we can recover the session
-        
-        $self->AceDatabase->smart_slice->DataSet->save_gff_filter_state($self->gff_filters);
-        
-        # and update the delayed flags in the zmap config file
-        
-        $self->zMapUpdateConfigFile;
-    }
-    
-    return (200, $self->zMapZmapConnector->handled_response(1));
-}
-
-sub zMapUpdateConfigFile {
-    my $self = shift;
-    
-    my $cfg = $self->{_zmap_cfg} ||= Config::IniFiles->new( -file => $self->zMapZmapDir . '/ZMap' );
-    
-    for my $filter (@{ $self->gff_filters }) {
-        if ($filter->done) {
-            $cfg->setval($filter->name,'delayed','false');
-        }
-        if ($filter->failed) {
-            $cfg->setval($filter->name,'delayed','true');
-        }
-    }
-    
-    $cfg->RewriteConfig;
-}
-
 sub zMapIgnoreRequest {
     my ($self) = @_;
     
     return(200, $self->zMapZmapConnector->handled_response(0));
 }
+
+#===========================================================
 
 sub RECEIVE_FILTER {
     my ($connect, $request, $obj) = @_;
@@ -1162,8 +966,8 @@ sub RECEIVE_FILTER {
         multiple_select => 'zMapHighlight',
         finalised       => 'zMapRelaunchZMap',
         feature_details => 'zMapTagValues',
-	    view_closed     => 'zMapRemoveView',
-	    features_loaded => 'zMapFeaturesLoaded',
+        view_closed     => 'zMapRemoveView',
+        features_loaded => 'zMapIgnoreRequest'
     };
 
     # @list could be dynamically created...
@@ -1289,36 +1093,31 @@ sub open_clones {
 
     my $zmap_success = $self->zMapDoRequest($xremote, "new_zmap", qq!<zmap><request action="new_zmap"/></zmap>!);
 
-    if($zmap_success == 0){
-    	# now open a view
-    	my $seg = newXMLObj(  'segment'  );
-    	setObjNameValue($seg, 'sequence', $self->slice_name);
-    	setObjNameValue($seg, 'start',    1);
-    	setObjNameValue($seg, 'end',     '0');
-    
-    	$xremote = $self->zMapGetXRemoteClientByName("ZMap");
-    
-    	$self->zMapRegisterClientRequest($xremote);
-    
-        #my $input = <STDIN>;
-    
-    	my $view_success = $self->zMapDoRequest($xremote, "new_view", obj_make_xml($seg, "new_view"));
-    
-    	if($view_success == 0){
-    	    $xremote = $self->zMapGetXRemoteClientByName($self->slice_name());
-    
-    	    $self->zMapRegisterClientRequest($xremote);
-            
-#            sleep 10;
-#            
-#            my @filters_wanted = map { $_->featuresets } grep { $_->wanted } values %{ $self->gff_filters };
-#            print "Filters to load: ".join(',',@filters_wanted)."\n" if $ZMAP_DEBUG;
-#            $self->zMapLoadFeatures(@filters_wanted);
-    	} else {
-    	    warn "new_view request failed!";
-    	}
-    } else {
-	   warn "new_zmap request failed!"
+    if ($zmap_success == 0) {
+
+        # now open a view
+        my $seg = newXMLObj('segment');
+        setObjNameValue($seg, 'sequence', $self->slice_name);
+        setObjNameValue($seg, 'start',    1);
+        setObjNameValue($seg, 'end',      '0');
+
+        $xremote = $self->zMapGetXRemoteClientByName("ZMap");
+
+        $self->zMapRegisterClientRequest($xremote);
+
+        my $view_success = $self->zMapDoRequest($xremote, "new_view", obj_make_xml($seg, "new_view"));
+
+        if ($view_success == 0) {
+            $xremote = $self->zMapGetXRemoteClientByName($self->slice_name());
+
+            $self->zMapRegisterClientRequest($xremote);
+        }
+        else {
+            warn "new_view request failed!";
+        }
+    }
+    else {
+        warn "new_zmap request failed!";
     }
 
     return;
@@ -1373,9 +1172,7 @@ sub _zMapLoadFeatures {
     my ($self, $featuresets, $use_mark) = @_;
 
     if (my $client = $self->zMapGetXRemoteClientByAction('load_features', 1)) {
-        
-        print "Got client for load_features\n" if $ZMAP_DEBUG;
-        
+
         my $xml = Hum::XmlWriter->new;
         $xml->open_tag('zmap');
         $xml->open_tag('request', { action => 'load_features', $use_mark ? (load => 'mark') : () });
