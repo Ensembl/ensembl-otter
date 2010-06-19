@@ -183,7 +183,7 @@ sub cleanup_log_dir {
     my $log_dir = $self->get_log_dir or return;
     
     opendir my $LOG, $log_dir or confess "Can't open directory '$log_dir': $!";
-    foreach my $file (grep /^$file_root\./, readdir $LOG) {
+    foreach my $file (grep { /^$file_root\./ } readdir $LOG) {
         my $full = "$log_dir/$file"; #" comment soley for eclipses buggy parsing!
         if (-M $full > $days) {
             unlink $full
