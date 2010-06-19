@@ -381,6 +381,24 @@ sub zMapWriteDotBlixemrc {
       );
 }
 
+sub zMapWriteOtterStylesIni {
+    my ($self) = @_;
+
+    my $file = $self->zMapOtterStylesIniFile;
+
+    open my $fh, '>', $file
+      or confess "Can't write to '$file'; $!";
+    print $fh $self->AceDatabase->Client->get_otter_styles;
+    close $fh
+      or confess "Error writing to '$file'; $!";
+}
+
+sub zMapOtterStylesIniFile {
+    my ($self) = @_;
+
+    return $self->zMapZmapDir . "/otter_styles.ini";
+}
+
 sub zMapWriteDotZmap {
     my ($self) = @_;
 
@@ -411,6 +429,7 @@ sub zMapServerDefaults {
     return $self->formatZmapDefaults(
         $self->slice_name,
         url             => $url,
+        'stylesfile'    => $self->zMapOtterStylesIniFile,
         writeback       => 'false',
         sequence        => 'true',
         'legacy-styles' => 'true',
