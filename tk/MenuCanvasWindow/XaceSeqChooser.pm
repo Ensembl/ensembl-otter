@@ -102,6 +102,7 @@ sub initialize {
     $self->zMapWriteDotZmap;
     $self->zMapWriteDotGtkrc;
     $self->zMapWriteDotBlixemrc;
+    $self->zMapWriteOtterStylesIni;
     $self->zMapLaunchZmap;
     $self->top_window->raise;
 }
