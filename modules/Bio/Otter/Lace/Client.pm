@@ -372,6 +372,8 @@ sub save_CookieJar {
         umask(066);
         open my $fh, '>', $jar
             or confess "Can't create '$jar'; $!";
+        close $fh
+            or confess "Can't close '$jar'; $!";
         umask($save_mask);
     }
 
