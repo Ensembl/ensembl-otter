@@ -432,10 +432,9 @@ sub zMapAceServerDefaults {
 
     return $self->formatZmapDefaults(
         $self->slice_name,
-        url             => $url,
-        writeback       => 'false',
-        sequence        => 'true',
-        'legacy-styles' => 'true',
+        url       => $url,
+        writeback => 'false',
+        sequence  => 'true',
 
         # navigatorsets specifies the feature sets to draw in the navigator pane.
         # so far the requested columns are just scale, genomic_canonical and locus
@@ -585,7 +584,7 @@ sub zMapZMapDefaults {
         );
     }
 
-    # push @config, %{ Bio::Otter::Lace::Defaults::fetch_zmap_stanza() };
+    push @config, %{ Bio::Otter::Lace::Defaults::fetch_zmap_stanza() };
 
     return $self->formatZmapDefaults(@config);
 }
@@ -609,7 +608,7 @@ sub zMapBlixemDefaults {
             'Novel CDS Transcripts',
             'Putative and NMD',
         ],
-        # %{ Bio::Otter::Lace::Defaults::fetch_blixem_stanza() },
+        %{ Bio::Otter::Lace::Defaults::fetch_blixem_stanza() },
     );
 
     # script could also be "blixem_standalone" sh wrapper (if needed)
