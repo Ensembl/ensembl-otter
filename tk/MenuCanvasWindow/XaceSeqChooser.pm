@@ -61,6 +61,8 @@ sub drop_AceDatabase {
     my $self = shift;
 
     $self->{'_AceDatabase'} = undef;
+
+    return;
 }
 
 sub SequenceNotes {
@@ -104,6 +106,8 @@ sub initialize {
     $self->zMapWriteDotBlixemrc;
     $self->zMapLaunchZmap;
     $self->top_window->raise;
+
+    return;
 }
 
 sub menu_bar {
@@ -154,6 +158,8 @@ sub set_known_GeneMethods {
         ];
     my $idx = $self->{'_gene_methods'} = {};
     %$idx = map {$_->name, $_} @$lst;
+
+    return;
 }
 
 sub get_GeneMethod {
@@ -220,6 +226,8 @@ sub set_Locus {
 
     my $name = $locus->name;
     $self->{'_locus_cache'}{$name} = $locus;
+
+    return;
 }
 
 sub get_all_Loci {
@@ -238,6 +246,8 @@ sub empty_Locus_cache {
     my( $self ) = @_;
 
     $self->{'_locus_cache'} = undef;
+
+    return;
 }
 
 sub update_Locus {
@@ -261,6 +271,8 @@ sub update_Locus {
             }
         }
     }
+
+    return;
 }
 
 sub fetch_SubSeqs_by_locus_name {
@@ -316,6 +328,8 @@ sub attach_xace {
     } else {
         warn "no xwindow id: $xwid";
     }
+
+    return;
 }
 
 sub xace_process_id {
@@ -348,6 +362,8 @@ sub launch_xace {
     } else {
         warn "Error: ace_path not set";
     }
+
+    return;
 }
 
 sub kill_xace {
@@ -357,6 +373,8 @@ sub kill_xace {
         warn "Killing xace process '$pid'\n";
         kill 9, $pid;
     }
+
+    return;
 }
 
 sub get_xwindow_id_from_readlock {
@@ -663,6 +681,8 @@ sub populate_menus {
     $subseq->bind('<Destroy>', sub{
         $self = undef;
     });
+
+    return;
 }
 
 sub LoadColumns {
@@ -683,6 +703,8 @@ sub show_lcd_dialog {
     $lc->show_filters;
     $top->deiconify;
     $top->raise;
+
+    return;
 }
 
 sub gff_filters {
@@ -708,6 +730,8 @@ sub populate_clone_menu {
     $clone_menu->bind('<Destroy>', sub{
         $self = undef;
     });
+
+    return;
 }
 
 sub bind_events {
@@ -740,6 +764,8 @@ sub bind_events {
         #cluck "Dealing with <Destroy> call";
         $self = undef;
         });
+
+    return;
 }
 
 sub highlight {
@@ -752,6 +778,8 @@ sub highlight {
         -command    => sub{ $self->deselect_all; },
     );
     weaken $self;
+
+    return;
 }
 
 sub GenomicFeatures {
@@ -786,6 +814,8 @@ sub launch_GenomicFeatures {
         warn $msg;
         $self->exception_message($msg);
     }
+
+    return;
 }
 
 sub close_GenomicFeatures {
@@ -794,6 +824,8 @@ sub close_GenomicFeatures {
     if(my $gfs = $self->GenomicFeatures()) {
         $gfs->try2save_and_quit();
     }
+
+    return;
 }
 
 {
@@ -815,6 +847,8 @@ sub close_GenomicFeatures {
             $sub->is_archival(0);
             push(@holding_pen, $sub);
         }
+
+        return;
     }
 
     sub paste_selected_subseqs {
@@ -883,6 +917,8 @@ sub close_GenomicFeatures {
         foreach my $new (@new_subseq) {
             $self->make_exoncanvas_edit_window($new);
         }
+
+        return;
     }
 }
 
@@ -981,6 +1017,8 @@ sub edit_double_clicked {
     $canvas->Busy;
     $self->edit_subsequences;
     $canvas->Unbusy;
+
+    return;
 }
 
 sub left_button_handler {
@@ -992,6 +1030,8 @@ sub left_button_handler {
     if (my ($obj) = $canvas->find('withtag', 'current')) {
         $self->highlight($obj);
     }
+
+    return;
 }
 
 sub shift_left_button_handler {
@@ -1006,6 +1046,8 @@ sub shift_left_button_handler {
             $self->highlight($obj);
         }
     }
+
+    return;
 }
 
 sub make_search_panel {
@@ -1053,6 +1095,8 @@ sub make_search_panel {
     $button->bind('<Destroy>', sub{
         $self = undef;
         });
+
+    return;
 }
 
 
@@ -1089,8 +1133,9 @@ sub hunt_for_Entry_text {
         $self->highlight_by_name(@matching_sub_names);
     } else {
         $self->message("Can't find '$query_str'");
-        return;
     }
+
+    return;
 }
 
 
@@ -1140,6 +1185,8 @@ sub resync_with_db {
     $self->draw_subseq_list;
 
     $self->canvas->Unbusy;
+
+    return;
 }
 
 sub max_seq_list_length {
@@ -1248,6 +1295,8 @@ sub edit_new_subsequence {
     }
 
     $self->add_SubSeq_and_paste_evidence($new, $clip);
+
+    return;
 }
 
 sub region_name_and_next_locus_number {
@@ -1348,6 +1397,8 @@ sub make_variant_subsequence {
     }
 
     $self->add_SubSeq_and_paste_evidence($var, $clip);
+
+    return;
 }
 
 sub add_SubSeq_and_paste_evidence {
@@ -1365,6 +1416,8 @@ sub add_SubSeq_and_paste_evidence {
     if (keys %$clip_evi) {
         $ec->EvidencePaster->add_evidence_type_name_hash($clip_evi);
     }
+
+    return;
 }
 
 sub delete_subsequences {
@@ -1439,6 +1492,8 @@ sub delete_subsequences {
     }
 
     $self->draw_subseq_list;
+
+    return;
 }
 
 sub make_exoncanvas_edit_window {
@@ -1494,12 +1549,16 @@ sub save_subseq_edit_window {
 
     $self->{'_subseq_edit_window'}{$name} = $ec;
     weaken($self->{'_subseq_edit_window'}{$name});
+
+    return;
 }
 
 sub delete_subseq_edit_window {
     my( $self, $name ) = @_;
 
     delete($self->{'_subseq_edit_window'}{$name});
+
+    return;
 }
 
 sub rename_subseq_edit_window {
@@ -1509,6 +1568,8 @@ sub rename_subseq_edit_window {
         or return;
     $self->delete_subseq_edit_window($old_name);
     $self->save_subseq_edit_window($new_name, $win);
+
+    return;
 }
 
 sub close_all_subseq_edit_windows {
@@ -1537,6 +1598,8 @@ sub draw_subseq_list {
 
     $self->draw_sequence_list($slist);
     $self->fix_window_min_max_sizes;
+
+    return;
 }
 
 sub get_ace_sorted_SubSeqs {
@@ -1609,6 +1672,8 @@ sub edit_Clone {
     my $top = $cew->top;
     $top->deiconify;
     $top->raise;
+
+    return;
 }
 
 sub close_all_clone_edit_windows {
@@ -1675,6 +1740,8 @@ sub empty_Assembly_cache {
     my( $self ) = @_;
 
     $self->{'_assembly'} = undef;
+
+    return;
 }
 
 sub replace_SubSeq {
@@ -1698,6 +1765,8 @@ sub replace_SubSeq {
 
     ### Update all subseq edit windows
     $self->draw_subseq_list;
+
+    return;
 }
 
 sub add_SubSeq {
@@ -1710,6 +1779,8 @@ sub add_SubSeq {
     } else {
         $self->{'_subsequence_cache'}{$name} = $sub;
     }
+
+    return;
 }
 
 sub delete_SubSeq {
@@ -1747,6 +1818,8 @@ sub empty_SubSeq_cache {
     my( $self ) = @_;
 
     $self->{'_subsequence_cache'} = undef;
+
+    return;
 }
 
 sub row_count {
@@ -1784,6 +1857,8 @@ sub update_SubSeq_locus_level_errors {
         my $sub = $self->get_SubSeq($sub_name) or next;
         $ec->SubSeq->locus_level_errors($sub->locus_level_errors);
     }
+
+    return;
 }
 
 sub draw_sequence_list {
@@ -1875,6 +1950,8 @@ sub draw_sequence_list {
     eval{
         $canvas->raise('msg', 'subseq');
     };
+
+    return;
 }
 
 sub xace_remote {
@@ -1924,6 +2001,7 @@ sub get_xace_window_id {
         return $xwid;
     } else {
         $self->message("Error running xwininfo: $?");
+        return;
     }
 }
 
@@ -1931,6 +2009,8 @@ sub highlight_by_name {
     my( $self, @names ) = @_;
 
     $self->highlight($self->subseq_names_to_canvas_obj(@names));
+
+    return;
 }
 
 sub highlight_by_name_without_owning_clipboard {
@@ -1939,6 +2019,8 @@ sub highlight_by_name_without_owning_clipboard {
     if (my @obj_list = $self->subseq_names_to_canvas_obj(@names)) {
         $self->CanvasWindow::highlight(@obj_list);
     }
+
+    return;
 }
 
 sub subseq_names_to_canvas_obj {
@@ -2073,6 +2155,8 @@ sub send_zmap_commands {
             die $error;
         }
     }
+
+    return;
 }
 
 sub DESTROY {
@@ -2082,6 +2166,8 @@ sub DESTROY {
 
     $self->zMapKillZmap;
     $self->drop_AceDatabase;
+
+    return;
 }
 
 1;
