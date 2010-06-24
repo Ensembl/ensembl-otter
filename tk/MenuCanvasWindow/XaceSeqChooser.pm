@@ -238,7 +238,7 @@ sub get_all_Loci {
 
 sub list_Locus_names {
     my( $self ) = @_;
-    my @names = sort {lc $a cmp lc $b} map $_->name, $self->get_all_Loci;
+    my @names = sort {lc $a cmp lc $b} map { $_->name } $self->get_all_Loci;
     return @names;
 }
 
@@ -912,7 +912,7 @@ sub close_GenomicFeatures {
             }
         }
         $self->draw_subseq_list;
-        $self->highlight_by_name(map $_->name, @new_subseq);
+        $self->highlight_by_name(map { $_->name } @new_subseq);
         $self->message(@msg) if @msg;
         foreach my $new (@new_subseq) {
             $self->make_exoncanvas_edit_window($new);
@@ -1199,8 +1199,7 @@ sub slice_name {
     my $slice_name;
     unless ($slice_name = $self->{'_slice_name'}) {
         my $adbh = $self->ace_handle;
-        my @slice_list = map $_->name,
-            $adbh->fetch(Assembly => '*');
+        my @slice_list = map { $_->name } $adbh->fetch(Assembly => '*');
         if (@slice_list > 1) {
             $self->message("Error: more than 1 assembly in database:", @slice_list);
             return;
@@ -1450,7 +1449,7 @@ sub delete_subsequences {
     if (@to_die > 1) {
         $question = join('',
             "Really delete these subsequences?\n\n",
-            map("  $_\n", map($_->name, @to_die)),
+            map { "  $_\n" } map { $_->name } @to_die
             );
     } else {
         $question = "Really delete this subsequence?\n\n  "
