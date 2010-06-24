@@ -319,19 +319,6 @@ sub make_menu {
     return $menu;
 }
 
-sub attach_xace {
-    my( $self ) = @_;
-
-    if (my $xwid = $self->get_xace_window_id) {
-        my $xrem = Hum::Ace::XaceRemote->new($xwid);
-        $self->xace_remote($xrem);
-    } else {
-        warn "no xwindow id: $xwid";
-    }
-
-    return;
-}
-
 sub xace_process_id {
     my( $self, $xace_process_id ) = @_;
 
@@ -1963,45 +1950,6 @@ sub xace_remote {
         $self->{'_xace_remote'} = $xrem;
     }
     return $self->{'_xace_remote'};
-}
-
-sub get_xace_window_id {
-    my( $self ) = @_;
-
-    my $mid = $self->message("Please click on the xace main window with the cross-hairs");
-    $self->delete_message($mid);
-
-    open my $xwid_h, '-|', 'xwininfo'
-        or confess("Can't open pipe from xwininfo : $!");
-    my( $xwid );
-    while (<$xwid_h>) {
-        # xwininfo: Window id: 0x7c00026 "ACEDB 4_9c, lace bA314N13"
-
-      # HACK
-      # above format NOT returnd by xwininfo on Sun OS 5.7:
-      #  tace version:
-      #  ACEDB 4_9r,  build dir: RELEASE.2003_05_01
-      # 2 lines before modified to support xace at RIKEN
-
-        # BEFORE: if (/Window id: (\w+) "([^"]+)/) {
-        if (/Window id: (\w+) "([^"]+)/ || /Window id: (\w+)/) {
-            my $id   = $1;
-            my $name = $2;
-	    # BEFORE: if ($name =~ /^ACEDB/){
-            if ($name =~ /^ACEDB/ || $name eq '') {
-                $xwid = $id;
-                $self->message("Attached to:\n$name");
-            } else {
-                $self->message("'$name' is not an xace main window");
-            }
-        }
-    }
-    if (close $xwid_h) {
-        return $xwid;
-    } else {
-        $self->message("Error running xwininfo: $?");
-        return;
-    }
 }
 
 sub highlight_by_name {
