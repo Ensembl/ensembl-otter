@@ -58,7 +58,7 @@ sub AceDatabase {
 }
 
 sub drop_AceDatabase {
-    my $self = shift;
+    my( $self ) = @_;
 
     $self->{'_AceDatabase'} = undef;
 
@@ -66,7 +66,7 @@ sub drop_AceDatabase {
 }
 
 sub SequenceNotes {
-    my ($self, $sn) = @_ ;
+    my ($self, $sn) = @_;
 
     if ($sn){
         $self->{'_sequence_notes'} = $sn ;
@@ -151,7 +151,7 @@ sub vocab_transcript {
 
 
 sub set_known_GeneMethods {
-    my ($self) = @_ ;
+    my ($self) = @_;
 
     my $lst = $self->{'_gene_methods_list'} = [
         $self->Assembly->MethodCollection->get_all_transcript_Methods
@@ -769,9 +769,9 @@ sub bind_events {
 }
 
 sub highlight {
-    my $self = shift;
+    my( $self, @args ) = @_;
 
-    $self->SUPER::highlight(@_);
+    $self->SUPER::highlight(@args);
 
     my $canvas = $self->canvas;
     $canvas->SelectionOwn(
@@ -783,7 +783,7 @@ sub highlight {
 }
 
 sub GenomicFeatures {
-    my ($self, $gfs) = @_ ;
+    my ($self, $gfs) = @_;
 
     if(defined($gfs)){
         $self->{'_gfs'} = $gfs;
@@ -819,7 +819,7 @@ sub launch_GenomicFeatures {
 }
 
 sub close_GenomicFeatures {
-    my $self = shift @_;
+    my( $self ) = @_;
 
     if(my $gfs = $self->GenomicFeatures()) {
         $gfs->try2save_and_quit();
@@ -1152,10 +1152,10 @@ sub ace_path {
 }
 
 sub save_ace {
-    my $self = shift;
+    my( $self, @args ) = @_;
 
     my $val;
-    eval { $val = $self->AceDatabase->ace_server->save_ace(@_) };
+    eval { $val = $self->AceDatabase->ace_server->save_ace(@args) };
     if ($@) {
         $self->exception_message($@, "Error saving to acedb");
         confess "Error saving to acedb: $@";
@@ -1804,7 +1804,7 @@ sub get_SubSeq {
 }
 
 sub list_all_SubSeq_names {
-    my ($self) = @_ ;
+    my ($self) = @_;
 
     if (my $sub_hash = $self->{'_subsequence_cache'}) {
         return keys %$sub_hash;
