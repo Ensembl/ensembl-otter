@@ -187,8 +187,8 @@ sub get_all_mutable_GeneMethods {
 sub get_default_mutable_GeneMethod {
     my( $self ) = @_;
 
-    my @possible = grep $_->coding, $self->get_all_mutable_GeneMethods;
-    if (my ($supp) = grep $_->name eq 'Coding', @possible) {
+    my @possible = grep { $_->coding } $self->get_all_mutable_GeneMethods;
+    if (my ($supp) = grep { $_->name eq 'Coding' } @possible) {
         # "Coding" is the default method, if it is there
         return $supp;
     }
@@ -390,7 +390,7 @@ sub get_xwindow_id_from_readlock {
     for (my $i = 0; $i < $wait_seconds; do { $i++; sleep 1; }) {
         opendir my $lock_dir_h, $lock_dir
             or confess "Can't opendir '$lock_dir' : $!";
-        ($lock_file) = grep /\.$pid$/, readdir $lock_dir_h;
+        ($lock_file) = grep { /\.$pid$/ } readdir $lock_dir_h;
         closedir $lock_dir_h;
         if ($lock_file) {
             $lock_file = "$lock_dir/$lock_file";
@@ -1831,7 +1831,7 @@ sub row_count {
         # window roughly square.  Also a lower and
         # an upper limit of 20 and 40 rows.
         my $total_name_length = 0;
-        foreach my $sub (grep $_, @$slist) {
+        foreach my $sub (grep { $_ } @$slist) {
             $total_name_length += length($sub->name);
         }
         $rows = int sqrt($total_name_length);
@@ -2047,7 +2047,7 @@ sub canvas_obj_to_subseq_names {
 
     my( @names );
     foreach my $obj (@obj_list) {
-        if (grep $_ eq 'subseq', $canvas->gettags($obj)) {
+        if (grep { $_ eq 'subseq' } $canvas->gettags($obj)) {
             my $n = $canvas->itemcget($obj, 'text');
             push(@names, $n);
         }
