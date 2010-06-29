@@ -6,7 +6,7 @@ use URI::Escape qw(uri_escape);
 my $DEBUG   = 1;
 my $LOG     = 1;
 
-my %args = map {split /=/} @ARGV;
+my %args = map { split(/=/) } @ARGV;
 
 # pull off arguments meant for us
 
