@@ -94,6 +94,8 @@ sub _launchZMap {
         warn $mess;
         $self->message($mess);
     }
+
+    return;
 }
 
 =head1 zMapLaunchZmap
@@ -128,6 +130,8 @@ sub zMapLaunchInAZmap {
     if (!$self->zMapKillZmap(0, 1)) {
         $self->_launchInAZMap();
     }
+
+    return;
 }
 
 =head1 _launchInAZMap
@@ -382,6 +386,8 @@ sub zMapWriteDotBlixemrc {
         'node'        => $PFETCH_SERVER_LIST->[0][0],
         'port'        => $PFETCH_SERVER_LIST->[0][1],
       );
+
+    return;
 }
 
 sub zMapWriteDotZmap {
@@ -398,6 +404,8 @@ sub zMapWriteDotZmap {
     print $fh $self->zMapDotZmapContent($stylesfile);
     close $fh
       or confess "Error writing to '$file'; $!";
+
+    return;
 }
 
 sub zMapDotZmapContent{
@@ -722,6 +730,8 @@ sub zMapDotGtkrcContent {
     );
 
     # foreach (species){ self->formatGtkrcStyleDef("species", ... ) }
+
+    return $full_content;
 }
 
 sub zMapWriteDotGtkrc {
@@ -743,6 +753,8 @@ sub zMapWriteDotGtkrc {
         print $fh $content;
     }
     close $fh;
+
+    return;
 }
 
 sub zMapZmapDir {
@@ -1144,6 +1156,8 @@ sub zMapUpdateConfigFile {
     }
     
     $cfg->RewriteConfig;
+
+    return;
 }
 
 sub zMapIgnoreRequest {
@@ -1399,6 +1413,8 @@ sub _zMapLoadFeatures {
     else {
         warn "Failed to get client for 'load_features'";
     }
+
+    return;
 }
 
 sub zMapLoadFeatures {
@@ -1444,6 +1460,8 @@ sub zMapDeleteFeaturesets {
     else {
         warn "Failed to get client for 'delete_feature'";
     }
+    
+    return;
 }
 
 sub zMapZoomToSubSeq {
