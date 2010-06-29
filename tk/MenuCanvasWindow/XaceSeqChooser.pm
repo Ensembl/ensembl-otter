@@ -29,11 +29,13 @@ use EditWindow::Clone;
 use EditWindow::LocusName;
 use MenuCanvasWindow::ExonCanvas;
 use MenuCanvasWindow::GenomicFeatures;
-use MenuCanvasWindow::ZMapSeqChooser;
 use Bio::Otter::Lace::Defaults;
 use Text::Wrap qw{ wrap };
 
-use base 'MenuCanvasWindow';
+use base qw{
+MenuCanvasWindow
+MenuCanvasWindow::ZMapSeqChooser
+};
 
 sub new {
     my( $pkg, $tk ) = @_;

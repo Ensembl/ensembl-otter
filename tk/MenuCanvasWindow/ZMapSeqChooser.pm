@@ -1,6 +1,6 @@
-### MenuCanvasWindow::ZmapSeqChooser
+### MenuCanvasWindow::ZMapSeqChooser
 
-package MenuCanvasWindow::XaceSeqChooser;
+package MenuCanvasWindow::ZMapSeqChooser;
 
 use strict;
 use warnings;
@@ -28,9 +28,9 @@ my $ZMAP_DEBUG = 1;
 
 =head1 WARNING
 
-This modules injects methods into the MenuCanvasWindow::XaceSeqChooser
-namespace.  All have  been prefixed with "zMap" to  avoid any clashes,
-but this isn't a long term solution.
+This module is included into MenuCanvasWindow::XaceSeqChooser.  All
+methods have been prefixed with "zMap" to avoid any clashes, but this
+isn't a long term solution.
 
 =head1 zMapLaunchZmap
 
