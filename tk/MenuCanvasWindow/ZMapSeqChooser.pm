@@ -538,7 +538,7 @@ sub zMapGffFilterDefaults {
 sub semi_colon_separated_list {
     my ($self, $list) = @_;
 
-    return sprintf(q{%s}, join ' ; ', map qq{$_}, @$list);
+    return sprintf(q{%s}, join ' ; ', map { qq{$_} } @$list);
 }
 
 sub zMapZMapDefaults {
@@ -761,7 +761,7 @@ sub zMapListMethodNames_ordered {
     my $self       = shift;
     my @list       = ();
     my $collection = $self->Assembly->MethodCollection;
-    return map $_->name, $collection->get_all_top_level_Methods;
+    return map { $_->name } $collection->get_all_top_level_Methods;
 }
 
 #===========================================================
