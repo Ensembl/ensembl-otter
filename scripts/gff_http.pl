@@ -18,9 +18,10 @@ my $server_script   = delete $args{server_script};
 my $session_dir     = delete $args{session_dir};
 my $cookie_jar      = delete $args{cookie_jar};
 
+my $log_file;
 if ($LOG) {
     my $log_file_name = $session_dir.'/gff_log.txt';
-    open LOG_FILE, ">>$log_file_name";
+    open $log_file, ">>$log_file_name";
 }
 
 # we always want to rebase for zmap
@@ -62,11 +63,11 @@ else {
 if (-e $cache_file) {
     # cache hit
 
-    print LOG_FILE "cache hit for $gff_filename\n" if $LOG;
+    print $log_file "cache hit for $gff_filename\n" if $LOG;
 
-    open GFF_FILE, "<$cache_file" or print STDERR "Failed to open cache file: $!\n";
+    open my $gff_file, "<$cache_file" or print STDERR "Failed to open cache file: $!\n";
 
-    while (<GFF_FILE>) {
+    while (<$gff_file>) {
         print;
     }
 }
@@ -79,7 +80,7 @@ else {
     require HTTP::Request;
     require HTTP::Cookies::Netscape;
     
-    print LOG_FILE "cache miss for $gff_filename\n" if $LOG;
+    print $log_file "cache miss for $gff_filename\n" if $LOG;
     
     my $request = HTTP::Request->new;
 
@@ -89,7 +90,7 @@ else {
 
     my $url = $url_root . '/' . $server_script . '?' . $params;
 
-    print LOG_FILE "URL: $url\n" if $LOG && $DEBUG;
+    print $log_file "URL: $url\n" if $LOG && $DEBUG;
     
     $request->uri($url);
     
@@ -122,9 +123,9 @@ else {
             close STDOUT;
             
             # cache the result
-            open CACHE_FILE, ">$cache_file" or print STDERR "Failed to open cache file: $!\n";
+            open my $cache_file_h, ">$cache_file" or print STDERR "Failed to open cache file: $!\n";
         
-            print CACHE_FILE $gff;
+            print $cache_file_h $gff;
         }
         else {
             print STDERR "Unexpected response for $source_name: $gff\n";
