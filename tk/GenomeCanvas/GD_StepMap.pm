@@ -69,7 +69,7 @@ sub add_value {
     push(@{$self->{'_values'}}, $value);
 }
 
-sub values {
+sub values { ## no critic(Subroutines::ProhibitBuiltinHomonyms)
     my( $self, @values ) = @_;
     
     if (@values) {
