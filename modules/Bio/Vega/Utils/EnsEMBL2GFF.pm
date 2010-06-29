@@ -669,7 +669,7 @@ sub gff_header {
                 )};
             };
             
-            if ($@ or !defined($df1) or !defined($df2)) {
+            if ($@ || !defined($df1) || !defined($df2)) {
                 die "Failed to find matching ditag pair: $@";
             }
             
