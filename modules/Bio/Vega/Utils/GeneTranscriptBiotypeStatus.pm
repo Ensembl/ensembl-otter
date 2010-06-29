@@ -5,6 +5,7 @@ package Bio::Vega::Utils::GeneTranscriptBiotypeStatus;
 
 use strict;
 use warnings;
+use Carp;
 use base 'Exporter';
 our @EXPORT_OK = qw{ method2biotype_status biotype_status2method };
 
@@ -50,7 +51,7 @@ my @method_biotype_status = qw{
 };
 
 if (@method_biotype_status % 3) {
-    die "Method, Biotype, Status list is not a multiple of 3";
+    confess "Method, Biotype, Status list is not a multiple of 3";
 }
 
 my (%method_to_biotype_status, %biotype_status_to_method);
