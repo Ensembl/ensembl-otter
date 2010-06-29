@@ -21,7 +21,7 @@ my $cookie_jar      = delete $args{cookie_jar};
 my $log_file;
 if ($LOG) {
     my $log_file_name = $session_dir.'/gff_log.txt';
-    open $log_file, ">>$log_file_name";
+    open $log_file, '>>', $log_file_name;
 }
 
 # we always want to rebase for zmap
@@ -65,7 +65,7 @@ if (-e $cache_file) {
 
     print $log_file "cache hit for $gff_filename\n" if $LOG;
 
-    open my $gff_file, "<$cache_file" or print STDERR "Failed to open cache file: $!\n";
+    open my $gff_file, '<', $cache_file or print STDERR "Failed to open cache file: $!\n";
 
     while (<$gff_file>) {
         print;
@@ -123,7 +123,7 @@ else {
             close STDOUT;
             
             # cache the result
-            open my $cache_file_h, ">$cache_file" or print STDERR "Failed to open cache file: $!\n";
+            open my $cache_file_h, '>', $cache_file or print STDERR "Failed to open cache file: $!\n";
         
             print $cache_file_h $gff;
         }
