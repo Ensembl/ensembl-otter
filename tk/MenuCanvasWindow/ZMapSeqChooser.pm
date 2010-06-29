@@ -574,46 +574,42 @@ sub zMapZMapDefaults {
     # make this configurable for those users where zmap doesn't start
     # due to not having window id when doing XChangeProperty.
 
-    my $show_main = Bio::Otter::Lace::Defaults::option_from_array(
-        [qw(client zmap_main_window)]
-      )
-        ? 'true'
-        : 'false';
-    
-    my $sources_string = join ' ; ', $self->slice_name, map { $_->name } @{ $self->gff_filters };
-    
-    my $columns_string = join ' ; ', 
+    my $show_mainwindow =
+        Bio::Otter::Lace::Defaults::option_from_array(
+            [qw(client zmap_main_window)]
+        );
+
+    my $gff_filters = $self->gff_filters;
+
+    my $sources_string =
+        join ' ; ',
+        $self->slice_name,
+        ( map { $_->name } @{$gff_filters} ),
+        ;
+
+    my $columns = { };
+    $columns->{$_->zmap_column || $_->name}++ foreach @{$gff_filters};
+    my $columns_string =
+        join ' ; ', 
         $self->zMapListMethodNames_ordered,
-        keys %{ { map { ($_->zmap_column || $_->name) => 1 } @{ $self->gff_filters } } };
-    
-    my @config = (
+        keys %{$columns},
+        ;
+
+    my $pfetch_www = $ENV{'PFETCH_WWW'};
+    my $pfetch_url = $self->AceDatabase->Client->url_root . '/nph-pfetch';
+
+    return $self->formatZmapDefaults(
         'ZMap',
         'sources'           => $sources_string,
-        'show-mainwindow'   => $show_main,
+        'show-mainwindow'   => ( $show_mainwindow ? 'true' : 'false' ),
         'cookie-jar'        => $ENV{'OTTERLACE_COOKIE_JAR'},
         'script-dir'        => $ENV{'OTTER_HOME'}.'/ensembl-otter/scripts',
         'xremote-debug'     => $ZMAP_DEBUG ? 'true' : 'false',
         'columns'           => $columns_string,
+        'pfetch-mode'       => ( $pfetch_www ? 'http' : 'pipe' ),
+        'pfetch'            => ( $pfetch_www ? $pfetch_url : 'pfetch' ),
+        %{ Bio::Otter::Lace::Defaults::fetch_zmap_stanza() },
         );
-
-    if ($ENV{'PFETCH_WWW'}) {
-        push(
-            @config,
-            'pfetch-mode' => 'http',
-            'pfetch'      => $self->AceDatabase->Client->url_root . '/nph-pfetch',
-        );
-    }
-    else {
-        push(
-            @config,
-            'pfetch-mode' => 'pipe',
-            'pfetch'      => 'pfetch',
-        );
-    }
-
-    push @config, %{ Bio::Otter::Lace::Defaults::fetch_zmap_stanza() };
-
-    return $self->formatZmapDefaults(@config);
 }
 
 sub zMapBlixemDefaults {
