@@ -371,23 +371,40 @@ sub zMapWriteDotBlixemrc {
     mkpath($dir);    # Fatal if fails
     open my $blixem_rc, '>', $file
       or confess "Can't write to '$file'; $!";
-    print $blixem_rc $self->formatZmapDefaults('blixem',
-        'default-fetch-mode' => $ENV{'PFETCH_WWW'} ? 'pfetch-http' : 'pfetch-socket',),
-      $self->formatZmapDefaults(
-        'pfetch-http',
-        'pfetch-mode' => 'http',
-        'pfetch'      => $self->AceDatabase->Client->url_root . '/nph-pfetch',
-        'cookie-jar'  => $ENV{'OTTERLACE_COOKIE_JAR'},
-        'port'        => 80,
-      ),
-      $self->formatZmapDefaults(
-        'pfetch-socket',
-        'pfetch-mode' => 'socket',
-        'node'        => $PFETCH_SERVER_LIST->[0][0],
-        'port'        => $PFETCH_SERVER_LIST->[0][1],
-      );
+    print $blixem_rc $self->zMapDotBlixemrcContent;
+    close $blixem_rc
+        or confess "Error writing to '$file'; $!";
 
     return;
+}
+
+sub zMapDotBlixemrcContent {
+    my ($self) = @_;
+
+    my $pfetch = $self->AceDatabase->Client->url_root . '/nph-pfetch';
+    my $default_fetch_mode =
+        $ENV{'PFETCH_WWW'} ? 'pfetch-http' : 'pfetch-socket';
+
+    return
+        join "",
+        $self->formatZmapDefaults(
+            'blixem',
+            'default-fetch-mode' => $default_fetch_mode,
+        ),
+        $self->formatZmapDefaults(
+            'pfetch-http',
+            'pfetch-mode' => 'http',
+            'pfetch'      => $pfetch,
+            'cookie-jar'  => $ENV{'OTTERLACE_COOKIE_JAR'},
+            'port'        => 80,
+        ),
+        $self->formatZmapDefaults(
+            'pfetch-socket',
+            'pfetch-mode' => 'socket',
+            'node'        => $PFETCH_SERVER_LIST->[0][0],
+            'port'        => $PFETCH_SERVER_LIST->[0][1],
+        ),
+        ;
 }
 
 sub zMapWriteDotZmap {
