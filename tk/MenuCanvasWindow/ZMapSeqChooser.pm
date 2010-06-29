@@ -771,7 +771,7 @@ sub zMapZmapDir {
     my $path     = "$ace_path/ZMap";
     unless (-d $path) {
         mkdir $path;
-        die "Can't mkdir('$path') : $!\n" unless -d $path;
+        confess "Can't mkdir('$path') : $!\n" unless -d $path;
     }
     return $path;
 }
@@ -878,7 +878,7 @@ sub zMapEdit {
             my $subs = $feat->{'subfeature'}
               or next;
             unless (ref $subs eq 'ARRAY') {
-                die "Unexpected feature format: ", Dumper($feat);
+                confess "Unexpected feature format: ", Dumper($feat);
             }
             foreach my $s (@$subs) {
 
