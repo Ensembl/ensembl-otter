@@ -1579,7 +1579,6 @@ sub draw_subseq_list {
     my $slist = [];
     my $counter = 1;
     foreach my $clust ($self->get_all_Subseq_clusters) {
-    #foreach my $clust ($self->get_ace_sorted_SubSeqs) {
         push(@$slist, "") if @$slist;
         push(@$slist, @$clust);
     }
@@ -1588,13 +1587,6 @@ sub draw_subseq_list {
     $self->fix_window_min_max_sizes;
 
     return;
-}
-
-sub get_ace_sorted_SubSeqs {
-    my ($self) = @_;
-
-    my $assembly = $self->Assembly;
-    return [sort { ace_sort($a->name, $b->name) } $assembly->get_all_SubSeqs];
 }
 
 sub get_all_Subseq_clusters {
