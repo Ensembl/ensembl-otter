@@ -757,19 +757,11 @@ sub zMapWriteDotGtkrc {
     my $dir  = $self->zMapZmapDir;
     my $file = "$dir/.gtkrc";
 
-    my $fh;
-    eval {
-
-        # directory should be made already
-        open $fh, '>', $file
-          or die "write_dot_zmap: error writing file '$file', $!";
-    };
-    warn "Error in :$@" if $@;
-    unless ($@) {
-        my $content = $self->zMapDotGtkrcContent();
-        print $fh $content;
-    }
-    close $fh;
+    open my $fh, '>', $file
+        or confess "Can't write to '$file'; $!";
+    print $fh $self->zMapDotGtkrcContent;
+    close $fh
+      or confess "Error writing to '$file'; $!";
 
     return;
 }
