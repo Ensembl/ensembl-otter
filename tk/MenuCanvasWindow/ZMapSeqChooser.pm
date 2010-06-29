@@ -354,7 +354,9 @@ sub zMapInsertZmapConnector {
 }
 
 sub zMapZmapConnector {
-    return shift->zMapInsertZmapConnector(@_);
+    my ( $self, @args ) = @_;
+
+    return $self->zMapInsertZmapConnector(@args);
 }
 
 sub zMapWriteDotBlixemrc {
@@ -744,9 +746,9 @@ sub zMapWriteDotGtkrc {
 }
 
 sub zMapZmapDir {
-    my $self = shift;
+    my ( $self, @args ) = @_;
 
-    confess "Cannot set ZMap directory directly" if @_;
+    confess "Cannot set ZMap directory directly" if @args;
 
     my $ace_path = $self->ace_path();
     my $path     = "$ace_path/ZMap";
