@@ -591,7 +591,7 @@ sub zMapZMapDefaults {
         'sources'           => $sources_string,
         'show-mainwindow'   => $show_main,
         'cookie-jar'        => $ENV{'OTTERLACE_COOKIE_JAR'},
-        'script-dir'        => $ENV{'OTTER_HOME'}.'/ensembl-otter/scripts/',
+        'script-dir'        => $ENV{'OTTER_HOME'}.'/ensembl-otter/scripts',
         'xremote-debug'     => $ZMAP_DEBUG ? 'true' : 'false',
         'columns'           => $columns_string,
         );
