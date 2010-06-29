@@ -1,5 +1,8 @@
 #!/usr/bin/perl
 
+use strict;
+use warnings;
+
 use Digest::MD5 qw(md5_hex);
 use URI::Escape qw(uri_escape);
 
