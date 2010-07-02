@@ -466,11 +466,11 @@ sub zMapAceServerDefaults {
         # navigatorsets specifies the feature sets to draw in the navigator pane.
         # so far the requested columns are just scale, genomic_canonical and locus
         # in line with keeping the columns to a minimum to save screen space.
-        navigatorsets => $self->semi_colon_separated_list([qw{ scale genomic_canonical locus }]),
+        navigatorsets => ( join ' ; ', qw{ scale genomic_canonical locus } ),
 
         # Can specify a stylesfile instead of featuresets
 
-        featuresets     => $self->semi_colon_separated_list([$self->zMapListMethodNames_ordered]),
+        featuresets     => ( join ' ; ', $self->zMapListMethodNames_ordered ),
         stylesfile      => $stylesfile,
     );
 }
@@ -566,12 +566,6 @@ sub zMapGffFilterDefaults {
     }
     
     return $text;
-}
-
-sub semi_colon_separated_list {
-    my ($self, $list) = @_;
-
-    return sprintf(q{%s}, join ' ; ', map { qq{$_} } @$list);
 }
 
 sub zMapZMapDefaults {
@@ -670,8 +664,7 @@ sub formatZmapDefaults {
 
     my $def_str = "\n[$key]\n";
     while (my ($setting, $value) = each %defaults) {
-        $value = $self->semi_colon_separated_list($value)
-          if ref($value);
+        $value = join ' ; ', @{$value} if ref $value;
         $def_str .= qq{$setting = $value\n};
     }
     $def_str .= "\n";
