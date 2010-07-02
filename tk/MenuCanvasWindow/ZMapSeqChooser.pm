@@ -682,13 +682,13 @@ sub formatZmapDefaults {
 sub formatGtkrcStyleDef {
     my ($self, $style_class, %defaults) = @_;
 
-    my $style_string = qq`\nstyle "$style_class" {\n`;
+    my $style_string = qq(\nstyle "$style_class" {\n);
 
     while (my ($style_element, $value) = each %defaults) {
-        $style_string .= qq`  $style_element = "$value" \n`;
+        $style_string .= qq(  $style_element = "$value" \n);
     }
 
-    $style_string .= qq`}\n`;
+    $style_string .= qq(}\n);
 
     return $style_string;
 }
@@ -696,7 +696,7 @@ sub formatGtkrcStyleDef {
 sub formatGtkrcWidgetDef {
     my ($self, $widget_path, $style_class) = @_;
 
-    my $widget_string = qq`\nwidget "$widget_path" style "$style_class"\n`;
+    my $widget_string = qq(\nwidget "$widget_path" style "$style_class"\n);
 
     return $widget_string;
 }
