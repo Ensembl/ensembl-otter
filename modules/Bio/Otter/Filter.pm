@@ -140,7 +140,7 @@ sub featuresets {
         
         if ($_[0] =~ /,/) {
             # if its a comma delimited string, split it into an arrayref
-            $featuresets = [split /,/, $_[0]];
+            $featuresets = [split(/,/, $_[0])];
         }
         elsif (ref($_[0]) ne 'ARRAY') {
             # if the first arg isn't an arrayref we assume the rest of @_ 
