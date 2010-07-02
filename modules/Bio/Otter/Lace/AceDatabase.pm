@@ -120,6 +120,7 @@ sub add_acefile {
 
     my $af = $self->{'_acefile_list'} ||= [];
     push(@$af, $acefile);
+    return;
 }
 
 sub list_all_acefiles {
@@ -136,6 +137,8 @@ sub empty_acefile_list {
     my( $self ) = @_;
 
     $self->{'_acefile_list'} = undef;
+
+    return;
 }
 
 sub init_AceDatabase {
@@ -167,6 +170,7 @@ sub init_AceDatabase {
         warn $@;
     }
 
+    return;
 }
 
 sub write_local_exonerate {
@@ -195,6 +199,8 @@ sub write_local_exonerate {
     }
 
 	$self->ace_server->save_ace($ace_text);
+
+    return;
 }
 
 
@@ -224,6 +230,8 @@ sub write_otter_acefile {
     print $ace_fh $parser->make_ace;
     close $ace_fh or confess "Error writing to '$ace_filename' : $!";
     $self->add_acefile($ace_filename);
+
+    return;
 }
 
 sub try_to_lock_the_block {
@@ -232,6 +240,8 @@ sub try_to_lock_the_block {
     if (my $lock_xml = $self->smart_slice->lock_region_xml) {
         $self->write_file($LOCK_REGION_XML_FILE, $lock_xml);
     }
+
+    return;
 }
 
 sub write_file {
@@ -241,6 +251,8 @@ sub write_file {
     open my $LF, '>', $full_file or die "Can't write to '$full_file'; $!";
     print $LF $content;
     close $LF or die "Error writing to '$full_file'; $!";
+
+    return;
 }
 
 sub read_file {
@@ -263,6 +275,8 @@ sub write_region_xml_file {
                                                     # without an (empty) featuerset?
     
     $self->write_file($REGION_XML_FILE, $xml);
+
+    return;
 }
 
 sub recover_smart_slice_from_region_xml_file {
@@ -304,6 +318,8 @@ sub recover_smart_slice_from_region_xml_file {
         $slice->end,
         );
     $self->smart_slice($smart_slice);
+
+    return;
 }
 
 
@@ -424,6 +440,8 @@ sub make_database_directory {
 
     $self->make_passwd_wrm;
     $self->edit_displays_wrm;
+
+    return;
 }
 
 sub write_methods_acefile {
@@ -433,6 +451,8 @@ sub write_methods_acefile {
     my $collect = $self->MethodCollection;
     $collect->write_to_file($methods_file);
     $self->add_acefile($methods_file);
+
+    return;
 }
 
 sub make_passwd_wrm {
@@ -458,6 +478,8 @@ sub make_passwd_wrm {
     }
 
     close $fh;    # Must close to ensure buffer is flushed into file
+
+    return;
 }
 
 sub edit_displays_wrm {
@@ -483,6 +505,8 @@ sub edit_displays_wrm {
     open my $disp_out, '>', $displays or confess "Can't write to '$displays' : $!";
     print $disp_out @disp;
     close $disp_out;
+
+    return;
 }
 
 sub add_misc_acefile {
@@ -492,6 +516,7 @@ sub add_misc_acefile {
 
     confess "No such file '$file'" unless -e $file;
     $self->add_acefile($file);
+    return;
 }
 
 sub initialize_database {
@@ -569,6 +594,8 @@ sub write_dna_data {
     open my $ace_fh, '>', $ace_filename or confess "Can't write to '$ace_filename' : $!";
     print $ace_fh $dna_filter->ace_data($slice);
     close $ace_fh;
+
+    return;
 }
 
 sub topup_pipeline_data_into_ace_server {
@@ -609,6 +636,8 @@ sub get_filter_loaded_states_from_acedb {
             warn "No filter '$name'";
         }
     }
+
+    return;
 }
 
 sub pipeline_DataFactory {
@@ -734,6 +763,8 @@ sub DESTROY {
     if ($callback) {
         $callback->();
     }
+
+    return;
 }
 
 1;
