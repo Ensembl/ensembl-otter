@@ -68,7 +68,7 @@ sub parse_gff_filters {
             
             die "No module supplied for filter '$filter_name'" unless $module;
             
-            eval "require $module";
+            eval "require $module"; ## no critic(BuiltinFunctions::ProhibitStringyEval)
             die "Failed to require module '$module' for filter '$filter_name': $@" if $@;
             
             if ($module->isa('Bio::Otter::GFFFilter')) {
