@@ -230,6 +230,8 @@ sub initialize {
     $top->bind('<Destroy>', sub{
         $self = undef;
     });
+
+    return;
 }
 
 sub num_filters {
@@ -268,7 +270,8 @@ sub reset_progress {
     $self->label_text($label_text);
     $self->{_filters_done} = 0;
     $self->{_num_filters} = 0;
-    
+
+    return;
 }
 
 sub label_text {
@@ -283,6 +286,7 @@ sub loading_filter {
     $filter->load_time(time);
     $self->label_text("Loading: ".$filter->name." (".($self->{_filters_done}+1)." of ".$self->{_num_filters}.")");
     $self->update_tk_preserve_grab;
+    return;
 }
 
 sub filter_done {
@@ -290,6 +294,7 @@ sub filter_done {
     $self->{_filters_done}++;
     $self->update_tk_preserve_grab; # to move the progress bar
     #if ($self->{_filters_done} == $self->{_num_filters}) {}
+    return;
 }
 
 sub filter_loaded {
@@ -306,6 +311,8 @@ sub filter_loaded {
     else {
         push @{ $self->{_loaded_filters} }, $filter->name;
     }
+
+    return;
 }
 
 sub filter_failed {
@@ -313,6 +320,7 @@ sub filter_failed {
     $filter->failed(1);
     $filter->fail_msg($msg);
     $self->filter_done;
+    return;
 }
 
 sub withdraw_or_destroy {
@@ -325,6 +333,8 @@ sub withdraw_or_destroy {
     } else {
         $self->top->withdraw;
     }
+
+    return;
 }
 
 sub init_flag {
@@ -434,6 +444,8 @@ sub load_filters {
     $top->Unbusy;
     $top->withdraw;
     $self->reset_progress;
+
+    return;
 }
 
 sub update_tk_preserve_grab {
@@ -443,11 +455,14 @@ sub update_tk_preserve_grab {
     # printf STDERR "\nGrab status of top before update is: '%s'\n", $top->grabStatus;
     $top->update;
     # printf STDERR "\nGrab status of top after update is:  '%s'\n", $top->grabStatus;
+
+    return;
 }
 
 sub set_filters_wanted {
 	my ($self, $wanted_hash) = @_;
 	map { $self->n2f->{$_}->wanted($wanted_hash->{$_}) } keys %{ $self->n2f };
+        return;
 }
 
 sub sort_by_filter_method {
@@ -518,6 +533,8 @@ sub sort_by_filter_method {
 	}
 	
     $self->show_filters(\@sorted_names);
+
+        return;
 }
 
 sub change_checkbutton_state {
@@ -529,6 +546,8 @@ sub change_checkbutton_state {
     	my $cb = $self->hlist->itemCget($i, 0, '-widget');
         $cb->$fn if $cb->cget('-selectcolor') eq $state_color;
     }
+
+        return;
 }
 
 sub show_filters {
@@ -616,6 +635,8 @@ sub show_filters {
        	
         $i++;
     }
+
+        return;
 }
 
 # (g|s)etters
@@ -729,6 +750,8 @@ sub drop_AceDatabase {
     my ($self) = @_;
     
     $self->{'_AceDatabase'} = undef;
+
+    return;
 }
 
 sub SequenceNotes {
@@ -753,6 +776,8 @@ sub DESTROY {
             $sn->refresh_lock_columns;    
         });
     }
+
+    return;
 }
 
 1;
