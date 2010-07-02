@@ -3,6 +3,7 @@ package Bio::Otter::EnsEMBL2SQL::Base;
 use vars qw(@ISA);
 use strict;
 use warnings;
+use Carp;
 
 use FileHandle;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
@@ -197,7 +198,8 @@ sub dump_table_SQL {
 
     my $command = $self->get_dump_stub($table);
 
-    open (my $in, '-|', $command);
+    open my $in, '-|', $command
+        or confess "failed to run the command '$command': $!";
     
     my $str;
 
@@ -211,7 +213,10 @@ sub dump_table_SQL {
 	}
     }
 
-    close($in);
+    close $in
+        or confess $! ?
+        "error closing the command '$command': $!" :
+        "the command '$command' failed: status $?";
 
     return $str;
 }
