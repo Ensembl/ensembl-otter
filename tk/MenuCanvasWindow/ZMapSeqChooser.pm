@@ -1523,7 +1523,9 @@ sub zMapDoRequest {
     if ($ZMAP_DEBUG) {
         my $substring = 1;    # sometimes you don't need to see _all_ of the request
         if ($substring) {
-            map { warn substr($_, 0, 512), (length($_) > 512 ? "..." : "") } @commands;
+            foreach ( @commands ) {
+                warn substr($_, 0, 512), (length($_) > 512 ? "..." : "");
+            }
         }
         else {
             warn "@commands";
