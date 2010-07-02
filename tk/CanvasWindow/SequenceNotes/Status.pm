@@ -85,8 +85,6 @@ sub initialise {
     $button_frame->pack(
 		-side => 'top',
  		);        
-    
-    my( $comment, $comment_label, $set );
 
     ### These buttons should also highlight the current
     ### clone in the parent SequenceNotes window
