@@ -488,23 +488,29 @@ sub zMapGffFilterDefaults {
     my %filter_columns;
     my %filter_styles;
     my %filter_descs;
-    
+
+    my $slice_params = $self->AceDatabase->smart_slice->toHash;
+    my $gff_fetch_params = {
+        session_dir => $self->ace_path,
+        url_root    => $self->AceDatabase->Client->url_root,
+        cookie_jar  => $ENV{'OTTERLACE_COOKIE_JAR'},
+    };
+
     for my $filter (@$gff_filters) {
-        
-        my %params = ( %{ $self->AceDatabase->smart_slice->toHash }, %{ $filter->server_params } );
-        
-        $params{gff_seqname} = $params{type};
-        $params{gff_source} = $filter->name;
-        
-        # get rid of parameters with no value (shortens the URL)
-        map { delete $params{$_} unless $params{$_} } keys %params;
-        
-        # we need to set these parameters for the gff fetching script itself
-        $params{session_dir}    = $self->ace_path;
-        $params{url_root}       = $self->AceDatabase->Client->url_root;
-        $params{cookie_jar}     = $ENV{'OTTERLACE_COOKIE_JAR'};
-        
-        my $param_string = join '&', map { $_.'='.$params{$_} } keys %params;
+
+        my %params = (
+            %{ $slice_params },
+            %{ $filter->server_params },
+            gff_seqname => $slice_params->{type},
+            gff_source  => $filter->name,
+            %{ $gff_fetch_params },
+            );
+
+        my $param_string =
+            join '&',
+            map { $_.'='.$params{$_} }
+            grep { defined $params{$_} }
+            keys %params;
         
         $text .= $self->formatZmapDefaults(
             $filter->name,
