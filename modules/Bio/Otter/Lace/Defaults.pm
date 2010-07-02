@@ -60,6 +60,7 @@ my @CLIENT_OPTIONS = qw(
 sub save_option {
     my ($option, $value) = @_;
     $GETOPT->{$CLIENT_STANZA}->{$option} = $value;
+    return;
 }
 
 # not a method
@@ -72,6 +73,7 @@ sub save_deep_option {
     my $opt_str = join('.', @$option);
     $GETOPT->{$opt_str} ||= {};
     $GETOPT->{$opt_str}->{$param} = $value;
+    return;
 }
 
 ################################################
@@ -182,6 +184,8 @@ sub save_server_otter_config {
     
     # Server config file should be second in list, just after HARDWIRED
     splice(@$CONFIG_INIFILES, 1, 0, $ini);
+
+    return;
 }
 
 sub show_help {
