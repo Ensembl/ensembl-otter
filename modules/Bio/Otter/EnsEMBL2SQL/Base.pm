@@ -108,7 +108,7 @@ sub query  {
 	$self->throw("Error executing sql $query\n");
     }
 
-
+    return;
 }
 
 sub dump_SQL_to_file {
@@ -142,6 +142,8 @@ sub dump_SQL_to_file {
 
 	$filehandle->close;
     }
+
+    return;
 }
 
 sub dump_table {
@@ -170,6 +172,7 @@ sub dump_table {
 	}
     }
 
+    return;
 }
 
 sub get_dump_stub {
