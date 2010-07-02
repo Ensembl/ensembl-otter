@@ -56,13 +56,13 @@ my @CLIENT_OPTIONS = qw(
 # $GETOPT->{$CLIENT_STANZA} hash.  To add another client option just include in above
 # and if necessary add to hardwired defaults in do_getopt().
 
-    # not a method
+# not a method
 sub save_option {
     my ($option, $value) = @_;
     $GETOPT->{$CLIENT_STANZA}->{$option} = $value;
 }
 
-    # not a method
+# not a method
 sub save_deep_option {
     my $getopt = $_[1];
     my ($option, $value) = split(/=/, $getopt, 2);
