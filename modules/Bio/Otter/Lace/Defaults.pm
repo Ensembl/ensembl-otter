@@ -65,7 +65,7 @@ sub save_option {
 
 # not a method
 sub save_deep_option {
-    my $getopt = $_[1];
+    my ( undef, $getopt ) = @_; # ignore the option name
     my ($option, $value) = split(/=/, $getopt, 2);
     $option = [ split(/\./, $option) ];
     my $param = pop @$option;
