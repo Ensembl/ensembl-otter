@@ -39,6 +39,10 @@ sub server_params {
     return $params;
 }
 
+sub is_gff_filter { # flag - does ZMap get this filter through a pipe?
+    return 1;
+}
+
 1;
 
 __END__

@@ -692,10 +692,7 @@ sub _open_SequenceSet {
     $adb->title($title);
     $adb->smart_slice($smart_slice);
     $adb->make_database_directory;
-    
-    # we need to parse the gff filters first to stop ace trying to read them
     $smart_slice->DataSet->session_dir($adb->home);
-    my $gff_filters = $smart_slice->DataSet->parse_gff_filters;
     
     $adb->make_pipeline_DataFactory;
 
@@ -736,7 +733,6 @@ sub _open_SequenceSet {
     );
    	my $lc = EditWindow::LoadColumns->new($top);
    	$lc->init_flag(1);
-   	$lc->gff_filters($gff_filters);
    	$lc->AceDatabase($adb);
    	$lc->SequenceNotes($self);
    	$lc->DataSetChooser($self->SequenceSetChooser->DataSetChooser);

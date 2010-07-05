@@ -695,12 +695,6 @@ sub show_lcd_dialog {
     return;
 }
 
-sub gff_filters {
-    my ($self, $filters) = @_;    
-    $self->{'_gff_filters'} = $filters if $filters;
-    return $self->{'_gff_filters'};
-}
-
 sub populate_clone_menu {
     my ($self) = @_;
 
