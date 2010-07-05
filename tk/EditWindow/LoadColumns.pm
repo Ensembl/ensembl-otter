@@ -394,7 +394,7 @@ sub load_filters {
         
         # save the state of each gff filter to disk so we can recover the session
         
-        $self->AceDatabase->smart_slice->DataSet->save_gff_filter_state($self->gff_filters);
+        $self->AceDatabase->smart_slice->DataSet->save_gff_filter_state;
         
         # replace the current fatal error prompt (because it waits for the user to acknowledge 
         # each filter that fails to load)
@@ -437,7 +437,6 @@ sub load_filters {
         $xc->AceDatabase($self->AceDatabase);
         $xc->SequenceNotes($self->SequenceNotes);
         $xc->LoadColumns($self);
-        $xc->gff_filters($self->gff_filters);
         $xc->initialize;
     }
     
@@ -708,16 +707,14 @@ sub n2f {
 	return $self->{'_n2f'};
 }
 
-sub gff_filters {
-    my ($self, $filters) = @_;    
-    $self->{'_gff_filters'} = $filters if $filters;
-    return $self->{'_gff_filters'};
-}
-
 sub gff_filters_hash {
     my ($self) = @_;
     unless ($self->{_gff_filters_hash}) {
-        $self->{_gff_filters_hash} = { map { $_->name => $_ } @{ $self->gff_filters } };
+        my $gff_filters =
+            $self->AceDatabase->smart_slice->DataSet->gff_filters;
+        $self->{_gff_filters_hash} = {
+            map { $_->name => $_ } @{$gff_filters},
+        };
     }
     return $self->{_gff_filters_hash};
 }

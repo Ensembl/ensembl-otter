@@ -613,47 +613,13 @@ sub make_pipeline_DataFactory {
     my $smart_slice = $self->smart_slice();
 
     my $dataset = $smart_slice->DataSet;
-    my $use_filters     = $dataset->get_config('use_filters');
-    my $filter_options  = $dataset->get_config('filter');
-
     my $collect = $self->MethodCollection;
     my $factory = Bio::EnsEMBL::Ace::DataFactory->new($smart_slice);
-    while ( my($filter_name, $filter_wanted) = each %$use_filters   ) {
 
-        my $param = $filter_options->{$filter_name}
-            or confess "No parameters for '$filter_name'";
-
-        my $class = $param->{'module'}
-            or confess "Module class for '$filter_name' missing from config";
-
-        # analysis_name MUST be set, whether or not it is defined in the config
-        $param->{'analysis_name'} ||= $filter_name;
-
-        $self->load_filter_module($class);
-
-        # We create all available filters and load all corresponding methods
-        # irrespectively of whether they are 'wanted' or not, so that we can
-        # run them at a later time if needed.
-
-        my $pipe_filter = $class->new;
-        $pipe_filter->wanted($filter_wanted);
-        $pipe_filter->name($filter_name);
-
-        # Options in the config file are methods on filter objects:
-        while (my ($option, $value) = each %$param) {
-            next if $option eq 'module';
-            if ($pipe_filter->can($option)) {
-                $pipe_filter->$option($value);
-            } else {
-                die "Wrong configuration for '$filter_name' analysis.\n",
-                    "No such method '$option' in '$class'\n",
-                    "Check your '~/.otter_config' file.\n",
-                    "If it looks correct you might be running an outdated version of the client.\n";
-            }
-        }
+    foreach my $filter ( @{$dataset->ace_filters} ) {
 
         # does the filter need a method?
-        my $req = $pipe_filter->required_ace_method_names;
+        my $req = $filter->required_ace_method_names;
         foreach my $tag (@$req) {
                 #print STDERR "Trying to get a method Object with tag '$tag' ... filter '$class' ... ";
             my $methObj = $collect->get_Method_by_name($tag);
@@ -661,7 +627,7 @@ sub make_pipeline_DataFactory {
         }
 
         # add the filter to the factory
-        $factory->add_filter($filter_name, $pipe_filter);
+        $factory->add_filter($filter->name, $filter);
     }
 
     # cache it for future reference

@@ -479,7 +479,8 @@ sub zMapGffFilterDefaults {
     
     my ($self, $stylesfile) = @_;
     
-    my $gff_filters = $self->gff_filters;
+    my $gff_filters =
+        $self->AceDatabase->smart_slice->DataSet->gff_filters;
     
     my $text;
     
@@ -577,7 +578,8 @@ sub zMapZMapDefaults {
     my $show_mainwindow =
         $self->AceDatabase->Client->config_value(qw(client zmap_main_window));
 
-    my $gff_filters = $self->gff_filters;
+    my $gff_filters =
+        $self->AceDatabase->smart_slice->DataSet->gff_filters;
 
     my $sources_string =
         join ' ; ',
@@ -1100,7 +1102,8 @@ sub zMapFeaturesLoaded {
     unless ($self->{_gff_filters_by_featureset}) {
         my $filters_by_fset;
         
-        my $gff_filters = $self->gff_filters;
+        my $gff_filters =
+            $self->AceDatabase->smart_slice->DataSet->gff_filters;
         
         for my $filter (@$gff_filters) {
             for my $fset ($filter->featuresets) {
@@ -1133,7 +1136,7 @@ sub zMapFeaturesLoaded {
     if ($state_changed) {
         # save the state of each gff filter to disk so we can recover the session
         
-        $self->AceDatabase->smart_slice->DataSet->save_gff_filter_state($self->gff_filters);
+        $self->AceDatabase->smart_slice->DataSet->save_gff_filter_state;
         
         # and update the delayed flags in the zmap config file
         
@@ -1148,7 +1151,10 @@ sub zMapUpdateConfigFile {
     
     my $cfg = $self->{_zmap_cfg} ||= Config::IniFiles->new( -file => $self->zMapZmapDir . '/ZMap' );
     
-    for my $filter (@{ $self->gff_filters }) {
+    my $gff_filters =
+        $self->AceDatabase->smart_slice->DataSet->gff_filters;
+
+    for my $filter (@{$gff_filters}) {
         if ($filter->done) {
             $cfg->setval($filter->name,'delayed','false');
         }

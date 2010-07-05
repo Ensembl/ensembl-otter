@@ -130,12 +130,8 @@ sub recover_session {
     $adb->recover_smart_slice_from_region_xml_file;
     
     my $dataset = $adb->smart_slice->DataSet;
-    
     $dataset->session_dir($adb->home);
-    
-    my $gff_filters = $dataset->parse_gff_filters;
-    
-    $dataset->reload_gff_filter_state($gff_filters);
+    $dataset->reload_gff_filter_state;
     
     $adb->make_pipeline_DataFactory;
     $adb->get_filter_loaded_states_from_acedb;
@@ -146,7 +142,7 @@ sub recover_session {
     }
     $adb->title($title);
 
-    return ($adb, $gff_filters);
+    return $adb;
 }
 
 sub kill_old_sgifaceserver {

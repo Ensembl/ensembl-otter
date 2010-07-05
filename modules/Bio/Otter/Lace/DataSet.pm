@@ -50,70 +50,66 @@ sub session_dir {
     return $self->{_session_dir};
 }
 
-sub parse_gff_filters {
+sub filters {
     my ($self) = @_;
+    return $self->{_filters} ||=
+        $self->_filters;
+}
+
+sub _filters {
+    my ($self) = @_;
+
+    my $use_filters = $self->get_config('use_filters');
+    my $filters     = $self->get_config('filter');
+
+    my $_filters;
     
-    unless ($self->{_gff_filters}) {
-    
-        my $use_filters = $self->get_config('use_filters');
-        my $filters     = $self->get_config('filter');
-        
-        my $gff_filters;
-        
-        for my $filter_name (keys %$use_filters) {
-            
-            my $params = $filters->{$filter_name};
-            
-            my $module = $params->{'module'};
-            
-            die "No module supplied for filter '$filter_name'" unless $module;
-            
-            eval "require $module"; ## no critic(BuiltinFunctions::ProhibitStringyEval)
-            die "Failed to require module '$module' for filter '$filter_name': $@" if $@;
-            
-            if ($module->isa('Bio::Otter::GFFFilter')) {
-                
-                delete $params->{'module'}; # so we don't try to call a method 'module' below
-                
-                my $filter_obj = $module->new;
-                
-                $filter_obj->name($filter_name);
-                
-                for my $meth (keys %$params) {
-                    if ($filter_obj->can($meth)) {
-                        $filter_obj->$meth($params->{$meth});
-                    }
-                    else {
-                        die "Unrecognised configuration parameter '$meth' used in filter '$filter_name', check your .otter_config";
-                    }
-                }
-                
-                $filter_obj->wanted($use_filters->{$filter_name});
-                
-                if (scalar(@{ $filter_obj->featuresets }) > 1 && $filter_obj->zmap_style) {
-                    die "Filter $filter_name: You can't specify a zmap_style for a filter with multiple featuresets";
-                }
-                
-                push @$gff_filters, $filter_obj;
-    
-                # delete them from the global hash so acedb doesn't try to load them
-                delete $filters->{$filter_name};
-                delete $use_filters->{$filter_name};
+    for my $filter_name (keys %$use_filters) {
+        my $params = $filters->{$filter_name};
+        my $module = $params->{'module'};
+        die "No module supplied for filter '$filter_name'" unless $module;
+        eval "require $module"; ## no critic(BuiltinFunctions::ProhibitStringyEval)
+        die "Failed to require module '$module' for filter '$filter_name': $@" if $@;
+        delete $params->{'module'}; # so we don't try to call a method 'module' below
+        my $filter_obj = $module->new;
+        $filter_obj->name($filter_name);
+        for my $meth (keys %$params) {
+            if ($filter_obj->can($meth)) {
+                $filter_obj->$meth($params->{$meth});
+            }
+            else {
+                die "Unrecognised configuration parameter '$meth' used in filter '$filter_name', check your .otter_config";
             }
         }
-        
-        $self->{_gff_filters} = $gff_filters;
+        $filter_obj->wanted($use_filters->{$filter_name});
+        if (scalar(@{ $filter_obj->featuresets }) > 1
+            && $filter_obj->zmap_style) {
+            die "Filter $filter_name: You can't specify a zmap_style for a filter with multiple featuresets";
+        }
+        push @$_filters, $filter_obj;
     }
-    
-    return $self->{_gff_filters}; 
+
+    return $_filters;
+}
+
+sub ace_filters {
+    my ($self) = @_;
+    return $self->{_ace_filters} ||=
+        [ grep { $_->is_ace_filter } @{$self->filters} ];
+}
+
+sub gff_filters {
+    my ($self) = @_;
+    return $self->{_gff_filters} ||=
+        [ grep { $_->is_gff_filter } @{$self->filters} ];
 }
 
 sub reload_gff_filter_state {
-    my ($self, $filters) = @_;
+    my ($self) = @_;
     
     my $cfg = $self->_gff_filter_state;
-    
-    my %filter_hash = map {$_->name => $_} @$filters;
+
+    my %filter_hash = map {$_->name => $_} @{$self->gff_filters};
     
     for my $filter_name ($cfg->Sections) {
         print "Reloading $filter_name\n";
@@ -126,11 +122,11 @@ sub reload_gff_filter_state {
 }
 
 sub save_gff_filter_state {
-    my ($self, $filters) = @_;
+    my ($self) = @_;
     
     my $cfg = $self->_gff_filter_state;
-    
-    for my $filter (@$filters) {
+
+    for my $filter (@{$self->gff_filters}) {
         for my $state (@FILTER_STATES) {
             if ($filter->$state) {
                 $cfg->AddSection($filter->name) unless $cfg->SectionExists($filter->name);
