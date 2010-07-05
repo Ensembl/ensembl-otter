@@ -22,7 +22,6 @@ use Tk::X;
 use ZMap::ConnectUtils qw(:all);
 use Exporter;
 our @ISA    = qw(Exporter);
-our @EXPORT = (@ZMap::ConnectUtils::EXPORT);
 our @EXPORT_OK = (@ZMap::ConnectUtils::EXPORT_OK);
 our %EXPORT_TAGS = (%ZMap::ConnectUtils::EXPORT_TAGS,
                     'noutils' => []);
