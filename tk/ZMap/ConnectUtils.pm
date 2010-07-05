@@ -7,20 +7,19 @@ use X11::XRemote;
 use XML::Simple;
 
 our @ISA    = qw(Exporter);
-our @EXPORT = qw(parse_params 
-                 parse_request
-                 parse_response
-                 xml_escape
-                 make_xml
-                 obj_make_xml
-                 newXMLObj
-                 setObjNameValue
-                 $WAIT_VARIABLE
-                 );
-our @EXPORT_OK = qw(fork_exec
+our @EXPORT_OK = qw(parse_params 
+                    parse_request
+                    parse_response
+                    xml_escape
+                    make_xml
+                    obj_make_xml
+                    newXMLObj
+                    setObjNameValue
+                    $WAIT_VARIABLE
+                    fork_exec
                     );
 our %EXPORT_TAGS = ('caching' => [@EXPORT_OK],
-                    'all'     => [@EXPORT, @EXPORT_OK]
+                    'all'     => [@EXPORT_OK]
                     );
 our $WAIT_VARIABLE = 0;
 
