@@ -16,6 +16,7 @@ use Term::ReadKey qw{ ReadMode ReadLine };
 use Bio::Vega::Author;
 use Bio::Vega::ContigLock;
 
+use Bio::Otter::Lace::Defaults;
 use Bio::Otter::Lace::DataSet;
 use Bio::Otter::Lace::Locator;
 use Bio::Otter::Lace::PersistentFile;
@@ -34,9 +35,14 @@ sub new {
 
     $ENV{'OTTERLACE_COOKIE_JAR'} ||= "$ENV{HOME}/.otter/ns_cookie_jar";
     $ENV{'BLIXEM_CONFIG_FILE'}   ||= "$ENV{HOME}/.otter/etc/blixemrc";
-    return bless {
+
+    my $new = bless {
         _cookie_jar_file => $ENV{'OTTERLACE_COOKIE_JAR'},
     }, $pkg;
+
+    $new->setup_pfetch_env;
+
+    return $new;
 }
 
 sub host {
@@ -994,6 +1000,18 @@ sub unlock_otter_xml {
         }
     );
     return 1;
+}
+
+# configuration
+
+sub config_value {
+    my ( $self, $key1, $key2 ) = @_;
+    return Bio::Otter::Lace::Defaults::option_from_array([$key1, $key2]);
+}
+
+sub fetch_group {
+    my ( $group ) = @_;
+    return Bio::Otter::Lace::Defaults::fetch_group($group);
 }
 
 1;

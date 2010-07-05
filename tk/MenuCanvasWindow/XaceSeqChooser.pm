@@ -29,7 +29,6 @@ use EditWindow::Clone;
 use EditWindow::LocusName;
 use MenuCanvasWindow::ExonCanvas;
 use MenuCanvasWindow::GenomicFeatures;
-use Bio::Otter::Lace::Defaults;
 use Text::Wrap qw{ wrap };
 
 use base qw{
@@ -1228,7 +1227,9 @@ sub edit_subsequences {
 }
 
 sub default_locus_prefix {
-    return Bio::Otter::Lace::Defaults::fetch_gene_type_prefix() || '';
+    my ( $self ) = @_;
+    my $client = $self->AceDatabase->Client;
+    return $client->config_value('client', 'gene_type_prefix') || '';
 }
 
 sub edit_new_subsequence {

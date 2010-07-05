@@ -575,9 +575,7 @@ sub zMapZMapDefaults {
     # due to not having window id when doing XChangeProperty.
 
     my $show_mainwindow =
-        Bio::Otter::Lace::Defaults::option_from_array(
-            [qw(client zmap_main_window)]
-        );
+        $self->AceDatabase->Client->config_value(qw(client zmap_main_window));
 
     my $gff_filters = $self->gff_filters;
 
@@ -608,7 +606,7 @@ sub zMapZMapDefaults {
         'columns'           => $columns_string,
         'pfetch-mode'       => ( $pfetch_www ? 'http' : 'pipe' ),
         'pfetch'            => ( $pfetch_www ? $pfetch_url : 'pfetch' ),
-        %{ Bio::Otter::Lace::Defaults::fetch_zmap_stanza() },
+        %{ $self->AceDatabase->Client->fetch_group('zmap') },
         );
 }
 
@@ -631,7 +629,7 @@ sub zMapBlixemDefaults {
             'Novel CDS Transcripts',
             'Putative and NMD',
         ],
-        %{ Bio::Otter::Lace::Defaults::fetch_blixem_stanza() },
+        %{ $self->AceDatabase->Client->fetch_group('blixem') },
     );
 
     # script could also be "blixem_standalone" sh wrapper (if needed)

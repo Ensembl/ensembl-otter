@@ -13,7 +13,6 @@ use Bio::Vega::Transform::Otter::Ace;
 use Bio::Vega::AceConverter;
 use Bio::Vega::Transform::XML;
 
-use Bio::Otter::Lace::Defaults;
 use Bio::Otter::Lace::PipelineDB;
 use Bio::Otter::Lace::SatelliteDB;
 use Bio::Otter::Lace::PersistentFile;
@@ -511,9 +510,8 @@ sub edit_displays_wrm {
 
 sub add_misc_acefile {
     my( $self ) = @_;
-
-    return unless my $file = Bio::Otter::Lace::Defaults::misc_acefile();
-
+    my $file = $self->Client->config_value('client', 'misc_acefile');
+    return unless $file;
     confess "No such file '$file'" unless -e $file;
     $self->add_acefile($file);
     return;
