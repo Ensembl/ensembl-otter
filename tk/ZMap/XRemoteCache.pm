@@ -199,7 +199,7 @@ sub remove_client_with_id{
         delete $self->{'_self_windows'}->{$id};
     }
 
-    return undef;
+    return;
 }
 
 sub remove_clients_to_bad_windows{
@@ -222,7 +222,7 @@ sub remove_clients_to_bad_windows{
         }
             
     }
-    return undef;
+    return;
 }
 
 sub create_client_with_pid_id_actions{
