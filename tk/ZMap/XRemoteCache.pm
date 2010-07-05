@@ -259,6 +259,8 @@ sub DESTROY{
     my $cache = $self->_get_clients_cache();
 
     print Dumper $cache if $CACHE_DEBUG;
+
+    return;
 }
 
 1;
