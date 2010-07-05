@@ -8,13 +8,10 @@ use warnings;
 use Carp;
 use Getopt::Long 'GetOptions';
 use Config::IniFiles;
-use Bio::Otter::Lace::Client;
 use POSIX 'uname';
 
 
 my $CLIENT_STANZA   = 'client';
-my $ZMAP_STANZA     = 'zmap';
-my $BLIXEM_STANZA   = 'blixem';
 
 my $DEFAULT_TAG     = 'default';
 my $DEBUG_CONFIG    = 0;
@@ -193,9 +190,8 @@ sub show_help {
 }
 
 sub make_Client {
-    my $client = Bio::Otter::Lace::Client->new;
-    $client->setup_pfetch_env;
-    return $client;
+    require Bio::Otter::Lace::Client;
+    return Bio::Otter::Lace::Client->new;
 }
 
 ### Not very happy with this subroutine.  It is difficult to understand.
@@ -266,40 +262,6 @@ sub parse_available_config_files {
     }
     return @ini;
 }
-
-
-################################################
-#
-## UTILITY METHODS - MADE FOR YOU
-#
-################################################
-
-sub fetch_gene_type_prefix {
-    return option_from_array([ $CLIENT_STANZA, 'gene_type_prefix' ]);
-}
-
-sub misc_acefile {
-    return option_from_array([ $CLIENT_STANZA, 'misc_acefile' ]);
-}
-
-sub methods_acefile {
-    return option_from_array([ $CLIENT_STANZA, 'methods_acefile' ]);
-}
-
-sub fetch_zmap_stanza {
-    return __fetch_stanza($ZMAP_STANZA);
-}
-
-sub fetch_blixem_stanza {
-    return __fetch_stanza($BLIXEM_STANZA);
-}
-
-################################################
-#
-## INTERNAL METHODS - NOT MADE FOR YOU
-#
-################################################
-# options_from_file
 
 sub options_from_file {
     my ($file) = @_;
@@ -386,7 +348,7 @@ sub __internal_option_from_array {
     return ($value, $found);
 }
 
-sub __fetch_stanza {
+sub fetch_group {
     my ( $name ) = @_;
     return {
         map {
