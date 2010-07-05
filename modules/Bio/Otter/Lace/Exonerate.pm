@@ -39,26 +39,6 @@ sub new{
 sub initialise {
     my ($self,$fasta_file) = @_;
 
-    my $cl = $self->AceDatabase->Client();
-
-    if(!$fasta_file) {
-    	# Just return if a blast database hasn't been defined
-    	$fasta_file = $cl->option_from_array([ 'local_exonerate', 'database' ]);
-    	return unless $fasta_file;
-    	# Get all the other configuration options
-	    foreach my $attribute (qw{
-	        homol_tag
-	        method_tag
-	        method_color
-	        logic_name
-	        query_type
-	      })
-	    {
-	        my $value = $cl->option_from_array([ 'local_exonerate', $attribute ]);
-	        $self->$attribute($value);
-	    }
-    }
-
     unless ($fasta_file =~ m{^/}) {
         confess "fasta file '$fasta_file' is not an absolute path";
     }
