@@ -227,7 +227,7 @@ sub remove_clients_to_bad_windows{
 
 sub create_client_with_pid_id_actions{
     my ($self, $requested_pid, $requested_id, @actions) = @_;
-    my ($cached_name, $cached_id);
+    my $cached_id;
 
     my $client = $self->get_client_with_id($requested_id);
 
