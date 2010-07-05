@@ -17,7 +17,6 @@ use Bio::Otter::Lace::PipelineDB;
 use Bio::Otter::Lace::SatelliteDB;
 use Bio::Otter::Lace::PersistentFile;
 use Bio::Otter::Lace::Slice; # a new kind of Slice that knows how to get pipeline data
-use Bio::Otter::Lace::Exonerate;
 
 
 use Bio::EnsEMBL::Ace::DataFactory;
@@ -158,46 +157,6 @@ sub init_AceDatabase {
     $self->write_methods_acefile;
 
     $self->initialize_database;
-
-    eval {
-        my $cl = $self->Client;
-        if ($cl->option_from_array([ 'local_exonerate', 'database' ])) {
-            $self->write_local_exonerate;
-        }
-    };
-    if ($@) {
-        warn $@;
-    }
-
-    return;
-}
-
-sub write_local_exonerate {
-    my ($self) = @_;
-
-    # The Exonerate object gets all its configuration
-    # information from Lace::Defaults
-    ### Should be able to specify mulitple databases to search,
-    ### the results of each go into separate columns.
-    my $exon = Bio::Otter::Lace::Exonerate->new;
-    $exon->AceDatabase($self);
-    $exon->initialise or return;
-    my $ace_text = $exon->run or return;
-
-    my $ace_filename = $self->home . '/rawdata/local_exonerate_search.ace';
-    open my $ace_fh, '>', $ace_filename or die "Can't write to '$ace_filename' : $!";
-    print $ace_fh $ace_text;
-    close $ace_fh or confess "Error writing to '$ace_filename' : $!";
-
-    # Need to add new method to collection if we don't have it already
-    my $coll = $self->MethodCollection;
-    my $method = $exon->ace_Method;
-    unless ($coll->get_Method_by_name($method->name)) {
-        $coll->add_Method($method);
-        $self->ace_server->save_ace($coll->ace_string());
-    }
-
-	$self->ace_server->save_ace($ace_text);
 
     return;
 }
