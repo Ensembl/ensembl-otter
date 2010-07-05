@@ -200,7 +200,7 @@ sub fork_exec {
             $obj->[1] = { %{$encodedXSD->{$type}} };
             return $obj;
         }else{
-            return undef;
+            return;
         }
     }
 
