@@ -153,7 +153,7 @@ Just the window id of the request widget.
 
 sub server_window_id{
     my ($self) = @_;
-    return undef unless $self->_is_server();
+    return unless $self->_is_server();
     return $self->widget->id();
 }
 
