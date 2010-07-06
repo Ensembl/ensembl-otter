@@ -598,8 +598,8 @@ sub hunt_for_selection {
     my @overlapping = $canvas->find('overlapping', $canvas->bbox($found));
     foreach my $obj (@overlapping) {
         my @tags = $canvas->gettags($obj);
-        if (grep $_ eq 'clone_seq_rectangle', @tags) {
-            unless (grep $_ eq 'selected', @tags) {
+        if (grep { $_ eq 'clone_seq_rectangle' } @tags) {
+            unless (grep { $_ eq 'selected' } @tags) {
                 toggle_selection($self, $obj);
             }
         }
@@ -1279,7 +1279,7 @@ sub toggle_selection {
     my( $self, $obj ) = @_;
     
     my $canvas = $self->canvas;
-    my $is_selected = grep $_ eq 'selected', $canvas->gettags($obj);
+    my $is_selected = grep { $_ eq 'selected' } $canvas->gettags($obj);
     my( $new_colour ); 
     if ($is_selected) {
         $new_colour = '#aaaaff';
@@ -1385,7 +1385,7 @@ sub save_sequence_notes {
     my $all_list = $self->SequenceSet->CloneSequence_list;
     my $contig_string = join "|", map { $_->contig_name } @$seq_list;
     my %seq_hash;
-    foreach(grep($_->contig_name =~ /$contig_string/,@$all_list)){
+    foreach (grep { $_->contig_name =~ /$contig_string/ } @$all_list){
     	$seq_hash{$_->contig_name} ||= [];
     	push @{$seq_hash{$_->contig_name}},$_;
     }
