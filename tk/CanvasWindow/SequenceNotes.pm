@@ -102,6 +102,8 @@ sub refresh_column {
             warn "No object withtag '$tag_string'";
         }
     }
+
+    return;
 }
 
 sub refresh_lock_columns {
@@ -112,6 +114,8 @@ sub refresh_lock_columns {
     $self->refresh_column(7);   # Padlock icon column
     $self->refresh_column(8);   # Lock author name column
     $top->Unbusy;
+
+    return;
 }
 
 # this should be used by the refresh column method
@@ -136,6 +140,8 @@ sub _refresh_SequenceSet{
         # no column number - just update the whole thing
         $self->get_CloneSequence_list(1)
     }
+
+    return;
 }
 
 
@@ -215,6 +221,8 @@ sub _column_write_text {
     #warn "Drawing text with args [", join(', ', map "'$_'", @args), "]\n";
     
     $canvas->createText(@args) ;
+
+    return;
 }
 
 sub _column_draw_image {
@@ -226,6 +234,8 @@ sub _column_draw_image {
     delete $args{'-anchor'} ; 
 
     $canvas->createImage($x, $y, %args , -anchor => 'n');
+
+    return;
 }
 
 sub _column_text_row_number {
@@ -459,12 +469,14 @@ sub go_left {
     my $self = shift @_;
     ${$self->current_page_var_ref}--;
     warn "Go_left button pressed\n";
+    return;
 }
 
 sub go_right {
     my $self = shift @_;
     ${$self->current_page_var_ref}++;
     warn "Go_right button pressed\n";
+    return;
 }
 
 sub bind_close_window{
@@ -499,6 +511,8 @@ sub bind_item_selection{
         });
     # needs to bind destroy so everyhting gets cleaned up.
     $canvas->CanvasBind('<Destroy>', sub { $self = undef} );
+
+    return;
 }
 
 
@@ -590,6 +604,8 @@ sub hunt_for_selection {
             }
         }
     }
+
+    return;
 }
 
 sub make_button {
@@ -636,6 +652,8 @@ sub run_lace {
         $self->selected_clones_string,
         );
     $self->_open_SequenceSet($title) ;
+
+    return;
 }
 
 sub run_lace_on_slice{
@@ -671,6 +689,8 @@ sub run_lace_on_slice{
     }
     my $title = qq`lace for SLICE $start - $end ` . $self->name;
     $self->_open_SequenceSet($title);
+
+    return;
 }
 
 ## allows Searched SequenceNotes.pm to inherit the main part of the run_lace method
@@ -737,6 +757,8 @@ sub _open_SequenceSet {
    	$lc->SequenceNotes($self);
    	$lc->DataSetChooser($self->SequenceSetChooser->DataSetChooser);
 	$lc->initialize;
+
+    return;
 }
 
 # creates a string based on the selected clones
@@ -907,6 +929,8 @@ sub draw_paging_buttons{
                                 -width  => $width,
                                 -anchor => 'nw',
                                 -window => $pg_frame);
+
+    return;
 }
 
 sub draw_all {
@@ -1132,6 +1156,8 @@ sub deselect_all_selected_not_current {
     foreach my $obj ($canvas->find('withtag', 'selected&&!current')) {
         $self->toggle_selection($obj);
     }    
+
+    return;
 }
 
 sub toggle_current {
@@ -1141,6 +1167,8 @@ sub toggle_current {
 
     my ($rect) = $self->canvas->find('withtag', "$row_tag&&clone_seq_rectangle") or return;        
     $self->toggle_selection($rect);
+
+    return;
 }
 
 sub extend_selection {
@@ -1194,6 +1222,8 @@ sub extend_selection {
             $self->toggle_selection($rect);
         }
     }
+
+    return;
 }
 
 sub selected_CloneSequence_indices {
@@ -1259,6 +1289,8 @@ sub toggle_selection {
     $canvas->itemconfigure($obj,
         -fill => $new_colour,
         );
+
+    return;
 }
 
 sub draw_row_backgrounds {
@@ -1286,6 +1318,8 @@ sub draw_row_backgrounds {
         $canvas->lower($rec, $row_tag);
         $cs_i++;
     }
+
+    return;
 }
 
 my $count ;
@@ -1326,6 +1360,7 @@ warn "LayOut started...\n";
 
 warn "LayOut finished.\n";
 
+    return;
 }
 
 sub save_sequence_notes {
@@ -1376,6 +1411,8 @@ sub save_sequence_notes {
     } 
     $self->draw;
     $self->set_scroll_region_and_maxsize;
+
+    return;
 }
 
 
@@ -1384,6 +1421,7 @@ sub DESTROY {
     my ($type) = ref($self) =~ /([^:]+)$/;
     my $name = $self->name;
     warn "Destroying $type $name\n";
+    return;
 }
 
 
@@ -1410,6 +1448,8 @@ sub popup_missing_analysis{
         $hp->draw;
         $self->add_Status($hp);
     }
+
+    return;
 }
 
 
@@ -1442,7 +1482,10 @@ sub popup_ana_seq_history{
             $self->message( "No History for sequence " . $cs->contig_name . "  " . $cs->clone_name); 
         }
     }  
+
+    return;
 }
+
 sub add_Status{
     my ($self , $status) = @_ ;
     #add a new element to the hash
@@ -1613,6 +1656,8 @@ sub slice_window{
         $slice_window->draw();
     }
     $slice_window->show_me();
+
+    return;
 }
 
 sub set_note_ref{
