@@ -3094,7 +3094,7 @@ sub xace_save {
     
     $top->grabRelease;
     
-    return 1;
+    return;
 }
 
 sub zmap_save {
