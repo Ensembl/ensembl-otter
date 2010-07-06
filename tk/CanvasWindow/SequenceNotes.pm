@@ -433,7 +433,7 @@ sub initialise {
 	    $title =~ s/\W+/_/g;
 	    my @files = $self->print_postscript($title);
 	    warn "Printed to files:\n",
-	    map "  $_\n", @files;
+	    map { "  $_\n" } @files;
     };
     $top->bind('<Control-p>', $print_to_file);
     $top->bind('<Control-P>', $print_to_file);
@@ -1184,9 +1184,9 @@ sub extend_selection {
     # Get a list of all the rows that are currently selected
     my( @sel_rows );
     foreach my $obj ($canvas->find('withtag', 'selected&&clone_seq_rectangle')) {
-        my ($row) = map /^row=(\d+)/, $canvas->gettags($obj);
+        my ($row) = map { /^row=(\d+)/ } $canvas->gettags($obj);
         unless (defined $row) {
-            die "Can't see row=# in tags: ", join(', ', map "'$_'", $canvas->gettags($obj));
+            die "Can't see row=# in tags: ", join(', ', map { "'$_'" } $canvas->gettags($obj));
         }
         push(@sel_rows, $row);
     }
@@ -1235,9 +1235,9 @@ sub selected_CloneSequence_indices {
     my $select = [];
     my $first = $self->_user_first_clone_seq() || 1;
     foreach my $obj ($canvas->find('withtag', 'selected&&clone_seq_rectangle')) {
-        my ($i) = map /^cs=(\d+)/, $canvas->gettags($obj);
+        my ($i) = map { /^cs=(\d+)/ } $canvas->gettags($obj);
         unless (defined $i) {
-            die "Can't see cs=# in tags: ", join(', ', map "'$_'", $canvas->gettags($obj));
+            die "Can't see cs=# in tags: ", join(', ', map { "'$_'" } $canvas->gettags($obj));
         }
         push(@$select, $i + $first - 1);
     }
@@ -1254,7 +1254,7 @@ sub get_current_CloneSequence_index {
     my $canvas = $self->canvas;
     my ($obj) = $canvas->find('withtag', 'current') or return;
      
-    my ($i) = map /^cs=(\d+)/, $canvas->gettags($obj);  
+    my ($i) = map { /^cs=(\d+)/ } $canvas->gettags($obj);  
     return $i;
 
 }
@@ -1383,7 +1383,7 @@ sub save_sequence_notes {
     my $seq_list = $self->SequenceSet->selected_CloneSequences;
     
     my $all_list = $self->SequenceSet->CloneSequence_list;
-    my $contig_string = join "|",map($_->contig_name,@$seq_list);
+    my $contig_string = join "|", map { $_->contig_name } @$seq_list;
     my %seq_hash;
     foreach(grep($_->contig_name =~ /$contig_string/,@$all_list)){
     	$seq_hash{$_->contig_name} ||= [];
