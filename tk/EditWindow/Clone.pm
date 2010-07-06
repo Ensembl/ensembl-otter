@@ -137,6 +137,8 @@ sub initialise {
     $self->fill_Entries;
     $self->fill_Properties;
     $self->set_minsize;
+
+    return;
 }
 
 sub fill_Properties {
@@ -156,6 +158,8 @@ sub fill_Properties {
     my $rem = $self->remark_text;
     $rem->delete('1.0', 'end');
     $rem->insert('end', join '', map("$_\n", $clone->get_all_remarks));
+
+    return;
 }
 
 sub make_labelled_text_widget {
@@ -223,6 +227,8 @@ sub generate_desc {
 	
 	# and insert the new text at the current cursor position
 	$self->description_text->insert('insert', $desc);
+
+        return;
 }
 
 sub xace_save {
@@ -232,6 +238,8 @@ sub xace_save {
         $self->xace_save_Clone($clone);
         $self->fill_Properties;
     }
+
+    return;
 }
 
 sub xace_save_Clone {
@@ -361,6 +369,8 @@ sub insert_char {
     $text->deleteSelected;
     
     $text->insert('insert', $char);
+
+    return;
 }
 
 sub fill_Entries {
@@ -379,6 +389,8 @@ sub fill_Entries {
         eval { $entry->configure(-state => 'readonly'); };
         $entry->configure(-state => 'disabled') if $@;
     }
+
+    return;
 }
 
 sub make_entry {
@@ -397,6 +409,8 @@ sub make_entry {
     $self->{'_clone_entry'}{$clone_method} = $widget->Entry(
         -width => $width,
         )->pack(-side => 'left');
+
+    return;
 }
 
 sub insert_pad {
@@ -405,6 +419,8 @@ sub insert_pad {
     $widget->Frame(
         -width  => 10,
         )->pack(-side => 'left');
+
+    return;
 }
 
 sub Clone {
@@ -437,6 +453,8 @@ sub DESTROY {
     my $name = $self->Clone->name;
     my $type = ref($self);
     warn "Destroying $type '$name'\n";
+
+    return;
 }
 
 1;
