@@ -36,18 +36,41 @@ sub name {
     return $self->{'_name'};
 }
 
-sub get_config {
-    my ($self, $section) = @_;
-    
-    my $conf = $self->{'_get_config_cache'}{$section}
-        ||= $self->_config_from_client($section);
-    return $conf;
-}
-
 sub session_dir {
     my ($self, $session_dir) = @_;
     $self->{_session_dir} = $session_dir if $session_dir;
     return $self->{_session_dir};
+}
+
+sub filter_by_name {
+    my ($self, $name) = @_;
+    return $self->{_filter_by_name}{$name} ||=
+        $self->_filter_by_name($name);
+}
+
+sub _filter_by_name {
+    my ($self, $name) = @_;
+
+    my $config = $self->config_section("filter.${name}");
+
+    my $module = $config->{'module'};
+    die "No module supplied for filter '$name'" unless $module;
+    $self->load_filter_module($module);
+    die "Failed to require module '$module' for filter '$name': $@" if $@;
+
+    my $filter = $module->new;
+    $filter->name($name) if $filter->can('name');
+
+    delete $config->{'module'}; # so we don't try to call 'module'
+    while ( my ( $meth, $arg ) = each %{$config} ) {
+        die "Unrecognised configuration parameter '$meth' "
+            . "used in filter '$name', "
+            . "check your .otter_config"
+            unless $filter->can($meth);
+        $filter->$meth($arg);
+    }
+
+    return $filter;
 }
 
 sub filters {
@@ -59,37 +82,19 @@ sub filters {
 sub _filters {
     my ($self) = @_;
 
-    my $use_filters = $self->get_config('use_filters');
-    my $filters     = $self->get_config('filter');
-
-    my $_filters;
-    
-    for my $filter_name (keys %$use_filters) {
-        my $params = $filters->{$filter_name};
-        my $module = $params->{'module'};
-        die "No module supplied for filter '$filter_name'" unless $module;
-        eval "require $module"; ## no critic(BuiltinFunctions::ProhibitStringyEval)
-        die "Failed to require module '$module' for filter '$filter_name': $@" if $@;
-        delete $params->{'module'}; # so we don't try to call a method 'module' below
-        my $filter_obj = $module->new;
-        $filter_obj->name($filter_name);
-        for my $meth (keys %$params) {
-            if ($filter_obj->can($meth)) {
-                $filter_obj->$meth($params->{$meth});
-            }
-            else {
-                die "Unrecognised configuration parameter '$meth' used in filter '$filter_name', check your .otter_config";
-            }
+    my $filters = [ ];
+    my $use_filters = $self->config_section('use_filters');
+    while ( my ( $name, $wanted ) = each %{$use_filters} ) {
+        my $filter = $self->filter_by_name($name);
+        $filter->wanted($wanted);
+        if (scalar(@{ $filter->featuresets }) > 1
+            && $filter->zmap_style) {
+            die "Filter $name: You can't specify a zmap_style for a filter with multiple featuresets";
         }
-        $filter_obj->wanted($use_filters->{$filter_name});
-        if (scalar(@{ $filter_obj->featuresets }) > 1
-            && $filter_obj->zmap_style) {
-            die "Filter $filter_name: You can't specify a zmap_style for a filter with multiple featuresets";
-        }
-        push @$_filters, $filter_obj;
+        push @$filters, $filter;
     }
 
-    return $_filters;
+    return $filters;
 }
 
 sub ace_filters {
@@ -166,26 +171,10 @@ sub _gff_filter_state {
     return $self->{_gff_filter_state};
 }
 
-sub _config_from_client {
+sub config_section {
     my ($self, $section) = @_;
-    
-    my $client = $self->Client or confess "No Client attached";
-    
-    my $ds = $self;
-    # Used to fetch config from both ALIAS dataset and this dataset
-    # but this does not work because the "default" setting in
-    # this dataaset override the settings in the ALIAS dataset.
-    if (my $alias = $ds->ALIAS) {
-        $ds = $client->get_DataSet_by_name($alias);
-    }
-    
-    my $config = {};
-    my $name = $ds->name;
-    my $nc = $client->option_from_array([$name, $section]);
-    while (my ($tag, $val) = each %$nc) {
-        $config->{$tag} = $val;
-    }
-    
+    my $name = $self->ALIAS || $self->name;
+    my $config = $self->Client->config_section($name, $section);
     return $config;
 }
 
@@ -211,6 +200,18 @@ sub get_meta_value {
     confess "Multiple entries in meta table under key '$key'" if @{$values} > 1;
 
     return $values->[0];
+}
+
+sub vocab_locus {
+    my ($self) = @_;
+    return $self->{'_vocab_locus'} ||=
+        $self->config_section('controlled_vocabulary_locus');
+}
+
+sub vocab_transcript {
+    my ($self) = @_;
+    return $self->{'_vocab_transcript'} ||=
+        $self->config_section('controlled_vocabulary_transcript');
 }
 
 sub taxon {
@@ -521,6 +522,19 @@ sub ALIAS {
         $self->{'_ALIAS'} = $ALIAS;
     }
     return $self->{'_ALIAS'};
+}
+
+sub load_filter_module {
+    my ($self, $class) = @_;
+
+    my $file = "$class.pm";
+    $file =~ s{::}{/}g;
+    eval {
+        require $file;
+        1;
+    } or die "Error attempting to load filter module '$file'\n$@";
+
+    return;
 }
 
 1;

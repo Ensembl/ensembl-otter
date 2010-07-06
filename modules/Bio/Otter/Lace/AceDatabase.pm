@@ -469,7 +469,7 @@ sub edit_displays_wrm {
 
 sub add_misc_acefile {
     my( $self ) = @_;
-    my $file = $self->Client->config_value('client', 'misc_acefile');
+    my $file = $self->Client->config_value('misc_acefile');
     return unless $file;
     confess "No such file '$file'" unless -e $file;
     $self->add_acefile($file);
@@ -537,18 +537,14 @@ sub write_dna_data {
     my( $self ) = @_;
 
     my $slice = $self->smart_slice;
-    my $filter_options = $slice->DataSet->get_config('filter');
-    my $otter = $filter_options->{'otter'}
-        or confess "otter filter (used to fetch DNA) missing from otter_config";
-    my $class = $otter->{'module'}
-        or confess "Module class for 'otter' missing from otter_config";
-    $self->load_filter_module($class);
-    my $dna_filter = $class->new;
+    my $dna_filter = $slice->DataSet->filter_by_name('otter');
+    confess "otter filter (used to fetch DNA) missing from otter_config"
+        unless $dna_filter;
 
     my $ace_filename = $self->home . '/rawdata/dna.ace';
     $self->add_acefile($ace_filename);
-
-    open my $ace_fh, '>', $ace_filename or confess "Can't write to '$ace_filename' : $!";
+    open my $ace_fh, '>', $ace_filename
+        or confess "Can't write to '$ace_filename' : $!";
     print $ace_fh $dna_filter->ace_data($slice);
     close $ace_fh;
 
@@ -632,18 +628,6 @@ sub make_pipeline_DataFactory {
 
     # cache it for future reference
     return $self->pipeline_DataFactory($factory);
-}
-
-sub load_filter_module {
-    my ($self, $class) = @_;
-    
-    # Load the filter module
-    my $file = "$class.pm";
-    $file =~ s{::}{/}g;
-    eval { require $file };
-    if ($@) {
-        die "Error attempting to load filter module '$file'\n$@";
-    }
 }
 
 
