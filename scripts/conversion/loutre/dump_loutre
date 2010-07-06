@@ -743,7 +743,6 @@ sub transfer_gene {
 	);
       );
     }
-    $AUTHOR = $lgene->gene_author;
   }
 
   my $l_gene_slice = $lgene->slice;
