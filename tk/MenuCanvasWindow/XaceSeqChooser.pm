@@ -138,19 +138,6 @@ sub balloon {
     return $self->{'_balloon'};
 }
 
-sub vocab_locus {
-    my ($self) = @_;
-    
-    return $self->AceDatabase->smart_slice->DataSet->get_config('controlled_vocabulary_locus');
-}
-
-sub vocab_transcript {
-    my ($self) = @_;
-    
-    return $self->AceDatabase->smart_slice->DataSet->get_config('controlled_vocabulary_transcript');
-}
-
-
 sub set_known_GeneMethods {
     my ($self) = @_;
 
@@ -1222,8 +1209,14 @@ sub edit_subsequences {
 
 sub default_locus_prefix {
     my ( $self ) = @_;
+    return $self->{_default_locus_prefix} ||=
+        $self->_default_locus_prefix;
+}
+
+sub _default_locus_prefix {
+    my ( $self ) = @_;
     my $client = $self->AceDatabase->Client;
-    return $client->config_value('client', 'gene_type_prefix') || '';
+    return $client->config_value('gene_type_prefix') || '';
 }
 
 sub edit_new_subsequence {

@@ -439,6 +439,11 @@ sub XaceSeqChooser {
     return $self->{'_XaceSeqChooser'};
 }
 
+sub Dataset {
+    my( $self ) = @_;
+    return $self->XaceSeqChooser->AceDatabase->smart_slice->DataSet;
+}
+
 sub add_subseq_exons {
     my( $self, $subseq ) = @_;
 
@@ -1588,7 +1593,9 @@ my $voc_tag = 'Controlled_Vocabulary';
 sub update_transcript_remark_widget {
     my( $self, $sub ) = @_;
 
-    $self->update_remark_Entry($self->transcript_remark_Entry, $self->XaceSeqChooser->vocab_transcript, $sub);
+    $self->update_remark_Entry($self->transcript_remark_Entry,
+                               $self->Dataset->vocab_transcript,
+                               $sub);
 
     return;
 }
@@ -1596,7 +1603,9 @@ sub update_transcript_remark_widget {
 sub update_locus_remark_widget {
     my( $self, $locus ) = @_;
 
-    $self->update_remark_Entry($self->locus_remark_Entry, $self->XaceSeqChooser->vocab_locus, $locus);
+    $self->update_remark_Entry($self->locus_remark_Entry,
+                               $self->Dataset->vocab_locus,
+                               $locus);
 
     return;
 }

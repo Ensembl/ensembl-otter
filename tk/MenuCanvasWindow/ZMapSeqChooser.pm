@@ -576,7 +576,7 @@ sub zMapZMapDefaults {
     # due to not having window id when doing XChangeProperty.
 
     my $show_mainwindow =
-        $self->AceDatabase->Client->config_value(qw(client zmap_main_window));
+        $self->AceDatabase->Client->config_value('zmap_main_window');
 
     my $gff_filters =
         $self->AceDatabase->smart_slice->DataSet->gff_filters;
@@ -608,7 +608,7 @@ sub zMapZMapDefaults {
         'columns'           => $columns_string,
         'pfetch-mode'       => ( $pfetch_www ? 'http' : 'pipe' ),
         'pfetch'            => ( $pfetch_www ? $pfetch_url : 'pfetch' ),
-        %{ $self->AceDatabase->Client->fetch_group('zmap') },
+        %{ $self->AceDatabase->smart_slice->DataSet->config_section('zmap') },
         );
 }
 
@@ -631,7 +631,7 @@ sub zMapBlixemDefaults {
             'Novel CDS Transcripts',
             'Putative and NMD',
         ],
-        %{ $self->AceDatabase->Client->fetch_group('blixem') },
+        %{ $self->AceDatabase->smart_slice->DataSet->config_section('blixem') },
     );
 
     # script could also be "blixem_standalone" sh wrapper (if needed)

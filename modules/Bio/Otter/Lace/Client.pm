@@ -50,7 +50,7 @@ sub host {
 
     warn "Set using the Config file please.\n" if $host;
 
-    return $self->option_from_array([qw( client host )]);
+    return $self->config_value('host');
 }
 
 sub port {
@@ -58,7 +58,7 @@ sub port {
     
     warn "Set using the Config file please.\n" if $port;
 
-    return $self->option_from_array([qw( client port )]);
+    return $self->config_value('port');
 }
 
 sub version {
@@ -66,7 +66,7 @@ sub version {
     
     warn "Set using the Config file please.\n" if $version;
 
-    return $self->option_from_array([qw( client version )]);
+    return $self->config_value('version');
 }
 
 sub write_access {
@@ -74,7 +74,7 @@ sub write_access {
     
     warn "Set using the Config file please.\n" if $write_access;
 
-    return $self->option_from_array([qw( client write_access )]) || 0;
+    return $self->config_value('write_access') || 0;
 }
 
 sub author {
@@ -82,7 +82,7 @@ sub author {
     
     warn "Set using the Config file please.\n" if $author;
 
-    return $self->option_from_array([qw( client author )]) || (getpwuid($<))[0];
+    return $self->config_value('author') || (getpwuid($<))[0];
 }
 
 sub email {
@@ -90,7 +90,7 @@ sub email {
     
     warn "Set using the Config file please.\n" if $email;
 
-    return $self->option_from_array([qw( client email )]) || (getpwuid($<))[0];
+    return $self->config_value('email') || (getpwuid($<))[0];
 }
 
 sub fetch_truncated_genes {
@@ -98,7 +98,7 @@ sub fetch_truncated_genes {
     
     warn "Set using the Config file please.\n" if $fetch_truncated_genes;
     
-    return $self->option_from_array([qw{ client fetch_truncated_genes }]);
+    return $self->config_value('fetch_truncated_genes');
 }
 
 sub client_name {
@@ -116,7 +116,7 @@ sub debug {
 
     warn "Set using the Config file please.\n" if $debug;
 
-    my $val = $self->option_from_array([qw( client debug )]);
+    my $val = $self->config_value('debug');
     return $val ? $val : 0;
 }
 
@@ -141,7 +141,7 @@ sub timeout_attempts {
 sub get_log_dir {
     my( $self ) = @_;
     
-    my $log_dir = $self->option_from_array([qw( client logdir )])
+    my $log_dir = $self->config_value('logdir')
         or return;
     
     # Make $log_dir into absolute file path
@@ -206,12 +206,6 @@ sub lock { ## no critic(Subroutines::ProhibitBuiltinHomonyms)
     confess "lock takes no arguments" if @args;
 
     return $self->write_access ? 'true' : 'false';
-}
-
-sub option_from_array{
-    my ($self, $array) = @_;
-    return unless $array;
-    return Bio::Otter::Lace::Defaults::option_from_array($array);
 }
 
 sub client_hostname {
@@ -1005,13 +999,13 @@ sub unlock_otter_xml {
 # configuration
 
 sub config_value {
-    my ( $self, $key1, $key2 ) = @_;
-    return Bio::Otter::Lace::Defaults::option_from_array([$key1, $key2]);
+    my ( $self, $key ) = @_;
+    return Bio::Otter::Lace::Defaults::config_value('client', $key);
 }
 
-sub fetch_group {
-    my ( $group ) = @_;
-    return Bio::Otter::Lace::Defaults::fetch_group($group);
+sub config_section {
+    my ( $self, @keys ) = @_;
+    return Bio::Otter::Lace::Defaults::config_section(@keys);
 }
 
 1;

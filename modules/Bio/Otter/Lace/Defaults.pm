@@ -194,58 +194,6 @@ sub make_Client {
     return Bio::Otter::Lace::Client->new;
 }
 
-### Not very happy with this subroutine.  It is difficult to understand.
-sub option_from_array{
-    my ($array) = @_;
-    $array    ||= [];
-    my $value   = undef;
-    warn "\noption_from_array([@$array])\n" if $DEBUG_CONFIG;
-
-    my @arr_copy = @{$array};
-    my $first    = shift @arr_copy;
-
-    my $allow_hash = 1; # allow hash for first call to set_value
-
-    my $set_value = sub {
-        my ($conf_val, $found) = @_;
-        my $value_is_hash    = ref($value)    eq 'HASH';
-        my $conf_val_is_hash = ref($conf_val) eq 'HASH';
-        if ($DEBUG_CONFIG) {
-            warn sprintf("got value '%s', found '%s'\n",
-                $conf_val || 'undef',
-                defined($found) ? $found : 'undef');
-        }
-        return unless $found;
-        if (($value_is_hash || $allow_hash) && $conf_val_is_hash) {
-            # initialise as first time it will be undef
-            $value ||= {};
-            # overwrite existing keys in $value
-            while (my ($tag, $val) = each %$conf_val) {
-                $value->{$tag} = $val;
-            }
-        }else{
-            $value = $conf_val;
-        }
-        $allow_hash = 0;
-    };
-
-    # for each file
-    #    - get default option from that and overwrite
-    #    - get option from that (if exists) and overwrite
-
-    foreach my $conf (@$CONFIG_INIFILES) {
-        $set_value->(
-            __internal_option_from_array($conf, [ $DEFAULT_TAG, @arr_copy ]));
-        $set_value->(
-            __internal_option_from_array($conf, [ $first,       @arr_copy ]));
-    }
-
-    printf(STDERR "Returning value '%s' for [@$array]\n\n", defined($value) ? $value : 'undef')
-        if $DEBUG_CONFIG;
-
-    return $value;
-}
-
 sub parse_available_config_files {
     my @conf_files = ("/etc/otter_config");
     if ($ENV{'OTTER_HOME'}) {
@@ -275,85 +223,33 @@ sub options_from_file {
     return $ini;
 }
 
-sub __internal_option_from_array {
-    my ($inifiles, $array) = @_;
+sub config_value {
+    my ( $section, $key ) = @_;
 
-    #return unless tied(%$inifiles);    ### Why would this ever not be tied?
-    
-    if ($DEBUG_CONFIG) {
-        my $filename = tied(%$inifiles)->GetFileName() || 'no filename';
-
-        warn
-    "option from array inifile called // $inifiles @$array // looking at '$filename'\n";
-    }
-
-    my $param = pop @$array;
-    my $section = join(".", @$array);
-    warn sprintf "param '%s' and section '%s'\n", $param, $section
-      if $DEBUG_CONFIG;
-    my $value = undef;
-    my $found = 0;
-
-    my $stem_finder = sub {
-        my ($s, $p) = @_;
-        my $val  = {};
-        my $stem = "$s.$p";
-        foreach my $k (keys(%$inifiles)) {
-            $val = { %$val, ($1 => $inifiles->{$k}) } if $k =~ /^$stem\.(.+)/;
+    my $value;
+    foreach my $ini ( @$CONFIG_INIFILES ) {
+        foreach my $s ( 'default', $section ) {
+            my $v = $ini->{$s}{$key};
+            $value = $v if $v;
         }
-        return (scalar(keys(%$val)) ? $val : undef);
-    };
-
-    # get the explicit call for a parameter client host
-    if (exists $inifiles->{$section}{$param})
-    {
-
-        #print STDERR "1\n";
-        $value = $inifiles->{$section}{$param};
-        $found = 1;
-
-        # get the hash for a block [default.use_filters]
     }
-    elsif (exists $inifiles->{ $section . ".$param" }) {
 
-        #print STDERR "2\n";
-        $value = $inifiles->{ $section . ".$param" };
-        $found = 1;
-
-# get the hash for a block [default]. this is same as the above but for only single named stanzas!
-    }
-    elsif ((!$section) && exists $inifiles->{"$param"}) {
-
-        #print STDERR "3\n";
-        $value = $inifiles->{"$param"};
-        $found = 1;
-
-        # get the hash for a group of blocks [default.filter]
-        # will include [default.filter.repeatmask], [default.filter.cpg] ...
-        # this can be a pain, not sure stem finder is working as expected
-    }
-    elsif (my $stem = $stem_finder->($section, $param)) {
-
-        #print STDERR "4\n";
-        $value = $stem;
-        $found = 1;
-
-        # all the above failed to find the specified node of tree
-    }
-    else {
-
-        #print STDERR "5\n";
-        $found = 0;
-    }
-    return ($value, $found);
+    return $value;
 }
 
-sub fetch_group {
-    my ( $name ) = @_;
+sub config_section {
+    my ( $key1, $key2 ) = @_;
+
+    my @keys = ( "default.$key2", "$key1.$key2" );
+
     return {
         map {
-            my $stanza= $_->{$name};
-            defined $stanza ? %{$stanza} : ( );
+            my $ini = $_;
+            map {
+                my $key = $_;
+                my $section= $ini->{$key};
+                defined $section ? %{$section} : ( );
+            } @keys;
         } @$CONFIG_INIFILES,
     };
 }
