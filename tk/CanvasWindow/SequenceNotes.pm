@@ -559,7 +559,7 @@ sub hunt_for_selection {
     }
     
     if ($selected_text_obj) {
-        if ($selected_text_obj == $all_text_obj[$#all_text_obj]) {
+        if ($selected_text_obj == $all_text_obj[-1]) {
             # selected obj is last on list, so is to leave at end
         } else {
             for (my $i = 0; $i < @all_text_obj; $i++) {
@@ -773,7 +773,7 @@ sub selected_clones_string {
     } else {
         return sprintf "clones %d..%d",
             1 + $selected->[0],
-            1 + $selected->[$#$selected];
+            1 + $selected->[-1];
     }
 }
 
@@ -1645,8 +1645,8 @@ sub slice_window{
         $self->{'_slice_window'} = 
             $slice_window = TransientWindow::OpenSlice->new($master, 'Open a slice');
         my $cs_list = $self->SequenceSet->CloneSequence_list();
-        my $slice_start = $cs_list->[0]->chr_start       || 0;
-        my $set_end     = $cs_list->[$#$cs_list]->chr_end || 0;
+        my $slice_start = $cs_list->[0]->chr_start || 0;
+        my $set_end     = $cs_list->[-1]->chr_end  || 0;
         $slice_window->text_variable_ref('slice_start', $slice_start, 1);
         $slice_window->text_variable_ref('set_end'    , $set_end    , 1);
         $slice_window->action('runLace', sub{
