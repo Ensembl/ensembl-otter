@@ -690,7 +690,7 @@ sub delete_selected_exons {
     $self->deselect_all;
     my( %del_exon );
     foreach my $obj (@selected) {
-        my ($exon_id) = grep /^exon_id/, $canvas->gettags($obj);
+        my ($exon_id) = grep { /^exon_id/ } $canvas->gettags($obj);
         if ($exon_id) {
             $del_exon{$exon_id}++;
         }
@@ -1798,7 +1798,7 @@ sub make_labelled_text_widget {
         my @this_line = ("$line_start", "$line_start lineend");
         #warn "line start = $line_start";
         my $annotation_is_set = 0;
-        if (grep $_ eq $ann_tag, $text->tagNames("$line_start")) {
+        if (grep { $_ eq $ann_tag } $text->tagNames("$line_start")) {
             $annotation_is_set = 1;
             $text->tagRemove($ann_tag, @this_line);
         }
@@ -1903,7 +1903,7 @@ sub ignore_in_controlled_vocab {
 sub is_ctrl_vocab_char {
     my ($text, $posn) = @_;
 
-    return grep $_ eq $voc_tag, $text->tagNames($posn);
+    return grep { $_ eq $voc_tag } $text->tagNames($posn);
 }
 
 # Inserts (printing) characters with the same style as the rest of the line
@@ -1915,14 +1915,14 @@ sub insert_char {
     return unless $char =~ /[[:print:]]/;
 
     # Do not edit controlled vocabulary
-    return if grep $_ eq $voc_tag, $text->tagNames('insert linestart');
+    return if grep { $_ eq $voc_tag } $text->tagNames('insert linestart');
 
     # Expected behaviour is that any selected text will
     # be replaced by what the user types.
     $text->deleteSelected;
 
     # There will only ever be one or zero tags per line in out Text box.
-    my ($tag) = grep $_ eq $ann_tag, $text->tagNames('insert linestart');
+    my ($tag) = grep { $_ eq $ann_tag } $text->tagNames('insert linestart');
 
     $text->insert('insert', $char, $tag);
 
@@ -2292,7 +2292,7 @@ sub focus_on_current_text {
 
     my $canvas = $self->canvas;
     my ($obj) = $canvas->find('withtag', 'current') or return;
-    if (grep /translation_region|exon_pos/, $canvas->gettags($obj) ) {
+    if (grep { /translation_region|exon_pos/ } $canvas->gettags($obj) ) {
         $canvas->focus($obj);
 
         # Position the icursor at the end of the text
@@ -2325,7 +2325,7 @@ sub shift_left_button_handler {
         $self->highlight($obj);
     }
     elsif ($tags{'exon_furniture'}) {
-        my ($exon_id) = grep /^exon_id/, keys %tags;
+        my ($exon_id) = grep { /^exon_id/ } keys %tags;
         my( @select, @deselect );
         foreach my $ex_obj ($canvas->find('withtag', "exon_pos&&$exon_id")) {
             if ($self->is_selected($ex_obj)) {
@@ -2373,7 +2373,7 @@ sub set_tk_strand {
 
     my $canvas = $self->canvas;
     foreach my $obj ($canvas->find('withtag', $del_tag)) {
-        my @tags = grep $_ ne $del_tag, $canvas->gettags($obj);
+        my @tags = grep { $_ ne $del_tag } $canvas->gettags($obj);
         $canvas->delete($obj);
         my ($i) = map { /exon_id-(\d+)/ } @tags;
         #warn "Drawing strand indicator for exon $i\n";
@@ -2578,7 +2578,7 @@ sub update_splice_strings {
 
     my %exons_to_update;
     foreach my $obj ($canvas->find('withtag', $tag_or_id)) {
-        my ($exon_id) = grep /^exon_id/, $canvas->gettags($obj);
+        my ($exon_id) = grep { /^exon_id/ } $canvas->gettags($obj);
         $exons_to_update{$exon_id} = 1 if $exon_id;
     }
     
@@ -3124,7 +3124,7 @@ sub Exons_from_canvas {
     my $done_message = 0;
     my( @exons );
     foreach my $pp ($self->all_position_pair_text) {
-        confess "Error: Empty coordinate" if grep $_ == 0, @$pp;
+        confess "Error: Empty coordinate" if grep { $_ == 0 } @$pp;
         my $ex = Hum::Ace::Exon->new;
         $ex->start($pp->[0]);
         $ex->end  ($pp->[1]);
