@@ -54,7 +54,7 @@ sub SequenceSetChooser {
 
 
 sub LocalDatabaseFactory {
-    my $self = shift @_;
+    my( $self ) = @_;
 
     return $self->SequenceSetChooser->LocalDatabaseFactory();
 }
@@ -296,7 +296,7 @@ sub max_column_width {
 }
 
 sub write_access_var_ref {
-    my $self = shift @_;
+    my( $self ) = @_;
 
     unless(exists($self->{'_write_access_var'})) {
         $self->{'_write_access_var'} = $self->Client->write_access && $self->SequenceSet->write_access;
@@ -457,7 +457,7 @@ sub initialise {
 }
 
 sub current_page_var_ref {
-    my $self = shift @_;
+    my( $self ) = @_;
 
     unless(exists($self->{'_curr_page_var'})) {
         $self->{'_curr_page_var'} = 1;
@@ -466,14 +466,14 @@ sub current_page_var_ref {
 }
 
 sub go_left {
-    my $self = shift @_;
+    my( $self ) = @_;
     ${$self->current_page_var_ref}--;
     warn "Go_left button pressed\n";
     return;
 }
 
 sub go_right {
-    my $self = shift @_;
+    my( $self ) = @_;
     ${$self->current_page_var_ref}++;
     warn "Go_right button pressed\n";
     return;
@@ -792,11 +792,13 @@ sub get_rows_list{
 }
 
 sub _min {
-    return ($_[0]<$_[1]) ? $_[0] : $_[1];
+    my ($x0, $x1) = @_;
+    return ($x0<$x1) ? $x0 : $x1;
 }
 
 sub _max {
-    return ($_[0]<$_[1]) ? $_[1] : $_[0];
+    my ($x0, $x1) = @_;
+    return ($x0<$x1) ? $x1 : $x0;
 }
 
 sub _sanity_check{
@@ -946,9 +948,9 @@ sub draw_all {
 }
 
 sub current_subset_tag {
-    my $self = shift @_;
+    my ($self, @args) = @_;
 
-    $self->{'_current_subset_tag'} = shift @_ if @_;
+    $self->{'_current_subset_tag'} = shift @args if @args;
 
     return $self->{'_current_subset_tag'};
 }
@@ -1042,14 +1044,14 @@ sub draw_range {
 }
 
 sub _allow_paging {
-    my $self = shift;
-    $self->{'_allow_paging'} = shift if @_;
+    my ($self, @args) = @_;
+    $self->{'_allow_paging'} = shift @args if @args;
     return ($self->{'_allow_paging'} ? 1 : 0);
 }
 
 sub _currently_paging {
-    my $self = shift;
-    $self->{'_currently_paging'} = shift if @_;
+    my ($self, @args) = @_;
+    $self->{'_currently_paging'} = shift @args if @args;
     return ($self->{'_currently_paging'} ? 1 : 0);
 }
 
@@ -1248,7 +1250,7 @@ sub selected_CloneSequence_indices {
 }
 
 sub get_current_CloneSequence_index {
-    my $self = shift @_ ;
+    my( $self ) = @_ ;
     my $canvas = $self->canvas;
     my ($obj) = $canvas->find('withtag', 'current') or return;
      
