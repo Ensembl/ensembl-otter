@@ -149,7 +149,7 @@ sub fill_Properties {
     
     my $key = $self->keyword_text;
     $key->delete('1.0', 'end');
-    $key->insert('end', join '', map("$_\n", $clone->get_all_keywords));
+    $key->insert('end', join '', map { "$_\n" } $clone->get_all_keywords);
     
     my $desc = $self->description_text;
     $desc->delete('1.0', 'end');
@@ -157,7 +157,7 @@ sub fill_Properties {
     
     my $rem = $self->remark_text;
     $rem->delete('1.0', 'end');
-    $rem->insert('end', join '', map("$_\n", $clone->get_all_remarks));
+    $rem->insert('end', join '', map { "$_\n" } $clone->get_all_remarks);
 
     return;
 }
