@@ -284,7 +284,7 @@ sub initialize {
         $canvas->Tk::bind('<BackSpace>', sub{ $self->canvas_backspace      });
 
         # For entering digits into the text object which has keyboard focus
-        $canvas->eventAdd('<<digit>>', map "<KeyPress-$_>", 0..9);
+        $canvas->eventAdd('<<digit>>', map { "<KeyPress-$_>" } 0..9);
         $canvas->Tk::bind('<<digit>>', [sub{ $self->canvas_insert_character(@_) }, Tk::Ev('A')]);
 
         # Increases the number which has keyboard focus
@@ -506,7 +506,7 @@ sub add_subseq_exons {
                 confess "only got ", scalar(@del), " elements, not '$length'";
             }
             my $canvas = $self->canvas;
-            foreach my $exon_id (map $_->[2], @del) {
+            foreach my $exon_id (map { $_->[2] } @del) {
                 $canvas->delete($exon_id);
             }
             $self->decrement_exon_counter($length);
@@ -2375,7 +2375,7 @@ sub set_tk_strand {
     foreach my $obj ($canvas->find('withtag', $del_tag)) {
         my @tags = grep $_ ne $del_tag, $canvas->gettags($obj);
         $canvas->delete($obj);
-        my ($i) = map /exon_id-(\d+)/, @tags;
+        my ($i) = map { /exon_id-(\d+)/ } @tags;
         #warn "Drawing strand indicator for exon $i\n";
         my( $size, $half, $pad, $text_len,
             $x1, $y1, $x2, $y2 ) = $self->exon_holder_coords($i - 1);
@@ -2486,7 +2486,7 @@ sub middle_button_paste {
             if ($start > $end) {
                 ($start, $end) = ($end, $start);
             }
-            my ($exon_num) = map /exon_id-(\d+)/, keys %obj_tags;
+            my ($exon_num) = map { /exon_id-(\d+)/ } keys %obj_tags;
             warn "start=$start end=$end exon=$exon_num";
             my $pp = ($self->position_pairs)[$exon_num - 1];
             $self->set_position_pair_text($pp, [$start, $end]);
@@ -2593,7 +2593,7 @@ sub update_splice_strings {
         
     foreach my $exon_id (keys %exons_to_update) {
         
-        my ($start, $end) = map $canvas->itemcget($_, 'text'), $canvas->find('withtag', "$exon_id&&exon_pos");
+        my ($start, $end) = map { $canvas->itemcget($_, 'text') } $canvas->find('withtag', "$exon_id&&exon_pos");
         if ($start > $end) {
             ($start, $end) = ($end, $start);
         }
