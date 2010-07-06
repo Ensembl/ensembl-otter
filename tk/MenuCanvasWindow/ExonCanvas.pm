@@ -400,6 +400,8 @@ sub initialize {
 
     $top->update;
     $self->fix_window_min_max_sizes;
+
+    return;
 }
 
 
@@ -452,6 +454,8 @@ sub add_subseq_exons {
     }
     
     $self->remove_spurious_splice_sites;
+
+    return;
 }
 
 {
@@ -479,6 +483,8 @@ sub add_subseq_exons {
         }
         $self->{$pp_field} ||= [];
         push(@{$self->{$pp_field}}, [@pair_and_id]);
+
+        return;
     }
 
     sub next_position_pair_index {
@@ -509,6 +515,8 @@ sub add_subseq_exons {
         }
         $self->set_tk_strand($strand) if $strand;
         $self->position_mobile_elements;
+
+        return;
     }
 }
 
@@ -548,6 +556,8 @@ sub set_position_pair_text {
         $canvas->itemconfigure($obj, -text => $pos);
     }
     $self->update_splice_strings($text_pair->[0]);
+
+    return;
 }
 
 sub set_all_position_pair_text {
@@ -562,6 +572,8 @@ sub set_all_position_pair_text {
         $self->set_position_pair_text($pp_list[$i], $coord[$i]);
     }
     $self->update_splice_strings('exon_start');
+
+    return;
 }
 
 sub sort_all_coordinates {
@@ -570,6 +582,8 @@ sub sort_all_coordinates {
     $self->delete_was_selected;
     $self->sort_position_pairs;
     $self->sort_translation_region;
+
+    return;
 }
 
 sub sort_position_pairs {
@@ -607,6 +621,8 @@ sub sort_position_pairs {
     $self->highlight(@select) if @select;
     $self->update_splice_strings('exon_start');
     $self->remove_spurious_splice_sites;
+
+    return;
 }
 
 sub sort_translation_region {
@@ -621,6 +637,8 @@ sub sort_translation_region {
         $self->tk_t_start($region[1]);
         $self->tk_t_end  ($region[0]);
     }
+
+    return;
 }
 
 sub merge_position_pairs {
@@ -660,6 +678,8 @@ sub merge_position_pairs {
     }
     
     $self->remove_spurious_splice_sites;
+
+    return;
 }
 
 sub delete_selected_exons {
@@ -707,6 +727,8 @@ sub delete_selected_exons {
     }
         
     $self->fix_window_min_max_sizes;
+
+    return;
 }
 
 sub exon_strand_from_tk {
@@ -729,6 +751,8 @@ sub add_coordinate_pair {
         ($start, $end) = ($end, $start);
     }
     $self->add_exon_holder($start, $end, $strand);
+
+    return;
 }
 
 sub draw_subseq {
@@ -738,6 +762,8 @@ sub draw_subseq {
     $self->add_subseq_exons($sub);
     $self->draw_translation_region($sub);
     $self->evidence_hash($sub->clone_evidence_hash);
+
+    return;
 }
 
 sub is_mutable {
@@ -803,6 +829,8 @@ sub show_subseq {
     my $success = $self->XaceSeqChooser->zMapZoomToSubSeq($self->SubSeq);
     
     $self->message("Zmap not running") unless $success;
+
+    return;
 }
 
 sub show_peptide {
@@ -932,6 +960,8 @@ sub show_peptide {
         $win->deiconify;
         $win->raise;
     }
+
+    return;
 }
 
 sub search_pfam {
@@ -979,6 +1009,8 @@ sub search_pfam {
         $self->{'_pfam'} = $pfam;
         $pfam->initialize();
     }
+
+    return;
 }
 
 sub update_translation {
@@ -1132,6 +1164,8 @@ sub save_OtterTranscript_evidence {
         push @$evi_list, $name;
     }
     $self->evidence_hash($evi_hash);
+
+    return;
 }
 
 sub check_kozak{
@@ -1273,6 +1307,7 @@ sub check_kozak{
     $kozak_window->deiconify;
     $kozak_window->raise ;
 
+    return;
 }
 
 sub trim_cds_coord_to_current_methionine {
@@ -1288,6 +1323,8 @@ sub trim_cds_coord_to_current_methionine {
 
     # Highlight the translation end if we have changed it
     $self->highlight('t_start') if $new != $original;
+
+    return;
 }
 
 sub trim_cds_coord_to_first_stop {
@@ -1357,6 +1394,8 @@ sub trim_cds_coord_to_first_stop {
         $pos = $exon_end;
     }
     $self->message("Failed to map coordinate");
+
+    return;
 }
 
 sub add_locus_editing_widgets {
@@ -1477,6 +1516,8 @@ sub update_Locus_tk_fields {
     }
 
     $self->update_locus_remark_widget($locus);
+
+    return;
 }
 
 # Locus renaming plan
@@ -1528,6 +1569,8 @@ sub rename_locus {
 
     my $name = $self->get_locus_name or return;
     $self->XaceSeqChooser->rename_locus($name);
+
+    return;
 }
 
 sub update_Locus {
@@ -1535,6 +1578,8 @@ sub update_Locus {
 
     $self->update_Locus_tk_fields($locus);
     $self->SubSeq->Locus($locus);
+
+    return;
 }
 
 my $ann_tag = 'Annotation';
@@ -1544,12 +1589,16 @@ sub update_transcript_remark_widget {
     my( $self, $sub ) = @_;
 
     $self->update_remark_Entry($self->transcript_remark_Entry, $self->XaceSeqChooser->vocab_transcript, $sub);
+
+    return;
 }
 
 sub update_locus_remark_widget {
     my( $self, $locus ) = @_;
 
     $self->update_remark_Entry($self->locus_remark_Entry, $self->XaceSeqChooser->vocab_locus, $locus);
+
+    return;
 }
 
 sub update_remark_Entry {
@@ -1570,6 +1619,8 @@ sub update_remark_Entry {
             "\n"        => '',
         );
     }
+
+    return;
 }
 
 sub add_transcript_remark_widget {
@@ -1578,6 +1629,8 @@ sub add_transcript_remark_widget {
     my $rt = $self->make_labelled_text_widget($widget, 'Remarks', $tsct_attrib_menu, -anchor => 'se');
     $self->transcript_remark_Entry($rt);
     $self->update_transcript_remark_widget($self->SubSeq);
+
+    return;
 }
 
 sub add_subseq_rename_widget {
@@ -1586,18 +1639,24 @@ sub add_subseq_rename_widget {
     $self->subseq_name_Entry(
         $self->make_labelled_entry_widget($widget, 'Name', $self->SubSeq->name, 22, -side => 'top')
         );
+
+    return;
 }
 
 sub populate_transcript_attribute_menu {
     my ($self, $menu) = @_;
     
     $self->populate_attribute_menu($menu, $self->transcript_remark_Entry, $self->XaceSeqChooser->vocab_transcript);
+
+    return;
 }
 
 sub populate_locus_attribute_menu {
     my ($self, $menu) = @_;
     
     $self->populate_attribute_menu($menu, $self->locus_remark_Entry, $self->XaceSeqChooser->vocab_locus);
+
+    return;
 }
 
 sub populate_attribute_menu {
@@ -1611,6 +1670,8 @@ sub populate_attribute_menu {
             },
         );
     }
+
+    return;
 }
 
 sub make_labelled_text_widget {
@@ -1753,6 +1814,8 @@ sub post_ctrl_vocab_menu {
     my ($text, $menu, $x, $y) = @_;
 
     $menu->Post($x, $y);
+
+    return;
 }
 
 sub insert_phrase {
@@ -1776,6 +1839,8 @@ sub insert_phrase {
             );
     }
     $text->see($see_i);
+
+    return;
 }
 
 sub backspace_delete_whole_ctrl_vocab_line {
@@ -1794,6 +1859,8 @@ sub backspace_delete_whole_ctrl_vocab_line {
             $text->break;
         }
     }
+
+    return;
 }
 
 sub forward_delete_whole_ctrl_vocab_line {
@@ -1810,6 +1877,8 @@ sub forward_delete_whole_ctrl_vocab_line {
             $text->break;
         }
     }
+
+    return;
 }
 
 sub ignore_in_controlled_vocab {
@@ -1827,6 +1896,8 @@ sub ignore_in_controlled_vocab {
     if (is_ctrl_vocab_char($text, $posn)) {
         $text->break;
     }
+
+    return;
 }
 
 sub is_ctrl_vocab_char {
@@ -1854,6 +1925,8 @@ sub insert_char {
     my ($tag) = grep $_ eq $ann_tag, $text->tagNames('insert linestart');
 
     $text->insert('insert', $char, $tag);
+
+    return;
 }
 
 sub make_labelled_entry_widget {
@@ -1949,6 +2022,8 @@ sub add_start_end_method_widgets {
     $self->{'_end_not_found_variable'} = \$enf;
 
     $om->bind('<Destroy>', sub{ $self = undef });
+
+    return;
 }
 
 sub start_not_found_from_tk {
@@ -2021,6 +2096,8 @@ sub get_remarks_from_Entry {
     }
     $obj->set_remarks(@$rem);
     $obj->set_annotation_remarks(@$ann_rem);
+
+    return;
 }
 
 sub locus_description_Entry {
@@ -2080,6 +2157,8 @@ sub set_subseq_name {
     my $entry = $self->subseq_name_Entry;
     $entry->delete(0, 'end');
     $entry->insert(0, $new);
+
+    return;
 }
 
 sub method_name_var {
@@ -2106,6 +2185,8 @@ sub canvas_insert_character {
     $self->re_highlight($text);
     $self->update_splice_strings($text);
     $self->remove_spurious_splice_sites;
+
+    return;
 }
 
 sub increment_int {
@@ -2121,6 +2202,8 @@ sub increment_int {
         $self->update_splice_strings($text);
         $self->remove_spurious_splice_sites;
     }
+
+    return;
 }
 
 sub decrement_int {
@@ -2136,6 +2219,8 @@ sub decrement_int {
         $self->update_splice_strings($text);
         $self->remove_spurious_splice_sites;
     }
+
+    return;
 }
 
 sub canvas_text_go_left {
@@ -2145,6 +2230,8 @@ sub canvas_text_go_left {
     my $text = $canvas->focus or return;
     my $pos = $canvas->index($text, 'insert');
     $canvas->icursor($text, $pos - 1);
+
+    return;
 }
 
 sub canvas_text_go_right {
@@ -2154,6 +2241,8 @@ sub canvas_text_go_right {
     my $text = $canvas->focus or return;
     my $pos = $canvas->index($text, 'insert');
     $canvas->icursor($text, $pos + 1);
+
+    return;
 }
 
 sub canvas_backspace {
@@ -2167,6 +2256,8 @@ sub canvas_backspace {
     $self->re_highlight($text);
     $self->update_splice_strings($text);
     $self->remove_spurious_splice_sites;
+
+    return;
 }
 
 sub select_all_exon_pos {
@@ -2182,6 +2273,8 @@ sub delete_chooser_window_ref {
     my $name = $self->name;
     my $xc = $self->XaceSeqChooser;
     $xc->delete_subseq_edit_window($name);
+
+    return;
 }
 
 sub left_button_handler {
@@ -2190,6 +2283,8 @@ sub left_button_handler {
     return if $self->delete_message;
     $self->deselect_all;
     $self->shift_left_button_handler;
+
+    return;
 }
 
 sub focus_on_current_text {
@@ -2210,6 +2305,8 @@ sub focus_on_current_text {
         }
         $canvas->focus($obj);
     }
+
+    return;
 }
 
 sub shift_left_button_handler {
@@ -2240,6 +2337,8 @@ sub shift_left_button_handler {
         $self->remove_selected(@deselect) if @deselect;
         $self->highlight(@select)         if @select;
     }
+
+    return;
 }
 
 sub control_left_button_handler {
@@ -2256,6 +2355,8 @@ sub control_left_button_handler {
     }
     $self->update_splice_strings($obj);
     $self->remove_spurious_splice_sites;
+
+    return;
 }
 
 sub set_tk_strand {
@@ -2283,6 +2384,8 @@ sub set_tk_strand {
 
     $self->sort_all_coordinates;
     $self->remove_spurious_splice_sites;
+
+    return;
 }
 
 sub toggle_tk_strand {
@@ -2293,6 +2396,8 @@ sub toggle_tk_strand {
     } else {
         $self->set_tk_strand(1);
     }
+
+    return;
 }
 
 sub empty_string {
@@ -2318,6 +2423,8 @@ sub deselect_all {
     $canvas->focus("");
 
     $self->SUPER::deselect_all;
+
+    return;
 }
 
 sub export_highlighted_text_to_selection {
@@ -2405,6 +2512,8 @@ sub middle_button_paste {
     }
     
     $self->remove_spurious_splice_sites;
+
+    return;
 }
 
 sub next_exon_holder_coords {
@@ -2507,6 +2616,8 @@ sub update_splice_strings {
             $don_str =~ /(.gt|ggc)/ ? @good : @bad,
         );
     }
+
+    return;
 }
 
 sub remove_spurious_splice_sites {
@@ -2526,6 +2637,8 @@ sub remove_spurious_splice_sites {
     
     my ($donor_txt) = $canvas->find('withtag', "$terminal_exon_id&&splice_donor");
     $canvas->itemconfigure($donor_txt, -text => '');
+
+    return;
 }
 
 sub get_splice_acceptor_donor_strings {
@@ -2631,6 +2744,8 @@ sub position_mobile_elements {
     my $fixed_bottom = ($canvas->bbox('!mobile'))[3] + $pad;
 
     $canvas->move('mobile', 0, $fixed_bottom - $mobile_top);
+
+    return;
 }
 
 sub draw_plus {
@@ -2656,6 +2771,8 @@ sub draw_plus {
         -outline    => 'DimGrey',
         -joinstyle  => 'miter',
         );
+
+    return;
 }
 
 sub draw_minus {
@@ -2670,6 +2787,8 @@ sub draw_minus {
         -fill       => 'grey',
         -outline    => 'DimGrey',
         );
+
+    return;
 }
 
 sub strand_from_tk {
@@ -2771,6 +2890,8 @@ sub strand_from_tk {
             -font   => $font,
             -tags   => ['t_end', $tr_tag],
             );
+
+        return;
     }
 
     sub translation_region_from_tk {
@@ -2875,6 +2996,8 @@ sub manage_locus_otter_ids {
             $self->message("Locus object '$new_locus_name' has now stolen Otter ID from '$old_locus_name'");
         }
     }
+
+    return;
 }
 
 sub new_SubSeq_from_tk {
@@ -2920,6 +3043,8 @@ sub save_if_changed {
     if ($@) {
         $self->exception_message($@, 'Error saving transcript');
     }
+
+    return;
 }
 
 sub xace_save {
@@ -2989,6 +3114,8 @@ sub zmap_save {
     #print STDERR "Sending:\n", @xml;
 
     $self->XaceSeqChooser->send_zmap_commands(@xml);
+
+    return;
 }
 
 sub Exons_from_canvas {
@@ -3027,6 +3154,8 @@ sub check_for_errors {
     } else {
         $self->message('Transcript OK');
     }
+
+    return;
 }
 
 sub run_dotter {
@@ -3085,6 +3214,8 @@ sub decrement_exon_counter {
 
     confess "No count given" unless defined $count;
     $self->{'_max_exon_number'} -= $count;
+
+    return;
 }
 
 sub DESTROY {
@@ -3092,6 +3223,8 @@ sub DESTROY {
 
     my $name = $self->name;
     warn "Destroying ExonCanvas: '$name'\n";
+
+    return;
 }
 
 sub icon_pixmap {
