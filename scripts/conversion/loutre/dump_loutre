@@ -115,6 +115,7 @@ use Bio::EnsEMBL::Utils::ConversionSupport;
 use Bio::EnsEMBL::Gene;
 use Bio::EnsEMBL::Transcript;
 use Bio::EnsEMBL::Exon;
+use Bio::Vega::AuthorGroup;
 
 $| = 1;
 
@@ -732,9 +733,13 @@ sub transfer_gene {
   my $lgene = shift;
 
   unless ($AUTHOR) {
-    if ($lgene->gene_author->group->name eq 'havana') {
-      $AUTHOR = $lgene->gene_author;
+    if (! $lgene->gene_author->group) {
+      $lgene->gene_author->group = Bio::Vega::AuthorGroup->new(
+	NAME  => 'havana',
+	EMAIL => 'vega@sanger.ac.uk',
+      );
     }
+    $AUTHOR = $lgene->gene_author;
   }
 
   my $l_gene_slice = $lgene->slice;
