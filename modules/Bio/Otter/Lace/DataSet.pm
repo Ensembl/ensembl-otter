@@ -173,9 +173,18 @@ sub _gff_filter_state {
 
 sub config_section {
     my ($self, $section) = @_;
+    return $self->Client->config_section($self->config_name, $section);
+}
+
+sub config_value_list_merged {
+    my ($self, @keys) = @_;
+    return $self->Client->config_value_list_merged($self->config_name, @keys);
+}
+
+sub config_name {
+    my ($self) = @_;
     my $name = $self->ALIAS || $self->name;
-    my $config = $self->Client->config_section($name, $section);
-    return $config;
+    return $name;
 }
 
 sub meta_hash {
