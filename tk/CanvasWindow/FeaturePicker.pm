@@ -72,6 +72,8 @@ sub next_match {
         $self->highlight($obj);
         $self->scroll_to_obj($obj);
     }
+
+    return;
 }
 
 sub select_feature {
@@ -83,6 +85,8 @@ sub select_feature {
     if (my ($current) = $canvas->find('withtag', 'current')) {
         $self->highlight($current);
     }
+
+    return;
 }
 
 sub show_selected_in_zmap {
@@ -121,6 +125,8 @@ sub show_selected_in_zmap {
         $zmap_rem->send_command($command);
     };
     $self->exception_message($@) if $@;
+
+    return;
 }
 
 sub parse_feature_filehandle {
@@ -169,6 +175,8 @@ sub parse_feature_filehandle {
             };
         push(@$feat_list, $match);
     }
+
+    return;
 }
 
 sub feature_list {
@@ -228,6 +236,8 @@ sub draw_feature_list {
     }
     
     $self->fix_window_min_max_sizes;
+
+    return;
 }
 
 sub zmap_remote {
@@ -247,6 +257,8 @@ sub attach_zmap {
         my $xrem = Hum::Ace::XaceRemote->new($xwid);
         $self->zmap_remote($xrem);
     }
+
+    return;
 }
 
 sub get_zmap_window_id {
@@ -272,6 +284,7 @@ sub get_zmap_window_id {
         return $xwid;
     } else {
         $self->message("Error running xwininfo: exit $?");
+        return;
     }
 }
 
