@@ -578,22 +578,16 @@ sub zMapZMapDefaults {
     my $show_mainwindow =
         $self->AceDatabase->Client->config_value('zmap_main_window');
 
-    my $gff_filters =
-        $self->AceDatabase->smart_slice->DataSet->gff_filters;
+    my $dataset = $self->AceDatabase->smart_slice->DataSet;
 
     my $sources_string =
         join ' ; ',
         $self->slice_name,
-        ( map { $_->name } @{$gff_filters} ),
+        ( map { $_->name } @{$dataset->gff_filters} ),
         ;
 
-    my $columns = { };
-    $columns->{$_->zmap_column || $_->name}++ foreach @{$gff_filters};
-    my $columns_string =
-        join ' ; ', 
-        $self->zMapListMethodNames_ordered,
-        keys %{$columns},
-        ;
+    my $columns = $dataset->config_value_list_merged('zmap_config', 'columns');
+    my @columns = $columns ? ( columns => join ' ; ', @{$columns} ) : ( );
 
     my $pfetch_www = $ENV{'PFETCH_WWW'};
     my $pfetch_url = $self->AceDatabase->Client->url_root . '/nph-pfetch';
@@ -605,10 +599,10 @@ sub zMapZMapDefaults {
         'cookie-jar'        => $ENV{'OTTERLACE_COOKIE_JAR'},
         'script-dir'        => $ENV{'OTTER_HOME'}.'/ensembl-otter/scripts',
         'xremote-debug'     => $ZMAP_DEBUG ? 'true' : 'false',
-        'columns'           => $columns_string,
         'pfetch-mode'       => ( $pfetch_www ? 'http' : 'pipe' ),
         'pfetch'            => ( $pfetch_www ? $pfetch_url : 'pfetch' ),
-        %{ $self->AceDatabase->smart_slice->DataSet->config_section('zmap') },
+        @columns,
+        %{ $dataset->config_section('zmap') },
         );
 }
 
