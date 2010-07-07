@@ -21,8 +21,6 @@ our %EXPORT_TAGS = ('caching' => [@EXPORT_OK],
                     'all'     => [@EXPORT_OK]
                     );
 
-my $DEBUG_FORK_EXEC = 0;
-
 =pod
 
 =head1 NAME
