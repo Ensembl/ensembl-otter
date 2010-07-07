@@ -127,6 +127,8 @@ sub clear_font_caches {
     $self->{'_font_fixed'}      = undef;
     $self->{'_font_fixed_bold'} = undef;
     $self->{'_font_unit_width'} = undef;
+
+    return;
 }
 
 sub xlfd_array {
@@ -345,6 +347,8 @@ sub bind_scroll_commands {
 			});
 		}
 	}
+
+    return;
 }
 
 sub scroll_to_obj {
@@ -406,6 +410,8 @@ sub scroll_to_obj {
     } else {
         # warn "object is visible in y axis\n";
     }
+
+    return;
 }
 
 sub fix_window_min_max_sizes {
@@ -448,6 +454,8 @@ sub fix_window_min_max_sizes {
     my $geom = "${max_x}x$max_y+$x+$y";
     $mw->geometry($geom);
     #$mw->deiconify;
+
+    return;
 }
 
 sub set_scroll_region_and_maxsize {
@@ -772,6 +780,8 @@ sub exception_message {
     print STDERR $except;
 
     $self->message(@message, $except_first);
+
+    return;
 }
 
 sub message {
@@ -909,6 +919,8 @@ sub next_message_id {
             $canvas->lower($r, $o);
             $self->add_selected($o, $r);
         }
+
+        return;
     }
 
     sub re_highlight {
@@ -925,6 +937,8 @@ sub next_message_id {
             $bbox[3] += 1;
             $canvas->coords($r, @bbox);
         }
+
+        return;
     }
 
     # Extends the set of highlighted objects to include
@@ -947,6 +961,8 @@ sub next_message_id {
             next if $self->is_selected($obj);
             $self->highlight($obj);
         }
+
+        return;
     }
 
     sub deselect_all {
@@ -963,6 +979,8 @@ sub next_message_id {
             $self->{'_selected_list'} = undef;
             $self->{'_was_selected_list'} = $sel;
         }
+
+        return;
     }
 
     sub delete_was_selected {
@@ -972,12 +990,16 @@ sub next_message_id {
             $self->canvas->delete($was_tag);
             $self->{'_was_selected_list'} = undef;
         }
+
+        return;
     }
 
     sub add_selected {
         my( $self, $obj, $rect ) = @_;
 
         $self->{'_selected_list'}{$obj} = $rect;
+
+        return;
     }
 
     sub remove_selected {
@@ -990,6 +1012,8 @@ sub next_message_id {
                 delete($self->{'_selected_list'}{$o});
             }
         }
+
+        return;
     }
 
     sub is_selected {
