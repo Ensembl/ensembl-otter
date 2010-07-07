@@ -237,6 +237,51 @@ sub config_value {
     return $value;
 }
 
+sub config_value_list_merged {
+    my ( $key1, $key2, $name ) = @_;
+
+    my @keys = ( "default.$key2", "$key1.$key2" );
+
+    my $values;
+    foreach my $ini ( @$CONFIG_INIFILES ) {
+        foreach my $key ( @keys ) {
+            my $vs = $ini->{$key}{$name};
+            next unless $vs && @{$vs};
+            if ( $values ) {
+                _config_value_list_merge($values, $vs);
+            }
+            else {
+                $values = $vs;
+            }
+        }
+    }
+
+    return $values;
+}
+
+sub _config_value_list_merge {
+    my ( $values, $vs ) = @_;
+
+    # hash the new values
+    my $vsh = { };
+    $vsh->{$_}++ foreach @{$vs};
+
+    # find the position of the first new value in the current list
+    my $pos = 0;
+    foreach ( @{$values} ) {
+        last if $vsh->{$_};
+        $pos++;
+    }
+
+    # remove any existing copies of the new values
+    @{$values} = grep { ! $vsh->{$_} } @{$values};
+
+    # splice the new values into place
+    splice @{$values}, $pos, 0, @{$vs};
+
+    return;
+}
+
 sub config_section {
     my ( $key1, $key2 ) = @_;
 
