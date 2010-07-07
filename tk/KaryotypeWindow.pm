@@ -51,6 +51,8 @@ sub add_Chromosome {
     confess "Missing Chromosome argument" unless $chr;
     my $lst = $self->{'_Chromosome_list'} ||= [];
     push ( @$lst, $chr );
+
+    return;
 }
 
 sub new_Chromosome {
@@ -85,6 +87,8 @@ sub draw {
     
     $self->draw_legend($x, $y);
     $self->canvas->raise('histogram_bar', 'all');
+
+    return;
 }
 
 sub draw_legend {
@@ -141,6 +145,8 @@ sub draw_legend {
         # Move pointer to the right for next label
         $x = ($canvas->bbox('scale_label'))[2] + $pad;
     }
+
+    return;
 }
 
 sub draw_chromsome_set {
@@ -252,6 +258,8 @@ sub process_graph_data_file {
     if (my @none_such = sort keys %$data) {
         warn "No such chromosomes:\n", map "  $_\n", @none_such;
     }
+
+    return;
 }
 
 
