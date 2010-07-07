@@ -191,7 +191,7 @@ sub fork_exec {
     sub newXMLObj{
         my ($type) = @_;
         $type = lc $type;
-        if(grep /^$type$/, @TYPES){
+        if(grep { /^$type$/ } @TYPES){
             my $obj = [];
             $obj->[0] = $type;
             $obj->[1] = { %{$encodedXSD->{$type}} };
@@ -205,7 +205,7 @@ sub fork_exec {
         my ($obj, $name, $value) = @_;
         return unless $obj && $name && defined($value) && ref($obj) eq 'ARRAY';
         my $type = $obj->[0];
-        if((grep /$type/, @TYPES) && exists($encodedXSD->{$type}->{$name})){
+        if((grep { /$type/ } @TYPES) && exists($encodedXSD->{$type}->{$name})){
             if(ref($encodedXSD->{$type}->{$name}) eq 'ARRAY'){
                 push(@{$obj->[1]->{$name}}, $value);
             }else{
