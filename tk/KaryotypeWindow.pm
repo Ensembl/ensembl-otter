@@ -256,7 +256,7 @@ sub process_graph_data_file {
     }
     
     if (my @none_such = sort keys %$data) {
-        warn "No such chromosomes:\n", map "  $_\n", @none_such;
+        warn "No such chromosomes:\n", map { "  $_\n" } @none_such;
     }
 
     return;
