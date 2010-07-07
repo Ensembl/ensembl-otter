@@ -217,7 +217,7 @@ sub minimum_scroll_bbox {
             unless $count == 4;
         foreach my $i (@min_scroll) {
             confess("Non-integer value in: (",
-                join(', ', map "'$_'", @min_scroll), ")")
+                join(', ', map { "'$_'" } @min_scroll), ")")
                 unless $i =~ /^-?\d+$/;
         }
         $self->{'_min_scroll_bbox'} = [@min_scroll];
@@ -876,7 +876,7 @@ sub delete_message {
     unless ($msg_id) {
         my ($obj) = $canvas->find('withtag', 'current');
         if ($obj) {
-            ($msg_id) = grep /^message_id=/, $canvas->gettags($obj);
+            ($msg_id) = grep { /^message_id=/ } $canvas->gettags($obj);
         }
     }
     if ($msg_id) {
@@ -957,7 +957,7 @@ sub next_message_id {
 
         foreach my $obj ($canvas->find('withtag', $search)) {
             next unless $in_region{$obj};
-            next if grep $_ eq $sel_tag, $canvas->gettags($obj);
+            next if grep { $_ eq $sel_tag } $canvas->gettags($obj);
             next if $self->is_selected($obj);
             $self->highlight($obj);
         }
