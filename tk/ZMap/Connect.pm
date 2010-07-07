@@ -108,6 +108,8 @@ sub init{
 
     $self->widget($tk);
     $self->respond_handler($callback, $data);
+
+    return;
 }
 
 =head2 connect_request( )
@@ -231,6 +233,8 @@ sub protocol_add_request {
     my ($self, $hash) = @_;
     
     $hash->{'request'} = [ xml_escape($self->_current_request_string) ];
+
+    return;
 }
 
 sub protocol_add_meta {
@@ -242,6 +246,8 @@ sub protocol_add_meta {
         application => $self->xremote->application,
         version     => $self->xremote->version,
     };
+
+    return;
 }
 
 =head1 SETUP METHODS
@@ -349,6 +355,8 @@ sub respond_handler{
             "my \$c = ".__PACKAGE__."->new([options]);\n" .
             "\$c->init(\$tk, \$callback, \$callback_data);\n";
     }
+
+    return;
 }
 
 
@@ -421,12 +429,16 @@ sub _do_callback{
         my @post_data = @{$self->__post_callback_data()};
         $post_cb->($self, @post_data);
     }
+
+    return;
 }
 
 sub _drop_current_request_string {
     my ($self) = @_;
     
     $self->{'_current_request_string'} = undef;
+
+    return;
 }
 
 sub _current_request_string {
@@ -470,6 +482,7 @@ sub __post_callback{
 sub DESTROY{
     my ($self) = @_;
     warn "Destroying $self";
+    return;
 }
 
 1;
