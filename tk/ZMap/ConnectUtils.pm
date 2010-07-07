@@ -15,13 +15,11 @@ our @EXPORT_OK = qw(parse_params
                     obj_make_xml
                     newXMLObj
                     setObjNameValue
-                    $WAIT_VARIABLE
                     fork_exec
                     );
 our %EXPORT_TAGS = ('caching' => [@EXPORT_OK],
                     'all'     => [@EXPORT_OK]
                     );
-our $WAIT_VARIABLE = 0;
 
 my $DEBUG_FORK_EXEC = 0;
 
