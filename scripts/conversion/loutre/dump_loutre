@@ -735,11 +735,11 @@ sub transfer_gene {
   unless ($AUTHOR) {
     if (! $lgene->gene_author->group) {
       $AUTHOR = Bio::Vega::Author->new(
-									NAME  => 'vega',
-									EMAIL => 'vega.sanger.ac.uk',
-									GROUP => Bio::Vega::AuthorGroup->new(
-														NAME  => 'havana',
-														EMAIL => 'vega@sanger.ac.uk',
+									-NAME  => 'vega',
+									-EMAIL => 'vega.sanger.ac.uk',
+									-GROUP => Bio::Vega::AuthorGroup->new(
+														-NAME  => 'havana',
+														-EMAIL => 'vega@sanger.ac.uk',
 									)
 			);
     }
