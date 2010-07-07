@@ -135,6 +135,8 @@ sub fork_exec {
     else {
         die "fork failed: $!";
     }
+
+    return; # not reached
 }
 
 
@@ -212,6 +214,7 @@ sub fork_exec {
         }else{
             warn "Unknown type '$type' or name '$name'\n";
         }
+        return;
     }
 
 }
