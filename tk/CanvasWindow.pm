@@ -68,7 +68,7 @@ sub new {
 }
 
 sub top_window {
-	my $self = shift @_;
+	my( $self ) = @_;
 
 	return $self->canvas->toplevel;
 }
