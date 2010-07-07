@@ -227,7 +227,7 @@ sub draw_feature_list {
         my $x = 0;
         my $y = $i * $font_line_height;
         my $ftr = $feat_list->[$i];
-        my $txt_str = sprintf $printf_str, map($ftr->{$_}, @fields);
+        my $txt_str = sprintf $printf_str, map { $ftr->{$_} } @fields;
         $canvas->createText($x, $y,
             -font   => $font_def,
             -text   => $txt_str,
