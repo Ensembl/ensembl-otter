@@ -8,14 +8,14 @@ use strict;
 use warnings;
 
 sub new {
-    my( $pkg ) = shift @_;
+    my( $pkg, $qname, $qtype, $component_names, $assembly ) = @_;
 
     my $self = bless {}, $pkg;
 
-    $self->qname(shift @_) if @_;
-    $self->qtype(shift @_) if @_;
-    $self->component_names(shift @_) if @_;
-    $self->assembly(shift @_) if @_;
+    $self->qname($qname) if $qname;
+    $self->qtype($qtype) if $qtype;
+    $self->component_names($component_names) if $component_names;
+    $self->assembly($assembly) if $assembly;
     
     return $self;
 }
