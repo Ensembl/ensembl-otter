@@ -93,6 +93,8 @@ sub drop_CloneSequence_list {
     my( $self ) = @_;
     
     $self->{'_CloneSequence_list'} = undef;
+
+    return;
 }
 
 sub selected_CloneSequences {
@@ -111,6 +113,8 @@ sub unselect_all_CloneSequences {
     my( $self ) = @_;
     
     $self->{'_selected_CloneSequences'} = undef;
+
+    return;
 }
 
 sub select_CloneSequences_by_start_end_accessions {
@@ -143,6 +147,8 @@ sub select_CloneSequences_by_start_end_accessions {
     }
     
     $self->selected_CloneSequences($ctg);
+
+    return;
 }
 
 sub selected_CloneSequences_as_contig_list {
@@ -280,6 +286,8 @@ sub set_subset {
     $self->{'_belongs_to'}{$subset_tag} = (ref($state_array_or_hash) eq 'HASH')
         ? $state_array_or_hash
         : { map { ($_ => 1) } @$state_array_or_hash };
+
+    return;
 }
 
 sub get_subset_names {
