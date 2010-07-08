@@ -352,6 +352,7 @@ sub DESTROY {
 	foreach (@{$self->output_files}) {
 		unlink $_;
 	}
+        return;
 }
 
 
