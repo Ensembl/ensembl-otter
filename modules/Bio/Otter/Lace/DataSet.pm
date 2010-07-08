@@ -124,6 +124,8 @@ sub reload_gff_filter_state {
             $filter->$state($setting) if defined $setting;
         } 
     }
+
+    return;
 }
 
 sub save_gff_filter_state {
@@ -141,6 +143,8 @@ sub save_gff_filter_state {
     }
     
     $cfg->RewriteConfig;
+
+    return;
 }
 
 sub _gff_filter_state {
