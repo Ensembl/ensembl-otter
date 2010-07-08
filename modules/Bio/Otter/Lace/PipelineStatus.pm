@@ -38,6 +38,8 @@ sub add_analysis {
     } else {
         $self->entry($ana_name, {});
     }
+
+    return;
 }
 
 sub all_analyses {
