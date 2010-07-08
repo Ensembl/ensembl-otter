@@ -291,7 +291,7 @@ sub set_subset {
 }
 
 sub get_subset_names {
-    my $self = shift @_;
+    my( $self ) = @_;
 
     return [ keys %{ $self->{'_belongs_to'} } ];
 }
