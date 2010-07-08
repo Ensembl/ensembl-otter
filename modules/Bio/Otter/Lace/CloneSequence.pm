@@ -234,16 +234,16 @@ sub current_SequenceNote {
 }
 
 sub set_lock_status {
-    my $self = shift;
+    my( $self, $lock_status ) = @_;
     
-    $self->{'_lock_status'} = shift;
+    $self->{'_lock_status'} = $lock_status;
 
     return;
 }
 
 sub get_lock_status {
-    my $self = shift;
-    warn "get_lock_status is 'Get' only" if @_;
+    my( $self, @args ) = @_;
+    warn "get_lock_status is 'Get' only" if @args;
     return $self->{'_lock_status'} ? 1 : 0 ;
 }
 
