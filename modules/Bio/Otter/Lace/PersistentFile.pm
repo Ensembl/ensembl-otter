@@ -13,6 +13,7 @@ our @ISA = qw(Bio::Otter::Lace::TempFile);
 sub rm{
     my ($self) = @_;
     unlink($self->full_name);
+    return;
 }
 sub mv{
     my ($self, $name) = @_;
@@ -24,6 +25,7 @@ sub mv{
     my $new_full_name = $self->full_name();
     rename($old_full_name, $new_full_name)
         or confess "Error renaming '$old_full_name' to '$new_full_name' : $!";
+    return;
 }
 sub full_name{
     my( $self, $full_name ) = @_;
