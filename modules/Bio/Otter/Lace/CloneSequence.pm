@@ -187,6 +187,8 @@ sub drop_pipelineStatus {
     my( $self ) = @_;
 
     $self->{'_pipelineStatus'} = undef;
+
+    return;
 }
 
 sub add_SequenceNote {
@@ -194,6 +196,8 @@ sub add_SequenceNote {
     
     my $sn_list = $self->{'_SequenceNote_list'} ||= [];
     push(@$sn_list, $note);
+
+    return;
 }
 
 sub truncate_SequenceNotes{
@@ -233,6 +237,8 @@ sub set_lock_status {
     my $self = shift;
     
     $self->{'_lock_status'} = shift;
+
+    return;
 }
 
 sub get_lock_status {
