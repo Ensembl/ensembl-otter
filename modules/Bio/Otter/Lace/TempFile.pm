@@ -86,6 +86,8 @@ sub DESTROY {
     my( $self ) = @_;
     
     unlink($self->full_name);
+
+    return;
 }
 
 1;
