@@ -6,7 +6,6 @@ use strict;
 use warnings;
 use Carp;
 use base 'CanvasWindow';
-use Bio::Otter::Lace::Locator;
 use Hum::Sort 'ace_sort';
 
 sub Client {
