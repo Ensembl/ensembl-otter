@@ -48,7 +48,7 @@ use XML::Parser;
 use Bio::Otter::Version qw( $SCHEMA_VERSION $XML_VERSION );
 
 sub new{
-    my $pkg = shift;
+    my ( $pkg ) = @_;
 
     my $self = bless({}, ref($pkg) || $pkg);
 
@@ -56,7 +56,7 @@ sub new{
 }
 
 sub my_parser{
-    my ($self) = @_;
+    my ( $self ) = @_;
     my $p1 = new XML::Parser(Style => 'Debug',
                              Handlers => {
                                  Start => sub { 
@@ -74,24 +74,22 @@ sub my_parser{
 }
 
 sub default_handler{
+    my ( @args ) = @_;
     my $c = (caller(1))[3];
-    print "$c -> @_\n";
+    print "$c -> @args\n";
     return;
 }
 
 sub start_handler{
-    my $self = shift;
-    my $xml  = shift;
-    my $ele  = lc shift;
-    $self->_check_version(@_) if $ele eq 'otter';
+    my ( $self, $xml, $ele, %attr ) = @_;
+    $self->_check_version(%attr) if lc $ele eq 'otter';
     return;
 }
 
 sub _check_version{
-    my $self = shift;
-    my $attr = {@_};
-    my $schemaVersion = $attr->{'schemaVersion'} || '';
-    my $xmlVersion    = $attr->{'xmlVersion'}    || '';
+    my ( $self, %attr ) = @_;
+    my $schemaVersion = $attr{'schemaVersion'} || '';
+    my $xmlVersion    = $attr{'xmlVersion'}    || '';
     error_exit("Wrong schema version, expected '$SCHEMA_VERSION' not '$schemaVersion'\n")
         unless ($schemaVersion && $schemaVersion <= $SCHEMA_VERSION);
     # $schemaVersion xml client receives must be older than client understands ($SCHEMA_VERSION)
@@ -102,20 +100,21 @@ sub _check_version{
 }
 
 sub error_exit{
-    print STDOUT "@_";
-    print STDERR "@_";
+    my ( @args ) = @_;
+    print STDOUT "@args";
+    print STDERR "@args";
     exit(1);
 }
 
 sub end_handler{
-    my $self = shift;
-    $self->default_handler(@_);
+    my ( $self, @args ) = @_;
+    $self->default_handler(@args);
     return;
 }
 
 sub char_handler{
-    my $self = shift;
-    $self->default_handler(@_);
+    my ( $self, @args ) = @_;
+    $self->default_handler(@args);
     return;
 }
 
@@ -129,18 +128,18 @@ sub set_property{
 }
 
 sub get_property{
-    my $self = shift;
-    return $self->set_property(@_);
+    my ( $self, @args ) = @_;
+    return $self->set_property(@args);
 }
 
 sub objects{
-    my $self = shift;
+    my ( $self ) = @_;
     return $self->{'_objects'} || [];
 }
 
 sub add_object{
-    my $self = shift;
-    push(@{$self->{'_objects'}}, shift) if @_;
+    my ( $self, $obj ) = @_;
+    push(@{$self->{'_objects'}}, $obj) if $obj;
     return;
 }
 
