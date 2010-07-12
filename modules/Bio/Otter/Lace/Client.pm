@@ -4,7 +4,7 @@ package Bio::Otter::Lace::Client;
 
 use strict;
 use warnings;
-use Carp qw{ confess cluck };
+use Carp;
 use Net::Domain qw{ hostname hostfqdn };
 
 use LWP;

@@ -46,6 +46,8 @@ sub start_handler{
       $cl->set_lock_status($cloneLock);
 
     }
+
+    return;
 }
 
 sub end_handler{
@@ -64,6 +66,7 @@ sub end_handler{
             print STDERR "$current can't $context_method\n";
         }
     }
+    return;
 }
 
 sub char_handler{
@@ -73,6 +76,7 @@ sub char_handler{
     if ($data ne ""){
       $value .= $data;
     }
+    return;
 }
 
 
