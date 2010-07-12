@@ -811,7 +811,8 @@ sub get_all_DataSets {
         my $dsp = Bio::Otter::Transform::DataSets->new();
         my $p = $dsp->my_parser();
         $p->parse($content);
-        $ds = $self->{'_datasets'} = $dsp->sorted_objects;
+        $ds = $self->{'_datasets'} =
+            [ sort {$a->name cmp $b->name} @{$dsp->objects} ];
         foreach my $dataset (@$ds) {
             $dataset->Client($self);
         }

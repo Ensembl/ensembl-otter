@@ -52,12 +52,6 @@ sub char_handler{
     return;
 }
 
-sub sorted_objects {
-    my ( $self ) = @_;
-    
-    return [sort {$a->name cmp $b->name} @{$self->objects}];
-}
-
 1;
 
 __END__
