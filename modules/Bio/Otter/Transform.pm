@@ -76,6 +76,7 @@ sub my_parser{
 sub default_handler{
     my $c = (caller(1))[3];
     print "$c -> @_\n";
+    return;
 }
 
 sub start_handler{
@@ -83,7 +84,9 @@ sub start_handler{
     my $xml  = shift;
     my $ele  = lc shift;
     $self->_check_version(@_) if $ele eq 'otter';
+    return;
 }
+
 sub _check_version{
     my $self = shift;
     my $attr = {@_};
@@ -95,19 +98,25 @@ sub _check_version{
     error_exit("Wrong xml version, expected '$XML_VERSION' not '$xmlVersion'\n")
         unless ($xmlVersion    && $xmlVersion    <= $XML_VERSION);
     #### $xmlVersion xml client receives must be older than client understands ($XML_VERSION)
+    return;
 }
+
 sub error_exit{
     print STDOUT "@_";
     print STDERR "@_";
     exit(1);
 }
+
 sub end_handler{
     my $self = shift;
     $self->default_handler(@_);
+    return;
 }
+
 sub char_handler{
     my $self = shift;
     $self->default_handler(@_);
+    return;
 }
 
 sub set_property{
@@ -118,6 +127,7 @@ sub set_property{
     }
     return $self->{'_properties'}->{$prop_name};
 }
+
 sub get_property{
     my $self = shift;
     return $self->set_property(@_);
@@ -127,10 +137,11 @@ sub objects{
     my $self = shift;
     return $self->{'_objects'} || [];
 }
+
 sub add_object{
     my $self = shift;
     push(@{$self->{'_objects'}}, shift) if @_;
-    
+    return;
 }
 
 # END
