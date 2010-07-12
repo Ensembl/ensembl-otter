@@ -35,9 +35,12 @@ sub start_handler{
     }else{
       #  print "Uninteresting $ele\n";
     }
-    
+
+    return;
 }
+
 sub end_handler{ }
+
 sub char_handler{
     my $self = shift;
     my $xml  = shift;
@@ -54,6 +57,7 @@ sub char_handler{
             $current->$context_method($data);
         }
     }
+    return;
 }
 
 sub sorted_objects {
