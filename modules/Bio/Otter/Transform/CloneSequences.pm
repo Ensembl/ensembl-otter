@@ -17,12 +17,10 @@ my $value;
 
 # this should be in xsl and use xslt to transform and create the objects
 sub start_handler{
-    my $self = shift;
-    my $xml  = shift;
-    my $ele  = lc shift;
-    my $attr = {@_};
+    my ( $self, $xml, $ele, %attr ) = @_;
+
     $value='';
-    $self->_check_version(@_) if $ele eq 'otter';
+    $self->_check_version(%attr) if $ele eq 'otter';
     if($ele eq 'clonesequence'){
       my $cl = Bio::Otter::Lace::CloneSequence->new();
       $self->add_object($cl);
@@ -32,15 +30,15 @@ sub start_handler{
       my $cl=$cs->[-1];
 
         # from now on, just keep the chromosome's name
-      $cl->chromosome($attr->{name});
+      $cl->chromosome($attr{name});
     }
     if($ele eq 'lock'){
       my $authorObj = Bio::Vega::Author->new(
-					      -name  => $attr->{'author_name'},
-					      -email => $attr->{'email'});
+					      -name  => $attr{'author_name'},
+					      -email => $attr{'email'});
       my $cloneLock = Bio::Vega::ContigLock->new(-author   => $authorObj,
-						 -hostname => $attr->{'host_name'},
-						 -dbID     => $attr->{'lock_id'});
+						 -hostname => $attr{'host_name'},
+						 -dbID     => $attr{'lock_id'});
       my $cs = $self->objects;
       my $cl = $cs->[-1];
       $cl->set_lock_status($cloneLock);
@@ -51,11 +49,9 @@ sub start_handler{
 }
 
 sub end_handler{
-    my $self = shift;
-    my $xml  = shift;
+    my ( $self, $xml, $context ) = @_;
     $value =~ s/^\s*//;
     $value =~ s/\s*$//;
-    my $context = shift;
     if($SUB_ELE->{$context}){
         my $context_method = $context;
         my $cs = $self->objects;
@@ -70,9 +66,7 @@ sub end_handler{
 }
 
 sub char_handler{
-    my $self = shift;
-    my $xml  = shift;
-    my $data = shift;
+    my ( $self, $xml, $data ) = @_;
     if ($data ne ""){
       $value .= $data;
     }
