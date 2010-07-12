@@ -19,16 +19,13 @@ my $SUP_ELE = { map { $_ => 1 } qw(otter datasets) };
 
 # this should be in xsl and use xslt to transform and create the objects
 sub start_handler{
-    my $self = shift;
-    my $xml  = shift;
-    my $ele  = shift;
+    my ( $self, $xml, $ele, %attr ) = @_;
     $ele     =~ tr/[A-Z]/[a-z]/;
-    my $attr = {@_};
-    $self->_check_version(@_) if $ele eq 'otter';
+    $self->_check_version(%attr) if $ele eq 'otter';
 
     if($ele eq 'dataset'){
         my $ds = Bio::Otter::Lace::DataSet->new();
-        $ds->name($attr->{'name'});
+        $ds->name($attr{'name'});
         $self->add_object($ds);
     }elsif($SUB_ELE->{$ele}){
      #   print "* Interesting $ele\n";
@@ -42,12 +39,8 @@ sub start_handler{
 sub end_handler{ }
 
 sub char_handler{
-    my $self = shift;
-    my $xml  = shift;
-    my $data = shift;
-    #my $context = ($xml->context)[-1];
+    my ( $self, $xml, $data ) = @_;
     my $context = $xml->current_element();
-    #print "context '$context'\n";
     if($SUB_ELE->{$context}){
         $context =~ tr/[a-z]/[A-Z]/;
         my $context_method = $context;
@@ -61,7 +54,7 @@ sub char_handler{
 }
 
 sub sorted_objects {
-    my $self = shift;
+    my ( $self ) = @_;
     
     return [sort {$a->name cmp $b->name} @{$self->objects}];
 }
