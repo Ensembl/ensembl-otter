@@ -9,8 +9,6 @@ our @ISA = qw(Bio::Otter::Transform);
 
 # ones were interested in 
 my $SUB_ELE = { map { $_ => 1 } qw(clone_name accession sv chromosome chr_start chr_end contig_name length contig_start contig_end contig_strand )};
-# super elements to the actual clonesequence
-my $SUP_ELE = { map { $_ => 1 } qw(otter dataset sequenceset clonesequences clonesequence) };
 
 my $value;
 

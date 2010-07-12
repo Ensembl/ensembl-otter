@@ -9,8 +9,6 @@ our @ISA = qw(Bio::Otter::Transform);
 
 # ones were interested in 
 my $SUB_ELE = { map { $_ => 1 } qw(description vega_set_id priority is_hidden write_access)};
-# super elements to the actual sequence set
-my $SUP_ELE = { map { $_ => 1 } qw(otter sequencesets) };
 my $value;
 my $subregion_name;   # I hate this global_var style!
 my $subregion_hidden; # me too!
