@@ -36,6 +36,7 @@ sub start_handler{
     }else{
        # print "Uninteresting $ele\n";
     }
+    return;
 }
 
 sub end_handler{ 
@@ -60,6 +61,7 @@ sub end_handler{
             print STDERR "$current_ss can't $context_method\n";
         }
     }
+    return;
 }
 
 sub char_handler{
@@ -69,6 +71,7 @@ sub char_handler{
   if ($data ne ''){
     $value .= $data;
   }
+  return;
 }
 
 1;
