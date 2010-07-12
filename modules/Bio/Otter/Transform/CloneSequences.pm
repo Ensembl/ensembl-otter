@@ -11,8 +11,7 @@ our @ISA = qw(Bio::Otter::Transform);
 my $SUB_ELE = { map { $_ => 1 } qw(clone_name accession sv chromosome chr_start chr_end contig_name length contig_start contig_end contig_strand )};
 # super elements to the actual clonesequence
 my $SUP_ELE = { map { $_ => 1 } qw(otter dataset sequenceset clonesequences clonesequence) };
-my $chr;
-my %id_chr;
+
 my $value;
 
 # this should be in xsl and use xslt to transform and create the objects
