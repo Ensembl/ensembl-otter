@@ -17,20 +17,17 @@ my $subregion_hidden; # me too!
 
 # this should be in xsl and use xslt to transform and create the objects
 sub start_handler{
-    my $self = shift;
-    my $xml  = shift;
-    my $ele  = lc shift;
-    my $attr = {@_};
+    my ( $self, $xml, $ele, %attr ) = @_;
     $value='';
-    $self->_check_version(@_) if $ele eq 'otter';
+    $self->_check_version(%attr) if $ele eq 'otter';
     if($ele eq 'sequenceset'){
         my $ss = Bio::Otter::Lace::SequenceSet->new();
-        $ss->name($attr->{'name'});
+        $ss->name($attr{'name'});
         $ss->dataset_name($self->get_property('dataset_name'));
         $self->add_object($ss);
     }elsif($ele eq 'subregion'){
-        $subregion_name   = $attr->{'name'};
-        $subregion_hidden = $attr->{'hidden'};
+        $subregion_name   = $attr{'name'};
+        $subregion_hidden = $attr{'hidden'};
     }elsif($SUB_ELE->{$ele}){
        # print "* Interesting $ele\n";
     }else{
@@ -40,8 +37,7 @@ sub start_handler{
 }
 
 sub end_handler{ 
-    my $self = shift;
-    my $xml  = shift;
+    my ( $self, $xml ) = @_;
     $value =~ s/^\s*//;
     $value =~ s/\s*$//;
     my $context = shift;
@@ -65,9 +61,7 @@ sub end_handler{
 }
 
 sub char_handler{
-  my $self = shift;
-  my $xml  = shift;
-  my $data = shift;
+    my ( $self, $xml, $data ) = @_;
   if ($data ne ''){
     $value .= $data;
   }
