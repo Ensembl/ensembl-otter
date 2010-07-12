@@ -9,7 +9,6 @@ use Net::Domain qw{ hostname hostfqdn };
 
 use LWP;
 use URI::Escape qw{ uri_escape };
-use MIME::Base64;
 use HTTP::Cookies::Netscape;
 use Term::ReadKey qw{ ReadMode ReadLine };
 
@@ -17,12 +16,9 @@ use Bio::Vega::Author;
 use Bio::Vega::ContigLock;
 
 use Bio::Otter::Lace::Defaults;
-use Bio::Otter::Lace::DataSet;
 use Bio::Otter::Lace::Locator;
-use Bio::Otter::Lace::PersistentFile;
 use Bio::Otter::Lace::PipelineStatus;
 use Bio::Otter::Lace::SequenceNote;
-use Bio::Otter::Lace::TempFile;
 use Bio::Otter::LogFile;
 use Bio::Otter::Transform::DataSets;
 use Bio::Otter::Transform::SequenceSets;
