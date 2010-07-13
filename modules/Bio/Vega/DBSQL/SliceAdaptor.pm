@@ -39,8 +39,6 @@ sub fetch_by_clone_list {
   my ($self, $clones) = @_;
 
   my $counter = 0;
-  my @coords;
-  my ($chr_start, $chr_end);
   my $seq_region_name;
   my @chr_coords;
 
