@@ -95,7 +95,6 @@ sub history{
 
   my $j=0;
   my $i=0;
-  my $all_exons;
   
   foreach my $g (@$genes){
 	 my $txs=$g->get_all_Transcripts;
