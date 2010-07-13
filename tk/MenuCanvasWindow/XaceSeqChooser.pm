@@ -840,7 +840,7 @@ sub close_GenomicFeatures {
             my $exon_seq = $sub->exon_Sequence_array;
             my $fs = $finder->find_best_Feature_set($exon_seq);
             my @exons = $sub->get_all_Exons;
-            my( $strand, @new_exons, $done_msg );
+            my( $strand, @new_exons );
             for (my $i = 0; $i < @exons; $i++) {
                 my $feat = $fs->[$i] or next;
                 my $ex = Hum::Ace::Exon->new;
