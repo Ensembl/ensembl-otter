@@ -64,7 +64,7 @@ sub register_client {
 
     my $response = qq(
         <zmap>
-            <meta application="perl" display=":0.0" version="\$Revision: 1.1 $" windowid="$win_id" />
+            <meta application="perl" display=":0.0" version="\$Revision: 1.10 $" windowid="$win_id" />
             <response>
                 <client created="1" exists="1" />
             </response>
@@ -93,7 +93,7 @@ sub single_select {
 
     my $response = qq(
         <zmap>
-            <meta application="perl" display=":0.0" version="\$Revision: 1.1 $" windowid="$win_id" />
+            <meta application="perl" display=":0.0" version="\$Revision: 1.10 $" windowid="$win_id" />
             <response handled="true" />
         </zmap>
     );
@@ -118,10 +118,6 @@ sub select_other {
           </request>
         </zmap>
     ));
-    
-    my $foo; #do stuff
-
-    #my ($stat, $resp) = parse_response($res[0]);
 
     print "MARK:\n",$res[0],"\n";
 }
