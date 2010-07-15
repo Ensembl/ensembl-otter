@@ -4,7 +4,7 @@ package MenuCanvasWindow::XaceSeqChooser;
 use strict;
 use warnings;
 use 5.006_001;  # For qr support
-use Carp qw{ cluck confess };
+use Carp;
 use Scalar::Util 'weaken';
 
 use Tk::Dialog;
@@ -730,7 +730,6 @@ sub bind_events {
 
     # Object won't get DESTROY'd without:
     $canvas->Tk::bind('<Destroy>', sub{
-        #cluck "Dealing with <Destroy> call";
         $self = undef;
         });
 
@@ -1741,7 +1740,6 @@ sub add_SubSeq {
     my( $self, $sub ) = @_;
 
     my $name = $sub->name;
-    #cluck("Adding SubSeq '$name'");
     if ($self->{'_subsequence_cache'}{$name}) {
         confess "already have SubSeq '$name'";
     } else {
