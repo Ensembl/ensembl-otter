@@ -73,7 +73,7 @@ The guts of the code to launch and display the features in a zmap.
 sub _launchZMap {
     my ($self) = @_;
 
-    my $zmap_conn = $self->zMapInsertZmapConnector();
+    my $zmap_conn = $self->zMapZmapConnector();
 
     unless ($self->xremote_cache()) {
         $self->xremote_cache(ZMap::XRemoteCache->new());
@@ -366,13 +366,13 @@ sub zMapPID {
     return $self->{'_zMap_ZMAP_PROCESS_ID'};
 }
 
-=head1 zMapInsertZmapConnector
+=head1 zMapZmapConnector
 
 This is the way we receive commands from zmap.
 
 =cut
 
-sub zMapInsertZmapConnector {
+sub zMapZmapConnector {
     my ($self) = @_;
     my $zc = $self->{'_zMap_ZMAP_CONNECTOR'};
     if (!$zc) {
@@ -383,12 +383,6 @@ sub zMapInsertZmapConnector {
         $zc = $self->{'_zMap_ZMAP_CONNECTOR'} = $zmap;
     }
     return $zc;
-}
-
-sub zMapZmapConnector {
-    my ( $self, @args ) = @_;
-
-    return $self->zMapInsertZmapConnector(@args);
 }
 
 sub zMapWriteDotBlixemrc {
