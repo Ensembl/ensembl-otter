@@ -206,6 +206,33 @@ sub _launchInAZMap {
     return;
 }
 
+sub zMapSendCommands {
+    my ($self, @xml) = @_;
+
+    my $xr = $self->zMapGetXRemoteClientForView();
+    unless ($xr) {
+        warn "No current window.";
+        return;
+    }
+    warn "Sending window '", $xr->window_id, "' this xml:\n", @xml;
+
+    my @a = $xr->send_commands(@xml);
+
+    for(my $i = 0; $i < @xml; $i++){
+        my ($status, $xmlHash) = parse_response($a[$i]);
+        if ($status =~ /^2\d\d/) { # 200s
+            print STDERR "OK\n";
+        } else {
+            my $error = $xmlHash->{'error'}{'message'};
+            print STDERR "ERROR: $a[$i]\n$error\n";
+            $self->xremote_cache->remove_clients_to_bad_windows();
+            die $error;
+        }
+    }
+
+    return;
+}
+
 =head1 post_response_client_cleanup
 
 A function to cleanup any bad windows that might exist.
