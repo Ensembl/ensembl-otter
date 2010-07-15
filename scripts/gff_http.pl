@@ -141,7 +141,9 @@ else {
             $err_msg = $1;
         }
         elsif ($res =~ /The Sanger Institute Web service you requested is temporarily unavailable/) {
-            $err_msg = "web service temporarily unavailable";
+            my $code = $response->code;
+            my $message = $response->message;
+            $err_msg = "This Sanger web service is temporarily unavailable: status = ${code} ${message}";
         }
         else {
             $err_msg = $res;
