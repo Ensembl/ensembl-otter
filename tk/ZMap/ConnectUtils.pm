@@ -7,8 +7,7 @@ use X11::XRemote;
 use XML::Simple;
 
 our @ISA    = qw(Exporter);
-our @EXPORT_OK = qw(parse_params 
-                    parse_request
+our @EXPORT_OK = qw(parse_request
                     parse_response
                     xml_escape
                     make_xml
@@ -33,15 +32,6 @@ ZMap::ConnectUtils
 
 =head1 PARSING FUNCTIONS
 
-=head2 parse_params(string)
-
-parse a string like name = value ; name = valU ; called = valid
-into 
- {
-    name   => [qw(value valU)],
-    called  => 'valid'
- }
-
 =cut
 
 sub parse_request{
@@ -53,32 +43,6 @@ sub parse_request{
         ForceArray => [ 'feature', 'subfeature' ],
         );
     return $hash;
-}
-
-sub parse_params{
-    warn "This doesn't work anymore!";
-#    return {};
-
-    my ($pairs_string) = shift;
-    my ($param, $value, $out, $tmp);
-
-    $pairs_string =~ s/\s//g; # no spaces allowed.
-    my (@pairs)   = split(/[;]/,$pairs_string);
-
-    foreach (@pairs) {
-	($param,$value) = split('=',$_,2);
-	next unless defined $param;
-	next unless defined $value;
-	push (@{$tmp->{$param}},$value);
-    }
-    # this removes the arrays if there's only one element in them.
-    # I'm not sure I like this behaviour, but it means it's not
-    # necessary to remember to add ->[0] to everything. 
-    $out = { 
-        map { scalar(@{$tmp->{$_}}) > 1 ? ($_ => $tmp->{$_}) : ($_ => $tmp->{$_}->[0]) } keys(%$tmp) 
-        };
-    
-    return $out;
 }
 
 =head2 parse_response(string)
