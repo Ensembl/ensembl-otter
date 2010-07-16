@@ -4,7 +4,6 @@
 package CanvasWindow::DataSetChooser;
 
 use strict;
-use warnings;
 use Carp;
 use Tk::DialogBox;
 use base 'CanvasWindow';
@@ -257,8 +256,7 @@ sub recover_some_sessions {
                 }
             };
             if ($@) {
-                # The fork/exec when the sgifaceserver is launched seems
-                # to prevent $@ being set in the eval
+                # Destruction of the AceDatabase object prevents us seeing $@
                 $self->exception_message($@, 'Error recovering lace sessions');
             }
             return 1;

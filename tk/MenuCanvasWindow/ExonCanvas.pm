@@ -400,7 +400,6 @@ sub initialize {
 
     $top->update;
     $self->fix_window_min_max_sizes;
-
     return;
 }
 
