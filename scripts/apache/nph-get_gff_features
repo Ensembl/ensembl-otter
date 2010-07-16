@@ -12,8 +12,6 @@ use SangerPaths qw{ core bioperl123 ensembl57 otter53 };
 use Bio::Otter::ServerScriptSupport;
 use Bio::Vega::Utils::EnsEMBL2GFF;
 
-use CGI::Carp 'fatalsToBrowser';
-
 use Time::HiRes qw(time);
 
 my $server = Bio::Otter::ServerScriptSupport->new;

@@ -19,8 +19,6 @@ use Bio::Otter::ServerScriptSupport;
 use Bio::Otter::Lace::ViaText qw( &GenerateFeatures %LangDesc );
 use Bio::Vega::Utils::EnsEMBL2GFF;
 
-use CGI::Carp 'fatalsToBrowser';
-
 sub struct_traverse_path {
     my ($struct, $path) = @_;
     
