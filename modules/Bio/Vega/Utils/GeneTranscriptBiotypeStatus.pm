@@ -25,15 +25,19 @@ my @method_biotype_status = qw{
     Novel_Transcript                processed_transcript    KNOWN
     Novel_Transcript                processed_transcript    NOVEL
     Transcript                      processed_transcript    -
-        Non_coding                  =                       -
         Ambiguous_ORF               =                       -
         Retained_intron             =                       -
-        Antisense                   =                       -
         Disrupted_domain            =                       -
         IG_segment                  =                       -
         IG_gene                     =                       -
         IG_pseudogene               =                       -
         Putative                    processed_transcript    PUTATIVE
+
+    Non_coding                      =                       -
+        Antisense                   =                       -
+        ncRNA_host                  =                       -
+        3'_overlapping_ncRNA        =                       -
+        
                                     
     Pseudogene                      =                       -
         Processed_pseudogene        =                       -

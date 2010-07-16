@@ -13,6 +13,7 @@ $| = 1;
 {
     
     my $usage     = sub { exec('perldoc', $0) };
+    $0 = 'otterlace';
     my $dataset_name = undef;
     my $author    = undef;
     my $assembly  = undef;
@@ -94,7 +95,9 @@ $| = 1;
     }
     $sql .= ' ORDER BY l.contig_lock_id ASC ';
 
+    # warn "Preparing SQL $sql";
     my $sth = $otter_db->dbc->prepare($sql);
+    # warn "Executing SQL";
     $sth->execute(@param);
     
     my( %lock_id );
