@@ -12,13 +12,9 @@ use SangerPaths qw{ core bioperl123 ensembl57 otter53 };
 use Bio::Otter::ServerScriptSupport;
 use Bio::Vega::Utils::EnsEMBL2GFF;
 
-use Time::HiRes qw(time);
-
 my $server = Bio::Otter::ServerScriptSupport->new;
 
 my $gff_string = '';
-
-my ($t0, $t1, $t2);
 
 eval {
     my $analyses        = $server->param('analysis');
@@ -27,12 +23,8 @@ eval {
     my $gff_source      = $server->param('gff_source');
     my $gff_seqname     = $server->param('gff_seqname');
     my $swap_strands    = $server->param('swap_strands');
-    
-    $t0 = time();
 
     my $features = $server->get_requested_features;
-   
-    $t1 = time();
 
     my %gff_args = (
         rebase      => $rebase,
@@ -55,8 +47,6 @@ eval {
     else {
         $gff_string = $server->empty_gff_header;
     }
-
-    $t2 = time();
 };
 
 if ($@) {
@@ -64,7 +54,6 @@ if ($@) {
 }
 else {
     $server->send_response($gff_string, 0, 1);
-    #$server->send_response("db took: ".($t1-$t0)." gff took: ".($t2-$t1));
 }
 
 1;
