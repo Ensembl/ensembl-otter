@@ -222,7 +222,7 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS { # $kind = 'SimpleFeature' ||
                     warn "Could not group feature: $@\n";
                 }
             } else {
-                $feature->display_label( $pt_label );
+                $feature->display_label( $pt_label ) if $feature->can('display_label');
                 push @$feature_coll, $feature;
             }
         }
