@@ -235,6 +235,8 @@ sub initialise {
     $top->protocol('WM_DELETE_WINDOW', $close_window);
     $top->bind('<Destroy>', sub { $self = undef; });
     $self->set_minsize;
+
+    return;
 }
 
 sub update_from_XaceSeqChooser {
@@ -243,6 +245,7 @@ sub update_from_XaceSeqChooser {
     my $top = $self->top;
     $top->deiconify;
     $top->raise;
+    return;
 }
 
 sub query_Sequence {
@@ -273,6 +276,8 @@ sub accessions_from_clipboard {
         # the latest accessions added.
         $self->match->xviewMoveto(1);
     }
+
+    return;
 }
 
 sub set_entry {
@@ -289,6 +294,8 @@ sub set_entry {
     $entry->insert(0, $txt);
 
     $entry->configure(-state => 'readonly') if $reset;
+
+    return;
 }
 
 sub get_entry {
@@ -744,6 +751,8 @@ sub DESTROY {
     my ($self) = shift;
 
     warn "Freeing exonerateWindow '$self'\n";
+
+    return;
 }
 
 1;
