@@ -204,10 +204,11 @@ sub find_by_stable_ids {
                 # warn "'$qname' looks like a stable id, but wasn't found.";
                 # warn ($@) if $DEBUG;
             } elsif($feature) { # however watch out, sometimes we just silently get nothing!
-                my $feature_slice = $feature->feature_Slice();
+                my $feature_slice  = $feature->feature_Slice();
+                my $analysis_logic = $feature->analysis->logic_name(); 
 
                 warn "find_stable_ids: Trying to register slices ($qname, $qtype_prefix.$qtype)";
-                $self->register_slices($qname, $qtype_prefix.$qtype, [$feature_slice]);
+                $self->register_slices($qname, $qtype_prefix.$analysis_logic.":".$qtype, [$feature_slice]);
             }
         }
     } # foreach $qname
@@ -333,7 +334,7 @@ sub find_by_xref {
 
         my $slice = $adaptor->fetch_by_region($cs_name, $sr_name, $start, $end, 1, $cs_version);
 
-        $self->register_slices($qname, $qtype_prefix.$qtype, [ $slice ]);
+        $self->register_slices($qname, $qtype_prefix.$qtype.":", [ $slice ]);
     }
 }
 
