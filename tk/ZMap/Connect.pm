@@ -405,13 +405,14 @@ sub _do_callback{
     warn "Event has request string $request_string\n" if $DEBUG_CALLBACK;
     #=========================================================
     my $cb = $self->__callback();
+    my $request = parse_request($request_string);
     my @data = @{$self->__callback_data};
     my $reply;
     my $fstr  = $self->xremote->format_string;
     my $intSE = $self->basic_error("Internal Server Error");
     eval{ 
         X11::XRemote::block(); # this gets automatically unblocked for us, besides we have no way to do that!
-        my ($status, $xmlstr) = $cb->($self, $request_string, @data);
+        my ($status, $xmlstr) = $cb->($self, $request, @data);
         $status ||= 500; # If callback returns undef...
         $xmlstr ||= $intSE;
         $reply = sprintf($fstr, $status, $xmlstr);
