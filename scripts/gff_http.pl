@@ -20,6 +20,7 @@ my $cookie_jar      = delete $args{cookie_jar};
 
 my $log_file;
 if ($LOG) {
+    $args{log} = 1; # enable logging on the server
     my $log_file_name = $session_dir.'/gff_log.txt';
     open $log_file, '>>', $log_file_name;
 }
