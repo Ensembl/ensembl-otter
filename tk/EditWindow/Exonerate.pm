@@ -541,19 +541,7 @@ sub launch_exonerate {
     }
 
     $self->XaceSeqChooser->save_ace($ace_text);
-
-    if ($need_relaunch) {
-        if ($self->{_use_marked_region}) {
-
-            # XXX: temporarily don't ask zmap to load in the marked region as this crashes
-            # zmap when the view is reverse complemented
-            #$self->XaceSeqChooser->zMapLoadFeaturesInMark($method_name);
-            $self->XaceSeqChooser->zMapLoadFeatures(@method_names);
-        }
-        else {
-            $self->XaceSeqChooser->zMapLoadFeatures(@method_names);
-        }
-    }
+    $self->XaceSeqChooser->zMapLoadFeatures(@method_names) if $need_relaunch;
 
     $self->top->Unbusy;
 

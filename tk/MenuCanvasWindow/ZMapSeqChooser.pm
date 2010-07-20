@@ -1408,8 +1408,8 @@ sub zMapGetMark {
     return;
 }
 
-sub _zMapLoadFeatures {
-    my ($self, $featuresets, $use_mark) = @_;
+sub zMapLoadFeatures {
+    my ($self, @featuresets) = @_;
 
     if (my $client = $self->zMapGetXRemoteClientByAction('load_features', 1)) {
         
@@ -1417,10 +1417,14 @@ sub _zMapLoadFeatures {
         
         my $xml = Hum::XmlWriter->new;
         $xml->open_tag('zmap');
-        $xml->open_tag('request', { action => 'load_features', $use_mark ? (load => 'mark') : () });
+        $xml->open_tag('request',
+                       {
+                           action => 'load_features',
+                           # load => 'mark', # not used at the moment
+                       });
         $xml->open_tag('align');
         $xml->open_tag('block');
-        for my $featureset (@$featuresets) {
+        for my $featureset (@featuresets) {
             $xml->open_tag('featureset', { name => $featureset });
             $xml->close_tag;
         }
@@ -1439,16 +1443,6 @@ sub _zMapLoadFeatures {
     }
 
     return;
-}
-
-sub zMapLoadFeatures {
-    my ($self, @featuresets) = @_;
-    return $self->_zMapLoadFeatures(\@featuresets, 0);
-}
-
-sub zMapLoadFeaturesInMark {
-    my ($self, @featuresets) = @_;
-    return $self->_zMapLoadFeatures(\@featuresets, 1);
 }
 
 sub zMapDeleteFeaturesets {
