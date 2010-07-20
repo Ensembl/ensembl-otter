@@ -1664,8 +1664,7 @@ sub Assembly {
     my $ace  = $self->ace_handle;
 
     unless ($self->{'_assembly'}) {
-        use Time::HiRes 'gettimeofday';
-        my $before = gettimeofday();
+        my $before = time();
         $canvas->Busy(
             -recurse => 0,
             );
@@ -1696,9 +1695,11 @@ sub Assembly {
         $self->{'_assembly'} = $assembly;
         $self->set_known_GeneMethods;
 
-        my $after  = gettimeofday();
+        my $after  = time();
         $canvas->Unbusy;
-        printf "Express fetch for '%s' took %4.3f\n", $self->slice_name, $after - $before;
+        printf
+            "Express fetch for '%s' took %d second(s)\n",
+            $self->slice_name, $after - $before;
     }
     return $self->{'_assembly'};
 }

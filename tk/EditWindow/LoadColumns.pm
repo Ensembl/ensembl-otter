@@ -12,7 +12,6 @@ use Tk::HListplusplus;
 use Tk::Checkbutton;
 use Tk::LabFrame;
 use Tk::Balloon;
-use Time::HiRes 'time';
 
 use MenuCanvasWindow::XaceSeqChooser;
 use Hum::Sort 'ace_sort';
@@ -599,7 +598,7 @@ sub show_filters {
                 my $balloon = $self->balloon;
                 if (defined $self->n2f->{$name}->load_time) {
                     $balloon->attach($cb,
-                        -balloonmsg => sprintf('Loaded in %.2f seconds', $self->n2f->{$name}->load_time),
+                        -balloonmsg => sprintf('Loaded in %d seconds', $self->n2f->{$name}->load_time),
                     );
                 }
             }
