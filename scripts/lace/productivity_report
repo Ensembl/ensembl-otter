@@ -119,11 +119,6 @@ use Date::Calc 'Monday_of_Week';
     }
 }
 
-#use Time::HiRes 'gettimeofday';
-#    my $before = gettimeofday();
-#    my $after = gettimeofday();
-#    printf "Query took %.2f seconds\n", $after - $before;
-
 
 __END__
 
