@@ -1191,7 +1191,7 @@ sub zMapIgnoreRequest {
 }
 
 sub RECEIVE_FILTER {
-    my ($connect, $request, $obj) = @_;
+    my ($connect, $reqXML, $obj) = @_;
 
     # The table of actions and functions...
     my $lookup = {
@@ -1208,10 +1208,6 @@ sub RECEIVE_FILTER {
     # @list could be dynamically created...
     my @list = keys(%$lookup);
 
-    # find the action in the request XML
-    #warn "Request = '$request'";
-    my $reqXML = parse_request($request);
-
     unless ($reqXML->{'request'}) {
 
         #for my $k (keys %$reqXML) {
@@ -1223,8 +1219,6 @@ sub RECEIVE_FILTER {
     }
 
     my $action = $reqXML->{'request'}->{'action'};
-
-    warn "REQUEST FROM ZMAP: $request\n" if $ZMAP_DEBUG;
 
     warn "PARSED REQUEST: " . Dumper($reqXML) . "\n" if $ZMAP_DEBUG;
 
