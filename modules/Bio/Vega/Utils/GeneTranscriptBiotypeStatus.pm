@@ -34,6 +34,7 @@ my @method_biotype_status = qw{
         Putative                    processed_transcript    PUTATIVE
 
     Non_coding                      =                       -
+        lincRNA                     =                       -
         Antisense                   =                       -
         ncRNA_host                  =                       -
         3'_overlapping_ncRNA        =                       -
