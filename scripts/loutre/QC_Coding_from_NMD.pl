@@ -44,7 +44,7 @@ my $host = 'otterlive';
 my $port = '';
 my $name = '';
 my $user = '';
-my $pass = '';
+my $pass = undef;
 
 my $usage = sub { exec( 'perldoc', $0 ); };
 
@@ -58,7 +58,7 @@ my $usage = sub { exec( 'perldoc', $0 ); };
   )
   or $usage->();
 
-if ( !$user || !$pass || !$port ) {
+if ( !$user || !$port ) {
     my @param = &get_db_param($host);
     $user = $param[0] unless $user;
     $pass = $param[1] unless $pass;
@@ -85,11 +85,15 @@ my $dba = Bio::Vega::DBSQL::DBAdaptor->new(
         -dbname => $name,
         -host   => $host,
         -port   => $port,
-        -pass   => $pass);
+        -pass   => $pass
+        );
 my $t_ad = $dba->get_TranscriptAdaptor;
         
 my $tsi_sth = $dba->dbc->prepare($tsi_sql);
 $tsi_sth->execute;
+
+my $header = 1;
+my @columns = qw{chromosome locus gene_stable_id transcript_stable_id start end strand biotype status orf(aa) stop2splice(bp)};
 
 TRANSCRIPT: while(my ($sr_name, $locus, $gsi, $tsi, $start, $end, $strand, $biotype, $status) = $tsi_sth->fetchrow_array){
 	my $t = $t_ad->fetch_by_stable_id($tsi);
@@ -118,6 +122,11 @@ TRANSCRIPT: while(my ($sr_name, $locus, $gsi, $tsi, $start, $end, $strand, $biot
 	## Condition 4 : CDS variant reference ?
 	
 	## Print transcript info if it reaches this point 
+	
+	print STDOUT join("\t",@columns)."\n" 
+	   if $header;
+	$header = 0;
+	
 	print STDOUT join(" ",$sr_name, $locus, $gsi, $tsi, $start, $end, $strand, $biotype, $status,$orf_length,$stop_to_splice)."\n" 
 	   if(( $orf_length <= 35 && !$CDS_start_NF) || $stop_to_splice <= 50);
 }        

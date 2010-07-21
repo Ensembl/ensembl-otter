@@ -44,7 +44,7 @@ my $host = 'otterlive';
 my $port = '';
 my $name = '';
 my $user = '';
-my $pass = '';
+my $pass = undef;
 
 my $usage = sub { exec( 'perldoc', $0 ); };
 
@@ -58,7 +58,7 @@ my $usage = sub { exec( 'perldoc', $0 ); };
   )
   or $usage->();
 
-if ( !$user || !$pass || !$port ) {
+if ( !$user || !$port ) {
     my @param = &get_db_param($host);
     $user = $param[0] unless $user;
     $pass = $param[1] unless $pass;
@@ -67,7 +67,7 @@ if ( !$user || !$pass || !$port ) {
 
 my $tsi_sql = qq/SELECT s.name, ga.value, gsi.stable_id, tsi.stable_id, t.seq_region_start, t.seq_region_end, t.seq_region_strand, t.biotype, t.status, ta.value
 FROM transcript t, transcript_stable_id tsi, gene g, gene_attrib ga, gene_stable_id gsi, seq_region s
-LEFT JOIN transcript_attrib ta ON (t.transcript_id = ta.transcript_id && ta.attrib_type_id IN (54,123) &&  ta.value = 'NMD_exception')
+LEFT JOIN transcript_attrib ta ON (t.transcript_id = ta.transcript_id && ta.attrib_type_id IN (54,123) &&  ta.value = 'NMD exception')
 WHERE t.biotype = 'protein_coding'
 AND t.status != 'PREDICTED'
 AND g.gene_id = t.gene_id
@@ -91,6 +91,10 @@ my $t_ad = $dba->get_TranscriptAdaptor;
         
 my $tsi_sth = $dba->dbc->prepare($tsi_sql);
 $tsi_sth->execute;
+
+my $header = 1;
+my @columns = qw{chromosome locus gene_stable_id transcript_stable_id start end strand biotype status NMD_Exception};
+
 TRANSCRIPT: while(my ($sr_name, $locus, $gsi, $tsi, $start, $end, $strand, $biotype, $status, $exception) = $tsi_sth->fetchrow_array){
 	my $t = $t_ad->fetch_by_stable_id($tsi);
 	my $translation = $t->translation;
@@ -117,7 +121,13 @@ TRANSCRIPT: while(my ($sr_name, $locus, $gsi, $tsi, $start, $end, $strand, $biot
 	next TRANSCRIPT unless $stop_to_splice > 50;
 	## Condition 4 : CDS variant reference ?
 	
-	## Print transcript info if it reaches this point 
+	## Print transcript info if it reaches this point
+	
+	print STDOUT join("\t",@columns)."\n" 
+       if $header;
+    $header = 0;
+    
+    
 	print STDOUT join(" ",$sr_name, $locus, $gsi, $tsi, $start, $end, $strand, $biotype, $status, $exception ? "1" : "0" )."\n";
 }        
 
