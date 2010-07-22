@@ -6,7 +6,6 @@ use strict;
 use warnings;
 use Carp qw{ cluck confess };
 use ZMap::Connect;
-use ZMap::ConnectUtils qw{ :all };
 use Sys::Hostname;
 use ZMap::XRemoteCache;
 use Data::Dumper;
@@ -1314,10 +1313,14 @@ sub open_clones {
 
     if($zmap_success == 0){
     	# now open a view
-    	my $seg = newXMLObj(  'segment'  );
-    	setObjNameValue($seg, 'sequence', $self->slice_name);
-    	setObjNameValue($seg, 'start',    1);
-    	setObjNameValue($seg, 'end',     '0');
+    	my $seg = [
+            'segment',
+            {
+                sequence => $self->slice_name,
+                start    => 1,
+                end      => 0,
+            },
+            ];
     
     	$xremote = $self->zMapGetXRemoteClientByName("ZMap");
     
