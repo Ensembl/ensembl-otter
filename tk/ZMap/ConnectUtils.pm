@@ -40,16 +40,6 @@ parse a response into (status, hash of xml)
 
 =cut
 
-sub parse_response{
-    my $response = shift;
-    my $delimit  = X11::XRemote::delimiter();
-
-    my ($status, $xml) = split(/$delimit/, $response, 2);
-    my $parser = XML::Simple->new();
-    my $hash   = $parser->XMLin($xml);
-    
-    return wantarray ? ($status, $hash) : $hash;
-}
 sub make_xml{
     my ($hash) = @_;
     my $parser = XML::Simple->new(rootname => q{},

@@ -219,7 +219,7 @@ sub zMapSendCommands {
     my @a = $xr->send_commands(@xml);
 
     for(my $i = 0; $i < @xml; $i++){
-        my ($status, $xmlHash) = parse_response($a[$i]);
+        my ($status, $xmlHash) = zMapParseResponse($a[$i]);
         if ($status =~ /^2\d\d/) { # 200s
             print STDERR "OK\n";
         } else {
@@ -1381,7 +1381,7 @@ sub zMapGetMark {
 
         my @response = $client->send_commands($xml);
 
-        my ($status, $hash) = parse_response($response[0]);
+        my ($status, $hash) = zMapParseResponse($response[0]);
 
         if ($status =~ /^2/ && $hash->{response}->{mark}->{exists} eq "true") {
 
@@ -1426,7 +1426,7 @@ sub zMapLoadFeatures {
 
         my @response = $client->send_commands($xml->flush);
 
-        my ($status, $hash) = parse_response($response[0]);
+        my ($status, $hash) = zMapParseResponse($response[0]);
 
         unless ($status =~ /^2/) {
             warn "Problem loading featuresets";
@@ -1458,7 +1458,7 @@ sub zMapDeleteFeaturesets {
 
         my @response = $client->send_commands($xml->flush);
 
-        my ($status, $hash) = parse_response($response[0]);
+        my ($status, $hash) = zMapParseResponse($response[0]);
 
         unless ($status =~ /^2/) {
             unless ($hash->{error}->{message} =~ /Unknown FeatureSet/) {
@@ -1492,7 +1492,7 @@ sub zMapZoomToSubSeq {
 
         my @response = $client->send_commands($xml->flush);
 
-        my ($status, $hash) = parse_response($response[0]);
+        my ($status, $hash) = zMapParseResponse($response[0]);
 
         if ($status =~ /^2/ && $hash->{response} =~ /executed/) {
             return 1;
@@ -1538,7 +1538,7 @@ sub zMapDoRequest {
     for (my $i = 0; $i < @commands; $i++) {
         warn "command $i '", substr($commands[$i], 0, index($commands[$i], '>') + 1), "' returned $a[$i] "
           if $ZMAP_DEBUG;
-        my ($status, $xmlHash) = parse_response($a[$i]);
+        my ($status, $xmlHash) = zMapParseResponse($a[$i]);
         if ($status =~ /^2\d\d/) {    # 200s
             $self->RESPONSE_HANDLER($action, $xmlHash);
             $response_error_fail = 0;
@@ -1610,6 +1610,14 @@ sub zMapProcessNewClientXML {
     }
 
     return;
+}
+
+sub zMapParseResponse {
+    my ($response) = @_;
+    my $delimit  = X11::XRemote::delimiter();
+    my ($status, $xml) = split(/$delimit/, $response, 2);
+    my $hash   = XMLin($xml);
+    return ($status, $hash);
 }
 
 sub RESPONSE_HANDLER {
