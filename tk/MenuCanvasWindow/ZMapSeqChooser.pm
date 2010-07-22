@@ -85,10 +85,14 @@ sub _launchZMap {
         '--win_id'   => $zmap_conn->server_window_id
     );
     warn "Running @e";
-    my $pid = fork_exec(\@e);
-
+    my $pid = fork;
     if ($pid) {
         $self->zMapPID($pid);
+    }
+    elsif (defined $pid) {
+        exec @e;
+        warn "exec '@e' failed : $!";
+        CORE::exit();   # Still triggers DESTROY        
     }
     else {
         my $mess = "Error: couldn't fork()\n";

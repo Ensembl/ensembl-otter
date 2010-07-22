@@ -57,26 +57,6 @@ sub xml_escape{
 }
 
 
-sub fork_exec {
-    my ($command) = @_;
-    
-    if (my $pid = fork) {
-        return $pid;
-    }
-    elsif (defined $pid) {
-    
-        exec @$command;
-        warn "exec(@$command) failed : $!";
-        CORE::exit();   # Still triggers DESTROY
-    }
-    else {
-        die "fork failed: $!";
-    }
-
-    return; # not reached
-}
-
-
 #########################
 {
     my $encodedXSD = {
