@@ -15,6 +15,7 @@ useable as a server.
 
 use strict;
 use warnings;
+use XML::Simple;
 use X11::XRemote;
 use Tk::X;
 use ZMap::ConnectUtils qw(:all);
@@ -375,6 +376,13 @@ sub post_respond_handler{
 # ======================================================== #
 #                      INTERNALS                           #
 # ======================================================== #
+
+my @xml_request_parse_parameters =
+    (
+     KeyAttr    => { feature => 'name' },
+     ForceArray => [ 'feature', 'subfeature' ],
+    );
+
 sub _do_callback{
     my ($tk, $self) = @_;
     my $id    = $tk->id();
@@ -405,7 +413,7 @@ sub _do_callback{
     warn "Event has request string $request_string\n" if $DEBUG_CALLBACK;
     #=========================================================
     my $cb = $self->__callback();
-    my $request = parse_request($request_string);
+    my $request = XMLin($request_string, @xml_request_parse_parameters);
     my @data = @{$self->__callback_data};
     my $reply;
     my $fstr  = $self->xremote->format_string;
