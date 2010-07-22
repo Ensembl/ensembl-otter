@@ -34,17 +34,6 @@ ZMap::ConnectUtils
 
 =cut
 
-sub parse_request{
-    my ($xml)  = shift;
-    my $parser = XML::Simple->new();
-    my $hash   = $parser->XMLin(
-        $xml,
-        KeyAttr => {feature => 'name'},
-        ForceArray => [ 'feature', 'subfeature' ],
-        );
-    return $hash;
-}
-
 =head2 parse_response(string)
 
 parse a response into (status, hash of xml)
