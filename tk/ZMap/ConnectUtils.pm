@@ -40,22 +40,6 @@ parse a response into (status, hash of xml)
 
 =cut
 
-sub make_xml{
-    my ($hash) = @_;
-    my $parser = XML::Simple->new(rootname => q{},
-                                  keeproot => 1,
-                                  );
-    my $xml = $parser->XMLout($hash);
-    return $xml;
-}
-
-sub xml_escape{
-    my $data    = shift;
-    my $parser  = XML::Simple->new(NumericEscape => 1);
-    my $escaped = $parser->escape_value($data);
-    return $escaped;
-}
-
 
 #########################
 {
