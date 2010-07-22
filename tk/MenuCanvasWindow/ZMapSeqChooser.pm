@@ -1332,10 +1332,10 @@ sub open_clones {
     	$xremote = $self->zMapGetXRemoteClientByName("ZMap");
     
     	$self->zMapRegisterClientRequest($xremote);
-    
-        #my $input = <STDIN>;
-    
-    	my $view_success = $self->zMapDoRequest($xremote, "new_view", obj_make_xml($seg, "new_view"));
+
+        my $xml = sprintf
+            '<zmap><request action="new_view">%s</request></zmap>', zMapXMLString($seg);
+    	my $view_success = $self->zMapDoRequest($xremote, "new_view", $xml);
     
     	if($view_success == 0){
     	    $xremote = $self->zMapGetXRemoteClientByName($self->slice_name());
@@ -1618,6 +1618,49 @@ sub zMapParseResponse {
     my ($status, $xml) = split(/$delimit/, $response, 2);
     my $hash   = XMLin($xml);
     return ($status, $hash);
+}
+
+sub zMapXMLString {
+    my ($obj) = @_;
+    return "" unless $obj && ref($obj) eq 'ARRAY';
+    my $formatStr = "";
+    my @parts     = ();
+    my $utype     = $obj->[0];
+    my $uobj      = $obj->[1];
+    if($utype eq 'client'){
+        $formatStr = '<client xwid="%s" request_atom="%s" response_atom="%s" />';
+        @parts     = map { $uobj->{$_} || '' } qw(xwid request_atom response_atom);
+    }elsif($utype eq 'feature'){
+        @parts     = map { $uobj->{$_} || '' } qw(suid name style start end strand);
+        if($uobj->{'edit_name'} 
+           || $uobj->{'edit_start'} 
+           || $uobj->{'edit_end'}
+           || $uobj->{'edit_style'}){
+            $formatStr = '<feature suid="%s" name="%s" style="%s" start="%s" 
+                                   end="%s" strand="%s" >
+                            <edit name="%s" style="%s" start="%s" end="%s"/>
+                          </feature>';
+            push(@parts, map{ $uobj->{$_} || '' } qw(edit_name edit_style edit_start edit_end));
+        }else{
+            $formatStr = '<feature suid="%s" name="%s" style="%s" start="%s" 
+                                    end="%s" strand="%s"/>';
+        }
+    }elsif($utype eq 'featureset'){
+        $formatStr = '<featureset suid="%s">%s</featureset>';
+        @parts     = map { $uobj->{$_} || '' } qw(suid __empty);
+        foreach my $f(@{$uobj->{'features'}}){
+            $parts[1] .= zMapXMLString($f);
+        }
+    }elsif($utype eq 'location'){
+        $formatStr = '<location start="%s" end="%s" />';
+        @parts     = map { $uobj->{$_} || '' } qw(start end); 
+    }elsif($utype eq 'segment'){
+        $formatStr = '<segment sequence="%s" start="%s" end="%s" />';
+        @parts     = map { $uobj->{$_} || '' } qw(sequence start end);
+    }else{
+        warn "Unknown object type '$utype'\n";
+    }
+    return sprintf($formatStr, @parts);
 }
 
 sub RESPONSE_HANDLER {
