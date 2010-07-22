@@ -830,18 +830,7 @@ A handler to handle register_client requests.
 sub zMapRegisterClient {
     my ($self, $xml) = @_;
 
-    my $zmap = $self->zMapZmapConnector();
-    my $out  = {
-        response => {
-            client => [
-                {
-                    created => 0,
-                    exists  => 1,
-                }
-            ]
-        }
-    };
-    $zmap->protocol_add_meta($out);
+    my $zmap = $self->zMapZmapConnector;
 
     unless ($xml->{'request'}->{'client'}->{'xwid'}
         && $xml->{'request'}->{'client'}->{'request_atom'}
@@ -857,10 +846,7 @@ sub zMapRegisterClient {
 
     $zmap->post_respond_handler(\&open_clones, [$self]);
 
-    # this feels convoluted
-    $out->{'response'}->{'client'}->[0]->{'created'} = 1;
-
-    my $response_xml = make_xml($out);
+    my $response_xml = $zmap->client_registered_response;
 
     warn "Sending response to register_client:\n$response_xml\n" if $ZMAP_DEBUG;
 

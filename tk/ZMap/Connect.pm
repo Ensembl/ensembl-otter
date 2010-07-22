@@ -139,6 +139,25 @@ sub connect_request{
                    );
 }
 
+sub client_registered_response{
+    my ($self) = @_;
+
+    my $out  = {
+        response => {
+            client => [
+                {
+                    created => 1,
+                    exists  => 1,
+                }
+            ]
+        }
+    };
+    $self->protocol_add_meta($out);
+    my $reponse =make_xml($out);
+
+    return $reponse;
+}
+
 =head2 server_window_id( )
 
 Just the window id of the request widget.
