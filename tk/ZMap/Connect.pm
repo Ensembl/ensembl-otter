@@ -18,7 +18,6 @@ use warnings;
 use XML::Simple;
 use X11::XRemote;
 use Tk::X;
-use ZMap::ConnectUtils qw(:all);
 
 my $DEBUG_CALLBACK = 0;
 my $DEBUG_EVENTS   = 0;
@@ -511,6 +510,19 @@ sub DESTROY{
     my ($self) = @_;
     warn "Destroying $self";
     return;
+}
+
+sub make_xml{
+    my ($hash) = @_;
+    my $xml = XMLout($hash, rootname => q{}, keeproot => 1);
+    return $xml;
+}
+
+my $xml_escape_parser = XML::Simple->new(NumericEscape => 1);
+sub xml_escape{
+    my ($data) = shift;
+    my $escaped = $xml_escape_parser->escape_value($data);
+    return $escaped;
 }
 
 1;
