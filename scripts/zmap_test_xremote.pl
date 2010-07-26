@@ -92,7 +92,6 @@ sub single_select {
 
     my $response = qq(
         <zmap>
-            <meta application="perl" display=":0.0" version="\$Revision: 1.15 $" windowid="$win_id" />
             <response handled="true" />
         </zmap>
     );
