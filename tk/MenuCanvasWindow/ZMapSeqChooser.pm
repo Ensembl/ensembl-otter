@@ -143,7 +143,7 @@ sub _launchInAZMap {
                     $protocol, $server->user, $server->pass, $server->host, $server->port);
 
                 my $config = $self->formatZmapDefaults('ZMap', sources => "$sequence");
-                $config .= $self->zMapServerDefaults();
+                $config .= $self->zMapAceServerDefaults();
                 $config =~ s/\&/&amp;/g;    # needs fully xml escaping really
 
                 my $xml = sprintf(
