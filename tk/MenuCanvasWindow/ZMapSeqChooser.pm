@@ -1296,14 +1296,6 @@ sub zMapGetXRemoteClientForView {
 sub open_clones {
     my ($zmap, $self) = @_;
 
-    unless (UNIVERSAL::isa($zmap, 'ZMap::Connect')
-        && UNIVERSAL::isa($self, 'MenuCanvasWindow::XaceSeqChooser'))
-    {
-        cluck "Usage: open_clones(ZMap::Connect, MenuCanvasWindow::XaceSeqChooser)";
-        return;
-    }
-
-    #sleep 20;
     $zmap->post_respond_handler();    # clear the handler...
 
     # first open a zmap window...
