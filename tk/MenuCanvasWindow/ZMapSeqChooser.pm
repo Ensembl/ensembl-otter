@@ -39,30 +39,6 @@ on 'Launch ZMap' menu item in xaceseqchooser window.
 
 =cut
 
-sub zMap_make_exoncanvas_edit_window {
-    my ($self, $sub) = @_;
-
-    my $sub_name = $sub->name;
-    warn "subsequence-name $sub_name ";
-
-    #    warn "locus " . $sub->Locus->name ;
-    my $canvas = $self->canvas;
-
-    # Make a new window
-    my $top = $canvas->Toplevel;
-
-    # Make new MenuCanvasWindow::ExonCanvas object and initialize
-    my $ec = MenuCanvasWindow::ZMapExonCanvas->new($top, 345, 50);
-    $ec->name($sub_name);
-    $ec->XaceSeqChooser($self);
-    $ec->SubSeq($sub);
-    $ec->initialize;
-
-    $self->save_subseq_edit_window($sub_name, $ec);
-
-    return $ec;
-}
-
 =head1 _launchZMap
 
 The guts of the code to launch and display the features in a zmap.
