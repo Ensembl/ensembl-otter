@@ -110,22 +110,6 @@ sub get_client_with_id{
     return $client;
 }
 
-sub get_clients_with_pid{
-    my ($self, $pid) = @_;
-
-    my $client_list = [];
-
-    my $cache = $self->_get_clients_cache();
-
-    foreach my $id(keys(%$cache)){
-        if ($pid eq $cache->{$id}->{'pid'}){
-            push(@$client_list, $cache->{$id}->{'object'});
-        }
-    }
-
-    return $client_list;
-}
-
 sub _internal_get_client_for_action_pid{
     my ($self, $cache, $requested_action, $pid) = @_;
 
