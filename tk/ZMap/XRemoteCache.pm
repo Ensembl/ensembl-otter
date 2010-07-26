@@ -25,24 +25,12 @@ sub new{
     my $pkg = shift;
     my $self = {};
     $self->{'_clients'} = \$object_cache;
-    $self->{'_user_keys'} = {};
     $self->{'_self_windows'} = {};
     bless($self, $pkg);
 
     return $self;
 }
 
-sub insert_lookup{
-    my ($self, $key, $value) = @_;
-    $self->{'_user_keys'}->{$key} = $value;
-    warn "Inserting $key - $value" if $CACHE_DEBUG;
-    return 1;
-}
-sub lookup_value{
-    my ($self, $key, $value) = @_;
-    $value = $self->{'_user_keys'}->{$key};
-    return $value;
-}
 # access the class data
 sub _get_clients_cache{
     my ($self) = @_;

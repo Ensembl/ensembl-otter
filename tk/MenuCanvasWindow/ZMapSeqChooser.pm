@@ -369,6 +369,11 @@ sub zMapPID {
     return $self->{'_zMap_ZMAP_PROCESS_ID'};
 }
 
+sub zMapWindowIDs {
+    my ($self) = @_;
+    return $self->{'_zMap_ZMAP_WINDOW_IDS'} ||= { };
+}
+
 =head1 zMapZmapConnector
 
 This is the way we receive commands from zmap.
@@ -1251,7 +1256,7 @@ sub zMapGetXRemoteClientByName {
     my $cache = $self->xremote_cache();
     $cache ||= $self->xremote_cache(ZMap::XRemoteCache->new());
 
-    my $window_id = $cache->lookup_value($key);
+    my $window_id = $self->zMapWindowIDs->{$key};
 
     my $client = $cache->get_client_with_id($window_id);
 
@@ -1530,7 +1535,7 @@ sub zMapProcessNewClientXML {
                 if (!$cache->get_client_with_id($id)) {
                     $cache->create_client_with_pid_id_actions($self->zMapPID(), $id, @actions);
                 }
-                $cache->insert_lookup($full_key, $id);
+                $self->zMapWindowIDs->{$full_key} = $id;
             }
             $counter++;
         }
