@@ -181,7 +181,7 @@ sub _launchInAZMap {
                                   !, $sequence, $config
                 );
                 warn $xml;
-                $self->zMapDoRequest($xr, "new_view", $xml);
+                return unless $self->zMapDoRequest($xr, "new_view", $xml);
 
                 if ($xr = $self->zMapGetXRemoteClientByName($self->slice_name())) {
                     $self->zMapRegisterClientRequest($xr);
@@ -1308,30 +1308,22 @@ sub open_clones {
 
     # first open a zmap window...
     my $xremote = $self->zMapGetXRemoteClientByName($self->main_window_name());
+    return unless $self->zMapDoRequest($xremote, "new_zmap", qq!<zmap><request action="new_zmap"/></zmap>!);
 
-    my $zmap_success = $self->zMapDoRequest($xremote, "new_zmap", qq!<zmap><request action="new_zmap"/></zmap>!);
+    # now open a view
+    $xremote = $self->zMapGetXRemoteClientByName("ZMap");
+    $self->zMapRegisterClientRequest($xremote);
+    my $xml = $zmap->open_view_request($self->slice_name);
+    return unless $self->zMapDoRequest($xremote, "new_view", $xml);
 
-    if($zmap_success == 0){
-    	# now open a view
-    	$xremote = $self->zMapGetXRemoteClientByName("ZMap");
-    	$self->zMapRegisterClientRequest($xremote);
-        my $xml = $zmap->open_view_request($self->slice_name);
-    	my $view_success = $self->zMapDoRequest($xremote, "new_view", $xml);
-    	if($view_success == 0){
-    	    $xremote = $self->zMapGetXRemoteClientByName($self->slice_name());
-    	    $self->zMapRegisterClientRequest($xremote);
-            
+    $xremote = $self->zMapGetXRemoteClientByName($self->slice_name());
+    $self->zMapRegisterClientRequest($xremote);
+
 #            sleep 10;
 #            
 #            my @filters_wanted = map { $_->featuresets } grep { $_->wanted } values %{ $self->gff_filters };
 #            print "Filters to load: ".join(',',@filters_wanted)."\n" if $ZMAP_DEBUG;
 #            $self->zMapLoadFeatures(@filters_wanted);
-    	} else {
-    	    warn "new_view request failed!";
-    	}
-    } else {
-	   warn "new_zmap request failed!"
-    }
 
     return;
 }
@@ -1340,12 +1332,7 @@ sub zMapRegisterClientRequest {
     my ($self, $xremote) = @_;
 
     my $zmap = $self->zMapZmapConnector();
-
-    my $register_success = $self->zMapDoRequest($xremote, "register_client", $zmap->connect_request());
-
-    if ($register_success != 0) {
-        warn "register_client failed";
-    }
+    $self->zMapDoRequest($xremote, "register_client", $zmap->connect_request());
 
     return;
 }
@@ -1486,19 +1473,12 @@ sub zMapZoomToSubSeq {
 
 =head1 zMapDoRequest
 
-return = -1, 0, 1 for fail, response, or error respectively
+return true for success
 
 =cut
 
 sub zMapDoRequest {
     my ($self, $xremote, $action, @commands) = @_;
-
-    my $response_error_fail = -1;
-
-    unless ($xremote && UNIVERSAL::isa($xremote, 'X11::XRemote')) {
-        cluck "Usage: $self->zMapDoRequest(X11::XRemote, '<action>', (<commands>)" if $ZMAP_DEBUG;
-        return $response_error_fail;
-    }
 
     if ($ZMAP_DEBUG) {
         my $substring = 1;    # sometimes you don't need to see _all_ of the request
@@ -1520,16 +1500,14 @@ sub zMapDoRequest {
         my ($status, $xmlHash) = zMapParseResponse($a[$i]);
         if ($status =~ /^2\d\d/) {    # 200s
             $self->RESPONSE_HANDLER($action, $xmlHash);
-            $response_error_fail = 0;
         }
         else {
             $self->ERROR_HANDLER($action, $status, $xmlHash);
-            $response_error_fail = 1;
-            last;
+            return 0;
         }
     }
 
-    return $response_error_fail;
+    return 1;
 }
 
 sub zMapProcessNewClientXML {
