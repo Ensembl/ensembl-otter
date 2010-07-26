@@ -157,6 +157,14 @@ sub client_registered_response{
     return $reponse;
 }
 
+my $open_view_request_format =
+    q{<zmap><request action="new_view"><segment sequence="%s" start="1" end="0" /></request></zmap>};
+sub open_view_request{
+    my ($self, $sequence_name) = @_;
+    my $request = sprintf $open_view_request_format, xml_escape($sequence_name);
+    return $request;
+}
+
 =head2 server_window_id( )
 
 Just the window id of the request widget.
