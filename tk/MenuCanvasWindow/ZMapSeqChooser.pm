@@ -212,7 +212,7 @@ sub _launchInAZMap {
 sub zMapSendCommands {
     my ($self, @xml) = @_;
 
-    my $xr = $self->zMapGetXRemoteClientForView();
+    my $xr = $self->zMapGetXRemoteClientByName($self->slice_name());
     unless ($xr) {
         warn "No current window.";
         return;
@@ -1279,13 +1279,6 @@ sub zMapGetXRemoteClientByAction {
         $client = $cache->$method($action, $pid);
     }
 
-    return $client;
-}
-
-sub zMapGetXRemoteClientForView {
-    my ($self) = @_;
-    my $client = $self->zMapGetXRemoteClientByName($self->slice_name());
-    if (!$client) { cluck sprintf("Missing a client for %s. Are you sure zmap is running?", $self->slice_name()); }
     return $client;
 }
 
