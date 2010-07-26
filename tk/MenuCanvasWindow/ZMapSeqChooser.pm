@@ -1259,25 +1259,13 @@ sub zMapGetXRemoteClientByName {
 }
 
 sub zMapGetXRemoteClientByAction {
-    my ($self, $action, $own_windows_only) = @_;
-
-    my ($pid, $client, $method);
+    my ($self, $action) = @_;
 
     my $cache = $self->xremote_cache();
     $cache ||= $self->xremote_cache(ZMap::XRemoteCache->new());
 
-    # warn Dumper $cache;
-
-    $method = (
-        $own_windows_only
-        ? 'get_own_client_for_action_pid'
-        : 'get_client_for_action_pid'
-    );
-
-    if ($cache) {
-        $pid = $self->zMapPID();
-        $client = $cache->$method($action, $pid);
-    }
+    my $pid = $self->zMapPID();
+    my $client = $cache->get_own_client_for_action_pid($action, $pid);
 
     return $client;
 }
@@ -1326,7 +1314,7 @@ sub zMapGetMark {
 
     my ($self) = @_;
 
-    if (my $client = $self->zMapGetXRemoteClientByAction('get_mark', 1)) {
+    if (my $client = $self->zMapGetXRemoteClientByAction('get_mark')) {
 
         my $xml = qq(<zmap><request action="get_mark" /></zmap>);
 
@@ -1356,7 +1344,7 @@ sub zMapGetMark {
 sub zMapLoadFeatures {
     my ($self, @featuresets) = @_;
 
-    if (my $client = $self->zMapGetXRemoteClientByAction('load_features', 1)) {
+    if (my $client = $self->zMapGetXRemoteClientByAction('load_features')) {
         
         print "Got client for load_features\n" if $ZMAP_DEBUG;
         
@@ -1393,7 +1381,7 @@ sub zMapLoadFeatures {
 sub zMapDeleteFeaturesets {
     my ($self, @featuresets) = @_;
 
-    if (my $client = $self->zMapGetXRemoteClientByAction('delete_feature', 1)) {
+    if (my $client = $self->zMapGetXRemoteClientByAction('delete_feature')) {
 
         my $xml = Hum::XmlWriter->new;
         $xml->open_tag('zmap');
@@ -1431,7 +1419,7 @@ sub zMapZoomToSubSeq {
 
     my ($self, $subseq) = @_;
 
-    if (my $client = $self->zMapGetXRemoteClientByAction('zoom_to', 1)) {
+    if (my $client = $self->zMapGetXRemoteClientByAction('zoom_to')) {
         my $xml = Hum::XmlWriter->new;
         $xml->open_tag('zmap');
         $xml->open_tag('request', { action => 'zoom_to' });
