@@ -64,7 +64,6 @@ sub register_client {
 
     my $response = qq(
         <zmap>
-            <meta application="perl" display=":0.0" version="\$Revision: 1.10 $" windowid="$win_id" />
             <response>
                 <client created="1" exists="1" />
             </response>
@@ -93,7 +92,7 @@ sub single_select {
 
     my $response = qq(
         <zmap>
-            <meta application="perl" display=":0.0" version="\$Revision: 1.10 $" windowid="$win_id" />
+            <meta application="perl" display=":0.0" version="\$Revision: 1.15 $" windowid="$win_id" />
             <response handled="true" />
         </zmap>
     );
