@@ -141,7 +141,8 @@ sub all_Attributes_string {
 }
 
 sub vega_hashkey {
-  my $self=shift;
+  my ($self) = @_;
+
   my $seq_region_name   = $self->seq_region_name    || throw(  'seq_region_name must be set to generate correct vega_hashkey.');
   my $seq_region_start  = $self->seq_region_start   || throw( 'seq_region_start must be set to generate correct vega_hashkey.');
   my $seq_region_end    = $self->seq_region_end     || throw(   'seq_region_end must be set to generate correct vega_hashkey.');
@@ -163,8 +164,8 @@ sub vega_hashkey_structure {
 }
 
 sub vega_hashkey_sub {
+  my ($self) = @_;
 
-  my $self = shift;
   my $evidence=$self->evidence_list();
   my $vega_hashkey_sub={};
 
@@ -184,7 +185,7 @@ sub vega_hashkey_sub {
 }
 
 sub translatable_Exons_vega_hashkey {
-    my $self = shift;
+    my ($self) = @_;
 
     return join('+', map $_->vega_hashkey, @{$self->get_all_translateable_Exons});
 }
@@ -193,10 +194,10 @@ sub translatable_Exons_vega_hashkey {
 # to simplify the loading during comparison.
 
 sub last_db_version {
-    my $self = shift @_;
+    my ($self, @args) = @_;
 
-    if(@_) {
-        $self->{_last_db_version} = shift @_;
+    if(@args) {
+        $self->{_last_db_version} = shift @args;
     }
     return $self->{_last_db_version};
 }
