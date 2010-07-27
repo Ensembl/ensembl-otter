@@ -187,7 +187,7 @@ sub vega_hashkey_sub {
 sub translatable_Exons_vega_hashkey {
     my ($self) = @_;
 
-    return join('+', map $_->vega_hashkey, @{$self->get_all_translateable_Exons});
+    return join('+', map { $_->vega_hashkey } @{$self->get_all_translateable_Exons});
 }
 
 # This is to be used by storing mechanism of GeneAdaptor,
