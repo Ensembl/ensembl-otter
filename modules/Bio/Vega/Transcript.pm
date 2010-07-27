@@ -26,11 +26,9 @@ sub get_all_Exons_ref {
     my ($self) = @_;
     
     $self->get_all_Exons;
-    if (my $ref = $self->{'_trans_exon_array'}) {
-        return $ref;
-    } else {
-        $self->throw("'_trans_exon_array' not set");
-    }
+    my $ref = $self->{'_trans_exon_array'};
+    $self->throw("'_trans_exon_array' not set") unless $ref;
+    return $ref;
 }
 
 sub transcript_author {
