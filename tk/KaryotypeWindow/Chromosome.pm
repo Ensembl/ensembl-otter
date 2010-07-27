@@ -61,6 +61,8 @@ sub draw {
         $graph->draw($kw, $graph_x, $save_y);
         $graph_x += $pad + $graph->width;
     }
+
+    return;
 }
 
 sub height {
@@ -123,6 +125,7 @@ sub set_initial_and_terminal_bands {
     $bands[0]->is_first(1);
     $bands[$#bands]->is_last(1);
 
+    return;
 }
 
 sub get_first_and_last_Bands {
@@ -149,6 +152,8 @@ sub add_Graph {
     confess "Missing Graph argument" unless $Graph;
     my $lst = $self->{'_Graph_list'} ||= [];
     push ( @$lst, $Graph );
+
+    return;
 }
 
 sub new_Graph {
@@ -177,6 +182,8 @@ sub add_Band {
     confess "Missing Band argument" unless $band;
     my $lst = $self->{'_Band_list'} ||= [];
     push ( @$lst, $band );
+
+    return;
 }
 
 sub new_Band {
