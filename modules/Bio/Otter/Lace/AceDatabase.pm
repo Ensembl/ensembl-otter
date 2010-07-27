@@ -630,6 +630,34 @@ sub make_pipeline_DataFactory {
     return $self->pipeline_DataFactory($factory);
 }
 
+sub gff_http_script_name {
+    return "gff_http.pl";
+}
+
+sub gff_http_script_arguments {
+    my( $self, $filter ) = @_;
+
+    my $slice_params = $self->smart_slice->toHash;
+
+    my $params = {
+        %{ $slice_params },
+        %{ $filter->server_params },
+        gff_seqname => $slice_params->{type},
+        gff_source  => $filter->name,
+        session_dir => $self->home,
+        url_root    => $self->Client->url_root,
+        cookie_jar  => $ENV{'OTTERLACE_COOKIE_JAR'},
+    };
+
+    my $arguments = [ ];
+    while ( my ( $key, $value ) = each %{$params} ) {
+        next unless defined $value;
+        push @{$arguments}, join "=", $key, $value;
+    }
+
+    return $arguments; 
+}
+
 
 sub DESTROY {
     my( $self ) = @_;
