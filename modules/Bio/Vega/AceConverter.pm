@@ -177,6 +177,8 @@ sub build_Author {
         -NAME   => $name,
         );
     $authors{$self}{$name} = $author;
+
+    return;
 }
 
 sub build_Features_spans_and_agp_fragments {
@@ -252,6 +254,8 @@ sub build_Features_spans_and_agp_fragments {
         push(@$cs_list, $cs);
     }
     @$cs_list = sort {$a->chr_start <=> $b->chr_start} @$cs_list;
+
+    return;
 }
 
 sub build_CloneSequence {
@@ -301,6 +305,8 @@ sub build_CloneSequence {
             $self->create_Attribute($ci, 'keyword', $kw->[0]);
         }
     }
+
+    return;
 }
 
 sub build_Gene {
@@ -343,6 +349,8 @@ sub build_Gene {
 
     my $gene_list = $genes{$self} ||= [];
     push(@$gene_list, $gene);
+
+    return;
 }
 
 sub gather_transcripts {
@@ -478,6 +486,8 @@ sub build_Transcript {
     }
 
     $transcripts{$self}{$name} = $tsct;
+
+    return;
 }
 
 sub make_exons {
