@@ -29,7 +29,6 @@ use Hum::Ace::Method;
 use Hum::FastaFileIO;
 use Bio::Otter::Lace::PersistentFile;
 use Bio::EnsEMBL::Analysis::Runnable::Finished::Exonerate;
-use Bio::EnsEMBL::Ace::Filter::Cigar_ace_parser;
 
 sub new{
     my( $pkg ) = @_;
@@ -469,28 +468,16 @@ sub format_ace_output {
 
         foreach my $fp (@{ $name_fp_list{$hname} }) {
 
-            # est2genome has strand info from splice sites, which we are losing.
-            # contig_strand is always 1 at the moment
-            # align_coords() will break if we fix this
-            my $strand = $fp->strand;
-
-            # Transforms the gapped alignment information in the cigar string
-            # into a series of Align blocks for acedb's Smap system. This
-            # enables gapped alignments to be displayed in blixem.
-            my ($seq_coord, $target_coord, $other) = Bio::EnsEMBL::Ace::Filter::Cigar_ace_parser::align_coords(
-                $fp->cigar_string, $fp->start, $fp->end, $fp->hstart, $fp->hend, $strand, $fp->hstrand, $is_protein);
-
-
-            #print STDOUT "Parse ".join(" ",$fp->cigar_string, $fp->start, $fp->end, $fp->hstart, $fp->hend, $strand, $fp->hstrand, $is_protein)."\n";
-
             # In acedb strand is encoded by start being greater
             # than end if the feature is on the negative strand.
+            my $strand = $fp->strand;
             my $start = $fp->start;
             my $end   = $fp->end;
             my $hstart = $fp->hstart;
             my $hend 	= $fp->hend;
+            my $hstrand = $fp->hstrand;
 
-			if($fp->hstrand ==-1){
+            if($hstrand ==-1){
             	$fp->hstrand(1);
             	$strand *= -1;
             }
@@ -515,18 +502,23 @@ sub format_ace_output {
               $self->acedb_homol_tag, $hname, $method_tag, $fp->percent_id,
               $start, $end, $hstart, $hend;
 
-            if (@$seq_coord > 1) {
+            my @ugfs = $fp->ungapped_features;
+            if (@ugfs > 1) {
                 # Gapped alignments need two or more Align blocks to describe
                 # them. The information at the start of the line is needed for
                 # each block so that they all end up under the same tag once
                 # they are parsed into acedb.
-                for (my $i = 0; $i < @$seq_coord; $i++){
-                    $ace .=  $query_line . ($is_protein ? " AlignDNAPep" : " Align") . " $seq_coord->[$i] $target_coord->[$i] $other->[$i]\n";
-                    #print STDOUT $query_line . " Align $seq_coord->[$i] $target_coord->[$i] $other->[$i]\n";
+                foreach my $ugf (@ugfs){
+                    my $ref_coord   = $strand  == -1 ? $ugf->end  : $ugf->start;
+                    my $match_coord = $hstrand == -1 ? $ugf->hend : $ugf->hstart;
+                    my $length      = ($ugf->hend - $ugf->hstart) + 1;
+                    $ace .=
+                        $query_line
+                        . ($is_protein ? " AlignDNAPep" : " Align")
+                        . " $ref_coord $match_coord $length\n";
                 }
             } else {
                 $ace .= $query_line . "\n";
-                #print STDOUT $query_line ."\n";
             }
         }
 
