@@ -90,6 +90,8 @@ sub set_top_coordinates {
 
     confess "Missing coordinates argument" unless @coord;
     $self->{'_top_coordinates'} = [@coord];
+
+    return;
 }
 
 sub bottom_coordinates {
@@ -107,6 +109,8 @@ sub set_bottom_coordinates {
 
     confess "Missing coordinates argument" unless @coord;
     $self->{'_bottom_coordinates'} = [@coord];
+
+    return;
 }
 
 sub draw {
@@ -134,6 +138,8 @@ sub draw {
         -smooth     => $smooth_flag,
         -stipple    => $self->stipple || '',
         );
+
+    return;
 }
 
 # If the top is being rounded, we need to double
@@ -175,6 +181,8 @@ sub set_fill_from_shade {
     $shade = 255 - (255 * $shade);
     my $fill = sprintf "#%02x%02x%02x", $shade, $shade, $shade;
     $self->fill($fill);
+
+    return;
 }
 
 sub fill {
