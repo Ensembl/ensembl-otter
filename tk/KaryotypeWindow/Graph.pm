@@ -88,6 +88,8 @@ sub add_Bin {
     confess "Missing Bin argument" unless $Bin;
     my $lst = $self->{'_Bin_list'} ||= [];
     push ( @$lst, $Bin );
+
+    return;
 }
 
 sub new_Bin {
@@ -158,6 +160,7 @@ sub draw {
     #    -width => 0.25,
     #);
 
+    return;
 }
 
 sub draw_histogram {
@@ -190,6 +193,8 @@ sub draw_histogram {
         $y1 = $y2;
         $x++;
     }
+
+    return;
 }
 
 
