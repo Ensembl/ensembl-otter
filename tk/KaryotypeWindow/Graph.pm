@@ -171,7 +171,7 @@ sub draw_histogram {
     my $chr_name = $chr->name;
 
     my $data   = $kw->data;
-    my @values = @{ %$data->{$chr_name} };
+    my @values = @{ $data->{$chr_name} };
 
     my $height = $chr->height;
 
