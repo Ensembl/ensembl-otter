@@ -29,6 +29,8 @@ sub draw {
         -smooth     => 1,
         -stipple    => $self->stipple,
         );
+
+    return;
 }
 
 sub fill {
@@ -61,6 +63,8 @@ sub set_stalk_coords {
         $x+$width,$y+$height, $x+$width,$y+$height,
         $x,$y+$height, $x,$y+$height,
         );
+
+    return;
 }
 
 
