@@ -4,6 +4,7 @@
 package CanvasWindow::DataSetChooser;
 
 use strict;
+use warnings;
 use Carp;
 use Tk::DialogBox;
 use base 'CanvasWindow';
