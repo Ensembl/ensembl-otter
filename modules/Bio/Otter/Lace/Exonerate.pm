@@ -538,7 +538,6 @@ sub list_GenomeSequence_names {
 sub get_masked_unmasked_seq {
     my ($self) = @_;
 
-	my $ace = $self->AceDatabase->aceperl_db_handle;
     my $name = $self->genomic_seq->name;
     my $dna_str = $self->genomic_seq->sequence_string;
     $dna_str =~ s/-/N/g;
@@ -552,54 +551,50 @@ sub get_masked_unmasked_seq {
         -alphabet   => 'dna',
         );
 
-    $ace->raw_query("find Sequence $name");
+    my $gff_http_script =
+        sprintf "%s/ensembl-otter/scripts/%s",
+        $ENV{'OTTER_HOME'},
+        $self->AceDatabase->gff_http_script_name;
+    my $dataset = $self->AceDatabase->smart_slice->DataSet;
 
-	# Make sure trf and repeatmasker are loaded before masking
-	my $DataFactory = $self->AceDatabase->pipeline_DataFactory();
-	my $filters = $DataFactory->get_names2filters();
+    # mask the sequences with repeat features
+    foreach my $filter_name qw( trf RepeatMasker ) {
+        my $filter = $dataset->filter_by_name($filter_name);
+        confess "no filter named '${filter_name}'" unless $filter;
+        my @gff_http_command =
+            ( $gff_http_script,
+              @{$self->AceDatabase->gff_http_script_arguments($filter)} );
+        open my $gff_http_h, '-|', @gff_http_command
+            or confess "failed to run $gff_http_script: $!";
+        while (<$gff_http_h>) {
+            chomp;
+            next if /^\#\#/; # skip GFF headers
 
-	foreach (keys %$filters) { $filters->{$_}->wanted(0);}
-	my ($rm,$trf) = ('RepeatMasker','trf');
-	my $load;
-	for ($rm,$trf) {
-		if(!$filters->{$_}->done) {
-			$filters->{$_}->wanted(1);
-			$load = 1;
-		}
-	}
-	$self->AceDatabase->topup_pipeline_data_into_ace_server() if $load;
-	foreach (keys %$filters) { $filters->{$_}->wanted(1); }
+            # feature parameters
+            my ( $start, $end ) = (split /\t/)[3,4];
 
-	# must reset the sequence in the current list
-	$ace->raw_query("find Sequence $name");
+            # sanity checks
+            confess "missing feature start in '$_'" unless defined $start;
+            confess "non-numeric feature start: $start"
+                unless $start =~ /^[[:digit:]]+$/;
+            confess "missing feature end in '$_'" unless defined $end;
+            confess "non-numeric feature end: $end"
+                unless $end =~ /^[[:digit:]]+$/;
 
-    # Mask DNA with trf features
-    my $feat_list = $ace->raw_query('show -a Feature');
+            if ($start > $end) {
+                ($start, $end) = ($end, $start);
+            }
 
-    #warn "Features: $feat_list";
-    my $feat_txt = Hum::Ace::AceText->new($feat_list);
-    foreach my $f ($feat_txt->get_values('Feature."?trf')) {
-        my ($start, $end) = @$f;
-        if ($start > $end) {
-            ($start, $end) = ($end, $start);
+            # mask against this feature
+            my $length = $end - $start + 1;
+            substr($dna_str, $start - 1, $length, 'n' x $length);
+            substr($sm_dna_str, $start - 1, $length,
+                   lc substr($sm_dna_str, $start - 1, $length));
         }
-        my $length = $end - $start + 1;
-        substr($dna_str, $start - 1, $length) = 'n' x $length;
-        substr($sm_dna_str, $start - 1, $length) = lc substr($sm_dna_str, $start - 1, $length);
-    }
-
-    # Mask DNA with RepeatMakser features
-    my $repeat_list = $ace->raw_query('show -a Motif_homol');
-    #warn "Repeats: $repeat_list";
-    my $repeat_txt = Hum::Ace::AceText->new($repeat_list);
-    foreach my $m ($repeat_txt->get_values('Motif_homol')) {
-        my ($start, $end) = @$m[3,4];
-        if ($start > $end) {
-            ($start, $end) = ($end, $start);
-        }
-        my $length = $end - $start + 1;
-        substr($dna_str, $start - 1, $length) = 'n' x $length;
-        substr($sm_dna_str, $start - 1, $length) = lc substr($sm_dna_str, $start - 1, $length);
+        close $gff_http_h
+            or confess $!
+            ? "error closing $gff_http_script: $!"
+            : "$gff_http_script failed: status = $?";
     }
 
     my $masked = Bio::Seq->new(
