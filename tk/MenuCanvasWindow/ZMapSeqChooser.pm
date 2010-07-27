@@ -490,34 +490,16 @@ sub zMapGffFilterDefaults {
     
     my $text;
     
-    my $script = 'gff_http.pl';
+    my $script = $self->AceDatabase->gff_http_script_name;
     
     my %filter_columns;
     my %filter_styles;
     my %filter_descs;
 
-    my $slice_params = $self->AceDatabase->smart_slice->toHash;
-    my $gff_fetch_params = {
-        session_dir => $self->ace_path,
-        url_root    => $self->AceDatabase->Client->url_root,
-        cookie_jar  => $ENV{'OTTERLACE_COOKIE_JAR'},
-    };
-
     for my $filter (@$gff_filters) {
 
-        my %params = (
-            %{ $slice_params },
-            %{ $filter->server_params },
-            gff_seqname => $slice_params->{type},
-            gff_source  => $filter->name,
-            %{ $gff_fetch_params },
-            );
-
         my $param_string =
-            join '&',
-            map { $_.'='.$params{$_} }
-            grep { defined $params{$_} }
-            keys %params;
+            join '&', @{$self->AceDatabase->gff_http_script_arguments($filter)};
         
         $text .= $self->formatZmapDefaults(
             $filter->name,
