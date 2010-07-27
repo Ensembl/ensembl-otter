@@ -114,8 +114,9 @@ sub generate_vega_objects {
     my $ace_txt = $ace->raw_query('show -a');
 
     # Remove all Feature lines which aren't editable types
-    my $editable = join '|', map $_->name,
+    my $mutable =
         $self->AceDatabase->MethodCollection->get_all_mutable_non_transcript_Methods;
+    my $editable = join '|', map { $_->name } @{$mutable};
     $ace_txt =~ s/^Feature\s+"(?!($editable)).*\n//mg;
 
     $self->parse('build_Features_spans_and_agp_fragments', $ace_txt);
@@ -161,7 +162,7 @@ sub parse {
 
     # The $method only gets given a single paragraph
     # ie: ace file "object"
-    foreach my $obj_txt (grep /\w/, split /\n\n+/, $txt) {
+    foreach my $obj_txt (grep { /\w/ } split /\n\n+/, $txt) {
         my $ace = Hum::Ace::AceText->new($obj_txt);
         $self->$method($ace);
     }
@@ -264,7 +265,7 @@ sub build_CloneSequence {
     my (undef, $name) = $ace->class_and_name;
 
     # The same contig can appear more than once in the assembly
-    foreach my $cs (grep $_->contig_name eq $name, @{$clone_sequences{$self}}) {
+    foreach my $cs (grep { $_->contig_name eq $name } @{$clone_sequences{$self}}) {
         if (my $acc = $ace->get_single_value('Accession')) {
             $cs->accession($acc);
         }
@@ -414,7 +415,7 @@ sub set_gene_biotype_status {
 
 
     my $biotype = 'processed_transcript';
-    if (my @pseudo = grep /pseudo/i, keys %tsct_biotype) {
+    if (my @pseudo = grep { /pseudo/i } keys %tsct_biotype) {
         if (@pseudo > 1) {
             confess sprintf "More than one psedogene type in gene %s (%s)",
                 $gene->get_all_Attributes('name')->[0]->value,
