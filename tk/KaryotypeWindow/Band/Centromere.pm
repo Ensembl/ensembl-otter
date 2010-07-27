@@ -32,6 +32,8 @@ sub draw {
         -smooth     => 1,
         -stipple    => $self->stipple,
         );
+
+    return;
 }
 
 sub fill {
@@ -64,6 +66,8 @@ sub set_p_centromere_coords {
         $x+(0.25*$width),$y+$height, $x+(0.25*$width),$y+$height,
         $x+(0.25*$width),$y+(0.5*$height), $x,$y+(0.5*$height),
         );
+
+    return;
 }
 
 sub set_q_centromere_coords {
@@ -79,6 +83,8 @@ sub set_q_centromere_coords {
         $x+$width,$y+$height,               $x+$width,$y+$height,
         $x,$y+$height,                      $x,$y+$height,
         );
+
+    return;
 }
 
 1;
