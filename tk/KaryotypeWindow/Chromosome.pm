@@ -123,7 +123,7 @@ sub set_initial_and_terminal_bands {
         $band->is_last(0);
     }
     $bands[0]->is_first(1);
-    $bands[$#bands]->is_last(1);
+    $bands[-1]->is_last(1);
 
     return;
 }
