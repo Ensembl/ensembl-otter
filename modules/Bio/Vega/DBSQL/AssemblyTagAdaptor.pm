@@ -43,13 +43,13 @@ sub check_seq_region_id_is_transferred {
 
   my ($self, $seq_region_id) = @_;
   my $sth = $self->prepare(qq{
-							  SELECT seq_region_id
-							  FROM assembly_tagged_contig
-							  WHERE seq_region_id = $seq_region_id
-							  AND transferred = 'yes'
-							  limit 1
-							 }
-						  );
+SELECT seq_region_id
+FROM assembly_tagged_contig
+WHERE seq_region_id = $seq_region_id
+AND transferred = 'yes'
+limit 1
+}
+      );
   $sth->execute;
   return $sth->fetchrow ? 1 : 0;
 }
@@ -58,15 +58,15 @@ sub remove {
   my ($self, $del_at) = @_;
   my $sth;
   eval {
-	 $sth = $self->prepare("DELETE FROM assembly_tag where tag_id = ?");
-	 $sth->execute($del_at->dbID);
+      $sth = $self->prepare("DELETE FROM assembly_tag where tag_id = ?");
+      $sth->execute($del_at->dbID);
   };
   if ($@){
-	 throw "problem with deleting assembly_tag ".$del_at->dbID;
+      throw "problem with deleting assembly_tag ".$del_at->dbID;
   }
   my $num=$sth->rows;
   if ($num == 0) {
-	 throw "assembly tag with ".$del_at->dbID." not deleted , tag_id may not be present\n";
+      throw "assembly tag with ".$del_at->dbID." not deleted , tag_id may not be present\n";
   }
   warning "----- assembly_tag tag_id ", $del_at->dbID, " is deleted -----\n";
 
@@ -76,10 +76,10 @@ sub remove {
   my $sa=$self->db->get_SliceAdaptor();
   my $clone_id=$sa->get_seq_region_id($clone_slice);
   eval{
-	 $self->update_assembly_tagged_clone($clone_id,"no");
+      $self->update_assembly_tagged_clone($clone_id,"no");
   };
   if ($@){
-	 throw "delete of assembly_tag failed :$@";
+      throw "delete of assembly_tag failed :$@";
   }
   return 1;
 }
@@ -89,15 +89,15 @@ sub update_assembly_tagged_contig {
 
   my $num;
   eval{
-	my $sth = $self->prepare(qq{
-								UPDATE assembly_tagged_contig
-								SET transferred = 'yes'
-								WHERE seq_region_id = $seq_region_id
-							   });
-	$sth->execute();
+      my $sth = $self->prepare(qq{
+UPDATE assembly_tagged_contig
+SET transferred = 'yes'
+WHERE seq_region_id = $seq_region_id
+});
+      $sth->execute();
   };
   if ($@) {
-	 throw "Update of assembly_tagged_contig failed for seq_region_id $seq_region_id: $@";
+      throw "Update of assembly_tagged_contig failed for seq_region_id $seq_region_id: $@";
   }
 
   return 1;
@@ -128,7 +128,7 @@ sub store {
 
     $contig_slice = $at_c->slice;
 
-    unless ($contig_slice) {	
+    unless ($contig_slice) {
       throw "AssemblyTag does not have a contig slice attached to it, cannot store AssemblyTag\n";
     }
   }
@@ -143,10 +143,10 @@ sub store {
   my $sth = $self->prepare($sql);
 
   eval{
-	 $sth->execute($seq_region_id, $at->seq_region_start, $at->seq_region_end, $at->seq_region_strand, $at->tag_type, $at->tag_info);
+      $sth->execute($seq_region_id, $at->seq_region_start, $at->seq_region_end, $at->seq_region_strand, $at->tag_type, $at->tag_info);
   };
   if ($@){
-	 throw "insert of assembly_tag failed:$@";
+      throw "insert of assembly_tag failed:$@";
   }
 
   $self->update_assembly_tagged_contig($seq_region_id); # is contig_id
