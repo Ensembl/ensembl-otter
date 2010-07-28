@@ -90,13 +90,14 @@ sub compare_assembly_tag_sets {
 sub AssemblyTag_key {
     my( $at ) = @_;
 
-    return join('^',
+    return
+        join '^',
         $at->tag_type,
         $at->start,
         $at->end,
-	$at->tag_info,	
-	$at->strand	
-        );
+        $at->tag_info,
+        $at->strand,
+        ;
 }
 
 sub compare_clones {
@@ -435,7 +436,7 @@ sub set_gene_created_version_modified {
     foreach my $tran (@{$gene->get_all_Transcripts}) {
         $tran->created($time) unless $tran->created;
         $tran->version(1)     unless $tran->version;
-	$tran->modified($time);
+        $tran->modified($time);
 
         if (my $translation = $tran->translation) {
             $translation->version(1) unless $translation->version;
@@ -443,10 +444,10 @@ sub set_gene_created_version_modified {
     }
 
     foreach my $exon (@{$gene->get_all_Exons}) {
-	$exon->dbID(undef);
-	$exon->created($time) unless $exon->created;
+        $exon->dbID(undef);
+        $exon->created($time) unless $exon->created;
         $exon->version(1)     unless $exon->version;
-	$exon->modified($time);
+        $exon->modified($time);
     }
 
     return;
@@ -459,7 +460,7 @@ sub compare_obj {
 
     # Make a hash of id => old objects (objects already in otter)
     foreach my $oldobj (@$oldobjs) {
-	if (my $old_id = $oldobj->stable_id) {
+        if (my $old_id = $oldobj->stable_id) {
             $id_old{$old_id} = $oldobj;
         } else {
             my $thing = $self->obj_type($oldobj);
@@ -471,7 +472,7 @@ sub compare_obj {
     # id that is not in the list of old objects to the list of
     # potentially modified objects.
     foreach my $newobj (@$newobjs) {
-	my $new_id = $newobj->stable_id
+        my $new_id = $newobj->stable_id
             or die "Object '$newobj' in data being saved is missing its stable_id";
         # Might want to check if two objects in the list
         # of new ones have the same stable_id?
@@ -514,17 +515,17 @@ sub compare_transcripts {
     @exons2 = sort {$a->start <=> $b->start} @exons2;
 
     if (scalar(@exons1) != scalar(@exons2)) {
-	print STDERR "Different numbers of exons (" . scalar(@exons1) . " and " . scalar(@exons2) . "\n";
-	return 0;
+        print STDERR "Different numbers of exons (" . scalar(@exons1) . " and " . scalar(@exons2) . "\n";
+        return 0;
     }
 
     while (my $ex1 = shift @exons1) {
-	my $ex2 = shift(@exons2);
+        my $ex2 = shift(@exons2);
 
-	if ($self->compare_exons($ex1,$ex2) == 0) {
+        if ($self->compare_exons($ex1,$ex2) == 0) {
             print STDERR "Found different exon " . $ex1->stable_id . " " . $ex2->stable_id . "\n";
-	    return 0;
-	}
+            return 0;
+        }
     }
 
     my $tl_old = $tran1->translation;
@@ -599,7 +600,7 @@ sub compare_translations {
         print STDERR "Found different translation end coords " . $tl1->end . " " . $tl2->end . "\n";
         return 0;
     } else {
-	return 1;
+        return 1;
     }
 }
 
