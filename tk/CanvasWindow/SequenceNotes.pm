@@ -96,7 +96,7 @@ sub refresh_column {
 
             my $new_content = $data_method->($cs, $i , $self, $ss);
             delete $new_content->{'-tags'};    # Don't want to alter tags
-    #	    warn "re-configuring column  $col_no , row $i" ; 
+            # warn "re-configuring column  $col_no , row $i" ; 
             $canvas->itemconfigure($obj, %$new_content);
          } else {
             warn "No object withtag '$tag_string'";
@@ -168,44 +168,44 @@ sub column_methods {
         $self->{'_column_methods'} = [
             [$text_method, \&_column_text_row_number],
             [$text_method, 
-                sub{
-                    # Use closure for font definition
-                    my ($cs, $i, $self, $ss) = @_;
-                    my $accsv = $cs->accession_dot_sv();
-                    my $current_subset_tag = $self->current_subset_tag();
-                    my $fontcolour = $ss->accsv_belongs_to_subset($accsv, $current_subset_tag)
-                                        ? 'red'
-                                        : $ss->accsv_belongs_to_subset($accsv)
-                                            ? 'DarkRed'
-                                            : 'black';
-                    return {-text => $accsv, -font => $bold, -fill => $fontcolour, -tags => ['searchable']};
-                }],
+             sub{
+                 # Use closure for font definition
+                 my ($cs, $i, $self, $ss) = @_;
+                 my $accsv = $cs->accession_dot_sv();
+                 my $current_subset_tag = $self->current_subset_tag();
+                 my $fontcolour = $ss->accsv_belongs_to_subset($accsv, $current_subset_tag)
+                     ? 'red'
+                     : $ss->accsv_belongs_to_subset($accsv)
+                     ? 'DarkRed'
+                     : 'black';
+                 return {-text => $accsv, -font => $bold, -fill => $fontcolour, -tags => ['searchable']};
+             }],
             [$text_method, 
-                sub{
-                    # Use closure for font definition
-                    my ($cs, $i, $self, $ss) = @_;
-                    my $accsv = $cs->accession_dot_sv();
-                    my $current_subset_tag = $self->current_subset_tag();
-                    my $fontcolour = $ss->accsv_belongs_to_subset($accsv, $current_subset_tag)
-                                        ? 'red'
-                                        : $ss->accsv_belongs_to_subset($accsv)
-                                            ? 'DarkRed'
-                                            : 'black';
-                    return {-text => $cs->clone_name, -font => $bold, -fill => $fontcolour, -tags => ['searchable'] };
-                }],
+             sub{
+                 # Use closure for font definition
+                 my ($cs, $i, $self, $ss) = @_;
+                 my $accsv = $cs->accession_dot_sv();
+                 my $current_subset_tag = $self->current_subset_tag();
+                 my $fontcolour = $ss->accsv_belongs_to_subset($accsv, $current_subset_tag)
+                     ? 'red'
+                     : $ss->accsv_belongs_to_subset($accsv)
+                     ? 'DarkRed'
+                     : 'black';
+                 return {-text => $cs->clone_name, -font => $bold, -fill => $fontcolour, -tags => ['searchable'] };
+             }],
             [$text_method, \&_column_text_pipeline_status],
-	        [$text_method , 
-                sub{
-                    my $cs = shift;
-                    if (my $sn = $cs->current_SequenceNote) {
-                        my $time = $sn->timestamp;
-                        my( $year, $month, $mday ) = (localtime($time))[5,4,3];
-                        my $txt = sprintf "%04d-%02d-%02d", 1900 + $year, 1 + $month, $mday;
-                        return { -text => $txt, -font => $norm, -tags => ['searchable']};
-                    } else {
-                        return;
-                    }
-                }],
+            [$text_method , 
+             sub{
+                 my $cs = shift;
+                 if (my $sn = $cs->current_SequenceNote) {
+                     my $time = $sn->timestamp;
+                     my( $year, $month, $mday ) = (localtime($time))[5,4,3];
+                     my $txt = sprintf "%04d-%02d-%02d", 1900 + $year, 1 + $month, $mday;
+                     return { -text => $txt, -font => $norm, -tags => ['searchable']};
+                 } else {
+                     return;
+                 }
+             }],
             [$text_method,  \&_column_text_seq_note_author],
             [$text_method,  \&_column_text_seq_note_text],
             [$image_method, \&_column_padlock_icon],
@@ -341,7 +341,7 @@ sub initialise {
         my $clear_button = $button_frame_notes->Button(-text    => 'clear'   ,
                                                    -command => sub { my $ref = $self->set_note_ref(); $$ref = undef; }
                                                    )->pack(-side => 'right');
-	
+
         # Remove Control-H binding from Entry
         $comment->bind(ref($comment), '<Control-h>', '');
         $comment->bind(ref($comment), '<Control-H>', '');
@@ -370,9 +370,9 @@ sub initialise {
 
     ### Is hunting in CanvasWindow?
     my $hunter = sub{
-	    $top->Busy;
-	    $self->hunt_for_selection;
-	    $top->Unbusy;
+        $top->Busy;
+        $self->hunt_for_selection;
+        $top->Unbusy;
     };
 
     if( @{$self->get_CloneSequence_list()} > $self->max_per_page() ){
@@ -393,7 +393,7 @@ sub initialise {
     $top->bind('<Control-H>', $hunter);
     
     my $refresh_locks = sub{
-	    $self->refresh_lock_columns;
+        $self->refresh_lock_columns;
     };
     $self->make_button($button_frame_cmds, 'Refresh Locks', $refresh_locks, 0);
     $top->bind('<Control-r>', $refresh_locks);
@@ -401,11 +401,11 @@ sub initialise {
     $top->bind('<F5>',        $refresh_locks);
     
     my $refresh_all = sub {
-	    $top->Busy;
+        $top->Busy;
         # we want this to refresh all columns
         $self->_refresh_SequenceSet();
-	    $self->draw();
-	    $top->Unbusy;
+        $self->draw();
+        $top->Unbusy;
     };
     $self->make_button($button_frame_cmds, 'Refresh Ana. Status', $refresh_all, 8);
     $top->bind('<Control-a>', $refresh_all);
@@ -413,27 +413,27 @@ sub initialise {
     $top->bind('<F6>',        $refresh_all);
     
     my $run_lace_on_slice = sub{
-	    $self->slice_window;
+        $self->slice_window;
     };
     $self->make_button($button_frame_cmds, 'Open from chr coords', $run_lace_on_slice);
 
     my $run_lace = sub{
-	    $top->Busy;
-	    $self->run_lace;
-	    $top->Unbusy;
+        $top->Busy;
+        $self->run_lace;
+        $top->Unbusy;
     };
     $self->make_button($button_frame_cmds, 'Run lace', $run_lace, 4);
     $top->bind('<Control-l>', $run_lace);
     $top->bind('<Control-L>', $run_lace);
 
     my $print_to_file = sub {
-	    $self->page_width(591);
-	    $self->page_height(841);
-	    my $title = $top->title;
-	    $title =~ s/\W+/_/g;
-	    my @files = $self->print_postscript($title);
-	    warn "Printed to files:\n",
-	    map { "  $_\n" } @files;
+        $self->page_width(591);
+        $self->page_height(841);
+        my $title = $top->title;
+        $title =~ s/\W+/_/g;
+        my @files = $self->print_postscript($title);
+        warn "Printed to files:\n",
+        map { "  $_\n" } @files;
     };
     $top->bind('<Control-p>', $print_to_file);
     $top->bind('<Control-P>', $print_to_file);
@@ -483,13 +483,13 @@ sub bind_close_window{
     my ($self , $top)  = @_ ;
     
     my $close_window = sub{ 
-	# This removes the seqSetCh.
-	# It must be reset by seqSetCh. when the cached version
-	# of this object is deiconified [get_SequenceNotes_by_name in ssc]!!!!
-	# not necessary ATM.
-	# $self->clean_SequenceSetChooser(); 
-	my $top = $self->canvas->toplevel;
-	$top->withdraw;
+        # This removes the seqSetCh.
+        # It must be reset by seqSetCh. when the cached version
+        # of this object is deiconified [get_SequenceNotes_by_name in ssc]!!!!
+        # not necessary ATM.
+        # $self->clean_SequenceSetChooser(); 
+        my $top = $self->canvas->toplevel;
+        $top->withdraw;
     };
     $top->protocol('WM_DELETE_WINDOW', $close_window);
     $top->bind('<Control-w>',          $close_window);
@@ -612,15 +612,15 @@ sub make_button {
     my( $self, $parent, $label, $command, $underline_index ) = @_;
     
     my @args = (
-	    -text => $label,
-	    -command => $command,
-	);
+        -text => $label,
+        -command => $command,
+        );
     push(@args, -underline => $underline_index) 
-	    if defined $underline_index;
+        if defined $underline_index;
     my $button = $parent->Button(@args);
     $button->pack(
-	    -side => 'left',
-	);
+        -side => 'left',
+        );
 
     return $button;
 }
@@ -749,14 +749,14 @@ sub _open_SequenceSet {
     warn "Making LoadColumns";
     
     my $top = $self->canvas->Toplevel(
-   	    -title  => 'Select column data to load',
+        -title  => 'Select column data to load',
     );
-   	my $lc = EditWindow::LoadColumns->new($top);
-   	$lc->init_flag(1);
-   	$lc->AceDatabase($adb);
-   	$lc->SequenceNotes($self);
-   	$lc->DataSetChooser($self->SequenceSetChooser->DataSetChooser);
-	$lc->initialize;
+    my $lc = EditWindow::LoadColumns->new($top);
+    $lc->init_flag(1);
+    $lc->AceDatabase($adb);
+    $lc->SequenceNotes($self);
+    $lc->DataSetChooser($self->SequenceSetChooser->DataSetChooser);
+    $lc->initialize;
 
     return;
 }
@@ -1118,11 +1118,11 @@ sub draw {
             
             my $opt_hash = $data_method ? $data_method->($cs, $i, $self, $ss) : {};
             $opt_hash->{'-anchor'} ||= 'nw';
-	        $opt_hash->{'-font'}   ||= $helv_def;
-	        $opt_hash->{'-width'}  ||= $max_width;
-	        $opt_hash->{'-tags'}   ||= [];
-	        push(@{$opt_hash->{'-tags'}}, $row_tag, $col_tag, "cs=$i");
-	    
+            $opt_hash->{'-font'}   ||= $helv_def;
+            $opt_hash->{'-width'}  ||= $max_width;
+            $opt_hash->{'-tags'}   ||= [];
+            push(@{$opt_hash->{'-tags'}}, $row_tag, $col_tag, "cs=$i");
+
             #warn "\ntags = [", join(', ', map "'$_'", @{$opt_hash->{'-tags'}}), "]\n";
             $draw_method->($canvas, $x, $y, %$opt_hash);  ## in most cases this will be $canvas->createText
         }
@@ -1386,22 +1386,22 @@ sub save_sequence_notes {
     my $contig_string = join "|", map { $_->contig_name } @$seq_list;
     my %seq_hash;
     foreach (grep { $_->contig_name =~ /$contig_string/ } @$all_list){
-    	$seq_hash{$_->contig_name} ||= [];
-    	push @{$seq_hash{$_->contig_name}},$_;
+        $seq_hash{$_->contig_name} ||= [];
+        push @{$seq_hash{$_->contig_name}},$_;
     }
     
     foreach my $contig_name (keys %seq_hash) {
-    	my $new_note = Bio::Otter::Lace::SequenceNote->new;
+        my $new_note = Bio::Otter::Lace::SequenceNote->new;
         $new_note->author($cl->author);
         $new_note->text($text);
         $new_note->timestamp($time);
-    	# store new SequenceNote in the database
+        # store new SequenceNote in the database
         $cl->push_sequence_note(
             $ds->name(),
             $contig_name,
             $new_note,
-        );    	
-    	foreach my $cs (@{$seq_hash{$contig_name}}){
+        );
+        foreach my $cs (@{$seq_hash{$contig_name}}){
             $cs->add_SequenceNote($new_note);    
             $cs->current_SequenceNote($new_note);
             # sync state of SequenceNote objects with database
@@ -1409,7 +1409,7 @@ sub save_sequence_notes {
                 $note->is_current(0);
             }
             $new_note->is_current(1);
-    	}
+        }
     } 
     $self->draw;
     $self->set_scroll_region_and_maxsize;
@@ -1440,8 +1440,8 @@ sub popup_missing_analysis{
         my $top = $self->canvas->Toplevel();
         $top->transient($self->canvas->toplevel);
         my $hp  = CanvasWindow::SequenceNotes::Status->new($top, 650 , 50);
-	    # $hp->SequenceNotes($self); # can't have reference to self if we're inheriting
-	    # clean up just won't work.
+        # $hp->SequenceNotes($self); # can't have reference to self if we're inheriting
+        # clean up just won't work.
         $hp->SequenceSet($self->SequenceSet);
         $hp->SequenceSetChooser($self->SequenceSetChooser);
         $hp->name($cs->contig_name);
@@ -1471,7 +1471,7 @@ sub popup_ana_seq_history{
             $top->transient($self->canvas->toplevel);
             my $hp  = CanvasWindow::SequenceNotes::History->new($top, 650 , 50);
             $hp->Client($self->Client());
-	        $hp->SequenceNotes($self);
+            $hp->SequenceNotes($self);
             $hp->SequenceSet($self->SequenceSet);
             $hp->SequenceSetChooser($self->SequenceSetChooser);
             $hp->name($cs->contig_name);
@@ -1492,7 +1492,7 @@ sub add_Status{
     my ($self , $status) = @_ ;
     #add a new element to the hash
     if ($status){
-	$self->{'_Status_win'} = $status;
+        $self->{'_Status_win'} = $status;
     }
     return $self->{'_Status_win'};
 }
@@ -1500,7 +1500,7 @@ sub add_History{
     my ($self , $history) = @_ ;
     #add a new element to the hash
     if ($history){
-	$self->{'_History_win'} = $history;
+        $self->{'_History_win'} = $history;
     }
     return $self->{'_History_win'};
 }
