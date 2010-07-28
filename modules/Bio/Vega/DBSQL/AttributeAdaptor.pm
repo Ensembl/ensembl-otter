@@ -37,24 +37,24 @@ sub fetch_all_by_ContigInfo  {
 }
 
 sub _store_type {
-	
-	# override superclass method to fill in missing names for Attributes
-	
-	my $self = shift;
-  	my $attrib = shift;
-	
-	unless ($attrib->name) {
-		my $sth = $self->prepare(qq{
-			SELECT name 
-			FROM   attrib_type 
-			WHERE  code = ?
-		});
-		$sth->execute($attrib->code);
-		my ($name) = $sth->fetchrow_array;
-		
-		die "Failed to find attribute name for code: ".$attrib->code unless $name;
-		
-		$attrib->name($name);
+
+    # override superclass method to fill in missing names for Attributes
+
+    my $self = shift;
+    my $attrib = shift;
+
+    unless ($attrib->name) {
+        my $sth = $self->prepare(qq{
+SELECT name 
+FROM   attrib_type 
+WHERE  code = ?
+});
+        $sth->execute($attrib->code);
+        my ($name) = $sth->fetchrow_array;
+
+        die "Failed to find attribute name for code: ".$attrib->code unless $name;
+
+        $attrib->name($name);
     }
     
     return $self->SUPER::_store_type($attrib);
@@ -80,14 +80,16 @@ sub store_on_ContigInfo  {
     $self->throw("ContigInfo is not stored in this DB - cannot store attributes.");
   }
   my $contiginfo_id = $contiginfo->dbID();
-  my $sth = $self->prepare( "INSERT into contig_attrib ".
-			    "SET contig_info_id = ?, attrib_type_id = ?, ".
-			    "value = ? " );
+  my $sth = $self->prepare(
+      "INSERT into contig_attrib ".
+      "SET contig_info_id = ?, attrib_type_id = ?, ".
+      "value = ? "
+      );
 
   for my $attrib ( @$attributes ) {
     if(!ref($attrib) && $attrib->isa('Bio::EnsEMBL::Attribute')) {
       $self->throw("Reference to list of Bio::EnsEMBL::Attribute objects " .
-						 "argument expected.");
+                   "argument expected.");
     }
     
    
