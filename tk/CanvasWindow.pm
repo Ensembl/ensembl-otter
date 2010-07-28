@@ -15,10 +15,10 @@ use Hum::ClipboardUtils 'integers_from_text';
 sub new {
     my( $pkg, $tk, $x, $y, $where_scrollbars, $canvas_class) = @_;
     
-	if(!defined($where_scrollbars)) { # NB: not just empty, but undefined
-		$where_scrollbars = 'se';
-	}
-	$canvas_class ||= 'Canvas';	# or 'HeadedCanvas', for example
+    if(!defined($where_scrollbars)) { # NB: not just empty, but undefined
+        $where_scrollbars = 'se';
+    }
+    $canvas_class ||= 'Canvas'; # or 'HeadedCanvas', for example
     
     unless ($tk) {
         confess "Error usage: $pkg->new(<Tk::Widget object>)";
@@ -35,18 +35,18 @@ sub new {
         -background         => 'white',
         -width              => $x,
         -height             => $y,
-	);
+        );
     my @packing_params = (
         -side => 'top',
         -fill => 'both',
         -expand => 1,
-	);
+        );
 
     my $scrolled = $where_scrollbars
-	    ? $tk->Scrolled( $canvas_class,
-                             -scrollbars => $where_scrollbars,
-                             @creation_params)
-	    : $tk->$canvas_class( @creation_params );
+        ? $tk->Scrolled( $canvas_class,
+                         -scrollbars => $where_scrollbars,
+                         @creation_params)
+        : $tk->$canvas_class( @creation_params );
 
     $scrolled->pack( @packing_params );
 
@@ -68,9 +68,9 @@ sub new {
 }
 
 sub top_window {
-	my( $self ) = @_;
+    my( $self ) = @_;
 
-	return $self->canvas->toplevel;
+    return $self->canvas->toplevel;
 }
 
 sub icon_pixmap {
@@ -234,16 +234,16 @@ sub bind_scroll_commands {
     
     my $canvas = $self->canvas; # whether a self-managing or Scrolled
 
-	my $scrolled = $canvas->can('Subwidget') # the owner of scrollbars
-		? $canvas			# self-managing
-		: $canvas->parent;	# Scrolled
+    my $scrolled = $canvas->can('Subwidget') # the owner of scrollbars
+        ? $canvas # self-managing
+        : $canvas->parent; # Scrolled
 
     my $x_scroll = $scrolled->Subwidget('xscrollbar');
     my $y_scroll = $scrolled->Subwidget('yscrollbar');
 
-	my $canvas_components = $canvas->can('canvases')
-			? $canvas->canvases()
-			: [ $canvas ];
+    my $canvas_components = $canvas->can('canvases')
+        ? $canvas->canvases()
+        : [ $canvas ];
     
     # Unbind the scrollbar keyboard events from the canvas
     my $class = ref($canvas);
@@ -319,34 +319,34 @@ sub bind_scroll_commands {
         $y_scroll->ScrlByUnits('v', 1);
         });
 
-	for my $cc (@$canvas_components) { # mousewheel must be bound on every focusable canvas component
-		if($^O eq 'MSWin32'){
-			#$cc->Tk::bind('<MouseWheel>',sub{
-				#warn "Someone's scrolling with the mousewheel\n";
-				#$y_scroll->ScrlByUnits('v', 3);
-			#});
-		}else{
-				# vertical scroll
-			$cc->Tk::bind('<4>', sub{
-				# warn "Someone's scrolling up with the mousewheel\n";
-				$y_scroll->ScrlByUnits('v', -3);
-			});
-			$cc->Tk::bind('<5>', sub{
-				# warn "Someone's scrolling down with the mousewheel\n";
-				$y_scroll->ScrlByUnits('v',  +3);
-			});
+    for my $cc (@$canvas_components) { # mousewheel must be bound on every focusable canvas component
+        if($^O eq 'MSWin32'){
+            #$cc->Tk::bind('<MouseWheel>',sub{
+            #warn "Someone's scrolling with the mousewheel\n";
+            #$y_scroll->ScrlByUnits('v', 3);
+            #});
+        }else{
+            # vertical scroll
+            $cc->Tk::bind('<4>', sub{
+                # warn "Someone's scrolling up with the mousewheel\n";
+                $y_scroll->ScrlByUnits('v', -3);
+                          });
+            $cc->Tk::bind('<5>', sub{
+                # warn "Someone's scrolling down with the mousewheel\n";
+                $y_scroll->ScrlByUnits('v',  +3);
+                          });
 
-				# horizontal scroll using Control modifier
-			$cc->Tk::bind('<Control-4>', sub{
-				# warn "Someone's scrolling left with the mousewheel\n";
-				$x_scroll->ScrlByUnits('h', -3);
-			});
-			$cc->Tk::bind('<Control-5>', sub{
-				# warn "Someone's scrolling right with the mousewheel\n";
-				$x_scroll->ScrlByUnits('h',  +3);
-			});
-		}
-	}
+            # horizontal scroll using Control modifier
+            $cc->Tk::bind('<Control-4>', sub{
+                # warn "Someone's scrolling left with the mousewheel\n";
+                $x_scroll->ScrlByUnits('h', -3);
+                          });
+            $cc->Tk::bind('<Control-5>', sub{
+                # warn "Someone's scrolling right with the mousewheel\n";
+                $x_scroll->ScrlByUnits('h',  +3);
+                          });
+        }
+    }
 
     return;
 }
@@ -384,12 +384,12 @@ sub scroll_to_obj {
     #warn "left=$visible_left, right=$visible_right\n";
     if ($obj_right < $visible_left) {
         $canvas->xviewMoveto(($obj_left - $margin) / $width);
-		# warn "scrolling left";
+        # warn "scrolling left";
     }
     elsif ($obj_left > $visible_right) {
         my $visible_width = $visible_right - $visible_left;
         $canvas->xviewMoveto(($obj_right + $margin - $visible_width) / $width);
-		# warn "scrolling right";
+        # warn "scrolling right";
     }
     else {
         # warn "object is visible in x axis\n";
@@ -401,12 +401,12 @@ sub scroll_to_obj {
     #warn "top=$top, bottom=$bottom\n";
     if ($obj_bottom < $visible_top) {
         $canvas->yviewMoveto(($obj_top - $margin) / $height);
-		# warn "scrolling up";
+        # warn "scrolling up";
     }
     elsif ($obj_top > $visible_bottom) {
         my $visible_height = $visible_bottom - $visible_top;
         $canvas->yviewMoveto(($obj_bottom + $margin - $visible_height) / $height);
-		# warn "scrolling down";
+        # warn "scrolling down";
     } else {
         # warn "object is visible in y axis\n";
     }
@@ -1154,9 +1154,9 @@ sub hash_from_clipboard {
     my @s = split(/\s+/, $text);
 
     foreach my $k(keys(%$regex_hash)){
-	my $regex = $regex_hash->{$k}->[0];
-	my $index = $regex_hash->{$k}->[1];
-	$results->{$k} = [ $s[$index] =~ $regex ] || [];
+        my $regex = $regex_hash->{$k}->[0];
+        my $index = $regex_hash->{$k}->[1];
+        $results->{$k} = [ $s[$index] =~ $regex ] || [];
     }
 
     return $results;
