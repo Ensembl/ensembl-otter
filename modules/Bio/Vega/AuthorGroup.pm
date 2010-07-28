@@ -10,7 +10,7 @@ sub new {
   my $self = $class->SUPER::new(@args);
   my ($name,$email)  = rearrange([qw(
                             NAME
-									 EMAIL	
+                            EMAIL
                             )],@args);
 
   $self->name($name);
