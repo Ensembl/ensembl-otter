@@ -133,14 +133,18 @@ sub get_accession_types {
 
     my $accs = shift;
 
-    my $sql = '	SELECT molecule_type, data_class, accession_version
-				FROM entry e, accession a
-				WHERE e.entry_id = a.entry_id
-				AND a.accession = ? ';
+    my $sql = '
+SELECT molecule_type, data_class, accession_version
+FROM entry e, accession a
+WHERE e.entry_id = a.entry_id
+AND a.accession = ?
+';
 
-    my $uniprot_archive_sql = ' SELECT molecule_type, data_class, accession_version
-        						FROM entry
-        						WHERE accession_version LIKE ?';
+    my $uniprot_archive_sql = '
+SELECT molecule_type, data_class, accession_version
+FROM entry
+WHERE accession_version LIKE ?
+';
 
     my %acc_hash = ();
 
