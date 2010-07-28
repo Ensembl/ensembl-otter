@@ -30,42 +30,42 @@ sub initialize {
     # set the default selection
     
     my $dsc_default = $self->DataSetChooser->default_selection($self->species);
-		
-	if ($dsc_default) {
-		$self->default_selection($dsc_default);
-	}
-	else {
-		# this is the first time we've opened a slice from this species, so make
-		# the current 'wanted' settings (which come from the otter_config) the
-		# default selection 
-		
-		$self->default_selection(
-			{ map { $_ => $self->n2f->{$_}->wanted } keys %{ $self->n2f } }
-		);
-			
-		# and store these settings in the DataSetChooser
-			
-		$self->DataSetChooser->default_selection(
-			$self->species,
-			$self->default_selection
-		);
-	}
+
+    if ($dsc_default) {
+        $self->default_selection($dsc_default);
+    }
+    else {
+        # this is the first time we've opened a slice from this species, so make
+        # the current 'wanted' settings (which come from the otter_config) the
+        # default selection 
+        
+        $self->default_selection(
+            { map { $_ => $self->n2f->{$_}->wanted } keys %{ $self->n2f } }
+            );
+        
+        # and store these settings in the DataSetChooser
+        
+        $self->DataSetChooser->default_selection(
+            $self->species,
+            $self->default_selection
+            );
+    }
     
     # reset the last selection (if one exists)
     
     my $dsc_last = $self->DataSetChooser->last_selection($self->species);
-	
-	# directly set the private hash variable to avoid updating the DSC
-	# with the same data, and use the default selection if we don't have
-	# a last selection
-	
-	$self->{_last_selection} = $dsc_last || $self->default_selection;
-	
-	# reset the last sorted by
-	
-	my $dsc_last_sorted = $self->DataSetChooser->last_sorted_by($self->species);
-	
-	$self->{_last_sorted_by} = $dsc_last_sorted || $self->default_selection;
+    
+    # directly set the private hash variable to avoid updating the DSC
+    # with the same data, and use the default selection if we don't have
+    # a last selection
+    
+    $self->{_last_selection} = $dsc_last || $self->default_selection;
+    
+    # reset the last sorted by
+    
+    my $dsc_last_sorted = $self->DataSetChooser->last_sorted_by($self->species);
+    
+    $self->{_last_sorted_by} = $dsc_last_sorted || $self->default_selection;
     
     # and actually set the wanted flags on the filters accordingly
     
@@ -76,95 +76,95 @@ sub initialize {
     my $filter_count = scalar keys %{$self->n2f};
     my $max_rows = 28;
     my $height = $filter_count > $max_rows ? $max_rows : $filter_count;
-	my $hlist = $top->Scrolled("HListplusplus",
-		-header => 1,
-		-columns => 3,
-		-scrollbars => 'ose',
-		-width => 100,
-		-height => $height,
-        -selectmode => 'single',
-        -selectbackground => 'light grey',
-        -borderwidth => 1,
-	)->pack(-expand => 1, -fill => 'both');
+    my $hlist = $top->Scrolled("HListplusplus",
+                               -header => 1,
+                               -columns => 3,
+                               -scrollbars => 'ose',
+                               -width => 100,
+                               -height => $height,
+                               -selectmode => 'single',
+                               -selectbackground => 'light grey',
+                               -borderwidth => 1,
+        )->pack(-expand => 1, -fill => 'both');
 
-	$hlist->configure(
-		-browsecmd => sub {
-			$hlist->anchorClear;
-        	my $i = shift;
-        	my $cb = $self->hlist->itemCget($i, 0, '-widget');
-        	$cb->invoke unless $cb->cget('-selectcolor') eq $STATE_COLORS{'done'}
+    $hlist->configure(
+        -browsecmd => sub {
+            $hlist->anchorClear;
+            my $i = shift;
+            my $cb = $self->hlist->itemCget($i, 0, '-widget');
+            $cb->invoke unless $cb->cget('-selectcolor') eq $STATE_COLORS{'done'}
         }
-	);
+        );
 
-	my $i = 0;
-	
-	$hlist->header('create', $i++,  
-    	-itemtype => 'resizebutton', 
-    	-command => sub {
-    		$self->sort_by_filter_method('wanted');
-    	}
-	);
-	
-	$hlist->header('create', $i++, 
-		-text => 'Name', 
-    	-itemtype => 'resizebutton', 
-    	-command => sub { $self->sort_by_filter_method('name') }
-	);
-	
-	$hlist->header('create', $i++, 
-		-text => 'Description', 
-    	-itemtype => 'resizebutton', 
-    	-command => sub { $self->sort_by_filter_method('description') }
-	);
+    my $i = 0;
 
-	$self->hlist($hlist);
+    $hlist->header('create', $i++,  
+                   -itemtype => 'resizebutton', 
+                   -command => sub {
+                       $self->sort_by_filter_method('wanted');
+                   }
+        );
+
+    $hlist->header('create', $i++, 
+                   -text => 'Name', 
+                   -itemtype => 'resizebutton', 
+                   -command => sub { $self->sort_by_filter_method('name') }
+        );
+    
+    $hlist->header('create', $i++, 
+                   -text => 'Description', 
+                   -itemtype => 'resizebutton', 
+                   -command => sub { $self->sort_by_filter_method('description') }
+        );
+
+    $self->hlist($hlist);
 
     my $bottom_frame = $top->Frame->pack(
         -side => 'bottom', 
         -expand => 0,
         -fill => 'x'    
-    );
+        );
 
-	my $but_frame = $bottom_frame->pack(
-	   -side => 'top',
-	   #-expand => 0,
-       #-fill => 'x'
-    );
+    my $but_frame = $bottom_frame->pack(
+        -side => 'top',
+        #-expand => 0,
+        #-fill => 'x'
+        );
     
     my $select_frame = $but_frame->Frame->pack(
-    	-side => 'top', 
-    	-expand => 0
-    );
+        -side => 'top', 
+        -expand => 0
+        );
     
     $select_frame->Button(
-	    -text => 'Default',
-	    -command => sub { $self->set_filters_wanted($self->default_selection) },
-	)->pack(-side => 'left');
-	
-	$select_frame->Button(
-	    -text => 'Previous',
-	    -command => sub { $self->set_filters_wanted($self->last_selection) },
-	)->pack(-side => 'left');
-	
-	$select_frame->Button(
-	    -text => 'All', 
-	    -command => sub { $self->change_checkbutton_state('select') },
-	)->pack(-side => 'left');
-	
-	$select_frame->Button(
-	    -text => 'None', 
-	    -command => sub { $self->change_checkbutton_state('deselect') },
-	)->pack(-side => 'left');
-	
-	$select_frame->Button(
-	    -text => 'Invert', 
-	    -command => sub { $self->change_checkbutton_state('toggle') },
-	)->pack(-side => 'left');
-	
-	$select_frame->Button(
+        -text => 'Default',
+        -command => sub { $self->set_filters_wanted($self->default_selection) },
+        )->pack(-side => 'left');
+    
+    $select_frame->Button(
+        -text => 'Previous',
+        -command => sub { $self->set_filters_wanted($self->last_selection) },
+        )->pack(-side => 'left');
+    
+    $select_frame->Button(
+        -text => 'All', 
+        -command => sub { $self->change_checkbutton_state('select') },
+        )->pack(-side => 'left');
+    
+    $select_frame->Button(
+        -text => 'None', 
+        -command => sub { $self->change_checkbutton_state('deselect') },
+        )->pack(-side => 'left');
+    
+    $select_frame->Button(
+        -text => 'Invert', 
+        -command => sub { $self->change_checkbutton_state('toggle') },
+        )->pack(-side => 'left');
+    
+    $select_frame->Button(
         -text => 'Reselect failed', 
         -command => sub { $self->change_checkbutton_state('invoke', $STATE_COLORS{'failed'}) },
-    )->pack(-side => 'right');
+        )->pack(-side => 'right');
 
     my $progress_frame = $bottom_frame->Frame->pack(
         -side   => 'bottom', 
@@ -172,53 +172,53 @@ sub initialize {
         -expand => 1
     );
 
-	my $control_frame = $progress_frame->Frame->pack(
-		-side => 'bottom', 
-		-expand => 0, 
-		-fill => 'x'
-	);
-	
+    my $control_frame = $progress_frame->Frame->pack(
+        -side => 'bottom', 
+        -expand => 0, 
+        -fill => 'x'
+        );
+    
     $control_frame->Button(
-	    -text => 'Load',
-	    -command => sub { $self->load_filters },
-	)->pack(-side => 'left', -expand => 0);
-	
-	# The user can press the Cancel button either before the AceDatabase is made
-	# (in which case we destroy ourselves) or during an edit session (in which
-	# case we just withdraw the window).
-	my $wod_cmd = sub { $self->withdraw_or_destroy };
-	$control_frame->Button(
-	    -text => 'Cancel', 
-	    -command => $wod_cmd,
-	)->pack(-side => 'right', -expand => 0);
+        -text => 'Load',
+        -command => sub { $self->load_filters },
+        )->pack(-side => 'left', -expand => 0);
+    
+    # The user can press the Cancel button either before the AceDatabase is made
+    # (in which case we destroy ourselves) or during an edit session (in which
+    # case we just withdraw the window).
+    my $wod_cmd = sub { $self->withdraw_or_destroy };
+    $control_frame->Button(
+        -text => 'Cancel', 
+        -command => $wod_cmd,
+        )->pack(-side => 'right', -expand => 0);
     $top->protocol( 'WM_DELETE_WINDOW', $wod_cmd );
     
     $self->{_default_sort_method} = 'name';
     
     $self->sort_by_filter_method(
-    	$self->DataSetChooser->last_sorted_by($self->species) ||
-    	$self->{_default_sort_method}
-    );
+        $self->DataSetChooser->last_sorted_by($self->species) ||
+        $self->{_default_sort_method}
+        );
     
     
     $control_frame->Label(
         -textvariable => \$self->{_label_text}
-    )->pack(-side => 'top');
+        )->pack(-side => 'top');
     
     $self->{_filters_done} = 0;
     
     my $prog_bar = $progress_frame->ProgressBar(
-       -width       => 20,
-       -from        => 0,
-       -blocks      => 1,
-       -variable    => \$self->{_filters_done}
-    )->pack( 
+        -width       => 20,
+        -from        => 0,
+        -blocks      => 1,
+        -variable    => \$self->{_filters_done}
+        )->pack( 
         -fill   => 'x',
         -expand => 1,
         -padx   => 5,
         -pady   => 5,
         -side => 'top'
-    );
+            );
     
     $self->pipeline_progress_bar($prog_bar);
     $self->reset_progress;
@@ -228,7 +228,7 @@ sub initialize {
     
     $top->bind('<Destroy>', sub{
         $self = undef;
-    });
+               });
 
     return;
 }
@@ -458,101 +458,101 @@ sub update_tk_preserve_grab {
 }
 
 sub set_filters_wanted {
-	my ($self, $wanted_hash) = @_;
-	map { $self->n2f->{$_}->wanted($wanted_hash->{$_}) } keys %{ $self->n2f };
-        return;
+    my ($self, $wanted_hash) = @_;
+    map { $self->n2f->{$_}->wanted($wanted_hash->{$_}) } keys %{ $self->n2f };
+    return;
 }
 
 sub sort_by_filter_method {
-	
-	my $self = shift;
-	
-	my $method = shift || $self->{_default_sort_method};
-	
-	my %n2f = %{ $self->n2f };
-	
-	if ($method =~ /wanted/) {
-		# hack to get done filters sorted before wanted but undone 
-    	# filters - note that '/' is ascii-betically before 1 or 0!
-    	map { $n2f{$_}->wanted('/') if $n2f{$_}->done } keys %n2f;
-    	map { $n2f{$_}->wanted('9') if $n2f{$_}->failed } keys %n2f;
-    	$self->{_default_sort_method} = 'load_time';
-	}
-	
-	my $cmp_filters = sub {
-		
-		my ($f1, $f2, $method, $invert) = @_;
-		
-		my $res;
-		
-		if ($f1->$method && !$f2->$method) {
-			$res = -1;
-		}
-		elsif (!$f1->$method && $f2->$method) {
-			$res = 1;
-		}
-		elsif (!$f1->$method && !$f2->$method) {
-			$res = 0;
-		}
-		else {
-			$res = ace_sort($f1->$method, $f2->$method);
-		}
-		
-		return $invert ? $res * -1 : $res;
-	};
-	
-	my $flip = 0;
-	
-	# if we are being launched for the first time we don't want 
-	# to reverse the last_sorted_by method, but if the user has
-	# clicked on the button twice though we do - this flag marks this
-	if ($self->{_internally_sorted}) {
-		$flip = $self->last_sorted_by eq $method;
-	}
-	else {
-		$self->{_internally_sorted} = 1;
-	}
-	
-	if ($method =~  s/_rev$//) {
-		$flip = 1;
-	}
-	
-	my @sorted_names = sort { 
-		$cmp_filters->($n2f{$a}, $n2f{$b}, $method, $flip) || 
-		$cmp_filters->($n2f{$a}, $n2f{$b}, $self->{_default_sort_method})	
-	} keys %n2f;
-	
-	$self->last_sorted_by($flip ? $method.'_rev' : $method);
-	
-	if ($method =~ /wanted/) {
-		# patch the real values back again!
-    	map { $n2f{$_}->wanted(1) if $n2f{$_}->done } keys %n2f;
-    	map { $n2f{$_}->wanted(1) if $n2f{$_}->failed } keys %n2f;
-	}
-	
+    
+    my $self = shift;
+    
+    my $method = shift || $self->{_default_sort_method};
+    
+    my %n2f = %{ $self->n2f };
+    
+    if ($method =~ /wanted/) {
+        # hack to get done filters sorted before wanted but undone 
+        # filters - note that '/' is ascii-betically before 1 or 0!
+        map { $n2f{$_}->wanted('/') if $n2f{$_}->done } keys %n2f;
+        map { $n2f{$_}->wanted('9') if $n2f{$_}->failed } keys %n2f;
+        $self->{_default_sort_method} = 'load_time';
+    }
+    
+    my $cmp_filters = sub {
+        
+        my ($f1, $f2, $method, $invert) = @_;
+        
+        my $res;
+        
+        if ($f1->$method && !$f2->$method) {
+            $res = -1;
+        }
+        elsif (!$f1->$method && $f2->$method) {
+            $res = 1;
+        }
+        elsif (!$f1->$method && !$f2->$method) {
+            $res = 0;
+        }
+        else {
+            $res = ace_sort($f1->$method, $f2->$method);
+        }
+        
+        return $invert ? $res * -1 : $res;
+    };
+    
+    my $flip = 0;
+    
+    # if we are being launched for the first time we don't want 
+    # to reverse the last_sorted_by method, but if the user has
+    # clicked on the button twice though we do - this flag marks this
+    if ($self->{_internally_sorted}) {
+        $flip = $self->last_sorted_by eq $method;
+    }
+    else {
+        $self->{_internally_sorted} = 1;
+    }
+    
+    if ($method =~  s/_rev$//) {
+        $flip = 1;
+    }
+    
+    my @sorted_names = sort { 
+        $cmp_filters->($n2f{$a}, $n2f{$b}, $method, $flip) || 
+            $cmp_filters->($n2f{$a}, $n2f{$b}, $self->{_default_sort_method})
+    } keys %n2f;
+    
+    $self->last_sorted_by($flip ? $method.'_rev' : $method);
+    
+    if ($method =~ /wanted/) {
+        # patch the real values back again!
+        map { $n2f{$_}->wanted(1) if $n2f{$_}->done } keys %n2f;
+        map { $n2f{$_}->wanted(1) if $n2f{$_}->failed } keys %n2f;
+    }
+    
     $self->show_filters(\@sorted_names);
 
-        return;
+    return;
 }
 
 sub change_checkbutton_state {
-	my ($self, $fn, $state_color) = @_;
-	
-	$state_color ||= $STATE_COLORS{'default'};
-	
+    my ($self, $fn, $state_color) = @_;
+    
+    $state_color ||= $STATE_COLORS{'default'};
+    
     for (my $i = 0; $i < scalar(keys %{ $self->n2f }); $i++) {
-    	my $cb = $self->hlist->itemCget($i, 0, '-widget');
+        my $cb = $self->hlist->itemCget($i, 0, '-widget');
         $cb->$fn if $cb->cget('-selectcolor') eq $state_color;
     }
 
-        return;
+    return;
 }
 
 sub show_filters {
    
-   	my $self = shift;
-   	my $names_in_order = shift || $self->{_last_names_in_order} || keys %{ $self->n2f };
-   	
+    my $self = shift;
+    my $names_in_order = shift || $self->{_last_names_in_order} || keys %{ $self->n2f };
+
     $self->{_last_names_in_order} = $names_in_order;
     
     my $hlist = $self->hlist;
@@ -560,8 +560,8 @@ sub show_filters {
     my $i = 0;
     
     for my $name (@$names_in_order) {
-    	
-    	# eval because delete moans if entry doesn't exist
+
+        # eval because delete moans if entry doesn't exist
         eval{ $hlist->delete('entry', $i) };
         
         $hlist->add($i);
@@ -576,18 +576,18 @@ sub show_filters {
         }
         
         $hlist->itemCreate($i, 0, 
-            -itemtype => 'window', 
-            -widget => $hlist->Checkbutton(
-                -variable => \$self->n2f->{$name}->{_wanted},
-                -onvalue => 1,
-            	-offvalue => 0,
-            	-anchor => 'w',
-            	-selectcolor => $cb_color,
-            ),
-        );
+                           -itemtype => 'window', 
+                           -widget => $hlist->Checkbutton(
+                               -variable => \$self->n2f->{$name}->{_wanted},
+                               -onvalue => 1,
+                               -offvalue => 0,
+                               -anchor => 'w',
+                               -selectcolor => $cb_color,
+                           ),
+            );
         
         if ($self->n2f->{$name}->done) {
-        	my $cb = $hlist->itemCget($i, 0, '-widget');
+            my $cb = $hlist->itemCget($i, 0, '-widget');
             $cb->configure(-command => sub { $cb->select() });
             if (! $self->n2f->{$name}->{_wanted}) {
                 warn "filter '$name' done but not wanted ???";
@@ -598,8 +598,8 @@ sub show_filters {
                 my $balloon = $self->balloon;
                 if (defined $self->n2f->{$name}->load_time) {
                     $balloon->attach($cb,
-                        -balloonmsg => sprintf('Loaded in %d seconds', $self->n2f->{$name}->load_time),
-                    );
+                                     -balloonmsg => sprintf('Loaded in %d seconds', $self->n2f->{$name}->load_time),
+                        );
                 }
             }
         }
@@ -617,93 +617,93 @@ sub show_filters {
                     $cb->configure(
                         -selectcolor => $STATE_COLORS{'default'}, 
                         -command => undef,
-                    );
+                        );
                     $cb->select;
                 },
-            );
+                );
         }
 
         $hlist->itemCreate($i, 1, 
-        	-text => $self->n2f->{$name}->name,
-        );
+                           -text => $self->n2f->{$name}->name,
+            );
         
         $hlist->itemCreate($i, 2,
-        	-text => $self->n2f->{$name}->description,
-        );
-       	
+                           -text => $self->n2f->{$name}->description,
+            );
+
         $i++;
     }
 
-        return;
+    return;
 }
 
 # (g|s)etters
 
 sub last_selection {
-	my ($self, $last) = @_;
-	
-	if ($last) {
-		
-		$self->{_last_selection} = $last;
-		
-		# also update the DataSetChooser
-		
-		$self->DataSetChooser->last_selection(
-			$self->species,
-			$last,
-		);
-	}
-	
-	return $self->{_last_selection};
+    my ($self, $last) = @_;
+    
+    if ($last) {
+        
+        $self->{_last_selection} = $last;
+        
+        # also update the DataSetChooser
+        
+        $self->DataSetChooser->last_selection(
+            $self->species,
+            $last,
+            );
+    }
+    
+    return $self->{_last_selection};
 }
 
 sub last_sorted_by {
-	my ($self, $last) = @_;
-	
-	if ($last) {
-		
-		$self->{_last_sorted_by} = $last;
-		
-		# also update the DataSetChooser
-		
-		$self->DataSetChooser->last_sorted_by(
-			$self->species,
-			$last,
-		);
-	}
-	
-	return $self->{_last_sorted_by};
+    my ($self, $last) = @_;
+    
+    if ($last) {
+        
+        $self->{_last_sorted_by} = $last;
+        
+        # also update the DataSetChooser
+        
+        $self->DataSetChooser->last_sorted_by(
+            $self->species,
+            $last,
+            );
+    }
+    
+    return $self->{_last_sorted_by};
 }
 
 sub default_selection {
-	my ($self, $default) = @_;
-	
-	$self->{_default_selection} = $default if $default;
-	
-	return $self->{_default_selection};
+    my ($self, $default) = @_;
+    
+    $self->{_default_selection} = $default if $default;
+    
+    return $self->{_default_selection};
 }
 
 sub species {
-	my ($self) = @_;
-	
-	return $self->AceDatabase->smart_slice->dsname;
+    my ($self) = @_;
+    
+    return $self->AceDatabase->smart_slice->dsname;
 }
 
 sub n2f {
-	my ($self, $n2f) = @_;
-	
-	unless ($self->{'_n2f'}) {
-		my $ace_filters = $self->AceDatabase->
-			pipeline_DataFactory->get_names2filters() || {};
-		
-		my $gff_filters = $self->gff_filters_hash || {};
-			
-		# merge the two sets of filters	
-	   
-	    $self->{'_n2f'} = {%$ace_filters, %$gff_filters};
-	}
-	
-	return $self->{'_n2f'};
+    my ($self, $n2f) = @_;
+    
+    unless ($self->{'_n2f'}) {
+        my $ace_filters = $self->AceDatabase->
+            pipeline_DataFactory->get_names2filters() || {};
+        
+        my $gff_filters = $self->gff_filters_hash || {};
+        
+        # merge the two sets of filters
+        
+        $self->{'_n2f'} = {%$ace_filters, %$gff_filters};
+    }
+    
+    return $self->{'_n2f'};
 }
 
 sub gff_filters_hash {
@@ -719,17 +719,17 @@ sub gff_filters_hash {
 }
 
 sub hlist {
-	my ($self, $hlist) = @_;
-	$self->{'_hlist'} = $hlist if $hlist;
+    my ($self, $hlist) = @_;
+    $self->{'_hlist'} = $hlist if $hlist;
     # weaken($self->{'_hlist'}) if $hlist;
-	return $self->{'_hlist'};
+    return $self->{'_hlist'};
 }
 
 sub XaceSeqChooser {
     my ($self, $xc) = @_ ;
     
     if ($xc) {
-    	$self->{'_XaceSeqChooser'} = $xc;
+        $self->{'_XaceSeqChooser'} = $xc;
         weaken($self->{'_XaceSeqChooser'});
     }
     
