@@ -114,7 +114,7 @@ sub compare_clones {
         my $new_clone = $new{$acc_sv}
             or $self->throw(
                 "No such clone '$acc_sv' in new annotation:\n"
-                . join('', map "$_\n", keys %new));
+                . join('', map { "$_\n" } keys %new));
         unless ($old_clone->clone_info->equals($new_clone->clone_info)) {
             $new_clone->clone_info->author($current_author);
             push(@changed, $new_clone);
