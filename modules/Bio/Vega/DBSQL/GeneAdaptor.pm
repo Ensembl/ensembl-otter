@@ -459,7 +459,7 @@ sub fetch_by_transcript_stable_id_constraint {
     my $sth = $self->prepare(
         qq(
         SELECT  tr.gene_id
-		FROM	transcript tr, transcript_stable_id tsi
+        FROM    transcript tr, transcript_stable_id tsi
         WHERE   tsi.stable_id = ?
         AND     tr.transcript_id = tsi.transcript_id
     )
@@ -818,9 +818,9 @@ sub resurrect {    # make a particular gene current (without touching the previo
 }
 
 sub hibernate { # make a particular gene non-current (take care of shared exons)
-	my ($self, $gene) = @_;
+    my ($self, $gene) = @_;
 
-	my $ta = $self->db->get_TranscriptAdaptor;
+    my $ta = $self->db->get_TranscriptAdaptor;
     my $ea = $self->db->get_ExonAdaptor;
 
     $gene->is_current(0);
@@ -830,10 +830,10 @@ sub hibernate { # make a particular gene non-current (take care of shared exons)
         $ta->update($transcript);
     }
 
-	my $broker   = $self->db->get_AnnotationBroker();
-	$broker->set_exon_current_flags([$gene]);
+    my $broker   = $self->db->get_AnnotationBroker();
+    $broker->set_exon_current_flags([$gene]);
 
-        return;
+    return;
 }
 
 sub fetch_all_genes_on_reference_slice {
