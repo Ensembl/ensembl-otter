@@ -49,7 +49,7 @@ sub initialise {
     warn "Found exonerate database: '$fasta_file'\n";
 
     #$self->homol_tag(($self->query_type eq 'protein') ? 'Pep_homol' : 'DNA_homol');
-	$self->homol_tag('DNA_homol');
+    $self->homol_tag('DNA_homol');
 
     # Make the analysis object needed by the Runnable
     my $ana_obj = Bio::EnsEMBL::Analysis->new(
@@ -67,19 +67,19 @@ sub initialise {
 }
 
 sub write_seq_file {
-	my ($self) = @_;
-	my $query_file   = "/tmp/query_seq.$$.fa";
-	# Write out the query sequence
-	my $seq = $self->query_seq();
-	if(@$seq) {
-		my $query_out = Hum::FastaFileIO->new("> $query_file");
-    	$query_out->write_sequences(@$seq);
-	    $query_out = undef;
+    my ($self) = @_;
+    my $query_file   = "/tmp/query_seq.$$.fa";
+    # Write out the query sequence
+    my $seq = $self->query_seq();
+    if(@$seq) {
+        my $query_out = Hum::FastaFileIO->new("> $query_file");
+        $query_out->write_sequences(@$seq);
+        $query_out = undef;
 
-	    return $query_file;
-	}
+        return $query_file;
+    }
 
-	return;
+    return;
 }
 
 # Attribute methods
@@ -113,19 +113,19 @@ sub genomic_seq {
 }
 
 sub genomic_start {
-	my ( $self, $genomic_start ) = @_;
-	if ( defined $genomic_start ) {
-		$self->{'_genomic_start'} = $genomic_start;
-	}
-	return $self->{'_genomic_start'};
+    my ( $self, $genomic_start ) = @_;
+    if ( defined $genomic_start ) {
+        $self->{'_genomic_start'} = $genomic_start;
+    }
+    return $self->{'_genomic_start'};
 }
 
 sub genomic_end {
-	my ( $self, $genomic_end ) = @_;
-	if ( defined $genomic_end ) {
-		$self->{'_genomic_end'} = $genomic_end;
-	}
-	return $self->{'_genomic_end'};
+    my ( $self, $genomic_end ) = @_;
+    if ( defined $genomic_end ) {
+        $self->{'_genomic_end'} = $genomic_end;
+    }
+    return $self->{'_genomic_end'};
 }
 
 sub query_seq {
@@ -141,11 +141,11 @@ sub query_type {
     my( $self, $query_type ) = @_;
 
     if ($query_type) {
-    	my $type = lc($query_type);
-    	$type =~ s/\s//g;
-	    unless( $type eq 'dna' || $type eq 'protein' ){
-	      confess "not the right query type: $type";
-	    }
+        my $type = lc($query_type);
+        $type =~ s/\s//g;
+        unless( $type eq 'dna' || $type eq 'protein' ){
+            confess "not the right query type: $type";
+        }
         $self->{'_query_type'} = $type;
     }
 
@@ -172,19 +172,19 @@ sub database {
 }
 
 sub score {
-	my ( $self, $score ) = @_;
-	if ($score) {
-		$self->{'_score'} = $score;
-	}
-	return $self->{'_score'};
+    my ( $self, $score ) = @_;
+    if ($score) {
+        $self->{'_score'} = $score;
+    }
+    return $self->{'_score'};
 }
 
 sub bestn {
-	my ( $self, $bestn) = @_;
-	if ($bestn) {
-		$self->{'_bestn'} = $bestn;
-	}
-	return $self->{'_bestn'};
+    my ( $self, $bestn) = @_;
+    if ($bestn) {
+        $self->{'_bestn'} = $bestn;
+    }
+    return $self->{'_bestn'};
 }
 
 sub max_intron_length {
@@ -196,11 +196,11 @@ sub max_intron_length {
 }
 
 sub dnahsp {
-	my ( $self, $dnahsp ) = @_;
-	if ($dnahsp) {
-		$self->{'_dnahsp'} = $dnahsp;
-	}
-	return $self->{'_dnahsp'};
+    my ( $self, $dnahsp ) = @_;
+    if ($dnahsp) {
+        $self->{'_dnahsp'} = $dnahsp;
+    }
+    return $self->{'_dnahsp'};
 }
 
 
@@ -271,8 +271,8 @@ sub sequence_fetcher {
 sub ace_Method {
     my ($self) = @_;
 
-	my $method = $self->{'_ace_method'} = Hum::Ace::Method->new;
-	$method->name(  $self->method_tag   );
+    my $method = $self->{'_ace_method'} = Hum::Ace::Method->new;
+    $method->name(  $self->method_tag   );
 
     return $method;
 }
@@ -301,7 +301,7 @@ sub run {
     my $end = $self->genomic_end;
     $_->seq($_->subseq($start, $end)) foreach $masked, $smasked, $unmasked;
 
-	unless ($masked->seq =~ /[acgtACGT]{5}/) {
+    unless ($masked->seq =~ /[acgtACGT]{5}/) {
         warn "The genomic sequence is entirely repeat\n";
         return $ace;
     }
@@ -318,74 +318,80 @@ sub run {
 # the query sequence PolyA/T tail if any
 
 sub append_polyA_tail {
-	my( $self, $features ) = @_;
-	my %by_hit_name;
-	my $debug = 0;
+    my( $self, $features ) = @_;
+    my %by_hit_name;
+    my $debug = 0;
 
-	# Group the DnaDnaAlignFeatures by hit_name
-	map { $by_hit_name{$_->hseqname} ||= [] ; push @{$by_hit_name{$_->hseqname}}, $_ } @$features;
+    # Group the DnaDnaAlignFeatures by hit_name
+    map { $by_hit_name{$_->hseqname} ||= [] ; push @{$by_hit_name{$_->hseqname}}, $_ } @$features;
 
-	HITNAME: for my $hit_name (keys %by_hit_name) {
-		my ($sub_seq,$alt_exon,$match,$cigar,$pattern);
-		my $hit_features = $by_hit_name{$hit_name};
-		my $hit_strand = $hit_features->[0]->hstrand;
-		print STDOUT "PolyA/T tail Search for $hit_name...\n";
-		print STDOUT "Processing $hit_name with ".scalar(@$hit_features)." Features\n" if $debug;
-		# fetch the hit sequence
-		my $fetcher = $self->sequence_fetcher;
-		my $seq = $fetcher->{$hit_name};
-		# Get the AlignFeature that needs to be extended
-		# last exon if hit in forward strand, first if in reverse
+  HITNAME: for my $hit_name (keys %by_hit_name) {
+      my ($sub_seq,$alt_exon,$match,$cigar,$pattern);
+      my $hit_features = $by_hit_name{$hit_name};
+      my $hit_strand = $hit_features->[0]->hstrand;
+      print STDOUT "PolyA/T tail Search for $hit_name...\n";
+      print STDOUT "Processing $hit_name with ".scalar(@$hit_features)." Features\n" if $debug;
+      # fetch the hit sequence
+      my $fetcher = $self->sequence_fetcher;
+      my $seq = $fetcher->{$hit_name};
+      # Get the AlignFeature that needs to be extended
+      # last exon if hit in forward strand, first if in reverse
 
-		@$hit_features = sort {					$hit_strand == -1 ?
-								$a->hstart <=> $b->hstart || $b->hend <=> $a->hend :
-								$b->hend <=> $a->hend || $a->hstart <=> $b->hstart		} @$hit_features;
-		$alt_exon = shift @$hit_features;
-		print STDOUT ($hit_strand == -1 ? "Reverse" : "Forward").
-			" strand: start ".$alt_exon->hstart." end ".$alt_exon->hend." length ".$seq->sequence_length."\n" if $debug;
-		if($hit_strand == -1) {
-			next HITNAME unless $alt_exon->hstart > 1;
-			$sub_seq = $seq->sub_sequence(1,($alt_exon->hstart-1));
-			print STDOUT "subseq <1-".($alt_exon->hstart-1)."> is\n$sub_seq\n" if $debug;
-			$pattern = '^(.*T{3,})$';  # <AGAGTTTTTTTTTTTTTTTTTTTTTT>ALT_EXON_START
-		} else {
-			next HITNAME unless $alt_exon->hend < $seq->sequence_length;
-			$sub_seq = $seq->sub_sequence(($alt_exon->hend+1),$seq->sequence_length);
-			print STDOUT "subseq <".($alt_exon->hend+1)."-".$seq->sequence_length."> is\n$sub_seq\n" if $debug;
-			$pattern = '^(A{3,}.*)$';  # ALT_EXON_END<AAAAAAAAAAAAAAAAAAAAAAAACGAG>
-		}
+      @$hit_features = sort {
+          $hit_strand == -1 ?
+              $a->hstart <=> $b->hstart || $b->hend <=> $a->hend :
+              $b->hend <=> $a->hend || $a->hstart <=> $b->hstart;
+      } @$hit_features;
+      $alt_exon = shift @$hit_features;
+      print STDOUT ($hit_strand == -1 ? "Reverse" : "Forward").
+          " strand: start ".$alt_exon->hstart." end ".$alt_exon->hend." length ".$seq->sequence_length."\n" if $debug;
+      if($hit_strand == -1) {
+          next HITNAME unless $alt_exon->hstart > 1;
+          $sub_seq = $seq->sub_sequence(1,($alt_exon->hstart-1));
+          print STDOUT "subseq <1-".($alt_exon->hstart-1)."> is\n$sub_seq\n" if $debug;
+          $pattern = '^(.*T{3,})$';  # <AGAGTTTTTTTTTTTTTTTTTTTTTT>ALT_EXON_START
+      }
+      else {
+          next HITNAME unless $alt_exon->hend < $seq->sequence_length;
+          $sub_seq = $seq->sub_sequence(($alt_exon->hend+1),$seq->sequence_length);
+          print STDOUT "subseq <".($alt_exon->hend+1)."-".$seq->sequence_length."> is\n$sub_seq\n" if $debug;
+          $pattern = '^(A{3,}.*)$';  # ALT_EXON_END<AAAAAAAAAAAAAAAAAAAAAAAACGAG>
+      }
 
-		if($sub_seq =~ /$pattern/i ) {
-			$match = length $1;
-			$cigar = $alt_exon->cigar_string;
-			print STDOUT "Found $match bp long polyA/T tail\n";
+      if($sub_seq =~ /$pattern/i ) {
+          $match = length $1;
+          $cigar = $alt_exon->cigar_string;
+          print STDOUT "Found $match bp long polyA/T tail\n";
 
-			# change the feature cigar string
-			if(not $cigar =~ s/(\d*)M$/($1+$match)."M"/e ) {
-				$cigar = $cigar."${match}M";
-			}
-			print STDOUT "old cigar $cigar new $cigar\n" if $debug;
-			$alt_exon->cigar_string($cigar);
+          # change the feature cigar string
+          if(not $cigar =~ s/(\d*)M$/($1+$match)."M"/e ) {
+              $cigar = $cigar."${match}M";
+          }
+          print STDOUT "old cigar $cigar new $cigar\n" if $debug;
+          $alt_exon->cigar_string($cigar);
 
-			# change the feature coordinates
-			if($hit_strand == -1) {
-				$alt_exon->hstart($alt_exon->hstart-$match);
-			} else {
-				$alt_exon->hend($alt_exon->hend+$match);
-			}
+          # change the feature coordinates
+          if($hit_strand == -1) {
+              $alt_exon->hstart($alt_exon->hstart-$match);
+          }
+          else {
+              $alt_exon->hend($alt_exon->hend+$match);
+          }
 
-			if($alt_exon->strand == 1) {
-				$alt_exon->end($alt_exon->end+$match);
-			} else {
-				$alt_exon->start($alt_exon->start-$match);
-			}
+          if($alt_exon->strand == 1) {
+              $alt_exon->end($alt_exon->end+$match);
+          }
+          else {
+              $alt_exon->start($alt_exon->start-$match);
+          }
 
-		} else {
-			next HITNAME;
-		}
-	}
+      }
+      else {
+          next HITNAME;
+      }
+  }
 
-        return;
+    return;
 }
 
 sub run_exonerate {
@@ -399,17 +405,18 @@ sub run_exonerate {
     
     my $exo_options = "--softmasktarget yes -M 500 --bestn $bestn --maxintron $max_intron_length --score $score";
     
-    $exo_options .= $self->query_type() eq 'protein' ?
-    	" -m p2g" :
-    	" -m e2g --softmaskquery yes --dnahspthreshold $dnahsp --geneseed 300" ;
+    $exo_options .=
+        $self->query_type() eq 'protein' ?
+        " -m p2g" :
+        " -m e2g --softmaskquery yes --dnahspthreshold $dnahsp --geneseed 300" ;
 
     my $runnable = Bio::EnsEMBL::Analysis::Runnable::Finished::Exonerate->new(
-        -analysis => $self->analysis(),
-        -target    => $smasked,
-        -query_db	=> 	$self->database(),
-        -query_type => $self->query_type() || 'dna',
+        -analysis    => $self->analysis(),
+        -target      => $smasked,
+        -query_db    => $self->database(),
+        -query_type  => $self->query_type() || 'dna',
         -exo_options => $exo_options,
-        -program => $self->analysis->program
+        -program     => $self->analysis->program
         );
     $runnable->run();
 
@@ -444,7 +451,7 @@ sub format_ace_output {
     my $homol_tag   = $self->homol_tag;
     my $method_tag  = $self->method_tag;
 
-	my $offset = $self->genomic_start - 1;
+    my $offset = $self->genomic_start - 1;
 
     my %name_fp_list;
     foreach my $fp (@$fp_list) {
@@ -461,7 +468,7 @@ sub format_ace_output {
         # each hit from the fasta file using the OBDA index.
         $self->add_hit_name($hname);
 
-		my $prefix = $is_protein ? 'Protein' : 'Sequence';
+        my $prefix = $is_protein ? 'Protein' : 'Sequence';
 
         $ace       .= qq{\nSequence : "$contig_name"\n};
         my $hit_ace = qq{\n$prefix : "$hname"\n};
@@ -470,37 +477,39 @@ sub format_ace_output {
 
             # In acedb strand is encoded by start being greater
             # than end if the feature is on the negative strand.
-            my $strand = $fp->strand;
-            my $start = $fp->start;
-            my $end   = $fp->end;
-            my $hstart = $fp->hstart;
-            my $hend 	= $fp->hend;
+            my $strand  = $fp->strand;
+            my $start   = $fp->start;
+            my $end     = $fp->end;
+            my $hstart  = $fp->hstart;
+            my $hend    = $fp->hend;
             my $hstrand = $fp->hstrand;
 
-            if($hstrand ==-1){
-            	$fp->hstrand(1);
-            	$strand *= -1;
+            if ($hstrand ==-1){
+                $fp->hstrand(1);
+                $strand *= -1;
             }
 
             if ($strand == -1){
                 ($start, $end) = ($end, $start);
             }
 
-			my $hit_homol_tag = 'DNA_homol';
+            my $hit_homol_tag = 'DNA_homol';
 
             # Show coords in hit back to genomic sequence. (The annotators like this.)
-            $hit_ace .= sprintf qq{Homol %s "%s" "%s" %.3f %d %d %d %d\n},
-              $hit_homol_tag, $contig_name, $method_tag, $fp->percent_id,
-              $hstart, $hend, $start, $end;
-              #print STDOUT sprintf qq{Homol %s "%s" "%s" %.3f %d %d %d %d\n},
-              #$homol_tag, $contig_name, $method_tag, $fp->percent_id,
-              #$fp->hstart, $fp->hend, $start, $end;
+            $hit_ace .=
+                sprintf qq{Homol %s "%s" "%s" %.3f %d %d %d %d\n},
+                $hit_homol_tag, $contig_name, $method_tag, $fp->percent_id,
+                $hstart, $hend, $start, $end;
+            #print STDOUT sprintf qq{Homol %s "%s" "%s" %.3f %d %d %d %d\n},
+            #$homol_tag, $contig_name, $method_tag, $fp->percent_id,
+            #$fp->hstart, $fp->hend, $start, $end;
 
             # The first part of the line is all we need if there are no
             # gaps in the alignment between genomic sequence and hit.
-            my $query_line = sprintf qq{Homol %s "%s" "%s" %.3f %d %d %d %d},
-              $self->acedb_homol_tag, $hname, $method_tag, $fp->percent_id,
-              $start, $end, $hstart, $hend;
+            my $query_line =
+                sprintf qq{Homol %s "%s" "%s" %.3f %d %d %d %d},
+                $self->acedb_homol_tag, $hname, $method_tag, $fp->percent_id,
+                $start, $end, $hstart, $hend;
 
             my @ugfs = $fp->ungapped_features;
             if (@ugfs > 1) {
