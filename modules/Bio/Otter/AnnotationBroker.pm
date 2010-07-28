@@ -141,6 +141,8 @@ sub make_id_version_hash {
     }
 
     $self->{'_id_version_hash'} = $stable_version;
+
+    return;
 }
 
 sub store_stable {
@@ -164,6 +166,8 @@ sub store_stable {
             $sid_v->{$sid} = $this_version;
         }
     }
+
+    return;
 }
 
 sub increment_obj_version {
@@ -183,12 +187,16 @@ sub increment_obj_version {
     } else {
         warn "New  object '$type' '$stable'\n";
     }
+
+    return;
 }
 
 sub drop_id_version_hash {
     my( $self ) = @_;
 
     $self->{'_id_version_hash'} = undef;
+
+    return;
 }
 
 sub compare_genes {
@@ -411,6 +419,8 @@ sub increment_versions_in_gene {
     foreach my $exon (@{$gene->get_all_Exons}) {
         $self->increment_obj_version($exon);
     }
+
+    return;
 }
 
 sub set_gene_created_version_modified {
@@ -438,6 +448,8 @@ sub set_gene_created_version_modified {
         $exon->version(1)     unless $exon->version;
 	$exon->modified($time);
     }
+
+    return;
 }
 
 sub compare_obj {
