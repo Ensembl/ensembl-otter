@@ -1,0 +1,72 @@
+#!/usr/bin/env perl
+
+### find_UTR_incomplete_transcripts
+
+use strict;
+use warnings;
+
+use Bio::Otter::Lace::Defaults;
+
+{
+    my( $dataset_name, $set_name );
+
+    my $usage = sub { exec('perldoc', $0) };
+    # This do_getopt() call is needed to parse the otter config files
+    # even if you aren't giving any arguments on the command line.
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        'dataset=s'     => \$dataset_name,
+        ) or $usage->();
+    $usage->() unless $dataset_name;
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    
+    my $otter_dba = $ds->get_cached_DBAdaptor;
+
+    # attrib_type_id  code           name                  description    
+    # --------------  -------------  --------------------  ---------------
+    # 115             EndNotFound    end not found         end not found  
+    # 116             StartNotFound  start not found       start not found
+    # 124             mRNA_start_NF  mRNA start not found                 
+    # 125             mRNA_end_NF    mRNA end not found                   
+    # 126             cds_start_NF   CDS start not found                  
+    # 127             cds_end_NF     CDS end not found                    
+    
+    my $sth = $otter_dba->prepare(q{
+        SELECT t.transcript_id
+        FROM gene g
+          , transcript t
+          , transcript_attrib mnf
+        LEFT JOIN transcript_attrib cnf
+          ON t.transcript_id = cnf.transcript_id
+          AND cnf.attrib_type_id = 126
+        WHERE g.gene_id = t.gene_id
+          AND t.transcript_id = mnf.transcript_id
+          AND g.is_current = 1
+          AND g.source = 'HAVANA'
+          AND mnf.attrib_type_id = 124
+          AND mnf.value = "1"
+          AND (cnf.value IS NULL
+              or cnf.value = "0") 
+    });
+    
+    $sth->execute;
+    
+    
+}
+
+
+
+
+__END__
+
+=head1 NAME - find_UTR_incomplete_transcripts
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
