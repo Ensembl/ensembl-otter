@@ -53,7 +53,7 @@ sub paste_eucomm_data {
     # Parse the old otter exon IDs from the existing text field
     my $display_otter = {};
     my $text = $genomic_feature->{display_label} || '';
-    foreach my $id (grep /E\d{11}$/, split /[^A-Z0-9]+/, $text) {
+    foreach my $id (grep { /E\d{11}$/ } split /[^A-Z0-9]+/, $text) {
         $display_otter->{$id} = 1;
     }
 
