@@ -376,13 +376,10 @@ sub load_filters {
             $self->init_flag(0);
         }
     }
-    
-    my $fetched_new_data = 0;
-    
+
     $self->{_loaded_filters} = [];
     
     if (@to_fetch) {
-        
         for my $filter (@to_fetch) {
             my $gff_filter = $self->gff_filters_hash->{$filter};
             if ($gff_filter) {
@@ -390,39 +387,20 @@ sub load_filters {
                 push @{ $self->{_loaded_filters} }, @to_load;
             }
         }
-        
-        # save the state of each gff filter to disk so we can recover the session
-        
         $self->AceDatabase->smart_slice->DataSet->save_gff_filter_state;
-        
-        # replace the current fatal error prompt (because it waits for the user to acknowledge 
-        # each filter that fails to load)
-        my $old_callback = $self->DataSetChooser->Client->fatal_error_prompt;
-        $self->DataSetChooser->Client->fatal_error_prompt(sub {die shift});
-        
-        # actually fetch the data
-        $fetched_new_data = $self->AceDatabase->topup_pipeline_data_into_ace_server($self);
-        
-        # and put the old prompt back        
-        $self->DataSetChooser->Client->fatal_error_prompt($old_callback);
     }
     
     if ($self->XaceSeqChooser) {
-        if ($fetched_new_data) {
-            $self->XaceSeqChooser->resync_with_db;
+        if (@to_fetch) {
             $self->XaceSeqChooser->zMapLoadFeatures(@{ $self->{_loaded_filters} });
         }
-        elsif (@to_fetch) {
-            $self->XaceSeqChooser->zMapLoadFeatures(@{ $self->{_loaded_filters} });
-        }
-        elsif (! @to_fetch) {
-            # Don't need to fetch anything
+        else {
             $top->messageBox(
                 -title      => 'Nothing to fetch',
                 -icon       => 'warning',
                 -message    => 'All selected columns have already been loaded',
                 -type       => 'OK',
-            );            
+                );            
         }
     } else {
         # we need to set up and show an XaceSeqChooser        
