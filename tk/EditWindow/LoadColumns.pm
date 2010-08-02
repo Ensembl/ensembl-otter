@@ -279,40 +279,6 @@ sub label_text {
     return $self->{_label_text};
 }
 
-sub filter_done {
-    my ($self) = @_;
-    $self->{_filters_done}++;
-    $self->update_tk_preserve_grab; # to move the progress bar
-    #if ($self->{_filters_done} == $self->{_num_filters}) {}
-    return;
-}
-
-sub filter_loaded {
-    my ($self, $filter) = @_;
-    $self->filter_done;
-    $filter->load_time(time - $filter->load_time);
-    $self->show_filters;
-    
-    $self->{_loaded_filters} ||= [];
-    
-    if ($filter->can('required_ace_method_names')) {
-        push @{ $self->{_loaded_filters} }, @{ $filter->required_ace_method_names };
-    }
-    else {
-        push @{ $self->{_loaded_filters} }, $filter->name;
-    }
-
-    return;
-}
-
-sub filter_failed {
-    my ($self, $filter, $msg) = @_;
-    $filter->failed(1);
-    $filter->fail_msg($msg);
-    $self->filter_done;
-    return;
-}
-
 sub withdraw_or_destroy {
     my ($self) = @_;
     
@@ -411,17 +377,6 @@ sub load_filters {
     $top->Unbusy;
     $top->withdraw;
     $self->reset_progress;
-
-    return;
-}
-
-sub update_tk_preserve_grab {
-    my ($self) = @_;
-    
-    my $top = $self->top;
-    # printf STDERR "\nGrab status of top before update is: '%s'\n", $top->grabStatus;
-    $top->update;
-    # printf STDERR "\nGrab status of top after update is:  '%s'\n", $top->grabStatus;
 
     return;
 }
