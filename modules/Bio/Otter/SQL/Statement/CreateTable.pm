@@ -208,17 +208,17 @@ sub string {
     my $indent = '    ';
     my $str = $self->comment_string
         . "CREATE TABLE " . $self->name . " ("
-        . join(',', map "\n$indent" . $_->string,
+        . join(',', map { "\n$indent" . $_->string }
             $self->ColumnDefinition_list);
     if (my @keys = $self->KeyDefinition_list) {
         $str .= ",\n"
-            . join(',', map "\n$indent" . $_->string, @keys)
+            . join(',', map { "\n$indent" . $_->string } @keys)
     }
     $str .= "\n)";
     
     if (my @qual = $self->Qualifier_list) {
         #warn "Qualifiers: ", join ', ', map "[$_]", map defined($_) ? $_ : 'undef', @qual;
-        $str .= " " . join(" ", map $_->string, @qual);
+        $str .= " " . join(" ", map { $_->string } @qual);
     }
     $str .= ";\n";
     return $str;
