@@ -97,12 +97,6 @@ sub _filters {
     return $filters;
 }
 
-sub ace_filters {
-    my ($self) = @_;
-    return $self->{_ace_filters} ||=
-        [ grep { $_->is_ace_filter } @{$self->filters} ];
-}
-
 sub gff_filters {
     my ($self) = @_;
     return $self->{_gff_filters} ||=
