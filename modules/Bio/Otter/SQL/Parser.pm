@@ -36,7 +36,7 @@ sub parse_fh {
             next;
         }
         
-        my @line = grep defined($_), quotewords('[\s,\(\);=#]+', 'delimiters', $_);
+        my @line = grep { defined($_) } quotewords('[\s,\(\);=#]+', 'delimiters', $_);
         for (my $i = 0; $i < @line;) {
             my $tok = $line[$i];
             #warn "TOKEN: [$tok]\n";
