@@ -246,7 +246,7 @@ sub generate_SequenceSet {
 
     # Set fetch_truncated_genes=0 in [client] stanza of config to skip truncated genes.
     if ($skip_trunc{$self}) {
-        $list_of_genes = [grep ! $_->truncated_flag, @$list_of_genes];
+        $list_of_genes = [grep { ! $_->truncated_flag } @$list_of_genes];
     }
 
     foreach my $gene (sort $by_start_end_strand @$list_of_genes) {
