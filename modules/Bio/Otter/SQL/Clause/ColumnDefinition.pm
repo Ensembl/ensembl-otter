@@ -45,6 +45,8 @@ sub add_properties {
     
     my $prop = $self->{'_property_list'} ||= [];
     push(@$prop, @_);
+
+    return;
 }
 
 sub property_list {
@@ -64,6 +66,8 @@ sub add_values {
     
     my $prop = $self->{'_value_list'} ||= [];
     push(@$prop, @_);
+
+    return;
 }
 
 sub value_list {
@@ -142,6 +146,8 @@ sub process_TokenList {
     }
     $list->backup;
     $self->add_properties(@prop);
+
+    return;
 }
 
 1;

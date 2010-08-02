@@ -26,6 +26,7 @@ sub append_comment {
     my( $self, $comment ) = @_;
     
     $self->{'_comment_string'} .= $comment;
+    return;
 }
 
 1;

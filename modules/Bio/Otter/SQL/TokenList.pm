@@ -1,4 +1,5 @@
 
+
 ### Bio::Otter::SQL::TokenList
 
 package Bio::Otter::SQL::TokenList;
@@ -14,6 +15,7 @@ sub new {
 sub add_tokens {
     my $l = shift->{'_tokens'} ||= [];
     push(@$l, @_);
+    return;
 }
 
 sub next_token {
@@ -54,6 +56,8 @@ sub token_list {
 
 sub reset { ## no critic(Subroutines::ProhibitBuiltinHomonyms)
     shift->{'_index'} = undef;
+
+    return;
 }
 
 sub backup {
@@ -61,6 +65,8 @@ sub backup {
     
     $self->{'_index'}  or return;
     $self->{'_index'}--;
+
+    return;
 }
 
 sub string {
@@ -144,6 +150,8 @@ sub discard_next {
     if ($expect ne $next) {
         $self->fatal_message("Expected '$expect' but next token was '$next'");
     }
+
+    return;
 }
 
 
