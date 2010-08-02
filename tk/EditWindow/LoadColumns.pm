@@ -233,19 +233,6 @@ sub initialize {
     return;
 }
 
-sub num_filters {
-    my ( $self, $num_filters ) = @_;
-    
-    if (defined $num_filters) {
-        $self->{_num_filters} = $num_filters;
-        $self->pipeline_progress_bar->configure(
-            -to     => $num_filters,
-            );
-    }
-
-    return $self->{_num_filters};
-}
-
 sub pipeline_progress_bar {
     my ( $self, $pipeline_progress_bar ) = @_;
     $self->{_pipeline_progress_bar} = $pipeline_progress_bar if $pipeline_progress_bar;
@@ -268,7 +255,6 @@ sub reset_progress {
     
     $self->label_text($label_text);
     $self->{_filters_done} = 0;
-    $self->{_num_filters} = 0;
 
     return;
 }
