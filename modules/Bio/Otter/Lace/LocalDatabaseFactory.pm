@@ -132,9 +132,6 @@ sub recover_session {
     my $dataset = $adb->smart_slice->DataSet;
     $dataset->session_dir($adb->home);
     $dataset->reload_gff_filter_state;
-    
-    $adb->make_pipeline_DataFactory;
-    $adb->get_filter_loaded_states_from_acedb;
 
     my $title = $self->get_title($adb->home);
     unless ($title =~ /^Recovered/) {
