@@ -691,19 +691,7 @@ sub species {
 
 sub n2f {
     my ($self, $n2f) = @_;
-    
-    unless ($self->{'_n2f'}) {
-        my $ace_filters = $self->AceDatabase->
-            pipeline_DataFactory->get_names2filters() || {};
-        
-        my $gff_filters = $self->gff_filters_hash || {};
-        
-        # merge the two sets of filters
-        
-        $self->{'_n2f'} = {%$ace_filters, %$gff_filters};
-    }
-    
-    return $self->{'_n2f'};
+    return $self->gff_filters_hash;
 }
 
 sub gff_filters_hash {
