@@ -713,8 +713,6 @@ sub _open_SequenceSet {
     $adb->smart_slice($smart_slice);
     $adb->make_database_directory;
     $smart_slice->DataSet->session_dir($adb->home);
-    
-    $adb->make_pipeline_DataFactory;
 
     if ($adb_write_access) {
         # only lock the region if we have write access.

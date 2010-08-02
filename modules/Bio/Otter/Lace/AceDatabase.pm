@@ -18,9 +18,6 @@ use Bio::Otter::Lace::SatelliteDB;
 use Bio::Otter::Lace::PersistentFile;
 use Bio::Otter::Lace::Slice; # a new kind of Slice that knows how to get pipeline data
 
-
-use Bio::EnsEMBL::Ace::DataFactory;
-
 use Hum::Ace::LocalServer;
 use Hum::Ace::MethodCollection;
 use Hum::ZMapStyleCollection;
@@ -549,85 +546,6 @@ sub write_dna_data {
     close $ace_fh;
 
     return;
-}
-
-sub topup_pipeline_data_into_ace_server {
-    my( $self, $progress_monitor ) = @_;
-
-    my $factory = $self->pipeline_DataFactory
-        or confess "No pipeline_DataFactory";
-
-        # closure will probably work better:
-    my $ace_server = $self->ace_server();
-
-    my $filters_fetched_data = $factory->topup_pipeline
-        (
-         progress_monitor => $progress_monitor,
-         callback => sub { $ace_server->save_ace(@_); },
-        );
-
-    return $filters_fetched_data;
-}
-
-sub get_filter_loaded_states_from_acedb {
-    my ($self) = @_;
-
-    my $pdf = $self->pipeline_DataFactory
-        or confess "No pipeline_DataFactory";
-    my $n2f = $pdf->get_names2filters;
-    
-    warn "Fetching filters from acedb\n";
-
-    my $ace_handle = $self->aceperl_db_handle;
-    $ace_handle->raw_query('find Assembly *');
-    my $ace_text = $ace_handle->AceText_from_tag('Filter');
-    foreach ($ace_text->get_values('Filter')) {
-        my $name = $_->[0];
-        if (my $filt = $n2f->{$name}) {
-            $filt->done(1);
-        } else {
-            warn "No filter '$name'";
-        }
-    }
-
-    return;
-}
-
-sub pipeline_DataFactory {
-    my( $self, $pipeline_DataFactory ) = @_;
-    
-    if ($pipeline_DataFactory) {
-        $self->{'_pipeline_DataFactory'} = $pipeline_DataFactory;
-    }
-    return $self->{'_pipeline_DataFactory'};
-}
-
-sub make_pipeline_DataFactory {
-    my( $self ) = @_;
-
-    my $client      = $self->Client();
-    my $smart_slice = $self->smart_slice();
-
-    my $dataset = $smart_slice->DataSet;
-    my $collect = $self->MethodCollection;
-    my $factory = Bio::EnsEMBL::Ace::DataFactory->new($smart_slice);
-
-    foreach my $filter ( @{$dataset->ace_filters} ) {
-
-        # does the filter need a method?
-        my $req = $filter->required_ace_method_names;
-        foreach my $tag (@$req) {
-                #print STDERR "Trying to get a method Object with tag '$tag' ... filter '$class' ... ";
-            my $methObj = $collect->get_Method_by_name($tag);
-                #print STDERR $methObj ? "found one\n" : "find failed\n";
-        }
-
-        # add the filter to the factory
-        $factory->add_filter($filter->name, $filter);
-    }
-
-    # cache it for future reference
-    return $self->pipeline_DataFactory($factory);
 }
 
 sub gff_http_script_name {
