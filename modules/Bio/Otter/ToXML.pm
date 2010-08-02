@@ -275,7 +275,7 @@ sub Bio::Otter::TranscriptInfo::toXMLstring {
         $str .= $author->toXMLstring();
     }
 
-    foreach my $remstr (sort map $_->remark, $tinfo->remark) {
+    foreach my $remstr (sort map { $_->remark } $tinfo->remark) {
         $remstr =~ s/\n/ /g;
         $str .= emit_tagpair('remark', $remstr, 6);
     }
