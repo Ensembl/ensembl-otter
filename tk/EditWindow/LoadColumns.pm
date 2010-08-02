@@ -279,15 +279,6 @@ sub label_text {
     return $self->{_label_text};
 }
 
-sub loading_filter {
-    my ($self, $filter) = @_;
-    $self->{_current_filter} = $filter;
-    $filter->load_time(time);
-    $self->label_text("Loading: ".$filter->name." (".($self->{_filters_done}+1)." of ".$self->{_num_filters}.")");
-    $self->update_tk_preserve_grab;
-    return;
-}
-
 sub filter_done {
     my ($self) = @_;
     $self->{_filters_done}++;
