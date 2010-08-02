@@ -687,7 +687,9 @@ sub run_lace_on_slice{
         $ss->unselect_all_CloneSequences;
         return;
     }
-    my $title = qq`lace for SLICE $start - $end ` . $self->name;
+    my $title =
+        sprintf "lace for SLICE %d - %d %s",
+        $start, $end, $self->name;
     $self->_open_SequenceSet($title);
 
     return;
