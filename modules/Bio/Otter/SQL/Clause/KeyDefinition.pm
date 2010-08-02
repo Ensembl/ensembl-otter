@@ -53,7 +53,7 @@ sub string {
     if (my $n = $self->name) {
         $str .= " $n";
     }
-    $str .= ' ('. join(', ', map $_->string, $self->Column_list) . ')';
+    $str .= ' ('. join(', ', map { $_->string } $self->Column_list) . ')';
 
     return $str;
 }
