@@ -1236,7 +1236,7 @@ sub DataSet {
 sub quote_row {
     my (@row) = @_;
 
-    return join(",\t", map "'$_'", @row) . "\n";
+    return join(",\t", map { "'$_'" } @row) . "\n";
 }
 
 
