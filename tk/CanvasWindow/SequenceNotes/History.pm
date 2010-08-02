@@ -312,7 +312,7 @@ sub toggle_selection {
     my ($self, $obj) = @_;
 
     my $canvas = $self->canvas;
-    my $is_selected = grep $_ eq 'selected', $canvas->gettags($obj);
+    my $is_selected = grep { $_ eq 'selected' } $canvas->gettags($obj);
     my ($new_colour);
     if ($is_selected) {
         $new_colour = '#ccccff';
