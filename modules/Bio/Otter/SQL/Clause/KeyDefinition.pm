@@ -32,6 +32,8 @@ sub add_Columns {
     
     my $prop = $self->{'_Column_list'} ||= [];
     push(@$prop, @_);
+
+    return;
 }
 
 sub Column_list {
@@ -52,6 +54,8 @@ sub string {
         $str .= " $n";
     }
     $str .= ' ('. join(', ', map $_->string, $self->Column_list) . ')';
+
+    return $str;
 }
 
 
@@ -108,6 +112,8 @@ sub string {
                     if $token =~ /\W/;
             }
         }
+
+        return;
     }
 }
 

@@ -15,6 +15,7 @@ sub add_Statement {
     my $self = shift;
     
     push(@$self, shift);
+    return;
 }
 
 sub Statement_list {
@@ -40,6 +41,7 @@ sub make_transactional {
         next unless $st->isa('Bio::Otter::SQL::Statement::CreateTable');
         $st->make_transactional;
     }
+    return;
 }
 
 1;

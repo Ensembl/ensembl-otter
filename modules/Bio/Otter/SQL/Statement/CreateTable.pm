@@ -26,6 +26,8 @@ sub add_ColumnDefinitions {
     
     my $prop = $self->{'_ColumnDefinition_list'} ||= [];
     push(@$prop, @_);
+
+    return;
 }
 
 sub ColumnDefinition_list {
@@ -45,12 +47,16 @@ sub add_KeyDefinitions {
     
     my $prop = $self->{'_KeyDefinition_list'} ||= [];
     push(@$prop, @_);
+
+    return;
 }
 
 sub set_KeyDefinitions {
     my $self = shift;
     
     $self->{'_KeyDefinition_list'} = [@_];
+
+    return;
 }
 
 sub KeyDefinition_list {
@@ -70,6 +76,8 @@ sub add_Qualifiers {
     
     my $prop = $self->{'_Qualifier_list'} ||= [];
     push(@$prop, @_);
+
+    return;
 }
 
 sub Qualifier_list {
@@ -133,6 +141,8 @@ sub make_transactional {
     if ($key_comments) {
         $self->append_comment($key_comments);
     }
+
+    return;
 }
 
 {
@@ -187,6 +197,8 @@ sub make_transactional {
             $qual->value($value);
             $self->add_Qualifiers($qual);
         }
+
+        return;
     }
 }
 
