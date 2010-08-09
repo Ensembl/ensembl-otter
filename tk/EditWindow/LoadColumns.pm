@@ -330,7 +330,7 @@ sub load_filters {
                 push @{ $self->{_loaded_filters} }, @to_load;
             }
         }
-        $self->AceDatabase->smart_slice->DataSet->save_gff_filter_state;
+        $self->AceDatabase->save_filter_state;
     }
     
     if ($self->XaceSeqChooser) {
@@ -608,7 +608,7 @@ sub gff_filters_hash {
     my ($self) = @_;
     unless ($self->{_gff_filters_hash}) {
         my $gff_filters =
-            $self->AceDatabase->smart_slice->DataSet->filters;
+            $self->AceDatabase->filters;
         $self->{_gff_filters_hash} = {
             map { $_->name => $_ } @{$gff_filters},
         };

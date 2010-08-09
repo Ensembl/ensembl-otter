@@ -8,6 +8,7 @@ use warnings;
 use Carp;
 use File::Path 'rmtree';
 use Fcntl qw{ O_WRONLY O_CREAT };
+use Config::IniFiles;
 
 use Bio::Vega::Transform::Otter::Ace;
 use Bio::Vega::AceConverter;
@@ -24,6 +25,9 @@ use Hum::ZMapStyleCollection;
 
 my      $REGION_XML_FILE =      '.region.xml';
 my $LOCK_REGION_XML_FILE = '.lock_region.xml';
+
+my $FILTERS_STATE_FILE = "filters_state.ini";
+my @FILTER_STATES = qw(wanted done failed);
 
 sub new {
     my( $pkg ) = @_;
@@ -546,6 +550,75 @@ sub write_dna_data {
     close $ace_fh;
 
     return;
+}
+
+sub reload_filter_state {
+    my ($self) = @_;
+    
+    my $cfg = $self->_filter_state;
+
+    my %filter_hash = map {$_->name => $_} @{$self->filters};
+    
+    for my $filter_name ($cfg->Sections) {
+        print "Reloading $filter_name\n";
+        my $filter = $filter_hash{$filter_name};
+        for my $state (@FILTER_STATES) {
+            my $setting = $cfg->val($filter_name, $state);
+            $filter->$state($setting) if defined $setting;
+        } 
+    }
+
+    return;
+}
+
+sub save_filter_state {
+    my ($self) = @_;
+    
+    my $cfg = $self->_filter_state;
+
+    for my $filter (@{$self->filters}) {
+        for my $state (@FILTER_STATES) {
+            if ($filter->$state) {
+                $cfg->AddSection($filter->name) unless $cfg->SectionExists($filter->name);
+                $cfg->newval($filter->name, $state, 1);
+            }
+        }
+    }
+    
+    $cfg->RewriteConfig;
+
+    return;
+}
+
+sub _filter_state {
+    my ($self) = @_;
+    unless ($self->{_filter_state}) {
+        my $file = $self->home.'/'.$FILTERS_STATE_FILE;
+        my $cfg;
+        
+        # Config::IniFiles is fussy about being passed an empty file, so we have to  
+        # do things differently if the file exists or not, we should probably fix this...
+        
+        unless (-e $file) {
+            $cfg = Config::IniFiles->new;
+            $cfg->SetFileName($file);
+        }
+        else {
+            $cfg = Config::IniFiles->new( -file => $file );
+        }
+        
+        die "Failed to create Config object from $file" unless $cfg;
+        
+        $self->{_filter_state} = $cfg;
+    }
+    
+    return $self->{_filter_state};
+}
+
+sub filters {
+    my ($self) = @_;
+    return $self->{_filters} ||=
+        $self->smart_slice->DataSet->filters;
 }
 
 sub gff_http_script_name {
