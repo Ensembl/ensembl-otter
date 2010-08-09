@@ -24,53 +24,24 @@ my %STATE_COLORS = (
     failed  => 'red',
 );
 
+my $_default_selection = { };
+my $_last_selection    = { };
+my $_sorted_by         = { };
+
 sub initialize {
     my( $self ) = @_;
-    
-    # set the default selection
-    
-    my $dsc_default = $self->DataSetChooser->default_selection($self->species);
 
-    if ($dsc_default) {
-        $self->default_selection($dsc_default);
-    }
-    else {
-        # this is the first time we've opened a slice from this species, so make
-        # the current 'wanted' settings (which come from the otter_config) the
-        # default selection 
-        
-        $self->default_selection(
-            { map { $_ => $self->n2f->{$_}->wanted } keys %{ $self->n2f } }
-            );
-        
-        # and store these settings in the DataSetChooser
-        
-        $self->DataSetChooser->default_selection(
-            $self->species,
-            $self->default_selection
-            );
-    }
-    
-    # reset the last selection (if one exists)
-    
-    my $dsc_last = $self->DataSetChooser->last_selection($self->species);
-    
-    # directly set the private hash variable to avoid updating the DSC
-    # with the same data, and use the default selection if we don't have
-    # a last selection
-    
-    $self->{_last_selection} = $dsc_last || $self->default_selection;
-    
-    # reset the last sorted by
-    
-    my $dsc_last_sorted = $self->DataSetChooser->last_sorted_by($self->species);
-    
-    $self->{_last_sorted_by} = $dsc_last_sorted || $self->default_selection;
-    
-    # and actually set the wanted flags on the filters accordingly
-    
-    $self->set_filters_wanted($self->last_selection);
-    
+    my $species = $self->species;
+
+    my $selection =
+        $_default_selection->{$species} ||= {
+            map {
+                $_->name => $_->wanted;
+            } @{$self->AceDatabase->filters},
+    };
+    $_last_selection->{$species} ||= $selection;
+    $_sorted_by->{$species} = 'name';
+
     my $top = $self->top;
 
     my $filter_count = scalar keys %{$self->n2f};
@@ -138,12 +109,12 @@ sub initialize {
     
     $select_frame->Button(
         -text => 'Default',
-        -command => sub { $self->set_filters_wanted($self->default_selection) },
+        -command => sub { $self->set_filters_wanted($_default_selection) },
         )->pack(-side => 'left');
     
     $select_frame->Button(
         -text => 'Previous',
-        -command => sub { $self->set_filters_wanted($self->last_selection) },
+        -command => sub { $self->set_filters_wanted($_last_selection) },
         )->pack(-side => 'left');
     
     $select_frame->Button(
@@ -192,13 +163,8 @@ sub initialize {
         -command => $wod_cmd,
         )->pack(-side => 'right', -expand => 0);
     $top->protocol( 'WM_DELETE_WINDOW', $wod_cmd );
-    
-    $self->{_default_sort_method} = 'name';
-    
-    $self->sort_by_filter_method(
-        $self->DataSetChooser->last_sorted_by($self->species) ||
-        $self->{_default_sort_method}
-        );
+
+    $self->sort_by_filter_method;
     
     
     $control_frame->Label(
@@ -296,9 +262,11 @@ sub load_filters {
     $top->Busy(-recurse => 1);
     
     # save off the current selection as the last selection
-    $self->last_selection(
-        { map { $_ => $self->n2f->{$_}->wanted } keys %{ $self->n2f } }
-    );
+    $_last_selection->{$self->species} = {
+        map {
+            $_->name => $_->wanted;
+        } @{$self->AceDatabase->filters},
+    };
 
     my @to_fetch = grep { 
         $self->n2f->{$_}->wanted && !$self->n2f->{$_}->done && !$self->n2f->{$_}->failed
@@ -368,27 +336,20 @@ sub load_filters {
 }
 
 sub set_filters_wanted {
-    my ($self, $wanted_hash) = @_;
-    map { $self->n2f->{$_}->wanted($wanted_hash->{$_}) } keys %{ $self->n2f };
+    my ($self, $selection_by_species) = @_;
+
+    my $filters = $self->AceDatabase->filters;
+    my $selection = $selection_by_species->{$self->species};
+    $_->wanted($selection->{$_->name}) foreach @{$filters};
+
     return;
 }
 
 sub sort_by_filter_method {
-    
-    my $self = shift;
-    
-    my $method = shift || $self->{_default_sort_method};
-    
-    my %n2f = %{ $self->n2f };
-    
-    if ($method =~ /wanted/) {
-        # hack to get done filters sorted before wanted but undone 
-        # filters - note that '/' is ascii-betically before 1 or 0!
-        map { $n2f{$_}->wanted('/') if $n2f{$_}->done } keys %n2f;
-        map { $n2f{$_}->wanted('9') if $n2f{$_}->failed } keys %n2f;
-        $self->{_default_sort_method} = 'load_time';
-    }
-    
+    my ( $self, $method ) = @_;
+
+    $method ||= $_sorted_by->{$self->species};
+
     my $cmp_filters = sub {
         
         my ($f1, $f2, $method, $invert) = @_;
@@ -417,7 +378,7 @@ sub sort_by_filter_method {
     # to reverse the last_sorted_by method, but if the user has
     # clicked on the button twice though we do - this flag marks this
     if ($self->{_internally_sorted}) {
-        $flip = $self->last_sorted_by eq $method;
+        $flip = $_sorted_by->{$self->species} eq $method;
     }
     else {
         $self->{_internally_sorted} = 1;
@@ -427,19 +388,12 @@ sub sort_by_filter_method {
         $flip = 1;
     }
     
+    my $n2f = $self->n2f;
     my @sorted_names = sort { 
-        $cmp_filters->($n2f{$a}, $n2f{$b}, $method, $flip) || 
-            $cmp_filters->($n2f{$a}, $n2f{$b}, $self->{_default_sort_method})
-    } keys %n2f;
+        $cmp_filters->($n2f->{$a}, $n2f->{$b}, $method, $flip)
+    } keys %{$n2f};
     
-    $self->last_sorted_by($flip ? $method.'_rev' : $method);
-    
-    if ($method =~ /wanted/) {
-        # patch the real values back again!
-        map { $n2f{$_}->wanted(1) if $n2f{$_}->done } keys %n2f;
-        map { $n2f{$_}->wanted(1) if $n2f{$_}->failed } keys %n2f;
-    }
-    
+    $_sorted_by->{$self->species} = $flip ? $method.'_rev' : $method;
     $self->show_filters(\@sorted_names);
 
     return;
@@ -548,50 +502,6 @@ sub show_filters {
 }
 
 # (g|s)etters
-
-sub last_selection {
-    my ($self, $last) = @_;
-    
-    if ($last) {
-        
-        $self->{_last_selection} = $last;
-        
-        # also update the DataSetChooser
-        
-        $self->DataSetChooser->last_selection(
-            $self->species,
-            $last,
-            );
-    }
-    
-    return $self->{_last_selection};
-}
-
-sub last_sorted_by {
-    my ($self, $last) = @_;
-    
-    if ($last) {
-        
-        $self->{_last_sorted_by} = $last;
-        
-        # also update the DataSetChooser
-        
-        $self->DataSetChooser->last_sorted_by(
-            $self->species,
-            $last,
-            );
-    }
-    
-    return $self->{_last_sorted_by};
-}
-
-sub default_selection {
-    my ($self, $default) = @_;
-    
-    $self->{_default_selection} = $default if $default;
-    
-    return $self->{_default_selection};
-}
 
 sub species {
     my ($self) = @_;
