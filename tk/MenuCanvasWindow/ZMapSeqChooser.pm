@@ -486,7 +486,7 @@ sub zMapGffFilterDefaults {
     my ($self, $stylesfile) = @_;
     
     my $gff_filters =
-        $self->AceDatabase->smart_slice->DataSet->gff_filters;
+        $self->AceDatabase->smart_slice->DataSet->filters;
     
     my $text;
     
@@ -571,7 +571,7 @@ sub zMapZMapDefaults {
     my $sources_string =
         join ' ; ',
         $self->slice_name,
-        ( map { $_->name } @{$dataset->gff_filters} ),
+        ( map { $_->name } @{$dataset->filters} ),
         ;
 
     my $columns = $dataset->config_value_list_merged('zmap_config', 'columns');
@@ -1071,7 +1071,7 @@ sub zMapFeaturesLoaded {
         my $filters_by_fset;
         
         my $gff_filters =
-            $self->AceDatabase->smart_slice->DataSet->gff_filters;
+            $self->AceDatabase->smart_slice->DataSet->filters;
         
         for my $filter (@$gff_filters) {
             for my $fset ($filter->featuresets) {
@@ -1120,7 +1120,7 @@ sub zMapUpdateConfigFile {
     my $cfg = $self->{_zmap_cfg} ||= Config::IniFiles->new( -file => $self->zMapZmapDir . '/ZMap' );
     
     my $gff_filters =
-        $self->AceDatabase->smart_slice->DataSet->gff_filters;
+        $self->AceDatabase->smart_slice->DataSet->filters;
 
     for my $filter (@{$gff_filters}) {
         if ($filter->done) {

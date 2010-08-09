@@ -608,7 +608,7 @@ sub gff_filters_hash {
     my ($self) = @_;
     unless ($self->{_gff_filters_hash}) {
         my $gff_filters =
-            $self->AceDatabase->smart_slice->DataSet->gff_filters;
+            $self->AceDatabase->smart_slice->DataSet->filters;
         $self->{_gff_filters_hash} = {
             map { $_->name => $_ } @{$gff_filters},
         };
