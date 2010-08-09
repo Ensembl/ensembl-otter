@@ -181,10 +181,6 @@ sub server_params {
 sub transcript_name_from_transcript_xref {}
 
 
-sub is_gff_filter { # flag - does ZMap get this filter through a pipe?
-    return 0;
-}
-
 
 1;
 
