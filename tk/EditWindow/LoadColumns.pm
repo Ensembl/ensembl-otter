@@ -40,7 +40,8 @@ sub initialize {
             } @{$self->AceDatabase->filters},
     };
     $_last_selection->{$species} ||= $selection;
-    $_sorted_by->{$species} = 'name';
+    $_sorted_by->{$species} = undef;
+    $self->{_flip} = 0;
 
     my $top = $self->top;
 
@@ -164,7 +165,7 @@ sub initialize {
         )->pack(-side => 'right', -expand => 0);
     $top->protocol( 'WM_DELETE_WINDOW', $wod_cmd );
 
-    $self->sort_by_filter_method;
+    $self->sort_by_filter_method_('name');
     
     
     $control_frame->Label(
@@ -348,7 +349,18 @@ sub set_filters_wanted {
 sub sort_by_filter_method {
     my ( $self, $method ) = @_;
 
-    $method ||= $_sorted_by->{$self->species};
+    my $flip = $self->{_flip} =
+        $_sorted_by->{$self->species} eq $method
+        ? ! $self->{_flip} : 0;
+    $_sorted_by->{$self->species} = $method;
+
+    $self->sort_by_filter_method_($method, $flip);
+
+    return;
+}
+
+sub sort_by_filter_method_ {
+    my ( $self, $method, $flip ) = @_; 
 
     my $cmp_filters = sub {
         
@@ -371,30 +383,12 @@ sub sort_by_filter_method {
         
         return $res;
     };
-    
-    my $flip = 0;
-    
-    # if we are being launched for the first time we don't want 
-    # to reverse the last_sorted_by method, but if the user has
-    # clicked on the button twice though we do - this flag marks this
-    if ($self->{_internally_sorted}) {
-        $flip = $_sorted_by->{$self->species} eq $method;
-    }
-    else {
-        $self->{_internally_sorted} = 1;
-    }
-    
-    if ($method =~  s/_rev$//) {
-        $flip = 1;
-    }
-    
+
     my $n2f = $self->n2f;
     my @sorted_names = sort { 
         $cmp_filters->($n2f->{$a}, $n2f->{$b}, $method);
     } keys %{$n2f};
     @sorted_names = reverse @sorted_names if $flip;
-
-    $_sorted_by->{$self->species} = $flip ? $method.'_rev' : $method;
     $self->show_filters(\@sorted_names);
 
     return;
