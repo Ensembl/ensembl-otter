@@ -484,10 +484,7 @@ sub zMapAceServerDefaults {
 sub zMapGffFilterDefaults {
     
     my ($self, $stylesfile) = @_;
-    
-    my $gff_filters =
-        $self->AceDatabase->filters;
-    
+
     my $text;
     
     my $script = $self->AceDatabase->gff_http_script_name;
@@ -496,7 +493,10 @@ sub zMapGffFilterDefaults {
     my %filter_styles;
     my %filter_descs;
 
-    for my $filter (@$gff_filters) {
+    for (values %{$self->AceDatabase->filters}) {
+
+        my $filter = $_->{filter};
+        my $state_hash = $_->{state};
 
         my $param_string =
             join '&', @{$self->AceDatabase->gff_http_script_arguments($filter)};
@@ -505,7 +505,9 @@ sub zMapGffFilterDefaults {
             $filter->name,
             url             => 'pipe:///'.$script.'?'.$param_string,
             featuresets     => join(' ; ', $filter->featuresets),
-            delayed         => ($filter->wanted && !$filter->failed) ? 'false' : 'true',
+            delayed         =>
+            ( $state_hash->{wanted} && ! $state_hash->{failed} )
+            ? 'false' : 'true',
             stylesfile      => $stylesfile,
             group           => 'always',
         );
@@ -571,7 +573,7 @@ sub zMapZMapDefaults {
     my $sources_string =
         join ' ; ',
         $self->slice_name,
-        ( map { $_->name } @{$self->AceDatabase->filters} ),
+        keys %{$self->AceDatabase->filters},
         ;
 
     my $columns = $dataset->config_value_list_merged('zmap_config', 'columns');
@@ -1069,13 +1071,11 @@ sub zMapFeaturesLoaded {
     
     unless ($self->{_gff_filters_by_featureset}) {
         my $filters_by_fset;
-        
-        my $gff_filters =
-            $self->AceDatabase->filters;
-        
-        for my $filter (@$gff_filters) {
-            for my $fset ($filter->featuresets) {
-                $filters_by_fset->{lc($fset)} = $filter; # lc because zmap does
+
+        for (values %{$self->AceDatabase->filters}) {
+            my $state_hash = $_->{state};
+            for ($_->{filter}->featuresets) {
+                $filters_by_fset->{lc($_)} = $state_hash; # lc because zmap does
             }
         }
         
@@ -1087,16 +1087,17 @@ sub zMapFeaturesLoaded {
     my $state_changed = 0;
     
     for my $name (@featuresets) {;
-        if (my $filter = $gff_filters_by_featureset->{lc($name)}) { # lc here too in case zmap changes!
-            if ($status == 0 && !$filter->failed) {
+        if (my $state_hash =
+            $gff_filters_by_featureset->{lc($name)}) { # lc here too in case zmap changes!
+            if ($status == 0 && ! $state_hash->{failed}) {
                 $state_changed = 1;
-                $filter->failed(1);
-                $filter->fail_msg($msg);
+                $state_hash->{failed} = 1;
+                $state_hash->{fail_msg} = $msg;
             }
-            elsif ($status == 1 && !$filter->done) {
+            elsif ($status == 1 && ! $state_hash->{done}) {
                 $state_changed = 1;
-                $filter->done(1);
-                $filter->failed(0); # reset failed flag if filter succeeds
+                $state_hash->{done} = 1;
+                $state_hash->{failed} = 0; # reset failed flag if filter succeeds
             }
         }
     }
@@ -1118,16 +1119,14 @@ sub zMapUpdateConfigFile {
     my $self = shift;
     
     my $cfg = $self->{_zmap_cfg} ||= Config::IniFiles->new( -file => $self->zMapZmapDir . '/ZMap' );
-    
-    my $gff_filters =
-        $self->AceDatabase->filters;
 
-    for my $filter (@{$gff_filters}) {
-        if ($filter->done) {
-            $cfg->setval($filter->name,'delayed','false');
+    while ( my ( $name, $value ) = each %{$self->AceDatabase->filters}) {
+        my $state_hash = $value->{state};
+        if ($state_hash->{done}) {
+            $cfg->setval($name,'delayed','false');
         }
-        if ($filter->failed) {
-            $cfg->setval($filter->name,'delayed','true');
+        if ($state_hash->{failed}) {
+            $cfg->setval($name,'delayed','true');
         }
     }
     
@@ -1254,12 +1253,6 @@ sub open_clones {
 
     $xremote = $self->zMapGetXRemoteClientByName($self->slice_name());
     $self->zMapRegisterClientRequest($xremote);
-
-#            sleep 10;
-#            
-#            my @filters_wanted = map { $_->featuresets } grep { $_->wanted } values %{ $self->gff_filters };
-#            print "Filters to load: ".join(',',@filters_wanted)."\n" if $ZMAP_DEBUG;
-#            $self->zMapLoadFeatures(@filters_wanted);
 
     return;
 }

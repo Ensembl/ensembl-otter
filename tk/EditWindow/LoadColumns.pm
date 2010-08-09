@@ -31,19 +31,20 @@ my $_sorted_by         = { };
 my $_sort_methods = {
     name        => [ \ &_sorted_by_method, 'name', ],
     description => [ \ &_sorted_by_method, 'description', ],
-    wanted      => [ \ &_sorted_by_method, 'wanted', ],
+    # wanted      => [ \ &_sorted_by_method, 'wanted', ],
 };
 
 sub initialize {
     my( $self ) = @_;
 
     my $species = $self->species;
+    my @filters = values %{$self->AceDatabase->filters};
 
     my $selection =
         $_default_selection->{$species} ||= {
             map {
-                $_->name => $_->wanted;
-            } @{$self->AceDatabase->filters},
+                $_->{filter}->name => $_->{filter}->wanted;
+            } @filters,
     };
     $_last_selection->{$species} ||= $selection;
     $_sorted_by->{$species} = undef;
@@ -51,7 +52,7 @@ sub initialize {
 
     my $top = $self->top;
 
-    my $filter_count = scalar keys %{$self->n2f};
+    my $filter_count = @filters;
     my $max_rows = 28;
     my $height = $filter_count > $max_rows ? $max_rows : $filter_count;
     my $hlist = $top->Scrolled("HListplusplus",
@@ -79,7 +80,7 @@ sub initialize {
     $hlist->header('create', $i++,  
                    -itemtype => 'resizebutton', 
                    -command => sub {
-                       $self->sort_by_filter_method('wanted');
+                       # $self->sort_by_filter_method('wanted');
                    }
         );
 
@@ -217,10 +218,10 @@ sub reset_progress {
     
     my ($num_done, $num_failed) = (0, 0);
     
-    for my $key (keys %{ $self->n2f }) {
-        my $filter = $self->n2f->{$key};
-        $num_done++ if $filter->done && !$filter->failed;
-        $num_failed++ if $filter->failed;
+    for (values %{ $self->AceDatabase->filters }) {
+        my $state = $_->{state};
+        $num_done++ if $state->{done} && ! $state->{failed};
+        $num_failed++ if $state->{failed};
     }
     
     my $label_text = "$num_done columns loaded";
@@ -267,17 +268,21 @@ sub load_filters {
 
     my $top = $self->top;
     $top->Busy(-recurse => 1);
-    
+
+    my @filters = values %{$self->AceDatabase->filters};
+
     # save off the current selection as the last selection
     $_last_selection->{$self->species} = {
         map {
-            $_->name => $_->wanted;
-        } @{$self->AceDatabase->filters},
+            $_->{filter}->name => $_->{state}{wanted};
+        } @filters,
     };
 
     my @to_fetch = grep { 
-        $self->n2f->{$_}->wanted && !$self->n2f->{$_}->done && !$self->n2f->{$_}->failed
-    } keys %{ $self->n2f };
+        $_->{state}{wanted}
+        && ! $_->{state}{done}
+        && ! $_->{state}{failed}
+    } @filters;
 
     if ($self->init_flag) {
         my $adb = $self->AceDatabase;
@@ -295,22 +300,13 @@ sub load_filters {
         }
     }
 
-    $self->{_loaded_filters} = [];
-    
-    if (@to_fetch) {
-        for my $filter (@to_fetch) {
-            my $gff_filter = $self->gff_filters_hash->{$filter};
-            if ($gff_filter) {
-                my @to_load = $gff_filter->featuresets;
-                push @{ $self->{_loaded_filters} }, @to_load;
-            }
-        }
-        $self->AceDatabase->save_filter_state;
-    }
-    
+    $self->AceDatabase->save_filter_state if @to_fetch;
+
     if ($self->XaceSeqChooser) {
         if (@to_fetch) {
-            $self->XaceSeqChooser->zMapLoadFeatures(@{ $self->{_loaded_filters} });
+            my @featuresets = 
+                map { @{$_->{filter}->featuresets} } @to_fetch;
+            $self->XaceSeqChooser->zMapLoadFeatures(@featuresets);
         }
         else {
             $top->messageBox(
@@ -345,9 +341,9 @@ sub load_filters {
 sub set_filters_wanted {
     my ($self, $selection_by_species) = @_;
 
-    my $filters = $self->AceDatabase->filters;
+    my @filters = values %{$self->AceDatabase->filters};
     my $selection = $selection_by_species->{$self->species};
-    $_->wanted($selection->{$_->name}) foreach @{$filters};
+    $_->{state}{wanted} = $selection->{$_->{filter}->name} foreach @filters;
 
     return;
 }
@@ -379,10 +375,12 @@ sub sort_by_filter_method_ {
 sub _sorted_by_method {
     my ( $self, $method ) = @_;
 
-    my $n2f = $self->n2f;
+    my $filters = $self->AceDatabase->filters;
     my @names = sort {
-        _sort_by_method($n2f->{$a}, $n2f->{$b}, $method);
-    } keys %{$n2f};
+        _sort_by_method($filters->{$a}->{filter},
+                        $filters->{$b}->{filter},
+                        $method);
+    } keys %{$filters};
 
     return @names;
 }
@@ -413,7 +411,7 @@ sub change_checkbutton_state {
     
     $state_color ||= $STATE_COLORS{'default'};
     
-    for (my $i = 0; $i < scalar(keys %{ $self->n2f }); $i++) {
+    for (my $i = 0; $i < keys %{ $self->AceDatabase->filters }; $i++) {
         my $cb = $self->hlist->itemCget($i, 0, '-widget');
         $cb->$fn if $cb->cget('-selectcolor') eq $state_color;
     }
@@ -424,7 +422,11 @@ sub change_checkbutton_state {
 sub show_filters {
    
     my $self = shift;
-    my $names_in_order = shift || $self->{_last_names_in_order} || keys %{ $self->n2f };
+
+    my $filters = $self->AceDatabase->filters;
+
+    my $names_in_order =
+        shift || $self->{_last_names_in_order} || keys %{ $filters };
 
     $self->{_last_names_in_order} = $names_in_order;
     
@@ -434,6 +436,9 @@ sub show_filters {
     
     for my $name (@$names_in_order) {
 
+        my $filter = $filters->{$name}{filter};
+        my $state_hash = $filters->{$name}{state};
+
         # eval because delete moans if entry doesn't exist
         eval{ $hlist->delete('entry', $i) };
         
@@ -441,17 +446,17 @@ sub show_filters {
         
         my $cb_color = $STATE_COLORS{'default'};
         
-        if ($self->n2f->{$name}->failed) {
+        if ($state_hash->{failed}) {
             $cb_color = $STATE_COLORS{'failed'};
         }
-        elsif ($self->n2f->{$name}->done) {
+        elsif ($state_hash->{done}) {
             $cb_color = $STATE_COLORS{'done'};
         }
         
         $hlist->itemCreate($i, 0, 
                            -itemtype => 'window', 
                            -widget => $hlist->Checkbutton(
-                               -variable => \$self->n2f->{$name}->{_wanted},
+                               -variable => \ $state_hash->{wanted},
                                -onvalue => 1,
                                -offvalue => 0,
                                -anchor => 'w',
@@ -459,34 +464,34 @@ sub show_filters {
                            ),
             );
         
-        if ($self->n2f->{$name}->done) {
+        if ($state_hash->{done}) {
             my $cb = $hlist->itemCget($i, 0, '-widget');
             $cb->configure(-command => sub { $cb->select() });
-            if (! $self->n2f->{$name}->{_wanted}) {
+            if (! $state_hash->{wanted}) {
                 warn "filter '$name' done but not wanted ???";
-                $self->n2f->{$name}->{_wanted} = 1;
+                $state_hash->{wanted} = 1;
             }
             
-            if (!$self->n2f->{$name}->failed) {
+            if (! $state_hash->{failed}) {
                 my $balloon = $self->balloon;
-                if (defined $self->n2f->{$name}->load_time) {
+                if (defined $state_hash->{load_time}) {
                     $balloon->attach($cb,
-                                     -balloonmsg => sprintf('Loaded in %d seconds', $self->n2f->{$name}->load_time),
+                                     -balloonmsg => sprintf('Loaded in %d seconds', $state_hash->{load_time}),
                         );
                 }
             }
         }
         
-        if ($self->n2f->{$name}->failed) {
+        if ($state_hash->{failed}) {
             my $cb = $hlist->itemCget($i, 0, '-widget');
             my $balloon = $self->top->Balloon;
-            $balloon->attach($cb, -balloonmsg => $self->n2f->{$name}->fail_msg || '');
+            $balloon->attach($cb, -balloonmsg => $state_hash->{fail_msg} || '');
             
             # configure the button such that the user can reselect 
             # a failed filter to try again
             $cb->configure(
                 -command => sub {
-                    $self->n2f->{$name}->failed(0);
+                    $state_hash->{failed} = 0;
                     $cb->configure(
                         -selectcolor => $STATE_COLORS{'default'}, 
                         -command => undef,
@@ -496,13 +501,8 @@ sub show_filters {
                 );
         }
 
-        $hlist->itemCreate($i, 1, 
-                           -text => $self->n2f->{$name}->name,
-            );
-        
-        $hlist->itemCreate($i, 2,
-                           -text => $self->n2f->{$name}->description,
-            );
+        $hlist->itemCreate($i, 1, -text => $filter->name);
+        $hlist->itemCreate($i, 2, -text => $filter->description);
 
         $i++;
     }
@@ -516,23 +516,6 @@ sub species {
     my ($self) = @_;
     
     return $self->AceDatabase->smart_slice->dsname;
-}
-
-sub n2f {
-    my ($self, $n2f) = @_;
-    return $self->gff_filters_hash;
-}
-
-sub gff_filters_hash {
-    my ($self) = @_;
-    unless ($self->{_gff_filters_hash}) {
-        my $gff_filters =
-            $self->AceDatabase->filters;
-        $self->{_gff_filters_hash} = {
-            map { $_->name => $_ } @{$gff_filters},
-        };
-    }
-    return $self->{_gff_filters_hash};
 }
 
 sub hlist {
