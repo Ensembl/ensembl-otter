@@ -28,6 +28,12 @@ my $_default_selection = { };
 my $_last_selection    = { };
 my $_sorted_by         = { };
 
+my $_sort_methods = {
+    name        => [ \ &_sorted_by_method, 'name', ],
+    description => [ \ &_sorted_by_method, 'description', ],
+    wanted      => [ \ &_sorted_by_method, 'wanted', ],
+};
+
 sub initialize {
     my( $self ) = @_;
 
@@ -362,36 +368,44 @@ sub sort_by_filter_method {
 sub sort_by_filter_method_ {
     my ( $self, $method, $flip ) = @_; 
 
-    my $cmp_filters = sub {
-        
-        my ($f1, $f2, $method) = @_;
-        
-        my $res;
-        
-        if ($f1->$method && !$f2->$method) {
-            $res = -1;
-        }
-        elsif (!$f1->$method && $f2->$method) {
-            $res = 1;
-        }
-        elsif (!$f1->$method && !$f2->$method) {
-            $res = 0;
-        }
-        else {
-            $res = ace_sort($f1->$method, $f2->$method);
-        }
-        
-        return $res;
-    };
-
-    my $n2f = $self->n2f;
-    my @sorted_names = sort { 
-        $cmp_filters->($n2f->{$a}, $n2f->{$b}, $method);
-    } keys %{$n2f};
+    my ( $sort_method, $arg ) = @{$_sort_methods->{$method}};
+    my @sorted_names = $self->$sort_method($arg);
     @sorted_names = reverse @sorted_names if $flip;
     $self->show_filters(\@sorted_names);
 
     return;
+}
+
+sub _sorted_by_method {
+    my ( $self, $method ) = @_;
+
+    my $n2f = $self->n2f;
+    my @names = sort {
+        _sort_by_method($n2f->{$a}, $n2f->{$b}, $method);
+    } keys %{$n2f};
+
+    return @names;
+}
+
+sub _sort_by_method {
+    my ($f1, $f2, $method) = @_;
+
+    my $res;
+
+    if ($f1->$method && !$f2->$method) {
+        $res = -1;
+    }
+    elsif (!$f1->$method && $f2->$method) {
+        $res = 1;
+    }
+    elsif (!$f1->$method && !$f2->$method) {
+        $res = 0;
+    }
+    else {
+        $res = ace_sort($f1->$method, $f2->$method);
+    }
+
+    return $res;
 }
 
 sub change_checkbutton_state {
