@@ -7,10 +7,6 @@ use strict;
 use warnings;
 use Carp;
 use Scalar::Util 'weaken';
-use Config::IniFiles;
-
-my $GFF_FILTERS_STATE_FILE = "gff_filters_state.ini";
-my @FILTER_STATES = qw(wanted done failed);
 
 sub new {
     my( $pkg ) = @_;
@@ -34,12 +30,6 @@ sub name {
         $self->{'_name'} = $name;
     }
     return $self->{'_name'};
-}
-
-sub session_dir {
-    my ($self, $session_dir) = @_;
-    $self->{_session_dir} = $session_dir if $session_dir;
-    return $self->{_session_dir};
 }
 
 sub filter_by_name {
@@ -95,72 +85,6 @@ sub _filters {
     }
 
     return $filters;
-}
-
-sub reload_gff_filter_state {
-    my ($self) = @_;
-    
-    my $cfg = $self->_gff_filter_state;
-
-    my %filter_hash = map {$_->name => $_} @{$self->filters};
-    
-    for my $filter_name ($cfg->Sections) {
-        print "Reloading $filter_name\n";
-        my $filter = $filter_hash{$filter_name};
-        for my $state (@FILTER_STATES) {
-            my $setting = $cfg->val($filter_name, $state);
-            $filter->$state($setting) if defined $setting;
-        } 
-    }
-
-    return;
-}
-
-sub save_gff_filter_state {
-    my ($self) = @_;
-    
-    my $cfg = $self->_gff_filter_state;
-
-    for my $filter (@{$self->filters}) {
-        for my $state (@FILTER_STATES) {
-            if ($filter->$state) {
-                $cfg->AddSection($filter->name) unless $cfg->SectionExists($filter->name);
-                $cfg->newval($filter->name, $state, 1);
-            }
-        }
-    }
-    
-    $cfg->RewriteConfig;
-
-    return;
-}
-
-sub _gff_filter_state {
-    my ($self) = @_;
-    
-    die "Need to specify session_dir to DataSet before calling" unless $self->session_dir;
-    
-    unless ($self->{_gff_filter_state}) {
-        my $file = $self->session_dir.'/'.$GFF_FILTERS_STATE_FILE;
-        my $cfg;
-        
-        # Config::IniFiles is fussy about being passed an empty file, so we have to  
-        # do things differently if the file exists or not, we should probably fix this...
-        
-        unless (-e $file) {
-            $cfg = Config::IniFiles->new;
-            $cfg->SetFileName($file);
-        }
-        else {
-            $cfg = Config::IniFiles->new( -file => $file );
-        }
-        
-        die "Failed to create Config object from $file" unless $cfg;
-        
-        $self->{_gff_filter_state} = $cfg;
-    }
-    
-    return $self->{_gff_filter_state};
 }
 
 sub config_section {
