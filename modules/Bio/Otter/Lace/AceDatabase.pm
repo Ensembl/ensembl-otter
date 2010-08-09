@@ -556,15 +556,14 @@ sub reload_filter_state {
     my ($self) = @_;
     
     my $cfg = $self->_filter_state;
+    my $filters = $self->filters;
 
-    my %filter_hash = map {$_->name => $_} @{$self->filters};
-    
     for my $filter_name ($cfg->Sections) {
         print "Reloading $filter_name\n";
-        my $filter = $filter_hash{$filter_name};
+        my $state_hash = $filters->{$filter_name}{state};
         for my $state (@FILTER_STATES) {
             my $setting = $cfg->val($filter_name, $state);
-            $filter->$state($setting) if defined $setting;
+            $state_hash->$state = $setting if defined $setting;
         } 
     }
 
@@ -576,11 +575,12 @@ sub save_filter_state {
     
     my $cfg = $self->_filter_state;
 
-    for my $filter (@{$self->filters}) {
+    while ( my ($name, $value) = each %{$self->filters} ) {
+        my $state_hash = $value->{state};
         for my $state (@FILTER_STATES) {
-            if ($filter->$state) {
-                $cfg->AddSection($filter->name) unless $cfg->SectionExists($filter->name);
-                $cfg->newval($filter->name, $state, 1);
+            if ($state_hash->{$state}) {
+                $cfg->AddSection($name) unless $cfg->SectionExists($name);
+                $cfg->newval($name, $state, 1);
             }
         }
     }
@@ -617,8 +617,18 @@ sub _filter_state {
 
 sub filters {
     my ($self) = @_;
-    return $self->{_filters} ||=
-        $self->smart_slice->DataSet->filters;
+    return $self->{_filters} ||= {
+        map {
+            $_->name => {
+                filter => $_,
+                state => {
+                    wanted => $_->wanted,
+                    done   => 0,
+                    failed => 0,
+                },
+            };
+        } @{$self->smart_slice->DataSet->filters},
+    };
 }
 
 sub gff_http_script_name {
