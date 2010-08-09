@@ -352,7 +352,7 @@ sub sort_by_filter_method {
 
     my $cmp_filters = sub {
         
-        my ($f1, $f2, $method, $invert) = @_;
+        my ($f1, $f2, $method) = @_;
         
         my $res;
         
@@ -369,7 +369,7 @@ sub sort_by_filter_method {
             $res = ace_sort($f1->$method, $f2->$method);
         }
         
-        return $invert ? $res * -1 : $res;
+        return $res;
     };
     
     my $flip = 0;
@@ -390,9 +390,10 @@ sub sort_by_filter_method {
     
     my $n2f = $self->n2f;
     my @sorted_names = sort { 
-        $cmp_filters->($n2f->{$a}, $n2f->{$b}, $method, $flip)
+        $cmp_filters->($n2f->{$a}, $n2f->{$b}, $method);
     } keys %{$n2f};
-    
+    @sorted_names = reverse @sorted_names if $flip;
+
     $_sorted_by->{$self->species} = $flip ? $method.'_rev' : $method;
     $self->show_filters(\@sorted_names);
 
