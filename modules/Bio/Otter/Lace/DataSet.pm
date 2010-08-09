@@ -97,18 +97,12 @@ sub _filters {
     return $filters;
 }
 
-sub gff_filters {
-    my ($self) = @_;
-    return $self->{_gff_filters} ||=
-        [ grep { $_->is_gff_filter } @{$self->filters} ];
-}
-
 sub reload_gff_filter_state {
     my ($self) = @_;
     
     my $cfg = $self->_gff_filter_state;
 
-    my %filter_hash = map {$_->name => $_} @{$self->gff_filters};
+    my %filter_hash = map {$_->name => $_} @{$self->filters};
     
     for my $filter_name ($cfg->Sections) {
         print "Reloading $filter_name\n";
@@ -127,7 +121,7 @@ sub save_gff_filter_state {
     
     my $cfg = $self->_gff_filter_state;
 
-    for my $filter (@{$self->gff_filters}) {
+    for my $filter (@{$self->filters}) {
         for my $state (@FILTER_STATES) {
             if ($filter->$state) {
                 $cfg->AddSection($filter->name) unless $cfg->SectionExists($filter->name);
