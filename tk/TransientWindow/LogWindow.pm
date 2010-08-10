@@ -142,6 +142,8 @@ sub show_output {
     my $txt = $self->readonly_text;
     $txt->insert('end', <$fh>);
     $txt->yview('end');
+
+    return;
 }
 
 sub get_log_contents {
@@ -183,6 +185,8 @@ sub mail_contents {
     open my $fh, '|-', $mail_pipe or die "Error opening '$mail_pipe' : $!";
     print $fh "$pre\n\n$mess";
     close $fh or warn "Error emailing with pipe '$mail_pipe' : exit($?)";
+
+    return;
 }
 
 sub DESTROY {
@@ -196,6 +200,8 @@ sub DESTROY {
     if (my $fh = $self->logfile_handle) {
         close($fh);
     }
+
+    return;
 }
 
 1;
