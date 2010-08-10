@@ -40,9 +40,8 @@ sub gff_header {
     use Bio::EnsEMBL::Utils::Exception qw(verbose);
 
     sub gff_header {
+        my ($self, %args) = @_;
 
-        my $self        = shift;
-        my %args        = @_;
         my $include_dna = $args{include_dna};
         my $rebase      = $args{rebase};
         my $seqname     = $args{gff_seqname} || $self->seq_region_name;
@@ -70,9 +69,7 @@ sub gff_header {
         #	 include_header => 1
         # );
 
-        my $self = shift;
-
-        my %args = @_;
+        my ($self, %args) = @_;
 
         my $analyses = $args{analyses} || ['']; # if we're not given any analyses, search for features from all analyses
         my $feature_types  = $args{feature_types};
@@ -196,15 +193,13 @@ sub gff_header {
 
     sub to_gff {
 
-        my $self = shift;
-        
-        my %args = @_;
+        my ($self, %args) = @_;
         
         # This parameter is assumed to be a hashref which includes extra attributes you'd
         # like to have appended onto the gff line for the feature
         my $extra_attrs = $args{extra_attrs};
 
-        my $gff = $self->_gff_hash(@_);
+        my $gff = $self->_gff_hash(%args);
 
         $gff->{score}  = '.' unless defined $gff->{score};
         $gff->{strand} = '.' unless defined $gff->{strand};
@@ -235,9 +230,7 @@ sub gff_header {
     }
 
     sub _gff_hash {
-        my $self = shift;
-        
-        my %args = @_;
+        my ($self, %args) = @_;
         
         my $rebase      = $args{rebase};
         my $gff_seqname = $args{gff_seqname} || $self->slice->seq_region_name;
@@ -262,7 +255,7 @@ sub gff_header {
     }
 
     sub _gff_source {
-        my $self = shift;
+        my ($self) = @_;
         
         if ($self->analysis) {
             return
@@ -275,7 +268,7 @@ sub gff_header {
     }
 
     sub _gff_feature {
-        my $self = shift;
+        my ($self) = @_;
 
         return
             ( $self->analysis && $self->analysis->gff_feature )
@@ -288,9 +281,9 @@ sub gff_header {
     package Bio::EnsEMBL::SimpleFeature;
 
     sub _gff_hash {
-        my $self = shift;
+        my ($self, @args) = @_;
 
-        my $gff = $self->SUPER::_gff_hash(@_);
+        my $gff = $self->SUPER::_gff_hash(@args);
 
         $gff->{score}   = $self->score;
         $gff->{feature} = 'misc_feature';
@@ -308,9 +301,7 @@ sub gff_header {
     package Bio::EnsEMBL::FeaturePair;
 
     sub _gff_hash {
-        my $self = shift;
-        
-        my %args = @_;
+        my ($self, %args) = @_;
         
         my $rebase = $args{rebase};
         
@@ -325,7 +316,7 @@ sub gff_header {
             $gap_string = join( ',', @gaps );
         }
 
-        my $gff = $self->SUPER::_gff_hash(@_);
+        my $gff = $self->SUPER::_gff_hash(%args);
 
         $gff->{score} = $self->percent_id;
         $gff->{feature} = ($self->analysis && $self->analysis->gff_feature) || 'similarity';
@@ -347,8 +338,8 @@ sub gff_header {
     package Bio::EnsEMBL::DnaPepAlignFeature;
     
     sub _gff_hash {
-        my $self = shift;
-        my $gff = $self->SUPER::_gff_hash(@_);
+        my ($self, @args) = @_;
+        my $gff = $self->SUPER::_gff_hash(@args);
         $gff->{attributes}->{Class} = qq("Protein");
         return $gff;
     }
@@ -359,12 +350,12 @@ sub gff_header {
     package Bio::EnsEMBL::Gene;
 
     sub to_gff {
-        my $self = shift;
+        my ($self, @args) = @_;
       
         # just concatenate the gff of each of the transcripts, joining them together
         # with the Locus attribute
         return join( "\n",
-            map { $_->to_gff( @_, extra_attrs => { Locus => '"' . $self->display_id . '"' } ) }
+            map { $_->to_gff(@args, extra_attrs => { Locus => '"' . $self->display_id . '"' } ) }
               @{ $self->get_all_Transcripts } );
     }
 }
@@ -374,8 +365,8 @@ sub gff_header {
     package Bio::EnsEMBL::Transcript;
 
     sub _gff_hash {
-        my $self = shift;
-        my $gff  = $self->SUPER::_gff_hash(@_);
+        my ($self, @args) = @_;
+        my $gff  = $self->SUPER::_gff_hash(@args);
         $gff->{feature} = 'Sequence';
         $gff->{attributes}->{Class} = qq("Sequence");
         $gff->{attributes}->{Name} = '"'.$self->display_id.'"';
@@ -383,10 +374,7 @@ sub gff_header {
     }
 
     sub to_gff {
-
-        my $self = shift;
-        
-        my %args = @_;
+        my ($self, %args) = @_;
         
         my $rebase = $args{rebase};
         
@@ -397,7 +385,7 @@ sub gff_header {
             $self->analysis->gff_source('Otter_'.$self->biotype);
         }
 
-        my $gff = $self->SUPER::to_gff(@_);
+        my $gff = $self->SUPER::to_gff(%args);
 
         if ( $self->translation ) {
             
@@ -410,7 +398,7 @@ sub gff_header {
             my $end = $self->coding_region_end;
             $end += $self->slice->start - 1 unless $rebase;
             
-            my $gff_hash = $self->_gff_hash(@_);
+            my $gff_hash = $self->_gff_hash(%args);
             
             $gff .= "\n" . join(
                 "\t",
@@ -437,7 +425,7 @@ sub gff_header {
 
             # and add the feature's gff line to our string, including the sequence name information as an attribute
             $gff .= "\n"
-              . $feat->to_gff( @_, extra_attrs => { Name => '"' . $self->display_id . '"' } );
+              . $feat->to_gff( %args, extra_attrs => { Name => '"' . $self->display_id . '"' } );
 
             # to be on the safe side, get rid of the analysis we temporarily attached
             # (someone might rely on there not being one later)
@@ -550,8 +538,8 @@ sub gff_header {
     package Bio::EnsEMBL::Exon;
 
     sub _gff_hash {
-        my $self = shift;
-        my $gff  = $self->SUPER::_gff_hash(@_);
+        my ($self, @args) = @_;
+        my $gff  = $self->SUPER::_gff_hash(@args);
         $gff->{feature} = 'exon';
         $gff->{attributes}->{Class} = qq("Sequence");
         return $gff;
@@ -563,8 +551,8 @@ sub gff_header {
     package Bio::EnsEMBL::Intron;
 
     sub _gff_hash {
-        my $self = shift;
-        my $gff  = $self->SUPER::_gff_hash(@_);
+        my ($self, @args) = @_;
+        my $gff  = $self->SUPER::_gff_hash(@args);
         $gff->{feature} = 'intron';
         $gff->{attributes}->{Class} = qq("Sequence");
         return $gff;
@@ -579,13 +567,13 @@ sub gff_header {
         'http://www.ensembl.org/Homo_sapiens/Variation/Summary?v=%s';
 
     sub _gff_hash {
-        my $self = shift;
+        my ($self, @args) = @_;
 
         my $name = $self->variation->name;
         my $allele = $self->allele_string;
         my $url = sprintf $url_format, $name;
 
-        my $gff  = $self->SUPER::_gff_hash(@_);
+        my $gff  = $self->SUPER::_gff_hash(@args);
         my ( $start, $end ) = @{$gff}{qw( start end )};
         if ( $start == $end - 1 ) {
             @{$gff}{qw( start end )} = ( $end, $start );
@@ -607,8 +595,8 @@ sub gff_header {
     package Bio::EnsEMBL::RepeatFeature;
     
     sub _gff_hash {
-        my $self = shift;
-        my $gff  = $self->SUPER::_gff_hash(@_);
+        my ($self, @args) = @_;
+        my $gff  = $self->SUPER::_gff_hash(@args);
         
         if ($self->analysis->logic_name =~ /RepeatMasker/i) {
             my $class = $self->repeat_consensus->repeat_class;
@@ -645,7 +633,7 @@ sub gff_header {
     package Bio::EnsEMBL::Map::DitagFeature;
     
     sub to_gff {
-        my $self = shift;
+        my ($self, @args) = @_;
         
         my ($start, $end, $hstart, $hend, $cigar_string);
         
@@ -718,7 +706,7 @@ sub gff_header {
             -cigar_string => $cigar_string,
         );
         
-        return $daf->to_gff(@_);
+        return $daf->to_gff(@args);
     }
     
 #    sub _gff_hash {
@@ -742,8 +730,8 @@ sub gff_header {
     package Bio::Otter::DnaDnaAlignFeature;
 
     sub _gff_hash {
-        my $self = shift;
-        my $gff  = $self->SUPER::_gff_hash(@_);
+        my ($self, @args) = @_;
+        my $gff  = $self->SUPER::_gff_hash(@args);
         $gff->{attributes}->{Length} = $self->get_HitDescription->hit_length;
         #$gff->{attributes}->{Note} = '"'.$self->get_HitDescription->description.'"';
         return $gff;
@@ -755,8 +743,8 @@ sub gff_header {
     package Bio::Otter::DnaPepAlignFeature;
 
     sub _gff_hash {
-        my $self = shift;
-        my $gff  = $self->SUPER::_gff_hash(@_);
+        my ($self, @args) = @_;
+        my $gff  = $self->SUPER::_gff_hash(@args);
         $gff->{attributes}->{Length} = $self->get_HitDescription->hit_length;
         #$gff->{attributes}->{Note} = '"'.$self->get_HitDescription->description.'"';
         return $gff;
