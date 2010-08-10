@@ -230,7 +230,7 @@ sub _column_write_text {
 }
 
 sub column_methods {
-    my $self = shift @_;
+    my ($self) = @_;
     my $helv = [ 'helvetica', $self->font_size, 'normal' ];
     my $norm = $self->font_fixed;
     my $bold = $self->font_fixed_bold;
