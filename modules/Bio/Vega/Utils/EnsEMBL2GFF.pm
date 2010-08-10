@@ -137,10 +137,10 @@ sub gff_header {
                         }
                         
                         if ($feature->isa('Bio::EnsEMBL::Gene')) {
-                            map { 
+                            foreach my $transcript ( @{ $feature->get_all_Transcripts } ) { 
                                 my $truncated = $_->truncate_to_Slice($target_slice);
                                 print "Truncated transcript: ".$_->display_id."\n" if $truncated && $verbose;
-                            } @{ $feature->get_all_Transcripts };
+                            }
                         }
                         elsif ($feature->isa('Bio::EnsEMBL::Transcript')) {
                             my $truncated = $feature->truncate_to_Slice($target_slice);
