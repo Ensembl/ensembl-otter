@@ -72,25 +72,29 @@ GetOptions(
             'dbname=s'    => \$dbname,
             'user=s'      => \$user,
             'pass=s'      => \$pass,
-            'desc=s'        => \$desc,
+            'desc=s'      => \$desc,
             'stable_id=s' => \@ids,
             'h|help!'     => $usage,
   )
   or $usage->();
 
-# Reading the DB connexion parameters from ~/.netrc
-my $ref = Net::Netrc->lookup($host);
-if ( !$ref ) {
-    print STDERR "No entry found in ~/.netrc for host $host\n";
-    next;
-}
+throw("Must provide a database name (dbname) !") 
+    unless $dbname;
 
 throw("Must either provide a list of stable id or a description key world !") 
     unless @ids || $desc;
-
-$user = $ref->login;
-$pass = $ref->password;
-$port = $ref->account;
+    
+if(!$user || !$port){    
+	# Reading the DB connexion parameters from ~/.netrc
+	my $ref = Net::Netrc->lookup($host);
+	if ( !$ref ) {
+	    print STDERR "No entry found in ~/.netrc for host $host\n";
+	    next;
+	}
+	$user ||= $ref->login;
+	$pass ||= $ref->password;
+	$port ||= $ref->account;
+}
 
 my @sids;
 map( push( @sids, split( /,/, $_ ) ), @ids );
@@ -107,7 +111,7 @@ my $ga = $dba->get_GeneAdaptor();
 
 my $list = @sids ?  \@sids : &get_desc_list($ga->dbc, $desc);
 my $header = 0;
-GSI: foreach my $si ( @$list ) {
+GSI: foreach my $si ( sort @$list ) {
     my $gene = $ga->fetch_latest_by_stable_id($si);
     next unless $gene;
     my $gene_slice = $gene->feature_Slice;
