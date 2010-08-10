@@ -100,25 +100,11 @@ sub swap_strands {
 }
 
 sub featuresets {
-    my $self = shift;
+    my ($self, $featuresets) = @_;
 
-    if (@_) {
-        
-        my $featuresets;
-        
-        # featuresets should be an arrayref
-        
-        if ($_[0] =~ /,/) {
-            # if its a comma delimited string, split it into an arrayref
-            $featuresets = [split(/,/, $_[0])];
-        }
-        elsif (ref($_[0]) ne 'ARRAY') {
-            # if the first arg isn't an arrayref we assume the rest of @_ 
-            # is a real array and convert it
-            $featuresets = [@_];
-        }
-        
-        $self->{_featuresets} = $featuresets;
+    if ($featuresets) {
+        $self->{_featuresets} =
+            ref $featuresets ? $featuresets : [split(/,/, $featuresets)];
     }
     
     # the list of featuresets defaults to the name of this filter
