@@ -14,6 +14,7 @@ sub initialise{
     my $slice_start = ${$self->text_variable_ref('slice_start')};
     my $slice_end ||= $slice_start + $DEFAULT_SLICE_SIZE;
     $self->text_variable_ref('slice_end', $slice_end, 1);
+    return;
 }
 
 sub draw{
