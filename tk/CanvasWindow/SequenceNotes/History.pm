@@ -115,7 +115,7 @@ sub draw {
             -tags   => ['lock_status'],
             -fill   => 'red',
             -text   =>
-              qq`Clone '$c_name' is locked by user '$locker' on host '$host'`
+              qq(Clone '$c_name' is locked by user '$locker' on host '$host')
         );
         $self->fix_window_min_max_sizes();
     }
