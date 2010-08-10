@@ -10,8 +10,8 @@ use Bio::Otter::LogFile;
 
 our @ISA = qw(TransientWindow);
 
-my $email     = q`anacode`;
-my $domain    = q`sanger.ac.uk`;
+my $email     = q(anacode);
+my $domain    = q(sanger.ac.uk);
 my @mail      = qw(smtp Server localhost);
 my $loggingOn = 0;
 
@@ -67,7 +67,7 @@ sub initialise {
 
     my $email_dev = sub { $self->mail_contents(); };
     $but_frame->Button(
-        -text    => qq`Email $email`,
+        -text    => qq(Email $email),
         -command => $email_dev,
     )->pack(-side => 'left');
 
