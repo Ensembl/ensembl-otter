@@ -119,6 +119,7 @@ sub draw {
         );
         $self->fix_window_min_max_sizes();
     }
+    return;
 }
 
 sub initialise {
@@ -225,6 +226,7 @@ sub empty_canvas_message {
 sub _column_write_text {
     my ($canvas, @args) = @_;
     $canvas->createText(@args);
+    return;
 }
 
 sub column_methods {
@@ -306,6 +308,8 @@ sub bind_item_selection {
     );
     $canvas->CanvasBind('<Destroy>', sub { $self = undef });
     $comment_entry->bind('<Destroy>', sub { $self = undef });
+
+    return;
 }
 
 sub toggle_selection {
@@ -323,6 +327,8 @@ sub toggle_selection {
         $canvas->addtag('selected', 'withtag', $obj);
     }
     $canvas->itemconfigure($obj, -fill => $new_colour,);
+
+    return;
 }
 
 sub get_row_id {
@@ -337,6 +343,7 @@ sub get_message {
     my ($index) = $self->get_row_id;
     my $text    = $self->indexed_note_text($index);
     ${ $self->entry_text_ref() } = $text;
+    return;
 }
 
 sub indexed_note_text {
@@ -412,12 +419,15 @@ sub update_db_comment {
         );
     }
     $self->top_window->Unbusy;
+
+    return;
 }
 
 sub DESTROY {
     my ($self) = @_;
     my $idx = $self->clone_index();
     warn "Destroying CanvasWindow::SequenceNotes::History with idx $idx\n";
+    return;
 }
 
 1;
