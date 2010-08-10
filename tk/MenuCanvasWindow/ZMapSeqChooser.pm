@@ -504,7 +504,7 @@ sub zMapGffFilterDefaults {
         $text .= $self->formatZmapDefaults(
             $filter->name,
             url             => 'pipe:///'.$script.'?'.$param_string,
-            featuresets     => join(' ; ', $filter->featuresets),
+            featuresets     => join(' ; ', @{$filter->featuresets}),
             delayed         =>
             ( $state_hash->{wanted} && ! $state_hash->{failed} )
             ? 'false' : 'true',
@@ -514,7 +514,7 @@ sub zMapGffFilterDefaults {
         
         if ($filter->zmap_column) {
             my $fsets = $filter_columns{$filter->zmap_column} ||= [];
-            push @{ $fsets }, $filter->featuresets;
+            push @{ $fsets }, @{$filter->featuresets};
         }
         
         if ($filter->zmap_style) {
@@ -1074,7 +1074,7 @@ sub zMapFeaturesLoaded {
 
         for (values %{$self->AceDatabase->filters}) {
             my $state_hash = $_->{state};
-            for ($_->{filter}->featuresets) {
+            for ( @{$_->{filter}->featuresets} ) {
                 $filters_by_fset->{lc($_)} = $state_hash; # lc because zmap does
             }
         }

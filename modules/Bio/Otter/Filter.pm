@@ -125,7 +125,7 @@ sub featuresets {
     
     $self->{_featuresets} ||= [ $self->name ];
     
-    return wantarray ? @{ $self->{_featuresets} } : $self->{_featuresets};
+    return $self->{_featuresets};
 }
 
 sub server_params {
