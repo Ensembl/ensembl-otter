@@ -155,6 +155,7 @@ sub DESTROY {
     my( $self ) = @_;
     my $idx = $self->clone_index();
     warn "Destroying CanvasWindow::SequenceNotes::Status with idx $idx\n";
+    return;
 }
 
 1;
