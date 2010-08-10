@@ -26,41 +26,11 @@ sub wanted { # it's a flag showing whether the user wants this filter to be load
     return $self->{_wanted};
 }
 
-sub done { # it's a flag showing whether the filter has actually done its work
-    my ($self, $done) = @_;
-
-    if(defined($done)) {
-        
-        #confess "Here";
-        
-        $self->{_done} = $done
-    }
-    return $self->{_done};
-}
-
 sub name {
     # the canonical name for this filter
     my ($self, $name) = @_;
     $self->{_name} = $name if $name;
     return $self->{_name};
-}
-
-sub failed {
-    my ($self, $failed) = @_;
-    $self->{_failed} = $failed if defined $failed;
-    return $self->{_failed};
-}
-
-sub fail_msg {
-    my ($self, $msg) = @_;
-    $self->{_fail_msg} = $msg if $msg;
-    return $self->{_fail_msg};
-}
-
-sub load_time {
-    my ($self, $time) = @_;
-    $self->{_load_time} = $time if $time;
-    return $self->{_load_time};
 }
 
 sub url_string {
