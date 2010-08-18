@@ -2,11 +2,23 @@
 # Author: Kerstin Jekosch
 # Email: kj2@sanger.ac.uk
 
+# updated by Britt Reimholz, br2@sanger.ac.uk
+
+## amended the code to also delete appropriate xref_ids from xref and object_xref
+## and delete entries in object_xref, xref and translation_stable_id where translation_id is null
+
 use strict;
 use Bio::EnsEMBL::DBSQL::DBConnection;
 use Getopt::Long;
 
 my ($dbhost,$dbuser,$dbname,$dbpass,$dbport,$file);
+
+$dbhost = 'vegabuild';
+#$dbname = 'vega_danio_rerio_20070523';
+$dbuser = 'ottadmin';
+$dbpass = 'lutralutra';
+#$dbport = 3304;
+
 my $hm = GetOptions(
         'dbhost:s' => \$dbhost,
         'dbname:s' => \$dbname,
@@ -15,12 +27,6 @@ my $hm = GetOptions(
         'dbport:s' => \$dbport,
         'file:s'   => \$file,
         );
-
-$dbhost = 'vegabuild';
-#$dbname = 'vega_danio_rerio_20070523';
-$dbuser = 'ottadmin';
-$dbpass = 'lutralutra';
-#$dbport = 3304;
 
 my $db = Bio::EnsEMBL::DBSQL::DBConnection->new(
     -host   => $dbhost,
@@ -61,6 +67,8 @@ foreach my $id (@translationid) {
 }
 
 my ($gcount,$tcount);
+my ($oxref_count,$xref_count, $translation_stable_count);
+
 my $sth1 = $db->prepare(q{  update gene set biotype = 'protein_coding_in_progress' where gene_id = ?});
 foreach my $id (@geneid) {
     $sth1->execute($id);
@@ -74,11 +82,50 @@ foreach my $id (@transcriptid) {
 
 my $sth3 = $db->prepare(q{delete from translation where translation_id = ?});
 my $sth4 = $db->prepare(q{delete from translation_stable_id where translation_id = ?});
+
+my $sth5 = $db->prepare(qq{ select xref_id from object_xref ox where  
+                  ensembl_object_type = 'Translation' and ensembl_id = ? });
+my $sth6 = $db->prepare(qq{delete from xref where xref_id = ?});
+my $sth7 = $db->prepare(qq{delete from object_xref where ensembl_object_type = 'Translation' and ensembl_id = ?});
+
 foreach my $id (@translationid) {
     $sth3->execute($id);
     $sth4->execute($id);
+
+    $sth5->execute($id);
+    while (my @row = $sth5->fetchrow_array) {
+        my $xref_id = $row[0];
+	$sth6->execute($xref_id);
+	$xref_count++;
+    }
+    $sth7->execute($id);
+    $oxref_count++;
 }
 
 print "changed $gcount genes and $tcount transcripts to \'protein_coding_in_progress\'\n";
 
 
+## delete entries in object_xref, xref and translation_stable_id where 
+## translation id is null 
+my $sth8 = $db->prepare(qq{ select tsi.translation_id 
+                    from translation_stable_id tsi left join translation t 
+		    on tsi.translation_id = t.translation_id 
+		    where t.translation_id is null });
+$sth8->execute();
+
+while (my @row = $sth8->fetchrow_array) {
+    my $translation_id = $row[0];    
+    $sth4->execute($translation_id);
+    $translation_stable_count++;
+    
+    $sth5->execute($translation_id);
+    while (my @row = $sth5->fetchrow_array) {
+        my $xref_id = $row[0];
+	$sth6->execute($xref_id);
+	$xref_count++;
+    }
+    $sth7->execute($translation_id);
+    $oxref_count++;
+}
+
+print "deleted $oxref_count object_xrefs with object_type \'Translation\' and $xref_count xrefs \n";
