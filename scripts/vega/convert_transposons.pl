@@ -2,13 +2,23 @@
 # Author: Kerstin Jekosch
 # Email: kj2@sanger.ac.uk
 
+## updated by Britt Reimholz, br2@sanger.ac.uk
+
 # produces list of IDs for transposons and the fillers for repeat_feature
+# also inserts a new entry of 'novel transposon' into repeat_consensus and adapts the repeat_consensus_id to the newly laoded entry 
 
 use strict;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Getopt::Long;
 
-my ($dbhost,$dbuser,$dbname,$dbpass,$dbport,$repeat_class);
+my $repeat_class;
+
+my $dbhost = 'vegabuild';
+my $dbport = 3304;
+my $dbuser = 'ottadmin';
+my $dbpass = 'wibble';
+my $dbname;
+
 my $hm = GetOptions(
         'dbhost:s' => \$dbhost,
         'dbname:s' => \$dbname,
@@ -18,13 +28,8 @@ my $hm = GetOptions(
         'repeatclass:s' => \$repeat_class,
 );
 
-$dbhost = 'vegabuild';
-$dbport = 3304;
-$dbuser = 'ottadmin';
-$dbpass = 'wibble';
-$dbname = 'vega_danio_rerio_20080717';
-
-# insert into repeat_class values (236343,'novel_transposon','novel_transposon',\N,\N);
+# ?? insert into repeat_class values (236343,'novel_transposon','novel_transposon',\N,\N);
+# ?? insert into repeat_consensus values (236343,'novel_transposon','novel_transposon','transposon',\N);
 
 
 my $db = Bio::EnsEMBL::DBSQL::DBConnection->new(
@@ -41,10 +46,10 @@ my $db = Bio::EnsEMBL::DBSQL::DBConnection->new(
 my $sth10 = $db->prepare(q{select max(repeat_consensus_id) from repeat_consensus});
 $sth10->execute;
 while (my $no = $sth10->fetchrow_array) {
-    $repeat_class = $no;
+    $repeat_class = $no + 1;
 }
 die "need repeatclass number for novel_transposon!\n" unless ($repeat_class);
-$db->do("insert into repeat_class values ($repeat_class,'novel_transposon','novel_transposon',\\N,\\N)");
+$db->do("insert into repeat_consensus values ($repeat_class,'novel_transposon','novel_transposon','transposon',\\N)");
 
 my $sth1 = $db->prepare(q{
     select t.gene_id, 
@@ -63,7 +68,7 @@ my $sth1 = $db->prepare(q{
 });
 
 $sth1->execute();
-open(FEAT,">./repeat_features.txt");
+open(FEAT,">./repeat_feature.txt");
 open(GENE,">./genes2delete_transposons.txt");
 
 my %del;
