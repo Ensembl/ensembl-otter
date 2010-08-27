@@ -142,13 +142,13 @@ sub XaceSeqChooser{
 }
 
 sub AceDatabase {
-    my $self = shift @_;
+    my ($self) = @_;
 
     return $self->XaceSeqChooser->AceDatabase;
 }
 
 sub Assembly {
-    my $self = shift @_;
+    my ($self) = @_;
 
     return $self->XaceSeqChooser->Assembly;
 }
@@ -579,7 +579,7 @@ sub save_to_ace {
 # ---[attempt to save if needed, then destroy the window]------
 
 sub try2save_and_quit {
-    my $self = shift @_;
+    my ($self) = @_;
 
     if($self->XaceSeqChooser()) {
         $self->save_to_ace(0); # '0' means do it interactively
