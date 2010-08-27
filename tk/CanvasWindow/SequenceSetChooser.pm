@@ -220,6 +220,8 @@ sub draw {
     }
     
     $self->fix_window_min_max_sizes;
+
+    return;
 }
 
 sub show_log{
@@ -233,6 +235,8 @@ sub show_log{
         $self->{'__tw_log'} = $tw;
     }
     $tw->show_me();
+
+    return;
 }
 
 sub select_sequence_set {
@@ -254,6 +258,8 @@ sub select_sequence_set {
     } else {
         $self->deselect_all;
     }
+
+    return;
 }
 
 sub add_SequenceNotes{
@@ -338,6 +344,8 @@ sub open_sequence_set_by_ssname_subset {
     } elsif(! $sn->canvas->find('withtag', 'all')) {
         $sn->draw_all();    
     }
+
+    return;
 }
 
 # brings up a window for searching for loci / clones
@@ -363,6 +371,8 @@ sub DESTROY {
     my ($type) = ref($self) =~ /([^:]+)$/;
     my $name = $self->name;
     warn "Destroying $type $name\n";
+
+    return;
 }
 
 1;
