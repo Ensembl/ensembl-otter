@@ -292,7 +292,7 @@ sub highlight {
 }
 
 sub DESTROY {
-    warn "Destrying ", ref(shift), "\n";
+    warn "Destroying ", ref(shift), "\n";
     return;
 }
 
