@@ -158,6 +158,8 @@ sub do_search {
     $self->fix_window_min_max_sizes;
 
     $self->top_window->Unbusy;
+
+    return;
 }
 
 sub new {
@@ -237,6 +239,8 @@ sub show_me {
     $window->deiconify();
     $window->raise();
     $window->focus();
+
+    return;
 }
 
 sub hide_me {
@@ -245,6 +249,8 @@ sub hide_me {
     my $window = $self->canvas()->toplevel();
 
     $window->withdraw();
+
+    return;
 }
 
 1;
