@@ -94,6 +94,8 @@ sub select_dataset {
     } else {
         $self->deselect_all;
     }
+
+    return;
 }
 
 sub open_dataset {
@@ -133,6 +135,8 @@ sub open_dataset {
         }
     }
     $canvas->Unbusy;
+
+    return;
 }
 
 sub draw {
@@ -162,6 +166,8 @@ sub draw {
             );
     }
     $self->fix_window_min_max_sizes;
+
+    return;
 }
 
 sub recover_some_sessions {
