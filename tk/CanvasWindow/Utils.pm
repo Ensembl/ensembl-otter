@@ -32,6 +32,8 @@ sub expand_bbox {
     $bbox->[1] -= $pad;
     $bbox->[2] += $pad;
     $bbox->[3] += $pad;
+
+    return;
 }
 
 
