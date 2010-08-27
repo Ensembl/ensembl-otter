@@ -77,6 +77,8 @@ sub paste_eucomm_data {
         $name,
         join(' ', sort keys %$otter);
     $genomic_feature->{display_label} = $str;
+
+    return;
 }
 
 sub get_overlapping_exon_otter_id_start_end {
@@ -280,6 +282,8 @@ sub recalc_coords_callback {
         $genomic_feature->{$other_key} =
           $this_value + $diff_sign * $genomic_feature->{strand} * ($length - 1);
     }
+
+    return;
 }
 
 sub show_direction_callback {
@@ -288,6 +292,8 @@ sub show_direction_callback {
     $genomic_feature->{direction_button}->configure(
         -text => $strand_name{$genomic_feature->{strand}}
     );
+
+    return;
 }
 
 sub paste_label_callback {
@@ -301,6 +307,8 @@ sub paste_label_callback {
         # We allow the Entry's built in paste behaviour.
         $genomic_feature->{$this}->Paste($x);
     }
+
+    return;
 }
 
 sub paste_coords_callback {
@@ -333,6 +341,8 @@ sub paste_coords_callback {
 
         show_direction_callback($genomic_feature);
     }
+
+    return;
 }
 
 sub flip_direction_callback {
@@ -349,6 +359,8 @@ sub flip_direction_callback {
     }
 
     show_direction_callback($genomic_feature);
+
+    return;
 }
 
 sub change_of_gf_type_callback {
@@ -366,6 +378,8 @@ sub change_of_gf_type_callback {
       ->configure($method->edit_score         ? @enable : @disable);
     $genomic_feature->{'display_label_entry'}
       ->configure($method->edit_display_label ? @enable : @disable);
+
+    return;
 }
 
 sub add_genomic_feature {
@@ -485,6 +499,8 @@ sub add_genomic_feature {
     #$genomic_feature->{gf_type_menu}->configure(
     #   -command => sub { change_of_gf_type_callback($genomic_feature, shift @_); },
     #);
+
+    return;
 }
 
 sub load_genomic_features {
@@ -497,6 +513,8 @@ sub load_genomic_features {
     }
 
     $self->fix_window_min_max_sizes;
+
+    return;
 }
 
 # -------------[removing things]-------------------------------
@@ -506,6 +524,8 @@ sub delete_genomic_feature {
 
     $self->{_gfs}{$gfid}{subframe}->packForget();
     delete $self->{_gfs}{$gfid};
+
+    return;
 }
 
 sub clear_genomic_features {
@@ -515,6 +535,8 @@ sub clear_genomic_features {
         $self->delete_genomic_feature($gfid);
     }
     $self->{_gfs} = {};
+
+    return;
 }
 
 # -------------[save if needed (+optional interactivity) ]-------------------
@@ -550,6 +572,8 @@ sub save_to_ace {
         $self->XaceSeqChooser->save_ace($new_ace);
         $self->Assembly->set_SimpleFeature_list($new_assembly->get_all_SimpleFeatures);
     }
+
+    return;
 }
 
 # ---[attempt to save if needed, then destroy the window]------
@@ -564,6 +588,8 @@ sub try2save_and_quit {
     }
 
     $self->top_window->destroy();
+
+    return;
 }
 
 # -------------[fill it in]------------------------------------
@@ -653,6 +679,8 @@ sub initialize {
     $tl->title("Genomic features for '". $self->Assembly->name ."'");
     
     $self->canvas->Tk::bind('<Destroy>', sub{ $self = undef });
+
+    return;
 }
 
 1;
