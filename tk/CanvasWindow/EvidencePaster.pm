@@ -280,9 +280,9 @@ sub highlight_evidence_by_type_name {
 }
 
 sub highlight {
-    my $self = shift;
+    my( $self, @args ) = @_;
 
-    $self->SUPER::highlight(@_);
+    $self->SUPER::highlight(@args);
     $self->canvas->SelectionOwn(
         -command    => sub{ $self->deselect_all },
         );
@@ -292,7 +292,8 @@ sub highlight {
 }
 
 sub DESTROY {
-    warn "Destroying ", ref(shift), "\n";
+    my( $self ) = @_;
+    warn "Destroying ", ref($self), "\n";
     return;
 }
 
