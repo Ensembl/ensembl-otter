@@ -73,6 +73,8 @@ sub initialise {
 
     $self->evidence_hash($evidence_hash);
     $self->draw_evidence;
+
+    return;
 }
 
 sub ExonCanvas {
@@ -91,6 +93,8 @@ sub left_button_handler {
     return if $self->delete_message;
     $self->deselect_all;
     $self->control_left_button_handler;
+
+    return;
 }
 
 sub control_left_button_handler {
@@ -106,6 +110,8 @@ sub control_left_button_handler {
     } else {
         $self->highlight($obj);
     }
+
+    return;
 }
 
 sub shift_left_button_handler {
@@ -116,6 +122,8 @@ sub shift_left_button_handler {
     return unless $canvas->find('withtag', 'current&&!IGNORE');
 
     $self->extend_highlight('!IGNORE');
+
+    return;
 }
 
 sub select_all {
@@ -126,6 +134,8 @@ sub select_all {
     $self->highlight(
         $canvas->find('withtag', '!IGNORE')
         );
+
+    return;
 }
 
 sub evidence_hash {
@@ -155,6 +165,8 @@ sub remove_selected_from_evidence_list {
         }
     }
     $self->draw_evidence;
+
+    return;
 }
 
 sub draw_evidence {
@@ -203,6 +215,8 @@ sub draw_evidence {
         -title => 'Evi: ' . $self->ExonCanvas->SubSeq->name,
         );
     $self->fix_window_min_max_sizes;
+
+    return;
 }
 
 sub paste_type_and_name {
@@ -211,6 +225,8 @@ sub paste_type_and_name {
     if (my $clip = $self->get_clipboard_text) {
         $self->add_evidence_from_text($clip);
     }
+
+    return;
 }
 
 sub add_evidence_from_text {
@@ -221,6 +237,8 @@ sub add_evidence_from_text {
     if (my $clip_evi = evidence_type_and_name_from_text($ace, $text)) {
         $self->add_evidence_type_name_hash($clip_evi);
     }
+
+    return;
 }
 
 sub add_evidence_type_name_hash {
@@ -242,6 +260,8 @@ sub add_evidence_type_name_hash {
             $self->highlight_evidence_by_type_name($type, $name);
         }
     }
+
+    return;
 }
 
 sub highlight_evidence_by_type_name {
@@ -255,6 +275,8 @@ sub highlight_evidence_by_type_name {
             last;
         }
     }
+
+    return;
 }
 
 sub highlight {
@@ -265,10 +287,13 @@ sub highlight {
         -command    => sub{ $self->deselect_all },
         );
     weaken $self;
+
+    return;
 }
 
 sub DESTROY {
     warn "Destrying ", ref(shift), "\n";
+    return;
 }
 
 1;
