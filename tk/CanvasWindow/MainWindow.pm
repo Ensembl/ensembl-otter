@@ -54,6 +54,8 @@ sub add_default_bindings {
     my $exit = sub{ exit; };
     $mw->bind('<Control-q>', $exit);
     $mw->bind('<Control-Q>', $exit);
+
+    return;
 }
 
 sub add_default_options {
@@ -105,6 +107,8 @@ sub add_default_options {
         $mw->optionAdd("CanvasWindow\*$class.font",
             '-*-lucidatypewriter-medium-r-normal-*-14-140-*-*-*-*-*-*',     $priority);
     }
+
+    return;
 }
 
 
