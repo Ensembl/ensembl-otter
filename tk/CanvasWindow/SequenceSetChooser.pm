@@ -117,7 +117,7 @@ sub DataSetChooser {
 }
 
 sub LocalDatabaseFactory {
-    my $self = shift @_;
+    my( $self ) = @_;
 
     return $self->DataSetChooser->LocalDatabaseFactory();
 }
@@ -225,7 +225,7 @@ sub draw {
 }
 
 sub show_log{
-    my $self = shift;
+    my( $self ) = @_;
 
     my $tw = $self->{'__tw_log'};
     unless($tw){
