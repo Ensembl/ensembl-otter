@@ -77,7 +77,7 @@ sub Client {
 }
 
 sub LocalDatabaseFactory {
-    my $self = shift @_;
+    my( $self ) = @_;
 
     $self->{'_ldf'} ||= Bio::Otter::Lace::LocalDatabaseFactory->new();
 
