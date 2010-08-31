@@ -55,6 +55,8 @@ sub initialise {
     $top->protocol('WM_DELETE_WINDOW' =>    $submit);
     
     $entry_frame->bind('<Destroy>', sub { $self = undef });
+
+    return;
 }
 
 sub get_password {
@@ -80,6 +82,8 @@ sub get_password {
     if ($grab_window) {
         $grab_window->grab;
     }
+
+    return;
 }
 
 sub passref {
