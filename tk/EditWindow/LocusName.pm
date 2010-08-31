@@ -71,6 +71,8 @@ sub initialise {
 
     
     $top->bind('<Destroy>', sub{ $self = undef; });
+
+    return;
 }
 
 sub do_rename {
@@ -129,6 +131,8 @@ sub do_rename {
     }
     
     $self->top->destroy;
+
+    return;
 }
 
 sub locus_name_arg {
@@ -203,6 +207,8 @@ sub DESTROY {
     my ($self) = @_;
     
     warn "Destroying a '", ref($self), "'";
+
+    return;
 }
 
 1;
