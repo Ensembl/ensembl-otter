@@ -18,6 +18,8 @@ sub initialize {
         -accelerator    => 'Ctrl+N',
         -underline      => 1,
         );    
+
+    return;
 }
 
 
