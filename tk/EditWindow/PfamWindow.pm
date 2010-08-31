@@ -328,6 +328,8 @@ sub initialize {
     # need to call configure to resize the window.
     # the values in width and height are not important
     $self->top->toplevel->configure(-width => 1 , -height => 1);
+
+    return;
 }
 
 sub fill_progressBar {
@@ -340,6 +342,8 @@ sub fill_progressBar {
         $self->top->toplevel->update;
         $self->top->toplevel->after(20);
     }
+
+    return;
 }
 
 sub open_url {
@@ -365,11 +369,14 @@ sub open_url {
             $success = system($commands[$i]);
         }
     }
+
+    return;
 }
 
 sub DESTROY {
     my ($self) = @_;
     $self = undef;    # $self gets nicely DESTROY'd with this
+    return;
 }
 
 1;
