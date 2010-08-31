@@ -192,6 +192,8 @@ sub initialise {
     $top->protocol('WM_DELETE_WINDOW',  $close_window);
     
     $top->bind('<Destroy>', sub{ $self = undef });
+
+    return;
 }
 
 sub XaceSeqChooser {
@@ -211,6 +213,8 @@ sub update_from_XaceSeqChooser {
     my $top = $self->top;
     $top->deiconify;
     $top->raise;
+
+    return;
 }
 
 sub query_Sequence {
@@ -231,6 +235,8 @@ sub update_from_clipboard {
         $self->set_entry('genomic_start', $start - $flank);
         $self->set_entry('genomic_end',   $end   + $flank);
     }
+
+    return;
 }
 
 sub set_entry {
@@ -239,6 +245,8 @@ sub set_entry {
     my $entry = $self->$method();
     $entry->delete(0, 'end');
     $entry->insert(0, $txt);
+
+    return;
 }
 
 sub get_entry {
