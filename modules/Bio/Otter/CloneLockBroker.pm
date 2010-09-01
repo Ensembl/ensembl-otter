@@ -143,6 +143,8 @@ sub lock_clones_by_slice {
 	}
 	$self->throw($lock_error_str);
     }
+
+    return;
 }
 
 
@@ -162,6 +164,8 @@ sub remove_by_slice {
 	    $self->warn("Can't unlock clone [$clone]. Lock doesn't exist");
 	}
     }
+
+    return;
 }
 	 
 
