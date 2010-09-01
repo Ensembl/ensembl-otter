@@ -139,6 +139,8 @@ sub delete_genes_by_exon_id_list {
         $dbh->do(qq{DELETE FROM identity_xref WHERE object_xref_id = $trans_xref_id->[2]});
     }
     print STDERR "done\n";
+
+    return;
 }
 
 1;
