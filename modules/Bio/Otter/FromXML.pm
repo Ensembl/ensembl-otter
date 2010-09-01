@@ -50,7 +50,7 @@ sub linearray {
 }
 
 sub get_new_line {
-    my $self = shift @_;
+    my ($self) = @_;
 
     return shift @{$self->linearray()};
 }
@@ -65,7 +65,7 @@ sub slice {
 }
 
 sub parse_next_line {
-    my $self = shift @_;
+    my ($self) = @_;
 
     my $line = $self->get_new_line();
 
@@ -91,7 +91,7 @@ sub parse_next_line {
 }
 
 sub build_Author {
-    my $self = shift @_;
+    my ($self) = @_;
 
     my $author = Bio::Otter::Author->new();
 
@@ -110,7 +110,7 @@ sub build_Author {
 }
 
 sub build_Evidence {
-    my $self = shift @_;
+    my ($self) = @_;
 
     my $evidence = Bio::Otter::Evidence->new();
     $evidence->type('UNKNOWN');
@@ -130,7 +130,7 @@ sub build_Evidence {
 }
 
 sub build_TranscriptInfo {
-    my $self = shift @_;
+    my ($self) = @_;
 
     my $tinfo = Bio::Otter::TranscriptInfo->new();
 
@@ -165,7 +165,7 @@ sub build_TranscriptInfo {
 }
 
 sub build_Exon {
-    my $self = shift @_;
+    my ($self) = @_;
 
     my $exon = Bio::EnsEMBL::Exon->new();
     my $slice = $self->slice();
@@ -283,7 +283,7 @@ sub build_Translation {
 }
 
 sub build_Transcript {
-    my $self = shift @_;
+    my ($self) = @_;
 
     my $transcript = Bio::EnsEMBL::Transcript->new();
 
@@ -316,7 +316,7 @@ sub build_Transcript {
 }
 
 sub build_GeneInfo {
-    my $self = shift @_;
+    my ($self) = @_;
 
     my $ginfo = Bio::Otter::GeneInfo->new();
 
@@ -345,7 +345,7 @@ sub build_GeneInfo {
 }
 
 sub build_DBEntry {
-    my $self = shift @_;
+    my ($self) = @_;
 
     my $dbentry = Bio::EnsEMBL::DBEntry->new();
 
@@ -372,7 +372,7 @@ sub build_DBEntry {
 }
 
 sub build_Gene {
-    my $self = shift @_;
+    my ($self) = @_;
 
     my $gene = Bio::EnsEMBL::Gene->new();
     # my $time_now = time;
@@ -409,7 +409,7 @@ sub build_Gene {
 }
 
 sub build_Gene_array {
-    my $self = shift @_;
+    my ($self) = @_;
 
     my @gene_array;
 
