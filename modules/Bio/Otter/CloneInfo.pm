@@ -68,9 +68,9 @@ sub clone_id{
 }
 
 sub remark{
-    my $obj = shift @_;
+    my ($obj, @remarks) = @_;
 
-    while (my $rem = shift @_) {
+    while (my $rem = shift @remarks) {
         if ($rem->isa("Bio::Otter::CloneRemark")) {
             push(@{$obj->{'_remark'}},$rem);
         } else {
@@ -83,9 +83,9 @@ sub remark{
 }
 
 sub keyword{
-    my $obj = shift;
+    my ($obj, @keywords) = @_;
 
-    while (my $keyword = shift) {
+    while (my $keyword = shift @keywords) {
         if ($keyword->isa("Bio::Otter::Keyword")) {
             push(@{$obj->{'_keyword'}},$keyword);
         } else {
