@@ -263,6 +263,56 @@ sub update_Locus {
     return;
 }
 
+sub do_rename_locus {
+    my( $self, $old_name, $new_name ) = @_;
+
+    eval {
+        my @xml;
+        foreach my $sub ($self->fetch_SubSeqs_by_locus_name($old_name)) {
+            push @xml, $sub->zmap_delete_xml_string;
+        }
+
+        my $locus_cache = $self->{'_locus_cache'}
+            or confess "Did not get locus cache";
+
+        if ($locus_cache->{$new_name}) {
+            $self->message("Cannot rename to '$new_name'; Locus already exists");
+            return;
+        }
+
+        my $locus = delete $locus_cache->{$old_name}
+            or confess "No locus called '$old_name'";
+        $locus->name($new_name);
+        $self->set_Locus($locus);
+
+        my $ace = qq{\n-R Locus "$old_name" "$new_name"\n};
+
+        # Need to deal with gene type prefix, in case the rename
+        # involves a prefix being added, removed or changed.
+        if (my ($pre) = $new_name =~ /^([^:]+):/) {
+            $locus->gene_type_prefix($pre);
+            $ace .= qq{\nLocus "$new_name"\nType_prefix "$pre"\n};
+        } else {
+            $locus->gene_type_prefix('');
+            $ace .= qq{\nLocus "$new_name"\n-D Type_prefix\n};
+        }
+    
+        # Now we need to update Zmap with the new locus names
+        foreach my $sub ($self->fetch_SubSeqs_by_locus_name($new_name)) {
+            push @xml, $sub->zmap_create_xml_string;
+        }
+        $self->send_zmap_commands(@xml);    
+
+        $self->save_ace($ace);
+    };
+
+    if ($@) {
+        $self->exception_message("Error renaming locus '$old_name' to '$new_name'; ". $@);
+    }
+
+    return;
+}
+
 sub fetch_SubSeqs_by_locus_name {
    my( $self, $locus_name ) = @_;
 
