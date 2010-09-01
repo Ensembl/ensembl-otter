@@ -35,10 +35,9 @@ sub start_handler{
 }
 
 sub end_handler{ 
-    my ( $self, $xml ) = @_;
+    my ( $self, $xml, $context ) = @_;
     $value =~ s/^\s*//;
     $value =~ s/\s*$//;
-    my $context = shift;
     if($context eq 'subregion') {
         unless($subregion_hidden) {
             my $sss = $self->objects;
