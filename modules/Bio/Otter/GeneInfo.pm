@@ -87,9 +87,9 @@ sub gene_stable_id{
 }
 
 sub remark {
-    my $obj = shift @_;
+    my ($obj, @remarks) = @_;
 
-    while (my $rem = shift @_) {
+    while (my $rem = shift @remarks) {
       if (defined($rem)) {
         if ($rem->isa("Bio::Otter::GeneRemark")) {
           push(@{$obj->{'_remark'}},$rem);
@@ -103,9 +103,9 @@ sub remark {
 }
 
 sub synonym {
-    my $self = shift @_;
+    my ($self, @synonyms) = @_;
 
-    while (my $syn = shift @_) {
+    while (my $syn = shift @synonyms) {
       if (defined($syn)) {
         if ($syn->isa("Bio::Otter::GeneSynonym")) {
           push(@{$self->{'_synonym'}},$syn);
