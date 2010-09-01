@@ -9,7 +9,7 @@ our @ISA = qw(Bio::Otter::Transform);
 
 
 # probably these should be global rather than assign EVERY time
-# ones were interested in
+# ones we are interested in
 my $SUB_ELE = {
     map { $_ => 1 }
       qw(host port user pass dbname type headcode alias
