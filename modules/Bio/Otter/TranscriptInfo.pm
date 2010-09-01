@@ -360,6 +360,8 @@ sub add_Evidence {
             $self->throw("Object [$ev] is not an Evidence object");
         }
     }
+
+    return;
 }
 
 sub get_all_Evidence {
@@ -448,6 +450,8 @@ sub validate {
     if (!defined($self->name)) {
         $self->throw("No name for transcript " . $self->transcript_stable_id);
     }
+
+    return;
 }
 
 sub equals {
