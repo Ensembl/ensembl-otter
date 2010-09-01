@@ -7,7 +7,7 @@ use Bio::Otter::Lace::SequenceSet;
 
 our @ISA = qw(Bio::Otter::Transform);
 
-# ones were interested in 
+# ones we are interested in 
 my $SUB_ELE = { map { $_ => 1 } qw(description vega_set_id priority is_hidden write_access)};
 my $value;
 my $subregion_name;   # I hate this global_var style!
