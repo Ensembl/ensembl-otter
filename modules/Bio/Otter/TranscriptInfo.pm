@@ -332,9 +332,9 @@ sub mRNA_end_not_found {
 }
 
 sub remark {
-    my $obj = shift @_;
+    my ($obj, @remarks) = @_;
 
-    while (my $rem = shift @_) {
+    while (my $rem = shift @remarks) {
         if ($rem->isa("Bio::Otter::TranscriptRemark")) {
             push(@{ $obj->{'_remark'} }, $rem);
         }
@@ -348,10 +348,10 @@ sub remark {
 }
 
 sub add_Evidence {
-    my $self = shift;
+    my ($self, @evidence) = @_;
 
     my $list = $self->{'_evidence'};
-    while (my $ev = shift) {
+    while (my $ev = shift @evidence) {
         if ($ev->isa("Bio::Otter::Evidence")) {
             push(@$list, $ev);
             $self->{'_is_sorted'} = 0;
@@ -365,7 +365,7 @@ sub add_Evidence {
 }
 
 sub get_all_Evidence {
-    my $self = shift;
+    my ($self) = @_;
 
     unless ($self->{'_is_sorted'}) {
         # Ensures that we only sort the evidence array once
@@ -378,14 +378,14 @@ sub get_all_Evidence {
 }
 
 sub flush_Evidence {
-    my $self = shift;
+    my ($self) = @_;
 
     $self->{'_evidence'} = [];
     return 1;
 }
 
 sub toString {
-    my ($self) = shift;
+    my ($self) = @_;
 
     my $str = "";
 
