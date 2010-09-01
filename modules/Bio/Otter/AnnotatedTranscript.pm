@@ -176,6 +176,8 @@ sub _remove_exons_from_other_Assemblies{
             $i ++ ;
         }
     }
+
+    return;
 }
 
 ## removes exons that are completley outiside the slice coordinates
@@ -205,6 +207,8 @@ sub _exon_completely_outside_slice{
     
     #remove the exon
     splice(@$exon_list, $i, 1);
+
+    return;
 }
 
 ## exons that are passed to this routine are UTR exons that may need truncated. 
@@ -467,6 +471,8 @@ sub _reset_start_phase{
     my $new_phase = ($exon->phase + $difference ) % 3 ;    
    
     $exon->phase($new_phase) ;    
+
+    return;
 }
 
 
@@ -475,6 +481,7 @@ sub _reset_end_phase {
     my $exon_length = ($exon->end - $exon->start + 1) ;
     my $new_phase = ($exon->phase + $exon_length) %3 ;
     $exon->end_phase($new_phase) ;
+    return;
 }
 
 sub toXMLString {
