@@ -114,9 +114,9 @@ sub generate_vega_objects {
     my $ace_txt = $ace->raw_query('show -a');
 
     # Remove all Feature lines which aren't editable types
-    my $mutable =
+    my @mutable =
         $self->AceDatabase->MethodCollection->get_all_mutable_non_transcript_Methods;
-    my $editable = join '|', map { $_->name } @{$mutable};
+    my $editable = join '|', map { $_->name } @mutable;
     $ace_txt =~ s/^Feature\s+"(?!($editable)).*\n//mg;
 
     $self->parse('build_Features_spans_and_agp_fragments', $ace_txt);
