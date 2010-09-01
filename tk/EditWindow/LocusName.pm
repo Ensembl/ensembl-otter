@@ -108,8 +108,8 @@ sub do_rename {
 
         my $ace = qq{\n-R Locus "$old_name" "$new_name"\n};
 
-        # Need to deal with gene type prefix, incase the rename
-        # invoves a prefix being added, removed or changed.
+        # Need to deal with gene type prefix, in case the rename
+        # involves a prefix being added, removed or changed.
         if (my ($pre) = $new_name =~ /^([^:]+):/) {
             $locus->gene_type_prefix($pre);
             $ace .= qq{\nLocus "$new_name"\nType_prefix "$pre"\n};
@@ -173,7 +173,7 @@ sub make_menu_choices {
     my $sel_locus_name = $self->locus_name_arg;
     my @locus_name = $xc->list_Locus_names;
 
-    # If we were passed a locus name, check that it is acutally a locus name
+    # If we were passed a locus name, check that it is actually a locus name
     my $saw = 0;
     if ($sel_locus_name) {
         foreach my $name (@locus_name) {
