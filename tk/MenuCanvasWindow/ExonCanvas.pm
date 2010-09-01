@@ -1654,7 +1654,9 @@ sub add_subseq_rename_widget {
 sub populate_transcript_attribute_menu {
     my ($self, $menu) = @_;
     
-    $self->populate_attribute_menu($menu, $self->transcript_remark_Entry, $self->XaceSeqChooser->vocab_transcript);
+    $self->populate_attribute_menu($menu,
+                                   $self->transcript_remark_Entry,
+                                   $self->Dataset->vocab_transcript);
 
     return;
 }
@@ -1662,7 +1664,9 @@ sub populate_transcript_attribute_menu {
 sub populate_locus_attribute_menu {
     my ($self, $menu) = @_;
     
-    $self->populate_attribute_menu($menu, $self->locus_remark_Entry, $self->XaceSeqChooser->vocab_locus);
+    $self->populate_attribute_menu($menu,
+                                   $self->locus_remark_Entry,
+                                   $self->Dataset->vocab_locus);
 
     return;
 }
