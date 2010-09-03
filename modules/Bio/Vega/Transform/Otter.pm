@@ -336,7 +336,7 @@ sub build_Exon {
     if (defined($phase)) {
         $exon->phase($phase);
     }else {
-    	$exon->phase(-1);
+        $exon->phase(-1);
     }
     if (defined($end_phase)){
         $exon->end_phase($end_phase);

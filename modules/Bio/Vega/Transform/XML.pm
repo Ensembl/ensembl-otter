@@ -286,7 +286,7 @@ sub generate_SequenceFragment {
         #     $sf->attribvals($self->prettyprint('author_email',  $contig_author->email   ));
         # }
 
- 	    my $ci_attribs = $ci->get_all_Attributes;
+        my $ci_attribs = $ci->get_all_Attributes;
 
         foreach my $cia (@$ci_attribs) {
             if ($cia->code eq 'remark'
@@ -408,9 +408,9 @@ sub generate_Transcript {
      }
   }
   if(my $remarks = $tran->get_all_Attributes('hidden_remark')){
-	 foreach my $rem (@$remarks){
-		$t->attribvals($self->prettyprint('remark','Annotation_remark- '.$rem->value));
-	 }
+      foreach my $rem (@$remarks){
+          $t->attribvals($self->prettyprint('remark','Annotation_remark- '.$rem->value));
+      }
   }
 
   $self->add_start_end_not_found_tags($t, $tran);
@@ -423,32 +423,32 @@ sub generate_Transcript {
   my $tran_name_att = $tran->get_all_Attributes('name') ;
   my $tran_name='';
   if ($tran_name_att->[0]){
-	 $tran_name=$tran_name_att->[0]->value;
+      $tran_name=$tran_name_att->[0]->value;
   }
   $t->attribvals($self->prettyprint('name',$tran_name));
 
   my $es=$self->generate_EvidenceSet($tran);
   if ($es) {
-	 $t->attribobjs($es);
+      $t->attribobjs($es);
   }
 
   my ($tran_low,$tran_high);
   if (my $translation=$tran->translation){
-	 my $strand = $translation->start_Exon->strand;
-	 $tran_low  = $tran->coding_region_start;
-	 $tran_high = $tran->coding_region_end;
-	 my ($tl_start, $tl_end) = ($strand == 1)
-		? ($tran_low + $coord_offset, $tran_high + $coord_offset)
-		  : ($tran_high + $coord_offset, $tran_low + $coord_offset);
-	 if ($tl_start){
-		$t->attribvals($self->prettyprint('translation_start',$tl_start));
-	 }
-	 if ($tl_end){
-		$t->attribvals($self->prettyprint('translation_end',$tl_end));
-	 }
-	 if ($translation->stable_id){
-		$t->attribvals($self->prettyprint('translation_stable_id',$translation->stable_id));
-	 }
+      my $strand = $translation->start_Exon->strand;
+      $tran_low  = $tran->coding_region_start;
+      $tran_high = $tran->coding_region_end;
+      my ($tl_start, $tl_end) = ($strand == 1)
+          ? ($tran_low + $coord_offset, $tran_high + $coord_offset)
+          : ($tran_high + $coord_offset, $tran_low + $coord_offset);
+      if ($tl_start){
+          $t->attribvals($self->prettyprint('translation_start',$tl_start));
+      }
+      if ($tl_end){
+          $t->attribvals($self->prettyprint('translation_end',$tl_end));
+      }
+      if ($translation->stable_id){
+          $t->attribvals($self->prettyprint('translation_stable_id',$translation->stable_id));
+      }
 
   }
 
@@ -484,16 +484,16 @@ sub generate_ExonSet {
   my $exon_set=$tran->get_all_Exons;
   my $exs=$self->prettyprint('exon_set');
   foreach my $exon (@$exon_set){
-	 my $e=$self->prettyprint('exon');
-     if($exon->stable_id) {
-         $e->attribvals($self->prettyprint('stable_id',$exon->stable_id));
-     }
-	 $e->attribvals($self->prettyprint('start',$exon->start + $coord_offset));
-	 $e->attribvals($self->prettyprint('end',$exon->end  + $coord_offset));
-	 $e->attribvals($self->prettyprint('strand',$exon->strand));
-	 $e->attribvals($self->prettyprint('phase',$exon->phase));
-	 $e->attribvals($self->prettyprint('end_phase',$exon->end_phase));
-	 $exs->attribobjs($e);
+      my $e=$self->prettyprint('exon');
+      if($exon->stable_id) {
+          $e->attribvals($self->prettyprint('stable_id',$exon->stable_id));
+      }
+      $e->attribvals($self->prettyprint('start',$exon->start + $coord_offset));
+      $e->attribvals($self->prettyprint('end',$exon->end  + $coord_offset));
+      $e->attribvals($self->prettyprint('strand',$exon->strand));
+      $e->attribvals($self->prettyprint('phase',$exon->phase));
+      $e->attribvals($self->prettyprint('end_phase',$exon->end_phase));
+      $exs->attribobjs($e);
   }
   return $exs;
 }
@@ -527,39 +527,39 @@ sub generate_FeatureSet {
 
   foreach my $feature (sort $by_start_end_strand @$features) {
 
-	 my $f = $self->prettyprint('feature');
-	 if ($feature->analysis){
-		my $a=$feature->analysis;
-		$f->attribvals($self->prettyprint('type',$a->logic_name));
-	 } else {
-		throw "Cannot create Otter XML, feature type is absent: $feature";
-	 }
+      my $f = $self->prettyprint('feature');
+      if ($feature->analysis){
+          my $a=$feature->analysis;
+          $f->attribvals($self->prettyprint('type',$a->logic_name));
+      } else {
+          throw "Cannot create Otter XML, feature type is absent: $feature";
+      }
 
-	 if ($feature->start){
-		$f->attribvals($self->prettyprint('start',$feature->start+$offset));
-	 } else {
-		throw "Cannot create Otter XML, feature start is absent: $feature";
-	 }
+      if ($feature->start){
+          $f->attribvals($self->prettyprint('start',$feature->start+$offset));
+      } else {
+          throw "Cannot create Otter XML, feature start is absent: $feature";
+      }
 
-	 if ($feature->end){
-		$f->attribvals($self->prettyprint('end',$feature->end+$offset));
-	 } else {
-		throw "Cannot create Otter XML, feature end is absent: $feature";
-	 }
+      if ($feature->end){
+          $f->attribvals($self->prettyprint('end',$feature->end+$offset));
+      } else {
+          throw "Cannot create Otter XML, feature end is absent: $feature";
+      }
 
-	 if ($feature->strand){
-		$f->attribvals($self->prettyprint('strand',$feature->strand));
-	 } else {
-		throw "Cannot create Otter XML, feature strand is absent: $feature";
-	 }
+      if ($feature->strand){
+          $f->attribvals($self->prettyprint('strand',$feature->strand));
+      } else {
+          throw "Cannot create Otter XML, feature strand is absent: $feature";
+      }
 
-	 if ($feature->score){
-		$f->attribvals($self->prettyprint('score',$feature->score));
-	 }
-	 if ($feature->display_label){
-		$f->attribvals($self->prettyprint('label',$feature->display_label));
-	 }
-	 $fs->attribobjs($f);
+      if ($feature->score){
+          $f->attribvals($self->prettyprint('score',$feature->score));
+      }
+      if ($feature->display_label){
+          $f->attribvals($self->prettyprint('label',$feature->display_label));
+      }
+      $fs->attribobjs($f);
   }
   return ($fs);
 }
