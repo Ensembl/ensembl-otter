@@ -31,12 +31,12 @@ sub new {
     $canvas->Tk::bind('<Escape>', sub{ $self->deselect_all });
     
     my $close_window = sub{
-	my $top = $self->DataSetChooser->canvas->toplevel;
-	$top->deiconify;
-	$top->raise;
-	$self->canvas->toplevel->destroy;
-	$self->clean_SequenceNotes();
-	$self = undef;  # $self will not get DESTROY'd without this
+        my $top = $self->DataSetChooser->canvas->toplevel;
+        $top->deiconify;
+        $top->raise;
+        $self->canvas->toplevel->destroy;
+        $self->clean_SequenceNotes();
+        $self = undef;  # $self will not get DESTROY'd without this
     };
     $canvas->Tk::bind('<Control-w>',                $close_window);
     $canvas->Tk::bind('<Control-W>',                $close_window);
@@ -212,7 +212,7 @@ sub draw {
             -outline    => undef,
             -tags   => ["row=$row", 'SetBackground', 'SequenceSet=' . $tag],
             );
-	    $canvas->lower($rec, "row=$row");
+            $canvas->lower($rec, "row=$row");
         }
     
     } else {
@@ -265,7 +265,7 @@ sub select_sequence_set {
 sub add_SequenceNotes{
     my ($self, $sn) = @_;
     if ($sn){
-	$self->{'_sequence_notes'}->{"$sn"} = $sn;
+        $self->{'_sequence_notes'}->{"$sn"} = $sn;
     }
     return $self->{'_sequence_notes'}->{"$sn"};
 }
@@ -290,9 +290,9 @@ sub clean_SequenceNotes{
     my $seqNotes = $self->{'_sequence_notes'} || {};
      
     foreach my $hash_id(keys %$seqNotes){
-#	warn $hash_id ;
+#        warn $hash_id ;
         $seqNotes->{"$hash_id"} = undef;
-	delete $seqNotes->{"$hash_id"};
+        delete $seqNotes->{"$hash_id"};
     }
     return 0;
 }

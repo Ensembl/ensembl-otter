@@ -317,11 +317,11 @@ __END__
 
 James Gilbert B<email> jgrg@sanger.ac.uk
 
-	From: 	  edgrif@sanger.ac.uk
-	Subject: 	"spec" for program to drive ZMap
-	Date: 	November 15, 2004 10:00:06 GMT
-	To: 	  jgrg@sanger.ac.uk
-	Cc: 	  rnc@sanger.ac.uk
+        From:    edgrif@sanger.ac.uk
+        Subject: "spec" for program to drive ZMap
+        Date:    November 15, 2004 10:00:06 GMT
+        To:      jgrg@sanger.ac.uk
+        Cc:      rnc@sanger.ac.uk
 
 James,
 

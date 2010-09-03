@@ -1084,9 +1084,9 @@ sub make_search_panel {
 
     # Is hunting in CanvasWindow?
     my $hunter = sub{
-	    $top->Busy;
-	    $self->hunt_for_Entry_text($search_box);
-	    $top->Unbusy;
+        $top->Busy;
+        $self->hunt_for_Entry_text($search_box);
+        $top->Unbusy;
     };
     my $button = $search_frame->Button(
          -text      => 'Find',
@@ -1127,11 +1127,11 @@ sub hunt_for_Entry_text {
     my $canvas = $self->canvas;
     my( $query_str, $regex );
     eval{
-	    $query_str = $entry->get();
-	    $query_str =~ s{([^\w\*\?\\])}{\\$1}g;
-	    $query_str =~ s{\*}{.*}g;
-	    $query_str =~ s{\?}{.}g;
-	    $regex =  qr/($query_str)/i;
+        $query_str = $entry->get();
+        $query_str =~ s{([^\w\*\?\\])}{\\$1}g;
+        $query_str =~ s{\*}{.*}g;
+        $query_str =~ s{\?}{.}g;
+        $regex =  qr/($query_str)/i;
     };
     return unless $query_str;
     # warn $query_str;
@@ -1285,7 +1285,7 @@ sub edit_new_subsequence {
         $new = Hum::Ace::SubSeq->new_from_subseq_list(@subseq);
     }
     else {
-    	warn "CLIPBOARD: $clip\n";
+        warn "CLIPBOARD: $clip\n";
         $new = Hum::Ace::SubSeq->new_from_clipboard_text($clip);
         unless ($new) {
             $self->message("Need a highlighted transcript or a coordinate on the clipboard to make SubSeq");
@@ -1928,23 +1928,23 @@ sub draw_sequence_list {
                     }
                 }
             }
-	        my $txt = $canvas->createText(
-		        $x, $y,
-		        -anchor     => 'nw',
-		        -text       => $sub->name,
-		        -font       => $style eq 'bold' ? $self->font_fixed_bold : $self->font_fixed,
-		        -tags       => ['subseq', 'searchable'],
-		        -fill       => $color,
-		        );
-		    if ($error) {
-		        $error =~ s/\n$//;
-		        $Text::Wrap::columns = 60;
-		        my @fmt;
-		        foreach my $line (split /\n/, $error) {
-		            push(@fmt, wrap('', '  ', $line));
-		        }
-		        $err_hash->{$txt} = join "\n", @fmt;
-		    }
+            my $txt = $canvas->createText(
+                $x, $y,
+                -anchor     => 'nw',
+                -text       => $sub->name,
+                -font       => $style eq 'bold' ? $self->font_fixed_bold : $self->font_fixed,
+                -tags       => ['subseq', 'searchable'],
+                -fill       => $color,
+                );
+            if ($error) {
+                $error =~ s/\n$//;
+                $Text::Wrap::columns = 60;
+                my @fmt;
+                foreach my $line (split /\n/, $error) {
+                    push(@fmt, wrap('', '  ', $line));
+                }
+                $err_hash->{$txt} = join "\n", @fmt;
+            }
         }
 
         if (($i + 1) % $rows) {
@@ -2096,8 +2096,8 @@ sub run_exonerate {
     unless ($ew) {
         my $parent = $self->top_window();
         my $top = $parent->Toplevel(
-        	-title => 'On The Fly (OTF) Alignment - brought to you by exonerate'
-        	);
+            -title => 'On The Fly (OTF) Alignment - brought to you by exonerate'
+            );
         $top->transient($parent);
         $ew = EditWindow::Exonerate->new($top);
         $ew->XaceSeqChooser($self);
