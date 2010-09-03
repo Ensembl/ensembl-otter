@@ -88,7 +88,7 @@ sub translations_diff {
 
                 #
                 ##Remember to uncomment this after loading and remove the line/s after
-                #	throw('translation stable_ids of the same two transcripts are different\n');
+                #    throw('translation stable_ids of the same two transcripts are different\n');
                 #
 
                 my $existing_translation =

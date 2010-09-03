@@ -13,11 +13,11 @@ sub new {
   my ($transcript_author,$evidence_list)  = rearrange([qw(AUTHOR EVIDENCE)],@args);
   $self->transcript_author($transcript_author);
   if (defined($evidence_list)) {
-	 if (ref($evidence_list) eq "ARRAY") {
-		$self->evidence_list($evidence_list);
-	 } else {
-		$self->throw( "Argument to evidence must be an array ref. Currently [$evidence_list]");
-	 }
+      if (ref($evidence_list) eq "ARRAY") {
+          $self->evidence_list($evidence_list);
+      } else {
+          $self->throw( "Argument to evidence must be an array ref. Currently [$evidence_list]");
+      }
   }
   return $self;
 }
@@ -34,11 +34,11 @@ sub get_all_Exons_ref {
 sub transcript_author {
   my ($self,$value) = @_;
   if( defined $value) {
-	 if ($value->isa("Bio::Vega::Author")) {
-		$self->{'transcript_author'} = $value;
-	 } else {
-		throw("Argument to transcript_author must be a Bio::Vega::Author object.  Currently is [$value]");
-	 }
+      if ($value->isa("Bio::Vega::Author")) {
+          $self->{'transcript_author'} = $value;
+      } else {
+          throw("Argument to transcript_author must be a Bio::Vega::Author object.  Currently is [$value]");
+      }
   }
   return $self->{'transcript_author'};
 }
@@ -71,8 +71,8 @@ sub truncate_to_Slice {
   my $end_exon   = 0;
   my( $tsl );
   if ($tsl = $self->translation) {
-	 $start_exon = $tsl->start_Exon;
-	 $end_exon   = $tsl->end_Exon;
+      $start_exon = $tsl->start_Exon;
+      $end_exon   = $tsl->end_Exon;
   }
   my $exons_truncated = 0;
   my $in_translation_zone = 0;
@@ -82,50 +82,50 @@ sub truncate_to_Slice {
   my $ex_list = $self->get_all_Exons_ref;
   
   for (my $i = 0; $i < @$ex_list;) {
-	 my $exon = $ex_list->[$i];
-	 my $exon_start = $exon->start;
-	 my $exon_end   = $exon->end;
-	 # now compare slice names instead of slice references
-	 # slice references can be different not the slice names
-	 if ($exon->slice->name ne $slice->name or $exon_end < 1 or $exon_start > $slice_length) {
-		#warn "removing exon that is off slice";
-		splice(@$ex_list, $i, 1);
-		$exons_truncated++;
-	 } else {
-		#printf STDERR
-		#    "Checking if exon %s is within slice %s of length %d\n"
-		#    . "  being attached to %s and extending from %d to %d\n",
-		#    $exon->stable_id, $slice, $slice_length, $exon->contig, $exon_start, $exon_end;
-		$i++;
-		my $trunc_flag = 0;
-		if ($exon->start < 1) {
-		  #warn "truncating exon that overlaps start of slice";
-		  $trunc_flag = 1;
-		  $exon->start(1);
-		}
-		if ($exon->end > $slice_length) {
-		  #warn "truncating exon that overlaps end of slice";
-		  $trunc_flag = 1;
-		  $exon->end($slice_length);
-		}
-		$exons_truncated++ if $trunc_flag;
-	 }
+      my $exon = $ex_list->[$i];
+      my $exon_start = $exon->start;
+      my $exon_end   = $exon->end;
+      # now compare slice names instead of slice references
+      # slice references can be different not the slice names
+      if ($exon->slice->name ne $slice->name or $exon_end < 1 or $exon_start > $slice_length) {
+          #warn "removing exon that is off slice";
+          splice(@$ex_list, $i, 1);
+          $exons_truncated++;
+      } else {
+          #printf STDERR
+          #    "Checking if exon %s is within slice %s of length %d\n"
+          #    . "  being attached to %s and extending from %d to %d\n",
+          #    $exon->stable_id, $slice, $slice_length, $exon->contig, $exon_start, $exon_end;
+          $i++;
+          my $trunc_flag = 0;
+          if ($exon->start < 1) {
+              #warn "truncating exon that overlaps start of slice";
+              $trunc_flag = 1;
+              $exon->start(1);
+          }
+          if ($exon->end > $slice_length) {
+              #warn "truncating exon that overlaps end of slice";
+              $trunc_flag = 1;
+              $exon->end($slice_length);
+          }
+          $exons_truncated++ if $trunc_flag;
+      }
   }
   ### Hack until we fiddle with translation stuff
   if ($exons_truncated) {
-	 $self->{'translation'}     = undef;
-	 $self->{'_translation_id'} = undef;
-	 my $attrib = $self->get_all_Attributes;
-	 for (my $i = 0; $i < @$attrib;) {
-	     my $this = $attrib->[$i];
-	     # Should not have CDS start/end not found attributes
-	     # if there is no CDS!
-	     if ($this->code =~ /^cds_(start|end)_NF$/) {
-	         splice(@$attrib, $i, 1);
-	     } else {
-	         $i++;
-	     }
-	 }
+      $self->{'translation'}     = undef;
+      $self->{'_translation_id'} = undef;
+      my $attrib = $self->get_all_Attributes;
+      for (my $i = 0; $i < @$attrib;) {
+          my $this = $attrib->[$i];
+          # Should not have CDS start/end not found attributes
+          # if there is no CDS!
+          if ($this->code =~ /^cds_(start|end)_NF$/) {
+              splice(@$attrib, $i, 1);
+          } else {
+              $i++;
+          }
+      }
   }
   return $exons_truncated;
 }
@@ -170,15 +170,15 @@ sub vega_hashkey_sub {
   my $vega_hashkey_sub={};
 
   if (defined $evidence) {
-	 foreach my $evi (@$evidence){
-		my $e=$evi->name.$evi->type;
-		$vega_hashkey_sub->{$e}='evidence';
-	 }
+      foreach my $evi (@$evidence){
+          my $e=$evi->name.$evi->type;
+          $vega_hashkey_sub->{$e}='evidence';
+      }
   }
   my $exons=$self->get_all_Exons;
 
   foreach my $exon (@$exons){
-	 $vega_hashkey_sub->{$exon->stable_id}='exon_stable_id';
+      $vega_hashkey_sub->{$exon->stable_id}='exon_stable_id';
   }
   return $vega_hashkey_sub;
 
