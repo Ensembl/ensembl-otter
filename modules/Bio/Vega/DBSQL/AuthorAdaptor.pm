@@ -76,13 +76,13 @@ sub _generic_sql_fetch {
 =cut
 
 sub fetch_by_dbID {
-	my ($self,$id) = @_;
+    my ($self,$id) = @_;
 
-	if (!defined($id)) {
-		$self->throw("Id must be entered to fetch an author object");
-	}
+    if (!defined($id)) {
+        $self->throw("Id must be entered to fetch an author object");
+    }
 
-	return $self->_generic_sql_fetch("author_id = ?", $id);
+    return $self->_generic_sql_fetch("author_id = ?", $id);
 }
 
 =head2 fetch_by_name
@@ -99,13 +99,13 @@ sub fetch_by_dbID {
 
 
 sub fetch_by_name {
-	my ($self, $name) = @_;
+    my ($self, $name) = @_;
 
-	unless ($name) {
-		$self->throw("Name must be entered to fetch an author object");
-	}
+    unless ($name) {
+        $self->throw("Name must be entered to fetch an author object");
+    }
 
-	return $self->_generic_sql_fetch("author_name = ?", $name);
+    return $self->_generic_sql_fetch("author_name = ?", $name);
 }
 
 =head2 fetch_by_email
@@ -121,22 +121,22 @@ sub fetch_by_name {
 =cut
 
 sub fetch_by_email {
-	my ($self, $email) = @_;
+    my ($self, $email) = @_;
 
-	unless ($email) {
-		$self->throw("Email address must be entered to fetch an author object");
-	}
+    unless ($email) {
+        $self->throw("Email address must be entered to fetch an author object");
+    }
 
-	my $author = $self->_generic_sql_fetch("author_email = ?", $email);
+    my $author = $self->_generic_sql_fetch("author_email = ?", $email);
 
-	return $author;
+    return $author;
 }
-	
+
 sub exists_in_db {
   my ($self, $author) = @_;
 
   unless ($author->name) {
-	 throw("Name is empty in the author object - should be set to check for exsistence");
+      throw("Name is empty in the author object - should be set to check for exsistence");
   }
 
   if (my $db_author = $self->fetch_by_name($author->name)) {
@@ -164,16 +164,16 @@ sub exists_in_db {
 sub store {
     my ($self,$author) = @_;
     if (!defined($author)) {
-	   throw("Must provide an author object to the store method");
+        throw("Must provide an author object to the store method");
     } elsif (! $author->isa("Bio::Vega::Author")) {
-	   throw("Argument must be an author object to the store method.  Currently is [$author]");
+        throw("Argument must be an author object to the store method.  Currently is [$author]");
     }
     my $author_name  = $author->name  || throw "Author does not have a name";
     my $author_email = $author->email || throw "Author does not have an email address";
 
     # Is this author already in the database?
     if ($self->exists_in_db($author)) {
-	   return 1;
+        return 1;
     }
 
     my $group_id;
@@ -207,7 +207,7 @@ sub store {
 sub store_gene_author {
   my ($self,$gene_id,$author_id) = @_;
   unless ($gene_id || $author_id) {
-	 throw("gene_id:$gene_id and author_id:$author_id must be present to store a gene_author");
+      throw("gene_id:$gene_id and author_id:$author_id must be present to store a gene_author");
   }
   # Insert new gene author
   my $sth = $self->prepare(q{
@@ -230,7 +230,7 @@ sub remove_gene_author {
 sub store_transcript_author {
   my ($self,$transcript_id,$author_id) = @_;
   unless ($transcript_id || $author_id) {
-	 throw("transcript_id:$transcript_id and author_id:$author_id must be present to store a transcript_author");
+      throw("transcript_id:$transcript_id and author_id:$author_id must be present to store a transcript_author");
   }
   # Insert new gene author
   my $sth = $self->prepare(q{
@@ -253,7 +253,7 @@ sub remove_transcript_author {
 sub fetch_gene_author {
   my ($self,$gene_id) = @_;
   unless ($gene_id) {
-	 throw("gene_id:$gene_id  must be present to fetch a gene_author");
+      throw("gene_id:$gene_id  must be present to fetch a gene_author");
   }
   my $sth = $self->prepare(q{
         SELECT author_id from gene_author where gene_id=?
@@ -269,7 +269,7 @@ sub fetch_gene_author {
 sub fetch_transcript_author {
   my ($self,$transcript_id) = @_;
   unless ($transcript_id) {
-	 throw("transcript_id:$transcript_id  must be present to fetch a transcript_author");
+      throw("transcript_id:$transcript_id  must be present to fetch a transcript_author");
   }
   my $sth = $self->prepare(q{
         SELECT author_id from transcript_author where transcript_id=?

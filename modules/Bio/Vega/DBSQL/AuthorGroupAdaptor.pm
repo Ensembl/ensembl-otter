@@ -40,9 +40,9 @@ sub store {
    my $sth = $self->prepare(q{
         INSERT INTO author_group(group_name, group_email) VALUES (?,?)
         });
-	$sth->execute($group->name, $group->email);
-	my $id = $sth->{'mysql_insertid'} or $self->throw('Failed to get autoincremented ID from statement handle');
-	$group->dbID($id);
+   $sth->execute($group->name, $group->email);
+   my $id = $sth->{'mysql_insertid'} or $self->throw('Failed to get autoincremented ID from statement handle');
+   $group->dbID($id);
 
    return $id;
 }

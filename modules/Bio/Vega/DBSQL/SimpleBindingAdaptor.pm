@@ -6,13 +6,13 @@ use warnings;
 use DBI;
 
 #sub connect_with_params {
-#	my %params = @_;
+#    my %params = @_;
 #
-#	my $datasource = "DBI:mysql:$params{-DBNAME}:$params{-HOST}:$params{-PORT}";
-#	my $username   = $params{-USER};
-#	my $password   = $params{-PASS} || '';
+#    my $datasource = "DBI:mysql:$params{-DBNAME}:$params{-HOST}:$params{-PORT}";
+#    my $username   = $params{-USER};
+#    my $password   = $params{-PASS} || '';
 #
-#	return DBI->connect($datasource, $username, $password, { RaiseError => 1 });
+#    return DBI->connect($datasource, $username, $password, { RaiseError => 1 });
 #}
 
 sub new {

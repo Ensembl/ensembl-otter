@@ -49,7 +49,7 @@ sub fetch_by_contigSlice {
         -AUTHOR         => $author,
         -CREATED_DATE   => $created_uniseconds,
     );
-	 
+
     my $attributes = $self->db->get_AttributeAdaptor->fetch_all_by_ContigInfo($contig_info);
     $contig_info->add_Attributes(@$attributes);
 
@@ -98,16 +98,16 @@ sub store {
                 # of updating the author_id valid for THIS database
                 # (in case the contig_info comes from a different one)
             $self->db->get_AuthorAdaptor->store($contig_info->author);
-		};
-		if ($@){
+        };
+        if ($@){
             throw "Error due to contig_info author: ".$contig_info->author->name
                  ." author_email: ".$contig_info->author->email
                  ." slice name: ".$contig_info->slice->name
                  ."\nerror is: ".$@;
-		}
-		
-            # Store a new row in the contig_info table and get contig_info_id
-		my $sth = $self->prepare(q{
+        }
+
+        # Store a new row in the contig_info table and get contig_info_id
+        my $sth = $self->prepare(q{
                                INSERT INTO contig_info(
                                seq_region_id
                                , author_id
@@ -117,22 +117,22 @@ sub store {
         });
 
         my $created_date = $contig_info->created_date || $time_uniseconds || time;
-		my $author_id    = $contig_info->author->dbID;
-		$sth->execute( $seq_region_id,
+        my $author_id    = $contig_info->author->dbID;
+        $sth->execute( $seq_region_id,
                        $author_id,
                        $created_date,
         );
 
 
-		my $contig_info_id = $sth->{'mysql_insertid'} or $self->throw("No insert id");
-		$contig_info->dbID($contig_info_id);
+        my $contig_info_id = $sth->{'mysql_insertid'} or $self->throw("No insert id");
+        $contig_info->dbID($contig_info_id);
 
             # created_date is only set for contig_info objects that either come directly
             # from the DB or have just been stored (this case).
             # Since the date is not a part of XML, the XML->Vega parser will leave the date unset.
         $contig_info->created_date( $created_date );
 
-		$self->db->get_AttributeAdaptor->store_on_ContigInfo($contig_info,$contig_info->get_all_Attributes);
+        $self->db->get_AttributeAdaptor->store_on_ContigInfo($contig_info,$contig_info->get_all_Attributes);
     }
 
     return $changed;
