@@ -33,10 +33,10 @@ sub fetch_evidence {
   $sth->execute($tid);
   my $results = [];
   while  (my $ref = $sth->fetchrow_hashref) {
-	 my $obj=Bio::Vega::Evidence->new;
-	 $obj->name($ref->{name});
-	 $obj->type($ref->{type});
-	 push @$results, $obj;
+      my $obj=Bio::Vega::Evidence->new;
+      $obj->name($ref->{name});
+      $obj->type($ref->{type});
+      push @$results, $obj;
   }
   $sth->finish();
 
@@ -47,7 +47,7 @@ sub store_Evidence {
   my ($self,$transcript_id,$evidence_list) = @_;
 
   unless ($evidence_list || $transcript_id) {
-	 throw("evidence object list :$evidence_list and transcript_id:$transcript_id must be entered to store an evidence");
+      throw("evidence object list :$evidence_list and transcript_id:$transcript_id must be entered to store an evidence");
   }
   # Insert new evidence
   my $sth = $self->prepare(q{
@@ -55,9 +55,9 @@ sub store_Evidence {
         });
 
   foreach my $evidence (@$evidence_list) {
-	 my $name = $evidence->name;
-	 my $type = $evidence->type;
-	 $sth->execute($transcript_id, $name, $type);
+      my $name = $evidence->name;
+      my $type = $evidence->type;
+      $sth->execute($transcript_id, $name, $type);
   }
 
   return;
@@ -100,7 +100,7 @@ sub fetch_by_stable_id  {
 
   my ($transcript) = $self->SUPER::fetch_by_stable_id($stable_id);
   if ($transcript){
-	 $self->reincarnate_transcript($transcript);
+      $self->reincarnate_transcript($transcript);
   }
 
   return $transcript;
@@ -112,7 +112,7 @@ sub fetch_by_stable_id_version  {
   my $constraint = "tsi.stable_id = '$stable_id' AND tsi.version = $version ORDER BY tsi.modified_date DESC, tsi.transcript_id DESC LIMIT 1";
   my ($transcript) = @{ $self->generic_fetch($constraint) };
   if ($transcript){
-	 $self->reincarnate_transcript($transcript);
+      $self->reincarnate_transcript($transcript);
   }
 
   return $transcript;
@@ -123,9 +123,9 @@ sub fetch_all_by_Slice  {
 
   my ($transcripts) = $self->SUPER::fetch_all_by_Slice($slice,$load_exons,$logic_name);
   if ($transcripts){
-	 foreach my $transcript(@$transcripts){
-		$self->reincarnate_transcript($transcript);
-	 }
+      foreach my $transcript(@$transcripts){
+          $self->reincarnate_transcript($transcript);
+      }
   }
 
   return $transcripts;
@@ -136,9 +136,9 @@ sub fetch_all_by_Gene  {
 
   my ($transcripts) = $self->SUPER::fetch_all_by_Gene($gene);
   if ($transcripts){
-	 foreach my $transcript(@$transcripts){
-		$self->reincarnate_transcript($transcript);
-	 }
+      foreach my $transcript(@$transcripts){
+          $self->reincarnate_transcript($transcript);
+      }
   }
 
   return $transcripts;
@@ -148,7 +148,7 @@ sub get_deleted_Transcript_by_slice{
   my ($self, $transcript,$tran_version) = @_;
 
   unless ($transcript || $tran_version){
-	 throw("no transcript passed on to fetch old transcript or no version supplied");
+      throw("no transcript passed on to fetch old transcript or no version supplied");
   }
   my $tran_slice=$transcript->slice;
   my $tran_stable_id=$transcript->stable_id;
@@ -156,18 +156,18 @@ sub get_deleted_Transcript_by_slice{
   my @out = grep { $_->stable_id eq $tran_stable_id and $_->version eq $tran_version }
     @{$self->SUPER::fetch_all_by_Slice_constraint($tran_slice,'t.is_current = 0 ')};
   if ($#out > 1) {
-	 ##test
-	 @out = sort {$a->dbID <=> $b->dbID} @out;
-	 $db_tran=pop @out;
-	 ##test
-	 #die "there are more than one transcript retrived\n".$db_tran->dbID;
+      ##test
+      @out = sort {$a->dbID <=> $b->dbID} @out;
+      $db_tran=pop @out;
+      ##test
+      #die "there are more than one transcript retrived\n".$db_tran->dbID;
   }
   else {
-	 $db_tran=$out[0];
+      $db_tran=$out[0];
   }
 
   if ($db_tran){
-	 $self->reincarnate_transcript($db_tran);
+      $self->reincarnate_transcript($db_tran);
   }
 
   return $db_tran;
@@ -177,18 +177,18 @@ sub get_current_Transcript_by_slice {
   my ($self, $transcript) = @_;
 
   unless ($transcript){
-	 throw("no transcript passed on to fetch old transcript");
+      throw("no transcript passed on to fetch old transcript");
   }
   my $tran_slice=$transcript->slice;
   my $tran_stable_id=$transcript->stable_id;
   my @out = grep { $_->stable_id eq $tran_stable_id }
     @{ $self->fetch_all_by_Slice_constraint($tran_slice,'t.is_current = 1 ')};
-	if ($#out > 1) {
-	  die "there are more than one transcript retrived\n";
-	}
+  if ($#out > 1) {
+      die "there are more than one transcript retrived\n";
+  }
   my $db_tran=$out[0];
   if ($db_tran){
-	 $self->reincarnate_transcript($db_tran);
+      $self->reincarnate_transcript($db_tran);
   }
 
   return $db_tran;

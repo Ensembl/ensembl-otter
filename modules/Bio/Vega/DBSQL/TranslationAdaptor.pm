@@ -17,7 +17,7 @@ sub fetch_by_stable_id  {
   my ($self, $stable_id) = @_;
   my ($translation) = $self->SUPER::fetch_by_stable_id($stable_id);
   if ($translation){
-	 bless $translation, "Bio::Vega::Translation";
+      bless $translation, "Bio::Vega::Translation";
   }
   return $translation;
 
@@ -38,7 +38,7 @@ sub fetch_by_Transcript  {
   my ( $self, $transcript ) = @_;
   my ($translation) = $self->SUPER::fetch_by_Transcript($transcript);
   if ($translation){
-	 bless $translation, "Bio::Vega::Translation";
+      bless $translation, "Bio::Vega::Translation";
   }
   return $translation;
 }
