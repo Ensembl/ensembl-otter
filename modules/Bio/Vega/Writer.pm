@@ -43,12 +43,12 @@ sub formatxml {
   $pp->xmlformat($self->formatopentag($pp->name,$pp->indent));
   my $attribvals=$pp->attribvals;
   foreach my $a (@$attribvals){
-	 $pp->xmlformat($self->formatopenendtag($a->name,$pp->indent,$a->value));
+      $pp->xmlformat($self->formatopenendtag($a->name,$pp->indent,$a->value));
   }
   my $attribobjs=$pp->attribobjs;
   foreach my $a (@$attribobjs){
-	 $a->indent($pp->indent+2);
-	 $pp->xmlformat($self->formatxml($a));
+      $a->indent($pp->indent+2);
+      $pp->xmlformat($self->formatxml($a));
   }
   $pp->xmlformat($self->formatclosetag($pp->name,$pp->indent));
   return $pp->xmlformat;

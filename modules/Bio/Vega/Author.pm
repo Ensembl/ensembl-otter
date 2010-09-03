@@ -68,10 +68,10 @@ sub name{
 sub group{
   my ($self,$value) = @_;
   if( defined $value) {
-	 $self->{'group'} = $value;
-	 if (! $value->isa("Bio::Vega::AuthorGroup") ) {
-		throw("Argument must be an AuthorGroup object.");
-    }
+      $self->{'group'} = $value;
+      if (! $value->isa("Bio::Vega::AuthorGroup") ) {
+          throw("Argument must be an AuthorGroup object.");
+      }
   }
   return $self->{'group'};
 }

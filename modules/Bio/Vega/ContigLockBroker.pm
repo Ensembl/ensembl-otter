@@ -47,10 +47,10 @@ sub check_locks_exist_by_slice {
     if(UNIVERSAL::isa($slice, 'Bio::EnsEMBL::Slice')) {
         $slice = [$slice];
     } elsif(UNIVERSAL::isa($slice, 'ARRAY') &&
-    		UNIVERSAL::isa($slice->[0], 'Bio::EnsEMBL::Slice')) {
-    	# do nothing
+            UNIVERSAL::isa($slice->[0], 'Bio::EnsEMBL::Slice')) {
+        # do nothing
     } else {
-    	throw("[$slice] should be Bio::EnsEMBL::Slice or an array of Bio::EnsEMBL::Slice");
+        throw("[$slice] should be Bio::EnsEMBL::Slice or an array of Bio::EnsEMBL::Slice");
     }
     $author ||= $self->author() || throw("An author object needs to be passed either on creation or on use");
 
@@ -78,10 +78,10 @@ sub check_no_locks_exist_by_slice {
     if(UNIVERSAL::isa($slice, 'Bio::EnsEMBL::Slice')) {
         $slice = [$slice];
     } elsif(UNIVERSAL::isa($slice, 'ARRAY') &&
-    		UNIVERSAL::isa($slice->[0], 'Bio::EnsEMBL::Slice')) {
-    	# do nothing
+            UNIVERSAL::isa($slice->[0], 'Bio::EnsEMBL::Slice')) {
+        # do nothing
     } else {
-    	throw("[$slice] should be Bio::EnsEMBL::Slice or an array of Bio::EnsEMBL::Slice");
+        throw("[$slice] should be Bio::EnsEMBL::Slice or an array of Bio::EnsEMBL::Slice");
     }
     $author ||= $self->author() || throw("An author object needs to be passed either on creation or on use");
 
@@ -109,10 +109,10 @@ sub lock_clones_by_slice {
     if(UNIVERSAL::isa($slice, 'Bio::EnsEMBL::Slice')) {
         $slice = [$slice];
     } elsif(UNIVERSAL::isa($slice, 'ARRAY') &&
-    		UNIVERSAL::isa($slice->[0], 'Bio::EnsEMBL::Slice')) {
-    	# do nothing
+            UNIVERSAL::isa($slice->[0], 'Bio::EnsEMBL::Slice')) {
+        # do nothing
     } else {
-    	throw("[$slice] should be Bio::EnsEMBL::Slice or an array of Bio::EnsEMBL::Slice");
+        throw("[$slice] should be Bio::EnsEMBL::Slice or an array of Bio::EnsEMBL::Slice");
     }
     $author ||= $self->author() || throw("An author object needs to be passed either on creation or on use");
 
@@ -127,30 +127,30 @@ sub lock_clones_by_slice {
     while( my($contig_id, $contig_name) = each %$contig_hash) {
 
         my( $lock );
-	    eval {
-	        $lock = Bio::Vega::ContigLock->new(
-                 -author       => $author,
-                 -contig_id    => $contig_id,
-                 -hostname     => $self->client_hostname,
-            );
-		    $db->get_ContigLockAdaptor->store($lock);
-	    };
+        eval {
+            $lock = Bio::Vega::ContigLock->new(
+                -author       => $author,
+                -contig_id    => $contig_id,
+                -hostname     => $self->client_hostname,
+                );
+            $db->get_ContigLockAdaptor->store($lock);
+        };
 
-	    if ($@) {
+        if ($@) {
             $lock_error_str .= sprintf "Failed to lock contig '%s'", $contig_name;
             if (my $dblock = $db->get_ContigLockAdaptor->fetch_by_contig_id($contig_id)) {
                 $lock_error_str .= sprintf " already locked by '%s' on '%s' since %s\n",
-                    $dblock->author->name,
-                    $dblock->hostname,
-                    scalar localtime($dblock->timestamp);
+                $dblock->author->name,
+                $dblock->hostname,
+                scalar localtime($dblock->timestamp);
             } else {
                 # Locking failed for another reason.
                 $lock_error_str .= ": $@\n";
                 last;   # No point trying to lock other contigs
             }
-	    } else {
-		    push(@successful_locks, $lock);
-	    }
+        } else {
+            push(@successful_locks, $lock);
+        }
     }
 
     if ($lock_error_str) {
@@ -174,10 +174,10 @@ sub remove_by_slice {
     if(UNIVERSAL::isa($slice, 'Bio::EnsEMBL::Slice')) {
         $slice = [$slice];
     } elsif(UNIVERSAL::isa($slice, 'ARRAY') &&
-    		UNIVERSAL::isa($slice->[0], 'Bio::EnsEMBL::Slice')) {
-    	# do nothing
+            UNIVERSAL::isa($slice->[0], 'Bio::EnsEMBL::Slice')) {
+        # do nothing
     } else {
-    	throw("[$slice] should be Bio::EnsEMBL::Slice or an array of Bio::EnsEMBL::Slice");
+        throw("[$slice] should be Bio::EnsEMBL::Slice or an array of Bio::EnsEMBL::Slice");
     }
     $author ||= $self->author() || throw("An author object needs to be passed either on creation or on use");
 
@@ -204,14 +204,14 @@ sub Contig_hashref_from_Slice {
 
     my $sa          = $db->get_SliceAdaptor;
     my %contig_hash = ();
-	foreach my $slice (@$slices) {
-	    foreach my $contig_seg (@{ $slice->project('contig') }) {
-	        my $contig_slice = $contig_seg->to_Slice();
-	        my $contig_id    = $sa->get_seq_region_id($contig_slice);
-	        my $contig_name  = $contig_slice->seq_region_name();
-	        $contig_hash{$contig_id} = $contig_name;
-	    }
-	}
+    foreach my $slice (@$slices) {
+        foreach my $contig_seg (@{ $slice->project('contig') }) {
+            my $contig_slice = $contig_seg->to_Slice();
+            my $contig_id    = $sa->get_seq_region_id($contig_slice);
+            my $contig_name  = $contig_slice->seq_region_name();
+            $contig_hash{$contig_id} = $contig_name;
+        }
+    }
 
     return \%contig_hash;
 }

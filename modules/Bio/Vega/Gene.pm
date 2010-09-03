@@ -18,11 +18,11 @@ sub new {
 sub gene_author {
   my ($self,$value) = @_;
   if( defined $value) {
-	 if ($value->isa("Bio::Vega::Author")) {
-		$self->{'gene_author'} = $value;
-	 } else {
-		throw("Argument to gene_author must be a Bio::Vega::Author object.  Currently is [$value]");
-	 }
+      if ($value->isa("Bio::Vega::Author")) {
+          $self->{'gene_author'} = $value;
+      } else {
+          throw("Argument to gene_author must be a Bio::Vega::Author object.  Currently is [$value]");
+      }
   }
   return $self->{'gene_author'};
 }
@@ -73,7 +73,7 @@ sub vega_hashkey_sub {
   my $vega_hashkey_sub={};
   my $trans=$self->get_all_Transcripts;
   foreach my $tran (@$trans){
-	 $vega_hashkey_sub->{$tran->stable_id}='transcript-stable-id';
+      $vega_hashkey_sub->{$tran->stable_id}='transcript-stable-id';
   }
   return $vega_hashkey_sub;
 
@@ -92,7 +92,7 @@ editable in the client.  Defaults to 0.
 sub truncated_flag {
   my( $self, $flag ) = @_;
   if (defined $flag) {
-	 $self->{'truncated_flag'} = $flag ? 1 : 0;
+      $self->{'truncated_flag'} = $flag ? 1 : 0;
   }
   return $self->{'truncated_flag'} || 0;
 }
@@ -145,42 +145,42 @@ sub prune_Exons {
 
   my( %stable_key, %unique_exons );
   foreach my $tran (@{$self->get_all_Transcripts}) {
-	 my (@transcript_exons);
-	 foreach my $exon (@{$tran->get_all_Exons}) {
-		my $exon_key = $exon->vega_hashkey;
-		if (my $found = $unique_exons{$exon_key}) {
-		  # Use the found exon in the translation
-		  if ($tran->translation) {
-			 if ($exon == $tran->translation->start_Exon) {
-				$tran->translation->start_Exon($found);
-			 }
-			 if ($exon == $tran->translation->end_Exon) {
-				$tran->translation->end_Exon($found);
-			 }
-		  }
-		  # re-use existing exon in this transcript
-		  $exon = $found;
-		} else {
-		  $unique_exons{$exon_key} = $exon;
-		}
-		push (@transcript_exons, $exon);
-		# Make sure we don't have the same stable IDs
-		# for different exons (different keys).
-		if (my $stable = $exon->stable_id) {
-		  if (my $seen_key = $stable_key{$stable}) {
-			 if ($seen_key ne $exon_key) {
-				print STDERR  "Exon '$exon_key': already seen exon_id '$stable' on different exon '$seen_key'.\n";
-				$exon->stable_id(undef);
-			 }
-		  } else {
-			 $stable_key{$stable} = $exon_key;
-		  }
-		}
-	 }
-	 $tran->flush_Exons;
-	 foreach my $exon (@transcript_exons) {
-		$tran->add_Exon($exon);
-	 }
+      my (@transcript_exons);
+      foreach my $exon (@{$tran->get_all_Exons}) {
+          my $exon_key = $exon->vega_hashkey;
+          if (my $found = $unique_exons{$exon_key}) {
+              # Use the found exon in the translation
+              if ($tran->translation) {
+                  if ($exon == $tran->translation->start_Exon) {
+                      $tran->translation->start_Exon($found);
+                  }
+                  if ($exon == $tran->translation->end_Exon) {
+                      $tran->translation->end_Exon($found);
+                  }
+              }
+              # re-use existing exon in this transcript
+              $exon = $found;
+          } else {
+              $unique_exons{$exon_key} = $exon;
+          }
+          push (@transcript_exons, $exon);
+          # Make sure we don't have the same stable IDs
+          # for different exons (different keys).
+          if (my $stable = $exon->stable_id) {
+              if (my $seen_key = $stable_key{$stable}) {
+                  if ($seen_key ne $exon_key) {
+                      print STDERR  "Exon '$exon_key': already seen exon_id '$stable' on different exon '$seen_key'.\n";
+                      $exon->stable_id(undef);
+                  }
+              } else {
+                  $stable_key{$stable} = $exon_key;
+              }
+          }
+      }
+      $tran->flush_Exons;
+      foreach my $exon (@transcript_exons) {
+          $tran->add_Exon($exon);
+      }
   }
 }
 

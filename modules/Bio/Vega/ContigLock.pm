@@ -36,13 +36,13 @@ sub contig_id {
 sub author{
    my ($self,$value) = @_;
    if( defined $value) {
-		 if ($value->isa("Bio::Vega::Author")) {
-			 $self->{'author'} = $value;
-		 } else {
-			 throw("Argument [$value] is not a Bio::Vega::Author");
-		 }
-	 }
-    return $self->{'author'};
+       if ($value->isa("Bio::Vega::Author")) {
+           $self->{'author'} = $value;
+       } else {
+           throw("Argument [$value] is not a Bio::Vega::Author");
+       }
+   }
+   return $self->{'author'};
 }
 
 sub timestamp{
