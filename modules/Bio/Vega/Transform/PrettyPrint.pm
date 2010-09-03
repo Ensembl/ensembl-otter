@@ -18,7 +18,7 @@ sub new {
 sub name {
   my ($self,$value) = @_;
   if( defined $value) {
-	 $self->{'name'} = $value;
+      $self->{'name'} = $value;
   }
   return $self->{'name'};
 }
@@ -26,7 +26,7 @@ sub name {
 sub value {
   my ($self,$value) = @_;
   if( defined $value) {
-	 $self->{'value'} = $value;
+      $self->{'value'} = $value;
   }
   return $self->{'value'};
 }
@@ -35,7 +35,7 @@ sub value {
 sub indent {
   my ($self,$value) = @_;
   if( defined $value) {
-	 $self->{'indent'} = $value;
+      $self->{'indent'} = $value;
   }
   return $self->{'indent'};
 }
@@ -43,10 +43,10 @@ sub indent {
 sub xmlformat {
   my ($self,$value) = @_;
   if( defined $value) {
-	 unless ($self->{'xmlformat'}){
-		$self->{'xmlformat'}='';
-	 }
-	 $self->{'xmlformat'}=$self->{'xmlformat'}.$value;
+      unless ($self->{'xmlformat'}){
+          $self->{'xmlformat'}='';
+      }
+      $self->{'xmlformat'}=$self->{'xmlformat'}.$value;
   }
   return $self->{'xmlformat'};
 }
@@ -55,7 +55,7 @@ sub attribvals {
   my ($self,$value) = @_;
   if (defined $value){
      my $vals = $self->{'attribvals'} ||= [];
-	 push @$vals, $value;
+     push @$vals, $value;
   }
   return $self->{'attribvals'};
 }
@@ -63,10 +63,10 @@ sub attribvals {
 sub attribobjs {
   my ($self,$value)=@_;
   if (defined $value){
-	 unless ($self->{'attribobjs'}){
-		$self->{'attribobjs'}=[];
-	 }
-	 push @{$self->{'attribobjs'}},$value;
+      unless ($self->{'attribobjs'}){
+          $self->{'attribobjs'}=[];
+      }
+      push @{$self->{'attribobjs'}},$value;
   }
   return $self->{'attribobjs'};
 }
