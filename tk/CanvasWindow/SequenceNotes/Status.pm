@@ -13,28 +13,28 @@ sub clone_index{
     my ($self, $index) = @_;
 
     if (defined $index) {
-	    $self->{'_clone_index'} = $index;
+        $self->{'_clone_index'} = $index;
 
 
         # Disable Prev and Next buttons at ends of range
-	    my $cs_list = $self->get_CloneSequence_list();
-	    my $prev_button = $self->prev_button();
-	    my $next_button = $self->next_button();
+        my $cs_list = $self->get_CloneSequence_list();
+        my $prev_button = $self->prev_button();
+        my $next_button = $self->next_button();
         if ($index == 0) {
             # First clone
-		    $prev_button->configure(-state => 'disabled');
-		    $next_button->configure(-state => 'normal');
-	    }
+            $prev_button->configure(-state => 'disabled');
+            $next_button->configure(-state => 'normal');
+        }
         elsif ($index + 1 >= scalar(@$cs_list)) {
             # Last clone
-		    $prev_button->configure(-state => 'normal');
-		    $next_button->configure(-state => 'disabled');
-	    }
+            $prev_button->configure(-state => 'normal');
+            $next_button->configure(-state => 'disabled');
+        }
         else {
             # Internal clone
-		    $prev_button->configure(-state => 'normal');
-		    $next_button->configure(-state => 'normal');
-	    }
+            $prev_button->configure(-state => 'normal');
+            $next_button->configure(-state => 'normal');
+        }
     }
     return $self->{'_clone_index'};
 }
@@ -42,14 +42,14 @@ sub clone_index{
 sub next_button {
     my ($self, $next) = @_;
     if ($next){
-	    $self->{'_next_button'} = $next;
+        $self->{'_next_button'} = $next;
     }
     return $self->{'_next_button'};
 }
 sub prev_button {
     my ($self, $prev) = @_;
     if ($prev){
-	    $self->{'_prev_button'} = $prev;
+        $self->{'_prev_button'} = $prev;
     }
     return $self->{'_prev_button'};
 }
@@ -83,24 +83,24 @@ sub initialise {
     
     my $button_frame = $top->Frame;
     $button_frame->pack(
-		-side => 'top',
- 		);        
+        -side => 'top',
+        );        
 
     ### These buttons should also highlight the current
     ### clone in the parent SequenceNotes window
     my $next_clone = sub { 
-	    my $cs_list = $self->get_CloneSequence_list(); 
-	    my $cur_idx = $self->clone_index();
-	    $self->clone_index(++$cur_idx) unless $cur_idx + 1 >= scalar(@$cs_list);
-	    $self->draw();
+        my $cs_list = $self->get_CloneSequence_list(); 
+        my $cur_idx = $self->clone_index();
+        $self->clone_index(++$cur_idx) unless $cur_idx + 1 >= scalar(@$cs_list);
+        $self->draw();
     };
     my $prev_clone = sub { 
-	    my $cs_list = $self->get_CloneSequence_list(); 
-	    my $cur_idx = $self->clone_index();
-	    $self->clone_index(--$cur_idx) if $cur_idx;
-	    $self->draw();
+        my $cs_list = $self->get_CloneSequence_list(); 
+        my $cur_idx = $self->clone_index();
+        $self->clone_index(--$cur_idx) if $cur_idx;
+        $self->draw();
     };
-    
+
     my $prev = $self->make_button($button_frame, 'Prev Clone', $prev_clone);
     my $next = $self->make_button($button_frame, 'Next Clone', $next_clone);
     $self->prev_button($prev);
@@ -119,27 +119,28 @@ sub initialise {
     my $status_colors = {'completed'   => 'DarkGreen', 
                          'missing'     => 'red', 
                          'unavailable' => 'DarkRed'};
-	my $column_write_text  = \&CanvasWindow::SequenceNotes::_column_write_text ;
-    $self->column_methods([
-        [$column_write_text, sub{
-	         my $pipe_status = shift;
-	         return { -font => $norm, -tags => ['searchable'], -text => $pipe_status->{'name'} }; 
-	         }],
-        [$column_write_text, sub{
-	         my $pipe_status = shift;
+    my $column_write_text  = \&CanvasWindow::SequenceNotes::_column_write_text ;
+    $self->column_methods(
+        [
+         [$column_write_text, sub{
+             my $pipe_status = shift;
+             return { -font => $norm, -tags => ['searchable'], -text => $pipe_status->{'name'} }; 
+          }],
+         [$column_write_text, sub{
+             my $pipe_status = shift;
              my $status = $pipe_status->{'status'};
-	         return { -font => $norm, -tags => ['searchable'], -text => $status, -fill => $status_colors->{$status}};
-             }],
-        [$column_write_text, sub{
-	         my $pipe_status = shift;
-	         return { -font => $norm, -tags => ['searchable'], -text => $pipe_status->{'created'} };
-             }],
-        [$column_write_text, sub{
-	         my $pipe_status = shift;
-	         return { -font => $bold, -tags => ['searchable'], -text => $pipe_status->{'version'} };
-             }],
-    ]);
-    
+             return { -font => $norm, -tags => ['searchable'], -text => $status, -fill => $status_colors->{$status}};
+          }],
+         [$column_write_text, sub{
+             my $pipe_status = shift;
+             return { -font => $norm, -tags => ['searchable'], -text => $pipe_status->{'created'} };
+          }],
+         [$column_write_text, sub{
+             my $pipe_status = shift;
+             return { -font => $bold, -tags => ['searchable'], -text => $pipe_status->{'version'} };
+          }],
+        ]);
+
     $prev->bind('<Destroy>', sub { $self = undef });
 
     return $self;

@@ -1005,7 +1005,7 @@ sub zmap_feature_evidence_xml {
         #   type    => [ qw(evidence names) ],
         #   EST     => [ qw(Em:BC01234.1 Em:CR01234.2) ],
         #   cDNA    => [ qw(Em:AB01221.3) ],
-        #   ncRNA	=> [ qw(Em:AF480562.1) ],
+        #   ncRNA   => [ qw(Em:AF480562.1) ],
         #   Protein => [ qw(Sw:Q99IVF1) ]
         # }
 
@@ -1152,8 +1152,8 @@ sub RECEIVE_FILTER {
         multiple_select => 'zMapHighlight',
         finalised       => 'zMapRelaunchZMap',
         feature_details => 'zMapTagValues',
-	    view_closed     => 'zMapRemoveView',
-	    features_loaded => 'zMapFeaturesLoaded',
+        view_closed     => 'zMapRemoveView',
+        features_loaded => 'zMapFeaturesLoaded',
     };
 
     # @list could be dynamically created...
@@ -1162,8 +1162,8 @@ sub RECEIVE_FILTER {
     unless ($reqXML->{'request'}) {
 
         #for my $k (keys %$reqXML) {
-        #	$reqXML->{'request'}->{$k} = $reqXML->{$k};
-        #	delete $reqXML->{$k};
+        #    $reqXML->{'request'}->{$k} = $reqXML->{$k};
+        #    delete $reqXML->{$k};
         #}
 
         warn "INVALID REQUEST: no <request> block\n";
