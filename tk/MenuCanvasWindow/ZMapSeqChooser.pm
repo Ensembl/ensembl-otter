@@ -1056,6 +1056,14 @@ sub zMapRemoveView {
     return (200, $z->handled_response(1));
 }
 
+sub zMapViewReady {
+    my ($self, $xml) = @_;
+
+    my $zc = $self->zMapZmapConnector;
+
+    return (200, $zc->handled_response(1));
+}
+
 sub zMapFeaturesLoaded {
     my ($self, $xml) = @_;
     
@@ -1147,6 +1155,7 @@ sub RECEIVE_FILTER {
     # The table of actions and functions...
     my $lookup = {
         register_client => 'zMapRegisterClient',
+        view_ready      => 'zMapViewReady',
         edit            => 'zMapEdit',
         single_select   => 'zMapHighlight',
         multiple_select => 'zMapHighlight',
