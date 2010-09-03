@@ -64,9 +64,9 @@ sub gff_header {
         # you're interested in, e.g.:
         #
         # print $slice->to_gff(
-        # 	 analyses 		=> ['RepeatMasker', 'vertrna'],
-        #	 feature_types	=> ['RepeatFeatures', 'DnaAlignFeatures', 'SimpleFeatures'],
-        #	 include_header => 1
+        #     analyses       => ['RepeatMasker', 'vertrna'],
+        #     feature_types  => ['RepeatFeatures', 'DnaAlignFeatures', 'SimpleFeatures'],
+        #     include_header => 1
         # );
 
         my ($self, %args) = @_;
@@ -754,7 +754,7 @@ sub gff_header {
 1;
 
 __END__
-	
+
 =head1 NAME - Bio::Vega::Utils::EnsEMBL2GFF 
 
 =head1 SYNOPSIS
