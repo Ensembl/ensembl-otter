@@ -37,12 +37,6 @@ sub qnames_locators {
     return $self->{_ql};
 }
 
-sub in_quoted_list {
-    my $self = shift @_;
-
-    return $self->{_in_quoted_list} ||= 'in ('. join(', ', map {"'$_'"} keys %{$self->qnames_locators()} ) .' ) ';
-}
-
 sub find_containing_chromosomes {
     my ($self, $slice) = @_;
 
@@ -383,28 +377,35 @@ sub find_by_hit_name {
 sub find {
     my $self = shift @_;
 
+    # lists of names, with and without versions
+    my @names = keys %{$self->qnames_locators()};
+    my @names_2 = _strip_trailing_version_numbers(@names);
+    warn sprintf "%s(): names_2: %s", (caller(0))[3], join ", ", @names_2 ;
+
+    # lists expressed as SQL conditions
+    my $condition   = _sql_list_condition(@names);
+    my $condition_2 = _sql_list_condition(@names_2);
+
     $self->find_by_stable_ids('', '.');
 
     $self->find_by_stable_ids('EnsEMBL:','ensembl_core_db_head');
 
     $self->find_by_stable_ids('EnsEMBL_EST:','ensembl_estgene_db_head');
 
-    my $in_quoted_list = $self->in_quoted_list();
+    $self->find_by_hit_name('Pipeline_dna_hit:', '', 'dna', $condition);
+    $self->find_by_hit_name('Pipeline_protein_hit:', '', 'protein', $condition);
 
-    $self->find_by_hit_name('Pipeline_dna_hit:', '', 'dna', $in_quoted_list);
-    $self->find_by_hit_name('Pipeline_protein_hit:', '', 'protein', $in_quoted_list);
+    $self->find_by_xref('CCDS_db:','ens_livemirror_ccds_db', $condition_2);
 
-    $self->find_by_xref('CCDS_db:','ens_livemirror_ccds_db', $in_quoted_list);
+    $self->find_by_seqregion_names($condition);
 
-    $self->find_by_seqregion_names($in_quoted_list);
-
-    $self->find_by_feature_attributes($in_quoted_list, 'gene_name',
+    $self->find_by_feature_attributes($condition, 'gene_name',
         'gene_attrib', 'gene_id', 'name', 'get_GeneAdaptor');
 
-    $self->find_by_feature_attributes($in_quoted_list, 'gene_synonym',
+    $self->find_by_feature_attributes($condition, 'gene_synonym',
         'gene_attrib', 'gene_id', 'synonym', 'get_GeneAdaptor');
 
-    $self->find_by_feature_attributes($in_quoted_list, 'transcript_name',
+    $self->find_by_feature_attributes($condition, 'transcript_name',
         'transcript_attrib', 'transcript_id', 'name', 'get_TranscriptAdaptor');
 
     foreach my $qname (keys %{$self->qnames_locators()}) {
@@ -418,9 +419,9 @@ sub find {
             'transcript_attrib', 'transcript_id', 'name', 'get_TranscriptAdaptor');
     }
 
-    $self->find_by_seqregion_attributes($in_quoted_list, 'international_clone_name', 'clone', 'intl_clone_name');
+    $self->find_by_seqregion_attributes($condition, 'international_clone_name', 'clone', 'intl_clone_name');
 
-    $self->find_by_seqregion_attributes($in_quoted_list, 'clone_accession', 'clone', 'embl_acc');
+    $self->find_by_seqregion_attributes($condition, 'clone_accession', 'clone', 'embl_acc');
 }
 
 sub generate_output {
@@ -448,6 +449,16 @@ sub generate_output {
     }
 
     return $output_string;
+}
+
+# these are private subroutines, *not* methods
+
+sub _strip_trailing_version_numbers {
+    return map { /^(.*?)(?:\.[[:digit:]]+)?$/ } @_;
+}
+
+sub _sql_list_condition {
+    return 'in ( '. join(', ', map {"'$_'"} @_ ) .' ) ';
 }
 
 1;
