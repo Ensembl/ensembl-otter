@@ -563,7 +563,7 @@ sub reload_filter_state {
         my $state_hash = $filters->{$filter_name}{state};
         for my $state (@FILTER_STATES) {
             my $setting = $cfg->val($filter_name, $state);
-            $state_hash->$state = $setting if defined $setting;
+            $state_hash->{$state} = $setting if defined $setting;
         } 
     }
 
