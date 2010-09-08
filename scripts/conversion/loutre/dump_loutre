@@ -735,13 +735,13 @@ sub transfer_gene {
   unless ($AUTHOR) {
     if (! $lgene->gene_author->group) {
       $AUTHOR = Bio::Vega::Author->new(
-									-NAME  => 'vega',
-									-EMAIL => 'vega.sanger.ac.uk',
-									-GROUP => Bio::Vega::AuthorGroup->new(
-														-NAME  => 'havana',
-														-EMAIL => 'vega@sanger.ac.uk',
-									)
-			);
+	-NAME  => 'vega',
+	-EMAIL => 'vega.sanger.ac.uk',
+	-GROUP => Bio::Vega::AuthorGroup->new(
+	  -NAME  => 'havana',
+	  -EMAIL => 'vega@sanger.ac.uk',
+	)
+      );
     }
   }
 
@@ -759,7 +759,6 @@ sub transfer_gene {
     $support->log_warning("Couldn't fetch vega gene slice\n");
     return 0;
   }
-
   unless ($lgene->gene_author) {
     $support->log_warning("No author attached to ".$lgene->stable_id.". Using default Havana author\n");
     $lgene->gene_author($AUTHOR);
