@@ -294,15 +294,15 @@ foreach my $chr (@chr_sorted) {
 
 	      # loop over exons and look for overlapping
 	      # similarity features
-	      foreach my $exon (@exons) {
+#	      foreach my $exon (@exons) {
 #		warn $exon->stable_id.":".$exon->end."--".$hit->[0]." --- ".$exon->start."--".$hit->[1];
-		if ($exon->end >= $hit->[0] && $exon->start <= $hit->[1]) {
-		  $support->log_verbose("Matches similarity feature with dbID ".$hit->[2].".\n", 3);
+#		if ($exon->end >= $hit->[0] && $exon->start <= $hit->[1]) {
+#		  $support->log_verbose("Matches similarity feature with dbID ".$hit->[2].".\n", 3);
 		  # store unique evidence identifier in hash
-		  $se_hash{$exon->dbID.":".$hit->[2].":".$hit->[3]} = 1;
-		  $e_match = 1;
-		}
-	      }
+#		  $se_hash{$exon->dbID.":".$hit->[2].":".$hit->[3]} = 1;
+#		  $e_match = 1;
+#		}
+#	      }
 	    }
 	  }
 	}
