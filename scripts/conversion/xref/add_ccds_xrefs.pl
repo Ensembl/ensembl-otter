@@ -76,12 +76,19 @@ my $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
 
 # parse options
 $support->parse_common_options(@_);
-$support->parse_extra_options('ccdsfile=s');
-$support->allowed_params($support->get_common_params, 'ccdsfile');
+$support->parse_extra_options(
+  'ccdsfile=s',
+  'prune=s'
+);
+$support->allowed_params(
+  $support->get_common_params,
+  'ccdsfile',
+  'prune',
+);
 
 if ($support->param('help') or $support->error) {
-    warn $support->error if $support->error;
-    pod2usage(1);
+  warn $support->error if $support->error;
+  pod2usage(1);
 }
 
 # ask user to confirm parameters to proceed
@@ -95,6 +102,27 @@ my $dba = $support->get_database('ensembl');
 my $ta = $dba->get_TranscriptAdaptor;
 my $ea = $dba->get_DBEntryAdaptor;
 
+if ($support->param('prune') and $support->user_proceed('Would you really like to delete all previous CCDS xrefs?')) {
+
+  $support->log("Deleting  CCDS  xrefs...\n");
+
+  my $num = $dba->dbc->do(qq(
+           DELETE x
+           FROM xref x, external_db ed
+           WHERE x.external_db_id = ed.external_db_id
+           AND ed.db_name = 'CCDS'));
+  $support->log("Done deleting $num entries.\n");
+
+  # object_xrefs
+  $support->log("Deleting orphan object_xrefs...\n");
+  $num = $dba->dbc->do(qq(
+           DELETE ox
+           FROM object_xref ox
+           LEFT JOIN xref x ON ox.xref_id = x.xref_id
+           WHERE x.xref_id IS NULL
+        ));
+}
+
 # get list of identifiers into a hash
 $support->check_required_params('ccdsfile');
 $support->log_stamped("Reading CCDS identifier input file...\n");
@@ -102,8 +130,8 @@ my $ccds_file = $support->param('ccdsfile');
 open (FHIN, "<$ccds_file");
 my %CCDS_idents;
 foreach my $entry (<FHIN>) {
-    my ($vega,$ccds) = $entry =~ /(\S*)\s+(\S*)/;
-    $CCDS_idents{$vega} = $ccds;
+  my ($vega,$ccds) = $entry =~ /(\S*)\s+(\S*)/;
+  $CCDS_idents{$vega} = $ccds;
 }
 $support->log_stamped("Done parsing ".scalar(keys %CCDS_idents)." entries.\n");
 
@@ -112,31 +140,31 @@ $support->log_stamped("Adding xrefs to db...\n");
 my ($no_trans, $num_success, $no_match) = (0, 0, 0);
 my ($successful, $non_translating, $missing_transcript);
 foreach my $k (keys %CCDS_idents) {
-    if (my $transcript = $ta->fetch_by_stable_id($k)) {
-        if (my $translation = $transcript->translation) {
-            $num_success++;
-            my $internal_id = $translation->dbID;
-            my $ccds_idnt = $CCDS_idents{$k};
-            my ($prim_acc) = $ccds_idnt =~ /(\w*)/;
-            $successful .= sprintf "    %-30s%-20s%-20s\n", $k, $internal_id, $ccds_idnt;
-            my $dbentry = Bio::EnsEMBL::DBEntry->new(
-                    -primary_id => $prim_acc,
-                    -display_id => $ccds_idnt,
-                    -version    => 1,
-                    -dbname     => 'CCDS',
-                    -release    => 1,
-            );
-            unless ($support->param('dry_run')) {
-                $ea->store($dbentry, $internal_id, 'Translation');
-            }
-        } else {
-            $no_trans++;
-            $non_translating .= "    $k\n";
-        }
+  if (my $transcript = $ta->fetch_by_stable_id($k)) {
+    if (my $translation = $transcript->translation) {
+      $num_success++;
+      my $internal_id = $translation->dbID;
+      my $ccds_idnt = $CCDS_idents{$k};
+      my ($prim_acc) = $ccds_idnt =~ /(\w*)/;
+      $successful .= sprintf "    %-30s%-20s%-20s\n", $k, $internal_id, $ccds_idnt;
+      my $dbentry = Bio::EnsEMBL::DBEntry->new(
+	-primary_id => $prim_acc,
+	-display_id => $ccds_idnt,
+	-version    => 1,
+	-dbname     => 'CCDS',
+	-release    => 1,
+      );
+      unless ($support->param('dry_run')) {
+	$ea->store($dbentry, $internal_id, 'Translation');
+      }
     } else {
-        $no_match++;
-        $missing_transcript .= "    $k\n";
+      $no_trans++;
+      $non_translating .= "    $k\n";
     }
+  } else {
+    $no_match++;
+    $missing_transcript .= "    $k\n";
+  }
 }
 $support->log("Done. ".$support->date_and_mem."\n\n");
 
@@ -148,18 +176,18 @@ $support->log("Identifiers with no matching transcript in Vega: $no_match.\n", 1
 $support->log("Transcripts in this set that don't translate: $no_trans.\n", 1);
 
 if ($successful) {
-    $support->log("\nTranscripts which had a CCDS identifier added:\n");
-    $support->log(sprintf "    %-30s%-20s%-20s\n", qw(STABLE_ID DBID CCDS_ID));
-    $support->log("    " . "-"x70 . "\n");
-    $support->log($successful);
+  $support->log("\nTranscripts which had a CCDS identifier added:\n");
+  $support->log(sprintf "    %-30s%-20s%-20s\n", qw(STABLE_ID DBID CCDS_ID));
+  $support->log("    " . "-"x70 . "\n");
+  $support->log($successful);
 }
 if ($missing_transcript) {
-    $support->log("\nTranscripts with no matching CCDS identifier:\n");
-    $support->log($missing_transcript);
+  $support->log("\nTranscripts with no matching CCDS identifier:\n");
+  $support->log($missing_transcript);
 }
 if ($non_translating) {
-    $support->log("\nTranscripts in this set that don't translate:\n");
-    $support->log($non_translating);
+  $support->log("\nTranscripts in this set that don't translate:\n");
+  $support->log($non_translating);
 }
 
 # finish log
