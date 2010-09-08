@@ -15,7 +15,8 @@ count_transferred_genes.pl - compare gene / transcripts numbers in two databases
     -h, --help, -?                      print help (this message)
 
 Specific options:
-                                        details of previous database to compare against:
+
+details of previous database to compare against:
     --lastdbname=STRING
     --lasthost=S
     --lastport=S
@@ -76,14 +77,16 @@ $support->parse_extra_options(
   'evegadbname=s',
   'lastdbname=s',
 );
-$support->allowed_params($support->get_common_params,
-			 'evegahost',
-			 'evegaport',
-			 'evegauser',
-			 'evegapass',
-			 'evegadbname',
-                         'lastdbname',
-		       );
+$support->allowed_params(
+  $support->get_common_params,
+  'evegahost',
+  'evegaport',
+  'evegauser',
+  'evegapass',
+  'evegadbname',
+  'lastdbname',
+);
+
 if ($support->param('help') or $support->error) {
     warn $support->error if $support->error;
     pod2usage(1);
