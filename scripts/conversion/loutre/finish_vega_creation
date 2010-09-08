@@ -402,7 +402,7 @@ if ($alt_assembly = $support->param('ensemblassembly') ) {
   unless ($support->param('dry_run')) {
     $vdbh->do($sql);
   }
-
+  
  CHROM:
   foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
     my $v_name  = $chrom->seq_region_name;
@@ -525,7 +525,6 @@ if ($alt_assembly = $support->param('ensemblassembly') ) {
   }
 }
 
-
 #####################################
 # Chromosome names, gene source etc #
 #####################################
@@ -591,7 +590,15 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
 #      next if $source eq 'ensembl'; #halfwise genes
       my $gsid = $gene->stable_id;
       my $gid  = $gene->dbID;
-      my $gname = $gene->get_all_Attributes('name')->[0]->value;
+      $support->log_verbose("Studying gene $gsid\n");
+      my $gname;
+      #cope with no name attribute (although if this happens you're probably in the poo!)
+      eval {  $gene->get_all_Attributes('name')->[0]->value; };
+      if ($@) { 
+	$support->log_warning("Gene $gsid doesn't have a name attrib: $@");
+	$gname = 'Unknown';
+      }
+	
       if ($source ne 'havana') {
 	$source = uc($source);
 	if ($gene->source ne $source) {
