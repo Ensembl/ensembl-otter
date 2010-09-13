@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2010-09-13 10:06:37 $
-# Id:            $Id: nph-get_clonesequences_fast,v 1.30 2010-09-13 10:06:37 jh13 Exp $
+# Last modified: $Date: 2010-09-13 10:06:54 $
+# Id:            $Id: nph-get_clonesequences_fast,v 1.31 2010-09-13 10:06:54 jh13 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_clonesequences_fast,v $
 
 use strict;
@@ -138,7 +138,7 @@ while (
         };
     }
 
-    if (my $prev = $cs_list[$#cs_list]) {
+    if (my $prev = $cs_list[-1]) {
         # Merge adjacent segments of the same contig together.
         if ($cs->{'contig_name'} eq $prev->{'contig_name'}) {
             $prev->{'chr_end'} = $cs->{'chr_end'};
