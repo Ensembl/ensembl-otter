@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2010-05-04 14:17:52 $
-# Id:            $Id: nph-get_analyses_status,v 1.22 2010-05-04 14:17:52 ml6 Exp $
+# Last modified: $Date: 2010-09-13 10:06:54 $
+# Id:            $Id: nph-get_analyses_status,v 1.28 2010-09-13 10:06:54 jh13 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_analyses_status,v $
 
 use strict;
@@ -90,7 +90,7 @@ if(! @input_ids) {
     $server->return_emptyhanded();
 }
 
-my $input_id_str = join(', ', map "'$_'", @input_ids);
+my $input_id_str = join(', ', map { "'$_'" } @input_ids);
 my $sql_statement = qq{
         SELECT i.input_id
           , a.logic_name
