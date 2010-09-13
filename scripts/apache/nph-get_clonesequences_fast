@@ -3,8 +3,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2010-05-04 14:17:52 $
-# Id:            $Id: nph-get_clonesequences_fast,v 1.26 2010-05-04 14:17:52 ml6 Exp $
+# Last modified: $Date: 2010-09-13 10:06:37 $
+# Id:            $Id: nph-get_clonesequences_fast,v 1.30 2010-09-13 10:06:37 jh13 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_clonesequences_fast,v $
 
 use strict;
@@ -168,7 +168,7 @@ foreach my $cs (@cs_list) {
         my $value = $cs->{$tag};
         next unless defined $value;
         if (ref($value)) {
-            my $att_str = join(' ', map qq{$_="$value->{$_}"}, keys %$value);
+            my $att_str = join(' ', map { qq{$_="$value->{$_}"} } keys %$value);
             $xml .= qq{          <$tag $att_str></$tag>\n};
         }
         else {
