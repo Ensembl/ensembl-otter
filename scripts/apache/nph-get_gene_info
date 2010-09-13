@@ -5,8 +5,8 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2010-05-04 14:17:52 $
-# Id:            $Id: nph-get_gene_info,v 1.6 2010-05-04 14:17:52 ml6 Exp $
+# Last modified: $Date: 2010-09-13 10:06:54 $
+# Id:            $Id: nph-get_gene_info,v 1.10 2010-09-13 10:06:54 jh13 Exp $
 # Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_gene_info,v $
 
 
@@ -47,7 +47,7 @@ use Bio::Otter::ServerScriptSupport;
                 next unless $sid;
                 push(@id_list, $sid);
             }
-            my $id_query = join(', ', map "'$_'", @id_list);
+            my $id_query = join(', ', map { "'$_'" } @id_list);
             $sql .= qq{
                 AND gsid1.stable_id in ($id_query)
             };
