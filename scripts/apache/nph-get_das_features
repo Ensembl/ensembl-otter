@@ -3,9 +3,6 @@
 # Author:        lg4
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2010-07-19 16:59:20 $
-# Id:            $Id: nph-get_das_features,v 1.39 2010-07-19 16:59:20 jh13 Exp $
-# Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_das_features,v $
 
 use strict;
 use warnings;

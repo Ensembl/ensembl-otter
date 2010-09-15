@@ -3,9 +3,6 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2010-09-13 10:06:54 $
-# Id:            $Id: nph-set_sequence_note,v 1.25 2010-09-13 10:06:54 jh13 Exp $
-# Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-set_sequence_note,v $
 
 use strict;
 use warnings;

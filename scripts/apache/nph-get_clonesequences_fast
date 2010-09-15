@@ -3,9 +3,6 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2010-09-13 10:06:54 $
-# Id:            $Id: nph-get_clonesequences_fast,v 1.31 2010-09-13 10:06:54 jh13 Exp $
-# Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-get_clonesequences_fast,v $
 
 use strict;
 use warnings;
