@@ -3,9 +3,6 @@
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
-# Last modified: $Date: 2010-05-04 14:17:52 $
-# Id:            $Id: nph-find_clones,v 1.22 2010-05-04 14:17:52 ml6 Exp $
-# Source:        $Source: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/apache/Attic/nph-find_clones,v $
 
 use strict;
 use warnings;
