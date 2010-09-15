@@ -56,7 +56,7 @@ use Hum::Sort 'ace_sort';
 
 sub print_agp {
     my( $ds, $sequence_set ) = @_;
-    
+
     my $dba = $ds->get_cached_DBAdaptor;
     my $sth = $dba->dbc->prepare(q{
         SELECT chr_attrib.value
@@ -68,32 +68,32 @@ sub print_agp {
           , acc_attrib.value
           , sv_attrib.value
         FROM seq_region chr
-          , seq_region_attrib chr_attrib
           , seq_region contig
           , seq_region clone
-          , seq_region_attrib acc_attrib
-          , seq_region_attrib sv_attrib
           , assembly a_chr
           , assembly a_clone
-        WHERE chr_attrib.attrib_type_id =
+        JOIN seq_region_attrib chr_attrib
+          ON chr.seq_region_id = chr_attrib.seq_region_id
+          AND chr_attrib.attrib_type_id =
         (SELECT attrib_type_id
             FROM attrib_type
             WHERE code = 'chr')
-          AND chr_attrib.seq_region_id = chr.seq_region_id
-          AND chr.seq_region_id = a_chr.asm_seq_region_id
-          AND a_chr.cmp_seq_region_id = contig.seq_region_id
-          AND contig.seq_region_id = a_clone.cmp_seq_region_id
-          AND a_clone.asm_seq_region_id = clone.seq_region_id
-          AND clone.seq_region_id = acc_attrib.seq_region_id
+        JOIN seq_region_attrib acc_attrib
+          ON clone.seq_region_id = acc_attrib.seq_region_id
           AND acc_attrib.attrib_type_id =
         (SELECT attrib_type_id
             FROM attrib_type
             WHERE code = 'embl_acc')
-          AND clone.seq_region_id = sv_attrib.seq_region_id
+        JOIN seq_region_attrib sv_attrib
+          ON clone.seq_region_id = sv_attrib.seq_region_id
           AND sv_attrib.attrib_type_id =
         (SELECT attrib_type_id
             FROM attrib_type
             WHERE code = 'embl_version')
+        WHERE chr.seq_region_id = a_chr.asm_seq_region_id
+          AND a_chr.cmp_seq_region_id = contig.seq_region_id
+          AND contig.seq_region_id = a_clone.cmp_seq_region_id
+          AND a_clone.asm_seq_region_id = clone.seq_region_id
           AND chr.name = ?
     });
     $sth->execute($sequence_set);
