@@ -580,9 +580,6 @@ CREATE TABLE meta (
 ) TYPE=InnoDB;
 
 
-# Auto add schema version to database
-insert into meta (meta_key, meta_value) values ("schema_version", "$Revision: 1.8 $");
-
 
 CREATE TABLE prediction_transcript (
     prediction_transcript_id int unsigned not null auto_increment,
