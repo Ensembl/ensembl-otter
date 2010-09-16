@@ -12,8 +12,7 @@ $INC{q(BlastableVersion.pm)}++;
 use vars qw(%versions $debug $revision);
 
 $debug = 0;
-$revision='$Revision: 1.5 $ ';
-$revision =~ s/\$.evision: (\S+).*/$1/;
+$revision='1.5';
 
 #### CONSTRUCTORS
 
