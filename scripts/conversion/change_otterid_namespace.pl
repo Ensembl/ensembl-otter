@@ -8,8 +8,6 @@
 # modify it under the terms of the GNU General Public License
 # as published by the Free Software Foundation
 #
-# $Header: /tmp/ENSCOPY-ENSEMBL-OTTER/scripts/conversion/Attic/change_otterid_namespace.pl,v 1.5 2004-01-27 12:27:55 th Exp $
-#
 # Function:
 # T: 
 # D: 
