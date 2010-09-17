@@ -29,11 +29,13 @@ sub initialise {
     my $window = $self->window();
     $window->protocol('WM_DELETE_WINDOW', $self->hide_me_ref());
     $window->bind('<Destroy>', sub { $self = undef });
+    return;
 }
 
 sub draw {
     my ($self) = @_;
     $self->show_me();
+    return;
 }
 
 sub hide_me_ref {
@@ -49,6 +51,7 @@ sub hide_me_ref {
 sub hide_me {
     my ($self) = @_;
     $self->hide_me_ref->();
+    return;
 }
 
 sub show_me_ref {
@@ -68,6 +71,7 @@ sub show_me_ref {
 sub show_me {
     my $self = shift;
     $self->show_me_ref->();
+    return;
 }
 
 sub window {
@@ -119,6 +123,7 @@ sub delete_all_actions {
     foreach my $name (keys(%{ $self->{'_actions'} })) {
         $self->delete_action($name);
     }
+    return;
 }
 
 sub DESTROY {
@@ -126,6 +131,7 @@ sub DESTROY {
     my $t    = $self->title();
     my ($type) = ref($self) =~ /([^:]+)$/;
     warn "Destroying $type named '$t'";
+    return;
 }
 
 1;
