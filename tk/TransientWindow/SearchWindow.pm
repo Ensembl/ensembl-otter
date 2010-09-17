@@ -15,6 +15,7 @@ sub initialise{
     $self->text_variable_ref('search_text',  $DEFAULT_SEARCH_TEXT,  1);
     $self->text_variable_ref('search_type',  $DEFAULT_SEARCH_TYPE,  1);
     $self->text_variable_ref('context_size', $DEFAULT_CONTEXT_SIZE, 1);
+    return;
 }
 
 sub draw {
