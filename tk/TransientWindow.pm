@@ -39,7 +39,7 @@ sub draw {
 }
 
 sub hide_me_ref {
-    my $self = shift;
+    my ($self) = @_;
     my $ref  = $self->{'_hide_the_window'};
     unless ($ref) {
         my $window = $self->window();
@@ -69,7 +69,7 @@ sub show_me_ref {
 }
 
 sub show_me {
-    my $self = shift;
+    my ($self) = @_;
     $self->show_me_ref->();
     return;
 }
@@ -119,7 +119,7 @@ sub delete_action {
 }
 
 sub delete_all_actions {
-    my $self = shift;
+    my ($self) = @_;
     foreach my $name (keys(%{ $self->{'_actions'} })) {
         $self->delete_action($name);
     }
@@ -127,7 +127,7 @@ sub delete_all_actions {
 }
 
 sub DESTROY {
-    my $self = shift;
+    my ($self) = @_;
     my $t    = $self->title();
     my ($type) = ref($self) =~ /([^:]+)$/;
     warn "Destroying $type named '$t'";
