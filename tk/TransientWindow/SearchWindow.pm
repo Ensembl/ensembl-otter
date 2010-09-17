@@ -10,8 +10,8 @@ my $DEFAULT_SEARCH_TYPE  = 'locus';
 my $DEFAULT_CONTEXT_SIZE = 1;
 
 sub initialise{
-    my $self = shift;
-    $self->SUPER::initialise(@_);
+    my ($self, @args) = @_;
+    $self->SUPER::initialise(@args);
     $self->text_variable_ref('search_text',  $DEFAULT_SEARCH_TEXT,  1);
     $self->text_variable_ref('search_type',  $DEFAULT_SEARCH_TYPE,  1);
     $self->text_variable_ref('context_size', $DEFAULT_CONTEXT_SIZE, 1);
@@ -19,7 +19,7 @@ sub initialise{
 }
 
 sub draw {
-    my $self = shift;
+    my ($self) = @_;
     return if $self->{'_drawn'};
 
     # get the callbacks required
