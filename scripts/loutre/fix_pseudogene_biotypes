@@ -8,53 +8,62 @@ use Bio::Otter::Lace::Defaults;
 
 {
     my $usage = sub { exec('perldoc', $0) };
+
     # This do_getopt() call is needed to parse the otter config files
     # even if you aren't giving any arguments on the command line.
-    Bio::Otter::Lace::Defaults::do_getopt(
-        'h|help!'       => $usage,
-        ) or $usage->();
-    
+    Bio::Otter::Lace::Defaults::do_getopt('h|help!' => $usage,) or $usage->();
+
     # Client communicates with otter HTTP server
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
-    
+
     # foreach my $ds ($cl->get_all_DataSets) {
 
     # foreach my $ds ($cl->get_DataSet_by_name('human')) {
 
-    $0 = 'otterlace';   # In order to see restricted datasets
+    $0 = 'otterlace';    # In order to see restricted datasets
     foreach my $ds ($cl->get_DataSet_by_name('human_test')) {
 
         my $dba = $ds->make_Vega_DBAdaptor;
-        
-        fix_pseudogene_biotypes($ds, $dba);
+        $dba->begin_work;
+        eval { fix_pseudogene_biotypes($ds, $dba); };
+        $dba->rollback;
     }
 }
 
 sub fix_pseudogene_biotypes {
     my ($ds, $dba) = @_;
-    
-    $dba->dbc->do(q{
+
+    $dba->dbc->do(
+        q{
         UPDATE transcript
         SET biotype = 'transcribed_processed_pseudogene'
         WHERE biotype = 'processed_pseudogene'
-    });
-    $dba->dbc->do(q{
+    }
+    );
+    $dba->dbc->do(
+        q{
         UPDATE transcript
         SET biotype = 'transcribed_unprocessed_pseudogene'
         WHERE biotype = 'unprocessed_pseudogene'
-    });
-    $dba->dbc->do(q{
+    }
+    );
+    $dba->dbc->do(
+        q{
         UPDATE gene
         SET biotype = 'transcribed_processed_pseudogene'
         WHERE biotype = 'processed_pseudogene'
-    });
-    $dba->dbc->do(q{
+    }
+    );
+    $dba->dbc->do(
+        q{
         UPDATE gene
         SET biotype = 'transcribed_unprocessed_pseudogene'
         WHERE biotype = 'unprocessed_pseudogene'
-    });
-    
-    my $sth = $dba->dbc->prepare(q{
+    }
+    );
+
+    my $sth = $dba->dbc->prepare(
+        q{
         SELECT gsid.stable_id
           , g.gene_id
           , g.biotype
@@ -68,45 +77,49 @@ sub fix_pseudogene_biotypes {
           AND g.biotype like 'polymorphic%'
           AND g.source = 'havana'
         GROUP BY g.gene_id
-    });
+    }
+    );
     $sth->execute;
-    
-    my $update_gene_biotype = $dba->dbc->prepare(q{
+
+    my $update_gene_biotype = $dba->dbc->prepare(
+        q{
         UPDATE gene
         SET biotype = ?
         WHERE gene_id = ?
-    });
-    
+    }
+    );
+
     my %gene_type_pat;
     while (my ($stable_id, $gene_id, $biotype, $t_types) = $sth->fetchrow) {
         my %t_type_count;
         foreach my $type (split /,/, $t_types) {
             $t_type_count{$type}++;
         }
-        
+
         # my @counts = map "$_($t_type_count{$_})", sort keys %t_type_count;
         my @counts = sort keys %t_type_count;
-        
+
         my $pat = "$biotype {@counts}";
         $gene_type_pat{$pat}++;
-        if ($pat =~ /(nonsense|coding)/
-            or $pat eq 'polymorphic_pseudogene {processed_pseudogene}'
-            or $pat eq 'polymorphic {artifact transcribed_processed_pseudogene}'
-            )
-        {
-            print "$stable_id\t$pat\n";
-        }
-        
-        my ($pseudo) = grep /pseudo/, @counts;
-        $update_gene_biotype->execute($pseudo, $gene_id);
+
+        # if ($pat =~ /(nonsense|coding)/
+        #     or $pat eq 'polymorphic_pseudogene {processed_pseudogene}'
+        #     or $pat eq 'polymorphic {artifact transcribed_processed_pseudogene}'
+        #     )
+        # {
+        #     print "$stable_id\t$pat\n";
+        # }
+
+        # my ($pseudo) = grep /pseudo/, @counts;
+        # $update_gene_biotype->execute($pseudo, $gene_id);
     }
+
     printf STDERR "\nDataSet %s\n", $ds->name;
     foreach my $pat (sort keys %gene_type_pat) {
         my $count = $gene_type_pat{$pat};
         printf STDERR "  %4d  %s\n", $count, $pat;
     }
 }
-
 
 __END__
 
