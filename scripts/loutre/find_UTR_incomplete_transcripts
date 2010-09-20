@@ -55,8 +55,6 @@ use Bio::Otter::Lace::Defaults;
     });
     
     $sth->execute;
-    
-    
 }
 
 
