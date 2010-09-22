@@ -24,6 +24,8 @@ sub Bio::EnsEMBL::Gene::propagate_slice {
         $transcript->slice($slice);
     }
     $gene->slice($slice);
+
+    return;
 }
 
 my $server = Bio::Otter::ServerScriptSupport->new;
