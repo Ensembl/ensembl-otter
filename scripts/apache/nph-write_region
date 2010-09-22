@@ -232,6 +232,7 @@ sub insert_ContigInfo_Attributes {
                         -attributes => $ctg_attrib_list,
     );
     $db->get_ContigInfoAdaptor->store($contig_info, $time_uniseconds);
+    return;
 }
 
 sub strip_incomplete_genes {
@@ -251,6 +252,7 @@ sub strip_incomplete_genes {
             $i++;
         }
     }
+    return;
 }
 
 1;
