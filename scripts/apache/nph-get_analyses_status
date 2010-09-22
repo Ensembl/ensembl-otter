@@ -14,7 +14,7 @@ use Bio::Otter::ServerScriptSupport;
 my $ana_root = 'SubmitContig';
 
 sub get_possible_analyses {
-    my $pdbc = shift @_;
+    my ($pdbc) = @_;
 
     my %rule = ();
     my $rule_sth = $pdbc->prepare(qq{
