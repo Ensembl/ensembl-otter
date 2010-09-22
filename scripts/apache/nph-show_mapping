@@ -74,7 +74,7 @@ sub comma_separate_thousands {
     my ($num) = @_;
     
     for (my $i = length($num) - 3; $i > 0; $i -= 3) {
-        substr($num, $i, 0) = ',';
+        substr($num, $i, 0, ',');
     }
     return $num;
 }
