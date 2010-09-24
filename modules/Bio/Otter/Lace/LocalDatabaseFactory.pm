@@ -36,48 +36,38 @@ sub sessions_needing_recovery {
     my @otterlace_procs = grep {$_->cmndline =~ /otterlace/} @{$proc_table->table};
     my %existing_pid = map {$_->pid, 1} @otterlace_procs;
 
-    my $tmp_dir = '/var/tmp';
-    opendir my $var_tmp, $tmp_dir or die "Cannot read '$tmp_dir' : $!";
     my $to_recover = [];
-    my $version = $self->Client->version;
-    foreach (readdir $var_tmp) {
-        if (/^lace_$version\.(\d+)/o) {
-            my $pid = $1;
-            next if $existing_pid{$pid};
-            my $lace_dir = "$tmp_dir/$_";
+    my $client = $self->Client;
 
-            # Skip if directory is not ours
-            my ($owner, $mtime) = (stat($lace_dir))[4,9];
-            next if $< != $owner;
+    foreach ( $client->all_sessions ) {
+        my ( $lace_dir, $pid, $mtime ) = @{$_};
+        next if $existing_pid{$pid};
 
-            my $ace_wrm = "$lace_dir/database/ACEDB.wrm";
-            if (-e $ace_wrm) {
-                my $title = $self->get_title($lace_dir);
-                push(@$to_recover, [$lace_dir, $mtime, $title]);
-            } else {
-                my $client = $self->Client;
-                my $save_sub = $client->fatal_error_prompt;
-                $client->fatal_error_prompt(sub{ die shift });
-                eval {
-                    # Attempt to release locks of uninitialised sessions
-                    my $adb = $self->recover_session($lace_dir);
-                    $adb->error_flag(0);    # It is uninitialised, so we want it to be removed
-                    $lace_dir = $adb->home;
-                    if ($adb->write_access) {
-                        $adb->unlock_otter_slice;
-                        print STDERR "\nRemoved lock from uninitialised database in '$lace_dir'\n";
-                    }
-                };
-                $client->fatal_error_prompt($save_sub);
-                if (-d $lace_dir) {
-                    # Belt and braces - if the session was unrecoverable we want it to be deleted.
-                    print STDERR "\nNo such file: '$lace_dir/database/ACEDB.wrm'\nDeleting uninitialized database '$lace_dir'\n";
-                    rmtree($lace_dir);
+        my $ace_wrm = "$lace_dir/database/ACEDB.wrm";
+        if (-e $ace_wrm) {
+            my $title = $self->get_title($lace_dir);
+            push(@$to_recover, [$lace_dir, $mtime, $title]);
+        } else {
+            my $save_sub = $client->fatal_error_prompt;
+            $client->fatal_error_prompt(sub{ die shift });
+            eval {
+                # Attempt to release locks of uninitialised sessions
+                my $adb = $self->recover_session($lace_dir);
+                $adb->error_flag(0);    # It is uninitialised, so we want it to be removed
+                $lace_dir = $adb->home;
+                if ($adb->write_access) {
+                    $adb->unlock_otter_slice;
+                    print STDERR "\nRemoved lock from uninitialised database in '$lace_dir'\n";
                 }
+            };
+            $client->fatal_error_prompt($save_sub);
+            if (-d $lace_dir) {
+                # Belt and braces - if the session was unrecoverable we want it to be deleted.
+                print STDERR "\nNo such file: '$lace_dir/database/ACEDB.wrm'\nDeleting uninitialized database '$lace_dir'\n";
+                rmtree($lace_dir);
             }
         }
     }
-    closedir $var_tmp or die "Error reading directory '$tmp_dir' : $!";
 
     # Sort by modification date, ascending
     $to_recover = [sort {$a->[1] <=> $b->[1]} @$to_recover];
