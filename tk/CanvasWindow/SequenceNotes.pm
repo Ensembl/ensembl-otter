@@ -53,12 +53,6 @@ sub SequenceSetChooser {
 }
 
 
-sub LocalDatabaseFactory {
-    my( $self ) = @_;
-
-    return $self->SequenceSetChooser->LocalDatabaseFactory();
-}
-
 sub get_CloneSequence_list {
     my( $self , $force_update ) = @_;
     
