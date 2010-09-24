@@ -4,231 +4,196 @@
 
 rollback_gene.pl
 
-=head1 SYNOPSIS
-
-rollback_gene.pl
-
 =head1 DESCRIPTION
 
-This script is used to switch a gene back to its previous version if it exists.
-First it delete the current gene then it makes the previous gene current.
-Must provide a list of gene stable id.
+This script is used to switch a gene back to its previous version, if it
+exists. First it delete the current gene then it makes the previous gene
+current.
 
-here is an example commandline
+=head1 EXAMPLE
 
-./rollback_gene.pl
--host otterlive
--port 3352
--dbname loutre_mouse
--user ottuser
--pass *****
--stable_id OTTMUSG00000016621,OTTMUSG00000001145
--author ml6
+  ./rollback_gene.pl -dataset mouse -author ml6 -once -stable OTTMUSG00000016621,OTTMUSG00000001145
 
 =head1 OPTIONS
 
-    -host (default:otterlive)   host name for the loutre database (gets put as phost= in locator)
-    -dbname (no default)  For RDBs, what name to connect to (pname= in locator)
-    -user (check the ~/.netrc file)  For RDBs, what username to connect as (puser= in locator)
-    -pass (check the ~/.netrc file)  For RDBs, what password to use (ppass= in locator)
-    -port (check the ~/.netrc file)   For RDBs, what port to use (pport= in locator)
+=over 4
 
-    -stable_id	list of gene stable ids, comma separated
-    -force	don't ask for confirmation
-    -once	roll to the previous version only
-    -author	author login to lock the region of interest
-    -help|h	displays this documentation with PERLDOC
+=item B<-stable>
+
+List of gene stable ids, comma separated. Or multiple B<-stable> arguments can
+be given, or a list of stable IDs can be supplied in files listed on the
+command line.
+
+=item B<-force>
+
+Don't prompt the user for confirmation.
+
+=item B<-once>
+
+Roll back to the previous version only.
+
+=item B<-help>
+
+Displays this documentation.
+
+=back
 
 =head1 CONTACT
 
-Mustapha Larbaoui B<email> ml6@sanger.ac.uk
+Mustapha Larbaoui B<ml6@sanger.ac.uk>
+
+Refactored to use Bio::Otter::Lace::Defaults by James Gilbert B<jgrg@sanger.ac.uk>
 
 =cut
 
 use strict;
-use Getopt::Long;
-use Net::Netrc;
-use Sys::Hostname;
-use Bio::EnsEMBL::Utils::Exception qw(throw warning);
+use Carp qw{ confess };
+use Sys::Hostname qw{ hostname };
+use Bio::Otter::Lace::Defaults;
 use Bio::Vega::ContigLockBroker;
-use Bio::Vega::Author;
-use Bio::Vega::DBSQL::DBAdaptor;
 
+{
+    my $dataset_name;
+    my $force;
+    my $once;
+    my $lock   = 1;
+    my $author = (getpwuid($<))[0];
+    my @stable_ids;
 
-my $dbname			= '';
-my $host			= 'otterlive';
-my $user			= '';
-my $port            = '';
-my $pass            = '';
-my $help;
-my $force;
-my $once;
-my $lock = 1;
-my $author;
-my @ids;
+    # This do_getopt() call is needed to parse the otter config files
+    # even if you aren't giving any arguments on the command line.
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'dataset=s' => \$dataset_name,
+        'force!'    => \$force,
+        'once!'     => \$once,
+        'lock!'     => \$lock,
+        'stable=s'  => \@stable_ids,
+    );
+    Bio::Otter::Lace::Defaults::show_help() unless $dataset_name;
 
-my $usage = sub { exec( 'perldoc', $0 ); };
+    if (@ARGV) {
+        while (<>) {
+            push(@stable_ids, split);
+        }
+    }
 
-my $list_sql = qq{
-	SELECT g.gene_id, s.name, g.description, g.is_current, gsi.version, gsi.modified_date,a.author_name
-	FROM gene g, gene_stable_id gsi,gene_author ga, seq_region s, author a
-	WHERE gsi.stable_id = ?
-	AND gsi.gene_id = g.gene_id
-	AND s.seq_region_id = g.seq_region_id
-    AND ga.gene_id = g.gene_id
-    AND ga.author_id = a.author_id
-	ORDER BY gsi.modified_date DESC
-};
+    # Split any comma separated lists of stable IDs
+    @stable_ids = map { split /,/, $_ } @stable_ids;
 
-GetOptions(
-           'host=s'        => \$host,
-           'port=n'        => \$port,
-           'dbname=s'      => \$dbname,
-           'user=s'        => \$user,
-           'pass=s'        => \$pass,
-           'author=s'	   => \$author,
-           'force!'		   => \$force,
-           'once!'		   => \$once,
-           'lock!'		   => \$lock,
-           'stable_id=s'   => \@ids,
-           'h|help!' 		   => $usage,
-)
-or $usage->();
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
 
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
 
-throw("must provide a list of gene stable ids")
-  unless ( @ids );
+    my $otter_dba = $ds->get_cached_DBAdaptor;
 
-if ( !$user || !$pass || !$port ) {
-	my @param = &get_db_param($host);
-	$user = $param[0] unless $user;
-	$pass = $param[1] unless $pass;
-	$port = $param[2] unless $port;
-}
+    my $list_sth = $otter_dba->dbc->prepare(qq{
+        SELECT g.gene_id
+          , s.name
+          , g.description
+          , g.is_current
+          , gsi.version
+          , gsi.modified_date
+          , a.author_name
+        FROM gene g
+          , gene_stable_id gsi,gene_author ga
+          , seq_region s
+          , author a
+        WHERE gsi.stable_id = ?
+          AND gsi.gene_id = g.gene_id
+          AND s.seq_region_id = g.seq_region_id
+          AND ga.gene_id = g.gene_id
+          AND ga.author_id = a.author_id
+        ORDER BY gsi.modified_date DESC
+    });
 
-if ( !$dbname ) {
-	print STDERR
-	  "Can't run script without all database parameters\n";
-	print STDERR "-host $host -user $user -pass $pass\n";
-	&option();
-}
+    my $gene_adaptor = $otter_dba->get_GeneAdaptor;
 
-my $db = Bio::Vega::DBSQL::DBAdaptor->new(
-    -host   => $host,
-    -user   => $user,
-    -dbname => $dbname,
-    -pass   => $pass,
-    -port   => $port
-) or die ("Failed to create Bio::Vega::DBSQL::DBAdaptor to db $dbname \n");
+    my $author_obj = Bio::Vega::Author->new(-name => $author, -email => $author);
 
-my $gene_adaptor = $db->get_GeneAdaptor;
+  GSI: foreach my $id (@stable_ids) {
+        print "Get information for gene_stable_id $id\n";
+        my $genes = get_history($list_sth, $id);
 
+        unless (@$genes) {
+            warn("No such Gene stable ID '$id' in $dataset_name\n");
+            next GSI;
+        }
 
-my @sids;
-map(push(@sids , split(/,/,$_)) , @ids);
+        my $current_gene_id = shift @$genes;
 
-GSI: foreach my $id (@sids) {
-	print "Get information for gene_stable_id $id\n";
-	my $genes = &get_history($id);
+        warn("There is only one version of gene $id\n") unless @$genes;
+      GENE: while (@$genes) {
+            my $previous_gene_id = shift @$genes;
+            my $cur_gene         = $gene_adaptor->fetch_by_dbID($current_gene_id);
+            my $prev_gene        = $gene_adaptor->fetch_by_dbID($previous_gene_id);
+            if ($force || proceed($current_gene_id) =~ /^y$|^yes$/) {
 
-	if(! defined @$genes) {
-		warning("There is no gene_stable_id $id in $host:$dbname\n");
-		next GSI;
-	}
+                my $cb;
+                if ($lock) {
+                    eval {
+                        $cb = Bio::Vega::ContigLockBroker->new(-hostname => hostname());
+                        printf STDERR "Locking gene slice %s <%d-%d>\n", $cur_gene->seq_region_name,
+                          $cur_gene->seq_region_start, $cur_gene->seq_region_end;
+                        $cb->lock_clones_by_slice([ $cur_gene->feature_Slice, $prev_gene->feature_Slice ],
+                            $author_obj, $otter_dba);
+                    };
+                    if ($@) {
+                        warn("Problem locking gene slice with author name $author\n$@\n");
+                        next GSI;
+                    }
+                }
 
-	my $current_gene_id = shift @$genes;
+                $gene_adaptor->remove($cur_gene);
+                $gene_adaptor->resurrect($prev_gene);
+                print STDERR "gene_id $current_gene_id REMOVED !!!!!!\n";
 
-	warning("There is only one version of gene $id\n") unless @$genes;
-	my $loop = 1;
-	GENE:while($loop && scalar @$genes) {
-		my $previous_gene_id = shift @$genes;
-		my $cur_gene = $gene_adaptor->fetch_by_dbID($current_gene_id);
-		my $prev_gene = $gene_adaptor->fetch_by_dbID($previous_gene_id);
-		if($force || &proceed($current_gene_id) =~ /^y$|^yes$/ ) {
+                if ($lock) {
+                    eval {
+                        printf STDERR "Unlocking gene slice %s <%d-%d>\n", $cur_gene->seq_region_name,
+                          $cur_gene->seq_region_start, $cur_gene->seq_region_end;
+                        $cb->remove_by_slice([ $cur_gene->feature_Slice, $prev_gene->feature_Slice ],
+                            $author_obj, $otter_dba);
+                    };
+                    if ($@) {
+                        warn("Cannot remove locks from gene slice with author name $author\n$@\n");
+                    }
+                }
+            }
+            else {
+                last GENE;
+            }
+            $current_gene_id = $previous_gene_id;
 
-			my ($cb,$author_obj);
-			if($lock){
-				eval {
-					$cb = Bio::Vega::ContigLockBroker->new(-hostname => hostname);
-					$author_obj = Bio::Vega::Author->new(-name => $author, -email => $author);
-					printf STDOUT "Locking gene slice %s <%d-%d>\n",$cur_gene->seq_region_name,$cur_gene->seq_region_start,$cur_gene->seq_region_end;
-					$cb->lock_clones_by_slice([$cur_gene->feature_Slice,$prev_gene->feature_Slice],$author_obj,$db);
-				};
-				if($@){
-					warning("Problem locking gene slice with author name $author\n$@\n");
-					next GSI;
-				}
-			}
-
-			$gene_adaptor->remove($cur_gene);
-			$gene_adaptor->resurrect($prev_gene);
-			print STDOUT "gene_id $current_gene_id REMOVED !!!!!!\n";
-
-			if($lock){
-				eval {
-					printf STDOUT "Unlocking gene slice %s <%d-%d>\n",$cur_gene->seq_region_name,$cur_gene->seq_region_start,$cur_gene->seq_region_end;
-					$cb->remove_by_slice([$cur_gene->feature_Slice,$prev_gene->feature_Slice],$author_obj,$db);
-				};
-				if($@){
-					warning("Cannot remove locks from gene slice with author name $author\n$@\n");
-				}
-			}
-		} else {
-			last GENE;
-		}
-		$current_gene_id = $previous_gene_id;
-
-		$loop = 0 if($once);
-	}
+            last GENE if $once;
+        }
+    }
 }
 
 sub proceed {
-	my ( $id ) = @_;
-	print STDOUT "remove gene $id ? [no]";
-	my $answer = <STDIN>;chomp $answer;
-	$answer ||= 'no';
-	return $answer;
+    my ($id) = @_;
+    print STDERR "remove gene $id ? [no] ";
+    my $answer = <STDIN>;
+    chomp $answer;
+    $answer ||= 'no';
+    return $answer;
 }
-
 
 sub get_history {
-	my ( $sid ) = @_;
-	my $gene_ids;
-	my $tag;
-	my $sth = $db->dbc->prepare($list_sql);
-	$sth->execute($sid);
+    my ($sth, $sid) = @_;
 
-	while(my @arr = $sth->fetchrow_array){
-		print STDOUT "gene_id\tassembly name\tdescription\tis_current\tversion\tmodified_date\tauthor\n" unless $tag;
-		print STDOUT join("\t",@arr)."\n";
-		push @$gene_ids, $arr[0];
-		$tag = 1;
-	}
+    $sth->execute($sid);
+    
+    if ($sth->rows) {
+        print STDERR "gene_id\tassembly name\tdescription\tis_current\tversion\tmodified_date\tauthor\n";
+    }
 
-	return $gene_ids;
+    my $gene_ids = [];
+    while (my @arr = $sth->fetchrow_array) {
+        print STDERR join("\t", @arr) . "\n";
+        push @$gene_ids, $arr[0];
+    }
+
+    return $gene_ids;
 }
-
-
-sub get_db_param {
-	my ( $dbhost ) = @_;
-	my ( $dbuser, $dbpass, $dbport );
-
-	my $ref = Net::Netrc->lookup($dbhost);
-	throw("$dbhost entry is missing from ~/.netrc") unless ($ref);
-	$dbuser = $ref->login;
-	$dbpass = $ref->password;
-	$dbport = $ref->account;
-	throw(
-		"Missing parameter in the ~/.netrc file:\n
-			machine " .  ( $dbhost || 'missing' ) . "\n
-			login " .    ( $dbuser || 'missing' ) . "\n
-			password " . ( $dbpass || 'missing' ) . "\n
-			account "
-		  . ( $dbport || 'missing' )
-		  . " (should be used to set the port number)"
-	  )
-	  unless ( $dbuser && $dbpass && $dbport );
-
-	return ( $dbuser, $dbpass, $dbport );
-}
-
