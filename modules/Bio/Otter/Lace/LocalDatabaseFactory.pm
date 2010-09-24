@@ -163,19 +163,8 @@ sub new_AceDatabase {
     my $adb = Bio::Otter::Lace::AceDatabase->new;
     $adb->write_access($write_access);
     $adb->Client( $self->Client() );
-    $adb->home($self->make_home_path($write_access));
+    $adb->home($self->Client->session_path($write_access));
     return $adb;
-}
-
-sub make_home_path {
-    my ($self, $write_access) = @_;
-    
-    my $version = $self->Client->version;
-    my $readonly_tag = $write_access ? '' : '.ro';
-    my $i = ++$self->{'_last_db'};  # Could just use a class variable,
-                                    # then we wouldn't have to make sure that
-                                    # we only create one LocalDatabaseFactory
-    return "/var/tmp/lace_${version}.${$}${readonly_tag}.$i";
 }
 
 1;

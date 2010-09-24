@@ -196,6 +196,20 @@ sub cleanup_log_dir {
     return;
 }
 
+my $session_root = '/var/tmp/lace';
+my $session_number = 0;
+
+sub session_path {
+    my ($self, $write_access) = @_;
+
+    my $readonly_tag = $write_access ? '' : '.ro';
+    $session_number++;
+
+    return
+        sprintf "%s_%d.%d%s.%d",
+        $session_root, $self->version, $$, $readonly_tag, $session_number;
+}
+
 sub lock { ## no critic(Subroutines::ProhibitBuiltinHomonyms)
     my( $self, @args ) = @_;
     
