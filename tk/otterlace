@@ -21,6 +21,7 @@ use POSIX ":sys_wait_h";
 
     Bio::Otter::Lace::Defaults::do_getopt() || die $Bio::Otter::Lace::Defaults::GETOPT_ERRSTR . "\n";
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    $cl->cleanup_sessions;
     $cl->cleanup_log_dir('otterlace');
     $cl->make_log_file('otterlace');
 

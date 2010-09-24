@@ -5,6 +5,8 @@ package Bio::Otter::Lace::Client;
 use strict;
 use warnings;
 use Carp;
+
+use File::Path qw{ remove_tree };
 use Net::Domain qw{ hostname hostfqdn };
 
 use LWP;
@@ -199,6 +201,21 @@ sub cleanup_log_dir {
 
 my $session_root = '/var/tmp/lace';
 my $session_number = 0;
+my $session_dir_expire_days = 14;
+
+sub cleanup_sessions {
+    my ($self) = @_;
+
+    foreach ( $self->all_session_dirs ) {
+        next unless /\.done$/;
+        if ( -M > $session_dir_expire_days ) {
+            remove_tree($_)
+                or warn "Error removing expired session directory '$_'";
+        }
+    }
+
+    return;
+}
 
 sub session_path {
     my ($self, $write_access) = @_;
@@ -214,12 +231,9 @@ sub session_path {
 sub all_sessions {
     my ($self) = @_;
 
-    my $session_dir_pattern =
-        sprintf "%s_%s.*", $session_root, $self->version;
-
     my @sessions = map {
         $self->_session_from_dir($_);
-    } glob($session_dir_pattern);
+    } $self->all_session_dirs;
 
     return @sessions;
 }
@@ -239,6 +253,16 @@ sub _session_from_dir {
     return unless $< == $owner;
 
     return [ $dir, $pid, $mtime ];
+}
+
+sub all_session_dirs {
+    my ($self) = @_;
+
+    my $session_dir_pattern =
+        sprintf "%s_%s.*", $session_root, $self->version;
+    my @session_dirs = glob($session_dir_pattern);
+
+    return @session_dirs;
 }
 
 sub new_AceDatabase {
