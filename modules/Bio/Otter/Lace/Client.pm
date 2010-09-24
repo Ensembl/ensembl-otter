@@ -227,6 +227,9 @@ sub all_sessions {
 sub _session_from_dir {
     my ($self, $dir) = @_;
 
+    # this ignores completed sessions, as they have been renamed to
+    # end in ".done"
+
     return unless
         my ( $pid ) =
         $dir =~ /_[[:digit:]]+\.([[:digit:]]+)(?:\.ro)?\.[[:digit:]]+$/;
