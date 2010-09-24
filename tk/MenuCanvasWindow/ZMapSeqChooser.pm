@@ -609,12 +609,13 @@ sub zMapBlixemDefaults {
         },
         'protein-featuresets' => [qw{ SwissProt TrEMBL }],
         'dna-featuresets'    => [qw{ EST_Human EST_Mouse EST_Other vertebrate_mRNA OTF_mRNA Unknown_DNA }],
-        'transcript-featuresets' => [
-            'Coding Transcripts',
-            'Known CDS Transcripts',
-            'Novel CDS Transcripts',
-            'Putative and NMD',
-        ],
+        'transcript-featuresets' => [qw{
+Coding
+Known_CDS
+Novel_CDS
+Putative_CDS
+Nonsense_mediated_decay
+}],
         %{ $self->AceDatabase->smart_slice->DataSet->config_section('blixem') },
     );
 
