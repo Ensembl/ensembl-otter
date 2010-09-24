@@ -19,6 +19,7 @@ use Bio::Otter::Lace::Defaults;
 use Bio::Otter::Lace::Locator;
 use Bio::Otter::Lace::PipelineStatus;
 use Bio::Otter::Lace::SequenceNote;
+use Bio::Otter::Lace::AceDatabase;
 use Bio::Otter::LogFile;
 use Bio::Otter::Transform::DataSets;
 use Bio::Otter::Transform::SequenceSets;
@@ -208,6 +209,17 @@ sub session_path {
     return
         sprintf "%s_%d.%d%s.%d",
         $session_root, $self->version, $$, $readonly_tag, $session_number;
+}
+
+sub new_AceDatabase {
+    my( $self, $write_access ) = @_;
+
+    my $adb = Bio::Otter::Lace::AceDatabase->new;
+    $adb->write_access($write_access);
+    $adb->Client($self);
+    $adb->home($self->session_path($write_access));
+
+    return $adb;
 }
 
 sub lock { ## no critic(Subroutines::ProhibitBuiltinHomonyms)

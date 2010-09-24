@@ -709,7 +709,7 @@ sub _open_SequenceSet {
 
     
     my $adb_write_access = ${$self->write_access_var_ref()};
-    my $adb = $self->LocalDatabaseFactory->new_AceDatabase($adb_write_access);
+    my $adb = $self->Client->new_AceDatabase($adb_write_access);
     $adb->error_flag(1);
     $adb->title($title);
     $adb->smart_slice($smart_slice);

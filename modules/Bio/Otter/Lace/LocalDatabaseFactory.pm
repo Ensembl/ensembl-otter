@@ -3,7 +3,7 @@ package Bio::Otter::Lace::LocalDatabaseFactory;
 use strict;
 use warnings;
 use Carp;
-use Bio::Otter::Lace::AceDatabase;
+
 use File::Path 'rmtree';
 use Proc::ProcessTable;
 
@@ -113,7 +113,7 @@ sub recover_session {
 
     my $write_flag = $dir =~ /\.ro/ ? 0 : 1;
 
-    my $adb = $self->new_AceDatabase($write_flag);
+    my $adb = $self->Client->new_AceDatabase($write_flag);
     $adb->error_flag(1);
     my $home = $adb->home;
     rename($dir, $home) or die "Cannot move '$dir' to '$home'; $!";
@@ -156,16 +156,6 @@ sub kill_old_sgifaceserver {
 }
 
 ############## Session recovery methods end here ############################
-
-sub new_AceDatabase {
-    my( $self, $write_access ) = @_;
-
-    my $adb = Bio::Otter::Lace::AceDatabase->new;
-    $adb->write_access($write_access);
-    $adb->Client( $self->Client() );
-    $adb->home($self->Client->session_path($write_access));
-    return $adb;
-}
 
 1;
 
