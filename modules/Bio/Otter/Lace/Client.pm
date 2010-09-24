@@ -211,6 +211,33 @@ sub session_path {
         $session_root, $self->version, $$, $readonly_tag, $session_number;
 }
 
+sub all_sessions {
+    my ($self) = @_;
+
+    my $session_dir_pattern =
+        sprintf "%s_%s.*", $session_root, $self->version;
+
+    my @sessions = map {
+        $self->_session_from_dir($_);
+    } glob($session_dir_pattern);
+
+    return @sessions;
+}
+
+sub _session_from_dir {
+    my ($self, $dir) = @_;
+
+    return unless
+        my ( $pid ) =
+        $dir =~ /_[[:digit:]]+\.([[:digit:]]+)(?:\.ro)?\.[[:digit:]]+$/;
+
+    # Skip if directory is not ours
+    my ($owner, $mtime) = (stat($dir))[4,9];
+    return unless $< == $owner;
+
+    return [ $dir, $pid, $mtime ];
+}
+
 sub new_AceDatabase {
     my( $self, $write_access ) = @_;
 
