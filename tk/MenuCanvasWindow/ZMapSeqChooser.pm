@@ -591,6 +591,7 @@ sub zMapZMapDefaults {
         'xremote-debug'     => $ZMAP_DEBUG ? 'true' : 'false',
         'pfetch-mode'       => ( $pfetch_www ? 'http' : 'pipe' ),
         'pfetch'            => ( $pfetch_www ? $pfetch_url : 'pfetch' ),
+        'thread-fail-silent' => 'true',
         @columns,
         %{ $dataset->config_section('zmap') },
         );
@@ -640,7 +641,9 @@ sub zMapWindowDefaults {
           colour-frame-1              #e6ffe6
           colour-frame-2              #e6e6ff
           canvas-maxsize              10000
-          }
+          },
+          'colour-masked-feature-fill'   => 'light grey',
+          'colour-masked-feature-border' => 'dark grey',
     );
 }
 
