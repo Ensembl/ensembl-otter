@@ -1,0 +1,80 @@
+#!/usr/bin/env perl
+
+### add_transcript_attribute
+
+use strict;
+use warnings;
+use Bio::Otter::Lace::Defaults;
+
+{
+    my $dataset_name = 'human';
+    my $attrib_type_id = 54;
+    my $attrib_value   = 'confirm experimentally';
+
+    my $usage = sub { exec('perldoc', $0) };
+    # This do_getopt() call is needed to parse the otter config files
+    # even if you aren't giving any arguments on the command line.
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        'dataset=s'     => \$dataset_name,
+        ) or $usage->();
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    
+    my $otter_dbc = $ds->get_cached_DBAdaptor->dbc;
+    
+    my $get_db_id = $otter_dbc->prepare(q{
+        SELECT t.transcript_id
+        FROM transcript t
+          , transcript_stable_id tsid
+        WHERE t.transcript_id = tsid.transcript_id
+          AND t.is_current = 1
+          AND tsid.stable_id = ?
+    });
+    my $count_attrib = $otter_dbc->prepare(qq{
+        SELECT count(*)
+        FROM transcript_attrib
+        WHERE transcript_id = ?
+          AND attrib_type_id = ?
+          AND value = ?
+    });
+    my $insert_attrib = $otter_dbc->prepare(q{
+        INSERT transcript_attrib (transcript_id, attrib_type_id, value)
+        VALUES (?, ?, ?)
+    });
+    
+    while (<>) {
+        foreach my $stable_id (split) {
+            $get_db_id->execute($stable_id);
+            my ($db_id) = $get_db_id->fetchrow;
+            unless ($db_id) {
+                warn "No current transcript with stable ID '$stable_id'\n";
+                next;
+            }
+            $count_attrib->execute($db_id, $attrib_type_id, $attrib_value);
+            my ($count) = $count_attrib->fetchrow;
+            if ($count) {
+                warn "Attrib $attrib_type_id '$attrib_value' already set for transcript '$stable_id'\n";
+                next;
+            }
+            $insert_attrib->execute($db_id, $attrib_type_id, $attrib_value);
+            warn "Added attrib $attrib_type_id '$attrib_value' to transcript '$stable_id'\n";
+        }
+    }
+}
+
+
+
+
+__END__
+
+=head1 NAME - add_transcript_attribute
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
