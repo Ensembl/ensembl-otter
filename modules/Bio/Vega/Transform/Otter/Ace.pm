@@ -28,6 +28,8 @@ sub DESTROY {
 
     # So that DESTROY gets called in baseclass:
     bless $self, 'Bio::Vega::Transform::Otter';
+
+    return;
 }
 
 
@@ -49,6 +51,8 @@ sub make_ace {
     
     # Genomic features
     $ace_str .= $self->make_ace_genomic_features;
+
+    return $ace_str;
 }
 
 sub make_ace_genes_transcripts {
@@ -104,6 +108,8 @@ sub add_attributes_to_Ace {
     foreach my $attrib (@{$obj->get_all_Attributes($attrib_code)}) {
         $ace->add_tag($ace_key, $attrib->value);
     }
+
+    return;
 }
 
 sub get_first_attrib_value {
@@ -201,6 +207,8 @@ sub fill_transcript_AceText {
     foreach my $ev (@{$tsct->evidence_list}) {
         $ace->add_tag($ev->type . '_match', $ev->name);
     }
+
+    return;
 }
 
 sub fill_locus_AceText {
@@ -227,6 +235,8 @@ sub fill_locus_AceText {
     if ($source ne 'havana') {
         $ace->add_tag('Type_prefix', $source);
     }
+
+    return;
 }
 
 sub new_slice_ace_object {
