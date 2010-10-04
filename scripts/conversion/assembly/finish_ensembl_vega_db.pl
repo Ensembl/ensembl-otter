@@ -341,20 +341,19 @@ $sql = qq(
 $c = $dbh->{'evega'}->do($sql);
 $support->log_stamped("Done transfering $c seq_region_attrib entries.\n\n");
 
-# transfer Ensembl-Vega assembly information from tmp_seq_region and
-# tmp_assembly back into main tables
-$support->log_stamped("Adding Ensembl-Vega assembly info from tmp tables...\n");
-$sql = qq(
-    INSERT INTO seq_region
-    SELECT * FROM tmp_seq_region
-);
-my $c3 = $dbh->{'evega'}->do($sql);
-$sql = qq(
-    INSERT INTO assembly
-    SELECT * from tmp_assembly
-);
-my $c4 = $dbh->{'evega'}->do($sql);
-$support->log_stamped("Done adding $c3 seq_region and $c4 assembly entries.\n\n");
+# used to transfer Ensembl-Vega assembly information from tmp_seq_region and tmp_assembly back into main tables but no need now
+#$support->log_stamped("Adding Ensembl-Vega assembly info from tmp tables...\n");
+#$sql = qq(
+#    INSERT INTO seq_region
+#    SELECT * FROM tmp_seq_region
+#);
+#my $c3 = $dbh->{'evega'}->do($sql);
+#$sql = qq(
+#    INSERT INTO assembly
+#    SELECT * from tmp_assembly
+#);
+#my $c4 = $dbh->{'evega'}->do($sql);
+#$support->log_stamped("Done adding $c3 seq_region and $c4 assembly entries.\n\n");
 
 # now adjust all seq_region_ids
 $support->log_stamped("Updating seq_region_ids on all tables:\n");
