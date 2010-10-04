@@ -36,6 +36,8 @@ sub DESTROY {
         warn "Unused data after parse: ", Dumper($data);
     }
     delete $is_multiple{$self};
+
+    return;
 }
 
 sub new {
@@ -53,12 +55,16 @@ sub parse {
     my ($self, $fh, $encoding) = @_;
 
     $self->_do_parse($fh, $encoding, 'parse');
+
+    return;
 }
 
 sub parsefile {
     my ($self, $filename, $encoding) = @_;
 
     $self->_do_parse($filename, $encoding, 'parsefile');
+
+    return;
 }
 
 # If we need a value from the parent tag which has not yet
@@ -85,6 +91,8 @@ sub _do_parse {
     
     my $parser = $self->new_Parser;
     $parser->$method($file, @opt);
+
+    return;
 }
 
 sub new_Parser {
@@ -144,6 +152,8 @@ sub handle_start {
             . Dumper({@_})
             );
     }
+
+    return;
 }
 
 sub handle_char {
@@ -152,6 +162,7 @@ sub handle_char {
     # by Expat on a single string. We therefore need
     # to append to the existing string.
     $current_string{$self} .= $txt;
+    return;
 }
 
 sub handle_end {
@@ -188,6 +199,8 @@ sub handle_end {
             }
         }
     }
+
+    return;
 }
 
 1;
