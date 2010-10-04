@@ -53,51 +53,51 @@ my $by_start_end_strand = sub {
 # get/set methods exposed on object interface
 
 sub species {
-    my $self = shift;
+    my ($self, @args) = @_;
 
-    $species{$self} = shift if @_;
+    $species{$self} = shift @args if @args;
     return $species{$self};
 }
 
 sub slice {
-    my $self = shift;
+    my ($self, @args) = @_;
 
-    $slice{$self} = shift if @_;
+    $slice{$self} = shift @args if @args;
     return $slice{$self};
 }
 
 sub otter_dba {
-    my $self = shift;
+    my ($self, @args) = @_;
 
-    $otter_dba{$self} = shift if @_;
+    $otter_dba{$self} = shift @args if @args;
     return $otter_dba{$self};
 }
 
 sub genes {
-    my $self = shift;
+    my ($self, @args) = @_;
 
-    $genes{$self} = shift if @_;
+    $genes{$self} = shift @args if @args;
     return $genes{$self};
 }
 
 sub seq_features {
-    my $self = shift;
+    my ($self, @args) = @_;
 
-    $seq_features{$self} = shift if @_;
+    $seq_features{$self} = shift @args if @args;
     return $seq_features{$self};
 }
 
 sub clone_seq_list {
-    my $self = shift;
+    my ($self, @args) = @_;
 
-    $clone_seq_list{$self} = shift if @_;
+    $clone_seq_list{$self} = shift @args if @args;
     return $clone_seq_list{$self};
 }
 
 sub skip_truncated_genes {
-    my $self = shift;
+    my ($self, @args) = @_;
 
-    $skip_trunc{$self} = shift if @_;
+    $skip_trunc{$self} = shift @args if @args;
     return $skip_trunc{$self} || 0;
 }
 
