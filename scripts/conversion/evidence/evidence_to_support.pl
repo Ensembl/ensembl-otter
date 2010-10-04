@@ -294,15 +294,15 @@ foreach my $chr (@chr_sorted) {
 
 	      # loop over exons and look for overlapping
 	      # similarity features
-#	      foreach my $exon (@exons) {
+	      foreach my $exon (@exons) {
 #		warn $exon->stable_id.":".$exon->end."--".$hit->[0]." --- ".$exon->start."--".$hit->[1];
-#		if ($exon->end >= $hit->[0] && $exon->start <= $hit->[1]) {
-#		  $support->log_verbose("Matches similarity feature with dbID ".$hit->[2].".\n", 3);
-		  # store unique evidence identifier in hash
-#		  $se_hash{$exon->dbID.":".$hit->[2].":".$hit->[3]} = 1;
-#		  $e_match = 1;
-#		}
-#	      }
+		if ($exon->end >= $hit->[0] && $exon->start <= $hit->[1]) {
+		  $support->log_verbose("Matches similarity feature with dbID ".$hit->[2].".\n", 3);
+	      # store unique evidence identifier in hash
+		  $se_hash{$exon->dbID.":".$hit->[2].":".$hit->[3]} = 1;
+		  $e_match = 1;
+		}
+	      }
 	    }
 	  }
 	}
@@ -370,6 +370,9 @@ foreach my $chr (@chr_sorted) {
 
 #summarise genes missing support / evidence
 foreach my $source (keys %{$stats}) {
+
+  #only show Havana missing evidence unless we really want to!
+  next if ( ($source ne 'havana') && (! $support->param('verbose')) );
 
   #summarise genes with no supporting_features and evidence
   if (my $g_no_support = $stats->{$source}{'genes_without_support'}) {
