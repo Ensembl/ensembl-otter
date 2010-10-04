@@ -157,10 +157,7 @@ foreach my $chr ($support->sort_chromosomes) {
     my $transnames;
     my %seen_names;
     my %transcripts;
-    my $g_name = $gene->get_all_Attributes('name')->[0]->value;
-#    if ( $support->param('dbname') =~ /rerio/) {
-#      $g_name = $gene->display_xref->display_id;
-#    }
+    my $g_name = $gene->display_xref->display_id;
     my $source = $gene->source;
 
     $support->log("\n$g_name ($gsi)\n");
