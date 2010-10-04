@@ -124,6 +124,8 @@ sub initialize {
         -sequence_level => 1,
         -default        => 1,
     );
+
+    return;
 }
 
 ## parser builder methods to build otter objects
@@ -133,6 +135,8 @@ sub save_species {
     my ($self, $data) = @_;
 
     $species{$self} = $data->{'species'};
+
+    return;
 }
 
 sub species {
@@ -253,6 +257,8 @@ sub build_SequenceFragment {
     my $tile = [$start, $end, $ctg_cmp_slice, $cln_attrib_list];
     my $tile_list = $tiles{$self} ||= [];
     push @$tile_list, $tile;
+
+    return;
 }
 
 sub get_Analysis {
@@ -271,6 +277,8 @@ sub build_Evidence {
     );
     my $list = $evidence_list{$self} ||= [];
     push @$list, $evidence;
+
+    return;
 }
 
 sub build_XRef {
@@ -287,12 +295,16 @@ sub build_XRef {
 
     my $list = $xref_list{$self} ||= [];
     push @$list, $xref;
+
+    return;
 }
 
 sub build_DNA {
     my ($self, $data) = @_;
 
     $dna{$self} = $data->{'dna'};
+
+    return;
 }
 
 sub build_Feature {
@@ -315,6 +327,8 @@ sub build_Feature {
     );
     my $list = $feature_list{$self} ||= [];
     push @$list, $feature;
+
+    return;
 }
 
 sub build_Exon {
@@ -345,6 +359,8 @@ sub build_Exon {
     }
     my $list = $exon_list{$self} ||= [];
     push @$list, $exon;
+
+    return;
 }
 
 sub add_xrefs_to_object {
@@ -493,6 +509,8 @@ sub build_Transcript {
 
   my $list = $transcript_list{$self} ||= [];
   push @$list, $transcript;
+
+    return;
 }
 
 sub translation_pos {
@@ -617,6 +635,8 @@ sub build_Locus {
 
     my $list = $gene_list{$self} ||= [];
     push @$list, $gene;
+
+    return;
 }
 
 sub do_nothing {
