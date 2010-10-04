@@ -133,23 +133,21 @@ sub set_multi_value_tags {
 }
 
 sub handle_start {
-    my $self = shift;
-    my $expat = shift;
-    my $element = shift;
+    my ($self, $expat, $element, @args) = @_;
 
     if ($object_builders{$self}{$element}) {
         # This makes $element the "current context"
         unshift @{$tag_stack{$self}}, $element;
-        # Anything left in @_ are attribute key, value pairs
-        for (my $i = 0; $i < @_; $i += 2) {
-            $object_data{$self}{$element}{$_[$i]} = $_[$i + 1];
+        # @args are attribute key, value pairs
+        for (my $i = 0; $i < @args; $i += 2) {
+            $object_data{$self}{$element}{$args[$i]} = $args[$i + 1];
         }
     }
-    elsif (@_) {
+    elsif (@args) {
         # There are attribtes in a non object-creating tag.
         $expat->xpcroak(
             "This parser cannot handle attributes in '$element' tags:\n"
-            . Dumper({@_})
+            . Dumper({@args})
             );
     }
 
