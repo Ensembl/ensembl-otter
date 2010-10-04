@@ -37,6 +37,8 @@ sub DESTROY {
 
     # So that any DESTROY methods in base classes get called:
     bless $self, 'Bio::Vega::Writer';
+
+    return;
 }
 
 # Use this to sort SimpleFeatures, Genes and Transcripts
@@ -111,12 +113,16 @@ sub fetch_data_from_otter_db {
     $self->fetch_species;
     $self->fetch_SimpleFeatures;
     $self->fetch_Genes;
+
+    return;
 }
 
 sub fetch_species {
     my ($self) = @_;
 
     $species{$self} = $otter_dba{$self}->species;
+
+    return;
 }
 
 sub fetch_SimpleFeatures {
@@ -137,12 +143,16 @@ sub fetch_SimpleFeatures {
     }
 
     $seq_features{$self} = $features;
+
+    return;
 }
 
 sub fetch_Genes {
     my ($self) = @_;
 
     $genes{$self} = $slice{$self}->get_all_Genes;
+
+    return;
 }
 
 sub fetch_CloneSequences {
@@ -154,6 +164,8 @@ sub fetch_CloneSequences {
         my $cs = $self->fetch_CloneSeq($contig_seg);
         push @$cs_list, $cs;
     }
+
+    return;
 }
 
 sub fetch_CloneSeq {
@@ -475,6 +487,8 @@ sub generate_Transcript {
                 $t->attribvals($self->prettyprint($tag, $val));
             }
         }
+
+        return;
     }
 }
 
