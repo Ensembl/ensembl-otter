@@ -879,7 +879,7 @@ sub close_GenomicFeatures {
 
         my $assembly = $self->Assembly;
 
-        # The ExonLoacator finds exons in a genomic sequence
+        # The ExonLocator finds exons in a genomic sequence
         my $finder = Hum::Analysis::Factory::ExonLocator->new;
         $finder->genomic_Sequence($assembly->Sequence);
 
