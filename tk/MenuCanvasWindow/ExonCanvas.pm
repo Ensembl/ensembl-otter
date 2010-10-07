@@ -1672,15 +1672,32 @@ sub populate_locus_attribute_menu {
 }
 
 sub populate_attribute_menu {
-    my ($self, $menu, $text, $attribs) = @_;
+    my ($self, $parent_menu, $text, $attribs) = @_;
     
+    my %sub_menus;
     foreach my $phrase (sort keys %$attribs) {
+        my $value = $attribs->{$phrase};
+        my $menu;
+        if ($value eq 'single') {
+            $menu = $parent_menu;
+        } else {
+            $menu = $sub_menus{$value} ||= $parent_menu->Menu(-tearoff => 0);
+        }
         $menu->add('command',
             -label      => $phrase,
             -command    => sub {
                 insert_phrase($text, $phrase);
             },
         );
+    }
+
+    # Add any cascade sub-menus onto the end of this menu
+    foreach my $label (sort keys %sub_menus) {
+        $parent_menu->add('cascade',
+            -menu       => $sub_menus{$label},
+            -label      => $label,
+            -underline  => 0,
+            );
     }
 
     return;
