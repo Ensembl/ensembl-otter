@@ -1140,13 +1140,34 @@ sub hunt_for_Entry_text {
     $self->deselect_all();
 
     my @matching_sub_names;
+    my @ace_fail_names;
     foreach my $name ($self->list_all_SubSeq_names) {
         my $sub = $self->get_SubSeq($name) or next;
-        my $str = $sub->ace_string;
+        my $str = eval { $sub->ace_string };
+        if ($@) {
+            # Data outside our control may break Hum::Ace::SubSeq  RT:188195
+            my $err = $@;
+            warn "hunt_for_Entry_text on $name: $err";
+            push @ace_fail_names, $name;
+            # It could be a real error, not just some broken data.
+            # We'll mention that if there are no results.
+            next;
+        }
         if (my ($hit) = $str =~ /$regex/) {
             push(@matching_sub_names, $name);
         }
     }
+
+    if (@ace_fail_names && !@matching_sub_names) {
+        # We see only errors
+        $self->message("hunt_for_Entry_text: no results,\nonly errors while searching.\nSomething broken?");
+        return;
+    } elsif (@ace_fail_names) {
+        # Mixture of errors and hits
+        push @matching_sub_names, @ace_fail_names;
+        $self->message("hunt_for_Entry_text: some errors while searching, will highlight those items too\n(@ace_fail_names)");
+    }
+
     if (@matching_sub_names) {
         $self->highlight_by_name(@matching_sub_names);
     } else {
