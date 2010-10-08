@@ -5,9 +5,9 @@ use warnings;
 use base 'Bio::EnsEMBL::Exon';
 
 sub adjust_start_end {
-    my $self = shift @_;
+    my ($self, @args) = @_;
 
-    my $ensembl_exon = $self->SUPER::adjust_start_end(@_);
+    my $ensembl_exon = $self->SUPER::adjust_start_end(@args);
 
     return bless $ensembl_exon, 'Bio::Vega::Exon';
 }
@@ -17,7 +17,7 @@ sub vega_hashkey_structure {
 }
 
 sub vega_hashkey {
-    my $self = shift;
+    my ($self) = @_;
     
     return join('-',
         $self->seq_region_name,
@@ -33,10 +33,10 @@ sub vega_hashkey {
 # to simplify the loading during comparison.
 
 sub last_db_version {
-    my $self = shift @_;
+    my ($self, @args) = @_;
 
-    if(@_) {
-        $self->{_last_db_version} = shift @_;
+    if(@args) {
+        $self->{_last_db_version} = shift @args;
     }
     return $self->{_last_db_version};
 }
