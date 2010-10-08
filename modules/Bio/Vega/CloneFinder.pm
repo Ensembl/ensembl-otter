@@ -32,7 +32,7 @@ sub qnames_locators {
 # This is a HoL
 # {query_name}[locators*]
 #
-    my $self = shift @_;
+    my ($self) = @_;
 
     return $self->{_ql};
 }
@@ -391,7 +391,7 @@ sub find_by_hit_name {
 }
 
 sub find {
-    my $self = shift @_;
+    my ($self) = @_;
 
     # lists of names, with and without versions
     my @names = keys %{$self->qnames_locators()};
@@ -471,11 +471,11 @@ sub generate_output {
 
 # these are private subroutines, *not* methods
 
-sub _strip_trailing_version_numbers {
+sub _strip_trailing_version_numbers { ## no critic(Subroutines::RequireArgUnpacking)
     return map { /^(.*?)(?:\.[[:digit:]]+)?$/ } @_;
 }
 
-sub _sql_list_condition {
+sub _sql_list_condition { ## no critic(Subroutines::RequireArgUnpacking)
     return 'in ( '. join(', ', map {"'$_'"} @_ ) .' ) ';
 }
 
