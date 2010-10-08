@@ -117,6 +117,8 @@ sub register_slices {
             }
         }
     }
+
+    return;
 }
 
 sub register_slice {
@@ -152,6 +154,8 @@ sub register_slice {
 
         push @{ $self->qnames_locators()->{uc($qname)} }, $loc;
     }
+
+    return;
 }
 
 sub find_by_stable_ids {
@@ -206,6 +210,8 @@ sub find_by_stable_ids {
             }
         }
     } # foreach $qname
+
+    return;
 }
 
 sub find_by_feature_attributes {
@@ -232,6 +238,8 @@ sub find_by_feature_attributes {
             $self->register_slice($qname, $qtype, $feature->feature_Slice());
         }
     }
+
+    return;
 }
 
 sub find_by_seqregion_names {
@@ -257,6 +265,8 @@ sub find_by_seqregion_names {
 
         $self->register_slice($sr_name, $cs_name.'_name', $slice);
     }
+
+    return;
 }
 
 sub find_by_seqregion_attributes {
@@ -284,6 +294,8 @@ sub find_by_seqregion_attributes {
 
         $self->register_slice($qname, $qtype, $slice);
     }
+
+    return;
 }
 
 sub find_by_xref {
@@ -330,6 +342,8 @@ sub find_by_xref {
 
         $self->register_slices($qname, $qtype_prefix.$qtype.":", [ $slice ]);
     }
+
+    return;
 }
 
 sub find_by_hit_name {
@@ -372,6 +386,8 @@ sub find_by_hit_name {
 
         $self->register_slices($qname, "${qtype_prefix}${analysis_name}(score=$score)", [ $slice ]);
     }
+
+    return;
 }
 
 sub find {
@@ -422,6 +438,8 @@ sub find {
     $self->find_by_seqregion_attributes($condition, 'international_clone_name', 'clone', 'intl_clone_name');
 
     $self->find_by_seqregion_attributes($condition, 'clone_accession', 'clone', 'embl_acc');
+
+    return;
 }
 
 sub generate_output {
