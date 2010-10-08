@@ -51,6 +51,8 @@ sub swap_slice {
     $self->start($self->start + $offset);
     $self->end(  $self->end   + $offset);
     $self->slice($new_slice);
+
+    return;
 }
 
 1;
