@@ -66,6 +66,7 @@ sub fetch_new_stable_ids_or_prefetch_latest_db_components {
         }
     }
 
+    return;
 }
 
 sub translations_diff {
