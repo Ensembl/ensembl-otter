@@ -8,7 +8,7 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use base 'Bio::EnsEMBL::Translation';
 
 sub vega_hashkey {
-  my $self=shift;
+  my ($self) = @_;
 
   my $start_exon = $self->start_Exon;
   my $end_exon   = $self->end_Exon;
@@ -30,7 +30,7 @@ sub vega_hashkey_structure {
 
 sub vega_hashkey_sub {
 
-  my $self = shift;
+  my ($self) = @_;
   my $sel = $self->get_all_Attributes('_selenocysteine');
   my $hashkey_sub={};
   if (defined $sel) {
@@ -45,10 +45,10 @@ sub vega_hashkey_sub {
 # to simplify the loading during comparison.
 
 sub last_db_version {
-    my $self = shift @_;
+    my ($self, @args) = @_;
 
-    if(@_) {
-        $self->{_last_db_version} = shift @_;
+    if(@args) {
+        $self->{_last_db_version} = shift @args;
     }
     return $self->{_last_db_version};
 }
