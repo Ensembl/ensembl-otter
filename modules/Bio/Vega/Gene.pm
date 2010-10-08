@@ -28,9 +28,9 @@ sub gene_author {
 }
 
 sub source  {
-  my $self = shift;
+  my ($self, @args) = @_;
 
-  $self->{'source'} = shift if( @_ );
+  $self->{'source'} = shift @args if( @args );
   return ( $self->{'source'} || "havana" );
 }
 
@@ -45,7 +45,7 @@ sub all_Attributes_string {
 }
 
 sub vega_hashkey {
-    my $self=shift;
+    my ($self) = @_;
 
     my $seq_region_name   = $self->seq_region_name    || throw(  'seq_region_name must be set to generate vega_hashkey');
     my $start             = $self->seq_region_start   || throw( 'seq_region_start must be set to generate vega_hashkey');
@@ -69,7 +69,7 @@ sub vega_hashkey_structure {
 
 sub vega_hashkey_sub {
 
-  my $self = shift;
+  my ($self) = @_;
   my $vega_hashkey_sub={};
   my $trans=$self->get_all_Transcripts;
   foreach my $tran (@$trans){
@@ -101,16 +101,16 @@ sub truncated_flag {
 # to simplify the loading during comparison.
 
 sub last_db_version {
-    my $self = shift @_;
+    my ($self, @args) = @_;
 
-    if(@_) {
-        $self->{_last_db_version} = shift @_;
+    if(@args) {
+        $self->{_last_db_version} = shift @args;
     }
     return $self->{_last_db_version};
 }
 
 sub dissociate {
-    my $self = shift @_;
+    my ($self) = @_;
 
     $self->dbID(undef);
     $self->adaptor(undef);
