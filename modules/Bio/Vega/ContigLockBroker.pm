@@ -7,10 +7,10 @@ use Bio::EnsEMBL::Utils::Exception qw ( throw warning );
 use Bio::EnsEMBL::Utils::Argument qw ( rearrange );
 
 sub new {
-    my $class = shift @_;
+    my ($class, @args) = @_;
 
     my $self = bless {}, $class;
-    my ($hostname, $author) = rearrange([qw(HOSTNAME AUTHOR)], @_);
+    my ($hostname, $author) = rearrange([qw(HOSTNAME AUTHOR)], @args);
 
     $self->client_hostname($hostname)   if $hostname;
     $self->author($author)              if $author;
