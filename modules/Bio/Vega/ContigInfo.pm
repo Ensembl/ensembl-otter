@@ -68,6 +68,8 @@ sub add_Attributes {
         }
         push( @$al, $attrib );
     }
+
+    return;
 }
 
 sub vega_hashkey_sub {
