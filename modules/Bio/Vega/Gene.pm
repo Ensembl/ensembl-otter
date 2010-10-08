@@ -123,6 +123,8 @@ sub dissociate {
             $tran->translation->adaptor(undef);
         }
     }
+
+    return;
 }
 
 sub attach_slice {
@@ -135,6 +137,8 @@ sub attach_slice {
     foreach my $exon (@{$self->get_all_Exons}) {
         $exon->slice($slice);
     }
+
+    return;
 }
 
 # keep track of all unique exons found so far to avoid making duplicates
@@ -182,6 +186,8 @@ sub prune_Exons {
           $tran->add_Exon($exon);
       }
   }
+
+  return;
 }
 
 
