@@ -7,11 +7,11 @@ use base qw(Bio::EnsEMBL::Storable);
 
 
 sub new {
-    my $class = shift @_;
+    my ($class, @args) = @_;
 
-    my $self = $class->SUPER::new(@_);
+    my $self = $class->SUPER::new(@args);
     my ($slice, $author, $attributes, $created_date )  =
-        rearrange([qw( SLICE AUTHOR ATTRIBUTES CREATED_DATE )], @_);
+        rearrange([qw( SLICE AUTHOR ATTRIBUTES CREATED_DATE )], @args);
 
     $self->slice($slice)                    if $slice;
     $self->author($author)                  if $author;
@@ -50,9 +50,9 @@ sub author {
     # Since the date is not a part of XML, the XML->Vega parser will leave the created_date unset.
     #
 sub created_date  {
-    my $self = shift;
+    my ($self, @args) = @_;
 
-    $self->{'created_date'} = shift if scalar(@_);
+    $self->{'created_date'} = shift @args if scalar(@args);
 
     return $self->{'created_date'};
 }
@@ -73,7 +73,7 @@ sub add_Attributes {
 }
 
 sub vega_hashkey_sub {
-    my $self = shift;
+    my ($self) = @_;
     my $attributes = $self->get_all_Attributes;
     my $hashkey_sub={};
     foreach my $a (@$attributes) {
@@ -83,14 +83,13 @@ sub vega_hashkey_sub {
 }
 
 sub vega_hashkey {
-    my $self = shift;
+    my ($self) = @_;
 
     return scalar @{$self->get_all_Attributes};
 }
 
 sub get_all_Attributes  {
-  my $self = shift;
-  my $attrib_code = shift;
+  my ($self, $attrib_code) = @_;
   if( ! exists $self->{'attributes' } ) {
     if(!$self->adaptor() ) {
       return [];
