@@ -197,6 +197,8 @@ sub remove_by_slice {
             warning("Can't unlock contig '$contig_name'. Lock doesn't exist");
         }
     }
+
+    return;
 }
 
 sub Contig_hashref_from_Slice {
