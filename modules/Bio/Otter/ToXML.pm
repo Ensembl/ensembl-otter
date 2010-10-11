@@ -8,7 +8,7 @@ use Bio::Vega::Utils::GeneTranscriptBiotypeStatus 'biotype_status2method';
 # ----------------[simplify some formatting]----------------------
 
 sub emit_value { # just make sure it does not contain triangular brackets:
-    my $value = shift @_;
+    my ($value) = @_;
 
     ### There are other characters that sould be escaped: & "
     $value=~s/\>/&gt;/g;
@@ -18,13 +18,17 @@ sub emit_value { # just make sure it does not contain triangular brackets:
 }
 
 sub emit_opening_tag {
-    my ($tag, $offset) = (@_, 0);
+    my ($tag, $offset) = @_;
+
+    $offset ||= 0;
 
     return ( (' ' x $offset) . '<' . $tag . ">\n") ;
 }
 
 sub emit_closing_tag {
-    my ($tag, $offset) = (@_, 0);
+    my ($tag, $offset) = @_;
+
+    $offset ||= 0;
 
     return ( (' ' x $offset) . '</' . $tag . ">\n") ;
 }
@@ -44,7 +48,7 @@ sub emit_tagpair {
 # ----------------[original Bio::EnsEMBL::... classes]--------------
 
 sub Bio::EnsEMBL::DBEntry::toXMLstring {
-    my $dbentry = shift @_;
+    my ($dbentry) = @_;
 
     my $str = '';
 
@@ -224,7 +228,7 @@ if($exon->end()<=0) { print STDERR "exon end is negative\n";}
 # ----------------[inherited Bio::Otter::... classes]--------------
 
 sub Bio::Otter::Author::toXMLstring {
-    my $author = shift @_;
+    my ($author) = @_;
 
     # my $name  = $author->name  or $author->throw("name not set");
     # my $email = $author->email or $author->throw("email not set");
@@ -239,7 +243,7 @@ sub Bio::Otter::Author::toXMLstring {
 }
 
 sub Bio::Otter::GeneInfo::toXMLstring {
-    my $ginfo = shift @_;
+    my ($ginfo) = @_;
 
     my $str = '';
     $str .= emit_opening_tag('gene_info', 2);
@@ -265,7 +269,7 @@ sub Bio::Otter::GeneInfo::toXMLstring {
 }
 
 sub Bio::Otter::TranscriptInfo::toXMLstring {
-    my $tinfo = shift @_;
+    my ($tinfo) = @_;
 
     my $str = '';
 
@@ -306,7 +310,7 @@ sub Bio::Otter::TranscriptInfo::toXMLstring {
 # ----------------[back-porting the system to support Vega/Loutre genes]--------------
 
 sub Bio::Vega::Gene::toXMLstring_info {
-    my $gene = shift @_;
+    my ($gene) = @_;
 
     my $str = '';
     $str .= emit_opening_tag('gene_info', 2);
@@ -344,7 +348,7 @@ sub Bio::Vega::Gene::toXMLstring_info {
 }
 
 sub Bio::Vega::Transcript::toXMLstring_info {
-    my $transcript = shift @_;
+    my ($transcript) = @_;
 
     my $str = '';
     $str .= emit_opening_tag('transcript_info', 4);
@@ -411,7 +415,7 @@ sub Bio::Vega::Transcript::toXMLstring_info {
 # ----------------[back-porting the system to support Vega/Loutre genes]--------------
 
 sub Bio::Vega::Author::toXMLstring {
-    my $author = shift @_;
+    my ($author) = @_;
 
     my $str = '';
     $str .= emit_opening_tag('author', 4);
