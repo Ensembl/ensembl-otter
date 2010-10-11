@@ -44,11 +44,11 @@ eval {
 
     foreach my $ip_addr (qw{ 193.62.203.7 }){
         last if $socket = IO::Socket::INET->new(
-            PeerAddr 	=> $ip_addr,
-            PeerPort 	=> 22400,
-            Proto    	=> 'tcp',
-            Type     	=> SOCK_STREAM,
-            Timeout  	=> 10,
+            PeerAddr => $ip_addr,
+            PeerPort => 22400,
+            Proto    => 'tcp',
+            Type     => SOCK_STREAM,
+            Timeout  => 10,
             );
     }
     die "Connect to pfetch server failed" unless $socket;
