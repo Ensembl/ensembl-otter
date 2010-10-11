@@ -38,6 +38,7 @@ sub set_minsize {
     my $top = $self->top;
     $top->update;
     $top->minsize($top->width, $top->height);
+    return;
 }
 
 sub get_clipboard_text {
