@@ -14,6 +14,7 @@ my $prefix_sub = sub {
 
 sub set_prefix_sub {
     $prefix_sub = shift;
+    return;
 }
 
 my $file;
