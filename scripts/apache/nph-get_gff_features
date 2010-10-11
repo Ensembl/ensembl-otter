@@ -50,7 +50,7 @@ eval {
 };
 
 if ($@) {
-	$server->error_exit($@);
+    $server->error_exit($@);
 }
 else {
     $server->send_response($gff_string, 0, 1);
