@@ -43,16 +43,16 @@ sub current_dataset_param {
 }
 
 sub otter_dba {
-    my $self = shift @_;
+    my ($self, @args) = @_;
 
-    if($self->{'_odba'} && !scalar(@_)) {   # cached value and no override
+    if($self->{'_odba'} && !scalar(@args)) {   # cached value and no override
         return $self->{'_odba'};
     }
 
     my $adaptor_class = 'Bio::Vega::DBSQL::DBAdaptor';
 
-    if(@_) { # let's check that the class is ok
-        my $odba = shift @_;
+    if(@args) { # let's check that the class is ok
+        my $odba = shift @args;
         if(UNIVERSAL::isa($odba, $adaptor_class)) {
             return $self->{'_odba'} = $odba;
         } else {
@@ -277,7 +277,7 @@ sub return_emptyhanded { # we probably only want to know about it only if using 
 }
 
 sub otter_assembly_equiv_hash { # $self->{_aeh}{NCBI36}{11} = 'chr11-02';
-    my $self = shift;
+    my ($self) = @_;
 
     if (my $aeh = $self->{'_aeh'}) {
         return $aeh;
