@@ -39,6 +39,8 @@ sub add_Band {
     $band->add_State($gc->state);
     $band->canvas($gc->canvas);
     push(@{$gc->{'_band_list'}}, $band);
+
+    return;
 }
 
 sub band_list {
@@ -92,6 +94,8 @@ sub render {
 
     }
     #print STDERR scalar(localtime), " Done rendering\n";
+
+    return;
 }
 
 sub draw_band_outline {
@@ -109,6 +113,8 @@ sub draw_band_outline {
         -tags       => [@tags],
         );
     $canvas->lower($r, 'all');
+
+    return;
 }
 
 sub delete_all_bands {
@@ -119,6 +125,8 @@ sub delete_all_bands {
         my $tag = $gc->band_tag($band);
         $canvas->delete($tag);
     }
+
+    return;
 }
 
 sub band_tag {
@@ -173,6 +181,8 @@ sub zoom {
     
     $gc->residues_per_pixel($new_rpp);
     $gc->fix_window_min_max_sizes;
+
+    return;
 }
 
 1;
