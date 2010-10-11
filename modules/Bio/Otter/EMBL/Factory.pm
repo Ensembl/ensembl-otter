@@ -291,6 +291,8 @@ sub add_sequence_from_otter {
 
     $embl->newXX;
     $embl->newSequence->seq($self->contig_Slice->seq);
+
+    return;
 }
 
 =head2 secondary_accs
@@ -530,6 +532,8 @@ sub fetch_clone_and_chromosome_Slices {
 
     $self->chromosome_Slice($chr_slice);
     $self->contig_Slice($ctg_slice);
+
+    return;
 }
 
 sub contig_name {
@@ -587,6 +591,8 @@ sub create_annotated_region_feature {
     $feat->key('misc_feature');
     $feat->location(simple_location($self->contig_start, $self->contig_end));
     $feat->addQualifierStrings('note', "annotated region of clone");
+
+    return;
 }
 
 =head2 make_embl_ft
@@ -656,6 +662,8 @@ sub make_embl_ft {
     $set->sortByPosition;
     $set->removeDuplicateFeatures;
     $set->addToEntry($embl);
+
+    return;
 }
 
 
@@ -884,6 +892,8 @@ sub _do_assembly_tag {
       }
     }
   }
+
+  return;
 }
 
 =head2 _do_polyA
@@ -958,6 +968,8 @@ sub _do_polyA {
             confess "Bad strand: ", $ctg_pos->strand;
         }
     }
+
+    return;
 }
 
 
@@ -1062,6 +1074,8 @@ sub process_gene {
             $cds_ft->addQualifierStrings('locus_tag', $name);
         }
     }
+
+    return;
 }
 
 sub make_ExonLocation {
@@ -1162,6 +1176,8 @@ sub _supporting_evidence {
     }
     $ft->addQualifierStrings('note', $evidence_hash{$evidence_type});
   }
+
+  return;
 }
 
 =head2 _add_gene_qualifiers
@@ -1192,6 +1208,8 @@ sub _add_gene_qualifiers {
   if ($gene->biotype =~ /pseudo/i) {
     $ft->addQualifierStrings('pseudo');
   }
+
+  return;
 }
 
 
