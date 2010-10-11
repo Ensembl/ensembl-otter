@@ -266,6 +266,8 @@ sub check_slice {
         my $ctg = @both_strands_used == 1 ? 'this contig uses' : 'these contigs use';
         $self->error_exit("Smap will fail because $ctg both strands in the assembly: @both_strands_used");
     }
+
+    return;
 }
 
 sub return_emptyhanded { # we probably only want to know about it only if using MFetcher directly,
@@ -500,6 +502,7 @@ sub map_remote_slice_back {
         }
     }
 
+    return [];
 }
 
 sub fetch_mapped_features {
