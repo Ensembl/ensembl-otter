@@ -73,7 +73,7 @@ foreach my $tile (@{ $slice->project('clone') }) {
         $proj_slice->strand(),
 
         $clone->length(),
-		# only send the contig's dna once
+        # only send the contig's dna once
         ($dna_wanted && !$contig_dna{$contig_name}) ? ($clone->seq()) : (),
         "\n"
     );
