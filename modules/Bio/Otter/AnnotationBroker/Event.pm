@@ -25,10 +25,10 @@ sub new {
   my ($type,$old_gene,$new_gene) =
 
       $self->_rearrange([qw(
-			    TYPE
-			    OLD
-			    NEW
-                            )],@args);
+TYPE
+OLD
+NEW
+)],@args);
 
   $type || $self->throw("Events must be made with a type");
   $self->type($type);
@@ -54,9 +54,8 @@ sub type {
     my ($self,$value) = @_;
 
     if (defined($value)) {
-	
-	$self->{'type'} = $value
-	}
+        $self->{'type'} = $value
+    }
     return $self->{'type'};
 }
 
@@ -75,9 +74,9 @@ sub old_gene {
     my ($self,$value) = @_;
 
     if (defined($value)) {
-	if( !ref $value || !$value->isa('Bio::Otter::AnnotatedGene') ) {
-	    $self->throw("[$value] is not an Otter gene");
-	}
+        if( !ref $value || !$value->isa('Bio::Otter::AnnotatedGene') ) {
+            $self->throw("[$value] is not an Otter gene");
+        }
     $self->{'old'} = $value
     }
     return $self->{'old'};
@@ -98,9 +97,9 @@ sub new_gene {
     my ($self,$value) = @_;
 
     if (defined($value)) {
-	if( !ref $value || !$value->isa('Bio::Otter::AnnotatedGene') ) {
-	    $self->throw("[$value] is not an Otter gene");
-	}
+        if( !ref $value || !$value->isa('Bio::Otter::AnnotatedGene') ) {
+            $self->throw("[$value] is not an Otter gene");
+        }
     $self->{'new'} = $value
     }
     return $self->{'new'};
@@ -111,9 +110,9 @@ sub to_string {
     my $gene;
 
     if( $self->type eq 'deleted') {
-	$gene = $self->old_gene();
+        $gene = $self->old_gene();
     } else {
-	$gene = $self->new_gene();
+        $gene = $self->new_gene();
     }
 
     return sprintf("Event %12s ID %12s",$self->type,$gene->stable_id);
