@@ -50,13 +50,13 @@ sub author{
    my ($self,$value) = @_;
 
    if( defined $value) {
-		 if ($value->isa("Bio::Otter::Author")) {
-			 $self->{'author'} = $value;
-		 } else {
-			 $self->throw("Argument [$value] is not a Bio::Otter::Author");
-		 }
-	 }
-    return $self->{'author'};
+       if ($value->isa("Bio::Otter::Author")) {
+           $self->{'author'} = $value;
+       } else {
+           $self->throw("Argument [$value] is not a Bio::Otter::Author");
+       }
+   }
+   return $self->{'author'};
 }
 
 sub timestamp{
