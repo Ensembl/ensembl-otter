@@ -15,8 +15,8 @@ sub new {
     my $self = $class->SUPER::new(@args);
 
     my ($transcript_info)  = $self->_rearrange([qw(
-						   INFO
-						   )],@args);
+INFO
+)],@args);
     
     $self->transcript_info($transcript_info);
     
@@ -42,10 +42,10 @@ sub transcript_info {
    if( defined $value) {
 
        if ($value->isa("Bio::Otter::TranscriptInfo")) {
-	   $obj->{'transcript_info'} = $value;
+           $obj->{'transcript_info'} = $value;
            $value->transcript_stable_id($obj->stable_id);
        } else {
-	   $obj->throw("Argument to transcript_info must be a Bio::Otter::TranscriptInfo object.  Currently is [$value]");
+           $obj->throw("Argument to transcript_info must be a Bio::Otter::TranscriptInfo object.  Currently is [$value]");
        }
     }
     return $obj->{'transcript_info'};
@@ -125,7 +125,7 @@ sub truncate_to_Slice {
         my $exon_start = $exon->start;
         my $exon_end   = $exon->end;
         if(($exon->contig != $slice) or ($exon_end < 1) or ($exon_start > $slice_length)
-	   or ($exon->{_previously_truncated})) {
+           or ($exon->{_previously_truncated})) {
             #warn "removing exon that is off slice";
             ### This won't work if get_all_Exons() ceases to return
             ### a ref to the actual array of exons in the transcript.
@@ -141,13 +141,13 @@ sub truncate_to_Slice {
             my $trunc_flag = 0;
             if ($exon->start < 1) {
                 #warn "truncating exon that overlaps start of slice";
-	        $exon->{_previously_truncated} = 1;
+                $exon->{_previously_truncated} = 1;
                 $trunc_flag = 1;
                 $exon->start(1);
             }
             if ($exon->end > $slice_length) {
                 #warn "truncating exon that overlaps end of slice";
-	        $exon->{_previously_truncated} = 1;
+                $exon->{_previously_truncated} = 1;
                 $trunc_flag = 1;
                 $exon->end($slice_length);
             }
