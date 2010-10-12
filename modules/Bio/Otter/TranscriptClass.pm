@@ -130,14 +130,14 @@ sub equals {
     my ($self,$obj) = @_;
 
     if (!defined($obj)) {
-	$self->throw("Need an object to compare with");
+        $self->throw("Need an object to compare with");
     }
     if (!$obj->isa("Bio::Otter::TranscriptClass")) {
-	$self->throw("[$obj] is not a Bio::Otter::TranscriptClass");
+        $self->throw("[$obj] is not a Bio::Otter::TranscriptClass");
     }
 
     if ($self->name eq $obj->name) {
-	return 1;
+        return 1;
     }
 }
 1;
