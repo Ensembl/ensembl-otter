@@ -376,7 +376,7 @@ sub fetch_Author_obj {
 sub enrich {
     my ($afs, $enriched_class) = @_;
 
-	my $server = Bio::Otter::ServerScriptSupport->new;
+    my $server = Bio::Otter::ServerScriptSupport->new;
 
         # Put the names into the hit_description hash:
     my %hd_hash = ();
@@ -432,45 +432,45 @@ sub Bio::EnsEMBL::Slice::get_all_DnaPepAlignFeatures {
 
 sub get_requested_features {
 
-	my $self = shift;
+    my $self = shift;
 
-	my @feature_kinds  = split(/,/, $self->require_argument('kind'));
+    my @feature_kinds  = split(/,/, $self->require_argument('kind'));
     my $analysis_list = $self->param('analysis');
     my @analysis_names = $analysis_list ? split(/,/, $analysis_list) : ( undef );
     my $filter_module = $self->param('filter_module');
 
-	my @feature_list = ();
+    my @feature_list = ();
 
-	foreach my $analysis_name (@analysis_names) {
-	    foreach my $feature_kind (@feature_kinds) {
-	        my $param_descs = $LangDesc{$feature_kind}{-call_args};
-	        my $getter_method = "get_all_${feature_kind}s";
+    foreach my $analysis_name (@analysis_names) {
+        foreach my $feature_kind (@feature_kinds) {
+            my $param_descs = $LangDesc{$feature_kind}{-call_args};
+            my $getter_method = "get_all_${feature_kind}s";
 
-	        my @param_list = ();
-	        foreach my $param_desc (@$param_descs) {
-	            my ($param_name, $param_def_value, $param_separator) = @$param_desc;
+            my @param_list = ();
+            foreach my $param_desc (@$param_descs) {
+                my ($param_name, $param_def_value, $param_separator) = @$param_desc;
 
-	            my $param_value = (scalar(@$param_desc)==1)
-	                ? $self->require_argument($param_name)
-	                : defined($self->param($param_name))
-	                    ? $self->param($param_name)
-	                    : $param_def_value;
-	            if($param_value && $param_separator) {
-	                $param_value = [split(/$param_separator/,$param_value)];
-	            }
-				$param_value = $analysis_name if $param_value =~ /$analysis_name/;
-	            push @param_list, $param_value;
-	        }
+                my $param_value = (scalar(@$param_desc)==1)
+                    ? $self->require_argument($param_name)
+                    : defined($self->param($param_name))
+                    ? $self->param($param_name)
+                    : $param_def_value;
+                if($param_value && $param_separator) {
+                    $param_value = [split(/$param_separator/,$param_value)];
+                }
+                $param_value = $analysis_name if $param_value =~ /$analysis_name/;
+                push @param_list, $param_value;
+            }
 
-	        my $features = $self->fetch_mapped_features($feature_kind, $getter_method, \@param_list,
-	            map { defined($self->param($_)) ? $self->param($_) : '' }
-	                qw(cs name type start end metakey csver csver_remote)
-	        );
+            my $features = $self->fetch_mapped_features($feature_kind, $getter_method, \@param_list,
+                                                        map { defined($self->param($_)) ? $self->param($_) : '' }
+                                                        qw(cs name type start end metakey csver csver_remote)
+                );
 
-	        push @feature_list, @$features;
-	    }
-	}
-    
+            push @feature_list, @$features;
+        }
+    }
+
     if ($filter_module) {
         
         # detaint the module string
@@ -498,7 +498,7 @@ sub get_requested_features {
         }
     }
     
-	return \@feature_list;
+    return \@feature_list;
 }
 
 sub empty_gff_header {
