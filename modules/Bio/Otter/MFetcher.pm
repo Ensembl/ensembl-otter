@@ -78,7 +78,7 @@ sub otter_dba {
 
         $self->log("Connected to otter database");
     } else {
-		$self->error_exit("Failed opening otter database [No database name]");
+        $self->error_exit("Failed opening otter database [No database name]");
     }
 
     if(my $dna_dbname = $self->current_dataset_param('DNA_DBNAME')) {
@@ -418,7 +418,7 @@ sub fetch_and_export {
                         ." --> $csver_target:".$target_feature->start().'..'.$target_feature->end()."\n";
                 } else {
                     warn "Could not transform the feature ".$original_slice_on_mapper->name." ".
-		          $orig_feature->start().'..'.$orig_feature->end();
+                        $orig_feature->start().'..'.$orig_feature->end();
                 }
             }
 
@@ -553,7 +553,7 @@ sub fetch_mapped_features {
                 # Try to map to scaffold if coordinate system exists and mapping to chromosome failed
                 # allow getting ensembl objects from Zfish scaffolds
                 if(!@$proj_segments_on_mapper && $mdba->get_CoordSystemAdaptor->fetch_by_name('scaffold',$csver_remote)) {
-					$proj_segments_on_mapper = $original_slice_on_mapper->project( 'scaffold', $csver_remote );
+                    $proj_segments_on_mapper = $original_slice_on_mapper->project( 'scaffold', $csver_remote );
                 }
             };
             if ($@ || ! @$proj_segments_on_mapper) {
@@ -561,36 +561,36 @@ sub fetch_mapped_features {
             }
             $self->log("Found ".scalar(@$proj_segments_on_mapper)." projection segments on mapper when projecting to $cs:$csver_remote");
 
-	    # group the projected slices by their chromosome and,
-	    # for each chromosome, calculate the endpoints of the
-	    # slice that just covers all the projected slices on
-	    # that chromosome
+            # group the projected slices by their chromosome and,
+            # for each chromosome, calculate the endpoints of the
+            # slice that just covers all the projected slices on
+            # that chromosome
 
-	    my $amalgamated_endpoints = { };
-	    my $proj_slices_on_mapper;
+            my $amalgamated_endpoints = { };
+            my $proj_slices_on_mapper;
 
-	    foreach my $segment (@$proj_segments_on_mapper) {
-		my $slice = $segment->to_Slice;
-		my $chromosome = $slice->seq_region_name;
-		my $start0 = $amalgamated_endpoints->{$chromosome}[0];
-		my $start1 = $slice->start;
-		my $end0 = $amalgamated_endpoints->{$chromosome}[1];
-		my $end1 = $slice->end;
-		$amalgamated_endpoints->{$chromosome}[0] = $start1 unless
-		    defined $start0 && $start0 <= $start1;
-		$amalgamated_endpoints->{$chromosome}[1] = $end1 unless
-		    defined $end0 && $end0 >= $end1;
-	    }
+            foreach my $segment (@$proj_segments_on_mapper) {
+                my $slice = $segment->to_Slice;
+                my $chromosome = $slice->seq_region_name;
+                my $start0 = $amalgamated_endpoints->{$chromosome}[0];
+                my $start1 = $slice->start;
+                my $end0 = $amalgamated_endpoints->{$chromosome}[1];
+                my $end1 = $slice->end;
+                $amalgamated_endpoints->{$chromosome}[0] = $start1 unless
+                    defined $start0 && $start0 <= $start1;
+                $amalgamated_endpoints->{$chromosome}[1] = $end1 unless
+                    defined $end0 && $end0 >= $end1;
+            }
 
-	    # create the amalgamated slices
-	    my $strand = $original_slice_on_mapper->strand;
-	    my $adaptor = $original_slice_on_mapper->adaptor;
-	    $proj_slices_on_mapper = [ map {
-		my $seq_region_name = $_;
-		my ( $start, $end ) = @{$amalgamated_endpoints->{$_}};
-		$adaptor->fetch_by_region($cs, $seq_region_name,
-					  $start, $end, $strand, $csver_remote,);
-	    } keys %$amalgamated_endpoints ];
+            # create the amalgamated slices
+            my $strand = $original_slice_on_mapper->strand;
+            my $adaptor = $original_slice_on_mapper->adaptor;
+            $proj_slices_on_mapper = [ map {
+                my $seq_region_name = $_;
+                my ( $start, $end ) = @{$amalgamated_endpoints->{$_}};
+                $adaptor->fetch_by_region($cs, $seq_region_name,
+                                          $start, $end, $strand, $csver_remote,);
+            } keys %$amalgamated_endpoints ];
 
             if($das_style_mapping) { # In this mode there is no target_db involved.
                                      # Features are put directly on the mapper target slice and then mapped back.
