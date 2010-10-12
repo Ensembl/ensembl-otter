@@ -13,11 +13,11 @@ sub new {
   my $self = bless {}, $class;
 
   my ($dbid,$name,$transcript_info_id,$type)  = $self->_rearrange([qw(
-							  DBID
-                                                          NAME
-							  TRANSCRIPT_INFO_ID
-							  TYPE
-							  )],@args);
+DBID
+NAME
+TRANSCRIPT_INFO_ID
+TYPE
+)],@args);
 
   $self->dbID($dbid);
   $self->name($name);
@@ -109,9 +109,9 @@ sub type{
    if( defined $value) {
 
        if ($value eq 'ncRNA' || $value eq 'EST' || $value eq 'Protein' || $value eq 'cDNA' || $value eq 'Genomic' || $value eq 'UNKNOWN') {
-	   $obj->{'type'} = $value;
+           $obj->{'type'} = $value;
        } else {
-	   $obj->throw("Invalid type [$value]. Must be one of EST,ncRNA,Protein,cDNA,Genomic");
+           $obj->throw("Invalid type [$value]. Must be one of EST,ncRNA,Protein,cDNA,Genomic");
        }
     }
     return $obj->{'type'};
