@@ -14,10 +14,10 @@ sub new {
 
   my ($dbid,$name,$clone_info_id)  
       = $self->_rearrange([qw(
-			      DBID
-			      NAME
-			      CLONE_INFO_ID
-			      )],@args);
+DBID
+NAME
+CLONE_INFO_ID
+)],@args);
 
   $self->dbID($dbid);
   $self->name($name);
@@ -61,10 +61,10 @@ sub toString{
     my $clone_info_id = "";
 
     if (defined($self->dbID)) {
-	$dbid = $self->dbID;
+        $dbid = $self->dbID;
     }
     if (defined($self->clone_info_id)) {
-	$clone_info_id = $self->clone_info_id;
+        $clone_info_id = $self->clone_info_id;
     }
 
     $str .= "DbID          : " . $dbid . "\n";
