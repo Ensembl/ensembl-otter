@@ -385,11 +385,11 @@ sub get_all_features_hash { # get Simple|DnaAlign|ProteinAlign|Repeat|Marker|Dit
     my $all_features = ParseFeatures(\$response, $self->name(), $arg_pairs{'analysis'});
 
     return {
-	map {
-	    my $features = $all_features->{$_} || [];
-	    $features = [ values %$features ] if ref($features) eq "HASH";
-	    $_ => $features;
-	} keys %$all_features,
+        map {
+            my $features = $all_features->{$_} || [];
+            $features = [ values %$features ] if ref($features) eq "HASH";
+            $_ => $features;
+        } keys %$all_features,
     };
 }
 
