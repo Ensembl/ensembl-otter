@@ -127,9 +127,9 @@ sub equals {
     #if ($self->name eq $obj->name &&
     #$self->email eq $obj->email) {
     if ($self->name eq $obj->name) {
-	return 1;
+        return 1;
     } else {
-	return 0;
+        return 0;
     }
 }
 
