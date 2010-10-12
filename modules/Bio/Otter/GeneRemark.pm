@@ -132,21 +132,21 @@ sub equals {
     my ($self,$obj) = @_;
 
     if (!defined($obj)) {
-	$self->throw("Need an object to compare with");
+        $self->throw("Need an object to compare with");
     }
     if (!$obj->isa("Bio::Otter::GeneRemark")) {
-	$self->throw("Can only compare with a GeneRemark object");
+        $self->throw("Can only compare with a GeneRemark object");
     }
     
     if ($self->remark eq $obj->remark) {
         #printf STDERR "The same:\n'%s'\n", $obj->remark;
-	return 1;
+        return 1;
     } else {
         #printf STDERR "Different:\n  '%s'\n  '%s'\n", $self->remark, $obj->remark;
-	return 0;
+        return 0;
     }
 }
-	
+
 1;
 
 __END__
