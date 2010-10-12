@@ -130,16 +130,16 @@ sub equals {
     my ($self,$obj) = @_;
 
     if (!defined($obj)) {
-	$self->throw("Need an object to compare with");
+        $self->throw("Need an object to compare with");
     }
     if (!$obj->isa("Bio::Otter::TranscriptRemark")) {
-	$self->throw("Can only compare with a TranscriptRemark object");
+        $self->throw("Can only compare with a TranscriptRemark object");
     }
     
     if ($self->remark eq $obj->remark) {
-	return 1;
+        return 1;
     } else {
-	return 0;
+        return 0;
     }
 }
 
