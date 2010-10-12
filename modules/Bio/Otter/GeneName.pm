@@ -13,10 +13,10 @@ sub new {
   my $self = bless {}, $class;
 
   my ($dbid,$name,$gene_info_id)  = $self->_rearrange([qw(
-							  DBID
-							  NAME
-							  GENE_INFO_ID
-							  )],@args);
+DBID
+NAME
+GENE_INFO_ID
+)],@args);
   $self->dbID($dbid);
   $self->name($name);
   $self->gene_info_id($gene_info_id);
@@ -108,13 +108,13 @@ sub toString{
     my $infoid = "";
 
     if (defined($self->dbID)) {
-	$dbid = $self->dbID;
+        $dbid = $self->dbID;
     }
     if (defined($self->name)) {
-	$name = $self->name;
+        $name = $self->name;
     }
     if (defined($self->gene_info_id)) {
-	$infoid = $self->gene_info_id;
+        $infoid = $self->gene_info_id;
     }
 
     $str .= "DbID    : " . $dbid . "\n";
@@ -130,9 +130,9 @@ sub equals {
     my ($self,$obj) = @_;
 
     if ($self->name eq $obj->name) {
-	return 1;
+        return 1;
     } else {
-	return 0;
+        return 0;
     }
 }
 
