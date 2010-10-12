@@ -35,16 +35,16 @@ sub import {
 
 
     foreach (@vars) {
-	    if (defined $Config{ $_ }) {
-                ## no critic(TestingAndDebugging::ProhibitNoStrict)
-                no strict 'refs';
-	        # Exporter does a similar job to the following
-	        # statement, but for function names, not
-	        # scalar variables:
-	        *{"${callpack}::$_"} = \$Config{ $_ };
-	    } else {
-	        die "Error: Config: $_ not known (See Bio::Otter::Lace::Blast)\n";
-	    }
+        if (defined $Config{ $_ }) {
+            ## no critic(TestingAndDebugging::ProhibitNoStrict)
+            no strict 'refs';
+            # Exporter does a similar job to the following
+            # statement, but for function names, not
+            # scalar variables:
+            *{"${callpack}::$_"} = \$Config{ $_ };
+        } else {
+            die "Error: Config: $_ not known (See Bio::Otter::Lace::Blast)\n";
+        }
     }
 
     return;
