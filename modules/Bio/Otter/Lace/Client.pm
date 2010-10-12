@@ -1016,8 +1016,8 @@ sub get_accession_types {
     }
     
     while (@uncached) {
-	# HTTP fetch in batches, to avoid blowing the GET URL length limit.
-	#   150 is conservatively < (4096 limit - 120 for URL) / (20 char each, when encoded)
+        # HTTP fetch in batches, to avoid blowing the GET URL length limit.
+        #   150 is conservatively < (4096 limit - 120 for URL) / (20 char each, when encoded)
         my @fetch_accs = splice @uncached, 0, 150;
         
         my $response = $self->http_response_content(
