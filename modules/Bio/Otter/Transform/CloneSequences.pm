@@ -31,11 +31,12 @@ sub start_handler{
     }
     if($ele eq 'lock'){
       my $authorObj = Bio::Vega::Author->new(
-					      -name  => $attr{'author_name'},
-					      -email => $attr{'email'});
-      my $cloneLock = Bio::Vega::ContigLock->new(-author   => $authorObj,
-						 -hostname => $attr{'host_name'},
-						 -dbID     => $attr{'lock_id'});
+          -name  => $attr{'author_name'},
+          -email => $attr{'email'});
+      my $cloneLock = Bio::Vega::ContigLock->new(
+          -author   => $authorObj,
+          -hostname => $attr{'host_name'},
+          -dbID     => $attr{'lock_id'});
       my $cs = $self->objects;
       my $cl = $cs->[-1];
       $cl->set_lock_status($cloneLock);
