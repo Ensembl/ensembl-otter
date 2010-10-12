@@ -58,7 +58,7 @@ sub load_species_dat_file {
                 $self->error_exit("Error: first section in species.dat should be 'defaults'");
             }
             elsif ($1 eq "defaults") {
-	            $self->log("Got default section");
+                $self->log("Got default section");
                 $curhash = $defhash;
             }
             else {
