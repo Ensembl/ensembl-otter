@@ -29,16 +29,15 @@ sub vega_hashkey_structure {
 }
 
 sub vega_hashkey_sub {
-
-  my ($self) = @_;
-  my $sel = $self->get_all_Attributes('_selenocysteine');
-  my $hashkey_sub={};
-  if (defined $sel) {
-	 foreach my $s (@$sel){
-		$hashkey_sub->{$s->value}=1;
-	 }
-  }
-  return $hashkey_sub;
+    my ($self) = @_;
+    my $sel = $self->get_all_Attributes('_selenocysteine');
+    my $hashkey_sub={};
+    if (defined $sel) {
+        foreach my $s (@$sel){
+            $hashkey_sub->{$s->value}=1;
+        }
+    }
+    return $hashkey_sub;
 }
 
 # This is to be used by storing mechanism of GeneAdaptor,
