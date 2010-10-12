@@ -136,8 +136,8 @@ sub Bio::EnsEMBL::Transcript::toXMLstring {
     my ($transcript, $coord_offset, $slice_length) = @_;
 
     my $str  = emit_opening_tag('transcript', 2);
-       $str .= emit_tagpair('stable_id', $transcript->stable_id(), 4);
-	   $str .= emit_tagpair('analysis', $transcript->analysis->logic_name, 4);
+    $str .= emit_tagpair('stable_id', $transcript->stable_id(), 4);
+    $str .= emit_tagpair('analysis', $transcript->analysis->logic_name, 4);
     for my $dbentry (@{$transcript->get_all_DBEntries}) {
        $str .= $dbentry->toXMLstring();
     }
@@ -248,7 +248,7 @@ sub Bio::Otter::GeneInfo::toXMLstring {
     my $str = '';
     $str .= emit_opening_tag('gene_info', 2);
 
-	$str .= emit_tagpair('name', $ginfo->name() && $ginfo->name()->name(), 4);
+    $str .= emit_tagpair('name', $ginfo->name() && $ginfo->name()->name(), 4);
     $str .= emit_tagpair('known', $ginfo->known_flag, 4);
     $str .= emit_tagpair('truncated', $ginfo->truncated_flag, 4);
 
@@ -317,10 +317,10 @@ sub Bio::Vega::Gene::toXMLstring_info {
 
     my $gene_name_att = $gene->get_all_Attributes('name');
     my $gene_name = $gene_name_att->[0] ? $gene_name_att->[0]->value : '';
-	$str .= emit_tagpair('name', $gene_name, 4);
+    $str .= emit_tagpair('name', $gene_name, 4);
 
-	$str .= emit_tagpair('known', $gene->is_known || 0, 4);
-	$str .= emit_tagpair('truncated', $gene->truncated_flag, 4);
+    $str .= emit_tagpair('known', $gene->is_known || 0, 4);
+    $str .= emit_tagpair('truncated', $gene->truncated_flag, 4);
 
     if(my $synonyms = $gene->get_all_Attributes('synonym')) {
         foreach my $syn (@$synonyms){
