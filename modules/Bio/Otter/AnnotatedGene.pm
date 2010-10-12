@@ -14,8 +14,8 @@ sub new {
   my $self = $class->SUPER::new(@args);
   
   my ($gene_info)  = $self->_rearrange([qw(
-					   INFO
-					   )],@args);
+INFO
+)],@args);
   
   $self->gene_info($gene_info);
 
@@ -58,9 +58,9 @@ sub gene_info {
    if( defined $value) {
 
        if ($value->isa("Bio::Otter::GeneInfo")) {
-	   $obj->{'gene_info'} = $value;
+           $obj->{'gene_info'} = $value;
        } else {
-	   $obj->throw("Argument to gene_info must be a Bio::Otter::GeneInfo object.  Currently is [$value]");
+           $obj->throw("Argument to gene_info must be a Bio::Otter::GeneInfo object.  Currently is [$value]");
        }
     }
     return $obj->{'gene_info'};
