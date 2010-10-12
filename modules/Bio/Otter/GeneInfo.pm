@@ -29,14 +29,14 @@ sub new {
 
   if (defined($remark)) {
       if (ref($remark) ne "ARRAY") {
-	  $self->throw("Remark argument must be an array ref. Currently is [$remark]\n");
+          $self->throw("Remark argument must be an array ref. Currently is [$remark]\n");
       }
 
       $self->remark(@$remark);
   }
   if (defined($synonym)) {
       if (ref($synonym) ne "ARRAY") {
-	  $self->throw("Remark argument must be an array ref. Currently is [$synonym]\n");
+          $self->throw("Remark argument must be an array ref. Currently is [$synonym]\n");
       }
 
       $self->synonym(@$synonym);
@@ -168,11 +168,11 @@ sub name {
     my ($obj,$value) = @_;
 
     if (defined($value)) {
-	if ($value->isa("Bio::Otter::GeneName")) {
-	    $obj->{_name} = $value;
-	} else {
-	    $obj->throw("[$value] is not a Bio::Otter::GeneName object");
-	}
+        if ($value->isa("Bio::Otter::GeneName")) {
+            $obj->{_name} = $value;
+        } else {
+            $obj->throw("[$value] is not a Bio::Otter::GeneName object");
+        }
     }
     return $obj->{_name};
 }
