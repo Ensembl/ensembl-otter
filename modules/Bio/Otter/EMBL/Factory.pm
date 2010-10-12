@@ -774,7 +774,7 @@ Warns if no CloneRemarks are fetched for the clone, returning undef.
 =cut
 
 sub get_description_from_otter {
-	my ( $self ) = @_;
+    my ( $self ) = @_;
 
     my $ctg = $self->contig_Slice;
     my $ctginfo_ad  = $self->DataSet->make_Vega_DBAdaptor->get_ContigInfoAdaptor;
@@ -802,7 +802,7 @@ Warns if no Keyword objects are fetched for the clone, returning undef.
 =cut
 
 sub get_keywords_from_otter {
-	my ( $self ) = @_;
+    my ( $self ) = @_;
 
     my $ctg         = $self->contig_Slice;
     my $ctginfo_ad  = $self->DataSet->make_Vega_DBAdaptor->get_ContigInfoAdaptor;
