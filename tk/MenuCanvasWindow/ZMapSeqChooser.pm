@@ -839,13 +839,20 @@ sub zMapEdit {
           or return return (200, $z->handled_response(0));
 
         # Are there any transcripts in the list of features?
-        my ($genomic_canonical, @subseq_names);
+        my @subseq_names;
       NAME: foreach my $name (keys %$feat_hash) {
             my $feat = $feat_hash->{$name};
             if (my $style = $feat->{'style'}) {
                 if (lc($style) eq 'genomic_canonical') {
-                    $genomic_canonical = $name;
-                    last NAME;
+                    confess "invalid name for a genomic_canonical feature: ${name}"
+                        unless my ( $accession_version ) = $name =~ / ^
+    (.*) \. [[:digit:]]+ \. [[:digit:]]+
+    - [[:digit:]]+ # start
+    - [[:digit:]]+ # end
+    - [[:alpha:]]+ # strand
+    $ /x;
+                    $self->edit_Clone_by_accession_version($accession_version);
+                    return (200, $z->handled_response(1));
                 }
             }
             my $subs = $feat->{'subfeature'}
@@ -863,11 +870,7 @@ sub zMapEdit {
             }
         }
 
-        if ($genomic_canonical) {
-            $self->edit_Clone($genomic_canonical);
-            return (200, $z->handled_response(1));
-        }
-        elsif (@subseq_names) {
+        if (@subseq_names) {
             my $success = $self->edit_subsequences(@subseq_names);
             return (200, $z->handled_response($success));
         }
