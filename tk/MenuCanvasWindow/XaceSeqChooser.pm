@@ -735,14 +735,19 @@ sub show_lcd_dialog {
 sub populate_clone_menu {
     my ($self) = @_;
 
+    my $clones_by_accession_version =
+        $self->{_clones_by_accession_version} = { };
+
     my $clone_menu = $self->clone_menu;
     foreach my $clone ($self->Assembly->get_all_Clones) {
-        my $name = $clone->name;
+        my $clone_name = $clone->clone_name;
+        my $accession_version = $clone->accession_version;
+        $clones_by_accession_version->{$accession_version} = $clone;
         $clone_menu->add('command',
-            -label          => $clone->clone_name,
+            -label          => $clone_name,
             # Not an accelerator - just for formatting!
-            -accelerator    => $clone->accession_version,
-            -command        => sub{ $self->edit_Clone($name) },
+            -accelerator    => $accession_version,
+            -command        => sub{ $self->edit_Clone($clone) },
             );
     }
 
@@ -1691,9 +1696,9 @@ sub get_all_Subseq_clusters {
 }
 
 sub edit_Clone {
-    my ($self, $name) = @_;
+    my ($self, $clone) = @_;
 
-    my $clone = $self->Assembly->get_Clone($name);
+    my $name = $clone->name;
 
     # show Clone EditWindow
     my $cew;
@@ -1710,6 +1715,20 @@ sub edit_Clone {
     my $top = $cew->top;
     $top->deiconify;
     $top->raise;
+
+    return;
+}
+
+sub edit_Clone_by_accession_version {
+    my ($self, $accession_version) = @_;
+
+    my $clone = $self->{_clones_by_accession_version}{$accession_version};
+    confess 
+        sprintf "No clone with this accession.version: '%s'",
+        $accession_version
+        unless $clone;
+
+    $self->edit_Clone($clone);
 
     return;
 }
