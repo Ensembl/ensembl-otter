@@ -1150,7 +1150,7 @@ sub hunt_for_Entry_text {
         my $sub = $self->get_SubSeq($name) or next;
         my $str = eval { $sub->ace_string };
         if ($@) {
-            # Data outside our control may break Hum::Ace::SubSeq  RT:188195
+            # Data outside our control may break Hum::Ace::SubSeq  RT:188195, 189606
             my $err = $@;
             warn "hunt_for_Entry_text on $name: $err";
             push @ace_fail_names, $name;
@@ -1164,13 +1164,12 @@ sub hunt_for_Entry_text {
     }
 
     if (@ace_fail_names && !@matching_sub_names) {
-        # We see only errors
-        $self->message("hunt_for_Entry_text: no results,\nonly errors while searching.\nSomething broken?");
-        return;
+        # We see only errors.  Highlight them.
+        $self->message("hunt_for_Entry_text: NO RESULTS, but did encounter errors while searching.  Highlighting those instead.");
+	@matching_sub_names = @ace_fail_names;
     } elsif (@ace_fail_names) {
-        # Mixture of errors and hits
-        push @matching_sub_names, @ace_fail_names;
-        $self->message("hunt_for_Entry_text: some errors while searching, will highlight those items too\n(@ace_fail_names)");
+        # Mixture of errors and hits.  Highlight the hits.
+        $self->message("hunt_for_Entry_text: I also saw some errors while searching.  Search for 'wibble' to highlight those.");
     }
 
     if (@matching_sub_names) {
