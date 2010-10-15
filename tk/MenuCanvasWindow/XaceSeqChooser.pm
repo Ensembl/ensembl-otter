@@ -735,19 +735,22 @@ sub show_lcd_dialog {
 sub populate_clone_menu {
     my ($self) = @_;
 
+    my $clones_by_name =
+        $self->{_clones_by_name} = { };
     my $clones_by_accession_version =
         $self->{_clones_by_accession_version} = { };
 
     my $clone_menu = $self->clone_menu;
     foreach my $clone ($self->Assembly->get_all_Clones) {
-        my $clone_name = $clone->clone_name;
+        my $name = $clone->clone_name;
+        $clones_by_name->{$name} = $clone;
         my $accession_version = $clone->accession_version;
         $clones_by_accession_version->{$accession_version} = $clone;
         $clone_menu->add('command',
-            -label          => $clone_name,
+            -label          => $name,
             # Not an accelerator - just for formatting!
             -accelerator    => $accession_version,
-            -command        => sub{ $self->edit_Clone($clone) },
+            -command        => sub{ $self->edit_Clone_by_name($name) },
             );
     }
 
@@ -1714,6 +1717,18 @@ sub edit_Clone {
     my $top = $cew->top;
     $top->deiconify;
     $top->raise;
+
+    return;
+}
+
+sub edit_Clone_by_name {
+    my ($self, $name) = @_;
+
+    my $clone = $self->{_clones_by_name}{$name};
+    confess sprintf "No clone with this name: '%s'", $name
+        unless $clone;
+
+    $self->edit_Clone($clone);
 
     return;
 }
