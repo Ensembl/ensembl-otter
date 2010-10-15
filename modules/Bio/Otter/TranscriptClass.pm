@@ -138,6 +138,8 @@ sub equals {
 
     if ($self->name eq $obj->name) {
         return 1;
+    } else {
+        return 0;
     }
 }
 1;
