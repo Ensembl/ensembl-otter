@@ -9,7 +9,7 @@ use Bio::EnsEMBL::Root;
 
 @ISA = qw(Bio::EnsEMBL::Root);
 
-# new is inherieted?
+# new is inherited?
 
 sub new {
   my($caller,@args) = @_;
