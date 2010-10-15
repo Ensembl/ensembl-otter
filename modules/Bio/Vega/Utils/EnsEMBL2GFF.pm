@@ -575,7 +575,7 @@ sub gff_header {
 
         my $gff  = $self->SUPER::_gff_hash(@args);
         my ( $start, $end ) = @{$gff}{qw( start end )};
-        if ( $start == $end - 1 ) {
+        if ( $start > $end ) {
             @{$gff}{qw( start end )} = ( $end, $start );
         }
 
