@@ -19,5 +19,5 @@ then
 else
   echo "Creating sparseimage $sparse"
   hdiutil create -fs HFS+ -volname "$release" "$sparse"
-  open "$sparse"
+  hdiutil mount "$sparse"
 fi
