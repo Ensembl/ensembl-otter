@@ -162,10 +162,28 @@ sub read_user_file {
     return $usr_hash;
 }
 
+
+=head2 sangerweb()
+
+Instance method.  Cache and return an instance of L<SangerWeb>
+configured with us as the CGI instance.
+
+It is important to instantiate only one CGI (or subclass) instance,
+because it will eat the POST input.
+
+=cut
+
+sub sangerweb {
+    my ($self) = @_;
+
+    return $self->{'_sangerweb'} ||= SangerWeb->new({ cgi => $self });
+}
+
+
 sub authenticate_user {
     my ($self) = @_;
 
-    my $sw = SangerWeb->new({ cgi => $self });
+    my $sw = $self->sangerweb;
 
     if (my $user = lc($sw->username)) {
         my $auth_flag     = 0;
@@ -207,14 +225,25 @@ sub internal_user {
     return $self->{'_internal_user'};
 }
 
-sub local_user {
-    my ($self) = @_;
 
-    my $local_user;
-    unless ($local_user = $self->{'_local_user'}) {
-        $local_user = $ENV{'localuser'} =~ /local/ ? 1 : 0;
-    }
-    return $local_user;
+=head2 local_user()
+
+Is the caller on the WTSI internal network?
+
+=cut
+
+sub local_user {
+    # These environment variables are set by SiteDecor (webteam)
+
+    # Pre-2010-10, behind the Apache front-end reverse proxies.  It
+    # seems they set HTTP_CLIENTREALM=localuser
+    return 1 if $ENV{'localuser'} =~ /local/;
+
+    # Behind the Zeus (zxtm) reverse proxies.  We think this is
+    # equivalent to the old localuser.  See RT #190390.
+    return 1 if $ENV{'sanger'} eq 'sanger';
+
+    return 0;
 }
 
 sub show_restricted_datasets {
