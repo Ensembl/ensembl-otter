@@ -37,6 +37,9 @@ isn't a long term solution.
 sub zMapInitialize {
     my ( $self ) = @_;
 
+    $self->{_zMap_ZMAP_CONNECTOR} =
+        $self->zMapZmapConnectorNew;
+
     $self->zMapWriteDotZmap;
     $self->zMapWriteDotGtkrc;
     $self->zMapWriteDotBlixemrc;
@@ -372,14 +375,16 @@ This is the way we receive commands from zmap.
 
 sub zMapZmapConnector {
     my ($self) = @_;
-    my $zc = $self->{'_zMap_ZMAP_CONNECTOR'};
-    if (!$zc) {
-        my $mb = $self->menu_bar();
-        my $zmap = ZMap::Connect->new(-server => 1);
-        $zmap->init($mb, \&RECEIVE_FILTER, [ $self, qw() ]);
-        my $id = $zmap->server_window_id();
-        $zc = $self->{'_zMap_ZMAP_CONNECTOR'} = $zmap;
-    }
+    my $zc = $self->{_zMap_ZMAP_CONNECTOR};
+    return $zc;
+}
+
+sub zMapZmapConnectorNew {
+    my ($self) = @_;
+    my $mb = $self->menu_bar();
+    my $zc = ZMap::Connect->new(-server => 1);
+    $zc->init($mb, \&RECEIVE_FILTER, [ $self, qw() ]);
+    my $id = $zc->server_window_id();
     return $zc;
 }
 
