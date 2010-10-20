@@ -237,6 +237,22 @@ sub config_value {
     return $value;
 }
 
+sub config_value_list {
+    my ( $key1, $key2, $name ) = @_;
+
+    my @keys = ( "default.$key2", "$key1.$key2" );
+
+    return [
+        map {
+            my $ini = $_;
+            map  {
+                my $key = $_;
+                my $vs = $ini->{$key}{$name};
+                ref $vs ? @{$vs} : defined $vs ? ( $vs ) : ( );
+            } @keys;
+        } @$CONFIG_INIFILES, ];
+}
+
 sub config_value_list_merged {
     my ( $key1, $key2, $name ) = @_;
 

@@ -68,10 +68,13 @@ The guts of the code to launch and display the features in a zmap.
 sub _launchZMap {
     my ($self) = @_;
 
+    my $dataset = $self->AceDatabase->smart_slice->DataSet;
+
     my @e = (
         'zmap',
         '--conf_dir' => $self->zMapZmapDir,
         '--win_id'   => $self->zMapZmapConnector->server_window_id,
+        @{$dataset->config_value_list('zmap_config', 'arguments')},
     );
     warn "Running @e";
     my $pid = fork;
