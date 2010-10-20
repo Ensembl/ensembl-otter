@@ -40,6 +40,9 @@ sub zMapInitialize {
     $self->{_zMap_ZMAP_CONNECTOR} =
         $self->zMapZmapConnectorNew;
 
+    $self->{_xremote_cache} =
+        ZMap::XRemoteCache->new;
+
     $self->zMapWriteDotZmap;
     $self->zMapWriteDotGtkrc;
     $self->zMapWriteDotBlixemrc;
@@ -66,10 +69,6 @@ sub _launchZMap {
     my ($self) = @_;
 
     my $zmap_conn = $self->zMapZmapConnector();
-
-    unless ($self->xremote_cache()) {
-        $self->xremote_cache(ZMap::XRemoteCache->new());
-    }
 
     my @e = (
         'zmap',
@@ -141,7 +140,6 @@ sub _launchInAZMap {
     my ($self) = @_;
 
     my $xremote_cache = $self->xremote_cache;
-    $xremote_cache ||= $self->xremote_cache(ZMap::XRemoteCache->new());
 
     if (my $pid_list = $xremote_cache->get_pid_list()) {
         if (scalar(@$pid_list) == 1) {
@@ -794,10 +792,9 @@ sub zMapListMethodNames_ordered {
 #===========================================================
 
 sub xremote_cache {
-    my ($self, $cache) = @_;
+    my ($self) = @_;
 
-    if   ($cache) { $self->{'_xremote_cache'} = $cache; }
-    else          { $cache                    = $self->{'_xremote_cache'}; }
+    my $cache = $self->{'_xremote_cache'};
 
     return $cache;
 }
@@ -1239,10 +1236,7 @@ sub zMapGetXRemoteClientByName {
     my ($self, $key) = @_;
 
     my $cache = $self->xremote_cache();
-    $cache ||= $self->xremote_cache(ZMap::XRemoteCache->new());
-
     my $window_id = $self->zMapWindowIDs->{$key};
-
     my $client = $cache->get_client_with_id($window_id);
 
     return $client;
@@ -1252,8 +1246,6 @@ sub zMapGetXRemoteClientByAction {
     my ($self, $action) = @_;
 
     my $cache = $self->xremote_cache();
-    $cache ||= $self->xremote_cache(ZMap::XRemoteCache->new());
-
     my $pid = $self->zMapPID();
     my $client = $cache->get_own_client_for_action_pid($action, $pid);
 
