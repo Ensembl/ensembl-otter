@@ -1228,7 +1228,7 @@ based on a name. e.g. the window that's displaying the features.
 sub zMapGetXRemoteClientByName {
     my ($self, $key) = @_;
 
-    my $cache = $self->xremote_cache();
+    my $cache = $self->xremote_cache;
     my $window_id = $self->zMapWindowIDs->{$key};
     my $client = $cache->get_client_with_id($window_id);
 
@@ -1238,7 +1238,7 @@ sub zMapGetXRemoteClientByName {
 sub zMapGetXRemoteClientByAction {
     my ($self, $action) = @_;
 
-    my $cache = $self->xremote_cache();
+    my $cache = $self->xremote_cache;
     my $pid = $self->zMapPID();
     my $client = $cache->get_own_client_for_action_pid($action, $pid);
 
@@ -1455,7 +1455,7 @@ sub zMapDoRequest {
 sub zMapProcessNewClientXML {
     my ($self, $xml, $lookup_key) = @_;
 
-    my $cache = $self->xremote_cache();
+    my $cache = $self->xremote_cache;
 
     my ($client_tag, $id);
 
