@@ -92,6 +92,11 @@ sub config_section {
     return $self->Client->config_section($self->config_name, $section);
 }
 
+sub config_value_list {
+    my ($self, @keys) = @_;
+    return $self->Client->config_value_list($self->config_name, @keys);
+}
+
 sub config_value_list_merged {
     my ($self, @keys) = @_;
     return $self->Client->config_value_list_merged($self->config_name, @keys);

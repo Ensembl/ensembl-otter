@@ -1083,6 +1083,11 @@ sub config_value {
     return Bio::Otter::Lace::Defaults::config_value('client', $key);
 }
 
+sub config_value_list {
+    my ( $self, @keys ) = @_;
+    return Bio::Otter::Lace::Defaults::config_value_list(@keys);
+}
+
 sub config_value_list_merged {
     my ( $self, @keys ) = @_;
     return Bio::Otter::Lace::Defaults::config_value_list_merged(@keys);
