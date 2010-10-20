@@ -68,12 +68,10 @@ The guts of the code to launch and display the features in a zmap.
 sub _launchZMap {
     my ($self) = @_;
 
-    my $zmap_conn = $self->zMapZmapConnector();
-
     my @e = (
         'zmap',
         '--conf_dir' => $self->zMapZmapDir,
-        '--win_id'   => $zmap_conn->server_window_id
+        '--win_id'   => $self->zMapZmapConnector->server_window_id,
     );
     warn "Running @e";
     my $pid = fork;
@@ -184,8 +182,7 @@ sub _launchInAZMap {
             else {
 
                 # couldn't find a client who can new_view, probably need to
-                my $zmap = $self->zMapZmapConnector();
-                open_clones($zmap, $self);
+                open_clones($self->zMapZmapConnector, $self);
             }
         }
         elsif (scalar(@$pid_list) == 0) {
@@ -274,15 +271,11 @@ sub zMapRelaunchZMap {
         warn "Relaunching zmap..." if $ZMAP_DEBUG;
     }
     elsif ($self->{'_launch_in_a_zmap'}) {
-        if (my $zmap = $self->zMapZmapConnector()) {
-            $zmap->post_respond_handler(\&post_response_client_cleanup_launch_in_a_zmap, [$self]);
-        }
+        $self->zMapZmapConnector->post_respond_handler(\&post_response_client_cleanup_launch_in_a_zmap, [$self]);
         $self->{'_launch_in_a_zmap'} = 0;
     }
     else {
-        if (my $zmap = $self->zMapZmapConnector()) {
-            $zmap->post_respond_handler(\&post_response_client_cleanup, [$self]);
-        }
+        $self->zMapZmapConnector->post_respond_handler(\&post_response_client_cleanup, [$self]);
 
         # calling this here creates a race condition.
         # $self->xremote_cache->remove_clients_to_bad_windows();
@@ -816,7 +809,7 @@ A handler to handle register_client requests.
 sub zMapRegisterClient {
     my ($self, $xml) = @_;
 
-    my $zmap = $self->zMapZmapConnector;
+    my $zc = $self->zMapZmapConnector;
 
     unless ($xml->{'request'}->{'client'}->{'xwid'}
         && $xml->{'request'}->{'client'}->{'request_atom'}
@@ -825,14 +818,14 @@ sub zMapRegisterClient {
         warn "mismatched request for register_client:\n",
           "id, request and response required\n",
           "Got '", Dumper($xml), "'\n";
-        return (403, $zmap->basic_error("Bad Request!"));
+        return (403, $zc->basic_error("Bad Request!"));
     }
 
     $self->zMapProcessNewClientXML($xml, $self->main_window_name());
 
-    $zmap->post_respond_handler(\&open_clones, [$self]);
+    $zc->post_respond_handler(\&open_clones, [$self]);
 
-    my $response_xml = $zmap->client_registered_response;
+    my $response_xml = $zc->client_registered_response;
 
     warn "Sending response to register_client:\n$response_xml\n" if $ZMAP_DEBUG;
 
@@ -849,12 +842,12 @@ sub zMapEdit {
     my ($self, $xml_hash) = @_;
 
     my $response;
-    my $z = $self->zMapZmapConnector();
+    my $zc = $self->zMapZmapConnector;
     if ($xml_hash->{'request'}->{'action'} eq 'edit') {
 
         #warn Dumper($xml_hash);
         my $feat_hash = $xml_hash->{'request'}->{'align'}->{'block'}->{'featureset'}{'feature'}
-          or return return (200, $z->handled_response(0));
+          or return return (200, $zc->handled_response(0));
 
         # Are there any transcripts in the list of features?
         my @subseq_names;
@@ -870,7 +863,7 @@ sub zMapEdit {
     - [[:alpha:]]+ # strand
     $ /x;
                     $self->edit_Clone_by_accession_version($accession_version);
-                    return (200, $z->handled_response(1));
+                    return (200, $zc->handled_response(1));
                 }
             }
             my $subs = $feat->{'subfeature'}
@@ -890,10 +883,10 @@ sub zMapEdit {
 
         if (@subseq_names) {
             my $success = $self->edit_subsequences(@subseq_names);
-            return (200, $z->handled_response($success));
+            return (200, $zc->handled_response($success));
         }
         else {
-            return (200, $z->handled_response(0));
+            return (200, $zc->handled_response(0));
         }
     }
     else {
@@ -912,7 +905,7 @@ returns a basic response.
 sub zMapHighlight {
     my ($self, $xml_hash) = @_;
 
-    my $z = $self->zMapZmapConnector();
+    my $zc = $self->zMapZmapConnector;
 
     # Needs to do something interesting to find the object to highlight.
     if ($xml_hash->{'request'}->{'action'} eq 'single_select') {
@@ -930,7 +923,7 @@ sub zMapHighlight {
     }
     else { confess "Not a 'select' action\n"; }
 
-    return (200, $z->handled_response(1));
+    return (200, $zc->handled_response(1));
 }
 
 =head1 zMapTagValues
@@ -1067,7 +1060,7 @@ sub zMapRemoveView {
 
     my ($client_tag, $xid);
 
-    my $z = $self->zMapZmapConnector();
+    my $zc = $self->zMapZmapConnector;
 
     if ($client_tag = $xml->{'request'}->{'client'}) {
         $xid = $client_tag->{'xwid'};
@@ -1078,7 +1071,7 @@ sub zMapRemoveView {
         $self->xremote_cache->remove_client_with_id($xid);
     }
 
-    return (200, $z->handled_response(1));
+    return (200, $zc->handled_response(1));
 }
 
 sub zMapFeaturesLoaded {
@@ -1280,7 +1273,7 @@ sub open_clones {
 sub zMapRegisterClientRequest {
     my ($self, $xremote) = @_;
 
-    my $zmap = $self->zMapZmapConnector();
+    my $zmap = $self->zMapZmapConnector;
     $self->zMapDoRequest($xremote, "register_client", $zmap->connect_request());
 
     return;
