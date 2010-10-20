@@ -32,6 +32,20 @@ This module is included into MenuCanvasWindow::XaceSeqChooser.  All
 methods have been prefixed with "zMap" to avoid any clashes, but this
 isn't a long term solution.
 
+=cut
+
+sub zMapInitialize {
+    my ( $self ) = @_;
+
+    $self->zMapWriteDotZmap;
+    $self->zMapWriteDotGtkrc;
+    $self->zMapWriteDotBlixemrc;
+
+    return;
+}
+
+=pod
+
 =head1 zMapLaunchZmap
 
 This is where it all starts.  This is the method which gets called

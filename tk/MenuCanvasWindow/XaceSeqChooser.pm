@@ -102,9 +102,7 @@ sub initialize {
 
     $self->draw_subseq_list;
     $self->populate_clone_menu;
-    $self->zMapWriteDotZmap;
-    $self->zMapWriteDotGtkrc;
-    $self->zMapWriteDotBlixemrc;
+    $self->zMapInitialize;
     $self->zMapLaunchZmap;
     $self->top_window->raise;
 
