@@ -20,13 +20,13 @@ my $sql = qq{
     SELECT DISTINCT cl.name, concat(embl_acc.value, '.', embl_version.value), ctg.name,
            l.hostname, l.timestamp, aut.author_name, aut.author_email
       FROM seq_region cl,
-           seq_region ctg,
+           seq_region ctg
+ LEFT JOIN contig_lock l ON ctg.seq_region_id = l.seq_region_id
+ LEFT JOIN author aut ON aut.author_id = l.author_id,
            assembly cl2ctg,
            seq_region_attrib embl_acc, seq_region_attrib embl_version }
 .($asm_type ? qq{ , assembly chr2ctg, seq_region chr } : '')
 .qq{
- LEFT JOIN contig_lock l ON ctg.seq_region_id = l.seq_region_id
- LEFT JOIN author aut ON aut.author_id = l.author_id
      WHERE cl2ctg.asm_seq_region_id=cl.seq_region_id
        AND cl2ctg.cmp_seq_region_id=ctg.seq_region_id
        AND cl.coord_system_id=(select coord_system_id from coord_system where name='clone')
