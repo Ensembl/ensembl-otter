@@ -400,7 +400,7 @@ sub zMapWriteDotBlixemrc {
 sub zMapDotBlixemrcContent {
     my ($self) = @_;
 
-    my $pfetch = $self->AceDatabase->Client->url_root . '/nph-pfetch';
+    my $pfetch = $self->AceDatabase->Client->pfetch_url;
     my $default_fetch_mode =
         $ENV{'PFETCH_WWW'} ? 'pfetch-http' : 'pfetch-socket';
 
@@ -595,7 +595,7 @@ sub zMapZMapDefaults {
     my @columns = $columns ? ( columns => join ' ; ', @{$columns} ) : ( );
 
     my $pfetch_www = $ENV{'PFETCH_WWW'};
-    my $pfetch_url = $self->AceDatabase->Client->url_root . '/nph-pfetch';
+    my $pfetch_url = $self->AceDatabase->Client->pfetch_url;
 
     return $self->formatZmapDefaults(
         'ZMap',
