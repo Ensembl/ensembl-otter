@@ -43,7 +43,7 @@ sub server_params {
         $params->{$meth} = $self->$meth;
     }
     
-    $params->{server_script} = 'nph-get_gff_das_features';
+    $params->{server_script} = 'get_gff_das_features';
     
     $params->{gff_source} = $self->name;
        
