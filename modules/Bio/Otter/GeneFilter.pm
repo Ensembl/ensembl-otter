@@ -27,7 +27,7 @@ sub server_params {
     
     my $params = $self->SUPER::server_params;
     
-    $params->{server_script} = 'nph-get_gff_genes';
+    $params->{server_script} = 'get_gff_genes';
     $params->{transcript_analyses} = $self->transcript_analyses;
     $params->{translation_xref_dbs} = $self->translation_xref_dbs;
        

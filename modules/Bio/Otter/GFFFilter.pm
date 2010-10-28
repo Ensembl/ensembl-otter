@@ -33,7 +33,7 @@ sub server_params {
     
     my $params = $self->SUPER::server_params;
     
-    $params->{server_script} = 'nph-get_gff_features';
+    $params->{server_script} = 'get_gff_features';
     $params->{ditypes} = $self->ditypes if $self->ditypes;
     
     return $params;

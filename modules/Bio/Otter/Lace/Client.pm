@@ -472,7 +472,7 @@ sub url_root {
 sub pfetch_url {
     my ($self) = @_;
     
-    return $self->url_root . '/nph-pfetch';
+    return $self->url_root . '/pfetch';
 }
 
 sub setup_pfetch_env {
@@ -582,9 +582,6 @@ sub escaped_param_string {
 
 sub do_http_request {
     my ($self, $method, $scriptname, $params) = @_;
-
-    # Apache non-parsed-header scripts must begin "nph-"
-    $scriptname = "nph-$scriptname";
 
     my $url = $self->url_root.'/'.$scriptname;
     my $paramstring = $self->escaped_param_string($params);
