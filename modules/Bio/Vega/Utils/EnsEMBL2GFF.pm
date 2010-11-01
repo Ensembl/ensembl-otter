@@ -369,7 +369,9 @@ sub gff_header {
         my $gff  = $self->SUPER::_gff_hash(@args);
         $gff->{feature} = 'Sequence';
         $gff->{attributes}->{Class} = qq("Sequence");
-        $gff->{attributes}->{Name} = '"'.$self->display_id.'"';
+        if ( $self->display_id ) {
+            $gff->{attributes}->{Name} = '"'.$self->display_id.'"';
+        }
         return $gff;
     }
 
@@ -399,7 +401,8 @@ sub gff_header {
             $end += $self->slice->start - 1 unless $rebase;
             
             my $gff_hash = $self->_gff_hash(%args);
-            
+            my $name= $gff_hash->{attributes}->{Name};
+
             $gff .= "\n" . join(
                 "\t",
                 $gff_hash->{seqname},
@@ -411,8 +414,7 @@ sub gff_header {
                 $gff_hash->{strand},
                 '0', # frame - not really sure what we should put here, but giface always seems to use 0, so we will too!
                 'Class "Sequence"',
-                ';',
-                'Name ' . $gff_hash->{attributes}->{Name}
+                ( $name ? ( ';', 'Name ' . $name ) : ( ) ),
             );
         }
 
@@ -425,7 +427,13 @@ sub gff_header {
 
             # and add the feature's gff line to our string, including the sequence name information as an attribute
             $gff .= "\n"
-              . $feat->to_gff( %args, extra_attrs => { Name => '"' . $self->display_id . '"' } );
+              . $feat->to_gff( %args,
+                               ( $self->display_id
+                                 ? ( extra_attrs =>
+                                     { Name => '"' . $self->display_id . '"' }
+                                     )
+                                 : ( ) )
+              );
 
             # to be on the safe side, get rid of the analysis we temporarily attached
             # (someone might rely on there not being one later)
