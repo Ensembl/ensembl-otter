@@ -1806,6 +1806,18 @@ sub Assembly {
     return $self->{'_assembly'};
 }
 
+sub save_Assembly {
+    my( $self, $new ) = @_;
+
+    my @xml = $new->zmap_SimpleFeature_xml($self->Assembly);
+    $self->send_zmap_commands(@xml);
+    my $ace = $new->ace_string;
+    $self->save_ace($ace);
+    $self->Assembly->set_SimpleFeature_list($new->get_all_SimpleFeatures);
+
+    return;
+}
+
 sub empty_Assembly_cache {
     my( $self ) = @_;
 
