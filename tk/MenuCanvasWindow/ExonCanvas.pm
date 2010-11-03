@@ -3094,22 +3094,9 @@ sub xace_save {
         $top->grabRelease;
         return;
     }
-
-    my $ace = '';
-
-    # Do we need to rename?
-    if ($old->is_archival and $new_name ne $old_name) {
-        $ace .= $sub->ace_string($old_name);
-    } else {
-        $ace .= $sub->ace_string;
-    }
-
     my $xc = $self->XaceSeqChooser;
 
-    print STDERR "Sending:\n$ace";
-    $xc->save_ace($ace);
-    $self->zmap_save($sub);
-    $xc->replace_SubSeq($sub, $old_name);
+    $xc->replace_SubSeq($sub, $old);
     $self->SubSeq($sub);
     $self->update_transcript_remark_widget($sub);
     $self->name($new_name);
@@ -3123,27 +3110,6 @@ sub xace_save {
     
     $top->grabRelease;
     
-    return;
-}
-
-sub zmap_save {
-    my( $self, $sub ) = @_;
-
-    confess "Missing SubSeq argument" unless $sub;
-
-    my $old = $self->SubSeq;
-
-    # Do we need to rename?
-    my @xml;
-    if ($old->is_archival) {
-        push @xml, $old->zmap_delete_xml_string;
-    }
-    push @xml, $sub->zmap_create_xml_string;
-
-    #print STDERR "Sending:\n", @xml;
-
-    $self->XaceSeqChooser->send_zmap_commands(@xml);
-
     return;
 }
 
