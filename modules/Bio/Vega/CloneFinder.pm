@@ -304,30 +304,40 @@ sub find_by_xref {
     my $satellite_dba = $self->satellite_dba($metakey, 1) || return;
 
     my $sql = qq{
-        SELECT DISTINCT edb.db_name, x.dbprimary_acc,
-                        sr.name, cs.name, cs.version,
-                        (CASE ox.ensembl_object_type
-                         WHEN 'Gene' THEN g.seq_region_start
-                         WHEN 'Transcript' THEN t.seq_region_start
-                         WHEN 'Translation' THEN t2p.seq_region_start END),
-                        (CASE ox.ensembl_object_type
-                         WHEN 'Gene' THEN g.seq_region_end
-                         WHEN 'Transcript' THEN t.seq_region_end
-                         WHEN 'Translation' THEN t2p.seq_region_end END)
-                  FROM external_db edb, xref x, object_xref ox
-             LEFT JOIN gene g ON g.gene_id=ox.ensembl_id
-             LEFT JOIN transcript t ON t.transcript_id=ox.ensembl_id
-             LEFT JOIN translation p ON p.translation_id=ox.ensembl_id
-             LEFT JOIN transcript t2p ON p.transcript_id=t2p.transcript_id
-             LEFT JOIN seq_region sr ON sr.seq_region_id=
-                        (CASE ox.ensembl_object_type
-                         WHEN 'Gene' THEN g.seq_region_id
-                         WHEN 'Transcript' THEN t.seq_region_id
-                         WHEN 'Translation' THEN t2p.seq_region_id END)
-             LEFT JOIN coord_system cs ON cs.coord_system_id=sr.coord_system_id
-                 WHERE edb.external_db_id=x.external_db_id
-                   AND x.xref_id=ox.xref_id
-                   AND x.dbprimary_acc $condition
+        SELECT DISTINCT edb.db_name
+          , x.dbprimary_acc
+          , sr.name
+          , cs.name
+          , cs.version
+          , (CASE ox.ensembl_object_type
+            WHEN 'Gene' THEN g.seq_region_start
+            WHEN 'Transcript' THEN t.seq_region_start
+            WHEN 'Translation' THEN t2p.seq_region_start END)
+          , (CASE ox.ensembl_object_type
+            WHEN 'Gene' THEN g.seq_region_end
+            WHEN 'Transcript' THEN t.seq_region_end
+            WHEN 'Translation' THEN t2p.seq_region_end END)
+        FROM (external_db edb
+              , xref x
+              , object_xref ox)
+        LEFT JOIN gene g
+          ON g.gene_id = ox.ensembl_id
+        LEFT JOIN transcript t
+          ON t.transcript_id = ox.ensembl_id
+        LEFT JOIN translation p
+          ON p.translation_id = ox.ensembl_id
+        LEFT JOIN transcript t2p
+          ON p.transcript_id = t2p.transcript_id
+        LEFT JOIN seq_region sr
+          ON sr.seq_region_id = (CASE ox.ensembl_object_type
+            WHEN 'Gene' THEN g.seq_region_id
+            WHEN 'Transcript' THEN t.seq_region_id
+            WHEN 'Translation' THEN t2p.seq_region_id END)
+        LEFT JOIN coord_system cs
+          ON cs.coord_system_id = sr.coord_system_id
+        WHERE edb.external_db_id = x.external_db_id
+          AND x.xref_id = ox.xref_id
+          AND x.dbprimary_acc $condition
     };
 
     my $dbc = $satellite_dba->dbc();

@@ -1080,8 +1080,6 @@ sub zMapRemoveView {
 sub zMapFeaturesLoaded {
     my ($self, $xml) = @_;
     
-    import Data::Dumper;
-    
     my @featuresets = split(/;/, $xml->{request}->{featureset}->{names});
     
     my $status = $xml->{request}->{status}->{value};

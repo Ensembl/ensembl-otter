@@ -36,25 +36,26 @@ use Bio::Otter::Lace::Defaults;
 
     my $sth = $ens_db->prepare(qq{
         SELECT DISTINCT gsi1.stable_id
-          FROM assembly a,
-            contig c,
-            exon e,
-            exon_transcript et,
-            transcript t, 
-            gene g,
-            gene_stable_id gsi1 LEFT JOIN gene_stable_id gsi2 
-            ON gsi1.stable_id = gsi2.stable_id 
-            && gsi1.version < gsi2.version
-          WHERE gsi2.stable_id IS NULL
-            && g.gene_id = gsi1.gene_id
-            && g.type = ?
-            && a.contig_id = c.contig_id
-            && a.type = ?
-            && e.contig_id = c.contig_id
-            && e.exon_id = et.exon_id
-            && t.transcript_id = et.transcript_id
-            && t.gene_id = g.gene_id
-          $order_by
+        FROM (assembly a
+              , contig c
+              , exon e
+              , exon_transcript et
+              , transcript t
+              , gene g
+              , gene_stable_id gsi1)
+        LEFT JOIN gene_stable_id gsi2
+          ON gsi1.stable_id = gsi2.stable_id
+          AND gsi1.version < gsi2.version
+        WHERE gsi2.stable_id IS NULL
+          AND g.gene_id = gsi1.gene_id
+          AND g.type = ?
+          AND a.contig_id = c.contig_id
+          AND a.type = ?
+          AND e.contig_id = c.contig_id
+          AND e.exon_id = et.exon_id
+          AND t.transcript_id = et.transcript_id
+          AND t.gene_id = g.gene_id
+        $order_by
         });
     $sth->execute($type, $set);
     while (my ($stable_id) = $sth->fetchrow) {

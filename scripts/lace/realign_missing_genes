@@ -175,9 +175,9 @@ sub list_exonless_accessions {
     my $sth = $dbh->prepare(q{
         SELECT c.embl_acc
           , c.embl_version
-        FROM clone c
+        FROM (clone c
           , contig g
-          , assembly a
+          , assembly a)
         LEFT JOIN exon e
           ON g.contig_id = e.contig_id
         WHERE c.clone_id = g.clone_id

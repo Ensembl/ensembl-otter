@@ -2,7 +2,6 @@
 
 use warnings;
 
-
 use strict;
 use Carp;
 use Hum::Tracking;
@@ -13,32 +12,33 @@ use Hum::Submission;
 {
 
     # Stop another repair_intl_clone_names running at the same time
-	my $project = "repair_intl_clone_names";
-  	Hum::Submission::create_lock($project);
+    my $project = "repair_intl_clone_names";
+    Hum::Submission::create_lock($project);
 
     my $dataset_name = undef;
-    my $rescan_flag = 0;     # Re-scan the names even if they are already in the database
-    my $change_flag = 0;     # Whether we should change or just show the stats
+    my $rescan_flag  = 0;       # Re-scan the names even if they are already in the database
+    my $change_flag  = 0;       # Whether we should change or just show the stats
     Bio::Otter::Lace::Defaults::do_getopt(
-					  'dataset=s'   => \$dataset_name,
-                      'change!'     => \$change_flag,
-					  ) || die "No arguments - don't know what to do";
+        'dataset=s' => \$dataset_name,
+        'change!'   => \$change_flag,
+    ) || die "No arguments - don't know what to do";
 
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
 
     my @datasets;
 
-    if($dataset_name) {
+    if ($dataset_name) {
         push @datasets, $cl->get_DataSet_by_name($dataset_name);
-    } else {
+    }
+    else {
         @datasets = $cl->get_all_DataSets();
     }
 
     while (my $ds = shift @datasets) {
 
         $dataset_name = $ds->name();
-        next if $dataset_name eq "cow"; # cow does not have clones - it has fake clones
-                                        # from whole genome shotgun
+        next if $dataset_name eq "cow";    # cow does not have clones - it has fake clones
+                                           # from whole genome shotgun
 
         print STDERR "\n=================== $dataset_name ===============\n";
 
@@ -46,15 +46,11 @@ use Hum::Submission;
         my $otter_db = $ds->get_cached_DBAdaptor;
 
         eval {
-                my $dbh = $otter_db->can('dbc') ? $otter_db->dbc : $otter_db;
-                repair_one_db($dbh, $rescan_flag, $change_flag, $dataset_name, 'otter');
+            my $dbh = $otter_db->can('dbc') ? $otter_db->dbc : $otter_db;
+            repair_one_db($dbh, $rescan_flag, $change_flag, $dataset_name, 'otter');
 
-                my $pipe_db =
-                    Bio::Otter::Lace::SatelliteDB::get_DBAdaptor(
-                        $otter_db,
-                        'pipeline_db_rw_head',
-                );
-                repair_one_db($pipe_db->dbc, $rescan_flag, $change_flag, $dataset_name, 'pipe');
+            my $pipe_db = Bio::Otter::Lace::SatelliteDB::get_DBAdaptor($otter_db, 'pipeline_db_rw_head',);
+            repair_one_db($pipe_db->dbc, $rescan_flag, $change_flag, $dataset_name, 'pipe');
         };
         warn $@ if $@;
     }
@@ -67,9 +63,11 @@ use Hum::Submission;
 sub get_attrib_id_by_name {
     my ($dbh, $name) = @_;
 
-    my $query = $dbh->prepare(qq{
+    my $query = $dbh->prepare(
+        qq{
         SELECT attrib_type_id FROM attrib_type WHERE code = '$name'
-    });
+    }
+    );
     $query->execute;
     return $query->fetchrow;
 }
@@ -78,45 +76,56 @@ sub repair_one_db {
 
     my ($dbh, $rescan_flag, $change_flag, $dataset_name, $which_db) = @_;
 
-    if(! $dbh) {
+    if (!$dbh) {
         print STDERR "\n***** '$which_db' database of '$dataset_name' species does not seem to exist\n";
         return;
     }
 
     print STDERR "\n***** Repairing '$which_db' database of '$dataset_name' species:\n";
 
-    my ($intl_attrib, $acc_attrib, $op_update_pipe_query,
-        $np_select_srid_and_old_by_acc, $np_insert_pipe_query, $np_update_pipe_query);
+    my ($intl_attrib, $acc_attrib, $op_update_pipe_query, $np_select_srid_and_old_by_acc,
+        $np_insert_pipe_query, $np_update_pipe_query);
 
-        $intl_attrib = get_attrib_id_by_name($dbh, 'intl_clone_name') || die "'intl_clone_name' attrib not defined";
-        $acc_attrib  = get_attrib_id_by_name($dbh, 'embl_acc') || die "'embl_acc' attrib not defined";
+    $intl_attrib = get_attrib_id_by_name($dbh, 'intl_clone_name') || die "'intl_clone_name' attrib not defined";
+    $acc_attrib  = get_attrib_id_by_name($dbh, 'embl_acc')        || die "'embl_acc' attrib not defined";
 
-        # find the clones that need their international name to be updated:
+    # find the clones that need their international name to be updated:
     my $clones_acc_query = $dbh->prepare(
-    qq{
-        SELECT a_acc.value, a_ver.value, a_icn.value
-        FROM seq_region s,
-	     seq_region_attrib a_acc,
-	     seq_region_attrib a_ver
+        qq{
+        SELECT a_acc.value
+          , a_ver.value
+          , a_icn.value
+        FROM (seq_region s
+              , seq_region_attrib a_acc
+              , seq_region_attrib a_ver)
         LEFT JOIN seq_region_attrib a_icn
-          ON  s.seq_region_id = a_icn.seq_region_id
-         AND  a_icn.attrib_type_id = $intl_attrib
-        WHERE s.coord_system_id = (SELECT coord_system_id FROM coord_system WHERE name = 'clone')
-        }.( $rescan_flag
+          ON s.seq_region_id = a_icn.seq_region_id
+          AND a_icn.attrib_type_id = $intl_attrib
+        WHERE s.coord_system_id =
+        (SELECT coord_system_id
+            FROM coord_system
+            WHERE name = 'clone')
+        }
+          . (
+            $rescan_flag
             ? ''
             : ' AND a_icn.value is NULL '
-        ).qq{
+          )
+          . qq{
           AND s.seq_region_id = a_acc.seq_region_id
           AND a_acc.attrib_type_id = $acc_attrib
           AND s.seq_region_id = a_ver.seq_region_id
-          AND a_ver.attrib_type_id = (SELECT attrib_type_id FROM attrib_type WHERE code = 'embl_version')
+          AND a_ver.attrib_type_id =
+        (SELECT attrib_type_id
+            FROM attrib_type
+            WHERE code = 'embl_version')
         }
     );
     $clones_acc_query->execute;
 
-
-            # find srid and old value via accession only:
-        $np_select_srid_and_old_by_acc = $dbh->prepare(qq{
+    # find srid and old value via accession only:
+    $np_select_srid_and_old_by_acc = $dbh->prepare(
+        qq{
             SELECT a_acc.seq_region_id, a_icn.value
             FROM seq_region_attrib a_acc
             LEFT JOIN seq_region_attrib a_icn
@@ -124,27 +133,31 @@ sub repair_one_db {
              AND  a_icn.attrib_type_id = $intl_attrib
             WHERE a_acc.attrib_type_id = $acc_attrib
               AND a_acc.value = ?
-        });
+        }
+    );
 
-            # insert a *new* intl_clone_name in the new schema (one by one):
-        $np_insert_pipe_query = $dbh->prepare(qq{
+    # insert a *new* intl_clone_name in the new schema (one by one):
+    $np_insert_pipe_query = $dbh->prepare(
+        qq{
             INSERT INTO seq_region_attrib
             (value, seq_region_id, attrib_type_id)
             VALUES (?, ?, $intl_attrib)
-        });
+        }
+    );
 
-            # update an intl_clone_name in the new schema
-        $np_update_pipe_query = $dbh->prepare(qq{
+    # update an intl_clone_name in the new schema
+    $np_update_pipe_query = $dbh->prepare(
+        qq{
             UPDATE seq_region_attrib
             SET value = ?
             WHERE seq_region_id = ?
               AND attrib_type_id = $intl_attrib
-        });
+        }
+    );
 
-
-        # the actual update loop:
-    my $scanned_count = 0;
-    my $done_count    = 0;
+    # the actual update loop:
+    my $scanned_count      = 0;
+    my $done_count         = 0;
     my $diff_changed_count = 0;
     my $diff_chback_count  = 0;
 
@@ -157,25 +170,27 @@ sub repair_one_db {
 
         my $changed_delim = '....';
 
-        if( $new_intl ne $old_intl ) {
+        if ($new_intl ne $old_intl) {
 
-                # some stats about the discrepancy:
-            if($new_intl) {
+            # some stats about the discrepancy:
+            if ($new_intl) {
                 $diff_changed_count++;
-            } elsif($old_intl=~/^\w+\-\w+/) {
+            }
+            elsif ($old_intl =~ /^\w+\-\w+/) {
                 $diff_chback_count++;
             }
 
-            if($change_flag) { # be a man, change the world!
-                    $np_select_srid_and_old_by_acc->execute($acc);
-                    while (my ($srid, $old) = $np_select_srid_and_old_by_acc->fetchrow) {
-                        if($old) {
-                            $np_update_pipe_query->execute($new_intl, $srid) || die $np_update_pipe_query->errstr;
-                        } else {
-                            $np_insert_pipe_query->execute($new_intl, $srid) || die $np_insert_pipe_query->errstr;
-                        }
-                        $done_count++;
+            if ($change_flag) {    # be a man, change the world!
+                $np_select_srid_and_old_by_acc->execute($acc);
+                while (my ($srid, $old) = $np_select_srid_and_old_by_acc->fetchrow) {
+                    if ($old) {
+                        $np_update_pipe_query->execute($new_intl, $srid) || die $np_update_pipe_query->errstr;
                     }
+                    else {
+                        $np_insert_pipe_query->execute($new_intl, $srid) || die $np_insert_pipe_query->errstr;
+                    }
+                    $done_count++;
+                }
 
                 $changed_delim = '--->';
             }
@@ -188,20 +203,20 @@ sub repair_one_db {
     print STDERR "\n***** Summary ('$which_db' of '$dataset_name' species) :\n";
     print STDERR "$scanned_count clones were scanned\n";
     print STDERR "$diff_changed_count clones were found to have new names in ORACLE db\n";
-    if($rescan_flag) {
+    if ($rescan_flag) {
         print STDERR "$diff_chback_count clones' names were found to have disappeared from ORACLE db\n";
     }
     print STDERR "$done_count names were actually changed\n";
 }
 
-
 {
-    my( $sth );
+    my ($sth);
 
     sub get_international_clone_name {
-        my( $acc ) = @_;
+        my ($acc) = @_;
 
-        $sth ||= Hum::Tracking::prepare_track_statement(q{
+        $sth ||= Hum::Tracking::prepare_track_statement(
+            q{
             SELECT c.clonename
               , l.internal_prefix
               , l.external_prefix
@@ -214,7 +229,8 @@ sub repair_one_db {
               AND c.libraryname = l.libraryname
               AND s.accession = ?
               AND cs.is_current = 1
-            });
+            }
+        );
         $sth->execute($acc);
 
         my ($clone, $int_pre, $ext_pre) = $sth->fetchrow;
@@ -227,10 +243,12 @@ sub repair_one_db {
         $ext_pre ||= 'XX';
         if ($ext_pre =~ /^XX/) {
             $intl = "$ext_pre-$intl";
-        } else {
+        }
+        else {
             if (substr($intl, 0, length($int_pre)) eq uc $int_pre) {
                 substr($intl, 0, length($int_pre)) = "$ext_pre-";
-            } else {
+            }
+            else {
                 warn "clone '$clone' does not begin with internal prefix '$int_pre'";
                 $intl = "$ext_pre-$intl";
             }

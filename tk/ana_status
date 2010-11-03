@@ -74,10 +74,10 @@ sub show_status_for_set {
           , s.sequence_name
           , sens.ensembl_contig_id num
           , sens.ensembl_db_id
-        FROM ana_set aset
+        FROM (ana_set aset
           , ana_sequence_set ass
           , ana_sequence a
-          , sequence s
+          , sequence s)
         LEFT JOIN ana_sequence_ensembl sens
           ON a.ana_seq_id = sens.ana_seq_id
         WHERE aset.set_id = ass.set_id

@@ -362,7 +362,17 @@ some final checks
 
     translateability:
     check whether things translate that shouldn't and the other way round
-    select g.type, if(isnull(tr.translation_id),'non-trans','trans') as state,count(*) as C from gene as g, transcript as t left join translation as tr on tr.translation_id=t.translation_id where g.gene_id = t.gene_id group by type,state;
+
+    SELECT g.type
+      , IF(isnull(tr.translation_id),'non-trans','trans') as state
+      , count(*) as C
+    FROM (gene as g
+          , transcript as t)
+    LEFT JOIN translation as tr
+      ON tr.translation_id = t.translation_id
+    WHERE g.gene_id = t.gene_id
+    GROUP BY type, state
+
     pseudogenes and transposons shouldn't have a translation    
 
 things for Tom

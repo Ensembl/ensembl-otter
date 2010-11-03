@@ -67,11 +67,11 @@ sub print_agp {
           , a_chr.ori
           , acc_attrib.value
           , sv_attrib.value
-        FROM seq_region chr
-          , seq_region contig
-          , seq_region clone
-          , assembly a_chr
-          , assembly a_clone
+        FROM (seq_region chr
+              , seq_region contig
+              , seq_region clone
+              , assembly a_chr
+              , assembly a_clone)
         JOIN seq_region_attrib chr_attrib
           ON chr.seq_region_id = chr_attrib.seq_region_id
           AND chr_attrib.attrib_type_id =

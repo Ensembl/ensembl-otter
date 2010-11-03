@@ -102,14 +102,18 @@ my $sdb = new Bio::Otter::DBSQL::DBAdaptor(-host => $host,
                                            -dbname => $dbname);
 my $aga = $sdb->get_GeneAdaptor;
 
-my $sql=qq{SELECT gsi1.stable_id, gsi1.version, g.type
-	     FROM gene g, gene_stable_id gsi1 
-	LEFT JOIN gene_stable_id gsi2
-               ON gsi1.stable_id = gsi2.stable_id
-              AND gsi1.version<gsi2.version
-	    WHERE gsi2.stable_id is NULL
-              AND gsi1.gene_id = g.gene_id
-	    };
+my $sql = q{
+    SELECT gsi1.stable_id
+      , gsi1.version
+      , g.type
+    FROM (gene g
+          , gene_stable_id gsi1)
+    LEFT JOIN gene_stable_id gsi2
+      ON gsi1.stable_id = gsi2.stable_id
+      AND gsi1.version<gsi2.version
+    WHERE gsi2.stable_id IS NULL
+      AND gsi1.gene_id = g.gene_id
+    };
 my $sth = $dbh->prepare($sql);
 $sth->execute();
 my %gsi;
@@ -120,14 +124,18 @@ while (my @row = $sth->fetchrow_array()){
   $type1{$type}++;
 }
 
-my $sql=qq{SELECT gsi1.stable_id, gsi1.version, g.type
-	     FROM gene g, gene_stable_id gsi1 
-	LEFT JOIN gene_stable_id gsi2
-               ON gsi1.stable_id = gsi2.stable_id
-              AND gsi1.version<gsi2.version
-	    WHERE gsi2.stable_id is NULL
-              AND gsi1.gene_id = g.gene_id
-	    };
+my $sql=qq{
+    SELECT gsi1.stable_id
+      , gsi1.version
+      , g.type
+    FROM (gene g
+          , gene_stable_id gsi1)
+    LEFT JOIN gene_stable_id gsi2
+      ON gsi1.stable_id = gsi2.stable_id
+      AND gsi1.version<gsi2.version
+    WHERE gsi2.stable_id IS NULL
+      AND gsi1.gene_id = g.gene_id
+    };
 my $sth = $dbh2->prepare($sql);
 $sth->execute();
 my $nm=0;

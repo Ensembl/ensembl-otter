@@ -33,7 +33,7 @@ use Bio::Otter::Lace::Defaults;
     my $sth_orphan = $otter_dba->prepare( $with_genes
     ? qq{
         SELECT DISTINCT c.name
-        FROM contig c, exon e
+        FROM (contig c, exon e)
         LEFT JOIN assembly a
         ON a.contig_id=c.contig_id
         WHERE e.contig_id=c.contig_id

@@ -211,9 +211,60 @@ if($read_cache){
     # all assemblies - assume only contains assemblies of interest
     $sth=$dbh->prepare("select a.contig_id, c.name, a.type, a.chr_start, a.chr_end, a.contig_start, a.contig_end, a.contig_ori, cl.embl_acc, cl.embl_version from contig ct, clone cl, chromosome c, assembly a where cl.clone_id=ct.clone_id and ct.contig_id=a.contig_id and a.chromosome_id=c.chromosome_id");
   }elsif($anno){
-    $sth=$dbh->prepare("select a.contig_id, c.name, a.type, a.chr_start, a.chr_end, a.contig_start, a.contig_end, a.contig_ori, cl.embl_acc, cl.embl_version, vs.vega_type from contig ct, clone cl, chromosome c, assembly a, sequence_set ss, current_clone_info cci, clone_remark cr left join vega_set vs on (vs.vega_set_id=ss.vega_set_id) where cl.clone_id=ct.clone_id and ct.contig_id=a.contig_id and a.chromosome_id=c.chromosome_id and a.type=ss.assembly_type and cl.clone_id=cci.clone_id and cci.clone_info_id=cr.clone_info_id and cr.remark rlike '^Annotation_remark-[[:blank:]]*annotated'");
+    $sth=$dbh->prepare(q{
+    SELECT a.contig_id
+      , c.name
+      , a.type
+      , a.chr_start
+      , a.chr_end
+      , a.contig_start
+      , a.contig_end
+      , a.contig_ori
+      , cl.embl_acc
+      , cl.embl_version
+      , vs.vega_type
+    FROM (contig ct
+      , clone cl
+      , chromosome c
+      , assembly a
+      , sequence_set ss
+      , current_clone_info cci
+      , clone_remark cr)
+    LEFT JOIN vega_set vs
+      ON (vs.vega_set_id = ss.vega_set_id)
+    WHERE cl.clone_id = ct.clone_id
+      AND ct.contig_id = a.contig_id
+      AND a.chromosome_id = c.chromosome_id
+      AND a.type = ss.assembly_type
+      AND cl.clone_id = cci.clone_id
+      AND cci.clone_info_id = cr.clone_info_id
+      AND cr.remark rlike '^Annotation_remark-[[:blank:]]*annotated'
+    });
   }else{
-    $sth=$dbh->prepare("select a.contig_id, c.name, a.type, a.chr_start, a.chr_end, a.contig_start, a.contig_end, a.contig_ori, cl.embl_acc, cl.embl_version, vs.vega_type from contig ct, clone cl, chromosome c, assembly a, sequence_set ss left join vega_set vs on (vs.vega_set_id=ss.vega_set_id) where cl.clone_id=ct.clone_id and ct.contig_id=a.contig_id and a.chromosome_id=c.chromosome_id and a.type=ss.assembly_type");
+    $sth=$dbh->prepare(q{
+        SELECT a.contig_id
+          , c.name
+          , a.type
+          , a.chr_start
+          , a.chr_end
+          , a.contig_start
+          , a.contig_end
+          , a.contig_ori
+          , cl.embl_acc
+          , cl.embl_version
+          , vs.vega_type
+        FROM (contig ct
+          , clone cl
+          , chromosome c
+          , assembly a
+          , sequence_set ss)
+        LEFT JOIN vega_set vs
+          ON (vs.vega_set_id = ss.vega_set_id)
+        WHERE cl.clone_id = ct.clone_id
+          AND ct.contig_id = a.contig_id
+          AND a.chromosome_id = c.chromosome_id
+          AND a.type = ss.assembly_type
+        });
   }
   $sth->execute();
   my $n=0;
@@ -304,7 +355,17 @@ if($read_cache){
     my $nd=0;
     my $ns=0;
     my %cl;
-    my $sth=$dbh->prepare("select cl.embl_acc, cl.embl_version, ct.contig_id, a.type from contig ct, clone cl left join assembly a on (a.contig_id=ct.contig_id) where cl.clone_id=ct.clone_id");
+    my $sth=$dbh->prepare(q{
+        SELECT cl.embl_acc
+          , cl.embl_version
+          , ct.contig_id
+          , a.type
+        FROM (contig ct
+          , clone cl)
+        LEFT JOIN assembly a
+          ON (a.contig_id = ct.contig_id)
+        WHERE cl.clone_id = ct.clone_id
+        });
     $sth->execute();
     while (my @row = $sth->fetchrow_array()){
       my($cla,$clv,$cid,$atype)=@row;
@@ -360,7 +421,33 @@ if($read_cache){
   my $nobs=0;
 
   # get exons of current genes
-  my $sth=$dbh->prepare("select gsi1.stable_id,gn.name,g.type,tsi.stable_id,ti.name,et.rank,e.exon_id,e.contig_id,e.contig_start,e.contig_end,e.sticky_rank,e.contig_strand,e.phase,e.end_phase,cti.transcript_info_id,t.translation_id from exon e, exon_transcript et, transcript t, current_gene_info cgi, gene_stable_id gsi1, gene_name gn, gene g, transcript_stable_id tsi, current_transcript_info cti, transcript_info ti left join gene_stable_id gsi2 on (gsi1.stable_id=gsi2.stable_id and gsi1.version<gsi2.version) where gsi2.stable_id IS NULL and cgi.gene_stable_id=gsi1.stable_id and cgi.gene_info_id=gn.gene_info_id and gsi1.gene_id=g.gene_id and g.gene_id=t.gene_id and t.transcript_id=tsi.transcript_id and tsi.stable_id=cti.transcript_stable_id and cti.transcript_info_id=ti.transcript_info_id and t.transcript_id=et.transcript_id and et.exon_id=e.exon_id and e.contig_id");
+  my $sth=$dbh->prepare(q{
+    SELECT gsi1.stable_id,gn.name,g.type,tsi.stable_id,ti.name,et.rank,e.exon_id,e.contig_id,e.contig_start,e.contig_end,e.sticky_rank,e.contig_strand,e.phase,e.end_phase,cti.transcript_info_id,t.translation_id
+    FROM (exon e
+      , exon_transcript et
+      , transcript t
+      , current_gene_info cgi
+      , gene_stable_id gsi1
+      , gene_name gn
+      , gene g
+      , transcript_stable_id tsi
+      , current_transcript_info cti
+      , transcript_info ti)
+    LEFT JOIN gene_stable_id gsi2
+      ON (gsi1.stable_id = gsi2.stable_id
+          AND gsi1.version < gsi2.version)
+    WHERE gsi2.stable_id IS NULL
+      AND cgi.gene_stable_id = gsi1.stable_id
+      AND cgi.gene_info_id = gn.gene_info_id
+      AND gsi1.gene_id = g.gene_id
+      AND g.gene_id = t.gene_id
+      AND t.transcript_id = tsi.transcript_id
+      AND tsi.stable_id = cti.transcript_stable_id
+      AND cti.transcript_info_id = ti.transcript_info_id
+      AND t.transcript_id = et.transcript_id
+      AND et.exon_id = e.exon_id
+      AND e.contig_id
+      });
   $sth->execute;
 
   while (my @row = $sth->fetchrow_array()){

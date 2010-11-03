@@ -108,10 +108,10 @@ sub fix_gene_exons_missing_stable_ids {
     
     my $sth = $dba->dbc->prepare(q{
           SELECT distinct g.gene_id
-          FROM gene g
+          FROM (gene g
             , transcript t
             , exon_transcript et
-            , exon e
+            , exon e)
           LEFT JOIN exon_stable_id esid
             ON e.exon_id = esid.exon_id
           WHERE esid.exon_id IS NULL

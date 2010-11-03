@@ -913,32 +913,34 @@ sub make_chooser_map {
     
     print STDERR "Getting set notes...";
         
-    my $sql = qq{
-        SELECT      cl.name ,
-            cl.embl_acc ,
-            cl.embl_version , 
-            au.author_name ,
-            sn.note_time, 
-            sn.note,
-            cg.contig_id,
-            a.chr_start,
-            a.chr_end
-        FROM  sequence_set ss ,
-              clone cl,
-              contig cg  
-        LEFT JOIN assembly a ON 
-            ss.assembly_type = a.type
-        LEFT JOIN sequence_note sn  
-            ON sn.contig_id = a.contig_id
-        LEFT JOIN author au 
-            ON au.author_id = sn.author_id
-        WHERE cg.contig_id  = a.contig_id 
-        AND cl.clone_id = cg.clone_id
-        AND (sn.is_current = 'Y'
-        OR sn.is_current IS NULL)
-        AND ss.assembly_type = ? 
-        ORDER BY chr_start , chr_end , sn.note_time        
-        } ;
+    my $sql = q{
+        SELECT cl.name
+          , cl.embl_acc
+          , cl.embl_version
+          , au.author_name
+          , sn.note_time
+          , sn.note
+          , cg.contig_id
+          , a.chr_start
+          , a.chr_end
+        FROM (sequence_set ss
+              , clone cl
+              , contig cg)
+        LEFT JOIN assembly a
+          ON ss.assembly_type = a.type
+        LEFT JOIN sequence_note sn
+          ON sn.contig_id = a.contig_id
+        LEFT JOIN author au
+          ON au.author_id = sn.author_id
+        WHERE cg.contig_id = a.contig_id
+          AND cl.clone_id = cg.clone_id
+          AND (sn.is_current = 'Y'
+               OR sn.is_current IS NULL)
+          AND ss.assembly_type = ?
+        ORDER BY chr_start
+          , chr_end
+          , sn.note_time
+    };
     
     
         

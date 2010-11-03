@@ -67,17 +67,22 @@ GetOptions(
 @dbnames = map( split( /,/, $_ ), @dbnames );
 
 my $sql = qq/
-SELECT s.seq_region_id,
-       a1.value AS chromosome, 
-       s.name AS seq_set
-FROM attrib_type t1, coord_system c, seq_region s
-LEFT JOIN seq_region_attrib a1 ON (a1.seq_region_id =  s.seq_region_id AND t1.attrib_type_id = a1.attrib_type_id)
-WHERE c.coord_system_id = s.coord_system_id
-AND t1.code = 'chr'
-AND c.name = 'chromosome'
-AND c.version = 'Otter'
-AND s.name LIKE 'chr%'
-ORDER BY  chromosome, s.seq_region_id DESC
+    SELECT s.seq_region_id
+      , a1.value AS chromosome
+      , s.name AS seq_set
+    FROM (attrib_type t1
+          , coord_system c
+          , seq_region s)
+    LEFT JOIN seq_region_attrib a1
+      ON (a1.seq_region_id = s.seq_region_id
+          AND t1.attrib_type_id = a1.attrib_type_id)
+    WHERE c.coord_system_id = s.coord_system_id
+      AND t1.code = 'chr'
+      AND c.name = 'chromosome'
+      AND c.version = 'Otter'
+      AND s.name LIKE 'chr%'
+    ORDER BY chromosome
+      , s.seq_region_id DESC
 /;
 
 foreach my $host (@$hosts) {

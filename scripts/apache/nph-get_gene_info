@@ -23,10 +23,10 @@ use Bio::Otter::ServerScriptSupport;
             SELECT gnu.consortium_id
               , gsid1.stable_id
               , ga2.value as current_name
-            FROM gene_stable_id gsid1
-              , gene_stable_id gsid2
-              , gene g2
-              , gene_attrib ga2
+            FROM (gene_stable_id gsid1
+                  , gene_stable_id gsid2
+                  , gene g2
+                  , gene_attrib ga2)
             LEFT JOIN gene_name_update gnu
               ON gsid1.gene_id = gnu.gene_id
             WHERE gsid1.stable_id = gsid2.stable_id

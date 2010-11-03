@@ -125,16 +125,23 @@ sub remove_pipeline_analysis {
   # Deleting rows in object_xref is based on gene_id col where gene_id = object_xref.ensembl_id and object_xref.ensembl_object_type = 'Gene'
 
   my $sql = $pipe_db->prepare(qq{
-                                 SELECT e.exon_id, et.transcript_id, g.gene_id, tl.translation_id
-                                 FROM exon e, contig c, exon_transcript et, transcript t, gene g
-                                 LEFT JOIN translation tl
-                                 ON t.translation_id = tl.translation_id
-				 WHERE c.contig_id = e.contig_id
-                                 AND e.exon_id = et.exon_id
-                                 AND et.transcript_id = t.transcript_id
-                                 AND t.gene_id = g.gene_id
-                                 AND e.contig_id = $contig_id}
-                             );
+    SELECT e.exon_id
+      , et.transcript_id
+      , g.gene_id
+      , tl.translation_id
+    FROM (exon e
+          , contig c
+          , exon_transcript et
+          , transcript t
+          , gene g)
+    LEFT JOIN translation tl
+      ON t.translation_id = tl.translation_id
+    WHERE c.contig_id = e.contig_id
+      AND e.exon_id = et.exon_id
+      AND et.transcript_id = t.transcript_id
+      AND t.gene_id = g.gene_id
+      AND e.contig_id = $contig_id
+  });
   $sql->execute();
 
   my $column_to_table = {
@@ -237,15 +244,22 @@ With [-set dataset] the OTTER API figures out the contig_name of each clone in t
 
 The following query used in the script is useful for hand-checking B<halfwise> results of a contig_id:
 
-SELECT e.exon_id, et.transcript_id, g.gene_id, tl.translation_id
-FROM exon e, contig c, exon_transcript et, transcript t, gene g
-LEFT JOIN translation tl
-ON t.translation_id = tl.translation_id
-WHERE c.contig_id = e.contig_id
-AND e.exon_id = et.exon_id
-AND et.transcript_id = t.transcript_id
-AND t.gene_id = g.gene_id
-AND e.contig_id =
+    SELECT e.exon_id
+      , et.transcript_id
+      , g.gene_id
+      , tl.translation_id
+    FROM (exon e
+          , contig c
+          , exon_transcript et
+          , transcript t
+          , gene g)
+    LEFT JOIN translation tl
+      ON t.translation_id = tl.translation_id
+    WHERE c.contig_id = e.contig_id
+      AND e.exon_id = et.exon_id
+      AND et.transcript_id = t.transcript_id
+      AND t.gene_id = g.gene_id
+      AND e.contig_id =
 
 =head1 B<AUTHOR>
 

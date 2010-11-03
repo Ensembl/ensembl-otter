@@ -21,7 +21,7 @@ my @method_biotype_status = qw{
         Novel_CDS                   protein_coding          NOVEL
         Putative_CDS                protein_coding          PUTATIVE
         Nonsense_mediated_decay     =                       -
-                                    
+
     Novel_Transcript                processed_transcript    KNOWN
     Novel_Transcript                processed_transcript    NOVEL
     Transcript                      processed_transcript    -
@@ -38,15 +38,14 @@ my @method_biotype_status = qw{
         Antisense                   =                       -
         ncRNA_host                  =                       -
         3'_overlapping_ncRNA        =                       -
-        
-                                    
+
     Pseudogene                      =                       -
         Processed_pseudogene        =                       -
         Unprocessed_pseudogene      =                       -
         Expressed_pseudogene        =                       -
-                                    
+
     Transposon                      =                       -
-                                    
+
     Artifact                        =                       -
 
     TEC                             =                       -

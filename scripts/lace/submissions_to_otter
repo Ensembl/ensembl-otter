@@ -49,10 +49,10 @@ my $otter_db;
         SELECT r.annotator_uname
           , r.review_comment
           , r.review_time
-        FROM project_acc pa
+        FROM (project_acc pa
           , project_dump d
           , sequence s
-          , ana_sequence a
+          , ana_sequence a)
         STRAIGHT_JOIN ana_sequence_review r
         WHERE pa.sanger_id = d.sanger_id
           AND d.seq_id = s.seq_id
@@ -69,8 +69,8 @@ my $otter_db;
         SELECT r.annotator_uname
           , r.review_comment
           , r.review_time
-        FROM sequence s
-          , ana_sequence a
+        FROM (sequence s
+          , ana_sequence a)
         STRAIGHT_JOIN ana_sequence_review r
         WHERE s.seq_id = a.seq_id
           AND a.ana_seq_id = r.ana_seq_id
@@ -96,8 +96,8 @@ my $otter_db;
         SELECT cl.embl_acc
           , cl.embl_version
           , cg.contig_id
-        FROM clone cl
-          , contig cg
+        FROM (clone cl
+          , contig cg)
         LEFT JOIN sequence_note sn
           ON sn.contig_id = cg.contig_id
         WHERE cg.clone_id = cl.clone_id
