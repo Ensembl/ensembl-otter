@@ -1815,18 +1815,30 @@ sub empty_Assembly_cache {
 }
 
 sub replace_SubSeq {
-    my( $self, $sub, $old_name ) = @_;
+    my( $self, $new, $old ) = @_;
 
-    my $sub_name = $sub->name;
-    $old_name ||= $sub_name;
-    $self->Assembly->replace_SubSeq($sub, $old_name);
-    if ($sub_name ne $old_name) {
+    my $new_name = $new->name;
+    my $old_name = $old->name || $new_name;
+
+    my $rename_needed = $old->is_archival && $new_name ne $old_name;
+    my $ace = $rename_needed
+        ? $new->ace_string($old_name)
+        : $new->ace_string;
+    $self->save_ace($ace);
+
+    $self->send_zmap_commands(
+        ( $old->is_archival ? $old->zmap_delete_xml_string : () ),
+        $new->zmap_create_xml_string,
+        );
+
+    $self->Assembly->replace_SubSeq($new, $old_name);
+    if ($new_name ne $old_name) {
         $self->{'_subsequence_cache'}{$old_name} = undef;
-        $self->rename_subseq_edit_window($old_name, $sub_name);
+        $self->rename_subseq_edit_window($old_name, $new_name);
     }
-    $self->{'_subsequence_cache'}{$sub_name} = $sub;
+    $self->{'_subsequence_cache'}{$new_name} = $new;
 
-    my $locus = $sub->Locus;
+    my $locus = $new->Locus;
     if (my $prev_name = $locus->drop_previous_name) {
         warn "Unsetting otter_id for locus '$prev_name'\n";
         $self->get_Locus($prev_name)->drop_otter_id;
