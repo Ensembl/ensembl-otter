@@ -564,13 +564,8 @@ sub save_to_ace {
                 return;
             }
         }
-        
-        my $xc = $self->XaceSeqChooser;
-        
-        my @xml = $new_assembly->zmap_SimpleFeature_xml($self->Assembly);
-        $self->XaceSeqChooser->send_zmap_commands(@xml);
-        $self->XaceSeqChooser->save_ace($new_ace);
-        $self->Assembly->set_SimpleFeature_list($new_assembly->get_all_SimpleFeatures);
+
+        $self->XaceSeqChooser->save_Assembly($new_assembly);
     }
 
     return;
