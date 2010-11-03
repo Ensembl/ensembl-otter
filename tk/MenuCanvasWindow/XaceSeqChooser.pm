@@ -299,7 +299,7 @@ sub do_rename_locus {
         foreach my $sub ($self->fetch_SubSeqs_by_locus_name($new_name)) {
             push @xml, $sub->zmap_create_xml_string;
         }
-        $self->send_zmap_commands(@xml);    
+        $self->zMapSendCommands(@xml);    
 
         $self->save_ace($ace);
     };
@@ -1535,7 +1535,7 @@ sub delete_subsequences {
 
     # Delete from acedb database and Zmap
     $self->save_ace($ace);
-    $self->send_zmap_commands(@xml);
+    $self->zMapSendCommands(@xml);
 
     # Remove from our objects
     foreach my $sub (@to_die) {
@@ -1810,7 +1810,7 @@ sub save_Assembly {
     my( $self, $new ) = @_;
 
     my @xml = $new->zmap_SimpleFeature_xml($self->Assembly);
-    $self->send_zmap_commands(@xml);
+    $self->zMapSendCommands(@xml);
     my $ace = $new->ace_string;
     $self->save_ace($ace);
     $self->Assembly->set_SimpleFeature_list($new->get_all_SimpleFeatures);
@@ -1838,7 +1838,7 @@ sub replace_SubSeq {
         : $new->ace_string;
     $self->save_ace($ace);
 
-    $self->send_zmap_commands(
+    $self->zMapSendCommands(
         ( $old->is_archival ? $old->zmap_delete_xml_string : () ),
         $new->zmap_create_xml_string,
         );
@@ -2184,12 +2184,6 @@ sub run_exonerate {
     $ew->update_from_XaceSeqChooser;
 
     return 1;
-}
-
-sub send_zmap_commands {
-    my ($self, @xml) = @_;
-    $self->zMapSendCommands(@xml);
-    return;
 }
 
 sub DESTROY {
