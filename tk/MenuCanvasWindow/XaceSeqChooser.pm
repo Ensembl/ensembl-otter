@@ -31,10 +31,16 @@ use MenuCanvasWindow::ExonCanvas;
 use MenuCanvasWindow::GenomicFeatures;
 use Text::Wrap qw{ wrap };
 
+use Bio::Otter::Lace::Exonerate;
+
 use base qw{
 MenuCanvasWindow
 MenuCanvasWindow::ZMapSeqChooser
 };
+
+my $PROT_SCORE = 100;
+my $DNA_SCORE  = 100;
+my $DNAHSP     = 120;
 
 sub new {
     my( $pkg, $tk ) = @_;
@@ -1983,6 +1989,161 @@ sub update_SubSeq_locus_level_errors {
     }
 
     return;
+}
+
+sub launch_exonerate {
+    my( $self, $seqs, %params ) = @_;
+
+    # lower case query polyA/T tails to avoid spurious exons
+    for my $seq (@$seqs) {
+        my $s = $seq->uppercase;
+        $s =~ s/(^T{6,}|A{6,}$)/lc($1)/ge;
+        $seq->sequence_string($s);
+    }
+
+    # save seqs in hash
+    my $name_seq = { };
+    for my $seq (@$seqs) {
+        $name_seq->{ $seq->name } = $seq;
+    }
+
+    my %seqs_by_type = ();
+
+    for my $seq (@$seqs) {
+        if (
+            $seq->type
+            && (   $seq->type eq 'EST'
+                || $seq->type eq 'ncRNA'
+                || $seq->type eq 'mRNA'
+                || $seq->type eq 'Protein')
+          )
+        {
+            push @{ $seqs_by_type{ $seq->type } }, $seq;
+        }
+        elsif ($seq->sequence_string =~ /^[AGCTNagctn\s]*$/) {
+            push @{ $seqs_by_type{'Unknown_DNA'} }, $seq;
+        }
+        else {
+            push @{ $seqs_by_type{'Unknown_Protein'} }, $seq;
+        }
+    }
+
+    # get marked region (if requested)
+    my ($genomic_start, $genomic_end) =
+        (1, $self->Assembly->Sequence->sequence_length);
+    if ($params{-use_marked_region}) {
+        my ($mark_start, $mark_end) = $self->zMapGetMark;
+        if ($mark_start && $mark_end) {
+            warn "Setting exonerate genomic start & end to marked region: $mark_start - $mark_end\n";
+            ($genomic_start, $genomic_end) = ($mark_start, $mark_end);
+        }
+    }
+
+    my $need_relaunch = 0;
+    my @method_names;
+    my $ace_text = '';
+    my $best_n   = $params{bestn};
+    my $max_intron_length = $params{max_intron_length};
+    for my $type (keys %seqs_by_type) {
+
+        print STDERR "Running exonerate for sequence(s) of type: $type\n";
+
+        my $score    = $type =~ /Protein/  ? $PROT_SCORE : $DNA_SCORE;
+        my $ana_name = $type =~ /^Unknown/ ? $type       : "OTF_$type";
+        my $dnahsp   = $DNAHSP;
+
+        my $exonerate = Bio::Otter::Lace::Exonerate->new;
+        $exonerate->AceDatabase($self->AceDatabase);
+        $exonerate->genomic_seq($self->Assembly->Sequence);
+        $exonerate->genomic_start($genomic_start);
+        $exonerate->genomic_end($genomic_end);
+        $exonerate->query_seq($seqs_by_type{$type});
+        $exonerate->sequence_fetcher($name_seq);
+        $exonerate->acedb_homol_tag($ana_name . '_homol');
+        $exonerate->query_type($type =~ /Protein/ ? 'protein' : 'dna');
+        $exonerate->score($score);
+        $exonerate->dnahsp($dnahsp);
+        $exonerate->bestn($best_n);
+        $exonerate->max_intron_length($max_intron_length);
+        $exonerate->method_tag($ana_name);
+        $exonerate->logic_name($ana_name);
+
+        my $seq_file = $exonerate->write_seq_file();
+
+        if ($seq_file) {
+            $exonerate->initialise($seq_file);
+            my $ace_output .= $exonerate->run;
+
+            # delete query file
+            unlink $seq_file;
+
+            next unless $ace_output;
+
+            # add hit sequences into ace text
+            my $names = $exonerate->delete_all_hit_names;
+
+            # only add the sequence to acedb if they are not pfetchable (i.e. they are unknown)
+            if ($type =~ /^Unknown/) {
+                foreach my $hit_name (@$names) {
+                    my $seq = $name_seq->{$hit_name};
+
+                    if ($exonerate->query_type eq 'protein') {
+                        $ace_output .= $self->ace_PEPTIDE($hit_name, $seq);
+                    }
+                    else {
+                        $ace_output .= $self->ace_DNA($hit_name, $seq);
+                    }
+                }
+            }
+
+            $need_relaunch = 1;
+
+            # Need to add new method to collection if we don't have it already
+            my $coll      = $exonerate->AceDatabase->MethodCollection;
+            my $coll_zmap = $self->Assembly->MethodCollection;
+            my $method    = $exonerate->ace_Method;
+            push @method_names, $method->name;
+            unless ($coll->get_Method_by_name($method->name)
+                || $coll_zmap->get_Method_by_name($method->name))
+            {
+                $coll->add_Method($method);
+                $coll_zmap->add_Method($method);
+                $self->save_ace($coll->ace_string());
+            }
+            $ace_text .= $ace_output;
+        }
+    }
+
+    $self->save_ace($ace_text);
+    $self->zMapLoadFeatures(@method_names) if $need_relaunch;
+
+    return $need_relaunch;
+}
+
+sub ace_DNA {
+    my ($self, $name, $seq) = @_;
+
+    my $ace = qq{\nSequence "$name"\n\nDNA "$name"\n};
+
+    my $dna_string = $seq->sequence_string;
+
+    while ($dna_string =~ /(.{1,60})/g) {
+        $ace .= $1 . "\n";
+    }
+
+    return $ace;
+}
+
+sub ace_PEPTIDE {
+    my ($self, $name, $seq) = @_;
+
+    my $ace = qq{\nProtein "$name"\n\nPEPTIDE "$name"\n};
+
+    my $prot_string = $seq->sequence_string;
+    while ($prot_string =~ /(.{1,60})/g) {
+        $ace .= $1 . "\n";
+    }
+    return $ace;
 }
 
 sub draw_sequence_list {
