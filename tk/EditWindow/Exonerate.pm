@@ -461,15 +461,13 @@ sub launch_exonerate {
     $self->top->Busy;
 
     if ($self->{'_clear_existing'}) {
-        my $ace_text .= sprintf qq{\nSequence : "%s"\n}, $self->XaceSeqChooser->Assembly->Sequence->name;
-        foreach my $type (qw{ Unknown_DNA Unknown_Protein OTF_EST OTF_ncRNA OTF_mRNA OTF_Protein }) {
-            $ace_text .= qq{-D Homol ${type}_homol\n};
-
-            # just delete all types for now (we have to do this seperately at the moment because zmap errors
-            # out without deleting anything if any featureset does not currently exist in the zmap window)
-            $self->XaceSeqChooser->zMapDeleteFeaturesets($type);
-        }
-        $self->XaceSeqChooser->save_ace($ace_text);
+        $self->XaceSeqChooser->delete_featuresets(qw{
+Unknown_DNA
+Unknown_Protein
+OTF_EST
+OTF_ncRNA
+OTF_mRNA
+OTF_Protein });
     }
 
     my $need_relaunch = 0;

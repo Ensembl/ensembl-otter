@@ -1836,6 +1836,27 @@ sub empty_Assembly_cache {
     return;
 }
 
+sub delete_featuresets {
+    my( $self, @types ) = @_;
+
+    my $name = $self->Assembly->Sequence->name;
+    my $ace = sprintf qq{\nSequence : "%s"\n}, $name;
+
+    foreach my $type ( @types ) {
+        $ace .= qq{-D Homol ${type}_homol\n};
+
+        # we delete types seperately because zmap errors out without
+        # deleting anything if any featureset does not currently exist
+        # in the zmap window
+
+        $self->zMapDeleteFeaturesets($type);
+    }
+
+    $self->save_ace($ace);
+
+    return;
+}
+
 sub replace_SubSeq {
     my( $self, $new, $old ) = @_;
 
