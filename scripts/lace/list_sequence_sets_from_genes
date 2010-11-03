@@ -28,16 +28,18 @@ use Hum::Sort qw{ ace_sort };
     
     my $sth = $otter_db->prepare(qq{
         SELECT DISTINCT ss.assembly_type
-        FROM gene g
-          , gene_stable_id gsid
-          , current_gene_info c
-          , gene_info i
-          , gene_name n
-          , transcript t
-          , exon_transcript et
-          , exon e
-        LEFT JOIN assembly a ON e.contig_id = a.contig_id
-        LEFT JOIN sequence_set ss on a.type = ss.assembly_type
+        FROM (gene g
+              , gene_stable_id gsid
+              , current_gene_info c
+              , gene_info i
+              , gene_name n
+              , transcript t
+              , exon_transcript et
+              , exon e)
+        LEFT JOIN assembly a
+          ON e.contig_id = a.contig_id
+        LEFT JOIN sequence_set ss
+          ON a.type = ss.assembly_type
         WHERE g.gene_id = gsid.gene_id
           AND gsid.stable_id = c.gene_stable_id
           AND c.gene_info_id = i.gene_info_id

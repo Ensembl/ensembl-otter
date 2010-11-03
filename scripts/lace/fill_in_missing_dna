@@ -30,8 +30,8 @@ $| = 1;
         SELECT c.embl_acc
           , c.embl_version
           , g.dna_id
-        FROM clone c
-          , contig g
+        FROM (clone c
+          , contig g)
         LEFT JOIN dna d
           ON g.dna_id = d.dna_id
         WHERE c.clone_id = g.clone_id

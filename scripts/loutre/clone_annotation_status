@@ -218,11 +218,11 @@ sub get_region_with_sequence_note_before_date {
     my $sth = $dbc->prepare(q{
         SELECT clone.name
           , sn.seq_region_id
-        FROM assembly chr_asm
+        FROM (assembly chr_asm
           , seq_region ctg
           , seq_region chr
           , seq_region clone
-          , assembly ctg_asm
+          , assembly ctg_asm)
         LEFT JOIN sequence_note sn
           ON ctg.seq_region_id = sn.seq_region_id
           AND sn.note_time < '2008-09-25'

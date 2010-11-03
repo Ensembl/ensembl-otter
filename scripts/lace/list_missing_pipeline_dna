@@ -31,8 +31,8 @@ $| = 1;
         SELECT a.type
           , c.embl_acc
           , c.embl_version
-        FROM contig g
-          , clone c
+        FROM (contig g
+          , clone c)
         LEFT JOIN assembly a
         ON g.contig_id = a.contig_id
         WHERE g.clone_id = c.clone_id

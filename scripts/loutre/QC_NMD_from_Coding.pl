@@ -65,21 +65,41 @@ if ( !$user || !$port ) {
     $port = $param[2] unless $port;
 }
 
-my $tsi_sql = qq/SELECT s.name, ga.value, gsi.stable_id, tsi.stable_id, t.seq_region_start, t.seq_region_end, t.seq_region_strand, t.biotype, t.status, ta.value
-FROM transcript t, transcript_stable_id tsi, gene g, gene_attrib ga, gene_stable_id gsi, seq_region s
-LEFT JOIN transcript_attrib ta ON (t.transcript_id = ta.transcript_id && ta.attrib_type_id IN (54,123) &&  ta.value = 'NMD exception')
-WHERE t.biotype = 'protein_coding'
-AND t.status != 'PREDICTED'
-AND g.gene_id = t.gene_id
-AND g.gene_id = ga.gene_id
-AND ga.attrib_type_id = 4
-AND gsi.gene_id = g.gene_id
-AND g.is_current
-AND t.is_current
-AND g.source = 'havana'
-AND tsi.transcript_id = t.transcript_id
-AND s.seq_region_id = t.seq_region_id
-ORDER BY s.name, t.seq_region_start/;
+my $tsi_sql = qq/
+    SELECT s.name
+      , ga.value
+      , gsi.stable_id
+      , tsi.stable_id
+      , t.seq_region_start
+      , t.seq_region_end
+      , t.seq_region_strand
+      , t.biotype
+      , t.status
+      , ta.value
+    FROM (transcript t
+          , transcript_stable_id tsi
+          , gene g
+          , gene_attrib ga
+          , gene_stable_id gsi
+          , seq_region s)
+    LEFT JOIN transcript_attrib ta
+      ON (t.transcript_id = ta.transcript_id
+          AND ta.attrib_type_id IN (54,123)
+          AND ta.value = 'NMD exception')
+    WHERE t.biotype = 'protein_coding'
+      AND t.status != 'PREDICTED'
+      AND g.gene_id = t.gene_id
+      AND g.gene_id = ga.gene_id
+      AND ga.attrib_type_id = 4
+      AND gsi.gene_id = g.gene_id
+      AND g.is_current
+      AND t.is_current
+      AND g.source = 'havana'
+      AND tsi.transcript_id = t.transcript_id
+      AND s.seq_region_id = t.seq_region_id
+    ORDER BY s.name
+      , t.seq_region_start
+    /;
 
 my $dba = Bio::Vega::DBSQL::DBAdaptor->new(
         -user   => $user,

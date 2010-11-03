@@ -188,13 +188,17 @@ sub fetch_stable_id_by_name {
 
         $attrib_value = lc($attrib_value);     # for case-insensitive comparison later
         my $sql = qq{
-                 SELECT distinct gsi.stable_id, ma.value
-                 FROM gene_stable_id gsi, $mode m, attrib_type a , $mode_attrib ma
-                 WHERE gsi.gene_id=m.gene_id
-                 AND $join
-                 AND ma.attrib_type_id = a.attrib_type_id
-                 AND a.code=?
-                 AND ma.value LIKE ?
+                SELECT distinct gsi.stable_id
+                  , ma.value
+                FROM gene_stable_id gsi
+                  , $mode m
+                  , attrib_type a
+                  , $mode_attrib ma
+                WHERE gsi.gene_id = m.gene_id
+                  AND $JOIN
+                  AND ma.attrib_type_id = a.attrib_type_id
+                  AND a.code = ?
+                  AND ma.value LIKE ?
                };
 
         $sql .= " AND m.is_current = 1" if $current;

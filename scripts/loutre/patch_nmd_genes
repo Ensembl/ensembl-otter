@@ -41,18 +41,24 @@ my $time_now = time();
     
     my $list_nmd = $dba->dbc->prepare(q{
         SELECT DISTINCT g.gene_id
-		FROM transcript t, transcript_stable_id tsi, gene g, gene_stable_id gsi, seq_region s
-		LEFT JOIN translation tr ON (t.transcript_id = tr.transcript_id)
-		WHERE t.biotype = 'nonsense_mediated_decay'
-		AND g.gene_id = t.gene_id
-		AND g.is_current
-		AND g.seq_region_id = s.seq_region_id
-		AND t.is_current
-		AND g.source = 'havana'
-		AND tsi.transcript_id = t.transcript_id
-		AND gsi.gene_id = g.gene_id
-		AND translation_id IS NULL
-		ORDER BY s.name, t.seq_region_start 
+        FROM (transcript t
+              , transcript_stable_id tsi
+              , gene g
+              , gene_stable_id gsi
+              , seq_region s)
+        LEFT JOIN translation tr
+          ON (t.transcript_id = tr.transcript_id)
+        WHERE t.biotype = 'nonsense_mediated_decay'
+          AND g.gene_id = t.gene_id
+          AND g.is_current
+          AND g.seq_region_id = s.seq_region_id
+          AND t.is_current
+          AND g.source = 'havana'
+          AND tsi.transcript_id = t.transcript_id
+          AND gsi.gene_id = g.gene_id
+          AND translation_id IS NULL
+        ORDER BY s.name
+          , t.seq_region_start
     });
 
     $list_nmd->execute;

@@ -677,31 +677,31 @@ sub get_ctg_coordinate_details {
           , ctg.name
           , a.cmp_start
           , a.cmp_end
-        FROM seq_region ctg
-          , assembly a
-          , seq_region chr
+        FROM (seq_region ctg
+              , assembly a
+              , seq_region chr)
         LEFT JOIN seq_region_attrib hide
           ON chr.seq_region_id = hide.seq_region_id
           AND hide.attrib_type_id =
-            (SELECT attrib_type_id
-                FROM attrib_type
-                WHERE code = 'write_access')
+        (SELECT attrib_type_id
+            FROM attrib_type
+            WHERE code = 'write_access')
         WHERE ctg.seq_region_id = a.cmp_seq_region_id
           AND a.asm_seq_region_id = chr.seq_region_id
           AND ctg.coord_system_id =
-            (SELECT coord_system_id
-                FROM coord_system
-                WHERE name = 'contig')
+        (SELECT coord_system_id
+            FROM coord_system
+            WHERE name = 'contig')
           AND chr.coord_system_id =
-            (SELECT coord_system_id
-                FROM coord_system
-                WHERE name = 'chromosome'
-                  AND version = 'Otter')
+        (SELECT coord_system_id
+            FROM coord_system
+            WHERE name = 'chromosome'
+              AND version = 'Otter')
           AND hide.value = 1
           AND ctg.name like ?
     });
 
-    $get_ctg_coords->execute("$acc%");  # Fix Nedit syntax highlight with a "
+    $get_ctg_coords->execute("$acc%");
 
     if ($get_ctg_coords->rows > 1) {
         my $err = "Too many rows from coordinate fetching query:\n";

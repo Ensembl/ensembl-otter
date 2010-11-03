@@ -60,11 +60,11 @@ use Date::Calc 'Monday_of_Week';
               , g.type
               , DATE_FORMAT(s.modified, '%x/%v')
               , a.author_name
-            FROM gene g
+            FROM (gene g
               , gene_stable_id s
               , current_gene_info cur
               , gene_info i
-              , author a
+              , author a)
             LEFT JOIN gene_stable_id s2
               ON s.stable_id = s2.stable_id
               AND s.version < s2.version
