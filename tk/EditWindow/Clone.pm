@@ -244,11 +244,8 @@ sub xace_save {
 
 sub xace_save_Clone {
     my ($self, $clone) = @_;
-    
-    my $ace = $clone->ace_string;
 
-    $self->XaceSeqChooser->save_ace($ace);
-    $self->XaceSeqChooser->Assembly->replace_Clone($clone);
+    $self->XaceSeqChooser->save_Clone($clone);
     $self->Clone($clone);
     
     return 1;

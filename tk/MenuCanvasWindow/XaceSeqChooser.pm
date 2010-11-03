@@ -1695,6 +1695,16 @@ sub get_all_Subseq_clusters {
     return @clust;
 }
 
+sub save_Clone {
+    my ($self, $clone) = @_;
+
+    my $ace = $clone->ace_string;
+    $self->save_ace($ace);
+    $self->Assembly->replace_Clone($clone);
+
+    return;
+}
+
 sub edit_Clone {
     my ($self, $clone) = @_;
 
