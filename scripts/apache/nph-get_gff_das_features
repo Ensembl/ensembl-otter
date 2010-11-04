@@ -210,6 +210,13 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS { # $kind = 'SimpleFeature' ||
 
             if($parent_constructor) {
                 my $parent_feature = $feature_coll->{$pt_label} ||= $parent_constructor->new( -dbID => $pt_label, -slice => $slice );
+
+                if ( $parent_feature->can('display_label') ) {
+                    $parent_feature->display_label( $pt_label );
+                }
+                elsif ( $parent_feature->can('display_id') ) {
+                    $parent_feature->display_id( $pt_label );
+                }
                 
                 eval {
                     warn "adding feature with start=".$feature->start()." and end=".$feature->end()."\n";
@@ -222,7 +229,13 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS { # $kind = 'SimpleFeature' ||
                     warn "Could not group feature: $@\n";
                 }
             } else {
-                $feature->display_label( $pt_label ) if $feature->can('display_label');
+                if ( $feature->can('display_label') ) {
+                    $feature->display_label( $pt_label );
+                }
+                elsif ( $feature->can('display_id') ) {
+                    $feature->display_id( $pt_label );
+                }
+                die sprintf 'feature type: "%s"', ref $feature;
                 push @$feature_coll, $feature;
             }
         }
