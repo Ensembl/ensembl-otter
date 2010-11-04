@@ -195,7 +195,7 @@ sub fetch_stable_id_by_name {
                   , attrib_type a
                   , $mode_attrib ma
                 WHERE gsi.gene_id = m.gene_id
-                  AND $JOIN
+                  AND $join
                   AND ma.attrib_type_id = a.attrib_type_id
                   AND a.code = ?
                   AND ma.value LIKE ?
