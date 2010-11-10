@@ -95,6 +95,17 @@ sub reincarnate_transcript {
     return $transcript;
 }
 
+sub fetch_by_dbID {
+  my ($self, $dbID) = @_;
+
+  my ($transcript) = $self->SUPER::fetch_by_dbID($dbID);
+  if ($transcript){
+      $self->reincarnate_transcript($transcript);
+  }
+
+  return $transcript;
+}
+
 sub fetch_by_stable_id  {
   my ($self, $stable_id) = @_;
 
