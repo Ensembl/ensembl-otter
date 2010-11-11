@@ -37,6 +37,9 @@ END {
     warn "otter_srv script end: $0\n";
 }
 
+our $COMPRESSION_ENABLED;
+$COMPRESSION_ENABLED = 1 unless defined $COMPRESSION_ENABLED;
+
 sub new {
     my ( $pkg, %params ) = @_;
 
@@ -283,7 +286,7 @@ sub send_response {
 
     my ($self, $response, $wrap, $compress) = @_;
 
-    if ($compress) {
+    if ($COMPRESSION_ENABLED && $compress) {
         print $self->header(
             -status             => 200,
             -type               => 'text/plain',
