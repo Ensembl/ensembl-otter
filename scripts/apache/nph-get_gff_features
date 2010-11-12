@@ -39,6 +39,7 @@ eval {
             if ($swap_strands && $f->can('hstrand') && $f->hstrand == -1) {
                 $f->hstrand($f->hstrand * -1);
                 $f->strand($f->strand * -1);
+                $f->cigar_string(join '', reverse($f->cigar_string =~ /(\d*[A-Za-z])/g))
             }
             my $gff = $f->to_gff(%gff_args);
             $gff_string .= $gff."\n" if $gff;
