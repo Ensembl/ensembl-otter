@@ -540,7 +540,18 @@ sub get_requested_features {
             die "Invalid filter module: $filter_module";
         }
     }
-    
+
+    # workaround: some of our pipelines put features on the wrong strand
+    if ( $self->param('swap_strands') ) {
+        for my $f (@feature_list) {
+            if ($f->can('hstrand') && $f->hstrand == -1) {
+                $f->hstrand($f->hstrand * -1);
+                $f->strand($f->strand * -1);
+                $f->cigar_string(join '', reverse($f->cigar_string =~ /(\d*[A-Za-z])/g))
+            }
+        }
+    }
+
     return \@feature_list;
 }
 
