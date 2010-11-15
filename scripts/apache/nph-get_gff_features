@@ -17,19 +17,12 @@ my $server = Bio::Otter::ServerScriptSupport->new;
 my $gff_string = '';
 
 eval {
-    my $analyses        = $server->param('analysis');
-    my $types           = $server->param('kind');
-    my $rebase          = $server->param('rebase');
-    my $gff_source      = $server->param('gff_source');
-    my $gff_seqname     = $server->param('gff_seqname');
-    my $swap_strands    = $server->param('swap_strands');
-
     my $features = $server->get_requested_features;
 
     my %gff_args = (
-        rebase      => $rebase,
-        gff_source  => $gff_source,
-        gff_seqname => $gff_seqname,
+        rebase      => $server->param('rebase'),
+        gff_source  => $server->param('gff_source'),
+        gff_seqname => $server->param('gff_seqname'),
     );
 
     if (@$features) {
