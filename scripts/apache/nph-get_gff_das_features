@@ -14,7 +14,6 @@ my $http_proxy = $ENV{http_proxy};
 use Bio::Das::Lite;
 use Bio::EnsEMBL::SimpleFeature;
 use Bio::EnsEMBL::PredictionExon;
-use Bio::Vega::PredictionTranscript;
 use Bio::Otter::ServerScriptSupport;
 use Bio::Otter::Lace::ViaText qw( &GenerateFeatures %LangDesc );
 use Bio::Vega::Utils::EnsEMBL2GFF;
