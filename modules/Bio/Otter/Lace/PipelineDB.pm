@@ -13,14 +13,14 @@ sub get_DBAdaptor {
     my( $otter_db, $rw ) = @_;
 
     return Bio::Otter::Lace::SatelliteDB::get_DBAdaptor(
-        $otter_db, 'pipeline_db', 'Bio::Otter::DBSQL::DBAdaptor');
+        $otter_db, 'pipeline_db_head', 'Bio::Otter::DBSQL::DBAdaptor');
 }
 
 sub get_rw_DBAdaptor {
     my( $otter_db ) = @_;
     
     return Bio::Otter::Lace::SatelliteDB::get_DBAdaptor(
-        $otter_db, 'pipeline_db_rw', 'Bio::Otter::DBSQL::DBAdaptor');
+        $otter_db, 'pipeline_db_rw_head', 'Bio::Otter::DBSQL::DBAdaptor');
 }
 
 sub get_pipeline_DBAdaptor {
@@ -28,7 +28,7 @@ sub get_pipeline_DBAdaptor {
 
     require Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor;
     my $pipe_db = Bio::Otter::Lace::SatelliteDB::get_DBAdaptor(
-        $otter_db, 'pipeline_db', 'Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor');
+        $otter_db, 'pipeline_db_head', 'Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor');
 
     if($inherit_assembly_type) {
         $pipe_db->assembly_type($otter_db->assembly_type());
@@ -42,7 +42,7 @@ sub get_pipeline_rw_DBAdaptor {
     
     require Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor;
     my $pipe_db =  Bio::Otter::Lace::SatelliteDB::get_DBAdaptor(
-        $otter_db, 'pipeline_db_rw', 'Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor');
+        $otter_db, 'pipeline_db_rw_head', 'Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor');
 
     if($inherit_assembly_type) {
         $pipe_db->assembly_type($otter_db->assembly_type());
@@ -65,7 +65,7 @@ __END__
 =head1 DESCRIPTION
 
 Using the options hash value stored under the key
-B<pipeline_db> in the meta table of the database
+B<pipeline_db_head> in the meta table of the database
 given as the argument to either the subroutines a
 DBAdaptor is returned.
 
