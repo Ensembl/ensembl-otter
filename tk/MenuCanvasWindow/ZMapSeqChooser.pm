@@ -947,7 +947,6 @@ sub zMapTagValues {
 
         # There is only ever 1 feature in the XML from Zmap
         my ($name) = keys %$feature_hash;
-        my $info = $feature_hash->{$name};
 
         unless ($name) {
             warn "No feature in featureset of XML";
@@ -956,8 +955,8 @@ sub zMapTagValues {
             $pages .= $subseq->zmap_info_xml;
         }
         else {
-            $pages .= $self->zmap_feature_details_xml($name, $info);
-            $pages .= $self->zmap_feature_evidence_xml($name, $info);
+            $pages .= $self->zmap_feature_details_xml($name);
+            $pages .= $self->zmap_feature_evidence_xml($name);
         }
     }
 
@@ -974,7 +973,7 @@ sub zMapTagValues {
 }
 
 sub zmap_feature_details_xml {
-    my ($self, $name, $info) = @_;
+    my ($self, $name) = @_;
 
     my $ace = $self->ace_handle;
     my ($taxon_id, $desc);
@@ -1007,7 +1006,7 @@ sub zmap_feature_details_xml {
 }
 
 sub zmap_feature_evidence_xml {
-    my ($self, $feat_name, $info) = @_;
+    my ($self, $feat_name) = @_;
 
     my $subseq_list = [];
     foreach my $name ($self->list_all_SubSeq_names) {
