@@ -300,6 +300,12 @@ sub gff_header {
 
     package Bio::EnsEMBL::FeaturePair;
 
+    my $db_prefix = {
+        EMBL      => 'Em',
+        Swissprot => 'Sw',
+        TrEMBL    => 'Tr',
+    };
+
     sub _gff_hash {
         my ($self, %args) = @_;
         
@@ -320,9 +326,19 @@ sub gff_header {
 
         $gff->{score} = $self->score;
         $gff->{feature} = ($self->analysis && $self->analysis->gff_feature) || 'similarity';
-        
+
+        my $name = $self->hseqname;
+        my ( $hit_description, $db_name, $hseq_prefix );
+        if ( $self->can('get_HitDescription')
+             && ( $hit_description = $self->get_HitDescription )
+             && ( $db_name = $hit_description->db_name )
+             && ( $hseq_prefix = $db_prefix->{$db_name} )
+            ) {
+            $name = "$hseq_prefix:$name";
+        }
+
         $gff->{attributes}->{Class} = qq("Sequence");
-        $gff->{attributes}->{Name} = '"'.$self->hseqname.'"';
+        $gff->{attributes}->{Name} = '"'.$name.'"';
         $gff->{attributes}->{Align} = $self->hstart.' '.$self->hend.' '.( $self->hstrand == -1 ? '-' : '+' );
         $gff->{attributes}->{percentID} = $self->percent_id;
 
