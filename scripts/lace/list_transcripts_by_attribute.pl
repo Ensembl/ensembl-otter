@@ -40,19 +40,20 @@ use Bio::Otter::Lace::Defaults;
         SELECT
                 g.gene_id,
                 gsi.stable_id,
-                ga.value,
+                gan.value,
                 t.transcript_id,
                 tsi.stable_id,
                 tan.value,
-                ta.value
+                ta.value,
+                sr.name
         FROM
                 transcript           t
            JOIN transcript_attrib    ta  USING (transcript_id)
            JOIN transcript_stable_id tsi USING (transcript_id)
            JOIN gene                 g   ON t.gene_id = g.gene_id
            JOIN gene_stable_id       gsi ON g.gene_id = gsi.gene_id
-           JOIN gene_attrib          ga  ON     g.gene_id = ga.gene_id 
-            			            AND ga.attrib_type_id = (
+           JOIN gene_attrib          gan ON     g.gene_id = gan.gene_id 
+            			            AND gan.attrib_type_id = (
             			                SELECT attrib_type_id
             			                FROM   attrib_type
             			                WHERE  code = 'name'
@@ -63,6 +64,7 @@ use Bio::Otter::Lace::Defaults;
             			                FROM   attrib_type
             			                WHERE  code = 'name'
             			               )
+           JOIN seq_region           sr  ON g.seq_region_id = sr.seq_region_id
         WHERE
                 t.is_current = 1
             AND ta.value LIKE ?
@@ -76,17 +78,18 @@ use Bio::Otter::Lace::Defaults;
     $list_transcripts->execute($attrib_pattern, $attrib_code);
 
     my $count = 0;
-    printf( "%-15s %18s : %-20s %18s [%s]\n",
-	    "Gene name", "Gene stable id",
-	    "Transcript name", "Transcript stable ID",
-	    "Attr. val." ) unless $quiet;
+    my $out_format = "%s\t%s\t%s\t%s\t%s\t%s\n";
+    printf( $out_format,
+	    "Chromosome", "Gene name", "stable id",
+	    "Transcript name", "stable ID",
+	    "Attribute" ) unless $quiet;
     
     while (my ($gid, $gene_sid, $gene_name, 
 	       $tid, $transcript_sid, $transcript_name,
-	       $attrib_value) = $list_transcripts->fetchrow()) {
+	       $attrib_value, $seq_region_name) = $list_transcripts->fetchrow()) {
         ++$count;
-        printf( "%-15s %18s : %-20s %18s [%s]\n", 
-                $gene_name, $gene_sid,
+        printf( $out_format,
+                $seq_region_name, $gene_name, $gene_sid,
 		$transcript_name, $transcript_sid,
 		$attrib_value,
             ) unless $quiet;
