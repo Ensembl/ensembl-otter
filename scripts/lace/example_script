@@ -34,7 +34,7 @@ use Bio::Otter::Lace::Defaults;
     my $otter_dba = $ds->get_cached_DBAdaptor;
     my $pipe_dba = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($otter_dba);
     
-    
+    my $sth = $otter_dba->dbc->prepare('SELECT (1)');
 }
 
 
