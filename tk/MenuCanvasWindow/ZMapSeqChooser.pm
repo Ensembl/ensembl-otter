@@ -972,34 +972,37 @@ sub zMapTagValues {
     return (200, $xml->flush);
 }
 
+my $zmap_feature_details_tags = [
+    [ taxon_id => {
+        name => 'Taxon ID',
+        type => 'scrolled_text',
+      }, ],
+    [ description => {
+        name => 'Description',
+        type => 'simple',
+      }, ],
+    ];
+
 sub zmap_feature_details_xml {
-    my ($self, $name) = @_;
+    my ($self, $feat_name) = @_;
 
-    my $ace = $self->ace_handle;
-    my ($taxon_id, $desc);
-    foreach my $class (qw{ Sequence Protein }) {
-        $ace->raw_query(qq{find $class "$name"});
-        my $txt = Hum::Ace::AceText->new($ace->raw_query(qq{show -a}));
-
-        # print STDERR $$txt;
-        next unless $txt->get_values($class);
-        ($taxon_id) = $txt->get_values('Taxon_id');
-        ($desc)     = $txt->get_values('Title');
-    }
-
-    return '' unless $taxon_id or $desc;
-
-    my $xml = Hum::XmlWriter->new(5);
+    my $details_content =
+        $self->AceDatabase->Client->http_response_content(
+            'POST', 'get_feature_details',
+            { 'feature' => $feat_name, });
+    my $details = { $details_content =~ /^(.*?)\t(.*)$/mg };
+    return '' unless keys %{$details};
 
     # Put this on the "Details" page which already exists.
+    my $xml = Hum::XmlWriter->new(5);
     $xml->open_tag('page',       { name => 'Details' });
     $xml->open_tag('subsection', { name => 'Feature' });
     $xml->open_tag('paragraph',  { type => 'tagvalue_table' });
-    $xml->full_tag('tagvalue', { name => 'Taxon ID', type => 'simple' }, $taxon_id->[0])
-      if $taxon_id;
-    $xml->full_tag('tagvalue', { name => 'Description', type => 'scrolled_text' }, $desc->[0])
-      if $desc;
-
+    for ( @{$zmap_feature_details_tags} ) {
+        my ($key, $tag) = @{$_};
+        next unless my $value = $details->{$key};
+        $xml->full_tag('tagvalue', $tag, $value);
+    }
     $xml->close_all_open_tags;
 
     return $xml->flush;
