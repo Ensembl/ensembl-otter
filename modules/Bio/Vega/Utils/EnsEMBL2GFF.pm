@@ -223,7 +223,7 @@ sub gff_header {
 
             my @attrs = map  { $_ . ' ' . $gff->{attributes}->{$_} } keys %{ $gff->{attributes} };
                 
-            $gff_str .= "\t" . join( "\t;\t", @attrs );
+            $gff_str .= "\t" . join( " ; ", @attrs );
         }
 
         return $gff_str;
