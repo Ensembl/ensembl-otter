@@ -1011,6 +1011,11 @@ sub zmap_feature_details_xml {
 sub zmap_feature_evidence_xml {
     my ($self, $feat_name) = @_;
 
+    my $feat_name_is_prefixed =
+        $feat_name =~ /\A[[:alnum:]]{2}:/;
+    warn sprintf "Feature name '%s' is prefixed: %s\n"
+        , $feat_name, $feat_name_is_prefixed;
+
     my $subseq_list = [];
     foreach my $name ($self->list_all_SubSeq_names) {
         if (my $subseq = $self->get_SubSeq($name)) {
@@ -1035,6 +1040,8 @@ sub zmap_feature_evidence_xml {
         foreach my $evi_type (keys %$evi_hash) {
             my $evi_array = $evi_hash->{$evi_type};
             foreach my $evi_name (@$evi_array) {
+                $evi_name =~ s/\A[[:alnum:]]{2}://
+                    if ! $feat_name_is_prefixed;
                 if ($feat_name eq $evi_name) {
                     push(@$used_subseq_names, $subseq->name);
                     next SUBSEQ;
