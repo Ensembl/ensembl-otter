@@ -37,6 +37,17 @@ here is an example commandline
     -set            comma separated list of sequence sets
     -help|h         displays this documentation with PERLDOC
 
+=head1 SQL
+
+  UPDATE seq_region_attrib
+  SET value = '0'
+  WHERE attrib_type_id = 128
+    AND seq_region_id IN
+  (SELECT seq_region_id
+      FROM seq_region
+      WHERE name like '%_20101111')
+
+
 =head1 CONTACT
 
 Mustapha Larbaoui B<email> ml6@sanger.ac.uk
