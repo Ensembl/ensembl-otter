@@ -661,7 +661,7 @@ $zmap_cfg->newval('source', 'featuresets', $sources_list);
 $zmap_cfg->newval('source', 'stylesfile', $styles_file);
 $zmap_cfg->newval('blixem', 'dna-featuresets', $dna_sources);
 $zmap_cfg->newval('blixem', 'protein-featuresets', $protein_sources);
-$zmap_cfg->newval('blixem', 'transcript-featuresets', $tsct_sources);
+$zmap_cfg->newval('blixem', 'featuresets', $tsct_sources);
 
 my $zmap_dir = tempdir(
         'enzembl_zmap_XXXXXX', 
@@ -755,7 +755,7 @@ on the command line to see a working example file.
  ------------------------------------------------------------------------
  [ZMap]         default-sequence
  [source]       url, featuresets, stylesfile
- [blixem]       dna-featuresets, protein-featuresets, transcript-featuresets
+ [blixem]       dna-featuresets, protein-featuresets, featuresets
 
 =item B<-db | -dbs dbname1,dbname2,...>
 

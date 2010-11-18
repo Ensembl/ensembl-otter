@@ -625,7 +625,7 @@ sub zMapBlixemDefaults {
         },
         'protein-featuresets' => [qw{ SwissProt TrEMBL }],
         'dna-featuresets'    => [qw{ EST_Human EST_Mouse EST_Other vertebrate_mRNA OTF_mRNA Unknown_DNA }],
-        'transcript-featuresets' => [qw{
+        'featuresets' => [qw{
 Coding
 Known_CDS
 Novel_CDS
