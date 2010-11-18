@@ -17,7 +17,7 @@ sub gff_header {
     my ( $sec, $min, $hr, $mday, $mon, $year ) = localtime;
     $year += 1900;    # correct the year
     $mon++;           # correct the month
-    my $date = "$year-$mon-$mday";
+    my $date = sprintf "%4d-%02d-%02d", $year, $mon, $mday;
     
     my $hdr =
         "##gff-version 2\n"
