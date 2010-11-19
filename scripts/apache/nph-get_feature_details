@@ -10,7 +10,6 @@ use warnings;
 
 use SangerPaths qw{ core bioperl123 ensembl57 otter53 };
 use SangerWeb;
-use IO::Socket;
 
 use Bio::Otter::ServerScriptSupport;
 use Bio::Otter::Utils::MM;
