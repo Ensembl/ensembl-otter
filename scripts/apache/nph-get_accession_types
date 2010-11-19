@@ -8,12 +8,13 @@
 use strict;
 use warnings;
 
-use SangerPaths qw{ core bioperl123 ensembl57 otter53 };
+use SangerPaths qw{ core bioperl123 ensembl57 otter53 humpub };
 use SangerWeb;
 use IO::Socket;
 
 use Bio::Otter::ServerScriptSupport;
 use Bio::Otter::Utils::MM;
+use Hum::Conf qw{ PFETCH_SERVER_LIST };
 
 my $server = Bio::Otter::ServerScriptSupport->new;
 
@@ -36,10 +37,11 @@ if ($@) {
     
     my $socket;
 
-    foreach my $ip_addr (qw{ 172.17.62.2 172.17.62.3 }){
+    foreach my $srv_arr (@$PFETCH_SERVER_LIST) {
+	my ($ip_addr, $port) = @$srv_arr;
         last if $socket = IO::Socket::INET->new(
             PeerAddr    => $ip_addr,
-            PeerPort    => 22400,
+            PeerPort    => $port,
             Proto       => 'tcp',
             Type        => SOCK_STREAM,
             Timeout     => 10,
