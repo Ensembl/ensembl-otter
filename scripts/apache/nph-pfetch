@@ -12,6 +12,15 @@ use SangerWeb;
 use IO::Socket;
 use CGI;
 
+### We avoid these for faster turnaround of requests, but have to
+#   replicate equivalent functionality inline.
+#
+# use Bio::Otter::ServerScriptSupport;
+# use Hum::Conf qw{ PFETCH_SERVER_LIST };
+#
+# Listed here for the benefit of greppers...
+
+
 my $q;
 
 eval {
@@ -45,7 +54,7 @@ eval {
 
     die "Empty request\n" unless $req =~ /\S/;
 
-    foreach my $ip_addr (qw{ 193.62.203.7 }){
+    foreach my $ip_addr (qw{ pfetch.sanger.ac.uk }){
         last if $socket = IO::Socket::INET->new(
             PeerAddr => $ip_addr,
             PeerPort => 22400,
