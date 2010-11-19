@@ -975,11 +975,11 @@ sub zMapTagValues {
 my $zmap_feature_details_tags = [
     [ taxon_id => {
         name => 'Taxon ID',
-        type => 'scrolled_text',
+        type => 'simple',
       }, ],
     [ description => {
         name => 'Description',
-        type => 'simple',
+        type => 'scrolled_text',
       }, ],
     ];
 
