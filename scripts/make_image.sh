@@ -2,7 +2,7 @@
 
 touch otterlace.app
 
-release="otterlace_mac_intel_52-19"
+release="otterlace_mac_intel_52-20"
 sparse="$release.sparseimage"
 dmg="$release.dmg"
 
