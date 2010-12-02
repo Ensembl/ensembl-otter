@@ -1,31 +1,95 @@
 #!/usr/local/bin/perl -Tw
 
-# Author: mca
-#
-# Wrapper script on old nph-foo scripts, for migration away from nph.
-# We don't want to be maintaining two copies of these scripts while
-# the clients are switched over.
+### nph-get_gene_info
+
+# Author:        jgrg
+# Group:         anacode
+# Maintainer:    jgrg
+
 
 use strict;
 use warnings;
-# require nothing
 
+use SangerPaths qw{ core bioperl123 ensembl57 otter53 };
 
-sub main {
-    $ENV{PATH} = "/bin";
-    my $script = scriptpath_nph();
-    { exec($script); } # {}s to avoid Perl warning
-    print "Status: 500\n\n$0 failed to exec($script): $!\n";
-}
+use Bio::Otter::ServerScriptSupport;
 
-sub scriptpath_nph {
-    my $script = $ENV{SCRIPT_FILENAME} || $0;
-    if ($script =~ m{^(/[-_a-zA-Z0-9/]+)/([-_a-zA-Z0-9]+)$}) {
-	return "$1/nph-$2";
+{
+    my $server = Bio::Otter::ServerScriptSupport->new;
+
+    my $output_string = '';
+    eval {
+        my $sql = q{
+            SELECT gnu.consortium_id
+              , gsid1.stable_id
+              , ga2.value as current_name
+            FROM (gene_stable_id gsid1
+                  , gene_stable_id gsid2
+                  , gene g2
+                  , gene_attrib ga2)
+            LEFT JOIN gene_name_update gnu
+              ON gsid1.gene_id = gnu.gene_id
+            WHERE gsid1.stable_id = gsid2.stable_id
+              AND gsid2.gene_id = g2.gene_id
+              AND g2.gene_id = ga2.gene_id
+              AND ga2.attrib_type_id = 4
+              AND g2.is_current = 1
+              AND g2.source = 'havana'
+        };
+        
+        if (my $id_str = $server->param('idlist')) {
+            my @id_list;
+            foreach my $sid (split /,/, $id_str) {
+                $sid =~ s/[^A-Za-z0-9]//g;
+                next unless $sid;
+                push(@id_list, $sid);
+            }
+            my $id_query = join(', ', map { "'$_'" } @id_list);
+            $sql .= qq{
+                AND gsid1.stable_id in ($id_query)
+            };
+        }
+        
+        $sql .= q{
+            ORDER BY g2.gene_id DESC            
+        };
+    
+        my $otter = $server->otter_dba;
+        my $sth = $otter->dbc->prepare($sql);
+        $sth->execute;
+
+        my %seen_stable;
+        while (my ($consortium_id, $stable_id, $current_name) = $sth->fetchrow) {
+            next if $seen_stable{$stable_id};
+            $output_string .= join("\t", $consortium_id || '', $stable_id, $current_name) . "\n";
+            $seen_stable{$stable_id} = 1;
+        }
+    };
+
+    if ($@) {
+        print $server->header(
+            -status => 500,
+            -type   => 'text/plain',
+            ),
+            "ERROR: $@";
+        exit(1);
     } else {
-	print "Status: 500\n\nFailed to untaint and derive nph- name for $script\n";
-	exit(1);
+        print $server->header(
+            -status => 200,
+            -type   => 'text/plain',
+            ),
+            $output_string;
     }
 }
 
-main();
+
+
+
+__END__
+
+=head1 NAME - nph-get_gene_info
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+

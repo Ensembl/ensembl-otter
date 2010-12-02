@@ -1,31 +1,108 @@
 #!/usr/local/bin/perl -Tw
 
-# Author: mca
-#
-# Wrapper script on old nph-foo scripts, for migration away from nph.
-# We don't want to be maintaining two copies of these scripts while
-# the clients are switched over.
+
+# Author:        gr5
+# Group:         anacode
+# Maintainer:    gr5
 
 use strict;
 use warnings;
-# require nothing
 
+use SangerPaths qw{ core bioperl123 ensembl57 otter53 humpub };
+use SangerWeb;
+use IO::Socket;
 
-sub main {
-    $ENV{PATH} = "/bin";
-    my $script = scriptpath_nph();
-    { exec($script); } # {}s to avoid Perl warning
-    print "Status: 500\n\n$0 failed to exec($script): $!\n";
-}
+use Bio::Otter::ServerScriptSupport;
+use Bio::Otter::Utils::MM;
+use Hum::Conf qw{ PFETCH_SERVER_LIST };
 
-sub scriptpath_nph {
-    my $script = $ENV{SCRIPT_FILENAME} || $0;
-    if ($script =~ m{^(/[-_a-zA-Z0-9/]+)/([-_a-zA-Z0-9]+)$}) {
-	return "$1/nph-$2";
-    } else {
-	print "Status: 500\n\nFailed to untaint and derive nph- name for $script\n";
-	exit(1);
+my $server = Bio::Otter::ServerScriptSupport->new;
+
+my $accs = $server->param('accessions');
+
+my @acc_list = split(/,/, $accs);
+
+my $mm = Bio::Otter::Utils::MM->new;
+
+my $types;
+
+eval {
+    $types = $mm->get_accession_types(\@acc_list);
+};
+if ($@) {
+    
+    # mole and mushroom probably failed, so let's try to parse the pfetch header
+    
+    # XXX: much of this code nicked from nph-pfetch but rejigged here
+    
+    my $socket;
+
+    foreach my $srv_arr (@$PFETCH_SERVER_LIST) {
+	my ($ip_addr, $port) = @$srv_arr;
+        last if $socket = IO::Socket::INET->new(
+            PeerAddr    => $ip_addr,
+            PeerPort    => $port,
+            Proto       => 'tcp',
+            Type        => SOCK_STREAM,
+            Timeout     => 10,
+        );
     }
+    
+    die "Connect to pfetch server failed" unless $socket;
+    
+    # detaint and join the accessions into one string
+
+    my $acc_string;
+
+    for my $acc (@acc_list) {
+        $acc =~ s/\s+/ /g;
+        $acc =~ s/[^\w\-\.\: ]//g;
+        $acc_string .= "$acc ";
+        $types->{$acc} = [];
+    }
+    
+    # chuck it down the pipe
+    
+    print $socket "-F $acc_string\n";
+    
+    # NB: I assume here that the results come back in the order requested
+    
+    my $idx = 0;
+    
+    while (<$socket>) {
+        if (/^ID/) {
+            my $acc = $acc_list[$idx];
+            
+            if (/EST/) {
+                $types->{$acc} = ['EST', $acc];
+            }
+            elsif (/mRNA/) {
+                $types->{$acc} = ['mRNA', $acc];
+            }
+            elsif (/other RNA/) {
+                $types->{$acc} = ['ncRNA', $acc];
+            }
+            elsif (/\d+\s+AA/) {
+                $types->{$acc} = ['Protein', $acc];
+            }
+        }
+        
+        # it seems pfetch marks the next file with the line '//'
+        
+        if (/^\/\/$/) {
+            $idx++;
+        }
+    }
+    
+    close $socket;
 }
 
-main();
+my $response = '';
+
+for my $key (keys %$types) {
+    $response .= $key."\t".$types->{$key}->[0]."\t".$types->{$key}->[1]."\n";
+}
+
+$server->send_response($response);
+
+1;

@@ -1,31 +1,48 @@
 #!/usr/local/bin/perl -Tw
 
-# Author: mca
-#
-# Wrapper script on old nph-foo scripts, for migration away from nph.
-# We don't want to be maintaining two copies of these scripts while
-# the clients are switched over.
+# Author:        gr5
+# Group:         anacode
+# Maintainer:    gr5
 
 use strict;
 use warnings;
-# require nothing
 
+use SangerPaths qw{ core bioperl123 ensembl57 otter53 };
 
-sub main {
-    $ENV{PATH} = "/bin";
-    my $script = scriptpath_nph();
-    { exec($script); } # {}s to avoid Perl warning
-    print "Status: 500\n\n$0 failed to exec($script): $!\n";
-}
+use Bio::Otter::ServerScriptSupport;
+use Bio::Vega::Utils::EnsEMBL2GFF;
 
-sub scriptpath_nph {
-    my $script = $ENV{SCRIPT_FILENAME} || $0;
-    if ($script =~ m{^(/[-_a-zA-Z0-9/]+)/([-_a-zA-Z0-9]+)$}) {
-	return "$1/nph-$2";
-    } else {
-	print "Status: 500\n\nFailed to untaint and derive nph- name for $script\n";
-	exit(1);
+my $server = Bio::Otter::ServerScriptSupport->new;
+
+my $gff_string = '';
+
+eval {
+    my $features = $server->get_requested_features;
+
+    my %gff_args = (
+        rebase      => $server->param('rebase'),
+        gff_source  => $server->param('gff_source'),
+        gff_seqname => $server->param('gff_seqname'),
+    );
+
+    if (@$features) {
+        $gff_string = $features->[0]->slice->gff_header(%gff_args);
+        for my $f (@$features) {
+            my $gff = $f->to_gff(%gff_args);
+            $gff_string .= $gff."\n" if $gff;
+        }
     }
+    else {
+        $gff_string = $server->empty_gff_header;
+    }
+};
+
+if ($@) {
+    $server->error_exit($@);
+}
+else {
+    $server->send_response($gff_string, 0, 1);
 }
 
-main();
+1;
+

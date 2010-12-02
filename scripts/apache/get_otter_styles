@@ -1,31 +1,39 @@
 #!/usr/local/bin/perl -Tw
 
-# Author: mca
-#
-# Wrapper script on old nph-foo scripts, for migration away from nph.
-# We don't want to be maintaining two copies of these scripts while
-# the clients are switched over.
+# Author:        gr5
+# Group:         anacode
+# Maintainer:    gr5
+
+### nph-get_otter_styles
 
 use strict;
 use warnings;
-# require nothing
 
+use SangerPaths qw{ core bioperl123 ensembl57 otter53 };
 
-sub main {
-    $ENV{PATH} = "/bin";
-    my $script = scriptpath_nph();
-    { exec($script); } # {}s to avoid Perl warning
-    print "Status: 500\n\n$0 failed to exec($script): $!\n";
+use Bio::Otter::ServerScriptSupport;
+
+{
+    my $server = Bio::Otter::ServerScriptSupport->new;
+    my $otter_styles = $server->data_dir . "/otter_styles.ini";
+    open my $STYLES_FH, '<', $otter_styles or
+        $server->error_exit("Error getting otter_styles\nCan't read '$otter_styles' : $!");
+    local $/ = undef;
+    my $txt = <$STYLES_FH>;
+    $server->send_response($txt);
+    close $STYLES_FH;  # Too late for error to client
 }
 
-sub scriptpath_nph {
-    my $script = $ENV{SCRIPT_FILENAME} || $0;
-    if ($script =~ m{^(/[-_a-zA-Z0-9/]+)/([-_a-zA-Z0-9]+)$}) {
-	return "$1/nph-$2";
-    } else {
-	print "Status: 500\n\nFailed to untaint and derive nph- name for $script\n";
-	exit(1);
-    }
-}
 
-main();
+
+
+__END__
+
+=head1 NAME - nph-get_otter_styles
+
+=head1 AUTHOR
+
+Graham Ritchie B<email> gr5@sanger.ac.uk
+
+
+

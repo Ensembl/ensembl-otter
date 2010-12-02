@@ -1,31 +1,37 @@
 #!/usr/local/bin/perl -Tw
 
-# Author: mca
-#
-# Wrapper script on old nph-foo scripts, for migration away from nph.
-# We don't want to be maintaining two copies of these scripts while
-# the clients are switched over.
+# Author:        jgrg
+# Group:         anacode
+# Maintainer:    jgrg
+
+### nph-get_methods_ace
 
 use strict;
 use warnings;
-# require nothing
 
+use SangerPaths qw{ core bioperl123 ensembl57 otter53 };
 
-sub main {
-    $ENV{PATH} = "/bin";
-    my $script = scriptpath_nph();
-    { exec($script); } # {}s to avoid Perl warning
-    print "Status: 500\n\n$0 failed to exec($script): $!\n";
+use Bio::Otter::ServerScriptSupport;
+
+{
+    my $server = Bio::Otter::ServerScriptSupport->new;
+    my $methods_ace = $server->data_dir . "/methods.ace";
+    open my $ACE_FH, '<', $methods_ace or
+        $server->error_exit("Error getting methods.ace\nCan't read '$methods_ace' : $!");
+    local $/ = undef;
+    my $ace_txt = <$ACE_FH>;
+    $server->send_response($ace_txt);
+    close $ACE_FH;  # Too late for error to client
 }
 
-sub scriptpath_nph {
-    my $script = $ENV{SCRIPT_FILENAME} || $0;
-    if ($script =~ m{^(/[-_a-zA-Z0-9/]+)/([-_a-zA-Z0-9]+)$}) {
-	return "$1/nph-$2";
-    } else {
-	print "Status: 500\n\nFailed to untaint and derive nph- name for $script\n";
-	exit(1);
-    }
-}
 
-main();
+
+
+__END__
+
+=head1 NAME - nph-get_methods_ace
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+

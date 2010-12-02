@@ -1,31 +1,69 @@
 #!/usr/local/bin/perl -Tw
 
-# Author: mca
-#
-# Wrapper script on old nph-foo scripts, for migration away from nph.
-# We don't want to be maintaining two copies of these scripts while
-# the clients are switched over.
+# Author:        jgrg
+# Group:         anacode
+# Maintainer:    jgrg
 
 use strict;
 use warnings;
-# require nothing
+
+use SangerPaths qw{ core bioperl123 ensembl57 otter53 };
+
+use Bio::Otter::ServerScriptSupport;
+use Bio::Otter::ToXML;
 
 
-sub main {
-    $ENV{PATH} = "/bin";
-    my $script = scriptpath_nph();
-    { exec($script); } # {}s to avoid Perl warning
-    print "Status: 500\n\n$0 failed to exec($script): $!\n";
-}
+sub Bio::EnsEMBL::Gene::propagate_slice {
+    my ($gene, $slice) = @_;
 
-sub scriptpath_nph {
-    my $script = $ENV{SCRIPT_FILENAME} || $0;
-    if ($script =~ m{^(/[-_a-zA-Z0-9/]+)/([-_a-zA-Z0-9]+)$}) {
-	return "$1/nph-$2";
-    } else {
-	print "Status: 500\n\nFailed to untaint and derive nph- name for $script\n";
-	exit(1);
+    foreach my $exon (@{ $gene->get_all_Exons }) {
+        $exon->slice($slice);
     }
+    foreach my $transcript (@{ $gene->get_all_Transcripts }) {
+        $transcript->slice($slice);
+    }
+    $gene->slice($slice);
+
+    return;
 }
 
-main();
+my $server = Bio::Otter::ServerScriptSupport->new;
+
+my $output_string = '';
+
+eval {
+    my @analysis_names = $server->param('analysis') ? split(/,/, $server->param('analysis')) :
+                                                      ( undef );
+    my $transcript_analyses  = $server->param('transcript_analyses')  || '';
+    my $translation_xref_dbs = $server->param('translation_xref_dbs') || '';
+
+    my $allowed_transcript_analyses_hash = $transcript_analyses
+        ? { map { $_ => 1 } split(/,/, $transcript_analyses) }
+        : '';
+    my $allowed_translation_xref_db_hash = $translation_xref_dbs
+        ? { map { $_ => 1 } split(/,/, $translation_xref_dbs) }
+        : '';
+
+    foreach my $analysis_name (@analysis_names) {
+        # third parameter of $slice->get_all_Genes() helps preventing lazy-loading of transcripts
+        my $genes = $server->fetch_mapped_features('gene', 'get_all_Genes', [$analysis_name, undef, 1],
+            map { defined($server->param($_)) ? $server->param($_) : '' } qw(cs name type start end metakey csver csver_remote)
+        );
+
+        foreach my $gene (@$genes) {
+            $output_string .= $gene->toXMLstring(
+                $allowed_transcript_analyses_hash,
+                $allowed_translation_xref_db_hash
+            );
+        }
+    }
+};
+
+if ($@) {
+    $server->error_exit("Error fetching genes:\n" . $@);
+} else {
+    $server->send_response($output_string, 1);
+}
+
+1;
+

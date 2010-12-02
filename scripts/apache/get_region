@@ -1,31 +1,45 @@
 #!/usr/local/bin/perl -Tw
 
-# Author: mca
-#
-# Wrapper script on old nph-foo scripts, for migration away from nph.
-# We don't want to be maintaining two copies of these scripts while
-# the clients are switched over.
+# Author:        jgrg
+# Group:         anacode
+# Maintainer:    jgrg
 
 use strict;
 use warnings;
-# require nothing
 
+use SangerPaths qw{ core bioperl123 ensembl57 otter53 };
 
-sub main {
-    $ENV{PATH} = "/bin";
-    my $script = scriptpath_nph();
-    { exec($script); } # {}s to avoid Perl warning
-    print "Status: 500\n\n$0 failed to exec($script): $!\n";
-}
+use Bio::Otter::ServerScriptSupport;
+use Bio::Vega::Transform::XML;
 
-sub scriptpath_nph {
-    my $script = $ENV{SCRIPT_FILENAME} || $0;
-    if ($script =~ m{^(/[-_a-zA-Z0-9/]+)/([-_a-zA-Z0-9]+)$}) {
-	return "$1/nph-$2";
-    } else {
-	print "Status: 500\n\nFailed to untaint and derive nph- name for $script\n";
-	exit(1);
-    }
-}
+my $server = Bio::Otter::ServerScriptSupport->new;
 
-main();
+my $cs      = $server->param('cs')     || 'chromosome';
+my $csver   = $server->param('csver')  || (($cs eq 'chromosome') ? 'Otter' : undef);
+my $name    = $server->require_argument('name');
+my $type    = $server->require_argument('type');
+my $start   = $server->require_argument('start');
+my $end     = $server->require_argument('end');
+my $strand  = $server->param('strand') || undef;
+my $trunc   = $server->param('trunc');
+
+$server->log("Getting slice... [$name | $type] [$start] [$end]");
+
+my $odba  = $server->otter_dba();
+my $slice = $server->get_slice($odba, $cs, $name, $type, $start, $end, $strand, $csver);
+
+$server->log("Converting slice to XML...");
+
+my $formatter = Bio::Vega::Transform::XML->new;
+$formatter->skip_truncated_genes($trunc ? 0 : 1);
+$formatter->otter_dba($odba);
+$formatter->slice($slice);
+$formatter->fetch_data_from_otter_db;
+my $xml = $formatter->generate_OtterXML;
+
+$server->log("Done converting slice to XML. Length of XML = " . length($xml) );
+
+$server->send_response($xml);
+
+1;
+

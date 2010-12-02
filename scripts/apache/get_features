@@ -1,31 +1,32 @@
 #!/usr/local/bin/perl -Tw
 
-# Author: mca
-#
-# Wrapper script on old nph-foo scripts, for migration away from nph.
-# We don't want to be maintaining two copies of these scripts while
-# the clients are switched over.
+# Author:        lg4
+# Group:         anacode
+# Maintainer:    lg4
 
 use strict;
 use warnings;
-# require nothing
 
+use SangerPaths qw{ core bioperl123 ensembl57 otter53 };
 
-sub main {
-    $ENV{PATH} = "/bin";
-    my $script = scriptpath_nph();
-    { exec($script); } # {}s to avoid Perl warning
-    print "Status: 500\n\n$0 failed to exec($script): $!\n";
+use Bio::Otter::ServerScriptSupport;
+use Bio::Otter::Lace::ViaText qw( %LangDesc &GenerateFeatures );
+
+my $server       = Bio::Otter::ServerScriptSupport->new;
+
+my $output_string;
+
+eval {
+    my $analysis_list = $server->param('analysis');
+    my $features = $server->get_requested_features;
+    $output_string = GenerateFeatures($features, $analysis_list);
+};
+
+if ($@) {
+    $server->error_exit($@);
+} else {
+    $server->send_response($output_string, 1);
 }
 
-sub scriptpath_nph {
-    my $script = $ENV{SCRIPT_FILENAME} || $0;
-    if ($script =~ m{^(/[-_a-zA-Z0-9/]+)/([-_a-zA-Z0-9]+)$}) {
-	return "$1/nph-$2";
-    } else {
-	print "Status: 500\n\nFailed to untaint and derive nph- name for $script\n";
-	exit(1);
-    }
-}
+1;
 
-main();
