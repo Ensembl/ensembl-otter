@@ -1,31 +1,89 @@
 #!/usr/local/bin/perl -Tw
 
-# Author: mca
-#
-# Wrapper script on old nph-foo scripts, for migration away from nph.
-# We don't want to be maintaining two copies of these scripts while
-# the clients are switched over.
+# Author:        jgrg
+# Group:         anacode
+# Maintainer:    jgrg
 
 use strict;
 use warnings;
-# require nothing
+
+use SangerPaths qw{ core };
+use SangerWeb;
+use IO::Socket;
+use CGI;
+
+### We avoid these for faster turnaround of requests, but have to
+#   replicate equivalent functionality inline.
+#
+# use Bio::Otter::ServerScriptSupport;
+# use Hum::Conf qw{ PFETCH_SERVER_LIST };
+#
+# Listed here for the benefit of greppers...
 
 
-sub main {
-    $ENV{PATH} = "/bin";
-    my $script = scriptpath_nph();
-    { exec($script); } # {}s to avoid Perl warning
-    print "Status: 500\n\n$0 failed to exec($script): $!\n";
-}
+my $q;
 
-sub scriptpath_nph {
+eval {
+    $q = CGI->new;
+
+    # XXX: remove this when nph-* are gone; should we be using ServerScriptSupport.pm ?
     my $script = $ENV{SCRIPT_FILENAME} || $0;
-    if ($script =~ m{^(/[-_a-zA-Z0-9/]+)/([-_a-zA-Z0-9]+)$}) {
-	return "$1/nph-$2";
-    } else {
-	print "Status: 500\n\nFailed to untaint and derive nph- name for $script\n";
-	exit(1);
-    }
+    $q->nph(1) if $script =~ m{/nph-};
+    
+    my $sw = SangerWeb->new({ cgi => $q });
+    die "Not authorized\n"
+      unless $sw->username;
+};
+
+if ($@) {
+    print $q->header(
+        -status => 403,
+        -type   => 'text/plain',
+        );
+    print $@;
+    exit(1);
 }
 
-main();
+my $socket;
+
+eval {
+    # Get request string and de-taint
+    my $req = $q->param('request');
+    $req =~ s/\s+/ /g;
+    $req =~ s/[^\w\-\.\: ]//g;
+
+    die "Empty request\n" unless $req =~ /\S/;
+
+    foreach my $ip_addr (qw{ pfetch.sanger.ac.uk }){
+        last if $socket = IO::Socket::INET->new(
+            PeerAddr => $ip_addr,
+            PeerPort => 22400,
+            Proto    => 'tcp',
+            Type     => SOCK_STREAM,
+            Timeout  => 10,
+            );
+    }
+    die "Connect to pfetch server failed" unless $socket;
+    
+    print $socket $req, "\n";
+};
+
+if ($@) {
+    print $q->header(
+        -status => 500,
+        -type   => 'text/plain',
+        );
+    print $@;
+    exit(1);
+} else {
+    print $q->header(
+        -status => 200,
+        -type   => 'text/plain',
+        );
+    
+    while (<$socket>) {
+        print;
+    }
+    close $socket;
+    exit(0);
+}

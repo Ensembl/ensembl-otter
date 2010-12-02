@@ -1,31 +1,40 @@
 #!/usr/local/bin/perl -Tw
 
-# Author: mca
-#
-# Wrapper script on old nph-foo scripts, for migration away from nph.
-# We don't want to be maintaining two copies of these scripts while
-# the clients are switched over.
+# Author:        jgrg
+# Group:         anacode
+# Maintainer:    jgrg
 
 use strict;
 use warnings;
-# require nothing
 
+use SangerPaths qw{ core bioperl123 ensembl57 otter53 };
+use SangerWeb;
 
-sub main {
-    $ENV{PATH} = "/bin";
-    my $script = scriptpath_nph();
-    { exec($script); } # {}s to avoid Perl warning
-    print "Status: 500\n\n$0 failed to exec($script): $!\n";
+use Bio::Otter::ServerScriptSupport;
+
+my $server = Bio::Otter::ServerScriptSupport->new;
+my $web = $server->sangerweb;
+
+my $user = $web->username;
+
+my $env = "ENV:\n";
+foreach my $var (sort keys %ENV) {
+    $env .= sprintf "%24s  %s\n", $var, $ENV{$var};
 }
 
-sub scriptpath_nph {
-    my $script = $ENV{SCRIPT_FILENAME} || $0;
-    if ($script =~ m{^(/[-_a-zA-Z0-9/]+)/([-_a-zA-Z0-9]+)$}) {
-	return "$1/nph-$2";
-    } else {
-	print "Status: 500\n\nFailed to untaint and derive nph- name for $script\n";
-	exit(1);
-    }
+$env .= "\nCGI param:\n";
+foreach my $var ($server->param) {
+    $env .= sprintf "%24s  %s\n", $var, $server->param($var);
 }
 
-main();
+$env .= sprintf "\nSangerWeb cgi = %s\n", $web->cgi;
+$env .= sprintf "\nSangerWeb username = %s\n", $web->username;
+
+my $dbh = DBI->connect("DBI:mysql:database=pipe_human;host=otterslave;port=3312", "ottro", undef);
+$env .= "CONNECTED $dbh";
+
+if ($server->local_user) {
+    $server->send_response($env);
+} else {
+    $server->send_response("You are an external user\n");
+}
