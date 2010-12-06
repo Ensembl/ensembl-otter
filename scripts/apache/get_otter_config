@@ -5,7 +5,7 @@
 use strict;
 use warnings;
 
-use SangerPaths qw{ core bioperl123 ensembl57 otter53 };
+use SangerPaths qw{ core bioperl123 ensembl57 otter54 };
 
 use Bio::Otter::ServerScriptSupport;
 
