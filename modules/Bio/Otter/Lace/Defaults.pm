@@ -421,7 +421,7 @@ __DATA__
 [client]
 host=www.sanger.ac.uk
 port=80
-version=53
+version=54
 write_access=0
 debug=1
 show_zmap=1
