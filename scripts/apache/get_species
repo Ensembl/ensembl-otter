@@ -28,7 +28,7 @@ use Bio::Otter::ServerScriptSupport;
 
 __END__
 
-=head1 NAME - nph-get_species
+=head1 NAME - get_species
 
 =head1 AUTHOR
 
