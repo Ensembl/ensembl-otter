@@ -10,7 +10,6 @@ use Carp;
 use Hum::Pfetch;
 use Hum::FastaFileIO;
 use Hum::ClipboardUtils qw{ accessions_from_text };
-use Bio::Otter::Lace::Client;
 use Hum::Sort qw{ ace_sort };
 use Tk::LabFrame;
 use Tk::Balloon;
