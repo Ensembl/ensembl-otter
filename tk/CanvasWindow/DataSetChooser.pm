@@ -10,7 +10,6 @@ use Tk::DialogBox;
 use base 'CanvasWindow';
 use EditWindow::LoadColumns;
 use CanvasWindow::SequenceSetChooser;
-use Bio::Otter::Lace::LocalDatabaseFactory;
 
 sub new {
     my( $pkg, @args ) = @_;
@@ -71,17 +70,8 @@ sub Client {
     
     if ($Client) {
         $self->{'_Client'} = $Client;
-        $self->LocalDatabaseFactory->Client($Client);
     }
     return $self->{'_Client'};
-}
-
-sub LocalDatabaseFactory {
-    my( $self ) = @_;
-
-    $self->{'_ldf'} ||= Bio::Otter::Lace::LocalDatabaseFactory->new();
-
-    return $self->{'_ldf'};
 }
 
 sub select_dataset {
@@ -173,8 +163,8 @@ sub draw {
 sub recover_some_sessions {
     my ($self) = @_;
 
-    my $ldf = $self->LocalDatabaseFactory();
-    my $recoverable_sessions = $ldf->sessions_needing_recovery();
+    my $client = $self->Client();
+    my $recoverable_sessions = $client->sessions_needing_recovery();
     
     if (@$recoverable_sessions) {
         my %session_wanted = map { $_->[0] => 1 } @$recoverable_sessions;
@@ -229,7 +219,7 @@ sub recover_some_sessions {
                     my ($session_dir, $date, $title) = @$rec;
                     
                     # Bring up GUI
-                    my $adb = $ldf->recover_session($session_dir);
+                    my $adb = $client->recover_session($session_dir);
                     
                     my $top = $canvas->Toplevel(
                         -title  => 'Select column data to load',
