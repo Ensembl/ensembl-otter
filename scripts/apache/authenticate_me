@@ -19,7 +19,7 @@ $server->send_response($user);
 
 __END__
 
-=head1 NAME - nph-authenticate_me
+=head1 NAME - authenticate_me
 
 =head1 AUTHOR
 

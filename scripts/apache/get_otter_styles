@@ -29,7 +29,7 @@ use Bio::Otter::ServerScriptSupport;
 
 __END__
 
-=head1 NAME - nph-get_otter_styles
+=head1 NAME - get_otter_styles
 
 =head1 AUTHOR
 

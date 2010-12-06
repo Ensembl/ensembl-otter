@@ -29,7 +29,7 @@ use Bio::Otter::ServerScriptSupport;
 
 __END__
 
-=head1 NAME - nph-get_methods_ace
+=head1 NAME - get_methods_ace
 
 =head1 AUTHOR
 

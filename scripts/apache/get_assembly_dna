@@ -67,7 +67,7 @@ $server->send_response($output_str, 1);
 
 __END__
 
-=head1 NAME - nph-get_assembly_dna
+=head1 NAME - get_assembly_dna
 
 =head1 AUTHOR
 

@@ -32,7 +32,7 @@ use Bio::Otter::ServerScriptSupport;
 
 __END__
 
-=head1 NAME - nph-get_lace_acedb_tar
+=head1 NAME - get_lace_acedb_tar
 
 =head1 AUTHOR
 
