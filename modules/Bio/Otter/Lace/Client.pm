@@ -1171,7 +1171,7 @@ sub recover_session {
 
     my $write_flag = $dir =~ /\.ro/ ? 0 : 1;
 
-    my $adb = $self->Client->new_AceDatabase($write_flag);
+    my $adb = $self->new_AceDatabase($write_flag);
     $adb->error_flag(1);
     my $home = $adb->home;
     rename($dir, $home) or die "Cannot move '$dir' to '$home'; $!";
