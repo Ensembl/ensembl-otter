@@ -4,18 +4,9 @@ package ToXML; # a module, but not really a class
 use strict;
 use warnings;
 use Bio::Vega::Utils::GeneTranscriptBiotypeStatus 'biotype_status2method';
+use Bio::Vega::Utils::XmlEscape qw{ xml_escape };
 
 # ----------------[simplify some formatting]----------------------
-
-sub emit_value { # just make sure it does not contain triangular brackets:
-    my ($value) = @_;
-
-    ### There are other characters that sould be escaped: & "
-    $value=~s/\>/&gt;/g;
-    $value=~s/\</&lt;/g;
-
-    return $value;
-}
 
 sub emit_opening_tag {
     my ($tag, $offset) = @_;
@@ -41,7 +32,7 @@ sub emit_tagpair {
 
     $offset ||= 0;
 
-    return ( (' ' x $offset) . '<' . $tag . '>' . emit_value($value) . '</' . $tag . ">\n") ;
+    return ( (' ' x $offset) . '<' . $tag . '>' . xml_escape($value) . '</' . $tag . ">\n") ;
 }
 
 
