@@ -8,10 +8,12 @@ use Bio::Otter::Lace::Defaults;
 
 {
     my $sql;
-    my $pipe = 0;
+    my $pipe_flag = 0;
+    my   $do_flag = 0;
     Bio::Otter::Lace::Defaults::do_getopt(
         'query=s' => \$sql,
-        'pipe!'   => \$pipe,
+        'pipe!'   => \$pipe_flag,
+        'do!'     => \$do_flag,
     );
     unless ($sql) {
         $sql = join(' ', <>);
@@ -25,14 +27,33 @@ use Bio::Otter::Lace::Defaults;
         printf "Querying dataset %s\n", $ds->name;
         my $otter_dba = $ds->get_cached_DBAdaptor;
         my $query_dba =
-          $pipe
-          ? Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($otter_dba)
+          $pipe_flag
+          ? Bio::Otter::Lace::PipelineDB::get_pipeline_rw_DBAdaptor($otter_dba)
           : $otter_dba;
-        my $sth = $query_dba->dbc->prepare($sql);
-        $sth->execute;
-        while (my @row = $sth->fetchrow) {
-            print join("\t", @row), "\n";
+
+        my $row_count;
+        if ($do_flag) {
+            $row_count = $query_dba->dbc->do($sql);
         }
+        else {
+            my $sth = $query_dba->dbc->prepare($sql);
+            $sth->execute;
+            my $head = "\t" . DBI::neat_list($sth->{'NAME'}) . "\n";
+            my $data = $sth->fetchall_arrayref;
+            $row_count = $sth->rows;
+            if ($row_count) {
+                print $head;
+                foreach my $row (@$data) {
+                    print "\t", DBI::neat_list($row), "\n";
+                }
+            }
+        }
+        
+        printf STDERR "%d row%s\n", $row_count, $row_count == 1 ? '' : 's';
+        
+        # while (my @row = $sth->fetchrow) {
+        #     print join("\t", @row), "\n";
+        # }
     }
 }
 
@@ -42,7 +63,8 @@ __END__
 
 =head1 SYNOPSIS
 
-  query_all_datasets [-pipe] -query "SQL STATEMENT"
+  query_all_datasets [-pipe] [-do] -query "SQL STATEMENT"
+  query_all_datasets [-pipe] [-do] < tmp.sql
 
 =head1 PARAMETERS
 
@@ -52,9 +74,13 @@ __END__
 
 Query the pipeline databases instead of the (default) loutre databases.
 
+=item B<-do>
+
+For non-SELECT statements, uses the C<DBI $dbh-E<gt>do()> method to run them.
+
 =item B<-query>
 
-The SQL to send to each database.
+The SQL to send to each database. Alternatively it will take SQL from STDIN.
 
 =back
 
