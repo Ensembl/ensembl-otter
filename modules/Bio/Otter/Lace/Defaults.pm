@@ -12,19 +12,17 @@ use POSIX 'uname';
 
 
 my $CLIENT_STANZA   = 'client';
-
-my $DEFAULT_TAG     = 'default';
 my $DEBUG_CONFIG    = 0;
 #-------------------------------
 my $CONFIG_INIFILES = [];
 my %OPTIONS_TO_TIE  = (
-                       -default     => $DEFAULT_TAG, 
+                       -default     => 'default', 
                        -reloadwarn  => 1,
                        );
 
 my $HARDWIRED = {};
 tie %$HARDWIRED, 'Config::IniFiles', (-file => \*DATA, %OPTIONS_TO_TIE);
-push(@$CONFIG_INIFILES, $HARDWIRED); 
+push(@$CONFIG_INIFILES, $HARDWIRED);
 
 # The tied hash for the GetOptions variables
 my $GETOPT = {};
@@ -33,7 +31,6 @@ tie %$GETOPT, 'Config::IniFiles', (%OPTIONS_TO_TIE);
 my ($THIS_USER, $HOME_DIR) = (getpwuid($<))[0,7];
 my $CALLED = "$0 @ARGV";
 
-our $GETOPT_ERRSTR  = undef;
 my @CLIENT_OPTIONS = qw(
     host=s
     port=s
@@ -68,7 +65,6 @@ sub save_deep_option {
     my $param = pop @$option;
     return unless @$option;
     my $opt_str = join('.', @$option);
-    $GETOPT->{$opt_str} ||= {};
     $GETOPT->{$opt_str}->{$param} = $value;
     return;
 }
@@ -103,12 +99,15 @@ sub platform_cpu {
      - hardwired defaults (in this subroutine)
     overriding as we go.
 
- Returns true on success, false otherwise, in the latter case 
-the Bio::Otter::Lace::Defaults::GETOPT_ERRSTR variable is populated.
+Returns true on success, but on failure does:
+
+  exec('perldoc', $0)
 
 Suggested usage:
- @options = (-dataset => \$dataset);
- Bio::Otter::Lace::Defaults::do_getopt(@options) || die $Bio::Otter::Lace::Defaults::GETOPT_ERRSTR;
+
+  Bio::Otter::Lace::Defaults::do_getopt(
+    -dataset => \$dataset,
+    );
 
 =cut
 
@@ -127,7 +126,6 @@ sub do_getopt {
     ############################################################################
     ############################################################################
     my $start = "Called as:\n\t$CALLED\nGetOptions() Error parsing options:";
-    $GETOPT_ERRSTR = undef;    # in case this gets called more than once
     GetOptions(
         'h|help!' => \&show_help,
 
@@ -150,7 +148,6 @@ sub do_getopt {
         'cfgfile=s' => sub {
             push(@$CONFIG_INIFILES, options_from_file(pop));
         },
-        'log-file=s' => sub { die "log-file option is obsolete - use logdir" },
 
         # 'prebinpath=s' => sub { $ENV{PATH} = "$_[1]:$ENV{PATH}"; },
 
@@ -228,9 +225,8 @@ sub config_value {
 
     my $value;
     foreach my $ini ( @$CONFIG_INIFILES ) {
-        foreach my $s ( 'default', $section ) {
-            my $v = $ini->{$s}{$key};
-            $value = $v if $v;
+        if (my $v = $ini->{$section}{$key}) {
+            $value = $v;
         }
     }
 
