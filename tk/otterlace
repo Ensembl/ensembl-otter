@@ -19,7 +19,7 @@ use POSIX ":sys_wait_h";
         die "\n\n  Sorry, this version of otterlace does not work on Alpha machines\n\n\n";
     }
 
-    Bio::Otter::Lace::Defaults::do_getopt() || die $Bio::Otter::Lace::Defaults::GETOPT_ERRSTR . "\n";
+    Bio::Otter::Lace::Defaults::do_getopt();
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
     $cl->cleanup_sessions;
     $cl->cleanup_log_dir('otterlace');
