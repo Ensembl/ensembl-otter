@@ -1,6 +1,5 @@
 #!/usr/local/bin/perl -Tw
 
-
 # Author:        gr5
 # Group:         anacode
 # Maintainer:    gr5
@@ -10,6 +9,7 @@ use warnings;
 
 use SangerPaths qw{ core bioperl123 ensembl57 otter54 humpub };
 use SangerWeb;
+
 use IO::Socket;
 
 use Bio::Otter::ServerScriptSupport;

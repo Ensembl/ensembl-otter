@@ -6,7 +6,9 @@
 
 use strict;
 use warnings;
+
 use SangerPaths qw{ core bioperl123 ensembl57 otter54 };
+
 use Bio::Otter::ServerScriptSupport;
 
 # For added security we don't show mysql connection details to clients outside
