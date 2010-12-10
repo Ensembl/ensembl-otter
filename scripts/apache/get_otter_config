@@ -1,7 +1,5 @@
 #!/usr/local/bin/perl -Tw
 
-### nph-get_otter_config
-
 use strict;
 use warnings;
 

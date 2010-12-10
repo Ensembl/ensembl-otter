@@ -1,7 +1,5 @@
 #!/usr/local/bin/perl -Tw
 
-### nph-get_gene_info
-
 # Author:        jgrg
 # Group:         anacode
 # Maintainer:    jgrg
