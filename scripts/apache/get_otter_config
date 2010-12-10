@@ -1,5 +1,9 @@
 #!/usr/local/bin/perl -Tw
 
+# Author:        jgrg
+# Group:         anacode
+# Maintainer:    jgrg
+
 use strict;
 use warnings;
 
