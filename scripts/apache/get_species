@@ -7,9 +7,10 @@
 use strict;
 use warnings;
 
-use DBI;
 use SangerPaths qw{ core bioperl123 ensembl57 otter54 };
 use SangerWeb;
+
+use DBI;
 
 use Bio::Otter::ServerScriptSupport;
 {
