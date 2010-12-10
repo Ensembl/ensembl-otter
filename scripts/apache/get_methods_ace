@@ -4,8 +4,6 @@
 # Group:         anacode
 # Maintainer:    jgrg
 
-### nph-get_methods_ace
-
 use strict;
 use warnings;
 

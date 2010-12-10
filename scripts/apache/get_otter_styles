@@ -4,8 +4,6 @@
 # Group:         anacode
 # Maintainer:    gr5
 
-### nph-get_otter_styles
-
 use strict;
 use warnings;
 
