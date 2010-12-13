@@ -43,7 +43,7 @@ use Getopt::Long 'GetOptions';
         
         my $req = HTTP::Request->new;
         $req->method('POST');
-        $req->uri('http://www.sanger.ac.uk:80/cgi-bin/otter/50/nph-pfetch');
+        $req->uri('http://www.sanger.ac.uk:80/cgi-bin/otter/50/pfetch'); # (!) no longer present on server
         $req->content("request=$request_str");
         
         # Reload cookie from jar if it has been updated

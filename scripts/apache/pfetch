@@ -27,10 +27,6 @@ my $q;
 eval {
     $q = CGI->new;
 
-    # XXX: remove this when nph-* are gone; should we be using ServerScriptSupport.pm ?
-    my $script = $ENV{SCRIPT_FILENAME} || $0;
-    $q->nph(1) if $script =~ m{/nph-};
-    
     my $sw = SangerWeb->new({ cgi => $q });
     die "Not authorized\n"
       unless $sw->username;

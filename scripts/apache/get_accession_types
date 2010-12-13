@@ -33,7 +33,7 @@ if ($@) {
     
     # mole and mushroom probably failed, so let's try to parse the pfetch header
     
-    # XXX: much of this code nicked from nph-pfetch but rejigged here
+    # XXX: much of this code nicked from scripts/apache/pfetch but rejigged here
     
     my $socket;
 

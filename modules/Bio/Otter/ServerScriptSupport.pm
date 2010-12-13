@@ -18,18 +18,6 @@ use SangerWeb;
 use base ('CGI', 'Bio::Otter::MFetcher');
 
 
-# In Apache2, NPH is broken (junk fetch by client, Hinx RT#190644) and
-# unsupported...  but our nph flag must still match Apache's detection
-# of nph- prefix else client sees 500 error.
-#
-# Until we have no clients requesting nph-foo urls, make nph
-# conditional on script name.
-{
-    my $script = $ENV{SCRIPT_FILENAME} || $0;
-    CGI->nph(1) if $script =~ m{/nph-};
-} # XXX: remove this when nph-* are gone
-
-
 BEGIN {
     warn "otter_srv script start: $0\n";
 }
