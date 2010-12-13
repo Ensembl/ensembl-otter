@@ -583,7 +583,8 @@ sub zMapZMapDefaults {
     my $show_mainwindow =
         $self->AceDatabase->Client->config_value('zmap_main_window');
 
-    my $dataset = $self->AceDatabase->smart_slice->DataSet;
+    my $slice = $self->AceDatabase->smart_slice;
+    my $dataset = $slice->DataSet;
 
     my $sources_string =
         join ' ; ',
@@ -599,6 +600,10 @@ sub zMapZMapDefaults {
 
     return $self->formatZmapDefaults(
         'ZMap',
+        'csname'            => $slice->csname,
+        'csver'             => $slice->csver,
+        'start'             => $slice->start,
+        'end'               => $slice->end,
         'sources'           => $sources_string,
         'show-mainwindow'   => ( $show_mainwindow ? 'true' : 'false' ),
         'cookie-jar'        => $ENV{'OTTERLACE_COOKIE_JAR'},
