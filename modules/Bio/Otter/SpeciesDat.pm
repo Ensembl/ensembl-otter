@@ -18,7 +18,7 @@ sub get_dataset_param {
     return $subhash->{$param_name};
 }
 
-sub dataset_hash { # used by nph-get_datasets only
+sub dataset_hash { # used by scripts/apache/get_datasets only
     my ($self) = @_;
 
     unless ($self->{'_species_dat_hash'}) {
