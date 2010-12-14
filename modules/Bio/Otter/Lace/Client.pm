@@ -998,43 +998,14 @@ sub get_methods_ace {
 }
 
 sub get_accession_types {
-    
     my( $self, @accessions ) = @_;
     
-    my @uncached = ();
-    my %res = ();
-    
-    for my $acc (@accessions) {
-        if (defined $self->{_accession_types}->{$acc}) {
-            $res{$acc} = $self->{_accession_types}->{$acc};
-        }
-        else {
-            push @uncached, $acc;
-        }   
-    }
-    
-    while (@uncached) {
-        # HTTP fetch in batches, to avoid blowing the GET URL length limit.
-        #   150 is conservatively < (4096 limit - 120 for URL) / (20 char each, when encoded)
-        my @fetch_accs = splice @uncached, 0, 150;
-        
-        my $response = $self->http_response_content(
-                            'GET', 
-                            'get_accession_types', 
-                            {accessions => join ',', @fetch_accs}
-                        );
-                        
-        for my $line (split /\n/, $response) {
-            my ($acc, $type, $full_acc) = split /\t/, $line;
-            $res{$acc} = [$type, $full_acc];
-        }
-        
-        for my $acc (keys %res) {
-            $self->{_accession_types}->{$acc} = $res{$acc}; 
-        }
-    }
-    
-    return \%res;
+    my $response = $self->http_response_content(
+        'POST',
+        'get_accession_types',
+        {accessions => join ',', @accessions},
+        );
+    return $response;
 }
 
 sub save_otter_xml {
@@ -1078,6 +1049,7 @@ sub unlock_otter_xml {
 
 sub config_value {
     my ( $self, $key ) = @_;
+    
     return Bio::Otter::Lace::Defaults::config_value('client', $key);
 }
 

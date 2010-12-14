@@ -9,12 +9,14 @@ use ZMap::Connect;
 use Sys::Hostname;
 use ZMap::XRemoteCache;
 use Data::Dumper;
+    $Data::Dumper::Terse = 1;
+    $Data::Dumper::Indent = 1;
 use Hum::Conf qw{ PFETCH_SERVER_LIST };
 use XML::Simple;
 use File::Path 'mkpath';
 use Config::IniFiles;
 
-my $ZMAP_DEBUG = 1;
+my $ZMAP_DEBUG = 0;
 
 #==============================================================================#
 #
@@ -598,6 +600,17 @@ sub zMapZMapDefaults {
     my $pfetch_www = $ENV{'PFETCH_WWW'};
     my $pfetch_url = $self->AceDatabase->Client->pfetch_url;
 
+    my $script_dir = $ENV{'OTTER_HOME'} . '/ensembl-otter/scripts';
+    unless (-d $script_dir) {
+        foreach my $otter (grep m{ensembl-otter/}, @INC) {
+            $otter =~ s{ensembl-otter/.+}{ensembl-otter/scripts};
+            if (-d $otter) {
+                $script_dir = $otter;
+                last;
+            }
+        }
+    }
+
     return $self->formatZmapDefaults(
         'ZMap',
         'csname'            => $slice->csname,
@@ -607,7 +620,7 @@ sub zMapZMapDefaults {
         'sources'           => $sources_string,
         'show-mainwindow'   => ( $show_mainwindow ? 'true' : 'false' ),
         'cookie-jar'        => $ENV{'OTTERLACE_COOKIE_JAR'},
-        'script-dir'        => $ENV{'OTTER_HOME'}.'/ensembl-otter/scripts',
+        'script-dir'        => $script_dir,
         'xremote-debug'     => $ZMAP_DEBUG ? 'true' : 'false',
         'pfetch-mode'       => ( $pfetch_www ? 'http' : 'pipe' ),
         'pfetch'            => ( $pfetch_www ? $pfetch_url : 'pfetch' ),
@@ -915,21 +928,24 @@ sub zMapHighlight {
 
     my $zc = $self->zMapZmapConnector;
 
+    my $features_hash = $xml_hash->{'request'}{'align'}{'block'}{'featureset'}{'feature'} || {};
+
     # Needs to do something interesting to find the object to highlight.
     if ($xml_hash->{'request'}->{'action'} eq 'single_select') {
         $self->deselect_all();
-        my $feature = $xml_hash->{'request'}->{'align'}->{'block'}->{'featureset'}->{'feature'} || {};
-        foreach my $name (keys(%$feature)) {
+        foreach my $name (keys(%$features_hash)) {
             $self->highlight_by_name_without_owning_clipboard($name);
         }
     }
     elsif ($xml_hash->{'request'}->{'action'} eq 'multiple_select') {
-        my $feature = $xml_hash->{'request'}->{'align'}->{'block'}->{'featureset'}->{'feature'} || {};
-        foreach my $name (keys(%$feature)) {
+        foreach my $name (keys(%$features_hash)) {
             $self->highlight_by_name_without_owning_clipboard($name);
         }
     }
     else { confess "Not a 'select' action\n"; }
+
+    my $cache = $self->AceDatabase->AccessionTypeCache;
+    $cache->cache_type_from_Zmap_XML($features_hash);
 
     return (200, $zc->handled_response(1));
 }

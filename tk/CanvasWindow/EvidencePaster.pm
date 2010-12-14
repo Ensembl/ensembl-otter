@@ -8,7 +8,7 @@ use warnings;
 use Scalar::Util 'weaken';
 use Hum::Ace::AceText;
 use Hum::Sort 'ace_sort';
-use Hum::ClipboardUtils 'evidence_type_and_name_from_text';
+
 use base 'CanvasWindow';
 
 sub initialise {
@@ -222,9 +222,11 @@ sub draw_evidence {
 sub paste_type_and_name {
     my( $self ) = @_;
 
+    $self->top_window->Busy;    # Because it may involve a HTTP request
     if (my $clip = $self->get_clipboard_text) {
         $self->add_evidence_from_text($clip);
     }
+    $self->top_window->Unbusy;
 
     return;
 }
@@ -232,9 +234,9 @@ sub paste_type_and_name {
 sub add_evidence_from_text {
     my ($self, $text) = @_;
 
-    my $ace = $self->ExonCanvas->XaceSeqChooser->ace_handle;
+    my $cache = $self->ExonCanvas->XaceSeqChooser->AceDatabase->AccessionTypeCache;
 
-    if (my $clip_evi = evidence_type_and_name_from_text($ace, $text)) {
+    if (my $clip_evi = $cache->evidence_type_and_name_from_text($text)) {
         $self->add_evidence_type_name_hash($clip_evi);
     }
 
