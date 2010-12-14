@@ -489,82 +489,75 @@ sub get_query_seq {
 
     # identify the types of all the accessions supplied
 
-    my $client = $self->XaceSeqChooser->AceDatabase->Client;
-
-    my $types = $client->get_accession_types(@accessions);
+    my $cache = $self->XaceSeqChooser->AceDatabase->AccessionTypeCache;
+    $cache->populate(\@accessions);
 
     # add type and full accession information to the existing sequences
 
+    my ($missing_msg, $remapped_msg);
     for my $seq (@seqs) {
-        if ($types->{ $seq->name }) {
-            my ($type, $full_acc) = @{ $types->{ $seq->name } };
+        my $name = $seq->name;
+        if (my ($type, $full_acc) = $cache->type_and_name_from_accession($name)) {
             $seq->type($type);
             $seq->name($full_acc);
-        }
-    }
-
-    # map between the corrected and supplied accessions
-
-    my %correct_to_supplied = ();
-
-    map { $correct_to_supplied{ $types->{$_}->[1] || $_ } = $_ } @supplied_accs;
-
-    # build a list of all the correct accessions for pfetch
-
-    my @correct_accs = map { $types->{$_}->[1] || $_ } @supplied_accs;
-
-    my $remapped_msg = '';
-
-    my %seq_fetched = map { $_ => 0 } @correct_accs;
-
-    if (@correct_accs) {
-
-        # and pfetch the remaining sequences using the corrected accessions
-
-        for my $seq (Hum::Pfetch::get_Sequences(@correct_accs)) {
-
-            next unless $seq;    # Pfetch returns undef for accessions with no match
-
-            # add the type information to the sequence
-
-            $seq->type($types->{ $correct_to_supplied{ $seq->name } }->[0]);
-            push @seqs, $seq;
-
-            # flag to the user that we changed the accession if necessary
-
-            unless ($seq->name =~ $correct_to_supplied{ $seq->name }) {
-                $remapped_msg .= "  " . $correct_to_supplied{ $seq->name } . " to " . $seq->name . "\n";
+            if ($name ne $full_acc) {
+                $remapped_msg .= "  $name to $full_acc\n";
             }
-
-            # and flag that we have found a sequence for this accession
-
-            $seq_fetched{ $seq->name } = 1;
         }
     }
 
-    # build a list of accessions we didn't find anything for
+    my @to_pfetch;
+    foreach my $acc (@supplied_accs) {
+        my $full = $cache->full_accession($acc)
+            or next;    # No point trying to pfetch invalid accessions
+        push(@to_pfetch, $acc);
+    }
 
-    my $missing_msg = '';
+    my %seqs_fetched = map {$_->name => $_} Hum::Pfetch::get_Sequences(@to_pfetch);
+    foreach my $acc (@supplied_accs) {
+        my $full = $cache->full_accession($acc);
+        unless ($full) {
+            $missing_msg .= "  $acc (unknown accession)\n";
+            next;
+        }
+        
+        # Delete from the hash so that we can check for
+        # unclaimed sequences.
+        my $seq = delete($seqs_fetched{$full});
+        unless ($seq) {
+            $missing_msg .= "  $acc ($full)\n";
+            next;
+        }
+        
+        if ($full ne $acc) {
+            $remapped_msg .= "  $acc to $full\n";
+        }
 
-    map { $missing_msg .= "\t$_\n" unless $seq_fetched{$_} } @correct_accs;
-
-    $missing_msg = "I did not find any sequences for the following accessions:\n\n" . $missing_msg
-      if $missing_msg;
+        push(@seqs, $seq);
+    }
 
     # tell the user about any missing sequences or remapped accessions
 
-    if ($missing_msg || $remapped_msg) {
+    if ($missing_msg || $remapped_msg || keys %seqs_fetched) {
+        $missing_msg =
+          "I did not find any sequences for the following accessions:\n\n$missing_msg\n"
+            if $missing_msg;
 
         $remapped_msg =
-          "The following supplied accessions have been " . "mapped to more recent accessions\n\n" . $remapped_msg
-          if $remapped_msg;
+          "The following supplied accessions have been mapped to full accessions:\n\n$remapped_msg\n"
+            if $remapped_msg;
 
-        $missing_msg .= "\n" if ($missing_msg && $remapped_msg);
+        my $unclaimed_msg = '';
+        if (keys %seqs_fetched) {
+            $unclaimed_msg =
+              "The following sequences were fetched, but didn't map back to supplied names:\n\n"
+                . join('', map "  $_\n", keys %seqs_fetched);
+        }
 
         $self->top->messageBox(
             -title   => 'Problems with accessions supplied',
             -icon    => 'warning',
-            -message => $missing_msg . $remapped_msg,
+            -message => $missing_msg . $remapped_msg . $unclaimed_msg,
             -type    => 'OK',
         );
     }

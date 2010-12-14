@@ -22,7 +22,7 @@ use Hum::Ace;
 use Hum::Analysis::Factory::ExonLocator;
 use Hum::Conf qw{ PFETCH_SERVER_LIST };
 use Hum::Sort qw{ ace_sort };
-use Hum::ClipboardUtils qw{ text_is_zmap_clip evidence_type_and_name_from_text };
+use Hum::ClipboardUtils qw{ text_is_zmap_clip };
 use EditWindow::Dotter;
 use EditWindow::Exonerate;
 use EditWindow::Clone;
@@ -1469,10 +1469,7 @@ sub add_SubSeq_and_paste_evidence {
 
     my $ec = $self->make_exoncanvas_edit_window($sub);
     $ec->merge_position_pairs;  # Useful if multiple overlapping evidence selected
-    my $clip_evi = evidence_type_and_name_from_text($self->ace_handle, $clip);
-    if (keys %$clip_evi) {
-        $ec->EvidencePaster->add_evidence_type_name_hash($clip_evi);
-    }
+    $ec->EvidencePaster->add_evidence_from_text($clip);
 
     return;
 }
@@ -2014,7 +2011,7 @@ sub launch_exonerate {
             $seq->type
             && (   $seq->type eq 'EST'
                 || $seq->type eq 'ncRNA'
-                || $seq->type eq 'mRNA'
+                || $seq->type eq 'cDNA'
                 || $seq->type eq 'Protein')
           )
         {
@@ -2049,7 +2046,8 @@ sub launch_exonerate {
         print STDERR "Running exonerate for sequence(s) of type: $type\n";
 
         my $score    = $type =~ /Protein/  ? $PROT_SCORE : $DNA_SCORE;
-        my $ana_name = $type =~ /^Unknown/ ? $type       : "OTF_$type";
+        my $ana_name = $type =~ /^Unknown/ ? $type       :
+            $type eq 'cDNA' ? "OTF_mRNA" : "OTF_$type";
         my $dnahsp   = $DNAHSP;
 
         my $exonerate = Bio::Otter::Lace::Exonerate->new;

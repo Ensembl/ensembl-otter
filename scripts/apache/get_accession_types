@@ -77,7 +77,9 @@ if ($@) {
                 $types->{$acc} = ['EST', $acc];
             }
             elsif (/mRNA/) {
-                $types->{$acc} = ['mRNA', $acc];
+                # Here we return cDNA, which is more technically correct since
+                # both ESTs and cDNAs are mRNAs.
+                $types->{$acc} = ['cDNA', $acc];
             }
             elsif (/other RNA/) {
                 $types->{$acc} = ['ncRNA', $acc];
@@ -86,10 +88,9 @@ if ($@) {
                 $types->{$acc} = ['Protein', $acc];
             }
         }
-        
-        # it seems pfetch marks the next file with the line '//'
-        
-        if (/^\/\/$/) {
+        elsif (/^\/\/$/ or /^no match$/) {
+            # Database entries in Uniprot and EMBL end with the line "//"
+            # Entries not found appear as the line "no match"
             $idx++;
         }
     }
@@ -99,8 +100,9 @@ if ($@) {
 
 my $response = '';
 
-for my $key (keys %$types) {
-    $response .= $key."\t".$types->{$key}->[0]."\t".$types->{$key}->[1]."\n";
+foreach my $acc (keys %$types) {
+    my ($acc_type, $full_acc) = @{$types->{$acc}};
+    $response .= "$acc\t$acc_type\t$full_acc\n";
 }
 
 $server->send_response($response);
