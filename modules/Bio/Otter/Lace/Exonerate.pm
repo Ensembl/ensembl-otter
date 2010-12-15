@@ -561,8 +561,8 @@ sub get_masked_unmasked_seq {
         );
 
     my $gff_http_script =
-        sprintf "%s/ensembl-otter/scripts/%s",
-        $ENV{'OTTER_HOME'},
+        $self->AceDatabase->script_dir
+        . '/' .
         $self->AceDatabase->gff_http_script_name;
     my $dataset = $self->AceDatabase->smart_slice->DataSet;
 

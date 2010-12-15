@@ -524,7 +524,10 @@ sub get_query_seq {
         # Delete from the hash so that we can check for
         # unclaimed sequences.
         my $seq = delete($seqs_fetched{$full});
-        unless ($seq) {
+        if ($seq) {
+            $seq->type($cache->type($full));
+        }
+        else {
             $missing_msg .= "  $acc ($full)\n";
             next;
         }

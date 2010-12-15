@@ -75,7 +75,7 @@ sub type {
 sub evidence_type_and_name_from_text {
     my ($self, $text) = @_;
 
-    warn "Trying to parse: [$text]\n";
+    # warn "Trying to parse: [$text]\n";
 
     my %clip_names;
     while ($text =~ /$magic_evi_name_matcher/g) {
@@ -86,7 +86,7 @@ sub evidence_type_and_name_from_text {
         $clip_names{"$prefix$acc$sv"} = 1;
     }
     my $acc_list = [keys %clip_names];
-    warn "Got names:\n", map {"  $_\n"} @$acc_list;
+    # warn "Got names:\n", map {"  $_\n"} @$acc_list;
     $self->populate($acc_list);
 
     my $type_name = {};
@@ -136,7 +136,7 @@ sub evidence_type_and_name_from_text {
                     next;
                 }
             }
-            warn "Caching $full_acc = $acc_type\n";
+            # warn "Caching $full_acc = $acc_type\n";
             $full_accession{$self}{$full_acc} = $full_acc;
             $type{$self}{$full_acc} = $acc_type;
         }
