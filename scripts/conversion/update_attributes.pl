@@ -28,7 +28,6 @@ General options:
 
 Specific options:
 
-    --attribtypefile=FILE               read attribute type definition from FILE
 
 =head1 DESCRIPTION
 
@@ -77,17 +76,13 @@ our $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
 
 # parse options
 $support->parse_common_options(@_);
-$support->parse_extra_options('attribtypefile=s', 'production_host=s', 'production_port=s', 'production_user=s', 'production_pass=s');
-$support->allowed_params($support->get_common_params, 'attribtypefile', 'production_host', 'production_port', 'production_user', 'production_pass');
+$support->parse_extra_options('production_host=s', 'production_port=s', 'production_user=s', 'production_pass=s');
+$support->allowed_params($support->get_common_params, 'production_host', 'production_port', 'production_user', 'production_pass');
 
 if ($support->param('help') or $support->error) {
     warn $support->error if $support->error;
     pod2usage(1);
 }
-
-# check required params
-$support->check_required_params('attribtypefile');
-
 
 # ask user to confirm parameters to proceed
 $support->confirm_params;
@@ -127,7 +122,7 @@ while ( my $row = $production_sth->fetchrow_hashref() ) {
     'attrib_type_id' => $row->{'attrib_type_id'},
     'code' => $row->{'code'},
     'name' => $row->{'name'},
-    'description'  => $row->{'description'},
+    'description'  => $row->{'description'}
   };
 }
 $production_sth->finish;

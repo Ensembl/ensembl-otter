@@ -26,9 +26,7 @@ General options:
     -h, --help, -?                      print help (this message)
 
 Specific options:
-    --extdbfile, --extdb=FILE           the path of the file containing
-                                        the insert statements of the
-                                        entries of the external_db table
+
 
 =head1 DESCRIPTION
 
@@ -58,6 +56,7 @@ use strict;
 use warnings;
 no warnings 'uninitialized';
 
+use DBI qw( :sql_types );
 use FindBin qw($Bin);
 use vars qw($SERVERROOT);
 
@@ -77,15 +76,13 @@ my $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
 
 # parse options
 $support->parse_common_options(@_);
-$support->parse_extra_options('extdbfile|extdb=s');
-$support->allowed_params($support->get_common_params, 'extdbfile');
+$support->parse_extra_options('production_host=s', 'production_port=s', 'production_user=s', 'production_pass=s');
+$support->allowed_params($support->get_common_params, 'production_host', 'production_port', 'production_user', 'production_pass');
 
 if ($support->param('help') or $support->error) {
     warn $support->error if $support->error;
     pod2usage(1);
 }
-
-$support->check_required_params('extdbfile');
 
 # ask user to confirm parameters to proceed
 $support->confirm_params;
@@ -99,33 +96,35 @@ my $dbh = $dba->dbc->db_handle;
 
 # read external_db entries from the file
 $support->log("Reading external_db entries from file...\n");
-my $extdbfile = $support->param('extdbfile');
-open(IN, '<', "$extdbfile") or $support->throw(
-    "Could not open external_db input file $extdbfile for reading: $!");
+
+my $production_host=$support->param('production_host')|| 'ens-staging1';
+my $production_port=$support->param('production_port') || 3306;
+my $production_user=$support->param('production_user') || 'ensro';
+my $production_pass=$support->param('production_pass') || '';
+
+my $production_dsn = sprintf( 'DBI:mysql:host=%s;port=%d', $production_host, $production_port );
+my $production_dbh = DBI->connect( $production_dsn, $production_user, $production_pass, { 'PrintError' => 1 } );
+my $production_sth = $production_dbh->prepare('SELECT * FROM master_external_db');
+$production_sth->execute();
+
 my @rows;
-while (my $row = <IN>) {
-	next if ($row =~ /^#/);
-	next if ($row =~ /^\s$/);
-    chomp($row);
-    my @a = split(/\t/, $row);
-	foreach my $col (@a) {
-		$col =~ s/\\N//;
-	}
-    push @rows, {
-        'external_db_id'            => $a[0],
-        'db_name'                   => $a[1],
-        'db_release'                => $a[2],
-        'status'                    => $a[3],
-        'dbprimary_acc_linkable'    => $a[4],
-        'display_label_linkable'    => $a[5],
-        'priority'                  => $a[6],
-        'db_display_name'           => $a[7],
-		'type'                      => $a[8],
-		'secondary_db_name'         => $a[9],
-		'secondary_db_table'        => $a[10],
-    } unless $a[0]=~/^#/;
+while ( my $row = $production_sth->fetchrow_hashref() ) {
+  push @rows, {
+    'external_db_id'            => $row->{'external_db_id'},
+    'db_name'                   => $row->{'db_name'},
+    'db_release'                => $row->{'db_release'},
+    'status'                    => $row->{'status'},
+    'dbprimary_acc_linkable'    => $row->{'dbprimary_acc_linkable'},
+    'display_label_linkable'    => $row->{'display_label_linkable'},
+    'priority'                  => $row->{'priority'},
+    'db_display_name'           => $row->{'db_display_name'},
+		'type'                      => $row->{'type'},
+		'secondary_db_name'         => $row->{'secondary_db_name'},
+	  'secondary_db_table'        => $row->{'secondary_db_table'}
+  };
 }
-close(IN);
+$production_sth->finish;
+$production_dbh->Close();
 $support->log("Done reading ".scalar(@rows)." entries.\n");
 
 # delete all entries from external_db
