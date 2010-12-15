@@ -116,13 +116,13 @@ my $production_port=$support->param('production_port') || 3306;
 my $production_user=$support->param('production_user') || 'ensro';
 my $production_pass=$support->param('production_pass') || '';
 
-my $dsn = sprintf( 'DBI:mysql:host=%s;port=%d', $production_host, $production_port );
-my $dbh = DBI->connect( $dsn, $production_user, $production_pass, { 'PrintError' => 1 } );
-my $sth = $dbh->prepare('SELECT * FROM master_attrib_type');
-$sth->execute();
+my $production_dsn = sprintf( 'DBI:mysql:host=%s;port=%d', $production_host, $production_port );
+my $production_dbh = DBI->connect( $production_dsn, $production_user, $production_pass, { 'PrintError' => 1 } );
+my $production_sth = $production_dbh->prepare('SELECT * FROM master_attrib_type');
+$production_sth->execute();
 
 my @rows;
-while ( my $row = $sth->fetchrow_hashref() ) {
+while ( my $row = $production_sth->fetchrow_hashref() ) {
   push @rows, {
     'attrib_type_id' => $row->{'attrib_type_id'},
     'code' => $row->{'code'},
@@ -130,6 +130,8 @@ while ( my $row = $sth->fetchrow_hashref() ) {
     'description'  => $row->{'description'},
   };
 }
+$production_sth->finish;
+$production_dbh->Close();
 
 $support->log("Done reading ".scalar(@rows)." entries.\n");
 
