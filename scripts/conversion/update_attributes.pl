@@ -57,6 +57,7 @@ use strict;
 use warnings;
 no warnings 'uninitialized';
 
+use DBI qw( :sql_types );
 use FindBin qw($Bin);
 use vars qw($SERVERROOT);
 
@@ -76,8 +77,8 @@ our $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
 
 # parse options
 $support->parse_common_options(@_);
-$support->parse_extra_options('attribtypefile=s');
-$support->allowed_params($support->get_common_params, 'attribtypefile');
+$support->parse_extra_options('attribtypefile=s', 'production_host=s', 'production_port=s', 'production_user=s', 'production_pass=s');
+$support->allowed_params($support->get_common_params, 'attribtypefile', 'production_host', 'production_port', 'production_user', 'production_pass');
 
 if ($support->param('help') or $support->error) {
     warn $support->error if $support->error;
@@ -86,6 +87,7 @@ if ($support->param('help') or $support->error) {
 
 # check required params
 $support->check_required_params('attribtypefile');
+
 
 # ask user to confirm parameters to proceed
 $support->confirm_params;
@@ -106,24 +108,29 @@ my $dbh = $dba->dbc->db_handle;
 # finish logfile
 $support->finish_log;
 
-# read attrib_type entries from file
-$support->log("Reading attrib_type entries from file...\n");
-my $fh = $support->filehandle('<', $support->param('attribtypefile'));
-my @rows;
-while (my $row = <$fh>) {
-    chomp($row);
-    next if ($row =~ /^\S*$/);
-    next if ($row =~ /^\#/);
+# read attrib_type entries from ensembl_production
+$support->log("Reading attrib_type entries from ensembl_prodcution database...\n");
 
-    my @a = split(/\t/, $row);
-    push @rows, {
-        'attrib_type_id' => $a[0],
-        'code' => $a[1],
-        'name' => $a[2],
-        'description'  => $a[3],
-    };
+my $production_host=$support->param('production_host')|| 'ens-staging1';
+my $production_port=$support->param('production_port') || 3306;
+my $production_user=$support->param('production_user') || 'ensro';
+my $production_pass=$support->param('production_pass') || '';
+
+my $dsn = sprintf( 'DBI:mysql:host=%s;port=%d', $production_host, $production_port );
+my $dbh = DBI->connect( $dsn, $production_user, $production_pass, { 'PrintError' => 1 } );
+my $sth = $dbh->prepare('SELECT * FROM master_attrib_type');
+$sth->execute();
+
+my @rows;
+while ( my $row = $sth->fetchrow_hashref() ) {
+  push @rows, {
+    'attrib_type_id' => $row->{'attrib_type_id'},
+    'code' => $row->{'code'},
+    'name' => $row->{'name'},
+    'description'  => $row->{'description'},
+  };
 }
-close($fh);
+
 $support->log("Done reading ".scalar(@rows)." entries.\n");
 
 # check for consistency between database and file
