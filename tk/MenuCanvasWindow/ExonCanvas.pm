@@ -1818,7 +1818,7 @@ sub make_labelled_text_widget {
 
 
     my (@tags) = $tw->bindtags;
-    warn "tags=(@tags)\n";
+    # warn "tags=(@tags)\n";
     $tw->bindtags([@tags[1, 0, 2, 3]]);
 
     $annotation_button->configure(-command => sub {

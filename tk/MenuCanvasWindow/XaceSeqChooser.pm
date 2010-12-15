@@ -1317,7 +1317,7 @@ sub edit_new_subsequence {
         $new = Hum::Ace::SubSeq->new_from_subseq_list(@subseq);
     }
     else {
-        warn "CLIPBOARD: $clip\n";
+        # warn "CLIPBOARD: $clip\n";
         $new = Hum::Ace::SubSeq->new_from_clipboard_text($clip);
         unless ($new) {
             $self->message("Need a highlighted transcript or a coordinate on the clipboard to make SubSeq");
@@ -1369,7 +1369,7 @@ sub region_name_and_next_locus_number {
     my $region_name = $most_3prime
         ? $assembly->clone_name_overlapping($most_3prime)
         : $assembly->name;
-    warn "Looking for clone overlapping '$most_3prime' found '$region_name'";
+    warn "Looking for clone overlapping '$most_3prime' found '$region_name'\n";
 
     # Trim sequence version from accession if clone_name ends .SV
     $region_name =~ s/\.\d+$//;

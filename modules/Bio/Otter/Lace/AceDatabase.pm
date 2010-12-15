@@ -641,6 +641,21 @@ sub filters {
     };
 }
 
+sub script_dir {    
+    my $script_dir = $ENV{'OTTER_HOME'} . '/ensembl-otter/scripts';
+    unless (-d $script_dir) {
+        $script_dir = undef;
+        foreach my $otter (grep m{ensembl-otter/}, @INC) {
+            $otter =~ s{ensembl-otter/.+}{ensembl-otter/scripts};
+            if (-d $otter) {
+                $script_dir = $otter;
+                last;
+            }
+        }
+    }
+    return $script_dir;
+}
+
 sub gff_http_script_name {
     return "gff_http.pl";
 }

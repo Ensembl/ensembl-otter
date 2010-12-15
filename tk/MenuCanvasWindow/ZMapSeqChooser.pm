@@ -600,17 +600,6 @@ sub zMapZMapDefaults {
     my $pfetch_www = $ENV{'PFETCH_WWW'};
     my $pfetch_url = $self->AceDatabase->Client->pfetch_url;
 
-    my $script_dir = $ENV{'OTTER_HOME'} . '/ensembl-otter/scripts';
-    unless (-d $script_dir) {
-        foreach my $otter (grep m{ensembl-otter/}, @INC) {
-            $otter =~ s{ensembl-otter/.+}{ensembl-otter/scripts};
-            if (-d $otter) {
-                $script_dir = $otter;
-                last;
-            }
-        }
-    }
-
     return $self->formatZmapDefaults(
         'ZMap',
         'csname'            => $slice->csname,
@@ -620,7 +609,7 @@ sub zMapZMapDefaults {
         'sources'           => $sources_string,
         'show-mainwindow'   => ( $show_mainwindow ? 'true' : 'false' ),
         'cookie-jar'        => $ENV{'OTTERLACE_COOKIE_JAR'},
-        'script-dir'        => $script_dir,
+        'script-dir'        => $self->AceDatabase->script_dir,
         'xremote-debug'     => $ZMAP_DEBUG ? 'true' : 'false',
         'pfetch-mode'       => ( $pfetch_www ? 'http' : 'pipe' ),
         'pfetch'            => ( $pfetch_www ? $pfetch_url : 'pfetch' ),
@@ -1243,7 +1232,7 @@ sub RECEIVE_FILTER {
         }
     }
 
-    warn "Response:\n$response";
+    warn "Response:\n$response" if $ZMAP_DEBUG;
 
     return ($status, $response);
 }
