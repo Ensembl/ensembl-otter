@@ -14,6 +14,8 @@ use Bio::SeqIO;
     my $total = 0;
     my $quiet = 0;
     my $dump_seq = 0;
+    my $list_attrs = 0;
+    my $biotype_count = 0;
 
     my $usage = sub { exec('perldoc', $0) };
     # This do_getopt() call is needed to parse the otter config files
@@ -24,6 +26,8 @@ use Bio::SeqIO;
         'quiet!'        => \$quiet,
         'total!'        => \$total,
         'dumpseq!'      => \$dump_seq,
+        'list_attrs!'   => \$list_attrs,
+        'biotype_count!'=> \$biotype_count,
         ) or $usage->();
     $usage->() unless $dataset_name;
 
@@ -43,34 +47,71 @@ use Bio::SeqIO;
     my $list_transcripts = $otter_dba->dbc->prepare(q{
         SELECT
                 t.transcript_id,
+                t.description,
                 e.name,
                 e.type,
                 t.biotype
         FROM
                 transcript t
-           JOIN gene g USING (gene_id)
            LEFT JOIN evidence e ON t.transcript_id = e.transcript_id
+           JOIN gene g 
+             ON t.gene_id = g.gene_id AND g.source = 'havana'
+           -- Make sure it is on a writeable seq_region
+           JOIN seq_region_attrib sra 
+             ON t.seq_region_id = sra.seq_region_id
+            AND sra.attrib_type_id = (SELECT attrib_type_id FROM attrib_type WHERE code = 'write_access')
+            AND sra.value = 1
         WHERE
                 t.is_current = 1
-            AND g.source = 'havana'
             AND e.type IS NULL
         ORDER BY t.transcript_id
     });
     $list_transcripts->execute;
 
+    my $transcript_attribs = $otter_dba->dbc->prepare(q{
+        SELECT
+            ta.attrib_type_id,
+            at.code,
+            ta.value
+        FROM
+            transcript_attrib ta
+            JOIN attrib_type at
+              ON ta.attrib_type_id = at.attrib_type_id
+             AND at.attrib_type_id IN (
+                     SELECT attrib_type_id
+                     FROM attrib_type
+                     WHERE code IN ('name', 'synonym', 'remark', 'hidden_remark')
+             ) 
+        WHERE
+            transcript_id = ?
+        ORDER BY ta.attrib_type_id
+    });
+
     my $str;
     my $io = IO::String->new(\$str);
     my $seqOut = Bio::SeqIO->new(-format => 'Fasta',
                                          -fh     => $io );
+
     my $count = 0;
-    while (my ($tid, $e_name, $e_type, $biotype) = $list_transcripts->fetchrow()) {
+    my %bt_count;
+
+    while (my ($tid, $descr, $e_name, $e_type, $biotype) = $list_transcripts->fetchrow()) {
         ++$count;
-        printf( "%10d: %s/%s\t[%s]\n", 
+        ++$bt_count{$biotype};
+        printf( "%10d: %s/%s\t[%s] %s\n", 
                 $tid, 
                 defined($e_name) ? $e_name : 'U', 
                 defined($e_type) ? $e_type : 'U', 
-                $biotype
+                $biotype,
+                defined($descr) ? $descr : 'U',
             ) unless $quiet;
+
+        if ($list_attrs and not $quiet) {
+            $transcript_attribs->execute($tid);
+            while (my ($ati, $code, $value) = $transcript_attribs->fetchrow()) {
+                printf( "\t%-15s %s\n", $code, $value);
+            }
+        }
 
         if ($dump_seq) {
             my $td = $transcript_adaptor->fetch_by_dbID($tid);
@@ -80,6 +121,14 @@ use Bio::SeqIO;
                 print $str;
             }
         }
+    }
+    if ($biotype_count) {
+        printf( "%-40s%-5s\n", "Biotype", "Count");
+        printf( "%-40s%-5s\n", "=======", "=====");
+        foreach my $key (sort keys %bt_count) {
+            printf( "%-40s%5d\n", $key, $bt_count{$key});
+        }
+        printf "\n" if $total;
     }
     printf "Total: %d\n", $count if $total;
 
