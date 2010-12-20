@@ -111,7 +111,7 @@ my $production_port=$support->param('production_port') || 3306;
 my $production_user=$support->param('production_user') || 'ensro';
 my $production_pass=$support->param('production_pass') || '';
 
-my $production_dsn = sprintf( 'DBI:mysql:host=%s;port=%d', $production_host, $production_port );
+my $production_dsn = sprintf( 'DBI:mysql:ensembl_production:host=%s;port=%d', $production_host, $production_port );
 my $production_dbh = DBI->connect( $production_dsn, $production_user, $production_pass, { 'PrintError' => 1 } );
 my $production_sth = $production_dbh->prepare('SELECT * FROM master_attrib_type');
 $production_sth->execute();
