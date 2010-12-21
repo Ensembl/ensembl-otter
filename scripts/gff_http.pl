@@ -25,9 +25,7 @@ if ($LOG) {
     open $log_file, '>>', $log_file_name;
 }
 
-# we always want to rebase for zmap
-
-$args{rebase} = 1;
+$args{rebase} = 1 unless $ENV{OTTERLACE_CHROMOSOME_COORDINATES};
 
 # concatenate the rest of the arguments into a parameter string
 
