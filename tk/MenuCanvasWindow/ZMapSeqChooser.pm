@@ -602,10 +602,15 @@ sub zMapZMapDefaults {
 
     return $self->formatZmapDefaults(
         'ZMap',
-        'csname'            => $slice->csname,
-        'csver'             => $slice->csver,
-        'start'             => $slice->start,
-        'end'               => $slice->end,
+        ( $ENV{OTTERLACE_CHROMOSOME_COORDINATES}
+          ? (
+              'csname'            => $slice->csname,
+              'csver'             => $slice->csver,
+              'start'             => $slice->start,
+              'end'               => $slice->end,
+          )
+          : ( )
+        ),
         'sources'           => $sources_string,
         'show-mainwindow'   => ( $show_mainwindow ? 'true' : 'false' ),
         'cookie-jar'        => $ENV{'OTTERLACE_COOKIE_JAR'},
