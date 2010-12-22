@@ -126,7 +126,6 @@ while ( my $row = $production_sth->fetchrow_hashref() ) {
   };
 }
 $production_sth->finish;
-$production_dbh->Close();
 
 $support->log("Done reading ".scalar(@rows)." entries.\n");
 
