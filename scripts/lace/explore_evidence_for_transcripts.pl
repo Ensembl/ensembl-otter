@@ -31,7 +31,7 @@ my $opts;
         evi_type => undef,
         max_length => undef,
         max_features => undef,
-        logic_name => undef,
+        logic_names => undef,
     };
 
     my $usage = sub { exec('perldoc', $0) };
@@ -48,10 +48,11 @@ my $opts;
         'type=s'        => \$opts->{evi_type},
         'maxlength=i'   => \$opts->{max_length},
         'maxfeatures=i' => \$opts->{max_features},
-        'logicname=s'   => \$opts->{logic_name},
+        'logicnames=s'  => \$opts->{logic_names},
         ) or $usage->();
 
     $usage->() unless $dataset_name;
+
     if (my $et = $opts->{evi_type}) {
         unless (   $et eq 'ncRNA' 
                 || $et eq 'EST'
@@ -62,19 +63,25 @@ my $opts;
             croak "type must be one of EST,ncRNA,Protein,cDNA,Genomic";
         }
     }
+
     if ($opts->{quiet} and not $opts->{total}) {
         carp "Using -quiet but not -total - no output will be produced!";
     }
 
+    if ($opts->{logic_names}) {
+        $opts->{logic_names} = [ split(',', $opts->{logic_names}) ];
+    }
+
     {
         my %evitype2logic = (
-            'EST' => 'Est2genome_human',
+            'EST' => ['Est2genome_human','Est2genome_human_raw'],
             );
 
-        if ($opts->{evi_type} and not $opts->{logic_name}) {
-            $opts->{logic_name} = $evitype2logic{$opts->{evi_type}};
-            if ($opts->{logic_name}) {
-                carp("Logic name set to '", $opts->{logic_name}, "' for evidence type '", $opts->{evi_type}, "'");
+        if ($opts->{evi_type} and not $opts->{logic_names}) {
+            $opts->{logic_names} = $evitype2logic{$opts->{evi_type}};
+            if ($opts->{logic_names}) {
+                carp("Logic names set to '", join(',', @{$opts->{logic_names}}),
+                     "' for evidence type '", $opts->{evi_type}, "'");
             } else {
                 carp("No logic name translation for evidence type '", $opts->{evi_type}, "'");
             }
@@ -205,7 +212,7 @@ sub process_align_features {
 
         my $hseqname = $feature->hseqname;
 
-        if ($opts->{evi_type} and not $opts->{logic_name}) {
+        if ($opts->{evi_type} and not $opts->{logic_names}) {
             my ($f_type, $f_ver) = get_accession_type($hseqname);
             $f_type ||= "";
             if ($f_type ne $opts->{evi_type}) {
@@ -287,6 +294,23 @@ sub make_align_fingerprint {
         );
 }
 
+sub feature_augment {
+    my ($f_list, $hseqname_seen, $n_list) = @_;
+    my $n = 0;
+    foreach my $f ( @$n_list ) {
+        my $hseqname    = $f->hseqname;
+        my $fingerprint = make_align_fingerprint($f);
+        my $key         = join(':', $hseqname, $fingerprint);
+
+        next if $hseqname_seen->{$key};
+
+        push(@$f_list, $f);
+        $hseqname_seen->{$key} = 1;
+        ++$n;
+    }
+    return $n;
+}
+
 my ($transcript_adaptor, $gene_adaptor, $slice_adaptor, $dna_feature_adaptor);
 my ($pipe_dba, $p_slice_adaptor);
 
@@ -336,13 +360,22 @@ sub process_transcript {
                                                         $gene->start,
                                                         $gene->end);
 
+        # Is this interesting in practice?
         my $genes = $p_slice->get_all_Genes;
         foreach my $gene (@$genes) {
             reportf("verbose:PT:1", "Got pipeline gene %s [%s]", $gene->dbID, $gene->display_id);
         }
         
-        # $opts->{logic_name} may be undef in which case we get all
-        my $p_features = $p_slice->get_all_DnaAlignFeatures($opts->{logic_name});
+        my $p_features;
+        if ($opts->{logic_names}) {
+            $p_features = [];
+            my $p_f_seen = {};
+            foreach my $logic_name ( @{$opts->{logic_names}} ) {
+                feature_augment($p_features, $p_f_seen, $p_slice->get_all_DnaAlignFeatures($logic_name));
+            }
+        } else {
+            $p_features = $p_slice->get_all_DnaAlignFeatures();
+        }
         report("verbose:PT:1", "Got ", scalar @$p_features, " features");
 
         my $dna_align_features = process_align_features($p_features, $opts);
@@ -386,8 +419,8 @@ sub process_transcript {
                 $hit_feature = $features->[0];
                 unless ($opts->{quiet}) {
                     my $n_features = scalar(@$features);
-                    reportf("normal:PT:2", "Found feature match for %s at rank %d with %d features",
-                           $short_name, $top_rank, $n_features );
+                    reportf("normal:PT:2", "Found feature match for %s at rank %d with %d features, logic %s",
+                           $short_name, $top_rank, $n_features, $hit_feature->analysis->logic_name );
                     reportf("verbose:PT:2", "Feature fingerprint:  %s", make_align_fingerprint($hit_feature));
 
                     my $acc_feats = $dna_align_features->{_acc_by_hseqname_anl}->{$short_name};
@@ -405,7 +438,7 @@ sub process_transcript {
               FEATURE_HUNT: {
 
                   # First check it's not hiding under a different logic name, if we previously narrowed
-                  if ($opts->{logic_name}) {
+                  if ($opts->{logic_names}) {
                       $all_dna_features ||= $p_slice->get_all_DnaAlignFeatures();
                       report("verbose:PT:2", "Got ", scalar @$all_dna_features, " features using all logic names");
                       my @match_features = grep { $_->hseqname eq $short_name } @$all_dna_features;
