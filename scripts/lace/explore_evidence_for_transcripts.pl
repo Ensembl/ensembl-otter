@@ -28,6 +28,7 @@ my $opts;
         verbose => 0,
         dump_seq => 0,
         dump_features => 0,
+        dump_exon_matches => 0,
         evi_type => undef,
         max_length => undef,
         max_features => undef,
@@ -45,6 +46,7 @@ my $opts;
         'total!'        => \$opts->{total},
         'dumpseq!'      => \$opts->{dump_seq},
         'dumpfeatures!' => \$opts->{dump_features},
+        'dumpexonmatches+'=>\$opts->{dump_exon_matches},
         'type=s'        => \$opts->{evi_type},
         'maxlength=i'   => \$opts->{max_length},
         'maxfeatures=i' => \$opts->{max_features},
@@ -329,24 +331,27 @@ sub exon_align_features {
     my $feature_chains = shift;
     my $opts = shift;
 
+    my $dem = $opts->{dump_exon_matches};
+    my $dev = ($dem and $dem > 1);
+
     if ($strand < 0) {
         $exons = [ reverse @$exons ];
     }
 
     my $exon_length   = 0;
-    reportf("verbose:EA:1", "Exons (%s strand):", $strand > 0 ? "forward" : "reverse");
+    reportf("verbose:EA:1", "Exons (%s strand):", $strand > 0 ? "forward" : "reverse") if $dev;
     foreach my $i (0 .. $#$exons) {
         my $exon = $exons->[$i];
         $exon_length += $exon->length;
         reportf("verbose:EA:2", "%d %d-%d (%d) %d [%d]", $i, $exon->seq_region_start, $exon->seq_region_end,
-                $exon->strand, $exon->length, $exon->slice);
+                $exon->strand, $exon->length, $exon->slice) if $dev;
     }
-    reportf("verbose:EA:2", "total length %d", $exon_length);
+    reportf("verbose:EA:2", "total length %d", $exon_length) if $dev;
 
     foreach my $fc (@$feature_chains) {
 
         reportf("verbose:EA:1", "Feature chain '%s' (%s): [SC:%d AL:%d %%:%.1f]",
-                $fc->{hseqname}, $fc->{logic_name}, $fc->{score}, $fc->{alignment_length}, $fc->{percent_id});
+                $fc->{hseqname}, $fc->{logic_name}, $fc->{score}, $fc->{alignment_length}, $fc->{percent_id}) if $dev;
 
         my $start_exon       = 0;
         my $total_overlap    = 0;
@@ -357,7 +362,7 @@ sub exon_align_features {
 
             reportf("verbose:EA:2", "%d-%d (hs:%d) %d [SC:%d AL:%d %%:%.1f]",
                     $f->seq_region_start, $f->seq_region_end, $f->hstrand, $f->length,
-                    $f->score, $f->alignment_length, $f->percent_id);
+                    $f->score, $f->alignment_length, $f->percent_id) if $dev;
 
             my $match = undef;
             my $ft;
@@ -374,13 +379,13 @@ sub exon_align_features {
 
                 if ($exon->overlaps($ft)) {
                     my $overlap = calc_overlap($exon, $f);
-                    reportf("verbose:EA:3", "overlaps exon %d by %d", $i, $overlap);
+                    reportf("verbose:EA:3", "overlaps exon %d by %d", $i, $overlap) if $dev;
                     $match = 1;
                     ++$exon_match_count;
                     $total_overlap += $overlap;
                     $score += $f->score * $overlap / $f->alignment_length;
                 } else {
-                    reportf("verbose:EA:3", "does not overlap exon %d", $i);
+                    reportf("verbose:EA:3", "does not overlap exon %d", $i) if $dev;
                     $start_exon++ if not $match;
                 }
             }
@@ -391,9 +396,17 @@ sub exon_align_features {
         $fc->{coverage}         = $total_overlap/$exon_length*100.0;
         $fc->{exon_score}       = $score;
 
-        reportf("verbose:EA:1", " => %d/%d exons, overlap length %d, coverage %.1f%%, score %d",
-                $exon_match_count, scalar(@$exons), $total_overlap, $fc->{coverage}, $score);
+        if ($dev) {
+            reportf("verbose:EA:1", " => %d/%d exons, overlap length %d, coverage %.1f%%, score %d",
+                    $exon_match_count, scalar(@$exons), $total_overlap, $fc->{coverage}, $score);
+        } elsif ($dem) {
+            reportf("verbose:EA:1", "FC '%s' (%s): %d/%d exons, overlap length %d, coverage %.1f%%, score %d",
+                    $fc->{hseqname}, $fc->{logic_name}, 
+                    $exon_match_count, scalar(@$exons), $total_overlap, $fc->{coverage}, $score);
+        }
     }
+
+    reportf("verbose:EA:1", "Processed exon matches for %d feature chains", scalar(@$feature_chains));
 
     # Not sure whether to sort on exon_score or coverage.
     #
@@ -511,6 +524,8 @@ sub process_transcript {
         my $feature_chains     = $dna_align_features->{_by_total_hseqname_anl};
         my $per_exon_scoring   = exon_align_features($exons, $td->strand, $feature_chains, $opts);
 
+        # Top plain feature chain no longer that interesting, but...
+        #
         my $tfp = $feature_chains->[0];
         if ($tfp) {
             reportf("normal:PT:1", "Top plain feature: %s [Score:%d Length:%d %%ID:%.1f]",
