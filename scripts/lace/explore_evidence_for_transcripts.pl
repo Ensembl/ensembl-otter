@@ -186,6 +186,25 @@ sub get_comp_app {
     return $comp_app;
 }
 
+BEGIN {
+    # Lower is better
+    my %ANL_RANK = (
+        Est2genome_human     => 1,
+        Est2genome_human_raw => 2,
+        );
+
+    sub anl_rank {
+        my $logic_name = shift;
+        my $rank = $ANL_RANK{$logic_name};
+        return $rank || 1e6;
+    }
+
+    sub feature_anl_rank {
+        my $f = shift;
+        return anl_rank($f->analysis->logic_name);
+    }
+}
+
 sub process_align_features {
     my $features_ref = shift;
     my $opts = shift;
@@ -204,9 +223,13 @@ sub process_align_features {
     my $rank = 0;
     my $count = 0;
 
-    my @features = sort { $b->score      <=> $a->score
-                                          ||
-                          $b->percent_id <=> $a->percent_id } @{$features_ref};
+    my @features = sort { 
+        feature_anl_rank($a) <=> feature_anl_rank($b)
+                              ||
+        $a->hseqname         cmp $b->hseqname
+                              ||
+        $a->start            <=> $b->start 
+    } @{$features_ref};
 
   FEATURE: foreach my $feature ( @features ) {
 
@@ -234,17 +257,24 @@ sub process_align_features {
         unless (defined $acc) {
             $acc = $hseq_anl_acc{$hseqname}->{$anid} = { hseqname    => $hseqname,
                                                          analysis_id => $anid, 
-                                                         dbid        => $dbid,
                                                          logic_name  => $feature->analysis->logic_name, 
-                                                         count => 0, score => 0, length => 0, identical => 0 };
+                                                         count       => 0,
+                                                         score       => 0,
+                                                         alignment_length => 0,
+                                                         identical   => 0,
+                                                         features    => []
+                                                       };
             push @flat_hseq_anl_acc, $acc;
         }
         ++$acc->{count};
         $acc->{score}  += $feature->score;
-        $acc->{length} += $feature->length;
-        $acc->{identical} += ($feature->length * $feature->percent_id / 100.0);
-        $acc->{percent_id} = $acc->{identical} / $acc->{length} * 100.0;
+        $acc->{alignment_length} += $feature->alignment_length;
+        $acc->{identical} += ($feature->alignment_length * $feature->percent_id / 100.0);
+        $acc->{percent_id} = $acc->{identical} / $acc->{alignment_length} * 100.0;
+        push @{$acc->{features}}, $feature;
 
+        # This fingerprinted ranking is probably not terribly useful except for single exon transcripts
+        #
         my $fp = make_align_fingerprint($feature);
         my $f_rank;
         if (defined $fingerprints{$fp}) {
@@ -266,9 +296,9 @@ sub process_align_features {
         map { push @{$by_hseqname_ranked{$_->hseqname}->{$i}}, $_ } @{$ranked[$i]};
     }
 
-    my $by_total_hseqname_anl = [ sort { $b->{score} <=> $a->{score}
-                                                      ||
-                                         $b->{analysis_id} <=> $a->{analysis_id} }
+    my $by_total_hseqname_anl = [ sort { $b->{score}                <=> $a->{score}
+                                                                     ||
+                                         anl_rank($a->{logic_name}) <=> anl_rank($b->{logic_name}) }
                                   @flat_hseq_anl_acc ];
 
     reportf("verbose:PF:1", "Processed %d features with %d fingerprints", $count, $rank);
@@ -285,6 +315,91 @@ sub process_align_features {
     };
 }
 
+sub calc_overlap {
+    my $a = shift;
+    my $b = shift;
+    return min($a->seq_region_end, $b->seq_region_end) - max($a->seq_region_start, $b->seq_region_start) + 1;
+}
+
+# Side-effects warning - adds elements to $feature_chains members
+#
+sub exon_align_features {
+    my $exons = shift;
+    my $strand = shift;
+    my $feature_chains = shift;
+    my $opts = shift;
+
+    if ($strand < 0) {
+        $exons = [ reverse @$exons ];
+    }
+
+    my $exon_length   = 0;
+    reportf("verbose:EA:1", "Exons (%s strand):", $strand > 0 ? "forward" : "reverse");
+    foreach my $i (0 .. $#$exons) {
+        my $exon = $exons->[$i];
+        $exon_length += $exon->length;
+        reportf("verbose:EA:2", "%d %d-%d (%d) %d [%d]", $i, $exon->seq_region_start, $exon->seq_region_end,
+                $exon->strand, $exon->length, $exon->slice);
+    }
+    reportf("verbose:EA:2", "total length %d", $exon_length);
+
+    foreach my $fc (@$feature_chains) {
+
+        reportf("verbose:EA:1", "Feature chain '%s' (%s): [SC:%d AL:%d %%:%.1f]",
+                $fc->{hseqname}, $fc->{logic_name}, $fc->{score}, $fc->{alignment_length}, $fc->{percent_id});
+
+        my $start_exon       = 0;
+        my $total_overlap    = 0;
+        my $exon_match_count = 0;
+        my $score            = 0;
+
+        foreach my $f (@{$fc->{features}}) {
+
+            reportf("verbose:EA:2", "%d-%d (hs:%d) %d [SC:%d AL:%d %%:%.1f]",
+                    $f->seq_region_start, $f->seq_region_end, $f->hstrand, $f->length,
+                    $f->score, $f->alignment_length, $f->percent_id);
+
+            my $match = undef;
+            my $ft;
+
+            foreach my $i ($start_exon .. $#$exons) {
+
+                my $exon = $exons->[$i];
+
+                # Feature start/end are rel feature not rel seq_region or transcript/exon, so...
+                #
+                if (not defined $ft or $ft->slice != $exon->slice) {
+                    $ft = $f->transfer($exon->slice);
+                }
+
+                if ($exon->overlaps($ft)) {
+                    my $overlap = calc_overlap($exon, $f);
+                    reportf("verbose:EA:3", "overlaps exon %d by %d", $i, $overlap);
+                    $match = 1;
+                    ++$exon_match_count;
+                    $total_overlap += $overlap;
+                    $score += $f->score * $overlap / $f->alignment_length;
+                } else {
+                    reportf("verbose:EA:3", "does not overlap exon %d", $i);
+                    $start_exon++ if not $match;
+                }
+            }
+        }
+
+        $fc->{exon_match_count} = $exon_match_count;
+        $fc->{total_overlap}    = $total_overlap;
+        $fc->{coverage}         = $total_overlap/$exon_length*100.0;
+        $fc->{exon_score}       = $score;
+
+        reportf("verbose:EA:1", " => %d/%d exons, overlap length %d, coverage %.1f%%, score %d",
+                $exon_match_count, scalar(@$exons), $total_overlap, $fc->{coverage}, $score);
+    }
+
+    # Not sure whether to sort on exon_score or coverage.
+    #
+    return [ sort { $b->{exon_score} <=> $a->{exon_score} } @$feature_chains ];
+}
+
 sub make_align_fingerprint {
     my $feature = shift;
     return sprintf("%d-%d (%+d)\t=> %d-%d (%+d)\t: %d %.1f %s",
@@ -294,12 +409,21 @@ sub make_align_fingerprint {
         );
 }
 
+sub make_mini_fingerprint {
+    my $feature = shift;
+    return sprintf("%d-%d (%+d)\t=> %d-%d (%+d)\t: %d",
+                   $feature->hstart(), $feature->hend(), $feature->hstrand(),
+                   $feature->start(),  $feature->end(),  $feature->strand(),
+                   $feature->score(),
+        );
+}
+
 sub feature_augment {
     my ($f_list, $hseqname_seen, $n_list) = @_;
     my $n = 0;
     foreach my $f ( @$n_list ) {
         my $hseqname    = $f->hseqname;
-        my $fingerprint = make_align_fingerprint($f);
+        my $fingerprint = make_mini_fingerprint($f);
         my $key         = join(':', $hseqname, $fingerprint);
 
         next if $hseqname_seen->{$key};
@@ -327,7 +451,9 @@ sub process_transcript {
     my $td = $transcript_adaptor->fetch_by_dbID($tid);
     if ($td) {
 
-        reportf("normal:PT:0", "Transcript %s, strand %d", $td->stable_id, $td->strand);
+        my $exons = $td->get_all_Exons;
+
+        reportf("normal:PT:0", "Transcript %s, strand %d, exons %d", $td->stable_id, $td->strand, scalar(@$exons));
 
         #TEMP debug hook
         if ($td->stable_id eq 'OTTHUMT00000109016') {
@@ -340,7 +466,9 @@ sub process_transcript {
 
         my $min_start = min($td->seq_region_start, $gene->seq_region_start);
         my $max_end   = max($td->seq_region_end,   $gene->seq_region_end);
-        
+
+        # Do we want to extend the region by a flanking distance in each direction?
+        #
         reportf("verbose:PT:1",
                "Fetching from pipeline DB: %s [%s] @ %s %s from %d to %d (g %d to %d) (ts %d to %d)",
                $gene->stable_id,
@@ -360,7 +488,8 @@ sub process_transcript {
                                                         $gene->start,
                                                         $gene->end);
 
-        # Is this interesting in practice?
+        # Is this interesting in practice? - probably not!
+        #
         my $genes = $p_slice->get_all_Genes;
         foreach my $gene (@$genes) {
             reportf("verbose:PT:1", "Got pipeline gene %s [%s]", $gene->dbID, $gene->display_id);
@@ -379,11 +508,19 @@ sub process_transcript {
         report("verbose:PT:1", "Got ", scalar @$p_features, " features");
 
         my $dna_align_features = process_align_features($p_features, $opts);
+        my $feature_chains     = $dna_align_features->{_by_total_hseqname_anl};
+        my $per_exon_scoring   = exon_align_features($exons, $td->strand, $feature_chains, $opts);
 
-        my $tf = $dna_align_features->{_by_total_hseqname_anl}->[0];
-        if ($tf) {
-            reportf("normal:PT:1", "Top feature: %s %d [Score:%d Length:%d %%ID:%d]",
-                    $tf->{hseqname}, $tf->{dbid}, $tf->{score}, $tf->{length}, $tf->{percent_id});
+        my $tfp = $feature_chains->[0];
+        if ($tfp) {
+            reportf("normal:PT:1", "Top plain feature: %s [Score:%d Length:%d %%ID:%.1f]",
+                    $tfp->{hseqname}, $tfp->{score}, $tfp->{alignment_length}, $tfp->{percent_id});
+        }
+
+        my $tfe = $per_exon_scoring->[0];
+        if ($tfe) {
+            reportf("normal:PT:1", "Top exon-scored feature: %s [Score:%d Overlap:%d Coverage:%.1f%%]",
+                    $tfe->{hseqname}, $tfe->{exon_score}, $tfe->{total_overlap}, $tfe->{coverage});
         }
         
         if ($opts->{dump_seq}) {
@@ -427,7 +564,7 @@ sub process_transcript {
                     if ($acc_feats) {
                         my $max_ann = (sort {$b <=> $a} keys %$acc_feats)[0];
                         my $af = $acc_feats->{$max_ann};
-                        reportf("normal:PT:2", "Acc feature length: %d", $af->{length});
+                        reportf("normal:PT:2", "Acc feature length: %d", $af->{alignment_length});
                     }
                 }
             } else {
