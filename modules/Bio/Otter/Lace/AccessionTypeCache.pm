@@ -40,7 +40,7 @@ sub Client {
 sub populate {
     my ($self, $name_list) = @_;
     
-    my @to_fetch = grep ! $full_accession{$self}{$_}, @$name_list;
+    my @to_fetch = grep { ! $full_accession{$self}{$_} } @$name_list;
     return unless @to_fetch;
     my $response = $self->Client->get_accession_types(@to_fetch);
     foreach my $line (split /\n/, $response) {
