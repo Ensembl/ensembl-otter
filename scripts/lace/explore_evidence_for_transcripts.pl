@@ -33,6 +33,7 @@ my $opts;
         max_length => undef,
         max_features => undef,
         logic_names => undef,
+        consider_chains => 3,
     };
 
     my $usage = sub { exec('perldoc', $0) };
@@ -168,14 +169,6 @@ sub get_accession_type {
     return @$at;
 }
 
-my ($factory, $comp_app);
-
-sub get_comp_app {
-    $factory ||= Bio::Factory::EMBOSS->new();
-    $comp_app ||= $factory->program('water');
-    return $comp_app;
-}
-
 BEGIN {
     # Lower is better
     my %ANL_RANK = (
@@ -257,7 +250,7 @@ sub process_align_features {
         ++$count;
     }
 
-    reportf("verbose:PF:1", "Processed %d features", $count);
+    reportf("verbose:PF:1", "Processed %d features into %d feature chains", $count, scalar @flat_hseq_anl_acc);
 
     return \@flat_hseq_anl_acc;
 }
@@ -268,7 +261,7 @@ sub calc_overlap {
     return min($a->seq_region_end, $b->seq_region_end) - max($a->seq_region_start, $b->seq_region_start) + 1;
 }
 
-# Side-effects warning - adds elements to $feature_chains members
+# Side-effects warning - adds elements to @$feature_chains members
 #
 sub exon_align_features {
     my $exons = shift;
@@ -414,6 +407,124 @@ sub feature_augment {
     return $n;
 }
 
+my ($factory, $comp_app);
+
+sub get_comp_app {
+    $factory ||= Bio::Factory::EMBOSS->new();
+    $comp_app ||= $factory->program('water');
+    return $comp_app;
+}
+
+sub compare_evidence {
+    my $transcript    = shift;
+    my $evidence_name = shift;
+    my $evidence      = shift;
+    my $hit_feature   = shift;
+
+    my $evi_seq = pfetch($evidence_name);
+    unless ($evi_seq) {
+        my $msg = sprintf("Cannot pfetch sequence for '%s'", $evidence_name);
+        report("all:CE:0", $msg);
+        carp $msg;
+        return undef;
+    }
+
+    if (    $opts->{max_length}
+            and ($evi_seq->length > $opts->{max_length})
+            and ($transcript->seq->length > $opts->{max_length})
+        ) {
+        my $msg = sprintf("Transcript %s and evidence %s both too long, skipping",
+                          $transcript->stable_id, $evidence_name);
+        report("all:CE:0", $msg);
+        carp $msg;
+        return undef;
+    }
+
+    # Compare them
+    my $comp_app = get_comp_app();
+    my $comp_fh = File::Temp->new();
+    my $comp_outfile = $comp_fh->filename;
+
+    my $rev_str = $evi_seq->seq;
+    Bio::EnsEMBL::Utils::Sequence::reverse_comp(\$rev_str);
+    my $rev_evi_seq = Bio::Seq->new(
+        -seq        => $rev_str,
+        -display_id => $evi_seq->display_id . ".rev",
+        );
+
+    my ($msg, $exp);
+    if ($hit_feature) {
+        if ($hit_feature->hstrand == $transcript->strand) {
+            $msg = "Feature hit and transcript strands match    - expecting forward match";
+            $exp = 1;
+        } else {
+            $msg = "Feature hit and transcript strands mismatch - expecting reverse match";
+            $exp = -1;
+        }
+    } else {
+        $msg = "No hit feature - no match prediction";
+    }
+    report("normal:CE:2", $msg);
+
+    $comp_app->run({-asequence => $transcript->seq,
+                    -bsequence => [$evi_seq, $rev_evi_seq],
+                    -outfile   => $comp_outfile,
+                    -aformat   => 'srspair',
+                   });
+
+    my $alnin = Bio::AlignIO->new(-format => 'emboss',
+                                  -fh     => $comp_fh);
+
+    my @aln_results;
+    while ( my $aln = $alnin->next_aln ) {
+        push @aln_results, $aln;
+        # process the alignment -- these will be Bio::SimpleAlign objects
+        my $name = $aln->get_seq_by_pos(2)->display_id;
+        if ($opts->{verbose}) {
+            reportf("verbose:CE:3", "feature: %-15s : score: %8.1f, length: %5d, ident: %5.1f%%",
+                    $name,
+                    $aln->score,
+                    $aln->length,
+                    $aln->percentage_identity,
+                );
+        } elsif (not $opts->{quiet}) {
+            reportf("normal:CE:3", "%s,%s,%s,%.1f,%d,%.1f,%d,%d",
+                    $transcript->stable_id,
+                    $name,
+                    $evidence ? $evidence->type : '-',
+                    $aln->score,
+                    $aln->length,
+                    $aln->percentage_identity,
+                    $transcript->seq->length,
+                    $evi_seq->length,
+                );
+        }
+    }
+
+    my $top_hit = (sort { $b->score <=> $a->score } @aln_results)[0];
+    if ($top_hit == $aln_results[0]) {
+        report("verbose:CE:2", "Top match on forward");
+        if ($exp) {
+            if ($exp == 1) {
+                report("normal:CE:2", "Match on forward as expected");
+            } else {
+                report("all:CE:2", "MATCH ON FORWARD, EXPECTING REVERSE");
+            }
+        }
+    } else {
+        report("verbose:CE:2", "Top match on reverse");
+        if ($exp) {
+            if ($exp == -1) {
+                report("normal:CE:2", "Match on reverse as expected");
+            } else {
+                report("all:CE:2", "MATCH ON REVERSE, EXPECTING FORWARD");
+            }
+        }
+    }
+    
+    return $top_hit;
+}
+
 my ($transcript_adaptor, $gene_adaptor, $slice_adaptor, $dna_feature_adaptor);
 my ($pipe_dba, $p_slice_adaptor);
 
@@ -501,6 +612,7 @@ sub process_transcript {
         }
 
         my $all_dna_features;
+        my %feature_chain_hit;
 
         my @evidence = @{$td->evidence_list};
         EVIDENCE: foreach my $evi (@evidence) {
@@ -529,6 +641,7 @@ sub process_transcript {
                         $short_name, $e_hit->{rank}, $e_hit->{count}, $e_hit->{logic_name} );
 
                 $hit_feature = $e_hit->{features}->[0];
+                $feature_chain_hit{$short_name} = 1;
  
             } else {
                 report("normal:PT:2", "No feature match for $short_name");
@@ -591,103 +704,24 @@ sub process_transcript {
                 } # FEATURE_HUNT
             }
 
-            my $evi_seq = pfetch($e_name);
-            next EVIDENCE unless $evi_seq;
+            my $top_hit = compare_evidence($td, $e_name, $evi, $hit_feature);
+            next EVIDENCE unless $top_hit;
 
-            if (    $opts->{max_length}
-                    and ($evi_seq->length > $opts->{max_length})
-                    and ($td->seq->length > $opts->{max_length})
-                ) {
-                my $msg = sprintf("Transcript %s and evidence %s both too long, skipping",
-                                  $td->stable_id, $e_name);
-                report("all:PT:0", $msg);
-                carp $msg;
-                next EVIDENCE;
-            }
-
-            # Compare them
-            my $comp_app = get_comp_app();
-            my $comp_fh = File::Temp->new();
-            my $comp_outfile = $comp_fh->filename;
-
-            my $rev_str = $evi_seq->seq;
-            Bio::EnsEMBL::Utils::Sequence::reverse_comp(\$rev_str);
-            my $rev_evi_seq = Bio::Seq->new(
-                -seq        => $rev_str,
-                -display_id => $evi_seq->display_id . ".rev",
-                );
-
-            my ($msg, $exp);
-            if ($hit_feature) {
-                if ($hit_feature->hstrand == $td->strand) {
-                    $msg = "Feature hit and transcript strands match    - expecting forward match";
-                    $exp = 1;
-                } else {
-                    $msg = "Feature hit and transcript strands mismatch - expecting reverse match";
-                    $exp = -1;
-                }
-            } else {
-                $msg = "No hit feature - no match prediction";
-            }
-            report("normal:PT:2", $msg);
-
-            $comp_app->run({-asequence => $td->seq,
-                            -bsequence => [$evi_seq, $rev_evi_seq],
-                            -outfile   => $comp_outfile,
-                            -aformat   => 'srspair',
-                           });
-
-            my $alnin = Bio::AlignIO->new(-format => 'emboss',
-                                          -fh     => $comp_fh);
-
-            my @aln_results;
-            while ( my $aln = $alnin->next_aln ) {
-                push @aln_results, $aln;
-                # process the alignment -- these will be Bio::SimpleAlign objects
-                my $name = $aln->get_seq_by_pos(2)->display_id;
-                if ($opts->{verbose}) {
-                    reportf("verbose:PT:3", "feature: %-15s : score: %8.1f, length: %5d, ident: %5.1f%%",
-                           $name,
-                           $aln->score,
-                           $aln->length,
-                           $aln->percentage_identity,
-                        );
-                } elsif (not $opts->{quiet}) {
-                    reportf("normal:PT:3", "%s,%s,%s,%.1f,%d,%.1f,%d,%d",
-                           $td->stable_id,
-                           $name,
-                           $evi->type,
-                           $aln->score,
-                           $aln->length,
-                           $aln->percentage_identity,
-                           $td->seq->length,
-                           $evi_seq->length,
-                        );
-                }
-            }
-
-            my $top_hit = (sort { $b->score <=> $a->score } @aln_results)[0];
-            if ($top_hit == $aln_results[0]) {
-                report("verbose:PT:2", "Top match on forward");
-                if ($exp) {
-                    if ($exp == 1) {
-                        report("normal:PT:2", "Match on forward as expected");
-                    } else {
-                        report("all:PT:2", "MATCH ON FORWARD, EXPECTING REVERSE");
-                    }
-                }
-            } else {
-                report("verbose:PT:2", "Top match on reverse");
-                if ($exp) {
-                    if ($exp == -1) {
-                        report("normal:PT:2", "Match on reverse as expected");
-                    } else {
-                        report("all:PT:2", "MATCH ON REVERSE, EXPECTING FORWARD");
-                    }
-                }
-            }
-            
         } # EVIDENCE
+
+        # Now look at the top few feature chains and see if we've hit them.
+        # If not, do SW against them, to see what the result is.
+        #
+      FEATURE_CHAIN: for my $i ( 0 .. min($opts->{consider_chains} - 1, $#per_exon_by_score) ) {
+            my $fc = $per_exon_by_score[$i];
+            if ($feature_chain_hit{$fc->{hseqname}}) {
+                # Bail out as soon as we've actually seen a high-ranked feature chain
+                last FEATURE_CHAIN;
+            } else {
+                reportf("normal:PT:1", "Evidence didn't include '%s' at rank %d", $fc->{hseqname}, $fc->{rank});
+                my $top_hit = compare_evidence($td, $fc->{hseqname}, undef, $fc->{features}->[0]);
+            }
+        } # FEATURE_CHAIN
 
         printf "\n" unless $opts->{quiet};
 
