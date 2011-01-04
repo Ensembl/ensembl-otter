@@ -132,26 +132,14 @@ my $opts;
 
 }
 
+# Used in process_transcript() if $opts{dump_seq} - SORT OUT VIA SUBROUTINES
+#
 my ($seq_str, $seq_str_io, $seqio_out);
 
 sub setup_io {
     $seq_str_io = IO::String->new(\$seq_str);
     $seqio_out = Bio::SeqIO->new(-format => 'Fasta',
                                  -fh     => $seq_str_io );
-}
-
-my $fetcher;
-
-# Warning - Bio::EnsEMBL::Pipeline::SeqFetcher spawns a pfetch each time to do the work
-#          
-# Therefore no longer used
-#
-sub pfetch_ensembl_pipeline {
-    my ( $id ) = @_;
-    $fetcher ||= Bio::EnsEMBL::Pipeline::SeqFetcher->new;
-    my $seq = $fetcher->run_pfetch($id);
-    carp sprintf "Cannot pfetch '%s'!\n", $id unless $seq;
-    return $seq;
 }
 
 sub pfetch {
@@ -253,8 +241,6 @@ sub process_align_features {
 
         push @{$by_hseqname{$hseqname}}, $feature;
 
-        # Should I look at ordering and positioning wrt exons?
-        #
         my $acc = $hseq_anl_acc{$hseqname}->{$anid};
         unless (defined $acc) {
             $acc = $hseq_anl_acc{$hseqname}->{$anid} = { hseqname    => $hseqname,
@@ -306,7 +292,6 @@ sub process_align_features {
     reportf("verbose:PF:1", "Processed %d features with %d fingerprints", $count, $rank);
 
     return {
-        _fingerprints       => \%fingerprints,
         _by_dbid            => \%by_dbid,
         _by_hseqname        => \%by_hseqname,
         _by_hseqname_ranked => \%by_hseqname_ranked,
@@ -408,18 +393,39 @@ sub exon_align_features {
 
     reportf("verbose:EA:1", "Processed exon matches for %d feature chains", scalar(@$feature_chains));
 
-    # Not sure whether to sort on exon_score or coverage.
-    #
-    return [ sort { $b->{exon_score} <=> $a->{exon_score} } @$feature_chains ];
+    return $feature_chains;
+}
+
+# Side-effects warning - adds 'rank' element to @$sorted members
+#
+sub make_ranked_map {
+    my $sorted = shift;
+    my $map_key = shift;
+
+    my $map = {};
+
+    for my $i ( 0..$#$sorted ) {
+
+        my $ele = $sorted->[$i];
+        $ele->{rank} = $i;
+
+        my $key = $ele->{$map_key};
+
+        # Only point to top-ranked hit for key
+        #
+        unless ($map->{$key}) {
+            $map->{$key} = $ele;
+        }
+
+    }
+
+    return $map;
 }
 
 sub make_align_fingerprint {
     my $feature = shift;
-    return sprintf("%d-%d (%+d)\t=> %d-%d (%+d)\t: %d %.1f %s",
-                   $feature->hstart(), $feature->hend(), $feature->hstrand(),
-                   $feature->start(),  $feature->end(),  $feature->strand(),
-                   $feature->score(), $feature->percent_id(), $feature->cigar_string()
-        );
+    my $mini_fp = make_mini_fingerprint($feature);
+    return sprintf("%s %.1f %s", $mini_fp, $feature->percent_id(), $feature->cigar_string());
 }
 
 sub make_mini_fingerprint {
@@ -524,6 +530,11 @@ sub process_transcript {
         my $feature_chains     = $dna_align_features->{_by_total_hseqname_anl};
         my $per_exon_scoring   = exon_align_features($exons, $td->strand, $feature_chains, $opts);
 
+        # Not sure whether to sort on exon_score or coverage.
+        #
+        my @per_exon_by_score = sort { $b->{exon_score} <=> $a->{exon_score} } @$per_exon_scoring;
+        my $per_exon_by_score_map = make_ranked_map(\@per_exon_by_score, 'hseqname');
+
         # Top plain feature chain no longer that interesting, but...
         #
         my $tfp = $feature_chains->[0];
@@ -532,7 +543,7 @@ sub process_transcript {
                     $tfp->{hseqname}, $tfp->{score}, $tfp->{alignment_length}, $tfp->{percent_id});
         }
 
-        my $tfe = $per_exon_scoring->[0];
+        my $tfe = $per_exon_by_score[0];
         if ($tfe) {
             reportf("normal:PT:1", "Top exon-scored feature: %s [Score:%d Overlap:%d Coverage:%.1f%%]",
                     $tfe->{hseqname}, $tfe->{exon_score}, $tfe->{total_overlap}, $tfe->{coverage});
@@ -563,6 +574,13 @@ sub process_transcript {
             }
             my ($prefix, $short_name) = $e_name =~ m/^(\w+)?:?([\w\.]+)$/ ;
             $short_name ||= $e_name;
+
+            my $e_hit = $per_exon_by_score_map->{$short_name};
+            if ($e_hit) {
+                reportf("normal:PT:2",
+                        "Found exon-scored feature match for %s at rank %d with %d features, logic %s",
+                        $short_name, $e_hit->{rank}, $e_hit->{count}, $e_hit->{logic_name} );
+            }
 
             my $hit_feature = undef;
             if (my $flist = $dna_align_features->{_by_hseqname_ranked}->{$short_name}) {
