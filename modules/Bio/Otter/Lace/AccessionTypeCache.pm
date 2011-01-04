@@ -17,6 +17,8 @@ sub DESTROY {
     delete $client{$self};
     delete $full_accession{$self};
     delete $type{$self};
+
+    return;
 }
 
 sub new {
@@ -46,6 +48,8 @@ sub populate {
         $full_accession{$self}{$acc} = $full_acc;
         $type{$self}{$full_acc} = $type;
     }
+
+    return;
 }
 
 sub type_and_name_from_accession {
@@ -140,6 +144,8 @@ sub evidence_type_and_name_from_text {
             $full_accession{$self}{$full_acc} = $full_acc;
             $type{$self}{$full_acc} = $acc_type;
         }
+
+        return;
     }
 }
 
