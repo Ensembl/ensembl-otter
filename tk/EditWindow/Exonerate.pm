@@ -554,7 +554,7 @@ sub get_query_seq {
         if (keys %seqs_fetched) {
             $unclaimed_msg =
               "The following sequences were fetched, but didn't map back to supplied names:\n\n"
-                . join('', map "  $_\n", keys %seqs_fetched);
+                . join('', map { "  $_\n" } keys %seqs_fetched);
         }
 
         $self->top->messageBox(
