@@ -16,7 +16,7 @@ use XML::Simple;
 use File::Path 'mkpath';
 use Config::IniFiles;
 
-my $ZMAP_DEBUG = $ENV{ZMAP_DEBUG};
+my $ZMAP_DEBUG = $ENV{OTTERLACE_ZMAP_DEBUG};
 
 #==============================================================================#
 #
