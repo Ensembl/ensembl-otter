@@ -97,8 +97,11 @@ eval {
     }
 
 
-    $xml   .= qq`  <dataset name="$dataset">\n`;
-    $xml   .= qq`    <sequencesets>\n`;
+    $xml .= <<"XML"
+  <dataset name="$dataset">
+    <sequencesets>
+XML
+;
 
     # SliceAdaptor always uses the dnadb connection so visible
     # sequencesets will always be the ones in the dnadb.
@@ -142,20 +145,32 @@ eval {
             $hidden       = ($access!~/R/) || 0;
         }
 
-        $xml .= qq`      <sequenceset name="$chr_name">\n`;
-        $xml .= qq`        <description>$description</description>\n`;
-        $xml .= qq`        <is_hidden>$hidden</is_hidden>\n`;
-        $xml .= qq`        <write_access>$write_access</write_access>\n`;
+        $xml .= <<"XML"
+      <sequenceset name="$chr_name">
+        <description>$description</description>
+        <is_hidden>$hidden</is_hidden>
+        <write_access>$write_access</write_access>
+XML
+;
 
         foreach my $sub_name (@{$chr_2_sub{$chr_name}}) {
-            $xml .= qq`        <subregion name="$sub_name" hidden="$sub_hidden{$sub_name}">$sub_contigs{$sub_name}</subregion>\n`;
+            $xml .= <<"XML"
+        <subregion name="$sub_name" hidden="$sub_hidden{$sub_name}">$sub_contigs{$sub_name}</subregion>
+XML
+;
         }
 
-        $xml .= qq`      </sequenceset>\n`;
+        $xml .= <<"XML"
+      </sequenceset>
+XML
+;
     }
 
-    $xml .= qq`    </sequencesets>\n`;
-    $xml .= qq`  </dataset>\n`;
+    $xml .= <<"XML"
+    </sequencesets>
+  </dataset>
+XML
+;
 };
 
 if ($@) {
