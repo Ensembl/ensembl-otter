@@ -201,16 +201,9 @@ sub process_align_features {
 
     return undef if $opts->{max_features} and scalar(@$features_ref) > $opts->{max_features};
 
-    my %by_dbid = ();
-    my %by_hseqname = ();
-    my @ranked = ();
-    my %fingerprints = ();
-    my %rank_for_feature = ();
-    my %by_hseqname_ranked = ();
     my %hseq_anl_acc = ();
     my @flat_hseq_anl_acc = ();
 
-    my $rank = 0;
     my $count = 0;
 
     my @features = sort { 
@@ -234,12 +227,7 @@ sub process_align_features {
             }
         }
 
-        my $dbid = $feature->dbID;
-        $by_dbid{$dbid} = $feature;
-
         my $anid = $feature->analysis->dbID;
-
-        push @{$by_hseqname{$hseqname}}, $feature;
 
         my $acc = $hseq_anl_acc{$hseqname}->{$anid};
         unless (defined $acc) {
@@ -254,52 +242,24 @@ sub process_align_features {
                                                        };
             push @flat_hseq_anl_acc, $acc;
         }
+
         ++$acc->{count};
         $acc->{score}  += $feature->score;
         $acc->{alignment_length} += $feature->alignment_length;
         $acc->{identical} += ($feature->alignment_length * $feature->percent_id / 100.0);
         $acc->{percent_id} = $acc->{identical} / $acc->{alignment_length} * 100.0;
+
         push @{$acc->{features}}, $feature;
 
-        # This fingerprinted ranking is probably not terribly useful except for single exon transcripts
-        #
-        my $fp = make_align_fingerprint($feature);
-        my $f_rank;
-        if (defined $fingerprints{$fp}) {
-            $f_rank = $fingerprints{$fp};
-        } else {
-            $f_rank = $fingerprints{$fp} = $rank;
-            $rank++;
-        }
+        reportf("all:PF:1", "%d %s %s", $feature->dbID, $hseqname, make_align_fingerprint($feature))
+            if $opts->{dump_features};
 
-        push @{$ranked[$f_rank]}, $feature;
-
-        $rank_for_feature{$dbid} = $f_rank;
-
-        reportf("all:PF:1", "%d %s %s", $dbid, $hseqname, $fp) if $opts->{dump_features};
         ++$count;
     }
 
-    foreach my $i ( 0..$#ranked ) {
-        map { push @{$by_hseqname_ranked{$_->hseqname}->{$i}}, $_ } @{$ranked[$i]};
-    }
+    reportf("verbose:PF:1", "Processed %d features", $count);
 
-    my $by_total_hseqname_anl = [ sort { $b->{score}                <=> $a->{score}
-                                                                     ||
-                                         anl_rank($a->{logic_name}) <=> anl_rank($b->{logic_name}) }
-                                  @flat_hseq_anl_acc ];
-
-    reportf("verbose:PF:1", "Processed %d features with %d fingerprints", $count, $rank);
-
-    return {
-        _by_dbid            => \%by_dbid,
-        _by_hseqname        => \%by_hseqname,
-        _by_hseqname_ranked => \%by_hseqname_ranked,
-        _ranked             => \@ranked,
-        _rank_for_feature   => \%rank_for_feature,
-        _acc_by_hseqname_anl=> \%hseq_anl_acc,
-        _by_total_hseqname_anl => $by_total_hseqname_anl,
-    };
+    return \@flat_hseq_anl_acc;
 }
 
 sub calc_overlap {
@@ -474,14 +434,7 @@ sub process_transcript {
 
         reportf("normal:PT:0", "Transcript %s, strand %d, exons %d", $td->stable_id, $td->strand, scalar(@$exons));
 
-        #TEMP debug hook
-        if ($td->stable_id eq 'OTTHUMT00000109016') {
-            $DB::single = 1;
-        }
-
         my $gene = $gene_adaptor->fetch_by_transcript_id($tid);
-
-        # my $slice = $slice_adaptor->fetch_by_gene_stable_id($gene->stable_id); # not req'd?
 
         my $min_start = min($td->seq_region_start, $gene->seq_region_start);
         my $max_end   = max($td->seq_region_end,   $gene->seq_region_end);
@@ -526,22 +479,13 @@ sub process_transcript {
         }
         report("verbose:PT:1", "Got ", scalar @$p_features, " features");
 
-        my $dna_align_features = process_align_features($p_features, $opts);
-        my $feature_chains     = $dna_align_features->{_by_total_hseqname_anl};
+        my $feature_chains     = process_align_features($p_features, $opts);
         my $per_exon_scoring   = exon_align_features($exons, $td->strand, $feature_chains, $opts);
 
         # Not sure whether to sort on exon_score or coverage.
         #
         my @per_exon_by_score = sort { $b->{exon_score} <=> $a->{exon_score} } @$per_exon_scoring;
         my $per_exon_by_score_map = make_ranked_map(\@per_exon_by_score, 'hseqname');
-
-        # Top plain feature chain no longer that interesting, but...
-        #
-        my $tfp = $feature_chains->[0];
-        if ($tfp) {
-            reportf("normal:PT:1", "Top plain feature: %s [Score:%d Length:%d %%ID:%.1f]",
-                    $tfp->{hseqname}, $tfp->{score}, $tfp->{alignment_length}, $tfp->{percent_id});
-        }
 
         my $tfe = $per_exon_by_score[0];
         if ($tfe) {
@@ -575,31 +519,17 @@ sub process_transcript {
             my ($prefix, $short_name) = $e_name =~ m/^(\w+)?:?([\w\.]+)$/ ;
             $short_name ||= $e_name;
 
+            my $hit_feature = undef;
+
             my $e_hit = $per_exon_by_score_map->{$short_name};
             if ($e_hit) {
+
                 reportf("normal:PT:2",
                         "Found exon-scored feature match for %s at rank %d with %d features, logic %s",
                         $short_name, $e_hit->{rank}, $e_hit->{count}, $e_hit->{logic_name} );
-            }
 
-            my $hit_feature = undef;
-            if (my $flist = $dna_align_features->{_by_hseqname_ranked}->{$short_name}) {
-                my $top_rank = (sort keys %$flist)[0];
-                my $features = $flist->{$top_rank};
-                $hit_feature = $features->[0];
-                unless ($opts->{quiet}) {
-                    my $n_features = scalar(@$features);
-                    reportf("normal:PT:2", "Found feature match for %s at rank %d with %d features, logic %s",
-                           $short_name, $top_rank, $n_features, $hit_feature->analysis->logic_name );
-                    reportf("verbose:PT:2", "Feature fingerprint:  %s", make_align_fingerprint($hit_feature));
-
-                    my $acc_feats = $dna_align_features->{_acc_by_hseqname_anl}->{$short_name};
-                    if ($acc_feats) {
-                        my $max_ann = (sort {$b <=> $a} keys %$acc_feats)[0];
-                        my $af = $acc_feats->{$max_ann};
-                        reportf("normal:PT:2", "Acc feature length: %d", $af->{alignment_length});
-                    }
-                }
+                $hit_feature = $e_hit->{features}->[0];
+ 
             } else {
                 report("normal:PT:2", "No feature match for $short_name");
 
