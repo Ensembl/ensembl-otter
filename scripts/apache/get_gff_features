@@ -19,10 +19,11 @@ my $gff_string = '';
 eval {
     my $features = $server->get_requested_features;
 
-    my %gff_args = (
-        rebase      => $server->param('rebase'),
-        gff_source  => $server->param('gff_source'),
-        gff_seqname => $server->param('gff_seqname'),
+    my %gff_args;
+    $gff_args{$_} = $server->param($_) for qw(
+        rebase
+        gff_source
+        gff_seqname
     );
 
     if (@$features) {
