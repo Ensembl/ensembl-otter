@@ -1,14 +1,12 @@
 package Bio::Otter::CloneLockBroker;
 
-use vars qw(@ISA);
 use strict;
 use warnings;
 
-use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 use Bio::Otter::CloneLock;
 
 # Shouldn't have this
-@ISA = qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
+use base qw( Bio::EnsEMBL::DBSQL::BaseAdaptor );
 
 
 sub client_hostname {

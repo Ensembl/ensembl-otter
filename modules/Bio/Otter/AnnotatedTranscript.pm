@@ -1,14 +1,11 @@
 package Bio::Otter::AnnotatedTranscript;
 
-use vars qw(@ISA);
 use strict;
 use warnings;
-use Bio::EnsEMBL::Transcript;
 
 use Bio::Vega::Utils::XmlEscape qw{ xml_escape xml_unescape };
 
-
-@ISA = qw(Bio::EnsEMBL::Transcript);
+use base qw( Bio::EnsEMBL::Transcript );
 
 sub new {
     my($class,@args) = @_;

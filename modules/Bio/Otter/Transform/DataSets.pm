@@ -2,10 +2,10 @@ package Bio::Otter::Transform::DataSets;
 
 use strict;
 use warnings;
-use Bio::Otter::Transform;
+
 use Bio::Otter::Lace::DataSet;
 
-our @ISA = qw(Bio::Otter::Transform);
+use base qw( Bio::Otter::Transform );
 
 
 # probably these should be global rather than assign EVERY time

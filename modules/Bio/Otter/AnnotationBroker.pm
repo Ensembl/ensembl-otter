@@ -1,13 +1,11 @@
 package Bio::Otter::AnnotationBroker;
 
-use vars qw(@ISA);
 use strict;
 use warnings;
-use Bio::EnsEMBL::DBSQL::BaseAdaptor;
+
 use Bio::Otter::AnnotationBroker::Event;
 
-@ISA = qw(Bio::EnsEMBL::DBSQL::BaseAdaptor);
-
+use base qw( Bio::EnsEMBL::DBSQL::BaseAdaptor );
 
 # The name of the author writing changes into the database
 sub current_author {

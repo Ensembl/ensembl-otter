@@ -6,9 +6,8 @@ package Bio::Otter::CloneLock;
 
 use strict;
 use warnings;
-use Bio::EnsEMBL::Root;
-use vars qw(@ISA);
-@ISA = qw(Bio::EnsEMBL::Root);
+
+use base qw( Bio::EnsEMBL::Root );
 
 sub new {
   my($class,@args) = @_;

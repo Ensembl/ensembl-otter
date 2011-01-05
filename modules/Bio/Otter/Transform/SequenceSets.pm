@@ -2,10 +2,10 @@ package Bio::Otter::Transform::SequenceSets;
 
 use strict;
 use warnings;
-use Bio::Otter::Transform;
+
 use Bio::Otter::Lace::SequenceSet;
 
-our @ISA = qw(Bio::Otter::Transform);
+use base qw( Bio::Otter::Transform );
 
 # ones we are interested in 
 my $SUB_ELE = { map { $_ => 1 } qw(description vega_set_id priority is_hidden write_access)};
