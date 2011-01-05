@@ -1,10 +1,9 @@
 package TransientWindow::OpenSlice;
 
-use TransientWindow;
 use strict;
 use warnings;
 
-our @ISA   = qw(TransientWindow);
+use base qw( TransientWindow );
 
 my $DEFAULT_SLICE_SIZE = 1e6;
 

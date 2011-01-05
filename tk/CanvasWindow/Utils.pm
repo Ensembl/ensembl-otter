@@ -5,10 +5,10 @@ package CanvasWindow::Utils;
 
 use strict;
 use warnings;
-use Exporter;
-use vars ('@ISA', '@EXPORT_OK');
 
-@ISA = ('Exporter');
+use base qw( Exporter );
+use vars qw ( @EXPORT_OK );
+
 @EXPORT_OK = qw{
     bbox_union
     expand_bbox

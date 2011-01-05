@@ -5,10 +5,9 @@ use strict;
 use warnings;
 
 use IO::Handle;
-use TransientWindow;
 use Bio::Otter::LogFile;
 
-our @ISA = qw(TransientWindow);
+use base qw( TransientWindow );
 
 my $email     = q(anacode);
 my $domain    = q(sanger.ac.uk);
