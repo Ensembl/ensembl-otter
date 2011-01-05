@@ -1,10 +1,9 @@
 package TransientWindow::OpenRange;
 
-use TransientWindow;
 use strict;
 use warnings;
 
-our @ISA   = qw(TransientWindow);
+use base qw( TransientWindow );
 
 
 sub draw{

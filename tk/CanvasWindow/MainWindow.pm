@@ -6,14 +6,13 @@ package CanvasWindow::MainWindow;
 use strict;
 use warnings;
 
-use vars '@ISA';
 use Tk;
 
 # Work around UTF8 conversion bug
 # "selection conversion left too many bytes unconverted"
 $Tk::encodeFallback = 1;
 
-@ISA = ('MainWindow');
+use base qw( MainWindow );
 
 sub new {
     my( $pkg, $title, @command_line ) = @_;

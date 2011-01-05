@@ -6,10 +6,7 @@ package MenuCanvasWindow;
 use strict;
 use warnings;
 use Carp;
-use CanvasWindow;
-use vars '@ISA';
-
-@ISA = ('CanvasWindow');
+use base qw( CanvasWindow );
 
 sub new {
     my( $pkg, $tk, @rest ) = @_;
