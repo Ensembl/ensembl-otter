@@ -335,8 +335,6 @@ sub initialize {
 sub fill_progressBar {
     my ($self, $value) = @_;
 
-    return unless $self->progress < $value;
-
     for ( my $percent = $self->progress ; $percent <= $value ; $percent++ ) {
         $self->progress($percent);
         $self->top->toplevel->update;
