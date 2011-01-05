@@ -6,9 +6,8 @@ package Bio::Otter::Lace::PersistentFile;
 use strict;
 use warnings;
 use Carp;
-use Bio::Otter::Lace::TempFile;
 
-our @ISA = qw(Bio::Otter::Lace::TempFile);
+use base qw( Bio::Otter::Lace::TempFile );
 
 sub rm{
     my ($self) = @_;

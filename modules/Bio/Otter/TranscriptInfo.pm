@@ -3,12 +3,10 @@ package Bio::Otter::TranscriptInfo;
 
 # clone info file
 
-use vars qw(@ISA);
 use strict;
 use warnings;
-use Bio::EnsEMBL::Root;
 
-@ISA = qw(Bio::EnsEMBL::Root);
+use base qw( Bio::EnsEMBL::Root );
 
 sub new {
     my ($class, @args) = @_;
