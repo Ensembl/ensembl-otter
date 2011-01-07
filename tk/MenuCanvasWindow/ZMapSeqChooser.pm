@@ -1417,7 +1417,7 @@ sub zMapZoomToSubSeq {
 my $zmap_new_view_format = <<'FORMAT'
 <zmap>
  <request action="new_view">
-  <segment sequence="%s" start="1" end="0">
+  <segment sequence="%s" start="%d" end="%d">
 %s
   </segment>
  </request>
@@ -1431,8 +1431,16 @@ sub zMapNewView {
     $config = "" unless defined $config;
 
     my $slice_name = $self->slice_name;
+    my $slice = $self->AceDatabase->smart_slice;
+    my @start_end =
+        ( $ENV{OTTERLACE_CHROMOSOME_COORDINATES}
+          ? ( $slice->start, $slice->end, )
+          : ( 1,             0,           )
+          );
+
     my $xml = sprintf $zmap_new_view_format
         , xml_escape($slice_name)
+        , @start_end
         , xml_escape($config)
         ;
 
