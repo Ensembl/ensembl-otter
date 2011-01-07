@@ -154,18 +154,9 @@ sub _launchInAZMap {
             }
             elsif (my $xr = $xremote_cache->get_client_for_action_pid("new_view", $pid)) {
                 $self->zMapPID($pid);
-
-                my $sequence = $self->slice_name;
-                my $server   = $self->AceDatabase->ace_server;
-                my $protocol = 'acedb';
-
-                my $url = sprintf(q{%s://%s:%s@%s:%d?use_methods=true},
-                    $protocol, $server->user, $server->pass, $server->host, $server->port);
-
                 my $config =
-                    $self->formatZmapDefaults('ZMap', sources => "$sequence")
+                    $self->formatZmapDefaults('ZMap', sources => $self->slice_name)
                     . $self->zMapAceServerDefaults();
-
                 $self->zMapNewView($xr, $config);
             }
             else {
