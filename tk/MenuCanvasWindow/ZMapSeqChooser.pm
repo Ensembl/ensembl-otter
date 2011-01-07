@@ -9,14 +9,15 @@ use ZMap::Connect;
 use Sys::Hostname;
 use ZMap::XRemoteCache;
 use Data::Dumper;
-    $Data::Dumper::Terse = 1;
-    $Data::Dumper::Indent = 1;
 use Hum::Conf qw{ PFETCH_SERVER_LIST };
 use XML::Simple;
 use File::Path 'mkpath';
 use Config::IniFiles;
 
 my $ZMAP_DEBUG = $ENV{OTTERLACE_ZMAP_DEBUG};
+
+$Data::Dumper::Terse = 1;
+$Data::Dumper::Indent = 1;
 
 #==============================================================================#
 #
