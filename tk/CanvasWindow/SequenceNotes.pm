@@ -954,9 +954,9 @@ sub draw_subset {
     my $ss = $self->SequenceSet();
     $self->get_CloneSequence_list(); # make sure the clones are preloaded
 
-    my ($first, $last) = $ss->get_subsets_first_last_index($subset_tag);
+    my ($index_first, $index_last) = $ss->get_subsets_first_last_index($subset_tag);
 
-    if(defined($first)) {
+    if(defined($index_first)) {
 
             $self->current_subset_tag($subset_tag);
 
@@ -964,12 +964,12 @@ sub draw_subset {
 
             $self->_currently_paging(1);
 
-            my $length = $last - $first + 1;
+            my $length = $index_last - $index_first + 1;
             my $max_pp   = $self->max_per_page;
 
             my $start = ($length+2 <= $max_pp)  # first & last are 0-based!
-                ? int(($last+$first-$max_pp)/2)
-                : $first;
+                ? int(($index_last+$index_first-$max_pp)/2)
+                : $index_first;
             my $end   = $start + $max_pp - 1;
 
             $self->_user_first_clone_seq( $start );
@@ -1075,11 +1075,11 @@ sub draw {
         my $y = $row * $size;
 
         unless ($i == 0) {
-            my $last = $cs_list->[$i - 1];
+            my $cs_last = $cs_list->[$i - 1];
             
             my $gap = 0; # default for non SequenceNotes methods inheriting this method
             if ( eval { $cs->can('chr_start'); } ){
-                $gap = $cs->chr_start - $last->chr_end - 1;
+                $gap = $cs->chr_start - $cs_last->chr_end - 1;
             }
             if ($gap > 0) {
                 $gap_pos->{$row} = 1;              
@@ -1226,13 +1226,13 @@ sub selected_CloneSequence_indices {
     
     my $canvas = $self->canvas;
     my $select = [];
-    my $first = $self->_user_first_clone_seq() || 1;
+    my $cs_first = $self->_user_first_clone_seq() || 1;
     foreach my $obj ($canvas->find('withtag', 'selected&&clone_seq_rectangle')) {
         my ($i) = map { /^cs=(\d+)/ } $canvas->gettags($obj);
         unless (defined $i) {
             die "Can't see cs=# in tags: ", join(', ', map { "'$_'" } $canvas->gettags($obj));
         }
-        push(@$select, $i + $first - 1);
+        push(@$select, $i + $cs_first - 1);
     }
     
     if (@$select) {
