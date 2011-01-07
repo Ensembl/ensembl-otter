@@ -5,7 +5,7 @@ package Bio::Vega::Transform::Otter::Ace;
 
 use strict;
 use warnings;
-use Carp qw{ cluck confess };
+use Carp;
 use Hum::Ace::AceText;
 use Bio::Vega::Utils::GeneTranscriptBiotypeStatus 'biotype_status2method';
 
