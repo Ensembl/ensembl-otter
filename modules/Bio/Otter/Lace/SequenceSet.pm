@@ -197,9 +197,9 @@ sub CloneSequence_contigs_split_on_gaps {
         $a->chr_start <=> $b->chr_start
         } @$cs_list)
     {
-        my $last = $ctg->[-1];
-        if ($last) {
-            if ($last->chr_end + 1 >= $this->chr_start) {
+        my $ctg_last = $ctg->[-1];
+        if ($ctg_last) {
+            if ($ctg_last->chr_end + 1 >= $this->chr_start) {
                 push(@$ctg, $this);
             } else {
                 $ctg = [$this];
@@ -303,16 +303,16 @@ sub get_subsets_first_last_index { # They are 0-based indices
     
     my ($self, $subset_tag) = @_;
 
-    my ($first, $last);
+    my ($index_first, $index_last);
     my $cs_list = $self->CloneSequence_list;
     foreach my $i (0..scalar(@$cs_list)-1) {
         my $cs = $cs_list->[$i];
         if($self->accsv_belongs_to_subset($cs->accession_dot_sv(), $subset_tag)) {
-            unless(defined($first)) { $first = $i; }
-            $last = $i;
+            unless(defined($index_first)) { $index_first = $i; }
+            $index_last = $i;
         }
     }
-    return ($first, $last);
+    return ($index_first, $index_last);
 }
 
 1;
