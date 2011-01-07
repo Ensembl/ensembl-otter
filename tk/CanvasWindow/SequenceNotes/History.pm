@@ -139,7 +139,7 @@ sub initialise {
     my $button_frame = $top->Frame;
     $button_frame->pack(-side => 'top',);
 
-    my ($comment, $comment_label, $set);
+    my ($comment, $comment_label, $set_note);
 
     if ($write) {
         $comment_label = $button_frame->Label(
@@ -166,7 +166,7 @@ sub initialise {
 
             #update_sequence_notes($comment);
         };
-        $set =
+        $set_note =
           $self->make_button($button_frame, 'Set note', $update_comment, 0);
         $top->bind('<Control-s>', $update_comment);
         $top->bind('<Control-S>', $update_comment);
