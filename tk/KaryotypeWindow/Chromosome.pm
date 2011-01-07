@@ -35,7 +35,7 @@ sub draw {
         $y += $band->height($kw);
     }
 
-    my ( $first, $last ) = $self->get_first_and_last_Bands;
+    my ( $band_first, $band_last ) = $self->get_first_and_last_Bands;
     my $canvas = $kw->canvas;
     my $outline = $canvas->createPolygon(
         $self->get_outline_coordinates,
@@ -53,7 +53,7 @@ sub draw {
         -font => [ 'Helvetica', $font_size, 'bold' ],
     );
     
-    my $max_y = $last->end;
+    my $max_y = $band_last->end;
     my $pad = $self->pad($kw);
     my $graph_x = $x + $self->chr_width($kw) + $self->pad($kw);
     foreach my $graph ($self->get_all_Graphs) {
@@ -68,8 +68,8 @@ sub draw {
 sub height {
     my( $self, $kw ) = @_;
 
-    my ( $first, $last ) = $self->get_first_and_last_Bands;
-    my $length = ( $last->end - $first->start + 1 ) / 1_000_000;
+    my ( $band_first, $band_last ) = $self->get_first_and_last_Bands;
+    my $length = ( $band_last->end - $band_first->start + 1 ) / 1_000_000;
     return(($kw->font_size * 2) + ($length / $kw->Mb_per_pixel));
 }
 
