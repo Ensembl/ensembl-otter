@@ -19,11 +19,6 @@ use Evi::EviCollection;
 use Evi::EviDisplay;
 use Evi::Tictoc;
 
-# sub Bio::EnsEMBL::DBSQL::DBAdaptor::DESTROY {
-#       use Carp 'cluck';
-#       cluck 'bye';
-# }
-
 {
     my $dataset_name    = 'test_human'; # 'test_human';      # 'mouse', ...
 
