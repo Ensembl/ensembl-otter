@@ -633,7 +633,7 @@ sub make_embl_ft {
 
     my $chr_slice = $self->chromosome_Slice;
 
-    my $set = 'Hum::EMBL::FeatureSet'->new;
+    my $feature_set = 'Hum::EMBL::FeatureSet'->new;
 
     my $genes = $chr_slice->get_all_Genes;
 
@@ -647,21 +647,21 @@ sub make_embl_ft {
             next if $gene->biotype eq 'obsolete';
             next if $gene->source ne 'havana';
 
-            # $self->_do_Gene($gene, $set, $chr_slice);
-            $self->process_gene($set, $gene);
+            # $self->_do_Gene($gene, $feature_set, $chr_slice);
+            $self->process_gene($feature_set, $gene);
         }
     }
 
     # PolyA signals and sites are on chrom. slice
-    $self->_do_polyA($set);
+    $self->_do_polyA($feature_set);
 
     # Assembly_tags are on the contig slice
-    $self->_do_assembly_tag($set);
+    $self->_do_assembly_tag($feature_set);
 
     # Finish up
-    $set->sortByPosition;
-    $set->removeDuplicateFeatures;
-    $set->addToEntry($embl);
+    $feature_set->sortByPosition;
+    $feature_set->removeDuplicateFeatures;
+    $feature_set->addToEntry($embl);
 
     return;
 }
@@ -839,7 +839,7 @@ Fetch them via misc_feature
 
 
 sub _do_assembly_tag {
-  my ( $self, $set ) = @_;
+  my ( $self, $feature_set ) = @_;
 
     my $slice = $self->chromosome_Slice;
 
@@ -863,7 +863,7 @@ sub _do_assembly_tag {
 
     foreach my $atag ( @{$mf->get_all_Attributes} ){
         my $code = $atag->code;
-      my $feat = $set->newFeature;
+      my $feat = $feature_set->newFeature;
 
       # assembly_tag types: Clone_left_end, Clone_right_end and Misc
       #                     are assigned "misc_feature" key,
@@ -910,7 +910,7 @@ These are stored in Otter as SimpleFeatures on the Slice
 =cut
 
 sub _do_polyA {
-    my ( $self, $set ) = @_;
+    my ( $self, $feature_set ) = @_;
 
     my $slice    = $self->chromosome_Slice;
     my $ctg_name = $self->contig_name;
@@ -920,7 +920,7 @@ sub _do_polyA {
 
     foreach my $polyA_signal (@$polyA_signal_feats) {
 
-        my $ft = $set->newFeature;
+        my $ft = $feature_set->newFeature;
         $ft->key('polyA_signal');
 
         my @pos;
@@ -952,7 +952,7 @@ sub _do_polyA {
         # with the site ending up on the adjacent contig
         next unless $ctg_pos->seq_region_name eq $ctg_name;
 
-        my $ft = $set->newFeature;
+        my $ft = $feature_set->newFeature;
         $ft->key('polyA_site');
 
         my $loc = Hum::EMBL::Location->new;
@@ -1003,7 +1003,7 @@ my %ens2embl_phase = (
     );
 
 sub process_gene {
-    my ($self, $set, $gene) = @_;
+    my ($self, $feature_set, $gene) = @_;
 
     my $ens_db   = $self->DataSet->make_EnsEMBL_DBAdaptor;
 
@@ -1023,7 +1023,7 @@ sub process_gene {
         my $mRNA_exonlocation = $self->make_ExonLocation($transcript->get_all_Exons)
             or next;
 
-        my $ft = $set->newFeature;
+        my $ft = $feature_set->newFeature;
         $ft->location($mRNA_exonlocation);
         if ($gtype eq "transposon") {
             $ft->key('repeat_region');
@@ -1054,7 +1054,7 @@ sub process_gene {
             my $CDS_exonlocation = $self->make_ExonLocation($transcript->get_all_translateable_Exons)
                 or next;
 
-            my $cds_ft = $set->newFeature;
+            my $cds_ft = $feature_set->newFeature;
             $cds_ft->location($CDS_exonlocation);
             $cds_ft->key('CDS');
 
