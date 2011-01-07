@@ -1260,22 +1260,11 @@ sub zMapGetXRemoteClientByAction {
 
 sub open_clones {
     my ($zmap, $self) = @_;
-
     $zmap->post_respond_handler();    # clear the handler...
-
-    # first open a zmap window...
     my $xremote = $self->zMapGetXRemoteClientByName($self->main_window_name());
     return unless $self->zMapDoRequest($xremote, "new_zmap", qq!<zmap><request action="new_zmap"/></zmap>!);
-
-    # now open a view
     $xremote = $self->zMapGetXRemoteClientByName("ZMap");
-    $self->zMapRegisterClientRequest($xremote);
-    my $xml = $zmap->open_view_request($self->slice_name);
-    return unless $self->zMapDoRequest($xremote, "new_view", $xml);
-
-    $xremote = $self->zMapGetXRemoteClientByName($self->slice_name());
-    $self->zMapRegisterClientRequest($xremote);
-
+    $self->zMapNewView($xremote);
     return;
 }
 
