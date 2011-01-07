@@ -146,33 +146,40 @@ sub _launchInAZMap {
 
     my $xremote_cache = $self->xremote_cache;
 
-    if (my $pid_list = $xremote_cache->get_pid_list()) {
-        if (scalar(@$pid_list) == 1) {
-            my $pid = $pid_list->[0];
-            if ($self->zMapGetXRemoteClientByName($self->slice_name())) {
-                $self->message(sprintf("Already launched in zmap with pid %d", $pid));
-            }
-            elsif (my $xr = $xremote_cache->get_client_for_action_pid("new_view", $pid)) {
-                $self->zMapPID($pid);
-                my $config =
-                    $self->formatZmapDefaults('ZMap', sources => $self->slice_name)
-                    . $self->zMapAceServerDefaults();
-                $self->zMapNewView($xr, $config);
-            }
-            else {
-
-                # couldn't find a client who can new_view, probably need to
-                open_clones($self->zMapZmapConnector, $self);
-            }
-        }
-        elsif (scalar(@$pid_list) == 0) {
-            cluck "Process id list is empty. Is zmap running?";
-        }
-        else {
-            cluck "More than one process id in list, How to choose?";
-        }
+    my $pid_list = $xremote_cache->get_pid_list;
+    unless($pid_list) {
+        warn "Failed to get a process id list from the cache. Is zmap running?";
+        return;
     }
-    else { cluck "Failed to get a process id list from the cache. Is zmap running?"; }
+
+    if (@{$pid_list} < 1) {
+        warn "Process id list is empty. Is zmap running?";
+        return;
+    }
+
+    if (@{$pid_list} > 1) {
+        warn "More than one process id in list, How to choose?";
+        return;
+    }
+
+    if ($self->zMapGetXRemoteClientByName($self->slice_name)) {
+        $self->message("Already launched in a ZMap");
+        return;
+    }
+
+    my ($pid) = @{$pid_list};
+    my $xremote = $xremote_cache->get_client_for_action_pid("new_view", $pid);
+    unless ($xremote) {
+        # couldn't find a client who can new_view, probably need to
+        open_clones($self->zMapZmapConnector, $self);
+        return;
+    }
+
+    $self->zMapPID($pid);
+    my $config =
+        $self->formatZmapDefaults('ZMap', sources => $self->slice_name)
+        . $self->zMapAceServerDefaults();
+    $self->zMapNewView($xremote, $config);
 
     return;
 }
