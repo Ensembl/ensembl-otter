@@ -217,10 +217,10 @@ sub zMapSendCommands {
     for(my $i = 0; $i < @xml; $i++){
         my ($status, $xmlHash) = zMapParseResponse($a[$i]);
         if ($status =~ /^2\d\d/) { # 200s
-            print STDERR "OK\n";
+            warn "OK\n";
         } else {
             my $error = $xmlHash->{'error'}{'message'};
-            print STDERR "ERROR: $a[$i]\n$error\n";
+            warn "ERROR: $a[$i]\n$error\n";
             $self->xremote_cache->remove_clients_to_bad_windows();
             die $error;
         }
@@ -1108,7 +1108,7 @@ sub zMapFeaturesLoaded {
     
     my $status = $xml->{request}->{status}->{value};
     
-    print "zmap loaded featuresets: ".$xml->{request}->{featureset}->{names}." status: $status\n";   
+    warn "zmap loaded featuresets: ".$xml->{request}->{featureset}->{names}." status: $status\n";   
     
     my $msg = $xml->{request}->{status}->{message};
     
@@ -1340,7 +1340,7 @@ sub zMapLoadFeatures {
 
     if (my $client = $self->zMapGetXRemoteClientByAction('load_features')) {
         
-        print "Got client for load_features\n" if $ZMAP_DEBUG;
+        warn "Got client for load_features\n" if $ZMAP_DEBUG;
         
         my $xml = Hum::XmlWriter->new;
         $xml->open_tag('zmap');
