@@ -144,15 +144,15 @@ sub draw {
     my $size = $self->font_size;
     my $row_height = int $size * 1.5;
     for (my $i = 0; $i < @dsl; $i++) {
-        my $set = $dsl[$i];
+        my $data_set = $dsl[$i];
         my $x = $size;
         my $y = $row_height * (1 + $i);
         $canvas->createText(
             $x, $y,
-            -text   => $set->name,
+            -text   => $data_set->name,
             -font   => $font,
             -anchor => 'nw',
-            -tags   => ['DataSet=' . $set->name],
+            -tags   => ['DataSet=' . $data_set->name],
             );
     }
     $self->fix_window_min_max_sizes;
