@@ -35,7 +35,7 @@ package Bio::Otter::EMBL::Factory;
 
 use strict;
 use warnings;
-use Carp qw{confess cluck};
+use Carp;
 use Hum::EMBL;
 use Hum::EMBL::FeatureSet;
 use Hum::EMBL::Exon;

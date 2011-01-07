@@ -7,7 +7,7 @@ package Bio::Otter::FromXML;
 
 use strict;
 use warnings;
-use Carp qw{ cluck confess };
+use Carp;
 
 use Bio::EnsEMBL::Exon;
 use Bio::EnsEMBL::Transcript;
