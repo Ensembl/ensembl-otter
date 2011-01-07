@@ -171,7 +171,7 @@ sub _launchInAZMap {
     my $xremote = $xremote_cache->get_client_for_action_pid("new_view", $pid);
     unless ($xremote) {
         # couldn't find a client who can new_view, probably need to
-        open_clones($self->zMapZmapConnector, $self);
+        $self->zMapOpenClones;
         return;
     }
 
@@ -1252,13 +1252,18 @@ sub zMapGetXRemoteClientByAction {
     return $client;
 }
 
-# open_clones - Displays the data in  a zmap.  This is not a method on
-# self,  but  a  standalone  function  taking a  ZMap::Connect  and  a
-# MenuCanvasWindow::XaceSeqChooser.
+# This is not a method on self, but a standalone function taking a
+# ZMap::Connect and a MenuCanvasWindow::XaceSeqChooser.
 
 sub open_clones {
     my ($zmap, $self) = @_;
     $zmap->post_respond_handler();    # clear the handler...
+    $self->zMapOpenClones;
+    return;
+}
+
+sub zMapOpenClones {
+    my ($self) = @_;
     my $xremote = $self->zMapGetXRemoteClientByName($self->main_window_name());
     return unless $self->zMapDoRequest($xremote, "new_zmap", qq!<zmap><request action="new_zmap"/></zmap>!);
     $xremote = $self->zMapGetXRemoteClientByName("ZMap");
