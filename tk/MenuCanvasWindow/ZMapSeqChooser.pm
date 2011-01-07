@@ -11,6 +11,7 @@ use ZMap::XRemoteCache;
 use Data::Dumper;
 use Hum::Conf qw{ PFETCH_SERVER_LIST };
 use XML::Simple;
+use Bio::Vega::Utils::XmlEscape qw{ xml_escape };
 use File::Path 'mkpath';
 use Config::IniFiles;
 
@@ -161,29 +162,11 @@ sub _launchInAZMap {
                 my $url = sprintf(q{%s://%s:%s@%s:%d?use_methods=true},
                     $protocol, $server->user, $server->pass, $server->host, $server->port);
 
-                my $config = $self->formatZmapDefaults('ZMap', sources => "$sequence");
-                $config .= $self->zMapAceServerDefaults();
-                $config =~ s/\&/&amp;/g;    # needs fully xml escaping really
+                my $config =
+                    $self->formatZmapDefaults('ZMap', sources => "$sequence")
+                    . $self->zMapAceServerDefaults();
 
-                my $xml = sprintf(
-                    q!<zmap>
- <request action="new_view">
-  <segment sequence="%s" start="1" end="0">
-   %s
-  </segment>
- </request>
-</zmap>
-                                  !, $sequence, $config
-                );
-                warn $xml;
-                return unless $self->zMapDoRequest($xr, "new_view", $xml);
-
-                if ($xr = $self->zMapGetXRemoteClientByName($self->slice_name())) {
-                    $self->zMapRegisterClientRequest($xr);
-                }
-                else {
-                    cluck "Failed to find the new xremote client";
-                }
+                $self->zMapNewView($xr, $config);
             }
             else {
 
@@ -1435,6 +1418,43 @@ sub zMapZoomToSubSeq {
     else {
         warn "Failed to get client for 'zoom_to'";
     }
+
+    return;
+}
+
+my $zmap_new_view_format = <<'FORMAT'
+<zmap>
+ <request action="new_view">
+  <segment sequence="%s" start="1" end="0">
+%s
+  </segment>
+ </request>
+</zmap>
+FORMAT
+    ;
+
+sub zMapNewView {
+    my ($self, $xremote, $config) = @_;
+
+    $config = "" unless defined $config;
+
+    my $slice_name = $self->slice_name;
+    my $xml = sprintf $zmap_new_view_format
+        , xml_escape($slice_name)
+        , xml_escape($config)
+        ;
+
+    unless ($self->zMapDoRequest($xremote, "new_view", $xml)) {
+        warn "Failed to create a new view";
+        return;
+    }
+
+    my $xremote_new = $self->zMapGetXRemoteClientByName($slice_name);
+    unless ($xremote_new) {
+        warn "Failed to find the new xremote client";
+        return;
+    }
+    $self->zMapRegisterClientRequest($xremote_new);
 
     return;
 }
