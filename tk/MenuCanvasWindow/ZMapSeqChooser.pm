@@ -4,7 +4,7 @@ package MenuCanvasWindow::ZMapSeqChooser;
 
 use strict;
 use warnings;
-use Carp qw{ cluck confess };
+use Carp;
 use ZMap::Connect;
 use Sys::Hostname;
 use ZMap::XRemoteCache;
@@ -1551,7 +1551,7 @@ sub zMapProcessNewClientXML {
         }
     }
     else {
-        cluck "malformed register client xml [no window id]";
+        warn "malformed register client xml [no window id]";
     }
 
     return;
@@ -1596,7 +1596,7 @@ sub RESPONSE_HANDLER {
 
     }
     else {
-        cluck "RESPONSE_HANDLER knows nothing about how to handle actions of type '$action'";
+        warn "RESPONSE_HANDLER knows nothing about how to handle actions of type '$action'";
     }
 
     return;
