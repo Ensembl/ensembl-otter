@@ -67,21 +67,21 @@ sub draw {
     my ($self) = @_;
 
     my $max     = $self->chromosomes_per_row;
-    my $set     = [];
-    my @all_set = ($set);
+    my $chr_set = [];
+    my @all_chr_set = ($chr_set);
     foreach my $chr ( $self->get_all_Chromosomes ) {
-        push ( @$set, $chr );
-        if ( @$set >= $max ) {
-            $set = [];
-            push ( @all_set, $set );
+        push ( @$chr_set, $chr );
+        if ( @$chr_set >= $max ) {
+            $chr_set = [];
+            push ( @all_chr_set, $chr_set );
         }
     }
 
     my $pad = $self->pad;
     my ( $x, $y ) = ( $pad, $pad );
-    foreach my $set (@all_set) {
-        next unless @$set;
-        $y += $self->draw_chromsome_set( $x, $y, $set );
+    foreach my $chr_set (@all_chr_set) {
+        next unless @$chr_set;
+        $y += $self->draw_chromsome_set( $x, $y, $chr_set );
         $y += $pad;
     }
     
@@ -150,20 +150,20 @@ sub draw_legend {
 }
 
 sub draw_chromsome_set {
-    my ( $self, $x, $y, $set ) = @_;
+    my ( $self, $x, $y, $chr_set ) = @_;
 
-    warn sprintf "Drawing set of %d chromsomes\n", scalar @$set;
+    warn sprintf "Drawing set of %d chromsomes\n", scalar @$chr_set;
 
     my $scale          = $self->Mb_per_pixel;
     my $canvas         = $self->canvas;
     my $pad            = $self->pad;
     my $max_chr_height = 0;
-    foreach my $chr (@$set) {
+    foreach my $chr (@$chr_set) {
         my $h = $chr->height($self);
         $max_chr_height = $h if $h > $max_chr_height;
     }
 
-    foreach my $chr (@$set) {
+    foreach my $chr (@$chr_set) {
         $chr->set_initial_and_terminal_bands;
         my $chr_y = $y + $max_chr_height - $chr->height($self);
         $chr->draw( $self, $x, $chr_y );
