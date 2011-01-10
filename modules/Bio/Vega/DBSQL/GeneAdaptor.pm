@@ -178,11 +178,13 @@ sub fetch_stable_id_by_name {
             $join = "m.gene_id = ma.gene_id";
         }
         else {
-            $attrib_value =~ /(.*)-\d+.*/;     # eg, ABO-001
-            $attrib_value =~ /(.*\.\d+).*/;    # want sth. like RP11-195F19.20, trim away eg, -001, -002-2-2
+            # $attrib_value =~ /(.*)-\d+.*/;     # eg, ABO-001
+            # want sth. like RP11-195F19.20, trim away eg, -001, -002-2-2
+            my ($attrib_value_2) =
+                $attrib_value =~ /(.*\.\d+).*/;
 
             # BCM:NM_032242_26281 (OTTHUMG00000136748)
-            $attrib_value = $1 ? $1 : $attrib_value;
+            $attrib_value = $attrib_value_2 if defined $attrib_value_2;
             $join = "m.transcript_id = ma.transcript_id";
         }
 
