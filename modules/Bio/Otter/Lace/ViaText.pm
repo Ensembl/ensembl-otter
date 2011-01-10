@@ -186,8 +186,7 @@ sub GenerateFeatures {
 sub generate_unless_hashed {
     my ($feature, $parent_hash_key, $seen_hash, $analysis_name) = @_;
 
-    ref($feature) =~ /::(\w+)$/;
-    my $feature_type = $1;
+    my ($feature_type) = ref($feature) =~ /::(\w+)$/;
 
     my $feature_subhash = $LangDesc{$feature_type};
 
