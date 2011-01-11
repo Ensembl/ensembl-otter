@@ -37,9 +37,12 @@ sub DESTROY {
 
 sub make_ace {
     my ($self) = @_;
+    
+    # New top level object to generate whole chromosome coordinates
+    my $ace_str = $self->make_ace_chr_assembly;
 
     # Assembly object from chromosome slice
-    my $ace_str = $self->make_ace_assembly;
+    $ace_str .= $self->make_ace_assembly;
     
     # Objects for each genomic clone
     $ace_str .= $self->make_ace_contigs;
@@ -254,6 +257,18 @@ sub make_assembly_name {
         $chr_slice->seq_region_name,
         $chr_slice->start,
         $chr_slice->end;
+}
+
+sub make_ace_chr_assembly {
+    my ($self) = @_;
+    
+    my $chr_slice = $self->get_ChromosomeSlice;
+
+    my $ace = Hum::Ace::AceText->new_from_class_and_name('Sequence', $chr_slice->seq_region_name);
+    $ace->add_tag('AGP_Fragment',
+        $self->make_assembly_name, $chr_slice->start, $chr_slice->end,
+        'Align', $chr_slice->start, 1, $chr_slice->length,
+        );
 }
 
 sub make_ace_assembly {
