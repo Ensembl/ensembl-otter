@@ -240,9 +240,11 @@ sub set_biotype_status_from_transcripts {
     my $biotype = 'processed_transcript';
     if (my @pseudo = grep { /pseudo/i } keys %tsct_biotype) {
         if (@pseudo > 1) {
-            confess sprintf "More than one psedogene type in gene %s (%s)",
-                $self->get_all_Attributes('name')->[0]->value,
-                join(', ', @pseudo);
+            throw(
+                sprintf "More than one psedogene type in gene %s (%s)",
+                    $self->get_all_Attributes('name')->[0]->value,
+                    join(', ', @pseudo)
+                );
         }
         else {
             $biotype = $pseudo[0];
