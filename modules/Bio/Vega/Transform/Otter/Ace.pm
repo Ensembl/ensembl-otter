@@ -269,6 +269,8 @@ sub make_ace_chr_assembly {
         $self->make_assembly_name, $chr_slice->start, $chr_slice->end,
         'Align', $chr_slice->start, 1, $chr_slice->length,
         );
+
+    return $ace;
 }
 
 sub make_ace_assembly {
