@@ -9,6 +9,7 @@ use Carp;
 
 use Fcntl qw{ O_WRONLY O_CREAT };
 use Config::IniFiles;
+use URI::Escape qw{ uri_escape };
 
 use Bio::Vega::Transform::Otter::Ace;
 use Bio::Vega::AceConverter;
@@ -678,7 +679,7 @@ sub gff_http_script_arguments {
     my $arguments = [ ];
     while ( my ( $key, $value ) = each %{$params} ) {
         next unless defined $value;
-        push @{$arguments}, join "=", $key, $value;
+        push @$arguments, join "=", $key, uri_escape($value);
     }
 
     return $arguments; 
