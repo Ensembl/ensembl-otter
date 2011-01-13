@@ -533,7 +533,7 @@ sub gff_header {
                 $end,
                 '.',      # score
                 $gff_hash->{'strand'},
-                $ens_phase_to_gff_frame{ $tsl->start_exon->phase },    # frame
+                $ens_phase_to_gff_frame{ $tsl->start_Exon->phase },    # frame
                 qq{Class "Sequence"; Name $name}
             );
         }
