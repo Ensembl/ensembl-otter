@@ -270,7 +270,7 @@ sub make_ace_chr_assembly {
         'Align', $chr_slice->start, 1, $chr_slice->length,
         );
 
-    return $ace;
+    return $$ace;
 }
 
 sub make_ace_assembly {
