@@ -216,7 +216,8 @@ sub options_from_file {
     my $ini;
     print STDERR "Trying $file\n" if $DEBUG_CONFIG;
     tie %$ini, 'Config::IniFiles', ( -file => $file, %OPTIONS_TO_TIE)
-      or confess "Error opening '$file':\n", join("\n", @Config::IniFiles::errors);
+        or confess "Error opening '$file':\n",
+        join("\n", @Config::IniFiles::errors); ## no critic(Variables::ProhibitPackageVars)
     return $ini;
 }
 
