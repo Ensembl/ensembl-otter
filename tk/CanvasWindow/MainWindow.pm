@@ -10,7 +10,7 @@ use Tk;
 
 # Work around UTF8 conversion bug
 # "selection conversion left too many bytes unconverted"
-$Tk::encodeFallback = 1;
+$Tk::encodeFallback = 1; ## no critic(Variables::ProhibitPackageVars)
 
 use base qw( MainWindow );
 

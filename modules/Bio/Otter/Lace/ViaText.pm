@@ -32,7 +32,7 @@ use Bio::Vega::PredictionTranscript;
 use base ('Exporter');
 our @EXPORT_OK = qw( %LangDesc &ParseFeatures &GenerateFeatures );
 
-our %LangDesc = (
+our %LangDesc = ( ## no critic(Variables::ProhibitPackageVars)
     'SimpleFeature' => {
         -constructor => 'Bio::EnsEMBL::SimpleFeature',
         -optnames    => [ qw(start end strand display_label score) ],

@@ -9,7 +9,7 @@ use warnings;
 #### Stop anyone else loading their own BlastableVersion
 $INC{q(BlastableVersion.pm)}++;
 
-use vars qw(%versions $debug $revision);
+use vars qw(%versions $debug $revision); ## no critic(Variables::ProhibitPackageVars)
 
 $debug = 0;
 $revision='1.5';
