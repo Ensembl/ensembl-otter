@@ -1010,8 +1010,6 @@ sub zmap_feature_evidence_xml {
 
     my $feat_name_is_prefixed =
         $feat_name =~ /\A[[:alnum:]]{2}:/;
-    warn sprintf "Feature name '%s' is prefixed: %s\n"
-        , $feat_name, $feat_name_is_prefixed;
 
     my $subseq_list = [];
     foreach my $name ($self->list_all_SubSeq_names) {
