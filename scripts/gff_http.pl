@@ -4,12 +4,16 @@ use strict;
 use warnings;
 
 use Digest::MD5 qw(md5_hex);
-use URI::Escape qw(uri_escape);
+use URI::Escape qw(uri_escape uri_unescape);
 
 my $DEBUG   = 1;
 my $LOG     = 1;
 
-my %args = map { split(/=/) } @ARGV;
+my %args;
+foreach my $pair (@ARGV) {
+    my ($key, $val) = split /=/, $pair;
+    $args{uri_unescape($key)} = uri_unescape($val);
+}
 
 # pull off arguments meant for us
 

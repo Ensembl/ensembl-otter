@@ -679,7 +679,7 @@ sub gff_http_script_arguments {
     my $arguments = [ ];
     while ( my ( $key, $value ) = each %{$params} ) {
         next unless defined $value;
-        push @$arguments, join "=", $key, uri_escape($value);
+        push @$arguments, join "=", uri_escape($key), uri_escape($value);
     }
 
     return $arguments; 
