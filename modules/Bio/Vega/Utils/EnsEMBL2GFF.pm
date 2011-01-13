@@ -356,6 +356,15 @@ sub gff_header {
 
     package Bio::EnsEMBL::Gene;
 
+    sub synthetic_gene_name {
+        my ($self, $sgn) = @_;
+        
+        if ($sgn) {
+            $self->{'_synthetic_gene_name'} = $sgn;
+        }
+        return $self->{'_synthetic_gene_name'}
+    }
+
     sub to_gff {
         my ($self, %args) = @_;
 
@@ -402,6 +411,9 @@ sub gff_header {
         my $gff_string = '';
         if (@tsct_for_gff) {
             my $extra_attrs = $self->make_extra_attributes(%args);
+            if (my $sgn = $self->synthetic_gene_name) {
+                $args{'gene_name'} = $sgn;
+            }
             foreach my $tsct (@tsct_for_gff) {
                 $gff_string .= $tsct->to_gff(%args, extra_attrs => $extra_attrs) . "\n";
             }
@@ -420,7 +432,7 @@ sub gff_header {
             if ($url =~ /pfam\.sanger\.ac\.uk/) {
                 foreach my $xr (@{$self->get_all_DBEntries}) {
                     if ($xr->dbname() eq 'PFAM') {
-                        $args{'gene_name'} = $xr->display_id;
+                        $self->synthetic_gene_name($xr->display_id);
                         my $name = sprintf "%s.%d", $xr->display_id, $gene_numeric_id;
                         my $url = sprintf $url, $xr->primary_id;
                         $extra_attrs->{'Locus'} = qq{"$name"};
@@ -439,7 +451,7 @@ sub gff_header {
         
         unless ($extra_attrs->{'Locus'}) {
             if (my $xr = $self->display_xref) {
-                $args{'gene_name'} = $xr->display_id;
+                $self->synthetic_gene_name($xr->display_id);
                 my $name = sprintf "%s.%d", $xr->display_id, $gene_numeric_id;
                 $extra_attrs->{'Locus'} = qq{"$name"};
             }
