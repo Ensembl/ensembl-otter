@@ -128,6 +128,7 @@ sub server_params {
         metakey         => $self->metakey,
         filter_module   => $self->filter_module,
         swap_strands    => $self->swap_strands,
+        url_string      => $self->url_string,
         client          => 'otterlace',
     };
 }
