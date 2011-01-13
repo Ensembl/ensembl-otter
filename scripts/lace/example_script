@@ -1,11 +1,11 @@
 #!/usr/bin/env perl
 
-use warnings;
-
-
 ### example_script
 
 use strict;
+use warnings;
+
+
 use Bio::Otter::Lace::Defaults;
 
 {
