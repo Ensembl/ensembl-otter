@@ -13,7 +13,7 @@ use Bio::Otter::ServerScriptSupport;
 use Bio::Otter::ToXML;
 use Bio::Vega::Utils::EnsEMBL2GFF;
 
-
+### Why not put this in Bio::Vega::Utils::EnsEMBL2GFF?
 sub Bio::EnsEMBL::Gene::propagate_slice {
     my ($gene, $slice) = @_;
 
@@ -33,76 +33,55 @@ my $server = Bio::Otter::ServerScriptSupport->new;
 my $gff_string = '';
 
 eval {
-    my @analysis_names = $server->param('analysis') ? split(/,/, $server->param('analysis')) :
-                                                      ( undef );
-    my $transcript_analyses  = $server->param('transcript_analyses')  || '';
-    my $translation_xref_dbs = $server->param('translation_xref_dbs') || '';
-    my $rebase               = $server->param('rebase');
-    my $gff_source           = $server->param('gff_source');
-    my $gff_seqname          = $server->param('gff_seqname');
 
-    my $allowed_transcript_analyses_hash = $transcript_analyses
-        ? { map { $_ => 1 } split(/,/, $transcript_analyses) }
-        : '';
-    my $allowed_translation_xref_db_hash = $translation_xref_dbs
-        ? { map { $_ => 1 } split(/,/, $translation_xref_dbs) }
-        : '';
+    my @fetch_mapped_feature_params = ();
+    foreach my $param (qw{ cs name type start end metakey csver csver_remote }) {
+        my $val = $server->param($param);
+        push(@fetch_mapped_feature_params, defined($val) ? $val : '');
+    }
 
+    my %gff_genes_params;
+    foreach my $param (
+        qw{
+        rebase
+        gff_source
+        gff_seqname
+        url_string
+        transcript_analyses
+        translation_xref_dbs
+        }
+      )
+    {
+        $gff_genes_params{$param} = $server->param($param);
+    }
+
+    my @analysis_names =
+      $server->param('analysis')
+      ? split(/,/, $server->param('analysis'))
+      : (undef);
+    # $analysis_name will be 'undef' if we are fetching genes of all analyses.
     foreach my $analysis_name (@analysis_names) {
+
         # third parameter of $slice->get_all_Genes() helps preventing lazy-loading of transcripts
-        my $genes = $server->fetch_mapped_features('gene', 'get_all_Genes', [$analysis_name, undef, 1],
-            map { defined($server->param($_)) ? $server->param($_) : '' } qw(cs name type start end metakey csver csver_remote)
-        );
-        
-        $gff_string ||= $genes->[0]->slice->gff_header(rebase => $rebase, gff_seqname => $gff_seqname) if @$genes;
+        my $genes = $server->fetch_mapped_features('gene', 'get_all_Genes', [ $analysis_name, undef, 1 ],
+            @fetch_mapped_feature_params,);
 
         foreach my $gene (@$genes) {
-
-            # filter the transcripts according to the transcript_analyses & translation_xref_db params
-
-            for my $tsct (@{ $gene->get_all_Transcripts } ) {
-                
-                if (!$allowed_transcript_analyses_hash || 
-                    $allowed_transcript_analyses_hash->{$tsct->analysis->logic_name}) {
-                    
-                    my $allowed = ! $allowed_translation_xref_db_hash;
-                    
-                    if (!$allowed) { 
-                        if (my $trl = $tsct->translation) {
-                            for my $xr (@{ $trl->get_all_DBEntries }) {
-                                if($allowed_translation_xref_db_hash->{$xr->dbname}) {
-                                    $allowed = 1;
-                                    last;
-                                }
-                            }
-                        }
-                    }
-                    
-                    if ($allowed) {
-                        
-                        $gff_string .= $tsct->to_gff(
-                            rebase      => $rebase, 
-                            gff_source  => $gff_source, 
-                            gff_seqname => $gff_seqname,
-                            extra_attrs => { Locus => '"' . $gene->display_id . '"' },
-                        )."\n";
-                        
-                    }
-                }
-            }
-            
-            #$gff_string .= $gene->to_gff(rebase => $rebase, gff_source => $gff_source, gff_seqname => $gff_seqname)."\n";
+            $gff_string .= $gene->to_gff(%gff_genes_params);
         }
     }
-    
-    unless ($gff_string) {
+
+    if ($gff_string) {
+        $gff_string = $genes->[0]->slice->gff_header(%gff_genes_params) . $gff_string;
+    } else {
         $gff_string = $server->empty_gff_header;
     }
 };
 
 if ($@) {
     $server->error_exit("Error fetching genes:\n" . $@);
-} else {
+}
+else {
     $server->send_response($gff_string, 0, 1);
 }
 
