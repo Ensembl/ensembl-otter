@@ -1088,7 +1088,7 @@ sub zMapFeaturesLoaded {
     
     my $status = $xml->{request}->{status}->{value};
     
-    warn "zmap loaded featuresets: ".$xml->{request}->{featureset}->{names}." status: $status\n";   
+    # warn "zmap loaded featuresets: ".$xml->{request}->{featureset}->{names}." status: $status\n";   
     
     my $msg = $xml->{request}->{status}->{message};
     
