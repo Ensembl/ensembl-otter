@@ -7,7 +7,7 @@
 use strict;
 use warnings;
 
-use SangerPaths qw{ core bioperl123 ensembl58 otter54 humpub };
+use SangerPaths qw{ core bioperl123 ensembl59 otter54 humpub };
 use SangerWeb;
 
 use IO::Socket;
