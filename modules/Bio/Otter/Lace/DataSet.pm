@@ -43,20 +43,17 @@ sub _filter_by_name {
 
     my $config = $self->config_section("filter.${name}");
 
-    my $module = $config->{'module'};
+    # Delete so that we don't try to call non-existant method "module" below
+    my $module = delete $config->{'module'};
     die "No module supplied for filter '$name'" unless $module;
-    $self->load_filter_module($module);
-    die "Failed to require module '$module' for filter '$name': $@" if $@;
+    $self->load_filter_module($module);    # Fatal on failure
 
     my $filter = $module->new;
     $filter->name($name) if $filter->can('name');
 
-    delete $config->{'module'}; # so we don't try to call 'module'
-    while ( my ( $meth, $arg ) = each %{$config} ) {
-        die "Unrecognised configuration parameter '$meth' "
-            . "used in filter '$name', "
-            . "check your .otter_config"
-            unless $filter->can($meth);
+    while (my ($meth, $arg) = each %{$config}) {
+        die "Unrecognised configuration parameter '$meth' used in filter '$name'; check your .otter_config"
+          unless $filter->can($meth);
         $filter->$meth($arg);
     }
 
