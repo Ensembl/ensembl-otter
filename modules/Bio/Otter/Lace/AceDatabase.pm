@@ -570,8 +570,8 @@ sub reload_filter_state {
     my $filters = $self->filters;
 
     for my $filter_name ($cfg->Sections) {
-        print "Reloading $filter_name\n";
-        my $state_hash = $filters->{$filter_name}{state};
+        print STDERR "Reloading $filter_name\n";
+        my $state_hash = $filters->{$filter_name}{'state'};
         for my $state (@FILTER_STATES) {
             my $setting = $cfg->val($filter_name, $state);
             $state_hash->{$state} = $setting if defined $setting;
@@ -587,7 +587,7 @@ sub save_filter_state {
     my $cfg = $self->_filter_state;
 
     while ( my ($name, $value) = each %{$self->filters} ) {
-        my $state_hash = $value->{state};
+        my $state_hash = $value->{'state'};
         for my $state (@FILTER_STATES) {
             if (defined(my $setting = $state_hash->{$state})) {
                 $cfg->AddSection($name) unless $cfg->SectionExists($name);
@@ -603,7 +603,7 @@ sub save_filter_state {
 
 sub _filter_state {
     my ($self) = @_;
-    unless ($self->{_filter_state}) {
+    unless ($self->{'_filter_state'}) {
         my $file = $self->home.'/'.$FILTERS_STATE_FILE;
         my $cfg;
         
@@ -620,10 +620,10 @@ sub _filter_state {
         
         die "Failed to create Config object from $file" unless $cfg;
         
-        $self->{_filter_state} = $cfg;
+        $self->{'_filter_state'} = $cfg;
     }
     
-    return $self->{_filter_state};
+    return $self->{'_filter_state'};
 }
 
 sub filters {
