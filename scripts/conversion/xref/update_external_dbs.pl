@@ -104,7 +104,7 @@ my $production_pass=$support->param('production_pass') || '';
 
 my $production_dsn = sprintf( 'DBI:mysql:ensembl_production:host=%s;port=%d', $production_host, $production_port );
 my $production_dbh = DBI->connect( $production_dsn, $production_user, $production_pass, { 'PrintError' => 1 } );
-my $production_sth = $production_dbh->prepare('SELECT * FROM master_external_db');
+my $production_sth = $production_dbh->prepare('SELECT * FROM external_db');
 $production_sth->execute();
 
 my @rows;
