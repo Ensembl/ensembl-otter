@@ -1265,6 +1265,7 @@ sub zMapOpenClones {
     my $xremote = $self->zMapGetXRemoteClientByName($self->main_window_name());
     return unless $self->zMapDoRequest($xremote, "new_zmap", qq!<zmap><request action="new_zmap"/></zmap>!);
     $xremote = $self->zMapGetXRemoteClientByName("ZMap");
+    $self->zMapRegisterClientRequest($xremote);
     $self->zMapNewView($xremote);
     return;
 }
