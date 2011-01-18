@@ -782,15 +782,17 @@ sub transfer_gene {
   # $Data::Dumper::Maxdepth=2;
   # warn Dumper $lgene;
   my $needs_updateing=0;
-
+  my @transcripts = @{$lgene->get_all_Transcripts};
  TRANS:
-  foreach my $transcript (@{$lgene->get_all_Transcripts}){
+  foreach my $transcript (@transcripts){
+
     #this really should work you'd have thought, however cannot get it to in the time I have (error deep within Slice Adaptor)
     #for now continue to remove these after transfer
     # - perhaps we have to recalculate start and stop at this stage ? surely not ?
     if ( grep { $_->value eq 'not for VEGA' } @{$transcript->get_all_Attributes('remark')}  ) {
       $support->log("Didn't transfer 'not_for_Vega' transcript ".$transcript->stable_id."\n",2);
-      # remove from gene object
+      # # #remove from gene object
+      $needs_updateing=1;
       my $i=0;
       while ($i< scalar @{$lgene->{'_transcript_array'}} ){
         if($lgene->{'_transcript_array'}->[$i]->stable_id eq $transcript->stable_id){
@@ -818,11 +820,11 @@ sub transfer_gene {
       }
     }
   }
-
-  # if($needs_updateing){#if we deleted a transcript the biotype * start/stop need updating
+  if($needs_updateing){#if we deleted a transcript the biotype * start/stop need updating
     $lgene->set_biotype_status_from_transcripts;# update biotype;
     #update start & end
-    foreach my $transcript (@{$lgene->get_all_Transcripts}){
+    @transcripts = @{$lgene->get_all_Transcripts};
+    foreach my $transcript (@transcripts){
       if ($transcript->start <  $lgene->start){
         $lgene->start=$transcript->start;
       }
@@ -830,10 +832,10 @@ sub transfer_gene {
         $lgene->end=$transcript->end;
       }
     }
-  # }
+  }
   
   unless ($found_trans) {
-    $support->log_warning("No transcripts found for gene ".$lgene->stable_id,". Skipping...\n");
+    $support->log_warning("No transcripts found for gene ".$lgene->stable_id." Skipping...\n");
     return 0;
   }
 
