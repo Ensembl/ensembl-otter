@@ -308,7 +308,7 @@ sub array_comp {
 
   return @diff;
 }
-sub sid_2_atype {
+sub sid_2_atype_UNSAFE { # implementation is not safe (e.g. Gorilla has OTTGORT00000000037), but also is apparently not called from anywhere
 
   my ($dataset, $stable_id)= @_;
 
