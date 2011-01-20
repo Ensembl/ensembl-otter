@@ -96,6 +96,9 @@ sub evidence_type_and_name_from_text {
     my $type_name = {};
     foreach my $acc (@$acc_list) {
         my ($type, $full_name) = $self->type_and_name_from_accession($acc);
+        unless ($type and $full_name) {
+            next;
+        }
         my $name_list = $type_name->{$type} ||= [];
         push(@$name_list, $full_name);
     }
