@@ -569,14 +569,22 @@ sub reload_filter_state {
     my $cfg = $self->_filter_state;
     my $filters = $self->filters;
 
-    for my $filter_name ($cfg->Sections) {
-        print STDERR "Reloading state from file for $filter_name\n";
+    foreach my $filter_name ($cfg->Sections) {
+        if ($filters->{$filter_name}) {
+            print STDERR "Reloading state from file for $filter_name\n";
+        } else {
+            print STDERR "Skipping obsolete coloumn '$filter_name'\n";
+            $cfg->DeleteSection($filter_name);
+            next;
+        }
         my $state_hash = $filters->{$filter_name}{'state'};
         for my $state (@FILTER_STATES) {
             my $setting = $cfg->val($filter_name, $state);
             $state_hash->{$state} = $setting if defined $setting;
         }
     }
+    
+    $cfg->RewriteConfig;
 
     return;
 }
