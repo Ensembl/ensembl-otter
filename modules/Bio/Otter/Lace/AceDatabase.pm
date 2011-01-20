@@ -654,6 +654,7 @@ sub script_dir {
             }
         }
     }
+    die "Could not find script_dir (ensembl-otter/scripts)" unless $script_dir;
     return $script_dir;
 }
 
