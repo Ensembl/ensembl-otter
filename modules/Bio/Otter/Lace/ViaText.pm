@@ -24,9 +24,9 @@ use Bio::EnsEMBL::Map::Ditag;
 use Bio::EnsEMBL::Map::DitagFeature;
 use Bio::EnsEMBL::Variation::Variation;
 use Bio::EnsEMBL::Variation::VariationFeature;
-use Bio::Otter::DnaDnaAlignFeature;
-use Bio::Otter::DnaPepAlignFeature;
-use Bio::Otter::HitDescription;
+use Bio::Vega::DnaDnaAlignFeature;
+use Bio::Vega::DnaPepAlignFeature;
+use Bio::Vega::HitDescription;
 use Bio::Vega::PredictionTranscript;
 
 use base ('Exporter');
@@ -41,7 +41,7 @@ our %LangDesc = ( ## no critic(Variables::ProhibitPackageVars)
     },
 
     'HitDescription' => {
-        -constructor => 'Bio::Otter::HitDescription',
+        -constructor => 'Bio::Vega::HitDescription',
         -optnames    => [ qw(hit_name db_name taxon_id hit_length description) ],
         -hash_by     => 'hit_name',
     },
@@ -50,7 +50,7 @@ our %LangDesc = ( ## no critic(Variables::ProhibitPackageVars)
         -optnames    => [ qw(start end strand hstart hend hstrand percent_id score cigar_string hseqname) ],
         -reference   => ['HitDescription', 'hseqname',
                                            sub{ my($af,$hd)=@_;
-                                                    bless $af,'Bio::Otter::DnaDnaAlignFeature';
+                                                    bless $af,'Bio::Vega::DnaDnaAlignFeature';
                                                     $af->{'_hit_description'} = $hd;
                                            },
                                            sub{ my $af = shift @_;
@@ -64,7 +64,7 @@ our %LangDesc = ( ## no critic(Variables::ProhibitPackageVars)
         -optnames    => [ qw(start end strand hstart hend hstrand percent_id score cigar_string hseqname) ],
         -reference   => ['HitDescription', 'hseqname',
                                            sub{ my($af,$hd)=@_;
-                                                    bless $af,'Bio::Otter::DnaPepAlignFeature';
+                                                    bless $af,'Bio::Vega::DnaPepAlignFeature';
                                                     $af->{'_hit_description'} = $hd;
                                            },
                                            sub{ my $af = shift @_;

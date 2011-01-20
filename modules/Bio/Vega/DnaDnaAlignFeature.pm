@@ -1,7 +1,7 @@
 
-### Bio::Otter::DnaDnaAlignFeature
+### Bio::Vega::DnaDnaAlignFeature
 
-package Bio::Otter::DnaDnaAlignFeature;
+package Bio::Vega::DnaDnaAlignFeature;
 
 use strict;
 use warnings;
@@ -17,16 +17,16 @@ sub get_HitDescription {
 
 __END__
 
-=head1 NAME - Bio::Otter::DnaDnaAlignFeature
+=head1 NAME - Bio::Vega::DnaDnaAlignFeature
 
 =head1 DESCRIPTION
 
-Extends its Bio::Otter::DnaDnaAlignFeature
+Extends its Bio::EnsEMBL::DnaDnaAlignFeature
 baseclass to add the method:
 
 =head1 get_HitDescription
 
-Returns the Bio::Otter::HitDescription object
+Returns the Bio::Vega::HitDescription object
 attached to the feature.
 
 =head1 AUTHOR

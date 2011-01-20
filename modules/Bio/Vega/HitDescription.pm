@@ -1,7 +1,7 @@
 
-### Bio::Otter::HitDescription
+### Bio::Vega::HitDescription
 
-package Bio::Otter::HitDescription;
+package Bio::Vega::HitDescription;
 
 use strict;
 use warnings;
@@ -75,7 +75,7 @@ sub db_name {
 
 __END__
 
-=head1 NAME - Bio::Otter::HitDescription
+=head1 NAME - Bio::Vega::HitDescription
 
 =head1 DESCRIPTION
 
