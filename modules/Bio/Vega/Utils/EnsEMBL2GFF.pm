@@ -857,7 +857,7 @@ sub gff_header {
 
 {
 
-    package Bio::Otter::DnaDnaAlignFeature;
+    package Bio::Vega::DnaDnaAlignFeature;
 
     sub _gff_hash {
         my ($self, @args) = @_;
@@ -871,7 +871,7 @@ sub gff_header {
 
 {
 
-    package Bio::Otter::DnaPepAlignFeature;
+    package Bio::Vega::DnaPepAlignFeature;
 
     sub _gff_hash {
         my ($self, @args) = @_;

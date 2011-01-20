@@ -1,7 +1,7 @@
 
-### Bio::Otter::DnaPepAlignFeature
+### Bio::Vega::DnaPepAlignFeature
 
-package Bio::Otter::DnaPepAlignFeature;
+package Bio::Vega::DnaPepAlignFeature;
 
 use strict;
 use warnings;
@@ -23,17 +23,21 @@ sub frame { # has to match the name of the method in Exon.pm
 
 __END__
 
-=head1 NAME - Bio::Otter::DnaPepAlignFeature
+=head1 NAME - Bio::Vega::DnaPepAlignFeature
 
 =head1 DESCRIPTION
 
-Extends its Bio::Otter::DnaPepAlignFeature
-baseclass to add the method:
+Extends its Bio::EnsEMBL::DnaPepAlignFeature
+baseclass to add the methods:
 
 =head1 get_HitDescription
 
-Returns the Bio::Otter::HitDescription object
+Returns the Bio::Vega::HitDescription object
 attached to the feature.
+
+=head1 frame
+
+<method doc to be completed>
 
 =head1 AUTHOR
 

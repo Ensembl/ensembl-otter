@@ -419,7 +419,7 @@ sub enrich {
             hit_taxon _taxon_id
             hit_db _db_name
         )},
-        'Bio::Otter::HitDescription',
+        'Bio::Vega::HitDescription',
         \%hd_hash,
     );
 
@@ -441,13 +441,13 @@ sub enrich {
 sub Bio::EnsEMBL::Slice::get_all_DnaDnaAlignFeatures {
     my ($self, @args) = @_;
     my $naked_features = $self->get_all_DnaAlignFeatures(@args);
-    return enrich($naked_features, 'Bio::Otter::DnaDnaAlignFeature');
+    return enrich($naked_features, 'Bio::Vega::DnaDnaAlignFeature');
 }
 
 sub Bio::EnsEMBL::Slice::get_all_DnaPepAlignFeatures {
     my ($self, @args) = @_;
     my $naked_features = $self->get_all_ProteinAlignFeatures(@args);
-    return enrich($naked_features, 'Bio::Otter::DnaPepAlignFeature');
+    return enrich($naked_features, 'Bio::Vega::DnaPepAlignFeature');
 }
 
 #################### ideally the preceding snippet should live in an Otter/Vega adaptor ############
