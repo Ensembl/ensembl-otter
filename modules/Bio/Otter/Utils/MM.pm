@@ -200,7 +200,9 @@ WHERE accession_version LIKE ?
                     $res{$key} = [ 'EST', "Em:$version" ];
                 }
                 elsif ($type eq 'mRNA') {
-                    $res{$key} = [ 'mRNA', "Em:$version" ];
+                    # Here we return cDNA, which is more technically correct since
+                    # both ESTs and cDNAs are mRNAs.
+                    $res{$key} = [ 'cDNA', "Em:$version" ];
                 }
                 elsif ($type eq 'protein') {
 
