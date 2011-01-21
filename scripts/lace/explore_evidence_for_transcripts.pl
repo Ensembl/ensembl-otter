@@ -10,6 +10,9 @@ use List::Util qw(min max);
 use Bio::Otter::Lace::Defaults;
 use Bio::Otter::Utils::MM;
 
+use Bio::Vega::Enrich::SliceGetAllAlignFeatures; # Enriched Bio::EnsEMBL::Slice::get_all_DnaDnaAlignFeatures 
+                                                 # (with hit descriptions)
+
 use Bio::SeqIO;
 use Bio::EnsEMBL::Pipeline::SeqFetcher;
 use Bio::Factory::EMBOSS;       # EMBOSS needs to be on PATH - /software/pubseq/bin/EMBOSS-5.0.0/bin
@@ -271,6 +274,7 @@ sub exon_align_features {
 
     my $dem = $opts->{dump_exon_matches};
     my $dev = ($dem and $dem > 1);
+    my $dep = ($dem and $dem > 2);
 
     if ($strand < 0) {
         $exons = [ reverse @$exons ];
@@ -281,20 +285,24 @@ sub exon_align_features {
     foreach my $i (0 .. $#$exons) {
         my $exon = $exons->[$i];
         $exon_length += $exon->length;
-        reportf("verbose:EA:2", "%d %d-%d (%d) %d [%d]", $i, $exon->seq_region_start, $exon->seq_region_end,
-                $exon->strand, $exon->length, $exon->slice) if $dev;
+        reportf("verbose:EA:2", "%d %d-%d (%d) %d [%s]", $i, $exon->seq_region_start, $exon->seq_region_end,
+                $exon->strand, $exon->length, $exon->slice->display_id) if $dev;
     }
     reportf("verbose:EA:2", "total length %d", $exon_length) if $dev;
 
     foreach my $fc (@$feature_chains) {
 
-        reportf("verbose:EA:1", "Feature chain '%s' (%s): [SC:%d AL:%d %%:%.1f]",
-                $fc->{hseqname}, $fc->{logic_name}, $fc->{score}, $fc->{alignment_length}, $fc->{percent_id}) if $dev;
+        reportf("verbose:EA:1", "Feature chain '%s' (%s): [SC:%d AL:%d %%:%.1f] FL:%d",
+                $fc->{hseqname}, $fc->{logic_name}, $fc->{score}, $fc->{alignment_length}, $fc->{percent_id},
+                $fc->{features}->[0]->get_HitDescription->hit_length,
+               ) if $dev;
 
         my $start_exon       = 0;
         my $total_overlap    = 0;
         my $exon_match_count = 0;
+        my @exon_match_map   = ();
         my $score            = 0;
+        my $penalty          = 0;
 
         foreach my $f (@{$fc->{features}}) {
 
@@ -317,22 +325,30 @@ sub exon_align_features {
 
                 if ($exon->overlaps($ft)) {
                     my $overlap = calc_overlap($exon, $f);
-                    reportf("verbose:EA:3", "overlaps exon %d by %d", $i, $overlap) if $dev;
+                    reportf("verbose:EA:3", "overlaps exon %d by %d (%d-%d hcoords %d-%d)",
+                            $i, $overlap, $f->seq_region_start, $f->seq_region_end, $f->hstart, $f->hend) if $dev;
+                    if ($match) {
+                        report("verbose:EA:3", "FEATURE SPANS EXONS") if $dev;
+                        $penalty += 1000;
+                    }
                     $match = 1;
                     ++$exon_match_count;
+                    push @exon_match_map, $i;
                     $total_overlap += $overlap;
                     $score += $f->score * $overlap / $f->alignment_length;
                 } else {
-                    reportf("verbose:EA:3", "does not overlap exon %d", $i) if $dev;
+                    reportf("verbose:EA:3", "does not overlap exon %d", $i) if $dep;
                     $start_exon++ if not $match;
                 }
             }
         }
 
         $fc->{exon_match_count} = $exon_match_count;
+        $fc->{exon_match_map}   = \@exon_match_map;
         $fc->{total_overlap}    = $total_overlap;
         $fc->{coverage}         = $total_overlap/$exon_length*100.0;
         $fc->{exon_score}       = $score;
+        $fc->{penalty}          = $penalty;
 
         if ($dev) {
             reportf("verbose:EA:1", " => %d/%d exons, overlap length %d, coverage %.1f%%, score %d",
@@ -545,6 +561,9 @@ sub process_transcript {
 
         reportf("normal:PT:0", "Transcript %s, strand %d, exons %d", $td->stable_id, $td->strand, scalar(@$exons));
 
+        # DEBUG
+        $DB::single = 1 if $td->stable_id eq 'OTTHUMT00000077359';
+
         my $gene = $gene_adaptor->fetch_by_transcript_id($tid);
 
         my $min_start = min($td->seq_region_start, $gene->seq_region_start);
@@ -583,10 +602,10 @@ sub process_transcript {
             $p_features = [];
             my $p_f_seen = {};
             foreach my $logic_name ( @{$opts->{logic_names}} ) {
-                feature_augment($p_features, $p_f_seen, $p_slice->get_all_DnaAlignFeatures($logic_name));
+                feature_augment($p_features, $p_f_seen, $p_slice->get_all_DnaDnaAlignFeatures($logic_name));
             }
         } else {
-            $p_features = $p_slice->get_all_DnaAlignFeatures();
+            $p_features = $p_slice->get_all_DnaDnaAlignFeatures();
         }
         report("verbose:PT:1", "Got ", scalar @$p_features, " features");
 
@@ -595,13 +614,18 @@ sub process_transcript {
 
         # Not sure whether to sort on exon_score or coverage.
         #
-        my @per_exon_by_score = sort { $b->{exon_score} <=> $a->{exon_score} } @$per_exon_scoring;
+        my @per_exon_by_score = sort { $a->{penalty}    <=> $b->{penalty}
+                                                        ||
+                                       $b->{exon_score} <=> $a->{exon_score} } @$per_exon_scoring;
         my $per_exon_by_score_map = make_ranked_map(\@per_exon_by_score, 'hseqname');
 
         my $tfe = $per_exon_by_score[0];
         if ($tfe) {
-            reportf("normal:PT:1", "Top exon-scored feature: %s [Score:%d Overlap:%d Coverage:%.1f%%]",
-                    $tfe->{hseqname}, $tfe->{exon_score}, $tfe->{total_overlap}, $tfe->{coverage});
+            reportf("normal:PT:1",
+                    "Top exon-scored feature: %s [Score:%d Overlap:%d Coverage:%.1f%% Exons: %d (%s)]",
+                    $tfe->{hseqname},
+                    $tfe->{exon_score}, $tfe->{total_overlap}, $tfe->{coverage}, $tfe->{exon_match_count},
+                    join(',', @{$tfe->{exon_match_map}}) );
         }
         
         if ($opts->{dump_seq}) {
@@ -622,11 +646,11 @@ sub process_transcript {
             }
 
             my $e_name = $evi->name;
-            my @at = get_accession_type($e_name);
-            reportf("verbose:PT:1", "Evidence: %s - %s [%s %s]", $e_name, $evi->type, $at[0], $at[1]);
-            if ($e_name ne $at[1] and $at[1] =~ m/^$e_name/) {
-                reportf("verbose:PT:1", "Adding version, %s => %s", $e_name, $at[1]);
-                $e_name = $at[1];
+            my ($a_type, $a_ver) = get_accession_type($e_name);
+            reportf("verbose:PT:1", "Evidence: %s - %s [%s %s]", $e_name, $evi->type, $a_type, $a_ver);
+            if ($e_name ne $a_ver and $a_ver =~ m/^$e_name/) {
+                reportf("verbose:PT:1", "Adding version, %s => %s", $e_name, $a_ver);
+                $e_name = $a_ver;
             }
             my ($prefix, $short_name) = $e_name =~ m/^(\w+)?:?([\w\.]+)$/ ;
             $short_name ||= $e_name;
@@ -639,6 +663,8 @@ sub process_transcript {
                 reportf("normal:PT:2",
                         "Found exon-scored feature match for %s at rank %d with %d features, logic %s",
                         $short_name, $e_hit->{rank}, $e_hit->{count}, $e_hit->{logic_name} );
+                reportf("normal:PT:2", "Exons: %d (%s)", $e_hit->{exon_match_count}, 
+                        join(',', @{$e_hit->{exon_match_map}}));
 
                 $hit_feature = $e_hit->{features}->[0];
                 $feature_chain_hit{$short_name} = 1;
@@ -652,7 +678,7 @@ sub process_transcript {
 
                   # First check it's not hiding under a different logic name, if we previously narrowed
                   if ($opts->{logic_names}) {
-                      $all_dna_features ||= $p_slice->get_all_DnaAlignFeatures();
+                      $all_dna_features ||= $p_slice->get_all_DnaDnaAlignFeatures();
                       report("verbose:PT:2", "Got ", scalar @$all_dna_features, " features using all logic names");
                       my @match_features = grep { $_->hseqname eq $short_name } @$all_dna_features;
                       if (@match_features) {
