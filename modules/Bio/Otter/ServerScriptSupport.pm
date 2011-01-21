@@ -10,6 +10,7 @@ use Bio::Otter::Lace::TempFile;
 use Bio::Otter::Lace::ViaText qw( %LangDesc &GenerateFeatures );
 use Bio::Vega::DBSQL::SimpleBindingAdaptor;
 use Bio::Vega::Utils::EnsEMBL2GFF;
+use Bio::Vega::Enrich::SliceGetAllAlignFeatures;
 
 use IO::Compress::Gzip qw(gzip);
 
@@ -392,65 +393,6 @@ sub fetch_Author_obj {
     }
     return $author_obj;
 }
-
-#################### ideally the following snippet should live in an Otter/Vega adaptor ############
-
-sub enrich {
-    my ($afs, $enriched_class) = @_;
-
-    my $server = Bio::Otter::ServerScriptSupport->new;
-
-        # Put the names into the hit_description hash:
-    my %hd_hash = ();
-    foreach my $af (@$afs) {
-        $hd_hash{$af->hseqname()} = '';
-    }
-
-    # Fetch the hit descriptions from the pipeline
-    my $pdbc = $server->satellite_dba( '' )->dbc();
-    my $hd_adaptor = Bio::Vega::DBSQL::SimpleBindingAdaptor->new( $pdbc );
-    $hd_adaptor->fetch_into_hash(
-        'hit_description',
-        'hit_name',
-        { qw(
-            hit_name _hit_name
-            hit_length _hit_length
-            hit_description _description
-            hit_taxon _taxon_id
-            hit_db _db_name
-        )},
-        'Bio::Vega::HitDescription',
-        \%hd_hash,
-    );
-
-    foreach my $af (@$afs) {
-        if(my $hd = $hd_hash{$af->hseqname()}) {
-            bless $af, $enriched_class;
-            $af->{'_hit_description'} = $hd;
-        }
-    }
-
-    return $afs;
-}
-
-# It is  a lucky  coincidence that these  two classes need  to be  enriched, and
-# their fetching methods in Bio::EnsEMBL::Slice are not systematically named. We
-# make  use of  this coincidence  by enriching  the methods  without subclassing
-# Bio::EnsEMBL::Slice
-
-sub Bio::EnsEMBL::Slice::get_all_DnaDnaAlignFeatures {
-    my ($self, @args) = @_;
-    my $naked_features = $self->get_all_DnaAlignFeatures(@args);
-    return enrich($naked_features, 'Bio::Vega::DnaDnaAlignFeature');
-}
-
-sub Bio::EnsEMBL::Slice::get_all_DnaPepAlignFeatures {
-    my ($self, @args) = @_;
-    my $naked_features = $self->get_all_ProteinAlignFeatures(@args);
-    return enrich($naked_features, 'Bio::Vega::DnaPepAlignFeature');
-}
-
-#################### ideally the preceding snippet should live in an Otter/Vega adaptor ############
 
 sub get_requested_features {
 
