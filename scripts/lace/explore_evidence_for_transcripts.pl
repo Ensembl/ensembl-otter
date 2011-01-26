@@ -21,6 +21,22 @@ use Bio::AlignIO;
 
 use Hum::Pfetch;
 
+use Evi::CollectionFilter;
+use Evi::EviCollection;
+package Evi::EviCollection;
+
+# Should be in EviCollection but let's play here for now
+
+sub new {
+    my $pkg = shift;
+    my $self = bless {}, $pkg;
+    $self->{_collection} = {};  # hash{by_analysis} of lists of chains
+    $self->{_name2chains} = {}; # sublists of chains indexed by name
+    return $self;
+}
+
+package main;
+
 my $opts;
 
 {
@@ -311,19 +327,12 @@ sub exon_align_features {
                     $f->score, $f->alignment_length, $f->percent_id) if $dev;
 
             my $match = undef;
-            my $ft;
 
             foreach my $i ($start_exon .. $#$exons) {
 
                 my $exon = $exons->[$i];
+                if ($exon->overlaps($f)) {
 
-                # Feature start/end are rel feature not rel seq_region or transcript/exon, so...
-                #
-                if (not defined $ft or $ft->slice != $exon->slice) {
-                    $ft = $f->transfer($exon->slice);
-                }
-
-                if ($exon->overlaps($ft)) {
                     my $overlap = calc_overlap($exon, $f);
                     reportf("verbose:EA:3", "overlaps exon %d by %d (%d-%d hcoords %d-%d)",
                             $i, $overlap, $f->seq_region_start, $f->seq_region_end, $f->hstart, $f->hend) if $dev;
@@ -336,6 +345,7 @@ sub exon_align_features {
                     push @exon_match_map, $i;
                     $total_overlap += $overlap;
                     $score += $f->score * $overlap / $f->alignment_length;
+
                 } else {
                     reportf("verbose:EA:3", "does not overlap exon %d", $i) if $dep;
                     $start_exon++ if not $match;
@@ -378,7 +388,12 @@ sub make_ranked_map {
         my $ele = $sorted->[$i];
         $ele->{rank} = $i;
 
-        my $key = $ele->{$map_key};
+        my $key;
+        if (UNIVERSAL::can($ele,$map_key)) {
+            $key = $ele->$map_key;
+        } else {
+            $key = $ele->{$map_key};
+        }
 
         # Only point to top-ranked hit for key
         #
@@ -423,12 +438,91 @@ sub feature_augment {
     return $n;
 }
 
-my ($factory, $comp_app);
+sub reverse_seq {
+    my $bio_seq = shift;
 
-sub get_comp_app {
-    $factory ||= Bio::Factory::EMBOSS->new();
-    $comp_app ||= $factory->program('water');
-    return $comp_app;
+    my $rev_str = $bio_seq->seq;
+    Bio::EnsEMBL::Utils::Sequence::reverse_comp(\$rev_str);
+    my $rev_bio_seq = Bio::Seq->new(
+        -seq        => $rev_str,
+        -display_id => $bio_seq->display_id . ".rev",
+        );
+
+    return $rev_bio_seq;
+}
+
+{
+    my ($factory, $comp_app);
+
+    sub get_comp_app {
+        $factory ||= Bio::Factory::EMBOSS->new();
+        $comp_app ||= $factory->program('water');
+        return $comp_app;
+    }
+}
+
+sub compare_fetched_features_to_ref {
+    my $ref_seq = shift;
+    my $feature_list = shift;
+    my $fetcher = shift;
+    my $do_reverse = shift;
+
+    my @feature_seqs;
+
+  FEATURE: foreach my $f_name (@$feature_list) {
+
+        my $f_seq = &$fetcher($f_name, $ref_seq);
+        next FEATURE unless $f_seq;
+
+        push @feature_seqs, $f_seq;
+
+        if ($do_reverse) {
+            push @feature_seqs, reverse_seq($f_seq);
+        }
+  }
+
+    # Compare them
+    my $comp_app = get_comp_app();
+    my $comp_fh = File::Temp->new();
+    my $comp_outfile = $comp_fh->filename;
+
+    $comp_app->run({-asequence => $ref_seq,
+                    -bsequence => \@feature_seqs,
+                    -outfile   => $comp_outfile,
+                    -aformat   => 'srspair',
+                   });
+
+    my $alnin = Bio::AlignIO->new(-format => 'emboss',
+                                  -fh     => $comp_fh);
+
+    my @aln_results;
+    while ( my $aln = $alnin->next_aln ) {
+        push @aln_results, $aln;
+    }
+
+    return \@aln_results;
+}
+
+sub pfetch_feature_max_len {
+    my $feature_name = shift;
+    my $ref_seq = shift;
+
+    my $f_seq = pfetch($feature_name);
+    unless ($f_seq) {
+        rcarpf("all:CE:0", "Cannot pfetch sequence for '%s'", $feature_name);
+        return undef;
+    }
+    
+    if (    $opts->{max_length}
+            and ($f_seq->length > $opts->{max_length})
+            and ($ref_seq->length > $opts->{max_length})
+        ) {
+        rcarpf("all:CE:0", "Ref seq %s and feature %s both too long, skipping",
+               $ref_seq->display_id, $feature_name);
+        return undef;
+    }
+
+    return $f_seq;
 }
 
 sub compare_evidence {
@@ -436,37 +530,6 @@ sub compare_evidence {
     my $evidence_name = shift;
     my $evidence      = shift;
     my $hit_feature   = shift;
-
-    my $evi_seq = pfetch($evidence_name);
-    unless ($evi_seq) {
-        my $msg = sprintf("Cannot pfetch sequence for '%s'", $evidence_name);
-        report("all:CE:0", $msg);
-        carp $msg;
-        return undef;
-    }
-
-    if (    $opts->{max_length}
-            and ($evi_seq->length > $opts->{max_length})
-            and ($transcript->seq->length > $opts->{max_length})
-        ) {
-        my $msg = sprintf("Transcript %s and evidence %s both too long, skipping",
-                          $transcript->stable_id, $evidence_name);
-        report("all:CE:0", $msg);
-        carp $msg;
-        return undef;
-    }
-
-    # Compare them
-    my $comp_app = get_comp_app();
-    my $comp_fh = File::Temp->new();
-    my $comp_outfile = $comp_fh->filename;
-
-    my $rev_str = $evi_seq->seq;
-    Bio::EnsEMBL::Utils::Sequence::reverse_comp(\$rev_str);
-    my $rev_evi_seq = Bio::Seq->new(
-        -seq        => $rev_str,
-        -display_id => $evi_seq->display_id . ".rev",
-        );
 
     my ($msg, $exp);
     if ($hit_feature) {
@@ -482,18 +545,12 @@ sub compare_evidence {
     }
     report("normal:CE:2", $msg);
 
-    $comp_app->run({-asequence => $transcript->seq,
-                    -bsequence => [$evi_seq, $rev_evi_seq],
-                    -outfile   => $comp_outfile,
-                    -aformat   => 'srspair',
-                   });
+    my $aln_results = compare_fetched_features_to_ref($transcript->seq,
+                                                      [$evidence_name],
+                                                      \&pfetch_feature_max_len,
+                                                      1);
 
-    my $alnin = Bio::AlignIO->new(-format => 'emboss',
-                                  -fh     => $comp_fh);
-
-    my @aln_results;
-    while ( my $aln = $alnin->next_aln ) {
-        push @aln_results, $aln;
+    foreach my $aln (@$aln_results) {
         # process the alignment -- these will be Bio::SimpleAlign objects
         my $name = $aln->get_seq_by_pos(2)->display_id;
         if ($opts->{verbose}) {
@@ -512,13 +569,13 @@ sub compare_evidence {
                     $aln->length,
                     $aln->percentage_identity,
                     $transcript->seq->length,
-                    $evi_seq->length,
+                    $aln->get_seq_by_pos(2)->length,
                 );
         }
     }
 
-    my $top_hit = (sort { $b->score <=> $a->score } @aln_results)[0];
-    if ($top_hit == $aln_results[0]) {
+    my $top_hit = (sort { $b->score <=> $a->score } @$aln_results)[0];
+    if ($top_hit == $aln_results->[0]) {
         report("verbose:CE:2", "Top match on forward");
         if ($exp) {
             if ($exp == 1) {
@@ -544,6 +601,34 @@ sub compare_evidence {
 my ($transcript_adaptor, $gene_adaptor, $slice_adaptor, $dna_feature_adaptor);
 my ($pipe_dba, $p_slice_adaptor);
 
+my $evi_filter = [
+    Evi::SortCriterion->new('Analysis','analysis',
+                            [],'alphabetic','is','Est2genome'),
+    Evi::SortCriterion->new('Supported introns', 'trans_supported_introns',
+                            [], 'numeric','descending',1),
+    Evi::SortCriterion->new('Supported junctions', 'trans_supported_junctions',
+                            [], 'numeric','descending'),
+    Evi::SortCriterion->new('Supported % of transcript','transcript_coverage',
+                            [], 'numeric','descending'),
+    Evi::SortCriterion->new('Dangling ends (bases)','contrasupported_length',
+                            [], 'numeric','ascending',10),
+    ];
+
+sub report_ec_hit {
+    my $report_control = shift;
+    my $ec_hit = shift;
+    my $ts = shift;
+    reportf($report_control,
+            "Found EviChain feature match for %s at rank %d with %d features, logic %s",
+            $ec_hit->name, $ec_hit->{rank}, scalar @{$ec_hit->afs_lp}, $ec_hit->analysis );
+    reportf($report_control,
+            "Supported introns: %d, junctions: %d; TS cov %.1f%%; contra len %d",
+            $ec_hit->trans_supported_introns($ts),
+            $ec_hit->trans_supported_junctions($ts),
+            $ec_hit->transcript_coverage($ts),
+            $ec_hit->contrasupported_length($ts));
+}
+
 sub process_transcript {
     my ($otter_dba, $tid, $opts) = @_;
 
@@ -557,13 +642,6 @@ sub process_transcript {
     my $td = $transcript_adaptor->fetch_by_dbID($tid);
     if ($td) {
 
-        my $exons = $td->get_all_Exons;
-
-        reportf("normal:PT:0", "Transcript %s, strand %d, exons %d", $td->stable_id, $td->strand, scalar(@$exons));
-
-        # DEBUG
-        $DB::single = 1 if $td->stable_id eq 'OTTHUMT00000077359';
-
         my $gene = $gene_adaptor->fetch_by_transcript_id($tid);
 
         my $min_start = min($td->seq_region_start, $gene->seq_region_start);
@@ -571,6 +649,26 @@ sub process_transcript {
 
         # Do we want to extend the region by a flanking distance in each direction?
         #
+        my $p_slice = $p_slice_adaptor->fetch_by_region($gene->coord_system_name,
+                                                        $gene->seq_region_name,
+                                                        $gene->start,
+                                                        $gene->end);
+
+        # Make sure transcript has loaded exons before transferring it
+        $td->get_all_Exons;
+
+        my $p_td = $td->transfer($p_slice);
+
+        my $exons = $p_td->get_all_Exons;
+
+        reportf("normal:PT:0", "Transcript %s, strand %d, exons %d", $p_td->stable_id, $p_td->strand, scalar(@$exons));
+
+        # DEBUG
+        $DB::single = 1 if $p_td->stable_id eq 'OTTHUMT00000076914';
+        $DB::single = 1 if $p_td->stable_id eq 'OTTHUMT00000077359';
+
+        # This really wants to move before $p_slice fetch, left here to allow comparison of outputs
+        # It doesn't even reflect reality!
         reportf("verbose:PT:1",
                "Fetching from pipeline DB: %s [%s] @ %s %s from %d to %d (g %d to %d) (ts %d to %d)",
                $gene->stable_id,
@@ -581,14 +679,9 @@ sub process_transcript {
                $max_end,
                $gene->seq_region_start,
                $gene->seq_region_end,
-               $td->seq_region_start,
-               $td->seq_region_end,
+               $p_td->seq_region_start,
+               $p_td->seq_region_end,
             );
-
-        my $p_slice = $p_slice_adaptor->fetch_by_region($gene->coord_system_name,
-                                                        $gene->seq_region_name,
-                                                        $gene->start,
-                                                        $gene->end);
 
         # Is this interesting in practice? - probably not!
         #
@@ -598,19 +691,26 @@ sub process_transcript {
         }
         
         my $p_features;
+        my $evi_coll = Evi::EviCollection->new;
+        $evi_coll->rna_analyses_lp([]);     # shouldn't be necessary
+        $evi_coll->protein_analyses_lp([]); # shouldn't be necessary
         if ($opts->{logic_names}) {
             $p_features = [];
             my $p_f_seen = {};
             foreach my $logic_name ( @{$opts->{logic_names}} ) {
-                feature_augment($p_features, $p_f_seen, $p_slice->get_all_DnaDnaAlignFeatures($logic_name));
+                my $features = $p_slice->get_all_DnaDnaAlignFeatures($logic_name);
+                feature_augment($p_features, $p_f_seen, $features);
+                $evi_coll->add_collection($features, $logic_name);
+                push @{$evi_coll->rna_analyses_lp}, $logic_name;
             }
         } else {
             $p_features = $p_slice->get_all_DnaDnaAlignFeatures();
+            # FIXME - what to do with $evi_coll
         }
         report("verbose:PT:1", "Got ", scalar @$p_features, " features");
 
         my $feature_chains     = process_align_features($p_features, $opts);
-        my $per_exon_scoring   = exon_align_features($exons, $td->strand, $feature_chains, $opts);
+        my $per_exon_scoring   = exon_align_features($exons, $p_td->strand, $feature_chains, $opts);
 
         # Not sure whether to sort on exon_score or coverage.
         #
@@ -627,18 +727,34 @@ sub process_transcript {
                     $tfe->{exon_score}, $tfe->{total_overlap}, $tfe->{coverage}, $tfe->{exon_match_count},
                     join(',', @{$tfe->{exon_match_map}}) );
         }
-        
+
+        my $cfs = Evi::CollectionFilter->new(
+            'Explore Evidence (EST)',
+            $evi_coll,
+            $evi_filter,
+            $evi_filter,
+            1,
+            );
+        $cfs->current_transcript($p_td);
+        my $cfs_results = $cfs->results_lp;
+        reportf("normal:PT:1", "Got %d results from CollectionFilter", scalar @$cfs_results);
+        my $cfs_map;
+        if (@$cfs_results) {
+            reportf("normal:PT:1", "Top CF result: %s", $cfs_results->[0]->name);
+            $cfs_map = make_ranked_map($cfs_results, 'name');
+        }
+
         if ($opts->{dump_seq}) {
             setup_io() unless $seqio_out;
             $seq_str_io->truncate(0);   # reset to start of $seq_str
-            $seqio_out->write_seq($td->seq);
+            $seqio_out->write_seq($p_td->seq);
             print $seq_str;
         }
 
         my $all_dna_features;
         my %feature_chain_hit;
 
-        my @evidence = @{$td->evidence_list};
+        my @evidence = @{$p_td->evidence_list};
         EVIDENCE: foreach my $evi (@evidence) {
 
             if ($opts->{evi_type}) {
@@ -657,9 +773,15 @@ sub process_transcript {
 
             my $hit_feature = undef;
 
+            my $cfs_hit = $cfs_map ? $cfs_map->{$short_name} : undef;
+            if ($cfs_hit) {
+                report_ec_hit("normal:PT:2", $cfs_hit, $p_td);
+                $hit_feature = $cfs_hit->get_first_exon; # may get overridden below
+                $feature_chain_hit{$short_name} = 1;
+            }
+
             my $e_hit = $per_exon_by_score_map->{$short_name};
             if ($e_hit) {
-
                 reportf("normal:PT:2",
                         "Found exon-scored feature match for %s at rank %d with %d features, logic %s",
                         $short_name, $e_hit->{rank}, $e_hit->{count}, $e_hit->{logic_name} );
@@ -668,8 +790,9 @@ sub process_transcript {
 
                 $hit_feature = $e_hit->{features}->[0];
                 $feature_chain_hit{$short_name} = 1;
- 
-            } else {
+            }
+
+            unless ($e_hit or $cfs_hit) {
                 report("normal:PT:2", "No feature match for $short_name");
 
                 # Do a little more digging 
@@ -730,7 +853,7 @@ sub process_transcript {
                 } # FEATURE_HUNT
             }
 
-            my $top_hit = compare_evidence($td, $e_name, $evi, $hit_feature);
+            my $top_hit = compare_evidence($p_td, $e_name, $evi, $hit_feature);
             next EVIDENCE unless $top_hit;
 
         } # EVIDENCE
@@ -745,7 +868,10 @@ sub process_transcript {
                 last FEATURE_CHAIN;
             } else {
                 reportf("normal:PT:1", "Evidence didn't include '%s' at rank %d", $fc->{hseqname}, $fc->{rank});
-                my $top_hit = compare_evidence($td, $fc->{hseqname}, undef, $fc->{features}->[0]);
+                if (my $ec = $cfs_map->{$fc->{hseqname}}) {
+                    report_ec_hit("normal:PT:1", $ec, $p_td);
+                }
+                my $top_hit = compare_evidence($p_td, $fc->{hseqname}, undef, $fc->{features}->[0]);
             }
         } # FEATURE_CHAIN
 
@@ -799,6 +925,15 @@ sub reportf {
     my $format = shift;
     my $msg = sprintf($format, @_);
     print $prefix, $msg, "\n";
+}
+
+sub rcarpf {
+    my $cond = shift;
+    my $format = shift;
+
+    my $msg = sprintf($format, @_);
+    report($cond, $msg);
+    carp $msg;
 }
 
 __END__
