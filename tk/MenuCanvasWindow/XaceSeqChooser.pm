@@ -739,22 +739,14 @@ sub show_lcd_dialog {
 sub populate_clone_menu {
     my ($self) = @_;
 
-    my $clones_by_name =
-        $self->{_clones_by_name} = { };
-    my $clones_by_accession_version =
-        $self->{_clones_by_accession_version} = { };
-
     my $clone_menu = $self->clone_menu;
     foreach my $clone ($self->Assembly->get_all_Clones) {
-        my $name = $clone->clone_name;
-        $clones_by_name->{$name} = $clone;
-        my $accession_version = $clone->accession_version;
-        $clones_by_accession_version->{$accession_version} = $clone;
         $clone_menu->add('command',
-            -label          => $name,
+            # NB: $clone->name ne $clone->clone_name
+            -label          => $clone->clone_name,
             # Not an accelerator - just for formatting!
-            -accelerator    => $accession_version,
-            -command        => sub{ $self->edit_Clone_by_name($name) },
+            -accelerator    => $clone->accession_version,
+            -command        => sub{ $self->edit_Clone_by_name($clone->name) },
             );
     }
 
@@ -1735,10 +1727,7 @@ sub edit_Clone {
 sub edit_Clone_by_name {
     my ($self, $name) = @_;
 
-    my $clone = $self->{_clones_by_name}{$name};
-    confess sprintf "No clone with this name: '%s'", $name
-        unless $clone;
-
+    my $clone = $self->Assembly->get_Clone($name);
     $self->edit_Clone($clone);
 
     return;
@@ -1747,12 +1736,7 @@ sub edit_Clone_by_name {
 sub edit_Clone_by_accession_version {
     my ($self, $accession_version) = @_;
 
-    my $clone = $self->{_clones_by_accession_version}{$accession_version};
-    confess 
-        sprintf "No clone with this accession.version: '%s'",
-        $accession_version
-        unless $clone;
-
+    my $clone = $self->Assembly->get_Clone_by_accession_version($accession_version);
     $self->edit_Clone($clone);
 
     return;
