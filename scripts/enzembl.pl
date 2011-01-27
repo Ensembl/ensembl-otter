@@ -326,6 +326,7 @@ if (%features) {
 
 # pull the data from each of the databases
 
+my $gff_header;
 my $gff;
 my %sources_to_types;
 my $sequence_name;
@@ -500,12 +501,12 @@ for my $db (keys %dbs) {
         # and append the slice's gff representation
         
         print "Database $db:\n" if $verbose;
-        
+
+        $gff_header ||=
+            ($t_slice || $slice)->gff_header(include_dna => 1);
         $gff .= $slice->to_gff(
                 analyses                        => $dbs{$db}->{analyses},
                 feature_types           => $dbs{$db}->{feature_types},
-                include_dna             => 1,
-                include_header          => !$gff,
                 sources_to_types        => \%sources_to_types,
                 verbose                         => $verbose,
                 target_slice        => $t_slice,
@@ -630,7 +631,7 @@ my ($gff_fh, $gff_filename) = tempfile(
         DIR => '/tmp'
 );
 
-print $gff_fh $gff;
+print $gff_fh $gff_header . $gff;
 
 # build up ZMap file
 
