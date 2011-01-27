@@ -286,23 +286,15 @@ eval {
         1, # do the short version of mapping, without the target database
     );
     
-    if (@$features) {
-        
-        $gff_string = $features->[0]->slice->gff_header(rebase => $rebase, gff_seqname => $gff_seqname);
-        
-        for my $f (@$features) {
-            $gff_string .= $f->to_gff(rebase => $rebase, gff_source => $gff_source, gff_seqname => $gff_seqname)."\n";
-        }
-    }
-    else {
-        $gff_string = $server->empty_gff_header;
+    for my $f (@$features) {
+        $gff_string .= $f->to_gff(rebase => $rebase, gff_source => $gff_source, gff_seqname => $gff_seqname)."\n";
     }
 };
 
 if ($@) {
     $server->error_exit($@);
 } else {
-    $server->send_response($gff_string, 0, 1);
+    $server->send_response($server->gff_header . $gff_string, 0, 1);
 }
 
 1;
