@@ -349,20 +349,20 @@ foreach my $chr (@chr_sorted) {
       }
     }
 
-    if ($gene_has_support and ! $support->param('dry_run')) {
-      $support->log_verbose("Storing supporting evidence... ".
-			      $support->date_and_mem."\n", 1);
-      foreach my $se (keys %se_hash) {
-	eval {
-	  $sth->execute(split(":", $se));
-	};
-	if ($@) {
-	  $support->log_warning("$gsi: $@\n", 1);
-	}
-      }
-      $support->log_verbose("Done storing evidence. ".
-			      $support->date_and_mem."\n", 1);
-    }
+#    if ($gene_has_support and ! $support->param('dry_run')) {
+#      $support->log_verbose("Storing supporting evidence... ".
+#			      $support->date_and_mem."\n", 1);
+#      foreach my $se (keys %se_hash) {
+#	eval {
+#	  $sth->execute(split(":", $se));
+#	};
+#	if ($@) {
+#	  $support->log_warning("$gsi: $@\n", 1);
+#	}
+#      }
+#      $support->log_verbose("Done storing evidence. ".
+#			      $support->date_and_mem."\n", 1);
+#    }
   }
   $support->log("\nProcessed $chr_stats{genes} genes (of ".scalar @$genes." on chromosome $chr), $chr_stats{transcripts} transcripts, $chr_stats{exons} exons.\n");
   $support->log("Done with chromosome $chr. ".$support->date_and_mem."\n\n");
