@@ -15,7 +15,7 @@ my $dba = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
 
 my $result_dba = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
     -host   => 'otterpipe2',
-    -port   => 3303,
+    -port   => 3323,
     -user   => 'ottadmin',
     -pass   => 'lutralutra',
     -dbname => 'gr5_zebrafish_solexa',

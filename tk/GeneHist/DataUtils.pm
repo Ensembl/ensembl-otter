@@ -326,7 +326,7 @@ sub sid_2_atype_UNSAFE { # implementation is not safe (e.g. Gorilla has OTTGORT0
   my $host = 'otterpipe2';
   my $user = 'ottro';
   my $pass = '';
-  my $port = 3303;
+  my $port = 3323;
 
   my $dbnames = {
                  human_sp1 => 'ck1_human_new_history',

@@ -10,7 +10,7 @@ with all the needed assemblies
 values from HEADCODE run:
 
 ensembl-HEAD/misc-scripts/attribute_types/upload_attributes.pl \
-    -host otterlive -user ottroot -port 3301 -pass xx -dbnames loutre_'species' \
+    -host otterlive -user ottroot -port 3324 -pass xx -dbnames loutre_'species' \
     -file attrib_type.txt
 
 1.2) Make a dump of the database so that we can
@@ -91,7 +91,7 @@ Alternatively, to quickly see which gene dbid is not dumped,
 4) Take a dump of the loutre_'species' before
 loading, incase something goes wrong:
 
-  mysqldump --opt -u ottroot -p -P 3301 -h otterlive \
+  mysqldump --opt -u ottroot -p -P 3324 -h otterlive \
     loutre_'species' > loutre_'species'.dump
 
 5) CHECK that translation_stable_id does not have a
@@ -150,7 +150,7 @@ INSERT INTO meta VALUES (null, 'prefix.primary', 'LDR');
 Run ensembl-otter/scripts/lace/patch_transcript_modified_time \
     -dataset loutre_dataset_name -port 33999 > outfile
 
-grep "UPDATE" outfile | mysql -uottadmin -plutralutra -P3301 -hotterlive loutre_'species'
+grep "UPDATE" outfile | mysql -uottadmin -plutralutra -P3324 -hotterlive loutre_'species'
 
 ------------------------------------------------
 

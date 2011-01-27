@@ -32,7 +32,7 @@ foreach my $ctg (@$ctgs ){
   $ctgID_ctgname->{$ctg->dbID} = $ctg->name;
 };
 
-my $new_otter_dbh = DBI->connect("DBI:mysql:$new_otter_db:otterlive:3301", 'ottadmin', $passwd,
+my $new_otter_dbh = DBI->connect("DBI:mysql:$new_otter_db:otterlive:3324", 'ottadmin', $passwd,
 						 {RaiseError => 1, AutoCommit => 0}) || die "cannot connect to $new_otter_db, $DBI::errstr";
 
 my $ctgname_2_seqRegionID = convert_ctg_name_2_seq_regon_id($new_otter_dbh);

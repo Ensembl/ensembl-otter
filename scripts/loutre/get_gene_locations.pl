@@ -17,7 +17,7 @@ here is an example commandline
 
 ./get_gene_location.pl
 -host otterlive
--port 3301
+-port 3324
 -dbname loutre_human
 -user pipuser
 -pass *****

@@ -15,7 +15,7 @@ use Net::Netrc;
     umask(002);
 
     my $host = 'otterlive';
-    my $port = '3301';
+    my $port = '3324';
     my $mach = Net::Netrc->lookup($host);
     my $user = $mach->login;
     my $password = $mach->password;

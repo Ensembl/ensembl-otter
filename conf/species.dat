@@ -1,10 +1,10 @@
 [defaults]
 HOST        otterlive
-PORT        3301
+PORT        3324
 USER        ottadmin
 PASS        lutralutra
 DNA_HOST    otterlive
-DNA_PORT    3301
+DNA_PORT    3324
 DNA_USER    ottadmin
 DNA_PASS    lutralutra
 HEADCODE    1
@@ -78,71 +78,71 @@ DBNAME      loutre_sordaria
 [nod_mouse]
 DBNAME      ck1_nod_idd
 HOST        otterpipe2
-PORT        3303
+PORT        3323
 DNA_DBNAME  ck1_nod_idd
 DNA_HOST    otterpipe2
-DNA_PORT    3303
+DNA_PORT    3323
 RESTRICTED  1
 
 [test_exonerate]
 DBNAME      ml6_loutre_mouse
 HOST        otterpipe2
-PORT        3303
+PORT        3323
 RESTRICTED  1
 
 [gr5_loutre_filter]
 DBNAME      gr5_loutre_filter
 HOST        otterpipe2
-PORT        3303
+PORT        3323
 RESTRICTED  1
 
 [human_test]
 ALIAS       human
 DBNAME      jgrg_human_test
 HOST        otterpipe2
-PORT        3303
+PORT        3323
 RESTRICTED  1
 
 [mouse_test]
 ALIAS       mouse
 DBNAME      jgrg_mouse_test
 HOST        otterpipe2
-PORT        3303
+PORT        3323
 DNA_DBNAME  loutre_mouse
 DNA_HOST    otterlive
-DNA_PORT    3301
+DNA_PORT    3324
 RESTRICTED  1
 
 [pig_test]
 ALIAS       pig
 DBNAME      jgrg_pig_test
 HOST        otterpipe2
-PORT        3303
+PORT        3323
 DNA_DBNAME  loutre_pig
 DNA_HOST    otterlive
-DNA_PORT    3301
+DNA_PORT    3324
 RESTRICTED  1
 
 
 [nmd_mouse]
 DBNAME      jgrg_nmd_mouse
 HOST        otterpipe2
-PORT        3303
+PORT        3323
 DNA_DBNAME  loutre_mouse
 DNA_HOST    otterlive
-DNA_PORT    3301
+DNA_PORT    3324
 RESTRICTED  1
 
 [alignment_test]
 DBNAME      ml6_loutre_alignment
 HOST        otterpipe2
-PORT        3303
+PORT        3323
 RESTRICTED  1
 
 [zebrafish_repeats]
 DBNAME      loutre_zfrepeats
 HOST        otterpipe2
-PORT        3303
+PORT        3323
 RESTRICTED  1
 
 [act_test]
