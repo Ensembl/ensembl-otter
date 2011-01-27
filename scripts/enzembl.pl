@@ -697,7 +697,7 @@ assuming you've specified some style settings and a zmap executable in your conf
 (see below for details):
 
   enzembl -region clone::AC068644.15 -analyses Halfwise,vertrna -types Genes,DnaAlignFeatures\ 
-          -db pipe_human -host otterpipe1 -port 3302 -user ottro
+          -db pipe_human -host otterpipe1 -port 3322 -user ottro
 
 or with databases and types specified in the config file:
 
@@ -790,13 +790,13 @@ If supplied vith '-cfg' (or in ~/.enzembl_config), should look something like th
 
  [loutre_human]
  host = otterlive
- port = 3301
+ port = 3324
  user = ottro
  analyses = Otter
 
  [pipe_human]
  host = otterpipe1
- port = 3302
+ port = 3322
  user = ottro
  analyses = vertrna
 

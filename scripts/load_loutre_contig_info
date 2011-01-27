@@ -2,7 +2,7 @@
 
 =head1 DESCRIPTION
 
-load_loutre_contig_info -dbhost otterlive -dbport 3301 -dbname loutre_pig -dbuser ottadmin -dbpass wibble 
+load_loutre_contig_info -dbhost otterlive -dbport 3324 -dbname loutre_pig -dbuser ottadmin -dbpass wibble 
 
 =head1 OPTIONS
 

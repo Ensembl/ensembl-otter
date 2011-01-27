@@ -18,7 +18,7 @@ use Bio::Otter::Lace::Defaults;
     if (0) {
         $dba = Bio::Vega::DBSQL::DBAdaptor->new(
             -host   => 'otterlive',
-            -port   => 3301,
+            -port   => 3324,
             -user   => 'ottadmin',
             -pass   => 'wibble',
             -dbname => 'loutre_human',

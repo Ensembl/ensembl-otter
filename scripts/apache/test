@@ -30,7 +30,7 @@ foreach my $var ($server->param) {
 $env .= sprintf "\nSangerWeb cgi = %s\n", $web->cgi;
 $env .= sprintf "\nSangerWeb username = %s\n", $web->username;
 
-my $dbh = DBI->connect("DBI:mysql:database=pipe_human;host=otterslave;port=3312", "ottro", undef);
+my $dbh = DBI->connect("DBI:mysql:database=pipe_human;host=otterslave;port=3322", "ottro", undef);
 $env .= "CONNECTED $dbh";
 
 if ($server->local_user) {

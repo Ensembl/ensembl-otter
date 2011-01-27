@@ -74,7 +74,7 @@ foreach my $db (@db_names) {
     #     -dataset    => 'human',
     #     -key        => $key,
     #     -sathost    => 'otterlive',
-    #     -satport    => 3301,
+    #     -satport    => 3324,
     #     -satuser    => 'ottro',
     #     -satdbname  => $db,
     #     ) == 0 or die "Error saving metakey for $db";

@@ -315,7 +315,7 @@ if ( $ARGV[0] == 8 ){
   print STDOUT "8.   BACKED UP\n\n";
   print STDOUT "Your need to\n";
   printf STDOUT ("%s\n%s\n%s\n", "(1) Create directory 'mkdir $cdna_db_dump_dir'", "(2) chmod -R 777 $cdna_db_dump_dir",
-				 "(3) Run mysqldump -uottroot -pxxx -hotterpipe2 -P3303 --tab=$cdna_db_dump_dir/ --fields-terminated-by='\t' $cdna_db");
+				 "(3) Run mysqldump -uottroot -pxxx -hotterpipe2 -P3323 --tab=$cdna_db_dump_dir/ --fields-terminated-by='\t' $cdna_db");
 }
 
 if ( $ARGV[0] == 81 ){

@@ -50,7 +50,7 @@ $day = sprintf("%02d", $day);
 my $date = "$year-$mon-$day";
 
 my $host = 'otterlive';
-my $port = 3301;
+my $port = 3324;
 my $user = 'ottro';
 my $pass = '';
 my $dbname = 'loutre_pig';

@@ -18,7 +18,7 @@ here is an example commandline
 
 ./fix_stable_id.pl
 -host otterlive
--port 3301
+-port 3324
 -dbname loutre_wallaby
 -user pipuser
 -pass *****

@@ -141,7 +141,7 @@ unless (($skip =~ /load/) || ($skip =~ /realign/)) {
     }
     print "\n" if ($verbose);
     foreach my $chr (@chroms) {
-        my $command = "ATTENTION: You have to run the following under head\nperl /nfs/farm/Fish/kj2/head/ensembl-pipeline/scripts/Finished/load_from_otter_to_pipeline.pl -chr chr".$chr."_".$moredate." -chromosome_cs_version Otter -oname otter_zebrafish -phost otterpipe2 -pport 3303 -pname pipe_zebrafish $agpdir/chr".$chr.".fullagp\n";
+        my $command = "ATTENTION: You have to run the following under head\nperl /nfs/farm/Fish/kj2/head/ensembl-pipeline/scripts/Finished/load_from_otter_to_pipeline.pl -chr chr".$chr."_".$moredate." -chromosome_cs_version Otter -oname otter_zebrafish -phost otterpipe2 -pport 3323 -pname pipe_zebrafish $agpdir/chr".$chr.".fullagp\n";
         print "$command\n";
     }
     print "\n" if ($verbose);

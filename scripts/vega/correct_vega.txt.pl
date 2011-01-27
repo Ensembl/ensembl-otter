@@ -18,7 +18,7 @@ my $hm = GetOptions(
 $dbhost = 'otterlive';
 $dbname = 'loutre_zebrafish';
 $dbuser ='ottro';
-$dbport = 3301;
+$dbport = 3324;
 
 my $db = Bio::EnsEMBL::DBSQL::DBConnection->new(
     -host   => $dbhost,
