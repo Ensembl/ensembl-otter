@@ -5,6 +5,8 @@ package Evi::EviChain;
 #
 # lg4
 
+use List::Util qw(min max);
+
 use Evi::Taxonamer;
 
 sub new {
@@ -190,18 +192,6 @@ sub eviseq_coverage {
 		);
 	}
 	return $self->{_eviseq_coverage};
-}
-
-# it's AMAZING that they still haven't implemented these in the standard library:
-
-sub max {
-	my ($a,$b) = @_;
-	return ($a>$b)?$a:$b;
-}
-
-sub min {
-	my ($a,$b) = @_;
-	return ($a<$b)?$a:$b;
 }
 
 sub roundto {
