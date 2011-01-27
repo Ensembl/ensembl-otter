@@ -40,15 +40,12 @@ use Bio::Vega::Utils::GFF;
         # print $slice->to_gff(
         #     analyses       => ['RepeatMasker', 'vertrna'],
         #     feature_types  => ['RepeatFeatures', 'DnaAlignFeatures', 'SimpleFeatures'],
-        #     include_header => 1
         # );
 
         my ($self, %args) = @_;
 
         my $analyses = $args{analyses} || ['']; # if we're not given any analyses, search for features from all analyses
         my $feature_types  = $args{feature_types};
-        my $include_header = $args{include_header};
-        my $include_dna    = $args{include_dna};
         my $verbose        = $args{verbose};
         my $target_slice   = $args{target_slice} || $self;
         my $common_slice   = $args{common_slice};
@@ -58,10 +55,7 @@ use Bio::Vega::Utils::GFF;
 
         my $sources_to_types = $args{sources_to_types};
 
-        my $gff =
-            $include_header
-          ? $target_slice->gff_header(include_dna => $include_dna, rebase => $rebase, gff_seqname => $gff_seqname)
-          : '';
+        my $gff = '';
 
         # grab features of each type we're interested in
 
