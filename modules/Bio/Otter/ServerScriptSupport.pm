@@ -9,7 +9,7 @@ use Bio::Otter::Version qw( $SCHEMA_VERSION $XML_VERSION );
 use Bio::Otter::Lace::TempFile;
 use Bio::Otter::Lace::ViaText qw( %LangDesc &GenerateFeatures );
 use Bio::Vega::DBSQL::SimpleBindingAdaptor;
-use Bio::Vega::Utils::EnsEMBL2GFF;
+use Bio::Vega::Utils::GFF;
 use Bio::Vega::Enrich::SliceGetAllAlignFeatures;
 
 use IO::Compress::Gzip qw(gzip);
@@ -490,7 +490,7 @@ sub empty_gff_header {
         $start = 1;
     }
     
-    return Bio::Vega::Utils::EnsEMBL2GFF::gff_header($name, $start, $end);
+    return Bio::Vega::Utils::GFF::gff_header($name, $start, $end);
 }
 
 ## no critic(Modules::ProhibitMultiplePackages)

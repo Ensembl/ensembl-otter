@@ -5,29 +5,10 @@ package Bio::Vega::Utils::EnsEMBL2GFF;
 use strict;
 use warnings;
 
+use Bio::Vega::Utils::GFF;
+
 # This module allows conversion of ensembl/otter objects to GFF by inserting
 # to_gff (and supporting _gff_hash) methods into the necessary feature classes
-
-sub gff_header {
-    my ($name, $start, $end, $dna) = @_;
-
-    # build up a date string in the format specified by the GFF spec
-
-    my ($sec, $min, $hr, $mday, $mon, $year) = localtime;
-    $year += 1900;    # correct the year
-    $mon++;           # correct the month
-    my $date = sprintf "%4d-%02d-%02d", $year, $mon, $mday;
-
-    my $hdr =
-        "##gff-version 2\n"
-      . "##source-version EnsEMBL2GFF 1.0\n"
-      . "##date $date\n"
-      . "##sequence-region $name $start $end\n";
-
-    $hdr .= "##DNA\n##$dna\n##end-DNA\n" if $dna;
-
-    return $hdr;
-}
 
 ## no critic(Modules::ProhibitMultiplePackages)
 
@@ -48,7 +29,7 @@ sub gff_header {
         my $start = $rebase ? 1                                                : $self->start;
         my $end   = $rebase ? $self->length                                    : $self->end;
 
-        return Bio::Vega::Utils::EnsEMBL2GFF::gff_header($name, $start, $end, ($include_dna ? $self->seq : undef),);
+        return Bio::Vega::Utils::GFF::gff_header($name, $start, $end, ($include_dna ? $self->seq : undef),);
     }
 
     sub to_gff {
