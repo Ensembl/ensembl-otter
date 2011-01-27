@@ -331,10 +331,6 @@ my $gff;
 my %sources_to_types;
 my $sequence_name;
 
-my $loutre_slice_adaptor;
-my $loutre_slice;
-my $loutre_region_hash;
-
 # first try to find a coordinate system that all dbs support
 
 my %coord_systems;
