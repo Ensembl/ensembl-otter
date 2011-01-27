@@ -70,15 +70,6 @@ eval {
         foreach my $gene (@$genes) {
             $gff_string .= $gene->to_gff(%gff_genes_params);
         }
-        if ($gff_string) {
-            $header ||= $genes->[0]->slice->gff_header(%gff_genes_params);
-        }
-    }
-
-    if ($gff_string) {
-        $gff_string = $header . $gff_string;
-    } else {
-        $gff_string = $server->empty_gff_header;
     }
 };
 
@@ -86,7 +77,7 @@ if ($@) {
     $server->error_exit("Error fetching genes:\n" . $@);
 }
 else {
-    $server->send_response($gff_string, 0, 1);
+    $server->send_response($server->gff_header . $gff_string, 0, 1);
 }
 
 1;

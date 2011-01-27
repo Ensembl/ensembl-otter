@@ -476,7 +476,7 @@ sub get_requested_features {
     return \@feature_list;
 }
 
-sub empty_gff_header {
+sub gff_header {
     
     my $self = shift;
     
