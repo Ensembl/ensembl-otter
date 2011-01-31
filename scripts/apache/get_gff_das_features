@@ -285,9 +285,17 @@ eval {
         (map { defined($server->param($_)) ? $server->param($_) : '' } qw(cs name type start end metakey csver csver_remote)),
         1, # do the short version of mapping, without the target database
     );
-    
+
+    my %gff_args;
+    $gff_args{$_} = $server->param($_) for qw(
+        rebase
+        gff_source
+        gff_seqname
+    );
+
     for my $f (@$features) {
-        $gff_string .= $f->to_gff(rebase => $rebase, gff_source => $gff_source, gff_seqname => $gff_seqname)."\n";
+        my $gff = $f->to_gff(%gff_args);
+        $gff_string .= $gff."\n" if $gff;
     }
 };
 
