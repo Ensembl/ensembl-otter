@@ -10,7 +10,6 @@ use warnings;
 use SangerPaths qw{ core bioperl123 ensembl59 otter54 };
 
 use Bio::Otter::ServerScriptSupport;
-use Bio::Otter::ToXML;
 use Bio::Vega::Utils::EnsEMBL2GFF;
 
 my $server = Bio::Otter::ServerScriptSupport->new;
