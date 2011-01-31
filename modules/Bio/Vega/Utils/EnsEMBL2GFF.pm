@@ -114,8 +114,9 @@ use Bio::Vega::Utils::GFF;
                         }
 
                         $gff .=
-                          $feature->to_gff(rebase => $rebase, gff_source => $gff_source, gff_seqname => $gff_seqname)
-                          . "\n";
+                            $feature->to_gff(rebase => $rebase,
+                                             gff_source => $gff_source,
+                                             gff_seqname => $gff_seqname);
 
                         if ($sources_to_types) {
 
@@ -190,6 +191,7 @@ use Bio::Vega::Utils::GFF;
 
             $gff_str .= "\t" . join(" ; ", @attrs);
         }
+        $gff_str .= "\n";
 
         return $gff_str;
     }
@@ -390,7 +392,7 @@ use Bio::Vega::Utils::GFF;
                 $args{'gene_name'} = $sgn;
             }
             foreach my $tsct (@tsct_for_gff) {
-                $gff_string .= $tsct->to_gff(%args, extra_attrs => $extra_attrs) . "\n";
+                $gff_string .= $tsct->to_gff(%args, extra_attrs => $extra_attrs);
             }
         }
         return $gff_string;
@@ -511,7 +513,7 @@ use Bio::Vega::Utils::GFF;
             $end += $self->slice->start - 1 unless $rebase;
 
 
-            $gff .= "\n" . join(
+            $gff .= join(
                 "\t",
                 $gff_hash->{'seqname'},
                 $gff_hash->{'source'},
@@ -523,6 +525,7 @@ use Bio::Vega::Utils::GFF;
                 $ens_phase_to_gff_frame{ $tsl->start_Exon->phase },    # frame
                 qq{Class "Sequence"; Name $name}
             );
+            $gff .= "\n";
         }
 
         # add gff lines for each of the introns and exons
@@ -533,7 +536,7 @@ use Bio::Vega::Utils::GFF;
             $feat->analysis($self->analysis);
 
             # and add the feature's gff line to our string, including the sequence name information as an attribute
-            $gff .= "\n" . $feat->to_gff(%args, extra_attrs => { Name => $name });
+            $gff .= $feat->to_gff(%args, extra_attrs => { Name => $name });
 
             # to be on the safe side, get rid of the analysis we temporarily attached
             # (someone might rely on there not being one later)
