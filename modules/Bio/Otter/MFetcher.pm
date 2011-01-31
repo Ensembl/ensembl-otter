@@ -697,6 +697,20 @@ sub fetch_mapped_features {
     return $features;
 }
 
+sub Bio::EnsEMBL::Gene::propagate_slice {
+    my ($gene, $slice) = @_;
+
+    foreach my $exon (@{ $gene->get_all_Exons }) {
+        $exon->slice($slice);
+    }
+    foreach my $transcript (@{ $gene->get_all_Transcripts }) {
+        $transcript->slice($slice);
+    }
+    $gene->slice($slice);
+
+    return;
+}
+
 1;
 
 __END__
