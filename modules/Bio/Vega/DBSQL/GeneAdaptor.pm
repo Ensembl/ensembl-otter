@@ -873,21 +873,6 @@ sub fetch_all_genes_on_reference_slice {
     return $transformed_genes;
 }
 
-# called by MFetcher, so that the transformed genes will have exons
-sub Bio::EnsEMBL::Gene::propagate_slice {
-    my ($gene, $slice) = @_;
-
-    foreach my $transcript (@{ $gene->get_all_Transcripts() }) {
-        foreach my $exon (@{ $transcript->get_all_Exons() }) {
-            $exon->slice($slice);
-        }
-        $transcript->slice($slice);
-    }
-    $gene->slice($slice);
-
-    return;
-}
-
 1;
 
 __END__
