@@ -321,7 +321,7 @@ sub open_sequence_set_by_ssname_subset {
         $sn->top_window()->deiconify();
         $sn->top_window()->raise();
     } else {
-        my $top = $self->top_window()->Toplevel(-title => "SequenceSet $ss_name");
+        my $top = $self->top_window()->Toplevel(-title => "otter: Assembly $ss_name");
         my $ss = $self->DataSet->get_SequenceSet_by_name($ss_name);
       
         $sn = CanvasWindow::SequenceNotes->new($top, 820, 100);
@@ -349,7 +349,7 @@ sub search_window{
     my $search_window = $self->{'_search_window'};
   
     unless (defined ($search_window) ){
-        my $actual_window = $self->top_window()->Toplevel(-title => 'Find loci, stable_ids or clones');
+        my $actual_window = $self->top_window()->Toplevel(-title => 'otter: Find Loci, Stable IDs or Clones');
         $self->{'_search_window'} = $search_window = CanvasWindow::SearchWindow->new($actual_window, 500, 60);
         $search_window->Client($self->Client());
         $search_window->DataSet($self->DataSet());

@@ -109,7 +109,7 @@ sub open_dataset {
                 $top->deiconify;
                 $top->raise;
             } else {
-                $top = $canvas->Toplevel(-title => "DataSet $name");
+                $top = $canvas->Toplevel(-title => "otter: Assembly List $name");
                 my $ssc = CanvasWindow::SequenceSetChooser->new($top);
 
                 $ssc->name($name);
@@ -170,7 +170,7 @@ sub recover_some_sessions {
         my %session_wanted = map { $_->[0] => 1 } @$recoverable_sessions;
 
         my $rss_dialog = $self->canvas->toplevel->DialogBox(
-            -title => 'Recover sessions',
+            -title => 'otter: Recover Sessions',
             -buttons => ['Recover', 'Cancel'],
         );
 
@@ -222,7 +222,7 @@ sub recover_some_sessions {
                     my $adb = $client->recover_session($session_dir);
                     
                     my $top = $canvas->Toplevel(
-                        -title  => 'Select column data to load',
+                        -title  => 'otter: Select Column Data to Load',
                     );
                     
                     my $lc = EditWindow::LoadColumns->new($top);

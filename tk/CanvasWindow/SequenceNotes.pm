@@ -742,7 +742,7 @@ sub _open_SequenceSet {
     warn "Making LoadColumns";
     
     my $top = $self->canvas->Toplevel(
-        -title  => 'Select column data to load',
+        -title  => 'otter: Select column data to load',
     );
     my $lc = EditWindow::LoadColumns->new($top);
     $lc->init_flag(1);

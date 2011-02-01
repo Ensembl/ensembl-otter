@@ -951,7 +951,8 @@ sub zMapTagValues {
         elsif (my $subseq = $self->get_SubSeq($name)) {
             $pages .= $subseq->zmap_info_xml;
         }
-        else {
+        elsif (! $feature_hash->{$name}{'subfeature'}) {
+            # It is not a transcript if it doesn't have subfeatures
             $pages .= $self->zmap_feature_details_xml($name);
             $pages .= $self->zmap_feature_evidence_xml($name);
         }

@@ -159,7 +159,7 @@ sub mail_contents {
     my $file   = $self->current_logfile;
     my $subj   = "[$0] error log $file";
     my $dialog = $self->window->toplevel->DialogBox(
-        -title          => "Email $to?",
+        -title          => "otter: Email $to?",
         -buttons        => [qw(Ok Cancel)],
         -default_button => 'Cancel',
     );
