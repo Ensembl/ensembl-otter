@@ -61,7 +61,7 @@ sub current_clone {
     my $i = $self->clone_index;
     my $cs = @$cs_list[$i];
 
-    my $title = sprintf "%d: pipline status of %s  (%s)",
+    my $title = sprintf "otter: Pipline Status of #%d  %s  (%s)",
         $i + 1,
         $cs->accession . '.' . $cs->sv,
         $cs->clone_name;

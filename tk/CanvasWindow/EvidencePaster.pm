@@ -16,7 +16,7 @@ sub initialise {
 
     my $canvas = $self->canvas;
     my $top = $canvas->toplevel;
-    $top->configure(-title => "Supporting evidence");
+    $top->configure(-title => "otter: Evidence");
 
     my $button_frame = $top->Frame->pack(
         -side => 'top',
@@ -212,7 +212,7 @@ sub draw_evidence {
     }
 
     $self->canvas->toplevel->configure(
-        -title => 'Evi: ' . $self->ExonCanvas->SubSeq->name,
+        -title => 'otter: Evidence ' . $self->ExonCanvas->SubSeq->name,
         );
     $self->fix_window_min_max_sizes;
 

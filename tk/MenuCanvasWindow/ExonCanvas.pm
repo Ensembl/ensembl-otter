@@ -422,7 +422,7 @@ sub SubSeq {
             confess "Expected a '$expected', but got '$sub'";
         }
         $self->{'_SubSeq'} = $sub;
-        $self->canvas->toplevel->configure(-title => $sub->name);
+        $self->canvas->toplevel->configure(-title => 'otter: Transcript ' . $sub->name);
     }
     return $self->{'_SubSeq'};
 }
@@ -791,9 +791,9 @@ sub window_close {
         if ($@) {
             $self->exception_message($@);
             my $dialog = $self->canvas->toplevel->Dialog(
-                -title          => 'Abandon?',
+                -title          => 'otter: Abandon?',
                 -bitmap         => 'question',
-                -text           => "SubSequence '$name' has errors.\nAbandon changes?",
+                -text           => "Transcript '$name' has errors.\nAbandon changes?",
                 -default_button => 'No',
                 -buttons        => [qw{ Yes No }],
                 );
@@ -804,9 +804,9 @@ sub window_close {
 
             # Ask the user if changes should be saved
             my $dialog = $self->canvas->toplevel->Dialog(
-                -title          => 'Save changes?',
+                -title          => 'otter: Save changes?',
                 -bitmap         => 'question',
-                -text           => "Save changes to SubSequence '$name' ?",
+                -text           => "Save changes to Transcript '$name' ?",
                 -default_button => 'Yes',
                 -buttons        => [qw{ Yes No Cancel }],
                 );
@@ -989,7 +989,7 @@ sub search_pfam {
             $pfam = $self->{'_pfam'};
             if($pfam->query() ne $str) {
                 $pfam->top->destroy;
-                $pfam = EditWindow::PfamWindow->new($self->canvas->Toplevel(-title => "Pfam $name"));
+                $pfam = EditWindow::PfamWindow->new($self->canvas->Toplevel(-title => "otter: Pfam $name"));
             } else {
                 $pfam->top->deiconify;
                 $pfam->top->raise;
@@ -1001,10 +1001,10 @@ sub search_pfam {
             $pfam = $self->{'_pfam'};
             my $result_url = $pfam->result_url;
             my $prev_query = $pfam->query();
-            $pfam = EditWindow::PfamWindow->new($self->canvas->Toplevel(-title => "Pfam $name"));
+            $pfam = EditWindow::PfamWindow->new($self->canvas->Toplevel(-title => "otter: Pfam $name"));
             $pfam->result_url($result_url) unless $prev_query ne $str;
         } else {
-            $pfam = EditWindow::PfamWindow->new($self->canvas->Toplevel(-title => "Pfam $name"));
+            $pfam = EditWindow::PfamWindow->new($self->canvas->Toplevel(-title => "otter: Pfam $name"));
         }
 
         $pfam->query($str);
@@ -1109,7 +1109,7 @@ sub update_translation {
     }
 
     # Set the window title
-    $peptext->toplevel->configure( -title => $sub->name . " translation" );
+    $peptext->toplevel->configure( -title => sprintf("otter: Translation %s", $sub->name) );
 
     return 1;
 }
@@ -1178,7 +1178,7 @@ sub check_kozak{
     # create a new window if none available
     unless (defined $kozak_window){
         my $master = $self->canvas->toplevel;
-        $kozak_window = $master->Toplevel(-title => 'Kozak Checker');
+        $kozak_window = $master->Toplevel(-title => 'otter: Kozak Checker');
         $kozak_window->transient($master);
 
         my $font = $self->font_fixed;
@@ -2974,6 +2974,9 @@ sub get_SubSeq_if_changed {
     # Get the otter_id for the locus, or take it from
     # an existing locus if we are renaming.
     $self->manage_locus_otter_ids($old, $new);
+
+    # printf STDERR "Comparing old:\n%s\nTo new:\n%s",
+    #     $old->ace_string, $new->ace_string;
 
     if ($old->is_archival and $new->ace_string eq $old->ace_string) {
         # SubSeq is saved, and there are no changes.

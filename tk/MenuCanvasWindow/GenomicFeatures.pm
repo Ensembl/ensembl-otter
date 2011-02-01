@@ -553,7 +553,7 @@ sub save_to_ace {
         unless ($force) {
             
             my $save_changes = $self->top_window->messageBox(
-                -title      => "Save genomic features?" ,
+                -title      => "otter: Save Genomic Features?" ,
                 -message    => "Do you wish to save the changes for '" . $new_assembly->name . "'?",
                 -type       => 'YesNo',
                 -icon       => 'question',
@@ -671,7 +671,7 @@ sub initialize {
 
 
     my $tl = $self->top_window;
-    $tl->title("Genomic features for '". $self->Assembly->name ."'");
+    $tl->title("otter: Genomic Features on " . $self->Assembly->name);
     
     $self->canvas->Tk::bind('<Destroy>', sub{ $self = undef });
 

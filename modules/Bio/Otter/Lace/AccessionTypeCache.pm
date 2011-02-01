@@ -122,12 +122,12 @@ sub evidence_type_and_name_from_text {
         OTF_Protein      => 'Protein',
         Ens_cDNA         => 'cDNA',
     );
-    
+
     # Make hash case insensitive
     foreach my $style (keys %column_type) {
         $column_type{lc $style} = $column_type{$style};
     }
-    
+
     sub cache_type_from_Zmap_XML {
         my ($self, $parsed_xml) = @_;
         

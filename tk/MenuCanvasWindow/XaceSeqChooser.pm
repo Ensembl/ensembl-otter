@@ -959,7 +959,7 @@ sub exit_save_data {
 
     # Ask the user if any changes should be saved
     my $dialog = $self->top_window()->Dialog(
-        -title          => 'Otter save?',
+        -title          => 'otter: Save?',
         -bitmap         => 'question',
         -text           => "Save any changes to otter server?",
         -default_button => 'Yes',
@@ -1495,15 +1495,15 @@ sub delete_subsequences {
     my( $question );
     if (@to_die > 1) {
         $question = join('',
-            "Really delete these subsequences?\n\n",
+            "Really delete these transcripts?\n\n",
             map { "  $_\n" } map { $_->name } @to_die
             );
     } else {
-        $question = "Really delete this subsequence?\n\n  "
+        $question = "Really delete this transcript?\n\n  "
             . $to_die[0]->name ."\n";
     }
     my $dialog = $self->top_window()->Dialog(
-        -title          => 'Delete subsequenes?',
+        -title          => 'otter: Delete Transcripts?',
         -bitmap         => 'question',
         -text           => $question,
         -default_button => 'Yes',
@@ -1709,7 +1709,7 @@ sub edit_Clone {
     my $cew;
     unless ($cew = $self->{'_clone_edit_window'}{$name}) {
         $cew = EditWindow::Clone->new($self->top_window->Toplevel(
-            -title => sprintf("Clone: %s", $clone->clone_name),
+            -title => sprintf("otter: Clone %s", $clone->clone_name),
             ));
         $cew->XaceSeqChooser($self);
         $cew->Clone($clone);
@@ -2309,7 +2309,7 @@ sub rename_locus {
         $ren_window->top->destroy;
     }
     my $parent = $self->top_window;
-    my $top = $parent->Toplevel(-title => 'rename locus');
+    my $top = $parent->Toplevel(-title => 'otter: Rename Locus');
     $top->transient($parent);
     my $lr = EditWindow::LocusName->new($top);
     $lr->XaceSeqChooser($self);
@@ -2327,7 +2327,7 @@ sub run_dotter {
     my $dw = $self->{'_dotter_window'};
     unless ($dw) {
         my $parent = $self->top_window();
-        my $top = $parent->Toplevel(-title => 'run dotter');
+        my $top = $parent->Toplevel(-title => 'otter: Run Dotter');
         $top->transient($parent);
         $dw = EditWindow::Dotter->new($top);
         $dw->initialise;
@@ -2346,7 +2346,7 @@ sub run_exonerate {
     unless ($ew) {
         my $parent = $self->top_window();
         my $top = $parent->Toplevel(
-            -title => 'On The Fly (OTF) Alignment - brought to you by exonerate'
+            -title => 'otter: On The Fly (OTF) Alignment'
             );
         $top->transient($parent);
         $ew = EditWindow::Exonerate->new($top);

@@ -212,7 +212,7 @@ sub generate_desc {
 
     unless ($desc) {
         $self->top->messageBox(
-            -title      => 'No description',
+            -title      => 'otter: No description',
             -icon       => 'warning',
             -message    => "I didn't find anything to describe",
             -type       => 'OK',
@@ -259,7 +259,7 @@ sub close_window {
         # Ask the user if changes should be saved
         my $name = $clone->clone_name;
         my $dialog = $self->top->Dialog(
-            -title          => 'Save changes?',
+            -title          => 'otter: Save changes?',
             -bitmap         => 'question',
             -text           => "Save changes to Clone '$name'?",
             -default_button => 'Yes',
@@ -299,7 +299,7 @@ sub get_new_Clone_if_changed {
         $new->add_remark($rem);
     }
     
-    #printf STDERR "\nOLD: <%s>\n\nNEW: <%s>\n\n",
+    # printf STDERR "\nOLD: <%s>\n\nNEW: <%s>\n\n",
     #    $old->ace_string, $new->ace_string;
     if ($old->ace_string ne $new->ace_string) {
         return $new;

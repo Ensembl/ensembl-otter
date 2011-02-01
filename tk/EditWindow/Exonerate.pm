@@ -83,7 +83,7 @@ sub initialise {
         -text    => 'Browse...',
         -command => sub {
             $fname = $top->getOpenFile(
-                -title      => 'Choose fasta file',
+                -title      => 'otter: Choose Fasta File',
                 -initialdir => $INITIAL_DIR,
                 -filetypes  => [
 
@@ -412,7 +412,7 @@ sub launch_exonerate {
 
     unless (@$seqs) {
         $self->top->messageBox(
-            -title   => 'No sequence',
+            -title   => 'otter: No Sequence',
             -icon    => 'warning',
             -message => 'Did not get any sequence data',
             -type    => 'OK',
@@ -447,7 +447,7 @@ OTF_Protein });
     }
     else {
         $self->top->messageBox(
-            -title   => 'No matches',
+            -title   => 'otter: No Matches',
             -icon    => 'warning',
             -message => 'Exonerate did not find any matches on genomic sequence',
             -type    => 'OK',
@@ -558,7 +558,7 @@ sub get_query_seq {
         }
 
         $self->top->messageBox(
-            -title   => 'Problems with accessions supplied',
+            -title   => 'otter: Problems With Accessions Supplied',
             -icon    => 'warning',
             -message => $missing_msg . $remapped_msg . $unclaimed_msg,
             -type    => 'OK',
@@ -572,7 +572,7 @@ sub get_query_seq {
     for my $seq (@seqs) {
         if ($seq->sequence_length > $MAX_QUERY_LENGTH) {
             my $response = $self->top->messageBox(
-                -title   => 'Unusually long query sequence',
+                -title   => 'otter: Unusually Long Query Sequence',
                 -icon    => 'warning',
                 -message => $seq->name . " is "
                   . $seq->sequence_length

@@ -310,7 +310,7 @@ sub load_filters {
         }
         else {
             $top->messageBox(
-                -title      => 'Nothing to fetch',
+                -title      => 'otter: Nothing to fetch',
                 -icon       => 'warning',
                 -message    => 'All selected columns have already been loaded',
                 -type       => 'OK',
@@ -320,7 +320,7 @@ sub load_filters {
         # we need to set up and show an XaceSeqChooser        
         my $xc = MenuCanvasWindow::XaceSeqChooser->new(
             $self->top->Toplevel(
-                -title => $self->AceDatabase->title,
+                -title => 'otter: Session ' . $self->AceDatabase->title,
             )
         );
         

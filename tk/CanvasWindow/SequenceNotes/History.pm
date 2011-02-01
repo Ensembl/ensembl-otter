@@ -85,7 +85,7 @@ sub current_clone {
     my $i       = $self->clone_index;
     my $cs      = @$cs_list[$i];
 
-    my $title = sprintf "%d: note history of %s  (%s)", $i + 1,
+    my $title = sprintf "otter: Note History of %d %s  (%s)", $i + 1,
       $cs->accession . '.' . $cs->sv, $cs->clone_name;
     $self->canvas->toplevel->title($title);
     return $cs;
@@ -392,7 +392,7 @@ sub update_db_comment {
 
         ###confirm that the user wants to update the entry
         my $confirm = $self->canvas->toplevel->messageBox(
-            -title   => 'Update Sequence Note',
+            -title   => 'otter: Update Sequence Note',
             -message =>
               "Please Confirm that you wish to update this note in the database",
             -type => 'OKCancel'
@@ -412,7 +412,7 @@ sub update_db_comment {
     }
     else {
         $self->top_window->messageBox(
-            -title   => 'Sorry',
+            -title   => 'otter: Sorry',
             -message =>
 "Only the original author, $note_author, can update these comments\nYou are currently logged on as $current_user",
             -type => 'OK'

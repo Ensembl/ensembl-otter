@@ -1161,9 +1161,6 @@ sub recover_session {
     $adb->reload_filter_state;
 
     my $title = $self->get_title($adb->home);
-    unless ($title =~ /^Recovered/) {
-        $title = "Recovered $title";
-    }
     $adb->title($title);
 
     return $adb;

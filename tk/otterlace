@@ -21,7 +21,7 @@ use POSIX ":sys_wait_h";
     $cl->cleanup_log_dir('otterlace');
     $cl->make_log_file('otterlace');
 
-    my $mw = CanvasWindow::MainWindow->new("Choose DataSet");
+    my $mw = CanvasWindow::MainWindow->new("otter: Species List");
 
     # Look for zombies every 5 seconds
     $mw->repeat(
@@ -41,8 +41,8 @@ use POSIX ":sys_wait_h";
         my $user = $self->author;
 
         my $pass = '';
-        my $pass_win = EditWindow::Password->new($mw->Toplevel(-title => 'Enter password'));
-        $pass_win->prompt_string("Enter password for '$user'");
+        my $pass_win = EditWindow::Password->new($mw->Toplevel(-title => 'otter: Enter Password'));
+        $pass_win->prompt_string("Enter web password for '$user'");
         $pass_win->passref(\$pass);
         $pass_win->initialise;
         $pass_win->get_password;
@@ -57,7 +57,7 @@ use POSIX ":sys_wait_h";
 
         if ($msg =~ /web server/) {
             $mw->messageBox(
-                -title   => 'Web server problem',
+                -title   => 'otter: Web server problem',
                 -icon    => 'warning',
                 -message => 'There seems to be a problem with the web server, ' . 'please try again later.',
                 -type    => 'OK',
@@ -65,7 +65,7 @@ use POSIX ":sys_wait_h";
         }
         else {
             $mw->messageBox(
-                -title   => 'Unidentified problem',
+                -title   => 'otter: Unidentified problem',
                 -icon    => 'warning',
                 -message => "Unidentified problem: $msg\n\n" . 'I suggest you raise a helpdesk ticket!',
                 -type    => 'OK',
