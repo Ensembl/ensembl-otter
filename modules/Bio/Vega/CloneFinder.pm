@@ -206,35 +206,33 @@ sub _find_by_stable_ids {
     my $satellite_dba = $self->server->satellite_dba($metakey, 1);
     return unless $satellite_dba;
 
-    my $meta_con   = bless $satellite_dba->get_MetaContainer, 'Bio::Vega::DBSQL::MetaContainer';
-
+    my $meta_con = bless $satellite_dba->get_MetaContainer, 'Bio::Vega::DBSQL::MetaContainer';
     my $prefix_primary = $meta_con->get_primary_prefix || 'ENS';
-
     my $prefix_species = $meta_con->get_species_prefix || '\w{0,6}';
+    my $qname_pattern = qr(^${prefix_primary}${prefix_species}([TPGE])\d+)i;
 
     foreach my $qname (keys %{$self->qnames_locators}) {
-        if(uc($qname) =~ /^$prefix_primary$prefix_species([TPGE])\d+/i){ # try stable_ids
-            my $typeletter = $1;
-            my $id_adaptor_fetcher =
-                $id_adaptor_fetcher_by_type->{$typeletter};
-            next unless $id_adaptor_fetcher;
-            my ( $id, $adaptor, $fetcher ) = @{$id_adaptor_fetcher};
 
-            # Just imagine: they raise an EXCEPTION to indicate nothing was found. Terrific!
-            my $feature;
-            {
-                ## no critic (ErrorHandling::RequireCheckingReturnValueOfEval)
-                eval { $feature = $satellite_dba->$adaptor->$fetcher($qname); };
-            }
+        my ($typeletter) = uc($qname) =~ $qname_pattern;
+        next unless $typeletter;
 
-            if ($feature) {
-                my $feature_slice  = $feature->feature_Slice;
-                my $analysis_logic = $feature->analysis->logic_name; 
-                my $qtype = "${qtype_prefix}${analysis_logic}:${id}";
-                $self->register_slice($qname, $qtype, $feature_slice);
-            }
+        my $id_adaptor_fetcher = $id_adaptor_fetcher_by_type->{$typeletter};
+        next unless $id_adaptor_fetcher;
+        my ( $id, $adaptor, $fetcher ) = @{$id_adaptor_fetcher};
+
+        # Just imagine: they raise an EXCEPTION to indicate nothing was found. Terrific!
+        my $feature;
+        {
+            ## no critic (ErrorHandling::RequireCheckingReturnValueOfEval)
+            eval { $feature = $satellite_dba->$adaptor->$fetcher($qname); };
         }
-    } # foreach $qname
+        next unless $feature;
+
+        my $feature_slice  = $feature->feature_Slice;
+        my $analysis_logic = $feature->analysis->logic_name; 
+        my $qtype = "${qtype_prefix}${analysis_logic}:${id}";
+        $self->register_slice($qname, $qtype, $feature_slice);
+    }
 
     return;
 }
