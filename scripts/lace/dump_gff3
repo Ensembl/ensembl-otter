@@ -147,7 +147,7 @@ use Bio::Otter::MFetcher;
       #  my $ncbi_chr   = '22';        # num or x, y
       #  my $otter_chr  = 'chr22-07'; # sset name
 
-      my $ncbi_genes = $gene_Ad->fetch_all_genes_on_ncbi_slice($ncbi_chr, $set_name, $slice, $ncbi_version);
+      my $ncbi_genes = $gene_Ad->fetch_all_genes_on_reference_slice($ncbi_chr, $set_name, $slice, $ncbi_version);
       $genes = $ncbi_genes;
 
       my $ncbi_slice;
