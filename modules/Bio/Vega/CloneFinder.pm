@@ -177,7 +177,8 @@ sub find_by_stable_ids {
 sub _find_by_stable_ids {
     my ($self, $qtype_prefix, $metakey) = @_;
 
-    my $satellite_dba = $self->server->satellite_dba($metakey, 1) || return;
+    my $satellite_dba = $self->server->satellite_dba($metakey, 1);
+    return unless $satellite_dba;
 
     my $meta_con   = bless $satellite_dba->get_MetaContainer, 'Bio::Vega::DBSQL::MetaContainer';
 
@@ -335,7 +336,8 @@ sub find_by_xref {
 sub _find_by_xref {
     my ($self, $qtype_prefix, $metakey, $condition) = @_;
 
-    my $satellite_dba = $self->server->satellite_dba($metakey, 1) || return;
+    my $satellite_dba = $self->server->satellite_dba($metakey, 1);
+    return unless $satellite_dba;
 
     my $sql = qq{
         SELECT DISTINCT edb.db_name
@@ -404,7 +406,8 @@ sub _find_by_hit_name {
 
     # NB: $condition only can be equality, otherwise you'll annoy the users!
 
-    my $satellite_dba = $self->server->satellite_dba($metakey, 1) || return;
+    my $satellite_dba = $self->server->satellite_dba($metakey, 1);
+    return unless $satellite_dba;
 
     my $sql = qq{
         SELECT af.hit_name, sr.name, cs.name, cs.version, af.seq_region_start, af.seq_region_end, af.seq_region_strand
