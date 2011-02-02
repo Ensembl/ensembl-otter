@@ -12,7 +12,6 @@ use warnings;
 use Bio::Otter::Lace::Locator;
 
 my $component = 'clone'; # this is the type of components we want the found matches mapped on
-my $DEBUG=0; # do not show all SQL statements
 
 sub new {
     my ($class, $server) = @_;
@@ -198,6 +197,7 @@ sub _find_by_stable_ids {
             my $id_name;
             my $feature;
 
+            # Just imagine: they raise an EXCEPTION to indicate nothing was found. Terrific!
             eval {
                 if($typeletter eq 'G') {
                     $id_name = 'gene_stable_id';
@@ -214,11 +214,7 @@ sub _find_by_stable_ids {
                 }
             };
 
-                # Just imagine: they raise an EXCEPTION to indicate nothing was found. Terrific!
-            if($@) {
-                # warn "'$qname' looks like a stable id, but wasn't found.";
-                # warn ($@) if $DEBUG;
-            } elsif($feature) { # however watch out, sometimes we just silently get nothing!
+            if ($feature) {
                 my $feature_slice  = $feature->feature_Slice;
                 my $analysis_logic = $feature->analysis->logic_name; 
                 my $qtype = "${qtype_prefix}${analysis_logic}:${id_name}";
