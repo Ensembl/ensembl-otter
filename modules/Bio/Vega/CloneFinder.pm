@@ -200,21 +200,21 @@ sub _find_by_stable_ids {
     foreach my $qname (keys %{$self->qnames_locators()}) {
         if(uc($qname) =~ /^$prefix_primary$prefix_species([TPGE])\d+/i){ # try stable_ids
             my $typeletter = $1;
-            my $qtype;
+            my $id_name;
             my $feature;
 
             eval {
                 if($typeletter eq 'G') {
-                    $qtype = 'gene_stable_id';
+                    $id_name = 'gene_stable_id';
                     $feature = $gene_adaptor->fetch_by_stable_id($qname);
                 } elsif($typeletter eq 'T') {
-                    $qtype = 'transcript_stable_id';
+                    $id_name = 'transcript_stable_id';
                     $feature = $transcript_adaptor->fetch_by_stable_id($qname);
                 } elsif($typeletter eq 'P') {
-                    $qtype = 'translation_stable_id';
+                    $id_name = 'translation_stable_id';
                     $feature = $transcript_adaptor->fetch_by_translation_stable_id($qname);
                 } elsif($typeletter eq 'E') {
-                    $qtype = 'exon_stable_id';
+                    $id_name = 'exon_stable_id';
                     $feature = $exon_adaptor->fetch_by_stable_id($qname);
                 }
             };
@@ -226,9 +226,8 @@ sub _find_by_stable_ids {
             } elsif($feature) { # however watch out, sometimes we just silently get nothing!
                 my $feature_slice  = $feature->feature_Slice();
                 my $analysis_logic = $feature->analysis->logic_name(); 
-
-                warn "find_stable_ids: Trying to register slices ($qname, $qtype_prefix.$qtype)";
-                $self->register_slices($qname, $qtype_prefix.$analysis_logic.":".$qtype, [$feature_slice]);
+                my $qtype = "${qtype_prefix}${analysis_logic}:${id_name}";
+                $self->register_slices($qname, $qtype, [$feature_slice]);
             }
         }
     } # foreach $qname
@@ -391,12 +390,11 @@ sub _find_by_xref {
     $sth->execute();
 
     my $adaptor;
-    while( my ($qtype, $qname, $sr_name, $cs_name, $cs_version, $start, $end) = $sth->fetchrow() ) {
+    while( my ($db_name, $qname, $sr_name, $cs_name, $cs_version, $start, $end) = $sth->fetchrow() ) {
         $adaptor ||= $satellite_dba->get_SliceAdaptor();
-
         my $slice = $adaptor->fetch_by_region($cs_name, $sr_name, $start, $end, 1, $cs_version);
-
-        $self->register_slices($qname, $qtype_prefix.$qtype.":", [ $slice ]);
+        my $qtype = "${qtype_prefix}${db_name}:";
+        $self->register_slices($qname, $qtype, [ $slice ]);
     }
 
     return;
@@ -443,10 +441,9 @@ sub _find_by_hit_name {
     my $adaptor;
     while( my ($qname, $sr_name, $cs_name, $cs_version, $start, $end, $strand, $analysis_name, $score) = $sth->fetchrow() ) {
         $adaptor ||= $satellite_dba->get_SliceAdaptor();
-
         my $slice = $adaptor->fetch_by_region($cs_name, $sr_name, $start, $end, $strand, $cs_version);
-
-        $self->register_slices($qname, "${qtype_prefix}${analysis_name}(score=$score)", [ $slice ]);
+        my $qtype = "${qtype_prefix}${analysis_name}(score=$score)";
+        $self->register_slices($qname, $qtype, [ $slice ]);
     }
 
     return;
