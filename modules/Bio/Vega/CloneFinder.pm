@@ -189,8 +189,6 @@ sub _find_by_stable_ids {
     my $transcript_adaptor     = $satellite_dba->get_TranscriptAdaptor;
     my $exon_adaptor           = $satellite_dba->get_ExonAdaptor;
 
-    my @slices = ();
-
     foreach my $qname (keys %{$self->qnames_locators}) {
         if(uc($qname) =~ /^$prefix_primary$prefix_species([TPGE])\d+/i){ # try stable_ids
             my $typeletter = $1;
