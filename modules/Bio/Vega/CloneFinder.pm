@@ -170,7 +170,7 @@ sub register_local_slice {
 
 sub find_by_stable_ids {
     my ($self, @args) = @_;
-    eval { $self->_find_by_stable_ids(@args); };
+    eval { $self->_find_by_stable_ids(@args); }; ## no critic (ErrorHandling::RequireCheckingReturnValueOfEval)
     return;
 }
 
@@ -227,7 +227,7 @@ sub _find_by_stable_ids {
 
 sub find_by_feature_attributes {
     my ($self, @args) = @_;
-    eval { $self->_find_by_feature_attributes(@args); };
+    eval { $self->_find_by_feature_attributes(@args); }; ## no critic (ErrorHandling::RequireCheckingReturnValueOfEval)
     return;
 }
 
@@ -263,7 +263,7 @@ sub _find_by_feature_attributes {
 
 sub find_by_seqregion_names {
     my ($self, @args) = @_;
-    eval { $self->_find_by_seqregion_names(@args); };
+    eval { $self->_find_by_seqregion_names(@args); }; ## no critic (ErrorHandling::RequireCheckingReturnValueOfEval)
     return;
 }
 
@@ -298,7 +298,7 @@ sub _find_by_seqregion_names {
 
 sub find_by_seqregion_attributes {
     my ($self, @args) = @_;
-    eval { $self->_find_by_seqregion_attributes(@args); };
+    eval { $self->_find_by_seqregion_attributes(@args); }; ## no critic (ErrorHandling::RequireCheckingReturnValueOfEval)
     return;
 }
 
@@ -335,7 +335,7 @@ sub _find_by_seqregion_attributes {
 
 sub find_by_xref {
     my ($self, @args) = @_;
-    eval { $self->_find_by_xref(@args); };
+    eval { $self->_find_by_xref(@args); }; ## no critic (ErrorHandling::RequireCheckingReturnValueOfEval)
     return;
 }
 
@@ -404,7 +404,7 @@ sub _find_by_xref {
 
 sub find_by_hit_name {
     my ($self, @args) = @_;
-    eval { $self->_find_by_hit_name(@args); };
+    eval { $self->_find_by_hit_name(@args); }; ## no critic (ErrorHandling::RequireCheckingReturnValueOfEval)
     return;
 }
 
