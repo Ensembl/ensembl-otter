@@ -52,6 +52,21 @@ sub unhide {
         $self->server->param('unhide') || 0;
 }
 
+my $find_containing_chromosomes_sql_template = <<'SQL'
+        SELECT    chr.name,
+                  group_concat(distinct a.cmp_seq_region_id) as joined_cmps
+        FROM      assembly a,
+                  seq_region chr,
+                  coord_system cs
+        WHERE     cs.name='chromosome'
+        AND       cs.version='Otter'
+        AND       cs.coord_system_id=chr.coord_system_id
+        AND       chr.seq_region_id=a.asm_seq_region_id
+        AND       a.cmp_seq_region_id IN ( %s )
+        GROUP BY  chr.name
+SQL
+    ;
+
 sub find_containing_chromosomes {
     my ($self, $slice) = @_;
 
@@ -66,31 +81,16 @@ sub find_containing_chromosomes {
         : map { $sa->get_seq_region_id($_->to_Slice) } @{$slice->project('seqlevel')}
     ];
 
-        # now map those contig_ids back onto a chromosome
-    my $sql = qq{
-        SELECT  chr.name,
-                group_concat(distinct a.cmp_seq_region_id) as joined_cmps
-        FROM    assembly a,
-                seq_region chr,
-                coord_system cs
-        WHERE   cs.name='chromosome'
-        AND     cs.version='Otter'
-        AND     cs.coord_system_id=chr.coord_system_id
-        AND     chr.seq_region_id=a.asm_seq_region_id
-        AND     a.cmp_seq_region_id IN (
-    }.join(', ', @$seq_level_slice_ids).qq{
-                )
-     GROUP BY chr.name
-    };
-
+    # now map those contig_ids back onto a chromosome
+    my $sql = sprintf
+        $find_containing_chromosomes_sql_template,
+        join ', ', @{$seq_level_slice_ids};
     my $sth = $sa->dbc->prepare($sql);
     $sth->execute;
 
     my @chr_slices = ();
     while( my ($atype, $joined_cmps) = $sth->fetchrow ) {
-
         my @cmps = split(/,/, $joined_cmps);
-
         if(scalar(@cmps) == scalar(@$seq_level_slice_ids)) {
                     # let's hope the default coord_system_version is set correctly:
             my $chr_slice = $sa->fetch_by_region('chromosome', $atype);
@@ -231,26 +231,28 @@ sub find_by_feature_attributes {
     return;
 }
 
+my $find_by_feature_attributes_sql_template = <<'SQL'
+    SELECT %s, value
+      FROM %s
+     WHERE attrib_type_id = (SELECT attrib_type_id from attrib_type where code='%s')
+       AND value %s
+SQL
+    ;
+
 sub _find_by_feature_attributes {
     my ($self, $condition, $qtype, $table, $id_field, $code, $adaptor_call) = @_;
 
-    my $sql = qq{
-        SELECT $id_field, value
-        FROM $table
-        WHERE attrib_type_id = (SELECT attrib_type_id from attrib_type where code='$code')
-          AND value $condition
-    };
-
-    my $dbc      = $self->otter_dba->dbc;
+    my $sql =
+        sprintf $find_by_feature_attributes_sql_template,
+        $id_field, $table, $code, $condition;
+    my $dbc = $self->otter_dba->dbc;
     my $sth = $dbc->prepare($sql);
     $sth->execute;
 
     my $adaptor;
     while( my ($feature_id, $qname) = $sth->fetchrow ) {
         $adaptor ||= $self->otter_dba->$adaptor_call; # only do it if we found something
-
         my $feature = $adaptor->fetch_by_dbID($feature_id);
-
         if($feature->is_current) {
             $self->register_local_slice($qname, $qtype, $feature->feature_Slice);
         }
@@ -265,27 +267,29 @@ sub find_by_seqregion_names {
     return;
 }
 
+my $find_by_seqregion_names_sql_template = <<'SQL'
+    SELECT cs.name, sr.name
+      FROM seq_region sr, coord_system cs
+     WHERE sr.coord_system_id=cs.coord_system_id
+       AND cs.name <> 'chromosome'
+       AND sr.name %s
+SQL
+    ;
+
 sub _find_by_seqregion_names {
     my ($self, $condition) = @_;
 
-    my $dbc      = $self->otter_dba->dbc;
-    my $adaptor;
-
-    my $sql = qq{
-        SELECT cs.name, sr.name
-        FROM seq_region sr, coord_system cs
-        WHERE sr.coord_system_id=cs.coord_system_id
-          AND cs.name <> 'chromosome'
-          AND sr.name $condition
-    };
-
+    my $sql = sprintf
+        $find_by_seqregion_names_sql_template,
+        $condition;
+    my $dbc = $self->otter_dba->dbc;
     my $sth = $dbc->prepare($sql);
     $sth->execute;
+
+    my $adaptor;
     while( my ($cs_name, $sr_name) = $sth->fetchrow ) {
         $adaptor ||= $self->otter_dba->get_SliceAdaptor;
-
         my $slice = $adaptor->fetch_by_region($cs_name, $sr_name);
-
         $self->register_local_slice($sr_name, $cs_name.'_name', $slice);
     }
 
@@ -298,29 +302,31 @@ sub find_by_seqregion_attributes {
     return;
 }
 
+my $find_by_seqregion_attributes_sql_template = <<'SQL'
+    SELECT sr.name, sra.value
+      FROM seq_region sr, coord_system cs, seq_region_attrib sra
+     WHERE cs.name = '%s'
+       AND sr.coord_system_id = cs.coord_system_id
+       AND sr.seq_region_id = sra.seq_region_id
+       AND sra.attrib_type_id = (SELECT attrib_type_id from attrib_type where code = '%s')
+       AND sra.value %s
+SQL
+    ;
+
 sub _find_by_seqregion_attributes {
     my ($self, $condition, $qtype, $cs_name, $code) = @_;
 
-    my $sql = qq{
-        SELECT sr.name, sra.value
-        FROM seq_region sr, coord_system cs, seq_region_attrib sra
-        WHERE cs.name='$cs_name'
-          AND sr.coord_system_id=cs.coord_system_id
-          AND sr.seq_region_id=sra.seq_region_id
-          AND sra.attrib_type_id = (SELECT attrib_type_id from attrib_type where code='$code')
-          AND sra.value $condition
-    };
-
-    my $dbc      = $self->otter_dba->dbc;
+    my $sql = sprintf
+        $find_by_seqregion_attributes_sql_template,
+        $cs_name, $code, $condition;
+    my $dbc = $self->otter_dba->dbc;
     my $sth = $dbc->prepare($sql);
     $sth->execute;
 
     my $adaptor;
     while( my ($sr_name, $qname) = $sth->fetchrow ) {
         $adaptor ||= $self->otter_dba->get_SliceAdaptor;
-
         my $slice = $adaptor->fetch_by_region($cs_name, $sr_name);
-
         $self->register_local_slice($qname, $qtype, $slice);
     }
 
@@ -333,14 +339,9 @@ sub find_by_xref {
     return;
 }
 
-sub _find_by_xref {
-    my ($self, $qtype_prefix, $metakey, $condition) = @_;
-
-    my $satellite_dba = $self->server->satellite_dba($metakey, 1);
-    return unless $satellite_dba;
-
-    my $sql = qq{
-        SELECT DISTINCT edb.db_name
+my $find_by_xref_sql_template = <<'SQL'
+    SELECT DISTINCT
+            edb.db_name
           , x.dbprimary_acc
           , sr.name
           , cs.name
@@ -353,29 +354,39 @@ sub _find_by_xref {
             WHEN 'Gene' THEN g.seq_region_end
             WHEN 'Transcript' THEN t.seq_region_end
             WHEN 'Translation' THEN t2p.seq_region_end END)
-        FROM (external_db edb
-              , xref x
-              , object_xref ox)
-        LEFT JOIN gene g
-          ON g.gene_id = ox.ensembl_id
-        LEFT JOIN transcript t
-          ON t.transcript_id = ox.ensembl_id
-        LEFT JOIN translation p
-          ON p.translation_id = ox.ensembl_id
-        LEFT JOIN transcript t2p
-          ON p.transcript_id = t2p.transcript_id
-        LEFT JOIN seq_region sr
-          ON sr.seq_region_id = (CASE ox.ensembl_object_type
-            WHEN 'Gene' THEN g.seq_region_id
-            WHEN 'Transcript' THEN t.seq_region_id
-            WHEN 'Translation' THEN t2p.seq_region_id END)
-        LEFT JOIN coord_system cs
-          ON cs.coord_system_id = sr.coord_system_id
-        WHERE edb.external_db_id = x.external_db_id
-          AND x.xref_id = ox.xref_id
-          AND x.dbprimary_acc $condition
-    };
+    FROM (external_db edb
+          , xref x
+          , object_xref ox)
+    LEFT JOIN gene g
+      ON g.gene_id = ox.ensembl_id
+    LEFT JOIN transcript t
+      ON t.transcript_id = ox.ensembl_id
+    LEFT JOIN translation p
+      ON p.translation_id = ox.ensembl_id
+    LEFT JOIN transcript t2p
+      ON p.transcript_id = t2p.transcript_id
+    LEFT JOIN seq_region sr
+      ON sr.seq_region_id = (CASE ox.ensembl_object_type
+        WHEN 'Gene' THEN g.seq_region_id
+        WHEN 'Transcript' THEN t.seq_region_id
+        WHEN 'Translation' THEN t2p.seq_region_id END)
+    LEFT JOIN coord_system cs
+      ON cs.coord_system_id = sr.coord_system_id
+    WHERE edb.external_db_id = x.external_db_id
+      AND x.xref_id = ox.xref_id
+      AND x.dbprimary_acc %s
+SQL
+    ;
 
+sub _find_by_xref {
+    my ($self, $qtype_prefix, $metakey, $condition) = @_;
+
+    my $satellite_dba = $self->server->satellite_dba($metakey, 1);
+    return unless $satellite_dba;
+
+    my $sql = sprintf
+        $find_by_xref_sql_template,
+        $condition;
     my $dbc = $satellite_dba->dbc;
     my $sth = $dbc->prepare($sql);
     $sth->execute;
@@ -397,6 +408,30 @@ sub find_by_hit_name {
     return;
 }
 
+my $find_by_hit_name_sql_template = <<'SQL'
+    SELECT af.hit_name
+         , sr.name
+         , cs.name
+         , cs.version
+         , af.seq_region_start
+         , af.seq_region_end
+         , af.seq_region_strand
+         , a.logic_name
+         , SUM(af.score) score_sum
+      FROM %s af
+         , seq_region sr
+         , coord_system cs
+         , analysis a
+     WHERE af.seq_region_id = sr.seq_region_id
+       AND cs.coord_system_id = sr.coord_system_id
+       AND a.analysis_id = af.analysis_id
+       AND af.hit_name %s
+     GROUP BY af.hit_name, af.seq_region_id
+     ORDER BY score_sum DESC
+     LIMIT 10
+SQL
+    ;
+
 sub _find_by_hit_name {
     my ($self, $qtype_prefix, $metakey, $kind, $condition) = @_;
 
@@ -409,23 +444,9 @@ sub _find_by_hit_name {
     my $satellite_dba = $self->server->satellite_dba($metakey, 1);
     return unless $satellite_dba;
 
-    my $sql = qq{
-        SELECT af.hit_name, sr.name, cs.name, cs.version, af.seq_region_start, af.seq_region_end, af.seq_region_strand
-             , a.logic_name
-             , SUM(af.score) score_sum
-          FROM $table_name af
-             , seq_region sr
-             , coord_system cs
-             , analysis a
-         WHERE af.seq_region_id = sr.seq_region_id
-           AND cs.coord_system_id = sr.coord_system_id
-           AND a.analysis_id = af.analysis_id
-           AND af.hit_name $condition
-         GROUP BY af.hit_name, af.seq_region_id
-         ORDER BY score_sum DESC
-         LIMIT 10
-    };
-
+    my $sql = sprintf
+        $find_by_hit_name_sql_template,
+        $table_name, $condition;
     my $dbc = $satellite_dba->dbc;
     my $sth = $dbc->prepare($sql);
     $sth->execute;
