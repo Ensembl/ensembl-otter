@@ -135,10 +135,8 @@ sub satellite_dba {
         $kind    = 'satellite DB';
     }
 
-    if($self->{_sdba}{$metakey}) {
-        $self->log("Get the cached [$metakey] adapter...");
-        return $self->{_sdba}{$metakey};
-    }
+    my $sdba_cached = $self->{_sdba}{$metakey};
+    return $sdba_cached if $sdba_cached;
 
     $self->log("connecting to the '$kind' using [$metakey] meta entry...");
 
