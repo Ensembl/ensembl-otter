@@ -102,42 +102,37 @@ sub find_containing_chromosomes {
     return \@chr_slices;
 }
 
-sub register_slices {
-    my ($self, $qname, $qtype, $feature_slices) = @_;
+sub register_slice {
+    my ($self, $qname, $qtype, $slice) = @_;
 
-    my $odba     = $self->otter_dba();
-    my $pdba;
-    my $local_sa;
+    my $odba = $self->otter_dba();
+    my $lsa = $odba->get_SliceAdaptor();
+    my $sdba = $slice->adaptor->db();
 
-    foreach my $feature_slice (@$feature_slices) {
-        my $fdba = $feature_slice->adaptor->db();
-
-        if($fdba == $odba) {
-            $self->register_slice($qname, $qtype, $feature_slice);
-        } elsif($fdba == ($pdba ||= $self->server->satellite_dba(''))) {
-            $local_sa ||= $odba->get_SliceAdaptor();
-            my $local_slice = $local_sa->fetch_by_region(
-                $feature_slice->coord_system_name(),
-                $feature_slice->seq_region_name(),
-                $feature_slice->start(),
-                $feature_slice->end(),
-                $feature_slice->strand(),
-                $feature_slice->coord_system()->version(),
+    if($sdba == $odba) {
+        $self->register_local_slice($qname, $qtype, $slice);
+    } elsif($sdba == $self->server->satellite_dba('')) {
+        my $local_slice =
+            $lsa->fetch_by_region(
+                $slice->coord_system_name(),
+                $slice->seq_region_name(),
+                $slice->start(),
+                $slice->end(),
+                $slice->strand(),
+                $slice->coord_system()->version(),
             );
-
-            $self->register_slice($qname, $qtype, $local_slice);
-        } else {
-            my $mapped_slices = $self->server->map_remote_slice_back($feature_slice);
-            foreach my $mapped_slice (@$mapped_slices) {
-                $self->register_slice($qname, $qtype, $mapped_slice);
-            }
+        $self->register_local_slice($qname, $qtype, $local_slice);
+    } else {
+        my $local_slices = $self->server->map_remote_slice_back($slice);
+        foreach my $local_slice (@$local_slices) {
+            $self->register_local_slice($qname, $qtype, $local_slice);
         }
     }
 
     return;
 }
 
-sub register_slice {
+sub register_local_slice {
     my ($self, $qname, $qtype, $feature_slice) = @_;
 
     my $cs_name = $feature_slice->coord_system_name();
@@ -227,7 +222,7 @@ sub _find_by_stable_ids {
                 my $feature_slice  = $feature->feature_Slice();
                 my $analysis_logic = $feature->analysis->logic_name(); 
                 my $qtype = "${qtype_prefix}${analysis_logic}:${id_name}";
-                $self->register_slices($qname, $qtype, [$feature_slice]);
+                $self->register_slice($qname, $qtype, $feature_slice);
             }
         }
     } # foreach $qname
@@ -262,7 +257,7 @@ sub _find_by_feature_attributes {
         my $feature = $adaptor->fetch_by_dbID($feature_id);
 
         if($feature->is_current()) {
-            $self->register_slice($qname, $qtype, $feature->feature_Slice());
+            $self->register_local_slice($qname, $qtype, $feature->feature_Slice());
         }
     }
 
@@ -296,7 +291,7 @@ sub _find_by_seqregion_names {
 
         my $slice = $adaptor->fetch_by_region($cs_name, $sr_name);
 
-        $self->register_slice($sr_name, $cs_name.'_name', $slice);
+        $self->register_local_slice($sr_name, $cs_name.'_name', $slice);
     }
 
     return;
@@ -331,7 +326,7 @@ sub _find_by_seqregion_attributes {
 
         my $slice = $adaptor->fetch_by_region($cs_name, $sr_name);
 
-        $self->register_slice($qname, $qtype, $slice);
+        $self->register_local_slice($qname, $qtype, $slice);
     }
 
     return;
@@ -394,7 +389,7 @@ sub _find_by_xref {
         $adaptor ||= $satellite_dba->get_SliceAdaptor();
         my $slice = $adaptor->fetch_by_region($cs_name, $sr_name, $start, $end, 1, $cs_version);
         my $qtype = "${qtype_prefix}${db_name}:";
-        $self->register_slices($qname, $qtype, [ $slice ]);
+        $self->register_slice($qname, $qtype, $slice);
     }
 
     return;
@@ -443,7 +438,7 @@ sub _find_by_hit_name {
         $adaptor ||= $satellite_dba->get_SliceAdaptor();
         my $slice = $adaptor->fetch_by_region($cs_name, $sr_name, $start, $end, $strand, $cs_version);
         my $qtype = "${qtype_prefix}${analysis_name}(score=$score)";
-        $self->register_slices($qname, $qtype, [ $slice ]);
+        $self->register_slice($qname, $qtype, $slice);
     }
 
     return;
