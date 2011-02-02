@@ -159,6 +159,12 @@ sub register_slice {
 }
 
 sub find_by_stable_ids {
+    my ($self, @args) = @_;
+    eval { $self->_find_by_stable_ids(@args); };
+    return;
+}
+
+sub _find_by_stable_ids {
     my ($self, $qtype_prefix, $metakey) = @_;
 
     my $satellite_dba = $self->satellite_dba($metakey, 1) || return;
@@ -215,6 +221,12 @@ sub find_by_stable_ids {
 }
 
 sub find_by_feature_attributes {
+    my ($self, @args) = @_;
+    eval { $self->_find_by_feature_attributes(@args); };
+    return;
+}
+
+sub _find_by_feature_attributes {
     my ($self, $condition, $qtype, $table, $id_field, $code, $adaptor_call) = @_;
 
     my $sql = qq{
@@ -243,6 +255,12 @@ sub find_by_feature_attributes {
 }
 
 sub find_by_seqregion_names {
+    my ($self, @args) = @_;
+    eval { $self->_find_by_seqregion_names(@args); };
+    return;
+}
+
+sub _find_by_seqregion_names {
     my ($self, $condition) = @_;
 
     my $dbc      = $self->otter_dba()->dbc();
@@ -270,6 +288,12 @@ sub find_by_seqregion_names {
 }
 
 sub find_by_seqregion_attributes {
+    my ($self, @args) = @_;
+    eval { $self->_find_by_seqregion_attributes(@args); };
+    return;
+}
+
+sub _find_by_seqregion_attributes {
     my ($self, $condition, $qtype, $cs_name, $code) = @_;
 
     my $sql = qq{
@@ -299,6 +323,12 @@ sub find_by_seqregion_attributes {
 }
 
 sub find_by_xref {
+    my ($self, @args) = @_;
+    eval { $self->_find_by_xref(@args); };
+    return;
+}
+
+sub _find_by_xref {
     my ($self, $qtype_prefix, $metakey, $condition) = @_;
 
     my $satellite_dba = $self->satellite_dba($metakey, 1) || return;
@@ -357,6 +387,12 @@ sub find_by_xref {
 }
 
 sub find_by_hit_name {
+    my ($self, @args) = @_;
+    eval { $self->_find_by_hit_name(@args); };
+    return;
+}
+
+sub _find_by_hit_name {
     my ($self, $qtype_prefix, $metakey, $kind, $condition) = @_;
 
     ## kind = 'dna'|'protein'
