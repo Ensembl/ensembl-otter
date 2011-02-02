@@ -14,17 +14,11 @@ use Bio::Vega::CloneFinder;
 
 my $server = Bio::Otter::ServerScriptSupport->new;
 
-my $qnames       = $server->require_argument('qnames');
-my $filter_atype = $server->param('type')   || '';
-my $unhide       = $server->param('unhide') || 0;
+my $finder = Bio::Vega::CloneFinder->new($server);
+$finder->find;
+my $output = $finder->generate_output;
 
-my $finder = Bio::Vega::CloneFinder->new( $server->otter_dba(), [ split(',', $qnames) ], $unhide);
-
-$finder->find();
-
-my $output_string = $finder->generate_output($filter_atype);
-
-$server->send_response($output_string, 1);
+$server->send_response($output, 1);
 
 1;
 

@@ -8,33 +8,49 @@ package Bio::Vega::CloneFinder;
 
 use strict;
 use warnings;
-use Bio::Otter::Lace::Locator;
 
-use base ('Bio::Otter::MFetcher');
+use Bio::Otter::Lace::Locator;
 
 my $component = 'clone'; # this is the type of components we want the found matches mapped on
 my $DEBUG=0; # do not show all SQL statements
 
 sub new {
-    my ($class, $otter_dba, $qnames, $unhide) = @_;
+    my ($class, $server) = @_;
 
-    my $self = $class->SUPER::new(
-        '_odba'         => $otter_dba,
-        '_ql'           => ($qnames ? {map {(uc($_) => [])} @$qnames } : {}),
-        '_unhide'       => ($unhide ? 1 : 0),
-    );
+    my $self = {
+        _server => $server,
+    };
 
-    return $self;
+    return bless $self, $class;
+}
+
+sub server {
+    my ($self) = @_;
+    return $self->{_server};
+}
+
+sub otter_dba {
+    my ($self) = @_;
+    return $self->{_otter_dba} ||=
+        $self->server->otter_dba;
 }
 
 sub qnames_locators {
-#
-# This is a HoL
-# {query_name}[locators*]
-#
     my ($self) = @_;
+    return $self->{_qnames_locators} ||=
+        $self->_qnames_locators;
+}
 
-    return $self->{_ql};
+sub _qnames_locators {
+    my ($self) = @_;
+    my @qnames = split(',', $self->server->require_argument('qnames'));
+    return { map { (uc($_) => []); } @qnames };
+}
+
+sub unhide {
+    my ($self) = @_;
+    return $self->{_unhide} ||=
+        $self->server->param('unhide') || 0;
 }
 
 sub find_containing_chromosomes {
@@ -98,7 +114,7 @@ sub register_slices {
 
         if($fdba == $odba) {
             $self->register_slice($qname, $qtype, $feature_slice);
-        } elsif($fdba == ($pdba ||= $self->satellite_dba(''))) {
+        } elsif($fdba == ($pdba ||= $self->server->satellite_dba(''))) {
             $local_sa ||= $odba->get_SliceAdaptor();
             my $local_slice = $local_sa->fetch_by_region(
                 $feature_slice->coord_system_name(),
@@ -111,7 +127,7 @@ sub register_slices {
 
             $self->register_slice($qname, $qtype, $local_slice);
         } else {
-            my $mapped_slices = $self->map_remote_slice_back($feature_slice);
+            my $mapped_slices = $self->server->map_remote_slice_back($feature_slice);
             foreach my $mapped_slice (@$mapped_slices) {
                 $self->register_slice($qname, $qtype, $mapped_slice);
             }
@@ -137,7 +153,7 @@ sub register_slice {
         ? [ $feature_slice ]
         : $self->find_containing_chromosomes($feature_slice);
 
-    my $unhide = $self->{_unhide};
+    my $unhide = $self->unhide;
 
     foreach my $chr_slice (@$found_chromosome_slices) {
 
@@ -167,7 +183,7 @@ sub find_by_stable_ids {
 sub _find_by_stable_ids {
     my ($self, $qtype_prefix, $metakey) = @_;
 
-    my $satellite_dba = $self->satellite_dba($metakey, 1) || return;
+    my $satellite_dba = $self->server->satellite_dba($metakey, 1) || return;
 
     my $meta_con   = bless $satellite_dba->get_MetaContainer(), 'Bio::Vega::DBSQL::MetaContainer';
 
@@ -331,7 +347,7 @@ sub find_by_xref {
 sub _find_by_xref {
     my ($self, $qtype_prefix, $metakey, $condition) = @_;
 
-    my $satellite_dba = $self->satellite_dba($metakey, 1) || return;
+    my $satellite_dba = $self->server->satellite_dba($metakey, 1) || return;
 
     my $sql = qq{
         SELECT DISTINCT edb.db_name
@@ -401,7 +417,7 @@ sub _find_by_hit_name {
 
     # NB: $condition only can be equality, otherwise you'll annoy the users!
 
-    my $satellite_dba = $self->satellite_dba($metakey, 1) || return;
+    my $satellite_dba = $self->server->satellite_dba($metakey, 1) || return;
 
     my $sql = qq{
         SELECT af.hit_name, sr.name, cs.name, cs.version, af.seq_region_start, af.seq_region_end, af.seq_region_strand
@@ -488,8 +504,9 @@ sub find {
 }
 
 sub generate_output {
-    my ($self, $filter_atype) = @_;
+    my ($self) = @_;
 
+    my $type = $self->server->param('type');
     my $output_string = '';
 
     for my $qname (sort keys %{$self->qnames_locators()}) {
@@ -497,7 +514,7 @@ sub generate_output {
         for my $loc (sort {$a->assembly cmp $b->assembly}
                         @{ $self->qnames_locators()->{$qname} }) {
             my $asm = $loc->assembly();
-            if(!$filter_atype || ($filter_atype eq $asm)) {
+            if(!$type || ($type eq $asm)) {
                 $output_string .= join("\t",
                     $loc->qname(), # take it from $loc to avoid case confusion
                     $loc->qtype(),
