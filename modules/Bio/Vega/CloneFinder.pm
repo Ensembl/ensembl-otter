@@ -174,6 +174,29 @@ sub find_by_stable_ids {
     return;
 }
 
+my $id_adaptor_fetcher_by_type = {
+    'G' => [
+        'gene_stable_id',
+        'get_GeneAdaptor',
+        'fetch_by_stable_id',
+        ],
+    'T' => [
+        'transcript_stable_id',
+        'get_TranscriptAdaptor',
+        'fetch_by_stable_id',
+    ],
+    'P' => [
+        'translation_stable_id',
+        'get_TranscriptAdaptor',
+        'fetch_by_translation_stable_id',
+    ],
+    'E' => [
+        'exon_stable_id',
+        'get_ExonAdaptor',
+        'fetch_by_stable_id',
+    ],
+};
+
 sub _find_by_stable_ids {
     my ($self, $qtype_prefix, $metakey) = @_;
 
@@ -186,37 +209,25 @@ sub _find_by_stable_ids {
 
     my $prefix_species = $meta_con->get_species_prefix || '\w{0,6}';
 
-    my $gene_adaptor           = $satellite_dba->get_GeneAdaptor;
-    my $transcript_adaptor     = $satellite_dba->get_TranscriptAdaptor;
-    my $exon_adaptor           = $satellite_dba->get_ExonAdaptor;
-
     foreach my $qname (keys %{$self->qnames_locators}) {
         if(uc($qname) =~ /^$prefix_primary$prefix_species([TPGE])\d+/i){ # try stable_ids
             my $typeletter = $1;
-            my $id_name;
-            my $feature;
+            my $id_adaptor_fetcher =
+                $id_adaptor_fetcher_by_type->{$typeletter};
+            next unless $id_adaptor_fetcher;
+            my ( $id, $adaptor, $fetcher ) = @{$id_adaptor_fetcher};
 
             # Just imagine: they raise an EXCEPTION to indicate nothing was found. Terrific!
-            eval {
-                if($typeletter eq 'G') {
-                    $id_name = 'gene_stable_id';
-                    $feature = $gene_adaptor->fetch_by_stable_id($qname);
-                } elsif($typeletter eq 'T') {
-                    $id_name = 'transcript_stable_id';
-                    $feature = $transcript_adaptor->fetch_by_stable_id($qname);
-                } elsif($typeletter eq 'P') {
-                    $id_name = 'translation_stable_id';
-                    $feature = $transcript_adaptor->fetch_by_translation_stable_id($qname);
-                } elsif($typeletter eq 'E') {
-                    $id_name = 'exon_stable_id';
-                    $feature = $exon_adaptor->fetch_by_stable_id($qname);
-                }
-            };
+            my $feature;
+            {
+                ## no critic (ErrorHandling::RequireCheckingReturnValueOfEval)
+                eval { $feature = $satellite_dba->$adaptor->$fetcher($qname); };
+            }
 
             if ($feature) {
                 my $feature_slice  = $feature->feature_Slice;
                 my $analysis_logic = $feature->analysis->logic_name; 
-                my $qtype = "${qtype_prefix}${analysis_logic}:${id_name}";
+                my $qtype = "${qtype_prefix}${analysis_logic}:${id}";
                 $self->register_slice($qname, $qtype, $feature_slice);
             }
         }
