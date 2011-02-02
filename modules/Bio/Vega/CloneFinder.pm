@@ -442,7 +442,6 @@ sub find {
     # lists of names, with and without versions
     my @names = keys %{$self->qnames_locators()};
     my @names_2 = _strip_trailing_version_numbers(@names);
-    warn sprintf "%s(): names_2: %s", (caller(0))[3], join ", ", @names_2 ;
 
     # lists expressed as SQL conditions
     my $condition   = _sql_list_condition(@names);
