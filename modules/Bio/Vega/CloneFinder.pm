@@ -59,12 +59,12 @@ sub find_containing_chromosomes {
         # EnsEMBL as of rel46 cannot perform ambigous clone|subregion->contig->chromosome mapping correctly.
         # So we prefer to do it using direct SQL:
         
-    my $sa = $slice->adaptor();
+    my $sa = $slice->adaptor;
 
         # map the original slice onto contig_ids
-    my $seq_level_slice_ids = [ $slice->coord_system->is_sequence_level()
+    my $seq_level_slice_ids = [ $slice->coord_system->is_sequence_level
         ? $sa->get_seq_region_id($slice)
-        : map { $sa->get_seq_region_id($_->to_Slice()) } @{$slice->project('seqlevel')}
+        : map { $sa->get_seq_region_id($_->to_Slice) } @{$slice->project('seqlevel')}
     ];
 
         # now map those contig_ids back onto a chromosome
@@ -84,11 +84,11 @@ sub find_containing_chromosomes {
      GROUP BY chr.name
     };
 
-    my $sth = $sa->dbc()->prepare($sql);
-    $sth->execute();
+    my $sth = $sa->dbc->prepare($sql);
+    $sth->execute;
 
     my @chr_slices = ();
-    while( my ($atype, $joined_cmps) = $sth->fetchrow() ) {
+    while( my ($atype, $joined_cmps) = $sth->fetchrow ) {
 
         my @cmps = split(/,/, $joined_cmps);
 
@@ -105,21 +105,21 @@ sub find_containing_chromosomes {
 sub register_slice {
     my ($self, $qname, $qtype, $slice) = @_;
 
-    my $odba = $self->otter_dba();
-    my $lsa = $odba->get_SliceAdaptor();
-    my $sdba = $slice->adaptor->db();
+    my $odba = $self->otter_dba;
+    my $lsa = $odba->get_SliceAdaptor;
+    my $sdba = $slice->adaptor->db;
 
     if($sdba == $odba) {
         $self->register_local_slice($qname, $qtype, $slice);
     } elsif($sdba == $self->server->satellite_dba('')) {
         my $local_slice =
             $lsa->fetch_by_region(
-                $slice->coord_system_name(),
-                $slice->seq_region_name(),
-                $slice->start(),
-                $slice->end(),
-                $slice->strand(),
-                $slice->coord_system()->version(),
+                $slice->coord_system_name,
+                $slice->seq_region_name,
+                $slice->start,
+                $slice->end,
+                $slice->strand,
+                $slice->coord_system->version,
             );
         $self->register_local_slice($qname, $qtype, $local_slice);
     } else {
@@ -135,13 +135,13 @@ sub register_slice {
 sub register_local_slice {
     my ($self, $qname, $qtype, $feature_slice) = @_;
 
-    my $cs_name = $feature_slice->coord_system_name();
+    my $cs_name = $feature_slice->coord_system_name;
 
     my $component_names = [ ($cs_name eq $component)
         ? $feature_slice->seq_region_name
-        : map { $_->to_Slice()->seq_region_name() }
+        : map { $_->to_Slice->seq_region_name }
                     # NOTE: order of projection segments WAS strand-dependent
-                sort { ($a->from_start() <=> $b->from_start())*$feature_slice->strand() }
+                sort { ($a->from_start <=> $b->from_start)*$feature_slice->strand }
                     @{ $feature_slice->project($component) } ];
 
     my $found_chromosome_slices = ($cs_name eq 'chromosome')
@@ -153,17 +153,17 @@ sub register_local_slice {
     foreach my $chr_slice (@$found_chromosome_slices) {
 
         unless($unhide) {
-            my ($hidden) = ((map {$_->value()} @{$chr_slice->get_all_Attributes('hidden')}), 1);
+            my ($hidden) = ((map {$_->value} @{$chr_slice->get_all_Attributes('hidden')}), 1);
 
             next if $hidden;
         }
 
         my $loc = Bio::Otter::Lace::Locator->new($qname, $qtype);
 
-        $loc->assembly( $chr_slice->seq_region_name() );
+        $loc->assembly( $chr_slice->seq_region_name );
         $loc->component_names( $component_names );
 
-        push @{ $self->qnames_locators()->{uc($qname)} }, $loc;
+        push @{ $self->qnames_locators->{uc($qname)} }, $loc;
     }
 
     return;
@@ -180,19 +180,19 @@ sub _find_by_stable_ids {
 
     my $satellite_dba = $self->server->satellite_dba($metakey, 1) || return;
 
-    my $meta_con   = bless $satellite_dba->get_MetaContainer(), 'Bio::Vega::DBSQL::MetaContainer';
+    my $meta_con   = bless $satellite_dba->get_MetaContainer, 'Bio::Vega::DBSQL::MetaContainer';
 
-    my $prefix_primary = $meta_con->get_primary_prefix() || 'ENS';
+    my $prefix_primary = $meta_con->get_primary_prefix || 'ENS';
 
-    my $prefix_species = $meta_con->get_species_prefix() || '\w{0,6}';
+    my $prefix_species = $meta_con->get_species_prefix || '\w{0,6}';
 
-    my $gene_adaptor           = $satellite_dba->get_GeneAdaptor();
-    my $transcript_adaptor     = $satellite_dba->get_TranscriptAdaptor();
-    my $exon_adaptor           = $satellite_dba->get_ExonAdaptor();
+    my $gene_adaptor           = $satellite_dba->get_GeneAdaptor;
+    my $transcript_adaptor     = $satellite_dba->get_TranscriptAdaptor;
+    my $exon_adaptor           = $satellite_dba->get_ExonAdaptor;
 
     my @slices = ();
 
-    foreach my $qname (keys %{$self->qnames_locators()}) {
+    foreach my $qname (keys %{$self->qnames_locators}) {
         if(uc($qname) =~ /^$prefix_primary$prefix_species([TPGE])\d+/i){ # try stable_ids
             my $typeletter = $1;
             my $id_name;
@@ -219,8 +219,8 @@ sub _find_by_stable_ids {
                 # warn "'$qname' looks like a stable id, but wasn't found.";
                 # warn ($@) if $DEBUG;
             } elsif($feature) { # however watch out, sometimes we just silently get nothing!
-                my $feature_slice  = $feature->feature_Slice();
-                my $analysis_logic = $feature->analysis->logic_name(); 
+                my $feature_slice  = $feature->feature_Slice;
+                my $analysis_logic = $feature->analysis->logic_name; 
                 my $qtype = "${qtype_prefix}${analysis_logic}:${id_name}";
                 $self->register_slice($qname, $qtype, $feature_slice);
             }
@@ -246,18 +246,18 @@ sub _find_by_feature_attributes {
           AND value $condition
     };
 
-    my $dbc      = $self->otter_dba()->dbc();
+    my $dbc      = $self->otter_dba->dbc;
     my $sth = $dbc->prepare($sql);
-    $sth->execute();
+    $sth->execute;
 
     my $adaptor;
-    while( my ($feature_id, $qname) = $sth->fetchrow() ) {
-        $adaptor ||= $self->otter_dba()->$adaptor_call; # only do it if we found something
+    while( my ($feature_id, $qname) = $sth->fetchrow ) {
+        $adaptor ||= $self->otter_dba->$adaptor_call; # only do it if we found something
 
         my $feature = $adaptor->fetch_by_dbID($feature_id);
 
-        if($feature->is_current()) {
-            $self->register_local_slice($qname, $qtype, $feature->feature_Slice());
+        if($feature->is_current) {
+            $self->register_local_slice($qname, $qtype, $feature->feature_Slice);
         }
     }
 
@@ -273,7 +273,7 @@ sub find_by_seqregion_names {
 sub _find_by_seqregion_names {
     my ($self, $condition) = @_;
 
-    my $dbc      = $self->otter_dba()->dbc();
+    my $dbc      = $self->otter_dba->dbc;
     my $adaptor;
 
     my $sql = qq{
@@ -285,9 +285,9 @@ sub _find_by_seqregion_names {
     };
 
     my $sth = $dbc->prepare($sql);
-    $sth->execute();
-    while( my ($cs_name, $sr_name) = $sth->fetchrow() ) {
-        $adaptor ||= $self->otter_dba()->get_SliceAdaptor();
+    $sth->execute;
+    while( my ($cs_name, $sr_name) = $sth->fetchrow ) {
+        $adaptor ||= $self->otter_dba->get_SliceAdaptor;
 
         my $slice = $adaptor->fetch_by_region($cs_name, $sr_name);
 
@@ -316,13 +316,13 @@ sub _find_by_seqregion_attributes {
           AND sra.value $condition
     };
 
-    my $dbc      = $self->otter_dba()->dbc();
+    my $dbc      = $self->otter_dba->dbc;
     my $sth = $dbc->prepare($sql);
-    $sth->execute();
+    $sth->execute;
 
     my $adaptor;
-    while( my ($sr_name, $qname) = $sth->fetchrow() ) {
-        $adaptor ||= $self->otter_dba()->get_SliceAdaptor();
+    while( my ($sr_name, $qname) = $sth->fetchrow ) {
+        $adaptor ||= $self->otter_dba->get_SliceAdaptor;
 
         my $slice = $adaptor->fetch_by_region($cs_name, $sr_name);
 
@@ -380,13 +380,13 @@ sub _find_by_xref {
           AND x.dbprimary_acc $condition
     };
 
-    my $dbc = $satellite_dba->dbc();
+    my $dbc = $satellite_dba->dbc;
     my $sth = $dbc->prepare($sql);
-    $sth->execute();
+    $sth->execute;
 
     my $adaptor;
-    while( my ($db_name, $qname, $sr_name, $cs_name, $cs_version, $start, $end) = $sth->fetchrow() ) {
-        $adaptor ||= $satellite_dba->get_SliceAdaptor();
+    while( my ($db_name, $qname, $sr_name, $cs_name, $cs_version, $start, $end) = $sth->fetchrow ) {
+        $adaptor ||= $satellite_dba->get_SliceAdaptor;
         my $slice = $adaptor->fetch_by_region($cs_name, $sr_name, $start, $end, 1, $cs_version);
         my $qtype = "${qtype_prefix}${db_name}:";
         $self->register_slice($qname, $qtype, $slice);
@@ -429,13 +429,13 @@ sub _find_by_hit_name {
          LIMIT 10
     };
 
-    my $dbc = $satellite_dba->dbc();
+    my $dbc = $satellite_dba->dbc;
     my $sth = $dbc->prepare($sql);
-    $sth->execute();
+    $sth->execute;
 
     my $adaptor;
-    while( my ($qname, $sr_name, $cs_name, $cs_version, $start, $end, $strand, $analysis_name, $score) = $sth->fetchrow() ) {
-        $adaptor ||= $satellite_dba->get_SliceAdaptor();
+    while( my ($qname, $sr_name, $cs_name, $cs_version, $start, $end, $strand, $analysis_name, $score) = $sth->fetchrow ) {
+        $adaptor ||= $satellite_dba->get_SliceAdaptor;
         my $slice = $adaptor->fetch_by_region($cs_name, $sr_name, $start, $end, $strand, $cs_version);
         my $qtype = "${qtype_prefix}${analysis_name}(score=$score)";
         $self->register_slice($qname, $qtype, $slice);
@@ -448,7 +448,7 @@ sub find {
     my ($self) = @_;
 
     # lists of names, with and without versions
-    my @names = keys %{$self->qnames_locators()};
+    my @names = keys %{$self->qnames_locators};
     my @names_2 = _strip_trailing_version_numbers(@names);
 
     # lists expressed as SQL conditions
@@ -477,7 +477,7 @@ sub find {
     $self->find_by_feature_attributes($condition, 'transcript_name',
         'transcript_attrib', 'transcript_id', 'name', 'get_TranscriptAdaptor');
 
-    foreach my $qname (keys %{$self->qnames_locators()}) {
+    foreach my $qname (keys %{$self->qnames_locators}) {
 
         my $like_prefixed_qname = "like '%:$qname'";
 
@@ -501,17 +501,17 @@ sub generate_output {
     my $type = $self->server->param('type');
     my $output_string = '';
 
-    for my $qname (sort keys %{$self->qnames_locators()}) {
+    for my $qname (sort keys %{$self->qnames_locators}) {
         my $count = 0;
         for my $loc (sort {$a->assembly cmp $b->assembly}
-                        @{ $self->qnames_locators()->{$qname} }) {
-            my $asm = $loc->assembly();
+                        @{ $self->qnames_locators->{$qname} }) {
+            my $asm = $loc->assembly;
             if(!$type || ($type eq $asm)) {
                 $output_string .= join("\t",
-                    $loc->qname(), # take it from $loc to avoid case confusion
-                    $loc->qtype(),
-                    join(',', @{$loc->component_names()}),
-                    $loc->assembly())."\n";
+                    $loc->qname, # take it from $loc to avoid case confusion
+                    $loc->qtype,
+                    join(',', @{$loc->component_names}),
+                    $loc->assembly)."\n";
                 $count++;
             }
         }
