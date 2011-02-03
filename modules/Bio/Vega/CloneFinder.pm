@@ -53,17 +53,17 @@ sub unhide {
 }
 
 my $find_containing_chromosomes_sql_template = <<'SQL'
-        SELECT    chr.name,
-                  group_concat(distinct a.cmp_seq_region_id) as joined_cmps
-        FROM      assembly a,
-                  seq_region chr,
-                  coord_system cs
-        WHERE     cs.name='chromosome'
-        AND       cs.version='Otter'
-        AND       cs.coord_system_id=chr.coord_system_id
-        AND       chr.seq_region_id=a.asm_seq_region_id
-        AND       a.cmp_seq_region_id IN ( %s )
-        GROUP BY  chr.name
+    SELECT    chr.name,
+              group_concat(distinct a.cmp_seq_region_id) as joined_cmps
+    FROM      assembly a,
+              seq_region chr,
+              coord_system cs
+    WHERE     cs.name='chromosome'
+    AND       cs.version='Otter'
+    AND       cs.coord_system_id=chr.coord_system_id
+    AND       chr.seq_region_id=a.asm_seq_region_id
+    AND       a.cmp_seq_region_id IN ( %s )
+    GROUP BY  chr.name
 SQL
     ;
 
