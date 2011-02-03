@@ -18,6 +18,8 @@ sub new {
 
     my $self = {
         _server => $server,
+        _qnames => [ split ',', $server->require_argument('qnames') ],
+        _qnames_locators => {},
     };
 
     return bless $self, $class;
@@ -34,16 +36,14 @@ sub otter_dba {
         $self->server->otter_dba;
 }
 
-sub qnames_locators {
+sub qnames {
     my ($self) = @_;
-    return $self->{_qnames_locators} ||=
-        $self->_qnames_locators;
+    return $self->{_qnames};
 }
 
-sub _qnames_locators {
+sub qnames_locators {
     my ($self) = @_;
-    my @qnames = split(',', $self->server->require_argument('qnames'));
-    return { map { (uc($_) => []); } @qnames };
+    return $self->{_qnames_locators};
 }
 
 sub unhide {
@@ -211,7 +211,7 @@ sub _find_by_stable_ids {
     my $prefix_species = $meta_con->get_species_prefix || '\w{0,6}';
     my $qname_pattern = qr(^${prefix_primary}${prefix_species}([TPGE])\d+)i;
 
-    foreach my $qname (keys %{$self->qnames_locators}) {
+    foreach my $qname (@{$self->qnames}) {
 
         my ($typeletter) = uc($qname) =~ $qname_pattern;
         next unless $typeletter;
@@ -493,7 +493,7 @@ sub find {
     my ($self) = @_;
 
     # lists of names, with and without versions
-    my @names = keys %{$self->qnames_locators};
+    my @names = @{$self->qnames};
     my @names_2 = _strip_trailing_version_numbers(@names);
 
     # lists expressed as SQL conditions
@@ -522,7 +522,7 @@ sub find {
     $self->find_by_feature_attributes($condition, 'transcript_name',
         'transcript_attrib', 'transcript_id', 'name', 'get_TranscriptAdaptor');
 
-    foreach my $qname (keys %{$self->qnames_locators}) {
+    foreach my $qname (@{$self->qnames}) {
 
         my $like_prefixed_qname = "like '%:$qname'";
 
@@ -546,18 +546,21 @@ sub generate_output {
     my $type = $self->server->param('type');
     my $output_string = '';
 
-    for my $qname (sort keys %{$self->qnames_locators}) {
+    for my $qname (sort @{$self->qnames}) {
+        my $locators = $self->qnames_locators->{$qname};
         my $count = 0;
-        for my $loc (sort {$a->assembly cmp $b->assembly}
-                        @{ $self->qnames_locators->{$qname} }) {
-            my $asm = $loc->assembly;
-            if(!$type || ($type eq $asm)) {
-                $output_string .= join("\t",
-                    $loc->qname, # take it from $loc to avoid case confusion
-                    $loc->qtype,
-                    join(',', @{$loc->component_names}),
-                    $loc->assembly)."\n";
-                $count++;
+        if ($locators) {
+            for my $loc (sort {$a->assembly cmp $b->assembly} @{$locators}) {
+                my $asm = $loc->assembly;
+                if(!$type || ($type eq $asm)) {
+                    $output_string .=
+                        join("\t",
+                             $loc->qname, # take it from $loc to avoid case confusion
+                             $loc->qtype,
+                             join(',', @{$loc->component_names}),
+                             $loc->assembly)."\n";
+                    $count++;
+                }
             }
         }
         if(!$count) {
