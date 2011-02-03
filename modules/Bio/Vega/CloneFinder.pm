@@ -46,12 +46,6 @@ sub qnames_locators {
     return $self->{_qnames_locators};
 }
 
-sub unhide {
-    my ($self) = @_;
-    return $self->{_unhide} ||=
-        $self->server->param('unhide') || 0;
-}
-
 my $find_containing_chromosomes_sql_template = <<'SQL'
     SELECT    chr.name,
               group_concat(distinct a.cmp_seq_region_id) as joined_cmps
@@ -147,15 +141,9 @@ sub register_local_slice {
         ? [ $feature_slice ]
         : $self->find_containing_chromosomes($feature_slice);
 
-    my $unhide = $self->unhide;
-
     foreach my $chr_slice (@$found_chromosome_slices) {
-
-        unless($unhide) {
-            my ($hidden) = ((map {$_->value} @{$chr_slice->get_all_Attributes('hidden')}), 1);
-
-            next if $hidden;
-        }
+        my ($hidden) = ((map {$_->value} @{$chr_slice->get_all_Attributes('hidden')}), 1);
+        next if $hidden;
 
         my $loc = Bio::Otter::Lace::Locator->new($qname, $qtype);
 
@@ -543,27 +531,21 @@ sub find {
 sub generate_output {
     my ($self) = @_;
 
-    my $type = $self->server->param('type');
     my $output_string = '';
 
     for my $qname (sort @{$self->qnames}) {
         my $locators = $self->qnames_locators->{$qname};
-        my $count = 0;
         if ($locators) {
             for my $loc (sort {$a->assembly cmp $b->assembly} @{$locators}) {
-                my $asm = $loc->assembly;
-                if(!$type || ($type eq $asm)) {
-                    $output_string .=
-                        join("\t",
-                             $loc->qname, # take it from $loc to avoid case confusion
-                             $loc->qtype,
-                             join(',', @{$loc->component_names}),
-                             $loc->assembly)."\n";
-                    $count++;
-                }
+                $output_string .=
+                    join("\t",
+                         $loc->qname, # take it from $loc to avoid case confusion
+                         $loc->qtype,
+                         join(',', @{$loc->component_names}),
+                         $loc->assembly)."\n";
             }
         }
-        if(!$count) {
+        else {
             $output_string .= "$qname\n"; # no matches for this qname
         }
     }
