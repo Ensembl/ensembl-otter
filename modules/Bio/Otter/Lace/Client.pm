@@ -329,7 +329,7 @@ sub password_prompt{
     }
     $callback = $self->{'_password_prompt_callback'} ||=
         sub {
-            my $self = shift;
+            my ($self) = @_;
             
             unless (-t STDIN) { ## no critic(InputOutput::ProhibitInteractiveTest)
                 warn "Cannot prompt for password - not attached to terminal\n";
@@ -357,7 +357,7 @@ sub fatal_error_prompt {
     
     $callback = $self->{'_fatal_error_callback'} ||=
         sub {
-            my $msg = shift;
+            my ($msg) = @_;
             die $msg;
         };
         
@@ -1087,7 +1087,11 @@ sub sessions_needing_recovery {
             push(@$to_recover, [$lace_dir, $mtime, $title]);
         } else {
             my $save_sub = $self->fatal_error_prompt;
-            $self->fatal_error_prompt(sub{ die shift });
+            $self->fatal_error_prompt(
+                sub {
+                    my ($msg) = @_;
+                    die $msg;
+                });
             eval {
                 # Attempt to release locks of uninitialised sessions
                 my $adb = $self->recover_session($lace_dir);
