@@ -73,17 +73,16 @@ sub do_search {
 
     my $results_list = $self->Client()->find_string_match_in_clones($self->DataSet->name(), $qnames);
     
-    foreach my $locator (sort { ace_sort($a->qname(), $b->qname()) } @$results_list) {
+    foreach my $result (sort { ace_sort($a->{qname}, $b->{qname}) } @$results_list) {
 
         my $result_frame = $self->{_results_frame}->Frame(
         )->pack(-side => 'top', -fill => 'x');
 
         push @{$self->found_elements}, $result_frame;
 
-        my $qname        = $locator->qname();
-        my $qtype        = $locator->qtype();
-        my $ssname       = $locator->assembly();
-        my $clone_names  = $locator->component_names();
+        my ($qname, $qtype, $ssname, $clone_names) =
+            @{$result}{qw( qname qtype assembly components )};
+
         my $clone_number = scalar(@$clone_names);
 
         if($clone_number) {

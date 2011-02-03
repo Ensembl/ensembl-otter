@@ -19,7 +19,6 @@ use Bio::Vega::Author;
 use Bio::Vega::ContigLock;
 
 use Bio::Otter::Lace::Defaults;
-use Bio::Otter::Lace::Locator;
 use Bio::Otter::Lace::PipelineStatus;
 use Bio::Otter::Lace::SequenceNote;
 use Bio::Otter::Lace::AceDatabase;
@@ -706,9 +705,13 @@ sub find_string_match_in_clones {
 
     for my $line (split(/\n/,$response)) {
         my ($qname, $qtype, $component_names, $assembly) = split(/\t/, $line);
-        my $component_list = $component_names ? [ split(/,/, $component_names) ] : [];
-
-        push @results_list, Bio::Otter::Lace::Locator->new($qname, $qtype, $component_list, $assembly);
+        my $components = $component_names ? [ split(/,/, $component_names) ] : [];
+        push @results_list, {
+            qname      => $qname,
+            qtype      => $qtype,
+            components => $components,
+            assembly   => $assembly,
+        };
     }
 
     return \@results_list;
