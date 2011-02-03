@@ -2,6 +2,9 @@
 
 package Bio::Vega::Utils::GFF;
 
+use strict;
+use warnings;
+
 sub gff_header {
     my ($name, $start, $end, $dna) = @_;
 
@@ -22,9 +25,6 @@ sub gff_header {
 
     return $hdr;
 }
-
-use strict;
-use warnings;
 
 1;
 
