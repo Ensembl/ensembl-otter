@@ -5,6 +5,7 @@ package Bio::Vega::Enrich::SliceGetAllAlignFeatures;
 use strict;
 use warnings;
 
+use Bio::EnsEMBL::Slice;
 use Bio::Vega::DBSQL::SimpleBindingAdaptor;
 
 # Code in this module was originally embedded in Bio::Otter::ServerScriptSupport
