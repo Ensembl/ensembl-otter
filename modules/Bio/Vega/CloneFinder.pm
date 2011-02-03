@@ -17,7 +17,7 @@ sub new {
     my $self = {
         _server => $server,
         _qnames => [ split ',', $server->require_argument('qnames') ],
-        _qnames_locators => {},
+        _results => {},
     };
 
     return bless $self, $class;
@@ -39,9 +39,9 @@ sub qnames {
     return $self->{_qnames};
 }
 
-sub qnames_locators {
+sub results {
     my ($self) = @_;
-    return $self->{_qnames_locators};
+    return $self->{_results};
 }
 
 my $find_containing_chromosomes_sql_template = <<'SQL'
@@ -144,7 +144,7 @@ sub register_local_slice {
         next if $hidden;
         my $chr_name = $chr_slice->seq_region_name;
         push
-            @{ $self->qnames_locators->{uc($qname)}{$chr_name} },
+            @{ $self->results->{uc($qname)}{$chr_name} },
             [ $qtype, $component_names ];
     }
 
@@ -529,10 +529,10 @@ sub generate_output {
     my $output_string = '';
 
     for my $qname (sort @{$self->qnames}) {
-        my $locators = $self->qnames_locators->{$qname};
-        if ($locators) {
-            for my $chr_name (sort keys %{$locators}) {
-                for (@{$locators->{$chr_name}}) {
+        my $qname_results = $self->results->{$qname};
+        if ($qname_results) {
+            for my $chr_name (sort keys %{$qname_results}) {
+                for (@{$qname_results->{$chr_name}}) {
                     my ( $qtype, $component_names ) = @{$_};
                     my $components = join ',', @{$component_names};
                     $output_string .=
