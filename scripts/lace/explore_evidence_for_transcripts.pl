@@ -10,6 +10,7 @@ use List::Util qw(min max);
 use Bio::Otter::Lace::Defaults;
 use Bio::Otter::Utils::MM;
 
+use Bio::Vega::SimpleAlign;
 use Bio::Vega::Enrich::SliceGetAllAlignFeatures; # Enriched Bio::EnsEMBL::Slice::get_all_DnaDnaAlignFeatures 
                                                  # (with hit descriptions)
 
@@ -36,6 +37,10 @@ sub new {
 }
 
 package main;
+
+use constant MAX_UNDERLAP        => 10;
+use constant MAX_TRAIL           => 10;
+use constant MAX_OVERSIZE_INSERT => 10;
 
 my $opts;
 
@@ -386,7 +391,8 @@ sub make_ranked_map {
     for my $i ( 0..$#$sorted ) {
 
         my $ele = $sorted->[$i];
-        $ele->{rank} = $i;
+        # WARNING - MAKES ASSUMPTIONS about structure of $ele
+        $ele->{_otter_rank} = $i;
 
         my $key;
         if (UNIVERSAL::can($ele,$map_key)) {
@@ -456,7 +462,8 @@ sub reverse_seq {
 
     sub get_comp_app {
         $factory ||= Bio::Factory::EMBOSS->new();
-        $comp_app ||= $factory->program('water');
+#        $comp_app ||= $factory->program('water');
+        $comp_app ||= $factory->program('needle');
         return $comp_app;
     }
 }
@@ -490,6 +497,7 @@ sub compare_fetched_features_to_ref {
                     -bsequence => \@feature_seqs,
                     -outfile   => $comp_outfile,
                     -aformat   => 'srspair',
+                    -aglobal   => 1,
                    });
 
     my $alnin = Bio::AlignIO->new(-format => 'emboss',
@@ -497,7 +505,7 @@ sub compare_fetched_features_to_ref {
 
     my @aln_results;
     while ( my $aln = $alnin->next_aln ) {
-        push @aln_results, $aln;
+        push @aln_results, Bio::Vega::SimpleAlign->promote_BioSimpleAlign($aln);
     }
 
     return \@aln_results;
@@ -525,11 +533,94 @@ sub pfetch_feature_max_len {
     return $f_seq;
 }
 
+sub score_align_features {
+    my $transcript = shift;
+    my $feature_list = shift;
+
+    my $n_features = scalar @$feature_list;
+    reportf("verbose:SA:1", "Aligning %d features to %s", $n_features, $transcript->stable_id);
+
+    my @best_direction_hits;
+
+    my $chunk_size = 100;
+    for (my $i = 0; $i < $n_features; $i += $chunk_size) {
+
+        my $limit = min($i+$chunk_size-1, $n_features-1);
+        reportf("verbose:SA:2", "Features %d .. %d", $i, $limit);
+        my @slice = @$feature_list[$i .. $limit];
+
+        my $aln_results = compare_fetched_features_to_ref($transcript->seq,
+                                                          \@slice,
+                                                          \&pfetch_feature_max_len,
+                                                          1);
+
+      ALIGN: while (@$aln_results) {
+            my $fwd = shift @$aln_results;
+            my $rev = shift @$aln_results;
+        
+            my $name = $fwd->feature_seq->display_id;
+            my $best;
+
+            if ($fwd->score >= $rev->score) {
+                reportf("verbose:SA:2", "Best match for %s is forward", $name);
+                $fwd->direction(1);
+                $best = $fwd;
+            } else {
+                reportf("verbose:SA:2", "Best match for %s is reverse", $name);
+                $rev->direction(-1);
+                $best = $rev;
+            }
+            
+            my $ul = $best->underlap_length($transcript->strand);
+            if ($ul) {
+                reportf("verbose:SA:3", "Underlaps by %d", $ul);
+            }
+
+            my $trl = $best->trailing_length($transcript->strand);
+            my $polyA = "";
+            if ($trl) {
+                my $trl_seq = $best->trailing_feature_seq($transcript->strand);
+                # What constitutes a poly-A tail? Here one or more trailing As together
+                if ($trl_seq =~ /^A+$/) {
+                    $polyA = " - looks like poly(A) tail: $trl_seq";
+                } 
+                reportf("verbose:SA:3", "Trails by %d%s", $trl, $polyA);
+            }
+
+            my $max_os = 0;
+            if (my @os_inserts = $best->oversize_inserts) {
+                my $n_os = scalar @os_inserts;
+                $max_os = length( (sort {$b cmp $a} @os_inserts)[0] );
+                reportf("verbose:SA:3", "Oversize inserts: %d, largest %d", $n_os, $max_os);
+            }
+
+            if ($ul > MAX_UNDERLAP) {
+                reportf("all:SA:2:", "Dropping %s, underlap %d > %d", $name, $ul, MAX_UNDERLAP);
+                next ALIGN;
+            }
+            if ($trl > MAX_TRAIL and not $polyA) {
+                reportf("all:SA:2:", "Dropping %s, trail %d > %d", $name, $trl, MAX_TRAIL);
+                next ALIGN;
+            }
+            if  ($max_os > MAX_OVERSIZE_INSERT) {
+                reportf("all:SA:2:", "Dropping %s, max os insert %d > %d", $name, $max_os, MAX_OVERSIZE_INSERT);
+                next ALIGN;
+            }
+
+            $best->id($name);
+            push @best_direction_hits, $best;
+        }
+    }
+
+    return [sort {$b->score <=> $a->score} @best_direction_hits];
+}
+
 sub compare_evidence {
     my $transcript    = shift;
     my $evidence_name = shift;
     my $evidence      = shift;
     my $hit_feature   = shift;
+    my $results_map   = shift;
 
     my ($msg, $exp);
     if ($hit_feature) {
@@ -545,37 +636,44 @@ sub compare_evidence {
     }
     report("normal:CE:2", $msg);
 
-    my $aln_results = compare_fetched_features_to_ref($transcript->seq,
-                                                      [$evidence_name],
-                                                      \&pfetch_feature_max_len,
-                                                      1);
+    my $top_hit = $results_map->{$evidence_name};
+    unless ($top_hit) {
+        my $aln_results = compare_fetched_features_to_ref($transcript->seq,
+                                                          [$evidence_name],
+                                                          \&pfetch_feature_max_len,
+                                                          1);
 
-    foreach my $aln (@$aln_results) {
-        # process the alignment -- these will be Bio::SimpleAlign objects
-        my $name = $aln->get_seq_by_pos(2)->display_id;
-        if ($opts->{verbose}) {
-            reportf("verbose:CE:3", "feature: %-15s : score: %8.1f, length: %5d, ident: %5.1f%%",
-                    $name,
-                    $aln->score,
-                    $aln->length,
-                    $aln->percentage_identity,
-                );
-        } elsif (not $opts->{quiet}) {
-            reportf("normal:CE:3", "%s,%s,%s,%.1f,%d,%.1f,%d,%d",
-                    $transcript->stable_id,
-                    $name,
-                    $evidence ? $evidence->type : '-',
-                    $aln->score,
-                    $aln->length,
-                    $aln->percentage_identity,
-                    $transcript->seq->length,
-                    $aln->get_seq_by_pos(2)->length,
-                );
+        $aln_results->[0]->direction(1);
+        $aln_results->[1]->direction(-1);
+
+        foreach my $aln (@$aln_results) {
+            # process the alignment -- these will be Bio::Vega::SimpleAlign objects
+            my $name = $aln->feature_seq->display_id;
+            if ($opts->{verbose}) {
+                reportf("verbose:CE:3", "feature: %-15s : score: %8.1f, length: %5d, ident: %5.1f%%",
+                        $name,
+                        $aln->score,
+                        $aln->length,
+                        $aln->percentage_identity,
+                    );
+            } elsif (not $opts->{quiet}) {
+                reportf("normal:CE:3", "%s,%s,%s,%.1f,%d,%.1f,%d,%d",
+                        $transcript->stable_id,
+                        $name,
+                        $evidence ? $evidence->type : '-',
+                        $aln->score,
+                        $aln->length,
+                        $aln->percentage_identity,
+                        $transcript->seq->length,
+                        $aln->feature_seq->length,
+                    );
+            }
         }
+
+        $top_hit = (sort { $b->score <=> $a->score } @$aln_results)[0];
     }
 
-    my $top_hit = (sort { $b->score <=> $a->score } @$aln_results)[0];
-    if ($top_hit == $aln_results->[0]) {
+    if ($top_hit->direction > 0) {
         report("verbose:CE:2", "Top match on forward");
         if ($exp) {
             if ($exp == 1) {
@@ -620,7 +718,7 @@ sub report_ec_hit {
     my $ts = shift;
     reportf($report_control,
             "Found EviChain feature match for %s at rank %d with %d features, logic %s",
-            $ec_hit->name, $ec_hit->{rank}, scalar @{$ec_hit->afs_lp}, $ec_hit->analysis );
+            $ec_hit->name, $ec_hit->{_otter_rank}, scalar @{$ec_hit->afs_lp}, $ec_hit->analysis );
     reportf($report_control,
             "Supported introns: %d, junctions: %d; TS cov %.1f%%; contra len %d",
             $ec_hit->trans_supported_introns($ts),
@@ -664,7 +762,8 @@ sub process_transcript {
         reportf("normal:PT:0", "Transcript %s, strand %d, exons %d", $p_td->stable_id, $p_td->strand, scalar(@$exons));
 
         # DEBUG
-        $DB::single = 1 if $p_td->stable_id eq 'OTTHUMT00000076914';
+#        $DB::single = 1 if $p_td->stable_id eq 'OTTHUMT00000076914';
+#        $DB::single = 1 if $p_td->stable_id eq 'OTTHUMT00000077344';
         $DB::single = 1 if $p_td->stable_id eq 'OTTHUMT00000077359';
 
         # This really wants to move before $p_slice fetch, left here to allow comparison of outputs
@@ -708,6 +807,10 @@ sub process_transcript {
             # FIXME - what to do with $evi_coll
         }
         report("verbose:PT:1", "Got ", scalar @$p_features, " features");
+        if ($opts->{max_features} and scalar(@$p_features) > $opts->{max_features}) {
+            reportf("all:PT:1", "Skipping further processing as more than %d features", $opts->{max_features});
+            return;
+        }
 
         my $feature_chains     = process_align_features($p_features, $opts);
         my $per_exon_scoring   = exon_align_features($exons, $p_td->strand, $feature_chains, $opts);
@@ -744,6 +847,14 @@ sub process_transcript {
             $cfs_map = make_ranked_map($cfs_results, 'name');
         }
 
+        my $align_results = score_align_features($p_td, [keys %$per_exon_by_score_map]);
+        reportf("normal:PT:1", "Got %d results from score_align_features", scalar @$align_results);
+        my $align_results_map;
+        if (@$align_results) {
+            reportf("normal:PT:1", "Top SAR result: %s", $align_results->[0]->id);
+            $align_results_map = make_ranked_map($align_results, 'id');
+        }
+
         if ($opts->{dump_seq}) {
             setup_io() unless $seqio_out;
             $seq_str_io->truncate(0);   # reset to start of $seq_str
@@ -773,26 +884,35 @@ sub process_transcript {
 
             my $hit_feature = undef;
 
+            my $saf_hit = $align_results_map ? $align_results_map->{$short_name} : undef;
+            if ($saf_hit) {
+                reportf("normal:PT:2", "Found align-scored hit for %s at rank %d, score %f, length %d, ident %f",
+                        $short_name, $saf_hit->{_otter_rank},
+                        $saf_hit->score, $saf_hit->length, $saf_hit->percentage_identity,
+                    );
+                $feature_chain_hit{$short_name} = 1;
+            }
+
             my $cfs_hit = $cfs_map ? $cfs_map->{$short_name} : undef;
             if ($cfs_hit) {
                 report_ec_hit("normal:PT:2", $cfs_hit, $p_td);
                 $hit_feature = $cfs_hit->get_first_exon; # may get overridden below
-                $feature_chain_hit{$short_name} = 1;
+#                $feature_chain_hit{$short_name} = 1;
             }
 
             my $e_hit = $per_exon_by_score_map->{$short_name};
             if ($e_hit) {
                 reportf("normal:PT:2",
                         "Found exon-scored feature match for %s at rank %d with %d features, logic %s",
-                        $short_name, $e_hit->{rank}, $e_hit->{count}, $e_hit->{logic_name} );
+                        $short_name, $e_hit->{_otter_rank}, $e_hit->{count}, $e_hit->{logic_name} );
                 reportf("normal:PT:2", "Exons: %d (%s)", $e_hit->{exon_match_count}, 
                         join(',', @{$e_hit->{exon_match_map}}));
 
                 $hit_feature = $e_hit->{features}->[0];
-                $feature_chain_hit{$short_name} = 1;
+#                $feature_chain_hit{$short_name} = 1;
             }
 
-            unless ($e_hit or $cfs_hit) {
+            unless ($e_hit or $cfs_hit or $saf_hit) {
                 report("normal:PT:2", "No feature match for $short_name");
 
                 # Do a little more digging 
@@ -853,7 +973,7 @@ sub process_transcript {
                 } # FEATURE_HUNT
             }
 
-            my $top_hit = compare_evidence($p_td, $e_name, $evi, $hit_feature);
+            my $top_hit = compare_evidence($p_td, $e_name, $evi, $hit_feature, $align_results_map);
             next EVIDENCE unless $top_hit;
 
         } # EVIDENCE
@@ -864,14 +984,14 @@ sub process_transcript {
       FEATURE_CHAIN: for my $i ( 0 .. min($opts->{consider_chains} - 1, $#per_exon_by_score) ) {
             my $fc = $per_exon_by_score[$i];
             if ($feature_chain_hit{$fc->{hseqname}}) {
-                # Bail out as soon as we've actually seen a high-ranked feature chain
-                last FEATURE_CHAIN;
+                # DON'T # Bail out as soon as we've actually seen a high-ranked feature chain
+                #       last FEATURE_CHAIN;
             } else {
-                reportf("normal:PT:1", "Evidence didn't include '%s' at rank %d", $fc->{hseqname}, $fc->{rank});
+                reportf("normal:PT:1", "Evidence didn't include '%s' at rank %d", $fc->{hseqname}, $fc->{_otter_rank});
                 if (my $ec = $cfs_map->{$fc->{hseqname}}) {
                     report_ec_hit("normal:PT:1", $ec, $p_td);
                 }
-                my $top_hit = compare_evidence($p_td, $fc->{hseqname}, undef, $fc->{features}->[0]);
+                my $top_hit = compare_evidence($p_td, $fc->{hseqname}, undef, $fc->{features}->[0], $align_results_map);
             }
         } # FEATURE_CHAIN
 
