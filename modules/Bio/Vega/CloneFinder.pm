@@ -9,8 +9,6 @@ package Bio::Vega::CloneFinder;
 use strict;
 use warnings;
 
-use Bio::Otter::Lace::Locator;
-
 my $component = 'clone'; # this is the type of components we want the found matches mapped on
 
 sub new {
@@ -144,13 +142,10 @@ sub register_local_slice {
     foreach my $chr_slice (@$found_chromosome_slices) {
         my ($hidden) = ((map {$_->value} @{$chr_slice->get_all_Attributes('hidden')}), 1);
         next if $hidden;
-
-        my $loc = Bio::Otter::Lace::Locator->new($qname, $qtype);
-
-        $loc->assembly( $chr_slice->seq_region_name );
-        $loc->component_names( $component_names );
-
-        push @{ $self->qnames_locators->{uc($qname)} }, $loc;
+        my $chr_name = $chr_slice->seq_region_name;
+        push
+            @{ $self->qnames_locators->{uc($qname)}{$chr_name} },
+            [ $qtype, $component_names ];
     }
 
     return;
@@ -536,13 +531,13 @@ sub generate_output {
     for my $qname (sort @{$self->qnames}) {
         my $locators = $self->qnames_locators->{$qname};
         if ($locators) {
-            for my $loc (sort {$a->assembly cmp $b->assembly} @{$locators}) {
-                $output_string .=
-                    join("\t",
-                         $loc->qname, # take it from $loc to avoid case confusion
-                         $loc->qtype,
-                         join(',', @{$loc->component_names}),
-                         $loc->assembly)."\n";
+            for my $chr_name (sort keys %{$locators}) {
+                for (@{$locators->{$chr_name}}) {
+                    my ( $qtype, $component_names ) = @{$_};
+                    my $components = join ',', @{$component_names};
+                    $output_string .=
+                        join("\t", $qname, $qtype, $components, $chr_name)."\n";
+                }
             }
         }
         else {
