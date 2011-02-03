@@ -688,7 +688,7 @@ sub status_refresh_for_DataSet_SequenceSet{
 }
 
 sub find_string_match_in_clones {
-    my( $self, $dsname, $qnames_list, $ssname, $unhide_flag ) = @_;
+    my( $self, $dsname, $qnames_list ) = @_;
 
     my $qnames_string = join(',', @$qnames_list);
     my $ds = $self->get_DataSet_by_name($dsname);
@@ -699,8 +699,6 @@ sub find_string_match_in_clones {
         {
             'dataset'  => $dsname,
             'qnames'   => $qnames_string,
-            'unhide'   => $unhide_flag || 0,
-            defined($ssname) ? ('type' => $ssname ) : (),
         },
     );
 
