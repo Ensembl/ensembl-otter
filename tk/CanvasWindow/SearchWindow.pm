@@ -102,6 +102,37 @@ sub _new_result_entry {
     my ($qname, $qtype, $ssname, $clone_names) =
         @{$result}{qw( qname qtype assembly components )};
 
+    $qtype=~s/_/ /g; # underscores become spaces for readability
+
+    my $label1 = $result_frame->Label(
+        -text => "$qname [$qtype] found on ",
+        )->pack(-side => 'left', -fill => 'x');
+
+    $self->_clones_button($result_frame, $result);
+
+    $result_frame
+        ->Label(-text => $self->_clone_names_label($clone_names))
+        ->pack(-side => 'left', -fill => 'x');
+
+    return;
+}
+
+sub _new_result_frame {
+    my ($self) = @_;
+
+    my $result_frame = $self
+        ->{_results_frame}->Frame()
+        ->pack(-side => 'top', -fill => 'x');
+    push @{$self->found_elements}, $result_frame;
+
+    return $result_frame;
+}
+
+sub _clones_button {
+    my ($self, $result_frame, $result) = @_;
+
+    my ($qname, $ssname, $clone_names) =
+        @{$result}{qw( qname assembly components )};
     my $clone_number = scalar(@$clone_names);
 
     # PREPARE TO set the subset in the SequenceSet
@@ -109,13 +140,7 @@ sub _new_result_entry {
     my $ss = $ds->get_SequenceSet_by_name($ssname);
     my $subset_tag = "$ssname:Found:$qname";
 
-    $qtype=~s/_/ /g; # underscores become spaces for readability
-
-    my $label1 = $result_frame->Label(
-        -text => "$qname [$qtype] found on ",
-        )->pack(-side => 'left', -fill => 'x');
-
-    my $button = $result_frame->Button(
+    $result_frame->Button(
         -text => "$clone_number clone".(($clone_number>1) ? 's' : '')." on $ssname",
         -command => sub {
             print STDERR "Opening '$subset_tag'...\n";
@@ -135,22 +160,7 @@ sub _new_result_entry {
         },
         )->pack(-side => 'left');
 
-    $result_frame
-        ->Label(-text => $self->_clone_names_label($clone_names))
-        ->pack(-side => 'left', -fill => 'x');
-
     return;
-}
-
-sub _new_result_frame {
-    my ($self) = @_;
-
-    my $result_frame = $self
-        ->{_results_frame}->Frame()
-        ->pack(-side => 'top', -fill => 'x');
-    push @{$self->found_elements}, $result_frame;
-
-    return $result_frame;
 }
 
 sub _clone_names_label {
