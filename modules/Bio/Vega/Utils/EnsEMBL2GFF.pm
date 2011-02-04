@@ -819,8 +819,8 @@ use Bio::Vega::Utils::GFF;
 
  #    sub _gff_hash {
  #
- #        my $self = shift;
- #        my $gff  = $self->SUPER::_gff_hash(@_);
+ #        my ($self, @args) = @_;
+ #        my $gff  = $self->SUPER::_gff_hash(@args);
  #
  #        $gff->{feature} = 'similarity';
  #
