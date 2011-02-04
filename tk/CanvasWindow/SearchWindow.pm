@@ -98,16 +98,9 @@ sub _new_result_entry {
     my ($self, $result) = @_;
 
     my $result_frame = $self->_new_result_frame;
-
-    my ($qname, $qtype, $ssname, $clone_names) =
-        @{$result}{qw( qname qtype assembly components )};
-
     $self->_result_label_1($result_frame, $result);
     $self->_clones_button($result_frame, $result);
-
-    $result_frame
-        ->Label(-text => $self->_clone_names_label($clone_names))
-        ->pack(-side => 'left', -fill => 'x');
+    $self->_result_label_2($result_frame, $result);
 
     return;
 }
@@ -175,9 +168,21 @@ sub _clones_button_command {
     return;
 }
 
-sub _clone_names_label {
-    my ($self, $clone_names) = @_;
+sub _result_label_2 {
+    my ($self, $result_frame, $result) = @_;
 
+    my $label_text = $self->_clone_names_label($result);
+    $result_frame
+        ->Label(-text => $label_text)
+        ->pack(-side => 'left', -fill => 'x');
+
+    return;
+}
+
+sub _clone_names_label {
+    my ($self, $result) = @_;
+
+    my $clone_names = $result->{components};
     my $clone_number = scalar(@$clone_names);
     my $center_index = int(($clone_number-1)/2);
 
