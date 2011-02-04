@@ -528,16 +528,14 @@ sub generate_output {
 
     my $output_string = '';
 
-    for my $qname (sort @{$self->qnames}) {
-        my $qname_results = $self->results->{$qname};
-        if ($qname_results) {
-            for my $chr_name (sort keys %{$qname_results}) {
-                for (@{$qname_results->{$chr_name}}) {
-                    my ( $qtype, $component_names ) = @{$_};
-                    my $components = join ',', @{$component_names};
-                    $output_string .=
-                        join("\t", $qname, $qtype, $components, $chr_name)."\n";
-                }
+    my $results = $self->results;
+    while (my ($qname, $qname_results) = each %{$results}) {
+        while (my ($chr_name, $chr_name_results) = each %{$qname_results}) {
+            for (@{$chr_name_results}) {
+                my ( $qtype, $component_names ) = @{$_};
+                my $components = join ',', @{$component_names};
+                $output_string .=
+                    join("\t", $qname, $qtype, $components, $chr_name)."\n";
             }
         }
     }
