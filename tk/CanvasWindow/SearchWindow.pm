@@ -135,8 +135,30 @@ sub _new_result_entry {
         },
         )->pack(-side => 'left');
 
+    $result_frame
+        ->Label(-text => $self->_clone_names_label($clone_names))
+        ->pack(-side => 'left', -fill => 'x');
 
+    return;
+}
+
+sub _new_result_frame {
+    my ($self) = @_;
+
+    my $result_frame = $self
+        ->{_results_frame}->Frame()
+        ->pack(-side => 'top', -fill => 'x');
+    push @{$self->found_elements}, $result_frame;
+
+    return $result_frame;
+}
+
+sub _clone_names_label {
+    my ($self, $clone_names) = @_;
+
+    my $clone_number = scalar(@$clone_names);
     my $center_index = int(($clone_number-1)/2);
+
     my %show_clone_index = (
         0               => 1,               # always show the first one
         ($center_index==2) ? (1 => 1) : (), # show the second one if there is only one in the gap
@@ -160,23 +182,7 @@ sub _new_result_entry {
         }
     }
 
-    my $label2 = $result_frame->Label(
-        -text => ' [ '.join(', ', @clone_names_to_show).' ]',
-        )->pack(-side => 'left', -fill => 'x');
-
-
-    return;
-}
-
-sub _new_result_frame {
-    my ($self) = @_;
-
-    my $result_frame = $self
-        ->{_results_frame}->Frame()
-        ->pack(-side => 'top', -fill => 'x');
-    push @{$self->found_elements}, $result_frame;
-
-    return $result_frame;
+    return sprintf ' [ %s ] ', join ', ', @clone_names_to_show;
 }
 
 sub new {
