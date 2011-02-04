@@ -102,12 +102,7 @@ sub _new_result_entry {
     my ($qname, $qtype, $ssname, $clone_names) =
         @{$result}{qw( qname qtype assembly components )};
 
-    $qtype=~s/_/ /g; # underscores become spaces for readability
-
-    my $label1 = $result_frame->Label(
-        -text => "$qname [$qtype] found on ",
-        )->pack(-side => 'left', -fill => 'x');
-
+    $self->_result_label_1($result_frame, $result);
     $self->_clones_button($result_frame, $result);
 
     $result_frame
@@ -126,6 +121,21 @@ sub _new_result_frame {
     push @{$self->found_elements}, $result_frame;
 
     return $result_frame;
+}
+
+sub _result_label_1 {
+    my ($self, $result_frame, $result) = @_;
+
+    my ($qname, $qtype) =
+        @{$result}{qw( qname qtype )};
+    $qtype=~s/_/ /g; # underscores become spaces for readability
+    my $label_text = sprintf '%s [%s] found on ', $qname, $qtype;
+
+    $result_frame
+        ->Label(-text => $label_text,)
+        ->pack(-side => 'left', -fill => 'x');
+
+    return;
 }
 
 sub _clones_button {
