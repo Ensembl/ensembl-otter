@@ -540,9 +540,6 @@ sub generate_output {
                 }
             }
         }
-        else {
-            $output_string .= "$qname\n"; # no matches for this qname
-        }
     }
 
     return $output_string;
