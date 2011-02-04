@@ -131,34 +131,36 @@ sub _new_result_frame {
 sub _clones_button {
     my ($self, $result_frame, $result) = @_;
 
-    my ($qname, $ssname, $clone_names) =
-        @{$result}{qw( qname assembly components )};
+    my ($ssname, $clone_names) =
+        @{$result}{qw( assembly components )};
     my $clone_number = scalar(@$clone_names);
 
-    # PREPARE TO set the subset in the SequenceSet
-    my $ds = $self->DataSet();
-    my $ss = $ds->get_SequenceSet_by_name($ssname);
-    my $subset_tag = "$ssname:Found:$qname";
+    my $button_text = sprintf
+        "%d clone%s on %s",
+        $clone_number,
+        (($clone_number>1) ? 's' : ''),
+        $ssname;
 
-    $result_frame->Button(
-        -text => "$clone_number clone".(($clone_number>1) ? 's' : '')." on $ssname",
-        -command => sub {
-            print STDERR "Opening '$subset_tag'...\n";
+    my $button_command =
+        sub { $self->_clones_button_command($result); };
 
-            # See whether this step can be omittied in the new implementation
-            #
-            #    # pre-load the clone sequences, if they have not been loaded yet
-            #unless(defined($ss->CloneSequence_list())) {
-            #    $ds->fetch_all_CloneSequences_for_SequenceSet($ss, 1);
-            #}
-            # ACTUALLY SET the subset in the SequenceSet
-            $ss->set_subset($subset_tag, $clone_names);
+    $result_frame
+        ->Button(-text => $button_text, -command => $button_command)
+        ->pack(-side => 'left');
 
-            $self->SequenceSetChooser()->open_sequence_set_by_ssname_subset(
-                $ssname, $subset_tag
-                );
-        },
-        )->pack(-side => 'left');
+    return;
+}
+
+sub _clones_button_command {
+    my ($self, $result) = @_;
+
+    my ($qname, $ssname, $clone_names) =
+        @{$result}{qw( qname assembly components )};
+    my $ss = $self->DataSet->get_SequenceSet_by_name($ssname);
+    my $subset_tag = "${ssname}:Found:${qname}";
+
+    $ss->set_subset($subset_tag, $clone_names);
+    $self->SequenceSetChooser->open_sequence_set_by_ssname_subset($ssname, $subset_tag);
 
     return;
 }
