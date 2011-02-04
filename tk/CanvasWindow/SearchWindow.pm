@@ -71,86 +71,93 @@ sub do_search {
     my $qnames = [ split(/[\s,]+/, ${$self->search_field()} ) ];
 
 
-    my $results_list = $self->Client()->find_string_match_in_clones($self->DataSet->name(), $qnames);
-    
-    foreach my $result (sort { ace_sort($a->{qname}, $b->{qname}) } @$results_list) {
+    my $results = $self->Client()->find_string_match_in_clones($self->DataSet->name(), $qnames);
+    my $results_by_qname = {};
+    push @{$results_by_qname->{$_->{qname}}}, $_ for @{$results};
 
-        my $result_frame = $self->{_results_frame}->Frame(
-        )->pack(-side => 'top', -fill => 'x');
+    foreach my $qname (sort { ace_sort($a,$b); } @{$qnames}) {
+        my $qname_results = $results_by_qname->{$qname};
+        if ($qname_results) {
+            foreach my $result (@{$qname_results}) {
 
-        push @{$self->found_elements}, $result_frame;
+                my $result_frame = $self->{_results_frame}->Frame(
+                    )->pack(-side => 'top', -fill => 'x');
 
-        my ($qname, $qtype, $ssname, $clone_names) =
-            @{$result}{qw( qname qtype assembly components )};
+                push @{$self->found_elements}, $result_frame;
 
-        my $clone_number = scalar(@$clone_names);
+                my ($qname, $qtype, $ssname, $clone_names) =
+                    @{$result}{qw( qname qtype assembly components )};
 
-        if($clone_number) {
+                my $clone_number = scalar(@$clone_names);
 
                 # PREPARE TO set the subset in the SequenceSet
-            my $ds = $self->DataSet();
-            my $ss = $ds->get_SequenceSet_by_name($ssname);
-            my $subset_tag = "$ssname:Found:$qname";
+                my $ds = $self->DataSet();
+                my $ss = $ds->get_SequenceSet_by_name($ssname);
+                my $subset_tag = "$ssname:Found:$qname";
 
-            $qtype=~s/_/ /g; # underscores become spaces for readability
+                $qtype=~s/_/ /g; # underscores become spaces for readability
 
-            my $label1 = $result_frame->Label(
-                -text => "$qname [$qtype] found on ",
-            )->pack(-side => 'left', -fill => 'x');
+                my $label1 = $result_frame->Label(
+                    -text => "$qname [$qtype] found on ",
+                    )->pack(-side => 'left', -fill => 'x');
 
-            my $button = $result_frame->Button(
-                -text => "$clone_number clone".(($clone_number>1) ? 's' : '')." on $ssname",
-                -command => sub {
-                    print STDERR "Opening '$subset_tag'...\n";
+                my $button = $result_frame->Button(
+                    -text => "$clone_number clone".(($clone_number>1) ? 's' : '')." on $ssname",
+                    -command => sub {
+                        print STDERR "Opening '$subset_tag'...\n";
 
-                    # See whether this step can be omittied in the new implementation
-                    #
-                    #    # pre-load the clone sequences, if they have not been loaded yet
-                    #unless(defined($ss->CloneSequence_list())) {
-                    #    $ds->fetch_all_CloneSequences_for_SequenceSet($ss, 1);
-                    #}
+                        # See whether this step can be omittied in the new implementation
+                        #
+                        #    # pre-load the clone sequences, if they have not been loaded yet
+                        #unless(defined($ss->CloneSequence_list())) {
+                        #    $ds->fetch_all_CloneSequences_for_SequenceSet($ss, 1);
+                        #}
                         # ACTUALLY SET the subset in the SequenceSet
-                    $ss->set_subset($subset_tag, $clone_names);
+                        $ss->set_subset($subset_tag, $clone_names);
 
-                    $self->SequenceSetChooser()->open_sequence_set_by_ssname_subset(
+                        $self->SequenceSetChooser()->open_sequence_set_by_ssname_subset(
                             $ssname, $subset_tag
+                            );
+                    },
+                    )->pack(-side => 'left');
+
+
+                my $center_index = int(($clone_number-1)/2);
+                my %show_clone_index = (
+                    0               => 1,               # always show the first one
+                    ($center_index==2) ? (1 => 1) : (), # show the second one if there is only one in the gap
+                    $center_index   => 1,               # always show the middle one
+                    ($clone_number==5) ? (3 => 1) : (), # show the fourth one if there is only one in the gap
+                    $clone_number-1 => 1,               # always show the last one
                     );
-                },
-            )->pack(-side => 'left');
 
-
-            my $center_index = int(($clone_number-1)/2);
-            my %show_clone_index = (
-                0               => 1,               # always show the first one
-                ($center_index==2) ? (1 => 1) : (), # show the second one if there is only one in the gap
-                $center_index   => 1,               # always show the middle one
-                ($clone_number==5) ? (3 => 1) : (), # show the fourth one if there is only one in the gap
-                $clone_number-1 => 1,               # always show the last one
-            );
-
-            my @clone_names_to_show = ();
-            my $skipped_number = 0;
-            foreach my $i (0..scalar(@$clone_names)-1) {
-                if($show_clone_index{$i}) {
-                    if($skipped_number) {
-                        push @clone_names_to_show, '...';
-                        $skipped_number = 0;
+                my @clone_names_to_show = ();
+                my $skipped_number = 0;
+                foreach my $i (0..scalar(@$clone_names)-1) {
+                    if($show_clone_index{$i}) {
+                        if($skipped_number) {
+                            push @clone_names_to_show, '...';
+                            $skipped_number = 0;
+                        }
+                        my $clone_name = $clone_names->[$i];
+                        push @clone_names_to_show, $clone_name;
+                    } else {
+                        $skipped_number++;
                     }
-                    my $clone_name = $clone_names->[$i];
-                    push @clone_names_to_show, $clone_name;
-                } else {
-                    $skipped_number++;
                 }
+
+                my $label2 = $result_frame->Label(
+                    -text => ' [ '.join(', ', @clone_names_to_show).' ]',
+                    )->pack(-side => 'left', -fill => 'x');
+
             }
-
-            my $label2 = $result_frame->Label(
-                -text => ' [ '.join(', ', @clone_names_to_show).' ]',
-            )->pack(-side => 'left', -fill => 'x');
-
         } else {
+            my $result_frame = $self->{_results_frame}->Frame(
+                )->pack(-side => 'top', -fill => 'x');
+            push @{$self->found_elements}, $result_frame;
             my $label = $result_frame->Label(
                 -text => "$qname not found",
-            )->pack(-side => 'left', -fill => 'x');
+                )->pack(-side => 'left', -fill => 'x');
         }
     }
 
