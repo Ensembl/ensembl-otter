@@ -113,9 +113,9 @@ sub data_dir {
 
     # overloading because certain species may need to be masked
 sub load_species_dat_file {
-    my $self = shift;
+    my ($self, @args) = @_;
 
-    $self->SUPER::load_species_dat_file(@_);
+    $self->SUPER::load_species_dat_file(@args);
 
     unless ($self->local_user || $self->internal_user) {        
         # External users only see datasets listed after their names in users.txt file
@@ -396,7 +396,7 @@ sub fetch_Author_obj {
 
 sub get_requested_features {
 
-    my $self = shift;
+    my ($self) = @_;
 
     my @feature_kinds  = split(/,/, $self->require_argument('kind'));
     my $analysis_list = $self->param('analysis');
@@ -478,7 +478,7 @@ sub get_requested_features {
 
 sub gff_header {
     
-    my $self = shift;
+    my ($self) = @_;
     
     my $name    = $self->param('type');
     my $start   = $self->param('start');
