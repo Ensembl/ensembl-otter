@@ -80,10 +80,7 @@ sub do_search {
         if ($qname_results) {
             foreach my $result (@{$qname_results}) {
 
-                my $result_frame = $self->{_results_frame}->Frame(
-                    )->pack(-side => 'top', -fill => 'x');
-
-                push @{$self->found_elements}, $result_frame;
+                my $result_frame = $self->_new_result_frame;
 
                 my ($qname, $qtype, $ssname, $clone_names) =
                     @{$result}{qw( qname qtype assembly components )};
@@ -152,12 +149,10 @@ sub do_search {
 
             }
         } else {
-            my $result_frame = $self->{_results_frame}->Frame(
-                )->pack(-side => 'top', -fill => 'x');
-            push @{$self->found_elements}, $result_frame;
-            my $label = $result_frame->Label(
-                -text => "$qname not found",
-                )->pack(-side => 'left', -fill => 'x');
+            $self
+                ->_new_result_frame
+                ->Label(-text => "$qname not found")
+                ->pack(-side => 'left', -fill => 'x');
         }
     }
 
@@ -166,6 +161,17 @@ sub do_search {
     $self->top_window->Unbusy;
 
     return;
+}
+
+sub _new_result_frame {
+    my ($self) = @_;
+
+    my $result_frame = $self
+        ->{_results_frame}->Frame()
+        ->pack(-side => 'top', -fill => 'x');
+    push @{$self->found_elements}, $result_frame;
+
+    return $result_frame;
 }
 
 sub new {
