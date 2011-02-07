@@ -462,6 +462,9 @@ sub zMapAceServerDefaults {
 
     my $url = sprintf q{%s://%s:%s@%s:%d}, $protocol, $server->user, $server->pass, $server->host, $server->port;
 
+    my $collection = $self->Assembly->MethodCollection;
+    my $featuresets = join ' ; ', map { $_->name } $collection->get_all_top_level_Methods;
+
     return $self->formatZmapDefaults(
         $self->slice_name,
         url       => $url,
@@ -475,7 +478,7 @@ sub zMapAceServerDefaults {
 
         # Can specify a stylesfile instead of featuresets
 
-        featuresets     => ( join ' ; ', $self->zMapListMethodNames_ordered ),
+        featuresets     => $featuresets,
         stylesfile      => $stylesfile,
     );
 }
@@ -770,13 +773,6 @@ sub zMapZmapDir {
         confess "Can't mkdir('$path') : $!\n" unless -d $path;
     }
     return $path;
-}
-
-sub zMapListMethodNames_ordered {
-    my ($self) = @_;
-    my @list       = ();
-    my $collection = $self->Assembly->MethodCollection;
-    return map { $_->name } $collection->get_all_top_level_Methods;
 }
 
 #===========================================================
