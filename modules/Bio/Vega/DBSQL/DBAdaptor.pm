@@ -20,7 +20,7 @@ use Bio::Vega::DBSQL::SliceAdaptor;
 use base 'Bio::EnsEMBL::DBSQL::DBAdaptor';
 
 sub get_GeneAdaptor {
-  my $self = shift;
+  my ($self) = @_;
   if ( !exists $self->{'VegaGene'} ){
       my $ad=Bio::Vega::DBSQL::GeneAdaptor->new($self);
       $self->{'VegaGene'}=$ad;
@@ -28,7 +28,7 @@ sub get_GeneAdaptor {
   return $self->{'VegaGene'};
 }
 sub get_SliceAdaptor {
-  my $self = shift;
+  my ($self) = @_;
   if ( !exists $self->{'VegaSlice'} ){
       my $ad=Bio::Vega::DBSQL::SliceAdaptor->new($self);
       $self->{'VegaSlice'}=$ad;
@@ -37,7 +37,7 @@ sub get_SliceAdaptor {
 }
 
 sub get_ContigInfoAdaptor {
-  my $self = shift;
+  my ($self) = @_;
   if ( !exists $self->{'ContigInfo'} ){
       my $ad=Bio::Vega::DBSQL::ContigInfoAdaptor->new($self);
       $self->{'ContigInfo'}=$ad;
@@ -46,7 +46,7 @@ sub get_ContigInfoAdaptor {
 }
 
 sub get_AuthorAdaptor {
-  my $self = shift;
+  my ($self) = @_;
   if ( !exists $self->{'Author'} ){
       my $ad=Bio::Vega::DBSQL::AuthorAdaptor->new($self);
       $self->{'Author'}=$ad;
@@ -55,7 +55,7 @@ sub get_AuthorAdaptor {
 }
 
 sub get_AuthorGroupAdaptor {
-  my $self = shift;
+  my ($self) = @_;
   if ( !exists $self->{'AuthorGroup'} ){
       my $ad=Bio::Vega::DBSQL::AuthorGroupAdaptor->new($self);
       $self->{'AuthorGroup'}=$ad;
@@ -64,7 +64,7 @@ sub get_AuthorGroupAdaptor {
 }
 
 sub get_AttributeAdaptor {
-  my $self = shift;
+  my ($self) = @_;
   if ( !exists $self->{'ContigAttribute'} ){
       my $ad=Bio::Vega::DBSQL::AttributeAdaptor->new($self);
       $self->{'ContigAttribute'}=$ad;
@@ -73,7 +73,7 @@ sub get_AttributeAdaptor {
 }
 
 sub get_StableIdAdaptor {
-  my $self = shift;
+  my ($self) = @_;
   if ( !exists $self->{'StableId'} ){
       my $ad=Bio::Vega::DBSQL::StableIdAdaptor->new($self);
       $self->{'StableId'}=$ad;
@@ -82,7 +82,7 @@ sub get_StableIdAdaptor {
 }
 
 sub get_ExonAdaptor {
-  my $self = shift;
+  my ($self) = @_;
   if ( !exists $self->{'VegaExon'} ){
       my $ad=Bio::Vega::DBSQL::ExonAdaptor->new($self);
       $self->{'VegaExon'}=$ad;
@@ -91,7 +91,7 @@ sub get_ExonAdaptor {
 }
 
 sub get_TranscriptAdaptor {
-  my $self = shift;
+  my ($self) = @_;
   if ( !exists $self->{'VegaTranscript'} ){
       my $ad=Bio::Vega::DBSQL::TranscriptAdaptor->new($self);
       $self->{'VegaTranscript'}=$ad;
@@ -101,7 +101,7 @@ sub get_TranscriptAdaptor {
 
 # We now rebless Translation inside Bio::Vega::Transcript::reincarnate_transcript() instead
 #sub get_TranslationAdaptor {
-#  my $self = shift;
+#  my ($self) = @_;
 #  if ( !exists $self->{'VegaTranslation'} ){
 #     my $ad=Bio::Vega::DBSQL::TranslationAdaptor->new($self);
 #     $self->{'VegaTranslation'}=$ad;
@@ -110,7 +110,7 @@ sub get_TranscriptAdaptor {
 #}
 
 sub get_AssemblyTagAdaptor {
-  my $self = shift;
+  my ($self) = @_;
   if ( !exists $self->{'AssemblyTag'} ){
       my $ad=Bio::Vega::DBSQL::AssemblyTagAdaptor->new($self);
       $self->{'AssemblyTag'}=$ad;
@@ -119,7 +119,7 @@ sub get_AssemblyTagAdaptor {
 }
 
 sub get_ContigLockAdaptor {
-  my $self = shift;
+  my ($self) = @_;
   if ( !exists $self->{'ContigLock'} ){
       my $ad=Bio::Vega::DBSQL::ContigLockAdaptor->new($self);
       $self->{'ContigLock'}=$ad;
@@ -128,7 +128,7 @@ sub get_ContigLockAdaptor {
 }
 
 sub get_MetaContainer {
-  my( $self ) = @_;
+  my ($self) = @_;
   if ( !exists $self->{'VegaMetaContainer'} ){
       $self->{'VegaMetaContainer'}=Bio::Vega::DBSQL::MetaContainer->new($self);
   }
@@ -136,7 +136,7 @@ sub get_MetaContainer {
 }
 
 sub get_AnnotationBroker {
-  my( $self ) = @_;
+  my ($self) = @_;
   if ( !exists $self->{'AnnotationBroker'} ){
       $self->{'AnnotationBroker'}=Bio::Vega::AnnotationBroker->new($self);
   }
@@ -144,20 +144,20 @@ sub get_AnnotationBroker {
 }
 
 sub begin_work {
-  my $self = shift;
+  my ($self) = @_;
   $self->dbc->db_handle->{AutoCommit}=0;
   $self->dbc->do('BEGIN');
   return;
 }
 
 sub commit {
-  my $self = shift;
+  my ($self) = @_;
   $self->dbc->do('COMMIT');
   return;
 }
 
 sub rollback {
-  my $self = shift;
+  my ($self) = @_;
   $self->dbc->do('ROLLBACK');
   return;
 }
