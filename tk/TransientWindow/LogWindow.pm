@@ -15,9 +15,9 @@ my @mail      = qw(smtp Server localhost);
 my $loggingOn = 0;
 
 sub initialise {
-    my $self = shift;
+    my ($self, @args) = @_;
 
-    $self->SUPER::initialise(@_);
+    $self->SUPER::initialise(@args);
 
     my $lw        = $self->window;
     my $top_frame = $lw->Frame->pack(
@@ -81,7 +81,7 @@ sub initialise {
 }
 
 sub draw {
-    my $self = shift;
+    my ($self) = @_;
     return if $self->{'_drawn'};
 
     my $file      = $self->current_logfile;
