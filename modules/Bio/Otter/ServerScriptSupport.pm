@@ -8,7 +8,6 @@ use Bio::Vega::Author;
 use Bio::Otter::Version qw( $SCHEMA_VERSION $XML_VERSION );
 use Bio::Otter::Lace::TempFile;
 use Bio::Otter::Lace::ViaText qw( %LangDesc &GenerateFeatures );
-use Bio::Vega::DBSQL::SimpleBindingAdaptor;
 use Bio::Vega::Utils::GFF;
 use Bio::Vega::Enrich::SliceGetAllAlignFeatures;
 
