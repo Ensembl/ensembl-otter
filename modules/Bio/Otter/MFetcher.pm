@@ -114,7 +114,7 @@ sub satellite_dba {
 
     # Note: as multiple satellite_db's can be used, we have to explicitly send $metakey
 
-    $metakey ||= '';
+    $metakey ||= 'pipeline_db_head';
 
         # It may well be true that the caller
         # is interested in features from otter_db itself.
@@ -126,19 +126,10 @@ sub satellite_dba {
         return $self->otter_dba();
     }
 
-    my $kind;
-
-    if(! $metakey) {
-        $metakey = 'pipeline_db_head';
-        $kind    = 'pipeline DB'
-    } else {
-        $kind    = 'satellite DB';
-    }
-
     my $sdba_cached = $self->{_sdba}{$metakey};
     return $sdba_cached if $sdba_cached;
 
-    $self->log("connecting to the '$kind' using [$metakey] meta entry...");
+    $self->log("connecting to the satellite DB '$metakey'...");
 
     # get the minimal adaptor (may be extended to Vega in future)
     my $is_variation = $metakey =~ /_variation$/;
