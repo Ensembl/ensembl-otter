@@ -186,8 +186,7 @@ my $id_adaptor_fetcher_by_type = {
 sub _find_by_stable_ids {
     my ($self, $qtype_prefix, $metakey) = @_;
 
-    my $satellite_dba = $self->server->satellite_dba($metakey, 1);
-    return unless $satellite_dba;
+    my $satellite_dba = $self->server->satellite_dba($metakey);
 
     my $meta_con = bless $satellite_dba->get_MetaContainer, 'Bio::Vega::DBSQL::MetaContainer';
     my $prefix_primary = $meta_con->get_primary_prefix || 'ENS';
@@ -388,8 +387,7 @@ SQL
 sub _find_by_xref {
     my ($self, $qtype_prefix, $metakey, $condition) = @_;
 
-    my $satellite_dba = $self->server->satellite_dba($metakey, 1);
-    return unless $satellite_dba;
+    my $satellite_dba = $self->server->satellite_dba($metakey);
 
     my $sql = sprintf
         $find_by_xref_sql_template,
@@ -451,8 +449,7 @@ sub _find_by_hit_name {
 
     # NB: $condition only can be equality, otherwise you'll annoy the users!
 
-    my $satellite_dba = $self->server->satellite_dba($metakey, 1);
-    return unless $satellite_dba;
+    my $satellite_dba = $self->server->satellite_dba($metakey);
 
     my $sql = sprintf
         $find_by_hit_name_sql_template,
