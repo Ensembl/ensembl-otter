@@ -138,9 +138,7 @@ sub dbh {
 }
 
 sub get_accession_types {
-    my $self = shift;
-
-    my $accs = shift;
+    my ($self, $accs) = @_;
 
     my $sql = '
 SELECT molecule_type, data_class, accession_version
