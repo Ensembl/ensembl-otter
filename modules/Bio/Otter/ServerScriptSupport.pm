@@ -7,7 +7,7 @@ use warnings;
 use Bio::Vega::Author;
 use Bio::Otter::Version qw( $SCHEMA_VERSION $XML_VERSION );
 use Bio::Otter::Lace::TempFile;
-use Bio::Otter::Lace::ViaText qw( %LangDesc &GenerateFeatures );
+use Bio::Otter::Lace::ViaText qw( %LangDesc );
 use Bio::Vega::Utils::GFF;
 use Bio::Vega::Enrich::SliceGetAllAlignFeatures;
 
