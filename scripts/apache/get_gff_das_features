@@ -302,7 +302,8 @@ eval {
 if ($@) {
     $server->error_exit($@);
 } else {
-    $server->send_response($server->gff_header . $gff_string, 0, 1);
+    $server->compression(1);
+    $server->send_response($server->gff_header . $gff_string);
 }
 
 1;
