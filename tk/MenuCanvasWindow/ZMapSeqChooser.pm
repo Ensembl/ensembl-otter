@@ -442,7 +442,7 @@ sub zMapDotZmapContent{
 }
 
 sub zMapGlyphDefaults {
-    my $self = shift;
+    my ($self) = @_;
     
     return $self->formatZmapDefaults(
         'glyphs',
@@ -744,7 +744,7 @@ sub zMapDotGtkrcContent {
 }
 
 sub zMapWriteDotGtkrc {
-    my $self = shift;
+    my ($self) = @_;
 
     my $dir  = $self->zMapZmapDir;
     my $file = "$dir/.gtkrc";
@@ -773,7 +773,7 @@ sub zMapZmapDir {
 }
 
 sub zMapListMethodNames_ordered {
-    my $self       = shift;
+    my ($self) = @_;
     my @list       = ();
     my $collection = $self->Assembly->MethodCollection;
     return map { $_->name } $collection->get_all_top_level_Methods;
@@ -1140,7 +1140,7 @@ sub zMapFeaturesLoaded {
 }
 
 sub zMapUpdateConfigFile {
-    my $self = shift;
+    my ($self) = @_;
     
     my $cfg = $self->{_zmap_cfg} ||= Config::IniFiles->new( -file => $self->zMapZmapDir . '/ZMap' );
 
