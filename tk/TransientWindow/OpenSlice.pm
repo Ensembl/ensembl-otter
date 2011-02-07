@@ -8,8 +8,8 @@ use base qw( TransientWindow );
 my $DEFAULT_SLICE_SIZE = 1e6;
 
 sub initialise{
-    my $self = shift;
-    $self->SUPER::initialise(@_);
+    my ($self, @args) = @_;
+    $self->SUPER::initialise(@args);
     my $slice_start = ${$self->text_variable_ref('slice_start')};
     my $slice_end ||= $slice_start + $DEFAULT_SLICE_SIZE;
     $self->text_variable_ref('slice_end', $slice_end, 1);
@@ -17,7 +17,7 @@ sub initialise{
 }
 
 sub draw{
-    my $self   = shift;
+    my ($self) = @_;
     return if $self->{'_drawn'};
 
     my $slice_window = $self->window;
