@@ -13,9 +13,10 @@ use Bio::Vega::Enrich::SliceGetAllAlignFeatures;
 
 use IO::Compress::Gzip qw(gzip);
 
+use CGI;
 use SangerWeb;
 
-use base ('CGI', 'Bio::Otter::MFetcher');
+use base ('Bio::Otter::MFetcher');
 
 
 BEGIN {
@@ -31,7 +32,10 @@ $COMPRESSION_ENABLED = 1 unless defined $COMPRESSION_ENABLED;
 sub new {
     my ( $pkg ) = @_;
 
-    my $self = $pkg->CGI::new();    # CGI part of the object needs initialization
+    my $self = {
+        _cgi => CGI->new,
+    };
+    bless $self, $pkg;
 
     if ($self->show_restricted_datasets || ! $self->local_user) {
         $self->authorized_user;
@@ -43,6 +47,21 @@ sub new {
     $self->species_dat_filename($self->data_dir . '/species.dat');
 
     return $self;
+}
+
+sub cgi {
+    my ($self) = @_;
+    return $self->{_cgi};
+}
+
+sub header {
+    my ($self, @args) = @_;
+    return $self->cgi->header(@args);
+}
+
+sub param {
+    my ($self, @args) = @_;
+    return $self->cgi->param(@args);
 }
 
 sub dataset_name { # overloads the one provided by MFetch
@@ -166,17 +185,15 @@ sub read_user_file {
 =head2 sangerweb()
 
 Instance method.  Cache and return an instance of L<SangerWeb>
-configured with us as the CGI instance.
-
-It is important to instantiate only one CGI (or subclass) instance,
-because it will eat the POST input.
+configured with our CGI instance.
 
 =cut
 
 sub sangerweb {
     my ($self) = @_;
 
-    return $self->{'_sangerweb'} ||= SangerWeb->new({ cgi => $self });
+    return $self->{'_sangerweb'} ||=
+        SangerWeb->new({ cgi => $self->cgi });
 }
 
 
