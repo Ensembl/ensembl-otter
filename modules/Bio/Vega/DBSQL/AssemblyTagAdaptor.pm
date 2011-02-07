@@ -8,12 +8,12 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use base 'Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor';
 
 sub _tables {
-  my $self = shift;
+  my ($self) = @_;
   return ['assembly_tag', 'at'];
 }
 
 sub _columns {
-  my $self = shift;
+  my ($self) = @_;
   return qw(at.tag_id at.seq_region_id at.seq_region_start at.seq_region_end at.seq_region_strand at.tag_type at.tag_info);
 }
 
