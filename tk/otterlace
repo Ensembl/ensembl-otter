@@ -37,7 +37,7 @@ use POSIX ":sys_wait_h";
     $dc->Client($cl);
 
     my $prompt_sub = sub {
-        my $self = shift;
+        my ($self) = @_;
         my $user = $self->author;
 
         my $pass = '';
