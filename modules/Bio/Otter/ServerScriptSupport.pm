@@ -33,7 +33,8 @@ sub new {
     my ( $pkg ) = @_;
 
     my $self = {
-        _cgi => CGI->new,
+        _cgi         => CGI->new,
+        _compression => 0,
     };
     bless $self, $pkg;
 
@@ -276,11 +277,20 @@ sub log { ## no critic(Subroutines::ProhibitBuiltinHomonyms)
     return;
 }
 
+sub compression {
+    my ($self, @args) = @_;
+    if (@args) {
+        my ($compression) = @args;
+        $self->{_compression} = $compression;
+    }
+    return $self->{_compression};
+}
+
 sub send_response {
 
-    my ($self, $response, $wrap, $compress) = @_;
+    my ($self, $response, $wrap) = @_;
 
-    if ($COMPRESSION_ENABLED && $compress) {
+    if ($COMPRESSION_ENABLED && $self->compression) {
         print $self->header(
             -status             => 200,
             -type               => 'text/plain',
