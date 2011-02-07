@@ -40,8 +40,7 @@ sub _store_type {
 
     # override superclass method to fill in missing names for Attributes
 
-    my $self = shift;
-    my $attrib = shift;
+    my ($self, $attrib) = @_;
 
     unless ($attrib->name) {
         my $sth = $self->prepare(qq{
@@ -62,9 +61,7 @@ WHERE  code = ?
 
 
 sub store_on_ContigInfo  {
-  my $self = shift;
-  my $contiginfo = shift;
-  my $attributes = shift;
+  my ($self, $contiginfo, $attributes) = @_;
   if(!ref($contiginfo) || !$contiginfo->isa('Bio::Vega::ContigInfo')) {
     $self->throw("ContigInfo argument expected");
   }
