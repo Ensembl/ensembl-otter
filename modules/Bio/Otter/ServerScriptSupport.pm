@@ -29,11 +29,9 @@ our $COMPRESSION_ENABLED;
 $COMPRESSION_ENABLED = 1 unless defined $COMPRESSION_ENABLED;
 
 sub new {
-    my ( $pkg, %params ) = @_;
+    my ( $pkg ) = @_;
 
     my $self = $pkg->CGI::new();    # CGI part of the object needs initialization
-
-    @{$self}{ keys %params } = values %params; # set the rest of the parameters
 
     if ($self->show_restricted_datasets || ! $self->local_user) {
         $self->authorized_user;
