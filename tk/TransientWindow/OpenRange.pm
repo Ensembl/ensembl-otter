@@ -7,7 +7,7 @@ use base qw( TransientWindow );
 
 
 sub draw{
-    my $self   = shift;
+    my ($self) = @_;
     return if $self->{'_drawn'};
 
     my $trim_window = $self->window;
