@@ -34,7 +34,7 @@ use base 'Bio::EnsEMBL::DBSQL::MetaContainer';
 =cut
 
 sub get_primary_prefix {
-  my $self = shift;
+  my ($self) = @_;
 
   my $sth = $self->db->dbc->prepare( "SELECT meta_value
                              FROM meta
@@ -61,7 +61,7 @@ sub get_primary_prefix {
 =cut
 
 sub get_species_prefix {
-  my $self = shift;
+  my ($self) = @_;
 
   my $sth = $self->db->dbc->prepare( "SELECT meta_value
                              FROM meta
@@ -88,7 +88,7 @@ sub get_species_prefix {
 =cut
 
 sub get_stable_id_min {
-  my $self = shift;
+  my ($self) = @_;
 
   my $sth = $self->db->dbc->prepare( "SELECT meta_value
                              FROM meta
