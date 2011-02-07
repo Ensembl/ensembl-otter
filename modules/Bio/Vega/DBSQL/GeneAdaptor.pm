@@ -259,11 +259,9 @@ sub reincarnate_gene {
 }
 
 sub fetch_all_versions_by_Slice_constraint {
-    my $self             = shift;
-    my $slice            = shift;
-    my $constraint       = shift || '1 = 1';    # this should not break the primitive MySQL patterns
-    my $logic_name       = shift;
-    my $load_transcripts = shift;
+    my ($self, $slice, $constraint, $logic_name, $load_transcripts) = @_;
+
+    $constraint ||= '1 = 1'; # this should not break the primitive MySQL patterns
 
     my $genes = $self->SUPER::fetch_all_by_Slice_constraint($slice, $constraint, $logic_name) || [];
 
