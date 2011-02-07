@@ -6,7 +6,6 @@ use warnings;
 
 use Bio::Vega::Author;
 use Bio::Otter::Version qw( $SCHEMA_VERSION $XML_VERSION );
-use Bio::Otter::Lace::TempFile;
 use Bio::Otter::Lace::ViaText qw( %LangDesc );
 use Bio::Vega::Utils::GFF;
 use Bio::Vega::Enrich::SliceGetAllAlignFeatures;
@@ -367,26 +366,6 @@ sub return_emptyhanded {
 
     $self->send_response('', 1);
     exit(0); # <--- this forces all the scripts to exit normally
-}
-
-sub tempfile_from_argument {
-    my ($self, $argname, $file_name) = @_;
-
-    $file_name ||= $self->csn().'_'.$self->require_argument('author').'.xml';
-
-    my $tmp_file = Bio::Otter::Lace::TempFile->new;
-    $tmp_file->root('/tmp');
-    $tmp_file->name($file_name);
-    my $full_name = $tmp_file->full_name();
-
-    $self->log("Dumping the data to the temporary file '$full_name'");
-
-    my $write_fh = eval{
-        $tmp_file->write_file_handle();
-    } || $self->error_exit("Can't write to '$full_name' : $!");
-    print $write_fh $self->require_argument($argname);
-
-    return $tmp_file;
 }
 
 ############# Creation of an Author object from arguments #######
