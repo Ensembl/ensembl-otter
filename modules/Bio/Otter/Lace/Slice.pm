@@ -16,8 +16,6 @@ use Bio::Otter::Lace::CloneSequence;
 
 use Bio::Vega::Transform::Otter;
 
-use Bio::Otter::Lace::PersistentFile;
-
 sub new {
     my( $pkg,
         $Client, # object
@@ -314,11 +312,16 @@ sub get_region_xml {
     );
 
     if ($client->debug) {
-        my $debug_file = Bio::Otter::Lace::PersistentFile->new();
-        $debug_file->name("otter-debug.$$.fetch.xml");
-        my $fh = $debug_file->write_file_handle();
-        print $fh $xml;
-        close $fh;
+        my $debug_file = "/var/tmp/otter-debug.$$.fetch.xml";
+        if (open my $fh, '>', $debug_file) {
+            print $fh $xml;
+            unless (close $fh) {
+                warn "get_region_xml(): failed to close the debug file '${debug_file}'\n";
+            }
+        }
+        else {
+            warn "get_region_xml(): failed to open the debug file '${debug_file}'\n";
+        }
     }
 
     return $xml;
