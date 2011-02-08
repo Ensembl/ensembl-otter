@@ -16,9 +16,6 @@ use Bio::Vega::AceConverter;
 use Bio::Vega::Transform::XML;
 
 use Bio::Otter::Lace::AccessionTypeCache;
-use Bio::Otter::Lace::PipelineDB;
-use Bio::Otter::Lace::SatelliteDB;
-use Bio::Otter::Lace::PersistentFile;
 use Bio::Otter::Lace::Slice; # a new kind of Slice that knows how to get pipeline data
 
 use Hum::Ace::LocalServer;
