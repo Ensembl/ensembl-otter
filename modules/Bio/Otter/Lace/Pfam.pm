@@ -17,7 +17,7 @@ use LWP::UserAgent;
 use HTTP::Request;
 use XML::LibXML;
 use XML::LibXML::XPathContext;
-use Bio::Otter::Lace::TempFile;
+
 my $SEARCH_URL = 'http://pfam.sanger.ac.uk/search/sequence';
 my $HMM_URL    = 'http://pfam.sanger.ac.uk/family/hmm';
 my $SEED_URL   = 'http://pfam.sanger.ac.uk/family/alignment/download/format';
