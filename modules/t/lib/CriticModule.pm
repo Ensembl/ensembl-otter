@@ -1,8 +1,21 @@
+package CriticModule;
+
 use strict;
 use warnings;
 
+use base 'Exporter';
+our @EXPORT = qw(critic_module_ok);
+
 use File::Spec;
-use Test::Perl::Critic (-severity => 3);
+
+use Test::Perl::Critic;
+
+sub import {
+    my ($self, %args) = @_;
+    Test::Perl::Critic->import(%args);
+    $self->export_to_level( 1, $self, qw(critic_module_ok) );
+    1;
+}
 
 sub critic_module_ok {
     my ($module, $test_name, @args) = @_;
