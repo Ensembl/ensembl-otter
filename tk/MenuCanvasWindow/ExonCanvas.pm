@@ -2649,7 +2649,7 @@ sub update_splice_strings {
 }
 
 sub remove_spurious_splice_sites {
-    my $self = shift;
+    my ($self) = @_;
     
     my $canvas = $self->canvas;
     
