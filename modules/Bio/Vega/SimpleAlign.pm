@@ -102,6 +102,7 @@ sub _assert_dir {
     my ($self, $dir, $desc) = @_;
     $self->throw("Must specify $desc") unless defined $dir;
     $self->throw("$desc must be -1 or 1") unless ($dir == 1 or $dir == -1);
+    return;
 }
 
 sub direction {
