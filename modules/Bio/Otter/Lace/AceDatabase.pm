@@ -181,11 +181,6 @@ sub get_region_xml {
         or confess "No smart_slice attached";
 
     return $smart_slice->get_region_xml;
-    
-    # my $save = "/var/tmp/slice.xml";
-    # open my $tmp, '>', $save or die "Can't write to '$save'; $!";
-    # print $tmp $xml_string;
-    # close $tmp or die "Error writing to '$save'; $!";
 }
 
 sub write_otter_acefile {
