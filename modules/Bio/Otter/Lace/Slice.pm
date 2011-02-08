@@ -16,6 +16,7 @@ use Bio::Otter::Lace::CloneSequence;
 
 use Bio::Vega::Transform::Otter;
 
+use Bio::Otter::Lace::PersistentFile;
 
 sub new {
     my( $pkg,
