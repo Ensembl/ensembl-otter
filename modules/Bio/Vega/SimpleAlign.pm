@@ -202,9 +202,9 @@ sub _reference_dangle_length {
     my $match = '';
 
     if ($end eq 'front') {
-        ($match) = $seq =~ /^(-*)/;
+        ($match) = $seq =~ /^(-*)/x;
     } elsif ($end eq 'back') {
-        ($match) = $seq =~ /(-*)$/;
+        ($match) = $seq =~ /(-*)$/x;
     } else {
         $self->throw("Don't understand end '%s'", $end);
     }
@@ -265,7 +265,7 @@ sub oversize_inserts {
     my $core = $self->_core_align;
     my $core_ref = $core->reference_seq->seq;
 
-    my @os_inserts = ($core_ref =~ m/(-{$max_insert,})/g);
+    my @os_inserts = ($core_ref =~ m/(-{$max_insert,})/gx);
 
     return @os_inserts;
 }
