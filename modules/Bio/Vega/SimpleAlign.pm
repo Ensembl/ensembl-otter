@@ -33,11 +33,13 @@ package Bio::Vega::SimpleAlign;
 use strict;
 use warnings;
 
+use Readonly;
+
 use Bio::EnsEMBL::Utils::CigarString;
 
 use base 'Bio::SimpleAlign';
 
-use constant DEFAULT_MAX_TOLERABLE_INSERT => 3;
+Readonly my $DEFAULT_MAX_TOLERABLE_INSERT => 3;
 
 =head2 promote_BioSimpleAlign
 
@@ -258,7 +260,7 @@ sub _core_align {
 
 sub oversize_inserts {
     my $self = shift;
-    my $max_insert = shift || DEFAULT_MAX_TOLERABLE_INSERT;
+    my $max_insert = shift || $DEFAULT_MAX_TOLERABLE_INSERT;
 
     my $core = $self->_core_align;
     my $core_ref = $core->reference_seq->seq;
