@@ -235,7 +235,7 @@ sub trailing_feature_seq {
     my $self = shift;
 
     my $len = $self->trailing_length;
-    return undef unless $len;
+    return unless $len;
 
     my $feature_seq = $self->feature_seq->seq;
     return substr($feature_seq, -$len);
