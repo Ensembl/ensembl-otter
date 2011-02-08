@@ -3,14 +3,21 @@
 use strict;
 use warnings;
 
-use Test::More tests => 79;
+use FindBin;
+use lib "$FindBin::Bin/lib";
+use CriticModule;
 
 use Bio::AlignIO;
 use Bio::Factory::EMBOSS;
 
 use Bio::EnsEMBL::Utils::Sequence;
 
-use_ok('Bio::Vega::SimpleAlign');
+use Test::More tests => 80;
+
+my $module = 'Bio::Vega::SimpleAlign';
+
+use_ok($module);
+critic_module_ok($module);
 
 # Basics
 
