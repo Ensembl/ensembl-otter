@@ -27,7 +27,6 @@ use Bio::Seq;
 use Hum::Ace::AceText;
 use Hum::Ace::Method;
 use Hum::FastaFileIO;
-use Bio::Otter::Lace::PersistentFile;
 use Bio::EnsEMBL::Analysis::Runnable::Finished::Exonerate;
 
 sub new{
@@ -275,17 +274,6 @@ sub ace_Method {
     $method->name(  $self->method_tag   );
 
     return $method;
-}
-
-
-sub _remove_files {
-    my ($self, $fasta) = @_;
-    my $filestamp = Bio::Otter::Lace::PersistentFile->new();
-    $filestamp->root($self->db_dirname());
-    $filestamp->name('.efficient_indexing_'. $self->db_basename());
-    $filestamp->rm();
-    rmtree($self->indicate_index());
-    return;
 }
 
 
