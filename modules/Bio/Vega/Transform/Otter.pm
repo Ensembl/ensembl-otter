@@ -644,7 +644,7 @@ sub do_nothing {
 }
 
 sub get_ChromosomeSlice {
-    my $self = shift;
+    my ($self) = @_;
 
     return $chrslice{$self};
 }
@@ -658,7 +658,7 @@ sub set_ChromosomeSlice {
 }
 
 sub get_Tiles {
-    my $self = shift;
+    my ($self) = @_;
 
     if (my $t = $tiles{$self}) {
         my @tiles = sort { $a->[0] <=> $b->[0] } @$t;
@@ -669,19 +669,19 @@ sub get_Tiles {
 }
 
 sub get_Genes {
-    my $self=shift;
+    my ($self) = @_;
 
     return $gene_list{$self} || [];
 }
 
 # sub get_AssemblyTags {
-#     my $self=shift;
+#     my ($self) = @_;
 #
 #     return $assembly_tag_list{$self} || [];
 # }
 
 sub get_SimpleFeatures {
-    my $self=shift;
+    my ($self) = @_;
 
     return $feature_list{$self} || [];
 }
