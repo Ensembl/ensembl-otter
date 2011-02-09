@@ -47,6 +47,8 @@ sub fetch {
 sub get_name {					# a normal usage is Taxonamer::get_name(9606)
 	my $taxon_id 	= pop @_;	# in case someone wants to use Taxonamer->get_name() notation
 
+        return "UNDEF";         # MJG FIXME!!
+
 	put_id($taxon_id);
 
 	if( %waiting) {

@@ -7,7 +7,7 @@ package Tk::WrappedOSF;
 
 use Tk;
 
-use base ('Evi::DestroyReporter','Tk::OrderedSelectionFrame');
+use base ('Tk::DestroyReporter','Tk::OrderedSelectionFrame');
 
 Construct Tk::Widget 'WrappedOSF';
 

@@ -6,7 +6,7 @@ package Evi::CF_Set;
 
 use Evi::CollectionFilter;
 
-use base ('Evi::DestroyReporter');
+use base ('Tk::DestroyReporter');
  
 sub new { # class method
 	my $pkg			= shift @_;

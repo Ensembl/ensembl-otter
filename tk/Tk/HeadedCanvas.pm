@@ -7,7 +7,7 @@ package Tk::HeadedCanvas;
 use strict;
 use Tk;
 
-use base ('Evi::DestroyReporter', 'Tk::Frame');
+use base ('Tk::DestroyReporter', 'Tk::Frame');
 
 Construct Tk::Widget 'HeadedCanvas';
 

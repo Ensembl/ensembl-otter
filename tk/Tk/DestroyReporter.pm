@@ -1,4 +1,4 @@
-package Evi::DestroyReporter;
+package Tk::DestroyReporter;
 
 # Any class that wants to report about destruction of its instances
 # should inherit from this one

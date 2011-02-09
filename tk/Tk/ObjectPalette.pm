@@ -12,7 +12,7 @@ use Tk::LabFrame;   # This class should never be inherited from,
 use Tk::ManualOrder;
 use Tk::ChoiceEditor;
 
-use base ('Evi::DestroyReporter', 'Tk::Frame');
+use base ('Tk::DestroyReporter', 'Tk::Frame');
 
 Construct Tk::Widget 'ObjectPalette';
 
