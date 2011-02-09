@@ -68,8 +68,8 @@ sub initialize {
 
     $hlist->configure(
         -browsecmd => sub {
+            my ($i) = @_;
             $hlist->anchorClear;
-            my $i = shift;
             my $cb = $self->hlist->itemCget($i, 0, '-widget');
             $cb->invoke unless $cb->cget('-selectcolor') eq $STATE_COLORS{'done'}
         }
@@ -264,7 +264,7 @@ sub init_flag {
 
 
 sub load_filters {
-    my $self = shift;
+    my ($self) = @_;
 
     my $top = $self->top;
     $top->Busy(-recurse => 1);
@@ -424,12 +424,12 @@ sub change_checkbutton_state {
 
 sub show_filters {
    
-    my $self = shift;
+    my ($self, $names_in_order) = @_;
 
     my $filters = $self->AceDatabase->filters;
 
-    my $names_in_order =
-        shift || $self->{_last_names_in_order} || keys %{ $filters };
+    $names_in_order ||=
+        $self->{_last_names_in_order} || keys %{ $filters };
 
     $self->{_last_names_in_order} = $names_in_order;
     
