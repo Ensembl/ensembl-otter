@@ -9,7 +9,7 @@ use strict;
 use Evi::EviChain;
 use Evi::Taxonamer;
 
-use base ('Evi::DestroyReporter'); # we want to track the destruction event
+use base ('Tk::DestroyReporter'); # we want to track the destruction event
 
 sub otter_to_pipeline { # class method
     my $otter_slice = shift @_;

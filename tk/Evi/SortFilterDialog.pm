@@ -10,7 +10,7 @@ use Evi::CollectionFilter; # the sorting/filtering criteria live here
 use Tk;
 use Tk::ObjectPalette;     # frame that selects the sorting order
 
-use base ('Evi::DestroyReporter','Evi::BlackSpot');
+use base ('Tk::DestroyReporter','Evi::BlackSpot');
  
 sub new { # class method
 	my $pkg			= shift @_;

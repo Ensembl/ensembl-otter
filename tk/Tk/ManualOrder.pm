@@ -15,7 +15,7 @@ use Tk;
     # Tk::LabFrame should be never inherited from,
     # as it has bugs that break 'grid' geometry manager.
     # Things should inherit from Tk::Frame instead, and be wrapped.
-use base ('Evi::DestroyReporter', 'Tk::Frame');
+use base ('Tk::DestroyReporter', 'Tk::Frame');
 
 Construct Tk::Widget 'ManualOrder';
 

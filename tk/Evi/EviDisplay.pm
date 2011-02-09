@@ -60,7 +60,7 @@ use Evi::Tictoc;            # a simple stopwatch
 use Evi::BlixemLauncher;    # the name says it all
 
 use base ('MenuCanvasWindow',
-    'Evi::DestroyReporter',     # we want to track the destruction event
+    'Tk::DestroyReporter',     # we want to track the destruction event
     'Evi::BlackSpot',           # and be able to break the links
 );
 

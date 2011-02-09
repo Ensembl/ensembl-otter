@@ -13,7 +13,7 @@ use Evi::SortCriterion;	# method/params to be called on data to compute the key,
 use Evi::Sorter;		# performs multicriterial sorting, filtering and uniq
 use Evi::Tictoc;		# the stopwatch
 
-use base ('Evi::DestroyReporter');
+use base ('Tk::DestroyReporter');
  
 sub new { # class method
 	my $pkg			= shift @_;
