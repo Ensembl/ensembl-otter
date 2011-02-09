@@ -7,6 +7,7 @@ use strict;
 use warnings;
 
 use DBI;
+use Readonly;
 
 =pod
 
@@ -27,18 +28,37 @@ my @DB_CATEGORIES = (
     #'refseq'
 );
 
-# pinched from Hum::ClipboardUtils.pm (copied here due to server PERL5LIB issues)
-my $magic_evi_name_matcher = qr{
-    ([A-Za-z]{2}:)?       # Optional prefix
+# pinched & adapted from Hum::ClipboardUtils.pm (copied here due to server PERL5LIB issues)
+# declaring as 'Readonly our' permits its use elsewhere as $Bio::Otter::Utils::MM::MAGIC_EVI_NAME_MATCHER
+#
+Readonly our $MAGIC_EVI_NAME_MATCHER => qr{
+    \s*                   # Optional leading whitespace
+    (?:([A-Za-z]{2}):)?   # Optional prefix - only return the letters
     (
                           # Something that looks like an accession:
         [A-Z]+\d{5,}      # one or more letters followed by 5 or more digits
         |                 # or, for TrEMBL,
         [A-Z]\d[A-Z\d]{4} # a capital letter, a digit, then 4 letters or digits.
     )
-    (\-\d+)?              # Optional VARSPLICE suffix
-    (\.\d+)?              # Optional .SV
+    (?:\-(\d+))?          # Optional VARSPLICE suffix - only return the digits
+    (?:\.(\d+))?          # Optional .SV - only return the digits
+    \s*                   # Optional trailing whitespace
 }x;
+
+# Not a method
+#
+# returns (prefix, accession, sv, accession-without-splice-variant, splice-variant)
+#
+sub magic_evi_name_match {
+    my $text = shift;
+
+    my ($prefix, $acc_only, $splv, $sv) = ($text =~ /^${MAGIC_EVI_NAME_MATCHER}$/o);
+
+    my $acc = $acc_only;
+    $acc .= "-$splv" if $splv;
+
+    return ($prefix, $acc, $sv, $acc_only, $splv);
+}
 
 sub new {
     my ($class, @args) = @_;
@@ -156,11 +176,10 @@ WHERE accession_version LIKE ?
     my %acc_hash = ();
 
     for my $text (@$accs) {
-        if ($text =~ /$magic_evi_name_matcher/g) {
-            my $prefix = $1 || '*';
-            my $acc = $2;
-            $acc .= $3 if $3;
-            my $sv = $4 || '*';
+        my ($prefix, $acc, $sv) = magic_evi_name_match($text);
+        if ($acc) {
+
+            $sv = $sv ||= '*';
 
             $acc_hash{$text} = [ $acc, $sv ];
         }
@@ -188,7 +207,7 @@ WHERE accession_version LIKE ?
 
             if (my ($type, $class, $version) = $sth->fetchrow_array()) {
 
-                my ($db_sv) = $version =~ /.+(\.\d+)/;
+                my ($db_sv) = $version =~ /.+\.(\d+)/;
 
                 next unless ($sv eq '*') || ($sv eq $db_sv);
 
