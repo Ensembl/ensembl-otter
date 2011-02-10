@@ -104,7 +104,9 @@ sub fetch_current_gene_id_for_transcript {
     while (my ($stable, $gid) = $sth->fetchrow) {
         $stable_gid{$stable} = $gid;
     }
-    return sort {$a <=> $b} values %stable_gid;
+    my @gene_id = sort {$a <=> $b} values %stable_gid;
+
+    return @gene_id;
 }
 
 
