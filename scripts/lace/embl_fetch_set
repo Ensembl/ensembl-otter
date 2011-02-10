@@ -82,7 +82,7 @@ foreach my $ver(@embl){
 
 sub tempFile{
     my ($location) = @_;
-    return undef unless $location;
+    return unless $location;
     open(my $fh, '<', $location) or die "Couldn't find $location \n";
     return $fh;
 }
