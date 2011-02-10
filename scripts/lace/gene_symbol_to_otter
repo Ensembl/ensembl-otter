@@ -34,9 +34,9 @@ my $geneRemarkAd  = $otter_db->get_GeneRemarkAdaptor;
 my $gname         = new Bio::Otter::GeneName;
 
 $outfile = $file.".diff";
-open (F, '>', $outfile) || die $!;
+open (my $out, '>', $outfile) || die $!;
 
-open FILE, '<', $file || die $!;
+open my $in, '<', $file || die $!;
 
 my $start = 0;
 
@@ -44,7 +44,7 @@ eval {
 
   $otter_db->begin_work;	# get along with AutoCommit turning on, so that rollback is possible later
 
-  while (<FILE>) {
+  while (<$in>) {
     chomp;
 
     if ( /^Symbol/ ) {
@@ -142,7 +142,7 @@ eval {
 	$sth->finish();
       }
 
-      print F $changed if $changed;
+      print $out $changed if $changed;
       $changed =();
     }
   }

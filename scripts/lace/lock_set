@@ -32,7 +32,7 @@ use Bio::Otter::Lace::Defaults;
         my $lock_xml = <>;
         $cl->unlock_otter_xml($lock_xml, $dataset);
     } else {
-        open LOCK, '>', $lock_file or die "Can't write to '$lock_file' : $!";
+        open my $lock, '>', $lock_file or die "Can't write to '$lock_file' : $!";
         my $seqSet   = $dsObj->get_SequenceSet_by_name($seqsetname);
         $dsObj->selected_SequenceSet($seqSet);
         my $csObjs   = $dsObj->fetch_all_CloneSequences_for_selected_SequenceSet();
@@ -51,8 +51,8 @@ use Bio::Otter::Lace::Defaults;
                 die $@;
             }
         }
-        print LOCK $lock_xml;
-        close LOCK or die "Error writing to '$lock_file' : $!";
+        print $lock $lock_xml;
+        close $lock or die "Error writing to '$lock_file' : $!";
         warn "Wrote lock to '$lock_file'\n";
     }
 }

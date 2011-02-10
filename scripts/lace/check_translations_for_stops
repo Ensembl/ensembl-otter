@@ -13,6 +13,8 @@ use Bio::EnsEMBL::Intron;
 
 $| = 1;
 
+my ($out2, $out3, $out4, $out5, $out6, $out7);
+
 {
     my ($dataset, $sequence_set, $chr_start_acc, $chr_end_acc, $gene_stable_id);
     my ($tunnel, $remarks, $verbose, $seleno, $sql, $prefix, $tags, $tlen, 
@@ -66,12 +68,12 @@ $| = 1;
       my @list;
       if (-e $gene_stable_id) {
 	# 'gene_stable_id' is a file
-	open(IN, '<', $gene_stable_id) || die "cannot open $gene_stable_id";
-	while (<IN>) {
+	open(my $in, '<', $gene_stable_id) || die "cannot open $gene_stable_id";
+	while (<$in>) {
 	  chomp;
 	  push(@list,$_);
 	}
-	close(IN);
+	close($in);
       } else {
 	@list=(split(/,/, $gene_stable_id));
       }
@@ -134,22 +136,22 @@ $| = 1;
     # if sql file name specified, writes sql to add annotation remarks for
     # selenocysteine in correct format.
     if ($sql) {
-        open(OUT2, '>', $sql) || die "cannot open $sql";
+        open($out2, '>', $sql) || die "cannot open $sql";
     }
     if ($tags) {
-        open(OUT3, '>', $tags) || die "cannot open $tags";
+        open($out3, '>', $tags) || die "cannot open $tags";
     }
     if ($tlen) {
-        open(OUT4, '>', $tlen) || die "cannot open $tlen";
+        open($out4, '>', $tlen) || die "cannot open $tlen";
     }
     if ($nmd) {
-        open(OUT5, '>', $nmd) || die "cannot open $nmd";
+        open($out5, '>', $nmd) || die "cannot open $nmd";
     }
     if ($stat) {
-        open(OUT6, '>', $stat) || die "cannot open $stat";
+        open($out6, '>', $stat) || die "cannot open $stat";
     }
     if ($nmds) {
-        open(OUT7, '>', $nmds) || die "cannot open $nmds";
+        open($out7, '>', $nmds) || die "cannot open $nmds";
     }
     foreach my $id (@$gene_id_list) {
         $i++;
@@ -173,7 +175,7 @@ $| = 1;
 		my $tsi=$trans->stable_id;
 		my $tn=$transcript_info->name;
 		my $gsi=$gene->stable_id;
-		print OUT5 "$tsi ($tn) [$gsi]: INFO: annotated as NMD\n";
+		print $out5 "$tsi ($tn) [$gsi]: INFO: annotated as NMD\n";
 		$nnmdl++;
 	      }
 	    }
@@ -185,34 +187,34 @@ $| = 1;
 	    # check for translations containing stop codons
             my $sqltxt =
               check_for_stops($gene, $trans, $remarks, $verbose, $seleno, $sql);
-            print OUT2 $sqltxt if $sql;
+            print $out2 $sqltxt if $sql;
 
 	    # check for translations with inconsistent 'snf, enf tags'
-	    print OUT3 check_start_end($gene, $trans) if $tags;
+	    print $out3 check_start_end($gene, $trans) if $tags;
 
 	    # check for translations that are very short
-	    print OUT4 check_length($gene, $trans, $min_len) if $tlen;
+	    print $out4 check_length($gene, $trans, $min_len) if $tlen;
 
 	    # check for translations when probably nmd
-	    print OUT5 check_nmd($gene, $trans, $stat, \$nnmd) if $nmd;
+	    print $out5 check_nmd($gene, $trans, $stat, \$nnmd) if $nmd;
         }
 	if($ntrans>0){
 	  my $gid=$gene->stable_id;
 	  my $gn=$gene->gene_info->name->name;
 	  if($ntrans==$nnmd){
-	    print OUT5 "$gid ($gn): WARN: all translations flagged as NMD ($ntrans)\n";
+	    print $out5 "$gid ($gn): WARN: all translations flagged as NMD ($ntrans)\n";
 	  }
 	  if($nmds){
 	    $nnmdl+=$nnmd;
-	    print OUT7 "$gid ($gn)\t$ntrans\t$nnmd\t$ntranscript\t$nnmdl\n";
+	    print $out7 "$gid ($gn)\t$ntrans\t$nnmd\t$ntranscript\t$nnmdl\n";
 	  }
 	}
     }
     print STDERR " $i\n";
-    close OUT2 if $sql;
-    close OUT3 if $tags;
-    close OUT4 if $tlen;
-    close OUT5 if $nmd;
+    close $out2 if $sql;
+    close $out3 if $tags;
+    close $out4 if $tlen;
+    close $out5 if $nmd;
 }
 
 sub check_start_end {
@@ -467,7 +469,7 @@ sub check_nmd {
 	my $leseq=length($1);
 	# write distance for all cases for analysis
 	if($stat){
-	  print OUT6 "$leseq\t$tsi\t$tn\t$gsi\t$enum\t$ilen\t$elen\n";
+	  print $out6 "$leseq\t$tsi\t$tn\t$gsi\t$enum\t$ilen\t$elen\n";
 	}
 	# only flag as NMD if considering -1 exon
 	if($leseq>50 && $enum==-1){

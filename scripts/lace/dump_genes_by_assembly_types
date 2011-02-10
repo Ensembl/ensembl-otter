@@ -1457,15 +1457,15 @@ sub find_last_dbid {
 
     my $skip_to = 0;
 
-    open(PREV, '<', $filename);
+    open(my $prev, '<', $filename);
     local $/="----------------------------------------\n";
-    while (<PREV>) {
+    while (<$prev>) {
         my $gene_xml=$_;
         if ($gene_xml=~/^\S+\s+\S+\s+(\S+)\s+\S+\s+<locus>.*<\/locus>.*/ms){
             $skip_to = $1;
         }
     }
-    close PREV;
+    close $prev;
 
     return $skip_to;
 }
@@ -1768,13 +1768,13 @@ sub build_redundant_set {
 
   my $redundant_set = {};
 
-  open (IN,'<', $filename) || die ("Could not open redundant file '$filename' for reading:\n $!\n");
-  while(<IN>){
+  open (my $in,'<', $filename) || die ("Could not open redundant file '$filename' for reading:\n $!\n");
+  while(<$in>){
 	 if ($_ =~ /(\S+)/){
 		$redundant_set->{$1}=1;
 	 }
   }
-  close IN;
+  close $in;
   return $redundant_set;
 }
 
@@ -1783,13 +1783,13 @@ sub get_valid_gene_ids {
 
   my $list_of_gene_ids = '0';
 
-  open (IN,'<', $filename) || die ("Could not open load file '$filename' for reading:\n $!\n");
-  while(<IN>){
+  open (my $in,'<', $filename) || die ("Could not open load file '$filename' for reading:\n $!\n");
+  while(<$in>){
 	 if ($_ =~ /(\S+)/){
 		$list_of_gene_ids .= ",$1";
 	 }
   }
-  close IN;
+  close $in;
   return $list_of_gene_ids;
 }
 

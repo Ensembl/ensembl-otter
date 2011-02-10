@@ -138,11 +138,11 @@ sub output_list {
   if ( keys %$name_and_shame ) {
 
 	# blame list
-	open( FH, '>', $list) or die $!;
-	print FH "\nPlease check the protein sequence of transcript that has:\n";
-	print FH "\t(1) no stop codon but 'cds_end_not_found' tag is NOT selected or\n";
-	print FH "\t(2) non-ATG translation start but 'cds_start_not_found' tag is NOT selected or\n";
-	print FH "\t(3) stop codon in CDS(s)\n\n";
+	open( my $fh, '>', $list) or die $!;
+	print $fh "\nPlease check the protein sequence of transcript that has:\n";
+	print $fh "\t(1) no stop codon but 'cds_end_not_found' tag is NOT selected or\n";
+	print $fh "\t(2) non-ATG translation start but 'cds_start_not_found' tag is NOT selected or\n";
+	print $fh "\t(3) stop codon in CDS(s)\n\n";
 
 	foreach my $name ( sort keys %$name_and_shame ) {
 	  warn $name;
@@ -150,9 +150,9 @@ sub output_list {
 
 	  if ( @errs ){
 		warn @errs;
-		print FH "\n$name:\n";
+		print $fh "\n$name:\n";
 		foreach my $err ( @errs ){
-		  print FH "\t$err";
+		  print $fh "\t$err";
 		}
 	  }
 	}

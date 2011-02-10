@@ -156,8 +156,8 @@ foreach my $file ( @latest_agps ){
   $agpfile =~ s/-\d+//;
   my $region_seq .= $agpfile.".seq";
 
-  open(AGPSEQ, '>', "$dest_dir/$region_seq") or die $!;
-  print AGPSEQ basename($file), "\n\n";
+  open(my $agpseq, '>', "$dest_dir/$region_seq") or die $!;
+  print $agpseq basename($file), "\n\n";
 
   warn "  FINISHED: $agpfile [$region_seq]";
 
@@ -207,9 +207,9 @@ foreach my $file ( @latest_agps ){
 	  $seq .= "n" x $acc if $non_n == 1; # $acc here is eg, 50000 (bp of gap)
 	}
   }
-  print AGPSEQ sixty_cols($seq);
+  print $agpseq sixty_cols($seq);
   close $fh;
-  close AGPSEQ;
+  close $agpseq;
 }
 
 # update NOD agp/seq files in live site
