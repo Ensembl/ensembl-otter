@@ -213,7 +213,8 @@ sub write_transcript_gtf {
     $hasstart = $hasend = 0;
   }
 
-  my @translateable_exons = @{ $transcript->get_all_translateable_Exons }
+  my @translateable_exons;
+  @translateable_exons= @{ $transcript->get_all_translateable_Exons }
     if $transcript->translation;
 
   if ($fix_phases) {
