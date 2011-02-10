@@ -1,3 +1,27 @@
 #  This file lists scripts that have been deleted from version control.
 #
 #  The format is "path/to/deleted/script<tab>reason_for_deletion"
+
+scripts/conversion/gtf2xml.pl	uses the non-existent Bio::Otter::Converter module
+scripts/conversion/parse_ncbi_gtf	uses the non-existent Bio::Otter::Converter module
+scripts/dump_XML	uses the non-existent Bio::Otter::Converter module
+scripts/from_otter	uses the non-existent Bio::Otter::Converter module
+scripts/game2otter	uses the non-existent Bio::Otter::Converter module
+scripts/get_region	uses the non-existent Bio::Otter::Converter module
+scripts/jig_genes	uses the non-existent Bio::Otter::Converter module
+scripts/lace/copy_translation	uses the non-existent Bio::Otter::Converter module
+scripts/lace/dump_otter_SFeature_Atag_by_assembly	uses the non-existent Bio::Otter::Converter module
+scripts/lace/load_new_gene_xml	uses the non-existent Bio::Otter::Converter module
+scripts/lace/realign_missing_genes	uses the non-existent Bio::Otter::Converter module
+scripts/lace/realign_offtrack_cdna_genes	uses the non-existent Bio::Otter::Converter module
+scripts/lace/realign_offtrack_genes	uses the non-existent Bio::Otter::Converter module
+scripts/lace/transfer_MHC_annotation.pl	uses the non-existent Bio::Otter::Converter module
+scripts/lace/update_genes	uses the non-existent Bio::Otter::Converter module
+scripts/loadXML	uses the non-existent Bio::Otter::Converter module
+scripts/loadXML_on_slice	uses the non-existent Bio::Otter::Converter module
+scripts/make_assembly	uses the non-existent Bio::Otter::Converter module
+scripts/make_otter_xml	uses the non-existent Bio::Otter::Converter module
+scripts/test_server	uses the non-existent Bio::Otter::Converter module
+scripts/to_otter	uses the non-existent Bio::Otter::Converter module
+scripts/to_otter_slice	uses the non-existent Bio::Otter::Converter module
+scripts/write_region	uses the non-existent Bio::Otter::Converter module
