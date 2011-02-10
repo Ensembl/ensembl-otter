@@ -8,7 +8,6 @@ use warnings;
 use strict;
 use Bio::Otter::Lace::Defaults;
 use Bio::Vega::DBSQL::DBAdaptor;
-use Symbol 'gensym';
 use Hum::Sort ('ace_sort');
 use URI::Escape;
 
@@ -50,10 +49,9 @@ use URI::Escape;
 
 
   # Write GFF3 to one single file
-  my $fh = gensym();
   my $file_name = "$dataset_name.gff3";
 
-  open $fh, '>', $file_name or die "Can't write to '$file_name' : $!";
+  open my $fh, '>', $file_name or die "Can't write to '$file_name' : $!";
   warn "Writing GFF3 data to '$file_name'\n";
 
   # this is required as the first line for GFF3
