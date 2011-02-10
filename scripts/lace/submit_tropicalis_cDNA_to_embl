@@ -106,7 +106,7 @@ if ( $ARGV[0] eq "p1" ){
   my $test             = $ARGV[2];
   my $fh;
 
-  open($fh, "<$lib_mapping_file") or die $!;
+  open($fh, '<', $lib_mapping_file) or die $!;
 
   my $cdna_lib = {};
 
@@ -143,7 +143,7 @@ if ( $ARGV[0] eq "p1" ){
 	die;
   }
 
-  open($fh, "$cons_file") or die $!;
+  open($fh, '<', $cons_file) or die $!;
 
   my ($fasta, $cdna, $lib);
   my $cdna_fasta = {};
@@ -169,11 +169,11 @@ if ( $ARGV[0] eq "p1" ){
   $cons_file =~ /(.+)\.(.+)/;
   my $plate    = $1;
   my $cons_ver = $2;
-  open(my $FL, ">>$file_list") or die $!;
+  open(my $FL, '>>', $file_list) or die $!;
 
   foreach my $lib ( keys %$cdna_fasta ) {
 	system("mkdir -p $plate/$lib");
-	open(my $fh, ">>$plate/$lib/$cons_ver");
+	open(my $fh, '>>', "$plate/$lib/$cons_ver");
 	
 	print $FL "Location of $lib $new_load_fldr/$plate/$lib/$cons_ver\n";
 
@@ -520,7 +520,7 @@ if ( $ARGV[0] == 15 ){
 	}
 
 	my $chsumfile = "md5sum_".$release_date;
-	open(my $fh, ">$chsumfile" ) or die "Failed to create md5sum file\n";
+	open(my $fh, '>', $chsumfile ) or die "Failed to create md5sum file\n";
 	printf $fh $chksum;
 
 

@@ -86,7 +86,7 @@ sub get_redundant_db_ids {
 
       if ($test){
         my $xmlout = $gsid."_".$ver."_".$curr_g->dbID;
-        open(my $fh, ">$xmlout") or die $!;
+        open(my $fh, '>', $xmlout) or die $!;
         print $fh $ver_xml->{$ver};
       }
     }

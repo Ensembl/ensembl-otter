@@ -168,7 +168,7 @@ sub output_sequences {
 	}
 	
 
-	open($fh, ">>$filename") or die $!;
+	open($fh, '>>', $filename) or die $!;
 	print $fh ">@{$gene_info_of_trans->{$t}}\n";
 	print $fh $formatted_seq, "\n\n";
 
@@ -176,7 +176,7 @@ sub output_sequences {
 	  # print also prtein seq to a separate file for conding genes
 
 	  $filename = "Coding_genes_AA_".$date;
-	  open($fh, ">>$filename") or die $!;
+	  open($fh, '>>', $filename) or die $!;
 
 	  # looks like some genes can be dubious due to incomplete annotation
 	  # eg, coding gene but its transcript does not have translation

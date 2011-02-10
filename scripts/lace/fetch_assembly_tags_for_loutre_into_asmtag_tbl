@@ -170,7 +170,7 @@ sub parse_ace {
     $acefile = "gzip -cd $acefile |";
   }
 
-  open( my $fh, $acefile ) || die "Failed to read $acefile";
+  open( my $fh, '<', $acefile ) || die "Failed to read $acefile";
 
   my $info;
 

@@ -64,7 +64,7 @@ sub compare_checksum {
   my $sftp_md5 = $md5->b64digest;
 
   # local file
-  open(my $local_file, "$hgnc/$file") or die;
+  open(my $local_file, '<', "$hgnc/$file") or die;
   $md5->addfile($local_file);
   my $local_md5 = $md5->b64digest;
 
