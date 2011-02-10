@@ -13,6 +13,7 @@
 # The result of this script is a list ref. of vega ids
 
 use strict;
+use warnings;
 
 my $original = 'MGI_2_multiple_vega_ids.ori';
 my $revised  = 'MGI_2_multiple_vega_ids.rev';
