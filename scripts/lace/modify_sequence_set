@@ -164,7 +164,8 @@ sub show_agp {
         }
         $chr_end = $row->[2];
         print join("\t", @$row) . "\n";
-        my ($acc) = split(/\./, $row->[5]) if $row->[5];
+        my $acc;
+        ($acc) = split(/\./, $row->[5]) if $row->[5];
         $found->{ $acc || $row->[0] } = 1;
     }
     return $gaps, $found;
