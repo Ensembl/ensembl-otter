@@ -156,9 +156,9 @@ sub cleanup_old_otter_dbs {
     closedir BACKUPS;
     
     # Keep the most recent 12
-    foreach my $i (01..12) {
+    foreach my $i (1..12) {
         my $backup = pop(@all);
-        warn "Keeping $i: $backup\n";
+        warn sprintf "Keeping %02d: %s\n", $i, $backup;
         last unless @all;
     }
     
