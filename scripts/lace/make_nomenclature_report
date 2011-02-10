@@ -42,8 +42,8 @@ use Bio::SeqIO;
     if ($locus_skip_file) {
         #my %req_gene = map {$_, 1} @gene_id;
     
-        open SKIP, '<', $locus_skip_file or die "Can't read '$locus_skip_file' : $!";
-        while (<SKIP>) {
+        open my $skip, '<', $locus_skip_file or die "Can't read '$locus_skip_file' : $!";
+        while (<$skip>) {
             foreach my $id (split) {
                 $skip_list{$id} = 1;
                 #if ($req_gene{$id}) {
@@ -51,7 +51,7 @@ use Bio::SeqIO;
                 #}
             }
         }
-        close SKIP;
+        close $skip;
     }
     
     my $nuc_out = Bio::SeqIO->new(

@@ -70,12 +70,12 @@ my $geneAd   = $otter_db->get_GeneAdaptor;
 
 # loop thru all assembly types to fetch all annotated genes in it on otter
 unless ( @sets ){
-  open(FH, '<', $encode_list) or die $!;
-  while(<FH>){
+  open(my $fh, '<', $encode_list) or die $!;
+  while(<$fh>){
     chomp;
     push(@sets, $_);
   };
-  close FH;
+  close $fh;
 }
 
 my $wanted_gtypes = {

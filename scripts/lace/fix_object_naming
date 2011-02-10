@@ -128,14 +128,13 @@ use Hum::Submission 'prepare_cached_statement';
 sub rename_hash_from_file {
     my ($file) = @_;
 
-    local *REN;
-    open REN, '<', $file or die "Can't read '$file' : $!";
+    open my $ren, '<', $file or die "Can't read '$file' : $!";
     my $old_new = {};
-    while (<REN>) {
+    while (<$ren>) {
         my ($old, $new) = split;
         $old_new->{$old} = $new;
     }
-    close REN or die "Error reading '$file' : $!";
+    close $ren or die "Error reading '$file' : $!";
     return $old_new;
 }
 

@@ -29,8 +29,8 @@ use strict;
     main($cache);
   }
   else {
-    open(FH, '<', $cache) or die "Failed loading cached page";
-    while(<FH>){
+    open(my $fh, '<', $cache) or die "Failed loading cached page";
+    while(<$fh>){
       print $_;
     }
   }
@@ -41,7 +41,7 @@ use strict;
 sub main {
 
   my $cached = shift;
-  open(FH, '>', $cached) or die "Cannot create cached page!";
+  open(my $fh, '>', $cached) or die "Cannot create cached page!";
 
   my $sw = SangerWeb->new({
 						   'title'   => 'Mouse NOD clone / Assembly sequencing status',
@@ -59,19 +59,19 @@ sub main {
 						   'inifile' => "$ENV{'DOCUMENT_ROOT'}/Projects/M_musculus-NOD/header.ini",
 						  });
 
-  print    $sw->header();
-  print FH $sw->header();
+  print     $sw->header();
+  print $fh $sw->header();
 
   my $q = CGI->new;
 
   # test
   #print map { "$_ --> $ENV{$_}<br>" } (keys %ENV);
 
-  print    qq{<center><div style='margin-bottom: 1em'><h6>NA = not available</h6></div>\n};
-  print FH qq{<center><div style='margin-bottom: 1em'><h6>NA = not Available</h6></div>\n};
+  print     qq{<center><div style='margin-bottom: 1em'><h6>NA = not available</h6></div>\n};
+  print $fh qq{<center><div style='margin-bottom: 1em'><h6>NA = not Available</h6></div>\n};
 
-  print    qq{<div style='margin-right: 1em;'><table width="100%">\n};
-  print FH qq{<div style='margin-right: 1em;'><table width="100%">\n};
+  print     qq{<div style='margin-right: 1em;'><table width="100%">\n};
+  print $fh qq{<div style='margin-right: 1em;'><table width="100%">\n};
 
   # all NOD clones columns
   my $clone_info = get_all_NOD_clones();
@@ -131,11 +131,11 @@ sub main {
   #  now make one table for all
   #------------------------------
 
-  print    results_table($header, $caption_tpf, $rows_tpf, $caption_non_tpf, $rows_non_tpf);
-  print FH results_table($header, $caption_tpf, $rows_tpf, $caption_non_tpf, $rows_non_tpf);
+  print     results_table($header, $caption_tpf, $rows_tpf, $caption_non_tpf, $rows_non_tpf);
+  print $fh results_table($header, $caption_tpf, $rows_tpf, $caption_non_tpf, $rows_non_tpf);
 
-  print    qq{</table></center>\n};
-  print FH qq{</table></center>\n};
+  print     qq{</table></center>\n};
+  print $fh qq{</table></center>\n};
 
   my $footer =  qq{<div style='text-align: center;
                          background-color: #C1CDCD;
@@ -143,11 +143,11 @@ sub main {
                  Wellcome Trust Genome Campus, Hinxton, Cambridge, CB10 1SA, UK&nbsp;&nbsp;
                  Tel:+44 (0)1223 834244&nbsp;&nbsp;webmaster\@sanger.ac.uk</div>};
 
-  print    $footer;
-  print FH $footer;
+  print     $footer;
+  print $fh $footer;
 
-  #print    $sw->footer(); # screws with <div> tag
-  #print FH $sw->footer();
+  #print     $sw->footer(); # screws with <div> tag
+  #print $fh $sw->footer();
 
   print qq{</body></html>};
 

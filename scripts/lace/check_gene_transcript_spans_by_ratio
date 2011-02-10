@@ -47,7 +47,7 @@ unless ( @a_types ){
 
 # loop thru all assembly types to fetch all annotated genes in it on otter
 
-open(F, '>', "vega_data_error") || die $!;
+open(my $f, '>', "vega_data_error") || die $!;
 
 foreach my $type ( @a_types ) {
 
@@ -74,7 +74,7 @@ foreach my $type ( @a_types ) {
     my $all_exons = $gene->get_all_Exons;
     foreach ( @$all_exons ){
       if ( $_->contig != $slice ){
-	print F "$type\t". $gene->stable_id ."\t". $gene->gene_info->name->name. " has no exons within the slice\n" if ( $_->contig != $slice );
+	print $f "$type\t". $gene->stable_id ."\t". $gene->gene_info->name->name. " has no exons within the slice\n" if ( $_->contig != $slice );
 	next GENE;
       }
     }
@@ -94,7 +94,7 @@ foreach my $type ( @a_types ) {
     }
 
     unless ($longest) {
-	print F "\n$type\tFAILED TO GET LONGEST TRANSCRIPT FOR ", $gene->stable_id, "\n";
+	print $f "\n$type\tFAILED TO GET LONGEST TRANSCRIPT FOR ", $gene->stable_id, "\n";
         next;
     }
 

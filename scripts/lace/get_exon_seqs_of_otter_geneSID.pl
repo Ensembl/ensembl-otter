@@ -31,8 +31,8 @@ my $geneAd   = $otter_db->get_GeneAdaptor;
 my $geneSID_list;
 
 if ( $infile ){
-  open(FH, '<', $infile) or die $!;
-  while (<FH>){
+  open(my $fh, '<', $infile) or die $!;
+  while (<$fh>){
 	chomp;
 	push(@$geneSID_list, $_);
   }
