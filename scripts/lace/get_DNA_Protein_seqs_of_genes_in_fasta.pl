@@ -112,7 +112,7 @@ sub get_latest_trans_or_prot_seq {
 	  next if $trans->transcript_info->class->name eq "Transposon";
 
 	  if ( $trans->transcript_info->class->name eq "Coding" ){
-warn $trans->transcript_info->transcript_stable_id if $gene_sid eq 'OTTHUMG00000024196';
+              # warn $trans->transcript_info->transcript_stable_id if $gene_sid eq 'OTTHUMG00000024196';
 		push( @$coding, $trans );
 	  }
 	  elsif ( $trans->transcript_info->class->name =~ /pseudogene/i ){
