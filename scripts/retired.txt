@@ -3,78 +3,25 @@
 #  The format is "path/to/deleted/script<tab>reason_for_deletion"
 
 scripts/compare_gene_id.pl	uses non-existent Bio::Otter::DBSQL::* modules
-scripts/conversion/assembly/accs2chromosomes.pl	obsolete
-scripts/conversion/assembly/accs2fakeassembly.pl	obsolete
-scripts/conversion/assembly/add_assembly.pl	obsolete
-scripts/conversion/assembly/align_by_clone_identity.pl	obsolete
-scripts/conversion/assembly/align_nonident_regions.pl	obsolete
-scripts/conversion/assembly/assembly_exception.pl	obsolete
-scripts/conversion/assembly/assembly_tags.pl	obsolete
-scripts/conversion/assembly/blastz_matrix.txt	obsolete
-scripts/conversion/assembly/check_ensembl_vega_projection.pl	obsolete
-scripts/conversion/assembly/count_transferred_genes.pl	obsolete
-scripts/conversion/assembly/finish_ensembl_vega_db.pl	obsolete
-scripts/conversion/assembly/fix_overlaps.pl	obsolete
-scripts/conversion/assembly/get_chr_seq.pl	obsolete
-scripts/conversion/assembly/make_combined_assembly.pl	obsolete
-scripts/conversion/assembly/make_ensembl_vega_db.pl	obsolete
-scripts/conversion/assembly/map_annotation.pl	obsolete
-scripts/conversion/assembly/modules/BlastzAligner.pm	obsolete
-scripts/conversion/assembly/modules/Deletion.pm	obsolete
-scripts/conversion/assembly/modules/Gene.pm	obsolete
-scripts/conversion/assembly/modules/InterimExon.pm	obsolete
-scripts/conversion/assembly/modules/InterimTranscript.pm	obsolete
-scripts/conversion/assembly/modules/Length.pm	obsolete
-scripts/conversion/assembly/modules/StatLogger.pm	obsolete
-scripts/conversion/assembly/modules/StatMsg.pm	obsolete
-scripts/conversion/assembly/modules/Transcript.pm	obsolete
-scripts/conversion/assembly/modules/Utils.pm	obsolete
-scripts/conversion/assembly/set_chr_lens.pl	obsolete
-scripts/conversion/assembly/transfer_clone_annotation.pl	obsolete
-scripts/conversion/assembly/transfer_ens_annotation.pl	obsolete
-scripts/conversion/assembly/transfer_identical_chromosomes.pl	obsolete
-scripts/conversion/change_analysis_by_stable_id.pl	obsolete
-scripts/conversion/change_otterid_namespace.pl	obsolete
-scripts/conversion/delete_genes.pl	obsolete
-scripts/conversion/delete_redundant_vega_tables.pl	obsolete
-scripts/conversion/ensembl2gtf	obsolete
-scripts/conversion/evidence/check_evidence.pl	obsolete
-scripts/conversion/evidence/evidence_to_support.pl	obsolete
-scripts/conversion/fix_exon_ids.pl	obsolete
-scripts/conversion/fixagp.pl	obsolete
-scripts/conversion/gtf2ensembl	obsolete
-scripts/conversion/loutre/cleanup_pipeline_dump	obsolete
-scripts/conversion/loutre/compare_databases	obsolete
-scripts/conversion/loutre/config.conf	obsolete
-scripts/conversion/loutre/dump_loutre	obsolete
-scripts/conversion/loutre/dump_pipeline	obsolete
-scripts/conversion/loutre/finish_vega_creation	obsolete
-scripts/conversion/loutre/patch_51_49.sql	obsolete
-scripts/conversion/loutre/prepare_loutre	obsolete
-scripts/conversion/loutre/vega_regions.txt	obsolete
-scripts/conversion/newschema/ensembl2gtf	obsolete
-scripts/conversion/otter2agp	obsolete
-scripts/conversion/parse_chr21	obsolete
-scripts/conversion/parse_chr22	obsolete
-scripts/conversion/parse_gtf	obsolete
-scripts/conversion/parse_thot	obsolete
-scripts/conversion/parse_thot_with_seq	obsolete
-scripts/conversion/testing/get_stats.pl	obsolete
-scripts/conversion/testing/get_trans.pl	obsolete
-scripts/conversion/trim_align_features.pl	obsolete
-scripts/conversion/update_attributes.pl	obsolete
-scripts/conversion/xref/add_ccds_xrefs.pl	obsolete
-scripts/conversion/xref/add_ensembl_mappings.pl	obsolete
-scripts/conversion/xref/add_external_xrefs.pl	obsolete
-scripts/conversion/xref/add_gene_synonyms.pl	obsolete
-scripts/conversion/xref/add_go_xrefs.pl	obsolete
-scripts/conversion/xref/add_havana_xrefs.pl	obsolete
-scripts/conversion/xref/add_vega_xrefs.pl	obsolete
-scripts/conversion/xref/fix_transcript_names.pl	obsolete
-scripts/conversion/xref/patch_mouse_WU_genes.pl	obsolete
-scripts/conversion/xref/update_external_dbs.pl	obsolete
-scripts/conversion/xref/update_mouse_gene_names.pl	obsolete
-scripts/conversion/xref/update_transcript_names.pl	obsolete
+scripts/conversion/assembly/copy_annotation.pl	uses non-existent Bio::Otter::DBSQL::* modules
+scripts/conversion/assembly/transfer_annotation.pl	uses non-existent Bio::Otter::DBSQL::* modules
+scripts/conversion/copy_genes.pl	uses non-existent Bio::Otter::DBSQL::* modules
+scripts/conversion/evidence/accession_to_support.pl	uses non-existent Bio::Otter::DBSQL::* modules
+scripts/conversion/evidence/delete_chr_data.pl	uses non-existent Bio::Otter::DBSQL::* modules
+scripts/conversion/gtf2xml.pl	uses the non-existent Bio::Otter::Converter module
+scripts/conversion/otter2gtf	uses non-existent Bio::Otter::DBSQL::* modules
+scripts/conversion/parse_ncbi_gtf	uses the non-existent Bio::Otter::Converter module
+scripts/conversion/parse_pathogen	uses non-existent Bio::Otter::DBSQL::* modules
+scripts/conversion/parse_scoe	uses non-existent Bio::Otter::DBSQL::* modules
+scripts/conversion/testing/get_interpro.pl	uses non-existent Bio::Otter::DBSQL::* modules
+scripts/conversion/testing/get_interpro_trans.pl	uses non-existent Bio::Otter::DBSQL::* modules
+scripts/conversion/xref/hugo_to_description.pl	uses non-existent Bio::Otter::DBSQL::* modules
+scripts/conversion/xref/hugo_to_xrefs.pl	uses non-existent Bio::Otter::DBSQL::* modules
+scripts/conversion/xref/hugo_to_xrefs_otter_ids	uses non-existent Bio::Otter::DBSQL::* modules
+scripts/conversion/xref/locuslink_to_xrefs.pl	uses non-existent Bio::Otter::DBSQL::* modules
+scripts/conversion/xref/locuslink_to_xrefs_gff.pl	uses non-existent Bio::Otter::DBSQL::* modules
+scripts/conversion/xref/make_full_names_descriptions.pl	uses non-existent Bio::Otter::DBSQL::* modules
+scripts/conversion/xref/make_vega_xrefs_display.pl	uses non-existent Bio::Otter::DBSQL::* modules
 scripts/dump_XML	uses the non-existent Bio::Otter::Converter module
 scripts/ens2otter	uses non-existent Bio::Otter::DBSQL::* modules
 scripts/from_otter	uses the non-existent Bio::Otter::Converter module
