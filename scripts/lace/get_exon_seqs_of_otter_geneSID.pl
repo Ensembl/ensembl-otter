@@ -50,8 +50,8 @@ foreach my $gsid ( @$geneSID_list ){
 
   # first get the longest transcript
   my ($len_trans, $trans);
-  foreach $trans ( @{$gene->get_all_Transcripts} ) {
-	$len_trans->{abs($trans->end - $trans->start) + 1} = $trans;
+  foreach my $t ( @{$gene->get_all_Transcripts} ) {
+	$len_trans->{abs($t->end - $t->start) + 1} = $t;
   }
 
   $trans = $len_trans->{(sort {$a<=>$b} keys %$len_trans)[-1]};
