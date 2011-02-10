@@ -81,9 +81,12 @@ scripts/from_otter	uses the non-existent Bio::Otter::Converter module
 scripts/game2otter	uses the non-existent Bio::Otter::Converter module
 scripts/get_region	uses the non-existent Bio::Otter::Converter module
 scripts/jig_genes	uses the non-existent Bio::Otter::Converter module
+scripts/lace/copy_sequence_notes_2_new_otter	uses the non-existent Bio::Otter::{Clone,RawContig} modules
 scripts/lace/copy_translation	uses the non-existent Bio::Otter::Converter module
 scripts/lace/dump_otter_SFeature_Atag_by_assembly	uses the non-existent Bio::Otter::Converter module
+scripts/lace/embl_to_otter_ensembl	uses the non-existent Bio::Otter::{Clone,RawContig} modules
 scripts/lace/load_new_gene_xml	uses the non-existent Bio::Otter::Converter module
+scripts/lace/load_otter_ensembl	uses the non-existent Bio::Otter::{Clone,RawContig} modules
 scripts/lace/realign_missing_genes	uses the non-existent Bio::Otter::Converter module
 scripts/lace/realign_offtrack_cdna_genes	uses the non-existent Bio::Otter::Converter module
 scripts/lace/realign_offtrack_genes	uses the non-existent Bio::Otter::Converter module
@@ -91,6 +94,7 @@ scripts/lace/transfer_MHC_annotation.pl	uses the non-existent Bio::Otter::Conver
 scripts/lace/update_genes	uses the non-existent Bio::Otter::Converter module
 scripts/loadXML	uses the non-existent Bio::Otter::Converter module
 scripts/loadXML_on_slice	uses the non-existent Bio::Otter::Converter module
+scripts/load_fasta	uses the non-existent Bio::Otter::{Clone,RawContig} modules
 scripts/make_assembly	uses the non-existent Bio::Otter::Converter module
 scripts/make_otter	uses non-existent Bio::Otter::DBSQL::* modules
 scripts/make_otter_xml	uses the non-existent Bio::Otter::Converter module
