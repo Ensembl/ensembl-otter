@@ -10,7 +10,6 @@ use warnings;
 use strict;
 use Bio::Otter::Lace::Defaults;
 use Bio::Vega::DBSQL::DBAdaptor;
-use Symbol 'gensym';
 use Hum::Sort ('ace_sort');
 use URI::Escape;
 use Bio::Otter::MFetcher;
