@@ -12,7 +12,6 @@ use Bio::Otter::Lace::Defaults;
 use Bio::Vega::DBSQL::DBAdaptor;
 use Hum::Sort ('ace_sort');
 use URI::Escape;
-use Bio::Otter::MFetcher;
 
 {
   my ($dataset_name);
@@ -48,9 +47,6 @@ use Bio::Otter::MFetcher;
   my $loutre_dba  = $dataset->get_cached_DBAdaptor;
   my $slice_Ad = $loutre_dba->get_SliceAdaptor;
   my $gene_Ad  = $loutre_dba->get_GeneAdaptor;
-
-  my $mfetcher  = Bio::Otter::MFetcher->new();
-  $mfetcher->otter_dba($loutre_dba);
 
   #my $pipe_dba = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($loutre_dba);
 
