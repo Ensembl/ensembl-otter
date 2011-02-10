@@ -6,8 +6,10 @@ use strict;
 use Carp;
 use IO::String;
 use List::Util qw(min max);
+use Readonly;
 
 use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Lace::PipelineDB;
 use Bio::Otter::Utils::MM;
 
 use Bio::Vega::SimpleAlign;
@@ -24,6 +26,7 @@ use Hum::Pfetch;
 
 use Evi::CollectionFilter;
 use Evi::EviCollection;
+
 package Evi::EviCollection;
 
 # Should be in EviCollection but let's play here for now
@@ -36,11 +39,30 @@ sub new {
     return $self;
 }
 
-package main;
+package main; ## no critic (ProhibitMultiplePackages)
 
-use constant MAX_UNDERLAP        => 10;
-use constant MAX_TRAIL           => 10;
-use constant MAX_OVERSIZE_INSERT => 10;
+Readonly my $MAX_UNDERLAP        => 10;
+Readonly my $MAX_TRAIL           => 10;
+Readonly my $MAX_OVERSIZE_INSERT => 10;
+
+{
+    # Lower is better
+    Readonly my %ANL_RANK => (
+        Est2genome_human     => 1,
+        Est2genome_human_raw => 2,
+        );
+
+    sub anl_rank {
+        my $logic_name = shift;
+        my $rank = $ANL_RANK{$logic_name};
+        return $rank || 1e6;
+    }
+
+    sub feature_anl_rank {
+        my $f = shift;
+        return anl_rank($f->analysis->logic_name);
+    }
+}
 
 my $opts;
 
@@ -165,6 +187,7 @@ sub setup_io {
     $seq_str_io = IO::String->new(\$seq_str);
     $seqio_out = Bio::SeqIO->new(-format => 'Fasta',
                                  -fh     => $seq_str_io );
+    return;
 }
 
 sub pfetch {
@@ -172,7 +195,7 @@ sub pfetch {
     my ($hum_seq) = Hum::Pfetch::get_Sequences($id);
     unless ($hum_seq) {
         carp sprintf "Cannot pfetch '%s'!\n", $id;
-        return undef;
+        return;
     }
     my $seq = Bio::Seq->new(
         -seq        => $hum_seq->sequence_string,
@@ -193,30 +216,11 @@ sub get_accession_type {
     return @$at;
 }
 
-BEGIN {
-    # Lower is better
-    my %ANL_RANK = (
-        Est2genome_human     => 1,
-        Est2genome_human_raw => 2,
-        );
-
-    sub anl_rank {
-        my $logic_name = shift;
-        my $rank = $ANL_RANK{$logic_name};
-        return $rank || 1e6;
-    }
-
-    sub feature_anl_rank {
-        my $f = shift;
-        return anl_rank($f->analysis->logic_name);
-    }
-}
-
 sub process_align_features {
     my $features_ref = shift;
     my $opts = shift;
 
-    return undef if $opts->{max_features} and scalar(@$features_ref) > $opts->{max_features};
+    return if $opts->{max_features} and scalar(@$features_ref) > $opts->{max_features};
 
     my %hseq_anl_acc = ();
     my @flat_hseq_anl_acc = ();
@@ -518,7 +522,7 @@ sub pfetch_feature_max_len {
     my $f_seq = pfetch($feature_name);
     unless ($f_seq) {
         rcarpf("all:CE:0", "Cannot pfetch sequence for '%s'", $feature_name);
-        return undef;
+        return;
     }
     
     if (    $opts->{max_length}
@@ -527,7 +531,7 @@ sub pfetch_feature_max_len {
         ) {
         rcarpf("all:CE:0", "Ref seq %s and feature %s both too long, skipping",
                $ref_seq->display_id, $feature_name);
-        return undef;
+        return;
     }
 
     return $f_seq;
@@ -594,16 +598,16 @@ sub score_align_features {
                 reportf("verbose:SA:3", "Oversize inserts: %d, largest %d", $n_os, $max_os);
             }
 
-            if ($ul > MAX_UNDERLAP) {
-                reportf("all:SA:2:", "Dropping %s, underlap %d > %d", $name, $ul, MAX_UNDERLAP);
+            if ($ul > $MAX_UNDERLAP) {
+                reportf("all:SA:2:", "Dropping %s, underlap %d > %d", $name, $ul, $MAX_UNDERLAP);
                 next ALIGN;
             }
-            if ($trl > MAX_TRAIL and not $polyA) {
-                reportf("all:SA:2:", "Dropping %s, trail %d > %d", $name, $trl, MAX_TRAIL);
+            if ($trl > $MAX_TRAIL and not $polyA) {
+                reportf("all:SA:2:", "Dropping %s, trail %d > %d", $name, $trl, $MAX_TRAIL);
                 next ALIGN;
             }
-            if  ($max_os > MAX_OVERSIZE_INSERT) {
-                reportf("all:SA:2:", "Dropping %s, max os insert %d > %d", $name, $max_os, MAX_OVERSIZE_INSERT);
+            if  ($max_os > $MAX_OVERSIZE_INSERT) {
+                reportf("all:SA:2:", "Dropping %s, max os insert %d > %d", $name, $max_os, $MAX_OVERSIZE_INSERT);
                 next ALIGN;
             }
 
@@ -725,6 +729,7 @@ sub report_ec_hit {
             $ec_hit->trans_supported_junctions($ts),
             $ec_hit->transcript_coverage($ts),
             $ec_hit->contrasupported_length($ts));
+    return;
 }
 
 sub process_transcript {
@@ -1000,6 +1005,7 @@ sub process_transcript {
     } else {
         carp "Cannot retrieve transcript with id %d from adaptor";
     }
+    return;
 }
 
 # Rational output of results
@@ -1014,10 +1020,10 @@ sub report_prefix {
     my ($level, $context, $indent) = split(':', $cond);
 
     if ($opts->{quiet}) {
-        return undef unless $level eq 'all';
+        return unless $level eq 'all';
     }
     unless ($opts->{verbose}) {
-        return undef if $level eq 'verbose';
+        return if $level eq 'verbose';
     }
 
     if ($opts->{context}) {
@@ -1030,30 +1036,33 @@ sub report_prefix {
 }
 
 sub report {
-    my $cond = shift;
+    my ($cond, @args) = @_;
+
     my $prefix = report_prefix($cond);
     return unless defined $prefix;
 
-    print $prefix, @_, "\n";
+    print $prefix, @args, "\n";
+    return;
 }
 
 sub reportf {
-    my $cond = shift;
+    my ($cond, $format, @args) = @_;
+
     my $prefix = report_prefix($cond);
     return unless defined $prefix;
 
-    my $format = shift;
-    my $msg = sprintf($format, @_);
+    my $msg = sprintf($format, @args);
     print $prefix, $msg, "\n";
+    return;
 }
 
 sub rcarpf {
-    my $cond = shift;
-    my $format = shift;
+    my ($cond, $format, @args) = @_;
 
-    my $msg = sprintf($format, @_);
+    my $msg = sprintf($format, @args);
     report($cond, $msg);
     carp $msg;
+    return;
 }
 
 __END__
