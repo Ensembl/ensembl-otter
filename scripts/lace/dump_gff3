@@ -86,7 +86,7 @@ use Bio::Otter::MFetcher;
       # dump all encode
       # read from external file for list of mouse encode regions
       # not optimal, but this turns out to be the only source
-      open(my $fh, "/nfs/team71/analysis/ck1/DATAMINE/adam/mouse_encode_regions/mouse_encode_regions_no_flank.txt") or die $!;
+      open(my $fh, '<', "/nfs/team71/analysis/ck1/DATAMINE/adam/mouse_encode_regions/mouse_encode_regions_no_flank.txt") or die $!;
 
       my $seen;
 
@@ -114,7 +114,7 @@ use Bio::Otter::MFetcher;
     # Write GFF3 to one single file
     my $suffix = $ncbi_version ? "_NCBI$ncbi_version".".gff3" : ".gff3";
     $file_name = $set_name.$suffix;
-    open ($fh,">$file_name") or die $!;
+    open ($fh,'>', $file_name) or die $!;
     warn "Writing GFF3 data to '$file_name'\n";
 
     # this is required as the first line for GFF3

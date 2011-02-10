@@ -47,7 +47,7 @@ unless ( @a_types ){
 
 # loop thru all assembly types to fetch all annotated genes in it on otter
 
-open(F, ">vega_data_error") || die $!;
+open(F, '>', "vega_data_error") || die $!;
 
 foreach my $type ( @a_types ) {
 

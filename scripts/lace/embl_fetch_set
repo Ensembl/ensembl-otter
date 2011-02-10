@@ -65,7 +65,7 @@ useage() if $help;
 
 my @embl;
 if($infile){
-    open(my $fh, $infile) or die "Couldn't open $infile\n";
+    open(my $fh, '<', $infile) or die "Couldn't open $infile\n";
     @embl = readFile($fh);
 }elsif(-e $ARGV[0]){
     @embl = readFile(\*ARGV);
@@ -83,7 +83,7 @@ foreach my $ver(@embl){
 sub tempFile{
     my ($location) = @_;
     return undef unless $location;
-    open(my $fh, $location) or die "Couldn't find $location \n";
+    open(my $fh, '<', $location) or die "Couldn't find $location \n";
     return $fh;
 }
 sub readFile{

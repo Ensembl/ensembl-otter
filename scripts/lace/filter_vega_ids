@@ -18,7 +18,7 @@ my $original = 'MGI_2_multiple_vega_ids.ori';
 my $revised  = 'MGI_2_multiple_vega_ids.rev';
 my $name_id;
 
-open(my $fh, "$revised") or die $!;
+open(my $fh, '<', $revised) or die $!;
 while(<$fh>) {
   chomp;
   my(@cols) = split("\t", $_);
@@ -28,7 +28,7 @@ while(<$fh>) {
 
 
 my @ids_to_skip;
-open($fh, "$original") or die $!;
+open($fh, '<', $original) or die $!;
 while(<$fh>) {
   chomp;
   my(@cols) = split("\t", $_);
@@ -52,5 +52,5 @@ while(<$fh>) {
 }
 
 my $outfile = $ARGV[0];
-open($fh, ">$outfile") or die $!;
+open($fh, '>', $outfile) or die $!;
 print $fh "@ids_to_skip";

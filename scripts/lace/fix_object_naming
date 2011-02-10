@@ -129,7 +129,7 @@ sub rename_hash_from_file {
     my ($file) = @_;
 
     local *REN;
-    open REN, $file or die "Can't read '$file' : $!";
+    open REN, '<', $file or die "Can't read '$file' : $!";
     my $old_new = {};
     while (<REN>) {
         my ($old, $new) = split;

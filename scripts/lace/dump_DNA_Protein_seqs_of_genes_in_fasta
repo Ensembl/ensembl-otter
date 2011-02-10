@@ -217,12 +217,12 @@ sub output_sequences {
 		}
 	
 		if ( $all_exons ) {
-		  open($fh, ">>$filename_a") or die $!;
+		  open($fh, '>>', $filename_a) or die $!;
 		  print $fh ">@{$gene_info_of_trans->{$t}}\n"; # fasta header
 		  print $fh $formatted_seq_all_exons, "\n";
 		}
 		if ( $cds_only ) {
-		  open($fh, ">>$filename_c") or die $!;
+		  open($fh, '>>', $filename_c) or die $!;
 		  print $fh ">@{$gene_info_of_trans->{$t}}\n";
 		  print $fh $formatted_seq_CDS_only, "\n"  if $cds_only;
 		}
@@ -238,7 +238,7 @@ sub output_sequences {
 		  # print also prtein seq to a separate file for conding genes
 
 		  my $filename_p = $type_or_class."_AA_".$date;
-		  open($fh, ">>$filename_p") or die $!;
+		  open($fh, '>>', $filename_p) or die $!;
 
 		  # looks like some genes can be dubious due to incomplete annotation
 		  # eg, coding gene but its transcript does not have translation

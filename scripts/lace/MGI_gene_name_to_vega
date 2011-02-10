@@ -150,7 +150,7 @@ sub parse_mgi_input {
 
     if ( keys %$mgiSymbol_2_vegaIDs > 0 ){
         $duplcate_list = "MGI_2_multiple_vega_ids.ori";
-        open($fh, ">$duplcate_list") or die $!;
+        open($fh, '>', $duplcate_list) or die $!;
     }
     foreach my $symbol ( keys %$mgiSymbol_2_vegaIDs ){
         if ( @{$mgiSymbol_2_vegaIDs->{$symbol}} > 1 ){
@@ -281,7 +281,7 @@ sub update_loutre {
   my @ids_to_skip;
   if ( $has_duplicates ){
     system("$scriptdir/filter_vega_ids", $duplicate_file);
-    open(my $fh, "$duplicate_file") or die $!;
+    open(my $fh, '<', $duplicate_file) or die $!;
     my $ids = <$fh>;
     @ids_to_skip = split('\s', $ids);
   }

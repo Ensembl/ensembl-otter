@@ -11,7 +11,7 @@ print "\nChecking sequence version of clones in AGP . . .\n\n";
 
 foreach my $agp ( @ARGV ) {
 
-  open($agp_fh, "$agp") or die $!;
+  open($agp_fh, '<', $agp) or die $!;
 
   my $diff = 0;
   my $fh;
@@ -34,8 +34,8 @@ foreach my $agp ( @ARGV ) {
   close($agp_fh);
   
   # Pfetch the description of all accession in one block and compare the version
-  $cmd = "pfetch -D ".join(" ",keys %acc_ver)." |";
-  open($fh,$cmd) or die("Error running command $cmd\n$!");
+  $cmd = "pfetch -D ".join(" ",keys %acc_ver);
+  open($fh,'-|',$cmd) or die("Error running command $cmd\n$!");
   while(<$fh>){
 	my @acc_desc = split(/\s+/,$_);
 	my $acc_test = $acc_desc[1];

@@ -54,7 +54,7 @@ use Bio::Vega::DBSQL::DBAdaptor;
         if (-e $agp_file) {
             die "Error: file '$agp_file' already exists\n";
         }
-        open my $agp, "> $agp_file" or die "Can't write to '$agp_file' : $!";
+        open my $agp, '>', $agp_file or die "Can't write to '$agp_file' : $!";
         warn "Creating AGP file '$agp_file'\n";
         print $agp @{$ss->agp_data};
         close $agp or die "Error writing to '$agp_file' : $!";
@@ -64,7 +64,7 @@ use Bio::Vega::DBSQL::DBAdaptor;
         if (-e $file_name) {
             die "Error: file '$file_name' already exists\n";
         }
-        open my $fh, "> $file_name" or die "Can't write to '$file_name' : $!";
+        open my $fh, '>', $file_name or die "Can't write to '$file_name' : $!";
         warn "Writing GTF data to '$file_name'\n";
 
 

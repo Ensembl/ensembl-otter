@@ -96,7 +96,7 @@ foreach my $region (keys %$nod_chrdigit ){
   if ( $file ){
 	
 	my $fh;
-	open ( $fh, ">$outfile") or die $!;
+	open ( $fh, '>', $outfile) or die $!;
 	
 	my $cols =<<COLS;
 ----------------------------------------------------------------------------
@@ -145,7 +145,7 @@ foreach my $file ( @latest_agps ){
   }
 
   my $fh;
-  open($fh, "$file") or die $!;
+  open($fh, '<', $file) or die $!;
 
   my $agpfile = basename($file);
 
@@ -156,7 +156,7 @@ foreach my $file ( @latest_agps ){
   $agpfile =~ s/-\d+//;
   my $region_seq .= $agpfile.".seq";
 
-  open(AGPSEQ, ">$dest_dir/$region_seq") or die $!;
+  open(AGPSEQ, '>', "$dest_dir/$region_seq") or die $!;
   print AGPSEQ basename($file), "\n\n";
 
   warn "  FINISHED: $agpfile [$region_seq]";
@@ -266,7 +266,7 @@ sub assembly_contig_seq {
 
   my $file = shift;
   my $fh;
-  open ( $fh, "$file" ) or die $!;
+  open ( $fh, '<', $file ) or die $!;
 
   my $seq;
   my $N = 1;
@@ -338,7 +338,7 @@ sub concat_seq {
   my $seq_file = $file."_$ranks".".seq";
   my $outfile = "$dest_dir/$seq_file";
   my $fh;
-  open ( $fh, ">$outfile" ) or die $!;
+  open ( $fh, '>', $outfile ) or die $!;
 
   print "Writing to $seq_file\n";
   print $fh "$seq_file\n\n", sixty_cols($seq);

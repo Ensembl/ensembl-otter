@@ -1457,7 +1457,7 @@ sub find_last_dbid {
 
     my $skip_to = 0;
 
-    open(PREV, "<$filename");
+    open(PREV, '<', $filename);
     local $/="----------------------------------------\n";
     while (<PREV>) {
         my $gene_xml=$_;
@@ -1768,7 +1768,7 @@ sub build_redundant_set {
 
   my $redundant_set = {};
 
-  open (IN,"<$filename") || die ("Could not open redundant file '$filename' for reading:\n $!\n");
+  open (IN,'<', $filename) || die ("Could not open redundant file '$filename' for reading:\n $!\n");
   while(<IN>){
 	 if ($_ =~ /(\S+)/){
 		$redundant_set->{$1}=1;
@@ -1783,7 +1783,7 @@ sub get_valid_gene_ids {
 
   my $list_of_gene_ids = '0';
 
-  open (IN,"<$filename") || die ("Could not open load file '$filename' for reading:\n $!\n");
+  open (IN,'<', $filename) || die ("Could not open load file '$filename' for reading:\n $!\n");
   while(<IN>){
 	 if ($_ =~ /(\S+)/){
 		$list_of_gene_ids .= ",$1";

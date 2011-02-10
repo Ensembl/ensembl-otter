@@ -118,7 +118,7 @@ sub export_SequenceSet {
         };
 
     if ($file and -e $file) {
-        open($fh, $file) or die $!;
+        open($fh, '<', $file) or die $!;
         my @accessions;
         while (<$fh>) {
             my ($cl) = split;

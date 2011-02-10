@@ -70,7 +70,7 @@ my $geneAd   = $otter_db->get_GeneAdaptor;
 
 # loop thru all assembly types to fetch all annotated genes in it on otter
 unless ( @sets ){
-  open(FH, "$encode_list") or die $!;
+  open(FH, '<', $encode_list) or die $!;
   while(<FH>){
     chomp;
     push(@sets, $_);
@@ -367,7 +367,7 @@ TOP
   $rows .= qq{</table>};
   $rows .= "</body></html>";
 
-  open (my $fh, ">$html_output") or die $!;
+  open (my $fh, '>', $html_output) or die $!;
   print $fh $rows;
 }
 

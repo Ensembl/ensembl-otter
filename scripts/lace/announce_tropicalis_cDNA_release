@@ -129,7 +129,7 @@ Wood J., Zorn A.M.
 ==========================================
 LTR
 
-open(my $ltr, ">Release_letter_$new_rel") or die $!;
+open(my $ltr, '>', "Release_letter_$new_rel") or die $!;
 print $ltr $letter;
 close $ltr;
 
@@ -138,7 +138,7 @@ foreach my $email ( @emails ){
   my ($name, $domain) = split(/@/, $email);
 
   my $mail;
-  open $mail, "| mailx -s 'New X. tropicalis cDNA release - $new_rel' $name\@$domain "
+  open $mail, '|-', "mailx -s 'New X. tropicalis cDNA release - $new_rel' $name\@$domain "
 	or die "Can't open email pipe: $!";
 
   print $mail $letter;

@@ -66,7 +66,7 @@ $| = 1;
       my @list;
       if (-e $gene_stable_id) {
 	# 'gene_stable_id' is a file
-	open(IN, $gene_stable_id) || die "cannot open $gene_stable_id";
+	open(IN, '<', $gene_stable_id) || die "cannot open $gene_stable_id";
 	while (<IN>) {
 	  chomp;
 	  push(@list,$_);
@@ -134,22 +134,22 @@ $| = 1;
     # if sql file name specified, writes sql to add annotation remarks for
     # selenocysteine in correct format.
     if ($sql) {
-        open(OUT2, ">$sql") || die "cannot open $sql";
+        open(OUT2, '>', $sql) || die "cannot open $sql";
     }
     if ($tags) {
-        open(OUT3, ">$tags") || die "cannot open $tags";
+        open(OUT3, '>', $tags) || die "cannot open $tags";
     }
     if ($tlen) {
-        open(OUT4, ">$tlen") || die "cannot open $tlen";
+        open(OUT4, '>', $tlen) || die "cannot open $tlen";
     }
     if ($nmd) {
-        open(OUT5, ">$nmd") || die "cannot open $nmd";
+        open(OUT5, '>', $nmd) || die "cannot open $nmd";
     }
     if ($stat) {
-        open(OUT6, ">$stat") || die "cannot open $stat";
+        open(OUT6, '>', $stat) || die "cannot open $stat";
     }
     if ($nmds) {
-        open(OUT7, ">$nmds") || die "cannot open $nmds";
+        open(OUT7, '>', $nmds) || die "cannot open $nmds";
     }
     foreach my $id (@$gene_id_list) {
         $i++;

@@ -29,7 +29,7 @@ use strict;
     main($cache);
   }
   else {
-    open(FH, "$cache") or die "Failed loading cached page";
+    open(FH, '<', $cache) or die "Failed loading cached page";
     while(<FH>){
       print $_;
     }
@@ -41,7 +41,7 @@ use strict;
 sub main {
 
   my $cached = shift;
-  open(FH, ">$cached") or die "Cannot create cached page!";
+  open(FH, '>', $cached) or die "Cannot create cached page!";
 
   my $sw = SangerWeb->new({
 						   'title'   => 'Mouse NOD clone / Assembly sequencing status',

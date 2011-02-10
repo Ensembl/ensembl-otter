@@ -62,7 +62,7 @@ if ($dumpDir) {
   die "No such directory '$dumpDir'\n" unless -d $dumpDir;
 }
 if ($errFile) {
-  open STDERR, "> $errFile"
+  open STDERR, '>', $errFile
 	or die "Can't write to '$errFile': $!";
 }
 

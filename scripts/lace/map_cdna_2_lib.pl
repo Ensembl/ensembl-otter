@@ -19,7 +19,7 @@ my @plate_libs = qw(plate19.lib plate20.lib);
 my $cdna_lib = {};
 
 foreach my $lib ( @plate_libs ) {
-  open(my $fh, "/nfs/team71/analysis/ck1/FROG_PLATE_LIB/$lib") or die $!;
+  open(my $fh, '<', "/nfs/team71/analysis/ck1/FROG_PLATE_LIB/$lib") or die $!;
 
   while (<$fh> ) {
 	chomp;
@@ -63,7 +63,7 @@ my $cdna_fasta = {};
 
 foreach my $cons_file ( @cons_files ) {
 
-  open(my $fh, "$cons_file") or die $!;
+  open(my $fh, '<', $cons_file) or die $!;
 
   my ($fasta, $cdna, $lib, $plate);
 
@@ -112,7 +112,7 @@ foreach my $cons_file ( @cons_files ) {
 	# make dirs for libs found in cons file
 	system("mkdir -p $cons_dir/$lib");
 
-	open($fh, ">>$cons_dir/$lib/$cons_ver");
+	open($fh, '>>', "$cons_dir/$lib/$cons_ver");
 
 	foreach my $cdna ( keys %{$cdna_fasta->{$plate}->{$lib}} ) {
 	  print $fh @{$cdna_fasta->{$plate}->{$lib}->{$cdna}}, "\n";

@@ -57,7 +57,7 @@ my $geneAd   = $otter_db->get_GeneAdaptor;
 
 # get all encoce sets
 unless ( @sets ){
-  open(FH, "$encode_list") or die $!;
+  open(FH, '<', $encode_list) or die $!;
   while(<FH>){
     chomp;
     push(@sets, $_);

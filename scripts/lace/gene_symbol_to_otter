@@ -34,9 +34,9 @@ my $geneRemarkAd  = $otter_db->get_GeneRemarkAdaptor;
 my $gname         = new Bio::Otter::GeneName;
 
 $outfile = $file.".diff";
-open (F, ">$outfile") || die $!;
+open (F, '>', $outfile) || die $!;
 
-open FILE, $file || die $!;
+open FILE, '<', $file || die $!;
 
 my $start = 0;
 

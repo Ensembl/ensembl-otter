@@ -53,7 +53,7 @@ use URI::Escape;
   my $fh = gensym();
   my $file_name = "$dataset_name.gff3";
 
-  open $fh, "> $file_name" or die "Can't write to '$file_name' : $!";
+  open $fh, '>', $file_name or die "Can't write to '$file_name' : $!";
   warn "Writing GFF3 data to '$file_name'\n";
 
   # this is required as the first line for GFF3
