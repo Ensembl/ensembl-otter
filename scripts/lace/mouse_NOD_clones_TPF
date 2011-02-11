@@ -558,12 +558,9 @@ sub clone_seq_link {
 
 sub results_table {
 
-    my( $header, $caption_tpf, $rows_tpf, $caption_non_tpf, $rows_non_tpf ) = @_;
+    my( $header, @info ) = @_;
 
     my $col_count = scalar @$header;
-    shift;
-
-    my @info = @_;
 
     my $t = qq{<table border=1 cellspacing=0 cellpadding=4 width="100%">\n};
 
@@ -617,7 +614,7 @@ sub results_table {
     return $t;
   }
 
-sub t_row {
+sub t_row { ## no critic(Subroutines::RequireArgUnpacking)
   return qq{  <tr>\n} . join('', map "$_\n", @_) . qq{  </tr>\n};
 }
 
