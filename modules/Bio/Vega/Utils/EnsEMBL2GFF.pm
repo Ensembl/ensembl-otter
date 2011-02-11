@@ -534,7 +534,7 @@ use Bio::Vega::Utils::GFF;
                 '.',      # score
                 $gff_hash->{'strand'},
                 $frame,
-                qq{Class "Sequence"; Name $name}
+                qq{Class "Sequence" ; Name $name}
             ) . "\n";
         }
 
