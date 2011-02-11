@@ -594,7 +594,7 @@ sub get_query_seq {
 }
 
 sub DESTROY {
-    my ($self) = shift;
+    my ($self) = @_;
 
     warn "Freeing exonerateWindow '$self'\n";
 

@@ -190,7 +190,7 @@ sub column_methods {
             [$text_method, \&_column_text_pipeline_status],
             [$text_method , 
              sub{
-                 my $cs = shift;
+                 my ($cs) = @_;
                  if (my $sn = $cs->current_SequenceNote) {
                      my $time = $sn->timestamp;
                      my( $year, $month, $mday ) = (localtime($time))[5,4,3];
@@ -1643,7 +1643,7 @@ sub slice_window{
         $slice_window->text_variable_ref('slice_start', $slice_start, 1);
         $slice_window->text_variable_ref('set_end'    , $set_end    , 1);
         $slice_window->action('runLace', sub{
-            my $sw = shift;
+            my ($sw) = @_;
             $sw->hide_me;
             $self->run_lace_on_slice(${$sw->text_variable_ref('slice_start')}, ${$sw->text_variable_ref('slice_end')});
         });
