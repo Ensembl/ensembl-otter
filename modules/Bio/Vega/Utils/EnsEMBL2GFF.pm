@@ -524,7 +524,7 @@ use Bio::Vega::Utils::GFF;
                 $frame = 0;
             }
 
-            $gff .= "\n" . join(
+            $gff .= join(
                 "\t",
                 $gff_hash->{'seqname'},
                 $gff_hash->{'source'},
@@ -535,7 +535,7 @@ use Bio::Vega::Utils::GFF;
                 $gff_hash->{'strand'},
                 $frame,
                 qq{Class "Sequence"; Name $name}
-            );
+            ) . "\n";
         }
 
         return $gff;
