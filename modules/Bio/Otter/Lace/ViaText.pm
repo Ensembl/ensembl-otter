@@ -53,7 +53,7 @@ our %LangDesc = ( ## no critic(Variables::ProhibitPackageVars)
                                                     bless $af,'Bio::Vega::DnaDnaAlignFeature';
                                                     $af->{'_hit_description'} = $hd;
                                            },
-                                           sub{ my $af = shift @_;
+                                           sub{ my($af)=@_;
                                                 return $af->can('get_HitDescription') ? $af->get_HitDescription() : undef;
                                            } ],
          -call_args  => [['analysis' => undef], ['score' => undef], ['dbtype' => undef]],
@@ -67,7 +67,7 @@ our %LangDesc = ( ## no critic(Variables::ProhibitPackageVars)
                                                     bless $af,'Bio::Vega::DnaPepAlignFeature';
                                                     $af->{'_hit_description'} = $hd;
                                            },
-                                           sub{ my $af = shift @_;
+                                           sub{ my($af)=@_;
                                                 return $af->can('get_HitDescription') ? $af->get_HitDescription() : undef;
                                            } ],
          -call_args  => [['analysis' => undef], ['score' => undef], ['dbtype' => undef]],
@@ -128,7 +128,7 @@ our %LangDesc = ( ## no critic(Variables::ProhibitPackageVars)
         -reference   => [ 'Ditag', '', 'ditag' ],
             # group_by is used *only* by the parser for storing things in arrays in the feature_hash
             #          Hashing is similar to hash_by, but there is an additinal level of structure.
-        -group_by    => sub{ my $self=shift; return $self->ditag()->dbID().'.'.$self->ditag_pair_id();},
+        -group_by    => sub{ my ($self)=@_; return $self->ditag()->dbID().'.'.$self->ditag_pair_id();},
         -call_args   => [['ditypes', undef, qr/,/], ['analysis' => undef]],
     },
 
@@ -153,10 +153,10 @@ our %LangDesc = ( ## no critic(Variables::ProhibitPackageVars)
 
 # a Bio::EnsEMBL::Slice method to handle the dummy ExonSupportingFeature feature type
 sub Bio::EnsEMBL::Slice::get_all_ExonSupportingFeatures {
-    my $self = shift;
+    my ($self, $logic_name, $dbtype) = @_;
+
     my $load_exons = 1;
-    my $logic_name = shift;
-    my $dbtype     = shift;
+
     if(!$self->adaptor()) {
         warning('Cannot get Transcripts without attached adaptor');
         return [];
