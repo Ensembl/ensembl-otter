@@ -189,7 +189,7 @@ use Bio::Vega::Utils::GFF;
 
             my @attrs = map { $_ . ' ' . $gff->{attributes}->{$_} } keys %{ $gff->{attributes} };
 
-            $gff_str .= "\t" . join(" ; ", @attrs);
+            $gff_str .= "\t" . join(' ; ', @attrs);
         }
         $gff_str .= "\n";
 
@@ -263,12 +263,6 @@ use Bio::Vega::Utils::GFF;
 
     package Bio::EnsEMBL::FeaturePair;
 
-    my $db_prefix = {
-        EMBL      => 'Em',
-        Swissprot => 'Sw',
-        TrEMBL    => 'Tr',
-    };
-
     sub _gff_hash {
         my ($self, %args) = @_;
 
@@ -295,22 +289,14 @@ use Bio::Vega::Utils::GFF;
         $gff->{feature} = ($self->analysis && $self->analysis->gff_feature) || 'similarity';
 
         my $name = $self->hseqname;
-        my ($hit_description, $db_name, $hseq_prefix);
-        if (   $self->can('get_HitDescription')
-            && ($hit_description = $self->get_HitDescription)
-            && ($db_name         = $hit_description->db_name)
-            && ($hseq_prefix     = $db_prefix->{$db_name}))
-        {
-            $name = "$hseq_prefix:$name";
-        }
 
-        $gff->{attributes}->{Class}     = qq("Sequence");
-        $gff->{attributes}->{Name}      = '"' . $name . '"';
-        $gff->{attributes}->{Align}     = $self->hstart . ' ' . $self->hend . ' ' . ($self->hstrand == -1 ? '-' : '+');
-        $gff->{attributes}->{percentID} = $self->percent_id;
+        $gff->{'attributes'}{'Class'}     = qq("Sequence");
+        $gff->{'attributes'}{'Name'}      = qq{"$name"};
+        $gff->{'attributes'}{'Align'}     = $self->hstart . ' ' . $self->hend . ' ' . ($self->hstrand == -1 ? '-' : '+');
+        $gff->{'attributes'}{'percentID'} = $self->percent_id;
 
         if ($gap_string) {
-            $gff->{attributes}->{Gaps} = qq("$gap_string");
+            $gff->{'attributes'}->{'Gaps'} = qq("$gap_string");
         }
 
         return $gff;
@@ -405,13 +391,13 @@ use Bio::Vega::Utils::GFF;
         my $gene_numeric_id = $self->dbID || ++$gene_count;
         
         my $extra_attrs = {};
-        if (my $url = $args{'url_string'}) {
-            if ($url =~ /pfam\.sanger\.ac\.uk/) {
+        if (my $url_fmt = $args{'url_string'}) {
+            if ($url_fmt =~ /pfam\.sanger\.ac\.uk/) {
                 foreach my $xr (@{$self->get_all_DBEntries}) {
                     if ($xr->dbname() eq 'PFAM') {
                         $self->synthetic_gene_name($xr->display_id);
                         my $name = sprintf "%s.%d", $xr->display_id, $gene_numeric_id;
-                        my $url = sprintf $url, $xr->primary_id;
+                        my $url = sprintf $url_fmt, $xr->primary_id;
                         $extra_attrs->{'Locus'} = qq{"$name"};
                         $extra_attrs->{'URL'}   = qq{"$url"};
                     }
@@ -422,7 +408,8 @@ use Bio::Vega::Utils::GFF;
             }
             else {
                 # Assume it is an ensembl gene
-                $extra_attrs->{'URL'} = sprintf $url, $self->stable_id;
+                my $url = sprintf $url_fmt, $self->stable_id;
+                $extra_attrs->{'URL'} = qq{"$url"};
             }
         }
         
@@ -501,33 +488,6 @@ use Bio::Vega::Utils::GFF;
         my $gff_hash = $self->_gff_hash(%args);
         my $name = $gff_hash->{'attributes'}{'Name'};
 
-        if (my $tsl = $self->translation) {
-
-            # build up the CDS line - it's not really worth creating a Translation->to_gff method, as most
-            # of the fields are derived from the Transcript and Translation doesn't inherit from Feature
-
-            my $start = $self->coding_region_start;
-            $start += $self->slice->start - 1 unless $rebase;
-
-            my $end = $self->coding_region_end;
-            $end += $self->slice->start - 1 unless $rebase;
-
-
-            $gff .= join(
-                "\t",
-                $gff_hash->{'seqname'},
-                $gff_hash->{'source'},
-                'CDS',    # feature
-                $start,
-                $end,
-                '.',      # score
-                $gff_hash->{'strand'},
-                $ens_phase_to_gff_frame{ $tsl->start_Exon->phase },    # frame
-                qq{Class "Sequence"; Name $name}
-            );
-            $gff .= "\n";
-        }
-
         # add gff lines for each of the introns and exons
         # (adding lines for both seems a bit redundant to me, but zmap seems to like it!)
         foreach my $feat (@{ $self->get_all_Exons }, @{ $self->get_all_Introns }) {
@@ -536,11 +496,29 @@ use Bio::Vega::Utils::GFF;
             $feat->analysis($self->analysis);
 
             # and add the feature's gff line to our string, including the sequence name information as an attribute
-            $gff .= $feat->to_gff(%args, extra_attrs => { Name => $name });
+            $gff .= $feat->to_gff(%args, extra_attrs => { Name => qq{"$name"} });
 
             # to be on the safe side, get rid of the analysis we temporarily attached
             # (someone might rely on there not being one later)
             $feat->analysis(undef);
+        }
+
+        if ($self->translation) {
+
+            foreach my $cds_exon (@{ $self->get_all_translateable_Exons }) {
+                my $gff_hash = $cds_exon->_gff_hash(%args);
+                $gff .= join("\t",
+                    $gff_hash->{'seqname'},
+                    $gff_hash->{'source'},
+                    'CDS',                                          # feature
+                    $gff_hash->{'start'},
+                    $gff_hash->{'end'},
+                    '.',                                            # score
+                    $gff_hash->{'strand'},
+                    $ens_phase_to_gff_frame{ $cds_exon->phase },    # frame
+                    qq{Class "Sequence" ; Name "$name"\n},
+                );
+            }
         }
 
         return $gff;
@@ -833,30 +811,53 @@ use Bio::Vega::Utils::GFF;
 
 }
 
+# my ($hit_description, $db_name, $hseq_prefix);
+# if (   $self->can('get_HitDescription')
+#     && ($hit_description = $self->get_HitDescription)
+#     && ($db_name         = $hit_description->db_name)
+#     && ($hseq_prefix     = $db_prefix->{$db_name}))
+# {
+#     $name = "$hseq_prefix:$name";
+#     $gff->{'attributes'}{''}
+# }
+
+
 {
+    my %db_prefix = (
+        EMBL      => 'Em',
+    );
 
     package Bio::Vega::DnaDnaAlignFeature;
 
-    sub _gff_hash {
-        my ($self, @args) = @_;
-        my $gff = $self->SUPER::_gff_hash(@args);
-        $gff->{attributes}->{Length} = $self->get_HitDescription->hit_length;
-
-        #$gff->{attributes}->{Note} = '"'.$self->get_HitDescription->description.'"';
-        return $gff;
-    }
+    # To avoid copy/pasting code:
+    *{_gff_hash} = *{Bio::Vega::DnaPepAlignFeature::_gff_hash}
 }
 
 {
+    my %db_prefix = (
+        Swissprot => 'Sw',
+        TrEMBL    => 'Tr',
+    );
 
     package Bio::Vega::DnaPepAlignFeature;
 
     sub _gff_hash {
         my ($self, @args) = @_;
-        my $gff = $self->SUPER::_gff_hash(@args);
-        $gff->{attributes}->{Length} = $self->get_HitDescription->hit_length;
 
-        #$gff->{attributes}->{Note} = '"'.$self->get_HitDescription->description.'"';
+        my $gff = $self->SUPER::_gff_hash(@args);
+
+        my $hd = $self->get_HitDescription;
+        if (my $prefix = $db_prefix{$hd->db_name}) {
+            $gff->{'attributes'}{'Name'} = sprintf q{"%s:%s"}, $prefix, $self->hseqname;
+        }
+        $gff->{'attributes'}{'Length'}   = $hd->hit_length;
+        $gff->{'attributes'}{'Taxon_ID'} = $hd->taxon_id;
+        $gff->{'attributes'}{'DB_Name'}  = $hd->db_name;
+        if (my $desc = $hd->description) {
+            $desc =~ s/"/\\"/g;
+            $gff->{'attributes'}{'Description'} = qq{"$desc"};
+        }
+
         return $gff;
     }
 }
