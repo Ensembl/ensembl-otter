@@ -269,14 +269,14 @@ sub ParseFeatures {
     my $resplines_ref = [ split(/\n/,$$response_ref) ];
 
     foreach my $respline (@$resplines_ref) {
-        my @optvalues  = split(/\t/, $respline, -1);
+        my @respfields  = split(/\t/, $respline, -1);
 
-        unless (@optvalues) {
+        unless (@respfields) {
             confess "Blank line in output - due to newline on end of hit description?";
         }
 
 
-        my $feature_type    = shift @optvalues; # 'SimpleFeature'|'HitDescription'|...|'PredictionExon'
+        my ($feature_type, @optvalues) = @respfields; # 'SimpleFeature'|'HitDescription'|...|'PredictionExon'
         my $feature_subhash = $LangDesc{$feature_type};
 
         my $constructor = $feature_subhash->{-constructor};
