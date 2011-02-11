@@ -468,7 +468,7 @@ use Bio::Vega::Utils::GFF;
         0  => 0,
         1  => 2,
         2  => 1,
-        -1 => '.',
+        -1 => 0,    # Start phase is (always?) -1 for first coding exon
     );
 
     sub to_gff {
@@ -486,6 +486,8 @@ use Bio::Vega::Utils::GFF;
 
         my $gff = $self->SUPER::to_gff(%args);
         my $gff_hash = $self->_gff_hash(%args);
+        
+        # $name is already double-quoted
         my $name = $gff_hash->{'attributes'}{'Name'};
 
         # add gff lines for each of the introns and exons
@@ -496,29 +498,44 @@ use Bio::Vega::Utils::GFF;
             $feat->analysis($self->analysis);
 
             # and add the feature's gff line to our string, including the sequence name information as an attribute
-            $gff .= $feat->to_gff(%args, extra_attrs => { Name => qq{"$name"} });
+            $gff .= $feat->to_gff(%args, extra_attrs => { Name => $name });
 
             # to be on the safe side, get rid of the analysis we temporarily attached
             # (someone might rely on there not being one later)
             $feat->analysis(undef);
         }
 
-        if ($self->translation) {
+        if (my $tsl = $self->translation) {
 
-            foreach my $cds_exon (@{ $self->get_all_translateable_Exons }) {
-                my $gff_hash = $cds_exon->_gff_hash(%args);
-                $gff .= join("\t",
-                    $gff_hash->{'seqname'},
-                    $gff_hash->{'source'},
-                    'CDS',                                          # feature
-                    $gff_hash->{'start'},
-                    $gff_hash->{'end'},
-                    '.',                                            # score
-                    $gff_hash->{'strand'},
-                    $ens_phase_to_gff_frame{ $cds_exon->phase },    # frame
-                    qq{Class "Sequence" ; Name "$name"\n},
-                );
+            # build up the CDS line - it's not really worth creating a Translation->to_gff method, as most
+            # of the fields are derived from the Transcript and Translation doesn't inherit from Feature
+
+            my $start = $self->coding_region_start;
+            $start += $self->slice->start - 1 unless $rebase;
+
+            my $end = $self->coding_region_end;
+            $end += $self->slice->start - 1 unless $rebase;
+            
+            my $frame;
+            if (defined(my $phase = $tsl->start_Exon->phase)) {
+                $frame = $ens_phase_to_gff_frame{$phase};
             }
+            else {
+                $frame = 0;
+            }
+
+            $gff .= "\n" . join(
+                "\t",
+                $gff_hash->{'seqname'},
+                $gff_hash->{'source'},
+                'CDS',    # feature
+                $start,
+                $end,
+                '.',      # score
+                $gff_hash->{'strand'},
+                $frame,
+                qq{Class "Sequence"; Name $name}
+            );
         }
 
         return $gff;
