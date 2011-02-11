@@ -1453,7 +1453,7 @@ my %assembly_to_version = (
 );
 
 sub find_last_dbid {
-    my $filename = shift @_;
+    my ($filename) = @_;
 
     my $skip_to = 0;
 
@@ -1501,7 +1501,7 @@ sub find_last_dbid {
 } # lexical environment for &execute_ctgids_2_asm
 
 sub is_selenoprotein {
-    my $transcript = shift @_;
+    my ($transcript) = @_;
 
     for my $line (map $_->remark, $transcript->transcript_info()->remark()) {
         if($line=~/selenocysteine/i) {
@@ -1512,7 +1512,7 @@ sub is_selenoprotein {
 }
 
 sub no_premature_stops {
-    my $transcript = shift @_;
+    my ($transcript) = @_;
 
     return $transcript->translate()->seq()!~/\*/;
 }
@@ -1681,7 +1681,7 @@ sub gene_transformed_successfully {
 }
 
 sub try_and_fix_exon_strands {
-    my $gene = shift @_;
+    my ($gene) = @_;
 
     foreach my $transcript (@{$gene->get_all_Transcripts}) {
         my $pos_count = 0;
@@ -1764,7 +1764,7 @@ sub try_and_fix_exon_strands {
 } # lexical environment for add_xml_gene
 
 sub build_redundant_set {
-  my $filename = shift @_;
+  my ($filename) = @_;
 
   my $redundant_set = {};
 
@@ -1779,7 +1779,7 @@ sub build_redundant_set {
 }
 
 sub get_valid_gene_ids {
-  my $filename = shift @_;
+  my ($filename) = @_;
 
   my $list_of_gene_ids = '0';
 
