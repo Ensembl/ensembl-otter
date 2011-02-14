@@ -159,7 +159,7 @@ sub group_by_contigs {
         }
     }
     
-    my %uniq_group = map {$_, $_} values %ctg_group;
+    my %uniq_group = map {$_ => $_} values %ctg_group;
     return values %uniq_group;
 }
 
