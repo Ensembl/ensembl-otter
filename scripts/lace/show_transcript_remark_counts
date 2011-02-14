@@ -28,7 +28,7 @@ $| = 1;
     my $otter_db = $ds->get_cached_DBAdaptor;
     my $ss_list = $ds->get_all_SequenceSets;
     if (@ARGV) {
-        my %set_names = map {$_, 1} @ARGV;
+        my %set_names = map {$_ => 1} @ARGV;
         foreach my $ss (@$ss_list) {
             next unless $set_names{$ss->name};
             check_for_transcript_remarks($otter_db, $ss);
