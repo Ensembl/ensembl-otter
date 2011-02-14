@@ -209,7 +209,7 @@ foreach my $chr (@chr_sorted) {
       if ($existing_xref = $ea->fetch_by_db_accession('Havana_gene',$pid)) {
 	$support->log_verbose("Using previous xref for gene $gsi (Havana_gene display_id $pid).\n", 1);
 	$gene->add_DBEntry($existing_xref);
-	$dbID = $ea->store($existing_xref, $gid, 'gene') unless $support->param('dry_run');
+	$dbID = $ea->store($existing_xref, $gid, 'gene',1) unless $support->param('dry_run');
       } else {
 	my $dbentry = Bio::EnsEMBL::DBEntry->new(
 	  -primary_id => $pid,
@@ -224,7 +224,7 @@ foreach my $chr (@chr_sorted) {
 	  $support->log_verbose("Would store xref ($pid) for gene $gene_name ($gsi, $gid)\n", 1);
 	}
 	else {
-	  $dbID = $ea->store($dbentry, $gid, 'gene') unless $support->param('dry_run');
+	  $dbID = $ea->store($dbentry, $gid, 'gene',1) unless $support->param('dry_run');
 	  if ($dbID) {
 	    $support->log_verbose("Stored xref: display_id $pid (dbID $dbID) for gene $gene_name ($gsi, $gid)\n", 1);
 	  }
