@@ -16,6 +16,12 @@ sub new {
     return bless {}, ref($obj_or_class) || $obj_or_class;
 }
 
+sub server_script {
+    my ($self, $server_script) = @_;
+    $self->{_server_script} = $server_script if defined $server_script;
+    return $self->{_server_script};
+}
+
 sub wanted { # it's a flag showing whether the user wants this filter to be loaded
              # ( initialized from ['species'.use_filters] section of otter_config )
     my ($self, $wanted) = @_;
