@@ -184,7 +184,10 @@ my $id_adaptor_fetcher_by_type = {
 };
 
 sub _find_by_stable_ids {
-    my ($self, $qtype_prefix, $metakey) = @_;
+    my ($self, $parameters) = @_;
+
+    my ($qtype_prefix, $metakey) = @{$parameters};
+
 
     my $satellite_dba = $self->server->satellite_dba($metakey);
 
@@ -237,7 +240,9 @@ SQL
     ;
 
 sub _find_by_feature_attributes {
-    my ($self, $qtype, $table, $id_field, $code, $adaptor_call, $condition, $args) = @_;
+    my ($self, $parameters, $condition, $args) = @_;
+
+    my ($qtype, $table, $id_field, $code, $adaptor_call) = @{$parameters};
 
     my $sql =
         sprintf $find_by_feature_attributes_sql_template,
@@ -317,7 +322,9 @@ SQL
     ;
 
 sub _find_by_seqregion_attributes {
-    my ($self, $qtype, $cs_name, $code, $names) = @_;
+    my ($self, $parameters, $names) = @_;
+
+    my ($qtype, $cs_name, $code) = @{$parameters};
 
     my $sql = sprintf
         $find_by_seqregion_attributes_sql_template,
@@ -385,7 +392,9 @@ SQL
     ;
 
 sub _find_by_xref {
-    my ($self, $qtype_prefix, $metakey, $names) = @_;
+    my ($self, $parameters, $names) = @_;
+
+    my ($prefix, $metakey) = @{$parameters};
 
     my $satellite_dba = $self->server->satellite_dba($metakey);
 
@@ -400,7 +409,7 @@ sub _find_by_xref {
     while( my ($db_name, $qname, $sr_name, $cs_name, $cs_version, $start, $end) = $sth->fetchrow ) {
         $adaptor ||= $satellite_dba->get_SliceAdaptor;
         my $slice = $adaptor->fetch_by_region($cs_name, $sr_name, $start, $end, 1, $cs_version);
-        my $qtype = "${qtype_prefix}${db_name}:";
+        my $qtype = "${prefix}${db_name}:";
         $self->register_slice($qname, $qtype, $slice);
     }
 
@@ -441,7 +450,9 @@ SQL
     ;
 
 sub _find_by_hit_name {
-    my ($self, $kind, $names) = @_;
+    my ($self, $parameters, $names) = @_;
+
+    my ($kind) = @{$parameters};
 
     ## kind = 'dna'|'protein'
     #
@@ -467,6 +478,37 @@ sub _find_by_hit_name {
     return;
 }
 
+my $stable_ids_parameters = [
+    #     prefix       metakey
+    [     '',          '.',                      ],
+    [ qw( EnsEMBL:     ensembl_core_db_head    ) ],
+    [ qw( EnsEMBL_EST: ensembl_estgene_db_head ) ],
+    ];
+
+my $hit_name_parameters = [
+    #     kind
+    [ qw( dna     ) ],
+    [ qw( protein ) ],
+    ];
+
+my $xref_parameters = [
+    #     prefix,  metakey
+    [ qw( CCDS_db: ens_livemirror_ccds_db ) ],
+    ];
+
+my $feature_attributes_parameters = [
+    #     qtype           table               id_field      code    adaptor
+    [ qw( gene_name       gene_attrib         gene_id       name    get_GeneAdaptor       ) ],
+    [ qw( gene_synonym    gene_attrib         gene_id       synonym get_GeneAdaptor       ) ],
+    [ qw( transcript_name transcript_attrib   transcript_id name    get_TranscriptAdaptor ) ],
+    ];
+
+my $seqregion_attributes_parameters = [
+    #     qtype,                   cs_name code
+    [ qw( international_clone_name clone   intl_clone_name ) ],
+    [ qw( clone_accession          clone   embl_acc        ) ],
+    ];
+
 sub find {
     my ($self) = @_;
 
@@ -474,44 +516,25 @@ sub find {
     my $names = $self->qnames;
     my $names_2 = [ _strip_trailing_version_numbers(@{$names}) ];
 
-    $self->find_by_stable_ids('', '.');
-
-    $self->find_by_stable_ids('EnsEMBL:','ensembl_core_db_head');
-
-    $self->find_by_stable_ids('EnsEMBL_EST:','ensembl_estgene_db_head');
-
-    $self->find_by_hit_name('dna', $names);
-    $self->find_by_hit_name('protein', $names);
-
-    $self->find_by_xref('CCDS_db:','ens_livemirror_ccds_db', $names_2);
-
-    $self->find_by_seqregion_names($names);
-
+    # conditions and arguments for find_by_feature_attributes
     my $fa_condition_unprefixed =
         sprintf ' ( value IN ( %s ) ) ', (join ' , ', ('?') x @{$names});
-
     my $fa_condition =
         join ' OR ',
         $fa_condition_unprefixed,
         ((' ( value LIKE ? ) ') x @{$names} );
-
     my $fa_args = [
         @{$names},
         ( map { "%:$_" } @{$names} ),
         ];
 
-    $self->find_by_feature_attributes('gene_name', 'gene_attrib', 'gene_id', 'name', 'get_GeneAdaptor',
-                                      $fa_condition, $fa_args);
+    $self->find_by_seqregion_names($names);
 
-    $self->find_by_feature_attributes('gene_synonym', 'gene_attrib', 'gene_id', 'synonym', 'get_GeneAdaptor',
-                                      $fa_condition, $fa_args);
-
-    $self->find_by_feature_attributes('transcript_name', 'transcript_attrib', 'transcript_id', 'name', 'get_TranscriptAdaptor',
-                                      $fa_condition, $fa_args);
-
-    $self->find_by_seqregion_attributes('international_clone_name', 'clone', 'intl_clone_name', $names);
-
-    $self->find_by_seqregion_attributes('clone_accession', 'clone', 'embl_acc', $names);
+    $self->find_by_stable_ids($_) for @{$stable_ids_parameters};
+    $self->find_by_hit_name($_, $names) for @{$hit_name_parameters};
+    $self->find_by_xref($_, $names_2) for @{$xref_parameters};
+    $self->find_by_feature_attributes($_, $fa_condition, $fa_args) for @{$feature_attributes_parameters};
+    $self->find_by_seqregion_attributes($_, $names) for @{$seqregion_attributes_parameters};
 
     return;
 }
