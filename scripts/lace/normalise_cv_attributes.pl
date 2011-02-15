@@ -40,7 +40,7 @@ my $opts = {
     };
 
 {
-    $0 = 'otterlace'; # for access to test_human
+    local $0 = 'otterlace'; # for access to test_human
 
     my $dataset_name = undef;
     my $attrib_pattern = undef;
@@ -144,6 +144,7 @@ sub print_divider {
     } else {
         printf("%s\n", '-' x 66);
     }
+    return;
 }
 
 sub match_vocab {
@@ -324,6 +325,7 @@ sub show_variants {
             printf(" %4d %s '%s'\n", $values->{$code}->{$value}, $hit, $value);
         }
     }
+    return;
 }
 
 sub plan_update_actions {
@@ -443,7 +445,7 @@ sub retain_match {
 
     if ($opts->{unkeep}) {
         my @matches = split(/,/, $opts->{unkeep});
-        if (grep($value eq $_, @matches)) {
+        if (grep { $value eq $_ } @matches) {
             return 0;
         }
     }
@@ -505,7 +507,8 @@ sub do_insert {
 
     print "  SQL: $sql\n" if $sql and $opts->{debug};
 
-    my $sth = $dba->dbc->prepare($sql) if $sql;
+    my $sth;
+    $sth = $dba->dbc->prepare($sql) if $sql;
     my $total_rows = 0;
 
     foreach my $item (@$list) {
@@ -518,6 +521,8 @@ sub do_insert {
         close_tell_db_item($item, $count);
         $total_rows += $count;
     }
+
+    return;
 }
 
 sub do_composite {
@@ -598,7 +603,7 @@ sub tell_db_item {
            $item->{sid}, 
            $item->{code}, $item->{value},
            $item->{new_code}, $item->{new_value},
-           join(', ', map("'$_'", @args))
+           join(', ', map { "'$_'" } @args),
         );
     return;
 }
