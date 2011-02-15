@@ -441,28 +441,26 @@ SQL
     ;
 
 sub _find_by_hit_name {
-    my ($self, $qtype_prefix, $metakey, $kind, $names) = @_;
+    my ($self, $kind, $names) = @_;
 
     ## kind = 'dna'|'protein'
     #
     my $table_name = $kind.'_align_feature';
 
-    # NB: $condition only can be equality, otherwise you'll annoy the users!
-
-    my $satellite_dba = $self->server->satellite_dba($metakey);
+    my $pipe_dba = $self->server->satellite_dba('');
 
     my $sql = sprintf
         $find_by_hit_name_sql_template,
         $table_name, (join ' , ', ('?') x @{$names});
-    my $dbc = $satellite_dba->dbc;
+    my $dbc = $pipe_dba->dbc;
     my $sth = $dbc->prepare($sql);
     $sth->execute(@{$names});
 
     my $adaptor;
     while( my ($qname, $sr_name, $cs_name, $cs_version, $start, $end, $strand, $analysis_name, $score) = $sth->fetchrow ) {
-        $adaptor ||= $satellite_dba->get_SliceAdaptor;
+        $adaptor ||= $pipe_dba->get_SliceAdaptor;
         my $slice = $adaptor->fetch_by_region($cs_name, $sr_name, $start, $end, $strand, $cs_version);
-        my $qtype = "${qtype_prefix}${analysis_name}(score=$score)";
+        my $qtype = "Pipeline_${kind}_hit:${analysis_name}(score=$score)";
         $self->register_slice($qname, $qtype, $slice);
     }
 
@@ -482,8 +480,8 @@ sub find {
 
     $self->find_by_stable_ids('EnsEMBL_EST:','ensembl_estgene_db_head');
 
-    $self->find_by_hit_name('Pipeline_dna_hit:', '', 'dna', $names);
-    $self->find_by_hit_name('Pipeline_protein_hit:', '', 'protein', $names);
+    $self->find_by_hit_name('dna', $names);
+    $self->find_by_hit_name('protein', $names);
 
     $self->find_by_xref('CCDS_db:','ens_livemirror_ccds_db', $names_2);
 
