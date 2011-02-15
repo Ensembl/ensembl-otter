@@ -72,6 +72,11 @@ my $opts = {
 
     my $otter_dba = $ds->make_Vega_DBAdaptor;
 
+    print_divider(sprintf("Normalise %s using '%s'%s",
+                          $dataset_name, $attrib_pattern, 
+                          $opts->{dry_run} ? ' [dry run]' : ''
+                  ));
+
     $cl->get_server_otter_config;
     my $vocab_locus = $ds->vocab_locus;
     my $vocab_transcript = $ds->vocab_transcript;
@@ -607,24 +612,40 @@ sub close_tell_db_item {
 
 __END__
 
-=head1 NAME - list_genes_by_attribute.pl
+=head1 NAME - normalise_cv_attributes.pl
 
 =head1 SYNOPSIS
 
-list_genes_by_attribute -dataset <DATASET NAME> -attrib <ATTRIB PATTERN> 
-                              [-code <ATTRIB CODE>] [-quiet] [-total]
+normalise_cv_attributes -dataset <DATASET NAME> -attrib <ATTRIB PATTERN> 
+                        [-unkeep <VOCAB1>[,<VOCAB2>...]] [-maxslop 3]
+                        [-[no]dryrun] [-quiet] [-verbose] [-debug] [-total]
 
 =head1 DESCRIPTION
 
-Checks for current genes having the specified atttribute value 
-in an attribute of the specified code.
+Checks for, and optionally fixes up, transcript and gene attributes which
+should come from the relevant controlled vocabulary. The attrib pattern is
+matched against the locus and transcript controlled vocabulary to find the
+canonical version. 
 
-The attribute value can contain SQL wildcards.
-The attribute code defaults to 'remark'.
+Wrong versions which match the pattern are corrected, moved from 
+type 'hidden_remark' to 'remark' if necessary, and from transcript to
+gene if necessary.
+
+The 'wrong' matches must be no more than maxslop (default 3) characters 
+longer than the correct version to be replaced. If longer, the long 'wrong'
+match will be retained but a controlled-vocab tag will be added.
+
+If there are long matches which should be replaced rather than
+retained-and-augmented, these can be specified via -unkeep. See the example
+below, which ensures that 'readonly_transcript' is replaced by 'readonly'.
+
+The attribute value can and normally should contain SQL wildcards.
 
 =head1 EXAMPLE
 
-  list_genes_by_attribute.pl --dataset=mouse --attrib='frag%loc%'
+  normalise_cv_attributes.pl --dataset=mouse --attrib='frag%loc%'
+  normalise_cv_attributes.pl --dataset=zebrafish --attrib='read%only%' \
+                             --unkeep='readonly_transcript' --nodryrun
 
 =head1 AUTHOR
 
