@@ -10,7 +10,7 @@ use warnings;
 use SangerPaths qw{ core bioperl123 ensembl60 otter54 };
 
 use Bio::Otter::ServerScriptSupport;
-use Bio::Otter::Lace::ViaText qw( %LangDesc &GenerateFeatures );
+use Bio::Otter::Lace::ViaText qw( &GenerateFeatures );
 
 my $server       = Bio::Otter::ServerScriptSupport->new;
 
