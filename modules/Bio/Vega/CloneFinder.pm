@@ -76,9 +76,9 @@ sub find_containing_chromosomes {
     # now map those contig_ids back onto a chromosome
     my $sql = sprintf
         $find_containing_chromosomes_sql_template,
-        join ', ', @{$seq_level_slice_ids};
+        (join ' , ', ('?') x @{$seq_level_slice_ids});
     my $sth = $sa->dbc->prepare($sql);
-    $sth->execute;
+    $sth->execute(@{$seq_level_slice_ids});
 
     my @chr_slices = ();
     while( my ($atype, $joined_cmps) = $sth->fetchrow ) {
@@ -232,19 +232,19 @@ my $find_by_feature_attributes_sql_template = <<'SQL'
     SELECT %s, value
       FROM %s
      WHERE attrib_type_id = (SELECT attrib_type_id from attrib_type where code='%s')
-       AND value %s
+       AND ( %s )
 SQL
     ;
 
 sub _find_by_feature_attributes {
-    my ($self, $condition, $qtype, $table, $id_field, $code, $adaptor_call) = @_;
+    my ($self, $qtype, $table, $id_field, $code, $adaptor_call, $condition, $args) = @_;
 
     my $sql =
         sprintf $find_by_feature_attributes_sql_template,
         $id_field, $table, $code, $condition;
     my $dbc = $self->otter_dba->dbc;
     my $sth = $dbc->prepare($sql);
-    $sth->execute;
+    $sth->execute(@{$args});
 
     my $adaptor;
     while( my ($feature_id, $qname) = $sth->fetchrow ) {
@@ -272,19 +272,19 @@ my $find_by_seqregion_names_sql_template = <<'SQL'
       FROM seq_region sr, coord_system cs
      WHERE sr.coord_system_id=cs.coord_system_id
        AND cs.name <> 'chromosome'
-       AND sr.name %s
+       AND sr.name IN ( %s )
 SQL
     ;
 
 sub _find_by_seqregion_names {
-    my ($self, $condition) = @_;
+    my ($self, $names) = @_;
 
     my $sql = sprintf
         $find_by_seqregion_names_sql_template,
-        $condition;
+        (join ' , ', ('?') x @{$names});
     my $dbc = $self->otter_dba->dbc;
     my $sth = $dbc->prepare($sql);
-    $sth->execute;
+    $sth->execute(@{$names});
 
     my $adaptor;
     while( my ($cs_name, $sr_name) = $sth->fetchrow ) {
@@ -312,19 +312,19 @@ my $find_by_seqregion_attributes_sql_template = <<'SQL'
        AND sr.coord_system_id = cs.coord_system_id
        AND sr.seq_region_id = sra.seq_region_id
        AND sra.attrib_type_id = (SELECT attrib_type_id from attrib_type where code = '%s')
-       AND sra.value %s
+       AND sra.value IN ( %s )
 SQL
     ;
 
 sub _find_by_seqregion_attributes {
-    my ($self, $condition, $qtype, $cs_name, $code) = @_;
+    my ($self, $qtype, $cs_name, $code, $names) = @_;
 
     my $sql = sprintf
         $find_by_seqregion_attributes_sql_template,
-        $cs_name, $code, $condition;
+        $cs_name, $code, (join ' , ', ('?') x @{$names});
     my $dbc = $self->otter_dba->dbc;
     my $sth = $dbc->prepare($sql);
-    $sth->execute;
+    $sth->execute(@{$names});
 
     my $adaptor;
     while( my ($sr_name, $qname) = $sth->fetchrow ) {
@@ -380,21 +380,21 @@ my $find_by_xref_sql_template = <<'SQL'
       ON cs.coord_system_id = sr.coord_system_id
     WHERE edb.external_db_id = x.external_db_id
       AND x.xref_id = ox.xref_id
-      AND x.dbprimary_acc %s
+      AND x.dbprimary_acc IN ( %s )
 SQL
     ;
 
 sub _find_by_xref {
-    my ($self, $qtype_prefix, $metakey, $condition) = @_;
+    my ($self, $qtype_prefix, $metakey, $names) = @_;
 
     my $satellite_dba = $self->server->satellite_dba($metakey);
 
     my $sql = sprintf
         $find_by_xref_sql_template,
-        $condition;
+        (join ' , ', ('?') x @{$names});
     my $dbc = $satellite_dba->dbc;
     my $sth = $dbc->prepare($sql);
-    $sth->execute;
+    $sth->execute(@{$names});
 
     my $adaptor;
     while( my ($db_name, $qname, $sr_name, $cs_name, $cs_version, $start, $end) = $sth->fetchrow ) {
@@ -433,7 +433,7 @@ my $find_by_hit_name_sql_template = <<'SQL'
      WHERE af.seq_region_id = sr.seq_region_id
        AND cs.coord_system_id = sr.coord_system_id
        AND a.analysis_id = af.analysis_id
-       AND af.hit_name %s
+       AND af.hit_name IN ( %s )
      GROUP BY af.hit_name, af.seq_region_id
      ORDER BY score_sum DESC
      LIMIT 10
@@ -441,7 +441,7 @@ SQL
     ;
 
 sub _find_by_hit_name {
-    my ($self, $qtype_prefix, $metakey, $kind, $condition) = @_;
+    my ($self, $qtype_prefix, $metakey, $kind, $names) = @_;
 
     ## kind = 'dna'|'protein'
     #
@@ -453,10 +453,10 @@ sub _find_by_hit_name {
 
     my $sql = sprintf
         $find_by_hit_name_sql_template,
-        $table_name, $condition;
+        $table_name, (join ' , ', ('?') x @{$names});
     my $dbc = $satellite_dba->dbc;
     my $sth = $dbc->prepare($sql);
-    $sth->execute;
+    $sth->execute(@{$names});
 
     my $adaptor;
     while( my ($qname, $sr_name, $cs_name, $cs_version, $start, $end, $strand, $analysis_name, $score) = $sth->fetchrow ) {
@@ -473,12 +473,8 @@ sub find {
     my ($self) = @_;
 
     # lists of names, with and without versions
-    my @names = @{$self->qnames};
-    my @names_2 = _strip_trailing_version_numbers(@names);
-
-    # lists expressed as SQL conditions
-    my $condition   = _sql_list_condition(@names);
-    my $condition_2 = _sql_list_condition(@names_2);
+    my $names = $self->qnames;
+    my $names_2 = [ _strip_trailing_version_numbers(@{$names}) ];
 
     $self->find_by_stable_ids('', '.');
 
@@ -486,36 +482,38 @@ sub find {
 
     $self->find_by_stable_ids('EnsEMBL_EST:','ensembl_estgene_db_head');
 
-    $self->find_by_hit_name('Pipeline_dna_hit:', '', 'dna', $condition);
-    $self->find_by_hit_name('Pipeline_protein_hit:', '', 'protein', $condition);
+    $self->find_by_hit_name('Pipeline_dna_hit:', '', 'dna', $names);
+    $self->find_by_hit_name('Pipeline_protein_hit:', '', 'protein', $names);
 
-    $self->find_by_xref('CCDS_db:','ens_livemirror_ccds_db', $condition_2);
+    $self->find_by_xref('CCDS_db:','ens_livemirror_ccds_db', $names_2);
 
-    $self->find_by_seqregion_names($condition);
+    $self->find_by_seqregion_names($names);
 
-    $self->find_by_feature_attributes($condition, 'gene_name',
-        'gene_attrib', 'gene_id', 'name', 'get_GeneAdaptor');
+    my $fa_condition_unprefixed =
+        sprintf ' ( value IN ( %s ) ) ', (join ' , ', ('?') x @{$names});
 
-    $self->find_by_feature_attributes($condition, 'gene_synonym',
-        'gene_attrib', 'gene_id', 'synonym', 'get_GeneAdaptor');
+    my $fa_condition =
+        join ' OR ',
+        $fa_condition_unprefixed,
+        ((' ( value LIKE ? ) ') x @{$names} );
 
-    $self->find_by_feature_attributes($condition, 'transcript_name',
-        'transcript_attrib', 'transcript_id', 'name', 'get_TranscriptAdaptor');
+    my $fa_args = [
+        @{$names},
+        ( map { "%:$_" } @{$names} ),
+        ];
 
-    foreach my $qname (@{$self->qnames}) {
+    $self->find_by_feature_attributes('gene_name', 'gene_attrib', 'gene_id', 'name', 'get_GeneAdaptor',
+                                      $fa_condition, $fa_args);
 
-        my $like_prefixed_qname = "like '%:$qname'";
+    $self->find_by_feature_attributes('gene_synonym', 'gene_attrib', 'gene_id', 'synonym', 'get_GeneAdaptor',
+                                      $fa_condition, $fa_args);
 
-        $self->find_by_feature_attributes($like_prefixed_qname, 'prefixed_gene_name',
-            'gene_attrib', 'gene_id', 'name', 'get_GeneAdaptor');
+    $self->find_by_feature_attributes('transcript_name', 'transcript_attrib', 'transcript_id', 'name', 'get_TranscriptAdaptor',
+                                      $fa_condition, $fa_args);
 
-        $self->find_by_feature_attributes($like_prefixed_qname, 'prefixed_transcript_name',
-            'transcript_attrib', 'transcript_id', 'name', 'get_TranscriptAdaptor');
-    }
+    $self->find_by_seqregion_attributes('international_clone_name', 'clone', 'intl_clone_name', $names);
 
-    $self->find_by_seqregion_attributes($condition, 'international_clone_name', 'clone', 'intl_clone_name');
-
-    $self->find_by_seqregion_attributes($condition, 'clone_accession', 'clone', 'embl_acc');
+    $self->find_by_seqregion_attributes('clone_accession', 'clone', 'embl_acc', $names);
 
     return;
 }
@@ -544,10 +542,6 @@ sub generate_output {
 
 sub _strip_trailing_version_numbers { ## no critic(Subroutines::RequireArgUnpacking)
     return map { /^(.*?)(?:\.[[:digit:]]+)?$/ } @_;
-}
-
-sub _sql_list_condition { ## no critic(Subroutines::RequireArgUnpacking)
-    return 'in ( '. join(', ', map {"'$_'"} @_ ) .' ) ';
 }
 
 1;
