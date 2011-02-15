@@ -210,7 +210,7 @@ if (! %$ens_ids) {
       }
     }
   }
-  store($ens_ids,$xref_file);
+  store($ens_ids,$xref_file,1);
 }
 
 #this defines the order in which the e! xrefs will be used, and which external_db 
@@ -256,7 +256,7 @@ foreach my $type (qw(genes transcripts)) {
 	    $found = 1;
 	  }
 	  else {
-	    my $dbID = $ea->store($dbentry, $object->dbID, $type eq 'genes' ? 'gene' : 'transcript');
+	    my $dbID = $ea->store($dbentry, $object->dbID, $type eq 'genes' ? 'gene' : 'transcript',1);
 	    # apparently, this xref had been stored already, so get
 	    # xref_id from db
 	    if (! $dbID) {
