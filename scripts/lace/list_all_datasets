@@ -1,0 +1,38 @@
+#!/usr/bin/env perl
+
+### list_all_datasets
+
+use strict;
+use warnings;
+use Bio::Otter::Lace::Defaults;
+
+{
+    Bio::Otter::Lace::Defaults::do_getopt(
+    );
+
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    foreach my $ds ($cl->get_all_DataSets) {
+        printf "%s\n", $ds->name;
+    }
+}
+
+__END__
+
+=head1 NAME - list_all_datasets
+
+=head1 SYNOPSIS
+
+  list_all_datasets
+
+=head1 PARAMETERS
+
+=over 4
+
+None
+
+=back
+
+=head1 AUTHOR
+
+Michael Gray B<email> mg13@sanger.ac.uk
+
