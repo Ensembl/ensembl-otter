@@ -38,6 +38,7 @@ sub initialize {
     my( $self ) = @_;
 
     my $species = $self->species;
+    $self->AceDatabase->DB;
     my @filters = values %{$self->AceDatabase->filters};
 
     my $selection =

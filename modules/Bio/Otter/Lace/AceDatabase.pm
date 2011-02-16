@@ -16,7 +16,9 @@ use Bio::Vega::AceConverter;
 use Bio::Vega::Transform::XML;
 
 use Bio::Otter::Lace::AccessionTypeCache;
+use Bio::Otter::Lace::DB;
 use Bio::Otter::Lace::Slice; # a new kind of Slice that knows how to get pipeline data
+use Bio::Otter::Lace::ProcessGFF;
 
 use Hum::Ace::LocalServer;
 use Hum::Ace::MethodCollection;
@@ -25,8 +27,6 @@ use Hum::ZMapStyleCollection;
 my      $REGION_XML_FILE =      '.region.xml';
 my $LOCK_REGION_XML_FILE = '.lock_region.xml';
 
-my $FILTERS_STATE_FILE = "filters_state.ini";
-my @FILTER_STATES = qw(wanted done failed);
 
 sub new {
     my( $pkg ) = @_;
@@ -50,6 +50,14 @@ sub AccessionTypeCache {
         ||= Bio::Otter::Lace::AccessionTypeCache->new;
     $cache->Client($self->Client);
     return $cache;
+}
+
+sub DB {
+    my ($self) = @_;
+    
+    my $db = $self->{'_sqlite_database'}
+        ||= Bio::Otter::Lace::DB->new($self->home);
+    return $db;
 }
 
 sub write_access {
@@ -557,78 +565,62 @@ sub write_dna_data {
 
 sub reload_filter_state {
     my ($self) = @_;
+
+    my $dbh = $self->DB->dbh;
+    my $sth = $dbh->prepare(q{
+        SELECT filter_name, wanted, failed, done FROM otter_filter
+    });
+    $sth->execute;
     
-    my $cfg = $self->_filter_state;
     my $filters = $self->filters;
 
-    foreach my $filter_name ($cfg->Sections) {
+    while (my ($filter_name, $wanted, $failed, $done) = $sth->fetchrow) {
         if ($filters->{$filter_name}) {
             print STDERR "Reloading state from file for $filter_name\n";
         } else {
             print STDERR "Skipping obsolete coloumn '$filter_name'\n";
-            $cfg->DeleteSection($filter_name);
+            my $del = $dbh->prepare(q{ DELETE FROM otter_filter WHERE filter_name = ? });
+            $del->execute($filter_name);
             next;
         }
         my $state_hash = $filters->{$filter_name}{'state'};
-        for my $state (@FILTER_STATES) {
-            my $setting = $cfg->val($filter_name, $state);
-            $state_hash->{$state} = $setting if defined $setting;
-        }
+        $state_hash->{'wanted'} = $wanted;
+        $state_hash->{'failed'} = $failed;
+        $state_hash->{'done'}   = $done;
     }
-    
-    $cfg->RewriteConfig;
 
     return;
 }
 
 sub save_filter_state {
     my ($self) = @_;
-    
-    my $cfg = $self->_filter_state;
+
+    my $dbh = $self->DB->dbh;
+    my $insert = $dbh->prepare(q{
+        INSERT OR IGNORE INTO otter_filter (filter_name) VALUES (?)
+    });
+    my $update = $dbh->prepare(q{
+        UPDATE otter_filter SET wanted = ?, failed = ?, done = ? WHERE filter_name = ?
+    });
 
     while ( my ($name, $value) = each %{$self->filters} ) {
         my $state_hash = $value->{'state'};
-        for my $state (@FILTER_STATES) {
-            if (defined(my $setting = $state_hash->{$state})) {
-                $cfg->AddSection($name) unless $cfg->SectionExists($name);
-                $cfg->newval($name, $state, $setting);
-            }
-        }
+        $insert->execute($name);
+        $update->execute(
+            $state_hash->{'wanted'},
+            $state_hash->{'failed'},
+            $state_hash->{'done'},
+            $name, 
+            );
     }
-    
-    $cfg->RewriteConfig;
 
     return;
 }
 
-sub _filter_state {
-    my ($self) = @_;
-    unless ($self->{'_filter_state'}) {
-        my $file = $self->home.'/'.$FILTERS_STATE_FILE;
-        my $cfg;
-        
-        # Config::IniFiles is fussy about being passed an empty file, so we have to  
-        # do things differently if the file exists or not, we should probably fix this...
-        
-        unless (-e $file) {
-            $cfg = Config::IniFiles->new;
-            $cfg->SetFileName($file);
-        }
-        else {
-            $cfg = Config::IniFiles->new( -file => $file );
-        }
-        
-        die "Failed to create Config object from $file" unless $cfg;
-        
-        $self->{'_filter_state'} = $cfg;
-    }
-    
-    return $self->{'_filter_state'};
-}
-
 sub filters {
     my ($self) = @_;
-    return $self->{_filters} ||= {
+
+    return $self->{'_filters'} ||= {
         map {
             $_->name => {
                 filter => $_,
@@ -640,6 +632,27 @@ sub filters {
             };
         } @{$self->smart_slice->DataSet->filters},
     };
+}
+
+sub process_gff_file_from_Filter {
+    my ($self, $filt) = @_;
+    
+    my $filt_name = $filt->name;
+    my $sth = $self->DB->dbh->prepare(q{ SELECT gff_file FROM otter_filter WHERE filter_name = ? });
+    $sth->execute($filt_name);
+    my ($gff_file) = $sth->fetchrow;
+    unless ($gff_file) {
+        confess "gff_file column not set for '$filt_name' in otter_filter table in SQLite DB";
+    }
+    my $full_gff_file = $self->home . "/$gff_file";
+    
+    my $fk = $filt->feature_kind;
+    if ($fk =~ /AlignFeature/) {
+        Bio::Otter::Lace::ProcessGFF::store_hit_data_from_gff($self->DB->dbh, $full_gff_file);
+    }
+    else {
+        confess "Don't know how to process GFF file containing '$fk'\n";
+    }
 }
 
 sub script_dir {    

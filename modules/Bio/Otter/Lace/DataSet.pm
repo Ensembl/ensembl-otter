@@ -34,7 +34,7 @@ sub name {
 
 sub filter_by_name {
     my ($self, $name) = @_;
-    return $self->{_filter_by_name}{$name} ||=
+    return $self->{'_filter_by_name'}{$name} ||=
         $self->_filter_by_name($name);
 }
 

@@ -670,6 +670,7 @@ use Bio::Vega::Utils::GFF;
 
     package Bio::EnsEMBL::Variation::VariationFeature;
 
+    ### Should unify with Gene URL stuff.
     my $url_format = 'http://www.ensembl.org/Homo_sapiens/Variation/Summary?v=%s';
 
     sub _gff_hash {
@@ -865,11 +866,11 @@ use Bio::Vega::Utils::GFF;
 
         my $hd = $self->get_HitDescription;
         if (my $prefix = $db_prefix{$hd->db_name}) {
-            $gff->{'attributes'}{'Name'} = sprintf q{"%s:%s"}, $prefix, $self->hseqname;
+            $gff->{'attributes'}{'Name'} = sprintf(q{"%s:%s"}, $prefix, $self->hseqname);
         }
         $gff->{'attributes'}{'Length'}   = $hd->hit_length;
         $gff->{'attributes'}{'Taxon_ID'} = $hd->taxon_id;
-        $gff->{'attributes'}{'DB_Name'}  = $hd->db_name;
+        $gff->{'attributes'}{'DB_Name'}  = sprintf(q{"%s"}, $hd->db_name);
         if (my $desc = $hd->description) {
             $desc =~ s/"/\\"/g;
             $gff->{'attributes'}{'Description'} = qq{"$desc"};
