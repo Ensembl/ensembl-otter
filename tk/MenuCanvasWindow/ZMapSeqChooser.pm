@@ -1081,54 +1081,42 @@ sub zMapRemoveView {
 sub zMapFeaturesLoaded {
     my ($self, $xml) = @_;
     
-    my @featuresets = split(/;/, $xml->{request}->{featureset}->{names});
+    my @featuresets = split(/;/, $xml->{'request'}{'featureset'}{'names'});
     
-    my $status = $xml->{request}->{status}->{value};
+    my $status = $xml->{'request'}{'status'}{'value'};
+    my $msg    = $xml->{'request'}{'status'}{'message'};
     
-    # warn "zmap loaded featuresets: ".$xml->{request}->{featureset}->{names}." status: $status\n";   
-    
-    my $msg = $xml->{request}->{status}->{message};
-    
-    unless ($self->{_gff_filters_by_featureset}) {
-        my $filters_by_fset;
-
-        for (values %{$self->AceDatabase->filters}) {
-            my $state_hash = $_->{state};
-            for ( @{$_->{filter}->featuresets} ) {
-                $filters_by_fset->{lc($_)} = $state_hash; # lc because zmap does
-            }
-        }
-        
-        $self->{_gff_filters_by_featureset} = $filters_by_fset;
-    }
-    
-    my $gff_filters_by_featureset = $self->{_gff_filters_by_featureset};
-    
+    my $filt_hash = $self->AceDatabase->filters;
     my $state_changed = 0;
-    
-    for my $name (@featuresets) {;
-        if (my $state_hash =
-            $gff_filters_by_featureset->{lc($name)}) { # lc here too in case zmap changes!
-            if ($status == 0 && ! $state_hash->{failed}) {
-                $state_changed = 1;
-                $state_hash->{failed} = 1;
-                $state_hash->{fail_msg} = $msg;
-            }
-            elsif ($status == 1 && ! $state_hash->{done}) {
-                $state_changed = 1;
-                $state_hash->{done} = 1;
-                $state_hash->{failed} = 0; # reset failed flag if filter succeeds
+    foreach my $set_name (@featuresets) {
+        # Zmap lowercases everything in its XML
+        foreach my $name (keys %$filt_hash) {
+            if (lc($name) eq lc($set_name)) {
+                 if (my $state_hash = $filt_hash->{$name}{'state'}) {
+                    if ($status == 0 && ! $state_hash->{'failed'}) {
+                        $state_changed = 1;
+                        $state_hash->{'failed'} = 1;
+                        $state_hash->{'fail_msg'} = $msg; ### Could store in SQLite db
+                    }
+                    elsif ($status == 1 && ! $state_hash->{'done'}) {
+                        $state_changed = 1;
+                        $state_hash->{'done'} = 1;
+                        $state_hash->{'failed'} = 0; # reset failed flag if filter succeeds
+                        my $filt = $filt_hash->{$name}{'filter'};
+                        if ($filt->process_gff_file) {
+                            $self->AceDatabase->process_gff_file_from_Filter($filt);
+                        }
+                    }
+                }
             }
         }
     }
     
     if ($state_changed) {
         # save the state of each gff filter to disk so we can recover the session
-        
         $self->AceDatabase->save_filter_state;
         
         # and update the delayed flags in the zmap config file
-        
         $self->zMapUpdateConfigFile;
     }
     
