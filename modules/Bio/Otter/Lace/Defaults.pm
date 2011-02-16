@@ -83,11 +83,6 @@ sub client_name {
     }
 }
 
-sub platform_cpu {
-    my ($platform, $cpu) = (uname)[0, 4];
-    return "${platform}_$cpu";
-}
-
 
 =head1 do_getopt
 
