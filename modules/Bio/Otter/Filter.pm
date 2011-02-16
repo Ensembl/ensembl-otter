@@ -140,11 +140,6 @@ sub server_params {
 }
 
 
-
-sub transcript_name_from_transcript_xref {}
-
-
-
 1;
 
 __END__
