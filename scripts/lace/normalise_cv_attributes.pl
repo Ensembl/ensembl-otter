@@ -153,7 +153,7 @@ sub match_vocab {
     my $perl_pattern = sql_to_perl_regexp($pattern);
     croak "Don't understand '$pattern'" unless $perl_pattern;
 
-    my @hits = map { /($perl_pattern)/ } keys %$vocab;
+    my @hits = map { /($perl_pattern)/x } keys %$vocab;
     croak "More than one vocab match for $perl_pattern:", join(',', @hits) if scalar @hits > 1;
 
     return $hits[0];
@@ -162,8 +162,8 @@ sub match_vocab {
 sub sql_to_perl_regexp {
     my $pattern = shift;
 
-    $pattern =~ s/%/.*/g;
-    $pattern =~ s/_/./g;
+    $pattern =~ s/%/.*/xg;
+    $pattern =~ s/_/./xg;
 
     return "^$pattern\$";
 }
@@ -171,7 +171,7 @@ sub sql_to_perl_regexp {
 sub find_genes {
     my ($otter_dba, $attrib_pattern) = @_;
 
-    my $list_genes = $otter_dba->dbc->prepare(q{
+    my $list_genes = $otter_dba->dbc->prepare(<<'__SQL_END__');
         SELECT
                 g.gene_id,
                 gsi.stable_id,
@@ -186,17 +186,18 @@ sub find_genes {
            JOIN attrib_type          at  USING (attrib_type_id)
            JOIN gene_stable_id       gsi USING (gene_id)
            JOIN gene_attrib          gan ON     g.gene_id = gan.gene_id 
-            			            AND gan.attrib_type_id = (
-            			                SELECT attrib_type_id
-            			                FROM   attrib_type
-            			                WHERE  code = 'name'
-            			               )
+                                            AND gan.attrib_type_id = (
+                                                SELECT attrib_type_id
+                                                FROM   attrib_type
+                                                WHERE  code = 'name'
+                                               )
            JOIN seq_region           sr  USING (seq_region_id)
         WHERE
                 g.is_current = 1
             AND ga.value LIKE ?
             AND at.code IN ('remark', 'hidden_remark')
-    });
+__SQL_END__
+
     $list_genes->execute($attrib_pattern);
 
     my %genes;
@@ -237,7 +238,7 @@ sub find_genes {
 sub find_transcripts {
     my ($otter_dba, $attrib_pattern) = @_;
 
-    my $list_transcripts = $otter_dba->dbc->prepare(q{
+    my $list_transcripts = $otter_dba->dbc->prepare(<<'__SQL_END__');
         SELECT
                 g.gene_id,
                 gsi.stable_id,
@@ -257,23 +258,24 @@ sub find_transcripts {
            JOIN gene                 g   USING (gene_id)
            JOIN gene_stable_id       gsi USING (gene_id)
            JOIN gene_attrib          gan ON     g.gene_id = gan.gene_id 
-            			            AND gan.attrib_type_id = (
-            			                SELECT attrib_type_id
-            			                FROM   attrib_type
-            			                WHERE  code = 'name'
-            			               )
+                                            AND gan.attrib_type_id = (
+                                                SELECT attrib_type_id
+                                                FROM   attrib_type
+                                                WHERE  code = 'name'
+                                               )
            JOIN transcript_attrib    tan ON     t.transcript_id = tan.transcript_id
-            			            AND tan.attrib_type_id = (
-            			                SELECT attrib_type_id
-            			                FROM   attrib_type
-            			                WHERE  code = 'name'
-            			               )
+                                            AND tan.attrib_type_id = (
+                                                SELECT attrib_type_id
+                                                FROM   attrib_type
+                                                WHERE  code = 'name'
+                                               )
            JOIN seq_region           sr  ON g.seq_region_id = sr.seq_region_id
         WHERE
                 t.is_current = 1
             AND ta.value LIKE ?
             AND at.code IN ('remark', 'hidden_remark')
-    });
+__SQL_END__
+
     $list_transcripts->execute($attrib_pattern);
 
     my %transcripts;
@@ -573,11 +575,12 @@ sub do_composite {
 
         return $attrib_type_cache{$code} if exists $attrib_type_cache{$code};
 
-        $attrib_type_sth ||= $dba->dbc->prepare(q{
+        $attrib_type_sth ||= $dba->dbc->prepare(<<'__SQL_END__');
             SELECT attrib_type_id
             FROM   attrib_type
             WHERE  code = ?
-        });
+__SQL_END__
+
         $attrib_type_sth->execute($code);
         my ( $atid ) = $attrib_type_sth->fetchrow_array;
 
