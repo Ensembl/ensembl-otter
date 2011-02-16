@@ -30,12 +30,16 @@ use Bio::Otter::Transform::CloneSequences;
 sub new {
     my( $pkg ) = @_;
 
+    my ($script) = $0 =~ m{([^/]+)$};
+    my $client_name = $script || 'otterlace';
+
     ## no critic(Variables::RequireLocalizedPunctuationVars)
 
     $ENV{'OTTERLACE_COOKIE_JAR'} ||= "$ENV{HOME}/.otter/ns_cookie_jar";
     $ENV{'BLIXEM_CONFIG_FILE'}   ||= "$ENV{HOME}/.otter/etc/blixemrc";
 
     my $new = bless {
+        _client_name     => $client_name,
         _cookie_jar_file => $ENV{'OTTERLACE_COOKIE_JAR'},
     }, $pkg;
 
@@ -102,12 +106,7 @@ sub fetch_truncated_genes {
 
 sub client_name {
     my ($self) = @_;
-    
-    my $name;
-    unless ($name = $self->{'_client_name'}) {
-        $name = $self->{'_client_name'} = Bio::Otter::Lace::Defaults::client_name();
-    }
-    return $name;
+    return $self->{'_client_name'};
 }
 
 sub debug {
