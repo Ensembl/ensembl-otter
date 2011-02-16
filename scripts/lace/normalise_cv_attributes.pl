@@ -37,6 +37,7 @@ my $opts = {
     quiet    => 0,
     verbose  => 0,
     max_slop => 3,
+    just_query => 0,
     };
 
 {
@@ -58,6 +59,7 @@ my $opts = {
         'total!'        => \$opts->{total},
         'verbose!'      => \$opts->{verbose},
         'unkeep:s'      => \$opts->{unkeep},
+        'justquery!'    => \$opts->{just_query},
         ) or $usage->();
     $usage->() unless ($dataset_name and $attrib_pattern);
 
@@ -90,7 +92,8 @@ my $opts = {
            $cv_locus      || '<no match>',
            $cv_transcript || '<no match>') unless $opts->{quiet};
 
-    croak "Found both locus and transcript CVs, am confused!" if ($cv_locus and $cv_transcript);
+    my $on_both_branches = ($cv_locus and $cv_transcript);
+    print_divider("NB: found both locus and transcript CVs") if $on_both_branches;
 
     print_divider('Find relevant items');
 
@@ -102,6 +105,8 @@ my $opts = {
     show_variants('Locus',      $g_values, $cv_locus)      unless $opts->{quiet};
     show_variants('Transcript', $t_values, $cv_transcript) unless $opts->{quiet};
 
+    exit 0 if $opts->{just_query};
+
     print_divider('Calculate actions');
 
     my ($gene_actions, $transcript_actions);
@@ -110,15 +115,21 @@ my $opts = {
 
         $gene_actions = plan_update_actions($cv_locus, $genes, $transcripts);
 
-        my $matches = identify_ts_where_gene_attrib_exists($transcripts, $genes);
-        $transcript_actions = plan_move_actions($cv_locus, $transcripts, $gene_actions);
+        unless ($on_both_branches) {
+            my $matches = identify_ts_where_gene_attrib_exists($transcripts, $genes);
+            $transcript_actions = plan_move_actions($cv_locus, $transcripts, $gene_actions);
+        }
 
-    } else {
+    } 
+
+    if ($cv_transcript) {
 
         $transcript_actions = plan_update_actions($cv_transcript, $transcripts, $genes);
 
-        # We cannot necessarily assign from transcript to gene
-        # $gene_actions =       plan_move_actions($cv_transcript, $genes, $transcript_actions);
+        unless ($on_both_branches) {
+            # We cannot necessarily assign from transcript to gene
+            # $gene_actions =       plan_move_actions($cv_transcript, $genes, $transcript_actions);
+        }
 
     }
 
