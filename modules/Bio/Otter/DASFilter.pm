@@ -44,9 +44,7 @@ sub server_params {
     }
     
     $params->{server_script} = 'get_gff_das_features';
-    
-    $params->{gff_source} = $self->name;
-       
+
     return $params;
 }
 
