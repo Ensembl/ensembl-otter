@@ -156,6 +156,30 @@ sub process_gff_file {
     return $self->{'_process_gff_file'};
 }
 
+sub grouplabel {
+    my ($self, $grouplabel) = @_;
+    $self->{_grouplabel} = $grouplabel if $grouplabel;
+    return $self->{_grouplabel};
+}
+
+sub dsn {
+    my ($self, $dsn) = @_;
+    $self->{_dsn} = $dsn if $dsn;
+    return $self->{_dsn};
+}
+
+sub sieve {
+    my ($self, $sieve) = @_;
+    $self->{_sieve} = $sieve if $sieve;
+    return $self->{_sieve};
+}
+
+sub source {
+    my ($self, $source) = @_;
+    $self->{_source} = $source if $source;
+    return $self->{_source};
+}
+
 sub server_params {
     
     # this method defines the parameters and their corresponding values that are 
@@ -176,6 +200,12 @@ sub server_params {
 
         # GFF
         ditypes         => $self->ditypes,
+
+        # DAS
+        grouplabel      => $self->grouplabel,
+        dsn             => $self->dsn,
+        sieve           => $self->sieve,
+        source          => $self->source,
 
     };
 }
