@@ -11,7 +11,7 @@ my $LOG     = 1;
 
 my %args;
 foreach my $pair (@ARGV) {
-    my ($key, $val) = split /=/, $pair;
+    my ($key, $val) = split(/=/, $pair);
     $args{uri_unescape($key)} = uri_unescape($val);
 }
 
