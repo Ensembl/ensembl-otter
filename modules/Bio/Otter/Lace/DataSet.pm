@@ -8,6 +8,8 @@ use warnings;
 use Carp;
 use Scalar::Util 'weaken';
 
+use Bio::Otter::Filter;
+
 sub new {
     my( $pkg ) = @_;
 
@@ -41,15 +43,13 @@ sub filter_by_name {
 sub _filter_by_name {
     my ($self, $name) = @_;
 
+    my $filter = Bio::Otter::Filter->new;
+    $filter->name($name);
+
     my $config = $self->config_section("filter.${name}");
 
     # Delete so that we don't try to call non-existant method "module" below
-    my $module = delete $config->{'module'};
-    die "No module supplied for filter '$name'" unless $module;
-    $self->load_filter_module($module);    # Fatal on failure
-
-    my $filter = $module->new;
-    $filter->name($name) if $filter->can('name');
+    delete $config->{'module'};
 
     while (my ($meth, $arg) = each %{$config}) {
         die "Unrecognised configuration parameter '$meth' used in filter '$name'; check your .otter_config"
@@ -449,19 +449,6 @@ sub ALIAS {
         $self->{'_ALIAS'} = $ALIAS;
     }
     return $self->{'_ALIAS'};
-}
-
-sub load_filter_module {
-    my ($self, $class) = @_;
-
-    my $file = "$class.pm";
-    $file =~ s{::}{/}g;
-    eval {
-        require $file;
-        1;
-    } or die "Error attempting to load filter module '$file'\n$@";
-
-    return;
 }
 
 1;
