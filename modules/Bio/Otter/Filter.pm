@@ -120,6 +120,42 @@ sub featuresets {
     return $self->{_featuresets};
 }
 
+sub zmap_column {
+    my ($self, $zmap_column) = @_;
+    
+    if ($zmap_column) {
+        $self->{'_zmap_column'} = $zmap_column;
+    }
+    return $self->{'_zmap_column'};
+}
+
+sub zmap_style {
+    my ($self, $zmap_style) = @_;
+    
+    if ($zmap_style) {
+        $self->{'_zmap_style'} = $zmap_style;
+    }
+    return $self->{'_zmap_style'};
+}
+
+sub ditypes {
+    my ($self, $ditypes) = @_;
+    
+    if ($ditypes) {
+        $self->{'_ditypes'} = $ditypes;
+    }
+    return $self->{'_ditypes'};
+}
+
+sub process_gff_file {
+    my($self, $flag) = @_;
+    
+    if (defined $flag) {
+        $self->{'_process_gff_file'} = $flag ? 1 : 0;
+    }
+    return $self->{'_process_gff_file'};
+}
+
 sub server_params {
     
     # this method defines the parameters and their corresponding values that are 
@@ -128,6 +164,8 @@ sub server_params {
     my ($self) = @_;
     
     return {
+
+        # common
         analysis        => $self->analysis_name,
         kind            => $self->feature_kind,
         csver_remote    => $self->csver_remote,
@@ -135,6 +173,10 @@ sub server_params {
         filter_module   => $self->filter_module,
         swap_strands    => $self->swap_strands,
         url_string      => $self->url_string,
+
+        # GFF
+        ditypes         => $self->ditypes,
+
     };
 }
 
