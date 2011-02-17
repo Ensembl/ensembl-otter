@@ -50,8 +50,7 @@ sub server_params {
     my ($self) = @_;
     
     my $params = $self->SUPER::server_params;
-    
-    $params->{server_script} = 'get_gff_features';
+
     $params->{ditypes} = $self->ditypes if $self->ditypes;
     
     return $params;

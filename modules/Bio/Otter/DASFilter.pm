@@ -42,8 +42,6 @@ sub server_params {
     for my $meth (qw( grouplabel dsn sieve source )) {
         $params->{$meth} = $self->$meth;
     }
-    
-    $params->{server_script} = 'get_gff_das_features';
 
     return $params;
 }

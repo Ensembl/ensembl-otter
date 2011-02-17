@@ -679,6 +679,7 @@ sub gff_http_script_arguments {
         client => 'otterlace',
         %{ $slice_params },
         %{ $filter->server_params },
+        server_script => $filter->server_script,
         gff_seqname => $slice_params->{type},
         gff_source  => $filter->name,
         session_dir => $self->home,
