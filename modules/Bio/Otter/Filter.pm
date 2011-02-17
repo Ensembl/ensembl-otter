@@ -180,6 +180,18 @@ sub source {
     return $self->{_source};
 }
 
+sub transcript_analyses {
+    my ($self, $transcript_analyses) = @_;
+    $self->{_transcript_analyses} = $transcript_analyses if $transcript_analyses;
+    return $self->{_transcript_analyses};
+}
+
+sub translation_xref_dbs {
+    my ($self, $translation_xref_dbs) = @_;
+    $self->{_translation_xref_dbs} = $translation_xref_dbs if $translation_xref_dbs;
+    return $self->{_translation_xref_dbs};
+}
+
 sub server_params {
     
     # this method defines the parameters and their corresponding values that are 
@@ -206,6 +218,10 @@ sub server_params {
         dsn             => $self->dsn,
         sieve           => $self->sieve,
         source          => $self->source,
+
+        # Gene
+        transcript_analyses  => $self->transcript_analyses,
+        translation_xref_dbs => $self->translation_xref_dbs,
 
     };
 }
