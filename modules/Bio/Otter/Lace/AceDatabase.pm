@@ -548,16 +548,11 @@ sub db_initialized {
 sub write_dna_data {
     my( $self ) = @_;
 
-    my $slice = $self->smart_slice;
-    my $dna_filter = $slice->DataSet->filter_by_name('otter');
-    confess "otter filter (used to fetch DNA) missing from otter_config"
-        unless $dna_filter;
-
     my $ace_filename = $self->home . '/rawdata/dna.ace';
     $self->add_acefile($ace_filename);
     open my $ace_fh, '>', $ace_filename
         or confess "Can't write to '$ace_filename' : $!";
-    print $ace_fh $dna_filter->ace_data($slice);
+    print $ace_fh $self->smart_slice->dna_ace_data;
     close $ace_fh;
 
     return;
