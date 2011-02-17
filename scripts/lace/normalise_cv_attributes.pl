@@ -5,6 +5,7 @@ use strict;
 
 use Carp;
 use Readonly;
+use JSON;
 
 use Bio::Otter::Lace::Defaults;
 
@@ -58,10 +59,22 @@ my $opts = {
         'quiet!'        => \$opts->{quiet},
         'total!'        => \$opts->{total},
         'verbose!'      => \$opts->{verbose},
-        'unkeep:s'      => \$opts->{unkeep},
+        'unkeep=s'      => \$opts->{unkeep},
         'justquery!'    => \$opts->{just_query},
+        'summarise:s'   => \$opts->{summarise},
+        'output=s'      => \$opts->{output},
         ) or $usage->();
     $usage->() unless ($dataset_name and $attrib_pattern);
+
+    if (defined $opts->{summarise} and not $opts->{dry_run}) {
+        carp("Forcing -dryrun for -summarise mode");
+        $opts->{dry_run} = 1;
+    }
+
+    if ($opts->{output}) {
+        # Redirect stdout
+        open STDOUT, '>', $opts->{output} or croak "Can't redirect STDOUT: $!";
+    }
 
     # Client communicates with otter HTTP server
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
@@ -92,6 +105,11 @@ my $opts = {
            $cv_locus      || '<no match>',
            $cv_transcript || '<no match>') unless $opts->{quiet};
 
+    unless ($cv_locus or $cv_transcript) {
+        print_divider("WARNING: no CV found");
+        carp("WARNING: no CV found");
+    }
+
     my $on_both_branches = ($cv_locus and $cv_transcript);
     print_divider("NB: found both locus and transcript CVs") if $on_both_branches;
 
@@ -102,10 +120,11 @@ my $opts = {
 
     print_divider('Identified variants');
 
-    show_variants('Locus',      $g_values, $cv_locus)      unless $opts->{quiet};
-    show_variants('Transcript', $t_values, $cv_transcript) unless $opts->{quiet};
+    my %summary;
+    $summary{variants}->{locus}      = summarise_variants('Locus',      $g_values, $cv_locus);
+    $summary{variants}->{transcript} = summarise_variants('Transcript', $t_values, $cv_transcript);
 
-    exit 0 if $opts->{just_query};
+    summary_exit(\%summary, 0) if $opts->{just_query};
 
     print_divider('Calculate actions');
 
@@ -136,15 +155,34 @@ my $opts = {
     print_divider('Implement actions');
 
     if ($gene_actions) {
-        implement_actions($otter_dba, $gene_actions, 'gene', $opts->{dry_run});
+        $summary{actions}->{locus} =
+            implement_actions($otter_dba, $gene_actions,       'gene',       $opts->{dry_run});
     }
     if ($transcript_actions) {
-        implement_actions($otter_dba, $transcript_actions, 'transcript', $opts->{dry_run});
+        $summary{actions}->{transcript} =
+            implement_actions($otter_dba, $transcript_actions, 'transcript', $opts->{dry_run});
     }
     
     print_divider('Done');
 
-    exit 0;
+    summary_exit(\%summary, 0);
+}
+
+sub summary_exit {
+    my ($summary, $exit_code) = @_;
+
+    if (defined $opts->{summarise}) {
+
+        my $summary_fh;
+        if ($opts->{summarise}) {
+            open $summary_fh, '>', $opts->{summarise} or croak "Can't open summary file: $!";
+        } else {
+            $summary_fh = *STDOUT;
+        }
+        print $summary_fh to_json($summary, { pretty => 1 }), "\n";
+        close $summary_fh;
+    }
+    exit $exit_code;
 }
 
 sub print_divider {
@@ -164,7 +202,7 @@ sub match_vocab {
     my $perl_pattern = sql_to_perl_regexp($pattern);
     croak "Don't understand '$pattern'" unless $perl_pattern;
 
-    my @hits = map { /($perl_pattern)/x } keys %$vocab;
+    my @hits = map { /($perl_pattern)/ix } keys %$vocab;
     croak "More than one vocab match for $perl_pattern:", join(',', @hits) if scalar @hits > 1;
 
     return $hits[0];
@@ -329,16 +367,23 @@ __SQL_END__
     return ( \%transcripts, \%values );
 }
 
-sub show_variants {
+sub summarise_variants {
     my ($title, $values, $vocab) = @_;
+    my %summary;
     foreach my $code (qw(remark hidden_remark)) {
-        printf("%s values for %s:\n", $title, $code);
+        printf("%s values for %s:\n", $title, $code) unless $opts->{quiet};
         foreach my $value (sort keys %{$values->{$code}}) {
-            my $hit = ($vocab and $vocab eq $value) ? '*' : ' ';
-            printf(" %4d %s '%s'\n", $values->{$code}->{$value}, $hit, $value);
+            my $hit = ' ';
+            if ($vocab and $vocab eq $value and $code eq 'remark') {
+                $hit = '*';
+                $summary{hit}->{$code}++;
+            } else {
+                $summary{miss}->{$code}++;
+            }
+            printf(" %4d %s '%s'\n", $values->{$code}->{$value}, $hit, $value) unless $opts->{quiet};
         }
     }
-    return;
+    return \%summary;
 }
 
 sub plan_update_actions {
@@ -493,19 +538,23 @@ sub identify_ts_where_gene_attrib_exists {
 sub implement_actions {
     my ($dba, $actions, $type, $dry_run) = @_;
 
-    if ($actions->{insert} and @{$actions->{insert}}) {
-        do_insert($dba, $actions->{insert}, $type, $dry_run);
+    my %summary;
+
+    my $inserts = $actions->{insert};
+    if ($inserts and @$inserts) {
+        do_insert($dba, $inserts, $type, $dry_run);
+        $summary{insert} = scalar @$inserts;
     }
 
-    if ($actions->{update} and @{$actions->{update}}) {
-        do_composite($dba, $actions->{update}, $type, 'update', $dry_run);
+    foreach my $a_type (qw(update delete)) {
+        my $action_list = $actions->{$a_type};
+        if ($action_list and @$action_list) {
+            do_composite($dba, $action_list, $type, $a_type, $dry_run);
+            $summary{$a_type} = scalar @$action_list;
+        }
     }
 
-    if ($actions->{delete} and @{$actions->{delete}}) {
-        do_composite($dba, $actions->{delete}, $type, 'delete', $dry_run);
-    }
-
-    return 1;
+    return \%summary;
 }
 
 sub do_insert {
@@ -637,8 +686,9 @@ __END__
 
 normalise_cv_attributes -dataset <DATASET NAME> -attrib <ATTRIB PATTERN> 
                         [-unkeep <VOCAB1>[,<VOCAB2>...]] [-maxslop 3]
-                        [-[no]dryrun] [-quiet] [-verbose] [-debug] [-total]
-
+                        [-[no]dryrun] [-summarise [<FILE>]]
+                        [-quiet] [-verbose] [-debug] [-total]
+                        [-output <FILNAME>]
 =head1 DESCRIPTION
 
 Checks for, and optionally fixes up, transcript and gene attributes which
