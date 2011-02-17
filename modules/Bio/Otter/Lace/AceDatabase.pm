@@ -676,6 +676,7 @@ sub gff_http_script_arguments {
     my $slice_params = $self->smart_slice->toHash;
 
     my $params = {
+        client => 'otterlace',
         %{ $slice_params },
         %{ $filter->server_params },
         gff_seqname => $slice_params->{type},
