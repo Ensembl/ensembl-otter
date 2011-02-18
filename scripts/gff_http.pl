@@ -6,7 +6,6 @@ use warnings;
 use Digest::MD5 qw(md5_hex);
 use URI::Escape qw(uri_escape uri_unescape);
 
-my $DEBUG   = 1;
 my $LOG     = 1;
 
 my %args;
@@ -80,7 +79,7 @@ else {
 
     my $url = $url_root . '/' . $server_script . '?' . $params;
 
-    print $log_file "URL: $url\n" if $LOG && $DEBUG;
+    print $log_file "URL: $url\n" if $LOG;
     
     $request->uri($url);
     
