@@ -38,14 +38,7 @@ $args{rebase} = 1 unless $ENV{OTTERLACE_CHROMOSOME_COORDINATES};
 
 my $params = join '&', map { uri_escape($_).'='.uri_escape($args{$_}) } keys %args;
 
-my $gff_filename;
-
-if ($DEBUG) {
-    $gff_filename = $args{gff_source}.'.gff';
-}
-else {
-    $gff_filename = md5_hex($params).'.gff';
-}
+my $gff_filename = sprintf '%s_%s.gff', $args{gff_source}, md5_hex($params);
 
 my $top_dir = 'gff_cache';
 
