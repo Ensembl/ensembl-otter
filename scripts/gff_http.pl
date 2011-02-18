@@ -46,18 +46,7 @@ unless (-d $top_dir) {
     mkdir $top_dir or die "Failed to create toplevel cache directory: $!\n";
 }
 
-my $cache_file;
-
-if ($DEBUG) {
-    $cache_file = $top_dir.'/'.$gff_filename;
-}
-else {
-    my $cache_dir = $top_dir.'/'.substr($gff_filename, 0, 2);
-    unless (-d $cache_dir) {
-        mkdir $cache_dir or die "Failed to create cache directory: $!\n";
-    }
-    $cache_file = $cache_dir.'/'.$gff_filename;
-}
+my $cache_file = $top_dir.'/'.$gff_filename;
 
 if (-e $cache_file) {
     # cache hit
