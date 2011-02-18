@@ -309,6 +309,7 @@ use Bio::Vega::Utils::GFF;
 
     sub _gff_hash {
         my ($self, @args) = @_;
+
         my $gff = $self->SUPER::_gff_hash(@args);
         $gff->{attributes}->{Class} = qq("Protein");
         return $gff;
@@ -841,10 +842,6 @@ use Bio::Vega::Utils::GFF;
 
 
 {
-    my %db_prefix = (
-        EMBL      => 'Em',
-    );
-
     package Bio::Vega::DnaDnaAlignFeature;
 
     # To avoid copy/pasting code:
@@ -852,11 +849,6 @@ use Bio::Vega::Utils::GFF;
 }
 
 {
-    my %db_prefix = (
-        Swissprot => 'Sw',
-        TrEMBL    => 'Tr',
-    );
-
     package Bio::Vega::DnaPepAlignFeature;
 
     sub _gff_hash {
