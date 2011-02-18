@@ -8,7 +8,6 @@ use warnings;
 use Carp;
 
 use Fcntl qw{ O_WRONLY O_CREAT };
-use Config::IniFiles;
 use URI::Escape qw{ uri_escape };
 
 use Bio::Vega::Transform::Otter::Ace;
