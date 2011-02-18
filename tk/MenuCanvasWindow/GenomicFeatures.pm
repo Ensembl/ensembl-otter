@@ -560,7 +560,7 @@ sub save_to_ace {
                 -default    => 'Yes',
             );
 
-            if($save_changes eq 'No') {
+            if ($save_changes eq 'No') {
                 return;
             }
         }

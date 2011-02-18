@@ -71,14 +71,15 @@ sub init_db {
 {
     my %table_defs = (
         otter_filter  => q{
-            filter_name TEXT        PRIMARY KEY
-            , wanted    INTEGER DEFAULT 0
-            , failed    INTEGER DEFAULT 0
-            , done      INTEGER DEFAULT 0
-            , gff_file  TEXT
+            filter_name     TEXT PRIMARY KEY
+            , wanted        INTEGER DEFAULT 0
+            , failed        INTEGER DEFAULT 0
+            , done          INTEGER DEFAULT 0
+            , gff_file      TEXT
+            , process_gff   INTEGER DEFAULT 0
         },
         accession_info  => q{
-            accession_sv    TEXT    PRIMARY KEY
+            accession_sv    TEXT PRIMARY KEY
             , taxon_id      INTEGER
             , evi_type      TEXT
             , description   TEXT

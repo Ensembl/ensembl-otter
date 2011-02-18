@@ -7,7 +7,7 @@ use strict;
 use warnings;
 use Hum::ClipboardUtils qw{ $magic_evi_name_matcher };
 
-my (%client, %full_accession, %type);
+my (%client, %full_accession, %type, %DB);
 
 sub DESTROY {
     my ($self) = @_;
@@ -17,6 +17,7 @@ sub DESTROY {
     delete $client{$self};
     delete $full_accession{$self};
     delete $type{$self};
+    delete $DB{$self};
 
     return;
 }
@@ -35,6 +36,15 @@ sub Client {
         $client{$self} = $client;
     }
     return $client{$self};
+}
+
+sub DB {
+    my ($self, $DB) = @_;
+    
+    if ($DB) {
+        $DB{$self} = $DB;
+    }
+    return $DB{$self};
 }
 
 sub populate {
@@ -87,69 +97,54 @@ sub evidence_type_and_name_from_text {
         my $acc    = $2;
         $acc      .= $3 if $3;
         my $sv     = $4 || '';
-        $clip_names{"$prefix$acc$sv"} = 1;
+        # $clip_names{"$prefix$acc$sv"} = 1;
+        $clip_names{"$acc$sv"} = 1;
     }
     my $acc_list = [keys %clip_names];
     # warn "Got names:\n", map {"  $_\n"} @$acc_list;
-    $self->populate($acc_list);
+
+    my $dbh = $DB{$self}->dbh;
+    my $full_fetch = $dbh->prepare(q{ SELECT evi_type, accession_sv, source_db FROM accession_info WHERE accession_sv = ? });
+    my $part_fetch = $dbh->prepare(q{ SELECT evi_type, accession_sv, source_db FROM accession_info WHERE accession_sv LIKE ? });
 
     my $type_name = {};
+    my $not_found = [];
+
+    # First look at our SQLite db, to find out what kind of accession it is
     foreach my $acc (@$acc_list) {
-        my ($type, $full_name) = $self->type_and_name_from_accession($acc);
+        $full_fetch->execute($acc);
+        my ($type, $full_name, $source_db) = $full_fetch->fetchrow;
+        unless ($type) {
+            # Try a different query, assuming the SV was missed off
+            $part_fetch->execute("$acc.%");
+            ($type, $full_name, $source_db) = $part_fetch->fetchrow;
+        }
         unless ($type and $full_name) {
+            push(@$not_found, $acc);
             next;
+        }
+        if ($source_db) {
+            my $prefix = ucfirst lc substr($source_db, 0, 2);
+            $full_name = "$prefix:$full_name";
         }
         my $name_list = $type_name->{$type} ||= [];
         push(@$name_list, $full_name);
     }
     
-    return $type_name;
-}
-
-{
-    ### Should add this to otter_config
-    ### or parse it from the Zmap styles
-    my %column_type = (
-        EST              => 'EST',
-        vertebrate_mRNA  => 'cDNA',
-        vertebrate_ncRNA => 'ncRNA',
-        BLASTX           => 'Protein',
-        SwissProt        => 'Protein',
-        TrEMBL           => 'Protein',
-        OTF_ncRNA        => 'ncRNA',
-        OTF_EST          => 'EST',
-        OTF_mRNA         => 'cDNA',
-        OTF_Protein      => 'Protein',
-        Ens_cDNA         => 'cDNA',
-    );
-
-    # Make hash case insensitive
-    foreach my $style (keys %column_type) {
-        $column_type{lc $style} = $column_type{$style};
-    }
-
-    sub cache_type_from_Zmap_XML {
-        my ($self, $parsed_xml) = @_;
-        
-        foreach my $full_acc (keys %$parsed_xml) {
-            my $style = $parsed_xml->{$full_acc}{'style'}
-                or next;
-            my $acc_type = $column_type{$style};
-            unless ($acc_type) {
-                if ($style =~ /^EST_/i) {
-                    $acc_type = 'EST';
-                }
-                else {
-                    next;
-                }
+    # Fall back to a server query for stuff not found in the SQLite db.
+    if (@$not_found) {
+        $self->populate($not_found);
+        foreach my $acc (@$not_found) {
+            my ($type, $full_name) = $self->type_and_name_from_accession($acc);
+            unless ($type and $full_name) {
+                next;
             }
-            # warn "Caching $full_acc = $acc_type\n";
-            $full_accession{$self}{$full_acc} = $full_acc;
-            $type{$self}{$full_acc} = $acc_type;
+            my $name_list = $type_name->{$type} ||= [];
+            push(@$name_list, $full_name);        
         }
-
-        return;
     }
+    
+    return $type_name;
 }
 
 

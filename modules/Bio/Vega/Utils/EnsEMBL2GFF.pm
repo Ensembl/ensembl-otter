@@ -524,7 +524,11 @@ use Bio::Vega::Utils::GFF;
             else {
                 $frame = 0;
             }
-
+            
+            my $attrib_str = qq{Class "Sequence" ; Name $name};
+            if (my $stable = $tsl->stable_id) {
+                $attrib_str .= qq{ ; Stable_ID "$stable"};
+            }
             $gff .= join(
                 "\t",
                 $gff_hash->{'seqname'},
@@ -535,7 +539,7 @@ use Bio::Vega::Utils::GFF;
                 '.',      # score
                 $gff_hash->{'strand'},
                 $frame,
-                qq{Class "Sequence" ; Name $name}
+                $attrib_str,
             ) . "\n";
         }
 
@@ -648,8 +652,11 @@ use Bio::Vega::Utils::GFF;
     sub _gff_hash {
         my ($self, @args) = @_;
         my $gff = $self->SUPER::_gff_hash(@args);
-        $gff->{feature} = 'exon';
-        $gff->{attributes}->{Class} = qq("Sequence");
+        $gff->{'feature'} = 'exon';
+        $gff->{'attributes'}{'Class'} = qq{"Sequence"};
+        if (my $stable = $self->stable_id) {
+            $gff->{'attributes'}{'Stable_ID'} = qq{"$stable"};
+        }
         return $gff;
     }
 }
