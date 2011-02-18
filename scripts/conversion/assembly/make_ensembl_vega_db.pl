@@ -278,6 +278,7 @@ $dbh->{'evega'} = $dba->{'evega'}->dbc->db_handle;
 # names as in source db)
 my $c = 0;
 my $vegaassembly = $support->param('assembly');
+
 $support->log_stamped("Transfering Vega chromosome seq_regions...\n");
 $sql = qq(
     INSERT INTO $evega_db.seq_region
@@ -301,10 +302,13 @@ $sth = $dbh->{'evega'}->prepare("SELECT MAX(seq_region_id) FROM seq_region");
 $sth->execute;
 my ($max_sri) = $sth->fetchrow_array;
 my $sri_adjust = 10**(length($max_sri));
+$support->log("Using adjustment factor of $sri_adjust for seq_region_ids...\n");
 $sth = $dbh->{'evega'}->prepare("SELECT MAX(coord_system_id) FROM seq_region");
 $sth->execute;
 my ($max_csi) = $sth->fetchrow_array;
 my $csi_adjust = 10**(length($max_csi));
+$support->log("Using adjustment factor of $csi_adjust for coord_system_ids...\n");
+
 # fetch and insert Ensembl seq_regions with adjusted seq_region_id and
 # coord_system_id
 $sql = qq(
@@ -589,13 +593,12 @@ if (! $support->param('dry_run') ) {
       interactive => 0,
     },
   });
+
   $support->log_stamped("\nUpdating external_db table on ".$support->param('evegadbname')."...\n");
   system("../xref/update_external_dbs.pl $options") == 0
     or $support->throw("Error running update_external_dbs.pl: $!");
   $support->log_stamped("Done.\n\n");
 
-
-  #this bit is throwing lots of warnings but is running fine, cannot see the problem. Might be easiest to run it at the end (ie as part of finish_ensembl_veega_createion.pl) ?
   $options =~ s/make_ensembl_vega_update_external_dbs_ensvega\.log/ensembl_vega_percent_gc_calc\.log/;
   $support->log_stamped("\nCalculating %GC for ".$support->param('evegadbname')."...\n");
   system("../../../../sanger-plugins/vega/utils/vega_percent_gc_calc.pl $options") == 0
