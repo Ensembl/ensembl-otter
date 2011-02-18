@@ -857,9 +857,6 @@ use Bio::Vega::Utils::GFF;
         my $gff = $self->SUPER::_gff_hash(@args);
 
         my $hd = $self->get_HitDescription;
-        if (my $prefix = $db_prefix{$hd->db_name}) {
-            $gff->{'attributes'}{'Name'} = sprintf(q{"%s:%s"}, $prefix, $self->hseqname);
-        }
         $gff->{'attributes'}{'Length'}   = $hd->hit_length;
         $gff->{'attributes'}{'Taxon_ID'} = $hd->taxon_id;
         $gff->{'attributes'}{'DB_Name'}  = sprintf(q{"%s"}, $hd->db_name);
