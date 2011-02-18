@@ -170,15 +170,15 @@ $sql = qq(
 $sth = $dbh->{'evega'}->prepare($sql);
 $sth->execute;
 my ($max_csi) = $sth->fetchrow_array;
-my $E_csi_adjust = 10**(length($max_csi));
+my $E_csi_adjust = 10**(length($max_csi)); #this has to be the same as the value used in make_ensembl_vega.pl
 
 # store Vega chromosome seq_regions and Ensembl-Vega assembly in temporary tables
 $support->log_stamped("Storing Vega chromosome seq_regions and Ensembl-Vega assembly in temporary tables...\n");
 $sql = qq(
     CREATE TABLE tmp_seq_region
     SELECT sr.*
-    FROM    seq_region sr,
-            coord_system cs
+    FROM   seq_region sr,
+           coord_system cs
     WHERE sr.coord_system_id = cs.coord_system_id
     AND cs.name = 'chromosome'
     AND cs.version = '$vegaassembly'
@@ -187,11 +187,11 @@ my $c1 = $dbh->{'evega'}->do($sql);
 $sql = qq(
     CREATE TABLE tmp_assembly
     SELECT a.*
-    FROM    assembly a,
-            seq_region sr1,
-            seq_region sr2,
-            coord_system cs1,
-            coord_system cs2
+    FROM   assembly a,
+           seq_region sr1,
+           seq_region sr2,
+           coord_system cs1,
+           coord_system cs2
     WHERE a.asm_seq_region_id = sr1.seq_region_id
     AND a.cmp_seq_region_id = sr2.seq_region_id
     AND sr1.coord_system_id = cs1.coord_system_id
@@ -201,6 +201,7 @@ $sql = qq(
     AND cs1.version = '$vegaassembly'
     AND cs2.version = '$ensemblassembly'
 );
+
 my $c2 = $dbh->{'evega'}->do($sql);
 $support->log_stamped("Done storing $c1 seq_region and $c2 assembly entries.\n\n");
 
@@ -250,10 +251,10 @@ $support->log_stamped("Done.\n\n");
 
 # adjust seq_region_ids in tmp_seq_region and tmp_assembly
 $support->log_stamped("Adjusting Vega seq_region_ids in tmp_assembly and tmp_seq_region...\n");
-$sth = $dbh->{'evega'}->prepare("SELECT MAX(seq_region_id) FROM seq_region");
+$sth = $dbh->{'evega'}->prepare("SELECT MAX(seq_region_id) FROM $ensembl_db.seq_region");
 $sth->execute;
-my ($tmp_max_sri) = $sth->fetchrow_array;
-my $V_sri_adjust = 10**(length($tmp_max_sri));
+my ($V_sri_adjust) = $sth->fetchrow_array;
+
 $support->log("Adjustment factors: $V_sri_adjust for Vega, $E_sri_adjust for Ensembl seq_region_ids.\n", 1);
 $sql = qq(
     UPDATE tmp_seq_region
@@ -341,19 +342,20 @@ $sql = qq(
 $c = $dbh->{'evega'}->do($sql);
 $support->log_stamped("Done transfering $c seq_region_attrib entries.\n\n");
 
-# used to transfer Ensembl-Vega assembly information from tmp_seq_region and tmp_assembly back into main tables but no need now
-#$support->log_stamped("Adding Ensembl-Vega assembly info from tmp tables...\n");
-#$sql = qq(
-#    INSERT INTO seq_region
-#    SELECT * FROM tmp_seq_region
-#);
-#my $c3 = $dbh->{'evega'}->do($sql);
-#$sql = qq(
-#    INSERT INTO assembly
-#    SELECT * from tmp_assembly
-#);
-#my $c4 = $dbh->{'evega'}->do($sql);
-#$support->log_stamped("Done adding $c3 seq_region and $c4 assembly entries.\n\n");
+# transfer Ensembl-Vega assembly information from tmp_seq_region and tmp_assembly back into main tables
+$support->log_stamped("Adding Vega seq_regions from tmp tables...\n");
+$sql = qq(
+    INSERT INTO seq_region
+    SELECT * FROM tmp_seq_region
+);
+my $c3 = $dbh->{'evega'}->do($sql);
+$support->log_stamped("Adding Ensembl-Vega assembly mapping info from tmp tables...\n");
+$sql = qq(
+    INSERT INTO assembly
+    SELECT * from tmp_assembly
+);
+my $c4 = $dbh->{'evega'}->do($sql);
+$support->log_stamped("Done adding $c3 seq_region and $c4 assembly entries.\n\n");
 
 # now adjust all seq_region_ids
 $support->log_stamped("Updating seq_region_ids on all tables:\n");
