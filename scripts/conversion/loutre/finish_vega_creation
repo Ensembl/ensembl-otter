@@ -763,6 +763,7 @@ push @sql_fixes, "UPDATE gene SET biotype = 'TEC' WHERE biotype = 'tec';\n";
 push @sql_fixes, "UPDATE transcript SET biotype = 'IG_gene' WHERE biotype = 'ig_gene';\n";
 push @sql_fixes, "UPDATE transcript SET biotype = 'IG_pseudogene' WHERE biotype = 'ig_pseudogene';\n";
 push @sql_fixes, "UPDATE transcript SET biotype = 'TEC' WHERE biotype = 'tec';\n";
+push @sql_fixes, "UPDATE transcript SET biotype = 'lincRNA' WHERE biotype = 'linkrna';\n";
 push @sql_fixes, "UPDATE gene SET biotype = 'processed_transcript' WHERE biotype = 'novel_transcript';\n";
 push @sql_fixes, "UPDATE gene SET biotype = 'transcribed_pseudogene' WHERE biotype = 'expressed_pseudogene';\n";
 push @sql_fixes, "UPDATE transcript SET biotype = 'transcribed_pseudogene' WHERE biotype = 'expressed_pseudogene';\n";
