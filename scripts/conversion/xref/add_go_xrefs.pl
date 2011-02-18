@@ -230,7 +230,7 @@ foreach my $chr (@chr_sorted) {
 	    }
 	    $ev_type ||= 'NULL';
 	    $support->log_verbose("Creating new GO xref for $trlsi--$match.\n", 3);
-	    my $dbentry = Bio::EnsEMBL::GoXref->new(
+	    my $dbentry = Bio::EnsEMBL::OntoogyXref->new(
 	      -primary_id => $xid,
 	      -display_id => $xid,
 	      -version    => 1,
