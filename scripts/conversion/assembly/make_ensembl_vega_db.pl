@@ -288,7 +288,10 @@ $sql = qq(
     AND cs.version = '$vegaassembly'
 );
 $c = $dbh->{'vega'}->do($sql) unless ($support->param('dry_run'));
-$support->log_stamped("Done transfering $c seq_regions.\n\n");
+$support->log_stamped("Done transfering $c Vega seq_regions.\n\n");
+unless ($c > 1) {
+  $support->log_warning("Only $c Vega seq_regions on assembly $vegaassembly transferred - is this really correct ?\n");
+}
 
 # transfer seq_regions from Ensembl db
 my $sth;
