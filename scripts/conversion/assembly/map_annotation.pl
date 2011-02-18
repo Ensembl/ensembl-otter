@@ -231,6 +231,7 @@ my $E_chrlength = $support->get_chrlength($E_dba, $support->param('ensemblassemb
 my $ensembl_chr_map = $support->get_ensembl_chr_mapping($V_dba, $support->param('assembly'));
 
 foreach my $V_chr ($support->sort_chromosomes($V_chrlength)) {
+
   $support->log_stamped("Chromosome $V_chr...\n", 1);
 
   # skip non-ensembl chromosomes
@@ -315,9 +316,6 @@ foreach my $V_chr ($support->sort_chromosomes($V_chrlength)) {
   $support->log("Done with chromosome $V_chr.\n", 1);
 }
 
-# write out to statslog file
-do_stats_logging();
-
 #see if any transcripts / gene are different
 foreach my $gsi (keys %trans_numbers) {
   if ($trans_numbers{$gsi}->{'vega'} != $trans_numbers{$gsi}->{'evega'}) {
@@ -326,6 +324,9 @@ foreach my $gsi (keys %trans_numbers) {
     $support->log("There are different numbers of transcripts for gene $gsi in vega ($v_num) and ensembl_vega ($e_num)\n");
   }
 }
+
+# write out to statslog file
+do_stats_logging();
 
 # finish logfile
 $support->finish_log;
