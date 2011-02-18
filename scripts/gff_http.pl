@@ -24,13 +24,9 @@ my $process_gff     = delete $args{'process_gff_file'};
 
 chdir($session_dir) or die "Could not chdir to '$session_dir'; $!";
 
-my $log_file;
-if ($LOG) {
-    $args{log} = 1; # enable logging on the server
-    my $log_file_name = 'gff_log.txt';
-    open $log_file, '>>', $log_file_name;
-}
+open my $log_file, '>>', 'gff_log.txt';
 
+$args{log} = 1 if $LOG; # enable logging on the server
 $args{rebase} = 1 unless $ENV{OTTERLACE_CHROMOSOME_COORDINATES};
 
 # concatenate the rest of the arguments into a parameter string
@@ -50,7 +46,7 @@ my $cache_file = $top_dir.'/'.$gff_filename;
 if (-e $cache_file) {
     # cache hit
 
-    print $log_file "cache hit for $gff_filename\n" if $LOG;
+    print $log_file "cache hit for $gff_filename\n";
 
     open my $gff_file, '<', $cache_file or die "Failed to open cache file: $!\n";
 
@@ -69,7 +65,7 @@ else {
     require HTTP::Cookies::Netscape;
     require DBI;
     
-    print $log_file "cache miss for $gff_filename\n" if $LOG;
+    print $log_file "cache miss for $gff_filename\n";
     
     my $request = HTTP::Request->new;
 
@@ -79,7 +75,7 @@ else {
 
     my $url = $url_root . '/' . $server_script . '?' . $params;
 
-    print $log_file "URL: $url\n" if $LOG;
+    print $log_file "URL: $url\n";
     
     $request->uri($url);
     
