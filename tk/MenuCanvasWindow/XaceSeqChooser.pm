@@ -81,15 +81,6 @@ sub SequenceNotes {
     return $self->{'_sequence_notes'} ;
 }
 
-sub EviCollection {
-    my( $self, $EviCollection ) = @_;
-
-    if ($EviCollection) {
-        $self->{'_EviCollection'} = $EviCollection;
-    }
-    return $self->{'_EviCollection'};
-}
-
 sub initialize {
     my( $self ) = @_;
 
@@ -106,6 +97,7 @@ sub initialize {
                     );
     }
 
+    $self->fetch_external_SubSeqs;
     $self->draw_subseq_list;
     $self->populate_clone_menu;
     $self->zMapInitialize;
@@ -1464,6 +1456,48 @@ sub add_SubSeq_and_paste_evidence {
     $ec->EvidencePaster->add_evidence_from_text($clip);
 
     return;
+}
+
+sub add_external_SubSeqs {
+    my ($self, @ext_subs) = @_;
+
+    # Subsequences from Zmap gff which are not in acedb database
+    my $asm = $self->Assembly;
+    my $dna = $asm->Sequence;
+    foreach my $sub (@ext_subs) {
+        if (my $ext = $self->get_SubSeq($sub->name)) {
+            if ($ext->GeneMethod->name eq $sub->GeneMethod->name) {
+                # Looks zmap has been restarted, which has
+                # triggered a reload of this data.
+                next;
+            }
+            else {
+                confess sprintf "External transcript '%s' from '%s' has same name as transcript from '%s'\n",
+                    $sub->name, $sub->GeneMethod->name, $ext->GeneMethod->name;
+            }
+        }
+        $sub->clone_Sequence($dna);
+        $asm->add_SubSeq($sub);
+        $self->add_SubSeq($sub);
+    }
+}
+
+sub fetch_external_SubSeqs {
+    my ($self) = @_;
+    
+    my $sth = $self->AceDatabase->DB->dbh->prepare(
+        q{ SELECT filter_name FROM otter_filter WHERE done = 1 AND process_gff = 1 }
+        );
+    $sth->execute;
+    my $filt_hash = $self->AceDatabase->filters;
+    while (my ($filt_name) = $sth->fetchrow) {
+        my $filt = $filt_hash->{$filt_name}{'filter'};
+        my @tsct = $self->AceDatabase->process_gff_file_from_Filter($filt);
+        if (@tsct) {
+            $self->add_external_SubSeqs(@tsct);
+        }
+    }
+    $self->draw_subseq_list;
 }
 
 sub delete_subsequences {

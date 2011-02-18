@@ -17,10 +17,11 @@ foreach my $pair (@ARGV) {
 
 # pull off arguments meant for us
 
-my $url_root        = delete $args{url_root};
-my $server_script   = delete $args{server_script};
-my $session_dir     = delete $args{session_dir};
-my $cookie_jar      = delete $args{cookie_jar};
+my $url_root        = delete $args{'url_root'};
+my $server_script   = delete $args{'server_script'};
+my $session_dir     = delete $args{'session_dir'};
+my $cookie_jar      = delete $args{'cookie_jar'};
+my $process_gff     = delete $args{'process_gff_file'};
 
 chdir($session_dir) or die "Could not chdir to '$session_dir'; $!";
 
@@ -134,8 +135,10 @@ else {
                 RaiseError => 1,
                 AutoCommit => 1,
                 });
-            my $sth = $dbh->prepare(q{ UPDATE otter_filter SET gff_file = ? WHERE filter_name = ? });
-            $sth->execute($cache_file, $args{'gff_source'});
+            my $sth = $dbh->prepare(
+                q{ UPDATE otter_filter SET done = 1, failed = 0, gff_file = ?, process_gff = ? WHERE filter_name = ? }
+            );
+            $sth->execute($cache_file, $process_gff || 0, $args{'gff_source'});
             
             # zmap waits for STDOUT to be closed as an indication that all
             # data has been sent, so we close the handle now so that zmap

@@ -46,9 +46,13 @@ sub Client {
 sub AccessionTypeCache {
     my ($self) = @_;
     
-    my $cache = $self->{'_AccessionTypeCache'}
-        ||= Bio::Otter::Lace::AccessionTypeCache->new;
-    $cache->Client($self->Client);
+    my $cache = $self->{'_AccessionTypeCache'};
+    unless ($cache) {
+        $cache = Bio::Otter::Lace::AccessionTypeCache->new;
+        $cache->Client($self->Client);
+        $cache->DB($self->DB);
+        $self->{'_AccessionTypeCache'} = $cache;
+    }
     return $cache;
 }
 
@@ -566,11 +570,12 @@ sub reload_filter_state {
         SELECT filter_name, wanted, failed, done FROM otter_filter
     });
     $sth->execute;
-    
+
     my $filters = $self->filters;
 
     while (my ($filter_name, $wanted, $failed, $done) = $sth->fetchrow) {
-        if ($filters->{$filter_name}) {
+        my $filt = $filters->{$filter_name};
+        if ($filt) {
             print STDERR "Reloading state from file for $filter_name\n";
         } else {
             print STDERR "Skipping obsolete coloumn '$filter_name'\n";
@@ -633,20 +638,30 @@ sub process_gff_file_from_Filter {
     my ($self, $filt) = @_;
     
     my $filt_name = $filt->name;
-    my $sth = $self->DB->dbh->prepare(q{ SELECT gff_file FROM otter_filter WHERE filter_name = ? });
+    my $sth = $self->DB->dbh->prepare(q{ SELECT gff_file, process_gff FROM otter_filter WHERE filter_name = ? });
     $sth->execute($filt_name);
-    my ($gff_file) = $sth->fetchrow;
+    my ($gff_file, $load_gff) = $sth->fetchrow;
     unless ($gff_file) {
         confess "gff_file column not set for '$filt_name' in otter_filter table in SQLite DB";
     }
+    unless ($load_gff) {
+        return;
+    }
+    
     my $full_gff_file = $self->home . "/$gff_file";
     
-    my $fk = $filt->feature_kind;
-    if ($fk =~ /AlignFeature/) {
+    if ($filt->server_script =~ /genes/) {
+        return Bio::Otter::Lace::ProcessGFF::make_ace_transcripts_from_gff($full_gff_file, $self->MethodCollection);
+    }
+    elsif ($filt->feature_kind =~ /AlignFeature/) {
         Bio::Otter::Lace::ProcessGFF::store_hit_data_from_gff($self->DB->dbh, $full_gff_file);
+        # Unset flag so that we don't reprocess this file if we recover the session.
+        my $no_reload = $self->DB->dbh->prepare(q{ UPDATE otter_filter SET process_gff = 0 WHERE filter_name = ? });
+        $no_reload->execute($filt_name);
+        return;
     }
     else {
-        confess "Don't know how to process GFF file containing '$fk'\n";
+        confess "Don't know how to process '$filt_name' GFF file '$gff_file'\n";
     }
 }
 
@@ -679,9 +694,10 @@ sub gff_http_script_arguments {
         client => 'otterlace',
         %{ $slice_params },
         %{ $filter->server_params },
-        server_script => $filter->server_script,
+        server_script       => $filter->server_script,
+        process_gff_file    => $filter->process_gff_file,
+        gff_source          => $filter->name,
         gff_seqname => $slice_params->{type},
-        gff_source  => $filter->name,
         session_dir => $self->home,
         url_root    => $self->Client->url_root,
         cookie_jar  => $ENV{'OTTERLACE_COOKIE_JAR'},

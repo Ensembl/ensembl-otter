@@ -916,9 +916,6 @@ sub zMapHighlight {
     }
     else { confess "Not a 'select' action\n"; }
 
-    my $cache = $self->AceDatabase->AccessionTypeCache;
-    $cache->cache_type_from_Zmap_XML($features_hash);
-
     return (200, $zc->handled_response(1));
 }
 
@@ -936,7 +933,7 @@ sub zMapTagValues {
 
     my $pages = "";
     if ($xml_hash->{'request'}->{'action'} eq 'feature_details') {
-        my $feature_hash = $xml_hash->{'request'}->{'align'}->{'block'}->{'featureset'}->{'feature'} || {};
+        my $feature_hash = $xml_hash->{'request'}{'align'}{'block'}{'featureset'}{'feature'} || {};
 
         # There is only ever 1 feature in the XML from Zmap
         my ($name) = keys %$feature_hash;
@@ -980,23 +977,20 @@ my $zmap_feature_details_tags = [
 sub zmap_feature_details_xml {
     my ($self, $feat_name) = @_;
 
-    my $details_content =
-        $self->AceDatabase->Client->http_response_content(
-            'POST', 'get_feature_details',
-            { 'feature' => $feat_name, });
-    my $details = { $details_content =~ /^(.*?)\t(.*)$/mg };
-    return '' unless keys %{$details};
+    my $sth = $self->AceDatabase->DB->dbh->prepare(q{
+        SELECT source_db, taxon_id, description FROM accession_info WHERE accession_sv = ?
+    });
+    $sth->execute($feat_name);
+    my ($source_db, $taxon_id, $desc) = $sth->fetchrow;
 
     # Put this on the "Details" page which already exists.
     my $xml = Hum::XmlWriter->new(5);
     $xml->open_tag('page',       { name => 'Details' });
     $xml->open_tag('subsection', { name => 'Feature' });
     $xml->open_tag('paragraph',  { type => 'tagvalue_table' });
-    for ( @{$zmap_feature_details_tags} ) {
-        my ($key, $tag) = @{$_};
-        next unless my $value = $details->{$key};
-        $xml->full_tag('tagvalue', $tag, $value);
-    }
+    $xml->full_tag('tagvalue', { name => 'Source database', type => 'simple' }, $source_db);
+    $xml->full_tag('tagvalue', { name => 'Taxon ID',        type => 'simple' }, $taxon_id);
+    $xml->full_tag('tagvalue', { name => 'Description', type => 'scrolled_text' }, $desc);
     $xml->close_all_open_tags;
 
     return $xml->flush;
@@ -1104,7 +1098,11 @@ sub zMapFeaturesLoaded {
                         $state_hash->{'failed'} = 0; # reset failed flag if filter succeeds
                         my $filt = $filt_hash->{$name}{'filter'};
                         if ($filt->process_gff_file) {
-                            $self->AceDatabase->process_gff_file_from_Filter($filt);
+                            my @tsct = $self->AceDatabase->process_gff_file_from_Filter($filt);
+                            if (@tsct) {
+                                $self->add_external_SubSeqs(@tsct);
+                                $self->draw_subseq_list;
+                            }
                         }
                     }
                 }
