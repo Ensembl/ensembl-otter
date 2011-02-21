@@ -649,7 +649,7 @@ sub process_gff_file_from_Filter {
     
     my $full_gff_file = $self->home . "/$gff_file";
     
-    if ($filt->server_script =~ /genes/) {
+    if ($filt->server_script eq 'get_gff_genes') {
         return Bio::Otter::Lace::ProcessGFF::make_ace_transcripts_from_gff($full_gff_file, $self->MethodCollection);
     }
     elsif ($filt->feature_kind =~ /AlignFeature/) {

@@ -320,14 +320,17 @@ use Bio::Vega::Utils::GFF;
 
     package Bio::EnsEMBL::Gene;
 
-    sub synthetic_gene_name {
-        my ($self, $sgn) = @_;
-        
-        if ($sgn) {
-            $self->{'_synthetic_gene_name'} = $sgn;
-        }
-        return $self->{'_synthetic_gene_name'}
-    }
+    # sub _gff_hash {
+    #     my ($self, %args) = @_;
+    #     
+    #     my $gff = $self->SUPER::_gff_hash(%args);
+    #     $gff->{'feature'} = 'Locus';
+    #     $gff->{'attributes'}{'Class'} = qq{"Locus"};
+    #     if (my $stable = $self->stable_id) {
+    #         $gff->{'attributes'}{'Stable_ID'} = qq{"$stable"};
+    #     }
+    #     return $gff;
+    # }
 
     sub to_gff {
         my ($self, %args) = @_;
@@ -372,10 +375,11 @@ use Bio::Vega::Utils::GFF;
             }
         }
 
+        # my $gff_string = $self->SUPER::to_gff(%args);
         my $gff_string = '';
         if (@tsct_for_gff) {
             my $extra_attrs = $self->make_extra_attributes(%args);
-            if (my $sgn = $self->synthetic_gene_name) {
+            if (my $sgn = delete( $extra_attrs->{'synthetic_gene_name'} )) {
                 $args{'gene_name'} = $sgn;
             }
             foreach my $tsct (@tsct_for_gff) {
@@ -392,11 +396,16 @@ use Bio::Vega::Utils::GFF;
         my $gene_numeric_id = $self->dbID || ++$gene_count;
         
         my $extra_attrs = {};
+        
+        if (my $stable = $self->stable_id) {
+            $extra_attrs->{'Locus_Stable_ID'} = qq{"$stable"};
+        }
+        
         if (my $url_fmt = $args{'url_string'}) {
             if ($url_fmt =~ /pfam\.sanger\.ac\.uk/) {
                 foreach my $xr (@{$self->get_all_DBEntries}) {
                     if ($xr->dbname() eq 'PFAM') {
-                        $self->synthetic_gene_name($xr->display_id);
+                        $extra_attrs->{'synthetic_gene_name'} = $xr->display_id;
                         my $name = sprintf "%s.%d", $xr->display_id, $gene_numeric_id;
                         my $url = sprintf $url_fmt, $xr->primary_id;
                         $extra_attrs->{'Locus'} = qq{"$name"};
@@ -416,7 +425,7 @@ use Bio::Vega::Utils::GFF;
         
         unless ($extra_attrs->{'Locus'}) {
             if (my $xr = $self->display_xref) {
-                $self->synthetic_gene_name($xr->display_id);
+                $extra_attrs->{'synthetic_gene_name'} = $xr->display_id;
                 my $name = sprintf "%s.%d", $xr->display_id, $gene_numeric_id;
                 $extra_attrs->{'Locus'} = qq{"$name"};
             }
@@ -443,8 +452,11 @@ use Bio::Vega::Utils::GFF;
 
         my $gff = $self->SUPER::_gff_hash(%args);
 
-        $gff->{feature} = 'Sequence';
-        $gff->{attributes}->{Class} = qq{"Sequence"};
+        $gff->{'feature'} = 'Sequence';
+        $gff->{'attributes'}{'Class'} = qq{"Sequence"};
+        if (my $stable = $self->stable_id) {
+            $gff->{'attributes'}{'Stable_ID'} = qq{"$stable"};
+        }
         
         my $tsct_numeric_id = $self->dbID || ++$tsct_count;
         # Each transcript must have a (unique) name for GFF grouping purposes
