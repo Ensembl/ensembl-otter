@@ -8,6 +8,8 @@ use warnings;
 use Carp;
 use Text::ParseWords qw{ quotewords };
 use Hum::Ace::SubSeq;
+use Hum::Ace::Method;
+use Hum::Ace::Locus;
 
 {
     ### Should add this to otter_config
@@ -142,7 +144,18 @@ sub make_ace_transcripts_from_gff {
             }
         }
     }
-    return values %tsct;
+    
+    my (@ok_tsct);
+    while (my ($name, $sub) = each %tsct) {
+        eval {$sub->validate};
+        if ($@) {
+            warn "Error in SubSeq '$name':\n$@";
+        }
+        else {
+            push(@ok_tsct, $sub);
+        }
+    }
+    return @ok_tsct;
 }
 
 sub parse_gff_line {
