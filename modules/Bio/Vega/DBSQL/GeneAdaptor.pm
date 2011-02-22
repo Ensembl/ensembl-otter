@@ -741,6 +741,40 @@ sub store_only {
     return;
 }
 
+sub db_gene_update_is_current { # change is_current for an existing gene and its components.
+                                # NB DB only, DOES NOT UPDATE any in-memory transcript or exon objects
+    my ($self, $db_gene, $is_current) = @_;
+
+    $db_gene->is_current($is_current);
+    $self->update($db_gene);
+
+    my $ta = $self->db->get_TranscriptAdaptor();
+    foreach my $db_gene_tran (@{ $db_gene->get_all_Transcripts() }) {
+        $db_gene_tran->is_current($is_current);
+        $ta->update($db_gene_tran);
+    }
+    
+    my $ea = $self->db->get_ExonAdaptor();
+    foreach my $db_gene_exon (@{ $db_gene->get_all_Exons() }) {
+        $db_gene_exon->is_current($is_current);
+        $ea->update($db_gene_exon);
+    }
+    
+    return 1;
+}
+
+sub hide_db_gene {                # set an existing gene and its components to hidden (is_current = 0)
+                                  # NB DB only, DOES NOT UPDATE any in-memory transcript or exon objects
+    my ($self, $db_gene) = @_;
+    return $self->db_gene_update_is_current($db_gene, 0);
+}
+
+sub unhide_db_gene {              # set an existing gene and its components to visible (is_current = 1)
+                                  # NB DB only, DOES NOT UPDATE any in-memory transcript or exon objects
+    my ($self, $db_gene) = @_;
+    return $self->db_gene_update_is_current($db_gene, 1);
+}
+
 sub set_obsolete {    # set an existing gene to obsolete (non-current)
                       # code copied from the above store method
     my ($self, $gene) = @_;
@@ -749,18 +783,7 @@ sub set_obsolete {    # set an existing gene to obsolete (non-current)
     $broker->fetch_new_stable_ids_or_prefetch_latest_db_components($gene);
 
     if (my $db_gene = $gene->last_db_version()) {
-        $db_gene->is_current(0);
-        $self->update($db_gene);
-        my $ta = $self->db->get_TranscriptAdaptor();
-        foreach my $db_gene_tran (@{ $db_gene->get_all_Transcripts() }) {
-            $db_gene_tran->is_current(0);
-            $ta->update($db_gene_tran);
-        }
-        my $ea = $self->db->get_ExonAdaptor();
-        foreach my $db_gene_exon (@{ $db_gene->get_all_Exons() }) {
-            $db_gene_exon->is_current(0);
-            $ea->update($db_gene_exon);
-        }
+        $self->hide_db_gene($db_gene);
         if ($gene->dbID() && ($gene->dbID() == $db_gene->dbID())) {
             $gene->dissociate();
         }
