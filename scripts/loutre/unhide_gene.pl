@@ -38,8 +38,6 @@ Michael Gray B<email> mg13@sanger.ac.uk
 use strict;
 use warnings;
 
-use Getopt::Long;
-
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::Otter::Lace::Defaults;
 
@@ -50,7 +48,7 @@ use Bio::Otter::Lace::Defaults;
 
     my $usage = sub { exec( 'perldoc', $0 ); };
 
-    GetOptions(
+    Bio::Otter::Lace::Defaults::do_getopt(
         'dataset=s'     => \$dataset_name,
         'stable_id=s'   => \@ids,
         'force'         => \$force,
