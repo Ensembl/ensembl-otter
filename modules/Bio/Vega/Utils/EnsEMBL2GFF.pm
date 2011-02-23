@@ -312,7 +312,7 @@ use Bio::Vega::Utils::GFF;
         my ($self, @args) = @_;
 
         my $gff = $self->SUPER::_gff_hash(@args);
-        $gff->{attributes}->{Class} = qq("Protein");
+        $gff->{attributes}{'Class'} = qq{"Protein"};
         return $gff;
     }
 }
@@ -864,8 +864,22 @@ use Bio::Vega::Utils::GFF;
 {
     package Bio::Vega::DnaDnaAlignFeature;
 
-    # To avoid copy/pasting code:
-    *{_gff_hash} = *{Bio::Vega::DnaPepAlignFeature::_gff_hash}
+    sub _gff_hash {
+        my ($self, @args) = @_;
+
+        my $gff = $self->SUPER::_gff_hash(@args);
+
+        my $hd = $self->get_HitDescription;
+        $gff->{'attributes'}{'Length'}   = $hd->hit_length;
+        $gff->{'attributes'}{'Taxon_ID'} = $hd->taxon_id;
+        $gff->{'attributes'}{'DB_Name'}  = sprintf(q{"%s"}, $hd->db_name);
+        if (my $desc = $hd->description) {
+            $desc =~ s/"/\\"/g;
+            $gff->{'attributes'}{'Description'} = qq{"$desc"};
+        }
+
+        return $gff;
+    }
 }
 
 {
