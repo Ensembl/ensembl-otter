@@ -60,6 +60,7 @@ my $opts = {
         'total!'        => \$opts->{total},
         'verbose!'      => \$opts->{verbose},
         'unkeep=s'      => \$opts->{unkeep},
+        'ignore=s'      => \$opts->{ignore},
         'justquery!'    => \$opts->{just_query},
         'summarise:s'   => \$opts->{summarise},
         'output=s'      => \$opts->{output},
@@ -508,6 +509,7 @@ sub plan_update_actions {
           } else {
 
               # Delete the hidden_remark tag
+              printf("%s: deleting hidden_remark, already cv remark\n", $item->{sid}) unless $opts->{quiet};
               push @{$actions{delete}}, $item;
 
           }
@@ -594,6 +596,14 @@ sub skip_match {
         return 1;
     }
 
+    if ($opts->{ignore}) {
+        my @matches = split(/,/, $opts->{ignore});
+        my @regexps = map { sql_to_perl_regexp($_) } @matches;
+        if (grep { $value =~ /$_/ } @regexps) {
+            return 1;
+        }
+    }
+
     return 0;                   # do not skip by default
 }
 
@@ -605,7 +615,8 @@ sub retain_match {
 
     if ($opts->{unkeep}) {
         my @matches = split(/,/, $opts->{unkeep});
-        if (grep { $value eq $_ } @matches) {
+        my @regexps = map { sql_to_perl_regexp($_) } @matches;
+        if (grep { $value =~ /$_/ } @regexps) {
             return 0;
         }
     }
@@ -787,6 +798,7 @@ __END__
 
 normalise_cv_attributes -dataset <DATASET NAME> -attrib <ATTRIB PATTERN> 
                         [-unkeep <VOCAB1>[,<VOCAB2>...]] [-maxslop 3]
+                        [-ignore <PATTERN1>[,<PATTERN2>...]]
                         [-[no]dryrun] [-summarise [<FILE>]]
                         [-quiet] [-verbose] [-debug] [-total]
                         [-output <FILNAME>]
@@ -796,6 +808,9 @@ Checks for, and optionally fixes up, transcript and gene attributes which
 should come from the relevant controlled vocabulary. The attrib pattern is
 matched against the locus and transcript controlled vocabulary to find the
 canonical version. 
+
+Attribute values matching '-ignore' patterns are left alone and not
+considered further.
 
 Wrong versions which match the pattern are corrected, moved from 
 type 'hidden_remark' to 'remark' if necessary, and from transcript to
