@@ -58,15 +58,20 @@ sub description {
 }
 
 sub analysis_name {
-    my ($self, $analysis_name) = @_;
+    my ($self, @args) = @_;
+    return $self->analysis(@args);
+}
 
-    if($analysis_name) {
-        $self->{_analysis_name} = $analysis_name;
+sub analysis {
+    my ($self, $analysis) = @_;
+
+    if($analysis) {
+        $self->{_analysis} = $analysis;
     }
 
     # the analysis name defaults to the filter name
 
-    return $self->{_analysis_name} || $self->name;
+    return $self->{_analysis} || $self->name;
 }
 
 sub metakey {
@@ -202,7 +207,7 @@ sub server_params {
     return {
 
         # common
-        analysis        => $self->analysis_name,
+        analysis        => $self->analysis,
         kind            => $self->feature_kind,
         csver_remote    => $self->csver_remote,
         metakey         => $self->metakey,
