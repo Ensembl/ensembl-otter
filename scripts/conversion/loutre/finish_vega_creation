@@ -402,7 +402,7 @@ if ($alt_assembly = $support->param('ensemblassembly') ) {
   unless ($support->param('dry_run')) {
     $vdbh->do($sql);
   }
-  
+
  CHROM:
   foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
     my $v_name  = $chrom->seq_region_name;
@@ -465,7 +465,7 @@ if ($alt_assembly = $support->param('ensemblassembly') ) {
 	}
       }
       else {
-	$support->log("Chromosome $v_name doesn't have the correct equiv_asm seq_region_attribute (value should be $alt_assembly), trying to take assembly mappings for chromsome $v_name from loutre\n",2);
+	$support->log("Chromosome $v_name an equiv_asm seq_region_attribute (value should be $alt_assembly) so trying to take assembly mappings for chromsome $v_name from loutre\n",2);
 	my $le_sr_id = $lsa->fetch_by_region('chromosome',$e_name,'','','',$alt_assembly,)->get_seq_region_id;
 	my $l_sr_id = $l_chrom->get_seq_region_id;
 	my $id_diff = $e_sr_id-$le_sr_id;
