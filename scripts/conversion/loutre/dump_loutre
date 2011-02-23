@@ -326,7 +326,7 @@ $lsth->execute;
 
 while (my ($name,$group1,$group2,$group_email) = $lsth->fetchrow_array ) {
   if (! $group_email) {
-    $support->log_warning("Author $name in loutre is not properly linked to an author_group. Please fix as soon as you can\n");
+    $support->log("Author $name in loutre is not properly linked to an author_group. Please fix as soon as you can\n");
   }
 }
 
@@ -595,7 +595,7 @@ foreach my $name (@{$chr_names_wanted}) {
     #skip not for VEGA genes
     if ( grep { $_->value eq 'not for VEGA' } @{$lgene->get_all_Attributes('remark')} ) {
       $support->log("Skipping gene $gname ($lgsi) because of a not for VEGA remark\n",2);
-	    next GENE;
+      next GENE;
     }
     
     $lgene->set_biotype_status_from_transcripts; # update biotypes
@@ -612,11 +612,6 @@ foreach my $name (@{$chr_names_wanted}) {
       $support->log("Skipping gene $gname ($lgsi) because it's from an external source (".$lgene->source.")\n",2);
       next GENE;
     }
-    #hack - ignore everything by gdr on 5 and 17
-#    if ( ($name =~ /chr5-|chr17-/) && ($lgene->gene_author->name eq 'gdr')) {
-#      $support->log("Skipping gene $gname ($lgsi) because of untrusted author (".$lgene->gene_author->name.")\n",2);
-#      next GENE;
-#    }
 
     #filter out genes on non-anotated clones and without fsv tags
     if ($support->param('dbname') =~ /danio/) {
@@ -777,18 +772,11 @@ sub transfer_gene {
     return 0;
   }
   my $found_trans = 0;
-
-  # use Data::Dumper;
-  # $Data::Dumper::Maxdepth=2;
-  # warn Dumper $lgene;
   my $needs_updateing=0;
   my @transcripts = @{$lgene->get_all_Transcripts};
  TRANS:
   foreach my $transcript (@transcripts){
 
-    #this really should work you'd have thought, however cannot get it to in the time I have (error deep within Slice Adaptor)
-    #for now continue to remove these after transfer
-    # - perhaps we have to recalculate start and stop at this stage ? surely not ?
     if ( grep { $_->value eq 'not for VEGA' } @{$transcript->get_all_Attributes('remark')}  ) {
       $support->log("Didn't transfer 'not_for_Vega' transcript ".$transcript->stable_id."\n",2);
       # # #remove from gene object
@@ -801,7 +789,8 @@ sub transfer_gene {
           $i++;
         }
       }
-    }else{
+    }
+    else{
       $support->log("Will transfer ".$transcript->stable_id."\n",2);    
       $support->log_verbose("Will transfer ".$transcript->stable_id."\n",2);
       $found_trans = 1;
@@ -833,9 +822,9 @@ sub transfer_gene {
       }
     }
   }
-  
+
   unless ($found_trans) {
-    $support->log_warning("No transcripts found for gene ".$lgene->stable_id." Skipping...\n");
+    $support->log("No transcripts found for gene ".$lgene->stable_id." (all 'not for VEGA'). Skipping...\n");
     return 0;
   }
 
@@ -1086,7 +1075,7 @@ sequence_set_access           i
 transcript_stable_id_pool     i
 translation_stable_id_pool    i
 tmp_align                     i
-test_contig_info              i
+gene_name_update              i
 ENDOFTEXT
   return $txt;
 }
