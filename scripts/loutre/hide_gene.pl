@@ -24,6 +24,7 @@ Here is an example commandline:
     -dataset    dataset to use, e.g. human
 
     -stable_id  list of gene stable ids, comma separated
+    -author     author for locking
     -force      proceed without user confirmation
     -help|h     displays this documentation with PERLDOC
 
@@ -36,27 +37,31 @@ Michael Gray B<email> mg13@sanger.ac.uk
 use strict;
 use warnings;
 
-use Getopt::Long;
+use Sys::Hostname;
 
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::Otter::Lace::Defaults;
+use Bio::Vega::ContigLockBroker;
+use Bio::Vega::Author;
 
 {
     my $dataset_name;
     my @ids;
+    my $author = $ENV{USERNAME};
     my $force;
 
     my $usage = sub { exec( 'perldoc', $0 ); };
 
-    GetOptions(
+    Bio::Otter::Lace::Defaults::do_getopt(
         'dataset=s'     => \$dataset_name,
         'stable_id=s'   => \@ids,
+        'author=s'      => \$author,
         'force'         => \$force,
         'h|help!'       => $usage,
     )
     or $usage->();
 
-    $usage->() unless ($dataset_name and @ids);
+    $usage->() unless ($dataset_name and @ids and $author);
 
     local $0 = 'otterlace';     # for access to test_human
 
@@ -72,6 +77,9 @@ use Bio::Otter::Lace::Defaults;
     my $dba = $ds->make_Vega_DBAdaptor;
 
     my $gene_adaptor = $dba->get_GeneAdaptor;
+
+    my $contig_broker = Bio::Vega::ContigLockBroker->new(-hostname => hostname);
+    my $author_obj    = Bio::Vega::Author->new(-name => $author, -email => $author);
 
     my @sids;
     foreach my $id_list (@ids) { push(@sids , split(/,/x, $id_list)); }
@@ -101,14 +109,32 @@ use Bio::Otter::Lace::Defaults;
 
       if ($force || &proceed() =~ /^y$|^yes$/x ) {
 
+          my $lock_ok = eval { 
+              $contig_broker->lock_by_object($gene, $author_obj);
+              1;
+          };
+          unless ($lock_ok) {
+              warning("Cannot lock for $id\n$@\n");
+              next GSI;
+          }
+
           my $ok = eval {
               $gene_adaptor->hide_db_gene($gene);
+              1;
           };
 
           if ($ok) {
               print STDOUT "gene_stable_id $id is now hidden\n";
           } else {
               warning("Cannot hide $id\n$@\n");
+          }
+
+          my $unlock_ok = eval {
+              $contig_broker->remove_by_object($gene, $author_obj);
+              1;
+          };
+          unless ($unlock_ok) {
+              warning("Cannot unlock for $id\n$@\n");
           }
       }
   } # GSI
