@@ -285,7 +285,8 @@ use Bio::Vega::Utils::GFF;
 
         my $gff = $self->SUPER::_gff_hash(%args);
 
-        $gff->{score} = $self->score;
+        # $gff->{score} = $self->score;
+        $gff->{score} = $self->percent_id;  # Want to use percent identity rather than score for features
         $gff->{feature} = ($self->analysis && $self->analysis->gff_feature) || 'similarity';
 
         my $name = $self->hseqname;
