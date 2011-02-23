@@ -47,10 +47,6 @@ sub _filter_by_name {
     $filter->name($name);
 
     my $config = $self->config_section("filter.${name}");
-
-    # Delete so that we don't try to call non-existant method "module" below
-    delete $config->{'module'};
-
     while (my ($meth, $arg) = each %{$config}) {
         die "Unrecognised configuration parameter '$meth' used in filter '$name'; check your .otter_config"
           unless $filter->can($meth);
