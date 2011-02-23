@@ -135,8 +135,8 @@ my $opts = {
         $gene_actions = plan_update_actions($cv_locus, $genes, $transcripts);
 
         unless ($on_both_branches) {
-            my $matches = identify_ts_where_gene_attrib_exists($transcripts, $genes);
-            $transcript_actions = plan_move_actions($cv_locus, $transcripts, $gene_actions);
+            my $gene_matches_for_ts = identify_ts_where_gene_attrib_exists($transcripts, $genes);
+            $transcript_actions = plan_ts_to_gene_actions($cv_locus, $transcripts, $gene_actions, $gene_matches_for_ts);
         }
 
     } 
@@ -258,11 +258,19 @@ __SQL_END__
 	    "Chromosome", "Gene name", "stable id",
 	    "Code", "Attribute" ) if $opts->{verbose};
     
-    while (my ($gid, $gene_sid, $gene_name, 
-	       $attrib_type_id, $attrib_code, $attrib_value,
-               $seq_region_name) = $list_genes->fetchrow()) {
+    GENE_ATTR: while (my ($gid, $gene_sid, $gene_name, 
+                          $attrib_type_id, $attrib_code, $attrib_value,
+                          $seq_region_name) = $list_genes->fetchrow()) {
 
         carp "Already seen ", $attrib_code, " for gene ", $gene_sid if $genes{$attrib_code}->{$gid};
+
+        if ($attrib_value =~ /
+                               \?   # a real question mark
+                               \s*  # followed by optional white space
+                               $    # at the end of the value
+                             /x) {
+            next GENE_ATTR;
+        }
 
         $genes{$attrib_code}->{$gid} = {
             gene_id => $gid,
@@ -278,7 +286,9 @@ __SQL_END__
                 $seq_region_name, $gene_name, $gene_sid,
 		$attrib_code, $attrib_value,
             ) if $opts->{verbose};
-    }
+
+    } # GENE_ATTR
+
     printf "Total genes: %d\n", $count if $opts->{total};
 
     return ( \%genes, \%values );
@@ -337,13 +347,21 @@ __SQL_END__
 	    "Transcript name", "stable ID",
 	    "Code", "Attribute" ) if $opts->{verbose};
     
-    while (my ($gid, $gene_sid, $gene_name, 
-	       $tid, $transcript_sid, $transcript_name,
-	       $attrib_type_id, $attrib_code, $attrib_value,
-               $seq_region_name) = $list_transcripts->fetchrow()) {
+    TS_ATTR: while (my ($gid, $gene_sid, $gene_name, 
+                        $tid, $transcript_sid, $transcript_name,
+                        $attrib_type_id, $attrib_code, $attrib_value,
+                        $seq_region_name) = $list_transcripts->fetchrow()) {
 
         carp "Already seen ", $attrib_code, " for transcript ", $transcript_sid
             if $transcripts{$attrib_code}->{$tid};
+
+        if ($attrib_value =~ /
+                               \?   # a real question mark
+                               \s*  # followed by optional white space
+                               $    # at the end of the value
+                             /x) {
+            next TS_ATTR;
+        }
 
         $transcripts{$attrib_code}->{$tid} = {
             gene_id => $gid,
@@ -361,7 +379,9 @@ __SQL_END__
 		$transcript_name, $transcript_sid,
 		$attrib_code, $attrib_value,
             ) if $opts->{verbose};
-    }
+
+    } # TS_ATTR
+
     printf "Total transcripts: %d\n", $count if $opts->{total};
 
     return ( \%transcripts, \%values );
@@ -458,24 +478,25 @@ sub plan_update_actions {
     return \%actions;
 }
 
-sub plan_move_actions {
-    my ($correct_value, $items, $other_branch_actions) = @_;
+sub plan_ts_to_gene_actions {
+    my ($correct_value, $transcripts, $gene_actions, $gene_matches) = @_;
 
     my %actions = ( delete => [] );
 
     # It doesn't matter whether hidden or not on wrong branch
     #
     foreach my $code (qw(remark hidden_remark)) {
-        foreach my $id (keys %{$items->{$code}}) {
+        foreach my $id (keys %{$transcripts->{$code}}) {
 
-            my $item = $items->{$code}->{$id};
+            my $item = $transcripts->{$code}->{$id};
 
             $item->{new_value} = $correct_value;
             $item->{new_code}  = 'remark';
 
             # Add a tag on the other branch
-            unless ($item->{supress_other_branch_insert}) {
-                push @{$other_branch_actions->{insert}}, $item;
+            unless ($gene_matches->{$item->{gene_id}}) {
+                push @{$gene_actions->{insert}}, $item;
+                $gene_matches->{$item->{gene_id}}++; # avoid duplicate inserts
             }
 
             if (retain_match($item->{value}, $correct_value)) {
@@ -513,7 +534,7 @@ sub retain_match {
 
 sub identify_ts_where_gene_attrib_exists {
     my ($transcripts, $genes) = @_;
-    my @matches;
+    my %gene_matches;
 
     foreach my $code (qw(remark hidden_remark)) {
         foreach my $id (keys %{$transcripts->{$code}}) {
@@ -526,13 +547,12 @@ sub identify_ts_where_gene_attrib_exists {
             if ($r_gene or $hr_gene) {
                 my $gsid = $r_gene->{sid} || $hr_gene->{sid};
                 printf("%s: already locus remark on %s\n", $item->{sid}, $gsid) unless $opts->{quiet};
-                $item->{supress_other_branch_insert}++;
-                push @matches, $item;
+                $gene_matches{$item->{gene_id}}++;
             }
         }
     }
 
-    return \@matches;
+    return \%gene_matches;
 }
 
 sub implement_actions {
