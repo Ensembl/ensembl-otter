@@ -461,7 +461,7 @@ sub pre_process {
 
           if (skip_match($entry->{value}, $correct_value)) {
               
-              printf("%s: skipping $code '%s'\n", $item->{sid}, $code, $item->{value}) unless $opts->{quiet};
+              printf("%s: skipping %s '%s'\n", $entry->{sid}, $code, $entry->{value}) unless $opts->{quiet};
               next ENTRY;
           }
 
@@ -582,7 +582,8 @@ sub plan_ts_to_gene_actions {
             } elsif ($item->{to_update}) {
                 $example_item = $item->{to_update}->[0];
             } else {
-                croak("Nothing to do in plan_ts_to_gene_actions");
+                # Probably skipping this anyway
+                next ITEM;
             }
 
             if ($example_item) { # always true?
