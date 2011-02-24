@@ -266,38 +266,37 @@ use Bio::Vega::Utils::GFF;
     sub _gff_hash {
         my ($self, %args) = @_;
 
-        my $rebase = $args{rebase};
+        my $rebase = $args{'rebase'};
 
         my $gap_string = '';
 
         my @fps = $self->ungapped_features;
 
         if (@fps > 1) {
-            my @gaps =
-              map {
-                join(' ',
-                    ($rebase ? $_->start : $_->seq_region_start),
-                    ($rebase ? $_->end   : $_->seq_region_end),
-                    $_->hstart, $_->hend)
-              } @fps;
+            my @gaps;
+            if ($rebase) {
+                @gaps = map { join ' ', $_->start,            $_->end,            $_->hstart, $_->hend } @fps;
+            }
+            else {
+                @gaps = map { join ' ', $_->seq_region_start, $_->seq_region_end, $_->hstart, $_->hend } @fps;
+            }
             $gap_string = join(',', @gaps);
         }
 
         my $gff = $self->SUPER::_gff_hash(%args);
 
-        # $gff->{score} = $self->score;
-        $gff->{score} = $self->percent_id;  # Want to use percent identity rather than score for features
-        $gff->{feature} = ($self->analysis && $self->analysis->gff_feature) || 'similarity';
+        $gff->{'score'} = $self->score;
+        $gff->{'feature'} = ($self->analysis && $self->analysis->gff_feature) || 'similarity';
 
         my $name = $self->hseqname;
 
-        $gff->{'attributes'}{'Class'}     = qq("Sequence");
+        $gff->{'attributes'}{'Class'}     = qq{"Sequence"};
         $gff->{'attributes'}{'Name'}      = qq{"$name"};
         $gff->{'attributes'}{'Align'}     = $self->hstart . ' ' . $self->hend . ' ' . ($self->hstrand == -1 ? '-' : '+');
         $gff->{'attributes'}{'percentID'} = $self->percent_id;
 
         if ($gap_string) {
-            $gff->{'attributes'}->{'Gaps'} = qq("$gap_string");
+            $gff->{'attributes'}->{'Gaps'} = qq{"$gap_string"};
         }
 
         return $gff;
