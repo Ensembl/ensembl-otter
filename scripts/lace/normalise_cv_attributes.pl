@@ -126,6 +126,15 @@ my $opts = {
     $summary{variants}->{locus}      = summarise_variants('Locus',      $g_values, $cv_locus);
     $summary{variants}->{transcript} = summarise_variants('Transcript', $t_values, $cv_transcript);
 
+    summary_exit(\%summary, 0) if $opts->{just_query};
+
+    print_divider('Pre-process');
+
+    my $correct_value = $cv_locus || $cv_transcript;
+
+    pre_process($correct_value, $cv_locus,      $genes);
+    pre_process($correct_value, $cv_transcript, $transcripts);
+
     my $warnings = identify_warnings($genes, $transcripts);
     if (%{$warnings->{summary}}) {
         $summary{warnings} = $warnings->{summary};
@@ -135,8 +144,6 @@ my $opts = {
         }
     }
     
-    summary_exit(\%summary, 0) if $opts->{just_query};
-
     print_divider('Calculate actions');
 
     my ($gene_actions, $transcript_actions);
@@ -146,8 +153,7 @@ my $opts = {
         $gene_actions = plan_update_actions($cv_locus, $genes, $transcripts);
 
         unless ($on_both_branches) {
-            my $gene_matches_for_ts = identify_ts_where_gene_attrib_exists($transcripts, $genes);
-            $transcript_actions = plan_ts_to_gene_actions($cv_locus, $transcripts, $gene_actions, $gene_matches_for_ts);
+            $transcript_actions = plan_ts_to_gene_actions($cv_locus, $transcripts, $gene_actions, $genes);
         }
 
     } 
@@ -273,20 +279,16 @@ __SQL_END__
                           $attrib_type_id, $attrib_code, $attrib_value,
                           $seq_region_name) = $list_genes->fetchrow()) {
 
-        my $duplicates;
-        if (my $prev = $genes{$attrib_code}->{$gid}) {
-            carp "Already seen ", $attrib_code, " for gene ", $gene_sid;
-            $duplicates = ++$prev->{duplicates};
-        }
-
-        $genes{$attrib_code}->{$gid} = {
+        my $entry = {
             gene_id => $gid,
             sid   => $gene_sid,
             atid  => $attrib_type_id,
             code  => $attrib_code,
             value => $attrib_value,
-            duplicates => $duplicates, # yuk - shouldn't be throwing away prev
         };
+
+        my $list = $genes{$attrib_code}->{$gid}->{list} ||= [];
+        push @$list, $entry;
 
         ++$values{$attrib_code}->{$attrib_value};
         ++$count;
@@ -361,21 +363,17 @@ __SQL_END__
                         $attrib_type_id, $attrib_code, $attrib_value,
                         $seq_region_name) = $list_transcripts->fetchrow()) {
 
-        my $duplicates;
-        if (my $prev = $transcripts{$attrib_code}->{$tid}) {
-            carp "Already seen ", $attrib_code, " for transcript ", $transcript_sid;
-            $duplicates = ++$prev->{duplicates};
-        }
-
-        $transcripts{$attrib_code}->{$tid} = {
+        my $entry = {
             gene_id => $gid,
             transcript_id => $tid,
             sid   => $transcript_sid,
             atid  => $attrib_type_id,
             code  => $attrib_code,
             value => $attrib_value,
-            duplicates => $duplicates, # yuk - shouldn't be throwing away prev
         };
+
+        my $list = $transcripts{$attrib_code}->{$tid}->{list} ||= [];
+        push @$list, $entry;
 
         ++$values{$attrib_code}->{$attrib_value};
         ++$count;
@@ -428,9 +426,9 @@ sub identify_warnings {
             my $items = $branches->{$branch}->{$code};
             foreach my $id (keys %$items) {
                 my $item = $items->{$id};
-                if ($item->{duplicates}) {
+                if ($item->{cv_duplicates}) {
                     push @list, sprintf("%s: duplicate entries (%d extras) on %s",
-                                        $item->{sid}, $item->{duplicates}, $code);
+                                        $item->{cv}->{sid}, scalar(@{$item->{cv_duplicates}}), $code);
                     ++$summary{duplicates}->{$branch}->{$code};
                 }
             }
@@ -451,6 +449,54 @@ sub show_warnings {
     1;
 }
 
+sub pre_process {
+    my ($correct_value, $this_branch, $items) = @_;
+
+  CODE: foreach my $code (qw(remark hidden_remark)) {
+
+    ITEM: foreach my $id (keys %{$items->{$code}}) {
+        my $item = $items->{$code}->{$id};
+
+      ENTRY: foreach my $entry (@{$item->{list}}) {
+
+          if (skip_match($entry->{value}, $correct_value)) {
+              
+              printf("%s: skipping $code '%s'\n", $item->{sid}, $code, $item->{value}) unless $opts->{quiet};
+              next ENTRY;
+          }
+
+          if ( ($entry->{value} eq $correct_value) and ($code eq 'remark') and $this_branch ) {
+
+              unless ($item->{cv}) {
+                  $item->{cv} = $entry;
+                  next ENTRY;
+              }
+
+              my $dups = $item->{cv_duplicates} ||= [];
+              push @$dups, $entry;
+              next ENTRY;
+
+          }
+
+          if (retain_match($entry->{value}, $correct_value)) {
+
+              my $retain = $item->{retain} ||= [];
+              push @$retain, $entry;
+              next ENTRY;
+
+          }
+          
+          my $to_update = $item->{to_update} ||= [];
+          push @$to_update, $entry;
+
+      } # ENTRY
+
+    } # ITEM
+
+  } # CODE
+
+}
+
 sub plan_update_actions {
     my ($correct_value, $items, $wrong_branch_items) = @_;
 
@@ -458,85 +504,67 @@ sub plan_update_actions {
 
     # 'remark' items have the correct attribute code already
     #
-  REMARK: foreach my $id (keys %{$items->{remark}}) {
-      my $item = $items->{remark}->{$id};
+  CODE: foreach my $code (qw(remark hidden_remark)) {
 
-      next REMARK if $item->{value} eq $correct_value;
+    ITEM: foreach my $id (keys %{$items->{$code}}) {
 
-      if (skip_match($item->{value}, $correct_value)) {
+        my $item = $items->{$code}->{$id};
 
-          printf("%s: skipping remark '%s'\n", $item->{sid}, $item->{value}) unless $opts->{quiet};
-          next REMARK;
-      }
+        my $remark_item;
+        if ($code eq 'remark') {
+            $remark_item = $item;
+        } else {
+            $remark_item = $items->{remark}->{$id};
+        }
 
-      $item->{new_value} = $correct_value;
-      $item->{new_code}  = 'remark';
+        if ($item->{retain}) {
+            
+            unless ($remark_item and $remark_item->{cv}) {
 
-      if (retain_match($item->{value}, $correct_value)) {
+                my $insert = $item->{retain}->[0];
+                printf("%s: have long %ss, adding cv remark\n", $insert->{sid}, $code) unless $opts->{quiet};
 
-          # Leave the long tag and add a new tag
-          printf("%s: leaving long remark, adding cv remark\n", $item->{sid}) unless $opts->{quiet};
-          push @{$actions{insert}}, $item;
-          next REMARK;
-      }
+                $insert->{new_value} = $correct_value;
+                $insert->{new_code}  = 'remark';
 
-      # If we get here, update the tag
-      push @{$actions{update}}, $item;
+                push @{$actions{insert}}, $insert;
+                $items->{remark}->{$id}->{cv} = $insert; # make sure to create remark_item if it wasn't
+            }
 
-  }
+            foreach my $entry (@{$item->{retain}}) {
+                printf("%s: leaving long %s\n", $entry->{sid}, $code) unless $opts->{quiet};
+            }
+        }
 
-  HIDDEN_REMARK: foreach my $id (keys %{$items->{hidden_remark}}) {
-      my $item = $items->{hidden_remark}->{$id};
+        if ($item->{to_update}) {
 
-      if (skip_match($item->{value}, $correct_value)) {
+            unless ($remark_item->{cv}) {
 
-          printf("%s: skipping hidden_remark '%s'\n", $item->{sid}, $item->{value}) unless $opts->{quiet};
-          next HIDDEN_REMARK;
-      }
+                my $update = shift @{$item->{to_update}};
+                $update->{new_value} = $correct_value;
+                $update->{new_code}  = 'remark';
 
-      $item->{new_value} = $correct_value;
-      $item->{new_code}  = 'remark';
+                push @{$actions{update}}, $update;
+                $remark_item->{cv} = $update;
+            }
 
-      if ($items->{remark}->{$id}) {
+            # If there's anything left...
+            #
+            foreach my $entry (@{$item->{to_update}}) {
+                printf("%s: deleting extra %s '%s'\n", $entry->{sid}, $code, $entry->{value}) unless $opts->{quiet};
+                push @{$actions{delete}}, $entry;
+            }
+        }
 
-          # There's already a remark, which will be fixed if necessary above
+    } # ITEM
 
-          if (retain_match($item->{value}, $correct_value)) {
+  } # CODE
 
-              # Leave this long hidden_remark tag
-              printf("%s: leaving long hidden_remark, already cv remark\n", $item->{sid}) unless $opts->{quiet};
-
-          } else {
-
-              # Delete the hidden_remark tag
-              printf("%s: deleting hidden_remark, already cv remark\n", $item->{sid}) unless $opts->{quiet};
-              push @{$actions{delete}}, $item;
-
-          }
-
-
-      } else {
-
-          if (retain_match($item->{value}, $correct_value)) {
-
-              # Leave the long hidden_remark tag and insert a remark tag
-              printf("%s: leaving long hidden_remark, adding cv remark\n", $item->{sid}) unless $opts->{quiet};
-              push @{$actions{insert}}, $item;
-
-          } else {
-
-              # Move the hidden_remark tag to remark
-              push @{$actions{update}}, $item;
-
-          }
-      }
-     
-  }
     return \%actions;
 }
 
 sub plan_ts_to_gene_actions {
-    my ($correct_value, $transcripts, $gene_actions, $gene_matches) = @_;
+    my ($correct_value, $transcripts, $gene_actions, $genes) = @_;
 
     my %actions = ( delete => [] );
 
@@ -548,32 +576,46 @@ sub plan_ts_to_gene_actions {
 
             my $item = $transcripts->{$code}->{$id};
 
-            if (skip_match($item->{value}, $correct_value)) {
-
-                printf("%s: skipping %s '%s' (in ts_to_gene)\n", $item->{sid}, $code, $item->{value})
-                    unless $opts->{quiet};
-                next ITEM;
-            }
-
-            $item->{new_value} = $correct_value;
-            $item->{new_code}  = 'remark';
-
-            # Add a tag on the other branch
-            unless ($gene_matches->{$item->{gene_id}}) {
-                push @{$gene_actions->{insert}}, $item;
-                $gene_matches->{$item->{gene_id}}++; # avoid duplicate inserts
-            }
-
-            if (retain_match($item->{value}, $correct_value)) {
-
-                # Leave the long tag
-                printf("%s: leaving long %s on transcript\n", $item->{sid}, $code) unless $opts->{quiet};
-
+            my $example_item;
+            if ($item->{retain}) {
+                $example_item = $item->{retain}->[0];
+            } elsif ($item->{to_update}) {
+                $example_item = $item->{to_update}->[0];
             } else {
+                croak("Nothing to do in plan_ts_to_gene_actions");
+            }
 
-                # Delete the tag
-                push @{$actions{delete}}, $item;
+            if ($example_item) { # always true?
 
+                my $gene_id   = $example_item->{gene_id};
+                my $gene_item = $genes->{remark}->{$gene_id};
+
+                unless ($gene_item and $gene_item->{cv}) {
+
+                    printf("%s: have transcript %ss, adding locus remark\n", $example_item->{sid}, $code)
+                        unless $opts->{quiet};
+
+                    # Add tag on other branch
+                    $example_item->{new_value} = $correct_value;
+                    $example_item->{new_code}  = 'remark';
+
+                    push @{$gene_actions->{insert}}, $example_item;
+                    $genes->{remark}->{$gene_id}->{cv} = $example_item; # make sure to create gene item if it wasn't
+                }
+            }
+
+            if ($item->{retain}) {
+                foreach my $entry (@{$item->{retain}}) {
+                    printf("%s: leaving long %s on transcript\n", $entry->{sid}, $code) unless $opts->{quiet};
+                }
+            }
+
+            if ($item->{to_update}) {
+                foreach my $entry (@{$item->{to_update}}) {
+                    printf("%s: deleting transcript %s '%s'\n", $entry->{sid}, $code, $entry->{value})
+                        unless $opts->{quiet};
+                    push @{$actions{delete}}, $entry;
+                }
             }
 
         } # ITEM
@@ -599,7 +641,7 @@ sub skip_match {
     if ($opts->{ignore}) {
         my @matches = split(/,/, $opts->{ignore});
         my @regexps = map { sql_to_perl_regexp($_) } @matches;
-        if (grep { $value =~ /$_/ } @regexps) {
+        if (grep { $value =~ /$_/i } @regexps) {
             return 1;
         }
     }
@@ -616,35 +658,12 @@ sub retain_match {
     if ($opts->{unkeep}) {
         my @matches = split(/,/, $opts->{unkeep});
         my @regexps = map { sql_to_perl_regexp($_) } @matches;
-        if (grep { $value =~ /$_/ } @regexps) {
+        if (grep { $value =~ /$_/i } @regexps) {
             return 0;
         }
     }
 
     return 1;                   # retain by default
-}
-
-sub identify_ts_where_gene_attrib_exists {
-    my ($transcripts, $genes) = @_;
-    my %gene_matches;
-
-    foreach my $code (qw(remark hidden_remark)) {
-        foreach my $id (keys %{$transcripts->{$code}}) {
-
-            my $item = $transcripts->{$code}->{$id};
-
-            my $r_gene = $genes->{remark}->{$item->{gene_id}};
-            my $hr_gene = $genes->{hidden_remark}->{$item->{gene_id}};
-
-            if ($r_gene or $hr_gene) {
-                my $gsid = $r_gene->{sid} || $hr_gene->{sid};
-                printf("%s: already locus remark on %s\n", $item->{sid}, $gsid) unless $opts->{quiet};
-                $gene_matches{$item->{gene_id}}++;
-            }
-        }
-    }
-
-    return \%gene_matches;
 }
 
 sub implement_actions {
@@ -720,7 +739,10 @@ sub do_composite {
     my $total_rows = 0;
 
     foreach my $item (@$list) {
-        $item->{new_atid} = get_attrib_type_id($dba, $item->{new_code}) unless $item->{new_atid};
+
+        if ($item->{new_code} and not $item->{new_atid}) {
+            $item->{new_atid} = get_attrib_type_id($dba, $item->{new_code});
+        }
 
         my @args = ( $item->{$sql_tab{$type}->{id_tag}}, $item->{atid}, $item->{value} );
         unless ($dry_run) {
@@ -777,7 +799,7 @@ sub tell_db_item {
     printf("  %s [%s:%s]>[%s:%s] (%s) : ",
            $item->{sid}, 
            $item->{code}, $item->{value},
-           $item->{new_code}, $item->{new_value},
+           $item->{new_code} || '-', $item->{new_value} || '-',
            join(', ', map { "'$_'" } @args),
         );
     return;
