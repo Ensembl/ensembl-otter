@@ -44,13 +44,13 @@ use Hum::Ace::Locus;
         open my $gff_fh, '<', $gff_file or confess "Can't read GFF file '$gff_file'; $!";
         while (<$gff_fh>) {
             next if /^\s*#/;
-            my ($seq_name, $method, $feat_type, $start, $end, $score, $strand, $frame, $attrib)
+            my ($seq_name, $source, $feat_type, $start, $end, $score, $strand, $frame, $attrib)
                 = parse_gff_line($_);
             next unless $attrib->{'Name'};
             $store->execute(
                 $attrib->{'Name'},
                 $attrib->{'Taxon_ID'},
-                substr($method, 0, 4) eq 'EST_' ? 'EST' : $evidence_type{$method},
+                substr($source, 0, 4) eq 'EST_' ? 'EST' : $evidence_type{$source},
                 $attrib->{'Description'},
                 $attrib->{'DB_Name'},
                 );
@@ -62,14 +62,12 @@ use Hum::Ace::Locus;
 }
 
 sub make_ace_transcripts_from_gff {
-    my ($gff_file, $method_collection) = @_;
+    my ($gff_file) = @_;
     
-    my (%tsct, $gene_method, $coding_gene_method);
+    my (%tsct, %locus_by_name, $gene_method, $coding_gene_method);
     
     open my $gff_fh, '<', $gff_file or confess "Can't read GFF file '$gff_file'; $!";
     my $length;     ### HACK: Should truncate to Slice on server
-    
-    my %locus_by_name;
     
     while (<$gff_fh>) {
         if (/^\s*#/) {
@@ -78,7 +76,7 @@ sub make_ace_transcripts_from_gff {
             }
             next;
         }
-        my ($seq_name, $method, $feat_type, $start, $end, $score, $strand, $frame, $attrib)
+        my ($seq_name, $source, $feat_type, $start, $end, $score, $strand, $frame, $attrib)
             = parse_gff_line($_);
         my $name = $attrib->{'Name'};
         next unless $name;
@@ -90,9 +88,9 @@ sub make_ace_transcripts_from_gff {
             $sub = Hum::Ace::SubSeq->new;
             unless ($gene_method) {
                 $gene_method = Hum::Ace::Method->new;
-                $gene_method->name($method);
+                $gene_method->name($source);
                 $coding_gene_method = Hum::Ace::Method->new;
-                $coding_gene_method->name($method);
+                $coding_gene_method->name($source);
                 $coding_gene_method->coding(1);
             }
             $sub->name($name);
@@ -162,15 +160,22 @@ sub parse_gff_line {
     my ($line) = @_;
     
     chomp($line);
-    my ($seq_name, $method, $feat_type, $start, $end, $score, $strand, $frame, $group)
+    my ($seq_name, $source, $feat_type, $start, $end, $score, $strand, $frame, $group)
         = split(/\t/, $line, 9);
     my $attrib = {};
+    # The "1" argument to quotewords tells it to keep the quotes
+    # so that we preserve the fields for the next level of parsing
     foreach my $tag_val (quotewords('\s*;\s*', 1, $group)) {
+        # The "0" argument means that we now discard the quotes
         my ($tag, @values) = quotewords('\s+', 0, $tag_val);
         $attrib->{$tag} = "@values";
     }
-    return ($seq_name, $method, $feat_type, $start, $end, $score, $strand, $frame, $attrib);
+    return ($seq_name, $source, $feat_type, $start, $end, $score, $strand, $frame, $attrib);
 }
+
+# $gff->{seqname}, $gff->{source}, $gff->{feature}, $gff->{start},
+# $gff->{end},     $gff->{score},  $gff->{strand},  $gff->{frame},
+
 
 1;
 

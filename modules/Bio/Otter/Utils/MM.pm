@@ -179,7 +179,7 @@ WHERE accession_version LIKE ?
         my ($prefix, $acc, $sv) = magic_evi_name_match($text);
         if ($acc) {
 
-            $sv = $sv ||= '*';
+            $sv ||= '*';
 
             $acc_hash{$text} = [ $acc, $sv ];
         }
@@ -205,43 +205,43 @@ WHERE accession_version LIKE ?
 
             $sth->execute($acc) or die "Couldn't execute statement: " . $sth->errstr;
 
-            if (my ($type, $class, $version) = $sth->fetchrow_array()) {
+            if (my ($type, $class, $acc_sv) = $sth->fetchrow_array()) {
 
-                my ($db_sv) = $version =~ /.+\.(\d+)/;
+                my ($db_sv) = $acc_sv =~ /.+\.(\d+)/;
 
                 next unless ($sv eq '*') || ($sv eq $db_sv);
 
                 # found an entry, so establish if the type is one we're expecting
 
                 if ($class eq 'EST') {
-                    $res{$key} = [ 'EST', "Em:$version" ];
+                    $res{$key} = [ 'EST', $acc_sv, 'EMBL' ];
                 }
                 elsif ($type eq 'mRNA') {
                     # Here we return cDNA, which is more technically correct since
                     # both ESTs and cDNAs are mRNAs.
-                    $res{$key} = [ 'cDNA', "Em:$version" ];
+                    $res{$key} = [ 'cDNA', $acc_sv, 'EMBL' ];
                 }
                 elsif ($type eq 'protein') {
 
-                    my $prefix;
+                    my $source_db;
 
                     if ($class eq 'STD') {
-                        $prefix = 'Sw';
+                        $source_db = "Swissprot"
                     }
                     elsif ($class eq 'PRE') {
-                        $prefix = 'Tr';
+                        $source_db = 'TrEMBL';
                     }
                     elsif ($class eq 'ISO') {    # we don't think trembl can have isoforms
-                        $prefix = 'Sw';
+                        $source_db = 'Swissprot';
                     }
                     else {
                         die "Unexpected data class for uniprot entry: $class";
                     }
 
-                    $res{$key} = [ 'Protein', "$prefix:$version" ];
+                    $res{$key} = [ 'Protein', $acc_sv, $source_db ];
                 }
                 elsif ($type eq 'other RNA' or $type eq 'transcribed RNA') {
-                    $res{$key} = [ 'ncRNA', "Em:$version" ];
+                    $res{$key} = [ 'ncRNA', $acc_sv, 'EMBL' ];
                 }
 
                 delete $acc_hash{$key};
@@ -255,18 +255,18 @@ WHERE accession_version LIKE ?
 }
 
 my $feature_details_sql = {
-    description => <<'SQL',
+    description => q{
     SELECT d.description
     FROM entry e, description d
     WHERE e.entry_id = d.entry_id
     AND e.accession_version = ?
-SQL
-    taxon_id => <<'SQL',
+},
+    taxon_id => q{
     SELECT t.ncbi_tax_id
     FROM entry e, taxonomy t
     WHERE e.entry_id = t.entry_id
     AND e.accession_version = ?
-SQL
+},
 };
 
 sub get_feature_details {
