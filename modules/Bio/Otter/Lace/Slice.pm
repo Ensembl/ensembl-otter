@@ -5,10 +5,6 @@ use warnings;
 
 use Bio::EnsEMBL::Slice;
 
-    # parsing is now performed by a table-driven parser:
-use Bio::Otter::Lace::ViaText qw( %LangDesc &ParseFeatures );
-
-    # so we only parse the tiling path here:
 use Bio::Otter::Lace::CloneSequence;
 
 use Bio::Vega::Transform::Otter;
