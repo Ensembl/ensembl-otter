@@ -187,7 +187,10 @@ use Bio::Vega::Utils::GFF;
 
         if ($gff->{attributes}) {
 
-            my @attrs = map { $_ . ' ' . $gff->{attributes}->{$_} } keys %{ $gff->{attributes} };
+            my @attrs = map {
+                my $attribute = $gff->{attributes}->{$_};
+                defined $attribute ? ( $_ . ' ' . $attribute ) : ( );
+            } keys %{ $gff->{attributes} };
 
             $gff_str .= "\t" . join(' ; ', @attrs);
         }
