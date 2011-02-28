@@ -487,9 +487,17 @@ sub show_filters {
         }
         
         if ($state_hash->{failed}) {
+            my $fail_msg = $state_hash->{fail_msg};
+            if (defined $fail_msg) {
+                # trim uninformative boilerplate
+                $fail_msg =~ s/^Thread request failed - Thread request failed - Server pipe: - //;
+            }
+            else {
+                $fail_msg = 'Failed (reason unknown)';
+            }
             my $cb = $hlist->itemCget($i, 0, '-widget');
             my $balloon = $self->top->Balloon;
-            $balloon->attach($cb, -balloonmsg => $state_hash->{fail_msg} || '');
+            $balloon->attach($cb, -balloonmsg => $fail_msg);
             
             # configure the button such that the user can reselect 
             # a failed filter to try again
