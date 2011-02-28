@@ -5,6 +5,13 @@
 use strict;
 use warnings;
 
+die <<'OBSOLETE'
+This script is obsolete because it uses the now-deleted "get_features"
+CGI script.  Rewrite it to use "get_gff_features" instead if you need
+this functionality.
+OBSOLETE
+    ;
+
 use Bio::Otter::Lace::Defaults;
 
 {
