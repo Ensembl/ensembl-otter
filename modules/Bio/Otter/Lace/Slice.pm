@@ -425,36 +425,6 @@ sub get_all_DAS_features { # get SimpleFeatures or PredictionExons from DAS sour
     return ParseFeatures(\$response, $self->name(), $analysis_name);
 }
 
-sub get_all_PipelineGenes { # get genes from otter/pipeline/ensembl db
-    my( $self, $analysis_name, $metakey, $csver_remote, $transcript_analyses, $translation_xref_dbs ) = @_;
-
-    if(!$analysis_name) {
-        die "Analysis name must be specified!";
-    }
-
-    my $response = $self->Client()->http_response_content(
-        'GET',
-        'get_genes',
-        {
-            %{$self->toHash},
-            'analysis' => $analysis_name,
-            $metakey ? ('metakey' => $metakey) : (),
-            $csver_remote   ? ('csver_remote' => $csver_remote) : (), # if you forget it, the assembly will be Otter by default!
-            $transcript_analyses ? ('transcript_analyses' => $transcript_analyses) : (),
-            $translation_xref_dbs ? ('translation_xref_dbs' => $translation_xref_dbs) : (),
-        },
-    );
-
-    if ($response) {
-        my $parser = Bio::Vega::Transform::Otter->new;
-        $parser->set_ChromosomeSlice($self->create_detached_slice);
-        $parser->parse($response);
-        return $parser->get_Genes;
-    } else {
-        return [];
-    }
-}
-
 sub dna_ace_data {
     my ($self) = @_;
 
