@@ -115,12 +115,12 @@ while ( my $row = $production_sth->fetchrow_hashref() ) {
     'db_release'                => $row->{'db_release'},
     'status'                    => $row->{'status'},
     'dbprimary_acc_linkable'    => $row->{'dbprimary_acc_linkable'},
-    'display_label_linkable'    => $row->{'display_label_linkable'},
+    'display_label_linkable'    => $row->{'display_label_linkable'} || 0,
     'priority'                  => $row->{'priority'},
     'db_display_name'           => $row->{'db_display_name'},
-		'type'                      => $row->{'type'},
-		'secondary_db_name'         => $row->{'secondary_db_name'},
-	  'secondary_db_table'        => $row->{'secondary_db_table'}
+    'type'                      => $row->{'type'},
+    'secondary_db_name'         => $row->{'secondary_db_name'},
+    'secondary_db_table'        => $row->{'secondary_db_table'}
   };
 }
 $production_sth->finish;
