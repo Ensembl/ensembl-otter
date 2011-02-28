@@ -8,9 +8,6 @@ use Bio::EnsEMBL::Slice;
     # parsing is now performed by a table-driven parser:
 use Bio::Otter::Lace::ViaText qw( %LangDesc &ParseFeatures );
 
-    # parsing of genes is done separately:
-use Bio::Otter::FromXML;
-
     # so we only parse the tiling path here:
 use Bio::Otter::Lace::CloneSequence;
 
@@ -447,11 +444,6 @@ sub get_all_PipelineGenes { # get genes from otter/pipeline/ensembl db
             $translation_xref_dbs ? ('translation_xref_dbs' => $translation_xref_dbs) : (),
         },
     );
-
-    # my $slice = $self->create_detached_slice();
-    #
-    # my $gene_parser = Bio::Otter::FromXML->new([ split(/\n/, $response) ], $slice);
-    # return $gene_parser->build_Gene_array($slice);
 
     if ($response) {
         my $parser = Bio::Vega::Transform::Otter->new;
