@@ -340,68 +340,6 @@ sub lock_region_xml {
     );
 }
 
-
-sub get_all_features_hash { # get Simple|DnaAlign|ProteinAlign|Repeat|Marker|Ditag|PredictionTranscript features from otter|pipe|ensembl db
-
-    # This returns features hashed by their actual Perl classes,
-    # rather than the feature types used in $kind_and_args. This
-    # supports dummy feature types (such as ExonSupportingFeature)
-    # that return features whose class is not the same as the feature
-    # type.
-
-    my ($self, $kind_and_args, $metakey, $csver_remote) = @_;
-
-    my @feature_kinds = map { $_->[0] } @$kind_and_args;
-
-    my %arg_pairs = (
-        %{$self->toHash},
-        'kind' => join(',', @feature_kinds),
-        $metakey      ? ('metakey'      => $metakey) : (),
-        $csver_remote ? ('csver_remote' => $csver_remote) : (),
-    ); # key-value pairs of mixed call parameters
-
-    foreach my $ka_pair (@$kind_and_args) {
-        my ($feature_kind, $call_arg_values) = @$ka_pair;
-        my $lang_desc = $LangDesc{$feature_kind};
-        if(!$lang_desc) {
-            die "Unknown feature kind ${feature_kind}!";
-        }
-        my $call_arg_descs = $lang_desc->{-call_args};
-
-        for(my $i=0;$i<scalar(@$call_arg_descs);$i++) {
-            my ($arg_name, $arg_def_value) = @{ $call_arg_descs->[$i] };
-            my $arg_value = defined($call_arg_values->[$i]) ? $call_arg_values->[$i] : $arg_def_value;
-            if($arg_value) {
-                $arg_pairs{$arg_name} = $arg_value;
-            }
-        }
-    }
-
-    my $response = $self->Client()->otter_response_content(
-        'GET',
-        'get_features',
-        \%arg_pairs,
-    );
-
-    my $all_features = ParseFeatures(\$response, $self->name(), $arg_pairs{'analysis'});
-
-    return {
-        map {
-            my $features = $all_features->{$_} || [];
-            $features = [ values %$features ] if ref($features) eq "HASH";
-            $_ => $features;
-        } keys %$all_features,
-    };
-}
-
-
-sub get_all_features { # get Simple|DnaAlign|ProteinAlign|Repeat|Marker|Ditag|PredictionTranscript features from otter|pipe|ensembl db
-    my ($self, $kind_and_args, $metakey, $csver_remote) = @_;
-    my @feature_kinds = map { $_->[0] } @$kind_and_args;
-    my $all_features = $self->get_all_features_hash($kind_and_args, $metakey, $csver_remote);
-    return map { $all_features->{$_} || [] } @feature_kinds;
-}
-
 sub dna_ace_data {
     my ($self) = @_;
 
