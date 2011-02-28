@@ -762,6 +762,8 @@ use Bio::Vega::Utils::GFF;
     sub to_gff {
         my ($self, @args) = @_;
 
+        require Bio::EnsEMBL::DnaDnaAlignFeature;
+
         my ($start, $end, $hstart, $hend, $cigar_string);
 
         if ($self->ditag_side eq "F") {
