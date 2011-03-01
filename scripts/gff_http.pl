@@ -6,6 +6,18 @@ use warnings;
 use Digest::MD5 qw(md5_hex);
 use URI::Escape qw(uri_escape uri_unescape);
 
+my $gff_source;
+
+my $log_file;
+sub log_message {
+    my ($message) = @_;
+    return unless $log_file;
+    my $now = time;
+    printf $log_file "%02d:%02d:%02d: %6d: %-35s : %s\n"
+        , (localtime($now))[2,1,0], $$, ($gff_source || '???'), $message, "\n";
+    return;
+}
+
 my $LOG     = 1;
 
 my %args;
@@ -14,7 +26,7 @@ foreach my $pair (@ARGV) {
     $args{uri_unescape($key)} = uri_unescape($val);
 }
 
-my $gff_source = $args{gff_source};
+$gff_source = $args{gff_source};
 
 # pull off arguments meant for us
 
@@ -26,7 +38,8 @@ my $process_gff     = delete $args{'process_gff_file'};
 
 chdir($session_dir) or die "Could not chdir to '$session_dir'; $!";
 
-open my $log_file, '>>', 'gff_log.txt';
+open $log_file, '>>', 'gff_log.txt';
+log_message "starting";
 
 $args{log} = 1 if $LOG; # enable logging on the server
 $args{rebase} = 1 unless $ENV{OTTERLACE_CHROMOSOME_COORDINATES};
@@ -47,7 +60,7 @@ my $cache_file = $top_dir.'/'.$gff_filename;
 
 if (-e $cache_file) {
     # cache hit
-    print $log_file "$gff_source: cache file: $gff_filename: cache hit\n";
+    log_message "cache file: $gff_filename: cache hit";
     open my $gff_file, '<', $cache_file or die "Failed to open cache file: $!\n";
     while (<$gff_file>) { print; }
     close $gff_file or die "Failed to close cache file: $!\n";
@@ -64,7 +77,7 @@ require HTTP::Request;
 require HTTP::Cookies::Netscape;
 require DBI;
 
-print $log_file "$gff_source: cache file: $gff_filename: cache miss\n";
+log_message "cache file: $gff_filename: cache miss";
 
 my $request = HTTP::Request->new;
 
@@ -74,7 +87,7 @@ $request->method('GET');
 
 my $url = $url_root . '/' . $server_script . '?' . $params;
 
-print $log_file "$gff_source: URL: $url\n";
+log_message "URL: $url";
 
 $request->uri($url);
 
@@ -93,7 +106,7 @@ my $start_time = time;
 my $response = $ua->request($request);
 die "No response for $gff_source\n" unless $response;
 my $request_time = time - $start_time;
-print $log_file "$gff_source: request time (seconds): $request_time\n";
+log_message "request time (seconds): $request_time";
 
 if ($response->is_success) {
 
