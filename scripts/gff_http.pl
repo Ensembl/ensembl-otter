@@ -126,9 +126,14 @@ if ($response->is_success) {
 
 
     # cache the result
+    log_message "caching: start";
+    my $cache_start_time = time;
     open my $cache_file_h, '>', $cache_file or die "Cannot write to cache file '$cache_file'; $!\n";
     print $cache_file_h $gff;
     close $cache_file_h or die "Error writing to '$cache_file'; $!";
+    my $cache_finish_time = time;
+    my $cache_time = $cache_finish_time - $cache_start_time;
+    log_message "caching: finish: time (seconds): $cache_time";
 
     my $dbh = DBI->connect("dbi:SQLite:dbname=$session_dir/otter.sqlite", undef, undef, {
         RaiseError => 1,
