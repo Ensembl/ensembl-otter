@@ -8,7 +8,6 @@ use strict;
 use warnings;
 use Carp;
 
-    # objects that can be created by the parser:
 use Bio::EnsEMBL::Analysis;
 use Bio::EnsEMBL::DnaDnaAlignFeature;
 use Bio::EnsEMBL::DnaPepAlignFeature;
@@ -30,7 +29,7 @@ use Bio::Vega::HitDescription;
 use Bio::Vega::PredictionTranscript;
 
 use base ('Exporter');
-our @EXPORT_OK = qw( %LangDesc &ParseFeatures &GenerateFeatures );
+our @EXPORT_OK = qw( %LangDesc );
 
 our %LangDesc = ( ## no critic(Variables::ProhibitPackageVars)
     'SimpleFeature' => {
@@ -167,186 +166,6 @@ sub Bio::EnsEMBL::Slice::get_all_ExonSupportingFeatures {
           map { @{$_->get_all_Exons} }
           @{$self->get_all_Transcripts($load_exons, $logic_name, $dbtype)}
           ];
-}
-
-sub GenerateFeatures {
-    my ($features, $analysis_name) = @_;
-
-    my %seen_hash     = (); # we don't store objects here, just count them
-    my $cumulative_output = ''; # alternatively we can print things out into a FileHandle/Socket as they arrive
-
-    foreach my $feature (@$features) {
-        my ($feature_output, $hash_key) = generate_unless_hashed($feature, '', \%seen_hash, $analysis_name);
-        $cumulative_output .= $feature_output;
-    }
-
-    return $cumulative_output;
-}
-
-sub generate_unless_hashed {
-    my ($feature, $parent_hash_key, $seen_hash, $analysis_name) = @_;
-
-    my ($feature_type) = ref($feature) =~ /::(\w+)$/;
-
-    my $feature_subhash = $LangDesc{$feature_type};
-
-    my $hash_key;    # will be included in @optvalues if set
-
-    if(my $hash_by = $feature_subhash->{-hash_by}) { # only output hashable feature once:
-        $hash_key = $feature->$hash_by();
-        if($seen_hash->{$feature_type}{$hash_key}++) {
-            return ('', $hash_key);
-        }
-    }
-
-    my $cumulative_output = ''; # alternatively we can print things out into a FileHandle/Socket as they arrive
-
-        ## now let's generate our own fields:
-
-    my $optnames  = $feature_subhash->{-optnames};
-    my @optvalues = ($feature_type);
-    for my $opt (@$optnames) {
-        if ($feature->can($opt)) {
-            push @optvalues, $feature->$opt() || 0;
-        }
-    }
-
-    if(my $ref_link = $feature_subhash->{-reference}) { # reference link is one-way (the referenced object doesn't know its referees)
-        my ($referenced_feature_type, $ref_field, $ref_setter, $ref_getter ) = @$ref_link;
-        $ref_getter ||= $ref_setter; # let's avoid duplication, since in most cases getter is the same method as setter
-
-        my $ref_hash_key;
-        if(my $referenced_feature = $feature->$ref_getter()) { # we allow it to be false too
-            my $reference_output;
-            ($reference_output, $ref_hash_key) =  generate_unless_hashed($referenced_feature, '', $seen_hash, $analysis_name);
-            $cumulative_output .= $reference_output;
-        }
-
-        if(not $ref_field) {
-            push @optvalues, $ref_hash_key || 0;
-        }
-    }
-
-    if($parent_hash_key) {
-        push @optvalues, $parent_hash_key;
-    }
-        my $multi_analysis =
-            defined $analysis_name
-            && $analysis_name =~ /,/;
-    if($feature->can('analysis') && (!$analysis_name || $multi_analysis)) {
-        my $analysis = $feature->analysis();
-        my $logic_name =
-            defined $analysis
-            ? $analysis->logic_name()
-            : '';
-        push @optvalues, $logic_name;
-    }
-
-    $cumulative_output .= join("\t", @optvalues)."\n";
-
-        # after outputting itself a parent lists all of its components:
-        #
-    if(my $cmps_getter = $feature_subhash->{-get_all_cmps}) { # component link is two-way (parent keeps a list of its components)
-        foreach my $component_feature (@{ $feature->$cmps_getter() }) {
-            if ($component_feature ) { # gr5: temporary fix to resolve PredictionTranscripts with undef Exons due ensembl API issue
-                my ($component_output, $to_be_ignored) = generate_unless_hashed($component_feature, $hash_key, $seen_hash, $analysis_name);
-                $cumulative_output .= $component_output;
-            }
-        }
-    }
-
-    return ($cumulative_output, $hash_key);
-}
-
-sub ParseFeatures {
-    my ($response_ref, $seqname, $analysis_name) = @_;
-
-    my %feature_hash = (); # first level hashed by type, second level depends on -hash_by (pushed if undefined)
-
-    my %analysis_hash = ();
-
-        # we should switch over to processing the stream, when it becomes possible
-    my $resplines_ref = [ split(/\n/,$$response_ref) ];
-
-    foreach my $respline (@$resplines_ref) {
-        my @respfields  = split(/\t/, $respline, -1);
-
-        unless (@respfields) {
-            confess "Blank line in output - due to newline on end of hit description?";
-        }
-
-
-        my ($feature_type, @optvalues) = @respfields; # 'SimpleFeature'|'HitDescription'|...|'PredictionExon'
-        my $feature_subhash = $LangDesc{$feature_type};
-
-        my $constructor = $feature_subhash->{-constructor};
-        my $optnames    = $feature_subhash->{-optnames};
-        my $feature;
-        if (ref $constructor) {
-            $feature = $constructor->();
-            for(my $i=0; $i < @$optnames; $i++) {
-                my $method = $optnames->[$i];
-                $feature->$method($optvalues[$i]);
-            }
-        } else {
-            my @args = ();
-            for (my $i = 0; $i < @$optnames; $i++) {
-                my $method = $optnames->[$i];
-                my $value  = $optvalues[$i];
-                # EnsEMBL appears to stick to the convention that the labelled
-                # arguments to new are of the form "-method_name"
-                push(@args, "-$method", $value);
-            }
-            $feature = $constructor->new(@args);
-        }
-
-        my $logic_name = $analysis_name;
-        my $multi_analysis =
-            defined $analysis_name
-            && $analysis_name =~ /,/;
-        if($feature->can('analysis') && (!$analysis_name || $multi_analysis)) {
-                $logic_name = pop @optvalues;
-        }
-
-        if(my $ref_link = $feature_subhash->{-reference}) { # reference link is one-way (the referenced object doesn't know its referees)
-            my ($referenced_feature_type, $ref_field, $ref_setter, $ref_getter ) = @$ref_link;
-            my $referenced_id  = $ref_field ? $feature->$ref_field() : pop @optvalues; # it can either be named or nameless
-            if(my $referenced_feature = $feature_hash{$referenced_feature_type}{$referenced_id}) {
-                $feature->$ref_setter($referenced_feature);
-            }
-        } elsif(my $cmp_uplink = $feature_subhash->{-add_one_cmp}) { # component link is two-way (parent keeps a list of its components)
-            my ($parent_feature_type, $add_sub) = @$cmp_uplink;
-            my $parent_id = pop @optvalues; # always nameless
-            if(my $parent_feature = $feature_hash{$parent_feature_type}{$parent_id}) {
-                $parent_feature->$add_sub($feature);
-            }
-        }
-
-        if($logic_name && $feature->can('analysis')) {
-            $feature->analysis(
-                $analysis_hash{$logic_name} ||= Bio::EnsEMBL::Analysis->new(-logic_name => $logic_name)
-            );
-        }
-
-        if($feature->can('seqname')) {
-            $feature->seqname($seqname);
-        }
-
-            # --------- different ways of storing features: ----------------
-        if(my $hash_by = $feature_subhash->{-hash_by}) { # double-hash it into HoH (referenced objects):
-            
-            $feature_hash{$feature_type}{$feature->$hash_by()} = $feature;
-
-        } elsif(my $group_by = $feature_subhash->{-group_by}) { # double-hash-push it into HoHoL (ditag_features):
-
-            push @{ $feature_hash{$feature_type}{$feature->$group_by()} }, $feature;
-
-        } else { # push it into HoL (any non-ditag '*_features'):
-
-            push @{ $feature_hash{$feature_type} }, $feature;
-        }
-    }
-    return \%feature_hash;
 }
 
 1;
