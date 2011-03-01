@@ -475,15 +475,6 @@ sub show_filters {
                 warn "filter '$name' done but not wanted ???";
                 $state_hash->{wanted} = 1;
             }
-            
-            if (! $state_hash->{failed}) {
-                my $balloon = $self->balloon;
-                if (defined $state_hash->{load_time}) {
-                    $balloon->attach($cb,
-                                     -balloonmsg => sprintf('Loaded in %d seconds', $state_hash->{load_time}),
-                        );
-                }
-            }
         }
         
         if ($state_hash->{failed}) {
