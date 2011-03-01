@@ -52,105 +52,102 @@ if (-e $cache_file) {
     while (<$gff_file>) { print; }
     close $gff_file or die "Failed to close cache file: $!\n";
     close STDOUT or die "Error writing to STDOUT; $!";
+    exit;
 }
-else {
-    # cache miss
-    
-    # only require these packages now, so we don't take the import hit on a cache hit
-    
-    require LWP::UserAgent;
-    require HTTP::Request;
-    require HTTP::Cookies::Netscape;
-    require DBI;
-    
-    print $log_file "$gff_source: cache file: $gff_filename: cache miss\n";
-    
-    my $request = HTTP::Request->new;
 
-    $request->method('GET');
+# cache miss
 
-    #$request->accept_decodable(HTTP::Message::Decodable);
+# only require these packages now, so we don't take the import hit on a cache hit
 
-    my $url = $url_root . '/' . $server_script . '?' . $params;
+require LWP::UserAgent;
+require HTTP::Request;
+require HTTP::Cookies::Netscape;
+require DBI;
 
-    print $log_file "$gff_source: URL: $url\n";
-    
-    $request->uri($url);
-    
-    # create a user agent to send the request
+print $log_file "$gff_source: cache file: $gff_filename: cache miss\n";
 
-    my $ua = LWP::UserAgent->new(
-        timeout             => 9000,
-        env_proxy           => 1,
-        agent               => $0,
-        cookie_jar          => HTTP::Cookies::Netscape->new(file => $cookie_jar),
-        protocols_allowed   => [qw(http https)],
-    );
+my $request = HTTP::Request->new;
 
-    # do the request
-    my $start_time = time;
-    my $response = $ua->request($request);
-    my $request_time = time - $start_time;
-    print $log_file "$gff_source: request time (seconds): $request_time\n";
+$request->method('GET');
 
-    if ($response && $response->is_success) {
+#$request->accept_decodable(HTTP::Message::Decodable);
 
-        my $gff = $response->decoded_content;
+my $url = $url_root . '/' . $server_script . '?' . $params;
 
-        if ($gff =~ /EnsEMBL2GFF/) {
-            
-            # Send data to zmap on STDOUT
-            print $gff;
+print $log_file "$gff_source: URL: $url\n";
 
-            
-            # cache the result
-            open my $cache_file_h, '>', $cache_file or die "Cannot write to cache file '$cache_file'; $!\n";
-            print $cache_file_h $gff;
-            close $cache_file_h or die "Error writing to '$cache_file'; $!";
-            
-            my $dbh = DBI->connect("dbi:SQLite:dbname=$session_dir/otter.sqlite", undef, undef, {
-                RaiseError => 1,
-                AutoCommit => 1,
-                });
-            my $sth = $dbh->prepare(
-                q{ UPDATE otter_filter SET done = 1, failed = 0, gff_file = ?, process_gff = ? WHERE filter_name = ? }
-            );
-            $sth->execute($cache_file, $process_gff || 0, $gff_source);
-            
-            # zmap waits for STDOUT to be closed as an indication that all
-            # data has been sent, so we close the handle now so that zmap
-            # doesn't tell otterlace about the successful loading of the column
-            # before we have the SQLite db updated and the cache file saved.
-            close STDOUT or die "Error writing to STDOUT; $!";
-        }
-        else {
-            die "Unexpected response for $gff_source: $gff\n";
-        }
-    }
-    elsif ($response) {
-        
-        my $res = $response->content;
-        
-        my $err_msg;
-        
-        if ($res =~ /ERROR: (.+)/) {
-            $err_msg = $1;
-        }
-        elsif ($res =~ /The Sanger Institute Web service you requested is temporarily unavailable/) {
-            my $code = $response->code;
-            my $message = $response->message;
-            $err_msg = "This Sanger web service is temporarily unavailable: status = ${code} ${message}";
-        }
-        else {
-            $err_msg = $res;
-        }
-        
-        die "Webserver error for $gff_source: $err_msg\n";
+$request->uri($url);
+
+# create a user agent to send the request
+
+my $ua = LWP::UserAgent->new(
+    timeout             => 9000,
+    env_proxy           => 1,
+    agent               => $0,
+    cookie_jar          => HTTP::Cookies::Netscape->new(file => $cookie_jar),
+    protocols_allowed   => [qw(http https)],
+);
+
+# do the request
+my $start_time = time;
+my $response = $ua->request($request);
+my $request_time = time - $start_time;
+print $log_file "$gff_source: request time (seconds): $request_time\n";
+
+if ($response && $response->is_success) {
+
+    my $gff = $response->decoded_content;
+
+    if ($gff =~ /EnsEMBL2GFF/) {
+
+        # Send data to zmap on STDOUT
+        print $gff;
+
+
+        # cache the result
+        open my $cache_file_h, '>', $cache_file or die "Cannot write to cache file '$cache_file'; $!\n";
+        print $cache_file_h $gff;
+        close $cache_file_h or die "Error writing to '$cache_file'; $!";
+
+        my $dbh = DBI->connect("dbi:SQLite:dbname=$session_dir/otter.sqlite", undef, undef, {
+            RaiseError => 1,
+            AutoCommit => 1,
+            });
+        my $sth = $dbh->prepare(
+            q{ UPDATE otter_filter SET done = 1, failed = 0, gff_file = ?, process_gff = ? WHERE filter_name = ? }
+        );
+        $sth->execute($cache_file, $process_gff || 0, $gff_source);
+
+        # zmap waits for STDOUT to be closed as an indication that all
+        # data has been sent, so we close the handle now so that zmap
+        # doesn't tell otterlace about the successful loading of the column
+        # before we have the SQLite db updated and the cache file saved.
+        close STDOUT or die "Error writing to STDOUT; $!";
     }
     else {
-        die "No response for $gff_source\n";
+        die "Unexpected response for $gff_source: $gff\n";
     }
 }
+elsif ($response) {
 
+    my $res = $response->content;
 
+    my $err_msg;
 
+    if ($res =~ /ERROR: (.+)/) {
+        $err_msg = $1;
+    }
+    elsif ($res =~ /The Sanger Institute Web service you requested is temporarily unavailable/) {
+        my $code = $response->code;
+        my $message = $response->message;
+        $err_msg = "This Sanger web service is temporarily unavailable: status = ${code} ${message}";
+    }
+    else {
+        $err_msg = $res;
+    }
+
+    die "Webserver error for $gff_source: $err_msg\n";
+}
+else {
+    die "No response for $gff_source\n";
+}
