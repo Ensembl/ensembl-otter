@@ -47,7 +47,7 @@ my $cache_file = $top_dir.'/'.$gff_filename;
 
 if (-e $cache_file) {
     # cache hit
-    print $log_file "$gff_filename: cache hit\n";
+    print $log_file "$gff_source: cache file: $gff_filename: cache hit\n";
     open my $gff_file, '<', $cache_file or die "Failed to open cache file: $!\n";
     while (<$gff_file>) { print; }
     close $gff_file or die "Failed to close cache file: $!\n";
@@ -63,7 +63,7 @@ else {
     require HTTP::Cookies::Netscape;
     require DBI;
     
-    print $log_file "$gff_filename: cache miss\n";
+    print $log_file "$gff_source: cache file: $gff_filename: cache miss\n";
     
     my $request = HTTP::Request->new;
 
@@ -73,7 +73,7 @@ else {
 
     my $url = $url_root . '/' . $server_script . '?' . $params;
 
-    print $log_file "$gff_filename: URL: $url\n";
+    print $log_file "$gff_source: URL: $url\n";
     
     $request->uri($url);
     
@@ -91,7 +91,7 @@ else {
     my $start_time = time;
     my $response = $ua->request($request);
     my $request_time = time - $start_time;
-    print $log_file "$gff_filename: request time (seconds): $request_time\n";
+    print $log_file "$gff_source: request time (seconds): $request_time\n";
 
     if ($response && $response->is_success) {
 
