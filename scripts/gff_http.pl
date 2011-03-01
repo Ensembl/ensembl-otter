@@ -122,8 +122,12 @@ if ($response->is_success) {
     die "Unexpected response for $gff_source: $gff\n" unless $gff =~ /EnsEMBL2GFF/;
 
     # Send data to zmap on STDOUT
+    log_message "sending data: start";
+    my $send_data_start_time = time;
     print $gff;
-
+    my $send_data_finish_time = time;
+    my $send_data_time = $send_data_finish_time - $send_data_start_time;
+    log_message "sending data: finish: time (seconds): $send_data_time";
 
     # cache the result
     log_message "caching: start";
