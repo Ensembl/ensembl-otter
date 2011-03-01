@@ -135,6 +135,9 @@ if ($response->is_success) {
     my $cache_time = $cache_finish_time - $cache_start_time;
     log_message "caching: finish: time (seconds): $cache_time";
 
+    # update the SQLite db
+    log_message "SQLite update: start";
+    my $sqlite_update_start_time = time;
     my $dbh = DBI->connect("dbi:SQLite:dbname=$session_dir/otter.sqlite", undef, undef, {
         RaiseError => 1,
         AutoCommit => 1,
@@ -143,6 +146,9 @@ if ($response->is_success) {
         q{ UPDATE otter_filter SET done = 1, failed = 0, gff_file = ?, process_gff = ? WHERE filter_name = ? }
         );
     $sth->execute($cache_file, $process_gff || 0, $gff_source);
+    my $sqlite_update_finish_time = time;
+    my $sqlite_update_time = $sqlite_update_finish_time - $sqlite_update_start_time;
+    log_message "SQLite update: finish: time (seconds): $sqlite_update_time";
 
     # zmap waits for STDOUT to be closed as an indication that all
     # data has been sent, so we close the handle now so that zmap
