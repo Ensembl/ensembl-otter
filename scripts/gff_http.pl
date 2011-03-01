@@ -98,36 +98,31 @@ print $log_file "$gff_source: request time (seconds): $request_time\n";
 if ($response->is_success) {
 
     my $gff = $response->decoded_content;
+    die "Unexpected response for $gff_source: $gff\n" unless $gff =~ /EnsEMBL2GFF/;
 
-    if ($gff =~ /EnsEMBL2GFF/) {
-
-        # Send data to zmap on STDOUT
-        print $gff;
+    # Send data to zmap on STDOUT
+    print $gff;
 
 
-        # cache the result
-        open my $cache_file_h, '>', $cache_file or die "Cannot write to cache file '$cache_file'; $!\n";
-        print $cache_file_h $gff;
-        close $cache_file_h or die "Error writing to '$cache_file'; $!";
+    # cache the result
+    open my $cache_file_h, '>', $cache_file or die "Cannot write to cache file '$cache_file'; $!\n";
+    print $cache_file_h $gff;
+    close $cache_file_h or die "Error writing to '$cache_file'; $!";
 
-        my $dbh = DBI->connect("dbi:SQLite:dbname=$session_dir/otter.sqlite", undef, undef, {
-            RaiseError => 1,
-            AutoCommit => 1,
-            });
-        my $sth = $dbh->prepare(
-            q{ UPDATE otter_filter SET done = 1, failed = 0, gff_file = ?, process_gff = ? WHERE filter_name = ? }
+    my $dbh = DBI->connect("dbi:SQLite:dbname=$session_dir/otter.sqlite", undef, undef, {
+        RaiseError => 1,
+        AutoCommit => 1,
+                           });
+    my $sth = $dbh->prepare(
+        q{ UPDATE otter_filter SET done = 1, failed = 0, gff_file = ?, process_gff = ? WHERE filter_name = ? }
         );
-        $sth->execute($cache_file, $process_gff || 0, $gff_source);
+    $sth->execute($cache_file, $process_gff || 0, $gff_source);
 
-        # zmap waits for STDOUT to be closed as an indication that all
-        # data has been sent, so we close the handle now so that zmap
-        # doesn't tell otterlace about the successful loading of the column
-        # before we have the SQLite db updated and the cache file saved.
-        close STDOUT or die "Error writing to STDOUT; $!";
-    }
-    else {
-        die "Unexpected response for $gff_source: $gff\n";
-    }
+    # zmap waits for STDOUT to be closed as an indication that all
+    # data has been sent, so we close the handle now so that zmap
+    # doesn't tell otterlace about the successful loading of the column
+    # before we have the SQLite db updated and the cache file saved.
+    close STDOUT or die "Error writing to STDOUT; $!";
 }
 else {
 
