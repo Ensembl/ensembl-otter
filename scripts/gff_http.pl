@@ -45,14 +45,10 @@ my $cache_file = $top_dir.'/'.$gff_filename;
 
 if (-e $cache_file) {
     # cache hit
-
     print $log_file "$gff_filename: cache hit\n";
-
     open my $gff_file, '<', $cache_file or die "Failed to open cache file: $!\n";
-
-    while (<$gff_file>) {
-        print;
-    }
+    while (<$gff_file>) { print; }
+    close $gff_file or die "Failed to close cache file: $!\n";
     close STDOUT or die "Error writing to STDOUT; $!";
 }
 else {
