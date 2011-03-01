@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use Bio::EnsEMBL::Slice;
+use Bio::EnsEMBL::CoordSystem;
 
 sub new {
     my( $pkg,
