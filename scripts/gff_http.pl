@@ -46,7 +46,7 @@ my $cache_file = $top_dir.'/'.$gff_filename;
 if (-e $cache_file) {
     # cache hit
 
-    print $log_file "cache hit for $gff_filename\n";
+    print $log_file "$gff_filename: cache hit\n";
 
     open my $gff_file, '<', $cache_file or die "Failed to open cache file: $!\n";
 
@@ -65,7 +65,7 @@ else {
     require HTTP::Cookies::Netscape;
     require DBI;
     
-    print $log_file "cache miss for $gff_filename\n";
+    print $log_file "$gff_filename: cache miss\n";
     
     my $request = HTTP::Request->new;
 
@@ -75,7 +75,7 @@ else {
 
     my $url = $url_root . '/' . $server_script . '?' . $params;
 
-    print $log_file "URL: $url\n";
+    print $log_file "$gff_filename: URL: $url\n";
     
     $request->uri($url);
     
