@@ -39,6 +39,12 @@ my $process_gff     = delete $args{'process_gff_file'};
 chdir($session_dir) or die "Could not chdir to '$session_dir'; $!";
 
 open $log_file, '>>', 'gff_log.txt';
+{
+    ## no critic (InputOutput::ProhibitOneArgSelect)
+    my $old_fh = select $log_file;
+    $| = 1; ## no critic (Variables::RequireLocalizedPunctuationVars)
+    select $old_fh;
+}
 log_message "starting";
 
 $args{log} = 1 if $LOG; # enable logging on the server
