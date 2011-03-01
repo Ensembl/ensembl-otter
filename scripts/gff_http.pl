@@ -14,6 +14,8 @@ foreach my $pair (@ARGV) {
     $args{uri_unescape($key)} = uri_unescape($val);
 }
 
+my $gff_source = $args{gff_source};
+
 # pull off arguments meant for us
 
 my $url_root        = delete $args{'url_root'};
@@ -33,7 +35,7 @@ $args{rebase} = 1 unless $ENV{OTTERLACE_CHROMOSOME_COORDINATES};
 
 my $params = join '&', map { uri_escape($_).'='.uri_escape($args{$_}) } keys %args;
 
-my $gff_filename = sprintf '%s_%s.gff', $args{gff_source}, md5_hex($params);
+my $gff_filename = sprintf '%s_%s.gff', $gff_source, md5_hex($params);
 
 my $top_dir = 'gff_cache';
 
@@ -91,8 +93,6 @@ else {
     my $request_time = time - $start_time;
     print $log_file "$gff_filename: request time (seconds): $request_time\n";
 
-    my $source_name = $args{gff_source};
-
     if ($response && $response->is_success) {
 
         my $gff = $response->decoded_content;
@@ -115,7 +115,7 @@ else {
             my $sth = $dbh->prepare(
                 q{ UPDATE otter_filter SET done = 1, failed = 0, gff_file = ?, process_gff = ? WHERE filter_name = ? }
             );
-            $sth->execute($cache_file, $process_gff || 0, $args{'gff_source'});
+            $sth->execute($cache_file, $process_gff || 0, $gff_source);
             
             # zmap waits for STDOUT to be closed as an indication that all
             # data has been sent, so we close the handle now so that zmap
@@ -124,7 +124,7 @@ else {
             close STDOUT or die "Error writing to STDOUT; $!";
         }
         else {
-            die "Unexpected response for $source_name: $gff\n";
+            die "Unexpected response for $gff_source: $gff\n";
         }
     }
     elsif ($response) {
@@ -145,10 +145,10 @@ else {
             $err_msg = $res;
         }
         
-        die "Webserver error for $source_name: $err_msg\n";
+        die "Webserver error for $gff_source: $err_msg\n";
     }
     else {
-        die "No response for $source_name\n";
+        die "No response for $gff_source\n";
     }
 }
 
