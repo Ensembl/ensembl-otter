@@ -91,10 +91,11 @@ my $ua = LWP::UserAgent->new(
 # do the request
 my $start_time = time;
 my $response = $ua->request($request);
+die "No response for $gff_source\n" unless $response;
 my $request_time = time - $start_time;
 print $log_file "$gff_source: request time (seconds): $request_time\n";
 
-if ($response && $response->is_success) {
+if ($response->is_success) {
 
     my $gff = $response->decoded_content;
 
@@ -128,7 +129,7 @@ if ($response && $response->is_success) {
         die "Unexpected response for $gff_source: $gff\n";
     }
 }
-elsif ($response) {
+else {
 
     my $res = $response->content;
 
@@ -147,7 +148,4 @@ elsif ($response) {
     }
 
     die "Webserver error for $gff_source: $err_msg\n";
-}
-else {
-    die "No response for $gff_source\n";
 }
