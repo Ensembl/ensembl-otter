@@ -648,8 +648,23 @@ sub process_gff_file_from_Filter {
     }
     
     my $full_gff_file = $self->home . "/$gff_file";
+
+    # feature_kind values from otter_config:
+    # DitagFeature
+    # DnaDnaAlignFeature
+    # DnaPepAlignFeature
+    # ExonSupportingFeature
+    # MarkerFeature
+    # PredictionExon
+    # PredictionTranscript
+    # RepeatFeature
+    # SimpleFeature
+    # VariationFeature
     
-    if ($filt->server_script eq 'get_gff_genes') {
+    if ($filt->server_script eq 'get_gff_genes'
+        or $filt->feature_kind eq 'PredictionExon'
+        or $filt->feature_kind eq 'PredictionTranscript'
+    ) {
         return Bio::Otter::Lace::ProcessGFF::make_ace_transcripts_from_gff($full_gff_file);
     }
     elsif ($filt->feature_kind =~ /AlignFeature/) {
