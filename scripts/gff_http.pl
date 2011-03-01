@@ -93,7 +93,7 @@ $request->method('GET');
 
 my $url = $url_root . '/' . $server_script . '?' . $params;
 
-log_message "URL: $url";
+log_message "http: URL: $url";
 
 $request->uri($url);
 
@@ -108,11 +108,13 @@ my $ua = LWP::UserAgent->new(
 );
 
 # do the request
-my $start_time = time;
+log_message "http: start";
+my $request_start_time = time;
 my $response = $ua->request($request);
 die "No response for $gff_source\n" unless $response;
-my $request_time = time - $start_time;
-log_message "request time (seconds): $request_time";
+my $request_finish_time = time;
+my $request_time = $request_finish_time - $request_start_time;
+log_message "http: finish: time (seconds): $request_time";
 
 if ($response->is_success) {
 
