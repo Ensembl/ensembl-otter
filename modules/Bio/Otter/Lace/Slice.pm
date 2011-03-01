@@ -5,10 +5,6 @@ use warnings;
 
 use Bio::EnsEMBL::Slice;
 
-use Bio::Otter::Lace::CloneSequence;
-
-use Bio::Vega::Transform::Otter;
-
 sub new {
     my( $pkg,
         $Client, # object
