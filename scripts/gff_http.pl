@@ -85,7 +85,11 @@ else {
         protocols_allowed   => [qw(http https)],
     );
 
+    # do the request
+    my $start_time = time;
     my $response = $ua->request($request);
+    my $request_time = time - $start_time;
+    print $log_file "$gff_filename: request time (seconds): $request_time\n";
 
     my $source_name = $args{gff_source};
 
