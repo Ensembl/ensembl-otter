@@ -2,57 +2,71 @@
 
 use warnings;
 
-
 ### add_evidence_prefixes
 
 use strict;
 use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Lace::PipelineDB;
 
 {
-    my( $dataset_name );
+    my ($dataset_name);
 
     my $usage = sub { exec('perldoc', $0) };
     Bio::Otter::Lace::Defaults::do_getopt(
-        'h|help!'       => $usage,
-        'dataset=s'     => \$dataset_name,
-        ) or $usage->();
+        'h|help!'   => $usage,
+        'dataset=s' => \$dataset_name,
+    ) or $usage->();
     $usage->() unless $dataset_name;
-    
+
     # Client communicates with otter HTTP server
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
-    
+
     # DataSet interacts directly with an otter database
     my $ds = $cl->get_DataSet_by_name($dataset_name);
-    
+
     my $otter_dba = $ds->get_cached_DBAdaptor;
-    my $pipe_dba = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($otter_dba);
-    
-    my $list_missing_pre = $otter_dba->prepare(q{
-        SELECT evidence_id
-          , evidence_name
+    my $pipe_dba  = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($otter_dba);
+
+    my $list_missing_pre = $otter_dba->dbc->prepare(
+        q{
+        SELECT transcript_id
+          , name
           , type
         FROM evidence
-        WHERE evidence_name NOT like '%:%'
-        });
-    
-    my $get_db = $pipe_dba->prepare(q{
+        WHERE name NOT like '%:%'
+        }
+    );
+
+    my $get_db = $pipe_dba->dbc->prepare(
+        q{
         SELECT hit_db
         FROM hit_description
         WHERE hit_name = ?
-        });
-    
-    my $update_pre = $otter_dba->prepare(q{
+        }
+    );
+
+    my $update_pre = $otter_dba->dbc->prepare(
+        q{
         UPDATE evidence
-        SET evidence_name = ?
-        WHERE evidence_id = ?
-    });
-    
+        SET name = ?
+        WHERE transcript_id = ?
+    }
+    );
+
+    my $delete_dup_entry = $otter_dba->dbc->prepare(
+        q{
+        DELETE FROM evidence
+        WHERE transcript_id = ? AND name = ? AND type = ?
+    }
+    );
+
     $list_missing_pre->execute;
     while (my ($id, $name, $type) = $list_missing_pre->fetchrow) {
         my $prefix;
-        if ($type eq 'EST' or $type eq 'cDNA') {
+        if ($type eq 'EST' or $type eq 'cDNA' or $type eq 'ncRNA') {
             $prefix = 'Em';
-        } else {
+        }
+        else {
             $get_db->execute($name);
             if (my ($db) = $get_db->fetchrow) {
                 if ($db eq 'Swissprot') {
@@ -68,17 +82,25 @@ use Bio::Otter::Lace::Defaults;
             }
         }
         if ($prefix) {
-            #print STDERR "$type $prefix:$name\n";
-            $update_pre->execute("$prefix:$name", $id);
-        } else {
+            eval { $update_pre->execute("$prefix:$name", $id); };
+            if (my $err = $@) {
+                if ($err =~ /Duplicate entry/) {
+                    $delete_dup_entry->execute($id, $name, $type);
+                    print STDERR "DUPLICATE DELETED '$id', '$name', '$type'\n";
+                }
+                else {
+                    die $err;
+                }
+            }
+            else {
+                print STDERR "ADDED $type $prefix:$name\n";
+            }
+        }
+        else {
             print STDERR "NO PREFIX: $type $name\n";
         }
     }
 }
-
-
-
-
 
 __END__
 
