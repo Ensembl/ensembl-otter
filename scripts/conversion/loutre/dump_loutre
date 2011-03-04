@@ -309,27 +309,6 @@ foreach my $t (keys %constraints) {
 }
 
 
-##########################################
-# SQL checks/fixes before doing anything #
-##########################################
-
-####
-#warn if there are missing links between author and author_group
-####
-my $sql = qq(
-    select a.author_name, a.group_id, ag.group_id, ag.group_email
-    from author a left join author_group ag
-      on a.group_id = ag.group_id
-);
-my $lsth = $ldbh->prepare($sql);
-$lsth->execute;
-
-while (my ($name,$group1,$group2,$group_email) = $lsth->fetchrow_array ) {
-  if (! $group_email) {
-    $support->log("Author $name in loutre is not properly linked to an author_group. Please fix as soon as you can\n");
-  }
-}
-
 ####
 #check all attrib_type.attrib_type_ids in loutre are in the newly created vega db
 ####
@@ -374,7 +353,7 @@ else {
 #check for new seq_region_attribues in loutre
 ####
 
-$lsth = $ldbh->prepare(qq(
+my $lsth = $ldbh->prepare(qq(
           SELECT distinct(at.code)
           FROM seq_region_attrib sra, attrib_type at
           WHERE sra.attrib_type_id = at.attrib_type_id));
@@ -578,38 +557,37 @@ foreach my $name (@{$chr_names_wanted}) {
       $support->log("Doing specific dump of gene $lgsi",2);
     }
     my $gname = $lgene->get_all_Attributes('name')->[0]->value;
+
     #filter on source	
     if ($support->param('filter_prefix')) {
       if (grep { $lgene->source eq $_} $support->param('filter_prefix')) {
-	      $support->log("Skipping gene $gname ($lgsi) because of incorrect source\n",2);
-	      next GENE;
+        $support->log("Skipping gene $gname ($lgsi) because of incorrect source\n",1);
+        next GENE;
       }
     }	
     #filter on biotype
     if ($support->param('filter_biotype') ) {
       if (grep {lc($lgene->biotype) eq lc($_)} $support->param('filter_biotype') ) {
-	      $support->log("Skipping gene $gname ($lgsi) because of incorrect biotype (".$lgene->biotype.")\n",2);
-	      next GENE;
-      }       
+        $support->log("Skipping gene $gname ($lgsi) because of incorrect biotype (".$lgene->biotype.")\n",1);
+        next GENE;
+      }
     }
     #skip not for VEGA genes
     if ( grep { $_->value eq 'not for VEGA' } @{$lgene->get_all_Attributes('remark')} ) {
-      $support->log("Skipping gene $gname ($lgsi) because of a not for VEGA remark\n",2);
+      $support->log_warning("Skipping gene $gname ($lgsi) because of a not for VEGA remark\n",1);
       next GENE;
     }
-    
-    $lgene->set_biotype_status_from_transcripts; # update biotypes
-    
+
     #ignore genes by particular authors
     if ($support->param('ignore_authors')) {
       if (grep { $lgene->gene_author->name eq $_} @{$ignore_authors}) {
-	$support->log("Skipping gene $gname ($lgsi) because of untrusted author (".$lgene->gene_author->name.")\n",2);
+	$support->log("Skipping gene $gname ($lgsi) because of untrusted author (".$lgene->gene_author->name.")\n",1);
 	next GENE;
       }
     }
     #ignore BCM genes on chr7
     if ( ($name =~ /chr3-/) && ($lgene->source eq 'BCM') ) {
-      $support->log("Skipping gene $gname ($lgsi) because it's from an external source (".$lgene->source.")\n",2);
+      $support->log("Skipping gene $gname ($lgsi) because it's from an external source (".$lgene->source.")\n",1);
       next GENE;
     }
 
@@ -749,10 +727,12 @@ sub transfer_gene {
   }
 
   my $l_gene_slice = $lgene->slice;
-  my $v_gene_slice = $vsa->fetch_by_region($l_gene_slice->coord_system->name,
-					   $l_gene_slice->seq_region_name,
-					   $l_gene_slice->start,
-					   $l_gene_slice->end);
+  my $v_gene_slice = $vsa->fetch_by_region(
+    $l_gene_slice->coord_system->name,
+    $l_gene_slice->seq_region_name,
+    $l_gene_slice->start,
+    $l_gene_slice->end
+  );
   if(!$l_gene_slice) {
     $support->log_warning("Couldn't fetch loutre gene slice\n");
     return 0;
@@ -774,11 +754,12 @@ sub transfer_gene {
   my $found_trans = 0;
   my $needs_updateing=0;
   my @transcripts = @{$lgene->get_all_Transcripts};
+
  TRANS:
   foreach my $transcript (@transcripts){
 
     if ( grep { $_->value eq 'not for VEGA' } @{$transcript->get_all_Attributes('remark')}  ) {
-      $support->log("Didn't transfer 'not_for_Vega' transcript ".$transcript->stable_id."\n",2);
+      $support->log_warning("Didn't transfer 'not for Vega' transcript ".$transcript->stable_id."\n",2);
       # # #remove from gene object
       $needs_updateing=1;
       my $i=0;
@@ -791,8 +772,7 @@ sub transfer_gene {
       }
     }
     else{
-      $support->log("Will transfer ".$transcript->stable_id."\n",2);    
-      $support->log_verbose("Will transfer ".$transcript->stable_id."\n",2);
+      $support->log("Will transfer ".$transcript->stable_id."\n",2);
       $found_trans = 1;
       $transcript->slice($v_gene_slice);
       $transcript->is_current(1);
@@ -810,7 +790,13 @@ sub transfer_gene {
     }
   }
   if($needs_updateing){#if we deleted a transcript the biotype * start/stop need updating
+    my $old_biotype = $lgene->biotype;
     $lgene->set_biotype_status_from_transcripts;# update biotype;
+    my $new_biotype = $lgene->biotype;
+    if ($old_biotype ne $new_biotype) {
+      $support->log_warning("Biotype of ".$lgene->stable_id." changed from $old_biotype to $new_biotype\n",2);
+    }
+
     #update start & end
     @transcripts = @{$lgene->get_all_Transcripts};
     foreach my $transcript (@transcripts){
