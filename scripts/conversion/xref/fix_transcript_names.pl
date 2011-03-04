@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-fix_transcript_names.pl - update transcript names gene based names
+fix_transcript_names.pl - update transcript names to gene based one
 
 =head1 SYNOPSIS
 
@@ -39,12 +39,6 @@ been seen before then the ID is dumped to file (new_fragmented_gene_list.txt).
 These should be reported to Havana for double
 checking they are not meant to be fragmented (see below). Using the verbose option
 will also report on non-havana loci.
-
-For fragmented genes - these have a 'fragmented locus' gene_attrib hidden_remark,
-or a '%fragmen%' transcript_attrib remark or hidden_remark, a human readable gene_attrib remark
-is also added. For genes that don't have such a remark on the gene or a transcript,
-the stable_id is first compared against a list of previously curated fragmented genes -
-if any are seen then this is logged as they really shouldn't be seen.
 
 See vega_data_curation.txt for further details on using this script and getting usefull
 reports from the log file
