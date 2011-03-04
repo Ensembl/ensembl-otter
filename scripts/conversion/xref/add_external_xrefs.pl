@@ -448,7 +448,7 @@ foreach my $chr (@chr_sorted) {
 	      }
 	      #was the store succesfull ?
 	      if ($dbID) {
-		$support->log("Stored $db xref (display_id = $xid, pid = $pid) for gene $gene_name ($gsi)\n", 3);
+		$support->log("Stored $db xref (display_id = $xid, pid = $pid) for gene $gene_name ($gsi)\n", 2);
 	      }
 	      elsif (! $support->param('dry_run')) {
 		$support->log_warning("Failed to store $db xref for gene $gene_name ($gsi)\n");
@@ -461,7 +461,7 @@ foreach my $chr (@chr_sorted) {
 		if (! $prefix) {
 		  if (! $support->param('dry_run')) {
 		    $sth_display_xref->execute($dbID,$gid);
-		    $support->log("UPDATED display xref (pid = $dbID) for $gene_name ($gsi).\n",3);	
+		    $support->log("UPDATED display xref (pid = $dbID) for $gene_name ($gsi).\n",2);	
 		  }
 		}
 				
