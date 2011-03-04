@@ -281,24 +281,20 @@ foreach my $chr (@chr_sorted) {
 	  if ($hitname eq $acc) {
 	    foreach my $hit (@{ $sf->{$hitname} }) {
 	      # store transcript supporting evidence
-#	      warn $trans->end."--".$hit->[0]." --- ".$trans->start."--".$hit->[1];
 	      if ($trans->end >= $hit->[0] && $trans->start <= $hit->[1]) {
 		# store unique evidence identifier in hash
 		$tse_hash{$trans->dbID.":".$hit->[2].":".$hit->[3]} = 1;
-
 		$hit_match = 1;
 		$t_match = 1;
 		$gene_has_support++;
 		$transcript_has_support++;
 	      }
 
-	      # loop over exons and look for overlapping
-	      # similarity features
+	      # loop over exons and look for overlapping similarity features
 	      foreach my $exon (@exons) {
-#		warn $exon->stable_id.":".$exon->end."--".$hit->[0]." --- ".$exon->start."--".$hit->[1];
 		if ($exon->end >= $hit->[0] && $exon->start <= $hit->[1]) {
 		  $support->log_verbose("Matches similarity feature with dbID ".$hit->[2].".\n", 3);
-	      # store unique evidence identifier in hash
+                  # store unique evidence identifier in hash
 		  $se_hash{$exon->dbID.":".$hit->[2].":".$hit->[3]} = 1;
 		  $e_match = 1;
 		}
@@ -350,8 +346,7 @@ foreach my $chr (@chr_sorted) {
     }
 
     if ($gene_has_support and ! $support->param('dry_run')) {
-      $support->log_verbose("Storing supporting evidence... ".
-			      $support->date_and_mem."\n", 1);
+      $support->log_verbose("Storing supporting evidence... ". $support->date_and_mem."\n", 1);
       foreach my $se (keys %se_hash) {
 	eval {
 	  $sth->execute(split(":", $se));
@@ -360,8 +355,7 @@ foreach my $chr (@chr_sorted) {
 	  $support->log_warning("$gsi: $@\n", 1);
 	}
       }
-      $support->log_verbose("Done storing evidence. ".
-			      $support->date_and_mem."\n", 1);
+      $support->log_verbose("Done storing evidence. ". $support->date_and_mem."\n", 1);
     }
   }
   $support->log("\nProcessed $chr_stats{genes} genes (of ".scalar @$genes." on chromosome $chr), $chr_stats{transcripts} transcripts, $chr_stats{exons} exons.\n");
