@@ -48,6 +48,8 @@ sub DB {
 sub populate {
     my ($self, $name_list) = @_;
     
+    # Will fetch the latest version of any ACCESSION supplied without a SV.
+    
     my $dbh = $DB{$self}->dbh;
     my $check_full  = $dbh->prepare(q{ SELECT count(*) FROM accession_info WHERE accession_sv = ? });
     my $check_alias = $dbh->prepare(q{ SELECT count(*) FROM full_accession WHERE name = ? });
@@ -98,7 +100,13 @@ sub populate {
                 # Some SwissProt entries contain the same protein and multiple species.
                 warn "Discarding taxon info from '$taxon_list' for '$acc_sv'; keeping only '$tax_id'";
             }
-            $save_acc_info->execute($acc_sv, $tax_id, $evi_type, $description, $source_db, $seq_length);
+            # Don't overwrite existing info
+            $check_full->execute($acc_sv);
+            my ($have_full) = $check_full->fetchrow;
+            unless ($have_full) {
+                # It is new, so save it
+                $save_acc_info->execute($acc_sv, $tax_id, $evi_type, $description, $source_db, $seq_length);
+            }
             if ($name ne $acc_sv) {
                 $save_alias->execute($name, $acc_sv);
             }
@@ -119,7 +127,12 @@ sub type_and_name_from_accession {
     my ($self, $acc) = @_;
     
     my $dbh = $DB{$self}->dbh;
-    my $sth = $dbh->prepare(q{ SELECT evi_type, accession_sv FROM accession_info WHERE accession_sv = ? });
+    my $sth = $dbh->prepare(q{
+        SELECT evi_type
+          , accession_sv
+        FROM accession_info
+        WHERE accession_sv = ?
+        });
     $sth->execute($acc);
     my ($type, $acc_sv) = $sth->fetchrow;
     unless ($type and $acc_sv) {
@@ -159,15 +172,29 @@ sub evidence_type_and_name_from_text {
     # warn "Got names:\n", map {"  $_\n"} @$acc_list;
 
     my $dbh = $DB{$self}->dbh;
-    my $full_fetch = $dbh->prepare(q{ SELECT evi_type, accession_sv, source_db FROM accession_info WHERE accession_sv = ? });
-    my $part_fetch = $dbh->prepare(q{ SELECT evi_type, accession_sv, source_db FROM accession_info WHERE accession_sv LIKE ? });
+    my $full_fetch = $dbh->prepare(q{
+        SELECT evi_type
+          , accession_sv
+          , source_db
+        FROM accession_info
+        WHERE accession_sv = ?
+        });
     my $alias_fetch = $dbh->prepare(q{
-            SELECT ai.evi_type, ai.accession_sv, ai.source_db 
-            FROM accession_info ai
-              , full_accession f
-            WHERE ai.accession_sv = f.accession_sv
-            AND f.name = ?
-            });
+        SELECT ai.evi_type
+          , ai.accession_sv
+          , ai.source_db
+        FROM accession_info ai
+          , full_accession f
+        WHERE ai.accession_sv = f.accession_sv
+          AND f.name = ?
+        });
+    my $part_fetch = $dbh->prepare(q{
+        SELECT evi_type
+          , accession_sv
+          , source_db
+        FROM accession_info
+        WHERE accession_sv LIKE ?
+        });
 
     # First look at our SQLite db, to find out what kind of accession it is
     my $type_name = {};
@@ -175,13 +202,15 @@ sub evidence_type_and_name_from_text {
         $full_fetch->execute($acc);
         my ($type, $full_name, $source_db) = $full_fetch->fetchrow;
         unless ($type) {
-            # Try a different query, assuming the SV was missed off
-            $part_fetch->execute("$acc.%");
-            ($type, $full_name, $source_db) = $part_fetch->fetchrow;
-        }
-        unless ($type) {
+            # If the SV was left off, try the full_accession table first to
+            # ensure that the most recent version is returned, if cached.
             $alias_fetch->execute($acc);
             ($type, $full_name, $source_db) = $alias_fetch->fetchrow;
+        }
+        unless ($type) {
+            # Last, try a LIKE query, assuming the SV was missed off
+            $part_fetch->execute("$acc.%");
+            ($type, $full_name, $source_db) = $part_fetch->fetchrow;
         }
         unless ($type and $full_name) {
             next;

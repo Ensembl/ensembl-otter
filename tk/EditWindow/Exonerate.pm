@@ -490,6 +490,9 @@ sub get_query_seq {
     # identify the types of all the accessions supplied
 
     my $cache = $self->XaceSeqChooser->AceDatabase->AccessionTypeCache;
+    # The populate method will fetch the latest version of
+    # any accessions which are supplied without a SV into
+    # the cache object.
     $cache->populate(\@accessions);
 
     # add type and full accession information to the existing sequences
@@ -553,7 +556,7 @@ sub get_query_seq {
             if $missing_msg;
 
         $remapped_msg =
-          "The following supplied accessions have been mapped to full accessions:\n\n$remapped_msg\n"
+          "The following supplied accessions have been mapped to full ACCESSION.SV:\n\n$remapped_msg\n"
             if $remapped_msg;
 
         my $unclaimed_msg = '';
