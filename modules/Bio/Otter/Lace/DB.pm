@@ -84,7 +84,23 @@ sub init_db {
             , evi_type      TEXT
             , description   TEXT
             , source_db     TEXT
+            , length        INTEGER
+            , sequence      TEXT
         },
+        full_accession  => q{
+            name            TEXT PRIMARY KEY
+            , accession_sv  TEXT
+        },
+        species_info => q{
+            taxon_id        INTEGER PRIMARY KEY
+            , genus         TEXT
+            , species       TEXT
+            , common_name   TEXT
+        },
+    );
+
+    my %index_defs = (
+        idx_full_accession  => q{ full_accession( accession_sv, name ) },
     );
 
     sub create_tables {
@@ -98,6 +114,15 @@ sub init_db {
         foreach my $tab (sort keys %table_defs) {
             unless ($existing_table{$tab}) {
                 $dbh->do("CREATE TABLE $tab ($table_defs{$tab})");
+            }
+        }
+        
+        my %existing_index = map {$_->[0], 1}
+            @{ $dbh->selectall_arrayref(q{SELECT name FROM sqlite_master WHERE type = 'index'}) };
+
+        foreach my $idx (sort keys %index_defs) {
+            unless ($existing_index{$idx}) {
+                $dbh->do("CREATE INDEX $idx ON $index_defs{$idx}");
             }
         }
     }

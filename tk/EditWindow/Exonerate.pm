@@ -508,14 +508,14 @@ sub get_query_seq {
 
     my @to_pfetch;
     foreach my $acc (@supplied_accs) {
-        my $full = $cache->full_accession($acc)
+        my (undef, $full) = $cache->type_and_name_from_accession($acc)
             or next;    # No point trying to pfetch invalid accessions
-        push(@to_pfetch, $acc);
+        push(@to_pfetch, $full);
     }
 
     my %seqs_fetched = map {$_->name => $_} Hum::Pfetch::get_Sequences(@to_pfetch);
     foreach my $acc (@supplied_accs) {
-        my $full = $cache->full_accession($acc);
+        my ($type, $full) = $cache->type_and_name_from_accession($acc);
         unless ($full) {
             $missing_msg .= "  $acc (unknown accession)\n";
             next;
@@ -525,7 +525,7 @@ sub get_query_seq {
         # unclaimed sequences.
         my $seq = delete($seqs_fetched{$full});
         if ($seq) {
-            $seq->type($cache->type($full));
+            $seq->type($type);
         }
         else {
             $missing_msg .= "  $acc ($full)\n";
