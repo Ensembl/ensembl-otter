@@ -38,7 +38,7 @@ use Hum::Ace::Locus;
                   , description
                   , source_db
                   , length)
-            VALUES (?,?,?,?,?)
+            VALUES (?,?,?,?,?,?)
         });
     
         $dbh->begin_work;
