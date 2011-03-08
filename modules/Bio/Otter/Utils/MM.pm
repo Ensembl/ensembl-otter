@@ -7,7 +7,6 @@ use strict;
 use warnings;
 
 use DBI;
-use Readonly;
 
 =pod
 
@@ -20,45 +19,13 @@ All cells in the entry.accession columns match
 
 # NB: databases will be searched in the order in which they appear in this list
 my @DB_CATEGORIES = (
+    'emblnew',
     'emblrelease',
     'uniprot',
-    'emblnew',
     'uniprot_archive',
 
     #'refseq'
 );
-
-# pinched & adapted from Hum::ClipboardUtils.pm (copied here due to server PERL5LIB issues)
-# declaring as 'Readonly our' permits its use elsewhere as $Bio::Otter::Utils::MM::MAGIC_EVI_NAME_MATCHER
-#
-Readonly our $MAGIC_EVI_NAME_MATCHER => qr{
-    \s*                   # Optional leading whitespace
-    (?:([A-Za-z]{2}):)?   # Optional prefix - only return the letters
-    (
-                          # Something that looks like an accession:
-        [A-Z]+\d{5,}      # one or more letters followed by 5 or more digits
-        |                 # or, for TrEMBL,
-        [A-Z]\d[A-Z\d]{4} # a capital letter, a digit, then 4 letters or digits.
-    )
-    (?:\-(\d+))?          # Optional VARSPLICE suffix - only return the digits
-    (?:\.(\d+))?          # Optional .SV - only return the digits
-    \s*                   # Optional trailing whitespace
-}x;
-
-# Not a method
-#
-# returns (prefix, accession, sv, accession-without-splice-variant, splice-variant)
-#
-sub magic_evi_name_match {
-    my $text = shift;
-
-    my ($prefix, $acc_only, $splv, $sv) = ($text =~ /^${MAGIC_EVI_NAME_MATCHER}$/o);
-
-    my $acc = $acc_only;
-    $acc .= "-$splv" if $splv;
-
-    return ($prefix, $acc, $sv, $acc_only, $splv);
-}
 
 sub new {
     my ($class, @args) = @_;
@@ -67,7 +34,7 @@ sub new {
 
     my ($host, $port, $user, $name) = @args;
 
-    $self->host($host || 'cbi3d');
+    $self->host($host || 'cbi3');
     $self->port($port || 3306);
     $self->user($user || 'genero');
     $self->name($name || 'mm_ini');
@@ -157,102 +124,97 @@ sub dbh {
     return $self->{_dbhs}->{$category};
 }
 
-sub get_accession_types {
-    my ($self, $accs) = @_;
+{
+    my $common_sql = q{
+SELECT e.molecule_type
+  , e.data_class
+  , e.accession_version
+  , e.sequence_length
+  , GROUP_CONCAT(t.ncbi_tax_id) as taxon_list
+  , d.description
+FROM entry e
+  , description d
+  , taxonomy t
+WHERE e.entry_id = d.entry_id
+  AND e.entry_id = t.entry_id
+  AND e.accession_version };
+    
+    # May be dangerous to assume that the most recent entries in uniprot_archive
+    # will have the biggest entry_id
+    my $group_order_sql = q{ GROUP BY e.entry_id ORDER BY e.entry_id ASC };
+    
+    my $with_sv_sql = "$common_sql    = ?\n$group_order_sql";
+    my $like_sv_sql = "$common_sql LIKE ?\n$group_order_sql";
 
-    my $sql = '
-SELECT molecule_type, data_class, accession_version
-FROM entry e, accession a
-WHERE e.entry_id = a.entry_id
-AND a.accession = ?
-';
+    sub get_accession_types {
+        my ($self, $accs) = @_;
 
-    my $uniprot_archive_sql = '
-SELECT molecule_type, data_class, accession_version
-FROM entry
-WHERE accession_version LIKE ?
-';
+        my %acc_hash = map { $_ => 1 } @$accs;
+        my $results = {};
 
-    my %acc_hash = ();
+        for my $db_name (@DB_CATEGORIES) {
+            my $dbh = $self->dbh($db_name);
+            my $with_sv_sth = $dbh->prepare($with_sv_sql);
+            my $like_sv_sth = $dbh->prepare($like_sv_sql);
 
-    for my $text (@$accs) {
-        my ($prefix, $acc, $sv) = magic_evi_name_match($text);
-        if ($acc) {
+            foreach my $name (keys %acc_hash) {
 
-            $sv ||= '*';
-
-            $acc_hash{$text} = [ $acc, $sv ];
-        }
-    }
-
-    my %res = map { $_ => [] } @$accs;
-
-    return \%res unless %acc_hash;
-
-    for my $db (@DB_CATEGORIES) {
-
-        my $archive = $db eq 'uniprot_archive';
-
-        my $query = $archive ? $uniprot_archive_sql : $sql;
-
-        my $sth = $self->dbh($db)->prepare($query);
-
-        for my $key (keys %acc_hash) {
-
-            my ($acc, $sv) = @{ $acc_hash{$key} };
-
-            $acc .= '%' if $archive;    # uniprot_archive accessions have versions appended
-
-            $sth->execute($acc) or die "Couldn't execute statement: " . $sth->errstr;
-
-            if (my ($type, $class, $acc_sv) = $sth->fetchrow_array()) {
-
-                my ($db_sv) = $acc_sv =~ /.+\.(\d+)/;
-
-                next unless ($sv eq '*') || ($sv eq $db_sv);
-
-                # found an entry, so establish if the type is one we're expecting
-
-                if ($class eq 'EST') {
-                    $res{$key} = [ 'EST', $acc_sv, 'EMBL' ];
+                my $sth;
+                if ($name =~ /\.\d+$/) {
+                    $with_sv_sth->execute($name);
+                    $sth = $with_sv_sth;
                 }
-                elsif ($type eq 'mRNA') {
-                    # Here we return cDNA, which is more technically correct since
-                    # both ESTs and cDNAs are mRNAs.
-                    $res{$key} = [ 'cDNA', $acc_sv, 'EMBL' ];
-                }
-                elsif ($type eq 'protein') {
-
-                    my $source_db;
-
-                    if ($class eq 'STD') {
-                        $source_db = "Swissprot"
-                    }
-                    elsif ($class eq 'PRE') {
-                        $source_db = 'TrEMBL';
-                    }
-                    elsif ($class eq 'ISO') {    # we don't think trembl can have isoforms
-                        $source_db = 'Swissprot';
-                    }
-                    else {
-                        die "Unexpected data class for uniprot entry: $class";
-                    }
-
-                    $res{$key} = [ 'Protein', $acc_sv, $source_db ];
-                }
-                elsif ($type eq 'other RNA' or $type eq 'transcribed RNA') {
-                    $res{$key} = [ 'ncRNA', $acc_sv, 'EMBL' ];
+                else {
+                    $like_sv_sth->execute("$name.%");
+                    $sth = $like_sv_sth;
                 }
 
-                delete $acc_hash{$key};
+                while (my ($type, $class, $acc_sv, @extra_info) = $sth->fetchrow) {
+                    if ($class eq 'EST') {
+                        $results->{$name} = [ 'EST', $acc_sv, 'EMBL', @extra_info ];
+                    }
+                    elsif ($type eq 'mRNA') {
+                        # Here we return cDNA, which is more technically correct since
+                        # both ESTs and cDNAs are mRNAs.
+                        $results->{$name} = [ 'cDNA', $acc_sv, 'EMBL', @extra_info ];
+                    }
+                    elsif ($type eq 'protein') {
+
+                        my $source_db;
+
+                        if ($class eq 'STD') {
+                            $source_db = "Swissprot"
+                        }
+                        elsif ($class eq 'PRE') {
+                            $source_db = 'TrEMBL';
+                        }
+                        elsif ($class eq 'ISO') {    # we don't think TrEMBL can have isoforms
+                            $source_db = 'Swissprot';
+                        }
+                        else {
+                            die "Unexpected data class for uniprot entry: $class";
+                        }
+
+                        $results->{$name} = [ 'Protein', $acc_sv, $source_db, @extra_info ];
+                    }
+                    elsif ($type eq 'other RNA' or $type eq 'transcribed RNA') {
+                        $results->{$name} = [ 'ncRNA', $acc_sv, 'EMBL', @extra_info ];
+                    }
+
+                    delete $acc_hash{$name};
+                }
             }
+
+            # We don't need to search any further databases if 
+            last unless keys %acc_hash;
         }
 
-        last unless %acc_hash;
+        return $results;
     }
+    
 
-    return \%res;
 }
+
 
 my $feature_details_sql = {
     description => q{

@@ -36,7 +36,8 @@ use Hum::Ace::Locus;
                   , taxon_id
                   , evi_type
                   , description
-                  , source_db)
+                  , source_db
+                  , length)
             VALUES (?,?,?,?,?)
         });
     
@@ -53,6 +54,7 @@ use Hum::Ace::Locus;
                 substr($source, 0, 4) eq 'EST_' ? 'EST' : $evidence_type{$source},
                 $attrib->{'Description'},
                 $attrib->{'DB_Name'},
+                $attrib->{'Length'},
                 );
         }
         close $gff_fh or confess "Error reading GFF file '$gff_file'; $!";

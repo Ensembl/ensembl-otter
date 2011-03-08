@@ -51,8 +51,7 @@ use Bio::Otter::Utils::MM;
 
     my $response = '';
     foreach my $acc (keys %$types) {
-        my ($acc_type, $full_acc, $source_db) = @{$types->{$acc}};
-        $response .= "$acc\t$acc_type\t$full_acc\t$source_db\n";
+        $response .= join("\t", $acc, @{$types->{$acc}}) . "\n";
     }
     $server->send_response($response);
 }

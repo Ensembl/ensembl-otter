@@ -7,7 +7,7 @@ use strict;
 use warnings;
 use Hum::ClipboardUtils qw{ $magic_evi_name_matcher };
 
-my (%client, %full_accession, %type, %DB);
+my (%client, %DB);
 
 sub DESTROY {
     my ($self) = @_;
@@ -15,8 +15,6 @@ sub DESTROY {
     warn "Destroying a ", ref($self), "\n";
 
     delete $client{$self};
-    delete $full_accession{$self};
-    delete $type{$self};
     delete $DB{$self};
 
     return;
@@ -50,13 +48,68 @@ sub DB {
 sub populate {
     my ($self, $name_list) = @_;
     
-    my @to_fetch = grep { ! $full_accession{$self}{$_} } @$name_list;
+    my $dbh = $DB{$self}->dbh;
+    my $check_full  = $dbh->prepare(q{ SELECT count(*) FROM accession_info WHERE accession_sv = ? });
+    my $check_alias = $dbh->prepare(q{ SELECT count(*) FROM full_accession WHERE name = ? });
+    
+    my (@to_fetch);
+    foreach my $name (@$name_list) {
+        $check_full->execute($name);
+        my ($have_full) = $check_full->fetchrow;
+        if ($have_full) {
+            next;
+        }
+        else {
+            $check_alias->execute($name);
+            my ($have_alias) = $check_alias->fetchrow;
+            if ($have_alias) {
+                next;
+            }
+            else {
+                push(@to_fetch, $name);
+            }
+        }
+    }
     return unless @to_fetch;
+
+    # Query the webserver (mole database) for the information.
     my $response = $self->Client->get_accession_types(@to_fetch);
-    foreach my $line (split /\n/, $response) {
-        my ($acc, $type, $full_acc) = split /\t/, $line;
-        $full_accession{$self}{$acc} = $full_acc;
-        $type{$self}{$full_acc} = $type;
+
+    my $save_acc_info = $dbh->prepare(q{
+        INSERT INTO accession_info (
+              accession_sv
+              , taxon_id
+              , evi_type
+              , description
+              , source_db
+              , length)
+        VALUES (?,?,?,?,?,?)
+    });
+    my $save_alias = $dbh->prepare(q{
+        INSERT INTO full_accession(name, accession_sv) VALUES (?,?)
+    });
+    
+    $dbh->begin_work;
+    eval {
+        foreach my $line (split /\n/, $response) {
+            my ($name, $evi_type, $acc_sv, $source_db, $seq_length, $taxon_list, $description) = split /\t/, $line;
+            my ($tax_id, @other_tax) = split /,/, $taxon_list;
+            if (@other_tax) {
+                # Some SwissProt entries contain the same protein and multiple species.
+                warn "Discarding taxon info from '$taxon_list' for '$acc_sv'; keeping only '$tax_id'";
+            }
+            $save_acc_info->execute($acc_sv, $tax_id, $evi_type, $description, $source_db, $seq_length);
+            if ($name ne $acc_sv) {
+                $save_alias->execute($name, $acc_sv);
+            }
+        }
+    };
+    if (my $err = $@) {
+        $dbh->rollback;
+        die "Error saving accession info: $@";
+    }
+    else {
+        $dbh->commit;
     }
 
     return;
@@ -65,25 +118,27 @@ sub populate {
 sub type_and_name_from_accession {
     my ($self, $acc) = @_;
     
-    if (my $full_acc = $full_accession{$self}{$acc}) {
-        my $type = $type{$self}{$full_acc};
-        return ($type, $full_acc);
+    my $dbh = $DB{$self}->dbh;
+    my $sth = $dbh->prepare(q{ SELECT evi_type, accession_sv FROM accession_info WHERE accession_sv = ? });
+    $sth->execute($acc);
+    my ($type, $acc_sv) = $sth->fetchrow;
+    unless ($type and $acc_sv) {
+        $sth = $dbh->prepare(q{
+            SELECT ai.evi_type, ai.accession_sv
+            FROM accession_info ai
+              , full_accession f
+            WHERE ai.accession_sv = f.accession_sv
+            AND f.name = ?
+            });
+        $sth->execute($acc);
+        ($type, $acc_sv) = $sth->fetchrow;
+    }
+    if ($type and $acc_sv) {
+        return ($type, $acc_sv);
     }
     else {
         return;
     }
-}
-
-sub full_accession {
-    my ($self, $acc) = @_;
-    
-    return $full_accession{$self}{$acc};
-}
-
-sub type {
-    my ($self, $full_acc) = @_;
-    
-    return $type{$self}{$full_acc};
 }
 
 sub evidence_type_and_name_from_text {
@@ -106,11 +161,16 @@ sub evidence_type_and_name_from_text {
     my $dbh = $DB{$self}->dbh;
     my $full_fetch = $dbh->prepare(q{ SELECT evi_type, accession_sv, source_db FROM accession_info WHERE accession_sv = ? });
     my $part_fetch = $dbh->prepare(q{ SELECT evi_type, accession_sv, source_db FROM accession_info WHERE accession_sv LIKE ? });
-
-    my $type_name = {};
-    my $not_found = [];
+    my $alias_fetch = $dbh->prepare(q{
+            SELECT ai.evi_type, ai.accession_sv, ai.source_db 
+            FROM accession_info ai
+              , full_accession f
+            WHERE ai.accession_sv = f.accession_sv
+            AND f.name = ?
+            });
 
     # First look at our SQLite db, to find out what kind of accession it is
+    my $type_name = {};
     foreach my $acc (@$acc_list) {
         $full_fetch->execute($acc);
         my ($type, $full_name, $source_db) = $full_fetch->fetchrow;
@@ -119,8 +179,11 @@ sub evidence_type_and_name_from_text {
             $part_fetch->execute("$acc.%");
             ($type, $full_name, $source_db) = $part_fetch->fetchrow;
         }
+        unless ($type) {
+            $alias_fetch->execute($acc);
+            ($type, $full_name, $source_db) = $alias_fetch->fetchrow;
+        }
         unless ($type and $full_name) {
-            push(@$not_found, $acc);
             next;
         }
         if ($source_db) {
@@ -129,19 +192,6 @@ sub evidence_type_and_name_from_text {
         }
         my $name_list = $type_name->{$type} ||= [];
         push(@$name_list, $full_name);
-    }
-    
-    # Fall back to a server query for stuff not found in the SQLite db.
-    if (@$not_found) {
-        $self->populate($not_found);
-        foreach my $acc (@$not_found) {
-            my ($type, $full_name) = $self->type_and_name_from_accession($acc);
-            unless ($type and $full_name) {
-                next;
-            }
-            my $name_list = $type_name->{$type} ||= [];
-            push(@$name_list, $full_name);        
-        }
     }
     
     return $type_name;

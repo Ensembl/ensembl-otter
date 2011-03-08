@@ -471,11 +471,6 @@ sub zMapAceServerDefaults {
         writeback => 'false',
         sequence  => 'true',
 
-        # navigatorsets specifies the feature sets to draw in the navigator pane.
-        # so far the requested columns are just scale, genomic_canonical and locus
-        # in line with keeping the columns to a minimum to save screen space.
-        navigatorsets => ( join ' ; ', qw{ scale genomic_canonical locus } ),
-
         # Can specify a stylesfile instead of featuresets
 
         featuresets     => $featuresets,
@@ -1083,31 +1078,36 @@ sub zMapFeaturesLoaded {
     my $filt_hash = $self->AceDatabase->filters;
     my $state_changed = 0;
     foreach my $set_name (@featuresets) {
-        # Zmap lowercases everything in its XML
-        foreach my $name (keys %$filt_hash) {
-            if (lc($name) eq lc($set_name)) {
-                 if (my $state_hash = $filt_hash->{$name}{'state'}) {
-                    if ($status == 0 && ! $state_hash->{'failed'}) {
-                        $state_changed = 1;
-                        $state_hash->{'failed'} = 1;
-                        $state_hash->{'fail_msg'} = $msg; ### Could store in SQLite db
-                    }
-                    elsif ($status == 1 && ! $state_hash->{'done'}) {
-                        $state_changed = 1;
-                        $state_hash->{'done'} = 1;
-                        $state_hash->{'failed'} = 0; # reset failed flag if filter succeeds
-                        my $filt = $filt_hash->{$name}{'filter'};
-                        if ($filt->process_gff_file) {
-                            my @tsct = $self->AceDatabase->process_gff_file_from_Filter($filt);
-                            if (@tsct) {
-                                $self->add_external_SubSeqs(@tsct);
-                                $self->draw_subseq_list;
-                            }
-                        }
+
+        # We used to get featureset names back from zmap in lower case so that
+        # we had to do a case insensitive search through the filter names for a
+        # match. Starting with Zmap 0.1.114 (or maybe earlier) we get them in
+        # their original case.
+
+        if (my $state_hash = $filt_hash->{$set_name}{'state'}) {
+            if ($status == 0 && ! $state_hash->{'failed'}) {
+                $state_changed = 1;
+                $state_hash->{'failed'} = 1;
+                $state_hash->{'fail_msg'} = $msg; ### Could store in SQLite db
+            }
+            elsif ($status == 1 && ! $state_hash->{'done'}) {
+                $state_changed = 1;
+                $state_hash->{'done'} = 1;
+                $state_hash->{'failed'} = 0; # reset failed flag if filter succeeds
+                my $filt = $filt_hash->{$set_name}{'filter'};
+                if ($filt->process_gff_file) {
+                    my @tsct = $self->AceDatabase->process_gff_file_from_Filter($filt);
+                    if (@tsct) {
+                        $self->add_external_SubSeqs(@tsct);
+                        $self->draw_subseq_list;
                     }
                 }
             }
         }
+        # else {
+        #     # We see a warning for each acedb featureset
+        #     warn "Ignoring featurset '$set_name'";
+        # }
     }
     
     if ($state_changed) {
@@ -1309,8 +1309,8 @@ sub zMapLoadFeatures {
                        });
         $xml->open_tag('align');
         $xml->open_tag('block');
-        for my $featureset (@featuresets) {
-            $xml->open_tag('featureset', { name => $featureset });
+        foreach my $fs_name (@featuresets) {
+            $xml->open_tag('featureset', { name => $fs_name });
             $xml->close_tag;
         }
         $xml->close_all_open_tags;

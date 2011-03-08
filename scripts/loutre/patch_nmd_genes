@@ -94,7 +94,7 @@ my $time_now = time();
             $not_recov++;
         }
     }
-    print STDERR "Found $gene_count Genes with nonsense_mediated_decay Transcripts\n",
+    print STDERR "Found $gene_count Genes with nonsense_mediated_decay Transcripts without translations.\n",
       "Found or recovered Translation for $recovered nonsense_mediated_decay Transcripts\n",
       "Leaves $not_recov Genes with 1 or more nonsense_mediated_decay Transcripts missing Translation\n";
 }
@@ -213,7 +213,7 @@ sub recover_coding_region {
         }
     }
 
-    # return $found_tsl + $already_tsl;
+    return $found_tsl + $already_tsl;
 
     if ($found_tsl) {
         $dba->begin_work;
@@ -238,7 +238,7 @@ sub recover_coding_region {
 sub print_gene_info {
 	my ($gene,$tsct,$tag) = @_;
 	my ($gene_name) = @{$gene->get_all_Attributes('name')};
-	printf STDOUT join(" ",
+	printf STDERR join(" ",
 	                   $gene->slice->seq_region_name,
 	                   $gene_name->value,
 	                   $gene->stable_id,
