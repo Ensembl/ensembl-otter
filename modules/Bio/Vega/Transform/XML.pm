@@ -374,14 +374,10 @@ sub generate_Locus {
         }
     }
 
-    my $author_name;
-    my $author_email;
-    if( my $gene_author=$gene->gene_author ) {
-        $author_name  = $gene_author->name;
-        $author_email = $gene_author->email;
+    if (my $gene_author = $gene->gene_author) {
+        $g->attribvals($self->prettyprint('author',       $gene_author->name));
+        $g->attribvals($self->prettyprint('author_email', $gene_author->email));
     }
-    $g->attribvals($self->prettyprint('author', $author_name));
-    $g->attribvals($self->prettyprint('author_email', $author_email));
 
     if( my $transcripts=$gene->get_all_Transcripts ) {
 
@@ -405,14 +401,10 @@ sub generate_Transcript {
         $t->attribvals($self->prettyprint('stable_id',$tran->stable_id));
     }
 
-    my $author_name;
-    my $author_email;
-    if( my $transcript_author=$tran->transcript_author ) {
-        $author_name  = $transcript_author->name;
-        $author_email = $transcript_author->email;
+    if (my $tsct_author = $tran->transcript_author) {
+        $t->attribvals($self->prettyprint('author',       $tsct_author->name));
+        $t->attribvals($self->prettyprint('author_email', $tsct_author->email));
     }
-    $t->attribvals($self->prettyprint('author',$author_name));
-    $t->attribvals($self->prettyprint('author_email',$author_email));
 
   if(my $remarks = $tran->get_all_Attributes('remark')){
      foreach my $rem (@$remarks){

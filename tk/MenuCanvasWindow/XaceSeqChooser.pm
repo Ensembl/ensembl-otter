@@ -1214,6 +1214,9 @@ sub resync_with_db {
     $self->empty_Assembly_cache;
     $self->empty_SubSeq_cache;
     $self->empty_Locus_cache;
+    
+    # Refetch transcripts from GFF cache
+    $self->fetch_external_SubSeqs;
 
     # Redisplay
     $self->draw_subseq_list;
@@ -1497,7 +1500,6 @@ sub fetch_external_SubSeqs {
             $self->add_external_SubSeqs(@tsct);
         }
     }
-    $self->draw_subseq_list;
 }
 
 sub delete_subsequences {
@@ -1970,24 +1972,19 @@ sub empty_SubSeq_cache {
 sub row_count {
     my( $self, $slist ) = @_;
 
-    my $rows = $self->{'_row_count'};
-    unless ($rows) {
-        # Work out number of rows to keep chooser
-        # window roughly square.  Also a lower and
-        # an upper limit of 20 and 40 rows.
-        my $total_name_length = 0;
-        foreach my $sub (grep { $_ } @$slist) {
-            $total_name_length += length($sub->name);
-        }
-        $rows = int sqrt($total_name_length);
-        if ($rows < 20) {
-            $rows = 20;
-        }
-        elsif ($rows > 40) {
-            $rows = 40;
-        }
-
-        $self->{'_row_count'} = $rows;
+    # Work out number of rows to keep chooser
+    # window roughly square.  Also a lower and
+    # an upper limit of 20 and 40 rows.
+    my $total_name_length = 0;
+    foreach my $sub (grep { $_ } @$slist) {
+        $total_name_length += length($sub->name);
+    }
+    my $rows = int sqrt($total_name_length);
+    if ($rows < 20) {
+        $rows = 20;
+    }
+    elsif ($rows > 40) {
+        $rows = 40;
     }
 
     return $rows;

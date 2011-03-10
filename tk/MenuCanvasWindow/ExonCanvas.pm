@@ -3112,7 +3112,7 @@ sub xace_save {
     
     $top->grabRelease;
     
-    return;
+    return 1;
 }
 
 sub Exons_from_canvas {
