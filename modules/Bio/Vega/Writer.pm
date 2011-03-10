@@ -24,8 +24,10 @@ sub formatclosetag{
 sub formatopenendtag{
   my ($self,$name,$indent,$value)=@_;
   $indent=$indent+2;
-  if(!defined($name)) { warn "NAME is not defined"; }
-  if(!defined($value)) { warn "VALUE is not defined where NAME='$name'"; }
+  unless (defined($value)) {
+      warn "Value not defined for <$name> tag\n";
+      $value = '';
+  }
   return ((' ' x $indent).'<'.$name.'>'.$value.'</'.$name.">\n")
 }
 
