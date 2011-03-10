@@ -689,7 +689,6 @@ sub find_string_match_in_clones {
     my( $self, $dsname, $qnames_list ) = @_;
 
     my $qnames_string = join(',', @$qnames_list);
-    my $ds = $self->get_DataSet_by_name($dsname);
 
     my $response = $self->otter_response_content(
         'GET',
