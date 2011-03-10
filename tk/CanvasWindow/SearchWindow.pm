@@ -70,25 +70,20 @@ sub do_search {
 
     my $qnames = [ split(/[\s,]+/, ${$self->search_field()} ) ];
 
-
     my $results = $self->Client()->find_string_match_in_clones($self->DataSet->name(), $qnames);
-    my $results_by_qname = {};
-    push @{$results_by_qname->{$_->{qname}}}, $_ for @{$results};
-
-    foreach my $qname (sort { ace_sort($a,$b); } @{$qnames}) {
-        my $qname_results = $results_by_qname->{$qname};
-        if ($qname_results) {
-            $self->_new_result_entry($_) for @{$qname_results};
-        } else {
-            $self
-                ->_new_result_frame
-                ->Label(-text => "$qname not found")
-                ->pack(-side => 'left', -fill => 'x');
+    if (@$results) {
+        foreach my $res_hash (sort { ace_sort($a->{'qname'}, $b->{'qname'}); } @$results) {
+            $self->_new_result_entry($res_hash);
         }
     }
-
+    else {
+        my $q_name_list = join(', or ', map { "'$_'" } @$qnames);
+        $self->_new_result_frame
+            ->Label(-text => "Nothing found for $q_name_list")
+            ->pack(-side => 'left', -fill => 'x');
+    }
+    
     $self->fix_window_min_max_sizes;
-
     $self->top_window->Unbusy;
 
     return;
