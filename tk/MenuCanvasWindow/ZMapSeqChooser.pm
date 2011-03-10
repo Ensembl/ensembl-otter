@@ -1084,7 +1084,9 @@ sub zMapFeaturesLoaded {
         # match. Starting with Zmap 0.1.114 (or maybe earlier) we get them in
         # their original case.
 
-        if (my $state_hash = $filt_hash->{$set_name}{'state'}) {
+        # NB: careful not to auto-vivify entries in $filt_hash !
+        if (my $filter_entry = $filt_hash->{$set_name}) {
+            my $state_hash = $filter_entry->{'state'};
             if ($status == 0 && ! $state_hash->{'failed'}) {
                 $state_changed = 1;
                 $state_hash->{'failed'} = 1;
