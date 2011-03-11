@@ -654,8 +654,12 @@ foreach my $name (@{$chr_names_wanted}) {
 	}
       }
 
-      if ($fsv_gene || $annotated_clone) {
-	$support->log("Taking gene $gname ($lgsi) with annotation flag\n");
+      if ($fsv_gene) {
+	$support->log("Taking gene $gname ($lgsi) with fsv annotation flag\n");
+	$fsv++;
+      }
+      elsif ($annotated_clone) {
+	$support->log("Taking gene $gname ($lgsi) with annotated clone flag\n");
 	$fsv++;
       }
       else {
