@@ -232,7 +232,7 @@ if ($support->param('prune') && $support->user_proceed("\nDo you want to undo al
 ##########################################################################
 # delete unwanted loutre-derived simple_features                         #
 ##########################################################################
-my %lns_to_stay = map {$_,1} qw(CpG
+my %lns_to_stay = map {lc($_),1} qw(CpG
 			     Eponine
 			     polyA_signal
 			     polyA_site
@@ -240,7 +240,7 @@ my %lns_to_stay = map {$_,1} qw(CpG
 			     RSS
 			     tRNAscan
 			     EUCOMM );
-my %lns_to_go = map {$_,1} qw(TATA_box
+my %lns_to_go = map {lc($_),1} qw(TATA_box
 			   EUCOMM_AUTO
 			   phastCons
 			   ComparaCons
@@ -261,8 +261,8 @@ while (my ($logic_name,$analysis_id,$c) = $s->fetchrow) {
 }
 my $problem = 0;
 foreach my $ln (keys %sf_features) {
-  if (! exists($lns_to_stay{$ln}) ) {
-    if (! exists($lns_to_go{$ln}) ) {
+  if (! exists($lns_to_stay{lc($ln)}) ) {
+    if (! exists($lns_to_go{lc($ln)}) ) {
       $support->log_warning("I don't know what to do with $ln simple features, please help me out\n");
       $problem = 1;
     }
@@ -737,13 +737,16 @@ push @sql_fixes, "UPDATE coord_system set attrib = \'default_version\' WHERE ver
 push @sql_fixes, "UPDATE coord_system set rank = 1 WHERE version = \'VEGA$release_no\' and name = \'chromosome\';\n";
 push @sql_fixes, "UPDATE coord_system set version = NULL WHERE version = \'none\' and name = \'contig\';\n";
 push @sql_fixes, "INSERT into meta (meta_key,meta_value) VALUES (\'assembly.default\',\'VEGA$release_no\');\n";
-#push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA$release_no|contig\' WHERE meta_value = \'chromosome:Otter|contig\';\n";
-#push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA$release_no|contig|clone\' WHERE meta_value = \'chromosome:Otter|contig|clone\';\n";
 push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA$release_no#contig\' WHERE meta_value = \'chromosome:Otter#contig\';\n";
 push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA$release_no#contig#clone\' WHERE meta_value = \'chromosome:Otter#contig#clone\';\n";	
 if (my $alt_assembly = $support->param('ensemblassembly') ) {
   push @sql_fixes, "INSERT into meta (meta_key,meta_value) VALUES (\'assembly.mapping\',\'chromosome:VEGA$release_no#chromosome:$alt_assembly\');\n";
 }
+
+#zfish fixes
+push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA$release_no|contig\' WHERE meta_value = \'chromosome:Otter|contig\';\n";
+push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA$release_no|contig|clone\' WHERE meta_value = \'chromosome:Otter|contig|clone\';\n";
+push @sql_fixes, "DELETE from meta where meta_value like \'%OtterArchive%\';\n";
 
 #add misc info to meta table
 my $date = strftime "%Y-%m", localtime;
@@ -763,7 +766,7 @@ push @sql_fixes, "UPDATE gene SET biotype = 'TEC' WHERE biotype = 'tec';\n";
 push @sql_fixes, "UPDATE transcript SET biotype = 'IG_gene' WHERE biotype = 'ig_gene';\n";
 push @sql_fixes, "UPDATE transcript SET biotype = 'IG_pseudogene' WHERE biotype = 'ig_pseudogene';\n";
 push @sql_fixes, "UPDATE transcript SET biotype = 'TEC' WHERE biotype = 'tec';\n";
-push @sql_fixes, "UPDATE transcript SET biotype = 'lincRNA' WHERE biotype = 'linkrna';\n";
+push @sql_fixes, "UPDATE transcript SET biotype = 'lincRNA' WHERE biotype = 'lincrna';\n";
 push @sql_fixes, "UPDATE gene SET biotype = 'processed_transcript' WHERE biotype = 'novel_transcript';\n";
 push @sql_fixes, "UPDATE gene SET biotype = 'transcribed_pseudogene' WHERE biotype = 'expressed_pseudogene';\n";
 push @sql_fixes, "UPDATE transcript SET biotype = 'transcribed_pseudogene' WHERE biotype = 'expressed_pseudogene';\n";
@@ -777,6 +780,9 @@ push @sql_fixes, "UPDATE gene SET status = 'NOVEL' WHERE status = 'PUTATIVE' and
 #misc fix for repeat features
 push @sql_fixes, "DELETE from repeat_feature where repeat_start < 1;\n";
 push @sql_fixes, "DELETE from repeat_feature where repeat_end < 1;\n";
+
+#set all logic_names to be lowercase
+push @sql_fixes, "UPDATE analysis set logic_name = lower(logic_name);\n";
 
 if (! $support->param('dry_run')) {
   $support->log("\nFixing meta table, updating gene / transcript types\n");
@@ -808,6 +814,7 @@ if ($support->param('dry_run')) {
 }
 
 if ( ! $support->param('dry_run')) {
+
   #update attribute table
   my $options = $support->create_commandline_options({
     'allowed_params' => 1,
@@ -829,8 +836,23 @@ if ( ! $support->param('dry_run')) {
       'logfile'     => 'finish_vega_creation_update_external_dbs.log',
     }
   });
+
+  #update external db table
   $support->log("\nUpdating external_db table on ".$support->param('dbname')."...\n");
   system("../xref/update_external_dbs.pl $options") == 0
     or $support->throw("Error running update_external_dbs.pl: $!");
+
+  #make a backup
+  my $dbname = $support->param('dbname');
+  my $new_dbname = $dbname.'_original';
+  my $host   = $support->param('host');
+  my $port   = $support->param('port');
+  my $user   = $support->param('user');
+  my $pass   = $support->param('pass');
+  $support->log("Making a backup of $dbname to $new_dbname\n");
+  my $cmd = "mysql -u $user -p$pass -h $host -P $port -e 'create database $new_dbname'";
+  `$cmd`;
+  $cmd = "mysqldump --opt -u $user -p$pass -h $host -P $port $dbname | mysql -u $user -p$pass -h $host -P $port $new_dbname";
+  `$cmd`;
 }	
 $support->finish_log;
