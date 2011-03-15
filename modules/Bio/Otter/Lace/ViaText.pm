@@ -150,24 +150,6 @@ our %LangDesc = ( ## no critic(Variables::ProhibitPackageVars)
     },
 );
 
-# a Bio::EnsEMBL::Slice method to handle the dummy ExonSupportingFeature feature type
-sub Bio::EnsEMBL::Slice::get_all_ExonSupportingFeatures {
-    my ($self, $logic_name, $dbtype) = @_;
-
-    my $load_exons = 1;
-
-    if(!$self->adaptor()) {
-        warning('Cannot get Transcripts without attached adaptor');
-        return [];
-    }
-
-    return
-        [ map { @{$_->get_all_supporting_features} }
-          map { @{$_->get_all_Exons} }
-          @{$self->get_all_Transcripts($load_exons, $logic_name, $dbtype)}
-          ];
-}
-
 1;
 
 __END__
