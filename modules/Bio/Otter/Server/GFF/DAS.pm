@@ -261,9 +261,6 @@ sub get_requested_features {
     my $sieve         = $self->param('sieve') || '';
     my $grouplabel    = $self->param('grouplabel') || '';
     my $dump          = $self->param('dump') || 0;
-    my $rebase        = $self->param('rebase');
-    my $gff_source    = $self->param('gff_source');
-    my $gff_seqname   = $self->param('gff_seqname');
 
     my $das = Bio::Das::Lite->new({
         'dsn' => $source ? $source.'/'.$dsn : $dsn,
