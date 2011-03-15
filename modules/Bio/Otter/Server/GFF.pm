@@ -99,7 +99,7 @@ sub get_requested_features {
 
     my ($self) = @_;
 
-    my @feature_kinds  = split(/,/, $self->require_argument('kind'));
+    my @feature_kinds  = split(/,/, $self->require_argument('feature_kind'));
     my $analysis_list = $self->param('analysis');
     my @analysis_names = $analysis_list ? split(/,/, $analysis_list) : ( undef );
     my $filter_module = $self->param('filter_module');

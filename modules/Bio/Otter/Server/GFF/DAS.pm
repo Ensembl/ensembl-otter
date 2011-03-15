@@ -257,7 +257,7 @@ sub get_requested_features {
     my $source        = $self->param('source'); # let's slowly phase it out
     my $dsn           = $self->require_argument('dsn');
     my $analysis_name = $self->param('analysis'); # defaults to *everything*
-    my $kind          = $self->param('kind')  || 'SimpleFeature';
+    my $kind          = $self->param('feature_kind')  || 'SimpleFeature';
     my $sieve         = $self->param('sieve') || '';
     my $grouplabel    = $self->param('grouplabel') || '';
     my $dump          = $self->param('dump') || 0;

@@ -208,7 +208,7 @@ sub server_params {
 
         # common
         analysis        => $self->analysis,
-        kind            => $self->feature_kind,
+        feature_kind    => $self->feature_kind,
         csver_remote    => $self->csver_remote,
         metakey         => $self->metakey,
         filter_module   => $self->filter_module,
