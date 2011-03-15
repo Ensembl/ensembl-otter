@@ -3,8 +3,7 @@
 use strict;
 use warnings;
 
-use FindBin;
-use lib "$FindBin::Bin/lib";
+use lib "${ENV{TEAM_TOOLS}}/t/tlib";
 use CriticModule;
 
 use Bio::AlignIO;
