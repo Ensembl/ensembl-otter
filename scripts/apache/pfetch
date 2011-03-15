@@ -61,7 +61,7 @@ eval {
             );
     }
     die "Connect to pfetch server failed" unless $socket;
-    
+
     print $socket $req, "\n";
 };
 
@@ -77,7 +77,7 @@ if ($@) {
         -status => 200,
         -type   => 'text/plain',
         );
-    
+
     while (<$socket>) {
         print;
     }

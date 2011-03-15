@@ -18,12 +18,12 @@ eval {
     my $timestamp   = $server->require_argument('timestamp');
     my $text        = $server->require_argument('text');
     my $action      = $server->require_argument('action');
-    
+
     my $author = $server->make_Author_obj;
     $server->otter_dba->get_AuthorAdaptor->store($author);
 
     my $odbc = $server->otter_dba->dbc;
-    
+
     my $seq_region_sub_select = q{(SELECT seq_region_id FROM seq_region where name = ?)};
 
     if ($action=~/(change|modify|old)/) {
