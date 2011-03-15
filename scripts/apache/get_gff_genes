@@ -9,61 +9,6 @@ use warnings;
 
 use SangerPaths qw{ core bioperl123 ensembl60 otter54 };
 
-use Bio::Otter::ServerScriptSupport;
-use Bio::Vega::Utils::EnsEMBL2GFF;
+use Bio::Otter::Server::GFF::Genes;
 
-my $server = Bio::Otter::ServerScriptSupport->new;
-
-my $gff_string = '';
-
-eval {
-
-    my @fetch_mapped_feature_params = ();
-    foreach my $param (qw{ cs name type start end metakey csver csver_remote }) {
-        my $val = $server->param($param);
-        push(@fetch_mapped_feature_params, defined($val) ? $val : '');
-    }
-
-    my %gff_genes_params;
-    foreach my $param (
-        qw{
-        rebase
-        gff_source
-        gff_seqname
-        url_string
-        transcript_analyses
-        translation_xref_dbs
-        }
-      )
-    {
-        $gff_genes_params{$param} = $server->param($param);
-    }
-
-    my @analysis_names =
-      $server->param('analysis')
-      ? split(/,/, $server->param('analysis'))
-      : (undef);
-    # $analysis_name will be 'undef' if we are fetching genes of all analyses.
-    my $header = '';
-    foreach my $analysis_name (@analysis_names) {
-
-        # third parameter of $slice->get_all_Genes() helps preventing lazy-loading of transcripts
-        my $genes = $server->fetch_mapped_features('gene', 'get_all_Genes', [ $analysis_name, undef, 1 ],
-            @fetch_mapped_feature_params,);
-
-        foreach my $gene (@$genes) {
-            $gff_string .= $gene->to_gff(%gff_genes_params);
-        }
-    }
-};
-
-if ($@) {
-    $server->error_exit("Error fetching genes:\n" . $@);
-}
-else {
-    $server->compression(1);
-    $server->send_response($server->gff_header . $gff_string);
-}
-
-1;
-
+Bio::Otter::Server::GFF::Genes->send_requested_features;
