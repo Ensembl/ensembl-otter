@@ -4,8 +4,8 @@ package Bio::Otter::Server::GFF;
 use strict;
 use warnings;
 
-use Bio::Otter::Lace::ViaText qw( %LangDesc );
 use Bio::Vega::Enrich::SliceGetAllAlignFeatures;
+use Bio::Vega::Utils::GFF;
 use Bio::Vega::Utils::EnsEMBL2GFF;
 
 use base qw( Bio::Otter::ServerScriptSupport );
@@ -15,6 +15,52 @@ my @gff_keys = qw(
     gff_source
     gff_seqname
     );
+
+my $call_args = {
+
+    # EnsEMBL
+    SimpleFeature => [
+        ['analysis' => undef],
+        ],
+    RepeatFeature => [
+        ['analysis' => undef],
+        ['repeat_type' => undef],
+        ['dbtype' => undef],
+    ],
+    MarkerFeature => [
+        ['analysis' => undef],
+        ['priority' => undef],
+        ['map_weight' => undef],
+    ],
+    DitagFeature => [
+        ['ditypes', undef, qr/,/],
+        ['analysis' => undef],
+    ],
+    VariationFeature => [
+    ],
+
+    # Vega
+    DnaDnaAlignFeature => [
+        ['analysis' => undef],
+        ['score' => undef],
+        ['dbtype' => undef],
+    ],
+    DnaPepAlignFeature => [
+        ['analysis' => undef],
+        ['score' => undef],
+        ['dbtype' => undef],
+    ],
+    PredictionTranscript => [
+        ['analysis' => undef],
+        ['load_exons' => 1],
+    ],
+
+    # dummy
+    ExonSupportingFeature => [
+        ['analysis' => undef],
+    ],
+
+};
 
 sub send_requested_features {
     my ($pkg) = @_;
@@ -62,7 +108,7 @@ sub get_requested_features {
 
     foreach my $analysis_name (@analysis_names) {
         foreach my $feature_kind (@feature_kinds) {
-            my $param_descs = $LangDesc{$feature_kind}{-call_args};
+            my $param_descs = $call_args->{$feature_kind};
             my $getter_method = "get_all_${feature_kind}s";
 
             my @param_list = ();
@@ -159,6 +205,24 @@ sub _features_gff {
 
 sub _gff_keys {
     return @gff_keys;
+}
+
+# a Bio::EnsEMBL::Slice method to handle the dummy ExonSupportingFeature feature type
+sub Bio::EnsEMBL::Slice::get_all_ExonSupportingFeatures {
+    my ($self, $logic_name, $dbtype) = @_;
+
+    my $load_exons = 1;
+
+    if(!$self->adaptor()) {
+        warning('Cannot get Transcripts without attached adaptor');
+        return [];
+    }
+
+    return
+        [ map { @{$_->get_all_supporting_features} }
+          map { @{$_->get_all_Exons} }
+          @{$self->get_all_Transcripts($load_exons, $logic_name, $dbtype)}
+          ];
 }
 
 1;
