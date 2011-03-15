@@ -215,43 +215,6 @@ WHERE e.entry_id = d.entry_id
 
 }
 
-
-my $feature_details_sql = {
-    description => q{
-    SELECT d.description
-    FROM entry e, description d
-    WHERE e.entry_id = d.entry_id
-    AND e.accession_version = ?
-},
-    taxon_id => q{
-    SELECT t.ncbi_tax_id
-    FROM entry e, taxonomy t
-    WHERE e.entry_id = t.entry_id
-    AND e.accession_version = ?
-},
-};
-
-sub get_feature_details {
-    my ($self, $feature_name) = @_;
-
-    return unless my ( $accession_version ) =
-        $feature_name =~ /\A(?:[[:alpha:]]{2}:)?(.*)\z/;
-
-    my $details = { };
-
-    while ( my ($key, $sql) = each %{$feature_details_sql} ) {
-        for my $db (@DB_CATEGORIES) {
-            my $sth = $self->dbh($db)->prepare($sql);
-            $sth->execute($accession_version);
-            next unless my ($value) = $sth->fetchrow_array();
-            $details->{$key} = $value;
-            last;
-        }
-    }
-
-    return $details;
-}
-
 sub name {
     my ($self, $name) = @_;
     $self->{_name} = $name if $name;
