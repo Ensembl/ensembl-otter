@@ -56,10 +56,10 @@ sub struct_show_path {
     return $output;
 }
 
-sub Bio::EnsEMBL::Slice::get_all_features_via_DAS { # $kind = 'SimpleFeature' || 'PredictionExon'
-    my ($slice, $server, $das, $chr_name, $analysis_name, $kind, $sieve, $grouplabel, $dump) = @_;
+sub Bio::EnsEMBL::Slice::get_all_features_via_DAS { # $feature_kind = 'SimpleFeature' || 'PredictionExon'
+    my ($slice, $server, $das, $chr_name, $analysis_name, $feature_kind, $sieve, $grouplabel, $dump) = @_;
 
-    my $feature_subhash     = $LangDesc{$kind};
+    my $feature_subhash     = $LangDesc{$feature_kind};
     my $feature_constructor = $feature_subhash->{-constructor};
     my $feature_sub =
         ref $feature_constructor eq "CODE"
@@ -257,7 +257,7 @@ sub get_requested_features {
     my $source        = $self->param('source'); # let's slowly phase it out
     my $dsn           = $self->require_argument('dsn');
     my $analysis_name = $self->param('analysis'); # defaults to *everything*
-    my $kind          = $self->param('feature_kind')  || 'SimpleFeature';
+    my $feature_kind  = $self->param('feature_kind')  || 'SimpleFeature';
     my $sieve         = $self->param('sieve') || '';
     my $grouplabel    = $self->param('grouplabel') || '';
     my $dump          = $self->param('dump') || 0;
@@ -274,8 +274,8 @@ sub get_requested_features {
     $das->timeout(2 * 60);
 
     my $features = $self->fetch_mapped_features(
-        'das_'.$kind, 'get_all_features_via_DAS',
-        [$self, $das, $chr_name, $analysis_name, $kind, $sieve, $grouplabel, $dump],
+        'das_'.$feature_kind, 'get_all_features_via_DAS',
+        [$self, $das, $chr_name, $analysis_name, $feature_kind, $sieve, $grouplabel, $dump],
         (map { defined($self->param($_)) ? $self->param($_) : '' } qw(cs name type start end metakey csver csver_remote)),
         1, # do the short version of mapping, without the target database
         );
