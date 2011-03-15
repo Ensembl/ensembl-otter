@@ -8,6 +8,40 @@ use warnings;
 
 use Carp;
 
+my @server_params = (
+
+    # common
+    qw(
+    analysis
+    feature_kind
+    csver_remote
+    metakey
+    filter_module
+    swap_strands
+    url_string
+    ),
+
+    # GFF
+    qw(
+    ditypes
+    ),
+
+    # DAS
+    qw(
+    grouplabel
+    dsn
+    sieve
+    source
+    ),
+
+    # Gene
+    qw(
+    transcript_analyses
+    translation_xref_dbs
+    ),
+
+    );
+
 sub new {
     my ($obj_or_class, @args) = @_;
     
@@ -198,37 +232,8 @@ sub translation_xref_dbs {
 }
 
 sub server_params {
-    
-    # this method defines the parameters and their corresponding values that are 
-    # required by the otter server to retrieve data for this filter
-    
     my ($self) = @_;
-    
-    return {
-
-        # common
-        analysis        => $self->analysis,
-        feature_kind    => $self->feature_kind,
-        csver_remote    => $self->csver_remote,
-        metakey         => $self->metakey,
-        filter_module   => $self->filter_module,
-        swap_strands    => $self->swap_strands,
-        url_string      => $self->url_string,
-
-        # GFF
-        ditypes         => $self->ditypes,
-
-        # DAS
-        grouplabel      => $self->grouplabel,
-        dsn             => $self->dsn,
-        sieve           => $self->sieve,
-        source          => $self->source,
-
-        # Gene
-        transcript_analyses  => $self->transcript_analyses,
-        translation_xref_dbs => $self->translation_xref_dbs,
-
-    };
+    return { map { $_ => $self->$_ } @server_params };
 }
 
 
