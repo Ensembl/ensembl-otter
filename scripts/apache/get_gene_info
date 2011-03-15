@@ -33,7 +33,7 @@ use Bio::Otter::ServerScriptSupport;
               AND g2.is_current = 1
               AND g2.source = 'havana'
         };
-        
+
         if (my $id_str = $server->param('idlist')) {
             my @id_list;
             foreach my $sid (split /,/, $id_str) {
@@ -46,11 +46,11 @@ use Bio::Otter::ServerScriptSupport;
                 AND gsid1.stable_id in ($id_query)
             };
         }
-        
+
         $sql .= q{
-            ORDER BY g2.gene_id DESC            
+            ORDER BY g2.gene_id DESC
         };
-    
+
         my $otter = $server->otter_dba;
         my $sth = $otter->dbc->prepare($sql);
         $sth->execute;

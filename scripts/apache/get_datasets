@@ -32,7 +32,7 @@ my $server = Bio::Otter::ServerScriptSupport->new;
 my $xml;
 eval {
     my $species_hash = $server->dataset_hash;
-    
+
     # Only local users get to see mysql connection details
     my $show_details = $server->local_user;
 

@@ -142,9 +142,9 @@ use Bio::Vega::Transform::XML;
             }
         }
         $server->log("Updated " . scalar(@$changed_genes) . " genes");
-        
+
         my %stored_genes_hash = map {$_->stable_id, $_} @$xml_genes;
-        
+
         my $del_count = 0;
         foreach my $dbgene (@$db_genes) {
             next if $stored_genes_hash{$dbgene->stable_id};
@@ -161,7 +161,7 @@ use Bio::Vega::Transform::XML;
                 $exon->slice($db_slice);
             }
             ##update all gene and its components in db (del)
-            
+
             # Setting is_current to 0 will cause the store method to delete it.
             $dbgene->is_current(0);
             $gene_adaptor->store($dbgene, $time_now);
@@ -173,7 +173,7 @@ use Bio::Vega::Transform::XML;
         my $ab = $odba->get_AnnotationBroker();
 
         # Because exons are shared between transcripts, genes and gene versions
-        # setting which are current is not simple        
+        # setting which are current is not simple
         #$ab->set_exon_current_flags($db_genes, $xml_genes);
 
         ##update feature_sets

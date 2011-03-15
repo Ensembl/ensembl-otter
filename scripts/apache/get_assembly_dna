@@ -33,7 +33,7 @@ foreach my $tile (@{ $slice->project('seqlevel') }) {
     my $tile_slice = $tile->to_Slice;
     my $start = $tile->from_start;
     my $end   = $tile->from_end;
-    
+
     # Is there a gap before this piece?
     if (my $gap = $start - $posn - 1) {
         # Debugging.  Show the char immediately before and after the string of "N".
@@ -42,7 +42,7 @@ foreach my $tile (@{ $slice->project('seqlevel') }) {
         substr($output_str, $posn, $gap, '-' x $gap);
     }
     $posn = $end;
-    
+
     # To save copying large strings, we append onto the
     # end of the sequence in the output string.
     $output_str .= join("\t",
