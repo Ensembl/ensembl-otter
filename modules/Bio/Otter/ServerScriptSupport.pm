@@ -40,6 +40,7 @@ sub new {
         $self->authenticate_user;
     }
 
+    $self->dataset_name($self->param('dataset'));
     $self->species_dat_filename($self->data_dir . '/species.dat');
 
     return $self;
@@ -58,16 +59,6 @@ sub header {
 sub param {
     my ($self, @args) = @_;
     return $self->cgi->param(@args);
-}
-
-sub dataset_name { # overloads the one provided by MFetch
-    my( $self ) = @_;
-
-    my $dataset_name;
-    unless ($dataset_name = $self->{'_dataset_name'}) {
-        $self->{'_dataset_name'} = $dataset_name = $self->require_argument('dataset');
-    }
-    return $dataset_name;
 }
 
 
