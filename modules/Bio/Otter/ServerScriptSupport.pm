@@ -40,7 +40,6 @@ sub new {
         $self->authenticate_user;
     }
 
-    # '/GPFS/data1/WWW/SANGER_docs/data/otter/48/species.dat';
     $self->species_dat_filename($self->data_dir . '/species.dat');
 
     return $self;
