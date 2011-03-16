@@ -351,44 +351,6 @@ sub otter_assembly_equiv_hash { # $self->{_aeh}{NCBI36}{11} = 'chr11-02';
     return $aeh;
 }
 
-sub otter_assembly_mapping_hash { ## $self->{_amh}{NCBIM37}{11} = 'chr11-07';
-                                  ## Note that 1st level hashes are filled independently.
-    my ($self, $csver_remote) = @_;
-
-    my $amh_sub;
-    if($amh_sub = $self->{_amh}{$csver_remote}) {
-        return $amh_sub;
-    } else { # $self->{_amh} gets autovivified anyway, but it may not be true for the next level
-        $amh_sub = $self->{_amh}{$csver_remote} = {};
-    }
-
-    my $mapper_metakey = "mapper_db.${csver_remote}";
-    if(my $mdba = $self->satellite_dba($mapper_metakey) ) {
-        my $sql = qq{
-            SELECT DISTINCT cmp.name,asm.name
-              FROM assembly a, seq_region asm, seq_region cmp, coord_system asm_cs, coord_system cmp_cs
-             WHERE a.asm_seq_region_id=asm.seq_region_id
-               AND a.cmp_seq_region_id=cmp.seq_region_id
-               AND asm.coord_system_id=asm_cs.coord_system_id
-               AND cmp.coord_system_id=cmp_cs.coord_system_id
-               AND asm_cs.name='chromosome'
-               AND asm_cs.version='Otter'
-               AND cmp_cs.name='chromosome'
-               AND cmp_cs.version=?
-          ORDER BY cmp_cs.version, cmp.name
-        };
-        my $sth = $mdba->dbc()->prepare($sql);
-        $sth->execute($csver_remote);
-
-        while( my ($remote_chr, $atype) = $sth->fetchrow()) {
-            $amh_sub->{$remote_chr} = $atype;
-        }
-        return $amh_sub;
-    } else {
-        die "Can't connect to the mapper ($mapper_metakey)";
-    }
-}
-
 sub init_csver {
     my ($self, $cs, $metakey) = @_; # metakey can even be '.' or ''
 
