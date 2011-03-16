@@ -17,26 +17,8 @@ my $server = Bio::Otter::ServerScriptSupport->new;
 my $dataset   = $server->require_argument('dataset');
 my $csver_cmp = $server->require_argument('csver');
 my $csver_asm = 'Otter';
-my $mapper_metakey = "mapper_db.${csver_cmp}";
 
-my $odba = $server->otter_dba();
-
-my ($mapper_val) = @{$odba->get_MetaContainer()->list_value_by_key($mapper_metakey)};
-my $mdba;
-
-if (!$mapper_val) {
-    $server->error_exit("'$mapper_metakey' is not properly defined");
-} elsif($mapper_val eq '=otter_head') {
-    $mdba = $odba;
-} elsif($mapper_val eq '=pipeline_head') {
-    $mdba = $server->satellite_dba( '' );
-} else {
-    $mdba = $server->satellite_dba($mapper_metakey);
-}
-
-my $mdbc = $mdba->dbc();
-
-my $sth = $mdbc->prepare(q{
+my $sth = $server->otter_dba->dbc->prepare(q{
     SELECT asm.name
       , cmp.name
       , a.asm_start
