@@ -74,7 +74,6 @@ sub load_species_dat_file {
         } elsif (/(\S+)\s+(\S+)/) {
             my $key   = uc $1;
             my $value =    $2;
-            warn "Reading entry $key='$value'\n";
             $curhash->{$key} = $value;
         }
     }
@@ -108,8 +107,6 @@ sub remove_restricted_datasets {
 
     foreach my $dataset_name (keys %$sp) {
         next unless $sp->{$dataset_name}{'RESTRICTED'};
-        warn sprintf "Dataset %s is %srestricted"
-            , $dataset_name, $allowed_hash->{$dataset_name} ? 'not ' : '';
         delete $sp->{$dataset_name} unless $allowed_hash->{$dataset_name};
     }
 
