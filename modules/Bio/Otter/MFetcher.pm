@@ -372,9 +372,9 @@ sub fetch_and_export {
     ) = @_;
 
     my $odba = $self->otter_dba();
-    my $original_slice = $self->get_slice($odba, $cs, $name, $type, $start, $end, $csver_orig);
+    my $slice = $self->get_slice($odba, $cs, $name, $type, $start, $end, $csver_orig);
 
-    my $orig_features = $original_slice->$fetching_method(@$call_parms);
+    my $orig_features = $slice->$fetching_method(@$call_parms);
 
     unless($orig_features) {
         die "Fetching failed";
@@ -386,38 +386,19 @@ sub fetch_and_export {
         return $orig_features;
 
     } else {
-        # do the transformation if it is needed:
-
-        my $mapper_metakey = "mapper_db.${csver_target}";
-        if (my $mdba = $self->satellite_dba($mapper_metakey) ) {
-            my $original_slice_on_mapper = $self->get_slice($mdba, $cs, $name, $type, $start, $end, $csver_orig);
-
-            my $transformed_features = [];
-
-            foreach my $orig_feature (@$orig_features) {
-
-                    # move each feature to the mapper first:
-                if($orig_feature->can('propagate_slice')) {
-                    $orig_feature->propagate_slice($original_slice_on_mapper);
-                } else {
-                    $orig_feature->slice($original_slice_on_mapper);
-                }
-
-                if( my $target_feature = $orig_feature->transform($cs, $csver_target) ) {
-                    push @$transformed_features, $target_feature;
-                    warn "Transformed $csver_orig:".$original_slice_on_mapper->name.":".$orig_feature->start().'..'.$orig_feature->end()
-                        ." --> $csver_target:".$target_feature->start().'..'.$target_feature->end()."\n";
-                } else {
-                    warn "Could not transform the feature ".$original_slice_on_mapper->name." ".
-                        $orig_feature->start().'..'.$orig_feature->end();
-                }
+        my $transformed_features = [];
+        foreach my $orig_feature (@$orig_features) {
+            if( my $target_feature = $orig_feature->transform($cs, $csver_target) ) {
+                push @$transformed_features, $target_feature;
+                warn "Transformed $csver_orig:".$slice->name.":".$orig_feature->start().'..'.$orig_feature->end()
+                    ." --> $csver_target:".$target_feature->start().'..'.$target_feature->end()."\n";
+            } else {
+                warn "Could not transform the feature ".$slice->name." ".
+                    $orig_feature->start().'..'.$orig_feature->end();
             }
-
-            return $transformed_features;
-
-        } else {
-            die "Can't connect to the mapper ($mapper_metakey)";
         }
+
+        return $transformed_features;
     }
 }
 
