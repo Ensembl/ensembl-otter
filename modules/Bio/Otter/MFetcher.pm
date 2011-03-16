@@ -26,7 +26,6 @@ sub new { # just to make it possible to instantiate an object
     return $self;
 }
 
-    # to be overloaded by ServerScriptSupport
 sub dataset_name {
     my( $self, $dataset_name ) = @_;
 
