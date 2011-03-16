@@ -75,7 +75,7 @@ sub otter_dba {
         };
         $self->error_exit("Failed opening otter database [$@]") if $@;
 
-        $self->log("Connected to otter database");
+        warn "Connected to otter database\n";
     } else {
         $self->error_exit("Failed opening otter database [No database name]");
     }
@@ -94,7 +94,7 @@ sub otter_dba {
         $self->error_exit("Failed opening dna database [$@]") if $@;
         $odba->dnadb($dnadb);
 
-        $self->log("Connected to dna database");
+        warn "Connected to dna database\n";
     }
 
     return $self->{'_odba'} = $odba;
@@ -120,8 +120,13 @@ sub satellite_dba {
     # get and check the options
     my $options = $self->satellite_dba_options($metakey);
     unless ($options) {
-        my $method = $may_be_absent ? "log" : "error_exit";
-        $self->$method("metakey '$metakey' is not defined");
+        my $message = "metakey '$metakey' is not defined";
+        if ($may_be_absent) {
+            warn "$message\n";
+        }
+        else {
+            $self->error_exit($message);
+        }
         return;
     }
 
@@ -168,7 +173,7 @@ sub variation_satellite_dba_make {
 sub satellite_dba_make {
     my ($self, $metakey, $adaptor_class, $options) = @_;
 
-    $self->log("connecting to the satellite DB '$metakey'...");
+    warn "connecting to the satellite DB '$metakey'...\n";
 
     my @options;
     {
@@ -192,7 +197,7 @@ sub satellite_dba_make {
     $self->error_exit("Couldn't connect to '$metakey' satellite db")
         unless $dba;
 
-    $self->log("... with parameters: ".join(', ', map { "$_=".$uppercased_options{$_} } keys %uppercased_options ));
+    warn "... with parameters: ".join(', ', map { "$_=".$uppercased_options{$_} } keys %uppercased_options )."\n";
 
     $self->{_sdba}{$metakey} = $dba;
 
@@ -261,7 +266,7 @@ sub get_slice {
     # $self->check_slice($slice);
 
     unless ($slice) {
-        $self->log('Could not get a slice, probably not (yet) loaded into satellite db');
+        warn "Could not get a slice, probably not (yet) loaded into satellite db\n";
         $self->return_emptyhanded();
     }
 
@@ -300,7 +305,7 @@ sub return_emptyhanded { # we probably only want to know about it only if using 
                          # otherwise it gets overloaded by ServerScriptSupport
     my ($self) = @_;
 
-    $self->log("Slice could not have been created");
+    warn "Slice could not have been created\n";
     exit(0);
 }
 
@@ -463,7 +468,7 @@ sub map_remote_slice_back {
     my $csver_remote    = $remote_slice->coord_system()->version();
 
     unless($cs eq 'chromosome') {
-        $self->log("We do not yet perform mapping from $cs:$csver_remote to Otter chromosomes");
+        warn "We do not yet perform mapping from $cs:$csver_remote to Otter chromosomes\n";
         return [];
     }
 
@@ -516,10 +521,10 @@ sub map_remote_slice_back {
 
             if(my $results = scalar(@local_slices)) {
                 if($results>1) {
-                    $self->log("Could not uniquely map '$csver_remote' slice to 'Otter' (got $results pieces)");
+                    warn "Could not uniquely map '$csver_remote' slice to 'Otter' (got $results pieces)\n";
                 }
             } else {
-                $self->log("Could not map '$csver_remote' slice to 'Otter' at all");
+                warn "Could not map '$csver_remote' slice to 'Otter' at all\n";
             }
             return \@local_slices;
 
@@ -552,7 +557,7 @@ sub fetch_mapped_features {
                 ? $csver_orig
                 : $csver_remote;
 
-        $self->log("Assuming the mappings to be identical, just fetching from {$metakey}$cs:$csver_target");
+        warn "Assuming the mappings to be identical, just fetching from {$metakey}$cs:$csver_target\n";
 
         my $sdba = $self->satellite_dba( $metakey );
         my $original_slice = $self->get_slice($sdba, $cs, $name, $type, $start, $end, $csver_target);
@@ -569,7 +574,7 @@ sub fetch_mapped_features {
 
         if( my $mdba = $self->satellite_dba($mapper_metakey) ) {
 
-            $self->log("Proceeding with mapping code");
+            warn "Proceeding with mapping code\n";
 
             my $original_slice_on_mapper = $self->get_slice($mdba, $cs, $name, $type, $start, $end, $csver_orig);
 
@@ -585,7 +590,7 @@ sub fetch_mapped_features {
             if ($@ || ! @$proj_segments_on_mapper) {
                 die "Unable to project: $type:$csver_orig($start..$end)->$csver_remote. Check the mapping.\n$@";
             }
-            $self->log("Found ".scalar(@$proj_segments_on_mapper)." projection segments on mapper when projecting to $cs:$csver_remote");
+            warn "Found ".scalar(@$proj_segments_on_mapper)." projection segments on mapper when projecting to $cs:$csver_remote\n";
 
             # group the projected slices by their chromosome and,
             # for each chromosome, calculate the endpoints of the
@@ -625,20 +630,20 @@ sub fetch_mapped_features {
                     my $target_fs_on_mapper_segment
                         = $projected_slice_on_mapper->$fetching_method(@$call_parms);
 
-                    $self->log('***** : '.scalar(@$target_fs_on_mapper_segment)." ${feature_name}s created on the slice");
+                    warn '***** : '.scalar(@$target_fs_on_mapper_segment)." ${feature_name}s created on the slice\n";
 
                     while (my $target_feature = shift @$target_fs_on_mapper_segment) {
                         my $fname = sprintf( "%s [%d..%d]",
                                             $target_feature->display_id(),
                                             $target_feature->start(),
                                             $target_feature->end() );
-                        $self->log("Transferring $feature_name $fname from {".$target_feature->slice->name
-                                   ."} onto {".$original_slice_on_mapper->name.'}');
+                        warn "Transferring $feature_name $fname from {".$target_feature->slice->name
+                                   ."} onto {".$original_slice_on_mapper->name."}\n";
                         if( my $transferred = $target_feature->transfer($original_slice_on_mapper) ) {
                             push @$features, $transferred;
-                            $self->log("Transfer OK");
+                            warn "Transfer OK\n";
                         } else {
-                            $self->log("Transfer failed");
+                            warn "Transfer failed\n";
                         }
                     }
                 }
@@ -683,7 +688,7 @@ sub fetch_mapped_features {
                         die "Fetching failed";
                     }
 
-                    $self->log('***** : '.scalar(@$target_fs_on_target_segment)." ${feature_name}s found on the slice $metakey:".$target_slice_on_target->start().'..'.$target_slice_on_target->end());
+                    warn '***** : '.scalar(@$target_fs_on_target_segment)." ${feature_name}s found on the slice $metakey:".$target_slice_on_target->start().'..'.$target_slice_on_target->end()."\n";
 
                     # foreach my $target_feature (@$target_fs_on_target_segment) {
                     # This is supposed to be faster:
@@ -699,14 +704,14 @@ sub fetch_mapped_features {
                                             $target_feature->display_id(),
                                             $target_feature->start(),
                                             $target_feature->end() );
-                        $self->log("Transferring $feature_name $fname from {".$target_feature->slice->name
-                                   ."} onto {".$original_slice_on_mapper->name.'}');
+                        warn "Transferring $feature_name $fname from {".$target_feature->slice->name
+                                   ."} onto {".$original_slice_on_mapper->name."}\n";
                         if( my $transferred = $target_feature->transfer($original_slice_on_mapper) ) {
                             
                             push @$features, $transferred;
-                            $self->log("Transfer OK".ref($transferred));
+                            warn "Transfer OK".ref($transferred)."\n";
                         } else {
-                            $self->log("Transfer failed");
+                            warn "Transfer failed\n";
                         }
                     } # for each feature
                 } # for each segment
@@ -717,8 +722,8 @@ sub fetch_mapped_features {
         }
     }
 
-    $self->log("Total of ".scalar(@$features).' '.join('/', grep { defined($_) && !ref($_) } @$call_parms)
-              ." ${feature_name}s have been sent to the client");
+    warn "Total of ".scalar(@$features).' '.join('/', grep { defined($_) && !ref($_) } @$call_parms)
+              ." ${feature_name}s have been sent to the client\n";
 
     return $features;
 }

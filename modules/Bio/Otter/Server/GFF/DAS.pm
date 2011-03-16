@@ -90,10 +90,10 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS { # $feature_kind = 'SimpleFea
         $analysis_name = undef;
     }
 
-    $server->log( sprintf ("GET  %s/features?segment=%s%s\n",
+    warn sprintf "GET  %s/features?segment=%s%s\n",
                             $das->dsn->[0],
                             $segment_name,
-                            $analysis_name ? ";type=$analysis_name" : '') );
+                            $analysis_name ? ";type=$analysis_name" : '';
 
     my $response = $das->features({
         'segment' => $segment_name,

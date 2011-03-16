@@ -83,7 +83,7 @@ my %result_hash   = ();
 
 # If there are no input IDs - just peacefully return an empty list:
 if(! @input_ids) {
-    $server->log('No input IDs');
+    warn "No input IDs\n";
     $server->return_emptyhanded();
 }
 

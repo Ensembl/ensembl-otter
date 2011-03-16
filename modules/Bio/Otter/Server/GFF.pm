@@ -152,11 +152,11 @@ sub get_requested_features {
             
             my $filter = $module_name->new;
             
-            $self->log(scalar(@feature_list)." features before filtering...");
+            warn scalar(@feature_list)." features before filtering...\n";
             
             @feature_list = $filter->run(\@feature_list);
             
-            $self->log(scalar(@feature_list)." features after filtering...");
+            warn scalar(@feature_list)." features after filtering...\n";
         }
         else {
             die "Invalid filter module: $filter_module";
