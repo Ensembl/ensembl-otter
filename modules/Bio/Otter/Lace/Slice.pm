@@ -170,7 +170,6 @@ sub get_assembly_dna {
         'get_assembly_dna',
         {
             %{$self->toHash},
-            'metakey'   => '.',             # get the slice from Otter_db
         },
     );
     
