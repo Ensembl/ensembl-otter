@@ -414,7 +414,8 @@ sub map_remote_slice_back {
     }
 
     my $remote_chr_name = $remote_slice->seq_region_name();
-    my $local_sa = $self->otter_dba()->get_SliceAdaptor();
+    my $odba = $self->otter_dba();
+    my $local_sa = $odba->get_SliceAdaptor();
 
     if(my $otter_chr_name = $self->otter_assembly_equiv_hash()->{$csver_remote}{$remote_chr_name}) {
             # chromosomes are equivalent, re-create the slice on loutre_db:
@@ -431,47 +432,38 @@ sub map_remote_slice_back {
         return [ $local_slice ];
 
     } else {
-        # otherwise perform the mapping back:
-
-        my $mapper_metakey = "mapper_db.${csver_remote}";
-        if(my $mdba = $self->satellite_dba($mapper_metakey) ) {
-
-            my $remote_slice_on_mapper = $mdba->get_SliceAdaptor()->fetch_by_region(
-                $remote_slice->coord_system()->name(),
-                $remote_slice->seq_region_name(),
-                $remote_slice->start(),
-                $remote_slice->end(),
-                $remote_slice->strand(),
-                $remote_slice->coord_system()->version(),
+        my $remote_slice_2 = $local_sa->fetch_by_region(
+            $remote_slice->coord_system()->name(),
+            $remote_slice->seq_region_name(),
+            $remote_slice->start(),
+            $remote_slice->end(),
+            $remote_slice->strand(),
+            $remote_slice->coord_system()->version(),
             );
 
-            my @local_slices = ();
-            foreach my $proj_segment (@{ $remote_slice_on_mapper->project('chromosome', 'Otter') }) {
-                my $local_slice_on_mapper = $proj_segment->to_Slice();
+        my @local_slices = ();
+        foreach my $proj_segment (@{ $remote_slice_2->project('chromosome', 'Otter') }) {
+            my $local_slice_2 = $proj_segment->to_Slice();
 
-                my $local_slice = $local_sa->fetch_by_region(
-                    $local_slice_on_mapper->coord_system()->name(),
-                    $local_slice_on_mapper->seq_region_name(),
-                    $local_slice_on_mapper->start(),
-                    $local_slice_on_mapper->end(),
-                    $local_slice_on_mapper->strand(),
-                    $local_slice_on_mapper->coord_system()->version(),
+            my $local_slice = $local_sa->fetch_by_region(
+                $local_slice_2->coord_system()->name(),
+                $local_slice_2->seq_region_name(),
+                $local_slice_2->start(),
+                $local_slice_2->end(),
+                $local_slice_2->strand(),
+                $local_slice_2->coord_system()->version(),
                 );
-                push @local_slices, $local_slice;
-            }
-
-            if(my $results = scalar(@local_slices)) {
-                if($results>1) {
-                    warn "Could not uniquely map '$csver_remote' slice to 'Otter' (got $results pieces)\n";
-                }
-            } else {
-                warn "Could not map '$csver_remote' slice to 'Otter' at all\n";
-            }
-            return \@local_slices;
-
-        } else { # if it wasn't possible to connect to the mapper
-            $self->error_exit("No '$mapper_metakey' defined in meta table => cannot map between assemblies");
+            push @local_slices, $local_slice;
         }
+
+        if(my $results = scalar(@local_slices)) {
+            if($results>1) {
+                warn "Could not uniquely map '$csver_remote' slice to 'Otter' (got $results pieces)\n";
+            }
+        } else {
+            warn "Could not map '$csver_remote' slice to 'Otter' at all\n";
+        }
+        return \@local_slices;
     }
 
     return [];
