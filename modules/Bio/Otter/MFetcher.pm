@@ -316,8 +316,6 @@ sub otter_assembly_equiv_hash { # $self->{_aeh}{NCBI36}{11} = 'chr11-02';
         return $aeh;
     }
 
-    my $edba = $self->satellite_dba( 'equiv_asm_db' ); # the value is either '=otter' (for new schema)
-                                                       # or '=pipeline' (for old schema DB with new schema pipeline)
     my $sql = qq{
         SELECT ae_val.value
           , cn_val.value
@@ -341,7 +339,7 @@ sub otter_assembly_equiv_hash { # $self->{_aeh}{NCBI36}{11} = 'chr11-02';
           AND hi_val.value = 0
         };
 
-    my $sth = $edba->dbc()->prepare($sql);
+    my $sth = $self->otter_dba->dbc()->prepare($sql);
     $sth->execute();
 
     my $aeh = $self->{'_aeh'} = {};
