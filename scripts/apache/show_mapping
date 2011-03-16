@@ -14,7 +14,6 @@ use Bio::Otter::ServerScriptSupport;
 
 my $server = Bio::Otter::ServerScriptSupport->new;
 
-my $dataset   = $server->require_argument('dataset');
 my $csver_cmp = $server->require_argument('csver');
 my $csver_asm = 'Otter';
 
