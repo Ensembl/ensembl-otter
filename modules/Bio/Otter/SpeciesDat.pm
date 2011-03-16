@@ -58,7 +58,7 @@ sub load_species_dat_file {
                 $self->error_exit("Error: first section in species.dat should be 'defaults'");
             }
             elsif ($1 eq "defaults") {
-                $self->log("Got default section");
+                warn "Got default section\n";
                 $curhash = $defhash;
             }
             else {
@@ -74,7 +74,7 @@ sub load_species_dat_file {
         } elsif (/(\S+)\s+(\S+)/) {
             my $key   = uc $1;
             my $value =    $2;
-            $self->log("Reading entry $key='$value'");
+            warn "Reading entry $key='$value'\n";
             $curhash->{$key} = $value;
         }
     }
@@ -93,7 +93,8 @@ sub keep_only_datasets {
     my $sp = $self->dataset_hash;
 
     foreach my $dataset_name (keys %$sp) {
-        $self->log(sprintf("Dataset %s is %sallowed", $dataset_name, $allowed_hash->{$dataset_name} ? '' : 'not '));
+        warn sprintf "Dataset %s is %sallowed\n"
+            , $dataset_name, $allowed_hash->{$dataset_name} ? '' : 'not ';
         delete $sp->{$dataset_name} unless $allowed_hash->{$dataset_name};
     }
 
@@ -107,20 +108,10 @@ sub remove_restricted_datasets {
 
     foreach my $dataset_name (keys %$sp) {
         next unless $sp->{$dataset_name}{'RESTRICTED'};
-        $self->log(sprintf("Dataset %s is %srestricted", $dataset_name, $allowed_hash->{$dataset_name} ? 'not ' : ''));
+        warn sprintf "Dataset %s is %srestricted"
+            , $dataset_name, $allowed_hash->{$dataset_name} ? 'not ' : '';
         delete $sp->{$dataset_name} unless $allowed_hash->{$dataset_name};
     }
-
-    return;
-}
-
-sub log { ## no critic(Subroutines::ProhibitBuiltinHomonyms)
-
-    # to be overloaded
-
-    my ($self, $message) = @_;
-
-    print STDERR $message."\n";
 
     return;
 }
@@ -128,7 +119,7 @@ sub log { ## no critic(Subroutines::ProhibitBuiltinHomonyms)
 sub error_exit { # to be overloaded
     my ($self, $message) = @_;
 
-    $self->log($message);
+    warn $message, "\n";
     exit(1);
 }
 

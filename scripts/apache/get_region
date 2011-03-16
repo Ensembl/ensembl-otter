@@ -23,12 +23,12 @@ my $end     = $server->require_argument('end');
 my $strand  = $server->param('strand') || undef;
 my $trunc   = $server->param('trunc');
 
-$server->log("Getting slice... [$name | $type] [$start] [$end]");
+warn "Getting slice... [$name | $type] [$start] [$end]\n";
 
 my $odba  = $server->otter_dba();
 my $slice = $server->get_slice($odba, $cs, $name, $type, $start, $end, $strand, $csver);
 
-$server->log("Converting slice to XML...");
+warn "Converting slice to XML...\n";
 
 my $formatter = Bio::Vega::Transform::XML->new;
 $formatter->skip_truncated_genes($trunc ? 0 : 1);
@@ -37,7 +37,7 @@ $formatter->slice($slice);
 $formatter->fetch_data_from_otter_db;
 my $xml = $formatter->generate_OtterXML;
 
-$server->log("Done converting slice to XML. Length of XML = " . length($xml) );
+warn "Done converting slice to XML. Length of XML = " . length($xml) . "\n";
 
 $server->send_response($xml);
 

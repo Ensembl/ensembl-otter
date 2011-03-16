@@ -37,24 +37,24 @@ use Bio::Vega::Transform::Otter;
 
       $slice = $odba->get_SliceAdaptor()->fetch_by_region(
           $cs, $seq_reg_name, $start, $end, $strand, $cs_version);
-      $server->log("Processed incoming xml file with slice: [$seq_reg_name] [$start] [$end]");
+      warn "Processed incoming xml file with slice: [$seq_reg_name] [$start] [$end]\n";
   };
   if ($@) {
       $server->error_exit("Failed converting XML to otter [$@]");
   }
-  $server->log('Checking region is locked...');
+  warn "Checking region is locked...\n";
   my $cb=Bio::Vega::ContigLockBroker->new;
   eval { $cb->check_locks_exist_by_slice($slice,$author_obj,$odba); };
   if ($@) {
       $server->error_exit("Failed checking locks [$@]");
   }
-  $server->log('Done checking region is locked.');
-  $server->log('Unlocking clones...');
+  warn "Done checking region is locked.\n";
+  warn "Unlocking clones...\n";
   eval{ $cb->remove_by_slice($slice,$author_obj,$odba); };
   if ($@) {
       $server->error_exit("Failed to unlock clones\n $@\n***\n");
   }
-  $server->log('Done unlocking clones.');
+  warn "Done unlocking clones.\n";
   $server->send_response("<response>\n</response>\n", 1);
 
 }

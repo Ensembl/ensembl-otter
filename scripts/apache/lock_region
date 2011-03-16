@@ -31,11 +31,11 @@ eval {
     my $cb = Bio::Vega::ContigLockBroker->new;
     $cb->client_hostname($cl_host);
 
-    $server->log("Getting slice [$name] [$start] [$end]");
+    warn "Getting slice [$name] [$start] [$end]\n";
     my $slice = $server->get_slice($odba, $cs, $name, $type, $start, $end, $strand, $csver);
     my $author_obj = $server->make_Author_obj();
 
-    $server->log('Attempting to lock clones...');
+    warn "Attempting to lock clones...\n";
     $cb->lock_clones_by_slice($slice, $author_obj, $odba);
     my $formatter = Bio::Vega::Transform::XML->new;
     $formatter->otter_dba($odba);
@@ -46,10 +46,10 @@ eval {
 };
 
 if ($@) {
-    $server->log("Error getting locks: $@");
+    warn "Error getting locks: $@\n";
     $server->error_exit("Clones locked - exiting [$@]");
 } else {
-    $server->log('Obtained the locks.');
+    warn "Obtained the locks.\n";
     $server->send_response($xml);
 }
 

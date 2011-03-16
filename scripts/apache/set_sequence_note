@@ -27,7 +27,7 @@ eval {
     my $seq_region_sub_select = q{(SELECT seq_region_id FROM seq_region where name = ?)};
 
     if ($action=~/(change|modify|old)/) {
-        $server->log("Changing a sequence_note");
+        warn "Changing a sequence_note\n";
 
         my $sth = $odbc->prepare(qq{
             UPDATE sequence_note
@@ -36,16 +36,16 @@ eval {
             AND author_id = ?
             AND note_time = FROM_UNIXTIME(?)
             });
-        $server->log(
+        warn
             "Arguments = ("
-            . join(', ', map { "'$_'" } ($text, $contig_name, $author->dbID, $timestamp))
+            . join(', ', map { "'$_'" } ($text, $contig_name, $author->dbID, $timestamp)
             . ")\n");
         my $changed = $sth->execute($text, $contig_name, $author->dbID, $timestamp);
-        $server->log("Changed $changed sequence_notes for contig $contig_name");
+        warn "Changed $changed sequence_notes for contig $contig_name\n";
         die "Failed to change sequence note" unless $changed;
     }
     elsif ($action=~/(add|push|new)/) {
-        $server->log("Adding a new sequence_note");
+        warn "Adding a new sequence_note\n";
 
         my $sth = $odbc->prepare(qq{
             UPDATE sequence_note
@@ -53,7 +53,7 @@ eval {
              WHERE seq_region_id = $seq_region_sub_select
         });
         my $non_curr=$sth->execute($contig_name);
-        $server->log("Contig $contig_name has $non_curr non-current sequence_notes now...");
+        warn "Contig $contig_name has $non_curr non-current sequence_notes now...\n";
 
         $sth = $odbc->prepare(qq{
             INSERT INTO sequence_note (seq_region_id, author_id, note_time, is_current, note)
@@ -66,7 +66,7 @@ eval {
                  )
         });
         my $curr = $sth->execute($contig_name, $author->dbID, $timestamp, $text);
-        $server->log( "... and $curr current sequence_notes");
+        warn "... and $curr current sequence_notes\n";
         die "Failed to add new note" unless $curr;
     }
     else {

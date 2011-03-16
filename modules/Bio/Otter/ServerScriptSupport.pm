@@ -25,6 +25,8 @@ END {
 our $COMPRESSION_ENABLED;
 $COMPRESSION_ENABLED = 1 unless defined $COMPRESSION_ENABLED;
 
+my $LOG;
+
 sub new {
     my ( $pkg ) = @_;
 
@@ -42,6 +44,8 @@ sub new {
 
     $self->dataset_name($self->param('dataset'));
     $self->species_dat_filename($self->data_dir . '/species.dat');
+
+    $LOG = $self->param('log');
 
     return $self;
 }
@@ -63,19 +67,6 @@ sub param {
 
 
 ############## getters: ###########################
-
-sub csn {   # needed by logging mechanism
-    my ($self) = @_;
-
-    my $csn;
-    unless ($csn = $self->{'_current_script_name'}) {
-        ($csn) = $ENV{'SCRIPT_NAME'} =~ m{([^/]+)$};
-        die "Can't parse script name from '$ENV{SCRIPT_NAME}'"
-          unless $csn;
-        $self->{'_current_script_name'} = $csn;
-    }
-    return $csn
-}
 
 sub otter_version {
     my ($self) = @_;
@@ -253,15 +244,15 @@ sub show_restricted_datasets {
 
 ############## I/O: ################################
 
-sub log { ## no critic(Subroutines::ProhibitBuiltinHomonyms)
-    my ($self, $line) = @_;
-
-    return unless $self->param('log');
-
-    print STDERR '['.$self->csn()."] $line\n";
-
+my $csn;
+($csn) = $ENV{'SCRIPT_NAME'} =~ m{([^/]+)$} if defined $ENV{'SCRIPT_NAME'};
+$SIG{__WARN__} = sub { ## no critic (Variables::RequireLocalizedPunctuationVars)
+    my ($line) = @_;
+    return unless $LOG;
+    $line = sprintf "[%s] %s", $csn, $line if defined $csn;
+    warn $line;
     return;
-}
+};
 
 sub compression {
     my ($self, @args) = @_;
@@ -332,7 +323,7 @@ sub error_exit {
         -type   => 'text/plain',
         ),
       $self->wrap_response(" <response>\n    ERROR: $reason\n </response>\n");
-    $self->log("ERROR: $reason\n");
+    warn "ERROR: $reason\n";
 
     exit(1);
 }

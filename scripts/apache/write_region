@@ -93,10 +93,10 @@ use Bio::Vega::Transform::XML;
     eval {
             ##check if clones are locked or not
         my $cb = new Bio::Vega::ContigLockBroker;
-        $server->log("Checking region is locked...");
+        warn "Checking region is locked...\n";
         eval { $cb->check_locks_exist_by_slice($db_slice, $author_obj, $odba); };
         $server->error_exit("Failed checking locks [$@]") if $@;
-        $server->log("Done checking region is locked.");
+        warn "Done checking region is locked.\n";
 
             ## everything that needs saving should use this timestamp:
         my $time_now = time;
@@ -105,7 +105,7 @@ use Bio::Vega::Transform::XML;
         while (my ($contig_name, $pair) = each %ci_hash) {
             my ($db_ctg_slice, $xml_ci_attribs) = @$pair;
             insert_ContigInfo_Attributes($odba, $author_obj, $db_ctg_slice, $xml_ci_attribs, $time_now);
-            $server->log("Updating contig info-attrib for '$contig_name'");
+            warn "Updating contig info-attrib for '$contig_name'\n";
         }
 
         ## strip_incomplete_genes for the xml genes
@@ -113,13 +113,13 @@ use Bio::Vega::Transform::XML;
         strip_incomplete_genes($odba, $server, $xml_genes);
 
         ##fetch database genes and compare to find the new/modified/deleted genes
-        $server->log("Fetching database genes for comparison...");
+        warn "Fetching database genes for comparison...\n";
         my $db_genes = $db_slice->get_all_Genes || [];
         strip_incomplete_genes($odba, $server, $db_genes);
-        $server->log("Comparing " . scalar(@$db_genes) . " old to " . scalar(@$xml_genes) . " new gene(s)... ");
+        warn "Comparing " . scalar(@$db_genes) . " old to " . scalar(@$xml_genes) . " new gene(s)...\n";
 
         my $gene_adaptor = $odba->get_GeneAdaptor;
-        $server->log("Attaching gene to slice ");
+        warn "Attaching gene to slice \n";
 
 
         my $changed_genes = [];
@@ -141,7 +141,7 @@ use Bio::Vega::Transform::XML;
                 push(@$changed_genes, $gene);
             }
         }
-        $server->log("Updated " . scalar(@$changed_genes) . " genes");
+        warn "Updated " . scalar(@$changed_genes) . " genes\n";
 
         my %stored_genes_hash = map {$_->stable_id, $_} @$xml_genes;
 
@@ -166,9 +166,9 @@ use Bio::Vega::Transform::XML;
             $dbgene->is_current(0);
             $gene_adaptor->store($dbgene, $time_now);
             $del_count++;
-            $server->log("Deleted gene " . $dbgene->stable_id);
+            "Deleted gene " . $dbgene->stable_id . "\n";
         }
-        $server->log("Deleted $del_count Genes") if ($del_count);
+        warn "Deleted $del_count Genes\n" if ($del_count);
 
         my $ab = $odba->get_AnnotationBroker();
 
@@ -187,12 +187,12 @@ use Bio::Vega::Transform::XML;
         foreach my $del_feat (@$delete_sf) {
             $sfa->remove($del_feat);
         }
-        $server->log("Deleted " . scalar(@$delete_sf) . " SimpleFeatures") unless $@;
+        warn "Deleted " . scalar(@$delete_sf) . " SimpleFeatures\n" unless $@;
         foreach my $new_feat (@$save_sf) {
             $new_feat->slice($db_slice);
             $sfa->store($new_feat);
         }
-        $server->log("Saved " . scalar(@$save_sf) . " SimpleFeatures") unless $@;
+        "Saved " . scalar(@$save_sf) . " SimpleFeatures\n" unless $@;
 
         ##assembly_tags are not taken into account here, as they are not part of annotation nor versioned ,
         ##but may be required in the future
@@ -245,7 +245,7 @@ sub strip_incomplete_genes {
         my $gene_name_att = $gene->get_all_Attributes('name');
         $gene_name = $gene_name_att->[0]->value;
         if ($truncated_flag) {
-            $server->log("Splicing out incomplete gene $gene_name");
+            warn "Splicing out incomplete gene $gene_name\n";
             splice(@$gene_list, $i, 1);
             next;
         } else {

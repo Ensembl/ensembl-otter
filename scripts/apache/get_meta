@@ -40,7 +40,7 @@ while (my ($meta_key, $meta_value) = $sth->fetchrow) {
     $counter++;
 }
 
-$server->log("Total of $counter meta table pairs sent");
+warn "Total of $counter meta table pairs sent\n";
 
 $server->send_response($output_string, 1);
 
