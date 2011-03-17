@@ -56,7 +56,7 @@ $| = 1;
         next unless @$gene_id_list > 1;
         my @gene_sv =
           sort {$a->[0] cmp $b->[0]}
-          map gene_stable_id_version_from_dbID($otter_dba, $_), @$gene_id_list;
+          map { gene_stable_id_version_from_dbID($otter_dba, $_) } @$gene_id_list;
         my $first = shift @gene_sv;
         foreach my $other (@gene_sv) {
             make_new_stable_exon($otter_dba, @$other, $exon_sid);

@@ -43,7 +43,7 @@ use Bio::Otter::DBUtils 'delete_genes_by_exon_id_list';
 sub delete_genes_by_db_id {
     my( $dbh, @gene_id ) = @_;
     
-    my $id_str = join(',', map "'$_'", @gene_id);
+    my $id_str = join(',', map { "'$_'" } @gene_id);
     
     my $sql = qq{
         SELECT DISTINCT e.exon_id

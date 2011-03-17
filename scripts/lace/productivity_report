@@ -90,7 +90,7 @@ use Date::Calc 'Monday_of_Week';
         }
     }
     
-    printf "Genes in datasets: %s\n", join(", ", sort map $_->name, @dataset);
+    printf "Genes in datasets: %s\n", join(", ", sort map { $_->name } @dataset);
     
     my @authors = sort keys %$author_count;
     # Author name headers

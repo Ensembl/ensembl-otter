@@ -77,7 +77,7 @@ use Bio::Otter::Lace::Defaults;
                 $str .= "  $stable\n";
                 my $keep = 1;
                 foreach my $exon_key (keys %$uniq_exons) {
-                    my @version_list = sort {$a <=> $b} map $_->version, @{$uniq_exons->{$exon_key}};
+                    my @version_list = sort {$a <=> $b} map { $_->version } @{$uniq_exons->{$exon_key}};
                     $str .= "    $exon_key  (@version_list)\n";
                     if ($keep) {
                         $keep = 0;

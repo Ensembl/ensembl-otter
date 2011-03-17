@@ -524,7 +524,7 @@ sub fix_transcript_remarks {
         }
     );
 
-    my @remarks = map $_->transcript_info->remark, @$tsct_list;
+    my @remarks = map { $_->transcript_info->remark } @$tsct_list;
     foreach my $old_new (@$tsct_rename_map) {
         my ($old, $new) = @$old_new;
         my $pattern = qr{\b$old\b};
@@ -577,7 +577,7 @@ sub transcript_gene_number {
     my $tsct_list = $gene->get_all_Transcripts;
 
     my (%gene_n);
-    foreach my $name (map $_->transcript_info->name, @$tsct_list) {
+    foreach my $name (map { $_->transcript_info->name } @$tsct_list) {
         if ($name =~ /\.(\d+)-\d{3}$/) {
             $gene_n{$1}++;
         }
@@ -594,7 +594,7 @@ sub three_prime_clone_name {
     my $longest = [];
     my (%name_clone);
     foreach my $tsct (@$tsct_list) {
-        my $clone_list = [ map $_->contig->clone, @{ $tsct->get_all_Exons } ];
+        my $clone_list = [ map { $_->contig->clone } @{ $tsct->get_all_Exons } ];
         for (my $i = 1 ; $i < @$clone_list ;) {
             if ($clone_list->[$i]->id eq $clone_list->[ $i - 1 ]->id) {
                 splice(@$clone_list, $i, 1);

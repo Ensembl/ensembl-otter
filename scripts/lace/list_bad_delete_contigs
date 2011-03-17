@@ -67,7 +67,7 @@ $| = 1;
     
     printf STDERR "%d total contig names need re-analysis\n", scalar(keys %$all_names);
     
-    print map "$_\n", sort keys %$all_names;
+    print map { "$_\n" } sort keys %$all_names;
 }
 
 sub get_id_name {

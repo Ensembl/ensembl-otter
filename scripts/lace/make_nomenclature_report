@@ -131,7 +131,7 @@ use Bio::SeqIO;
                 if ($gene->gene_info->known_flag) {
                     push(@ele, qq{SYMBOL "$name"});
                 }
-                my @evidence = map $_->name, @{$tscript->transcript_info->get_all_Evidence};
+                my @evidence = map { $_->name } @{$tscript->transcript_info->get_all_Evidence};
                 if (@evidence) {
                     push(@ele, qq{AC "@evidence"});
                 }
@@ -158,7 +158,7 @@ use Bio::SeqIO;
 sub get_remark {
     my( $gene ) = @_;
 
-    my @all_remark = map $_->remark, $gene->gene_info->remark;
+    my @all_remark = map { $_->remark } $gene->gene_info->remark;
     if (@all_remark) {
         return join(' -- ', @all_remark);
     } else {
