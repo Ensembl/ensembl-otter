@@ -152,7 +152,7 @@ sub cleanup_old_otter_dbs {
     my( $dir ) = @_;
     
     opendir BACKUPS, $dir or die "Can't opendir '$dir' : $!";
-    my @all = sort grep /^otter_sub_backup_/, readdir BACKUPS;
+    my @all = sort grep { /^otter_sub_backup_/ } readdir BACKUPS;
     closedir BACKUPS;
     
     # Keep the most recent 12

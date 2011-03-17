@@ -293,7 +293,7 @@ sub update_loutre {
 
     print STDERR "UPDATING with MGI data: $gene_SID ($mgi_symbol) ...";
 
-    if ( @ids_to_skip and grep(/$gene_SID/, @ids_to_skip) ) {
+    if ( @ids_to_skip and grep({/$gene_SID/} @ids_to_skip) ) {
       print STDERR "SKIP DUPLICATE $gene_SID - another gene is already linked to $mgi_symbol\n";
       next;
     }

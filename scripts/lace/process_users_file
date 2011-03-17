@@ -25,7 +25,7 @@ use Getopt::Long qw{ GetOptions };
         my $len = length($email);
         $max_email = $len if $len > $max_email;
         if ($target) {
-            next unless grep $_ eq $target, @species;
+            next unless grep { $_ eq $target } @species;
         }
         my ($user, $domain) = split /\@/, $email;
         $domain ||= 'sanger.ac.uk';

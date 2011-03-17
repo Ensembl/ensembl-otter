@@ -39,7 +39,7 @@ while(<$fh>) {
   if ( $ids[0] ){
     #warn "$symbol links to @ids\n";
     foreach my $id ( @cols[2..$#cols] ){
-      if ( ! grep /$id/, @ids ){
+      if ( ! grep { /$id/ } @ids ){
         #warn "$symbol - skip $id\n";
         push(@ids_to_skip, $id);
       }

@@ -82,7 +82,7 @@ sub get_redundant_db_ids {
 
     if ( $curr_g ){
       $ver_dbid->{$ver} = $curr_g->dbID;
-      $ver_xml->{$ver} = join "\n", grep ! /<(stable_id|author|author_email|translation_stable_id)>/,  split "\n", $curr_g->toXMLString;
+      $ver_xml->{$ver} = join "\n", grep { ! /<(stable_id|author|author_email|translation_stable_id)>/ }  split "\n", $curr_g->toXMLString;
 
       if ($test){
         my $xmlout = $gsid."_".$ver."_".$curr_g->dbID;
