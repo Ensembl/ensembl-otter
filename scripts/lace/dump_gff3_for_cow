@@ -372,7 +372,6 @@ sub make_start_codon_features {
 
   if (scalar(@pepgencoords) > 2) {
     die("pep start does not map cleanly\n");
-    next;
   } elsif (scalar(@pepgencoords) == 2) {
     print "WOW got a 2 feature start codon for "
       . $trans->stable_id
@@ -382,13 +381,11 @@ sub make_start_codon_features {
 
   unless ($pepgencoords[0]->isa('Bio::EnsEMBL::Mapper::Coordinate')) {
     die("pep start maps to gap\n");
-    next;
   }
   unless (
           $pepgencoords[$#pepgencoords]->isa('Bio::EnsEMBL::Mapper::Coordinate'))
     {
       die("pep start (end of) maps to gap\n");
-      next;
     }
 
   my @startc_feat;
@@ -427,7 +424,6 @@ sub make_stop_codon_features {
 
   if (scalar(@pepgencoords) > 2) {
     die("pep end does not map cleanly\n");
-    next;
   } elsif (scalar(@pepgencoords) == 2) {
     print "WOW got a 2 feature stop codon for "
       . $trans->stable_id
@@ -437,13 +433,11 @@ sub make_stop_codon_features {
 
   unless ($pepgencoords[0]->isa('Bio::EnsEMBL::Mapper::Coordinate')) {
     die("pep end maps to gap\n");
-    next;
   }
   unless (
           $pepgencoords[$#pepgencoords]->isa('Bio::EnsEMBL::Mapper::Coordinate'))
     {
       die("pep end (end of) maps to gap\n");
-      next;
     }
 
   my @stopc_feat;
