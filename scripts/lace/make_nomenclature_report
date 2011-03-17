@@ -73,7 +73,7 @@ use Bio::SeqIO;
         {
             my $chr_name  = $ctg->[0]->chromosome->name;
             my $start     = $ctg->[0]->chr_start;
-            my $end       = $ctg->[$#$ctg]->chr_end;
+            my $end       = $ctg->[-1]->chr_end;
             #print STDERR "Fetching slice of chr '$chr_name' from '$start' to '$end'\n";
             my $slice = $slice_aptr->fetch_by_chr_start_end($chr_name, $start, $end);
             my $slice_genes = $gene_aptr->fetch_by_Slice($slice);
