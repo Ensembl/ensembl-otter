@@ -114,10 +114,10 @@ sub main {
   my $clones = [];
 
   foreach my $cln ( keys %$clone_info ) {
-	if ( !exists $tpf_clones->{$cln} and $clone_info->{$cln}->[3] =~ /^NOD/) {
+	if ( !exists $tpf_clones->{$cln} && $clone_info->{$cln}->[3] =~ /^NOD/) {
 	  push(@$clones, $cln);
 	}
-	if ( !exists $tpf_clones->{$cln} and $clone_info->{$cln}->[3] =~ /^CHORI-29/) {
+	if ( !exists $tpf_clones->{$cln} && $clone_info->{$cln}->[3] =~ /^CHORI-29/) {
 	  push(@$clones, $cln);
 	}
   }

@@ -128,7 +128,7 @@ sub print_sequence_set {
         my $cs = $cs_list->[$i];
         
         # Show sizes of gaps between clones
-        if (! $acc_only and ! $acc_sv and my $gap = $cs->chr_start - $last_pos - 1) {
+        if (! $acc_only && ! $acc_sv && ( my $gap = $cs->chr_start - $last_pos - 1 )) {
             printf "GAP  %s bp\n", comma_format($gap);
         }
         $last_pos = $cs->chr_end;

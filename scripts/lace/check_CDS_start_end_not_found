@@ -77,7 +77,7 @@ if ( $vega ) {
 }
 
 # do whole genome
-if ( !@sets and !$vega ) {
+if ( !@sets && !$vega ) {
 
   print "\nExamining all genes on '$dataset'\n";
 

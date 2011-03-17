@@ -267,7 +267,7 @@ sub fix_names {
     $gene_number ||= transcript_gene_number($gene);
 
     my $gene_clone_root = undef;
-    if (!$fix_root and name_is_clone_based($gene_name, $all_clone_names)) {
+    if (!$fix_root && name_is_clone_based($gene_name, $all_clone_names)) {
         print STDERR "  GENE NAME OK\n";
         $gene_clone_root = $gene_name;
     }
