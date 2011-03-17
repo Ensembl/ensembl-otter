@@ -110,7 +110,7 @@ sub init_db {
 
         my $dbh = $dbh{$self};
 
-        my %existing_table = map {$_->[0], 1}
+        my %existing_table = map {$_->[0] => 1}
             @{ $dbh->selectall_arrayref(q{SELECT name FROM sqlite_master WHERE type = 'table'}) };
 
         foreach my $tab (sort keys %table_defs) {
@@ -119,7 +119,7 @@ sub init_db {
             }
         }
         
-        my %existing_index = map {$_->[0], 1}
+        my %existing_index = map {$_->[0] => 1}
             @{ $dbh->selectall_arrayref(q{SELECT name FROM sqlite_master WHERE type = 'index'}) };
 
         foreach my $idx (sort keys %index_defs) {
