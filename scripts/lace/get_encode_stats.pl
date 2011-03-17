@@ -102,7 +102,7 @@ foreach my $set ( @sets ) {
       foreach my $daf ( @$dafs ) {
         my $human = 0;
         eval { $human = $daf->get_HitDescription->description =~ /Homo sapiens/i;};
-        shift @$dafs if !$@ and $human == 1;
+        shift @$dafs if !$@ && $human == 1;
       }
     }
 
