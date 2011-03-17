@@ -97,7 +97,7 @@ use Bio::Otter::AnnotationBroker;
             next unless @ext;
 
             my $first = $ext[0];
-            my $last  = $ext[$#ext];
+            my $last  = $ext[-1];
             #
             #my $name = $last->gene_info->name->name;
             ##next unless $do_not_skip{$name};
