@@ -1,4 +1,3 @@
-
 #!/usr/local/ensembl/bin/perl
 
 use warnings;
