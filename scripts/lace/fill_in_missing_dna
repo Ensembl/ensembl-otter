@@ -59,7 +59,7 @@ $| = 1;
         $j = @missing if $j > @missing;
         $j--;
         my @chunk = @missing[$i..$j];
-        my @seq_chunk = get_Sequences(map $_->[0], @chunk);
+        my @seq_chunk = get_Sequences(map { $_->[0] } @chunk);
         for (my $k = 0; $k < @chunk; $k++) {
             if (my $seq = $seq_chunk[$k]) {
                 my $dna_id = $chunk[$k][1];

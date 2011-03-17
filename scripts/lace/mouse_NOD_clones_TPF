@@ -571,7 +571,7 @@ sub results_table {
 		 );
 
       $t .= t_row(
-				  map qq{    <th bgcolor="#ccccff" align="left" >$_</th>}, @$header,
+				  map { qq{    <th bgcolor="#ccccff" align="left" >$_</th>} } @$header,
 				 );
 
       my $count = 1;
@@ -615,7 +615,7 @@ sub results_table {
   }
 
 sub t_row { ## no critic(Subroutines::RequireArgUnpacking)
-  return qq{  <tr>\n} . join('', map "$_\n", @_) . qq{  </tr>\n};
+  return qq{  <tr>\n} . join('', map { "$_\n" } @_) . qq{  </tr>\n};
 }
 
 __END__

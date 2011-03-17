@@ -102,7 +102,7 @@ $| = 1;
             foreach my $name (sort keys %name_sid) {
                 my $sid_hash = $name_sid{$name};
                 if (keys %$sid_hash > 1) {
-                    my @sid_list = map [$sid_hash->{$_}, $_], keys %$sid_hash;
+                    my @sid_list = map { [$sid_hash->{$_}, $_] } keys %$sid_hash;
                     my ($first, @rest) = sort {$b->[0] cmp $a->[0]} @sid_list;
                     my ($first_stable, $first_info) = @$first;
                     print "\n$name\t$first_stable\n";

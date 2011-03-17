@@ -1503,7 +1503,7 @@ sub find_last_dbid {
 sub is_selenoprotein {
     my ($transcript) = @_;
 
-    for my $line (map $_->remark, $transcript->transcript_info()->remark()) {
+    for my $line (map { $_->remark } $transcript->transcript_info()->remark()) {
         if($line=~/selenocysteine/i) {
             return 1;
         }

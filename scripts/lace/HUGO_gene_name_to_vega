@@ -200,7 +200,7 @@ sub parse_hugo_input {
 }
 
 sub fmt_list { ## no critic(Subroutines::RequireArgUnpacking)
-    return join(', ', map "'$_'", @_);
+    return join(', ', map { "'$_'" } @_);
 }
 
 sub update_gene_name_and_description {
