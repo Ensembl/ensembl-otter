@@ -18,6 +18,8 @@ sub DESTROY {
     
     delete($dbh{$self});
     delete($file{$self});
+
+    return;
 }
 
 sub new {
@@ -125,6 +127,8 @@ sub init_db {
                 $dbh->do("CREATE INDEX $idx ON $index_defs{$idx}");
             }
         }
+
+        return;
     }
 }
 
