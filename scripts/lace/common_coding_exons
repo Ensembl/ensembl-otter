@@ -48,7 +48,7 @@ sub common_coding_exons {
     my ($gene) = @_;
     
     # Get list of coding transcripts
-    my @code_tscts = grep $_->translation, @{$gene->get_all_Transcripts};
+    my @code_tscts = grep { $_->translation } @{$gene->get_all_Transcripts};
 
     my $common_exons = [];
     for (my $i = 0; $i < @code_tscts; $i++) {

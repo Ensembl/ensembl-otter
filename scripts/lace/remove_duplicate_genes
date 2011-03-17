@@ -73,7 +73,7 @@ $| = 1;
             }
 
             my $fixed_this_gene = 0;
-            my @overlaps = grep @$_ > 1, group_by_contigs(@candidate);
+            my @overlaps = grep { @$_ > 1 } group_by_contigs(@candidate);
             if (@overlaps) {
                 foreach my $group (@overlaps) {
                     print "  GROUP:\n";

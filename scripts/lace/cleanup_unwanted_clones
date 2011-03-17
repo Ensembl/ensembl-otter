@@ -67,7 +67,7 @@ sub parse_agps_in_dir {
     
     local *AGPDIR;
     opendir AGPDIR, $dir or die "Can't opendir '$dir' : $!";
-    foreach my $file (grep /^chr.*\.agp$/, readdir AGPDIR) {
+    foreach my $file (grep { /^chr.*\.agp$/ } readdir AGPDIR) {
         $parser->file("$dir/$file");
 
         my $agp = $parser->parse;
