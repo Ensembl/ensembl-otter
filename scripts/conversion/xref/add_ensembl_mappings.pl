@@ -210,8 +210,9 @@ if (! %$ens_ids) {
       }
     }
   }
-  store($ens_ids,$xref_file,1);
+  store($ens_ids,$xref_file);
 }
+
 
 #this defines the order in which the e! xrefs will be used, and which external_db 
 #they match in Vega
