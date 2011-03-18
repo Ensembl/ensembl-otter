@@ -3,6 +3,8 @@
 ### test_lace_client
 
 use strict;
+use warnings;
+
 use Getopt::Long 'GetOptions';
 use Bio::Otter::Lace::Client;
 
