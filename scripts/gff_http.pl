@@ -7,14 +7,29 @@ use Digest::MD5 qw(md5_hex);
 use URI::Escape qw(uri_escape uri_unescape);
 
 my $gff_source;
+sub _log_prefix {
+    my $now = time;
+    return sprintf "%02d:%02d:%02d: %6d: %-35s "
+        , (localtime($now))[2,1,0], $$, ($gff_source || '???');
+}
 
 my $log_file;
+
 sub log_message {
     my ($message) = @_;
     return unless $log_file;
-    my $now = time;
-    printf $log_file "%02d:%02d:%02d: %6d: %-35s : %s\n"
-        , (localtime($now))[2,1,0], $$, ($gff_source || '???'), $message, "\n";
+    printf $log_file "%s: %s\n", _log_prefix, $message;
+    return;
+}
+
+sub log_chunk {
+    my ($prefix, $chunk) = @_;
+    return unless $log_file;
+    my $prefix_full = sprintf "%s: %s: ", _log_prefix, $prefix;
+    chomp $chunk;
+    $chunk .= "\n";
+    $chunk =~ s/^/$prefix_full/gm;
+    print $log_file $chunk;
     return;
 }
 
@@ -163,6 +178,7 @@ if ($response->is_success) {
 else {
 
     my $res = $response->content;
+    log_chunk 'http: error', $res;
 
     my $err_msg;
 
