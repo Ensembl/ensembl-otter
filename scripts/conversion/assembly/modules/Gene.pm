@@ -59,7 +59,8 @@ sub store_gene {
        -version    => $V_gene->version,
        -dbname     => 'Vega_gene',
        -release    => 1,
-       -display_id => $V_gene->stable_id));
+       -display_id => $V_gene->stable_id,
+       -info_text  => 'Added during ensembl-vega production'));
 
   # add transcripts to gene
   foreach my $E_trans (@{ $E_transcripts }) {
@@ -177,7 +178,8 @@ sub create_vega_xrefs {
        -version    => $transcript->version,
        -dbname     => 'Vega_transcript',
        -release    => 1,
-       -display_id => $transcript->stable_id);
+       -display_id => $transcript->stable_id,
+       -info_text  => 'Added during ensembl-vega production');
     $transcript->add_DBEntry($dbe);
 
     if($transcript->translation) {
@@ -186,7 +188,8 @@ sub create_vega_xrefs {
 	 -version    => $transcript->translation->version,
 	 -dbname     => 'Vega_translation',
 	 -release    => 1,
-	 -display_id => $transcript->translation->stable_id);
+	 -display_id => $transcript->translation->stable_id,
+         -info_text  => 'Added during ensembl-vega production');
       $transcript->translation->add_DBEntry($dbe);
     }
   }
