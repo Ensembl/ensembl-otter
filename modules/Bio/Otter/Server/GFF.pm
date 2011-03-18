@@ -197,7 +197,8 @@ sub gff_header {
 sub _features_gff {
     my ($self, $features) = @_;
 
-    my %gff_args = map { $_ => $self->param($_) } $self->_gff_keys;
+    my %gff_args = ();
+    $gff_args{$_} = $self->param($_) for $self->_gff_keys;
     my $features_gff = join '', map { $_->to_gff(%gff_args) || '' } @{$features};
 
     return $features_gff;
