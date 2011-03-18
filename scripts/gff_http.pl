@@ -182,8 +182,10 @@ else {
 
     my $err_msg;
 
-    if ($res =~ /ERROR: (.+)/) {
-        $err_msg = $1;
+    if (my ($err) = $res =~ /ERROR:[[:space:]]*(.+)/s) {
+        $err =~ s/\A(^-+[[:blank:]]*EXCEPTION[[:blank:]]*-+\n)+//m; # remove boring initial lines
+        $err =~ s/\n.*//s; # keep only the first line
+        $err_msg = $err;
     }
     elsif ($res =~ /The Sanger Institute Web service you requested is temporarily unavailable/) {
         my $code = $response->code;
