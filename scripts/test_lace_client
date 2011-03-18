@@ -4,7 +4,6 @@
 
 use strict;
 use Getopt::Long 'GetOptions';
-#use Data::Dumper;
 use Bio::Otter::Lace::AceDatabase;
 use Bio::Otter::Lace::Client;
 
@@ -34,19 +33,10 @@ use Bio::Otter::Lace::Client;
         $db->recover_slice_dataset_hash;
     } else {
         my $ds = $cl->get_DataSet_by_name('otter_chr9p12');
-
-        #foreach my $chr ($ds->get_all_Chromosomes) {
-        #    print "chr: ", Dumper($chr);
-        #}
-
         my $cs_list = $ds->get_all_CloneSequences;
-
         $ds->selected_CloneSequences([@$cs_list[2..7]]);
-        #print Dumper( $ds->selected_CloneSequences );
-
         $db->make_database_directory;
         $db->write_otter_acefile;
-
         unless ($db->initialize_database) {
             die "Error initialzing database";
         }
