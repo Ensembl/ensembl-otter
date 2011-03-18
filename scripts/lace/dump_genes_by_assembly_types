@@ -14,7 +14,7 @@ my $remark_prefix = 'Annotation_remark- LoutreTransfer:';
 my $otter_dba; # it's much cheaper to have these globally visible
 my $gene_adaptor;
 my $slice_adaptor;
-$|=1;
+$|=1; ## no critic (Variables::RequireLocalizedPunctuationVars)
 
 my $gene_count=0;
 

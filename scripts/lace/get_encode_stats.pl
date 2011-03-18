@@ -26,7 +26,7 @@ use POSIX 'strftime';
 use POSIX 'mktime';
 use Time::Local;
 
-$| = 1;
+$| = 1; ## no critic (Variables::RequireLocalizedPunctuationVars)
 
 my ($dataset, @sets, $cutoff_time_1, $cutoff_time_2);
 
