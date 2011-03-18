@@ -10,7 +10,7 @@ use Getopt::Long 'GetOptions';
 use Bio::Otter::Lace::Defaults;
 
 # Set STDOUT to autoflush
-$| = 1;
+$| = 1; ## no critic (Variables::RequireLocalizedPunctuationVars)
 
 {
     my $dataset_name = undef;

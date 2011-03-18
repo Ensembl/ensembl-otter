@@ -12,6 +12,7 @@ use File::Path 'rmtree';
 {
     umask(002);
     {
+        ## no critic (Variables::RequireLocalizedPunctuationVars)
         my $path = $ENV{'PATH'};
         $ENV{'PATH'} = "/usr/local/bin:/usr/apps/bin:$path";
     }

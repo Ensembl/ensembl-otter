@@ -31,7 +31,7 @@ use Bio::Vega::Transform::Otter;
 use Bio::Vega::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw ( throw warning );
 
-$|=1;
+$|=1; ## no critic (Variables::RequireLocalizedPunctuationVars)
 
 my $dsname    = '';
 my $last_dbid = '';
@@ -57,7 +57,7 @@ if($last_dbid) {
     ($last_dbid) = @{ $mc->list_value_by_key('last_gene_old_dbid') };
 }
 
-$/="----------------------------------------\n";
+$/="----------------------------------------\n"; ## no critic (Variables::RequireLocalizedPunctuationVars)
 LOCUS: while (<>){  ## read from STDIN + @ARGV filenames
   my $dbid;
   my $gene_xml=$_;

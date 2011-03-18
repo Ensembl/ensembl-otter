@@ -11,7 +11,7 @@ use Bio::Otter::Lace::Defaults;
 use Bio::Seq;
 
 
-$| = 1;
+$| = 1; ## no critic (Variables::RequireLocalizedPunctuationVars)
 
 my ($dataset, @sets, $vega);
 
@@ -54,7 +54,7 @@ else {
 # do not want to use buffer
 for my $current ($fh, $fh1) {
   my $old = select($current);
-  $|=1;
+  $|=1; ## no critic (Variables::RequireLocalizedPunctuationVars)
   select ($old);
 }
 
