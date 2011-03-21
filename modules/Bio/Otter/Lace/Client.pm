@@ -716,14 +716,13 @@ sub find_string_match_in_clones {
 }
 
 sub get_meta {
-    my ( $self, $dsname, $which) = @_;
+    my ( $self, $dsname ) = @_;
 
     my $response = $self->otter_response_content(
         'GET',
         'get_meta',
         {
             'dataset'  => $dsname,
-            defined($which) ? ('which' => $which ) : (),
         },
     );
 
