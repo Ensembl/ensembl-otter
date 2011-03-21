@@ -103,15 +103,9 @@ sub config_name {
 
 sub meta_hash {
     my ($self) = @_;
-
-    my $meta;
-    unless ($meta = $self->{'_meta_hash'}) {
-
-        # Get all of meta table in one call
-        $meta = $self->{'_meta_hash'} =
-          $self->Client()->get_meta($self->name);
-    }
-    return $meta;
+    # Get all of meta table in one call
+    return $self->{'_meta_hash'} ||=
+        $self->Client()->get_meta($self->name);
 }
 
 sub get_meta_value {
