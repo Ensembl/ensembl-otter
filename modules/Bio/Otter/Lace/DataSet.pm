@@ -109,7 +109,7 @@ sub meta_hash {
 
         # Get all of meta table in one call
         $meta = $self->{'_meta_hash'} =
-          $self->Client()->get_meta($self->name, 'otter');
+          $self->Client()->get_meta($self->name);
     }
     return $meta;
 }
