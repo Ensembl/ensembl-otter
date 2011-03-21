@@ -13,13 +13,7 @@ use Bio::Otter::ServerScriptSupport;
 
 my $server = Bio::Otter::ServerScriptSupport->new;
 
-my $which = $server->param('which') || 'otter';
-
-my $dba = ($which eq 'pipe')
-    ? $server->satellite_dba( '' )
-    : $server->otter_dba();
-
-my $sth = $dba->dbc()->prepare(qq{
+my $sth = $server->otter_dba()->dbc()->prepare(qq{
     SELECT meta_key, meta_value
       FROM meta
   ORDER BY meta_id
