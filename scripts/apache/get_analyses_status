@@ -52,7 +52,7 @@ my $server = Bio::Otter::ServerScriptSupport->new;
 my $assembly = $server->require_argument('type');
 my $component_cs = $server->param('component_cs') || 'contig';
 
-my $pdbc = $server->satellite_dba( '' )->dbc();  # pipeline dbc
+my $pdbc = $server->pipeline_dba()->dbc();  # pipeline dbc
 
 my @input_ids = ();
 
