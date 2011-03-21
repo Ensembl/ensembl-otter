@@ -14,7 +14,6 @@ use Bio::Otter::ServerScriptSupport;
 my $server = Bio::Otter::ServerScriptSupport->new;
 
 my $which = $server->param('which') || 'otter';
-my $key   = $server->param('key');
 
 my $dba = ($which eq 'pipe')
     ? $server->satellite_dba( '' )
@@ -23,8 +22,6 @@ my $dba = ($which eq 'pipe')
 my $sth = $dba->dbc()->prepare(qq{
     SELECT meta_key, meta_value
       FROM meta
-}.($key ? qq{   WHERE meta_key = '$key' } : '')
-.qq{
   ORDER BY meta_id
 });
 $sth->execute;
