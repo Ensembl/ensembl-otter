@@ -13,16 +13,7 @@ use Bio::Otter::ServerScriptSupport;
 
 my $server = Bio::Otter::ServerScriptSupport->new;
 
-my $cs         = $server->param('cs')     || 'chromosome';
-my $csver      = $server->param('csver')  || (($cs eq 'chromosome') ? 'Otter' : undef);
-my $name       = $server->require_argument('name');
-my $type       = $server->require_argument('type');
-my $start      = $server->param('start');
-my $end        = $server->param('end');
-my $strand     = $server->param('strand') || undef;
-
-my $odba  = $server->otter_dba();
-my $slice = $server->get_slice($odba, $cs, $name, $type, $start, $end, $strand, $csver);
+my $slice = $server->get_requested_slice;
 
 my $output_str = $slice->seq . "\n";
 

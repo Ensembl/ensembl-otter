@@ -15,13 +15,6 @@ use Bio::Vega::Transform::XML;
 
 my $server = Bio::Otter::ServerScriptSupport->new;
 
-my $cs      = $server->param('cs')       || 'chromosome';
-my $csver   = $server->param('csver')    || (($cs eq 'chromosome') ? 'Otter' : undef);
-my $name    = $server->require_argument('name');
-my $type    = $server->require_argument('type');
-my $start   = $server->require_argument('start');
-my $end     = $server->require_argument('end');
-my $strand  = $server->param('strand')   || undef;
 my $cl_host = $server->param('hostname') || $ENV{REMOTE_ADDR};
 
 my ($xml);
@@ -31,8 +24,7 @@ eval {
     my $cb = Bio::Vega::ContigLockBroker->new;
     $cb->client_hostname($cl_host);
 
-    warn "Getting slice [$name] [$start] [$end]\n";
-    my $slice = $server->get_slice($odba, $cs, $name, $type, $start, $end, $strand, $csver);
+    my $slice = $server->get_requested_slice;
     my $author_obj = $server->make_Author_obj();
 
     warn "Attempting to lock clones...\n";

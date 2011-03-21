@@ -375,6 +375,29 @@ sub fetch_Author_obj {
     return $author_obj;
 }
 
+
+############## the requested region: ###########################
+
+sub get_requested_slice {
+    my ($self) = @_;
+
+    my $cs      = $self->param('cs')     || 'chromosome';
+    my $csver   = $self->param('csver')  || (($cs eq 'chromosome') ? 'Otter' : undef);
+    my $name    = $self->require_argument('name');
+    my $type    = $self->require_argument('type');
+    my $start   = $self->require_argument('start');
+    my $end     = $self->require_argument('end');
+    my $strand  = $self->param('strand') || undef;
+
+    warn "Getting slice... [$name | $type] [$start] [$end]\n";
+
+    my $odba  = $self->otter_dba;
+    my $slice = $self->get_slice($odba, $cs, $name, $type, $start, $end, $strand, $csver);
+
+    return $slice;
+}
+
+
 ## no critic(Modules::ProhibitMultiplePackages)
 
 package Bio::EnsEMBL::DBSQL::StatementHandle;
