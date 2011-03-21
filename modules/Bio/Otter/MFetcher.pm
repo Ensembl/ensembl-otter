@@ -108,6 +108,11 @@ sub default_assembly {
     return $asm_def || 'UNKNOWN';
 }
 
+sub pipeline_dba {
+    my ($self) = @_;
+    return $self->satellite_dba('pipeline_db_head');
+}
+
 sub satellite_dba {
     my ($self, $metakey) = @_;
 
