@@ -455,31 +455,23 @@ sub build_Transcript {
       $transcript->transcript_author($transcript_author);
   }
 
-  ##transcript attributes
-  my $transcript_attributes;
-  my $mRNA_start_not_found = $data->{'mRNA_start_not_found'};
-  if (defined $mRNA_start_not_found){
-     my $attrib=$self->make_Attribute('mRNA_start_NF', $mRNA_start_not_found);
-     push @$transcript_attributes,$attrib;
-  }
-  my $mRNA_end_not_found = $data->{'mRNA_end_not_found'};
-  if (defined $mRNA_end_not_found ){
-     my $attrib=$self->make_Attribute('mRNA_end_NF', $mRNA_end_not_found);
-     push @$transcript_attributes,$attrib;
-  }
-  my $cds_start_not_found = $data->{'cds_start_not_found'};
-  if (defined $cds_start_not_found ){
-      if ($start_Exon_Pos != 1) {
-          die "Transcript '$transcript_name' has CDS start not found set but has 5' UTR";
-      }
-     my $attrib= $self->make_Attribute('cds_start_NF', $cds_start_not_found);
-     push @$transcript_attributes,$attrib;
-  }
-  my $cds_end_not_found = $data->{'cds_end_not_found'};
-  if (defined $cds_end_not_found ){
-     my $attrib= $self->make_Attribute('cds_end_NF', $cds_end_not_found);
-     push @$transcript_attributes,$attrib;
-  }
+    # Transcript attributes
+    my $transcript_attributes;
+    if (my $mRNA_start_not_found = $data->{'mRNA_start_not_found'}) {
+        push @$transcript_attributes, $self->make_Attribute('mRNA_start_NF', $mRNA_start_not_found);
+    }
+    if (my $mRNA_end_not_found = $data->{'mRNA_end_not_found'}) {
+        push @$transcript_attributes, $self->make_Attribute('mRNA_end_NF', $mRNA_end_not_found);
+    }
+    if (my $cds_start_not_found = $data->{'cds_start_not_found'}) {
+        if ($start_Exon_Pos != 1) {
+            die "Transcript '$transcript_name' has CDS start not found set but has 5' UTR";
+        }
+        push @$transcript_attributes, $self->make_Attribute('cds_start_NF', $cds_start_not_found);
+    }
+    if (my $cds_end_not_found = $data->{'cds_end_not_found'}) {
+        push @$transcript_attributes, $self->make_Attribute('cds_end_NF', $cds_end_not_found);
+    }
 
   if(my $remarks=$data->{'remark'}) {
       foreach my $rem (@$remarks){
