@@ -380,6 +380,7 @@ sub build_Transcript {
 
     my $exons = delete $exon_list{$self};
     my $chr_slice = $self->get_ChromosomeSlice;
+    my $transcript_name = $data->{'name'};
 
     my $ana = $self->get_Analysis($data->{'analysis'} || 'Otter');
 
@@ -468,6 +469,9 @@ sub build_Transcript {
   }
   my $cds_start_not_found = $data->{'cds_start_not_found'};
   if (defined $cds_start_not_found ){
+      if ($start_Exon_Pos != 1) {
+          die "Transcript '$transcript_name' has CDS start not found set but has 5' UTR";
+      }
      my $attrib= $self->make_Attribute('cds_start_NF', $cds_start_not_found);
      push @$transcript_attributes,$attrib;
   }
@@ -490,7 +494,7 @@ sub build_Transcript {
       }
   }
 
-  if(my $transcript_name=$data->{'name'}) {
+  if ($transcript_name) {   ### Don't we always have a name?
      if ($seen_transcript_name{$self}{$transcript_name}) {
         die "more than one transcript has the name $transcript_name";
      } else {

@@ -511,12 +511,14 @@ sub set_exon_phases_translation_cds_start_end {
     # Set the phase of the exons
     my $start_phase = $ace->get_single_value('Start_not_found');
     if (defined $start_phase) {
+        if ($cds_start != 1) {
+            confess "Error in transcript '$name'; Start_not_found $start_phase set, but there is 5' UTR\n";
+        }
         my $ens_phase = $ace2ens_phase{$start_phase};
         if (defined $ens_phase) {
             $start_phase = $ens_phase;
         } else {
-            confess sprintf "Error in transcript '%s'; bad value for Start_not_found '%s'\n",
-                $tsct->get_all_Attributes('name')->[0]->value, $start_phase;
+            confess "Error in transcript '$name'; bad value for Start_not_found '$start_phase'\n";
         }
         $self->create_Attribute($tsct, 'cds_start_NF', 1);
         $self->create_Attribute($tsct, 'mRNA_start_NF', 1);
