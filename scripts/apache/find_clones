@@ -12,13 +12,14 @@ use SangerPaths qw{ core bioperl123 ensembl61 otter54 };
 use Bio::Otter::ServerScriptSupport;
 use Bio::Vega::CloneFinder;
 
-my $server = Bio::Otter::ServerScriptSupport->new;
-
-my $finder = Bio::Vega::CloneFinder->new($server);
-$finder->find;
-my $output = $finder->generate_output;
-
-$server->send_response($output, 1);
+Bio::Otter::ServerScriptSupport->send_response(
+    sub {
+        my ($server) = @_;
+        my $finder = Bio::Vega::CloneFinder->new($server);
+        $finder->find;
+        my $output = $finder->generate_output;
+        return $output;
+    });
 
 1;
 
