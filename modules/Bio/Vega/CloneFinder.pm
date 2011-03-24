@@ -34,6 +34,12 @@ sub otter_dba {
         $self->server->otter_dba;
 }
 
+sub pipeline_dba {
+    my ($self) = @_;
+    return $self->{_otter_dba} ||=
+        $self->server->pipeline_dba;
+}
+
 sub qnames {
     my ($self) = @_;
     return $self->{_qnames};
@@ -102,7 +108,7 @@ sub register_slice {
 
     if($sdba == $odba) {
         $self->register_local_slice($qname, $qtype, $slice);
-    } elsif($sdba == $self->server->satellite_dba('')) {
+    } elsif($sdba == $self->pipeline_dba) {
         my $local_slice =
             $lsa->fetch_by_region(
                 $slice->coord_system_name,
@@ -465,7 +471,7 @@ sub _find_by_hit_name {
     #
     my $table_name = $kind.'_align_feature';
 
-    my $pipe_dba = $self->server->satellite_dba('');
+    my $pipe_dba = $self->pipeline_dba;
 
     my $sql = sprintf
         $find_by_hit_name_sql_template,
