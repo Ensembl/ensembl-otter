@@ -344,9 +344,9 @@ sub set_filters_wanted {
 
     my @filters = values %{$self->AceDatabase->filters};
     my $selection = $selection_by_species->{$self->species};
-    foreach my $filt (@filters) {
-        my $name = $filt->{'filter'}->name;
-        $filt->{'state'}{'wanted'} = $selection->{$name};
+    foreach my $filter_entry (@filters) {
+        my $name = $filter_entry->{'filter'}->name;
+        $filter_entry->{'state'}{'wanted'} = $selection->{$name};
     }
  
     return;

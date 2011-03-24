@@ -1075,7 +1075,7 @@ sub zMapFeaturesLoaded {
     my $status = $xml->{'request'}{'status'}{'value'};
     my $msg    = $xml->{'request'}{'status'}{'message'};
     
-    my $filt_hash = $self->AceDatabase->filters;
+    my $filter_hash = $self->AceDatabase->filters;
     my $state_changed = 0;
     foreach my $set_name (@featuresets) {
 
@@ -1084,8 +1084,8 @@ sub zMapFeaturesLoaded {
         # match. Starting with Zmap 0.1.114 (or maybe earlier) we get them in
         # their original case.
 
-        # NB: careful not to auto-vivify entries in $filt_hash !
-        if (my $filter_entry = $filt_hash->{$set_name}) {
+        # NB: careful not to auto-vivify entries in $filter_hash !
+        if (my $filter_entry = $filter_hash->{$set_name}) {
             my $state_hash = $filter_entry->{'state'};
             if ($status == 0 && ! $state_hash->{'failed'}) {
                 $state_changed = 1;
@@ -1096,9 +1096,9 @@ sub zMapFeaturesLoaded {
                 $state_changed = 1;
                 $state_hash->{'done'} = 1;
                 $state_hash->{'failed'} = 0; # reset failed flag if filter succeeds
-                my $filt = $filt_hash->{$set_name}{'filter'};
-                if ($filt->process_gff_file) {
-                    my @tsct = $self->AceDatabase->process_gff_file_from_Filter($filt);
+                my $filter = $filter_hash->{$set_name}{'filter'};
+                if ($filter->process_gff_file) {
+                    my @tsct = $self->AceDatabase->process_gff_file_from_Filter($filter);
                     if (@tsct) {
                         $self->add_external_SubSeqs(@tsct);
                         $self->draw_subseq_list;

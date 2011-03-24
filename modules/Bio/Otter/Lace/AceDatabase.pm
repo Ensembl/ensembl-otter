@@ -573,8 +573,8 @@ sub reload_filter_state {
     my $filters = $self->filters;
 
     while (my ($filter_name, $wanted, $failed, $done) = $sth->fetchrow) {
-        my $filt = $filters->{$filter_name};
-        if ($filt) {
+        my $filter = $filters->{$filter_name};
+        if ($filter) {
             print STDERR "Reloading state from file for $filter_name\n";
         } else {
             print STDERR "Skipping obsolete coloumn '$filter_name'\n";
@@ -634,14 +634,14 @@ sub filters {
 }
 
 sub process_gff_file_from_Filter {
-    my ($self, $filt) = @_;
+    my ($self, $filter) = @_;
     
-    my $filt_name = $filt->name;
+    my $filter_name = $filter->name;
     my $sth = $self->DB->dbh->prepare(q{ SELECT gff_file, process_gff FROM otter_filter WHERE filter_name = ? });
-    $sth->execute($filt_name);
+    $sth->execute($filter_name);
     my ($gff_file, $load_gff) = $sth->fetchrow;
     unless ($gff_file) {
-        confess "gff_file column not set for '$filt_name' in otter_filter table in SQLite DB";
+        confess "gff_file column not set for '$filter_name' in otter_filter table in SQLite DB";
     }
     unless ($load_gff) {
         return;
@@ -661,21 +661,21 @@ sub process_gff_file_from_Filter {
     # SimpleFeature
     # VariationFeature
     
-    if ($filt->server_script eq 'get_gff_genes'
-        or $filt->feature_kind eq 'PredictionExon'
-        or $filt->feature_kind eq 'PredictionTranscript'
+    if ($filter->server_script eq 'get_gff_genes'
+        or $filter->feature_kind eq 'PredictionExon'
+        or $filter->feature_kind eq 'PredictionTranscript'
     ) {
         return Bio::Otter::Lace::ProcessGFF::make_ace_transcripts_from_gff($full_gff_file);
     }
-    elsif ($filt->feature_kind =~ /AlignFeature/) {
+    elsif ($filter->feature_kind =~ /AlignFeature/) {
         Bio::Otter::Lace::ProcessGFF::store_hit_data_from_gff($self->DB->dbh, $full_gff_file);
         # Unset flag so that we don't reprocess this file if we recover the session.
         my $no_reload = $self->DB->dbh->prepare(q{ UPDATE otter_filter SET process_gff = 0 WHERE filter_name = ? });
-        $no_reload->execute($filt_name);
+        $no_reload->execute($filter_name);
         return;
     }
     else {
-        confess "Don't know how to process '$filt_name' GFF file '$gff_file'\n";
+        confess "Don't know how to process '$filter_name' GFF file '$gff_file'\n";
     }
 }
 
