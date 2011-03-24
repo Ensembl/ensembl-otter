@@ -124,7 +124,7 @@ sub satellite_dba {
 
     # get and check the options
     my $options = $self->satellite_dba_options($metakey);
-    $self->error_exit("metakey '$metakey' is not defined") unless $options;
+    die "metakey '$metakey' is not defined" unless $options;
 
     # special case, '.' means the Otter database
     return $self->otter_dba if $options eq '.';
