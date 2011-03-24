@@ -420,11 +420,7 @@ sub _find_by_xref {
 
     my ($prefix, $metakey) = @{$parameters};
 
-    # Not all species will have a satellite db for this metakey.
-    # Need to pass in "1", which is the may_be_absent parameter,
-    # without which the server will do an error_exit().
-    my $satellite_dba = $self->server->satellite_dba($metakey, 1)
-        or return;
+    my $satellite_dba = $self->server->satellite_dba($metakey);
 
     my $sql = sprintf
         $find_by_xref_sql_template,
