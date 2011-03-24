@@ -67,7 +67,9 @@ $args{rebase} = 1 unless $ENV{OTTERLACE_CHROMOSOME_COORDINATES};
 
 # concatenate the rest of the arguments into a parameter string
 
-my $params = join '&', map { uri_escape($_).'='.uri_escape($args{$_}) } keys %args;
+my $params = join '&', map {
+    uri_escape($_).'='.uri_escape($args{$_});
+} sort keys %args;
 
 my $gff_filename = sprintf '%s_%s.gff', $gff_source, md5_hex($params);
 
