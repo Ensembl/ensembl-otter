@@ -215,13 +215,7 @@ sub _find_by_remote_stable_ids {
 sub _find_by_stable_ids {
     my ($self, $dba, $qtype_prefix) = @_;
 
-    # Not all species will have a satellite db for this metakey.
-    # Need to pass in "1", which is the may_be_absent parameter,
-    # without which the server will do an error_exit().
-    my $satellite_dba = $self->server->satellite_dba($metakey, 1)
-        or return;
-
-    my $meta_con = bless $satellite_dba->get_MetaContainer, 'Bio::Vega::DBSQL::MetaContainer';
+    my $meta_con = bless $dba->get_MetaContainer, 'Bio::Vega::DBSQL::MetaContainer';
     my $prefix_primary = $meta_con->get_primary_prefix || 'ENS';
     my $prefix_species = $meta_con->get_species_prefix || '\w{0,6}';
     my $qname_pattern = qr(^${prefix_primary}${prefix_species}([TPGE])\d+)i;
