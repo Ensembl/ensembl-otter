@@ -48,8 +48,10 @@ sub _filter_by_name {
 
     my $config = $self->config_section("filter.${name}");
     while (my ($meth, $arg) = each %{$config}) {
-        die "Unrecognised configuration parameter '$meth' used in filter '$name'; check your .otter_config"
-          unless $filter->can($meth);
+        unless ($filter->can($meth)) {
+            warn "Unrecognised configuration parameter '$meth' used in filter '$name'; check your .otter_config";
+            return;
+        }
         $filter->$meth($arg);
     }
 
@@ -69,10 +71,12 @@ sub _filters {
     my $use_filters = $self->config_section('use_filters');
     while ( my ( $name, $wanted ) = each %{$use_filters} ) {
         my $filter = $self->filter_by_name($name);
+        next unless $filter;
         $filter->wanted($wanted);
         if (scalar(@{ $filter->featuresets }) > 1
             && $filter->zmap_style) {
-            die "Filter $name: You can't specify a zmap_style for a filter with multiple featuresets";
+            warn "Filter $name: You can't specify a zmap_style for a filter with multiple featuresets";
+            next;
         }
         push @$filters, $filter;
     }
