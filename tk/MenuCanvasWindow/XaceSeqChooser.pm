@@ -1492,10 +1492,10 @@ sub fetch_external_SubSeqs {
         q{ SELECT filter_name FROM otter_filter WHERE done = 1 AND process_gff = 1 }
         );
     $sth->execute;
-    my $filt_hash = $self->AceDatabase->filters;
-    while (my ($filt_name) = $sth->fetchrow) {
-        my $filt = $filt_hash->{$filt_name}{'filter'};
-        my @tsct = $self->AceDatabase->process_gff_file_from_Filter($filt);
+    my $filter_hash = $self->AceDatabase->filters;
+    while (my ($filter_name) = $sth->fetchrow) {
+        my $filter = $filter_hash->{$filter_name}{'filter'};
+        my @tsct = $self->AceDatabase->process_gff_file_from_Filter($filter);
         if (@tsct) {
             $self->add_external_SubSeqs(@tsct);
         }
