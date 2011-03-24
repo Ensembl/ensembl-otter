@@ -264,6 +264,27 @@ sub compression {
 }
 
 sub send_response {
+    my ($self, @args) = @_;
+
+    if (ref $self) {
+        $self->_send_response(@args);
+    }
+    else {
+        my ($sub) = @args;
+        my $server = $self->new;
+        my $response;
+        if (eval { $response = $sub->($server); 1; }) {
+            $server->_send_response($response, 1);
+        }
+        else {
+            $server->error_exit($@);
+        }
+    }
+
+    return;
+}
+
+sub _send_response {
 
     my ($self, $response, $wrap) = @_;
 
