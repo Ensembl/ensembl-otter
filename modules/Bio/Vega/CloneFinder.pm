@@ -157,11 +157,20 @@ sub register_local_slice {
     return;
 }
 
-sub find_by_stable_ids {
+sub find_by_otter_stable_ids {
     my ($self, @args) = @_;
     {
         ## no critic (ErrorHandling::RequireCheckingReturnValueOfEval)
-        eval { $self->_find_by_stable_ids(@args); };
+        eval { $self->_find_by_otter_stable_ids(@args); };
+    }
+    return;
+}
+
+sub find_by_remote_stable_ids {
+    my ($self, @args) = @_;
+    {
+        ## no critic (ErrorHandling::RequireCheckingReturnValueOfEval)
+        eval { $self->_find_by_remote_stable_ids(@args); };
     }
     return;
 }
@@ -189,10 +198,22 @@ my $id_adaptor_fetcher_by_type = {
     ],
 };
 
-sub _find_by_stable_ids {
-    my ($self, $parameters) = @_;
+sub _find_by_otter_stable_ids {
+    my ($self) = @_;
+    my $qtype_prefix = '';
+    my $dba = $self->otter_dba;
+    return $self->_find_by_stable_ids($dba, $qtype_prefix);
+}
 
+sub _find_by_remote_stable_ids {
+    my ($self, $parameters) = @_;
     my ($qtype_prefix, $metakey) = @{$parameters};
+    my $dba = $self->server->satellite_dba($metakey);
+    return $self->_find_by_stable_ids($dba, $qtype_prefix);
+}
+
+sub _find_by_stable_ids {
+    my ($self, $dba, $qtype_prefix) = @_;
 
     # Not all species will have a satellite db for this metakey.
     # Need to pass in "1", which is the may_be_absent parameter,
@@ -218,7 +239,7 @@ sub _find_by_stable_ids {
         my $feature;
         {
             ## no critic (ErrorHandling::RequireCheckingReturnValueOfEval)
-            eval { $feature = $satellite_dba->$adaptor->$fetcher($qname); };
+            eval { $feature = $dba->$adaptor->$fetcher($qname); };
         }
         next unless $feature;
 
@@ -491,9 +512,8 @@ sub _find_by_hit_name {
     return;
 }
 
-my $stable_ids_parameters = [
+my $remote_stable_ids_parameters = [
     #     prefix       metakey
-    [     '',          '.',                      ],
     [ qw( EnsEMBL:     ensembl_core_db_head    ) ],
     [ qw( EnsEMBL_EST: ensembl_estgene_db_head ) ],
     ];
@@ -543,7 +563,8 @@ sub find {
 
     $self->find_by_seqregion_names($names);
 
-    $self->find_by_stable_ids($_) for @{$stable_ids_parameters};
+    $self->find_by_otter_stable_ids;
+    $self->find_by_remote_stable_ids($_) for @{$remote_stable_ids_parameters};
     $self->find_by_hit_name($_, $names) for @{$hit_name_parameters};
     $self->find_by_xref($_, $names_2) for @{$xref_parameters};
     $self->find_by_feature_attributes($_, $fa_condition, $fa_args) for @{$feature_attributes_parameters};
