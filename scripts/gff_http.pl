@@ -76,7 +76,12 @@ my $gff_filename = sprintf '%s_%s.gff', $gff_source, md5_hex($params);
 my $top_dir = 'gff_cache';
 
 unless (-d $top_dir) {
-    mkdir $top_dir or die "Failed to create toplevel cache directory: $!\n";
+    # Cannot check return value from mkdir() because another instance of the
+    # script is likely to have made the directory since many run in parallel!
+    mkdir $top_dir;
+    unless (-d $top_dir) {
+        die "Failed to create toplevel cache directory: $!\n";
+    }
 }
 
 my $cache_file = $top_dir.'/'.$gff_filename;
