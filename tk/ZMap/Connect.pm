@@ -26,41 +26,13 @@ my $DEBUG_EVENTS   = 0;
 
 =head2 new([-option => "value"])
 
-Creates a  new ZMap::Connect Object  of the style  requested.  Control
-the style with the following options (defaults in []).
-
-=over 10
-
-=item I<-server> '0|1' [1]
-
- Whether to create a server.
-
-=item I<-request_name> name [_CLIENT_REQUEST_NAME]
-
- The atom name.
-
-=item I<-response_name> atom name for response [_CLIENT_RESPONSE_NAME]
-
- The atom name.
-
-=item I<-debug> '0|1' [0]
-
- Show debugging messages when set to 1
-
-=back
+Creates a new ZMap::Connect Object.
 
 =cut
 
 sub new{
-    my ($pkg, @args) = @_;
-    my $p = {};
-    $p = { @args } if(!(scalar(@args) % 2));
-    my $self = {_server        => 1,
-                _debug         => 0,
-                _request_name  => undef,
-                _response_name => undef,
-                map { "_".lc(substr($_,1)) => $p->{$_} } keys(%$p)
-                };
+    my ($pkg) = @_;
+    my $self = { };
     bless($self, $pkg);
     return $self;
 }
@@ -166,7 +138,6 @@ Just the window id of the request widget.
 
 sub server_window_id{
     my ($self) = @_;
-    return unless $self->_is_server();
     return $self->widget->id();
 }
 
@@ -180,19 +151,14 @@ sub xremote{
     my ($self, $id) = @_;
     my $xr = $self->{'_xremote'};
     if (!$xr) {
-        if ($self->_is_server) {
-            if (defined $id) {
-                $xr = X11::XRemote->new(
-                    -server => 1,
-                    -id     => $id
+        if (defined $id) {
+            $xr = X11::XRemote->new(
+                -server => 1,
+                -id     => $id
                 );
-            }
-            else {
-                die "ZMap::Connect::xremote called as server without providing a window ID";
-            }
         }
         else {
-            $xr = X11::XRemote->new();
+            die "ZMap::Connect::xremote called as server without providing a window ID";
         }
         $self->{'_xremote'} = $xr;
     }
@@ -269,43 +235,12 @@ sub protocol_add_meta {
     return;
 }
 
-=head1 SETUP METHODS
-
-It is  recommended that these methods  are not used  directly to setup
-the object (as  setters), but feel free to call  with no arguments (as
-getters).
-
-=head2 request_name( )
-
-Set/Get the atom name for the request.
-
-=cut
-
-# ======================================================== #
-# SETUP STUFF: Easier just to call $self->init(@args);     #
-# ======================================================== #
 sub request_name{
-    my ($self, $name) = @_;
-    if($name && !$self->requestWidget()){
-        $self->{'_request_name'} = $name;
-    }
-    $self->{'_request_name'} ||= X11::XRemote::client_request_name();
-    return $self->{'_request_name'};
+    return X11::XRemote::client_request_name;
 }
 
-=head2 response_name( )
-
-Set/Get the atom name for the response.
-
-=cut
-
 sub response_name{
-    my ($self, $name) = @_;
-    if($name && !$self->responseWidget()){
-        $self->{'_response_name'} = $name;
-    }
-    $self->{'_response_name'} ||= X11::XRemote::client_response_name();
-    return $self->{'_response_name'};
+    return X11::XRemote::client_response_name;
 }
 
 =head2 widget( )
@@ -416,14 +351,12 @@ sub _do_callback{
     warn "//========== _do_callback ========== window id: $id\n" if $DEBUG_CALLBACK;
     if($DEBUG_EVENTS){
         foreach my $m('a'..'z','A'..'Z','#'){
-            warn "Event on ".($self->_is_server ? "server" : "client").
-                " method '$m' - ". $ev->$m() . " " .sprintf("0x%lx", $ev->$m) . " \n" if $ev->$m();
+            warn "Event on method '$m' - ". $ev->$m() . " " .sprintf("0x%lx", $ev->$m) . " \n" if $ev->$m();
         }
     }
     unless($ev->T eq 'PropertyNotify'){ warn "Odd Not a propertyNotify\n"; }
     unless($ev->d eq $reqnm){
-        warn "Event was NOT for this ".($self->_is_server ? "server" : "client").
-            "\n" if $DEBUG_CALLBACK;
+        warn "Event was NOT for this.\n" if $DEBUG_CALLBACK;
         return ; # Tk->break
     }
     my $request_string = $self->xremote->request_string();
@@ -486,10 +419,6 @@ sub __callback{
     my($self, $codeRef) = @_;
     $self->{'_callback'} = $codeRef if ($codeRef && ref($codeRef) eq 'CODE');
     return $self->{'_callback'} || sub { warn "@_\nNo callback set.\n"; return (500,"") };
-}
-sub _is_server{
-    my ($self) = @_;
-    return ($self->{'_server'} ? 1 : 0);
 }
 
 sub __post_callback_data{
