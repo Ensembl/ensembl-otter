@@ -42,7 +42,10 @@ sub zMapInitialize {
     my ( $self ) = @_;
 
     $self->{_zMap_ZMAP_CONNECTOR} =
-        $self->zMapZmapConnectorNew;
+        ZMap::Connect->new(
+            -tk => $self->menu_bar,
+            -receiver => $self,
+        );
 
     $self->{_xremote_cache} =
         ZMap::XRemoteCache->new;
@@ -354,15 +357,6 @@ This is the way we receive commands from zmap.
 sub zMapZmapConnector {
     my ($self) = @_;
     my $zc = $self->{_zMap_ZMAP_CONNECTOR};
-    return $zc;
-}
-
-sub zMapZmapConnectorNew {
-    my ($self) = @_;
-    my $mb = $self->menu_bar();
-    my $zc = ZMap::Connect->new;
-    $zc->init($mb, \&RECEIVE_FILTER, [ $self, qw() ]);
-    my $id = $zc->server_window_id();
     return $zc;
 }
 
@@ -1149,8 +1143,8 @@ sub zMapIgnoreRequest {
     return(200, $self->zMapZmapConnector->handled_response(0));
 }
 
-sub RECEIVE_FILTER {
-    my ($connect, $reqXML, $obj) = @_;
+sub _zmap_request_callback {
+    my ($self, $reqXML) = @_;
 
     # The table of actions and functions...
     my $lookup = {
@@ -1181,23 +1175,23 @@ sub RECEIVE_FILTER {
 
     warn "PARSED REQUEST: " . Dumper($reqXML) . "\n" if $ZMAP_DEBUG;
 
-    warn "In RECEIVE_FILTER for action=$action\n" if $ZMAP_DEBUG;
+    warn "In _zmap_request_callback for action=$action\n" if $ZMAP_DEBUG;
 
     # The default response code and message.
-    my ($status, $response) = (404, $obj->zMapZmapConnector->basic_error("Unknown Command"));
+    my ($status, $response) = (404, $self->zMapZmapConnector->basic_error("Unknown Command"));
 
     # find the method to call...
     foreach my $valid (@list) {
         if (
             $action eq $valid
             && ($valid = $lookup->{$valid})    # N.B. THIS SHOULD BE ASSIGNMENT NOT EQUALITY
-            && $obj->can($valid)
+            && $self->can($valid)
           )
         {
 
             # call the method to get the status and response
-            #warn "Calling $obj->$valid($reqXML)";
-            ($status, $response) = $obj->$valid($reqXML);
+            #warn "Calling $self->$valid($reqXML)";
+            ($status, $response) = $self->$valid($reqXML);
             last;                              # no need to go any further...
         }
     }
