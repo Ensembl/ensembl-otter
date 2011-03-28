@@ -67,22 +67,10 @@ sub add_client_with_pid_actions{
     return 1;
 }
 
-sub _internal_get_cache_with_id{
-    my ($self, $id, $entry) = @_;
-
-    if($id){
-        $entry = $object_cache->{$id};
-    }else{
-        $entry = undef;
-    }
-
-    return $entry;
-}
-
 sub get_client_with_id{
     my ($self, $id) = @_;
 
-    my $entry = $self->_internal_get_cache_with_id($id);
+    my $entry = $object_cache->{$id};
     return unless $entry;
 
     return $entry->{'object'};
@@ -126,7 +114,7 @@ sub get_own_client_for_action_pid{
     my $cache;
 
     foreach my $id(keys(%{$self->{'_self_windows'}})){
-        $cache->{$id} = $self->_internal_get_cache_with_id($id);
+        $cache->{$id} = $object_cache->{$id};
     }
 
     my $client = $self->_internal_get_client_for_action_pid($cache, $requested_action, $pid);
