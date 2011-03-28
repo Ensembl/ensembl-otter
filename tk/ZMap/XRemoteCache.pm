@@ -160,28 +160,13 @@ sub remove_clients_to_bad_windows{
 }
 
 sub create_client_with_pid_id_actions{
-    my ($self, $requested_pid, $requested_id, @actions) = @_;
-    my $cached_id;
+    my ($self, $pid, $id, @actions) = @_;
 
-    my $client = $self->get_client_with_id($requested_id);
-
-    my $allow_overwrite = 0;
-
-    if($client){
-        warn "Are you sure? (client with window id '$requested_id' already exists)";
-        if($allow_overwrite){
-            $cached_id = $client->window_id();
-            $client = X11::XRemote->new(-id     => $requested_id, 
-                                        -server => 0,
-                                        -_DEBUG => $CLIENT_DEBUG);
-            $self->add_client_with_pid_actions($client, $requested_pid, @actions);            
-        }
-    }else{
-        $client = X11::XRemote->new(-id     => $requested_id, 
-                                    -server => 0,
-                                    -_DEBUG => $CLIENT_DEBUG);
-        $self->add_client_with_pid_actions($client, $requested_pid, @actions);
-    }
+    return if $self->get_client_with_id($id);
+    my $client = X11::XRemote->new(-id     => $id, 
+                                   -server => 0,
+                                   -_DEBUG => $CLIENT_DEBUG);
+    $self->add_client_with_pid_actions($client, $pid, @actions);
 
     return $client;
 }
