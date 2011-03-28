@@ -24,36 +24,20 @@ my $object_cache = {
 sub new{
     my $pkg = shift;
     my $self = {};
-    $self->{'_clients'} = \$object_cache;
     $self->{'_self_windows'} = {};
     bless($self, $pkg);
 
     return $self;
 }
 
-# access the class data
-sub _get_clients_cache{
-    my ($self) = @_;
-
-    if(ref $self){
-        return ${ $self->{'_clients'} };
-    }else{
-        return $object_cache;
-    }
-
-    return {};
-}
-
 sub get_pid_list{
     my ($self) = @_;
-    my ($list, $cache, $pid_hash);
+    my ($list, $pid_hash);
     
     $list ||= [];
 
-    $cache = $self->_get_clients_cache();
-
-    foreach my $xwid(keys(%$cache)){
-        my $pid = $cache->{$xwid}->{'pid'};
+    foreach my $xwid(keys(%$object_cache)){
+        my $pid = $object_cache->{$xwid}->{'pid'};
         if(defined $pid){ $pid_hash->{$pid} = 1; }
     }
 
@@ -71,11 +55,9 @@ sub add_client_with_pid_actions{
     my $id = $client->window_id();
 
     warn "Are you _really_ sure? (client with id '$id' already exists)" if($self->get_client_with_id($id));
-    
-    my $cache = $self->_get_clients_cache();
 
     warn "Adding client $id" if $CACHE_DEBUG;
-    $cache->{$id} = {
+    $object_cache->{$id} = {
         'object'  => $client,
         'pid'     => $pid,
         'actions' => [ @actions ],
@@ -88,10 +70,8 @@ sub add_client_with_pid_actions{
 sub _internal_get_cache_with_id{
     my ($self, $id, $entry) = @_;
 
-    my $cache = $self->_get_clients_cache();
-
     if($id){
-        $entry = $cache->{$id};
+        $entry = $object_cache->{$id};
     }else{
         $entry = undef;
     }
@@ -137,9 +117,7 @@ sub _internal_get_client_for_action_pid{
 sub get_client_for_action_pid{
     my ($self, $requested_action, $pid) = @_;
 
-    my $cache  = $self->_get_clients_cache();
-
-    my $client = $self->_internal_get_client_for_action_pid($cache, $requested_action, $pid);
+    my $client = $self->_internal_get_client_for_action_pid($object_cache, $requested_action, $pid);
 
     return $client;
 }
@@ -165,9 +143,8 @@ sub remove_client_with_id{
 
     if($client){
         my $wid   = $client->window_id();
-        my $cache = $self->_get_clients_cache();
         warn "Client Window id != hash key id" if ($id ne $wid);
-        delete $cache->{$id};
+        delete $object_cache->{$id};
         delete $self->{'_self_windows'}->{$id};
     }
 
@@ -176,20 +153,19 @@ sub remove_client_with_id{
 
 sub remove_clients_to_bad_windows{
     my ($self) = @_;
-    my $cache = $self->_get_clients_cache();
 
     warn "cleaning up any bad windows" if $CACHE_DEBUG;
-    foreach my $id(keys(%$cache)){
-        if(my $xr = $cache->{$id}->{'object'}){
+    foreach my $id(keys(%$object_cache)){
+        if(my $xr = $object_cache->{$id}->{'object'}){
             if ($xr->ping) {
                 warn sprintf "  client '%s' not bad", $id if $CACHE_DEBUG;
             } else {
                 warn sprintf "  removing bad client '%s'", $id if $CACHE_DEBUG;
-                delete $cache->{$id};
+                delete $object_cache->{$id};
                 delete $self->{'_self_windows'}->{$id};
             }
         }else{
-            delete $cache->{$id};
+            delete $object_cache->{$id};
             delete $self->{'_self_windows'}->{$id};
         }
             
@@ -228,9 +204,7 @@ sub create_client_with_pid_id_actions{
 sub DESTROY{
     my ($self) = @_;
 
-    my $cache = $self->_get_clients_cache();
-
-    print Dumper $cache if $CACHE_DEBUG;
+    print Dumper $object_cache if $CACHE_DEBUG;
 
     return;
 }
