@@ -33,17 +33,14 @@ Creates a new ZMap::Connect Object.
 sub new{
     my ($pkg, @args) = @_;
 
+    my $args = { @args };
+
     my $self = { };
     bless($self, $pkg);
 
-    my $args = { @args };
     $self->{_receiver} = $args->{-receiver};
-
     my $widget = $self->{_widget} = $self->_widget(@args);
-
-    my $xr = $self->xremote($widget->id);
-    $xr->request_name($self->request_name);
-    $xr->response_name($self->response_name);
+    $self->{_xremote} = $self->_xremote($widget->id);
 
     return $self;
 }
@@ -112,21 +109,18 @@ The xremote Object [C<<< X11::XRemote >>>].
 =cut
 
 sub xremote{
+    my ($self) = @_;
+    return $self->{_xremote};
+}
+
+sub _xremote{
     my ($self, $id) = @_;
-    my $xr = $self->{'_xremote'};
-    if (!$xr) {
-        if (defined $id) {
-            $xr = X11::XRemote->new(
-                -server => 1,
-                -id     => $id
-                );
-        }
-        else {
-            die "ZMap::Connect::xremote called as server without providing a window ID";
-        }
-        $self->{'_xremote'} = $xr;
-    }
-    return $xr;
+
+    my $xremote = X11::XRemote->new(-server => 1, -id => $id);
+    $xremote->request_name($self->request_name);
+    $xremote->response_name($self->response_name);
+
+    return $xremote;
 }
 
 
