@@ -80,14 +80,12 @@ sub _internal_get_cache_with_id{
 }
 
 sub get_client_with_id{
-    my ($self, $id, $client) = @_;
+    my ($self, $id) = @_;
 
-    if(my $entry = $self->_internal_get_cache_with_id($id)){
-        $client = $entry->{'object'};
-    }else{
-        $client = undef;
-    }
-    return $client;
+    my $entry = $self->_internal_get_cache_with_id($id);
+    return unless $entry;
+
+    return $entry->{'object'};
 }
 
 sub _internal_get_client_for_action_pid{
