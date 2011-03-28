@@ -1401,31 +1401,35 @@ my $zmap_new_view_format = <<'FORMAT'
 FORMAT
     ;
 
+sub _zmap_new_view_xml {
+    my ($self, $config) = @_;
+
+    my $slice = $self->AceDatabase->smart_slice;
+    my $on_chromosome = $ENV{OTTERLACE_CHROMOSOME_COORDINATES};
+
+    my $segment = $on_chromosome ? $slice->ssname : $slice->name;
+    my $start   = $on_chromosome ? $slice->start  : 1;
+    my $end     = $on_chromosome ? $slice->end    : 0;
+
+    my @fields = ( $segment, $start, $end, $config );
+    my @xml_escaped_fields = map { xml_escape($_) } @fields;
+    my $xml = sprintf $zmap_new_view_format, @xml_escaped_fields;
+
+    return $xml;
+}
+
 sub zMapNewView {
     my ($self, $xremote, $config) = @_;
 
     $config = "" unless defined $config;
 
-    my $slice_name = $self->slice_name;
-    my $slice = $self->AceDatabase->smart_slice;
-    my @start_end =
-        ( $ENV{OTTERLACE_CHROMOSOME_COORDINATES}
-          ? ( $slice->start, $slice->end, )
-          : ( 1,             0,           )
-          );
-
-    my $xml = sprintf $zmap_new_view_format
-        , xml_escape($slice_name)
-        , @start_end
-        , xml_escape($config)
-        ;
-
-    unless ($self->zMapDoRequest($xremote, "new_view", $xml)) {
+    my $new_view_xml = $self->_zmap_new_view_xml($self, $config);
+    unless ($self->zMapDoRequest($xremote, "new_view", $new_view_xml)) {
         warn "Failed to create a new view";
         return;
     }
 
-    my $xremote_new = $self->zMapGetXRemoteClientByName($slice_name);
+    my $xremote_new = $self->zMapGetXRemoteClientByName($self->slice_name);
     unless ($xremote_new) {
         warn "Failed to find the new xremote client";
         return;
