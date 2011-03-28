@@ -104,14 +104,8 @@ sub get_own_client_for_action_pid{
 sub remove_client_with_id{
     my ($self, $id, $name) = @_;
 
-    my $client = $self->get_client_with_id($id);
-
-    if($client){
-        my $wid   = $client->window_id();
-        warn "Client Window id != hash key id" if ($id ne $wid);
-        delete $object_cache->{$id};
-        delete $self->{'_self_windows'}->{$id};
-    }
+    delete $object_cache->{$id};
+    delete $self->{'_self_windows'}->{$id};
 
     return;
 }
