@@ -46,15 +46,6 @@ sub get_pid_list{
     return $list;
 }
 
-sub get_client_with_id{
-    my ($self, $id) = @_;
-
-    my $entry = $object_cache->{$id};
-    return unless $entry;
-
-    return $entry->{'object'};
-}
-
 sub _internal_get_client_for_action_pid{
     my ($self, $cache, $requested_action, $pid) = @_;
 
@@ -135,7 +126,9 @@ sub remove_clients_to_bad_windows{
 sub create_client_with_pid_id_actions{
     my ($self, $pid, $id, @actions) = @_;
 
-    return if $self->get_client_with_id($id);
+    my $entry = $object_cache->{$id};
+    return $entry->{'object'} if $entry;
+
     my $client = X11::XRemote->new(-id     => $id, 
                                    -server => 0,
                                    -_DEBUG => $CLIENT_DEBUG);
