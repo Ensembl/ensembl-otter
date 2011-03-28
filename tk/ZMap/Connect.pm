@@ -39,15 +39,11 @@ sub new{
     my $args = { @args };
     $self->{_receiver} = $args->{-receiver};
 
-    my $destroy_callback = sub {
-        $self->{'_xremote'}  = undef;
-        $self->{'_receiver'} = undef; 
-        $self = undef;
-    };
-
     my $widget = $self->{_widget} = $self->_widget(@args);
-    $widget->bind('<Property>', sub { $self->_callback; } );
-    $widget->bind('<Destroy>',  $destroy_callback);
+
+    my $xr = $self->xremote($widget->id);
+    $xr->request_name($self->request_name);
+    $xr->response_name($self->response_name);
 
     return $self;
 }
@@ -234,15 +230,18 @@ sub _widget{
 
     # wait until the widget is mapped
     my $mapped;
-    $widget->bind(
-        '<Map>' => sub {
-            $widget->packForget;
-            my $xr = $self->xremote($widget->id);
-            $xr->request_name($self->request_name);
-            $xr->response_name($self->response_name);
-            $mapped = 1;
-        });
+    $widget->bind('<Map>' => sub { $mapped = 1; });
     $widget->waitVariable(\$mapped);
+
+    $widget->packForget;
+
+    my $destroy_callback = sub {
+        $self->{'_xremote'}  = undef;
+        $self->{'_receiver'} = undef; 
+        $self = undef;
+    };
+    $widget->bind('<Property>', sub { $self->_callback; } );
+    $widget->bind('<Destroy>',  $destroy_callback);
 
     return $widget;
 }
