@@ -360,7 +360,7 @@ sub zMapZmapConnector {
 sub zMapZmapConnectorNew {
     my ($self) = @_;
     my $mb = $self->menu_bar();
-    my $zc = ZMap::Connect->new(-server => 1);
+    my $zc = ZMap::Connect->new;
     $zc->init($mb, \&RECEIVE_FILTER, [ $self, qw() ]);
     my $id = $zc->server_window_id();
     return $zc;
