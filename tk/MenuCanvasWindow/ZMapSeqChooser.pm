@@ -1526,9 +1526,7 @@ sub zMapProcessNewClientXML {
                 else {
                     warn "Odd for a client to not have actions.";
                 }
-                if (!$cache->get_client_with_id($id)) {
-                    $cache->create_client_with_pid_id_actions($self->zMapPID(), $id, @actions);
-                }
+                $cache->create_client_with_pid_id_actions($self->zMapPID(), $id, @actions);
                 $self->zMapWindowIDs->{$full_key} = $id;
             }
             $counter++;
