@@ -340,9 +340,9 @@ sub zMapPID {
     return $self->{'_zMap_ZMAP_PROCESS_ID'};
 }
 
-sub zMapWindowIDs {
+sub zMapXRemoteClients {
     my ($self) = @_;
-    return $self->{'_zMap_ZMAP_WINDOW_IDS'} ||= { };
+    return $self->{'_zMap_ZMAP_XREMOTE_CLIENTS'} ||= { };
 }
 
 =head1 zMapZmapConnector
@@ -1218,9 +1218,7 @@ based on a name. e.g. the window that's displaying the features.
 sub zMapGetXRemoteClientByName {
     my ($self, $key) = @_;
 
-    my $cache = $self->xremote_cache;
-    my $window_id = $self->zMapWindowIDs->{$key};
-    my $client = $cache->get_client_with_id($window_id);
+    my $client = $self->zMapXRemoteClients->{$key};
 
     return $client;
 }
@@ -1526,8 +1524,9 @@ sub zMapProcessNewClientXML {
                 else {
                     warn "Odd for a client to not have actions.";
                 }
-                $cache->create_client_with_pid_id_actions($self->zMapPID(), $id, @actions);
-                $self->zMapWindowIDs->{$full_key} = $id;
+                my $xr =
+                    $cache->create_client_with_pid_id_actions($self->zMapPID(), $id, @actions);
+                $self->zMapXRemoteClients->{$full_key} = $xr;
             }
             $counter++;
         }
