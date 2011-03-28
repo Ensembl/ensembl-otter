@@ -46,27 +46,6 @@ sub get_pid_list{
     return $list;
 }
 
-sub add_client_with_pid_actions{
-    my ($self, $client, $pid, @actions) = @_;
-
-    warn "client is required"    if(!defined($client));
-    warn "pid is required"       if(!defined($pid));
-    
-    my $id = $client->window_id();
-
-    warn "Are you _really_ sure? (client with id '$id' already exists)" if($self->get_client_with_id($id));
-
-    warn "Adding client $id" if $CACHE_DEBUG;
-    $object_cache->{$id} = {
-        'object'  => $client,
-        'pid'     => $pid,
-        'actions' => [ @actions ],
-    };
-    $self->{'_self_windows'}->{$id} = $id;
-
-    return 1;
-}
-
 sub get_client_with_id{
     my ($self, $id) = @_;
 
@@ -166,7 +145,12 @@ sub create_client_with_pid_id_actions{
     my $client = X11::XRemote->new(-id     => $id, 
                                    -server => 0,
                                    -_DEBUG => $CLIENT_DEBUG);
-    $self->add_client_with_pid_actions($client, $pid, @actions);
+    $object_cache->{$id} = {
+        'object'  => $client,
+        'pid'     => $pid,
+        'actions' => [ @actions ],
+    };
+    $self->{'_self_windows'}->{$id} = $id;
 
     return $client;
 }
