@@ -60,6 +60,8 @@ use Hum::Ace::Locus;
         close $gff_fh or confess "Error reading GFF file '$gff_file'; $!";
 
         $dbh->commit;
+
+        return;
     }
 }
 
