@@ -147,12 +147,11 @@ sub make_ace_transcripts_from_gff {
     
     my (@ok_tsct);
     while (my ($name, $sub) = each %tsct) {
-        eval {$sub->validate};
-        if ($@) {
-            warn "Error in SubSeq '$name':\n$@";
+        if (eval { $sub->validate; 1; }) {
+            push(@ok_tsct, $sub);
         }
         else {
-            push(@ok_tsct, $sub);
+            warn "Error in SubSeq '$name':\n$@";
         }
     }
     return @ok_tsct;
