@@ -67,10 +67,28 @@ use Hum::Ace::Locus;
 
 sub make_ace_transcripts_from_gff {
     my ($gff_file) = @_;
-    
-    my (%tsct, %locus_by_name, $gene_method, $coding_gene_method);
-    
+
+    my %tsct;
     open my $gff_fh, '<', $gff_file or confess "Can't read GFF file '$gff_file'; $!";
+    make_ace_transcripts_from_gff_fh($gff_fh, \%tsct);
+    close $gff_fh or confess "Can't close GFF file '$gff_file'; $!";
+    
+    my (@ok_tsct);
+    while (my ($name, $sub) = each %tsct) {
+        if (eval { $sub->validate; 1; }) {
+            push(@ok_tsct, $sub);
+        }
+        else {
+            warn "Error in SubSeq '$name':\n$@";
+        }
+    }
+    return @ok_tsct;
+}
+
+sub make_ace_transcripts_from_gff_fh {
+    my ($gff_fh, $tsct) = @_;
+
+    my (%locus_by_name, $gene_method, $coding_gene_method);
 
     my ($seq_region_found,
         $seq_region_start,
@@ -102,7 +120,7 @@ sub make_ace_transcripts_from_gff {
         my $name = $attrib->{'Name'};
         next unless $name;
         my ($sub);
-        unless ($sub = $tsct{$name}) {
+        unless ($sub = $tsct->{$name}) {
             $sub = Hum::Ace::SubSeq->new;
             unless ($gene_method) {
                 $gene_method = Hum::Ace::Method->new;
@@ -113,7 +131,7 @@ sub make_ace_transcripts_from_gff {
             }
             $sub->name($name);
             $sub->GeneMethod($gene_method);
-            $tsct{$name} = $sub;
+            $tsct->{$name} = $sub;
         }
         
         if ($feat_type eq 'Sequence') {
@@ -161,17 +179,8 @@ sub make_ace_transcripts_from_gff {
             }
         }
     }
-    
-    my (@ok_tsct);
-    while (my ($name, $sub) = each %tsct) {
-        if (eval { $sub->validate; 1; }) {
-            push(@ok_tsct, $sub);
-        }
-        else {
-            warn "Error in SubSeq '$name':\n$@";
-        }
-    }
-    return @ok_tsct;
+
+    return;
 }
 
 sub parse_gff_line {
