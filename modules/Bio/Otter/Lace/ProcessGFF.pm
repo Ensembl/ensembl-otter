@@ -71,22 +71,36 @@ sub make_ace_transcripts_from_gff {
     my (%tsct, %locus_by_name, $gene_method, $coding_gene_method);
     
     open my $gff_fh, '<', $gff_file or confess "Can't read GFF file '$gff_file'; $!";
-    my $length;     ### HACK: Should truncate to Slice on server
-    
+
+    my ($seq_region_found,
+        $seq_region_start,
+        $seq_region_end,
+        $seq_region_offset,
+        $seq_region_length);
+
+    $seq_region_found = 0;
     while (<$gff_fh>) {
         if (/^\s*#/) {
-            if (/^##sequence-region (\S+) (\d+) (\d+)/) {
-                $length = $3 - $2 + 1;
+            if (/^\s*##sequence-region /) {
+                if (($seq_region_start, $seq_region_end) =
+                    /^##sequence-region \S+ (\d+) (\d+)/) {
+                    $seq_region_found = 1;
+                    $seq_region_offset = $seq_region_start - 1;
+                    $seq_region_length = $seq_region_end - $seq_region_offset;
+                }
+                else {
+                    confess "invalid sequence region header in GFF file"
+                }
             }
             next;
         }
+        confess "no sequence region header in GFF file" unless $seq_region_found;
         my ($seq_name, $source, $feat_type, $start, $end, $score, $strand, $frame, $attrib)
             = parse_gff_line($_);
+        $start -= $seq_region_offset;
+        $end   -= $seq_region_offset;
         my $name = $attrib->{'Name'};
         next unless $name;
-        unless ($length) {
-            confess "length not calculated from GFF header";
-        }
         my ($sub);
         unless ($sub = $tsct{$name}) {
             $sub = Hum::Ace::SubSeq->new;
@@ -120,12 +134,13 @@ sub make_ace_transcripts_from_gff {
                 $sub->Locus($locus);
             }
         }
+        ### HACK: Should truncate to Slice on server
         elsif ($feat_type eq 'exon') {
             # Truncate exons to slice
             next if $end < 0;
-            next if $start > $length;
+            next if $start > $seq_region_length;
             $start = 1 if $start < 0;
-            $end = $length if $end > $length;
+            $end = $seq_region_length if $end > $seq_region_length;
             
             my $exon = $sub->new_Exon;
             $exon->start($start);
@@ -137,7 +152,7 @@ sub make_ace_transcripts_from_gff {
         elsif ($feat_type eq 'CDS') {            
             # Don't attempt truncated CDS
             next if $start < 0;
-            next if $end > $length;
+            next if $end > $seq_region_length;
 
             $sub->translation_region($start, $end);
             $sub->GeneMethod($coding_gene_method);
