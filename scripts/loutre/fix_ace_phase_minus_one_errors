@@ -1,0 +1,156 @@
+#!/usr/bin/env perl
+
+### fix_ace_phase_minus_one_errors
+
+use strict;
+use warnings;
+
+
+use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Lace::PipelineDB;
+
+{
+
+    my $usage = sub { exec('perldoc', $0) };
+    # This do_getopt() call is needed to parse the otter config files
+    # even if you aren't giving any arguments on the command line.
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        ) or $usage->();
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    foreach my $ds ($cl->get_all_DataSets) {
+        printf STDERR "\nLooking at DataSet %s\n", $ds->name;
+        my $otter_dba = $ds->get_cached_DBAdaptor;
+        my $sth = $otter_dba->dbc->prepare(q{
+            SELECT ta.transcript_id
+              , tsid.stable_id
+            FROM (translation tsl
+                  , transcript t
+                  , transcript_attrib ta
+                  , transcript_stable_id tsid
+                  , exon e
+                  , gene g)
+            LEFT JOIN seq_region_attrib sra
+              ON (t.seq_region_id = sra.seq_region_id
+                  AND sra.attrib_type_id = 129
+                  AND sra.value = 1)
+            WHERE tsl.transcript_id = ta.transcript_id
+              AND tsl.transcript_id = t.transcript_id
+              AND t.transcript_id = tsid.transcript_id
+              AND t.gene_id = g.gene_id
+              AND tsl.start_exon_id = e.exon_id
+              AND ta.attrib_type_id = 126
+              AND ta.value = 1
+              AND t.is_current = 1
+              AND g.is_current = 1
+              AND tsl.seq_start > 1
+              AND e.phase = -1
+              AND sra.value IS NULL
+        });
+        $sth->execute;
+        
+        my $del_start_not_found = $otter_dba->dbc->prepare(q{
+            DELETE FROM transcript_attrib
+            WHERE attrib_type_id = 126
+            AND transcript_id = ?
+        });
+        
+        my $count_tsct = $otter_dba->dbc->prepare(q{
+            SELECT count(*)
+            FROM gene g
+              , transcript t
+            WHERE g.gene_id =
+            (SELECT gene_id
+                FROM transcript
+                WHERE transcript_id = ?)
+              AND g.gene_id = t.gene_id
+            GROUP BY g.gene_id
+        });
+        
+        while (my ($tsct_id, $tsid) = $sth->fetchrow) {
+            $count_tsct->execute($tsct_id);
+            my ($count) = $count_tsct->fetchrow;
+            printf STDERR "%3d  %s  %d\n", $count, $tsid, $tsct_id;
+            $del_start_not_found->execute($tsct_id);
+        }
+    }
+    
+}
+
+
+
+
+__END__
+
+=head1 NAME - fix_ace_phase_minus_one_errors
+
+    attrib_type_id  code           name
+    --------------  -------------  --------------------
+    124             mRNA_start_NF  mRNA start not found
+    125             mRNA_end_NF    mRNA end not found
+    126             cds_start_NF   CDS start not found
+    127             cds_end_NF     CDS end not found
+
+Output from run on Thu 24 Mar 2011:
+
+    Looking at DataSet cat
+
+    Looking at DataSet chicken
+
+    Looking at DataSet chimp
+
+    Looking at DataSet cow
+
+    Looking at DataSet dog
+
+    Looking at DataSet gibbon
+
+    Looking at DataSet gorilla
+
+    Looking at DataSet human
+     12  OTTHUMT00000321477  1105956
+
+    Looking at DataSet lemur
+
+    Looking at DataSet marmoset
+
+    Looking at DataSet medicago
+
+    Looking at DataSet mouse
+      8  OTTMUST00000097188  387288
+
+    Looking at DataSet mus_spretus
+
+    Looking at DataSet opossum
+
+    Looking at DataSet pig
+      1  OTTSUST00000002135  13010
+
+    Looking at DataSet platypus
+
+    Looking at DataSet rat
+
+    Looking at DataSet sordaria
+
+    Looking at DataSet tas_devil
+
+    Looking at DataSet tomato
+
+    Looking at DataSet tropicalis
+
+    Looking at DataSet wallaby
+
+    Looking at DataSet zebrafish
+      3  OTTDART00000014650  328255
+      1  OTTDART00000040125  334860
+      1  OTTDART00000051322  344820
+
+
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
