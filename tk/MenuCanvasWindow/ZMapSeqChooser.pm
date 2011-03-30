@@ -962,9 +962,10 @@ SQL
 sub zmap_feature_details_xml {
     my ($self, $feat_name) = @_;
 
-    my $sth = $self->AceDatabase->DB->dbh->prepare($zmap_feature_details_xml_sql);
-    $sth->execute($feat_name);
-    my ($source_db, $taxon_id, $desc) = $sth->fetchrow;
+    my $row = $self->AceDatabase->DB->dbh->selectrow_arrayref(
+        $zmap_feature_details_xml_sql, {}, $feat_name);
+    return '' unless $row;
+    my ($source_db, $taxon_id, $desc) = @{$row};
 
     # Put this on the "Details" page which already exists.
     my $xml = Hum::XmlWriter->new(5);
