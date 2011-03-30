@@ -279,7 +279,7 @@ sub runit {
     return if $test;
 
     if (system("$command")) {
-	my $err = ($? == -1 ? "error $!" : "returncode $?");
+	my $err = ($? == -1 ? "error $!" : sprintf('returncode 0x%04x', $?));
 	$err .= ", called from ".(join " line ", (caller())[1, 2]);
 	print LOG " # Failed: $err\n";
 	if ($ignore_errs) {
