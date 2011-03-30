@@ -1446,36 +1446,22 @@ return true for success
 =cut
 
 sub zMapDoRequest {
-    my ($self, $xremote, $action, @commands) = @_;
+    my ($self, $xremote, $action, $command) = @_;
 
-    if ($ZMAP_DEBUG) {
-        my $substring = 1;    # sometimes you don't need to see _all_ of the request
-        if ($substring) {
-            foreach ( @commands ) {
-                warn substr($_, 0, 512), (length($_) > 512 ? "..." : "");
-            }
-        }
-        else {
-            warn "@commands";
-        }
+    warn substr($command, 0, 512), (length($_) > 512 ? "..." : "") if $ZMAP_DEBUG;
+
+    my ($response) = $xremote->send_commands($command);
+    warn "command returned $response" if $ZMAP_DEBUG;
+
+    my ($status, $xmlHash) = zMapParseResponse($response);
+    if ($status =~ /^2\d\d/) {    # 200s
+        $self->RESPONSE_HANDLER($action, $xmlHash);
+        return 1;
     }
-
-    my @a = $xremote->send_commands(@commands);
-
-    for (my $i = 0; $i < @commands; $i++) {
-        warn "command $i '", substr($commands[$i], 0, index($commands[$i], '>') + 1), "' returned $a[$i] "
-          if $ZMAP_DEBUG;
-        my ($status, $xmlHash) = zMapParseResponse($a[$i]);
-        if ($status =~ /^2\d\d/) {    # 200s
-            $self->RESPONSE_HANDLER($action, $xmlHash);
-        }
-        else {
-            $self->xremote_cache->remove_clients_to_bad_windows if $status == 412;
-            return 0;
-        }
+    else {
+        $self->xremote_cache->remove_clients_to_bad_windows if $status == 412;
+        return 0;
     }
-
-    return 1;
 }
 
 sub zMapProcessNewClientXML {
