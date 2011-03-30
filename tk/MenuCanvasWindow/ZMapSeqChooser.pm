@@ -1143,60 +1143,34 @@ sub zMapIgnoreRequest {
     return(200, $self->zMapZmapConnector->handled_response(0));
 }
 
+my $zmap_request_callback_methods = {
+    register_client => 'zMapRegisterClient',
+    edit            => 'zMapEdit',
+    single_select   => 'zMapHighlight',
+    multiple_select => 'zMapHighlight',
+    finalised       => 'zMapRelaunchZMap',
+    feature_details => 'zMapTagValues',
+    view_closed     => 'zMapRemoveView',
+    features_loaded => 'zMapFeaturesLoaded',
+};
+
 sub _zmap_request_callback {
     my ($self, $reqXML) = @_;
-
-    # The table of actions and functions...
-    my $lookup = {
-        register_client => 'zMapRegisterClient',
-        edit            => 'zMapEdit',
-        single_select   => 'zMapHighlight',
-        multiple_select => 'zMapHighlight',
-        finalised       => 'zMapRelaunchZMap',
-        feature_details => 'zMapTagValues',
-        view_closed     => 'zMapRemoveView',
-        features_loaded => 'zMapFeaturesLoaded',
-    };
-
-    # @list could be dynamically created...
-    my @list = keys(%$lookup);
-
-    unless ($reqXML->{'request'}) {
-
-        #for my $k (keys %$reqXML) {
-        #    $reqXML->{'request'}->{$k} = $reqXML->{$k};
-        #    delete $reqXML->{$k};
-        #}
-
-        warn "INVALID REQUEST: no <request> block\n";
-    }
-
-    my $action = $reqXML->{'request'}->{'action'};
-
-    warn "PARSED REQUEST: " . Dumper($reqXML) . "\n" if $ZMAP_DEBUG;
-
-    warn "In _zmap_request_callback for action=$action\n" if $ZMAP_DEBUG;
 
     # The default response code and message.
     my ($status, $response) = (404, $self->zMapZmapConnector->basic_error("Unknown Command"));
 
-    # find the method to call...
-    foreach my $valid (@list) {
-        if (
-            $action eq $valid
-            && ($valid = $lookup->{$valid})    # N.B. THIS SHOULD BE ASSIGNMENT NOT EQUALITY
-            && $self->can($valid)
-          )
-        {
-
-            # call the method to get the status and response
-            #warn "Calling $self->$valid($reqXML)";
-            ($status, $response) = $self->$valid($reqXML);
-            last;                              # no need to go any further...
+    if (my $action = $reqXML->{request}{action}) {
+        if (my $method = $zmap_request_callback_methods->{$action}) {
+            ($status, $response) = $self->$method($reqXML);
+        }
+        else {
+            warn "UNKNOWN ACTION: ${action}\n";
         }
     }
-
-    warn "Response:\n$response" if $ZMAP_DEBUG;
+    else {
+        warn "INVALID REQUEST\n";
+    }
 
     return ($status, $response);
 }
