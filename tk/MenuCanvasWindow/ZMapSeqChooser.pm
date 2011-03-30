@@ -1176,7 +1176,7 @@ sub _zmap_request_callback {
 
     warn sprintf
         "\n_zmap_request_callback\nstatus:%d\nresponse\n>>>\n%s\n<<<\n"
-        , $status, $xml
+        , $status, $response
         if $ZMAP_DEBUG;
 
     return ($status, $response);
