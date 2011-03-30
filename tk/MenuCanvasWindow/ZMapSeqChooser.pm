@@ -254,7 +254,6 @@ sub zMapFinalised {
     if ($self->{'_relaunch_zmap'}) {
         $self->_launchZMap();
         $self->{'_relaunch_zmap'} = 0;
-        warn "Relaunching zmap..." if $ZMAP_DEBUG;
     }
     elsif ($self->{'_launch_in_a_zmap'}) {
         $self->zMapZmapConnector->post_respond_handler(\&post_response_client_cleanup_launch_in_a_zmap, [$self]);
@@ -262,10 +261,6 @@ sub zMapFinalised {
     }
     else {
         $self->zMapZmapConnector->post_respond_handler(\&post_response_client_cleanup, [$self]);
-
-        # calling this here creates a race condition.
-        # $self->xremote_cache->remove_clients_to_bad_windows();
-        warn "Relaunch was not requested..." if $ZMAP_DEBUG;
     }
 
     return (200, "all closed");
@@ -805,8 +800,6 @@ sub zMapRegisterClient {
 
     my $response_xml = $zc->client_registered_response;
 
-    warn "Sending response to register_client:\n$response_xml\n" if $ZMAP_DEBUG;
-
     return (200, $response_xml);
 }
 
@@ -1275,9 +1268,7 @@ sub zMapLoadFeatures {
     my ($self, @featuresets) = @_;
 
     if (my $client = $self->zMapGetXRemoteClientByAction('load_features')) {
-        
-        warn "Got client for load_features\n" if $ZMAP_DEBUG;
-        
+
         my $xml = Hum::XmlWriter->new;
         $xml->open_tag('zmap');
         $xml->open_tag('request',
