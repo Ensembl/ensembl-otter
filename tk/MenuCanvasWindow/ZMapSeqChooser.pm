@@ -6,7 +6,6 @@ use strict;
 use warnings;
 use Carp;
 use ZMap::Connect;
-use Sys::Hostname;
 use ZMap::XRemoteCache;
 use Hum::Conf qw{ PFETCH_SERVER_LIST };
 use XML::Simple;
