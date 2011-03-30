@@ -10,7 +10,7 @@ use ZMap::XRemoteCache;
 use Hum::Conf qw{ PFETCH_SERVER_LIST };
 use XML::Simple;
 use Bio::Vega::Utils::XmlEscape qw{ xml_escape };
-use File::Path 'mkpath';
+use File::Path qw{ mkpath };
 use Config::IniFiles;
 
 my $ZMAP_DEBUG = $ENV{OTTERLACE_ZMAP_DEBUG};
