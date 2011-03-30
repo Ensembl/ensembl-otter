@@ -1159,6 +1159,8 @@ my $zmap_request_callback_methods = {
 sub _zmap_request_callback {
     my ($self, $xml) = @_;
 
+    warn sprintf "\n_zmap_request_callback:XML\n>>>\n%s\n<<<\n", $xml if $ZMAP_DEBUG;
+
     # The default response code and message.
     my ($status, $response) = (404, $self->zMapZmapConnector->basic_error("Unknown Command"));
 
@@ -1174,6 +1176,11 @@ sub _zmap_request_callback {
     else {
         warn "INVALID REQUEST\n";
     }
+
+    warn sprintf
+        "\n_zmap_request_callback\nstatus:%d\nresponse\n>>>\n%s\n<<<\n"
+        , $status, $xml
+        if $ZMAP_DEBUG;
 
     return ($status, $response);
 }
