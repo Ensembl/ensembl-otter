@@ -1143,14 +1143,14 @@ my @zmap_request_callback_xml_parameters =
     );
 
 my $zmap_request_callback_methods = {
-    register_client => 'zMapRegisterClient',
-    edit            => 'zMapEdit',
-    single_select   => 'zMapSingleSelect',
-    multiple_select => 'zMapMultipleSelect',
-    finalised       => 'zMapFinalised',
-    feature_details => 'zMapFeatureDetails',
-    view_closed     => 'zMapViewClosed',
-    features_loaded => 'zMapFeaturesLoaded',
+    register_client => \&zMapRegisterClient,
+    edit            => \&zMapEdit,
+    single_select   => \&zMapSingleSelect,
+    multiple_select => \&zMapMultipleSelect,
+    finalised       => \&zMapFinalised,
+    feature_details => \&zMapFeatureDetails,
+    view_closed     => \&zMapViewClosed,
+    features_loaded => \&zMapFeaturesLoaded,
 };
 
 sub _zmap_request_callback {
