@@ -1470,7 +1470,7 @@ sub zMapDoRequest {
             $self->RESPONSE_HANDLER($action, $xmlHash);
         }
         else {
-            $self->ERROR_HANDLER($action, $status, $xmlHash);
+            $self->xremote_cache->remove_clients_to_bad_windows if $status == 412;
             return 0;
         }
     }
@@ -1578,59 +1578,6 @@ sub RESPONSE_HANDLER {
         warn "RESPONSE_HANDLER knows nothing about how to handle actions of type '$action'";
     }
 
-    return;
-}
-
-sub ERROR_HANDLER {
-    my ($self, $action, $status, $xml) = @_;
-    my $message = "";
-    if (exists($xml->{'error'})) {
-        if (   (ref($xml->{'error'}) eq 'HASH')
-            && (exists($xml->{'error'}->{'message'})))
-        {
-            $message = $xml->{'error'}->{'message'};
-        }
-        else {
-            $message = $xml->{'error'};
-        }
-    }
-
-    warn "action=$action status=$status error=$message" if $ZMAP_DEBUG;
-
-    if ($status == 400) {
-
-    }
-    elsif ($status == 401) {
-
-    }
-    elsif ($status == 402) {
-
-    }
-    elsif ($status == 403) {
-
-    }
-    elsif ($status == 404) {
-
-        # could do something clever here so that we don't send the same window this command again.
-    }
-    elsif ($status == 412) {
-        $self->xremote_cache->remove_clients_to_bad_windows();
-    }
-    elsif ($status == 500) {
-
-    }
-    elsif ($status == 501) {
-
-    }
-    elsif ($status == 502) {
-
-    }
-    elsif ($status == 503) {
-
-    }
-    else {
-        warn "I know nothing about status $status\n";
-    }
     return;
 }
 
