@@ -576,6 +576,7 @@ sub zMapZMapDefaults {
           : ( )
         ),
         'sources'           => $sources_string,
+        'navigator_sets'    => [ qw( genomic-canonical locus ) ],
         'show-mainwindow'   => ( $show_mainwindow ? 'true' : 'false' ),
         'cookie-jar'        => $ENV{'OTTERLACE_COOKIE_JAR'},
         'script-dir'        => $self->AceDatabase->script_dir,
