@@ -256,12 +256,6 @@ sub post_respond_handler{
 #                      INTERNALS                           #
 # ======================================================== #
 
-my @xml_request_parse_parameters =
-    (
-     KeyAttr    => { feature => 'name' },
-     ForceArray => [ 'feature', 'subfeature' ],
-    );
-
 sub _callback{
     my ($self) = @_;
     my $widget = $self->widget;
@@ -292,13 +286,12 @@ sub _callback{
     #=========================================================
     my $receiver = $self->{_receiver};
     return unless $receiver;
-    my $request = XMLin($request_string, @xml_request_parse_parameters);
     my $reply;
     my $fstr  = $self->xremote->format_string;
     my $intSE = $self->basic_error("Internal Server Error");
     eval{ 
         X11::XRemote::block(); # this gets automatically unblocked for us, besides we have no way to do that!
-        my ($status, $xmlstr) = $receiver->_zmap_request_callback($request);
+        my ($status, $xmlstr) = $receiver->_zmap_request_callback($request_string);
         $status ||= 500; # If callback returns undef...
         $xmlstr ||= $intSE;
         $reply = sprintf($fstr, $status, $xmlstr);

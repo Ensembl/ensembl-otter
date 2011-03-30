@@ -1143,6 +1143,12 @@ sub zMapIgnoreRequest {
     return(200, $self->zMapZmapConnector->handled_response(0));
 }
 
+my @zmap_request_callback_xml_parameters =
+    (
+     KeyAttr    => { feature => 'name' },
+     ForceArray => [ 'feature', 'subfeature' ],
+    );
+
 my $zmap_request_callback_methods = {
     register_client => 'zMapRegisterClient',
     edit            => 'zMapEdit',
@@ -1155,14 +1161,15 @@ my $zmap_request_callback_methods = {
 };
 
 sub _zmap_request_callback {
-    my ($self, $reqXML) = @_;
+    my ($self, $xml) = @_;
 
     # The default response code and message.
     my ($status, $response) = (404, $self->zMapZmapConnector->basic_error("Unknown Command"));
 
-    if (my $action = $reqXML->{request}{action}) {
+    my $request = XMLin($xml, @zmap_request_callback_xml_parameters);
+    if (my $action = $request->{request}{action}) {
         if (my $method = $zmap_request_callback_methods->{$action}) {
-            ($status, $response) = $self->$method($reqXML);
+            ($status, $response) = $self->$method($request);
         }
         else {
             warn "UNKNOWN ACTION: ${action}\n";
