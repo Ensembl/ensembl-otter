@@ -192,7 +192,7 @@ unless (($skip =~ /newagp/) || ($skip =~ /load/) || ($skip =~ /realign/)){
     print LOG "\n";
 }
 # stop here if flag 'noload' is chosen.
-exit("You chose not to load the agps into the database\n") if ($noload);
+die("Stopping: You chose not to load the agps into the database\n") if ($noload);
 
 # to load directly from agp into new pipedb and loutr db
 # perl /software/anacode/pipeline/ensembl-pipeline/scripts/Finished/load_from_agp.pl -set chrH_20090616 -description chrH_20090616 -host otterpipe2 -user ottadmin -pass wibble -port 3323 -dbname pipe_zebrafish_new ../haplo_agp_090616/chrH.fullagp
@@ -230,7 +230,7 @@ $text   .= "make new clone_sets visible by running the following command in lout
 $text   .= "update seq_region_attrib sra, seq_region sr set sra.value = 0 where sra.attrib_type_id = 129 and sra.seq_region_id = sr.seq_region_id and sr.name like \'\%".$date."\';\n";
 print  $text;
 print LOG $text;
-die("all done");
+print "all done";
 
 # REALIGN GENES
 # start here with -skip load
