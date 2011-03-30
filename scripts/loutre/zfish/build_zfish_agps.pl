@@ -6,49 +6,104 @@
 # it also does this for haplotypic clones
 #
 # 17.11.2005 Kerstin Howe (kj2)
+# last updated 
+# 29.09.2009 Britt Reimholz (br2)
+# 23.03.2010 br2
 #
 # if you want to delete a sequence_set use
 # /software/anacode/pipeline/ensembl-pipeline/scripts/Finished/delete_sequence_set.pl 
 # -host otterpipe2 -port 3303 -user ottadmin -pass wibble -dbname pipe_zebrafish -delete -set set1 -set set2 etc.
 
 use strict;
+use Carp;
 use Getopt::Long;
+use DBI;
 
-my ($date,$test,$verbose,$skip,$haplo,$tags,$help,$stop,$chroms,$path, $noload);
+my ($date,$test,$verbose,$skip,$haplo,$tags,$help,$stop,$chroms,$path, $logfile, $noload);
+my $loutrehost = 'otterlive';
+my $loutrename = 'loutre_zebrafish';
+## not needed any more:
+#my $loutreuser = 'ottadmin';
+#my $loutrepass;
+#my $loutreport = 3301;
+
+my $pipehost   = 'otterpipe2';
+my $pipename   = 'pipe_zebrafish';
+#my $pipeuser   = 'ottadmin';
+my $pipeuser   = 'ottro';
+my $pipepass   = '';
+my $pipeport   = 3303;
+
 GetOptions(
-        'date:s'   => \$date,       # format YYMMDD 
-        'test'     => \$test,       # doesn't execute system commands
-        'verbose'  => \$verbose,    # prints all commands 
-        'skip:s'   => \$skip,       # skips certain steps
-        'tags'     => \$tags,       # loads assembly tags
-        'h'        => \$help,       # help
-        'stop'     => \$stop,       # stops where you've put your exit(0) if ($stop)
-        'haplo'    => \$haplo,      # deals with chr H clones (only)
-        'chr:s'    => \$chroms,     # overrides all chromosomes
-        'path:s'   => \$path,       # overrides /lustre/cbi4/work1/zfish/agps
-        'noload'   => \$noload,     # doesn't load into dbs, only creates files
+    'date:s'     => \$date,       # format YYMMDD 
+    'test'       => \$test,       # doesn't execute system commands
+    'verbose'    => \$verbose,    # prints all commands 
+    'skip:s'     => \$skip,       # skips certain steps
+    'tags'       => \$tags,       # loads assembly tags
+    'h'          => \$help,       # help
+    'stop'       => \$stop,       # stops where you've put your exit(0) if ($stop)
+    'haplo'      => \$haplo,      # deals with chr H clones (only)
+    'chr:s'      => \$chroms,     # overrides all chromosomes
+    'path:s'     => \$path,       # overrides /lustre/cbi4/work1/zfish/agps
+    'logfile:s'  => \$logfile,    # overrides ./agp_$date.log
+    'noload'     => \$noload,     # doesn't load into dbs, only creates files		
+    'loutrehost' => \$loutrehost, # default: otterlive
+		'loutrename' => \$loutrename, # default: loutre_zebrafish
+		'pipehost'   => \$pipehost,   # default: otterpipe2
+		'pipename'   => \$pipename,   # default: pipe_zebrafish
+		'pipeuser'   => \$pipeuser,   # default: ottro
+		'pipepass'   => \$pipepass,   # password for user ottro
+		'pipeport'   => \$pipeport,   # default: 3303
 );
+#		'loutreuser' => \$loutreuser, # default: ottadmin
+#		'loutrepass' => \$loutrepass, # default: password for user ottadmin
+#		'loutreport' => \$loutreport, # default: 3301
 
 my @chroms = split /,/, $chroms if ($chroms);
 $skip = '' unless $skip;
 
+## was:    print "                    -skip            # skip steps in order agp, qc, region, fullagp, load\n";
+## commented out: -skip realign
 if (($help) || (!$date)){
     print "build_zfish_agps.pl -date YYMMDD\n";
-    print "                    -skip            # skip steps in order agp, qc, region, fullagp, load\n";
-    print "                    -haplo           # loads chr H clones\n";
-    print "                    -chr             # runs for your comma separated list of chromosomes\n";
-    print "                    -path            # path to build new agp folder in\n";
-    print "                    -tags            # load assembly tags\n";
-    print "                    -test            # don't execute system commands\n";
-    print "                    -verbose         # print commands\n";
-    print "                    -noload          # do ot load paths into databases\n";
+    print "                    -skip       # skip steps in order agp, qc, region, newagp, load\n";
+    print "                    -haplo      # loads chr H clones\n";
+    print "                    -chr        # runs for your comma separated list of chromosomes\n";
+    print "                    -path       # path to build new agp folder in\n";
+    print "                    -logfile    # default logfile: ./agp_DATE.log)\n";
+    print "                    -tags       # load assembly tags\n";
+    print "                    -test       # don't execute system commands\n";
+    print "                    -verbose    # print commands\n";
+    print "                    -noload     # do ot load paths into databases\n";
+    print "                    -loutrehost # default: otterlive\n";
+		print "                    -loutrename # default: loutre_zebrafish\n";
+		print "                    -pipehost   # default: otterpipe2\n";
+		print "                    -pipename   # default: pipe_zebrafish\n";
+		print "                    -pipeuser   # default: ottadmin\n";
+		print "                    -pipepass   # \n";
+		print "                    -pipeport   # default: 3303\n";
 }
+#		print "                    -loutreuser # default: ottadmin\n";
+#		print "                    -loutrepass # \n";
+#		print "                    -loutreport # default: 3301\n";
 
 # date
 die "Date doesn't have format YYMMDD\n" unless ($date =~ /\d{6}/);
 my ($year,$month,$day) = ($date =~ /(\d\d)(\d\d)(\d\d)/);
 my $moredate = "20".$date;
 my $fulldate = $day.".".$month.".20".$year;
+
+# log file
+$logfile = "agp_$date.log" unless ($logfile);
+$logfile = "haplo_$logfile" if ($haplo);
+open(LOG, ">$logfile") or die "Can't write to log file $logfile : $!";
+
+my $logfile_load_tags = $logfile;
+if ($logfile_load_tags =~ /.log/) {
+  $logfile_load_tags =~ s/.log/_load_tags.log/g;
+} else {
+  $logfile_load_tags .= ".load_tags";
+}
 
 # paths
 $path = "/lustre/cbi4/work1/zfish/agps" unless ($path);
@@ -70,8 +125,9 @@ unless (($skip =~ /agp/) || ($skip =~ /qc/) || ($skip =~ /region/) || ($skip =~ 
         $command = "/software/anacode/bin/oracle2agp -catch_err -species Zebrafish -chromosome $chr > $agpdir/chr".$chr.".agp" unless ($haplo);
         eval {&runit($command)};
     }
-    print "\n" if ($verbose);
-    &check_agps unless ($tags);
+    print LOG "\n";
+    ## check if agps are empty or clones are in more than one chromosome:
+		&check_agps unless ($tags);
 }
 # if agps don't load, identify showstoppers, introduce a gap before or after in tpf (check chromoview to decide where)
 # use tpf2oracle -species zebrafish -chr n chrn.tpf to upload, then dump agp again
@@ -83,7 +139,7 @@ unless (($skip =~ /agp/) || ($skip =~ /qc/) || ($skip =~ /region/) || ($skip =~ 
 unless (($skip =~ /qc/) || ($skip =~ /region/) || ($skip =~ /newagp/) || ($skip =~ /load/) || ($skip =~ /realign/)){
     my $command = "/software/zfish/agps/qc_clones.pl > $agpdir/qc_clones.txt";
     &runit($command);
-    print "\n" if ($verbose);
+    print LOG "\n";
 }
 
 # CREATE REGION FILES
@@ -95,11 +151,11 @@ unless (($skip =~ /region/) || ($skip =~ /newagp/) || ($skip =~ /load/) || ($ski
         $command .= " > chr".$chr.".region";
         eval {&runit($command)};
     }
-    print "\n" if ($verbose);
+    print LOG "\n";
     
     # create only one agp.new file for chr H
     if ($haplo) {    
-        open(OUT,">$agpdir/chrH.region") or die "ERROR: Cannot open $agpdir/chrH.fullagp $!\n";
+        open(OUT,">$agpdir/chrH.region") or die "ERROR: Cannot open $agpdir/chrH.region $!\n";
         foreach my $chr (@chroms) {
             my $line = "N	500000\n";
             my $file = "chr".$chr.".region";
@@ -109,6 +165,7 @@ unless (($skip =~ /region/) || ($skip =~ /newagp/) || ($skip =~ /load/) || ($ski
             }
             print OUT $line;
         }
+	print LOG "concatenated all region files into chrH.region\n\n";
     }
 }
 #CONVERT REGION FILES TO AGP
@@ -119,7 +176,7 @@ unless (($skip =~ /newagp/) || ($skip =~ /load/) || ($skip =~ /realign/)){
         my $command = "perl /software/anacode/bin/regions_to_agp -chromosome $chr $agpdir/chr".$chr.".region > $agpdir/chr".$chr.".fullagp";
         eval {&runit($command)};
     }
-    print "\n" if ($verbose);
+    print LOG "\n";
 }
 
 
@@ -128,6 +185,7 @@ unless (($skip =~ /newagp/) || ($skip =~ /load/) || ($skip =~ /realign/)){
 	chdir($agpdir);
 	my $command1 = "/software/zfish/agps/get_missing_clone_seqs.pl";
 	&runit($command1);
+  print LOG "\n";
 }
 # stop here if flag 'noload' is chosen.
 exit("You chose not to load the agps into the database\n") if ($noload);
@@ -142,19 +200,32 @@ exit("You chose not to load the agps into the database\n") if ($noload);
 unless (($skip =~ /load/) || ($skip =~ /realign/)) {
     @chroms = ("H") if ($haplo);
     foreach my $chr (@chroms) {
-#        my $command = "perl /software/anacode/pipeline/ensembl-pipeline/scripts/Finished/load_loutre_pipeline.pl -set chr".$chr."_".$moredate." -description \"chrom ".$chr."\" -dbname loutre_zebrafish $agpdir/chr".$chr.".fullagp";
-        my $pipeload  = "perl /software/anacode/pipeline/ensembl-pipeline/scripts/Finished/load_from_agp.pl -set chr".$chr."_".$moredate." -description chr".$chr."_".$moredate." -host otterpipe2 -user ottadmin -pass wibble -port 3303 -dbname pipe_zebrafish_new $agpdir/chr".$chr.".fullagp";
-        my $otterload = "perl /software/anacode/pipeline/ensembl-pipeline/scripts/Finished/load_from_agp.pl -set chr".$chr."_".$moredate." -description chr".$chr."_".$moredate." -host otterlive -user ottadmin -pass wibble -port 3301 -dbname loutre_zebrafish $agpdir/chr".$chr.".fullagp";
-        eval {&runit($pipeload)};
-#		eval {&runit($otterload)};
+
+#      my $command = "perl /software/anacode/pipeline/ensembl-pipeline/scripts/Finished/load_loutre_pipeline.pl -set chr".$chr."_".$moredate." -description \"chrom ".$chr."\" -dbname loutre_zebrafish $agpdir/chr".$chr.".fullagp";
+#      my $pipeload  = "perl /software/anacode/pipeline/ensembl-pipeline/scripts/Finished/load_from_agp.pl -set chr".$chr."_".$moredate." -description chr".$chr."_".$moredate." -host $pipehost -user $pipeuser -pass $pipepass -port $pipeport -dbname $pipename $agpdir/chr".$chr.".fullagp";
+#      my $otterload = "perl /software/anacode/pipeline/ensembl-pipeline/scripts/Finished/load_from_agp.pl -set chr".$chr."_".$moredate." -description chr".$chr."_".$moredate." -host $loutrehost -user $loutreuser -pass $loutrepass -port $loutreport -dbname $loutrename $agpdir/chr".$chr.".fullagp";
+
+## load_from_agp.pl was replaced by load_loutre_pipeline.pl; this script can load both databases:
+      my $otterload = "perl /software/anacode/pipeline/ensembl-pipeline/scripts/Finished/load_loutre_pipeline.pl  -set chr" . $chr . "_" . $moredate . " -description chr" . $chr . "_" . $moredate . " -host $loutrehost -dbname $loutrename -do_pipe $agpdir/chr" . $chr . ".fullagp";
+
+#      eval {&runit($pipeload)};
+			eval {&runit($otterload)};
     }
-    print "\n" if ($verbose);
+    print LOG "\n";
+
+		&compare_final_numbers;
 }
-die "END OF: This is it for haplotype chromosomes, but you might want to set the otter sequence entries and alert anacode to start the analyses\n" if ($haplo);
-print STDERR "this is it for the moment, you need to load the assembly tags\n";
-print STDERR "perl /software/anacode/otter/otter_production_main/ensembl-otter/scripts/lace/fetch_assembly_tags_for_loutre -dataset zebrafish -verbose -update -misc -atag\n";
-print STDERR "make new clone_sets visible by running the following command in loutre\n";
-print STDERR "update seq_region_attrib sra, seq_region sr set sra.value = 0 where sra.attrib_type_id = 129 and sra.seq_region_id = sr.seq_region_id and sr.name like \'\%".$date."\';\n";
+
+if ($haplo) {
+	die "\nEND OF: This is it for haplotype chromosomes, but you might want to set the otter sequence entries and alert anacode to start the analyses\n";
+}
+
+my $text = "\nthis is it for the moment, you need to load the assembly tags\n";
+$text   .= "perl /software/anacode/otter/otter_production_main/ensembl-otter/scripts/lace/fetch_assembly_tags_for_loutre -dataset zebrafish -verbose -update -misc -atag > $logfile_load_tags\n";
+$text   .= "make new clone_sets visible by running the following command in loutre\n";
+$text   .= "update seq_region_attrib sra, seq_region sr set sra.value = 0 where sra.attrib_type_id = 129 and sra.seq_region_id = sr.seq_region_id and sr.name like \'\%".$date."\';\n";
+print  $text;
+print LOG $text;
 die("all done");
 
 # REALIGN GENES
@@ -185,12 +256,12 @@ die("all done");
 
 
 
-# LOAD ASSEMBLY TAGS
-# start here with -skip realign
-if ($tags) {
-    my $command2 = "perl /nfs/team71/zfish/kj2/new_cvs/ensembl-otter/scripts/lace/fetch_assembly_tags_for_loutre -dataset zebrafish -verbose -update -misc -atag";
-    &runit($command2);
-}
+### LOAD ASSEMBLY TAGS
+### start here with -skip realign
+##if ($tags) {
+##    my $command2 = "perl /nfs/team71/zfish/kj2/new_cvs/ensembl-otter/scripts/lace/fetch_assembly_tags_for_loutre -dataset zebrafish -verbose -update -misc -atag";
+##    &runit($command2);
+##}
 
 # make new sets visible
 # first check
@@ -200,11 +271,12 @@ if ($tags) {
 
 sub runit {
     my $command = shift;
-    print $command,"\n" if ($verbose);
+    print LOG $command,"\n";
     system("$command") and die "ERROR: Cannot execute $command $!\n" unless ($test);
 }
 
 
+## check if agps are empty or clones are in more than one chromosome
 sub check_agps {
     my %seen;
     foreach my $chr (@chroms) {
@@ -227,4 +299,53 @@ sub check_agps {
         }    
     }
     die "ERROR: agps are incorrect\n" if ($alarm && ($alarm > 0));
+}
+
+## check results, compare numbers of last path against current one
+sub compare_final_numbers {
+
+	#get db connection
+	my $dbh_pipe = DBI->connect("DBI:mysql:$pipename:$pipehost:$pipeport", $pipeuser, $pipepass) or die "Can't connect to database: $DBI::errstr\n";
+#	$dbh_pipe->trace(1);
+
+	## get second last date for a/any chromosome:
+	my $ary_ref = $dbh_pipe->selectcol_arrayref(qq(select name from seq_region where name like 'chr4%' order by name desc));
+	my $old_date;
+	if ((defined @$ary_ref) and (defined ${$ary_ref}[1])) {
+		$old_date =  ${$ary_ref}[1];
+		$old_date =~ s/chr4_//;
+	} else {
+    print STDERR "WARNING: couldn't find date of last tile path \n";
+	}
+	
+	my (%numbers_of_clones_old, %numbers_of_clones_new);
+	my $sql = qq(SELECT sr.name, count(*) from assembly a, seq_region sr where sr.seq_region_id = a.asm_seq_region_id and sr.name like ? group by sr.name);
+	my $sth = $dbh_pipe->prepare($sql);
+	print LOG "\nquery pipe db with following sql:\n" . $sql . "\nfor $moredate and $old_date\n" if ($verbose);
+	
+	$sth->execute(qq(%$old_date)) or print STDERR "WARNING: couldn't select tile path for date $old_date: \n$DBI::errstr \n";
+	while (my $ref = $sth->fetchrow_arrayref()) {
+		my $chromosome = @{$ref}[0]; 
+		$chromosome =~ s/_$old_date//;
+		$numbers_of_clones_old{$chromosome} = @{$ref}[1];
+	}
+	
+	$sth->execute(qq(%$moredate)) or print STDERR "WARNING: couldn't select tile path for date $moredate: \n$DBI::errstr \n";	
+	while (my $ref = $sth->fetchrow_arrayref()) {
+		my $chromosome = @{$ref}[0];
+		$chromosome =~ s/_$moredate//;
+		$numbers_of_clones_new{$chromosome} = @{$ref}[1];
+	}
+	
+	print LOG "\nThe following lists for each chromosome the number of clones on the tile path: $old_date / $moredate\n" if ($verbose);
+	foreach my $chromosome (keys %numbers_of_clones_new) {
+		my $number_new = $numbers_of_clones_new{$chromosome};
+		my $number_old = $numbers_of_clones_old{$chromosome};
+		print LOG "$chromosome: $number_old / $number_new\n" if ($verbose);
+		if (($number_old > $number_new) && ($chromosome =~ /\d/)) {
+			print STDERR "WARNING: the number of clones for chromosome $chromosome look wrong ($moredate: $number_new, $old_date: $number_old), please check! \n";
+			print LOG "WARNING: the number of clones for chromosome $chromosome look wrong ($moredate: $number_new, $old_date: $number_old), please check! \n";
+		}
+	}
+
 }
