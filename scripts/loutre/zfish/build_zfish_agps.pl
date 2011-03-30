@@ -127,7 +127,7 @@ unless (($skip =~ /agp/) || ($skip =~ /qc/) || ($skip =~ /region/) || ($skip =~ 
 	  ($haplo
 	   ? "$AnacodeBin/oracle2agp -catch_err -species Zebrafish -chromosome $chr -subregion H_".$chr." > $agpdir/chr".$chr.".agp"
 	   : "$AnacodeBin/oracle2agp -catch_err -species Zebrafish -chromosome $chr"                   ." > $agpdir/chr".$chr.".agp");
-        eval {&runit($command)};
+        runit($command, "ignore");
     }
     print LOG "\n";
     ## check if agps are empty or clones are in more than one chromosome:
@@ -142,7 +142,7 @@ unless (($skip =~ /agp/) || ($skip =~ /qc/) || ($skip =~ /region/) || ($skip =~ 
 # start here with -skip agp
 unless (($skip =~ /qc/) || ($skip =~ /region/) || ($skip =~ /newagp/) || ($skip =~ /load/) || ($skip =~ /realign/)){
     my $command = "$Bin/qc_clones.pl > $agpdir/qc_clones.txt";
-    &runit($command);
+    runit($command);
     print LOG "\n";
 }
 
@@ -153,7 +153,7 @@ unless (($skip =~ /region/) || ($skip =~ /newagp/) || ($skip =~ /load/) || ($ski
         my $command = "$Bin/make_agps_for_otter_sets.pl -agp $agpdir/chr".$chr.".agp -clones $agpdir/qc_clones.txt";
         $command .= " -haplo" if ($haplo);
         $command .= " > chr".$chr.".region";
-        eval {&runit($command)};
+        runit($command, "ignore");
     }
     print LOG "\n";
 
@@ -178,7 +178,7 @@ unless (($skip =~ /newagp/) || ($skip =~ /load/) || ($skip =~ /realign/)){
     @chroms = ("H") if ($haplo);
     foreach my $chr (@chroms) {
         my $command = "$AnacodeBin/regions_to_agp -chromosome $chr $agpdir/chr".$chr.".region > $agpdir/chr".$chr.".fullagp";
-        eval {&runit($command)};
+        runit($command, "ignore");
     }
     print LOG "\n";
 }
@@ -188,7 +188,7 @@ unless (($skip =~ /newagp/) || ($skip =~ /load/) || ($skip =~ /realign/)){
 unless (($skip =~ /newagp/) || ($skip =~ /load/) || ($skip =~ /realign/)){
     chdir($agpdir);
     my $command1 = "$Bin/get_missing_clone_seqs.pl";
-    &runit($command1);
+    runit($command1);
     print LOG "\n";
 }
 # stop here if flag 'noload' is chosen.
@@ -212,8 +212,8 @@ unless (($skip =~ /load/) || ($skip =~ /realign/)) {
 ## load_from_agp.pl was replaced by load_loutre_pipeline.pl; this script can load both databases:
       my $otterload = "/software/anacode/pipeline/ensembl-pipeline/scripts/Finished/load_loutre_pipeline.pl  -set chr" . $chr . "_" . $moredate . " -description chr" . $chr . "_" . $moredate . " -host $loutrehost -dbname $loutrename -do_pipe $agpdir/chr" . $chr . ".fullagp";
 
-#      eval {&runit($pipeload)};
-      eval {&runit($otterload)};
+#      runit($pipeload, "ignore");
+      runit($otterload, "ignore");
     }
     print LOG "\n";
 
@@ -235,12 +235,12 @@ die("all done");
 # REALIGN GENES
 # start here with -skip load
 #my $command2 = "touch realign_offtrack_genes.out";
-#&runit($command2);
+#runit($command2);
 #unless ($skip =~ /realign/) {
 #    foreach my $chr (@chroms) {
 #        my $command = "\n$AnacodeBin/realign_offtrack_genes -dataset zebrafish -set chr".$chr."_".$moredate." >> & realign_offtrack_genes.out";
 #        my $command = "\n/software/anacode/pipeline/ensembl-pipeline/scripts/Finished/assembly/align_by_component_identity.pl -dataset zebrafish -set chr".$chr."_".$moredate." >> & realign_offtrack_genes.out";
-#        &runit($command);
+#        runit($command);
 #    }
 #
 #}
@@ -264,7 +264,7 @@ die("all done");
 ### start here with -skip realign
 ##if ($tags) {
 ##    my $command2 = "perl /nfs/team71/zfish/kj2/new_cvs/ensembl-otter/scripts/lace/fetch_assembly_tags_for_loutre -dataset zebrafish -verbose -update -misc -atag";
-##    &runit($command2);
+##    runit($command2);
 ##}
 
 # make new sets visible
@@ -274,11 +274,19 @@ die("all done");
 ########################################################
 
 sub runit {
-    my $command = shift;
+    my ($command, $ignore_errs) = @_;
     print LOG $command,"\n";
-    unless ($test) {
-	system("$command") and die "ERROR: Cannot execute $command $!\n";
-    }
+    return if $test;
+
+    if (system("$command")) {
+	my $err = ($? == -1 ? "returncode $?" : "error $!");
+	print LOG " # Failed: $err\n";
+	if ($ignore_errs) {
+	    die "ERROR: Cannot execute $command $err\n";
+	} else {
+	    warn "Ignoring error from $command\n\t\t$err\n";
+	}
+    } # else success
 }
 
 
