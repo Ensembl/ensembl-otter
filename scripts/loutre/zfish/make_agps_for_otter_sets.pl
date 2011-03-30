@@ -1,15 +1,17 @@
 #!/usr/local/bin/perl -w
-# 
-# filters agps taken from chromoview for qc checked clones
-# creates files to build sets for otter 
 #
-# 25.03.04 Kerstin Jekosch <kj2@sanger.ac.uk> 
+# filters agps taken from chromoview for qc checked clones
+# creates files to build sets for otter
+#
+# 25.03.04 Kerstin Jekosch <kj2@sanger.ac.uk>
 
 
 use strict;
 use Getopt::Long;
- 
+
 my ($agp,$clones,$help,$haplo);
+my $exitcode = 0;
+
 my $hm = GetOptions(
         'agp:s'     => \$agp,
         'clones:s'  => \$clones,
@@ -17,10 +19,10 @@ my $hm = GetOptions(
         'haplo'     => \$haplo,
 );
 
-&help if ($help || (!$agp) || (!$clones)); 
+&help if ($help || (!$agp) || (!$clones));
 
 # get names of qc checked clones
-open(CL,$clones) or die "Can't open $clones\n";
+open(CL, '<', $clones) or die "Can't read $clones: $!\n";
 my %qc;
 while (<CL>) {
     /\S+\s+(\S+)\s+(\d+)\s+\d+/ and do {
@@ -31,44 +33,64 @@ while (<CL>) {
 # read through agp
 if ($agp) {
 
-    open(AGP,$agp) or die "Can't open $agp\n";
-#    open(AGPOUT,">./$agp.new") or die "Can't open $agp.new\n";
+    open(AGP, '<', $agp) or die "Can't read $agp: $!\n";
+#    open(AGPOUT,'>',"./$agp.new") or die "Can't write $agp.new: $!\n";
 
     my $gapline  = "N\t10000\n";
     my $clonegap = "N\t5001\n";
     my $haplogap = "N\t500000\n";
     my $lastgap;
     my $started;
-    
+
     while (<AGP>) {
         chomp;
-        # clone line
-        if (/\tF\t/)  {
-            my ($chr,$cstart,$cend,$no,$type,$name,$start,$end,$dir) = split /\t/;
-            my $short;
+	my @column = split /\t/;
 
-            if (exists $qc{$name}) {
+        # clone line
+        if ($column[4] eq 'F')  {
+            my ($chr,$cstart,$cend,$no,$type,$name,$start,$end,$dir) = @column;
+
+	    if ($end < $start && $cstart == $cend + 1) {
+		warn "$chr:$.: Taking out $name (negative overlap) - **temporary fix**\n";
+		# Negative overlaps are an artifact of the choice of overlap,
+		#
+		#	A +++++++++++----
+		#	B     ---------------
+		#	C         ---++++++++++++
+		#
+		# Sequence is contributed only by A and C, but because
+		# B is part of the tiling path (and for good reason
+		# e.g. contains interesting variants) an F-clone line
+		# is squeezed in.
+		$exitcode |= 16;
+	    }
+	    elsif (exists $qc{$name}) {
                 print "F\t$name\t$start\t$end\t$dir\n";
                 $lastgap =0;
-            }    
-
+            }
             else {
                 unless ($lastgap) {
                     ($haplo) ? print $haplogap : print $clonegap;
                     $lastgap++;
-                }    
-                print STDERR "Taking out $name\n";
+                }
+                warn "$chr:$.: Taking out $name (no QC)\n";
+		$exitcode |= 8;
             }
         }
-#        elsif (/\tU\t/) {
+#        elsif ($column[4] eq 'U') {
 #        }
-#        elsif (/\tA\t/) {    
+#        elsif ($column[4] eq 'A') {
 #        }
 
-        ## changed code slightly to adapt to Will's agp format (br2, 17.05.2010) 
+        ## changed code slightly to adapt to Will's agp format (br2, 17.05.2010)
 	# gap line
         else {
-            my ($chr,$cstart,$cend,$no,$type,$gap,$gaptype) = split /\t/;
+            my ($chr,$cstart,$cend,$no,$type,$gap,$gaptype) = @column;
+	    if ($type ne 'N') {
+		warn "$chr:$.: Gap, type 'N' expected but got $type\n";
+		$exitcode |= 4;
+	    }
+
             if ($gaptype eq 'FPC') {
                 unless ($lastgap) {
                     ($haplo) ? print $haplogap : print $gapline;
@@ -84,19 +106,20 @@ if ($agp) {
             }
 	    else {
 		unless ($gaptype =~ /fragment/) {
-		    warn "something wrong with line in $agp.agp $1 chr,$cstart,$cend,$no,$type,$gap,$gaptype\n";
+		    warn "something wrong at $agp:$.: $chr,$cstart,$cend,$no,$type,$gap,$gaptype\n";
+		    $exitcode |= 2;
                     unless ($lastgap) {
                         ($haplo) ? print $haplogap : print $gapline;
                         $lastgap++;
-		    }    
+		    }
                 }
             }
 
         }
-    
+
         # gap line
 #         else {
-#           my ($chr,$cstart,$cend,$no,$type,$gap,$gaptype,$yes) = split /\t/;
+#           my ($chr,$cstart,$cend,$no,$type,$gap,$gaptype,$yes) = @column;
 #           if ($gaptype eq 'clone') {
 #             unless ($lastgap) {
 #               ($haplo) ? print $haplogap : print $clonegap;
@@ -112,7 +135,7 @@ if ($agp) {
 #           else {
 #             unless (($gaptype eq 'CENTROMERE') || ($gaptype =~ /No overlap in database/)
 #                      || ($gaptype =~ /dovetail/) || ($gaptype =~ /double.*prime join/)) {
-#               warn "something wrong with line in $agp.agp $1 chr,$cstart,$cend,$no,$type,$gap,$gaptype,$yes\n";
+#               warn "something wrong at $agp:$.: $chr,$cstart,$cend,$no,$type,$gap,$gaptype,$yes\n";
 #               unless ($lastgap) {
 #                 ($haplo) ? print $haplogap : print $gapline;
 #                 $lastgap++;
@@ -121,7 +144,7 @@ if ($agp) {
 #           }
 #         }
 #
-    
+
     }
 }
 
@@ -131,17 +154,4 @@ sub help {
 }
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+END { $? ||= $exitcode } # declare exit failure, if we are not dying
