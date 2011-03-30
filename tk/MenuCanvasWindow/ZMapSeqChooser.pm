@@ -1455,7 +1455,15 @@ sub zMapDoRequest {
 
     my ($status, $xmlHash) = zMapParseResponse($response);
     if ($status =~ /^2\d\d/) {    # 200s
-        $self->RESPONSE_HANDLER($action, $xmlHash);
+        if ($action eq 'new_zmap') {
+            $self->zMapProcessNewClientXML($xmlHash, "ZMap");
+        }
+        elsif ($action eq 'new_view') {
+            $self->zMapProcessNewClientXML($xmlHash, $self->slice_name());
+        }
+        elsif ($action eq 'list_windows') {
+            $self->zMapProcessNewClientXML($xmlHash, "ZMapWindow");
+        }
         return 1;
     }
     else {
@@ -1528,43 +1536,6 @@ sub zMapParseResponse {
     my ($status, $xml) = split(/$delimit/, $response, 2);
     my $hash   = XMLin($xml);
     return ($status, $hash);
-}
-
-sub RESPONSE_HANDLER {
-    my ($self, $action, $xml) = @_;
-
-    warn "In RESPONSE_HANDLER for action=$action\n" if $ZMAP_DEBUG;
-
-    # should have something to get the actions from the xml!
-
-    if ($action eq 'new_zmap') {
-        $self->zMapProcessNewClientXML($xml, "ZMap");
-    }
-    elsif ($action eq 'new_view') {
-        $self->zMapProcessNewClientXML($xml, $self->slice_name());
-    }
-    elsif ($action eq 'list_windows') {
-        $self->zMapProcessNewClientXML($xml, "ZMapWindow");
-    }
-    elsif ($action eq 'register_client'
-        || $action eq 'other actions')
-    {
-
-        # do these
-        warn "handled action '$action'" if $ZMAP_DEBUG;
-    }
-    elsif ($action eq 'zoom_to') {
-
-        #$self->message($xml->{'response'});
-    }
-    elsif ($action eq 'get_mark') {
-
-    }
-    else {
-        warn "RESPONSE_HANDLER knows nothing about how to handle actions of type '$action'";
-    }
-
-    return;
 }
 
 1;
