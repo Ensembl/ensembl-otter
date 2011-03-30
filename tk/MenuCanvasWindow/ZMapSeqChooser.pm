@@ -827,7 +827,6 @@ sub zMapEdit {
     my $zc = $self->zMapZmapConnector;
     if ($xml_hash->{'request'}->{'action'} eq 'edit') {
 
-        #warn Dumper($xml_hash);
         my $feat_hash = $xml_hash->{'request'}->{'align'}->{'block'}->{'featureset'}{'feature'}
           or return return (200, $zc->handled_response(0));
 
@@ -917,8 +916,6 @@ response.
 
 sub zMapTagValues {
     my ($self, $xml_hash) = @_;
-
-    # warn Dumper($xml_hash);
 
     my $pages = "";
     if ($xml_hash->{'request'}->{'action'} eq 'feature_details') {
