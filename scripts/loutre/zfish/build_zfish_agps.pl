@@ -12,12 +12,15 @@
 #
 # if you want to delete a sequence_set use
 # /software/anacode/pipeline/ensembl-pipeline/scripts/Finished/delete_sequence_set.pl
-# -host otterpipe2 -port 3303 -user ottadmin -pass wibble -dbname pipe_zebrafish -delete -set set1 -set set2 etc.
+# -host otterpipe2 -port 3323 -user ottadmin -pass wibble -dbname pipe_zebrafish -delete -set set1 -set set2 etc.
 
 use strict;
 use Carp;
 use Getopt::Long;
 use DBI;
+
+use FindBin qw($Bin);
+my $AnacodeBin = "/software/anacode/bin";
 
 my ($date,$test,$verbose,$skip,$haplo,$tags,$help,$stop,$chroms,$path, $logfile, $noload);
 my $loutrehost = 'otterlive';
@@ -25,14 +28,14 @@ my $loutrename = 'loutre_zebrafish';
 ## not needed any more:
 #my $loutreuser = 'ottadmin';
 #my $loutrepass;
-#my $loutreport = 3301;
+#my $loutreport = 3324;
 
 my $pipehost   = 'otterpipe2';
 my $pipename   = 'pipe_zebrafish';
 #my $pipeuser   = 'ottadmin';
 my $pipeuser   = 'ottro';
 my $pipepass   = '';
-my $pipeport   = 3303;
+my $pipeport   = 3323;
 
 GetOptions(
     'date:s'     => \$date,       # format YYMMDD
@@ -53,11 +56,11 @@ GetOptions(
     'pipename'   => \$pipename,   # default: pipe_zebrafish
     'pipeuser'   => \$pipeuser,   # default: ottro
     'pipepass'   => \$pipepass,   # password for user ottro
-    'pipeport'   => \$pipeport,   # default: 3303
+    'pipeport'   => \$pipeport,   # default: 3323
 );
 #    'loutreuser' => \$loutreuser, # default: ottadmin
 #    'loutrepass' => \$loutrepass, # default: password for user ottadmin
-#    'loutreport' => \$loutreport, # default: 3301
+#    'loutreport' => \$loutreport, # default: 3324
 
 my @chroms = split /,/, $chroms if ($chroms);
 $skip = '' unless $skip;
@@ -81,11 +84,11 @@ if (($help) || (!$date)){
     print "                    -pipename   # default: pipe_zebrafish\n";
     print "                    -pipeuser   # default: ottadmin\n";
     print "                    -pipepass   # \n";
-    print "                    -pipeport   # default: 3303\n";
+    print "                    -pipeport   # default: 3323\n";
 }
 #    print "                    -loutreuser # default: ottadmin\n";
 #    print "                    -loutrepass # \n";
-#    print "                    -loutreport # default: 3301\n";
+#    print "                    -loutreport # default: 3324\n";
 
 # date
 die "Date doesn't have format YYMMDD\n" unless ($date =~ /\d{6}/);
@@ -99,8 +102,8 @@ $logfile = "haplo_$logfile" if ($haplo);
 open(LOG, ">$logfile") or die "Can't write to log file $logfile : $!";
 
 my $logfile_load_tags = $logfile;
-if ($logfile_load_tags =~ /.log/) {
-  $logfile_load_tags =~ s/.log/_load_tags.log/g;
+if ($logfile_load_tags =~ /\.log/) {
+  $logfile_load_tags =~ s/\.log/_load_tags.log/g;
 } else {
   $logfile_load_tags .= ".load_tags";
 }
@@ -120,9 +123,10 @@ chdir($agpdir);
 # GET AGPS
 unless (($skip =~ /agp/) || ($skip =~ /qc/) || ($skip =~ /region/) || ($skip =~ /newagp/) || ($skip =~ /load/) || ($skip =~ /realign/)) {
     foreach my $chr (@chroms) {
-        my $command;
-        $command = "/software/anacode/bin/oracle2agp -catch_err -species Zebrafish -chromosome $chr -subregion H_".$chr." > $agpdir/chr".$chr.".agp" if ($haplo);
-        $command = "/software/anacode/bin/oracle2agp -catch_err -species Zebrafish -chromosome $chr > $agpdir/chr".$chr.".agp" unless ($haplo);
+        my $command =
+	  ($haplo
+	   ? "$AnacodeBin/oracle2agp -catch_err -species Zebrafish -chromosome $chr -subregion H_".$chr." > $agpdir/chr".$chr.".agp"
+	   : "$AnacodeBin/oracle2agp -catch_err -species Zebrafish -chromosome $chr"                   ." > $agpdir/chr".$chr.".agp");
         eval {&runit($command)};
     }
     print LOG "\n";
@@ -137,7 +141,7 @@ unless (($skip =~ /agp/) || ($skip =~ /qc/) || ($skip =~ /region/) || ($skip =~ 
 # GET QC CHECKED CLONES
 # start here with -skip agp
 unless (($skip =~ /qc/) || ($skip =~ /region/) || ($skip =~ /newagp/) || ($skip =~ /load/) || ($skip =~ /realign/)){
-    my $command = "/software/zfish/agps/qc_clones.pl > $agpdir/qc_clones.txt";
+    my $command = "$Bin/qc_clones.pl > $agpdir/qc_clones.txt";
     &runit($command);
     print LOG "\n";
 }
@@ -146,7 +150,7 @@ unless (($skip =~ /qc/) || ($skip =~ /region/) || ($skip =~ /newagp/) || ($skip 
 # start here with -skip qc
 unless (($skip =~ /region/) || ($skip =~ /newagp/) || ($skip =~ /load/) || ($skip =~ /realign/)) {
     foreach my $chr (@chroms) {
-        my $command = "/software/zfish/agps/make_agps_for_otter_sets.pl -agp $agpdir/chr".$chr.".agp -clones $agpdir/qc_clones.txt";
+        my $command = "$Bin/make_agps_for_otter_sets.pl -agp $agpdir/chr".$chr.".agp -clones $agpdir/qc_clones.txt";
         $command .= " -haplo" if ($haplo);
         $command .= " > chr".$chr.".region";
         eval {&runit($command)};
@@ -173,7 +177,7 @@ unless (($skip =~ /region/) || ($skip =~ /newagp/) || ($skip =~ /load/) || ($ski
 unless (($skip =~ /newagp/) || ($skip =~ /load/) || ($skip =~ /realign/)){
     @chroms = ("H") if ($haplo);
     foreach my $chr (@chroms) {
-        my $command = "perl /software/anacode/bin/regions_to_agp -chromosome $chr $agpdir/chr".$chr.".region > $agpdir/chr".$chr.".fullagp";
+        my $command = "$AnacodeBin/regions_to_agp -chromosome $chr $agpdir/chr".$chr.".region > $agpdir/chr".$chr.".fullagp";
         eval {&runit($command)};
     }
     print LOG "\n";
@@ -183,7 +187,7 @@ unless (($skip =~ /newagp/) || ($skip =~ /load/) || ($skip =~ /realign/)){
 # GET MISSING CLONE SEQUENCES
 unless (($skip =~ /newagp/) || ($skip =~ /load/) || ($skip =~ /realign/)){
     chdir($agpdir);
-    my $command1 = "/software/zfish/agps/get_missing_clone_seqs.pl";
+    my $command1 = "$Bin/get_missing_clone_seqs.pl";
     &runit($command1);
     print LOG "\n";
 }
@@ -191,8 +195,8 @@ unless (($skip =~ /newagp/) || ($skip =~ /load/) || ($skip =~ /realign/)){
 exit("You chose not to load the agps into the database\n") if ($noload);
 
 # to load directly from agp into new pipedb and loutr db
-# perl /software/anacode/pipeline/ensembl-pipeline/scripts/Finished/load_from_agp.pl -set chrH_20090616 -description chrH_20090616 -host otterpipe2 -user ottadmin -pass wibble -port 3303 -dbname pipe_zebrafish_new ../haplo_agp_090616/chrH.fullagp
-# perl /software/anacode/pipeline/ensembl-pipeline/scripts/Finished/load_from_agp.pl -set chrH_20090616 -description chrH_20090616 -host otterlive -user ottadmin -pass wibble -port 3301 -dbname loutre_zebrafish ../haplo_agp_090616/chrH.fullagp
+# perl /software/anacode/pipeline/ensembl-pipeline/scripts/Finished/load_from_agp.pl -set chrH_20090616 -description chrH_20090616 -host otterpipe2 -user ottadmin -pass wibble -port 3323 -dbname pipe_zebrafish_new ../haplo_agp_090616/chrH.fullagp
+# perl /software/anacode/pipeline/ensembl-pipeline/scripts/Finished/load_from_agp.pl -set chrH_20090616 -description chrH_20090616 -host otterlive -user ottadmin -pass wibble -port 3324 -dbname loutre_zebrafish ../haplo_agp_090616/chrH.fullagp
 
 
 # LOAD AGPS INTO LOUTRE_ZEBRAFISH AND PIPE_ZEBRAFISH
@@ -206,14 +210,14 @@ unless (($skip =~ /load/) || ($skip =~ /realign/)) {
 #      my $otterload = "perl /software/anacode/pipeline/ensembl-pipeline/scripts/Finished/load_from_agp.pl -set chr".$chr."_".$moredate." -description chr".$chr."_".$moredate." -host $loutrehost -user $loutreuser -pass $loutrepass -port $loutreport -dbname $loutrename $agpdir/chr".$chr.".fullagp";
 
 ## load_from_agp.pl was replaced by load_loutre_pipeline.pl; this script can load both databases:
-      my $otterload = "perl /software/anacode/pipeline/ensembl-pipeline/scripts/Finished/load_loutre_pipeline.pl  -set chr" . $chr . "_" . $moredate . " -description chr" . $chr . "_" . $moredate . " -host $loutrehost -dbname $loutrename -do_pipe $agpdir/chr" . $chr . ".fullagp";
+      my $otterload = "/software/anacode/pipeline/ensembl-pipeline/scripts/Finished/load_loutre_pipeline.pl  -set chr" . $chr . "_" . $moredate . " -description chr" . $chr . "_" . $moredate . " -host $loutrehost -dbname $loutrename -do_pipe $agpdir/chr" . $chr . ".fullagp";
 
 #      eval {&runit($pipeload)};
       eval {&runit($otterload)};
     }
     print LOG "\n";
 
-		&compare_final_numbers;
+    &compare_final_numbers;
 }
 
 if ($haplo) {
@@ -234,7 +238,7 @@ die("all done");
 #&runit($command2);
 #unless ($skip =~ /realign/) {
 #    foreach my $chr (@chroms) {
-#        my $command = "\n/software/anacode/bin/realign_offtrack_genes -dataset zebrafish -set chr".$chr."_".$moredate." >> & realign_offtrack_genes.out";
+#        my $command = "\n$AnacodeBin/realign_offtrack_genes -dataset zebrafish -set chr".$chr."_".$moredate." >> & realign_offtrack_genes.out";
 #        my $command = "\n/software/anacode/pipeline/ensembl-pipeline/scripts/Finished/assembly/align_by_component_identity.pl -dataset zebrafish -set chr".$chr."_".$moredate." >> & realign_offtrack_genes.out";
 #        &runit($command);
 #    }
@@ -245,12 +249,12 @@ die("all done");
 # cd /software/anacode/pipeline/ensembl-pipeline/scripts/Finished/assembly/
 #
 # foreach i (1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 H U)
-#   perl align_by_component_identity.pl -host otterlive -port 3301 -user ottroot -pass lutrasuper -dbname loutre_zebrafish \
+#   perl align_by_component_identity.pl -host otterlive -port 3324 -user ottroot -pass lutrasuper -dbname loutre_zebrafish \
 #   -assembly Otter -altassembly Otter -chromosomes chr${i}_20080117 -altchromosomes chr${i}_20080214 > & /lustre/cbi4/work1/zfish/agps/agp_080214/transfer${i}.log
 # end
 #
 # foreach i (1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 H U)
-#   perl align_nonident.pl -host otterlive -port 3301 -user ottroot -pass lutrasuper -dbname loutre_zebrafish -assembly Otter -altassembly Otter \
+#   perl align_nonident.pl -host otterlive -port 3324 -user ottroot -pass lutrasuper -dbname loutre_zebrafish -assembly Otter -altassembly Otter \
 #   -chromosomes chr${i}_20080117 -altchromosomes chr${i}_20080214 > & /lustre/cbi4/work1/zfish/agps/agp_080214/transferb${i}.log
 # end
 
