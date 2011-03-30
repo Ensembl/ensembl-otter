@@ -642,7 +642,8 @@ sub formatZmapDefaults {
     my ($self, $key, %defaults) = @_;
 
     my $def_str = "\n[$key]\n";
-    while (my ($setting, $value) = each %defaults) {
+    for my $setting ( sort keys %defaults ) {
+        my $value = $defaults{$setting};
         $value = join ' ; ', @{$value} if ref $value;
         $def_str .= qq{$setting = $value\n};
     }
