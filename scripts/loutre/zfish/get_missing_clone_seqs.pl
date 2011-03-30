@@ -21,28 +21,28 @@ use Hum::FastaFileIO;
 my @agp_files = <*.agp>;
 
 foreach my $agp_file (@agp_files) {
-    
+
   print "\n(get_missing_clone_seqs.pl) Processing $agp_file....\n";
   open(my $fh, "$agp_file") or die "Can't read '$agp_file' : $!";
   while (<$fh>) {
-		next if $_ =~ /^\#/; #skip comments
-		my @data = split('\t', $_);
-		if ($data[4] eq 'F') {
-		    
-	  	my $out = &check_for_seq($data[5]);
-		  if ($out) {
-				if ($out == 1) {
-			    #print "$agp_file: $data[5] already in database\n";
-				} elsif ($out == 2) {
-		    	print "  $agp_file: $data[5] seq file already in current directory\n";
-				} elsif ($out == 3) {
-			    print "  $agp_file: $data[5] generated seq file in current directory\n";
-				}
-		  } else {
-				warn "$agp_file: Couldnt get sequence for clone $data[5]\n";
-	  	}
-		}
-	}
+    next if $_ =~ /^\#/; #skip comments
+    my @data = split('\t', $_);
+    if ($data[4] eq 'F') {
+
+      my $out = &check_for_seq($data[5]);
+      if ($out) {
+        if ($out == 1) {
+          #print "$agp_file: $data[5] already in database\n";
+        } elsif ($out == 2) {
+          print "  $agp_file: $data[5] seq file already in current directory\n";
+        } elsif ($out == 3) {
+          print "  $agp_file: $data[5] generated seq file in current directory\n";
+        }
+      } else {
+        warn "$agp_file: Couldnt get sequence for clone $data[5]\n";
+      }
+    }
+  }
   print ".....$agp_file done.\n\n";
 }
 
@@ -56,35 +56,35 @@ sub check_for_seq {
 
 ##  my $pfetch ||= Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch->new;
 ##  my $seq = $pfetch->get_Seq_by_acc($acc_ver);
-    
+
   if ($seq) {
-		# Sequence is available online via pfetch
+    # Sequence is available online via pfetch
     return 1;
   } else {
-	 
-	  print "Attempting to read fasta file <$acc_ver.seq> in current dir.\n";
-##		my $in;
-##		eval { $in = Bio::SeqIO->new(
-##				   -file   => $seq_file,
-##				   -format => 'FASTA',
-##	         );
-##				};
-##		if ($in) {
-##	    return(2);
-	    
+
+    print "Attempting to read fasta file <$acc_ver.seq> in current dir.\n";
+##    my $in;
+##    eval { $in = Bio::SeqIO->new(
+##           -file   => $seq_file,
+##           -format => 'FASTA',
+##           );
+##        };
+##    if ($in) {
+##      return(2);
+
     if (-e $seq_file) {
       $seq = Hum::FastaFileIO->new_DNA_IO($seq_file)->read_one_sequence;
     }
-    
-		if ($seq and $seq->name eq $acc_ver) {
+
+    if ($seq and $seq->name eq $acc_ver) {
       return 2;
-    
-		} else {
-      # There is no file stored in the current directory, so we try to 
+
+    } else {
+      # There is no file stored in the current directory, so we try to
       # fetch the current sequence from the Sanger submission system.
       ### my $acc = $acc_ver;
-	    ### $acc =~ s/^(\S+)\.(\d+)$/$1/;
-      my ($acc, $sv) = ($acc_ver =~ /^(\S+)\.(\d+)$/);  
+      ### $acc =~ s/^(\S+)\.(\d+)$/$1/;
+      my ($acc, $sv) = ($acc_ver =~ /^(\S+)\.(\d+)$/);
 
       # this should be the only thing necessary now
       my $inf = Hum::SequenceInfo->sanger_sequence_get($acc);
@@ -112,11 +112,11 @@ sub check_for_seq {
 ##
 ####      print $outFile $seq_obj;
 ####    while ( my $seq = $in->next_seq() ) {
-##			my $success = $outFile->write_seq($seq);
+##      my $success = $outFile->write_seq($seq);
 ####    }
 ##
 ##      return(3, $success)
 ##
-##		}
+##    }
   }
 }
