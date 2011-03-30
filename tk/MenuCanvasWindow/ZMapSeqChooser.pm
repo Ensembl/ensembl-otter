@@ -963,12 +963,15 @@ my $zmap_feature_details_tags = [
       }, ],
     ];
 
+my $zmap_feature_details_xml_sql = <<'SQL'
+SELECT source_db, taxon_id, description FROM accession_info WHERE accession_sv = ?
+SQL
+    ;
+
 sub zmap_feature_details_xml {
     my ($self, $feat_name) = @_;
 
-    my $sth = $self->AceDatabase->DB->dbh->prepare(q{
-        SELECT source_db, taxon_id, description FROM accession_info WHERE accession_sv = ?
-    });
+    my $sth = $self->AceDatabase->DB->dbh->prepare($zmap_feature_details_xml_sql);
     $sth->execute($feat_name);
     my ($source_db, $taxon_id, $desc) = $sth->fetchrow;
 
