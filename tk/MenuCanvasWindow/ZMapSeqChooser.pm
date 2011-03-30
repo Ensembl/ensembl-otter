@@ -1401,7 +1401,7 @@ sub zMapNewView {
 
     $config = "" unless defined $config;
 
-    my $new_view_xml = $self->_zmap_new_view_xml($self, $config);
+    my $new_view_xml = $self->_zmap_new_view_xml($config);
     unless ($self->zMapDoRequest($xremote, "new_view", $new_view_xml)) {
         warn "Failed to create a new view";
         return;
