@@ -279,7 +279,7 @@ sub runit {
     return if $test;
 
     if (system("$command")) {
-	my $err = ($? == -1 ? "returncode $?" : "error $!");
+	my $err = ($? == -1 ? "error $!" : "returncode $?");
 	print LOG " # Failed: $err\n";
 	if ($ignore_errs) {
 	    die "ERROR: Cannot execute $command $err\n";
