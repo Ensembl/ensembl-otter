@@ -217,7 +217,7 @@ sub zMapSendCommands {
 =head1 post_response_client_cleanup
 
 A function to cleanup any bad windows that might exist.
-Primary user of this is the zMapRelaunchZMap function.
+Primary user of this is the zMapFinalised function.
 
 =cut
 
@@ -244,7 +244,7 @@ sub post_response_client_cleanup_launch_in_a_zmap {
     return;
 }
 
-=head1 zMapRelaunchZMap
+=head1 zMapFinalised
 
 A  handler to  handle finalise  requests. ZMap  sends these  when it's
 closing the  whole program. Depending  on whether we want  to relaunch
@@ -252,7 +252,7 @@ zmap might be launched again.
 
 =cut
 
-sub zMapRelaunchZMap {
+sub zMapFinalised {
     my ($self, $xml) = @_;
 
     if ($self->{'_relaunch_zmap'}) {
@@ -307,7 +307,7 @@ sub zMapKillZmap {
 
                 $rval = 1;    # everything has been as successful as can be
                 ### Check shutdown by checking property set by ZMap?
-                ### This is done in zMapRelaunchZMap...
+                ### This is done in zMapFinalised...
             }
             else {
 
@@ -907,14 +907,14 @@ sub zMapHighlight {
     return (200, $zc->handled_response(1));
 }
 
-=head1 zMapTagValues
+=head1 zMapFeatureDetails
 
 A  handler  to handle  feature_details  request.   returns a  notebook
 response.
 
 =cut
 
-sub zMapTagValues {
+sub zMapFeatureDetails {
     my ($self, $xml_hash) = @_;
 
     my $pages = "";
@@ -1040,7 +1040,7 @@ sub zmap_feature_evidence_xml {
     }
 }
 
-sub zMapRemoveView {
+sub zMapViewClosed {
     my ($self, $xml) = @_;
 
     # I guess all we need to do here is remove the associated xid from the cache...
@@ -1154,9 +1154,9 @@ my $zmap_request_callback_methods = {
     edit            => 'zMapEdit',
     single_select   => 'zMapHighlight',
     multiple_select => 'zMapHighlight',
-    finalised       => 'zMapRelaunchZMap',
-    feature_details => 'zMapTagValues',
-    view_closed     => 'zMapRemoveView',
+    finalised       => 'zMapFinalised',
+    feature_details => 'zMapFeatureDetails',
+    view_closed     => 'zMapViewClosed',
     features_loaded => 'zMapFeaturesLoaded',
 };
 
