@@ -595,25 +595,8 @@ sub zMapBlixemDefaults {
     return $self->formatZmapDefaults(
         'blixem',
         'config-file' => $ENV{'BLIXEM_CONFIG_FILE'},
-        qw{
-            script      blixemh
-            scope       200000
-            homol-max   0
-        },
-        'protein-featuresets' => [qw{ SwissProt TrEMBL }],
-        'dna-featuresets'    => [qw{ EST_Human EST_Mouse EST_Other vertebrate_mRNA OTF_mRNA Unknown_DNA }],
-        'featuresets' => [qw{
-Coding
-Known_CDS
-Novel_CDS
-Putative_CDS
-Nonsense_mediated_decay
-ensembl_variation
-}],
         %{ $self->AceDatabase->smart_slice->DataSet->config_section('blixem') },
     );
-
-    # script could also be "blixem_standalone" sh wrapper (if needed)
 }
 
 sub zMapWindowDefaults {
