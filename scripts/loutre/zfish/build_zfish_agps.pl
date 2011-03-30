@@ -280,11 +280,12 @@ sub runit {
 
     if (system("$command")) {
 	my $err = ($? == -1 ? "error $!" : "returncode $?");
+	$err .= ", called from ".(join " line ", (caller())[1, 2]);
 	print LOG " # Failed: $err\n";
 	if ($ignore_errs) {
-	    die "ERROR: Cannot execute $command $err\n";
-	} else {
 	    warn "Ignoring error from $command\n\t\t$err\n";
+	} else {
+	    die "ERROR: Cannot execute $command $err\n";
 	}
     } # else success
 }
