@@ -8,7 +8,6 @@ use Carp;
 use ZMap::Connect;
 use Sys::Hostname;
 use ZMap::XRemoteCache;
-use Data::Dumper;
 use Hum::Conf qw{ PFETCH_SERVER_LIST };
 use XML::Simple;
 use Bio::Vega::Utils::XmlEscape qw{ xml_escape };
@@ -16,9 +15,6 @@ use File::Path 'mkpath';
 use Config::IniFiles;
 
 my $ZMAP_DEBUG = $ENV{OTTERLACE_ZMAP_DEBUG};
-
-$Data::Dumper::Terse = 1;
-$Data::Dumper::Indent = 1;
 
 #==============================================================================#
 #
@@ -799,7 +795,7 @@ sub zMapRegisterClient {
     {
         warn "mismatched request for register_client:\n",
           "id, request and response required\n",
-          "Got '", Dumper($xml), "'\n";
+          "Got '${xml}'\n";
         return (403, $zc->basic_error("Bad Request!"));
     }
 
@@ -850,7 +846,7 @@ sub zMapEdit {
             my $subs = $feat->{'subfeature'}
               or next;
             unless (ref $subs eq 'ARRAY') {
-                confess "Unexpected feature format: ", Dumper($feat);
+                confess "Unexpected feature format for ${name}";
             }
             foreach my $s (@$subs) {
 
@@ -871,7 +867,7 @@ sub zMapEdit {
         }
     }
     else {
-        confess "Not an 'edit' action:\n", Dumper($xml_hash);
+        confess "Not an 'edit' action";
     }
 
 }
