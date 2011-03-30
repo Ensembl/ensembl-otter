@@ -1390,7 +1390,7 @@ sub zMapZoomToSubSeq {
     return;
 }
 
-my $zmap_new_view_format = <<'FORMAT'
+my $zmap_new_view_xml_format = <<'FORMAT'
 <zmap>
  <request action="new_view">
   <segment sequence="%s" start="%d" end="%d">
@@ -1413,7 +1413,7 @@ sub _zmap_new_view_xml {
 
     my @fields = ( $segment, $start, $end, $config );
     my @xml_escaped_fields = map { xml_escape($_) } @fields;
-    my $xml = sprintf $zmap_new_view_format, @xml_escaped_fields;
+    my $xml = sprintf $zmap_new_view_xml_format, @xml_escaped_fields;
 
     return $xml;
 }
