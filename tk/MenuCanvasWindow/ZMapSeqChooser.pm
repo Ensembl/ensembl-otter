@@ -608,6 +608,7 @@ Known_CDS
 Novel_CDS
 Putative_CDS
 Nonsense_mediated_decay
+ensembl_variation
 }],
         %{ $self->AceDatabase->smart_slice->DataSet->config_section('blixem') },
     );
