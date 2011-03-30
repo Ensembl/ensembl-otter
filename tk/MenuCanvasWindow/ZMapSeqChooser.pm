@@ -1448,10 +1448,9 @@ return true for success
 sub zMapDoRequest {
     my ($self, $xremote, $action, $command) = @_;
 
-    warn substr($command, 0, 512), (length($_) > 512 ? "..." : "") if $ZMAP_DEBUG;
-
+    warn sprintf "\nzMapDoRequest:command\n>>>\n%s\n<<<\n", $command if $ZMAP_DEBUG;
     my ($response) = $xremote->send_commands($command);
-    warn "command returned $response" if $ZMAP_DEBUG;
+    warn sprintf "\nzMapDoRequest:response\n>>>\n%s\n<<<\n", $response if $ZMAP_DEBUG;
 
     my ($status, $xmlHash) = zMapParseResponse($response);
     if ($status =~ /^2\d\d/) {    # 200s
