@@ -793,6 +793,10 @@ sub zMapHighlight {
     return (200, $zc->handled_response(1));
 }
 
+# some aliases for naming consistency
+*zMapSingleSelect   = \&zMapHighlight;
+*zMapMultipleSelect = \&zMapHighlight;
+
 =head1 zMapFeatureDetails
 
 A  handler  to handle  feature_details  request.   returns a  notebook
@@ -1046,8 +1050,8 @@ sub RECEIVE_FILTER {
     my $lookup = {
         register_client => 'zMapRegisterClient',
         edit            => 'zMapEdit',
-        single_select   => 'zMapHighlight',
-        multiple_select => 'zMapHighlight',
+        single_select   => 'zMapSingleSelect',
+        multiple_select => 'zMapMultipleSelect',
         finalised       => 'zMapFinalised',
         feature_details => 'zMapFeatureDetails',
         view_closed     => 'zMapViewClosed',
