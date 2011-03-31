@@ -14,7 +14,8 @@ use Getopt::Long 'GetOptions';
 use Term::ANSIColor;
 
 my $buser;
-GetOptions('u|user=s' => \$buser);
+GetOptions('u|user=s' => \$buser) or die "command line error";
+die "error: usage: farm_info <user>" unless defined $buser;
 
 my $sep = '-' x 75 . "\n";
 
