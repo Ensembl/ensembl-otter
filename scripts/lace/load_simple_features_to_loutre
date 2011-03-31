@@ -80,7 +80,6 @@ foreach my $file ( `ls $input_dir` ) {
 	  };
 	  if ($@) {
 		die "problem with loading of simplefeatures\n$@\n";
-		$db->rollback;
 	  }
 	}
   };
