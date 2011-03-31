@@ -208,19 +208,6 @@ sub get_region_xml {
         },
     );
 
-    if ($client->debug) {
-        my $debug_file = "/var/tmp/otter-debug.$$.fetch.xml";
-        if (open my $fh, '>', $debug_file) {
-            print $fh $xml;
-            unless (close $fh) {
-                warn "get_region_xml(): failed to close the debug file '${debug_file}'\n";
-            }
-        }
-        else {
-            warn "get_region_xml(): failed to open the debug file '${debug_file}'\n";
-        }
-    }
-
     return $xml;
 }
 
