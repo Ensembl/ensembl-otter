@@ -192,6 +192,8 @@ sub set_color {
 
   print color($color), "$info";
   print color 'reset';
+
+  return;
 }
 
 
