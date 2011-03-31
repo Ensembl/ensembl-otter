@@ -85,10 +85,10 @@ if ( $ARGV[0] == 0 ) {
 
   my ($ori, $new);
   my $old = {};
-  map {$ori = $_;
+  foreach my $ori (keys %{$library_clone_info{'ZF_mu'}}) {
 	   $ori =~ s/.+\.//;
 	   $old->{$ori}++ unless $old->{$ori};
-	 } keys %{$library_clone_info{'ZF_mu'}};
+	 }
 
   foreach ( keys %$seen ) {
 	unless ( $old->{$_} ){
