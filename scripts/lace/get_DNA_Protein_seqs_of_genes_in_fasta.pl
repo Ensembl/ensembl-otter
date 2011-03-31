@@ -124,7 +124,6 @@ sub get_latest_trans_or_prot_seq {
 	}
   }
   print STDOUT "\t$done\n";
-exit;
   return $coding, $transcripts, $pseudos;
 }
 
