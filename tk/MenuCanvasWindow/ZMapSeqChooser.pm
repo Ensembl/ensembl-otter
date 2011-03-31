@@ -600,24 +600,9 @@ sub zMapBlixemDefaults {
 sub zMapWindowDefaults {
     my ($self) = @_;
 
-    # Turn off warning about "possible comment in qw()"
-    # caused by #hex colour names
-    no warnings 'qw';    ## no critic(TestingAndDebugging::ProhibitNoWarnings)
-
-    # The canvas_maxsize probably needs some thought here.
     return $self->formatZmapDefaults(
         'ZMapWindow',
-        qw{
-          feature-line-width          1
-          feature-spacing             4.0
-          colour-column-highlight     cornsilk
-          colour-frame-0              #ffe6e6
-          colour-frame-1              #e6ffe6
-          colour-frame-2              #e6e6ff
-          canvas-maxsize              10000
-          },
-          'colour-masked-feature-fill'   => 'light grey',
-          'colour-masked-feature-border' => 'dark grey',
+        %{ $self->AceDatabase->smart_slice->DataSet->config_section('ZMapWindow') },
     );
 }
 
