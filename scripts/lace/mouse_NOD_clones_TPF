@@ -97,7 +97,7 @@ sub main {
 	$count++;
 
 	# replace chr number with contig_name of a tpf clone (not for non-tpf clone)
-	map {$clone_info->{$_}->[2] = $ctg_name} @{$contig_clone->{$ctg_name}};
+        $clone_info->{$_}->[2] = $ctg_name for @{$contig_clone->{$ctg_name}};
 	
 	push (@$clones_tpf, @{$contig_clone->{$ctg_name}});
 
