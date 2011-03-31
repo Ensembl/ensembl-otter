@@ -118,8 +118,10 @@ if ( @lsload ) {
 
 
 my @status = `$pipebin/bjobs -l -u $buser`;
-map ($_ =~ s/^\s*//,@status);
-map (chomp $_ ,@status);
+for (@status) {
+    s/^\s*//;
+    chomp;
+}
 @status = split(/-{20}/,join("",@status));
 
 # This output format depends on user bsub command and
