@@ -62,7 +62,7 @@ foreach my $file ( `ls $input_dir` ) {
   ##Let begin a transaction and do all the database changes within a transaction
   $db->begin_work();
 
-  eval{
+  if( eval{
 	# Load SimpleFeatures in xml
 
 	my $chr_slice=$parser->get_ChromosomeSlice;
@@ -78,13 +78,15 @@ foreach my $file ( `ls $input_dir` ) {
 	  eval { $sfa->store($new_feat); 1; }
             or die "problem with loading of simplefeatures\n$@\n";
 	}
-  };
+
+        1;
+      }) {
 
 
   $db->commit;
   print STDOUT "\nCommitted all session data from XML in database\n";
-
-  if ($@) {
+  }
+  else {
 	print STDERR "\nError saving genes from file: Rolled back all data of this session - Please correct errors\n".$@;
 	$db->rollback;
   }
