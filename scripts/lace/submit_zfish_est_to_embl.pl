@@ -529,6 +529,7 @@ if ( $ARGV[0] == 29 ){
 
 sub check_status {
   shift == 0 ? print STDOUT "Command successful\n\n" : print STDOUT "command failed\n\n";
+  return;
 }
 
 
