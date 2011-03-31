@@ -75,12 +75,8 @@ foreach my $file ( `ls $input_dir` ) {
 	foreach my $new_feat (@$simple_features) {
 
 	  $new_feat->slice($new_slice);
-	  eval{
-		$sfa->store($new_feat);
-	  };
-	  if ($@) {
-		die "problem with loading of simplefeatures\n$@\n";
-	  }
+	  eval { $sfa->store($new_feat); 1; }
+            or die "problem with loading of simplefeatures\n$@\n";
 	}
   };
 
