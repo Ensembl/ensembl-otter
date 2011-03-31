@@ -15,20 +15,21 @@ my ($dataset, @sets, $vega);
 
 my $help = sub { exec('perldoc', $0) };
 
-Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset, # eg, human or mouse or zebrafish
-									  's|set=s@'     => \@sets,	   # sequence set(s) to check
-									  'h|help'       => $help,
-									  'v|vega'       => \$vega,	   # this flags vega_set_id > 0. If !$vega: check all datasets
-								                                   # for now, zebrafish defaults to !$vega
-									 ) or $help->();               # plus default options
+Bio::Otter::Lace::Defaults::do_getopt(
+    'ds|dataset=s' => \$dataset, # eg, human or mouse or zebrafish
+    's|set=s@'     => \@sets,    # sequence set(s) to check
+    'h|help'       => $help,
+    'v|vega'       => \$vega,    # this flags vega_set_id > 0. If !$vega: check all datasets
+    # for now, zebrafish defaults to !$vega
+    ) or $help->();               # plus default options
 $help->() unless ( $dataset );
 $help->() if ( $vega and @sets );                                  # vega option does all vega sets
 
 
 my $client    = Bio::Otter::Lace::Defaults::make_Client();         # Bio::Otter::Lace::Client
-my $dset      = $client->get_DataSet_by_name($dataset);	           # Bio::Otter::Lace::DataSet
+my $dset      = $client->get_DataSet_by_name($dataset);            # Bio::Otter::Lace::DataSet
 my $otter_db  = $dset->get_cached_DBAdaptor;                       # Bio::EnsEMBL::Containerr
-my $geneAd    = $otter_db->get_GeneAdaptor;	                       # Bio::Otter::AnnotatedGeneAdaptor
+my $geneAd    = $otter_db->get_GeneAdaptor;                        # Bio::Otter::AnnotatedGeneAdaptor
 
 my $date = `date +%Y%m%d`; chomp $date;
 my $gene_info_of_trans    = {};
