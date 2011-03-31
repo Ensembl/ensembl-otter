@@ -5,6 +5,7 @@ use warnings;
 use Carp;
 use Bio::Otter::Lace::Pfam;
 use Tk::ProgressBar;
+use POSIX();
 use base 'EditWindow';
 my $POLL_ATTEMPTS = 30;
 my %WIDGETS;
@@ -354,6 +355,9 @@ sub open_url {
         system("open '$url'");
     }
     else {
+        # run in the background to avoid hanging the Otterlace GUI
+        return unless fork;
+        POSIX::_exit(0) unless fork;
         my @commands = (qq{firefox -remote "openURL($url,new-tab)"},
                         qq{iceape -remote "openURL($url,new-tab)"},
                         qq{mozilla -remote "openURL($url,new-tab)"},
@@ -366,6 +370,7 @@ sub open_url {
         for(my $i = 0;($i < scalar(@commands) && $success != 0); $i++) {
             $success = system($commands[$i]);
         }
+        POSIX::_exit(0);
     }
 
     return;
