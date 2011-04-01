@@ -31,8 +31,9 @@ sub new {
     my ( $pkg, @args ) = @_;
 
     my $self = {
-        -cgi         => CGI->new,
-        -compression => 0,
+        -cgi          => CGI->new,
+        -compression  => 0,
+        -content_type => 'text/plain',
         @args,
     };
     bless $self, $pkg;
@@ -280,10 +281,12 @@ sub _send_response {
 
     my ($self, $response, $wrap) = @_;
 
+    my $content_type = $self->{-content_type};
+
     if ($COMPRESSION_ENABLED && $self->{-compression}) {
         print $self->header(
             -status             => 200,
-            -type               => 'text/plain',
+            -type               => $content_type,
             -content_encoding   => 'gzip',
         );
 
@@ -294,7 +297,7 @@ sub _send_response {
     else {
         print $self->header(
             -status => 200,
-            -type   => 'text/plain',
+            -type   => $content_type,
         );
 
         if ($wrap) {
