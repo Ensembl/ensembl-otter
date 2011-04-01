@@ -11,22 +11,10 @@ use SangerPaths qw{ core bioperl123 ensembl61 otter54 };
 
 use Bio::Otter::ServerScriptSupport;
 
-{
-    my $server = Bio::Otter::ServerScriptSupport->new;
-    my $tar = $server->data_dir . "/lace_acedb.tar.gz";
-    open my $TAR_FH, '<', $tar or
-        $server->error_exit("Error getting empty acedb database directory structure\nCan't read '$tar' : $!");
-
-    print $server->header(
-        -status => 200,
-        -type   => 'application/x-tar-gzip',
-        );
-    while (<$TAR_FH>) {
-        print;
-    }
-    close $TAR_FH;  # Too late for error to client
-}
-
+Bio::Otter::ServerScriptSupport->send_file(
+    "lace_acedb.tar.gz",
+    -content_type => 'application/x-tar-gzip',
+    );
 
 __END__
 

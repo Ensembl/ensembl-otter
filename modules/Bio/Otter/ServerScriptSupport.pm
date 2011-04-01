@@ -256,6 +256,26 @@ $SIG{__WARN__} = sub { ## no critic (Variables::RequireLocalizedPunctuationVars)
     return;
 };
 
+sub send_file {
+    my ($pkg, $name, @args) = @_;
+
+    $pkg->send_response(
+        @args, # passed to the constructor
+        sub {
+            my ($self) = @_;
+
+            my $path = sprintf "%s/%s", $self->data_dir, $name;
+            open my $fh, '<', $path or die "Can't read '$path' : $!";
+            local $/ = undef;
+            my $content = <$fh>;
+            close $fh;
+
+            return $content;
+        });
+
+    return;
+}
+
 sub send_response {
     my ($self, @args) = @_;
 
