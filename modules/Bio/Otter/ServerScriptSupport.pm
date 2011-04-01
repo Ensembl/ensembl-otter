@@ -274,7 +274,7 @@ sub send_response {
         my $server = $self->new;
         my $response;
         if (eval { $response = $sub->($server); 1; }) {
-            $server->_send_response($response, 1);
+            $server->_send_response($response);
         }
         else {
             $server->error_exit($@);
