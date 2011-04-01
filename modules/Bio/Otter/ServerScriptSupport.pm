@@ -31,7 +31,7 @@ sub new {
     my ( $pkg, @args ) = @_;
 
     my $self = {
-        _cgi         => CGI->new,
+        -cgi         => CGI->new,
         -compression => 0,
         @args,
     };
@@ -53,7 +53,7 @@ sub new {
 
 sub cgi {
     my ($self) = @_;
-    return $self->{_cgi};
+    return $self->{-cgi};
 }
 
 sub header {
