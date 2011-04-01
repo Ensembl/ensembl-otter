@@ -9,8 +9,6 @@ use warnings;
 
 use SangerPaths qw{ core bioperl123 ensembl61 otter54 humpub };
 
-use IO::Socket;
-
 use Bio::Otter::ServerScriptSupport;
 use Bio::Otter::Utils::MM;
 
