@@ -306,7 +306,7 @@ sub _send_response {
         );
 
         if ($wrap) {
-            print $self->wrap_response($response);
+            print $self->otter_wrap_response($response);
         } else {
             print $response;
         }
@@ -315,7 +315,7 @@ sub _send_response {
     return;
 }
 
-sub wrap_response {
+sub otter_wrap_response {
     my ($self, $response) = @_;
 
     return qq{<?xml version="1.0" encoding="UTF-8"?>\n}
@@ -343,7 +343,7 @@ sub error_exit {
         -status => 417,
         -type   => 'text/plain',
         ),
-      $self->wrap_response(" <response>\n    ERROR: $reason\n </response>\n");
+      $self->otter_wrap_response(" <response>\n    ERROR: $reason\n </response>\n");
     warn "ERROR: $reason\n";
 
     exit(1);
