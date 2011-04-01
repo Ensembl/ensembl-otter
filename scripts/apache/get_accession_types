@@ -13,7 +13,6 @@ use IO::Socket;
 
 use Bio::Otter::ServerScriptSupport;
 use Bio::Otter::Utils::MM;
-# use Hum::Conf qw{ PFETCH_SERVER_LIST };
 
 {
     my $server = Bio::Otter::ServerScriptSupport->new;
@@ -32,111 +31,12 @@ use Bio::Otter::Utils::MM;
         $server->error_exit("Failed to fetch accession type info: $err");
     }
 
-    # The pfetching code (commented out section underneath) is somewhat broken.
-    # Uniprot entries are not correctly parsed. We can rely on M&M - I don't
-    # think there is any reason not to.
-
-    # if (my $first_error = $@) {
-    #     $types = {};
-    #     # mole and mushroom probably failed, so let's try to parse the pfetch header
-    #     eval {
-    #         pfetch_acc_types($types, $acc_list);
-    #     };
-    #     if (my $second_error = $@) {
-    #         $server->error_exit("Failed to fetch accession type info: " . $first_error . $second_error);
-    #     }
-    # }
-
-
     my $response = '';
     foreach my $acc (keys %$types) {
         $response .= join("\t", $acc, @{$types->{$acc}}) . "\n";
     }
     $server->send_response($response);
 }
-
-
-# sub pfetch_acc_types {
-#     my ($types, $acc_list) = @_;
-# 
-#     # XXX: much of this code nicked from scripts/apache/pfetch but rejigged here
-#     my $socket;
-# 
-#     foreach my $srv_arr (@$PFETCH_SERVER_LIST) {
-#         my ($ip_addr, $port) = @$srv_arr;
-#         last
-#           if $socket = IO::Socket::INET->new(
-#             PeerAddr => $ip_addr,
-#             PeerPort => $port,
-#             Proto    => 'tcp',
-#             Type     => SOCK_STREAM,
-#             Timeout  => 10,
-#           );
-#     }
-# 
-#     die "Connect to pfetch server failed" unless $socket;
-# 
-#     # detaint and join the accessions into one string
-# 
-#     my $acc_string;
-# 
-#     for my $acc (@$acc_list) {
-#         $acc =~ s/\s+/ /g;
-#         $acc =~ s/[^\w\-\.\: ]//g;
-#         $acc_string .= "$acc ";
-#         $types->{$acc} = [];
-#     }
-# 
-#     # chuck it down the pipe
-# 
-#     print $socket "-F $acc_string\n";
-# 
-#     # NB: I assume here that the results come back in the order requested
-# 
-#     my $idx = 0;
-# 
-#     while (<$socket>) {
-#         if (/^ID/) {
-#             my $acc = $acc_list->[$idx];
-# 
-#             if (/EST/) {
-#                 $types->{$acc} = [ 'EST', $acc, 'EMBL' ];
-#             }
-#             elsif (/mRNA/) {
-# 
-#                 # Here we return cDNA, which is more technically correct since
-#                 # both ESTs and cDNAs are mRNAs.
-#                 $types->{$acc} = [ 'cDNA', $acc, 'EMBL' ];
-#             }
-#             elsif (/other RNA/) {
-#                 $types->{$acc} = [ 'ncRNA', $acc, 'EMBL' ];
-#             }
-#             elsif (/\d+\s+AA\b/) {
-#                 my $source_db;
-#                 if (/\b(STD|ISO)\b/) {
-#                     $source_db = 'Swissprot';
-#                 }
-#                 elsif (/\bPRE\b/) {
-#                     $source_db = 'TrEMBL';
-#                 }
-#                 else {
-#                     die "Can't choose between Swissprot and TrEMBL in ID line: $_";
-#                 }
-#                 $types->{$acc} = [ 'Protein', $acc, $source_db ];
-#             }
-#         }
-#         elsif (/^\/\/$/ or /^no match$/) {
-# 
-#             # Database entries in Uniprot and EMBL end with the line "//"
-#             # Entries not found appear as the line "no match"
-#             $idx++;
-#         }
-#     }
-# 
-#     close $socket;
-#     
-#     return;
-# }
 
 
 1;
