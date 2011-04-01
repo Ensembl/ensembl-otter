@@ -65,32 +65,15 @@ my $call_args = {
 sub send_requested_features {
     my ($pkg) = @_;
 
-    $pkg->send_features(
+    $pkg->send_response(
         sub {
             my ($self) = @_;
-            return $self->get_requested_features;
+            my $features = $self->get_requested_features;
+            my $features_gff = $self->_features_gff($features);
+            my $gff = $self->gff_header . $features_gff;
+            $self->compression(1);
+            return $gff;
         });
-
-    return;
-}
-
-sub send_features {
-    my ($pkg, $features_sub) = @_;
-
-    my $self = $pkg->new;
-
-    my $gff;
-    if (eval {
-        my $features = $features_sub->($self);
-        $gff = $self->_features_gff($features);
-        1;
-        }) {
-        $self->compression(1);
-        $self->send_response($self->gff_header . $gff);
-    }
-    else {
-        $self->error_exit($@);
-    }
 
     return;
 }
