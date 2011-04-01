@@ -28,11 +28,12 @@ $COMPRESSION_ENABLED = 1 unless defined $COMPRESSION_ENABLED;
 my $LOG;
 
 sub new {
-    my ( $pkg ) = @_;
+    my ( $pkg, @args ) = @_;
 
     my $self = {
         _cgi         => CGI->new,
-        _compression => 0,
+        -compression => 0,
+        @args,
     };
     bless $self, $pkg;
 
@@ -254,15 +255,6 @@ $SIG{__WARN__} = sub { ## no critic (Variables::RequireLocalizedPunctuationVars)
     return;
 };
 
-sub compression {
-    my ($self, @args) = @_;
-    if (@args) {
-        my ($compression) = @args;
-        $self->{_compression} = $compression;
-    }
-    return $self->{_compression};
-}
-
 sub send_response {
     my ($self, @args) = @_;
 
@@ -270,8 +262,8 @@ sub send_response {
         $self->_send_response(@args);
     }
     else {
-        my ($sub) = @args;
-        my $server = $self->new;
+        my $sub = pop @args;
+        my $server = $self->new(@args);
         my $response;
         if (eval { $response = $sub->($server); 1; }) {
             $server->_send_response($response);
@@ -288,7 +280,7 @@ sub _send_response {
 
     my ($self, $response, $wrap) = @_;
 
-    if ($COMPRESSION_ENABLED && $self->compression) {
+    if ($COMPRESSION_ENABLED && $self->{-compression}) {
         print $self->header(
             -status             => 200,
             -type               => 'text/plain',
