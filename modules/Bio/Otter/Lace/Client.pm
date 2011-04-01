@@ -690,7 +690,7 @@ sub find_string_match_in_clones {
 
     my $qnames_string = join(',', @$qnames_list);
 
-    my $response = $self->otter_response_content(
+    my $response = $self->http_response_content(
         'GET',
         'find_clones',
         {
