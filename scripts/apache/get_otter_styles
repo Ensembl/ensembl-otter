@@ -11,19 +11,7 @@ use SangerPaths qw{ core bioperl123 ensembl61 otter54 };
 
 use Bio::Otter::ServerScriptSupport;
 
-{
-    my $server = Bio::Otter::ServerScriptSupport->new;
-    my $otter_styles = $server->data_dir . "/otter_styles.ini";
-    open my $STYLES_FH, '<', $otter_styles or
-        $server->error_exit("Error getting otter_styles\nCan't read '$otter_styles' : $!");
-    local $/ = undef;
-    my $txt = <$STYLES_FH>;
-    $server->send_response($txt);
-    close $STYLES_FH;  # Too late for error to client
-}
-
-
-
+Bio::Otter::ServerScriptSupport->send_file("otter_styles.ini");
 
 __END__
 

@@ -11,22 +11,7 @@ use SangerPaths qw{ core bioperl123 ensembl61 otter54 };
 
 use Bio::Otter::ServerScriptSupport;
 
-{
-    my $server = Bio::Otter::ServerScriptSupport->new;
-    my $otter_config = $server->data_dir . "/otter_config";
-    open my $CFG_FH, '<', $otter_config or
-        $server->error_exit("Error getting otter_config\nCan't read '$otter_config' : $!");
-    local $/ = undef;
-    my $ace_txt = <$CFG_FH>;
-    $server->send_response($ace_txt);
-    close $CFG_FH;  # Too late for error to client
-}
-
-
-
-
-
-
+Bio::Otter::ServerScriptSupport->send_file("otter_config");
 
 __END__
 

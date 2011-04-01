@@ -11,19 +11,7 @@ use SangerPaths qw{ core bioperl123 ensembl61 otter54 };
 
 use Bio::Otter::ServerScriptSupport;
 
-{
-    my $server = Bio::Otter::ServerScriptSupport->new;
-    my $methods_ace = $server->data_dir . "/methods.ace";
-    open my $ACE_FH, '<', $methods_ace or
-        $server->error_exit("Error getting methods.ace\nCan't read '$methods_ace' : $!");
-    local $/ = undef;
-    my $ace_txt = <$ACE_FH>;
-    $server->send_response($ace_txt);
-    close $ACE_FH;  # Too late for error to client
-}
-
-
-
+Bio::Otter::ServerScriptSupport->send_file("methods.ace");
 
 __END__
 
