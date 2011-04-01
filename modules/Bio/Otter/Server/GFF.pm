@@ -66,12 +66,12 @@ sub send_requested_features {
     my ($pkg) = @_;
 
     $pkg->send_response(
+        -compression => 1,
         sub {
             my ($self) = @_;
             my $features = $self->get_requested_features;
             my $features_gff = $self->_features_gff($features);
             my $gff = $self->gff_header . $features_gff;
-            $self->compression(1);
             return $gff;
         });
 
