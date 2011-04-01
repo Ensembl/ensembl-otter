@@ -14,27 +14,26 @@ use IO::Socket;
 use Bio::Otter::ServerScriptSupport;
 use Bio::Otter::Utils::MM;
 
-{
-    my $server = Bio::Otter::ServerScriptSupport->new;
+Bio::Otter::ServerScriptSupport->send_response(
+    sub {
+        my ($server) = @_;
 
-    my $accs = $server->param('accessions');
+        my $accs = $server->param('accessions');
+        my $acc_list = [ split(/,/, $accs) ];
 
-    my $acc_list = [ split(/,/, $accs) ];
+        my $types;
+        eval {
+            my $mm = Bio::Otter::Utils::MM->new;
+            $types = $mm->get_accession_types($acc_list);
+            1;
+        } or die "Failed to fetch accession type info: $@";
 
+        my $response = '';
+        foreach my $acc (keys %$types) {
+            $response .= join("\t", $acc, @{$types->{$acc}}) . "\n";
+        }
 
-    my $types;
-    eval {
-        my $mm = Bio::Otter::Utils::MM->new;
-        $types = $mm->get_accession_types($acc_list);
-        1;
-    } or $server->error_exit("Failed to fetch accession type info: $@");
-
-    my $response = '';
-    foreach my $acc (keys %$types) {
-        $response .= join("\t", $acc, @{$types->{$acc}}) . "\n";
-    }
-    $server->send_response($response);
-}
-
+        return $response;
+    });
 
 1;
