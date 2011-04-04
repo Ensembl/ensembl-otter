@@ -11,7 +11,8 @@ use SangerPaths qw{ core bioperl123 ensembl61 otter54 };
 
 use Bio::Otter::ServerScriptSupport;
 
-my $server = Bio::Otter::ServerScriptSupport->new;
+sub get_clonesequences {
+    my ($server) = @_;
 
 my $dataset     = $server->require_argument('dataset');
 my $sequenceset = $server->require_argument('sequenceset');
@@ -178,7 +179,10 @@ $xml .= qq{      </clonesequences>\n};
 $xml .= qq{    </sequenceset>\n};
 $xml .= qq{  </dataset>\n};
 
-$server->send_response($xml, 1);
+return $server->otter_wrap_response($xml);
+}
+
+Bio::Otter::ServerScriptSupport->send_response(\&get_clonesequences);
 
 __END__
 
