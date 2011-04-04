@@ -294,7 +294,7 @@ sub send_response {
 
 sub _send_response {
 
-    my ($self, $response, $wrap) = @_;
+    my ($self, $response) = @_;
 
     my $content_type = $self->{-content_type};
 
@@ -310,16 +310,13 @@ sub _send_response {
         print $gzipped;
     }
     else {
-        print $self->header(
-            -status => 200,
-            -type   => $content_type,
-        );
-
-        if ($wrap) {
-            print $self->otter_wrap_response($response);
-        } else {
-            print $response;
-        }
+        print
+            $self->header(
+                -status => 200,
+                -type   => $content_type,
+            ),
+            $response,
+            ;
     }
 
     return;
