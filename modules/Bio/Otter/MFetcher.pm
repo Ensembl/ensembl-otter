@@ -73,11 +73,11 @@ sub otter_dba {
                                         -species    => $self->dataset_name,
                                         );
         };
-        $self->error_exit("Failed opening otter database [$@]") if $@;
+        die "Failed opening otter database [$@]" if $@;
 
         warn "Connected to otter database\n";
     } else {
-        $self->error_exit("Failed opening otter database [No database name]");
+        die "Failed opening otter database [No database name]";
     }
 
     if(my $dna_dbname = $self->current_dataset_param('DNA_DBNAME')) {
@@ -91,7 +91,7 @@ sub otter_dba {
                                                          -species   => $self->dataset_name,
                                                          );
         };
-        $self->error_exit("Failed opening dna database [$@]") if $@;
+        die "Failed opening dna database [$@]" if $@;
         $odba->dnadb($dnadb);
 
         warn "Connected to dna database\n";
@@ -156,7 +156,7 @@ sub variation_satellite_dba_make {
     return unless $options;
 
     # special case, '.' means the Otter database
-    $self->error_exit("cannot specify the otter database for a variation database")
+    die "cannot specify the otter database for a variation database"
         if $options eq '.';
 
     # create the adaptor
@@ -176,7 +176,7 @@ sub satellite_dba_make {
         ## no critic(BuiltinFunctions::ProhibitStringyEval)
         @options = eval $options;
     }
-    $self->error_exit("Error evaluating '$options' : $@") if $@;
+    die "Error evaluating '$options' : $@" if $@;
 
     my %anycase_options = (
          -group     => $metakey,
@@ -190,7 +190,7 @@ sub satellite_dba_make {
     }
 
     my $dba = $adaptor_class->new(%uppercased_options);
-    $self->error_exit("Couldn't connect to '$metakey' satellite db")
+    die "Couldn't connect to '$metakey' satellite db"
         unless $dba;
 
     warn "... with parameters: ".join(', ', map { "$_=".$uppercased_options{$_} } keys %uppercased_options )."\n";
@@ -248,7 +248,7 @@ sub get_slice {
         ? ('type', $type)
         : ('name', $name);
 
-    $self->error_exit("$cs '$segment_attr' attribute not set") unless $segment_name;
+    die "$cs '$segment_attr' attribute not set" unless $segment_name;
 
     $slice =  $dba->get_SliceAdaptor()->fetch_by_region(
         $cs,
@@ -291,7 +291,7 @@ sub check_slice {
     }
     if (@both_strands_used) {
         my $ctg = @both_strands_used == 1 ? 'this contig uses' : 'these contigs use';
-        $self->error_exit("Smap will fail because $ctg both strands in the assembly: @both_strands_used");
+        die "Smap will fail because $ctg both strands in the assembly: @both_strands_used";
     }
 
     return;
