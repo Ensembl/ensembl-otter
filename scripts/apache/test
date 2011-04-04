@@ -11,7 +11,9 @@ use SangerPaths qw{ core bioperl123 ensembl61 otter54 };
 
 use Bio::Otter::ServerScriptSupport;
 
-my $server = Bio::Otter::ServerScriptSupport->new;
+sub test {
+    my ($server) = @_;
+
 my $web = $server->sangerweb;
 
 my $user = $web->username;
@@ -32,8 +34,7 @@ $env .= sprintf "\nSangerWeb username = %s\n", $web->username;
 my $dbh = DBI->connect("DBI:mysql:database=pipe_human;host=otterslave;port=3322", "ottro", undef);
 $env .= "CONNECTED $dbh";
 
-if ($server->local_user) {
-    $server->send_response($env);
-} else {
-    $server->send_response("You are an external user\n");
+return $server->local_user ? $env : "You are an external user\n";
 }
+
+Bio::Otter::ServerScriptSupport->send_response(\&test);
