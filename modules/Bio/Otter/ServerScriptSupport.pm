@@ -382,16 +382,18 @@ sub return_emptyhanded {
     exit(0); # <--- this forces all the scripts to exit normally
 }
 
-############# Creation of an Author object from arguments #######
+############# Creation of an Author object #######
 
 sub make_Author_obj {
-    my ($self, $author_name) = @_;
+    my ($self) = @_;
 
-    $author_name ||= $self->authorized_user;
-
+    my $author_name = $self->authorized_user;
     #my $author_email = $self->require_argument('email');
 
-    return Bio::Vega::Author->new(-name => $author_name, -email => $author_name);
+    return Bio::Vega::Author->new(
+        -name  => $author_name,
+        -email => $author_name,
+        );
 }
 
 
