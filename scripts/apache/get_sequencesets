@@ -11,10 +11,8 @@ use SangerPaths qw{ core bioperl123 ensembl61 otter54 };
 
 use Bio::Otter::ServerScriptSupport;
 
-my $server = Bio::Otter::ServerScriptSupport->new;
-my $xml = '';
-
-eval {
+sub get_sequencesets {
+    my ($server) = @_;
 
     my $dataset = $server->require_argument('dataset');
 
@@ -96,6 +94,7 @@ eval {
         }
     }
 
+    my $xml = '';
 
     $xml .= <<"XML"
   <dataset name="$dataset">
@@ -171,13 +170,11 @@ XML
   </dataset>
 XML
 ;
-};
 
-if ($@) {
-    $server->error_exit($@);
-} else {
-    $server->send_response($xml, 1);
+    return $server->otter_wrap_response($xml);
 }
+
+Bio::Otter::ServerScriptSupport->send_response(\&get_sequencesets);
 
 1;
 
