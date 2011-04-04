@@ -15,8 +15,8 @@ use Bio::Vega::Transform::Otter;
 use Bio::Vega::Transform::XML;
 
 
-{
-    my $server = Bio::Otter::ServerScriptSupport->new;
+sub write_region {
+    my ($server) = @_;
 
     my $odba       = $server->otter_dba();
     my $author_obj = $server->make_Author_obj();
@@ -28,7 +28,7 @@ use Bio::Vega::Transform::XML;
         $parser->parse($xml_string);
     };
     if ($@) {
-        $server->error_exit("Failed converting XML to otter [$@]");
+        die "Failed converting XML to otter [$@]";
     }
 
     # check that the assembly is already loaded in the database and
@@ -85,7 +85,7 @@ use Bio::Vega::Transform::XML;
 
     };
     if ($@) {
-        $server->error_exit("Failed at comparing xml assembly with database assembly [$@]");
+        die "Failed at comparing xml assembly with database assembly [$@]";
     }
     my $output_xml;
     $odba->begin_work;
@@ -95,7 +95,7 @@ use Bio::Vega::Transform::XML;
         my $cb = new Bio::Vega::ContigLockBroker;
         warn "Checking region is locked...\n";
         eval { $cb->check_locks_exist_by_slice($db_slice, $author_obj, $odba); };
-        $server->error_exit("Failed checking locks [$@]") if $@;
+        die "Failed checking locks [$@]" if $@;
         warn "Done checking region is locked.\n";
 
             ## everything that needs saving should use this timestamp:
@@ -210,14 +210,16 @@ use Bio::Vega::Transform::XML;
         $output_xml = $formatter->generate_OtterXML;
     };
     if ($@) {
-        $server->error_exit("Failed writing annotations [$@]");
+        die "Failed writing annotations [$@]";
         $odba->rollback;
     } else {
         $odba->commit;
     }
-    ##send the response
-    $server->send_response($output_xml);
+
+    return $output_xml;
 }
+
+Bio::Otter::ServerScriptSupport->send_response(\&write_region);
 
 #-------------------------------------------
 #          S U B R O U T I N E S
