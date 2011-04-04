@@ -279,19 +279,14 @@ sub send_file {
 sub send_response {
     my ($self, @args) = @_;
 
-    if (ref $self) {
-        $self->_send_response(@args);
+    my $sub = pop @args;
+    my $server = $self->new(@args);
+    my $response;
+    if (eval { $response = $sub->($server); 1; }) {
+        $server->_send_response($response);
     }
     else {
-        my $sub = pop @args;
-        my $server = $self->new(@args);
-        my $response;
-        if (eval { $response = $sub->($server); 1; }) {
-            $server->_send_response($response);
-        }
-        else {
-            $server->error_exit($@);
-        }
+        $server->error_exit($@);
     }
 
     return;
