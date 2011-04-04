@@ -12,7 +12,8 @@ use SangerPaths qw{ core bioperl123 ensembl61 otter54 };
 use DBI;
 
 use Bio::Otter::ServerScriptSupport;
-{
+
+sub get_species {
     my $server = Bio::Otter::ServerScriptSupport->new;
     my $user = $server->authorized_user;
     my $dbh = DBI->connect('DBI:mysql:host=cbi3.internal.sanger.ac.uk', 'genero', undef);
@@ -22,9 +23,11 @@ use Bio::Otter::ServerScriptSupport;
         $tid =~ s/\D+//g;
         push(@taxon, $tid);
     }
-    $server->send_response("User '$user' is fetching taxonomy info for (@taxon)");
+
+    return "User '$user' is fetching taxonomy info for (@taxon)";
 }
 
+Bio::Otter::ServerScriptSupport->send_response(\&get_species);
 
 __END__
 
