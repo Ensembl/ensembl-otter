@@ -14,7 +14,7 @@ sub get_dataset_param {
     my ($self, $dataset_name, $param_name) = @_;
 
     my $all_species = $self->dataset_hash;
-    my $subhash = $all_species->{$dataset_name} || $self->error_exit("Unknown Dataset '$dataset_name'");
+    my $subhash = $all_species->{$dataset_name} || die "Unknown Dataset '$dataset_name'";
     return $subhash->{$param_name};
 }
 
@@ -41,7 +41,7 @@ sub load_species_dat_file {
 
     my $filename = $self->species_dat_filename();
 
-    open my $dat, '<', $filename or $self->error_exit("Can't read species file '$filename' : $!");
+    open my $dat, '<', $filename or die "Can't read species file '$filename' : $!";
 
     my $cursect = undef;
     my $defhash = {};
@@ -55,7 +55,7 @@ sub load_species_dat_file {
 
         if (/\[(.*)\]/) {
             if (!defined($cursect) && $1 ne "defaults") {
-                $self->error_exit("Error: first section in species.dat should be 'defaults'");
+                die "Error: first section in species.dat should be 'defaults'";
             }
             elsif ($1 eq "defaults") {
                 warn "Got default section\n";
@@ -78,7 +78,7 @@ sub load_species_dat_file {
         }
     }
 
-    close $dat or $self->error_exit("Error reading '$filename' : $!");
+    close $dat or die "Error reading '$filename' : $!";
 
     # Have finished with defaults, so we can remove them.
     delete $sp->{'defaults'};
@@ -111,13 +111,6 @@ sub remove_restricted_datasets {
     }
 
     return;
-}
-
-sub error_exit { # to be overloaded
-    my ($self, $message) = @_;
-
-    warn $message, "\n";
-    exit(1);
 }
 
 1;
