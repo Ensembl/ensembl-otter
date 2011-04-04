@@ -11,10 +11,12 @@ use SangerPaths qw{ core bioperl123 ensembl61 otter54 };
 
 use Bio::Otter::ServerScriptSupport;
 
-my $server = Bio::Otter::ServerScriptSupport->new;
-my $user = $server->authorized_user;
-$server->send_response($user);
-
+Bio::Otter::ServerScriptSupport->send_response(
+    sub {
+        my ($server) = @_;
+        my $user = $server->authorized_user;
+        return $user;
+    });
 
 __END__
 
