@@ -14,8 +14,8 @@ use Bio::Vega::ContigLockBroker;
 use Bio::Vega::Transform::Otter;
 
 
-{
-  my $server = Bio::Otter::ServerScriptSupport->new;
+sub unlock_region {
+    my ($server) = @_;
 
   my $odba        = $server->otter_dba();
   my $author_obj  = $server->make_Author_obj();
@@ -40,24 +40,26 @@ use Bio::Vega::Transform::Otter;
       warn "Processed incoming xml file with slice: [$seq_reg_name] [$start] [$end]\n";
   };
   if ($@) {
-      $server->error_exit("Failed converting XML to otter [$@]");
+      die "Failed converting XML to otter [$@]";
   }
   warn "Checking region is locked...\n";
   my $cb=Bio::Vega::ContigLockBroker->new;
   eval { $cb->check_locks_exist_by_slice($slice,$author_obj,$odba); };
   if ($@) {
-      $server->error_exit("Failed checking locks [$@]");
+      die "Failed checking locks [$@]";
   }
   warn "Done checking region is locked.\n";
   warn "Unlocking clones...\n";
   eval{ $cb->remove_by_slice($slice,$author_obj,$odba); };
   if ($@) {
-      $server->error_exit("Failed to unlock clones\n $@\n***\n");
+      die "Failed to unlock clones\n $@\n***\n";
   }
   warn "Done unlocking clones.\n";
-  $server->send_response("<response>\n</response>\n", 1);
 
+  return $server->otter_wrap_response("<response>\n</response>\n");
 }
+
+Bio::Otter::ServerScriptSupport->send_response(\&unlock_region);
 
 1;
 
