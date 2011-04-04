@@ -261,10 +261,8 @@ sub get_slice {
     
     # $self->check_slice($slice);
 
-    unless ($slice) {
-        warn "Could not get a slice, probably not (yet) loaded into satellite db\n";
-        $self->return_emptyhanded();
-    }
+    die "Could not get a slice, probably not (yet) loaded into satellite db"
+        unless $slice;
 
     return $slice;
 }
@@ -295,14 +293,6 @@ sub check_slice {
     }
 
     return;
-}
-
-sub return_emptyhanded { # we probably only want to know about it only if using MFetcher directly,
-                         # otherwise it gets overloaded by ServerScriptSupport
-    my ($self) = @_;
-
-    warn "Slice could not have been created\n";
-    exit(0);
 }
 
 sub otter_assembly_equiv_hash { # $self->{_aeh}{NCBI36}{11} = 'chr11-02';
