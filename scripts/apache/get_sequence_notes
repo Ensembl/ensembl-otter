@@ -11,7 +11,8 @@ use SangerPaths qw{ core bioperl123 ensembl61 otter54 };
 
 use Bio::Otter::ServerScriptSupport;
 
-my $server = Bio::Otter::ServerScriptSupport->new;
+sub get_sequence_notes {
+    my ($server) = @_;
 
 my $asm_type = $server->param('type');
 my $aut_name = $server->param('author');
@@ -58,7 +59,10 @@ while (my ($ctg_name, $author_name, $is_current, $note_time, $timestamp, $note) 
     $output_string .= join("\t", $ctg_name, $author_name, $is_current, $note_time, $timestamp, $note)."\n";
 }
 
-$server->send_response($output_string, 1);
+return $server->otter_wrap_response($output_string);
+}
+
+Bio::Otter::ServerScriptSupport->send_response(\&get_sequence_notes);
 
 1;
 
