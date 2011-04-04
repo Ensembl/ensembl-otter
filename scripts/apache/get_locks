@@ -11,7 +11,8 @@ use SangerPaths qw{ core bioperl123 ensembl61 otter54 };
 
 use Bio::Otter::ServerScriptSupport;
 
-my $server = Bio::Otter::ServerScriptSupport->new;
+sub get_locks {
+    my ($server) = @_;
 
 my $asm_type = $server->param('type');
 my $aut_name = $server->param('author');
@@ -90,7 +91,10 @@ while (my (@columns) = $sth->fetchrow()) {
     $output_string .= join("\t", @columns)."\n";
 }
 
-$server->send_response($output_string, 1);
+    return $server->otter_wrap_response($output_string);
+}
+
+Bio::Otter::ServerScriptSupport->send_response(\&get_locks);
 
 1;
 
