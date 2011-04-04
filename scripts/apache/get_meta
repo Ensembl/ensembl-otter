@@ -11,7 +11,8 @@ use SangerPaths qw{ core bioperl123 ensembl61 otter54 };
 
 use Bio::Otter::ServerScriptSupport;
 
-my $server = Bio::Otter::ServerScriptSupport->new;
+sub get_meta {
+    my $server = @_;
 
 my $sth = $server->otter_dba()->dbc()->prepare(qq{
     SELECT meta_key, meta_value
@@ -33,7 +34,10 @@ while (my ($meta_key, $meta_value) = $sth->fetchrow) {
 
 warn "Total of $counter meta table pairs sent\n";
 
-$server->send_response($output_string, 1);
+    return $server->otter_wrap_response($output_string);
+}
+
+Bio::Otter::ServerScriptSupport->send_response(\&get_meta);
 
 1;
 
