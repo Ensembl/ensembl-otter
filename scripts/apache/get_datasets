@@ -27,10 +27,10 @@ my %secret_params = map { ( $_ => 1 ) } qw{
     DNA_DBNAME
 };
 
-my $server = Bio::Otter::ServerScriptSupport->new;
+sub get_datasets {
+    my ($server) = @_;
 
-my $xml;
-eval {
+    my $xml = '';
     my $species_hash = $server->dataset_hash;
 
     # Only local users get to see mysql connection details
@@ -53,13 +53,11 @@ eval {
         $xml .= qq{    </dataset>\n};
     }
     $xml .= qq{  </datasets>\n};
-};
 
-if ($@) {
-    $server->error_exit($@);
-} else {
-    $server->send_response($xml, 1);
+    return $server->otter_wrap_response($xml);
 }
+
+Bio::Otter::ServerScriptSupport->send_response(\&get_datasets);
 
 1;
 
