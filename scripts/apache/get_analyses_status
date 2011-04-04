@@ -82,10 +82,9 @@ while (my ($cmp_name, $cs_version) = $cmp_sth->fetchrow) {
 my %skeleton_hash = map { ($_ => []) } get_possible_analyses($pdbc);
 my %result_hash   = ();
 
-# If there are no input IDs - just peacefully return an empty list:
 if(! @input_ids) {
     warn "No input IDs\n";
-    $server->return_emptyhanded();
+    return '';
 }
 
 my $input_id_str = join(', ', map { "'$_'" } @input_ids);
