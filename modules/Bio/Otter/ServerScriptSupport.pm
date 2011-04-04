@@ -375,13 +375,6 @@ sub require_argument {
     return $value;
 }
 
-sub return_emptyhanded {
-    my ($self) = @_;
-
-    $self->send_response('', 1);
-    exit(0); # <--- this forces all the scripts to exit normally
-}
-
 ############# Creation of an Author object #######
 
 sub make_Author_obj {
