@@ -394,23 +394,6 @@ sub make_Author_obj {
     return Bio::Vega::Author->new(-name => $author_name, -email => $author_name);
 }
 
-sub fetch_Author_obj {
-    my ($self, $author_name) = @_;
-
-    $author_name ||= $self->authorized_user;
-
-    my $author_adaptor = $self->otter_dba()->get_AuthorAdaptor();
-
-    my $author_obj;
-    eval{
-        $author_obj = $author_adaptor->fetch_by_name($author_name);
-    };
-    if($@){
-        $self->error_exit("Failed to get an author.\n$@") unless $author_obj;
-    }
-    return $author_obj;
-}
-
 
 ############## the requested region: ###########################
 
