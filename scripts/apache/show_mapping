@@ -11,8 +11,8 @@ use SangerPaths qw{ core bioperl123 ensembl61 otter54 };
 
 use Bio::Otter::ServerScriptSupport;
 
-
-my $server = Bio::Otter::ServerScriptSupport->new;
+sub show_mapping {
+    my ($server) = @_;
 
 my $csver_cmp = $server->require_argument('csver');
 my $csver_asm = 'Otter';
@@ -49,7 +49,10 @@ while (my ($asm_name, $cmp_name, $asm_start, $asm_end, $cmp_start, $cmp_end) = $
         $csver_cmp, $cmp_name, comma_separate_thousands($cmp_start), comma_separate_thousands($cmp_end);
 }
 
-$server->send_response($output_string, 1);
+    return $server->otter_wrap_response($output_string);
+}
+
+Bio::Otter::ServerScriptSupport->send_response(\&show_mapping);
 
 sub comma_separate_thousands {
     my ($num) = @_;
