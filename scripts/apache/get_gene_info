@@ -11,11 +11,11 @@ use SangerPaths qw{ core bioperl123 ensembl61 otter54 };
 
 use Bio::Otter::ServerScriptSupport;
 
-{
-    my $server = Bio::Otter::ServerScriptSupport->new;
+sub get_gene_info {
+    my ($server) = @_;
 
     my $output_string = '';
-    eval {
+
         my $sql = q{
             SELECT gnu.consortium_id
               , gsid1.stable_id
@@ -61,25 +61,11 @@ use Bio::Otter::ServerScriptSupport;
             $output_string .= join("\t", $consortium_id || '', $stable_id, $current_name) . "\n";
             $seen_stable{$stable_id} = 1;
         }
-    };
 
-    if ($@) {
-        print $server->header(
-            -status => 500,
-            -type   => 'text/plain',
-            ),
-            "ERROR: $@";
-        exit(1);
-    } else {
-        print $server->header(
-            -status => 200,
-            -type   => 'text/plain',
-            ),
-            $output_string;
-    }
+    return $output_string;
 }
 
-
+Bio::Otter::ServerScriptSupport->send_response(\&get_gene_info);
 
 
 __END__
