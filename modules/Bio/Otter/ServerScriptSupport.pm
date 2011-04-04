@@ -369,7 +369,7 @@ sub require_argument {
 
     my $value = $self->param($argname);
 
-    $self->error_exit("No '$argname' argument defined")
+    die "No '$argname' argument defined"
         unless defined $value;
 
     return $value;
