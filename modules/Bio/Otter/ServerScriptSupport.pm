@@ -299,15 +299,16 @@ sub _send_response {
     my $content_type = $self->{-content_type};
 
     if ($COMPRESSION_ENABLED && $self->{-compression}) {
-        print $self->header(
-            -status             => 200,
-            -type               => $content_type,
-            -content_encoding   => 'gzip',
-        );
-
         my $gzipped;
         gzip \$response => \$gzipped;
-        print $gzipped;
+        print
+            $self->header(
+                -status           => 200,
+                -type             => $content_type,
+                -content_encoding => 'gzip',
+            ),
+            $gzipped,
+            ;
     }
     else {
         print
