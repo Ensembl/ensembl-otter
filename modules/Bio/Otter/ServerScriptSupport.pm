@@ -286,7 +286,16 @@ sub send_response {
         $server->_send_response($response);
     }
     else {
-        $server->error_exit($@);
+        my $error = $@;
+        chomp($error);
+        print
+            $server->header(
+                -status => 417,
+                -type   => 'text/plain',
+            ),
+            $server->otter_wrap_response(" <response>\n    ERROR: $error\n </response>\n"),
+            ;
+        warn "ERROR: $error\n";
     }
 
     return;
@@ -339,21 +348,6 @@ sub unauth_exit {
         -status => 403,
         -type   => 'text/plain',
         ), $reason;
-    exit(1);
-}
-
-sub error_exit {
-    my ($self, $reason) = @_;
-
-    chomp($reason);
-
-    print $self->header(
-        -status => 417,
-        -type   => 'text/plain',
-        ),
-      $self->otter_wrap_response(" <response>\n    ERROR: $reason\n </response>\n");
-    warn "ERROR: $reason\n";
-
     exit(1);
 }
 
