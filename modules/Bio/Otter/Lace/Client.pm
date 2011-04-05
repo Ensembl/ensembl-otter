@@ -877,13 +877,22 @@ sub get_all_DataSets {
 
     my $ds = $self->{'_datasets'};
     if (! $ds) {
+
         my $datasets_xml =
             $self->http_response_content(
                 'GET', 'get_datasets', {});
-        my $datasets_hash = XMLin($datasets_xml)->{datasets}{dataset};
+
+        my $datasets_hash =
+            XMLin($datasets_xml,
+                  ForceArray => [ qw(
+                      dataset
+                      ) ],
+            )->{datasets}{dataset};
+
         my @datasets = map {
             $self->_make_dataset($_, $datasets_hash->{$_});
         } keys %{$datasets_hash};
+
         $ds = $self->{'_datasets'} =
             [ sort {$a->name cmp $b->name} @datasets ];
     }
