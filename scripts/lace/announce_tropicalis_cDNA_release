@@ -76,7 +76,7 @@ my $curr_all_cdnas        = `gzip -cd $all_cdna_file | grep -c "^>"`; chomp $cur
 my $last_all_cdnas        = `gzip -cd ../archive/$last_all_cdna_file | grep -c "^>"`; chomp $last_all_cdnas;
 my $new_all_cdnas         = $curr_all_cdnas - $last_all_cdnas;
 
-my $letter=<<LTR;
+my $letter=<<"LTR";
 Dear X. tropicalis researcher:
 
 The Sanger Xenopus tropicalis EST/cDNA project are pleased to announce the
