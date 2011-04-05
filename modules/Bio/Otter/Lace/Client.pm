@@ -1058,12 +1058,12 @@ sub _make_CloneSequence {
 
     while (my ($key, $value) = each %{$params}) {
         if ($key eq 'chr') {
-            $clonesequence->chromosome($params->{name});
+            $clonesequence->chromosome($value->{name});
         }
         elsif ($key eq 'lock') {
 
             my ($author_name, $author_email, $host_name, $lock_id) =
-                @{$params}{qw( author_name email host_name lock_id )};
+                @{$value}{qw( author_name email host_name lock_id )};
 
             my $author = Bio::Vega::Author->new(
                 -name  => $author_name,
