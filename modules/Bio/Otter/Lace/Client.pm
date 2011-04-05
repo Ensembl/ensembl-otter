@@ -958,14 +958,14 @@ sub get_all_SequenceSets_for_DataSet {
 
   my $dataset_name = $ds->name;
 
-  my $sequencessets_xml =
+  my $sequencesets_xml =
       $self->http_response_content(
           'GET', 'get_sequencesets', {
               'dataset' => $dataset_name,
           });
 
-  my $sequencessets_hash =
-      XMLin($sequencessets_xml,
+  my $sequencesets_hash =
+      XMLin($sequencesets_xml,
             ForceArray => [ qw(
                 dataset
                 sequenceset
@@ -978,13 +978,13 @@ sub get_all_SequenceSets_for_DataSet {
             },
       )->{dataset}{$dataset_name}{sequencesets}{sequenceset};
 
-  my $sequencessets = [
+  my $sequencesets = [
       map {
           $self->_make_SequenceSet(
-              $_, $dataset_name, $sequencessets_hash->{$_});
-      } keys %{$sequencessets_hash} ];
+              $_, $dataset_name, $sequencesets_hash->{$_});
+      } keys %{$sequencesets_hash} ];
 
-  return $sequencessets;
+  return $sequencesets;
 }
 
 sub _make_SequenceSet {
