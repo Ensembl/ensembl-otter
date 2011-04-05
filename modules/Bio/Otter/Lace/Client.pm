@@ -887,6 +887,9 @@ sub get_all_DataSets {
                   ForceArray => [ qw(
                       dataset
                       ) ],
+                  KeyAttr => {
+                      dataset => 'name',
+                  },
             )->{datasets}{dataset};
 
         my @datasets = map {
