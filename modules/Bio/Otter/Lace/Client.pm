@@ -22,11 +22,11 @@ use Bio::Vega::ContigLock;
 
 use Bio::Otter::Lace::Defaults;
 use Bio::Otter::Lace::DataSet;
+use Bio::Otter::Lace::SequenceSet;
 use Bio::Otter::Lace::PipelineStatus;
 use Bio::Otter::Lace::SequenceNote;
 use Bio::Otter::Lace::AceDatabase;
 use Bio::Otter::LogFile;
-use Bio::Otter::Transform::SequenceSets;
 use Bio::Otter::Transform::CloneSequences;
 
 sub new {
@@ -944,21 +944,53 @@ sub get_all_SequenceSets_for_DataSet {
   my( $self, $ds ) = @_;
   return [] unless $ds;
 
-  my $content = $self->http_response_content(
-                       'GET',
-                       'get_sequencesets',
-                       {
-                        'dataset'  => $ds->name(),
-                       }
-                      );
-  # stream parsing expat non-validating parser
-  my $ssp = Bio::Otter::Transform::SequenceSets->new();
-  $ssp->set_property('dataset_name', $ds->name);
-  my $p   = $ssp->my_parser();
-  $p->parse($content);
-  my $seq_sets = $ssp->objects;
+  my $dataset_name = $ds->name;
 
-  return $seq_sets;
+  my $sequencessets_xml =
+      $self->http_response_content(
+          'GET', 'get_sequencesets', {
+              'dataset' => $dataset_name,
+          });
+
+  my $sequencessets_hash =
+      XMLin($sequencessets_xml,
+            ForceArray => [ qw(
+                dataset
+                sequenceset
+                subregion
+                ) ],
+      )->{dataset}{$dataset_name}{sequencesets}{sequenceset};
+
+  my $sequencessets = [
+      map {
+          $self->_make_SequenceSet(
+              $_, $dataset_name, $sequencessets_hash->{$_});
+      } keys %{$sequencessets_hash} ];
+
+  return $sequencessets;
+}
+
+sub _make_SequenceSet {
+    my ($self, $name, $dataset_name, $params) = @_;
+
+    my $sequenceset = Bio::Otter::Lace::SequenceSet->new;
+    $sequenceset->name($name);
+    $sequenceset->dataset_name($dataset_name);
+
+    while (my ($key, $value) = each %{$params}) {
+        if ($key eq 'subregion') {
+            while (my ($sr_name, $sr_params) = each %{$value}) {
+                next if $sr_params->{hidden};
+                $sequenceset->set_subset(
+                    $sr_name, [split(/,/, $sr_params->{content})]);
+            }
+        }
+        elsif ($sequenceset->can($key)) {
+            $sequenceset->$key($value);
+        }
+    }
+
+    return $sequenceset;
 }
 
 sub get_all_CloneSequences_for_DataSet_SequenceSet {
