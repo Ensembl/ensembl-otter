@@ -971,6 +971,11 @@ sub get_all_SequenceSets_for_DataSet {
                 sequenceset
                 subregion
                 ) ],
+            KeyAttr => {
+                dataset     => 'name',
+                sequenceset => 'name',
+                subregion   => 'name',
+            },
       )->{dataset}{$dataset_name}{sequencesets}{sequenceset};
 
   my $sequencessets = [
