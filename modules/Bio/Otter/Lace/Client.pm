@@ -21,11 +21,11 @@ use Bio::Vega::Author;
 use Bio::Vega::ContigLock;
 
 use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Lace::DataSet;
 use Bio::Otter::Lace::PipelineStatus;
 use Bio::Otter::Lace::SequenceNote;
 use Bio::Otter::Lace::AceDatabase;
 use Bio::Otter::LogFile;
-use Bio::Otter::Transform::DataSets;
 use Bio::Otter::Transform::SequenceSets;
 use Bio::Otter::Transform::CloneSequences;
 
@@ -877,24 +877,32 @@ sub get_all_DataSets {
 
     my $ds = $self->{'_datasets'};
     if (! $ds) {
-      
-        my $content = $self->http_response_content(
-            'GET',
-            'get_datasets',
-            {},
-        );
-
-        # stream parsing expat non-validating parser
-        my $dsp = Bio::Otter::Transform::DataSets->new();
-        my $p = $dsp->my_parser();
-        $p->parse($content);
+        my $datasets_xml =
+            $self->http_response_content(
+                'GET', 'get_datasets', {});
+        my $datasets_hash = XMLin($datasets_xml)->{datasets}{dataset};
+        my @datasets = map {
+            $self->_make_dataset($_, $datasets_hash->{$_});
+        } keys %{$datasets_hash};
         $ds = $self->{'_datasets'} =
-            [ sort {$a->name cmp $b->name} @{$dsp->objects} ];
-        foreach my $dataset (@$ds) {
-            $dataset->Client($self);
-        }
+            [ sort {$a->name cmp $b->name} @datasets ];
     }
+
     return @$ds;
+}
+
+sub _make_dataset {
+    my ($self, $name, $params) = @_;
+
+    my $dataset = Bio::Otter::Lace::DataSet->new;
+    $dataset->Client($self);
+    $dataset->name($name);
+    while (my ($key, $value) = each %{$params}) {
+        my $method = uc $key;
+        $dataset->$method($value) if $dataset->can($method);
+    }
+
+    return $dataset;
 }
 
 sub get_server_otter_config {
