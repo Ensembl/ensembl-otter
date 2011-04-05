@@ -36,7 +36,7 @@ sub otter_dba {
 
 sub pipeline_dba {
     my ($self) = @_;
-    return $self->{_otter_dba} ||=
+    return $self->{_pipeline_dba} ||=
         $self->server->pipeline_dba;
 }
 
