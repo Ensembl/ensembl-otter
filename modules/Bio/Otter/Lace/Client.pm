@@ -1028,7 +1028,7 @@ sub get_all_CloneSequences_for_DataSet_SequenceSet {
         }
     );
 
-  my $clonesequences_hash =
+  my $clonesequences_array =
       XMLin($clonesequences_xml,
             ForceArray => [ qw(
                 dataset
@@ -1038,25 +1038,23 @@ sub get_all_CloneSequences_for_DataSet_SequenceSet {
             KeyAttr => {
                 dataset       => 'name',
                 sequenceset   => 'name',
-                clonesequence => 'clone_name',
             },
       )->{dataset}{$dataset_name}{sequenceset}{$sequenceset_name}{clonesequences}{clonesequence};
 
   my $clonesequences = [
       map {
           $self->_make_CloneSequence(
-              $_, $dataset_name, $sequenceset_name, $clonesequences_hash->{$_});
-      } keys %{$clonesequences_hash} ];
+              $dataset_name, $sequenceset_name, $_);
+      } @{$clonesequences_array} ];
   $ss->CloneSequence_list($clonesequences);
 
   return $clonesequences;
 }
 
 sub _make_CloneSequence {
-    my ($self, $name, $dataset_name, $sequenceset_name, $params) = @_;
+    my ($self, $dataset_name, $sequenceset_name, $params) = @_;
 
     my $clonesequence = Bio::Otter::Lace::CloneSequence->new;
-    $clonesequence->clone_name($name);
 
     while (my ($key, $value) = each %{$params}) {
         if ($key eq 'chr') {
