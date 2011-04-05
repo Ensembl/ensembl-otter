@@ -268,7 +268,7 @@ sub output_html {
   my ($annotated_gene_set_type, $sum_annots_of_gtypes_of_atype,
       $total_annots_of_all_atype, $coding_locus_trans, $html_output) = @_;
 
-  my $top =<<TOP;
+  my $top =<<'TOP';
 <html>
 <body>
 TOP
