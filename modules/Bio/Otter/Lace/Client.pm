@@ -890,7 +890,7 @@ sub get_all_DataSets {
             )->{datasets}{dataset};
 
         my @datasets = map {
-            $self->_make_dataset($_, $datasets_hash->{$_});
+            $self->_make_DataSet($_, $datasets_hash->{$_});
         } keys %{$datasets_hash};
 
         $ds = $self->{'_datasets'} =
@@ -900,7 +900,7 @@ sub get_all_DataSets {
     return @$ds;
 }
 
-sub _make_dataset {
+sub _make_DataSet {
     my ($self, $name, $params) = @_;
 
     my $dataset = Bio::Otter::Lace::DataSet->new;
