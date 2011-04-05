@@ -15,6 +15,8 @@ use URI::Escape qw{ uri_escape };
 use HTTP::Cookies::Netscape;
 use Term::ReadKey qw{ ReadMode ReadLine };
 
+use XML::Simple;
+
 use Bio::Vega::Author;
 use Bio::Vega::ContigLock;
 
