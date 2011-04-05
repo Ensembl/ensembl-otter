@@ -23,11 +23,11 @@ use Bio::Vega::ContigLock;
 use Bio::Otter::Lace::Defaults;
 use Bio::Otter::Lace::DataSet;
 use Bio::Otter::Lace::SequenceSet;
+use Bio::Otter::Lace::CloneSequence;
 use Bio::Otter::Lace::PipelineStatus;
 use Bio::Otter::Lace::SequenceNote;
 use Bio::Otter::Lace::AceDatabase;
 use Bio::Otter::LogFile;
-use Bio::Otter::Transform::CloneSequences;
 
 sub new {
     my( $pkg ) = @_;
@@ -1008,20 +1008,76 @@ sub get_all_CloneSequences_for_DataSet_SequenceSet {
   my $csl = $ss->CloneSequence_list;
   return $csl if (defined $csl && scalar @$csl);
 
-  my $content = $self->http_response_content(
+  my $dataset_name     = $ds->name;
+  my $sequenceset_name = $ss->name;
+
+  my $clonesequences_xml = $self->http_response_content(
         'GET',
         'get_clonesequences_fast',
         {
-            'dataset'     => $ds->name(),
-            'sequenceset' => $ss->name(),
+            'dataset'     => $dataset_name,
+            'sequenceset' => $sequenceset_name,
         }
     );
-  # stream parsing expat non-validating parser
-  my $csp = Bio::Otter::Transform::CloneSequences->new();
-  $csp->my_parser()->parse($content);
-  $csl=$csp->objects;
-  $ss->CloneSequence_list($csl);
-  return $csl;
+
+  my $clonesequences_hash =
+      XMLin($clonesequences_xml,
+            ForceArray => [ qw(
+                dataset
+                sequenceset
+                clonesequence
+                ) ],
+            KeyAttr => {
+                dataset       => 'name',
+                sequenceset   => 'name',
+                clonesequence => 'clone_name',
+            },
+      )->{dataset}{$dataset_name}{sequenceset}{$sequenceset_name}{clonesequences}{clonesequence};
+
+  my $clonesequences = [
+      map {
+          $self->_make_CloneSequence(
+              $_, $dataset_name, $sequenceset_name, $clonesequences_hash->{$_});
+      } keys %{$clonesequences_hash} ];
+  $ss->CloneSequence_list($clonesequences);
+
+  return $clonesequences;
+}
+
+sub _make_CloneSequence {
+    my ($self, $name, $dataset_name, $sequenceset_name, $params) = @_;
+
+    my $clonesequence = Bio::Otter::Lace::CloneSequence->new;
+    $clonesequence->clone_name($name);
+
+    while (my ($key, $value) = each %{$params}) {
+        if ($key eq 'chr') {
+            $clonesequence->chromosome($params->{name});
+        }
+        elsif ($key eq 'lock') {
+
+            my ($author_name, $author_email, $host_name, $lock_id) =
+                @{$params}{qw( author_name email host_name lock_id )};
+
+            my $author = Bio::Vega::Author->new(
+                -name  => $author_name,
+                -email => $author_email,
+                );
+
+            my $clone_lock = Bio::Vega::ContigLock->new(
+                -author   => $author,
+                -hostname => $host_name,
+                -dbID     => $lock_id,
+                );
+
+            $clonesequence->set_lock_status($clone_lock);
+        }
+        elsif ($clonesequence->can($key)) {
+            $clonesequence->$key($value);
+        }
+    }
+
+    return $clonesequence;
 }
 
 sub get_lace_acedb_tar {
