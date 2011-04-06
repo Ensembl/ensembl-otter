@@ -683,7 +683,8 @@ sub script_dir {
     my $script_dir = $ENV{'OTTER_HOME'} . '/ensembl-otter/scripts';
     unless (-d $script_dir) {
         $script_dir = undef;
-        foreach my $otter (grep { m{ensembl-otter/} } @INC) {
+        foreach (grep { m{ensembl-otter/} } @INC) {
+            my $otter = $_;     # Make a copy so that we don't modify @INC
             $otter =~ s{ensembl-otter/.+}{ensembl-otter/scripts};
             if (-d $otter) {
                 $script_dir = $otter;

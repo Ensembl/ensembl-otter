@@ -56,6 +56,7 @@ sub populate {
     
     my (@to_fetch);
     foreach my $name (@$name_list) {
+        # my ($prefix, $acc, $varsplice, $sv) = $name =~ /$magic_evi_name_matcher/;
         $check_full->execute($name);
         my ($have_full) = $check_full->fetchrow;
         if ($have_full) {
