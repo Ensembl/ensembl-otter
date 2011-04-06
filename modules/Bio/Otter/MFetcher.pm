@@ -52,7 +52,7 @@ sub otter_dba {
 
     if(@args) { # let's check that the class is ok
         my $odba = shift @args;
-        if(UNIVERSAL::isa($odba, $adaptor_class)) {
+        if(eval { $odba->isa($adaptor_class) }) {
             return $self->{'_odba'} = $odba;
         } else {
             die "The object you assign to otter_dba must be a '$adaptor_class'";
