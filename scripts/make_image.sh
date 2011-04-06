@@ -3,7 +3,7 @@
 touch otterlace.app
 
 # we bump the release number and commit this file, just BEFORE making the dist image
-release="otterlace_mac_intel-53.06"
+release="otterlace_mac_intel-53.07"
 
 sparse="$release.sparseimage"
 dmg="$release.dmg"

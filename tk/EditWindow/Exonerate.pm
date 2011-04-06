@@ -466,14 +466,16 @@ sub get_query_seq {
 
     if (my $string = $self->fasta_txt->get('1.0', 'end')) {
         if ($string =~ /\S/ and $string !~ />/) {
-            print "creating new seq tag num: $seq_tag\n";
+            warn "creating new seq tag num: $seq_tag\n";
             $string = ">OTF_seq_$seq_tag\n" . $string;
             $seq_tag++;
         }
         push @seqs, Hum::FastaFileIO->new_String_IO($string)->read_all_sequences;
     }
-    if ($self->get_entry('fasta_file')) {
-        push @seqs, Hum::FastaFileIO->new($self->get_entry('fasta_file'))->read_all_sequences;
+    if (my $file_name = $self->get_entry('fasta_file')) {
+        # Trim trailing or leading whitespace from file name
+        $file_name =~ s/^\s+|\s+$//g;
+        push @seqs, Hum::FastaFileIO->new($file_name)->read_all_sequences;
     }
 
     my @accessions = map { $_->name } @seqs;
@@ -481,7 +483,6 @@ sub get_query_seq {
     # get seqs from accession numbers supplied by the user
 
     my @supplied_accs;
-
     if (my $txt = $self->get_entry('match')) {
         @supplied_accs = split(/[,;\|\s]+/, $txt);
         push @accessions, @supplied_accs;
@@ -496,11 +497,13 @@ sub get_query_seq {
     $cache->populate(\@accessions);
 
     # add type and full accession information to the existing sequences
-
     my ($missing_msg, $remapped_msg);
     for my $seq (@seqs) {
         my $name = $seq->name;
         if (my ($type, $full_acc) = $cache->type_and_name_from_accession($name)) {
+            ### Might want to be paranoid and check that the sequence of
+            ### supplied sequences matches the pfetched sequence where the
+            ### names of sequences are public accessions.
             $seq->type($type);
             $seq->name($full_acc);
             if ($name ne $full_acc) {
@@ -525,7 +528,12 @@ sub get_query_seq {
         }
     }
 
-    my %seqs_fetched = map {$_->name => $_} Hum::Pfetch::get_Sequences(@to_pfetch);
+    my %seqs_fetched;
+    if (@to_pfetch) {
+        foreach my $seq (Hum::Pfetch::get_Sequences(@to_pfetch)) {
+            $seqs_fetched{$seq->name} = $seq;
+        }
+    }
 
     foreach my $acc (@supplied_accs) {
         my ($type, $full) = @{$acc_type_full{$acc}};
