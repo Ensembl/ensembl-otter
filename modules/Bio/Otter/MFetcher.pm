@@ -63,7 +63,7 @@ sub otter_dba {
     my( $odba, $dnadb );
 
     if(my $dbname = $self->current_dataset_param('DBNAME')) {
-        eval {
+        die "Failed opening otter database [$@]" unless eval {
            $odba = $adaptor_class->new( -host       => $self->current_dataset_param('HOST'),
                                         -port       => $self->current_dataset_param('PORT'),
                                         -user       => $self->current_dataset_param('USER'),
@@ -72,8 +72,8 @@ sub otter_dba {
                                         -group      => 'otter',
                                         -species    => $self->dataset_name,
                                         );
+           1;
         };
-        die "Failed opening otter database [$@]" if $@;
 
         warn "Connected to otter database\n";
     } else {
@@ -81,7 +81,7 @@ sub otter_dba {
     }
 
     if(my $dna_dbname = $self->current_dataset_param('DNA_DBNAME')) {
-        eval {
+        die "Failed opening dna database [$@]" unless eval {
             $dnadb = new Bio::EnsEMBL::DBSQL::DBAdaptor( -host      => $self->current_dataset_param('DNA_HOST'),
                                                          -port      => $self->current_dataset_param('DNA_PORT'),
                                                          -user      => $self->current_dataset_param('DNA_USER'),
@@ -90,8 +90,8 @@ sub otter_dba {
                                                          -group     => 'dnadb',
                                                          -species   => $self->dataset_name,
                                                          );
+            1;
         };
-        die "Failed opening dna database [$@]" if $@;
         $odba->dnadb($dnadb);
 
         warn "Connected to dna database\n";
