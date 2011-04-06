@@ -345,8 +345,11 @@ sub set_filters_wanted {
     my @filters = values %{$self->AceDatabase->filters};
     my $selection = $selection_by_species->{$self->species};
     foreach my $filter_entry (@filters) {
-        my $name = $filter_entry->{'filter'}->name;
-        $filter_entry->{'state'}{'wanted'} = $selection->{$name};
+        my $filter = $filter_entry->{'filter'};
+        my $name = $filter->name;
+        my $wanted = $selection->{$name};
+        $filter->wanted($wanted);
+        $filter_entry->{'state'}{'wanted'} = $wanted;
     }
  
     return;
@@ -417,7 +420,10 @@ sub change_checkbutton_state {
     
     for (my $i = 0; $i < keys %{ $self->AceDatabase->filters }; $i++) {
         my $cb = $self->hlist->itemCget($i, 0, '-widget');
-        $cb->$fn if $cb->cget('-selectcolor') eq $state_color;
+        if ($cb->cget('-selectcolor') eq $state_color) {
+            $cb->$fn;
+            $cb->Callback('-command'); # NB: invoke does not work here: it toggles the checkbutton!
+        }
     }
 
     return;
@@ -456,11 +462,14 @@ sub show_filters {
         elsif ($state_hash->{done}) {
             $cb_color = $STATE_COLORS{'done'};
         }
-        
+
         $hlist->itemCreate($i, 0, 
                            -itemtype => 'window', 
                            -widget => $hlist->Checkbutton(
                                -variable => \ $state_hash->{wanted},
+                               -command => sub {
+                                   $filter->wanted($state_hash->{wanted});
+                               },
                                -onvalue => 1,
                                -offvalue => 0,
                                -anchor => 'w',
@@ -473,6 +482,7 @@ sub show_filters {
             $cb->configure(-command => sub { $cb->select() });
             if (! $state_hash->{wanted}) {
                 warn "filter '$name' done but not wanted ???";
+                $filter->wanted(1);
                 $state_hash->{wanted} = 1;
             }
         }
