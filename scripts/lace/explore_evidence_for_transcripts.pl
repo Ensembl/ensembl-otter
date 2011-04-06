@@ -399,7 +399,7 @@ sub make_ranked_map {
         $ele->{_otter_rank} = $i;
 
         my $key;
-        if (UNIVERSAL::can($ele,$map_key)) {
+        if (eval { $ele->can($map_key) }) {
             $key = $ele->$map_key;
         } else {
             $key = $ele->{$map_key};
