@@ -493,17 +493,16 @@ sub fetch_mapped_features {
         my $odba = $self->otter_dba();
         my $original_slice_2 = $self->get_slice($odba, $cs, $name, $type, $start, $end, $csver_orig);
         my $proj_segments_2;
-        eval {
+        die "Unable to project: $type:$csver_orig($start..$end)->$csver_remote. Check the mapping.\n$@"
+            unless eval {
             $proj_segments_2 = $original_slice_2->project( $cs, $csver_remote );
             # Try to map to scaffold if coordinate system exists and mapping to chromosome failed
             # allow getting ensembl objects from Zfish scaffolds
             if(!@$proj_segments_2 && $odba->get_CoordSystemAdaptor->fetch_by_name('scaffold',$csver_remote)) {
                 $proj_segments_2 = $original_slice_2->project( 'scaffold', $csver_remote );
             }
-        };
-        if ($@ || ! @$proj_segments_2) {
-            die "Unable to project: $type:$csver_orig($start..$end)->$csver_remote. Check the mapping.\n$@";
-        }
+            1;
+        } && @$proj_segments_2;
         warn "Found ".scalar(@$proj_segments_2)." projection segments on mapper when projecting to $cs:$csver_remote\n";
 
         # group the projected slices by their chromosome and,
