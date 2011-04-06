@@ -418,7 +418,7 @@ sub SubSeq {
 
     if ($sub) {
         my $expected = 'Hum::Ace::SubSeq';
-        unless (UNIVERSAL::isa($sub, $expected)) {
+        unless (eval { $sub->isa($expected) }) {
             confess "Expected a '$expected', but got '$sub'";
         }
         $self->{'_SubSeq'} = $sub;
