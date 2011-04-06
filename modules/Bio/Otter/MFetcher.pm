@@ -10,7 +10,7 @@ package Bio::Otter::MFetcher;
 
 use strict;
 use warnings;
-use Carp qw{ longmess };
+use Carp;
 
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
