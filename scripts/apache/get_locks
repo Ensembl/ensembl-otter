@@ -15,7 +15,6 @@ sub get_locks {
     my ($server) = @_;
 
 my $asm_type = $server->param('type');
-my $aut_name = $server->param('author');
 
 my $sql = qq{
     SELECT DISTINCT cl.name
@@ -73,8 +72,6 @@ my $sql = qq{
       AND chr2ctg.cmp_seq_region_id = ctg.seq_region_id }
     : ''
   )
-
-  . ($aut_name ? qq{ AND aut.author_name = "$aut_name" } : '')
 
   . qq{
        AND l.contig_lock_id IS NOT NULL
