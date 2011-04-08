@@ -14,7 +14,7 @@ use Bio::Otter::ServerScriptSupport;
 sub get_sequence_notes {
     my ($server) = @_;
 
-my $asm_type = $server->param('type');
+my $asm_type = $server->require_argument('type');
 
 my $sql = qq{
     SELECT ctg.name,
@@ -23,18 +23,15 @@ my $sql = qq{
            sn.note_time,
            UNIX_TIMESTAMP(sn.note_time) as ts,
            sn.note
-      FROM }
-.($asm_type ? qq{ assembly asm, seq_region chr,} : '' )
-.qq{
+      FROM assembly asm, seq_region chr,
            seq_region ctg,
            sequence_note sn,
            author aut
-     WHERE }
-.($asm_type ? qq{ chr.name = "$asm_type" AND
-                  asm.asm_seq_region_id = chr.seq_region_id AND
-                  asm.cmp_seq_region_id = ctg.seq_region_id AND } : '' )
-.qq{       sn.seq_region_id = ctg.seq_region_id }
-.qq{   AND sn.author_id = aut.author_id
+     WHERE chr.name = "$asm_type"
+       AND asm.asm_seq_region_id = chr.seq_region_id
+       AND asm.cmp_seq_region_id = ctg.seq_region_id
+       AND sn.seq_region_id = ctg.seq_region_id 
+       AND sn.author_id = aut.author_id
   GROUP BY ctg.name,
            aut.author_name,
            sn.is_current,
