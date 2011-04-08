@@ -61,17 +61,13 @@ SQL
 sub get_locks {
     my ($server) = @_;
 
-my $asm_type = $server->require_argument('type');
-
-
-
-my $sth = $server->otter_dba()->dbc()->prepare($select_locks_sql);
-$sth->execute($asm_type);
-
-my $output_string = '';
-while (my (@columns) = $sth->fetchrow()) {
-    $output_string .= join("\t", @columns)."\n";
-}
+    my $asm_type = $server->require_argument('type');
+    my $sth = $server->otter_dba()->dbc()->prepare($select_locks_sql);
+    $sth->execute($asm_type);
+    my $output_string = '';
+    while (my (@columns) = $sth->fetchrow()) {
+        $output_string .= join("\t", @columns)."\n";
+    }
 
     return $server->otter_wrap_response($output_string);
 }
