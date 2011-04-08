@@ -55,6 +55,12 @@ sub _filter_by_name {
         $filter->$meth($arg);
     }
 
+    if (@{ $filter->featuresets } > 1
+        && $filter->zmap_style) {
+        warn "Filter $name: You can't specify a zmap_style for a filter with multiple featuresets.";
+        return;
+    }
+
     return $filter;
 }
 
@@ -73,11 +79,6 @@ sub _filters {
         my $filter = $self->filter_by_name($name);
         next unless $filter;
         $filter->wanted($wanted);
-        if (scalar(@{ $filter->featuresets }) > 1
-            && $filter->zmap_style) {
-            warn "Filter $name: You can't specify a zmap_style for a filter with multiple featuresets.";
-            next;
-        }
         push @$filters, $filter;
     }
 
