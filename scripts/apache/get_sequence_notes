@@ -27,7 +27,7 @@ my $sql = qq{
            seq_region ctg,
            sequence_note sn,
            author aut
-     WHERE chr.name = "$asm_type"
+     WHERE chr.name = ?
        AND asm.asm_seq_region_id = chr.seq_region_id
        AND asm.cmp_seq_region_id = ctg.seq_region_id
        AND sn.seq_region_id = ctg.seq_region_id 
@@ -41,7 +41,7 @@ my $sql = qq{
 };
 
 my $sth = $server->otter_dba()->dbc()->prepare($sql);
-$sth->execute();
+$sth->execute($asm_type);
 
 my $output_string = '';
 while (my ($ctg_name, $author_name, $is_current, $note_time, $timestamp, $note) = $sth->fetchrow()) {
