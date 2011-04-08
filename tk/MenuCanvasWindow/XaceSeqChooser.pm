@@ -7,8 +7,8 @@ use 5.006_001;  # For qr support
 use Carp;
 use Scalar::Util 'weaken';
 
-use Tk::Dialog;
-use Tk::Balloon;
+require Tk::Dialog;
+require Tk::Balloon;
 
 use Hum::Ace::SubSeq;
 use Hum::Ace::Locus;
