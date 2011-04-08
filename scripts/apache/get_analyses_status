@@ -13,19 +13,22 @@ use Bio::Otter::ServerScriptSupport;
 
 my $ana_root = 'SubmitContig';
 
+my $select_analyses_sql = <<'SQL'
+SELECT rc.rule_condition
+     , a.logic_name
+FROM analysis a
+   , rule_goal rg
+   , rule_conditions rc
+WHERE a.analysis_id = rg.goal
+  AND rg.rule_id = rc.rule_id
+SQL
+    ;
+
 sub get_possible_analyses {
     my ($pdbc) = @_;
 
     my %rule = ();
-    my $rule_sth = $pdbc->prepare(qq{
-        SELECT rc.rule_condition
-             , a.logic_name
-        FROM analysis a
-           , rule_goal rg
-           , rule_conditions rc
-        WHERE a.analysis_id = rg.goal
-          AND rg.rule_id = rc.rule_id
-        });
+    my $rule_sth = $pdbc->prepare($select_analyses_sql);
     $rule_sth->execute;
     while (my ($condition, $logic_name) = $rule_sth->fetchrow) {
         push @{$rule{$condition}}, $logic_name;
