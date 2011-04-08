@@ -12,7 +12,7 @@ use SangerPaths qw{ core bioperl123 ensembl61 otter55 };
 use Bio::Otter::ServerScriptSupport;
 
 sub get_meta {
-    my $server = @_;
+    my ($server) = @_;
 
 my $sth = $server->otter_dba()->dbc()->prepare(qq{
     SELECT meta_key, meta_value
