@@ -262,8 +262,9 @@ sub do_rename_locus {
 
     eval {
         my @xml;
+        my $offset = $self->AceDatabase->offset;
         foreach my $sub ($self->fetch_SubSeqs_by_locus_name($old_name)) {
-            push @xml, $sub->zmap_delete_xml_string;
+            push @xml, $sub->zmap_delete_xml_string($offset);
         }
 
         my $locus_cache = $self->{'_locus_cache'}
@@ -293,7 +294,7 @@ sub do_rename_locus {
     
         # Now we need to update Zmap with the new locus names
         foreach my $sub ($self->fetch_SubSeqs_by_locus_name($new_name)) {
-            push @xml, $sub->zmap_create_xml_string;
+            push @xml, $sub->zmap_create_xml_string($offset);
         }
         $self->zMapSendCommands(@xml);    
 
@@ -462,7 +463,7 @@ sub populate_menus {
             $self->message('Not saving because some editing windows are still open');
             return;
         }
-        $self->save_data(1);
+        $self->save_data;
         };
     $file->add('command',
         -label          => 'Save',
@@ -961,7 +962,7 @@ sub exit_save_data {
     }
     elsif ($ans eq 'Yes') {
         # Return false if there is a problem saving
-        $self->save_data(0) or return;
+        $self->save_data or return;
     }
 
     # Will not want xace any more
@@ -984,10 +985,7 @@ sub close_all_edit_windows {
 }
 
 sub save_data {
-    my( $self, $update_ace ) = @_;
-
-    # update_ace should be true unless object is exiting
-    # i.e. when called from ->exit_save_data()
+    my ($self) = @_;
 
     unless ($self->AceDatabase->write_access) {
         warn "Read only session - not saving\n";
@@ -1000,11 +998,7 @@ sub save_data {
     eval{
         my $ace_data = $self->AceDatabase->save_ace_to_otter;
         $self->save_ace($ace_data);
-        # update_ace should be true unless this object is exiting
-        if ($update_ace) {
-            # resync here!
-            $self->resync_with_db;
-        }
+        $self->resync_with_db;
     };
     my $err = $@;
 
@@ -1547,6 +1541,7 @@ sub delete_subsequences {
     return if $ans eq 'No';
 
     # Make ace delete command for subsequences
+    my $offset = $self->AceDatabase->offset;
     my $ace = '';
     my @xml;
     foreach my $sub (@to_die) {
@@ -1557,7 +1552,7 @@ sub delete_subsequences {
             $ace .= qq{\n\-D Sequence "$sub_name"\n}
                 . qq{\nSequence "$clone_name"\n}
                 . qq{-D Subsequence "$sub_name"\n};
-            push @xml, $sub->zmap_delete_xml_string;
+            push @xml, $sub->zmap_delete_xml_string($offset);
         }
     }
 
@@ -1839,7 +1834,7 @@ sub Assembly {
 sub save_Assembly {
     my( $self, $new ) = @_;
 
-    my @xml = $new->zmap_SimpleFeature_xml($self->Assembly);
+    my @xml = $new->zmap_SimpleFeature_xml($self->Assembly, $self->AceDatabase->offset);
     $self->zMapSendCommands(@xml);
     my $ace = $new->ace_string;
     $self->save_ace($ace);
@@ -1889,9 +1884,10 @@ sub replace_SubSeq {
         : $new->ace_string;
     $self->save_ace($ace);
 
+    my $offset = $self->AceDatabase->offset;
     $self->zMapSendCommands(
-        ( $old->is_archival ? $old->zmap_delete_xml_string : () ),
-        $new->zmap_create_xml_string,
+        ( $old->is_archival ? $old->zmap_delete_xml_string($offset) : () ),
+        $new->zmap_create_xml_string($offset),
         );
 
     $self->Assembly->replace_SubSeq($new, $old_name);

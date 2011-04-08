@@ -295,14 +295,26 @@ sub recover_smart_slice_from_region_xml_file {
     return;
 }
 
-
 sub smart_slice {
     my( $self, $smart_slice ) = @_;
     
     if ($smart_slice) {
+        $self->{'_offset'} = undef;
         $self->{'_smart_slice'} = $smart_slice;
     }
     return $self->{'_smart_slice'};
+}
+
+sub offset {
+    my ($self) = @_;
+    
+    my $offset = $self->{'_offset'};
+    unless (defined $offset) {
+        my $slice = $self->smart_slice
+            or confess "No smart_slice (Bio::Otter::Lace::Slice) attached";
+        $offset = $self->{'_offset'} = $slice->start - 1;
+    }
+    return $offset;
 }
 
 sub save_ace_to_otter {
