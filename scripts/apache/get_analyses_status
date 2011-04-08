@@ -66,13 +66,13 @@ my $cmp_sth = $pdbc->prepare(qq{
       , seq_region cmp
       , assembly a
       , seq_region asm
-    WHERE asm.name = '$assembly'
+    WHERE asm.name = ?
       AND asm.seq_region_id = a.asm_seq_region_id
       AND a.cmp_seq_region_id = cmp.seq_region_id
       AND cmp.coord_system_id = cs.coord_system_id
-      AND cs.name = '$component_cs'
+      AND cs.name = ?
 });
-$cmp_sth->execute();
+$cmp_sth->execute($assembly, $component_cs);
 
 while (my ($cmp_name, $cs_version) = $cmp_sth->fetchrow) {
     my @syll = split(/\./, $cmp_name);
