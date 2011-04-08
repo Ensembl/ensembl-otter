@@ -64,7 +64,7 @@ open $log_file, '>>', 'gff_log.txt';
 log_message "starting";
 
 $args{log} = 1 if $LOG; # enable logging on the server
-$args{rebase} = 1 unless $ENV{OTTERLACE_CHROMOSOME_COORDINATES};
+$args{rebase} = 0;
 
 # concatenate the rest of the arguments into a parameter string
 
@@ -144,14 +144,6 @@ if ($response->is_success) {
     my $gff = $response->decoded_content;
     die "Unexpected response for $gff_source: $gff\n" unless $gff =~ /EnsEMBL2GFF/;
 
-    # Send data to zmap on STDOUT
-    log_message "sending data: start";
-    my $send_data_start_time = time;
-    print $gff;
-    my $send_data_finish_time = time;
-    my $send_data_time = time_diff($send_data_start_time, $send_data_finish_time);
-    log_message "sending data: finish: $send_data_time";
-
     # cache the result
     log_message "caching: start";
     my $cache_start_time = time;
@@ -188,6 +180,14 @@ if ($response->is_success) {
     my $sqlite_update_finish_time = time;
     my $sqlite_update_time = time_diff($sqlite_update_start_time, $sqlite_update_finish_time);
     log_message "SQLite update: finish: $sqlite_update_time";
+    
+    # Send data to zmap on STDOUT
+    log_message "sending data: start";
+    my $send_data_start_time = time;
+    print $gff;
+    my $send_data_finish_time = time;
+    my $send_data_time = time_diff($send_data_start_time, $send_data_finish_time);
+    log_message "sending data: finish: $send_data_time";
 
     # zmap waits for STDOUT to be closed as an indication that all
     # data has been sent, so we close the handle now so that zmap
