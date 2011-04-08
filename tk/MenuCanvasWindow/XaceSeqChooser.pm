@@ -371,7 +371,6 @@ sub launch_xace {
             $self->get_xwindow_id_from_readlock;
         }
         elsif (defined($pid)) {
-            no warnings;
             exec('xace', '-fmapcutcoords', $path);
             exit(1);
         }
