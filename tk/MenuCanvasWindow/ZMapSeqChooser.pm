@@ -566,15 +566,10 @@ sub zMapZMapDefaults {
 
     return $self->formatZmapDefaults(
         'ZMap',
-        ( $ENV{OTTERLACE_CHROMOSOME_COORDINATES}
-          ? (
-              'csname'            => $slice->csname,
-              'csver'             => $slice->csver,
-              'start'             => $slice->start,
-              'end'               => $slice->end,
-          )
-          : ( )
-        ),
+        'csname'            => $slice->csname,
+        'csver'             => $slice->csver,
+        'start'             => $slice->start,
+        'end'               => $slice->end,
         'sources'           => $sources_string,
         'show-mainwindow'   => ( $show_mainwindow ? 'true' : 'false' ),
         'cookie-jar'        => $ENV{'OTTERLACE_COOKIE_JAR'},
@@ -1353,11 +1348,10 @@ sub _zmap_new_view_xml {
     my ($self, $config) = @_;
 
     my $slice = $self->AceDatabase->smart_slice;
-    my $on_chromosome = $ENV{OTTERLACE_CHROMOSOME_COORDINATES};
 
-    my $segment = $on_chromosome ? $slice->ssname : $slice->name;
-    my $start   = $on_chromosome ? $slice->start  : 1;
-    my $end     = $on_chromosome ? $slice->end    : 0;
+    my $segment = $slice->ssname;
+    my $start   = $slice->start;
+    my $end     = $slice->end;
 
     my @fields = ( $segment, $start, $end, $config );
     my @xml_escaped_fields = map { xml_escape($_) } @fields;
