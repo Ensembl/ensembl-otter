@@ -14,7 +14,7 @@ use Bio::Otter::ServerScriptSupport;
 sub get_locks {
     my ($server) = @_;
 
-my $asm_type = $server->param('type');
+my $asm_type = $server->require_argument('type');
 
 my $sql = qq{
     SELECT DISTINCT cl.name
@@ -27,17 +27,9 @@ my $sql = qq{
     FROM (seq_region cl
       , seq_region ctg
       , assembly cl2ctg
-      , seq_region_attrib embl_acc }
-
-  . (
-    $asm_type
-    ? qq{
+      , seq_region_attrib embl_acc
       , assembly chr2ctg
-      , seq_region chr }
-    : ''
-  )
-
-  . qq{
+      , seq_region chr
       , seq_region_attrib embl_version)
     LEFT JOIN contig_lock l
       ON ctg.seq_region_id = l.seq_region_id
@@ -62,19 +54,11 @@ my $sql = qq{
       AND embl_version.attrib_type_id =
     (SELECT attrib_type_id
         FROM attrib_type
-        WHERE code = 'embl_version') }
-
-  . (
-    $asm_type
-    ? qq{
+        WHERE code = 'embl_version')
       AND chr.name = "$asm_type"
       AND chr2ctg.asm_seq_region_id = chr.seq_region_id
-      AND chr2ctg.cmp_seq_region_id = ctg.seq_region_id }
-    : ''
-  )
-
-  . qq{
-       AND l.contig_lock_id IS NOT NULL
+      AND chr2ctg.cmp_seq_region_id = ctg.seq_region_id
+      AND l.contig_lock_id IS NOT NULL
     ORDER BY l.timestamp
 };
 
