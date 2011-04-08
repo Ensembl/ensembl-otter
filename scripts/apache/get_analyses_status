@@ -64,6 +64,18 @@ WHERE asm.name = ?
 SQL
     ;
 
+my $select_analyses_sql_format = <<'SQL'
+SELECT i.input_id
+  , a.logic_name
+  , i.created
+  , i.db_version
+FROM analysis a
+  , input_id_analysis i
+WHERE a.analysis_id = i.analysis_id
+  AND i.input_id IN (%s)
+SQL
+    ;
+
 sub get_analyses_status {
     my ($server) = @_;
 
@@ -93,16 +105,7 @@ if(! @input_ids) {
 }
 
 my $input_id_str = join ',', qw(?) x @input_ids;
-my $sql_statement = qq{
-        SELECT i.input_id
-          , a.logic_name
-          , i.created
-          , i.db_version
-        FROM analysis a
-          , input_id_analysis i
-        WHERE a.analysis_id = i.analysis_id
-          AND i.input_id IN ($input_id_str)
-        };
+my $sql_statement = sprintf $select_analyses_sql_format, $input_id_str;
 my $input_sth = $pdbc->prepare($sql_statement);
 $input_sth->execute(@input_ids);
 
