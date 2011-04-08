@@ -11,12 +11,7 @@ use SangerPaths qw{ core bioperl123 ensembl61 otter55 };
 
 use Bio::Otter::ServerScriptSupport;
 
-sub get_sequence_notes {
-    my ($server) = @_;
-
-my $asm_type = $server->require_argument('type');
-
-my $sql = qq{
+my $select_sequence_notes_sql = <<'SQL'
     SELECT ctg.name,
            aut.author_name,
            sn.is_current,
@@ -38,9 +33,15 @@ my $sql = qq{
            sn.note_time,
            sn.note
   ORDER BY ctg.name, sn.note_time ASC
-};
+SQL
+    ;
 
-my $sth = $server->otter_dba()->dbc()->prepare($sql);
+sub get_sequence_notes {
+    my ($server) = @_;
+
+my $asm_type = $server->require_argument('type');
+
+my $sth = $server->otter_dba()->dbc()->prepare($select_sequence_notes_sql);
 $sth->execute($asm_type);
 
 my $output_string = '';
