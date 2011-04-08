@@ -8,9 +8,7 @@ use Carp;
 use Scalar::Util 'weaken';
 
 use Tk::Dialog;
-use Tk::DialogBox;
 use Tk::Balloon;
-use Tk::LabFrame;
 
 use Hum::Ace::SubSeq;
 use Hum::Ace::Locus;
