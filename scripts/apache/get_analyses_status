@@ -92,7 +92,7 @@ if(! @input_ids) {
     return '';
 }
 
-my $input_id_str = join(', ', map { "'$_'" } @input_ids);
+my $input_id_str = join ',', qw(?) x @input_ids;
 my $sql_statement = qq{
         SELECT i.input_id
           , a.logic_name
@@ -104,7 +104,7 @@ my $sql_statement = qq{
           AND i.input_id IN ($input_id_str)
         };
 my $input_sth = $pdbc->prepare($sql_statement);
-$input_sth->execute();
+$input_sth->execute(@input_ids);
 
 while(my ($input_id, $logic_name, $created, $db_version) = $input_sth->fetchrow_array) {
     $input_id=~s/^$component_cs:[^:]*:([^:]+):.*$/$1/;
