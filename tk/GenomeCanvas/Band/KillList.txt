@@ -1,0 +1,4 @@
+
+# unused modules
+SeqChooser.pm
+Synteny.pm
