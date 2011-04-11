@@ -373,7 +373,7 @@ sub launch_xace {
         }
         elsif (defined($pid)) {
             exec('xace', '-fmapcutcoords', $path);
-            exit(1);
+            CORE::exit(1);
         }
         else {
             confess "Error: can't fork : $!";
