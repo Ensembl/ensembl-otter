@@ -163,12 +163,20 @@ sub make_log_file {
     my( $self, $file_root ) = @_;
     
     $file_root ||= 'client';
-    
+
+    my $log_format = "%s/%s_%04d-%02d-%02d_%02d-%02d-%02d_%d_%s.log";
     my $log_dir = $self->get_log_dir or return;
+    my @log_fields =
+        ( $log_dir, $file_root,
+          (localtime())[5,4,3,2,1,0],
+          $$ );
+    $log_fields[2] += 1900; # year
+    $log_fields[3] +=    1; # month
+
     my( $log_file );
     my $i = 'a';
     do {
-        $log_file = "$log_dir/$file_root.$$-$i.log";
+        $log_file = sprintf $log_format, @log_fields, $i;
         $i++;
     } while (-e $log_file);
     if($self->debug()) {
