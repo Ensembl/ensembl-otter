@@ -13,7 +13,7 @@ use Bio::Vega::Utils::XmlEscape qw{ xml_escape };
 use File::Path qw{ mkpath };
 use Config::IniFiles;
 
-my $ZMAP_DEBUG = $ENV{OTTERLACE_ZMAP_DEBUG};
+my $ZMAP_DEBUG = 1;
 
 #==============================================================================#
 #
