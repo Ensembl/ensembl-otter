@@ -32,7 +32,7 @@ sub new {
         '_seqname'  => $seqname,
         '_start'    => $start,
         '_end'      => $end,
-    }; 
+    };
 
     return bless $self, $pkg;
 }
