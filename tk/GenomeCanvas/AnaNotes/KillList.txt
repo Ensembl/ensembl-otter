@@ -1,3 +1,0 @@
-
-# only used by the obsolete and broken ana_notes program
-History.pm

@@ -1,3 +1,0 @@
-
-# long since obsolete
-transfer_hidden_attribute
