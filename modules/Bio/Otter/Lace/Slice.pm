@@ -198,7 +198,7 @@ sub get_region_xml {
         warn sprintf("Fetching data from chr %s %s-%s\n", $self->seqname(), $self->start(), $self->end() );
     }
 
-    my $xml = $client->http_response_content( # should be unified with 'otter_response_content'
+    my $xml = $client->http_response_content(
         'GET',
         'get_region',
         {
