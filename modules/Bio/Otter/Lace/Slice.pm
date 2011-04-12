@@ -164,7 +164,7 @@ sub DataSet {
 
 sub get_assembly_dna {
     my ($self) = @_;
-    
+
     my $response = $self->Client()->http_response_content(
         'GET',
         'get_assembly_dna',
@@ -172,7 +172,7 @@ sub get_assembly_dna {
             %{$self->toHash},
         },
     );
-    
+
     my ($seq, @tiles) = split /\n/, $response;
     for (my $i = 0; $i < @tiles; $i++) {
         my ($start, $end, $ctg_name, $ctg_start, $ctg_end, $ctg_strand, $ctg_length) = split /\t/, $tiles[$i];
@@ -250,7 +250,7 @@ sub dna_ace_data {
             $tile->{'ctg_end'},
             $tile->{'ctg_strand'} == -1 ? 'minus' : 'plus';
     }
-    
+
     my %seen_ctg;
     foreach my $tile (@t_path) {
         my $ctg_name = $tile->{'ctg_name'};
@@ -260,7 +260,7 @@ sub dna_ace_data {
             $tile->{'ctg_name'},
             $tile->{'ctg_length'};
     }
-    
+
     $ace_output .= qq{\nSequence : "$name"\n}
                  # . qq{Genomic_canonical\n}
                  # . qq{Method Genomic_canonical\n}
@@ -270,7 +270,7 @@ sub dna_ace_data {
     while ($dna_str =~ /(.{1,60})/g) {
         $ace_output .= "$1\n";
     }
-    
+
     return $ace_output;
 }
 
