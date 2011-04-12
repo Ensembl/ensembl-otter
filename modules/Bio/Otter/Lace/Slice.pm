@@ -165,7 +165,7 @@ sub DataSet {
 sub get_assembly_dna {
     my ($self) = @_;
     
-    my $response = $self->Client()->otter_response_content(
+    my $response = $self->Client()->http_response_content(
         'GET',
         'get_assembly_dna',
         {

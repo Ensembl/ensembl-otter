@@ -50,7 +50,7 @@ if (my $gap = $slice->length - $posn) {
     substr($output_string, $posn, $gap, '-' x $gap);
 }
 
-    return $server->otter_wrap_response($output_string);
+    return $output_string;
 }
 
 Bio::Otter::ServerScriptSupport->send_response(\&get_assembly_dna);
