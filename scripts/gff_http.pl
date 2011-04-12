@@ -180,11 +180,15 @@ if ($response->is_success) {
     my $sqlite_update_finish_time = time;
     my $sqlite_update_time = time_diff($sqlite_update_start_time, $sqlite_update_finish_time);
     log_message "SQLite update: finish: $sqlite_update_time";
+
+    # if (rand() < 0.5) {
+    #     die "Horribly";
+    # }
     
     # Send data to zmap on STDOUT
     log_message "sending data: start";
     my $send_data_start_time = time;
-    print $gff;
+    print STDOUT $gff;
     my $send_data_finish_time = time;
     my $send_data_time = time_diff($send_data_start_time, $send_data_finish_time);
     log_message "sending data: finish: $send_data_time";
