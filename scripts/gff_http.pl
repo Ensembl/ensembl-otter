@@ -44,6 +44,9 @@ foreach my $pair (@ARGV) {
 
 $gff_source = $args{gff_source};
 
+# test case
+die "failing as required" if $args{'fail'};
+
 # pull off arguments meant for us
 
 my $url_root        = delete $args{'url_root'};
