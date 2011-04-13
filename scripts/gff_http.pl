@@ -64,7 +64,6 @@ open $log_file, '>>', 'gff_log.txt';
 log_message "starting";
 
 $args{log} = 1 if $LOG; # enable logging on the server
-$args{rebase} = 0;
 
 # concatenate the rest of the arguments into a parameter string
 
