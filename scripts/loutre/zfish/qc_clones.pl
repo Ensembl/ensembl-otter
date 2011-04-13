@@ -42,8 +42,12 @@ my $sql = $dbi->prepare(qq[
     and cs.id_sequence = s.id_sequence
     and c.clonename = cp.clonename
     and cp.projectname = ps.projectname
-    and ps.status = 35
-]);    
+    and ps.status in
+	(35 /* QC Checked */,
+	44 /* Pooled Clone Finished */,
+	48 /* Indexed Clone Finished */)
+    order by c.clonename
+]);
 
 
 # execute for each command line query
