@@ -7,7 +7,6 @@ use warnings;
 use base qw( Bio::Otter::Server::GFF );
 
 my @gff_keys = qw(
-    rebase
     gff_source
     gff_seqname
     url_string

@@ -21,15 +21,12 @@ use Bio::Vega::Utils::GFF;
     sub gff_header {
         my ($self, %args) = @_;
 
-        my $include_dna = $args{include_dna};
-        my $rebase      = $args{rebase};
-        my $seqname     = $args{gff_seqname} || $self->seq_region_name;
+        my $name  = $args{gff_seqname} || $self->seq_region_name;
+        my $start = $self->start;
+        my $end   = $self->end;
+        my $seq   = $args{include_dna} ? $self->seq : undef;
 
-        my $name  = $rebase ? $seqname . '_' . $self->start . '-' . $self->end : $seqname;
-        my $start = $rebase ? 1                                                : $self->start;
-        my $end   = $rebase ? $self->length                                    : $self->end;
-
-        return Bio::Vega::Utils::GFF::gff_header($name, $start, $end, ($include_dna ? $self->seq : undef),);
+        return Bio::Vega::Utils::GFF::gff_header($name, $start, $end, $seq);
     }
 
     sub to_gff {
@@ -49,7 +46,6 @@ use Bio::Vega::Utils::GFF;
         my $verbose        = $args{verbose};
         my $target_slice   = $args{target_slice} || $self;
         my $common_slice   = $args{common_slice};
-        my $rebase         = $args{rebase};
         my $gff_source     = $args{gff_source};
         my $gff_seqname    = $args{gff_seqname};
 
@@ -114,8 +110,7 @@ use Bio::Vega::Utils::GFF;
                         }
 
                         $gff .=
-                            $feature->to_gff(rebase => $rebase,
-                                             gff_source => $gff_source,
+                            $feature->to_gff(gff_source => $gff_source,
                                              gff_seqname => $gff_seqname);
 
                         if ($sources_to_types) {
@@ -202,20 +197,15 @@ use Bio::Vega::Utils::GFF;
     sub _gff_hash {
         my ($self, %args) = @_;
 
-        my $rebase      = $args{rebase};
         my $gff_seqname = $args{gff_seqname} || $self->slice->seq_region_name;
         my $gff_source  = $args{gff_source} || $self->_gff_source;
 
-        my $seqname = $rebase ? $gff_seqname . '_' . $self->slice->start . '-' . $self->slice->end : $gff_seqname;
-        my $start = $rebase ? $self->start : $self->seq_region_start;
-        my $end   = $rebase ? $self->end   : $self->seq_region_end;
-
         my $gff = {
-            seqname => $seqname,
+            seqname => $gff_seqname,
             source  => $gff_source,
             feature => $self->_gff_feature,
-            start   => $start,
-            end     => $end,
+            start   => $self->seq_region_start,
+            end     => $self->seq_region_end,
             strand  => ($self->strand == 1 ? '+' : ($self->strand == -1 ? '-' : '.'))
         };
 
@@ -269,23 +259,6 @@ use Bio::Vega::Utils::GFF;
     sub _gff_hash {
         my ($self, %args) = @_;
 
-        my $rebase = $args{'rebase'};
-
-        my $gap_string = '';
-
-        my @fps = $self->ungapped_features;
-
-        if (@fps > 1) {
-            my @gaps;
-            if ($rebase) {
-                @gaps = map { join ' ', $_->start,            $_->end,            $_->hstart, $_->hend } @fps;
-            }
-            else {
-                @gaps = map { join ' ', $_->seq_region_start, $_->seq_region_end, $_->hstart, $_->hend } @fps;
-            }
-            $gap_string = join(',', @gaps);
-        }
-
         my $gff = $self->SUPER::_gff_hash(%args);
 
         $gff->{'score'} = $self->score;
@@ -298,7 +271,12 @@ use Bio::Vega::Utils::GFF;
         $gff->{'attributes'}{'Align'}     = $self->hstart . ' ' . $self->hend . ' ' . ($self->hstrand == -1 ? '-' : '+');
         $gff->{'attributes'}{'percentID'} = $self->percent_id;
 
-        if ($gap_string) {
+        my @fps = $self->ungapped_features;
+        if (@fps > 1) {
+            my $gap_string =
+                join ',', map {
+                    join ' ', $_->seq_region_start, $_->seq_region_end, $_->hstart, $_->hend;
+            } @fps;
             $gff->{'attributes'}->{'Gaps'} = qq{"$gap_string"};
         }
 
@@ -490,9 +468,6 @@ use Bio::Vega::Utils::GFF;
     sub to_gff {
         my ($self, %args) = @_;
 
-        my $rebase = $args{rebase};
-        
-
         return '' unless $self->get_all_Exons && @{ $self->get_all_Exons };
 
         ### hack to help differentiate the various otter transcripts
@@ -526,11 +501,8 @@ use Bio::Vega::Utils::GFF;
             # build up the CDS line - it's not really worth creating a Translation->to_gff method, as most
             # of the fields are derived from the Transcript and Translation doesn't inherit from Feature
 
-            my $start = $self->coding_region_start;
-            $start += $self->slice->start - 1 unless $rebase;
-
-            my $end = $self->coding_region_end;
-            $end += $self->slice->start - 1 unless $rebase;
+            my $start = $self->coding_region_start + $self->slice->start - 1;
+            my $end   = $self->coding_region_end   + $self->slice->start - 1;
             
             my $frame;
             if (defined(my $phase = $tsl->start_Exon->phase)) {

@@ -11,7 +11,6 @@ use Bio::Vega::Utils::EnsEMBL2GFF;
 use base qw( Bio::Otter::ServerScriptSupport );
 
 my @gff_keys = qw(
-    rebase
     gff_source
     gff_seqname
     );
@@ -167,13 +166,7 @@ sub gff_header {
     my $name    = $self->param('type');
     my $start   = $self->param('start');
     my $end     = $self->param('end');
-    
-    if ($self->param('rebase')) {
-        $name .= '_'.$start.'-'.$end;
-        $end = $end - $start + 1;
-        $start = 1;
-    }
-    
+
     return Bio::Vega::Utils::GFF::gff_header($name, $start, $end);
 }
 
