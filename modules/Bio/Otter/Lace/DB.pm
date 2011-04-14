@@ -62,7 +62,6 @@ sub init_db {
     my $dbh = DBI->connect("dbi:SQLite:dbname=$file", undef, undef, {
         RaiseError => 1,
         AutoCommit => 1,
-        sqlite_use_immediate_transaction => 1,
         });
     $dbh{$self} = $dbh;
     
