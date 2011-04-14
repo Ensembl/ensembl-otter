@@ -161,9 +161,10 @@ if ($response->is_success) {
     my $sqlite_update_start_time = time;
     my $dbh = DBI->connect("dbi:SQLite:dbname=$session_dir/otter.sqlite", undef, undef, {
         RaiseError => 1,
-        AutoCommit => 0,
+        AutoCommit => 1,
     });
     eval {
+        $dbh->begin_work;
         my $sth = $dbh->prepare(
             q{ UPDATE otter_filter SET done = 1, failed = 0, gff_file = ?, process_gff = ? WHERE filter_name = ? }
             );
