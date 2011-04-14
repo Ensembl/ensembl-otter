@@ -1,7 +1,7 @@
 #!/software/bin/perl -w
 
-# wrapper that loads agps from chromoview, checks them for redundant clones,
-# then against qc checked clones, loads them into otter, loads assembly tags
+# wrapper that loads agps from chromoview (with QC check of project_status),
+# checks them for redundant clones, loads them into otter, loads assembly tags
 # and realigns genes...uff
 # it also does this for haplotypic clones
 #
@@ -65,11 +65,11 @@ GetOptions(
 my @chroms = split /,/, $chroms if ($chroms);
 $skip = '' unless $skip;
 
-## was:    print "                    -skip            # skip steps in order agp, qc, region, fullagp, load\n";
+## was:    print "                    -skip            # skip steps in order agp, region, fullagp, load\n";
 ## commented out: -skip realign
 if (($help) || (!$date)){
     print "build_zfish_agps.pl -date YYMMDD\n";
-    print "                    -skip       # skip steps in order agp, qc, region, newagp, load\n";
+    print "                    -skip       # skip steps in order agp, region, newagp, load\n";
     print "                    -haplo      # loads chr H clones\n";
     print "                    -chr        # runs for your comma separated list of chromosomes\n";
     print "                    -path       # path to build new agp folder in\n";
@@ -121,12 +121,11 @@ chdir($agpdir);
 
 
 # GET AGPS
-unless (($skip =~ /agp/) || ($skip =~ /qc/) || ($skip =~ /region/) || ($skip =~ /newagp/) || ($skip =~ /load/) || ($skip =~ /realign/)) {
+unless (($skip =~ /agp/) || ($skip =~ /region/) || ($skip =~ /newagp/) || ($skip =~ /load/) || ($skip =~ /realign/)) {
     foreach my $chr (@chroms) {
-        my $command =
-	  ($haplo
-	   ? "$AnacodeBin/oracle2agp -catch_err -species Zebrafish -chromosome $chr -subregion H_".$chr." > $agpdir/chr".$chr.".agp"
-	   : "$AnacodeBin/oracle2agp -catch_err -species Zebrafish -chromosome $chr"                   ." > $agpdir/chr".$chr.".agp");
+        my $command = join ' ',
+	  ("$AnacodeBin/oracle2agp -catch_err -species Zebrafish -pstatuses 35,44,48 -chromosome $chr",
+	   ($haplo ? ("-subregion H_$chr") : ()), "> $agpdir/chr".$chr.".agp");
         runit($command, "ignore");
     }
     print LOG "\n";
@@ -138,19 +137,10 @@ unless (($skip =~ /agp/) || ($skip =~ /qc/) || ($skip =~ /region/) || ($skip =~ 
 # alert finishers!
 
 
-# GET QC CHECKED CLONES
-# start here with -skip agp
-unless (($skip =~ /qc/) || ($skip =~ /region/) || ($skip =~ /newagp/) || ($skip =~ /load/) || ($skip =~ /realign/)){
-    my $command = "$Bin/qc_clones.pl > $agpdir/qc_clones.txt";
-    runit($command);
-    print LOG "\n";
-}
-
 # CREATE REGION FILES
-# start here with -skip qc
 unless (($skip =~ /region/) || ($skip =~ /newagp/) || ($skip =~ /load/) || ($skip =~ /realign/)) {
     foreach my $chr (@chroms) {
-        my $command = "$Bin/make_agps_for_otter_sets.pl -agp $agpdir/chr".$chr.".agp -clones $agpdir/qc_clones.txt";
+        my $command = "$Bin/make_agps_for_otter_sets.pl -agp $agpdir/chr".$chr.".agp";
         $command .= " -haplo" if ($haplo);
         $command .= " > chr".$chr.".region";
         runit($command, "ignore");

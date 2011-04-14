@@ -1,6 +1,8 @@
 #!/usr/local/bin/perl -w
 #
-# filters agps taken from chromoview for qc checked clones
+# filters agps taken from chromoview
+# (previously, for qc checked clones; now just for gap type+size, and
+# negative overlap)
 # creates files to build sets for otter
 #
 # 25.03.04 Kerstin Jekosch <kj2@sanger.ac.uk>
@@ -9,26 +11,16 @@
 use strict;
 use Getopt::Long;
 
-my ($agp,$clones,$help,$haplo);
+my ($agp,$help,$haplo);
 my $exitcode = 0;
 
 my $hm = GetOptions(
         'agp:s'     => \$agp,
-        'clones:s'  => \$clones,
         'h'         => \$help,
         'haplo'     => \$haplo,
 );
 
-&help if ($help || (!$agp) || (!$clones));
-
-# get names of qc checked clones
-open(CL, '<', $clones) or die "Can't read $clones: $!\n";
-my %qc;
-while (<CL>) {
-    /\S+\s+(\S+)\s+(\d+)\s+\d+/ and do {
-        $qc{$1.".".$2}++;
-    };
-}
+&help if ($help || (!$agp));
 
 # read through agp
 if ($agp) {
@@ -64,17 +56,9 @@ if ($agp) {
 		# is squeezed in.
 		$exitcode |= 16;
 	    }
-	    elsif (exists $qc{$name}) {
+	    else {
                 print "F\t$name\t$start\t$end\t$dir\n";
                 $lastgap =0;
-            }
-            else {
-                unless ($lastgap) {
-                    ($haplo) ? print $haplogap : print $clonegap;
-                    $lastgap++;
-                }
-                warn "$chr:$.: Taking out $name (no QC)\n";
-		$exitcode |= 8;
             }
         }
 #        elsif ($column[4] eq 'U') {
@@ -149,7 +133,7 @@ if ($agp) {
 }
 
 sub help {
-    print "USAGE: make_agps_for_otter_sets.pl -agp agpfile -clones qc_checked_clones_file\n";
+    print "USAGE: make_agps_for_otter_sets.pl -agp foo.agp > foo.regions\n";
     exit(0);
 }
 
