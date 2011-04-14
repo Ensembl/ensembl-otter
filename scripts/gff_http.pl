@@ -162,7 +162,6 @@ if ($response->is_success) {
     my $dbh = DBI->connect("dbi:SQLite:dbname=$session_dir/otter.sqlite", undef, undef, {
         RaiseError => 1,
         AutoCommit => 0,
-        sqlite_use_immediate_transaction => 1,
     });
     eval {
         my $sth = $dbh->prepare(
