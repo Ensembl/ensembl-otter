@@ -440,24 +440,21 @@ sub _fetch_mapped_features {
     confess "invalid coordinate system version: '${csver_orig}'"
         unless $csver_orig eq 'Otter';
 
-    $metakey      ||= ''; # defaults to pipeline
-    $csver_remote ||=
-        $metakey ? $self->default_assembly($self->satellite_dba($metakey)) : "Otter";
+    $csver_remote ||= $self->default_assembly($self->satellite_dba($metakey)) if $metakey;
 
     my $features = [];
 
-    if( ($csver_orig eq $csver_remote)
-       || ( ($self->otter_assembly_equiv_hash()->{$csver_remote}{$name} || '') eq $type) ) {
-                # no mapping, just (cross)-fetching:
-
-        my $csver_target = $metakey ? $csver_remote : $csver_orig;
-        warn "Assuming the mappings to be identical, just fetching from {$metakey}$cs:$csver_target\n";
-
+    if(!$metakey) { # fetch from the pipeline
+        my $pdba = $self->pipeline_dba;
+        my $slice = $self->get_slice($pdba, $cs, $name, $type, $start, $end, $csver_orig);
+        $features = $slice->$fetching_method(@$call_parms);
+    }
+    elsif( ($self->otter_assembly_equiv_hash()->{$csver_remote}{$name} || '') eq $type) {
+        # no mapping, just (cross)-fetching:
+        warn "Assuming the mappings to be identical, just fetching from {$metakey}$cs:$csver_remote\n";
         my $sdba = $self->satellite_dba( $metakey );
-        my $original_slice = $self->get_slice($sdba, $cs, $name, $type, $start, $end, $csver_target);
-
+        my $original_slice = $self->get_slice($sdba, $cs, $name, $type, $start, $end, $csver_remote);
         $features = $original_slice->$fetching_method(@$call_parms);
-
     } else { # let's try to do the mapping:
         warn "Proceeding with mapping code\n";
 
