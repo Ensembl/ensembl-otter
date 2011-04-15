@@ -124,9 +124,6 @@ sub satellite_dba {
     my $options = $self->satellite_dba_options($metakey);
     die "metakey '$metakey' is not defined" unless $options;
 
-    # special case, '.' means the Otter database
-    return $self->otter_dba if $options eq '.';
-
     # create the adaptor
     my $adaptor_class = "Bio::EnsEMBL::DBSQL::DBAdaptor";
     my $dba = $self->satellite_dba_make($metakey, $adaptor_class, $options);
@@ -152,10 +149,6 @@ sub variation_satellite_dba_make {
     # get and check the options
     my $options = $self->satellite_dba_options($metakey);
     return unless $options;
-
-    # special case, '.' means the Otter database
-    die "cannot specify the otter database for a variation database"
-        if $options eq '.';
 
     # create the adaptor
     my $adaptor_class = "Bio::EnsEMBL::Variation::DBSQL::DBAdaptor";
