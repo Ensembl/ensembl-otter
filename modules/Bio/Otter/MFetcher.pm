@@ -461,9 +461,12 @@ sub fetch_mapped_features {
         $das_style_mapping,
     ) = @_;
 
+    confess "invalid coordinate system: '${cs}'"
+        unless $cs eq 'chromosome';
+    confess "invalid coordinate system version: '${csver_orig}'"
+        unless $csver_orig eq 'Otter';
+
     $metakey      ||= ''; # defaults to pipeline
-    $cs           ||= 'chromosome';
-    $csver_orig   ||= $self->init_csver($cs, '');
     $csver_remote ||= $self->init_csver($cs, $metakey);
 
     my $features = [];
