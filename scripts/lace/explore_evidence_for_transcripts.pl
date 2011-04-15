@@ -22,6 +22,7 @@ use Bio::Factory::EMBOSS;       # EMBOSS needs to be on PATH - /software/pubseq/
                                 # To verify, check that 'wossname water' runs successfully
 use Bio::AlignIO;
 
+use Hum::ClipboardUtils qw(magic_evi_name_match);
 use Hum::Pfetch;
 
 use Evi::CollectionFilter;
@@ -878,47 +879,52 @@ sub process_transcript {
             }
 
             my $e_name = $evi->name;
+            my ($e_prefix, $e_short_name, $e_ver) = magic_evi_name_match($e_name);
+            $e_name = $e_ver ? sprintf('%s.%s', $e_short_name, $e_ver) : $e_short_name;
+
             my ($a_type, $a_ver) = get_accession_type($e_name);
-            reportf("verbose:PT:1", "Evidence: %s - %s [%s %s]", $e_name, $evi->type, $a_type, $a_ver);
+            reportf("verbose:PT:1", "Evidence: %s - %s [%s %s]", $evi->name, $evi->type, $a_type, $a_ver);
             if ($e_name ne $a_ver and $a_ver =~ m/^$e_name/) {
                 reportf("verbose:PT:1", "Adding version, %s => %s", $e_name, $a_ver);
                 $e_name = $a_ver;
             }
-            my ($prefix, $short_name) = $e_name =~ m/^(\w+)?:?([\w\.]+)$/ ;
-            $short_name ||= $e_name;
+
+            # $e_name may have been updated, so...
+            ($e_prefix, $e_short_name, $e_ver) = magic_evi_name_match($e_name);
+            $e_name = $e_ver ? sprintf('%s.%s', $e_short_name, $e_ver) : $e_short_name;
 
             my $hit_feature = undef;
 
-            my $saf_hit = $align_results_map ? $align_results_map->{$short_name} : undef;
+            my $saf_hit = $align_results_map ? $align_results_map->{$e_name} : undef;
             if ($saf_hit) {
                 reportf("normal:PT:2", "Found align-scored hit for %s at rank %d, score %f, length %d, ident %f",
-                        $short_name, $saf_hit->{_otter_rank},
+                        $e_name, $saf_hit->{_otter_rank},
                         $saf_hit->score, $saf_hit->length, $saf_hit->percentage_identity,
                     );
-                $feature_chain_hit{$short_name} = 1;
+                $feature_chain_hit{$e_name} = 1;
             }
 
-            my $cfs_hit = $cfs_map ? $cfs_map->{$short_name} : undef;
+            my $cfs_hit = $cfs_map ? $cfs_map->{$e_name} : undef;
             if ($cfs_hit) {
                 report_ec_hit("normal:PT:2", $cfs_hit, $p_td);
                 $hit_feature = $cfs_hit->get_first_exon; # may get overridden below
-#                $feature_chain_hit{$short_name} = 1;
+#                $feature_chain_hit{$e_name} = 1;
             }
 
-            my $e_hit = $per_exon_by_score_map->{$short_name};
+            my $e_hit = $per_exon_by_score_map->{$e_name};
             if ($e_hit) {
                 reportf("normal:PT:2",
                         "Found exon-scored feature match for %s at rank %d with %d features, logic %s",
-                        $short_name, $e_hit->{_otter_rank}, $e_hit->{count}, $e_hit->{logic_name} );
+                        $e_name, $e_hit->{_otter_rank}, $e_hit->{count}, $e_hit->{logic_name} );
                 reportf("normal:PT:2", "Exons: %d (%s)", $e_hit->{exon_match_count}, 
                         join(',', @{$e_hit->{exon_match_map}}));
 
                 $hit_feature = $e_hit->{features}->[0];
-#                $feature_chain_hit{$short_name} = 1;
+#                $feature_chain_hit{$e_name} = 1;
             }
 
             unless ($e_hit or $cfs_hit or $saf_hit) {
-                report("normal:PT:2", "No feature match for $short_name");
+                report("normal:PT:2", "No feature match for $e_name");
 
                 # Do a little more digging 
 
@@ -928,7 +934,7 @@ sub process_transcript {
                   if ($opts->{logic_names}) {
                       $all_dna_features ||= $p_slice->get_all_DnaDnaAlignFeatures();
                       report("verbose:PT:2", "Got ", scalar @$all_dna_features, " features using all logic names");
-                      my @match_features = grep { $_->hseqname eq $short_name } @$all_dna_features;
+                      my @match_features = grep { $_->hseqname eq $e_name } @$all_dna_features;
                       if (@match_features) {
                           reportf("normal:PT:2",
                                   "Found %d exact matches using all logic names", scalar(@match_features));
@@ -941,7 +947,7 @@ sub process_transcript {
                           last FEATURE_HUNT;
                       }
                       # This stanza shouldn't get hit now that we add version to $e_name above where necessary
-                      @match_features = grep { $_->hseqname =~ /^$short_name/ } @$all_dna_features;
+                      @match_features = grep { $_->hseqname =~ /^$e_name/ } @$all_dna_features;
                       if (@match_features) {
                           reportf("normal:PT:2",
                                   "Found %d partial matches using all logic names", scalar(@match_features));
@@ -957,7 +963,7 @@ sub process_transcript {
 
                   # Next lookup by name
                   $dna_feature_adaptor ||= $pipe_dba->get_DnaAlignFeatureAdaptor;
-                  my $dna_features_by_name = $dna_feature_adaptor->fetch_all_by_hit_name($short_name);
+                  my $dna_features_by_name = $dna_feature_adaptor->fetch_all_by_hit_name($e_name);
                   report("verbose:PT:2", "Got ", scalar @$dna_features_by_name, " features by name");
                   if (@$dna_features_by_name) {
                       reportf("normal:PT:2", "Found %d matches by name in entire DB", scalar(@$dna_features_by_name));
@@ -965,7 +971,7 @@ sub process_transcript {
                   }
 
                   # This stanza shouldn't get hit now that we add version to $e_name above where necessary
-                  $dna_features_by_name = $dna_feature_adaptor->fetch_all_by_hit_name_unversioned($short_name);
+                  $dna_features_by_name = $dna_feature_adaptor->fetch_all_by_hit_name_unversioned($e_name);
                   report("verbose:PT:2", "Got ", scalar @$dna_features_by_name, " features by name_unversioned");
                   if (@$dna_features_by_name) {
                       reportf("normal:PT:2",
