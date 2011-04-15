@@ -204,27 +204,9 @@ sub satellite_dba_options {
     my ($self, $metakey) = @_;
 
     my $meta_container = $self->otter_dba->get_MetaContainer;
+    my ($options) = @{ $meta_container->list_value_by_key($metakey) };
 
-    while(1) {
-        my ($options) = @{ $meta_container->list_value_by_key($metakey) };
-
-        return unless $options; # nothing found, give up
-        return '.' if $options eq '=otter';  # special value, means otter_dba()
-
-        # check for redirects
-        if ($options eq '=pipeline') { # redirect to the pipeline
-            $metakey = 'pipeline_db_head';
-            next;
-        }
-        if ($options =~ /^\=(\w+)$/) { # redirect to another metakey
-            $options = $1;
-            next;
-        }
-
-        return $options;
-    }
-
-    return;
+    return $options;
 }
 
 sub get_slice {
