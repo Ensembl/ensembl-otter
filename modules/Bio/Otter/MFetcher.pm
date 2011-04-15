@@ -469,10 +469,7 @@ sub _fetch_mapped_features {
        || ( ($self->otter_assembly_equiv_hash()->{$csver_remote}{$name} || '') eq $type) ) {
                 # no mapping, just (cross)-fetching:
 
-        my $csver_target = (!$metakey || ($metakey eq '.'))
-                ? $csver_orig
-                : $csver_remote;
-
+        my $csver_target = $metakey ? $csver_remote : $csver_orig;
         warn "Assuming the mappings to be identical, just fetching from {$metakey}$cs:$csver_target\n";
 
         my $sdba = $self->satellite_dba( $metakey );
