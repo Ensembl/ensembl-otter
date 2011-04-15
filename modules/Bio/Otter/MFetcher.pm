@@ -203,8 +203,6 @@ sub satellite_dba_make {
 sub satellite_dba_options {
     my ($self, $metakey) = @_;
 
-    return '.' if $metakey eq '.'; # special value, means otter_dba()
-
     my $meta_container = $self->otter_dba->get_MetaContainer;
 
     while(1) {
