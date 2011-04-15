@@ -440,6 +440,15 @@ sub map_remote_slice_back {
 }
 
 sub fetch_mapped_features {
+    my ($self, @args) = @_;
+    my $features = $self->_fetch_mapped_features(@args);
+    my ($feature_name, $call_args) = @args[0,2];
+    warn "Total of ".scalar(@$features).' '.join('/', grep { defined($_) && !ref($_) } @$call_args)
+        ." ${feature_name}s have been sent to the client\n";
+    return $features;
+}
+
+sub _fetch_mapped_features {
     my ($self, $feature_name, $fetching_method, $call_parms,
         $cs, $name, $type, $start, $end, $metakey, $csver_orig, $csver_remote,
         $das_style_mapping,
@@ -617,9 +626,6 @@ sub fetch_mapped_features {
           } # for each segment
         }
     }
-
-    warn "Total of ".scalar(@$features).' '.join('/', grep { defined($_) && !ref($_) } @$call_parms)
-              ." ${feature_name}s have been sent to the client\n";
 
     return $features;
 }
