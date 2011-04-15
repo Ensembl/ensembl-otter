@@ -335,22 +335,6 @@ sub otter_assembly_equiv_hash { # $self->{_aeh}{NCBI36}{11} = 'chr11-02';
     return $aeh;
 }
 
-sub init_csver {
-    my ($self, $cs, $metakey) = @_; # metakey can even be '.' or ''
-
-    if($cs eq 'chromosome') {
-        if(!$metakey || ($metakey eq '.')) {
-            return 'Otter'; # just for saving time,
-                            # as we know already that otter and pipeline databases should have 'Otter'
-                            # as their meta.'assembly.default' value
-        } else {
-            return $self->default_assembly($self->satellite_dba($metakey));
-        }
-    } else {
-        return;  # defaults to NULL in the DB
-    }
-}
-
     # fetch things from Otter chromosome and map them to another assembly
 sub fetch_and_export {
     my ($self, $fetching_method, $call_parms,
@@ -467,7 +451,8 @@ sub fetch_mapped_features {
         unless $csver_orig eq 'Otter';
 
     $metakey      ||= ''; # defaults to pipeline
-    $csver_remote ||= $self->init_csver($cs, $metakey);
+    $csver_remote ||=
+        $metakey ? $self->default_assembly($self->satellite_dba($metakey)) : "Otter";
 
     my $features = [];
 
