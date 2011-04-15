@@ -10,11 +10,11 @@ use Readonly;
 
 use Bio::Otter::Lace::Defaults;
 use Bio::Otter::Lace::PipelineDB;
-use Bio::Otter::Utils::MM;
 
 use Bio::Vega::SimpleAlign;
 use Bio::Vega::Enrich::SliceGetAllAlignFeatures; # Enriched Bio::EnsEMBL::Slice::get_all_DnaDnaAlignFeatures 
                                                  # (with hit descriptions)
+use Bio::Vega::Utils::Evidence qw(get_accession_type);
 
 use Bio::SeqIO;
 use Bio::EnsEMBL::Pipeline::SeqFetcher;
@@ -203,18 +203,6 @@ sub pfetch {
         -display_id => $hum_seq->name,
         );
     return $seq;
-}
-
-my $mm;
-
-sub get_accession_type {
-    my $name = shift;
-
-    $mm ||= Bio::Otter::Utils::MM->new;
-
-    my $accession_types = $mm->get_accession_types([$name]);
-    my $at = $accession_types->{$name};
-    return @$at;
 }
 
 sub process_align_features {
