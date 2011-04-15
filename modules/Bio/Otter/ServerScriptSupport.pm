@@ -22,6 +22,9 @@ END {
     warn "otter_srv script end: $0\n";
 }
 
+our $ERROR_WRAPPING_ENABLED;
+$ERROR_WRAPPING_ENABLED = 1 unless defined $ERROR_WRAPPING_ENABLED;
+
 our $COMPRESSION_ENABLED;
 $COMPRESSION_ENABLED = 1 unless defined $COMPRESSION_ENABLED;
 
@@ -287,6 +290,7 @@ sub send_response {
     }
     else {
         my $error = $@;
+        die $error unless $ERROR_WRAPPING_ENABLED;
         chomp($error);
         print
             $server->header(
