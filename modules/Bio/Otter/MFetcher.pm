@@ -422,6 +422,7 @@ sub map_remote_slice_back {
 sub fetch_mapped_features {
     my ($self, @args) = @_;
     my $features = $self->_fetch_mapped_features(@args);
+    confess "Fetching failed" unless $features;
     my ($feature_name, $call_args) = @args[0,2];
     warn "Total of ".scalar(@$features).' '.join('/', grep { defined($_) && !ref($_) } @$call_args)
         ." ${feature_name}s have been sent to the client\n";
@@ -456,10 +457,6 @@ sub _fetch_mapped_features {
         my $original_slice = $self->get_slice($sdba, $cs, $name, $type, $start, $end, $csver_target);
 
         $features = $original_slice->$fetching_method(@$call_parms);
-
-        unless($features) {
-            die "Fetching failed";
-        }
 
     } else { # let's try to do the mapping:
         warn "Proceeding with mapping code\n";
