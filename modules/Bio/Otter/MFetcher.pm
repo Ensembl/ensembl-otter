@@ -116,8 +116,6 @@ sub pipeline_dba {
 sub satellite_dba {
     my ($self, $metakey) = @_;
 
-    $metakey ||= 'pipeline_db_head';
-
     # check for a cached dba
     my $dba_cached = $self->{_sdba}{$metakey};
     return $dba_cached if $dba_cached;
