@@ -11,16 +11,12 @@ use Readonly;
 use Bio::Otter::Lace::Defaults;
 use Bio::Otter::Lace::PipelineDB;
 
-use Bio::Vega::SimpleAlign;
 use Bio::Vega::Enrich::SliceGetAllAlignFeatures; # Enriched Bio::EnsEMBL::Slice::get_all_DnaDnaAlignFeatures 
                                                  # (with hit descriptions)
-use Bio::Vega::Utils::Evidence qw(get_accession_type);
+use Bio::Vega::Utils::Align;
+use Bio::Vega::Utils::Evidence qw(get_accession_type reverse_seq);
 
 use Bio::SeqIO;
-use Bio::EnsEMBL::Pipeline::SeqFetcher;
-use Bio::Factory::EMBOSS;       # EMBOSS needs to be on PATH - /software/pubseq/bin/EMBOSS-5.0.0/bin
-                                # To verify, check that 'wossname water' runs successfully
-use Bio::AlignIO;
 
 use Hum::ClipboardUtils qw(magic_evi_name_match);
 use Hum::Pfetch;
@@ -437,27 +433,12 @@ sub feature_augment {
     return $n;
 }
 
-sub reverse_seq {
-    my $bio_seq = shift;
-
-    my $rev_str = $bio_seq->seq;
-    Bio::EnsEMBL::Utils::Sequence::reverse_comp(\$rev_str);
-    my $rev_bio_seq = Bio::Seq->new(
-        -seq        => $rev_str,
-        -display_id => $bio_seq->display_id . ".rev",
-        );
-
-    return $rev_bio_seq;
-}
-
 {
-    my ($factory, $comp_app);
+    my ($aligner);
 
-    sub get_comp_app {
-        $factory ||= Bio::Factory::EMBOSS->new();
-#        $comp_app ||= $factory->program('water');
-        $comp_app ||= $factory->program('needle');
-        return $comp_app;
+    sub get_aligner {
+        $aligner ||= new Bio::Vega::Utils::Align;
+        return $aligner;
     }
 }
 
@@ -482,26 +463,10 @@ sub compare_fetched_features_to_ref {
   }
 
     # Compare them
-    my $comp_app = get_comp_app();
-    my $comp_fh = File::Temp->new();
-    my $comp_outfile = $comp_fh->filename;
+    my $aligner = get_aligner();
+    my $aln_results = $aligner->compare_feature_seqs_to_ref( $ref_seq, \@feature_seqs );
 
-    $comp_app->run({-asequence => $ref_seq,
-                    -bsequence => \@feature_seqs,
-                    -outfile   => $comp_outfile,
-                    -aformat   => 'srspair',
-                    -aglobal   => 1,
-                   });
-
-    my $alnin = Bio::AlignIO->new(-format => 'emboss',
-                                  -fh     => $comp_fh);
-
-    my @aln_results;
-    while ( my $aln = $alnin->next_aln ) {
-        push @aln_results, Bio::Vega::SimpleAlign->promote_BioSimpleAlign($aln);
-    }
-
-    return \@aln_results;
+    return $aln_results;
 }
 
 sub pfetch_feature_max_len {

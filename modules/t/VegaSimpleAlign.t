@@ -6,10 +6,8 @@ use warnings;
 use lib "${ENV{TEAM_TOOLS}}/t/tlib";
 use CriticModule;
 
-use Bio::AlignIO;
-use Bio::Factory::EMBOSS;
-
-use Bio::EnsEMBL::Utils::Sequence;
+use Bio::Vega::Utils::Align;
+use Bio::Vega::Utils::Evidence qw/reverse_seq/;
 
 use Test::More tests => 80;
 
@@ -217,55 +215,26 @@ sub compare_exon_split {
 }
 
 {
-    my ($factory, $comp_app);
+    my $aligner;
 
-    sub get_comp_app {
-        $factory ||= Bio::Factory::EMBOSS->new();
-        $comp_app ||= $factory->program('needle');
-        return $comp_app;
+    sub do_align {
+        my $ref_seq    = shift;
+        my $f_seq      = shift;
+        my $do_reverse = shift;
+
+        my $aligner ||= new Bio::Vega::Utils::Align;
+
+        if ($do_reverse) {
+            $f_seq = reverse_seq($f_seq);
+        }
+
+        my $results = $aligner->compare_feature_seqs_to_ref( $ref_seq, [ $f_seq ] );
+
+        my $result = $results->[0];
+        $result->direction( $do_reverse ? -1 : 1 );
+
+        return $result;
     }
-}
-
-sub reverse_seq {
-    my $bio_seq = shift;
-
-    my $rev_str = $bio_seq->seq;
-    Bio::EnsEMBL::Utils::Sequence::reverse_comp(\$rev_str);
-    my $rev_bio_seq = Bio::Seq->new(
-        -seq        => $rev_str,
-        -display_id => $bio_seq->display_id . ".rev",
-        );
-
-    return $rev_bio_seq;
-}
-
-sub do_align {
-    my $ref_seq    = shift;
-    my $f_seq      = shift;
-    my $do_reverse = shift;
-
-    my $comp_app = get_comp_app();
-    my $comp_fh = File::Temp->new();
-    my $comp_outfile = $comp_fh->filename;
-
-    if ($do_reverse) {
-        $f_seq = reverse_seq($f_seq);
-    }
-
-    $comp_app->run({-asequence => $ref_seq,
-                    -bsequence => [ $f_seq, ],
-                    -outfile   => $comp_outfile,
-#                    -aformat   => 'srspair',
-                   });
-
-    my $alnin = Bio::AlignIO->new(-format => 'emboss',
-                                  -fh     => $comp_fh);
-
-    my $result = Bio::Vega::SimpleAlign->promote_BioSimpleAlign($alnin->next_aln);
-    $result->id( $result->get_seq_by_pos(2)->id );
-    $result->direction( $do_reverse ? -1 : 1 );
-
-    return $result;
 }
 
 sub sequences {
