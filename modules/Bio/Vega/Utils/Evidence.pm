@@ -8,9 +8,12 @@ use base 'Exporter';
 
 our @EXPORT_OK = qw{
     get_accession_type
+    reverse_seq
 };
 
 use Bio::Otter::Utils::MM;
+
+# ---- MM based stuff ----
 
 {
     my $mm;
@@ -28,6 +31,17 @@ use Bio::Otter::Utils::MM;
             return ( (undef) x 6 );
         }
     }
+}
+
+# ---- Misc stuff ----
+
+sub reverse_seq {
+    my $bio_seq = shift;
+
+    my $rev_seq = $bio_seq->revcom;
+    $rev_seq->display_id($bio_seq->display_id . '.rev');
+
+    return $rev_seq;
 }
 
 1;
