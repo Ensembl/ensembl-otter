@@ -386,8 +386,8 @@ sub make_Author_obj {
 sub get_requested_slice {
     my ($self) = @_;
 
-    my $cs      = $self->param('cs')     || 'chromosome';
-    my $csver   = $self->param('csver')  || (($cs eq 'chromosome') ? 'Otter' : undef);
+    my $cs      = $self->require_argument('cs');
+    my $csver   = $self->require_argument('csver');
     my $name    = $self->require_argument('name');
     my $type    = $self->require_argument('type');
     my $start   = $self->require_argument('start');
