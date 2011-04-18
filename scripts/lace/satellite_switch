@@ -4,17 +4,35 @@
 
 use strict;
 use warnings;
+use List::MoreUtils 'uniq'; # CPAN
 
 use Bio::Otter::Lace::Defaults;
 
+
+# "Which database?" can now be answered by checking the port number.
+# The DBA team maintains (essentially) a registry of port numbers used
+# for databases and we are included.
+
+my %MASTER = (3322 => 'lutra5', 3323 => 'lutra7'); # lutra8:3324 is otterlive, not relevant in this script
+my %SLAVE  = (3322 => 'lutra6', 3323 => 'lutra6'); # lutra6:3324 also exists
+
+
+# Build regexps
+my $HOSTS_RE = join "|", sort( uniq( values %MASTER, values %SLAVE ));
+my $PORTS_RE = join "|", keys %MASTER;
+$HOSTS_RE = qr{\b($HOSTS_RE)\b};
+$PORTS_RE = qr{\b($PORTS_RE)\b};
+
 {
     my $switch;
+    my $dryrun = 0;
 
     my $usage = sub { exec('perldoc', $0) };
     # This do_getopt() call is needed to parse the otter config files
     # even if you aren't giving any arguments on the command line.
     Bio::Otter::Lace::Defaults::do_getopt(
         'h|help!'       => $usage,
+        'n|dryrun!'     => sub{ $dryrun = 1 },
         'slave!'        => sub{ $switch = 'slave' },
         'master!'       => sub{ $switch = 'master' },
         ) or $usage->();
@@ -34,49 +52,38 @@ use Bio::Otter::Lace::Defaults;
             next;
         }
         # warn "$name: Looking at $connect\n";
-        my ($sathost, $satport);
-        if ($switch eq 'slave' and $connect =~ /(330[23])/) {
-            print STDERR "\nSwitching $name to slave\n";
-            $sathost = 'otterslave';
-            if ($1 eq '3302') {
-                $satport = '3312';
-            }
-            elsif ($1 eq '3303') {
-                $satport = '3313';
-            }
-            else {
-                die "Bad port: $1";
-            }
-        }
-        elsif ($switch eq 'master' and $connect =~ /(331[23])/) {
-            print STDERR "\nSwitching $name to master\n";
-            if ($1 eq '3312') {
-                $sathost = 'otterpipe1';
-                $satport = '3302';
-            }
-            elsif ($1 eq '3313') {
-                $sathost = 'otterpipe2';
-                $satport = '3303';
-            }
-            else {
-                die "Bad port: $1";
-            }
-        }
-        else {
-            print STDERR "\nDataset $name is already on $switch\n";
+        my ($sathost) = $connect =~ $HOSTS_RE;
+	my ($satport) = $connect =~ $PORTS_RE;
+
+	if ($sathost && $satport) {
+	    if ($switch eq 'master' && $sathost eq $SLAVE{$satport}) {
+		$sathost = $MASTER{$satport};
+	    } elsif ($switch eq 'slave' && $sathost eq $MASTER{$satport}) {
+		$sathost = $SLAVE{$satport};
+	    } elsif ($sathost eq $SLAVE{$satport} || $sathost eq $MASTER{$satport}) {
+		warn "ok:  Dataset $name is already on $switch ($sathost:$satport)\n";
+		next;
+	    }
+
+	} else {
+	    warn "[W] Dataset $name current configuration not recognised,\n      $meta_key => { $connect }\n";
             next;
         }
-        
+
+	print STDERR "\n=>  Switching $name to $switch\n";
         my @command = ('./save_satellite_db',
             -dataset    => $name,
             -key        => $meta_key,
             -sathost    => $sathost,
             -satport    => $satport,
             );
-        warn "Running: @command\n";
-        system(@command);
+	if ($dryrun) {
+	    print "Would run: @command\n";
+	} else {
+	    warn "Running: @command\n";
+	    system(@command);
+	}
     }
-    
 }
 
 
@@ -88,7 +95,7 @@ __END__
 
 =head1 USAGE
 
-  satellite_switch <-slave|-master>
+  satellite_switch <-slave|-master> [-dryrun]
 
 =head1 AUTHOR
 
