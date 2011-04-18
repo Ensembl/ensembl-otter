@@ -119,7 +119,11 @@ sub initialise {
     my $status_colors = {'completed'   => 'DarkGreen', 
                          'missing'     => 'red', 
                          'unavailable' => 'DarkRed'};
-    my $column_write_text  = \&CanvasWindow::SequenceNotes::_column_write_text ;
+    my $column_write_text;
+    {
+        ## no critic(Variables::ProtectPrivateVars)
+        $column_write_text = \&CanvasWindow::SequenceNotes::_column_write_text;
+    }
     $self->column_methods(
         [
          [$column_write_text, sub{
