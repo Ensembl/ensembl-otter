@@ -103,7 +103,7 @@ sub single_select {
 
 sub select_other {
 
-    my @res = $view_xr->send_commands(qq(
+    my ($result) = $view_xr->send_commands(qq(
         <zmap> 
           <request action="delete_feature">
             <align>
@@ -117,29 +117,27 @@ sub select_other {
         </zmap>
     ));
 
-    print "MARK:\n",$res[0],"\n";
+    print "MARK:\n",$result,"\n";
 }
 
 sub start_zmap {
     
-    my @res = $app_xr->send_commands(qq(<zmap><request action="new_zmap"/></zmap>));
+    my $xml;
 
-    my $xml = $res[0];
+    ($xml) = $app_xr->send_commands(qq(<zmap><request action="new_zmap"/></zmap>));
 
     print "GOT THIS BACK: ",$xml,"\n";
     
     my ($id) = $xml =~ /client xwid="([^"]+)"/;
     $disp_xr = X11::XRemote->new(-id => $id);
 
-    @res = $disp_xr->send_commands(qq(
+    ($xml) = $disp_xr->send_commands(qq(
         <zmap>
             <request action="new_view">
                 <segment sequence="chr11-03_64807407-64995340" start="1" end="" />
             </request>
         </zmap>
     ));
-    
-    $xml = $res[0];
     
     ($id) = $xml =~ /client xwid="(.+)"/;
     $view_xr = X11::XRemote->new(-id => $id);
@@ -152,6 +150,6 @@ sub start_zmap {
         </zmap>
     );
 
-    @res = $view_xr->send_commands(sprintf($req, X11::XRemote::client_request_name, X11::XRemote::client_response_name));
+    ($xml) = $view_xr->send_commands(sprintf($req, X11::XRemote::client_request_name, X11::XRemote::client_response_name));
 }
 
