@@ -1218,9 +1218,9 @@ sub zMapGetMark {
 
         my $xml = qq(<zmap><request action="get_mark" /></zmap>);
 
-        my @response = $client->send_commands($xml);
+        my ($response) = $client->send_commands($xml);
 
-        my ($status, $hash) = zMapParseResponse($response[0]);
+        my ($status, $hash) = zMapParseResponse($response);
 
         if ($status =~ /^2/ && $hash->{response}->{mark}->{exists} eq "true") {
 
@@ -1261,9 +1261,9 @@ sub zMapLoadFeatures {
         }
         $xml->close_all_open_tags;
 
-        my @response = $client->send_commands($xml->flush);
+        my ($response) = $client->send_commands($xml->flush);
 
-        my ($status, $hash) = zMapParseResponse($response[0]);
+        my ($status, $hash) = zMapParseResponse($response);
 
         unless ($status =~ /^2/) {
             warn "Problem loading featuresets";
@@ -1293,9 +1293,9 @@ sub zMapDeleteFeaturesets {
         }
         $xml->close_all_open_tags;
 
-        my @response = $client->send_commands($xml->flush);
+        my ($response) = $client->send_commands($xml->flush);
 
-        my ($status, $hash) = zMapParseResponse($response[0]);
+        my ($status, $hash) = zMapParseResponse($response);
 
         unless ($status =~ /^2/) {
             unless ($hash->{error}->{message} =~ /Unknown FeatureSet/) {
@@ -1328,8 +1328,8 @@ sub zMapZoomToSubSeq {
         $xml->close_all_open_tags;
 
         my $command = $xml->flush;
-        my @response = $client->send_commands($command);
-        my ($status, $hash) = zMapParseResponse($response[0]);
+        my ($response) = $client->send_commands($command);
+        my ($status, $hash) = zMapParseResponse($response);
         if ($status =~ /^2/ && $hash->{response} =~ /executed/) {
             return 1;
         }
