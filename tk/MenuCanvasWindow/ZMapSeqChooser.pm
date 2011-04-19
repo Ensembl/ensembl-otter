@@ -1338,7 +1338,7 @@ sub zMapZoomToSubSeq {
         warn "Failed to get client for 'zoom_to'";
     }
 
-    return;
+    return 0;
 }
 
 my $zmap_new_view_xml_format = <<'FORMAT'
