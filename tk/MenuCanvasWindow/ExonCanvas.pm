@@ -831,7 +831,7 @@ sub show_subseq {
 
     my $success = $self->XaceSeqChooser->zMapZoomToSubSeq($self->SubSeq);
     
-    $self->message("Zmap not running") unless $success;
+    $self->message("ZMap: zoom to subsequence failed") unless $success;
 
     return;
 }
