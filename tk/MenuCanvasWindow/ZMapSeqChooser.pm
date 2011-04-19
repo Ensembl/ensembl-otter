@@ -1327,10 +1327,9 @@ sub zMapZoomToSubSeq {
         $subseq->zmap_xml_feature_tag($xml);
         $xml->close_all_open_tags;
 
-        my @response = $client->send_commands($xml->flush);
-
+        my $command = $xml->flush;
+        my @response = $client->send_commands($command);
         my ($status, $hash) = zMapParseResponse($response[0]);
-
         if ($status =~ /^2/ && $hash->{response} =~ /executed/) {
             return 1;
         }
