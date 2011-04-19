@@ -780,8 +780,8 @@ sub DESTROY {
     if ($@) {
         warn "Error in AceDatabase::DESTROY : $@";
     } else {
-        rename $home, "${home}.done"
-            or die "Error renaming the session directory.";
+        rename($home, "${home}.done")
+            or die "Error renaming the session directory; $!";
     }
     
     if ($callback) {
