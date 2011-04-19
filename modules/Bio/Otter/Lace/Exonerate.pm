@@ -127,6 +127,14 @@ sub genomic_end {
     return $self->{'_genomic_end'};
 }
 
+sub mask_target {
+    my ( $self, $mask_target ) = @_;
+    if ( defined $mask_target ) {
+        $self->{'_mask_target'} = $mask_target;
+    }
+    return $self->{'_mask_target'};
+}
+
 sub query_seq {
     my( $self, $seq ) = @_;
 
@@ -390,9 +398,20 @@ sub run_exonerate {
     my $dnahsp = $self->dnahsp || 120 ;
     my $bestn = $self->bestn || 0;
     my $max_intron_length = $self->max_intron_length || 200000;
-    
-    my $exo_options = "--softmasktarget yes -M 500 --bestn $bestn --maxintron $max_intron_length --score $score";
-    
+    my $mask_target = $self->mask_target || 'soft';
+
+    my $exo_options = "-M 500 --bestn $bestn --maxintron $max_intron_length --score $score";
+
+    my $target;
+    if ($mask_target eq 'soft') {
+        $target = $smasked;
+        $exo_options .= " --softmasktarget yes";
+    } elsif ($mask_target eq 'none') {
+        $target = $unmasked;
+    } else {
+        croak("mask_target type '$mask_target' not supported");
+    }
+
     $exo_options .=
         $self->query_type() eq 'protein' ?
         " -m p2g" :
@@ -400,7 +419,7 @@ sub run_exonerate {
 
     my $runnable = Bio::EnsEMBL::Analysis::Runnable::Finished::Exonerate->new(
         -analysis    => $self->analysis(),
-        -target      => $smasked,
+        -target      => $target,
         -query_db    => $self->database(),
         -query_type  => $self->query_type() || 'dna',
         -exo_options => $exo_options,

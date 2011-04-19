@@ -14,6 +14,7 @@ use Hum::Sort qw{ ace_sort };
 use Tk::LabFrame;
 use Tk::Balloon;
 use Tk::Checkbutton;
+use Tk::Radiobutton;
 use Data::Dumper;
 
 use base 'EditWindow';
@@ -21,6 +22,7 @@ use base 'EditWindow';
 my $BEST_N            = 1;
 my $MAX_INTRON_LENGTH = 200000;
 my $MAX_QUERY_LENGTH  = 10000;
+my $MASK_TARGET       = 'soft';
 
 my $INITIAL_DIR = (getpwuid($<))[7];
 
@@ -152,6 +154,26 @@ sub initialise {
         -labelside => 'acrosstop',
         -border    => 3,
     )->pack(@frame_pack);
+
+    my $repeat_radio_frame = $param_frame->LabFrame(
+        -label     => 'Repeat masking',
+        -labelside => 'acrosstop',
+        -border    => 3,
+    )->pack(-side => 'bottom', -fill => 'y');
+
+    $self->{_mask_target} = $MASK_TARGET;
+
+    $repeat_radio_frame->Radiobutton(
+        -variable => \$self->{_mask_target}, 
+        -text     => 'Unmasked',
+        -value    => 'none',
+    )->pack(-side => 'left', -expand => 1, -fill => 'x');
+
+    $repeat_radio_frame->Radiobutton(
+        -variable => \$self->{_mask_target}, 
+        -text     => 'Soft masked',
+        -value    => 'soft',
+    )->pack(-side => 'left', -expand => 1, -fill => 'x');
 
     my $option_frame = $param_frame->Frame->pack(-side => 'right', -fill => 'x');
 
@@ -432,13 +454,14 @@ OTF_mRNA
 OTF_Protein });
     }
 
-    my @exonerate_params = (
+    my %exonerate_params = (
         -use_marked_region => $self->{_use_marked_region},
-        -best_n            => $self->get_entry('bestn'),
-        -max_intron_length => $self->get_entry('max_intron_length'),
+        -best_n            => ($self->get_entry('bestn') || 0),
+        -max_intron_length => ($self->get_entry('max_intron_length') || 0),
+        -mask_target       => $self->{_mask_target},
         );
     my $need_relaunch =
-        $self->XaceSeqChooser->launch_exonerate($seqs, @exonerate_params);
+        $self->XaceSeqChooser->launch_exonerate($seqs, \%exonerate_params);
 
     $self->top->Unbusy;
 

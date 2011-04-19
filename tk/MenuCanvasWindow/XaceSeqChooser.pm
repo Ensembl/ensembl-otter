@@ -1997,7 +1997,7 @@ sub update_SubSeq_locus_level_errors {
 }
 
 sub launch_exonerate {
-    my( $self, $seqs, %params ) = @_;
+    my( $self, $seqs, $params ) = @_;
 
     # lower case query polyA/T tails to avoid spurious exons
     for my $seq (@$seqs) {
@@ -2036,7 +2036,7 @@ sub launch_exonerate {
     # get marked region (if requested)
     my ($genomic_start, $genomic_end) =
         (1, $self->Assembly->Sequence->sequence_length);
-    if ($params{-use_marked_region}) {
+    if ($params->{-use_marked_region}) {
         my ($mark_start, $mark_end) = $self->zMapGetMark;
         if ($mark_start && $mark_end) {
             warn "Setting exonerate genomic start & end to marked region: $mark_start - $mark_end\n";
@@ -2047,8 +2047,10 @@ sub launch_exonerate {
     my $need_relaunch = 0;
     my @method_names;
     my $ace_text = '';
-    my $best_n   = $params{bestn};
-    my $max_intron_length = $params{max_intron_length};
+    my $best_n   = $params->{-best_n};
+    my $max_intron_length = $params->{-max_intron_length};
+    my $mask_target = $params->{-mask_target};
+
     for my $type (keys %seqs_by_type) {
 
         print STDERR "Running exonerate for sequence(s) of type: $type\n";
@@ -2070,6 +2072,7 @@ sub launch_exonerate {
         $exonerate->score($score);
         $exonerate->dnahsp($dnahsp);
         $exonerate->bestn($best_n);
+        $exonerate->mask_target($mask_target);
         $exonerate->max_intron_length($max_intron_length);
         $exonerate->method_tag($ana_name);
         $exonerate->logic_name($ana_name);
