@@ -56,7 +56,9 @@ Mustapha Larbaoui B<email> ml6@sanger.ac.uk
 
 use strict;
 use warnings;
-use Bio
+use Getopt::Long;
+use DBI;
+use Net::Netrc;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 
 {
