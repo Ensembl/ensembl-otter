@@ -17,12 +17,6 @@ my @gff_keys = qw(
 sub get_requested_features {
     my ($self) = @_;
 
-    my @params = ();
-    foreach my $param (qw{ cs name type start end metakey csver csver_remote }) {
-        my $val = $self->param($param);
-        push(@params, defined($val) ? $val : '');
-    }
-
     my @analysis =
         $self->param('analysis')
         ? split(/,/, $self->param('analysis'))
@@ -31,10 +25,10 @@ sub get_requested_features {
     # third parameter of $slice->get_all_Genes() helps
     # preventing lazy-loading of transcripts
 
+    my $map = $self->make_map;
     return [
         map {
-            @{$self->fetch_mapped_features(
-                  'gene', 'get_all_Genes', [ $_, undef, 1 ], @params)};
+            @{$self->fetch_mapped_features('gene', 'get_all_Genes', [ $_, undef, 1 ], $map)};
         } @analysis ];
 }
 

@@ -421,10 +421,10 @@ sub fetch_mapped_features {
 }
 
 sub _fetch_mapped_features {
-    my ($self, $feature_name, $fetching_method, $call_parms,
-        $cs, $name, $type, $start, $end, $metakey, $csver_orig, $csver_remote,
-        $das_style_mapping,
-    ) = @_;
+    my ($self, $feature_name, $fetching_method, $call_parms, $map, $das_style_mapping) = @_;
+
+    my ($cs, $name, $type, $start, $end, $metakey, $csver_orig, $csver_remote) =
+        @{$map}{qw( cs name type start end metakey csver csver_remote )};
 
     confess "invalid coordinate system: '${cs}'"
         unless $cs eq 'chromosome';

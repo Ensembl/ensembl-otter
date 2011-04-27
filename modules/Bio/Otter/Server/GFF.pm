@@ -86,6 +86,7 @@ sub get_requested_features {
     my @analysis_names = $analysis_list ? split(/,/, $analysis_list) : ( undef );
     my $filter_module = $self->param('filter_module');
 
+    my $map = $self->make_map;
     my @feature_list = ();
 
     foreach my $analysis_name (@analysis_names) {
@@ -109,10 +110,7 @@ sub get_requested_features {
                 push @param_list, $param_value;
             }
 
-            my $features = $self->fetch_mapped_features($feature_kind, $getter_method, \@param_list,
-                                                        map { defined($self->param($_)) ? $self->param($_) : '' }
-                                                        qw(cs name type start end metakey csver csver_remote)
-                );
+            my $features = $self->fetch_mapped_features($feature_kind, $getter_method, \@param_list, $map);
 
             push @feature_list, @$features;
         }

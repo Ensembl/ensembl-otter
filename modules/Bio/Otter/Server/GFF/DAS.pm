@@ -270,11 +270,11 @@ sub get_requested_features {
     # Default timeout was 5 seconds, which is not long enough for UCSC!  Could make it a parameter.
     $das->timeout(2 * 60);
 
+    my $map = $self->make_map;
     my $features = $self->fetch_mapped_features(
         'das_'.$feature_kind, 'get_all_features_via_DAS',
         [$self, $das, $chr_name, $analysis_name, $feature_kind, $sieve, $grouplabel, $dump],
-        (map { defined($self->param($_)) ? $self->param($_) : '' } qw(cs name type start end metakey csver csver_remote)),
-        1, # do the short version of mapping, without the target database
+        $map, 1, # do the short version of mapping, without the target database
         );
 
     return $features;
