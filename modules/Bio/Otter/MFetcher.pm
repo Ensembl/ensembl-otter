@@ -421,7 +421,7 @@ sub fetch_mapped_features_ensembl {
     confess "invalid coordinate system version: '${csver_orig}'"
         unless $csver_orig eq 'Otter';
 
-    $csver_remote ||= $self->default_assembly($self->satellite_dba($metakey)) if $metakey;
+    $csver_remote = $map->{csver_remote} ||= $self->default_assembly($self->satellite_dba($metakey)) if $metakey;
 
     my $features = [];
 
