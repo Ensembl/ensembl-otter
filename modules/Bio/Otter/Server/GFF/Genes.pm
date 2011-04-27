@@ -28,7 +28,7 @@ sub get_requested_features {
     my $map = $self->make_map;
     return [
         map {
-            @{$self->fetch_mapped_features('get_all_Genes', [ $_, undef, 1 ], $map)};
+            @{$self->fetch_mapped_features_ensembl('get_all_Genes', [ $_, undef, 1 ], $map)};
         } @analysis ];
 }
 

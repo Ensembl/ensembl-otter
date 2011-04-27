@@ -410,8 +410,8 @@ sub map_remote_slice_back {
     return [];
 }
 
-sub fetch_mapped_features {
-    my ($self, $fetching_method, $call_parms, $map, $das_style_mapping) = @_;
+sub fetch_mapped_features_ensembl {
+    my ($self, $fetching_method, $call_parms, $map) = @_;
 
     my ($cs, $name, $type, $start, $end, $metakey, $csver_orig, $csver_remote) =
         @{$map}{qw( cs name type start end metakey csver csver_remote )};
@@ -443,83 +443,109 @@ sub fetch_mapped_features {
         my $original_slice_2 = $self->get_slice($odba, $cs, $name, $type, $start, $end, $csver_orig);
         my $proj_slices_2 = $self->fetch_mapped_slices($original_slice_2, $map);
 
-        if($das_style_mapping) { # In this mode there is no target_db involved.
-            # Features are put directly on the mapper target slice and then mapped back.
-            foreach my $projected_slice_2 (@$proj_slices_2) {
-                my $target_fs_2_segment
-                    = $projected_slice_2->$fetching_method(@$call_parms);
-                while (my $target_feature = shift @$target_fs_2_segment) {
-                    if( my $transferred = $target_feature->transfer($original_slice_2) ) {
-                        push @$features, $transferred;
-                        warn "Transfer OK\n";
-                    } else {
-                        warn "Transfer failed\n";
-                    }
-                }
-            }
+        my $sdba = $self->satellite_dba( $metakey );
+        my $sa_on_target = $sdba->get_SliceAdaptor();
 
-        } else { # full mapping with target database involved
+      SEGMENT: foreach my $projected_slice_2 (@$proj_slices_2) {
 
-            my $sdba = $self->satellite_dba( $metakey );
-            my $sa_on_target = $sdba->get_SliceAdaptor();
+          my $target_slice_on_target = $sa_on_target->fetch_by_region(
+              $projected_slice_2->coord_system()->name(),
+              $projected_slice_2->seq_region_name(),
+              $projected_slice_2->start(),
+              $projected_slice_2->end(),
+              $projected_slice_2->strand(),
+              $projected_slice_2->coord_system()->version(),
+              );
 
-          SEGMENT: foreach my $projected_slice_2 (@$proj_slices_2) {
+          unless($target_slice_on_target) {
+              warn "MFetcher: cannot create the slice ["
+                  .$projected_slice_2->coord_system()->name()
+                  .':'
+                  .$projected_slice_2->seq_region_name()
+                  .':'
+                  .$projected_slice_2->start()
+                  .':'
+                  .$projected_slice_2->end()
+                  .':'
+                  .$projected_slice_2->strand()
+                  .':'
+                  .$projected_slice_2->coord_system()->version()
+                  ."] on target, please check the target.\n";
+              next SEGMENT; # it may be mappable, but not applicable!
+          }
 
-              my $target_slice_on_target = $sa_on_target->fetch_by_region(
-                  $projected_slice_2->coord_system()->name(),
-                  $projected_slice_2->seq_region_name(),
-                  $projected_slice_2->start(),
-                  $projected_slice_2->end(),
-                  $projected_slice_2->strand(),
-                  $projected_slice_2->coord_system()->version(),
-                  );
+          my $target_fs_on_target_segment
+              = $target_slice_on_target->$fetching_method(@$call_parms);
 
-              unless($target_slice_on_target) {
-                  warn "MFetcher: cannot create the slice ["
-                      .$projected_slice_2->coord_system()->name()
-                      .':'
-                      .$projected_slice_2->seq_region_name()
-                      .':'
-                      .$projected_slice_2->start()
-                      .':'
-                      .$projected_slice_2->end()
-                      .':'
-                      .$projected_slice_2->strand()
-                      .':'
-                      .$projected_slice_2->coord_system()->version()
-                      ."] on target, please check the target.\n";
-                  next SEGMENT; # it may be mappable, but not applicable!
+          unless($target_fs_on_target_segment) {
+              die "Fetching failed";
+          }
+
+          # foreach my $target_feature (@$target_fs_on_target_segment) {
+          # This is supposed to be faster:
+          while (my $target_feature = shift @$target_fs_on_target_segment) {
+
+              if($target_feature->can('propagate_slice')) {
+                  $target_feature->propagate_slice($projected_slice_2);
+              } else {
+                  $target_feature->slice($projected_slice_2);
               }
 
-              my $target_fs_on_target_segment
-                  = $target_slice_on_target->$fetching_method(@$call_parms);
-
-              unless($target_fs_on_target_segment) {
-                  die "Fetching failed";
+              if( my $transferred = $target_feature->transfer($original_slice_2) ) {
+                  push @$features, $transferred;
+                  warn "Transfer OK".ref($transferred)."\n";
+              } else {
+                  warn "Transfer failed\n";
               }
-
-              # foreach my $target_feature (@$target_fs_on_target_segment) {
-              # This is supposed to be faster:
-              while (my $target_feature = shift @$target_fs_on_target_segment) {
-
-                  if($target_feature->can('propagate_slice')) {
-                      $target_feature->propagate_slice($projected_slice_2);
-                  } else {
-                      $target_feature->slice($projected_slice_2);
-                  }
-
-                  if( my $transferred = $target_feature->transfer($original_slice_2) ) {
-                      push @$features, $transferred;
-                      warn "Transfer OK".ref($transferred)."\n";
-                  } else {
-                      warn "Transfer failed\n";
-                  }
-              } # for each feature
-          } # for each segment
-        }
+          } # for each feature
+      } # for each segment
     }
 
     return $features;
+}
+
+sub fetch_mapped_features_das {
+    my ($self, $fetching_method, $call_parms, $map) = @_;
+
+    my ($cs, $name, $type, $start, $end, $csver_orig, $csver_remote) =
+        @{$map}{qw( cs name type start end csver csver_remote )};
+
+    confess "invalid coordinate system: '${cs}'"
+        unless $cs eq 'chromosome';
+    confess "invalid coordinate system version: '${csver_orig}'"
+        unless $csver_orig eq 'Otter';
+
+    if( ($self->otter_assembly_equiv_hash()->{$csver_remote}{$name} || '') eq $type) {
+        warn "fetch_mapped_features_das(): no mapping\n";
+        my $odba = $self->otter_dba;
+        my $slice = $self->get_slice($odba, $cs, $name, $type, $start, $end, $csver_orig);
+        return $slice->$fetching_method(@$call_parms);
+    }
+    else { # let's try to do the mapping:
+        warn "fetch_mapped_features_das(): mapping\n";
+
+        my $odba = $self->otter_dba;
+        my $slice = $self->get_slice($odba, $cs, $name, $type, $start, $end, $csver_orig);
+        my $proj_slices_2 = $self->fetch_mapped_slices($slice, $map);
+
+        # Features are put directly on the mapper target slice and then mapped back.
+        my $features = [ ];
+        foreach my $projected_slice_2 (@$proj_slices_2) {
+            my $target_fs_2_segment
+                = $projected_slice_2->$fetching_method(@$call_parms);
+            while (my $target_feature = shift @$target_fs_2_segment) {
+                if( my $transferred = $target_feature->transfer($slice) ) {
+                    push @$features, $transferred;
+                    warn "Transfer OK\n";
+                } else {
+                    warn "Transfer failed\n";
+                }
+            }
+        }
+
+        return $features;
+
+    }
 }
 
 sub fetch_mapped_slices {
