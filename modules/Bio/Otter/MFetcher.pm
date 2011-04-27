@@ -439,51 +439,9 @@ sub fetch_mapped_features {
     } else { # let's try to do the mapping:
         warn "Proceeding with mapping code\n";
 
-        my $odba = $self->otter_dba();
+        my $odba = $self->otter_dba;
         my $original_slice_2 = $self->get_slice($odba, $cs, $name, $type, $start, $end, $csver_orig);
-        my $proj_segments_2;
-        die "Unable to project: $type:$csver_orig($start..$end)->$csver_remote. Check the mapping.\n$@"
-            unless eval {
-            $proj_segments_2 = $original_slice_2->project( $cs, $csver_remote );
-            # Try to map to scaffold if coordinate system exists and mapping to chromosome failed
-            # allow getting ensembl objects from Zfish scaffolds
-            if(!@$proj_segments_2 && $odba->get_CoordSystemAdaptor->fetch_by_name('scaffold',$csver_remote)) {
-                $proj_segments_2 = $original_slice_2->project( 'scaffold', $csver_remote );
-            }
-            1;
-        } && @$proj_segments_2;
-        warn "Found ".scalar(@$proj_segments_2)." projection segments on mapper when projecting to $cs:$csver_remote\n";
-
-        # group the projected slices by their chromosome and,
-        # for each chromosome, calculate the endpoints of the
-        # slice that just covers all the projected slices on
-        # that chromosome
-
-        my $amalgamated_endpoints = { };
-        my $proj_slices_2;
-
-        foreach my $segment (@$proj_segments_2) {
-            my $slice = $segment->to_Slice;
-            my $chromosome = $slice->seq_region_name;
-            my $start0 = $amalgamated_endpoints->{$chromosome}[0];
-            my $start1 = $slice->start;
-            my $end0 = $amalgamated_endpoints->{$chromosome}[1];
-            my $end1 = $slice->end;
-            $amalgamated_endpoints->{$chromosome}[0] = $start1 unless
-                defined $start0 && $start0 <= $start1;
-            $amalgamated_endpoints->{$chromosome}[1] = $end1 unless
-                defined $end0 && $end0 >= $end1;
-        }
-
-        # create the amalgamated slices
-        my $strand = $original_slice_2->strand;
-        my $adaptor = $original_slice_2->adaptor;
-        $proj_slices_2 = [ map {
-            my $seq_region_name = $_;
-            my ( $start, $end ) = @{$amalgamated_endpoints->{$_}};
-            $adaptor->fetch_by_region($cs, $seq_region_name,
-                                      $start, $end, $strand, $csver_remote,);
-                                   } keys %$amalgamated_endpoints ];
+        my $proj_slices_2 = $self->fetch_mapped_slices($original_slice_2, $map);
 
         if($das_style_mapping) { # In this mode there is no target_db involved.
             # Features are put directly on the mapper target slice and then mapped back.
@@ -562,6 +520,70 @@ sub fetch_mapped_features {
     }
 
     return $features;
+}
+
+sub fetch_mapped_slices {
+    my ($self, $slice, $map) = @_;
+
+    my ($cs, $csver_remote) =
+        @{$map}{qw( cs csver_remote )};
+
+    my $segments = $self->fetch_mapped_segments($slice, $map);
+    warn "Found ".scalar(@$segments)." projection segments on mapper when projecting to $cs:$csver_remote\n";
+
+    # group the projected slices by their chromosome and,
+    # for each chromosome, calculate the endpoints of the
+    # slice that just covers all the projected slices on
+    # that chromosome
+
+    my $amalgamated_endpoints = { };
+    foreach my $segment (@$segments) {
+        my $segment_slice = $segment->to_Slice;
+        my $chromosome = $segment_slice->seq_region_name;
+        my $start0 = $amalgamated_endpoints->{$chromosome}[0];
+        my $start1 = $segment_slice->start;
+        my $end0 = $amalgamated_endpoints->{$chromosome}[1];
+        my $end1 = $segment_slice->end;
+        $amalgamated_endpoints->{$chromosome}[0] = $start1 unless
+            defined $start0 && $start0 <= $start1;
+        $amalgamated_endpoints->{$chromosome}[1] = $end1 unless
+            defined $end0 && $end0 >= $end1;
+    }
+
+    # create the amalgamated slices
+    my $strand = $slice->strand;
+    my $adaptor = $slice->adaptor;
+
+    return [
+        map {
+            my $seq_region_name = $_;
+            my ( $start, $end ) = @{$amalgamated_endpoints->{$_}};
+            $adaptor->fetch_by_region($cs, $seq_region_name,
+                                      $start, $end, $strand, $csver_remote,);
+        } keys %$amalgamated_endpoints ];
+}
+
+sub fetch_mapped_segments {
+    my ($self, $slice, $map) = @_;
+
+    my ($cs, $csver_remote) =
+        @{$map}{qw( cs csver_remote )};
+
+    my $segments;
+
+    $segments = $slice->project( $cs, $csver_remote );
+    return $segments if $segments;
+
+    # Try to map to scaffold if coordinate system exists and mapping
+    # to chromosome failed allow getting ensembl objects from Zfish
+    # scaffolds
+
+    if($self->otter_dba->get_CoordSystemAdaptor->fetch_by_name('scaffold',$csver_remote)) {
+        $segments = $slice->project( 'scaffold', $csver_remote );
+    }
+    return $segments if $segments;
+
+    die "unable to project";
 }
 
 sub Bio::EnsEMBL::Gene::propagate_slice {
