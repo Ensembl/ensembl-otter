@@ -70,6 +70,16 @@ sub param {
     return $self->cgi->param(@args);
 }
 
+sub make_map {
+    my ($self) = @_;
+    return {
+        map {
+            my $val = $self->param($_);
+            $_ => defined($val) ? $val : '';
+        } qw( cs name type start end metakey csver csver_remote ),
+    };
+}
+
 
 ############## getters: ###########################
 
