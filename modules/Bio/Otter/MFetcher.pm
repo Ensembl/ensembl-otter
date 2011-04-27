@@ -411,7 +411,7 @@ sub map_remote_slice_back {
 }
 
 sub fetch_mapped_features {
-    my ($self, $feature_name, $fetching_method, $call_parms, $map, $das_style_mapping) = @_;
+    my ($self, $fetching_method, $call_parms, $map, $das_style_mapping) = @_;
 
     my ($cs, $name, $type, $start, $end, $metakey, $csver_orig, $csver_remote) =
         @{$map}{qw( cs name type start end metakey csver csver_remote )};
