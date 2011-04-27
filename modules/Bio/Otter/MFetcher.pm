@@ -488,19 +488,9 @@ sub fetch_mapped_features {
         if($das_style_mapping) { # In this mode there is no target_db involved.
             # Features are put directly on the mapper target slice and then mapped back.
             foreach my $projected_slice_2 (@$proj_slices_2) {
-
                 my $target_fs_2_segment
                     = $projected_slice_2->$fetching_method(@$call_parms);
-
-                warn '***** : '.scalar(@$target_fs_2_segment)." ${feature_name}s created on the slice\n";
-
                 while (my $target_feature = shift @$target_fs_2_segment) {
-                    my $fname = sprintf( "%s [%d..%d]",
-                                         $target_feature->display_id(),
-                                         $target_feature->start(),
-                                         $target_feature->end() );
-                    warn "Transferring $feature_name $fname from {".$target_feature->slice->name
-                        ."} onto {".$original_slice_2->name."}\n";
                     if( my $transferred = $target_feature->transfer($original_slice_2) ) {
                         push @$features, $transferred;
                         warn "Transfer OK\n";
@@ -550,8 +540,6 @@ sub fetch_mapped_features {
                   die "Fetching failed";
               }
 
-              warn '***** : '.scalar(@$target_fs_on_target_segment)." ${feature_name}s found on the slice $metakey:".$target_slice_on_target->start().'..'.$target_slice_on_target->end()."\n";
-
               # foreach my $target_feature (@$target_fs_on_target_segment) {
               # This is supposed to be faster:
               while (my $target_feature = shift @$target_fs_on_target_segment) {
@@ -562,12 +550,6 @@ sub fetch_mapped_features {
                       $target_feature->slice($projected_slice_2);
                   }
 
-                  my $fname = sprintf( "%s [%d..%d]",
-                                       $target_feature->display_id(),
-                                       $target_feature->start(),
-                                       $target_feature->end() );
-                  warn "Transferring $feature_name $fname from {".$target_feature->slice->name
-                      ."} onto {".$original_slice_2->name."}\n";
                   if( my $transferred = $target_feature->transfer($original_slice_2) ) {
                       push @$features, $transferred;
                       warn "Transfer OK".ref($transferred)."\n";
