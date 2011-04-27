@@ -271,11 +271,10 @@ sub get_requested_features {
     $das->timeout(2 * 60);
 
     my $map = $self->make_map;
-    my $features = $self->fetch_mapped_features(
+    my $features = $self->fetch_mapped_features_das(
         'get_all_features_via_DAS',
         [$self, $das, $chr_name, $analysis_name, $feature_kind, $sieve, $grouplabel, $dump],
-        $map, 1, # do the short version of mapping, without the target database
-        );
+        $map);
 
     return $features;
 }
