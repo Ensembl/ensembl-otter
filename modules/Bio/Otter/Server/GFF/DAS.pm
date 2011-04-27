@@ -272,7 +272,7 @@ sub get_requested_features {
 
     my $map = $self->make_map;
     my $features = $self->fetch_mapped_features(
-        'das_'.$feature_kind, 'get_all_features_via_DAS',
+        'get_all_features_via_DAS',
         [$self, $das, $chr_name, $analysis_name, $feature_kind, $sieve, $grouplabel, $dump],
         $map, 1, # do the short version of mapping, without the target database
         );
