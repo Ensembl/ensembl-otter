@@ -57,12 +57,13 @@ no warnings 'uninitialized';
 
 use FindBin qw($Bin);
 use vars qw($SERVERROOT);
+use Storable;
 use Data::Dumper;
 
 BEGIN {
-    $SERVERROOT = "$Bin/../../../..";
-    unshift(@INC, "$SERVERROOT/ensembl/modules");
-    unshift(@INC, "$SERVERROOT/bioperl-live");
+  $SERVERROOT = "$Bin/../../../..";
+  unshift(@INC, "$SERVERROOT/ensembl/modules");
+  unshift(@INC, "$SERVERROOT/bioperl-live");
 }
 
 use Data::Dumper;
@@ -77,13 +78,39 @@ my $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
 # parse options
 $support->parse_common_options(@_);
 $support->parse_extra_options(
-  'ccdsfile=s',
-  'prune=s'
+  'prune=s',
+  'evegahost=s',
+  'evegaport=s',
+  'evegauser=s',
+  'evegapass=s',
+  'evegassembly=s',
+  'ensemblhost=s',
+  'ensemblport=s',
+  'ensembluser=s',
+  'ensemblpass=s',
+  'ccdshost=s',
+  'ccdsport=s',
+  'ccdsuser=s',
+  'ccdspass=s',
 );
 $support->allowed_params(
   $support->get_common_params,
-  'ccdsfile',
   'prune',
+  'evegahost',
+  'evegaport',
+  'evegauser',
+  'evegapass',
+  'evegaassembly',
+  'evegadbname',
+  'ensemblhost',
+  'ensemblport',
+  'ensembluser',
+  'ensemblpass',
+  'ccdshost',
+  'ccdsport',
+  'ccdsuser',
+  'ccdspass',
+  'ccdsdbname',
 );
 
 if ($support->param('help') or $support->error) {
@@ -97,15 +124,13 @@ $support->confirm_params;
 # get log filehandle and print heading and parameters to logfile
 $support->init_log;
 
-# get adaptors
+# get adaptors for adding to Vega
 my $dba = $support->get_database('ensembl');
 my $ta = $dba->get_TranscriptAdaptor;
 my $ea = $dba->get_DBEntryAdaptor;
 
 if ($support->param('prune') and $support->user_proceed('Would you really like to delete all previous CCDS xrefs?')) {
-
   $support->log("Deleting  CCDS  xrefs...\n");
-
   my $num = $dba->dbc->do(qq(
            DELETE x
            FROM xref x, external_db ed
@@ -123,34 +148,100 @@ if ($support->param('prune') and $support->user_proceed('Would you really like t
         ));
 }
 
-# get list of identifiers into a hash
-$support->check_required_params('ccdsfile');
-$support->log_stamped("Reading CCDS identifier input file...\n");
-my $ccds_file = $support->param('ccdsfile');
-open (FHIN, "<$ccds_file");
-my (%vega_ids, %CCDS_idents);
-foreach my $entry (<FHIN>) {
-  my ($vega,$ccds) = $entry =~ /(\S*)\s+(\S*)/;
-  $CCDS_idents{$ccds}++;
-  $vega_ids{$vega} = $ccds;
+#parse ccds info
+my ($vega_ids,$ccds_ids);
+my $vega_ids_file = $support->param('logpath').'/'.$support->param('ccdsdbname')."-parsed_vega_ids_for_ccds.file";
+if (-e $vega_ids_file) {
+  if ($support->user_proceed("Read CCDS records from a previously saved file ($vega_ids_file) ?\n")) {
+    $vega_ids = retrieve($vega_ids_file);
+  }
 }
-$support->log_stamped("Done parsing ".scalar(keys %vega_ids)." entries. Corresponds to ".scalar(keys %CCDS_idents)."\n");
+else {
+  my $e_dba = $support->get_database('ensembl','ensembl');
+  my $ev_dba = $support->get_database('ensembl','evega');
+  my $ev_sa = $ev_dba->get_SliceAdaptor;
+  my $ccds_dba = $support->get_database('ensembl','ccds');
+  my $ccds_sa = $ccds_dba->get_SliceAdaptor;
+  $ev_dba->dnadb($e_dba);
+  $ccds_dba->dnadb($e_dba);
+  my $path = $support->param('evegaassembly');
+  $support->log_stamped("Retrieving info from CCDS database\n");
+  foreach my $chr ( @{$ccds_sa->fetch_all('chromosome')}){
+    my $chrname = $chr->name;
+    $support->log_stamped("On chromosome $chrname\n",1);
+    foreach my $ccds_gene ( @{$chr->get_all_Genes()} ){
+      $ccds_gene = $ccds_gene->transform('chromosome', $path);
+      foreach my $ccds_trans (@{$ccds_gene->get_all_Transcripts()}){
+        my %xref_hash;
+        my $ccds_id;
+        foreach my $entry (@{$ccds_trans->get_all_DBEntries('CCDS')}) {
+          $xref_hash{$entry->display_id()} = 1;
+        }
+        if (scalar keys %xref_hash != 1){
+          my $tsi = $ccds_trans->stable_id;
+          $support->log_error("Something odd going on for $tsi, has ". scalar (keys %xref_hash) ." xrefs\n",1);
+          foreach my $entry (keys %xref_hash){
+            $support->log("xref $entry \n",2);
+          }
+        }
+        else {
+          foreach my $entry (keys %xref_hash){
+            $ccds_id = $entry;
+          }
+        }
+        my $chr_name = $ccds_trans->slice->seq_region_name;
+        my $start = $ccds_trans->start();
+        my $end   = $ccds_trans->end();
+        my @ccds_exons = @{$ccds_trans->get_all_translateable_Exons()};
+        my $slice = $ev_sa->fetch_by_region('chromosome',$chr_name, $start, $end, '1', $path );
+        foreach my $gene (@{$slice->get_all_Genes()}){
+          next if ($gene->biotype ne "protein_coding");
+          $gene = $gene->transform('chromosome', $path);
+          foreach my $trans (@{$gene->get_all_Transcripts}){
+            my @exons = @{$trans->get_all_translateable_Exons()};
+            my $match = 0;
+            if (scalar @exons == scalar @ccds_exons){
+              for (my $i = 0; $i < @exons; $i++){
+                if ($ccds_exons[$i]->start == $exons[$i]->start
+                      && $ccds_exons[$i]->end == $exons[$i]->end){
+                  $match++;
+                }
+                #else{
+                #  print "no match ".$ccds_exons[$i]->start." != ".$exons[$i]->start." or ".
+                #	$ccds_exons[$i]->end." != ".$exons[$i]->end."\n";
+                #}
+              }
+              if ($match == scalar @exons){
+                $vega_ids->{$trans->stable_id} = $ccds_id;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  store($vega_ids,$vega_ids_file);
+}
 
-# loop over transcripts, updating db with CCDS identifier
-$support->log_stamped("Adding xrefs to db...\n");
+foreach my $vid (keys %$vega_ids) {
+  $ccds_ids->{$vega_ids->{$vid}}++;
+}
+$support->log_stamped("Done parsing, retrieved ".scalar(keys %$vega_ids)." transcripts and ".scalar(keys %$ccds_ids)." CCDS entries\n");
+
+# loop over Vega transcripts, updating db with CCDS identifier
+$support->log_stamped("Adding xrefs to vega db...\n");
 my ($no_trans, $num_success, $no_match) = (0, 0, 0);
 my (%sources, %transcript_ids);
 my ($successful, $non_translating, $missing_transcript);
-foreach my $k (keys %vega_ids) {
-  if (my $transcript = $ta->fetch_by_stable_id($k)) {
+while (my ($tsi, $ccds_idnt) = each %$vega_ids) {
+  if (my $transcript = $ta->fetch_by_stable_id($tsi)) {
     if (my $translation = $transcript->translation) {
       $sources{$transcript->analysis->logic_name}++;
-      $transcript_ids{$k}++;
+      $transcript_ids{$tsi}++;
       $num_success++;
       my $internal_id = $translation->dbID;
-      my $ccds_idnt = $vega_ids{$k};
       my ($prim_acc) = $ccds_idnt =~ /(\w*)/;
-      $successful .= sprintf "    %-30s%-20s%-20s\n", $k, $internal_id, $ccds_idnt;
+      $successful .= sprintf "    %-30s%-20s%-20s\n", $tsi, $internal_id, $ccds_idnt;
       my $dbentry = Bio::EnsEMBL::DBEntry->new(
 	-primary_id => $prim_acc,
 	-display_id => $ccds_idnt,
@@ -162,17 +253,17 @@ foreach my $k (keys %vega_ids) {
       }
     } else {
       $no_trans++;
-      $non_translating .= "    $k\n";
+      $non_translating .= "    $tsi\n";
     }
   } else {
     $no_match++;
-    $missing_transcript .= "    $k\n";
+    $missing_transcript .= "    $tsi\n";
   }
 }
 $support->log("Done. ".$support->date_and_mem."\n\n");
 
 # print log results
-$support->log("\nProcessed ".scalar(keys %vega_ids)." identifiers.\n");
+$support->log("\nProcessed ".scalar(keys %$vega_ids)." identifiers.\n");
 $support->log("OK: $num_success\n");
 $support->log("WARNINGS:\n");
 $support->log("Identifiers with no matching transcript in Vega: $no_match.\n", 1);
