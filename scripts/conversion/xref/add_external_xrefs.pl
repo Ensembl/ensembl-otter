@@ -116,7 +116,7 @@ $support->parse_common_options(@_);
 $support->parse_extra_options(
   'chromosomes|chr=s@',
   'gene_stable_id|gsi=s@',
-  'xrefformat=s@',
+  'xrefformat=s',
   'hgncfile=s',
   'mgifile=s',
   'imgt_hlafile=s',
