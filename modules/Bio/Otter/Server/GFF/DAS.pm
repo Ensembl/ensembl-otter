@@ -247,7 +247,7 @@ sub get_requested_features {
     my $chr_name      = $self->param('name');  ## Since in our new schema name is substituted for type,
     ## we need it clean for outer sources
 
-    my $source        = $self->param('source'); # let's slowly phase it out
+    my $source        = $self->require_argument('source');
     my $dsn           = $self->require_argument('dsn');
     my $analysis_name = $self->param('analysis'); # defaults to *everything*
     my $feature_kind  = $self->param('feature_kind')  || 'SimpleFeature';
@@ -255,7 +255,7 @@ sub get_requested_features {
     my $grouplabel    = $self->param('grouplabel') || '';
 
     my $das = Bio::Das::Lite->new({
-        'dsn' => $source ? $source.'/'.$dsn : $dsn,
+        'dsn' => $source.'/'.$dsn,
         $http_proxy ? ('http_proxy' => $http_proxy) : (),
                                   });
 
