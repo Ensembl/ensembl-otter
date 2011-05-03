@@ -16,8 +16,6 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
 use Bio::Vega::DBSQL::DBAdaptor;
 
-use base ('Bio::Otter::SpeciesDat');
-
 sub new { # just to make it possible to instantiate an object
     my ($pkg, @arguments) = @_;
 

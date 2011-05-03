@@ -2,13 +2,19 @@
 package Bio::Otter::SpeciesDat;
 
 # Read and maintain the hash from 'species.dat'.
-# (Inherited by Bio::Otter::MFetcher)
 #
 # Author: lg4
 
 use strict;
 use warnings;
 
+sub new {
+    my ($pkg, $file) = @_;
+    my $new = {};
+    bless $new, $pkg;
+    $new->load_species_dat_file($file);
+    return $new;
+}
 
 sub get_dataset_param {
     my ($self, $dataset_name, $param_name) = @_;
@@ -27,19 +33,8 @@ sub dataset_hash { # used by scripts/apache/get_datasets only
     return $self->{'_species_dat_hash'};
 }
 
-sub species_dat_filename {
-    my( $self, $filename ) = @_;
-
-    if($filename) {
-        $self->{'_species_dat_filename'} = $filename;
-    }
-    return $self->{'_species_dat_filename'};
-}
-
 sub load_species_dat_file {
-    my ($self) = @_;
-
-    my $filename = $self->species_dat_filename();
+    my ($self, $filename) = @_;
 
     open my $dat, '<', $filename or die "Can't read species file '$filename' : $!";
 
