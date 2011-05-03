@@ -16,14 +16,6 @@ sub new {
     return $new;
 }
 
-sub get_dataset_param {
-    my ($self, $dataset_name, $param_name) = @_;
-
-    my $all_species = $self->dataset_hash;
-    my $subhash = $all_species->{$dataset_name} || die "Unknown Dataset '$dataset_name'";
-    return $subhash->{$param_name};
-}
-
 sub dataset_hash { # used by scripts/apache/get_datasets only
     my ($self) = @_;
 
@@ -110,7 +102,10 @@ sub otter_dba {
 
     die "No dataset name" unless $dataset_name;
 
-    my $dbname = $self->get_dataset_param($dataset_name, 'DBNAME');
+    my $dataset = $self->dataset_hash->{$dataset_name};
+    die "Unknown Dataset '$dataset_name'" unless $dataset;
+
+    my $dbname = $dataset->{DBNAME};
     die "Failed opening otter database [No database name]" unless $dbname;
 
     require Bio::Vega::DBSQL::DBAdaptor;
@@ -119,10 +114,10 @@ sub otter_dba {
     my $odba;
     die "Failed opening otter database [$@]" unless eval {
         $odba = Bio::Vega::DBSQL::DBAdaptor->new(
-            -host    => $self->get_dataset_param($dataset_name, 'HOST'),
-            -port    => $self->get_dataset_param($dataset_name, 'PORT'),
-            -user    => $self->get_dataset_param($dataset_name, 'USER'),
-            -pass    => $self->get_dataset_param($dataset_name, 'PASS'),
+            -host    => $dataset->{HOST},
+            -port    => $dataset->{PORT},
+            -user    => $dataset->{USER},
+            -pass    => $dataset->{PASS},
             -dbname  => $dbname,
             -group   => 'otter',
             -species => $dataset_name,
@@ -130,15 +125,15 @@ sub otter_dba {
         1;
     };
 
-    my $dna_dbname = $self->get_dataset_param($dataset_name, 'DNA_DBNAME');
+    my $dna_dbname = $dataset->{DNA_DBNAME};
     if ($dna_dbname) {
         my $dnadb;
         die "Failed opening dna database [$@]" unless eval {
             $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
-                -host    => $self->get_dataset_param($dataset_name, 'DNA_HOST'),
-                -port    => $self->get_dataset_param($dataset_name, 'DNA_PORT'),
-                -user    => $self->get_dataset_param($dataset_name, 'DNA_USER'),
-                -pass    => $self->get_dataset_param($dataset_name, 'DNA_PASS'),
+                -host    => $dataset->{DNA_HOST},
+                -port    => $dataset->{DNA_PORT},
+                -user    => $dataset->{DNA_USER},
+                -pass    => $dataset->{DNA_PASS},
                 -dbname  => $dna_dbname,
                 -group   => 'dnadb',
                 -species => $dataset_name,
