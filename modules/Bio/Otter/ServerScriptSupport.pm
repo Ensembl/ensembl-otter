@@ -137,21 +137,17 @@ sub _SpeciesDat {
     my $species_dat_file = $self->data_dir . '/species.dat';
     my $species_dat = Bio::Otter::SpeciesDat->new($species_dat_file);
 
+    my $user = $self->authorized_user;
+    my $allowed_datasets = $self->users_hash->{$user} || {};
+
     unless ($self->local_user || $self->internal_user) {        
         # External users only see datasets listed after their names in users.txt file
-        $species_dat->keep_only_datasets($self->allowed_datasets);
+        $species_dat->keep_only_datasets($allowed_datasets);
     }
-    my $datasets_to_keep = $self->show_restricted_datasets ? $self->allowed_datasets : {};
+    my $datasets_to_keep = $self->show_restricted_datasets ? $allowed_datasets : {};
     $species_dat->remove_restricted_datasets($datasets_to_keep);
 
     return $species_dat;
-}
-
-sub allowed_datasets {
-    my ($self) = @_;
-
-    my $user = $self->authorized_user;
-    return $self->users_hash->{$user} || {};
 }
 
 sub users_hash {
