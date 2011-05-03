@@ -27,9 +27,6 @@ sub get_dataset_param {
 sub dataset_hash { # used by scripts/apache/get_datasets only
     my ($self) = @_;
 
-    unless ($self->{'_species_dat_hash'}) {
-        $self->load_species_dat_file;
-    }
     return $self->{'_species_dat_hash'};
 }
 
