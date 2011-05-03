@@ -116,6 +116,8 @@ sub remove_restricted_datasets {
 sub otter_dba {
     my ($self, $dataset_name) = @_;
 
+    die "No dataset name" unless $dataset_name;
+
     my $dbname = $self->get_dataset_param($dataset_name, 'DBNAME');
     die "Failed opening otter database [No database name]" unless $dbname;
 
