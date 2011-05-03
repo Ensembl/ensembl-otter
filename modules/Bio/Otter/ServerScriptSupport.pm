@@ -6,6 +6,7 @@ use warnings;
 
 use Bio::Vega::Author;
 use Bio::Otter::Version qw( $SCHEMA_VERSION $XML_VERSION );
+use Bio::Otter::SpeciesDat;
 
 use IO::Compress::Gzip qw(gzip);
 
@@ -48,7 +49,6 @@ sub new {
     }
 
     $self->dataset_name($self->param('dataset'));
-    $self->species_dat_filename($self->data_dir . '/species.dat');
 
     $LOG = $self->param('log');
 
@@ -122,23 +122,29 @@ sub data_dir {
 
 sub otter_dba_default {
     my ($self) = @_;
-    return $self->Bio::Otter::SpeciesDat::otter_dba($self->dataset_name);
+    return $self->SpeciesDat->otter_dba($self->dataset_name);
 }
 
-    # overloading because certain species may need to be masked
-sub load_species_dat_file {
-    my ($self, @args) = @_;
+sub SpeciesDat {
+    my ($self) = @_;
 
-    $self->SUPER::load_species_dat_file(@args);
+    return $self->{_SpeciesDat} ||= $self->_SpeciesDat;
+}
+
+sub _SpeciesDat {
+    my ($self) = @_;
+
+    my $species_dat_file = $self->data_dir . '/species.dat';
+    my $species_dat = Bio::Otter::SpeciesDat->new($species_dat_file);
 
     unless ($self->local_user || $self->internal_user) {        
         # External users only see datasets listed after their names in users.txt file
-        $self->keep_only_datasets($self->allowed_datasets);
+        $species_dat->keep_only_datasets($self->allowed_datasets);
     }
     my $datasets_to_keep = $self->show_restricted_datasets ? $self->allowed_datasets : {};
-    $self->remove_restricted_datasets($datasets_to_keep);
+    $species_dat->remove_restricted_datasets($datasets_to_keep);
 
-    return;
+    return $species_dat;
 }
 
 sub allowed_datasets {

@@ -31,7 +31,7 @@ sub get_datasets {
     my ($server) = @_;
 
     my $xml = '';
-    my $species_hash = $server->dataset_hash;
+    my $species_hash = $server->SpeciesDat->dataset_hash;
 
     # Only local users get to see mysql connection details
     my $show_details = $server->local_user;
