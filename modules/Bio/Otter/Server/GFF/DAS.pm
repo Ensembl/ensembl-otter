@@ -57,7 +57,7 @@ sub struct_show_path {
 }
 
 sub Bio::EnsEMBL::Slice::get_all_features_via_DAS { # $feature_kind = 'SimpleFeature' || 'PredictionExon'
-    my ($slice, $server, $das, $chr_name, $analysis_name, $feature_kind, $sieve, $grouplabel, $dump) = @_;
+    my ($slice, $server, $das, $chr_name, $analysis_name, $feature_kind, $sieve, $grouplabel) = @_;
 
     my $feature_subhash     = $LangDesc{$feature_kind};
     my $feature_constructor = $feature_subhash->{-constructor};
@@ -108,11 +108,6 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS { # $feature_kind = 'SimpleFea
         die "Error from DAS request: $code\n";
     }
 
-    ### This is VERY useful for finding out some protocol pecularities/discrepancies:
-    if($dump) {
-        die "The whole structure of the response is: '".Dumper($response)."'\n";
-    }
-    
     my $feature_coll; # collection(hash/array) of top-level features (prediction_transcripts | simple_features)
 
     foreach my $das_features (values %$response) {
@@ -144,8 +139,6 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS { # $feature_kind = 'SimpleFea
             if ($das_feature->{'start'} > $chr_end) {
                 $truncated_3_prime = 1;
             }
-
-            # warn "DAS_feature = ".Dumper($das_feature)."\n";
 
             my $pt_label;
 
@@ -260,7 +253,6 @@ sub get_requested_features {
     my $feature_kind  = $self->param('feature_kind')  || 'SimpleFeature';
     my $sieve         = $self->param('sieve') || '';
     my $grouplabel    = $self->param('grouplabel') || '';
-    my $dump          = $self->param('dump') || 0;
 
     my $das = Bio::Das::Lite->new({
         'dsn' => $source ? $source.'/'.$dsn : $dsn,
@@ -273,7 +265,7 @@ sub get_requested_features {
     my $map = $self->make_map;
     my $features = $self->fetch_mapped_features_das(
         'get_all_features_via_DAS',
-        [$self, $das, $chr_name, $analysis_name, $feature_kind, $sieve, $grouplabel, $dump],
+        [$self, $das, $chr_name, $analysis_name, $feature_kind, $sieve, $grouplabel],
         $map);
 
     return $features;
