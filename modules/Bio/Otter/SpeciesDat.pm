@@ -10,27 +10,28 @@ use warnings;
 
 sub new {
     my ($pkg, $file) = @_;
-    my $new = {};
+    my $new = {
+        _dataset_hash => _dataset_hash($file),
+    };
     bless $new, $pkg;
-    $new->load_species_dat_file($file);
     return $new;
 }
 
 sub dataset_hash { # used by scripts/apache/get_datasets only
     my ($self) = @_;
 
-    return $self->{'_species_dat_hash'};
+    return $self->{_dataset_hash};
 }
 
-sub load_species_dat_file {
-    my ($self, $filename) = @_;
+sub _dataset_hash {
+    my ($filename) = @_;
 
     open my $dat, '<', $filename or die "Can't read species file '$filename' : $!";
 
     my $cursect = undef;
     my $defhash = {};
     my $curhash = undef;
-    my $sp = $self->{'_species_dat_hash'} = {};
+    my $sp = {};
 
     while (<$dat>) {
         next if /^\#/;
@@ -67,7 +68,7 @@ sub load_species_dat_file {
     # Have finished with defaults, so we can remove them.
     delete $sp->{'defaults'};
 
-    return;
+    return $sp;
 }
 
 sub keep_only_datasets {
