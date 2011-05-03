@@ -411,10 +411,10 @@ sub map_remote_slice_back {
 }
 
 sub fetch_mapped_features_ensembl {
-    my ($self, $fetching_method, $call_parms, $map) = @_;
+    my ($self, $fetching_method, $call_parms, $map, $metakey) = @_;
 
-    my ($cs, $name, $type, $start, $end, $metakey, $csver_orig, $csver_remote) =
-        @{$map}{qw( cs name type start end metakey csver csver_remote )};
+    my ($cs, $name, $type, $start, $end, $csver_orig, $csver_remote) =
+        @{$map}{qw( cs name type start end csver csver_remote )};
 
     confess "invalid coordinate system: '${cs}'"
         unless $cs eq 'chromosome';
