@@ -60,41 +60,39 @@ sub otter_dba {
     }
 
 
-    my( $odba, $dnadb );
+    my $dbname = $self->current_dataset_param('DBNAME');
+    die "Failed opening otter database [No database name]" unless $dbname;
 
-    if(my $dbname = $self->current_dataset_param('DBNAME')) {
-        die "Failed opening otter database [$@]" unless eval {
-           $odba = $adaptor_class->new( -host       => $self->current_dataset_param('HOST'),
-                                        -port       => $self->current_dataset_param('PORT'),
-                                        -user       => $self->current_dataset_param('USER'),
-                                        -pass       => $self->current_dataset_param('PASS'),
-                                        -dbname     => $dbname,
-                                        -group      => 'otter',
-                                        -species    => $self->dataset_name,
-                                        );
-           1;
-        };
+    my $odba;
+    die "Failed opening otter database [$@]" unless eval {
+        $odba = $adaptor_class->new(
+            -host    => $self->current_dataset_param('HOST'),
+            -port    => $self->current_dataset_param('PORT'),
+            -user    => $self->current_dataset_param('USER'),
+            -pass    => $self->current_dataset_param('PASS'),
+            -dbname  => $dbname,
+            -group   => 'otter',
+            -species => $self->dataset_name,
+            );
+        1;
+    };
 
-        warn "Connected to otter database\n";
-    } else {
-        die "Failed opening otter database [No database name]";
-    }
-
-    if(my $dna_dbname = $self->current_dataset_param('DNA_DBNAME')) {
+    my $dna_dbname = $self->current_dataset_param('DNA_DBNAME');
+    if ($dna_dbname) {
+        my $dnadb;
         die "Failed opening dna database [$@]" unless eval {
-            $dnadb = new Bio::EnsEMBL::DBSQL::DBAdaptor( -host      => $self->current_dataset_param('DNA_HOST'),
-                                                         -port      => $self->current_dataset_param('DNA_PORT'),
-                                                         -user      => $self->current_dataset_param('DNA_USER'),
-                                                         -pass      => $self->current_dataset_param('DNA_PASS'),
-                                                         -dbname    => $dna_dbname,
-                                                         -group     => 'dnadb',
-                                                         -species   => $self->dataset_name,
-                                                         );
+            $dnadb = new Bio::EnsEMBL::DBSQL::DBAdaptor(
+                -host    => $self->current_dataset_param('DNA_HOST'),
+                -port    => $self->current_dataset_param('DNA_PORT'),
+                -user    => $self->current_dataset_param('DNA_USER'),
+                -pass    => $self->current_dataset_param('DNA_PASS'),
+                -dbname  => $dna_dbname,
+                -group   => 'dnadb',
+                -species => $self->dataset_name,
+                );
             1;
         };
         $odba->dnadb($dnadb);
-
-        warn "Connected to dna database\n";
     }
 
     return $self->{'_odba'} = $odba;
