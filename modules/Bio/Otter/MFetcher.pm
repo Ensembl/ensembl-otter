@@ -35,12 +35,6 @@ sub dataset_name {
     return $self->{'_dataset_name'};
 }
 
-sub current_dataset_param {
-    my ($self, $param_name) = @_;
-
-    return $self->get_dataset_param( $self->dataset_name() , $param_name);
-}
-
 sub otter_dba {
     my ($self, @args) = @_;
 
@@ -59,43 +53,7 @@ sub otter_dba {
         }
     }
 
-
-    my $dbname = $self->current_dataset_param('DBNAME');
-    die "Failed opening otter database [No database name]" unless $dbname;
-
-    my $odba;
-    die "Failed opening otter database [$@]" unless eval {
-        $odba = $adaptor_class->new(
-            -host    => $self->current_dataset_param('HOST'),
-            -port    => $self->current_dataset_param('PORT'),
-            -user    => $self->current_dataset_param('USER'),
-            -pass    => $self->current_dataset_param('PASS'),
-            -dbname  => $dbname,
-            -group   => 'otter',
-            -species => $self->dataset_name,
-            );
-        1;
-    };
-
-    my $dna_dbname = $self->current_dataset_param('DNA_DBNAME');
-    if ($dna_dbname) {
-        my $dnadb;
-        die "Failed opening dna database [$@]" unless eval {
-            $dnadb = new Bio::EnsEMBL::DBSQL::DBAdaptor(
-                -host    => $self->current_dataset_param('DNA_HOST'),
-                -port    => $self->current_dataset_param('DNA_PORT'),
-                -user    => $self->current_dataset_param('DNA_USER'),
-                -pass    => $self->current_dataset_param('DNA_PASS'),
-                -dbname  => $dna_dbname,
-                -group   => 'dnadb',
-                -species => $self->dataset_name,
-                );
-            1;
-        };
-        $odba->dnadb($dnadb);
-    }
-
-    return $self->{'_odba'} = $odba;
+    return $self->{'_odba'} = $self->SUPER::otter_dba($self->dataset_name);
 }
 
 sub default_assembly {

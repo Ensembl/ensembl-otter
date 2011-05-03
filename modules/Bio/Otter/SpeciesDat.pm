@@ -113,6 +113,50 @@ sub remove_restricted_datasets {
     return;
 }
 
+sub otter_dba {
+    my ($self, $dataset_name) = @_;
+
+    my $dbname = $self->get_dataset_param($dataset_name, 'DBNAME');
+    die "Failed opening otter database [No database name]" unless $dbname;
+
+    require Bio::Vega::DBSQL::DBAdaptor;
+    require Bio::EnsEMBL::DBSQL::DBAdaptor;
+
+    my $odba;
+    die "Failed opening otter database [$@]" unless eval {
+        $odba = Bio::Vega::DBSQL::DBAdaptor->new(
+            -host    => $self->get_dataset_param($dataset_name, 'HOST'),
+            -port    => $self->get_dataset_param($dataset_name, 'PORT'),
+            -user    => $self->get_dataset_param($dataset_name, 'USER'),
+            -pass    => $self->get_dataset_param($dataset_name, 'PASS'),
+            -dbname  => $dbname,
+            -group   => 'otter',
+            -species => $dataset_name,
+            );
+        1;
+    };
+
+    my $dna_dbname = $self->get_dataset_param($dataset_name, 'DNA_DBNAME');
+    if ($dna_dbname) {
+        my $dnadb;
+        die "Failed opening dna database [$@]" unless eval {
+            $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
+                -host    => $self->get_dataset_param($dataset_name, 'DNA_HOST'),
+                -port    => $self->get_dataset_param($dataset_name, 'DNA_PORT'),
+                -user    => $self->get_dataset_param($dataset_name, 'DNA_USER'),
+                -pass    => $self->get_dataset_param($dataset_name, 'DNA_PASS'),
+                -dbname  => $dna_dbname,
+                -group   => 'dnadb',
+                -species => $dataset_name,
+                );
+            1;
+        };
+        $odba->dnadb($dnadb);
+    }
+
+    return $odba;
+}
+
 1;
 
 __END__
