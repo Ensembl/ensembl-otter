@@ -10,8 +10,31 @@ my $http_proxy = $ENV{http_proxy};
 
 use Bio::Das::Lite;
 use Bio::EnsEMBL::SimpleFeature;
+use Bio::Vega::PredictionTranscript;
 use Bio::EnsEMBL::PredictionExon;
-use Bio::Otter::Lace::ViaText qw( %LangDesc );
+use Bio::EnsEMBL::DnaDnaAlignFeature;
+
+my %LangDesc = (
+
+    SimpleFeature => {
+        -constructor => 'Bio::EnsEMBL::SimpleFeature',
+    },
+
+    PredictionTranscript => {
+        -constructor  => 'Bio::Vega::PredictionTranscript',
+        -get_all_cmps => 'get_all_Exons',
+    },
+
+    PredictionExon => {
+        -constructor => 'Bio::EnsEMBL::PredictionExon',
+        -add_one_cmp => [ 'PredictionTranscript', 'add_Exon' ],
+    },
+
+    DnaDnaAlignFeature => {
+        -constructor => sub { return Bio::EnsEMBL::DnaDnaAlignFeature->new_fast({}); },
+    },
+
+    );
 
 sub struct_traverse_path {
     my ($struct, $path) = @_;
