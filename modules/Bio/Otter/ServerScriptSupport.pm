@@ -120,6 +120,11 @@ sub data_dir {
     return $data_dir;
 }
 
+sub otter_dba_default {
+    my ($self) = @_;
+    return $self->Bio::Otter::SpeciesDat::otter_dba($self->dataset_name);
+}
+
     # overloading because certain species may need to be masked
 sub load_species_dat_file {
     my ($self, @args) = @_;

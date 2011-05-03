@@ -53,7 +53,11 @@ sub otter_dba {
         }
     }
 
-    return $self->{'_odba'} = $self->SUPER::otter_dba($self->dataset_name);
+    return $self->{'_odba'} = $self->otter_dba_default;
+}
+
+sub otter_dba_default {
+    die "no default otter database";
 }
 
 sub default_assembly {
