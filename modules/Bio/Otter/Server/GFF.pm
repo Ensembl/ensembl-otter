@@ -110,7 +110,8 @@ sub get_requested_features {
                 push @param_list, $param_value;
             }
 
-            my $features = $self->fetch_mapped_features_ensembl($getter_method, \@param_list, $map);
+            my $metakey = $self->param('metakey');
+            my $features = $self->fetch_mapped_features_ensembl($getter_method, \@param_list, $map, $metakey);
 
             push @feature_list, @$features;
         }

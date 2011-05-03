@@ -76,7 +76,7 @@ sub make_map {
         map {
             my $val = $self->param($_);
             $_ => defined($val) ? $val : '';
-        } qw( cs name type start end metakey csver csver_remote ),
+        } qw( cs name type start end csver csver_remote ),
     };
 }
 
