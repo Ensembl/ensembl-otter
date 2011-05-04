@@ -147,6 +147,25 @@ sub otter_dba_default {
     return $self->SpeciesDat->otter_dba($dataset_name);
 }
 
+sub allowed_datasets {
+    my ($self) = @_;
+
+    my $user = $self->authorized_user;
+    my $user_is_external = ! ( $self->local_user || $self->internal_user );
+    my $user_datasets = $self->users_hash->{$user};
+
+    my $dataset_hash = $self->SpeciesDat->dataset_hash;
+
+    return [
+        grep {
+            my $is_listed = $user_datasets && $user_datasets->{$_};
+            my $list_rejected = $user_is_external && ! $is_listed;
+            my $is_restricted = $dataset_hash->{$_}{RESTRICTED};
+            my $restrict_rejected = $is_restricted && ( $user_is_external || ! $is_listed );
+            ! ( $list_rejected || $restrict_rejected );
+        } keys %{$dataset_hash} ];
+}
+
 sub SpeciesDat {
     my ($self) = @_;
 
