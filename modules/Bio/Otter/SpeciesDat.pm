@@ -1,7 +1,7 @@
 
 package Bio::Otter::SpeciesDat;
 
-# Read and maintain the hash from 'species.dat'.
+# Read a set of datasets from a file.
 #
 # Author: lg4
 
