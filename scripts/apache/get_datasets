@@ -37,7 +37,7 @@ sub get_datasets {
     my $show_details = $server->local_user;
 
     $xml   .= qq{  <datasets>\n};
-    foreach my $dataset (keys %$species_hash) {
+    foreach my $dataset (@{$server->allowed_datasets}) {
         my $species_subhash = $species_hash->{$dataset};
 
         $xml .= qq{    <dataset name="$dataset">\n};
