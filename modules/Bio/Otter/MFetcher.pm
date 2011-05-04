@@ -24,13 +24,19 @@ sub new { # just to make it possible to instantiate an object
     return $self;
 }
 
-sub dataset_name {
-    my( $self, $dataset_name ) = @_;
+sub dataset {
+    my( $self, $dataset ) = @_;
 
-    if($dataset_name) {
-        $self->{'_dataset_name'} = $dataset_name;
+    if($dataset) {
+        $self->{'_dataset'} = $dataset;
     }
-    return $self->{'_dataset_name'};
+
+    return $self->{'_dataset'} ||=
+        $self->dataset_default;
+}
+
+sub dataset_default {
+    die "no default dataset";
 }
 
 sub otter_dba {
@@ -51,11 +57,8 @@ sub otter_dba {
         }
     }
 
-    return $self->{'_odba'} = $self->otter_dba_default;
-}
-
-sub otter_dba_default {
-    die "no default otter database";
+    return $self->{'_odba'} ||=
+        $self->dataset->otter_dba;
 }
 
 sub default_assembly {
@@ -129,7 +132,7 @@ sub satellite_dba_make {
 
     my %anycase_options = (
          -group     => $metakey,
-         -species   => $self->dataset_name,
+         -species   => $self->dataset->name,
         @options,
     );
 

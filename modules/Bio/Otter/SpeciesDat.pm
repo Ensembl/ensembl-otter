@@ -8,19 +8,32 @@ package Bio::Otter::SpeciesDat;
 use strict;
 use warnings;
 
+use Bio::Otter::SpeciesDat::DataSet;
+
 sub new {
     my ($pkg, $file) = @_;
+    my $dataset_hash = _dataset_hash($file);
+    my $dataset = {
+        map {
+            $_ => Bio::Otter::SpeciesDat::DataSet->new($_, $dataset_hash->{$_});
+        } keys %{$dataset_hash} };
+    my $datasets = [ values %{$dataset} ];
     my $new = {
-        _dataset_hash => _dataset_hash($file),
+        _dataset  => $dataset,
+        _datasets => $datasets,
     };
     bless $new, $pkg;
     return $new;
 }
 
-sub dataset_hash {
-    my ($self) = @_;
+sub dataset {
+    my ($self, $name) = @_;
+    return $self->{_dataset}{$name};
+}
 
-    return $self->{_dataset_hash};
+sub datasets {
+    my ($self) = @_;
+    return $self->{_datasets};
 }
 
 sub _dataset_hash {
@@ -69,55 +82,6 @@ sub _dataset_hash {
     delete $sp->{'defaults'};
 
     return $sp;
-}
-
-sub otter_dba {
-    my ($self, $dataset_name) = @_;
-
-    die "No dataset name" unless $dataset_name;
-
-    my $dataset = $self->dataset_hash->{$dataset_name};
-    die "Unknown Dataset '$dataset_name'" unless $dataset;
-
-    my $dbname = $dataset->{DBNAME};
-    die "Failed opening otter database [No database name]" unless $dbname;
-
-    require Bio::Vega::DBSQL::DBAdaptor;
-    require Bio::EnsEMBL::DBSQL::DBAdaptor;
-
-    my $odba;
-    die "Failed opening otter database [$@]" unless eval {
-        $odba = Bio::Vega::DBSQL::DBAdaptor->new(
-            -host    => $dataset->{HOST},
-            -port    => $dataset->{PORT},
-            -user    => $dataset->{USER},
-            -pass    => $dataset->{PASS},
-            -dbname  => $dbname,
-            -group   => 'otter',
-            -species => $dataset_name,
-            );
-        1;
-    };
-
-    my $dna_dbname = $dataset->{DNA_DBNAME};
-    if ($dna_dbname) {
-        my $dnadb;
-        die "Failed opening dna database [$@]" unless eval {
-            $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
-                -host    => $dataset->{DNA_HOST},
-                -port    => $dataset->{DNA_PORT},
-                -user    => $dataset->{DNA_USER},
-                -pass    => $dataset->{DNA_PASS},
-                -dbname  => $dna_dbname,
-                -group   => 'dnadb',
-                -species => $dataset_name,
-                );
-            1;
-        };
-        $odba->dnadb($dnadb);
-    }
-
-    return $odba;
 }
 
 1;
