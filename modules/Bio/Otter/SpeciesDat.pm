@@ -71,33 +71,6 @@ sub _dataset_hash {
     return $sp;
 }
 
-sub keep_only_datasets {
-    my ($self, $allowed_hash) = @_;
-
-    my $sp = $self->dataset_hash;
-
-    foreach my $dataset_name (keys %$sp) {
-        warn sprintf "Dataset %s is %sallowed\n"
-            , $dataset_name, $allowed_hash->{$dataset_name} ? '' : 'not ';
-        delete $sp->{$dataset_name} unless $allowed_hash->{$dataset_name};
-    }
-
-    return;
-}
-
-sub remove_restricted_datasets {
-    my ($self, $allowed_hash) = @_;
-    
-    my $sp = $self->dataset_hash;
-
-    foreach my $dataset_name (keys %$sp) {
-        next unless $sp->{$dataset_name}{'RESTRICTED'};
-        delete $sp->{$dataset_name} unless $allowed_hash->{$dataset_name};
-    }
-
-    return;
-}
-
 sub otter_dba {
     my ($self, $dataset_name) = @_;
 
