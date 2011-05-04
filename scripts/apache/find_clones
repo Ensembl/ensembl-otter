@@ -20,6 +20,3 @@ Bio::Otter::ServerScriptSupport->send_response(
         my $output = $finder->generate_output;
         return $output;
     });
-
-1;
-

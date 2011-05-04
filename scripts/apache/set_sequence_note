@@ -77,6 +77,3 @@ sub set_sequence_note {
 }
 
 Bio::Otter::ServerScriptSupport->send_response(\&set_sequence_note);
-
-1;
-

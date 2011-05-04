@@ -39,6 +39,3 @@ sub lock_region {
 }
 
 Bio::Otter::ServerScriptSupport->send_response(\&lock_region);
-
-1;
-

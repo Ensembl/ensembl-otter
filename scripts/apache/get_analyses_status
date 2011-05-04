@@ -132,6 +132,3 @@ for my $input_id (sort keys %result_hash) {
 }
 
 Bio::Otter::ServerScriptSupport->send_response(\&get_analyses_status);
-
-1;
-

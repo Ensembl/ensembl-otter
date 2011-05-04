@@ -33,5 +33,3 @@ Bio::Otter::ServerScriptSupport->send_response(
 
         return $response;
     });
-
-1;

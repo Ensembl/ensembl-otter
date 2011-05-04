@@ -256,6 +256,3 @@ sub strip_incomplete_genes {
     }
     return;
 }
-
-1;
-

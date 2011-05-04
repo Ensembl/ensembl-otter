@@ -59,8 +59,6 @@ sub get_datasets {
 
 Bio::Otter::ServerScriptSupport->send_response(\&get_datasets);
 
-1;
-
 =pod
 
 =head1 get_datasets
