@@ -122,32 +122,36 @@ sub data_dir {
 
 sub otter_dba_default {
     my ($self) = @_;
-    return $self->SpeciesDat->otter_dba($self->dataset_name);
+
+    my $dataset_name = $self->dataset_name;
+
+    my $user = $self->authorized_user;
+    my $user_is_external = ! ( $self->local_user || $self->internal_user );
+
+    my $dataset = $self->SpeciesDat->dataset_hash->{$dataset_name};
+    die "no such dataset" unless $dataset;
+
+    # restrict external users to the datasets listed in the users file
+    my $user_datasets = $self->users_hash->{$user};
+    if ($user_is_external) {
+        die "no such dataset" unless
+            $user_datasets && $user_datasets->{$dataset_name};
+    }
+
+    # reject restricted datasets if necessary
+    die "no such dataset" if
+        ! $self->show_restricted_datasets &&
+        $user_is_external &&
+        $dataset->{RESTRICTED};
+
+    return $self->SpeciesDat->otter_dba($dataset_name);
 }
 
 sub SpeciesDat {
     my ($self) = @_;
 
-    return $self->{_SpeciesDat} ||= $self->_SpeciesDat;
-}
-
-sub _SpeciesDat {
-    my ($self) = @_;
-
-    my $species_dat_file = $self->data_dir . '/species.dat';
-    my $species_dat = Bio::Otter::SpeciesDat->new($species_dat_file);
-
-    my $user = $self->authorized_user;
-    my $allowed_datasets = $self->users_hash->{$user} || {};
-
-    unless ($self->local_user || $self->internal_user) {        
-        # External users only see datasets listed after their names in users.txt file
-        $species_dat->keep_only_datasets($allowed_datasets);
-    }
-    my $datasets_to_keep = $self->show_restricted_datasets ? $allowed_datasets : {};
-    $species_dat->remove_restricted_datasets($datasets_to_keep);
-
-    return $species_dat;
+    return $self->{_SpeciesDat} ||=
+        Bio::Otter::SpeciesDat->new($self->data_dir . '/species.dat');
 }
 
 sub users_hash {
