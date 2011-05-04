@@ -17,7 +17,7 @@ sub new {
     return $new;
 }
 
-sub dataset_hash { # used by scripts/apache/get_datasets only
+sub dataset_hash {
     my ($self) = @_;
 
     return $self->{_dataset_hash};
