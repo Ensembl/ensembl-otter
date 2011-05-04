@@ -48,8 +48,6 @@ sub new {
         $self->authenticate_user;
     }
 
-    $self->dataset_name($self->param('dataset'));
-
     $LOG = $self->param('log');
 
     return $self;
@@ -120,17 +118,18 @@ sub data_dir {
     return $data_dir;
 }
 
-sub otter_dba_default {
+sub dataset_default {
     my ($self) = @_;
-    my $dataset_name = $self->dataset_name;
-    die "no such dataset" unless $self->dataset_filter->($dataset_name);
-    return $self->SpeciesDat->otter_dba($dataset_name);
+    my $dataset_name = $self->require_argument('dataset');
+    my $dataset = $self->SpeciesDat->dataset($dataset_name);
+    die "no dataset" unless $dataset;
+    return $dataset;
 }
 
 sub allowed_datasets {
     my ($self) = @_;
     my $filter = $self->dataset_filter;
-    return [ grep { $filter->($_) } keys %{$self->SpeciesDat->dataset_hash} ];
+    return [ grep { $filter->($_) } @{$self->SpeciesDat->datasets} ];
 }
 
 sub dataset_filter {
@@ -139,13 +138,12 @@ sub dataset_filter {
     my $user = $self->authorized_user;
     my $user_is_external = ! ( $self->local_user || $self->internal_user );
     my $user_datasets = $self->users_hash->{$user};
-    my $dataset_hash = $self->SpeciesDat->dataset_hash;
 
     return sub {
         my ($dataset) = @_;
-        my $is_listed = $user_datasets && $user_datasets->{$dataset};
+        my $is_listed = $user_datasets && $user_datasets->{$dataset->name};
         my $list_rejected = $user_is_external && ! $is_listed;
-        my $is_restricted = $dataset_hash->{$dataset}{RESTRICTED};
+        my $is_restricted = $dataset->params->{RESTRICTED};
         my $restrict_rejected = $is_restricted && ( $user_is_external || ! $is_listed );
         return ! ( $list_rejected || $restrict_rejected );
     };

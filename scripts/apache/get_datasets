@@ -31,23 +31,23 @@ sub get_datasets {
     my ($server) = @_;
 
     my $xml = '';
-    my $species_hash = $server->SpeciesDat->dataset_hash;
 
     # Only local users get to see mysql connection details
     my $show_details = $server->local_user;
 
     $xml   .= qq{  <datasets>\n};
     foreach my $dataset (@{$server->allowed_datasets}) {
-        my $species_subhash = $species_hash->{$dataset};
+        my $name   = $dataset->name;
+        my $params = $dataset->params;
 
-        $xml .= qq{    <dataset name="$dataset">\n};
+        $xml .= qq{    <dataset name="$name">\n};
 
-        foreach my $key (keys %$species_subhash) {
+        foreach my $key (keys %$params) {
             unless ($show_details) {
                 next if $secret_params{$key};
             }
             my $lckey = lc($key);   ### Why do we bother lower casing this?
-            $xml .= qq{      <$lckey>$species_subhash->{$key}</$lckey>\n};
+            $xml .= qq{      <$lckey>$params->{$key}</$lckey>\n};
         }
 
         $xml .= qq{    </dataset>\n};
