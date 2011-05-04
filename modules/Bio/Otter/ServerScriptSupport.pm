@@ -122,48 +122,33 @@ sub data_dir {
 
 sub otter_dba_default {
     my ($self) = @_;
-
     my $dataset_name = $self->dataset_name;
-
-    my $user = $self->authorized_user;
-    my $user_is_external = ! ( $self->local_user || $self->internal_user );
-
-    my $dataset = $self->SpeciesDat->dataset_hash->{$dataset_name};
-    die "no such dataset" unless $dataset;
-
-    # restrict external users to the datasets listed in the users file
-    my $user_datasets = $self->users_hash->{$user};
-    if ($user_is_external) {
-        die "no such dataset" unless
-            $user_datasets && $user_datasets->{$dataset_name};
-    }
-
-    # reject restricted datasets if necessary
-    die "no such dataset" if
-        ! $self->show_restricted_datasets &&
-        $user_is_external &&
-        $dataset->{RESTRICTED};
-
+    die "no such dataset" unless $self->dataset_filter->($dataset_name);
     return $self->SpeciesDat->otter_dba($dataset_name);
 }
 
 sub allowed_datasets {
     my ($self) = @_;
+    my $filter = $self->dataset_filter;
+    return [ grep { $filter->($_) } keys %{$self->SpeciesDat->dataset_hash} ];
+}
+
+sub dataset_filter {
+    my ($self) = @_;
 
     my $user = $self->authorized_user;
     my $user_is_external = ! ( $self->local_user || $self->internal_user );
     my $user_datasets = $self->users_hash->{$user};
-
     my $dataset_hash = $self->SpeciesDat->dataset_hash;
 
-    return [
-        grep {
-            my $is_listed = $user_datasets && $user_datasets->{$_};
-            my $list_rejected = $user_is_external && ! $is_listed;
-            my $is_restricted = $dataset_hash->{$_}{RESTRICTED};
-            my $restrict_rejected = $is_restricted && ( $user_is_external || ! $is_listed );
-            ! ( $list_rejected || $restrict_rejected );
-        } keys %{$dataset_hash} ];
+    return sub {
+        my ($dataset) = @_;
+        my $is_listed = $user_datasets && $user_datasets->{$dataset};
+        my $list_rejected = $user_is_external && ! $is_listed;
+        my $is_restricted = $dataset_hash->{$dataset}{RESTRICTED};
+        my $restrict_rejected = $is_restricted && ( $user_is_external || ! $is_listed );
+        return ! ( $list_rejected || $restrict_rejected );
+    };
 }
 
 sub SpeciesDat {
