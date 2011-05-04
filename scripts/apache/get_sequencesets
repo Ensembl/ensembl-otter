@@ -181,8 +181,6 @@ XML
 
 Bio::Otter::ServerScriptSupport->send_response(\&get_sequencesets);
 
-1;
-
 __END__
 
 =head1 NAME - get_sequencesets

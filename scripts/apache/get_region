@@ -34,6 +34,3 @@ warn "Done converting slice to XML. Length of XML = " . length($xml) . "\n";
 }
 
 Bio::Otter::ServerScriptSupport->send_response(\&get_region);
-
-1;
-

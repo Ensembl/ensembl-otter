@@ -60,6 +60,3 @@ sub unlock_region {
 }
 
 Bio::Otter::ServerScriptSupport->send_response(\&unlock_region);
-
-1;
-

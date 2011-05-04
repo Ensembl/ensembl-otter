@@ -56,6 +56,3 @@ sub get_sequence_notes {
 }
 
 Bio::Otter::ServerScriptSupport->send_response(\&get_sequence_notes);
-
-1;
-
