@@ -206,7 +206,7 @@ foreach my $chr (@chr_sorted) {
     }
 
     my $gene_name = $gene->display_xref->display_id;
-    $support->log("Studying $gene_name ($gsi)...\n");
+    $support->log_verbose("Studying $gene_name ($gsi)...\n");
     $gnum++;
 
     foreach my $trans (@{$gene->get_all_Transcripts()}) {
@@ -216,7 +216,7 @@ foreach my $chr (@chr_sorted) {
 	
 	$support->log_verbose("Searching for name $trlsi...\n",1);
 	if (my $links = $parsed_xrefs->{$trlsi}) {
-	  $support->log("Match found for $trlsi.\n",1);
+	  $support->log_verbose("Match found for $trlsi.\n",1);
 
 	MATCH:
 	  foreach my $match (@{$links->{'GO'}}) {
@@ -230,7 +230,7 @@ foreach my $chr (@chr_sorted) {
 	    }
 	    $ev_type ||= 'NULL';
 	    $support->log_verbose("Creating new GO xref for $trlsi--$match.\n", 3);
-	    my $dbentry = Bio::EnsEMBL::OntoogyXref->new(
+	    my $dbentry = Bio::EnsEMBL::OntologyXref->new(
 	      -primary_id => $xid,
 	      -display_id => $xid,
 	      -version    => 1,
@@ -242,7 +242,7 @@ foreach my $chr (@chr_sorted) {
 	    $trl->add_DBEntry($dbentry);
 	    if (! $support->param('dry_run')) {
 	      if (my $dbID = $ea->store($dbentry, $trlid, 'translation', 1)) {
-		$support->log("Stored GO xref (display_id = $xid, evidence = $ev_type) for $trlsi\n", 3);
+		$support->log_verbose("Stored GO xref (display_id = $xid, evidence = $ev_type) for $trlsi\n", 3);
 	      }
 	      else {
 		$support->log_warning("Failed to store GO xref for $trlsi\n");
