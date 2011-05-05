@@ -39,16 +39,14 @@ sub datasets {
 sub _dataset_hash {
     my ($filename) = @_;
 
-    open my $dat, '<', $filename or die "Can't read species file '$filename' : $!";
-
     my $cursect = undef;
     my $defhash = {};
     my $curhash = undef;
     my $sp = {};
 
-    while (<$dat>) {
-        next if /^\#/;
-        next unless /\w+/;
+    my $do_line = sub {
+        return if /^\#/;
+        return unless /\w+/;
         chomp;
 
         if (/\[(.*)\]/) {
@@ -74,8 +72,10 @@ sub _dataset_hash {
             my $value =    $2;
             $curhash->{$key} = $value;
         }
-    }
+    };
 
+    open my $dat, '<', $filename or die "Can't read species file '$filename' : $!";
+    while (<$dat>) { $do_line->(); }
     close $dat or die "Error reading '$filename' : $!";
 
     # Have finished with defaults, so we can remove them.
