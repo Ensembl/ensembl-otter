@@ -82,7 +82,7 @@ sub get_analyses_status {
 my $assembly = $server->require_argument('type');
 my $component_cs = $server->param('component_cs') || 'contig';
 
-my $pdbc = $server->pipeline_dba()->dbc();  # pipeline dbc
+my $pdbc = $server->dataset->pipeline_dba()->dbc();  # pipeline dbc
 
 my @input_ids = ();
 my $cmp_sth = $pdbc->prepare($select_components_sql);
