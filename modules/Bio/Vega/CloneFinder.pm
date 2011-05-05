@@ -33,13 +33,19 @@ sub server {
 sub otter_dba {
     my ($self) = @_;
     return $self->{_otter_dba} ||=
-        $self->server->otter_dba;
+        $self->server->dataset->otter_dba;
 }
 
 sub pipeline_dba {
     my ($self) = @_;
     return $self->{_pipeline_dba} ||=
-        $self->server->pipeline_dba;
+        $self->server->dataset->pipeline_dba;
+}
+
+sub satellite_dba {
+    my ($self, $metakey) = @_;
+    return $self->{_satellite_dba}{$metakey} ||=
+        $self->server->dataset->satellite_dba($metakey);
 }
 
 sub qnames {
@@ -204,7 +210,7 @@ sub _find_by_otter_stable_ids {
 sub _find_by_remote_stable_ids {
     my ($self, $parameters) = @_;
     my ($qtype_prefix, $metakey) = @{$parameters};
-    my $dba = $self->server->satellite_dba($metakey);
+    my $dba = $self->satellite_dba($metakey);
     return $self->_find_by_stable_ids($dba, $qtype_prefix);
 }
 
@@ -404,7 +410,7 @@ sub _find_by_xref {
 
     my ($prefix, $metakey) = @{$parameters};
 
-    my $satellite_dba = $self->server->satellite_dba($metakey);
+    my $satellite_dba = $self->satellite_dba($metakey);
 
     my $sql = sprintf
         $find_by_xref_sql_template,

@@ -12,10 +12,6 @@ use strict;
 use warnings;
 use Carp;
 
-use Bio::EnsEMBL::DBSQL::DBAdaptor;
-use Bio::EnsEMBL::Variation::DBSQL::DBAdaptor;
-use Bio::Vega::DBSQL::DBAdaptor;
-
 sub new { # just to make it possible to instantiate an object
     my ($pkg, @arguments) = @_;
 
@@ -59,106 +55,6 @@ sub otter_dba {
 
     return $self->{'_odba'} ||=
         $self->dataset->otter_dba;
-}
-
-sub default_assembly {
-    my ($self, $dba) = @_;
-
-    my ($asm_def) = @{ $dba->get_MetaContainer()->list_value_by_key('assembly.default') };
-
-    return $asm_def || 'UNKNOWN';
-}
-
-sub pipeline_dba {
-    my ($self) = @_;
-    return $self->satellite_dba('pipeline_db_head');
-}
-
-sub satellite_dba {
-    my ($self, $metakey) = @_;
-
-    # check for a cached dba
-    my $dba_cached = $self->{_sdba}{$metakey};
-    return $dba_cached if $dba_cached;
-
-    # get and check the options
-    my $options = $self->satellite_dba_options($metakey);
-    die "metakey '$metakey' is not defined" unless $options;
-
-    # create the adaptor
-    my $adaptor_class = "Bio::EnsEMBL::DBSQL::DBAdaptor";
-    my $dba = $self->satellite_dba_make($metakey, $adaptor_class, $options);
-
-    # re-bless if necessary
-    bless $dba,'Bio::Vega::DBSQL::DBAdaptor'
-        if lc($self->default_assembly($dba)) eq 'otter';
-
-    # create the variation database (if there is one)
-    my $vdba = $self->variation_satellite_dba_make("${metakey}_variation");
-    $vdba->dnadb($dba) if $vdba;
-
-    return $dba;
-}
-
-sub variation_satellite_dba_make {
-    my ($self, $metakey) = @_;
-
-    # check for a cached dba
-    my $dba = $self->{_sdba}{$metakey};
-    return $dba if $dba;
-
-    # get and check the options
-    my $options = $self->satellite_dba_options($metakey);
-    return unless $options;
-
-    # create the adaptor
-    my $adaptor_class = "Bio::EnsEMBL::Variation::DBSQL::DBAdaptor";
-    $dba = $self->satellite_dba_make($metakey, $adaptor_class, $options);
-
-    return $dba;
-}
-
-sub satellite_dba_make {
-    my ($self, $metakey, $adaptor_class, $options) = @_;
-
-    warn "connecting to the satellite DB '$metakey'...\n";
-
-    my @options;
-    {
-        ## no critic(BuiltinFunctions::ProhibitStringyEval)
-        @options = eval $options;
-    }
-    die "Error evaluating '$options' : $@" if $@;
-
-    my %anycase_options = (
-         -group     => $metakey,
-         -species   => $self->dataset->name,
-        @options,
-    );
-
-    my %uppercased_options = ();
-    while( my ($k,$v) = each %anycase_options) {
-        $uppercased_options{uc($k)} = $v;
-    }
-
-    my $dba = $adaptor_class->new(%uppercased_options);
-    die "Couldn't connect to '$metakey' satellite db"
-        unless $dba;
-
-    warn "... with parameters: ".join(', ', map { "$_=".$uppercased_options{$_} } keys %uppercased_options )."\n";
-
-    $self->{_sdba}{$metakey} = $dba;
-
-    return $dba;
-}
-
-sub satellite_dba_options {
-    my ($self, $metakey) = @_;
-
-    my $meta_container = $self->otter_dba->get_MetaContainer;
-    my ($options) = @{ $meta_container->list_value_by_key($metakey) };
-
-    return $options;
 }
 
 sub get_slice {
@@ -382,19 +278,23 @@ sub fetch_mapped_features_ensembl {
     confess "invalid coordinate system version: '${csver_orig}'"
         unless $csver_orig eq 'Otter';
 
-    $csver_remote = $map->{csver_remote} ||= $self->default_assembly($self->satellite_dba($metakey)) if $metakey;
+    if (! $csver_remote && $metakey) {
+        my $sdba = $self->dataset->satellite_dba( $metakey );
+        my $assembly = $self->dataset->default_assembly($sdba);
+        $csver_remote = $map->{csver_remote} = $assembly
+    }
 
     my $features = [];
 
     if(!$metakey) { # fetch from the pipeline
-        my $pdba = $self->pipeline_dba;
+        my $pdba = $self->dataset->pipeline_dba;
         my $slice = $self->get_slice($pdba, $cs, $name, $type, $start, $end, $csver_orig);
         $features = $slice->$fetching_method(@$call_parms);
     }
     elsif( ($self->otter_assembly_equiv_hash()->{$csver_remote}{$name} || '') eq $type) {
         # no mapping, just (cross)-fetching:
         warn "Assuming the mappings to be identical, just fetching from {$metakey}$cs:$csver_remote\n";
-        my $sdba = $self->satellite_dba( $metakey );
+        my $sdba = $self->dataset->satellite_dba( $metakey );
         my $original_slice = $self->get_slice($sdba, $cs, $name, $type, $start, $end, $csver_remote);
         $features = $original_slice->$fetching_method(@$call_parms);
     } else { # let's try to do the mapping:
@@ -404,7 +304,7 @@ sub fetch_mapped_features_ensembl {
         my $original_slice_2 = $self->get_slice($odba, $cs, $name, $type, $start, $end, $csver_orig);
         my $proj_slices_2 = $self->fetch_mapped_slices($original_slice_2, $map);
 
-        my $sdba = $self->satellite_dba( $metakey );
+        my $sdba = $self->dataset->satellite_dba( $metakey );
         my $sa_on_target = $sdba->get_SliceAdaptor();
 
       SEGMENT: foreach my $projected_slice_2 (@$proj_slices_2) {
