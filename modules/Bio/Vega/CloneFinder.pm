@@ -9,6 +9,8 @@ package Bio::Vega::CloneFinder;
 use strict;
 use warnings;
 
+my $wrap_search_errors = 1; # set this to 0 to aid command-line debugging
+
 my $component = 'clone'; # this is the type of components we want the found matches mapped on
 
 sub new {
@@ -159,19 +161,13 @@ sub register_local_slice {
 
 sub find_by_otter_stable_ids {
     my ($self, @args) = @_;
-    {
-        ## no critic (ErrorHandling::RequireCheckingReturnValueOfEval)
-        eval { $self->_find_by_otter_stable_ids(@args); };
-    }
+    _wrap_search_errors($self, \&_find_by_otter_stable_ids, @args);
     return;
 }
 
 sub find_by_remote_stable_ids {
     my ($self, @args) = @_;
-    {
-        ## no critic (ErrorHandling::RequireCheckingReturnValueOfEval)
-        eval { $self->_find_by_remote_stable_ids(@args); };
-    }
+    _wrap_search_errors($self, \&_find_by_remote_stable_ids, @args);
     return;
 }
 
@@ -248,10 +244,7 @@ sub _find_by_stable_ids {
 
 sub find_by_feature_attributes {
     my ($self, @args) = @_;
-    {
-        ## no critic (ErrorHandling::RequireCheckingReturnValueOfEval)
-        eval { $self->_find_by_feature_attributes(@args); };
-    }
+    _wrap_search_errors($self, \&_find_by_feature_attributes, @args);
     return;
 }
 
@@ -289,10 +282,7 @@ sub _find_by_feature_attributes {
 
 sub find_by_seqregion_names {
     my ($self, @args) = @_;
-    {
-        ## no critic (ErrorHandling::RequireCheckingReturnValueOfEval)
-        eval { $self->_find_by_seqregion_names(@args); };
-    }
+    _wrap_search_errors($self, \&_find_by_seqregion_names, @args);
     return;
 }
 
@@ -327,10 +317,7 @@ sub _find_by_seqregion_names {
 
 sub find_by_seqregion_attributes {
     my ($self, @args) = @_;
-    {
-        ## no critic (ErrorHandling::RequireCheckingReturnValueOfEval)
-        eval { $self->_find_by_seqregion_attributes(@args); };
-    }
+    _wrap_search_errors($self, \&_find_by_seqregion_attributes, @args);
     return;
 }
 
@@ -369,10 +356,7 @@ sub _find_by_seqregion_attributes {
 
 sub find_by_xref {
     my ($self, @args) = @_;
-    {
-        ## no critic (ErrorHandling::RequireCheckingReturnValueOfEval)
-        eval { $self->_find_by_xref(@args); };
-    }
+    _wrap_search_errors($self, \&_find_by_xref, @args);
     return;
 }
 
@@ -442,10 +426,7 @@ sub _find_by_xref {
 
 sub find_by_hit_name {
     my ($self, @args) = @_;
-    {
-        ## no critic (ErrorHandling::RequireCheckingReturnValueOfEval)
-        eval { $self->_find_by_hit_name(@args); };
-    }
+    _wrap_search_errors($self, \&_find_by_hit_name, @args);
     return;
 }
 
@@ -581,6 +562,17 @@ sub generate_output {
     }
 
     return $output_string;
+}
+
+sub _wrap_search_errors {
+    my ($self, $coderef, @args) = @_;
+    if ($wrap_search_errors) {
+        eval { $self->$coderef(@args); 1; } or return; 
+    }
+    else {
+        $self->$coderef(@args);
+    }
+    return;
 }
 
 # these are private subroutines, *not* methods
