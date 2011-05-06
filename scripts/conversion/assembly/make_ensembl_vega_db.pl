@@ -554,16 +554,16 @@ $sql = qq(
 $c = $dbh->{'vega'}->do($sql) unless ($support->param('dry_run'));
 $support->log_stamped("Done inserting $c assembly mapping entries.\n");
 
-$sql = qq(
-    INSERT INTO $evega_db.assembly
-    SELECT a.cmp_seq_region_id, a.asm_seq_region_id, a.cmp_start, a.cmp_end, a.asm_start, a.asm_end, a.ori
-      FROM assembly a, seq_region sr, coord_system cs
-     WHERE a.asm_seq_region_id = sr.seq_region_id
-       AND sr.coord_system_id = cs.coord_system_id
-       AND cs.version = \'$ensembl_assembly\'
-);
-$c = $dbh->{'vega'}->do($sql) unless ($support->param('dry_run'));
-$support->log_stamped("Done inserting $c reversed assembly mapping entries.\n");
+#$sql = qq(
+#    INSERT INTO $evega_db.assembly
+#    SELECT a.cmp_seq_region_id, a.asm_seq_region_id, a.cmp_start, a.cmp_end, a.asm_start, a.asm_end, a.ori
+#      FROM assembly a, seq_region sr, coord_system cs
+#     WHERE a.asm_seq_region_id = sr.seq_region_id
+#       AND sr.coord_system_id = cs.coord_system_id
+#       AND cs.version = \'$ensembl_assembly\'
+#);
+#$c = $dbh->{'vega'}->do($sql) unless ($support->param('dry_run'));
+#$support->log_stamped("Done inserting $c reversed assembly mapping entries.\n");
 
 #update external_db and attrib_type on ensembl_vega
 if (! $support->param('dry_run') ) {
