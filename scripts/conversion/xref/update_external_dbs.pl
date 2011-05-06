@@ -114,13 +114,13 @@ while ( my $row = $production_sth->fetchrow_hashref() ) {
     'db_name'                   => $row->{'db_name'},
     'db_release'                => $row->{'db_release'},
     'status'                    => $row->{'status'},
-    'dbprimary_acc_linkable'    => $row->{'dbprimary_acc_linkable'},
-    'display_label_linkable'    => $row->{'display_label_linkable'} || 0,
+    'dbprimary_acc_linkable'    => $row->{'dbprimary_acc_linkable'} || 1,
     'priority'                  => $row->{'priority'},
     'db_display_name'           => $row->{'db_display_name'},
     'type'                      => $row->{'type'},
     'secondary_db_name'         => $row->{'secondary_db_name'},
-    'secondary_db_table'        => $row->{'secondary_db_table'}
+    'secondary_db_table'        => $row->{'secondary_db_table'},
+    'description'               => $row->{'description'},
   };
 }
 $production_sth->finish;
@@ -129,34 +129,37 @@ $support->log("Done reading ".scalar(@rows)." entries.\n");
 # delete all entries from external_db
 $support->log("Deleting all entries from external_db...\n");
 unless ($support->param('dry_run')) {
-    my $num = $dbh->do('DELETE FROM external_db');
-    $support->log("Done deleting $num rows.\n");
+  my $num = $dbh->do('DELETE FROM external_db');
+  $support->log("Done deleting $num rows.\n");
 }
 
 # insert new entries into external_db
 $support->log("Inserting new external_db entries into db...\n");
 unless ($support->param('dry_run')) {
-    my $sth = $dbh->prepare('
+  my $sth = $dbh->prepare('
         INSERT INTO external_db
-            (external_db_id, db_name, db_release, status, dbprimary_acc_linkable, 
-            display_label_linkable, priority, db_display_name, type)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            (external_db_id, db_name, db_release, status, dbprimary_acc_linkable,
+            priority, db_display_name, type, secondary_db_name, secondary_db_table,
+            description)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ');
-    foreach my $row (@rows) {
-        $sth->execute(
-                $row->{'external_db_id'}, 
-                $row->{'db_name'},
-                $row->{'db_release'},
-                $row->{'status'},
-                $row->{'dbprimary_acc_linkable'},
-                $row->{'display_label_linkable'},
-                $row->{'priority'},
-                $row->{'db_display_name'},
-				$row->{'type'},
-        );
-    }
-    $sth->finish();
-    $support->log("Done inserting ".scalar(@rows)." entries.\n");
+  foreach my $row (@rows) {
+    $sth->execute(
+      $row->{'external_db_id'}, 
+      $row->{'db_name'},
+      $row->{'db_release'},
+      $row->{'status'},
+      $row->{'dbprimary_acc_linkable'},
+      $row->{'priority'},
+      $row->{'db_display_name'},
+      $row->{'type'},
+      $row->{'secondary_db_name'},
+      $row->{'secondary_db_table'},
+      $row->{'description'},
+    );
+  }
+  $sth->finish();
+  $support->log("Done inserting ".scalar(@rows)." entries.\n");
 }
 
 # finish logging
