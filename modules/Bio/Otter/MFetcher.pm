@@ -60,8 +60,6 @@ sub otter_dba {
 sub get_slice {
     my ($self, $dba, $cs, $name, $type, $start, $end, $csver) = @_;
 
-    my $slice;
-
     $cs ||= 'chromosome'; # can't make a slice without cs
 
     if(!$csver && ($cs eq 'chromosome')) {
@@ -78,7 +76,7 @@ sub get_slice {
 
     die "$cs '$segment_attr' attribute not set" unless $segment_name;
 
-    $slice =  $dba->get_SliceAdaptor()->fetch_by_region(
+    my $slice = $dba->get_SliceAdaptor()->fetch_by_region(
         $cs,
         $segment_name,
         $start,
