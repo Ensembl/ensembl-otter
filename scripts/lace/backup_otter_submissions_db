@@ -3,8 +3,21 @@
 use warnings;
 
 
-### backup_all_otter_submissions_databases from otterslave and archive on cbi1
-### running this script as a cron job on cbi1
+=head1 NAME
+
+backup_all_otter_submissions_databases - archive otterlive to cbi4:/lustre
+
+=head1 SYNOPSIS
+
+(This script runs as a cron job from humpub@cbi4h)
+
+=head1 CAVEATS
+
+Note that the DBA team now also take full backups.  Otterlive's are
+nightly.
+
+=cut
+
 
 use strict;
 use DBI;
@@ -44,9 +57,6 @@ use Net::Netrc;
         eval {
             print STDERR "Backing up '$db_name'\n";
             $dbh->do("use $db_name");
-	    if ( $db_name =~  /^(otter|loutre)/i) {
-		check_database_not_too_big($dbh);
-	    }
             backup_otter_database($dbh, $mysql_dump, $db_name);
         };
         if ($@) {
@@ -79,30 +89,6 @@ sub archive {
     my $copy_end = time;
     printf STDERR "otter copy took %.0f minutes\n", ($copy_end - $copy_start) / 60;
     
-}
-
-sub check_database_not_too_big {
-    my( $dbh ) = @_;
-    
-    my $row_count = 0;
-    foreach my $table (qw{
-        dna_align_feature
-        protein_align_feature
-        simple_feature
-        })
-    {
-        eval{
-            my $sth = $dbh->prepare(qq{ SELECT count(*) FROM $table });
-            $sth->execute;
-            my ($rows) = $sth->fetchrow;
-            $row_count += $rows;
-        };
-        warn $@ if $@;
-    }
-    my $max_rows = 500_000;
-    if ($row_count > $max_rows) {
-        die "ERROR: Database has $row_count rows in feature tables: limit is $max_rows\n";
-    }
 }
 
 sub backup_otter_database {
