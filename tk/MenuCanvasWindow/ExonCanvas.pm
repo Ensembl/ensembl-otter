@@ -17,7 +17,6 @@ use Hum::Ace::SubSeq;
 use Hum::Ace::DotterLauncher;
 use CanvasWindow::EvidencePaster;
 use EditWindow::PfamWindow;
-#use Evi::EviDisplay;
 use Hum::Ace;
 
 use base qw( MenuCanvasWindow );
