@@ -183,7 +183,7 @@ sub read_user_file {
                 $usr_hash->{$user_name}{$ds} = 1;
             }
         }
-        close $list or die "Error reading '$list'; $!";
+        close $list or die "Error reading '$usr_file'; $!";
     }
     return $usr_hash;
 }
