@@ -17,6 +17,17 @@ use base ('Bio::Otter::MFetcher');
 
 
 BEGIN {
+    my $csn;
+    ($csn) = $ENV{'SCRIPT_NAME'} =~ m{([^/]+)$} if defined $ENV{'SCRIPT_NAME'};
+    $SIG{__WARN__} = sub { ## no critic (Variables::RequireLocalizedPunctuationVars)
+        my ($line) = @_;
+        $line = sprintf "[%s] %s", $csn, $line if defined $csn;
+        warn $line;
+        return;
+    };
+}
+
+BEGIN {
     warn "otter_srv script start: $0\n";
 }
 END {
@@ -275,15 +286,6 @@ sub show_restricted_datasets {
 }
 
 ############## I/O: ################################
-
-my $csn;
-($csn) = $ENV{'SCRIPT_NAME'} =~ m{([^/]+)$} if defined $ENV{'SCRIPT_NAME'};
-$SIG{__WARN__} = sub { ## no critic (Variables::RequireLocalizedPunctuationVars)
-    my ($line) = @_;
-    $line = sprintf "[%s] %s", $csn, $line if defined $csn;
-    warn $line;
-    return;
-};
 
 sub send_file {
     my ($pkg, $name, @args) = @_;
