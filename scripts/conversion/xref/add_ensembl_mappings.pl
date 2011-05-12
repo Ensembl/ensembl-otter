@@ -166,7 +166,7 @@ my (%assigned_txrefs, %assigned_gxrefs) = ({},{});
 
 #retrieve mappings from disc or parse database
 my $ens_ids = {};
-my $xref_file    = $SERVERROOT.'/'.$support->param('ensembldbname')."-ensembl-mappings.file";
+my $xref_file    = $support->param('logpath').'/'.$support->param('ensembldbname')."-ensembl-mappings.file";
 if (-e $xref_file) {
   if ($support->user_proceed("Read xref records from a previously saved file ?\n")) {
     $ens_ids = retrieve($xref_file);
@@ -253,7 +253,7 @@ foreach my $type (qw(genes transcripts)) {
 	  $type eq 'genes' ? $assigned_gxrefs{$vdb}->{$object->biotype}++ : $assigned_txrefs{$vdb}->{$object->biotype}++;
 	  $object->add_DBEntry($dbentry);
 	  if ($support->param('dry_run')) {
-	    $support->log("Would store $vdb xref $e_id for $v_id.\n", 1);
+	    $support->log_verbose("Would store $vdb xref $e_id for $v_id.\n", 1);
 	    $found = 1;
 	  }
 	  else {
