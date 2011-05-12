@@ -183,10 +183,11 @@ sub read_user_file {
         }
     };
 
-    if (open my $list, '<', $usr_file) {
-        while (<$list>) { $do_user_line->(); }
-        close $list or die "Error reading '$usr_file'; $!";
-    }
+    open my $list, '<', $usr_file
+        or die "Error opening '$usr_file'; $!";
+    while (<$list>) { $do_user_line->(); }
+    close $list or die "Error closing '$usr_file'; $!";
+
     return $usr_hash;
 }
 
