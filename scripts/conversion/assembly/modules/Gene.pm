@@ -99,18 +99,6 @@ sub store_gene {
 
   $support->log_warning("(this might be a fatal error, so please check!) ".$@) if ($@);
 
-  #add the canonical transcript
-  if ($V_gene->canonical_transcript) {
-    my $canonical_trans_id = $V_gene->canonical_transcript->stable_id;
-    my $e_canonical_trans = $E_ta->fetch_by_stable_id($canonical_trans_id);
-    if ( $e_canonical_trans ) {
-      $E_gene->canonical_transcript($e_canonical_trans);
-      $E_ga->update($E_gene);
-    }
-    else {
-      $support->log_warning("Canonical transcript has not transferred so you need to recalculate it\n");
-    }
-  }
   return;
 }
 
