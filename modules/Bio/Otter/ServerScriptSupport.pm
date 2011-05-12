@@ -29,8 +29,6 @@ $ERROR_WRAPPING_ENABLED = 1 unless defined $ERROR_WRAPPING_ENABLED;
 our $COMPRESSION_ENABLED;
 $COMPRESSION_ENABLED = 1 unless defined $COMPRESSION_ENABLED;
 
-my $LOG;
-
 sub new {
     my ( $pkg, @args ) = @_;
 
@@ -47,8 +45,6 @@ sub new {
     } else {
         $self->authenticate_user;
     }
-
-    $LOG = $self->param('log');
 
     return $self;
 }
@@ -276,7 +272,6 @@ my $csn;
 ($csn) = $ENV{'SCRIPT_NAME'} =~ m{([^/]+)$} if defined $ENV{'SCRIPT_NAME'};
 $SIG{__WARN__} = sub { ## no critic (Variables::RequireLocalizedPunctuationVars)
     my ($line) = @_;
-    return unless $LOG;
     $line = sprintf "[%s] %s", $csn, $line if defined $csn;
     warn $line;
     return;
