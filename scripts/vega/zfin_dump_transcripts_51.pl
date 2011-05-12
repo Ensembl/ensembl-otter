@@ -6,11 +6,11 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::SeqIO;
 use Getopt::Long;
 
-my $dbhost    = 'vegabuild';
-my $dbuser    = 'ottro';
-my $dbname    = 'vega_danio_rerio_20091013';
+my $dbhost    = 'ensdb-1-11';
+my $dbuser    = 'ensro';
+my $dbname    = 'vega_danio_rerio_20110307_v61_Zv9';
 my $dbpass    = undef;
-my $dbport    = 3304;
+my $dbport    = 5317;
 my $stable_id;
 my $db_id;
 my $file;
