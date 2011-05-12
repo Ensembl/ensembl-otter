@@ -116,7 +116,7 @@ my $ga = $dba->get_GeneAdaptor();
 my $ea = $dba->get_DBEntryAdaptor();
 
 # statement handles for display_xref_id updates
-my $sth_gene = $dba->dbc->prepare("update gene set display_xref_id=? where gene_id=?");
+my $sth_gene  = $dba->dbc->prepare("update gene set display_xref_id=? where gene_id=?");
 my $sth_trans = $dba->dbc->prepare("update transcript set display_xref_id=? where transcript_id=?");
 
 # delete all xrefs if --prune option is used
@@ -186,12 +186,12 @@ foreach my $chr (@chr_sorted) {
     my $gene_name = &get_name($gene);
     next GENE unless ($gene_name);
 
-    $support->log("Gene $gene_name ($gid, $gsi)...\n");
+    $support->log_verbose("Gene $gene_name ($gid, $gsi)...\n");
 	
     # filter to user-specified gene_type
     my $gene_type = $support->param('gene_type');
     if ($gene_type and ($gene_type ne $gene->type)){
-      $support->log("Skipping gene - not of type $gene_type.\n", 1);
+      $support->log_verbose("Skipping gene - not of type $gene_type.\n", 1);
       next;
     }
 		
@@ -231,7 +231,7 @@ foreach my $chr (@chr_sorted) {
       my $trans_name = &get_name($trans);
       next TRANS unless ($trans_name);
 
-      $support->log("Transcript $trans_name ($tid, $tsi)...\n", 1);
+      $support->log_verbose("Transcript $trans_name ($tid, $tsi)...\n", 1);
 			
       # add transcript name as an xref to db
       $tnum++;
