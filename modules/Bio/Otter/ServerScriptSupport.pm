@@ -68,10 +68,15 @@ sub make_map {
     my ($self) = @_;
     return {
         map {
-            my $val = $self->param($_);
-            $_ => defined($val) ? $val : '';
+            $_ => $self->make_map_value($_);
         } qw( cs name type start end csver csver_remote ),
     };
+}
+
+sub make_map_value {
+    my ($self, $key) = @_;
+    my $val = $self->param($key);
+    return defined($val) ? $val : '';
 }
 
 
