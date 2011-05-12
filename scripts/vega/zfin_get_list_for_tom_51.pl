@@ -11,11 +11,11 @@ use strict;
 use Bio::EnsEMBL::DBSQL::DBConnection;
 use Getopt::Long;
 
-my $dbhost = 'vegabuild';
-my $dbuser = 'ottro';
-my $dbname = 'vega_danio_rerio_20091117';
+my $dbhost = 'ensdb-1-11';
+my $dbuser = 'ensro';
+my $dbname = 'vega_danio_rerio_20110307_v61_Zv9';
 my $dbpass = '';
-my $dbport = 3304;
+my $dbport = 5317;
 #my $dbhost = 'ecs3f';
 #my $dbuser = 'ensro';
 #my $dbname = 'vega_danio_rerio_ext_20060725_v40';
