@@ -6,112 +6,112 @@
 #loutre_id        = seq_region.name in loutre (minus the numerical suffix)
 #vega_name        = seq_region.name in Vega
 #name             = human readable name (for Vega mapview)
-#ack              = Acknowledgement for group doing annotation
 #ensembl_name     = Name of equivalent seqregion in Ensembl
 
-#loutre_id	#vega_name	#name	#ack	#ensembl_name	
+#loutre_id	#vega_name	#name	#ensembl_name	
 
 --zebrafish--
-chr1_20100514	1	Chromosome 1		1
-chr2_20100514	2	Chromosome 2		2
-chr3_20100514	3	Chromosome 3		3
-chr4_20100514	4	Chromosome 4		4
-chr5_20100514	5	Chromosome 5		5
-chr6_20100514	6	Chromosome 6		6
-chr7_20100514	7	Chromosome 7		7
-chr8_20100514	8	Chromosome 8		8
-chr9_20100514	9	Chromosome 9		9
-chr10_20100514	10	Chromosome 10		10
-chr11_20100514	11	Chromosome 11		11
-chr12_20100514	12	Chromosome 12		12
-chr13_20100514	13	Chromosome 13		13
-chr14_20100514	14	Chromosome 14		14
-chr15_20100514	15	Chromosome 15		15
-chr16_20100514	16	Chromosome 16		16
-chr17_20100514	17	Chromosome 17		17
-chr18_20100514	18	Chromosome 18		18
-chr19_20100514	19	Chromosome 19		19
-chr20_20100514	20	Chromosome 20		20
-chr21_20100514	21	Chromosome 21		21
-chr22_20100514	22	Chromosome 22		22
-chr23_20100514	23	Chromosome 23		23
-chr24_20100514	24	Chromosome 24		24
-chr25_20100514	25	Chromosome 25		25
-chrU_20100514	U	Chromosome U		U
-chrAB_20060711	AB	Chromosome AB		AB
+chr1_20100514	1	Chromosome 1	1
+chr2_20100514	2	Chromosome 2	2
+chr3_20100514	3	Chromosome 3	3
+chr4_20100514	4	Chromosome 4	4
+chr5_20100514	5	Chromosome 5	5
+chr6_20100514	6	Chromosome 6	6
+chr7_20100514	7	Chromosome 7	7
+chr8_20100514	8	Chromosome 8	8
+chr9_20100514	9	Chromosome 9	9
+chr10_20100514	10	Chromosome 10	10
+chr11_20100514	11	Chromosome 11	11
+chr12_20100514	12	Chromosome 12	12
+chr13_20100514	13	Chromosome 13	13
+chr14_20100514	14	Chromosome 14	14
+chr15_20100514	15	Chromosome 15	15
+chr16_20100514	16	Chromosome 16	16
+chr17_20100514	17	Chromosome 17	17
+chr18_20100514	18	Chromosome 18	18
+chr19_20100514	19	Chromosome 19	19
+chr20_20100514	20	Chromosome 20	20
+chr21_20100514	21	Chromosome 21	21
+chr22_20100514	22	Chromosome 22	22
+chr23_20100514	23	Chromosome 23	23
+chr24_20100514	24	Chromosome 24	24
+chr25_20100514	25	Chromosome 25	25
+chrU_20100514	U	Chromosome U	U
+chrAB_20060711	AB	Chromosome AB	AB
 --end--
 
 --pig--
-mhc	7-MHC	MHC region of Chromosome 7	Havana
-#chr17-SSC17_MAX1	17-H20q13	H20q13 fragment of Chromosome 17	Havana
-chr17	17	Chromosome 17	Havana
-Chr_6_NKG	6-LRC	LRC region of Chromosome 6	Havana
+mhc	7-MHC	MHC region of Chromosome 7
+#chr17-SSC17_MAX1	17-H20q13	H20q13 fragment of Chromosome 17
+chr17	17	Chromosome 17
+Chr_6_NKG	6-LRC	LRC region of Chromosome 6
 --end--
 
 --human--
-chr1	1	Chromosome 1	Havana	1
-chr2	2	Chromosome 2	Havana	2
-chr3	3	Chromosome 3	Havana	3
-chr4	4	Chromosome 4	Havana	4
-chr5	5	Chromosome 5	Havana	5
-chr6	6	Chromosome 6	Havana	6
-chr7	7	Chromosome 7	Havana	7
-chr8	8	Chromosome 8	Broad	8
-chr9	9	Chromosome 9	Havana	9
-chr10	10	Chromosome 10	Havana	10
-chr11	11	Chromosome 11	Havana	11
-chr12	12	Chromosome 12	BCM	12
-chr13	13	Chromosome 13	Havana	13
-chr14	14	Chromosome 14	Genoscope	14
-chr15	15	Chromosome 15	Broad	15
-chr16	16	Chromosome 16	JGI	16
-chr17	17	Chromosome 17	Broad	17
-chr18	18	Chromosome 18	Broad	18
-chr19	19	Chromosome 19	JGI	19
-chr20	20	Chromosome 20	Havana	20
-chr21	21	Chromosome 21	Havana	21
-chr22	22	Chromosome 22	Havana / Sanger	22
-chrX	X	Chromosome X	Havana / GAG	X
-chrY	Y	Chromosome Y	Havana	Y
-MHC_COX	6-COX	Chromosome 6-COX	Havana	HSCHR6_MHC_COX
-MHC_QBL	6-QBL	Chromosome 6-QBL	Havana	HSCHR6_MHC_QBL
-MHC_APD	6-APD	Chromosome 6-APD	Havana	HSCHR6_MHC_APD
-MHC_DBB	6-DBB	Chromosome 6-DBB	Havana	HSCHR6_MHC_DBB
-MHC_MANN	6-MANN	Chromosome 6-MANN	Havana	HSCHR6_MHC_MANN
-MHC_MCF	6-MCF	Chromosome 6-MCF	Havana	HSCHR6_MHC_MCF
-MHC_SSTO	6-SSTO	Chromosome 6-SSTO	Havana	HSCHR6_MHC_SSTO
-LRC_COX_1	19-COX_1	Chromosome 19-COX_1	Havana
-LRC_COX_2	19-COX_2	Chromosome 19-COX_2	Havana
-LRC_PGF_1	19-PGF_1	Chromosome 19-PGF_1	Havana
-LRC_PGF_2	19-PGF_2	Chromosome 19-PGF_2	Havana
-LRC_DM1A	19-DM1A	Chromosome 19-DM1A	Havana
-LRC_DM1B	19-DM1B	Chromosome 19-DM1B	Havana
-LRC_MC1A	19-MC1A	Chromosome 19-MC1A	Havana
-LRC_MC1B	19-MC1B	Chromosome 19-MC1B	Havana
+chr1	1	Chromosome 1	1
+chr2	2	Chromosome 2	2
+chr3	3	Chromosome 3	3
+chr4	4	Chromosome 4	4
+chr5	5	Chromosome 5	5
+chr6	6	Chromosome 6	6
+chr7	7	Chromosome 7	7
+chr8	8	Chromosome 8	8
+chr9	9	Chromosome 9	9
+chr10	10	Chromosome 10	10
+chr11	11	Chromosome 11	11
+chr12	12	Chromosome 12	12
+chr13	13	Chromosome 13	13
+chr14	14	Chromosome 14	14
+chr15	15	Chromosome 15	15
+chr16	16	Chromosome 16	16
+chr17	17	Chromosome 17	17
+chr18	18	Chromosome 18	18
+chr19	19	Chromosome 19	19
+chr20	20	Chromosome 20	20
+chr21	21	Chromosome 21	21
+chr22	22	Chromosome 22	22
+chrX	X	Chromosome X	X
+chrY	Y	Chromosome Y	Y
+MHC_COX	6-COX	Chromosome 6-COX	HSCHR6_MHC_COX
+MHC_QBL	6-QBL	Chromosome 6-QBL	HSCHR6_MHC_QBL
+MHC_APD	6-APD	Chromosome 6-APD	HSCHR6_MHC_APD
+MHC_DBB	6-DBB	Chromosome 6-DBB	HSCHR6_MHC_DBB
+MHC_MANN	6-MANN	Chromosome 6-MANN	HSCHR6_MHC_MANN
+MHC_MCF	6-MCF	Chromosome 6-MCF	HSCHR6_MHC_MCF
+MHC_SSTO	6-SSTO	Chromosome 6-SSTO	HSCHR6_MHC_SSTO
+LRC_COX_1	19-COX_1	Chromosome 19-COX_1
+LRC_COX_2	19-COX_2	Chromosome 19-COX_2
+LRC_PGF_1	19-PGF_1	Chromosome 19-PGF_1
+LRC_PGF_2	19-PGF_2	Chromosome 19-PGF_2
+LRC_DM1A	19-DM1A	Chromosome 19-DM1A
+LRC_DM1B	19-DM1B	Chromosome 19-DM1B
+LRC_MC1A	19-MC1A	Chromosome 19-MC1A
+LRC_MC1B	19-MC1B	Chromosome 19-MC1B
+chr9_ABO_gene	HG79_PATCH	Chromosome HG79_PATCH	HG79_PATCH
 --end--
 
 --mouse--
-chr1	1	Chromosome 1		1
-chr2	2	Chromosome 2		2
-chr3	3	Chromosome 3		3
-chr4	4	Chromosome 4		4
-chr5	5	Chromosome 5		5
-chr6	6	Chromosome 6		6
-chr7	7	Chromosome 7		7
-chr8	8	Chromosome 8		8
-chr9	9	Chromosome 9		9
-chr10	10	Chromosome 10		10
-chr11	11	Chromosome 11		11
-chr12	12	Chromosome 12		12
-chr13	13	Chromosome 13		13
-chr14	14	Chromosome 14		14
-chr15	15	Chromosome 15		15
-chr16	16	Chromosome 16		16
-chr17	17	Chromosome 17		17
-chr18	18	Chromosome 18		18
-chr19	19	Chromosome 19		19
-chrX	X	Chromosome X		X
-chrY	Y	Chromosome Y		Y
+chr1	1	Chromosome 1	1
+chr2	2	Chromosome 2	2
+chr3	3	Chromosome 3	3
+chr4	4	Chromosome 4	4
+chr5	5	Chromosome 5	5
+chr6	6	Chromosome 6	6
+chr7	7	Chromosome 7	7
+chr8	8	Chromosome 8	8
+chr9	9	Chromosome 9	9
+chr10	10	Chromosome 10	10
+chr11	11	Chromosome 11	11
+chr12	12	Chromosome 12	12
+chr13	13	Chromosome 13	13
+chr14	14	Chromosome 14	14
+chr15	15	Chromosome 15	15
+chr16	16	Chromosome 16	16
+chr17	17	Chromosome 17	17
+chr18	18	Chromosome 18	18
+chr19	19	Chromosome 19	19
+chrX	X	Chromosome X	X
+chrY	Y	Chromosome Y	Y
 129_IDD3.1	3-IDD3.1_129	IDD3.1 region of chromosome 3 (129 strain)	
 NOD_IDD3.1	3-IDD3.1_DIL	IDD3.1 region of chromosome 3 (DIL NOD strain)
 NOD_IDD4.1	11-IDD4.1_DIL	IDD4.1 region of chromosome 11 (DIL NOD strain)
