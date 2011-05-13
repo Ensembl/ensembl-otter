@@ -49,3 +49,10 @@ sub compare_feature_seqs_to_ref {
 }
 
 1;
+
+__END__
+
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
+
