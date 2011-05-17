@@ -150,10 +150,12 @@ XML
         }
 
         $xml .= <<"XML"
-      <sequenceset name="$chr_name">
-        <description>$description</description>
-        <is_hidden>$hidden</is_hidden>
-        <write_access>$write_access</write_access>
+      <sequenceset
+        name="$chr_name"
+        description="$description"
+        is_hidden="$hidden"
+        write_access="$write_access"
+        >
 XML
 ;
 
