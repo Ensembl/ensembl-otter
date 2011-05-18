@@ -104,12 +104,6 @@ sub satellite_dba {
     # create the adaptor
     my $dba = $self->satellite_dba_make($metakey, "Bio::EnsEMBL::DBSQL::DBAdaptor", $options);
 
-    # re-bless if necessary
-    if (lc($self->default_assembly($dba)) eq 'otter') {
-        require Bio::Vega::DBSQL::DBAdaptor;
-        bless $dba,'Bio::Vega::DBSQL::DBAdaptor';
-    }
-
     # create the variation database (if there is one)
     my $vdba = $self->variation_satellite_dba_make("${metakey}_variation");
     $vdba->dnadb($dba) if $vdba;
