@@ -235,6 +235,13 @@ sub map_remote_slice_back {
     return [];
 }
 
+sub _default_assembly {
+    my ($dba) = @_;
+    my ($assembly) = @{ $dba->get_MetaContainer()->list_value_by_key('assembly.default') };
+    die "no default assembly" unless $assembly;
+    return $assembly;
+}
+
 sub fetch_mapped_features_ensembl {
     my ($self, $fetching_method, $call_parms, $map, $metakey) = @_;
 
@@ -248,7 +255,7 @@ sub fetch_mapped_features_ensembl {
 
     if (! $csver_remote && $metakey) {
         my $sdba = $self->dataset->satellite_dba( $metakey );
-        my $assembly = $self->dataset->default_assembly($sdba);
+        my $assembly = _default_assembly($sdba);
         $csver_remote = $map->{csver_remote} = $assembly
     }
 
