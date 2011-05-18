@@ -77,15 +77,6 @@ sub _otter_dba {
     return $odba;
 }
 
-sub default_assembly {
-    my ($self, $dba) = @_;
-
-    my ($assembly) = @{ $dba->get_MetaContainer()->list_value_by_key('assembly.default') };
-    die "no default assembly" unless $assembly;
-
-    return $assembly;
-}
-
 sub pipeline_dba {
     my ($self) = @_;
     return $self->satellite_dba('pipeline_db_head');
