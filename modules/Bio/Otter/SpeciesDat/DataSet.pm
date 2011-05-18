@@ -80,9 +80,10 @@ sub _otter_dba {
 sub default_assembly {
     my ($self, $dba) = @_;
 
-    my ($asm_def) = @{ $dba->get_MetaContainer()->list_value_by_key('assembly.default') };
+    my ($assembly) = @{ $dba->get_MetaContainer()->list_value_by_key('assembly.default') };
+    die "no default assembly" unless $assembly;
 
-    return $asm_def || 'UNKNOWN';
+    return $assembly;
 }
 
 sub pipeline_dba {
