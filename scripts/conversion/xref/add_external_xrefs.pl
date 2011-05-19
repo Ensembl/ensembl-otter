@@ -66,8 +66,8 @@ For mouse, mgi xrefformat adds links both to MGI and to external databases.
 
 Currently, these input formats are supported:
 
-    hgnc        => http://www.genenames.org/data/gdlw_index.html
-                   ('All data' in text format)
+    hgnc        => http://www.genenames.org/cgi-bin/hgnc_downloads.cgi
+                   - use the URL shown in the parse_hgnc  method below, or just let lwp do it for you!
     mgi         => ftp://ftp.informatics.jax.org/pub/reports/MGI_MouseHumanSequence.rpt
     imgt_hla    => by email Steven Marsh <marsh@ebi.ac.uk>
     imgt_gdb    => use vega database
@@ -94,6 +94,7 @@ no warnings 'uninitialized';
 use FindBin qw($Bin);
 use vars qw($SERVERROOT);
 use Storable;
+use LWP::Simple;
 
 BEGIN {
   $SERVERROOT = "$Bin/../../../..";
@@ -576,7 +577,7 @@ $support->finish_log;
   Description : Parses stable IDs xrefs from an E! core database where the display_xref is unique
   Return type : none
   Exceptions  : thrown if database can't be read
-  Caller      : internal
+  Caller      : Not called anywhere at all now, just kep in in case we ever need it!
 
 =cut
 
@@ -632,32 +633,47 @@ sub parse_ensdb {
                         print "DB $extdb, extID ".$xrefs->{$gene}->{$extdb}."\n";
                     }
                 }
-  Description : Parses a data file from HGNC
+  Description : Downloads from HGNC, or parses a data file manually downloaded from HGNC
   Return type : none
   Exceptions  : thrown if input file can't be read
   Caller      : internal
 
 =cut
 
-#http://www.genenames.org/cgi-bin/hgnc_downloads.cgi?title=HGNC+output+data&hgnc_dbtag=on&col=gd_hgnc_id&col=gd_app_sym&col=gd_status&col=gd_prev_sym&col=gd_aliases&col=gd_enz_ids&col=gd_pub_eg_id&col=gd_pubmed_ids&col=gd_pub_refseq_ids&col=md_eg_id&col=md_mim_id&col=md_refseq_id&col=md_prot_id&status=Approved&status=Entry+Withdrawn&status_opt=2&=on&where=&order_by=gd_app_sym_sort&format=text&limit=&submit=submit&.cgifields=&.cgifields=chr&.cgifields=status&.cgifields=hgnc_dbtag
+#URL for manual download = 
+#http://www.genenames.org/cgi-bin/hgnc_downloads.cgi?title=HGNC+output+data&hgnc_dbtag=on&col=gd_hgnc_id&col=gd_app_sym&col=gd_status&col=gd_aliases&col=gd_pubmed_ids&col=md_eg_id&col=md_mim_id&col=md_refseq_id&col=md_prot_id&status=Approved&status_opt=2&=on&where=&order_by=gd_app_sym_sort&format=text&limit=&submit=submit&.cgifields=&.cgifields=chr&.cgifields=status&.cgifields=hgnc_dbtag
+
 
 sub parse_hgnc {
   my ($xrefs, $lcmap) = @_;
   $support->log_stamped("HGNC...\n", 1);
-  
-  # read input file from HUGO
-  open (NOM, '<', $support->param('hgncfile')) or $support->throw(
-    "Couldn't open ".$support->param('hgncfile')." for reading: $!\n");
-  
+
+  my $url = "http://www.genenames.org/cgi-bin/hgnc_downloads.cgi?".
+    "title=HGNC%20output%20data&hgnc_dbtag=on&col=gd_hgnc_id&col=gd_app_sym&col=gd_status&".
+    "col=gd_aliases&col=gd_pubmed_ids&col=md_eg_id&col=md_mim_id&col=md_refseq_id&".
+    "col=md_prot_id&status=Approved&status_opt=2&=on&where=&".
+    "order_by=gd_app_sym_sort&format=text&limit=&submit=submit&.cgifields=&".
+    ".cgifields=status&.cgifields=chr&.cgifields=hgnc_dbtag";
+  my $page = get($url);
+  if ($page) {
+    $support->log("File downloaded from HGNC\n",1);
+  }
+  else {
+    # read input file from HUGO
+    $support->log("Reading file from disc: ".$support->param('hgncfile')."\n",1);
+    open (NOM, '<', $support->param('hgncfile')) or $support->throw(
+      "Couldn't open ".$support->param('hgncfile')." for reading: $!\n");
+    $page = do { local $/; <NOM> };
+  }
+  my @recs = split "\n", $page;
+
   #define which columns to parse out of the record
   my %wanted_columns = (
     'HGNC ID'                                       => 'HGNC_PID',
     'Approved Symbol'                               => 'HGNC',
     'Status'                                        => 'Status',
     'Synonyms'                                      => 'Synonyms',
-#    'Entrez Gene ID'                                => 'EntrezGene',
     'Pubmed IDs'                                    => 'PUBMED',
-#    'RefSeq IDs'                                    => 'RefSeq',
     'Entrez Gene ID (mapped data supplied by NCBI)' => 'EntrezGene',
     'OMIM ID (mapped data supplied by NCBI)'        => 'MIM_GENE',
     'UniProt ID (mapped data supplied by UniProt)'  => 'Uniprot/SWISSPROT',
@@ -676,7 +692,7 @@ sub parse_hgnc {
   );
 
   # read header (containing external db names) and check all wanted columns are there
-  my $line = <NOM>;
+  my $line = $recs[0];
   chomp $line;
   my @columns =  split /\t/, $line;
   foreach my $wanted (keys %wanted_columns) {
@@ -700,12 +716,10 @@ sub parse_hgnc {
     withdrawn  => 0,
   );
 
-#  warn Data::Dumper::Dumper(\%fieldnames);
-
   #parse records, storing only data in those columns defined above
   #also ignore 'withdrawn' symbols
  REC:
-  while (my $l = <NOM>) {
+  foreach my $l (@recs) {
     $stats{'total'}++;
     chomp $l;
     my @fields = split /\t/, $l, -1;
