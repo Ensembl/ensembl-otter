@@ -371,7 +371,6 @@ foreach my $chr (@chr_sorted) {
 	my $dbname = $xref->dbname;
 	$existing_dbnames{$dbname} = 1;
       }
-	    
       my $xref_found = 0;
     NAME:
       foreach my $name (@gene_names) {
@@ -392,8 +391,11 @@ foreach my $chr (@chr_sorted) {
 #	    }
 	  }
 	  $support->log("Match found for $name.\n",1);
+
+          my $synonyms = $links->{'Synonyms'} || [];
 	  
-	DB: foreach my $db (keys %{$links}) {						
+	DB: foreach my $db (keys %{$links}) {
+            next DB if $db eq 'Synonyms';
 	    $support->log_verbose("Assessing link to $db\n",2);
 	    
 	    #sanity check - don't go any further if this gene already has an xref for this source
@@ -423,6 +425,13 @@ foreach my $chr (@chr_sorted) {
 	      my ($existing_xref,$dbID);
 	      $existing_xref = $ea->fetch_by_db_accession($db,$pid);
 	      if ($existing_xref && $existing_xref->display_id eq $xid) {
+                #add synonyms if there are any
+                if ($extdb_def{$db}->[1] && @$synonyms ) {
+                  foreach my $syn (@$synonyms) {
+                    $support->log_verbose("Adding synonym $syn for $db xref $xid\n",3);
+                    $existing_xref->add_synonym($syn);
+                  }
+                }
 		my $old_dbID = $existing_xref->dbID;
 		$support->log_verbose("Using previous $db xref ($old_dbID) for gene $gene_name ($gsi).\n", 3);
 		$gene->add_DBEntry($existing_xref);
@@ -430,7 +439,7 @@ foreach my $chr (@chr_sorted) {
 		  $dbID = $ea->store($existing_xref, $gid, 'gene');
 		}
 	      }
-	      
+
 	      #... or else create a new one
 	      else {
 		$support->log_verbose("Creating new $db xref for gene $gene_name ($gsi).\n", 3);
@@ -440,6 +449,13 @@ foreach my $chr (@chr_sorted) {
 		  -version    => 1,
 		  -dbname     => $db,
 		);
+                #add synonyms if there are any
+                if ($extdb_def{$db}->[1] && @$synonyms ) {
+                  foreach my $syn (@$synonyms) {
+                    $support->log_verbose("Adding synonym $syn for $db xref $xid\n",3);
+                    $dbentry->add_synonym($syn);
+                  }
+                }
 		$dbentry->status($extdb_def{$db}->[0]); ##is this necc?
 		$gene->add_DBEntry($dbentry);
 		if (! $support->param('dry_run')) {
@@ -623,6 +639,8 @@ sub parse_ensdb {
 
 =cut
 
+#http://www.genenames.org/cgi-bin/hgnc_downloads.cgi?title=HGNC+output+data&hgnc_dbtag=on&col=gd_hgnc_id&col=gd_app_sym&col=gd_status&col=gd_prev_sym&col=gd_aliases&col=gd_enz_ids&col=gd_pub_eg_id&col=gd_pubmed_ids&col=gd_pub_refseq_ids&col=md_eg_id&col=md_mim_id&col=md_refseq_id&col=md_prot_id&status=Approved&status=Entry+Withdrawn&status_opt=2&=on&where=&order_by=gd_app_sym_sort&format=text&limit=&submit=submit&.cgifields=&.cgifields=chr&.cgifields=status&.cgifields=hgnc_dbtag
+
 sub parse_hgnc {
   my ($xrefs, $lcmap) = @_;
   $support->log_stamped("HGNC...\n", 1);
@@ -635,13 +653,17 @@ sub parse_hgnc {
   my %wanted_columns = (
     'HGNC ID'                                       => 'HGNC_PID',
     'Approved Symbol'                               => 'HGNC',
-    'UniProt ID (mapped data supplied by UniProt)'  => 'Uniprot/SWISSPROT',
-    'RefSeq (mapped data supplied by NCBI)'         => 'RefSeq',
+    'Status'                                        => 'Status',
+    'Synonyms'                                      => 'Synonyms',
+#    'Entrez Gene ID'                                => 'EntrezGene',
+    'Pubmed IDs'                                    => 'PUBMED',
+#    'RefSeq IDs'                                    => 'RefSeq',
     'Entrez Gene ID (mapped data supplied by NCBI)' => 'EntrezGene',
     'OMIM ID (mapped data supplied by NCBI)'        => 'MIM_GENE',
-    'Pubmed IDs'                                    => 'PUBMED',
+    'UniProt ID (mapped data supplied by UniProt)'  => 'Uniprot/SWISSPROT',
+    'RefSeq (mapped data supplied by NCBI)'         => 'RefSeq',
   );
-  
+
   #define relationships between RefSeq accession number and database (this is not in the download file)
   my %refseq_dbs = (
     NM => 'RefSeq_dna',
@@ -652,32 +674,33 @@ sub parse_hgnc {
     XR => 'RefSeq_rna_predicted',
     NG => 'RefSeq_genomic',
   );
-  
-  # read header (containing external db names) and check
+
+  # read header (containing external db names) and check all wanted columns are there
   my $line = <NOM>;
   chomp $line;
   my @columns =  split /\t/, $line;
-  my $changed = 0;
   foreach my $wanted (keys %wanted_columns) {
     unless (grep { $_ eq $wanted} @columns ) {
-      $support->log_warning("can't find $wanted column in HGNC record\n");
-      $changed = 1;
+      $support->log_error("Can't find $wanted column in HGNC record\n");
     }
   }
-  exit if $changed;
-  
+
   #make a note of positions of wanted fields
+  my $status_column;
   my %fieldnames;
   for (my $i=0; $i < scalar(@columns); $i++) {
     my $column_label =  $columns[$i];
+    $status_column = $i if $column_label eq 'Status';
     next if (! $wanted_columns{$column_label});
     $fieldnames{$i} = $wanted_columns{$column_label};
   }
-  
+
   my %stats = (
     total      => 0,
     withdrawn  => 0,
   );
+
+#  warn Data::Dumper::Dumper(\%fieldnames);
 
   #parse records, storing only data in those columns defined above
   #also ignore 'withdrawn' symbols
@@ -688,15 +711,19 @@ sub parse_hgnc {
     my @fields = split /\t/, $l, -1;
     my %accessions;
     my $gene_name;
+
+    #check that the symbol is not withdrawn
+    if ($fields[$status_column] =~ /withdrawn/) {
+      $support->log_verbose("You have a withdrawn symbol in the download. Ignoring it but no need to download these\n");
+      $stats{'withdrawn'}++;
+      next REC;
+    }
+
     foreach my $i (keys %fieldnames) {
       my $type = $fieldnames{$i};
+      next if $type eq 'Status';
       if ($type eq 'HGNC') {
 	$gene_name = $fields[$i];
-	if ( $gene_name =~ s/(\w+)~withdrawn/$1/) {
-	  $xrefs->{$gene_name}->{'This symbol is withdrawn'} = 1;
-	  $stats{'withdrawn'}++;
-	  next REC;
-	}
       }
       if ($fields[$i]) {
 	$accessions{$type} = $fields[$i];
@@ -736,6 +763,14 @@ sub parse_hgnc {
 	}
       }
 
+      #get synonyms
+      elsif ($db eq 'Synonyms') {
+	foreach my $record (split ',', $accessions{$db}) {
+	  $record =~ s/^\s+//;
+	  $record =~ s/\s+$//;
+	  push @{$xrefs->{$gene_name}->{$db}}, $record;
+	}
+      }
       #get rest of xrefs where the pid is the same as the name
       else {
 	push @{$xrefs->{$gene_name}->{$db}}, $accessions{$db}.'||'. $accessions{$db};
@@ -744,14 +779,6 @@ sub parse_hgnc {
 
     #store lowercase name for matching
     push @{ $lcmap->{lc($gene_name)} }, $gene_name;
-  }
-
-  #remove withdrawn entry if the entry is also real!
-  while (my ($gene_name, $dets) = each %{$xrefs}) {
-    if ($dets->{'This symbol is withdrawn'} && $dets->{'HGNC'}) {
-      $support->log_verbose("Ggene $gene_name is not really withdrawn\n",2);
-      delete $xrefs->{$gene_name}{'This symbol is withdrawn'};
-    }
   }
 
   close(NOM);
