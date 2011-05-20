@@ -323,7 +323,7 @@ sub run {
         return $ace;
     }
 
-    my $features = $self->run_exonerate($masked, $smasked, $unmasked);
+    my $features = $self->run_exonerate($smasked, $unmasked);
     $self->append_polyA_tail($features) unless $self->query_type eq 'protein' ;
 
     $ace .= $self->format_ace_output($name, $features);
@@ -412,7 +412,7 @@ sub append_polyA_tail {
 }
 
 sub run_exonerate {
-    my ($self, $masked, $smasked, $unmasked) = @_;
+    my ($self, $smasked, $unmasked) = @_;
 
     my $analysis = $self->analysis();
     my $score = $self->score() || ( $self->query_type() eq 'protein' ? 150 : 2000 );
