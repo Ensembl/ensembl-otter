@@ -231,6 +231,30 @@ sub translation_xref_dbs {
     return $self->{_translation_xref_dbs};
 }
 
+# session handling
+
+sub call_with_session_data_handle {
+    my ($self, $session, $data_sub) = @_;
+
+    my $gff_http_script =
+        sprintf "%s/%s", $session->script_dir, $session->gff_http_script_name;
+    my @gff_http_command =
+        ( $gff_http_script,
+          @{$session->gff_http_script_arguments($self)} );
+
+    open my $data_h, '-|', @gff_http_command
+        or confess "failed to run $gff_http_script: $!";
+
+    $data_sub->($data_h);
+
+    close $data_h
+        or confess $!
+        ? "error closing $gff_http_script: $!"
+        : "$gff_http_script failed: status = $?";
+
+    return;
+}
+
 sub server_params {
     my ($self) = @_;
     return { map { $_ => $self->$_ } @server_params };
