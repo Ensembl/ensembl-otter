@@ -557,19 +557,40 @@ sub get_masked_unmasked_seq {
     my $name = $self->genomic_seq->name;
     my $dna_str = $self->genomic_seq->sequence_string;
     $dna_str =~ s/-/N/g;
-    my $sm_dna_str = uc $dna_str;
+    my $m_dna_str = my $sm_dna_str = uc $dna_str;
 
-    warn "Got DNA string ", length($dna_str), " long";
+    my $offset = $self->AceDatabase->offset;
+    my $mask_sub = sub {
 
-    my $unmasked = Bio::Seq->new(
-        -id         => $name,
-        -seq        => $dna_str,
-        -alphabet   => 'dna',
-        );
+        chomp;
+        return if /^\#\#/; # skip GFF headers
+
+        # feature parameters
+        my ( $start, $end ) = (split /\t/)[3,4];
+        $start -= $offset;
+        $end   -= $offset;
+
+        # sanity checks
+        confess "missing feature start in '$_'" unless defined $start;
+        confess "non-numeric feature start: $start"
+            unless $start =~ /^[[:digit:]]+$/;
+        confess "missing feature end in '$_'" unless defined $end;
+        confess "non-numeric feature end: $end"
+            unless $end =~ /^[[:digit:]]+$/;
+
+        if ($start > $end) {
+            ($start, $end) = ($end, $start);
+        }
+
+        # mask against this feature
+        my $length = $end - $start + 1;
+        substr($m_dna_str, $start - 1, $length, 'n' x $length);
+        substr($sm_dna_str, $start - 1, $length,
+               lc substr($sm_dna_str, $start - 1, $length));
+    };
 
     # mask the sequences with repeat features
     my $dataset = $self->AceDatabase->smart_slice->DataSet;
-    my $offset = $self->AceDatabase->offset;
     foreach my $filter_name qw( trf RepeatMasker ) {
         my $filter = $dataset->filter_by_name($filter_name);
         confess "no filter named '${filter_name}'" unless $filter;
@@ -577,45 +598,25 @@ sub get_masked_unmasked_seq {
             $self->AceDatabase,
             sub {
                 my ($data_h) = @_;
-
-                while (<$data_h>) {
-                    chomp;
-                    next if /^\#\#/; # skip GFF headers
-
-                    # feature parameters
-                    my ( $start, $end ) = (split /\t/)[3,4];
-                    $start -= $offset;
-                    $end   -= $offset;
-
-                    # sanity checks
-                    confess "missing feature start in '$_'" unless defined $start;
-                    confess "non-numeric feature start: $start"
-                        unless $start =~ /^[[:digit:]]+$/;
-                    confess "missing feature end in '$_'" unless defined $end;
-                    confess "non-numeric feature end: $end"
-                        unless $end =~ /^[[:digit:]]+$/;
-
-                    if ($start > $end) {
-                        ($start, $end) = ($end, $start);
-                    }
-
-                    # mask against this feature
-                    my $length = $end - $start + 1;
-                    substr($dna_str, $start - 1, $length, 'n' x $length);
-                    substr($sm_dna_str, $start - 1, $length,
-                           lc substr($sm_dna_str, $start - 1, $length));
-                }
+                while (<$data_h>) { $mask_sub->(); }
             });
     }
 
     my $masked = Bio::Seq->new(
         -id         => $name,
-        -seq        => $dna_str,
+        -seq        => $m_dna_str,
         -alphabet   => 'dna',
         );
+
     my $softmasked = Bio::Seq->new(
         -id         => $name,
         -seq        => $sm_dna_str,
+        -alphabet   => 'dna',
+        );
+
+    my $unmasked = Bio::Seq->new(
+        -id         => $name,
+        -seq        => $dna_str,
         -alphabet   => 'dna',
         );
 
