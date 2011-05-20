@@ -318,7 +318,7 @@ sub run {
     my $end = $self->genomic_end;
     $_->seq($_->subseq($start, $end)) foreach $masked, $smasked, $unmasked;
 
-    unless ($masked->seq =~ /[acgtACGT]{5}/) {
+    unless ($smasked->seq =~ /[ACGT]{5}/) {
         warn "The genomic sequence is entirely repeat\n";
         return $ace;
     }
