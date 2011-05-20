@@ -567,53 +567,45 @@ sub get_masked_unmasked_seq {
         -alphabet   => 'dna',
         );
 
-    my $gff_http_script =
-        $self->AceDatabase->script_dir
-        . '/' .
-        $self->AceDatabase->gff_http_script_name;
-    my $dataset = $self->AceDatabase->smart_slice->DataSet;
-
     # mask the sequences with repeat features
+    my $dataset = $self->AceDatabase->smart_slice->DataSet;
     my $offset = $self->AceDatabase->offset;
     foreach my $filter_name qw( trf RepeatMasker ) {
         my $filter = $dataset->filter_by_name($filter_name);
         confess "no filter named '${filter_name}'" unless $filter;
-        my @gff_http_command =
-            ( $gff_http_script,
-              @{$self->AceDatabase->gff_http_script_arguments($filter)} );
-        open my $gff_http_h, '-|', @gff_http_command
-            or confess "failed to run $gff_http_script: $!";
-        while (<$gff_http_h>) {
-            chomp;
-            next if /^\#\#/; # skip GFF headers
+        $filter->call_with_session_data_handle(
+            $self->AceDatabase,
+            sub {
+                my ($data_h) = @_;
 
-            # feature parameters
-            my ( $start, $end ) = (split /\t/)[3,4];
-            $start -= $offset;
-            $end   -= $offset;
+                while (<$data_h>) {
+                    chomp;
+                    next if /^\#\#/; # skip GFF headers
 
-            # sanity checks
-            confess "missing feature start in '$_'" unless defined $start;
-            confess "non-numeric feature start: $start"
-                unless $start =~ /^[[:digit:]]+$/;
-            confess "missing feature end in '$_'" unless defined $end;
-            confess "non-numeric feature end: $end"
-                unless $end =~ /^[[:digit:]]+$/;
+                    # feature parameters
+                    my ( $start, $end ) = (split /\t/)[3,4];
+                    $start -= $offset;
+                    $end   -= $offset;
 
-            if ($start > $end) {
-                ($start, $end) = ($end, $start);
-            }
+                    # sanity checks
+                    confess "missing feature start in '$_'" unless defined $start;
+                    confess "non-numeric feature start: $start"
+                        unless $start =~ /^[[:digit:]]+$/;
+                    confess "missing feature end in '$_'" unless defined $end;
+                    confess "non-numeric feature end: $end"
+                        unless $end =~ /^[[:digit:]]+$/;
 
-            # mask against this feature
-            my $length = $end - $start + 1;
-            substr($dna_str, $start - 1, $length, 'n' x $length);
-            substr($sm_dna_str, $start - 1, $length,
-                   lc substr($sm_dna_str, $start - 1, $length));
-        }
-        close $gff_http_h
-            or confess $!
-            ? "error closing $gff_http_script: $!"
-            : "$gff_http_script failed: status = $?";
+                    if ($start > $end) {
+                        ($start, $end) = ($end, $start);
+                    }
+
+                    # mask against this feature
+                    my $length = $end - $start + 1;
+                    substr($dna_str, $start - 1, $length, 'n' x $length);
+                    substr($sm_dna_str, $start - 1, $length,
+                           lc substr($sm_dna_str, $start - 1, $length));
+                }
+            });
     }
 
     my $masked = Bio::Seq->new(
