@@ -290,7 +290,28 @@ sub run {
 
     my $ace = '';
     my $name = $self->genomic_seq->name;
-    my ($masked, $smasked, $unmasked) = $self->get_masked_unmasked_seq;
+    my $dna_str = $self->genomic_seq->sequence_string;
+    $dna_str =~ s/-/N/g;
+
+    my ($m_dna_str, $sm_dna_str) = $self->get_masked_dna($dna_str);
+
+    my $unmasked = Bio::Seq->new(
+        -id         => $name,
+        -seq        => $dna_str,
+        -alphabet   => 'dna',
+        );
+
+    my $masked = Bio::Seq->new(
+        -id         => $name,
+        -seq        => $m_dna_str,
+        -alphabet   => 'dna',
+        );
+
+    my $smasked = Bio::Seq->new(
+        -id         => $name,
+        -seq        => $sm_dna_str,
+        -alphabet   => 'dna',
+        );
 
     # only run exonerate with the specified subsequence of the genomic sequence
     my $start = $self->genomic_start;
@@ -551,12 +572,9 @@ sub list_GenomeSequence_names {
     return map { $_->name } $ace_dbh->fetch(Genome_Sequence => '*');
 }
 
-sub get_masked_unmasked_seq {
-    my ($self) = @_;
+sub get_masked_dna {
+    my ($self, $dna_str) = @_;
 
-    my $name = $self->genomic_seq->name;
-    my $dna_str = $self->genomic_seq->sequence_string;
-    $dna_str =~ s/-/N/g;
     my $m_dna_str = my $sm_dna_str = uc $dna_str;
 
     my $offset = $self->AceDatabase->offset;
@@ -602,25 +620,7 @@ sub get_masked_unmasked_seq {
             });
     }
 
-    my $masked = Bio::Seq->new(
-        -id         => $name,
-        -seq        => $m_dna_str,
-        -alphabet   => 'dna',
-        );
-
-    my $softmasked = Bio::Seq->new(
-        -id         => $name,
-        -seq        => $sm_dna_str,
-        -alphabet   => 'dna',
-        );
-
-    my $unmasked = Bio::Seq->new(
-        -id         => $name,
-        -seq        => $dna_str,
-        -alphabet   => 'dna',
-        );
-
-    return ($masked,$softmasked,$unmasked);
+    return ($m_dna_str, $sm_dna_str);
 }
 
 sub lib_path{
