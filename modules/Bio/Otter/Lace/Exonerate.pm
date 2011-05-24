@@ -293,17 +293,11 @@ sub run {
     my $dna_str = $self->genomic_seq->sequence_string;
     $dna_str =~ s/-/N/g;
 
-    my ($m_dna_str, $sm_dna_str) = $self->get_masked_dna($dna_str);
+    my $sm_dna_str = $self->get_softmasked_dna($dna_str);
 
     my $unmasked = Bio::Seq->new(
         -id         => $name,
         -seq        => $dna_str,
-        -alphabet   => 'dna',
-        );
-
-    my $masked = Bio::Seq->new(
-        -id         => $name,
-        -seq        => $m_dna_str,
         -alphabet   => 'dna',
         );
 
@@ -316,7 +310,7 @@ sub run {
     # only run exonerate with the specified subsequence of the genomic sequence
     my $start = $self->genomic_start;
     my $end = $self->genomic_end;
-    $_->seq($_->subseq($start, $end)) foreach $masked, $smasked, $unmasked;
+    $_->seq($_->subseq($start, $end)) foreach $smasked, $unmasked;
 
     unless ($smasked->seq =~ /[ACGT]{5}/) {
         warn "The genomic sequence is entirely repeat\n";
@@ -572,10 +566,10 @@ sub list_GenomeSequence_names {
     return map { $_->name } $ace_dbh->fetch(Genome_Sequence => '*');
 }
 
-sub get_masked_dna {
+sub get_softmasked_dna {
     my ($self, $dna_str) = @_;
 
-    my $m_dna_str = my $sm_dna_str = uc $dna_str;
+    my $sm_dna_str = uc $dna_str;
 
     my $offset = $self->AceDatabase->offset;
     my $mask_sub = sub {
@@ -602,7 +596,6 @@ sub get_masked_dna {
 
         # mask against this feature
         my $length = $end - $start + 1;
-        substr($m_dna_str, $start - 1, $length, 'n' x $length);
         substr($sm_dna_str, $start - 1, $length,
                lc substr($sm_dna_str, $start - 1, $length));
     };
@@ -620,7 +613,7 @@ sub get_masked_dna {
             });
     }
 
-    return ($m_dna_str, $sm_dna_str);
+    return $sm_dna_str;
 }
 
 sub lib_path{
