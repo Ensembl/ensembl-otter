@@ -269,7 +269,6 @@ sub gff_http_script_arguments {
     my( $self, $session ) = @_;
 
     my $params = {
-        client => 'otterlace',
         %{ $session->script_arguments },
         ( map { $_ => $self->$_ } @server_params ),
         server_script       => $self->server_script,
