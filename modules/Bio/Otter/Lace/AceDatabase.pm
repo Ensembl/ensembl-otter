@@ -726,6 +726,7 @@ sub script_arguments {
     my( $self ) = @_;
 
     my $arguments = {
+        client => 'otterlace',
         %{$self->smart_slice->toHash},
         session_dir => $self->home,
         url_root    => $self->Client->url_root,
