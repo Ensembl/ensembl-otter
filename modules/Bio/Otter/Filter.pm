@@ -233,6 +233,14 @@ sub translation_xref_dbs {
 
 # session handling
 
+sub source_url {
+    my ($self, $session) = @_;
+    my $script = $session->gff_http_script_name;
+    my $param_string =
+        join '&', @{$session->gff_http_script_arguments($self)};
+    return sprintf "pipe:///%s?%s", $script, $param_string,
+}
+
 sub call_with_session_data_handle {
     my ($self, $session, $data_sub) = @_;
 

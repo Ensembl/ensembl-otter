@@ -467,9 +467,6 @@ sub zMapGffFilterDefaults {
     my ($self, $stylesfile) = @_;
 
     my $text;
-    
-    my $script = $self->AceDatabase->gff_http_script_name;
-    
     my %filter_columns;
     my %filter_styles;
     my %filter_descs;
@@ -479,12 +476,9 @@ sub zMapGffFilterDefaults {
         my $filter = $_->{filter};
         my $state_hash = $_->{state};
 
-        my $param_string =
-            join '&', @{$self->AceDatabase->gff_http_script_arguments($filter)};
-        
         $text .= $self->formatZmapDefaults(
             $filter->name,
-            url             => 'pipe:///'.$script.'?'.$param_string,
+            url             => $filter->source_url($self->AceDatabase),
             featuresets     => join(' ; ', @{$filter->featuresets}),
             delayed         =>
             ( $state_hash->{wanted} && ! $state_hash->{failed} )
