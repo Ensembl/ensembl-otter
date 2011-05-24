@@ -507,6 +507,8 @@ sub get_query_seq {
 
     my @supplied_accs;
     if (my $txt = $self->get_entry('match')) {
+        $txt =~ s/^\s+//;
+        $txt =~ s/\s+$//;
         @supplied_accs = split(/[,;\|\s]+/, $txt);
         push @accessions, @supplied_accs;
     }
