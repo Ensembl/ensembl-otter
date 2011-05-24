@@ -8,6 +8,8 @@ use warnings;
 
 use Carp;
 
+use URI::Escape qw( uri_escape );
+
 my @server_params = (
 
     # common
@@ -237,7 +239,7 @@ sub source_url {
     my ($self, $session) = @_;
     my $script = $self->gff_http_script_name;
     my $param_string =
-        join '&', @{$session->gff_http_script_arguments($self)};
+        join '&', @{$self->gff_http_script_arguments($session)};
     return sprintf "pipe:///%s?%s", $script, $param_string,
 }
 
@@ -248,7 +250,7 @@ sub call_with_session_data_handle {
         sprintf "%s/%s", $session->script_dir, $self->gff_http_script_name;
     my @gff_http_command =
         ( $gff_http_script,
-          @{$session->gff_http_script_arguments($self)} );
+          @{$self->gff_http_script_arguments($session)} );
 
     open my $data_h, '-|', @gff_http_command
         or confess "failed to run $gff_http_script: $!";
@@ -261,6 +263,29 @@ sub call_with_session_data_handle {
         : "$gff_http_script failed: status = $?";
 
     return;
+}
+
+sub gff_http_script_arguments {
+    my( $self, $session ) = @_;
+
+    my $params = {
+        client => 'otterlace',
+        %{ $session->script_arguments },
+        %{ $self->server_params },
+        server_script       => $self->server_script,
+        process_gff_file    => $self->process_gff_file,
+        gff_source          => $self->name,
+    };
+    $params->{gff_seqname} = $params->{type};
+
+    my $arguments = [ ];
+    for my $key (sort keys %{$params}) {
+        my $value = $params->{$key};
+        next unless defined $value;
+        push @$arguments, join "=", uri_escape($key), uri_escape($value);
+    }
+
+    return $arguments; 
 }
 
 sub gff_http_script_name {
