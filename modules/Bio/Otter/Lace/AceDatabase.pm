@@ -8,7 +8,6 @@ use warnings;
 use Carp;
 
 use Fcntl qw{ O_WRONLY O_CREAT };
-use URI::Escape qw{ uri_escape };
 
 use Bio::Vega::Transform::Otter::Ace;
 use Bio::Vega::AceConverter;
@@ -723,30 +722,15 @@ sub script_dir {
     return $script_dir;
 }
 
-sub gff_http_script_arguments {
-    my( $self, $filter ) = @_;
+sub script_arguments {
+    my( $self ) = @_;
 
-    my $slice_params = $self->smart_slice->toHash;
-
-    my $params = {
-        client => 'otterlace',
-        %{ $slice_params },
-        %{ $filter->server_params },
-        server_script       => $filter->server_script,
-        process_gff_file    => $filter->process_gff_file,
-        gff_source          => $filter->name,
-        gff_seqname => $slice_params->{type},
+    my $arguments = {
+        %{$self->smart_slice->toHash},
         session_dir => $self->home,
         url_root    => $self->Client->url_root,
         cookie_jar  => $ENV{'OTTERLACE_COOKIE_JAR'},
     };
-
-    my $arguments = [ ];
-    for my $key (sort keys %{$params}) {
-        my $value = $params->{$key};
-        next unless defined $value;
-        push @$arguments, join "=", uri_escape($key), uri_escape($value);
-    }
 
     return $arguments; 
 }
