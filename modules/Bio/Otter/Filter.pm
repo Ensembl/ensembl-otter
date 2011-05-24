@@ -271,7 +271,7 @@ sub gff_http_script_arguments {
     my $params = {
         client => 'otterlace',
         %{ $session->script_arguments },
-        %{ $self->server_params },
+        ( map { $_ => $self->$_ } @server_params ),
         server_script       => $self->server_script,
         process_gff_file    => $self->process_gff_file,
         gff_source          => $self->name,
@@ -291,12 +291,6 @@ sub gff_http_script_arguments {
 sub gff_http_script_name {
     return "gff_http.pl";
 }
-
-sub server_params {
-    my ($self) = @_;
-    return { map { $_ => $self->$_ } @server_params };
-}
-
 
 1;
 
