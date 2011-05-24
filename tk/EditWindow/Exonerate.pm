@@ -326,14 +326,6 @@ sub get_entry {
     return;
 }
 
-sub method_tag {
-    my ($self, $match) = @_;
-    if ($match) {
-        $self->{'_method_tag'} = $match;
-    }
-    return $self->{'_method_tag'};
-}
-
 sub fasta_txt {
     my ($self, $txt) = @_;
     if ($txt) {
@@ -372,46 +364,6 @@ sub match {
         $self->{'_match'} = $match;
     }
     return $self->{'_match'};
-}
-
-sub genomic {
-    my ($self, $genomic) = @_;
-    if ($genomic) {
-        $self->{'_genomic'} = $genomic;
-    }
-    return $self->{'_genomic'};
-}
-
-sub genomic_start {
-    my ($self, $genomic_start) = @_;
-    if (defined $genomic_start) {
-        $self->{'_genomic_start'} = $genomic_start;
-    }
-    return $self->{'_genomic_start'};
-}
-
-sub genomic_end {
-    my ($self, $genomic_end) = @_;
-    if (defined $genomic_end) {
-        $self->{'_genomic_end'} = $genomic_end;
-    }
-    return $self->{'_genomic_end'};
-}
-
-sub flank {
-    my ($self, $flank) = @_;
-    if ($flank) {
-        $self->{'_flank'} = $flank;
-    }
-    return $self->{'_flank'};
-}
-
-sub revcomp_ref {
-    my ($self, $revcomp_ref) = @_;
-    if ($revcomp_ref) {
-        $self->{'_revcomp_ref'} = $revcomp_ref;
-    }
-    return $self->{'_revcomp_ref'};
 }
 
 sub XaceSeqChooser {
