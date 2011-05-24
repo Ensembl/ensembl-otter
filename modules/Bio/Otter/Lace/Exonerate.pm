@@ -334,7 +334,7 @@ sub append_polyA_tail {
     my $debug = 0;
 
     # Group the DnaDnaAlignFeatures by hit_name
-    map { $by_hit_name{$_->hseqname} ||= [] ; push @{$by_hit_name{$_->hseqname}}, $_ } @$features;
+    push @{$by_hit_name{$_->hseqname} ||= []}, $_ for @$features;
 
   HITNAME: for my $hit_name (keys %by_hit_name) {
       my ($sub_seq,$alt_exon,$match,$cigar,$pattern);
