@@ -328,79 +328,84 @@ sub run {
 # Extend the last or first align feature to incorporate
 # the query sequence PolyA/T tail if any
 
+my $debug = 0;
+
 sub append_polyA_tail {
     my( $self, $features ) = @_;
-    my %by_hit_name;
-    my $debug = 0;
 
     # Group the DnaDnaAlignFeatures by hit_name
+    my %by_hit_name;
     push @{$by_hit_name{$_->hseqname} ||= []}, $_ for @$features;
 
-  HITNAME: for my $hit_name (keys %by_hit_name) {
-      my ($sub_seq,$alt_exon,$match,$cigar,$pattern);
-      my $hit_features = $by_hit_name{$hit_name};
-      my $hit_strand = $hit_features->[0]->hstrand;
-      print STDOUT "PolyA/T tail Search for $hit_name...\n";
-      print STDOUT "Processing $hit_name with ".scalar(@$hit_features)." Features\n" if $debug;
-      # fetch the hit sequence
-      my $fetcher = $self->sequence_fetcher;
-      my $seq = $fetcher->{$hit_name};
-      # Get the AlignFeature that needs to be extended
-      # last exon if hit in forward strand, first if in reverse
+    while (my ($hit_name, $hit_features) = each %by_hit_name) {
+        print STDOUT "PolyA/T tail Search for $hit_name...\n";
+        print STDOUT "Processing $hit_name with ".scalar(@$hit_features)." Features\n" if $debug;
+        # fetch the hit sequence
+        my $seq = $self->sequence_fetcher->{$hit_name};
+        $self->append_polyA_tail_from_features($seq, $hit_features);
+    }
 
-      @$hit_features = sort {
-          $hit_strand == -1 ?
-              $a->hstart <=> $b->hstart || $b->hend <=> $a->hend :
-              $b->hend <=> $a->hend || $a->hstart <=> $b->hstart;
-      } @$hit_features;
-      $alt_exon = shift @$hit_features;
-      print STDOUT ($hit_strand == -1 ? "Reverse" : "Forward").
-          " strand: start ".$alt_exon->hstart." end ".$alt_exon->hend." length ".$seq->sequence_length."\n" if $debug;
-      if($hit_strand == -1) {
-          next HITNAME unless $alt_exon->hstart > 1;
-          $sub_seq = $seq->sub_sequence(1,($alt_exon->hstart-1));
-          print STDOUT "subseq <1-".($alt_exon->hstart-1)."> is\n$sub_seq\n" if $debug;
-          $pattern = '^(.*T{3,})$';  # <AGAGTTTTTTTTTTTTTTTTTTTTTT>ALT_EXON_START
-      }
-      else {
-          next HITNAME unless $alt_exon->hend < $seq->sequence_length;
-          $sub_seq = $seq->sub_sequence(($alt_exon->hend+1),$seq->sequence_length);
-          print STDOUT "subseq <".($alt_exon->hend+1)."-".$seq->sequence_length."> is\n$sub_seq\n" if $debug;
-          $pattern = '^(A{3,}.*)$';  # ALT_EXON_END<AAAAAAAAAAAAAAAAAAAAAAAACGAG>
-      }
+    return;
+}
 
-      if($sub_seq =~ /$pattern/i ) {
-          $match = length $1;
-          $cigar = $alt_exon->cigar_string;
-          print STDOUT "Found $match bp long polyA/T tail\n";
+sub append_polyA_tail_from_features {
+    my ($self, $seq, $hit_features) = @_;
 
-          # change the feature cigar string
-          if(not $cigar =~ s/(\d*)M$/($1+$match)."M"/e ) {
-              $cigar = $cigar."${match}M";
-          }
-          print STDOUT "old cigar $cigar new $cigar\n" if $debug;
-          $alt_exon->cigar_string($cigar);
+    my ($sub_seq,$alt_exon,$match,$cigar,$pattern);
+    my $hit_strand = $hit_features->[0]->hstrand;
 
-          # change the feature coordinates
-          if($hit_strand == -1) {
-              $alt_exon->hstart($alt_exon->hstart-$match);
-          }
-          else {
-              $alt_exon->hend($alt_exon->hend+$match);
-          }
+    # Get the AlignFeature that needs to be extended
+    # last exon if hit in forward strand, first if in reverse
 
-          if($alt_exon->strand == 1) {
-              $alt_exon->end($alt_exon->end+$match);
-          }
-          else {
-              $alt_exon->start($alt_exon->start-$match);
-          }
+    @$hit_features = sort {
+        $hit_strand == -1 ?
+            $a->hstart <=> $b->hstart || $b->hend <=> $a->hend :
+            $b->hend <=> $a->hend || $a->hstart <=> $b->hstart;
+    } @$hit_features;
+    $alt_exon = shift @$hit_features;
+    print STDOUT ($hit_strand == -1 ? "Reverse" : "Forward").
+        " strand: start ".$alt_exon->hstart." end ".$alt_exon->hend." length ".$seq->sequence_length."\n" if $debug;
+    if($hit_strand == -1) {
+        return unless $alt_exon->hstart > 1;
+        $sub_seq = $seq->sub_sequence(1,($alt_exon->hstart-1));
+        print STDOUT "subseq <1-".($alt_exon->hstart-1)."> is\n$sub_seq\n" if $debug;
+        $pattern = '^(.*T{3,})$';  # <AGAGTTTTTTTTTTTTTTTTTTTTTT>ALT_EXON_START
+    }
+    else {
+        return unless $alt_exon->hend < $seq->sequence_length;
+        $sub_seq = $seq->sub_sequence(($alt_exon->hend+1),$seq->sequence_length);
+        print STDOUT "subseq <".($alt_exon->hend+1)."-".$seq->sequence_length."> is\n$sub_seq\n" if $debug;
+        $pattern = '^(A{3,}.*)$';  # ALT_EXON_END<AAAAAAAAAAAAAAAAAAAAAAAACGAG>
+    }
 
-      }
-      else {
-          next HITNAME;
-      }
-  }
+    if($sub_seq =~ /$pattern/i ) {
+        $match = length $1;
+        $cigar = $alt_exon->cigar_string;
+        print STDOUT "Found $match bp long polyA/T tail\n";
+
+        # change the feature cigar string
+        if(not $cigar =~ s/(\d*)M$/($1+$match)."M"/e ) {
+            $cigar = $cigar."${match}M";
+        }
+        print STDOUT "old cigar $cigar new $cigar\n" if $debug;
+        $alt_exon->cigar_string($cigar);
+
+        # change the feature coordinates
+        if($hit_strand == -1) {
+            $alt_exon->hstart($alt_exon->hstart-$match);
+        }
+        else {
+            $alt_exon->hend($alt_exon->hend+$match);
+        }
+
+        if($alt_exon->strand == 1) {
+            $alt_exon->end($alt_exon->end+$match);
+        }
+        else {
+            $alt_exon->start($alt_exon->start-$match);
+        }
+
+    }
 
     return;
 }
