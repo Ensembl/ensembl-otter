@@ -723,10 +723,6 @@ sub script_dir {
     return $script_dir;
 }
 
-sub gff_http_script_name {
-    return "gff_http.pl";
-}
-
 sub gff_http_script_arguments {
     my( $self, $filter ) = @_;
 

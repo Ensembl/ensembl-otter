@@ -235,7 +235,7 @@ sub translation_xref_dbs {
 
 sub source_url {
     my ($self, $session) = @_;
-    my $script = $session->gff_http_script_name;
+    my $script = $self->gff_http_script_name;
     my $param_string =
         join '&', @{$session->gff_http_script_arguments($self)};
     return sprintf "pipe:///%s?%s", $script, $param_string,
@@ -245,7 +245,7 @@ sub call_with_session_data_handle {
     my ($self, $session, $data_sub) = @_;
 
     my $gff_http_script =
-        sprintf "%s/%s", $session->script_dir, $session->gff_http_script_name;
+        sprintf "%s/%s", $session->script_dir, $self->gff_http_script_name;
     my @gff_http_command =
         ( $gff_http_script,
           @{$session->gff_http_script_arguments($self)} );
@@ -261,6 +261,10 @@ sub call_with_session_data_handle {
         : "$gff_http_script failed: status = $?";
 
     return;
+}
+
+sub gff_http_script_name {
+    return "gff_http.pl";
 }
 
 sub server_params {
