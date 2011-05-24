@@ -12,6 +12,13 @@ use URI::Escape qw( uri_escape );
 
 my @server_params = (
 
+    # session
+    qw(
+    server_script
+    process_gff_file
+    gff_source
+    ),
+
     # common
     qw(
     analysis
@@ -271,9 +278,6 @@ sub gff_http_script_arguments {
     my $params = {
         %{ $session->script_arguments },
         ( map { $_ => $self->$_ } @server_params ),
-        server_script       => $self->server_script,
-        process_gff_file    => $self->process_gff_file,
-        gff_source          => $self->name,
     };
     $params->{gff_seqname} = $params->{type};
 
@@ -285,6 +289,11 @@ sub gff_http_script_arguments {
     }
 
     return $arguments; 
+}
+
+sub gff_source {
+    my( $self ) = @_;
+    return $self->name;
 }
 
 sub gff_http_script_name {
