@@ -253,32 +253,10 @@ sub write_region_xml_file {
 
 sub recover_smart_slice_from_region_xml_file {
     my ($self) = @_;
-    
+
     my $client = $self->Client or die "No Client attached";
-    
-    # We try the LOCK_REGION_XML_FILE too, since uninitialised
-    # lace sessions sometimes have it becuase it is created
-    # before the REGION_XML_FILE, and we want to recover the
-    # session to remove the lock.
-    
-    my ($error, $parser);
-    foreach my $f ($LOCK_REGION_XML_FILE, $REGION_XML_FILE) {
-        my $region_file = join('/', $self->home, $f);
-        $parser = Bio::Vega::Transform::Otter->new;
-        eval { $parser->parsefile($region_file) };
-        if ($error = $@) {
-            warn $error;
-            $parser = undef;
-        } else {
-            last;
-        }
-    }
-    if ($error) {
-        confess $error;
-    }
-    
+    my $parser = $self->parse_chromosome_slice_from_region_xml_file;
     my $slice = $parser->get_ChromosomeSlice;
-    
     my $smart_slice = Bio::Otter::Lace::Slice->new(
         $client,
         $parser->species,
@@ -292,6 +270,24 @@ sub recover_smart_slice_from_region_xml_file {
     $self->smart_slice($smart_slice);
 
     return;
+}
+
+sub parse_chromosome_slice_from_region_xml_file {
+    my ($self) = @_;
+
+    # We try the LOCK_REGION_XML_FILE too, since uninitialised
+    # lace sessions sometimes have it becuase it is created
+    # before the REGION_XML_FILE, and we want to recover the
+    # session to remove the lock.
+
+    foreach my $file ($LOCK_REGION_XML_FILE, $REGION_XML_FILE) {
+        my $region_file = join '/', $self->home, $file;
+        my $parser = Bio::Vega::Transform::Otter->new;
+        return $parser if eval { $parser->parsefile($region_file); 1; };
+        warn $@;
+    }
+
+    confess "all attempts to parse a chromosome slice failed";
 }
 
 sub smart_slice {
