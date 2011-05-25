@@ -406,12 +406,13 @@ sub make_database_directory {
     mkdir($home, 0777) or die "Can't mkdir('$home') : $!\n";
 
     my $tar_command = "cd '$home' && tar xzf -";
-    eval {
-        open my $expand, '|-', $tar_command or die "Can't open pipe '$tar_command'; $?";
-        print $expand $tar;
-        close $expand or die "Error running pipe '$tar_command'; $?";
-    };
-    if ($@) {
+    unless (
+        eval {
+            open my $expand, '|-', $tar_command or die "Can't open pipe '$tar_command'; $?";
+            print $expand $tar;
+            close $expand or die "Error running pipe '$tar_command'; $?";
+            1;
+        }) {
         $self->error_flag(1);
         confess $@;
     }
