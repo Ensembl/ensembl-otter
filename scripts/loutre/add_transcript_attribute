@@ -7,17 +7,25 @@ use warnings;
 use Bio::Otter::Lace::Defaults;
 
 {
-    my $dataset_name = 'human';
-    my $attrib_type_id = 54;
-    my $attrib_value   = 'confirm experimentally';
+# As used by jgrg, cvs v. 1.1
+#     my $dataset_name = 'human';
+#     my $attrib_type_id = 54; # remark
+#     my $attrib_value   = 'confirm experimentally';
+
+    my $dataset_name;
+    my $attrib_code;
+    my $attrib_value;
 
     my $usage = sub { exec('perldoc', $0) };
     # This do_getopt() call is needed to parse the otter config files
     # even if you aren't giving any arguments on the command line.
     Bio::Otter::Lace::Defaults::do_getopt(
-        'h|help!'       => $usage,
-        'dataset=s'     => \$dataset_name,
+        'h|help!'        => $usage,
+        'dataset=s'      => \$dataset_name,
+        'attrib_code=s'  => \$attrib_code,
+        'attrib_value=s' => \$attrib_value,
         ) or $usage->();
+    ($dataset_name and $attrib_code and $attrib_value) or $usage->();
     
     # Client communicates with otter HTTP server
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
@@ -37,14 +45,17 @@ use Bio::Otter::Lace::Defaults;
     });
     my $count_attrib = $otter_dbc->prepare(qq{
         SELECT count(*)
-        FROM transcript_attrib
-        WHERE transcript_id = ?
-          AND attrib_type_id = ?
-          AND value = ?
+        FROM transcript_attrib ta
+        JOIN attrib_type       at USING (attrib_type_id)
+        WHERE ta.transcript_id = ?
+          AND at.code          = ?
+          AND ta.value         = ?
     });
     my $insert_attrib = $otter_dbc->prepare(q{
         INSERT transcript_attrib (transcript_id, attrib_type_id, value)
-        VALUES (?, ?, ?)
+        VALUES (?,
+                (SELECT attrib_type_id FROM attrib_type WHERE code = ?),
+                ?)
     });
     
     while (<>) {
@@ -55,14 +66,14 @@ use Bio::Otter::Lace::Defaults;
                 warn "No current transcript with stable ID '$stable_id'\n";
                 next;
             }
-            $count_attrib->execute($db_id, $attrib_type_id, $attrib_value);
+            $count_attrib->execute($db_id, $attrib_code, $attrib_value);
             my ($count) = $count_attrib->fetchrow;
             if ($count) {
-                warn "Attrib $attrib_type_id '$attrib_value' already set for transcript '$stable_id'\n";
+                warn "Attrib $attrib_code '$attrib_value' already set for transcript '$stable_id'\n";
                 next;
             }
-            $insert_attrib->execute($db_id, $attrib_type_id, $attrib_value);
-            warn "Added attrib $attrib_type_id '$attrib_value' to transcript '$stable_id'\n";
+            $insert_attrib->execute($db_id, $attrib_code, $attrib_value);
+            warn "Added attrib $attrib_code '$attrib_value' to transcript '$stable_id'\n";
         }
     }
 }
@@ -72,9 +83,26 @@ use Bio::Otter::Lace::Defaults;
 
 __END__
 
-=head1 NAME - add_transcript_attribute
+=head1 NAME
+
+ add_transcript_attribute
+
+=head1 SYNOPSIS
+
+ add_transcript_attribute                               \
+     --dataset      mouse                               \
+     --attrib_code  hidden_remark                       \
+     --attrib_value 'Annotation transfer: missing_UTRs' \
+   list_of_ts_stable_ids.txt
+
+=head1 DESCRIPTION
+
+Add a specified transcript attribute to each of the 
+transcripts specified by stable id in the input file
+or standard input.
 
 =head1 AUTHOR
 
 James Gilbert B<email> jgrg@sanger.ac.uk
+Michael Gray B<email> mg13@sanger.ac.uk
 
