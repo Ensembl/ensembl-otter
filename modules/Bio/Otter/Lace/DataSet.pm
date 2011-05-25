@@ -43,23 +43,14 @@ sub filter_by_name {
 sub _filter_by_name {
     my ($self, $name) = @_;
 
-    my $filter = Bio::Otter::Filter->new;
-    $filter->name($name);
-
     my $config = $self->config_section("filter.${name}");
-    while (my ($meth, $arg) = each %{$config}) {
-        unless ($filter->can($meth)) {
-            warn "Filter $name: unrecognized configuration parameter '$meth': check your .otter_config file.";
-            return;
-        }
-        $filter->$meth($arg);
-    }
 
-    if (@{ $filter->featuresets } > 1
-        && $filter->zmap_style) {
-        warn "Filter $name: You can't specify a zmap_style for a filter with multiple featuresets.";
+    my $filter;
+    unless (eval { $filter = Bio::Otter::Filter->from_config($config); 1; }) {
+        warn sprintf "filter ${name}: ignored: $@";
         return;
     }
+    $filter->name($name);
 
     return $filter;
 }
