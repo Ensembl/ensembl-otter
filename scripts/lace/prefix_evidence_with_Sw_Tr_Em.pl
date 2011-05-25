@@ -86,7 +86,7 @@ sub connect_uniprot_db {
 
   my $dbname = shift;
 
-  my $dbh = DBI->connect("DBI:mysql:$dbname:cbi3:3306", "genero", "", {RaiseError => 1})
+  my $dbh = DBI->connect("DBI:mysql:$dbname:cbi5d:3306", "genero", "", {RaiseError => 1})
         || die "cannot connect to $dbname, $DBI::errstr";
   return $dbh;
 }

@@ -4,8 +4,8 @@ use warnings;
 
 
 ### parse all EST/cDNA submitted to EMBL - based on files prepared by Hans
-### run script on machine: cbi3
-### typical run: perl ~/bin/embl/parse_EST_cDNA_stats.pl -db mushroom_200610 -host cbi3 -user genero
+### run script on machine: cbi3 (now cbi5d?)
+### typical run: perl ~/bin/embl/parse_EST_cDNA_stats.pl -db mushroom_200610 -host cbi5d -user genero
 
 use strict;
 use DBI;
