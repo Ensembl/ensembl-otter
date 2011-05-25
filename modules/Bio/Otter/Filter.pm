@@ -177,12 +177,9 @@ sub featuresets {
         $self->{_featuresets} =
             ref $featuresets ? $featuresets : [split(/\s*[,;]\s*/, $featuresets)];
     }
-    
+
     # the list of featuresets defaults to the name of this filter
-    
-    $self->{_featuresets} ||= [ $self->name ];
-    
-    return $self->{_featuresets};
+    return $self->{_featuresets} || [ $self->name ];
 }
 
 sub zmap_column {
