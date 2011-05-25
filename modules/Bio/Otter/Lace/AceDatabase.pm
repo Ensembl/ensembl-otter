@@ -747,19 +747,20 @@ sub DESTROY {
         return;
     }
     my $client = $self->Client;
-    eval{
-        if ($self->ace_server_registered) {
-            $self->ace_server->kill_server;
-        }
-        if ($client) {
-            $self->unlock_otter_slice() if $self->write_access;
-        }
-    };
-    if ($@) {
-        warn "Error in AceDatabase::DESTROY : $@";
-    } else {
+    if (
+        eval {
+            if ($self->ace_server_registered) {
+                $self->ace_server->kill_server;
+            }
+            if ($client) {
+                $self->unlock_otter_slice() if $self->write_access;
+            }
+            1;
+        }) {
         rename($home, "${home}.done")
             or die "Error renaming the session directory; $!";
+    } else {
+        warn "Error in AceDatabase::DESTROY : $@";
     }
     
     if ($callback) {
