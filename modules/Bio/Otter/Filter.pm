@@ -54,6 +54,14 @@ my @server_params = (
 sub from_config {
     my ($pkg, $config) = @_;
 
+    die "you can't specify a zmap_style and multiple featuresets"
+        if 1
+        # NB: use redundant ( ... ) to discipline emacs mode indentation
+        && ($config->{zmap_style})
+        && ($config->{featuresets})
+        && ($config->{featuresets} =~ /[,;]/)
+        ;
+
     my $filter = $pkg->new;
 
     for my $key (keys %{$config}) {
@@ -61,9 +69,6 @@ sub from_config {
             unless $filter->can($key);
         $filter->$key($config->{$key});
     }
-
-    die "you can't specify a zmap_style for a filter with multiple featuresets"
-        if @{$filter->featuresets} > 1 && $filter->zmap_style;
 
     return $filter;
 }
