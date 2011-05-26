@@ -12,7 +12,6 @@ use Hum::FastaFileIO;
 use Hum::ClipboardUtils qw{ accessions_from_text };
 use Hum::Sort qw{ ace_sort };
 use Tk::LabFrame;
-use Tk::Balloon;
 use Tk::Checkbutton;
 use Tk::Radiobutton;
 
