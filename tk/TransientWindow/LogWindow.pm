@@ -175,7 +175,15 @@ sub mail_contents {
         -labelPack    => [ -side => 'left' ],
         -font         => [ 'Helvetica', '12', 'normal' ],
     )->pack(-pady => 6,);
-    $dialog->add('Label', -text => "Send this error log to '$to'?")->pack();
+    $dialog->add('Label', -text => "Send this error log to '$to'?\n\n".
+		 "Please note this uses the built-in (system) email transfer\n".
+		 "configuration.  This often does not work on laptops.")->pack();
+    $dialog->add('Label', -text =>
+		 "If you do not receive the automatic acknowledgement email within an\n".
+		 "hour or so, please contact us by another means.",
+		 -background => 'black',
+		 -foreground => 'red')->pack();
+
     my $result = $dialog->Show();
     return unless $result eq 'Ok';
 
