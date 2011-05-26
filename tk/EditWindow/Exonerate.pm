@@ -15,7 +15,6 @@ use Tk::LabFrame;
 use Tk::Balloon;
 use Tk::Checkbutton;
 use Tk::Radiobutton;
-use Data::Dumper;
 
 use base 'EditWindow';
 
