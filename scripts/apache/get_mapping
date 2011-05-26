@@ -1,0 +1,86 @@
+#!/usr/local/bin/perl -Tw
+
+# Author:        jh13
+# Group:         anacode
+# Maintainer:    jh13
+
+use strict;
+use warnings;
+
+use SangerPaths qw{ core bioperl123 ensembl62 otter55 };
+
+use Bio::Otter::ServerScriptSupport;
+
+my $mapping_none_xml = <<'XML'
+  <mapping type="none">
+  </mapping>
+XML
+    ;
+
+sub mapping_none_xml {
+    return $mapping_none_xml;
+}
+
+my $mapping_equiv_xml_format = <<'XML'
+  <mapping type="equiv" equiv_chr="%s">
+  </mapping>
+XML
+    ;
+
+sub mapping_equiv_xml {
+    my ($equiv_chr) = @_;
+    my $xml = sprintf $mapping_equiv_xml_format, $equiv_chr;
+    return $xml;
+}
+
+my $chr_id_select_sql = <<'SQL'
+select seq_region_id
+from seq_region
+where name = ?
+SQL
+    ;
+
+my $attrib_select_sql = <<'SQL'
+select value
+from seq_region_attrib sra
+inner join attrib_type at using (attrib_type_id)
+where sra.seq_region_id = ? and at.code = ?
+SQL
+    ;
+
+sub get_mapping {
+    my ($server) = @_;
+
+    my $dbh = $server->otter_dba->db_handle;
+    my $chr = $server->require_argument('chr');
+    my $cs  = $server->require_argument('cs');
+
+    return $server->otter_wrap_response(get_mapping_xml($dbh, $chr, $cs));
+}
+sub get_mapping_xml {
+    my ($dbh, $chr, $cs) = @_;
+
+    # get the seq_region ID
+    my ($chr_id) =
+        @{$dbh->selectcol_arrayref(
+              $chr_id_select_sql, { }, $chr)};
+    die qq(invalid chr '${chr}') unless defined $chr_id;
+
+    my $attrib_select_sth = $dbh->prepare($attrib_select_sql);
+
+    # check the equivalent assembly
+    my ($equiv_asm) =
+        @{$dbh->selectcol_arrayref(
+              $attrib_select_sth, { }, $chr_id, 'equiv_asm')};
+    return mapping_none_xml unless defined $equiv_asm && $equiv_asm eq $cs;
+
+    # get the equivalent chromosome
+    my ($equiv_chr) =
+        @{$dbh->selectcol_arrayref(
+              $attrib_select_sth, { }, $chr_id, 'chr')};
+    die q(missing chr attribute) unless defined $equiv_chr;
+
+    return mapping_equiv_xml($equiv_chr);
+}
+
+Bio::Otter::ServerScriptSupport->send_response(\&get_mapping);
