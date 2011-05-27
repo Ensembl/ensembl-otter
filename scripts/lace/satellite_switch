@@ -91,11 +91,30 @@ $PORTS_RE = qr{\b($PORTS_RE)\b};
 
 __END__
 
-=head1 NAME - satellite_switch
+=head1 NAME
+
+satellite_switch - flip satellite databases to/from MySQL slaves
 
 =head1 USAGE
 
   satellite_switch <-slave|-master> [-dryrun]
+
+=head1 DESCRIPTION
+
+This updates the C<pipeline_db_head> meta_key for all species in the
+server's C<species.dat> .  It maintains the port number and switches
+the hostname.  It is intended to switch the read-only queries from
+Otterlace via the CGI scripts, between master & slave database
+servers.
+
+The CNAME aliases (otterpipe1, otterpipe2) are not used.  In the event
+of database server failure, we can update these rows on accessible
+databases much faster than we can get the DNS changed.
+
+=head1 CAVEATS
+
+There are also C<pipeline_db_rw_head> and other database pointers.
+This script does not touch those.
 
 =head1 AUTHOR
 
