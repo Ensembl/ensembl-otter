@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-update_external_dbs.pl - reads external_db entries from reference file
+update_external_dbs.pl - reads external_db entries from the ensembl_production database
 
 =head1 SYNOPSIS
 
@@ -30,10 +30,8 @@ Specific options:
 
 =head1 DESCRIPTION
 
-This script reads external_db entries from a file that holds definitions for
-all external databases used in Vega. Vega usually reuses a file that is
-maintained by Ensembl, which is ensembl/misc-scripts/external_db/external_dbs.txt.
-The script is rarely called directly from the command line but is executed during
+This script reads external_db entries from the ensembl_production database
+The script is called directly from the command line and executed during
 vega and ensembl-vega preparation.
 
 =head1 LICENCE
