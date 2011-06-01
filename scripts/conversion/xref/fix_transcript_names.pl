@@ -147,6 +147,7 @@ foreach my $chr ($support->sort_chromosomes) {
   my $chrom = $sa->fetch_by_region('toplevel', $chr);
  GENE:
   foreach my $gene (@{$chrom->get_all_Genes()}) {
+    
     my $gsi    = $gene->stable_id;
     my $transnames;
     my %seen_names;
@@ -160,7 +161,7 @@ foreach my $chr ($support->sort_chromosomes) {
     foreach my $trans (@{$gene->get_all_Transcripts()}) {
       my $t_name = $trans->get_all_Attributes('name')->[0]->value;
  #     $t_name = $trans->display_xref->display_id;
-      #remove unexpected extensions but report them for fixing
+      #remove unexpected extensions but report them for fixing (should be caught now)
       my $base_name = $t_name;
       if ( ($base_name =~ s/-\d{1,2}$//)
 	     || ($base_name =~ s/__\d{1,2}$//)
@@ -172,19 +173,9 @@ foreach my $chr ($support->sort_chromosomes) {
 	}
       }
 			
-      #warn only Havana genes with duplicated names unless we're verbose
+      #warn duplicated names (should all be caught by the QC now)
       if (exists $seen_names{$base_name}) {
-	if ( $support->param('dbname') =~ /sapiens/) {
-	  if ( $source =~ /GD|havana/) {
-	    $support->log_warning("IDENTICAL: $source gene $gsi ($g_name) has transcripts with identical base loutre names ($base_name), please fix\n");
-	  }
-	  elsif ($support->param('verbose')) {
-	    $support->log_warning("IDENTICAL: $source gene $gsi ($g_name) has transcripts with identical base loutre names ($base_name), please fix\n");
-	  }	
-	}
-	else {
-	  $support->log_warning("IDENTICAL: $source gene $gsi ($g_name) has transcripts with identical base loutre names ($base_name), please fix\n");
-	}
+        $support->log_warning("IDENTICAL: $source gene $gsi ($g_name) has transcripts with identical base loutre names ($base_name), please fix\n");
       }
 
       else {
@@ -235,14 +226,6 @@ foreach my $chr ($support->sort_chromosomes) {
       }
 
       #log unexpected names (ie don't have -001 etc after removing Leo's extension
-      elsif ( $support->param('dbname') =~ /sapiens/) {
-	if ( $source =~ /GD|havana/) {
-	  $support->log_warning("Can't patch transcript $t_name ($tsi) because name is wrong\n");
-	}
-	elsif ($support->param('verbose')) {
-	  $support->log_warning("Can't patch $source transcript $t_name ($tsi) because name is wrong\n");
-	}
-      }
       else {
 	$support->log_warning("Can't patch transcript $t_name ($tsi) because name is wrong\n");
       }
