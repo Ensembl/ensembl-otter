@@ -61,7 +61,7 @@ sub _create_cache {
 
     require File::Path;
     my $git_dir = "${module_dir}/Bio/Otter/Git";
-    File::Path::make_path $git_dir;
+    File::Path::make_path($git_dir);
 
     my $cache_path = "${git_dir}/Cache.pm";
     open my $cache_h, '>', $cache_path
