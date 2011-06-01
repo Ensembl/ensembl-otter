@@ -2,11 +2,11 @@
 
 =head1 NAME
 
-accession_to_support.pl - script to add supporting evidence to a Vega database
+evidence_to_support.pl - script to add supporting evidence to a Vega database
 
 =head1 SYNOPSIS
 
-accession_to_support.pl [options]
+evidence_to_support.pl [options]
 
 General options:
 
@@ -59,10 +59,10 @@ Possible reasons for this are: spelling mistake by annotator; feature not found
 by protein pipeline run (e.g. removed from external database, renamed); small
 features found by Dotter and not by Blixem. The genes and transcripts without any
 evidence are reported by source (GC, havana etc), as are the evidence table entries
-that do not link to the align_feature tables (if check_evidence_table option = 1).
-Log output when verbose is indeed very long (for example reports stable IDs of all
-external genes without evidence and all evidence table entries that don't match to
-align_feature tables)
+that do not link to the align_feature tables (if check_evidence_table option is explicitly
+set to 1, this check is disabled by default). Log output when checking evidence is long,
+even more so when it is verbose (for example reports stable IDs of all external genes
+without evidence and all evidence table entries that don't match to align_feature tables)
 
 - genes without any evidence at all:
    $ grep 'No supporting feature' evidence_to_support.log
@@ -137,8 +137,8 @@ if ($support->param('help') or $support->error) {
 $support->comma_to_list('chromosomes');
 $support->list_or_file('gene_stable_id');
 
-#check evidence table by default
-$support->param('check_evidence_table',1) unless defined($support->param('check_evidence_table'));
+#do not check evidence table by default
+$support->param('check_evidence_table',0) unless defined($support->param('check_evidence_table'));
 
 # ask user to confirm parameters to proceed
 $support->confirm_params;
