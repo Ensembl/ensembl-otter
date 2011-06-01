@@ -457,6 +457,17 @@ $c = $dbh->{'evega'}->do($sql);
 $sql = qq(DROP TABLE tmp_seq_region);
 $c = $dbh->{'evega'}->do($sql);
 
+#tidy up meta table entries
+$support->log_stamped("Deleting and updating meta table entries.\n\n");
+$sql = qq(DELETE from meta
+           WHERE meta_key in ('assembly.num_toplevel_seqs', 'genebuild.vega_merge_db','genebuild.version', 'removed_evidence_flag.ensembl_dbversion', 'removed_evidence_flag.uniprot_dbversion'));
+$c = $dbh->{'evega'}->do($sql);
+$sql = qq(UPDATE meta
+             SET meta_value = 
+                 (SELECT meta value from $vega_db.meta where meta_key = 'genebuild.havana_datafreeze_date')
+           WHERE meta_key = 'genebuild.havana_datafreeze_date');
+$c = $dbh->{'evega'}->do($sql);
+
 # finish logfile
 $support->finish_log;
 
