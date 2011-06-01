@@ -5,7 +5,6 @@ use strict;
 use warnings;
 
 use Bio::Vega::Author;
-use Bio::Otter::Version qw( $SCHEMA_VERSION $XML_VERSION );
 use Bio::Otter::SpeciesDat;
 
 use IO::Compress::Gzip qw(gzip);
@@ -367,10 +366,13 @@ sub _send_response {
 sub otter_wrap_response {
     my ($self, $response) = @_;
 
-    return qq{<?xml version="1.0" encoding="UTF-8"?>\n}
-      . qq{<otter schemaVersion="$SCHEMA_VERSION" xmlVersion="$XML_VERSION">\n}
-      . $response
-      . qq{</otter>\n};
+    return <<"XML"
+<?xml version="1.0" encoding="UTF-8"?>
+<otter>
+$response
+</otter>
+XML
+;
 }
 
 sub unauth_exit {
