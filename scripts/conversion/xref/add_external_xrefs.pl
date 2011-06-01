@@ -880,6 +880,12 @@ sub parse_mgi {
     
     #add mgi entries
     my $gene_name = $fields[1];
+
+ #   if ($gene_name eq 'Arpc1b') {
+ #     warn Dumper(\@fields);
+ #     exit;
+ #   }
+
     my $mgi_pid = $fields[0];
     $xrefs->{$gene_name}->{'MGI'} = [ $gene_name .'||'. $mgi_pid ];
     
@@ -896,22 +902,15 @@ sub parse_mgi {
     }
 
     #add swissprot entry
-    my $swissptrots = $fields[22];
-    my ($first_id) = split ',',$swissptrots; 
-    $xrefs->{$gene_name}->{'Uniprot/SWISSPROT'} = [ $first_id .'||'.$first_id ];
+    my $swissptrots = $fields[26];
+    foreach (split ',',$swissptrots) {
+      push @{$xrefs->{$gene_name}->{'Uniprot/SWISSPROT'}}, $_ .'||'.$_ ;
+    }
 
     #add entrezgene entry
     my $entrezgenes = $fields[4];
-    ($first_id) = split ',',$entrezgenes; 
-    $xrefs->{$gene_name}->{'EntrezGene'} = [ $first_id .'||'. $first_id ];
-
-    #add ensembl xrefs
-    my $ensid = $fields[9];
-    if ( $ensid =~ /^ENSMUSG/ ) {
-      $xrefs->{$gene_name}->{'Ens_Mm_gene'} = [ $ensid .'||'. $ensid ];
-    }
-    elsif ($ensid) {
-      $support->log_warning("Gene $gene_name from MGI has a non-mouse Ensembl ID ($ensid)\n");
+    foreach (split ',',$entrezgenes ) {
+      push @{$xrefs->{$gene_name}->{'EntrezGene'}}, $_ .'||'. $_;
     }
 
     #store lower case name to catch case mismatches
