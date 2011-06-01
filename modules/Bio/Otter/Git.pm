@@ -19,15 +19,18 @@ my $commands = {
     head => q(git describe --tags HEAD),
 };
 
-#  We cache the output of the commands in $param.  The installer will
-#  update the cache in-place so that the installed Otterlace will use
-#  the cached git state and not attempt to rerun any git commands.
-#  This is necessary because the installed Otterlace is not in a git
-#  repository so running git would fail.
-
-my $param = {
-    # @PARAMETERS@ - DO NOT REMOVE THIS PLACEHOLDER!!! - the installer needs it
+our $CACHE = {
 };
+
+#  Attempt to load a cache.
+unless (eval { require Bio::Otter::Git::Cache; 1; }) {
+    if ($@ =~ m(\A\QCan't locate Bio/Otter/Git/Cache.pm in \E)) {
+        warn "No git cache found.  If this is not a development version you will see warnings from failed git commands.\n";
+    }
+    else {
+        die "cache error: $@";
+    }
+}
 
 sub dump { ## no critic (Subroutines::ProhibitBuiltinHomonyms)
     my ($pkg) = @_;
@@ -35,18 +38,46 @@ sub dump { ## no critic (Subroutines::ProhibitBuiltinHomonyms)
     return;
 }
 
-sub dump_as_perl {
-    my ($pkg) = @_;
-    printf "    %s => q(%s),\n", $_, $pkg->param($_)
-        for keys %{$commands};
+my $cache_template = <<'CACHE_TEMPLATE'
+
+package Bio::Otter::Git::Cache;
+
+use strict;
+use warnings;
+
+$Bio::Otter::Git::CACHE = {
+%s};
+
+1;
+CACHE_TEMPLATE
+    ;
+
+sub _create_cache {
+    my ($pkg, $module_dir) = @_;
+
+    my $cache_contents = join '', map {
+        sprintf "    %s => q(%s),\n", $_, $pkg->param($_);
+    } keys %{$commands};
+
+    require File::Path;
+    my $git_dir = "${module_dir}/Bio/Otter/Git";
+    File::Path::make_path $git_dir;
+
+    my $cache_path = "${git_dir}/Cache.pm";
+    open my $cache_h, '>', $cache_path
+        or die "failed to open the git cache '${cache_path}': $!";
+    printf $cache_h $cache_template, $cache_contents;
+    close $cache_h
+        or die "failed to close the git cache '${cache_path}': $!";
+
     return;
 }
 
 sub param {
     my ($pkg, $key) = @_;
-    $param->{$key} = $pkg->_param($key)
-        unless exists $param->{$key};
-    return $param->{$key};
+    $CACHE->{$key} = $pkg->_param($key)
+        unless exists $CACHE->{$key};
+    return $CACHE->{$key};
 }
 
 sub _param {
