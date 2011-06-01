@@ -4,6 +4,13 @@ package Bio::Otter::Git;
 use strict;
 use warnings;
 
+#  NB: This module must not have any non-standard dependencies,
+#  because the installer uses this module and it runs with a very
+#  minimal $PATH, $PERL5LIB etc. (due in part to ssh-ing to
+#  development hosts) so it will only find modules in default
+#  locations.  If you add any dependencies here then you *must* check
+#  that the installer still works.
+ 
 use File::Basename;
 
 my $dir = dirname __FILE__;
@@ -12,8 +19,14 @@ my $commands = {
     head => q(git describe --tags HEAD),
 };
 
+#  We cache the output of the commands in $param.  The installer will
+#  update the cache in-place so that the installed Otterlace will use
+#  the cached git state and not attempt to rerun any git commands.
+#  This is necessary because the installed Otterlace is not in a git
+#  repository so running git would fail.
+
 my $param = {
-    # @PARAMETERS@
+    # @PARAMETERS@ - DO NOT REMOVE THIS PLACEHOLDER!!! - the installer needs it
 };
 
 sub dump { ## no critic (Subroutines::ProhibitBuiltinHomonyms)
