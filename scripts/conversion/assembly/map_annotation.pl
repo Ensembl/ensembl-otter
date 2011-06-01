@@ -63,9 +63,7 @@ For future release, there are plans to store incomplete matches by using the
 Ensembl API's SeqEdit facilities.
 
 Genes transferred can be restricted on logic_name using the --logic_names
-option. Usage:
-human: --logic_names otter
-mouse: --logic_names otter,otter_external
+option. Used for mouse (-logic_names otter,otter_external).
 
 Look in the logs for 'Set coordinates' and check exon coordinates of any examples
 - untested code.
@@ -237,7 +235,7 @@ foreach my $V_chr ($support->sort_chromosomes($V_chrlength)) {
   # skip non-ensembl chromosomes
   my $E_chr = $ensembl_chr_map->{$V_chr};
   unless ($E_chrlength->{$E_chr}) {
-    $support->log_warning("Chromosome $E_chr not in Ensembl. Skipping.\n", 1);
+    $support->log_warning("Ensembl chromosome equivalent to $V_chr not found. Skipping.\n", 1);
     next;
   }
 
