@@ -117,6 +117,8 @@ use Bio::EnsEMBL::Transcript;
 use Bio::EnsEMBL::Exon;
 use Bio::Vega::AuthorGroup;
 
+use POSIX qw(strftime);
+
 $| = 1;
 
 our $AUTHOR;
@@ -456,6 +458,7 @@ if ($support->param('prune') && $support->user_proceed("\nDo you want to delete 
       $vdbh->do(qq(DROP table $t));
     }
   }	
+  $vdbh->do(qq(DELETE FROM meta where meta_key = 'genebuild.havana_datafreeze_date'));
   $vdbh->do(qq(DELETE FROM meta_coord));
   $vdbh->do(qq(INSERT INTO meta_coord SELECT * FROM backup_meta_coord));
 
@@ -698,7 +701,13 @@ foreach my $name (@{$chr_names_wanted}) {
     }
   }
 }
-$support->log("got $fsv fsv genes and $non_fsv non_fsv genes\n");
+$support->log("Got $fsv fsv genes and $non_fsv non_fsv genes\n");
+
+#add date of datafreeze
+my $datafreeze =  strftime "%Y-%m-%d", localtime;
+$vdbh->do(qq(INSERT ignore into meta (meta_key,meta_value) VALUES (\'genebuild.havana_datafreeze_date\',\'$datafreeze\')));
+$support->log("Added meta key of $datafreeze for genebuild.havana_datafreeze_date\n");
+
 $support->finish_log;
 
 
