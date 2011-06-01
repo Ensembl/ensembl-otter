@@ -8,9 +8,12 @@ use strict;
 use CanvasWindow::DataSetChooser;
 use EditWindow::Password;
 use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Git;
 use POSIX ":sys_wait_h";
 
 {
+
+    Bio::Otter::Git->dump;
 
     # Become leader of process group so that "kill -$$" at end works
     setpgrp();
