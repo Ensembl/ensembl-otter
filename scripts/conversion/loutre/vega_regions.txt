@@ -11,32 +11,32 @@
 #loutre_id	#vega_name	#name	#ensembl_name	
 
 --zebrafish--
-chr1_20100514	1	Chromosome 1	1
-chr2_20100514	2	Chromosome 2	2
-chr3_20100514	3	Chromosome 3	3
-chr4_20100514	4	Chromosome 4	4
-chr5_20100514	5	Chromosome 5	5
-chr6_20100514	6	Chromosome 6	6
-chr7_20100514	7	Chromosome 7	7
-chr8_20100514	8	Chromosome 8	8
-chr9_20100514	9	Chromosome 9	9
-chr10_20100514	10	Chromosome 10	10
-chr11_20100514	11	Chromosome 11	11
-chr12_20100514	12	Chromosome 12	12
-chr13_20100514	13	Chromosome 13	13
-chr14_20100514	14	Chromosome 14	14
-chr15_20100514	15	Chromosome 15	15
-chr16_20100514	16	Chromosome 16	16
-chr17_20100514	17	Chromosome 17	17
-chr18_20100514	18	Chromosome 18	18
-chr19_20100514	19	Chromosome 19	19
-chr20_20100514	20	Chromosome 20	20
-chr21_20100514	21	Chromosome 21	21
-chr22_20100514	22	Chromosome 22	22
-chr23_20100514	23	Chromosome 23	23
-chr24_20100514	24	Chromosome 24	24
-chr25_20100514	25	Chromosome 25	25
-chrU_20100514	U	Chromosome U	U
+chr1_20110419	1	Chromosome 1	1
+chr2_20110419	2	Chromosome 2	2
+chr3_20110419	3	Chromosome 3	3
+chr4_20110419	4	Chromosome 4	4
+chr5_20110419	5	Chromosome 5	5
+chr6_20110419	6	Chromosome 6	6
+chr7_20110419	7	Chromosome 7	7
+chr8_20110419	8	Chromosome 8	8
+chr9_20110419	9	Chromosome 9	9
+chr10_20110419	10	Chromosome 10	10
+chr11_20110419	11	Chromosome 11	11
+chr12_20110419	12	Chromosome 12	12
+chr13_20110419	13	Chromosome 13	13
+chr14_20110419	14	Chromosome 14	14
+chr15_20110419	15	Chromosome 15	15
+chr16_20110419	16	Chromosome 16	16
+chr17_20110419	17	Chromosome 17	17
+chr18_20110419	18	Chromosome 18	18
+chr19_20110419	19	Chromosome 19	19
+chr20_20110419	20	Chromosome 20	20
+chr21_20110419	21	Chromosome 21	21
+chr22_20110419	22	Chromosome 22	22
+chr23_20110419	23	Chromosome 23	23
+chr24_20110419	24	Chromosome 24	24
+chr25_20110419	25	Chromosome 25	25
+chrU_20110419	U	Chromosome U	U
 chrAB_20060711	AB	Chromosome AB	AB
 --end--
 
