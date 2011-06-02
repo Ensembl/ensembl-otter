@@ -563,6 +563,7 @@ sub zMapZMapDefaults {
     return $self->formatZmapDefaults(
         'ZMap',
         'dataset'           => $dataset->name,
+        'sequence'          => $slice->ssname,
         'csname'            => $slice->csname,
         'csver'             => $slice->csver,
         'start'             => $slice->start,
