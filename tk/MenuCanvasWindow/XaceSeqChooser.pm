@@ -1223,18 +1223,8 @@ sub max_seq_list_length {
 
 sub slice_name {
     my( $self ) = @_;
-
-    my $slice_name;
-    unless ($slice_name = $self->{'_slice_name'}) {
-        my $adbh = $self->ace_handle;
-        my @slice_list = map { $_->name } $adbh->fetch(Assembly => '*');
-        if (@slice_list > 1) {
-            $self->message("Error: more than 1 assembly in database:", @slice_list);
-            return;
-        }
-        $slice_name = $self->{'_slice_name'} = $slice_list[0];
-    }
-    return $slice_name;
+    return $self->{_slice_name} ||=
+        $self->AceDatabase->slice_name;
 }
 
 sub edit_subsequences {
