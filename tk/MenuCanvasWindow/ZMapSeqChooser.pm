@@ -1466,8 +1466,3 @@ James Gilbert B<email> jgrg@sanger.ac.uk
 
 
 =cut
-
-__DATA__
-
-
-
