@@ -539,31 +539,10 @@ sub zMapGffFilterDefaults {
 sub zMapZMapDefaults {
     my ($self) = @_;
 
-    # make this configurable for those users where zmap doesn't start
-    # due to not having window id when doing XChangeProperty.
-
-    my $show_mainwindow =
-        $self->AceDatabase->Client->config_value('zmap_main_window');
-
-    my $sources_string =
-        join ' ; ',
-        $self->slice_name,
-        keys %{$self->AceDatabase->filters},
-        ;
-
-    my $pfetch_www = $ENV{'PFETCH_WWW'};
-    my $pfetch_url = $self->AceDatabase->Client->pfetch_url;
-
     return $self->formatZmapDefaults(
         'ZMap',
-        'sources'           => $sources_string,
-        'show-mainwindow'   => ( $show_mainwindow ? 'true' : 'false' ),
-        'cookie-jar'        => $ENV{'OTTERLACE_COOKIE_JAR'},
-        'script-dir'        => $self->AceDatabase->script_dir,
-        'xremote-debug'     => $ZMAP_DEBUG ? 'true' : 'false',
-        'pfetch-mode'       => ( $pfetch_www ? 'http' : 'pipe' ),
-        'pfetch'            => ( $pfetch_www ? $pfetch_url : 'pfetch' ),
-        %{$self->AceDatabase->smart_slice->zmap_config},
+        'xremote-debug' => $ZMAP_DEBUG ? 'true' : 'false',
+        %{$self->AceDatabase->zmap_config},
         );
 }
 
