@@ -1164,12 +1164,6 @@ sub hunt_for_Entry_text {
 }
 
 
-sub ace_handle {
-    my( $self ) = @_;
-
-    return $self->AceDatabase->aceperl_db_handle;
-}
-
 sub ace_path {
     my( $self ) = @_;
 
@@ -1778,7 +1772,7 @@ sub Assembly {
 
     my $canvas = $self->canvas;
     my $slice_name = $self->slice_name;
-    my $ace  = $self->ace_handle;
+    my $ace  = $self->AceDatabase->aceperl_db_handle;
 
     unless ($self->{'_assembly'}) {
         my $before = time();
