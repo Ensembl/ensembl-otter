@@ -25,7 +25,12 @@ our $CACHE = {
 #  Attempt to load a cache.
 unless (eval { require Bio::Otter::Git::Cache; 1; }) {
     if ($@ =~ m(\A\QCan't locate Bio/Otter/Git/Cache.pm in \E)) {
-        warn "No git cache found.  If this is not a development version you will see warnings from failed git commands.\n";
+        warn <<'WARNING'
+No git cache.
+  If this is not a development version you will see warnings
+  from failed git commands.
+WARNING
+;
     }
     else {
         die "cache error: $@";
