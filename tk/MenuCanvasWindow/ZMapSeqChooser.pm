@@ -560,6 +560,7 @@ sub zMapZMapDefaults {
 
     return $self->formatZmapDefaults(
         'ZMap',
+        'dataset'           => $dataset->name,
         'csname'            => $slice->csname,
         'csver'             => $slice->csver,
         'start'             => $slice->start,
