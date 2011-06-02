@@ -12,6 +12,7 @@ use XML::Simple;
 use Bio::Vega::Utils::XmlEscape qw{ xml_escape };
 use File::Path qw{ mkpath };
 use Config::IniFiles;
+use POSIX;
 
 my $ZMAP_DEBUG = $ENV{OTTERLACE_ZMAP_DEBUG};
 
@@ -86,7 +87,8 @@ sub _launchZMap {
     elsif (defined $pid) {
         exec @e;
         warn "exec '@e' failed : $!";
-        CORE::exit();   # Still triggers DESTROY        
+        close STDERR; # _exit does not flush
+        POSIX::_exit(1); # avoid triggering DESTROY
     }
     else {
         my $mess = "Error: couldn't fork()\n";
