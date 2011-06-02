@@ -315,6 +315,32 @@ sub slice_name {
     return $slice_name;
 }
 
+sub zmap_config {
+    my ($self) = @_;
+
+    # The 'show-mainwindow' parameter is for when zmap does not start
+    # due to it not having window id when doing XChangeProperty().
+
+    my $sources =
+        join ' ; ', $self->slice_name, keys %{$self->filters};
+    my $show_mainwindow =
+        $self->Client->config_value('zmap_main_window');
+    my $pfetch_www = $ENV{'PFETCH_WWW'};
+    my $pfetch_url = $self->Client->pfetch_url;
+
+    my $hash = {
+        'sources'         => $sources,
+        'show-mainwindow' => ( $show_mainwindow ? 'true' : 'false' ),
+        'cookie-jar'      => $ENV{'OTTERLACE_COOKIE_JAR'},
+        'script-dir'      => $self->script_dir,
+        'pfetch-mode'     => ( $pfetch_www ? 'http' : 'pipe' ),
+        'pfetch'          => ( $pfetch_www ? $pfetch_url : 'pfetch' ),
+        %{$self->smart_slice->zmap_config},
+    };
+
+    return $hash;
+}
+
 sub offset {
     my ($self) = @_;
     
