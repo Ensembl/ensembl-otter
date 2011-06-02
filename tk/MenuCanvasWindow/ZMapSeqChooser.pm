@@ -545,29 +545,17 @@ sub zMapZMapDefaults {
     my $show_mainwindow =
         $self->AceDatabase->Client->config_value('zmap_main_window');
 
-    my $slice = $self->AceDatabase->smart_slice;
-    my $dataset = $slice->DataSet;
-
     my $sources_string =
         join ' ; ',
         $self->slice_name,
         keys %{$self->AceDatabase->filters},
         ;
 
-    my $columns = $dataset->config_value_list_merged('zmap_config', 'columns');
-    my @columns = $columns ? ( columns => join ' ; ', @{$columns} ) : ( );
-
     my $pfetch_www = $ENV{'PFETCH_WWW'};
     my $pfetch_url = $self->AceDatabase->Client->pfetch_url;
 
     return $self->formatZmapDefaults(
         'ZMap',
-        'dataset'           => $dataset->name,
-        'sequence'          => $slice->ssname,
-        'csname'            => $slice->csname,
-        'csver'             => $slice->csver,
-        'start'             => $slice->start,
-        'end'               => $slice->end,
         'sources'           => $sources_string,
         'show-mainwindow'   => ( $show_mainwindow ? 'true' : 'false' ),
         'cookie-jar'        => $ENV{'OTTERLACE_COOKIE_JAR'},
@@ -575,8 +563,7 @@ sub zMapZMapDefaults {
         'xremote-debug'     => $ZMAP_DEBUG ? 'true' : 'false',
         'pfetch-mode'       => ( $pfetch_www ? 'http' : 'pipe' ),
         'pfetch'            => ( $pfetch_www ? $pfetch_url : 'pfetch' ),
-        @columns,
-        %{ $dataset->config_section('zmap') },
+        %{$self->AceDatabase->smart_slice->zmap_config},
         );
 }
 
