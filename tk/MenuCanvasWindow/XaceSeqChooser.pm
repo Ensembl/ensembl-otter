@@ -1458,6 +1458,8 @@ sub add_external_SubSeqs {
         $asm->add_SubSeq($sub);
         $self->add_SubSeq($sub);
     }
+
+    return;
 }
 
 sub fetch_external_SubSeqs {
@@ -1475,6 +1477,8 @@ sub fetch_external_SubSeqs {
             $self->add_external_SubSeqs(@tsct);
         }
     }
+
+    return;
 }
 
 sub delete_subsequences {
