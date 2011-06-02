@@ -300,6 +300,21 @@ sub smart_slice {
     return $self->{'_smart_slice'};
 }
 
+sub slice_name {
+    my( $self ) = @_;
+
+    my $slice_name;
+    unless ($slice_name = $self->{'_slice_name'}) {
+        my @slice_list = $self->aceperl_db_handle->fetch(Assembly => '*');
+        my @slice_names = map { $_->name } @slice_list;
+        die "Error: more than 1 assembly in database: @slice_names"
+            if @slice_names > 1;
+        $slice_name = $self->{'_slice_name'} = $slice_names[0];
+    }
+
+    return $slice_name;
+}
+
 sub offset {
     my ($self) = @_;
     
