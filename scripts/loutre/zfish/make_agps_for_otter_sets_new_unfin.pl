@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl -w
+#!/usr/local/bin/perl
 # 
 # filters agps taken from chromoview for qc checked clones
 # creates files to build sets for otter 
@@ -8,6 +8,8 @@
 
 
 use strict;
+use warnings;
+
 use Getopt::Long;
  
 my ($agp,$clones,$help,$haplo);

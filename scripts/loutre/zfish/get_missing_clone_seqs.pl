@@ -1,6 +1,7 @@
-#!/usr/local/bin/perl -w
+#!/usr/local/bin/perl
 
 use strict;
+use warnings;
 
 #use Bio::SeqIO;
 #use Bio::Seq;

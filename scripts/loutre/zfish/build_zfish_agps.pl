@@ -1,4 +1,4 @@
-#!/software/bin/perl -w
+#!/usr/bin/env perl
 
 # wrapper that loads agps from chromoview (with QC check of project_status),
 # checks them for redundant clones, loads them into otter, loads assembly tags
@@ -15,6 +15,8 @@
 # -host otterpipe2 -port 3323 -user ottadmin -pass lutralutra -dbname pipe_zebrafish -delete -set set1 -set set2 etc.
 
 use strict;
+use warnings;
+
 use Carp;
 use Getopt::Long;
 use DBI;

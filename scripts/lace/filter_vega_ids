@@ -1,4 +1,4 @@
-#!/software/bin/perl -w
+#!/usr/bin/env perl
 
 # this script reads in a file corrected by annotator in this format
 # (could be multiple OTTMUSG ids)
