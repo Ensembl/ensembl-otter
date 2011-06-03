@@ -1288,7 +1288,7 @@ sub zMapZoomToSubSeq {
         $xml->open_tag('align');
         $xml->open_tag('block');
         $xml->open_tag('featureset', { name => $subseq->GeneMethod->name });
-        $subseq->zmap_xml_feature_tag($xml);
+        $subseq->zmap_xml_feature_tag($xml, $self->AceDatabase->offset);
         $xml->close_all_open_tags;
 
         my $command = $xml->flush;
