@@ -1,5 +1,8 @@
-#!/usr/local/bin/perl -w
+#!/usr/local/bin/perl
+
 use strict;
+use warnings;
+
 use Getopt::Long;
 
 my ($last,$now);

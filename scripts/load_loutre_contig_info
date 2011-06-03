@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl -w
+#!/usr/local/bin/perl
 
 =head1 DESCRIPTION
 
@@ -29,6 +29,8 @@ With the above table created in loutre_pig, this script can be run as shown in d
 =cut
 
 use strict;
+use warnings;
+
 use Bio::Vega::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw ( throw warning );
 use Getopt::Long;

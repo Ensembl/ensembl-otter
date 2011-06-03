@@ -1,4 +1,4 @@
-#!/software/bin/perl -w
+#!/usr/bin/env perl
 
 =head1 NAME
 
@@ -46,12 +46,13 @@ Mustapha Larbaoui B<email> ml6@sanger.ac.uk
 =cut
 
 use strict;
+use warnings;
+
 use Getopt::Long;
 use Net::Netrc;
 use Bio::Vega::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use GeneHist::DataUtils qw(process_query);
-use strict;
 use POSIX 'ceil';
 use Tk;
 

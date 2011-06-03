@@ -1,4 +1,4 @@
-#!/software/bin/perl -w
+#!/usr/bin/env perl
 
 =head1 NAME
 
@@ -39,6 +39,7 @@ Mustapha Larbaoui B<email> ml6@sanger.ac.uk
 
 use strict;
 use warnings;
+
 use Getopt::Long;
 use DBI;
 use Net::Netrc;

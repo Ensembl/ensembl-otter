@@ -1,8 +1,10 @@
-#!/usr/local/perl/bin -w
+#!/usr/bin/env perl
 # Author: Kerstin Jekosch
 # Email: kj2@sanger.ac.uk
 
 use strict;
+use warnings;
+
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Getopt::Long;
 
