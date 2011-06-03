@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl
+#!/usr/bin/env perl
 
 # Purpose: to install a new otter server distribution
 # Author: lg4@sanger.ac.uk
