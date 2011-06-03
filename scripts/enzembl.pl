@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl
+#!/usr/bin/env perl
 
 # enzembl - connect to EnsEMBL schema databases and show features directly in ZMap
 

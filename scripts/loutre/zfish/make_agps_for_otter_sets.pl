@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl
+#!/usr/bin/env perl
 #
 # filters agps taken from chromoview
 # (previously, for qc checked clones; now just for gap type+size, and

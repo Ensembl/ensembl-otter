@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl
+#!/usr/bin/env perl
 
 #chr14            1          106333        1     F       AL603712.1          130305           23973      -
 #chr14       106334          169641        2     F       AL589743.4          125813           62506      -

@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl
+#!/usr/bin/env perl
 # 
 # filters agps taken from chromoview for qc checked clones
 # creates files to build sets for otter 
