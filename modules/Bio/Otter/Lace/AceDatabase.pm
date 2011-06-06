@@ -330,10 +330,6 @@ sub zmap_config {
     my $pfetch_www = $ENV{'PFETCH_WWW'};
     my $pfetch_url = $self->Client->pfetch_url;
 
-    my $dataset = $self->DataSet;
-    my $columns = $dataset->config_value_list_merged('zmap_config', 'columns');
-    my @columns = $columns ? ( columns => join ' ; ', @{$columns} ) : ( );
-
     my $hash = {
         'ZMap' => [
             'sources'         => $sources,
@@ -344,9 +340,7 @@ sub zmap_config {
             'pfetch'          => ( $pfetch_www ? $pfetch_url : 'pfetch' ),
             'xremote-debug'   => $ZMAP_DEBUG ? 'true' : 'false',
             %{$self->smart_slice->zmap_config},
-
-            %{ $dataset->config_section('zmap') },
-            @columns,
+            %{$self->DataSet->zmap_config_stanza},
             ],
     };
 
