@@ -135,7 +135,7 @@ sub toHash {
     return $hash;
 }
 
-sub zmap_config {
+sub zmap_config_stanza {
     my ($self) = @_;
 
     my $hash = {
