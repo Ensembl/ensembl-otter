@@ -1259,8 +1259,7 @@ sub recover_session {
     rename($dir, $home) or die "Cannot move '$dir' to '$home'; $!";
     
     unless ($adb->db_initialized) {
-        eval { $adb->recover_smart_slice_from_region_xml_file };
-        warn $@ if $@;
+        warn $@ unless eval { $adb->recover_smart_slice_from_region_xml_file; 1; };
         return $adb;
     }
 
