@@ -168,12 +168,6 @@ sub create_detached_slice {
     return $slice;
 }
 
-sub DataSet {
-    my ($self) = @_;
-
-    return $self->Client->get_DataSet_by_name($self->dsname);
-}
-
 # ----------------------------------------------------------------------------------
 
 

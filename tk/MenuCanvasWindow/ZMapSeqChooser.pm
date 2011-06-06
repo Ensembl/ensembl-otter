@@ -71,7 +71,7 @@ The guts of the code to launch and display the features in a zmap.
 sub _launchZMap {
     my ($self) = @_;
 
-    my $dataset = $self->AceDatabase->smart_slice->DataSet;
+    my $dataset = $self->AceDatabase->DataSet;
 
     my @e = (
         'zmap',
@@ -557,7 +557,7 @@ sub zMapBlixemDefaults {
     return $self->formatZmapDefaults(
         'blixem',
         'config-file' => $ENV{'BLIXEM_CONFIG_FILE'},
-        %{ $self->AceDatabase->smart_slice->DataSet->config_section('blixem') },
+        %{ $self->AceDatabase->DataSet->config_section('blixem') },
     );
 }
 
@@ -566,7 +566,7 @@ sub zMapWindowDefaults {
 
     return $self->formatZmapDefaults(
         'ZMapWindow',
-        %{ $self->AceDatabase->smart_slice->DataSet->config_section('ZMapWindow') },
+        %{ $self->AceDatabase->DataSet->config_section('ZMapWindow') },
     );
 }
 
