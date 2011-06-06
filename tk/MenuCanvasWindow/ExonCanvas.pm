@@ -436,7 +436,7 @@ sub XaceSeqChooser {
     return $self->{'_XaceSeqChooser'};
 }
 
-sub Dataset {
+sub DataSet {
     my( $self ) = @_;
     return $self->XaceSeqChooser->AceDatabase->DataSet;
 }
@@ -1591,7 +1591,7 @@ sub update_transcript_remark_widget {
     my( $self, $sub ) = @_;
 
     $self->update_remark_Entry($self->transcript_remark_Entry,
-                               $self->Dataset->vocab_transcript,
+                               $self->DataSet->vocab_transcript,
                                $sub);
 
     return;
@@ -1601,7 +1601,7 @@ sub update_locus_remark_widget {
     my( $self, $locus ) = @_;
 
     $self->update_remark_Entry($self->locus_remark_Entry,
-                               $self->Dataset->vocab_locus,
+                               $self->DataSet->vocab_locus,
                                $locus);
 
     return;
@@ -1654,7 +1654,7 @@ sub populate_transcript_attribute_menu {
     
     $self->populate_attribute_menu($menu,
                                    $self->transcript_remark_Entry,
-                                   $self->Dataset->vocab_transcript);
+                                   $self->DataSet->vocab_transcript);
 
     return;
 }
@@ -1664,7 +1664,7 @@ sub populate_locus_attribute_menu {
     
     $self->populate_attribute_menu($menu,
                                    $self->locus_remark_Entry,
-                                   $self->Dataset->vocab_locus);
+                                   $self->DataSet->vocab_locus);
 
     return;
 }
