@@ -616,27 +616,6 @@ sub do_http_request {
 
 # ---- specific HTTP-requests:
 
-=pod
-
-For all of the get_X methods below the 'sliceargs'
-is EITHER a valid slice
-OR a hash reference that contains enough parameters
-to construct the slice for the v20+ EnsEMBL API:
-
-Examples:
-    $sa = {
-            'cs'    => 'chromosome',
-            'name'  => 22,
-            'start' => 15e6,
-            'end'   => 17e6,
-    };
-    $sa2 = {
-            'cs'    => 'contig',
-            'name'  => 'AL008715.1.1.101817',
-    }
-
-=cut
-
 sub status_refresh_for_DataSet_SequenceSet{
     my ($self, $ds, $ss) = @_;
 
