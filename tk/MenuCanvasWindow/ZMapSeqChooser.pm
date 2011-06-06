@@ -541,7 +541,6 @@ sub zMapZMapDefaults {
 
     return $self->formatZmapDefaults(
         'ZMap',
-        'xremote-debug' => $ZMAP_DEBUG ? 'true' : 'false',
         %{$self->AceDatabase->zmap_config},
         );
 }
