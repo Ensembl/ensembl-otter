@@ -539,10 +539,16 @@ sub zMapGffFilterDefaults {
 sub zMapZMapDefaults {
     my ($self) = @_;
 
-    return $self->formatZmapDefaults(
-        'ZMap',
-        %{$self->AceDatabase->zmap_config},
-        );
+    # extract the ZMap stanza so that we can put it first
+    my $zmap_config = $self->AceDatabase->zmap_config;
+    my $zmap_stanza = delete $zmap_config->{ZMap};
+
+    return
+        join '',
+        $self->formatZmapDefaults('ZMap', @{$zmap_stanza}),
+        ( map {
+            $self->formatZmapDefaults($_, @{$zmap_config->{$_}});
+          } sort keys %{$zmap_config} );
 }
 
 sub zMapBlixemDefaults {
