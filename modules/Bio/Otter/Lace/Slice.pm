@@ -138,10 +138,6 @@ sub toHash {
 sub zmap_config {
     my ($self) = @_;
 
-    my $dataset = $self->DataSet;
-    my $columns = $dataset->config_value_list_merged('zmap_config', 'columns');
-    my @columns = $columns ? ( columns => join ' ; ', @{$columns} ) : ( );
-
     my $hash = {
         'dataset'  => $self->dsname,
         'sequence' => $self->ssname,
@@ -149,9 +145,6 @@ sub zmap_config {
         'csver'    => $self->csver,
         'start'    => $self->start,
         'end'      => $self->end,
-
-        %{ $dataset->config_section('zmap') },
-        @columns,
     };
 
     return $hash;
