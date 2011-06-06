@@ -438,7 +438,7 @@ sub XaceSeqChooser {
 
 sub Dataset {
     my( $self ) = @_;
-    return $self->XaceSeqChooser->AceDatabase->smart_slice->DataSet;
+    return $self->XaceSeqChooser->AceDatabase->DataSet;
 }
 
 sub add_subseq_exons {

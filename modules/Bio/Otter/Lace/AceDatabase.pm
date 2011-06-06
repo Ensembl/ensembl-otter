@@ -330,7 +330,7 @@ sub zmap_config {
     my $pfetch_www = $ENV{'PFETCH_WWW'};
     my $pfetch_url = $self->Client->pfetch_url;
 
-    my $dataset = $self->smart_slice->DataSet;
+    my $dataset = $self->DataSet;
     my $columns = $dataset->config_value_list_merged('zmap_config', 'columns');
     my @columns = $columns ? ( columns => join ' ; ', @{$columns} ) : ( );
 
@@ -702,8 +702,14 @@ sub filters {
                     failed => 0,
                 },
             };
-        } @{$self->smart_slice->DataSet->filters},
+        } @{$self->DataSet->filters},
     };
+}
+
+sub DataSet {
+    my ($self) = @_;
+
+    return $self->Client->get_DataSet_by_name($self->smart_slice->dsname);
 }
 
 sub process_gff_file_from_Filter {
