@@ -38,7 +38,6 @@ sub new {
     ## no critic(Variables::RequireLocalizedPunctuationVars)
 
     $ENV{'OTTERLACE_COOKIE_JAR'} ||= "$ENV{HOME}/.otter/ns_cookie_jar";
-    $ENV{'BLIXEM_CONFIG_FILE'}   ||= "$ENV{HOME}/.otter/etc/blixemrc";
 
     my $new = bless {
         _client_name     => $client_name,
