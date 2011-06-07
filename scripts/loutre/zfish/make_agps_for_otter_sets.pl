@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/env perl
 #
 # filters agps taken from chromoview
 # (previously, for qc checked clones; now just for gap type+size, and
@@ -9,6 +9,8 @@
 
 
 use strict;
+use warnings;
+
 use Getopt::Long;
 
 my ($agp,$help,$haplo);

@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl
+#!/usr/bin/env perl
 
 # script to carry out most of changes required (by SQL) to create
 # a new gene and move some of the transcripts to it - see help for

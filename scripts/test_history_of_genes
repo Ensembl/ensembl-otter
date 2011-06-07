@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/env perl
 
 =head1 DESCRIPTION
 
@@ -18,6 +18,8 @@ or this
 =cut
 
 use strict;
+use warnings;
+
 use Bio::Vega::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw ( throw warning );
 use Bio::Vega::Utils::History qw(history);

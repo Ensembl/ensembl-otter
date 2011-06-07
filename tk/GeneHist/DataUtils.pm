@@ -1,7 +1,5 @@
 package GeneHist::DataUtils;
 
-#!/usr/local/bin/perl -w
-
 # Author: ck1@sanger.ac.uk
 
 use vars qw{ @ISA @EXPORT_OK };
@@ -29,6 +27,7 @@ use vars qw{ @ISA @EXPORT_OK };
                 );
 
 use strict;
+use warnings;
 
 sub process_query {
 

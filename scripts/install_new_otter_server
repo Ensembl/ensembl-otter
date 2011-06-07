@@ -1,7 +1,10 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/env perl
 
 # Purpose: to install a new otter server distribution
 # Author: lg4@sanger.ac.uk
+
+use strict;
+use warnings;
 
 if(scalar(@ARGV)<2) {
 	print STDERR "usage:\n";

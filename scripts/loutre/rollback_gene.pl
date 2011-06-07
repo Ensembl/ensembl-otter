@@ -1,4 +1,4 @@
-#!/software/bin/perl -w
+#!/usr/bin/env perl
 
 =head1 NAME
 
@@ -47,6 +47,8 @@ Refactored to use Bio::Otter::Lace::Defaults by James Gilbert B<jgrg@sanger.ac.u
 =cut
 
 use strict;
+use warnings;
+
 use Carp qw{ confess };
 use Sys::Hostname qw{ hostname };
 use Bio::Otter::Lace::Defaults;

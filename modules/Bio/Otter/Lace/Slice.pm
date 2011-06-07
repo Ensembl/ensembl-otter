@@ -135,12 +135,8 @@ sub toHash {
     return $hash;
 }
 
-sub zmap_config {
+sub zmap_config_stanza {
     my ($self) = @_;
-
-    my $dataset = $self->DataSet;
-    my $columns = $dataset->config_value_list_merged('zmap_config', 'columns');
-    my @columns = $columns ? ( columns => join ' ; ', @{$columns} ) : ( );
 
     my $hash = {
         'dataset'  => $self->dsname,
@@ -149,9 +145,6 @@ sub zmap_config {
         'csver'    => $self->csver,
         'start'    => $self->start,
         'end'      => $self->end,
-
-        %{ $dataset->config_section('zmap') },
-        @columns,
     };
 
     return $hash;
@@ -173,12 +166,6 @@ sub create_detached_slice {
         ),
     );
     return $slice;
-}
-
-sub DataSet {
-    my ($self) = @_;
-
-    return $self->Client->get_DataSet_by_name($self->dsname);
 }
 
 # ----------------------------------------------------------------------------------

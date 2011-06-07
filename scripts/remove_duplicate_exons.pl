@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl
+#!/usr/bin/env perl
 
 # extract list of clones for any given chromosome based set of coordinates
 

@@ -38,7 +38,6 @@ sub new {
     ## no critic(Variables::RequireLocalizedPunctuationVars)
 
     $ENV{'OTTERLACE_COOKIE_JAR'} ||= "$ENV{HOME}/.otter/ns_cookie_jar";
-    $ENV{'BLIXEM_CONFIG_FILE'}   ||= "$ENV{HOME}/.otter/etc/blixemrc";
 
     my $new = bless {
         _client_name     => $client_name,
@@ -615,27 +614,6 @@ sub do_http_request {
 }
 
 # ---- specific HTTP-requests:
-
-=pod
-
-For all of the get_X methods below the 'sliceargs'
-is EITHER a valid slice
-OR a hash reference that contains enough parameters
-to construct the slice for the v20+ EnsEMBL API:
-
-Examples:
-    $sa = {
-            'cs'    => 'chromosome',
-            'name'  => 22,
-            'start' => 15e6,
-            'end'   => 17e6,
-    };
-    $sa2 = {
-            'cs'    => 'contig',
-            'name'  => 'AL008715.1.1.101817',
-    }
-
-=cut
 
 sub status_refresh_for_DataSet_SequenceSet{
     my ($self, $ds, $ss) = @_;
@@ -1259,8 +1237,7 @@ sub recover_session {
     rename($dir, $home) or die "Cannot move '$dir' to '$home'; $!";
     
     unless ($adb->db_initialized) {
-        eval { $adb->recover_smart_slice_from_region_xml_file };
-        warn $@ if $@;
+        warn $@ unless eval { $adb->recover_smart_slice_from_region_xml_file; 1; };
         return $adb;
     }
 

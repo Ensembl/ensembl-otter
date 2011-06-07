@@ -1,8 +1,6 @@
 
 package GeneHist::WidgetUtils;
 
-#!/usr/local/bin/perl -w
-
 # Author: ck1@sanger.ac.uk
 
 use vars qw{ @ISA @EXPORT_OK };
@@ -19,6 +17,8 @@ use vars qw{ @ISA @EXPORT_OK };
                 );
 
 use strict;
+use warnings;
+
 use Hum::Sort ('ace_sort');
 
 sub adjust_scrollbar_width {

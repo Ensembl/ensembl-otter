@@ -25,12 +25,10 @@ our $CACHE = {
 #  Attempt to load a cache.
 unless (eval { require Bio::Otter::Git::Cache; 1; }) {
     if ($@ =~ m(\A\QCan't locate Bio/Otter/Git/Cache.pm in \E)) {
-        warn <<'WARNING'
-No git cache.
-  If this is not a development version you will see warnings
-  from failed git commands.
-WARNING
-;
+        warn "No git cache: assuming a git checkout.\n";
+        my $command = q(git tag);
+        system(qq(cd '$dir' && $command > /dev/null)) == 0
+            or die "'$command' failed: something is wrong with your git checkout";
     }
     else {
         die "cache error: $@";
