@@ -21,6 +21,7 @@ use Bio::Otter::Lace::ProcessGFF;
 use Hum::Ace::LocalServer;
 use Hum::Ace::MethodCollection;
 use Hum::ZMapStyleCollection;
+use Hum::Conf qw{ PFETCH_SERVER_LIST };
 
 my      $REGION_XML_FILE =      '.region.xml';
 my $LOCK_REGION_XML_FILE = '.lock_region.xml';
@@ -342,6 +343,37 @@ sub zmap_config {
           'xremote-debug'   => $ZMAP_DEBUG ? 'true' : 'false',
           %{$self->smart_slice->zmap_config_stanza},
         );
+
+    return $config;
+}
+
+sub blixem_config {
+    my ($self) = @_;
+
+    my $pfetch = $self->Client->pfetch_url;
+    my $default_fetch_mode =
+        $ENV{'PFETCH_WWW'} ? 'pfetch-http' : 'pfetch-socket';
+
+    my $config = {
+
+        'blixem' => {
+            'default-fetch-mode' => $default_fetch_mode,
+        },
+
+        'pfetch-http' => {
+            'pfetch-mode' => 'http',
+            'pfetch'      => $pfetch,
+            'cookie-jar'  => $ENV{'OTTERLACE_COOKIE_JAR'},
+            'port'        => 80,
+        },
+
+        'pfetch-socket' => {
+            'pfetch-mode' => 'socket',
+            'node'        => $PFETCH_SERVER_LIST->[0][0],
+            'port'        => $PFETCH_SERVER_LIST->[0][1],
+        },
+
+    };
 
     return $config;
 }
