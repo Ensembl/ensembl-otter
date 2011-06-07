@@ -46,7 +46,7 @@ sub zMapInitialize {
     $self->{_xremote_cache} =
         ZMap::XRemoteCache->new;
 
-    my $dir = $self->zMapZmapDir;
+    my $dir = $self->zMapZMapDir;
     unless (-d $dir) {
         mkdir $dir or confess "failed to create the directory '$dir': $!\n";
     }
@@ -83,7 +83,7 @@ sub _launchZMap {
 
     my @e = (
         'zmap',
-        '--conf_dir' => $self->zMapZmapDir,
+        '--conf_dir' => $self->zMapZMapDir,
         '--win_id'   => $self->zMapZmapConnector->server_window_id,
         @{$dataset->config_value_list('zmap_config', 'arguments')},
     );
@@ -649,13 +649,13 @@ sub zMapWriteConfigFile {
 sub zMapConfigPath {
     my ($self, $file) = @_;
 
-    my $dir  = $self->zMapZmapDir;
+    my $dir  = $self->zMapZMapDir;
     my $path = "${dir}/${file}";
 
     return $path;
 }
 
-sub zMapZmapDir {
+sub zMapZMapDir {
     my ($self) = @_;
     return $self->{'_zMap_ZMAP_DIR'} ||=
         ($self->ace_path . '/ZMap');
