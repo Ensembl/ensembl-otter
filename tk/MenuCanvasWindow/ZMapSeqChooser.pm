@@ -545,9 +545,9 @@ sub zMapZMapDefaults {
 
     return
         join '',
-        $self->formatZmapDefaults('ZMap', @{$zmap_stanza}),
+        $self->formatZmapDefaults('ZMap', %{$zmap_stanza}),
         ( map {
-            $self->formatZmapDefaults($_, @{$zmap_config->{$_}});
+            $self->formatZmapDefaults($_, %{$zmap_config->{$_}});
           } sort keys %{$zmap_config} );
 }
 

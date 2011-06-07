@@ -331,7 +331,7 @@ sub zmap_config {
     my $pfetch_url = $self->Client->pfetch_url;
 
     my $hash = {
-        'ZMap' => [
+        'ZMap' => {
             'sources'         => $sources,
             'show-mainwindow' => ( $show_mainwindow ? 'true' : 'false' ),
             'cookie-jar'      => $ENV{'OTTERLACE_COOKIE_JAR'},
@@ -341,7 +341,7 @@ sub zmap_config {
             'xremote-debug'   => $ZMAP_DEBUG ? 'true' : 'false',
             %{$self->smart_slice->zmap_config_stanza},
             %{$self->DataSet->zmap_config_stanza},
-            ],
+        },
     };
 
     return $hash;
