@@ -34,14 +34,18 @@ sub name {
     return $self->{'_name'};
 }
 
-sub zmap_config_stanza {
+sub zmap_config {
     my ($self, $name) = @_;
 
     my $stanza = { %{ $self->config_section('zmap') } };
     my $columns = $self->config_value_list_merged('zmap_config', 'columns');
     $stanza->{columns} = join ' ; ', @{$columns} if @${columns};
 
-    return $stanza;
+    my $config = {
+        'ZMap' => $stanza,
+    };
+
+    return $config;
 }
 
 sub filter_by_name {
