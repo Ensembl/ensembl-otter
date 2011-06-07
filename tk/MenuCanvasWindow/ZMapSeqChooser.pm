@@ -7,7 +7,6 @@ use warnings;
 use Carp;
 use ZMap::Connect;
 use ZMap::XRemoteCache;
-use Hum::Conf qw{ PFETCH_SERVER_LIST };
 use XML::Simple;
 use Bio::Vega::Utils::XmlEscape qw{ xml_escape };
 use File::Path qw{ mkpath };
@@ -363,30 +362,16 @@ sub zMapZmapConnector {
 sub zMapDotBlixemrcContent {
     my ($self) = @_;
 
-    my $pfetch = $self->AceDatabase->Client->pfetch_url;
-    my $default_fetch_mode =
-        $ENV{'PFETCH_WWW'} ? 'pfetch-http' : 'pfetch-socket';
+    # extract the blixem stanza so that we can put it first
+    my $blixem_config = $self->AceDatabase->blixem_config;
+    my $blixem_stanza = delete $blixem_config->{blixem};
 
     return
-        join "",
-        $self->formatZmapDefaults(
-            'blixem',
-            'default-fetch-mode' => $default_fetch_mode,
-        ),
-        $self->formatZmapDefaults(
-            'pfetch-http',
-            'pfetch-mode' => 'http',
-            'pfetch'      => $pfetch,
-            'cookie-jar'  => $ENV{'OTTERLACE_COOKIE_JAR'},
-            'port'        => 80,
-        ),
-        $self->formatZmapDefaults(
-            'pfetch-socket',
-            'pfetch-mode' => 'socket',
-            'node'        => $PFETCH_SERVER_LIST->[0][0],
-            'port'        => $PFETCH_SERVER_LIST->[0][1],
-        ),
-        ;
+        join '',
+        $self->formatZmapDefaults('blixem', %{$blixem_stanza}),
+        ( map {
+            $self->formatZmapDefaults($_, %{$blixem_config->{$_}});
+          } sort keys %{$blixem_config} );
 }
 
 sub zMapDotZmapContent{
