@@ -1,8 +1,9 @@
-#!/usr/bin/env perl -w
+#!/usr/bin/env perl
 
 ### repair_ko_gene_ott_ids
 
 use strict;
+use warnings;
 
 use Bio::Vega::DBSQL::DBAdaptor;
 use Sys::Hostname qw{ hostname };

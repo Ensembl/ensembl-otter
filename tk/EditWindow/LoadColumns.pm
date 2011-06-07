@@ -529,7 +529,7 @@ sub show_filters {
 sub species {
     my ($self) = @_;
     
-    return $self->AceDatabase->smart_slice->dsname;
+    return $self->AceDatabase->DataSet->name;
 }
 
 sub hlist {

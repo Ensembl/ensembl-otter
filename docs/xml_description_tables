@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/env perl
 
 ### xml_description_tables
 
@@ -16,6 +16,7 @@ after the containing tag.
 =cut
 
 use strict;
+use warnings;
 
 {
     my $title = 'Otter XML format description';

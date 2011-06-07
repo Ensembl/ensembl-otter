@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/env perl
 
 =head1 DESCRIPTION
 
@@ -21,6 +21,7 @@ test_vega_xml_writer -dbhost xxx -dbport xxx -dbname xxx -dbuser xxx -dbpass xxx
 =cut
 
 use strict;
+use warnings;
 
 use Bio::Vega::Transform::Otter;
 use Bio::Vega::Transform::XML;

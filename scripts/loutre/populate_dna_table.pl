@@ -1,4 +1,4 @@
-#!/software/bin/perl -w
+#!/usr/bin/env perl
 
 BEGIN {
     foreach my $path (@INC) {
@@ -60,6 +60,8 @@ Mustapha Larbaoui B<email> ml6@sanger.ac.uk
 =cut
 
 use strict;
+use warnings;
+
 use DBI;
 use Getopt::Long;
 use Net::Netrc;

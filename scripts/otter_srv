@@ -1,9 +1,11 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/env perl
 
 # Shamelessly ripped off from pfetch_srv
 package OtterServer;
 
 use strict;
+use warnings;
+
 use IPC::Open2;
 use IO::Socket;
 use POSIX qw(:signal_h);

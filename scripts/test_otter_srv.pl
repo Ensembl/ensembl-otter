@@ -1,9 +1,11 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/env perl
 
 
 $| = 1;
 
 use strict;
+use warnings;
+
 use Getopt::Long;
 use HTTP::Request;
 use LWP;

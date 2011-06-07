@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl
+#!/usr/bin/env perl
 
 # script to take a list of HUGO names current gene labels and write
 # sql required to change them.  ONLY SUITABLE FOR VEGA DATABASEs which

@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl
+#!/usr/bin/env perl
 #<sequence_fragment>
 #  <accession>AL035696.14.1.124034</accession>
 #  <chromosome>6</chromosome>

@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl
+#!/usr/bin/env perl
 =head1 NAME
 
 add_external_xrefs.pl - adds xrefs to external databases from various types

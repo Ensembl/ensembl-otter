@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl -w
+#!/usr/bin/env perl
 
 # wrapper that loads agps from chromoview, checks them for redundant clones, 
 # then against qc checked clones, loads them into otter, loads assembly tags
@@ -9,6 +9,8 @@
 # 17.11.2005 Kerstin Howe (kj2)
 
 use strict;
+use warnings;
+
 use Getopt::Long;
 
 my ($date,$test,$verbose,$skip,$haplo,$tags,$help,$stop,$chroms,$path);
