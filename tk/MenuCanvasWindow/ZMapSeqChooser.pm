@@ -50,9 +50,9 @@ sub zMapInitialize {
     my $stylesfile = $self->zMapConfigPath('styles.ini');
     $self->Assembly->MethodCollection->ZMapStyleCollection->write_to_file($stylesfile);
 
-    $self->zMapWriteConfigFile('ZMap',     $self->zMapDotZmapContent($stylesfile));
-    $self->zMapWriteConfigFile('.gtkrc',   $self->zMapDotGtkrcContent);
-    $self->zMapWriteConfigFile('blixemrc', $self->zMapDotBlixemrcContent);
+    $self->zMapWriteConfigFile('ZMap',     $self->zMapZMapContent($stylesfile));
+    $self->zMapWriteConfigFile('.gtkrc',   $self->zMapGtkrcContent);
+    $self->zMapWriteConfigFile('blixemrc', $self->zMapBlixemrcContent);
 
     return;
 }
@@ -365,7 +365,7 @@ sub zMapZmapConnectorNew {
     return $zc;
 }
 
-sub zMapDotBlixemrcContent {
+sub zMapBlixemrcContent {
     my ($self) = @_;
 
     # extract the blixem stanza so that we can put it first
@@ -380,7 +380,7 @@ sub zMapDotBlixemrcContent {
           } sort keys %{$blixem_config} );
 }
 
-sub zMapDotZmapContent{
+sub zMapZMapContent{
     my ($self, $stylesfile) = @_;
     
     return
@@ -581,7 +581,7 @@ sub formatGtkrcWidget {
     return $full_def;
 }
 
-sub zMapDotGtkrcContent {
+sub zMapGtkrcContent {
     my ($self) = @_;
 
     # to create a coloured border for the focused view.
