@@ -77,7 +77,7 @@ use Date::Calc 'Monday_of_Week';
 
         $sth->execute;
 
-        my( $stable_id, $gene_id, $gene_type, $created, $modified, $author );
+        my( $stable_id, $gene_id, $gene_type, $modified, $author );
         $sth->bind_columns(\$stable_id, \$gene_id, \$gene_type, \$modified, \$author);
 
         while ($sth->fetch) {
