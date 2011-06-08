@@ -35,7 +35,7 @@ sub name {
 }
 
 sub zmap_config {
-    my ($self, $name) = @_;
+    my ($self) = @_;
 
     my $stanza = { %{ $self->config_section('zmap') } };
     my $columns = $self->config_value_list_merged('zmap_config', 'columns');
