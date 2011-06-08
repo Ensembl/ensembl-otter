@@ -9,7 +9,7 @@ use strict;
 use Bio::Otter::Lace::Defaults;
 
 {
-    my( $dataset_name, $set_name, $agp_dir );
+    my( $dataset_name, $agp_dir );
 
     my $usage = sub { exec('perldoc', $0) };
     Bio::Otter::Lace::Defaults::do_getopt(

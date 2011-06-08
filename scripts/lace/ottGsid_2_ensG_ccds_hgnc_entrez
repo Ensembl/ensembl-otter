@@ -14,7 +14,7 @@ use strict;
 use Getopt::Long 'GetOptions';
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 
-my ( $dbhost, $dbname, $dbpass);
+my ( $dbhost, $dbname );
 my $dbport = 5317;
 my $dbuser = 'ensro';
 my $dbhost = 'ensdb-1-11';

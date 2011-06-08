@@ -56,7 +56,7 @@ sub parse_eucomm_oligos {
 
   my $atype_feats = {};
 
-  open(my $data, '<', $eucommFile) or die $!;
+  open my $data, '<', $eucommFile or die $!;
   while ( <$data> ) {
 	my @data = split(/\t/, $_);
 	# similarity     OTTMUSE00000134685      U1R     U1R     chr2-03 25200208        25200257        +       .       .
@@ -155,6 +155,8 @@ sub load_simple_features {
 	$counter++ unless $@;
   }
   print "Losding $counter EUCOMM OLIGO simple_features successfully!\n\n" unless $@;
+
+  return;
 }
 
 sub check_duplicates {
@@ -192,6 +194,8 @@ sub check_duplicates {
 
   warn "Found ", scalar @to_delete, " eucomm oligo simple_feature_id duplicates.\n";
   warn "@to_delete" if $verbose;
+
+  return;
 }
 
 

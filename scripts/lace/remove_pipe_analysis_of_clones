@@ -82,8 +82,6 @@ sub remove_pipeline_analysis {
 
   my ( $action, $pipe_db, $contig_name, $contig_id ) = @_;
 
-  my $deleted;
-
   my $counter = {};
   my $order = [qw(
                   input_id_analysis
