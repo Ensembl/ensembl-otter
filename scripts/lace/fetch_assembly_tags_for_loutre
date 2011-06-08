@@ -100,6 +100,8 @@ sub delete_old_assembly_tags {
     $del_atag->execute();
   }
   print STDERR "=== Old assembly_tags deleted ===\n";
+
+  return;
 }
 
 sub update_database {
@@ -109,6 +111,8 @@ sub update_database {
   foreach my $atag ( @$atags ) {
     $atagAd->store($atag);
   }
+
+  return;
 }
 
 sub populate_assembly_tagged_contig_table {
@@ -143,6 +147,8 @@ sub populate_assembly_tagged_contig_table {
     $insert->execute;
   };
   die $@ if $@;
+
+  return;
 }
 
 sub prepare_assembly_tag_data {
@@ -201,6 +207,8 @@ sub prepare_assembly_tag_data {
       }
     }
   }
+
+  return;
 }
 
 sub parse_ace {
@@ -312,6 +320,8 @@ sub parse_ace {
       print "\nNOTE: ".$contig_name." => ".$aceori." (no assembly_tag data)\n";
     }
   }
+
+  return;
 }
 
 sub trim {
@@ -359,6 +369,7 @@ sub make_misc_feats_for_atags {
   $mfeat->add_MiscSet($atag_set);
   $mfeat->add_Attribute($atag_attrib);
 
+  return;
 }
 
 sub make_atags {
@@ -375,6 +386,8 @@ sub make_atags {
   $atag->slice($contig);
 
   push(@$atags, $atag);
+
+  return;
 }
 
 
