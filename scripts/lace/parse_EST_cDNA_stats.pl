@@ -228,6 +228,8 @@ sub get_stats_from_mushroom_db {
 	  #printf("TAX %s\t%s\t%d\t%s\t%d\n", $os, $tax_id_name->{$id},  $id, "-", $seqs_to_date );
 	}
   }
+
+  return;
 }
 
 sub binaryName2commonName {
@@ -297,6 +299,8 @@ sub parse_est_cdna_files {
 	  }
 	}
   }
+
+  return;
 }
 
 __END__
