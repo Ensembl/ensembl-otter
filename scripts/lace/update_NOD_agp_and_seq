@@ -305,6 +305,8 @@ sub assembly_contig_seq {
   if ( scalar keys %$contig_acc_start_end_strand >= 2 ){
 	concat_seq($contig_acc_start_end_strand, $file);
   }
+
+  return;
 }
 
 sub concat_seq {
@@ -342,6 +344,8 @@ sub concat_seq {
 
   print "Writing to $seq_file\n";
   print $fh "$seq_file\n\n", sixty_cols($seq);
+
+  return;
 }
 
 
