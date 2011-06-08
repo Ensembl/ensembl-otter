@@ -331,18 +331,20 @@ sub zmap_config {
     my $pfetch_www = $ENV{'PFETCH_WWW'};
     my $pfetch_url = $self->Client->pfetch_url;
 
-    my $config = $self->DataSet->zmap_config;
-    %{$config->{'ZMap'}} =
-        ( %{$config->{'ZMap'}},
-          'sources'         => $sources,
-          'show-mainwindow' => ( $show_mainwindow ? 'true' : 'false' ),
-          'cookie-jar'      => $ENV{'OTTERLACE_COOKIE_JAR'},
-          'script-dir'      => $self->script_dir,
-          'pfetch-mode'     => ( $pfetch_www ? 'http' : 'pipe' ),
-          'pfetch'          => ( $pfetch_www ? $pfetch_url : 'pfetch' ),
-          'xremote-debug'   => $ZMAP_DEBUG ? 'true' : 'false',
-          %{$self->smart_slice->zmap_config_stanza},
-        );
+    my $config = {
+        'ZMap' => {
+            'sources'         => $sources,
+            'show-mainwindow' => ( $show_mainwindow ? 'true' : 'false' ),
+            'cookie-jar'      => $ENV{'OTTERLACE_COOKIE_JAR'},
+            'script-dir'      => $self->script_dir,
+            'pfetch-mode'     => ( $pfetch_www ? 'http' : 'pipe' ),
+            'pfetch'          => ( $pfetch_www ? $pfetch_url : 'pfetch' ),
+            'xremote-debug'   => $ZMAP_DEBUG ? 'true' : 'false',
+            %{$self->smart_slice->zmap_config_stanza},
+        },
+    };
+
+    _config_merge($config, $self->DataSet->zmap_config);
 
     return $config;
 }
@@ -376,6 +378,16 @@ sub blixem_config {
     };
 
     return $config;
+}
+
+sub _config_merge {
+    my ($config, $config_other) = @_;
+    for my $key (keys %{$config_other}) {
+        $config->{$key} ||= { };
+        %{$config->{$key}} =
+            ( %{$config->{$key}}, %{$config_other->{$key}} );
+    }
+    return;
 }
 
 sub offset {
