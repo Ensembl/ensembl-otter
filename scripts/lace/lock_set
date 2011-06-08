@@ -9,7 +9,7 @@ use strict;
 use Bio::Otter::Lace::Defaults;
 
 {
-    my( $author, $email, $dataset, $seqsetname );
+    my( $dataset, $seqsetname );
     my $unlock_flag = 0;
     my $lock_file = undef;
     my $usage = sub{ exec('perldoc', $0) };
