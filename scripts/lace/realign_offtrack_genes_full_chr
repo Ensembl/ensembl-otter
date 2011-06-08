@@ -52,7 +52,6 @@ sub get_list_of_slices{
     $n ||= 10;
     $count--;
     my $max = ceil($count/$n);
-    my $total;
     my @list;
     for my $i(0..$max){
         my $start = $i * $n;
