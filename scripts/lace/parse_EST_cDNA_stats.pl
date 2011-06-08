@@ -272,7 +272,7 @@ sub parse_est_cdna_files {
   #36869   29927
 
   if ( -e $file ) {
-	open( my $f, '<', $file) or die $!;
+	open my $f, '<', $file or die $!;
 
 	while (<$f>) {
 	  my @fds = split(/\t/, $_);
