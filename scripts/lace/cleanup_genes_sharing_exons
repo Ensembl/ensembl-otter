@@ -41,7 +41,7 @@ $| = 1; ## no critic (Variables::RequireLocalizedPunctuationVars)
     $sth->execute;
 
     # Get a list of all the genes each exon is in
-    my( %eid_gid, %seen_gid );
+    my( %eid_gid );
     while (my ($gid, $eid) = $sth->fetchrow) {
         my $gid_list = $eid_gid{$eid} ||= [];
         push(@$gid_list, $gid);
