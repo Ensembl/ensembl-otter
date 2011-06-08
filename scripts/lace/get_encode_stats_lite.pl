@@ -368,6 +368,8 @@ TOP
 
   open (my $fh, '>', $html_output) or die $!;
   print $fh $rows;
+
+  return;
 }
 
 sub count_trans_with_supporting_evi {
