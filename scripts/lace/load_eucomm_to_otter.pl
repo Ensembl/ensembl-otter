@@ -56,7 +56,7 @@ sub parse_eucomm_oligos {
 
   my $atype_feats = {};
 
-  open(my $data, '<', $eucommFile) or die $!;
+  open my $data, '<', $eucommFile or die $!;
   while ( <$data> ) {
 	my @data = split(/\t/, $_);
 	# similarity     OTTMUSE00000134685      U1R     U1R     chr2-03 25200208        25200257        +       .       .
