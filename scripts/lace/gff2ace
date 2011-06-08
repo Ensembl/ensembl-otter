@@ -9,7 +9,7 @@ use strict;
 use Bio::Otter::Lace::Defaults;
 
 {
-    my( $dataset_name, $set_name );
+    my $dataset_name;
     my $method='TransFrags';
     my $colour='CYAN';
     my $width=1;

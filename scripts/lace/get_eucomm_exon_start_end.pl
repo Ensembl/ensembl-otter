@@ -14,7 +14,7 @@ use Bio::EnsEMBL::SimpleFeature;
 
 {
 
-  my ($dataset, $dbname, $dbhost, $dbport, $dbuser, $dbpass);
+  my $dataset;
 
   Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset,    # eg, human or mouse or zebrafish
 									   );

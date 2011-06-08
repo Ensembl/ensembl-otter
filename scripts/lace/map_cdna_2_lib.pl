@@ -65,7 +65,7 @@ foreach my $cons_file ( @cons_files ) {
 
   open(my $fh, '<', $cons_file) or die $!;
 
-  my ($fasta, $cdna, $lib, $plate);
+  my ($cdna, $lib, $plate);
 
   $plate = $cons_file;
   $plate =~ s/\..+//;  # eg, p19, p20
@@ -103,8 +103,6 @@ foreach my $cons_file ( @cons_files ) {
   my $plate    = $1;
   my $cons_ver = $2;
   my $cons_dir = $plate."Cons";
-
-  my ($egg, $gas, $neu, $tpa, $tba, $hda);
 
   my $fh;
   foreach my $lib ( keys %{$cdna_fasta->{$plate}} ) {

@@ -99,8 +99,9 @@ my $wanted_gtypes = {
 					};
 
 my ( $annotated_gene_set_type,
-     $total_genes_of_atype, $sum_annots_of_gtypes_of_atype,
-     $annots_of_gtypes_of_atype, $total_annots_of_all_atype,
+     $total_genes_of_atype,
+     $sum_annots_of_gtypes_of_atype,
+     $total_annots_of_all_atype,
      $coding_locus_trans);
 
 if ( @sets ) {
@@ -368,13 +369,14 @@ TOP
 
   open (my $fh, '>', $html_output) or die $!;
   print $fh $rows;
+
+  return;
 }
 
 sub count_trans_with_supporting_evi {
 
   my $gene = shift;
   my $supported_trans_of_set;
-  my $non_supported_trans_of_set;
 
   foreach my $t ( @{$gene->get_all_Transcripts} ){
 	foreach my $evi (@{$t->transcript_info->get_all_Evidence} ){

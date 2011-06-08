@@ -11,7 +11,7 @@ use Bio::Vega::DBSQL::DBAdaptor;
 use Bio::Vega::Transform::XML;
 use Bio::Vega::Transform::PrettyPrint;
 
-my ($dataset, $gsid);
+my ($dataset);
 Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset,
 									 );
 
@@ -20,8 +20,6 @@ my $dset      = $client->get_DataSet_by_name($dataset);    # Bio::Otter::Lace::D
 my $loutre_db = $dset->make_Vega_DBAdaptor;               # Bio::Vega::DBSQL::DBAdaptor
 my $ga        = $loutre_db->get_GeneAdaptor;
 my $ta        = $loutre_db->get_TranscriptAdaptor;
-
-my $gver_tsid_info;
 
 my $sql = $loutre_db->prepare("select transcript_id, stable_id, version, modified_date from transcript_stable_id");
 $sql->execute;

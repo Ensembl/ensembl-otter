@@ -31,7 +31,7 @@ my $geneAd   = $otter_db->get_GeneAdaptor;
 my $geneSID_list;
 
 if ( $infile ){
-  open(my $fh, '<', $infile) or die $!;
+  open my $fh, '<', $infile or die $!;
   while (<$fh>){
 	chomp;
 	push(@$geneSID_list, $_);
@@ -102,6 +102,8 @@ sub print_exon_seq {
 	}
   }
   print "\n";
+
+  return;
 }
 
 sub add_flank_seqs {
@@ -110,7 +112,7 @@ sub add_flank_seqs {
   $exon->start($exon->start - 100);
   $exon->end($exon->end + 100 );
 
-  format_seq($ori_len, $exon->seq->seq, $flank_left, $flank_right);
+  return format_seq($ori_len, $exon->seq->seq, $flank_left, $flank_right);
 }
 
 sub format_seq {
@@ -124,7 +126,7 @@ sub format_seq {
 
   my $mid_seq  = substr($seq, $flant_left, $ori_len);
 
-  sixty_cols($flant_left_seq . $mid_seq . $flank_right_seq);
+  return sixty_cols($flant_left_seq . $mid_seq . $flank_right_seq);
 
 }
 

@@ -83,7 +83,7 @@ sub repair_one_db {
 
     print STDERR "\n***** Repairing '$which_db' database of '$dataset_name' species:\n";
 
-    my ($intl_attrib, $acc_attrib, $op_update_pipe_query, $np_select_srid_and_old_by_acc,
+    my ($intl_attrib, $acc_attrib, $np_select_srid_and_old_by_acc,
         $np_insert_pipe_query, $np_update_pipe_query);
 
     $intl_attrib = get_attrib_id_by_name($dbh, 'intl_clone_name') || die "'intl_clone_name' attrib not defined";
@@ -207,6 +207,8 @@ sub repair_one_db {
         print STDERR "$diff_chback_count clones' names were found to have disappeared from ORACLE db\n";
     }
     print STDERR "$done_count names were actually changed\n";
+
+    return;
 }
 
 {
