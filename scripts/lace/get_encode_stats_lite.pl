@@ -376,7 +376,6 @@ sub count_trans_with_supporting_evi {
 
   my $gene = shift;
   my $supported_trans_of_set;
-  my $non_supported_trans_of_set;
 
   foreach my $t ( @{$gene->get_all_Transcripts} ){
 	foreach my $evi (@{$t->transcript_info->get_all_Evidence} ){
