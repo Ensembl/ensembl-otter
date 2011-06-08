@@ -48,6 +48,15 @@ sub zmap_config {
     return $config;
 }
 
+sub blixem_config {
+    my ($self) = @_;
+
+    my $config = {
+    };
+
+    return $config;
+}
+
 sub filter_by_name {
     my ($self, $name) = @_;
     return $self->{'_filter_by_name'}{$name} ||=
