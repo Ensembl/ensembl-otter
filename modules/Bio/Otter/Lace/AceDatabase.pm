@@ -377,6 +377,8 @@ sub blixem_config {
 
     };
 
+    _config_merge($config, $self->DataSet->blixem_config);
+
     return $config;
 }
 
