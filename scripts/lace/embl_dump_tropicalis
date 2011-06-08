@@ -221,7 +221,7 @@ sub print_embl_entry {
   my( $Library, $Clone, $date, $species_name, $clone_info) = @_;
 
 
-  my ($primary_acc, @secondary_accs, @authors, $clone_name);
+  my (@secondary_accs, @authors, $clone_name);
 
   my $sanger_id = $Clone->sanger_id
 	or confess "Invalid sanger_id for Clone id: ", $Clone->id;
