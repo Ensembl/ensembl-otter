@@ -207,6 +207,8 @@ sub repair_one_db {
         print STDERR "$diff_chback_count clones' names were found to have disappeared from ORACLE db\n";
     }
     print STDERR "$done_count names were actually changed\n";
+
+    return;
 }
 
 {
