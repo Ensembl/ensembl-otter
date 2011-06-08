@@ -99,8 +99,9 @@ my $wanted_gtypes = {
 					};
 
 my ( $annotated_gene_set_type,
-     $total_genes_of_atype, $sum_annots_of_gtypes_of_atype,
-     $annots_of_gtypes_of_atype, $total_annots_of_all_atype,
+     $total_genes_of_atype,
+     $sum_annots_of_gtypes_of_atype,
+     $total_annots_of_all_atype,
      $coding_locus_trans);
 
 if ( @sets ) {
