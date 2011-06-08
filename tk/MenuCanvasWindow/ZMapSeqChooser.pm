@@ -47,10 +47,10 @@ sub zMapInitialize {
         mkdir $dir or confess "failed to create the directory '$dir': $!\n";
     }
 
-    my $stylesfile = $self->zMapConfigPath('styles.ini');
+    my $stylesfile = $self->zMapStylesPath;
     $self->Assembly->MethodCollection->ZMapStyleCollection->write_to_file($stylesfile);
 
-    $self->zMapWriteConfigFile('ZMap',     $self->zMapZMapContent($stylesfile));
+    $self->zMapWriteConfigFile('ZMap',     $self->zMapZMapContent);
     $self->zMapWriteConfigFile('.gtkrc',   $self->zMapGtkrcContent);
     $self->zMapWriteConfigFile('blixemrc', $self->zMapBlixemrcContent);
 
@@ -381,14 +381,14 @@ sub zMapBlixemrcContent {
 }
 
 sub zMapZMapContent{
-    my ($self, $stylesfile) = @_;
+    my ($self) = @_;
     
     return
         $self->zMapZMapDefaults
       . $self->zMapWindowDefaults
       . $self->zMapBlixemDefaults
-      . $self->zMapAceServerDefaults($stylesfile)
-      . $self->zMapGffFilterDefaults($stylesfile)
+      . $self->zMapAceServerDefaults
+      . $self->zMapGffFilterDefaults
       . $self->zMapGlyphDefaults
       ;
 }
@@ -406,7 +406,7 @@ sub zMapGlyphDefaults {
 }
 
 sub zMapAceServerDefaults {
-    my ($self, $stylesfile) = @_;
+    my ($self) = @_;
 
     my $server = $self->AceDatabase->ace_server;
 
@@ -426,13 +426,13 @@ sub zMapAceServerDefaults {
         # Can specify a stylesfile instead of featuresets
 
         featuresets     => $featuresets,
-        stylesfile      => $stylesfile,
+        stylesfile      => $self->zMapStylesPath,
     );
 }
 
 sub zMapGffFilterDefaults {
     
-    my ($self, $stylesfile) = @_;
+    my ($self) = @_;
 
     my $text;
     my %filter_columns;
@@ -451,7 +451,7 @@ sub zMapGffFilterDefaults {
             delayed         =>
             ( $state_hash->{wanted} && ! $state_hash->{failed} )
             ? 'false' : 'true',
-            stylesfile      => $stylesfile,
+            stylesfile      => $self->zMapStylesPath,
             group           => 'always',
         );
         
@@ -635,6 +635,11 @@ sub zMapWriteConfigFile {
       or confess "Error writing to '$path'; $!";
 
     return;
+}
+
+sub zMapStylesPath {
+    my ($self) = @_;
+    return $self->zMapConfigPath('styles.ini');
 }
 
 sub zMapConfigPath {
