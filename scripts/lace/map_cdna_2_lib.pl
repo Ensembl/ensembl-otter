@@ -22,34 +22,34 @@ foreach my $lib ( @plate_libs ) {
   open(my $fh, '<', "/nfs/team71/analysis/ck1/FROG_PLATE_LIB/$lib") or die $!;
 
   while (<$fh> ) {
-	chomp;
+    chomp;
 
-	# Format of platexx.lib
-	# Lib     Pos     Src     Plate           Well
-	# TEgg    30      A8      XTropTFL19      I11
+    # Format of platexx.lib
+    # Lib     Pos     Src     Plate           Well
+    # TEgg    30      A8      XTropTFL19      I11
 
-	next if $_ =~ /^#/;
+    next if $_ =~ /^#/;
 
-	my ( $lib, $pos, $src, $plate, $well ) = split(/\s+/, $_);
+    my ( $lib, $pos, $src, $plate, $well ) = split(/\s+/, $_);
 
-	if ( $well =~ /^([A-Z])(\d+)$/ ) {
-	  my $alpha = $1;
-	  my $num = sprintf("%02d", $2);
-	  $well = $alpha.$num;
-	}
+    if ( $well =~ /^([A-Z])(\d+)$/ ) {
+      my $alpha = $1;
+      my $num = sprintf("%02d", $2);
+      $well = $alpha.$num;
+    }
 
-	if ( $src =~ /^([A-Z])(\d+)$/ ) {
-	  my $alpha = $1;
-	  my $num = sprintf("%02d", $2);
-	  $src = $alpha.$num;
-	}
+    if ( $src =~ /^([A-Z])(\d+)$/ ) {
+      my $alpha = $1;
+      my $num = sprintf("%02d", $2);
+      $src = $alpha.$num;
+    }
 
-	$pos = sprintf("%03d", $pos);
+    $pos = sprintf("%03d", $pos);
 
-	my $clonename = $lib.$pos.lc($src);
-	print "$clonename\n" if length $clonename == 9;
+    my $clonename = $lib.$pos.lc($src);
+    print "$clonename\n" if length $clonename == 9;
 
-	push(@{$cdna_lib->{$plate.lc($well)}}, $lib, $clonename );
+    push(@{$cdna_lib->{$plate.lc($well)}}, $lib, $clonename );
   }
 }
 
@@ -72,28 +72,28 @@ foreach my $cons_file ( @cons_files ) {
 
   while (<$fh> ) {
 
-	# format of cons file FASTA header
-	# >XTropTFL19p17 FIN.0.8
-	# >XTrop20d06 FIN.0.7
+    # format of cons file FASTA header
+    # >XTropTFL19p17 FIN.0.8
+    # >XTrop20d06 FIN.0.7
 
-	if ( $_ =~ />(XTropTFL19.+|XTrop20.+)\s.+/ ) {
-	  $cdna = $1;
+    if ( $_ =~ />(XTropTFL19.+|XTrop20.+)\s.+/ ) {
+      $cdna = $1;
 
-	  # the finishers has inconsisten format in cons file and
-	  # lib mapping layout
+      # the finishers has inconsisten format in cons file and
+      # lib mapping layout
 
-	  $cdna =~ s/XTrop/XTropTFL/ if $cdna =~ /XTrop20/;
+      $cdna =~ s/XTrop/XTropTFL/ if $cdna =~ /XTrop20/;
 
-	  $lib = $cdna_lib->{$cdna}->[0];
-	  my $clonename = $cdna_lib->{$cdna}->[1];
+      $lib = $cdna_lib->{$cdna}->[0];
+      my $clonename = $cdna_lib->{$cdna}->[1];
 
-	  my $header = ">$clonename $lib\n";
-	  push(@{$cdna_fasta->{$plate}->{$lib}->{$cdna}}, $header);
-	  	print $header;
-	}
-	else {
-	  push(@{$cdna_fasta->{$plate}->{$lib}->{$cdna}}, $_);
-	}
+      my $header = ">$clonename $lib\n";
+      push(@{$cdna_fasta->{$plate}->{$lib}->{$cdna}}, $header);
+          print $header;
+    }
+    else {
+      push(@{$cdna_fasta->{$plate}->{$lib}->{$cdna}}, $_);
+    }
   }
 }
 
@@ -107,14 +107,14 @@ foreach my $cons_file ( @cons_files ) {
   my $fh;
   foreach my $lib ( keys %{$cdna_fasta->{$plate}} ) {
 
-	# make dirs for libs found in cons file
-	system("mkdir -p $cons_dir/$lib");
+    # make dirs for libs found in cons file
+    system("mkdir -p $cons_dir/$lib");
 
-	open($fh, '>>', "$cons_dir/$lib/$cons_ver");
+    open($fh, '>>', "$cons_dir/$lib/$cons_ver");
 
-	foreach my $cdna ( keys %{$cdna_fasta->{$plate}->{$lib}} ) {
-	  print $fh @{$cdna_fasta->{$plate}->{$lib}->{$cdna}}, "\n";
-	}
+    foreach my $cdna ( keys %{$cdna_fasta->{$plate}->{$lib}} ) {
+      print $fh @{$cdna_fasta->{$plate}->{$lib}->{$cdna}}, "\n";
+    }
   }
 }
 

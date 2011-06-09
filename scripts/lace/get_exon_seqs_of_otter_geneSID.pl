@@ -13,13 +13,14 @@ my ($dataset, $cds_only, $all_exons, $flank_left, $flank_right, $infile);
 
 my $help = sub { exec('perldoc', $0) };
 
-Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset,      # eg, human or mouse or zebrafish
-									  'all-exons'    => \$all_exons,    # output seqs for all exons
-									  'cds-only'     => \$cds_only,     # output seqs CDSes only
-									  'left=i'       => \$flank_left,   # number of left flank bp
-									  'right=i'      => \$flank_right,  # number of right flank bp
-									  'file=s'       => \$infile        # file with gene stable id (one each line)
-									 );
+Bio::Otter::Lace::Defaults::do_getopt(
+    'ds|dataset=s' => \$dataset,      # eg, human or mouse or zebrafish
+    'all-exons'    => \$all_exons,    # output seqs for all exons
+    'cds-only'     => \$cds_only,     # output seqs CDSes only
+    'left=i'       => \$flank_left,   # number of left flank bp
+    'right=i'      => \$flank_right,  # number of right flank bp
+    'file=s'       => \$infile        # file with gene stable id (one each line)
+    );
 
 $help->() unless ( $dataset and $flank_left and $flank_right and ($cds_only or $all_exons) and $infile);
 
@@ -33,8 +34,8 @@ my $geneSID_list;
 if ( $infile ){
   open my $fh, '<', $infile or die $!;
   while (<$fh>){
-	chomp;
-	push(@$geneSID_list, $_);
+    chomp;
+    push(@$geneSID_list, $_);
   }
 }
 
@@ -51,7 +52,7 @@ foreach my $gsid ( @$geneSID_list ){
   # first get the longest transcript
   my ($len_trans, $trans);
   foreach my $t ( @{$gene->get_all_Transcripts} ) {
-	$len_trans->{abs($t->end - $t->start) + 1} = $t;
+    $len_trans->{abs($t->end - $t->start) + 1} = $t;
   }
 
   $trans = $len_trans->{(sort {$a<=>$b} keys %$len_trans)[-1]};
@@ -59,19 +60,19 @@ foreach my $gsid ( @$geneSID_list ){
   my $transSID = $trans->stable_id;
 
   if ( ! $trans->translation ) {
-	print $trans->stable_id, ": no translation available\n";
+    print $trans->stable_id, ": no translation available\n";
   }
   else {
-	if ( $cds_only) {
-	  my ($prot_seq, $prot_len) = sixty_cols($trans->translate->primary_seq->seq);
-	  my $protID = $trans->translation->stable_id;
-	  printf(">%s\t%s\t%d\n%s\n", $transSID, $protID, $prot_len, $prot_seq);
+    if ( $cds_only) {
+      my ($prot_seq, $prot_len) = sixty_cols($trans->translate->primary_seq->seq);
+      my $protID = $trans->translation->stable_id;
+      printf(">%s\t%s\t%d\n%s\n", $transSID, $protID, $prot_len, $prot_seq);
 
-	  print_exon_seq($transSID, 'CDS only', $trans, $gene, "get_all_translateable_Exons");
-	}
+      print_exon_seq($transSID, 'CDS only', $trans, $gene, "get_all_translateable_Exons");
+    }
   }
   if ( $all_exons ) {
-	print_exon_seq($transSID, 'ALL exons', $trans, $gene, "get_all_Exons");
+    print_exon_seq($transSID, 'ALL exons', $trans, $gene, "get_all_Exons");
   }
 }
 
@@ -88,18 +89,18 @@ sub print_exon_seq {
   print "[$transSID: $mode]\n";
   foreach my $exon ( @{$trans->$method} ) {
 
-	next if $exon->stable_id =~ /^ENSMUSE/; # annotation errors
+    next if $exon->stable_id =~ /^ENSMUSE/; # annotation errors
 
-	my $header = $exon->stable_id."\t" .$gene->stable_id."\t".$gene->gene_info->name->name;
+    my $header = $exon->stable_id."\t" .$gene->stable_id."\t".$gene->gene_info->name->name;
 
-	if ( $flank_left and $flank_right ) {
-	  my ($flanked_seq, $new_len) = add_flank_seqs($exon, length($exon->seq->seq), $flank_left, $flank_right);
-	  printf(">%s\t%d\n%s\n", $header, $new_len, $flanked_seq);
-	}
-	else {
-	  my ($exon_seq, $ori_len) = sixty_cols($exon->seq->seq);
-	  printf(">%s\t%d\n%s\n", $header, $ori_len, $exon_seq);
-	}
+    if ( $flank_left and $flank_right ) {
+      my ($flanked_seq, $new_len) = add_flank_seqs($exon, length($exon->seq->seq), $flank_left, $flank_right);
+      printf(">%s\t%d\n%s\n", $header, $new_len, $flanked_seq);
+    }
+    else {
+      my ($exon_seq, $ori_len) = sixty_cols($exon->seq->seq);
+      printf(">%s\t%d\n%s\n", $header, $ori_len, $exon_seq);
+    }
   }
   print "\n";
 
@@ -137,7 +138,7 @@ sub sixty_cols {
   my $format_seq;
 
   while ($seq =~ /(.{1,60})/g) {
-	$format_seq .= $1 . "\n";
+    $format_seq .= $1 . "\n";
   }
   chomp $format_seq;
 
@@ -171,4 +172,4 @@ Chao-Kung Chen B<email> ck1@sanger.ac.uk
 
 
 
-__END__	
+__END__

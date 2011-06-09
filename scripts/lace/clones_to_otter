@@ -17,10 +17,10 @@ use Bio::Otter::Lace::Defaults;
     my $reverse = 0;    # Set to true to resync out of sync pipeline db
     my $help         = 0;
     Bio::Otter::Lace::Defaults::do_getopt(
-					  'help!'     => \$help,
-					  'dataset=s'   => \$dataset_name,
-                                          'reverse!'    => \$reverse,
-					  ) || usage();
+        'help!'     => \$help,
+        'dataset=s'   => \$dataset_name,
+        'reverse!'    => \$reverse,
+        ) || usage();
     die "I need a dataset name, is that too much to ask?\n" unless $dataset_name;
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
     my $ds = $cl->get_DataSet_by_name($dataset_name);

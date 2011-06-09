@@ -31,24 +31,24 @@ my $pos = '';
 
 while (<>) {
     if (/^(.*? \d{4})  (.*)Sending:$/) {
-	my $t = str2time($1)
-	  or die "Cannot make utime from $1 at $ARGV:$.";
-	my $junk = $2;
-	$pos = sprintf('%12d (%s) %s:%d', $t, $1, $ARGV, $.);
-	$found{$pos} = "// Junk precedes 'Sending:': $junk\n" if $junk ne '';
+    my $t = str2time($1)
+      or die "Cannot make utime from $1 at $ARGV:$.";
+    my $junk = $2;
+    $pos = sprintf('%12d (%s) %s:%d', $t, $1, $ARGV, $.);
+    $found{$pos} = "// Junk precedes 'Sending:': $junk\n" if $junk ne '';
         while (<>) {
-	    if (/Active Objects/) {
-		$found{$pos} .= "// $_";
-		last;
-	    }
-	    die "$ARGV:$.: Irregularity in log format: $_"
-	      unless substr($_, 0, 26) =~
-		m{^(Mon|Tue|Wed|Thu|Fri|Sat|Sun) \w{3} [ 0-9]{2} [ 0-9:]{8} \d{4}  $};
+        if (/Active Objects/) {
+        $found{$pos} .= "// $_";
+        last;
+        }
+        die "$ARGV:$.: Irregularity in log format: $_"
+          unless substr($_, 0, 26) =~
+        m{^(Mon|Tue|Wed|Thu|Fri|Sat|Sun) \w{3} [ 0-9]{2} [ 0-9:]{8} \d{4}  $};
             $found{$pos} .= substr($_, 26);
-	    warn "Truncated(?) ace data: EOF during $pos" if eof;
+        warn "Truncated(?) ace data: EOF during $pos" if eof;
         }
     } elsif (/Sending:/) {
-	warn "Ignore spurious 'Sending:' at $ARGV:$.";
+    warn "Ignore spurious 'Sending:' at $ARGV:$.";
     } # else: ignore other log stuff
 
     # NB.  eof() is different to eof
@@ -61,17 +61,17 @@ foreach my $pos (sort keys %found) {
     my $filtered_out = (defined $filter_re && $pos !~ $filter_re);
 
     if ($multi_file || $filtered_out) {
-	my ($seq) = ($detail =~ m{^SubSequence "([^"]*)"}m);
-	my ($locus) = ($detail =~ m{^Locus "(.*)"}m);
-	# There may be three m{^Locus( | : |    : )"?(\S*?)"?$} lines; they seem to be all the same?
-	my $len = length($detail);
-	my $sexons = () = $detail =~ m{^Source_Exons }mg;
+    my ($seq) = ($detail =~ m{^SubSequence "([^"]*)"}m);
+    my ($locus) = ($detail =~ m{^Locus "(.*)"}m);
+    # There may be three m{^Locus( | : |    : )"?(\S*?)"?$} lines; they seem to be all the same?
+    my $len = length($detail);
+    my $sexons = () = $detail =~ m{^Source_Exons }mg;
 
-	print "// rejected: " if $filtered_out;
-	printf("%s:\tSubSeq %s\tLocus %s\tbytes=%d\t#Source_Exons=%d\n", $pos, $seq, $locus, $len, $sexons);
+    print "// rejected: " if $filtered_out;
+    printf("%s:\tSubSeq %s\tLocus %s\tbytes=%d\t#Source_Exons=%d\n", $pos, $seq, $locus, $len, $sexons);
     } else {
-	print "// ------ $pos\n";
-	print $detail;
+    print "// ------ $pos\n";
+    print $detail;
     }
 }
 

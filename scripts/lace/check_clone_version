@@ -22,15 +22,15 @@ foreach my $agp ( @ARGV ) {
   
   # Store accession/version in a hash
   while (<$agp_fh>) {
-	chomp;
-	# agp format:
-	# chr11   1       176646  1       F       CR933541.6      1       176646  +
+    chomp;
+    # agp format:
+    # chr11   1       176646  1       F       CR933541.6      1       176646  +
 
-	my @fields = split(/\t/, $_);
-	my $acc_ori = $fields[5];
-	if($fields[4] eq 'N') { next };
-	($acc,$ver) = $acc_ori =~ /^(\S+)\.(\d+)/;
-	$acc_ver{$acc} = $ver;
+    my @fields = split(/\t/, $_);
+    my $acc_ori = $fields[5];
+    if($fields[4] eq 'N') { next };
+    ($acc,$ver) = $acc_ori =~ /^(\S+)\.(\d+)/;
+    $acc_ver{$acc} = $ver;
   }
   close($agp_fh);
   
@@ -38,16 +38,16 @@ foreach my $agp ( @ARGV ) {
   $cmd = "pfetch -D ".join(" ",keys %acc_ver);
   open($fh,'-|',$cmd) or die("Error running command $cmd\n$!");
   while(<$fh>){
-	my @acc_desc = split(/\s+/,$_);
-	my $acc_test = $acc_desc[1];
-	chomp $acc_test;
-	my ($acc,$ver) = $acc_test =~ /^(\S+)\.(\d+)/;
-	if ( $acc_test !~ /^\d+/ && $ver ne $acc_ver{$acc} ) {
-	  $diff = 1;
-	  print "Version diff:\n";
-	  printf("\t%-8s\t%s\n", "AGP:", $acc.$acc_ver{$acc});
-	  printf("\t%-8s\t%s\n", "Pfetch:", $acc_test);
-	}
+    my @acc_desc = split(/\s+/,$_);
+    my $acc_test = $acc_desc[1];
+    chomp $acc_test;
+    my ($acc,$ver) = $acc_test =~ /^(\S+)\.(\d+)/;
+    if ( $acc_test !~ /^\d+/ && $ver ne $acc_ver{$acc} ) {
+      $diff = 1;
+      print "Version diff:\n";
+      printf("\t%-8s\t%s\n", "AGP:", $acc.$acc_ver{$acc});
+      printf("\t%-8s\t%s\n", "Pfetch:", $acc_test);
+    }
   }
   close $fh;
 

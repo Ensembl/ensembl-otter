@@ -36,14 +36,14 @@ foreach (@busers ) {
   chomp;
 
   if ( $_ !~ /^(USER|default)/ ){
-	my ($user, $c2, $c3, $jobs, $pend, $run, $SSUSP, $USUSP) = split(/\s+/, $_);
-	if ( $jobs != 0 ) {
-	  if ( $user eq $buser ){
-		set_color("red", $user);
-		$user = '';
-	  }
-	  printf("%-10s\t%s\t%s\t%s\t%s\t%s\n", $user, $jobs, $pend, $run, $SSUSP, $USUSP);
-	}
+    my ($user, $c2, $c3, $jobs, $pend, $run, $SSUSP, $USUSP) = split(/\s+/, $_);
+    if ( $jobs != 0 ) {
+      if ( $user eq $buser ){
+        set_color("red", $user);
+        $user = '';
+      }
+      printf("%-10s\t%s\t%s\t%s\t%s\t%s\n", $user, $jobs, $pend, $run, $SSUSP, $USUSP);
+    }
   }
 }
 
@@ -63,17 +63,17 @@ foreach ( @bhosts ) {
   chomp;
 
   if ( $_ !~ /^HOST/ ){
-	my ($host, $status) = split(/\s+/, $_);
-	if ( $host =~ /^(\w+)-.+/ ){
-	  $host = $1;
-	}
-	elsif ( $host =~ /^ecs/ ){
-	  $host = 'ecs';
-	}
-	elsif ( $host =~ /^pfam/ ){
-	  $host = 'pfam';
-	}
-	$status_host->{$status}->{$host}++;
+    my ($host, $status) = split(/\s+/, $_);
+    if ( $host =~ /^(\w+)-.+/ ){
+      $host = $1;
+    }
+    elsif ( $host =~ /^ecs/ ){
+      $host = 'ecs';
+    }
+    elsif ( $host =~ /^pfam/ ){
+      $host = 'pfam';
+    }
+    $status_host->{$status}->{$host}++;
   }
 }
 
@@ -82,8 +82,8 @@ foreach my $status ( keys %$status_host ){
   my $info;
   my $info_s = sprintf("%-10s", $status);
   foreach my $host ( keys %{$status_host->{$status}} ){
-	$info .= sprintf("%-5s(%d)\t", $host, $status_host->{$status}->{$host});
-	$count += $status_host->{$status}->{$host};
+    $info .= sprintf("%-5s(%d)\t", $host, $status_host->{$status}->{$host});
+    $count += $status_host->{$status}->{$host};
   }
   printf("%s(%d)\t- %s\n", $info_s, $count, $info);
 
@@ -104,11 +104,11 @@ if ( @lsload ) {
   printf("%-10s\t%s\t%s\n", "HOST", "STATUS", "/tmp MEM < 1GB");
 
   foreach ( @lsload ) {
-	chomp;
-	if ( $_ !~ /^HOST/ ) {
-	  my ($host, $status, $tmp) = split(/\s+/, $_);
-	  printf("%-10s\t%s\t%s\n", $host, $status, $tmp);
-	}
+    chomp;
+    if ( $_ !~ /^HOST/ ) {
+      my ($host, $status, $tmp) = split(/\s+/, $_);
+      printf("%-10s\t%s\t%s\n", $host, $status, $tmp);
+    }
   }
 }
 
@@ -136,17 +136,17 @@ foreach ( @status ) {
   chomp;
   $queue = undef;
   if ( $_ =~ /Job Name <(.+):(\w+)>,.+/ ){
-	$db = $1;
-	$logic_name = $2;
+    $db = $1;
+    $logic_name = $2;
   }elsif($_ =~ /Job Name <script_(\w+)>,.+Queue <(\w+)>/){
-  	$db = "rulemanager";
-  	$logic_name = $1;
-  	$queue = $2;
+      $db = "rulemanager";
+      $logic_name = $1;
+      $queue = $2;
   }
   if ( $_ =~ /tatus <(\w+)>,.+/ ){
-	my $status = $1;
-	$db_logic_name_jobs_status->{$db}{$logic_name}{$status}++;
-	$db_logic_name_jobs_status->{$db}{$logic_name}{$status} = $queue if $queue;
+    my $status = $1;
+    $db_logic_name_jobs_status->{$db}{$logic_name}{$status}++;
+    $db_logic_name_jobs_status->{$db}{$logic_name}{$status} = $queue if $queue;
 
   }
 }
@@ -161,10 +161,10 @@ foreach my $db ( sort keys %$db_logic_name_jobs_status ){
   next unless $db =~ /rule/;
   set_color("cyan", "$db\n");
   foreach my $logicN ( keys %{$db_logic_name_jobs_status->{$db}} ){
-	printf("%-27s%-25s", "", $logicN);
-	foreach my $status ( keys %{$db_logic_name_jobs_status->{$db}{$logicN}} ){
-	  printf("%s%s%-15s%s\n","","", $status, $db_logic_name_jobs_status->{$db}{$logicN}{$status});
-	}
+    printf("%-27s%-25s", "", $logicN);
+    foreach my $status ( keys %{$db_logic_name_jobs_status->{$db}{$logicN}} ){
+      printf("%s%s%-15s%s\n","","", $status, $db_logic_name_jobs_status->{$db}{$logicN}{$status});
+    }
   }
 }
 
@@ -179,10 +179,10 @@ foreach my $db ( sort keys %$db_logic_name_jobs_status ){
   next unless $db !~ /rule/;
   set_color("cyan", "$db\n");
   foreach my $logicN ( keys %{$db_logic_name_jobs_status->{$db}} ){
-	printf("%-27s%-25s\n", "", $logicN);
-	foreach my $status ( keys %{$db_logic_name_jobs_status->{$db}{$logicN}} ){
-	  printf("%-27s%-25s%-15s%s\n","","", $status, $db_logic_name_jobs_status->{$db}{$logicN}{$status});
-	}
+    printf("%-27s%-25s\n", "", $logicN);
+    foreach my $status ( keys %{$db_logic_name_jobs_status->{$db}{$logicN}} ){
+      printf("%-27s%-25s%-15s%s\n","","", $status, $db_logic_name_jobs_status->{$db}{$logicN}{$status});
+    }
   }
 }
 

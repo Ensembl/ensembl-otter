@@ -16,32 +16,32 @@ use Bio::Otter::Lace::Defaults;
     my $label_type='transcript_id';
 
     my @colours=(
-		 'ORANGE',
-		 'LIGHTRED',
-		 'RED',
-		 'DARKRED',
-		 'MAGENTA',
-		 'PURPLE',
-		 'VIOLET',
-		 'DARKBLUE',
-		 'BLUE',
-		 'LIGHTBLUE',
-		 'DARKGREEN',
-		 'GREEN',
-		 'LIGHTGREEN',
-		 'BROWN',
-		 'DARKGRAY',
-		 'CERISE',
-		 );
+        'ORANGE',
+        'LIGHTRED',
+        'RED',
+        'DARKRED',
+        'MAGENTA',
+        'PURPLE',
+        'VIOLET',
+        'DARKBLUE',
+        'BLUE',
+        'LIGHTBLUE',
+        'DARKGREEN',
+        'GREEN',
+        'LIGHTGREEN',
+        'BROWN',
+        'DARKGRAY',
+        'CERISE',
+        );
 
     my $usage = sub { exec('perldoc', $0) };
     Bio::Otter::Lace::Defaults::do_getopt(
         'h|help!'       => $usage,
         'dataset=s'     => \$dataset_name,
-	'method=s'      => \$method,
-	'colour=s'      => \$colour,
-	'label_type=s'  => \$label_type,
-	'width=s'       => \$width,
+    'method=s'      => \$method,
+    'colour=s'      => \$colour,
+    'label_type=s'  => \$label_type,
+    'width=s'       => \$width,
         ) or $usage->();
     $usage->() unless $dataset_name;
     
@@ -61,18 +61,18 @@ use Bio::Otter::Lace::Defaults;
         next if /^#/;
         next if /^\s*$/;
         my ($acc_sv, $source, $start, $end, $score, $strand, $valuepairs) = 
-	    (split(/\t/))[0,1,3,4,5,6,8];
+        (split(/\t/))[0,1,3,4,5,6,8];
 
-	# build label
-	my $label;
-	foreach my $pair (split(/;\s+/,$valuepairs)){
-	  if($pair=~/(\w+)\s+\"(.*)\"/){
-	    if($1 eq $label_type){
-	      $label.="$2";
-	    }
-	  }
-	}
-	$label.=" $source";
+    # build label
+    my $label;
+    foreach my $pair (split(/;\s+/,$valuepairs)){
+      if($pair=~/(\w+)\s+\"(.*)\"/){
+        if($1 eq $label_type){
+          $label.="$2";
+        }
+      }
+    }
+    $label.=" $source";
 
         if ($strand eq '-') {
             ($start, $end) = ($end, $start);

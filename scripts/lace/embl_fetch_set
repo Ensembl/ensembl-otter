@@ -57,9 +57,9 @@ my $output = undef;
 my $help   = 0;
 
 GetOptions(
-	   'set:s'  => \$infile,
-	   'embl:s' => \$output,
-	   'help'   => \$help,
+    'set:s'  => \$infile,
+    'embl:s' => \$output,
+    'help'   => \$help,
 ) or useage();
 useage() if $help;
 
@@ -90,8 +90,8 @@ sub readFile{
     my ($fh) = @_;
     my @embl = ();
     while(<$fh>){
- 	chomp;
- 	push(@embl, split(" ", $_));
+        chomp;
+        push(@embl, split(" ", $_));
     }
     close $fh;
     return @embl;

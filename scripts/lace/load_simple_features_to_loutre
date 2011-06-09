@@ -14,9 +14,9 @@ use Bio::Otter::Lace::Defaults;
 my ($dataset_name, $xmlfile, $input_dir);
 
 Bio::Otter::Lace::Defaults::do_getopt(
-									  'ds|dataset=s'  => \$dataset_name,
-									  'indir=s'       => \$input_dir,
-									 ) ;
+    'ds|dataset=s'  => \$dataset_name,
+    'indir=s'       => \$input_dir,
+    ) ;
 
 
 if ( !defined $dataset_name || ! $input_dir){
@@ -54,30 +54,30 @@ foreach my $file ( `ls $input_dir` ) {
   my $aemail=$cl->email();
   my $clauthor;
   if ( defined $aname && defined $aemail) {
-	$clauthor=Bio::Vega::Author->new;
-	$clauthor->email($aemail);
-	$clauthor->name($aname);
+    $clauthor=Bio::Vega::Author->new;
+    $clauthor->email($aemail);
+    $clauthor->name($aname);
   }
 
   ##Let begin a transaction and do all the database changes within a transaction
   $db->begin_work();
 
   if( eval{
-	# Load SimpleFeatures in xml
+    # Load SimpleFeatures in xml
 
-	my $chr_slice=$parser->get_ChromosomeSlice;
+    my $chr_slice=$parser->get_ChromosomeSlice;
 
     my $new_slice = $sa->fetch_by_name($chr_slice->name);
 
-	my $simple_features=$parser->get_SimpleFeatures;
+    my $simple_features=$parser->get_SimpleFeatures;
     my $sfa=$db->get_SimpleFeatureAdaptor;
 
-	foreach my $new_feat (@$simple_features) {
+    foreach my $new_feat (@$simple_features) {
 
-	  $new_feat->slice($new_slice);
-	  eval { $sfa->store($new_feat); 1; }
+      $new_feat->slice($new_slice);
+      eval { $sfa->store($new_feat); 1; }
             or die "problem with loading of simplefeatures\n$@\n";
-	}
+    }
 
         1;
       }) {
@@ -87,8 +87,8 @@ foreach my $file ( `ls $input_dir` ) {
   print STDOUT "\nCommitted all session data from XML in database\n";
   }
   else {
-	print STDERR "\nError saving genes from file: Rolled back all data of this session - Please correct errors\n".$@;
-	$db->rollback;
+    print STDERR "\nError saving genes from file: Rolled back all data of this session - Please correct errors\n".$@;
+    $db->rollback;
   }
 }
 

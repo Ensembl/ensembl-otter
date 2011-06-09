@@ -37,14 +37,14 @@ my $atags  = [];
 
 
   Bio::Otter::Lace::Defaults::do_getopt(
-									  'ds|dataset=s' => \$dataset,
-									  'v|verbose'    => \$verbose,
-                                      'update'       => \$update,
-									  'h|help'       => $help,
-                                      'atag'         => \$do_atag,   # load atag data into assembly_tag / assembly_tagged_contig tables
-                                                                     # (will eventually become obsolete)
-                                      'misc'         => \$do_misc    # load atag data as misc features (4 tables)
-									 ) or $help->(); # plus default options
+      'ds|dataset=s' => \$dataset,
+      'v|verbose'    => \$verbose,
+      'update'       => \$update,
+      'h|help'       => $help,
+      'atag'         => \$do_atag,   # load atag data into assembly_tag / assembly_tagged_contig tables
+      # (will eventually become obsolete)
+      'misc'         => \$do_misc    # load atag data as misc features (4 tables)
+      ) or $help->(); # plus default options
 
   $help->() unless ( $dataset and ($do_misc or $do_atag) );
 
@@ -89,11 +89,11 @@ sub delete_old_assembly_tags {
     }
   }
   if($misc_feat_ids) {
-	  my $ids = join(',', @$misc_feat_ids);
-	  foreach my $t ( qw(misc_feature misc_attrib misc_feature_misc_set) ) {
-	    my $del_misc_feat = $loutre_db->dbc->prepare(qq{DELETE FROM $t WHERE misc_feature_id in ($ids)});
-	    $del_misc_feat->execute;
-	  }
+      my $ids = join(',', @$misc_feat_ids);
+      foreach my $t ( qw(misc_feature misc_attrib misc_feature_misc_set) ) {
+          my $del_misc_feat = $loutre_db->dbc->prepare(qq{DELETE FROM $t WHERE misc_feature_id in ($ids)});
+          $del_misc_feat->execute;
+      }
   }
   foreach my $t ( qw(assembly_tag assembly_tagged_contig) ) {
     my $del_atag = $loutre_db->dbc->prepare("DELETE FROM $t");
@@ -178,14 +178,14 @@ sub prepare_assembly_tag_data {
         next;
       }
 
-	  # only update if the version of loutre contig match that of submissions db
+      # only update if the version of loutre contig match that of submissions db
       if ( $cln_db_ver eq $seq_ver ) {
 
         my $dir      = $seq->analysis_directory;
         my $seq_ver  = $seq->sequence_version;
         my $seq_name = $seq->sequence_name;
         my $contig   = $sliceAd->fetch_by_region('contig', $contig_name);
-		my $seq_region_id = $sliceAd->get_seq_region_id($contig);
+        my $seq_region_id = $sliceAd->get_seq_region_id($contig);
 
         my $acefile;
         # double check existence of acefile
@@ -285,7 +285,7 @@ sub parse_ace {
         $info .= "flip\n" if $s>$e;
         $info .= "$ctg_seq_region_id : $tag_type : $ctg_strand : $tag_start : $tag_end : $tag_info\n";
 
-		make_misc_feats_for_atags($contig, $ctg_seq_region_id, $tag_type, $ctg_strand, $tag_start, $tag_end, $tag_info) if $do_misc;
+        make_misc_feats_for_atags($contig, $ctg_seq_region_id, $tag_type, $ctg_strand, $tag_start, $tag_end, $tag_info) if $do_misc;
         make_atags($contig, $ctg_seq_region_id, $tag_type, $ctg_strand, $tag_start, $tag_end, $tag_info) if $do_atag;
       }
     }
@@ -306,7 +306,7 @@ sub parse_ace {
       $name .= $tag_info." (intl name)";
 
       $info .= "$ctg_seq_region_id : $tag_type : $ctg_strand : $tag_start : $tag_end : $tag_info --- [$name]\n" if $verbose;
-	  make_misc_feats_for_atags($contig, $ctg_seq_region_id, $tag_type, $ctg_strand, $tag_start, $tag_end, $tag_info) if $do_misc;
+      make_misc_feats_for_atags($contig, $ctg_seq_region_id, $tag_type, $ctg_strand, $tag_start, $tag_end, $tag_info) if $do_misc;
       make_atags($contig, $ctg_seq_region_id, $tag_type, $ctg_strand, $tag_start, $tag_end, $tag_info) if $do_atag;
     }
   }
@@ -340,31 +340,37 @@ sub make_misc_feats_for_atags {
   $tag_type = ucfirst($tag_type);
 
   my $tag_type_val = {
-					  'Clone_left_end'  => 'atag_CLE' ,   #133
-					  'Clone_right_end' => 'atag_CRE',    #134
-					  'Misc'            => 'atag_Misc',   #135
-					  'Unsure'          => 'atag_Unsure'  #136
-					 };
+      'Clone_left_end'  => 'atag_CLE' ,   #133
+      'Clone_right_end' => 'atag_CRE',    #134
+      'Misc'            => 'atag_Misc',   #135
+      'Unsure'          => 'atag_Unsure'  #136
+  };
 
   die "TAG: $tag_type ILLEGAL" unless $tag_type_val->{$tag_type};
 
 
-  my $mfeat = Bio::EnsEMBL::MiscFeature->new(-START  => $tag_start,
-                                             -END    => $tag_end,
-                                             -STRAND => $ctg_strand,
-                                             -SLICE  => $contig);
+  my $mfeat = Bio::EnsEMBL::MiscFeature->new(
+      -START  => $tag_start,
+      -END    => $tag_end,
+      -STRAND => $ctg_strand,
+      -SLICE  => $contig
+      );
 
   push(@$mfeats, $mfeat);
 
-  my $atag_set = Bio::EnsEMBL::MiscSet->new(-CODE            => $tag_type_val->{$tag_type},
-											-NAME            => 'Assembly tag',
-											-DESCRIPTION     => $tag_type,
-											-LONGEST_FEATURE => 1e6);
+  my $atag_set = Bio::EnsEMBL::MiscSet->new(
+      -CODE            => $tag_type_val->{$tag_type},
+      -NAME            => 'Assembly tag',
+      -DESCRIPTION     => $tag_type,
+      -LONGEST_FEATURE => 1e6
+      );
 
   # load misc_attribe table
-  my $atag_attrib = Bio::EnsEMBL::Attribute->new(-VALUE => $tag_info,
-												 -CODE  => $tag_type_val->{$tag_type},
-												 -NAME  => $tag_type);
+  my $atag_attrib = Bio::EnsEMBL::Attribute->new(
+      -VALUE => $tag_info,
+      -CODE  => $tag_type_val->{$tag_type},
+      -NAME  => $tag_type
+      );
 
   $mfeat->add_MiscSet($atag_set);
   $mfeat->add_Attribute($atag_attrib);

@@ -53,7 +53,7 @@ my $opts = {
     Bio::Otter::Lace::Defaults::do_getopt(
         'h|help!'       => $usage,
         'dataset=s'     => \$dataset_name,
-	'attrib=s'      => \$attrib_pattern,
+        'attrib=s'      => \$attrib_pattern,
         'dryrun!'       => \$opts->{dry_run},
         'debug!'        => \$opts->{debug},
         'quiet!'        => \$opts->{quiet},
@@ -272,8 +272,8 @@ __SQL_END__
     my $count = 0;
     my $out_format = "%s\t%s\t%s\t%s\t%s\n";
     printf( $out_format,
-	    "Chromosome", "Gene name", "stable id",
-	    "Code", "Attribute" ) if $opts->{verbose};
+            "Chromosome", "Gene name", "stable id",
+            "Code", "Attribute" ) if $opts->{verbose};
     
     GENE_ATTR: while (my ($gid, $gene_sid, $gene_name, 
                           $attrib_type_id, $attrib_code, $attrib_value,
@@ -295,7 +295,7 @@ __SQL_END__
 
         printf( $out_format,
                 $seq_region_name, $gene_name, $gene_sid,
-		$attrib_code, $attrib_value,
+                $attrib_code, $attrib_value,
             ) if $opts->{verbose};
 
     } # GENE_ATTR
@@ -354,9 +354,9 @@ __SQL_END__
     my $count = 0;
     my $out_format = "%s\t%s\t%s\t%s\t%s\t%s\t%s\n";
     printf( $out_format,
-	    "Chromosome", "Gene name", "stable id",
-	    "Transcript name", "stable ID",
-	    "Code", "Attribute" ) if $opts->{verbose};
+            "Chromosome", "Gene name", "stable id",
+            "Transcript name", "stable ID",
+            "Code", "Attribute" ) if $opts->{verbose};
     
     TS_ATTR: while (my ($gid, $gene_sid, $gene_name, 
                         $tid, $transcript_sid, $transcript_name,
@@ -380,8 +380,8 @@ __SQL_END__
 
         printf( $out_format,
                 $seq_region_name, $gene_name, $gene_sid,
-		$transcript_name, $transcript_sid,
-		$attrib_code, $attrib_value,
+                $transcript_name, $transcript_sid,
+                $attrib_code, $attrib_value,
             ) if $opts->{verbose};
 
     } # TS_ATTR

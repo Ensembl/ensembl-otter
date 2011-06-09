@@ -12,12 +12,12 @@ use Bio::Otter::Lace::Defaults;
   my( $dataset, $seqsetname, $dir,$pipehead );
   my $usage = sub{ exec('perldoc', $0) };
   Bio::Otter::Lace::Defaults::do_getopt(
-													 'dataset=s'     => \$dataset,
-													 'set|seqset=s'  => \$seqsetname,
-													 'h|help!'       => $usage,
-													 'dir=s'         => \$dir,
-													 'pipehead=i'    => \$pipehead
-													) or $usage->();
+      'dataset=s'     => \$dataset,
+      'set|seqset=s'  => \$seqsetname,
+      'h|help!'       => $usage,
+      'dir=s'         => \$dir,
+      'pipehead=i'    => \$pipehead
+      ) or $usage->();
   $usage->() unless $dataset and $seqsetname;
   my $cl       = Bio::Otter::Lace::Defaults::make_Client();
   my $dsObj    = $cl->get_DataSet_by_name($dataset);
@@ -31,20 +31,18 @@ use Bio::Otter::Lace::Defaults;
   my $lock_xml;
   my $n=0;
   foreach my $ctg(@$ctg_list){
-	 my @newtemp=@$ctg;
-	 $n=$n+$#newtemp+1;
-	 next if $debug;
-	 eval{
-		$lock_xml .= 
-		  $cl->lock_region_for_contig_from_Dataset(\@newtemp,
-																 $dsObj
-																);
-	 };
-	 if($@){
-		warn "\n\nProblem in locking";
-		$cl->unlock_otter_xml($lock_xml, $dataset) if $lock_xml;
-		die $@;
-	 }
+      my @newtemp=@$ctg;
+      $n=$n+$#newtemp+1;
+      next if $debug;
+      eval{
+          $lock_xml .= 
+              $cl->lock_region_for_contig_from_Dataset(\@newtemp, $dsObj);
+      };
+      if($@){
+          warn "\n\nProblem in locking";
+          $cl->unlock_otter_xml($lock_xml, $dataset) if $lock_xml;
+          die $@;
+      }
   }
   # save the xml
   print STDERR "locked $n contigs\n";
@@ -52,60 +50,60 @@ use Bio::Otter::Lace::Defaults;
   # read a set of xml files from a directory
   my( $xml );
   if($dir){
-	 opendir(DIR,$dir);
-	 my @files=readdir(DIR);
-	 closedir(DIR);
-	 foreach my $file (@files){
-		next unless $file=~/\.xml$/;
-		my $ffile="$dir/$file";
-		open(my $in,'<',$ffile);
-		{
-		  local $/ = undef;
-		  $xml = <$in>;
-		}
-		close($in);
-		my $lxml=length($xml);
-		print "writing $ffile ($lxml)\n";
-		write_xml($xml,$dataset,$cl,$pipehead);
-	 }
+     opendir(DIR,$dir);
+     my @files=readdir(DIR);
+     closedir(DIR);
+     foreach my $file (@files){
+        next unless $file=~/\.xml$/;
+        my $ffile="$dir/$file";
+        open(my $in,'<',$ffile);
+        {
+          local $/ = undef;
+          $xml = <$in>;
+        }
+        close($in);
+        my $lxml=length($xml);
+        print "writing $ffile ($lxml)\n";
+        write_xml($xml,$dataset,$cl,$pipehead);
+     }
   }
   else{
-	 {
-		local $/ = undef;
-		$xml = <>;
-	 }
-	 write_xml($xml,$dataset,$cl,$pipehead);
+     {
+        local $/ = undef;
+        $xml = <>;
+     }
+     write_xml($xml,$dataset,$cl,$pipehead);
   }
   open(my $out, '>', "/tmp/test_lock.xml");
   print $out $lock_xml;
   close $out;
 
   unless ($debug) {
-	 eval {
-		$cl->unlock_otter_xml($lock_xml, $dataset);
-	 };
-	 if ($@) {
-		die "\n unlock contigs failed\n";
-	 }
-	 print "\nunlocked contigs\n";
+     eval {
+        $cl->unlock_otter_xml($lock_xml, $dataset);
+     };
+     if ($@) {
+        die "\n unlock contigs failed\n";
+     }
+     print "\nunlocked contigs\n";
   }
 
 
 
 
   sub write_xml{
-	 my($xml,$dataset,$cl,$pipehead)=@_;
-	 return if $debug;
-	 my $success;
-	 eval{
-		$success  = $cl->save_otter_xml($xml, $dataset,$pipehead);
-		if ($success) {
-		  print "\nwritten successfully in the db\n";
-		}
-	 };
-	 if($@){
-		die $@;
-	 }
+     my($xml,$dataset,$cl,$pipehead)=@_;
+     return if $debug;
+     my $success;
+     eval{
+        $success  = $cl->save_otter_xml($xml, $dataset,$pipehead);
+        if ($success) {
+          print "\nwritten successfully in the db\n";
+        }
+     };
+     if($@){
+        die $@;
+     }
   }
 
 }
