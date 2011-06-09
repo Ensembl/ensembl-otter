@@ -375,6 +375,14 @@ sub blixem_config {
             'port'        => $PFETCH_SERVER_LIST->[0][1],
         },
 
+        'short-read' => {
+            'bulk-fetch' => 'region-fetch',
+        },
+
+        'region-fetch' => {
+            'script' => '/nfs/anacode/otterlace/bin/bam_get',
+        },
+
     };
 
     _config_merge($config, $self->DataSet->blixem_config);

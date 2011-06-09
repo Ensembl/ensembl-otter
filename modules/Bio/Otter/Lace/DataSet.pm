@@ -42,8 +42,18 @@ sub zmap_config {
     my $columns = $self->config_value_list_merged('zmap_config', 'columns');
     $stanza->{columns} = join ' ; ', @{$columns} if @${columns};
 
+    my $bam_list = $self->bam_list;
+    $stanza->{'seq-data'} =
+        ( join ' ; ', sort map { $_->{name} } @{$bam_list} )
+        if @{$bam_list};
+
     my $config = {
         'ZMap' => $stanza,
+        ( map {
+            $_->name => {
+                description => $_->description,
+            },
+          } @{$self->bam_list} ),
     };
 
     return $config;
@@ -53,6 +63,13 @@ sub blixem_config {
     my ($self) = @_;
 
     my $config = {
+        ( map {
+            $_->name => {
+                description => $_->description,
+                args => ( sprintf "-bam_path=%s -bam_cs=%s",
+                          $_->file, $_->csver ),
+            },
+          } @{$self->bam_list} ),
     };
 
     return $config;
