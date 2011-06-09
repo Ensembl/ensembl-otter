@@ -9,6 +9,7 @@ use Carp;
 use Scalar::Util 'weaken';
 
 use Bio::Otter::Filter;
+use Bio::Otter::BAM;
 
 sub new {
     my( $pkg ) = @_;
@@ -55,6 +56,43 @@ sub blixem_config {
     };
 
     return $config;
+}
+
+sub bam_by_name {
+    my ($self, $name) = @_;
+
+    return $self->{_bam_by_name}{$name} ||=
+        $self->_bam_by_name($name);
+}
+
+sub _bam_by_name {
+    my ($self, $name) = @_;
+
+    my $config = $self->config_section("bam.${name}");
+    my $bam;
+    unless (eval { $bam = Bio::Otter::BAM->new($name, $config); 1; }) {
+        warn sprintf "BAM section for ${name}: ignored: $@";
+        return;
+    }
+
+    return $bam;
+}
+
+sub bam_list {
+    my ($self) = @_;
+
+    return $self->{'_bam_list'} ||= $self->_bam_list;
+}
+
+sub _bam_list {
+    my ($self) = @_;
+
+    my $config = $self->config_section('bam_list');
+    my @name_list = grep { $config->{$_} } keys %{$config};
+    my @bam_list = map { $self->bam_by_name($_); } @name_list;
+    my $bam_list = [ grep { defined } @bam_list ];
+
+    return $bam_list;
 }
 
 sub filter_by_name {
