@@ -9,7 +9,7 @@ use warnings;
 # update if necessary and copy over new ones to /nfs/WWWdev/SANGER_docs/htdocs/Projects/M_musculus-NOD/NOD_AGP
 # which is used by /nfs/WWWdev/SANGER_docs/cgi-bin/Projects/M_musculus/mouse_NOD_clones_TPF script
 # to generate webpage at http://wwwdev.sanger.ac.uk/cgi-bin/Projects/M_musculus/mouse_NOD_clones_TPF
-# 
+#
 
 use Hum::Sort ('ace_sort');
 use File::Basename;
@@ -94,10 +94,10 @@ foreach my $region (keys %$nod_chrdigit ){
   my $outfile = "$dest_dir/$file";
 
   if ( $file ){
-    
+
     my $fh;
     open ( $fh, '>', $outfile) or die $!;
-    
+
     my $cols =<<"COLS";
 ----------------------------------------------------------------------------
 $region AGP
@@ -114,13 +114,13 @@ col_9: orientation
 -----------------------------------------------------------------------------
 
 COLS
-    
+
     print $fh $cols;
     close $fh;
 
     system("cat $latest >> $outfile");
     push(@latest_agps, $latest);
-    
+
   }
 }
 warn "\n";
@@ -294,7 +294,7 @@ sub assembly_contig_seq {
 #      # assembly contig seq if there are > 1 consecutive clones
       elsif ( $clones >= 2 ) {
         concat_seq($contig_acc_start_end_strand, $file);
-    
+
         $contig_acc_start_end_strand = {};
         tie %$contig_acc_start_end_strand, "Tie::IxHash";
       }

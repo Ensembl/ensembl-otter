@@ -59,7 +59,7 @@ sub host {
 
 sub port {
     my( $self, $port ) = @_;
-    
+
     warn "Set using the Config file please.\n" if $port;
 
     return $self->config_value('port');
@@ -67,7 +67,7 @@ sub port {
 
 sub version {
     my( $self, $version ) = @_;
-    
+
     warn "Set using the Config file please.\n" if $version;
 
     return $self->config_value('version');
@@ -75,7 +75,7 @@ sub version {
 
 sub write_access {
     my( $self, $write_access ) = @_;
-    
+
     warn "Set using the Config file please.\n" if $write_access;
 
     return $self->config_value('write_access') || 0;
@@ -83,7 +83,7 @@ sub write_access {
 
 sub author {
     my( $self, $author ) = @_;
-    
+
     warn "Set using the Config file please.\n" if $author;
 
     return $self->config_value('author') || (getpwuid($<))[0];
@@ -91,7 +91,7 @@ sub author {
 
 sub email {
     my( $self, $email ) = @_;
-    
+
     warn "Set using the Config file please.\n" if $email;
 
     return $self->config_value('email') || (getpwuid($<))[0];
@@ -99,9 +99,9 @@ sub email {
 
 sub fetch_truncated_genes {
     my( $self, $fetch_truncated_genes ) = @_;
-    
+
     warn "Set using the Config file please.\n" if $fetch_truncated_genes;
-    
+
     return $self->config_value('fetch_truncated_genes');
 }
 
@@ -121,7 +121,7 @@ sub debug {
 
 sub password_attempts {
     my( $self, $password_attempts ) = @_;
-    
+
     if (defined $password_attempts) {
         $self->{'_password_attempts'} = $password_attempts;
     }
@@ -130,7 +130,7 @@ sub password_attempts {
 
 sub timeout_attempts {
     my( $self, $timeout_attempts ) = @_;
-    
+
     if (defined $timeout_attempts) {
         $self->{'_timeout_attempts'} = $timeout_attempts;
     }
@@ -139,10 +139,10 @@ sub timeout_attempts {
 
 sub get_log_dir {
     my( $self ) = @_;
-    
+
     my $log_dir = $self->config_value('logdir')
         or return;
-    
+
     # Make $log_dir into absolute file path
     # It is assumed to be relative to the home directory if not
     # already absolute or beginning with "~/".
@@ -151,7 +151,7 @@ sub get_log_dir {
     unless ($log_dir =~ m{^/}) {
         $log_dir = "$home/$log_dir";
     }
-    
+
     if (mkdir($log_dir)) {
         warn "Made logging directory '$log_dir'\n";
     }
@@ -160,7 +160,7 @@ sub get_log_dir {
 
 sub make_log_file {
     my( $self, $file_root ) = @_;
-    
+
     $file_root ||= 'client';
     
     my $log_dir = $self->get_log_dir or return;
@@ -179,14 +179,14 @@ sub make_log_file {
 
 sub cleanup_log_dir {
     my( $self, $file_root, $days ) = @_;
-    
+
     # Files older than this number of days are deleted.
     $days ||= 14;
-    
+
     $file_root ||= 'client';
-    
+
     my $log_dir = $self->get_log_dir or return;
-    
+
     opendir my $LOG, $log_dir or confess "Can't open directory '$log_dir': $!";
     foreach my $file (grep { /^$file_root\./ } readdir $LOG) {
         my $full = "$log_dir/$file"; #" comment solely for eclipses buggy parsing!
@@ -278,7 +278,7 @@ sub new_AceDatabase {
 
 sub lock { ## no critic(Subroutines::ProhibitBuiltinHomonyms)
     my( $self, @args ) = @_;
-    
+
     confess "lock takes no arguments" if @args;
 
     return $self->write_access ? 'true' : 'false';
@@ -286,7 +286,7 @@ sub lock { ## no critic(Subroutines::ProhibitBuiltinHomonyms)
 
 sub client_hostname {
     my( $self, $client_hostname ) = @_;
-    
+
     if ($client_hostname) {
         $self->{'_client_hostname'} = $client_hostname;
     }
@@ -302,7 +302,7 @@ sub client_hostname {
 #
 sub chr_start_end_from_contig {
     my( $self, $ctg ) = @_;
-    
+
     my $chr_name  = $ctg->[0]->chromosome;
     my $start     = $ctg->[0]->chr_start;
     my $end       = $ctg->[-1]->chr_end;
@@ -311,7 +311,7 @@ sub chr_start_end_from_contig {
 
 sub get_DataSet_by_name {
     my( $self, $name ) = @_;
-    
+
     foreach my $ds ($self->get_all_DataSets) {
         if ($ds->name eq $name) {
             return $ds;
@@ -322,19 +322,19 @@ sub get_DataSet_by_name {
 
 sub password_prompt{
     my ($self, $callback) = @_;
-    
+
     if ($callback) {
         $self->{'_password_prompt_callback'} = $callback;
     }
     $callback = $self->{'_password_prompt_callback'} ||=
         sub {
             my ($self) = @_;
-            
+
             unless (-t STDIN) { ## no critic(InputOutput::ProhibitInteractiveTest)
                 warn "Cannot prompt for password - not attached to terminal\n";
                 return;
             }
-            
+
             my $user = $self->author;
             print STDERR "Please enter your password ($user): ";
             ReadMode('noecho');
@@ -349,23 +349,23 @@ sub password_prompt{
 
 sub fatal_error_prompt {
     my ($self, $callback) = @_;
-    
+
     if ($callback) {
         $self->{'_fatal_error_callback'} = $callback;
     }
-    
+
     $callback = $self->{'_fatal_error_callback'} ||=
         sub {
             my ($msg) = @_;
             die $msg;
         };
-        
+
     return $callback;
 }
 
 sub authorize {
     my ($self) = @_;
-    
+
     my $user = $self->author;
     my $password = $self->password_prompt()->($self)
       or die "No password given";
@@ -424,7 +424,7 @@ sub create_UserAgent {
 sub get_CookieJar {
     my( $self ) = @_;
     return $self->{'_cookie_jar'} ||= $self->create_CookieJar;
-} 
+}
 
 sub create_CookieJar {
     my( $self ) = @_;
@@ -434,7 +434,7 @@ sub create_CookieJar {
 
 sub save_CookieJar {
     my ($self) = @_;
-    
+
     my $jar = $self->{_cookie_jar_file};
     if (-e $jar) {
         # Fix mode if not already mode 600
@@ -461,7 +461,7 @@ sub save_CookieJar {
 
 sub url_root {
     my( $self ) = @_;
-    
+
     my $host    = $self->host    or confess "host not set";
     my $port    = $self->port    or confess "port not set";
     my $version = $self->version or confess "version not set";
@@ -471,7 +471,7 @@ sub url_root {
 
 sub pfetch_url {
     my ($self) = @_;
-    
+
     return $self->url_root . '/pfetch';
 }
 
@@ -495,9 +495,9 @@ sub setup_pfetch_env {
 # with the <otter> tags removed.
 sub otter_response_content {
     my ($self, $method, $scriptname, $params) = @_;
-    
+
     my $response = $self->general_http_dialog($method, $scriptname, $params);
-    
+
     my $xml = $response->content();
 
     if (my ($content) = $xml =~ m{<otter[^\>]*\>\s*(.*)</otter>}s) {
@@ -513,9 +513,9 @@ sub otter_response_content {
 # Returns the full content string from the http response object
 sub http_response_content {
     my ($self, $method, $scriptname, $params) = @_;
-    
+
     my $response = $self->general_http_dialog($method, $scriptname, $params);
-    
+
     my $xml = $response->content();
     #warn $xml;
 
@@ -527,7 +527,7 @@ sub http_response_content {
 
 sub response_info {
     my ($self, $scriptname, $params, $length) = @_;
-    
+
     my $ana = $params->{'analysis'}
       ? ":$params->{analysis}"
       : '';
@@ -544,7 +544,7 @@ sub general_http_dialog {
     my $password_attempts = $self->password_attempts;
     my $timeout_attempts  = $self->timeout_attempts;
     my $response;
-    
+
     my $timed_out = 0;
 
     while ($password_attempts and $timeout_attempts) {
@@ -566,17 +566,17 @@ sub general_http_dialog {
             $self->fatal_error_prompt->(sprintf "%d (%s)", $response->code, $response->decoded_content);
         }
     }
-    
+
     if ($timed_out || $response->content =~ /The Sanger Institute Web service you requested is temporarily unavailable/) {
         $self->fatal_error_prompt->("Problem with the web server\n");
     }
-     
+
     return $response;
 }
 
 sub escaped_param_string {
     my ($self, $params) = @_;
-    
+
     return join '&', map { $_ . '=' . uri_escape($params->{$_}) } (keys %$params);
 }
 
@@ -648,7 +648,7 @@ sub status_refresh_for_DataSet_SequenceSet{
 
         my $status = Bio::Otter::Lace::PipelineStatus->new;
         my $contig_name = $cs->contig_name();
-        
+
         my $status_subhash = $status_hash{$contig_name} || $names_subhash;
 
         if($status_subhash == $names_subhash) {
@@ -775,7 +775,7 @@ sub fetch_all_SequenceNotes_for_DataSet_SequenceSet {
     my %ctgname2notes = ();
 
         # we allow the notes to come in any order, so simply fill the hash:
-        
+
     for my $line (split(/\n/,$response)) {
         my ($ctg_name, $aut_name, $is_current, $datetime, $timestamp, $note_text)
             = split(/\t/, $line, 6);
@@ -896,13 +896,13 @@ sub _make_DataSet {
 
 sub get_server_otter_config {
     my ($self) = @_;
-    
+
     my $content = $self->http_response_content(
         'GET',
         'get_otter_config',
         {},
     );
-    
+
     Bio::Otter::Lace::Defaults::save_server_otter_config($content);
 
     return;
@@ -910,7 +910,7 @@ sub get_server_otter_config {
 
 sub get_otter_styles {
     my ($self) = @_;
-    
+
     # We cache the whole otter_styles file in memory
     unless ($self->{'_otter_styles'}) {
         $self->{'_otter_styles'} = $self->http_response_content('GET', 'get_otter_styles', {});
@@ -920,7 +920,7 @@ sub get_otter_styles {
 
 sub do_authentication {
     my ($self) = @_;
-    
+
     my $user = $self->http_response_content(
         'GET',
         'authenticate_me',
@@ -1065,7 +1065,7 @@ sub _make_CloneSequence {
 
 sub get_lace_acedb_tar {
     my ($self) = @_;
-    
+
     # We cache the whole lace_acedb tar.gz file in memory
     unless ($self->{'_lace_acedb_tar'}) {
         $self->{'_lace_acedb_tar'} = $self->http_response_content( 'GET', 'get_lace_acedb_tar', {});
@@ -1075,7 +1075,7 @@ sub get_lace_acedb_tar {
 
 sub get_methods_ace {
     my ($self) = @_;
-    
+
     # We cache the whole methods.ace file in memory
     unless ($self->{'_methods_ace'}) {
         $self->{'_methods_ace'} = $self->http_response_content('GET', 'get_methods_ace', {});
@@ -1085,7 +1085,7 @@ sub get_methods_ace {
 
 sub get_accession_types {
     my( $self, @accessions ) = @_;
-    
+
     my $response = $self->http_response_content(
         'POST',
         'get_accession_types',
@@ -1096,11 +1096,11 @@ sub get_accession_types {
 
 sub save_otter_xml {
     my( $self, $xml, $dsname ) = @_;
-    
+
     confess "Don't have write access" unless $self->write_access;
 
     my $ds = $self->get_DataSet_by_name($dsname);
-    
+
     my $content = $self->http_response_content(
         'POST',
         'write_region',
@@ -1109,13 +1109,13 @@ sub save_otter_xml {
             'data'     => $xml,
         }
     );
-    
+
     return $content;
 }
 
 sub unlock_otter_xml {
     my( $self, $xml, $dsname ) = @_;
-    
+
     my $ds = $self->get_DataSet_by_name($dsname);
 
     $self->general_http_dialog(
@@ -1133,7 +1133,7 @@ sub unlock_otter_xml {
 
 sub config_value {
     my ( $self, $key ) = @_;
-    
+
     return Bio::Otter::Lace::Defaults::config_value('client', $key);
 }
 
@@ -1156,7 +1156,7 @@ sub config_section {
 
 sub sessions_needing_recovery {
     my( $self ) = @_;
-    
+
     my $proc_table = Proc::ProcessTable->new;
     my @otterlace_procs = grep {$_->cmndline =~ /otterlace/} @{$proc_table->table};
     my %existing_pid = map {$_->pid, 1} @otterlace_procs;
@@ -1199,13 +1199,13 @@ sub sessions_needing_recovery {
 
     # Sort by modification date, ascending
     $to_recover = [sort {$a->[1] <=> $b->[1]} @$to_recover];
-    
+
     return $to_recover;
 }
 
 sub get_title {
     my ($self, $home_dir) = @_;
-    
+
     my $displays_file = "$home_dir/wspec/displays.wrm";
     open my $DISP, '<', $displays_file or die "Can't read '$displays_file'; $!";
     my $title;
@@ -1216,17 +1216,17 @@ sub get_title {
         }
     }
     close $DISP or die "Error reading '$displays_file'; $!";
-    
+
     if ($title) {
         return $title;
     } else {
-        die "Failed to fetch title from '$displays_file'";        
+        die "Failed to fetch title from '$displays_file'";
     }
 }
 
 sub recover_session {
     my ($self, $dir) = @_;
-    
+
     $self->kill_old_sgifaceserver($dir);
 
     my $write_flag = $dir =~ /\.ro/ ? 0 : 1;
@@ -1235,7 +1235,7 @@ sub recover_session {
     $adb->error_flag(1);
     my $home = $adb->home;
     rename($dir, $home) or die "Cannot move '$dir' to '$home'; $!";
-    
+
     unless ($adb->db_initialized) {
         warn $@ unless eval { $adb->recover_smart_slice_from_region_xml_file; 1; };
         return $adb;
@@ -1255,8 +1255,8 @@ sub recover_session {
 
 sub kill_old_sgifaceserver {
     my ($self, $dir) = @_;
-    
-    # Kill any sgifaceservers from crashed otterlace 
+
+    # Kill any sgifaceservers from crashed otterlace
     my $proc_list = Proc::ProcessTable->new;
     foreach my $proc (@{$proc_list->table}) {
         my ($cmnd, @args) = split /\s+/, $proc->cmndline;
@@ -1264,7 +1264,7 @@ sub kill_old_sgifaceserver {
         next unless $args[0] eq $dir;
         printf STDERR "Killing old sgifaceserver '%s'\n", $proc->cmndline;
         kill 9, $proc->pid;
-    }    
+    }
 
     return;
 }
