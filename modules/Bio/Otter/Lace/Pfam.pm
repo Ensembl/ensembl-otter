@@ -26,142 +26,143 @@ my $SEED_URL   = 'http://pfam.sanger.ac.uk/family/alignment/download/format';
 my $HMMALIGN = 'hmmalign';
 
 sub new {
-	my ($self) = @_;
-	return bless {}, $self;
+    my ($self) = @_;
+    return bless {}, $self;
 }
 
 # submits the sequence search and returns the XML that comes back from the
 # server
 sub submit_search {
-	my ( $self, $seq ) = @_;
+    my ( $self, $seq ) = @_;
 
-	# create a user agent
-	my $ua = LWP::UserAgent->new;
-	$ua->env_proxy;
+    # create a user agent
+    my $ua = LWP::UserAgent->new;
+    $ua->env_proxy;
 
-	# set up the request
-	my $req = HTTP::Request->new( POST => $SEARCH_URL );
-	$req->content_type('application/x-www-form-urlencoded');
+    # set up the request
+    my $req = HTTP::Request->new( POST => $SEARCH_URL );
+    $req->content_type('application/x-www-form-urlencoded');
 
-	# build the query parameters. Use URI to format them nicely for LWP...
-	my $uri = URI->new;
-	my %param = (
-				  seqOpts => 'both',    # search both models and merge results
-				  ga      => 0,         # use the gathering threshold
-				  seq     => $seq,      # sequence to search
-				  output  => 'xml'
-	);
-	$uri->query_form( %param );
-	$req->content( $uri->query );
+    # build the query parameters. Use URI to format them nicely for LWP...
+    my $uri = URI->new;
+    my %param = (
+            seqOpts => 'both',    # search both models and merge results
+            ga      => 0,         # use the gathering threshold
+            seq     => $seq,      # sequence to search
+            output  => 'xml'
+    );
+    $uri->query_form( %param );
+    $req->content( $uri->query );
 
-	# submit the request
-	my $res = $ua->request($req);
+    # submit the request
+    my $res = $ua->request($req);
 
-	# see if it was successful
-	warn( 'submission failed: ' . $res->status_line )
-	  unless $res->is_success;
-	return $res->content;
+    # see if it was successful
+    warn( 'submission failed: ' . $res->status_line )
+      unless $res->is_success;
+    return $res->content;
 }
 
 # parses the submission XML and returns the URL for retrieving results and the
 # estimated job runtime
 sub check_submission {
-	my ( $self, $xml ) = @_;
+    my ( $self, $xml ) = @_;
 
-	# parse the XML that came back from the server when we submitted the search
-	my $parser = XML::LibXML->new();
-	my $dom;
-	eval { $dom = $parser->parse_string($xml); };
-	if ($@) {
-		warn("couldn't parse XML response for submission: $@");
-		return;
-	}
+    # parse the XML that came back from the server when we submitted the search
+    my $parser = XML::LibXML->new();
+    my $dom;
+    eval { $dom = $parser->parse_string($xml); };
+    if ($@) {
+        warn("couldn't parse XML response for submission: $@");
+        return;
+    }
 
-	# the root element is "jobs"
-	my $root = $dom->documentElement();
+    # the root element is "jobs"
+    my $root = $dom->documentElement();
 
-	# set up to use XPaths
-	my $xc = XML::LibXML::XPathContext->new($root);
-	$xc->registerNs( 'p', 'http://pfam.sanger.ac.uk/' );
+    # set up to use XPaths
+    my $xc = XML::LibXML::XPathContext->new($root);
+    $xc->registerNs( 'p', 'http://pfam.sanger.ac.uk/' );
 
-	# we're only running a single Pfam-A search, so there will be only one "job"
-	# tag, so we know that these XPaths will each give us only a single node
-	my $result_url     = $xc->findvalue('/p:jobs/p:job/p:result_url');
-	my $estimated_time = $xc->findvalue('/p:jobs/p:job/p:estimated_time');
-	$result_url     =~ s/\s//g;
-	$estimated_time =~ s/\s//g;
-	return ( $result_url, $estimated_time );
+    # we're only running a single Pfam-A search, so there will be only one "job"
+    # tag, so we know that these XPaths will each give us only a single node
+    my $result_url     = $xc->findvalue('/p:jobs/p:job/p:result_url');
+    my $estimated_time = $xc->findvalue('/p:jobs/p:job/p:estimated_time');
+    $result_url     =~ s/\s//g;
+    $estimated_time =~ s/\s//g;
+    return ( $result_url, $estimated_time );
 }
 
 # polls the result URL as often as necessary (up to a hard limit) and returns
 # the results XML
 sub poll_results {
-	my ( $self, $result_url ) = @_;
+    my ( $self, $result_url ) = @_;
 
-	# this is the request that we'll submit repeatedly
-	my $req = HTTP::Request->new( GET => $result_url );
+    # this is the request that we'll submit repeatedly
+    my $req = HTTP::Request->new( GET => $result_url );
 
-	# create a user agent
-	my $ua = LWP::UserAgent->new;
-	$ua->env_proxy;
+    # create a user agent
+    my $ua = LWP::UserAgent->new;
+    $ua->env_proxy;
 
-	# submit the request...
-	my $res = $ua->request($req);
-	return $res->content;
+    # submit the request...
+    my $res = $ua->request($req);
+    return $res->content;
 }
 
 # parses the results XML and return a hash containing the hits and locations
 sub parse_results {
-	my ( $self, $results_xml ) = @_;
-	print STDOUT "parsing XML search results\n";
-	my $parser = XML::LibXML->new();
-	my $dom;
-	eval { $dom = $parser->parse_string($results_xml); };
-	if ($@) {
-		warn("couldn't parse XML response for results: $@");
-		return;
-	}
+    my ( $self, $results_xml ) = @_;
+    print STDOUT "parsing XML search results\n";
+    my $parser = XML::LibXML->new();
+    my $dom;
+    eval { $dom = $parser->parse_string($results_xml); };
+    if ($@) {
+        warn("couldn't parse XML response for results: $@");
+        return;
+    }
 
-	# set up the XPath stuff for this document
-	my $root = $dom->documentElement();
-	my $xc   = XML::LibXML::XPathContext->new($root);
-	$xc->registerNs( 'p', 'http://pfam.sanger.ac.uk/' );
+    # set up the XPath stuff for this document
+    my $root = $dom->documentElement();
+    my $xc   = XML::LibXML::XPathContext->new($root);
+    $xc->registerNs( 'p', 'http://pfam.sanger.ac.uk/' );
 
-	# get all of the matches, that is the list of Pfam-A families that are found
-	# on the sequence
-	my @matches =
-	  $xc->findnodes(
+    # get all of the matches, that is the list of Pfam-A families that are found
+    # on the sequence
+    my @matches =
+      $xc->findnodes(
 '/p:pfam/p:results/p:matches/p:protein/p:database/p:match[@type="Pfam-A"]' );
-	print 'found ' . scalar @matches . " hit(s)\n";
-	my $results = {};
-	foreach my $match_node (@matches) {
-		print STDOUT (   'looking for locations for Pfam-A '
-					   . $match_node->getAttribute('class') . ' '
-					   . $match_node->getAttribute('id') . ' ('
-					   . $match_node->getAttribute('accession')
-					   . ')' );
-		my @locations =
-		  $xc->findnodes( 'p:location[@significant=1]', $match_node );
-		print '  found '
-		  . scalar @locations
-		  . ' location(s) for '
-		  . $match_node->getAttribute('accession') . "\n";
+    print 'found ' . scalar @matches . " hit(s)\n";
+    my $results = {};
+    foreach my $match_node (@matches) {
+        print STDOUT (
+            'looking for locations for Pfam-A '
+            . $match_node->getAttribute('class') . ' '
+            . $match_node->getAttribute('id') . ' ('
+            . $match_node->getAttribute('accession')
+            . ')' );
+        my @locations =
+          $xc->findnodes( 'p:location[@significant=1]', $match_node );
+        print '  found '
+          . scalar @locations
+          . ' location(s) for '
+          . $match_node->getAttribute('accession') . "\n";
 
-		next unless @locations;
+        next unless @locations;
 
-		foreach my $location_node (@locations) {
-			my $location = {
-							 start => $location_node->getAttribute('start'),
-							 end   => $location_node->getAttribute('end')
-			};
-			push @{ $results->{ $match_node->getAttribute('accession') }->{locations} }, $location;
-		}
+        foreach my $location_node (@locations) {
+            my $location = {
+                start => $location_node->getAttribute('start'),
+                end   => $location_node->getAttribute('end')
+            };
+            push @{ $results->{ $match_node->getAttribute('accession') }->{locations} }, $location;
+        }
 
-		$results->{ $match_node->getAttribute('accession') }->{id} = $match_node->getAttribute('id');
-		$results->{ $match_node->getAttribute('accession') }->{class} = $match_node->getAttribute('class');
-	}
-	print "done parsing search results\n";
-	return $results;
+        $results->{ $match_node->getAttribute('accession') }->{id} = $match_node->getAttribute('id');
+        $results->{ $match_node->getAttribute('accession') }->{class} = $match_node->getAttribute('class');
+    }
+    print "done parsing search results\n";
+    return $results;
 }
 
 #-------------------------------------------------------------------------------
@@ -251,20 +252,20 @@ sub retrieve_pfam_seed {
 }
 
 sub get_seq_snippets {
-	my ( $self, $seq_name, $seq_string, $hit_locations) = @_;
+    my ( $self, $seq_name, $seq_string, $hit_locations) = @_;
 
-	my $s;
+    my $s;
 
     foreach my $location ( @$hit_locations ) {
 
-	    	my $subseq = substr( $seq_string,
+            my $subseq = substr( $seq_string,
                            $location->{start} - 1,
                            $location->{end} - $location->{start} + 1 );
 
-			$s .= ">${seq_name}_$location->{start}-$location->{end}\n$subseq\n";
+            $s .= ">${seq_name}_$location->{start}-$location->{end}\n$subseq\n";
     }
 
-	return $s;
+    return $s;
 }
 
 
@@ -339,19 +340,19 @@ sub create_filename{
 }
 
 sub output_files {
-	my ($self,$file) = @_;
-	if ($file) {
-		push @{$self->{_result_files}} , $file;
-	}
-	return $self->{_result_files};
+    my ($self,$file) = @_;
+    if ($file) {
+        push @{$self->{_result_files}} , $file;
+    }
+    return $self->{_result_files};
 }
 
 sub DESTROY {
-	my ($self) = @_;
-	return unless $self->output_files;
-	foreach (@{$self->output_files}) {
-		unlink $_;
-	}
+    my ($self) = @_;
+    return unless $self->output_files;
+    foreach (@{$self->output_files}) {
+        unlink $_;
+    }
         return;
 }
 
