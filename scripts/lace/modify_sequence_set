@@ -71,7 +71,7 @@ use Hum::Submission qw(accession_from_sanger_name);
     }
     elsif ($show) {
 
-        #	$ds->export_SequenceSet();
+        # $ds->export_SequenceSet();
         my ($gaps, $found) =
           export_SequenceSet($otter_db, $SequenceSet, $list, $ARGV[0]);
         if (scalar(keys(%$found))) {

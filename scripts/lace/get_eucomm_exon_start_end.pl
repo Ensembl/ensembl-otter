@@ -55,7 +55,7 @@ use Bio::EnsEMBL::SimpleFeature;
   }
 }
 
-sub	get_EUCOMM_oligo_seq_sets {
+sub get_EUCOMM_oligo_seq_sets {
 
   my $otter_db = shift;
   my $qry = $otter_db->prepare(qq{
