@@ -8,7 +8,6 @@ use warnings;
 use strict;
 use CanvasWindow;
 use DBI;
-use Hum::Fox;
 use Hum::Submission;
 
 {
@@ -27,9 +26,6 @@ use Hum::Submission;
             "DBI:mysql:host=$host;port=$port;database=$dbname",
             $user, $password, {RaiseError => 1}
             );
-    } elsif (0) {
-        $dbname = 'fox';
-        $dbh = Hum::Fox::fox_db();
     }
     else {
         $dbname = 'submissions';
