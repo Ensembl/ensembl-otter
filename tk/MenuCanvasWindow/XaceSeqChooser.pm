@@ -1148,7 +1148,7 @@ sub hunt_for_Entry_text {
     if (@ace_fail_names && !@matching_sub_names) {
         # We see only errors.  Highlight them.
         $self->message("hunt_for_Entry_text: NO RESULTS, but did encounter errors while searching.  Highlighting those instead.");
-	@matching_sub_names = @ace_fail_names;
+        @matching_sub_names = @ace_fail_names;
     } elsif (@ace_fail_names) {
         # Mixture of errors and hits.  Highlight the hits.
         $self->message("hunt_for_Entry_text: I also saw some errors while searching.  Search for 'wibble' to highlight those.");
