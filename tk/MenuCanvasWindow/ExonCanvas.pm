@@ -3231,11 +3231,11 @@ static char * exoncanvas_xpm[] = {
 /* width height ncolors cpp [x_hot y_hot] */
 "48 48 5 1 0 0",
 /* colors */
-" 	s none	m none	c none",
-".	s iconColor2	m white	c white",
-"X	s bottomShadowColor	m black	c #636363636363",
-"o	s iconColor3	m black	c red",
-"O	s iconColor1	m black	c black",
+"  s none m none c none",
+". s iconColor2 m white c white",
+"o s iconColor3 m black c red",
+"O s iconColor1 m black c black",
+"X s bottomShadowColor m black c #636363636363",
 /* pixels */
 "   .....................XX                      ",
 "   ...o.............o...XX                      ",
