@@ -18,7 +18,7 @@ use Tk::Checkbutton;
 
 sub name {
     my( $self, $name ) = @_;
-    
+
     if ($name) {
         $self->{'_name'} = $name;
     }
@@ -27,7 +27,7 @@ sub name {
 
 sub Client {
     my( $self, $Client ) = @_;
-    
+
     if ($Client) {
         $self->{'_Client'} = $Client;
     }
@@ -45,7 +45,7 @@ sub SequenceSet {
 
 sub SequenceSetChooser {
     my( $self, $SequenceSetChooser ) = @_;
-    
+
     if ($SequenceSetChooser) {
         $self->{'_SequenceSetChooser'} = $SequenceSetChooser;
     }
@@ -55,7 +55,7 @@ sub SequenceSetChooser {
 
 sub get_CloneSequence_list {
     my( $self , $force_update ) = @_;
-    
+
     #if $force_update is set to 1, then it should re-query the db rather than us the old list
     my $ss = $self->SequenceSet;
     my $cs_list = $ss->CloneSequence_list;
@@ -72,12 +72,12 @@ sub get_CloneSequence_list {
 ## $i is the row index to start from - allows this method to be used by Searched SequenceNotes
 sub refresh_column {
     my ($self, $col_no , $list_pos) = @_ ;
-    
-    my $canvas = $self->canvas(); 
+
+    my $canvas = $self->canvas();
     my $col_tag = "col=$col_no";
     my $ds = $self->SequenceSetChooser->DataSet();
     my $ss = $self->SequenceSet();
-    
+
     $self->_refresh_SequenceSet($col_no);
     #my $cs_list = $self->get_CloneSequence_list;
     my $cs_list = $self->get_rows_list;
@@ -91,7 +91,7 @@ sub refresh_column {
 
             my $new_content = $data_method->($cs, $i , $self, $ss);
             delete $new_content->{'-tags'};    # Don't want to alter tags
-            # warn "re-configuring column  $col_no , row $i" ; 
+            # warn "re-configuring column  $col_no , row $i" ;
             $canvas->itemconfigure($obj, %$new_content);
          } else {
             warn "No object withtag '$tag_string'";
@@ -103,7 +103,7 @@ sub refresh_column {
 
 sub refresh_lock_columns {
     my ($self) = @_;
-    
+
     my $top = $self->canvas->toplevel;
     $top->Busy;
     $self->refresh_column(7);   # Padlock icon column
@@ -115,7 +115,7 @@ sub refresh_lock_columns {
 
 # this should be used by the refresh column method
 # some of the columns have had different queries written to speed up the refresh ,
-# this method activates the appropriate one 
+# this method activates the appropriate one
 sub _refresh_SequenceSet{
     my ($self , $column_number ) = @_ ;
     $column_number ||= 0;
@@ -130,7 +130,7 @@ sub _refresh_SequenceSet{
         $cl->lock_refresh_for_DataSet_SequenceSet($ds, $ss);
     } elsif($column_number == 8){
         # here we do nothing, but rely heavily on the order (that 8 gets called after 7)
-        
+
     }else{
         # no column number - just update the whole thing
         $self->get_CloneSequence_list(1)
@@ -141,12 +141,12 @@ sub _refresh_SequenceSet{
 
 
 # this method returns an anonymous array. Each element of the array consists of another annonymous array of two elements.
-# the first of the two elements is the method to be called on the canvas, 
+# the first of the two elements is the method to be called on the canvas,
 # and the second method that will produce the arguments for the first method
-# the first method will _column_write_text ($canvas->createText) or _column_draw_image ($canvas->createImage) 
+# the first method will _column_write_text ($canvas->createText) or _column_draw_image ($canvas->createImage)
 sub column_methods {
     my( $self, $methods ) = @_;
-    
+
     if ($methods) {
         my $ok = 0;
         eval{ $ok = 1 if ref($methods) eq 'ARRAY' };
@@ -157,12 +157,12 @@ sub column_methods {
         # Setup some default column methods
         my $text_method  = \&_column_write_text ;   # this is the default method to be used  to display text (rather than drawing s graphic)
         my $image_method = \&_column_draw_image ;
-        
+
         my $norm = $self->font_fixed;
         my $bold = $self->font_fixed_bold;
         $self->{'_column_methods'} = [
             [$text_method, \&_column_text_row_number],
-            [$text_method, 
+            [$text_method,
              sub{
                  # Use closure for font definition
                  my ($cs, $i, $self, $ss) = @_;
@@ -175,7 +175,7 @@ sub column_methods {
                      : 'black';
                  return {-text => $accsv, -font => $bold, -fill => $fontcolour, -tags => ['searchable']};
              }],
-            [$text_method, 
+            [$text_method,
              sub{
                  # Use closure for font definition
                  my ($cs, $i, $self, $ss) = @_;
@@ -189,7 +189,7 @@ sub column_methods {
                  return {-text => $cs->clone_name, -font => $bold, -fill => $fontcolour, -tags => ['searchable'] };
              }],
             [$text_method, \&_column_text_pipeline_status],
-            [$text_method , 
+            [$text_method ,
              sub{
                  my ($cs) = @_;
                  if (my $sn = $cs->current_SequenceNote) {
@@ -212,9 +212,9 @@ sub column_methods {
 
 sub _column_write_text {
     my ($canvas, @args) = @_ ;
-    
+
     #warn "Drawing text with args [", join(', ', map "'$_'", @args), "]\n";
-    
+
     $canvas->createText(@args) ;
 
     return;
@@ -222,11 +222,11 @@ sub _column_write_text {
 
 sub _column_draw_image {
     my ($canvas, $x, $y, %args) = @_;
-    
-    ## need to remove some tags -as they are for create_text 
+
+    ## need to remove some tags -as they are for create_text
     delete $args{'-width'} ;
     delete $args{'-font'} ;
-    delete $args{'-anchor'} ; 
+    delete $args{'-anchor'} ;
 
     $canvas->createImage($x, $y, %args , -anchor => 'n');
 
@@ -242,7 +242,7 @@ sub _column_text_row_number {
 
 sub _column_text_seq_note_author {
     my ($cs) = @_;
-    
+
     if (my $sn = $cs->current_SequenceNote) {
         return { -text => $sn->author };
     } else {
@@ -265,7 +265,7 @@ sub _column_text_seq_note_text {
 
 sub _column_text_pipeline_status {
     my ($cs) = @_;
-    
+
     my $text  = 'unavailable';
     my $color = 'DarkRed';
 
@@ -283,7 +283,7 @@ sub _column_text_pipeline_status {
 
 sub max_column_width {
     my( $self, $max_column_width ) = @_;
-    
+
     if ($max_column_width) {
         $self->{'_max_column_width'} = $max_column_width;
     }
@@ -308,14 +308,14 @@ sub initialise {
     my $initial_write_access  = ${$self->write_access_var_ref()};
     my $canvas = $self->canvas;
     my $top    = $canvas->toplevel;
-    
+
     $self->bind_item_selection($canvas);
 
     $canvas->CanvasBind('<Shift-Button-1>', sub {
         return if $self->delete_message;
         $self->extend_selection;
         });
-    
+
     my $button_frame_navi = $top->Frame->pack(-side => 'top');
     my $button_frame_cmds = $top->Frame->pack(-side => 'bottom');
 
@@ -358,7 +358,7 @@ sub initialise {
 
     } else {
         # $button_frame_cmds = $top->Frame->pack(-side => 'top');
-        $button_frame_cmds->Label(-text => 'Read Only   ', 
+        $button_frame_cmds->Label(-text => 'Read Only   ',
                                -foreground => 'red')->pack(-side => 'left');
         $button_frame_cmds->bind('<Destroy>', sub { $self = undef });
     }
@@ -382,11 +382,11 @@ sub initialise {
     }
     ## First call to this returns empty list!
     #my @all_text_obj = $canvas->find('withtag', 'contig_text');
-    
+
     $self->make_button($button_frame_cmds, 'Hunt selection', $hunter, 0);
     $top->bind('<Control-h>', $hunter);
     $top->bind('<Control-H>', $hunter);
-    
+
     my $refresh_locks = sub{
         $self->refresh_lock_columns;
     };
@@ -394,7 +394,7 @@ sub initialise {
     $top->bind('<Control-r>', $refresh_locks);
     $top->bind('<Control-R>', $refresh_locks);
     $top->bind('<F5>',        $refresh_locks);
-    
+
     my $refresh_all = sub {
         $top->Busy;
         # we want this to refresh all columns
@@ -406,7 +406,7 @@ sub initialise {
     $top->bind('<Control-a>', $refresh_all);
     $top->bind('<Control-A>', $refresh_all);
     $top->bind('<F6>',        $refresh_all);
-    
+
     my $run_lace_on_slice = sub{
         $self->slice_window;
     };
@@ -432,11 +432,11 @@ sub initialise {
     };
     $top->bind('<Control-p>', $print_to_file);
     $top->bind('<Control-P>', $print_to_file);
-    
+
     $canvas->Tk::bind('<Double-Button-1>',  sub{ $self->popup_ana_seq_history });
-    
-    $canvas->Tk::bind('<Button-3>',  sub{ $self->popup_missing_analysis });    
-    
+
+    $canvas->Tk::bind('<Button-3>',  sub{ $self->popup_missing_analysis });
+
     my $close_window = $self->bind_close_window($top);
 
     # close window button in second button frame
@@ -476,13 +476,13 @@ sub go_right {
 
 sub bind_close_window{
     my ($self , $top)  = @_ ;
-    
-    my $close_window = sub{ 
+
+    my $close_window = sub{
         # This removes the seqSetCh.
         # It must be reset by seqSetCh. when the cached version
         # of this object is deiconified [get_SequenceNotes_by_name in ssc]!!!!
         # not necessary ATM.
-        # $self->clean_SequenceSetChooser(); 
+        # $self->clean_SequenceSetChooser();
         my $top = $self->canvas->toplevel;
         $top->withdraw;
     };
@@ -497,7 +497,7 @@ sub bind_close_window{
 
 sub bind_item_selection{
     my ($self , $canvas) = @_ ;
-    
+
     $canvas->configure(-selectbackground => 'gold');
     $canvas->CanvasBind('<Button-1>', sub {
         return if $self->delete_message;
@@ -514,45 +514,45 @@ sub bind_item_selection{
 
 sub make_matcher {
     my( $self, $str ) = @_;
-    
+
     # Escape non word characters
     $str =~ s{(\W)}{\\$1}g;
-    
+
     return qr/($str)/i;
 }
 
 sub hunt_for_selection {
     my( $self ) = @_;
-    
+
     my $canvas = $self->canvas;
-    
+
     my $query_str = $self->get_clipboard_text or return;
     #warn "Looking for '$query_str'";
     my $matcher = $self->make_matcher($query_str);
-    
+
     my $current_obj;
     foreach my $obj ($canvas->find('withtag', 'selected')) {
         $current_obj ||= $obj;
         toggle_selection($self, $obj);
     }
-    
+
     my $selected_text_obj = $canvas->selectItem;
 
-    
+
     # naff hack to get round the error when the first call produces no results.
     my @all_text_obj ;
     for (my $number = 0 ; $number < 2 ; $number ++ ){
         @all_text_obj = $canvas->find('withtag', 'searchable');
-        last if @all_text_obj > 0 ; 
+        last if @all_text_obj > 0 ;
     }
-    
+
     unless (@all_text_obj) {
         ### Sometimes a weird error occurs where the first call to find
-        ### doesn't return anything - warn user if this happens. 
+        ### doesn't return anything - warn user if this happens.
         $self->message('No searchable text on canvas - is it empty?');
         return;
     }
-    
+
     if ($selected_text_obj) {
         if ($selected_text_obj == $all_text_obj[-1]) {
             # selected obj is last on list, so is to leave at end
@@ -582,14 +582,14 @@ sub hunt_for_selection {
             last;
         }
     }
-    
+
     unless ($found) {
         $self->message("Can't find '$query_str'");
         return;
     }
-    
+
     $self->scroll_to_obj($found);
-    
+
     my @overlapping = $canvas->find('overlapping', $canvas->bbox($found));
     foreach my $obj (@overlapping) {
         my @tags = $canvas->gettags($obj);
@@ -605,12 +605,12 @@ sub hunt_for_selection {
 
 sub make_button {
     my( $self, $parent, $label, $command, $underline_index ) = @_;
-    
+
     my @args = (
         -text => $label,
         -command => $command,
         );
-    push(@args, -underline => $underline_index) 
+    push(@args, -underline => $underline_index)
         if defined $underline_index;
     my $button = $parent->Button(@args);
     $button->pack(
@@ -622,7 +622,7 @@ sub make_button {
 
 sub set_selected_from_canvas {
     my( $self ) = @_;
-    
+
     my $ss = $self->SequenceSet;
     if (my $sel_i = $self->selected_CloneSequence_indices) {
         my $cs_list = $ss->CloneSequence_list;
@@ -637,7 +637,7 @@ sub set_selected_from_canvas {
 
 sub run_lace {
     my ($self) = @_ ;
-    
+
     ### Prevent opening of sequences already in lace sessions
     return unless $self->set_selected_from_canvas;
 
@@ -653,7 +653,7 @@ sub run_lace {
 
 sub run_lace_on_slice{
     my ($self, $start, $end) = @_;
-    
+
     ### doing the same as set_selected_from_canvas
     ### but from the user input instead
     my $ss    = $self->SequenceSet;
@@ -672,7 +672,7 @@ sub run_lace_on_slice{
             my $maxOK = $cur_s <= $end   || 0;
             my $both  = $minOK & $maxOK;
             #warn "Comparing $cur_s to (<) $end and $cur_e to (>) $start, Found: $minOK, $maxOK, $both \n";
-            push(@selection, $i) if $both;                                      
+            push(@selection, $i) if $both;
         }
         $selected = [ @{$cs_list}[@selection] ];
     }
@@ -693,7 +693,7 @@ sub run_lace_on_slice{
 ## allows Searched SequenceNotes.pm to inherit the main part of the run_lace method
 sub _open_SequenceSet {
     my ($self, $title) = @_ ;
-        
+
     my $cl = $self->Client;
     my $ss = $self->SequenceSet;
 
@@ -702,7 +702,7 @@ sub _open_SequenceSet {
     my $smart_slice = Bio::Otter::Lace::Slice->new($cl, $dsname, $ssname,
         'chromosome', 'Otter', $chr_name, $chr_start, $chr_end);
 
-    
+
     my $adb_write_access = ${$self->write_access_var_ref()};
     my $adb = $self->Client->new_AceDatabase($adb_write_access);
     $adb->error_flag(1);
@@ -715,8 +715,8 @@ sub _open_SequenceSet {
         eval{
             $adb->try_to_lock_the_block;
         };
-        
-        if ($@) { 
+
+        if ($@) {
             $adb->error_flag(0);
             $adb->write_access(0);  # Stops AceDatabase DESTROY from trying to unlock clones
             if ($@ =~ /Clones locked/) {
@@ -725,7 +725,7 @@ sub _open_SequenceSet {
                 my @lines = split /\n/ , $@ ;
                 print STDERR $@ ;
                 foreach my $line (@lines ){
-                    if (my ($clone_name , $author) = $line =~ m/(\S+) has been locked by \'(\S+)\'/ ){            
+                    if (my ($clone_name , $author) = $line =~ m/(\S+) has been locked by \'(\S+)\'/ ){
                         $message  .= "$clone_name is locked by $author \n";
                     }
                 }
@@ -737,11 +737,11 @@ sub _open_SequenceSet {
             return;
         }
     }
-    
+
     $self->refresh_lock_columns;
-    
+
     warn "Making LoadColumns";
-    
+
     my $top = $self->canvas->Toplevel(
         -title  => 'otter: Select column data to load',
     );
@@ -758,7 +758,7 @@ sub _open_SequenceSet {
 # creates a string based on the selected clones
 sub selected_clones_string {
     my ($self ) = @_ ;
-    
+
     my $selected = $self->selected_CloneSequence_indices;
 
     if (@$selected == 1) {
@@ -820,9 +820,9 @@ sub _sanity_check{
     }
 
     $self->_user_first_clone_seq($slice_a + 1);
-    $self->_user_last_clone_seq($slice_b + 1);    
+    $self->_user_last_clone_seq($slice_b + 1);
     # $self->max_per_page($slice_b - $slice_a + 1) unless $sanity_saved;
-    
+
     return ($slice_a, $slice_b);
 }
 sub _user_first_clone_seq{
@@ -867,7 +867,7 @@ sub draw_paging_buttons{
     my $next_new_max = ($cur_max < $abs_max ? $cur_max + $ppg_max : $abs_max);
     my $prev_new_max = $cur_min - 1;
     my $next_new_min = $cur_max + 1;
-    
+
     my $prev_state   = ($cur_min > 1 ? 'normal' : 'disabled');
     my $next_state   = ($cur_max < $abs_max ? 'normal' : 'disabled');
 
@@ -889,14 +889,14 @@ sub draw_paging_buttons{
         $self->_user_last_clone_seq($prev_new_max);
         $self->draw();
     };
-    my $next_cmd = sub{ 
+    my $next_cmd = sub{
         $self->_user_first_clone_seq($next_new_min);
         $self->_user_last_clone_seq($next_new_max);
         $self->draw();
     };
     $top->bind('<Control-Shift-Key-space>', ($prev_state eq 'normal' ? $prev_cmd : undef));
     $top->bind('<Control-Key-space>', ($next_state eq 'normal' ? $next_cmd : undef));
-    
+
     my $prev = $pg_frame->Button(-text => 'prev',
                                  -state => $prev_state,
                                  -command => $prev_cmd
@@ -920,7 +920,7 @@ sub draw_paging_buttons{
     my $x     = $self->font_size();
     my $y     = $bbox[3] + $x;
     my $width = $bbox[2] - $x;
-    
+
     $self->canvas->createWindow($x, $y,
                                 -width  => $width,
                                 -anchor => 'nw',
@@ -999,21 +999,21 @@ sub draw_range {
     $self->_user_first_clone_seq(1);
     $self->_user_last_clone_seq($max_pp);
 
-    my $trim_window = $self->{'_trim_window'}; 
+    my $trim_window = $self->{'_trim_window'};
     unless ($trim_window){
         my $master = $self->canvas->toplevel;
         $self->{'_trim_window'} = $trim_window = TransientWindow::OpenRange->new($master, 'Open Range');
-        
+
         $trim_window->text_variable_ref('user_min', 1                  , 1);
         $trim_window->text_variable_ref('user_max', $max_pp            , 1);
         $trim_window->text_variable_ref('total'   , $no_of_cs          , 1);
         $trim_window->text_variable_ref('per_page', $max_pp            , 1);
-        $trim_window->action('openRange', sub{ 
+        $trim_window->action('openRange', sub{
             my ($tw) = @_;
             $tw->hide_me;
             my $tl = $self->canvas->toplevel;
             $tl->deiconify; $tl->raise; $tl->focus;
-            
+
             $self->_currently_paging(1);
 
             # need to copy input across.
@@ -1021,7 +1021,7 @@ sub draw_range {
             $self->_user_last_clone_seq (${$tw->text_variable_ref('user_max')});
             $self->draw() ;
         });
-        $trim_window->action('openAll', sub { 
+        $trim_window->action('openAll', sub {
             my ($tw) = @_;
             $tw->hide_me;
             my $tl = $self->canvas->toplevel;
@@ -1068,7 +1068,7 @@ sub draw {
 
     my $gaps = 0;
     my $gap_pos = {};
-    
+
     for (my $i = 0; $i < @$cs_list; $i++) {   # go through each clone sequence
         my $row = $i + $gaps;
         my $cs = $cs_list->[$i];
@@ -1077,18 +1077,18 @@ sub draw {
 
         unless ($i == 0) {
             my $cs_last = $cs_list->[$i - 1];
-            
+
             my $gap = 0; # default for non SequenceNotes methods inheriting this method
             if ( eval { $cs->can('chr_start'); } ){
                 $gap = $cs->chr_start - $cs_last->chr_end - 1;
             }
             if ($gap > 0) {
-                $gap_pos->{$row} = 1;              
+                $gap_pos->{$row} = 1;
                 # Put spaces between thousands in gap length
                 my $gap_size = reverse $gap;
                 $gap_size =~ s/(\d{3})(?=\d)/$1 /g;
                 $gap_size = reverse $gap_size;
-                
+
                 $canvas->createText(
                     $size, $y,
                     -anchor => 'nw',
@@ -1103,13 +1103,13 @@ sub draw {
 
         $row_tag = "row=$row";
         $y = $row * $size;
-        
+
         for (my $col = 0; $col < @$methods; $col++) { # go through each method
             my $x = $col * $size;
 
             my $col_tag = "col=$col";
             my ($draw_method, $data_method) = @{$methods->[$col]};
-            
+
             my $opt_hash = $data_method ? $data_method->($cs, $i, $self, $ss) : {};
             $opt_hash->{'-anchor'} ||= 'nw';
             $opt_hash->{'-font'}   ||= $helv_def;
@@ -1120,12 +1120,12 @@ sub draw {
             #warn "\ntags = [", join(', ', map "'$_'", @{$opt_hash->{'-tags'}}), "]\n";
             $draw_method->($canvas, $x, $y, %$opt_hash);  ## in most cases this will be $canvas->createText
         }
-        
+
     }
     #print STDERR " done\n";
     my $col_count = scalar @$methods  + 1; # +1 fopr the padlock (non text column)
     my $row_count = scalar @$cs_list + $gaps;
-    
+
     #print STDERR "Laying out table...";
     $self->layout_columns_and_rows($col_count, $row_count);
     #print STDERR " done\n";
@@ -1146,22 +1146,22 @@ sub draw {
 
 sub deselect_all_selected_not_current {
     my( $self ) = @_;
-    
+
     my $canvas = $self->canvas;
     $canvas->selectClear;
     foreach my $obj ($canvas->find('withtag', 'selected&&!current')) {
         $self->toggle_selection($obj);
-    }    
+    }
 
     return;
 }
 
 sub toggle_current {
     my( $self ) = @_;
-    
+
     my $row_tag = $self->get_current_row_tag or return;
 
-    my ($rect) = $self->canvas->find('withtag', "$row_tag&&clone_seq_rectangle") or return;        
+    my ($rect) = $self->canvas->find('withtag', "$row_tag&&clone_seq_rectangle") or return;
     $self->toggle_selection($rect);
 
     return;
@@ -1169,12 +1169,12 @@ sub toggle_current {
 
 sub extend_selection {
     my( $self ) = @_;
-    
+
     my $canvas = $self->canvas;
     my $row_tag = $self->get_current_row_tag or return;
     my ($current_row) = $row_tag =~ /row=(\d+)/;
     die "Can't parse row number from '$row_tag'" unless defined $current_row;
-    
+
     # Get a list of all the rows that are currently selected
     my( @sel_rows );
     foreach my $obj ($canvas->find('withtag', 'selected&&clone_seq_rectangle')) {
@@ -1184,7 +1184,7 @@ sub extend_selection {
         }
         push(@sel_rows, $row);
     }
-    
+
     my( @new_select, %is_selected );
     if (@sel_rows) {
         %is_selected = map { $_ => 1 } @sel_rows;
@@ -1209,8 +1209,8 @@ sub extend_selection {
     } else {
         @new_select = ($current_row);
     }
-    
-    
+
+
     # Select all the rows in the new list that are not already selected
     foreach my $row (@new_select) {
         next if $is_selected{$row};
@@ -1224,7 +1224,7 @@ sub extend_selection {
 
 sub selected_CloneSequence_indices {
     my( $self ) = @_;
-    
+
     my $canvas = $self->canvas;
     my $select = [];
     my $cs_first = $self->_user_first_clone_seq() || 1;
@@ -1235,7 +1235,7 @@ sub selected_CloneSequence_indices {
         }
         push(@$select, $i + $cs_first - 1);
     }
-    
+
     if (@$select) {
         return $select;
     } else {
@@ -1247,15 +1247,15 @@ sub get_current_CloneSequence_index {
     my( $self ) = @_ ;
     my $canvas = $self->canvas;
     my ($obj) = $canvas->find('withtag', 'current') or return;
-     
-    my ($i) = map { /^cs=(\d+)/ } $canvas->gettags($obj);  
+
+    my ($i) = map { /^cs=(\d+)/ } $canvas->gettags($obj);
     return $i;
 
 }
 
 sub get_current_row_tag {
     my( $self ) = @_;
-    
+
     my $canvas = $self->canvas;
     my ($obj) = $canvas->find('withtag', 'current') or return;
 
@@ -1271,10 +1271,10 @@ sub get_current_row_tag {
 
 sub toggle_selection {
     my( $self, $obj ) = @_;
-    
+
     my $canvas = $self->canvas;
     my $is_selected = grep { $_ eq 'selected' } $canvas->gettags($obj);
-    my( $new_colour ); 
+    my( $new_colour );
     if ($is_selected) {
         $new_colour = '#aaaaff';
         $canvas->dtag($obj, 'selected');
@@ -1291,7 +1291,7 @@ sub toggle_selection {
 
 sub draw_row_backgrounds {
     my( $self, $row_count, $gap_pos ) = @_;
-    
+
     my $canvas = $self->canvas;
     my ($x1, $x2) = ($canvas->bbox('all'))[0,2];
     my  ($scroll_x2, $scroll_y)  = $self->initial_canvas_size;
@@ -1301,7 +1301,7 @@ sub draw_row_backgrounds {
     for (my $i = 0; $i < $row_count; $i++) {
         # Don't draw a rectangle behind gaps
         next if $gap_pos->{$i};
-        
+
         my $row_tag = "row=$i";
         my ($y1, $y2) = ($canvas->bbox($row_tag))[1,3];
         $y1--; $y2++;
@@ -1325,11 +1325,11 @@ sub layout_columns_and_rows {
 warn "LayOut started...\n";
 
     if (defined $count)  { ($count ++ )} else { $count  = 0};
-    
+
     my $canvas = $self->canvas;
     $canvas->delete('clone_seq_rectangle');
     my $size   = $self->font_size;
-    
+
     # Put the columns in the right place
     my $x = $size;
     my $x_pad = int $size * 1.5;
@@ -1340,15 +1340,15 @@ warn "LayOut started...\n";
         $canvas->move($col_tag, $x_shift, 0);
         $x = ($x2||0) + $x_shift + $x_pad;
     }
-    
+
     # Put the rows in the right place
     my $y = $size;
     my $y_pad = int $size * 0.5;
     for (my $r = 0; $r < $max_row; $r++) {
         my $row_tag = "row=$r";
-        
+
         my ($y1, $y2) = ($canvas->bbox($row_tag))[1,3];
-        
+
         my $y_shift = $y - $y1;
         $canvas->move($row_tag, 0, $y_shift);
         $y = $y2 + $y_shift + $y_pad;
@@ -1375,7 +1375,7 @@ sub save_sequence_notes {
     my $time = time();
 
     my $seq_list = $self->SequenceSet->selected_CloneSequences;
-    
+
     my $all_list = $self->SequenceSet->CloneSequence_list;
     my $contig_string = join "|", map { $_->contig_name } @$seq_list;
     my %seq_hash;
@@ -1383,7 +1383,7 @@ sub save_sequence_notes {
         $seq_hash{$_->contig_name} ||= [];
         push @{$seq_hash{$_->contig_name}},$_;
     }
-    
+
     foreach my $contig_name (keys %seq_hash) {
         my $new_note = Bio::Otter::Lace::SequenceNote->new;
         $new_note->author($cl->author);
@@ -1396,7 +1396,7 @@ sub save_sequence_notes {
             $new_note,
         );
         foreach my $cs (@{$seq_hash{$contig_name}}){
-            $cs->add_SequenceNote($new_note);    
+            $cs->add_SequenceNote($new_note);
             $cs->current_SequenceNote($new_note);
             # sync state of SequenceNote objects with database
             for my $note (@{$cs->get_all_SequenceNotes()}) {
@@ -1404,7 +1404,7 @@ sub save_sequence_notes {
             }
             $new_note->is_current(1);
         }
-    } 
+    }
     $self->draw;
     $self->set_scroll_region_and_maxsize;
 
@@ -1423,7 +1423,7 @@ sub DESTROY {
 
 sub popup_missing_analysis{
     my ($self) = @_;
-    my $index = $self->get_current_CloneSequence_index ; 
+    my $index = $self->get_current_CloneSequence_index ;
     unless (defined $index ){
         return;
     }
@@ -1451,7 +1451,7 @@ sub popup_missing_analysis{
 
 sub popup_ana_seq_history{
     my ($self) = @_;
-    my $index = $self->get_current_CloneSequence_index ; 
+    my $index = $self->get_current_CloneSequence_index ;
     unless (defined $index ){
         return;
     }
@@ -1475,9 +1475,9 @@ sub popup_ana_seq_history{
             $self->add_History($hp);
         }
         else{
-            $self->message( "No History for sequence " . $cs->contig_name . "  " . $cs->clone_name); 
+            $self->message( "No History for sequence " . $cs->contig_name . "  " . $cs->clone_name);
         }
-    }  
+    }
 
     return;
 }
@@ -1541,13 +1541,13 @@ sub _column_padlock_icon {
     else{
         $pixmap = $self->open_padlock_pixmap()  ;
     }
-    
+
     return { -image => $pixmap } ;
-}    
+}
 
 sub _column_who_locked {
     my ($cs) = @_;
-    
+
     if (my $lock = $cs->get_lock_as_CloneLock) {
         # Remove domain from full email addresses
         my ($name) = $lock->author->name =~ /^([^@]+)/;
@@ -1560,12 +1560,12 @@ sub _column_who_locked {
 
 sub closed_padlock_pixmap {
     my( $self ) = @_;
-    
+
     my( $pix );
     unless ($pix = $self->{'_closed_padlock_pixmap'}) {
-    
+
         my $data = <<'END_OF_PIXMAP' ;
-/* XPM */    
+/* XPM */
 static char * padlock[] = {
 "11 13 3 1",
 "     c None",
@@ -1585,7 +1585,7 @@ static char * padlock[] = {
 "  +++++++  ",
 "           "};
 END_OF_PIXMAP
-        
+
         $pix = $self->{'_closed_padlock_pixmap'} = $self->canvas->Pixmap( -data => $data );
     }
     return $pix;
@@ -1593,15 +1593,15 @@ END_OF_PIXMAP
 
 
 ### blank at the moment - perhaps put an "unlocked" icon in there later
-### Need an image of some sort in place of the "locked" icon - for the refresh columns methods 
+### Need an image of some sort in place of the "locked" icon - for the refresh columns methods
 sub open_padlock_pixmap {
     my( $self ) = @_;
-    
+
     my( $pix );
     unless ($pix = $self->{'_open_padlock_pixmap'}) {
-    
+
         my $data = <<'END_OF_PIXMAP';
-/* XPM */    
+/* XPM */
 static char * padlock[] = {
 "17 13 3 1",
 "     c None",
@@ -1610,18 +1610,18 @@ static char * padlock[] = {
 "           ",
 "           ",
 "           ",
-"           ",                    
-"           ",                    
-"           ",                    
-"           ",             
 "           ",
-"           ",     
-"           ",     
-"           ",     
+"           ",
+"           ",
+"           ",
+"           ",
+"           ",
+"           ",
+"           ",
 "           ",
 "           "};
 END_OF_PIXMAP
-        
+
         $pix = $self->{'_open_padlock_pixmap'} = $self->canvas->Pixmap( -data => $data );
     }
     return $pix;
@@ -1630,13 +1630,13 @@ END_OF_PIXMAP
 # brings up a window for searching for loci / clones
 sub slice_window{
     my ($self) = @_;
-    
+
     my $slice_window = $self->{'_slice_window'};
 
     unless (defined ($slice_window) ){
         ## make a new window
         my $master = $self->canvas->toplevel;
-        $self->{'_slice_window'} = 
+        $self->{'_slice_window'} =
             $slice_window = TransientWindow::OpenSlice->new($master, 'Open a slice');
         my $cs_list = $self->SequenceSet->CloneSequence_list();
         my $slice_start = $cs_list->[0]->chr_start || 0;
