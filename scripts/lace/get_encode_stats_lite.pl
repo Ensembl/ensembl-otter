@@ -49,13 +49,14 @@ my $encode_list = "/nfs/team71/analysis/jgrg/work/encode/encode_sets.list";
 
 my $help = sub { exec('perldoc', $0) };
 
-Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset, # eg, human or mouse or zebrafish
-                                      'set=s'        => \@sets,
-                                      'html=s'       => \$html_output,
-									  'h|help'       => $help,
-                                      'time1=s'      => \$cutoff_time_1,
-                                      'time2=s'      => \$cutoff_time_2,
-									 );
+Bio::Otter::Lace::Defaults::do_getopt(
+    'ds|dataset=s' => \$dataset, # eg, human or mouse or zebrafish
+    'set=s'        => \@sets,
+    'html=s'       => \$html_output,
+    'h|help'       => $help,
+    'time1=s'      => \$cutoff_time_1,
+    'time2=s'      => \$cutoff_time_2,
+    );
 
 $cutoff_time_1 = get_timelocal($cutoff_time_1) if $cutoff_time_1;
 $cutoff_time_2 = get_timelocal($cutoff_time_2) if $cutoff_time_2;
@@ -64,7 +65,7 @@ my $client   = Bio::Otter::Lace::Defaults::make_Client();
 my $dset     = $client->get_DataSet_by_name($dataset);
 my $otter_db = $dset->get_cached_DBAdaptor;
 my $sliceAd  = $otter_db->get_SliceAdaptor;
-my $geneAd   = $otter_db->get_GeneAdaptor;	
+my $geneAd   = $otter_db->get_GeneAdaptor;
 
 
 # loop thru all assembly types to fetch all annotated genes in it on otter
@@ -78,25 +79,25 @@ unless ( @sets ){
 }
 
 my $wanted_gtypes = {
-					 Known                  => 'K',
-					 Novel_CDS              => 'NC',
-					 Novel_Transcript       => 'NT',
-					 Putative               => 'P',
-					 Processed_pseudogene   => 'PS',
-					 Unprocessed_pseudogene => 'UP',
-					 Artifact               => 'A',
-					 TEC                    => 'T',
-					 Expressed_pseudogene   => 'EP',
-					 Ig_Pseudogene_Segment  => 'IPS',
-					 Ig_Segment             => 'IS',
-					 Polymorphic            => 'PM',
-					 Predicted_Gene         => 'PG',
-					 other                  => 'OT',
-					 Pseudogene             => 'PSE',
-					 Retained_intron        => 'RI',
-					 Transposon             => 'T',
-					 obsolete               => 'OB'
-					};
+    Known                  => 'K',
+    Novel_CDS              => 'NC',
+    Novel_Transcript       => 'NT',
+    Putative               => 'P',
+    Processed_pseudogene   => 'PS',
+    Unprocessed_pseudogene => 'UP',
+    Artifact               => 'A',
+    TEC                    => 'T',
+    Expressed_pseudogene   => 'EP',
+    Ig_Pseudogene_Segment  => 'IPS',
+    Ig_Segment             => 'IS',
+    Polymorphic            => 'PM',
+    Predicted_Gene         => 'PG',
+    other                  => 'OT',
+    Pseudogene             => 'PSE',
+    Retained_intron        => 'RI',
+    Transposon             => 'T',
+    obsolete               => 'OB'
+};
 
 my ( $annotated_gene_set_type,
      $total_genes_of_atype,
@@ -107,28 +108,28 @@ my ( $annotated_gene_set_type,
 if ( @sets ) {
 
   my ($all_encode_gene, $all_encode_annot_g, $all_encode_annot_t);
-	
+
   foreach my $set ( @sets ) {
-	warn  $set, "\n";
-	my ($total_gene_set);
-	my ($trans_has_evi, $trans_no_evi );
+    warn  $set, "\n";
+    my ($total_gene_set);
+    my ($trans_has_evi, $trans_no_evi );
 
-	$otter_db->assembly_type($set); # replace the default sequence set setting
+    $otter_db->assembly_type($set); # replace the default sequence set setting
 
-	my $seqSet = $dset->get_SequenceSet_by_name($set);
-	$dset->fetch_all_CloneSequences_for_SequenceSet($seqSet);
-	my $chrom = $seqSet->CloneSequence_list()->[0]->chromosome;
+    my $seqSet = $dset->get_SequenceSet_by_name($set);
+    $dset->fetch_all_CloneSequences_for_SequenceSet($seqSet);
+    my $chrom = $seqSet->CloneSequence_list()->[0]->chromosome;
 
-	my $slice = $sliceAd->fetch_by_chr_name($chrom);
-	my $latest_gene_ids = $geneAd->list_current_dbIDs_for_Slice($slice);
+    my $slice = $sliceAd->fetch_by_chr_name($chrom);
+    my $latest_gene_ids = $geneAd->list_current_dbIDs_for_Slice($slice);
 
-	foreach my $gid ( @$latest_gene_ids ){
-	  my $gene = $geneAd->fetch_by_dbID($gid);
-	  my $gtype = $gene->type;
+    foreach my $gid ( @$latest_gene_ids ){
+      my $gene = $geneAd->fetch_by_dbID($gid);
+      my $gtype = $gene->type;
 
       # exclude external/obsolete annotations
-	  next if  $gtype eq 'obsolete' or $gtype =~ /:/;
-	  #next unless $wanted_gtypes->{$gtype};
+      next if  $gtype eq 'obsolete' or $gtype =~ /:/;
+      #next unless $wanted_gtypes->{$gtype};
 
       if ( $cutoff_time_1 and $cutoff_time_2 ){
         if ( $gene->gene_info->timestamp <= $cutoff_time_2 and
@@ -154,79 +155,79 @@ if ( @sets ) {
           }
         }
       }
-	  else {
-		$annotated_gene_set_type->{$set}->{$gtype}->{gene}++;
-		$annotated_gene_set_type->{$set}->{$gtype}->{trans} +=
-		  scalar @{$gene->get_all_Transcripts};
-		if ( $gtype eq "Known" or $gtype eq "Novel_CDS" ){
-		  $coding_locus_trans->{$set}->{$gene->gene_info->name->name} = scalar @{$gene->get_all_Transcripts};
-		}
-	  }
-	}
+      else {
+        $annotated_gene_set_type->{$set}->{$gtype}->{gene}++;
+        $annotated_gene_set_type->{$set}->{$gtype}->{trans} +=
+          scalar @{$gene->get_all_Transcripts};
+        if ( $gtype eq "Known" or $gtype eq "Novel_CDS" ){
+          $coding_locus_trans->{$set}->{$gene->gene_info->name->name} = scalar @{$gene->get_all_Transcripts};
+        }
+      }
+    }
 
-	unless ( $cutoff_time_1 & $cutoff_time_2 ){
-	  $total_gene_set = scalar @$latest_gene_ids;
-	  $all_encode_gene += $total_gene_set;
-	}
+    unless ( $cutoff_time_1 & $cutoff_time_2 ){
+      $total_gene_set = scalar @$latest_gene_ids;
+      $all_encode_gene += $total_gene_set;
+    }
 
-	printf("%-20s Total genes: %d\n", $set, $total_gene_set);
+    printf("%-20s Total genes: %d\n", $set, $total_gene_set);
     $total_genes_of_atype->{$set} = $total_gene_set;
 
     printf("%-25s (%-4s, %s)\n", "Gene_type", "G", "T");
-	my ($sum_gene, $sum_trans);
+    my ($sum_gene, $sum_trans);
 
-	my @present_types = keys %{$annotated_gene_set_type->{$set}};
+    my @present_types = keys %{$annotated_gene_set_type->{$set}};
 
-	foreach my $gtype ( sort keys %$wanted_gtypes ){
-	  if ( grep($gtype, @present_types) ){
-		my $gene_count  = $annotated_gene_set_type->{$set}->{$gtype}->{gene};
-		my $trans_count = $annotated_gene_set_type->{$set}->{$gtype}->{trans};
-		printf("%-25s (%-4d, %d)\n", $gtype, $gene_count, $trans_count);
+    foreach my $gtype ( sort keys %$wanted_gtypes ){
+      if ( grep($gtype, @present_types) ){
+        my $gene_count  = $annotated_gene_set_type->{$set}->{$gtype}->{gene};
+        my $trans_count = $annotated_gene_set_type->{$set}->{$gtype}->{trans};
+        printf("%-25s (%-4d, %d)\n", $gtype, $gene_count, $trans_count);
 
         $gene_count = 0 unless $gene_count;
         $trans_count = 0 unless $trans_count;
 
-		$sum_gene += $gene_count;
-		$sum_trans += $trans_count;
-	  }
-	  else {
-		printf("%-25s (%-4d, %d)\n", $gtype, 0, 0);
-	  }
-	}
+        $sum_gene += $gene_count;
+        $sum_trans += $trans_count;
+      }
+      else {
+        printf("%-25s (%-4d, %d)\n", $gtype, 0, 0);
+      }
+    }
 
-	my ($excluded_sum_gene, $excluded_sum_trans);
+    my ($excluded_sum_gene, $excluded_sum_trans);
 
-	foreach my $type ( @present_types) {
-	  next if $type !~ /:/;
-	  my $gene_count  = $annotated_gene_set_type->{$set}->{$type}->{gene};
-	  my $trans_count = $annotated_gene_set_type->{$set}->{$type}->{trans};
-	  #printf("%s(%d, %d) ", $type, $gene_count, $trans_count);
-	  $excluded_sum_gene += $gene_count;
-	  $excluded_sum_trans += $trans_count;
-	}
+    foreach my $type ( @present_types) {
+      next if $type !~ /:/;
+      my $gene_count  = $annotated_gene_set_type->{$set}->{$type}->{gene};
+      my $trans_count = $annotated_gene_set_type->{$set}->{$type}->{trans};
+      #printf("%s(%d, %d) ", $type, $gene_count, $trans_count);
+      $excluded_sum_gene += $gene_count;
+      $excluded_sum_trans += $trans_count;
+    }
 
-	$all_encode_annot_g += $sum_gene;
-	$all_encode_annot_t += $sum_trans;
-	
-	printf("\n%s(%d, %d) %s(%d, %d)\n",
-		   "Sum", $sum_gene, $sum_trans,
-		   "External", $excluded_sum_gene, $excluded_sum_trans);
+    $all_encode_annot_g += $sum_gene;
+    $all_encode_annot_t += $sum_trans;
+
+    printf("\n%s(%d, %d) %s(%d, %d)\n",
+           "Sum", $sum_gene, $sum_trans,
+           "External", $excluded_sum_gene, $excluded_sum_trans);
 
     $sum_annots_of_gtypes_of_atype->{$set}->{G}= $sum_gene;
     $sum_annots_of_gtypes_of_atype->{$set}->{T}= $sum_trans;
 
-	$trans_no_evi = 0 unless $trans_no_evi;
-	$trans_has_evi = 0 unless $trans_has_evi;
-	#print "Trans_with_non_human_evidences(0) Trans_without_evidence_at_all($trans_no_evi)\n\n";\n\n";
-	print "Trans_with_non_human_evidences($trans_has_evi) Trans_without_evidence_at_all($trans_no_evi)\n\n";
+    $trans_no_evi = 0 unless $trans_no_evi;
+    $trans_has_evi = 0 unless $trans_has_evi;
+    #print "Trans_with_non_human_evidences(0) Trans_without_evidence_at_all($trans_no_evi)\n\n";\n\n";
+    print "Trans_with_non_human_evidences($trans_has_evi) Trans_without_evidence_at_all($trans_no_evi)\n\n";
   }
 
   print "\nNumber of coding variants per coding locus:\n";
   foreach my $set ( sort keys %$coding_locus_trans ){
-	print "$set: \n";
-	foreach  my $gname ( keys %{$coding_locus_trans->{$set}} ){
-	  printf("%-20s %d\n", $gname, $coding_locus_trans->{$set}->{$gname} );
-	}
+    print "$set: \n";
+    foreach  my $gname ( keys %{$coding_locus_trans->{$set}} ){
+      printf("%-20s %d\n", $gname, $coding_locus_trans->{$set}->{$gname} );
+    }
   }
   print "\n";
 
@@ -379,29 +380,29 @@ sub count_trans_with_supporting_evi {
   my $supported_trans_of_set;
 
   foreach my $t ( @{$gene->get_all_Transcripts} ){
-	foreach my $evi (@{$t->transcript_info->get_all_Evidence} ){
-	  if ( !$evi ){
-		#warn "NO EVI";
-		return "no evi";
-	  }
-	  else {
-		#warn "EVI $evi";
-		my $evidence_ori = $evi->name;
-		my $evidence = $evidence_ori;
-		$evidence =~ s/\w*://;
-		if ( $evidence_ori =~ /^Em:/ ){
-		  #warn $evidence;
-		  $evidence =~ s/\w*://;
-		  $supported_trans_of_set++ if ! `pfetch -D $evidence | grep "Homo"`;
-		  last;
-		}
-		elsif ( $evidence_ori =~ /^(SW:|Tr:)/ ){
-		  #warn $evidence;
-		  $supported_trans_of_set++ if ! `pfetch -D $evidence | grep "HUMAN`;
-		  last;
-		}
-	  }
-	}
+    foreach my $evi (@{$t->transcript_info->get_all_Evidence} ){
+      if ( !$evi ){
+        #warn "NO EVI";
+        return "no evi";
+      }
+      else {
+        #warn "EVI $evi";
+        my $evidence_ori = $evi->name;
+        my $evidence = $evidence_ori;
+        $evidence =~ s/\w*://;
+        if ( $evidence_ori =~ /^Em:/ ){
+          #warn $evidence;
+          $evidence =~ s/\w*://;
+          $supported_trans_of_set++ if ! `pfetch -D $evidence | grep "Homo"`;
+          last;
+        }
+        elsif ( $evidence_ori =~ /^(SW:|Tr:)/ ){
+          #warn $evidence;
+          $supported_trans_of_set++ if ! `pfetch -D $evidence | grep "HUMAN`;
+          last;
+        }
+      }
+    }
   }
   return $supported_trans_of_set;
 }

@@ -11,9 +11,9 @@ use Bio::Otter::Lace::Defaults;
 my ($dataset_name, $test);
 
 Bio::Otter::Lace::Defaults::do_getopt(
-                                      'ds|dataset=s' => \$dataset_name,
-                                      'test'         => \$test
-                                     );
+    'ds|dataset=s' => \$dataset_name,
+    'test'         => \$test
+    );
 
 my $client   = Bio::Otter::Lace::Defaults::make_Client();
 my $dset     = $client->get_DataSet_by_name($dataset_name);
@@ -55,7 +55,7 @@ sub get_gene_dbid_list_of_atype {
 
   my $seqSet = $dset->get_SequenceSet_by_name($atype);
   $dset->fetch_all_CloneSequences_for_SequenceSet($seqSet);
-	
+
   my $chrom = $seqSet->CloneSequence_list()->[0]->chromosome;
   my $slice = $sliceAd->fetch_by_chr_name($chrom);
   my $latest_gene_ids = $geneAd->list_current_dbIDs_for_Slice($slice);
@@ -102,7 +102,7 @@ sub get_redundant_db_ids {
 
   for ( my $i=0; $i < scalar @vers-1; $i++ ){
     if ( $ver_xml->{$vers[$i]} eq $ver_xml->{$vers[$i+1]} ){
-	  push(@unwanted_dbIDs, $ver_dbid->{$vers[$i]});
+        push(@unwanted_dbIDs, $ver_dbid->{$vers[$i]});
     }
   }
 

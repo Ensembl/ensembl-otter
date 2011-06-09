@@ -18,12 +18,12 @@ use Hum::Tracking ('prepare_track_statement');
 
 # get all NOD/CHORI subregions to chrom digit mapping
 my $nod = prepare_track_statement(qq{
-									 SELECT s.subregion, c.chromosome
-									 FROM subregion s, chromosomedict c
-									 WHERE s.chromosome=c.id_dict
-									 AND s.speciesname= ?
-									 AND s.SUBREGION LIKE ?
-									});
+    SELECT s.subregion, c.chromosome
+    FROM subregion s, chromosomedict c
+    WHERE s.chromosome=c.id_dict
+    AND s.speciesname= ?
+    AND s.SUBREGION LIKE ?
+    });
 $nod->execute('Mouse', 'NOD%');
 
 my $nod_chrdigit;
@@ -31,28 +31,28 @@ while ( my ($subregion, $chr_digit)= $nod->fetchrow ){
 
  # ignore old subregions - should have been remove by the finishers
   next if ( $subregion eq "NOD_IDD3" or
-			$subregion eq "NOD_IDD4" or
-			$subregion eq "NOD_IDD10" or
-			$subregion eq "NOD_IDD16" or
-			$subregion eq "NOD_IDD18" or
-			$subregion eq "NOD_IDD6.1+2"
-		  );
+            $subregion eq "NOD_IDD4" or
+            $subregion eq "NOD_IDD10" or
+            $subregion eq "NOD_IDD16" or
+            $subregion eq "NOD_IDD18" or
+            $subregion eq "NOD_IDD6.1+2"
+      );
 
   $nod_chrdigit->{$subregion} = $chr_digit;
 }
 
 my $chori = prepare_track_statement(qq{
-									   SELECT s.subregion, c.chromosome
-									   FROM subregion s, chromosomedict c
-									   WHERE s.chromosome=c.id_dict
-									   AND s.speciesname= ?
-									   AND s.SUBREGION LIKE ?
-									  });
+    SELECT s.subregion, c.chromosome
+    FROM subregion s, chromosomedict c
+    WHERE s.chromosome=c.id_dict
+    AND s.speciesname= ?
+    AND s.SUBREGION LIKE ?
+    });
 $chori->execute('Mouse', 'CHO%');
 while ( my ($subregion, $chr_digit)= $chori->fetchrow ){
 
   if ( $subregion eq "CHO_IDD5" ){
-	$subregion = "CHO_IDD5.1_Test";
+    $subregion = "CHO_IDD5.1_Test";
   }
   $nod_chrdigit->{$subregion} = $chr_digit;
 
@@ -60,7 +60,7 @@ while ( my ($subregion, $chr_digit)= $chori->fetchrow ){
 
 if ( $ARGV[0] eq "test" ){
   foreach my $region (keys %$nod_chrdigit ){
-	warn "$region ", $nod_chrdigit->{$region};
+    warn "$region ", $nod_chrdigit->{$region};
   }
   die;
 }
@@ -88,17 +88,17 @@ foreach my $region (keys %$nod_chrdigit ){
   $file =~ s/-\d+//;
 
   if ( $file =~ /(.*_)CHO(_.*)/ ){
-	$file = $1."CHORI29".$2;
+    $file = $1."CHORI29".$2;
   }
 
   my $outfile = "$dest_dir/$file";
 
   if ( $file ){
-	
-	my $fh;
-	open ( $fh, '>', $outfile) or die $!;
-	
-	my $cols =<<"COLS";
+    
+    my $fh;
+    open ( $fh, '>', $outfile) or die $!;
+    
+    my $cols =<<"COLS";
 ----------------------------------------------------------------------------
 $region AGP
 ----------------------------------------------------------------------------
@@ -114,13 +114,13 @@ col_9: orientation
 -----------------------------------------------------------------------------
 
 COLS
-	
-	print $fh $cols;
-	close $fh;
+    
+    print $fh $cols;
+    close $fh;
 
-	system("cat $latest >> $outfile");
-	push(@latest_agps, $latest);
-	
+    system("cat $latest >> $outfile");
+    push(@latest_agps, $latest);
+    
   }
 }
 warn "\n";
@@ -133,15 +133,15 @@ foreach my $file ( @latest_agps ){
   #my $chk_gap = `egrep '(clone|contig|N	50000)' $file`;
   my $chk_gap = `egrep '(clone|contig|N	)' $file`;
   if ( $chk_gap ){
-	warn "UNFINISHED: $file\n";
+    warn "UNFINISHED: $file\n";
 
-	# Assembly sequences for these NOD regions with gaps
-	# note that these gaps will never be filled as they are of no interest
-	# and will stay as is except IDD4 on chr 11.
-	# So make contigs for consecutive clones.
+    # Assembly sequences for these NOD regions with gaps
+    # note that these gaps will never be filled as they are of no interest
+    # and will stay as is except IDD4 on chr 11.
+    # So make contigs for consecutive clones.
 
-	assembly_contig_seq($file);
-	next;
+    assembly_contig_seq($file);
+    next;
   }
 
   my $fh;
@@ -150,7 +150,7 @@ foreach my $file ( @latest_agps ){
   my $agpfile = basename($file);
 
   if ( $agpfile =~ /(.+_)CHO(_.+)/ ){
-	$agpfile = $1."CHORI29".$2;
+    $agpfile = $1."CHORI29".$2;
   }
 
   $agpfile =~ s/-\d+//;
@@ -166,46 +166,45 @@ foreach my $file ( @latest_agps ){
   my $seq;
 
   while (<$fh>){
-	chomp;
+    chomp;
 
-	#warn $_, "\n";
-	# agp format:
-	# chr11   1       176646  1       F       CR933541.6      1       176646  +
+    #warn $_, "\n";
+    # agp format:
+    # chr11   1       176646  1       F       CR933541.6      1       176646  +
 
-	next if /^col/;
+    next if /^col/;
 
-	my ($start, $end, $rank, $status, $acc, $acc_ori, $strand) = get_fields($_);
+    my ($start, $end, $rank, $status, $acc, $acc_ori, $strand) = get_fields($_);
 
-	$acc =~ s/\.\d+$//;
+    $acc =~ s/\.\d+$//;
 
-	my $test_sv = `pfetch -D $acc`;
-	chomp $test_sv;
-	$test_sv =~ /^(.*\.\d+)\s.+/;
-	$test_sv = $1;
+    my $test_sv = `pfetch -D $acc`;
+    chomp $test_sv;
+    $test_sv =~ /^(.*\.\d+)\s.+/;
+    $test_sv = $1;
 
-#	warn "$acc_ori $acc $test_sv";
+#    warn "$acc_ori $acc $test_sv";
 
-	# acc sequence
-	if ( $acc_ori !~ /^\d+/ ){
+    # acc sequence
+    if ( $acc_ori !~ /^\d+/ ){
 
-	  $non_n = 1;
+      $non_n = 1;
 
-	  if ( $test_sv eq $acc_ori ){
-		
-		$seq .= `pfetch -s $start -e $end -q $acc`;
-	  }
+      if ( $test_sv eq $acc_ori ){
+        $seq .= `pfetch -s $start -e $end -q $acc`;
+      }
 
-	  # stop if version does not match
-	  else {
-		#unlink("$file.seq");
-		warn "Unmatched versions: AGP [$acc_ori], Pfetch [$test_sv] in $file";
-	  }
-	}
+      # stop if version does not match
+      else {
+        #unlink("$file.seq");
+        warn "Unmatched versions: AGP [$acc_ori], Pfetch [$test_sv] in $file";
+      }
+    }
 
-	# gap sequence
-	else {
-	  $seq .= "n" x $acc if $non_n == 1; # $acc here is eg, 50000 (bp of gap)
-	}
+    # gap sequence
+    else {
+      $seq .= "n" x $acc if $non_n == 1; # $acc here is eg, 50000 (bp of gap)
+    }
   }
   print $agpseq sixty_cols($seq);
   close $fh;
@@ -231,15 +230,15 @@ sub check_agp_is_up_2_date {
   warn $args, " $file" if $region eq "CHO_IDD5";
   my $diff = system("diff tmp $file");
   if ( $diff != 0 ){
-	print "AGP changed in chromoview: $file\n";
-	$file =~ /(.+-)(\d+)(\.agp)/;
-	my $version = $2;
-	$version++;
-	my $newfile = $1.$version.$3;
-	`mv tmp $newfile`;
+    print "AGP changed in chromoview: $file\n";
+    $file =~ /(.+-)(\d+)(\.agp)/;
+    my $version = $2;
+    $version++;
+    my $newfile = $1.$version.$3;
+    `mv tmp $newfile`;
   }
   else {
-	unlink "tmp";
+    unlink "tmp";
   }
   return $diff;
 }
@@ -277,33 +276,33 @@ sub assembly_contig_seq {
 
   while ( <$fh> ) {
 
-	my ($start, $end, $rank, $status, $acc, $acc_ori, $strand) = get_fields($_);
+    my ($start, $end, $rank, $status, $acc, $acc_ori, $strand) = get_fields($_);
 
-	#warn "$start, $end, $rank, $status, $acc, $acc_ori, $strand";
+    #warn "$start, $end, $rank, $status, $acc, $acc_ori, $strand";
 
-	if ( $status =~ /F|A/ ) { #eq "F" or $status eq "A" ) {
-	  push(@{$contig_acc_start_end_strand->{$acc}}, $rank, $start, $end, $strand);
-	}
-	elsif ( $status eq "N") {
-	  my $clones = scalar keys %$contig_acc_start_end_strand;
+    if ( $status =~ /F|A/ ) { #eq "F" or $status eq "A" ) {
+      push(@{$contig_acc_start_end_strand->{$acc}}, $rank, $start, $end, $strand);
+    }
+    elsif ( $status eq "N") {
+      my $clones = scalar keys %$contig_acc_start_end_strand;
 
-	  if ( $clones < 2 ){
-		$contig_acc_start_end_strand = {};
-		tie %$contig_acc_start_end_strand, "Tie::IxHash";
-	  }
+      if ( $clones < 2 ){
+        $contig_acc_start_end_strand = {};
+        tie %$contig_acc_start_end_strand, "Tie::IxHash";
+      }
 
-#	  # assembly contig seq if there are > 1 consecutive clones
-	  elsif ( $clones >= 2 ) {
-		concat_seq($contig_acc_start_end_strand, $file);
-	
-		$contig_acc_start_end_strand = {};
-		tie %$contig_acc_start_end_strand, "Tie::IxHash";
-	  }
-	}
+#      # assembly contig seq if there are > 1 consecutive clones
+      elsif ( $clones >= 2 ) {
+        concat_seq($contig_acc_start_end_strand, $file);
+    
+        $contig_acc_start_end_strand = {};
+        tie %$contig_acc_start_end_strand, "Tie::IxHash";
+      }
+    }
   }
 
   if ( scalar keys %$contig_acc_start_end_strand >= 2 ){
-	concat_seq($contig_acc_start_end_strand, $file);
+    concat_seq($contig_acc_start_end_strand, $file);
   }
 
   return;
@@ -319,20 +318,20 @@ sub concat_seq {
   $file =~ s/-\d+\.agp$//;
 
   if ( $file =~ /(.+_)CHO(_.+)/ ){
-	$file = $1."CHORI29".$2;
+    $file = $1."CHORI29".$2;
   }
 
   #warn $file, " ", keys %$contig_acc_start_end_strand;
   foreach my $acc ( keys %$contig_acc_start_end_strand ) {
 
-	my $acc_ori = $acc;
-	$acc =~ s/\.\d+$//;
-	my $start  = $contig_acc_start_end_strand->{$acc_ori}->[1];
-	my $end    = $contig_acc_start_end_strand->{$acc_ori}->[2];
-	my $rank   = $contig_acc_start_end_strand->{$acc_ori}->[0];
-	push(@ranks, $rank);
+    my $acc_ori = $acc;
+    $acc =~ s/\.\d+$//;
+    my $start  = $contig_acc_start_end_strand->{$acc_ori}->[1];
+    my $end    = $contig_acc_start_end_strand->{$acc_ori}->[2];
+    my $rank   = $contig_acc_start_end_strand->{$acc_ori}->[0];
+    push(@ranks, $rank);
 
-	$seq .= `pfetch -s $start -e $end -q $acc`;
+    $seq .= `pfetch -s $start -e $end -q $acc`;
   }
 
   $ranks .= $ranks[0]."-".$ranks[-1];
@@ -357,10 +356,10 @@ sub sixty_cols {
   my $formatted;
 
   while ($seq =~ /(.{1,60})/g) {
-	$seqfrag = $1;
-	$len += length($seqfrag);
+    $seqfrag = $1;
+    $len += length($seqfrag);
 
-	$formatted .= sprintf("%-60s\t%d\n", $seqfrag, $len);
+    $formatted .= sprintf("%-60s\t%d\n", $seqfrag, $len);
   }
   return lc($formatted);
 }
