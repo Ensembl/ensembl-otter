@@ -26,11 +26,12 @@ my $secondary_2_primary = {};	# secondary acc to primary acc
   my ($dataset, $prepare, $download);
   my $help = sub { exec('perldoc', $0) };
 
-  Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset,    # eg, human or mouse or zebrafish
-										'h|help'       => $help,
-										'download'     => \$download,
-										'prepare'      => \$prepare,
-									   ) or $help->();                  # plus default options
+  Bio::Otter::Lace::Defaults::do_getopt(
+      'ds|dataset=s' => \$dataset,    # eg, human or mouse or zebrafish
+      'h|help'       => $help,
+      'download'     => \$download,
+      'prepare'      => \$prepare,
+      ) or $help->();                  # plus default options
   $help->() unless ( $dataset );
 
   my $client      = Bio::Otter::Lace::Defaults::make_Client();	        # Bio::Otter::Lace::Client
@@ -44,17 +45,17 @@ my $secondary_2_primary = {};	# secondary acc to primary acc
   my $type = 0;
 
   if ( $download ){
-	foreach my $file (  $sp_del, $tr_del ){
-	  my $f = $ftp.$file;
+    foreach my $file (  $sp_del, $tr_del ){
+      my $f = $ftp.$file;
 
-	  # downloading list of deleted SW and TREM acc
-	  my $c = system("wget $f");
-	  die if $c != 0;
-	  $type++;
-	  $file =~ s/docs\/// if $file =~ /docs/;
+      # downloading list of deleted SW and TREM acc
+      my $c = system("wget $f");
+      die if $c != 0;
+      $type++;
+      $file =~ s/docs\/// if $file =~ /docs/;
 
-	  get_fasta_headers_only($D_SW_TR, $del_sptr_mapping, $file, $type );
-	}
+      get_fasta_headers_only($D_SW_TR, $del_sptr_mapping, $file, $type );
+    }
   }
 
   prepare_uniprot_data(connect_uniprot_db("uniprot_8_4")) if $prepare;
@@ -73,11 +74,11 @@ sub get_fasta_headers_only {
   my ($D_SW_TR, $del_sptr_mapping, $download, $type ) = @_;
 
   foreach (`cat $download`){
-	chomp;
-	if ( /^([O,P,Q][0-9][A-Z,0-9][A-Z,0-9][A-Z,0-9][0-9])/ ){
-	  $D_SW_TR->{$1} = "Sw:" if $type == 1;
-	  $D_SW_TR->{$1} = "Tr:" if $type == 2;
-	}
+    chomp;
+    if ( /^([O,P,Q][0-9][A-Z,0-9][A-Z,0-9][A-Z,0-9][0-9])/ ){
+      $D_SW_TR->{$1} = "Sw:" if $type == 1;
+      $D_SW_TR->{$1} = "Tr:" if $type == 2;
+    }
   }
   store($D_SW_TR, $del_sptr_mapping);
 }
@@ -104,16 +105,16 @@ sub prepare_uniprot_data {
   #+-----------+----------+
 
   my $primary = $dbh->prepare(qq{
-								 SELECT a.accession, e.data_class
-								 FROM accession a, entry e
-								 WHERE a.entry_id = e.entry_id
-								 AND a.qualifier ='primary'
-								}
-							 );
+    SELECT a.accession, e.data_class
+    FROM accession a, entry e
+    WHERE a.entry_id = e.entry_id
+    AND a.qualifier ='primary'
+    }
+      );
 
   $primary->execute;
   while ( my ($acc, $sw_tr) = $primary->fetchrow ) {
-	$primary_2_acc_db->{$acc} = $sw_tr;
+    $primary_2_acc_db->{$acc} = $sw_tr;
   }
   $primary->finish;
 
@@ -122,29 +123,29 @@ sub prepare_uniprot_data {
 
   my @entry_ids;
   while( my $entry_id = $secondary->fetchrow ){
-	push(@entry_ids, $entry_id);
+    push(@entry_ids, $entry_id);
   }
   $secondary->finish;
 
   my $qry = $dbh->prepare(qq{
-							 SELECT a.accession, a.qualifier, e.data_class
-							 FROM accession a, entry e
-							 WHERE a.entry_id = e.entry_id
-							 AND a.entry_id = ?
-							 ORDER BY a.qualifier;
-							 }
-						 );
+    SELECT a.accession, a.qualifier, e.data_class
+    FROM accession a, entry e
+    WHERE a.entry_id = e.entry_id
+    AND a.entry_id = ?
+    ORDER BY a.qualifier;
+    }
+      );
 
   foreach my $id ( @entry_ids ) {
-	$qry->execute($id);
+    $qry->execute($id);
 
-	my $prim_acc;
-	while ( my ($acc, $prim_sec, $sw_tr) = $qry->fetchrow ) {
-	  if ( $prim_sec eq "primary" ){
-		$prim_acc = $acc;
-	  }
-	  $secondary_2_primary->{$acc} = $prim_acc if $prim_sec eq "secondary";
-	}
+    my $prim_acc;
+    while ( my ($acc, $prim_sec, $sw_tr) = $qry->fetchrow ) {
+      if ( $prim_sec eq "primary" ){
+        $prim_acc = $acc;
+      }
+      $secondary_2_primary->{$acc} = $prim_acc if $prim_sec eq "secondary";
+    }
   }
 
   # prepare hash in disk for use later
@@ -158,45 +159,45 @@ sub make_sqls_to_patch_otter_evidences {
   my ($dbh, $ds) = @_;
 
   my $evis = $dbh->prepare(qq{
-							  SELECT evidence_name
-							  FROM evidence
-							  WHERE evidence_name
-							  NOT REGEXP "^..:"
-							 }
-						  );
+    SELECT evidence_name
+    FROM evidence
+    WHERE evidence_name
+    NOT REGEXP "^..:"
+    }
+      );
   $evis->execute;
 
   my $sql;
   while ( my $acc = $evis->fetchrow ){
-	my $ori_acc = $acc;
-	$acc =~ s/\.\d+$//;
+    my $ori_acc = $acc;
+    $acc =~ s/\.\d+$//;
 
-	if ( my $prefix = $primary_2_acc_db->{$acc} ){
+    if ( my $prefix = $primary_2_acc_db->{$acc} ){
 
       # uniprot primary acc
-	  $prefix eq "STD" ? ($prefix = "Sw:") : ($prefix = "Tr:");
-	  my $new_name = $prefix.$acc;
-	  $sql .= qq{update evidence set evidence_name = '$new_name' where evidence_name = '$acc'}. "\n";
+      $prefix eq "STD" ? ($prefix = "Sw:") : ($prefix = "Tr:");
+      my $new_name = $prefix.$acc;
+      $sql .= qq{update evidence set evidence_name = '$new_name' where evidence_name = '$acc'}. "\n";
 
-	}
-	elsif ( exists $D_SW_TR->{$acc} ){
-	  print "#$acc OBSOLETE\n";
-	}
-	elsif ( my $primAcc = $secondary_2_primary->{$acc} ){
+    }
+    elsif ( exists $D_SW_TR->{$acc} ){
+      print "#$acc OBSOLETE\n";
+    }
+    elsif ( my $primAcc = $secondary_2_primary->{$acc} ){
 
-	  # dealing with uniprot secondary acc
-	  my $prefix = $primary_2_acc_db->{$primAcc};
-	
-	  $prefix eq "STD" ? ($prefix = "Sw:") : ($prefix = "Tr:");
-	  print "#$acc is secondary to $primAcc [$prefix]\n";
-	  my $new_name = $prefix.$acc; # not changed to primary acc, only append Sw: or Tr:
-	
-	  $sql .= qq{update evidence set evidence_name = '$new_name' where evidence_name = '$acc'}. "\n";
+      # dealing with uniprot secondary acc
+      my $prefix = $primary_2_acc_db->{$primAcc};
+    
+      $prefix eq "STD" ? ($prefix = "Sw:") : ($prefix = "Tr:");
+      print "#$acc is secondary to $primAcc [$prefix]\n";
+      my $new_name = $prefix.$acc; # not changed to primary acc, only append Sw: or Tr:
+    
+      $sql .= qq{update evidence set evidence_name = '$new_name' where evidence_name = '$acc'}. "\n";
 
-	}
-	elsif ( $acc =~ /^[O,P,Q]/ and $acc !~ /_/) {
-	  print "#$acc NOT FOUND\n";
-	}
+    }
+    elsif ( $acc =~ /^[O,P,Q]/ and $acc !~ /_/) {
+      print "#$acc NOT FOUND\n";
+    }
     elsif ( $acc =~ /^N[C,G,T,Z,M,R,P]_|^X[M,R,P]_|^ZP_/ ) {
       # current NCBI RefSeq records: NC_, NG_, NT_, NZ_, NM_, NR_, XM_, XR_, NP_, XP_, ZP_
       print "#REFSEQ: $acc\n";
@@ -214,10 +215,10 @@ sub make_sqls_to_patch_otter_evidences {
       print "#TR_ENTRY_NAME $acc\n";
     }
     else {
-	  # all the rest goes to Em:
-	  my $new_name = "Em:$acc";
-	  $sql .= qq{update evidence set evidence_name = '$new_name' where evidence_name = '$ori_acc'}. "\n";
-	}
+      # all the rest goes to Em:
+      my $new_name = "Em:$acc";
+      $sql .= qq{update evidence set evidence_name = '$new_name' where evidence_name = '$ori_acc'}. "\n";
+    }
   }
   print $sql;
 }

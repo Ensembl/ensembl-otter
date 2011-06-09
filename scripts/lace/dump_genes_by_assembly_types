@@ -1770,9 +1770,9 @@ sub build_redundant_set {
 
   open (my $in,'<', $filename) || die ("Could not open redundant file '$filename' for reading:\n $!\n");
   while(<$in>){
-	 if ($_ =~ /(\S+)/){
-		$redundant_set->{$1}=1;
-	 }
+     if ($_ =~ /(\S+)/){
+        $redundant_set->{$1}=1;
+     }
   }
   close $in;
   return $redundant_set;
@@ -1785,9 +1785,9 @@ sub get_valid_gene_ids {
 
   open (my $in,'<', $filename) || die ("Could not open load file '$filename' for reading:\n $!\n");
   while(<$in>){
-	 if ($_ =~ /(\S+)/){
-		$list_of_gene_ids .= ",$1";
-	 }
+     if ($_ =~ /(\S+)/){
+        $list_of_gene_ids .= ",$1";
+     }
   }
   close $in;
   return $list_of_gene_ids;
@@ -1799,7 +1799,7 @@ sub main {
     my $skip_to    = 0;
     my $reduncount = 0;
     my $loadcount  = 0;
-	my ($redunfile,$loadfile,$prevdump);
+    my ($redunfile,$loadfile,$prevdump);
     my $redundant_set = {};
 
         # only include the following (comma-separated list of) chromosome names
@@ -1810,8 +1810,8 @@ sub main {
         'dataset=s'     => \$dataset_name,
         'skipto=s'      => \$skip_to,
         'prevdump=s'    => \$prevdump,
-		'redunfile=s'   => \$redunfile,
-		'loadfile=s'    => \$loadfile,
+        'redunfile=s'   => \$redunfile,
+        'loadfile=s'    => \$loadfile,
         'mydebug!'      => \$debug,
         'onlychrs=s'    => \$onlychrs,
     );
@@ -1839,46 +1839,45 @@ sub main {
     $otter_dba     = $ds->get_cached_DBAdaptor; # now it is global
     $gene_adaptor  = $otter_dba->get_GeneAdaptor();
     $slice_adaptor = $otter_dba->get_SliceAdaptor();
-	 
-	 #if redundant file is present create a hash of redundant dbids
-	 if ($redunfile) {
-		$redundant_set = build_redundant_set($redunfile);
-	 }
-	 my $sth_gene_ids;
-	 if ($loadfile) {
-		my $list_of_gene_ids = get_valid_gene_ids($loadfile);
-		$sth_gene_ids = $otter_dba->prepare(qq{
+     
+     #if redundant file is present create a hash of redundant dbids
+     if ($redunfile) {
+        $redundant_set = build_redundant_set($redunfile);
+     }
+     my $sth_gene_ids;
+     if ($loadfile) {
+        my $list_of_gene_ids = get_valid_gene_ids($loadfile);
+        $sth_gene_ids = $otter_dba->prepare(qq{
         SELECT gene_id, stable_id, version, UNIX_TIMESTAMP(modified)
         FROM gene_stable_id
         WHERE gene_id IN (}.$list_of_gene_ids.qq{)
         ORDER by gene_id ASC
     });
-	 }
-	 else {
-		$sth_gene_ids = $otter_dba->prepare(qq{
+     }
+     else {
+        $sth_gene_ids = $otter_dba->prepare(qq{
         SELECT gene_id, stable_id, version, UNIX_TIMESTAMP(modified)
         FROM gene_stable_id
         WHERE gene_id > $skip_to
         ORDER by gene_id ASC
     });
-	 }
-	 
+     }
+     
     $sth_gene_ids->execute();
 
     while( my ($gene_id, $stable_id, $version, $modified) = $sth_gene_ids->fetchrow()) {
 
-		### Ignore gene_ids in Chao-Kung's list of redundant gene_dbids
+        ### Ignore gene_ids in Chao-Kung's list of redundant gene_dbids
 
         print STDERR "$gene_id\t$stable_id.$version\t$modified\t";
 
-		if ($redunfile && exists $redundant_set->{$gene_id}){
-		  $reduncount++;
-		  print STDERR "--- REDUNDANT\n";
-		  next;
-		  
-		}
+        if ($redunfile && exists $redundant_set->{$gene_id}){
+          $reduncount++;
+          print STDERR "--- REDUNDANT\n";
+          next;
+        }
 
-		$loadcount++;
+        $loadcount++;
         my $gene = $gene_adaptor->fetch_by_dbID($gene_id);
         my $contig_id_set = {};
         for my $transcript (@{$gene->get_all_Transcripts()}) {

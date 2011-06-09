@@ -141,7 +141,7 @@ sub parse_mgi_input {
         push(@$mgi_data, $parsed_line);
     }
 
-    print STDERR "\n-------------------  END OF PARSING  -----------------------\n\n";	
+    print STDERR "\n-------------------  END OF PARSING  -----------------------\n\n";
 
     # checking symbols linked to multiple VEGA id
 
@@ -412,7 +412,7 @@ sub get_gids {
       # prefix can only be KO or WU for now
       if ( $source !~ /KO|WU|havana/ ){
         print STDERR "ERROR: FOUND unexpected $gsid in $seq_region_name, gid: $gid, source: $source\n";
-	next;
+        next;
       }
       if ( $mapping->[0] and $seq_region_name !~ /^chr/i  ){
         push(@$gids, $gid) if find_from_expected_haplotype($chr, $seq_region_name, $vega_name, $mapping, $gsid, $gid, $source);
@@ -428,7 +428,7 @@ sub get_gids {
 sub find_from_expected_haplotype {
 
   my ($chr, $seq_region_name, $vega_name, $mapping, $gsid, $gid, $source) = @_;
-	
+
   warn "SEARCHING for HAPLOTYPE(s) in ", join(', ', @$mapping), "\n";
   my $match;
   foreach ( @$mapping ) {
@@ -484,7 +484,7 @@ sub store_update {
     print STDERR "DESC CHANGE from '$curr_desc' to '$mgi_desc' => $assembly\n";
   }
   else {
-    print STDERR "DESC UP-TO-DATE: $source gene: $curr_name ($curr_stable_id)\n";	
+    print STDERR "DESC UP-TO-DATE: $source gene: $curr_name ($curr_stable_id)\n";
   }
 
   if ($need_update){

@@ -22,7 +22,7 @@ use CGI::Carp qw(warningsToBrowser fatalsToBrowser);
 
   my $cache = "$ENV{'DOCUMENT_ROOT'}/tmp/mouse_NOD_clones_TPF.html";
 
-  ($cache) = $cache =~ m|([a-z0-9_/\.]+)|i;	
+  ($cache) = $cache =~ m|([a-z0-9_/\.]+)|i;
 
   if ( -M $cache > (1/48) || ! -e $cache ){
     main($cache);
@@ -43,20 +43,20 @@ sub main {
   open(my $fh, '>', $cached) or die "Cannot create cached page!";
 
   my $sw = SangerWeb->new({
-						   'title'   => 'Mouse NOD clone / Assembly sequencing status',
-						   'banner'  => qq{<div style='font-family: sans-serif;
-                                                           padding: 10px;
-                                                     margin-bottom: 1em;
-                                                      margin-right: 0.7em;
-                                                        text-align: center;
-                                                        background: #00008B;
-                                                             color: white;
-                                                              size: 90%;'>Clone / Assembly info of the NOD genome<br>
-                                           from 2 NOD (Non-Obese Diabetic) mouse BAC libraries:<br>
-                                           NOD <font size=4 color='#DAD9FE'>[Strain NOD/MrkTac]</font>,
-                                           CHORI-29 <font size=4 color='#DAD9FE'>[Strain NOD/LtJ]</font></div>},
-						   'inifile' => "$ENV{'DOCUMENT_ROOT'}/Projects/M_musculus-NOD/header.ini",
-						  });
+      'title'   => 'Mouse NOD clone / Assembly sequencing status',
+      'banner'  => qq{<div style='font-family: sans-serif;
+                           padding: 10px;
+                     margin-bottom: 1em;
+                      margin-right: 0.7em;
+                        text-align: center;
+                        background: #00008B;
+                             color: white;
+                              size: 90%;'>Clone / Assembly info of the NOD genome<br>
+           from 2 NOD (Non-Obese Diabetic) mouse BAC libraries:<br>
+           NOD <font size=4 color='#DAD9FE'>[Strain NOD/MrkTac]</font>,
+           CHORI-29 <font size=4 color='#DAD9FE'>[Strain NOD/LtJ]</font></div>},
+           'inifile' => "$ENV{'DOCUMENT_ROOT'}/Projects/M_musculus-NOD/header.ini",
+                          });
 
   print     $sw->header();
   print $fh $sw->header();
@@ -94,15 +94,15 @@ sub main {
 
   foreach my $ctg_name ( @sorted_ctgs ) {
 
-	$count++;
+    $count++;
 
-	# replace chr number with contig_name of a tpf clone (not for non-tpf clone)
+    # replace chr number with contig_name of a tpf clone (not for non-tpf clone)
         $clone_info->{$_}->[2] = $ctg_name for @{$contig_clone->{$ctg_name}};
-	
-	push (@$clones_tpf, @{$contig_clone->{$ctg_name}});
 
-	# add space in between clones of different chromosomes
-	push (@$clones_tpf, "space");
+    push (@$clones_tpf, @{$contig_clone->{$ctg_name}});
+
+    # add space in between clones of different chromosomes
+    push (@$clones_tpf, "space");
   }
 
   my $caption_tpf = qq{<font color="3723AA"><center>Assembled Clones</center></font>};
@@ -114,12 +114,12 @@ sub main {
   my $clones = [];
 
   foreach my $cln ( keys %$clone_info ) {
-	if ( !exists $tpf_clones->{$cln} && $clone_info->{$cln}->[3] =~ /^NOD/) {
-	  push(@$clones, $cln);
-	}
-	if ( !exists $tpf_clones->{$cln} && $clone_info->{$cln}->[3] =~ /^CHORI-29/) {
-	  push(@$clones, $cln);
-	}
+    if ( !exists $tpf_clones->{$cln} && $clone_info->{$cln}->[3] =~ /^NOD/) {
+      push(@$clones, $cln);
+    }
+    if ( !exists $tpf_clones->{$cln} && $clone_info->{$cln}->[3] =~ /^CHORI-29/) {
+      push(@$clones, $cln);
+    }
   }
 
   my $caption_non_tpf = qq{<font color="620E34"><center>Non-assembled Clones</center></font>};
@@ -187,13 +187,13 @@ sub get_all_NOD_clones {
     # as they are used to close a gap in the genomic B6 mouse project
 
     if ( lc($desc) eq "cancelled" or
-    	 $clone eq 'bQ480D22' 	  or
-		 $clone eq 'bQ143F13'     or
-		 $clone eq 'mmNODBACend'  or
-		 $clone eq 'bQ353G8'      or   # do not belong to NOD (cas info)
-		 $clone eq 'bQ262D11'     or   # do not belong to NOD (cas info)
-		 $clone eq 'CHORI29_BACend' ){
-	 next;
+         $clone eq 'bQ480D22'     or
+         $clone eq 'bQ143F13'     or
+         $clone eq 'mmNODBACend'  or
+         $clone eq 'bQ353G8'      or   # do not belong to NOD (cas info)
+         $clone eq 'bQ262D11'     or   # do not belong to NOD (cas info)
+         $clone eq 'CHORI29_BACend' ){
+     next;
     }
 
     my $proj_info = project_name_to_accession_status( $proj );
@@ -267,9 +267,9 @@ sub sequence_status {
 
   my $proj = shift;
   my $sth = prepare_track_statement(qq{
-	    SELECT id_htgsphase
+        SELECT id_htgsphase
             FROM sequence where projectname='$proj'
-	    ORDER by sv
+        ORDER by sv
             DESC
             });
 
@@ -319,7 +319,7 @@ sub find_gap {
   my $clones_followed_by_gap = {};
 
   foreach my $prefix ( $bQ, $bCN){
-	my $sth = prepare_track_statement(qq{
+    my $sth = prepare_track_statement(qq{
           SELECT tr.id_tpfrow tr, tr.clonename
           FROM   tpf_row tr
           ,      clone c
@@ -328,32 +328,32 @@ sub find_gap {
           AND    c.speciesname = 'Mouse'
           });
 
-	$sth->execute;
+    $sth->execute;
 
-	my ( $next_row, $last_clone );
+    my ( $next_row, $last_clone );
 
-	while (my ($row, $clone) =  $sth->fetchrow) {
+    while (my ($row, $clone) =  $sth->fetchrow) {
 
-	  if ( $next_row and $next_row != $row ){
+      if ( $next_row and $next_row != $row ){
 
-		#print "GAP\t",$next_row," $last_clone<br>";
-	
-		my $gap_info = [];
-		$gap_info = fetch_gap_info($next_row);
+        #print "GAP\t",$next_row," $last_clone<br>";
 
-		
-		$clones_followed_by_gap->{$last_clone} = $gap_info if ref($gap_info) eq "ARRAY";
-	  }
+        my $gap_info = [];
+        $gap_info = fetch_gap_info($next_row);
 
-	  # cases where the clone is no long followed by a gap
-	  if ( exists $clones_followed_by_gap->{$clone} ){
-		delete $clones_followed_by_gap->{$clone};
-	  }
 
-	 # print $row, " ----------- $clone<br>";
-	  $next_row = $row + 1;
-	  $last_clone = $clone;
-	}
+        $clones_followed_by_gap->{$last_clone} = $gap_info if ref($gap_info) eq "ARRAY";
+      }
+
+      # cases where the clone is no long followed by a gap
+      if ( exists $clones_followed_by_gap->{$clone} ){
+        delete $clones_followed_by_gap->{$clone};
+      }
+
+     # print $row, " ----------- $clone<br>";
+      $next_row = $row + 1;
+      $last_clone = $clone;
+    }
   }
   return $clones_followed_by_gap;
 }
@@ -389,7 +389,7 @@ sub clone_status {
     my $ext         = external_clone_name($clone);
     my $proj_info   = project_name_to_accession_status($clone_info->{$clone}->[0]);
     my $seq_status  = $proj_info->{$clone_info->{$clone}->[0]}->[1];
-	my $contig_name = $clone_info->{$clone}->[2];
+    my $contig_name = $clone_info->{$clone}->[2];
 
     $num++ if $clone ne "space";
 
@@ -405,7 +405,7 @@ sub clone_status {
        $num = 0;
     }
 
-	# clones followed by gap
+    # clones followed by gap
     elsif ( $clones_followed_by_gap and exists $clones_followed_by_gap->{$clone} ){
 
       my $length   = "Length $clones_followed_by_gap->{$clone}->[0]";
@@ -413,24 +413,24 @@ sub clone_status {
 
       if ( $num == 1 and $contig_name =~ /^chr/i ){
 
-		# $contig_name here is eg, chr3_NOD_IDD3
+        # $contig_name here is eg, chr3_NOD_IDD3
 
-		# add a link to AGP file, seq file of the region, embl acc and swap sanger name with external clone name
-		$rows = links_to_agp_seq($contig_name, $cols, $rows);
-	  }
+        # add a link to AGP file, seq file of the region, embl acc and swap sanger name with external clone name
+        $rows = links_to_agp_seq($contig_name, $cols, $rows);
+      }
 
-	  $rows = links_to_acc_and_swap($seq_status, $clone, $clone_info, $rows, $num, $ext);
+      $rows = links_to_acc_and_swap($seq_status, $clone, $clone_info, $rows, $num, $ext);
 
       $num++; # increment by 1 for gap
       push( @$rows, [$num, "GAP - ($gap_type) $length"] );
     }
 
-	# overlapping clones
+    # overlapping clones
     else {
       if ( $num == 1 and $contig_name =~ /^chr(\d+)/ ){
-		$rows = links_to_agp_seq($contig_name, $cols, $rows);
-	  }
-	  $rows = links_to_acc_and_swap($seq_status, $clone, $clone_info, $rows, $num, $ext);
+        $rows = links_to_agp_seq($contig_name, $cols, $rows);
+      }
+      $rows = links_to_acc_and_swap($seq_status, $clone, $clone_info, $rows, $num, $ext);
     }
   }
 
@@ -447,79 +447,78 @@ sub links_to_agp_seq {
 
   # hard coded html links to contigs of consecutive clones
   my $regionContig_seq = {
-					'chr17_NOD_IDD16' => [
-										  'chr17_NOD_IDD16_Ranks_6-8.seq',
-										  'chr17_NOD_IDD16_Ranks_10-11.seq'
-										  ],
-
-					'chr1_NOD_IDD5.1' => [
-										  'chr1_NOD_IDD5.1_Ranks_1-2.seq',
-										  'chr1_NOD_IDD5.1_Ranks_4-5.seq'
-										 ],
-					'chr3_NOD_IDD10'  => [
-										  'chr3_NOD_IDD10_Ranks_5-7.seq',
-										  'chr3_NOD_IDD10_Ranks_11-13.seq'
-										 ],
-					'chr3_NOD_IDD3'   => [
-										  'chr3_NOD_IDD3_Ranks_1-2.seq',
-										  'chr3_NOD_IDD3_Ranks_6-7.seq'
-										 ],
-					'chr11_NOD_IDD4'  => [
-										  'chr11_NOD_IDD4_Ranks_1-9.seq'
-										 ]
-				   };
+      'chr17_NOD_IDD16' => [
+          'chr17_NOD_IDD16_Ranks_6-8.seq',
+          'chr17_NOD_IDD16_Ranks_10-11.seq',
+          ],
+          'chr1_NOD_IDD5.1' => [
+              'chr1_NOD_IDD5.1_Ranks_1-2.seq',
+              'chr1_NOD_IDD5.1_Ranks_4-5.seq',
+          ],
+          'chr3_NOD_IDD10'  => [
+              'chr3_NOD_IDD10_Ranks_5-7.seq',
+              'chr3_NOD_IDD10_Ranks_11-13.seq',
+          ],
+          'chr3_NOD_IDD3'   => [
+              'chr3_NOD_IDD3_Ranks_1-2.seq',
+              'chr3_NOD_IDD3_Ranks_6-7.seq',
+          ],
+          'chr11_NOD_IDD4'  => [
+              'chr11_NOD_IDD4_Ranks_1-9.seq',
+          ]
+  };
 
 
   if ( -e "$ENV{'DOCUMENT_ROOT'}/Projects/M_musculus-NOD/NOD_AGP/$agp_seq" ){
-	$chk = 1;
+    $chk = 1;
   }
 
   if ( $chk ) {
-	push( @$rows, [qq{<td bgcolor="F5EFE9" align="center"colspan="$cols" >
-					  <font color='#660D1B' size=4><B>$contig_name</B></font>&nbsp;&nbsp;
-					  <a target='_new' href='/Projects/M_musculus-NOD/NOD_AGP/$agp'><font size=1>AGP</font></a>&nbsp;
-					  <a target='_new' href='/Projects/M_musculus-NOD/NOD_AGP/$agp_seq'><font size=1>Region Sequence</font></a>
-					  </td>
-					 }
-				  ]
-		);
+    push( @$rows, [qq{<td bgcolor="F5EFE9" align="center"colspan="$cols" >
+                      <font color='#660D1B' size=4><B>$contig_name</B></font>&nbsp;&nbsp;
+                      <a target='_new' href='/Projects/M_musculus-NOD/NOD_AGP/$agp'><font size=1>AGP</font></a>&nbsp;
+                      <a target='_new' href='/Projects/M_musculus-NOD/NOD_AGP/$agp_seq'><font size=1>Region Sequence</font></a>
+                      </td>
+                     }
+                  ]
+        );
   }
   # skip Region Sequence link if region is not yet finished
   else {
 
-	my $seqhref;
-	foreach my $seqfile ( @{$regionContig_seq->{$contig_name}} ){
-	  $seqfile =~ /.+_(Ranks.+)/;
-	  $seqhref .= "<a target='_new' href='/Projects/M_musculus-NOD/NOD_AGP/$seqfile'>
+    my $seqhref;
+    foreach my $seqfile ( @{$regionContig_seq->{$contig_name}} ){
+      $seqfile =~ /.+_(Ranks.+)/;
+      $seqhref .= "<a target='_new' href='/Projects/M_musculus-NOD/NOD_AGP/$seqfile'>
                    <font size=1>$1</font></a>&nbsp;";
-	}
+    }
 
-	push( @$rows, [qq{<td bgcolor="F5EFE9" align="center"colspan="$cols" >
-					  <font color='#660D1B' size=4><B>$contig_name</B></font>&nbsp;&nbsp;
-					  <a target='_new' href='/Projects/M_musculus-NOD/NOD_AGP/$agp'><font size=1>AGP</font></a>&nbsp;
-					  $seqhref
-					  </td>
-					 }
-				  ]
-		);
+    push( @$rows, [qq{<td bgcolor="F5EFE9" align="center"colspan="$cols" >
+                      <font color='#660D1B' size=4><B>$contig_name</B></font>&nbsp;&nbsp;
+                      <a target='_new' href='/Projects/M_musculus-NOD/NOD_AGP/$agp'><font size=1>AGP</font></a>&nbsp;
+                      $seqhref
+                      </td>
+                     }
+                  ]
+        );
   }
-	
+
   return $rows;
-}	
+}
 
 sub links_to_acc_and_swap {
 
   my ($seq_status, $clone, $clone_info, $rows, $num, $ext) = @_;
-	
+
   # get chrom digit
   my $contig_name = $clone_info->{$clone}->[2];
   if ( $contig_name =~ /^chr(\d+)/ ) {
-	$clone_info->{$clone}->[2] = $1;
+    $clone_info->{$clone}->[2] = $1;
   }
 
   # make acc linked to EMBL seq page in ftp site
   clone_seq_link($seq_status, $clone, $clone_info);
-		
+
   # swap sanger_name with external clone name
   push( @$rows, [$num, $ext, @{$clone_info->{$clone}}] );
 
@@ -531,10 +530,10 @@ sub external_clone_name {
   my $clone = shift;
 
   my $sth = prepare_track_statement(qq{
-									   SELECT externalname 
-									   FROM external_name 
-									   WHERE clonename = '$clone'
-									  });
+                                       SELECT externalname
+                                       FROM external_name
+                                       WHERE clonename = '$clone'
+                                      });
 
   $sth->execute;
 
@@ -569,45 +568,45 @@ sub results_table {
     for (my $i = 0; $i < scalar @info; $i = $i + 2 ) {
 
       $t .= t_row(
-		  qq{    <th bgcolor="#ccccff" colspan=$col_count>$info[$i]</th>},
-		 );
+          qq{    <th bgcolor="#ccccff" colspan=$col_count>$info[$i]</th>},
+         );
 
       $t .= t_row(
-				  map { qq{    <th bgcolor="#ccccff" align="left" >$_</th>} } @$header,
-				 );
+          map { qq{    <th bgcolor="#ccccff" align="left" >$_</th>} } @$header,
+          );
 
       my $count = 1;
 
       if ( $info[$i+1]->[0] ) {
 
-		foreach my $r (@{$info[$i+1]} ) {
+        foreach my $r (@{$info[$i+1]} ) {
 
-		  $count++;
-		  my $bgcolor = ($count % 2 == 0) ? "#ffffff" : "#D8E0F4";
+          $count++;
+          my $bgcolor = ($count % 2 == 0) ? "#ffffff" : "#D8E0F4";
 
-		  my $tr =[];
+          my $tr =[];
 
-		  # @$r: all the col. info of each clone
-		  foreach ( @$r ) {
+          # @$r: all the col. info of each clone
+          foreach ( @$r ) {
 
-			if ( /^GAP/ ) {
-			  push(@$tr, qq{    <td bgcolor="#99CCFF" align="center" colspan="$col_count-1"><font color='black' size=3><B>$_</B></font></td>});
-			}
-			elsif ( /^<td/ ) {
-			  push(@$tr, qq{    <td bgcolor="white" align="center"><font color='white'><B>$_</B></font></td>});
-			}
-			else {
-			  push(@$tr, qq{    <td bgcolor="$bgcolor">$_</td>});
-			}
-		  }
-	
-		  $t .= t_row(@$tr);
-		}
+            if ( /^GAP/ ) {
+              push(@$tr, qq{    <td bgcolor="#99CCFF" align="center" colspan="$col_count-1"><font color='black' size=3><B>$_</B></font></td>});
+            }
+            elsif ( /^<td/ ) {
+              push(@$tr, qq{    <td bgcolor="white" align="center"><font color='white'><B>$_</B></font></td>});
+            }
+            else {
+              push(@$tr, qq{    <td bgcolor="$bgcolor">$_</td>});
+            }
+          }
+
+          $t .= t_row(@$tr);
+        }
       }
-	  else {
-		$count++;
-		my $bgcolor = ($count % 2 == 0) ? "#ffffff" : "#D8E0F4";
-		$t .= t_row(qq{    <td bgcolor="$bgcolor" align="center" colspan="$col_count"><font color='black'><B>NA</B></font></td>});
+      else {
+        $count++;
+        my $bgcolor = ($count % 2 == 0) ? "#ffffff" : "#D8E0F4";
+        $t .= t_row(qq{    <td bgcolor="$bgcolor" align="center" colspan="$col_count"><font color='black'><B>NA</B></font></td>});
       }
     }
 
