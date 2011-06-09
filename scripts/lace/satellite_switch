@@ -53,36 +53,37 @@ $PORTS_RE = qr{\b($PORTS_RE)\b};
         }
         # warn "$name: Looking at $connect\n";
         my ($sathost) = $connect =~ $HOSTS_RE;
-	my ($satport) = $connect =~ $PORTS_RE;
+        my ($satport) = $connect =~ $PORTS_RE;
 
-	if ($sathost && $satport) {
-	    if ($switch eq 'master' && $sathost eq $SLAVE{$satport}) {
-		$sathost = $MASTER{$satport};
-	    } elsif ($switch eq 'slave' && $sathost eq $MASTER{$satport}) {
-		$sathost = $SLAVE{$satport};
-	    } elsif ($sathost eq $SLAVE{$satport} || $sathost eq $MASTER{$satport}) {
-		warn "ok:  Dataset $name is already on $switch ($sathost:$satport)\n";
-		next;
-	    }
+        if ($sathost && $satport) {
+            if ($switch eq 'master' && $sathost eq $SLAVE{$satport}) {
+                $sathost = $MASTER{$satport};
+            } elsif ($switch eq 'slave' && $sathost eq $MASTER{$satport}) {
+                $sathost = $SLAVE{$satport};
+            } elsif ($sathost eq $SLAVE{$satport} || $sathost eq $MASTER{$satport}) {
+                warn "ok:  Dataset $name is already on $switch ($sathost:$satport)\n";
+                next;
+            }
 
-	} else {
-	    warn "[W] Dataset $name current configuration not recognised,\n      $meta_key => { $connect }\n";
+        } else {
+            warn "[W] Dataset $name current configuration not recognised,\n      $meta_key => { $connect }\n";
             next;
         }
 
-	print STDERR "\n=>  Switching $name to $switch\n";
-        my @command = ('./save_satellite_db',
+        print STDERR "\n=>  Switching $name to $switch\n";
+        my @command = (
+            './save_satellite_db',
             -dataset    => $name,
             -key        => $meta_key,
             -sathost    => $sathost,
             -satport    => $satport,
             );
-	if ($dryrun) {
-	    print "Would run: @command\n";
-	} else {
-	    warn "Running: @command\n";
-	    system(@command);
-	}
+        if ($dryrun) {
+            print "Would run: @command\n";
+        } else {
+            warn "Running: @command\n";
+            system(@command);
+        }
     }
 }
 

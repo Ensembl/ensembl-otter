@@ -19,14 +19,14 @@ use Data::Dumper;
     my $special      = undef;
     my $ss;
     Bio::Otter::Lace::Defaults::do_getopt(
-					  'h|help!'   => \$help,
-					  'dataset=s' => \$dataset_name,
-					  'set=s'     => \$ss_name,
-					  'min=i'     => \$start,
-					  'max=i'     => \$stop,
-					  'sql'       => \$sql,
-					  'slice=s'   => \$special,
-					  ) || usage();
+        'h|help!'   => \$help,
+        'dataset=s' => \$dataset_name,
+        'set=s'     => \$ss_name,
+        'min=i'     => \$start,
+        'max=i'     => \$stop,
+        'sql'       => \$sql,
+        'slice=s'   => \$special,
+        ) || usage();
     usage() if $help;
     die "I need a dataset name\n"      unless $dataset_name;
     die "I need a Sequence Set name\n" unless $ss_name;
@@ -34,7 +34,7 @@ use Data::Dumper;
     my $ds = $cl->get_DataSet_by_name($dataset_name);
 
     eval{
-	$ss = $ds->get_SequenceSet_by_name($ss_name);
+    $ss = $ds->get_SequenceSet_by_name($ss_name);
     };
     die "I couldn't find Sequence Set with name $ss_name \n $@" if $@;
 
@@ -45,55 +45,55 @@ use Data::Dumper;
     
     # defined $start as 0 is valid
     if(defined($start) || $stop){
-	# just some sanity checks here.
-	my $c = scalar @$cs;
-	$start ||= 0;
-	$stop  ||= $c;
-	$stop--  if ($stop > 0 && $start != 0);
-	$start-- if $start > 0;
-	$start = 0 if ($start > $stop || $start > $c);
-	$stop  = 1 if ($stop > $c);
-	# take a slice out 
-	$cs = [ @{$cs}[$start..$stop] ];
+    # just some sanity checks here.
+    my $c = scalar @$cs;
+    $start ||= 0;
+    $stop  ||= $c;
+    $stop--  if ($stop > 0 && $start != 0);
+    $start-- if $start > 0;
+    $start = 0 if ($start > $stop || $start > $c);
+    $stop  = 1 if ($stop > $c);
+    # take a slice out 
+    $cs = [ @{$cs}[$start..$stop] ];
     }elsif($special){
-	my $list = [ split(",", $special) ];
-	my @slice;
-	my $c = scalar @$cs;
-	foreach my $i( @$list ){
-	    if($i =~ /\-/){
-		if($i =~ /(\d+)\-(\d+)/){
-		    my $start = $1;
-		    my $stop  = $2;
-		    $stop--  if ($stop > 0 && $start != 0);
-		    $start-- if $start > 0;
-		    $start = 0 if ($start > $stop || $start > $c);
-		    $stop  = 1 if ($stop > $c);
-		    push(@slice, $start..$stop);
-		}
-	    }else{
-		$i-- if $i > 0;
-		push(@slice, int($i));
-	    }
-	}
-	$cs = [ @{$cs}[@slice] ];
+    my $list = [ split(",", $special) ];
+    my @slice;
+    my $c = scalar @$cs;
+    foreach my $i( @$list ){
+        if($i =~ /\-/){
+        if($i =~ /(\d+)\-(\d+)/){
+            my $start = $1;
+            my $stop  = $2;
+            $stop--  if ($stop > 0 && $start != 0);
+            $start-- if $start > 0;
+            $start = 0 if ($start > $stop || $start > $c);
+            $stop  = 1 if ($stop > $c);
+            push(@slice, $start..$stop);
+        }
+        }else{
+        $i-- if $i > 0;
+        push(@slice, int($i));
+        }
+    }
+    $cs = [ @{$cs}[@slice] ];
     }
     my @accs = ();
     foreach my $cloneSequence(@$cs){
-	printf "\n%s.%s %s \n", $cloneSequence->accession(), $cloneSequence->sv, $cloneSequence->clone_name;
-	push(@accs, "'".$cloneSequence->accession()."'");
-	my $notes = $cloneSequence->get_all_SequenceNotes();
-	unless( $notes ){
-	    print "\tNo sequence notes for this clone.\n";
-	    next;
-	}
-	foreach my $seqNote(@$notes){
-	    printf "\t%s %s %s\n", scalar(localtime($seqNote->timestamp)), $seqNote->author, $seqNote->text;
-	}
+    printf "\n%s.%s %s \n", $cloneSequence->accession(), $cloneSequence->sv, $cloneSequence->clone_name;
+    push(@accs, "'".$cloneSequence->accession()."'");
+    my $notes = $cloneSequence->get_all_SequenceNotes();
+    unless( $notes ){
+        print "\tNo sequence notes for this clone.\n";
+        next;
+    }
+    foreach my $seqNote(@$notes){
+        printf "\t%s %s %s\n", scalar(localtime($seqNote->timestamp)), $seqNote->author, $seqNote->text;
+    }
     }
     if($sql){
-	warn "\nSELECT c.* FROM clone_lock c, clone cl\n";
-	warn "WHERE c.clone_id = cl.clone_id && cl.embl_acc \n";
-	warn " IN(" . join(",", @accs) . ");\n";
+    warn "\nSELECT c.* FROM clone_lock c, clone cl\n";
+    warn "WHERE c.clone_id = cl.clone_id && cl.embl_acc \n";
+    warn " IN(" . join(",", @accs) . ");\n";
     }
 }
 

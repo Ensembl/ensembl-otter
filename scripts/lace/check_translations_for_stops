@@ -18,7 +18,7 @@ my ($out2, $out3, $out4, $out5, $out6, $out7);
 {
     my ($dataset, $sequence_set, $chr_start_acc, $chr_end_acc, $gene_stable_id);
     my ($tunnel, $remarks, $verbose, $seleno, $sql, $prefix, $tags, $tlen, 
-	$nmd, $nmds, $stat);
+    $nmd, $nmds, $stat);
     my $help = sub { exec('perldoc', $0) };
     my $min_len=30;
 
@@ -35,11 +35,11 @@ my ($out2, $out3, $out4, $out5, $out6, $out7);
         'tags:s'                => \$tags,
         'verbose|v'             => \$verbose,
         'prefix:s'              => \$prefix,
-	'min_length:s'          => \$min_len,
-	'tlen:s'                => \$tlen,
-	'nmd:s'                 => \$nmd,
-	'nmds:s'                => \$nmds,
-	'stat:s'                => \$stat,
+    'min_length:s'          => \$min_len,
+    'tlen:s'                => \$tlen,
+    'nmd:s'                 => \$nmd,
+    'nmds:s'                => \$nmds,
+    'stat:s'                => \$stat,
         'h|help'                => $help,
       )
       or $help->();
@@ -67,37 +67,37 @@ my ($out2, $out3, $out4, $out5, $out6, $out7);
     if ($gene_stable_id) {
       my @list;
       if (-e $gene_stable_id) {
-	# 'gene_stable_id' is a file
-	open(my $in, '<', $gene_stable_id) || die "cannot open $gene_stable_id";
-	while (<$in>) {
-	  chomp;
-	  push(@list,$_);
-	}
-	close($in);
+    # 'gene_stable_id' is a file
+    open(my $in, '<', $gene_stable_id) || die "cannot open $gene_stable_id";
+    while (<$in>) {
+      chomp;
+      push(@list,$_);
+    }
+    close($in);
       } else {
-	@list=(split(/,/, $gene_stable_id));
+    @list=(split(/,/, $gene_stable_id));
       }
       my $n=0;
       foreach my $gsi (@list) {
-	$n++;
-	# convert transcript_id into gene_id
-	if ($gsi =~ /T\d+/) {
-	  my $g;
-	  eval{
-	    $g=$gene_aptr->fetch_by_transcript_stable_id($gsi);
-	  };
-	  next if ($@ || !$g);
-	  my $gsi2=$g->stable_id;
-	  print STDERR "$gsi -> $gsi2\n";
-	  $gsi=$gsi2;
-	}
-	eval{
-	  push(@$gene_id_list, $gene_aptr->fetch_by_stable_id($gsi)->dbID);
-	};
-	next if ($@);
+    $n++;
+    # convert transcript_id into gene_id
+    if ($gsi =~ /T\d+/) {
+      my $g;
+      eval{
+        $g=$gene_aptr->fetch_by_transcript_stable_id($gsi);
+      };
+      next if ($@ || !$g);
+      my $gsi2=$g->stable_id;
+      print STDERR "$gsi -> $gsi2\n";
+      $gsi=$gsi2;
+    }
+    eval{
+      push(@$gene_id_list, $gene_aptr->fetch_by_stable_id($gsi)->dbID);
+    };
+    next if ($@);
       }
       print STDERR "checking ".scalar(@$gene_id_list)." valid gene_stable_ids out of $n\n";
-	  print join(',',@$gene_id_list)."\n";
+      print join(',',@$gene_id_list)."\n";
       exit if scalar(@$gene_id_list)==0;
     } elsif ($sequence_set) {
         my $slice_aptr = $otter_db->get_SliceAdaptor;
@@ -161,54 +161,54 @@ my ($out2, $out3, $out4, $out5, $out6, $out7);
         my $gt   = $gene->type;
         next if ($prefix && $gt !~ /$prefix:/);
         next if ($gt eq 'obsolete');
-	my $ntrans=0;
-	my $ntranscript=0;
-	my $nnmd=0;
-	my $nnmdl=0;
+    my $ntrans=0;
+    my $ntranscript=0;
+    my $nnmd=0;
+    my $nnmdl=0;
         foreach my $trans (@{ $gene->get_all_Transcripts }) {
 
-	    # for stats, also report transcripts that are labelled as NMD
-	    if($nmd){
-	      my $transcript_info=$trans->transcript_info;
-	      my $tc=$transcript_info->class->name;
-	      if($tc eq 'Nonsense_mediated_decay'){
-		my $tsi=$trans->stable_id;
-		my $tn=$transcript_info->name;
-		my $gsi=$gene->stable_id;
-		print $out5 "$tsi ($tn) [$gsi]: INFO: annotated as NMD\n";
-		$nnmdl++;
-	      }
-	    }
+        # for stats, also report transcripts that are labelled as NMD
+        if($nmd){
+          my $transcript_info=$trans->transcript_info;
+          my $tc=$transcript_info->class->name;
+          if($tc eq 'Nonsense_mediated_decay'){
+        my $tsi=$trans->stable_id;
+        my $tn=$transcript_info->name;
+        my $gsi=$gene->stable_id;
+        print $out5 "$tsi ($tn) [$gsi]: INFO: annotated as NMD\n";
+        $nnmdl++;
+          }
+        }
 
-	    $ntranscript++;
+        $ntranscript++;
             next unless $trans->translation;
-	    $ntrans++;
+        $ntrans++;
 
-	    # check for translations containing stop codons
+        # check for translations containing stop codons
             my $sqltxt =
               check_for_stops($gene, $trans, $remarks, $verbose, $seleno, $sql);
             print $out2 $sqltxt if $sql;
 
-	    # check for translations with inconsistent 'snf, enf tags'
-	    print $out3 check_start_end($gene, $trans) if $tags;
+        # check for translations with inconsistent 'snf, enf tags'
+        print $out3 check_start_end($gene, $trans) if $tags;
 
-	    # check for translations that are very short
-	    print $out4 check_length($gene, $trans, $min_len) if $tlen;
+        # check for translations that are very short
+        print $out4 check_length($gene, $trans, $min_len) if $tlen;
 
-	    # check for translations when probably nmd
-	    print $out5 check_nmd($gene, $trans, $stat, \$nnmd) if $nmd;
+        # check for translations when probably nmd
+        print $out5 check_nmd($gene, $trans, $stat, \$nnmd) if $nmd;
         }
-	if($ntrans>0){
-	  my $gid=$gene->stable_id;
-	  my $gn=$gene->gene_info->name->name;
-	  if($ntrans==$nnmd){
-	    print $out5 "$gid ($gn): WARN: all translations flagged as NMD ($ntrans)\n";
-	  }
-	  if($nmds){
-	    $nnmdl+=$nnmd;
-	    print $out7 "$gid ($gn)\t$ntrans\t$nnmd\t$ntranscript\t$nnmdl\n";
-	  }
-	}
+    if($ntrans>0){
+      my $gid=$gene->stable_id;
+      my $gn=$gene->gene_info->name->name;
+      if($ntrans==$nnmd){
+        print $out5 "$gid ($gn): WARN: all translations flagged as NMD ($ntrans)\n";
+      }
+      if($nmds){
+        $nnmdl+=$nnmd;
+        print $out7 "$gid ($gn)\t$ntrans\t$nnmd\t$ntranscript\t$nnmdl\n";
+      }
+    }
     }
     print STDERR " $i\n";
     close $out2 if $sql;
@@ -270,7 +270,7 @@ sub check_start_end {
   if($cdna ne $cdna2 && length($utr5)>0){
     # should never get this error
     print STDERR "ERROR: $tsi: cDNA truncated but not aligned with start".
-	" of mRNA: $cdna, $mrna\n";
+    " of mRNA: $cdna, $mrna\n";
   }
   
   # 5. is translation end also end of transcript
@@ -352,7 +352,7 @@ sub check_length {
       my $remark_txt=$remark->remark;
       #print STDOUT "$tsi: $tn: $remark\n";
       if($remark_txt=~/^$prefix\sname:\s(\w+)/){
-	$tn.="; $1";
+    $tn.="; $1";
       }
     }
   }
@@ -428,26 +428,26 @@ sub check_nmd {
       # get length of last intron
       my $ilen=0;
       eval{
-	my $intron = new Bio::EnsEMBL::Intron($l2exon, $lexon);
-	$ilen=$intron->end - $intron->start + 1;
+    my $intron = new Bio::EnsEMBL::Intron($l2exon, $lexon);
+    $ilen=$intron->end - $intron->start + 1;
       };
       if($@){
-	print STDERR "ERR: $tsi ($tn) $gsi: exons on different slices\n";
+    print STDERR "ERR: $tsi ($tn) $gsi: exons on different slices\n";
       }
 
       my $pep_str = $l2exon->peptide($trans)->seq;
       # use $enum to allow processing of both e-1 and e-2 exons
       my $enum;
       if($pep_str eq ''){
-	# if last-1 exon has no translation, must be NMD
-	$flag_nmd='whole exon';
-	$enum=-2;
-	# actually last but 2 exon
-	$l2exon=pop @exons;
+    # if last-1 exon has no translation, must be NMD
+    $flag_nmd='whole exon';
+    $enum=-2;
+    # actually last but 2 exon
+    $l2exon=pop @exons;
       }else{
-	# get full sequence of transcript including this exon
-	# but excluding last
-	$enum=-1;
+    # get full sequence of transcript including this exon
+    # but excluding last
+    $enum=-1;
       }
       push(@exons,$l2exon);
 
@@ -456,27 +456,27 @@ sub check_nmd {
 
       my $eseq;
       foreach my $exon (@exons){
-	$eseq.=$exon->seq->seq;
+    $eseq.=$exon->seq->seq;
       }
       # get transcript sequence
       my $cds=$trans->translateable_seq;
       # strip off leading N's
       if($cds=~/^N{1,2}(.*)/){
-	$cds=$1;
+    $cds=$1;
       }
       # compare cds with transcript to get length to exon boundary
       if($eseq=~/$cds(.*)/){
-	my $leseq=length($1);
-	# write distance for all cases for analysis
-	if($stat){
-	  print $out6 "$leseq\t$tsi\t$tn\t$gsi\t$enum\t$ilen\t$elen\n";
-	}
-	# only flag as NMD if considering -1 exon
-	if($leseq>50 && $enum==-1){
-	  $flag_nmd="$leseq bases from spice";
-	}
+    my $leseq=length($1);
+    # write distance for all cases for analysis
+    if($stat){
+      print $out6 "$leseq\t$tsi\t$tn\t$gsi\t$enum\t$ilen\t$elen\n";
+    }
+    # only flag as NMD if considering -1 exon
+    if($leseq>50 && $enum==-1){
+      $flag_nmd="$leseq bases from spice";
+    }
       }else{
-	print STDERR "ERR: translation not in transcript: $tsi $tn $gsi $enum\n $eseq\n $cds\n";
+    print STDERR "ERR: translation not in transcript: $tsi $tn $gsi $enum\n $eseq\n $cds\n";
       }
     }
   }
@@ -544,12 +544,12 @@ sub check_for_stops {
                       . $stop
                       . "\n", length($pseq1_f), length($mrna_f);
                 }
-		### check should below be +1 ??? 
-		### (checked this - correct - should be +1)
+        ### check should below be +1 ??? 
+        ### (checked this - correct - should be +1)
                 my $aaoffset = int($offset / 3)+1;
                 push(@stop, [ $stop, $aaoffset ]);
-		if($tstop) { $tstop .= " "; }
-		$tstop .= "$aaoffset";
+        if($tstop) { $tstop .= " "; }
+        $tstop .= "$aaoffset";
                 if ($ttstop) { $ttstop .= "; "; }
                 $ttstop .= "$aaoffset:$stop";
 
@@ -598,7 +598,7 @@ sub check_for_stops {
         $tiid = $remark->transcript_info_id;
         my $text = $remark->remark;
 
-	# word seleno has been used
+    # word seleno has been used
         if ($text =~ /seleno/i) {
             $flag_remark = 1;
         }
@@ -607,17 +607,17 @@ sub check_for_stops {
         # automatic parsing 'Annotation_remark- selenocysteine XX[ YY]' 
         # where XX, YY are the number of the aminoacid in the
         # translation that is a selenocysteine
-	my $stops;
-	my $flag_patch=0;
+    my $stops;
+    my $flag_patch=0;
         if ($text =~ /^$alabel(.*)/) {
-	  $stops=$1;
-	}elsif($text=~/^$alabel2(.*)/){
-	  my $tsid=$trans->stable_id;
-	  print STDERR "\nWARN: seleno remark for $tsid stored as plain remark\n";
-	  $flag_patch=1;
-	  $stops=$1;
-	}
-	if($stops){
+      $stops=$1;
+    }elsif($text=~/^$alabel2(.*)/){
+      my $tsid=$trans->stable_id;
+      print STDERR "\nWARN: seleno remark for $tsid stored as plain remark\n";
+      $flag_patch=1;
+      $stops=$1;
+    }
+    if($stops){
             my $nmatch     = 0;
             my $i          = 0;
             foreach my $offset (split(/\s+/, $stops)) {
@@ -625,20 +625,20 @@ sub check_for_stops {
                     $nmatch = 0;
                     last;
                 }
-		if($offset!~/^\d+$/){
-		  # not a number - ignore
-		}
+        if($offset!~/^\d+$/){
+          # not a number - ignore
+        }
                 elsif ($stop[$i]->[1] == $offset) {
                     $nmatch++;
                 }
                 elsif (($stop[$i]->[1] * 3) == $offset) {
-		    # catch old annotations where number was in DNA
-		    # not peptide coordinates
+            # catch old annotations where number was in DNA
+            # not peptide coordinates
                     $nmatch++;
                     $flag_patch = 1;
-		}
+        }
                 elsif (($stop[$i]->[1]) == $offset+1) {
-		    # catch old annotations where number off by one
+            # catch old annotations where number off by one
                     $nmatch++;
                     $flag_patch = 1;
                 }
@@ -647,7 +647,7 @@ sub check_for_stops {
             if ($nmatch == $nstop) {
                 $flag_remark2 = 1;
                 if ($flag_patch) {
-		    $flag_remark3=1;
+            $flag_remark3=1;
                     # existing structured remark is wrong - patch
                     $sql .=
 "update transcript_remark set remark=\'$alabel$tstop\' where transcript_remark_id=$dbid;\n";
@@ -673,7 +673,7 @@ sub check_for_stops {
             # remark indicates stop is a Selenocysteine
             $label = 'S-OK';
             if (!$flag_remark2) {
-	        $flag_remark3=1;
+            $flag_remark3=1;
 
                 # unless structured remark exists, build appropriate sql
                 $sql .=

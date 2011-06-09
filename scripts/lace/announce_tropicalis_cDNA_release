@@ -11,10 +11,11 @@ use Getopt::Long;
 
 my ($old_rel, $new_rel, $test);
 
-GetOptions('old=s' => \$old_rel,
-		   'new=s' => \$new_rel,
-		   'test'  => \$test
-		  );
+GetOptions(
+    'old=s' => \$old_rel,
+    'new=s' => \$new_rel,
+    'test'  => \$test
+    );
 
 unless ( $old_rel and $new_rel ){
   die "\nNeed to enter release date of current and last databases, eg, -old 2006_07_04 -new 2006-08-16\n\n";
@@ -56,9 +57,9 @@ jmdw@sanger.ac.uk
 
 if ( $test ){
   my @emails = qw(
-				  ck1@sanger.ac.uk
-				  ckpapa@yahoo.com
-				 );
+    ck1@sanger.ac.uk
+    ckpapa@yahoo.com
+    );
 }
 
 my $accpt_cdna_file       = "accepted_X_tropicalis_cDNAs_$new_rel".".fasta.gz";
@@ -139,7 +140,7 @@ foreach my $email ( @emails ){
 
   my $mail;
   open $mail, '|-', "mailx -s 'New X. tropicalis cDNA release - $new_rel' $name\@$domain "
-	or die "Can't open email pipe: $!";
+      or die "Can't open email pipe: $!";
 
   print $mail $letter;
 }

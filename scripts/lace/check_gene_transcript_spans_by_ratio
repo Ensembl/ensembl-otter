@@ -17,12 +17,13 @@ my $check_vega = 0;
 
 my $help = sub { exec('perldoc', $0) };
 
-Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset,
-	                              'v|verbose'    => \$verbose,
-				      't|type=s@'    => \@a_types,
-				      'h|help'       =>	$help,
-                                      'vega!'        => \$check_vega,
-                                      ) or $help->();    # plus default options
+Bio::Otter::Lace::Defaults::do_getopt(
+    'ds|dataset=s' => \$dataset,
+    'v|verbose'    => \$verbose,
+    't|type=s@'    => \@a_types,
+    'h|help'       => $help,
+    'vega!'        => \$check_vega,
+    ) or $help->();    # plus default options
 $help->() unless $dataset;
 
 my $client    = Bio::Otter::Lace::Defaults::make_Client();          # Bio::Otter::Lace::Client
@@ -74,8 +75,8 @@ foreach my $type ( @a_types ) {
     my $all_exons = $gene->get_all_Exons;
     foreach ( @$all_exons ){
       if ( $_->contig != $slice ){
-	print $f "$type\t". $gene->stable_id ."\t". $gene->gene_info->name->name. " has no exons within the slice\n" if ( $_->contig != $slice );
-	next GENE;
+    print $f "$type\t". $gene->stable_id ."\t". $gene->gene_info->name->name. " has no exons within the slice\n" if ( $_->contig != $slice );
+    next GENE;
       }
     }
 
@@ -94,7 +95,7 @@ foreach my $type ( @a_types ) {
     }
 
     unless ($longest) {
-	print $f "\n$type\tFAILED TO GET LONGEST TRANSCRIPT FOR ", $gene->stable_id, "\n";
+    print $f "\n$type\tFAILED TO GET LONGEST TRANSCRIPT FOR ", $gene->stable_id, "\n";
         next;
     }
 

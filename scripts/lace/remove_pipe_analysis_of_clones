@@ -19,11 +19,12 @@ use Bio::Otter::Lace::Defaults;
 
   push (@ARGV, "-pipeline");
 
-  Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset,
-                                        's|set=s@'     => \@sets,
-                                        'action=s'     => \$action,
-                                        'h|help'       => $help
-                                       ) or $help->(); # plus default options
+  Bio::Otter::Lace::Defaults::do_getopt(
+      'ds|dataset=s' => \$dataset,
+      's|set=s@'     => \@sets,
+      'action=s'     => \$action,
+      'h|help'       => $help
+      ) or $help->(); # plus default options
 
 
   # @ARGV is filename with a list of contig_names (eg, AC012101.7.1.168965)
@@ -40,13 +41,11 @@ use Bio::Otter::Lace::Defaults;
   if ( @sets ) {
       foreach my $name (@sets) {
           my $seqSet = $dset->get_SequenceSet_by_name($name);
-
-	      my $cs_list = $dset->fetch_all_CloneSequences_for_SequenceSet($seqSet);
-
+          my $cs_list = $dset->fetch_all_CloneSequences_for_SequenceSet($seqSet);
           foreach my $cs (@$cs_list) {
             $contignames{$cs->contig_name}++;
           }
-	  }
+      }
   } else {
         while (<>) {
             foreach my $contig_name (split) {
@@ -60,20 +59,20 @@ use Bio::Otter::Lace::Defaults;
 
     my $ctg_id = contig_name_to_contig_id($pipe_db, $ctg_name);
 
-	if ( $ctg_name and $ctg_id ) {
+    if ( $ctg_name and $ctg_id ) {
 
-	  my $msg = "\nWorking on $dataset" . "_finished contig_id $ctg_id => $ctg_name\n";
+      my $msg = "\nWorking on $dataset" . "_finished contig_id $ctg_id => $ctg_name\n";
 
-	  my ($counter, $order) = remove_pipeline_analysis($action, $pipe_db, $ctg_name, $ctg_id);
+      my ($counter, $order) = remove_pipeline_analysis($action, $pipe_db, $ctg_name, $ctg_id);
 
-	  # this tells if an analysis actually creates rows in the database
-	  printf( "%s\t%s\n", $msg, ($action eq "kill" ? "Deleted" : "Found") );
-	  foreach my $k (@$order ) {
-		printf("\t\t%7d row(s) in $k table\n", $counter->{$k});
-	  }
-	} else {
-	  warn "Need contig_name and contig_id info to proceed.";
-	}
+      # this tells if an analysis actually creates rows in the database
+      printf( "%s\t%s\n", $msg, ($action eq "kill" ? "Deleted" : "Found") );
+      foreach my $k (@$order ) {
+        printf("\t\t%7d row(s) in $k table\n", $counter->{$k});
+      }
+    } else {
+      warn "Need contig_name and contig_id info to proceed.";
+    }
   }
 }
 
@@ -143,39 +142,39 @@ sub remove_pipeline_analysis {
   $sql->execute();
 
   my $column_to_table = {
-						 'exon_id'          => ['exon'],
-						 'gene_id'          => ['gene', 'gene_description', 'object_xref'],
-						 'transcript_id'    => ['exon_transcript', 'transcript'],
-						 'translation_id'   => ['translation'],
-						};
+      'exon_id'          => ['exon'],
+      'gene_id'          => ['gene', 'gene_description', 'object_xref'],
+      'transcript_id'    => ['exon_transcript', 'transcript'],
+      'translation_id'   => ['translation'],
+  };
   my $col_to_ids = {};
 
   while ( my $col_ids = $sql->fetchrow_hashref ){
-	foreach my $column ( keys %$col_ids ){
+    foreach my $column ( keys %$col_ids ){
 
-	  # in case translation_id is null
-	  my $id = $col_ids->{$column} or next;
-	  $col_to_ids->{$column}{$id}++;
-	}
+      # in case translation_id is null
+      my $id = $col_ids->{$column} or next;
+      $col_to_ids->{$column}{$id}++;
+    }
   }
 
   foreach my $column_name ( keys %$col_to_ids ){
 
-	# concatenate all ids for deletion
-	my $values = join( ',', keys %{$col_to_ids->{$column_name}} );
+    # concatenate all ids for deletion
+    my $values = join( ',', keys %{$col_to_ids->{$column_name}} );
 
-	foreach my $table_name ( @{$column_to_table->{$column_name}} ){
+    foreach my $table_name ( @{$column_to_table->{$column_name}} ){
 
-	  # need to do something different for object_xref table
-	  if ( $column_name eq "gene_id" and $table_name eq "object_xref" ){
-		foreach my $gene_id (  keys %{$col_to_ids->{$column_name}} ){
-		  $counter->{$table_name} += delete_rows($action, $pipe_db, $table_name, "ensembl_id = $gene_id and ensembl_object_type = ?", "Gene");
-		}
-	  }
-	  else {
-		$counter->{$table_name} += delete_rows($action, $pipe_db, $table_name, "$column_name in ($values)");
-	  }
-	}
+      # need to do something different for object_xref table
+      if ( $column_name eq "gene_id" and $table_name eq "object_xref" ){
+        foreach my $gene_id (  keys %{$col_to_ids->{$column_name}} ){
+          $counter->{$table_name} += delete_rows($action, $pipe_db, $table_name, "ensembl_id = $gene_id and ensembl_object_type = ?", "Gene");
+        }
+      }
+      else {
+        $counter->{$table_name} += delete_rows($action, $pipe_db, $table_name, "$column_name in ($values)");
+      }
+    }
   }
 
   return ($counter, $order);
@@ -187,16 +186,16 @@ sub delete_rows {
   my ($rows_deleted, $sql);
 
   if ( $action eq "kill" ) {
-	$sql = $pipe_db->prepare(qq{DELETE from $table WHERE $where_clause});
-	$sql->execute($holder?$holder:());
+    $sql = $pipe_db->prepare(qq{DELETE from $table WHERE $where_clause});
+    $sql->execute($holder?$holder:());
 
-	$rows_deleted = $sql->rows;
+    $rows_deleted = $sql->rows;
     return $rows_deleted;
   }
 
   elsif ( $action eq "info" ) {
-	$sql = $pipe_db->prepare(qq{SELECT count(*) FROM $table WHERE $where_clause});
-	$sql->execute($holder?$holder:());
+    $sql = $pipe_db->prepare(qq{SELECT count(*) FROM $table WHERE $where_clause});
+    $sql->execute($holder?$holder:());
 
     return $sql->fetchrow;
   }

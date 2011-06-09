@@ -34,12 +34,13 @@ my $encode_list = "/nfs/team71/analysis/jgrg/work/encode/encode_sets.list";
 
 my $help = sub { exec('perldoc', $0) };
 
-Bio::Otter::Lace::Defaults::do_getopt('ds|dataset=s' => \$dataset,
-									  'h|help'       => $help,
-                                      'set=s'        => \@sets,
-                                      'time1=s'      => \$cutoff_time_1,
-                                      'time2=s'      => \$cutoff_time_2
-                                     );
+Bio::Otter::Lace::Defaults::do_getopt(
+    'ds|dataset=s' => \$dataset,
+    'h|help'       => $help,
+    'set=s'        => \@sets,
+    'time1=s'      => \$cutoff_time_1,
+    'time2=s'      => \$cutoff_time_2
+    );
 
 print "ENCODE region updated between $cutoff_time_1 and $cutoff_time_2\n";
 
@@ -52,7 +53,7 @@ my $otter_db = $dset->get_cached_DBAdaptor;
 my $pipe_db  = Bio::Otter::Lace::PipelineDB::get_pipeline_rw_DBAdaptor($otter_db);
 
 my $sliceAd  = $otter_db->get_SliceAdaptor;
-my $geneAd   = $otter_db->get_GeneAdaptor;	
+my $geneAd   = $otter_db->get_GeneAdaptor;
 
 # get all encoce sets
 unless ( @sets ){
@@ -64,11 +65,13 @@ unless ( @sets ){
   close $fh;
 }
 
-printf("%-20s %-10s %-10s %-10s %-10s %-10s %-10s %-10s %-10s %-10s %-10s %-10s %s\n",
-                                                "REGION", "TOTAL_gene", "UPDTD_gene",
-                                                "EST_best", "EST_all", "EST_evi",
-                                                "cDNA_best", "cDNA_all", "cDNA_evi",
-                                                "Prot_SW", "Prot_TR", "Prot_all", "Prot_evi");
+printf(
+    "%-20s %-10s %-10s %-10s %-10s %-10s %-10s %-10s %-10s %-10s %-10s %-10s %s\n",
+    "REGION", "TOTAL_gene", "UPDTD_gene",
+    "EST_best", "EST_all", "EST_evi",
+    "cDNA_best", "cDNA_all", "cDNA_evi",
+    "Prot_SW", "Prot_TR", "Prot_all", "Prot_evi"
+    );
 
 
 foreach my $set ( @sets ) {
@@ -89,10 +92,11 @@ foreach my $set ( @sets ) {
   my $region_evidences;
 
   # 1: newpipe 0: oldpipe
-  my @analysis = qw(Est2genome_human Est2genome_mouse Est2genome_other
-  					  Est2genome_human_raw Est2genome_mouse_raw Est2genome_other_raw
-  					  vertrna vertrna_raw
-                       );
+  my @analysis = qw(
+    Est2genome_human Est2genome_mouse Est2genome_other
+    Est2genome_human_raw Est2genome_mouse_raw Est2genome_other_raw
+    vertrna vertrna_raw
+    );
   foreach my $analysis_name ( @analysis ) {
     my $dafs = $pipe_slice->get_all_DnaAlignFeatures($analysis_name, 1);
     #warn %{$dafs->[0]};
@@ -185,26 +189,26 @@ sub get_encode_stats {
 
   foreach my $id ( @$latest_gene_id ) {
 
-	my $gene = $geneAd->fetch_by_dbID($id);
+    my $gene = $geneAd->fetch_by_dbID($id);
 
     # total refers to all gene types
-	$total_gene->{$set}++;
+    $total_gene->{$set}++;
 
     if ( $cutoff_time_1 and $cutoff_time_2 ){
-      next if $gene->gene_info->timestamp < $cutoff_time_1 or
-        $gene->gene_info->timestamp > $cutoff_time_2;
+        next if $gene->gene_info->timestamp < $cutoff_time_1 or
+            $gene->gene_info->timestamp > $cutoff_time_2;
     }
 
-	# always filter out gene type = "obsolete"
-	next if $gene->type eq "obsolete";
-	next if ($gene->type ne "Known"                  and
-			 $gene->type ne "Novel_CDS"              and
-			 $gene->type ne "Novel_transcript"       and
-			 $gene->type ne "Putative"               and
-			 $gene->type ne "Processed_pseudogene"   and
-			 $gene->type ne "Unprocessed_pseudogene" and
-			 $gene->type ne "Artifact"               and
-			 $gene->type ne "TEC");
+    # always filter out gene type = "obsolete"
+    next if $gene->type eq "obsolete";
+    next if ($gene->type ne "Known"                  and
+             $gene->type ne "Novel_CDS"              and
+             $gene->type ne "Novel_transcript"       and
+             $gene->type ne "Putative"               and
+             $gene->type ne "Processed_pseudogene"   and
+             $gene->type ne "Unprocessed_pseudogene" and
+             $gene->type ne "Artifact"               and
+             $gene->type ne "TEC");
 
     # updated genes refer to only the above gene types
     $region_updated->{$set}++;
