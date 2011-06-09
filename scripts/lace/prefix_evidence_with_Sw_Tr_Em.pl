@@ -18,9 +18,9 @@ my $del_sptr_mapping    = "del_sp_tr_acc_mapping";
 my $primary_acc_db      = "acc_2_sp_tr_mapping";
 my $sec_2_prim_acc      = "sec_2_prim_acc_mapping";
 
-my $D_SW_TR             = {};	# obsolete accs of Sw/Tr
-my $primary_2_acc_db    = {};	# primary acc to Sw: or Tr:
-my $secondary_2_primary = {};	# secondary acc to primary acc
+my $D_SW_TR             = {}; # obsolete accs of Sw/Tr
+my $primary_2_acc_db    = {}; # primary acc to Sw: or Tr:
+my $secondary_2_primary = {}; # secondary acc to primary acc
 
 {
   my ($dataset, $prepare, $download);
@@ -34,7 +34,7 @@ my $secondary_2_primary = {};	# secondary acc to primary acc
       ) or $help->();                  # plus default options
   $help->() unless ( $dataset );
 
-  my $client      = Bio::Otter::Lace::Defaults::make_Client();	        # Bio::Otter::Lace::Client
+  my $client      = Bio::Otter::Lace::Defaults::make_Client();          # Bio::Otter::Lace::Client
   my $dset        = $client->get_DataSet_by_name($dataset);             # Bio::Otter::Lace::DataSet
   my $otter_db    = $dset->get_cached_DBAdaptor;                        # Bio::EnsEMBL::Containerr
 
@@ -61,7 +61,7 @@ my $secondary_2_primary = {};	# secondary acc to primary acc
   prepare_uniprot_data(connect_uniprot_db("uniprot_8_4")) if $prepare;
 
   # read back data
-  $D_SW_TR             = retrieve($del_sptr_mapping);							
+  $D_SW_TR             = retrieve($del_sptr_mapping);
   $primary_2_acc_db    = retrieve($primary_acc_db);
   $secondary_2_primary = retrieve($sec_2_prim_acc);
 
