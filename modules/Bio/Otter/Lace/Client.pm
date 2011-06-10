@@ -557,7 +557,8 @@ sub general_http_dialog {
             $self->authorize;
             $password_attempts--;
         } elsif ($code == 500 or $code == 502) {
-            printf STDERR "\nGot error %s \n", $code; # , $response->decoded_content;
+	    print STDERR "\nGot error $code\n";
+	    print STDERR __truncdent_for_log($response->decoded_content, 10240, '| ');
             $timeout_attempts--;
             $timed_out = 1;
         } elsif ($code == 503 or $code == 504) {
@@ -573,6 +574,16 @@ sub general_http_dialog {
 
     return $response;
 }
+
+sub __truncdent_for_log {
+    my ($txt, $maxlen, $dent) = @_;
+    my $len = length($txt);
+    substr($txt, $maxlen) = "[...truncated from $len bytes]\n" if $len > $maxlen;
+    $txt =~ s/^/| /g;
+    $txt =~ s/\n*\z/\n/;
+    return $txt;
+}
+
 
 sub escaped_param_string {
     my ($self, $params) = @_;
