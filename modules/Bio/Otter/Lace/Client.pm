@@ -539,8 +539,8 @@ sub general_http_dialog {
         $response = $self->do_http_request($method, $scriptname, $params);
         last if $response->is_success;
         my $code = $response->code;
-        if ($code == 401 or $code == 403) {
-            # Unauthorized (We are swtiching from 403 to 401 from humpub-release-49.)
+        if ($code == 401) {
+            # unauthorized
             $self->authorize;
             $password_attempts--;
         } else {
