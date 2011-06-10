@@ -128,15 +128,6 @@ sub password_attempts {
     return $self->{'_password_attempts'} || 3;
 }
 
-sub timeout_attempts {
-    my( $self, $timeout_attempts ) = @_;
-
-    if (defined $timeout_attempts) {
-        $self->{'_timeout_attempts'} = $timeout_attempts;
-    }
-    return $self->{'_timeout_attempts'} || 1;
-}
-
 sub get_log_dir {
     my( $self ) = @_;
 
@@ -542,13 +533,9 @@ sub general_http_dialog {
     $params->{'client'} = $self->client_name;
 
     my $password_attempts = $self->password_attempts;
-    my $timeout_attempts  = $self->timeout_attempts;
     my $response;
 
-    my $timed_out = 0;
-
-    while ($password_attempts and $timeout_attempts) {
-        print STDERR "retrying...\n" if $timed_out;
+    while ($password_attempts) {
         $response = $self->do_http_request($method, $scriptname, $params);
         last if $response->is_success;
         my $code = $response->code;
@@ -556,19 +543,14 @@ sub general_http_dialog {
             # Unauthorized (We are swtiching from 403 to 401 from humpub-release-49.)
             $self->authorize;
             $password_attempts--;
-        } elsif ($code == 500 or $code == 502) {
+        } else {
 	    print STDERR "\nGot error $code\n";
 	    print STDERR __truncdent_for_log($response->decoded_content, 10240, '| ');
-            $timeout_attempts--;
-            $timed_out = 1;
-        } elsif ($code == 503 or $code == 504) {
-            $self->fatal_error_prompt->("The server timed out ($code). Please try again.\n");
-        } else {
             $self->fatal_error_prompt->(sprintf "%d (%s)", $response->code, $response->decoded_content);
         }
     }
 
-    if ($timed_out || $response->content =~ /The Sanger Institute Web service you requested is temporarily unavailable/) {
+    if ($response->content =~ /The Sanger Institute Web service you requested is temporarily unavailable/) {
         $self->fatal_error_prompt->("Problem with the web server\n");
     }
 
