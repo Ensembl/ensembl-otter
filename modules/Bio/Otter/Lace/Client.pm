@@ -338,22 +338,6 @@ sub password_prompt{
     return $callback;
 }
 
-sub fatal_error_prompt {
-    my ($self, $callback) = @_;
-
-    if ($callback) {
-        $self->{'_fatal_error_callback'} = $callback;
-    }
-
-    $callback = $self->{'_fatal_error_callback'} ||=
-        sub {
-            my ($msg) = @_;
-            die $msg;
-        };
-
-    return $callback;
-}
-
 sub authorize {
     my ($self) = @_;
 
@@ -547,12 +531,12 @@ sub general_http_dialog {
         } else {
 	    print STDERR "\nGot error $code\n";
 	    print STDERR __truncdent_for_log($response->decoded_content, 10240, '| ');
-            $self->fatal_error_prompt->(sprintf "%d (%s)", $response->code, $response->decoded_content);
+            die sprintf "%d (%s)", $response->code, $response->decoded_content;
         }
     }
 
     if ($response->content =~ /The Sanger Institute Web service you requested is temporarily unavailable/) {
-        $self->fatal_error_prompt->("Problem with the web server\n");
+        die "Problem with the web server\n";
     }
 
     return $response;
@@ -1166,12 +1150,6 @@ sub sessions_needing_recovery {
             my $title = $self->get_title($lace_dir);
             push(@$to_recover, [$lace_dir, $mtime, $title]);
         } else {
-            my $save_sub = $self->fatal_error_prompt;
-            $self->fatal_error_prompt(
-                sub {
-                    my ($msg) = @_;
-                    die $msg;
-                });
             eval {
                 # Attempt to release locks of uninitialised sessions
                 my $adb = $self->recover_session($lace_dir);
@@ -1182,7 +1160,6 @@ sub sessions_needing_recovery {
                     print STDERR "\nRemoved lock from uninitialised database in '$lace_dir'\n";
                 }
             };
-            $self->fatal_error_prompt($save_sub);
             if (-d $lace_dir) {
                 # Belt and braces - if the session was unrecoverable we want it to be deleted.
                 print STDERR "\nNo such file: '$lace_dir/database/ACEDB.wrm'\nDeleting uninitialized database '$lace_dir'\n";

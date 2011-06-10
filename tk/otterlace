@@ -9,6 +9,7 @@ use CanvasWindow::DataSetChooser;
 use EditWindow::Password;
 use Bio::Otter::Lace::Defaults;
 use Bio::Otter::Git;
+use Bio::Otter::Error;
 use POSIX ":sys_wait_h";
 
 {
@@ -53,32 +54,6 @@ use POSIX ":sys_wait_h";
     };
 
     $cl->password_prompt($prompt_sub);
-
-    my $fatal_prompt_sub = sub {
-
-        my ($msg) = @_;
-
-        if ($msg =~ /web server/) {
-            $mw->messageBox(
-                -title   => 'otter: Web server problem',
-                -icon    => 'warning',
-                -message => 'There seems to be a problem with the web server, ' . 'please try again later.',
-                -type    => 'OK',
-            );
-        }
-        else {
-            $mw->messageBox(
-                -title   => 'otter: Unidentified problem',
-                -icon    => 'warning',
-                -message => "Unidentified problem: $msg\n\n" . 'I suggest you raise a helpdesk ticket!',
-                -type    => 'OK',
-            );
-        }
-
-        die $msg;
-    };
-
-    $cl->fatal_error_prompt($fatal_prompt_sub);
 
     $cl->get_server_otter_config;
 
