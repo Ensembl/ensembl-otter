@@ -14,15 +14,17 @@ use strict;
 use Bio::SeqIO;
 use Bio::Otter::Lace::Defaults;
 use Bio::Vega::DBSQL::DBAdaptor;
+use Bio::Otter::Lace::SatelliteDB;
 
 {
-    my( $dataset_name, $set_name );
+    my( $dataset_name, $set_name, $stats_only );
 
     my $usage = sub { exec('perldoc', $0) };
     Bio::Otter::Lace::Defaults::do_getopt(
         'h|help!'       => $usage,
         'dataset=s'     => \$dataset_name,
         'set|chr=s'     => \$set_name,
+        'stats!'        => \$stats_only,
         ) or $usage->();
     $usage->() unless $dataset_name and $set_name;
     
@@ -56,6 +58,7 @@ use Bio::Vega::DBSQL::DBAdaptor;
     
     my $repeat_mask = ['trf', 'RepeatMasker'];
     my $soft = 1;
+    my %total; # stats chr=>count
     foreach my $cs (@$cs_list) {
         # my $ctg_id = $cs->pipeline_contig_id or die "No pipeline contig ID";
         my $ctg_name = $cs->contig_name();
@@ -64,16 +67,64 @@ use Bio::Vega::DBSQL::DBAdaptor;
         #my $ctg = $ctg_aptr->fetch_by_name($ctg_name)
         #  or die "No such contig '$ctg_name'";
         #my $seq = $ctg->get_repeatmasked_seq($repeat_mask, $soft);
-        $seq_out->write_seq($seq);
+	if ($stats_only) {
+	    my $char = seq2stats($seq->seq);
+	    printf("%-25s %s\n", $seq->seq_region_name, join "  ", stats2txt($char));
+	    while (my ($ch, $n) = each %$char) { $total{$ch} += $n }
+	} else {
+	    $seq_out->write_seq($seq);
+	}
+    }
+
+    if ($stats_only) {
+	print "=" x 76, "\n";
+	printf("%-25s %s\n", 'Total', join "  ", stats2txt(\%total));
     }
 }
 
+sub seq2stats {
+    my ($seq) = @_;
+    my $len = length($seq);
+    my %char;
+    @char{qw{ a c g t  A C G T N }} = (0) x 9;
+
+    for (my $i=0; $i<$len; $i++) {
+	$char{substr($seq,$i,1)}++;
+    }
+    delete @char{(' ', "\n", "\t")};
+
+    return \%char;
+}
+
+sub stats2txt {
+    my ($char) = @_;
+
+    my $len = 0;
+    foreach my $i (values %$char) { $len += $i }
+    return '(nil)  len:  0' if $len == 0;
+
+    my $len_comma = $len;
+    while ($len_comma =~ s{(\d)(\d{3}(?:,|$))}{$1,$2}g) { } # commas per 000
+
+    my $mask = $$char{a} + $$char{c} + $$char{g} + $$char{t};
+
+    return (map {sprintf($$char{$_} == 0 ? '%s: %4s ' : '%s:%5.1f%%',
+			 $_, $$char{$_} / $len * 100)}
+	    sort keys %$char),
+	      sprintf('mask:%5.1f%%  len:%8s', $mask / $len * 100, $len_comma);
+}
 
 
 
 __END__
 
-=head1 NAME - get_softmasked_seq_for_set
+=head1 NAME
+
+get_softmasked_seq_for_set - dump softmasked sequence to STDOUT
+
+=head1 SYNOPSIS
+
+ get_softmasked_seq_for_set -dataset <species> -chr <chromosome> [ -stats ]
 
 =head1 AUTHOR
 
