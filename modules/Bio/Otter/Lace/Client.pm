@@ -539,7 +539,8 @@ sub general_http_dialog {
         $response = $self->do_http_request($method, $scriptname, $params);
         last if $response->is_success;
         my $code = $response->code;
-        if ($code == 401) {
+        if ($code == 401 || $code == 403) {
+            # we should see 401 but the server still incorrectly returns 403
             # unauthorized
             $self->authorize;
             $password_attempts--;
