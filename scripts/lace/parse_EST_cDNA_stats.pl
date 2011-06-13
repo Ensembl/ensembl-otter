@@ -256,7 +256,8 @@ sub binaryName2commonName {
       $commonName = $h->{name};
     }
   }
-  $commonName ? return $commonName : return "NA";
+
+  return ($commonName || "NA");
 }
 
 sub parse_est_cdna_files {
