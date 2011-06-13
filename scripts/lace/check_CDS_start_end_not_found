@@ -7,6 +7,7 @@ use warnings;
 
 use strict;
 use Getopt::Long 'GetOptions';
+use IO::Handle;
 use Bio::Otter::Lace::Defaults;
 use Bio::Seq;
 
@@ -53,11 +54,7 @@ else {
 }
 
 # do not want to use buffer
-for my $current ($fh, $fh1) {
-  my $old = select($current);
-  $|=1; ## no critic (Variables::RequireLocalizedPunctuationVars)
-  select ($old);
-}
+$_->autoflush for ( $fh, $fh1 );
 
 
 my $name_and_shame;
