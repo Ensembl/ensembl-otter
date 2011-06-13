@@ -248,7 +248,7 @@ sub repair_one_db {
         }
         else {
             if (substr($intl, 0, length($int_pre)) eq uc $int_pre) {
-                substr($intl, 0, length($int_pre)) = "$ext_pre-";
+                substr($intl, 0, length($int_pre), "$ext_pre-");
             }
             else {
                 warn "clone '$clone' does not begin with internal prefix '$int_pre'";

@@ -545,7 +545,7 @@ sub general_http_dialog {
 sub __truncdent_for_log {
     my ($txt, $maxlen, $dent) = @_;
     my $len = length($txt);
-    substr($txt, $maxlen) = "[...truncated from $len bytes]\n" if $len > $maxlen;
+    substr($txt, $maxlen, $len, "[...truncated from $len bytes]\n") if $len > $maxlen;
     $txt =~ s/^/| /g;
     $txt =~ s/\n*\z/\n/;
     return $txt;
