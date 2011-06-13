@@ -169,6 +169,8 @@ sub get_latest_trans_or_prot_seq {
 
   return $geneType_trans   if $type eq "gene";
   return $transClass_trans if $type eq "trans";
+
+  return;
 }
 
 sub output_sequences {
@@ -257,6 +259,8 @@ sub output_sequences {
       }
     }
   }
+
+  return;
 }
 
 sub sixty_cols {

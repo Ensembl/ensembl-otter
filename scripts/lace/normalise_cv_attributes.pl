@@ -446,7 +446,7 @@ sub show_warnings {
     foreach my $w (@{$warnings->{list}}) {
         print "$w\n";
     }
-    1;
+    return;
 }
 
 sub pre_process {
@@ -495,6 +495,7 @@ sub pre_process {
 
   } # CODE
 
+  return;
 }
 
 sub plan_update_actions {

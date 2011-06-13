@@ -150,6 +150,8 @@ sub fix_transcript_naming {
         print "  $new\t$stable\n";
         $update->execute($new, $info->dbID);
     }
+
+    return;
 }
 
 __END__

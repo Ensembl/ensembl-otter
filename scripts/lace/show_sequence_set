@@ -115,6 +115,8 @@ sub print_agp {
             $strand eq '1' ? '+' : '-'), "\n";
         $pos = $chr_end;
     }
+
+    return;
 }
 
 sub print_sequence_set {
@@ -148,6 +150,8 @@ sub print_sequence_set {
                 $cs->accession;
         }
     }
+
+    return;
 }
 
 sub print_set_list {
@@ -169,6 +173,8 @@ sub print_set_list {
             $ss->name,
             $ss->description;
     }
+
+    return;
 }
 
 sub comma_format {

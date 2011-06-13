@@ -88,7 +88,8 @@ sub archive {
     }
     my $copy_end = time;
     printf STDERR "otter copy took %.0f minutes\n", ($copy_end - $copy_start) / 60;
-    
+
+    return;
 }
 
 sub backup_otter_database {
@@ -107,6 +108,8 @@ sub backup_otter_database {
     my $sql_file = "$db_name.sql";
     my $dump_command = "$mysql_dump $db_name @tables_to_backup > $sql_file";
     system($dump_command) == 0 or die "ERROR: exit $? running '$dump_command'\n";
+
+    return;
 }
 
 sub list_otter_databases {
@@ -160,6 +163,8 @@ sub cleanup_old_otter_dbs {
             $seen_month{$year_month} = $backup;
         }
     }
+
+    return;
 }
 
 __END__

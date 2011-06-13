@@ -737,6 +737,8 @@ sub select_CloneSequence_contig {
     }
 
     $ss->selected_CloneSequences($ctg);
+
+    return;
 }
 
 __END__

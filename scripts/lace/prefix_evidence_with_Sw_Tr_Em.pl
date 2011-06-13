@@ -81,6 +81,8 @@ sub get_fasta_headers_only {
     }
   }
   store($D_SW_TR, $del_sptr_mapping);
+
+  return;
 }
 
 sub connect_uniprot_db {
@@ -151,6 +153,8 @@ sub prepare_uniprot_data {
   # prepare hash in disk for use later
   store($primary_2_acc_db, $primary_acc_db);
   store($secondary_2_primary, $sec_2_prim_acc);
+
+  return;
 }
 
 
@@ -221,6 +225,8 @@ sub make_sqls_to_patch_otter_evidences {
     }
   }
   print $sql;
+
+  return;
 }
 
 

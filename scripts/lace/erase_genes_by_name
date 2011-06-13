@@ -69,6 +69,8 @@ sub delete_genes_by_name {
     print "Deleting ",scalar(@$exon_list)," distinct exon ids\n"; 
     
     delete_genes_by_exon_id_list($dbh, $exon_list);
+
+    return;
 }
 
 

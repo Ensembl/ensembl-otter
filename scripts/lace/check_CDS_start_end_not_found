@@ -156,6 +156,8 @@ sub output_list {
     }
     #unlink $tmp;
   }
+
+  return;
 }
 
 sub get_latest_gene_translations {
@@ -324,6 +326,8 @@ sub update_cds_end_not_found {
     });
   $sth->execute;
   $sth->finish;
+
+  return;
 }
 
   __END__

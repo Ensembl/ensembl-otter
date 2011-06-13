@@ -206,6 +206,8 @@ sub check_MGI_symbol_is_unique_in_loutre {
   else {
     print STDERR "PASSED\n";
   }
+
+  return;
 }
 
 sub check_for_good_symbols {
@@ -324,6 +326,8 @@ sub update_loutre {
       print STDERR " already up-to-date\n";
     }
   }
+
+  return;
 }
 
 sub fmt_list { ## no critic(Subroutines::RequireArgUnpacking)
@@ -368,6 +372,8 @@ sub update_gene_name_and_description {
     }
     print STDERR "\n";
   }
+
+  return;
 }
 
 sub find_genes_with_gene_names_from_prefixed_names_and_haplotype {
@@ -496,6 +502,7 @@ sub store_update {
     print STDERR "\n";
   }
 
+  return;
 }
 
 
@@ -557,6 +564,8 @@ sub store_gene {
     $updated_gsid{$gsid}++;
     #---------------------------------------------------------------------------------------------------------------
   }
+
+  return;
 }
 
 sub get_expected_haplotype_from_chr {

@@ -108,6 +108,8 @@ sub update_otter {
     }
 
   }
+
+  return;
 }
 
 sub check_HUGO_symbol_is_unique_in_loutre {
@@ -149,6 +151,8 @@ sub check_HUGO_symbol_is_unique_in_loutre {
   else {
     print STDERR "PASSED\n";
   }
+
+  return;
 }
 
 sub unexpected_gene_type {
@@ -262,6 +266,8 @@ sub update_gene_name_and_description {
   #   }
   #   print STDERR "\n";
   # }
+
+  return;
 }
 
 sub store_geneId_consortiumID_mapping {
@@ -273,6 +279,7 @@ sub store_geneId_consortiumID_mapping {
   my $update = $loutre_dba->dbc->prepare($sql);
   $update->execute;
 
+  return;
 }
 
 sub find_genes_with_gene_names_from_prefixed_names_and_haplotype {
@@ -434,6 +441,8 @@ sub store_update {
     store_gene($loutre_dba, $geneAd, $gene, $hgnc_id, $curr_name) unless $test;
     print STDERR "\n";
   }
+
+  return;
 }
 
 sub change_gene_trans_status {
@@ -494,6 +503,8 @@ sub store_gene {
     $updated_gsid{$gsid}++;
     #---------------------------------------------------------------------------------------------------------------
   }
+
+  return;
 }
 
 sub check_contig_lock {

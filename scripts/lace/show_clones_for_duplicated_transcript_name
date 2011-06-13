@@ -78,6 +78,8 @@ sub print_gene_clones {
     while (my ($acc, $name) = $sth->fetchrow) {
         print "$acc\t$name\n";
     }
+
+    return;
 }
 
 sub fetch_current_gene_id_for_transcript {

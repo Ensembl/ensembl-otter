@@ -111,6 +111,8 @@ sub extract_rik {
     while ($str =~ /(\w+rik)/ig) {
         $rik->{lc $1} = $1;
     }
+
+    return;
 }
 
 sub get_xl_table {
