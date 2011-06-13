@@ -68,7 +68,7 @@ sub compare_checksum {
   $md5->addfile($local_file);
   my $local_md5 = $md5->b64digest;
 
-  return 1 if $sftp_md5 ne $local_md5;
+  return ($sftp_md5 ne $local_md5);
 }
 
 sub connect_to_HGNC_sftp_host {
