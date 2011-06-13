@@ -69,6 +69,8 @@ sub check_for_updated_genes {
     my $mean = $total_genes == 0 ? 0 : $total_versions / $total_genes;
     printf "%24s  %6d  %6d  %3.2f  %d\n",
         $ass_type, $total_genes, $total_versions, $mean, $max;
+
+    return;
 }
 
 

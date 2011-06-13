@@ -69,6 +69,8 @@ sub do_transcript_counts {
         });
     
     do_counts('transcript', $otter_dba, $source_name, $count_transcripts, $list_transcripts);
+
+    return;
 }
 
 sub do_gene_counts {
@@ -96,6 +98,8 @@ sub do_gene_counts {
         });
     
     do_counts('gene', $otter_dba, $source_name, $count_genes, $list_genes);
+
+    return;
 }
 
 sub do_counts {
@@ -169,6 +173,8 @@ sub do_counts {
 
     print "Total ${object}s\t$total_objects\n",
         "Current ${object}s\t$total_current\n\n";
+
+    return;
 }
 
 

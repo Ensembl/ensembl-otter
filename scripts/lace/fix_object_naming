@@ -206,6 +206,8 @@ sub fix_chr7_transcript_names {
     fix_transcript_remarks($dba, $tsct_list, $tsct_rename_map);
 
     unlock_clones($dba, $all_clones);
+
+    return;
 }
 
 sub fix_names {
@@ -367,6 +369,8 @@ sub fix_names {
     }
 
     unlock_clones($dba, $all_clones);
+
+    return;
 }
 
 {
@@ -416,6 +420,8 @@ sub lock_clones {
     foreach my $clone (@$clone_list) {
         $sth->execute($clone->dbID, $now, $author_id, $host);
     }
+
+    return;
 }
 
 sub unlock_clones {
@@ -430,6 +436,8 @@ sub unlock_clones {
     foreach my $clone (@$clone_list) {
         $sth->execute($clone->dbID);
     }
+
+    return;
 }
 
 sub rename_transcript {
@@ -454,6 +462,8 @@ sub rename_transcript {
         }
     );
     $arch->execute($new, $old);
+
+    return;
 }
 
 sub rename_gene {
@@ -480,6 +490,8 @@ sub rename_gene {
     $arch->execute($old, $g_info_id);
 
     fix_gene_remarks($dba, $gene, $tsct_rename_map);
+
+    return;
 }
 
 sub fix_gene_remarks {
@@ -511,6 +523,8 @@ sub fix_gene_remarks {
             #}
         }
     }
+
+    return;
 }
 
 sub fix_transcript_remarks {
@@ -542,6 +556,8 @@ sub fix_transcript_remarks {
             #}
         }
     }
+
+    return;
 }
 
 sub name_is_clone_based {
@@ -656,6 +672,8 @@ sub make_new_gene_name {
                 save_number($name);
             }
         }
+
+        return;
     }
 
     sub save_number {
@@ -669,6 +687,8 @@ sub make_new_gene_name {
                 $gene_max{$root} = $n;
             }
         }
+
+        return;
     }
 
     sub gene_exists {
@@ -681,6 +701,8 @@ sub make_new_gene_name {
         my ($name) = @_;
 
         $gene_name{$name}++;
+
+        return;
     }
 
     sub new_gene_number {
@@ -716,12 +738,16 @@ sub make_new_gene_name {
             #    print STDERR "BAD TSCT NAME: '$name'\n";
             #}
         }
+
+        return;
     }
 
     sub save_transcript_name {
         my ($name) = @_;
 
         $tsct_name{$name}++;
+
+        return;
     }
 
     sub transcript_name_exists {

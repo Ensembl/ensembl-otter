@@ -56,6 +56,8 @@ sub delete_clones {
         printf STDERR "Deleting %s %s\n", $clone->embl_id, $clone->embl_version;
         $clone_aptr->remove($clone);
     }
+
+    return;
 }
 
 sub delete_input_id_analysis {
@@ -90,6 +92,8 @@ sub delete_input_id_analysis {
     while (my ($id) = $sth->fetchrow) {
         $delete->execute($id, $ana_id);
     }
+
+    return;
 }
 
 sub delete_assembly {
@@ -106,6 +110,8 @@ sub delete_assembly {
         WHERE assembly_type = ?
         });
     $sth->execute($name);
+
+    return;
 }
 
 

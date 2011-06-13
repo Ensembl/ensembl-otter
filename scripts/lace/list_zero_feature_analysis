@@ -92,6 +92,8 @@ sub list_missing_ana {
             }
         }
     }
+
+    return;
 }
 
 

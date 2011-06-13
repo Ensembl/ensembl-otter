@@ -293,6 +293,8 @@ sub write_transcript_gtf {
 
         $count++;
     }
+
+    return;
 }
 
 sub make_start_codon_features {
@@ -450,6 +452,8 @@ sub print_description_attribs {
             print $fh qq{ transcript_remark "$rem";};
         }
     }
+
+    return;
 }
 
 
@@ -477,6 +481,8 @@ sub print_attribs {
         print $fh ' protein_id "'
           . get_translation_id($transcript->translation) . '";';
     }
+
+    return;
 }
 
 

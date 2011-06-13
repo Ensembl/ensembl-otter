@@ -148,8 +148,10 @@ $| = 1; ## no critic (Variables::RequireLocalizedPunctuationVars)
                     "\n";
             }
         }
+
+        return;
     }
-    
+
     sub list_exon_stable_ids_for_gene {
         my ($dba, $gene_id, $exon_gene_hash) = @_;
         
@@ -168,6 +170,8 @@ $| = 1; ## no critic (Variables::RequireLocalizedPunctuationVars)
             my $list = $exon_gene_hash->{$exon_stable} ||= [];
             push(@$list, $gene_id);
         }
+
+        return;
     }
 
     # Not used

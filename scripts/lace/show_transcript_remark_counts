@@ -102,6 +102,8 @@ sub check_for_transcript_remarks {
     printf "              assembly  transcripts  with_remarks  remarks  mean  max\n"
         . "%22s  %11d  %12d  %7d  %4.1f  %3d\n",
         $ass_type, $total, $remark_transcripts, $remark_count, $mean, $max;
+
+    return;
 }
 
 

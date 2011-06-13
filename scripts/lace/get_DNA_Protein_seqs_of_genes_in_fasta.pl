@@ -191,6 +191,8 @@ sub output_sequences {
       }
     }
   }
+
+  return;
 }
 
 sub sixty_cols {

@@ -1759,6 +1759,8 @@ sub try_and_fix_exon_strands {
         } else {
             print STDERR "--- FAILED TO MAP (OLDER_VER: ".$gene->type().")\n";
         }
+
+        return;
     }
 
 } # lexical environment for add_xml_gene
@@ -1934,6 +1936,7 @@ sub main {
 
     undef $otter_dba; # to avoid the 'Memory leak' message
 
+    return;
 } # main()
 
 main();

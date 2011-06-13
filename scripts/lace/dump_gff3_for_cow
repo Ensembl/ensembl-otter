@@ -358,6 +358,8 @@ sub write_transcript_gtf {
 
     $count++;
   }
+
+  return;
 }
 
 sub make_start_codon_features {

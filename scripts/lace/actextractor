@@ -79,6 +79,7 @@ sub show_one_set {
     }
     print "\n".('-' x 64)."\n\n";
 
+    return;
 }
 
 sub usage {

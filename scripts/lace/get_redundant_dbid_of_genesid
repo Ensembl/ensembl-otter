@@ -107,6 +107,8 @@ sub get_redundant_db_ids {
   }
 
   print "$gsid ($latest_ver) @unwanted_dbIDs\n" if @unwanted_dbIDs;
+
+  return;
 }
 
 __END__
