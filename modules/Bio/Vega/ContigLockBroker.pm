@@ -29,7 +29,7 @@ sub client_hostname {
 sub author {
     my( $self, $author ) = @_;
     if ($author) {
-        if(!UNIVERSAL::isa($author, 'Bio::Vega::Author')) {
+        if(! eval { $author->isa('Bio::Vega::Author') }) {
             throw("[$author] is not a Bio::Vega::Author");
         }
         $self->{'author'} = $author;
@@ -44,10 +44,9 @@ sub author {
 sub check_locks_exist_by_slice {
     my ($self, $slice, $author, $db) = @_;
 
-    if(UNIVERSAL::isa($slice, 'Bio::EnsEMBL::Slice')) {
+    if($slice->isa('Bio::EnsEMBL::Slice')) {
         $slice = [$slice];
-    } elsif(UNIVERSAL::isa($slice, 'ARRAY') &&
-            UNIVERSAL::isa($slice->[0], 'Bio::EnsEMBL::Slice')) {
+    } elsif(eval { $slice->isa('ARRAY') && $slice->[0]->isa('Bio::EnsEMBL::Slice') }) {
         # do nothing
     } else {
         throw("[$slice] should be Bio::EnsEMBL::Slice or an array of Bio::EnsEMBL::Slice");
@@ -75,10 +74,9 @@ sub check_locks_exist_by_slice {
 sub check_no_locks_exist_by_slice {
     my ($self, $slice, $author, $db) = @_;
 
-    if(UNIVERSAL::isa($slice, 'Bio::EnsEMBL::Slice')) {
+    if(eval { $slice->isa('Bio::EnsEMBL::Slice') }) {
         $slice = [$slice];
-    } elsif(UNIVERSAL::isa($slice, 'ARRAY') &&
-            UNIVERSAL::isa($slice->[0], 'Bio::EnsEMBL::Slice')) {
+    } elsif(eval { $slice->isa('ARRAY') && $slice->[0]->isa('Bio::EnsEMBL::Slice') }) {
         # do nothing
     } else {
         throw("[$slice] should be Bio::EnsEMBL::Slice or an array of Bio::EnsEMBL::Slice");
@@ -106,10 +104,9 @@ sub lock_by_object {
 sub lock_clones_by_slice {
     my ($self, $slice, $author, $db) = @_;
 
-    if(UNIVERSAL::isa($slice, 'Bio::EnsEMBL::Slice')) {
+    if(eval { $slice->isa('Bio::EnsEMBL::Slice') }) {
         $slice = [$slice];
-    } elsif(UNIVERSAL::isa($slice, 'ARRAY') &&
-            UNIVERSAL::isa($slice->[0], 'Bio::EnsEMBL::Slice')) {
+    } elsif(eval { $slice->isa('ARRAY') && $slice->[0]->isa('Bio::EnsEMBL::Slice') }) {
         # do nothing
     } else {
         throw("[$slice] should be Bio::EnsEMBL::Slice or an array of Bio::EnsEMBL::Slice");
@@ -171,10 +168,9 @@ sub remove_by_object {
 sub remove_by_slice {
     my ($self, $slice, $author, $db) = @_;
 
-    if(UNIVERSAL::isa($slice, 'Bio::EnsEMBL::Slice')) {
+    if(eval { $slice->isa('Bio::EnsEMBL::Slice') }) {
         $slice = [$slice];
-    } elsif(UNIVERSAL::isa($slice, 'ARRAY') &&
-            UNIVERSAL::isa($slice->[0], 'Bio::EnsEMBL::Slice')) {
+    } elsif(eval { $slice->isa('ARRAY') && $slice->[0]->isa('Bio::EnsEMBL::Slice') }) {
         # do nothing
     } else {
         throw("[$slice] should be Bio::EnsEMBL::Slice or an array of Bio::EnsEMBL::Slice");
