@@ -110,7 +110,7 @@ foreach my $cons_file ( @cons_files ) {
     # make dirs for libs found in cons file
     system("mkdir -p $cons_dir/$lib");
 
-    open($fh, '>>', "$cons_dir/$lib/$cons_ver");
+    open($fh, '>>', "$cons_dir/$lib/$cons_ver") or die $!;
 
     foreach my $cdna ( keys %{$cdna_fasta->{$plate}->{$lib}} ) {
       print $fh @{$cdna_fasta->{$plate}->{$lib}->{$cdna}}, "\n";

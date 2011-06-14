@@ -1457,7 +1457,8 @@ sub find_last_dbid {
 
     my $skip_to = 0;
 
-    open(my $prev, '<', $filename);
+    open(my $prev, '<', $filename)
+        or die "failed to open $filename: $!";
     local $/="----------------------------------------\n";
     while (<$prev>) {
         my $gene_xml=$_;

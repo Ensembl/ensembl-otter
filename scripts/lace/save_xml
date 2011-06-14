@@ -56,7 +56,8 @@ use Bio::Otter::Lace::Defaults;
      foreach my $file (@files){
         next unless $file=~/\.xml$/;
         my $ffile="$dir/$file";
-        open(my $in,'<',$ffile);
+        open(my $in,'<',$ffile)
+            or die "failed to open $ffile: $!";
         {
           local $/ = undef;
           $xml = <$in>;
@@ -74,7 +75,8 @@ use Bio::Otter::Lace::Defaults;
      }
      write_xml($xml,$dataset,$cl,$pipehead);
   }
-  open(my $out, '>', "/tmp/test_lock.xml");
+  open(my $out, '>', "/tmp/test_lock.xml")
+      or die "failed to open /tmp/test_lock.xml: $!";
   print $out $lock_xml;
   close $out;
 
