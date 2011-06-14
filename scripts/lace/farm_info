@@ -17,7 +17,7 @@ my $buser;
 GetOptions('u|user=s' => \$buser) or die "command line error";
 die "error: usage: farm_info <user>" unless defined $buser;
 
-my $sep = '-' x 75 . "\n";
+my $sep = ( '-' x 75 ) . "\n";
 
 my $pipebin = '/usr/local/lsf/7.0/linux2.6-glibc2.3-x86_64/bin';
 

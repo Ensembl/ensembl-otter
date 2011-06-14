@@ -37,7 +37,7 @@ use Bio::Vega::DBSQL::DBAdaptor;
   my $setNum = scalar @sets;
 
   my $caption = sprintf("%-18s %-18s %-6s %-6s %-5s %-5s %s\n", 'Gene_stable_id', 'Trans_stable_id', 'Strand', 'Intron', 'Left', 'Right', 'Remark');
-  $caption .= '-' x 100 . "\n";
+  $caption .= ( '-' x 100 ) . "\n";
 
   my $warnings = '';
   my $setcount = 0;

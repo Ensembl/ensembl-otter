@@ -323,7 +323,7 @@ sub write_transcript_gtf {
               . ($startc->start + $sliceoffset) . "\t"
                 . ($startc->end + $sliceoffset) . "\t" . "." . "\t"
                   . $strand . "\t"
-                    . 0 . "\t";
+                    . "0" . "\t";
         print $fh print_attribs($transcript, 'start_codon');
         print $fh "\n";
       }
@@ -344,7 +344,7 @@ sub write_transcript_gtf {
                 . ($endc->start + $sliceoffset) . "\t"
                   . ($endc->end + $sliceoffset) . "\t" . "." . "\t"
                     . $strand . "\t"
-                      . 0 . "\t";
+                      . "0" . "\t";
           print $fh print_attribs($transcript, 'stop_codon');
           print $fh "\n";
         }
