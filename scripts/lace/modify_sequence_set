@@ -76,7 +76,7 @@ use Hum::Submission qw(accession_from_sanger_name);
           export_SequenceSet($otter_db, $SequenceSet, $list, $ARGV[0]);
         if (scalar(keys(%$found))) {
             print STDERR "Couldn't find:\n"
-              . (join("\n", grep { $found->{$_} ne 1 } (keys %$found))) . "\n";
+              . (join("\n", grep { $found->{$_} != 1 } (keys %$found))) . "\n";
         }
         print STDERR "Found $gaps gaps.\n";
     }
