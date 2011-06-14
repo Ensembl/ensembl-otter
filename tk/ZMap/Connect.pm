@@ -38,9 +38,10 @@ sub new{
     my $self = { };
     bless($self, $pkg);
 
-    $self->{_receiver} = $args->{-receiver};
+    my $receiver = $self->{_receiver} = $args->{-receiver};
     my $widget = $self->{_widget} = $self->_widget(@args);
-    $self->{_xremote} = $self->_xremote($widget->id);
+    my $debug = $receiver->xremote_debug;
+    $self->{_xremote} = $self->_xremote($widget->id, $debug);
 
     return $self;
 }
@@ -114,9 +115,9 @@ sub xremote{
 }
 
 sub _xremote{
-    my ($self, $id) = @_;
+    my ($self, $id, $debug) = @_;
 
-    my $xremote = X11::XRemote->new(-server => 1, -id => $id);
+    my $xremote = X11::XRemote->new(-server => 1, -id => $id, -_DEBUG => $debug);
     $xremote->request_name($self->request_name);
     $xremote->response_name($self->response_name);
 

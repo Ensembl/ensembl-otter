@@ -7,7 +7,6 @@ use warnings;
 use X11::XRemote;
 use Data::Dumper;
 
-my $CLIENT_DEBUG = 0;
 my $CACHE_DEBUG  = 0;
 
 my $object_cache = {
@@ -22,9 +21,14 @@ my $object_cache = {
 # spread over multiple pids.
 
 sub new{
-    my $pkg = shift;
-    my $self = {};
-    $self->{'_self_windows'} = {};
+    my ($pkg, @args) = @_;
+
+    my $args = { @args };
+    my $self = {
+        _self_windows => {},
+        _xremote_debug =>
+            $args->{-xremote_debug},
+    };
     bless($self, $pkg);
 
     return $self;
@@ -131,7 +135,7 @@ sub create_client_with_pid_id_actions{
 
     my $client = X11::XRemote->new(-id     => $id, 
                                    -server => 0,
-                                   -_DEBUG => $CLIENT_DEBUG);
+                                   -_DEBUG => $self->xremote_debug);
     $object_cache->{$id} = {
         'object'  => $client,
         'pid'     => $pid,
@@ -142,6 +146,10 @@ sub create_client_with_pid_id_actions{
     return $client;
 }
 
+sub xremote_debug {
+    my ($self) = @_;
+    return $self->{_xremote_debug};
+}
 
 sub DESTROY{
     my ($self) = @_;
