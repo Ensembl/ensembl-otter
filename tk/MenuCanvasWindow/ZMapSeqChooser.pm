@@ -13,8 +13,6 @@ use File::Path qw{ mkpath };
 use Config::IniFiles;
 use POSIX;
 
-my $ZMAP_DEBUG = $ENV{OTTERLACE_ZMAP_DEBUG};
-
 #==============================================================================#
 #
 # WARNING: THESE ARE INJECTED METHODS!!!!
@@ -43,7 +41,9 @@ sub zMapInitialize {
         );
 
     $self->{_xremote_cache} =
-        ZMap::XRemoteCache->new;
+        ZMap::XRemoteCache->new(
+            -xremote_debug => $self->xremote_debug,
+        );
 
     my $dir = $self->zMapZMapDir;
     unless (-d $dir) {
@@ -1062,7 +1062,7 @@ my $zmap_request_callback_methods = {
 sub _zmap_request_callback {
     my ($self, $xml) = @_;
 
-    warn sprintf "\n_zmap_request_callback:XML\n>>>\n%s\n<<<\n", $xml if $ZMAP_DEBUG;
+    warn sprintf "\n_zmap_request_callback:XML\n>>>\n%s\n<<<\n", $xml if $self->xremote_debug;
 
     # The default response code and message.
     my ($status, $response) = (404, $self->zMapZmapConnector->basic_error("Unknown Command"));
@@ -1083,7 +1083,7 @@ sub _zmap_request_callback {
     warn sprintf
         "\n_zmap_request_callback\nstatus:%d\nresponse\n>>>\n%s\n<<<\n"
         , $status, $response
-        if $ZMAP_DEBUG;
+        if $self->xremote_debug;
 
     return ($status, $response);
 }
@@ -1331,9 +1331,9 @@ return true for success
 sub zMapDoRequest {
     my ($self, $xremote, $action, $command) = @_;
 
-    warn sprintf "\nzMapDoRequest:command\n>>>\n%s\n<<<\n", $command if $ZMAP_DEBUG;
+    warn sprintf "\nzMapDoRequest:command\n>>>\n%s\n<<<\n", $command if $self->xremote_debug;
     my ($response) = $xremote->send_commands($command);
-    warn sprintf "\nzMapDoRequest:response\n>>>\n%s\n<<<\n", $response if $ZMAP_DEBUG;
+    warn sprintf "\nzMapDoRequest:response\n>>>\n%s\n<<<\n", $response if $self->xremote_debug;
 
     my ($status, $xmlHash) = zMapParseResponse($response);
     if ($status =~ /^2\d\d/) {    # 200s
@@ -1418,6 +1418,12 @@ sub zMapParseResponse {
     my ($status, $xml) = split(/$delimit/, $response, 2);
     my $hash   = XMLin($xml);
     return ($status, $hash);
+}
+
+sub xremote_debug {
+    my ($self) = @_;
+    return $self->{_xremote_debug} ||=
+        $self->AceDatabase->xremote_debug;
 }
 
 1;
