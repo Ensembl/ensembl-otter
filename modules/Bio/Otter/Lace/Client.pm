@@ -1159,7 +1159,8 @@ sub sessions_needing_recovery {
                     $adb->unlock_otter_slice;
                     print STDERR "\nRemoved lock from uninitialised database in '$lace_dir'\n";
                 }
-            };
+                1;
+            } or warn "error while recoving session '$lace_dir': $@";
             if (-d $lace_dir) {
                 # Belt and braces - if the session was unrecoverable we want it to be deleted.
                 print STDERR "\nNo such file: '$lace_dir/database/ACEDB.wrm'\nDeleting uninitialized database '$lace_dir'\n";
