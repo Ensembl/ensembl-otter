@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl
+#!/usr/bin/env perl
 
 # script to take meta information in an otter database and use it to
 # transform a copy of the database (pipeline, gene merge) into an 'vega'

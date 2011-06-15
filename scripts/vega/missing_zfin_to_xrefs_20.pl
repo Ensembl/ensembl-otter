@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl
+#!/usr/bin/env perl
 
 # same as missing_zfin_to_xrefs.pl but for schema 20+
 

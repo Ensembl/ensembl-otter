@@ -1,4 +1,4 @@
-#!/usr/local/perl/bin -w
+#!/usr/bin/env perl
 # Author: Kerstin Jekosch
 # Email: kj2@sanger.ac.uk
 
