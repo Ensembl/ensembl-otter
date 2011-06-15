@@ -1,4 +1,4 @@
-#!/usr/local/bin/perl
+#!/usr/bin/env perl
 
 # produces xrefs for the genes listed in our weekly ZFIN downloads (see below)
 
