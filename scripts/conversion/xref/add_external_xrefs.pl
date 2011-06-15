@@ -155,9 +155,9 @@ $support->init_log;
 # connect to database and get adaptors
 my $dba = $support->get_database('ensembl');
 my $dbh = $dba->dbc->db_handle;
-my $sa = $dba->get_SliceAdaptor();
-my $ga = $dba->get_GeneAdaptor();
-my $ea = $dba->get_DBEntryAdaptor();
+my $sa  = $dba->get_SliceAdaptor();
+my $ga  = $dba->get_GeneAdaptor();
+my $ea  = $dba->get_DBEntryAdaptor();
 
 # statement handle for display_xref_id update
 my $sth_display_xref = $dba->dbc->prepare("UPDATE gene SET display_xref_id=? WHERE gene_id=?");
@@ -254,6 +254,15 @@ if ($support->param('verbose')) {
 use strict 'refs';
 $support->log_stamped("Done.\n\n");
 
+if ($support->param('xrefformat') eq 'imgt_hla') {
+  foreach my $gsi (keys %{$parsed_xrefs}) {
+    unless (my $gene  = $ga->fetch_by_stable_id($gsi) ) {
+      $support->log_warning("Cannot retrieve $gsi from Vega database\n");
+    }
+  }
+}
+
+
 # define each type of xref that can be set, and whether to set as display_xref or not
 my %extdb_def = (
   HGNC                     => ['KNOWNXREF', 1],
@@ -278,6 +287,7 @@ my %extdb_def = (
 $support->log("Looping over chromosomes: @chr_sorted\n\n");
 my $seen_xrefs;
 my (%overall_stats,%overall_xrefs);
+
 foreach my $chr (@chr_sorted) {
   $support->log_stamped("> Chromosome $chr (".$chr_length->{$chr}."bp).\n\n");
 
@@ -301,9 +311,8 @@ foreach my $chr (@chr_sorted) {
   foreach my $gene (@$genes) {
     my $gsi = $gene->stable_id;
     my $gid = $gene->dbID;
-
     my $gene_name;
-    
+
     # filter to user-specified gene_stable_ids
     if (scalar(keys(%gene_stable_ids))){
       next GENE unless $gene_stable_ids{$gsi};
@@ -348,7 +357,7 @@ foreach my $chr (@chr_sorted) {
       #get all names to search on
       my @gene_names;
       push @gene_names, $real_name;
-	    
+
       #use previously set MarkerSymbol xrefs as searchable names
       if ( $support->param('xrefformat') eq 'mgi') {
 	foreach my $xref (@{$gene->get_all_DBEntries}) {
@@ -365,7 +374,7 @@ foreach my $chr (@chr_sorted) {
       if ($support->param('xrefformat') =~ /imgt|mgivega/) {
 	@gene_names = ( $gsi );
       }
-      
+
       #get a list of names of databases for existing xrefs on this gene
       my %existing_dbnames;
       foreach my $xref (@{$gene->get_all_DBEntries}){
@@ -382,23 +391,15 @@ foreach my $chr (@chr_sorted) {
 		
 	$support->log("Searching for name $name...\n",1);
 	if (my $links = $parsed_xrefs->{$name}) {
-	  if ($links->{'This symbol is withdrawn'}) {
 
-	    #need to be done better than it is to not hide useless reports(eg ->log_verbose_warning)
-	    # - don't know why this commented out code should not work
-#	    if (! $prefix || $support->param('verbose') ) {
-	      $support->log_warning("Vega name: $name ($gene_name) matches a withdrawn record\n",1);
-	      next NAME;
-#	    }
-	  }
 	  $support->log("Match found for $name.\n",1);
 
           my $synonyms = $links->{'Synonyms'} || [];
-	  
+
 	DB: foreach my $db (keys %{$links}) {
             next DB if $db eq 'Synonyms';
 	    $support->log_verbose("Assessing link to $db\n",2);
-	    
+
 	    #sanity check - don't go any further if this gene already has an xref for this source
 	    if ($existing_dbnames{$db}) {
 	      $support->log("$db xref previously set for gene $gene_name ($gsi), not storing a new one.\n", 1);
@@ -408,23 +409,24 @@ foreach my $chr (@chr_sorted) {
 			
 	    foreach my $concat_xid ( @{$links->{$db}} ) {
 	      my $dbentry;
-			    
+
 	      #catch empty xrefs
 	      if (!$concat_xid || $concat_xid =~ /^\|\|$/) {
 		$support->log_verbose("No details found for database $db\n",3);
 		next DB;
 	      }
-			    
+
 	      my ($xid,$pid) = split /\|\|/, $concat_xid;
-			    
+
 	      unless ($xid && $pid) {
 		$support->log_warning("Parsed file not in the correct format, please check\n");
 		next DB;
 	      }
-			    
+
 	      #use an existing xref if there is one...
 	      my ($existing_xref,$dbID);
 	      $existing_xref = $ea->fetch_by_db_accession($db,$pid);
+
 	      if ($existing_xref && $existing_xref->display_id eq $xid) {
                 #add synonyms if there are any
                 if ($extdb_def{$db}->[1] && @$synonyms ) {
@@ -470,12 +472,13 @@ foreach my $chr (@chr_sorted) {
 	      elsif (! $support->param('dry_run')) {
 		$support->log_warning("Failed to store $db xref for gene $gene_name ($gsi)\n");
 	      }
-			    
+
 	      #do we want to update the display_xref ?
 	      if ($extdb_def{$db}->[1]) {
 		
 		#if there's no prefix it's easy -  use the xref just created
 		if (! $prefix) {
+                  $support->log_verbose("Updating display_xref for gene $gene_name, using $gid\n",2);
 		  if (! $support->param('dry_run')) {
 		    $sth_display_xref->execute($dbID,$gid);
 		    $support->log("UPDATED display xref (pid = $dbID) for $gene_name ($gsi).\n",2);	
@@ -484,12 +487,14 @@ foreach my $chr (@chr_sorted) {
 				
 		#if there is a prefix then we need another xref
 		else {
+                  my $info_text = ($prefix eq 'KO') ? 'vega_source_prefix_ko' : 'vega_source_prefix';
+                  $support->log_verbose("Creating new display_xref for gene $gene_name\n",2);
 		  my $new_dbentry = Bio::EnsEMBL::DBEntry->new(
 		    -primary_id => $pid,
 		    -display_id => $gene_name,
 		    -version    => 1,
 		    -dbname     => $db,
-		    -info_text  => 'vega_source_prefix',
+		    -info_text  => $info_text,
 		  );
 		  if (! $support->param('dry_run')) {
 		    my $new_dbID = $ea->store($new_dbentry, $gid, 'gene', 1);
@@ -500,7 +505,6 @@ foreach my $chr (@chr_sorted) {
 	      }
 	    }
 	  }												
-	  #					exit;
 	}
 	else {
 	  $support->log("No match found for $name.\n",1);
@@ -978,6 +982,7 @@ sub parse_imgt_hla {
   my @fieldnames = split /\t/, $line;
   while (<IMGT>) {
     chomp;
+    s/ //g;
     my @fields = split /\t/, $_;
     my $xid  = $fields[1];
     my $gsi = $fields[0];
