@@ -38,6 +38,7 @@ sub new {
     ## no critic(Variables::RequireLocalizedPunctuationVars)
 
     $ENV{'OTTERLACE_COOKIE_JAR'} ||= "$ENV{HOME}/.otter/ns_cookie_jar";
+    $ENV{'BLIXEM_CONFIG_FILE'}   ||= "$ENV{HOME}/.otter/etc/blixemrc";
 
     my $new = bless {
         _client_name     => $client_name,
@@ -1242,12 +1243,6 @@ sub kill_old_sgifaceserver {
 }
 
 ############## Session recovery methods end here ############################
-
-sub xremote_debug {
-    my ($self) = @_;
-    return $self->{_xremote_debug} ||=
-        $self->config_value('xremote-debug') ? 1 : 0;
-}
 
 1;
 
