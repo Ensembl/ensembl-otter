@@ -265,31 +265,30 @@ $support->log("Done. ".$support->date_and_mem."\n\n");
 # print log results
 $support->log("\nProcessed ".scalar(keys %$vega_ids)." identifiers.\n");
 $support->log("OK: $num_success\n");
-$support->log("WARNINGS:\n");
-$support->log("Identifiers with no matching transcript in Vega: $no_match.\n", 1);
-$support->log("Transcripts in this set that don't translate: $no_trans.\n", 1);
-
 if ($successful) {
   $support->log("\nTranscripts which had a CCDS identifier added:\n");
   $support->log(sprintf "    %-30s%-20s%-20s\n", qw(STABLE_ID DBID CCDS_ID));
   $support->log("    " . "-"x70 . "\n");
   $support->log($successful);
 }
+
 if ($missing_transcript) {
-  $support->log_warning("\nTranscripts with no matching CCDS identifier:\n");
+  $support->log_warning("\nIdentifiers with no matching transcript in Vega: $no_match.\n", 1);
   $support->log($missing_transcript);
 }
+
 if ($non_translating) {
-  $support->log_warning("\nTranscripts in this set that don't translate:\n");
+  $support->log_warning("\nTranscripts in this set that don't translate: $no_trans.\n", 1);
   $support->log($non_translating);
 }
-$support->log("\nTranscripts in with xrefs added had the following logic_names:\n");
+
+$support->log("\nTranscripts with xrefs added had the following logic_names:\n");
 while (my ($ln, $c) = each %sources) {
   $support->log("$c with logic_name of $ln\n",1);
 }
 my @dup_ids = grep {$transcript_ids{$_} > 1} keys %transcript_ids;
 if (@dup_ids) {
-  $support->log("There are scalar(@dup_ids) with duplicates:\n" . join "\n" , @dup_ids . "\n");
+  $support->log_warning("There are scalar(@dup_ids) with duplicates:\n" . join "\n" , @dup_ids . "\n");
 }
 
 
