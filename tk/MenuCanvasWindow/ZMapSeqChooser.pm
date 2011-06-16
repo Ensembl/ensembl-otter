@@ -13,6 +13,8 @@ use File::Path qw{ mkpath };
 use Config::IniFiles;
 use POSIX;
 
+my $ZMAP_DEBUG = $ENV{OTTERLACE_ZMAP_DEBUG};
+
 #==============================================================================#
 #
 # WARNING: THESE ARE INJECTED METHODS!!!!
@@ -35,27 +37,14 @@ sub zMapInitialize {
     my ( $self ) = @_;
 
     $self->{_zMap_ZMAP_CONNECTOR} =
-        ZMap::Connect->new(
-            -tk => $self->menu_bar,
-            -receiver => $self,
-        );
+        $self->zMapZmapConnectorNew;
 
     $self->{_xremote_cache} =
-        ZMap::XRemoteCache->new(
-            -xremote_debug => $self->xremote_debug,
-        );
+        ZMap::XRemoteCache->new;
 
-    my $dir = $self->zMapZMapDir;
-    unless (-d $dir) {
-        mkdir $dir or confess "failed to create the directory '$dir': $!\n";
-    }
-
-    my $stylesfile = $self->zMapStylesPath;
-    $self->Assembly->MethodCollection->ZMapStyleCollection->write_to_file($stylesfile);
-
-    $self->zMapWriteConfigFile('ZMap',     $self->zMapZMapContent);
-    $self->zMapWriteConfigFile('.gtkrc',   $self->zMapGtkrcContent);
-    $self->zMapWriteConfigFile('blixemrc', $self->zMapBlixemrcContent);
+    $self->zMapWriteDotZmap;
+    $self->zMapWriteDotGtkrc;
+    $self->zMapWriteDotBlixemrc;
 
     return;
 }
@@ -82,7 +71,7 @@ sub _launchZMap {
 
     my @e = (
         'zmap',
-        '--conf_dir' => $self->zMapZMapDir,
+        '--conf_dir' => $self->zMapZmapDir,
         '--win_id'   => $self->zMapZmapConnector->server_window_id,
         @{$dataset->config_value_list('zmap_config', 'arguments')},
     );
@@ -221,7 +210,7 @@ sub zMapSendCommands {
 =head1 post_response_client_cleanup
 
 A function to cleanup any bad windows that might exist.
-Primary user of this is the zMapFinalised function.
+Primary user of this is the zMapRelaunchZMap function.
 
 =cut
 
@@ -248,7 +237,7 @@ sub post_response_client_cleanup_launch_in_a_zmap {
     return;
 }
 
-=head1 zMapFinalised
+=head1 zMapRelaunchZMap
 
 A  handler to  handle finalise  requests. ZMap  sends these  when it's
 closing the  whole program. Depending  on whether we want  to relaunch
@@ -256,7 +245,7 @@ zmap might be launched again.
 
 =cut
 
-sub zMapFinalised {
+sub zMapRelaunchZMap {
     my ($self, $xml) = @_;
 
     if ($self->{'_relaunch_zmap'}) {
@@ -306,7 +295,7 @@ sub zMapKillZmap {
 
                 $rval = 1;    # everything has been as successful as can be
                 ### Check shutdown by checking property set by ZMap?
-                ### This is done in zMapFinalised...
+                ### This is done in zMapRelaunchZMap...
             }
             else {
 
@@ -359,7 +348,31 @@ sub zMapZmapConnector {
     return $zc;
 }
 
-sub zMapBlixemrcContent {
+sub zMapZmapConnectorNew {
+    my ($self) = @_;
+    my $mb = $self->menu_bar();
+    my $zc = ZMap::Connect->new;
+    $zc->init($mb, \&RECEIVE_FILTER, [ $self, qw() ]);
+    my $id = $zc->server_window_id();
+    return $zc;
+}
+
+sub zMapWriteDotBlixemrc {
+    my ($self) = @_;
+
+    my $file = $ENV{'BLIXEM_CONFIG_FILE'};
+    my ($dir) = $file =~ m{(.+)/[^/]+$};
+    mkpath($dir);    # Fatal if fails
+    open my $blixem_rc, '>', $file
+      or confess "Can't write to '$file'; $!";
+    print $blixem_rc $self->zMapDotBlixemrcContent;
+    close $blixem_rc
+        or confess "Error writing to '$file'; $!";
+
+    return;
+}
+
+sub zMapDotBlixemrcContent {
     my ($self) = @_;
 
     # extract the blixem stanza so that we can put it first
@@ -374,15 +387,33 @@ sub zMapBlixemrcContent {
           } sort keys %{$blixem_config} );
 }
 
-sub zMapZMapContent{
+sub zMapWriteDotZmap {
     my ($self) = @_;
+
+    my $file = $self->zMapZmapDir . "/ZMap";
+    
+    my $stylesfile = $self->zMapZmapDir . "/styles.ini";
+    
+    $self->Assembly->MethodCollection->ZMapStyleCollection->write_to_file($stylesfile);
+
+    open my $fh, '>', $file
+        or confess "Can't write to '$file'; $!";
+    print $fh $self->zMapDotZmapContent($stylesfile);
+    close $fh
+      or confess "Error writing to '$file'; $!";
+
+    return;
+}
+
+sub zMapDotZmapContent{
+    my ($self, $stylesfile) = @_;
     
     return
         $self->zMapZMapDefaults
       . $self->zMapWindowDefaults
       . $self->zMapBlixemDefaults
-      . $self->zMapAceServerDefaults
-      . $self->zMapGffFilterDefaults
+      . $self->zMapAceServerDefaults($stylesfile)
+      . $self->zMapGffFilterDefaults($stylesfile)
       . $self->zMapGlyphDefaults
       ;
 }
@@ -400,7 +431,7 @@ sub zMapGlyphDefaults {
 }
 
 sub zMapAceServerDefaults {
-    my ($self) = @_;
+    my ($self, $stylesfile) = @_;
 
     my $server = $self->AceDatabase->ace_server;
 
@@ -420,13 +451,13 @@ sub zMapAceServerDefaults {
         # Can specify a stylesfile instead of featuresets
 
         featuresets     => $featuresets,
-        stylesfile      => $self->zMapStylesPath,
+        stylesfile      => $stylesfile,
     );
 }
 
 sub zMapGffFilterDefaults {
     
-    my ($self) = @_;
+    my ($self, $stylesfile) = @_;
 
     my $text;
     my %filter_columns;
@@ -445,7 +476,7 @@ sub zMapGffFilterDefaults {
             delayed         =>
             ( $state_hash->{wanted} && ! $state_hash->{failed} )
             ? 'false' : 'true',
-            stylesfile      => $self->zMapStylesPath,
+            stylesfile      => $stylesfile,
             group           => 'always',
         );
         
@@ -516,7 +547,7 @@ sub zMapBlixemDefaults {
 
     return $self->formatZmapDefaults(
         'blixem',
-        'config-file' => $self->zMapConfigPath('blixemrc'),
+        'config-file' => $ENV{'BLIXEM_CONFIG_FILE'},
         %{ $self->AceDatabase->DataSet->config_section('blixem') },
     );
 }
@@ -575,7 +606,7 @@ sub formatGtkrcWidget {
     return $full_def;
 }
 
-sub zMapGtkrcContent {
+sub zMapDotGtkrcContent {
     my ($self) = @_;
 
     # to create a coloured border for the focused view.
@@ -618,37 +649,33 @@ sub zMapGtkrcContent {
     return $full_content;
 }
 
-sub zMapWriteConfigFile {
-    my ($self, $file, $config) = @_;
+sub zMapWriteDotGtkrc {
+    my ($self) = @_;
 
-    my $path = $self->zMapConfigPath($file);
-    open my $fh, '>', $path
-        or confess "Can't write to '$path'; $!";
-    print $fh $config;
+    my $dir  = $self->zMapZmapDir;
+    my $file = "$dir/.gtkrc";
+
+    open my $fh, '>', $file
+        or confess "Can't write to '$file'; $!";
+    print $fh $self->zMapDotGtkrcContent;
     close $fh
-      or confess "Error writing to '$path'; $!";
+      or confess "Error writing to '$file'; $!";
 
     return;
 }
 
-sub zMapStylesPath {
-    my ($self) = @_;
-    return $self->zMapConfigPath('styles.ini');
-}
+sub zMapZmapDir {
+    my ( $self, @args ) = @_;
 
-sub zMapConfigPath {
-    my ($self, $file) = @_;
+    confess "Cannot set ZMap directory directly" if @args;
 
-    my $dir  = $self->zMapZMapDir;
-    my $path = "${dir}/${file}";
-
+    my $ace_path = $self->ace_path();
+    my $path     = "$ace_path/ZMap";
+    unless (-d $path) {
+        mkdir $path;
+        confess "Can't mkdir('$path') : $!\n" unless -d $path;
+    }
     return $path;
-}
-
-sub zMapZMapDir {
-    my ($self) = @_;
-    return $self->{'_zMap_ZMAP_DIR'} ||=
-        ($self->ace_path . '/ZMap');
 }
 
 #===========================================================
@@ -792,18 +819,14 @@ sub zMapHighlight {
     return (200, $zc->handled_response(1));
 }
 
-# some aliases for naming consistency
-*zMapSingleSelect   = \&zMapHighlight;
-*zMapMultipleSelect = \&zMapHighlight;
-
-=head1 zMapFeatureDetails
+=head1 zMapTagValues
 
 A  handler  to handle  feature_details  request.   returns a  notebook
 response.
 
 =cut
 
-sub zMapFeatureDetails {
+sub zMapTagValues {
     my ($self, $xml_hash) = @_;
 
     my $pages = "";
@@ -930,7 +953,7 @@ sub zmap_feature_evidence_xml {
     }
 }
 
-sub zMapViewClosed {
+sub zMapRemoveView {
     my ($self, $xml) = @_;
 
     # I guess all we need to do here is remove the associated xid from the cache...
@@ -1019,7 +1042,7 @@ sub zMapFeaturesLoaded {
 sub zMapUpdateConfigFile {
     my ($self) = @_;
     
-    my $cfg = $self->{_zmap_cfg} ||= Config::IniFiles->new( -file => $self->zMapConfigPath('ZMap'));
+    my $cfg = $self->{_zmap_cfg} ||= Config::IniFiles->new( -file => $self->zMapZmapDir . '/ZMap' );
 
     while ( my ( $name, $value ) = each %{$self->AceDatabase->filters}) {
         my $state_hash = $value->{state};
@@ -1042,48 +1065,67 @@ sub zMapIgnoreRequest {
     return(200, $self->zMapZmapConnector->handled_response(0));
 }
 
-my @zmap_request_callback_xml_parameters =
-    (
-     KeyAttr    => { feature => 'name' },
-     ForceArray => [ 'feature', 'subfeature' ],
-    );
+sub RECEIVE_FILTER {
+    my ($connect, $reqXML, $obj) = @_;
 
-my $zmap_request_callback_methods = {
-    register_client => \&zMapRegisterClient,
-    edit            => \&zMapEdit,
-    single_select   => \&zMapSingleSelect,
-    multiple_select => \&zMapMultipleSelect,
-    finalised       => \&zMapFinalised,
-    feature_details => \&zMapFeatureDetails,
-    view_closed     => \&zMapViewClosed,
-    features_loaded => \&zMapFeaturesLoaded,
-};
+    # The table of actions and functions...
+    my $lookup = {
+        register_client => 'zMapRegisterClient',
+        edit            => 'zMapEdit',
+        single_select   => 'zMapHighlight',
+        multiple_select => 'zMapHighlight',
+        finalised       => 'zMapRelaunchZMap',
+        feature_details => 'zMapTagValues',
+        view_closed     => 'zMapRemoveView',
+        features_loaded => 'zMapFeaturesLoaded',
+    };
 
-sub _zmap_request_callback {
-    my ($self, $xml) = @_;
+    # @list could be dynamically created...
+    my @list = keys(%$lookup);
 
-    warn sprintf "\n_zmap_request_callback:XML\n>>>\n%s\n<<<\n", $xml if $self->xremote_debug;
+    unless ($reqXML->{'request'}) {
+
+        #for my $k (keys %$reqXML) {
+        #    $reqXML->{'request'}->{$k} = $reqXML->{$k};
+        #    delete $reqXML->{$k};
+        #}
+
+        warn "INVALID REQUEST: no <request> block\n";
+    }
+
+    my $action = $reqXML->{'request'}->{'action'};
+
+    warn "PARSED REQUEST: " . Dumper($reqXML) . "\n" if $ZMAP_DEBUG;
+
+    warn "In RECEIVE_FILTER for action=$action\n" if $ZMAP_DEBUG;
+
+    warn sprintf "\n_zmap_request_callback:XML\n>>>\n%s\n<<<\n", $reqXML if $ZMAP_DEBUG;
 
     # The default response code and message.
-    my ($status, $response) = (404, $self->zMapZmapConnector->basic_error("Unknown Command"));
+    my ($status, $response) = (404, $obj->zMapZmapConnector->basic_error("Unknown Command"));
 
-    my $request = XMLin($xml, @zmap_request_callback_xml_parameters);
-    if (my $action = $request->{request}{action}) {
-        if (my $method = $zmap_request_callback_methods->{$action}) {
-            ($status, $response) = $self->$method($request);
-        }
-        else {
-            warn "UNKNOWN ACTION: ${action}\n";
+    # find the method to call...
+    foreach my $valid (@list) {
+        if (
+            $action eq $valid
+            && ($valid = $lookup->{$valid})    # N.B. THIS SHOULD BE ASSIGNMENT NOT EQUALITY
+            && $obj->can($valid)
+          )
+        {
+
+            # call the method to get the status and response
+            #warn "Calling $obj->$valid($reqXML)";
+            ($status, $response) = $obj->$valid($reqXML);
+            last;                              # no need to go any further...
         }
     }
-    else {
-        warn "INVALID REQUEST\n";
-    }
+
+    warn "Response:\n$response" if $ZMAP_DEBUG;
 
     warn sprintf
         "\n_zmap_request_callback\nstatus:%d\nresponse\n>>>\n%s\n<<<\n"
         , $status, $response
-        if $self->xremote_debug;
+        if $ZMAP_DEBUG;
 
     return ($status, $response);
 }
@@ -1331,9 +1373,9 @@ return true for success
 sub zMapDoRequest {
     my ($self, $xremote, $action, $command) = @_;
 
-    warn sprintf "\nzMapDoRequest:command\n>>>\n%s\n<<<\n", $command if $self->xremote_debug;
+    warn sprintf "\nzMapDoRequest:command\n>>>\n%s\n<<<\n", $command if $ZMAP_DEBUG;
     my ($response) = $xremote->send_commands($command);
-    warn sprintf "\nzMapDoRequest:response\n>>>\n%s\n<<<\n", $response if $self->xremote_debug;
+    warn sprintf "\nzMapDoRequest:response\n>>>\n%s\n<<<\n", $response if $ZMAP_DEBUG;
 
     my ($status, $xmlHash) = zMapParseResponse($response);
     if ($status =~ /^2\d\d/) {    # 200s
@@ -1418,12 +1460,6 @@ sub zMapParseResponse {
     my ($status, $xml) = split(/$delimit/, $response, 2);
     my $hash   = XMLin($xml);
     return ($status, $hash);
-}
-
-sub xremote_debug {
-    my ($self) = @_;
-    return $self->{_xremote_debug} ||=
-        $self->AceDatabase->xremote_debug;
 }
 
 1;
