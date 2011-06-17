@@ -44,6 +44,7 @@ version_major="$( config_value version_major )"
 version_minor="$( config_value version_minor )"
 testing="$( config_value testing )"
 client_ensembl_version="$( config_value client_ensembl_version )"
+zmap_path="$( config_value zmap_path )"
 
 if [ -n "$version_minor" ]
 then
@@ -52,13 +53,14 @@ else
     version="$version_major"
 fi
 
+zmap_home=~zmap
+zmap_root="${zmap_home}/${zmap_path}"
+zmap_prefix="${zmap_root}/Linux_$( uname -m )"
 
 # EXTERNAL PARAMETERS
 build_log=/nfs/anacode/otterlace/ensembl_otter_build_log.txt
 anacode_cvsroot=:ext:cvs.internal.sanger.ac.uk:/repos/cvs/anacode
 ensembl_cvsroot=:ext:cvs.sanger.ac.uk:/cvsroot/ensembl
-zmap_build_dir=~zmap/BUILD.DEVELOPMENT
-zmap_prefix="${zmap_build_dir}/Linux_$( uname -m )"
 otterlace_server_root=/nfs/WWWdev/SANGER_docs
 otterlace_prefix="/software/anacode/otter/otter_rel${version}"
 # echo "otterlace_prefix = '${otterlace_prefix}'" ; exit # uncomment to test
@@ -154,7 +156,7 @@ otterlace_client_install_xremote() {
     rm -rf -- "$build_dir" &&
     mkdir -p -- "$build_dir" &&
     ( cd "$build_dir" &&
-        cp -r -- "${zmap_build_dir}/ZMap/src/perl/X11-XRemote-0.01" . &&
+        cp -r -- "${zmap_root}/ZMap/src/perl/X11-XRemote-0.01" . &&
         cd X11-XRemote-0.01 &&
         perl Makefile.PL \
             PREFIX=${otterlace_prefix} \
