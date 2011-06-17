@@ -42,17 +42,17 @@ sub zMapInitialize {
     $self->{_xremote_cache} =
         ZMap::XRemoteCache->new;
 
-    my $dir = $self->zMapZmapDir;
+    my $dir = $self->zMapZMapDir;
     unless (-d $dir) {
         mkdir $dir or confess "failed to create the directory '$dir': $!\n";
     }
 
-    my $stylesfile = $self->zMapConfigPath('styles.ini');
+    my $stylesfile = $self->zMapStylesPath;
     $self->Assembly->MethodCollection->ZMapStyleCollection->write_to_file($stylesfile);
 
-    $self->zMapWriteConfigFile('ZMap',     $self->zMapDotZmapContent($stylesfile));
-    $self->zMapWriteConfigFile('.gtkrc',   $self->zMapDotGtkrcContent);
-    $self->zMapWriteConfigFile('blixemrc', $self->zMapDotBlixemrcContent);
+    $self->zMapWriteConfigFile('ZMap',     $self->zMapZMapContent);
+    $self->zMapWriteConfigFile('.gtkrc',   $self->zMapGtkrcContent);
+    $self->zMapWriteConfigFile('blixemrc', $self->zMapBlixemrcContent);
 
     return;
 }
@@ -79,7 +79,7 @@ sub _launchZMap {
 
     my @e = (
         'zmap',
-        '--conf_dir' => $self->zMapZmapDir,
+        '--conf_dir' => $self->zMapZMapDir,
         '--win_id'   => $self->zMapZmapConnector->server_window_id,
         @{$dataset->config_value_list('zmap_config', 'arguments')},
     );
@@ -218,7 +218,7 @@ sub zMapSendCommands {
 =head1 post_response_client_cleanup
 
 A function to cleanup any bad windows that might exist.
-Primary user of this is the zMapRelaunchZMap function.
+Primary user of this is the zMapFinalised function.
 
 =cut
 
@@ -245,7 +245,7 @@ sub post_response_client_cleanup_launch_in_a_zmap {
     return;
 }
 
-=head1 zMapRelaunchZMap
+=head1 zMapFinalised
 
 A  handler to  handle finalise  requests. ZMap  sends these  when it's
 closing the  whole program. Depending  on whether we want  to relaunch
@@ -253,7 +253,7 @@ zmap might be launched again.
 
 =cut
 
-sub zMapRelaunchZMap {
+sub zMapFinalised {
     my ($self, $xml) = @_;
 
     if ($self->{'_relaunch_zmap'}) {
@@ -303,7 +303,7 @@ sub zMapKillZmap {
 
                 $rval = 1;    # everything has been as successful as can be
                 ### Check shutdown by checking property set by ZMap?
-                ### This is done in zMapRelaunchZMap...
+                ### This is done in zMapFinalised...
             }
             else {
 
@@ -365,7 +365,7 @@ sub zMapZmapConnectorNew {
     return $zc;
 }
 
-sub zMapDotBlixemrcContent {
+sub zMapBlixemrcContent {
     my ($self) = @_;
 
     # extract the blixem stanza so that we can put it first
@@ -380,15 +380,15 @@ sub zMapDotBlixemrcContent {
           } sort keys %{$blixem_config} );
 }
 
-sub zMapDotZmapContent{
-    my ($self, $stylesfile) = @_;
+sub zMapZMapContent{
+    my ($self) = @_;
     
     return
         $self->zMapZMapDefaults
       . $self->zMapWindowDefaults
       . $self->zMapBlixemDefaults
-      . $self->zMapAceServerDefaults($stylesfile)
-      . $self->zMapGffFilterDefaults($stylesfile)
+      . $self->zMapAceServerDefaults
+      . $self->zMapGffFilterDefaults
       . $self->zMapGlyphDefaults
       ;
 }
@@ -406,7 +406,7 @@ sub zMapGlyphDefaults {
 }
 
 sub zMapAceServerDefaults {
-    my ($self, $stylesfile) = @_;
+    my ($self) = @_;
 
     my $server = $self->AceDatabase->ace_server;
 
@@ -426,13 +426,13 @@ sub zMapAceServerDefaults {
         # Can specify a stylesfile instead of featuresets
 
         featuresets     => $featuresets,
-        stylesfile      => $stylesfile,
+        stylesfile      => $self->zMapStylesPath,
     );
 }
 
 sub zMapGffFilterDefaults {
     
-    my ($self, $stylesfile) = @_;
+    my ($self) = @_;
 
     my $text;
     my %filter_columns;
@@ -451,7 +451,7 @@ sub zMapGffFilterDefaults {
             delayed         =>
             ( $state_hash->{wanted} && ! $state_hash->{failed} )
             ? 'false' : 'true',
-            stylesfile      => $stylesfile,
+            stylesfile      => $self->zMapStylesPath,
             group           => 'always',
         );
         
@@ -581,7 +581,7 @@ sub formatGtkrcWidget {
     return $full_def;
 }
 
-sub zMapDotGtkrcContent {
+sub zMapGtkrcContent {
     my ($self) = @_;
 
     # to create a coloured border for the focused view.
@@ -637,16 +637,21 @@ sub zMapWriteConfigFile {
     return;
 }
 
+sub zMapStylesPath {
+    my ($self) = @_;
+    return $self->zMapConfigPath('styles.ini');
+}
+
 sub zMapConfigPath {
     my ($self, $file) = @_;
 
-    my $dir  = $self->zMapZmapDir;
+    my $dir  = $self->zMapZMapDir;
     my $path = "${dir}/${file}";
 
     return $path;
 }
 
-sub zMapZmapDir {
+sub zMapZMapDir {
     my ($self) = @_;
     return $self->{'_zMap_ZMAP_DIR'} ||=
         ($self->ace_path . '/ZMap');
@@ -793,14 +798,18 @@ sub zMapHighlight {
     return (200, $zc->handled_response(1));
 }
 
-=head1 zMapTagValues
+# some aliases for naming consistency
+*zMapSingleSelect   = \&zMapHighlight;
+*zMapMultipleSelect = \&zMapHighlight;
+
+=head1 zMapFeatureDetails
 
 A  handler  to handle  feature_details  request.   returns a  notebook
 response.
 
 =cut
 
-sub zMapTagValues {
+sub zMapFeatureDetails {
     my ($self, $xml_hash) = @_;
 
     my $pages = "";
@@ -927,7 +936,7 @@ sub zmap_feature_evidence_xml {
     }
 }
 
-sub zMapRemoveView {
+sub zMapViewClosed {
     my ($self, $xml) = @_;
 
     # I guess all we need to do here is remove the associated xid from the cache...
@@ -1044,14 +1053,14 @@ sub RECEIVE_FILTER {
 
     # The table of actions and functions...
     my $lookup = {
-        register_client => 'zMapRegisterClient',
-        edit            => 'zMapEdit',
-        single_select   => 'zMapHighlight',
-        multiple_select => 'zMapHighlight',
-        finalised       => 'zMapRelaunchZMap',
-        feature_details => 'zMapTagValues',
-        view_closed     => 'zMapRemoveView',
-        features_loaded => 'zMapFeaturesLoaded',
+        register_client => \&zMapRegisterClient,
+        edit            => \&zMapEdit,
+        single_select   => \&zMapSingleSelect,
+        multiple_select => \&zMapMultipleSelect,
+        finalised       => \&zMapFinalised,
+        feature_details => \&zMapFeatureDetails,
+        view_closed     => \&zMapViewClosed,
+        features_loaded => \&zMapFeaturesLoaded,
     };
 
     # @list could be dynamically created...
