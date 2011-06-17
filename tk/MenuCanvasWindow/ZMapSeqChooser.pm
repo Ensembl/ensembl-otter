@@ -42,9 +42,17 @@ sub zMapInitialize {
     $self->{_xremote_cache} =
         ZMap::XRemoteCache->new;
 
-    $self->zMapWriteDotZmap;
-    $self->zMapWriteDotGtkrc;
-    $self->zMapWriteDotBlixemrc;
+    my $dir = $self->zMapZmapDir;
+    unless (-d $dir) {
+        mkdir $dir or confess "failed to create the directory '$dir': $!\n";
+    }
+
+    my $stylesfile = $self->zMapConfigPath('styles.ini');
+    $self->Assembly->MethodCollection->ZMapStyleCollection->write_to_file($stylesfile);
+
+    $self->zMapWriteConfigFile('ZMap',     $self->zMapDotZmapContent($stylesfile));
+    $self->zMapWriteConfigFile('.gtkrc',   $self->zMapDotGtkrcContent);
+    $self->zMapWriteConfigFile('blixemrc', $self->zMapDotBlixemrcContent);
 
     return;
 }
@@ -357,21 +365,6 @@ sub zMapZmapConnectorNew {
     return $zc;
 }
 
-sub zMapWriteDotBlixemrc {
-    my ($self) = @_;
-
-    my $file = $ENV{'BLIXEM_CONFIG_FILE'};
-    my ($dir) = $file =~ m{(.+)/[^/]+$};
-    mkpath($dir);    # Fatal if fails
-    open my $blixem_rc, '>', $file
-      or confess "Can't write to '$file'; $!";
-    print $blixem_rc $self->zMapDotBlixemrcContent;
-    close $blixem_rc
-        or confess "Error writing to '$file'; $!";
-
-    return;
-}
-
 sub zMapDotBlixemrcContent {
     my ($self) = @_;
 
@@ -385,24 +378,6 @@ sub zMapDotBlixemrcContent {
         ( map {
             $self->formatZmapDefaults($_, %{$blixem_config->{$_}});
           } sort keys %{$blixem_config} );
-}
-
-sub zMapWriteDotZmap {
-    my ($self) = @_;
-
-    my $file = $self->zMapZmapDir . "/ZMap";
-    
-    my $stylesfile = $self->zMapZmapDir . "/styles.ini";
-    
-    $self->Assembly->MethodCollection->ZMapStyleCollection->write_to_file($stylesfile);
-
-    open my $fh, '>', $file
-        or confess "Can't write to '$file'; $!";
-    print $fh $self->zMapDotZmapContent($stylesfile);
-    close $fh
-      or confess "Error writing to '$file'; $!";
-
-    return;
 }
 
 sub zMapDotZmapContent{
@@ -547,7 +522,7 @@ sub zMapBlixemDefaults {
 
     return $self->formatZmapDefaults(
         'blixem',
-        'config-file' => $ENV{'BLIXEM_CONFIG_FILE'},
+        'config-file' => $self->zMapConfigPath('blixemrc'),
         %{ $self->AceDatabase->DataSet->config_section('blixem') },
     );
 }
@@ -649,33 +624,32 @@ sub zMapDotGtkrcContent {
     return $full_content;
 }
 
-sub zMapWriteDotGtkrc {
-    my ($self) = @_;
+sub zMapWriteConfigFile {
+    my ($self, $file, $config) = @_;
 
-    my $dir  = $self->zMapZmapDir;
-    my $file = "$dir/.gtkrc";
-
-    open my $fh, '>', $file
-        or confess "Can't write to '$file'; $!";
-    print $fh $self->zMapDotGtkrcContent;
+    my $path = $self->zMapConfigPath($file);
+    open my $fh, '>', $path
+        or confess "Can't write to '$path'; $!";
+    print $fh $config;
     close $fh
-      or confess "Error writing to '$file'; $!";
+      or confess "Error writing to '$path'; $!";
 
     return;
 }
 
-sub zMapZmapDir {
-    my ( $self, @args ) = @_;
+sub zMapConfigPath {
+    my ($self, $file) = @_;
 
-    confess "Cannot set ZMap directory directly" if @args;
+    my $dir  = $self->zMapZmapDir;
+    my $path = "${dir}/${file}";
 
-    my $ace_path = $self->ace_path();
-    my $path     = "$ace_path/ZMap";
-    unless (-d $path) {
-        mkdir $path;
-        confess "Can't mkdir('$path') : $!\n" unless -d $path;
-    }
     return $path;
+}
+
+sub zMapZmapDir {
+    my ($self) = @_;
+    return $self->{'_zMap_ZMAP_DIR'} ||=
+        ($self->ace_path . '/ZMap');
 }
 
 #===========================================================
@@ -1042,7 +1016,7 @@ sub zMapFeaturesLoaded {
 sub zMapUpdateConfigFile {
     my ($self) = @_;
     
-    my $cfg = $self->{_zmap_cfg} ||= Config::IniFiles->new( -file => $self->zMapZmapDir . '/ZMap' );
+    my $cfg = $self->{_zmap_cfg} ||= Config::IniFiles->new( -file => $self->zMapConfigPath('ZMap'));
 
     while ( my ( $name, $value ) = each %{$self->AceDatabase->filters}) {
         my $state_hash = $value->{state};
