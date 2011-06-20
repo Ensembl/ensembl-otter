@@ -1053,14 +1053,14 @@ sub RECEIVE_FILTER {
 
     # The table of actions and functions...
     my $lookup = {
-        register_client => \&zMapRegisterClient,
-        edit            => \&zMapEdit,
-        single_select   => \&zMapSingleSelect,
-        multiple_select => \&zMapMultipleSelect,
-        finalised       => \&zMapFinalised,
-        feature_details => \&zMapFeatureDetails,
-        view_closed     => \&zMapViewClosed,
-        features_loaded => \&zMapFeaturesLoaded,
+        register_client => 'zMapRegisterClient',
+        edit            => 'zMapEdit',
+        single_select   => 'zMapSingleSelect',
+        multiple_select => 'zMapMultipleSelect',
+        finalised       => 'zMapFinalised',
+        feature_details => 'zMapFeatureDetails',
+        view_closed     => 'zMapViewClosed',
+        features_loaded => 'zMapFeaturesLoaded',
     };
 
     # @list could be dynamically created...
