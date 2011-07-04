@@ -5,7 +5,7 @@ use warnings;
 
 =head1 NAME
 
-backup_all_otter_submissions_databases - archive otterlive to cbi4:/lustre
+backup_all_otter_submissions_databases - archive otterlive to slow storage
 
 =head1 SYNOPSIS
 
@@ -23,6 +23,7 @@ use strict;
 use DBI;
 use File::Path 'rmtree';
 use Net::Netrc;
+use Hum::Conf '$WAREHOUSE_MYSQL';
 
 {
     umask(002);
@@ -38,7 +39,7 @@ use Net::Netrc;
         $user, $password, {RaiseError => 1});
     my $dbs = list_otter_databases($dbh);
 
-    my $base_dir = '/lustre/cbi4/work1/humpub/data/mysql_backup/otter_submissions';
+    my $base_dir = "$WAREHOUSE_MYSQL/otter_submissions";
     my $archive_dir = "$base_dir/OTTER_SUBMISSIONS_ARCHIVE";
 
     cleanup_old_otter_dbs($base_dir);
