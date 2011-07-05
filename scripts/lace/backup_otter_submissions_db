@@ -23,7 +23,7 @@ use strict;
 use DBI;
 use File::Path 'rmtree';
 use Net::Netrc;
-use Hum::Conf '$WAREHOUSE_MYSQL';
+use Hum::Conf 'WAREHOUSE_MYSQL';
 
 {
     umask(002);
