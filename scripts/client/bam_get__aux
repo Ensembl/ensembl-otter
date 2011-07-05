@@ -23,6 +23,7 @@ use Bio::Otter::Lace::Defaults;
 # my $fasta_path = q(/lustre/scratch102/projects/mouse/ref/NCBIM37_um.fa);
 
 # parse the command line
+my $gff_version = 3;
 my ($bam_path, $bam_cs, $dataset, $chr, $start, $end);
 unshift @ARGV
     , -bam_path => q(/nfs/vertres02/projects/vrtrack_mouse_transcriptomes/REL-1009/__VRTrack_Release__/NOD_Mouse_Transcriptome/NOD_FatherBrain/SLX/raw.bam),
@@ -33,6 +34,7 @@ unshift @ARGV
     , -end     => 16100000
     ;
 Bio::Otter::Lace::Defaults::do_getopt(
+    "gff_version=s" => \$gff_version,
     "bam_path=s" => \$bam_path,
     "bam_cs=s"   => \$bam_cs,
     "dataset=s"  => \$dataset,
@@ -119,8 +121,6 @@ for (sort { $a <=> $b } keys %{$sub_feature_counts}) {
 }
 
 =cut
-
-my $gff_version = 3;
 
 sub gff_escape {
     # escapes a minimal set of characters
