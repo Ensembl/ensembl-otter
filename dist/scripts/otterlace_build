@@ -116,7 +116,7 @@ otterlace_server_install() {
     {
         lib_dir="${otterlace_server_root}/lib/otter/${version_major}"
         new_directory "$lib_dir" &&
-        rsync -v -r --delete \
+        cp -v -r \
             "${ensembl_otter_root}/modules/Bio" \
             "$lib_dir" &&
         git_cache_create "$lib_dir" &&
@@ -127,8 +127,8 @@ otterlace_server_install() {
     {
         cgi_bin_dir="${otterlace_server_root}/cgi-bin/otter/${version_major}"
         new_directory "$cgi_bin_dir" &&
-        rsync -v -r --delete \
-            "${ensembl_otter_root}/scripts/apache/" \
+        cp -v -r \
+            "${ensembl_otter_root}/scripts/apache"/* \
             "$cgi_bin_dir" &&
         fix_permissions "$cgi_bin_dir" &&
         /bin/true ; } &&
@@ -165,7 +165,7 @@ otterlace_client_install_perl_modules() {
         cvs -d "$ensembl_cvsroot" checkout -r "$humpub_release"                    ensembl-analysis/modules &&
 
         mkdir -p -- ensembl-otter &&
-        rsync -v -r --delete \
+        cp -v -r \
             ${ensembl_otter_root}/{modules,scripts,tk} \
             ensembl-otter &&
 
