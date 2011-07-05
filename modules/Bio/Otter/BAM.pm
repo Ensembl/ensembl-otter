@@ -44,6 +44,11 @@ sub csver {
     return $self->{csver};
 }
 
+sub gff_feature_source {
+    my ($self) = @_;
+    return $self->{gff_feature_source};
+}
+
 1;
 
 __END__
