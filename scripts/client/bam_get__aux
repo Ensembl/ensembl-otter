@@ -35,12 +35,12 @@ unshift @ARGV
     ;
 Bio::Otter::Lace::Defaults::do_getopt(
     "gff_version=s" => \$gff_version,
-    "bam_path=s" => \$bam_path,
-    "bam_cs=s"   => \$bam_cs,
-    "dataset=s"  => \$dataset,
-    "chr=s"      => \$chr,
-    "start=i"    => \$start,
-    "end=i"      => \$end,
+    "bam_path=s"    => \$bam_path,
+    "bam_cs=s"      => \$bam_cs,
+    "dataset=s"     => \$dataset,
+    "chr=s"         => \$chr,
+    "start=i"       => \$start,
+    "end=i"         => \$end,
     );
 
 # get the mapping from the Otter server
