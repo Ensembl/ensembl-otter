@@ -57,6 +57,13 @@ else
     humpub_release="HEAD"
 fi
 
+# sanity check
+if [ -z "$version" ]
+then
+    echo "error: the otterlace version is not set" >&2
+    exit 1
+fi
+
 zmap_home=~zmap
 zmap_root="${zmap_home}/${zmap_path}"
 zmap_prefix="${zmap_root}/Linux_$( uname -m )"
