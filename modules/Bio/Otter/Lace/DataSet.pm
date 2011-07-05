@@ -66,13 +66,40 @@ sub blixem_config {
         ( map {
             $_->name => {
                 description => $_->description,
-                args => ( sprintf "-bam_path=%s -bam_cs=%s",
-                          $_->file, $_->csver ),
+                args => $self->blixem_bam_args($_),
             },
           } @{$self->bam_list} ),
     };
 
     return $config;
+}
+
+my $blixem_bam_parameters = [
+    #     key                 BAM method
+    [ qw( bam_path            file               ) ],
+    [ qw( bam_cs              csver              ) ],
+    [ qw( gff_feature_source  gff_feature_source ) ],
+    ];
+
+sub blixem_bam_args {
+    my ($self, $bam) = @_;
+
+    my $args = join ' ', map {
+        _blixem_bam_arg($bam, @{$_});
+    } @{$blixem_bam_parameters};
+
+    return $args;
+}
+
+# NB: *not* a method
+sub _blixem_bam_arg {
+    my ($bam, $key, $method) = @_;
+
+    my $value = $bam->$method;
+    return unless defined $value;
+
+    my $arg = sprintf '-%s=%s', $key, $value;
+    return $arg;
 }
 
 sub bam_by_name {
