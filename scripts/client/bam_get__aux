@@ -34,13 +34,13 @@ unshift @ARGV
     , -end     => 16100000
     ;
 Bio::Otter::Lace::Defaults::do_getopt(
-    "gff_version=s" => \$gff_version,
-    "bam_path=s"    => \$bam_path,
-    "bam_cs=s"      => \$bam_cs,
-    "dataset=s"     => \$dataset,
-    "chr=s"         => \$chr,
-    "start=i"       => \$start,
-    "end=i"         => \$end,
+    "gff_version=s"        => \$gff_version,
+    "bam_path=s"           => \$bam_path,
+    "bam_cs=s"             => \$bam_cs,
+    "dataset=s"            => \$dataset,
+    "chr=s"                => \$chr,
+    "start=i"              => \$start,
+    "end=i"                => \$end,
     "gff_feature_source=s" => \$gff_feature_source,
     );
 
