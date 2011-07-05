@@ -1,14 +1,12 @@
 package Bio::Otter::EnsEMBL2SQL::Base;
 
-use vars qw(@ISA);
 use strict;
 use warnings;
 use Carp;
 
 use FileHandle;
-use Bio::EnsEMBL::DBSQL::DBAdaptor;
 
-@ISA = qw(Bio::EnsEMBL::DBSQL::DBAdaptor);
+use base qw(Bio::EnsEMBL::DBSQL::DBAdaptor);
 
 
 sub new {
