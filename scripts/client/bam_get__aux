@@ -24,7 +24,7 @@ use Bio::Otter::Lace::Defaults;
 
 # parse the command line
 my $gff_version = 3;
-my ($bam_path, $bam_cs, $dataset, $chr, $start, $end);
+my ($bam_path, $bam_cs, $dataset, $chr, $start, $end, $gff_feature_source);
 unshift @ARGV
     , -bam_path => q(/nfs/vertres02/projects/vrtrack_mouse_transcriptomes/REL-1009/__VRTrack_Release__/NOD_Mouse_Transcriptome/NOD_FatherBrain/SLX/raw.bam),
     , -bam_cs  => 'NCBIM37',
@@ -41,6 +41,7 @@ Bio::Otter::Lace::Defaults::do_getopt(
     "chr=s"         => \$chr,
     "start=i"       => \$start,
     "end=i"         => \$end,
+    "gff_feature_source=s" => \$gff_feature_source,
     );
 
 # get the mapping from the Otter server
@@ -169,7 +170,8 @@ for (@read_pairs) {
     for ($_->get_SeqFeatures) {
         my $alignment = $_;
 
-        my $source = $_->source_tag;
+        # the -gff_feature_source flag overrides the source from the BAM file
+        my $source = $gff_feature_source || $_->source_tag;
 
         my ($score) = $alignment->get_tag_values('AS');
 
