@@ -73,11 +73,22 @@ otterlace_prefix="/software/anacode/otter/otter_rel${version}"
 
 ensembl_cvs_flags="-r branch-ensembl-${client_ensembl_version}"
 
+new_directory() {
+    local dir
+    dir=$1
+
+    rm -rf -- "$dir" &&
+    mkdir -v -p -- "$dir" &&
+    chgrp -v anacode "$dir" &&
+    chmod -v g+s "$dir" &&
+    /bin/true
+}
+
 fix_permissions() {
     local dir
     dir=$1
 
-    find "$dir" -type d -exec chmod g+s \{\} \; &&
+    chmod -v -R ug+rw "$dir" &&
     /bin/true
 }
 
@@ -104,18 +115,18 @@ otterlace_server_install() {
     echo "installing server: perl modules"
     {
         lib_dir="${otterlace_server_root}/lib/otter/${version_major}"
-        mkdir -p -- "$lib_dir" &&
+        new_directory "$lib_dir" &&
         rsync -v -r --delete \
             "${ensembl_otter_root}/modules/Bio" \
             "$lib_dir" &&
-        fix_permissions "$lib_dir" &&
         git_cache_create "$lib_dir" &&
+        fix_permissions "$lib_dir" &&
         /bin/true ; } &&
 
     echo "installing server: CGI scripts"
     {
         cgi_bin_dir="${otterlace_server_root}/cgi-bin/otter/${version_major}"
-        mkdir -p -- "$cgi_bin_dir" &&
+        new_directory "$cgi_bin_dir" &&
         rsync -v -r --delete \
             "${ensembl_otter_root}/scripts/apache/" \
             "$cgi_bin_dir" &&
@@ -217,8 +228,7 @@ otterlace_client_install() {
 
     echo &&
     echo "removing old otterlace installation" &&
-    rm -rf -- "$otterlace_prefix" &&
-    mkdir -- "$otterlace_prefix" &&
+    new_directory "$otterlace_prefix" &&
     otterlace_client_install_perl_modules &&
     otterlace_client_install_scripts &&
     otterlace_client_install_xremote &&
