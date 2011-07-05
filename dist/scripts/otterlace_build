@@ -36,7 +36,7 @@ ensembl_otter_root="$( pwd )"
 config_value() {
     local key
     key=$1
-    head -n 1 -- "$( dirname "$0" )/../conf/${key}"
+    head -n 1 -- "${ensembl_otter_root}/dist/conf/${key}"
 }
 
 
