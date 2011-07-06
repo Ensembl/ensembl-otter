@@ -40,17 +40,25 @@ sub author {
 ### CloneLockBroker should have an Author and a CloneLockAdaptor attached
 ### so it doesn't need to inherit from BaseAdaptor
 
+sub check_slice_argument {
+    my ($self, $slice) = @_;
+    
+    unless (ref($slice) eq 'ARRAY') {
+        $slice = [$slice];
+    }
+
+    foreach my $ting (@$slice) {
+        unless (eval{ $ting->isa('Bio::EnsEMBL::Slice') }) {
+            throw("slice argument should be Bio::EnsEMBL::Slice or ref. to array of Bio::EnsEMBL::Slice, but was: (@$slice)");
+        }
+    }
+    return $slice;
+}
 
 sub check_locks_exist_by_slice {
     my ($self, $slice, $author, $db) = @_;
 
-    if($slice->isa('Bio::EnsEMBL::Slice')) {
-        $slice = [$slice];
-    } elsif(eval { $slice->isa('ARRAY') && $slice->[0]->isa('Bio::EnsEMBL::Slice') }) {
-        # do nothing
-    } else {
-        throw("[$slice] should be Bio::EnsEMBL::Slice or an array of Bio::EnsEMBL::Slice");
-    }
+    $slice = $self->check_slice_argument($slice);
     $author ||= $self->author() || throw("An author object needs to be passed either on creation or on use");
 
     my $aptr        = $db->get_ContigLockAdaptor;
@@ -74,13 +82,7 @@ sub check_locks_exist_by_slice {
 sub check_no_locks_exist_by_slice {
     my ($self, $slice, $author, $db) = @_;
 
-    if(eval { $slice->isa('Bio::EnsEMBL::Slice') }) {
-        $slice = [$slice];
-    } elsif(eval { $slice->isa('ARRAY') && $slice->[0]->isa('Bio::EnsEMBL::Slice') }) {
-        # do nothing
-    } else {
-        throw("[$slice] should be Bio::EnsEMBL::Slice or an array of Bio::EnsEMBL::Slice");
-    }
+    $slice = $self->check_slice_argument($slice);
     $author ||= $self->author() || throw("An author object needs to be passed either on creation or on use");
 
     my $aptr        = $db->get_ContigLockAdaptor;
@@ -104,13 +106,7 @@ sub lock_by_object {
 sub lock_clones_by_slice {
     my ($self, $slice, $author, $db) = @_;
 
-    if(eval { $slice->isa('Bio::EnsEMBL::Slice') }) {
-        $slice = [$slice];
-    } elsif(eval { $slice->isa('ARRAY') && $slice->[0]->isa('Bio::EnsEMBL::Slice') }) {
-        # do nothing
-    } else {
-        throw("[$slice] should be Bio::EnsEMBL::Slice or an array of Bio::EnsEMBL::Slice");
-    }
+    $slice = $self->check_slice_argument($slice);
     $author ||= $self->author() || throw("An author object needs to be passed either on creation or on use");
 
     my $aptr        = $db->get_ContigLockAdaptor;
@@ -168,13 +164,7 @@ sub remove_by_object {
 sub remove_by_slice {
     my ($self, $slice, $author, $db) = @_;
 
-    if(eval { $slice->isa('Bio::EnsEMBL::Slice') }) {
-        $slice = [$slice];
-    } elsif(eval { $slice->isa('ARRAY') && $slice->[0]->isa('Bio::EnsEMBL::Slice') }) {
-        # do nothing
-    } else {
-        throw("[$slice] should be Bio::EnsEMBL::Slice or an array of Bio::EnsEMBL::Slice");
-    }
+    $slice = $self->check_slice_argument($slice);
     $author ||= $self->author() || throw("An author object needs to be passed either on creation or on use");
 
     my $aptr        = $db->get_ContigLockAdaptor;
