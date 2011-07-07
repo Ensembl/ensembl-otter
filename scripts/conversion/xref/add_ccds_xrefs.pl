@@ -273,12 +273,12 @@ if ($successful) {
 }
 
 if ($missing_transcript) {
-  $support->log_warning("\nIdentifiers with no matching transcript in Vega: $no_match.\n", 1);
+  $support->log_warning("\n\nIdentifiers with no matching transcript in Vega: $no_match.\n", 1);
   $support->log($missing_transcript);
 }
 
 if ($non_translating) {
-  $support->log_warning("\nTranscripts in this set that don't translate: $no_trans.\n", 1);
+  $support->log_warning("\n\nTranscripts in this set that don't translate: $no_trans.\n", 1);
   $support->log($non_translating);
 }
 
