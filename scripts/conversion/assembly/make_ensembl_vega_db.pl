@@ -184,7 +184,6 @@ if ( (! $support->param('dry_run'))
       'ensembluser',
       'ensemblpass',
       'ensembldbname',
-      'ensemblassembly',
       'evegahost',
       'evegaport',
       'evegauser',
@@ -216,6 +215,7 @@ if ( (! $support->param('dry_run'))
       'ensembluser',
       'ensemblpass',
       'ensembldbname',
+      'ensemblassembly',
       'evegahost',
       'evegaport',
       'evegauser',
@@ -596,13 +596,13 @@ if (! $support->param('dry_run') ) {
 
   $support->log_stamped("\nUpdating external_db table on ".$support->param('evegadbname')."...\n");
   system("../xref/update_external_dbs.pl $options") == 0
-    or $support->throw("Error running update_external_dbs.pl: $!");
+    or $support->warning("Error running update_external_dbs.pl: $!");
   $support->log_stamped("Done.\n\n");
 
   $options =~ s/make_ensembl_vega_update_external_dbs_ensvega\.log/ensembl_vega_percent_gc_calc\.log/;
   $support->log_stamped("\nCalculating %GC for ".$support->param('evegadbname')."...\n");
   system("../../../../sanger-plugins/vega/utils/vega_percent_gc_calc.pl $options") == 0
-    or $support->throw("Error running vega_percent_gc_calc.pl: $!");
+    or $support->warning("Error running vega_percent_gc_calc.pl: $!");
   $support->log_stamped("Done.\n\n");
 
 }
