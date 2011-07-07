@@ -187,7 +187,7 @@ Bio::Otter::ServerScriptSupport->send_response(\&get_clonesequences);
 
 __END__
 
-=head1 NAME - get_clonesequences_fast
+=head1 NAME - get_clonesequences
 
 
 =head1 DESCRIPTION

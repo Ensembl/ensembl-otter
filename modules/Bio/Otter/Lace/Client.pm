@@ -976,7 +976,7 @@ sub get_all_CloneSequences_for_DataSet_SequenceSet {
 
   my $clonesequences_xml = $self->http_response_content(
         'GET',
-        'get_clonesequences_fast',
+        'get_clonesequences',
         {
             'dataset'     => $dataset_name,
             'sequenceset' => $sequenceset_name,
