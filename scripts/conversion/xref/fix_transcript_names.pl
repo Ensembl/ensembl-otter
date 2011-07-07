@@ -138,6 +138,7 @@ if (! $support->param('update')) {
 
 my ($c1,$c2,$c3) = (0,0,0);
 foreach my $chr ($support->sort_chromosomes) {
+
   $support->log_stamped("\n\nLooping over chromosome $chr\n");
   my $chrom = $sa->fetch_by_region('toplevel', $chr);
  GENE:
@@ -146,7 +147,8 @@ foreach my $chr ($support->sort_chromosomes) {
     my $transnames;
     my %seen_names;
     my %transcripts;
-    my $g_name = $gene->get_all_Attributes('name')->[0]->value;#display_xref->display_id;
+    my $g_name = $gene->get_all_Attributes('name')->[0]->value;
+    $g_name = $gene->display_xref->display_id if ($support->param('update'));
     my $source = $gene->source;
 
     $support->log_verbose("\n$g_name ($gsi)\n");
@@ -172,7 +174,6 @@ foreach my $chr ($support->sort_chromosomes) {
       if (exists $seen_names{$base_name}) {
         $support->log_warning("IDENTICAL: $source gene $gsi ($g_name) has transcripts with identical base loutre names ($base_name), please fix\n");
       }
-
       else {
 	$seen_names{$base_name}++;
 	$transcripts{$t_name} = [$trans,$base_name];
@@ -192,38 +193,36 @@ foreach my $chr ($support->sort_chromosomes) {
 	next if ($new_name eq $t_name);
 	
         $c1++;
-        if (! $support->param('update')) {
-          #store a transcript attrib for the old name as long as it's not just a case change
-          my $attrib = [
-            Bio::EnsEMBL::Attribute->new(
-              -CODE => 'synonym',
-              -NAME => 'Synonym',
-              -DESCRIPTION => 'Synonymous names',
-              -VALUE => $t_name,
-            )];
-          unless (lc($t_name) eq lc($new_name)) {
-            if (! $support->param('dry_run')) {
-              $aa->store_on_Transcript($t_dbID, $attrib);
-            }
-	  $support->log_verbose("Stored synonym for old name ($t_name) for transcript $tsi\n",2);
-          }
-	}
 
-	#update xref for new transcript name
-	if (! $support->param('dry_run')) {
-	  $dbh->do(qq(UPDATE xref x, external_db ed
+        #store a transcript attrib for the old name as long as it's not just a case change
+        my $attrib = [
+          Bio::EnsEMBL::Attribute->new(
+            -CODE => 'synonym',
+            -NAME => 'Synonym',
+            -DESCRIPTION => 'Synonymous names',
+            -VALUE => $t_name,
+          )];
+        unless (lc($t_name) eq lc($new_name)) {
+          if (! $support->param('dry_run')) {
+            $aa->store_on_Transcript($t_dbID, $attrib);
+          }
+	  $support->log_verbose("Stored synonym for old name ($t_name) for transcript $tsi\n",2);
+        }
+
+        #update xref for new transcript name
+        if (! $support->param('dry_run')) {
+          $dbh->do(qq(UPDATE xref x, external_db ed
                          SET x.display_label = "$new_name"
                        WHERE dbprimary_acc = "$tsi"
                          AND x.external_db_id = ed.external_db_id
                          AND ed.db_name = "Vega_transcript"
                     ));
-	}
-	$support->log(sprintf("%-20s%-3s%-20s", "$t_name", "--->", " $new_name")."\n", 1);
+        }
+      $support->log(sprintf("%-20s%-3s%-20s", "$t_name", "--->", " $new_name")."\n", 1);
       }
-
-      #log unexpected names (ie don't have -001 etc after removing Leo's extension
       else {
-	$support->log_warning("Can't patch transcript $t_name ($tsi) because name is wrong\n");
+        #log unexpected names (ie don't have -001 etc after removing Leo's extension
+        $support->log_warning("Can't patch transcript $t_name ($tsi) because name is wrong\n");
       }
     }
 
@@ -255,11 +254,20 @@ $support->finish_log;
 sub check_remarks_and_update_names {
   my ($gene,$gene_c,$trans_c) = @_;
   my $action = ($support->param('dry_run')) ? 'Would add' : 'Added';
-  my $aa  = $gene->adaptor->db->get_AttributeAdaptor;
-  my $dbh = $gene->adaptor->db->dbc->db_handle;
+  my $aa     = $gene->adaptor->db->get_AttributeAdaptor;
+  my $dbh    = $gene->adaptor->db->dbc->db_handle;
   my $gsi    = $gene->stable_id;
   my $gid    = $gene->dbID;
   my $g_name;
+
+  my $gene_remark = 'This locus has been annotated as fragmented because either there is not enough evidence covering the whole locus to identify the exact exon structure of the transcript, or because the transcript spans a gap in the assembly';
+  my $attrib = [
+    Bio::EnsEMBL::Attribute->new(
+      -CODE => 'remark',
+      -NAME => 'Remark',
+      -DESCRIPTION => 'Annotation remark',
+      -VALUE => $gene_remark,
+    ) ];
 
   eval {
     $g_name = $gene->display_xref->display_id;
@@ -271,9 +279,20 @@ sub check_remarks_and_update_names {
   #get existing gene remarks
   my $remarks = [ map {$_->value} @{$gene->get_all_Attributes('remark')} ];
 
-  #shout if there is a remark to identify this as being fragmented locus
+  #shout if there is no remark to identify this as being fragmented locus
   if ( ! grep {$_ eq 'fragmented locus' } @$remarks) {
-    $support->log_warning("Gene $g_name has duplicate transcript names but no fragmented_locus remark, this shold be added\n");
+    $support->log_warning("Gene $g_name has duplicate transcript names but no fragmented_locus remark, this should be added\n");
+  }
+
+  #add the correct gene remark if it's needed
+  if ( grep {$_ eq $gene_remark } @$remarks) {
+    $support->log_verbose("Gene remark regarding fragmentation of the locus already present\n");
+  }
+  else {
+    $support->log("Adding gene remark regarding fragmentation of the locus\n");
+    if (! $support->param('dry_run')) {
+      $aa->store_on_Gene($gid,$attrib);
+    }
   }
 
   ##patch transcript names according to length and CDS
