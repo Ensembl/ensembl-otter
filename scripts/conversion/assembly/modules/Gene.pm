@@ -68,6 +68,9 @@ sub store_gene {
   }
 
   foreach my $gx (@{$V_gene->get_all_DBEntries}) {
+    if (my @synys = @{$gx->get_all_synonyms}) {
+      $support->log_verbose("Xref synonyms found for ".$V_gene->stable_id."\n");
+    }
     $E_gene->add_DBEntry($gx);
   }
 
@@ -126,6 +129,7 @@ sub transfer_xrefs {
   foreach my $tr (@{$V_gene->get_all_Transcripts}) {
     foreach my $E_tr (@{$E_transcripts{$tr->stable_id}}) {
       foreach my $xref (@{$tr->get_all_DBEntries}) {
+        $xref->get_all_synonyms;
 	unless ($xref->primary_id) {
 	  $support->log_warning("No primary ID for this transcript xref: ".$xref->display_id." ".$xref->dbname."\n");
 	}
@@ -145,6 +149,7 @@ sub transfer_xrefs {
     my $tl = $tr->translation;
     if($tl) {
       foreach my $xref (@{$tl->get_all_DBEntries}) {
+        $xref->get_all_synonyms;
 	unless ($xref->primary_id) {
 	  $support->log_warning("No primary ID for this translation xref: ".$xref->display_id." ".$xref->dbname."\n");
 	}
