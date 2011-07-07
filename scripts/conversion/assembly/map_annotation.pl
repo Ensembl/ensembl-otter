@@ -159,6 +159,13 @@ $support->comma_to_list('chromosomes');
 $support->comma_to_list('logic_names');
 my @logic_names = ( $support->param('logic_names'));
 
+if ($support->param('dbname') =~ /mus_musculus/) {
+  unless ($support->param('logic_names')) {
+    @logic_names = qw(otter otter_external);
+    $support->param('logic_names','otter,otter_external');
+  }
+}
+
 # ask user to confirm parameters to proceed
 $support->confirm_params;
 
