@@ -158,6 +158,11 @@ if ($support->param('release_type' ne 'External')) {
   exit;
 }
 
+
+if ($support->param('host') ne $support->param('ensemblhost') ) {
+  $support->log_error("Ensembl and Vega databases must be on the same host.\n");
+}
+
 # connect to vega database and get adaptors
 my $vdba = $support->get_database('ensembl');
 my $vsa  = $vdba->get_SliceAdaptor();
@@ -465,10 +470,10 @@ if ($alt_assembly = $support->param('ensemblassembly') ) {
 	}
       }
       else {
-	$support->log("Chromosome $v_name an equiv_asm seq_region_attribute (value should be $alt_assembly) so trying to take assembly mappings for chromsome $v_name from loutre\n",2);
+	$support->log("Chromosome $v_name has no equiv_asm seq_region_attribute (value should be $alt_assembly) so trying to take assembly mappings from loutre\n",2);
 	my $le_sr_id = $lsa->fetch_by_region('chromosome',$e_name,'','','',$alt_assembly,)->get_seq_region_id;
-	my $l_sr_id = $l_chrom->get_seq_region_id;
-	my $id_diff = $e_sr_id-$le_sr_id;
+	my $l_sr_id  = $l_chrom->get_seq_region_id;
+	my $id_diff  = $e_sr_id-$le_sr_id;
 	my $sql = qq(INSERT into $v_dbname.seq_region
                      SELECT seq_region_id+$offset, name, $other_coord_system_id, length 
                        FROM seq_region
@@ -751,11 +756,17 @@ push @sql_fixes, "DELETE from meta where meta_value like \'%OtterArchive%\';\n";
 #add misc info to meta table
 my $date = strftime "%Y-%m", localtime;
 my $gene_build = $date.'-Vega';
+my $gene_build_date =  strftime "%Y-%m-%d", localtime;
 push @sql_fixes, "INSERT ignore into meta (meta_key,meta_value) VALUES (\'genebuild.version\',\'$gene_build\');\n";
 push @sql_fixes, "INSERT into meta (meta_key,meta_value) VALUES ('genebuild.level','toplevel'),('transcriptbuild.level','toplevel'),('exonbuild.level','toplevel');\n";
 push @sql_fixes, "INSERT ignore into meta (meta_key,meta_value) VALUES (\'initial_release.version\',\'$release_no\');\n"; #needed for blast config
 push @sql_fixes, "INSERT ignore into meta (meta_key,meta_value) VALUES (\'ensembl.link\','yes');\n"; # needed for front page hyperlink to e! so might be 'no' occasionally
 
+#needed for compara
+push @sql_fixes, "INSERT ignore into meta (meta_key,meta_value) VALUES (\'assembly.coverage_depth\',\'high\');\n";
+my $gene_build_date =  strftime "%Y-%m-%d", localtime;
+push @sql_fixes, "INSERT ignore into meta (meta_key,meta_value) VALUES (\'genebuild.start_date\',\'$gene_build_date\');\n";
+#push @sql_fixes, "INSERT ignore into meta (meta_key,meta_value) VALUES (\'species.production_name\',\'homo_sapiens\')\n";
 #delete patch script entries
 push @sql_fixes, "DELETE from meta WHERE meta_key = \'patch\';\n";
 
@@ -825,8 +836,8 @@ if ( ! $support->param('dry_run')) {
     }
   });
   $support->log("\nUpdating attrib_type table for ".$support->param('dbname')."...\n");
-  system("../update_attributes.pl $options") == 0
-    or $support->throw("Error running update_attributes.pl: $!");
+    system("../update_attributes.pl $options") == 0
+    or $support->log_warning("Error running update_attributes.pl: $!");
 
   $options = $support->create_commandline_options({
     'allowed_params' => 1,
@@ -839,8 +850,8 @@ if ( ! $support->param('dry_run')) {
 
   #update external db table
   $support->log("\nUpdating external_db table on ".$support->param('dbname')."...\n");
-  system("../xref/update_external_dbs.pl $options") == 0
-    or $support->throw("Error running update_external_dbs.pl: $!");
+    system("../xref/update_external_dbs.pl $options") == 0
+    or $support->log_warning("Error running update_external_dbs.pl: $!");
 
   #make a backup
   my $dbname = $support->param('dbname');
