@@ -54,6 +54,8 @@ my @server_params = (
 sub from_config {
     my ($pkg, $config) = @_;
 
+    die sprintf "no filter configuration" unless keys %{$config};
+
     die "you can't specify a zmap_style and multiple featuresets"
         if 1
         # NB: use redundant ( ... ) to discipline emacs mode indentation
