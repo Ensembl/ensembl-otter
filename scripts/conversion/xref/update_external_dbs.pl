@@ -112,7 +112,6 @@ while ( my $row = $production_sth->fetchrow_hashref() ) {
     'db_name'                   => $row->{'db_name'},
     'db_release'                => $row->{'db_release'},
     'status'                    => $row->{'status'},
-    'dbprimary_acc_linkable'    => $row->{'dbprimary_acc_linkable'} || 1,
     'priority'                  => $row->{'priority'},
     'db_display_name'           => $row->{'db_display_name'},
     'type'                      => $row->{'type'},
@@ -136,10 +135,10 @@ $support->log("Inserting new external_db entries into db...\n");
 unless ($support->param('dry_run')) {
   my $sth = $dbh->prepare('
         INSERT INTO external_db
-            (external_db_id, db_name, db_release, status, dbprimary_acc_linkable,
+            (external_db_id, db_name, db_release, status,
             priority, db_display_name, type, secondary_db_name, secondary_db_table,
             description)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     ');
   foreach my $row (@rows) {
     $sth->execute(
@@ -147,7 +146,6 @@ unless ($support->param('dry_run')) {
       $row->{'db_name'},
       $row->{'db_release'},
       $row->{'status'},
-      $row->{'dbprimary_acc_linkable'},
       $row->{'priority'},
       $row->{'db_display_name'},
       $row->{'type'},
