@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use lib "${ENV{TEAM_TOOLS}}/t/tlib";
+use lib "${ENV{ANACODE_TEAM_TOOLS}}/t/tlib";
 use CriticModule;
 
 use Bio::Seq;
