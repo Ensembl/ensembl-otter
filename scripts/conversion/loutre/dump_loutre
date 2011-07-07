@@ -306,7 +306,7 @@ my %vega_tables;
 map { $_ =~ s/`//g;  $_ =~ s/$vdbname.//g; $vega_tables{$_} = 1; } $vdbh->tables;
 foreach my $t (keys %constraints) {
   if (! exists($vega_tables{$t}) && ! $constraints{$t}) {
-    $support->log_warning("Loutre contains a table $t that you haven't defined what to do with\n");
+    $support->log_error("Loutre contains a table $t that you haven't defined what to do with\n");
   }
 }
 
@@ -577,7 +577,7 @@ foreach my $name (@{$chr_names_wanted}) {
     }
     #skip not for VEGA genes
     if ( grep { $_->value eq 'not for VEGA' } @{$lgene->get_all_Attributes('remark')} ) {
-      $support->log_warning("Skipping gene $gname ($lgsi) because of a not for VEGA remark\n",1);
+      $support->log("Skipping gene $gname ($lgsi) because of a not for VEGA remark\n",1);
       next GENE;
     }
 
@@ -756,7 +756,7 @@ sub transfer_gene {
     return 0;
   }
   unless ($lgene->gene_author) {
-    $support->log_warning("No author attached to ".$lgene->stable_id.". Using default Havana author\n");
+    $support->log("No author attached to ".$lgene->stable_id.". Using default Havana author\n");
     $lgene->gene_author($AUTHOR);
   }
 
@@ -772,7 +772,7 @@ sub transfer_gene {
   foreach my $transcript (@transcripts){
 
     if ( grep { $_->value eq 'not for VEGA' } @{$transcript->get_all_Attributes('remark')}  ) {
-      $support->log_warning("Didn't transfer 'not for Vega' transcript ".$transcript->stable_id."\n",2);
+      $support->log("Didn't transfer 'not for Vega' transcript ".$transcript->stable_id."\n",2);
       # # #remove from gene object
       $needs_updateing=1;
       my $i=0;
@@ -807,7 +807,7 @@ sub transfer_gene {
     $lgene->set_biotype_status_from_transcripts;# update biotype;
     my $new_biotype = $lgene->biotype;
     if ($old_biotype ne $new_biotype) {
-      $support->log_warning("Biotype of ".$lgene->stable_id." changed from $old_biotype to $new_biotype\n",2);
+      $support->log("Biotype of ".$lgene->stable_id." changed from $old_biotype to $new_biotype\n",2);
     }
 
     #update start & end
@@ -1074,6 +1074,9 @@ sequence_set_access           i
 transcript_stable_id_pool     i
 translation_stable_id_pool    i
 tmp_align                     i
+tmp_mask                      i
+tmp_assembly                  i
+test_contig                   i
 gene_name_update              i
 ENDOFTEXT
   return $txt;
