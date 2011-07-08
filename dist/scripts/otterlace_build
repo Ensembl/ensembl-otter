@@ -235,15 +235,24 @@ otterlace_client_install_client() {
 }
 
 otterlace_client_install() {
-
-    otterlace_local="/software/anacode/bin/otterlace_rel${version}"
+    local arch
+    arch="$( uname -m )"
 
     echo ""
     echo "client install"
     echo "network host: ${otterlace_client_host}"
     echo "host name: $( hostname )"
-    echo "arch: $( uname -m )"
+    echo "arch: ${arch}"
     echo "debian version: $( cat /etc/debian_version )"
+
+    # sanity test
+    if ! [ -d "$zmap_prefix" ]
+    then
+        echo "error: client install for ${arch} aborted: the ZMap directory '${zmap_prefix} is missing or invalid" >&2
+        exit 1
+    fi
+
+    otterlace_local="/software/anacode/bin/otterlace_rel${version}"
 
     echo &&
     echo "removing old otterlace installation" &&
