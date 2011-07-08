@@ -80,33 +80,18 @@ otterlace_prefix="/software/anacode/otter/otter_rel${version}"
 
 ensembl_cvs_flags="-r branch-ensembl-${client_ensembl_version}"
 
-new_directory() {
-    local dir
-    dir=$1
-
-    rm -rf -- "$dir" &&
-    mkdir -v -p -- "$dir" &&
-    chgrp -v anacode "$dir" &&
-    chmod -v g+s "$dir" &&
-    /bin/true
-}
-
-fix_permissions() {
-    local dir
-    dir=$1
-
-    chmod -v -R ug+rw "$dir" &&
-    /bin/true
-}
-
 with_new_directory() {
     local dir command
     dir="$1"
     command="$2"
     shift 2
+    rm -rf -- "$dir" &&
+    mkdir -v -p -- "$dir" &&
+    chgrp -v anacode "$dir" &&
+    chmod -v g+s "$dir" &&
     "$command" "$dir" "$@"
     status=$?
-    fix_permissions "$dir" &&
+    chmod -v -R ug+rw "$dir" &&
     ( exit "$status" )
 }
 
