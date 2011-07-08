@@ -99,6 +99,17 @@ fix_permissions() {
     /bin/true
 }
 
+with_new_directory() {
+    local dir command
+    dir="$1"
+    command="$2"
+    shift 2
+    "$command" "$dir" "$@"
+    status=$?
+    fix_permissions "$dir" &&
+    ( exit "$status" )
+}
+
 git_cache_create() {
     local install_dir
     install_dir="$1"
@@ -114,40 +125,44 @@ git_cache_create() {
     /bin/true
 }
 
-otterlace_server_install() {
+otterlace_server_install_modules() {
+    local install_dir source_dir
+    install_dir="$1"
+    source_dir="${ensembl_otter_root}/modules/Bio"
+    cp -v -r "$source_dir" "$install_dir" &&
+    git_cache_create "$install_dir" &&
+    /bin/true
+}
 
+otterlace_server_install_cgi() {
+    local install_dir source_dir
+    install_dir="$1"
+    source_dir="${ensembl_otter_root}/scripts/apache"
+    cp -v -r "$source_dir"/* "$install_dir" &&
+    /bin/true
+}
+
+otterlace_server_install() {
+    local module_dir cgi_bin_dir
     echo ""
     echo "installing server"
-
-    echo "installing server: perl modules"
-    {
-        lib_dir="${otterlace_server_root}/lib/otter/${version_major}"
-        new_directory "$lib_dir" &&
-        cp -v -r \
-            "${ensembl_otter_root}/modules/Bio" \
-            "$lib_dir" &&
-        git_cache_create "$lib_dir" &&
-        fix_permissions "$lib_dir" &&
-        /bin/true ; } &&
-
-    echo "installing server: CGI scripts"
-    {
-        cgi_bin_dir="${otterlace_server_root}/cgi-bin/otter/${version_major}"
-        new_directory "$cgi_bin_dir" &&
-        cp -v -r \
-            "${ensembl_otter_root}/scripts/apache"/* \
-            "$cgi_bin_dir" &&
-        fix_permissions "$cgi_bin_dir" &&
-        /bin/true ; } &&
-
+    module_dir="${otterlace_server_root}/lib/otter/${version_major}"
+    cgi_bin_dir="${otterlace_server_root}/cgi-bin/otter/${version_major}"
+    echo "installing server: perl modules" &&
+    with_new_directory "$module_dir" otterlace_server_install_modules &&
+    echo "installing server: CGI scripts" &&
+    with_new_directory "$cgi_bin_dir" otterlace_server_install_cgi &&
     /bin/true
 }
 
 otterlace_client_install_perl_modules() {
+    local install_dir
+    install_dir="$1"
+
     echo &&
     echo "installing perl modules" &&
 
-    ( cd "$otterlace_prefix" &&
+    ( cd "$install_dir" &&
 
         cvs -d "$ensembl_cvsroot" \
             checkout $ensembl_cvs_flags \
@@ -178,21 +193,23 @@ otterlace_client_install_perl_modules() {
 
         /bin/true ) &&
 
-    git_cache_create "${otterlace_prefix}/ensembl-otter/modules" &&
+    git_cache_create "${install_dir}/ensembl-otter/modules" &&
 
     /bin/true
 }
 
 otterlace_client_install_scripts() {
-    local bin_dir
-    bin_dir="${otterlace_prefix}/bin"
+    local install_dir
+    install_dir="${1}/bin"
 
-    mkdir -p -- "$bin_dir" &&
-    cp -v -- ${ensembl_otter_root}/scripts/client/* "$bin_dir" &&
+    mkdir -p -- "$install_dir" &&
+    cp -v -- ${ensembl_otter_root}/scripts/client/* "$install_dir" &&
     /bin/true
 }
 
 otterlace_client_install_xremote() {
+    local install_dir build_dir
+    install_dir="$1"
     build_dir="/tmp/otterlace_xremote_build/$$"
     rm -rf -- "$build_dir" &&
     mkdir -p -- "$build_dir" &&
@@ -200,7 +217,7 @@ otterlace_client_install_xremote() {
         cp -r -- "${zmap_root}/ZMap/src/perl/X11-XRemote-0.01" . &&
         cd X11-XRemote-0.01 &&
         perl Makefile.PL \
-            PREFIX=${otterlace_prefix} \
+            PREFIX=${install_dir} \
             CC=gcc \
             LD=gcc \
             --with-zmap-libs "${zmap_prefix}/lib" \
@@ -214,11 +231,21 @@ otterlace_client_install_xremote() {
 }
 
 otterlace_client_install_acedb_zmap() {
-    local bin_dir
-    bin_dir="${otterlace_prefix}/bin"
+    local install_dir
+    install_dir="${1}/bin"
 
-    mkdir -p -- "$bin_dir" &&
-    cp -v -- ${zmap_prefix}/bin/* "$bin_dir" &&
+    mkdir -p -- "$install_dir" &&
+    cp -v -- ${zmap_prefix}/bin/* "$install_dir" &&
+    /bin/true
+}
+
+otterlace_client_install_client() {
+    local install_dir
+    install_dir="$1"
+    otterlace_client_install_perl_modules "$install_dir" &&
+    otterlace_client_install_scripts      "$install_dir" &&
+    otterlace_client_install_xremote      "$install_dir" &&
+    otterlace_client_install_acedb_zmap   "$install_dir" &&
     /bin/true
 }
 
@@ -235,20 +262,13 @@ otterlace_client_install() {
 
     echo &&
     echo "removing old otterlace installation" &&
-    new_directory "$otterlace_prefix" &&
-    otterlace_client_install_perl_modules &&
-    otterlace_client_install_scripts &&
-    otterlace_client_install_xremote &&
-    otterlace_client_install_acedb_zmap &&
-    fix_permissions "$otterlace_prefix" &&
-
+    with_new_directory "$otterlace_prefix" otterlace_client_install_client &&
     cp -v -- dist/scripts/otterlace_local "$otterlace_local" &&
     sed -i \
         -e "/^version=/s/=.*/=${version}/" \
         -e "/^testing=/s/=.*/=${testing}/" \
         "$otterlace_local" &&
     chmod -v 775 "$otterlace_local" &&
-
     /bin/true
 }
 
