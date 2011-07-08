@@ -6,7 +6,6 @@ package CanvasWindow::EvidencePaster;
 use strict;
 use warnings;
 use Scalar::Util 'weaken';
-use Hum::Ace::AceText;
 use Hum::Sort 'ace_sort';
 
 use base 'CanvasWindow';

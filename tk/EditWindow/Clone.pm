@@ -9,8 +9,6 @@ use Carp;
 
 use base 'EditWindow';
 
-use Hum::Ace::Clone;
-
 =pod
 
     -- Clone --
