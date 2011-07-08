@@ -3,7 +3,7 @@ package MenuCanvasWindow::XaceSeqChooser;
 
 use strict;
 use warnings;
-use 5.006_001;  # For qr support
+
 use Carp;
 use Scalar::Util 'weaken';
 
