@@ -13,7 +13,6 @@ use Tk::ROText;
 use Tk::LabFrame;
 use Tk::ComboBox;
 use Tk::SmartOptionmenu;
-use Hum::Ace::SubSeq;
 use Hum::Ace::DotterLauncher;
 use CanvasWindow::EvidencePaster;
 use EditWindow::PfamWindow;

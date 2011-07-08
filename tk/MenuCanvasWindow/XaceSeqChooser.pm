@@ -12,11 +12,8 @@ require Tk::Balloon;
 
 use Hum::Ace::SubSeq;
 use Hum::Ace::Locus;
-use Hum::Ace::Method;
 use Hum::Ace::XaceRemote;
 use Hum::Ace::Assembly;
-use Hum::Ace::AceText;
-use Hum::Ace;
 use Hum::Analysis::Factory::ExonLocator;
 use Hum::Conf qw{ PFETCH_SERVER_LIST };
 use Hum::Sort qw{ ace_sort };

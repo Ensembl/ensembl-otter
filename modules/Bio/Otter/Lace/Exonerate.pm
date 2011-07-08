@@ -24,7 +24,6 @@ use Bio::Otter::Lace::Exonerate::Config::General;
 use Bio::Otter::Lace::Exonerate::Config::Blast;
 
 use Bio::Seq;
-use Hum::Ace::AceText;
 use Hum::Ace::Method;
 use Hum::FastaFileIO;
 use Bio::EnsEMBL::Analysis::Runnable::Finished::Exonerate;
