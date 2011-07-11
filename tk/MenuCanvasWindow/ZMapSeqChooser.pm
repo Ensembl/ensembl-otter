@@ -419,7 +419,7 @@ sub zMapAceServerDefaults {
     my $url = sprintf q{%s://%s:%s@%s:%d}, $protocol, $server->user, $server->pass, $server->host, $server->port;
 
     my $collection = $self->Assembly->MethodCollection;
-    my $featuresets = join ' ; ', map { $_->name } $collection->get_all_top_level_Methods;
+    my $featuresets = [ map { $_->name } $collection->get_all_top_level_Methods ];
 
     return $self->formatZmapDefaults(
         $self->slice_name,
@@ -451,7 +451,7 @@ sub zMapGffFilterDefaults {
         $text .= $self->formatZmapDefaults(
             $filter->name,
             url             => $filter->source_url($self->AceDatabase),
-            featuresets     => join(' ; ', @{$filter->featuresets}),
+            featuresets     => $filter->featuresets,
             delayed         =>
             ( $state_hash->{wanted} && ! $state_hash->{failed} )
             ? 'false' : 'true',
@@ -479,7 +479,7 @@ sub zMapGffFilterDefaults {
         
         $text .= $self->formatZmapDefaults(
             'columns',
-            map { $_ => join ' ; ', @{ $filter_columns{$_} } } keys %filter_columns,
+            map { $_ => $filter_columns{$_} } keys %filter_columns,
         );
     }
     

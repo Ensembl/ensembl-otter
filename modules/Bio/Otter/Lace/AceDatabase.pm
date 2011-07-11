@@ -325,7 +325,7 @@ sub zmap_config {
     # due to it not having window id when doing XChangeProperty().
 
     my $sources =
-        join ' ; ', $self->slice_name, keys %{$self->filters};
+        [ $self->slice_name, keys %{$self->filters}, ];
     my $show_mainwindow =
         $self->Client->config_value('zmap_main_window');
     my $pfetch_www = $ENV{'PFETCH_WWW'};
