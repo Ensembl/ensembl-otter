@@ -40,11 +40,11 @@ sub zmap_config {
 
     my $stanza = { %{ $self->config_section('zmap') } };
     my $columns = $self->config_value_list_merged('zmap_config', 'columns');
-    $stanza->{columns} = join ' ; ', @{$columns} if @${columns};
+    $stanza->{columns} = $columns if @${columns};
 
     my $bam_list = $self->bam_list;
     $stanza->{'seq-data'} =
-        ( join ' ; ', sort map { $_->{name} } @{$bam_list} )
+        [ sort map { $_->{name} } @{$bam_list} ]
         if @{$bam_list};
 
     my $config = {
