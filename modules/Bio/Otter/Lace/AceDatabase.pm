@@ -324,8 +324,6 @@ sub zmap_config {
     # The 'show-mainwindow' parameter is for when zmap does not start
     # due to it not having window id when doing XChangeProperty().
 
-    my $sources =
-        [ $self->slice_name, keys %{$self->filters}, ];
     my $show_mainwindow =
         $self->Client->config_value('zmap_main_window');
     my $pfetch_www = $ENV{'PFETCH_WWW'};
@@ -333,7 +331,7 @@ sub zmap_config {
 
     my $config = {
         'ZMap' => {
-            'sources'         => $sources,
+            'sources'         => [ $self->slice_name ],
             'show-mainwindow' => ( $show_mainwindow ? 'true' : 'false' ),
             'cookie-jar'      => $ENV{'OTTERLACE_COOKIE_JAR'},
             'script-dir'      => $self->script_dir,
