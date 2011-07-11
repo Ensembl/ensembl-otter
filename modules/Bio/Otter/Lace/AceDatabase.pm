@@ -392,12 +392,30 @@ sub blixem_config {
 
 sub _config_merge {
     my ($config, $config_other) = @_;
-    for my $key (keys %{$config_other}) {
-        $config->{$key} ||= { };
-        %{$config->{$key}} =
-            ( %{$config->{$key}}, %{$config_other->{$key}} );
+    for my $name (keys %{$config_other}) {
+        my $stanza = $config->{$name} ||= { };
+        my $stanza_other = $config_other->{$name};
+        for my $key (keys %{$stanza_other}) {
+            $stanza->{$key} =
+                _value_merge($stanza->{$key},$stanza_other->{$key});
+        }
     }
     return;
+}
+
+# We merge two values as follows: if either value is undefined we
+# ignore it and return the other, if either value is a reference then
+# we concatenate them into a list, otherwise we ignore the first value
+# and return the second.
+
+sub _value_merge {
+    my ($v0, $v1) = @_;
+    return $v0 unless defined $v1;
+    return $v1 unless defined $v0;
+    return [ @{$v0}, @{$v1} ] if ref $v0 && ref $v1;
+    return [ @{$v0},   $v1  ] if ref $v0;
+    return [   $v0 , @{$v1} ] if ref $v1;
+    return $v1;
 }
 
 sub offset {
