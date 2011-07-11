@@ -39,6 +39,12 @@ sub zmap_config {
     my ($self) = @_;
 
     my $stanza = { %{ $self->config_section('zmap') } };
+
+    my $filters = $self->filters;
+    $stanza->{sources} =
+        [ sort map { $_->name } @{$filters} ]
+        if @${filters};
+
     my $columns = $self->config_value_list_merged('zmap_config', 'columns');
     $stanza->{columns} = $columns if @${columns};
 
