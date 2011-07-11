@@ -85,6 +85,7 @@ my $blixem_bam_parameters = [
     [ qw( bam_path            file               ) ],
     [ qw( bam_cs              csver              ) ],
     [ qw( gff_feature_source  gff_feature_source ) ],
+    [ qw( chr_prefix          chr_prefix         ) ],
     ];
 
 sub blixem_bam_args {
