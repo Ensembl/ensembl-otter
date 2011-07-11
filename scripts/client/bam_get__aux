@@ -24,7 +24,9 @@ use Bio::Otter::Lace::Defaults;
 
 # parse the command line
 my $gff_version = 3;
-my ($bam_path, $bam_cs, $dataset, $chr, $start, $end, $gff_feature_source);
+my ($bam_path, $bam_cs, $dataset,
+    $chr, $start, $end,
+    $gff_feature_source, $chr_prefix);
 unshift @ARGV
     , -bam_path => q(/nfs/vertres02/projects/vrtrack_mouse_transcriptomes/REL-1009/__VRTrack_Release__/NOD_Mouse_Transcriptome/NOD_FatherBrain/SLX/raw.bam),
     , -bam_cs  => 'NCBIM37',
@@ -42,6 +44,7 @@ Bio::Otter::Lace::Defaults::do_getopt(
     "start=i"              => \$start,
     "end=i"                => \$end,
     "gff_feature_source=s" => \$gff_feature_source,
+    "chr_prefix=s"         => \$chr_prefix,
     );
 
 # get the mapping from the Otter server
@@ -84,6 +87,7 @@ my $sam = Bio::DB::Sam->new
      # -fasta => $fasta_path,
      );
 
+$equiv_chr = "${chr_prefix}${equiv_chr}" if defined $chr_prefix;
 my @read_pairs = $sam->get_features_by_location(
     -type   => 'read_pair',
     -seq_id => $equiv_chr,

@@ -49,6 +49,11 @@ sub gff_feature_source {
     return $self->{gff_feature_source};
 }
 
+sub chr_prefix {
+    my ($self) = @_;
+    return $self->{chr_prefix};
+}
+
 1;
 
 __END__
