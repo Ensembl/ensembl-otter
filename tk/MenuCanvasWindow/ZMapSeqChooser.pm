@@ -439,9 +439,9 @@ sub zMapGffFilterDefaults {
     my ($self) = @_;
 
     my $text;
-    my %filter_columns;
-    my %filter_styles;
-    my %filter_descs;
+    my $filter_columns      = { };
+    my $filter_styles       = { };
+    my $filter_descriptions = { };
 
     for (values %{$self->AceDatabase->filters}) {
 
@@ -460,49 +460,26 @@ sub zMapGffFilterDefaults {
         );
         
         if ($filter->zmap_column) {
-            my $fsets = $filter_columns{$filter->zmap_column} ||= [];
+            my $fsets = $filter_columns->{$filter->zmap_column} ||= [];
             push @{ $fsets }, @{$filter->featuresets};
         }
         
         if ($filter->zmap_style) {
-            $filter_styles{$filter->name} = $filter->zmap_style;
+            $filter_styles->{$filter->name} = $filter->zmap_style;
         }
         
         if ($filter->description) {
-            $filter_descs{$filter->name} = $filter->description;
+            $filter_descriptions->{$filter->name} = $filter->description;
         }
     }
-    
-    if (keys %filter_columns) {
-        
-        # also add a columns stanza to group featuresets into columns
-        
-        $text .= $self->formatZmapDefaults(
-            'columns',
-            map { $_ => $filter_columns{$_} } keys %filter_columns,
-        );
-    }
-    
-    if (keys %filter_styles) {
-        
-        # and a featureset-styles stanza to specify the style for each featureset
-        
-        $text .= $self->formatZmapDefaults(
-            'featureset-style',
-            map { $_ => $filter_styles{$_} } keys %filter_styles,
-        );
-    }
-    
-    if (keys %filter_descs && 0) {
-        
-        # and a filter description stanza
-        
-        $text .= $self->formatZmapDefaults(
-            'featureset-description',
-            map { $_ => $filter_descs{$_} } keys %filter_descs,
-        );
-    }
-    
+
+    $text .= $self->formatZmapDefaults('columns', %{$filter_columns})
+        if keys %{$filter_columns};
+    $text .= $self->formatZmapDefaults('featureset-style', %{$filter_styles})
+        if keys %{$filter_styles};
+    $text .= $self->formatZmapDefaults('featureset-description', %{$filter_descriptions})
+        if keys %{$filter_descriptions} && 0; # disabled
+
     return $text;
 }
 
