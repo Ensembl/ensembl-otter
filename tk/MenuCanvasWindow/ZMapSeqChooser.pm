@@ -450,7 +450,7 @@ sub zMapGffFilterDefaults {
 
         $text .= $self->formatZmapDefaults(
             $filter->name,
-            url             => $filter->source_url($self->AceDatabase),
+            url             => $filter->url($self->AceDatabase),
             featuresets     => $filter->featuresets,
             delayed         =>
             ( $state_hash->{wanted} && ! $state_hash->{failed} )

@@ -263,7 +263,7 @@ sub translation_xref_dbs {
 
 # session handling
 
-sub source_url {
+sub url {
     my ($self, $session) = @_;
     my $script = $self->gff_http_script_name;
     my $param_string =
