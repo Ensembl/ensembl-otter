@@ -90,6 +90,10 @@ my $bam_parameters = [
     ),
     ];
 
+sub bam_parameters {
+    return $bam_parameters;
+}
+
 my $slice_parameters = [
     #   key
     qw(
