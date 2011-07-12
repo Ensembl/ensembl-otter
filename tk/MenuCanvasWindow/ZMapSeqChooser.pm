@@ -449,11 +449,11 @@ sub zMapGffFilterDefaults {
 
         $text .= $self->formatZmapDefaults(
             $filter->name,
-            url             => $filter->url($self->AceDatabase),
-            featuresets     => $filter->featuresets,
-            delayed         => $filter->delayed($self->AceDatabase) ? 'true' : 'false',
-            stylesfile      => $self->zMapStylesPath,
-            group           => 'always',
+            url         => $filter->url($self->AceDatabase),
+            featuresets => $filter->featuresets,
+            delayed     => $filter->delayed($self->AceDatabase) ? 'true' : 'false',
+            stylesfile  => $self->zMapStylesPath,
+            group       => 'always',
         );
         
         if ($filter->zmap_column) {
