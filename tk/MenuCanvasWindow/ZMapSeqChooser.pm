@@ -443,9 +443,7 @@ sub zMapGffFilterDefaults {
     my $filter_styles       = { };
     my $filter_descriptions = { };
 
-    for (values %{$self->AceDatabase->filters}) {
-
-        my $filter = $_->{filter};
+    for my $filter (@{$self->AceDatabase->DataSet->filters}) {
 
         $text .= $self->formatZmapDefaults(
             $filter->name,
