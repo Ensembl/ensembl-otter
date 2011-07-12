@@ -75,20 +75,12 @@ sub blixem_config {
     return $config;
 }
 
-my $blixem_bam_parameters = [
-    #     key                 BAM method
-    [ qw( bam_path            file       ) ],
-    [ qw( bam_cs              csver      ) ],
-    [ qw( gff_feature_source  name       ) ],
-    [ qw( chr_prefix          chr_prefix ) ],
-    ];
-
 sub blixem_bam_args {
     my ($self, $bam) = @_;
 
     my $args = join ' ', map {
-        _blixem_bam_arg($bam, @{$_});
-    } @{$blixem_bam_parameters};
+        _blixem_bam_arg($bam, ref $_ ? @{$_} : $_);
+    } @{$bam->bam_parameters};
 
     return $args;
 }
@@ -97,6 +89,7 @@ sub blixem_bam_args {
 sub _blixem_bam_arg {
     my ($bam, $key, $method) = @_;
 
+    $method ||= $key;
     my $value = $bam->$method;
     return unless defined $value;
 
