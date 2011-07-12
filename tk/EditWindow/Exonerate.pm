@@ -60,7 +60,10 @@ sub initialise {
     $match_frame->Button(
         -text      => 'Clear',
         -underline => 0,
-        -command   => sub { $self->set_entry('match', ''); },
+        -command   => sub {
+            $self->set_entry('match', '');
+            $self->fasta_txt->delete('1.0', 'end');
+        },
     )->pack(-side => 'left');
     $top->bind('<Control-u>', $update);
     $top->bind('<Control-U>', $update);
