@@ -84,8 +84,8 @@ my $bam_parameters = [
     #     key                method (optional)
     [ qw( bam_path           file  ) ],
     [ qw( bam_cs             csver ) ],
+    [ qw( gff_feature_source name  ) ],
     qw(
-          gff_feature_source
           chr_prefix
     ),
     ];
