@@ -446,15 +446,12 @@ sub zMapGffFilterDefaults {
     for (values %{$self->AceDatabase->filters}) {
 
         my $filter = $_->{filter};
-        my $state_hash = $_->{state};
 
         $text .= $self->formatZmapDefaults(
             $filter->name,
             url             => $filter->url($self->AceDatabase),
             featuresets     => $filter->featuresets,
-            delayed         =>
-            ( $state_hash->{wanted} && ! $state_hash->{failed} )
-            ? 'false' : 'true',
+            delayed         => $filter->delayed($self->AceDatabase) ? 'true' : 'false',
             stylesfile      => $self->zMapStylesPath,
             group           => 'always',
         );
