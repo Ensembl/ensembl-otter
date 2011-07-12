@@ -8,6 +8,8 @@ use warnings;
 
 use Carp;
 
+use URI::Escape qw( uri_escape );
+
 my @keys = qw( description file csver );
 
 sub new {
@@ -52,6 +54,84 @@ sub gff_feature_source {
 sub chr_prefix {
     my ($self) = @_;
     return $self->{chr_prefix};
+}
+
+# source methods
+
+sub featuresets {
+    my ($self) = @_;
+    return [ $self->name ];
+}
+
+sub zmap_column { return; }
+sub zmap_style  { return; }
+
+sub delayed {
+    return 1;
+};
+
+sub url {
+    my ($self, $session) = @_;
+    my $query_string = _query_string($self->url_query($session));
+    return sprintf "%s?%s", $self->url_path, $query_string,
+}
+
+sub url_path {
+    return "pipe:///client/bam_get";
+}
+
+my $bam_parameters = [
+    #     key                method (optional)
+    [ qw( bam_path           file  ) ],
+    [ qw( bam_cs             csver ) ],
+    qw(
+          gff_feature_source
+          chr_prefix
+    ),
+    ];
+
+my $slice_parameters = [
+    #   key
+    qw(
+        start
+        end
+    ) ];
+
+sub url_query {
+    my( $self, $session ) = @_;
+    my $slice = $session->smart_slice;
+    my $query = {
+        _query($self,  $bam_parameters),
+        _query($slice, $slice_parameters),
+    };
+    return $query;
+}
+
+# NB: the following subroutines are *not* methods
+
+sub _query_string {
+    my ($query) = @_;
+    my $arguments = [ ];
+    for my $key (sort keys %{$query}) {
+        my $value = $query->{$key};
+        next unless defined $value;
+        $key = "-${key}";
+        push @{$arguments}, join "=", uri_escape($key), uri_escape($value);
+    }
+    my $query_string = join '&', @{$arguments};
+    return $query_string;
+}
+
+sub _query {
+    my ($obj, $parameters) = @_;
+    return map { _query_pair($obj, ref $_ ? @{$_} : $_ ) } @{$parameters};
+}
+
+sub _query_pair {
+    my ($obj, $key, $method) = @_;
+    $method ||= $key;
+    my $value = $obj->$method;
+    return ( $key, $value );
 }
 
 1;
