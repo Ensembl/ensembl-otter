@@ -77,10 +77,10 @@ sub blixem_config {
 
 my $blixem_bam_parameters = [
     #     key                 BAM method
-    [ qw( bam_path            file               ) ],
-    [ qw( bam_cs              csver              ) ],
-    [ qw( gff_feature_source  name               ) ],
-    [ qw( chr_prefix          chr_prefix         ) ],
+    [ qw( bam_path            file       ) ],
+    [ qw( bam_cs              csver      ) ],
+    [ qw( gff_feature_source  name       ) ],
+    [ qw( chr_prefix          chr_prefix ) ],
     ];
 
 sub blixem_bam_args {
