@@ -392,7 +392,7 @@ sub zMapZMapContent{
       . $self->zMapWindowDefaults
       . $self->zMapBlixemDefaults
       . $self->zMapAceServerDefaults
-      . $self->zMapGffFilterDefaults
+      . $self->zMapSourceDefaults
       . $self->zMapGlyphDefaults
       ;
 }
@@ -434,46 +434,46 @@ sub zMapAceServerDefaults {
     );
 }
 
-sub zMapGffFilterDefaults {
+sub zMapSourceDefaults {
     
     my ($self) = @_;
 
     my $text;
-    my $filter_columns      = { };
-    my $filter_styles       = { };
-    my $filter_descriptions = { };
+    my $source_columns      = { };
+    my $source_styles       = { };
+    my $source_descriptions = { };
 
-    for my $filter (@{$self->AceDatabase->DataSet->filters}) {
+    for my $source (@{$self->AceDatabase->DataSet->sources}) {
 
         $text .= $self->formatZmapDefaults(
-            $filter->name,
-            url         => $filter->url($self->AceDatabase),
-            featuresets => $filter->featuresets,
-            delayed     => $filter->delayed($self->AceDatabase) ? 'true' : 'false',
+            $source->name,
+            url         => $source->url($self->AceDatabase),
+            featuresets => $source->featuresets,
+            delayed     => $source->delayed($self->AceDatabase) ? 'true' : 'false',
             stylesfile  => $self->zMapStylesPath,
             group       => 'always',
         );
         
-        if ($filter->zmap_column) {
-            my $fsets = $filter_columns->{$filter->zmap_column} ||= [];
-            push @{ $fsets }, @{$filter->featuresets};
+        if ($source->zmap_column) {
+            my $fsets = $source_columns->{$source->zmap_column} ||= [];
+            push @{ $fsets }, @{$source->featuresets};
         }
         
-        if ($filter->zmap_style) {
-            $filter_styles->{$filter->name} = $filter->zmap_style;
+        if ($source->zmap_style) {
+            $source_styles->{$source->name} = $source->zmap_style;
         }
         
-        if ($filter->description) {
-            $filter_descriptions->{$filter->name} = $filter->description;
+        if ($source->description) {
+            $source_descriptions->{$source->name} = $source->description;
         }
     }
 
-    $text .= $self->formatZmapDefaults('columns', %{$filter_columns})
-        if keys %{$filter_columns};
-    $text .= $self->formatZmapDefaults('featureset-style', %{$filter_styles})
-        if keys %{$filter_styles};
-    $text .= $self->formatZmapDefaults('featureset-description', %{$filter_descriptions})
-        if keys %{$filter_descriptions} && 0; # disabled
+    $text .= $self->formatZmapDefaults('columns', %{$source_columns})
+        if keys %{$source_columns};
+    $text .= $self->formatZmapDefaults('featureset-style', %{$source_styles})
+        if keys %{$source_styles};
+    $text .= $self->formatZmapDefaults('featureset-description', %{$source_descriptions})
+        if keys %{$source_descriptions} && 0; # disabled
 
     return $text;
 }

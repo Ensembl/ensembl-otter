@@ -40,10 +40,10 @@ sub zmap_config {
 
     my $stanza = { %{ $self->config_section('zmap') } };
 
-    my $filters = $self->filters;
+    my $sources = $self->sources;
     $stanza->{sources} =
-        [ sort map { $_->name } @{$filters} ]
-        if @${filters};
+        [ sort map { $_->name } @{$sources} ]
+        if @${sources};
 
     my $columns = $self->config_value_list_merged('zmap_config', 'columns');
     $stanza->{columns} = $columns if @${columns};
@@ -55,11 +55,6 @@ sub zmap_config {
 
     my $config = {
         'ZMap' => $stanza,
-        ( map {
-            $_->name => {
-                description => $_->description,
-            },
-          } @{$self->bam_list} ),
     };
 
     return $config;
@@ -186,6 +181,14 @@ sub _filters {
     }
 
     return $filters;
+}
+
+sub sources {
+    my ($self) = @_;
+    return $self->{_sources} ||= [
+        @{$self->filters},
+        @{$self->bam_list},
+        ];
 }
 
 sub config_section {
