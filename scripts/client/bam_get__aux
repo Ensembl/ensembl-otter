@@ -181,7 +181,7 @@ for (@read_pairs) {
 
         my @fields =
             (
-             $_->primary_tag,
+             'read',
              (sprintf "%d", $_->start),
              (sprintf "%d", $_->end),
              (defined $score ? (sprintf "%f", $score) : '.'),
