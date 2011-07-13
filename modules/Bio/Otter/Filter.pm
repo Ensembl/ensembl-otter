@@ -325,7 +325,7 @@ sub gff_source {
 }
 
 sub script_path {
-    return "gff_http.pl";
+    return "client/filter_get";
 }
 
 1;
