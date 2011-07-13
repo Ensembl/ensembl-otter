@@ -96,6 +96,7 @@ sub bam_parameters {
 
 my $slice_parameters = [
     #   key
+    [ qw( chr  ssname ) ],
     qw(
         start
         end
