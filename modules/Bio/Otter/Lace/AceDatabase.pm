@@ -825,19 +825,19 @@ sub process_gff_file_from_Filter {
 }
 
 sub script_dir {    
-    my $script_dir = $ENV{'OTTER_HOME'} . '/ensembl-otter/scripts';
+    my $script_dir = $ENV{'OTTER_HOME'} . '/ensembl-otter/scripts/client';
     unless (-d $script_dir) {
         $script_dir = undef;
         foreach (grep { m{ensembl-otter} } @INC) {
             my $otter = $_;     # Make a copy so that we don't modify @INC
-            $otter =~ s{[^/]+$}{scripts};
+            $otter =~ s{[^/]+$}{scripts/client};
             if (-d $otter) {
                 $script_dir = $otter;
                 last;
             }
         }
     }
-    die "Could not find directory for Zmap script-dir parameter (usually ensembl-otter/scripts)" unless $script_dir;
+    die "Could not find directory for Zmap script-dir parameter (usually ensembl-otter/scripts/client)" unless $script_dir;
     return $script_dir;
 }
 
