@@ -8,9 +8,9 @@ use XML::Simple;
 use Data::Dumper;
 
 use lib qw(
-/software/anacode/otter/otter_rel55/PerlModules
-/software/anacode/otter/otter_rel55/ensembl/modules
-/software/anacode/otter/otter_rel55/ensembl-otter/modules
+/software/anacode/otter/otter_rel56/PerlModules
+/software/anacode/otter/otter_rel56/ensembl/modules
+/software/anacode/otter/otter_rel56/ensembl-otter/modules
 /nfs/users/nfs_s/searle/bam/progs/BioPerl-1.6.1
 /nfs/users/nfs_s/searle/bam/progs/Bio-SamTools-1.20/lib
 /nfs/users/nfs_s/searle/bam/inst/lib/BioSamtools/lib/site_perl/5.8.8/x86_64-linux-thread-multi
