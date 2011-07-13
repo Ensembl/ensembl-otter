@@ -192,9 +192,10 @@ otterlace_client_install_scripts() {
     /bin/true
 }
 
-otterlace_client_install_xremote() {
-    local install_dir build_dir
+otterlace_client_install_zmap() {
+    local install_dir bin_dir build_dir
     install_dir="$1"
+    bin_dir="${install_dir}/bin"
     build_dir="/tmp/otterlace_xremote_build/$$"
     rm -rf -- "$build_dir" &&
     mkdir -p -- "$build_dir" &&
@@ -212,15 +213,9 @@ otterlace_client_install_xremote() {
         make &&
         make install &&
         rm -rf -- "$build_dir" &&
-        /bin/true )
-}
-
-otterlace_client_install_acedb_zmap() {
-    local install_dir
-    install_dir="${1}/bin"
-
-    mkdir -p -- "$install_dir" &&
-    cp -v -- ${zmap_prefix}/bin/* "$install_dir" &&
+        /bin/true ) &&
+    mkdir -p -- "$bin_dir" &&
+    cp -v -- ${zmap_prefix}/bin/* "$bin_dir" &&
     /bin/true
 }
 
@@ -229,8 +224,7 @@ otterlace_client_install_client() {
     install_dir="$1"
     otterlace_client_install_perl_modules "$install_dir" &&
     otterlace_client_install_scripts      "$install_dir" &&
-    otterlace_client_install_xremote      "$install_dir" &&
-    otterlace_client_install_acedb_zmap   "$install_dir" &&
+    otterlace_client_install_zmap         "$install_dir" &&
     /bin/true
 }
 
