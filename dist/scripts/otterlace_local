@@ -67,13 +67,9 @@ $OTTER_HOME/ensembl-otter/modules:\
 $OTTER_HOME/ensembl-analysis/modules:\
 $OTTER_HOME/ensembl/modules:\
 $OTTER_HOME/ensembl-variation/modules:\
-$OTTER_HOME/bioperl-1.4:\
-$OTTER_HOME/biodas-1.02:\
 $OTTER_HOME/lib:\
-$OTTER_HOME/lib/perl:\
 $OTTER_HOME/lib/site_perl:\
 $anasoft/lib:\
-$anasoft/lib/perl:\
 $anasoft/lib/site_perl\
 "
 
