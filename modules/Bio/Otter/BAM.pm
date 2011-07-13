@@ -77,7 +77,7 @@ sub url {
 }
 
 sub script_path {
-    return "client/bam_get";
+    return "bam_get";
 }
 
 my $bam_parameters = [
