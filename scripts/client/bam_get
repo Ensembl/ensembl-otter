@@ -19,7 +19,8 @@ print STDERR "$0", ( map { " '$_'" } @ARGV ), "\n";
 my $gff_version = 3;
 my ($bam_path, $bam_cs, $dataset,
     $chr, $start, $end,
-    $gff_feature_source, $chr_prefix);
+    $gff_feature_source, $chr_prefix,
+    $gff_seqname);
 unshift @ARGV
     , -bam_path => q(/nfs/vertres02/projects/vrtrack_mouse_transcriptomes/REL-1009/__VRTrack_Release__/NOD_Mouse_Transcriptome/NOD_FatherBrain/SLX/raw.bam),
     , -bam_cs  => 'NCBIM37',
@@ -38,6 +39,7 @@ Bio::Otter::Lace::Defaults::do_getopt(
     "end=i"                => \$end,
     "gff_feature_source=s" => \$gff_feature_source,
     "chr_prefix=s"         => \$chr_prefix,
+    "gff_seqname=s"        => \$gff_seqname,
     );
 
 # get the mapping from the Otter server
