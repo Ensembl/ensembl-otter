@@ -193,6 +193,14 @@ otterlace_client_install_scripts() {
 }
 
 otterlace_client_install_zmap() {
+
+    # sanity test
+    if ! [ -d "$zmap_prefix" ]
+    then
+        echo "error: client ZMap install for ${arch} aborted: the ZMap directory '${zmap_prefix} is missing or invalid" >&2
+        exit 1
+    fi
+
     local install_dir bin_dir build_dir
     install_dir="$1"
     bin_dir="${install_dir}/bin"
@@ -238,13 +246,6 @@ otterlace_client_install() {
     echo "host name: $( hostname )"
     echo "arch: ${arch}"
     echo "debian version: $( cat /etc/debian_version )"
-
-    # sanity test
-    if ! [ -d "$zmap_prefix" ]
-    then
-        echo "error: client install for ${arch} aborted: the ZMap directory '${zmap_prefix} is missing or invalid" >&2
-        exit 1
-    fi
 
     otterlace_local="/software/anacode/bin/otterlace_rel${version}"
 
