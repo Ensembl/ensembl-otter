@@ -22,6 +22,8 @@ use Bio::Otter::Lace::Defaults;
 
 # my $fasta_path = q(/lustre/scratch102/projects/mouse/ref/NCBIM37_um.fa);
 
+print STDERR "$0", ( map { " '$_'" } @ARGV ), "\n";
+
 # parse the command line
 my $gff_version = 3;
 my ($bam_path, $bam_cs, $dataset,
