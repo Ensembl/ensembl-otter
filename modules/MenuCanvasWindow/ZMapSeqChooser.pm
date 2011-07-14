@@ -471,8 +471,16 @@ sub zMapHighlight {
 }
 
 # some aliases for naming consistency
-*zMapSingleSelect   = \&zMapHighlight;
-*zMapMultipleSelect = \&zMapHighlight;
+
+sub zMapSingleSelect {
+    my ($self, @args) = @_;
+    return $self->zMapHighlight(@args);
+}
+
+sub zMapMultipleSelect {
+    my ($self, @args) = @_;
+    return $self->zMapHighlight(@args);
+}
 
 =head1 zMapFeatureDetails
 
