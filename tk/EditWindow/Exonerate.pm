@@ -446,7 +446,7 @@ sub get_query_seq {
             $string = ">OTF_seq_$seq_tag\n" . $string;
             $seq_tag++;
         }
-        push @seqs, Hum::FastaFileIO->new_String_IO($string)->read_all_sequences;
+        push @seqs, Hum::FastaFileIO->new(\$string)->read_all_sequences;
     }
     if (my $file_name = $self->get_entry('fasta_file')) {
         # Trim trailing or leading whitespace from file name
