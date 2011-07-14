@@ -281,8 +281,7 @@ sub delayed {
 sub call_with_session_data_handle {
     my ($self, $session, $data_sub) = @_;
 
-    my $gff_http_script =
-        sprintf "%s/%s", $session->script_dir, $self->script_name;
+    my $gff_http_script = $self->script_name;
     my @gff_http_command =
         ( $gff_http_script,
           @{$self->gff_http_script_arguments($session)} );
