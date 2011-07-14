@@ -267,7 +267,7 @@ sub url {
     my ($self, $session) = @_;
     my $script = $self->script_name;
     my $param_string =
-        join '&', @{$self->gff_http_script_arguments($session)};
+        join '&', @{$self->script_arguments($session)};
     return sprintf "pipe:///%s?%s", $script, $param_string,
 }
 
@@ -281,25 +281,23 @@ sub delayed {
 sub call_with_session_data_handle {
     my ($self, $session, $data_sub) = @_;
 
-    my $gff_http_script = $self->script_name;
-    my @gff_http_command =
-        ( $gff_http_script,
-          @{$self->gff_http_script_arguments($session)} );
+    my $script = $self->script_name;
+    my @command = ( $script, @{$self->script_arguments($session)} );
 
-    open my $data_h, '-|', @gff_http_command
-        or confess "failed to run $gff_http_script: $!";
+    open my $data_h, '-|', @command
+        or confess "failed to run $script: $!";
 
     $data_sub->($data_h);
 
     close $data_h
         or confess $!
-        ? "error closing $gff_http_script: $!"
-        : "$gff_http_script failed: status = $?";
+        ? "error closing $script: $!"
+        : "$script failed: status = $?";
 
     return;
 }
 
-sub gff_http_script_arguments {
+sub script_arguments {
     my( $self, $session ) = @_;
 
     my $params = {
