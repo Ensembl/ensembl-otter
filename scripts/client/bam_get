@@ -4,6 +4,7 @@ use strict;
 use warnings;
 
 use XML::Simple;
+use URI::Escape qw(uri_unescape);
 
 use Data::Dumper;
 
@@ -16,23 +17,49 @@ use Bio::Otter::Lace::Defaults;
 print STDERR "$0", ( map { " '$_'" } @ARGV ), "\n";
 
 # parse the command line
-my $gff_version = 3;
-my ($bam_path, $bam_cs, $dataset,
-    $chr, $start, $end,
-    $gff_feature_source, $chr_prefix,
-    $gff_seqname);
-Bio::Otter::Lace::Defaults::do_getopt(
-    "gff_version=s"        => \$gff_version,
-    "bam_path=s"           => \$bam_path,
-    "bam_cs=s"             => \$bam_cs,
-    "dataset=s"            => \$dataset,
-    "chr=s"                => \$chr,
-    "start=i"              => \$start,
-    "end=i"                => \$end,
-    "gff_feature_source=s" => \$gff_feature_source,
-    "chr_prefix=s"         => \$chr_prefix,
-    "gff_seqname=s"        => \$gff_seqname,
+
+my $options = {
+    gff_version => 3,
+};
+
+my @options_specs = qw(
+    gff_version=s
+    bam_path=s
+    bam_cs=s
+    dataset=s
+    chr=s
+    start=i
+    end=i
+    gff_feature_source=s
+    chr_prefix=s
+    gff_seqname=s
     );
+
+sub _key {
+    my ($key) = m(^(.*?)=);
+    return $key;
+}
+sub _option {
+    return ( $_, \$options->{_key()} );
+}
+
+my @keys    = map { _key()    } @options_specs;
+my @options = map { _option() } @options_specs;
+
+Bio::Otter::Lace::Defaults::do_getopt(@options);
+$options->{$_} = uri_unescape($options->{$_}) for keys %{$options};
+my (
+    $gff_version,
+    $bam_path,
+    $bam_cs,
+    $dataset,
+    $chr,
+    $start,
+    $end,
+    $gff_feature_source,
+    $chr_prefix,
+    $gff_seqname
+    ) = @{$options}{@keys};
 
 # get the mapping from the Otter server
 my $client = Bio::Otter::Lace::Defaults::make_Client();
