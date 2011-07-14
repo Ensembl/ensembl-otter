@@ -686,69 +686,38 @@ sub zMapIgnoreRequest {
     return(200, $self->zMapZmapConnector->handled_response(0));
 }
 
+my $action_method_hash = {
+    register_client => 'zMapRegisterClient',
+    edit            => 'zMapEdit',
+    single_select   => 'zMapSingleSelect',
+    multiple_select => 'zMapMultipleSelect',
+    finalised       => 'zMapFinalised',
+    feature_details => 'zMapFeatureDetails',
+    view_closed     => 'zMapViewClosed',
+    features_loaded => 'zMapFeaturesLoaded',
+};
+
 sub RECEIVE_FILTER {
     my ($connect, $reqXML, $obj) = @_;
 
-    # The table of actions and functions...
-    my $lookup = {
-        register_client => 'zMapRegisterClient',
-        edit            => 'zMapEdit',
-        single_select   => 'zMapSingleSelect',
-        multiple_select => 'zMapMultipleSelect',
-        finalised       => 'zMapFinalised',
-        feature_details => 'zMapFeatureDetails',
-        view_closed     => 'zMapViewClosed',
-        features_loaded => 'zMapFeaturesLoaded',
-    };
+    my $action = $reqXML->{'request'}{'action'};
+    warn sprintf
+        "\n_zmap_request_callback:\naction: %s\nrequest:\n>>>\n%s\n<<<\n",
+        $action, Dumper($reqXML)
+        if $ZMAP_DEBUG;
 
-    # @list could be dynamically created...
-    my @list = keys(%$lookup);
-
-    unless ($reqXML->{'request'}) {
-
-        #for my $k (keys %$reqXML) {
-        #    $reqXML->{'request'}->{$k} = $reqXML->{$k};
-        #    delete $reqXML->{$k};
-        #}
-
-        warn "INVALID REQUEST: no <request> block\n";
-    }
-
-    my $action = $reqXML->{'request'}->{'action'};
-
-    warn "PARSED REQUEST: " . Dumper($reqXML) . "\n" if $ZMAP_DEBUG;
-
-    warn "In RECEIVE_FILTER for action=$action\n" if $ZMAP_DEBUG;
-
-    warn sprintf "\n_zmap_request_callback:XML\n>>>\n%s\n<<<\n", $reqXML if $ZMAP_DEBUG;
-
-    # The default response code and message.
-    my ($status, $response) = (404, $obj->zMapZmapConnector->basic_error("Unknown Command"));
-
-    # find the method to call...
-    foreach my $valid (@list) {
-        if (
-            $action eq $valid
-            && ($valid = $lookup->{$valid})    # N.B. THIS SHOULD BE ASSIGNMENT NOT EQUALITY
-            && $obj->can($valid)
-          )
-        {
-
-            # call the method to get the status and response
-            #warn "Calling $obj->$valid($reqXML)";
-            ($status, $response) = $obj->$valid($reqXML);
-            last;                              # no need to go any further...
-        }
-    }
-
-    warn "Response:\n$response" if $ZMAP_DEBUG;
+    my $method = $action_method_hash->{$action};
+    my @result =
+        $method
+        ? $obj->$method($reqXML)
+        : (404, $obj->zMapZmapConnector->basic_error("Unknown Command"));
 
     warn sprintf
         "\n_zmap_request_callback\nstatus:%d\nresponse\n>>>\n%s\n<<<\n"
-        , $status, $response
+        , @result
         if $ZMAP_DEBUG;
 
-    return ($status, $response);
+    return @result;
 }
 
 =head1 zMapGetXRemoteClientByName
