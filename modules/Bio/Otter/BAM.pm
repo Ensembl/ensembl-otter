@@ -73,10 +73,10 @@ sub delayed {
 sub url {
     my ($self, $session) = @_;
     my $query_string = _query_string($self->url_query($session));
-    return sprintf "pipe:///%s?%s", $self->script_path, $query_string,
+    return sprintf "pipe:///%s?%s", $self->script_name, $query_string,
 }
 
-sub script_path {
+sub script_name {
     return "bam_get";
 }
 
