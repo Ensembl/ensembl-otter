@@ -324,7 +324,7 @@ sub zMapZmapConnectorNew {
     my ($self) = @_;
     my $mb = $self->menu_bar();
     my $zc = Bio::Otter::ZMap::Connect->new;
-    $zc->init($mb, \&RECEIVE_FILTER, [ $self, qw() ]);
+    $zc->init($mb, \&_zmap_request_callback, [ $self, qw() ]);
     my $id = $zc->server_window_id();
     return $zc;
 }
@@ -705,7 +705,7 @@ my $action_method_hash = {
     features_loaded => 'zMapFeaturesLoaded',
 };
 
-sub RECEIVE_FILTER {
+sub _zmap_request_callback {
     my ($connect, $reqXML, $obj) = @_;
 
     my $action = $reqXML->{'request'}{'action'};
