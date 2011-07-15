@@ -64,7 +64,7 @@ sub featuresets {
 }
 
 sub zmap_column { return; }
-sub zmap_style  { return 'dna_align'; }
+sub zmap_style  { return 'feat'; }
 
 sub delayed {
     return 1;
