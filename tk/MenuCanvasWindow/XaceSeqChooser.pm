@@ -15,7 +15,6 @@ use Hum::Ace::Locus;
 use Hum::Ace::XaceRemote;
 use Hum::Ace::Assembly;
 use Hum::Analysis::Factory::ExonLocator;
-use Hum::Conf qw{ PFETCH_SERVER_LIST };
 use Hum::Sort qw{ ace_sort };
 use Hum::ClipboardUtils qw{ text_is_zmap_clip };
 use EditWindow::Dotter;
