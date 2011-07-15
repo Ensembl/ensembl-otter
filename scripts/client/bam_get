@@ -183,6 +183,8 @@ my $strands = {
     -1 => '-',
 };
 
+my $attributes_format = $gff_version == 3 ? '%s=%s' : '%s="%s"';
+
 for (@read_pairs) {
     my $name = $_->name;
     for ($_->get_SeqFeatures) {
@@ -244,7 +246,7 @@ for (@read_pairs) {
                 gff_escape_attribute for @{$values};
             }
             gff_escape_attribute;
-            sprintf "%s=%s", $_, join ",", @{$values};
+            sprintf $attributes_format, $_, join ",", @{$values};
         } keys %{$attributes};
 
         gff_escape_seqid  for $chr;
