@@ -108,6 +108,7 @@ sub url_query {
     my $query = {
         _query($self,  $bam_parameters),
         _query($slice, $slice_parameters),
+        gff_version => 2,
     };
     return $query;
 }
