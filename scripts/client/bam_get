@@ -228,7 +228,7 @@ for (@read_pairs) {
 
         my $dna = $query->dna;
 
-        my $attributes = {
+        my @attributes = (
 
 #             ( map {
 #                 ( "bam_$_" => [ $alignment->get_tag_values($_) ] );
@@ -238,16 +238,17 @@ for (@read_pairs) {
             Gap      => [ $gap    ],
             Target   => [ $target ],
             sequence => [ $dna    ],
-        };
+        );
 
-        my $attributes_string = join ";", map { ## no critic (BuiltinFunctions::ProhibitComplexMappings)
-            my $values = $attributes->{$_};
-            unless ($_ eq 'Target') { # the Target tag is already escaped
+        my @attribute_strings = ();
+        while ( my ($key, $values) = splice(@attributes, 0, 2) ) {
+            unless ($key eq 'Target') { # the Target tag is already escaped
                 gff_escape_attribute for @{$values};
             }
-            gff_escape_attribute;
-            sprintf $attributes_format, $_, join ",", @{$values};
-        } keys %{$attributes};
+            gff_escape_attribute for $key;
+            push @attribute_strings, sprintf $attributes_format, $key, join ",", @{$values};
+        }
+        my $attributes_string = join ";", @attribute_strings;
 
         gff_escape_seqid  for $chr;
         gff_escape_source for $source;
