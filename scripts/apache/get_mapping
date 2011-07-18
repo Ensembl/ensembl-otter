@@ -33,6 +33,54 @@ sub mapping_equiv_xml {
     return $xml;
 }
 
+my $mapping_map_maplet_xml_format = <<'XML'
+      <maplet start="%d" end="%d" offset="%d" ori="%d"></maplet>
+XML
+    ;
+chomp $mapping_map_maplet_xml_format;
+
+sub mapping_map_maplet_xml { ## no critic ( Subroutines::RequireArgUnpacking )
+    my $xml = sprintf $mapping_map_maplet_xml_format, @_;
+    return $xml;
+}
+
+my $mapping_map_map_xml_format = <<'XML'
+    <map chr="%s">
+%s
+    </map>
+XML
+    ;
+chomp $mapping_map_map_xml_format;
+
+sub mapping_map_map_xml {
+    my ($chr, $maplets) = @_;
+    my $xml = sprintf $mapping_map_map_xml_format
+        , $chr , ( join "\n", map { mapping_map_maplet_xml(@{$_}) } @{$maplets} );
+    return $xml;
+}
+
+my $mapping_map_xml_format = <<'XML'
+  <mapping type="map">
+%s
+  </mapping>
+XML
+    ;
+
+sub mapping_map_xml {
+    my ($map) = @_;
+
+    my $chr_map = { };
+    for (@{$map}) {
+        my ($chr, @attributes) = @{$_};
+        push @{$chr_map->{$chr} ||= [ ]}, [ @attributes ];
+    }
+
+    my $xml = sprintf $mapping_map_xml_format
+        , join "\n", map { mapping_map_map_xml($_, $chr_map->{$_}) } keys %{$chr_map};
+
+    return $xml;
+}
+
 my $chr_id_select_sql = <<'SQL'
 select seq_region_id
 from seq_region
@@ -48,17 +96,39 @@ where sra.seq_region_id = ? and at.code = ?
 SQL
     ;
 
+my $map_select_sql = <<'SQL'
+select
+  cmp_sr.name,
+  a.cmp_start,
+  a.cmp_end,
+  a.asm_start - a.cmp_start,
+  a.ori
+from assembly a
+inner join seq_region cmp_sr
+  on ( cmp_sr.seq_region_id = a.cmp_seq_region_id )
+inner join coord_system cmp_cs
+  using ( coord_system_id )
+where a.asm_seq_region_id = ?
+and   cmp_cs.name    = 'chromosome'
+and   cmp_cs.version = ?
+and   a.asm_end   >= ?
+and   a.asm_start <= ?
+SQL
+    ;
+
 sub get_mapping {
     my ($server) = @_;
 
-    my $dbh = $server->otter_dba->db_handle;
-    my $chr = $server->require_argument('chr');
-    my $cs  = $server->require_argument('cs');
+    my $dbh   = $server->otter_dba->db_handle;
+    my $chr   = $server->require_argument('chr');
+    my $cs    = $server->require_argument('cs');
+    my $start = $server->require_argument('start');
+    my $end   = $server->require_argument('end');
 
-    return $server->otter_wrap_response(get_mapping_xml($dbh, $chr, $cs));
+    return $server->otter_wrap_response(get_mapping_xml($dbh, $chr, $cs, $start, $end));
 }
 sub get_mapping_xml {
-    my ($dbh, $chr, $cs) = @_;
+    my ($dbh, $chr, $cs, $start, $end) = @_;
 
     # get the seq_region ID
     my ($chr_id) =
@@ -72,15 +142,28 @@ sub get_mapping_xml {
     my ($equiv_asm) =
         @{$dbh->selectcol_arrayref(
               $attrib_select_sth, { }, $chr_id, 'equiv_asm')};
-    return mapping_none_xml unless defined $equiv_asm && $equiv_asm eq $cs;
 
-    # get the equivalent chromosome
-    my ($equiv_chr) =
-        @{$dbh->selectcol_arrayref(
-              $attrib_select_sth, { }, $chr_id, 'chr')};
-    die q(missing chr attribute) unless defined $equiv_chr;
+    if ( defined $equiv_asm && $equiv_asm eq $cs ) {
 
-    return mapping_equiv_xml($equiv_chr);
+        # get the equivalent chromosome
+        my ($equiv_chr) =
+            @{$dbh->selectcol_arrayref(
+                  $attrib_select_sth, { }, $chr_id, 'chr')};
+        die q(missing chr attribute) unless defined $equiv_chr;
+
+        return mapping_equiv_xml($equiv_chr);
+    }
+    else {
+        my $map =
+            $dbh->selectall_arrayref(
+                $map_select_sql, { }, $chr_id, $cs, $start, $end);
+        if (@{$map}) {
+            return mapping_map_xml($map);
+        }
+        else {
+            return mapping_none_xml;
+        }
+    }
 }
 
 Bio::Otter::ServerScriptSupport->send_response(\&get_mapping);
