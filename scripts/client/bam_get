@@ -186,9 +186,10 @@ my $strands = {
 my $attributes_format = $gff_version == 3 ? '%s=%s' : '%s "%s"';
 
 for (@read_pairs) {
-    my $name = $_->name;
     for ($_->get_SeqFeatures) {
         my $alignment = $_;
+
+        my $name = $alignment->name;
 
         # the -gff_feature_source flag overrides the source from the BAM file
         my $source = $gff_feature_source || $_->source_tag;
