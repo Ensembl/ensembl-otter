@@ -110,29 +110,31 @@ my @read_pairs = $sam->get_features_by_location(
     );
 warn sprintf "found %d read pairs\n", scalar @read_pairs;
 
+my @seq_features = map { $_->get_SeqFeatures } @read_pairs;
+
 =pod
 
-my $sub_feature_counts = { };
+    my $sub_feature_counts = { };
 for (@read_pairs) {
 
     # feature
     die "oof\n" unless ref eq "Bio::SeqFeature::Lite";
-    die "no sequence" unless defined $_->seq;
-    die sprintf "sequence: '%s'\n", $_->seq unless $_->seq eq '';
-    die "strand\n" if $_->strand;
-    die "phase\n" if $_->phase;
+die "no sequence" unless defined $_->seq;
+die sprintf "sequence: '%s'\n", $_->seq unless $_->seq eq '';
+die "strand\n" if $_->strand;
+die "phase\n" if $_->phase;
 
-    # subfeatures
-    my @sub_features = $_->get_SeqFeatures;
-    $sub_feature_counts->{scalar @sub_features}++;
-    for (@sub_features) {
-        die "splat\n" unless ref eq "Bio::DB::Bam::AlignWrapper";
-        die "no sequence\n" unless defined $_->seq;
-        die sprintf "invalid sequence type: '%s'\n", ref $_->seq
-            unless ref $_->seq eq "Bio::PrimarySeq";
-        die "no strand\n" unless $_->strand;
-        die "phase\n" if defined $_->phase;
-    }
+# subfeatures
+my @sub_features = $_->get_SeqFeatures;
+$sub_feature_counts->{scalar @sub_features}++;
+for (@sub_features) {
+    die "splat\n" unless ref eq "Bio::DB::Bam::AlignWrapper";
+die "no sequence\n" unless defined $_->seq;
+die sprintf "invalid sequence type: '%s'\n", ref $_->seq
+    unless ref $_->seq eq "Bio::PrimarySeq";
+die "no strand\n" unless $_->strand;
+die "phase\n" if defined $_->phase;
+}
 }
 
 for (sort { $a <=> $b } keys %{$sub_feature_counts}) {
@@ -185,76 +187,75 @@ my $strands = {
 
 my $attributes_format = $gff_version == 3 ? '%s=%s' : '%s "%s"';
 
-for (@read_pairs) {
-    for ($_->get_SeqFeatures) {
-        my $alignment = $_;
+for (@seq_features) {
 
-        my $name = $alignment->name;
+    my $alignment = $_;
 
-        # the -gff_feature_source flag overrides the source from the BAM file
-        my $source = $gff_feature_source || $_->source_tag;
+    my $name = $alignment->name;
 
-        my ($score) = $alignment->get_tag_values('AS');
+    # the -gff_feature_source flag overrides the source from the BAM file
+    my $source = $gff_feature_source || $_->source_tag;
 
-        my @fields =
-            (
-             'read',
-             (sprintf "%d", $_->start),
-             (sprintf "%d", $_->end),
-             (defined $score ? (sprintf "%f", $score) : '.'),
-             $strands->{$_->strand},
-             $_->phase || '.',
-             );
+    my ($score) = $alignment->get_tag_values('AS');
 
-        # $alignment->cigar_str has the wrong format for the Gap tag
-        # (eg. 76M instead of M76) so we have to build it from
-        # $alignment->cigar_array (which, strangely, has the operator
-        # and count arguments in the right order for the Gap tag even
-        # though $alignment->cigar_str has them in the wrong order)
-
-        my $gap = join ' ', map {
-            ($_->[0] eq 'S') ? ( ) : ( join '', @{$_} );
-        } @{$alignment->cigar_array};
-
-        # the Target tag - escaping this requires special handling of
-        # spaces in the query name
-
-        my $query = $alignment->query;
-        my $query_name = $query->name;
-        gff_escape_target for $query_name;
-        my $query_strand = $strands->{$query->strand};
-        my @target_fields = ( $query->start, $query->end );
-        push @target_fields, $query_strand if $query_strand;
-        my $target .= join ' ', $query_name, @target_fields;
-
-        my $dna = $query->dna;
-
-        my @attributes = (
-
-#             ( map {
-#                 ( "bam_$_" => [ $alignment->get_tag_values($_) ] );
-#             } $alignment->get_all_tags ),
-
-            Name     => [ $name   ],
-            Gap      => [ $gap    ],
-            Target   => [ $target ],
-            sequence => [ $dna    ],
+    my @fields =
+        (
+         'read',
+         (sprintf "%d", $_->start),
+         (sprintf "%d", $_->end),
+         (defined $score ? (sprintf "%f", $score) : '.'),
+         $strands->{$_->strand},
+         $_->phase || '.',
         );
 
-        my @attribute_strings = ();
-        while ( my ($key, $values) = splice(@attributes, 0, 2) ) {
-            unless ($key eq 'Target') { # the Target tag is already escaped
-                gff_escape_attribute for @{$values};
-            }
-            gff_escape_attribute for $key;
-            push @attribute_strings, sprintf $attributes_format, $key, join ",", @{$values};
-        }
-        my $attributes_string = join ";", @attribute_strings;
+    # $alignment->cigar_str has the wrong format for the Gap tag
+    # (eg. 76M instead of M76) so we have to build it from
+    # $alignment->cigar_array (which, strangely, has the operator
+    # and count arguments in the right order for the Gap tag even
+    # though $alignment->cigar_str has them in the wrong order)
 
-        gff_escape_seqid  for $chr;
-        gff_escape_source for $source;
-        gff_escape for @fields;
-        printf "%s\n", join "\t"
-            , $chr, $source, @fields, $attributes_string;
+    my $gap = join ' ', map {
+        ($_->[0] eq 'S') ? ( ) : ( join '', @{$_} );
+    } @{$alignment->cigar_array};
+
+    # the Target tag - escaping this requires special handling of
+    # spaces in the query name
+
+    my $query = $alignment->query;
+    my $query_name = $query->name;
+    gff_escape_target for $query_name;
+    my $query_strand = $strands->{$query->strand};
+    my @target_fields = ( $query->start, $query->end );
+    push @target_fields, $query_strand if $query_strand;
+    my $target .= join ' ', $query_name, @target_fields;
+
+    my $dna = $query->dna;
+
+    my @attributes = (
+
+#         ( map {
+#             ( "bam_$_" => [ $alignment->get_tag_values($_) ] );
+#         } $alignment->get_all_tags ),
+
+        Name     => [ $name   ],
+        Gap      => [ $gap    ],
+        Target   => [ $target ],
+        sequence => [ $dna    ],
+        );
+
+    my @attribute_strings = ();
+    while ( my ($key, $values) = splice(@attributes, 0, 2) ) {
+        unless ($key eq 'Target') { # the Target tag is already escaped
+            gff_escape_attribute for @{$values};
+        }
+        gff_escape_attribute for $key;
+        push @attribute_strings, sprintf $attributes_format, $key, join ",", @{$values};
     }
+    my $attributes_string = join ";", @attribute_strings;
+
+    gff_escape_seqid  for $chr;
+    gff_escape_source for $source;
+    gff_escape for @fields;
+    printf "%s\n", join "\t"
+        , $chr, $source, @fields, $attributes_string;
 }
