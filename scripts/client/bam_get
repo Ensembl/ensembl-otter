@@ -3,14 +3,13 @@
 use strict;
 use warnings;
 
-use XML::Simple;
 use URI::Escape qw(uri_unescape);
-
-use Data::Dumper;
 
 use Bio::Tools::GFF;
 use Bio::DB::Sam;
 use Bio::Otter::Lace::Defaults;
+use Bio::Otter::BAM::Source;
+use Bio::Otter::Mapping;
 
 # my $fasta_path = q(/lustre/scratch102/projects/mouse/ref/NCBIM37_um.fa);
 
@@ -66,36 +65,24 @@ my (
     $bam_path,
     $bam_cs,
     $dataset,
-    $chr_local,
-    $start_local,
-    $end_local,
+    $chr,
+    $start,
+    $end,
     $gff_feature_source,
     $chr_prefix,
     $gff_seqname
     ) = @{$options}{@keys};
 
-sub get_features {
-    my ($chr, $start, $end) = @_;
+my $sam = Bio::DB::Sam->new
+    (
+     -bam   => $bam_path,
+     # -fasta => $fasta_path,
+    );
 
-    my $sam = Bio::DB::Sam->new
-        (
-         -bam   => $bam_path,
-         # -fasta => $fasta_path,
-        );
-
-    $chr = "${chr_prefix}${chr}" if defined $chr_prefix;
-    my @read_pairs = $sam->features(
-        -type   => 'read_pair',
-        -seq_id => $chr,
-        -start  => $start,
-        -end    => $end,
-        );
-    warn sprintf "found %d read pairs\n", scalar @read_pairs;
-
-    my $features = [ map { $_->get_SeqFeatures } @read_pairs ];
-
-    return $features;
-}
+my $bam_source = Bio::Otter::BAM::Source->new(
+    -sam        => $sam,
+    -chr_prefix => $chr_prefix,
+    );
 
 =pod
 
@@ -158,14 +145,14 @@ sub gff_escape_target {
     return;
 }
 
-my $chr_local_field = $chr_local;
-gff_escape_seqid for $chr_local_field;
+my $chr_field = $chr;
+gff_escape_seqid for $chr_field;
 
-sub print_header {
+sub _print_header {
     print
         <<"GFF",
 ##gff-version $gff_version
-##sequence-region $chr_local $start_local $end_local
+##sequence-region $chr $start $end
 GFF
 ;
     return;
@@ -178,30 +165,31 @@ my $strands = {
 
 my $attributes_format = $gff_version == 3 ? '%s=%s' : '%s "%s"';
 
-sub do_feature {
+sub _print_feature {
+    my ( $feature, $start, $end ) = @_;
 
-    my $name = $_->name;
+    my $name = $feature->name;
 
     # the -gff_feature_source flag overrides the source from the BAM file
-    my $source = $gff_feature_source || $_->source_tag;
+    my $source = $gff_feature_source || $feature->source_tag;
 
-    my ($score) = $_->get_tag_values('AS');
+    my ($score) = $feature->get_tag_values('AS');
 
     my @fields =
         (
          'read',
-         (sprintf "%d", $_->start),
-         (sprintf "%d", $_->end),
+         (sprintf "%d", $start),
+         (sprintf "%d", $end),
          (defined $score ? (sprintf "%f", $score) : '.'),
-         $strands->{$_->strand},
-         $_->phase || '.',
+         $strands->{$feature->strand},
+         $feature->phase || '.',
         );
 
-    # $_->cigar_str has the wrong format for the Gap tag
+    # $feature->cigar_str has the wrong format for the Gap tag
     # (eg. 76M instead of M76) so we have to build it from
-    # $_->cigar_array (which, strangely, has the operator
+    # $feature->cigar_array (which, strangely, has the operator
     # and count arguments in the right order for the Gap tag even
-    # though $_->cigar_str has them in the wrong order)
+    # though $feature->cigar_str has them in the wrong order)
 
     my $gap = join ' ', map {
         ($_->[0] eq 'S') ? ( ) : ( join '', @{$_} );
@@ -210,7 +198,7 @@ sub do_feature {
     # the Target tag - escaping this requires special handling of
     # spaces in the query name
 
-    my $query = $_->query;
+    my $query = $feature->query;
     my $query_name = $query->name;
     gff_escape_target for $query_name;
     my $query_strand = $strands->{$query->strand};
@@ -240,7 +228,7 @@ sub do_feature {
     gff_escape_source for $source;
     gff_escape for @fields;
     printf "%s\n", join "\t"
-        , $chr_local_field, $source, @fields, $attributes_string;
+        , $chr_field, $source, @fields, $attributes_string;
 
     return;
 }
@@ -250,32 +238,13 @@ my $client = Bio::Otter::Lace::Defaults::make_Client();
 my $mapping_xml = $client->otter_response_content(
     'GET', 'get_mapping', {
         dataset => $dataset,
-        chr     => $chr_local,
         cs      => $bam_cs,
+        chr     => $chr,
+        start   => $start,
+        end     => $end,
     });
-my $mapping =
-    XMLin($mapping_xml,
-          ForceArray => [ qw(
-                      ) ],
-          KeyAttr => {
-          },
-    );
-die "failed to fetch a mapping" unless $mapping;
-# warn Dumper($mapping);
+my $mapping = Bio::Otter::Mapping->new_from_xml($mapping_xml);
 
-# unpack the mapping
-my $type = $mapping->{type};
-die "missing mapping type" unless $type;
-
-if ($type eq 'none') {
-    die "there is no mapping";
-}
-elsif ($type eq 'equiv') {
-    my $chr_remote = $mapping->{equiv_chr};
-    die "missing equivalent chr" unless $chr_remote;
-    print_header;
-    do_feature for @{get_features($chr_remote, $start_local, $end_local)};
-}
-else {
-    die "invalid mapping type '${type}'";
-}
+# map and print the features
+_print_header;
+$mapping->do_features($bam_source, $start, $end, \&_print_feature);
