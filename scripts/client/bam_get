@@ -61,40 +61,6 @@ my (
     $gff_seqname
     ) = @{$options}{@keys};
 
-# get the mapping from the Otter server
-my $client = Bio::Otter::Lace::Defaults::make_Client();
-my $mapping_xml = $client->otter_response_content(
-    'GET', 'get_mapping', {
-        dataset => $dataset,
-        chr     => $chr_local,
-        cs      => $bam_cs,
-    });
-my $mapping =
-    XMLin($mapping_xml,
-          ForceArray => [ qw(
-                      ) ],
-          KeyAttr => {
-          },
-    );
-die "failed to fetch a mapping" unless $mapping;
-# warn Dumper($mapping);
-
-# unpack the mapping
-my $equiv_chr;
-my $type = $mapping->{type};
-die "missing mapping type" unless $type;
-
-if ($type eq 'none') {
-    die "there is no mapping";
-}
-elsif ($type eq 'equiv') {
-    $equiv_chr = $mapping->{equiv_chr};
-    die "missing equivalent chr" unless $equiv_chr;
-}
-else {
-    die "invalid mapping type '${type}'";
-}
-
 sub get_features {
     my ($chr, $start, $end) = @_;
 
@@ -264,5 +230,37 @@ sub do_feature {
     return;
 }
 
-print_header;
-do_feature for @{get_features($equiv_chr, $start_local, $end_local)};
+# get the mapping from the Otter server
+my $client = Bio::Otter::Lace::Defaults::make_Client();
+my $mapping_xml = $client->otter_response_content(
+    'GET', 'get_mapping', {
+        dataset => $dataset,
+        chr     => $chr_local,
+        cs      => $bam_cs,
+    });
+my $mapping =
+    XMLin($mapping_xml,
+          ForceArray => [ qw(
+                      ) ],
+          KeyAttr => {
+          },
+    );
+die "failed to fetch a mapping" unless $mapping;
+# warn Dumper($mapping);
+
+# unpack the mapping
+my $type = $mapping->{type};
+die "missing mapping type" unless $type;
+
+if ($type eq 'none') {
+    die "there is no mapping";
+}
+elsif ($type eq 'equiv') {
+    my $chr_remote = $mapping->{equiv_chr};
+    die "missing equivalent chr" unless $chr_remote;
+    print_header;
+    do_feature for @{get_features($chr_remote, $start_local, $end_local)};
+}
+else {
+    die "invalid mapping type '${type}'";
+}
