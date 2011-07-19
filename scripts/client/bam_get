@@ -53,9 +53,9 @@ my (
     $bam_path,
     $bam_cs,
     $dataset,
-    $chr,
-    $start,
-    $end,
+    $chr_local,
+    $start_local,
+    $end_local,
     $gff_feature_source,
     $chr_prefix,
     $gff_seqname
@@ -66,7 +66,7 @@ my $client = Bio::Otter::Lace::Defaults::make_Client();
 my $mapping_xml = $client->otter_response_content(
     'GET', 'get_mapping', {
         dataset => $dataset,
-        chr     => $chr,
+        chr     => $chr_local,
         cs      => $bam_cs,
     });
 my $mapping =
@@ -95,22 +95,28 @@ else {
     die "invalid mapping type '${type}'";
 }
 
-my $sam = Bio::DB::Sam->new
-    (
-     -bam   => $bam_path,
-     # -fasta => $fasta_path,
-     );
+sub get_features {
+    my ($chr, $start, $end) = @_;
 
-$equiv_chr = "${chr_prefix}${equiv_chr}" if defined $chr_prefix;
-my @read_pairs = $sam->get_features_by_location(
-    -type   => 'read_pair',
-    -seq_id => $equiv_chr,
-    -start  => $start,
-    -end    => $end,
-    );
-warn sprintf "found %d read pairs\n", scalar @read_pairs;
+    my $sam = Bio::DB::Sam->new
+        (
+         -bam   => $bam_path,
+         # -fasta => $fasta_path,
+        );
 
-my @seq_features = map { $_->get_SeqFeatures } @read_pairs;
+    $chr = "${chr_prefix}${chr}" if defined $chr_prefix;
+    my @read_pairs = $sam->get_features_by_location(
+        -type   => 'read_pair',
+        -seq_id => $chr,
+        -start  => $start,
+        -end    => $end,
+        );
+    warn sprintf "found %d read pairs\n", scalar @read_pairs;
+
+    my $features = [ map { $_->get_SeqFeatures } @read_pairs ];
+
+    return $features;
+}
 
 =pod
 
@@ -176,7 +182,7 @@ sub gff_escape_target {
 print
     <<"GFF",
 ##gff-version $gff_version
-##sequence-region $chr $start $end
+##sequence-region $chr_local $start_local $end_local
 GFF
     ;
 
@@ -246,13 +252,13 @@ sub do_feature {
     }
     my $attributes_string = join ";", @attribute_strings;
 
-    gff_escape_seqid  for $chr;
+    gff_escape_seqid  for $chr_local;
     gff_escape_source for $source;
     gff_escape for @fields;
     printf "%s\n", join "\t"
-        , $chr, $source, @fields, $attributes_string;
+        , $chr_local, $source, @fields, $attributes_string;
 
     return;
 }
 
-do_feature for @seq_features;
+do_feature for @{get_features($equiv_chr, $start_local, $end_local)};
