@@ -179,12 +179,15 @@ sub gff_escape_target {
     return;
 }
 
-print
-    <<"GFF",
+sub print_header {
+    print
+        <<"GFF",
 ##gff-version $gff_version
 ##sequence-region $chr_local $start_local $end_local
 GFF
-    ;
+;
+    return;
+}
 
 my $strands = {
     1  => '+',
@@ -261,4 +264,5 @@ sub do_feature {
     return;
 }
 
+print_header;
 do_feature for @{get_features($equiv_chr, $start_local, $end_local)};
