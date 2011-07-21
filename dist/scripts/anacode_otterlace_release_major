@@ -1,0 +1,101 @@
+#!/bin/bash
+
+ensembl_cvs_repo=cvs.sanger.ac.uk/cvsroot/ensembl
+anacode_cvs_repo=cvs.internal.sanger.ac.uk:/repos/cvs/anacode
+anacode_git_repo=git:/repos/git/anacode/ensembl-otter
+
+tmp_dir="/tmp/$( basename "$0" )__$$"
+
+config() {
+    local key
+    key="$1"
+    head -n 1 -- "dist/conf/${key}"
+}
+
+config_set() {
+    local key value
+    key="$1"
+    value="$2"
+    sed -i -e "1s|.*|${value}|" "dist/conf/${key}"
+}
+
+sanity_check_version_minor_is_null() {
+    [ -z "$( config version_minor )" ] || {
+        echo "version_minor '${version_minor}' is not null"
+        return 1
+    }
+}
+
+git_update() {
+    git clone "$anacode_git_repo" &&
+    ( cd ensembl-otter &&
+        git checkout master &&
+        sanity_check_version_minor_is_null &&
+        {
+
+            # these variables intentionally not local
+            zmap_link="$( config "zmap_path" )"
+            zmap_path="$( readlink ~zmap/BUILD.DEVELOPMENT )"
+            version_major="$( config "version_major" )"
+            version_major_new="$( printf "%02d" "$(( $version_major + 1 ))" )"
+            version_minor="01"
+            release_branch="humpub-branch-${version_major}"
+            release_branch_tag="humpub-release-${version_major}"
+            release_tag="${release_branch_tag}-${version_minor}"
+
+            # release branch and tags
+            git branch "$release_branch" &&
+            git checkout "$release_branch" &&
+            git tag "$release_branch_tag" &&
+            config_set version_minor "$version_minor" &&
+            config_set zmap_path "$zmap_path" &&
+            git commit -a -m "Release: ${release_tag}." &&
+            git show &&
+            git tag "$release_tag" &&
+            echo &&
+            echo "Tags" &&
+            git tag &&
+            echo &&
+            echo "Branches" &&
+            git branch &&
+
+            # version bump
+            git checkout master &&
+            config_set version_major "$version_major_new" &&
+            sed -i \
+                -e "/\<SangerPaths\>/s/\<otter[[:alnum:]]*\>/otter${version_major_new}/" \
+                scripts/apache/* &&
+            sed -i -e "/^version=/s/=.*/=${version_major_new}/" modules/Bio/Otter/Lace/Defaults.pm &&
+            git commit -a -m "Master: ${version_major_new}" &&
+            git show &&
+
+            # git push &&
+
+            true
+        } )
+}
+
+cvs_update_repo() {
+    local repo module
+    repo="$1"
+    module="$2"
+    cvs -d "$repo" rtag    "$release_branch_tag" HEAD                  "$module" &&
+    cvs -d "$repo" rtag    "$release_tag"        "$release_branch_tag" "$module" &&
+    cvs -d "$repo" rtag -b "$release_branch"     "$release_branch_tag" "$module" &&
+    true
+}
+
+cvs_update() {
+    cvs_update_repo "$anacode_cvs_repo" PerlModules      &&
+    cvs_update_repo "$ensembl_cvs_repo" ensembl-analysis &&
+    true
+}
+
+rm -rf -- "$tmp_dir" &&
+mkdir -p -- "$tmp_dir" &&
+( cd "$tmp_dir" &&
+    git_update &&
+    # cvs_update &&
+    true ) &&
+rm -rf -- "$tmp_dir" &&
+true # success
