@@ -16,7 +16,8 @@ ensembl_otter_git_repo=git:/repos/git/anacode/ensembl-otter
 thisprog="$0 ($( cd $( dirname "$0") && git log -1 --format=%h ))"
 
 tmp_dir="/tmp/$( basename "$0" )__$$"
-dryrun=dummy
+#dryrun=1
+#dryrun=dummy
 
 
 # Dummy repositories for script testing.
@@ -147,6 +148,11 @@ cvs_update() {
     true
 }
 
+
+[ "$(uname -s)" = "Linux" ] && [ "$( uname -o )" = "GNU/Linux" ] || {
+    echo "This script is bash- and GNU- specific; will probably only work under Linux, sorry" >&2
+    exit 1
+}
 
 [ "$dryrun" = "dummy" ] && _create_dummy_repos_cvs
 
