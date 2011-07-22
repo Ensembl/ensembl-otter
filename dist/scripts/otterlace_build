@@ -91,7 +91,7 @@ with_new_directory() {
     chmod -v g+s "$dir" &&
     "$command" "$dir" "$@"
     status=$?
-    chmod -v -R ug+rw "$dir" &&
+    chmod -R ug+rw "$dir" &&
     ( exit "$status" )
 }
 
