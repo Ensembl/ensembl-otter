@@ -68,7 +68,7 @@ _create_dummy_repos_cvs() {
 
         cvs -d "$dummies/ensembl" init
         # provide one file, to be tagged
-        cp -a "$dummies/ensembl"/{CVSROOT/config\,v,ensembl-analysis}
+        cp -pR "$dummies/ensembl"/{CVSROOT/config\,v,ensembl-analysis}
         )
 
     # Replace the "upstream" repositories, so we can perform real VCS
@@ -182,10 +182,7 @@ cvs_update() {
 }
 
 
-[ "$(uname -s)" = "Linux" ] && [ "$( uname -o )" = "GNU/Linux" ] || {
-    echo "This script is bash- and GNU- specific; will probably only work under Linux, sorry" >&2
-    exit 1
-}
+main() {
 
 [ "$dryrun" = "dummy" ] && _create_dummy_repos_cvs
 
