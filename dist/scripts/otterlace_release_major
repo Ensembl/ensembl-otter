@@ -4,8 +4,25 @@
 #
 # Creates tags in Git and CVS modules.
 #
-# Leaves repositories in a state from which you could export code to
-# build a specific release ($MAJOR-$MINOR)
+# Leaves repositories in a state from which you could VCS-export code
+# to build a specific release ($MAJOR-$MINOR)
+
+
+# The plan for bumping the major version:
+#
+#   we are on "master" branch, doing development
+#
+#   minor version number is not set
+#
+#   on the new release branch,
+#     keep the old major version,
+#     have a minor version bump to .01
+#
+#   on the master branch,
+#     keep minor version unset
+#     have a major version bump
+#
+# We are then ready for new release & dev builds
 
 
 ensembl_cvs_repo=cvs.sanger.ac.uk/cvsroot/ensembl
@@ -15,16 +32,21 @@ ensembl_otter_git_repo=git:/repos/git/anacode/ensembl-otter
 # Could differ from what we're operating upon, but probably doesn't
 thisprog="$0 ($( cd $( dirname "$0") && git log -1 --format=%h ))"
 
-tmp_dir="/tmp/$( basename "$0" )__$$"
+tmp_dir="$( mktemp -t -d "$( basename "$0" ).XXXXXX" )" || exit 1
 #dryrun=1
 #dryrun=dummy
 
 
 # Dummy repositories for script testing.
 _create_dummy_repos_cvs() {
-    printf "\n*** Creating and running with dummy repos ***\n"
-    rm -rf /tmp/DUMMY_REPOS
-    mkdir -p /tmp/DUMMY_REPOS/{ensembl/ensembl-analysis,anacode}
+    local dummies
+
+    dummies="$( mktemp -t -d DUMMY_REPOS.XXXXXX )" || {
+        echo Failed to mktemp -d >&2
+        # Serious because caller does not want to do real operations
+        exit 1
+    }
+    printf "\n*** Creating and running with dummy repos in %s\n    these will NOT be cleaned up\n" "$dummies"
 
     # Make fake repos
     #  ens-ott is deliberately != ensembl-otter
@@ -32,26 +54,27 @@ _create_dummy_repos_cvs() {
     #  ensembl-analysis can be empty?
     (
         set -e
-        cd /tmp/DUMMY_REPOS
+        cd "$dummies"
         # set -e, cd : local to the ( ... )
 
+        mkdir -p $dummies/{ensembl/ensembl-analysis,anacode}
         git clone -q --bare "$ensembl_otter_git_repo" ens-ott.git
 
-        cd /tmp/DUMMY_REPOS/anacode
+        cd "$dummies/anacode"
         scp -rpq ${anacode_cvs_repo}/{CVSROOT,PerlModules,humscripts} .
         # intcvs1 uses a separate LockDir, which we don't have
-        perl -i~ -pe 's{LockDir=.*}{LockDir=/tmp/DUMMY_REPOS}' CVSROOT/config
+        LKDIR="$dummies" perl -i~ -pe 's{LockDir=.*}{LockDir=$ENV{LKDIR}}' CVSROOT/config
 
-        cvs -d /tmp/DUMMY_REPOS/ensembl init
+        cvs -d "$dummies/ensembl" init
         # provide one file, to be tagged
-        cp -a /tmp/DUMMY_REPOS/ensembl/{CVSROOT/config\,v,ensembl-analysis}
+        cp -a "$dummies/ensembl"/{CVSROOT/config\,v,ensembl-analysis}
         )
 
     # Replace the "upstream" repositories, so we can perform real VCS
     # operations on them.
-    ensembl_cvs_repo=/tmp/DUMMY_REPOS/ensembl
-    anacode_cvs_repo=/tmp/DUMMY_REPOS/anacode
-    ensembl_otter_git_repo=/tmp/DUMMY_REPOS/ens-ott.git
+    ensembl_cvs_repo="$dummies/ensembl"
+    anacode_cvs_repo="$dummies/anacode"
+    ensembl_otter_git_repo="$dummies/ens-ott.git"
 
     printf "    We have fake repos, proceed without dryrun\n\n"
     dryrun=
@@ -74,8 +97,11 @@ config_set() {
 sanity_check_version_minor_is_null() {
     [ -z "$( config version_minor )" ] || {
         echo "version_minor '${version_minor}' is not null"
-        return 1
-    }
+        echo "on master branch? this is weird, cannot proceed with major version bump"
+        echo "please fix something and try again"
+        # sanity check failed - bail
+        exit 1
+    } >&2
 }
 
 git_update() {
@@ -156,8 +182,6 @@ cvs_update() {
 
 [ "$dryrun" = "dummy" ] && _create_dummy_repos_cvs
 
-rm -rf -- "$tmp_dir" &&
-mkdir -p -- "$tmp_dir" &&
 ( cd "$tmp_dir" &&
     git_update &&
     cvs_update &&
