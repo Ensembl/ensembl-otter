@@ -334,7 +334,6 @@ sub zmap_config {
             'sources'         => [ $self->slice_name ],
             'show-mainwindow' => ( $show_mainwindow ? 'true' : 'false' ),
             'cookie-jar'      => $ENV{'OTTERLACE_COOKIE_JAR'},
-            'script-dir'      => $self->script_dir,
             'pfetch-mode'     => ( $pfetch_www ? 'http' : 'pipe' ),
             'pfetch'          => ( $pfetch_www ? $pfetch_url : 'pfetch' ),
             'xremote-debug'   => $ZMAP_DEBUG ? 'true' : 'false',
@@ -822,23 +821,6 @@ sub process_gff_file_from_Filter {
     else {
         confess "Don't know how to process '$filter_name' GFF file '$gff_file'\n";
     }
-}
-
-sub script_dir {    
-    my $script_dir = $ENV{'OTTER_HOME'} . '/ensembl-otter/scripts/client';
-    unless (-d $script_dir) {
-        $script_dir = undef;
-        foreach (grep { m{ensembl-otter} } @INC) {
-            my $otter = $_;     # Make a copy so that we don't modify @INC
-            $otter =~ s{[^/]+$}{scripts/client};
-            if (-d $otter) {
-                $script_dir = $otter;
-                last;
-            }
-        }
-    }
-    die "Could not find directory for Zmap script-dir parameter (usually ensembl-otter/scripts/client)" unless $script_dir;
-    return $script_dir;
 }
 
 sub script_arguments {
