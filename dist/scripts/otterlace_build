@@ -80,6 +80,11 @@ otterlace_prefix="/software/anacode/otter/otter_rel${version}"
 
 ensembl_cvs_flags="-r branch-ensembl-${client_ensembl_version}"
 
+cvs_run() {
+    # run CVS quietly
+    cvs "$@" 2>&1 | grep -v -- '^U '
+}
+
 with_new_directory() {
     local dir command
     dir="$1"
@@ -149,11 +154,11 @@ otterlace_client_install_perl_modules() {
 
     ( cd "$install_dir" &&
 
-        cvs -d "$ensembl_cvsroot" \
+        cvs_run -d "$ensembl_cvsroot" \
             checkout $ensembl_cvs_flags \
             ensembl/modules &&
 
-        cvs -d "$ensembl_cvsroot" \
+        cvs_run -d "$ensembl_cvsroot" \
             checkout $ensembl_cvs_flags \
             ensembl-variation/modules &&
 
@@ -161,15 +166,15 @@ otterlace_client_install_perl_modules() {
 
         ( if [ -n "$version_minor" ]
           then
-              cvs -d "$anacode_cvsroot" rtag -r "$humpub_branch" "$humpub_release" PerlModules/Hum
+              cvs_run -d "$anacode_cvsroot" rtag -r "$humpub_branch" "$humpub_release" PerlModules/Hum
           fi ) &&
-        cvs -d "$anacode_cvsroot" checkout -r "$humpub_release"                    PerlModules/Hum &&
+        cvs_run -d "$anacode_cvsroot" checkout -r "$humpub_release"                    PerlModules/Hum &&
 
         ( if [ -n "$version_minor" ]
           then
-              cvs -d "$ensembl_cvsroot" rtag -r "$humpub_branch" "$humpub_release" ensembl-analysis/modules
+              cvs_run -d "$ensembl_cvsroot" rtag -r "$humpub_branch" "$humpub_release" ensembl-analysis/modules
           fi ) &&
-        cvs -d "$ensembl_cvsroot" checkout -r "$humpub_release"                    ensembl-analysis/modules &&
+        cvs_run -d "$ensembl_cvsroot" checkout -r "$humpub_release"                    ensembl-analysis/modules &&
 
         mkdir -p -- ensembl-otter &&
         cp -r \
