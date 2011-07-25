@@ -35,6 +35,7 @@ thisprog="$0 ($( cd $( dirname "$0") && git log -1 --format=%h ))"
 tmp_dir="$( mktemp -t -d "$( basename "$0" ).XXXXXX" )" || exit 1
 #dryrun=1
 #dryrun=dummy
+verbose=
 
 
 # Dummy repositories for script testing.
@@ -91,7 +92,11 @@ config_set() {
     local key value
     key="$1"
     value="$2"
+    if [ -n "$verbose" ]; then
+        printf " : config_set(%s = %s)\n" "$key" "$value"
+    fi
     sed -i -e "1s|.*|${value}|" "dist/conf/${key}"
+    # returncode from sed
 }
 
 sanity_check_version_minor_is_null() {
@@ -145,18 +150,17 @@ git_update() {
         } }
 }
 
-git_show_maybe() { # pending a $verbose option
-    #git show
+git_show_maybe() {
+    if [ -n "$verbose" ]; then
+        git show
+    fi
     true
 }
 git_listrefs_maybe() {
-    echo &&
-    echo "Tags" &&
-    git tag &&
-    echo &&
-    echo "Branches" &&
-    git branch
-    true
+    if [ -n "$verbose" ]; then
+        printf "\nTags\n"     && git tag     &&
+        printf "\nBranches\n" && git branch
+    fi
 }
 
 cvs_update_repo() {
