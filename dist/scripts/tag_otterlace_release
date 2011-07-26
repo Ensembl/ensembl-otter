@@ -1,0 +1,376 @@
+#!/bin/bash
+
+# Bumps version numbers which are stored in files.
+#
+# Creates tags in Git and CVS modules, acting (more or less) directly
+# on the central repositories.  That means you can run the current
+# devel tagging script against an existing release branch, treating
+# the release as data.
+#
+# Leaves repositories in a state from which you could VCS-export code
+# to build a specific release ($MAJOR-$MINOR)
+
+
+# The plan for bumping the major version:
+#
+#   we are on "master" branch, doing development
+#
+#   minor version number is not set
+#
+#   on the new release branch,
+#     keep the old major version,
+#     have a minor version bump to .01
+#
+#   on the master branch,
+#     keep minor version unset
+#     have a major version bump
+#
+# We are then ready for new release & dev builds
+
+
+# The plan for bumping the minor version:
+#
+#   start on the "master" branch
+#
+#   we must obtain the current release
+#     subtract one from the apparent version_major
+#     checkout this release branch
+#
+#   on the existing release branch,
+#     minor version bump
+
+
+ensembl_cvs_repo=cvs.sanger.ac.uk/cvsroot/ensembl
+anacode_cvs_repo=cvs.internal.sanger.ac.uk:/repos/cvs/anacode
+ensembl_otter_git_repo=git:/repos/git/anacode/ensembl-otter
+
+# Could differ from what we're operating upon, but often doesn't.
+#
+# Still we expect it to come out of a git working copy, and we don't
+# chase symlinks first.
+thisprog="$0 ($( cd $( dirname "$0") && git log -1 --format=%h ))" || exit 1
+
+
+# Dummy repositories for script testing.
+_create_dummy_repos_cvs() {
+    local dummies
+
+    dummies="$( mktemp -t -d DUMMY_REPOS.XXXXXX )" || {
+        echo Failed to mktemp -d >&2
+        # Serious because caller does not want to do real operations
+        exit 1
+    }
+    printf "\n*** Creating and running with dummy repos in %s\n    these will NOT be cleaned up\n" "$dummies"
+
+    # Make fake repos
+    #  ens-ott is deliberately != ensembl-otter
+    #  humscripts is a canary module, should not be changed
+    #  ensembl-analysis can be empty?
+    (
+        set -e
+        cd "$dummies"
+        # set -e, cd : local to the ( ... )
+
+        mkdir -p $dummies/{ensembl/ensembl-analysis,anacode}
+        git clone -q --bare "$ensembl_otter_git_repo" ens-ott.git
+
+        cd "$dummies/anacode"
+        scp -rpq ${anacode_cvs_repo}/{CVSROOT,PerlModules,humscripts} .
+        # intcvs1 uses a separate LockDir, which we don't have
+        LKDIR="$dummies" perl -i~ -pe 's{LockDir=.*}{LockDir=$ENV{LKDIR}}' CVSROOT/config
+
+        cvs -d "$dummies/ensembl" init
+        # provide one file, to be tagged
+        cp -pR "$dummies/ensembl"/{CVSROOT/config\,v,ensembl-analysis}
+        )
+
+    # Replace the "upstream" repositories, so we can perform real VCS
+    # operations on them.
+    ensembl_cvs_repo="$dummies/ensembl"
+    anacode_cvs_repo="$dummies/anacode"
+    ensembl_otter_git_repo="$dummies/ens-ott.git"
+}
+
+
+config() {
+    local key
+    key="$1"
+    head -n 1 -- "dist/conf/${key}"
+}
+
+config_set() {
+    local key value
+    key="$1"
+    value="$2"
+    if [ -n "$verbose" ]; then
+        printf " : config_set(%s = %s)\n" "$key" "$value"
+    fi
+    sed -i -e "1s|.*|${value}|" "dist/conf/${key}"
+    # returncode from sed
+}
+
+config_show_maybe() {
+    local configs
+#    if [ -n "$verbose" ]; then
+# Useful always?
+        printf "\ndist/conf/* for "
+        git name-rev --always HEAD
+        configs=$( cd dist/conf; echo * )
+        for conf in $configs; do
+            printf "  %-40s = '%s'\n" "$conf" "$(config "$conf" )"
+        done
+        echo
+#    fi
+}
+
+
+sanity_check_version_minor_is_null() {
+    [ -z "$( config version_minor )" ] || {
+        echo "version_minor '${version_minor}' is not null"
+        echo "on master branch? this is weird, cannot proceed with major version bump"
+        echo "please fix something and try again"
+        # sanity check failed - bail
+        exit 1
+    } >&2
+    sanity_check_version_major_not_null
+}
+
+sanity_check_version_major_not_null() {
+    [ -n "$( config version_major )" ] || {
+        echo "version_major is null - weird"
+        echo "do we have dist/conf/ on this branch?"
+        git branch -v
+        exit 1
+    } >&2
+}
+
+set_variables_bumpmajor() {
+    # these variables intentionally not local
+
+#    zmap_link="$( config "zmap_path" )"
+# unused - should it be used in the next line?
+    zmap_path="$( readlink ~zmap/BUILD.DEVELOPMENT )"
+
+    set_variables_bumpminor
+    version_major_new="$( printf "%02d" "$(( $version_major + 1 ))" )"
+}
+
+set_variables_bumpminor() {
+    # these variables intentionally not local
+    sanity_check_version_major_not_null
+
+    version_major="$( config "version_major" )"
+    version_minor="$( printf "%02d" "$(( $( config version_minor ) + 1 ))" )"
+    # this works on master "56"."" -> "56"."01" for bumpmajor,
+    # and on a release branch "56"."01" -> "56"."02"
+
+    release_branch="humpub-branch-${version_major}"
+    release_tag="humpub-release-${version_major}-${version_minor}"
+}
+
+# changes $PWD
+# sets global variables
+git_update() {
+    git clone -q -b master "$ensembl_otter_git_repo" ensembl-otter &&
+    cd ensembl-otter &&
+    sanity_check_version_minor_is_null &&
+
+    if [ "$do_op" = "major" ]; then
+        do_bumpmajor
+    elif [ "$do_op" = "minor" ]; then
+        do_bumpminor
+    else
+        echo "Puzzled: $do_op" >&2
+        false
+    fi &&
+
+    git push ${dryrun:+-n} origin master "$release_tag" "$release_branch" &&
+    # pushing master is not always necessary, but a no-op is safe
+
+    true
+}
+
+do_bumpmajor() {
+    set_variables_bumpmajor &&
+
+    # release branch and tags
+    git checkout -b "$release_branch" &&
+    config_set version_minor "$version_minor" &&
+    config_set zmap_path "$zmap_path" &&
+    git commit -a -m "$( printf "New release branch.\n\nNext release will be ${release_tag};\nZMap is %s\nGenerated by %s\n" "$zmap_path" "$thisprog" )" &&
+    git_show_maybe &&
+    git tag "$release_tag" &&
+    git_listrefs_maybe &&
+    config_show_maybe &&
+
+    # version bump
+    git checkout master &&
+    config_set version_major "$version_major_new" &&
+    sed -i \
+        -e "/\<SangerPaths\>/s/\<otter[[:alnum:]]*\>/otter${version_major_new}/" \
+        scripts/apache/* &&
+    sed -i -e "/^version=/s/=.*/=${version_major_new}/" modules/Bio/Otter/Lace/Defaults.pm &&
+    git commit -a -m "$( printf "Bump major version after release branch.\n\nDevelopment continues as version ${version_major_new};\nGenerated by %s\n" "$thisprog" )" &&
+    git_show_maybe &&
+    config_show_maybe &&
+
+    true
+}
+
+# May update $bumprel
+do_bumpminor() {
+    local dev_major
+    if [ "$bumprel" = "last" ]; then
+        dev_major="$( config version_major )"
+        bumprel="$( printf "%02d" "$(( $dev_major - 1 ))" )"
+        echo " : Current development is v$dev_major"
+    fi
+
+    git checkout "humpub-branch-$bumprel" &&
+    echo " : Using release branch v$bumprel" &&
+
+    set_variables_bumpminor &&
+
+    echo "TODO: Minor version bump not yet implemented" >&2
+    config_show_maybe &&
+    false
+}
+
+
+git_show_maybe() {
+    if [ -n "$verbose" ]; then
+        git show
+    fi
+    true
+}
+git_listrefs_maybe() {
+    if [ -n "$verbose" ]; then
+        printf "\nTags\n"     && git tag     &&
+        printf "\nBranches\n" && git branch
+    fi
+}
+
+# On one CVS repo, tag the release
+# and if we did set_variables_bumpmajor,
+#   also label the branch at that point
+cvs_update_repo() {
+    local repo module
+    repo="$1"
+    module="$2"
+    ${dryrun:+echo DRYRUN:} cvs -d "$repo" -q rtag    -rHEAD           "$release_tag"    "$module" &&
+    if [ -n "$version_major_new" ]; then
+        ${dryrun:+echo DRYRUN:} cvs -d "$repo" -q rtag -b -r"$release_tag" "$release_branch" "$module"
+    fi &&
+    true
+}
+
+cvs_update() {
+    cvs_update_repo "$anacode_cvs_repo" PerlModules      &&
+    cvs_update_repo "$ensembl_cvs_repo" ensembl-analysis &&
+    true
+}
+
+
+# Sets variables.  May exit.
+parse_switches() {
+    local sw
+    while [ $# -gt 0 ]; do
+        sw=$1
+        shift
+        case $sw in
+            --major) _setop major   ;;
+            --minor) _setop minor
+                bumprel=last
+                case $1 in
+                    [0-9][0-9] | [0-9][0-9][0-9] )
+                        bumprel=$1
+                        shift
+                        ;;
+                esac
+                ;;
+            -v | --verbose)  verbose=1      ;;
+            -D | --dummy)    with_dummy=1   ;;
+            -n | --dryrun)   dryrun=1       ;;
+            -h | --help)
+                show_syntax
+                exit 0
+                ;;
+            *)
+                echo "Unknown option '$sw', try -h"
+                exit 1
+                ;;
+        esac
+    done
+}
+
+_setop() {
+    if [ -n "$do_op" ]; then
+        echo "Already planning to do '$do_op', cannot also do '$1'" >&2
+        exit 1
+    fi
+    do_op=$1
+}
+
+
+show_syntax() {
+    echo "Syntax: $0 [ -v ] [ -D ] [-n] < --major | --minor [NN] >"
+    cat <<MSG
+
+Necessary switches - one of
+
+  --major      Tag new release branch and matching .01 minor release.
+
+  --minor NN   Tag new minor release on the existing branch for major
+               version NN.
+
+  --minor      Tag new minor release on the latest release branch.
+               Uses (current master's major release number) minus one.
+
+
+Optional switches:
+
+  -D
+  --dummy    Make in TMPDIR some local CVS and Git repositories,
+             and use these instead of the real ones.
+
+  -n
+  --dryrun   Perform noisy no-ops instead of VCS commands.
+
+  -v
+  --verbose  More noise
+
+
+This is $thisprog
+
+MSG
+}
+
+
+main() {
+    local tmp_dir
+#    echo "Doing these: do_op=$do_op bumprel=$bumprel verbose=$verbose dryrun=$dryrun with_dummy=$with_dummy"
+
+    if [ -z "$do_op" ]; then
+        echo "Missing a necessary option"
+        show_syntax >&2
+        return 4
+    fi
+
+    tmp_dir="$( mktemp -t -d "$( basename "$0" ).XXXXXX" )" || exit 1
+
+    [ -n "$with_dummy" ] && _create_dummy_repos_cvs
+
+    ( cd "$tmp_dir" &&
+        git_update &&
+        cvs_update &&
+        true ) &&
+
+    rm -rf -- "$tmp_dir" &&
+    true # success
+}
+
+
+parse_switches "$@"
+
+main
+exit $?
