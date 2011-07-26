@@ -1,0 +1,22 @@
+=head1 ABOUT THIS REPOSITORY
+
+This repository contains Otterlace - client, server and supporting code.  It
+has dependencies on several other codebases, please contact the team before
+attempting to install it.
+
+=head2 Otterlace
+
+Otterlace is an interactive, graphical client, which uses a local acedb
+database with Zmap and perl/Tk tools to curate genomic annotation.
+Annotation is stored in an extended Ensembl schema (the "otter" database),
+which presents the annotator with contiguous regions of a chromosome.  The
+acedb database provides local persistent storage, so that if the software or
+desktop machine crashes, reboots or is exited, the editing session can be
+recovered.  Since all communication goes through the Sanger web server,
+annotators can work wherever there is a network connection.
+
+=head2 History
+
+As a Git repository, this began life as a cvs2git import of the
+"ensembl-otter" module of the Ensembl project CVS server, see
+http://cvs.sanger.ac.uk/cgi-bin/viewvc.cgi/ensembl-otter/?root=ensembl
