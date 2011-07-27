@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 
 #  This updates the zmap version to the current BUILD.DEVELOPMENT.
