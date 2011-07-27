@@ -13,20 +13,7 @@
 #  / TO DO
 
 
-config_set() {
-    local key value
-    key="$1"
-    value="$2"
-    sed -i -e "1s|.*|${value}|" "dist/conf/${key}"
-}
-
-git_show_maybe() { # pending a $verbose option
-    #git show
-    true
-}
-
-# Could differ from what we're operating upon, but probably doesn't
-thisprog="$0 ($( cd $( dirname "$0") && git log -1 --format=%h ))"
+. "$( dirname "$0" )/_otterlace.sh"
 
 zmap_path="$( readlink ~zmap/BUILD.DEVELOPMENT )"
 
