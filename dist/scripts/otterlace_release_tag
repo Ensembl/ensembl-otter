@@ -44,11 +44,7 @@ ensembl_cvs_repo=cvs.sanger.ac.uk/cvsroot/ensembl
 anacode_cvs_repo=cvs.internal.sanger.ac.uk:/repos/cvs/anacode
 ensembl_otter_git_repo=git:/repos/git/anacode/ensembl-otter
 
-# Could differ from what we're operating upon, but often doesn't.
-#
-# Still we expect it to come out of a git working copy, and we don't
-# chase symlinks first.
-thisprog="$0 ($( cd $( dirname "$0") && git log -1 --format=%h ))" || exit 1
+. "$( dirname "$0" )/_otterlace.sh"
 
 
 # Dummy repositories for script testing.
@@ -99,38 +95,6 @@ _use_dummy_repos_cvs() {
     ensembl_cvs_repo="$dummies/ensembl"
     anacode_cvs_repo="$dummies/anacode"
     ensembl_otter_git_repo="$dummies/ens-ott.git"
-}
-
-
-config() {
-    local key
-    key="$1"
-    head -n 1 -- "dist/conf/${key}"
-}
-
-config_set() {
-    local key value
-    key="$1"
-    value="$2"
-    if [ -n "$verbose" ]; then
-        printf " : config_set(%s = %s)\n" "$key" "$value"
-    fi
-    sed -i -e "1s|.*|${value}|" "dist/conf/${key}"
-    # returncode from sed
-}
-
-config_show_maybe() {
-    local configs
-#    if [ -n "$verbose" ]; then
-# Useful always?
-        printf "\ndist/conf/* for "
-        git name-rev --always HEAD
-        configs=$( cd dist/conf; echo * )
-        for conf in $configs; do
-            printf "  %-40s = '%s'\n" "$conf" "$(config "$conf" )"
-        done
-        echo
-#    fi
 }
 
 
@@ -251,19 +215,6 @@ do_bumpminor() {
     true
 }
 
-
-git_show_maybe() {
-    if [ -n "$verbose" ]; then
-        git show
-    fi
-    true
-}
-git_listrefs_maybe() {
-    if [ -n "$verbose" ]; then
-        printf "\nTags\n"     && git tag     &&
-        printf "\nBranches\n" && git branch
-    fi
-}
 
 # On one CVS repo, tag the release
 # and if we did set_variables_bumpmajor,
