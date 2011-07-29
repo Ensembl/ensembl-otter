@@ -121,11 +121,10 @@ sanity_check_version_major_not_null() {
 set_variables_bumpmajor() {
     # these variables intentionally not local
 
+    set_variables_bumpminor
 #    zmap_link="$( config "zmap_path" )"
 # unused - should it be used in the next line?
     zmap_path="$( readlink ~zmap/BUILD.DEVELOPMENT )"
-
-    set_variables_bumpminor
     version_major_new="$( printf "%02d" "$(( $version_major + 1 ))" )"
 }
 
@@ -140,6 +139,7 @@ set_variables_bumpminor() {
 
     release_branch="humpub-branch-${version_major}"
     release_tag="humpub-release-${version_major}-${version_minor}"
+    zmap_path="$( config zmap_path )"
 }
 
 # changes $PWD
