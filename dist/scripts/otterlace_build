@@ -253,7 +253,7 @@ otterlace_client_install() {
     echo &&
     echo "removing old otterlace installation" &&
     with_new_directory "$otterlace_prefix" otterlace_client_install_client &&
-    cp -- dist/scripts/otterlace_local "$otterlace_local" &&
+    cp -- dist/templates/otterlace "$otterlace_local" &&
     sed -i \
         -e "/^version=/s/=.*/=${version}/" \
         -e "/^testing=/s/=.*/=${testing}/" \
