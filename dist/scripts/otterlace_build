@@ -38,7 +38,6 @@ ensembl_otter_root="$( pwd )"
 
 version_major="$( config version_major )"
 version_minor="$( config version_minor )"
-testing="$( config testing )"
 client_ensembl_version="$( config client_ensembl_version )"
 zmap_path="$( config zmap_path )"
 
@@ -256,7 +255,6 @@ otterlace_client_install() {
     cp -- dist/templates/otterlace "$otterlace_local" &&
     sed -i \
         -e "/^version=/s/=.*/=${version}/" \
-        -e "/^testing=/s/=.*/=${testing}/" \
         "$otterlace_local" &&
     chmod -v 775 "$otterlace_local" &&
     /bin/true
