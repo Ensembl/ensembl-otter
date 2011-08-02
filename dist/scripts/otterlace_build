@@ -20,11 +20,10 @@
 # version-dependent locations.  Therefore we start the $PATH with
 # (location of preferred Perl).
 
-# But /software/perl-5.8.8/bin/perl (which was used via
-# /software/bin/perl ) will try to build the binary XRemote module
-# with the same version of gcc that it was built with, which is not
-# the version of gcc on modern hosts.  Therefore we tell perl to set
-# CC and LD to gcc, so that the build will use the local gcc.
+# But Perl will try to build the binary XRemote module with the same
+# version of gcc that it was built with, which is not the version of
+# gcc on modern hosts.  Therefore we set CC and LD to gcc, so that
+# Perl will use the local gcc.
 
 # / NB
 
