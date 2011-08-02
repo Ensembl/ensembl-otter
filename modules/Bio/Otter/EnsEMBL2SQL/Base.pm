@@ -118,7 +118,7 @@ sub dump_SQL_to_file {
     if ($self->can($method)) {
 	printf STDERR "Dumping SQL for %-25s [ %-25s ] using CUSTOM table method\n",$table,$self->dbname;
 
-	my $filehandle = new FileHandle;
+	my $filehandle = FileHandle->new;
 
 	$filehandle->open(">$dir/$table.sql");
 
@@ -131,7 +131,7 @@ sub dump_SQL_to_file {
     } else {
 	printf STDERR "Dumping SQL for %-25s [ %-25s ] using WHOLE  table method\n",$table,$self->dbname;
 
-	my $filehandle = new FileHandle;
+	my $filehandle = FileHandle->new;
 
 	$filehandle->open(">$dir/$table.sql");
 

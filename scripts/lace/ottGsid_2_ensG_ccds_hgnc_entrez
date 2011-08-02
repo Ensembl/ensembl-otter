@@ -23,7 +23,7 @@ GetOptions('dbhost=s' => \$dbhost,
            'dbname=s' => \$dbname,
           );
 
-my $db_adaptor = new Bio::EnsEMBL::DBSQL::DBAdaptor('-host'   => $dbhost,
+my $db_adaptor = Bio::EnsEMBL::DBSQL::DBAdaptor->new('-host'   => $dbhost,
                                                     '-port'   => $dbport,
                                                     '-user'   => $dbuser,
                                                     '-dbname' => $dbname);

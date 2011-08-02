@@ -428,7 +428,7 @@ sub check_nmd {
       # get length of last intron
       my $ilen=0;
       eval{
-    my $intron = new Bio::EnsEMBL::Intron($l2exon, $lexon);
+    my $intron = Bio::EnsEMBL::Intron->new($l2exon, $lexon);
     $ilen=$intron->end - $intron->start + 1;
       };
       if($@){

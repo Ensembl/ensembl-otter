@@ -437,7 +437,7 @@ sub feature_augment {
     my ($aligner);
 
     sub get_aligner {
-        $aligner ||= new Bio::Vega::Utils::Align;
+        $aligner ||= Bio::Vega::Utils::Align->new;
         return $aligner;
     }
 }
