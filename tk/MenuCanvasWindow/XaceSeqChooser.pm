@@ -1694,7 +1694,7 @@ sub get_all_Subseq_clusters {
     }
 
     foreach my $c (@clust) {
-        $c = [sort { ace_sort($a->name cmp $b->name) } @$c];
+        $c = [sort { ace_sort($a->name, $b->name) } @$c];
     }
 
     @clust = sort {$a->[0]->start <=> $b->[0]->start} @clust;
