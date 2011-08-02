@@ -26,7 +26,7 @@ sub _generic_sql_fetch {
   while (my $row = $sth->fetch) {
 
       my $author = $aad->fetch_by_dbID($row->[2]);
-      my $contiglock = new Bio::Vega::ContigLock(
+      my $contiglock = Bio::Vega::ContigLock->new(
           -DBID       => $row->[0],
           -CONTIG_ID  => $row->[1],
           -AUTHOR     => $author,
@@ -80,7 +80,7 @@ sub store {
       $authad->store($author);
       $author_id = $author->dbID;
   }
-  my $authad = new Bio::Vega::DBSQL::AuthorAdaptor($self->db);
+  my $authad = Bio::Vega::DBSQL::AuthorAdaptor->new($self->db);
   $authad->store($contig_lock->author);
   my $sth = $self->prepare(q{
         INSERT INTO contig_lock( contig_lock_id

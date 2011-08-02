@@ -331,7 +331,7 @@ sub make_start_codon_features {
     my @startc_feat;
     my $phase = 0;
     foreach my $pepgencoord (@pepgencoords) {
-        push @startc_feat, new Bio::EnsEMBL::SeqFeature(
+        push @startc_feat, Bio::EnsEMBL::SeqFeature->new(
             -seqname     => $id,
             -source_tag  => 'starttrans',
             -primary_tag => 'similarity',
@@ -388,7 +388,7 @@ sub make_stop_codon_features {
     my @stopc_feat;
     my $phase = 0;
     foreach my $pepgencoord (@pepgencoords) {
-        push @stopc_feat, new Bio::EnsEMBL::SeqFeature(
+        push @stopc_feat, Bio::EnsEMBL::SeqFeature->new(
             -seqname     => $id,
             -source_tag  => 'endtrans',
             -primary_tag => 'similarity',

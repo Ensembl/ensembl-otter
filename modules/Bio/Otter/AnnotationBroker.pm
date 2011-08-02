@@ -263,7 +263,7 @@ sub compare_genes {
                 }
 
                 if ($exist == 0) {
-                    my $gsynonym = new Bio::Otter::GeneSynonym;
+                    my $gsynonym = Bio::Otter::GeneSynonym->new;
                     $gsynonym->gene_info_id($newg->gene_info->dbID);
                     $gsynonym->name($oldg->gene_info->name->name);
                     $newg->gene_info->synonym($gsynonym);

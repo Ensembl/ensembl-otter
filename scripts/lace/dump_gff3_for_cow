@@ -395,7 +395,7 @@ sub make_start_codon_features {
   my $phase = 0;
   foreach my $pepgencoord (@pepgencoords) {
 
-    push @startc_feat, new Bio::EnsEMBL::Feature(
+    push @startc_feat, Bio::EnsEMBL::Feature->new(
                                                  -slice   => $trans->slice,
                                                  -start   => $pepgencoord->start,
                                                  -end     => $pepgencoord->end,
@@ -446,7 +446,7 @@ sub make_stop_codon_features {
   my @stopc_feat;
   my $phase = 0;
   foreach my $pepgencoord (@pepgencoords) {
-    push @stopc_feat, new Bio::EnsEMBL::Feature(
+    push @stopc_feat, Bio::EnsEMBL::Feature->new(
                                                -slice   => $trans->slice,
                                                -start   => $pepgencoord->start,
                                                -end     => $pepgencoord->end,

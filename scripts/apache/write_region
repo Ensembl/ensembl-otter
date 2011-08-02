@@ -92,7 +92,7 @@ sub write_region {
 
     eval {
             ##check if clones are locked or not
-        my $cb = new Bio::Vega::ContigLockBroker;
+        my $cb = Bio::Vega::ContigLockBroker->new;
         warn "Checking region is locked...\n";
         eval { $cb->check_locks_exist_by_slice($db_slice, $author_obj, $odba); };
         die "Failed checking locks [$@]" if $@;

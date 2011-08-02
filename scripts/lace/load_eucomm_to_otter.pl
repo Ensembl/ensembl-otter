@@ -122,12 +122,12 @@ sub load_simple_features {
         # make simplefeature obj
         print "\tmapped to: contig_id=".$coord->id().", start=".$coord->start().", end=".$coord->end().", strand=".$coord->strand().".\n\n" if $verbose;
 
-        my $analysis = new Bio::EnsEMBL::Analysis;
+        my $analysis = Bio::EnsEMBL::Analysis->new;
 
         $analysis->dbID(9);
         $analysis->logic_name("EUCOMM_AUTO");
 
-        my $sf = new Bio::EnsEMBL::SimpleFeature;
+        my $sf = Bio::EnsEMBL::SimpleFeature->new;
         $sf->dbID($coord->id);
         $sf->start($coord->start);
         $sf->end($coord->end);
