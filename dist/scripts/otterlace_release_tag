@@ -322,6 +322,15 @@ main() {
         return 4
     fi
 
+    if $dist_scripts/git-is-synced; then
+        echo "Your working copy is in sync.  It will be safe to pull after the bump."
+    elif [ -n "$dryrun" ]; then
+        echo "Your working copy is NOT in sync, but this is a dry run"
+    else
+        echo "Your working copy is NOT in sync.  Is this a good idea?" >&2
+        return 3
+    fi
+
     tmp_dir="$( mktemp -t -d "$( basename "$0" ).XXXXXX" )" || exit 1
 
     [ -n "$with_dummy" ] && _use_dummy_repos_cvs
@@ -330,6 +339,8 @@ main() {
         git_update &&
         cvs_update &&
         true ) &&
+
+    ${dryrun:+echo DRYRUN:} git pull -v &&
 
     rm -rf -- "$tmp_dir" &&
     true # success

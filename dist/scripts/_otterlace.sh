@@ -1,6 +1,9 @@
 
+# Assumes we were called by script in this directory.  $0 is not this file!
+dist_scripts="$( dirname "$0" )"
+
 # Could differ from what we're operating upon, but probably doesn't
-thisprog="$0 ($( cd $( dirname "$0") && git log -1 --format=%h ))"
+thisprog="$0 ($( cd "$dist_scripts" && git log -1 --format=%h ))"
 
 config() {
     local key
