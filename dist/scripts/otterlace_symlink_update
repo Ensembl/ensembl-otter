@@ -1,0 +1,26 @@
+#!/bin/bash
+
+
+# This updates the symbolic link for the current development track.
+
+
+. "$( dirname "$0" )/_otterlace.sh"
+
+
+# go to the right place first
+cd "$( dirname "$0" )/../.."
+ensembl_otter_root="$( pwd )"
+
+
+version_major="$( config version_major )"
+version_minor="$( config version_minor )"
+
+if [ -n "$version_minor" ]
+then
+    version="${version_major}.${version_minor}"
+else
+    version="$version_major"
+fi
+
+track="$( config "track" )"
+ln -vnfs -- "otterlace_rel${version}" "/software/anacode/bin/otterlace_${track}"
