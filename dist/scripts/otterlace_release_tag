@@ -49,11 +49,9 @@ ensembl_otter_git_repo=git:/repos/git/anacode/ensembl-otter
 
 # Dummy repositories for script testing.
 _create_dummy_repos_cvs() {
-    dummies="$( mktemp -t -d DUMMY_REPOS.XXXXXX )" || {
-        echo Failed to mktemp -d >&2
+    dummies="$( mktemp -t -d DUMMY_REPOS.XXXXXX )" || bail "Failed to mktemp -d"
         # Serious because caller does not want to do real operations
-        exit 1
-    }
+
     printf "\n*** Creating and running with dummy repos,\n    dummies=%s\n    these will NOT be cleaned up\n    you can use them again by setting the variable\n\n" "$dummies"
 
     # Make fake repos
@@ -81,14 +79,12 @@ _create_dummy_repos_cvs() {
 
 _use_dummy_repos_cvs() {
     if [ -z "$dummies" ]; then
-        _create_dummy_repos_cvs
-    else
-        [ -d "$dummies/ens-ott.git" ] &&
+        _create_dummy_repos_cvs || bail "Create dummy repos failed"
+    elif [ -d "$dummies/ens-ott.git" ]; then
         printf "\n*** Running with existing dummy repos in %s\n" "$dummies"
-    fi || {
-        echo "Failed while using dummy repos" >&2
-        exit 1
-    }
+    else
+        bail "No dummy repos at $dummies/ens-ott.git ?"
+    fi
 
     # Replace the "upstream" repositories, so we can perform real VCS
     # operations on them.
@@ -262,8 +258,7 @@ parse_switches() {
                 exit 0
                 ;;
             *)
-                echo "Unknown option '$sw', try -h"
-                exit 1
+                bail "Unknown option '$sw', try -h"
                 ;;
         esac
     done
@@ -271,8 +266,7 @@ parse_switches() {
 
 _setop() {
     if [ -n "$do_op" ]; then
-        echo "Already planning to do '$do_op', cannot also do '$1'" >&2
-        exit 1
+        bail "Already planning to do '$do_op', cannot also do '$1'"
     fi
     do_op=$1
 }
@@ -331,7 +325,7 @@ main() {
         return 3
     fi
 
-    tmp_dir="$( mktemp -t -d "$( basename "$0" ).XXXXXX" )" || exit 1
+    tmp_dir="$( mktemp -t -d "$( basename "$0" ).XXXXXX" )" || bail "mktemp failed"
 
     [ -n "$with_dummy" ] && _use_dummy_repos_cvs
 
