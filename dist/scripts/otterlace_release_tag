@@ -121,7 +121,7 @@ set_variables_bumpmajor() {
 #    zmap_link="$( config "zmap_path" )"
 # unused - should it be used in the next line?
     zmap_path="$( readlink ~zmap/BUILD.DEVELOPMENT )"
-    version_major_new="$( printf "%02d" "$(( $version_major + 1 ))" )"
+    version_major_new="$( printf "%02d" "$(( 10#$version_major + 1 ))" )" || bail "math error"
 }
 
 set_variables_bumpminor() {
@@ -129,7 +129,7 @@ set_variables_bumpminor() {
     sanity_check_version_major_not_null
 
     version_major="$( config "version_major" )"
-    version_minor="$( printf "%02d" "$(( $( config version_minor ) + 1 ))" )"
+    version_minor="$( printf "%02d" "$(( 10#$( config version_minor ) + 1 ))" )" || bail "math error"
     # this works on master "56"."" -> "56"."01" for bumpmajor,
     # and on a release branch "56"."01" -> "56"."02"
 
@@ -192,7 +192,7 @@ do_bumpminor() {
     local dev_major
     if [ "$bumprel" = "last" ]; then
         dev_major="$( config version_major )"
-        bumprel="$( printf "%02d" "$(( $dev_major - 1 ))" )"
+        bumprel="$( printf "%02d" "$(( 10#$dev_major - 1 ))" )" || bail "math error"
         echo " : Current development is v$dev_major"
     fi
 
