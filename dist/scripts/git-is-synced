@@ -1,0 +1,139 @@
+#! /bin/bash
+
+# Emits coloured noise on STDOUT and returns non-zero if any of
+#   We can fetch?
+#   Is there anything to merge?
+#   Is there anything to push?
+#   Working copy has modified files?
+#
+# DOES NOT return non-zero if the working copy contains untracked
+# files, but may emit noise as a warning.
+#
+# DOES NOT complain in any way about unpushed local branches.
+#
+#
+# Side effects: may bring new object or pack files into the object
+# store, but will not move any refs (even remote ones).
+#
+# Depends on: a Git with all the options...  1.6 ish?
+
+
+# This probably belongs in git/contrib, and maybe already does by some
+# name; but we need it for the release tagger because that has some
+# behaviour which I repeatedly find counter-intuitive.
+
+
+echodent() {
+    echo "$1" | sed -e 's/^/   /'
+}
+
+redgrep() {
+    grep -C100 --colour=always -E "$1"
+}
+
+# Returns fail for any of
+#   git-fetch(1) returns non-zero
+#   remote branches: new, deleted, fast-forwardable, forced-update
+try_fetch() {
+    local origin tryfetch notsame
+    origin=${1:-origin}
+    tryfetch=$( git fetch --verbose --prune --dry-run $origin 2>&1 || echo " !! git fetch failed: exit code $?" )
+    notsame=$( echo "$tryfetch" | redgrep '\[(deleted|new branch)\]|\.\.[^ ]*|!!|forced update' )
+    if [ -z "$notsame" ]; then
+        return 0
+    else
+        echo "git fetch: updates are available from $origin"
+        echodent "$notsame"
+        return 1
+    fi
+}
+
+# Returns fail for any of
+#   git-remote(1) returns non-zero
+#   local branches could push or pull
+#   branches which are configured to push, but not configured to pull
+remote_stat() {
+    local origin remstat notsynced notpulled
+    origin=${1:-origin}
+    remstat=$( git remote -v show $origin 2>&1 || echo " !! git remote failed: exit code $?" )
+    notsynced=$( echo "$remstat" | redgrep 'fast-forwardable|local out of date|!!' )
+    notpulled=$( echo "$remstat" | remstat_pushers_pull | redgrep 'mismatch|.*branches' )
+    if [ -n "$notsynced" ]; then
+        echo "git remote show: not in sync with $origin"
+        echodent "$notsynced"
+        return 1
+    fi
+    if [ -n "$notpulled" ]; then
+        echo "git remote show: tracking branch problems with $origin"
+        echodent "$notpulled"
+        return 1
+    fi
+    return 0
+}
+
+remstat_pushers_pull() {
+    perl -wne 'use strict; our (%push, %pull);
+ chomp;
+ if (m{^    (\S+)\s+pushes to (\S+)}) {
+   $push{$1} = 1;
+   print "$_: tracking branch name mismatch\n" unless $1 eq $2;
+ }
+ if (m{^    (\S+)\s+merges with remote (\S+)}) {
+   $pull{$1} = 1;
+   print "$_: push branch name mismatch\n" unless $1 eq $2;
+ }
+ END {
+   my @no_pull = grep { !exists $pull{$_} } sort keys %push;
+   print "Non-tracking branches (which push but do not pull):\n", map {"  $_\n"} @no_pull if @no_pull;
+   print "Found no pushing branches in $. lines - remstat_pushers_pull broken?\n" if !keys %push;
+ }
+'
+}
+
+
+# Returns fail for any of
+#   staged changes to be committed
+#   tracked files modified but not staged
+#
+# Lists but DOES NOT fail for untracked files
+committable() {
+    local ignored untracked diff_staged diff_unstaged
+    diff_staged=$(   git diff --name-status --staged )
+    diff_unstaged=$( git diff --name-status )
+    untracked=$( git clean -dn | sed -e 's/^Would remove //' )
+    ignored=$(  git clean -Xdn | sed -e 's/^Would remove //' )
+    if [ -n "$untracked" ]; then
+        echo "Untracked files (assuming these are cruft, not indicating a problem):"
+        echodent "$untracked"
+    fi
+    if [ -n "$verbose" ] && [ -n "$ignored" ]; then
+        echo "Ignored files:"
+        echodent "$ignored"
+    fi
+    if [ -z "$diff_unstaged$diff_staged" ]; then
+        return 0
+    else
+        {
+            if [ -n "$diff_staged" ]; then
+                echo "Staged changes:"
+                echodent "$diff_staged"
+            fi
+            if [ -n "$diff_unstaged" ]; then
+                echo "Unstaged changes:"
+                echodent "$diff_unstaged"
+            fi
+        } | redgrep '.* changes:'
+        return 1
+    fi
+}
+
+
+git_is_synced() {
+    try_fetch &&
+    committable &&
+    remote_stat &&
+    true
+}
+
+
+git_is_synced
