@@ -145,6 +145,9 @@ sub gff_escape_target {
     return;
 }
 
+my $chr_local_field = $chr_local;
+gff_escape_seqid for $chr_local_field;
+
 sub print_header {
     print
         <<"GFF",
@@ -221,11 +224,10 @@ sub do_feature {
     }
     my $attributes_string = join ";", @attribute_strings;
 
-    gff_escape_seqid  for $chr_local;
     gff_escape_source for $source;
     gff_escape for @fields;
     printf "%s\n", join "\t"
-        , $chr_local, $source, @fields, $attributes_string;
+        , $chr_local_field, $source, @fields, $attributes_string;
 
     return;
 }
