@@ -34,6 +34,15 @@ sub log_chunk {
     return;
 }
 
+sub time_diff_for(&) {
+    my ($code) = @_;
+    my $start_time = time;
+    $code->();
+    my $end_time = time;
+    
+    return sprintf "time (sec): %.3f", $end_time - $start_time;
+}
+
 my $LOG     = 1;
 
 my %args;
@@ -134,12 +143,15 @@ my $ua = LWP::UserAgent->new(
 
 # do the request
 log_message "http: start";
-my $request_start_time = time;
-my $response = $ua->request($request);
-die "No response for $gff_source\n" unless $response;
-my $request_finish_time = time;
-my $request_time = time_diff($request_start_time, $request_finish_time);
-log_message "http: finish: $request_time";
+my $response;
+my $request_time = time_diff_for {
+    $response = $ua->request($request);
+    die "No response for $gff_source\n" unless $response;
+};
+log_message sprintf("http: finish: %s  bytes: %d (decoded), %d (raw)  status: %s",
+                    $request_time,
+                    length($response->decoded_content), length($response->content),
+                    $response->status_line);
 
 if ($response->is_success) {
 
@@ -148,40 +160,38 @@ if ($response->is_success) {
 
     # cache the result
     log_message "caching: start";
-    my $cache_start_time = time;
-    open my $cache_file_h, '>', $cache_file or die "Cannot write to cache file '$cache_file'; $!\n";
-    print $cache_file_h $gff;
-    close $cache_file_h or die "Error writing to '$cache_file'; $!";
-    my $cache_finish_time = time;
-    my $cache_time = time_diff($cache_start_time, $cache_finish_time);
+    my $cache_time = time_diff_for {
+        open my $cache_file_h, '>', $cache_file or die "Cannot write to cache file '$cache_file'; $!\n";
+        print $cache_file_h $gff;
+        close $cache_file_h or die "Error writing to '$cache_file'; $!";
+    };
     log_message "caching: finish: $cache_time";
 
     # update the SQLite db
     log_message "SQLite update: start";
-    my $sqlite_update_start_time = time;
-    my $dbh = DBI->connect("dbi:SQLite:dbname=$session_dir/otter.sqlite", undef, undef, {
-        RaiseError => 1,
-        AutoCommit => 1,
-    });
-    eval {
-        $dbh->begin_work;
-        my $sth = $dbh->prepare(
-            q{ UPDATE otter_filter SET done = 1, failed = 0, gff_file = ?, process_gff = ? WHERE filter_name = ? }
-            );
-        $sth->execute($cache_file, $process_gff || 0, $gff_source);
+    my $sqlite_update_time = time_diff_for {
+        my $dbh = DBI->connect("dbi:SQLite:dbname=$session_dir/otter.sqlite", undef, undef, {
+            RaiseError => 1,
+            AutoCommit => 1,
+        });
+        eval {
+            $dbh->begin_work;
+            my $sth = $dbh->prepare(
+                q{ UPDATE otter_filter SET done = 1, failed = 0, gff_file = ?, process_gff = ? WHERE filter_name = ? }
+                );
+            $sth->execute($cache_file, $process_gff || 0, $gff_source);
+        };
+        if (my $err = $@) {
+            $dbh->rollback;
+            my $msg = "Update of otter_filter table in SQLite db failed; $err";
+            log_message $msg;
+            die $msg;
+        }
+        else {
+            $dbh->commit;
+        }
+        $dbh->disconnect;
     };
-    if (my $err = $@) {
-        $dbh->rollback;
-        my $msg = "Update of otter_filter table in SQLite db failed; $err";
-        log_message $msg;
-        die $msg;
-    }
-    else {
-        $dbh->commit;
-    }
-    $dbh->disconnect;
-    my $sqlite_update_finish_time = time;
-    my $sqlite_update_time = time_diff($sqlite_update_start_time, $sqlite_update_finish_time);
     log_message "SQLite update: finish: $sqlite_update_time";
 
     # if (rand() < 0.5) {
@@ -190,10 +200,9 @@ if ($response->is_success) {
     
     # Send data to zmap on STDOUT
     log_message "sending data: start";
-    my $send_data_start_time = time;
-    print STDOUT $gff;
-    my $send_data_finish_time = time;
-    my $send_data_time = time_diff($send_data_start_time, $send_data_finish_time);
+    my $send_data_time = time_diff_for {
+        print STDOUT $gff;
+    };
     log_message "sending data: finish: $send_data_time";
 
     # zmap waits for STDOUT to be closed as an indication that all
@@ -224,10 +233,4 @@ else {
     }
 
     die "Webserver error for $gff_source: $err_msg\n";
-}
-
-sub time_diff {
-    my ($start_time, $end_time) = @_;
-    
-    return sprintf "time (sec): %.3f", $end_time - $start_time;
 }
