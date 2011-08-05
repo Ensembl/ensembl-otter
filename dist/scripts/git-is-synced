@@ -58,14 +58,14 @@ remote_stat() {
     remstat=$( git remote -v show $origin 2>&1 || echo " !! git remote failed: exit code $?" )
     notsynced=$( echo "$remstat" | redgrep 'fast-forwardable|local out of date|!!' )
     notpulled=$( echo "$remstat" | remstat_pushers_pull | redgrep 'mismatch|.*branches' )
-    if [ -n "$notsynced" ]; then
-        echo "git remote show: not in sync with $origin"
-        echodent "$notsynced"
-        return 1
-    fi
     if [ -n "$notpulled" ]; then
         echo "git remote show: tracking branch problems with $origin"
         echodent "$notpulled"
+        return 1
+    fi
+    if [ -n "$notsynced" ]; then
+        echo "git remote show: not in sync with $origin"
+        echodent "$notsynced"
         return 1
     fi
     return 0
