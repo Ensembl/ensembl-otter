@@ -1,7 +1,7 @@
 #!/bin/bash
 
 
-# This updates the symbolic link for the current development track.
+# This updates the symbolic links for the current development track.
 
 
 . "$( dirname "$0" )/_otterlace.sh"
@@ -24,3 +24,4 @@ fi
 
 track="$( config "track" )"
 ln -vnfs -- "otterlace_rel${version}" "/software/anacode/bin/otterlace_${track}"
+ln -vnfs -- "otter_rel${version}" "/software/anacode/otter/otter_${track}"
