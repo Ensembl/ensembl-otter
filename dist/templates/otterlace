@@ -58,7 +58,6 @@ export ACEDB_NO_BANNER
 #cp -f "$OTTER_HOME/acedbrc" ~/.acedbrc
 
 PERL5LIB="\
-$OTTER_HOME/ensembl-otter/tk:\
 $OTTER_HOME/PerlModules:\
 $OTTER_HOME/ensembl-otter/modules:\
 $OTTER_HOME/ensembl-analysis/modules:\
