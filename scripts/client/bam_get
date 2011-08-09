@@ -35,6 +35,15 @@ my @options_specs = qw(
     gff_seqname=s
     );
 
+my @options_required = qw(
+    bam_path
+    bam_cs
+    dataset
+    chr
+    start
+    end
+    );
+
 sub _key {
     my ($key) = m(^(.*?)=);
     return $key;
@@ -47,6 +56,10 @@ my @keys    = map { _key()    } @options_specs;
 my @options = map { _option() } @options_specs;
 
 Bio::Otter::Lace::Defaults::do_getopt(@options);
+my @options_missing = grep { ! defined $options->{$_} } @options_required;
+die sprintf "missing options: %s\n",
+    join ', ', sort @options_missing
+    if @options_missing;
 $options->{$_} = uri_unescape($options->{$_}) for keys %{$options};
 my (
     $gff_version,
