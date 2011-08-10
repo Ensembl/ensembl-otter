@@ -176,21 +176,22 @@ if ($response->is_success) {
             RaiseError => 1,
             AutoCommit => 1,
         });
-        eval {
+        if ( eval {
             $dbh->begin_work;
             my $sth = $dbh->prepare(
                 q{ UPDATE otter_filter SET done = 1, failed = 0, gff_file = ?, process_gff = ? WHERE filter_name = ? }
                 );
             $sth->execute($cache_file, $process_gff || 0, $gff_source);
-        };
-        if (my $err = $@) {
+            1;
+             } ) {
+            $dbh->commit;
+        }
+        else {
+            my $err = $@;
             $dbh->rollback;
             my $msg = "Update of otter_filter table in SQLite db failed; $err";
             log_message $msg;
             die $msg;
-        }
-        else {
-            $dbh->commit;
         }
         $dbh->disconnect;
     };
