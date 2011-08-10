@@ -10,6 +10,9 @@
 # files, unpushed branches or unpushed tags, but may emit noise as a
 # warning.
 #
+# DOES NOT see any problems with branches or tags in the cvs/
+# namespace.  See redgrep.
+#
 #
 # Side effects: may bring new object or pack files into the object
 # store, but will not move any refs (even remote ones).
@@ -29,6 +32,9 @@ echodent() {
 }
 
 redgrep() {
+    # Deliberate blindness to anything in the "cvs/" namespace.
+    # XXX: using 'git config' would allow a more general blind-spot
+    grep -v ' cvs/' | \
     grep -C100 --colour=always -E "$1"
 }
 
@@ -164,6 +170,8 @@ git_is_synced() {
             echo "Defaults to operating on 'origin'."
             echo "Outputs coloured noise to STDOUT and sets exit code."
             echo "May fetch packfiles or objects, but will not move any refs."
+            echo
+            echo "This version ignores branches and tags in the cvs/ namespace."
             exit 2
             ;;
     esac >&2
