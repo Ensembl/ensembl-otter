@@ -34,7 +34,7 @@ sub log_chunk {
     return;
 }
 
-sub time_diff_for(&) {
+sub time_diff_for {
     my ($code) = @_;
     my $start_time = time;
     $code->();
@@ -144,7 +144,7 @@ my $ua = LWP::UserAgent->new(
 # do the request
 log_message "http: start";
 my $response;
-my $request_time = time_diff_for {
+my $request_time = time_diff_for sub {
     $response = $ua->request($request);
     die "No response for $gff_source\n" unless $response;
 };
@@ -160,7 +160,7 @@ if ($response->is_success) {
 
     # cache the result
     log_message "caching: start";
-    my $cache_time = time_diff_for {
+    my $cache_time = time_diff_for sub {
         open my $cache_file_h, '>', $cache_file or die "Cannot write to cache file '$cache_file'; $!\n";
         print $cache_file_h $gff;
         close $cache_file_h or die "Error writing to '$cache_file'; $!";
@@ -169,7 +169,7 @@ if ($response->is_success) {
 
     # update the SQLite db
     log_message "SQLite update: start";
-    my $sqlite_update_time = time_diff_for {
+    my $sqlite_update_time = time_diff_for sub {
         my $dbh = DBI->connect("dbi:SQLite:dbname=$session_dir/otter.sqlite", undef, undef, {
             RaiseError => 1,
             AutoCommit => 1,
@@ -200,7 +200,7 @@ if ($response->is_success) {
     
     # Send data to zmap on STDOUT
     log_message "sending data: start";
-    my $send_data_time = time_diff_for {
+    my $send_data_time = time_diff_for sub {
         print STDOUT $gff;
     };
     log_message "sending data: finish: $send_data_time";
