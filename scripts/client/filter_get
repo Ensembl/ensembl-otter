@@ -66,7 +66,9 @@ my $process_gff     = delete $args{'process_gff_file'};
 
 chdir($session_dir) or die "Could not chdir to '$session_dir'; $!";
 
-open $log_file, '>>', 'gff_log.txt';
+my $log_path = 'gff_log.txt';
+open $log_file, '>>', $log_path
+    or die "failed to open the log file '${log_path}'";
 {
     ## no critic (InputOutput::ProhibitOneArgSelect)
     my $old_fh = select $log_file;
