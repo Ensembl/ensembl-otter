@@ -7,15 +7,16 @@
 #   Working copy has modified files?
 #
 # DOES NOT return non-zero if the working copy contains untracked
-# files, but may emit noise as a warning.
-#
-# DOES NOT complain in any way about unpushed local branches.
+# files, unpushed branches or unpushed tags, but may emit noise as a
+# warning.
 #
 #
 # Side effects: may bring new object or pack files into the object
 # store, but will not move any refs (even remote ones).
 #
 # Depends on: a Git with all the options...  1.6 ish?
+#
+# We use "push.default=matching" (the default), YMMV.
 
 
 # This probably belongs in git/contrib, and maybe already does by some
@@ -34,10 +35,16 @@ redgrep() {
 # Returns fail for any of
 #   git-fetch(1) returns non-zero
 #   remote branches: new, deleted, fast-forwardable, forced-update
+#   remote tags: new, moved(!)
 try_fetch() {
     local tryfetch notsame
-    tryfetch=$( git fetch --verbose --prune --dry-run $origin 2>&1 || echo " !! git fetch failed: exit code $?" )
-    notsame=$( echo "$tryfetch" | redgrep '\[(deleted|new branch)\]|\.\.[^ ]*|!!|forced update' )
+    tryfetch=$(
+        git fetch --verbose --prune --dry-run $origin 2>&1 || \
+            echo " !! git fetch --dry-run --prune failed: exit code $?";
+        git fetch --verbose --tags --dry-run $origin 2>&1 || \
+            echo " !! git fetch --dry-run --tags failed: exit code $?"
+        )
+    notsame=$( echo "$tryfetch" | redgrep '\[(deleted|new branch|new tag|tag update)\]|\.\.[^ ]*|!!|forced update' )
     if [ -z "$notsame" ]; then
         return 0
     else
@@ -53,7 +60,10 @@ try_fetch() {
 #   branches which are configured to push, but not configured to pull
 remote_stat() {
     local remstat notsynced notpulled
-    remstat=$( git remote -v show $origin 2>&1 || echo " !! git remote failed: exit code $?" )
+    remstat=$(
+        git remote -v show $origin 2>&1 || \
+            echo " !! git remote failed: exit code $?"
+        )
     notsynced=$( echo "$remstat" | redgrep 'fast-forwardable|local out of date|!!' )
     notpulled=$( echo "$remstat" | remstat_pushers_pull | redgrep 'mismatch|.*branches' )
     if [ -n "$notpulled" ]; then
@@ -86,6 +96,23 @@ remstat_pushers_pull() {
    print "Found no pushing branches in $. lines - remstat_pushers_pull broken?\n" if !keys %push;
  }
 '
+}
+
+
+pushables() {
+    local trypush notpushed
+    trypush=$(
+        git push --dry-run --all $origin 2>&1 || \
+            echo " !! git push --dry-run --all failed: exit code $?";
+        git push --dry-run --tags $origin 2>&1 || \
+            echo " !! git push --dry-run --tags failed: exit code $?"
+        )
+    notpushed=$( echo "$trypush" | redgrep '\[new (branch|tag)\]|!!' )
+    if [ -n "$notpushed" ]; then
+        echo "W: Unpushed refs not already on $origin"
+        echo "   (assuming these are local developments, not indicating a problem):"
+        echodent "$notpushed"
+    fi
 }
 
 
@@ -127,6 +154,8 @@ committable() {
 
 
 git_is_synced() {
+    local rc
+
     origin=${1:-origin}
     case "$origin" in
         -h|--help)
@@ -139,10 +168,13 @@ git_is_synced() {
             ;;
     esac >&2
 
-    try_fetch &&
-    committable &&
-    remote_stat &&
-    true
+    rc=0
+    try_fetch || rc=1
+    committable || rc=1
+    remote_stat || rc=1
+    pushables || rc=1
+
+    return $rc
 }
 
 
