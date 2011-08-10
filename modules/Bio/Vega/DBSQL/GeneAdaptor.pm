@@ -349,13 +349,26 @@ sub fetch_all_versions_by_Slice_constraint {
     return $genes;
 }
 
-sub fetch_all_by_Slice {
+sub fetch_all_by_Slice_untruncated {
     my ($self, $slice, $logic_name, $load_transcripts) = @_;
-    my $latest_genes = [];
     my ($genes) = $self->fetch_all_by_Slice_constraint($slice, 'g.is_current = 1', $logic_name, $load_transcripts);
 
     foreach my $gene (@$genes) {
         $self->reincarnate_gene($gene);
+        # Force loading of exons, to replicate behaviour of full fetch_all_by_Slice()
+        foreach my $t (@{$gene->get_all_Transcripts}) {
+            $t->get_all_Exons;
+        }
+    }
+    return $genes;
+}
+
+sub fetch_all_by_Slice {
+    my ($self, $slice, $logic_name, $load_transcripts) = @_;
+    my $latest_genes = [];
+    my ($genes) = $self->fetch_all_by_Slice_untruncated($slice, $logic_name, $load_transcripts);
+
+    foreach my $gene (@$genes) {
         my $tsct_list = $gene->get_all_Transcripts;
         for (my $i = 0; $i < @$tsct_list;) {
             my $transcript = $tsct_list->[$i];
