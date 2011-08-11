@@ -84,7 +84,7 @@ sub get_features {
         );
 
     $chr = "${chr_prefix}${chr}" if defined $chr_prefix;
-    my @read_pairs = $sam->get_features_by_location(
+    my @read_pairs = $sam->features(
         -type   => 'read_pair',
         -seq_id => $chr,
         -start  => $start,
