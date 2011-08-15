@@ -99,15 +99,8 @@ sub get_TranscriptAdaptor {
   return $self->{'VegaTranscript'};
 }
 
+# sub get_TranslationAdaptor no longer exists!
 # We now rebless Translation inside Bio::Vega::Transcript::reincarnate_transcript() instead
-#sub get_TranslationAdaptor {
-#  my ($self) = @_;
-#  if ( !exists $self->{'VegaTranslation'} ){
-#     my $ad=Bio::Vega::DBSQL::TranslationAdaptor->new($self);
-#     $self->{'VegaTranslation'}=$ad;
-#  }
-#  return $self->{'VegaTranslation'};
-#}
 
 sub get_AssemblyTagAdaptor {
   my ($self) = @_;
