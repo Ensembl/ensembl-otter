@@ -16,7 +16,8 @@ use Bio::Otter::Lace::Defaults;
         'do!'     => \$do_flag,
     );
     unless ($sql) {
-        $sql = join(' ', <>);
+        local $/ = undef; # slurp the whole of STDIN
+        $sql = <>;
     }
     die "No query" unless $sql;
 
