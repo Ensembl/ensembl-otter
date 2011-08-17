@@ -663,8 +663,8 @@ sub parse_hgnc {
     $support->log("File downloaded from HGNC\n",1);
   }
   else {
-    # read input file from HUGO
-    $support->log("Reading file from disc: ".$support->param('hgncfile')."\n",1);
+    # read input file from HGNC
+    $support->log("Unable to download from HGNC, trying to read from disc: ".$support->param('hgncfile')."\n",1);
     open (NOM, '<', $support->param('hgncfile')) or $support->throw(
       "Couldn't open ".$support->param('hgncfile')." for reading: $!\n");
     $page = do { local $/; <NOM> };

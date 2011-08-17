@@ -8,7 +8,7 @@ use Getopt::Long;
 
 my $dbhost    = 'ensdb-1-11';
 my $dbuser    = 'ensro';
-my $dbname    = 'vega_danio_rerio_20110307_v61_Zv9';
+my $dbname    = 'vega_danio_rerio_20110711_v63_Zv9';
 my $dbpass    = undef;
 my $dbport    = 5317;
 my $stable_id;

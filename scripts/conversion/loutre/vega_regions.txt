@@ -36,8 +36,8 @@ chr22_20110419	22	Chromosome 22	22
 chr23_20110419	23	Chromosome 23	23
 chr24_20110419	24	Chromosome 24	24
 chr25_20110419	25	Chromosome 25	25
-chrU_20110419	U	Chromosome U	U
-chrAB_20060711	AB	Chromosome AB	AB
+chrU_20110419	U	Chromosome U
+chrAB_20060711	AB	Chromosome AB
 --end--
 
 --pig--
@@ -112,25 +112,25 @@ chr18	18	Chromosome 18	18
 chr19	19	Chromosome 19	19
 chrX	X	Chromosome X	X
 chrY	Y	Chromosome Y	Y
-129_IDD3.1	3-IDD3.1_129	IDD3.1 region of chromosome 3 (129 strain)	
-NOD_IDD3.1	3-IDD3.1_DIL	IDD3.1 region of chromosome 3 (DIL NOD strain)
-NOD_IDD4.1	11-IDD4.1_DIL	IDD4.1 region of chromosome 11 (DIL NOD strain)
-NOD_IDD4.2	11-IDD4.2_DIL	IDD4.2 region of chromosome 11 (DIL NOD strain)
-CHO_IDD4.2Q	11-IDD4.2Q_CHO	IDD4.2Q region of chromosome 11 (CHORI-29 strain)
-NOD_IDD5.1	1-IDD5.1_DIL	IDD5.1 region of chromosome 1 (DIL NOD strain)
-CHORI29_IDD5.1_test	1-IDD5.1_CHO	IDD5.1 region of chromosome 1 (CHORI-29 NOD strain)	
-NOD_IDD5.3	1-IDD5.3_DIL	IDD5.3 region of chromosome 1 (DIL NOD strain)
-NOD_IDD5.4	1-IDD5.4_DIL	IDD5.4 region of chromosome 1 (DIL NOD strain)
-CHO_IDD6.1_2	6-IDD6.1_2_CHO	IDD6.1+2 regions of chromosome 6 (CHORI-29 NOD strain)
-CHO_IDD6.3	6-IDD6.3_CHO	IDD6.3 region of chromosome 6 (CHORI-29 NOD strain)
-NOD_IDD9.1	4-IDD9.1_DIL	IDD9.1 region of chromosome 4 (DIL NOD strain)
-NOD_IDD9.1M	4-IDD9.1M_DIL	IDD9.1M region of chromosome 4 (DIL NOD strain)
-NOD_IDD9.2	4-IDD9.2_DIL	IDD9.2 region of chromosome 4 (DIL NOD strain)
-NOD_IDD9.3	4-IDD9.3_DIL	IDD9.3 region of chromosome 4 (DIL NOD strain)
-NOD_IDD10.1	3-IDD10.1_DIL	IDD10.1 region of chromosome 3 (DIL NOD strain)
-CHO_IDD16.1	17-IDD16.1_CHO	IDD16.1 region of chromosome 17 (CHORI-29 NOD strain)
-NOD_IDD18.1	3-IDD18.1_DIL	IDD18.1 region of chromosome 3 (DIL NOD strain)
-NOD_IDD18.2	3-IDD18.2_DIL	IDD18.2 region of chromosome 3 (DIL NOD strain)
+129_IDD3.1	3-Idd3.1_129	Idd3.1 region of chromosome 3 (129 strain)	
+NOD_IDD3.1	3-Idd3.1_DIL	Idd3.1 region of chromosome 3 (DIL NOD strain)
+NOD_IDD4.1	11-Idd4.1_DIL	Idd4.1 region of chromosome 11 (DIL NOD strain)
+NOD_IDD4.2	11-Idd4.2_DIL	Idd4.2 region of chromosome 11 (DIL NOD strain)
+CHO_IDD4.2Q	11-Idd4.2Q_CHO	Idd4.2Q region of chromosome 11 (CHORI-29 strain)
+NOD_IDD5.1	1-Idd5.1_DIL	Idd5.1 region of chromosome 1 (DIL NOD strain)
+CHORI29_IDD5.1_test	1-Idd5.1_CHO	Idd5.1 region of chromosome 1 (CHORI-29 NOD strain)	
+NOD_IDD5.3	1-Idd5.3_DIL	Idd5.3 region of chromosome 1 (DIL NOD strain)
+NOD_IDD5.4	1-Idd5.4_DIL	Idd5.4 region of chromosome 1 (DIL NOD strain)
+CHO_IDD6.1_2	6-Idd6.1_2_CHO	Idd6.1+2 regions of chromosome 6 (CHORI-29 NOD strain)
+CHO_IDD6.3	6-Idd6.3_CHO	Idd6.3 region of chromosome 6 (CHORI-29 NOD strain)
+NOD_IDD9.1	4-Idd9.1_DIL	Idd9.1 region of chromosome 4 (DIL NOD strain)
+NOD_IDD9.1M	4-Idd9.1M_DIL	Idd9.1M region of chromosome 4 (DIL NOD strain)
+NOD_IDD9.2	4-Idd9.2_DIL	Idd9.2 region of chromosome 4 (DIL NOD strain)
+NOD_IDD9.3	4-Idd9.3_DIL	Idd9.3 region of chromosome 4 (DIL NOD strain)
+NOD_IDD10.1	3-Idd10.1_DIL	Idd10.1 region of chromosome 3 (DIL NOD strain)
+CHO_IDD16.1	17-Idd16.1_CHO	Idd16.1 region of chromosome 17 (CHORI-29 NOD strain)
+NOD_IDD18.1	3-Idd18.1_DIL	Idd18.1 region of chromosome 3 (DIL NOD strain)
+NOD_IDD18.2	3-Idd18.2_DIL	Idd18.2 region of chromosome 3 (DIL NOD strain)
 --end--
 
 --gorilla--

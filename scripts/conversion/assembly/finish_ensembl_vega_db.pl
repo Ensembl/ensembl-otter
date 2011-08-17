@@ -464,7 +464,7 @@ $sql = qq(DELETE from meta
 $c = $dbh->{'evega'}->do($sql);
 $sql = qq(UPDATE meta
              SET meta_value = 
-                 (SELECT meta value from $vega_db.meta where meta_key = 'genebuild.havana_datafreeze_date')
+                 (SELECT meta_value from $vega_db.meta where meta_key = 'genebuild.havana_datafreeze_date')
            WHERE meta_key = 'genebuild.havana_datafreeze_date');
 $c = $dbh->{'evega'}->do($sql);
 
