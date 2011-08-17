@@ -300,6 +300,30 @@ sub _config_section_ini_key {
     return defined $section ? %{$section} : ( );
 }
 
+sub config_keys {
+    my ( $key1, $key2 ) = @_;
+    my $keys = [ "default.$key2", "$key1.$key2" ];
+    return [ map { _config_keys_ini_keys($_, $keys) } @$CONFIG_INIFILES ];
+}
+
+sub _config_keys_ini_keys {
+    my ( $ini, $keys ) = @_;
+    return map { _config_keys_ini_key($ini, $_); } @{$keys};
+}
+
+sub _config_keys_ini_key {
+    my ( $ini, $key ) = @_;
+    my $obj = tied %{$ini};
+    return map { _section_key($_, $key) } $obj->Sections;
+}
+
+sub _section_key {
+    my ( $section, $key ) = @_;
+    return unless my ( $key1, $key2 ) = $section =~ /^([^\.]*\.[^\.]*)\.(.*)$/;
+    return unless $key1 eq $key;
+    return $key2;
+}
+
 1;
 
 =head1 NAME - Bio::Otter::Lace::Defaults

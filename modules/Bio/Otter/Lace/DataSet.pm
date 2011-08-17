@@ -191,6 +191,11 @@ sub config_section {
     return $self->Client->config_section($self->config_name, $section);
 }
 
+sub config_keys {
+    my ($self, $key) = @_;
+    return $self->Client->config_keys($self->config_name, $key);
+}
+
 sub config_value_list {
     my ($self, @keys) = @_;
     return $self->Client->config_value_list($self->config_name, @keys);
