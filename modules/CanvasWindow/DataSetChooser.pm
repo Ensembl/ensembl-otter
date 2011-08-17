@@ -103,6 +103,7 @@ sub open_dataset {
             my $name = $1;
             my $client = $self->Client;
             my $ds = $client->get_DataSet_by_name($name);
+            $ds->load_client_config;
 
             my $top = $self->{'_sequence_set_chooser'}{$name};
             if (Tk::Exists($top)) {
