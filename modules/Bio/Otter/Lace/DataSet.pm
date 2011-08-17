@@ -28,6 +28,13 @@ sub Client {
   return $client;
 }
 
+sub load_client_config {
+    my ( $self ) = @_;
+    $self->_bam_load;
+    $self->_filter_load;
+    return;
+}
+
 sub name {
     my ( $self, $name ) = @_;
     
@@ -99,83 +106,73 @@ sub _blixem_bam_arg {
     return $arg;
 }
 
-sub bam_by_name {
-    my ($self, $name) = @_;
+sub _bam_load {
+    my ( $self ) = @_;
 
-    return $self->{_bam_by_name}{$name} ||=
-        $self->_bam_by_name($name);
-}
-
-sub _bam_by_name {
-    my ($self, $name) = @_;
-
-    my $config = $self->config_section("bam.${name}");
-    my $bam;
-    unless (eval { $bam = Bio::Otter::BAM->new($name, $config); 1; }) {
-        warn sprintf "BAM section for ${name}: ignored: $@";
-        return;
+    my $bam_by_name = $self->{_bam_by_name} = { };
+    for my $name ( @{$self->config_keys("bam")} ) {
+        my $config = $self->config_section("bam.${name}");
+        eval { $bam_by_name->{$name} = Bio::Otter::BAM->new($name, $config); 1; } or
+            warn sprintf "BAM section for ${name}: ignored: $@";
     }
 
-    return $bam;
+    my $config = $self->config_section('bam_list');
+    my @name_list = grep { $config->{$_} } keys %{$config};
+    my $bam_list = $self->{_bam_list} =
+        [ grep { defined } @{$bam_by_name}{@name_list} ];
+
+    return;
+}
+
+sub bam_by_name {
+    my ($self, $name) = @_;
+    return $self->{_bam_by_name}{$name};
 }
 
 sub bam_list {
     my ($self) = @_;
-
-    return $self->{'_bam_list'} ||= $self->_bam_list;
+    return $self->{_bam_list};
 }
 
-sub _bam_list {
-    my ($self) = @_;
+sub _filter_load {
+    my ( $self ) = @_;
 
-    my $config = $self->config_section('bam_list');
-    my @name_list = grep { $config->{$_} } keys %{$config};
-    my @bam_list = map { $self->bam_by_name($_); } @name_list;
-    my $bam_list = [ grep { defined } @bam_list ];
+    my $filter_by_name = $self->{_filter_by_name} = { };
+    for my $name ( @{$self->config_keys("filter")} ) {
+        my $config = $self->config_section("filter.${name}");
+        eval {
+            my $filter= Bio::Otter::Filter->from_config($config);
+            $filter->name($name);
+            $filter_by_name->{$name} = $filter;
+            1;
+        }
+        or warn sprintf "filter section for ${name}: ignored: $@";
+    }
 
-    return $bam_list;
+    my $filters = $self->{_filters} = [ ];
+    my $config = $self->config_section("use_filters");
+    $self->_filter_add($_, $config->{$_}) for keys %{$config};
+
+    return;
+}
+
+sub _filter_add {
+    my ( $self, $name, $wanted ) = @_;
+    my $filter = $self->{_filter_by_name}{$name};
+    return unless $filter;
+    $filter->wanted($wanted);
+    push @{$self->{_filters}}, $filter;
+    return;
 }
 
 sub filter_by_name {
     my ($self, $name) = @_;
-    return $self->{'_filter_by_name'}{$name} ||=
-        $self->_filter_by_name($name);
-}
-
-sub _filter_by_name {
-    my ($self, $name) = @_;
-
-    my $config = $self->config_section("filter.${name}");
-
-    my $filter;
-    unless (eval { $filter = Bio::Otter::Filter->from_config($config); 1; }) {
-        warn sprintf "filter ${name}: ignored: $@";
-        return;
-    }
-    $filter->name($name);
-
-    return $filter;
+    return $self->{'_filter_by_name'}{$name};
 }
 
 sub filters {
     my ($self) = @_;
-    return $self->{_filters} ||=
-        $self->_filters;
-}
-
-sub _filters {
-    my ($self) = @_;
-
-    my $filters = [ ];
-    my $use_filters = $self->config_section('use_filters');
-    while ( my ( $name, $wanted ) = each %{$use_filters} ) {
-        my $filter = $self->filter_by_name($name);
-        next unless $filter;
-        $filter->wanted($wanted);
-        push @$filters, $filter;
-    }
-
-    return $filters;
+    return $self->{_filters};
 }
 
 sub sources {
