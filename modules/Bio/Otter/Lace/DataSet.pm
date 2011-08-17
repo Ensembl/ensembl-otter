@@ -12,13 +12,13 @@ use Bio::Otter::Filter;
 use Bio::Otter::BAM;
 
 sub new {
-    my( $pkg ) = @_;
+    my ( $pkg ) = @_;
 
     return bless {}, $pkg;
 }
 
 sub Client {
-  my( $self, $client ) = @_;
+  my ( $self, $client ) = @_;
   if ($client) {
     $self->{'_Client'} = $client;
     weaken $self->{'_Client'};
@@ -29,7 +29,7 @@ sub Client {
 }
 
 sub name {
-    my( $self, $name ) = @_;
+    my ( $self, $name ) = @_;
     
     if ($name) {
         $self->{'_name'} = $name;
@@ -270,7 +270,7 @@ sub stable_id_prefix {
 }
 
 sub sequence_sets_cached {
-  my( $self, $ss ) = @_;
+  my ( $self, $ss ) = @_;
   if ($ss) {
     $self->{'_sequence_sets'} = $ss;
   }
@@ -278,7 +278,7 @@ sub sequence_sets_cached {
 }
 
 sub get_all_visible_SequenceSets {
-  my( $self) = @_;
+  my ( $self) = @_;
   my $ss_list= $self->get_all_SequenceSets();
   my $visible = [];
   foreach my $ss (@$ss_list) {
@@ -302,7 +302,7 @@ sub get_all_SequenceSets {
 }
 
 sub get_SequenceSet_by_name {
-    my( $self, $name ) = @_;
+    my ( $self, $name ) = @_;
     confess "missing name argument" unless $name;
     my $ss_list = $self->get_all_SequenceSets;
     foreach my $ss (@$ss_list) {
@@ -314,7 +314,7 @@ sub get_SequenceSet_by_name {
 }
 
 sub selected_SequenceSet {
-    my( $self, $selected_SequenceSet ) = @_;
+    my ( $self, $selected_SequenceSet ) = @_;
     if ($selected_SequenceSet) {
         $self->{'_selected_SequenceSet'} = $selected_SequenceSet;
     }
@@ -322,7 +322,7 @@ sub selected_SequenceSet {
 }
 
 sub fetch_all_CloneSequences_for_selected_SequenceSet {
-    my( $self ) = @_;
+    my ( $self ) = @_;
     
     my $ss = $self->selected_SequenceSet
         or confess "No SequenceSet is selected";
@@ -330,7 +330,7 @@ sub fetch_all_CloneSequences_for_selected_SequenceSet {
 }
 
 sub fetch_all_CloneSequences_for_SequenceSet {
-    my( $self, $ss ) = @_;
+    my ( $self, $ss ) = @_;
     confess "Missing SequenceSet argument" unless $ss;
     my $client = $self->Client;
     my $cs_list=$client->get_all_CloneSequences_for_DataSet_SequenceSet($self, $ss);
@@ -338,7 +338,7 @@ sub fetch_all_CloneSequences_for_SequenceSet {
 }
 
 sub fetch_notes_locks_status_for_SequenceSet {
-    my( $self, $ss ) = @_;
+    my ( $self, $ss ) = @_;
     confess "Missing SequenceSet argument" unless $ss;
     my $client = $self->Client;
 
@@ -354,7 +354,7 @@ sub fetch_notes_locks_status_for_SequenceSet {
 #-------------------------------------------------------------------------------
 #
 sub get_cached_DBAdaptor {
-    my( $self ) = @_;
+    my ( $self ) = @_;
 
     unless($self->{'_dba_cache'}){
         $self->{'_dba_cache'} = $self->make_Vega_DBAdaptor;
@@ -365,23 +365,23 @@ sub get_cached_DBAdaptor {
 }
 
 sub make_EnsEMBL_DBAdaptor {
-    my( $self ) = @_;
+    my ( $self ) = @_;
     
     require Bio::EnsEMBL::DBSQL::DBAdaptor;
     return $self->_make_DBAdaptor_with_class('Bio::EnsEMBL::DBSQL::DBAdaptor');
 }
 
 sub make_Vega_DBAdaptor {
-    my( $self ) = @_;
+    my ( $self ) = @_;
 
     require Bio::Vega::DBSQL::DBAdaptor;
     return $self->_make_DBAdaptor_with_class('Bio::Vega::DBSQL::DBAdaptor');
 }
 
 sub _make_DBAdaptor_with_class {
-    my( $self, $class ) = @_;
+    my ( $self, $class ) = @_;
     
-    my(@args) = (
+    my (@args) = (
         # Extra arguments to stop Bio::EnsEMBL::Registry issuing warnings
         -GROUP      => "otter:$class",
         -SPECIES    => $self->name,
@@ -396,11 +396,11 @@ sub _make_DBAdaptor_with_class {
     return $class->new(@args);
 }
 sub _attach_DNA_DBAdaptor{
-    my( $self, $dba ) = @_;
+    my ( $self, $dba ) = @_;
 
     return unless $dba;
 
-    my(@ott_args, @dna_args);
+    my (@ott_args, @dna_args);
     foreach my $this ($self->list_all_db_properties) {
         if (my ($prop) = $this =~ /^DNA_(\w+)/) {
             if (my $val = $self->$this()) {
@@ -446,7 +446,7 @@ sub list_all_db_properties {
 }
 
 sub HOST {
-    my( $self, $HOST ) = @_;
+    my ( $self, $HOST ) = @_;
     
     if(defined($HOST)) {
         $self->{'_HOST'} = $HOST;
@@ -455,7 +455,7 @@ sub HOST {
 }
 
 sub USER {
-    my( $self, $USER ) = @_;
+    my ( $self, $USER ) = @_;
     
     if(defined($USER)) {
         $self->{'_USER'} = $USER;
@@ -464,7 +464,7 @@ sub USER {
 }
 
 sub DNA_PASS {
-    my( $self, $DNA_PASS ) = @_;
+    my ( $self, $DNA_PASS ) = @_;
     
     if(defined($DNA_PASS)) {
         $self->{'_DNA_PASS'} = $DNA_PASS;
@@ -473,7 +473,7 @@ sub DNA_PASS {
 }
 
 sub PASS {
-    my( $self, $PASS ) = @_;
+    my ( $self, $PASS ) = @_;
     
     if(defined($PASS)) {
         $self->{'_PASS'} = $PASS;
@@ -482,7 +482,7 @@ sub PASS {
 }
 
 sub DBNAME {
-    my( $self, $DBNAME ) = @_;
+    my ( $self, $DBNAME ) = @_;
     
     if(defined($DBNAME)) {
         $self->{'_DBNAME'} = $DBNAME;
@@ -491,7 +491,7 @@ sub DBNAME {
 }
 
 sub TYPE {
-    my( $self, $TYPE ) = @_;
+    my ( $self, $TYPE ) = @_;
     
     if(defined($TYPE)) {
         $self->{'_TYPE'} = $TYPE;
@@ -500,7 +500,7 @@ sub TYPE {
 }
 
 sub DNA_PORT {
-    my( $self, $DNA_PORT ) = @_;
+    my ( $self, $DNA_PORT ) = @_;
     
     if(defined($DNA_PORT)) {
         $self->{'_DNA_PORT'} = $DNA_PORT;
@@ -509,7 +509,7 @@ sub DNA_PORT {
 }
 
 sub DNA_HOST {
-    my( $self, $DNA_HOST ) = @_;
+    my ( $self, $DNA_HOST ) = @_;
     
     if(defined($DNA_HOST)) {
         $self->{'_DNA_HOST'} = $DNA_HOST;
@@ -518,7 +518,7 @@ sub DNA_HOST {
 }
 
 sub DNA_USER {
-    my( $self, $DNA_USER ) = @_;
+    my ( $self, $DNA_USER ) = @_;
     
     if(defined($DNA_USER)) {
         $self->{'_DNA_USER'} = $DNA_USER;
@@ -526,7 +526,7 @@ sub DNA_USER {
     return $self->{'_DNA_USER'};
 }
 sub DNA_DBNAME {
-    my( $self, $DNA_DBNAME ) = @_;
+    my ( $self, $DNA_DBNAME ) = @_;
     
     if(defined($DNA_DBNAME)) {
         $self->{'_DNA_DBNAME'} = $DNA_DBNAME;
@@ -534,7 +534,7 @@ sub DNA_DBNAME {
     return $self->{'_DNA_DBNAME'};
 }
 sub PORT {
-    my( $self, $PORT ) = @_;
+    my ( $self, $PORT ) = @_;
     
     if(defined($PORT)) {
         $self->{'_PORT'} = $PORT;
@@ -543,7 +543,7 @@ sub PORT {
 }
 
 sub ALIAS {
-    my( $self, $ALIAS ) = @_;
+    my ( $self, $ALIAS ) = @_;
     
     if(defined($ALIAS)) {
         $self->{'_ALIAS'} = $ALIAS;
