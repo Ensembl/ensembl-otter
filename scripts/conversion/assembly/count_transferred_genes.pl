@@ -70,21 +70,29 @@ my $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
 # parse options
 $support->parse_common_options(@_);
 $support->parse_extra_options(
+  'evegadbname=s',
   'evegahost=s',
   'evegaport=s',
   'evegauser=s',
   'evegapass=s',
-  'evegadbname=s',
-  'lastdbname=s',
+  'lastevegadbname=s',
+  'lastevegahost=s',
+  'lastevegaport=s',
+  'lastevegauser=s',
+  'lastevegapass=s',
 );
 $support->allowed_params(
   $support->get_common_params,
+  'evegadbname',
   'evegahost',
   'evegaport',
   'evegauser',
   'evegapass',
-  'evegadbname',
-  'lastdbname',
+  'lastevegadbname',
+  'lastevegahost',
+  'lastevegaport',
+  'lastevegauser',
+  'lastevegapass',
 );
 
 if ($support->param('help') or $support->error) {
@@ -96,7 +104,7 @@ if ($support->param('help') or $support->error) {
 $support->confirm_params;
 
 my $this_db = $support->param('evegadbname');
-my $last_db = $support->param('lastdbname');
+my $last_db = $support->param('lastevegadbname');
 
 exit unless ($support->user_proceed("Proceed with comparing $this_db against $last_db ?"));
 	
@@ -104,17 +112,16 @@ $support->init_log;
 
 #get database adaptors
 my $new_dbh = $support->get_database('ensembl','evega')->dbc->db_handle;
-my $old_dbh = $support->get_database('ensembl','last')->dbc->db_handle;
+my $old_dbh = $support->get_database('ensembl','lastevega')->dbc->db_handle;
 
-my $cond = ($support->param('evegadbname') =~ /homo/) ? "and a.logic_name = 'otter'" : '';
 my ($old,$new);
 
 foreach my $t (qw(gene transcript)) {
-  $new->{$t}       = { map { @$_ } @{$new_dbh->selectall_arrayref( "select sr.name, count(*) from analysis a, $t t, seq_region sr where a.analysis_id = t.analysis_id and t.seq_region_id = sr.seq_region_id $cond group by sr.name" )} };
+  $new->{$t}       = { map { @$_ } @{$new_dbh->selectall_arrayref( "select sr.name, count(*) from analysis a, $t t, seq_region sr where a.analysis_id = t.analysis_id and t.seq_region_id = sr.seq_region_id group by sr.name" )} };
 }
 
 foreach my $t (qw(gene transcript)) {
-  $old->{$t}       = { map { @$_ } @{$old_dbh->selectall_arrayref( "select sr.name, count(*) from  analysis a, $t t, seq_region sr where a.analysis_id = t.analysis_id and t.seq_region_id = sr.seq_region_id $cond group by sr.name" )} };
+  $old->{$t}       = { map { @$_ } @{$old_dbh->selectall_arrayref( "select sr.name, count(*) from  analysis a, $t t, seq_region sr where a.analysis_id = t.analysis_id and t.seq_region_id = sr.seq_region_id group by sr.name" )} };
 }
 
 my $fmt = "%-20s%-20s%-20s%-25s%-25s\n";
