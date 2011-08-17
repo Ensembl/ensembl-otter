@@ -209,7 +209,7 @@ sub meta_hash {
     my ($self) = @_;
     # Get all of meta table in one call
     return $self->{'_meta_hash'} ||=
-        $self->Client()->get_meta($self->name);
+        $self->Client->get_meta($self->name);
 }
 
 sub get_meta_value {
