@@ -23,7 +23,9 @@ sub Client {
     $self->{'_Client'} = $client;
     weaken $self->{'_Client'};
   }
-  return $self->{'_Client'};
+  $client = $self->{'_Client'};
+  confess "No otter Client attached" unless $client;
+  return $client;
 }
 
 sub name {
@@ -292,7 +294,7 @@ sub get_all_SequenceSets {
   my $seq_sets =$self->sequence_sets_cached;
   return $seq_sets if (defined($seq_sets) && scalar(@$seq_sets));
 
-  my $client = $self->Client or confess "No otter Client attached";
+  my $client = $self->Client;
   $seq_sets = $client->get_all_SequenceSets_for_DataSet($self);
   $self->sequence_sets_cached($seq_sets);
 
@@ -330,7 +332,7 @@ sub fetch_all_CloneSequences_for_selected_SequenceSet {
 sub fetch_all_CloneSequences_for_SequenceSet {
     my( $self, $ss ) = @_;
     confess "Missing SequenceSet argument" unless $ss;
-    my $client = $self->Client or confess "No otter Client attached";
+    my $client = $self->Client;
     my $cs_list=$client->get_all_CloneSequences_for_DataSet_SequenceSet($self, $ss);
     return $cs_list;
 }
@@ -338,7 +340,7 @@ sub fetch_all_CloneSequences_for_SequenceSet {
 sub fetch_notes_locks_status_for_SequenceSet {
     my( $self, $ss ) = @_;
     confess "Missing SequenceSet argument" unless $ss;
-    my $client = $self->Client or confess "No otter Client attached";
+    my $client = $self->Client;
 
     $client->fetch_all_SequenceNotes_for_DataSet_SequenceSet($self, $ss);
     $client->lock_refresh_for_DataSet_SequenceSet($self, $ss);
