@@ -36,8 +36,8 @@ chr22_20110419	22	Chromosome 22	22
 chr23_20110419	23	Chromosome 23	23
 chr24_20110419	24	Chromosome 24	24
 chr25_20110419	25	Chromosome 25	25
-chrU_20110419	U	Chromosome U	U
-chrAB_20060711	AB	Chromosome AB	AB
+chrU_20110419	U	Chromosome U
+chrAB_20060711	AB	Chromosome AB
 --end--
 
 --pig--
