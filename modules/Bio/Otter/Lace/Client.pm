@@ -1130,6 +1130,11 @@ sub config_section {
     return Bio::Otter::Lace::Defaults::config_section(@keys);
 }
 
+sub config_keys {
+    my ( $self, @keys ) = @_;
+    return Bio::Otter::Lace::Defaults::config_keys(@keys);
+}
+
 ############## Session recovery methods ###################################
 
 sub sessions_needing_recovery {
