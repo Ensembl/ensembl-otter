@@ -1077,6 +1077,7 @@ tmp_align                     i
 tmp_mask                      i
 tmp_assembly                  i
 test_contig                   i
+test_contig_info              i
 gene_name_update              i
 ENDOFTEXT
   return $txt;
