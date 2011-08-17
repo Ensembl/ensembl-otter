@@ -184,6 +184,7 @@ if ( (! $support->param('dry_run'))
       'ensembluser',
       'ensemblpass',
       'ensembldbname',
+      'ensemblassembly',
       'evegahost',
       'evegaport',
       'evegauser',
