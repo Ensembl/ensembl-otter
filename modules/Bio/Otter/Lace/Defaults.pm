@@ -223,18 +223,19 @@ sub config_value {
 
 sub config_value_list {
     my ( $key1, $key2, $name ) = @_;
+    my $keys = [ "default.$key2", "$key1.$key2" ];
+    return [ map { _config_value_list_ini_keys_name($_, $keys, $name); } @$CONFIG_INIFILES, ];
+}
 
-    my @keys = ( "default.$key2", "$key1.$key2" );
+sub _config_value_list_ini_keys_name {
+    my ( $ini, $keys, $name ) = @_;
+    return map { _config_value_list_ini_key_name($ini, $_, $name); } $keys;
+}
 
-    return [
-        map {
-            my $ini = $_;
-            map  {
-                my $key = $_;
-                my $vs = $ini->{$key}{$name};
-                ref $vs ? @{$vs} : defined $vs ? ( $vs ) : ( );
-            } @keys;
-        } @$CONFIG_INIFILES, ];
+sub _config_value_list_ini_key_name {
+    my ( $ini, $key, $name ) = @_;
+    my $vs = $ini->{$key}{$name};
+    return ref $vs ? @{$vs} : defined $vs ? ( $vs ) : ( );
 }
 
 sub config_value_list_merged {
@@ -284,19 +285,19 @@ sub _config_value_list_merge {
 
 sub config_section {
     my ( $key1, $key2 ) = @_;
+    my $keys = [ "default.$key2", "$key1.$key2" ];
+    return { map { _config_section_ini_keys($_, $keys) } @$CONFIG_INIFILES };
+}
 
-    my @keys = ( "default.$key2", "$key1.$key2" );
+sub _config_section_ini_keys {
+    my ( $ini, $keys ) = @_;
+    return map { _config_section_ini_key($ini, $_); } @{$keys};
+}
 
-    return {
-        map {
-            my $ini = $_;
-            map {
-                my $key = $_;
-                my $section= $ini->{$key};
-                defined $section ? %{$section} : ( );
-            } @keys;
-        } @$CONFIG_INIFILES,
-    };
+sub _config_section_ini_key {
+    my ( $ini, $key ) = @_;
+    my $section = $ini->{$key};
+    return defined $section ? %{$section} : ( );
 }
 
 1;
