@@ -16,6 +16,7 @@ use Hum::Sort 'ace_sort';
     my $show_agp = 0;
     my $acc_sv   = 0;
     my $all      = 0;
+    my $agp_cs_version;
 
     my $usage = sub { exec('perldoc', $0) };
     Bio::Otter::Lace::Defaults::do_getopt(
@@ -25,10 +26,16 @@ use Hum::Sort 'ace_sort';
         'acc_only!'     => \$acc_only,
         'sv!'           => \$acc_sv,
         'agp!'          => \$show_agp,
+        'agp_cs_ver=s'  => \$agp_cs_version,
         'all!'          => \$all,
         ) or $usage->();
 
     $usage->() if $acc_only and $acc_sv;
+
+    if ($agp_cs_version and not $show_agp) {
+        warn "--agp_cs_ver can only be specified with --agp";
+        $usage->();
+    }
 
     # Connect to Ensembl/Otter database and fetch adaptors
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
@@ -38,7 +45,8 @@ use Hum::Sort 'ace_sort';
 
         if ($sequence_set) {
             if ($show_agp) {
-                print_agp($ds, $sequence_set);
+                $agp_cs_version ||= 'Otter';
+                print_agp($ds, $sequence_set, $agp_cs_version);
             } else {
                 print_sequence_set($ds, $sequence_set, $acc_only, $acc_sv);
             }
@@ -55,7 +63,7 @@ use Hum::Sort 'ace_sort';
 }
 
 sub print_agp {
-    my( $ds, $sequence_set ) = @_;
+    my( $ds, $sequence_set, $agp_cs_version ) = @_;
 
     my $dba = $ds->get_cached_DBAdaptor;
     my $sth = $dba->dbc->prepare(q{
@@ -71,7 +79,8 @@ sub print_agp {
               , seq_region contig
               , seq_region clone
               , assembly a_chr
-              , assembly a_clone)
+              , assembly a_clone
+              , coord_system cs)
         JOIN seq_region_attrib chr_attrib
           ON chr.seq_region_id = chr_attrib.seq_region_id
           AND chr_attrib.attrib_type_id =
@@ -94,10 +103,13 @@ sub print_agp {
           AND a_chr.cmp_seq_region_id = contig.seq_region_id
           AND contig.seq_region_id = a_clone.cmp_seq_region_id
           AND a_clone.asm_seq_region_id = clone.seq_region_id
+          AND chr.coord_system_id = cs.coord_system_id
+          AND cs.name = 'chromosome'
           AND chr.name = ?
+          AND cs.version = ?
         ORDER BY a_chr.asm_start
     });
-    $sth->execute($sequence_set);
+    $sth->execute($sequence_set, $agp_cs_version);
     
     my $row = 0;
     my $pos = 0;
@@ -201,6 +213,15 @@ will list the sequence sets for the "human" dataset.
 
 will print out the "chr1-07" set, much as it
 appears in the SequenceNotes window.
+
+  ./show_sequence_set -dataset human -set chr1-07 -agp
+
+will print out the same set in AGP format.
+
+  ./show_sequence_set -dataset human -set 21 -agp -agp_cs_ver NCBI36
+
+will print out the set named "21" with coord system version NCBI36.
+(-agp_cs_ver defaults to "Otter".)
 
 =head1 AUTHOR
 
