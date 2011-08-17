@@ -153,6 +153,11 @@ $support->confirm_params;
 # get log filehandle and print heading and parameters to logfile
 $support->init_log;
 
+my $make_backup = 0;
+if ($support->user_proceed("Would you like to make a backup of this database made when everything else has been done ?\n")) {
+  $make_backup = 1;
+}
+
 if ($support->param('release_type' ne 'External')) {
   $support->log_warning("You haven't set \'release_type\' to be \'External\' using prepare_loutre.pl. Please do so before proceeding\n");
   exit;
@@ -854,16 +859,19 @@ if ( ! $support->param('dry_run')) {
     or $support->log_warning("Error running update_external_dbs.pl: $!");
 
   #make a backup
-  my $dbname = $support->param('dbname');
-  my $new_dbname = $dbname.'_original';
-  my $host   = $support->param('host');
-  my $port   = $support->param('port');
-  my $user   = $support->param('user');
-  my $pass   = $support->param('pass');
-  $support->log("Making a backup of $dbname to $new_dbname\n");
-  my $cmd = "mysql -u $user -p$pass -h $host -P $port -e 'create database $new_dbname'";
-  `$cmd`;
-  $cmd = "mysqldump --opt -u $user -p$pass -h $host -P $port $dbname | mysql -u $user -p$pass -h $host -P $port $new_dbname";
-  `$cmd`;
-}	
+  if ($make_backup) {
+    my $dbname = $support->param('dbname');
+    my $new_dbname = $dbname.'_original';
+    my $host   = $support->param('host');
+    my $port   = $support->param('port');
+    my $user   = $support->param('user');
+    my $pass   = $support->param('pass');
+    $support->log("Making a backup of $dbname to $new_dbname\n");
+    my $cmd = "mysql -u $user -p$pass -h $host -P $port -e 'create database $new_dbname'";
+    `$cmd`;
+    $cmd = "mysqldump --opt -u $user -p$pass -h $host -P $port $dbname | mysql -u $user -p$pass -h $host -P $port $new_dbname";
+    `$cmd`;
+  }	
+}
+
 $support->finish_log;
