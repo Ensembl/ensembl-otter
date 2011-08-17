@@ -488,48 +488,23 @@ if ($alt_assembly = $support->param('ensemblassembly') ) {
 	  $support->log("Inserted $c seq_region entries\n",3);
 	}
 
-        # it's the other way round in zebrafish. do not ask...will make this more elegant later...
-
-	### note that this didn't work for vega40, need to revisit in the case the the mappings are still the other way around in loutre
-
-        if ($l_dbname =~ /zebrafish/) {
-	  $sql = qq(SELECT asm_start, asm_end, cmp_start, cmp_end, ori
-                        FROM assembly
-                       WHERE asm_seq_region_id = $le_sr_id
-                         AND cmp_seq_region_id = $l_sr_id);
-	  $sth = $ldbh->prepare($sql);
-	  $sth->execute;
-	  my $c = 0;
-	  while (my ($asm_start,$asm_end,$cmp_start,$cmp_end,$ori) = $sth->fetchrow_array) {
-	    $sql = qq(INSERT into assembly
-                      VALUES ($e_sr_id+$offset,$v_sr_id,$asm_start,$asm_end,$cmp_start,$cmp_end,$ori));
-	    $support->log_verbose("SQL for assembly entries is $sql\n",2);
-	    if (! $support->param('dry_run')) {
-	      $c++;
-	      $vdbh->do($sql);
-	    }
-	  }
-	  $support->log("Inserted $c reversed assembly entries\n",3);
-        }
-        else {
-	  $sql = qq(SELECT asm_start, asm_end, cmp_start, cmp_end, ori
-                      FROM assembly
-                     WHERE asm_seq_region_id = $l_sr_id
-                       AND cmp_seq_region_id = $le_sr_id);
-	  $sth = $ldbh->prepare($sql);
-	  $sth->execute;
-	  my $c = 0;
-	  while (my ($asm_start,$asm_end,$cmp_start,$cmp_end,$ori) = $sth->fetchrow_array) {
-	    $sql = qq(INSERT into assembly
+        $sql = qq(SELECT asm_start, asm_end, cmp_start, cmp_end, ori
+                    FROM assembly
+                   WHERE asm_seq_region_id = $l_sr_id
+                     AND cmp_seq_region_id = $le_sr_id);
+        $sth = $ldbh->prepare($sql);
+        $sth->execute;
+        my $c = 0;
+        while (my ($asm_start,$asm_end,$cmp_start,$cmp_end,$ori) = $sth->fetchrow_array) {
+          $sql = qq(INSERT into assembly
                       VALUES ($v_sr_id,$e_sr_id+$offset,$asm_start,$asm_end,$cmp_start,$cmp_end,$ori));
-	    $support->log_verbose("SQL for assembly entries is $sql\n",2);
-	    if (! $support->param('dry_run')) {
-	      $c++;
-	      $vdbh->do($sql);
-	    }
-	  }
-	  $support->log("Inserted $c assembly entries\n",3);
-	}
+          $support->log_verbose("SQL for assembly entries is $sql\n",2);
+          if (! $support->param('dry_run')) {
+            $c++;
+            $vdbh->do($sql);
+          }
+        }
+        $support->log("Inserted $c assembly entries\n",3);
       }
     }
     else {
