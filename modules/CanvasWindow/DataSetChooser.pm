@@ -233,11 +233,9 @@ sub recover_some_sessions {
                     $lc->load_filters;
                     $top->withdraw;
                 }
-            };
-            if ($@) {
-                # Destruction of the AceDatabase object prevents us seeing $@
-                $self->exception_message($@, 'Error recovering lace sessions');
             }
+            # Destruction of the AceDatabase object prevents us seeing $@
+            or $self->exception_message($@, 'Error recovering lace sessions');
             return 1;
         } else {
             return 0;
