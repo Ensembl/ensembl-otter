@@ -52,7 +52,7 @@ sub zmap_config {
 
     my $bam_list = $self->bam_list;
     $stanza->{'seq-data'} =
-        [ sort map { $_->{name} } @{$bam_list} ]
+        [ sort map { $_->name } @{$bam_list} ]
         if @{$bam_list};
 
     my $config = {
