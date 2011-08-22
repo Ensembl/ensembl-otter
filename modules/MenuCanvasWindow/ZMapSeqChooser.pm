@@ -393,20 +393,7 @@ sub zMapZMapContent{
       . $self->zMapBlixemDefaults
       . $self->zMapAceServerDefaults
       . $self->zMapSourceDefaults
-      . $self->zMapGlyphDefaults
       ;
-}
-
-sub zMapGlyphDefaults {
-    my ($self) = @_;
-    
-    return $self->formatZmapDefaults(
-        'glyphs',
-        'up-tri'    => '<0,-4; -4,0; 4,0; 0,-4>',
-        'dn-tri'    => '<0,4; -4,0; 4,0; 0,4>',
-        'up-hook'   => '<0,0; 15,0; 15,-10>',
-        'dn-hook'   => '<0,0; 15,0; 15,10>',
-    );
 }
 
 sub zMapAceServerDefaults {
