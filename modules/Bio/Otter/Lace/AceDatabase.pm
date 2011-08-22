@@ -330,6 +330,7 @@ sub zmap_config {
     my $pfetch_url = $self->Client->pfetch_url;
 
     my $config = {
+
         'ZMap' => {
             'sources'         => [ $self->slice_name ],
             'show-mainwindow' => ( $show_mainwindow ? 'true' : 'false' ),
@@ -339,6 +340,14 @@ sub zmap_config {
             'xremote-debug'   => $ZMAP_DEBUG ? 'true' : 'false',
             %{$self->smart_slice->zmap_config_stanza},
         },
+
+        'glyphs' => {
+        'up-tri'  => '<0,-4; -4,0; 4,0; 0,-4>',
+        'dn-tri'  => '<0,4; -4,0; 4,0; 0,4>',
+        'up-hook' => '<0,0; 15,0; 15,-10>',
+        'dn-hook' => '<0,0; 15,0; 15,10>',
+        },
+
     };
 
     _config_merge($config, $self->DataSet->zmap_config);
