@@ -51,6 +51,26 @@ sub chr_prefix {
     return $self->{chr_prefix};
 }
 
+sub parent_column {
+    my ($self) = @_;
+    return $self->{parent_column};
+}
+
+sub parent_featureset {
+    my ($self) = @_;
+    return $self->{parent_featureset};
+}
+
+sub coverage_plus {
+    my ($self) = @_;
+    return $self->{coverage_plus};
+}
+
+sub coverage_minus {
+    my ($self) = @_;
+    return $self->{coverage_minus};
+}
+
 # source methods
 
 sub featuresets {
