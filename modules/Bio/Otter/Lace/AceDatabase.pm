@@ -384,7 +384,7 @@ sub ace_config {
     my $config = {
 
         'ZMap' => {
-            sources => $slice_name,
+            sources => [ $slice_name ],
         },
 
         $slice_name => {
