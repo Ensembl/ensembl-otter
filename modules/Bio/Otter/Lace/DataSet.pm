@@ -64,6 +64,7 @@ sub zmap_config {
 
     my $config = {
         'ZMap' => $stanza,
+        'ZMapWindow' => $self->config_section('ZMapWindow'),
     };
 
     return $config;
