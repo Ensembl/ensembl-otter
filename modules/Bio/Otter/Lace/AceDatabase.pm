@@ -329,6 +329,8 @@ sub zmap_config {
     my $pfetch_www = $ENV{'PFETCH_WWW'};
     my $pfetch_url = $self->Client->pfetch_url;
 
+    my $blixemrc = sprintf '%s/ZMap/blixemrc', $self->home;
+
     my $config = {
 
         'ZMap' => {
@@ -348,6 +350,11 @@ sub zmap_config {
         'dn-tri'  => '<0,4; -4,0; 4,0; 0,4>',
         'up-hook' => '<0,0; 15,0; 15,-10>',
         'dn-hook' => '<0,0; 15,0; 15,10>',
+        },
+
+        'blixem' => {
+            'config-file' => $blixemrc,
+            %{ $self->DataSet->config_section('blixem') },
         },
 
     };

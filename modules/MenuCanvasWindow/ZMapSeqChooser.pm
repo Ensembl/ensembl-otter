@@ -391,7 +391,6 @@ sub zMapZMapContent{
     
     return
         $self->zMapZMapDefaults
-      . $self->zMapBlixemDefaults
       . $self->zMapSourceDefaults
       ;
 }
@@ -453,16 +452,6 @@ sub zMapZMapDefaults {
         ( map {
             $self->formatZmapDefaults($_, %{$zmap_config->{$_}});
           } sort keys %{$zmap_config} );
-}
-
-sub zMapBlixemDefaults {
-    my ($self) = @_;
-
-    return $self->formatZmapDefaults(
-        'blixem',
-        'config-file' => $self->zMapConfigPath('blixemrc'),
-        %{ $self->AceDatabase->DataSet->config_section('blixem') },
-    );
 }
 
 sub formatZmapDefaults {
