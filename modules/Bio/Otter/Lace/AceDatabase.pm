@@ -341,6 +341,8 @@ sub zmap_config {
             %{$self->smart_slice->zmap_config_stanza},
         },
 
+        %{$self->ace_config},
+
         'glyphs' => {
         'up-tri'  => '<0,-4; -4,0; 4,0; 0,-4>',
         'dn-tri'  => '<0,4; -4,0; 4,0; 0,4>',
@@ -351,6 +353,32 @@ sub zmap_config {
     };
 
     _config_merge($config, $self->DataSet->zmap_config);
+
+    return $config;
+}
+
+sub ace_config {
+    my ($self) = @_;
+
+    my $ace_server = $self->ace_server;
+    my $url = sprintf 'acedb://%s:%s@%s:%d'
+        , $ace_server->user, $ace_server->pass, $ace_server->host, $ace_server->port;
+
+    my @methods = $self->MethodCollection->get_all_top_level_Methods;
+    my $featuresets = [ map { $_->name } @methods ];
+    my $stylesfile = sprintf '%s/ZMap/styles.ini', $self->home;
+
+    my $config = {
+
+        $self->slice_name => {
+            url         => $url,
+            writeback   => 'false',
+            sequence    => 'true',
+            featuresets => $featuresets,
+            stylesfile  => $stylesfile,
+        },
+
+    };
 
     return $config;
 }
