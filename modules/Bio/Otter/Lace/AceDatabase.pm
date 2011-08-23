@@ -373,7 +373,6 @@ sub ace_config {
 
     my @methods = $self->MethodCollection->get_all_top_level_Methods;
     my $featuresets = [ map { $_->name } @methods ];
-    my $stylesfile = sprintf '%s/ZMap/styles.ini', $self->home;
 
     my $config = {
 
@@ -382,7 +381,7 @@ sub ace_config {
             writeback   => 'false',
             sequence    => 'true',
             featuresets => $featuresets,
-            stylesfile  => $stylesfile,
+            stylesfile  => $self->stylesfile,
         },
 
     };
@@ -457,6 +456,11 @@ sub _value_merge {
     return [ @{$v0},   $v1  ] if ref $v0;
     return [   $v0 , @{$v1} ] if ref $v1;
     return $v1;
+}
+
+sub stylesfile {
+    my ($self) = @_;
+    return sprintf '%s/ZMap/styles.ini', $self->home;
 }
 
 sub offset {
