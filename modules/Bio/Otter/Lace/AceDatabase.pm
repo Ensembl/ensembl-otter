@@ -321,6 +321,16 @@ sub slice_name {
 sub zmap_config {
     my ($self) = @_;
 
+    my $config = $self->ace_config;
+    _config_merge($config, $self->_zmap_config);
+    _config_merge($config, $self->DataSet->zmap_config($self));
+
+    return $config;
+}
+
+sub _zmap_config {
+    my ($self) = @_;
+
     # The 'show-mainwindow' parameter is for when zmap does not start
     # due to it not having window id when doing XChangeProperty().
 
@@ -334,7 +344,6 @@ sub zmap_config {
     my $config = {
 
         'ZMap' => {
-            'sources'         => [ $self->slice_name ],
             'show-mainwindow' => ( $show_mainwindow ? 'true' : 'false' ),
             'cookie-jar'      => $ENV{'OTTERLACE_COOKIE_JAR'},
             'pfetch-mode'     => ( $pfetch_www ? 'http' : 'pipe' ),
@@ -342,8 +351,6 @@ sub zmap_config {
             'xremote-debug'   => $ZMAP_DEBUG ? 'true' : 'false',
             %{$self->smart_slice->zmap_config_stanza},
         },
-
-        %{$self->ace_config},
 
         'glyphs' => {
         'up-tri'  => '<0,-4; -4,0; 4,0; 0,-4>',
@@ -359,13 +366,13 @@ sub zmap_config {
 
     };
 
-    _config_merge($config, $self->DataSet->zmap_config($self));
-
     return $config;
 }
 
 sub ace_config {
     my ($self) = @_;
+
+    my $slice_name = $self->slice_name;
 
     my $ace_server = $self->ace_server;
     my $url = sprintf 'acedb://%s:%s@%s:%d'
@@ -376,7 +383,11 @@ sub ace_config {
 
     my $config = {
 
-        $self->slice_name => {
+        'ZMap' => {
+            sources => $slice_name,
+        },
+
+        $slice_name => {
             url         => $url,
             writeback   => 'false',
             sequence    => 'true',

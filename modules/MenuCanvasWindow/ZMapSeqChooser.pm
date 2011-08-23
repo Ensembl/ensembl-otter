@@ -378,13 +378,7 @@ sub zMapZMapContent{
 
 sub zMapAceContent {
     my ($self) = @_;
-    my $config = {
-        'ZMap' => {
-            sources => $self->slice_name,
-        },
-        %{$self->AceDatabase->ace_config},
-    };
-    return _format_config($config, 'ZMap');
+    return _format_config($self->AceDatabase->ace_config, 'ZMap');
 }
 
 sub _format_config {
