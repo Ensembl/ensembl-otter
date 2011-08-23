@@ -184,12 +184,7 @@ sub _launchInAZMap {
     }
 
     $self->zMapPID($pid);
-
-    my ( $key, $value ) = $self->AceDatabase->ace_config;
-    my $config =
-        $self->formatZmapDefaults('ZMap', sources => $self->slice_name)
-        . $self->formatZmapDefaults($key, %{$value});
-    $self->zMapNewView($xremote, $config);
+    $self->zMapNewView($xremote, $self->zMapAceContent);
 
     return;
 }
@@ -373,46 +368,44 @@ sub zMapZmapConnectorNew {
 
 sub zMapBlixemrcContent {
     my ($self) = @_;
-
-    # extract the blixem stanza so that we can put it first
-    my $blixem_config = $self->AceDatabase->blixem_config;
-    my $blixem_stanza = delete $blixem_config->{blixem};
-
-    return
-        join '',
-        $self->formatZmapDefaults('blixem', %{$blixem_stanza}),
-        ( map {
-            $self->formatZmapDefaults($_, %{$blixem_config->{$_}});
-          } sort keys %{$blixem_config} );
+    return _format_config($self->AceDatabase->blixem_config, 'blixem');
 }
 
 sub zMapZMapContent{
     my ($self) = @_;
-
-    # extract the ZMap stanza so that we can put it first
-    my $zmap_config = $self->AceDatabase->zmap_config;
-    my $zmap_stanza = delete $zmap_config->{ZMap};
-
-    return
-        join '',
-        $self->formatZmapDefaults('ZMap', %{$zmap_stanza}),
-        ( map {
-            $self->formatZmapDefaults($_, %{$zmap_config->{$_}});
-          } sort keys %{$zmap_config} );
+    return _format_config($self->AceDatabase->zmap_config, 'ZMap');
 }
 
-sub formatZmapDefaults {
-    my ($self, $key, %defaults) = @_;
+sub zMapAceContent {
+    my ($self) = @_;
+    my $config = {
+        'ZMap' => {
+            sources => $self->slice_name,
+        },
+        %{$self->AceDatabase->ace_config},
+    };
+    return _format_config($config, 'ZMap');
+}
 
-    my $def_str = "\n[$key]\n";
-    for my $setting ( sort keys %defaults ) {
-        my $value = $defaults{$setting};
-        $value = join ' ; ', @{$value} if ref $value;
-        $def_str .= qq{$setting = $value\n};
-    }
-    $def_str .= "\n";
+sub _format_config {
+    my ($config, $key) = @_;
+    my @keys = keys %{$config};
+    # move the special key to the front if possible
+    @keys = ( $key, grep { $_ ne $key } @keys )
+        if defined $key && defined $config->{$key};
+    return sprintf "\n%s\n", join "\n", map { _format_stanza($_, $config->{$_}) } @keys;
+}
 
-    return $def_str;
+sub _format_stanza {
+    my ($name, $stanza) = @_;
+    return sprintf "[%s]\n%s"
+        , $name, join '', map { _format_key_value($_, $stanza->{$_}) } keys %{$stanza};
+}
+
+sub _format_key_value {
+    my ($key, $value) = @_;
+    $value = join ' ; ', @{$value} if ref $value;
+    return sprintf "%s = %s\n", $key, $value;
 }
 
 sub formatGtkrcStyleDef {
