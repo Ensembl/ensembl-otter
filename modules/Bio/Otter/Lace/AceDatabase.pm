@@ -321,6 +321,16 @@ sub slice_name {
 sub zmap_config {
     my ($self) = @_;
 
+    my $config = $self->ace_config;
+    _config_merge($config, $self->_zmap_config);
+    _config_merge($config, $self->DataSet->zmap_config($self));
+
+    return $config;
+}
+
+sub _zmap_config {
+    my ($self) = @_;
+
     # The 'show-mainwindow' parameter is for when zmap does not start
     # due to it not having window id when doing XChangeProperty().
 
@@ -329,9 +339,11 @@ sub zmap_config {
     my $pfetch_www = $ENV{'PFETCH_WWW'};
     my $pfetch_url = $self->Client->pfetch_url;
 
+    my $blixemrc = sprintf '%s/ZMap/blixemrc', $self->home;
+
     my $config = {
+
         'ZMap' => {
-            'sources'         => [ $self->slice_name ],
             'show-mainwindow' => ( $show_mainwindow ? 'true' : 'false' ),
             'cookie-jar'      => $ENV{'OTTERLACE_COOKIE_JAR'},
             'pfetch-mode'     => ( $pfetch_www ? 'http' : 'pipe' ),
@@ -339,9 +351,51 @@ sub zmap_config {
             'xremote-debug'   => $ZMAP_DEBUG ? 'true' : 'false',
             %{$self->smart_slice->zmap_config_stanza},
         },
+
+        'glyphs' => {
+        'up-tri'  => '<0,-4; -4,0; 4,0; 0,-4>',
+        'dn-tri'  => '<0,4; -4,0; 4,0; 0,4>',
+        'up-hook' => '<0,0; 15,0; 15,-10>',
+        'dn-hook' => '<0,0; 15,0; 15,10>',
+        },
+
+        'blixem' => {
+            'config-file' => $blixemrc,
+            %{ $self->DataSet->config_section('blixem') },
+        },
+
     };
 
-    _config_merge($config, $self->DataSet->zmap_config);
+    return $config;
+}
+
+sub ace_config {
+    my ($self) = @_;
+
+    my $slice_name = $self->slice_name;
+
+    my $ace_server = $self->ace_server;
+    my $url = sprintf 'acedb://%s:%s@%s:%d'
+        , $ace_server->user, $ace_server->pass, $ace_server->host, $ace_server->port;
+
+    my @methods = $self->MethodCollection->get_all_top_level_Methods;
+    my $featuresets = [ map { $_->name } @methods ];
+
+    my $config = {
+
+        'ZMap' => {
+            sources => [ $slice_name ],
+        },
+
+        $slice_name => {
+            url         => $url,
+            writeback   => 'false',
+            sequence    => 'true',
+            featuresets => $featuresets,
+            stylesfile  => $self->stylesfile,
+        },
+
+    };
 
     return $config;
 }
@@ -413,6 +467,11 @@ sub _value_merge {
     return [ @{$v0},   $v1  ] if ref $v0;
     return [   $v0 , @{$v1} ] if ref $v1;
     return $v1;
+}
+
+sub stylesfile {
+    my ($self) = @_;
+    return sprintf '%s/ZMap/styles.ini', $self->home;
 }
 
 sub offset {
