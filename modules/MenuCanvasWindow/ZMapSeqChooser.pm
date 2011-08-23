@@ -388,59 +388,6 @@ sub zMapBlixemrcContent {
 
 sub zMapZMapContent{
     my ($self) = @_;
-    
-    return
-        $self->zMapZMapDefaults
-      . $self->zMapSourceDefaults
-      ;
-}
-
-sub zMapSourceDefaults {
-    
-    my ($self) = @_;
-
-    my $text;
-    my $source_columns      = { };
-    my $source_styles       = { };
-    my $source_descriptions = { };
-
-    for my $source (@{$self->AceDatabase->DataSet->sources}) {
-
-        $text .= $self->formatZmapDefaults(
-            $source->name,
-            url         => $source->url($self->AceDatabase),
-            featuresets => $source->featuresets,
-            delayed     => $source->delayed($self->AceDatabase) ? 'true' : 'false',
-            stylesfile  => $self->zMapStylesPath,
-            group       => 'always',
-        );
-        
-        if ($source->zmap_column) {
-            my $fsets = $source_columns->{$source->zmap_column} ||= [];
-            push @{ $fsets }, @{$source->featuresets};
-        }
-        
-        if ($source->zmap_style) {
-            $source_styles->{$source->name} = $source->zmap_style;
-        }
-        
-        if ($source->description) {
-            $source_descriptions->{$source->name} = $source->description;
-        }
-    }
-
-    $text .= $self->formatZmapDefaults('columns', %{$source_columns})
-        if keys %{$source_columns};
-    $text .= $self->formatZmapDefaults('featureset-style', %{$source_styles})
-        if keys %{$source_styles};
-    $text .= $self->formatZmapDefaults('featureset-description', %{$source_descriptions})
-        if keys %{$source_descriptions} && 0; # disabled
-
-    return $text;
-}
-
-sub zMapZMapDefaults {
-    my ($self) = @_;
 
     # extract the ZMap stanza so that we can put it first
     my $zmap_config = $self->AceDatabase->zmap_config;

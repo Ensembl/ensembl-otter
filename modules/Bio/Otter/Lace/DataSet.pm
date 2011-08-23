@@ -45,7 +45,9 @@ sub name {
 }
 
 sub zmap_config {
-    my ($self) = @_;
+    my ($self, $session) = @_;
+
+    my $stylesfile = $session->stylesfile;
 
     my $stanza = { %{ $self->config_section('zmap') } };
 
@@ -54,8 +56,8 @@ sub zmap_config {
         [ sort map { $_->name } @{$sources} ]
         if @${sources};
 
-    my $columns = $self->config_value_list_merged('zmap_config', 'columns');
-    $stanza->{columns} = $columns if @${columns};
+    my $columns_list = $self->config_value_list_merged('zmap_config', 'columns');
+    $stanza->{columns} = $columns_list if @${columns_list};
 
     my $bam_list = $self->bam_list;
     $stanza->{'seq-data'} =
@@ -66,6 +68,38 @@ sub zmap_config {
         'ZMap' => $stanza,
         'ZMapWindow' => $self->config_section('ZMapWindow'),
     };
+
+    my $columns      = { };
+    my $styles       = { };
+    my $descriptions = { };
+
+    for my $source (@{$self->sources}) {
+        
+        $config->{$source->name} = {
+            url         => $source->url($session),
+            featuresets => $source->featuresets,
+            delayed     => $source->delayed($session) ? 'true' : 'false',
+            stylesfile  => $stylesfile,
+            group       => 'always',
+        };
+        
+        if ($source->zmap_column) {
+            my $fsets = $columns->{$source->zmap_column} ||= [];
+            push @{ $fsets }, @{$source->featuresets};
+        }
+        
+        if ($source->zmap_style) {
+            $styles->{$source->name} = $source->zmap_style;
+        }
+        
+        if ($source->description) {
+            $descriptions->{$source->name} = $source->description;
+        }
+    }
+
+    $config->{'columns'}                = $columns      if keys %{$columns};
+    $config->{'featureset-style'}       = $styles       if keys %{$styles};
+    $config->{'featureset-description'} = $descriptions if keys %{$descriptions};
 
     return $config;
 }
