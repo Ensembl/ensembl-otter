@@ -184,9 +184,11 @@ sub _launchInAZMap {
     }
 
     $self->zMapPID($pid);
+
+    my ( $key, $value ) = $self->AceDatabase->ace_config;
     my $config =
         $self->formatZmapDefaults('ZMap', sources => $self->slice_name)
-        . $self->zMapAceServerDefaults();
+        . $self->formatZmapDefaults($key, %{$value});
     $self->zMapNewView($xremote, $config);
 
     return;
@@ -390,34 +392,8 @@ sub zMapZMapContent{
     return
         $self->zMapZMapDefaults
       . $self->zMapBlixemDefaults
-      . $self->zMapAceServerDefaults
       . $self->zMapSourceDefaults
       ;
-}
-
-sub zMapAceServerDefaults {
-    my ($self) = @_;
-
-    my $server = $self->AceDatabase->ace_server;
-
-    my $protocol = 'acedb';
-
-    my $url = sprintf q{%s://%s:%s@%s:%d}, $protocol, $server->user, $server->pass, $server->host, $server->port;
-
-    my $collection = $self->Assembly->MethodCollection;
-    my $featuresets = [ map { $_->name } $collection->get_all_top_level_Methods ];
-
-    return $self->formatZmapDefaults(
-        $self->slice_name,
-        url       => $url,
-        writeback => 'false',
-        sequence  => 'true',
-
-        # Can specify a stylesfile instead of featuresets
-
-        featuresets     => $featuresets,
-        stylesfile      => $self->zMapStylesPath,
-    );
 }
 
 sub zMapSourceDefaults {
