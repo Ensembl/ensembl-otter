@@ -359,7 +359,7 @@ sub zmap_config {
 
     };
 
-    _config_merge($config, $self->DataSet->zmap_config);
+    _config_merge($config, $self->DataSet->zmap_config($self));
 
     return $config;
 }
