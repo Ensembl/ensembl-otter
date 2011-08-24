@@ -52,17 +52,13 @@ sub zmap_config {
     my $columns_list = $self->config_value_list_merged('zmap_config', 'columns');
     $stanza->{columns} = $columns_list if @${columns_list};
 
-    my $bam_list = $self->bam_list;
-    $stanza->{'seq-data'} =
-        [ sort map { $_->name } @{$bam_list} ]
-        if @{$bam_list};
-
     my $config = {
         'ZMap' => $stanza,
         'ZMapWindow' => $self->config_section('ZMapWindow'),
     };
 
     $self->_add_zmap_source_config($config, $session);
+    $self->_add_zmap_bam_config($config, $session);
 
     return $config;
 }
@@ -108,6 +104,22 @@ sub _add_zmap_source_config {
     $config->{'columns'}                = $columns      if keys %{$columns};
     $config->{'featureset-style'}       = $styles       if keys %{$styles};
     $config->{'featureset-description'} = $descriptions if keys %{$descriptions};
+
+    return;
+}
+
+sub _add_zmap_bam_config {
+    my ($self, $config, $session) = @_;
+
+    # This handles special configuration parameters that are specific
+    # to BAM sources, such as those relating to sequence data.  The
+    # normal configuration stanzas for BAM sources are handled by
+    # _add_zmap_source_config().
+
+    my $bam_list = $self->bam_list;
+    $config->{ZMap}{'seq-data'} =
+        [ sort map { $_->name } @{$bam_list} ]
+        if @{$bam_list};
 
     return;
 }
