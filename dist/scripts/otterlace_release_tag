@@ -339,7 +339,16 @@ main() {
         cvs_update &&
         true ) &&
 
-    ${dryrun:+echo DRYRUN:} git pull -v &&
+    if [ -n "$with_dummy" ]; then
+        echo "# Would 'git pull -v' here, but we are using dummy repos"
+        echo "git fetch --dry-run $ensembl_otter_git_repo, as if from origin:"
+        git fetch --dry-run $ensembl_otter_git_repo 'refs/heads/*:refs/remotes/origin/*' 'refs/tags/*:refs/tags/*'
+        # The explicit tags fetch is redundant unless there are tags
+        # which are not on branches, and is verbose because we dry-run
+        echo "Or    (cd $ensembl_otter_git_repo; gitk --all &)"
+    else
+        ${dryrun:+echo DRYRUN:} git pull -v
+    fi &&
 
     rm -rf -- "$tmp_dir" &&
     true # success
