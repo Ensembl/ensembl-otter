@@ -47,14 +47,7 @@ sub name {
 sub zmap_config {
     my ($self, $session) = @_;
 
-    my $stylesfile = $session->stylesfile;
-
     my $stanza = { %{ $self->config_section('zmap') } };
-
-    my $sources = $self->sources;
-    $stanza->{sources} =
-        [ sort map { $_->name } @{$sources} ]
-        if @${sources};
 
     my $columns_list = $self->config_value_list_merged('zmap_config', 'columns');
     $stanza->{columns} = $columns_list if @${columns_list};
@@ -69,11 +62,26 @@ sub zmap_config {
         'ZMapWindow' => $self->config_section('ZMapWindow'),
     };
 
+    $self->_add_zmap_source_config($config, $session);
+
+    return $config;
+}
+
+sub _add_zmap_source_config {
+    my ($self, $config, $session) = @_;
+
+    my $sources = $self->sources;
+    my $stylesfile = $session->stylesfile;
+
+    $config->{ZMap}{sources} =
+        [ sort map { $_->name } @{$sources} ]
+        if @${sources};
+
     my $columns      = { };
     my $styles       = { };
     my $descriptions = { };
 
-    for my $source (@{$self->sources}) {
+    for my $source (@$sources) {
 
         $config->{$source->name} = {
             url         => $source->url($session),
@@ -101,7 +109,7 @@ sub zmap_config {
     $config->{'featureset-style'}       = $styles       if keys %{$styles};
     $config->{'featureset-description'} = $descriptions if keys %{$descriptions};
 
-    return $config;
+    return;
 }
 
 sub blixem_config {
