@@ -147,8 +147,8 @@ sub compare_gene_versions {
 	next;
   }
 
-  my $outdir = '/var/tmp';
-  system("rm $outdir/G*.V*");
+  my $outdir = '/tmp';
+  system("/bin/rm -f $outdir/ghv_G*.V*");
 
   my @files;
 
@@ -157,7 +157,7 @@ sub compare_gene_versions {
 
 	my $geneobj = $tree->info('data', $path);
     my $xmlg    = new Bio::Vega::Transform::XML;
-    my $file    = "$outdir/$path"."_$$";
+    my $file    = "$outdir/ghv_$path"."_$$";
     open( my $fh, ">$file") or die;
     print $fh $xmlg->get_geneXML($geneobj);
     push(@files, $file);
