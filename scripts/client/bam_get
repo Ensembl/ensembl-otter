@@ -7,7 +7,7 @@ use URI::Escape qw(uri_unescape);
 
 use Bio::DB::Sam;
 use Bio::Otter::Lace::Defaults;
-use Bio::Otter::BAM::Source;
+use Bio::Otter::Fetch::BAM;
 use Bio::Otter::Mapping;
 
 print STDERR "$0", ( map { " '$_'" } @ARGV ), "\n";
@@ -76,7 +76,7 @@ my $sam = Bio::DB::Sam->new
      # -fasta => $fasta_path,
     );
 
-my $bam_source = Bio::Otter::BAM::Source->new(
+my $bam_fetch = Bio::Otter::Fetch::BAM->new(
     -sam        => $sam,
     -chr_prefix => $chr_prefix,
     );
@@ -213,4 +213,4 @@ my $mapping = Bio::Otter::Mapping->new_from_xml($mapping_xml);
 
 # map and print the features
 _print_header;
-$mapping->do_features($bam_source, $start, $end, \&_print_feature);
+$mapping->do_features($bam_fetch, $start, $end, \&_print_feature);

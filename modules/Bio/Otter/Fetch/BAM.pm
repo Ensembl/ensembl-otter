@@ -1,7 +1,7 @@
 
-### Bio::Otter::BAM::Source
+### Bio::Otter::Fetch::BAM
 
-package Bio::Otter::BAM::Source;
+package Bio::Otter::Fetch::BAM;
 
 use strict;
 use warnings;
@@ -37,7 +37,7 @@ sub features {
 
 __END__
 
-=head1 NAME - Bio::Otter::BAM::Source
+=head1 NAME - Bio::Otter::Fetch::BAM
 
 =head1 AUTHOR
 
