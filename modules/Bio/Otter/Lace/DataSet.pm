@@ -37,7 +37,7 @@ sub load_client_config {
 
 sub name {
     my ( $self, $name ) = @_;
-    
+
     if ($name) {
         $self->{'_name'} = $name;
     }
@@ -47,34 +47,38 @@ sub name {
 sub zmap_config {
     my ($self, $session) = @_;
 
-    my $stylesfile = $session->stylesfile;
-
     my $stanza = { %{ $self->config_section('zmap') } };
-
-    my $sources = $self->sources;
-    $stanza->{sources} =
-        [ sort map { $_->name } @{$sources} ]
-        if @${sources};
 
     my $columns_list = $self->config_value_list_merged('zmap_config', 'columns');
     $stanza->{columns} = $columns_list if @${columns_list};
-
-    my $bam_list = $self->bam_list;
-    $stanza->{'seq-data'} =
-        [ sort map { $_->name } @{$bam_list} ]
-        if @{$bam_list};
 
     my $config = {
         'ZMap' => $stanza,
         'ZMapWindow' => $self->config_section('ZMapWindow'),
     };
 
+    $self->_add_zmap_source_config($config, $session);
+    $self->_add_zmap_bam_config($config, $session);
+
+    return $config;
+}
+
+sub _add_zmap_source_config {
+    my ($self, $config, $session) = @_;
+
+    my $sources = $self->sources;
+    my $stylesfile = $session->stylesfile;
+
+    $config->{ZMap}{sources} =
+        [ sort map { $_->name } @{$sources} ]
+        if @${sources};
+
     my $columns      = { };
     my $styles       = { };
     my $descriptions = { };
 
-    for my $source (@{$self->sources}) {
-        
+    for my $source (@$sources) {
+
         $config->{$source->name} = {
             url         => $source->url($session),
             featuresets => $source->featuresets,
@@ -82,16 +86,16 @@ sub zmap_config {
             stylesfile  => $stylesfile,
             group       => 'always',
         };
-        
+
         if ($source->zmap_column) {
             my $fsets = $columns->{$source->zmap_column} ||= [];
             push @{ $fsets }, @{$source->featuresets};
         }
-        
+
         if ($source->zmap_style) {
             $styles->{$source->name} = $source->zmap_style;
         }
-        
+
         if ($source->description) {
             $descriptions->{$source->name} = $source->description;
         }
@@ -101,7 +105,23 @@ sub zmap_config {
     $config->{'featureset-style'}       = $styles       if keys %{$styles};
     $config->{'featureset-description'} = $descriptions if keys %{$descriptions};
 
-    return $config;
+    return;
+}
+
+sub _add_zmap_bam_config {
+    my ($self, $config, $session) = @_;
+
+    # This handles special configuration parameters that are specific
+    # to BAM sources, such as those relating to sequence data.  The
+    # normal configuration stanzas for BAM sources are handled by
+    # _add_zmap_source_config().
+
+    my $bam_list = $self->bam_list;
+    $config->{ZMap}{'seq-data'} =
+        [ sort map { $_->name } @{$bam_list} ]
+        if @{$bam_list};
+
+    return;
 }
 
 sub blixem_config {
@@ -360,7 +380,7 @@ sub selected_SequenceSet {
 
 sub fetch_all_CloneSequences_for_selected_SequenceSet {
     my ( $self ) = @_;
-    
+
     my $ss = $self->selected_SequenceSet
         or confess "No SequenceSet is selected";
     return $self->fetch_all_CloneSequences_for_SequenceSet($ss);
@@ -403,7 +423,7 @@ sub get_cached_DBAdaptor {
 
 sub make_EnsEMBL_DBAdaptor {
     my ( $self ) = @_;
-    
+
     require Bio::EnsEMBL::DBSQL::DBAdaptor;
     return $self->_make_DBAdaptor_with_class('Bio::EnsEMBL::DBSQL::DBAdaptor');
 }
@@ -417,7 +437,7 @@ sub make_Vega_DBAdaptor {
 
 sub _make_DBAdaptor_with_class {
     my ( $self, $class ) = @_;
-    
+
     my (@args) = (
         # Extra arguments to stop Bio::EnsEMBL::Registry issuing warnings
         -GROUP      => "otter:$class",
@@ -484,7 +504,7 @@ sub list_all_db_properties {
 
 sub HOST {
     my ( $self, $HOST ) = @_;
-    
+
     if(defined($HOST)) {
         $self->{'_HOST'} = $HOST;
     }
@@ -493,7 +513,7 @@ sub HOST {
 
 sub USER {
     my ( $self, $USER ) = @_;
-    
+
     if(defined($USER)) {
         $self->{'_USER'} = $USER;
     }
@@ -502,7 +522,7 @@ sub USER {
 
 sub DNA_PASS {
     my ( $self, $DNA_PASS ) = @_;
-    
+
     if(defined($DNA_PASS)) {
         $self->{'_DNA_PASS'} = $DNA_PASS;
     }
@@ -511,7 +531,7 @@ sub DNA_PASS {
 
 sub PASS {
     my ( $self, $PASS ) = @_;
-    
+
     if(defined($PASS)) {
         $self->{'_PASS'} = $PASS;
     }
@@ -520,7 +540,7 @@ sub PASS {
 
 sub DBNAME {
     my ( $self, $DBNAME ) = @_;
-    
+
     if(defined($DBNAME)) {
         $self->{'_DBNAME'} = $DBNAME;
     }
@@ -529,7 +549,7 @@ sub DBNAME {
 
 sub TYPE {
     my ( $self, $TYPE ) = @_;
-    
+
     if(defined($TYPE)) {
         $self->{'_TYPE'} = $TYPE;
     }
@@ -538,7 +558,7 @@ sub TYPE {
 
 sub DNA_PORT {
     my ( $self, $DNA_PORT ) = @_;
-    
+
     if(defined($DNA_PORT)) {
         $self->{'_DNA_PORT'} = $DNA_PORT;
     }
@@ -547,7 +567,7 @@ sub DNA_PORT {
 
 sub DNA_HOST {
     my ( $self, $DNA_HOST ) = @_;
-    
+
     if(defined($DNA_HOST)) {
         $self->{'_DNA_HOST'} = $DNA_HOST;
     }
@@ -556,7 +576,7 @@ sub DNA_HOST {
 
 sub DNA_USER {
     my ( $self, $DNA_USER ) = @_;
-    
+
     if(defined($DNA_USER)) {
         $self->{'_DNA_USER'} = $DNA_USER;
     }
@@ -564,7 +584,7 @@ sub DNA_USER {
 }
 sub DNA_DBNAME {
     my ( $self, $DNA_DBNAME ) = @_;
-    
+
     if(defined($DNA_DBNAME)) {
         $self->{'_DNA_DBNAME'} = $DNA_DBNAME;
     }
@@ -572,7 +592,7 @@ sub DNA_DBNAME {
 }
 sub PORT {
     my ( $self, $PORT ) = @_;
-    
+
     if(defined($PORT)) {
         $self->{'_PORT'} = $PORT;
     }
@@ -581,7 +601,7 @@ sub PORT {
 
 sub ALIAS {
     my ( $self, $ALIAS ) = @_;
-    
+
     if(defined($ALIAS)) {
         $self->{'_ALIAS'} = $ALIAS;
     }
