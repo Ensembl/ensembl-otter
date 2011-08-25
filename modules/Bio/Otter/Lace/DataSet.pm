@@ -113,16 +113,92 @@ sub _add_zmap_bam_config {
     my ($self, $config, $session) = @_;
 
     # This handles special configuration parameters that are specific
-    # to BAM sources, such as those relating to sequence data.  The
-    # normal configuration stanzas for BAM sources are handled by
-    # _add_zmap_source_config().
+    # to BAM sources, such as those relating to sequence and coverage
+    # data.  The normal configuration stanzas for BAM sources are
+    # already handled by _add_zmap_source_config().
 
-    my $bam_list = $self->bam_list;
-    $config->{ZMap}{'seq-data'} =
-        [ sort map { $_->name } @{$bam_list} ]
-        if @{$bam_list};
+    my $stylesfile = $session->stylesfile;
+    my $slice      = $session->smart_slice;
+
+    # must be careful here because different BAM objects may have the
+    # same parent_column or parent_featureset
+
+    my $column_featureset_hash = { };
+
+    for my $bam ( @{$self->bam_list} ) {
+        my $bam_column = $bam->name;
+
+        push @{$config->{ZMap}{'seq-data'}}, $bam_column;
+
+        # coverage columns and featuresets
+        my $coverage_column = $bam->parent_column;
+        my $coverage_featureset = $bam->parent_featureset;
+        $column_featureset_hash->{$coverage_column}{$coverage_featureset}++;
+        $config->{'featureset-style'}{$coverage_featureset} = 'heatmap';
+
+        # virtual coverage featuresets
+        my $coverage_plus_featureset  = "${bam_column}_coverage_plus";
+        my $coverage_minus_featureset = "${bam_column}_coverage_minus";
+        my @coverage_featuresets =
+            ( $coverage_plus_featureset, $coverage_minus_featureset );
+        push @{$config->{featuresets}{$coverage_featureset}}, @coverage_featuresets;
+        push @{$config->{ZMap}{sources}}, @coverage_featuresets;
+
+        # related columns
+        my $related_column = "${coverage_featureset}_reads";
+        my $related_featureset = $bam->name;
+        $column_featureset_hash->{$related_column}{$related_featureset}++;
+        $config->{'featureset-related'}{$coverage_featureset} = $related_column;
+
+        for (
+            [ $coverage_plus_featureset,  $bam->coverage_plus,   1 ],
+            [ $coverage_minus_featureset, $bam->coverage_minus, -1 ],
+            ) {
+            my ( $featureset, $file, $strand ) = @{$_};
+            $config->{'featureset-style'}{$featureset} = 'heatmap';
+            $config->{'featureset-related'}{$featureset} = $related_column;
+            my $query = {
+                chr   => $slice->ssname,
+                start => $slice->start,
+                end   => $slice->end,
+                ( map { ( $_ => $bam->$_ ) } qw( csver chr_prefix ) ),
+                file   => $file,
+                strand => $strand,
+                gff_feature_source => $featureset,
+                gff_version => 2,
+            };
+            my $query_string = _query_string($query);
+            my $url = sprintf "pipe:///%s?%s", 'bigwig_get', $query_string;
+            $config->{$featureset} = {
+                featuresets => $featureset,
+                delayed     => 'true',
+                group       => 'always',
+                stylesfile  => $stylesfile,
+                url         => $url,
+            };
+        }
+    }
+
+    # add the columns to the ZMap configuration
+    my @columns = sort keys %{$column_featureset_hash};
+    push @{$config->{ZMap}{columns}}, sort @columns;
+    $config->{columns}{$_} =
+        [ sort keys %{$column_featureset_hash->{$_}} ]
+        for @columns;
 
     return;
+}
+
+sub _query_string {
+    my ($query) = @_;
+    my $arguments = [ ];
+    for my $key (sort keys %{$query}) {
+        my $value = $query->{$key};
+        next unless defined $value;
+        push @{$arguments}, sprintf '-%s=%s', $key, uri_escape($value);
+    }
+    my $query_string = join '&', @{$arguments};
+    return $query_string;
 }
 
 sub blixem_config {
