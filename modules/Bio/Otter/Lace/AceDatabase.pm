@@ -339,7 +339,7 @@ sub _zmap_config {
     my $pfetch_www = $ENV{'PFETCH_WWW'};
     my $pfetch_url = $self->Client->pfetch_url;
 
-    my $blixemrc = sprintf '%s/ZMap/blixemrc', $self->home;
+    my $blixemrc = sprintf '%s/blixemrc', $self->zmap_dir;
 
     my $config = {
 
@@ -471,7 +471,12 @@ sub _value_merge {
 
 sub stylesfile {
     my ($self) = @_;
-    return sprintf '%s/ZMap/styles.ini', $self->home;
+    return sprintf '%s/styles.ini', $self->zmap_dir;
+}
+
+sub zmap_dir {
+    my ($self) = @_;
+    return sprintf '%s/ZMap', $self->home;
 }
 
 sub offset {
