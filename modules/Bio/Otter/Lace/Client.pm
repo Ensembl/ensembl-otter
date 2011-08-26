@@ -1222,6 +1222,7 @@ sub recover_session {
     # in the lace database is saved in the region XML
     # dot file.
     $adb->recover_smart_slice_from_region_xml_file;
+    $adb->DataSet->load_client_config;
     $adb->reload_filter_state;
 
     my $title = $self->get_title($adb->home);
