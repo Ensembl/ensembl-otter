@@ -8,6 +8,7 @@ use warnings;
 use Carp;
 
 use Fcntl qw{ O_WRONLY O_CREAT };
+use Config::IniFiles;
 
 use Bio::Vega::Transform::Otter::Ace;
 use Bio::Vega::AceConverter;
@@ -17,6 +18,7 @@ use Bio::Otter::Lace::AccessionTypeCache;
 use Bio::Otter::Lace::DB;
 use Bio::Otter::Lace::Slice; # a new kind of Slice that knows how to get pipeline data
 use Bio::Otter::Lace::ProcessGFF;
+use Bio::Otter::Utils::Config::Ini qw( config_ini_format );
 
 use Hum::Ace::LocalServer;
 use Hum::Ace::MethodCollection;
@@ -318,6 +320,62 @@ sub slice_name {
     return $slice_name;
 }
 
+my $gtkrc = <<'GTKRC'
+
+style "zmap-focus-view-frame" {
+  bg[NORMAL] = "gold" 
+}
+
+widget "*.zmap-focus-view" style "zmap-focus-view-frame"
+
+style "infopanel-labels" {
+  bg[NORMAL] = "white" 
+}
+
+widget "*.zmap-control-infopanel" style "infopanel-labels"
+
+style "menu-titles" {
+  fg[INSENSITIVE] = "blue" 
+}
+
+widget "*.zmap-menu-title.*" style "menu-titles"
+
+style "default-species" {
+  bg[NORMAL] = "gold" 
+}
+GTKRC
+    ;
+
+sub zmap_dir_init {
+    my ($self) = @_;
+
+    my $dir = $self->zmap_dir;
+    unless (-d $dir) {
+        mkdir $dir or confess "failed to create the directory '$dir': $!\n";
+    }
+
+    $self->MethodCollection->ZMapStyleCollection->write_to_file($self->stylesfile);
+
+    $self->zmap_config_write('.gtkrc',   $gtkrc);
+    $self->zmap_config_write('ZMap',     config_ini_format($self->zmap_config, 'ZMap'));
+    $self->zmap_config_write('blixemrc', config_ini_format($self->blixem_config, 'blixem'));
+
+    return;
+}
+
+sub zmap_config_write {
+    my ($self, $file, $config) = @_;
+
+    my $path = sprintf "%s/%s", $self->zmap_dir, $file;
+    open my $fh, '>', $path
+        or confess "Can't write to '$path'; $!";
+    print $fh $config;
+    close $fh
+      or confess "Error writing to '$path'; $!";
+
+    return;
+}
+
 sub zmap_config {
     my ($self) = @_;
 
@@ -467,6 +525,28 @@ sub _value_merge {
     return [ @{$v0},   $v1  ] if ref $v0;
     return [   $v0 , @{$v1} ] if ref $v1;
     return $v1;
+}
+
+sub zmap_config_update {
+    my ($self) = @_;
+
+    my $cfg_path = sprintf "%s/ZMap", $self->zmap_dir;
+    my $cfg = $self->{_zmap_cfg} ||=
+        Config::IniFiles->new( -file => $cfg_path );
+
+    while ( my ( $name, $value ) = each %{$self->filters}) {
+        my $state_hash = $value->{state};
+        if ($state_hash->{done}) {
+            $cfg->setval($name,'delayed','false');
+        }
+        if ($state_hash->{failed}) {
+            $cfg->setval($name,'delayed','true');
+        }
+    }
+    
+    $cfg->RewriteConfig;
+
+    return;
 }
 
 sub stylesfile {

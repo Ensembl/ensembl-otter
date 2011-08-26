@@ -8,7 +8,6 @@ use Carp;
 use Data::Dumper;
 use XML::Simple;
 use File::Path qw{ mkpath };
-use Config::IniFiles;
 use POSIX;
 
 use Bio::Otter::ZMap::Connect;
@@ -48,17 +47,7 @@ sub zMapInitialize {
     $self->{_xremote_cache} =
         Bio::Otter::ZMap::XRemoteCache->new;
 
-    my $dir = $self->zMapZMapDir;
-    unless (-d $dir) {
-        mkdir $dir or confess "failed to create the directory '$dir': $!\n";
-    }
-
-    my $stylesfile = $self->zMapStylesPath;
-    $self->Assembly->MethodCollection->ZMapStyleCollection->write_to_file($stylesfile);
-
-    $self->zMapWriteConfigFile('ZMap',     $self->zMapZMapContent);
-    $self->zMapWriteConfigFile('.gtkrc',   $self->zMapGtkrcContent);
-    $self->zMapWriteConfigFile('blixemrc', $self->zMapBlixemrcContent);
+    $self->AceDatabase->zmap_dir_init;
 
     return;
 }
@@ -85,7 +74,7 @@ sub _launchZMap {
 
     my @e = (
         'zmap',
-        '--conf_dir' => $self->zMapZMapDir,
+        '--conf_dir' => $self->AceDatabase->zmap_dir,
         '--win_id'   => $self->zMapZmapConnector->server_window_id,
         @{$dataset->config_value_list('zmap_config', 'arguments')},
     );
@@ -186,7 +175,8 @@ sub _launchInAZMap {
     }
 
     $self->zMapPID($pid);
-    $self->zMapNewView($xremote, $self->zMapAceContent);
+    my $config = config_ini_format($self->AceDatabase->ace_config, 'ZMap');
+    $self->zMapNewView($xremote, $config);
 
     return;
 }
@@ -366,84 +356,6 @@ sub zMapZmapConnectorNew {
     $zc->init($mb, \&RECEIVE_FILTER, [ $self, qw() ]);
     my $id = $zc->server_window_id();
     return $zc;
-}
-
-sub zMapBlixemrcContent {
-    my ($self) = @_;
-    return config_ini_format($self->AceDatabase->blixem_config, 'blixem');
-}
-
-sub zMapZMapContent{
-    my ($self) = @_;
-    return config_ini_format($self->AceDatabase->zmap_config, 'ZMap');
-}
-
-sub zMapAceContent {
-    my ($self) = @_;
-    return config_ini_format($self->AceDatabase->ace_config, 'ZMap');
-}
-
-my $gtkrc_content = <<'GTKRC'
-
-style "zmap-focus-view-frame" {
-  bg[NORMAL] = "gold" 
-}
-
-widget "*.zmap-focus-view" style "zmap-focus-view-frame"
-
-style "infopanel-labels" {
-  bg[NORMAL] = "white" 
-}
-
-widget "*.zmap-control-infopanel" style "infopanel-labels"
-
-style "menu-titles" {
-  fg[INSENSITIVE] = "blue" 
-}
-
-widget "*.zmap-menu-title.*" style "menu-titles"
-
-style "default-species" {
-  bg[NORMAL] = "gold" 
-}
-GTKRC
-    ;
-
-sub zMapGtkrcContent {
-    return $gtkrc_content;
-}
-
-sub zMapWriteConfigFile {
-    my ($self, $file, $config) = @_;
-
-    my $path = $self->zMapConfigPath($file);
-    open my $fh, '>', $path
-        or confess "Can't write to '$path'; $!";
-    print $fh $config;
-    close $fh
-      or confess "Error writing to '$path'; $!";
-
-    return;
-}
-
-sub zMapStylesPath {
-    my ($self) = @_;
-    return $self->zMapConfigPath('styles.ini');
-}
-
-sub zMapConfigPath {
-    my ($self, $file) = @_;
-
-    my $dir  = $self->zMapZMapDir;
-    my $path = "${dir}/${file}";
-
-    return $path;
-}
-
-sub zMapZMapDir {
-    my ($self) = @_;
-    return $self->{'_zMap_ZMAP_DIR'} ||=
-        ($self->ace_path . '/ZMap');
 }
 
 #===========================================================
@@ -791,30 +703,10 @@ sub zMapFeaturesLoaded {
         $self->AceDatabase->save_filter_state;
         
         # and update the delayed flags in the zmap config file
-        $self->zMapUpdateConfigFile;
+        $self->AceDatabase->zmap_config_update;
     }
     
     return (200, $self->zMapZmapConnector->handled_response(1));
-}
-
-sub zMapUpdateConfigFile {
-    my ($self) = @_;
-    
-    my $cfg = $self->{_zmap_cfg} ||= Config::IniFiles->new( -file => $self->zMapConfigPath('ZMap'));
-
-    while ( my ( $name, $value ) = each %{$self->AceDatabase->filters}) {
-        my $state_hash = $value->{state};
-        if ($state_hash->{done}) {
-            $cfg->setval($name,'delayed','false');
-        }
-        if ($state_hash->{failed}) {
-            $cfg->setval($name,'delayed','true');
-        }
-    }
-    
-    $cfg->RewriteConfig;
-
-    return;
 }
 
 sub zMapIgnoreRequest {
