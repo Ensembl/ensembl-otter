@@ -68,32 +68,9 @@ The guts of the code to launch and display the features in a zmap.
 
 sub _launchZMap {
     my ($self) = @_;
-
-    my $dataset = $self->AceDatabase->DataSet;
-
-    my @e = (
-        'zmap',
-        '--conf_dir' => $self->AceDatabase->zmap_dir,
-        '--win_id'   => $self->zMapZmapConnector->server_window_id,
-        @{$dataset->config_value_list('zmap_config', 'arguments')},
-    );
-    warn "Running @e";
-    my $pid = fork;
-    if ($pid) {
-        $self->zMapPID($pid);
-    }
-    elsif (defined $pid) {
-        exec @e;
-        warn "exec '@e' failed : $!";
-        close STDERR; # _exit does not flush
-        POSIX::_exit(1); # avoid triggering DESTROY
-    }
-    else {
-        my $mess = "Error: couldn't fork()\n";
-        warn $mess;
-        $self->message($mess);
-    }
-
+    my $win_id = $self->zMapZmapConnector->server_window_id;
+    my $pid = $self->AceDatabase->zmap_launch($win_id);
+    $self->zMapPID($pid);
     return;
 }
 

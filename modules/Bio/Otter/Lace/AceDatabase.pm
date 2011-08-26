@@ -320,6 +320,29 @@ sub slice_name {
     return $slice_name;
 }
 
+sub zmap_launch {
+    my ($self, $win_id) = @_;
+
+    my @e = (
+        'zmap',
+        '--conf_dir' => $self->zmap_dir,
+        '--win_id'   => $win_id,
+        @{$self->DataSet->config_value_list('zmap_config', 'arguments')},
+    );
+
+    warn "Running @e";
+
+    my $pid = fork;
+    return $pid if $pid;
+    confess "Error: couldn't fork()\n" unless defined $pid;
+    exec @e;
+    warn "exec '@e' failed : $!";
+    close STDERR; # _exit does not flush
+    POSIX::_exit(1); # avoid triggering DESTROY
+
+    return;
+}
+
 my $gtkrc = <<'GTKRC'
 
 style "zmap-focus-view-frame" {
