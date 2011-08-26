@@ -393,7 +393,7 @@ sub _format_config {
 sub _format_stanza {
     my ($name, $stanza) = @_;
     return sprintf "[%s]\n%s"
-        , $name, join '', map { _format_key_value($_, $stanza->{$_}) } keys %{$stanza};
+        , $name, join '', map { _format_key_value($_, $stanza->{$_}) } sort keys %{$stanza};
 }
 
 sub _format_key_value {
