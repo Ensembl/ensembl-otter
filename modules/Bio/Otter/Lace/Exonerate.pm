@@ -15,7 +15,6 @@ use strict;
 use warnings;
 use Carp;
 use File::Basename;
-use File::Path 'rmtree';
 
 # pipeline configuration
 # this must come before Bio::EnsEMBL::Analysis::Runnable::Finished::Exonerate

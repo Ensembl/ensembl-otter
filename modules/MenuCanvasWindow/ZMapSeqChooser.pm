@@ -7,7 +7,6 @@ use warnings;
 use Carp;
 use Data::Dumper;
 use XML::Simple;
-use File::Path qw{ mkpath };
 use POSIX;
 
 use Bio::Otter::ZMap::Connect;
