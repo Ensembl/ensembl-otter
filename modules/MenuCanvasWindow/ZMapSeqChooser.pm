@@ -9,6 +9,7 @@ use ZMap::Connect;
 use ZMap::XRemoteCache;
 use Data::Dumper;
 use XML::Simple;
+use Bio::Otter::Utils::Config::Ini qw( config_ini_format );
 use Bio::Vega::Utils::XmlEscape qw{ xml_escape };
 use File::Path qw{ mkpath };
 use Config::IniFiles;
@@ -368,38 +369,17 @@ sub zMapZmapConnectorNew {
 
 sub zMapBlixemrcContent {
     my ($self) = @_;
-    return _format_config($self->AceDatabase->blixem_config, 'blixem');
+    return config_ini_format($self->AceDatabase->blixem_config, 'blixem');
 }
 
 sub zMapZMapContent{
     my ($self) = @_;
-    return _format_config($self->AceDatabase->zmap_config, 'ZMap');
+    return config_ini_format($self->AceDatabase->zmap_config, 'ZMap');
 }
 
 sub zMapAceContent {
     my ($self) = @_;
-    return _format_config($self->AceDatabase->ace_config, 'ZMap');
-}
-
-sub _format_config {
-    my ($config, $key) = @_;
-    my @keys = keys %{$config};
-    # move the special key to the front if possible
-    @keys = ( $key, grep { $_ ne $key } @keys )
-        if defined $key && defined $config->{$key};
-    return sprintf "\n%s\n", join "\n", map { _format_stanza($_, $config->{$_}) } @keys;
-}
-
-sub _format_stanza {
-    my ($name, $stanza) = @_;
-    return sprintf "[%s]\n%s"
-        , $name, join '', map { _format_key_value($_, $stanza->{$_}) } sort keys %{$stanza};
-}
-
-sub _format_key_value {
-    my ($key, $value) = @_;
-    $value = join ' ; ', @{$value} if ref $value;
-    return sprintf "%s = %s\n", $key, $value;
+    return config_ini_format($self->AceDatabase->ace_config, 'ZMap');
 }
 
 sub formatGtkrcStyleDef {
