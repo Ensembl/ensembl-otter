@@ -1,5 +1,5 @@
 
-package ZMap::XRemoteCache;
+package Bio::Otter::ZMap::XRemoteCache;
 
 use strict;
 use warnings;

@@ -1,10 +1,10 @@
-package ZMap::Connect;
+package Bio::Otter::ZMap::Connect;
 
 =pod
 
 =head1 NAME 
 
-ZMap::Connect
+Bio::Otter::ZMap::Connect
 
 =head1 DESCRIPTION
 
@@ -26,7 +26,7 @@ my $DEBUG_EVENTS   = 0;
 
 =head2 new([-option => "value"])
 
-Creates a new ZMap::Connect Object.
+Creates a new Bio::Otter::ZMap::Connect Object.
 
 =cut
 
@@ -66,7 +66,7 @@ this module (supplied as $self above).
      return (200, "printed my knowledge.");
  };
 
- my $zmap = ZMap::Connect->new();
+ my $zmap = Bio::Otter::ZMap::Connect->new();
  $zmap->init($tk, $callback, [$fruits, $veg]);
 
 =cut
@@ -158,7 +158,7 @@ sub xremote{
                 );
         }
         else {
-            die "ZMap::Connect::xremote called as server without providing a window ID";
+            die "Bio::Otter::ZMap::Connect::xremote called as server without providing a window ID";
         }
         $self->{'_xremote'} = $xr;
     }

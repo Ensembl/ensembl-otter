@@ -5,15 +5,16 @@ package MenuCanvasWindow::ZMapSeqChooser;
 use strict;
 use warnings;
 use Carp;
-use ZMap::Connect;
-use ZMap::XRemoteCache;
 use Data::Dumper;
 use XML::Simple;
-use Bio::Otter::Utils::Config::Ini qw( config_ini_format );
-use Bio::Vega::Utils::XmlEscape qw{ xml_escape };
 use File::Path qw{ mkpath };
 use Config::IniFiles;
 use POSIX;
+
+use Bio::Otter::ZMap::Connect;
+use Bio::Otter::ZMap::XRemoteCache;
+use Bio::Otter::Utils::Config::Ini qw( config_ini_format );
+use Bio::Vega::Utils::XmlEscape qw{ xml_escape };
 
 my $ZMAP_DEBUG = $ENV{OTTERLACE_ZMAP_DEBUG};
 
@@ -45,7 +46,7 @@ sub zMapInitialize {
         $self->zMapZmapConnectorNew;
 
     $self->{_xremote_cache} =
-        ZMap::XRemoteCache->new;
+        Bio::Otter::ZMap::XRemoteCache->new;
 
     my $dir = $self->zMapZMapDir;
     unless (-d $dir) {
@@ -361,7 +362,7 @@ sub zMapZmapConnector {
 sub zMapZmapConnectorNew {
     my ($self) = @_;
     my $mb = $self->menu_bar();
-    my $zc = ZMap::Connect->new;
+    my $zc = Bio::Otter::ZMap::Connect->new;
     $zc->init($mb, \&RECEIVE_FILTER, [ $self, qw() ]);
     my $id = $zc->server_window_id();
     return $zc;
@@ -914,7 +915,7 @@ sub zMapGetXRemoteClientByAction {
 }
 
 # This is not a method on self, but a standalone function taking a
-# ZMap::Connect and a MenuCanvasWindow::XaceSeqChooser.
+# Bio::Otter::ZMap::Connect and a MenuCanvasWindow::XaceSeqChooser.
 
 sub open_clones {
     my ($zmap, $self) = @_;
