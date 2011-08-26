@@ -382,78 +382,34 @@ sub zMapAceContent {
     return config_ini_format($self->AceDatabase->ace_config, 'ZMap');
 }
 
-sub formatGtkrcStyleDef {
-    my ($self, $style_class, %defaults) = @_;
+my $gtkrc_content = <<'GTKRC'
 
-    my $style_string = qq(\nstyle "$style_class" {\n);
-
-    while (my ($style_element, $value) = each %defaults) {
-        $style_string .= qq(  $style_element = "$value" \n);
-    }
-
-    $style_string .= qq(}\n);
-
-    return $style_string;
+style "zmap-focus-view-frame" {
+  bg[NORMAL] = "gold" 
 }
 
-sub formatGtkrcWidgetDef {
-    my ($self, $widget_path, $style_class) = @_;
+widget "*.zmap-focus-view" style "zmap-focus-view-frame"
 
-    my $widget_string = qq(\nwidget "$widget_path" style "$style_class"\n);
-
-    return $widget_string;
+style "infopanel-labels" {
+  bg[NORMAL] = "white" 
 }
 
-sub formatGtkrcWidget {
-    my ($self, $widget_path, $style_class, %style_def) = @_;
+widget "*.zmap-control-infopanel" style "infopanel-labels"
 
-    my $full_def = $self->formatGtkrcStyleDef($style_class, %style_def);
-    $full_def .= $self->formatGtkrcWidgetDef($widget_path, $style_class);
-
-    return $full_def;
+style "menu-titles" {
+  fg[INSENSITIVE] = "blue" 
 }
+
+widget "*.zmap-menu-title.*" style "menu-titles"
+
+style "default-species" {
+  bg[NORMAL] = "gold" 
+}
+GTKRC
+    ;
 
 sub zMapGtkrcContent {
-    my ($self) = @_;
-
-    # to create a coloured border for the focused view.
-    my $full_content = $self->formatGtkrcWidget(
-        "*.zmap-focus-view",
-        "zmap-focus-view-frame",
-        qw{
-          bg[NORMAL]      gold
-          }
-    );
-
-    # to make the info labels stand out and look like input boxes...
-    $full_content .= $self->formatGtkrcWidget(
-        "*.zmap-control-infopanel",
-        "infopanel-labels",
-        qw{
-          bg[NORMAL]      white
-          }
-    );
-
-    # to make the context menu titles blue
-    $full_content .= $self->formatGtkrcWidget(
-        "*.zmap-menu-title.*",
-        "menu-titles",
-        qw{
-          fg[INSENSITIVE] blue
-          }
-    );
-
-    # to create a coloured border for the view with an unknown species. (Not sure this works properly...)
-    $full_content .= $self->formatGtkrcStyleDef(
-        "default-species",
-        qw{
-          bg[NORMAL]    gold
-          }
-    );
-
-    # foreach (species){ self->formatGtkrcStyleDef("species", ... ) }
-
-    return $full_content;
+    return $gtkrc_content;
 }
 
 sub zMapWriteConfigFile {
