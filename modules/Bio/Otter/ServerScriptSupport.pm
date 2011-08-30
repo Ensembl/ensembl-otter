@@ -185,12 +185,13 @@ sub read_user_file {
     my $do_user_line = sub {
         s/#.*//;            # Remove comments
         s/(^\s+|\s+$)//g;   # Remove leading or trailing spaces
-        next if /^$/;       # Skip lines which are now blank
+        return () if /^$/;  # Skip lines which are now blank
         my ($user_name, @allowed_datasets) = split;
         $user_name = lc($user_name);
         foreach my $ds (@allowed_datasets) {
             $usr_hash->{$user_name}{$ds} = 1;
         }
+        return ();
     };
 
     open my $list, '<', $usr_file
