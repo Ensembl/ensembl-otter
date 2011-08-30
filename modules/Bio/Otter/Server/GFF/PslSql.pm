@@ -4,9 +4,132 @@ package Bio::Otter::Server::GFF::PslSql;
 use strict;
 use warnings;
 
+use List::Util qw(max min);
+use Readonly;
+Readonly my $INTRON_MIN => 8;
+
 use base qw( Bio::Otter::Server::GFF );
 
 use Bio::EnsEMBL::DnaDnaAlignFeature;
+
+# NOT a method
+#
+sub _psl_adjust_start_for_strand {
+    my ($q_start, $q_size, $positive) = @_;
+
+    if ($positive) {
+        return $q_start + 1;
+    }
+    else {
+        return $q_size - $q_start;
+    }
+}
+
+# NOT a method - but probably should be, of a PSL utility class
+#
+sub _psl_get_next_block {
+    my ($block_lists, $q_size, $positive) = @_;
+
+    return unless (@{$block_lists->{sizes}} and @{$block_lists->{q_starts}} and @{$block_lists->{t_starts}});
+
+    my $length      = shift(@{$block_lists->{sizes}});
+    my $raw_q_start = shift(@{$block_lists->{q_starts}});
+    my $raw_t_start = shift(@{$block_lists->{t_starts}});
+
+    my %block;
+
+    $block{q_start} = _psl_adjust_start_for_strand($raw_q_start, $q_size, $positive);
+    $block{t_start} = $raw_t_start + 1;
+    $block{length}  = $length;
+
+    $block{q_end}   = $positive ? ($block{q_start} + $length - 1) : ($block{q_start} - $length + 1);
+    $block{t_end}   = $block{t_start} + $length - 1;
+
+    $block{cigar}   = $length == 1 ? 'M' : $length . 'M';
+
+    return \%block;
+}
+
+# NOT a method
+#
+sub _psl_split_gapped_feature {
+    my $psl = shift;
+
+    my @features;
+
+    my $strand = $psl->{strand};
+    my $positive = ($strand eq '+');
+
+    my $q_size      = $psl->{qSize};
+    my $block_count = $psl->{blockCount};
+    my $block_sizes = $psl->{blockSizes};
+    my $q_starts    = $psl->{qStarts};
+    my $t_starts    = $psl->{tStarts};
+
+    # Much of the inital processing is nicked from Bio::SearchIO::psl
+    #
+
+    # cleanup trailing commas in some output
+    $block_sizes =~ s/\,$//;
+    $q_starts    =~ s/\,$//;
+    $t_starts    =~ s/\,$//;
+
+    my @blocksizes = split( /,/, $block_sizes );    # block sizes
+    my @qstarts = split( /,/, $q_starts ); # starting position of each block in query
+    my @tstarts = split( /,/, $t_starts ); # starting position of each block in target
+
+    my %blocks = ( sizes => \@blocksizes, q_starts => \@qstarts, t_starts => \@tstarts );
+
+    my $prev = _psl_get_next_block(\%blocks, $q_size, $positive);
+
+    # Start with a copy of the initial block. There may only be one, after all
+    my $current = { %$prev };
+
+    while (my $this = _psl_get_next_block(\%blocks, $q_size, $positive)) {
+
+        my $q_intron_len = abs( $this->{q_start} - $prev->{q_end} ) - 1;
+        my $t_intron_len = $this->{t_start} - $prev->{t_end} - 1;
+
+        if (    $t_intron_len < $INTRON_MIN
+                and $q_intron_len < $INTRON_MIN
+                and ($t_intron_len == 0 or $q_intron_len == 0 or $t_intron_len == $q_intron_len)
+            ) {
+
+            # Treat as gap - extend $current and its cigar string
+            #
+            $current->{t_end}   = $this->{t_end};
+
+            $current->{q_start} = min($current->{q_start}, $this->{q_start});
+            $current->{q_end}   = max($current->{q_end},   $this->{q_end});
+
+            if ($q_intron_len > 0) {
+                # extra bases in query == insertions in target (can't do) == deletions from query
+                $current->{cigar} .= $q_intron_len == 1 ? 'D' : $q_intron_len . 'D';
+            } elsif ($t_intron_len > 0) {
+                # extra bases in target == insertions in query to make match
+                $current->{cigar} .= $t_intron_len == 1 ? 'I' : $t_intron_len . 'I';
+            } else {
+                # BAD PSL
+            }
+
+            $current->{cigar} .= $this->{cigar};
+
+        } else {
+
+            # Treat as intron - add the current feature to the list and restart
+            #
+            push @features, $current;
+            $current = { %$this };
+
+        }
+
+        $prev = $this;
+    }
+
+    push @features, $current;   # make sure to get the last (or only) block
+
+    return @features;
+}
 
 sub Bio::EnsEMBL::Slice::get_all_features_via_psl_sql {
     my ($slice, $server, $sth, $chr_name) = @_;
