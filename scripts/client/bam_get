@@ -5,7 +5,6 @@ use warnings;
 
 use URI::Escape qw(uri_unescape);
 
-use Bio::Tools::GFF;
 use Bio::DB::Sam;
 use Bio::Otter::Lace::Defaults;
 use Bio::Otter::BAM::Source;
