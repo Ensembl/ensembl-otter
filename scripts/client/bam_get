@@ -10,8 +10,6 @@ use Bio::Otter::Lace::Defaults;
 use Bio::Otter::BAM::Source;
 use Bio::Otter::Mapping;
 
-# my $fasta_path = q(/lustre/scratch102/projects/mouse/ref/NCBIM37_um.fa);
-
 print STDERR "$0", ( map { " '$_'" } @ARGV ), "\n";
 
 # parse the command line
@@ -82,37 +80,6 @@ my $bam_source = Bio::Otter::BAM::Source->new(
     -sam        => $sam,
     -chr_prefix => $chr_prefix,
     );
-
-=pod
-
-    my $sub_feature_counts = { };
-for (@read_pairs) {
-
-    # feature
-    die "oof\n" unless ref eq "Bio::SeqFeature::Lite";
-die "no sequence" unless defined $_->seq;
-die sprintf "sequence: '%s'\n", $_->seq unless $_->seq eq '';
-die "strand\n" if $_->strand;
-die "phase\n" if $_->phase;
-
-# subfeatures
-my @sub_features = $_->get_SeqFeatures;
-$sub_feature_counts->{scalar @sub_features}++;
-for (@sub_features) {
-    die "splat\n" unless ref eq "Bio::DB::Bam::AlignWrapper";
-die "no sequence\n" unless defined $_->seq;
-die sprintf "invalid sequence type: '%s'\n", ref $_->seq
-    unless ref $_->seq eq "Bio::PrimarySeq";
-die "no strand\n" unless $_->strand;
-die "phase\n" if defined $_->phase;
-}
-}
-
-for (sort { $a <=> $b } keys %{$sub_feature_counts}) {
-    warn sprintf "%3d: %6d\n", $_, $sub_feature_counts->{$_};
-}
-
-=cut
 
 sub gff_escape {
     # escapes a minimal set of characters
