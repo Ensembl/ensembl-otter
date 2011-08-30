@@ -47,6 +47,12 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_psl_sql {
         $feature->end(   $f_end   > $chr_end   ? $chr_end : $f_end   - $chr_start + 1 );
         $feature->strand( $psl_row->{strand} =~ /^-/ ? -1 : 1 );
 
+        $feature->hstart(       $psl_row->{qStart} + 1 );
+        $feature->hend(         $psl_row->{qEnd}       );
+        $feature->hstrand(      1                      );
+        $feature->hseqname(     $psl_row->{qName}      );
+        $feature->cigar_string( sprintf('%dM', $psl_row->{qSize}) ); # assume it's all match for now
+
         if($feature->can('score')) {
             ## should we fake the value when it is not available? :
             $feature->score( ($f_score eq '-') ? 100 : $f_score );
