@@ -68,15 +68,47 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_psl_sql {
     return \@feature_coll;
 }
 
+sub parse_dsn {
+    my ($self, $dsn) = @_;
+
+    # E.g.:
+    #     'DBI:mysql:database=hg19;host=genome-mysql.cse.ucsc.edu;user=genome'
+    # => ('DBI:mysql:database=hg19;host=genome-mysql.cse.ucsc.edu', 'genome')
+
+    my ($dbi, $driver, $spec) = split(':', $dsn);
+
+    my %spec_parts;
+    foreach my $part (split(';', $spec)) {
+        my ($key, $value) = split('=', $part);
+        $spec_parts{$key} = $value;
+    }
+
+    my $user = $spec_parts{user};
+    delete $spec_parts{user};
+
+    $spec = join( ';', map { join('=', $_, $spec_parts{$_}) } keys %spec_parts );
+    $dsn  = join(':', $dbi, $driver, $spec);
+
+    return ($dsn, $user);
+}
+
 sub get_requested_features {
     my ($self) = @_;
 
     my $chr_name      = $self->param('name');  ## Since in our new schema name is substituted for type,
     ## we need it clean for outer sources
 
-    my $dsn           = $self->require_argument('dsn');
-    my $db_user       = $self->require_argument('db_user');
-    my $db_table      = $self->require_argument('db_table');
+    # I abuse dsn and source args to avoid having to add new arg types to Bio::Otter::Filter,
+    # and they have different meanings for DAS sources, which I try to preserve.
+    #
+    my $req_dsn       = $self->require_argument('dsn');
+    my $req_source    = $self->require_argument('source');
+
+    my $db_table = $req_dsn;
+    my ($dsn, $db_user) = $self->parse_dsn($req_source);
+
+    warn(sprintf("Connecting to '%s' %s, table %s\n",
+                 $dsn, $db_user ? "as '${db_user}'" : "[no user]", $db_table));
 
     my $dbh = DBI->connect($dsn, $db_user);
     my $sth = $dbh->prepare(qq{
