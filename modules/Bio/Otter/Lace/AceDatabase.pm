@@ -168,7 +168,8 @@ sub init_AceDatabase {
 
     $self->add_misc_acefile;
 
-    my $xml_string = $self->get_region_xml;
+    my $xml_string = $self->smart_slice->http_response_content(
+        'GET', 'get_region', { 'trunc' => $self->Client->fetch_truncated_genes });
     $self->write_file('01_before.xml', $xml_string);
 
     my $parser = Bio::Vega::Transform::Otter::Ace->new;
@@ -183,19 +184,6 @@ sub init_AceDatabase {
     $self->initialize_database;
 
     return;
-}
-
-
-sub get_region_xml {
-    my ($self) = @_;
-    
-    # Getting XML from the Client
-    my $client      = $self->Client
-        or confess "No otter Client attached";
-    my $smart_slice = $self->smart_slice
-        or confess "No smart_slice attached";
-
-    return $smart_slice->get_region_xml;
 }
 
 sub write_otter_acefile {
