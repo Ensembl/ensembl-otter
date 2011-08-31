@@ -8,6 +8,8 @@ use List::Util qw(max min);
 use Readonly;
 Readonly my $INTRON_MIN => 8;
 
+use Data::Dumper;               # REMEMBER to delete when done debugging
+
 use base qw( Bio::Otter::Server::GFF );
 
 use Bio::EnsEMBL::DnaDnaAlignFeature;
@@ -47,6 +49,8 @@ sub _psl_get_next_block {
 
     $block{cigar}   = $length == 1 ? 'M' : $length . 'M';
 
+    warn "Returning block:\n", Dumper(\%block);
+
     return \%block;
 }
 
@@ -80,6 +84,8 @@ sub _psl_split_gapped_feature {
 
     my %blocks = ( sizes => \@blocksizes, q_starts => \@qstarts, t_starts => \@tstarts );
 
+    warn("Starting split for ", $psl->{qName}, "\n");
+
     my $prev = _psl_get_next_block(\%blocks, $q_size, $positive);
 
     # Start with a copy of the initial block. There may only be one, after all
@@ -110,6 +116,7 @@ sub _psl_split_gapped_feature {
                 $current->{cigar} .= $t_intron_len == 1 ? 'I' : $t_intron_len . 'I';
             } else {
                 # BAD PSL
+                warn("Bad blocks list in PSL item.\n");
             }
 
             $current->{cigar} .= $this->{cigar};
@@ -118,6 +125,7 @@ sub _psl_split_gapped_feature {
 
             # Treat as intron - add the current feature to the list and restart
             #
+            warn("Ending exon, cigar: ", $current->{cigar}, "\n");
             push @features, $current;
             $current = { %$this };
 
@@ -126,8 +134,10 @@ sub _psl_split_gapped_feature {
         $prev = $this;
     }
 
+    warn("Ending final exon, cigar: ", $current->{cigar}, "\n");
     push @features, $current;   # make sure to get the last (or only) block
 
+    warn("Returning ", scalar(@features), " features from ", $psl->{qName}, "\n");
     return @features;
 }
 
