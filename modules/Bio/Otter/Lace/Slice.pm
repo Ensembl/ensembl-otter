@@ -174,15 +174,9 @@ sub create_detached_slice {
 sub get_assembly_dna {
     my ($self) = @_;
 
-    my $response = $self->Client()->http_response_content(
-        'GET',
-        'get_assembly_dna',
-        {
-            %{$self->toHash},
-        },
-    );
-
+    my $response = $self->http_response_content('GET', 'get_assembly_dna');
     my ($seq, @tiles) = split /\n/, $response;
+
     for (my $i = 0; $i < @tiles; $i++) {
         my ($start, $end, $ctg_name, $ctg_start, $ctg_end, $ctg_strand, $ctg_length) = split /\t/, $tiles[$i];
         $tiles[$i] = {
@@ -201,20 +195,8 @@ sub get_assembly_dna {
 sub get_region_xml {
     my ($self) = @_;
 
-    my $client = $self->Client();
-
-    if($client->debug()) {
-        warn sprintf("Fetching data from chr %s %s-%s\n", $self->seqname(), $self->start(), $self->end() );
-    }
-
-    my $xml = $client->http_response_content(
-        'GET',
-        'get_region',
-        {
-            %{$self->toHash},
-            'trunc'     => $client->fetch_truncated_genes,
-        },
-    );
+    my $xml = $self->http_response_content(
+        'GET', 'get_region', { 'trunc' => $self->Client->fetch_truncated_genes });
 
     return $xml;
 }
@@ -222,16 +204,10 @@ sub get_region_xml {
 sub lock_region_xml {
     my ($self) = @_;
 
-    my $client = $self->Client();
+    my $xml = $self->http_response_content(
+        'GET', 'lock_region', { 'hostname' => $self->Client->client_hostname() });
 
-    return $client->http_response_content(
-        'GET',
-        'lock_region',
-        {
-            %{$self->toHash},
-            'hostname' => $client->client_hostname(),
-        }
-    );
+    return $xml;
 }
 
 sub dna_ace_data {
@@ -281,6 +257,18 @@ sub dna_ace_data {
     }
 
     return $ace_output;
+}
+
+sub http_response_content {
+    my ($self, $command, $script, $args) = @_;
+
+    my $query = $self->toHash;
+    $query = { %{$query}, %{$args} } if $args;
+
+    my $response = $self->Client->http_response_content(
+        $command, $script, $query);
+
+    return $response;
 }
 
 1;
