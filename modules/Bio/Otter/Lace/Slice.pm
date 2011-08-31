@@ -168,21 +168,6 @@ sub create_detached_slice {
     return $slice;
 }
 
-# ----------------------------------------------------------------------------------
-
-
-sub http_response_content {
-    my ($self, $command, $script, $args) = @_;
-
-    my $query = $self->toHash;
-    $query = { %{$query}, %{$args} } if $args;
-
-    my $response = $self->Client->http_response_content(
-        $command, $script, $query);
-
-    return $response;
-}
-
 1;
 
 __END__

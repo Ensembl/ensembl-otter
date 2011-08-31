@@ -168,7 +168,7 @@ sub init_AceDatabase {
 
     $self->add_misc_acefile;
 
-    my $xml_string = $self->smart_slice->http_response_content(
+    my $xml_string = $self->http_response_content(
         'GET', 'get_region', { 'trunc' => $self->Client->fetch_truncated_genes });
     $self->write_file('01_before.xml', $xml_string);
 
@@ -202,7 +202,7 @@ sub write_otter_acefile {
 sub try_to_lock_the_block {
     my ($self) = @_;
 
-    my $lock_xml = $self->smart_slice->http_response_content(
+    my $lock_xml = $self->http_response_content(
         'GET', 'lock_region', { 'hostname' => $self->Client->client_hostname });
     $self->write_file($LOCK_REGION_XML_FILE, $lock_xml) if $lock_xml;
 
@@ -843,7 +843,7 @@ sub dna_ace_data {
     my ($self) = @_;
 
     my ($dna, @tiles) = split /\n/
-        , $self->smart_slice->http_response_content('GET', 'get_assembly_dna');
+        , $self->http_response_content('GET', 'get_assembly_dna');
 
     $dna = lc $dna;
     $dna =~ s/(.{60})/$1\n/g;
@@ -1036,6 +1036,18 @@ sub script_arguments {
     };
 
     return $arguments; 
+}
+
+sub http_response_content {
+    my ($self, $command, $script, $args) = @_;
+
+    my $query = $self->smart_slice->toHash;
+    $query = { %{$query}, %{$args} } if $args;
+
+    my $response = $self->Client->http_response_content(
+        $command, $script, $query);
+
+    return $response;
 }
 
 
