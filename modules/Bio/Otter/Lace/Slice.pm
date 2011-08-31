@@ -192,15 +192,6 @@ sub get_assembly_dna {
     return (lc $seq, @tiles);
 }
 
-sub lock_region_xml {
-    my ($self) = @_;
-
-    my $xml = $self->http_response_content(
-        'GET', 'lock_region', { 'hostname' => $self->Client->client_hostname() });
-
-    return $xml;
-}
-
 sub dna_ace_data {
     my ($self) = @_;
 
