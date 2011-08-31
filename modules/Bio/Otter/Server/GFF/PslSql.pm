@@ -14,19 +14,6 @@ use base qw( Bio::Otter::Server::GFF );
 
 use Bio::EnsEMBL::DnaDnaAlignFeature;
 
-# NOT a method
-#
-sub _psl_adjust_start_for_strand {
-    my ($q_start, $q_size, $positive) = @_;
-
-    if ($positive) {
-        return $q_start + 1;
-    }
-    else {
-        return $q_size - $q_start;
-    }
-}
-
 # NOT a method - but probably should be, of a PSL utility class
 #
 sub _psl_get_next_block {
@@ -40,12 +27,22 @@ sub _psl_get_next_block {
 
     my %block;
 
-    $block{q_start} = _psl_adjust_start_for_strand($raw_q_start, $q_size, $positive);
-    $block{t_start} = $raw_t_start + 1;
-    $block{length}  = $length;
+    if ($positive) {
 
-    $block{q_end}   = $positive ? ($block{q_start} + $length - 1) : ($block{q_start} - $length + 1);
-    $block{t_end}   = $block{t_start} + $length - 1;
+        $block{q_start} = $raw_q_start + 1;
+        $block{q_end}   = $raw_q_start + $length;
+
+    } else { # negative
+
+        $block{q_end}   = $q_size - $raw_q_start;
+        $block{q_start} = $block{q_end} - $length + 1;
+
+    }
+
+    $block{t_start} = $raw_t_start + 1;
+    $block{t_end}   = $raw_t_start + $length;
+
+    $block{length}  = $length;
 
     $block{cigar}   = $length == 1 ? 'M' : $length . 'M';
 
@@ -93,7 +90,13 @@ sub _psl_split_gapped_feature {
 
     while (my $this = _psl_get_next_block(\%blocks, $q_size, $positive)) {
 
-        my $q_intron_len = abs( $this->{q_start} - $prev->{q_end} ) - 1;
+        my $q_intron_len;
+        if ($positive) {        # account for q blocks in rev order for -ve
+            $q_intron_len = $this->{q_start} - $prev->{q_end} - 1;
+        } else {
+            $q_intron_len = $prev->{q_start} - $this->{q_end} - 1;
+        }
+
         my $t_intron_len = $this->{t_start} - $prev->{t_end} - 1;
 
         if (    $t_intron_len < $INTRON_MIN
