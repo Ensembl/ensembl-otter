@@ -179,7 +179,13 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_psl_sql {
             $daf->hend(         $f->{q_end}       );
             $daf->hstrand(      1                 );
             $daf->hseqname(     $psl_row->{qName} );
-            $daf->cigar_string( $f->{cigar}       );
+
+            # Reverse cigar string if -ve strand hit
+            my $cigar = $f->{cigar};
+            if ( $psl_row->{strand} =~ /^-/ ) {
+                $cigar = join('', reverse($cigar =~ /(\d*[A-Za-z])/g));
+            }
+            $daf->cigar_string( $cigar            );
 
             # fake the value as it is not available
             $daf->score(        100               );
