@@ -192,15 +192,6 @@ sub get_assembly_dna {
     return (lc $seq, @tiles);
 }
 
-sub get_region_xml {
-    my ($self) = @_;
-
-    my $xml = $self->http_response_content(
-        'GET', 'get_region', { 'trunc' => $self->Client->fetch_truncated_genes });
-
-    return $xml;
-}
-
 sub lock_region_xml {
     my ($self) = @_;
 
