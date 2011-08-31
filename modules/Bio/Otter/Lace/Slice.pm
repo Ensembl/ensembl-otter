@@ -171,74 +171,49 @@ sub create_detached_slice {
 # ----------------------------------------------------------------------------------
 
 
-sub get_assembly_dna {
-    my ($self) = @_;
-
-    my $response = $self->http_response_content('GET', 'get_assembly_dna');
-    my ($seq, @tiles) = split /\n/, $response;
-
-    for (my $i = 0; $i < @tiles; $i++) {
-        my ($start, $end, $ctg_name, $ctg_start, $ctg_end, $ctg_strand, $ctg_length) = split /\t/, $tiles[$i];
-        $tiles[$i] = {
-            start       => $start,
-            end         => $end,
-            ctg_name    => $ctg_name,
-            ctg_start   => $ctg_start,
-            ctg_end     => $ctg_end,
-            ctg_strand  => $ctg_strand,
-            ctg_length  => $ctg_length,
-        };
-    }
-    return (lc $seq, @tiles);
-}
-
 sub dna_ace_data {
     my ($self) = @_;
 
-    my $name = $self->name;
+    my ($dna, @tiles) = split /\n/, $self->http_response_content('GET', 'get_assembly_dna');
 
-    my ($dna_str, @t_path) = $self->get_assembly_dna;
+    $dna = lc $dna;
+    $dna =~ s/(.{60})/$1\n/g;
 
-    my $ace_output = qq{\nSequence "$name"\n};
+    my @feature_ace;
+    my %seen_ctg = ( );
+    my @ctg_ace = ( );
 
-    foreach my $tile (@t_path) {
-        my $start   = $tile->{'start'};
-        my $end     = $tile->{'end'};
-        my $strand  = $tile->{'ctg_strand'};
-        if ($strand == -1) {
-            ($start, $end) = ($end, $start);
+    for (@tiles) {
+
+        my ($start, $end,
+            $ctg_name, $ctg_start,
+            $ctg_end, $ctg_strand, $ctg_length,
+            ) = split /\t/;
+        ($start, $end) = ($end, $start) if $ctg_strand == -1;
+
+        my $strand_ace =
+            $ctg_strand == -1 ? 'minus' : 'plus';
+        my $feature_ace =
+            sprintf qq{Feature "Genomic_canonical" %d %d %f "%s-%d-%d-%s"\n},
+            $start, $end, 1.000, $ctg_name, $ctg_start, $ctg_end, $strand_ace;
+        push @feature_ace, $feature_ace;
+
+        unless ( $seen_ctg{$ctg_name} ) {
+            $seen_ctg{$ctg_name} = 1;
+            my $ctg_ace =
+                sprintf qq{\nSequence "%s"\nLength %d\n}, $ctg_name, $ctg_length;
+            push @ctg_ace, $ctg_ace;
         }
-        $ace_output .= sprintf qq{Feature "Genomic_canonical" %d %d %f "%s-%d-%d-%s"\n},
-            $start,
-            $end,
-            1.000,
-            $tile->{'ctg_name'},
-            $tile->{'ctg_start'},
-            $tile->{'ctg_end'},
-            $tile->{'ctg_strand'} == -1 ? 'minus' : 'plus';
+
     }
 
-    my %seen_ctg;
-    foreach my $tile (@t_path) {
-        my $ctg_name = $tile->{'ctg_name'};
-        next if $seen_ctg{$ctg_name};
-        $seen_ctg{$ctg_name} = 1;
-        $ace_output .= sprintf qq{\nSequence "%s"\nLength %d\n},
-            $tile->{'ctg_name'},
-            $tile->{'ctg_length'};
-    }
+    my $name = $self->name;
+    my $ace = join ''
+        , qq{\nSequence "$name"\n}, @feature_ace , @ctg_ace
+        , qq{\nSequence : "$name"\nDNA "$name"\n\nDNA : "$name"\n$dna\n}
+    ;
 
-    $ace_output .= qq{\nSequence : "$name"\n}
-                 # . qq{Genomic_canonical\n}
-                 # . qq{Method Genomic_canonical\n}
-                 . qq{DNA "$name"\n}
-                 . qq{\nDNA : "$name"\n};
-
-    while ($dna_str =~ /(.{1,60})/g) {
-        $ace_output .= "$1\n";
-    }
-
-    return $ace_output;
+    return $ace;
 }
 
 sub http_response_content {
