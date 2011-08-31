@@ -155,45 +155,38 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_psl_sql {
 
     while (my $psl_row = $sth->fetchrow_hashref) {
 
-        # Remember:
-        # When we get to splitting up the features, we need to discard ones which don't overlap segment
+        my @features = _psl_split_gapped_feature($psl_row);
 
-#         if ($das_feature->{'end'} < $chr_start) {
-#             $truncated_5_prime = 1;
-#         }
+        foreach my $f (@features) {
 
-#         if ($das_feature->{'start'} > $chr_end) {
-#             $truncated_3_prime = 1;
-#         }
+            # Skip components which extend beyond segment?? TRY BOTH WAYS
+            next if $f->{t_end}   < $chr_start;
+            next if $f->{t_start} > $chr_end;
 
-        my $f_score = '-';      # no score in psl
+            my $daf = Bio::EnsEMBL::DnaDnaAlignFeature->new_fast({});
 
-        my $f_start = $psl_row->{tStart} + 1;
-        my $f_end   = $psl_row->{tEnd};
+            $daf->slice(   $slice );
 
-        my $feature = Bio::EnsEMBL::DnaDnaAlignFeature->new_fast({});
+            # Set feature start and end to start and end of segment if it extends beyond
+            $daf->start( $f->{t_start} < $chr_start ? 1        : $f->{t_start} - $chr_start + 1 );
+            $daf->end(   $f->{t_end}   > $chr_end   ? $chr_end : $f->{t_end}   - $chr_start + 1 );
+            $daf->strand( $psl_row->{strand} =~ /^-/ ? -1 : 1 );
 
-        $feature->slice(   $slice );
+            $daf->hstart(       $f->{q_start}     );
+            $daf->hend(         $f->{q_end}       );
+            $daf->hstrand(      1                 );
+            $daf->hseqname(     $psl_row->{qName} );
+            $daf->cigar_string( $f->{cigar}       );
 
-        # Set feature start and end to start and end of segment if it extends beyond
-        $feature->start( $f_start < $chr_start ? 1        : $f_start - $chr_start + 1 );
-        $feature->end(   $f_end   > $chr_end   ? $chr_end : $f_end   - $chr_start + 1 );
-        $feature->strand( $psl_row->{strand} =~ /^-/ ? -1 : 1 );
+            # fake the value as it is not available
+            $daf->score(        100               );
 
-        $feature->hstart(       $psl_row->{qStart} + 1 );
-        $feature->hend(         $psl_row->{qEnd}       );
-        $feature->hstrand(      1                      );
-        $feature->hseqname(     $psl_row->{qName}      );
-        $feature->cigar_string( sprintf('%dM', $psl_row->{qSize}) ); # assume it's all match for now
+            $daf->display_id(   $psl_row->{qName} );
 
-        if($feature->can('score')) {
-            ## should we fake the value when it is not available? :
-            $feature->score( ($f_score eq '-') ? 100 : $f_score );
+            push @feature_coll, $daf;
+
         }
 
-        $feature->display_id( $psl_row->{qName} );
-
-        push @feature_coll, $feature;
     }
 
     warn "got ", scalar(@feature_coll), " features\n";
