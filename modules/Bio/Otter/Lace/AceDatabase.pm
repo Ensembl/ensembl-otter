@@ -202,9 +202,9 @@ sub write_otter_acefile {
 sub try_to_lock_the_block {
     my ($self) = @_;
 
-    if (my $lock_xml = $self->smart_slice->lock_region_xml) {
-        $self->write_file($LOCK_REGION_XML_FILE, $lock_xml);
-    }
+    my $lock_xml = $self->smart_slice->http_response_content(
+        'GET', 'lock_region', { 'hostname' => $self->Client->client_hostname });
+    $self->write_file($LOCK_REGION_XML_FILE, $lock_xml) if $lock_xml;
 
     return;
 }
