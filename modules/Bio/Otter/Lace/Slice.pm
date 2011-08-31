@@ -171,51 +171,6 @@ sub create_detached_slice {
 # ----------------------------------------------------------------------------------
 
 
-sub dna_ace_data {
-    my ($self) = @_;
-
-    my ($dna, @tiles) = split /\n/, $self->http_response_content('GET', 'get_assembly_dna');
-
-    $dna = lc $dna;
-    $dna =~ s/(.{60})/$1\n/g;
-
-    my @feature_ace;
-    my %seen_ctg = ( );
-    my @ctg_ace = ( );
-
-    for (@tiles) {
-
-        my ($start, $end,
-            $ctg_name, $ctg_start,
-            $ctg_end, $ctg_strand, $ctg_length,
-            ) = split /\t/;
-        ($start, $end) = ($end, $start) if $ctg_strand == -1;
-
-        my $strand_ace =
-            $ctg_strand == -1 ? 'minus' : 'plus';
-        my $feature_ace =
-            sprintf qq{Feature "Genomic_canonical" %d %d %f "%s-%d-%d-%s"\n},
-            $start, $end, 1.000, $ctg_name, $ctg_start, $ctg_end, $strand_ace;
-        push @feature_ace, $feature_ace;
-
-        unless ( $seen_ctg{$ctg_name} ) {
-            $seen_ctg{$ctg_name} = 1;
-            my $ctg_ace =
-                sprintf qq{\nSequence "%s"\nLength %d\n}, $ctg_name, $ctg_length;
-            push @ctg_ace, $ctg_ace;
-        }
-
-    }
-
-    my $name = $self->name;
-    my $ace = join ''
-        , qq{\nSequence "$name"\n}, @feature_ace , @ctg_ace
-        , qq{\nSequence : "$name"\nDNA "$name"\n\nDNA : "$name"\n$dna\n}
-    ;
-
-    return $ace;
-}
-
 sub http_response_content {
     my ($self, $command, $script, $args) = @_;
 
