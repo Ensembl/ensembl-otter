@@ -94,20 +94,14 @@ sub bam_parameters {
     return $bam_parameters;
 }
 
-my $slice_parameters = [
-    #   key
-    [ qw( chr  ssname ) ],
-    qw(
-        start
-        end
-    ) ];
-
 sub url_query {
     my( $self, $session ) = @_;
     my $slice = $session->smart_slice;
     my $query = {
-        _query($self,  $bam_parameters),
-        _query($slice, $slice_parameters),
+        -chr   => $slice->ssname,
+        -start => $slice->start,
+        -end   => $slice->end,
+        _query($self, $bam_parameters),
         gff_version => 2,
     };
     return $query;
