@@ -23,7 +23,7 @@ my $options = {
 
 my @options_specs = qw(
     gff_version=s
-    bam_path=s
+    file=s
     csver=s
     dataset=s
     chr=s
@@ -35,7 +35,7 @@ my @options_specs = qw(
     );
 
 my @options_required = qw(
-    bam_path
+    file
     csver
     dataset
     chr
@@ -62,7 +62,7 @@ die sprintf "missing options: %s\n",
 $options->{$_} = uri_unescape($options->{$_}) for keys %{$options};
 my (
     $gff_version,
-    $bam_path,
+    $file,
     $csver,
     $dataset,
     $chr,
@@ -75,7 +75,7 @@ my (
 
 my $sam = Bio::DB::Sam->new
     (
-     -bam   => $bam_path,
+     -bam   => $file,
      # -fasta => $fasta_path,
     );
 
