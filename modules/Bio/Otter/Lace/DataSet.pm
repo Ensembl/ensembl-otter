@@ -7,6 +7,7 @@ use strict;
 use warnings;
 use Carp;
 use Scalar::Util 'weaken';
+use URI::Escape qw( uri_escape );
 
 use Bio::Otter::Filter;
 use Bio::Otter::BAM;
@@ -143,7 +144,7 @@ sub blixem_bam_args {
     my ($self, $bam) = @_;
 
     my $args = join ' ', map {
-        sprintf '-%s=%s', $_, $bam->$_;
+        sprintf '-%s=%s', $_, uri_escape($bam->$_);
     } @{$bam->bam_parameters};
 
     return $args;
