@@ -143,22 +143,10 @@ sub blixem_bam_args {
     my ($self, $bam) = @_;
 
     my $args = join ' ', map {
-        _blixem_bam_arg($bam, ref $_ ? @{$_} : $_);
+        sprintf '-%s=%s', $_, $bam->$_;
     } @{$bam->bam_parameters};
 
     return $args;
-}
-
-# NB: *not* a method
-sub _blixem_bam_arg {
-    my ($bam, $key, $method) = @_;
-
-    $method ||= $key;
-    my $value = $bam->$method;
-    return unless defined $value;
-
-    my $arg = sprintf '-%s=%s', $key, $value;
-    return $arg;
 }
 
 sub _bam_load {
