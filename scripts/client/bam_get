@@ -24,7 +24,7 @@ my $options = {
 my @options_specs = qw(
     gff_version=s
     bam_path=s
-    bam_cs=s
+    csver=s
     dataset=s
     chr=s
     start=i
@@ -36,7 +36,7 @@ my @options_specs = qw(
 
 my @options_required = qw(
     bam_path
-    bam_cs
+    csver
     dataset
     chr
     start
@@ -63,7 +63,7 @@ $options->{$_} = uri_unescape($options->{$_}) for keys %{$options};
 my (
     $gff_version,
     $bam_path,
-    $bam_cs,
+    $csver,
     $dataset,
     $chr,
     $start,
@@ -238,7 +238,7 @@ my $client = Bio::Otter::Lace::Defaults::make_Client();
 my $mapping_xml = $client->otter_response_content(
     'GET', 'get_mapping', {
         dataset => $dataset,
-        cs      => $bam_cs,
+        cs      => $csver,
         chr     => $chr,
         start   => $start,
         end     => $end,
