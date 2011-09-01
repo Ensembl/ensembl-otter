@@ -6,7 +6,7 @@ use warnings;
 
 use List::Util qw(max min);
 use Readonly;
-Readonly my $INTRON_MIN => 8;
+Readonly my $INTRON_MIN => 30;
 
 use base qw( Bio::Otter::Server::GFF );
 
