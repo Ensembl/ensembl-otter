@@ -82,15 +82,12 @@ sub gff_feature_source {
     return $self->name;
 }
 
-my $bam_parameters = [
-    #     key                method (optional)
-    qw(
-          file
-          csver
-          chr_prefix
-          gff_feature_source
-    ),
-    ];
+my $bam_parameters = [ qw(
+    file
+    csver
+    chr_prefix
+    gff_feature_source
+    ) ];
 
 sub bam_parameters {
     return $bam_parameters;
@@ -103,7 +100,7 @@ sub url_query {
         -chr   => $slice->ssname,
         -start => $slice->start,
         -end   => $slice->end,
-        _query($self, $bam_parameters),
+        ( map { ( "-$_" => $self->$_ ) } @{$bam_parameters} ),
         gff_version => 2,
     };
     return $query;
@@ -122,18 +119,6 @@ sub _query_string {
     }
     my $query_string = join '&', @{$arguments};
     return $query_string;
-}
-
-sub _query {
-    my ($obj, $parameters) = @_;
-    return map { _query_pair($obj, ref $_ ? @{$_} : $_ ) } @{$parameters};
-}
-
-sub _query_pair {
-    my ($obj, $key, $method) = @_;
-    $method ||= $key;
-    my $value = $obj->$method;
-    return ( $key, $value );
 }
 
 1;
