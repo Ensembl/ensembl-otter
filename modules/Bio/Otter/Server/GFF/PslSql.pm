@@ -8,8 +8,6 @@ use List::Util qw(max min);
 use Readonly;
 Readonly my $INTRON_MIN => 8;
 
-use Data::Dumper;               # REMEMBER to delete when done debugging
-
 use base qw( Bio::Otter::Server::GFF );
 
 use Bio::EnsEMBL::DnaDnaAlignFeature;
@@ -46,8 +44,6 @@ sub _psl_get_next_block {
 
     $block{cigar}   = $length == 1 ? 'M' : $length . 'M';
 
-    warn "Returning block:\n", Dumper(\%block);
-
     return \%block;
 }
 
@@ -80,8 +76,6 @@ sub _psl_split_gapped_feature {
     my @tstarts = split( /,/, $t_starts ); # starting position of each block in target
 
     my %blocks = ( sizes => \@blocksizes, q_starts => \@qstarts, t_starts => \@tstarts );
-
-    warn("Starting split for ", $psl->{qName}, "\n");
 
     my $prev = _psl_get_next_block(\%blocks, $q_size, $positive);
 
@@ -128,7 +122,6 @@ sub _psl_split_gapped_feature {
 
             # Treat as intron - add the current feature to the list and restart
             #
-            warn("Ending exon, cigar: ", $current->{cigar}, "\n");
             push @features, $current;
             $current = { %$this };
 
@@ -137,10 +130,8 @@ sub _psl_split_gapped_feature {
         $prev = $this;
     }
 
-    warn("Ending final exon, cigar: ", $current->{cigar}, "\n");
     push @features, $current;   # make sure to get the last (or only) block
 
-    warn("Returning ", scalar(@features), " features from ", $psl->{qName}, "\n");
     return @features;
 }
 
@@ -156,8 +147,11 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_psl_sql {
 
     my @feature_coll;
 
+    my $rows = 0;
+
     while (my $psl_row = $sth->fetchrow_hashref) {
 
+        ++$rows;
         my @features = _psl_split_gapped_feature($psl_row);
 
         foreach my $f (@features) {
@@ -198,7 +192,7 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_psl_sql {
 
     }
 
-    warn "got ", scalar(@feature_coll), " features\n";
+    warn "got ", scalar(@feature_coll), " features from $rows rows\n";
 
     return \@feature_coll;
 }
