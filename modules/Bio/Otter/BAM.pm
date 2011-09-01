@@ -114,8 +114,7 @@ sub _query_string {
     for my $key (sort keys %{$query}) {
         my $value = $query->{$key};
         next unless defined $value;
-        $key = "-${key}";
-        push @{$arguments}, join "=", uri_escape($key), uri_escape($value);
+        push @{$arguments}, sprintf '-%s=%s', $key, uri_escape($value);
     }
     my $query_string = join '&', @{$arguments};
     return $query_string;
