@@ -14,6 +14,47 @@ use Bio::EnsEMBL::DnaDnaAlignFeature;
 
 # NOT a method - but probably should be, of a PSL utility class
 #
+# Taken from: http://genome.ucsc.edu/FAQ/FAQblat.html#blat4
+# simplified by setting isMrna = 1 (as stated in the ref)
+# AND assuming we're NOT handling protein PSLs!
+#
+sub _psl_percent_id {
+    my $psl = shift;
+
+    my $milliBad = 0;
+
+    my $qAliSize = $psl->{qEnd} - $psl->{qStart};
+    my $tAliSize = $psl->{tEnd} - $psl->{tStart};
+    my $aliSize  = min($qAliSize, $tAliSize);
+    if ($aliSize <= 0) {
+        return 0;
+    }
+    my $sizeDif = $qAliSize - $tAliSize;
+    if ($sizeDif < 0) {
+        $sizeDif = 0;
+    }
+    my $insertFactor = $psl->{qNumInsert};
+    my $total = $psl->{matches} + $psl->{repMatches} + $psl->{misMatches};
+    if ($total != 0) {
+        $milliBad = (1000 * ($psl->{misMatches} + $insertFactor + int(3*log(1+$sizeDif)+0.5))) / $total;
+    }
+    return 100 - $milliBad / 10;
+}
+
+sub _psl_score {
+    my $psl = shift;
+
+    return (
+          $psl->{matches}
+        + ($psl->{repMatches} / 2) 
+        - $psl->{misMatches}
+        - $psl->{qNumInsert}
+        - $psl->{tNumInsert}
+        );
+}
+
+# NOT a method - but probably should be, of a PSL utility class
+#
 sub _psl_get_next_block {
     my ($block_lists, $q_size, $positive) = @_;
 
@@ -152,7 +193,9 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_psl_sql {
     while (my $psl_row = $sth->fetchrow_hashref) {
 
         ++$rows;
-        my @features = _psl_split_gapped_feature($psl_row);
+        my @features   = _psl_split_gapped_feature($psl_row);
+        my $score      = _psl_score($psl_row);
+        my $percent_id = _psl_percent_id($psl_row);
 
         foreach my $f (@features) {
 
@@ -181,8 +224,8 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_psl_sql {
             }
             $daf->cigar_string( $cigar            );
 
-            # fake the value as it is not available
-            $daf->score(        100               );
+            $daf->score(        $score            );
+            $daf->percent_id(   $percent_id       );
 
             $daf->display_id(   $psl_row->{qName} );
 
