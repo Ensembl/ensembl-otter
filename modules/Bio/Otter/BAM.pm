@@ -46,11 +46,6 @@ sub csver {
     return $self->{csver};
 }
 
-sub gff_feature_source {
-    my ($self) = @_;
-    return $self->{gff_feature_source};
-}
-
 sub chr_prefix {
     my ($self) = @_;
     return $self->{chr_prefix};
@@ -80,13 +75,20 @@ sub script_name {
     return "bam_get";
 }
 
+# GFF methods 
+
+sub gff_feature_source {
+    my ($self) = @_;
+    return $self->name;
+}
+
 my $bam_parameters = [
     #     key                method (optional)
     [ qw( bam_path           file  ) ],
     [ qw( bam_cs             csver ) ],
-    [ qw( gff_feature_source name  ) ],
     qw(
           chr_prefix
+          gff_feature_source
     ),
     ];
 
