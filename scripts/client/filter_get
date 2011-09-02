@@ -78,6 +78,9 @@ open $log_file, '>>', $log_path
 }
 log_message "starting";
 
+# log the arguments
+log_message sprintf "argument: %s: %s", $_, $args{$_} for sort keys %args;
+
 $args{log} = 1 if $LOG; # enable logging on the server
 
 # concatenate the rest of the arguments into a parameter string
