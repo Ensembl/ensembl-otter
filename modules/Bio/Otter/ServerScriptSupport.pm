@@ -83,9 +83,17 @@ sub make_map {
     };
 }
 
+my $map_keys_required = { };
+$map_keys_required->{$_}++ for qw(
+type start end
+);
+
 sub make_map_value {
     my ($self, $key) = @_;
-    my $val = $self->param($key);
+    my $getter =
+        $map_keys_required->{$key} ? 'require_argument' : 'param';
+    warn sprintf "getter = '%s', key = '%s'\n", $getter, $key;
+    my $val = $self->$getter($key);
     return defined($val) ? $val : '';
 }
 
