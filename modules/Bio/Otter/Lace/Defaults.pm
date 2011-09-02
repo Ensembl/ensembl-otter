@@ -8,7 +8,6 @@ use warnings;
 use Carp;
 use Getopt::Long 'GetOptions';
 use Config::IniFiles;
-use POSIX 'uname';
 
 
 my $CLIENT_STANZA   = 'client';
