@@ -9,6 +9,7 @@ use Carp;
 
 use Fcntl qw{ O_WRONLY O_CREAT };
 use Config::IniFiles;
+use POSIX();
 
 use Bio::Vega::Transform::Otter::Ace;
 use Bio::Vega::AceConverter;
