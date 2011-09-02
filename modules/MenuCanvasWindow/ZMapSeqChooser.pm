@@ -7,7 +7,6 @@ use warnings;
 use Carp;
 use Data::Dumper;
 use XML::Simple;
-use POSIX;
 
 use Bio::Otter::ZMap::Connect;
 use Bio::Otter::ZMap::XRemoteCache;
