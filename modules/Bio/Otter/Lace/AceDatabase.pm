@@ -461,6 +461,7 @@ sub ace_config {
             url         => $url,
             writeback   => 'false',
             sequence    => 'true',
+            group       => 'always',
             featuresets => $featuresets,
             stylesfile  => $self->stylesfile,
         },
