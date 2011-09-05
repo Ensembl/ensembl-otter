@@ -378,9 +378,20 @@ sub authorize {
         $self->save_CookieJar;
         return 1;
     } else {
+        my $content = $response->decoded_content;
         my $msg = sprintf "Authorize failed: %s (%s)\n",
-            $response->status_line,
-            $response->decoded_content;
+            $response->status_line, $content;
+        if ($content =~ m{<title>Sanger Single Sign-on login}) {
+            # Some common special cases
+            if ($content =~ m{<P>(Invalid account details\. Please try again)</P>}i) {
+                $msg = "Login failed: $1";
+            } elsif ($content =~
+                     m{The account <b>(.*)</b> has been temporarily locked}) {
+                $msg = "Login fail and account $1 is temporarily locked.";
+                $msg .= "\nPlease wait $1 and try again, or contact Anacode for support"
+                  if $content =~ m{Please try again in ((\d+ hours?)?,? \d+ minutes?)};
+            } # else probably an entire HTML page
+        }
         $self->password_problem()->($self, $msg);
         return 0;
     }
