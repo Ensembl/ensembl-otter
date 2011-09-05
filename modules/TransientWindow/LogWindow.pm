@@ -157,14 +157,16 @@ sub mail_contents {
 
     my $to     = $email . '@' . $domain;
     my $file   = $self->current_logfile;
-    my $subj   = "[$0] error log $file";
+    my $subj   = "error log $file";
+    my $info   = ("Program version ".Bio::Otter::Git->param('head')."\n".
+                  "Program script name $0");
     my $dialog = $self->window->toplevel->DialogBox(
         -title          => "otter: Email $to?",
         -buttons        => [qw(Ok Cancel)],
         -default_button => 'Cancel',
     );
 
-    $dialog->add('Label', -text => $subj,)->pack();
+    $dialog->add('Label', -text => "$subj\n$info", -justify => 'left')->pack();
     my $pre = '';
     $dialog->add(
         'LabEntry',
@@ -194,7 +196,7 @@ sub mail_contents {
     my $mess      = $self->get_log_contents();
     my $mail_pipe = qq{mailx -s "$subj" $to};
     open my $fh, '|-', $mail_pipe or die "Error opening '$mail_pipe' : $!";
-    print $fh "$pre\n\n$mess";
+    print $fh "$pre\n\n$info\n--------\n$mess";
     close $fh or warn "Error emailing with pipe '$mail_pipe' : exit($?)";
 
     return;
