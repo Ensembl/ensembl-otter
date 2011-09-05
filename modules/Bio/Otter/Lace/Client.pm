@@ -338,6 +338,21 @@ sub password_prompt{
     return $callback;
 }
 
+sub password_problem{
+    my ($self, $callback) = @_;
+
+    if ($callback) {
+        $self->{'_password_problem_callback'} = $callback;
+    }
+    $callback = $self->{'_password_problem_callback'} ||=
+      sub {
+          my ($self, $message) = @_;
+          $message =~ s{\n*\z}{\n};
+          warn $message;
+      };
+    return $callback;
+}
+
 sub authorize {
     my ($self) = @_;
 
@@ -361,13 +376,14 @@ sub authorize {
         warn sprintf "Authorized OK: %s\n",
             $response->status_line;
         $self->save_CookieJar;
+        return 1;
     } else {
-        warn sprintf "Authorize failed: %s (%s)\n",
+        my $msg = sprintf "Authorize failed: %s (%s)\n",
             $response->status_line,
             $response->decoded_content;
+        $self->password_problem()->($self, $msg);
+        return 0;
     }
-
-    return;
 }
 
 # ---- HTTP protocol related routines:
