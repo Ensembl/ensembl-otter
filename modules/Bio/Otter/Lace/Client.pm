@@ -387,7 +387,7 @@ sub authorize {
                 $msg = "Login failed: $1";
             } elsif ($content =~
                      m{The account <b>(.*)</b> has been temporarily locked}) {
-                $msg = "Login fail and account $1 is temporarily locked.";
+                $msg = "Login failed and account $1 is now temporarily locked.";
                 $msg .= "\nPlease wait $1 and try again, or contact Anacode for support"
                   if $content =~ m{Please try again in ((\d+ hours?)?,? \d+ minutes?)};
             } # else probably an entire HTML page
