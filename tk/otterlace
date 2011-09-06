@@ -52,8 +52,18 @@ use POSIX ":sys_wait_h";
         $pass_win->get_password;
         return $pass;
     };
+    my $passwarn_sub = sub {
+        my ($client, $msg) = @_;
+        my $dialog = $mw->DialogBox
+          (-title => 'otter: Problem logging in',
+           -buttons => ['Ok'],);
+        $dialog->add(qw( Label -justify left -text ), $msg)->pack;
+        $dialog->Show;
+        return;
+    };
 
     $cl->password_prompt($prompt_sub);
+    $cl->password_problem($passwarn_sub);
 
     $cl->get_server_otter_config;
 
