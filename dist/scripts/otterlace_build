@@ -31,6 +31,10 @@
 . "$( dirname "$0" )/_otterlace.sh"
 
 
+# ensure that we find the otterlace_zmap_dir command
+export PATH=${PATH}:/nfs/anacode/otterlace/bin
+
+
 # go to the right place first
 cd "$( dirname "$0" )/../.."
 ensembl_otter_root="$( pwd )"
@@ -39,7 +43,7 @@ ensembl_otter_root="$( pwd )"
 version_major="$( config version_major )"
 version_minor="$( config version_minor )"
 client_ensembl_version="$( config client_ensembl_version )"
-zmap_path="$( config zmap_path )"
+zmap_version="$( config zmap_version )"
 track="$( config track )"
 
 humpub_branch="humpub-branch-${version_major}"
@@ -64,9 +68,10 @@ then
     exit 1
 fi
 
-zmap_home=~zmap
-zmap_root="${zmap_home}/${zmap_path}"
-zmap_prefix="${zmap_root}/Linux_$( uname -m )"
+zmap_dir="$( otterlace_zmap_dir "$zmap_version" )"
+[ -n "$zmap_dir" ] ||
+bail "failed to determine the ZMap directory"
+zmap_prefix="${zmap_dir}/Linux_$( uname -m )"
 
 # EXTERNAL PARAMETERS
 build_log=/nfs/anacode/otterlace/ensembl_otter_build_log.txt
@@ -220,7 +225,7 @@ otterlace_client_install_zmap() {
     rm -rf -- "$build_dir" &&
     mkdir -p -- "$build_dir" &&
     ( cd "$build_dir" &&
-        cp -r -- "${zmap_root}/ZMap/src/perl/X11-XRemote-0.01" . &&
+        cp -r -- "${zmap_dir}/ZMap/src/perl/X11-XRemote-0.01" . &&
         cd X11-XRemote-0.01 &&
         perl Makefile.PL \
             PREFIX=${install_dir} \
