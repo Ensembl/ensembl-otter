@@ -13,9 +13,6 @@ use Bio::Otter::Error;
 use POSIX ":sys_wait_h";
 
 {
-
-    Bio::Otter::Git->dump;
-
     # Become leader of process group so that "kill -$$" at end works
     setpgrp();
 
@@ -24,6 +21,8 @@ use POSIX ":sys_wait_h";
     $cl->cleanup_sessions;
     $cl->cleanup_log_dir('otterlace');
     $cl->make_log_file('otterlace');
+
+    Bio::Otter::Git->dump;
 
     my $mw = CanvasWindow::MainWindow->new("otter: Species List");
 
