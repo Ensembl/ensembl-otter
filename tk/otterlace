@@ -21,6 +21,7 @@ use POSIX ":sys_wait_h";
     $cl->cleanup_sessions;
     $cl->cleanup_log_dir('otterlace');
     $cl->make_log_file('otterlace');
+    # After this, we are writing logfile
 
     Bio::Otter::Git->dump;
 
@@ -79,6 +80,9 @@ use POSIX ":sys_wait_h";
     # group, ie: all of the children. This cleans
     # up any stray processes we have launched.
     kill TERM => -$$;
+
+    # NB. we are still here, and so is our logger.  Session recovery
+    # may be blocked until we are gone.
 }
 
 __END__

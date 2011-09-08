@@ -26,6 +26,10 @@ sub make_log {
     # Unbuffer STDOUT
     STDOUT->autoflush(1);
 
+    # Parent will try to kill us if it finishes cleanly, but we may
+    # need to wait and write out the final logs.
+    $SIG{'TERM'} = 'IGNORE';
+
     if (my $pid = open(STDOUT, "|-")) {
         # Send parent's STDERR to the same place as STDOUT.
         open STDERR, ">&STDOUT" or confess "Can't redirect STDERR to STDOUT";
