@@ -234,9 +234,12 @@ sub recover_some_sessions {
                     $lc->load_filters;
                     $top->withdraw;
                 }
+                1;
             }
-            # Destruction of the AceDatabase object prevents us seeing $@
-            or $self->exception_message($@, 'Error recovering lace sessions');
+              or $self->exception_message($@ || "[details in log file]\n",
+                                          # Destruction of the AceDatabase object prevents us seeing $@
+                                          'Error recovering lace sessions');
+            # XXX: we should make a stronger protest if it fails - maybe a pop up error dialog, or put a sticker on the session itself (if it exists).  Also, some errors have already been eaten (e.g. in RT#231368)
             return 1;
         } else {
             return 0;
