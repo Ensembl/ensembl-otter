@@ -775,13 +775,27 @@ sub exception_message {
     
     # Take just the first line of the exception message
     my ($except_first) = $except =~ /^(.+)$/m;
-    
-    # Put the message on the terminal
-    print STDERR $except;
+    $except_first = '(message got lost)' if !defined $except_first;
 
-    $self->message(@message, $except_first);
+    # Put the message on the terminal, with delimiter
+    print STDERR qq{exception_message("""$except""")\n};
+
+    if (Tk::Exists($self->canvas)) {
+        $self->message(@message, $except_first);
+    } else {
+        # we have been destroyed
+        print STDERR "Nowhere to stick the yellow message for this exception,\n".
+          __catdent('| ', @message);
+    }
 
     return;
+}
+
+sub __catdent {
+    my ($indent, @message) = @_;
+    my $txt = join '', map { /\n\z/ ? $_ : "$_\n" } @message;
+    $txt =~ s/^/$indent/mg;
+    return $txt;
 }
 
 sub message {
@@ -815,7 +829,11 @@ sub message {
     my $x = $x1 + $pad + $x_offset;
     my $y = $y1 + $pad + $pad;
     my $text_width = $message_width - ($pad * 2);
-    
+
+    # Copy to the logs
+    my $title = $self->top_window->title;
+    print STDERR qq{Yellow message on window="$title",\n}.__catdent('| ', @message);
+
     return $self->message_at_x_y($x, $y, $text_width, @message);
 }
 
