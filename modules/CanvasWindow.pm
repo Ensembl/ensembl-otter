@@ -773,15 +773,15 @@ sub visible_canvas_x_y {
 sub exception_message {
     my( $self, $except, @message ) = @_;
     
-    # Take just the first line of the exception message
-    my ($except_first) = $except =~ /^(.+)$/m;
-    $except_first = '(message got lost)' if !defined $except_first;
+    # Take just the first part of long exception messages
+    my @except_show = __partial_exception($except);
 
     # Put the message on the terminal, with delimiter
-    print STDERR qq{exception_message("""$except""")\n};
+    $except = (defined $except ? qq{"""$except"""} : 'undef');
+    print STDERR qq{exception_message($except)\n};
 
     if (Tk::Exists($self->canvas)) {
-        $self->message(@message, $except_first);
+        $self->message(@message, @except_show);
     } else {
         # we have been destroyed
         print STDERR "Nowhere to stick the yellow message for this exception,\n".
@@ -789,6 +789,30 @@ sub exception_message {
     }
 
     return;
+}
+
+sub __partial_exception {
+    my ($except) = @_;
+    my @ln;
+
+    if (!defined $except || $except eq '') {
+        @ln = '(message got lost)';
+    } else {
+        @ln = split /\n+/, $except;
+    }
+
+    if (length($ln[0]) > 80) {
+        # first line too long - shorten there
+        @ln = (substr($ln[0], 0, 76).' ...', '(see log)');
+    } elsif (length($ln[1]) > 80) {
+        # second line too long - shorten there
+        @ln = ($ln[0], substr($ln[1], 0, 76).' ...', '(see log)');
+    } elsif (@ln > 2) {
+        # too many lines
+        @ln = (@ln[0,1], '[... see log]');
+    } # else it fits OK
+
+    return @ln;
 }
 
 sub __catdent {
