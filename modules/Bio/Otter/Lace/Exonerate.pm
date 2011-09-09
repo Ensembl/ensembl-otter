@@ -496,7 +496,8 @@ sub format_ace_output {
         my $prefix = $is_protein ? 'Protein' : 'Sequence';
 
         $ace       .= qq{\nSequence : "$contig_name"\n};
-        my $hit_ace = qq{\n$prefix : "$hname"\n};
+        my $hit_length = $self->sequence_fetcher->{$hname}->sequence_length;
+        my $hit_ace = qq{\n$prefix : "$hname"\nLength $hit_length\n};
 
         foreach my $fp (@{ $name_fp_list{$hname} }) {
 
