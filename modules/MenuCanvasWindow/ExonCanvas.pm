@@ -779,15 +779,17 @@ sub window_close {
     my $xc = $self->XaceSeqChooser;
 
     if ($self->is_mutable && $xc->AceDatabase->write_access) {
-        my( $sub );
+        my ($sub, $err);
         eval{
             $sub = $self->get_SubSeq_if_changed;
-        };
+            1;
+        } or $err = ($@ || '(error message got lost)');
+        # lost $@ guard is just paranoia, so far
 
         my $name = $self->name;
 
-        if ($@) {
-            $self->exception_message($@);
+        if ($err) {
+            $self->exception_message($err, 'Error while detecting changes to save');
             my $dialog = $self->canvas->toplevel->Dialog(
                 -title          => 'otter: Abandon?',
                 -bitmap         => 'question',
@@ -3068,12 +3070,9 @@ sub save_if_changed {
         if (my $sub = $self->get_SubSeq_if_changed) {
             $self->xace_save($sub);
         }
-    };
-
+        1;
+    } or $self->exception_message($@, 'Error saving transcript');
     # Make sure the annotators see the messages!
-    if ($@) {
-        $self->exception_message($@, 'Error saving transcript');
-    }
 
     return;
 }
