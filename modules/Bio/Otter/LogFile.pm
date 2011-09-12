@@ -39,7 +39,7 @@ sub make_log {
 
         # Parent will try to kill us if it finishes cleanly, but we
         # may need to wait and write out the final logs.
-        $SIG{'TERM'} = 'IGNORE';
+        $SIG{'TERM'} = 'IGNORE'; ## no critic (Variables::RequireLocalizedPunctuationVars)
 
         # Child filters output from parent
         while (<STDIN>) { ## no critic(InputOutput::ProhibitExplicitStdin)
