@@ -620,15 +620,6 @@ sub get_softmasked_dna {
     return $sm_dna_str;
 }
 
-sub lib_path{
-    my ($self, $path) = @_;
-    if($path){
-        $self->{'_lib_path'} = $path;
-        $ENV{'LD_LIBRARY_PATH'} .= ":$path";
-    }
-    return $self->{'_lib_path'};
-}
-
 1;
 
 __END__
