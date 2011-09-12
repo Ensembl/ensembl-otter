@@ -190,21 +190,19 @@ sub read_user_file {
     my ($self, $usr_file) = @_;
 
     my $usr_hash = {};
-    my $do_user_line = sub {
+
+    open my $list, '<', $usr_file
+        or die "Error opening '$usr_file'; $!";
+    while (<$list>) {
         s/#.*//;            # Remove comments
         s/(^\s+|\s+$)//g;   # Remove leading or trailing spaces
-        return () if /^$/;  # Skip lines which are now blank
+        next if /^$/;       # Skip lines which are now blank
         my ($user_name, @allowed_datasets) = split;
         $user_name = lc($user_name);
         foreach my $ds (@allowed_datasets) {
             $usr_hash->{$user_name}{$ds} = 1;
         }
-        return ();
-    };
-
-    open my $list, '<', $usr_file
-        or die "Error opening '$usr_file'; $!";
-    while (<$list>) { $do_user_line->(); }
+    }
     close $list or die "Error closing '$usr_file'; $!";
 
     return $usr_hash;
