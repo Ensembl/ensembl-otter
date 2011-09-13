@@ -1171,9 +1171,9 @@ sub save_ace {
 
     my $val;
     eval { $val = $self->AceDatabase->ace_server->save_ace(@args) };
-    if ($@) {
-        $self->exception_message($@, "Error saving to acedb");
-        confess "Error saving to acedb: $@";
+    if (my $err = $@) {
+        $self->exception_message($err, "Error saving to acedb");
+        confess "Error saving to acedb: $err";
     } else {
         return $val;
     }
