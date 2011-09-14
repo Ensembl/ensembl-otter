@@ -144,7 +144,7 @@ sub blixem_bam_args {
     my ($self, $bam) = @_;
 
     my $args = join ' ', map {
-        sprintf '-%s=%s', $_, uri_escape($bam->$_);
+        $bam->$_ ? sprintf '-%s=%s', $_, uri_escape($bam->$_) : ( );
     } @{$bam->bam_parameters};
 
     return $args;
