@@ -317,11 +317,7 @@ sub load_filters {
         }
     } else {
         # we need to set up and show an XaceSeqChooser        
-        my $xc = MenuCanvasWindow::XaceSeqChooser->new(
-            $self->top->Toplevel(
-                -title => 'otter: Session ' . $self->AceDatabase->title,
-            )
-        );
+        my $xc = MenuCanvasWindow::XaceSeqChooser->new( $self->top->Toplevel );
         
         $self->XaceSeqChooser($xc);
         $xc->AceDatabase($self->AceDatabase);

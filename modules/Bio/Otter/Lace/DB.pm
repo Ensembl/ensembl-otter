@@ -55,6 +55,26 @@ sub file {
     return $file{$self};
 }
 
+sub get_tag_value {
+    my ($self, $tag) = @_;
+    
+    my $sth = $dbh{$self}->prepare(q{ SELECT value FROM tag_value WHERE tag = ? });
+    $sth->execute($tag);
+    my ($value) = $sth->fetchrow;
+    return $value;
+}
+
+sub set_tag_value {
+    my ($self, $tag, $value) = @_;
+
+    unless (defined $value) {
+        confess "No value provided";
+    }
+
+    my $sth = $dbh{$self}->prepare(q{ INSERT OR REPLACE INTO tag_value (tag, value) VALUES (?,?) });
+    $sth->execute($tag, $value);
+}
+
 sub init_db {
     my ($self) = @_;
     
@@ -98,6 +118,10 @@ sub init_db {
             , genus         TEXT
             , species       TEXT
             , common_name   TEXT
+        },
+        tag_value => q{
+            tag             TEXT PRIMARY KEY
+            , value         TEXT
         },
     );
 
