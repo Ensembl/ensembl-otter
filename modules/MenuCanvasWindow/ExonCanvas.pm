@@ -3081,13 +3081,20 @@ sub xace_save {
     my( $self, $sub ) = @_;
 
     confess "Missing SubSeq argument" unless $sub;
-
+    
     my $top = $self->top_window;
     $top->grab;     # Stop user closing window before save is finished
 
     my $old = $self->SubSeq;
     my $old_name = $old->name;
     my $new_name = $sub->name;
+
+    # Allow the "annotation in progress" remark to be deleted. If the old
+    # locus had it, but the new one does not, then it was deliberately
+    # deleted, so don't set it again.    
+    unless ($old->Locus->annotation_in_progress and ! $sub->Locus->annotation_in_progress) {
+        $sub->Locus->set_annotation_in_progress;
+    }
 
     my $clone_name = $sub->clone_Sequence->name;
     if ($clone_name eq $new_name) {

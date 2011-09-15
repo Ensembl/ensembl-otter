@@ -27,6 +27,7 @@ use Bio::Otter::Lace::CloneSequence;
 use Bio::Otter::Lace::PipelineStatus;
 use Bio::Otter::Lace::SequenceNote;
 use Bio::Otter::Lace::AceDatabase;
+use Bio::Otter::Lace::DB;
 use Bio::Otter::LogFile;
 
 sub new {
@@ -1179,8 +1180,8 @@ sub sessions_needing_recovery {
 
         my $ace_wrm = "$lace_dir/database/ACEDB.wrm";
         if (-e $ace_wrm) {
-            my $title = $self->get_title($lace_dir);
-            push(@$to_recover, [$lace_dir, $mtime, $title]);
+            my $name = $self->get_name($lace_dir);
+            push(@$to_recover, [$lace_dir, $mtime, $name]);
         } else {
             eval {
                 # Attempt to release locks of uninitialised sessions
@@ -1207,25 +1208,18 @@ sub sessions_needing_recovery {
     return $to_recover;
 }
 
-sub get_title {
+sub get_name {
     my ($self, $home_dir) = @_;
 
-    my $displays_file = "$home_dir/wspec/displays.wrm";
-    open my $DISP, '<', $displays_file or die "Can't read '$displays_file'; $!";
-    my $title;
-    while (<$DISP>) {
-        if (/_DDtMain.*-t\s*"([^"]+)/) {
-            $title = $1;
-            last;
-        }
-    }
-    close $DISP or die "Error reading '$displays_file'; $!";
+    my $db = Bio::Otter::Lace::DB->new($home_dir);
+    my $name = $db->get_tag_value('name');
 
-    if ($title) {
-        return $title;
+    if ($name) {
+        return $name;
     } else {
-        die "Failed to fetch title from '$displays_file'";
+        die "Failed to fetch AceDatabase name from SQLite DB in '$home_dir'";
     }
+
 }
 
 sub recover_session {
@@ -1251,9 +1245,6 @@ sub recover_session {
     $adb->recover_smart_slice_from_region_xml_file;
     $adb->DataSet->load_client_config;
     $adb->reload_filter_state;
-
-    my $title = $self->get_title($adb->home);
-    $adb->title($title);
 
     return $adb;
 }

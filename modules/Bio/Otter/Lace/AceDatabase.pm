@@ -86,13 +86,29 @@ sub home {
     return $self->{'_home'};
 }
 
-sub title {
-    my( $self, $title ) = @_;
+sub name {
+    my ($self, $name) = @_;
 
-    if ($title) {
-        $self->{'_title'} = $title;
+    if ($name) {
+        $self->DB->set_tag_value('name', $name);
+        return $name;
     }
-    return $self->{'_title'};
+    else {
+        return $self->DB->get_tag_value('name');
+    }
+}
+
+sub unsaved_changes {
+    my ($self, $flag) = @_;
+    
+    if (defined $flag) {
+        $flag = $flag ? 1 : 0;
+        $self->DB->set_tag_value('unsaved-changes', $flag);
+        return $flag;
+    }
+    else {
+        return $self->DB->get_tag_value('unsaved-changes');
+    }
 }
 
 sub tace {
@@ -240,6 +256,7 @@ sub write_region_xml_file {
     $xml =~ s{<feature_set>.*</feature_set>}{}s;    # Might not be valid otter XML
                                                     # without an (empty) featuerset?
     
+    # Could save in SQLite db instead
     $self->write_file($REGION_XML_FILE, $xml);
 
     return;
@@ -692,7 +709,6 @@ sub make_database_directory {
     die "Can't mkdir('$rawdata') : $!\n" unless -d $rawdata;
 
     $self->make_passwd_wrm;
-    $self->edit_displays_wrm;
 
     return;
 }
@@ -731,33 +747,6 @@ sub make_passwd_wrm {
     }
 
     close $fh;    # Must close to ensure buffer is flushed into file
-
-    return;
-}
-
-sub edit_displays_wrm {
-    my( $self ) = @_;
-
-    my $home  = $self->home;
-    my $title = $self->title;
-
-    my $displays = "$home/wspec/displays.wrm";
-
-    open my $disp_in, '<', $displays or confess "Can't read '$displays' : $!";
-    my @disp = <$disp_in>;
-    close $disp_in;
-
-    foreach (@disp) {
-        next unless /^_DDtMain/;
-
-        # Add our title onto the Main window
-        s/\s-t\s*"[^"]+/ -t "$title/i;  # " sorry just to fix emacs syntax highlight
-        last;
-    }
-
-    open my $disp_out, '>', $displays or confess "Can't write to '$displays' : $!";
-    print $disp_out @disp;
-    close $disp_out;
 
     return;
 }

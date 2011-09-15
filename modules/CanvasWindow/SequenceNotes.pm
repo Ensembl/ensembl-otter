@@ -641,12 +641,12 @@ sub run_lace {
     ### Prevent opening of sequences already in lace sessions
     return unless $self->set_selected_from_canvas;
 
-    my $title = join(' ',
+    my $name = join(' ',
         $self->SequenceSetChooser->DataSet->name,
         $self->name,
         $self->selected_clones_string,
         );
-    $self->_open_SequenceSet($title) ;
+    $self->_open_SequenceSet($name) ;
 
     return;
 }
@@ -682,17 +682,17 @@ sub run_lace_on_slice{
         $ss->unselect_all_CloneSequences;
         return;
     }
-    my $title =
+    my $name =
         sprintf "lace for SLICE %d - %d %s",
         $start, $end, $self->name;
-    $self->_open_SequenceSet($title);
+    $self->_open_SequenceSet($name);
 
     return;
 }
 
 ## allows Searched SequenceNotes.pm to inherit the main part of the run_lace method
 sub _open_SequenceSet {
-    my ($self, $title) = @_ ;
+    my ($self, $name) = @_ ;
 
     my $cl = $self->Client;
     my $ss = $self->SequenceSet;
@@ -706,9 +706,9 @@ sub _open_SequenceSet {
     my $adb_write_access = ${$self->write_access_var_ref()};
     my $adb = $self->Client->new_AceDatabase($adb_write_access);
     $adb->error_flag(1);
-    $adb->title($title);
-    $adb->smart_slice($smart_slice);
     $adb->make_database_directory;
+    $adb->name($name);
+    $adb->smart_slice($smart_slice);
 
     if ($adb_write_access) {
         # only lock the region if we have write access.
