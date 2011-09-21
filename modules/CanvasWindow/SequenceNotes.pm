@@ -704,9 +704,10 @@ sub _open_SequenceSet {
 
 
     my $adb_write_access = ${$self->write_access_var_ref()};
-    my $adb = $self->Client->new_AceDatabase($adb_write_access);
+    my $adb = $self->Client->new_AceDatabase;
     $adb->error_flag(1);
     $adb->make_database_directory;
+    $adb->write_access($adb_write_access);
     $adb->name($name);
     $adb->smart_slice($smart_slice);
 

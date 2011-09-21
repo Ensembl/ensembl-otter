@@ -210,16 +210,15 @@ sub cleanup_sessions {
 }
 
 sub session_path {
-    my ($self, $write_access) = @_;
+    my ($self) = @_;
 
-    my $readonly_tag = $write_access ? '' : '.ro';
     $session_number++;
 
     my $user = (getpwuid($<))[0];
 
     return
-        sprintf "%s_%d.%s.%d%s.%d",
-        $session_root, $self->version, $user, $$, $readonly_tag, $session_number;
+        sprintf "%s_%d.%s.%d.%d",
+        $session_root, $self->version, $user, $$, $session_number;
 }
 
 sub all_sessions {
@@ -258,12 +257,11 @@ sub all_session_dirs {
 }
 
 sub new_AceDatabase {
-    my( $self, $write_access ) = @_;
+    my( $self ) = @_;
 
     my $adb = Bio::Otter::Lace::AceDatabase->new;
-    $adb->write_access($write_access);
     $adb->Client($self);
-    $adb->home($self->session_path($write_access));
+    $adb->home($self->session_path);
 
     return $adb;
 }
@@ -1227,9 +1225,7 @@ sub recover_session {
 
     $self->kill_old_sgifaceserver($dir);
 
-    my $write_flag = $dir =~ /\.ro/ ? 0 : 1;
-
-    my $adb = $self->new_AceDatabase($write_flag);
+    my $adb = $self->new_AceDatabase;
     $adb->error_flag(1);
     my $home = $adb->home;
     rename($dir, $home) or die "Cannot move '$dir' to '$home'; $!";
