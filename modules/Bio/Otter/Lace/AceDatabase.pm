@@ -69,12 +69,16 @@ sub DB {
 }
 
 sub write_access {
-    my( $self, $write_access ) = @_;
-
-    if(defined($write_access)) {
-        $self->{'_write_access'} = $write_access ? 1 : 0;
+    my ($self, $flag) = @_;
+    
+    if (defined $flag) {
+        $flag = $flag ? 1 : 0;
+        $self->DB->set_tag_value('write_access', $flag);
+        return $flag;
     }
-    return $self->{'_write_access'};
+    else {
+        return $self->DB->get_tag_value('write_access');
+    }
 }
 
 sub home {
@@ -103,11 +107,11 @@ sub unsaved_changes {
     
     if (defined $flag) {
         $flag = $flag ? 1 : 0;
-        $self->DB->set_tag_value('unsaved-changes', $flag);
+        $self->DB->set_tag_value('unsaved_changes', $flag);
         return $flag;
     }
     else {
-        return $self->DB->get_tag_value('unsaved-changes');
+        return $self->DB->get_tag_value('unsaved_changes');
     }
 }
 
