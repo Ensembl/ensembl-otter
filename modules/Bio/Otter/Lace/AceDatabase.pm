@@ -26,9 +26,6 @@ use Hum::Ace::MethodCollection;
 use Hum::ZMapStyleCollection;
 use Hum::Conf qw{ PFETCH_SERVER_LIST };
 
-my      $REGION_XML_FILE =      '.region.xml';
-my $LOCK_REGION_XML_FILE = '.lock_region.xml';
-
 my $ZMAP_DEBUG = $ENV{OTTERLACE_ZMAP_DEBUG};
 
 
@@ -115,6 +112,34 @@ sub unsaved_changes {
     }
 }
 
+sub save_region_xml {
+    my ($self, $xml) = @_;
+    
+    # Remove the locus and features to make data smaller
+    $xml =~ s{<locus>.*</locus>}{}s;
+    $xml =~ s{<feature_set>.*</feature_set>}{}s;
+    
+    $self->DB->set_tag_value('region_xml', $xml);
+}
+
+sub fetch_region_xml {
+    my ($self) = @_;
+    
+    return $self->DB->get_tag_value('region_xml');
+}
+
+sub save_lock_region_xml {
+    my ($self, $xml) = @_;
+    
+    $self->DB->set_tag_value('lock_region_xml', $xml);
+}
+
+sub fetch_lock_region_xml {
+    my ($self) = @_;
+    
+    return $self->DB->get_tag_value('lock_region_xml');
+}
+
 sub tace {
     my( $self, $tace ) = @_;
 
@@ -195,12 +220,11 @@ sub init_AceDatabase {
 
     my $parser = Bio::Vega::Transform::Otter::Ace->new;
     $parser->parse($xml_string);
-    
-
     $self->write_otter_acefile($parser);
-    $self->write_region_xml_file($xml_string);
     $self->write_dna_data;
     $self->write_methods_acefile;
+
+    $self->save_region_xml($xml_string);
 
     $self->initialize_database;
 
@@ -225,7 +249,7 @@ sub try_to_lock_the_block {
 
     my $lock_xml = $self->http_response_content(
         'GET', 'lock_region', { 'hostname' => $self->Client->client_hostname });
-    $self->write_file($LOCK_REGION_XML_FILE, $lock_xml) if $lock_xml;
+    $self->save_lock_region_xml($lock_xml) if $lock_xml;
 
     return;
 }
@@ -252,26 +276,20 @@ sub read_file {
     return $content;
 }
 
-sub write_region_xml_file {
-    my ($self, $xml) = @_;
-    
-    # Remove the locus and features to make file smaller
-    $xml =~ s{<locus>.*</locus>}{}s;
-    $xml =~ s{<feature_set>.*</feature_set>}{}s;    # Might not be valid otter XML
-                                                    # without an (empty) featuerset?
-    
-    # Could save in SQLite db instead
-    $self->write_file($REGION_XML_FILE, $xml);
-
-    return;
-}
-
-sub recover_smart_slice_from_region_xml_file {
+sub recover_smart_slice_from_region_xml {
     my ($self) = @_;
 
     my $client = $self->Client or die "No Client attached";
-    my $parser = $self->parse_chromosome_slice_from_region_xml_file;
+
+    my $xml = $self->fetch_region_xml || $self->fetch_lock_region_xml;
+    unless ($xml) {
+        confess "Could not fetch XML from SQLite DB to create smart slice";
+    }
+
+    my $parser = Bio::Vega::Transform::Otter->new;
+    $parser->parse($xml);
     my $slice = $parser->get_ChromosomeSlice;
+
     my $smart_slice = Bio::Otter::Lace::Slice->new(
         $client,
         $parser->species,
@@ -285,24 +303,6 @@ sub recover_smart_slice_from_region_xml_file {
     $self->smart_slice($smart_slice);
 
     return;
-}
-
-sub parse_chromosome_slice_from_region_xml_file {
-    my ($self) = @_;
-
-    # We try the LOCK_REGION_XML_FILE too, since uninitialised
-    # lace sessions sometimes have it becuase it is created
-    # before the REGION_XML_FILE, and we want to recover the
-    # session to remove the lock.
-
-    foreach my $file ($LOCK_REGION_XML_FILE, $REGION_XML_FILE) {
-        my $region_file = join '/', $self->home, $file;
-        my $parser = Bio::Vega::Transform::Otter->new;
-        return $parser if eval { $parser->parsefile($region_file); 1; };
-        warn $@;
-    }
-
-    confess "all attempts to parse a chromosome slice failed";
 }
 
 sub smart_slice {
@@ -655,9 +655,13 @@ sub unlock_otter_slice {
 
     my $client   = $self->Client or confess "No Client attached";
 
-    my $xml_text = $self->read_file($LOCK_REGION_XML_FILE);
+    my $xml_text = $self->fetch_lock_region_xml;
 
-    return $client->unlock_otter_xml($xml_text, $dsname);
+    if ($client->unlock_otter_xml($xml_text, $dsname)) {
+        $self->write_access(0);
+        $self->save_lock_region_xml('unlocked at ' . scalar localtime);
+    }
+    return 1;
 }
 
 sub ace_server {
