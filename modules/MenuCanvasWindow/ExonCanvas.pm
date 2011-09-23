@@ -3092,7 +3092,7 @@ sub xace_save {
     # Allow the "annotation in progress" remark to be deleted. If the old
     # locus had it, but the new one does not, then it was deliberately
     # deleted, so don't set it again.    
-    unless ($old->Locus->annotation_in_progress and ! $sub->Locus->annotation_in_progress) {
+    unless ($old->Locus->annotation_in_progress && ! $sub->Locus->annotation_in_progress) {
         $sub->Locus->set_annotation_in_progress;
     }
 
