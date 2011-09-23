@@ -2316,6 +2316,8 @@ sub set_window_title {
     my $unsaved_str = $self->AceDatabase->unsaved_changes ? '* ' : '';
     my $title = "${unsaved_str}otter: Session $name";
     $self->top_window->title($title);
+
+    return;
 }
 
 sub update_window_title_unsaved_flag {
@@ -2326,6 +2328,8 @@ sub update_window_title_unsaved_flag {
     $title =~ s/^\* //;
     my $unsaved_str = $flag ? '* ' : '';
     $top->title("${unsaved_str}$title");
+
+    return;
 }
 
 sub DESTROY {
