@@ -73,6 +73,8 @@ sub set_tag_value {
 
     my $sth = $dbh{$self}->prepare(q{ INSERT OR REPLACE INTO tag_value (tag, value) VALUES (?,?) });
     $sth->execute($tag, $value);
+
+    return;
 }
 
 sub init_db {
