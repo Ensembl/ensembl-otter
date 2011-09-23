@@ -120,6 +120,8 @@ sub save_region_xml {
     $xml =~ s{<feature_set>.*</feature_set>}{}s;
     
     $self->DB->set_tag_value('region_xml', $xml);
+
+    return;
 }
 
 sub fetch_region_xml {
@@ -132,6 +134,8 @@ sub save_lock_region_xml {
     my ($self, $xml) = @_;
     
     $self->DB->set_tag_value('lock_region_xml', $xml);
+
+    return;
 }
 
 sub fetch_lock_region_xml {
