@@ -888,12 +888,12 @@ sub _make_DataSet {
     my ($self, $name, $params) = @_;
 
     my $dataset = Bio::Otter::Lace::DataSet->new;
-    $dataset->Client($self);
     $dataset->name($name);
     while (my ($key, $value) = each %{$params}) {
         my $method = uc $key;
         $dataset->$method($value) if $dataset->can($method);
     }
+    $dataset->Client($self);
 
     return $dataset;
 }
