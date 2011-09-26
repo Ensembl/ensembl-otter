@@ -344,7 +344,7 @@ sub zmap_launch {
         @{$self->DataSet->config_value_list('zmap_config', 'arguments')},
     );
 
-    warn "Running @e";
+    warn "Running\n  @e\n  ";
 
     my $pid = fork;
     return $pid if $pid;
