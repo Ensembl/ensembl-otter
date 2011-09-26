@@ -2015,7 +2015,7 @@ sub launch_exonerate {
 
         if ($seq_file) {
             $exonerate->initialise($seq_file);
-            my $ace_output .= $exonerate->run;
+            my $ace_output = $exonerate->run;
 
             # delete query file
             unlink $seq_file;
