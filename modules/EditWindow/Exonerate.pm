@@ -540,10 +540,12 @@ sub get_query_seq {
         $missing_msg =
           "I did not find any sequences for the following accessions:\n\n$missing_msg\n"
             if $missing_msg;
+        $missing_msg ||= '';
 
         $remapped_msg =
           "The following supplied accessions have been mapped to full ACCESSION.SV:\n\n$remapped_msg\n"
             if $remapped_msg;
+        $remapped_msg ||= '';
 
         my $unclaimed_msg = '';
         if (keys %seqs_fetched) {
