@@ -5,6 +5,7 @@
 use strict;
 use warnings;
 use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Lace::PipelineDB;
 
 {
     my $sql;
