@@ -1,4 +1,3 @@
-#!/bin/sh
 
 # the installation script will append the proper values to these lines
 version=
