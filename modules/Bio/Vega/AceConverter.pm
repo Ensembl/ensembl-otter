@@ -10,6 +10,10 @@ use Carp;
 use Hum::Ace::AceText;
 use Hum::Sort qw{ ace_sort };
 
+use Bio::EnsEMBL::SimpleFeature;
+use Bio::EnsEMBL::Attribute;
+use Bio::EnsEMBL::Analysis;
+
 use Bio::Vega::Gene;
 use Bio::Vega::Transcript;
 use Bio::Vega::Translation;
