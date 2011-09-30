@@ -629,7 +629,7 @@ sub generate_XML_from_acedb {
     # Pass the Ensembl objects to the XML formatter
     my $formatter = Bio::Vega::Transform::XML->new;
     $formatter->species($self->smart_slice->dsname);
-    $formatter->slice(          $converter->slice           );
+    $formatter->slice(          $converter->ensembl_slice   );
     $formatter->clone_seq_list( $converter->clone_seq_list  );
     $formatter->genes(          $converter->genes           );
     $formatter->seq_features(   $converter->seq_features    );

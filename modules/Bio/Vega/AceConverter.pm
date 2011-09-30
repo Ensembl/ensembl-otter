@@ -32,7 +32,7 @@ my %ace2ens_phase = (
     );
 
 my (
-    %slice,
+    %ensembl_slice,
     %ace_database,
     %authors,
     %genes,
@@ -47,7 +47,7 @@ my (
 sub DESTROY {
     my ($self) = @_;
 
-    delete(            $slice{$self}    );
+    delete(    $ensembl_slice{$self}    );
     delete(     $ace_database{$self}    );
     delete(          $authors{$self}    );
     delete(            $genes{$self}    );
@@ -68,10 +68,10 @@ sub new {
     return bless \$self_str, $pkg;
 }
 
-sub slice {
+sub ensembl_slice {
     my ($self) = @_;
 
-    return $slice{$self};
+    return $ensembl_slice{$self};
 }
 
 sub genes {
@@ -108,7 +108,7 @@ sub generate_vega_objects {
     my $ace        = $self->AceDatabase->aceperl_db_handle;
 
     # We need a slice to attach to the exons, transcripts, and genes
-    $slice{$self} = _create_detached_slice($self->AceDatabase->smart_slice);
+    $ensembl_slice{$self} = _ensembl_slice($self->AceDatabase->smart_slice);
 
     # List of people for Authors
     $ace->raw_query(qq{find Person *});
@@ -209,7 +209,7 @@ sub build_Features_spans_and_agp_fragments {
             Bio::EnsEMBL::Analysis->new(-LOGIC_NAME => $type);
         my $sf = Bio::EnsEMBL::SimpleFeature->new(
             -ANALYSIS       => $ana,
-            -SLICE          => $self->slice,
+            -SLICE          => $self->ensembl_slice,
             -START          => $start,
             -END            => $end,
             -STRAND         => $strand,
@@ -230,7 +230,7 @@ sub build_Features_spans_and_agp_fragments {
     }
 
     my $cs_list = $clone_sequences{$self} = [];
-    my $chr_offset = $self->slice->start - 1;
+    my $chr_offset = $self->ensembl_slice->start - 1;
     my $smart_slice = $ace_database{$self}->smart_slice;
     my $chr_name = $smart_slice->seqname;
     my $ss_name  = $smart_slice->ssname;
@@ -254,7 +254,7 @@ sub build_Features_spans_and_agp_fragments {
         $cs->chr_start($start + $chr_offset);
         $cs->chr_end($end + $chr_offset);
         $cs->assembly_type($ss_name);
-        $cs->ContigInfo(Bio::Vega::ContigInfo->new(-SLICE => $self->slice));
+        $cs->ContigInfo(Bio::Vega::ContigInfo->new(-SLICE => $self->ensembl_slice));
 
         push(@$cs_list, $cs);
     }
@@ -439,7 +439,7 @@ sub make_exons {
             -START      => $start,
             -END        => $end,
             -STRAND     => $strand,
-            -SLICE      => $self->slice,
+            -SLICE      => $self->ensembl_slice,
             -STABLE_ID  => $stable_id,
             );
         push(@$tsct_exons, $exon);
@@ -626,23 +626,23 @@ sub create_Attribute {
     return;
 }
 
-sub _create_detached_slice {
-    my ($slice) = @_;
+sub _ensembl_slice {
+    my ($otter_slice) = @_;
 
-    my $detached_slice = Bio::EnsEMBL::Slice->new(
-        -seq_region_name    => $slice->ssname,
-        -start              => $slice->start,
-        -end                => $slice->end,
+    my $ensembl_slice = Bio::EnsEMBL::Slice->new(
+        -seq_region_name    => $otter_slice->ssname,
+        -start              => $otter_slice->start,
+        -end                => $otter_slice->end,
         -coord_system   => Bio::EnsEMBL::CoordSystem->new(
-            -name           => $slice->csname,
-            -version        => $slice->csver,
+            -name           => $otter_slice->csname,
+            -version        => $otter_slice->csver,
             -rank           => 2,
             -sequence_level => 0,
             -default        => 1,
         ),
     );
 
-    return $detached_slice;
+    return $ensembl_slice;
 }
 
 1;
