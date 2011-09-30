@@ -364,9 +364,9 @@ sub build_Gene {
     }
     $self->add_remarks($ace, $gene);
 
-    if (my $name = $ace->get_single_value('Locus_author')) {
-        my $author = $authors{$self}{$name}
-            or confess "No author object '$name'";
+    if (my $author_name = $ace->get_single_value('Locus_author')) {
+        my $author = $authors{$self}{$author_name}
+            or confess "No author object '$author_name'";
         $gene->gene_author($author);
     }
 
@@ -423,9 +423,9 @@ sub build_Transcript {
     # Add remarks to transcript
     $self->add_remarks($ace, $tsct);
 
-    if (my $name = $ace->get_single_value('Transcript_author')) {
-        my $author = $authors{$self}{$name}
-            or confess "No author object '$name'";
+    if (my $author_name = $ace->get_single_value('Transcript_author')) {
+        my $author = $authors{$self}{$author_name}
+            or confess "No author object '$author_name'";
         $tsct->transcript_author($author);
     }
 
