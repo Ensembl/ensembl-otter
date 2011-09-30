@@ -10,6 +10,8 @@ use Carp;
 use Hum::Ace::AceText;
 use Hum::Sort qw{ ace_sort };
 
+use Bio::EnsEMBL::Slice;
+use Bio::EnsEMBL::CoordSystem;
 use Bio::EnsEMBL::SimpleFeature;
 use Bio::EnsEMBL::Attribute;
 use Bio::EnsEMBL::Analysis;
@@ -106,7 +108,7 @@ sub generate_vega_objects {
     my $ace        = $self->AceDatabase->aceperl_db_handle;
 
     # We need a slice to attach to the exons, transcripts, and genes
-    $slice{$self} = $self->AceDatabase->smart_slice->create_detached_slice;
+    $slice{$self} = _create_detached_slice($self->AceDatabase->smart_slice);
 
     # List of people for Authors
     $ace->raw_query(qq{find Person *});
@@ -628,6 +630,25 @@ sub create_Attribute {
     );
 
     return;
+}
+
+sub _create_detached_slice {
+    my ($slice) = @_;
+
+    my $detached_slice = Bio::EnsEMBL::Slice->new(
+        -seq_region_name    => $slice->ssname,
+        -start              => $slice->start,
+        -end                => $slice->end,
+        -coord_system   => Bio::EnsEMBL::CoordSystem->new(
+            -name           => $slice->csname,
+            -version        => $slice->csver,
+            -rank           => 2,
+            -sequence_level => 0,
+            -default        => 1,
+        ),
+    );
+
+    return $detached_slice;
 }
 
 1;
