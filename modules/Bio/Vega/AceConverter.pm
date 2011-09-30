@@ -32,6 +32,7 @@ my %ace2ens_phase = (
     );
 
 my (
+    %feature_types,
     %ensembl_slice,
     %otter_slice,
     %ace_database,
@@ -48,6 +49,7 @@ my (
 sub DESTROY {
     my ($self) = @_;
 
+    delete(    $feature_types{$self}    );
     delete(    $ensembl_slice{$self}    );
     delete(      $otter_slice{$self}    );
     delete(     $ace_database{$self}    );
@@ -68,6 +70,16 @@ sub new {
 
     my $self_str;
     return bless \$self_str, $pkg;
+}
+
+sub feature_types {
+    my ($self, $feature_types) = @_;
+
+    if ($feature_types) {
+        $feature_types{$self} = $feature_types;
+    }
+
+    return $feature_types{$self};
 }
 
 sub ensembl_slice {
@@ -128,11 +140,9 @@ sub generate_vega_objects {
     $ace->raw_query($find_assembly);
     my $ace_txt = $ace->raw_query('show -a');
 
-    # Remove all Feature lines which aren't editable types
-    my @mutable =
-        $self->AceDatabase->MethodCollection->get_all_mutable_non_transcript_Methods;
-    my $editable = join '|', map { $_->name } @mutable;
-    $ace_txt =~ s/^Feature\s+"(?!($editable)).*\n//mg;
+    # filter by feature type
+    my $selected_features = join '|', map { $_->name } @{$self->feature_types};
+    $ace_txt =~ s/^Feature\s+"(?!($selected_features)).*\n//mg;
 
     $self->parse('build_Features_spans_and_agp_fragments', $ace_txt);
 
