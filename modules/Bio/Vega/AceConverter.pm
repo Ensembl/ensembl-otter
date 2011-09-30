@@ -129,7 +129,7 @@ sub generate_vega_objects {
     my ($self) = @_;
 
     my $slice_name = $self->otter_slice->name;
-    my $ace        = $self->AceDatabase->aceperl_db_handle;
+    my $ace        = $self->AceDatabase;
 
     # List of people for Authors
     $ace->raw_query(qq{find Person *});
