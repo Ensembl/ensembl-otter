@@ -116,11 +116,11 @@ sub clone_seq_list {
     return $clone_sequences{$self};
 }
 
-sub AceDatabase {
-    my( $self, $AceDatabase ) = @_;
+sub ace_handle {
+    my( $self, $ace_handle ) = @_;
 
-    if ($AceDatabase) {
-        $ace_database{$self} = $AceDatabase;
+    if ($ace_handle) {
+        $ace_database{$self} = $ace_handle;
     }
     return $ace_database{$self};
 }
@@ -129,7 +129,7 @@ sub generate_vega_objects {
     my ($self) = @_;
 
     my $slice_name = $self->otter_slice->name;
-    my $ace        = $self->AceDatabase;
+    my $ace        = $self->ace_handle;
 
     # List of people for Authors
     $ace->raw_query(qq{find Person *});
