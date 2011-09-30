@@ -622,8 +622,11 @@ sub generate_XML_from_acedb {
     my ($self) = @_;
     
     # Make Ensembl objects from the acedb database
+    my $feature_types =
+        [ $self->MethodCollection->get_all_mutable_non_transcript_Methods ];
     my $converter = Bio::Vega::AceConverter->new;
     $converter->AceDatabase($self);
+    $converter->feature_types($feature_types);
     $converter->otter_slice($self->smart_slice);
     $converter->generate_vega_objects;
     
