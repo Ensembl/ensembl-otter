@@ -33,6 +33,7 @@ my %ace2ens_phase = (
 
 my (
     %ensembl_slice,
+    %otter_slice,
     %ace_database,
     %authors,
     %genes,
@@ -48,6 +49,7 @@ sub DESTROY {
     my ($self) = @_;
 
     delete(    $ensembl_slice{$self}    );
+    delete(      $otter_slice{$self}    );
     delete(     $ace_database{$self}    );
     delete(          $authors{$self}    );
     delete(            $genes{$self}    );
@@ -72,6 +74,16 @@ sub ensembl_slice {
     my ($self) = @_;
 
     return $ensembl_slice{$self};
+}
+
+sub otter_slice {
+    my( $self, $otter_slice ) = @_;
+
+    if ($otter_slice) {
+        $otter_slice{$self} = $otter_slice;
+        $ensembl_slice{$self} = _ensembl_slice($otter_slice);
+    }
+    return $otter_slice{$self};
 }
 
 sub genes {
@@ -104,11 +116,8 @@ sub AceDatabase {
 sub generate_vega_objects {
     my ($self) = @_;
 
-    my $slice_name = $self->AceDatabase->smart_slice->name;
+    my $slice_name = $self->otter_slice->name;
     my $ace        = $self->AceDatabase->aceperl_db_handle;
-
-    # We need a slice to attach to the exons, transcripts, and genes
-    $ensembl_slice{$self} = _ensembl_slice($self->AceDatabase->smart_slice);
 
     # List of people for Authors
     $ace->raw_query(qq{find Person *});
@@ -231,9 +240,8 @@ sub build_Features_spans_and_agp_fragments {
 
     my $cs_list = $clone_sequences{$self} = [];
     my $chr_offset = $self->ensembl_slice->start - 1;
-    my $smart_slice = $ace_database{$self}->smart_slice;
-    my $chr_name = $smart_slice->seqname;
-    my $ss_name  = $smart_slice->ssname;
+    my $chr_name = $self->otter_slice->seqname;
+    my $ss_name  = $self->otter_slice->ssname;
     foreach my $row ($ace->get_values('AGP_Fragment')) {
         my ($ctg_name, $group_start, $group_end, undef, $start_or_end, $offset, $tile_length) = @$row;
 
