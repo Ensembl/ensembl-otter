@@ -624,6 +624,7 @@ sub generate_XML_from_acedb {
     # Make Ensembl objects from the acedb database
     my $converter = Bio::Vega::AceConverter->new;
     $converter->AceDatabase($self);
+    $converter->otter_slice($self->smart_slice);
     $converter->generate_vega_objects;
     
     # Pass the Ensembl objects to the XML formatter
