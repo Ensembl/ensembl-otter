@@ -46,7 +46,7 @@ sub Client {
 
 sub AccessionTypeCache {
     my ($self) = @_;
-    
+
     my $cache = $self->{'_AccessionTypeCache'};
     unless ($cache) {
         $cache = Bio::Otter::Lace::AccessionTypeCache->new;
@@ -59,7 +59,7 @@ sub AccessionTypeCache {
 
 sub DB {
     my ($self) = @_;
-    
+
     my $db = $self->{'_sqlite_database'}
         ||= Bio::Otter::Lace::DB->new($self->home);
     return $db;
@@ -67,7 +67,7 @@ sub DB {
 
 sub write_access {
     my ($self, $flag) = @_;
-    
+
     if (defined $flag) {
         $flag = $flag ? 1 : 0;
         $self->DB->set_tag_value('write_access', $flag);
@@ -80,7 +80,7 @@ sub write_access {
 
 sub home {
     my( $self, $home ) = @_;
-    
+
     if ($home) {
         $self->{'_home'} = $home;
     }
@@ -101,7 +101,7 @@ sub name {
 
 sub unsaved_changes {
     my ($self, $flag) = @_;
-    
+
     if (defined $flag) {
         $flag = $flag ? 1 : 0;
         $self->DB->set_tag_value('unsaved_changes', $flag);
@@ -114,11 +114,11 @@ sub unsaved_changes {
 
 sub save_region_xml {
     my ($self, $xml) = @_;
-    
+
     # Remove the locus and features to make data smaller
     $xml =~ s{<locus>.*</locus>}{}s;
     $xml =~ s{<feature_set>.*</feature_set>}{}s;
-    
+
     $self->DB->set_tag_value('region_xml', $xml);
 
     return;
@@ -126,13 +126,13 @@ sub save_region_xml {
 
 sub fetch_region_xml {
     my ($self) = @_;
-    
+
     return $self->DB->get_tag_value('region_xml');
 }
 
 sub save_lock_region_xml {
     my ($self, $xml) = @_;
-    
+
     $self->DB->set_tag_value('lock_region_xml', $xml);
 
     return;
@@ -140,7 +140,7 @@ sub save_lock_region_xml {
 
 sub fetch_lock_region_xml {
     my ($self) = @_;
-    
+
     return $self->DB->get_tag_value('lock_region_xml');
 }
 
@@ -164,7 +164,7 @@ sub error_flag {
 
 sub post_exit_callback {
     my( $self, $post_exit_callback ) = @_;
-    
+
     if ($post_exit_callback) {
         $self->{'_post_exit_callback'} = $post_exit_callback;
     }
@@ -180,7 +180,7 @@ sub MethodCollection {
 
 sub get_default_MethodCollection {
     my( $self ) = @_;
-    
+
     my $styles_collection = Hum::ZMapStyleCollection->new_from_string($self->Client->get_otter_styles);
     my $collect = Hum::Ace::MethodCollection->new_from_string($self->Client->get_methods_ace, $styles_collection);
     $collect->process_for_otterlace;
@@ -260,7 +260,7 @@ sub try_to_lock_the_block {
 
 sub write_file {
     my ($self, $file_name, $content) = @_;
-    
+
     my $full_file = join('/', $self->home, $file_name);
     open my $LF, '>', $full_file or die "Can't write to '$full_file'; $!";
     print $LF $content;
@@ -271,7 +271,7 @@ sub write_file {
 
 sub read_file {
     my ($self, $file_name) = @_;
-    
+
     local $/ = undef;
     my $full_file = join('/', $self->home, $file_name);
     open my $RF, '<', $full_file or die "Can't read '$full_file'; $!";
@@ -311,7 +311,7 @@ sub recover_smart_slice_from_region_xml {
 
 sub smart_slice {
     my( $self, $smart_slice ) = @_;
-    
+
     if ($smart_slice) {
         $self->{'_offset'} = undef;
         $self->{'_smart_slice'} = $smart_slice;
@@ -581,7 +581,7 @@ sub zmap_config_update {
             $cfg->setval($name,'delayed','true');
         }
     }
-    
+
     $cfg->RewriteConfig;
 
     return;
@@ -599,7 +599,7 @@ sub zmap_dir {
 
 sub offset {
     my ($self) = @_;
-    
+
     my $offset = $self->{'_offset'};
     unless (defined $offset) {
         my $slice = $self->smart_slice
@@ -620,7 +620,7 @@ sub save_ace_to_otter {
 
 sub generate_XML_from_acedb {
     my ($self) = @_;
-    
+
     # Make Ensembl objects from the acedb database
     my $feature_types =
         [ $self->MethodCollection->get_all_mutable_non_transcript_Methods ];
@@ -629,7 +629,7 @@ sub generate_XML_from_acedb {
     $converter->feature_types($feature_types);
     $converter->otter_slice($self->smart_slice);
     $converter->generate_vega_objects;
-    
+
     # Pass the Ensembl objects to the XML formatter
     my $formatter = Bio::Vega::Transform::XML->new;
     $formatter->species($self->smart_slice->dsname);
@@ -637,7 +637,7 @@ sub generate_XML_from_acedb {
     $formatter->clone_seq_list( $converter->clone_seq_list  );
     $formatter->genes(          $converter->genes           );
     $formatter->seq_features(   $converter->seq_features    );
-    
+
     return $formatter->generate_OtterXML;
 }
 
@@ -645,10 +645,10 @@ sub update_with_stable_ids {
     my ($self, $xml) = @_;
 
     return unless $xml;
-    
+
     my $parser = Bio::Vega::Transform::Otter::Ace->new;
     $parser->parse($xml);
-    
+
     return $parser->make_ace_genes_transcripts;
 }
 
@@ -658,7 +658,7 @@ sub unlock_otter_slice {
     my $smart_slice = $self->smart_slice();
     my $slice_name  = $smart_slice->name();
     my $dsname      = $smart_slice->dsname();
-    
+
     warn "Unlocking $dsname:$slice_name\n";
 
     my $client   = $self->Client or confess "No Client attached";
@@ -918,7 +918,7 @@ sub reload_filter_state {
         $state_hash->{'failed'} = $failed;
         $state_hash->{'done'}   = $done;
     }
-    
+
     if (@obsolete) {
         $dbh->begin_work;
         my $del = $dbh->prepare(q{ DELETE FROM otter_filter WHERE filter_name = ? });
@@ -984,7 +984,7 @@ sub DataSet {
 
 sub process_gff_file_from_Filter {
     my ($self, $filter) = @_;
-    
+
     my $filter_name = $filter->name;
     my $sth = $self->DB->dbh->prepare(q{ SELECT gff_file, process_gff FROM otter_filter WHERE filter_name = ? });
     $sth->execute($filter_name);
@@ -995,7 +995,7 @@ sub process_gff_file_from_Filter {
     unless ($load_gff) {
         return;
     }
-    
+
     my $full_gff_file = $self->home . "/$gff_file";
 
     # feature_kind values from otter_config:
@@ -1009,7 +1009,7 @@ sub process_gff_file_from_Filter {
     # RepeatFeature
     # SimpleFeature
     # VariationFeature
-    
+
     if ($filter->server_script eq 'get_gff_genes'
         or $filter->feature_kind eq 'PredictionExon'
         or $filter->feature_kind eq 'PredictionTranscript'
@@ -1086,7 +1086,7 @@ sub DESTROY {
     } else {
         warn "Error in AceDatabase::DESTROY : $@";
     }
-    
+
     if ($callback) {
         $callback->();
     }
