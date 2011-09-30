@@ -191,8 +191,6 @@ sub build_Author {
 sub build_Features_spans_and_agp_fragments {
     my ($self, $ace) = @_;
 
-    my $slice = $slice{$self};
-
     my $feat_list = $simple_features{$self} ||= [];
     foreach my $row ($ace->get_values('Feature')) {
         my ($type, $start, $end, $score, $label) = @$row;
@@ -211,7 +209,7 @@ sub build_Features_spans_and_agp_fragments {
             Bio::EnsEMBL::Analysis->new(-LOGIC_NAME => $type);
         my $sf = Bio::EnsEMBL::SimpleFeature->new(
             -ANALYSIS       => $ana,
-            -SLICE          => $slice,
+            -SLICE          => $self->slice,
             -START          => $start,
             -END            => $end,
             -STRAND         => $strand,
@@ -232,7 +230,7 @@ sub build_Features_spans_and_agp_fragments {
     }
 
     my $cs_list = $clone_sequences{$self} = [];
-    my $chr_offset = $slice{$self}->start - 1;
+    my $chr_offset = $self->slice->start - 1;
     my $smart_slice = $ace_database{$self}->smart_slice;
     my $chr_name = $smart_slice->seqname;
     my $ss_name  = $smart_slice->ssname;
@@ -256,7 +254,7 @@ sub build_Features_spans_and_agp_fragments {
         $cs->chr_start($start + $chr_offset);
         $cs->chr_end($end + $chr_offset);
         $cs->assembly_type($ss_name);
-        $cs->ContigInfo(Bio::Vega::ContigInfo->new(-SLICE => $slice{$self}));
+        $cs->ContigInfo(Bio::Vega::ContigInfo->new(-SLICE => $self->slice));
 
         push(@$cs_list, $cs);
     }
@@ -377,8 +375,6 @@ sub gather_transcripts {
 sub build_Transcript {
     my ($self, $ace) = @_;
 
-    my $slice = $slice{$self};
-
     my (undef, $name) = $ace->class_and_name;
 
     my $span = $spans{$self}{$name}
@@ -425,8 +421,6 @@ sub make_exons {
 
     my ($tsct_start, $tsct_end, $strand) = @$span;
 
-    my $slice = $slice{$self};
-
     my $tsct_exons = [];
     foreach my $row ($ace->get_values('Source_Exons')) {
         my ($ace_start, $ace_end, $stable_id) = @$row;
@@ -445,7 +439,7 @@ sub make_exons {
             -START      => $start,
             -END        => $end,
             -STRAND     => $strand,
-            -SLICE      => $slice,
+            -SLICE      => $self->slice,
             -STABLE_ID  => $stable_id,
             );
         push(@$tsct_exons, $exon);
