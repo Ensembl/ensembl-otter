@@ -244,9 +244,10 @@ use Bio::Vega::Utils::GFF;
         $gff->{score}   = $self->score;
         $gff->{feature} = 'misc_feature';
 
-        if ($self->display_label) {
-            $gff->{attributes}->{Name} = '"' . $self->display_label . '"';
-        }
+        my $display_label =
+            $self->display_label ||
+            $self->analysis->logic_name;
+        $gff->{attributes}->{Name} = '"' . $display_label . '"';
 
         return $gff;
     }
