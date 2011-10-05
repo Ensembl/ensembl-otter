@@ -21,6 +21,8 @@ use File::Basename;
 use Bio::Otter::Lace::Exonerate::BlastableVersion;
 use Bio::Otter::Lace::Exonerate::Config::General;
 use Bio::Otter::Lace::Exonerate::Config::Blast;
+use Bio::EnsEMBL::Analysis::Tools::BlastDBTracking;
+Bio::EnsEMBL::Analysis::Tools::BlastDBTracking->_Fake_version_for_otf(1);
 
 use Bio::Seq;
 use Hum::Ace::Method;
