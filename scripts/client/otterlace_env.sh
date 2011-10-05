@@ -19,13 +19,7 @@ anasoft="/software/anacode"
 OTTER_HOME="$anasoft/otter/otter_rel${version}"
 export OTTER_HOME
 
-otterlib="$OTTER_HOME/lib"
-if [ -n "$LD_LIBRARY_PATH" ]
-then
-    LD_LIBRARY_PATH="$otterlib:$LD_LIBRARY_PATH"
-else
-    LD_LIBRARY_PATH="$otterlib"
-fi
+LD_LIBRARY_PATH=
 export LD_LIBRARY_PATH
 
 otterbin="$OTTER_HOME/bin:/software/anacode/bin:/software/pubseq/bin/EMBOSS-5.0.0/bin:/software/perl-5.12.2/bin"
