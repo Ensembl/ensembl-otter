@@ -17,9 +17,11 @@ sub import {
     # had to put this inline here
     my %Config = (
 
-                  DATA_DIR => '/data/blastdb/Finished',
-                  LIB_DIR  => '/software/anacode/lib',
-                  BIN_DIR  => '/software/anacode/bin',
+                  # These are required to be set by B:E:A:Runnable,
+                  # but we don't want them to be used.
+                  DATA_DIR => '/dev/null',
+                  LIB_DIR  => '/dev/null',
+                  BIN_DIR  => '/dev/null',
 
 
                   # temporary working space (e.g. /tmp)
