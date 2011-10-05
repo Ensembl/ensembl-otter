@@ -18,7 +18,6 @@ use File::Basename;
 
 # pipeline configuration
 # this must come before Bio::EnsEMBL::Analysis::Runnable::Finished::Exonerate
-use Bio::Otter::Lace::Exonerate::BlastableVersion;
 use Bio::Otter::Lace::Exonerate::Config::General;
 use Bio::Otter::Lace::Exonerate::Config::Blast;
 use Bio::EnsEMBL::Analysis::Tools::BlastDBTracking;
