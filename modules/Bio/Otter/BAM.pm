@@ -79,7 +79,7 @@ sub featuresets {
 }
 
 sub zmap_column { return; }
-sub zmap_style  { return 'feat'; }
+sub zmap_style  { return 'short-read'; }
 
 sub delayed {
     return 1;
