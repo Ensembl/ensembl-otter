@@ -194,7 +194,7 @@ sub Assembly_from_tk {
           or next;
         push(@sf_list, $feat);
     }
-    $new_assembly->add_SimpleFeatures(@sf_list);
+    $new_assembly->set_SimpleFeature_list(@sf_list);
     
     return $new_assembly;
 }
