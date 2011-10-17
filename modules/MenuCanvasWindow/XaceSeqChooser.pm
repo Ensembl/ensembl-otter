@@ -26,6 +26,7 @@ use MenuCanvasWindow::GenomicFeatures;
 use Text::Wrap qw{ wrap };
 
 use Bio::Otter::Lace::Exonerate;
+use Bio::Otter::ZMap::XML;
 
 use base qw{
 MenuCanvasWindow
@@ -1768,7 +1769,8 @@ sub Assembly {
 sub save_Assembly {
     my( $self, $new ) = @_;
 
-    my @xml = $new->zmap_SimpleFeature_xml($self->Assembly, $self->AceDatabase->offset);
+    my @xml = Bio::Otter::ZMap::XML::update_SimpleFeatures_xml(
+        $self->Assembly, $new, $self->AceDatabase->offset);
     $self->zMapSendCommands(@xml);
     my $ace = $new->ace_string;
     $self->save_ace($ace);
