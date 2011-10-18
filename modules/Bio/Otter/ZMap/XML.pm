@@ -40,8 +40,7 @@ sub _request_xml {
     my ($action, $featureset_xml_hash) = @_;
 
     # ZMap does not handle XML requests with no features, so we remove
-    # all empty lists and return an empty string if there is nothing
-    # left
+    # all empty lists and return nothing if the hash is empty
 
     for ( keys %{$featureset_xml_hash} ) {
         delete $featureset_xml_hash->{$_} unless @{$featureset_xml_hash->{$_}};
