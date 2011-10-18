@@ -11,8 +11,8 @@ sub update_SimpleFeatures_xml {
 
     my $delete_featureset_xml = { };
     my $create_featureset_xml = { };
-    my $old_featuresets = $old_assembly->group_SimpleFeatures_by_featureset;
-    my $new_featuresets = $new_assembly->group_SimpleFeatures_by_featureset;
+    my $old_featuresets = _group_by_method_name($old_assembly->get_all_SimpleFeatures);
+    my $new_featuresets = _group_by_method_name($new_assembly->get_all_SimpleFeatures);
 
     my %featuresets = map { $_ => 1 } (keys %$old_featuresets, keys %$new_featuresets);
     for my $featureset (keys %featuresets) {
@@ -28,6 +28,12 @@ sub update_SimpleFeatures_xml {
         _request_xml('delete_feature', $delete_featureset_xml),
         _request_xml('create_feature', $create_featureset_xml),
         );
+}
+
+sub _group_by_method_name { ## no critic(Subroutines::RequireArgUnpacking)
+    my $featuresets = { };
+    push @{$featuresets->{$_->method_name}}, $_ for @_;
+    return $featuresets;
 }
 
 sub _featureset_xml {
