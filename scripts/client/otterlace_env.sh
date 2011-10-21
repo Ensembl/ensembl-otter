@@ -9,10 +9,21 @@ then
     exit 1
 fi
 
-http_proxy=http://webcache.sanger.ac.uk:3128
-export http_proxy
-no_proxy=.sanger.ac.uk,localhost
-export no_proxy
+
+# Do not assume client is Inside.
+#
+# This will not re-configure for laptops which transition from guest
+# to/from wired.
+case "$( hostname -f )" in
+    *.sanger.ac.uk)
+        # On wired network.  Need proxy to fetch external resources,
+        # but not to reach the Otter Server or a local Apache
+        http_proxy=http://webcache.sanger.ac.uk:3128
+        export http_proxy
+        no_proxy=.sanger.ac.uk,localhost
+        export no_proxy
+        ;;
+esac
 
 anasoft="/software/anacode"
 
