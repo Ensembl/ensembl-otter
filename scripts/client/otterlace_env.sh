@@ -1,6 +1,10 @@
 
-# the installation script will append the proper values to these lines
+# The installation script will append the proper values to these
+# lines.  (It stops substituting at the first non-assignment code.)
 version=
+anasoft=
+OTTER_HOME=
+
 
 # check that the installation script has set things up
 if [ -z "$version" ]
@@ -25,15 +29,13 @@ case "$( hostname -f )" in
         ;;
 esac
 
-anasoft="/software/anacode"
 
-OTTER_HOME="$anasoft/otter/otter_rel${version}"
 export OTTER_HOME
 
 LD_LIBRARY_PATH=
 export LD_LIBRARY_PATH
 
-otterbin="$OTTER_HOME/bin:/software/anacode/bin:/software/pubseq/bin/EMBOSS-5.0.0/bin:/software/perl-5.12.2/bin"
+otterbin="$OTTER_HOME/bin:$anasoft/bin:/software/pubseq/bin/EMBOSS-5.0.0/bin:/software/perl-5.12.2/bin"
 
 if [ -n "$ZMAP_BIN" ]
 then
@@ -50,9 +52,9 @@ fi
 export PATH
 
 # Settings for wublast needed by local blast searches
-WUBLASTFILTER=/software/anacode/bin/wublast/filter
+WUBLASTFILTER=$anasoft/bin/wublast/filter
 export WUBLASTFILTER
-WUBLASTMAT=/software/anacode/bin/wublast/matrix
+WUBLASTMAT=$anasoft/bin/wublast/matrix
 export WUBLASTMAT
 
 # Some setup for acedb
