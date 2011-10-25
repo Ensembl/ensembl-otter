@@ -26,14 +26,25 @@ General options:
     -h, --help, -?                      print help (this message)
 
 Specific options:
-    --ccdsfile FILE                     read input from FILE
+    evegahost                           Connection details for ensembl-vega database
+    evegaport
+    evegauser
+    evegapass
+    evegadbname
+    evegaassembly                       ensembl-vega assembly (GRCh37 etc)
+
+    ccdshost                            Connection details for CCDS database
+    ccdsport
+    ccdsuser
+    ccdspass
+    ccdsdbname
 
 =head1 DESCRIPTION
 
-This script adds CCDS identifiers to the database. The input file is a
-whitespace-separated list of transcript stable IDs and CCDS identifiers. For
-more information on the CCDS database see
-http://www.ensembl.org/Homo_sapiens/ccds.html.
+This script adds CCDS identifiers to the database. Using the CCDS database and an ensembl-vega database
+it matches transcripts by position and generates mappings between CCDS and Vega identifiers. This mapping
+file is stored no disc in case the script needs rerunning. The mappings are added as xrefs to a vega database.
+For more information on the CCDS database see http://www.ensembl.org/Homo_sapiens/ccds.html.
 
 =head1 LICENCE
 
@@ -43,7 +54,6 @@ Please see http://www.ensembl.org/code_licence.html for details
 =head1 AUTHORS
 
 Steve Trevanion <st3@sanger.ac.uk>
-Patrick Meidl <pm2@sanger.ac.uk>
 
 =head1 CONTACT
 
@@ -83,11 +93,8 @@ $support->parse_extra_options(
   'evegaport=s',
   'evegauser=s',
   'evegapass=s',
+  'evegadbname=s',
   'evegassembly=s',
-  'ensemblhost=s',
-  'ensemblport=s',
-  'ensembluser=s',
-  'ensemblpass=s',
   'ccdshost=s',
   'ccdsport=s',
   'ccdsuser=s',
@@ -100,12 +107,8 @@ $support->allowed_params(
   'evegaport',
   'evegauser',
   'evegapass',
-  'evegaassembly',
   'evegadbname',
-  'ensemblhost',
-  'ensemblport',
-  'ensembluser',
-  'ensemblpass',
+  'evegaassembly',
   'ccdshost',
   'ccdsport',
   'ccdsuser',
