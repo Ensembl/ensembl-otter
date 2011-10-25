@@ -278,8 +278,7 @@ foreach my $V_chr ($support->sort_chromosomes($V_chrlength)) {
       }
       $c++;
 
-      my $interim_transcript = transfer_transcript($transcript, $mapper,
-						   $V_cs, $V_pfa, $E_slice);
+      my $interim_transcript = transfer_transcript($transcript, $mapper, $V_cs, $V_pfa, $E_slice);
       my ($finished_transcripts, $protein_features) =
 	create_transcripts($interim_transcript, $E_sa, $gsi);
 
@@ -490,7 +489,7 @@ sub transfer_transcript {
       #
 	if ($c->isa('Bio::EnsEMBL::Mapper::Gap')) {
 	  $E_exon->fail(1);
-	  $support->log_warning("Reason: Exon ".$E_exon->stable_id." mapping has a gap\n",4);
+	  $support->log("Reason: Exon ".$E_exon->stable_id." mapping has a gap\n",4);
 	  $gap = 1;
 	  last;
 	}
@@ -504,7 +503,7 @@ sub transfer_transcript {
 	  if ($last_end) {
 	    if ($c->start != $last_end) {
 	      $E_exon->fail(1);
-	      $support->log_warning("Reason: Exon mapping has a mismatch in coords\n",4);
+	      $support->log("Reason: Exon mapping has a mismatch in coords\n",4);
 	      last;
 	    }
 	  }
