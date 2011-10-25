@@ -19,7 +19,7 @@ use Bio::EnsEMBL::Exon;
 use constant MAX_INTRON_LEN => 2e6;
 
 #these are long genes that have been OKeyed by Havana
-my %long_genes = map {$_,1 } qw(OTTHUMG00000150663 OTTHUMG00000086753 OTTHUMG00000086796 OTTHUMG00000030300 OTTMUSG00000022667 OTTMUSG00000031222 OTTMUSG00000026145);
+my %long_genes = map {$_,1 } qw(OTTHUMG00000150663 OTTHUMG00000086753 OTTHUMG00000086796 OTTHUMG00000030300 OTTMUSG00000022667 OTTMUSG00000031222 OTTMUSG00000026145 OTTHUMG00000166726);
 
 #
 # sanity checks the interim exons, and splits this
@@ -62,7 +62,7 @@ sub check_iexons {
 
     # sanity check: start must be less than or equal to end
     if ($iexon->end < $iexon->start) {
-      $support->log_warning("Unexpected ($tsi): exon start less than end: ".$iexon->stable_id.": ".$iexon->start.'-'.$iexon->end."\n", 6);
+      $support->log("Unexpected ($tsi): exon start less than end: ".$iexon->stable_id.": ".$iexon->start.'-'.$iexon->end."\n", 6);
     }
 
     # sanity check: cdna length must equal length
@@ -81,7 +81,7 @@ sub check_iexons {
 	  $prev_end > $iexon->start) ||
 	    (defined($prev_start) && $iexon->strand == -1 &&
 	       $prev_start < $iexon->end)) {
-      $support->log_warning("Exon ".$iexon->stable_id." in wrong order. Skipping transcript $tsi.\n", 4);
+      $support->log("Exon ".$iexon->stable_id." in wrong order. Skipping transcript $tsi.\n", 4);
       $fail_flag = 1;
       last EXON;
     }
@@ -89,7 +89,7 @@ sub check_iexons {
     if (!defined($transcript_strand)) {
       $transcript_strand = $iexon->strand;
     } elsif ($transcript_strand != $iexon->strand) {
-      $support->log_warning("Exon ".$iexon->stable_id." on wrong strand. Skipping transcript $tsi.\n", 4);
+      $support->log("Exon ".$iexon->stable_id." on wrong strand. Skipping transcript $tsi.\n", 4);
       $fail_flag = 1;
       last EXON;
     }
@@ -110,7 +110,7 @@ sub check_iexons {
 	$support->log("Long intron in transcript but OKeyed by Havana\n",5);
       }
       else {
-	$support->log_warning("Very long intron ($intron_len bp) that has not been OKeyed. skipping transcript $tsi (gene $gsi).\n", 3);
+	$support->log_warning("Very long intron ($intron_len bp) that has not been OKeyed. skipping transcript $tsi (gene $gsi).\n", 2);
 	$fail_flag = 1;
 	last EXON;
       }
