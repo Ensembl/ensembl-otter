@@ -153,11 +153,6 @@ $support->confirm_params;
 # get log filehandle and print heading and parameters to logfile
 $support->init_log;
 
-my $make_backup = 0;
-if ($support->user_proceed("Would you like to make a backup of this database made when everything else has been done ?\n")) {
-  $make_backup = 1;
-}
-
 if ($support->param('release_type' ne 'External')) {
   $support->log_warning("You haven't set \'release_type\' to be \'External\' using prepare_loutre.pl. Please do so before proceeding\n");
   exit;
@@ -206,6 +201,13 @@ my @tables = qw(coord_system
 my (%tabs);
 my $dbname = $support->param('dbname');
 map { $_ =~ s/`//g; $_ =~ s/$dbname.//g; $tabs{$_} += 1; } $vdbh->tables;
+
+my $make_backup = 0;
+if (! $support->param('dry_run')) {
+  if ($support->user_proceed("Would you like to make a backup of this database made when everything else has been done ?\n")) {
+    $make_backup = 1;
+  }
+}
 
 my $ask = 1;
 foreach my $name (@tables) {
@@ -436,7 +438,7 @@ if ($alt_assembly = $support->param('ensemblassembly') ) {
     }
     if ( my $e_name = $e_attribs->[0]->value) {
       my $e_sr_id = $esa->fetch_by_region('chromosome',$e_name,'','','',$alt_assembly,)->get_seq_region_id;
-      if ( grep { $_->value eq $alt_assembly } @{$l_chrom->get_all_Attributes('equiv_asm')} ) {
+      if ( (grep { $_->value eq $alt_assembly } @{$l_chrom->get_all_Attributes('equiv_asm')}) ||( $v_name =~ /PATCH/) ) {
 	$support->log("Chromosome $v_name is the same for VEGA and $alt_assembly; adding seq_regions etc mapping from ensembl\n",2);
 	my ($e_assembly_start)  = $edbh->selectrow_array(qq(
                 SELECT min(asm_start)
@@ -762,7 +764,7 @@ push @sql_fixes, "UPDATE gene SET biotype = 'processed_transcript' WHERE biotype
 push @sql_fixes, "UPDATE gene SET biotype = 'transcribed_pseudogene' WHERE biotype = 'expressed_pseudogene';\n";
 push @sql_fixes, "UPDATE transcript SET biotype = 'transcribed_pseudogene' WHERE biotype = 'expressed_pseudogene';\n";
 push @sql_fixes, "UPDATE transcript SET biotype = 'processed_transcript', status  = 'PUTATIVE' WHERE biotype = 'putative' AND status  = 'UNKNOWN';\n";
-push @sql_fixes, "UPDATE transcript SET biotype = '3prime_overlapping_ncrna' where biotype = '3\'_overlapping_ncrna';\n";
+push @sql_fixes, qq(UPDATE transcript SET biotype = "3prime_overlapping_ncrna" where biotype = "3'_overlapping_ncrna";\n);
 
 push @sql_fixes, "UPDATE gene SET status = 'NOVEL' WHERE biotype = 'processed_transcript' AND status = 'UNKNOWN';\n";
 push @sql_fixes, "UPDATE gene SET status = NULL WHERE biotype in ('processed_pseudogene','pseudogene','transcribed_processed_pseudogene','transcribed_unitary_pseudogene','transcribed_unprocessed_pseudogene','unprocessed_pseudogene','unitary_pseudogene');\n";
@@ -844,7 +846,9 @@ if ( ! $support->param('dry_run')) {
     my $user   = $support->param('user');
     my $pass   = $support->param('pass');
     $support->log("Making a backup of $dbname to $new_dbname\n");
-    my $cmd = "mysql -u $user -p$pass -h $host -P $port -e 'create database $new_dbname'";
+    my $cmd = "mysql -u $user -p$pass -h $host -P $port -e 'drop database if exists $new_dbname'";
+    `$cmd`;
+    $cmd = "mysql -u $user -p$pass -h $host -P $port -e 'create database $new_dbname'";
     `$cmd`;
     $cmd = "mysqldump --opt -u $user -p$pass -h $host -P $port $dbname | mysql -u $user -p$pass -h $host -P $port $new_dbname";
     `$cmd`;
