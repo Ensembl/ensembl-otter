@@ -85,6 +85,7 @@ $support->parse_extra_options(
   'zfin_name_file=s',
   'zfin_desc_file=s',
   'zfin_alias_file=s',
+  'prune',
 );
 
 $support->allowed_params(
@@ -92,6 +93,7 @@ $support->allowed_params(
   'zfin_name_file',
   'zfin_desc_file',
   'zfin_alias_file',
+  'prune',
 );
 
 $support->check_required_params('zfin_name_file','zfin_desc_file','zfin_alias_file');	
@@ -105,7 +107,7 @@ $support->confirm_params;
 $support->init_log;
 
 my $vegafile = $support->param('zfin_name_file');  #http://zfin.org/data_transfer/Downloads/vega_transcript.txt
-my $zfinfile = $support->param('zfin_desc_file');  #http://zfin.org/transfer/MEOW/zfin_genes.txt 
+my $zfinfile = $support->param('zfin_desc_file');  #http://zfin.org/transfer/MEOW/zfin_genes.txt
 my $alias    = $support->param('zfin_alias_file'); #http://zfin.org/data_transfer/Downloads/aliases.txt
 
 my $dba = $support->get_database('ensembl');
@@ -302,7 +304,7 @@ foreach my $chr (@chr_sorted) {
       else {
         #no match :-(
         $zfin_xref_missing++;
-        $support->log_warning("Cannot match any zfin record with $gsi (vega_name = $gene_name; parsed vega_name = $newname)\n",2);
+        $support->log_warning("Cannot match any zfin record (gene or transcript) with $gsi (vega_name = $gene_name; parsed vega_name = $newname)\n",2);
       }
     }
   }
