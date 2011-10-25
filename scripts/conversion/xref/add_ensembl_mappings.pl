@@ -9,9 +9,9 @@ add_ensembl_mappings.pl - adds xrefs to ensembl transcripts/genes
 add_ensembl_mappings.pl [options]
 
 General options:
+
     --conffile, --conf=FILE             read parameters from FILE
                                         (default: conf/Conversion.ini)
-
     --dbname, db_name=NAME              use database NAME
     --host, --dbhost, --db_host=HOST    use database host HOST
     --port, --dbport, --db_port=PORT    use database port PORT
@@ -26,6 +26,7 @@ General options:
     -h, --help, -?                      print help (this message)
 
 Specific options:
+
     --ensemblhost=HOST                  use Ensembl database host HOST
     --ensemblport=PORT                  use Ensembl database port PORT
     --ensembluser=USER                  use Ensembl database username USER
@@ -96,7 +97,7 @@ $support->parse_extra_options(
   'ensembluser=s',
   'ensemblpass=s',
   'ensembldbname=s',
-  'prune=s',
+  'prune',
 );
 $support->allowed_params(
   $support->get_common_params,
@@ -279,7 +280,7 @@ foreach my $type (qw(genes transcripts)) {
 	      $support->log_warning("No dbID for $vdb xref ($e_id) $v_id.\n", 1);
 	    }
 	  }
-	}
+        }
       }
     }
     if (scalar(@c) > 1) {
