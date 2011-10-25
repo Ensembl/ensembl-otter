@@ -194,8 +194,8 @@ if (! $support->param('filter_biotype')) {
 $support->comma_to_list('filter_biotype');
 
 #loutre seq_region_attributes to transfer or ignore - add new ones here
-my $att_types_wanted = [qw(name toplevel ack vega_name vega_release vega_export_mod ensembl_name intl_clone_name annotated equiv_asm)];
-my $att_types_to_ignore = [qw(chr description embl_acc embl_version htg hidden write_access)];
+my $att_types_wanted = [qw(name toplevel vega_name vega_release vega_export_mod ensembl_name intl_clone_name annotated equiv_asm)];
+my $att_types_to_ignore = [qw(chr description embl_acc embl_version htg hidden write_access ack)];
 
 # ask user to confirm parameters to proceed
 $support->confirm_params;
@@ -303,13 +303,17 @@ foreach my $line (split(/\n/,$txt)){
 #read all current vega_tables and see if there are loutre tables we haven't considered
 my $vdbname = $support->param('dbname');
 my %vega_tables;
+my @new_tables;
 map { $_ =~ s/`//g;  $_ =~ s/$vdbname.//g; $vega_tables{$_} = 1; } $vdbh->tables;
 foreach my $t (keys %constraints) {
   if (! exists($vega_tables{$t}) && ! $constraints{$t}) {
-    $support->log_error("Loutre contains a table $t that you haven't defined what to do with\n");
+    push @new_tables, $t;
   }
 }
-
+if (@new_tables) {
+  my $new_tables = join ', ',@new_tables ;
+  $support->log_error("Loutre contains tables $new_tables that you haven't defined what to do with\n");
+}
 
 ####
 #check all attrib_type.attrib_type_ids in loutre are in the newly created vega db
@@ -577,7 +581,13 @@ foreach my $name (@{$chr_names_wanted}) {
     }
     #skip not for VEGA genes
     if ( grep { $_->value eq 'not for VEGA' } @{$lgene->get_all_Attributes('remark')} ) {
-      $support->log("Skipping gene $gname ($lgsi) because of a not for VEGA remark\n",1);
+      $support->log("Skipping gene $gname ($lgsi) because of a 'not for VEGA' remark\n",1);
+      next GENE;
+    }
+
+    #skip annotation in progress genes
+    if ( grep { $_->value eq 'annotation in progress' } @{$lgene->get_all_Attributes('remark')} ) {
+      $support->log("Skipping gene $gname ($lgsi) because of an 'annotation in progress' remark (".$lgene->gene_author->name.")\n",1);
       next GENE;
     }
 
@@ -587,11 +597,6 @@ foreach my $name (@{$chr_names_wanted}) {
 	$support->log("Skipping gene $gname ($lgsi) because of untrusted author (".$lgene->gene_author->name.")\n",1);
 	next GENE;
       }
-    }
-    #ignore BCM genes on chr7
-    if ( ($name =~ /chr3-/) && ($lgene->source eq 'BCM') ) {
-      $support->log("Skipping gene $gname ($lgsi) because it's from an external source (".$lgene->source.")\n",1);
-      next GENE;
     }
 
     #filter out genes on non-anotated clones and without fsv tags
@@ -1079,6 +1084,10 @@ tmp_assembly                  i
 test_contig                   i
 test_contig_info              i
 gene_name_update              i
+align_session                 i
+align_stage                   i
+misc_feature_misc_set__bak    i
+misc_set__bak                 i
 ENDOFTEXT
   return $txt;
 }
