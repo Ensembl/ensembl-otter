@@ -482,7 +482,7 @@ sub add_supporting_evidence {
     my ($self, $ace, $tsct) = @_;
 
     my $evidence_list = [];
-    foreach my $type (qw{ cDNA ncRNA Protein Genomic EST }) {
+    foreach my $type ( @Bio::Vega::Evidence::Types::ALL ) {
         foreach my $value ($ace->get_values($type . '_match')) {
             my $ev = Bio::Vega::Evidence->new(
                 -TYPE   => $type,

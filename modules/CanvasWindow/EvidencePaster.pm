@@ -7,6 +7,7 @@ use strict;
 use warnings;
 use Scalar::Util 'weaken';
 use Hum::Sort 'ace_sort';
+use Bio::Vega::Evidence::Types;
 
 use base 'CanvasWindow';
 
@@ -185,7 +186,7 @@ sub draw_evidence {
     my $x = $size;
 
     my $y = 0;
-    foreach my $type (qw{ Protein ncRNA cDNA EST }) {
+    foreach my $type ( @Bio::Vega::Evidence::Types::VALID ) {
         my $name_list = $evidence_hash->{$type} or next;
         next unless @$name_list;
 
