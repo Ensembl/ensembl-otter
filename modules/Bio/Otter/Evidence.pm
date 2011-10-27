@@ -3,6 +3,8 @@ package Bio::Otter::Evidence;
 use strict;
 use warnings;
 
+use Bio::Vega::Evidence::Types qw( evidence_type_valid_all );
+
 use base qw( Bio::EnsEMBL::Root );
 
 sub new {
@@ -105,17 +107,16 @@ sub transcript_info_id {
 sub type{
    my ($obj,$value) = @_;
    if( defined $value) {
-
-       if ($value eq 'ncRNA' || $value eq 'EST' || $value eq 'Protein' || $value eq 'cDNA' || $value eq 'Genomic' || $value eq 'UNKNOWN') {
+       if (evidence_type_valid_all($value) or $value eq 'UNKNOWN') {
            $obj->{'type'} = $value;
        } else {
-           $obj->throw("Invalid type [$value]. Must be one of EST,ncRNA,Protein,cDNA,Genomic");
+           my $valid = join(',', @Bio::Vega::Evidence::Types::ALL);
+           $obj->throw("Invalid type [$value]. Must be one of $valid");
        }
-    }
-    return $obj->{'type'};
+   }
+   return $obj->{'type'};
 
 }
-
 
 =head2 toString
 

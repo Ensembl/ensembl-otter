@@ -27,6 +27,7 @@ use Text::Wrap qw{ wrap };
 
 use Bio::Otter::Lace::Exonerate;
 use Bio::Otter::ZMap::XML;
+use Bio::Vega::Evidence::Types qw{ new_evidence_type_valid };
 
 use base qw{
 MenuCanvasWindow
@@ -1951,13 +1952,7 @@ sub launch_exonerate {
     my %seqs_by_type = ();
 
     for my $seq (@$seqs) {
-        if (
-            $seq->type
-            && (   $seq->type eq 'EST'
-                || $seq->type eq 'ncRNA'
-                || $seq->type eq 'cDNA'
-                || $seq->type eq 'Protein')
-          )
+        if ($seq->type && new_evidence_type_valid($seq->type))
         {
             push @{ $seqs_by_type{ $seq->type } }, $seq;
         }
