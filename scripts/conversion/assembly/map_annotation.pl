@@ -187,10 +187,8 @@ my $E_pfa = $E_dba->get_ProteinFeatureAdaptor;
 my $cs_adaptor = $E_dba->get_CoordSystemAdaptor;
 my $asmap_adaptor = $E_dba->get_AssemblyMapperAdaptor;
 
-my $E_cs = $cs_adaptor->fetch_by_name('chromosome',
-    $support->param('ensemblassembly'));
-my $V_cs = $cs_adaptor->fetch_by_name('chromosome',
-    $support->param('assembly'));
+my $E_cs = $cs_adaptor->fetch_by_name('chromosome',$support->param('ensemblassembly'));
+my $V_cs = $cs_adaptor->fetch_by_name('chromosome',$support->param('assembly'));
 
 # get assembly mapper
 my $mapper = $asmap_adaptor->fetch_by_CoordSystems($E_cs, $V_cs);
@@ -252,8 +250,20 @@ foreach my $V_chr ($support->sort_chromosomes($V_chrlength)) {
   my $E_slice = $E_sa->fetch_by_region('chromosome', $E_chr, undef, undef,
 				       undef, $support->param('ensemblassembly'));
 
-  $support->log("Looping over genes...\n", 1);
-  my $genes = $V_ga->fetch_all_by_Slice($V_slice);
+  my $genes;
+  my $patch_region_hack = 0;
+  if ( ! $V_slice->is_reference() ) {
+    $patch_region_hack = 1;
+    my $slices = $V_sa->fetch_by_region_unique( $V_slice->coord_system_name(),$V_slice->seq_region_name() );
+    foreach my $slice ( @{$slices} ) {
+      push @$genes, @{$V_ga->fetch_all_by_Slice($slice)};
+    }
+  }
+  else {
+    $genes = $V_ga->fetch_all_by_Slice($V_slice);
+  }
+
+  $support->log("Looping over ".scalar(@$genes)." genes...\n", 1);
  GENE:
   foreach my $gene (@{ $genes }) {
     my $gsi = $gene->stable_id;
@@ -265,7 +275,12 @@ foreach my $V_chr ($support->sort_chromosomes($V_chrlength)) {
 	next GENE;
       }
     }
-    $support->log("Gene $gsi/$name (logic_name $ln)\n", 2);
+    $support->log("Gene $gsi/$name (logic_name $ln)\n", 1);
+
+    if ($patch_region_hack) {
+      &transfer_vega_patch_gene($gene,$V_chr);
+      next GENE;
+    }
 
     my $transcripts = $gene->get_all_Transcripts;
     my (@finished, %all_protein_features);
@@ -279,8 +294,7 @@ foreach my $V_chr ($support->sort_chromosomes($V_chrlength)) {
       $c++;
 
       my $interim_transcript = transfer_transcript($transcript, $mapper, $V_cs, $V_pfa, $E_slice);
-      my ($finished_transcripts, $protein_features) =
-	create_transcripts($interim_transcript, $E_sa, $gsi);
+      my ($finished_transcripts, $protein_features) = create_transcripts($interim_transcript, $E_sa, $gsi);
 
       # set the translation stable identifier on the finished transcripts
       foreach my $tr (@{ $finished_transcripts }) {
@@ -336,6 +350,176 @@ do_stats_logging();
 $support->finish_log;
 
 ### END main
+
+
+=head2 transfer_vega_patch_gene
+
+  Arg[1]      : Bio::Vega::Gene - Vega source gene
+  Arg[2]      : Bio::Vega::Slice - Vega destination chromosome
+  Arg[3]      : arrayref of attrib_type.codes
+  Description : Transforms a Loutre gene into a Vega gene
+  Return type : none
+  Exceptions  : none
+  Caller      : internal
+
+=cut
+
+sub transfer_vega_patch_gene {
+  my ($vgene,$V_chr) = @_;
+  my $gsi = $vgene->stable_id;
+  my $v_gene_slice = $vgene->slice;
+  if(!$v_gene_slice) {		
+    $support->log_warning("Couldn't fetch vega gene slice\n");
+    return 0;
+  }
+  my ($min_start,$max_end);
+  my $ev_gene_slice = $E_sa->fetch_by_region(
+    'chromosome',
+    $v_gene_slice->seq_region_name,
+    $v_gene_slice->start,
+    $v_gene_slice->end,
+    $v_gene_slice->strand,
+    $support->param('ensemblassembly'),
+  );
+
+  if(!$ev_gene_slice) {
+    $support->log_warning("Couldn't fetch ensembl_vega gene slice\n");
+    return 0;
+  }
+
+  if(!@{$vgene->get_all_Transcripts}){
+    $support->log_warning("No transcripts for Vega gene ".$vgene->dbID."\n");
+    return 0;
+  }
+  my $found_trans     = 0;
+  my $needs_updating = 0;
+  my %artifact_ids;
+  my @transcripts = @{$vgene->get_all_Transcripts};
+
+  my $c = 0;
+ TRANS:
+  foreach my $transcript (@transcripts){
+
+    if ($transcript->biotype eq 'artifact') {
+      $support->log("Transcript: ".$transcript->stable_id." skipping because it's an 'artifact'\n", 3);
+      $needs_updating = 1;
+      $artifact_ids{$transcript->stable_id} = 1;
+      next TRANS;
+    }
+
+    if($transcript->translation){
+      $transcript->translation;
+    }
+    $transcript->stable_id;
+
+    $support->log("Will transfer ".$transcript->stable_id."\n",2);
+    $found_trans = 1;
+    foreach my $sf (@{$transcript->get_all_supporting_features}) {
+      my $ev_sf_slice;
+      if ($ev_sf_slice = $E_sa->fetch_by_region(
+        'chromosome',
+        $sf->seq_region_name,
+        $sf->seq_region_start,
+        $sf->seq_region_end,
+        $sf->seq_region_strand,
+        $support->param('ensemblassembly'),
+      )) {
+        if ($transcript->stable_id eq 'OTTHUMT00000426693'){
+          warn "vega sf start = ".$sf->seq_region_start." end = ".$sf->seq_region_end;
+          warn " ensembl sf slice start = ".$ev_sf_slice->start." end = ".$ev_sf_slice->end." cs= ".$ev_sf_slice->coord_system->version;
+ #         $sf->slice($ev_sf_slice);
+          warn "  2. sf slice (dbID = ".$sf->slice->get_seq_region_id.") start (after slice method) = ".$sf->seq_region_start." end = ".$sf->seq_region_end." cs = ".$sf->slice->coord_system->version;
+          $sf->hslice($ev_sf_slice);
+          warn "  3. sf slice (dbID = ".$sf->slice->get_seq_region_id.") start (after hslice method) = ".$sf->seq_region_start." end = ".$sf->seq_region_end." cs = ".$sf->slice->coord_system->version;
+        }
+      }
+      else {
+        $support->log("Cannot retrieve Ensembl slice for supporting_feature ".$sf->hseqname."\n",2);
+      }
+    }
+    my @exons= @{$transcript->get_all_Exons};
+    foreach my $exon (@exons) {
+      foreach my $sf (@{$exon->get_all_supporting_features}) {
+        my $v_sf_slice = $sf->slice;
+        my $ev_sf_slice;
+        if ($ev_sf_slice= $E_sa->fetch_by_region(
+          'chromosome',
+          $v_sf_slice->seq_region_name,
+          $v_sf_slice->start,
+          $v_sf_slice->end,
+          $v_sf_slice->strand,
+          $support->param('ensemblassembly'),
+        )) {
+          $sf->hslice($ev_sf_slice);
+        }
+        else {
+          $support->log("Cannot retrieve Ensembl slice for transcript supporting_feature ".$sf->hseqname."\n",2);
+        }
+      }
+      $exon->slice($ev_gene_slice);
+    }
+    $transcript->slice($ev_gene_slice);
+  }
+  $vgene->slice($ev_gene_slice);
+
+  #if we found a transcript to ignore then the gene start/stop need updating, and we need to delete the transcript before storing it
+  if ($needs_updating){
+
+    #update start & end
+    @transcripts = @{$vgene->get_all_Transcripts};
+    foreach my $transcript (@transcripts){
+      if ($artifact_ids{$transcript->stable_id}) {
+        &remove_Transcript($vgene,$transcript->stable_id);
+      }
+      else {
+        if ($transcript->start < $vgene->start){
+          $vgene->start=$transcript->start;
+        }
+        if ($transcript->end > $vgene->end){
+          $vgene->end=$transcript->end;
+        }
+      }
+    }
+  }
+
+  #make a note of the number of transcripts per gene
+  my $trans_c = scalar(@{$vgene->get_all_Transcripts});
+  $trans_numbers{$gsi}->{'vega'} = scalar(@transcripts);
+  $trans_numbers{$gsi}->{'evega'} = $trans_c;
+
+  #count gene and transcript if it's been transferred
+  $stat_hash{$V_chr}->{'genes'}++;
+  $stat_hash{$V_chr}->{'transcripts'} += $trans_c;
+
+  if (! $support->param('dry_run')) {
+    my $dbID;
+    if (eval { $dbID = $E_ga->store($vgene); 1 } ) {
+      $support->log("Stored gene ".$vgene->stable_id." ($dbID)\n",2);
+      return 1;
+    }
+    else {
+      $support->log_warning("Failed to store gene ".$vgene->stable_id."\n",2);
+      warn $@ if $@;
+      return 0;
+    }
+  }
+  else {
+    return 0;
+  }
+}
+
+
+sub remove_Transcript {
+  my ($gene, $stable_id) = @_;
+  my $transcripts = $gene->get_all_Transcripts();
+  for(my $i = 0; $i < scalar(@{$transcripts}); $i++) {
+    my $t = $transcripts->[$i];
+    if($t->stable_id() eq $stable_id) {
+      $support->log("Removing ".$t->stable_id." from list of transcripts that are giong to be transferred\n",3);
+      splice(@{$transcripts}, $i, 1);
+    }
+  }
+}
 
 
 =head2 transfer_transcript
