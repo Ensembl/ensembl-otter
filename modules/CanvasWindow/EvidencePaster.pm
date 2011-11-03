@@ -5,11 +5,15 @@ package CanvasWindow::EvidencePaster;
 
 use strict;
 use warnings;
+use Readonly;
 use Scalar::Util 'weaken';
 use Hum::Sort 'ace_sort';
 use Bio::Vega::Evidence::Types;
 
 use base 'CanvasWindow';
+
+Readonly my $EVI_TAG     => 'IsEvidence';
+Readonly my $CURRENT_EVI => "current&&${EVI_TAG}";
 
 sub initialise {
     my( $self, $evidence_hash ) = @_;
@@ -102,7 +106,7 @@ sub control_left_button_handler {
 
     my $canvas = $self->canvas;
 
-    my ($obj)  = $canvas->find('withtag', 'current&&!IGNORE')
+    my ($obj)  = $canvas->find('withtag', $CURRENT_EVI)
       or return;
 
     if ($self->is_selected($obj)) {
@@ -119,9 +123,9 @@ sub shift_left_button_handler {
 
     my $canvas = $self->canvas;
 
-    return unless $canvas->find('withtag', 'current&&!IGNORE');
+    return unless $canvas->find('withtag', $CURRENT_EVI);
 
-    $self->extend_highlight('!IGNORE');
+    $self->extend_highlight($EVI_TAG);
 
     return;
 }
@@ -132,7 +136,7 @@ sub select_all {
     my $canvas = $self->canvas;
 
     $self->highlight(
-        $canvas->find('withtag', '!IGNORE')
+        $canvas->find('withtag', $EVI_TAG)
         );
 
     return;
@@ -194,7 +198,6 @@ sub draw_evidence {
             -anchor => 'ne',
             -text   => $type,
             -font   => $bold,
-            -tags   => ['IGNORE'],
             );
 
         my $x = $size;
@@ -203,7 +206,7 @@ sub draw_evidence {
                 -anchor => 'nw',
                 -text   => $text,
                 -font   => $norm,
-                -tags   => [$type],
+                -tags   => [$type, $EVI_TAG],
                 );
             $y += $row_height;
         }

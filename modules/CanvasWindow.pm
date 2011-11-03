@@ -947,6 +947,7 @@ sub next_message_id {
         $canvas->delete($was_tag);
         $self->{'_was_selected_list'} = undef;
         foreach my $o (@obj) {
+            next if $self->is_selected($o);
             my @bbox = $canvas->bbox($o);
             $bbox[0] -= 1;
             $bbox[1] -= 1;
