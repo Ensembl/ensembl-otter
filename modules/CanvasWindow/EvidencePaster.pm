@@ -22,6 +22,19 @@ sub initialise {
     my $top = $canvas->toplevel;
     $top->configure(-title => "otter: Evidence");
 
+    my $align_frame = $top->Frame->pack(
+        -side => 'top',
+        -fill => 'x',
+        );
+
+    my $align = sub { $self->align_to_transcript; };
+    $top->bind('<Control-t>', $align);
+    $top->bind('<Control-T>', $align);
+    $align_frame->Button(
+        -text => 'Align to transcript',
+        -command => $align,
+        )->pack(-side => 'left', -fill => 'x', -expand => 1);
+
     my $button_frame = $top->Frame->pack(
         -side => 'top',
         -fill => 'x',
@@ -299,6 +312,17 @@ sub highlight {
     weaken $self;
 
     return;
+}
+
+sub align_to_transcript {
+    my ($self) = @_;
+    my $canvas = $self->canvas;
+
+    foreach my $sel ($self->list_selected) {
+        my ($type) = $canvas->gettags($sel);
+        my $name   = $canvas->itemcget($sel, 'text');
+        print "Aligning: $type -\t$name\t($sel)\n";
+    }
 }
 
 sub DESTROY {
