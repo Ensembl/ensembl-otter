@@ -30,10 +30,11 @@ sub initialise {
     my $align = sub { $self->align_to_transcript; };
     $top->bind('<Control-t>', $align);
     $top->bind('<Control-T>', $align);
-    $align_frame->Button(
+    my $align_button = $align_frame->Button(
         -text => 'Align to transcript',
         -command => $align,
         )->pack(-side => 'left', -fill => 'x', -expand => 1);
+    $self->align_button($align_button);
 
     my $button_frame = $top->Frame->pack(
         -side => 'top',
@@ -102,6 +103,15 @@ sub ExonCanvas {
         weaken($self->{'_ExonCanvas'});
     }
     return $self->{'_ExonCanvas'};
+}
+
+sub align_button {
+    my( $self, $align_button ) = @_;
+
+    if ($align_button) {
+        $self->{'_align_button'} = $align_button;
+    }
+    return $self->{'_align_button'};
 }
 
 sub left_button_handler {
