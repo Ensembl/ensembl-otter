@@ -135,9 +135,14 @@ sub select_all {
 
     my $canvas = $self->canvas;
 
-    $self->highlight(
-        $canvas->find('withtag', $EVI_TAG)
-        );
+    my @all      = $canvas->find('withtag', $EVI_TAG);
+    my @selected = $self->list_selected;
+
+    if (scalar(@all) == scalar(@selected)) {
+        $self->deselect_all;
+    } else {
+        $self->highlight(@all);
+    }
 
     return;
 }
