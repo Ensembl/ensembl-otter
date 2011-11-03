@@ -1073,19 +1073,19 @@ sub next_message_id {
     sub list_selected {
         my( $self ) = @_;
 
-        return $self->list_with_tag('_selected_list');
+        return $self->_get_sorted_list('_selected_list');
     }
 
     sub list_was_selected {
         my( $self ) = @_;
 
-        return $self->list_with_tag('_was_selected_list');
+        return $self->_get_sorted_list('_was_selected_list');
     }
 
-    sub list_with_tag {
-        my ($self, $tag) = @_;
+    sub _get_sorted_list {
+        my ($self, $list_name) = @_;
         
-        if (my $sel = $self->{$tag}) {
+        if (my $sel = $self->{$list_name}) {
             my @selected = sort { ace_sort($a,$b) } keys %$sel;
             return @selected;
         } else {
