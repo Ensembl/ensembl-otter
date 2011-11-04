@@ -31,8 +31,9 @@ sub initialise {
     $top->bind('<Control-t>', $align);
     $top->bind('<Control-T>', $align);
     my $align_button = $align_frame->Button(
-        -text => 'Align to transcript',
+        -text =>    'Align to transcript',
         -command => $align,
+        -state   => 'disabled',
         )->pack(-side => 'left', -fill => 'x', -expand => 1);
     $self->align_button($align_button);
 
@@ -114,6 +115,13 @@ sub align_button {
     return $self->{'_align_button'};
 }
 
+sub align_enable {
+    my ( $self, $enable ) = @_;
+    my $state = $enable ? 'normal' : 'disabled';
+    $self->align_button->configure( -state => $state );
+    return;
+}
+
 sub left_button_handler {
     my( $self ) = @_;
 
@@ -134,6 +142,7 @@ sub control_left_button_handler {
 
     if ($self->is_selected($obj)) {
         $self->remove_selected($obj);
+        $self->align_enable(0) unless $self->list_selected;
     } else {
         $self->highlight($obj);
     }
@@ -319,9 +328,17 @@ sub highlight {
     $self->canvas->SelectionOwn(
         -command    => sub{ $self->deselect_all },
         );
+    $self->align_enable(1);
     weaken $self;
 
     return;
+}
+
+sub deselect_all {
+    my ( $self ) = @_;
+
+    $self->SUPER::deselect_all;
+    $self->align_enable(0);
 }
 
 sub align_to_transcript {
