@@ -168,8 +168,7 @@ my @gene_stable_ids = $support->param('gene_stable_id');
 my %gene_stable_ids = map { $_, 1 } @gene_stable_ids;
 
 #get chromosomes
-#my $chr_length = $support->get_chrlength($dba,undef,'chromosome'); #sometimes needed
-my $chr_length = $support->get_chrlength($dba);
+my $chr_length = $support->get_chrlength($dba,'','chromosome',1); #will retrieve non-reference slices
 
 my @chr_sorted = $support->sort_chromosomes($chr_length);
 my %analysis = map { $_->logic_name => $_ } @{ $aa->fetch_all };
