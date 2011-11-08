@@ -1064,7 +1064,7 @@ sub next_message_id {
 
         return $self->{'_selected_list'}{$obj} ? 1 : 0;
     }
-    
+
     sub was_selected {
         my ($self, $obj) = @_;
         
