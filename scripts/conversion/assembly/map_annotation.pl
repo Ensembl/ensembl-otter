@@ -399,7 +399,6 @@ sub transfer_vega_patch_gene {
   my $c = 0;
  TRANS:
   foreach my $transcript (@transcripts){
-
     if ($transcript->biotype eq 'artifact') {
       $support->log("Transcript: ".$transcript->stable_id." skipping because it's an 'artifact'\n", 3);
       $needs_updating = 1;
@@ -414,8 +413,13 @@ sub transfer_vega_patch_gene {
 
     $support->log("Will transfer ".$transcript->stable_id."\n",2);
     $found_trans = 1;
+
     foreach my $sf (@{$transcript->get_all_supporting_features}) {
       my $ev_sf_slice;
+
+      #does this replace all of the below ?
+#      $sf->slice($ev_gene_slice);
+
       if ($ev_sf_slice = $E_sa->fetch_by_region(
         'chromosome',
         $sf->seq_region_name,
@@ -424,14 +428,14 @@ sub transfer_vega_patch_gene {
         $sf->seq_region_strand,
         $support->param('ensemblassembly'),
       )) {
-        if ($transcript->stable_id eq 'OTTHUMT00000426693'){
-          warn "vega sf start = ".$sf->seq_region_start." end = ".$sf->seq_region_end;
-          warn " ensembl sf slice start = ".$ev_sf_slice->start." end = ".$ev_sf_slice->end." cs= ".$ev_sf_slice->coord_system->version;
- #         $sf->slice($ev_sf_slice);
-          warn "  2. sf slice (dbID = ".$sf->slice->get_seq_region_id.") start (after slice method) = ".$sf->seq_region_start." end = ".$sf->seq_region_end." cs = ".$sf->slice->coord_system->version;
-          $sf->hslice($ev_sf_slice);
-          warn "  3. sf slice (dbID = ".$sf->slice->get_seq_region_id.") start (after hslice method) = ".$sf->seq_region_start." end = ".$sf->seq_region_end." cs = ".$sf->slice->coord_system->version;
-        }
+#        if ($transcript->stable_id eq 'OTTHUMT00000426675'){
+#          warn "vega sf start = ".$sf->seq_region_start." end = ".$sf->seq_region_end;
+#          warn " ensembl sf slice start = ".$ev_sf_slice->start." end = ".$ev_sf_slice->end." cs= ".$ev_sf_slice->coord_system->version;
+#          $sf->slice($ev_sf_slice);
+#          warn "  1. sf slice (dbID = ".$sf->slice->get_seq_region_id.") start (after slice method) = ".$sf->seq_region_start." end = ".$sf->seq_region_end." cs = ".$sf->slice->coord_system->version;
+        $sf->hslice($ev_sf_slice);
+#          warn "  2. sf slice (dbID = ".$sf->slice->get_seq_region_id.") start (after hslice method) = ".$sf->seq_region_start." end = ".$sf->seq_region_end." cs = ".$sf->slice->coord_system->version;
+#        }
       }
       else {
         $support->log("Cannot retrieve Ensembl slice for supporting_feature ".$sf->hseqname."\n",2);
@@ -440,6 +444,10 @@ sub transfer_vega_patch_gene {
     my @exons= @{$transcript->get_all_Exons};
     foreach my $exon (@exons) {
       foreach my $sf (@{$exon->get_all_supporting_features}) {
+
+        #does this replace all of the below ?
+#      $sf->slice($ev_gene_slice);
+
         my $v_sf_slice = $sf->slice;
         my $ev_sf_slice;
         if ($ev_sf_slice= $E_sa->fetch_by_region(
@@ -482,9 +490,20 @@ sub transfer_vega_patch_gene {
     }
   }
 
+  #ad xrefs to Vega stabel IDS (needed by genebuilders)
+  $vgene->get_all_DBLinks; #need to load existing ones otherwise they get overwritten by the below!
+  $vgene->add_DBEntry(Bio::EnsEMBL::DBEntry->new
+      (-primary_id => $vgene->stable_id,
+       -version    => $vgene->version,
+       -dbname     => 'Vega_gene',
+       -release    => 1,
+       -display_id => $vgene->stable_id,
+       -info_text  => 'Added during ensembl-vega production'));
+  Gene::create_vega_xrefs(\@transcripts);
+
   #make a note of the number of transcripts per gene
-  my $trans_c = scalar(@{$vgene->get_all_Transcripts});
   $trans_numbers{$gsi}->{'vega'} = scalar(@transcripts);
+  my $trans_c = scalar(@{$vgene->get_all_Transcripts});
   $trans_numbers{$gsi}->{'evega'} = $trans_c;
 
   #count gene and transcript if it's been transferred
