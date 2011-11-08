@@ -20,7 +20,7 @@ General options:
     --logfile, --log=FILE               log to FILE (default: *STDOUT)
     --logpath=PATH                      write logfile to PATH (default: .)
     --logappend, --log_append           append to logfile (default: truncate)
-    --prune=0|1                         remove changes from previous runs of this script
+    --prune                             remove changes from previous runs of this script
 
     --update                            update existing transcript names where gene names have changed
 

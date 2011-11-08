@@ -21,8 +21,8 @@ General options:
     --logpath=PATH                      write logfile to PATH (default: .)
     --logappend, --log_append           append to logfile (default: truncate)
     -v, --verbose                       verbose logging (default: false)
-    -i, --interactive=0|1               run script interactively (default: true)
-    -n, --dry_run, --dry=0|1            don't write results to database
+    -i, --interactive                   run script interactively (default: true)
+    -n, --dry_run, --dry                don't write results to database
     -h, --help, -?                      print help (this message)
 
 Specific options:
@@ -84,7 +84,7 @@ $support->parse_extra_options(
   'gene_stable_id|gsi=s@',
   'gene_type=s',
   'start_gid=s',
-  'prune=s',
+  'prune',
 );
 $support->allowed_params(
   $support->get_common_params,
