@@ -41,9 +41,13 @@ use Bio::Otter::Lace::PipelineDB;
         # $dba = DBI->connect("DBI:mysql:database=vega_homo_sapiens_20110711_v63_GRCh37;host=ensdb-1-11;port=5317",
         #     'ensadmin', 'ensembl', {RaiseError => 1});
 
-        $dba = DBI->connect("DBI:mysql:database=vega_homo_sapiens_20111010_v64_GRCh37;host=ensdb-1-11;port=5317",
+        # $dba = DBI->connect("DBI:mysql:database=vega_homo_sapiens_20111010_v64_GRCh37;host=ensdb-1-11;port=5317",
+        #     'ensadmin', 'ensembl', {RaiseError => 1});
+
+        $dba = DBI->connect("DBI:mysql:database=vega_mus_musculus_20111010_v64_NCBIM37;host=ensdb-1-11;port=5317",
             'ensadmin', 'ensembl', {RaiseError => 1});
     }
+
     
     my $sth = $dba->prepare(q{
         SELECT g.biotype
@@ -101,7 +105,7 @@ use Bio::Otter::Lace::PipelineDB;
             # }
             $transitions{"  $gene_biotype ($gene_status) > $new_biotype ($new_status)"}++;
             $transitions{"$gene_biotype > $new_biotype"}++;
-            $update->execute($new_biotype, $new_status, $gene_id);
+            $update->execute($new_biotype, $new_status || undef, $gene_id);
         }
     }
     
