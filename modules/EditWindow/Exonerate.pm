@@ -376,12 +376,9 @@ sub XaceSeqChooser {
 }
 
 sub launch_exonerate {
-
     my ($self) = @_;
 
-    my $seqs;
-
-    $seqs = $self->get_query_seq();
+    my $seqs = $self->get_query_seq();
 
     print STDERR "Found " . scalar(@$seqs) . " sequences\n";
 
@@ -397,6 +394,9 @@ sub launch_exonerate {
 
     $self->top->Busy;
 
+    # OTF should not influence unsaved changes state of the session
+    $self->XaceSeqChooser->flag_db_edits(0);
+
     if ($self->{'_clear_existing'}) {
         $self->XaceSeqChooser->delete_featuresets(qw{
 Unknown_DNA
@@ -407,18 +407,19 @@ OTF_mRNA
 OTF_Protein });
     }
 
-    my %exonerate_params = (
+    my $exonerate_params = {
         -use_marked_region => $self->{_use_marked_region},
         -best_n            => ($self->get_entry('bestn') || 0),
         -max_intron_length => ($self->get_entry('max_intron_length') || 0),
         -mask_target       => $self->{_mask_target},
-        );
-    my $need_relaunch =
-        $self->XaceSeqChooser->launch_exonerate($seqs, \%exonerate_params);
+        };
+    my $db_edited = $self->XaceSeqChooser->launch_exonerate($seqs, $exonerate_params);
 
     $self->top->Unbusy;
 
-    if ($need_relaunch) {
+    $self->XaceSeqChooser->flag_db_edits(1);
+
+    if ($db_edited) {
         return 1;
     }
     else {
