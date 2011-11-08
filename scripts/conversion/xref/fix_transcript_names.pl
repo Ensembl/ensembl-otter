@@ -80,7 +80,7 @@ my $support = new Bio::EnsEMBL::Utils::VegaCuration::Transcript($SERVERROOT);
 # parse options
 $support->parse_common_options(@_);
 $support->parse_extra_options(
-  'prune=s',
+  'prune',
   'update');
 $support->allowed_params(
   $support->get_common_params,
