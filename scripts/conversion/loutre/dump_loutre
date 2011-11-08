@@ -559,7 +559,7 @@ foreach my $name (@{$chr_names_wanted}) {
     #filter on stable id
     if ($support->param('add_genes')) {
       unless (grep { $lgene->stable_id eq $_ } @{$genes_to_dump}) {
-	      next GENE;
+        next GENE;
       }
       $support->log("Doing specific dump of gene $lgsi",2);
     }
