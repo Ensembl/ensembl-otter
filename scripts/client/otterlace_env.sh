@@ -77,7 +77,7 @@ $anasoft/lib/site_perl\
 
 if [ -n "$ZMAP_LIB" ]
 then
-    PERL5LIB="$ZMAP_LIB:$ZMAP_LIB/site_lib:$PERL5LIB"
+    PERL5LIB="$ZMAP_LIB:$ZMAP_LIB/site_perl:$PERL5LIB"
     echo "  Hacked PERL5LIB for ZMAP_LIB=$ZMAP_LIB" >&2
 fi
 
