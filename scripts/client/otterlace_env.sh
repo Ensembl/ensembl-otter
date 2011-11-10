@@ -35,7 +35,12 @@ export OTTER_HOME
 LD_LIBRARY_PATH=
 export LD_LIBRARY_PATH
 
-otterbin="$OTTER_HOME/bin:$anasoft/bin:/software/pubseq/bin/EMBOSS-5.0.0/bin:/software/perl-5.12.2/bin"
+otterbin="\
+$OTTER_HOME/bin:\
+$anasoft/bin:\
+/software/pubseq/bin/EMBOSS-5.0.0/bin:\
+/software/perl-5.12.2/bin\
+"
 
 if [ -n "$ZMAP_BIN" ]
 then
