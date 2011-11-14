@@ -1,9 +1,10 @@
 #!/usr/bin/env perl
 
-### show_entry_bindings
-
 use strict;
 use warnings;
+
+### show_entry_bindings
+
 use CanvasWindow::MainWindow;
 use Tk;
 

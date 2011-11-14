@@ -1,9 +1,10 @@
 #!/usr/bin/env perl
 
-### show_X11_colors
-
 use strict;
 use warnings;
+
+### show_X11_colors
+
 use Getopt::Long 'GetOptions';
 use Hum::Ace::Colors qw{ webhex_to_acename };
 use CanvasWindow;
