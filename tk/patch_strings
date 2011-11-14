@@ -1,11 +1,11 @@
 #!/usr/bin/env perl
 
+use strict;
 use warnings;
 
 
 ### patch_strings
 
-use strict;
 
 my %lookup = (
 

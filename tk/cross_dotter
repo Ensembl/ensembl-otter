@@ -1,11 +1,11 @@
 #!/usr/bin/env perl
 
+use strict;
 use warnings;
 
 
 ### cross_dotter
 
-use strict;
 use POSIX 'ceil';
 use Hum::Analysis::Factory::CrossMatch;
 use Hum::Pfetch;

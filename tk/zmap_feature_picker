@@ -1,11 +1,11 @@
 #!/usr/bin/env perl
 
+use strict;
 use warnings;
 
 
 ### zmap_feature_picker
 
-use strict;
 use CanvasWindow::FeaturePicker;
 use Getopt::Long 'GetOptions';
 use Symbol 'gensym';
