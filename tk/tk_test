@@ -1,11 +1,11 @@
 #!/usr/bin/env perl
 
+use strict;
 use warnings;
 
 
 ### tk_test ###
 
-use strict;
 use Tk;
 
 #print "Tk v$Tk::VERSION\n";

@@ -1,12 +1,12 @@
 #!/usr/bin/env perl
 
+use strict;
 use warnings;
 
 
 # gene_history_viewer.pl
 # Author: ck1@sanger.ac.uk
 
-use strict;
 use Text::Tabs;
 use FileHandle;
 use Bio::Otter::Lace::Defaults;
