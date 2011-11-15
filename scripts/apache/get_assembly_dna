@@ -55,9 +55,6 @@ if (my $gap = $slice->length - $posn) {
 
 Bio::Otter::ServerScriptSupport->send_response(\&get_assembly_dna);
 
-
-
-
 __END__
 
 =head1 NAME - get_assembly_dna
