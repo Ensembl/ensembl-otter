@@ -59,6 +59,8 @@ sub get_datasets {
 
 Bio::Otter::ServerScriptSupport->send_response(\&get_datasets);
 
+__END__
+
 =head1 NAME - get_datasets
 
 =head1 DESCRIPTION
