@@ -1,7 +1,7 @@
 
 ### Bio::Otter::EMBL::Factory
 
-=head1 NAME Bio::Otter::EMBL::Factory
+=head1 NAME - Bio::Otter::EMBL::Factory
 
 =head2 Description
 
