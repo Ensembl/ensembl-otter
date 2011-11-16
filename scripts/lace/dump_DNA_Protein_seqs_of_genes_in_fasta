@@ -305,7 +305,7 @@ sub gene_stable_id_2_acc_sv {
   return $stblID_acc;
 }
 
-  __END__
+__END__
 
 =head1 NAME - dump_DNA_Protein_seqs_of_genes_in_fasta
 
