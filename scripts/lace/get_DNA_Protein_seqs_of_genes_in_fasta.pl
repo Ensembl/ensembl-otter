@@ -209,7 +209,7 @@ sub sixty_cols {
 
   __END__
 
-=head1 NAME - get_DNA_Protein_seqs_of_genes_in_fasta
+=head1 NAME - get_DNA_Protein_seqs_of_genes_in_fasta.pl
 
 =head1 SYNOPSIS
 

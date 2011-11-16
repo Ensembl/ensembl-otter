@@ -145,7 +145,7 @@ sub sixty_cols {
   return ($format_seq, $ori_len);
 }
 
-=head1 NAME - get_exon_seqs_of_otter_geneSID
+=head1 NAME - get_exon_seqs_of_otter_geneSID.pl
 
 =head1 SYNOPSIS
 

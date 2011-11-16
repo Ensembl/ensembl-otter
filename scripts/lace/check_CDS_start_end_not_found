@@ -332,7 +332,7 @@ sub update_cds_end_not_found {
 
   __END__
 
-=head1 NAME - check_CDS_end_not_found
+=head1 NAME - check_CDS_start_end_not_found
 
 =head1 SYNOPSIS
 
