@@ -1,5 +1,6 @@
 #!/usr/bin/env perl
 
+use strict;
 use warnings;
 
 # test the HeadedCanvas class
@@ -12,7 +13,6 @@ my $lwidth = 100;
 my $mheight = 600;
 my $theight = 100;
 
-use strict;
 use Tk;
 use Tk::HeadedCanvas;
 

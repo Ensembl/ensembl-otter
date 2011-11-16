@@ -47,6 +47,7 @@ sub new {
     $self->make_search_panel;
     $self->bind_events;
     $self->minimum_scroll_bbox(0,0, 380,200);
+    $self->flag_db_edits(1);
 
     return $self;
 }
@@ -937,11 +938,10 @@ sub save_data {
 
     eval{
         my $ace_data = $adb->save_ace_to_otter;
-        $self->save_ace($ace_data);
-        # Have just saved some acedb data, but nothing that needs to be saved back to otter:
         $adb->unsaved_changes(0);
-        $self->update_window_title_unsaved_flag(0);
-        $self->resync_with_db;
+        $self->flag_db_edits(0);    # or the save_ace() will set unsaved_changes back to "1"
+        $self->save_ace($ace_data);
+        $self->flag_db_edits(1);
     };
     my $err = $@;
 
@@ -1124,10 +1124,21 @@ sub save_ace {
         confess "Error saving to acedb: $err";
     }
     else {
-        $self->AceDatabase->unsaved_changes(1);
-        $self->update_window_title_unsaved_flag(1);
+        if ($self->flag_db_edits) {
+            $self->AceDatabase->unsaved_changes(1);
+            $self->update_window_title_unsaved_flag(1);            
+        }
         return $val;
     }
+}
+
+sub flag_db_edits {
+    my ($self, $flag) = @_;
+    
+    if (defined $flag) {
+        $self->{'_flag_db_edits'} = $flag ? 1 : 0;
+    }
+    return $self->{'_flag_db_edits'};
 }
 
 sub resync_with_db {
@@ -1975,7 +1986,7 @@ sub launch_exonerate {
         }
     }
 
-    my $need_relaunch = 0;
+    my $db_edited = 0;
     my @method_names;
     my $ace_text = '';
     my $best_n   = $params->{-best_n};
@@ -2017,7 +2028,12 @@ sub launch_exonerate {
             # delete query file
             unlink $seq_file;
 
-            next unless $ace_output;
+            if ($ace_output) {
+                $db_edited = 1;
+            }
+            else {
+                next;
+            }
 
             # add hit sequences into ace text
             my $names = $exonerate->delete_all_hit_names;
@@ -2036,8 +2052,6 @@ sub launch_exonerate {
                 }
             }
 
-            $need_relaunch = 1;
-
             # Need to add new method to collection if we don't have it already
             my $coll      = $exonerate->AceDatabase->MethodCollection;
             my $coll_zmap = $self->Assembly->MethodCollection;
@@ -2055,9 +2069,10 @@ sub launch_exonerate {
     }
 
     $self->save_ace($ace_text);
-    $self->zMapLoadFeatures(@method_names) if $need_relaunch;
 
-    return $need_relaunch;
+    $self->zMapLoadFeatures(@method_names) if $db_edited;
+
+    return $db_edited;
 }
 
 sub ace_DNA {

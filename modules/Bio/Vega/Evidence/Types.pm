@@ -64,3 +64,11 @@ sub _in_list {
 }
 
 1;
+
+__END__
+
+=head1 NAME - Bio::Vega::Evidence::Types
+
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk

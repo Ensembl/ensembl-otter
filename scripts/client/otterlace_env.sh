@@ -35,7 +35,15 @@ export OTTER_HOME
 LD_LIBRARY_PATH=
 export LD_LIBRARY_PATH
 
-otterbin="$OTTER_HOME/bin:$anasoft/bin:/software/pubseq/bin/EMBOSS-5.0.0/bin:/software/perl-5.12.2/bin"
+anasoft_distro="$anasoft/distro/$( $anasoft/bin/anacode_distro_code )"
+
+otterbin="\
+$OTTER_HOME/bin:\
+$anasoft_distro/bin:\
+$anasoft/bin:\
+/software/pubseq/bin/EMBOSS-5.0.0/bin:\
+/software/perl-5.12.2/bin\
+"
 
 if [ -n "$ZMAP_BIN" ]
 then
@@ -71,13 +79,15 @@ $OTTER_HOME/ensembl/modules:\
 $OTTER_HOME/ensembl-variation/modules:\
 $OTTER_HOME/lib:\
 $OTTER_HOME/lib/site_perl:\
+$anasoft_distro/lib:\
+$anasoft_distro/lib/site_perl:\
 $anasoft/lib:\
 $anasoft/lib/site_perl\
 "
 
 if [ -n "$ZMAP_LIB" ]
 then
-    PERL5LIB="$ZMAP_LIB:$ZMAP_LIB/site_lib:$PERL5LIB"
+    PERL5LIB="$ZMAP_LIB:$ZMAP_LIB/site_perl:$PERL5LIB"
     echo "  Hacked PERL5LIB for ZMAP_LIB=$ZMAP_LIB" >&2
 fi
 

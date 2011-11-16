@@ -1,11 +1,11 @@
 #!/usr/bin/env perl
 
+use strict;
 use warnings;
 
 
 ### encode_seq_view
 
-use strict;
 use Bio::Otter::Lace::Defaults;
 use MenuCanvasWindow::XaceSeqChooser;
 
