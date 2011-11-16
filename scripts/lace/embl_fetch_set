@@ -17,7 +17,7 @@ embl_fetch_set [options] [ ACC_list | ACC_list_file]
 
 This script reads the list of accessions from the 
 
-=head1 USEAGE
+=head1 USAGE
 
 embl_fetch_set [options] [ ACC_list | ACC_list_file]
 

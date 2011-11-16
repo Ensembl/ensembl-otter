@@ -111,7 +111,7 @@ show_ana_notes_history -dataset <DATASET_NAME> -set <SEQUENCE_SET_NAME>
 
 Shows the sequence notes history for a B<sequence set> in B<dataset>.
 
-=head1 USEAGE
+=head1 USAGE
 
 show_ana_notes_history [options] -dataset <DATASET_NAME> -set <SEQUENCE_SET_NAME>
 

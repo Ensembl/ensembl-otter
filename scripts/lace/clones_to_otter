@@ -122,7 +122,7 @@ $OTTER_HOME/.otter_config or ~/.otter_config or
 command line in a similar  manner to the rest of
 the scripts in this directory.
 
-=head1 USEAGE
+=head1 USAGE
 
 Just give it a dataset name that occurs in the db
 you want to "fix". eg: "human" or "zebrafish"
