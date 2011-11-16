@@ -89,7 +89,7 @@ __END__
 
  Get the Stable Id for the genes of type <TYPE> on Chromosome <CHR>.
 
-=head1 USEAGE
+=head1 USAGE
 
   ./stable_id_for_type_on_chr -dataset <DATASET> -set <CHR> -type <TYPE> [-sort]
 

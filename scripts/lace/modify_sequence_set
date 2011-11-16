@@ -202,7 +202,7 @@ and/or B<priority> in bother otter and pipeline databases.
 B<list> format.  B<N.B.> This only uses the otter database.
 
 
-=head1 USEAGE
+=head1 USAGE
 
     help         - display this pod
     dataset      - set the dataset
