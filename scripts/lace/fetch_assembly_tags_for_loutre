@@ -400,7 +400,7 @@ sub make_atags {
 __END__
 
 
-=head1 NAME - fetch_assembly_tags_to_misc_features
+=head1 NAME - fetch_assembly_tags_for_loutre
 
 =head1 SYNOPSIS
 

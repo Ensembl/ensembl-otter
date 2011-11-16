@@ -537,7 +537,7 @@ sub check_start_and_stop {
 
 __END__
 
-=head1 NAME - dump_gff3
+=head1 NAME - dump_gff3_for_cow
 
   dump_gff3 -dataset <DATASET_NAME> <LIST OF SEQUENCE SETS>
 

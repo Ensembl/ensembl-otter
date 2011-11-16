@@ -3,7 +3,7 @@
 use warnings;
 
 
-=head1 NAME - backup_all_otter_submissions_databases
+=head1 NAME - backup_otter_submissions_db
 
 =head1 SYNOPSIS
 
@@ -170,7 +170,7 @@ sub cleanup_old_otter_dbs {
 
 __END__
 
-=head1 NAME - backup_all_otter_submission_databases
+=head1 NAME - backup_otter_submissions_db
 
 =head1 AUTHOR
 

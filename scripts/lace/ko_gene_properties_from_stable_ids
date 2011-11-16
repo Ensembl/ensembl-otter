@@ -133,7 +133,7 @@ sub gene_transformed_successfully {
 
 __END__
 
-=head1 NAME - example_script
+=head1 NAME - ko_gene_properties_from_stable_ids
 
 =head1 AUTHOR
 

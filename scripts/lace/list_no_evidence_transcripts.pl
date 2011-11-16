@@ -138,7 +138,7 @@ use Bio::SeqIO;
 
 __END__
 
-=head1 NAME - list_no_evidence_transcripts
+=head1 NAME - list_no_evidence_transcripts.pl
 
 =head1 SYNOPSIS
 
