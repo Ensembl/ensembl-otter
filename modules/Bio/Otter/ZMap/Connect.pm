@@ -2,9 +2,7 @@ package Bio::Otter::ZMap::Connect;
 
 =pod
 
-=head1 NAME 
-
-Bio::Otter::ZMap::Connect
+=head1 NAME - Bio::Otter::ZMap::Connect
 
 =head1 DESCRIPTION
 

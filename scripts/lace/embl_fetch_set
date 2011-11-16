@@ -7,9 +7,7 @@ use warnings;
 
 =pod
 
-=head1 NAME
-
-embl_fetch_set
+=head1 NAME - embl_fetch_set
 
 =head1 SYNOPSIS
  

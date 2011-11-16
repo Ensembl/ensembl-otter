@@ -178,9 +178,7 @@ sub usage{ exit(exec('perldoc', $0)) }
 
 =pod
 
-=head1 NAME
-
-gene_info_from_stable_id
+=head1 NAME - gene_info_from_stable_id
 
 =head1 DESCRIPTION
 

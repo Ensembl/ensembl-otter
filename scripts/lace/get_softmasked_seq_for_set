@@ -118,9 +118,11 @@ sub stats2txt {
 
 __END__
 
-=head1 NAME
+=head1 NAME - get_softmasked_seq_for_set
 
-get_softmasked_seq_for_set - dump softmasked sequence to STDOUT
+=head1 DESCRIPTION
+
+Dump softmasked sequence to STDOUT
 
 =head1 SYNOPSIS
 

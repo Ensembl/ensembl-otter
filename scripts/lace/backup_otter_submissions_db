@@ -3,11 +3,11 @@
 use warnings;
 
 
-=head1 NAME
-
-backup_all_otter_submissions_databases - archive otterlive to slow storage
+=head1 NAME - backup_all_otter_submissions_databases
 
 =head1 SYNOPSIS
+
+Archive otterlive to slow storage
 
 (This script runs as a cron job from humpub@cbi4h)
 
