@@ -101,9 +101,7 @@ sub usage{ exit(exec('perldoc', $0)); }
 
 __END__
 
-=head1 NAME
-
-show_ana_notes_history
+=head1 NAME - show_ana_notes_history
 
 =head1 SYNOPSIS
 
