@@ -21,10 +21,11 @@ my $pep_out = Bio::SeqIO->new(
 my $time_now = time();
 
 {
-    my $dsname;
+    my ($dsname, $dryrun);
 
     Bio::Otter::Lace::Defaults::do_getopt(
         'dataset=s'     => \$dsname,
+        'dryrun'        => \$dryrun,
     );
     
     unless ($dsname) {
@@ -76,19 +77,22 @@ my $time_now = time();
           AND tsid.stable_id = ?
         ORDER BY gsid.modified_date DESC limit 1
     });
-    
-    my $locker = Bio::Vega::ContigLockBroker->new(
-        -HOSTNAME   => hostname(),
-        );
-    my $author = Bio::Vega::Author->new(
-        -NAME       => $cl->author,
-        -EMAIL      => $cl->email,
-        );
+
+    my $details = { dryrun => $dryrun };
+    unless ($dryrun) {
+        $details->{locker} = Bio::Vega::ContigLockBroker->new(
+            -HOSTNAME   => hostname(),
+            );
+        $details->{author} = Bio::Vega::Author->new(
+            -NAME       => $cl->author,
+            -EMAIL      => $cl->email,
+            );
+    }
 
     my $recovered = 0;
     my $not_recov = 0;
     while (my ($g_dbID) = $list_nmd->fetchrow) {
-        if (my $count = recover_coding_region($g_dbID, $dba, $latest_with_translation, $locker, $author)) {
+        if (my $count = recover_coding_region($g_dbID, $dba, $latest_with_translation, $details)) {
             $recovered += $count;
         } else {
             $not_recov++;
@@ -100,7 +104,7 @@ my $time_now = time();
 }
 
 sub recover_coding_region {
-    my ($g_dbID, $dba, $latest_with_translation, $locker, $author) = @_;
+    my ($g_dbID, $dba, $latest_with_translation, $details) = @_;
     my $gene_aptr  = $dba->get_GeneAdaptor;
     my $tsct_aptr  = $dba->get_TranscriptAdaptor;
 
@@ -213,14 +217,14 @@ sub recover_coding_region {
         }
     }
 
-    return $found_tsl + $already_tsl;
+    return $found_tsl + $already_tsl if $details->{dryrun};
 
     if ($found_tsl) {
         $dba->begin_work;
         eval {
-            $locker->lock_by_object($gene, $author);
+            $details->{locker}->lock_by_object($gene, $details->{author});
             $gene_aptr->store($gene, $time_now);
-            $locker->remove_by_object($gene, $author);
+            $details->{locker}->remove_by_object($gene, $details->{author});
         };
         if ($@) {
             my $err = $@;

@@ -1,11 +1,11 @@
 #!/usr/bin/env perl
 
+use strict;
 use warnings;
 
 
 ### genome_canvas
 
-use strict;
 
 use GenomeCanvas;
 use GenomeCanvas::Band::TilingPath;

@@ -69,4 +69,8 @@ Returns a list of datasets to the Client. Returns a list of datasets which the
 user is permitted to access (determined by entries in the users.txt file for
 external users and restricted datasets).
 
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
+
 =cut

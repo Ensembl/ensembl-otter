@@ -1,9 +1,10 @@
 #!/usr/bin/env perl
 
-### annotation_remark_textbox
-
 use strict;
 use warnings;
+
+### annotation_remark_textbox
+
 use Tk::ROText;
 use CanvasWindow;
 

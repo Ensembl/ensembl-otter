@@ -1,11 +1,11 @@
 #!/usr/bin/env perl
 
+use strict;
 use warnings;
 
 
 ### draw_peri_contigs
 
-use strict;
 use Bio::Otter::Lace::Defaults;
 use GenomeCanvas;
 use GenomeCanvas::Band::ContigCartoon;
