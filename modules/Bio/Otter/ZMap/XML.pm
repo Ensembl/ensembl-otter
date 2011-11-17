@@ -51,7 +51,7 @@ sub _request_xml {
     for ( keys %{$featureset_xml_hash} ) {
         delete $featureset_xml_hash->{$_} unless @{$featureset_xml_hash->{$_}};
     }
-    return unless %{$featureset_xml_hash};
+    return unless keys %{$featureset_xml_hash};
 
     my $xml = Hum::XmlWriter->new;
 
