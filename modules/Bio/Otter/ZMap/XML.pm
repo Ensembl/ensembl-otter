@@ -21,7 +21,7 @@ sub update_SimpleFeatures_xml {
         $delete_featureset_xml->{$featureset} =
             _list_subtract($old_xml, $new_xml);
         $create_featureset_xml->{$featureset} =
-            _list_subtract($new_xml, $old_xml);;
+            _list_subtract($new_xml, $old_xml);
     }
 
     return (
