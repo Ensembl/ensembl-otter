@@ -35,7 +35,7 @@ use Hum::Submission qw(accession_from_sanger_name);
         'show'          => \$show,
         'list'          => \$list,
     );
-    useage() if $help;
+    usage() if $help;
 
     die "you need to give the set name as an argument" if (!defined $set_name);
     die "only one of -delete, -update, -show please"
@@ -171,7 +171,7 @@ sub show_agp {
     return $gaps, $found;
 }
 
-sub useage { exit(exec('perldoc', $0)); }
+sub usage { exit(exec('perldoc', $0)); }
 
 __END__
 

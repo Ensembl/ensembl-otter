@@ -58,8 +58,8 @@ GetOptions(
     'set:s'  => \$infile,
     'embl:s' => \$output,
     'help'   => \$help,
-) or useage();
-useage() if $help;
+) or usage();
+usage() if $help;
 
 my @embl;
 if($infile){
@@ -94,7 +94,7 @@ sub readFile{
     close $fh;
     return @embl;
 }
-sub useage{ exit(exec('perldoc', $0)); }
+sub usage{ exit(exec('perldoc', $0)); }
 
 __END__
 
