@@ -14,16 +14,16 @@ use Bio::Otter::Lace::Defaults;
     my $set     = '';
     my $show    = 0;
     my $sort    = 0;
-    my $useage  = sub { exit( exec('perldoc', $0)) };
+    my $usage  = sub { exit( exec('perldoc', $0)) };
     Bio::Otter::Lace::Defaults::do_getopt(
                                           'dataset=s' => \$ds_name,
                                           'type=s'    => \$type,
                                           'set=s'     => \$set,
                                           'show'      => \$show,
                                           'sort'      => \$sort,
-                                          'help'      => $useage
+                                          'help'      => $usage
         );
-    $useage->() unless $ds_name && $set;
+    $usage->() unless $ds_name && $set;
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
     my $ds = $cl->get_DataSet_by_name($ds_name);
     my $ss = $ds->get_SequenceSet_by_name($set);
