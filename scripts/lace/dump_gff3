@@ -86,7 +86,7 @@ use URI::Escape;
       my $seen;
 
       while(<$fh>){
-        next if $_ =~ /^\s+/ or $_ =~ /^#/;;
+        next if $_ =~ /^\s+/ or $_ =~ /^#/;
         my($seqregion_rank, $acc_sv, $subregion) = split(/\s+/, $_);
         push(@{$mouse_subregion_accSvs->{$subregion}}, $acc_sv);
         $seen->{$subregion}++;
