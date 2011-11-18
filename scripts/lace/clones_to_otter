@@ -111,7 +111,7 @@ __END__
 
   clones_to_otter -dataset <DATASET_NAME>
 
-=head DESCRIPTION
+=head1 DESCRIPTION
 
 Fills in the international clone names for the
 otter and pipeline dbs.   It uses the tracking

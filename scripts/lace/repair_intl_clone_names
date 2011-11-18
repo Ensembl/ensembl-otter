@@ -267,7 +267,7 @@ __END__
 
   repair_intl_clone_names -dataset <DATASET_NAME> [ -otter | -head ]
 
-=head DESCRIPTION
+=head1 DESCRIPTION
 
 Fills in the international clone names for EITHER
 otter database itself (use with -otter) OR
