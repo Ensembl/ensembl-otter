@@ -3,7 +3,7 @@
 
 Utilities for displaying EnsEMBL DNA alignment features on a terminal.
 
-=head1 Usage
+=head1 USAGE
 
     use Bio::Otter::Utils::Align qw(
         print_feature_align
