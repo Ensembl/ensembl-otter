@@ -13,7 +13,7 @@ submission_to_otter -dataset <DATASET NAME> [-domain <DOMAIN NAME>]
     
 checks through the contigs in an otter databases and if no sequence notes are present, it copies them from the submissions database
 
-=cut 
+=cut
  
 
 use strict ;
