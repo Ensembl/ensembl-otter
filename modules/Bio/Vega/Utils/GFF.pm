@@ -30,7 +30,7 @@ sub gff_header {
 
 __END__
 
-=head1 NAME - Bio::Vega::Utils::GFF 
+=head1 NAME - Bio::Vega::Utils::GFF
 
 =head1 SYNOPSIS
 

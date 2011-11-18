@@ -884,7 +884,7 @@ use Bio::Vega::Utils::GFF;
 
 __END__
 
-=head1 NAME - Bio::Vega::Utils::EnsEMBL2GFF 
+=head1 NAME - Bio::Vega::Utils::EnsEMBL2GFF
 
 =head1 SYNOPSIS
 
