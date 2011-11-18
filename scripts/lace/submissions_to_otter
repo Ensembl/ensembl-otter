@@ -9,7 +9,7 @@ use warnings;
     
 submission_to_otter -dataset <DATASET NAME> [-domain <DOMAIN NAME>]
 
-=head1 DESCRIPTION         
+=head1 DESCRIPTION
     
 checks through the contigs in an otter databases and if no sequence notes are present, it copies them from the submissions database
 
