@@ -213,9 +213,9 @@ sub contig_name_to_contig_id {
 
 __END__
 
-=head1 B<NAME> - remove_pipe_analysis_of_clones
+=head1 NAME - remove_pipe_analysis_of_clones
 
-=head1 B<SYNOPSIS>
+=head1 SYNOPSIS
 
 eg:
 
@@ -226,7 +226,7 @@ or
 remove_pipe_analysis_of_clones -ds human -action [kill|info] filename > outfile
 
 
-=head1 B<DESCRIPTION>
+=head1 DESCRIPTION
 
 This script deletes or shows pipleline analysis results of each analysis. It works with contig_names of clones.
 So if the analysis results of clones to delete are enlisted in a file, their format is of contig_name, eg, AC012101.7.1.168965, separated by new line.
@@ -258,7 +258,7 @@ The following query used in the script is useful for hand-checking B<halfwise> r
       AND t.gene_id = g.gene_id
       AND e.contig_id =
 
-=head1 B<AUTHOR>
+=head1 AUTHOR
 
 Chao-Kung Chen B<email> ck1@sanger.ac.uk
 
