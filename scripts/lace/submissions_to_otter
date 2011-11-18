@@ -16,7 +16,7 @@ checks through the contigs in an otter databases and if no sequence notes are pr
 =cut
  
 
-use strict ;
+use strict;
 use Carp;
 use Hum::Submission qw{sub_db prepare_statement};
 use DBI;
