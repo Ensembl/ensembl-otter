@@ -1,6 +1,4 @@
 
-=pod
-
 =head1 NAME - Bio::Otter::Lace::Exonerate
 
 =head1 DESCRIPTION

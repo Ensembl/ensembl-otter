@@ -5,8 +5,6 @@ use warnings;
 
 ### otter_embl_dump_generic
 
-=pod
-
 =head1 NAME - otter_embl_dump_generic
 
 =head1 COMMAND LINE PARAMETERS
