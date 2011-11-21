@@ -175,8 +175,6 @@ sub usage { exit(exec('perldoc', $0)); }
 
 __END__
 
-=pod
-
 =head1 NAME - modify_sequence_set
 
 =head1 DESCRIPTION
