@@ -673,14 +673,8 @@ Dumps GFF3 format files for each sequence set
 (chromosome) named on the command line along with
 an AGP file.
 
+dump_gtf is compatible to GFF2; now updated to dump_gff3 to work with GFF3
+
 =head1 AUTHOR
 
 James Gilbert B<email> jgrg@sanger.ac.uk
-
-Uses Steve Searle's gtf generation code (with minor modifications) from:
-
-  ensembl-personal/searle/hcds/scripts/ensembl2gtf
-
-Chao-Kung Chen B<email> ck1@sanger.ac.uk
-
-dump_gtf is compatible to GFF2; now updated to dump_gff3 to work with GFF3

@@ -194,7 +194,5 @@ return xml for sequence sets
 
 =head1 AUTHOR
 
-Roy Storey,,,, B<email> rds@sanger.ac.uk
-refactored by Sindhu K.Pillai B<email> sp1@sanger.ac.uk
-Leo Gordon B<email> lg4@sanger.ac.uk - support for the new schema
+Roy Storey B<email> rds@sanger.ac.uk
 

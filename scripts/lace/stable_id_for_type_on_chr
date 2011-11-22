@@ -97,7 +97,3 @@ E.G.
 
  ./stable_id_for_type_on_chr -dataset human -set Chr1_final -type Pseudogene
 
-
-=head1 AUTHOR
-
-

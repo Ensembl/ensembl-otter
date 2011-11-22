@@ -1269,5 +1269,3 @@ __END__
 =head1 AUTHOR
 
 Mike Croning B<email> mdr@sanger.ac.uk
-
-Chao-Kung Chen B<emai> ck1@sanger.ac.uk (updated for new schema)

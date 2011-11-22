@@ -566,7 +566,3 @@ an AGP file.
 
 James Gilbert B<email> jgrg@sanger.ac.uk
 
-Uses Steve Searle's gtf generation code (with minor modifications) from:
-
-  ensembl-personal/searle/hcds/scripts/ensembl2gtf
-
