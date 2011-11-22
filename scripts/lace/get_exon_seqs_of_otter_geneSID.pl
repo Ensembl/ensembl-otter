@@ -166,5 +166,5 @@ Output individual exon sequence of a gene
 
 =head1 AUTHOR
 
-Chao-Kung Chen B<email> ck1@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk
 

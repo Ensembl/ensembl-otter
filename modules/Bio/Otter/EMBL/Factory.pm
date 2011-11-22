@@ -1268,4 +1268,4 @@ __END__
 
 =head1 AUTHOR
 
-Mike Croning B<email> mdr@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk

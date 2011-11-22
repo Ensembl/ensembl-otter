@@ -207,5 +207,5 @@ __END__
 
 =head1 AUTHOR
 
-Jeremy Henty B<email> jh13@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk
 

@@ -96,5 +96,5 @@ CloneSequence in the pipeline.
 
 =head1 AUTHOR
 
-Roy Storey B<email> rds@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk
 

@@ -372,4 +372,4 @@ __END__
 
 =head1 AUTHOR
 
-Stephen Keenan B<email> keenan@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk

@@ -894,5 +894,5 @@ by calling C<$slice->to_gff>, passing in lists of the analyses and feature types
 
 =head1 AUTHOR
 
-Graham Ritchie B<email> gr5@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk
 
