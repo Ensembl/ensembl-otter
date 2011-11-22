@@ -225,5 +225,3 @@ output DNA/Protein sequence of each splice variant of a gene in fasta format
 
 Ana Code B<email> anacode@sanger.ac.uk
 
-
-
