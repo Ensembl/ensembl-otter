@@ -77,6 +77,10 @@ __END__
 
 =head1 NAME - gene_authors_by_chr
 
+=head1 DESCRIPTION
+
+Script to list counts of genes annotated per author per chromosome.
+
 =head1 AUTHOR
 
 James Gilbert B<email> jgrg@sanger.ac.uk
