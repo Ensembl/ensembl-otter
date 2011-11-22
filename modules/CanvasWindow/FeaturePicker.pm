@@ -317,6 +317,8 @@ __END__
 
 James Gilbert B<email> jgrg@sanger.ac.uk
 
+=head1 SEE ALSO
+
         From:    edgrif@sanger.ac.uk
         Subject: "spec" for program to drive ZMap
         Date:    November 15, 2004 10:00:06 GMT

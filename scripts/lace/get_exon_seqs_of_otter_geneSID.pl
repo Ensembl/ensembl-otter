@@ -168,8 +168,3 @@ Output individual exon sequence of a gene
 
 Chao-Kung Chen B<email> ck1@sanger.ac.uk
 
-
-
-
-
-__END__

@@ -584,8 +584,3 @@ HUGO_gene_name_to_vega -notest -dataset human [HGNC_FILE]
 =head1 AUTHOR
 
 James Gilbert B<email> jgrg@sanger.ac.uk
-
-Updated for loutre
-
-Chao-Kung Chen B<email> ck1@sanger.ac.uk and
-Mustapha Larbaoui B<email> ml6@sanger.ac.uk

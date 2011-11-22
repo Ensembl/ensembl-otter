@@ -15,7 +15,7 @@ See L<Bio:SimpleAlign>.
 
 =head1 AUTHOR
 
-Michael Gray, mg13@sanger.ac.uk
+Michael Gray B<email> mg13@sanger.ac.uk
 
 =head1 SEE ALSO
 

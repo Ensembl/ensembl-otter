@@ -373,7 +373,3 @@ __END__
 =head1 AUTHOR
 
 Stephen Keenan B<email> keenan@sanger.ac.uk
-
-James Gilbert B<email> jgrg@sanger.ac.uk
-
-Graham Ritchie B<email> gr5@sanger.ac.uk
