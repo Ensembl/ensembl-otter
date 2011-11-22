@@ -171,5 +171,5 @@ __END__
 
 =head1 AUTHOR
 
-Colin Kingswood B<email> ck2@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk
 

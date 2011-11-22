@@ -57,5 +57,5 @@ __END__
 
 =head1 AUTHOR
 
-Graham Ritchie B<email> gr5@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk
 

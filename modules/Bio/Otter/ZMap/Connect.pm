@@ -484,7 +484,7 @@ be sufficient for most cases.
 
 =head1 AUTHOR
 
-Roy Storey B<email> rds@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk
 
 =head1 SEE ALSO
 

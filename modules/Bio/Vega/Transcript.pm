@@ -211,4 +211,4 @@ __END__
 
 =head1 AUTHOR
 
-Sindhu Pillai B<email> sp1@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk

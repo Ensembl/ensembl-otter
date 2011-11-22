@@ -223,7 +223,7 @@ output DNA/Protein sequence of each splice variant of a gene in fasta format
 
 =head1 AUTHOR
 
-Chao-Kung Chen B<email> ck1@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk
 
 
 
