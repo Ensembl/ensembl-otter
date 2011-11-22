@@ -1,0 +1,112 @@
+#!/usr/bin/env perl
+
+### patch_prefixed_genes
+
+use strict;
+use warnings;
+
+use strict;
+use warnings;
+
+use Bio::Otter::Lace::Defaults;
+
+{
+    my $dataset_name    = undef;
+    my $prefix          = undef;
+
+    my $usage = sub { exec('perldoc', $0) };
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        'dataset=s'     => \$dataset_name,
+        'prefix=s'      => \$prefix,
+        ) or $usage->();
+    unless ($dataset_name and $prefix) {
+        $usage->();
+    }
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    
+    my $otter_dba = $ds->get_cached_DBAdaptor;
+    my $dbc = $otter_dba->dbc;
+    
+    my $gene_sth = $dbc->prepare(q{
+        SELECT g.gene_id, ga.value
+        FROM gene g
+          , gene_attrib ga
+        WHERE g.gene_id = ga.gene_id
+          AND g.is_current = 1
+          AND ga.attrib_type_id = 4
+          AND ga.value like ? }
+    );
+
+    my $update_gene = $dbc->prepare(q{
+        UPDATE gene SET source = 'havana' WHERE gene_id = ?
+    });
+    my $update_gene_name = $dbc->prepare(q{
+        UPDATE gene_attrib SET value = ? WHERE attrib_type_id = 4 AND gene_id = ?
+    });
+    my $add_gene_hidden_remark = $dbc->prepare(q{
+        INSERT INTO gene_attrib(gene_id, attrib_type_id, value) VALUES (?, 123, ?)
+    });
+    my $update_tsct_name = $dbc->prepare(q{
+        UPDATE transcript_attrib SET value = ? WHERE attrib_type_id = 4 AND transcript_id = ?
+    });
+
+    my $tsct_sth = $dbc->prepare(q{
+        SELECT t.transcript_id, ta.value
+        FROM transcript t
+          , transcript_attrib ta
+        WHERE t.transcript_id = ta.transcript_id
+          AND ta.attrib_type_id = 4
+          AND t.gene_id = ?
+        }
+    );
+    
+    $otter_dba->begin_work;
+    
+    $gene_sth->execute("$prefix:%");
+    while (my ($gene_id, $gene_name) = $gene_sth->fetchrow) {
+        print "GENE: $gene_id\t$gene_name\n";
+
+        my $new_gene_name = $gene_name;
+        $new_gene_name =~ s/^$prefix://o or die "Unexpected name format: '$gene_name'";
+
+        $update_gene->execute($gene_id);
+        $update_gene_name->execute($new_gene_name, $gene_id);
+        $add_gene_hidden_remark->execute($gene_id, "Gene originally annotated by $prefix");
+
+        $tsct_sth->execute($gene_id);
+        while (my ($tsct_id, $tsct_name) = $tsct_sth->fetchrow) {
+            print "  TSTC: $tsct_id\t$tsct_name\n";
+            my $new_tsct_name = $tsct_name;
+            $new_tsct_name =~ s/^$prefix://o or warn "Unexpected name format: '$tsct_name'";
+            $update_tsct_name->execute($new_tsct_name, $tsct_id);
+        }
+    }
+    
+    $otter_dba->commit;
+}
+
+
+
+
+__END__
+
+=head1 NAME - patch_prefixed_genes
+
+=head1 EXAMPLE
+
+    patch_prefixed_genes -dataset mouse -prefix WU
+
+Would remove the WU from all mouse WU: genes and their transcripts,
+change the source to 'havana', and add a hidden remark of "Gene
+originally annotated by WU" to each of these genes.
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
