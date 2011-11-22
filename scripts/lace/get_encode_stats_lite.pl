@@ -4,8 +4,6 @@ use warnings;
 
 
 # get_encode_stats_lite
-# Author: ck1@sanger.ac.uk
-
 # output stats of encode regions for Havana annotated genes and transcripts in specified time windows
 # typical run: get_encode_stats_lite -ds human -time1 06-11-01 -time2 present
 

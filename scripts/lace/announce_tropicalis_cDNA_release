@@ -3,9 +3,6 @@
 use warnings;
 
 
-# Author: ck1@sanger.ac.uk
-
-
 use strict;
 use Getopt::Long;
 
