@@ -3,7 +3,6 @@
 use warnings;
 
 
-### Author ck1@sanger.ac.uk
 ### get_exon_seqs_of_otter_geneSID
 
 use strict;
