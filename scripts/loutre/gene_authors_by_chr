@@ -1,0 +1,87 @@
+#!/usr/bin/env perl
+
+### gene_authors_by_chr
+
+use strict;
+use warnings;
+use Hum::Sort qw{ ace_sort };
+use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Lace::PipelineDB;
+
+{
+    my $dataset_name = 'human';
+
+    my $usage = sub { exec('perldoc', $0) };
+    # This do_getopt() call is needed to parse the otter config files
+    # even if you aren't giving any arguments on the command line.
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        'dataset=s'     => \$dataset_name,
+        ) or $usage->();
+    $usage->() unless $dataset_name;
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    
+    my $otter_dba = $ds->get_cached_DBAdaptor;
+    
+    my $sth = $otter_dba->dbc->prepare(q{
+        SELECT chr.name
+          , a.author_name
+          , count(*)
+        FROM seq_region_attrib hidden
+          , seq_region chr
+          , gene g
+          , gene_author ga
+          , author a
+        WHERE hidden.seq_region_id = chr.seq_region_id
+          AND chr.seq_region_id = g.seq_region_id
+          AND g.gene_id = ga.gene_id
+          AND ga.author_id = a.author_id
+          AND hidden.attrib_type_id = 129
+          AND hidden.value = 0
+          AND g.is_current = 1
+        GROUP BY chr.seq_region_id
+          , a.author_id
+        ORDER BY chr.name
+    });
+
+    $sth->execute;
+    
+    my %chr_author_count;
+    while (my ($chr, $author, $count) = $sth->fetchrow) {
+        $chr_author_count{$chr}{$author} = $count;
+    }
+    
+    foreach my $chr (sort {ace_sort($a, $b)} keys %chr_author_count) {
+        # next unless $chr =~ /^chr(2|3|4|5|7|8|11|12)-/;
+        print "\n$chr\n";
+        my $author_count = $chr_author_count{$chr};
+        foreach my $author (sort {$author_count->{$b} <=> $author_count->{$a} || ace_sort($a,$b)} keys %$author_count) {
+            my $count = $author_count->{$author};
+            printf "%4d  %s\n", $count, $author;
+        }
+    }
+}
+
+
+
+
+
+
+
+__END__
+
+=head1 NAME - gene_authors_by_chr
+
+=head1 DESCRIPTION
+
+Script to list counts of genes annotated per author per chromosome.
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
