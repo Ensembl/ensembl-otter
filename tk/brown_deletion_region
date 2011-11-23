@@ -551,7 +551,7 @@ sub nudge_into_free_space {
 
 __END__
 
-=head1 NAME - genome_canvas
+=head1 NAME - brown_deletion_region
 
 =head1 SYNOPSIS
 

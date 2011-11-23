@@ -21,7 +21,7 @@ sub update_SimpleFeatures_xml {
         $delete_featureset_xml->{$featureset} =
             _list_subtract($old_xml, $new_xml);
         $create_featureset_xml->{$featureset} =
-            _list_subtract($new_xml, $old_xml);;
+            _list_subtract($new_xml, $old_xml);
     }
 
     return (
@@ -39,7 +39,7 @@ sub _group_by_method_name { ## no critic(Subroutines::RequireArgUnpacking)
 sub _featureset_xml {
     my ($featureset_list, $offset) = @_;
     $featureset_list ||= [ ];
-    return [ map { $_->zmap_xml_feature_tag($offset) => 1 } @{$featureset_list} ];
+    return [ map { $_->zmap_xml_feature_tag($offset) } @{$featureset_list} ];
 }
 
 sub _request_xml {
@@ -51,7 +51,7 @@ sub _request_xml {
     for ( keys %{$featureset_xml_hash} ) {
         delete $featureset_xml_hash->{$_} unless @{$featureset_xml_hash->{$_}};
     }
-    return unless %{$featureset_xml_hash};
+    return unless keys %{$featureset_xml_hash};
 
     my $xml = Hum::XmlWriter->new;
 
@@ -84,3 +84,4 @@ __END__
 =head1 AUTHOR
 
 Ana Code B<email> anacode@sanger.ac.uk
+

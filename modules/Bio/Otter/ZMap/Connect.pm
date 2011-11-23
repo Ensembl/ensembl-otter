@@ -1,10 +1,6 @@
 package Bio::Otter::ZMap::Connect;
 
-=pod
-
-=head1 NAME 
-
-Bio::Otter::ZMap::Connect
+=head1 NAME - Bio::Otter::ZMap::Connect
 
 =head1 DESCRIPTION
 
@@ -488,7 +484,7 @@ be sufficient for most cases.
 
 =head1 AUTHOR
 
-R.Storey <rds@sanger.ac.uk>
+Ana Code B<email> anacode@sanger.ac.uk
 
 =head1 SEE ALSO
 

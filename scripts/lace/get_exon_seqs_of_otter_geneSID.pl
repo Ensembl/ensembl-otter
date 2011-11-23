@@ -3,7 +3,6 @@
 use warnings;
 
 
-### Author ck1@sanger.ac.uk
 ### get_exon_seqs_of_otter_geneSID
 
 use strict;
@@ -145,7 +144,7 @@ sub sixty_cols {
   return ($format_seq, $ori_len);
 }
 
-=head1 NAME - get_exon_seqs_of_otter_geneSID
+=head1 NAME - get_exon_seqs_of_otter_geneSID.pl
 
 =head1 SYNOPSIS
 
@@ -166,10 +165,5 @@ Output individual exon sequence of a gene
 
 =head1 AUTHOR
 
-Chao-Kung Chen B<email> ck1@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk
 
-
-
-
-
-__END__

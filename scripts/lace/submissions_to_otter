@@ -3,22 +3,20 @@
 use warnings;
 
 
-=head1 NAME
-    
-submssion_to_otter
+=head1 NAME - submissions_to_otter
 
-=head1  SYNOPSIS 
+=head1 SYNOPSIS
     
 submission_to_otter -dataset <DATASET NAME> [-domain <DOMAIN NAME>]
 
-=head1 DESCRIPTION         
+=head1 DESCRIPTION
     
 checks through the contigs in an otter databases and if no sequence notes are present, it copies them from the submissions database
 
-=cut 
+=cut
  
 
-use strict ;
+use strict;
 use Carp;
 use Hum::Submission qw{sub_db prepare_statement};
 use DBI;
@@ -166,5 +164,5 @@ sub insert_new_author {
 
 =head1 AUTHOR
 
-Colin Kingswood<email> ck2@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk
 

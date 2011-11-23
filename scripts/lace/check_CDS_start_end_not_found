@@ -330,9 +330,9 @@ sub update_cds_end_not_found {
   return;
 }
 
-  __END__
+__END__
 
-=head1 NAME - check_CDS_end_not_found
+=head1 NAME - check_CDS_start_end_not_found
 
 =head1 SYNOPSIS
 
@@ -406,7 +406,5 @@ This is filter by clones_to_submit() in run_emblDump script. Just run the script
 
 =head1 AUTHOR
 
-Chao-Kung Chen B<email> ck1@sanger.ac.uk
-
-
+Ana Code B<email> anacode@sanger.ac.uk
 

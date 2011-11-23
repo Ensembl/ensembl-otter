@@ -7,7 +7,7 @@
 use strict;
 use warnings;
 
-use SangerPaths qw{ core bioperl123 ensembl64 otter59 };
+use SangerPaths qw{ core bioperl123 ensembl64 otter60 };
 
 use Bio::Otter::ServerScriptSupport;
 
@@ -67,12 +67,11 @@ sub get_gene_info {
 
 Bio::Otter::ServerScriptSupport->send_response(\&get_gene_info);
 
-
 __END__
 
 =head1 NAME - get_gene_info
 
 =head1 AUTHOR
 
-James Gilbert B<email> jgrg@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk
 
