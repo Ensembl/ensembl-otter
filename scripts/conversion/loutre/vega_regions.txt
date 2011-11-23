@@ -133,9 +133,14 @@ NOD_IDD18.2	3-Idd18.2_DIL	Idd18.2 region of chromosome 3 (DIL NOD strain)
 --end--
 
 --gorilla--
-MHC	6-MHC	MHC region of Chromosome 6
+MHC	5-MHC	MHC region of Chromosome 5
 KIR	19-LRC	LRC region of Chromosome 19	
 --end--
 
 --wallaby--
 mhc	2-MHC	MHC region of Chromosome 2
+--end--
+
+--chimp--
+mhc	5-MHC	MHC region of Chromosome 5
+--end--
