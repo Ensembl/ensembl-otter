@@ -26,6 +26,8 @@ use MenuCanvasWindow::GenomicFeatures;
 use Text::Wrap qw{ wrap };
 
 use Bio::Otter::Lace::Exonerate;
+use Bio::Otter::ZMap::XML;
+use Bio::Vega::Evidence::Types qw{ new_evidence_type_valid };
 
 use base qw{
 MenuCanvasWindow
@@ -45,6 +47,7 @@ sub new {
     $self->make_search_panel;
     $self->bind_events;
     $self->minimum_scroll_bbox(0,0, 380,200);
+    $self->flag_db_edits(1);
 
     return $self;
 }
@@ -77,6 +80,8 @@ sub SequenceNotes {
 
 sub initialize {
     my( $self ) = @_;
+
+    $self->set_window_title;
 
     # take GeneMethods from methods.ace file
     $self->set_known_GeneMethods();
@@ -348,101 +353,6 @@ sub make_menu {
     return $menu;
 }
 
-sub xace_process_id {
-    my( $self, $xace_process_id ) = @_;
-
-    if ($xace_process_id) {
-        $self->{'_xace_process_id'} = $xace_process_id;
-    }
-    return $self->{'_xace_process_id'};
-}
-
-sub launch_xace {
-    my( $self ) = @_;
-
-    $self->kill_xace;
-
-    if (my $path = $self->ace_path) {
-        if (my $pid = fork) {
-            $self->xace_process_id($pid);
-            $self->get_xwindow_id_from_readlock;
-        }
-        elsif (defined($pid)) {
-            exec('xace', '-fmapcutcoords', $path);
-            CORE::exit(1);
-        }
-        else {
-            confess "Error: can't fork : $!";
-        }
-    } else {
-        warn "Error: ace_path not set";
-    }
-
-    return;
-}
-
-sub kill_xace {
-    my( $self ) = @_;
-
-    if (my $pid = $self->xace_process_id) {
-        warn "Killing xace process '$pid'\n";
-        kill 9, $pid;
-    }
-
-    return;
-}
-
-sub get_xwindow_id_from_readlock {
-    my( $self ) = @_;
-
-    my $pid  = $self->xace_process_id or confess "xace_process_id not set";
-    my $path = $self->ace_path        or confess "ace_path not set";
-
-    # Find the readlock file for the process we just launched
-    my $lock_dir = "$path/database/readlocks";
-    my( $lock_file );
-    my $wait_seconds = 120;
-    for (my $i = 0; $i < $wait_seconds; do { $i++; sleep 1; }) {
-        opendir my $lock_dir_h, $lock_dir
-            or confess "Can't opendir '$lock_dir' : $!";
-        ($lock_file) = grep { /\.$pid$/ } readdir $lock_dir_h;
-        closedir $lock_dir_h;
-        if ($lock_file) {
-            $lock_file = "$lock_dir/$lock_file";
-            last;
-        }
-    }
-    unless ($lock_file) {
-        warn "Can't find xace readlock file in '$lock_dir' for process '$pid' after waiting for $wait_seconds seconds\n";
-        return 0;
-    }
-
-    my( $xwid );
-    for (my $i = 0; $i < $wait_seconds; do { $i++; sleep 1; }) {
-        # Extract the WindowID from the readlock file
-        open my $lock_file_h, '<', $lock_file
-            or confess "Can't read '$lock_file' : $!";
-        while (<$lock_file_h>) {
-            #warn "Looking at: $_";
-            if (/WindowID: (\w+)/) {
-                $xwid = $1;
-                last;
-            }
-        }
-        close $lock_file_h;
-
-        last if $xwid;
-    }
-    if ($xwid) {
-        my $xrem = Hum::Ace::XaceRemote->new($xwid);
-        $self->xace_remote($xrem);
-        return 1;
-    } else {
-        warn "WindowID was not found in lock file - outdated version of xace?";
-        return 0;
-    }
-}
-
 sub populate_menus {
     my( $self ) = @_;
 
@@ -621,18 +531,6 @@ sub populate_menus {
                -command        => $zmap_launch_command,
                -underline      => 7,
                );
-
-    # Launce xace
-    my $xace_launch_command = sub { $self->launch_xace };
-    # Hide menu item, but keep keyboard shortcut:
-    # $tools_menu->add('command',
-    #     -label          => 'Launch Xace',
-    #     -command        => $xace_launch_command,
-    #     -accelerator    => 'Ctrl+L',
-    #     -underline      => 7,
-    #     );
-    $top->bind('<Control-l>', $xace_launch_command);
-    $top->bind('<Control-L>', $xace_launch_command);
 
     # Genomic Features editing window
     my $gf_command = sub { $self->launch_GenomicFeatures };
@@ -936,33 +834,78 @@ sub exit_save_data {
     my $adb = $self->AceDatabase;
     unless ($adb->write_access) {
         $adb->error_flag(0);
-        $self->close_GenomicFeatures;
-        $self->kill_xace;
+        $self->close_GenomicFeatures;   ### Why is this special?
         return 1;
     }
 
     $self->close_all_edit_windows or return;
 
-    # Ask the user if any changes should be saved
-    my $dialog = $self->top_window()->Dialog(
-        -title          => 'otter: Save?',
-        -bitmap         => 'question',
-        -text           => "Save any changes to otter server?",
-        -default_button => 'Yes',
-        -buttons        => [qw{ Yes No Cancel }],
-        );
-    my $ans = $dialog->Show;
+    if (my @loci = $self->Assembly->get_all_annotation_in_progress_Loci) {
 
-    if ($ans eq 'Cancel') {
-        return;
-    }
-    elsif ($ans eq 'Yes') {
-        # Return false if there is a problem saving
-        $self->save_data or return;
+        # Format the text for the dialog
+        my $loci_str = join('', map {sprintf "\t%s\n", $_->name} @loci);
+        my $loci_phrase = @loci > 1 ? 'loci are'    : 'locus is';
+        my $flag_phrase = @loci > 1 ? 'these flags' : 'this flag';
+        my $what_phrase = @loci > 1 ? 'their'       : 'its';
+        my $txt = "The following $loci_phrase flagged with 'annotation in progress':\n$loci_str"
+            . "Is $what_phrase annotation now complete? Answering 'Yes' will remove $flag_phrase and save to otter";
+
+        my $dialog = $self->top_window()->Dialog(
+            -title          => 'otter: Annotation complete?',
+            -bitmap         => 'question',
+            -text           => $txt,
+            -default_button => 'No',
+            -buttons        => [qw{ Yes No Cancel }],
+            );
+        my $ans = $dialog->Show;
+        if ($ans eq 'Cancel') {
+            return;
+        }
+        elsif ($ans eq 'Yes') {
+            my $ace = '';
+            foreach my $locus (@loci) {
+                $locus->unset_annotation_in_progress;
+                $ace .= $locus->ace_string;
+                $self->update_Locus($locus);
+            }
+
+            eval {
+                $self->save_ace($ace);
+            };
+            if (my $err = $@) {
+                warn "Aborting lace session exit:\n$err";
+                return;
+            }
+
+            if ($self->save_data) {
+                $adb->error_flag(0);
+                return 1;
+            }
+            else {
+                return;
+            }
+        }
     }
 
-    # Will not want xace any more
-    $self->kill_xace;
+    if ($self->AceDatabase->unsaved_changes) {
+        # Ask the user if any changes should be saved
+        my $dialog = $self->top_window()->Dialog(
+            -title          => 'otter: Save?',
+            -bitmap         => 'question',
+            -text           => "Save any changes to otter server?",
+            -default_button => 'Yes',
+            -buttons        => [qw{ Yes No Cancel }],
+            );
+        my $ans = $dialog->Show;
+
+        if ($ans eq 'Cancel') {
+            return;
+        }
+        elsif ($ans eq 'Yes') {
+            # Return false if there is a problem saving
+            $self->save_data or return;
+        }
+    }
 
     # Unsetting the error_flag means that AceDatabase
     # will remove its directory during DESTROY.
@@ -983,7 +926,9 @@ sub close_all_edit_windows {
 sub save_data {
     my ($self) = @_;
 
-    unless ($self->AceDatabase->write_access) {
+    my $adb = $self->AceDatabase;
+
+    unless ($adb->write_access) {
         warn "Read only session - not saving\n";
         return 1;   # Can't save - but is OK
     }
@@ -992,14 +937,15 @@ sub save_data {
     $top->Busy;
 
     eval{
-        my $ace_data = $self->AceDatabase->save_ace_to_otter;
+        my $ace_data = $adb->save_ace_to_otter;
+        $adb->unsaved_changes(0);
+        $self->flag_db_edits(0);    # or the save_ace() will set unsaved_changes back to "1"
         $self->save_ace($ace_data);
-        $self->resync_with_db;
+        $self->flag_db_edits(1);
     };
     my $err = $@;
 
     $top->Unbusy;
-    # $top->raise;  # Not needed, now that we don't restart xace
 
     if ($err) {
         $self->exception_message($err, 'Error saving to otter');
@@ -1169,14 +1115,30 @@ sub ace_path {
 sub save_ace {
     my( $self, @args ) = @_;
 
+    my $adb = $self->AceDatabase;
+
     my $val;
-    eval { $val = $self->AceDatabase->ace_server->save_ace(@args) };
-    if ($@) {
-        $self->exception_message($@, "Error saving to acedb");
-        confess "Error saving to acedb: $@";
-    } else {
+    eval { $val = $adb->ace_server->save_ace(@args) };
+    if (my $err = $@) {
+        $self->exception_message($err, "Error saving to acedb");
+        confess "Error saving to acedb: $err";
+    }
+    else {
+        if ($self->flag_db_edits) {
+            $self->AceDatabase->unsaved_changes(1);
+            $self->update_window_title_unsaved_flag(1);            
+        }
         return $val;
     }
+}
+
+sub flag_db_edits {
+    my ($self, $flag) = @_;
+    
+    if (defined $flag) {
+        $self->{'_flag_db_edits'} = $flag ? 1 : 0;
+    }
+    return $self->{'_flag_db_edits'};
 }
 
 sub resync_with_db {
@@ -1405,6 +1367,7 @@ sub make_variant_subsequence {
     $var->empty_evidence_hash;
     $var->empty_remarks;
     $var->empty_annotation_remarks;
+    my $locus = $var->Locus;
 
     if (text_is_zmap_clip($clip)) {
         my $clip_sub = Hum::Ace::SubSeq->new_from_clipboard_text($clip);
@@ -1818,7 +1781,8 @@ sub Assembly {
 sub save_Assembly {
     my( $self, $new ) = @_;
 
-    my @xml = $new->zmap_SimpleFeature_xml($self->Assembly, $self->AceDatabase->offset);
+    my @xml = Bio::Otter::ZMap::XML::update_SimpleFeatures_xml(
+        $self->Assembly, $new, $self->AceDatabase->offset);
     $self->zMapSendCommands(@xml);
     my $ace = $new->ace_string;
     $self->save_ace($ace);
@@ -1999,13 +1963,7 @@ sub launch_exonerate {
     my %seqs_by_type = ();
 
     for my $seq (@$seqs) {
-        if (
-            $seq->type
-            && (   $seq->type eq 'EST'
-                || $seq->type eq 'ncRNA'
-                || $seq->type eq 'cDNA'
-                || $seq->type eq 'Protein')
-          )
+        if ($seq->type && new_evidence_type_valid($seq->type))
         {
             push @{ $seqs_by_type{ $seq->type } }, $seq;
         }
@@ -2028,7 +1986,7 @@ sub launch_exonerate {
         }
     }
 
-    my $need_relaunch = 0;
+    my $db_edited = 0;
     my @method_names;
     my $ace_text = '';
     my $best_n   = $params->{-best_n};
@@ -2065,12 +2023,17 @@ sub launch_exonerate {
 
         if ($seq_file) {
             $exonerate->initialise($seq_file);
-            my $ace_output .= $exonerate->run;
+            my $ace_output = $exonerate->run;
 
             # delete query file
             unlink $seq_file;
 
-            next unless $ace_output;
+            if ($ace_output) {
+                $db_edited = 1;
+            }
+            else {
+                next;
+            }
 
             # add hit sequences into ace text
             my $names = $exonerate->delete_all_hit_names;
@@ -2089,8 +2052,6 @@ sub launch_exonerate {
                 }
             }
 
-            $need_relaunch = 1;
-
             # Need to add new method to collection if we don't have it already
             my $coll      = $exonerate->AceDatabase->MethodCollection;
             my $coll_zmap = $self->Assembly->MethodCollection;
@@ -2108,9 +2069,10 @@ sub launch_exonerate {
     }
 
     $self->save_ace($ace_text);
-    $self->zMapLoadFeatures(@method_names) if $need_relaunch;
 
-    return $need_relaunch;
+    $self->zMapLoadFeatures(@method_names) if $db_edited;
+
+    return $db_edited;
 }
 
 sub ace_DNA {
@@ -2230,18 +2192,6 @@ sub draw_sequence_list {
     };
 
     return;
-}
-
-sub xace_remote {
-    my( $self, $xrem ) = @_;
-
-    if ($xrem) {
-        my $expected = 'Hum::Ace::XaceRemote';
-        confess "'$xrem' is not an '$expected'"
-            unless (ref($xrem) and $xrem->isa($expected));
-        $self->{'_xace_remote'} = $xrem;
-    }
-    return $self->{'_xace_remote'};
 }
 
 sub highlight_by_name {
@@ -2371,6 +2321,29 @@ sub run_exonerate {
     return 1;
 }
 
+sub set_window_title {
+    my ($self) = @_;
+    
+    my $name = $self->AceDatabase->name;
+    my $unsaved_str = $self->AceDatabase->unsaved_changes ? '* ' : '';
+    my $title = "${unsaved_str}otter: Session $name";
+    $self->top_window->title($title);
+
+    return;
+}
+
+sub update_window_title_unsaved_flag {
+    my ($self, $flag) = @_;
+    
+    my $top = $self->top_window;
+    my $title = $top->title;
+    $title =~ s/^\* //;
+    my $unsaved_str = $flag ? '* ' : '';
+    $top->title("${unsaved_str}$title");
+
+    return;
+}
+
 sub DESTROY {
     my( $self ) = @_;
 
@@ -2390,5 +2363,5 @@ __END__
 
 =head1 AUTHOR
 
-James Gilbert B<email> jgrg@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk
 

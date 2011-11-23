@@ -132,7 +132,7 @@ $vsa3->add_seq( Bio::LocatableSeq->new(
                     -seq => 'ZYXAB-DEWVF-HUTJKSRQP',
                     -id => 'fseq',
                     -start => 1,
-                    -end   => 10,
+                    -end   => 19,
                 )
     );
 

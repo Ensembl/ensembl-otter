@@ -773,15 +773,53 @@ sub visible_canvas_x_y {
 sub exception_message {
     my( $self, $except, @message ) = @_;
     
-    # Take just the first line of the exception message
-    my ($except_first) = $except =~ /^(.+)$/m;
-    
-    # Put the message on the terminal
-    print STDERR $except;
+    # Take just the first part of long exception messages
+    my @except_show = __partial_exception($except);
 
-    $self->message(@message, $except_first);
+    # Put the message on the terminal, with delimiter
+    $except = (defined $except ? qq{"""$except"""} : 'undef');
+    print STDERR qq{exception_message($except)\n};
+
+    if (Tk::Exists($self->canvas)) {
+        $self->message(@message, @except_show);
+    } else {
+        # we have been destroyed
+        print STDERR "Nowhere to stick the yellow message for this exception,\n".
+          __catdent('| ', @message);
+    }
 
     return;
+}
+
+sub __partial_exception {
+    my ($except) = @_;
+    my @ln;
+
+    if (!defined $except || $except eq '') {
+        @ln = '(message got lost)';
+    } else {
+        @ln = split /\n+/, $except;
+    }
+
+    if (length($ln[0]) > 80) {
+        # first line too long - shorten there
+        @ln = (substr($ln[0], 0, 76).' ...', '(see log)');
+    } elsif (length($ln[1]) > 80) {
+        # second line too long - shorten there
+        @ln = ($ln[0], substr($ln[1], 0, 76).' ...', '(see log)');
+    } elsif (@ln > 2) {
+        # too many lines
+        @ln = (@ln[0,1], '[... see log]');
+    } # else it fits OK
+
+    return @ln;
+}
+
+sub __catdent {
+    my ($indent, @message) = @_;
+    my $txt = join '', map { /\n\z/ ? $_ : "$_\n" } @message;
+    $txt =~ s/^/$indent/mg;
+    return $txt;
 }
 
 sub message {
@@ -815,7 +853,11 @@ sub message {
     my $x = $x1 + $pad + $x_offset;
     my $y = $y1 + $pad + $pad;
     my $text_width = $message_width - ($pad * 2);
-    
+
+    # Copy to the logs
+    my $title = $self->top_window->title;
+    print STDERR qq{Yellow message on window="$title",\n}.__catdent('| ', @message);
+
     return $self->message_at_x_y($x, $y, $text_width, @message);
 }
 
@@ -905,6 +947,7 @@ sub next_message_id {
         $canvas->delete($was_tag);
         $self->{'_was_selected_list'} = undef;
         foreach my $o (@obj) {
+            next if $self->is_selected($o);
             my @bbox = $canvas->bbox($o);
             $bbox[0] -= 1;
             $bbox[1] -= 1;
@@ -1021,7 +1064,7 @@ sub next_message_id {
 
         return $self->{'_selected_list'}{$obj} ? 1 : 0;
     }
-    
+
     sub was_selected {
         my ($self, $obj) = @_;
         
@@ -1031,19 +1074,19 @@ sub next_message_id {
     sub list_selected {
         my( $self ) = @_;
 
-        return $self->list_with_tag('_selected_list');
+        return $self->_get_sorted_list('_selected_list');
     }
 
     sub list_was_selected {
         my( $self ) = @_;
 
-        return $self->list_with_tag('_was_selected_list');
+        return $self->_get_sorted_list('_was_selected_list');
     }
 
-    sub list_with_tag {
-        my ($self, $tag) = @_;
+    sub _get_sorted_list {
+        my ($self, $list_name) = @_;
         
-        if (my $sel = $self->{$tag}) {
+        if (my $sel = $self->{$list_name}) {
             my @selected = sort { ace_sort($a,$b) } keys %$sel;
             return @selected;
         } else {
@@ -1170,5 +1213,5 @@ __END__
 
 =head1 AUTHOR
 
-James Gilbert B<email> jgrg@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk
 

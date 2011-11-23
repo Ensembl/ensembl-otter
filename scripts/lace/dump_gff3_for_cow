@@ -537,7 +537,7 @@ sub check_start_and_stop {
 
 __END__
 
-=head1 NAME - dump_gff3
+=head1 NAME - dump_gff3_for_cow
 
   dump_gff3 -dataset <DATASET_NAME> <LIST OF SEQUENCE SETS>
 
@@ -551,14 +551,9 @@ Dumps GFF3 format files for each sequence set
 (chromosome) named on the command line along with
 an AGP file.
 
+dump_gtf is compatible to GFF2; now updated to work with GFF3
+
 =head1 AUTHOR
 
-James Gilbert B<email> jgrg@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk
 
-Uses Steve Searle's gtf generation code (with minor modifications) from:
-
-  ensembl-personal/searle/hcds/scripts/ensembl2gtf
-
-Chao-Kung Chen B<email> ck1@sanger.ac.uk
-
-dump_gtf is compatible to GFF2; now updated to work with GFF3

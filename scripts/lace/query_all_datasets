@@ -5,6 +5,7 @@
 use strict;
 use warnings;
 use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Lace::PipelineDB;
 
 {
     my $sql;
@@ -87,5 +88,5 @@ The SQL to send to each database. Alternatively it will take SQL from STDIN.
 
 =head1 AUTHOR
 
-James Gilbert B<email> jgrg@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk
 

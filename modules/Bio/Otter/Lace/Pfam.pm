@@ -1,6 +1,4 @@
 
-=pod
-
 =head1 NAME - Bio::Otter::Lace::Pfam
 
 =head1 DESCRIPTION
@@ -362,5 +360,5 @@ __END__
 
 =head1 AUTHOR
 
-Anacode B<email> anacode@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk
 

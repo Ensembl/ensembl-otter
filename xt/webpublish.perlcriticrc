@@ -1,0 +1,14 @@
+
+#  This perlcriticrc file checks for things that will make webpublish
+#  reject files.  Do not treat it as a style checker.  To satisfy
+#  webpublish the following command should produce no output when run
+#  from the top of the ensembl-otter repository:
+#
+#      perlcritic --quiet --profile xt/webpublish.perlcriticrc modules/Bio scripts/apache
+
+severity = 1
+only     = 1
+
+[Documentation::RequirePodSections]
+lib_sections    = AUTHOR
+script_sections = AUTHOR

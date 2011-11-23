@@ -1,10 +1,10 @@
 #!/usr/bin/env perl
 
+use strict;
 use warnings;
 
 ### otterlace
 
-use strict;
 use CanvasWindow::DataSetChooser;
 use EditWindow::Password;
 use Bio::Otter::Lace::Defaults;
@@ -13,9 +13,6 @@ use Bio::Otter::Error;
 use POSIX ":sys_wait_h";
 
 {
-
-    Bio::Otter::Git->dump;
-
     # Become leader of process group so that "kill -$$" at end works
     setpgrp();
 
@@ -24,6 +21,9 @@ use POSIX ":sys_wait_h";
     $cl->cleanup_sessions;
     $cl->cleanup_log_dir('otterlace');
     $cl->make_log_file('otterlace');
+    # After this, we are writing logfile
+
+    Bio::Otter::Git->dump;
 
     my $mw = CanvasWindow::MainWindow->new("otter: Species List");
 
@@ -52,8 +52,18 @@ use POSIX ":sys_wait_h";
         $pass_win->get_password;
         return $pass;
     };
+    my $passwarn_sub = sub {
+        my ($client, $msg) = @_;
+        my $dialog = $mw->DialogBox
+          (-title => 'otter: Problem logging in',
+           -buttons => ['Ok'],);
+        $dialog->add(qw( Label -justify left -text ), $msg)->pack;
+        $dialog->Show;
+        return;
+    };
 
     $cl->password_prompt($prompt_sub);
+    $cl->password_problem($passwarn_sub);
 
     $cl->get_server_otter_config;
 
@@ -70,6 +80,9 @@ use POSIX ":sys_wait_h";
     # group, ie: all of the children. This cleans
     # up any stray processes we have launched.
     kill TERM => -$$;
+
+    # NB. we are still here, and so is our logger.  Session recovery
+    # may be blocked until we are gone.
 }
 
 __END__
@@ -106,5 +119,5 @@ saved to the otter server.
 
 =head1 AUTHOR
 
-James Gilbert B<email> jgrg@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk
 

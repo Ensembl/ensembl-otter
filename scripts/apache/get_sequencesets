@@ -7,7 +7,7 @@
 use strict;
 use warnings;
 
-use SangerPaths qw{ core bioperl123 ensembl63 otter57 };
+use SangerPaths qw{ core bioperl123 ensembl64 otter60 };
 
 use Bio::Otter::ServerScriptSupport;
 
@@ -194,7 +194,5 @@ return xml for sequence sets
 
 =head1 AUTHOR
 
-Roy Storey,,,, B<email> rds@sanger.ac.uk
-refactored by Sindhu K.Pillai B<email> sp1@sanger.ac.uk
-Leo Gordon B<email> lg4@sanger.ac.uk - support for the new schema
+Ana Code B<email> anacode@sanger.ac.uk
 

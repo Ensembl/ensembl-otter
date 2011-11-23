@@ -779,15 +779,17 @@ sub window_close {
     my $xc = $self->XaceSeqChooser;
 
     if ($self->is_mutable && $xc->AceDatabase->write_access) {
-        my( $sub );
+        my ($sub, $err);
         eval{
             $sub = $self->get_SubSeq_if_changed;
-        };
+            1;
+        } or $err = ($@ || '(error message got lost)');
+        # lost $@ guard is just paranoia, so far
 
         my $name = $self->name;
 
-        if ($@) {
-            $self->exception_message($@);
+        if ($err) {
+            $self->exception_message($err, 'Error while detecting changes to save');
             my $dialog = $self->canvas->toplevel->Dialog(
                 -title          => 'otter: Abandon?',
                 -bitmap         => 'question',
@@ -3068,12 +3070,9 @@ sub save_if_changed {
         if (my $sub = $self->get_SubSeq_if_changed) {
             $self->xace_save($sub);
         }
-    };
-
+        1;
+    } or $self->exception_message($@, 'Error saving transcript');
     # Make sure the annotators see the messages!
-    if ($@) {
-        $self->exception_message($@, 'Error saving transcript');
-    }
 
     return;
 }
@@ -3082,13 +3081,20 @@ sub xace_save {
     my( $self, $sub ) = @_;
 
     confess "Missing SubSeq argument" unless $sub;
-
+    
     my $top = $self->top_window;
     $top->grab;     # Stop user closing window before save is finished
 
     my $old = $self->SubSeq;
     my $old_name = $old->name;
     my $new_name = $sub->name;
+
+    # Allow the "annotation in progress" remark to be deleted. If the old
+    # locus had it, but the new one does not, then it was deliberately
+    # deleted, so don't set it again.    
+    unless ($old->Locus->annotation_in_progress && ! $sub->Locus->annotation_in_progress) {
+        $sub->Locus->set_annotation_in_progress;
+    }
 
     my $clone_name = $sub->clone_Sequence->name;
     if ($clone_name eq $new_name) {
@@ -3298,5 +3304,5 @@ __END__
 
 =head1 AUTHOR
 
-James Gilbert B<email> jgrg@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk
 

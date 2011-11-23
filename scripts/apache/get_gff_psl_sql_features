@@ -1,0 +1,14 @@
+#!/usr/local/bin/perl -Tw
+
+# Author:        mg13
+# Group:         anacode
+# Maintainer:    mg13
+
+use strict;
+use warnings;
+
+use SangerPaths qw{ core bioperl123 ensembl64 otter60 };
+
+use Bio::Otter::Server::GFF::PslSql;
+
+Bio::Otter::Server::GFF::PslSql->send_requested_features;

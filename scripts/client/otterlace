@@ -1,0 +1,24 @@
+#!/bin/sh
+
+# the installation script will append the proper values to these lines
+otterlace_installed=false
+
+# load the standard environment unless 
+# * this a checkout, not an installation
+# * $OTTER_HOME is set
+if $otterlace_installed || [ -z "$OTTER_HOME" ] ; then
+    the_real_me="$( readlink -f "$0" )"
+    if [ -z "$the_real_me" ] ; then
+        the_real_me="$0"
+    fi
+    . "$( dirname "$the_real_me" )/otterlace_env.sh"
+fi
+
+# sanity check
+if [ -z "$OTTER_HOME" ]
+then
+    echo "This script has been improperly installed!  Consult the developers!" >&2
+    exit 1
+fi
+
+exec perl "$OTTER_HOME/ensembl-otter/tk/otterlace" $@

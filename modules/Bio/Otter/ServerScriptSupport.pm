@@ -83,9 +83,17 @@ sub make_map {
     };
 }
 
+my $map_keys_required = { };
+$map_keys_required->{$_}++ for qw(
+type start end
+);
+
 sub make_map_value {
     my ($self, $key) = @_;
-    my $val = $self->param($key);
+    my $getter =
+        $map_keys_required->{$key} ? 'require_argument' : 'param';
+    warn sprintf "getter = '%s', key = '%s'\n", $getter, $key;
+    my $val = $self->$getter($key);
     return defined($val) ? $val : '';
 }
 
@@ -182,7 +190,10 @@ sub read_user_file {
     my ($self, $usr_file) = @_;
 
     my $usr_hash = {};
-    my $do_user_line = sub {
+
+    open my $list, '<', $usr_file
+        or die "Error opening '$usr_file'; $!";
+    while (<$list>) {
         s/#.*//;            # Remove comments
         s/(^\s+|\s+$)//g;   # Remove leading or trailing spaces
         next if /^$/;       # Skip lines which are now blank
@@ -191,11 +202,7 @@ sub read_user_file {
         foreach my $ds (@allowed_datasets) {
             $usr_hash->{$user_name}{$ds} = 1;
         }
-    };
-
-    open my $list, '<', $usr_file
-        or die "Error opening '$usr_file'; $!";
-    while (<$list>) { $do_user_line->(); }
+    }
     close $list or die "Error closing '$usr_file'; $!";
 
     return $usr_hash;
@@ -455,5 +462,5 @@ __END__
 
 =head1 AUTHOR
 
-Leo Gordon B<email> lg4@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk
 

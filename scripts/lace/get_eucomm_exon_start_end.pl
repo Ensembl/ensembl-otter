@@ -30,7 +30,7 @@ use Bio::EnsEMBL::SimpleFeature;
   my $seq_sets = get_EUCOMM_oligo_seq_sets($otter_db);
 
   print "Fields: (1)SF_ID\t(2)ANNOTATION\t(3)START\t(4)END\n";
-  print "-" x 100, "\n";;
+  print "-" x 100, "\n";
 
   foreach my $set ( keys %$seq_sets ) {
 

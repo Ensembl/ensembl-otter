@@ -1,11 +1,11 @@
 #!/usr/bin/env perl
 
+use strict;
 use warnings;
 
 
 ### draw_karyotype
 
-use strict;
 use KaryotypeWindow;
 use Hum::EnsCmdLineDB;
 use Getopt::Long 'GetOptions';

@@ -8,7 +8,6 @@ use warnings;
 use Carp;
 use Getopt::Long 'GetOptions';
 use Config::IniFiles;
-use POSIX 'uname';
 
 
 my $CLIENT_STANZA   = 'client';
@@ -223,18 +222,19 @@ sub config_value {
 
 sub config_value_list {
     my ( $key1, $key2, $name ) = @_;
+    my $keys = [ "default.$key2", "$key1.$key2" ];
+    return [ map { _config_value_list_ini_keys_name($_, $keys, $name); } @$CONFIG_INIFILES, ];
+}
 
-    my @keys = ( "default.$key2", "$key1.$key2" );
+sub _config_value_list_ini_keys_name {
+    my ( $ini, $keys, $name ) = @_;
+    return map { _config_value_list_ini_key_name($ini, $_, $name); } @{$keys};
+}
 
-    return [
-        map {
-            my $ini = $_;
-            map  {
-                my $key = $_;
-                my $vs = $ini->{$key}{$name};
-                ref $vs ? @{$vs} : defined $vs ? ( $vs ) : ( );
-            } @keys;
-        } @$CONFIG_INIFILES, ];
+sub _config_value_list_ini_key_name {
+    my ( $ini, $key, $name ) = @_;
+    my $vs = $ini->{$key}{$name};
+    return ref $vs ? @{$vs} : defined $vs ? ( $vs ) : ( );
 }
 
 sub config_value_list_merged {
@@ -284,19 +284,43 @@ sub _config_value_list_merge {
 
 sub config_section {
     my ( $key1, $key2 ) = @_;
+    my $keys = [ "default.$key2", "$key1.$key2" ];
+    return { map { _config_section_ini_keys($_, $keys) } @$CONFIG_INIFILES };
+}
 
-    my @keys = ( "default.$key2", "$key1.$key2" );
+sub _config_section_ini_keys {
+    my ( $ini, $keys ) = @_;
+    return map { _config_section_ini_key($ini, $_); } @{$keys};
+}
 
-    return {
-        map {
-            my $ini = $_;
-            map {
-                my $key = $_;
-                my $section= $ini->{$key};
-                defined $section ? %{$section} : ( );
-            } @keys;
-        } @$CONFIG_INIFILES,
-    };
+sub _config_section_ini_key {
+    my ( $ini, $key ) = @_;
+    my $section = $ini->{$key};
+    return defined $section ? %{$section} : ( );
+}
+
+sub config_keys {
+    my ( $key1, $key2 ) = @_;
+    my $keys = [ "default.$key2", "$key1.$key2" ];
+    return [ map { _config_keys_ini_keys($_, $keys) } @$CONFIG_INIFILES ];
+}
+
+sub _config_keys_ini_keys {
+    my ( $ini, $keys ) = @_;
+    return map { _config_keys_ini_key($ini, $_); } @{$keys};
+}
+
+sub _config_keys_ini_key {
+    my ( $ini, $key ) = @_;
+    my $obj = tied %{$ini};
+    return map { _section_key($_, $key) } $obj->Sections;
+}
+
+sub _section_key {
+    my ( $section, $key ) = @_;
+    return unless my ( $key1, $key2 ) = $section =~ /^([^\.]*\.[^\.]*)\.(.*)$/;
+    return unless $key1 eq $key;
+    return $key2;
 }
 
 1;
@@ -393,7 +417,7 @@ above does.
 
 =head1 AUTHOR
 
-James Gilbert B<email> jgrg@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk
 
 =cut
 
@@ -405,7 +429,7 @@ __DATA__
 [client]
 host=www.sanger.ac.uk
 port=80
-version=57
+version=60
 write_access=0
 debug=1
 show_zmap=1

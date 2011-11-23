@@ -33,7 +33,7 @@ sub get_requested_features {
         } @analysis ];
 }
 
-sub _gff_keys {
+sub _gff_keys { ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
     return @gff_keys;
 }
 
@@ -43,5 +43,5 @@ __END__
 
 =head1 AUTHOR
 
-Jeremy Henty B<email> jh13@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk
 

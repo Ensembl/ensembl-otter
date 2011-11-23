@@ -27,6 +27,7 @@ use Bio::Otter::Lace::CloneSequence;
 use Bio::Otter::Lace::PipelineStatus;
 use Bio::Otter::Lace::SequenceNote;
 use Bio::Otter::Lace::AceDatabase;
+use Bio::Otter::Lace::DB;
 use Bio::Otter::LogFile;
 
 sub new {
@@ -209,16 +210,15 @@ sub cleanup_sessions {
 }
 
 sub session_path {
-    my ($self, $write_access) = @_;
+    my ($self) = @_;
 
-    my $readonly_tag = $write_access ? '' : '.ro';
     $session_number++;
 
     my $user = (getpwuid($<))[0];
 
     return
-        sprintf "%s_%d.%s.%d%s.%d",
-        $session_root, $self->version, $user, $$, $readonly_tag, $session_number;
+        sprintf "%s_%d.%s.%d.%d",
+        $session_root, $self->version, $user, $$, $session_number;
 }
 
 sub all_sessions {
@@ -257,12 +257,11 @@ sub all_session_dirs {
 }
 
 sub new_AceDatabase {
-    my( $self, $write_access ) = @_;
+    my( $self ) = @_;
 
     my $adb = Bio::Otter::Lace::AceDatabase->new;
-    $adb->write_access($write_access);
     $adb->Client($self);
-    $adb->home($self->session_path($write_access));
+    $adb->home($self->session_path);
 
     return $adb;
 }
@@ -338,6 +337,21 @@ sub password_prompt{
     return $callback;
 }
 
+sub password_problem{
+    my ($self, $callback) = @_;
+
+    if ($callback) {
+        $self->{'_password_problem_callback'} = $callback;
+    }
+    $callback = $self->{'_password_problem_callback'} ||=
+      sub {
+          my ($self, $message) = @_;
+          $message =~ s{\n*\z}{\n};
+          warn $message;
+      };
+    return $callback;
+}
+
 sub authorize {
     my ($self) = @_;
 
@@ -361,13 +375,25 @@ sub authorize {
         warn sprintf "Authorized OK: %s\n",
             $response->status_line;
         $self->save_CookieJar;
+        return 1;
     } else {
-        warn sprintf "Authorize failed: %s (%s)\n",
-            $response->status_line,
-            $response->decoded_content;
+        my $content = $response->decoded_content;
+        my $msg = sprintf "Authorize failed: %s (%s)\n",
+            $response->status_line, $content;
+        if ($content =~ m{<title>Sanger Single Sign-on login}) {
+            # Some common special cases
+            if ($content =~ m{<P>(Invalid account details\. Please try again)</P>}i) {
+                $msg = "Login failed: $1";
+            } elsif ($content =~
+                     m{The account <b>(.*)</b> has been temporarily locked}) {
+                $msg = "Login failed and account $1 is now temporarily locked.";
+                $msg .= "\nPlease wait $1 and try again, or contact Anacode for support"
+                  if $content =~ m{Please try again in ((\d+ hours?)?,? \d+ minutes?)};
+            } # else probably an entire HTML page
+        }
+        $self->password_problem()->($self, $msg);
+        return 0;
     }
-
-    return;
 }
 
 # ---- HTTP protocol related routines:
@@ -862,12 +888,12 @@ sub _make_DataSet {
     my ($self, $name, $params) = @_;
 
     my $dataset = Bio::Otter::Lace::DataSet->new;
-    $dataset->Client($self);
     $dataset->name($name);
     while (my ($key, $value) = each %{$params}) {
         my $method = uc $key;
         $dataset->$method($value) if $dataset->can($method);
     }
+    $dataset->Client($self);
 
     return $dataset;
 }
@@ -1130,6 +1156,11 @@ sub config_section {
     return Bio::Otter::Lace::Defaults::config_section(@keys);
 }
 
+sub config_keys {
+    my ( $self, @keys ) = @_;
+    return Bio::Otter::Lace::Defaults::config_keys(@keys);
+}
+
 ############## Session recovery methods ###################################
 
 sub sessions_needing_recovery {
@@ -1147,8 +1178,13 @@ sub sessions_needing_recovery {
 
         my $ace_wrm = "$lace_dir/database/ACEDB.wrm";
         if (-e $ace_wrm) {
-            my $title = $self->get_title($lace_dir);
-            push(@$to_recover, [$lace_dir, $mtime, $title]);
+            if (my $name = $self->get_name($lace_dir)) {
+                push(@$to_recover, [$lace_dir, $mtime, $name]);                
+            }
+            else {
+                my $done = $self->move_to_done($lace_dir);
+                die "Session with uninitialised or corrupted SQLite DB renamed to '$done'";
+            }
         } else {
             eval {
                 # Attempt to release locks of uninitialised sessions
@@ -1163,8 +1199,8 @@ sub sessions_needing_recovery {
             } or warn "error while recoving session '$lace_dir': $@";
             if (-d $lace_dir) {
                 # Belt and braces - if the session was unrecoverable we want it to be deleted.
-                print STDERR "\nNo such file: '$lace_dir/database/ACEDB.wrm'\nDeleting uninitialized database '$lace_dir'\n";
-                remove_tree($lace_dir);
+                my $done = $self->move_to_done($lace_dir);
+                die "\nNo such file: '$lace_dir/database/ACEDB.wrm'\nDatabase moved to '$done'\n";
             }
         }
     }
@@ -1175,25 +1211,19 @@ sub sessions_needing_recovery {
     return $to_recover;
 }
 
-sub get_title {
+sub move_to_done {
+    my ($self, $lace_dir) = @_;
+
+    my $done = "$lace_dir.done";
+    rename($lace_dir, $done) or die "Error renaming '$lace_dir' to '$done'; $!";
+    return $done;
+}
+
+sub get_name {
     my ($self, $home_dir) = @_;
 
-    my $displays_file = "$home_dir/wspec/displays.wrm";
-    open my $DISP, '<', $displays_file or die "Can't read '$displays_file'; $!";
-    my $title;
-    while (<$DISP>) {
-        if (/_DDtMain.*-t\s*"([^"]+)/) {
-            $title = $1;
-            last;
-        }
-    }
-    close $DISP or die "Error reading '$displays_file'; $!";
-
-    if ($title) {
-        return $title;
-    } else {
-        die "Failed to fetch title from '$displays_file'";
-    }
+    my $db = Bio::Otter::Lace::DB->new($home_dir);
+    return $db->get_tag_value('name');
 }
 
 sub recover_session {
@@ -1201,26 +1231,22 @@ sub recover_session {
 
     $self->kill_old_sgifaceserver($dir);
 
-    my $write_flag = $dir =~ /\.ro/ ? 0 : 1;
-
-    my $adb = $self->new_AceDatabase($write_flag);
+    my $adb = $self->new_AceDatabase;
     $adb->error_flag(1);
     my $home = $adb->home;
     rename($dir, $home) or die "Cannot move '$dir' to '$home'; $!";
 
     unless ($adb->db_initialized) {
-        warn $@ unless eval { $adb->recover_smart_slice_from_region_xml_file; 1; };
+        warn $@ unless eval { $adb->recover_smart_slice_from_region_xml; 1; };
         return $adb;
     }
 
     # All the info we need about the genomic region
     # in the lace database is saved in the region XML
     # dot file.
-    $adb->recover_smart_slice_from_region_xml_file;
+    $adb->recover_smart_slice_from_region_xml;
+    $adb->DataSet->load_client_config;
     $adb->reload_filter_state;
-
-    my $title = $self->get_title($adb->home);
-    $adb->title($title);
 
     return $adb;
 }
@@ -1261,5 +1287,5 @@ server.
 
 =head1 AUTHOR
 
-James Gilbert B<email> jgrg@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk
 

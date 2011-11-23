@@ -10,6 +10,12 @@ use Carp;
 use Hum::Ace::AceText;
 use Hum::Sort qw{ ace_sort };
 
+use Bio::EnsEMBL::Slice;
+use Bio::EnsEMBL::CoordSystem;
+use Bio::EnsEMBL::SimpleFeature;
+use Bio::EnsEMBL::Attribute;
+use Bio::EnsEMBL::Analysis;
+
 use Bio::Vega::Gene;
 use Bio::Vega::Transcript;
 use Bio::Vega::Translation;
@@ -26,7 +32,9 @@ my %ace2ens_phase = (
     );
 
 my (
-    %slice,
+    %feature_types,
+    %ensembl_slice,
+    %otter_slice,
     %ace_database,
     %authors,
     %genes,
@@ -41,7 +49,9 @@ my (
 sub DESTROY {
     my ($self) = @_;
 
-    delete(            $slice{$self}    );
+    delete(    $feature_types{$self}    );
+    delete(    $ensembl_slice{$self}    );
+    delete(      $otter_slice{$self}    );
     delete(     $ace_database{$self}    );
     delete(          $authors{$self}    );
     delete(            $genes{$self}    );
@@ -62,10 +72,30 @@ sub new {
     return bless \$self_str, $pkg;
 }
 
-sub slice {
+sub feature_types {
+    my ($self, $feature_types) = @_;
+
+    if ($feature_types) {
+        $feature_types{$self} = $feature_types;
+    }
+
+    return $feature_types{$self};
+}
+
+sub ensembl_slice {
     my ($self) = @_;
 
-    return $slice{$self};
+    return $ensembl_slice{$self};
+}
+
+sub otter_slice {
+    my( $self, $otter_slice ) = @_;
+
+    if ($otter_slice) {
+        $otter_slice{$self} = $otter_slice;
+        $ensembl_slice{$self} = _ensembl_slice($otter_slice);
+    }
+    return $otter_slice{$self};
 }
 
 sub genes {
@@ -86,11 +116,11 @@ sub clone_seq_list {
     return $clone_sequences{$self};
 }
 
-sub AceDatabase {
-    my( $self, $AceDatabase ) = @_;
+sub ace_handle {
+    my( $self, $ace_handle ) = @_;
 
-    if ($AceDatabase) {
-        $ace_database{$self} = $AceDatabase;
+    if ($ace_handle) {
+        $ace_database{$self} = $ace_handle;
     }
     return $ace_database{$self};
 }
@@ -98,11 +128,8 @@ sub AceDatabase {
 sub generate_vega_objects {
     my ($self) = @_;
 
-    my $slice_name = $self->AceDatabase->smart_slice->name;
-    my $ace        = $self->AceDatabase->aceperl_db_handle;
-
-    # We need a slice to attach to the exons, transcripts, and genes
-    $slice{$self} = $self->AceDatabase->smart_slice->create_detached_slice;
+    my $slice_name = $self->otter_slice->name;
+    my $ace        = $self->ace_handle;
 
     # List of people for Authors
     $ace->raw_query(qq{find Person *});
@@ -113,11 +140,9 @@ sub generate_vega_objects {
     $ace->raw_query($find_assembly);
     my $ace_txt = $ace->raw_query('show -a');
 
-    # Remove all Feature lines which aren't editable types
-    my @mutable =
-        $self->AceDatabase->MethodCollection->get_all_mutable_non_transcript_Methods;
-    my $editable = join '|', map { $_->name } @mutable;
-    $ace_txt =~ s/^Feature\s+"(?!($editable)).*\n//mg;
+    # filter by feature type
+    my $selected_features = join '|', map { $_->name } @{$self->feature_types};
+    $ace_txt =~ s/^Feature\s+"(?!($selected_features)).*\n//mg;
 
     $self->parse('build_Features_spans_and_agp_fragments', $ace_txt);
 
@@ -185,8 +210,6 @@ sub build_Author {
 sub build_Features_spans_and_agp_fragments {
     my ($self, $ace) = @_;
 
-    my $slice = $slice{$self};
-
     my $feat_list = $simple_features{$self} ||= [];
     foreach my $row ($ace->get_values('Feature')) {
         my ($type, $start, $end, $score, $label) = @$row;
@@ -205,7 +228,7 @@ sub build_Features_spans_and_agp_fragments {
             Bio::EnsEMBL::Analysis->new(-LOGIC_NAME => $type);
         my $sf = Bio::EnsEMBL::SimpleFeature->new(
             -ANALYSIS       => $ana,
-            -SLICE          => $slice,
+            -SLICE          => $self->ensembl_slice,
             -START          => $start,
             -END            => $end,
             -STRAND         => $strand,
@@ -226,10 +249,9 @@ sub build_Features_spans_and_agp_fragments {
     }
 
     my $cs_list = $clone_sequences{$self} = [];
-    my $chr_offset = $slice{$self}->start - 1;
-    my $smart_slice = $ace_database{$self}->smart_slice;
-    my $chr_name = $smart_slice->seqname;
-    my $ss_name  = $smart_slice->ssname;
+    my $chr_offset = $self->ensembl_slice->start - 1;
+    my $chr_name = $self->otter_slice->seqname;
+    my $ss_name  = $self->otter_slice->ssname;
     foreach my $row ($ace->get_values('AGP_Fragment')) {
         my ($ctg_name, $group_start, $group_end, undef, $start_or_end, $offset, $tile_length) = @$row;
 
@@ -250,7 +272,7 @@ sub build_Features_spans_and_agp_fragments {
         $cs->chr_start($start + $chr_offset);
         $cs->chr_end($end + $chr_offset);
         $cs->assembly_type($ss_name);
-        $cs->ContigInfo(Bio::Vega::ContigInfo->new(-SLICE => $slice{$self}));
+        $cs->ContigInfo(Bio::Vega::ContigInfo->new(-SLICE => $self->ensembl_slice));
 
         push(@$cs_list, $cs);
     }
@@ -342,9 +364,9 @@ sub build_Gene {
     }
     $self->add_remarks($ace, $gene);
 
-    if (my $name = $ace->get_single_value('Locus_author')) {
-        my $author = $authors{$self}{$name}
-            or confess "No author object '$name'";
+    if (my $author_name = $ace->get_single_value('Locus_author')) {
+        my $author = $authors{$self}{$author_name}
+            or confess "No author object '$author_name'";
         $gene->gene_author($author);
     }
 
@@ -370,8 +392,6 @@ sub gather_transcripts {
 
 sub build_Transcript {
     my ($self, $ace) = @_;
-
-    my $slice = $slice{$self};
 
     my (undef, $name) = $ace->class_and_name;
 
@@ -403,9 +423,9 @@ sub build_Transcript {
     # Add remarks to transcript
     $self->add_remarks($ace, $tsct);
 
-    if (my $name = $ace->get_single_value('Transcript_author')) {
-        my $author = $authors{$self}{$name}
-            or confess "No author object '$name'";
+    if (my $author_name = $ace->get_single_value('Transcript_author')) {
+        my $author = $authors{$self}{$author_name}
+            or confess "No author object '$author_name'";
         $tsct->transcript_author($author);
     }
 
@@ -418,8 +438,6 @@ sub make_exons {
     my ($self, $ace, $span) = @_;
 
     my ($tsct_start, $tsct_end, $strand) = @$span;
-
-    my $slice = $slice{$self};
 
     my $tsct_exons = [];
     foreach my $row ($ace->get_values('Source_Exons')) {
@@ -439,7 +457,7 @@ sub make_exons {
             -START      => $start,
             -END        => $end,
             -STRAND     => $strand,
-            -SLICE      => $slice,
+            -SLICE      => $self->ensembl_slice,
             -STABLE_ID  => $stable_id,
             );
         push(@$tsct_exons, $exon);
@@ -464,7 +482,7 @@ sub add_supporting_evidence {
     my ($self, $ace, $tsct) = @_;
 
     my $evidence_list = [];
-    foreach my $type (qw{ cDNA ncRNA Protein Genomic EST }) {
+    foreach my $type ( @Bio::Vega::Evidence::Types::ALL ) {
         foreach my $value ($ace->get_values($type . '_match')) {
             my $ev = Bio::Vega::Evidence->new(
                 -TYPE   => $type,
@@ -626,6 +644,25 @@ sub create_Attribute {
     return;
 }
 
+sub _ensembl_slice {
+    my ($otter_slice) = @_;
+
+    my $ensembl_slice = Bio::EnsEMBL::Slice->new(
+        -seq_region_name    => $otter_slice->ssname,
+        -start              => $otter_slice->start,
+        -end                => $otter_slice->end,
+        -coord_system   => Bio::EnsEMBL::CoordSystem->new(
+            -name           => $otter_slice->csname,
+            -version        => $otter_slice->csver,
+            -rank           => 2,
+            -sequence_level => 0,
+            -default        => 1,
+        ),
+    );
+
+    return $ensembl_slice;
+}
+
 1;
 
 __END__
@@ -634,5 +671,5 @@ __END__
 
 =head1 AUTHOR
 
-James Gilbert B<email> jgrg@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk
 

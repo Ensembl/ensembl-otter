@@ -1,11 +1,11 @@
 #!/usr/bin/env perl
 
+use strict;
 use warnings;
 
 
 ### peri_dotter
 
-use strict;
 use Hum::EnsCmdLineDB;
 use CanvasWindow;
 

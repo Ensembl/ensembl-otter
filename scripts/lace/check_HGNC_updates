@@ -3,7 +3,6 @@
 use warnings;
 
 
-# Author: ck1@sanger.ac.uk
 # This scripts checks for gene name updates from HGNC
 # and downloads the file if positive.
 # Currently HGNC updates files on their sFTP server every Friday night

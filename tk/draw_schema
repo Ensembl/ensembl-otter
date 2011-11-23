@@ -1,11 +1,11 @@
 #!/usr/bin/env perl
 
+use strict;
 use warnings;
 
 
 ### canvas_drag_drop
 
-use strict;
 use CanvasWindow;
 use DBI;
 use Hum::Submission;
@@ -226,7 +226,7 @@ use Hum::Submission;
 
 __END__
 
-=head1 NAME - canvas_drag_drop
+=head1 NAME - draw_schema
 
 =head1 AUTHOR
 

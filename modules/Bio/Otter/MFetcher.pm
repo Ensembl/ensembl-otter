@@ -126,7 +126,12 @@ sub otter_assembly_equiv_hash { # $self->{_aeh}{NCBI36}{11} = 'chr11-02';
 
     my $aeh = $self->{'_aeh'} = {};
     while( my ($equiv_asm, $equiv_chr, $atype) = $sth->fetchrow()) {
-        $aeh->{$equiv_asm}{$equiv_chr} = $atype;
+        if (my $have_a_type = $aeh->{$equiv_asm}{$equiv_chr}) {
+            die "Already have chromosome '$have_a_type' for '$equiv_asm.$equiv_chr', will not overwrite with '$atype'";
+        }
+        else {
+            $aeh->{$equiv_asm}{$equiv_chr} = $atype;
+        }
     }
     return $aeh;
 }
@@ -472,6 +477,5 @@ __END__
 
 =head1 AUTHOR
 
-Leo Gordon B<email> lg4@sanger.ac.uk
-
+Ana Code B<email> anacode@sanger.ac.uk
 

@@ -1,11 +1,11 @@
 #!/usr/bin/env perl
 
+use strict;
 use warnings;
 
 
 ### canvas_text
 
-use strict;
 use CanvasWindow;
 
 {

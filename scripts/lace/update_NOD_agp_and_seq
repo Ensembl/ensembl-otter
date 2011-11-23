@@ -4,7 +4,6 @@ use strict;
 use warnings;
 
 
-# ck1@sanger.ac.uk
 # compare chromoview NOD/CHORI agps with agps in ~jgrg/work/mouse
 # update if necessary and copy over new ones to /nfs/WWWdev/SANGER_docs/htdocs/Projects/M_musculus-NOD/NOD_AGP
 # which is used by /nfs/WWWdev/SANGER_docs/cgi-bin/Projects/M_musculus/mouse_NOD_clones_TPF script
@@ -154,7 +153,7 @@ foreach my $file ( @latest_agps ){
   }
 
   $agpfile =~ s/-\d+//;
-  my $region_seq .= $agpfile.".seq";
+  my $region_seq = $agpfile.".seq";
 
   open(my $agpseq, '>', "$dest_dir/$region_seq") or die $!;
   print $agpseq basename($file), "\n\n";
