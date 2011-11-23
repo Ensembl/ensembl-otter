@@ -173,7 +173,7 @@ else {
   $support->log_stamped("Retrieving info from CCDS database\n");
   foreach my $chr ( @{$ccds_sa->fetch_all('chromosome')}){
     my $chrname = $chr->name;
-    $support->log_stamped("On chromosome $chrname\n",1);
+    $support->log_stamped("Ensembl $chrname\n",1);
     foreach my $ccds_gene ( @{$chr->get_all_Genes()} ){
       $ccds_gene = $ccds_gene->transform('chromosome', $path);
       foreach my $ccds_trans (@{$ccds_gene->get_all_Transcripts()}){
