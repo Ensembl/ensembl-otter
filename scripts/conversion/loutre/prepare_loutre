@@ -116,7 +116,7 @@ if (! (($species) = $support->param('loutredbname') =~ /loutre_(\S+)_*/ ) ) {
   $support->log_warning("No species name interpreted from loutredbname ".$support->param('loutredbname')." check configuration\n");
   exit;
 }
-unless (grep {$_ eq $species} qw(human mouse dog pig zebrafish gorilla wallaby)) {
+unless (grep {$_ eq $species} qw(human mouse dog pig zebrafish gorilla wallaby chimp)) {
   $support->log_warning("Species $species not recognised, please check\n");
   exit;
 }
@@ -154,6 +154,8 @@ while (my $rec = <$IN>) {
     ensembl_name     => $ensembl_name,
   };
 }
+
+#warn Data::Dumper::Dumper($regions_wanted_details); exit;
 
 
 # connect to database and get adaptors
@@ -242,10 +244,11 @@ foreach my $chrom (@$chroms) {
     }
   }
 }
-
-foreach my $wp (@wanted_patches) {
-  unless ( grep {$_ eq $wp} @found_patches) {
-    $support->log_warning("Cannot find $wp that Jon's asked for\n");
+if ($species eq 'human') {
+  foreach my $wp (@wanted_patches) {
+    unless ( grep {$_ eq $wp} @found_patches) {
+      $support->log_warning("Cannot find $wp that Jon's asked for\n");
+    }
   }
 }
 
