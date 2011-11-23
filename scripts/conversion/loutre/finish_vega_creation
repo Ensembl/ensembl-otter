@@ -752,6 +752,11 @@ push @sql_fixes, "INSERT ignore into meta (meta_key,meta_value) VALUES (\'genebu
 #delete patch script entries
 push @sql_fixes, "DELETE from meta WHERE meta_key = \'patch\';\n";
 
+#add non_ref seq_region_attributes to Vega PATCH chromosomes
+my ($cs_id) = $vdbh->selectrow_array(qq(SELECT coord_system_id from coord_system where version =VEGA$release_no));
+my ($attrib_type_id) = $vdbh->selectrow_array(qq(SELECT attrib_type_id from attrib_type where code = 'non_ref'));version =VEGA$release_no));
+push @sql_fixes, qq(INSERT into seq_region_attrib SELECT seq_region_id,$attrib_type_id,1 from seq_region where name like '%patch' and coord_system_id = $cs_id;\n);
+
 #update biotypes of some genes/transcripts for website display purposes
 push @sql_fixes, "UPDATE gene SET biotype = 'IG_gene' WHERE biotype = 'ig_gene';\n";
 push @sql_fixes, "UPDATE gene SET biotype = 'IG_pseudogene' WHERE biotype = 'ig_pseudogene';\n";
