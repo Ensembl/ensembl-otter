@@ -5,7 +5,7 @@
 
 #loutre_id        = seq_region.name in loutre (minus the numerical suffix)
 #vega_name        = seq_region.name in Vega
-#name             = human readable name (for Vega mapview)
+#name             = human readable name (for Vega chromosome summary)
 #ensembl_name     = Name of equivalent seqregion in Ensembl
 
 #loutre_id	#vega_name	#name	#ensembl_name	
