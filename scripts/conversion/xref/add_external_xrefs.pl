@@ -209,7 +209,7 @@ if ($support->param('prune') and $support->user_proceed('Would you really like t
 }
 
 my %gene_stable_ids = map { $_, 1 }  $support->param('gene_stable_id');
-my $chr_length = $support->get_chrlength($dba);
+my $chr_length = $support->get_chrlength($dba,'','',1);
 my @chr_sorted = $support->sort_chromosomes($chr_length);
 
 no strict 'refs';
@@ -262,7 +262,6 @@ if ($support->param('xrefformat') eq 'imgt_hla') {
   }
 }
 
-
 # define each type of xref that can be set, and whether to set as display_xref or not
 my %extdb_def = (
   HGNC                     => ['KNOWNXREF', 1],
@@ -294,7 +293,7 @@ foreach my $chr (@chr_sorted) {
   # fetch genes from db
   $support->log("Fetching genes...\n");
   my $slice = $sa->fetch_by_region('chromosome', $chr);
-  my $genes = $ga->fetch_all_by_Slice($slice);
+  my ($genes) = $support->get_unique_genes($slice);
   $support->log_stamped("Done fetching ".scalar @$genes." genes.\n\n");
 
   # loop over genes
