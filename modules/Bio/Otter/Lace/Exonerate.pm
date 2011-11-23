@@ -1,6 +1,4 @@
 
-=pod
-
 =head1 NAME - Bio::Otter::Lace::Exonerate
 
 =head1 DESCRIPTION
@@ -21,7 +19,10 @@ use File::Basename;
 use Bio::Otter::Lace::Exonerate::Config::General;
 use Bio::Otter::Lace::Exonerate::Config::Blast;
 use Bio::EnsEMBL::Analysis::Tools::BlastDBTracking;
-Bio::EnsEMBL::Analysis::Tools::BlastDBTracking->_Fake_version_for_otf(1);
+{
+    ## no critic(Subroutines::ProtectPrivateSubs)
+    Bio::EnsEMBL::Analysis::Tools::BlastDBTracking->_Fake_version_for_otf(1);
+}
 
 use Bio::Seq;
 use Hum::Ace::Method;
@@ -627,5 +628,5 @@ __END__
 
 =head1 AUTHOR
 
-Anacode B<email> anacode@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk
 

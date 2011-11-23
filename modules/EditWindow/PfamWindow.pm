@@ -389,5 +389,5 @@ __END__
 
 =head1 AUTHOR
 
-anacode B<email> anacode@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk
 

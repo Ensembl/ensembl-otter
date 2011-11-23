@@ -4,7 +4,7 @@
 #  webpublish the following command should produce no output when run
 #  from the top of the ensembl-otter repository:
 #
-#      perlcritic --quiet --profile perlcriticrc modules/Bio scripts/apache
+#      perlcritic --quiet --profile xt/webpublish.perlcriticrc modules/Bio scripts/apache
 
 severity = 1
 only     = 1

@@ -163,6 +163,5 @@ __END__
 
 =head1 AUTHOR
 
-Chao-Kung Chen ck1@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk
 
-Re-engineered by Sindhu Pillai sp1@sanger.ac.uk

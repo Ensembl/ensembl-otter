@@ -111,7 +111,7 @@ __END__
 
   clones_to_otter -dataset <DATASET_NAME>
 
-=head DESCRIPTION
+=head1 DESCRIPTION
 
 Fills in the international clone names for the
 otter and pipeline dbs.   It uses the tracking
@@ -122,12 +122,12 @@ $OTTER_HOME/.otter_config or ~/.otter_config or
 command line in a similar  manner to the rest of
 the scripts in this directory.
 
-=head1 USEAGE
+=head1 USAGE
 
 Just give it a dataset name that occurs in the db
 you want to "fix". eg: "human" or "zebrafish"
 
 =head1 AUTHOR
 
-James Gilbert B<email> jgrg@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk
 

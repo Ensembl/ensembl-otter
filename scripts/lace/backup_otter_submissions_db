@@ -3,11 +3,11 @@
 use warnings;
 
 
-=head1 NAME
-
-backup_all_otter_submissions_databases - archive otterlive to slow storage
+=head1 NAME - backup_otter_submissions_db
 
 =head1 SYNOPSIS
+
+Archive otterlive to slow storage
 
 (This script runs as a cron job from humpub@cbi4h)
 
@@ -170,12 +170,9 @@ sub cleanup_old_otter_dbs {
 
 __END__
 
-=head1 NAME - backup_all_otter_submission_databases
+=head1 NAME - backup_otter_submissions_db
 
 =head1 AUTHOR
 
-James Gilbert B<email> jgrg@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk
 
-modified for lutra replicated servers by 
-
-Sindhu K. Pillai B<email> sp1@sanger.ac.uk

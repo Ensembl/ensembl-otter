@@ -1,8 +1,6 @@
 # Bio::Vega::SimpleAlign
 
-=head1 NAME
-
-Bio::Vega::SimpleAlign - Multiple alignments held as a set of sequences
+=head1 NAME - Bio::Vega::SimpleAlign
 
 =head1 SYNOPSIS
 
@@ -11,11 +9,13 @@ documented here.
 
 =head1 DESCRIPTION
 
+Multiple alignments held as a set of sequences
+
 See L<Bio:SimpleAlign>.
 
 =head1 AUTHOR
 
-Michael Gray, mg13@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk
 
 =head1 SEE ALSO
 

@@ -4,8 +4,6 @@ use warnings;
 
 
 # get_encode_stats_lite
-# Author: ck1@sanger.ac.uk
-
 # output stats of encode regions for Havana annotated genes and transcripts in specified time windows
 # typical run: get_encode_stats_lite -ds human -time1 06-11-01 -time2 present
 
@@ -179,7 +177,7 @@ if ( @sets ) {
     my @present_types = keys %{$annotated_gene_set_type->{$set}};
 
     foreach my $gtype ( sort keys %$wanted_gtypes ){
-      if ( grep($gtype, @present_types) ){
+      if ( grep {$_ eq $gtype} @present_types ){
         my $gene_count  = $annotated_gene_set_type->{$set}->{$gtype}->{gene};
         my $trans_count = $annotated_gene_set_type->{$set}->{$gtype}->{trans};
         printf("%-25s (%-4d, %d)\n", $gtype, $gene_count, $trans_count);

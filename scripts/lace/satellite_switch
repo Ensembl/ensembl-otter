@@ -92,15 +92,15 @@ $PORTS_RE = qr{\b($PORTS_RE)\b};
 
 __END__
 
-=head1 NAME
-
-satellite_switch - flip satellite databases to/from MySQL slaves
+=head1 NAME - satellite_switch
 
 =head1 USAGE
 
   satellite_switch <-slave|-master> [-dryrun]
 
 =head1 DESCRIPTION
+
+Flip satellite databases to/from MySQL slaves
 
 This updates the C<pipeline_db_head> meta_key for all species in the
 server's C<species.dat> .  It maintains the port number and switches
@@ -119,5 +119,5 @@ This script does not touch those.
 
 =head1 AUTHOR
 
-James Gilbert B<email> jgrg@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk
 

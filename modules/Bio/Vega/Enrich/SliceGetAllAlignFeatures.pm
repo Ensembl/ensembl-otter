@@ -106,7 +106,7 @@ L<Bio::Vega::HitDescription>
 
 =head1 AUTHOR
 
-Michael Gray B<email> mg13@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk
 
 =cut
 

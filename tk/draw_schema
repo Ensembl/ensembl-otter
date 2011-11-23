@@ -226,7 +226,7 @@ use Hum::Submission;
 
 __END__
 
-=head1 NAME - canvas_drag_drop
+=head1 NAME - draw_schema
 
 =head1 AUTHOR
 

@@ -305,7 +305,7 @@ sub gene_stable_id_2_acc_sv {
   return $stblID_acc;
 }
 
-  __END__
+__END__
 
 =head1 NAME - dump_DNA_Protein_seqs_of_genes_in_fasta
 
@@ -327,7 +327,5 @@ One of the -all-exons, -cds-only option is mandatory, default is -all-exons
 
 =head1 AUTHOR
 
-Chao-Kung Chen B<email> ck1@sanger.ac.uk
-
-
+Ana Code B<email> anacode@sanger.ac.uk
 

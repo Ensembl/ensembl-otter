@@ -7,7 +7,7 @@
 use strict;
 use warnings;
 
-use SangerPaths qw{ core bioperl123 ensembl64 otter59 };
+use SangerPaths qw{ core bioperl123 ensembl64 otter60 };
 
 use Bio::Otter::ServerScriptSupport;
 
@@ -196,6 +196,5 @@ return xml for Clone Sequences of a sequence set.
 
 =head1 AUTHOR
 
-Sindhu K.Pillai B<email> sp1@sanger.ac.uk
-Leo Gordon B<email> lg4@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk
 

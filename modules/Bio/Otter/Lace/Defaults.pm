@@ -417,7 +417,7 @@ above does.
 
 =head1 AUTHOR
 
-James Gilbert B<email> jgrg@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk
 
 =cut
 
@@ -429,7 +429,7 @@ __DATA__
 [client]
 host=www.sanger.ac.uk
 port=80
-version=59
+version=60
 write_access=0
 debug=1
 show_zmap=1

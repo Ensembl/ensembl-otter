@@ -26,8 +26,6 @@ $Data::Dumper::Indent = 1;
 #
 #==============================================================================#
 
-=pod
-
 =head1 WARNING
 
 This module is included into MenuCanvasWindow::XaceSeqChooser.  All
@@ -49,8 +47,6 @@ sub zMapInitialize {
 
     return;
 }
-
-=pod
 
 =head1 zMapLaunchZmap
 
@@ -1092,13 +1088,10 @@ sub zMapParseResponse {
 __END__
 
 
-=pod
-
 =head1 NAME - MenuCanvasWindow::ZmapSeqChooser
 
 =head1 AUTHOR
 
-James Gilbert B<email> jgrg@sanger.ac.uk
-
+Ana Code B<email> anacode@sanger.ac.uk
 
 =cut
