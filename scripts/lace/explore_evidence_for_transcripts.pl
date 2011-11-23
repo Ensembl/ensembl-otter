@@ -720,7 +720,7 @@ sub process_transcript {
         # DEBUG
 #        $DB::single = 1 if $p_td->stable_id eq 'OTTHUMT00000076914';
 #        $DB::single = 1 if $p_td->stable_id eq 'OTTHUMT00000077344';
-        $DB::single = 1 if $p_td->stable_id eq 'OTTHUMT00000077359';
+#        $DB::single = 1 if $p_td->stable_id eq 'OTTHUMT00000077359';
 
         # This really wants to move before $p_slice fetch, left here to allow comparison of outputs
         # It doesn't even reflect reality!
