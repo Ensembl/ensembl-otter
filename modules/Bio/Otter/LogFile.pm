@@ -28,7 +28,7 @@ sub make_log {
 
     if (my $pid = open(STDOUT, "|-")) {
         # Send parent's STDERR to the same place as STDOUT.
-        open STDERR, ">&STDOUT" or confess "Can't redirect STDERR to STDOUT";
+        open STDERR, '>&', \*STDOUT or confess "Can't redirect STDERR to STDOUT";
         return $pid; ### Could write a rotate_logfile sub if we record the pid.
     }
     elsif (defined $pid) {
