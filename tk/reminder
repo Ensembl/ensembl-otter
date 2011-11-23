@@ -1,11 +1,11 @@
 #!/usr/bin/env perl
 
+use strict;
 use warnings;
 
 
 ### reminder
 
-use strict;
 use CanvasWindow;
 use Time::Local 'timelocal';
 use Getopt::Long 'GetOptions';

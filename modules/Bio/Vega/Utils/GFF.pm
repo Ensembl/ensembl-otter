@@ -30,7 +30,7 @@ sub gff_header {
 
 __END__
 
-=head1 NAME - Bio::Vega::Utils::GFF 
+=head1 NAME - Bio::Vega::Utils::GFF
 
 =head1 SYNOPSIS
 
@@ -38,5 +38,5 @@ Utilities for creating GFF.
 
 =head1 AUTHOR
 
-Jeremy Henty B<email> jh13@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk
 

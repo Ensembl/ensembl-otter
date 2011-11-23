@@ -194,7 +194,7 @@ sub Assembly_from_tk {
           or next;
         push(@sf_list, $feat);
     }
-    $new_assembly->add_SimpleFeatures(@sf_list);
+    $new_assembly->set_SimpleFeature_list(@sf_list);
     
     return $new_assembly;
 }
@@ -618,16 +618,16 @@ sub initialize {
     $top_window->bind('<Control-S>', $save);
     $top_window->bind('<Control-s>', $save);
 
-    my $close = sub { $self->try2save_and_quit() };
+    my $close_command = sub { $self->try2save_and_quit() };
     $file_menu->command(
         -label          => 'Close',
-        -command        => $close,
+        -command        => $close_command,
         -accelerator    => 'Ctrl+W',
         -underline      => 1,
     );
-    $top_window->protocol('WM_DELETE_WINDOW', $close);
-    $top_window->bind('<Control-W>', $close);
-    $top_window->bind('<Control-w>', $close);
+    $top_window->protocol('WM_DELETE_WINDOW', $close_command);
+    $top_window->bind('<Control-W>', $close_command);
+    $top_window->bind('<Control-w>', $close_command);
 
     my $add_menu = $self->make_menu('Add feature');
     foreach my $method ($self->get_all_Methods) {
@@ -686,5 +686,5 @@ __END__
 
 =head1 AUTHOR
 
-Leo Gordon B<email> lg4@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk
 

@@ -34,9 +34,20 @@ use Bio::Otter::Lace::PipelineDB;
     }
     else {
         # This is the version of the script used to patch vega_homo_sapiens_20110516_v62_GRCh37
-        $dba = DBI->connect("DBI:mysql:database=vega_homo_sapiens_20110516_v62_GRCh37;host=ensdb-1-11;port=5317",
+
+        # $dba = DBI->connect("DBI:mysql:database=vega_homo_sapiens_20110516_v62_GRCh37;host=ensdb-1-11;port=5317",
+        #     'ensadmin', 'ensembl', {RaiseError => 1});
+
+        # $dba = DBI->connect("DBI:mysql:database=vega_homo_sapiens_20110711_v63_GRCh37;host=ensdb-1-11;port=5317",
+        #     'ensadmin', 'ensembl', {RaiseError => 1});
+
+        # $dba = DBI->connect("DBI:mysql:database=vega_homo_sapiens_20111010_v64_GRCh37;host=ensdb-1-11;port=5317",
+        #     'ensadmin', 'ensembl', {RaiseError => 1});
+
+        $dba = DBI->connect("DBI:mysql:database=vega_mus_musculus_20111010_v64_NCBIM37;host=ensdb-1-11;port=5317",
             'ensadmin', 'ensembl', {RaiseError => 1});
     }
+
     
     my $sth = $dba->prepare(q{
         SELECT g.biotype
@@ -94,7 +105,7 @@ use Bio::Otter::Lace::PipelineDB;
             # }
             $transitions{"  $gene_biotype ($gene_status) > $new_biotype ($new_status)"}++;
             $transitions{"$gene_biotype > $new_biotype"}++;
-            $update->execute($new_biotype, $new_status, $gene_id);
+            $update->execute($new_biotype, $new_status || undef, $gene_id);
         }
     }
     
@@ -142,7 +153,7 @@ sub set_biotype_status_from_transcripts {
             }
         }
     }
-    elsif ($tsct_biotype{'protein_coding'}) {
+    elsif ($tsct_biotype{'protein_coding'} or $tsct_biotype{'nonsense_mediated_decay'}) {
         $biotype = 'protein_coding';
     }
     elsif (keys %tsct_biotype == 1) {

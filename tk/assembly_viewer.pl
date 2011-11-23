@@ -1,5 +1,8 @@
 #!/usr/bin/env perl
 
+use strict;
+use warnings;
+
 =head1 NAME
 
 assembly_viewer.pl
@@ -44,9 +47,6 @@ assembly_viewer.pl -dbname loutre_human -ref chr13-12 -alt chr13-13 -rcv OtterAr
 Mustapha Larbaoui B<email> ml6@sanger.ac.uk
 
 =cut
-
-use strict;
-use warnings;
 
 use Getopt::Long;
 use Net::Netrc;

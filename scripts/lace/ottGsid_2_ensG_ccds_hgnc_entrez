@@ -4,7 +4,6 @@ use warnings;
 
 
 
-# author: ck1@sanger.ac.uk
 # ottGsid_2_ensGsid_ccdsID_hgncID
 # Use a VEGA db and get the id mapping between
 # OTTG - ENSG - CCDS - HGNC

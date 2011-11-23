@@ -1,6 +1,4 @@
 
-=pod
-
 =head1 NAME - Bio::Otter::Lace::Exonerate
 
 =head1 DESCRIPTION
@@ -15,13 +13,16 @@ use strict;
 use warnings;
 use Carp;
 use File::Basename;
-use File::Path 'rmtree';
 
 # pipeline configuration
 # this must come before Bio::EnsEMBL::Analysis::Runnable::Finished::Exonerate
-use Bio::Otter::Lace::Exonerate::BlastableVersion;
 use Bio::Otter::Lace::Exonerate::Config::General;
 use Bio::Otter::Lace::Exonerate::Config::Blast;
+use Bio::EnsEMBL::Analysis::Tools::BlastDBTracking;
+{
+    ## no critic(Subroutines::ProtectPrivateSubs)
+    Bio::EnsEMBL::Analysis::Tools::BlastDBTracking->_Fake_version_for_otf(1);
+}
 
 use Bio::Seq;
 use Hum::Ace::Method;
@@ -497,7 +498,8 @@ sub format_ace_output {
         my $prefix = $is_protein ? 'Protein' : 'Sequence';
 
         $ace       .= qq{\nSequence : "$contig_name"\n};
-        my $hit_ace = qq{\n$prefix : "$hname"\n};
+        my $hit_length = $self->sequence_fetcher->{$hname}->sequence_length;
+        my $hit_ace = qq{\n$prefix : "$hname"\nLength $hit_length\n};
 
         foreach my $fp (@{ $name_fp_list{$hname} }) {
 
@@ -620,20 +622,11 @@ sub get_softmasked_dna {
     return $sm_dna_str;
 }
 
-sub lib_path{
-    my ($self, $path) = @_;
-    if($path){
-        $self->{'_lib_path'} = $path;
-        $ENV{'LD_LIBRARY_PATH'} .= ":$path";
-    }
-    return $self->{'_lib_path'};
-}
-
 1;
 
 __END__
 
 =head1 AUTHOR
 
-Anacode B<email> anacode@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk
 

@@ -69,8 +69,6 @@ sub get_list_of_slices{
 }
 
 
-=pod
-
 =head1 DESCRIPTION
 
  wrapper to call realign_offtrack_genes on a whole chromosome n clones at a time.

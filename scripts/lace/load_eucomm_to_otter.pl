@@ -2,8 +2,6 @@
 
 use warnings;
 
-# contact: ck1@sanger.ac.uk
-
 use strict;
 use Getopt::Long 'GetOptions';
 use Bio::Otter::Lace::Defaults;

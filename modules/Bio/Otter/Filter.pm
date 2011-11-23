@@ -43,6 +43,15 @@ my @server_params = (
     source
     ),
 
+    # PSL via SQL
+    qw(
+    db_dsn
+    db_user
+    db_pass
+    db_table
+    chr_prefix
+    ),
+
     # Gene
     qw(
     transcript_analyses
@@ -249,6 +258,36 @@ sub source {
     return $self->{_source};
 }
 
+sub db_dsn {
+    my ($self, $db_dsn) = @_;
+    $self->{_db_dsn} = $db_dsn if $db_dsn;
+    return $self->{_db_dsn};
+}
+
+sub db_user {
+    my ($self, $db_user) = @_;
+    $self->{_db_user} = $db_user if $db_user;
+    return $self->{_db_user};
+}
+
+sub db_pass {
+    my ($self, $db_pass) = @_;
+    $self->{_db_pass} = $db_pass if $db_pass;
+    return $self->{_db_pass};
+}
+
+sub db_table {
+    my ($self, $db_table) = @_;
+    $self->{_db_table} = $db_table if $db_table;
+    return $self->{_db_table};
+}
+
+sub chr_prefix {
+    my ($self, $chr_prefix) = @_;
+    $self->{_chr_prefix} = $chr_prefix if $chr_prefix;
+    return $self->{_chr_prefix};
+}
+
 sub transcript_analyses {
     my ($self, $transcript_analyses) = @_;
     $self->{_transcript_analyses} = $transcript_analyses if $transcript_analyses;
@@ -333,8 +372,5 @@ __END__
 
 =head1 AUTHOR
 
-Stephen Keenan B<email> keenan@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk
 
-James Gilbert B<email> jgrg@sanger.ac.uk
-
-Graham Ritchie B<email> gr5@sanger.ac.uk

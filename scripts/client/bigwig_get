@@ -1,0 +1,154 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use URI::Escape qw(uri_unescape);
+
+use Bio::DB::BigWig;
+use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Fetch::BigWig;
+use Bio::Otter::Mapping;
+
+print STDERR "$0", ( map { " '$_'" } @ARGV ), "\n";
+
+# parse the command line
+
+my $options = {
+    gff_version => 3,
+};
+
+my @options_specs = qw(
+    gff_version=s
+    file=s
+    csver=s
+    dataset=s
+    chr=s
+    start=i
+    end=i
+    strand=s
+    gff_feature_source=s
+    chr_prefix=s
+    gff_seqname=s
+    );
+
+my @options_required = qw(
+    file
+    csver
+    dataset
+    chr
+    start
+    end
+    strand
+    gff_feature_source
+    );
+
+sub _key {
+    my ($key) = m(^(.*?)=);
+    return $key;
+}
+sub _option {
+    return ( $_, \$options->{_key()} );
+}
+
+my @keys    = map { _key()    } @options_specs;
+my @options = map { _option() } @options_specs;
+
+Bio::Otter::Lace::Defaults::do_getopt(@options);
+my @options_missing = grep { ! defined $options->{$_} } @options_required;
+die sprintf "missing options: %s\n",
+    join ', ', sort @options_missing
+    if @options_missing;
+$options->{$_} = uri_unescape($options->{$_}) for keys %{$options};
+my (
+    $gff_version,
+    $file,
+    $csver,
+    $dataset,
+    $chr,
+    $start,
+    $end,
+    $strand,
+    $gff_feature_source,
+    $chr_prefix,
+    $gff_seqname
+    ) = @{$options}{@keys};
+
+my $strand_field =
+    ( $strand == 1 ) ? '+' : ( $strand == -1 ) ? '-' : '.';
+
+my $bigwig = Bio::DB::BigWig->new( -bigwig => $file );
+
+my $bigwig_fetch = Bio::Otter::Fetch::BigWig->new(
+    -bigwig     => $bigwig,
+    -chr_prefix => $chr_prefix,
+    );
+
+sub gff_escape {
+    # escapes a minimal set of characters
+    s/([\t\r\n[:cntrl:];=%&])/sprintf "%%%02X", ord($1)/eg;
+    return;
+}
+
+sub gff_escape_seqid {
+    # escapes everything except a restricted set of characters
+    s/([^-a-zA-Z0-9.:^*$@!+_?|])/sprintf "%%%02X", ord($1)/eg;
+    return;
+}
+
+sub gff_escape_source {
+    # escapes everything except a restricted set of characters
+    s/([^-a-zA-Z0-9.:^*$@!+_? ])/sprintf "%%%02X", ord($1)/eg;
+    return;
+}
+
+my $chr_field = $chr;
+gff_escape_seqid for $chr_field;
+my $source = $gff_feature_source;
+gff_escape_source for $source;
+
+sub _print_header {
+    print
+        <<"GFF",
+##gff-version $gff_version
+##sequence-region $chr $start $end
+GFF
+;
+    return;
+}
+
+sub _print_feature {
+    my ( $feature, $start, $end ) = @_;
+
+    my @fields =
+        (
+         'region',
+         (sprintf "%d", $start),
+         (sprintf "%d", $end),
+         abs($feature->score),
+         $strand_field,
+         '.', # phase, undefined
+         '', # attributes, empty
+        );
+
+    gff_escape for @fields;
+    printf "%s\n", join "\t", $chr_field, $source, @fields;
+
+    return;
+}
+
+# get the mapping from the Otter server
+my $client = Bio::Otter::Lace::Defaults::make_Client();
+my $mapping_xml = $client->otter_response_content(
+    'GET', 'get_mapping', {
+        dataset => $dataset,
+        cs      => $csver,
+        chr     => $chr,
+        start   => $start,
+        end     => $end,
+    });
+my $mapping = Bio::Otter::Mapping->new_from_xml($mapping_xml);
+
+# map and print the features
+_print_header;
+$mapping->do_features($bigwig_fetch, $start, $end, \&_print_feature);

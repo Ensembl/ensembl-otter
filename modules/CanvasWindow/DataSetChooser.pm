@@ -103,6 +103,7 @@ sub open_dataset {
             my $name = $1;
             my $client = $self->Client;
             my $ds = $client->get_DataSet_by_name($name);
+            $ds->load_client_config;
 
             my $top = $self->{'_sequence_set_chooser'}{$name};
             if (Tk::Exists($top)) {
@@ -233,11 +234,12 @@ sub recover_some_sessions {
                     $lc->load_filters;
                     $top->withdraw;
                 }
-            };
-            if ($@) {
-                # Destruction of the AceDatabase object prevents us seeing $@
-                $self->exception_message($@, 'Error recovering lace sessions');
+                1;
             }
+              or $self->exception_message($@ || "[details in log file]\n",
+                                          # Destruction of the AceDatabase object prevents us seeing $@
+                                          'Error recovering lace sessions');
+            # XXX: we should make a stronger protest if it fails - maybe a pop up error dialog, or put a sticker on the session itself (if it exists).  Also, some errors have already been eaten (e.g. in RT#231368)
             return 1;
         } else {
             return 0;
@@ -256,5 +258,5 @@ __END__
 
 =head1 AUTHOR
 
-James Gilbert B<email> jgrg@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk
 

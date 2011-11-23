@@ -5,13 +5,10 @@ use warnings;
 
 use URI::Escape qw(uri_unescape);
 
-use Bio::Tools::GFF;
 use Bio::DB::Sam;
 use Bio::Otter::Lace::Defaults;
-use Bio::Otter::BAM::Source;
+use Bio::Otter::Fetch::BAM;
 use Bio::Otter::Mapping;
-
-# my $fasta_path = q(/lustre/scratch102/projects/mouse/ref/NCBIM37_um.fa);
 
 print STDERR "$0", ( map { " '$_'" } @ARGV ), "\n";
 
@@ -23,8 +20,8 @@ my $options = {
 
 my @options_specs = qw(
     gff_version=s
-    bam_path=s
-    bam_cs=s
+    file=s
+    csver=s
     dataset=s
     chr=s
     start=i
@@ -35,8 +32,8 @@ my @options_specs = qw(
     );
 
 my @options_required = qw(
-    bam_path
-    bam_cs
+    file
+    csver
     dataset
     chr
     start
@@ -62,8 +59,8 @@ die sprintf "missing options: %s\n",
 $options->{$_} = uri_unescape($options->{$_}) for keys %{$options};
 my (
     $gff_version,
-    $bam_path,
-    $bam_cs,
+    $file,
+    $csver,
     $dataset,
     $chr,
     $start,
@@ -75,45 +72,14 @@ my (
 
 my $sam = Bio::DB::Sam->new
     (
-     -bam   => $bam_path,
+     -bam   => $file,
      # -fasta => $fasta_path,
     );
 
-my $bam_source = Bio::Otter::BAM::Source->new(
+my $bam_fetch = Bio::Otter::Fetch::BAM->new(
     -sam        => $sam,
     -chr_prefix => $chr_prefix,
     );
-
-=pod
-
-    my $sub_feature_counts = { };
-for (@read_pairs) {
-
-    # feature
-    die "oof\n" unless ref eq "Bio::SeqFeature::Lite";
-die "no sequence" unless defined $_->seq;
-die sprintf "sequence: '%s'\n", $_->seq unless $_->seq eq '';
-die "strand\n" if $_->strand;
-die "phase\n" if $_->phase;
-
-# subfeatures
-my @sub_features = $_->get_SeqFeatures;
-$sub_feature_counts->{scalar @sub_features}++;
-for (@sub_features) {
-    die "splat\n" unless ref eq "Bio::DB::Bam::AlignWrapper";
-die "no sequence\n" unless defined $_->seq;
-die sprintf "invalid sequence type: '%s'\n", ref $_->seq
-    unless ref $_->seq eq "Bio::PrimarySeq";
-die "no strand\n" unless $_->strand;
-die "phase\n" if defined $_->phase;
-}
-}
-
-for (sort { $a <=> $b } keys %{$sub_feature_counts}) {
-    warn sprintf "%3d: %6d\n", $_, $sub_feature_counts->{$_};
-}
-
-=cut
 
 sub gff_escape {
     # escapes a minimal set of characters
@@ -238,7 +204,7 @@ my $client = Bio::Otter::Lace::Defaults::make_Client();
 my $mapping_xml = $client->otter_response_content(
     'GET', 'get_mapping', {
         dataset => $dataset,
-        cs      => $bam_cs,
+        cs      => $csver,
         chr     => $chr,
         start   => $start,
         end     => $end,
@@ -247,4 +213,4 @@ my $mapping = Bio::Otter::Mapping->new_from_xml($mapping_xml);
 
 # map and print the features
 _print_header;
-$mapping->do_features($bam_source, $start, $end, \&_print_feature);
+$mapping->do_features($bam_fetch, $start, $end, \&_print_feature);

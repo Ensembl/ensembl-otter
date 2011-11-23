@@ -7,7 +7,7 @@
 use strict;
 use warnings;
 
-use SangerPaths qw{ core bioperl123 ensembl63 otter57 };
+use SangerPaths qw{ core bioperl123 ensembl64 otter60 };
 
 use Bio::Otter::ServerScriptSupport;
 
@@ -55,14 +55,11 @@ if (my $gap = $slice->length - $posn) {
 
 Bio::Otter::ServerScriptSupport->send_response(\&get_assembly_dna);
 
-
-
-
 __END__
 
 =head1 NAME - get_assembly_dna
 
 =head1 AUTHOR
 
-James Gilbert B<email> jgrg@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk
 

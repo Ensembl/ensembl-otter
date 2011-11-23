@@ -107,5 +107,5 @@ The attribute code defaults to 'remark'.
 
 =head1 AUTHOR
 
-Michael Gray B<email> mg13@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk
 

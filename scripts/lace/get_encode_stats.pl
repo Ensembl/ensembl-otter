@@ -4,8 +4,6 @@ use warnings;
 
 
 # get_encode_stats
-# Author: ck1@sanger.ac.uk
-
 # typical run: get_encode_stats -ds human -time1 06-11-01 -time2 present
 
 # output stats of

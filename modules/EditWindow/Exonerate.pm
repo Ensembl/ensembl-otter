@@ -376,12 +376,9 @@ sub XaceSeqChooser {
 }
 
 sub launch_exonerate {
-
     my ($self) = @_;
 
-    my $seqs;
-
-    $seqs = $self->get_query_seq();
+    my $seqs = $self->get_query_seq();
 
     print STDERR "Found " . scalar(@$seqs) . " sequences\n";
 
@@ -397,6 +394,9 @@ sub launch_exonerate {
 
     $self->top->Busy;
 
+    # OTF should not influence unsaved changes state of the session
+    $self->XaceSeqChooser->flag_db_edits(0);
+
     if ($self->{'_clear_existing'}) {
         $self->XaceSeqChooser->delete_featuresets(qw{
 Unknown_DNA
@@ -407,18 +407,19 @@ OTF_mRNA
 OTF_Protein });
     }
 
-    my %exonerate_params = (
+    my $exonerate_params = {
         -use_marked_region => $self->{_use_marked_region},
         -best_n            => ($self->get_entry('bestn') || 0),
         -max_intron_length => ($self->get_entry('max_intron_length') || 0),
         -mask_target       => $self->{_mask_target},
-        );
-    my $need_relaunch =
-        $self->XaceSeqChooser->launch_exonerate($seqs, \%exonerate_params);
+        };
+    my $db_edited = $self->XaceSeqChooser->launch_exonerate($seqs, $exonerate_params);
 
     $self->top->Unbusy;
 
-    if ($need_relaunch) {
+    $self->XaceSeqChooser->flag_db_edits(1);
+
+    if ($db_edited) {
         return 1;
     }
     else {
@@ -540,10 +541,12 @@ sub get_query_seq {
         $missing_msg =
           "I did not find any sequences for the following accessions:\n\n$missing_msg\n"
             if $missing_msg;
+        $missing_msg ||= '';
 
         $remapped_msg =
           "The following supplied accessions have been mapped to full ACCESSION.SV:\n\n$remapped_msg\n"
             if $remapped_msg;
+        $remapped_msg ||= '';
 
         my $unclaimed_msg = '';
         if (keys %seqs_fetched) {
@@ -604,5 +607,5 @@ __END__
 
 =head1 AUTHOR
 
-Anacode B<email> anacode@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk
 

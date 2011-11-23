@@ -13,6 +13,7 @@ use Bio::Otter::Lace::PipelineDB;
 
 use Bio::Vega::Enrich::SliceGetAllAlignFeatures; # Enriched Bio::EnsEMBL::Slice::get_all_DnaDnaAlignFeatures 
                                                  # (with hit descriptions)
+use Bio::Vega::Evidence::Types qw( evidence_type_valid_all );
 use Bio::Vega::Utils::Align;
 use Bio::Vega::Utils::Evidence qw(get_accession_type reverse_seq);
 
@@ -100,13 +101,9 @@ my $opts;
     $usage->() unless $dataset_name;
 
     if (my $et = $opts->{evi_type}) {
-        unless (   $et eq 'ncRNA' 
-                || $et eq 'EST'
-                || $et eq 'Protein'
-                || $et eq 'cDNA'
-                || $et eq 'Genomic'
-            ) {
-            croak "type must be one of EST,ncRNA,Protein,cDNA,Genomic";
+        unless (evidence_type_valid_all($et)) {
+            my $valid = join(',', @Bio::Vega::Evidence::Types::ALL);
+            croak "type must be one of $valid";
         }
     }
 
@@ -723,7 +720,7 @@ sub process_transcript {
         # DEBUG
 #        $DB::single = 1 if $p_td->stable_id eq 'OTTHUMT00000076914';
 #        $DB::single = 1 if $p_td->stable_id eq 'OTTHUMT00000077344';
-        $DB::single = 1 if $p_td->stable_id eq 'OTTHUMT00000077359';
+#        $DB::single = 1 if $p_td->stable_id eq 'OTTHUMT00000077359';
 
         # This really wants to move before $p_slice fetch, left here to allow comparison of outputs
         # It doesn't even reflect reality!
@@ -1038,5 +1035,5 @@ Explore evidence matching a transcript.
 
 =head1 AUTHOR
 
-Michael Gray B<email> mg13@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk
 

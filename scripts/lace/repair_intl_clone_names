@@ -267,7 +267,7 @@ __END__
 
   repair_intl_clone_names -dataset <DATASET_NAME> [ -otter | -head ]
 
-=head DESCRIPTION
+=head1 DESCRIPTION
 
 Fills in the international clone names for EITHER
 otter database itself (use with -otter) OR
@@ -285,9 +285,7 @@ to the rest of the scripts in this directory.
 Just give it a dataset name that occurs in the db
 you want to "fix". eg: "human" or "zebrafish"
 
-=head1 AUTHORS
+=head1 AUTHOR
 
-James Gilbert B<email> jgrg@sanger.ac.uk (original code)
-
-Leo Gordon B<email> lg4@sanger.ac.uk (adaptation for the new schema)
+Ana Code B<email> anacode@sanger.ac.uk
 

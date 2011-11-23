@@ -1,5 +1,5 @@
 
-package ZMap::XRemoteCache;
+package Bio::Otter::ZMap::XRemoteCache;
 
 use strict;
 use warnings;
@@ -152,3 +152,10 @@ sub DESTROY{
 }
 
 1;
+
+__END__
+
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
+

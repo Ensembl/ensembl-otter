@@ -46,14 +46,29 @@ sub csver {
     return $self->{csver};
 }
 
-sub gff_feature_source {
-    my ($self) = @_;
-    return $self->{gff_feature_source};
-}
-
 sub chr_prefix {
     my ($self) = @_;
     return $self->{chr_prefix};
+}
+
+sub parent_column {
+    my ($self) = @_;
+    return $self->{parent_column};
+}
+
+sub parent_featureset {
+    my ($self) = @_;
+    return $self->{parent_featureset};
+}
+
+sub coverage_plus {
+    my ($self) = @_;
+    return $self->{coverage_plus};
+}
+
+sub coverage_minus {
+    my ($self) = @_;
+    return $self->{coverage_minus};
 }
 
 # source methods
@@ -64,7 +79,7 @@ sub featuresets {
 }
 
 sub zmap_column { return; }
-sub zmap_style  { return 'feat'; }
+sub zmap_style  { return 'short-read'; }
 
 sub delayed {
     return 1;
@@ -80,34 +95,32 @@ sub script_name {
     return "bam_get";
 }
 
-my $bam_parameters = [
-    #     key                method (optional)
-    [ qw( bam_path           file  ) ],
-    [ qw( bam_cs             csver ) ],
-    [ qw( gff_feature_source name  ) ],
-    qw(
-          chr_prefix
-    ),
-    ];
+# GFF methods 
+
+sub gff_feature_source {
+    my ($self) = @_;
+    return $self->name;
+}
+
+my $bam_parameters = [ qw(
+    file
+    csver
+    chr_prefix
+    gff_feature_source
+    ) ];
 
 sub bam_parameters {
     return $bam_parameters;
 }
 
-my $slice_parameters = [
-    #   key
-    [ qw( chr  ssname ) ],
-    qw(
-        start
-        end
-    ) ];
-
 sub url_query {
     my( $self, $session ) = @_;
     my $slice = $session->smart_slice;
     my $query = {
-        _query($self,  $bam_parameters),
-        _query($slice, $slice_parameters),
+        -chr   => $slice->ssname,
+        -start => $slice->start,
+        -end   => $slice->end,
+        ( map { ( "-$_" => $self->$_ ) } @{$bam_parameters} ),
         gff_version => 2,
     };
     return $query;
@@ -121,23 +134,10 @@ sub _query_string {
     for my $key (sort keys %{$query}) {
         my $value = $query->{$key};
         next unless defined $value;
-        $key = "-${key}";
-        push @{$arguments}, join "=", uri_escape($key), uri_escape($value);
+        push @{$arguments}, sprintf '-%s=%s', $key, uri_escape($value);
     }
     my $query_string = join '&', @{$arguments};
     return $query_string;
-}
-
-sub _query {
-    my ($obj, $parameters) = @_;
-    return map { _query_pair($obj, ref $_ ? @{$_} : $_ ) } @{$parameters};
-}
-
-sub _query_pair {
-    my ($obj, $key, $method) = @_;
-    $method ||= $key;
-    my $value = $obj->$method;
-    return ( $key, $value );
 }
 
 1;

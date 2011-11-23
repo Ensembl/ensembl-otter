@@ -6,8 +6,6 @@ use warnings;
 # check_exon_intron_junctions
 # create a list of transcripts with exon/intron borders having bad or non-consensus sequences
 
-# ck1@sanger.ac.uk
-
 use strict;
 use Bio::Otter::Lace::Defaults;
 use Bio::Vega::DBSQL::DBAdaptor;

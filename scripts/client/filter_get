@@ -9,10 +9,10 @@ use Time::HiRes qw(time);
 
 my $gff_source;
 sub _log_prefix {
-    my $now = CORE::time;
-    my @t = localtime($now);
-    return sprintf "%4d-%02d-%02dt%02d:%02d:%02d: %6d: %-35s "
-        , 1900+$t[5], $t[4]+1, @t[3,2,1,0], $$, ($gff_source || '???');
+    my @t = localtime;
+    my @date = ( 1900+$t[5], $t[4]+1, @t[3,2,1,0] );
+    return sprintf "%4d-%02d-%02d %02d:%02d:%02d: %6d: %-35s "
+        , @date, $$, ($gff_source || '???');
 }
 
 my $log_file;
@@ -77,6 +77,9 @@ open $log_file, '>>', $log_path
     select $old_fh;
 }
 log_message "starting";
+
+# log the arguments
+log_message sprintf "argument: %s: %s", $_, $args{$_} for sort keys %args;
 
 $args{log} = 1 if $LOG; # enable logging on the server
 

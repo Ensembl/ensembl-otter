@@ -1,7 +1,7 @@
 
 ### Bio::Otter::EMBL::Factory
 
-=head1 NAME Bio::Otter::EMBL::Factory
+=head1 NAME - Bio::Otter::EMBL::Factory
 
 =head2 Description
 
@@ -1268,6 +1268,5 @@ __END__
 
 =head1 AUTHOR
 
-Mike Croning B<email> mdr@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk
 
-Chao-Kung Chen B<emai> ck1@sanger.ac.uk (updated for new schema)

@@ -8,6 +8,8 @@ use warnings;
 use Carp;
 
 use Fcntl qw{ O_WRONLY O_CREAT };
+use Config::IniFiles;
+use POSIX();
 
 use Bio::Vega::Transform::Otter::Ace;
 use Bio::Vega::AceConverter;
@@ -17,14 +19,12 @@ use Bio::Otter::Lace::AccessionTypeCache;
 use Bio::Otter::Lace::DB;
 use Bio::Otter::Lace::Slice; # a new kind of Slice that knows how to get pipeline data
 use Bio::Otter::Lace::ProcessGFF;
+use Bio::Otter::Utils::Config::Ini qw( config_ini_format );
 
 use Hum::Ace::LocalServer;
 use Hum::Ace::MethodCollection;
 use Hum::ZMapStyleCollection;
 use Hum::Conf qw{ PFETCH_SERVER_LIST };
-
-my      $REGION_XML_FILE =      '.region.xml';
-my $LOCK_REGION_XML_FILE = '.lock_region.xml';
 
 my $ZMAP_DEBUG = $ENV{OTTERLACE_ZMAP_DEBUG};
 
@@ -46,7 +46,7 @@ sub Client {
 
 sub AccessionTypeCache {
     my ($self) = @_;
-    
+
     my $cache = $self->{'_AccessionTypeCache'};
     unless ($cache) {
         $cache = Bio::Otter::Lace::AccessionTypeCache->new;
@@ -59,37 +59,89 @@ sub AccessionTypeCache {
 
 sub DB {
     my ($self) = @_;
-    
+
     my $db = $self->{'_sqlite_database'}
         ||= Bio::Otter::Lace::DB->new($self->home);
     return $db;
 }
 
 sub write_access {
-    my( $self, $write_access ) = @_;
+    my ($self, $flag) = @_;
 
-    if(defined($write_access)) {
-        $self->{'_write_access'} = $write_access ? 1 : 0;
+    if (defined $flag) {
+        $flag = $flag ? 1 : 0;
+        $self->DB->set_tag_value('write_access', $flag);
+        return $flag;
     }
-    return $self->{'_write_access'};
+    else {
+        return $self->DB->get_tag_value('write_access');
+    }
 }
 
 sub home {
     my( $self, $home ) = @_;
-    
+
     if ($home) {
         $self->{'_home'} = $home;
     }
     return $self->{'_home'};
 }
 
-sub title {
-    my( $self, $title ) = @_;
+sub name {
+    my ($self, $name) = @_;
 
-    if ($title) {
-        $self->{'_title'} = $title;
+    if ($name) {
+        $self->DB->set_tag_value('name', $name);
+        return $name;
     }
-    return $self->{'_title'};
+    else {
+        return $self->DB->get_tag_value('name');
+    }
+}
+
+sub unsaved_changes {
+    my ($self, $flag) = @_;
+
+    if (defined $flag) {
+        $flag = $flag ? 1 : 0;
+        $self->DB->set_tag_value('unsaved_changes', $flag);
+        return $flag;
+    }
+    else {
+        return $self->DB->get_tag_value('unsaved_changes');
+    }
+}
+
+sub save_region_xml {
+    my ($self, $xml) = @_;
+
+    # Remove the locus and features to make data smaller
+    $xml =~ s{<locus>.*</locus>}{}s;
+    $xml =~ s{<feature_set>.*</feature_set>}{}s;
+
+    $self->DB->set_tag_value('region_xml', $xml);
+
+    return;
+}
+
+sub fetch_region_xml {
+    my ($self) = @_;
+
+    return $self->DB->get_tag_value('region_xml');
+}
+
+sub save_lock_region_xml {
+    my ($self, $xml) = @_;
+
+    $self->DB->set_tag_value('lock_region_xml', $xml);
+
+    return;
+}
+
+sub fetch_lock_region_xml {
+    my ($self) = @_;
+
+    return $self->DB->get_tag_value('lock_region_xml');
 }
 
 sub tace {
@@ -112,7 +164,7 @@ sub error_flag {
 
 sub post_exit_callback {
     my( $self, $post_exit_callback ) = @_;
-    
+
     if ($post_exit_callback) {
         $self->{'_post_exit_callback'} = $post_exit_callback;
     }
@@ -128,7 +180,7 @@ sub MethodCollection {
 
 sub get_default_MethodCollection {
     my( $self ) = @_;
-    
+
     my $styles_collection = Hum::ZMapStyleCollection->new_from_string($self->Client->get_otter_styles);
     my $collect = Hum::Ace::MethodCollection->new_from_string($self->Client->get_methods_ace, $styles_collection);
     $collect->process_for_otterlace;
@@ -166,34 +218,21 @@ sub init_AceDatabase {
 
     $self->add_misc_acefile;
 
-    my $xml_string = $self->get_region_xml;
+    my $xml_string = $self->http_response_content(
+        'GET', 'get_region', { 'trunc' => $self->Client->fetch_truncated_genes });
     $self->write_file('01_before.xml', $xml_string);
 
     my $parser = Bio::Vega::Transform::Otter::Ace->new;
     $parser->parse($xml_string);
-    
-
     $self->write_otter_acefile($parser);
-    $self->write_region_xml_file($xml_string);
     $self->write_dna_data;
     $self->write_methods_acefile;
+
+    $self->save_region_xml($xml_string);
 
     $self->initialize_database;
 
     return;
-}
-
-
-sub get_region_xml {
-    my ($self) = @_;
-    
-    # Getting XML from the Client
-    my $client      = $self->Client
-        or confess "No otter Client attached";
-    my $smart_slice = $self->smart_slice
-        or confess "No smart_slice attached";
-
-    return $smart_slice->get_region_xml;
 }
 
 sub write_otter_acefile {
@@ -212,16 +251,16 @@ sub write_otter_acefile {
 sub try_to_lock_the_block {
     my ($self) = @_;
 
-    if (my $lock_xml = $self->smart_slice->lock_region_xml) {
-        $self->write_file($LOCK_REGION_XML_FILE, $lock_xml);
-    }
+    my $lock_xml = $self->http_response_content(
+        'GET', 'lock_region', { 'hostname' => $self->Client->client_hostname });
+    $self->save_lock_region_xml($lock_xml) if $lock_xml;
 
     return;
 }
 
 sub write_file {
     my ($self, $file_name, $content) = @_;
-    
+
     my $full_file = join('/', $self->home, $file_name);
     open my $LF, '>', $full_file or die "Can't write to '$full_file'; $!";
     print $LF $content;
@@ -232,7 +271,7 @@ sub write_file {
 
 sub read_file {
     my ($self, $file_name) = @_;
-    
+
     local $/ = undef;
     my $full_file = join('/', $self->home, $file_name);
     open my $RF, '<', $full_file or die "Can't read '$full_file'; $!";
@@ -241,25 +280,20 @@ sub read_file {
     return $content;
 }
 
-sub write_region_xml_file {
-    my ($self, $xml) = @_;
-    
-    # Remove the locus and features to make file smaller
-    $xml =~ s{<locus>.*</locus>}{}s;
-    $xml =~ s{<feature_set>.*</feature_set>}{}s;    # Might not be valid otter XML
-                                                    # without an (empty) featuerset?
-    
-    $self->write_file($REGION_XML_FILE, $xml);
-
-    return;
-}
-
-sub recover_smart_slice_from_region_xml_file {
+sub recover_smart_slice_from_region_xml {
     my ($self) = @_;
 
     my $client = $self->Client or die "No Client attached";
-    my $parser = $self->parse_chromosome_slice_from_region_xml_file;
+
+    my $xml = $self->fetch_region_xml || $self->fetch_lock_region_xml;
+    unless ($xml) {
+        confess "Could not fetch XML from SQLite DB to create smart slice";
+    }
+
+    my $parser = Bio::Vega::Transform::Otter->new;
+    $parser->parse($xml);
     my $slice = $parser->get_ChromosomeSlice;
+
     my $smart_slice = Bio::Otter::Lace::Slice->new(
         $client,
         $parser->species,
@@ -275,27 +309,9 @@ sub recover_smart_slice_from_region_xml_file {
     return;
 }
 
-sub parse_chromosome_slice_from_region_xml_file {
-    my ($self) = @_;
-
-    # We try the LOCK_REGION_XML_FILE too, since uninitialised
-    # lace sessions sometimes have it becuase it is created
-    # before the REGION_XML_FILE, and we want to recover the
-    # session to remove the lock.
-
-    foreach my $file ($LOCK_REGION_XML_FILE, $REGION_XML_FILE) {
-        my $region_file = join '/', $self->home, $file;
-        my $parser = Bio::Vega::Transform::Otter->new;
-        return $parser if eval { $parser->parsefile($region_file); 1; };
-        warn $@;
-    }
-
-    confess "all attempts to parse a chromosome slice failed";
-}
-
 sub smart_slice {
     my( $self, $smart_slice ) = @_;
-    
+
     if ($smart_slice) {
         $self->{'_offset'} = undef;
         $self->{'_smart_slice'} = $smart_slice;
@@ -318,7 +334,96 @@ sub slice_name {
     return $slice_name;
 }
 
+sub zmap_launch {
+    my ($self, $win_id) = @_;
+
+    my @e = (
+        'zmap',
+        '--conf_dir' => $self->zmap_dir,
+        '--win_id'   => $win_id,
+        @{$self->DataSet->config_value_list('zmap_config', 'arguments')},
+    );
+
+    warn "Running\n  @e\n  ";
+
+    my $pid = fork;
+    return $pid if $pid;
+    confess "Error: couldn't fork()\n" unless defined $pid;
+    exec @e;
+    warn "exec '@e' failed : $!";
+    close STDERR; # _exit does not flush
+    POSIX::_exit(1); # avoid triggering DESTROY
+
+    return;
+}
+
+my $gtkrc = <<'GTKRC'
+
+style "zmap-focus-view-frame" {
+  bg[NORMAL] = "gold" 
+}
+
+widget "*.zmap-focus-view" style "zmap-focus-view-frame"
+
+style "infopanel-labels" {
+  bg[NORMAL] = "white" 
+}
+
+widget "*.zmap-control-infopanel" style "infopanel-labels"
+
+style "menu-titles" {
+  fg[INSENSITIVE] = "blue" 
+}
+
+widget "*.zmap-menu-title.*" style "menu-titles"
+
+style "default-species" {
+  bg[NORMAL] = "gold" 
+}
+GTKRC
+    ;
+
+sub zmap_dir_init {
+    my ($self) = @_;
+
+    my $dir = $self->zmap_dir;
+    unless (-d $dir) {
+        mkdir $dir or confess "failed to create the directory '$dir': $!\n";
+    }
+
+    $self->MethodCollection->ZMapStyleCollection->write_to_file($self->stylesfile);
+
+    $self->zmap_config_write('.gtkrc',   $gtkrc);
+    $self->zmap_config_write('ZMap',     config_ini_format($self->zmap_config, 'ZMap'));
+    $self->zmap_config_write('blixemrc', config_ini_format($self->blixem_config, 'blixem'));
+
+    return;
+}
+
+sub zmap_config_write {
+    my ($self, $file, $config) = @_;
+
+    my $path = sprintf "%s/%s", $self->zmap_dir, $file;
+    open my $fh, '>', $path
+        or confess "Can't write to '$path'; $!";
+    print $fh $config;
+    close $fh
+      or confess "Error writing to '$path'; $!";
+
+    return;
+}
+
 sub zmap_config {
+    my ($self) = @_;
+
+    my $config = $self->ace_config;
+    _config_merge($config, $self->_zmap_config);
+    _config_merge($config, $self->DataSet->zmap_config($self));
+
+    return $config;
+}
+
+sub _zmap_config {
     my ($self) = @_;
 
     # The 'show-mainwindow' parameter is for when zmap does not start
@@ -329,9 +434,11 @@ sub zmap_config {
     my $pfetch_www = $ENV{'PFETCH_WWW'};
     my $pfetch_url = $self->Client->pfetch_url;
 
+    my $blixemrc = sprintf '%s/blixemrc', $self->zmap_dir;
+
     my $config = {
+
         'ZMap' => {
-            'sources'         => [ $self->slice_name ],
             'show-mainwindow' => ( $show_mainwindow ? 'true' : 'false' ),
             'cookie-jar'      => $ENV{'OTTERLACE_COOKIE_JAR'},
             'pfetch-mode'     => ( $pfetch_www ? 'http' : 'pipe' ),
@@ -339,9 +446,52 @@ sub zmap_config {
             'xremote-debug'   => $ZMAP_DEBUG ? 'true' : 'false',
             %{$self->smart_slice->zmap_config_stanza},
         },
+
+        'glyphs' => {
+        'up-tri'  => '<0,-4; -4,0; 4,0; 0,-4>',
+        'dn-tri'  => '<0,4; -4,0; 4,0; 0,4>',
+        'up-hook' => '<0,0; 15,0; 15,-10>',
+        'dn-hook' => '<0,0; 15,0; 15,10>',
+        },
+
+        'blixem' => {
+            'config-file' => $blixemrc,
+            %{ $self->DataSet->config_section('blixem') },
+        },
+
     };
 
-    _config_merge($config, $self->DataSet->zmap_config);
+    return $config;
+}
+
+sub ace_config {
+    my ($self) = @_;
+
+    my $slice_name = $self->slice_name;
+
+    my $ace_server = $self->ace_server;
+    my $url = sprintf 'acedb://%s:%s@%s:%d'
+        , $ace_server->user, $ace_server->pass, $ace_server->host, $ace_server->port;
+
+    my @methods = $self->MethodCollection->get_all_top_level_Methods;
+    my $featuresets = [ map { $_->name } @methods ];
+
+    my $config = {
+
+        'ZMap' => {
+            sources => [ $slice_name ],
+        },
+
+        $slice_name => {
+            url         => $url,
+            writeback   => 'false',
+            sequence    => 'true',
+            group       => 'always',
+            featuresets => $featuresets,
+            stylesfile  => $self->stylesfile,
+        },
+
+    };
 
     return $config;
 }
@@ -415,9 +565,41 @@ sub _value_merge {
     return $v1;
 }
 
+sub zmap_config_update {
+    my ($self) = @_;
+
+    my $cfg_path = sprintf "%s/ZMap", $self->zmap_dir;
+    my $cfg = $self->{_zmap_cfg} ||=
+        Config::IniFiles->new( -file => $cfg_path );
+
+    while ( my ( $name, $value ) = each %{$self->filters}) {
+        my $state_hash = $value->{state};
+        if ($state_hash->{done}) {
+            $cfg->setval($name,'delayed','false');
+        }
+        if ($state_hash->{failed}) {
+            $cfg->setval($name,'delayed','true');
+        }
+    }
+
+    $cfg->RewriteConfig;
+
+    return;
+}
+
+sub stylesfile {
+    my ($self) = @_;
+    return sprintf '%s/styles.ini', $self->zmap_dir;
+}
+
+sub zmap_dir {
+    my ($self) = @_;
+    return sprintf '%s/ZMap', $self->home;
+}
+
 sub offset {
     my ($self) = @_;
-    
+
     my $offset = $self->{'_offset'};
     unless (defined $offset) {
         my $slice = $self->smart_slice
@@ -438,20 +620,24 @@ sub save_ace_to_otter {
 
 sub generate_XML_from_acedb {
     my ($self) = @_;
-    
+
     # Make Ensembl objects from the acedb database
+    my $feature_types =
+        [ $self->MethodCollection->get_all_mutable_non_transcript_Methods ];
     my $converter = Bio::Vega::AceConverter->new;
-    $converter->AceDatabase($self);
+    $converter->ace_handle($self->aceperl_db_handle);
+    $converter->feature_types($feature_types);
+    $converter->otter_slice($self->smart_slice);
     $converter->generate_vega_objects;
-    
+
     # Pass the Ensembl objects to the XML formatter
     my $formatter = Bio::Vega::Transform::XML->new;
     $formatter->species($self->smart_slice->dsname);
-    $formatter->slice(          $converter->slice           );
+    $formatter->slice(          $converter->ensembl_slice   );
     $formatter->clone_seq_list( $converter->clone_seq_list  );
     $formatter->genes(          $converter->genes           );
     $formatter->seq_features(   $converter->seq_features    );
-    
+
     return $formatter->generate_OtterXML;
 }
 
@@ -459,10 +645,10 @@ sub update_with_stable_ids {
     my ($self, $xml) = @_;
 
     return unless $xml;
-    
+
     my $parser = Bio::Vega::Transform::Otter::Ace->new;
     $parser->parse($xml);
-    
+
     return $parser->make_ace_genes_transcripts;
 }
 
@@ -472,14 +658,18 @@ sub unlock_otter_slice {
     my $smart_slice = $self->smart_slice();
     my $slice_name  = $smart_slice->name();
     my $dsname      = $smart_slice->dsname();
-    
+
     warn "Unlocking $dsname:$slice_name\n";
 
     my $client   = $self->Client or confess "No Client attached";
 
-    my $xml_text = $self->read_file($LOCK_REGION_XML_FILE);
+    my $xml_text = $self->fetch_lock_region_xml;
 
-    return $client->unlock_otter_xml($xml_text, $dsname);
+    if ($client->unlock_otter_xml($xml_text, $dsname)) {
+        $self->write_access(0);
+        $self->save_lock_region_xml('unlocked at ' . scalar localtime);
+    }
+    return 1;
 }
 
 sub ace_server {
@@ -535,7 +725,6 @@ sub make_database_directory {
     die "Can't mkdir('$rawdata') : $!\n" unless -d $rawdata;
 
     $self->make_passwd_wrm;
-    $self->edit_displays_wrm;
 
     return;
 }
@@ -574,33 +763,6 @@ sub make_passwd_wrm {
     }
 
     close $fh;    # Must close to ensure buffer is flushed into file
-
-    return;
-}
-
-sub edit_displays_wrm {
-    my( $self ) = @_;
-
-    my $home  = $self->home;
-    my $title = $self->title;
-
-    my $displays = "$home/wspec/displays.wrm";
-
-    open my $disp_in, '<', $displays or confess "Can't read '$displays' : $!";
-    my @disp = <$disp_in>;
-    close $disp_in;
-
-    foreach (@disp) {
-        next unless /^_DDtMain/;
-
-        # Add our title onto the Main window
-        s/\s-t\s*"[^"]+/ -t "$title/i;  # " sorry just to fix emacs syntax highlight
-        last;
-    }
-
-    open my $disp_out, '>', $displays or confess "Can't write to '$displays' : $!";
-    print $disp_out @disp;
-    close $disp_out;
 
     return;
 }
@@ -678,10 +840,56 @@ sub write_dna_data {
     $self->add_acefile($ace_filename);
     open my $ace_fh, '>', $ace_filename
         or confess "Can't write to '$ace_filename' : $!";
-    print $ace_fh $self->smart_slice->dna_ace_data;
+    print $ace_fh $self->dna_ace_data;
     close $ace_fh;
 
     return;
+}
+
+sub dna_ace_data {
+    my ($self) = @_;
+
+    my ($dna, @tiles) = split /\n/
+        , $self->http_response_content('GET', 'get_assembly_dna');
+
+    $dna = lc $dna;
+    $dna =~ s/(.{60})/$1\n/g;
+
+    my @feature_ace;
+    my %seen_ctg = ( );
+    my @ctg_ace = ( );
+
+    for (@tiles) {
+
+        my ($start, $end,
+            $ctg_name, $ctg_start,
+            $ctg_end, $ctg_strand, $ctg_length,
+            ) = split /\t/;
+        ($start, $end) = ($end, $start) if $ctg_strand == -1;
+
+        my $strand_ace =
+            $ctg_strand == -1 ? 'minus' : 'plus';
+        my $feature_ace =
+            sprintf qq{Feature "Genomic_canonical" %d %d %f "%s-%d-%d-%s"\n},
+            $start, $end, 1.000, $ctg_name, $ctg_start, $ctg_end, $strand_ace;
+        push @feature_ace, $feature_ace;
+
+        unless ( $seen_ctg{$ctg_name} ) {
+            $seen_ctg{$ctg_name} = 1;
+            my $ctg_ace =
+                sprintf qq{\nSequence "%s"\nLength %d\n}, $ctg_name, $ctg_length;
+            push @ctg_ace, $ctg_ace;
+        }
+
+    }
+
+    my $name = $self->smart_slice->name;
+    my $ace = join ''
+        , qq{\nSequence "$name"\n}, @feature_ace , @ctg_ace
+        , qq{\nSequence : "$name"\nDNA "$name"\n\nDNA : "$name"\n$dna\n}
+    ;
+
+    return $ace;
 }
 
 sub reload_filter_state {
@@ -710,7 +918,7 @@ sub reload_filter_state {
         $state_hash->{'failed'} = $failed;
         $state_hash->{'done'}   = $done;
     }
-    
+
     if (@obsolete) {
         $dbh->begin_work;
         my $del = $dbh->prepare(q{ DELETE FROM otter_filter WHERE filter_name = ? });
@@ -776,7 +984,7 @@ sub DataSet {
 
 sub process_gff_file_from_Filter {
     my ($self, $filter) = @_;
-    
+
     my $filter_name = $filter->name;
     my $sth = $self->DB->dbh->prepare(q{ SELECT gff_file, process_gff FROM otter_filter WHERE filter_name = ? });
     $sth->execute($filter_name);
@@ -787,7 +995,7 @@ sub process_gff_file_from_Filter {
     unless ($load_gff) {
         return;
     }
-    
+
     my $full_gff_file = $self->home . "/$gff_file";
 
     # feature_kind values from otter_config:
@@ -801,7 +1009,7 @@ sub process_gff_file_from_Filter {
     # RepeatFeature
     # SimpleFeature
     # VariationFeature
-    
+
     if ($filter->server_script eq 'get_gff_genes'
         or $filter->feature_kind eq 'PredictionExon'
         or $filter->feature_kind eq 'PredictionTranscript'
@@ -837,6 +1045,18 @@ sub script_arguments {
     return $arguments; 
 }
 
+sub http_response_content {
+    my ($self, $command, $script, $args) = @_;
+
+    my $query = $self->smart_slice->toHash;
+    $query = { %{$query}, %{$args} } if $args;
+
+    my $response = $self->Client->http_response_content(
+        $command, $script, $query);
+
+    return $response;
+}
+
 
 sub DESTROY {
     my( $self ) = @_;
@@ -866,7 +1086,7 @@ sub DESTROY {
     } else {
         warn "Error in AceDatabase::DESTROY : $@";
     }
-    
+
     if ($callback) {
         $callback->();
     }

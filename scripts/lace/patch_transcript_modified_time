@@ -3,8 +3,6 @@
 use warnings;
 
 
-# Author: ck1@sanger.ac.uk
-
 use strict;
 use Bio::Otter::Lace::Defaults;
 use Bio::Vega::DBSQL::DBAdaptor;

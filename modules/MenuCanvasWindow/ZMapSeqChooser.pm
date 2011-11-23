@@ -5,14 +5,13 @@ package MenuCanvasWindow::ZMapSeqChooser;
 use strict;
 use warnings;
 use Carp;
-use ZMap::Connect;
-use ZMap::XRemoteCache;
 use Data::Dumper;
 use XML::Simple;
+
+use Bio::Otter::ZMap::Connect;
+use Bio::Otter::ZMap::XRemoteCache;
+use Bio::Otter::Utils::Config::Ini qw( config_ini_format );
 use Bio::Vega::Utils::XmlEscape qw{ xml_escape };
-use File::Path qw{ mkpath };
-use Config::IniFiles;
-use POSIX;
 
 my $ZMAP_DEBUG = $ENV{OTTERLACE_ZMAP_DEBUG};
 
@@ -26,8 +25,6 @@ $Data::Dumper::Indent = 1;
 #  BUT ALL WILL NEED CHANGING LATER (RDS)
 #
 #==============================================================================#
-
-=pod
 
 =head1 WARNING
 
@@ -44,24 +41,12 @@ sub zMapInitialize {
         $self->zMapZmapConnectorNew;
 
     $self->{_xremote_cache} =
-        ZMap::XRemoteCache->new;
+        Bio::Otter::ZMap::XRemoteCache->new;
 
-    my $dir = $self->zMapZMapDir;
-    unless (-d $dir) {
-        mkdir $dir or confess "failed to create the directory '$dir': $!\n";
-    }
-
-    my $stylesfile = $self->zMapStylesPath;
-    $self->Assembly->MethodCollection->ZMapStyleCollection->write_to_file($stylesfile);
-
-    $self->zMapWriteConfigFile('ZMap',     $self->zMapZMapContent);
-    $self->zMapWriteConfigFile('.gtkrc',   $self->zMapGtkrcContent);
-    $self->zMapWriteConfigFile('blixemrc', $self->zMapBlixemrcContent);
+    $self->AceDatabase->zmap_dir_init;
 
     return;
 }
-
-=pod
 
 =head1 zMapLaunchZmap
 
@@ -78,32 +63,9 @@ The guts of the code to launch and display the features in a zmap.
 
 sub _launchZMap {
     my ($self) = @_;
-
-    my $dataset = $self->AceDatabase->DataSet;
-
-    my @e = (
-        'zmap',
-        '--conf_dir' => $self->zMapZMapDir,
-        '--win_id'   => $self->zMapZmapConnector->server_window_id,
-        @{$dataset->config_value_list('zmap_config', 'arguments')},
-    );
-    warn "Running @e";
-    my $pid = fork;
-    if ($pid) {
-        $self->zMapPID($pid);
-    }
-    elsif (defined $pid) {
-        exec @e;
-        warn "exec '@e' failed : $!";
-        close STDERR; # _exit does not flush
-        POSIX::_exit(1); # avoid triggering DESTROY
-    }
-    else {
-        my $mess = "Error: couldn't fork()\n";
-        warn $mess;
-        $self->message($mess);
-    }
-
+    my $win_id = $self->zMapZmapConnector->server_window_id;
+    my $pid = $self->AceDatabase->zmap_launch($win_id);
+    $self->zMapPID($pid);
     return;
 }
 
@@ -184,9 +146,7 @@ sub _launchInAZMap {
     }
 
     $self->zMapPID($pid);
-    my $config =
-        $self->formatZmapDefaults('ZMap', sources => $self->slice_name)
-        . $self->zMapAceServerDefaults();
+    my $config = config_ini_format($self->AceDatabase->ace_config, 'ZMap');
     $self->zMapNewView($xremote, $config);
 
     return;
@@ -363,274 +323,10 @@ sub zMapZmapConnector {
 sub zMapZmapConnectorNew {
     my ($self) = @_;
     my $mb = $self->menu_bar();
-    my $zc = ZMap::Connect->new;
+    my $zc = Bio::Otter::ZMap::Connect->new;
     $zc->init($mb, \&RECEIVE_FILTER, [ $self, qw() ]);
     my $id = $zc->server_window_id();
     return $zc;
-}
-
-sub zMapBlixemrcContent {
-    my ($self) = @_;
-
-    # extract the blixem stanza so that we can put it first
-    my $blixem_config = $self->AceDatabase->blixem_config;
-    my $blixem_stanza = delete $blixem_config->{blixem};
-
-    return
-        join '',
-        $self->formatZmapDefaults('blixem', %{$blixem_stanza}),
-        ( map {
-            $self->formatZmapDefaults($_, %{$blixem_config->{$_}});
-          } sort keys %{$blixem_config} );
-}
-
-sub zMapZMapContent{
-    my ($self) = @_;
-    
-    return
-        $self->zMapZMapDefaults
-      . $self->zMapWindowDefaults
-      . $self->zMapBlixemDefaults
-      . $self->zMapAceServerDefaults
-      . $self->zMapSourceDefaults
-      . $self->zMapGlyphDefaults
-      ;
-}
-
-sub zMapGlyphDefaults {
-    my ($self) = @_;
-    
-    return $self->formatZmapDefaults(
-        'glyphs',
-        'up-tri'    => '<0,-4; -4,0; 4,0; 0,-4>',
-        'dn-tri'    => '<0,4; -4,0; 4,0; 0,4>',
-        'up-hook'   => '<0,0; 15,0; 15,-10>',
-        'dn-hook'   => '<0,0; 15,0; 15,10>',
-    );
-}
-
-sub zMapAceServerDefaults {
-    my ($self) = @_;
-
-    my $server = $self->AceDatabase->ace_server;
-
-    my $protocol = 'acedb';
-
-    my $url = sprintf q{%s://%s:%s@%s:%d}, $protocol, $server->user, $server->pass, $server->host, $server->port;
-
-    my $collection = $self->Assembly->MethodCollection;
-    my $featuresets = [ map { $_->name } $collection->get_all_top_level_Methods ];
-
-    return $self->formatZmapDefaults(
-        $self->slice_name,
-        url       => $url,
-        writeback => 'false',
-        sequence  => 'true',
-
-        # Can specify a stylesfile instead of featuresets
-
-        featuresets     => $featuresets,
-        stylesfile      => $self->zMapStylesPath,
-    );
-}
-
-sub zMapSourceDefaults {
-    
-    my ($self) = @_;
-
-    my $text;
-    my $source_columns      = { };
-    my $source_styles       = { };
-    my $source_descriptions = { };
-
-    for my $source (@{$self->AceDatabase->DataSet->sources}) {
-
-        $text .= $self->formatZmapDefaults(
-            $source->name,
-            url         => $source->url($self->AceDatabase),
-            featuresets => $source->featuresets,
-            delayed     => $source->delayed($self->AceDatabase) ? 'true' : 'false',
-            stylesfile  => $self->zMapStylesPath,
-            group       => 'always',
-        );
-        
-        if ($source->zmap_column) {
-            my $fsets = $source_columns->{$source->zmap_column} ||= [];
-            push @{ $fsets }, @{$source->featuresets};
-        }
-        
-        if ($source->zmap_style) {
-            $source_styles->{$source->name} = $source->zmap_style;
-        }
-        
-        if ($source->description) {
-            $source_descriptions->{$source->name} = $source->description;
-        }
-    }
-
-    $text .= $self->formatZmapDefaults('columns', %{$source_columns})
-        if keys %{$source_columns};
-    $text .= $self->formatZmapDefaults('featureset-style', %{$source_styles})
-        if keys %{$source_styles};
-    $text .= $self->formatZmapDefaults('featureset-description', %{$source_descriptions})
-        if keys %{$source_descriptions} && 0; # disabled
-
-    return $text;
-}
-
-sub zMapZMapDefaults {
-    my ($self) = @_;
-
-    # extract the ZMap stanza so that we can put it first
-    my $zmap_config = $self->AceDatabase->zmap_config;
-    my $zmap_stanza = delete $zmap_config->{ZMap};
-
-    return
-        join '',
-        $self->formatZmapDefaults('ZMap', %{$zmap_stanza}),
-        ( map {
-            $self->formatZmapDefaults($_, %{$zmap_config->{$_}});
-          } sort keys %{$zmap_config} );
-}
-
-sub zMapBlixemDefaults {
-    my ($self) = @_;
-
-    return $self->formatZmapDefaults(
-        'blixem',
-        'config-file' => $self->zMapConfigPath('blixemrc'),
-        %{ $self->AceDatabase->DataSet->config_section('blixem') },
-    );
-}
-
-sub zMapWindowDefaults {
-    my ($self) = @_;
-
-    return $self->formatZmapDefaults(
-        'ZMapWindow',
-        %{ $self->AceDatabase->DataSet->config_section('ZMapWindow') },
-    );
-}
-
-sub formatZmapDefaults {
-    my ($self, $key, %defaults) = @_;
-
-    my $def_str = "\n[$key]\n";
-    for my $setting ( sort keys %defaults ) {
-        my $value = $defaults{$setting};
-        $value = join ' ; ', @{$value} if ref $value;
-        $def_str .= qq{$setting = $value\n};
-    }
-    $def_str .= "\n";
-
-    return $def_str;
-}
-
-sub formatGtkrcStyleDef {
-    my ($self, $style_class, %defaults) = @_;
-
-    my $style_string = qq(\nstyle "$style_class" {\n);
-
-    while (my ($style_element, $value) = each %defaults) {
-        $style_string .= qq(  $style_element = "$value" \n);
-    }
-
-    $style_string .= qq(}\n);
-
-    return $style_string;
-}
-
-sub formatGtkrcWidgetDef {
-    my ($self, $widget_path, $style_class) = @_;
-
-    my $widget_string = qq(\nwidget "$widget_path" style "$style_class"\n);
-
-    return $widget_string;
-}
-
-sub formatGtkrcWidget {
-    my ($self, $widget_path, $style_class, %style_def) = @_;
-
-    my $full_def = $self->formatGtkrcStyleDef($style_class, %style_def);
-    $full_def .= $self->formatGtkrcWidgetDef($widget_path, $style_class);
-
-    return $full_def;
-}
-
-sub zMapGtkrcContent {
-    my ($self) = @_;
-
-    # to create a coloured border for the focused view.
-    my $full_content = $self->formatGtkrcWidget(
-        "*.zmap-focus-view",
-        "zmap-focus-view-frame",
-        qw{
-          bg[NORMAL]      gold
-          }
-    );
-
-    # to make the info labels stand out and look like input boxes...
-    $full_content .= $self->formatGtkrcWidget(
-        "*.zmap-control-infopanel",
-        "infopanel-labels",
-        qw{
-          bg[NORMAL]      white
-          }
-    );
-
-    # to make the context menu titles blue
-    $full_content .= $self->formatGtkrcWidget(
-        "*.zmap-menu-title.*",
-        "menu-titles",
-        qw{
-          fg[INSENSITIVE] blue
-          }
-    );
-
-    # to create a coloured border for the view with an unknown species. (Not sure this works properly...)
-    $full_content .= $self->formatGtkrcStyleDef(
-        "default-species",
-        qw{
-          bg[NORMAL]    gold
-          }
-    );
-
-    # foreach (species){ self->formatGtkrcStyleDef("species", ... ) }
-
-    return $full_content;
-}
-
-sub zMapWriteConfigFile {
-    my ($self, $file, $config) = @_;
-
-    my $path = $self->zMapConfigPath($file);
-    open my $fh, '>', $path
-        or confess "Can't write to '$path'; $!";
-    print $fh $config;
-    close $fh
-      or confess "Error writing to '$path'; $!";
-
-    return;
-}
-
-sub zMapStylesPath {
-    my ($self) = @_;
-    return $self->zMapConfigPath('styles.ini');
-}
-
-sub zMapConfigPath {
-    my ($self, $file) = @_;
-
-    my $dir  = $self->zMapZMapDir;
-    my $path = "${dir}/${file}";
-
-    return $path;
-}
-
-sub zMapZMapDir {
-    my ($self) = @_;
-    return $self->{'_zMap_ZMAP_DIR'} ||=
-        ($self->ace_path . '/ZMap');
 }
 
 #===========================================================
@@ -978,30 +674,10 @@ sub zMapFeaturesLoaded {
         $self->AceDatabase->save_filter_state;
         
         # and update the delayed flags in the zmap config file
-        $self->zMapUpdateConfigFile;
+        $self->AceDatabase->zmap_config_update;
     }
     
     return (200, $self->zMapZmapConnector->handled_response(1));
-}
-
-sub zMapUpdateConfigFile {
-    my ($self) = @_;
-    
-    my $cfg = $self->{_zmap_cfg} ||= Config::IniFiles->new( -file => $self->zMapConfigPath('ZMap'));
-
-    while ( my ( $name, $value ) = each %{$self->AceDatabase->filters}) {
-        my $state_hash = $value->{state};
-        if ($state_hash->{done}) {
-            $cfg->setval($name,'delayed','false');
-        }
-        if ($state_hash->{failed}) {
-            $cfg->setval($name,'delayed','true');
-        }
-    }
-    
-    $cfg->RewriteConfig;
-
-    return;
 }
 
 sub zMapIgnoreRequest {
@@ -1102,7 +778,7 @@ sub zMapGetXRemoteClientByAction {
 }
 
 # This is not a method on self, but a standalone function taking a
-# ZMap::Connect and a MenuCanvasWindow::XaceSeqChooser.
+# Bio::Otter::ZMap::Connect and a MenuCanvasWindow::XaceSeqChooser.
 
 sub open_clones {
     my ($zmap, $self) = @_;
@@ -1412,13 +1088,10 @@ sub zMapParseResponse {
 __END__
 
 
-=pod
-
 =head1 NAME - MenuCanvasWindow::ZmapSeqChooser
 
 =head1 AUTHOR
 
-James Gilbert B<email> jgrg@sanger.ac.uk
-
+Ana Code B<email> anacode@sanger.ac.uk
 
 =cut

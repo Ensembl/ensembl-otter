@@ -244,9 +244,10 @@ use Bio::Vega::Utils::GFF;
         $gff->{score}   = $self->score;
         $gff->{feature} = 'misc_feature';
 
-        if ($self->display_label) {
-            $gff->{attributes}->{Name} = '"' . $self->display_label . '"';
-        }
+        my $display_label =
+            $self->display_label ||
+            $self->analysis->logic_name;
+        $gff->{attributes}->{Name} = '"' . $display_label . '"';
 
         return $gff;
     }
@@ -883,7 +884,7 @@ use Bio::Vega::Utils::GFF;
 
 __END__
 
-=head1 NAME - Bio::Vega::Utils::EnsEMBL2GFF 
+=head1 NAME - Bio::Vega::Utils::EnsEMBL2GFF
 
 =head1 SYNOPSIS
 
@@ -893,5 +894,5 @@ by calling C<$slice->to_gff>, passing in lists of the analyses and feature types
 
 =head1 AUTHOR
 
-Graham Ritchie B<email> gr5@sanger.ac.uk
+Ana Code B<email> anacode@sanger.ac.uk
 
