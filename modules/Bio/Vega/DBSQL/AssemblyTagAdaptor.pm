@@ -7,17 +7,17 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 
 use base 'Bio::EnsEMBL::DBSQL::BaseFeatureAdaptor';
 
-sub _tables {
+sub _tables { ## no critic(Subroutines::ProhibitUnusedPrivateSubroutines)
   my ($self) = @_;
   return ['assembly_tag', 'at'];
 }
 
-sub _columns {
+sub _columns { ## no critic(Subroutines::ProhibitUnusedPrivateSubroutines)
   my ($self) = @_;
   return qw(at.tag_id at.seq_region_id at.seq_region_start at.seq_region_end at.seq_region_strand at.tag_type at.tag_info);
 }
 
-sub _objs_from_sth {
+sub _objs_from_sth { ## no critic(Subroutines::ProhibitUnusedPrivateSubroutines)
   my ($self, $sth) = @_;
   my $a_tags = [];
   my $hashref;
