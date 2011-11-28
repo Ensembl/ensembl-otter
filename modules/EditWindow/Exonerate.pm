@@ -7,6 +7,7 @@ use strict;
 use warnings;
 use Carp;
 
+use Bio::Otter::Lace::OnTheFly;
 use Hum::Pfetch;
 use Hum::FastaFileIO;
 use Hum::ClipboardUtils qw{ accessions_from_text };
@@ -378,7 +379,18 @@ sub XaceSeqChooser {
 sub launch_exonerate {
     my ($self) = @_;
 
-    my $seqs = $self->get_query_seq();
+    my $otf = Bio::Otter::Lace::OnTheFly->new({
+
+        seqs       => $self->entered_seqs,
+        accessions => $self->entered_accessions,
+
+        problem_report_cb => sub { $self->problem_message_box(@_) },
+        long_query_cb     => sub { $self->long_query_confirm(@_)  },
+
+        accession_type_cache => $self->XaceSeqChooser->AceDatabase->AccessionTypeCache,
+        });
+
+    my $seqs = $otf->get_query_seq();
 
     print STDERR "Found " . scalar(@$seqs) . " sequences\n";
 
@@ -435,11 +447,11 @@ OTF_Protein });
 
 my $seq_tag = 1;
 
-sub get_query_seq {
+# get seqs from fasta file and text box
+#
+sub entered_seqs {
     my ($self) = @_;
     my @seqs;
-
-    # get seqs from fasta file and text box
 
     if (my $string = $self->fasta_txt->get('1.0', 'end')) {
         if ($string =~ /\S/ and $string !~ />/) {
@@ -454,141 +466,46 @@ sub get_query_seq {
         $file_name =~ s/^\s+|\s+$//g;
         push @seqs, Hum::FastaFileIO->new($file_name)->read_all_sequences;
     }
+    return \@seqs;
+}
 
-    my @accessions = map { $_->name } @seqs;
-
-    # get seqs from accession numbers supplied by the user
+# get seqs from accession numbers supplied by the user
+#
+sub entered_accessions {
+    my ($self) = @_;
 
     my @supplied_accs;
     if (my $txt = $self->get_entry('match')) {
         $txt =~ s/^\s+//;
         $txt =~ s/\s+$//;
         @supplied_accs = split(/[,;\|\s]+/, $txt);
-        push @accessions, @supplied_accs;
     }
+    return \@supplied_accs;
+}
 
-    # identify the types of all the accessions supplied
-
-    my $cache = $self->XaceSeqChooser->AceDatabase->AccessionTypeCache;
-    # The populate method will fetch the latest version of
-    # any accessions which are supplied without a SV into
-    # the cache object.
-    $cache->populate(\@accessions);
-
-    # add type and full accession information to the existing sequences
-    my ($missing_msg, $remapped_msg);
-    for my $seq (@seqs) {
-        my $name = $seq->name;
-        if (my ($type, $full_acc) = $cache->type_and_name_from_accession($name)) {
-            ### Might want to be paranoid and check that the sequence of
-            ### supplied sequences matches the pfetched sequence where the
-            ### names of sequences are public accessions.
-            $seq->type($type);
-            $seq->name($full_acc);
-            if ($name ne $full_acc) {
-                $remapped_msg .= "  $name to $full_acc\n";
-            }
-        }
-    }
-
-    my (%acc_type_full, @to_pfetch);
-    for (my $i = 0; $i < @supplied_accs;) {
-        my $acc = $supplied_accs[$i];
-        my ($type, $full) = $cache->type_and_name_from_accession($acc);
-        if ($type and $full) {
-            $i++;
-            $acc_type_full{$acc} = [$type, $full];            
-            push(@to_pfetch, $full);
-        }
-        else {
-            # No point trying to pfetch invalid accessions
-            $missing_msg .= "  $acc unknown accession\n";
-            splice(@supplied_accs, $i, 1);
-        }
-    }
-
-    my %seqs_fetched;
-    if (@to_pfetch) {
-        foreach my $seq (Hum::Pfetch::get_Sequences(@to_pfetch)) {
-            $seqs_fetched{$seq->name} = $seq;
-        }
-    }
-
-    foreach my $acc (@supplied_accs) {
-        my ($type, $full) = @{$acc_type_full{$acc}};
-        
-        # Delete from the hash so that we can check for
-        # unclaimed sequences.
-        my $seq = delete($seqs_fetched{$full});
-        if ($seq) {
-            $seq->type($type);
-        }
-        else {
-            $missing_msg .= "  $acc ($full) could not pfetch\n";
-            next;
-        }
-        
-        if ($full ne $acc) {
-            $remapped_msg .= "  $acc to $full\n";
-        }
-
-        push(@seqs, $seq);
-    }
-
-    # tell the user about any missing sequences or remapped accessions
-
-    if ($missing_msg || $remapped_msg || keys %seqs_fetched) {
-        $missing_msg =
-          "I did not find any sequences for the following accessions:\n\n$missing_msg\n"
-            if $missing_msg;
-        $missing_msg ||= '';
-
-        $remapped_msg =
-          "The following supplied accessions have been mapped to full ACCESSION.SV:\n\n$remapped_msg\n"
-            if $remapped_msg;
-        $remapped_msg ||= '';
-
-        my $unclaimed_msg = '';
-        if (keys %seqs_fetched) {
-            $unclaimed_msg =
-              "The following sequences were fetched, but didn't map back to supplied names:\n\n"
-                . join('', map { "  $_\n" } keys %seqs_fetched);
-        }
-
-        $self->top->messageBox(
-            -title   => 'otter: Problems With Accessions Supplied',
-            -icon    => 'warning',
-            -message => $missing_msg . $remapped_msg . $unclaimed_msg,
-            -type    => 'OK',
+sub problem_message_box {
+    my ($self, $warnings) = shift;
+    $self->top->messageBox(
+        -title   => 'otter: Problems With Accessions Supplied',
+        -icon    => 'warning',
+        -message => $warnings->{missing} . $warnings->{remapped} . $warnings->{unclaimed},
+        -type    => 'OK',
         );
-    }
+    return;
+}
 
-    # check for unusually long query sequences
-
-    my @confirmed_seqs;
-
-    for my $seq (@seqs) {
-        if ($seq->sequence_length > $MAX_QUERY_LENGTH) {
-            my $response = $self->top->messageBox(
-                -title   => 'otter: Unusually Long Query Sequence',
-                -icon    => 'warning',
-                -message => $seq->name . " is "
-                  . $seq->sequence_length
+sub long_query_confirm {
+    my ($self, $details) = shift;
+    my $response = $self->top->messageBox(
+        -title   => 'otter: Unusually Long Query Sequence',
+        -icon    => 'warning',
+        -message => $details->{name} . " is "
+                  . $details->{length}
                   . " residues long.\n"
                   . "Are you sure you want to try to align it?",
-                -type => 'YesNo',
-            );
-
-            if ($response eq 'Yes') {
-                push @confirmed_seqs, $seq;
-            }
-        }
-        else {
-            push @confirmed_seqs, $seq;
-        }
-    }
-
-    return \@confirmed_seqs;
+        -type => 'YesNo',
+        );
+    return ($response eq 'Yes');
 }
 
 sub DESTROY {
