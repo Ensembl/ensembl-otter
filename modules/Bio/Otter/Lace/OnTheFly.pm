@@ -1,0 +1,254 @@
+package Bio::Otter::Lace::OnTheFly;
+
+use namespace::autoclean;
+use Moose;
+
+has accession_type_cache => ( is => 'ro', isa => 'Bio::Otter::Lace::AccessionTypeCache', required => 1 );
+
+has seqs                 => ( is => 'ro', isa => 'ArrayRef[Hum::Sequence]', default => sub{ [] } );
+has accessions           => ( is => 'ro', isa => 'ArrayRef[Str]',           default => sub{ [] } );
+
+has problem_report_cb    => ( is => 'ro', isa => 'CodeRef', required => 1 );
+has long_query_cb        => ( is => 'ro', isa => 'CodeRef', required => 1 );
+
+has max_query_length     => ( is => 'ro', isa => 'Int', default => 10000 );
+
+# Internal attributes
+#
+has _acc_type_full_cache => ( is => 'ro', isa => 'HashRef[ArrayRef[Str]]',
+                              default => sub{ {} }, init_arg => undef );
+
+has _warnings            => ( is => 'ro', isa => 'HashRef', default => sub{ {} }, init_arg => undef );
+
+sub BUILD {
+    my $self = shift;
+    # not sure how much processing to do here
+    # none for now, only if it becomes necessary for multiple methods
+    return;
+}
+
+sub get_query_seq {
+    my ($self) = @_;
+
+    {
+        my @seq_accs      = map { $_->name } @{$self->seqs};
+        my @supplied_accs = @{$self->accessions};
+
+        # We work on the union of the supplied sequences and supplied accession ids
+        my @accessions = ( @seq_accs, @supplied_accs );
+        return [] unless @accessions; # nothing to do
+
+        # identify the types of all the accessions supplied
+        my $cache = $self->accession_type_cache;
+        # The populate method will fetch the latest version of
+        # any accessions which are supplied without a SV into
+        # the cache object.
+        $cache->populate(\@accessions);
+    }
+
+    $self->_augment_supplied_sequences;
+    my @to_pfetch = $self->_check_augment_supplied_accessions;
+    $self->_pfetch_sequences(@to_pfetch);
+
+    # tell the user about any missing sequences or remapped accessions
+
+    # might it be better to pass the unprocessed warning lists to the callback and let
+    # them be processed according to the context and graphics framework?
+
+    if (%{$self->_warnings}) {
+        my $formatted_msgs = $self->_format_warnings;
+        $self->problem_report_cb( $formatted_msgs );
+    }
+
+    # check for unusually long query sequences
+
+    my @confirmed_seqs;
+
+    for my $seq (@{$self->seqs}) {
+        if ($seq->sequence_length > $self->max_query_length) {
+            my $okay = $self->long_query_cb( {
+                name   => $seq->name,
+                length => $seq->sequence_length,
+                                                 } );
+            if ($okay) {
+                push @confirmed_seqs, $seq;
+            }
+        }
+        else {
+            push @confirmed_seqs, $seq;
+        }
+    }
+
+    return \@confirmed_seqs;
+}
+
+# add type and full accession information to the supplied sequences
+# modifies sequences in $self->seqs
+#
+sub _augment_supplied_sequences {
+    my $self = shift;
+    my $cache = $self->accession_type_cache;
+
+    for my $seq (@{$self->seqs}) {
+        my $name = $seq->name;
+        if (my ($type, $full_acc) = $cache->type_and_name_from_accession($name)) {
+            ### Might want to be paranoid and check that the sequence of
+            ### supplied sequences matches the pfetched sequence where the
+            ### names of sequences are public accessions.
+            $seq->type($type);
+            $seq->name($full_acc);
+            if ($name ne $full_acc) {
+                $self->_add_remap_warning( $name => $full_acc );
+            }
+        }
+    }
+    return;
+}
+
+sub _check_augment_supplied_accessions {
+    my $self = shift;
+
+    my $cache = $self->accession_type_cache;
+    my $supplied_accs = $self->accessions;
+
+    my @to_pfetch;
+    foreach my $acc ( @$supplied_accs ) {
+        my $entry = $self->_acc_type_full($acc);
+        if ($entry) {
+            my ($type, $full) = @$entry;
+            push(@to_pfetch, $full);
+        }
+        else {
+            # No point trying to pfetch invalid accessions
+            $self->_add_missing_warning($acc, "unknown accession");
+        }
+    }
+    return @to_pfetch;
+}
+
+# Adds sequences to $self->seqs
+#
+sub _pfetch_sequences {
+    my ($self, @to_pfetch) = @_;
+
+    my %seqs_fetched;
+    if (@to_pfetch) {
+        foreach my $seq (Hum::Pfetch::get_Sequences(@to_pfetch)) {
+            $seqs_fetched{$seq->name} = $seq;
+        }
+    }
+
+    foreach my $acc (@to_pfetch) {
+        my ($type, $full) = @{$self->_acc_type_full($acc)};
+
+        # Delete from the hash so that we can check for
+        # unclaimed sequences.
+        my $seq = delete($seqs_fetched{$full});
+        if ($seq) {
+            $seq->type($type);
+        }
+        else {
+            $self->_add_missing_warning("$acc ($full)" => "could not pfetch");
+            next;
+        }
+
+        if ($full ne $acc) {
+            $self->_add_remap_warning($acc => $full);
+        }
+
+        push(@{$self->seqs}, $seq);
+    }
+
+    # anything not claimed should be reported
+    foreach my $unclaimed ( keys %seqs_fetched ) {
+        $self->_add_unclaimed_warning($unclaimed);
+    }
+
+    return;
+}
+
+# implements the local micro-cache - including caching misses
+
+sub _acc_type_full {
+    my ($self, $acc) = @_;
+
+    my $local_cache = $self->_acc_type_full_cache;
+    if (exists $local_cache->{$acc}) {
+        my $cached_entry = $local_cache->{$acc};
+        return $cached_entry;
+    }
+
+    my ($type, $full) = $self->accession_type_cache->type_and_name_from_accession($acc);
+    my $new_entry;
+    $new_entry = [ $type, $full ] if ($type and $full);
+    return $local_cache->{$acc} = $new_entry;
+}
+
+sub _add_warning {
+    my ($self, $type, $warning) = @_;
+    my $list = $self->_warnings->{$type} ||= [];
+    push @{$list}, $warning;
+    return;
+}
+
+sub _add_remap_warning {
+    my ($self, $old, $new) = @_;
+    my $remap_warnings = $self->_warnings->{remapped} ||= [];
+    $self->add_warning( remapped => [ $old => $new ] );
+    return;
+}
+
+sub _add_missing_warning {
+    my ($self, $acc, $msg) = @_;
+    $self->_add_warning( missing => [ $acc => $msg ] );
+    return;
+}
+
+sub _add_unclaimed_warning {
+    my ($self, $acc) = @_;
+    $self->_add_warning( unclaimed => $acc );
+    return;
+}
+
+sub _format_warnings {
+    my $self = shift;
+    my $warnings = $self->warnings;
+
+    my ($missing_msg, $remapped_msg, $unclaimed_msg) = ( '' x 3 );
+
+    if ($warnings->{missing}) {
+        my @missing = @{$warnings->{missing}};
+        $missing_msg = join("\n", map { sprintf("  %s %s", @{$_}) } @missing);
+        $missing_msg =
+            "I did not find any sequences for the following accessions:\n\n$missing_msg\n"
+    }
+
+    if ($warnings->{remapped}) {
+        my @remapped = @{$warnings->{remapped}};
+        $remapped_msg = join("\n", map { sprintf("  %s to %s", @{$_}) } @remapped);
+        $remapped_msg =
+            "The following supplied accessions have been mapped to full ACCESSION.SV:\n\n$remapped_msg\n"
+    }
+
+    if ($warnings->{unclaimed}) {
+        my @unclaimed = @{$warnings->{unclaimed}};
+        $unclaimed_msg =
+            "The following sequences were fetched, but didn't map back to supplied names:\n\n"
+            . join('', map { "  $_\n" } @unclaimed);
+    }
+    return( {
+        missing   => $missing_msg,
+        remapped  => $remapped_msg,
+        unclaimed => $unclaimed_msg,
+            } );
+}
+
+1;
+
+__END__
+
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
+
+# EOF
