@@ -8,7 +8,9 @@ use warnings;
 use Readonly;
 use Scalar::Util 'weaken';
 use Hum::Sort 'ace_sort';
+use Bio::Otter::Lace::OnTheFly;
 use Bio::Vega::Evidence::Types;
+use Tk::Utils::OnTheFly;
 
 use base 'CanvasWindow';
 
@@ -345,11 +347,30 @@ sub align_to_transcript {
     my ($self) = @_;
     my $canvas = $self->canvas;
 
+    my @accessions;
     foreach my $sel ($self->list_selected) {
         my ($type) = $canvas->gettags($sel);
         my $name   = $canvas->itemcget($sel, 'text');
-        print "Aligning: $type -\t$name\t($sel)\n";
+        my @no_prefixes = Hum::ClipboardUtils::accessions_from_text($name);
+        my $no_prefix = join(',', @no_prefixes);                  # debug
+        print "Aligning: $type -\t$name\t[$no_prefix]\t($sel)\n"; # debug
+        push @accessions, @no_prefixes;
     }
+
+    my $top = $self->canvas->toplevel;
+    my $otf = Bio::Otter::Lace::OnTheFly->new({
+
+        accessions => \@accessions,
+
+        problem_report_cb => sub { $top->Tk::Utils::OnTheFly::problem_box('Evidence Selected', @_) },
+        long_query_cb     => sub { $top->Tk::Utils::OnTheFly::long_query_confirm(@_)  },
+
+        accession_type_cache => $self->ExonCanvas->XaceSeqChooser->AceDatabase->AccessionTypeCache,
+        });
+
+    my $seqs = $otf->get_query_seq();
+
+    print STDERR "Found " . scalar(@$seqs) . " sequences\n";
 }
 
 sub DESTROY {
