@@ -57,7 +57,7 @@ sub get_query_seq {
 
     if (%{$self->_warnings}) {
         my $formatted_msgs = $self->_format_warnings;
-        $self->problem_report_cb( $formatted_msgs );
+        &{$self->problem_report_cb}( $formatted_msgs );
     }
 
     # check for unusually long query sequences
@@ -66,7 +66,7 @@ sub get_query_seq {
 
     for my $seq (@{$self->seqs}) {
         if ($seq->sequence_length > $self->max_query_length) {
-            my $okay = $self->long_query_cb( {
+            my $okay = &{$self->long_query_cb}( {
                 name   => $seq->name,
                 length => $seq->sequence_length,
                                                  } );
@@ -212,9 +212,9 @@ sub _add_unclaimed_warning {
 
 sub _format_warnings {
     my $self = shift;
-    my $warnings = $self->warnings;
+    my $warnings = $self->_warnings;
 
-    my ($missing_msg, $remapped_msg, $unclaimed_msg) = ( '' x 3 );
+    my ($missing_msg, $remapped_msg, $unclaimed_msg) = ( ('') x 3 );
 
     if ($warnings->{missing}) {
         my @missing = @{$warnings->{missing}};
