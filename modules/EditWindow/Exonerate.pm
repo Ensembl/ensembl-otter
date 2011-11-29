@@ -15,6 +15,7 @@ use Hum::Sort qw{ ace_sort };
 use Tk::LabFrame;
 use Tk::Checkbutton;
 use Tk::Radiobutton;
+use Tk::Utils::OnTheFly;
 
 use base 'EditWindow';
 
@@ -384,8 +385,8 @@ sub launch_exonerate {
         seqs       => $self->entered_seqs,
         accessions => $self->entered_accessions,
 
-        problem_report_cb => sub { $self->problem_message_box(@_) },
-        long_query_cb     => sub { $self->long_query_confirm(@_)  },
+        problem_report_cb => sub { $self->top->Tk::Utils::OnTheFly::problem_box('Accessions Supplied', @_) },
+        long_query_cb     => sub { $self->top->Tk::Utils::OnTheFly::long_query_confirm(@_)  },
 
         accession_type_cache => $self->XaceSeqChooser->AceDatabase->AccessionTypeCache,
         });
@@ -481,31 +482,6 @@ sub entered_accessions {
         @supplied_accs = split(/[,;\|\s]+/, $txt);
     }
     return \@supplied_accs;
-}
-
-sub problem_message_box {
-    my ($self, $warnings) = shift;
-    $self->top->messageBox(
-        -title   => 'otter: Problems With Accessions Supplied',
-        -icon    => 'warning',
-        -message => $warnings->{missing} . $warnings->{remapped} . $warnings->{unclaimed},
-        -type    => 'OK',
-        );
-    return;
-}
-
-sub long_query_confirm {
-    my ($self, $details) = shift;
-    my $response = $self->top->messageBox(
-        -title   => 'otter: Unusually Long Query Sequence',
-        -icon    => 'warning',
-        -message => $details->{name} . " is "
-                  . $details->{length}
-                  . " residues long.\n"
-                  . "Are you sure you want to try to align it?",
-        -type => 'YesNo',
-        );
-    return ($response eq 'Yes');
 }
 
 sub DESTROY {
