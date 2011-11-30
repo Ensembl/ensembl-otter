@@ -73,6 +73,14 @@ sub top_window {
     return $self->canvas->toplevel;
 }
 
+sub deiconify_and_raise {
+    my ($self) = @_;
+    
+    my $top = $self->top_window;
+    $top->deiconify;
+    $top->raise;
+}
+
 sub icon_pixmap {
     return;
 }

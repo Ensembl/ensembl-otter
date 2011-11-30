@@ -789,6 +789,7 @@ sub window_close {
         my $name = $self->name;
 
         if ($err) {
+            $self->deiconify_and_raise;
             $self->exception_message($err, 'Error while detecting changes to save');
             my $dialog = $self->canvas->toplevel->Dialog(
                 -title          => 'otter: Abandon?',
@@ -801,8 +802,8 @@ sub window_close {
             return if $ans eq 'No';
         }
         elsif ($sub) {
-
             # Ask the user if changes should be saved
+            $self->deiconify_and_raise;
             my $dialog = $self->canvas->toplevel->Dialog(
                 -title          => 'otter: Save changes?',
                 -bitmap         => 'question',
