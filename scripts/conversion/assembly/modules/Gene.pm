@@ -62,9 +62,57 @@ sub store_gene {
        -display_id => $V_gene->stable_id,
        -info_text  => 'Added during ensembl-vega production'));
 
-  # add transcripts to gene
+  # make a note of the strands of the transcripts
+  my %trans_strands;
   foreach my $E_trans (@{ $E_transcripts }) {
-    $E_gene->add_Transcript($E_trans);
+    push @{$trans_strands{$E_trans->seq_region_strand}},$E_trans->stable_id;
+  }
+
+  my $do_manually = 0;
+  #if there are multiple strands then decide which ones to keep
+  if (keys %trans_strands > 1 ) {
+    my $strand_to_keep;
+    my $no_trans = 0;
+    foreach my $t_strand (keys %trans_strands) {
+      if ($strand_to_keep) {
+        if (scalar @{$trans_strands{$t_strand}} == $no_trans) {
+          $do_manually = 1;
+        }
+        elsif (scalar @{$trans_strands{$t_strand}} > $no_trans) {
+          $strand_to_keep = $t_strand;
+        }
+      }
+      else {
+        $strand_to_keep = $t_strand;
+        $no_trans = scalar @{$trans_strands{$t_strand}};
+      }
+    }
+    if ($do_manually) {
+      #otherwise just add all transcripts to the gene
+      $support->log_warning('Storing gene '.$E_gene->stable_id." even though it has transcripts on multiple strands, need to resolve manually\n", 2);
+      foreach my $E_trans (@{ $E_transcripts }) {
+        $E_gene->add_Transcript($E_trans);
+      }
+    }
+    else {
+      my @trans_to_keep = @{$trans_strands{$strand_to_keep}};
+      foreach my $E_trans (@{ $E_transcripts }) {
+        if (grep { $_ eq $E_trans->stable_id } @trans_to_keep) {
+          $E_gene->add_Transcript($E_trans);
+        }
+        else {
+          $support->log_warning('Not storing transcript '.$E_trans->stable_id.' since gene '.$E_gene->stable_id." has transcripts on multiple strands\n", 2);
+        }
+      }
+    }
+  }
+  else {
+    if (! $do_manually) {
+      #otherwise just add all transcripts to the gene
+      foreach my $E_trans (@{ $E_transcripts }) {
+        $E_gene->add_Transcript($E_trans);
+      }
+    }
   }
 
   foreach my $gx (@{$V_gene->get_all_DBEntries}) {

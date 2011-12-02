@@ -61,7 +61,7 @@ Ana Code B<email> anacode@sanger.ac.uk
 CACHE_TEMPLATE
     ;
 
-sub _create_cache {
+sub _create_cache { ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
     my ($pkg, $module_dir) = @_;
 
     my $cache_contents = join '', map {

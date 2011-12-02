@@ -21,10 +21,13 @@ General options:
     --logfile, --log=FILE               log to FILE (default: *STDOUT)
     --logpath=PATH                      write logfile to PATH (default: .)
     --logappend, --log_append           append to logfile (default: truncate)
+    --prune                             reset to the state before running this
+                                        script
     -v, --verbose                       verbose logging (default: false)
-    -i, --interactive=0|1               run script interactively (default: true)
-    -n, --dry_run, --dry=0|1            don't write results to database
+    -i, --interactive                   run script interactively (default: true)
+    -n, --dry_run, --dry                don't write results to database
     -h, --help, -?                      print help (this message)
+
 
 Specific options:
 
@@ -98,10 +101,12 @@ my @use_list = qw(B3gat2 C4bp B3galt2 C8g S100a7a C1qc C1qdc2 C1qtnf P2rx7 B3gnt
 my $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
 $support->parse_common_options(@_);
 $support->parse_extra_options(
-    'mgifile=s',);
+  'mgifile=s',
+  'prune');
 $support->allowed_params(
-	$support->get_common_params,
-	'mgifile',);
+  $support->get_common_params,
+  'mgifile',
+  'prune');
 $support->check_required_params('mgifile');	
 if ($support->param('help') or $support->error) {
     warn $support->error if $support->error;

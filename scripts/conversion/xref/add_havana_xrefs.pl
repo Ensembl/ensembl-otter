@@ -21,15 +21,15 @@ General options:
     --logpath=PATH                      write logfile to PATH (default: .)
     --logappend, --log_append           append to logfile (default: truncate)
     -v, --verbose                       verbose logging (default: false)
-    -i, --interactive=0|1               run script interactively (default: true)
-    -n, --dry_run, --dry=0|1            don't write results to database
+    -i, --interactive                   run script interactively (default: true)
+    -n, --dry_run, --dry                don't write results to database
     -h, --help, -?                      print help (this message)
 
 Specific options:
     --chromosomes, --chr=LIST           only process LIST chromosomes
     --gene_stable_id, --gsi=LIST|FILE   only process LIST gene_stable_ids
                                         (or read list from FILE)
-    --prune=0|1                         reset to the state before running this
+    --prune                             reset to the state before running this
                                         script
 =head1 DESCRIPTION
 
@@ -80,7 +80,7 @@ $support->parse_common_options(@_);
 $support->parse_extra_options(
   'chromosomes|chr=s@',
   'gene_stable_id|gsi=s@',
-  'prune=s',
+  'prune',
 );
 $support->allowed_params(
   $support->get_common_params,

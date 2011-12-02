@@ -20,7 +20,7 @@ General options:
     --logfile, --log=FILE               log to FILE (default: *STDOUT)
     --logpath=PATH                      write logfile to PATH (default: .)
     --logappend, --log_append           append to logfile (default: truncate)
-    --prune=0|1                         remove changes from previous runs of this script
+    --prune                             remove changes from previous runs of this script
 
     --update                            update existing transcript names where gene names have changed
 
@@ -80,7 +80,7 @@ my $support = new Bio::EnsEMBL::Utils::VegaCuration::Transcript($SERVERROOT);
 # parse options
 $support->parse_common_options(@_);
 $support->parse_extra_options(
-  'prune=s',
+  'prune',
   'update');
 $support->allowed_params(
   $support->get_common_params,
