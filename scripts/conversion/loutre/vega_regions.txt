@@ -1,11 +1,11 @@
 #This file defines the regions to be exported from a loutre database for Vega
 #database production, and attributes to be given to those regions (by 
 #prepare_loutre). Entries must be tab delimited, and with the exception of
-#ensembl_name (used for ensembl_vega production) and ack are compulsory.
+#ensembl_name (used for ensembl_vega production) are compulsory.
 
 #loutre_id        = seq_region.name in loutre (minus the numerical suffix)
 #vega_name        = seq_region.name in Vega
-#name             = human readable name (for Vega mapview)
+#name             = human readable name (for Vega chromosome summary)
 #ensembl_name     = Name of equivalent seqregion in Ensembl
 
 #loutre_id	#vega_name	#name	#ensembl_name	
@@ -87,7 +87,6 @@ LRC_DM1A	19-DM1A	Chromosome 19-DM1A
 LRC_DM1B	19-DM1B	Chromosome 19-DM1B
 LRC_MC1A	19-MC1A	Chromosome 19-MC1A
 LRC_MC1B	19-MC1B	Chromosome 19-MC1B
-chr9_ABO_gene	HG79_PATCH	Chromosome HG79_PATCH	HG79_PATCH
 --end--
 
 --mouse--
@@ -134,9 +133,14 @@ NOD_IDD18.2	3-Idd18.2_DIL	Idd18.2 region of chromosome 3 (DIL NOD strain)
 --end--
 
 --gorilla--
-MHC	6-MHC	MHC region of Chromosome 6
+MHC	5-MHC	MHC region of Chromosome 5
 KIR	19-LRC	LRC region of Chromosome 19	
 --end--
 
 --wallaby--
 mhc	2-MHC	MHC region of Chromosome 2
+--end--
+
+--chimp--
+mhc	5-MHC	MHC region of Chromosome 5
+--end--

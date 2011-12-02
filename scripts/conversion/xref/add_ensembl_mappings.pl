@@ -9,9 +9,9 @@ add_ensembl_mappings.pl - adds xrefs to ensembl transcripts/genes
 add_ensembl_mappings.pl [options]
 
 General options:
+
     --conffile, --conf=FILE             read parameters from FILE
                                         (default: conf/Conversion.ini)
-
     --dbname, db_name=NAME              use database NAME
     --host, --dbhost, --db_host=HOST    use database host HOST
     --port, --dbport, --db_port=PORT    use database port PORT
@@ -20,18 +20,20 @@ General options:
     --logfile, --log=FILE               log to FILE (default: *STDOUT)
     --logpath=PATH                      write logfile to PATH (default: .)
     --logappend, --log_append           append to logfile (default: truncate)
+    --prune                             reset to the state before running this
+                                        script
     -v, --verbose                       verbose logging (default: false)
-    -i, --interactive=0|1               run script interactively (default: true)
-    -n, --dry_run, --dry=0|1            don't write results to database
+    -i, --interactive                   run script interactively (default: true)
+    -n, --dry_run, --dry                don't write results to database
     -h, --help, -?                      print help (this message)
 
 Specific options:
+
     --ensemblhost=HOST                  use Ensembl database host HOST
     --ensemblport=PORT                  use Ensembl database port PORT
     --ensembluser=USER                  use Ensembl database username USER
     --ensemblpass=PASS                  use Ensembl database password PASS
-    --prune=0|1                         reset to the state before running this
-                                        script
+
 
 =head1 DESCRIPTION
 
@@ -96,7 +98,7 @@ $support->parse_extra_options(
   'ensembluser=s',
   'ensemblpass=s',
   'ensembldbname=s',
-  'prune=s',
+  'prune',
 );
 $support->allowed_params(
   $support->get_common_params,
@@ -279,7 +281,7 @@ foreach my $type (qw(genes transcripts)) {
 	      $support->log_warning("No dbID for $vdb xref ($e_id) $v_id.\n", 1);
 	    }
 	  }
-	}
+        }
       }
     }
     if (scalar(@c) > 1) {

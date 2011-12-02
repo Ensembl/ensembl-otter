@@ -425,7 +425,7 @@ $support->log_stamped("Transferred $c translation_attrib entries.\n\n");
 
 # alt alleles
 $support->log_stamped("Transfering Vega alt alleles...\n");
-my $alt_alleles;
+my $alt_alleles = {};
 $sth = $dbh->{'evega'}->prepare(qq(
    SELECT aa.alt_allele_id, gsi.stable_id, gsi2.gene_id
      FROM $vega_db.alt_allele aa, $vega_db.gene_stable_id gsi, gene_stable_id gsi2
@@ -435,15 +435,19 @@ $sth->execute;
 while (my ($id, $gsi, $gid) = $sth->fetchrow_array) {
   push @{$alt_alleles->{$id}}, $gid ;
 }
-$sth = $dbh->{'evega'}->prepare(qq(INSERT INTO alt_allele values (?, ?)));
+my $allele_count;
+$sth = $dbh->{'evega'}->prepare(qq(INSERT INTO alt_allele (alt_allele_id, gene_id) values (?, ?)));
 foreach my $allele_id (keys %$alt_alleles) {
+  $allele_count++;
   next if (scalar @{$alt_alleles->{$allele_id}} < 2);
   foreach my $gene_id (@{$alt_alleles->{$allele_id}}) {
     $sth->execute($allele_id,$gene_id);
   }
 }
+$support->log_stamped("Transferred $allele_count alt_allele allele_ids.\n\n");
 
 #delete any orphan object_xref entries
+$support->log_stamped("Deleting orphan object_xref entries...\n");
 $sql = qq(DELETE ox
             FROM object_xref ox
             LEFT JOIN xref x ON ox.xref_id = x.xref_id

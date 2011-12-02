@@ -20,20 +20,33 @@ General options:
     --logfile, --log=FILE               log to FILE (default: *STDOUT)
     --logpath=PATH                      write logfile to PATH (default: .)
     --logappend, --log_append           append to logfile (default: truncate)
+    --prune                             reset to the state before running this
+                                        script
     -v, --verbose                       verbose logging (default: false)
-    -i, --interactive=0|1               run script interactively (default: true)
-    -n, --dry_run, --dry=0|1            don't write results to database
+    -i, --interactive                   run script interactively (default: true)
+    -n, --dry_run, --dry                don't write results to database
     -h, --help, -?                      print help (this message)
 
 Specific options:
-    --ccdsfile FILE                     read input from FILE
+    evegahost                           Connection details for ensembl-vega database
+    evegaport
+    evegauser
+    evegapass
+    evegadbname
+    evegaassembly                       ensembl-vega assembly (GRCh37 etc)
+
+    ccdshost                            Connection details for CCDS database
+    ccdsport
+    ccdsuser
+    ccdspass
+    ccdsdbname
 
 =head1 DESCRIPTION
 
-This script adds CCDS identifiers to the database. The input file is a
-whitespace-separated list of transcript stable IDs and CCDS identifiers. For
-more information on the CCDS database see
-http://www.ensembl.org/Homo_sapiens/ccds.html.
+This script adds CCDS identifiers to the database. Using the CCDS database and an ensembl-vega database
+it matches transcripts by position and generates mappings between CCDS and Vega identifiers. This mapping
+file is stored no disc in case the script needs rerunning. The mappings are added as xrefs to a vega database.
+For more information on the CCDS database see http://www.ensembl.org/Homo_sapiens/ccds.html.
 
 =head1 LICENCE
 
@@ -43,7 +56,6 @@ Please see http://www.ensembl.org/code_licence.html for details
 =head1 AUTHORS
 
 Steve Trevanion <st3@sanger.ac.uk>
-Patrick Meidl <pm2@sanger.ac.uk>
 
 =head1 CONTACT
 
@@ -78,16 +90,13 @@ my $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
 # parse options
 $support->parse_common_options(@_);
 $support->parse_extra_options(
-  'prune=s',
+  'prune',
   'evegahost=s',
   'evegaport=s',
   'evegauser=s',
   'evegapass=s',
+  'evegadbname=s',
   'evegassembly=s',
-  'ensemblhost=s',
-  'ensemblport=s',
-  'ensembluser=s',
-  'ensemblpass=s',
   'ccdshost=s',
   'ccdsport=s',
   'ccdsuser=s',
@@ -100,12 +109,8 @@ $support->allowed_params(
   'evegaport',
   'evegauser',
   'evegapass',
-  'evegaassembly',
   'evegadbname',
-  'ensemblhost',
-  'ensemblport',
-  'ensembluser',
-  'ensemblpass',
+  'evegaassembly',
   'ccdshost',
   'ccdsport',
   'ccdsuser',
@@ -168,7 +173,7 @@ else {
   $support->log_stamped("Retrieving info from CCDS database\n");
   foreach my $chr ( @{$ccds_sa->fetch_all('chromosome')}){
     my $chrname = $chr->name;
-    $support->log_stamped("On chromosome $chrname\n",1);
+    $support->log_stamped("Ensembl $chrname\n",1);
     foreach my $ccds_gene ( @{$chr->get_all_Genes()} ){
       $ccds_gene = $ccds_gene->transform('chromosome', $path);
       foreach my $ccds_trans (@{$ccds_gene->get_all_Transcripts()}){

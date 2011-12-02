@@ -33,7 +33,7 @@ sub get_requested_features {
         } @analysis ];
 }
 
-sub _gff_keys {
+sub _gff_keys { ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
     return @gff_keys;
 }
 

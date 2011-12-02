@@ -116,7 +116,7 @@ if (! (($species) = $support->param('loutredbname') =~ /loutre_(\S+)_*/ ) ) {
   $support->log_warning("No species name interpreted from loutredbname ".$support->param('loutredbname')." check configuration\n");
   exit;
 }
-unless (grep {$_ eq $species} qw(human mouse dog pig zebrafish gorilla wallaby)) {
+unless (grep {$_ eq $species} qw(human mouse dog pig zebrafish gorilla wallaby chimp)) {
   $support->log_warning("Species $species not recognised, please check\n");
   exit;
 }
@@ -155,19 +155,109 @@ while (my $rec = <$IN>) {
   };
 }
 
+#warn Data::Dumper::Dumper($regions_wanted_details); exit;
+
+
 # connect to database and get adaptors
 my $dba = $support->get_database('loutre','loutre');
 my $sa = $dba->get_SliceAdaptor();
 my $aa = $dba->get_AttributeAdaptor();
+
 #get chromosomes without a hidden attribute
 my $chroms = $support->fetch_non_hidden_slices($aa,$sa);
+
+#get details of all patch_fix chromosomes
+my $patch_regions_wanted_details;
+my @not_yet_wanted = map {$_.'_PATCH'} qw(HG1007 HG280);
+my @wanted_patches = map {$_.'_PATCH'} qw (
+                 HG989
+                 HG999_1
+                 HG999_2
+                 HG686
+                 HG186
+                 HG991
+                 HG706
+                 HG1032
+                 HG14
+                 HG115
+                 HG736
+                 HG946
+                 HG19
+                 HG104_HG975
+                 HG243
+                 HG79
+                 HG998_1
+                 HG998_2
+                 HG544
+                 HG905
+                 HG995
+                 HG142_HG150_HG151
+                 HG281
+                 HG536
+                 HG996
+                 HG531
+                 HG75
+                 HG183
+                 HG185
+                 HG745
+                 HG987
+                 HG990
+                 HG730
+                 HG506_HG1000_1
+                 HG1000_2
+                 HG480_HG481
+                 HG858
+                 HG7
+               );
+my @found_patches;
+my $c = 0;
+foreach my $chrom (@$chroms) {
+  my $chrom_name = $chrom->seq_region_name;
+  next unless $chrom_name =~ /^PATCH_FIX/;
+  my $vega_and_ensembl_name;
+  foreach my $attrib (@{$aa->fetch_all_by_Slice($chrom)}) {
+    if ($attrib->code eq 'chr') {
+      $vega_and_ensembl_name = $attrib->value;
+    }
+  }
+  if (! $vega_and_ensembl_name) {
+    $support->log_warning("No name attribute for $chrom_name, investigate\n");
+  }
+  if (grep {$vega_and_ensembl_name eq $_ } @not_yet_wanted) {
+    $support->log("Ignoring Chromosome $chrom_name (ensembl name = $vega_and_ensembl_name) since I've been told to!\n");
+  }
+  else {
+    push @found_patches, $vega_and_ensembl_name;
+    if (grep {$vega_and_ensembl_name eq $_ } @wanted_patches) {
+      $c++;
+      $patch_regions_wanted_details->{$chrom_name} = {
+        vega_name        => $vega_and_ensembl_name,
+        name             => "Chromosome $vega_and_ensembl_name",
+        vega_export_mod  => $rel_type,
+        vega_release     => $support->param('vega_release'),
+        ensembl_name     => $vega_and_ensembl_name,
+      };
+      $support->log("$c Adding Chromosome $chrom_name (ensembl name = $vega_and_ensembl_name) to list to be dumped\n");
+    }
+    else {
+      $support->log("Chromosome $chrom_name (ensembl name = $vega_and_ensembl_name) found but not in Jon's list\n");
+    }
+  }
+}
+if ($species eq 'human') {
+  foreach my $wp (@wanted_patches) {
+    unless ( grep {$_ eq $wp} @found_patches) {
+      $support->log_warning("Cannot find $wp that Jon's asked for\n");
+    }
+  }
+}
 
 #get all chromosomes
 my $all_chromosomes = $sa->fetch_all('Chromosome','Otter');
 
 # see which of the non hidden chromosomes best match to what we want
 SLICE:
-foreach my $k (keys %$regions_wanted_details ) {
+foreach my $k (keys(%$regions_wanted_details), keys(%$patch_regions_wanted_details)) {
   my $sr_name_to_use;
   my $saved_extra = '';
   my %possibles;
@@ -184,7 +274,9 @@ foreach my $k (keys %$regions_wanted_details ) {
     }
   }
   else {
-    %possibles = map {$_->seq_region_name => $_} grep { $_->seq_region_name =~ /^$k-/ } @$chroms;
+    my $poss_sr = ($k =~ /^PATCH/) ? $k : "$k-";
+    %possibles = map {$_->seq_region_name => $_} grep { $_->seq_region_name =~ /^$poss_sr/ } @$chroms;
+    warn "checking $k";
     if (scalar(keys %possibles) > 1) {
       my $max_version = 0;
       foreach my $sr_name ( keys %possibles ) {
@@ -225,7 +317,7 @@ foreach my $k (keys %$regions_wanted_details ) {
     next SLICE;
   }
 
-  my $attribs_wanted  = $regions_wanted_details->{$k};
+  my $attribs_wanted  = $regions_wanted_details->{$k} || $patch_regions_wanted_details->{$k};
   my $slice           = $possibles{$sr_name_to_use};
   my $sr_id           = $slice->get_seq_region_id;
 
@@ -291,6 +383,7 @@ foreach my $k (keys %$regions_wanted_details ) {
     }
   }
 }
+
 #####################################################################################################
 #do a final sanity check, all of these attributes should only be present once for each              #
 #chromosome that going to be exported, the exception is vega_release which can have multiple values #

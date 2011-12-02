@@ -8,15 +8,6 @@ use warnings;
 use Carp;
 use IO::Handle;
 
-my $prefix_sub = sub {
-    return scalar(localtime) . "  ";
-    };
-
-sub set_prefix_sub {
-    $prefix_sub = shift;
-    return;
-}
-
 my $file;
 sub make_log {
     confess "Already logging to '$file'" if $file;
@@ -28,7 +19,7 @@ sub make_log {
 
     if (my $pid = open(STDOUT, "|-")) {
         # Send parent's STDERR to the same place as STDOUT.
-        open STDERR, ">&STDOUT" or confess "Can't redirect STDERR to STDOUT";
+        open STDERR, '>&', \*STDOUT or confess "Can't redirect STDERR to STDOUT";
         return $pid; ### Could write a rotate_logfile sub if we record the pid.
     }
     elsif (defined $pid) {
@@ -44,7 +35,7 @@ sub make_log {
         # Child filters output from parent
         while (<STDIN>) { ## no critic(InputOutput::ProhibitExplicitStdin)
             print STDERR $_;    # Still print to STDERR
-            print $log $prefix_sub->(), $_;
+            printf $log "%s  %s", scalar(localtime), $_;
         }
         close $log;
         exit;   # Child must exit here!
