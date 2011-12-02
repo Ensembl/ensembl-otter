@@ -369,8 +369,13 @@ sub align_to_transcript {
         });
 
     my $seqs = $otf->get_query_seq();
-
     print STDERR "Found " . scalar(@$seqs) . " sequences\n";
+
+    my $cdna = $self->ExonCanvas->check_get_mRNA_Sequence;
+    return unless $cdna;
+    print STDERR "Spliced transcript is " . $cdna->sequence_length . " bp\n";
+
+    return;
 }
 
 sub DESTROY {
