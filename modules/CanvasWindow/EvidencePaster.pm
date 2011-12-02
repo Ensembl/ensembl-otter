@@ -239,7 +239,6 @@ sub draw_evidence {
             -font   => $bold,
             );
 
-        my $x = $size;
         foreach my $text (@$name_list) {
             $canvas->createText($x, $y,
                 -anchor => 'nw',
@@ -341,6 +340,8 @@ sub deselect_all {
 
     $self->SUPER::deselect_all;
     $self->align_enable(0);
+
+    return;
 }
 
 sub align_to_transcript {
