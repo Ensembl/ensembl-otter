@@ -385,6 +385,8 @@ sub launch_exonerate {
         seqs       => $self->entered_seqs,
         accessions => $self->entered_accessions,
 
+        lowercase_poly_a_t_tails => 1, # to avoid spurious exons
+
         problem_report_cb => sub { $self->top->Tk::Utils::OnTheFly::problem_box('Accessions Supplied', @_) },
         long_query_cb     => sub { $self->top->Tk::Utils::OnTheFly::long_query_confirm(@_)  },
 
@@ -426,7 +428,7 @@ OTF_Protein });
         -max_intron_length => ($self->get_entry('max_intron_length') || 0),
         -mask_target       => $self->{_mask_target},
         };
-    my $db_edited = $self->XaceSeqChooser->launch_exonerate($seqs, $exonerate_params);
+    my $db_edited = $self->XaceSeqChooser->launch_exonerate($otf, $exonerate_params);
 
     $self->top->Unbusy;
 
