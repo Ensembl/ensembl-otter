@@ -3,15 +3,28 @@ package Bio::Otter::Lace::OnTheFly;
 use namespace::autoclean;
 use Moose;
 
+use Bio::Vega::Evidence::Types qw{ new_evidence_type_valid };
+
 has accession_type_cache => ( is => 'ro', isa => 'Bio::Otter::Lace::AccessionTypeCache', required => 1 );
 
 has seqs                 => ( is => 'ro', isa => 'ArrayRef[Hum::Sequence]', default => sub{ [] } );
 has accessions           => ( is => 'ro', isa => 'ArrayRef[Str]',           default => sub{ [] } );
 
+has lowercase_poly_a_t_tails => ( is => 'ro', isa => 'Bool', default => undef );
+
 has problem_report_cb    => ( is => 'ro', isa => 'CodeRef', required => 1 );
 has long_query_cb        => ( is => 'ro', isa => 'CodeRef', required => 1 );
 
 has max_query_length     => ( is => 'ro', isa => 'Int', default => 10000 );
+
+has confirmed_seqs       => ( is => 'ro', isa => 'ArrayRef[Hum::Sequence]',
+                              lazy => 1, builder => '_build_confirmed_seqs', init_arg => undef );
+
+has seqs_by_type         => ( is => 'ro', isa => 'HashRef[ArrayRef[Hum::Sequence]]',
+                              lazy => 1, builder => '_build_seqs_by_type', init_arg => undef );
+
+has seqs_by_name         => ( is => 'ro', isa => 'HashRef[Hum::Sequence]',
+                              lazy => 1, builder => '_build_seqs_by_name', init_arg => undef );
 
 # Internal attributes
 #
@@ -28,6 +41,11 @@ sub BUILD {
 }
 
 sub get_query_seq {
+    my $self = shift;
+    return $self->confirmed_seqs;
+}
+
+sub _build_confirmed_seqs {
     my ($self) = @_;
 
     {
@@ -79,7 +97,61 @@ sub get_query_seq {
         }
     }
 
+    if ($self->lowercase_poly_a_t_tails) {
+        for my $seq (@confirmed_seqs) {
+            my $s = $seq->uppercase;
+            $s =~ s/(^T{6,}|A{6,}$)/lc($1)/ge;
+            $seq->sequence_string($s);
+        }
+    }
+
     return \@confirmed_seqs;
+}
+
+sub _build_seqs_by_type {
+    my $self = shift;
+
+    my %seqs_by_type;
+    foreach my $seq (@{$self->confirmed_seqs}) {
+        if ($seq->type && new_evidence_type_valid($seq->type))
+        {
+            push @{ $seqs_by_type{ $seq->type } }, $seq;
+        }
+        elsif ($seq->sequence_string =~ /^[AGCTNagctn\s]*$/) {
+            push @{ $seqs_by_type{'Unknown_DNA'} }, $seq;
+        }
+        else {
+            push @{ $seqs_by_type{'Unknown_Protein'} }, $seq;
+        }
+    }
+
+    return \%seqs_by_type;
+}
+
+sub seq_types {
+    my $self = shift;
+    return keys %{$self->seqs_by_type};
+}
+
+sub seqs_for_type {
+    my ( $self, $type ) = @_;
+    return $self->seqs_by_type->{$type};
+}
+
+sub _build_seqs_by_name {
+    my $self = shift;
+
+    my %name_seq;
+    for my $seq (@{$self->confirmed_seqs}) {
+        $name_seq{ $seq->name } = $seq;
+    }
+
+    return \%name_seq;
+}
+
+sub seq_by_name {
+    my ( $self, $name ) = @_;
+    return $self->seqs_by_name->{$name};
 }
 
 # add type and full accession information to the supplied sequences
