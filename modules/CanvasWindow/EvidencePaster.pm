@@ -358,10 +358,16 @@ sub align_to_transcript {
         push @accessions, @no_prefixes;
     }
 
+    my $cdna = $self->ExonCanvas->check_get_mRNA_Sequence;
+    return unless $cdna;
+    print STDERR "Spliced transcript is " . $cdna->sequence_length . " bp\n";
+
     my $top = $self->canvas->toplevel;
+
     my $otf = Bio::Otter::Lace::OnTheFly->new({
 
         accessions => \@accessions,
+        target_seq => $cdna,
 
         problem_report_cb => sub { $top->Tk::Utils::OnTheFly::problem_box('Evidence Selected', @_) },
         long_query_cb     => sub { $top->Tk::Utils::OnTheFly::long_query_confirm(@_)  },
@@ -372,9 +378,8 @@ sub align_to_transcript {
     my $seqs = $otf->get_query_seq();
     print STDERR "Found " . scalar(@$seqs) . " sequences\n";
 
-    my $cdna = $self->ExonCanvas->check_get_mRNA_Sequence;
-    return unless $cdna;
-    print STDERR "Spliced transcript is " . $cdna->sequence_length . " bp\n";
+    my $ts_file = $otf->target_fasta_file;
+    print STDERR "Wrote transcript sequence to ${ts_file}\n";
 
     return;
 }
