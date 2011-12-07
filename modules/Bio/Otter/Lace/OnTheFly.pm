@@ -3,6 +3,8 @@ package Bio::Otter::Lace::OnTheFly;
 use namespace::autoclean;
 use Moose;
 
+use File::Temp;
+
 use Bio::Vega::Evidence::Types qw{ new_evidence_type_valid };
 
 has accession_type_cache => ( is => 'ro', isa => 'Bio::Otter::Lace::AccessionTypeCache', required => 1 );
@@ -25,6 +27,11 @@ has seqs_by_type         => ( is => 'ro', isa => 'HashRef[ArrayRef[Hum::Sequence
 
 has seqs_by_name         => ( is => 'ro', isa => 'HashRef[Hum::Sequence]',
                               lazy => 1, builder => '_build_seqs_by_name', init_arg => undef );
+
+has target_seq           => ( is => 'ro', isa => 'Hum::Sequence', required => 1 );
+
+has target_fasta_file    => ( is => 'ro', isa => 'File::Temp',
+                              lazy => 1, builder => '_build_target_fasta_file', init_arg => undef );
 
 # Internal attributes
 #
@@ -313,6 +320,24 @@ sub _format_warnings {
         remapped  => $remapped_msg,
         unclaimed => $unclaimed_msg,
             } );
+}
+
+sub _build_target_fasta_file {
+    my $self = shift;
+
+    my $template = "otf_target_${$}_XXXXX";
+    my $file = File::Temp->new(
+        TEMPLATE => $template,
+        TMPDIR   => 1,
+        SUFFIX   => '.fa',
+        UNLINK   => 0,         # for now
+        );
+
+    my $ts_out  = Hum::FastaFileIO->new("> $file");
+    $ts_out->write_sequences( $self->target_seq );
+    $ts_out = undef;            # flush
+
+    return $file;
 }
 
 1;
