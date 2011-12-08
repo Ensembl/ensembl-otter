@@ -385,6 +385,8 @@ sub launch_exonerate {
         seqs       => $self->entered_seqs,
         accessions => $self->entered_accessions,
 
+        target_seq => $self->XaceSeqChooser->Assembly->Sequence,
+
         lowercase_poly_a_t_tails => 1, # to avoid spurious exons
 
         problem_report_cb => sub { $self->top->Tk::Utils::OnTheFly::problem_box('Accessions Supplied', @_) },
@@ -393,7 +395,7 @@ sub launch_exonerate {
         accession_type_cache => $self->XaceSeqChooser->AceDatabase->AccessionTypeCache,
         });
 
-    my $seqs = $otf->get_query_seq();
+    my $seqs = $otf->confirmed_seqs();
 
     print STDERR "Found " . scalar(@$seqs) . " sequences\n";
 
