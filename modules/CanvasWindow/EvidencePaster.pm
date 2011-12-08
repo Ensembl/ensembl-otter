@@ -391,7 +391,7 @@ sub align_to_transcript {
 
         my $exonerate = Bio::Otter::Lace::Exonerate->new;
         $exonerate->query_seq($aligner->seqs);
-        my $seq_file = $exonerate->write_seq_file();
+        my $seq_file = $aligner->fasta_file;
         print STDERR "Wrote sequences to ${seq_file}\n";
     }
 
