@@ -375,11 +375,25 @@ sub align_to_transcript {
         accession_type_cache => $self->ExonCanvas->XaceSeqChooser->AceDatabase->AccessionTypeCache,
         });
 
-    my $seqs = $otf->get_query_seq();
-    print STDERR "Found " . scalar(@$seqs) . " sequences\n";
+    print STDERR "Found " . scalar( @{$otf->confirmed_seqs} ) . " sequences\n";
 
     my $ts_file = $otf->target_fasta_file;
     print STDERR "Wrote transcript sequence to ${ts_file}\n";
+
+    foreach my $aligner ( $otf->aligners_for_each_type ) {
+
+        print STDERR "Running exonerate for sequence(s) of type: ", $aligner->type, "\n";
+
+        # my $score    = $type =~ /Protein/  ? $PROT_SCORE : $DNA_SCORE;
+        # my $ana_name = $type =~ /^Unknown/ ? $type       :
+        #     $type eq 'cDNA' ? "OTF_mRNA" : "OTF_$type";
+        # my $dnahsp   = $DNAHSP;
+
+        my $exonerate = Bio::Otter::Lace::Exonerate->new;
+        $exonerate->query_seq($aligner->seqs);
+        my $seq_file = $exonerate->write_seq_file();
+        print STDERR "Wrote sequences to ${seq_file}\n";
+    }
 
     return;
 }
