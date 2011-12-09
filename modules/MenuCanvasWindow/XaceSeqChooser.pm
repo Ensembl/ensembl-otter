@@ -1948,17 +1948,6 @@ sub update_SubSeq_locus_level_errors {
 sub launch_exonerate {
     my( $self, $otf, $params ) = @_;
 
-    # get marked region (if requested)
-    my ($genomic_start, $genomic_end) =
-        (1, $self->Assembly->Sequence->sequence_length);
-    if ($params->{-use_marked_region}) {
-        my ($mark_start, $mark_end) = $self->zMapGetMark;
-        if ($mark_start && $mark_end) {
-            warn "Setting exonerate genomic start & end to marked region: $mark_start - $mark_end\n";
-            ($genomic_start, $genomic_end) = ($mark_start, $mark_end);
-        }
-    }
-
     my $db_edited = 0;
     my @method_names;
     my $ace_text = '';
@@ -1978,8 +1967,8 @@ sub launch_exonerate {
         my $exonerate = Bio::Otter::Lace::Exonerate->new;
         $exonerate->AceDatabase($self->AceDatabase);
         $exonerate->genomic_seq($self->Assembly->Sequence);
-        $exonerate->genomic_start($genomic_start);
-        $exonerate->genomic_end($genomic_end);
+        $exonerate->genomic_start($otf->target_start);
+        $exonerate->genomic_end($otf->target_end);
         $exonerate->query_seq($otf->seqs_for_type($type));
         $exonerate->sequence_fetcher($otf->seqs_by_name);
         $exonerate->acedb_homol_tag($ana_name . '_homol');

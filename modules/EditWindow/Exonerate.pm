@@ -379,21 +379,34 @@ sub XaceSeqChooser {
 
 sub launch_exonerate {
     my ($self) = @_;
+    my $seq_chooser = $self->XaceSeqChooser;
 
-    my $otf = Bio::Otter::Lace::OnTheFly->new({
+    my %otf_params = (
 
         seqs       => $self->entered_seqs,
         accessions => $self->entered_accessions,
 
-        target_seq => $self->XaceSeqChooser->Assembly->Sequence,
+        target_seq => $seq_chooser->Assembly->Sequence,
 
         lowercase_poly_a_t_tails => 1, # to avoid spurious exons
 
         problem_report_cb => sub { $self->top->Tk::Utils::OnTheFly::problem_box('Accessions Supplied', @_) },
         long_query_cb     => sub { $self->top->Tk::Utils::OnTheFly::long_query_confirm(@_)  },
 
-        accession_type_cache => $self->XaceSeqChooser->AceDatabase->AccessionTypeCache,
-        });
+        accession_type_cache => $seq_chooser->AceDatabase->AccessionTypeCache,
+        );
+
+    # get marked region (if requested)
+    if ($self->{_use_marked_region}) {
+        my ($mark_start, $mark_end) = $seq_chooser->zMapGetMark;
+        if ($mark_start && $mark_end) {
+            warn "Setting exonerate genomic start & end to marked region: $mark_start - $mark_end\n";
+            $otf_params{target_start} = $mark_start;
+            $otf_params{target_end}   = $mark_end;
+        }
+    }
+
+    my $otf = Bio::Otter::Lace::OnTheFly->new(\%otf_params);
 
     my $seqs = $otf->confirmed_seqs();
 
@@ -412,10 +425,10 @@ sub launch_exonerate {
     $self->top->Busy;
 
     # OTF should not influence unsaved changes state of the session
-    $self->XaceSeqChooser->flag_db_edits(0);
+    $seq_chooser->flag_db_edits(0);
 
     if ($self->{'_clear_existing'}) {
-        $self->XaceSeqChooser->delete_featuresets(qw{
+        $seq_chooser->delete_featuresets(qw{
 Unknown_DNA
 Unknown_Protein
 OTF_EST
@@ -425,16 +438,15 @@ OTF_Protein });
     }
 
     my $exonerate_params = {
-        -use_marked_region => $self->{_use_marked_region},
         -best_n            => ($self->get_entry('bestn') || 0),
         -max_intron_length => ($self->get_entry('max_intron_length') || 0),
         -mask_target       => $self->{_mask_target},
         };
-    my $db_edited = $self->XaceSeqChooser->launch_exonerate($otf, $exonerate_params);
+    my $db_edited = $seq_chooser->launch_exonerate($otf, $exonerate_params);
 
     $self->top->Unbusy;
 
-    $self->XaceSeqChooser->flag_db_edits(1);
+    $seq_chooser->flag_db_edits(1);
 
     if ($db_edited) {
         return 1;
