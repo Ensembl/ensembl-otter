@@ -7,6 +7,8 @@ has type   => ( is => 'ro', isa => 'Str',                                   requ
 has seqs   => ( is => 'ro', isa => 'ArrayRef[Hum::Sequence]',               required => 1 );
 has target => ( is => 'ro', isa => 'Bio::Otter::Lace::OnTheFly::TargetSeq', required => 1 );
 
+has options => ( is => 'ro', isa => 'HashRef', default => sub { {} } );
+
 has fasta_description => ( is => 'ro', isa => 'Str', lazy => 1, builder => '_build_fasta_description' );
 
 sub _build_fasta_description {
@@ -20,6 +22,44 @@ sub fasta_sequences {
 }
 
 with 'Bio::Otter::Lace::OnTheFly::FastaFile';
+
+sub is_protein {
+    my $self = shift;
+    return $self->type =~ /Protein/;
+}
+
+sub query_type {
+    my $self = shift;
+    return $self->is_protein ? 'protein' : 'dna';
+}
+
+sub run {
+    my $self = shift;
+
+    my $command = 'exonerate';
+
+    my $query_file  = $self->fasta_file;
+    my $query_type  = $self->query_type;
+    my $target_file = $self->target->fasta_file;
+
+    my %args = (
+        '--targettype' => 'dna',
+        '--target'     => $target_file,
+        '--querytype'  => $query_type,
+        '--query'      => $query_file,
+        %{$self->options},
+        );
+
+    my @command_line = ( $command, %args );
+    open my $raw_align, '-|', @command_line or confess "failed to run $command: $!";
+
+    my $output;
+    while (my $line = <$raw_align>) {
+        $output .= $line;
+        print $line;
+    }
+    return $output;
+}
 
 1;
 

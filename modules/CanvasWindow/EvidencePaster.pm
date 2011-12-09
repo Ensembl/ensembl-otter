@@ -384,15 +384,9 @@ sub align_to_transcript {
 
         print STDERR "Running exonerate for sequence(s) of type: ", $aligner->type, "\n";
 
-        # my $score    = $type =~ /Protein/  ? $PROT_SCORE : $DNA_SCORE;
-        # my $ana_name = $type =~ /^Unknown/ ? $type       :
-        #     $type eq 'cDNA' ? "OTF_mRNA" : "OTF_$type";
-        # my $dnahsp   = $DNAHSP;
-
-        my $exonerate = Bio::Otter::Lace::Exonerate->new;
-        $exonerate->query_seq($aligner->seqs);
         my $seq_file = $aligner->fasta_file;
         print STDERR "Wrote sequences to ${seq_file}\n";
+        my $parsed_output = $aligner->run;
     }
 
     return;
