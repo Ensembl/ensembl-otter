@@ -397,7 +397,78 @@ sub align_to_transcript {
         my $seq_file = $aligner->fasta_file;
         print STDERR "Wrote sequences to ${seq_file}\n";
         my $parsed_output = $aligner->run;
+
+        $self->alignment_window($aligner->type, $parsed_output);
     }
+
+    return;
+}
+
+sub alignment_window {
+    my ( $self, $type, $alignment ) = @_;
+
+    $self->{_alignment_window} ||= {};
+    my $window = $self->{_alignment_window}->{$type};
+
+    unless ($window) {
+
+        # FIXME: duplication with ExonCanvas.pm
+        my $master = $self->canvas->toplevel;
+        my $top = $master->Toplevel;
+        $top->transient($master);
+
+        # FIXME: more duplication
+        $window = $self->{_alignment_window}->{$type} = $top->Scrolled(
+            'ROText',
+            -scrollbars             => 'e',
+            -font                   => $self->font_fixed,
+            -padx                   => 6,
+            -pady                   => 6,
+            -relief                 => 'groove',
+            -background             => 'white',
+            -border                 => 2,
+            -selectbackground       => 'gold',
+            )->pack(
+                -expand => 1,
+                -fill   => 'both',
+            );
+
+        $window->bind('<Destroy>', sub{ $window = $self->{_alignment_window}->{$type} = undef });
+    }
+
+    # The dynamic bit - separate sub?
+
+    # Empty the text widget
+    $window->delete('1.0', 'end');
+    $window->insert('end', $alignment); # just show it raw for now
+
+    # FIXME: more duplication (modulo width)
+    # Size widget to fit
+    my ($lines) = $window->index('end') =~ /(\d+)\./;
+    $lines--;
+    if ($lines > 40) {
+        $window->configure(
+            -width  => 80,
+            -height => 40,
+            );
+    } else {
+        # This has slightly odd behaviour if the ROText starts off
+        # big to accomodate a large translation, and is then made
+        # smaller.  Does not seem to shrink below a certain minimum
+        # height.
+        $window->configure(
+            -width  => 80,
+            -height => $lines,
+            );
+    }
+
+    my $toplevel = $window->toplevel;
+
+    # Set the window title
+    $toplevel->configure( -title => sprintf("otter: %s alignment", $type) );
+
+    $toplevel->deiconify;
+    $toplevel->raise;
 
     return;
 }
