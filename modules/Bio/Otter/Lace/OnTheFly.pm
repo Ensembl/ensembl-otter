@@ -26,6 +26,18 @@ has 'target'          => (
     writer => '_set_target',
     );
 
+has 'aligner_options' => (
+    is  => 'ro',
+    isa => 'HashRef',
+    default => sub { {} },
+    );
+
+has 'aligner_query_type_options' => (
+    is  => 'ro',
+    isa => 'HashRef',
+    default => sub { { dna => {}, protein => {} } },
+    );
+
 sub BUILD {
     my ( $self, $params ) = @_;
 
@@ -49,6 +61,8 @@ sub aligners_for_each_type {
             type   => $type,
             seqs   => $self->seqs_for_type($type),
             target => $self->target,
+            options => $self->aligner_options,
+            query_type_options => $self->aligner_query_type_options,
             );
     }
     return @aligners;

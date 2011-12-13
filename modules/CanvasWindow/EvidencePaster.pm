@@ -369,6 +369,16 @@ sub align_to_transcript {
         accessions => \@accessions,
         target_seq => $cdna,
 
+        # aligner_* attribs may be better via Aligner subclass??
+        aligner_options => {
+            '--bestn'      => 1,
+        },
+
+        aligner_query_type_options => {
+            protein => { '--model' => 'protein2dna:bestfit', '--exhaustive' => undef },
+            dna     => { '--model' => 'affine:bestfit',      '--exhaustive' => undef },
+        },
+
         problem_report_cb => sub { $top->Tk::Utils::OnTheFly::problem_box('Evidence Selected', @_) },
         long_query_cb     => sub { $top->Tk::Utils::OnTheFly::long_query_confirm(@_)  },
 
