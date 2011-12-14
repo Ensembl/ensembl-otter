@@ -354,15 +354,15 @@ $c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
 $support->log_stamped("Done transfering $c assembly entries.\n\n");
 
 # transfer assembly_exceptions from Ensembl db
-#$support->log_stamped("Transfering Ensembl assembly...\n");
-#$sql = qq(
-#    INSERT INTO $evega_db.assembly_exception
-#    SELECT '',seq_region_id+$sri_adjust, seq_region_start, seq_region_end,
-#           exc_type, exc_seq_region_id+$sri_adjust, seq_region_start, seq_region_end, ori
-#      FROM assembly_exception
-#);
-#$c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
-#$support->log_stamped("Done transfering $c assembly entries.\n\n");
+$support->log_stamped("Transfering Ensembl assembly_exception entries...\n");
+$sql = qq(
+    INSERT INTO $evega_db.assembly_exception
+    SELECT '',seq_region_id+$sri_adjust, seq_region_start, seq_region_end,
+           exc_type, exc_seq_region_id+$sri_adjust, seq_region_start, seq_region_end, ori
+      FROM assembly_exception
+);
+$c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
+$support->log_stamped("Done transfering $c assembly entries.\n\n");
 
 # transfer dna from Ensembl db
 $support->log_stamped("Transfering Ensembl dna...\n");
