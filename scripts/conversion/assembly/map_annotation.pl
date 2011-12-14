@@ -119,6 +119,8 @@ use Deletion;
 use Transcript;
 use Gene;
 
+use Data::Dumper;
+
 $| = 1;
 
 our $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
@@ -235,7 +237,7 @@ my $ensembl_chr_map = $support->get_ensembl_chr_mapping($V_dba, $support->param(
 
 foreach my $V_chr ($support->sort_chromosomes($V_chrlength)) {
 
-  $support->log_stamped("Chromosome $V_chr...\n", 1);
+  $support->log_stamped("Chromosome $V_chr...\n");
 
   # skip non-ensembl chromosomes
   my $E_chr = $ensembl_chr_map->{$V_chr};
@@ -250,23 +252,16 @@ foreach my $V_chr ($support->sort_chromosomes($V_chrlength)) {
   my $E_slice = $E_sa->fetch_by_region('chromosome', $E_chr, undef, undef,
 				       undef, $support->param('ensemblassembly'));
 
-  my $genes;
-  my $patch_region_hack = 0;
-  if ( ! $V_slice->is_reference() ) {
-    $patch_region_hack = 1;
-    my $slices = $V_sa->fetch_by_region_unique( $V_slice->coord_system_name(),$V_slice->seq_region_name() );
-    foreach my $slice ( @{$slices} ) {
-      push @$genes, @{$V_ga->fetch_all_by_Slice($slice)};
-    }
-  }
-  else {
-    $genes = $V_ga->fetch_all_by_Slice($V_slice);
-  }
-
+  my ($genes) = $support->get_unique_genes($V_slice,$V_dba);
   $support->log("Looping over ".scalar(@$genes)." genes...\n", 1);
+
  GENE:
   foreach my $gene (@{ $genes }) {
     my $gsi = $gene->stable_id;
+
+#    next unless ($gsi eq 'OTTHUMG00000174807');
+#    next unless ($gsi eq 'OTTHUMG00000174616');
+
     my $ln = $gene->analysis->logic_name;
     my $name = $gene->display_xref->display_id;
     if ($support->param('logic_names')) {
@@ -277,7 +272,7 @@ foreach my $V_chr ($support->sort_chromosomes($V_chrlength)) {
     }
     $support->log("Gene $gsi/$name (logic_name $ln)\n", 1);
 
-    if ($patch_region_hack) {
+     if ( ! $V_slice->is_reference() ) {
       &transfer_vega_patch_gene($gene,$V_chr);
       next GENE;
     }
@@ -368,6 +363,10 @@ sub transfer_vega_patch_gene {
   my ($vgene,$V_chr) = @_;
   my $gsi = $vgene->stable_id;
   my $v_gene_slice = $vgene->slice;
+
+  my $slice_start = $v_gene_slice->start;
+  my $slice_end   = $v_gene_slice->end;
+
   if(!$v_gene_slice) {		
     $support->log_warning("Couldn't fetch vega gene slice\n");
     return 0;
@@ -414,55 +413,59 @@ sub transfer_vega_patch_gene {
     $support->log("Will transfer ".$transcript->stable_id."\n",2);
     $found_trans = 1;
 
-    foreach my $sf (@{$transcript->get_all_supporting_features}) {
+    my @transcript_supporting_features = @{$transcript->get_all_supporting_features};
+  TSF:
+    foreach my $sf (@transcript_supporting_features) {
       my $ev_sf_slice;
 
-      #does this replace all of the below ?
-#      $sf->slice($ev_gene_slice);
+      #need to delete transcript supporting_features that lie outside the slice
+      if ($sf->seq_region_start < $slice_start || $sf->seq_region_end > $slice_end) {
+#        warn "deleting - ".$sf->display_id.'--'.$sf->seq_region_name.'--'.$sf->seq_region_start.'--'.$sf->seq_region_end.'--'.$sf->seq_region_strand;
+        &delete_supporting_feature('transcript',$transcript,$sf->dbID,$sf->display_id);
+        next TSF;
+      }
 
-      if ($ev_sf_slice = $E_sa->fetch_by_region(
-        'chromosome',
-        $sf->seq_region_name,
-        $sf->seq_region_start,
-        $sf->seq_region_end,
-        $sf->seq_region_strand,
-        $support->param('ensemblassembly'),
-      )) {
-#        if ($transcript->stable_id eq 'OTTHUMT00000426675'){
-#          warn "vega sf start = ".$sf->seq_region_start." end = ".$sf->seq_region_end;
-#          warn " ensembl sf slice start = ".$ev_sf_slice->start." end = ".$ev_sf_slice->end." cs= ".$ev_sf_slice->coord_system->version;
-#          $sf->slice($ev_sf_slice);
-#          warn "  1. sf slice (dbID = ".$sf->slice->get_seq_region_id.") start (after slice method) = ".$sf->seq_region_start." end = ".$sf->seq_region_end." cs = ".$sf->slice->coord_system->version;
-        $sf->hslice($ev_sf_slice);
-#          warn "  2. sf slice (dbID = ".$sf->slice->get_seq_region_id.") start (after hslice method) = ".$sf->seq_region_start." end = ".$sf->seq_region_end." cs = ".$sf->slice->coord_system->version;
+## could add each transcript_supporting_feature manually but no need, this is done when storing the gene
+#      my $ev_sf_slice;
+#      if ($ev_sf_slice = $E_sa->fetch_by_region(
+#        'chromosome',
+#        $sf->seq_region_name,
+#        $sf->seq_region_start,
+#        $sf->seq_region_end,
+#        $sf->seq_region_strand,
+#        $support->param('ensemblassembly'),
+#      )) {
+#        $sf->hslice($ev_sf_slice);
 #        }
-      }
-      else {
-        $support->log("Cannot retrieve Ensembl slice for supporting_feature ".$sf->hseqname."\n",2);
-      }
+#      else {
+#        $support->log("Cannot retrieve Ensembl slice for transcript supporting_feature ".$sf->hseqname."\n",2);
+#      }
     }
     my @exons= @{$transcript->get_all_Exons};
     foreach my $exon (@exons) {
-      foreach my $sf (@{$exon->get_all_supporting_features}) {
-
-        #does this replace all of the below ?
-#      $sf->slice($ev_gene_slice);
-
-        my $v_sf_slice = $sf->slice;
-        my $ev_sf_slice;
-        if ($ev_sf_slice= $E_sa->fetch_by_region(
-          'chromosome',
-          $v_sf_slice->seq_region_name,
-          $v_sf_slice->start,
-          $v_sf_slice->end,
-          $v_sf_slice->strand,
-          $support->param('ensemblassembly'),
-        )) {
-          $sf->hslice($ev_sf_slice);
+      my @supporting_features = @{$exon->get_all_supporting_features};
+    SF:
+      foreach my $sf (@supporting_features) {
+        #need to delete transcript supporting_features that lie outside the slice
+        if ($sf->seq_region_start < $slice_start || $sf->seq_region_end > $slice_end) {
+          &delete_supporting_feature('exon',$exon,$sf->dbID,$sf->display_id);
+          next SF;
         }
-        else {
-          $support->log("Cannot retrieve Ensembl slice for transcript supporting_feature ".$sf->hseqname."\n",2);
-        }
+
+## could add each supporting_feature manually but no need, this is done when storing the gene
+#        if ($ev_sf_slice= $E_sa->fetch_by_region(
+#          'chromosome',
+#          $v_sf_slice->seq_region_name,
+#          $v_sf_slice->start,
+#          $v_sf_slice->end,
+#          $v_sf_slice->strand,
+#          $support->param('ensemblassembly'),
+#        )) {
+#         $sf->hslice($ev_sf_slice);
+#       }
+#       else {
+#         $support->log("Cannot retrieve Ensembl slice for supporting_feature ".$sf->hseqname."\n",2);
+#       }
       }
       $exon->slice($ev_gene_slice);
     }
@@ -470,10 +473,8 @@ sub transfer_vega_patch_gene {
   }
   $vgene->slice($ev_gene_slice);
 
-  #if we found a transcript to ignore then the gene start/stop need updating, and we need to delete the transcript before storing it
+  #if we found a transcript to ignore then the gene start/stop need updating, and we need to delete the transcript before storing the gene
   if ($needs_updating){
-
-    #update start & end
     @transcripts = @{$vgene->get_all_Transcripts};
     foreach my $transcript (@transcripts){
       if ($artifact_ids{$transcript->stable_id}) {
@@ -490,8 +491,8 @@ sub transfer_vega_patch_gene {
     }
   }
 
-  #ad xrefs to Vega stabel IDS (needed by genebuilders)
-  $vgene->get_all_DBLinks; #need to load existing ones otherwise they get overwritten by the below!
+  #add xrefs to Vega stable IDS (needed by genebuilders)
+  $vgene->get_all_DBLinks; #need to lazy load existing ones otherwise they get overwritten by the below
   $vgene->add_DBEntry(Bio::EnsEMBL::DBEntry->new
       (-primary_id => $vgene->stable_id,
        -version    => $vgene->version,
@@ -527,6 +528,17 @@ sub transfer_vega_patch_gene {
   }
 }
 
+sub delete_supporting_feature {
+  my ($type,$obj,$id) = @_;
+  my $sfs = $obj->get_all_supporting_features;
+  for (my $i = 0; $i < scalar(@{$sfs}); $i++) {
+    my $sf = $sfs->[$i];
+    if ($sf->dbID == $id) {
+      $support->log("Removing $type supporting_feature ".$sf->display_id." (".$sf->dbID.") from ".$obj->stable_id."\n",3);
+      splice(@{$sfs}, $i, 1);
+    }
+  }
+}
 
 sub remove_Transcript {
   my ($gene, $stable_id) = @_;
@@ -534,7 +546,7 @@ sub remove_Transcript {
   for(my $i = 0; $i < scalar(@{$transcripts}); $i++) {
     my $t = $transcripts->[$i];
     if($t->stable_id() eq $stable_id) {
-      $support->log("Removing ".$t->stable_id." from list of transcripts that are giong to be transferred\n",3);
+      $support->log("Removing ".$t->stable_id." from list of transcripts that are going to be transferred\n",3);
       splice(@{$transcripts}, $i, 1);
     }
   }
