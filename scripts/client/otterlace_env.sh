@@ -29,6 +29,29 @@ case "$( hostname -f )" in
         ;;
 esac
 
+# Copy the *_proxy variables we want into *_PROXY, to simplify logic
+if [ -n "$http_proxy" ]; then
+    HTTP_PROXY="$http_proxy"
+    export HTTP_PROXY
+else
+    unset  HTTP_PROXY
+fi
+if [ -n "$no_proxy" ]; then
+    NO_PROXY="$no_proxy"
+    export NO_PROXY
+else
+    unset  NO_PROXY
+fi
+
+# Copy http_proxy to https_proxy
+if [ -n "$http_proxy" ]; then
+    https_proxy="$http_proxy"
+    HTTPS_PROXY="$http_proxy"
+    export https_proxy HTTPS_PROXY
+else
+    unset  https_proxy HTTPS_PROXY
+fi
+
 
 export OTTER_HOME
 
