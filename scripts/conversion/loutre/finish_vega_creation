@@ -526,6 +526,10 @@ $sth = $vdbh->prepare(qq(
            WHERE  seq_region_id = ?
 ));
 
+#SQL to add non-ref seq_region_attrib
+my ($attrib_type_id) = $vdbh->selectrow_array(qq(SELECT attrib_type_id from attrib_type where code = 'non_ref'));
+my $sth2 = $vdbh->prepare(qq(INSERT into seq_region_attrib values (?, $attrib_type_id, 1)));
+
 #loop through chromosomes and do the patches
 foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
   my $loutre_name = $chrom->seq_region_name;
@@ -545,6 +549,14 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
     if (! $support->param('dry_run')) {
       $support->log("...patching name to $vega_name\n",1);
       $sth->execute($vega_name,$sr_id);
+    }
+  }
+
+  #add non_ref seq_region_attributes to Vega PATCH chromosomes
+  if ($loutre_name =~ /patch/i) {
+    $support->log("Adding non-ref seq_region_attrib for chromosome $loutre_name",1);
+    if (! $support->param('dry_run')) {
+      $sth2->execute($sr_id);
     }
   }
 
@@ -746,16 +758,10 @@ push @sql_fixes, "INSERT ignore into meta (meta_key,meta_value) VALUES (\'ensemb
 
 #needed for compara
 push @sql_fixes, "INSERT ignore into meta (meta_key,meta_value) VALUES (\'assembly.coverage_depth\',\'high\');\n";
-my $gene_build_date =  strftime "%Y-%m-%d", localtime;
 push @sql_fixes, "INSERT ignore into meta (meta_key,meta_value) VALUES (\'genebuild.start_date\',\'$gene_build_date\');\n";
 #push @sql_fixes, "INSERT ignore into meta (meta_key,meta_value) VALUES (\'species.production_name\',\'homo_sapiens\')\n";
 #delete patch script entries
 push @sql_fixes, "DELETE from meta WHERE meta_key = \'patch\';\n";
-
-#add non_ref seq_region_attributes to Vega PATCH chromosomes
-my ($cs_id) = $vdbh->selectrow_array(qq(SELECT coord_system_id from coord_system where version =VEGA$release_no));
-my ($attrib_type_id) = $vdbh->selectrow_array(qq(SELECT attrib_type_id from attrib_type where code = 'non_ref'));version =VEGA$release_no));
-push @sql_fixes, qq(INSERT into seq_region_attrib SELECT seq_region_id,$attrib_type_id,1 from seq_region where name like '%patch' and coord_system_id = $cs_id;\n);
 
 #update biotypes of some genes/transcripts for website display purposes
 push @sql_fixes, "UPDATE gene SET biotype = 'IG_gene' WHERE biotype = 'ig_gene';\n";
