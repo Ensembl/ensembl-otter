@@ -130,6 +130,7 @@ $support->parse_extra_options(
   'evegauser=s',
   'evegapass=s',
   'evegadbname=s',
+  'assembly=s',
 );
 $support->allowed_params(
   $support->get_common_params,
@@ -144,6 +145,7 @@ $support->allowed_params(
   'evegauser',
   'evegapass',
   'evegadbname',
+  'assembly',
 );
 
 if ($support->param('help') or $support->error) {
