@@ -168,52 +168,17 @@ my $chroms = $support->fetch_non_hidden_slices($aa,$sa);
 
 #get details of all patch_fix chromosomes
 my $patch_regions_wanted_details;
-my @not_yet_wanted = map {$_.'_PATCH'} qw(HG1007 HG280);
-my @wanted_patches = map {$_.'_PATCH'} qw (
-                 HG989
-                 HG999_1
-                 HG999_2
-                 HG686
-                 HG186
-                 HG991
-                 HG706
-                 HG1032
-                 HG14
-                 HG115
-                 HG736
-                 HG946
-                 HG19
-                 HG104_HG975
-                 HG243
-                 HG79
-                 HG998_1
-                 HG998_2
-                 HG544
-                 HG905
-                 HG995
-                 HG142_HG150_HG151
-                 HG281
-                 HG536
-                 HG996
-                 HG531
-                 HG75
-                 HG183
-                 HG185
-                 HG745
-                 HG987
-                 HG990
-                 HG730
-                 HG506_HG1000_1
-                 HG1000_2
-                 HG480_HG481
-                 HG858
-                 HG7
-               );
+my @not_yet_wanted_patches = map {$_.'_PATCH'} qw(HG142_HG150_HG151); #fix patches
+push @not_yet_wanted_patches, qw(HSCHR2_2_CTG12 HSCHR9_1_CTG35 HSCHR10_1_CTG2); #novel patches
+push @not_yet_wanted_patches, qw(HSCHR19LRC_COX1_CTG1 HSCHR19LRC_COX2_CTG1 HSCHR19LRC_LRC_I_CTG1 HSCHR19LRC_LRC_J_CTG1 HSCHR19LRC_LRC_S_CTG1 HSCHR19LRC_LRC_T_CTG1 HSCHR19LRC_PGF1_CTG1 HSCHR19LRC_PGF2_CTG1); #LRC patches
+#warn Dumper(\@not_yet_wanted_patches);
+
+my @wanted_patches;
 my @found_patches;
 my $c = 0;
 foreach my $chrom (@$chroms) {
   my $chrom_name = $chrom->seq_region_name;
-  next unless $chrom_name =~ /^PATCH_FIX/;
+  next unless $chrom_name =~ /^PATCH/;
   my $vega_and_ensembl_name;
   foreach my $attrib (@{$aa->fetch_all_by_Slice($chrom)}) {
     if ($attrib->code eq 'chr') {
@@ -223,32 +188,25 @@ foreach my $chrom (@$chroms) {
   if (! $vega_and_ensembl_name) {
     $support->log_warning("No name attribute for $chrom_name, investigate\n");
   }
-  if (grep {$vega_and_ensembl_name eq $_ } @not_yet_wanted) {
+  if (grep {$vega_and_ensembl_name eq $_ } @not_yet_wanted_patches) {
     $support->log("Ignoring Chromosome $chrom_name (ensembl name = $vega_and_ensembl_name) since I've been told to!\n");
   }
   else {
     push @found_patches, $vega_and_ensembl_name;
-    if (grep {$vega_and_ensembl_name eq $_ } @wanted_patches) {
-      $c++;
-      $patch_regions_wanted_details->{$chrom_name} = {
-        vega_name        => $vega_and_ensembl_name,
-        name             => "Chromosome $vega_and_ensembl_name",
-        vega_export_mod  => $rel_type,
-        vega_release     => $support->param('vega_release'),
-        ensembl_name     => $vega_and_ensembl_name,
-      };
-      $support->log("$c Adding Chromosome $chrom_name (ensembl name = $vega_and_ensembl_name) to list to be dumped\n");
-    }
-    else {
-      $support->log("Chromosome $chrom_name (ensembl name = $vega_and_ensembl_name) found but not in Jon's list\n");
-    }
-  }
-}
-if ($species eq 'human') {
-  foreach my $wp (@wanted_patches) {
-    unless ( grep {$_ eq $wp} @found_patches) {
-      $support->log_warning("Cannot find $wp that Jon's asked for\n");
-    }
+#    if (grep {$vega_and_ensembl_name eq $_ } @wanted_patches) {
+    $c++;
+    $patch_regions_wanted_details->{$chrom_name} = {
+      vega_name        => $vega_and_ensembl_name,
+      name             => "Chromosome $vega_and_ensembl_name",
+      vega_export_mod  => $rel_type,
+      vega_release     => $support->param('vega_release'),
+      ensembl_name     => $vega_and_ensembl_name,
+    };
+    $support->log("$c Adding Chromosome $chrom_name (ensembl name = $vega_and_ensembl_name) to list to be dumped\n");
+#    }
+#    else {
+#      $support->log("Chromosome $chrom_name (ensembl name = $vega_and_ensembl_name) found but not in Jon's list\n");
+#    }
   }
 }
 
@@ -276,27 +234,30 @@ foreach my $k (keys(%$regions_wanted_details), keys(%$patch_regions_wanted_detai
   else {
     my $poss_sr = ($k =~ /^PATCH/) ? $k : "$k-";
     %possibles = map {$_->seq_region_name => $_} grep { $_->seq_region_name =~ /^$poss_sr/ } @$chroms;
-    warn "checking $k";
     if (scalar(keys %possibles) > 1) {
       my $max_version = 0;
       foreach my $sr_name ( keys %possibles ) {
-        my ($assembly,$version,$extra) = $sr_name =~ /(.*)-(\d*)(\D*)/;
-        if ($assembly && $version) {
-	  if ( (! $extra) && ($version > $max_version) ) {
-	    $max_version = $version;
-            $sr_name_to_use = $sr_name;
+        if ($sr_name =~ /^PATCH/) {
+          $sr_name_to_use = $sr_name;
+        }
+        elsif ( my ($assembly,$version,$extra) = $sr_name =~ /(.*)-(\d*)(\D*)/) {
+          if ($assembly && $version) {
+            if ( (! $extra) && ($version > $max_version) ) {
+              $max_version = $version;
+              $sr_name_to_use = $sr_name;
+            }
+            #not sure what to do with non-numerical suffixes - try this for now
+            elsif ($extra) {
+              if ($version >= $max_version) {
+                if ($extra gt $saved_extra) {
+                  $max_version = $version;
+                  $sr_name_to_use = $sr_name;
+                  $saved_extra = $extra;
+                  $support->log_warning("There is a non numerical assembly version you might want to check- $sr_name");
+                }
+              }
+            }
           }
-          #not sure what to do with non-numerical suffixes - try this for now
-	  elsif ($extra) {
-	    if ($version >= $max_version) {
-	      if ($extra gt $saved_extra) {
-	        $max_version = $version;
-	        $sr_name_to_use = $sr_name;
-	        $saved_extra = $extra;
-	        $support->log_warning("There is a non numerical assembly version you might want to check- $sr_name");
-	      }
-	    }
-	  }
         }
         else {
 	  $support->log_warning("There is a non standard assembly name in loutre which has been ignored - $sr_name\n");
