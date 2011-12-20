@@ -259,8 +259,7 @@ foreach my $V_chr ($support->sort_chromosomes($V_chrlength)) {
   foreach my $gene (@{ $genes }) {
     my $gsi = $gene->stable_id;
 
-#    next unless ($gsi eq 'OTTHUMG00000174807');
-#    next unless ($gsi eq 'OTTHUMG00000174616');
+#    next unless ($gsi =~ /OTTHUMG00000174590|OTTHUMG00000174616|OTTHUMG00000174807/);
 
     my $ln = $gene->analysis->logic_name;
     my $name = $gene->display_xref->display_id;
@@ -373,18 +372,20 @@ sub transfer_vega_patch_gene {
   }
   my ($min_start,$max_end);
   my $ev_gene_slice = $E_sa->fetch_by_region(
-    'chromosome',
+    $v_gene_slice->coord_system()->name(),
     $v_gene_slice->seq_region_name,
-    $v_gene_slice->start,
-    $v_gene_slice->end,
-    $v_gene_slice->strand,
-    $support->param('ensemblassembly'),
+    undef,
+    undef,
+    undef,
+    $support->param('ensemblassembly')
   );
 
   if(!$ev_gene_slice) {
     $support->log_warning("Couldn't fetch ensembl_vega gene slice\n");
     return 0;
   }
+#  $Data::Dumper::Maxdepth=1;
+#  warn Dumper( $ev_gene_slice );
 
   if(!@{$vgene->get_all_Transcripts}){
     $support->log_warning("No transcripts for Vega gene ".$vgene->dbID."\n");
