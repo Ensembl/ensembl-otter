@@ -74,8 +74,17 @@ my $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
 
 # parse options
 $support->parse_common_options(@_);
-$support->parse_extra_options('production_host=s', 'production_port=s', 'production_user=s', 'production_pass=s');
-$support->allowed_params($support->get_common_params, 'production_host', 'production_port', 'production_user', 'production_pass');
+$support->parse_extra_options(
+  'production_host=s',
+  'production_port=s',
+  'production_user=s',
+  'production_pass=s');
+$support->allowed_params(
+  $support->get_common_params,
+  'production_host',
+  'production_port',
+  'production_user',
+  'production_pass');
 
 if ($support->param('help') or $support->error) {
     warn $support->error if $support->error;
@@ -93,12 +102,12 @@ my $dba = $support->get_database('core');
 my $dbh = $dba->dbc->db_handle;
 
 # read external_db entries from the file
-$support->log("Reading external_db entries from file...\n");
+$support->log("Reading external_db entries from ensembl_production...\n");
 
-my $production_host=$support->param('production_host')|| 'ens-staging1';
-my $production_port=$support->param('production_port') || 3306;
-my $production_user=$support->param('production_user') || 'ensro';
-my $production_pass=$support->param('production_pass') || '';
+my $production_host = $support->param('production_host') || 'ens-staging1';
+my $production_port = $support->param('production_port') || 3306;
+my $production_user = $support->param('production_user') || 'ensro';
+my $production_pass = $support->param('production_pass') || '';
 
 my $production_dsn = sprintf( 'DBI:mysql:ensembl_production:host=%s;port=%d', $production_host, $production_port );
 my $production_dbh = DBI->connect( $production_dsn, $production_user, $production_pass, { 'PrintError' => 1 } );
@@ -108,16 +117,16 @@ $production_sth->execute();
 my @rows;
 while ( my $row = $production_sth->fetchrow_hashref() ) {
   push @rows, {
-    'external_db_id'            => $row->{'external_db_id'},
-    'db_name'                   => $row->{'db_name'},
-    'db_release'                => $row->{'db_release'},
-    'status'                    => $row->{'status'},
-    'priority'                  => $row->{'priority'},
-    'db_display_name'           => $row->{'db_display_name'},
-    'type'                      => $row->{'type'},
-    'secondary_db_name'         => $row->{'secondary_db_name'},
-    'secondary_db_table'        => $row->{'secondary_db_table'},
-    'description'               => $row->{'description'},
+    'external_db_id'     => $row->{'external_db_id'},
+    'db_name'            => $row->{'db_name'},
+    'db_release'         => $row->{'db_release'},
+    'status'             => $row->{'status'},
+    'priority'           => $row->{'priority'},
+    'db_display_name'    => $row->{'db_display_name'},
+    'type'               => $row->{'type'},
+    'secondary_db_name'  => $row->{'secondary_db_name'},
+    'secondary_db_table' => $row->{'secondary_db_table'},
+    'description'        => $row->{'description'},
   };
 }
 $production_sth->finish;
@@ -142,7 +151,7 @@ unless ($support->param('dry_run')) {
     ');
   foreach my $row (@rows) {
     $sth->execute(
-      $row->{'external_db_id'}, 
+      $row->{'external_db_id'},
       $row->{'db_name'},
       $row->{'db_release'},
       $row->{'status'},
