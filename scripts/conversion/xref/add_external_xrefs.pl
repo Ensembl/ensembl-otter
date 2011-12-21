@@ -94,7 +94,7 @@ no warnings 'uninitialized';
 use FindBin qw($Bin);
 use vars qw($SERVERROOT);
 use Storable;
-use LWP::Simple;
+use LWP::UserAgent;
 
 BEGIN {
   $SERVERROOT = "$Bin/../../../..";
@@ -646,7 +646,6 @@ sub parse_ensdb {
 #URL for manual download = 
 #http://www.genenames.org/cgi-bin/hgnc_downloads.cgi?title=HGNC+output+data&hgnc_dbtag=on&col=gd_hgnc_id&col=gd_app_sym&col=gd_status&col=gd_aliases&col=gd_pubmed_ids&col=md_eg_id&col=md_mim_id&col=md_refseq_id&col=md_prot_id&status=Approved&status_opt=2&=on&where=&order_by=gd_app_sym_sort&format=text&limit=&submit=submit&.cgifields=&.cgifields=chr&.cgifields=status&.cgifields=hgnc_dbtag
 
-
 sub parse_hgnc {
   my ($xrefs, $lcmap) = @_;
   $support->log_stamped("HGNC...\n", 1);
@@ -657,7 +656,12 @@ sub parse_hgnc {
     "col=md_prot_id&status=Approved&status_opt=2&=on&where=&".
     "order_by=gd_app_sym_sort&format=text&limit=&submit=submit&.cgifields=&".
     ".cgifields=status&.cgifields=chr&.cgifields=hgnc_dbtag";
-  my $page = get($url);
+
+  #try and download direct
+  my $ua = LWP::UserAgent->new;
+  $ua->proxy(['http'], 'http://webcache.sanger.ac.uk:3128');
+  my $resp = $ua->get($url);
+  my $page = $resp->content;
   if ($page) {
     $support->log("File downloaded from HGNC\n",1);
   }
@@ -746,11 +750,11 @@ sub parse_hgnc {
 	$accessions{$type} = $fields[$i];
       }
     }
-    
+
     #set records for each gene
     foreach my $db (keys %accessions) {
       next if ($db eq 'HGNC_PID');
-      
+
       #set record where display name and pid are different
       if ($db eq 'HGNC') {
 	$xrefs->{$gene_name}->{$db}[0] = $gene_name .'||'. $accessions{'HGNC_PID'};
@@ -758,7 +762,7 @@ sub parse_hgnc {
       elsif ($db eq 'EntrezGene') {
 	$xrefs->{$gene_name}->{$db}[0] = $gene_name .'||'. $accessions{$db};
       }
-      
+
       #set RefSeq records to the correct type of molecule
       elsif ($db eq 'RefSeq') {
 	if (my ($prefix) = $accessions{$db} =~ /^([A-Z]{2})_/) {
