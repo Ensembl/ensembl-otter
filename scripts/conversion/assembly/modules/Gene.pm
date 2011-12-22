@@ -69,6 +69,7 @@ sub store_gene {
   }
 
   my $do_manually = 0;
+
   #if there are multiple strands then decide which ones to keep
   if (keys %trans_strands > 1 ) {
     my $strand_to_keep;
@@ -88,7 +89,8 @@ sub store_gene {
       }
     }
     if ($do_manually) {
-      #otherwise just add all transcripts to the gene
+
+      #otherwise just add all transcripts to the gene - this needs to be smarter for zfish by setting the gene strand equal to that of the longest transcript
       $support->log_warning('Storing gene '.$E_gene->stable_id." even though it has transcripts on multiple strands, need to resolve manually\n", 2);
       foreach my $E_trans (@{ $E_transcripts }) {
         $E_gene->add_Transcript($E_trans);
@@ -107,11 +109,9 @@ sub store_gene {
     }
   }
   else {
-    if (! $do_manually) {
-      #otherwise just add all transcripts to the gene
-      foreach my $E_trans (@{ $E_transcripts }) {
-        $E_gene->add_Transcript($E_trans);
-      }
+    #otherwise just add all transcripts to the gene
+    foreach my $E_trans (@{ $E_transcripts }) {
+      $E_gene->add_Transcript($E_trans);
     }
   }
 
