@@ -3,15 +3,18 @@
 # the installation script will append the proper values to these lines
 otterlace_installed=false
 
+unset CDPATH
+
 # load the standard environment unless 
 # * this a checkout, not an installation
 # * $OTTER_HOME is set
 if $otterlace_installed || [ -z "$OTTER_HOME" ] ; then
-    the_real_me="$( readlink -f "$0" )"
-    if [ -z "$the_real_me" ] ; then
-        the_real_me="$0"
+    my_dir="$( dirname "$0" )"
+    my_real_dir="$( cd "${my_dir}" 2>/dev/null && pwd -P )"
+    if [ -z "${my_real_dir}" ] ; then
+        my_real_dir="${my_dir}"
     fi
-    . "$( dirname "$the_real_me" )/otterlace_env.sh"
+    . "${my_real_dir}/otterlace_env.sh"
 fi
 
 # sanity check
