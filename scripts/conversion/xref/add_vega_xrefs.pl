@@ -156,14 +156,13 @@ if ($support->param('prune') and $support->user_proceed('Would you really like t
 my $found = 0;
 my @gene_stable_ids = $support->param('gene_stable_id');
 my %gene_stable_ids = map { $_, 1 } @gene_stable_ids;
-my $chr_length = $support->get_chrlength($dba);
+my $chr_length = $support->get_chrlength($dba,'','',1);
 my @chr_sorted = $support->sort_chromosomes($chr_length);
 
 # loop over chromosomes
 $support->log("Looping over chromosomes: @chr_sorted\n\n");
 foreach my $chr (@chr_sorted) {
   $support->log_stamped("> Chromosome $chr (".$chr_length->{$chr}."bp).\n\n");
-
   # fetch genes from db
   $support->log("Fetching genes...\n");
   my $slice = $sa->fetch_by_region('toplevel', $chr);
