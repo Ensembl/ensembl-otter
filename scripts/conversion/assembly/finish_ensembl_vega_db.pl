@@ -275,6 +275,11 @@ $sql = qq(DELETE FROM assembly);
 $c = $dbh->{'evega'}->do($sql);
 $support->log_stamped("Done deleting $c assembly entries.\n\n");
 
+$support->log_stamped("Deleting assembly_exception...\n");
+$sql = qq(DELETE FROM assembly_exception);
+$c = $dbh->{'evega'}->do($sql);
+$support->log_stamped("Done deleting $c assembly_exception entries.\n\n");
+
 $support->log_stamped("Deleting seq_region...\n");
 $sql = qq(DELETE FROM seq_region);
 $c = $dbh->{'evega'}->do($sql);
