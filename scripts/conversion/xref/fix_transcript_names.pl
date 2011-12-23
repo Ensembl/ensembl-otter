@@ -137,9 +137,10 @@ if (! $support->param('update')) {
 }
 
 my ($c1,$c2,$c3) = (0,0,0);
-foreach my $chr ($support->sort_chromosomes) {
-
-  $support->log_stamped("\n\nLooping over chromosome $chr\n");
+my $chr_length = $support->get_chrlength($dba,'','',1);
+my @chr_sorted = $support->sort_chromosomes($chr_length);
+foreach my $chr (@chr_sorted) {
+  $support->log_stamped("\n\nLooping over Chromosome $chr\n");
   my $chrom = $sa->fetch_by_region('toplevel', $chr);
  GENE:
   foreach my $gene (@{$chrom->get_all_Genes()}) {
