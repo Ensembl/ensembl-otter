@@ -369,6 +369,8 @@ sub align_to_transcript {
         accessions => \@accessions,
         target_seq => $cdna,
 
+	aligner_class => 'Transcript',
+
         # aligner_* attribs may be better via Aligner subclass??
         aligner_options => {
             '--bestn'      => 1,

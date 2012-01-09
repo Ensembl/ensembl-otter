@@ -26,6 +26,12 @@ has 'target'          => (
     writer => '_set_target',
     );
 
+has 'aligner_class' => (
+    is       => 'ro',
+    isa      => 'Str',
+    required => 1,
+    );
+
 has 'aligner_options' => (
     is  => 'ro',
     isa => 'HashRef',
@@ -49,6 +55,8 @@ sub BUILD {
 
     $self->_set_target( Bio::Otter::Lace::OnTheFly::TargetSeq->new(\%target_params) );
 
+    Class::MOP::load_class( $self->fq_align_class );
+
     return;
 }
 
@@ -57,7 +65,7 @@ sub aligners_for_each_type {
 
     my @aligners;
     foreach my $type ( $self->seq_types ) {
-        push @aligners, Bio::Otter::Lace::OnTheFly::Aligner->new(
+        push @aligners, $self->fq_align_class->new(
             type   => $type,
             seqs   => $self->seqs_for_type($type),
             target => $self->target,
@@ -66,6 +74,19 @@ sub aligners_for_each_type {
             );
     }
     return @aligners;
+}
+
+# Could do this via coercion on the align_class attribute
+# or as an attribute in its own right with lazy construction
+#
+sub fq_align_class {
+    my $self = shift;
+    if ( $self->aligner_class =~ /::/ ) {
+	# assume fully-qualified
+	return $self->aligner_class;
+    } else {
+	return __PACKAGE__ . '::Aligner::' . $self->aligner_class;
+    }
 }
 
 1;

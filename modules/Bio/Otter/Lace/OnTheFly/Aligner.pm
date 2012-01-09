@@ -60,7 +60,12 @@ sub run {
     while (my $line = <$raw_align>) {
         $output .= $line;
     }
-    return $output;
+    return $self->parse($output);
+}
+
+sub parse {
+    my $self = shift;
+    die "parse method pure virtual: should be implemented in subclasses";
 }
 
 # FIXME: doesn't really belong here: more general
