@@ -3,6 +3,26 @@ package Bio::Otter::Lace::OnTheFly::Aligner;
 use namespace::autoclean;
 use Moose;
 
+use Readonly;
+
+Readonly our $RYO_FORMAT => 'RESULT: %S %pi %ql %tl %g %V\n';
+Readonly our @RYO_ORDER => qw(
+    tag
+    q_id
+    q_start
+    q_end
+    q_strand
+    t_id
+    t_start
+    t_end
+    t_strand
+    score
+    perc_id
+    q_length
+    t_length
+    gene_orientation
+);
+
 has type   => ( is => 'ro', isa => 'Str',                                   required => 1 );
 has seqs   => ( is => 'ro', isa => 'ArrayRef[Hum::Sequence]',               required => 1 );
 has target => ( is => 'ro', isa => 'Bio::Otter::Lace::OnTheFly::TargetSeq', required => 1 );
@@ -49,6 +69,8 @@ sub run {
         '--target'     => $target_file,
         '--querytype'  => $query_type,
         '--query'      => $query_file,
+	'--ryo'        => $RYO_FORMAT,
+	'--showvulgar' => 'false',
         %{$self->options},
         %{$self->query_type_options->{$query_type}},
         );
@@ -64,8 +86,20 @@ sub run {
 }
 
 sub parse {
-    my $self = shift;
-    die "parse method pure virtual: should be implemented in subclasses";
+    my ($self, $output) = @_;
+
+    open my $fh, '<', \$output;
+    while (my $line = <$fh>) {
+	next unless $line =~ /^RESULT:/;
+	my @line_parts = split(' ',$line);
+	my (%ryo_result, @vulgar_comps);
+	(@ryo_result{@RYO_ORDER}, @vulgar_comps) = @line_parts;
+	$ryo_result{vulgar_comps} = \@vulgar_comps;
+	my $q_id = $ryo_result{q_id};
+	print "RESULT found for ${q_id}\n";
+    }
+
+    return $output;
 }
 
 # FIXME: doesn't really belong here: more general

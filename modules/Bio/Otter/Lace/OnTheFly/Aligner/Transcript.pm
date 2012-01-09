@@ -5,10 +5,10 @@ use Moose;
 
 extends 'Bio::Otter::Lace::OnTheFly::Aligner';
 
-sub parse {
-    my ($self, $output) = @_;
-    return $output;
-}
+around 'parse' => sub {
+    my ($orig, $self, @args) = @_;
+    return $self->$orig(@args);
+};
 
 1;
 
