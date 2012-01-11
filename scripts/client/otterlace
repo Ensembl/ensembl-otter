@@ -9,12 +9,26 @@ unset CDPATH
 # * this a checkout, not an installation
 # * $OTTER_HOME is set
 if $otterlace_installed || [ -z "$OTTER_HOME" ] ; then
-    my_dir="$( dirname "$0" )"
-    my_real_dir="$( cd "${my_dir}" 2>/dev/null && pwd -P )"
-    if [ -z "${my_real_dir}" ] ; then
-        my_real_dir="${my_dir}"
+    # Bear in mind,
+    #   on Mac we have BSD readlink which takes no options
+    #   on internal Linux we have a two-hop symlink
+    #     $swac/bin/otterlace -> $swac/otter/{otter_live -> otter_relX.Y}/bin/otterlace
+    #     and we want to resolve all links to reduce load on NFS
+    if the_real_me="$( readlink -f "$0" 2>/dev/null )"; then
+        # Canonicalised: all links resolved
+        echo Linuxy
+        . "$( dirname "$the_real_me" )/otterlace_env.sh"
+    else
+        # "readlink -f" doesn't work.  Probably MacOS, so
+        # assume there is no symlink involved in startup.
+        echo Macish
+        my_dir="$( dirname "$0" )"
+        my_real_dir="$( cd "${my_dir}" 2>/dev/null && pwd -P )"
+        if [ -z "${my_real_dir}" ] ; then
+            my_real_dir="${my_dir}"
+        fi
+        . "${my_real_dir}/otterlace_env.sh"
     fi
-    . "${my_real_dir}/otterlace_env.sh"
 fi
 
 # sanity check
