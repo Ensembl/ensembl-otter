@@ -79,6 +79,8 @@ sub deiconify_and_raise {
     my $top = $self->top_window;
     $top->deiconify;
     $top->raise;
+
+    return;
 }
 
 sub icon_pixmap {
