@@ -7,7 +7,7 @@ extends 'Bio::Otter::Lace::OnTheFly::Aligner';
 
 around 'parse' => sub {
     my ($orig, $self, @args) = @_;
-    return $self->$orig(@args);
+    return $self->$orig(@args)->{raw};
 };
 
 1;
