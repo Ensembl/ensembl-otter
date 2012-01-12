@@ -95,7 +95,7 @@ sub parse {
 	my @line_parts = split(' ',$line);
 	my (%ryo_result, @vulgar_comps);
 	(@ryo_result{@RYO_ORDER}, @vulgar_comps) = @line_parts;
-	$ryo_result{vulgar_comps} = \@vulgar_comps;
+	$ryo_result{vulgar} = $self->_parse_vulgar(\@vulgar_comps);
 	my $q_id = $ryo_result{q_id};
 	print "RESULT found for ${q_id}\n";
 
@@ -110,6 +110,30 @@ sub parse {
 	raw         => $raw,
 	by_query_id => \%by_query_id,
     };
+}
+
+sub _parse_vulgar {
+    my ($self, $vulgar_comps) = @_;
+    my @vulgar_list;
+
+    while (@{$vulgar_comps}) {
+
+	my ($type, $q_len, $t_len) = splice(@{$vulgar_comps}, 0, 3); # shift off 1st three
+	unless ($type and defined $q_len and defined $t_len) {
+	    die "Ran out of vulgar components in mid-triplet";
+	}
+	unless ($type =~ /^[MCGN53ISF]$/) {
+	    die "Don't understand vulgar component type '$type'";
+	}
+
+	push @vulgar_list, {
+	    type       => $type,
+	    query_len  => $q_len,
+	    target_len => $t_len,
+	};
+    }
+
+    return \@vulgar_list;
 }
 
 # FIXME: doesn't really belong here: more general
