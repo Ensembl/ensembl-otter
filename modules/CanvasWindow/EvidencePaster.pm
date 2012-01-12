@@ -8,7 +8,9 @@ use warnings;
 use Readonly;
 use Scalar::Util 'weaken';
 use Hum::Sort 'ace_sort';
+use Bio::Otter::Lace::OnTheFly;
 use Bio::Vega::Evidence::Types;
+use Tk::Utils::OnTheFly;
 
 use base 'CanvasWindow';
 
@@ -21,6 +23,21 @@ sub initialise {
     my $canvas = $self->canvas;
     my $top = $canvas->toplevel;
     $top->configure(-title => "otter: Evidence");
+
+    my $align_frame = $top->Frame->pack(
+        -side => 'top',
+        -fill => 'x',
+        );
+
+    my $align = sub { $self->align_to_transcript; };
+    $top->bind('<Control-t>', $align);
+    $top->bind('<Control-T>', $align);
+    my $align_button = $align_frame->Button(
+        -text =>    'Align to transcript',
+        -command => $align,
+        -state   => 'disabled',
+        )->pack(-side => 'left', -fill => 'x', -expand => 1);
+    $self->align_button($align_button);
 
     my $button_frame = $top->Frame->pack(
         -side => 'top',
@@ -91,6 +108,22 @@ sub ExonCanvas {
     return $self->{'_ExonCanvas'};
 }
 
+sub align_button {
+    my( $self, $align_button ) = @_;
+
+    if ($align_button) {
+        $self->{'_align_button'} = $align_button;
+    }
+    return $self->{'_align_button'};
+}
+
+sub align_enable {
+    my ( $self, $enable ) = @_;
+    my $state = $enable ? 'normal' : 'disabled';
+    $self->align_button->configure( -state => $state );
+    return;
+}
+
 sub left_button_handler {
     my( $self ) = @_;
 
@@ -111,6 +144,7 @@ sub control_left_button_handler {
 
     if ($self->is_selected($obj)) {
         $self->remove_selected($obj);
+        $self->align_enable(0) unless $self->list_selected;
     } else {
         $self->highlight($obj);
     }
@@ -135,9 +169,14 @@ sub select_all {
 
     my $canvas = $self->canvas;
 
-    $self->highlight(
-        $canvas->find('withtag', $EVI_TAG)
-        );
+    my @all      = $canvas->find('withtag', $EVI_TAG);
+    my @selected = $self->list_selected;
+
+    if (scalar(@all) == scalar(@selected)) {
+        $self->deselect_all;
+    } else {
+        $self->highlight(@all);
+    }
 
     return;
 }
@@ -200,7 +239,6 @@ sub draw_evidence {
             -font   => $bold,
             );
 
-        my $x = $size;
         foreach my $text (@$name_list) {
             $canvas->createText($x, $y,
                 -anchor => 'nw',
@@ -291,7 +329,148 @@ sub highlight {
     $self->canvas->SelectionOwn(
         -command    => sub{ $self->deselect_all },
         );
+    $self->align_enable(1);
     weaken $self;
+
+    return;
+}
+
+sub deselect_all {
+    my ( $self ) = @_;
+
+    $self->SUPER::deselect_all;
+    $self->align_enable(0);
+
+    return;
+}
+
+sub align_to_transcript {
+    my ($self) = @_;
+    my $canvas = $self->canvas;
+
+    my @accessions;
+    foreach my $sel ($self->list_selected) {
+        my ($type) = $canvas->gettags($sel);
+        my $name   = $canvas->itemcget($sel, 'text');
+        my @no_prefixes = Hum::ClipboardUtils::accessions_from_text($name);
+        my $no_prefix = join(',', @no_prefixes);                  # debug
+        print "Aligning: $type -\t$name\t[$no_prefix]\t($sel)\n"; # debug
+        push @accessions, @no_prefixes;
+    }
+
+    my $cdna = $self->ExonCanvas->check_get_mRNA_Sequence;
+    return unless $cdna;
+    print STDERR "Spliced transcript is " . $cdna->sequence_length . " bp\n";
+
+    my $top = $self->canvas->toplevel;
+
+    my $otf = Bio::Otter::Lace::OnTheFly->new({
+
+        accessions => \@accessions,
+        target_seq => $cdna,
+
+	aligner_class => 'Transcript',
+
+        # aligner_* attribs may be better via Aligner subclass??
+        aligner_options => {
+            '--bestn'      => 1,
+        },
+
+        aligner_query_type_options => {
+            protein => { '--model' => 'protein2dna:bestfit', '--exhaustive' => undef },
+            dna     => { '--model' => 'affine:bestfit',      '--exhaustive' => undef },
+        },
+
+        problem_report_cb => sub { $top->Tk::Utils::OnTheFly::problem_box('Evidence Selected', @_) },
+        long_query_cb     => sub { $top->Tk::Utils::OnTheFly::long_query_confirm(@_)  },
+
+        accession_type_cache => $self->ExonCanvas->XaceSeqChooser->AceDatabase->AccessionTypeCache,
+        });
+
+    print STDERR "Found " . scalar( @{$otf->confirmed_seqs} ) . " sequences\n";
+
+    my $ts_file = $otf->target_fasta_file;
+    print STDERR "Wrote transcript sequence to ${ts_file}\n";
+
+    foreach my $aligner ( $otf->aligners_for_each_type ) {
+
+        print STDERR "Running exonerate for sequence(s) of type: ", $aligner->type, "\n";
+
+        my $seq_file = $aligner->fasta_file;
+        print STDERR "Wrote sequences to ${seq_file}\n";
+        my $parsed_output = $aligner->run;
+
+        $self->alignment_window($aligner->type, $parsed_output);
+    }
+
+    return;
+}
+
+sub alignment_window {
+    my ( $self, $type, $alignment ) = @_;
+
+    $self->{_alignment_window} ||= {};
+    my $window = $self->{_alignment_window}->{$type};
+
+    unless ($window) {
+
+        # FIXME: duplication with ExonCanvas.pm
+        my $master = $self->canvas->toplevel;
+        my $top = $master->Toplevel;
+        $top->transient($master);
+
+        # FIXME: more duplication
+        $window = $self->{_alignment_window}->{$type} = $top->Scrolled(
+            'ROText',
+            -scrollbars             => 'e',
+            -font                   => $self->font_fixed,
+            -padx                   => 6,
+            -pady                   => 6,
+            -relief                 => 'groove',
+            -background             => 'white',
+            -border                 => 2,
+            -selectbackground       => 'gold',
+            )->pack(
+                -expand => 1,
+                -fill   => 'both',
+            );
+
+        $window->bind('<Destroy>', sub{ $window = $self->{_alignment_window}->{$type} = undef });
+    }
+
+    # The dynamic bit - separate sub?
+
+    # Empty the text widget
+    $window->delete('1.0', 'end');
+    $window->insert('end', $alignment); # just show it raw for now
+
+    # FIXME: more duplication (modulo width)
+    # Size widget to fit
+    my ($lines) = $window->index('end') =~ /(\d+)\./;
+    $lines--;
+    if ($lines > 40) {
+        $window->configure(
+            -width  => 80,
+            -height => 40,
+            );
+    } else {
+        # This has slightly odd behaviour if the ROText starts off
+        # big to accomodate a large translation, and is then made
+        # smaller.  Does not seem to shrink below a certain minimum
+        # height.
+        $window->configure(
+            -width  => 80,
+            -height => $lines,
+            );
+    }
+
+    my $toplevel = $window->toplevel;
+
+    # Set the window title
+    $toplevel->configure( -title => sprintf("otter: %s alignment", $type) );
+
+    $toplevel->deiconify;
+    $toplevel->raise;
 
     return;
 }

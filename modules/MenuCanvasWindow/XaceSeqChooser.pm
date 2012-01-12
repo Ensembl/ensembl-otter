@@ -27,7 +27,6 @@ use Text::Wrap qw{ wrap };
 
 use Bio::Otter::Lace::Exonerate;
 use Bio::Otter::ZMap::XML;
-use Bio::Vega::Evidence::Types qw{ new_evidence_type_valid };
 
 use base qw{
 MenuCanvasWindow
@@ -1947,46 +1946,7 @@ sub update_SubSeq_locus_level_errors {
 }
 
 sub launch_exonerate {
-    my( $self, $seqs, $params ) = @_;
-
-    # lower case query polyA/T tails to avoid spurious exons
-    for my $seq (@$seqs) {
-        my $s = $seq->uppercase;
-        $s =~ s/(^T{6,}|A{6,}$)/lc($1)/ge;
-        $seq->sequence_string($s);
-    }
-
-    # save seqs in hash
-    my $name_seq = { };
-    for my $seq (@$seqs) {
-        $name_seq->{ $seq->name } = $seq;
-    }
-
-    my %seqs_by_type = ();
-
-    for my $seq (@$seqs) {
-        if ($seq->type && new_evidence_type_valid($seq->type))
-        {
-            push @{ $seqs_by_type{ $seq->type } }, $seq;
-        }
-        elsif ($seq->sequence_string =~ /^[AGCTNagctn\s]*$/) {
-            push @{ $seqs_by_type{'Unknown_DNA'} }, $seq;
-        }
-        else {
-            push @{ $seqs_by_type{'Unknown_Protein'} }, $seq;
-        }
-    }
-
-    # get marked region (if requested)
-    my ($genomic_start, $genomic_end) =
-        (1, $self->Assembly->Sequence->sequence_length);
-    if ($params->{-use_marked_region}) {
-        my ($mark_start, $mark_end) = $self->zMapGetMark;
-        if ($mark_start && $mark_end) {
-            warn "Setting exonerate genomic start & end to marked region: $mark_start - $mark_end\n";
-            ($genomic_start, $genomic_end) = ($mark_start, $mark_end);
-        }
-    }
+    my( $self, $otf, $params ) = @_;
 
     my $db_edited = 0;
     my @method_names;
@@ -1995,7 +1955,7 @@ sub launch_exonerate {
     my $max_intron_length = $params->{-max_intron_length};
     my $mask_target = $params->{-mask_target};
 
-    for my $type (keys %seqs_by_type) {
+    for my $type ( $otf->seq_types ) {
 
         print STDERR "Running exonerate for sequence(s) of type: $type\n";
 
@@ -2007,10 +1967,10 @@ sub launch_exonerate {
         my $exonerate = Bio::Otter::Lace::Exonerate->new;
         $exonerate->AceDatabase($self->AceDatabase);
         $exonerate->genomic_seq($self->Assembly->Sequence);
-        $exonerate->genomic_start($genomic_start);
-        $exonerate->genomic_end($genomic_end);
-        $exonerate->query_seq($seqs_by_type{$type});
-        $exonerate->sequence_fetcher($name_seq);
+        $exonerate->genomic_start($otf->target_start);
+        $exonerate->genomic_end($otf->target_end);
+        $exonerate->query_seq($otf->seqs_for_type($type));
+        $exonerate->sequence_fetcher($otf->seqs_by_name);
         $exonerate->acedb_homol_tag($ana_name . '_homol');
         $exonerate->query_type($type =~ /Protein/ ? 'protein' : 'dna');
         $exonerate->score($score);
@@ -2043,7 +2003,7 @@ sub launch_exonerate {
             # only add the sequence to acedb if they are not pfetchable (i.e. they are unknown)
             if ($type =~ /^Unknown/) {
                 foreach my $hit_name (@$names) {
-                    my $seq = $name_seq->{$hit_name};
+                    my $seq = $otf->seq_by_name($hit_name);
 
                     if ($exonerate->query_type eq 'protein') {
                         $ace_output .= $self->ace_PEPTIDE($hit_name, $seq);
