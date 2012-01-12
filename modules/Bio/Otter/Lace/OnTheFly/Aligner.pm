@@ -78,18 +78,19 @@ sub run {
     my @command_line = $self->construct_command( $command, \%args );
     open my $raw_align, '-|', @command_line or confess "failed to run $command: $!";
 
-    my $output;
-    while (my $line = <$raw_align>) {
-        $output .= $line;
-    }
-    return $self->parse($output);
+    return $self->parse($raw_align);
 }
 
 sub parse {
-    my ($self, $output) = @_;
+    my ($self, $fh) = @_;
 
-    open my $fh, '<', \$output;
+    my $raw;
+    my %by_query_id;
+
     while (my $line = <$fh>) {
+	$raw .= $line;
+
+	# We only parse our RYO lines
 	next unless $line =~ /^RESULT:/;
 	my @line_parts = split(' ',$line);
 	my (%ryo_result, @vulgar_comps);
@@ -97,9 +98,18 @@ sub parse {
 	$ryo_result{vulgar_comps} = \@vulgar_comps;
 	my $q_id = $ryo_result{q_id};
 	print "RESULT found for ${q_id}\n";
+
+	if ($by_query_id{$q_id}) {
+	    warn "Already have result for '$q_id'";
+	} else {
+	    $by_query_id{$q_id} = \%ryo_result;
+	}
     }
 
-    return $output;
+    return {
+	raw         => $raw,
+	by_query_id => \%by_query_id,
+    };
 }
 
 # FIXME: doesn't really belong here: more general
