@@ -383,6 +383,8 @@ sub launch_exonerate {
 
     my %otf_params = (
 
+	aligner_class => 'Genomic',
+
         seqs       => $self->entered_seqs,
         accessions => $self->entered_accessions,
 
