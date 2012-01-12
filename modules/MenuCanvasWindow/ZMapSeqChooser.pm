@@ -157,13 +157,15 @@ sub zMapSendCommands {
 
     my $xr = $self->zMapGetXRemoteClientByName($self->slice_name());
     unless ($xr) {
-        warn "No current window.";
-        return;
+        my $for = $self->slice_name();
+        die "zMapSendCommands cannot contact ZMap: no current window for $for";
     }
     warn "Sending window '", $xr->window_id, "' this xml:\n", @xml;
 
     my @a = $xr->send_commands(@xml);
 
+    my @err;
+    warn "OK?  There was no answer\n" unless @a;
     for(my $i = 0; $i < @xml; $i++){
         my ($status, $xmlHash) = zMapParseResponse($a[$i]);
         if ($status =~ /^2\d\d/) { # 200s
@@ -171,9 +173,15 @@ sub zMapSendCommands {
         } else {
             my $error = $xmlHash->{'error'}{'message'};
             warn "ERROR: $a[$i]\n$error\n";
-            $self->xremote_cache->remove_clients_to_bad_windows();
-            die $error;
+            push @err, $error;
         }
+    }
+    if (@err) {
+        eval { $self->xremote_cache->remove_clients_to_bad_windows(); 1 }
+          or warn "remove_clients_to_bad_windows failed: $@";
+        my $msg = join "\n", map {"[$_]"} @err;
+        $msg =~ s{\n*\z}{};
+        die "ZMap commands failed: $msg\n";
     }
 
     return;
