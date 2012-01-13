@@ -55,10 +55,10 @@ sub aligners_for_each_type {
     my @aligners;
     foreach my $type ( $self->seq_types ) {
         push @aligners, $self->build_aligner(
-            type       	       => $type,
-            seqs       	       => $self->seqs_for_type($type),
-            target 	       => $self->target_seq_obj,
-            options    	       => $self->aligner_options,
+            type               => $type,
+            seqs               => $self->seqs_for_type($type),
+            target             => $self->target_seq_obj,
+            options            => $self->aligner_options,
             query_type_options => $self->aligner_query_type_options,
             );
     }

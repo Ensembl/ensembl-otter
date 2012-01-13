@@ -401,8 +401,8 @@ sub launch_exonerate {
         my ($mark_start, $mark_end) = $seq_chooser->zMapGetMark;
         if ($mark_start && $mark_end) {
             warn "Setting exonerate genomic start & end to marked region: $mark_start - $mark_end\n";
-	    $otf->target_start($mark_start);
-	    $otf->target_end(  $mark_end);
+            $otf->target_start($mark_start);
+            $otf->target_end(  $mark_end);
         }
     }
 
