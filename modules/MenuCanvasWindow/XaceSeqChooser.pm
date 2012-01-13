@@ -1535,8 +1535,20 @@ sub delete_subsequences {
     }
 
     # Delete from acedb database and Zmap
-    $self->save_ace($ace);
-    $self->zMapSendCommands(@xml);
+    my $done_ace;
+    my $done_zmap = eval {
+        $self->save_ace($ace);
+        $done_ace = 1;
+
+        $self->zMapSendCommands(@xml);
+        return 1;
+    };
+    my $err = $@;
+
+    if (!$done_ace) {
+        $self->exception_message("Aborted delete, failed to save to Ace: $err");
+        return;
+    }
 
     # Remove from our objects
     foreach my $sub (@to_die) {
@@ -1544,6 +1556,10 @@ sub delete_subsequences {
     }
 
     $self->draw_subseq_list;
+
+    if (!$done_zmap) {
+        $self->exception_message("Deleted OK, but please restart ZMap: $err");
+    }
 
     return;
 }
