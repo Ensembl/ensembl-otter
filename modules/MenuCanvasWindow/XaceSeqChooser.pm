@@ -1830,12 +1830,43 @@ sub save_Assembly {
 
     my @xml = Bio::Otter::ZMap::XML::update_SimpleFeatures_xml(
         $self->Assembly, $new, $self->AceDatabase->offset);
-    $self->zMapSendCommands(@xml);
     my $ace = $new->ace_string;
-    $self->save_ace($ace);
-    $self->Assembly->set_SimpleFeature_list($new->get_all_SimpleFeatures);
 
-    return;
+    my $done_ace;
+    my $done_zmap = eval {
+        $self->save_ace($ace);
+        $done_ace = 1;
+
+        $self->zMapSendCommands(@xml);
+        return 1;
+    };
+    my $err = $@;
+
+    # Set internal state only if we saved to Ace OK
+    if ($done_ace) {
+        $self->Assembly->set_SimpleFeature_list($new->get_all_SimpleFeatures);
+    }
+
+    if ($done_zmap) {
+        # all OK
+        return;
+    } else {
+        my $msg;
+        if ($done_ace) {
+            $msg = "Saved OK, but please restart ZMap";
+        } else {
+            $msg = "Aborted save, failed to save to Ace";
+        }
+
+        # Where to put error message?
+        # MenuCanvasWindow::GenomicFeatures doesn't display the
+        # exception_message, it is covered by widgets
+        #
+        # Yellow note goes on the session window, somewhat invisible
+        $self->exception_message("$msg: $err");
+        # Exception box goes to Bio::Otter::Error / Tk::Error
+        die "$msg\n";
+    }
 }
 
 sub empty_Assembly_cache {
