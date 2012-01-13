@@ -6,8 +6,7 @@ use Moose;
 use Readonly;
 
 Readonly our $RYO_FORMAT => 'RESULT: %S %pi %ql %tl %g %V\n';
-Readonly our @RYO_ORDER => qw(
-    tag
+Readonly our @SUGAR_ORDER => qw(
     q_id
     q_start
     q_end
@@ -17,10 +16,16 @@ Readonly our @RYO_ORDER => qw(
     t_end
     t_strand
     score
-    perc_id
-    q_length
-    t_length
-    gene_orientation
+);
+Readonly our @RYO_ORDER => (
+    'tag',
+    @SUGAR_ORDER, 
+    qw(
+        perc_id
+        q_length
+        t_length
+        gene_orientation
+      ),
 );
 
 has type   => ( is => 'ro', isa => 'Str',                                   required => 1 );
