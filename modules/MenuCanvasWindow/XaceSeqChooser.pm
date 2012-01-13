@@ -260,7 +260,8 @@ sub update_Locus {
 sub do_rename_locus {
     my( $self, $old_name, $new_name ) = @_;
 
-    eval {
+    my %done; # we update in three places - keep track
+    my $ok = eval {
         my @xml;
         my $offset = $self->AceDatabase->offset;
         foreach my $sub ($self->fetch_SubSeqs_by_locus_name($old_name)) {
@@ -272,13 +273,18 @@ sub do_rename_locus {
 
         if ($locus_cache->{$new_name}) {
             $self->message("Cannot rename to '$new_name'; Locus already exists");
-            return;
+            return 0;
         }
 
-        my $locus = delete $locus_cache->{$old_name}
-            or confess "No locus called '$old_name'";
+        my $locus = delete $locus_cache->{$old_name};
+        if (!$locus) {
+            $self->message("Cannot find locus called '$old_name'");
+            return 0;
+        }
+
         $locus->name($new_name);
         $self->set_Locus($locus);
+        $done{'int'} = 1;
 
         my $ace = qq{\n-R Locus "$old_name" "$new_name"\n};
 
@@ -291,21 +297,45 @@ sub do_rename_locus {
             $locus->gene_type_prefix('');
             $ace .= qq{\nLocus "$new_name"\n-D Type_prefix\n};
         }
-    
+
         # Now we need to update Zmap with the new locus names
         foreach my $sub ($self->fetch_SubSeqs_by_locus_name($new_name)) {
             push @xml, $sub->zmap_create_xml_string($offset);
         }
-        $self->zMapSendCommands(@xml);    
 
         $self->save_ace($ace);
+        $done{'ace'} = 1;
+
+        $self->zMapSendCommands(@xml);
+        $done{'zmap'} = 1;
+
+        return 1;
     };
+    my $err = $@;
 
-    if ($@) {
-        $self->exception_message("Error renaming locus '$old_name' to '$new_name'; ". $@);
+    if ($ok) {
+        # success
+        return 1;
+    } elsif (defined $ok) {
+        # controlled fail, message given, could try again
+        return 0;
+    } else {
+        # breakage, probably a partial update.
+        # explain, return true to close the window.
+        my $msg;
+        $err ||= 'unknown error';
+        if ($done{'ace'}) {
+            # haven't told ZMap, reload it from Ace
+            $msg = "Renamed OK but sync failed, please restart ZMap";
+        } elsif ($done{'int'}) {
+            # haven't told Ace, so Otterlace state is wrong
+            $msg = "Rename failed, please restart Otterlace";
+        } else {
+            $msg = "Could not rename";
+        }
+        $self->exception_message("$msg\nwhile renaming locus '$old_name' to '$new_name': $err");
+        return -1;
     }
-
-    return;
 }
 
 sub fetch_SubSeqs_by_locus_name {
