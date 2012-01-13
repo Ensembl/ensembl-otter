@@ -69,8 +69,8 @@ sub run {
         '--target'     => $target_file,
         '--querytype'  => $query_type,
         '--query'      => $query_file,
-	'--ryo'        => $RYO_FORMAT,
-	'--showvulgar' => 'false',
+        '--ryo'        => $RYO_FORMAT,
+        '--showvulgar' => 'false',
         %{$self->options},
         %{$self->query_type_options->{$query_type}},
         );
@@ -88,27 +88,27 @@ sub parse {
     my %by_query_id;
 
     while (my $line = <$fh>) {
-	$raw .= $line;
+        $raw .= $line;
 
-	# We only parse our RYO lines
-	next unless $line =~ /^RESULT:/;
-	my @line_parts = split(' ',$line);
-	my (%ryo_result, @vulgar_comps);
-	(@ryo_result{@RYO_ORDER}, @vulgar_comps) = @line_parts;
-	$ryo_result{vulgar} = $self->_parse_vulgar(\@vulgar_comps);
-	my $q_id = $ryo_result{q_id};
-	print "RESULT found for ${q_id}\n";
+        # We only parse our RYO lines
+        next unless $line =~ /^RESULT:/;
+        my @line_parts = split(' ',$line);
+        my (%ryo_result, @vulgar_comps);
+        (@ryo_result{@RYO_ORDER}, @vulgar_comps) = @line_parts;
+        $ryo_result{vulgar} = $self->_parse_vulgar(\@vulgar_comps);
+        my $q_id = $ryo_result{q_id};
+        print "RESULT found for ${q_id}\n";
 
-	if ($by_query_id{$q_id}) {
-	    warn "Already have result for '$q_id'";
-	} else {
-	    $by_query_id{$q_id} = \%ryo_result;
-	}
+        if ($by_query_id{$q_id}) {
+            warn "Already have result for '$q_id'";
+        } else {
+            $by_query_id{$q_id} = \%ryo_result;
+        }
     }
 
     return {
-	raw         => $raw,
-	by_query_id => \%by_query_id,
+        raw         => $raw,
+        by_query_id => \%by_query_id,
     };
 }
 
@@ -118,19 +118,19 @@ sub _parse_vulgar {
 
     while (@{$vulgar_comps}) {
 
-	my ($type, $q_len, $t_len) = splice(@{$vulgar_comps}, 0, 3); # shift off 1st three
-	unless ($type and defined $q_len and defined $t_len) {
-	    die "Ran out of vulgar components in mid-triplet";
-	}
-	unless ($type =~ /^[MCGN53ISF]$/) {
-	    die "Don't understand vulgar component type '$type'";
-	}
+        my ($type, $q_len, $t_len) = splice(@{$vulgar_comps}, 0, 3); # shift off 1st three
+        unless ($type and defined $q_len and defined $t_len) {
+            die "Ran out of vulgar components in mid-triplet";
+        }
+        unless ($type =~ /^[MCGN53ISF]$/) {
+            die "Don't understand vulgar component type '$type'";
+        }
 
-	push @vulgar_list, {
-	    type       => $type,
-	    query_len  => $q_len,
-	    target_len => $t_len,
-	};
+        push @vulgar_list, {
+            type       => $type,
+            query_len  => $q_len,
+            target_len => $t_len,
+        };
     }
 
     return \@vulgar_list;
