@@ -44,11 +44,16 @@ use Bio::Otter::Lace::PipelineDB;
         # $dba = DBI->connect("DBI:mysql:database=vega_homo_sapiens_20111010_v64_GRCh37;host=ensdb-1-11;port=5317",
         #     'ensadmin', 'ensembl', {RaiseError => 1});
 
-        $dba = DBI->connect("DBI:mysql:database=vega_mus_musculus_20111010_v64_NCBIM37;host=ensdb-1-11;port=5317",
+        # $dba = DBI->connect("DBI:mysql:database=vega_mus_musculus_20111010_v64_NCBIM37;host=ensdb-1-11;port=5317",
+        #     'ensadmin', 'ensembl', {RaiseError => 1});
+
+        # $dba = DBI->connect("DBI:mysql:database=vega_homo_sapiens_20111219_v65_GRCh37;host=ensdb-1-11;port=5317",
+        #     'ensadmin', 'ensembl', {RaiseError => 1});
+
+        $dba = DBI->connect("DBI:mysql:database=vega_danio_rerio_20111219_v65_Zv9;host=ensdb-1-11;port=5317",
             'ensadmin', 'ensembl', {RaiseError => 1});
     }
 
-    
     my $sth = $dba->prepare(q{
         SELECT g.biotype
           , g.status
@@ -153,8 +158,11 @@ sub set_biotype_status_from_transcripts {
             }
         }
     }
-    elsif ($tsct_biotype{'protein_coding'} or $tsct_biotype{'nonsense_mediated_decay'}) {
+    elsif ($tsct_biotype{'protein_coding'} or $tsct_biotype{'nonsense_mediated_decay'} or $tsct_biotype{'non_stop_decay'}) {
         $biotype = 'protein_coding';
+    }
+    elsif ($tsct_biotype{'retained_intron'} or $tsct_biotype{'ambiguous_orf'}) {
+        $biotype = 'processed_transcript';
     }
     elsif (keys %tsct_biotype == 1) {
         # If there is just 1 transcript biotype, then the gene gets it too.
