@@ -8,7 +8,7 @@ use warnings;
 use Readonly;
 use Scalar::Util 'weaken';
 use Hum::Sort 'ace_sort';
-use Bio::Otter::Lace::OnTheFly;
+use Bio::Otter::Lace::OnTheFly::Transcript;
 use Bio::Vega::Evidence::Types;
 use Tk::Utils::OnTheFly;
 
@@ -364,12 +364,10 @@ sub align_to_transcript {
 
     my $top = $self->canvas->toplevel;
 
-    my $otf = Bio::Otter::Lace::OnTheFly->new({
+    my $otf = Bio::Otter::Lace::OnTheFly::Transcript->new({
 
         accessions => \@accessions,
-        target_seq => $cdna,
-
-	aligner_class => 'Transcript',
+        transcript => $self->ExonCanvas->current_SubSeq,
 
         # aligner_* attribs may be better via Aligner subclass??
         aligner_options => {

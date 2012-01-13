@@ -5,10 +5,20 @@ use Moose;
 
 extends 'Bio::Otter::Lace::OnTheFly::Aligner';
 
+has transcript => ( is => 'ro', isa => 'Hum::Ace::SubSeq', required => 1 );
+
 around 'parse' => sub {
     my ($orig, $self, @args) = @_;
-    return $self->$orig(@args)->{raw};
+
+    my $basic = $self->$orig(@args);
+    my $split = $self->_split_vulgar($basic->{vulgar});
+
+    return $basic->{raw};
 };
+
+sub _split_vulgar {
+    return;
+}
 
 1;
 

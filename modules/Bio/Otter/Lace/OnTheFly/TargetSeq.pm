@@ -5,8 +5,8 @@ use Moose;
 
 has 'full_seq'     => ( is => 'ro', isa => 'Hum::Sequence', required => 1 );
 
-has 'start'        => ( is => 'ro', isa => 'Int', lazy => 1, builder => '_build_start' );
-has 'end'          => ( is => 'ro', isa => 'Int', lazy => 1, builder => '_build_end' );
+has 'start'        => ( is => 'rw', isa => 'Int', lazy => 1, builder => '_build_start' );
+has 'end'          => ( is => 'rw', isa => 'Int', lazy => 1, builder => '_build_end' );
 
 has 'target_seq'   => ( is => 'ro', isa => 'Hum::Sequence',
                         lazy => 1, builder => '_build_target_seq', init_arg => undef );
