@@ -7,6 +7,7 @@ use strict;
 use warnings;
 use Carp;
 use Scalar::Util 'weaken';
+use Try::Tiny;
 use Tk;
 use Tk::Dialog;
 use Tk::ROText;
@@ -423,6 +424,15 @@ sub SubSeq {
         $self->canvas->toplevel->configure(-title => 'otter: Transcript ' . $sub->name);
     }
     return $self->{'_SubSeq'};
+}
+
+sub current_SubSeq {
+    my ( $self ) = @_;
+    if ($self->is_mutable) {
+        return $self->new_SubSeq_from_tk;
+    } else {
+        return $self->SubSeq;
+    }
 }
 
 sub XaceSeqChooser {
@@ -971,7 +981,7 @@ sub show_peptide {
 sub search_pfam {
     my( $self ) = @_;
 
-    my $sub = $self->is_mutable ? $self->new_SubSeq_from_tk : $self->SubSeq;
+    my $sub = $self->current_SubSeq;
     unless ($sub->GeneMethod->coding) {
         $self->message("non-coding transcript type");
         return;
@@ -1022,7 +1032,7 @@ sub update_translation {
 
     my $peptext = $self->{'_pep_peptext'} or return;
 
-    my $sub = $self->is_mutable ? $self->new_SubSeq_from_tk : $self->SubSeq;
+    my $sub = $self->current_SubSeq;
     unless ($sub->GeneMethod->coding) {
         if ($peptext) {
             $peptext->toplevel->withdraw;
@@ -3162,6 +3172,21 @@ sub check_for_errors {
     return;
 }
 
+sub check_get_mRNA_Sequence {
+    my( $self ) = @_;
+
+    my( $cdna );
+    try {
+        my $sub = $self->current_SubSeq;
+        $sub->validate;
+        $cdna = $sub->mRNA_Sequence;
+    } catch {
+        $self->exception_message($_, 'Error fetching mRNA sequence');
+        return;
+    };
+    return $cdna;
+}
+
 sub run_dotter {
     my( $self ) = @_;
 
@@ -3175,21 +3200,8 @@ sub run_dotter {
         return;
     }
 
-    my( $cdna );
-    eval {
-        my( $sub );
-        if ($self->is_mutable) {
-            $sub = $self->new_SubSeq_from_tk;
-        } else {
-            $sub = $self->SubSeq;
-        }
-        $sub->validate;
-        $cdna = $sub->mRNA_Sequence;
-    };
-    if ($@) {
-        $self->exception_message($@, 'Error fetching mRNA sequence');
-        return;
-    }
+    my $cdna = $self->check_get_mRNA_Sequence;
+    return unless $cdna;
 
     my $dotter = Hum::Ace::DotterLauncher->new;
     $dotter->query_Sequence($cdna);

@@ -972,7 +972,7 @@ sub next_message_id {
             $canvas->lower($r, $o);
             $self->add_selected($o, $r);
         }
-
+#        print "Highlighted: ", scalar( @{[ $canvas->find('withtag', $sel_tag) ]} ), "\n";
         return;
     }
 
