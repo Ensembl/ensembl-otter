@@ -435,7 +435,26 @@ sub alignment_window {
                 -fill   => 'both',
             );
 
-        $window->bind('<Destroy>', sub{ $window = $self->{_alignment_window}->{$type} = undef });
+        # And more duplication...
+        # Frame for buttons
+        my $frame = $top->Frame(
+            -border => 6,
+            )->pack(
+            -side   => 'bottom',
+            -fill   => 'x',
+            );
+
+        my $close_command = sub{ $top->withdraw; $window = $self->{_alignment_window}->{$type} = undef };
+
+        my $exit = $frame->Button(
+            -text => 'Close',
+            -command => $close_command ,
+            )->pack(-side => 'right');
+        $top->bind(    '<Control-w>',      $close_command);
+        $top->bind(    '<Control-W>',      $close_command);
+        $top->bind(    '<Escape>',         $close_command);
+
+        $window->bind('<Destroy>', $close_command);
     }
 
     # The dynamic bit - separate sub?
