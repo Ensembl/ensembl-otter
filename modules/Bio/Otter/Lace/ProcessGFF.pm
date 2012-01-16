@@ -24,7 +24,6 @@ use Hum::Ace::Locus;
         OTF_EST          => 'EST',
         OTF_mRNA         => 'cDNA',
         OTF_Protein      => 'Protein',
-        Ens_cDNA         => 'cDNA',
     );
 
 

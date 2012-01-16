@@ -18,7 +18,7 @@ fi
 #
 # This will not re-configure for laptops which transition from guest
 # to/from wired.
-case "$( hostname -f )" in
+case "$( hostname -f 2>/dev/null || hostname )" in
     *.sanger.ac.uk)
         # On wired network.  Need proxy to fetch external resources,
         # but not to reach the Otter Server or a local Apache

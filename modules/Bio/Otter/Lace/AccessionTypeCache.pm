@@ -5,7 +5,7 @@ package Bio::Otter::Lace::AccessionTypeCache;
 
 use strict;
 use warnings;
-use Hum::ClipboardUtils qw{ $magic_evi_name_matcher };
+use Hum::ClipboardUtils qw{ accessions_from_text };
 
 my (%client, %DB);
 
@@ -56,7 +56,6 @@ sub populate {
     
     my (@to_fetch);
     foreach my $name (@$name_list) {
-        # my ($prefix, $acc, $varsplice, $sv) = $name =~ /$magic_evi_name_matcher/;
         $check_full->execute($name);
         my ($have_full) = $check_full->fetchrow;
         if ($have_full) {
@@ -155,22 +154,14 @@ sub type_and_name_from_accession {
     }
 }
 
-sub evidence_type_and_name_from_text {
+sub accession_list_from_text {
     my ($self, $text) = @_;
 
-    # warn "Trying to parse: [$text]\n";
+    return [accessions_from_text($text)];
+}
 
-    my %clip_names;
-    while ($text =~ /$magic_evi_name_matcher/g) {
-        my $prefix = $1 || '';
-        my $acc    = $2;
-        $acc      .= $3 if $3;
-        my $sv     = $4 || '';
-        # $clip_names{"$prefix$acc$sv"} = 1;
-        $clip_names{"$acc$sv"} = 1;
-    }
-    my $acc_list = [keys %clip_names];
-    # warn "Got names:\n", map {"  $_\n"} @$acc_list;
+sub evidence_type_and_name_from_accession_list {
+    my ($self, $acc_list) = @_;
 
     my $dbh = $DB{$self}->dbh;
     my $full_fetch = $dbh->prepare(q{
