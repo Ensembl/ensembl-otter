@@ -11,10 +11,11 @@ around 'parse' => sub {
     my ($orig, $self, @args) = @_;
 
     my $basic = $self->$orig(@args);
-    # FIXME: objectification required
-    foreach my $query ( keys %{$basic->{by_query_id}} ) {
-        my $split = $self->_split_vulgar($basic->{by_query_id}->{$query});
-    }
+
+    # # FIXME: objectification required
+    # foreach my $query ( keys %{$basic->{by_query_id}} ) {
+    #     my $split = $self->_split_vulgar($basic->{by_query_id}->{$query});
+    # }
 
     return $basic->{raw};
 };
