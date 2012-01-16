@@ -192,6 +192,8 @@ if ( (! $support->param('dry_run'))
       'evegauser',
       'evegapass',
       'evegadbname',
+      'log_base_path',
+      'assembly',
     ],
     'replace' => {
       dbname      => $support->param('ensembldbname'),
@@ -224,6 +226,8 @@ if ( (! $support->param('dry_run'))
       'evegauser',
       'evegapass',
       'evegadbname',
+      'log_base_path',
+      'assembly',
     ],
     'replace' => {
       logfile     => 'make_ensembl_vega_update_attributes_vega.log',
@@ -596,6 +600,8 @@ if (! $support->param('dry_run') ) {
       'evegauser',
       'evegapass',
       'evegadbname',
+      'log_base_path',
+      'assembly',
     ],
     'replace' => {
       dbname      => $support->param('evegadbname'),

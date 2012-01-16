@@ -277,7 +277,9 @@ sub add_evidence_from_text {
 
     my $cache = $self->ExonCanvas->XaceSeqChooser->AceDatabase->AccessionTypeCache;
 
-    if (my $clip_evi = $cache->evidence_type_and_name_from_text($text)) {
+    my $acc_list = $cache->accession_list_from_text($text);
+    $cache->populate($acc_list);
+    if (my $clip_evi = $cache->evidence_type_and_name_from_accession_list($acc_list)) {
         $self->add_evidence_type_name_hash($clip_evi);
     }
 

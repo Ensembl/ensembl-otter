@@ -149,9 +149,9 @@ sub _add_zmap_bam_config {
             next unless $file;
             push @{$config->{ZMap}{sources}}, $featureset;
             push @{$config->{featuresets}{$coverage_featureset}}, $featureset;
-            $config->{'featureset-style'}{$coverage_featureset} = 'heatmap';
+            $config->{'featureset-style'}{$coverage_featureset} = 'short-read-coverage';
             $config->{'featureset-related'}{$coverage_featureset} = $related_column;
-            $config->{'featureset-style'}{$featureset} = 'heatmap';
+            $config->{'featureset-style'}{$featureset} = 'short-read-coverage';
             $config->{'featureset-related'}{$featureset} = $related_column;
             my $query = {
                 chr   => $slice->ssname,
