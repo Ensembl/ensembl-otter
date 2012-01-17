@@ -6,6 +6,9 @@ use warnings;
 
 use IO::Handle;
 use Bio::Otter::LogFile;
+use Bio::Vega::Utils::URI qw{ open_uri };
+use Net::Domain qw{ hostfqdn };
+
 
 use base qw( TransientWindow );
 
@@ -85,7 +88,7 @@ sub draw {
     return if $self->{'_drawn'};
 
     my $file      = $self->current_logfile;
-    my $tail_pipe = "tail -f -n 100 $file";
+    my $tail_pipe = "tail -f -n 1000 $file";
     my $pid       = open my $fh, '-|', $tail_pipe
       or die "Can't open tail command '$tail_pipe': $!";
     $self->tail_process($pid);
@@ -155,49 +158,19 @@ sub get_log_contents {
 sub mail_contents {
     my ($self) = @_;
 
-    my $to     = $email . '@' . $domain;
-    my $file   = $self->current_logfile;
-    my $subj   = "error log $file";
-    my $info   = ("Program version ".Bio::Otter::Git->param('head')."\n".
-                  "Program script name $0");
-    my $dialog = $self->window->toplevel->DialogBox(
-        -title          => "otter: Email $to?",
-        -buttons        => [qw(Ok Cancel)],
-        -default_button => 'Cancel',
-    );
+    my $to      = $email . '@' . $domain;
+    my $file    = hostfqdn() . ":" . $self->current_logfile;
+    my $subj    = "otterlace error: <PLEASE REPLACE WITH SHORT DESCRIPTION>";
+    my $mess    = $self->get_log_contents();
+    my $info   =
+        "Program version: " . Bio::Otter::Git->param('head') . "\n"
+        . "Program script name: $0\n"
+        . "Log file: $file\n";
 
-    $dialog->add('Label', -text => "$subj\n$info", -justify => 'left')->pack();
-    my $pre = '';
-    $dialog->add(
-        'LabEntry',
-        -textvariable => \$pre,
-        -label        => 'Description of error: ',
-        -width        => 45,
-        -background   => 'white',
-        -labelPack    => [ -side => 'left' ],
-        -font         => [ 'Helvetica', '12', 'normal' ],
-    )->pack(-pady => 6,);
-    $dialog->add(
-        'Label', -text => "Send this error log to '$to'?\n\n".
-        "Please note this uses the built-in (system) email transfer\n".
-        "configuration.  This often does not work on laptops."
-        )->pack();
-    $dialog->add(
-        'Label', -text =>
-        "If you do not receive the automatic acknowledgement email within an\n".
-        "hour or so, please contact us by another means.",
-        -background => 'black',
-        -foreground => 'red'
-        )->pack();
-
-    my $result = $dialog->Show();
-    return unless $result eq 'Ok';
-
-    my $mess      = $self->get_log_contents();
-    my $mail_pipe = qq{mailx -s "$subj" $to};
-    open my $fh, '|-', $mail_pipe or die "Error opening '$mail_pipe' : $!";
-    print $fh "$pre\n\n$info\n--------\n$mess";
-    close $fh or warn "Error emailing with pipe '$mail_pipe' : exit($?)";
+    open_uri("mailto:$to", {
+        subject => $subj,
+        body    => "\n<ADD FURTHER INFORMATION ABOUT PROBLEM HERE>\n\n--------\n$info--------\n$mess",
+    }) or warn "Error opening email client to send email to '$to'";
 
     return;
 }
