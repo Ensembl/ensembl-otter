@@ -40,6 +40,9 @@ Specific options:
     --prune                             delete results from previous runs of
                                         this script first
     --logic_names=LIST                  restrict transfer to gene logic_names
+    --delete_overlap_evi                delete supporting evidence alignments that
+                                        overlap the edge of the seq_region (ie PATCH)
+                                        optional, default is no
 
 =head1 DESCRIPTION
 
@@ -61,6 +64,13 @@ Currently, only complete transfers are considered. This is the easiest way to
 ensure that the resulting gene structures are identical to the original ones.
 For future release, there are plans to store incomplete matches by using the
 Ensembl API's SeqEdit facilities.
+
+Genes on PATCHES (non_ref top level seq_regions in Vega) are transferred by assigning
+them to a different seq_region rather than using thenassembly mapper and creating new
+objects. There have been problems with some of these not transferring because
+transcript_supporting_feature (not supporting_feature, these are always removed)
+alignments overlapping the edge of the patch have failed to transfer - if the script
+complains about this and time is short, then use the delete_overlap_evi option to remove them.
 
 Genes transferred can be restricted on logic_name using the --logic_names
 option. Used for mouse (-logic_names otter,otter_external).
@@ -127,7 +137,6 @@ our $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
 
 #$SIG{INT}= 'do_stats_logging';      # signal handler for Ctrl-C, i.e. will call sub do_stats_logging
 
-
 # parse options
 $support->parse_common_options(@_);
 $support->parse_extra_options(
@@ -139,6 +148,7 @@ $support->parse_extra_options(
   'chromosomes|chr=s@',
   'logic_names=s@',
   'prune',
+  'delete_overlap_evi',
 );
 $support->allowed_params(
   $support->get_common_params,
@@ -150,6 +160,7 @@ $support->allowed_params(
   'chromosomes',
   'logic_names',
   'prune',
+  'delete_overlap_evi',
 );
 
 if ($support->param('help') or $support->error) {
@@ -237,6 +248,8 @@ my $ensembl_chr_map = $support->get_ensembl_chr_mapping($V_dba, $support->param(
 
 foreach my $V_chr ($support->sort_chromosomes($V_chrlength)) {
 
+#  next unless ($V_chr =~ /HS|HG/);
+
   $support->log_stamped("Chromosome $V_chr...\n");
 
   # skip non-ensembl chromosomes
@@ -251,6 +264,10 @@ foreach my $V_chr ($support->sort_chromosomes($V_chrlength)) {
 				       undef, $support->param('assembly'));
   my $E_slice = $E_sa->fetch_by_region('chromosome', $E_chr, undef, undef,
 				       undef, $support->param('ensemblassembly'));
+
+  if (! $E_slice ) {
+    $support->log_warning("Can't get an Ensembl chromosome for $E_chr - have you used the right ensembl db as a template ?\n");
+  }
 
   my ($genes) = $support->get_unique_genes($V_slice,$V_dba);
   $support->log("Looping over ".scalar(@$genes)." genes...\n", 1);
@@ -271,11 +288,13 @@ foreach my $V_chr ($support->sort_chromosomes($V_chrlength)) {
     }
     $support->log("Gene $gsi/$name (logic_name $ln)\n", 1);
 
-     if ( ! $V_slice->is_reference() ) {
+    #PATCH genes are identified as being on non-reference slices...
+    if ( ! $V_slice->is_reference() ) {
       &transfer_vega_patch_gene($gene,$V_chr);
       next GENE;
     }
 
+    #All other genes
     my $transcripts = $gene->get_all_Transcripts;
     my (@finished, %all_protein_features);
     my $c = 0;
@@ -384,8 +403,6 @@ sub transfer_vega_patch_gene {
     $support->log_warning("Couldn't fetch ensembl_vega gene slice\n");
     return 0;
   }
-#  $Data::Dumper::Maxdepth=1;
-#  warn Dumper( $ev_gene_slice );
 
   if(!@{$vgene->get_all_Transcripts}){
     $support->log_warning("No transcripts for Vega gene ".$vgene->dbID."\n");
@@ -414,59 +431,32 @@ sub transfer_vega_patch_gene {
     $support->log("Will transfer ".$transcript->stable_id."\n",2);
     $found_trans = 1;
 
-    my @transcript_supporting_features = @{$transcript->get_all_supporting_features};
-  TSF:
-    foreach my $sf (@transcript_supporting_features) {
-      my $ev_sf_slice;
-
-      #need to delete transcript supporting_features that lie outside the slice
-      if ($sf->seq_region_start < $slice_start || $sf->seq_region_end > $slice_end) {
-#        warn "deleting - ".$sf->display_id.'--'.$sf->seq_region_name.'--'.$sf->seq_region_start.'--'.$sf->seq_region_end.'--'.$sf->seq_region_strand;
-        &delete_supporting_feature('transcript',$transcript,$sf->dbID,$sf->display_id);
-        next TSF;
+    my @tsfs = @{$transcript->get_all_supporting_features};
+    if ( $support->param('delete_overlap_evi')) {
+    TSF:
+      foreach my $sf (@tsfs) {
+        #delete transcript supporting_features that lie outside the slice
+        if ($sf->seq_region_start < $slice_start || $sf->seq_region_end > $slice_end) {
+          &delete_supporting_feature('transcript',$transcript,$sf->dbID,$sf->display_id);
+          next TSF;
+        }
       }
-
-## could add each transcript_supporting_feature manually but no need, this is done when storing the gene
-#      my $ev_sf_slice;
-#      if ($ev_sf_slice = $E_sa->fetch_by_region(
-#        'chromosome',
-#        $sf->seq_region_name,
-#        $sf->seq_region_start,
-#        $sf->seq_region_end,
-#        $sf->seq_region_strand,
-#        $support->param('ensemblassembly'),
-#      )) {
-#        $sf->hslice($ev_sf_slice);
-#        }
-#      else {
-#        $support->log("Cannot retrieve Ensembl slice for transcript supporting_feature ".$sf->hseqname."\n",2);
-#      }
     }
+
     my @exons= @{$transcript->get_all_Exons};
     foreach my $exon (@exons) {
-      my @supporting_features = @{$exon->get_all_supporting_features};
+      my @esfs = @{$exon->get_all_supporting_features};
     SF:
-      foreach my $sf (@supporting_features) {
-        #need to delete transcript supporting_features that lie outside the slice
+      foreach my $sf (@esfs) {
+
+        #odd, the below doesn't work
+        #foreach my $sf (@{$exon->get_all_supporting_features};
+
+        #delete supporting features that lie outside the slice
         if ($sf->seq_region_start < $slice_start || $sf->seq_region_end > $slice_end) {
           &delete_supporting_feature('exon',$exon,$sf->dbID,$sf->display_id);
           next SF;
         }
-
-## could add each supporting_feature manually but no need, this is done when storing the gene
-#        if ($ev_sf_slice= $E_sa->fetch_by_region(
-#          'chromosome',
-#          $v_sf_slice->seq_region_name,
-#          $v_sf_slice->start,
-#          $v_sf_slice->end,
-#          $v_sf_slice->strand,
-#          $support->param('ensemblassembly'),
-#        )) {
-#         $sf->hslice($ev_sf_slice);
-#       }
-#       else {
-#         $support->log("Cannot retrieve Ensembl slice for supporting_feature ".$sf->hseqname."\n",2);
-#       }
       }
       $exon->slice($ev_gene_slice);
     }
@@ -475,10 +465,11 @@ sub transfer_vega_patch_gene {
   $vgene->slice($ev_gene_slice);
 
   #if we found a transcript to ignore then the gene start/stop need updating, and we need to delete the transcript before storing the gene
+  my $trans_c = scalar(@transcripts);
   if ($needs_updating){
-    @transcripts = @{$vgene->get_all_Transcripts};
     foreach my $transcript (@transcripts){
       if ($artifact_ids{$transcript->stable_id}) {
+        $trans_c--;
         &remove_Transcript($vgene,$transcript->stable_id);
       }
       else {
@@ -505,7 +496,6 @@ sub transfer_vega_patch_gene {
 
   #make a note of the number of transcripts per gene
   $trans_numbers{$gsi}->{'vega'} = scalar(@transcripts);
-  my $trans_c = scalar(@{$vgene->get_all_Transcripts});
   $trans_numbers{$gsi}->{'evega'} = $trans_c;
 
   #count gene and transcript if it's been transferred
@@ -552,7 +542,6 @@ sub remove_Transcript {
     }
   }
 }
-
 
 =head2 transfer_transcript
 
