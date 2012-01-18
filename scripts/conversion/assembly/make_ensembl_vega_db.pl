@@ -131,6 +131,7 @@ $support->parse_extra_options(
   'evegapass=s',
   'evegadbname=s',
   'assembly=s',
+  'no_gc',
 );
 $support->allowed_params(
   $support->get_common_params,
@@ -146,6 +147,7 @@ $support->allowed_params(
   'evegapass',
   'evegadbname',
   'assembly',
+  'no_gc',
 );
 
 if ($support->param('help') or $support->error) {
@@ -173,14 +175,10 @@ $dbh->{'vega'} = $dba->{'vega'}->dbc->db_handle;
 $dba->{'ensembl'} = $support->get_database('ensembl', 'ensembl');
 $dbh->{'ensembl'} = $dba->{'ensembl'}->dbc->db_handle;
 
-##update external_db and attrib tables in vega and ensembl-vega database
-if ( (! $support->param('dry_run'))
-       && $support->user_proceed("Would you like to update the attrib_type tables for the ensembl and vega databases?\n")) {
-
-  #update ensembl database
-  my $options = $support->create_commandline_options({
+my $params = {
     'allowed_params' => 1,
     'exclude' => [
+      'assembly',
       'ensemblhost',
       'ensemblport',
       'ensembluser',
@@ -192,46 +190,32 @@ if ( (! $support->param('dry_run'))
       'evegauser',
       'evegapass',
       'evegadbname',
-    ],
-    'replace' => {
-      dbname      => $support->param('ensembldbname'),
-      host        => $support->param('ensemblhost'),
-      port        => $support->param('ensemblport'),
-      user        => $support->param('ensembluser'),
-      pass        => $support->param('ensemblpass'),
-      logfile     => 'make_ensembl_vega_update_attributes_ens.log',
-      interactive => 0,
-    },
-  });
-
-  $support->log_stamped("Updating attrib_type table for ".$support->param('ensembldbname')."...\n");
-  system("../update_attributes.pl $options") == 0
-    or $support->throw("Error running update_attributes.pl: $!");
-  $support->log_stamped("Done.\n\n");
-
-  #update vega database
-  $options = $support->create_commandline_options({
-    'allowed_params' => 1,
-    'exclude' => [
-      'ensemblhost',
-      'ensemblport',
-      'ensembluser',
-      'ensemblpass',
-      'ensembldbname',
-      'ensemblassembly',
-      'evegahost',
-      'evegaport',
-      'evegauser',
-      'evegapass',
-      'evegadbname',
+      'no_gc',
     ],
     'replace' => {
       logfile     => 'make_ensembl_vega_update_attributes_vega.log',
       interactive => 0,
     },
-  });
+  };
 
+##update external_db and attrib tables in vega and ensembl-vega database
+if ( (! $support->param('dry_run'))
+       && $support->user_proceed("Would you like to update the attrib_type tables for the ensembl and vega databases?\n")) {
+
+  #update vega database
+  my $options = $support->create_commandline_options($params);
   $support->log_stamped("Updating attrib_type table for ".$support->param('dbname')."...\n");
+  eval {
+    system("../update_attributes.pl $options") == 0
+      or $support->throw("Error running update_attributes.pl: $!");
+    $support->log_stamped("Done.\n\n");
+  };
+
+  #update ensembl database
+  $params->{'replace'}{'logfile'} = 'make_ensembl_vega_update_attributes_ens.log';
+  $params->{'replace'}{'dbname'}  = $support->param('ensembldbname');
+  $options = $support->create_commandline_options($params);
+  $support->log_stamped("Updating attrib_type table for ".$support->param('ensembldbname')."...\n");
   eval {
     system("../update_attributes.pl $options") == 0
       or $support->throw("Error running update_attributes.pl: $!");
@@ -239,7 +223,7 @@ if ( (! $support->param('dry_run'))
   };
 }
 
-# delete any preexisting mappings
+# delete any pre existing mappings
 if (! $support->param('dry_run')) {
   delete_mappings('ensembl',$dbh->{'ensembl'});
 }
@@ -552,7 +536,7 @@ $sql = qq(
     VALUES ('assembly.mapping', '$mappingstring')
 );
 $c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
-$support->log_stamped("Done inserting $c meta entries.\n");
+$support->log_stamped("Done inserting $c meta entries.\n\n");
 
 
 #add assembly mappings from vega
@@ -568,61 +552,37 @@ $sql = qq(
 $c = $dbh->{'vega'}->do($sql) unless ($support->param('dry_run'));
 $support->log_stamped("Done inserting $c assembly mapping entries.\n");
 
-#$sql = qq(
-#    INSERT INTO $evega_db.assembly
-#    SELECT a.cmp_seq_region_id, a.asm_seq_region_id, a.cmp_start, a.cmp_end, a.asm_start, a.asm_end, a.ori
-#      FROM assembly a, seq_region sr, coord_system cs
-#     WHERE a.asm_seq_region_id = sr.seq_region_id
-#       AND sr.coord_system_id = cs.coord_system_id
-#       AND cs.version = \'$ensembl_assembly\'
-#);
-#$c = $dbh->{'vega'}->do($sql) unless ($support->param('dry_run'));
-#$support->log_stamped("Done inserting $c reversed assembly mapping entries.\n");
-
 #update external_db and attrib_type on ensembl_vega
 if (! $support->param('dry_run') ) {
+
   # run update_external_dbs.pl
-  my $options = $support->create_commandline_options({
-    'allowed_params' => 1,
-    'exclude' => [
-      'ensemblhost',
-      'ensemblport',
-      'ensembluser',
-      'ensemblpass',
-      'ensembldbname',
-      'ensemblassembly',
-      'evegahost',
-      'evegaport',
-      'evegauser',
-      'evegapass',
-      'evegadbname',
-    ],
-    'replace' => {
-      dbname      => $support->param('evegadbname'),
-      host        => $support->param('evegahost'),
-      port        => $support->param('evegaport'),
-      user        => $support->param('evegauser'),
-      pass        => $support->param('evegapass'),
-      logfile     => 'make_ensembl_vega_update_external_dbs_ensvega.log',
-      interactive => 0,
-    },
-  });
-
+  $params->{'replace'}{'dbname'}  = $support->param('evegadbname');
+  $params->{'replace'}{'logfile'} = 'make_ensembl_vega_update_external_dbs.log';
+  my $options = $support->create_commandline_options($params);
   $support->log_stamped("\nUpdating external_db table on ".$support->param('evegadbname')."...\n");
-  system("../xref/update_external_dbs.pl $options") == 0
-    or $support->warning("Error running update_external_dbs.pl: $!");
-  $support->log_stamped("Done.\n\n");
+  eval {
+    system("../xref/update_external_dbs.pl $options") == 0
+      or $support->warning("Error running update_external_dbs.pl: $!");
+    $support->log_stamped("Done.\n\n");
+  };
 
-  $options =~ s/make_ensembl_vega_update_external_dbs_ensvega\.log/ensembl_vega_percent_gc_calc\.log/;
-  $support->log_stamped("\nCalculating %GC for ".$support->param('evegadbname')."...\n");
-  system("../../../../sanger-plugins/vega/utils/vega_percent_gc_calc.pl $options") == 0
-    or $support->warning("Error running vega_percent_gc_calc.pl: $!");
-  $support->log_stamped("Done.\n\n");
-
+  unless ($support->param('no_gc')) {
+    # run percent gc calc.pl
+    $params->{'replace'}{'logfile'} = 'make_ensembl_vega_percent_gc_calc.pl.log';
+    $options = $support->create_commandline_options($params);
+    $support->log_stamped("\nCalculating %GC for ".$support->param('evegadbname')."...\n");
+    eval {
+      system("../../../../sanger-plugins/vega/utils/vega_percent_gc_calc.pl $options") == 0
+        or $support->warning("Error running vega_percent_gc_calc.pl: $!");
+      $support->log_stamped("Done.\n\n");
+    };
+  }
 }
 
 # finish logfile
 $support->finish_log;
+
+
 
 # delete all unwanted mappings e.g. references to NCBI36 in a GRCh37 db
 sub delete_mappings{
