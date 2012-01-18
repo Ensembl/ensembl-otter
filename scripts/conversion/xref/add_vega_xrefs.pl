@@ -146,7 +146,7 @@ if ($support->param('prune') and $support->user_proceed('Would you really like t
   $support->log("Resetting gene.display_xref_id...\n");
   $num = $dba->dbc->do(qq(UPDATE gene set display_xref_id = 0));
   $support->log("Done resetting $num genes.\n");
-    
+
   # transcript.display_xref_id
   $support->log("Resetting transcript.display_xref_id...\n");
   $num = $dba->dbc->do(qq(UPDATE transcript set display_xref_id = 0));
