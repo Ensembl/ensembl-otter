@@ -290,7 +290,7 @@ sub check_remarks_and_update_names {
     $support->log_verbose("Gene remark regarding fragmentation of the locus already present\n");
   }
   else {
-    $support->log("Adding gene remark regarding fragmentation of the locus\n");
+    $support->log("Adding gene remark regarding fragmentation of the locus\n",2);
     if (! $support->param('dry_run')) {
       $aa->store_on_Gene($gid,$attrib);
     }
@@ -313,7 +313,7 @@ sub check_remarks_and_update_names {
 
   #sort transcripts coding > non-coding, then on length
   my $c = 0;
-  $support->log("\nPatching names according to CDS and length:\n",1);
+  $support->log("Patching names according to CDS and length:\n",2);
   foreach my $array_ref ($coding_trans,$noncoding_trans) {
     foreach my $trans ( sort { $b->length <=> $a->length } @$array_ref ) {
       $trans_c++;
