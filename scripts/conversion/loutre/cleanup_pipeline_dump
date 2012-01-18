@@ -126,7 +126,7 @@ my %lns_to_go = map {$_,1}
      Uniprot_TR
      Est2genome_human
      Est2genome_mouse
-		 Est2genome_fish
+     Est2genome_fish
      Uniprot_SW
      Est2genome_other
      Halfwise
