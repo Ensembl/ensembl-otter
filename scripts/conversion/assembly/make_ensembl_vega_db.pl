@@ -191,6 +191,7 @@ my $params = {
       'evegapass',
       'evegadbname',
       'no_gc',
+      'assembly',
     ],
     'replace' => {
       logfile     => 'make_ensembl_vega_update_attributes_vega.log',
@@ -554,7 +555,6 @@ $support->log_stamped("Done inserting $c assembly mapping entries.\n");
 
 #update external_db and attrib_type on ensembl_vega
 if (! $support->param('dry_run') ) {
-
   # run update_external_dbs.pl
   $params->{'replace'}{'dbname'}  = $support->param('evegadbname');
   $params->{'replace'}{'logfile'} = 'make_ensembl_vega_update_external_dbs.log';

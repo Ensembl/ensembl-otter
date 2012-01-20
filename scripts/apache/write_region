@@ -7,7 +7,7 @@
 use strict;
 use warnings;
 
-use SangerPaths qw{ core bioperl123 ensembl64 otter61 };
+use SangerPaths qw{ core bioperl123 ensembl64 otter62 };
 
 use Bio::Otter::ServerScriptSupport;
 use Bio::Vega::ContigLockBroker;
@@ -210,8 +210,9 @@ sub write_region {
         $output_xml = $formatter->generate_OtterXML;
     };
     if ($@) {
+        my $error = $@; # save $@ because the next line clobbers it
         $odba->rollback;
-        die "Failed writing annotations [$@]";
+        die sprintf 'Failed writing annotations [%s]', $error;
     } else {
         $odba->commit;
     }
