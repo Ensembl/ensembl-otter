@@ -13,7 +13,7 @@ use Getopt::Long;
 
 my $dbhost = 'ensdb-1-11';
 my $dbuser = 'ensro';
-my $dbname = 'vega_danio_rerio_20110711_v63_Zv9';
+my $dbname = 'vega_danio_rerio_20111219_v65_Zv9';
 my $dbpass = '';
 my $dbport = 5317;
 #my $dbhost = 'ecs3f';

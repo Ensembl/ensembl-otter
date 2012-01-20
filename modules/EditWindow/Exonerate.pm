@@ -7,7 +7,7 @@ use strict;
 use warnings;
 use Carp;
 
-use Bio::Otter::Lace::OnTheFly;
+use Bio::Otter::Lace::OnTheFly::Genomic;
 use Hum::Pfetch;
 use Hum::FastaFileIO;
 use Hum::ClipboardUtils qw{ accessions_from_text };
@@ -381,14 +381,12 @@ sub launch_exonerate {
     my ($self) = @_;
     my $seq_chooser = $self->XaceSeqChooser;
 
-    my %otf_params = (
-
-	aligner_class => 'Genomic',
+    my $otf = Bio::Otter::Lace::OnTheFly::Genomic->new(
 
         seqs       => $self->entered_seqs,
         accessions => $self->entered_accessions,
 
-        target_seq => $seq_chooser->Assembly->Sequence,
+        full_seq => $seq_chooser->Assembly->Sequence,
 
         lowercase_poly_a_t_tails => 1, # to avoid spurious exons
 
@@ -403,12 +401,10 @@ sub launch_exonerate {
         my ($mark_start, $mark_end) = $seq_chooser->zMapGetMark;
         if ($mark_start && $mark_end) {
             warn "Setting exonerate genomic start & end to marked region: $mark_start - $mark_end\n";
-            $otf_params{target_start} = $mark_start;
-            $otf_params{target_end}   = $mark_end;
+            $otf->target_start($mark_start);
+            $otf->target_end(  $mark_end);
         }
     }
-
-    my $otf = Bio::Otter::Lace::OnTheFly->new(\%otf_params);
 
     my $seqs = $otf->confirmed_seqs();
 

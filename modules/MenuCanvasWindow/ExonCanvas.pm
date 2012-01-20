@@ -3115,18 +3115,21 @@ sub xace_save {
     }
     my $xc = $self->XaceSeqChooser;
 
-    $xc->replace_SubSeq($sub, $old);
-    $self->SubSeq($sub);
-    $self->update_transcript_remark_widget($sub);
-    $self->name($new_name);
-    $self->evidence_hash($sub->clone_evidence_hash);
+    if ($xc->replace_SubSeq($sub, $old)) {
+      # more updating of internal state - if we're OK to do that
 
-    # update_Locus in this object will be called
-    # from update_Locus in the XaceSeqChooser
-    $xc->update_Locus($sub->Locus);
+      $self->SubSeq($sub);
+      $self->update_transcript_remark_widget($sub);
+      $self->name($new_name);
+      $self->evidence_hash($sub->clone_evidence_hash);
 
-    $sub->is_archival(1);
-    
+      # update_Locus in this object will be called
+      # from update_Locus in the XaceSeqChooser
+      $xc->update_Locus($sub->Locus);
+
+      $sub->is_archival(1);
+    }
+
     $top->grabRelease;
     
     return 1;

@@ -1,5 +1,11 @@
 package Bio::Otter::Lace::OnTheFly::QueryValidator;
 
+## Moose provides these, but webpublish doesn't know that!
+##
+use strict;
+use warnings;
+##
+
 use namespace::autoclean;
 use Moose;
 

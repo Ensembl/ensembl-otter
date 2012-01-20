@@ -84,10 +84,10 @@ sub do_rename {
         return;
     }
     warn "Renaming Locus '$old_name' to '$new_name'\n";
-    
-    $self->XaceSeqChooser->do_rename_locus($old_name, $new_name);
 
-    $self->top->destroy;
+    if ($self->XaceSeqChooser->do_rename_locus($old_name, $new_name)) {
+        $self->top->destroy;
+    } # else it failed politely, leave the window open to try again
 
     return;
 }
