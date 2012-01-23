@@ -280,6 +280,7 @@ sub parse_go {
     next if $fields[0] =~ /^#/;
     my $tlsi = $fields[0];
     my $xid  = $fields[1];
+    chomp $xid;
     my ($ev_type) = $fields[2] =~ /^([A-Z]*):/;
 
     #sanity checks
