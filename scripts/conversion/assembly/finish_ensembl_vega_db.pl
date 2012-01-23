@@ -149,28 +149,25 @@ my $vega_db     = $support->param('dbname');
 my $ensemblassembly = $support->param('ensemblassembly');
 my $vegaassembly    = $support->param('assembly');
 
-# determine adjustment factors for Ensembl seq_region_ids and coord_system_ids
+# retrieve adjustment factors for Ensembl seq_region_ids and coord_system_ids
 $sql = qq(
-    SELECT MAX(seq_region_id)
-    FROM seq_region sr, coord_system cs
-    WHERE sr.coord_system_id = cs.coord_system_id
-    AND cs.name = 'chromosome'
-    AND cs.version = '$vegaassembly'
+    SELECT meta_key, meta_value
+    FROM meta
+    WHERE meta_key in ('sri_adjust','csi_adjust')
 );
 $sth = $dbh->{'evega'}->prepare($sql);
 $sth->execute;
-my ($max_sri) = $sth->fetchrow_array;
-my $E_sri_adjust = 10**(length($max_sri));
-$sql = qq(
-    SELECT coord_system_id
-    FROM coord_system cs
-    WHERE cs.name = 'chromosome'
-    AND cs.version = '$vegaassembly'
-);
-$sth = $dbh->{'evega'}->prepare($sql);
-$sth->execute;
-my ($max_csi) = $sth->fetchrow_array;
-my $E_csi_adjust = 10**(length($max_csi)); #this has to be the same as the value used in make_ensembl_vega.pl
+my %meta_values;
+while (my ($meta_key, $meta_value) = $sth->fetchrow_array) {
+  $meta_values{$meta_key} = $meta_value;
+}
+my $E_sri_adjust = $meta_values{'sri_adjust'};
+my $E_csi_adjust = $meta_values{'csi_adjust'};
+
+unless ($E_sri_adjust && $E_csi_adjust) {
+  $support->log_error("Can't retrieve adjust values from meta table so you'll have problems - look at the make_ensembl_vega_db log to see what they should be\n");
+}
+$support->log("Will use a value of $E_sri_adjust to adjust Ensembl seq_regions, and $E_csi_adjust to adjust Ensembl coord_systems\n");
 
 # store Vega chromosome seq_regions and Ensembl-Vega assembly in temporary tables
 $support->log_stamped("Storing Vega chromosome seq_regions and Ensembl-Vega assembly in temporary tables...\n");
@@ -413,15 +410,15 @@ $support->log_stamped("Updated $c gene starts and ends...\n\n");
 $support->log_stamped("Transfering Vega translation_attribs (selenocysteines & peptide statistics)...\n");
 $sql = qq(
     INSERT INTO translation_attrib
-    SELECT tsi2.translation_id, at2.attrib_type_id, ta.value
+    SELECT t2.translation_id, at2.attrib_type_id, ta.value
     FROM
         $vega_db.translation_attrib ta,
-        $vega_db.translation_stable_id tsi,
+        $vega_db.translation t,
         $vega_db.attrib_type at,
-        translation_stable_id tsi2,
+        translation t2,
         attrib_type at2
-    WHERE ta.translation_id = tsi.translation_id
-    AND tsi.stable_id = tsi2.stable_id
+    WHERE ta.translation_id = t.translation_id
+    AND t.stable_id = t2.stable_id
     AND ta.attrib_type_id = at.attrib_type_id
     AND at.code = at2.code
 );
@@ -432,10 +429,10 @@ $support->log_stamped("Transferred $c translation_attrib entries.\n\n");
 $support->log_stamped("Transfering Vega alt alleles...\n");
 my $alt_alleles = {};
 $sth = $dbh->{'evega'}->prepare(qq(
-   SELECT aa.alt_allele_id, gsi.stable_id, gsi2.gene_id
-     FROM $vega_db.alt_allele aa, $vega_db.gene_stable_id gsi, gene_stable_id gsi2
-    WHERE aa.gene_id = gsi.gene_id
-      AND gsi.stable_id = gsi2.stable_id));
+   SELECT aa.alt_allele_id, g.stable_id, g2.gene_id
+     FROM $vega_db.alt_allele aa, $vega_db.gene g, gene g2
+    WHERE aa.gene_id = g.gene_id
+      AND g.stable_id = g2.stable_id));
 $sth->execute;
 while (my ($id, $gsi, $gid) = $sth->fetchrow_array) {
   push @{$alt_alleles->{$id}}, $gid ;
@@ -469,7 +466,7 @@ $c = $dbh->{'evega'}->do($sql);
 #tidy up meta table entries
 $support->log_stamped("Deleting and updating meta table entries.\n\n");
 $sql = qq(DELETE from meta
-           WHERE meta_key in ('assembly.num_toplevel_seqs', 'genebuild.vega_merge_db','genebuild.version', 'removed_evidence_flag.ensembl_dbversion', 'removed_evidence_flag.uniprot_dbversion'));
+           WHERE meta_key in ('assembly.num_toplevel_seqs', 'genebuild.vega_merge_db','genebuild.version', 'removed_evidence_flag.ensembl_dbversion', 'removed_evidence_flag.uniprot_dbversion','sri_adjust','csi_adjust'));
 $c = $dbh->{'evega'}->do($sql);
 $sql = qq(UPDATE meta
              SET meta_value = 
