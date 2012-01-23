@@ -131,7 +131,7 @@ $support->parse_extra_options(
   'evegapass=s',
   'evegadbname=s',
   'assembly=s',
-  'no_gc',
+  'no_web',
 );
 $support->allowed_params(
   $support->get_common_params,
@@ -147,7 +147,7 @@ $support->allowed_params(
   'evegapass',
   'evegadbname',
   'assembly',
-  'no_gc',
+  'no_web',
 );
 
 if ($support->param('help') or $support->error) {
@@ -190,7 +190,7 @@ my $params = {
       'evegauser',
       'evegapass',
       'evegadbname',
-      'no_gc',
+      'no_web',
       'assembly',
     ],
     'replace' => {
@@ -282,20 +282,29 @@ unless ($c > 1) {
   $support->log_warning("Only $c Vega seq_regions on assembly $vegaassembly transferred - is this really correct ?\n");
 }
 
-# transfer seq_regions from Ensembl db
+### transfer seq_regions from Ensembl db
 my $sth;
 $support->log_stamped("Transfering Ensembl seq_regions...\n");
-# determine max(seq_region_id) and max(coord_system_id) in Vega seq_region first
-$sth = $dbh->{'evega'}->prepare("SELECT MAX(seq_region_id) FROM seq_region");
+
+# determine max(seq_region_id) and max(coord_system_id) in Vega and use to offset the Ensembl seq_regions so they don't clash
+$sql = qq(SELECT MAX(seq_region_id) FROM seq_region);
+$sth = $dbh->{'vega'}->prepare($sql);
 $sth->execute;
-my ($max_sri) = $sth->fetchrow_array;
-my $sri_adjust = 10**(length($max_sri));
-$support->log("Using adjustment factor of $sri_adjust for seq_region_ids...\n");
+my ($sri_adjust) = $sth->fetchrow_array;
+
+$sri_adjust = 100000; #above fails when mapping *_align_features so use this value for now
+
+$support->log("Using adjustment factor of $sri_adjust for seq_region_ids...\n",1);
 $sth = $dbh->{'evega'}->prepare("SELECT MAX(coord_system_id) FROM seq_region");
 $sth->execute;
 my ($max_csi) = $sth->fetchrow_array;
 my $csi_adjust = 10**(length($max_csi));
-$support->log("Using adjustment factor of $csi_adjust for coord_system_ids...\n");
+$support->log("Using adjustment factor of $csi_adjust for coord_system_ids...\n",1);
+
+#put these in the db so finish_ensembl_vega can use them
+$sql = qq(INSERT into meta values ('','','sri_adjust',$sri_adjust),('','','csi_adjust',$csi_adjust));
+$dbh->{'evega'}->do($sql) unless ($support->param('dry_run'));
+
 
 # fetch and insert Ensembl seq_regions with adjusted seq_region_id and
 # coord_system_id
@@ -361,24 +370,26 @@ $sql = qq(
 $c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
 $support->log_stamped("Done transfering $c dna entries.\n\n");
 
-# transfer repeat_consensus and repeat_feature from Ensembl db
-$support->log_stamped("Transfering Ensembl repeat_consensus...\n");
-$sql = qq(
-    INSERT INTO $evega_db.repeat_consensus
-    SELECT * FROM repeat_consensus
+unless ($support->param('no_web')) {
+  # transfer repeat_consensus and repeat_feature from Ensembl db
+  $support->log_stamped("Transfering Ensembl repeat_consensus...\n");
+  $sql = qq(
+      INSERT INTO $evega_db.repeat_consensus
+      SELECT * FROM repeat_consensus
 );
-$c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
-$support->log_stamped("Done transfering $c repeat_consensus entries.\n\n");
-$support->log_stamped("Transfering Ensembl repeat_feature...\n");
-$sql = qq(
-    INSERT INTO $evega_db.repeat_feature
-    SELECT repeat_feature_id, seq_region_id+$sri_adjust, seq_region_start,
-           seq_region_end, seq_region_strand, repeat_start, repeat_end,
-           repeat_consensus_id, analysis_id, score
-    FROM repeat_feature
+  $c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
+  $support->log_stamped("Done transfering $c repeat_consensus entries.\n\n");
+  $support->log_stamped("Transfering Ensembl repeat_feature...\n");
+  $sql = qq(
+      INSERT INTO $evega_db.repeat_feature
+      SELECT repeat_feature_id, seq_region_id+$sri_adjust, seq_region_start,
+             seq_region_end, seq_region_strand, repeat_start, repeat_end,
+             repeat_consensus_id, analysis_id, score
+      FROM repeat_feature
 );
-$c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
-$support->log_stamped("Done transfering $c repeat_feature entries.\n\n");
+  $c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
+  $support->log_stamped("Done transfering $c repeat_feature entries.\n\n");
+}
 
 #not sure what to do with these - nice to have them for mart but no good for web display
 # - how can we switch them off for web ?
@@ -566,7 +577,7 @@ if (! $support->param('dry_run') ) {
     $support->log_stamped("Done.\n\n");
   };
 
-  unless ($support->param('no_gc')) {
+  unless ($support->param('no_web')) {
     # run percent gc calc.pl
     $params->{'replace'}{'logfile'} = 'make_ensembl_vega_percent_gc_calc.pl.log';
     $options = $support->create_commandline_options($params);
