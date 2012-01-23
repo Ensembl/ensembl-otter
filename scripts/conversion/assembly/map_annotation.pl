@@ -276,6 +276,7 @@ foreach my $V_chr ($support->sort_chromosomes($V_chrlength)) {
   foreach my $gene (@{ $genes }) {
     my $gsi = $gene->stable_id;
 
+    #uncomment line here to debug overlapping supporting evidence (-verbose -chr HG185_PATCH)
 #    next unless ($gsi =~ /OTTHUMG00000174590|OTTHUMG00000174616|OTTHUMG00000174807/);
 
     my $ln = $gene->analysis->logic_name;
@@ -393,11 +394,22 @@ sub transfer_vega_patch_gene {
   my $ev_gene_slice = $E_sa->fetch_by_region(
     $v_gene_slice->coord_system()->name(),
     $v_gene_slice->seq_region_name,
-    undef,
-    undef,
+    $slice_start,
+    $slice_end,
     undef,
     $support->param('ensemblassembly')
   );
+
+  # using this rather than the above allows transfer of overlapping transcript supporting evidence (although supporting_evidence must still be removed)
+  # however gene coords are then relative to the patch rather than in context
+#  my $ev_gene_slice = $E_sa->fetch_by_region(
+#    $v_gene_slice->coord_system()->name(),
+#    $v_gene_slice->seq_region_name,
+#    $slice_start,
+#    $slice_end,
+#    undef,
+#    $support->param('ensemblassembly')
+# );
 
   if(!$ev_gene_slice) {
     $support->log_warning("Couldn't fetch ensembl_vega gene slice\n");
@@ -412,6 +424,8 @@ sub transfer_vega_patch_gene {
   my $needs_updating = 0;
   my %artifact_ids;
   my @transcripts = @{$vgene->get_all_Transcripts};
+
+  $support->log_verbose("Vega gene $gsi in vega has coords of ".$vgene->seq_region_start.":".$vgene->seq_region_end."\n",3);
 
   my $c = 0;
  TRANS:
@@ -448,10 +462,6 @@ sub transfer_vega_patch_gene {
       my @esfs = @{$exon->get_all_supporting_features};
     SF:
       foreach my $sf (@esfs) {
-
-        #odd, the below doesn't work
-        #foreach my $sf (@{$exon->get_all_supporting_features};
-
         #delete supporting features that lie outside the slice
         if ($sf->seq_region_start < $slice_start || $sf->seq_region_end > $slice_end) {
           &delete_supporting_feature('exon',$exon,$sf->dbID,$sf->display_id);
@@ -492,6 +502,7 @@ sub transfer_vega_patch_gene {
        -release    => 1,
        -display_id => $vgene->stable_id,
        -info_text  => 'Added during ensembl-vega production'));
+
   Gene::create_vega_xrefs(\@transcripts);
 
   #make a note of the number of transcripts per gene
@@ -501,6 +512,8 @@ sub transfer_vega_patch_gene {
   #count gene and transcript if it's been transferred
   $stat_hash{$V_chr}->{'genes'}++;
   $stat_hash{$V_chr}->{'transcripts'} += $trans_c;
+
+  $support->log_verbose("Ensembl-vega gene $gsi has coords of ".$vgene->seq_region_start.":".$vgene->seq_region_end."\n",3);
 
   if (! $support->param('dry_run')) {
     my $dbID;
