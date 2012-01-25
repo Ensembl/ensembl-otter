@@ -98,13 +98,11 @@ sub store {
                 # of updating the author_id valid for THIS database
                 # (in case the contig_info comes from a different one)
             $self->db->get_AuthorAdaptor->store($contig_info->author);
-        };
-        if ($@){
-            throw "Error due to contig_info author: ".$contig_info->author->name
+            1;
+        } or throw "Error due to contig_info author: ".$contig_info->author->name
                  ." author_email: ".$contig_info->author->email
                  ." slice name: ".$contig_info->slice->name
                  ."\nerror is: ".$@;
-        }
 
         # Store a new row in the contig_info table and get contig_info_id
         my $sth = $self->prepare(q{

@@ -60,10 +60,8 @@ sub remove {
   eval {
       $sth = $self->prepare("DELETE FROM assembly_tag where tag_id = ?");
       $sth->execute($del_at->dbID);
-  };
-  if ($@){
-      throw "problem with deleting assembly_tag ".$del_at->dbID;
-  }
+      1;
+  } or throw "problem with deleting assembly_tag ".$del_at->dbID;
   my $num=$sth->rows;
   if ($num == 0) {
       throw "assembly tag with ".$del_at->dbID." not deleted , tag_id may not be present\n";
@@ -77,10 +75,8 @@ sub remove {
   my $clone_id=$sa->get_seq_region_id($clone_slice);
   eval{
       $self->update_assembly_tagged_clone($clone_id,"no");
-  };
-  if ($@){
-      throw "delete of assembly_tag failed :$@";
-  }
+      1;
+  } or throw "delete of assembly_tag failed :$@";
   return 1;
 }
 
@@ -95,10 +91,8 @@ SET transferred = 'yes'
 WHERE seq_region_id = $seq_region_id
 });
       $sth->execute();
-  };
-  if ($@) {
-      throw "Update of assembly_tagged_contig failed for seq_region_id $seq_region_id: $@";
-  }
+      1;
+  } or throw "Update of assembly_tagged_contig failed for seq_region_id $seq_region_id: $@";
 
   return 1;
 }
@@ -144,10 +138,8 @@ sub store {
 
   eval{
       $sth->execute($seq_region_id, $at->seq_region_start, $at->seq_region_end, $at->seq_region_strand, $at->tag_type, $at->tag_info);
-  };
-  if ($@){
-      throw "insert of assembly_tag failed:$@";
-  }
+      1;
+  } or throw "insert of assembly_tag failed:$@";
 
   $self->update_assembly_tagged_contig($seq_region_id); # is contig_id
 

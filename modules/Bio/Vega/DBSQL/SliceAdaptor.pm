@@ -77,11 +77,9 @@ sub _fetch_chr_coords_by_contig_projection {
     unless ( $seq_region_name ){
       eval{
         $seq_region_name = $self->_fetch_chr_name_by_contig_name($ctg->seq_region_name);
-        $chr_slice = $self->fetch_by_region('chromosome', $seq_region_name, undef, undef, undef, 'otter')
-      };
-      if ( $@ ){
-        die "Cannot project ", $ctg->seq_region_name, " to seq_region ... please check that your list is up-to-date\n";
-      }
+        $chr_slice = $self->fetch_by_region('chromosome', $seq_region_name, undef, undef, undef, 'otter');
+        1;
+      } or die "Cannot project ", $ctg->seq_region_name, " to seq_region ... please check that your list is up-to-date\n";
     }
 
     # now project the contig to current chr. slice
