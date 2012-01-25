@@ -1,14 +1,17 @@
-### EditWindow::PfamWindow
+
 package EditWindow::PfamWindow;
+
 use strict;
 use warnings;
 use Carp;
-use Bio::Otter::Lace::Pfam;
-use Tk::ProgressBar;
 use POSIX();
+use URI;
+use Tk::ProgressBar;
+use Bio::Otter::Lace::Pfam;
+use Bio::Vega::Utils::URI qw{ open_uri };
 use base 'EditWindow';
+
 my $POLL_ATTEMPTS = 30;
-my %WIDGETS;
 
 sub new {
     my ( $pkg, @args ) = @_;
@@ -65,6 +68,7 @@ sub result_url {
 
 sub initialize {
     my ($self) = @_;
+
     my $pfam = Bio::Otter::Lace::Pfam->new();
     $self->pfam($pfam);
 
@@ -82,9 +86,7 @@ sub initialize {
     $top->bind( '<Control-Q>', $cancel_command );
     $top->protocol( 'WM_DELETE_WINDOW', $cancel_command );
 
-
-
-    $WIDGETS{'Progress_bar'} = $top->ProgressBar(
+    my $progress_bar_widget = $top->ProgressBar(
                        -width       => 20,
                        -from        => 0,
                        -to          => 100,
@@ -92,19 +94,19 @@ sub initialize {
                        -variable    => \$self->{_progress}
     )->pack( -fill => 'x' , -expand => 1);
 
-    $WIDGETS{'Status_label'} = $top->Label(
+    $top->Label(
                  -width        => 45,
                  -height       => 1,
                  -textvariable => \$self->{_status}
     )->pack( -side => 'top', -fill => 'x' );
 
-    $WIDGETS{'Cancel_button'} = $top->Button(
+    my $cancel_button_widget = $top->Button(
                 -text    => 'Cancel',
                 -command => $cancel_command,
     )->pack( -side => 'top' );
 
     my ( $result_url, $estimated_time );
-    if($self->result_url) {
+    if ($self->result_url) {
         ( $result_url, $estimated_time ) = ($self->result_url , 1);
     } else {
         my $xml = $pfam->submit_search( $self->query );
@@ -183,20 +185,20 @@ sub initialize {
         $self->status("Significant Pfam-A Matches :");
         $self->top->toplevel->update;
 
-        $WIDGETS{'Padding_frame'} = $top->Frame->pack( -side => 'top', -fill => 'both');
-        $WIDGETS{'Result_frame'} = $top->Frame->pack( -side => 'top', -fill => 'both');
+        $top->Frame->pack( -side => 'top', -fill => 'both');
+        my $result_frame_widget = $top->Frame->pack( -side => 'top', -fill => 'both');
 
         # display result
         if(keys %$alignments) {
 
             # Widget Pfam_label isa Label
-            $WIDGETS{'Pfam_label'} = $WIDGETS{Result_frame}->Label(
+            $result_frame_widget->Label(
                -text        => 'Pfam',
                -width       => 10,
               )->grid(-column => 0 , -row => 0);
 
             # Widget ID_label isa Label
-            $WIDGETS{'ID_Class_label'} = $WIDGETS{Result_frame}->Label(
+            $result_frame_widget->Label(
                -text   => 'ID & Class',
                -width  => 20,
               )->grid(
@@ -205,7 +207,7 @@ sub initialize {
               );
 
             # Widget Locations_label isa Label
-            $WIDGETS{'Locations_label'} = $WIDGETS{Result_frame}->Label(
+            $result_frame_widget->Label(
                -text       => 'Locations',
                -width      => 10,
               )->grid(
@@ -214,7 +216,7 @@ sub initialize {
               );
 
             # Widget Alignments_label isa Label
-            $WIDGETS{'Alignments_label'} = $WIDGETS{Result_frame}->Label(
+            $result_frame_widget->Label(
                -text   => 'Alignments',
                -width  => 10,
               )->grid(
@@ -234,8 +236,7 @@ sub initialize {
                 $locations .= $location->{start}."->".$location->{end}." ";
             }
 
-            # Widget Pfam_entry isa Entry
-            $WIDGETS{'Pfam_entry_${domain}'} = $WIDGETS{Result_frame}->Entry(
+            $result_frame_widget->Entry(
                -highlightthickness => 0,
                -justify            => 'center',
                -state              => 'readonly',
@@ -246,8 +247,7 @@ sub initialize {
                -column => 0,
               );
 
-            # Widget ID_Class_entry isa Entry
-            $WIDGETS{'ID_Class_entry_${domain}'} = $WIDGETS{Result_frame}->Entry(
+            $result_frame_widget->Entry(
                -highlightthickness => 0,
                -justify            => 'center',
                -state              => 'readonly',
@@ -258,9 +258,7 @@ sub initialize {
                -column => 1,
               );
 
-
-            # Widget Locations_entry isa Entry
-            $WIDGETS{'Locations_entry_${domain}'} = $WIDGETS{Result_frame}->Entry(
+            $result_frame_widget->Entry(
                -highlightthickness => 0,
                -state              => 'readonly',
                -width              => 10,
@@ -270,7 +268,6 @@ sub initialize {
                -column => 2,
               );
 
-            # Widget Belvu_butto isa Button
             my $launch_belvu = sub {
                         if (my $pid = fork) {
                             return 1;
@@ -281,7 +278,7 @@ sub initialize {
                         }
             };
 
-            $WIDGETS{'Belvu_butto'} = $WIDGETS{Result_frame}->Button(
+            $result_frame_widget->Button(
                -anchor             => 's',
                -borderwidth        => 1,
                -highlightthickness => 2,
@@ -305,19 +302,19 @@ sub initialize {
         $self->top->toplevel->update;
     }
 
-    $WIDGETS{'Progress_bar'}->packForget;
-    $WIDGETS{'Cancel_button'}->packForget;
+    $progress_bar_widget->packForget;
+    $cancel_button_widget->packForget;
 
-    $WIDGETS{'Button_frame'} = $top->Frame->pack( -side => 'top', -fill => 'x' );
+    my $button_frame_widget = $top->Frame->pack( -side => 'top', -fill => 'x' );
 
-    $WIDGETS{'Open_button'} = $WIDGETS{'Button_frame'}->Button(
+    $button_frame_widget->Button(
         -text    => 'open Pfam page',
         -command => sub {
             $self->open_url();
         },
     )->pack( -side => 'left' );
 
-    $WIDGETS{'Quit_button'} = $WIDGETS{'Button_frame'}->Button(
+    $button_frame_widget->Button(
                                       -text    => 'Close',
                                       -command => $quit_command,
     )->pack( -side => 'right' );
@@ -347,32 +344,17 @@ sub fill_progressBar {
 
 sub open_url {
     my ($self) = @_;
+
     my $url = $self->result_url;
-    $url =~ s/output=xml&?//;
     $url =~ s/resultset/results/;
-    print STDOUT "Pfam search result for " . $self->name . "\n$url\n";
-    if ( $^O eq 'darwin' ) {
-        system("open '$url'");
-    }
-    else {
-        # run in the background to avoid hanging the Otterlace GUI
-        return unless fork;
-        POSIX::_exit(0) unless fork;
-        my @commands = (qq{firefox -remote "openURL($url,new-tab)"},
-                        qq{iceape -remote "openURL($url,new-tab)"},
-                        qq{mozilla -remote "openURL($url,new-tab)"},
-                        qq{firefox $url},
-                        qq{iceape $url},
-                        qq{mozilla $url},
-                        qq{echo 'you must install firefox web browser'});
-        my $success = 1;
 
-        for(my $i = 0;($i < scalar(@commands) && $success != 0); $i++) {
-            $success = system($commands[$i]);
-        }
-        POSIX::_exit(0);
-    }
+    # Remove query parameters
+    my $uri = URI->new($url);
+    $uri->query_form({});
+    $url = $uri->as_string;
 
+    print STDERR "Pfam search result for " . $self->name . "\n$url\n";
+    open_uri($url);
     return;
 }
 
