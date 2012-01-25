@@ -14,14 +14,14 @@ use base 'EditWindow';
 my $POLL_ATTEMPTS = 30;
 
 sub new {
-    my ( $pkg, @args ) = @_;
-    my $self         = $pkg->SUPER::new(@args);
+    my ($pkg, @args) = @_;
+    my $self = $pkg->SUPER::new(@args);
 
     return $self;
 }
 
 sub progress {
-    my ( $self, $p ) = @_;
+    my ($self, $p) = @_;
     if ($p) {
         $self->{_progress} = $p;
     }
@@ -29,13 +29,13 @@ sub progress {
 }
 
 sub pfam {
-    my ( $self, $pfam ) = @_;
+    my ($self, $pfam) = @_;
     $self->{_pfam} = $pfam if $pfam;
     return $self->{_pfam};
 }
 
 sub query {
-    my ( $self, $s ) = @_;
+    my ($self, $s) = @_;
     if ($s) {
         $self->{_seq} = $s;
     }
@@ -43,7 +43,7 @@ sub query {
 }
 
 sub name {
-    my ( $self, $n ) = @_;
+    my ($self, $n) = @_;
     if ($n) {
         $self->{_name} = $n;
     }
@@ -51,7 +51,7 @@ sub name {
 }
 
 sub status {
-    my ( $self, $s ) = @_;
+    my ($self, $s) = @_;
     if ($s) {
         $self->{_status} = $s;
     }
@@ -59,7 +59,7 @@ sub status {
 }
 
 sub result_url {
-    my ( $self, $u ) = @_;
+    my ($self, $u) = @_;
     if ($u) {
         $self->{_url} = $u;
     }
@@ -82,48 +82,48 @@ sub initialize {
         $top->destroy;
     };
 
-    $top->bind( '<Control-q>', $cancel_command );
-    $top->bind( '<Control-Q>', $cancel_command );
-    $top->protocol( 'WM_DELETE_WINDOW', $cancel_command );
+    $top->bind('<Control-q>', $cancel_command);
+    $top->bind('<Control-Q>', $cancel_command);
+    $top->protocol('WM_DELETE_WINDOW', $cancel_command);
 
     my $progress_bar_widget = $top->ProgressBar(
-                       -width       => 20,
-                       -from        => 0,
-                       -to          => 100,
-                       -blocks      => 1,
-                       -variable    => \$self->{_progress}
-    )->pack( -fill => 'x' , -expand => 1);
+        -width    => 20,
+        -from     => 0,
+        -to       => 100,
+        -blocks   => 1,
+        -variable => \$self->{_progress}
+    )->pack(-fill => 'x', -expand => 1);
 
     $top->Label(
-                 -width        => 45,
-                 -height       => 1,
-                 -textvariable => \$self->{_status}
-    )->pack( -side => 'top', -fill => 'x' );
+        -width        => 45,
+        -height       => 1,
+        -textvariable => \$self->{_status}
+    )->pack(-side => 'top', -fill => 'x');
 
     my $cancel_button_widget = $top->Button(
-                -text    => 'Cancel',
-                -command => $cancel_command,
-    )->pack( -side => 'top' );
+        -text    => 'Cancel',
+        -command => $cancel_command,
+    )->pack(-side => 'top');
 
-    my ( $result_url, $estimated_time );
+    my ($result_url, $estimated_time);
     if ($self->result_url) {
-        ( $result_url, $estimated_time ) = ($self->result_url , 1);
-    } else {
-        my $xml = $pfam->submit_search( $self->query );
-        ( $result_url, $estimated_time ) = $pfam->check_submission($xml);
+        ($result_url, $estimated_time) = ($self->result_url, 1);
+    }
+    else {
+        my $xml = $pfam->submit_search($self->query);
+        ($result_url, $estimated_time) = $pfam->check_submission($xml);
         $self->result_url($result_url);
     }
 
     $self->status("searching pfam (wait $estimated_time sec)");
     my $wait = $estimated_time / 30;
 
-    for ( my $block = 1 ; $block <= 30 ; $block++ ) {
+    for (my $block = 1; $block <= 30; $block++) {
         $self->progress($block);
         $self->top->toplevel->update;
-        eval {
-            $self->top->toplevel->after($wait * 1000);
-        };
+        eval { $self->top->toplevel->after($wait * 1000); };
         if ($@) {
+
             # catch "XStoSubCmd: Not a Tk Window" error when the search is canceled
             return;
         }
@@ -131,10 +131,10 @@ sub initialize {
     my $tries = 1;
     $wait = 0;
     my $res;
-    while ( $tries < $POLL_ATTEMPTS ) {
-        $self->progress( 30 + $tries );
+    while ($tries < $POLL_ATTEMPTS) {
+        $self->progress(30 + $tries);
         $res = $pfam->poll_results($self->result_url);
-        if ($res && $res =~ /<pfam/m ) {
+        if ($res && $res =~ /<pfam/m) {
             $self->fill_progressBar(60);
             last;
         }
@@ -142,10 +142,9 @@ sub initialize {
         $self->top->toplevel->update;
         $wait += $tries;
         $tries++;
-        eval {
-            $self->top->toplevel->after($wait * 1000);
-        };
+        eval { $self->top->toplevel->after($wait * 1000); };
         if ($@) {
+
             # catch "XStoSubCmd: Not a Tk Window" error when the search is canceled
             return;
         }
@@ -159,23 +158,23 @@ sub initialize {
         my $matches = $pfam->parse_results($res);
         $self->fill_progressBar(70);
         my @domains = keys %$matches;
-        if(@domains) {
+        if (@domains) {
             my $blocks_per_domain = 30 / scalar(@domains);
             foreach my $domain (sort @domains) {
-                my $sub_seq = $pfam->get_seq_snippets($self->name,$self->query,$matches->{$domain}->{locations});
+                my $sub_seq = $pfam->get_seq_snippets($self->name, $self->query, $matches->{$domain}->{locations});
                 $self->status("$domain: get the seed aligments");
                 $self->top->toplevel->update;
-                my $s = $pfam->retrieve_pfam_seed([$domain]);
+                my $s    = $pfam->retrieve_pfam_seed([$domain]);
                 my $seed = $s->{$domain};
 
                 $self->status("$domain: get the hmm");
                 $self->top->toplevel->update;
-                my $h = $pfam->retrieve_pfam_hmm([$domain]);
+                my $h   = $pfam->retrieve_pfam_hmm([$domain]);
                 my $hmm = $h->{$domain};
 
                 $self->status("$domain: aligning");
                 $self->top->toplevel->update;
-                my $alignment_file = $pfam->align_to_seed($sub_seq,$domain,$hmm,$seed);
+                my $alignment_file = $pfam->align_to_seed($sub_seq, $domain, $hmm, $seed);
                 $alignments->{$domain} = $alignment_file;
                 $self->fill_progressBar($blocks_per_domain + $self->progress);
             }
@@ -185,114 +184,112 @@ sub initialize {
         $self->status("Significant Pfam-A Matches :");
         $self->top->toplevel->update;
 
-        $top->Frame->pack( -side => 'top', -fill => 'both');
-        my $result_frame_widget = $top->Frame->pack( -side => 'top', -fill => 'both');
+        $top->Frame->pack(-side => 'top', -fill => 'both');
+        my $result_frame_widget = $top->Frame->pack(-side => 'top', -fill => 'both');
 
         # display result
-        if(keys %$alignments) {
+        if (keys %$alignments) {
 
             # Widget Pfam_label isa Label
             $result_frame_widget->Label(
-               -text        => 'Pfam',
-               -width       => 10,
-              )->grid(-column => 0 , -row => 0);
+                -text  => 'Pfam',
+                -width => 10,
+            )->grid(-column => 0, -row => 0);
 
             # Widget ID_label isa Label
             $result_frame_widget->Label(
-               -text   => 'ID & Class',
-               -width  => 20,
+                -text  => 'ID & Class',
+                -width => 20,
               )->grid(
-               -row    => 0,
-               -column => 1,
+                -row    => 0,
+                -column => 1,
               );
 
             # Widget Locations_label isa Label
             $result_frame_widget->Label(
-               -text       => 'Locations',
-               -width      => 10,
+                -text  => 'Locations',
+                -width => 10,
               )->grid(
-               -row    => 0,
-               -column => 2,
+                -row    => 0,
+                -column => 2,
               );
 
             # Widget Alignments_label isa Label
             $result_frame_widget->Label(
-               -text   => 'Alignments',
-               -width  => 10,
+                -text  => 'Alignments',
+                -width => 10,
               )->grid(
-               -row    => 0,
-               -column => 3,
+                -row    => 0,
+                -column => 3,
               );
         }
-
-
 
         my $row = 1;
 
         foreach my $domain (keys %$alignments) {
             my $locations = "";
-            my $m = scalar @{$matches->{$domain}->{locations}};
-            for my $location (sort {$a->{start} <=> $b->{start} } @{$matches->{$domain}->{locations}}) {
-                $locations .= $location->{start}."->".$location->{end}." ";
+            my $m         = scalar @{ $matches->{$domain}->{locations} };
+            for my $location (sort { $a->{start} <=> $b->{start} } @{ $matches->{$domain}->{locations} }) {
+                $locations .= $location->{start} . "->" . $location->{end} . " ";
             }
 
             $result_frame_widget->Entry(
-               -highlightthickness => 0,
-               -justify            => 'center',
-               -state              => 'readonly',
-               -text               => $domain,
-               -width              => 10,
+                -highlightthickness => 0,
+                -justify            => 'center',
+                -state              => 'readonly',
+                -text               => $domain,
+                -width              => 10,
               )->grid(
-               -row    => $row,
-               -column => 0,
+                -row    => $row,
+                -column => 0,
               );
 
             $result_frame_widget->Entry(
-               -highlightthickness => 0,
-               -justify            => 'center',
-               -state              => 'readonly',
-               -width              => 20,
-               -text               => $matches->{$domain}->{id}." ".$matches->{$domain}->{class},
+                -highlightthickness => 0,
+                -justify            => 'center',
+                -state              => 'readonly',
+                -width              => 20,
+                -text               => $matches->{$domain}->{id} . " " . $matches->{$domain}->{class},
               )->grid(
-               -row    => $row,
-               -column => 1,
+                -row    => $row,
+                -column => 1,
               );
 
             $result_frame_widget->Entry(
-               -highlightthickness => 0,
-               -state              => 'readonly',
-               -width              => 10,
-               -text               => $locations,
+                -highlightthickness => 0,
+                -state              => 'readonly',
+                -width              => 10,
+                -text               => $locations,
               )->grid(
-               -row    => $row,
-               -column => 2,
+                -row    => $row,
+                -column => 2,
               );
 
             my $launch_belvu = sub {
-                        if (my $pid = fork) {
-                            return 1;
-                        }
-                        elsif (defined $pid) {
-                            my $command = "belvu ".$alignments->{$domain};
-                            exec($command) or warn "Failed to exec '$command' : $!";
-                        }
+                if (my $pid = fork) {
+                    return 1;
+                }
+                elsif (defined $pid) {
+                    my $command = "belvu " . $alignments->{$domain};
+                    exec($command) or warn "Failed to exec '$command' : $!";
+                }
             };
 
             $result_frame_widget->Button(
-               -anchor             => 's',
-               -borderwidth        => 1,
-               -highlightthickness => 2,
-               -justify            => 'left',
-               -padx               => '0m',
-               -pady               => '0m',
-               -text               => 'in Belvu',
-               -width              => 9,
-               -command            => \$launch_belvu,
+                -anchor             => 's',
+                -borderwidth        => 1,
+                -highlightthickness => 2,
+                -justify            => 'left',
+                -padx               => '0m',
+                -pady               => '0m',
+                -text               => 'in Belvu',
+                -width              => 9,
+                -command            => \$launch_belvu,
               )->grid(
-               -row    => $row,
-               -column => 3,
+                -row    => $row,
+                -column => 3,
               );
-              $row ++;
+            $row++;
         }
 
         $self->open_url();
@@ -305,27 +302,27 @@ sub initialize {
     $progress_bar_widget->packForget;
     $cancel_button_widget->packForget;
 
-    my $button_frame_widget = $top->Frame->pack( -side => 'top', -fill => 'x' );
+    my $button_frame_widget = $top->Frame->pack(-side => 'top', -fill => 'x');
 
     $button_frame_widget->Button(
         -text    => 'open Pfam page',
         -command => sub {
             $self->open_url();
         },
-    )->pack( -side => 'left' );
+    )->pack(-side => 'left');
 
     $button_frame_widget->Button(
-                                      -text    => 'Close',
-                                      -command => $quit_command,
-    )->pack( -side => 'right' );
+        -text    => 'Close',
+        -command => $quit_command,
+    )->pack(-side => 'right');
 
-    $top->bind( '<Control-q>', $quit_command );
-    $top->bind( '<Control-Q>', $quit_command );
-    $top->protocol( 'WM_DELETE_WINDOW', $quit_command );
+    $top->bind('<Control-q>', $quit_command);
+    $top->bind('<Control-Q>', $quit_command);
+    $top->protocol('WM_DELETE_WINDOW', $quit_command);
 
     # need to call configure to resize the window.
     # the values in width and height are not important
-    $self->top->toplevel->configure(-width => 1 , -height => 1);
+    $self->top->toplevel->configure(-width => 1, -height => 1);
 
     return;
 }
@@ -333,7 +330,7 @@ sub initialize {
 sub fill_progressBar {
     my ($self, $value) = @_;
 
-    for ( my $percent = $self->progress ; $percent <= $value ; $percent++ ) {
+    for (my $percent = $self->progress; $percent <= $value; $percent++) {
         $self->progress($percent);
         $self->top->toplevel->update;
         $self->top->toplevel->after(20);
