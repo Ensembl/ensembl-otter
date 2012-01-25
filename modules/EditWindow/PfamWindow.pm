@@ -9,6 +9,8 @@ use URI;
 use Tk::ProgressBar;
 use Bio::Otter::Lace::Pfam;
 use Bio::Vega::Utils::URI qw{ open_uri };
+use Hum::Sort qw{ ace_sort };
+
 use base 'EditWindow';
 
 my $POLL_ATTEMPTS = 30;
@@ -190,13 +192,11 @@ sub initialize {
         # display result
         if (keys %$alignments) {
 
-            # Widget Pfam_label isa Label
             $result_frame_widget->Label(
                 -text  => 'Pfam',
                 -width => 10,
             )->grid(-column => 0, -row => 0);
 
-            # Widget ID_label isa Label
             $result_frame_widget->Label(
                 -text  => 'ID & Class',
                 -width => 20,
@@ -205,7 +205,6 @@ sub initialize {
                 -column => 1,
               );
 
-            # Widget Locations_label isa Label
             $result_frame_widget->Label(
                 -text  => 'Locations',
                 -width => 10,
@@ -214,7 +213,6 @@ sub initialize {
                 -column => 2,
               );
 
-            # Widget Alignments_label isa Label
             $result_frame_widget->Label(
                 -text  => 'Alignments',
                 -width => 10,
@@ -226,7 +224,7 @@ sub initialize {
 
         my $row = 1;
 
-        foreach my $domain (keys %$alignments) {
+        foreach my $domain (sort { ace_sort($a, $b) } keys %$alignments) {
             my $locations = "";
             my $m         = scalar @{ $matches->{$domain}->{locations} };
             for my $location (sort { $a->{start} <=> $b->{start} } @{ $matches->{$domain}->{locations} }) {
@@ -305,7 +303,7 @@ sub initialize {
     my $button_frame_widget = $top->Frame->pack(-side => 'top', -fill => 'x');
 
     $button_frame_widget->Button(
-        -text    => 'open Pfam page',
+        -text    => 'View result on Pfam website',
         -command => sub {
             $self->open_url();
         },
