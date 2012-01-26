@@ -76,28 +76,6 @@ sub _fetch_new_by_type {
   return $stableid;
 }
 
-sub fetch_new_stable_ids_for_Gene {
-    my( $self, $gene ) = @_;
-    $gene->stable_id($self->fetch_new_gene_stable_id)
-      unless $gene->stable_id;
-
-    foreach my $trans (@{$gene->get_all_Transcripts}) {
-        $trans->stable_id($self->fetch_new_transcript_stable_id)
-          unless $trans->stable_id;
-        if (my $translation = $trans->translation) {
-            $translation->stable_id($self->fetch_new_translation_stable_id)
-              unless $translation->stable_id;
-        }
-    }
-
-    foreach my $exon (@{$gene->get_all_Exons}) {
-        $exon->stable_id($self->fetch_new_exon_stable_id)
-          unless $exon->stable_id;
-    }
-
-    return;
-}
-
 1;
 
 __END__
