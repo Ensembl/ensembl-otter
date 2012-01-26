@@ -6,21 +6,6 @@ use Bio::EnsEMBL::DBSQL::MetaContainer;
 use base 'Bio::EnsEMBL::DBSQL::MetaContainer';
 
 
-#sub new {
- #   my ($class,$dbobj) = @_;
-
-  #  my $self = {};
-   # bless $self,$class;
-
-    #if( !defined $dbobj || !ref $dbobj ) {
-     #   $self->throw("Don't have a db [$dbobj] for new adaptor");
-    #}
-
-    #$self->db($dbobj);
-
-    #return $self;
-#}
-
 =head2 get_primary_prefix
 
   Arg [1]    : none
