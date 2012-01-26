@@ -60,33 +60,6 @@ sub get_species_prefix {
   }
 }
 
-=head2 get_stable_id_min
-
-  Arg [1]    : none
-  Example    : $prefix = $meta_container->get_stable_id_min();
-  Description: Retrieves the species prefix for this database from the
-               meta container
-  Returntype : string
-  Exceptions : none
-  Caller     : ?
-
-=cut
-
-sub get_stable_id_min {
-  my ($self) = @_;
-
-  my $sth = $self->db->dbc->prepare( "SELECT meta_value
-                             FROM meta
-                             WHERE meta_key = 'stable_id.min'" );
-  $sth->execute;
-
-  if( my $arrRef = $sth->fetchrow_arrayref() ) {
-    return $arrRef->[0];
-  } else {
-    return;
-  }
-}
-
 1;
 
 __END__
