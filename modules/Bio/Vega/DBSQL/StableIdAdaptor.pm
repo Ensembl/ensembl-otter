@@ -76,20 +76,6 @@ sub _fetch_new_by_type {
   return $stableid;
 }
 
-sub _exists_stable_id_by_type {
-
-    my ($self,$id,$type) = @_;
-
-    my $table  = $type . "_stable_id";
-    my $column = "stable_id";
-
-    my $sql = "select count(*) from $table where $column = '$id'";
-    my $sth = $self->prepare($sql);
-    $sth->execute;
-    my ($count) = $sth->fetchrow;
-    return $count;
-}
-
 sub fetch_new_stable_ids_for_Gene {
     my( $self, $gene ) = @_;
     $gene->stable_id($self->fetch_new_gene_stable_id)
