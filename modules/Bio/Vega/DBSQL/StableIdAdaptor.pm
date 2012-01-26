@@ -48,25 +48,8 @@ sub _fetch_new_by_type {
   my $num = $sth->{'mysql_insertid'};
 
   my $meta_container = $self->db->get_MetaContainer();
-  my $min_id  = $meta_container->get_stable_id_min();
-
-  if (defined($min_id)) {
-
-    if ($min_id > $num) {
-      my $sql = "update $table set $poolid=$min_id where $poolid=$num";
-      my $sth = $self->prepare($sql);
-      $sth->execute;
-      $num = $min_id;
-
-      $sql = "alter table $table auto_increment= " . ($min_id+1);
-      $sth = $self->prepare($sql);
-      $sth->execute;
-    }
-  }
   my $prefix = $meta_container->get_primary_prefix() || "OTT";
-
   my $stableid = $prefix;
-
   my $species_prefix = $meta_container->get_species_prefix();
   if (defined($species_prefix)) {
     $stableid .= $species_prefix;
