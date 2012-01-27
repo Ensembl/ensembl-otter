@@ -119,7 +119,7 @@ my $ea  = $dba->get_DBEntryAdaptor();
 # delete previous GO xrefs if --prune option is used
 if ($support->param('prune') and $support->user_proceed('Would you really like to delete xrefs from previous runs of this script that have used these options?')) {
 
-  $support->log("Deleting  external xrefs...\n");
+  $support->log("Deleting external xrefs...\n");
 
   my $num = $dba->dbc->do(qq(
            DELETE x
@@ -140,9 +140,7 @@ if ($support->param('prune') and $support->user_proceed('Would you really like t
 
   # go_xrefs
   $support->log("Deleting go_xrefs...\n");
-  $num = $dba->dbc->do(qq(
-           DELETE FROM go_xref
-        ));
+  $num = $dba->dbc->do(qq(DELETE FROM ontology_xref));
   $support->log("Done deleting $num entries.\n");
 }
 
@@ -228,8 +226,11 @@ foreach my $chr (@chr_sorted) {
 	      $support->log_warning("Parsed file not in the correct format, please check\n");
 	      next MATCH;
 	    }
-	    $ev_type ||= 'NULL';
-	    $support->log_verbose("Creating new GO xref for $trlsi--$match.\n", 3);
+            unless ($ev_type) {
+              $support->log_warning("No evidence type associated with $xid ($trlsi), please check input file\n");
+              $ev_type = '';
+            }
+	    $support->log_verbose("Creating new GO xref for $trlsi--$match.\n", 2);
 	    my $dbentry = Bio::EnsEMBL::OntologyXref->new(
 	      -primary_id => $xid,
 	      -display_id => $xid,
