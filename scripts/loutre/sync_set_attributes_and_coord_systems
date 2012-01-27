@@ -1,0 +1,120 @@
+#!/usr/bin/env perl
+
+### sync_set_attributes_and_coord_systems
+
+use strict;
+use warnings;
+use Hum::Sort qw{ ace_sort };
+use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Lace::PipelineDB;
+
+{
+    my( $dataset_name );
+
+    my $usage = sub { exec('perldoc', $0) };
+    # This do_getopt() call is needed to parse the otter config files
+    # even if you aren't giving any arguments on the command line.
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        'dataset=s'     => \$dataset_name,
+        ) or $usage->();
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    # DataSet interacts directly with an otter database
+    my @datasets;
+    if ($dataset_name) {
+        push(@datasets, $cl->get_DataSet_by_name($dataset_name));
+    }
+    else {
+        @datasets = $cl->get_all_DataSets;
+    }
+    
+    foreach my $ds (@datasets) {
+        $dataset_name = $ds->name;
+        warn "\nSyncing dataset '$dataset_name'\n";
+        my $otter_dba = $ds->get_cached_DBAdaptor;
+        my $pipe_dba = Bio::Otter::Lace::PipelineDB::get_pipeline_rw_DBAdaptor($otter_dba);
+
+        my $all_otter_chr = get_chromosome_attribs($otter_dba);
+        my $all_pipe_chr  = get_chromosome_attribs($pipe_dba);
+
+        my ($fix_pipe_cs_version);
+        foreach my $chr (sort {ace_sort($a, $b)} keys %$all_otter_chr) {
+            my $ott_chr  = $all_otter_chr->{$chr};
+            my $pipe_chr = $all_pipe_chr->{$chr};
+            unless ($pipe_chr) {
+                warn "Missing from pipe: $chr\n";
+                next;
+            }
+            if ($ott_chr->{'cs_version'} ne $pipe_chr->{'cs_version'}) {
+                warn "$chr mismatch: otter=$ott_chr->{'cs_version'} pipe=$pipe_chr->{'cs_version'}\n";
+
+                # We don't assume that the coord_system_id's are the same (but they should be).
+                my $pipe_cs_id = $pipe_dba->get_CoordSystemAdaptor->fetch_by_name('chromosome', $ott_chr->{'cs_version'})->dbID,
+
+                $fix_pipe_cs_version ||= $pipe_dba->dbc->prepare(q{
+                    UPDATE seq_region SET coord_system_id = ? WHERE seq_region_id = ?
+                });
+                $fix_pipe_cs_version->execute($pipe_cs_id, $pipe_chr->{'seq_region_id'});
+            }
+        }
+    }
+}
+
+sub get_chromosome_attribs {
+    my ($dba) = @_;
+    
+    my $sql = q{
+        SELECT sr.name
+          , sr.seq_region_id
+          , cs.version
+          , cs.coord_system_id
+          , hidden.value as H
+          , write_access.value as W
+        FROM (coord_system cs
+              , seq_region sr)
+        LEFT JOIN seq_region_attrib hidden
+          ON sr.seq_region_id = hidden.seq_region_id
+          AND hidden.attrib_type_id IN
+        (SELECT attrib_type_id
+            FROM attrib_type
+            WHERE code = 'hidden')
+        LEFT JOIN seq_region_attrib write_access
+          ON sr.seq_region_id = write_access.seq_region_id
+          AND write_access.attrib_type_id IN
+        (SELECT attrib_type_id
+            FROM attrib_type
+            WHERE code = 'write_access')
+        WHERE cs.coord_system_id = sr.coord_system_id
+          AND cs.name = 'chromosome'
+          AND cs.version IN ('Otter', 'OtterArchive')
+        ORDER BY sr.seq_region_id
+    };
+    my $sth_otter = $dba->dbc->prepare($sql);
+    $sth_otter->execute;
+    
+    my $chr = {};
+    while (my ($name, $seq_region_id, $cs_version, $cs_id, $hidden_flag, $write_flag) = $sth_otter->fetchrow) {
+        $chr->{$name} = {
+            seq_region_id   => $seq_region_id,
+            cs_version      => $cs_version,
+            cs_id           => $cs_id,
+            hidden          => $hidden_flag,
+            write           => $write_flag,
+        };
+    }
+    return $chr;
+}
+
+
+
+__END__
+
+=head1 NAME - sync_set_attributes_and_coord_systems
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
