@@ -12,7 +12,7 @@ use Bio::Vega::Transform::XML;
 use base 'Exporter';
 our @EXPORT_OK = qw{ freeze_thaw_gene };
 
-=head1 freeze_thaw_gene
+=head2 freeze_thaw_gene
 
   my $xml_gene = freeze_thaw_gene($gene);
 
