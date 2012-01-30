@@ -30,12 +30,12 @@ __END__
 Extends its Bio::EnsEMBL::DnaPepAlignFeature
 baseclass to add the methods:
 
-=head1 get_HitDescription
+=head2 get_HitDescription
 
 Returns the Bio::Vega::HitDescription object
 attached to the feature.
 
-=head1 frame
+=head2 frame
 
 <method doc to be completed>
 
