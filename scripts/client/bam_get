@@ -161,6 +161,8 @@ sub _print_feature {
         ($_->[0] eq 'S') ? ( ) : ( join '', @{$_} );
     } @{$_->cigar_array};
 
+    # $feature->l_qseq;
+
     # the Target tag - escaping this requires special handling of
     # spaces in the query name
 

@@ -21,7 +21,7 @@ sub features {
 
     $chr = "${chr_prefix}${chr}" if defined $chr_prefix;
     my @read_pairs = $sam->features(
-        -type   => 'read_pair',
+        -type   => 'read_pair', # Why not fetch "match"?
         -seq_id => $chr,
         -start  => $start,
         -end    => $end,
