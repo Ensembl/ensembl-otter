@@ -2,6 +2,7 @@ package Bio::Otter::AnnotatedTranscript;
 
 use strict;
 use warnings;
+use Carp;
 
 use Bio::Vega::Utils::XmlEscape qw{ xml_escape xml_unescape };
 
@@ -484,7 +485,6 @@ sub _reset_end_phase {
 sub toXMLString {
     my ($self, $offset) = @_;
     
-    use Carp 'confess';
     confess("No offset given") unless defined $offset;
 
     my $str = "";
