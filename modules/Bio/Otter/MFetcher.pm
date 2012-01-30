@@ -466,7 +466,8 @@ sub Bio::EnsEMBL::Gene::propagate_slice {
         }
 
         # This call has to come after get_all_Exons, or the transcript
-        # may attempt to lazy-load exons from the Otter database.
+        # may attempt to lazy-load exons from the Ensembl database using
+        # the Otter slice data ($slice).
         $transcript->slice($slice);
     }
     $gene->slice($slice);
