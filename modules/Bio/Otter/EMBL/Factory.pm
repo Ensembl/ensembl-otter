@@ -3,7 +3,7 @@
 
 =head1 NAME - Bio::Otter::EMBL::Factory
 
-=head2 Description
+=head1 DESCRIPTION
 
 Factory object used by:
 
