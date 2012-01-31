@@ -237,7 +237,7 @@ sub _session_from_dir {
     # this ignores completed sessions, as they have been renamed to
     # end in ".done"
 
-    my ($pid) = $dir =~ m{lace[^/]+\.(\d+)(\.ro)?\.\d+$};
+    my ($pid) = $dir =~ m{lace[^/]+\.(\d+)\.\d+$};
     return unless $pid;
 
     # Skip if directory is not ours
