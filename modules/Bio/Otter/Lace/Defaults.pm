@@ -75,7 +75,7 @@ sub save_deep_option {
 ################################################
 
 
-=head1 do_getopt
+=head2 do_getopt
 
  A wrapper function around GetOptions
 

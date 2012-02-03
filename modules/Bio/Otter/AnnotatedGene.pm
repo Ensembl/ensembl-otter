@@ -176,7 +176,7 @@ sub stable_id {
 
 
 
-=head1 detach_DBAdaptors
+=head2 detach_DBAdaptors
 
     $gene_adaptor->attach_to_Slice($gene, $slice);
     $gene->detach_DBAdaptors;

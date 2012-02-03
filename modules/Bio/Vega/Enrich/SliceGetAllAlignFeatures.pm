@@ -88,12 +88,12 @@ Bio::EnsEMBL::Slice, which return corresponding features enriched
 with original feature data, including full feature length, from
 the hit_description table, if it exists.
 
-=head1 Bio::EnsEMBL::Slice::get_all_DnaDnaAlignFeatures
+=head2 Bio::EnsEMBL::Slice::get_all_DnaDnaAlignFeatures
 
 Calls Bio::EnsEMBL::Slice::get_all_DnaAlignFeatures and then
 enriches the results with Bio::Vega::HitFeatures if possible.
 
-=head1 Bio::EnsEMBL::Slice::get_all_DnaPepAlignFeatures
+=head2 Bio::EnsEMBL::Slice::get_all_DnaPepAlignFeatures
 
 Calls Bio::EnsEMBL::Slice::get_all_ProteinAlignFeatures and then
 enriches the results with Bio::Vega::HitFeatures if possible.

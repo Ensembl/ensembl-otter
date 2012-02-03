@@ -20,7 +20,7 @@ my $DEBUG_EVENTS   = 0;
 
 =head1 METHODS
 
-=head2 new([-option => "value"])
+=head2 new
 
 Creates a new Bio::Otter::ZMap::Connect Object.
 
@@ -34,7 +34,7 @@ sub new{
 }
 
 
-=head2 init(Tk, [handler, [data]])
+=head2 init
 
 Initialises  the new  object  so  it is  useable. 
 Requires the  B<Tk> object.  The  B<handler> is 
@@ -80,7 +80,7 @@ sub init{
     return;
 }
 
-=head2 connect_request( )
+=head2 connect_request
 
 This maybe  used to  get the  string for registering  the server  as a
 remote window  of the  zmap client.  ZMap  should honour  this request
@@ -125,7 +125,7 @@ sub client_registered_response{
     return $reponse;
 }
 
-=head2 server_window_id( )
+=head2 server_window_id
 
 Just the window id of the request widget.
 
@@ -137,7 +137,7 @@ sub server_window_id{
     return $self->widget->id();
 }
 
-=head2 xremote( )
+=head2 xremote
 
 The xremote Object [C<<< X11::XRemote >>>].
 
@@ -167,7 +167,7 @@ sub xremote{
 
  Currently just the one to help the user with consistency.
 
-=head2 basic_error($message)
+=head2 basic_error
 
 Some xml which should be used in callback for error messages.
 
@@ -239,7 +239,7 @@ sub response_name{
     return X11::XRemote::client_response_name;
 }
 
-=head2 widget( )
+=head2 widget
 
 Set/Get the widget.
 
@@ -282,7 +282,7 @@ sub widget{
     return $widget;
 }
 
-=head2 respond_handler( )
+=head2 respond_handler
 
 Set/Get the callback which will get called.
 

@@ -3,7 +3,7 @@
 
 =head1 NAME - Bio::Otter::EMBL::Factory
 
-=head2 Description
+=head1 DESCRIPTION
 
 Factory object used by:
 
@@ -360,7 +360,7 @@ sub sequence_version {
     return $self->{'_bio_otter_embl_factory_sequence_version'};
 }
 
-=head2 desciption
+=head2 description
 
 Get/set method for the EMBL DE line description.
 
