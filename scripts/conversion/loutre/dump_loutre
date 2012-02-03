@@ -21,6 +21,7 @@ Options:
     --dump_assembly_tags=BOOLEAN        choose to dump or not dump assembly_tag misc_features
     --ignore_authors=LIST               comma seperated list of (gene) authors to ignore (optional)
     --add_genes=LIST                    comma seperated list of stable IDs to transfer
+    --live_update                       transfer only genes that are newer than what's in current Vega
 
     --loutredbname=NAME                 use loutre database NAME
     --loutrehost=HOST                   use loutre database host HOST
@@ -33,6 +34,11 @@ Options:
     --port=PORT                         use Vega database port PORT
     --user=USER                         use Vega database username USER
     --pass=PASS                         use Vega database password PASS
+
+    --currentdbname=NAME                use current live Vega database NAME
+    --currenthost=HOST                  use current live Vega database host HOST
+    --currentport=PORT                  use current live Vega database port PORT
+    --currentuser=USER                  use current live Vega database username USER
 
     --logfile, --log=FILE               log to FILE (default: *STDOUT)
     --logpath=PATH                      write logfile to PATH (default: .)
@@ -56,6 +62,11 @@ requires setting of the vega_release and release_type input parameters.
 When the 'ignore_chr' option is used, loutre is examined to see which chromosomes
 should be dumped, and then those specified are removed from that list (this is done
 behind the scenes in ConversionSupport.pm).
+
+The 'live_update' option will only transfer genes that have a newer version in loutre than in the
+current live Vega. Also, of other feature types only seq_region_attribs are transferred, ie simple
+features etc are not. Finally the presence of new loutre tables is only a warning rather then
+being fatal.
 
 A comma seperated list of stable IDs to be transferred can be defined using the  --add_genes
 option. Where possible this should be used together with the chr argument to prevent looping through
@@ -129,6 +140,10 @@ my $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
 $support->parse_common_options(@_);
 $support->parse_extra_options(
   $support->get_loutre_params(1),
+  'currentdbname=s',
+  'currenthost=s',
+  'currentport=s',
+  'currentuser=s',
   'vega_release=s',
   'release_type=s',
   'chr=s',
@@ -139,8 +154,13 @@ $support->parse_extra_options(
   'dump_assembly_tags=s',
   'ignore_authors=s',
   'add_genes=s',
+  'live_update',
 );
 $support->allowed_params(
+  'currentdbname',
+  'currenthost',
+  'currentport',
+  'currentuser',
   'vega_release',
   'release_type',
   'chr',
@@ -151,6 +171,7 @@ $support->allowed_params(
   'dump_assembly_tags',
   'ignore_authors',
   'add_genes',
+  'live_update',
   $support->get_loutre_params,
   $support->get_common_params,
 );
@@ -220,6 +241,17 @@ my $vsfa = $vdba->get_SimpleFeatureAdaptor();
 my $vmsa = $vdba->get_MiscSetAdaptor;
 my $vmfa = $vdba->get_MiscFeatureAdaptor();
 my $vdbh = $vdba->dbc->db_handle;
+
+my $current_genes = {};
+if ($support->param('live_update')) {
+  my $current_vdba = $support->get_database('ensembl','current');
+  my $sql = qq(SELECT stable_id, version from gene_stable_id);
+  my $sth = $current_vdba->dbc->db_handle->prepare($sql);
+  $sth->execute;
+  while ( my ($gsi,$version) = $sth->fetchrow_array) {
+    $current_genes->{$gsi} = $version;
+  }
+}
 
 #get chromosomes, either from a user defined list, or non-hidden
 #ones with the correct attributes for export mode and release number
@@ -312,7 +344,12 @@ foreach my $t (keys %constraints) {
 }
 if (@new_tables) {
   my $new_tables = join ', ',@new_tables ;
-  $support->log_error("Loutre contains tables $new_tables that you haven't defined what to do with\n");
+  if ($support->param('live_update')) {
+    $support->log_warning("Loutre contains tables $new_tables that you haven't defined what to do with\n");
+  }
+  else {
+    $support->log_error("Loutre contains tables $new_tables that you haven't defined what to do with\n");
+  }
 }
 
 ####
@@ -556,6 +593,7 @@ foreach my $name (@{$chr_names_wanted}) {
  GENE:
   foreach my $lgene (@{$lga->fetch_all_by_Slice($lslice)} ) {
     my $lgsi = $lgene->stable_id;
+
     #filter on stable id
     if ($support->param('add_genes')) {
       unless (grep { $lgene->stable_id eq $_ } @{$genes_to_dump}) {
@@ -596,6 +634,21 @@ foreach my $name (@{$chr_names_wanted}) {
       if (grep { $lgene->gene_author->name eq $_} @{$ignore_authors}) {
 	$support->log("Skipping gene $gname ($lgsi) because of untrusted author (".$lgene->gene_author->name.")\n",1);
 	next GENE;
+      }
+    }
+
+    if ($support->param('live_update')) {
+      if (my $existing_version = $current_genes->{$lgsi}){
+        if ($lgene->version > $existing_version) {
+          $support->log("Taking gene $gname ($lgsi) since its version (".$lgene->version.") is greater than that in current vega ($existing_version).\n",1);
+        }
+        else {
+          $support->log_verbose("Skipping gene $gname since its version has not changed since current live Vega.\n",1);
+          next GENE;
+        }
+      }
+      else {
+        $support->log("Taking new gene $gname ($lgsi) (version ".$lgene->version.").\n",1);
       }
     }
 
@@ -676,37 +729,38 @@ foreach my $name (@{$chr_names_wanted}) {
 	next GENE;
       }
     }		
-    
+
     if (&transfer_gene($lgene)) {
       $c++;
     }
-    
-				}
+  }
   $support->log("Transferred $c genes from chromosome $name\n");
 
   #transfer other seq_region based features
   if (! $support->param('dry_run') && ! $support->param('add_genes') ) {
 
-    #transfer simple features 
-    &transfer_simple_features($lslice,$vslice);
-
     ####does this transfer 'annotated' seq_region_attributes on clones ????####
     #transfer seq_region_attributes
     &transfer_sra($lslice,$vslice,$att_types_wanted);
 
-    ####remove this when we're sure they're in as seq_region_attribs on clones####	
-    #transform contig_attribs into seq_region_attribs
-    my $attribs_to_move = ['annotated'];
-    &transfer_contig_attribs($lslice,$vslice,$attribs_to_move);
+    if (! $support->param('live_update')) {
+      #transfer simple features 
+      &transfer_simple_features($lslice,$vslice);
 
-    #transfer assembly_tag misc_features
-    if ($support->param('dump_assembly_tags')) {
-      my $features_to_copy = ['atag_CLE','atag_CRE','atag_Misc','atag_Unsure'];
-      &transfer_misc_features($lslice,$vslice,$features_to_copy);
+      ####remove this when we're sure they're in as seq_region_attribs on clones####	
+      #transform contig_attribs into seq_region_attribs
+      my $attribs_to_move = ['annotated'];
+      &transfer_contig_attribs($lslice,$vslice,$attribs_to_move);
+
+      #transfer assembly_tag misc_features
+      if ($support->param('dump_assembly_tags')) {
+        my $features_to_copy = ['atag_CLE','atag_CRE','atag_Misc','atag_Unsure'];
+        &transfer_misc_features($lslice,$vslice,$features_to_copy);
+      }
     }
   }
 }
-$support->log("Got $fsv fsv genes and $non_fsv non_fsv genes\n");
+  $support->log("Got $fsv fsv genes and $non_fsv non_fsv genes\n");
 
 #add date of datafreeze
 my $datafreeze =  strftime "%Y-%m-%d", localtime;
