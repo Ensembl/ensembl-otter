@@ -69,7 +69,7 @@ sub initialise {
 
     my $email_dev = sub { $self->mail_contents(); };
     $but_frame->Button(
-        -text    => qq(Email $email),
+        -text    => 'Report bug',
         -command => $email_dev,
     )->pack(-side => 'left');
 
@@ -152,7 +152,9 @@ sub get_log_contents {
     my ($self, $refresh) = @_;
 
     my $txt = $self->readonly_text;
-    return $txt->get('1.0', 'end');
+
+    # Limit size of report - some email clients truncate long mailto URLs
+    return $txt->get('end - 250 lines', 'end');
 }
 
 sub mail_contents {
