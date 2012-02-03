@@ -18,7 +18,8 @@ Options:
     --chr=LIST                          comma seperated list of chromsomes to use (optional)
     --ignore_chr=LIST                   comma seperated list of chromsomes to ignore (optional)
 
-    --count_rows=1                      if enabled then counts entries in tables and exits
+    --count_rows                        if enabled then counts entries in tables and exits
+    --prepare_template                  prepare a template for new genes (ie delete everything)
 
     --dbname, db_name=NAME              use database NAME for the pipeline dump
     --host, --dbhost, --db_host=HOST    use database host HOST for the pipeline dump db
@@ -64,7 +65,7 @@ filters on seq_region, keeping only those regions whose export_mode and vega_rel
 attributes match those given as arguments. Tables cleaned up include seq_region, dna,
 assembly, prediction-* and the *_feature tables.
 
-The -count_rows=1 option is used as a diagnostic - when enabled it counts features and
+The -count_rows option is used as a diagnostic - when enabled it counts features and
 other entries (eg dna), does a Data::Dumper, and then exits without doing anything further.
 
 =head1 LICENCE
@@ -95,7 +96,6 @@ BEGIN {
   unshift(@INC, "$SERVERROOT/ensembl/modules");
   unshift(@INC, "$SERVERROOT/ensembl-variation/modules");
   unshift(@INC, "$SERVERROOT/bioperl-live");
-#  unshift(@INC, "modules");
 }
 
 use Getopt::Long;
@@ -143,9 +143,10 @@ $support->parse_extra_options(
   $support->get_loutre_params(1),
   'vega_release=s',
   'release_type=s',
-  'count_rows=s',
+  'count_rows',
   'chr=s',
   'ignore_chr=s',
+  'prepare_template',
 );
 $support->allowed_params(
   'vega_release',
@@ -153,6 +154,7 @@ $support->allowed_params(
   'count_rows',
   'chr',
   'ignore_chr',
+  'prepare_template',
   $support->get_loutre_params,
   $support->get_common_params,
 );
@@ -174,6 +176,16 @@ $support->init_log;
 if ($support->param('release_type' ne 'External')) {
   $support->log_warning("You haven't set \'release_type\' to be \'External\' using prepare_loutre.pl. Please do so before proceeding\n");
   exit;
+}
+
+#if we're preparing  template than all features must go
+if ($support->param('prepare_template') && $support->user_proceed('The \'prepare_template\' option will delete all features from this db, continue?')) {
+  while (my ($table,$lns) = each %lns_to_stay) {
+    foreach my $ln (keys %$lns) {
+      $lns_to_go{$ln}++;
+    }
+    $lns_to_stay{$table} = {};
+  }
 }
 
 # connect to dump of pipeline database and get adaptors
@@ -218,7 +230,6 @@ my @target_tables = qw(analysis
 #		       transcript
 #		       exon_transcript
 #		       exon
-
 
 #store counts of original number of features in each table
 my %table_rows;
@@ -287,7 +298,6 @@ foreach my $t (keys %lns_to_stay) {
     $original_lncounts{$t}{$logic_name} = $c;
   }
 }
-#warn Dumper(\%original_lncounts);
 
 #compare the logic names present with those that we know we are going to keep
 #and those that we know we are going to delete -> will identify any new ones
@@ -326,7 +336,9 @@ $idsth->execute();
 my %ids_to_stay;
 while (my ($analysis_id,$logic_name) = $idsth->fetchrow){
   foreach my $t (keys %lns_to_stay) {
+    my $all_to_go = 1;
     foreach my $ln (keys %{$lns_to_stay{$t}}) {
+      $all_to_go = 0;
       if ($logic_name eq $ln) {				
 	push @{$ids_to_stay{$t}}, $analysis_id;
 	#make a note of all analysis_ids for cleaning up analysis table
@@ -335,24 +347,40 @@ while (my ($analysis_id,$logic_name) = $idsth->fetchrow){
 	}
       }
     }
+    if ($all_to_go) {
+      $ids_to_stay{$t} = [];
+      $ids_to_stay{'analysis'} = [];
+    }
   }
 }
 
-#warn Dumper(\%ids_to_stay);
+$support->log("Doing the deletions:\n") if (! $support->param('dry_run'));
 
-$support->log("Doing the deletions:\n");
+##delete features by analysis_id
+# - it's faster to create tmp tables and truncate rather than delete
+# unless of course we're deleting everything as we do for a template db
+##
 
-#delete by analysis_id - faster to create tmp tables and truncate rather than delete
 foreach my $t (keys %ids_to_stay) {
-  my $ids_to_keep = join("','",@{$ids_to_stay{$t}});
-  my $sql = qq(CREATE TABLE tmp_$t SELECT * from $t WHERE analysis_id in ('$ids_to_keep'));
-  if (! $support->param('dry_run')) {
-    $support->log_stamped("Deleting from $t by analysis_id...\n",1);
-    $pddbh->do($sql);
-    $pddbh->do(qq(TRUNCATE $t));
-    $pddbh->do(qq(INSERT into $t select * from tmp_$t));
-    $pddbh->do(qq(DROP TABLE tmp_$t));
-    $support->log_stamped("...finished deleting from $t by analysis_id.\n\n",1);
+  if (@{$ids_to_stay{$t}}) {
+    my $ids_to_keep = join("','",@{$ids_to_stay{$t}});
+    my $sql = qq(CREATE TABLE tmp_$t SELECT * from $t WHERE analysis_id in ('$ids_to_keep'));
+    if (! $support->param('dry_run')) {
+      $support->log_stamped("Deleting from $t by analysis_id...\n",1);
+      $pddbh->do($sql);
+      $pddbh->do(qq(TRUNCATE $t));
+      $pddbh->do(qq(INSERT into $t select * from tmp_$t));
+      $pddbh->do(qq(DROP TABLE tmp_$t));
+      $support->log_stamped("...finished deleting from $t by analysis_id.\n\n",1);
+    }
+  }
+  else {
+    my $sql = qq(DELETE from $t);
+    if (! $support->param('dry_run')) {
+      $support->log_stamped("Deleting all features from $t...\n",1);
+      $pddbh->do($sql);
+      $support->log_stamped("...finished deleting everything from $t\n\n",1);
+    }
   }
 }
 foreach my $t (keys %ids_to_stay) {
@@ -365,12 +393,17 @@ foreach my $t (keys %ids_to_stay) {
 # delete any unwanted entries from meta_coord table #
 #####################################################
 
-my $noentry_tables = join("','",qw(gene transcript exon));
+my @noentry_tables = qw(gene transcript exon);
+if ($support->param('prepare_template')) {
+  push @noentry_tables, keys %ids_to_stay;
+}
+my $noentry_tables = join("','",@noentry_tables);
 
 if (! $support->param('dry_run')) {
   my $c = $pddbh->do(qq(DELETE FROM meta_coord where table_name in ('$noentry_tables')));
   $support->log("Removed $c entries from meta_coord table\n\n",1);
 }
+
 
 #########################
 # seq_region_attributes #
@@ -391,7 +424,7 @@ if (!$support->param('dry_run')) {
 # seq_region_ids #
 ##################
 
-## workout which seq_region_ids are to be kept
+## work out which seq_region_ids are to be kept
 my $chr_to_keep = join("', '",@{$chr_names_wanted});
 
 #chr seq_region_ids
@@ -477,10 +510,19 @@ while (my ($t, $cs_name) = $cssth->fetchrow_array){
 my $all_ids_to_stay = join("','",@all_ids);
 if (! $support->param('dry_run')) {
   foreach my $t (qw(seq_region seq_region_attrib dna)) {
-    $support->log_stamped("Deleting from $t by seq_region_id...\n",1);
-    my $sql = qq(DELETE FROM $t where seq_region_id not in ('$all_ids_to_stay'));
-    $table_rows{$t}{'deleted_by_seq_region_id'} = $pddbh->do($sql);
-    $support->log_stamped("...finished deleting from $t by seq_region_id...\n\n",1);
+    if ($support->param('create_template') && $t eq 'dna') {
+      #remove everything from the dna table if we're creating a template
+      $support->log_stamped("Deleting everything from $t...\n",1);
+      my $sql = qq(DELETE FROM $t);
+      $table_rows{$t}{'deleted_by_seq_region_id'} = $pddbh->do($sql);
+      $support->log_stamped("...finished deleting from $t by seq_region_id...\n\n",1);
+    }
+    else {
+      $support->log_stamped("Deleting from $t by seq_region_id...\n",1);
+      my $sql = qq(DELETE FROM $t where seq_region_id not in ('$all_ids_to_stay'));
+      $table_rows{$t}{'deleted_by_seq_region_id'} = $pddbh->do($sql);
+      $support->log_stamped("...finished deleting from $t by seq_region_id...\n\n",1);
+    }
   }
 
   #assembly
