@@ -6,33 +6,34 @@ use strict;
 use warnings;
 
 use Bio::Otter::Lace::Defaults;
-use Bio::Otter::Lace::PipelineDB;
+use DBI;
+# use Bio::Otter::Lace::PipelineDB;
 
 {
-    $0 = 'otterlace';   # For testing, to see restricted dataset.
-    my $dataset_name = 'human_test';
+    # $0 = 'otterlace';   # For testing, to see restricted dataset.
+    # my $dataset_name = 'human_test';
 
     my $usage = sub { exec('perldoc', $0) };
     # This do_getopt() call is needed to parse the otter config files
     # even if you aren't giving any arguments on the command line.
     Bio::Otter::Lace::Defaults::do_getopt(
         'h|help!'       => $usage,
-        'dataset=s'     => \$dataset_name,
+        # 'dataset=s'     => \$dataset_name,
         ) or $usage->();
-    $usage->() unless $dataset_name;
+    # $usage->() unless $dataset_name;
     
     my $dba;
-    if (0) {
-        # Client communicates with otter HTTP server
-        my $cl = Bio::Otter::Lace::Defaults::make_Client();
-    
-        # DataSet interacts directly with an otter database
-        my $ds = $cl->get_DataSet_by_name($dataset_name);
-    
-        my $otter_dba = $ds->get_cached_DBAdaptor;
-        $dba = $otter_dba->dbc;
-    }
-    else {
+    # if (0) {
+    #     # Client communicates with otter HTTP server
+    #     my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    # 
+    #     # DataSet interacts directly with an otter database
+    #     my $ds = $cl->get_DataSet_by_name($dataset_name);
+    # 
+    #     my $otter_dba = $ds->get_cached_DBAdaptor;
+    #     $dba = $otter_dba->dbc;
+    # }
+    # else {
         # This is the version of the script used to patch vega_homo_sapiens_20110516_v62_GRCh37
 
         # $dba = DBI->connect("DBI:mysql:database=vega_homo_sapiens_20110516_v62_GRCh37;host=ensdb-1-11;port=5317",
@@ -47,12 +48,17 @@ use Bio::Otter::Lace::PipelineDB;
         # $dba = DBI->connect("DBI:mysql:database=vega_mus_musculus_20111010_v64_NCBIM37;host=ensdb-1-11;port=5317",
         #     'ensadmin', 'ensembl', {RaiseError => 1});
 
-        # $dba = DBI->connect("DBI:mysql:database=vega_homo_sapiens_20111219_v65_GRCh37;host=ensdb-1-11;port=5317",
-        #     'ensadmin', 'ensembl', {RaiseError => 1});
+        # my $dsn = "DBI:mysql:database=vega_homo_sapiens_20111219_v65_GRCh37;host=ensdb-1-11;port=5317";
+        # my $dsn = "DBI:mysql:database=homo_sapiens_vega_65_20111219_gb_4;host=ensdb-1-11;port=5317";
+        my $dsn = "DBI:mysql:database=amonida_human_vega_67;host=genebuild4;port=3306";
 
-        $dba = DBI->connect("DBI:mysql:database=vega_danio_rerio_20111219_v65_Zv9;host=ensdb-1-11;port=5317",
-            'ensadmin', 'ensembl', {RaiseError => 1});
-    }
+        my $now = scalar localtime;
+        print "$now fix_gene_biotypes.pl on $dsn\n";
+        $dba = DBI->connect($dsn, 'ensadmin', 'ensembl', {RaiseError => 1});
+
+        # $dba = DBI->connect("DBI:mysql:database=vega_danio_rerio_20111219_v65_Zv9;host=ensdb-1-11;port=5317",
+        #     'ensadmin', 'ensembl', {RaiseError => 1});
+    # }
 
     my $sth = $dba->prepare(q{
         SELECT g.biotype
@@ -91,7 +97,7 @@ use Bio::Otter::Lace::PipelineDB;
         $tsct_status ||= '';
         my $gene_data = $gene_tsct_biotypes{$gene_id} ||= {};
         $gene_data->{'biotype'} = $gene_biotype;
-        $gene_data->{'stauts'}  = $gene_status;
+        $gene_data->{'status'}  = $gene_status;
         $gene_data->{'tsct_biotype'}{$tsct_biotype}++;
         $gene_data->{'tsct_status' }{$tsct_status }++;
     }
@@ -100,7 +106,7 @@ use Bio::Otter::Lace::PipelineDB;
     foreach my $gene_id (sort {$a <=> $b} keys %gene_tsct_biotypes) {
         my $gene_data = $gene_tsct_biotypes{$gene_id};
         my ($gene_biotype) = $gene_data->{'biotype'};
-        my ($gene_status)  = $gene_data->{'stauts'};
+        my ($gene_status)  = $gene_data->{'status'};
         my $tsct_biotype_hash = $gene_data->{'tsct_biotype'};
         my $tsct_status_hash  = $gene_data->{'tsct_status' };
         my ($new_biotype, $new_status) = set_biotype_status_from_transcripts($gene_status, $tsct_biotype_hash, $tsct_status_hash);
