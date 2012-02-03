@@ -48,14 +48,14 @@ sub zMapInitialize {
     return;
 }
 
-=head1 zMapLaunchZmap
+=head2 zMapLaunchZmap
 
 This is where it all starts.  This is the method which gets called
 on 'Launch ZMap' menu item in xaceseqchooser window.
 
 =cut
 
-=head1 _launchZMap
+=head2 _launchZMap
 
 The guts of the code to launch and display the features in a zmap.
 
@@ -69,7 +69,7 @@ sub _launchZMap {
     return;
 }
 
-=head1 zMapLaunchZmap
+=head2 zMapLaunchZmap
 
 Launches zmap, displaying the features of $self->slice_name(), killing
 an existing one if it exists.
@@ -88,7 +88,7 @@ sub zMapLaunchZmap {
     return;
 }
 
-=head1 zMapLaunchInAZmap
+=head2 zMapLaunchInAZmap
 
 Uses an existing ZMap to display the features of $self->slice_name().
 
@@ -105,7 +105,7 @@ sub zMapLaunchInAZmap {
     return;
 }
 
-=head1 _launchInAZMap
+=head2 _launchInAZMap
 
 The real part of zMapLaunchInAZmap()
 
@@ -187,7 +187,7 @@ sub zMapSendCommands {
     return;
 }
 
-=head1 post_response_client_cleanup
+=head2 post_response_client_cleanup
 
 A function to cleanup any bad windows that might exist.
 Primary user of this is the zMapFinalised function.
@@ -201,7 +201,7 @@ sub post_response_client_cleanup {
     return;
 }
 
-=head1 post_response_client_cleanup_launch_in_a_zmap
+=head2 post_response_client_cleanup_launch_in_a_zmap
 
 Cleanup any bad windows that might exist & call _launchInAZMap
 
@@ -217,7 +217,7 @@ sub post_response_client_cleanup_launch_in_a_zmap {
     return;
 }
 
-=head1 zMapFinalised
+=head2 zMapFinalised
 
 A  handler to  handle finalise  requests. ZMap  sends these  when it's
 closing the  whole program. Depending  on whether we want  to relaunch
@@ -243,7 +243,7 @@ sub zMapFinalised {
     return (200, "all closed");
 }
 
-=head1 zMapKillZmap
+=head2 zMapKillZmap
 
 Attempts  to kill  zmap,  return true  if  it succeeded  and false  on
 failure.  If relaunch = true and zMapKillZmap returns true then zmap
@@ -296,7 +296,7 @@ sub zMapKillZmap {
     return 0;
 }
 
-=head1 zMapPID
+=head2 zMapPID
 
 Stores the process id for zmap.
 
@@ -316,7 +316,7 @@ sub zMapXRemoteClients {
     return $self->{'_zMap_ZMAP_XREMOTE_CLIENTS'} ||= { };
 }
 
-=head1 zMapZmapConnector
+=head2 zMapZmapConnector
 
 This is the way we receive commands from zmap.
 
@@ -355,7 +355,7 @@ sub main_window_name {
     return $name;
 }
 
-=head1 zMapRegisterClient
+=head2 zMapRegisterClient
 
 A handler to handle register_client requests.
 
@@ -385,7 +385,7 @@ sub zMapRegisterClient {
     return (200, $response_xml);
 }
 
-=head1 zMapEdit
+=head2 zMapEdit
 
 A handler to handle edit requests.  Returns a basic response.
 
@@ -447,7 +447,7 @@ sub zMapEdit {
 
 }
 
-=head1 zMapHighlight
+=head2 zMapHighlight
 
 A  handler  to  handle  single_select  and  multiple_select  requests.
 returns a basic response.
@@ -490,7 +490,7 @@ sub zMapMultipleSelect {
     return $self->zMapHighlight(@args);
 }
 
-=head1 zMapFeatureDetails
+=head2 zMapFeatureDetails
 
 A  handler  to handle  feature_details  request.   returns a  notebook
 response.
@@ -736,7 +736,7 @@ sub _zmap_request_callback {
     return @result;
 }
 
-=head1 zMapGetXRemoteClientByName
+=head2 zMapGetXRemoteClientByName
 
 The XRemoteCache caches objects based on their window ids. This module
 needs some  way to get  the object cached  for a particular  window id
@@ -970,7 +970,7 @@ sub zMapNewView {
     return;
 }
 
-=head1 zMapDoRequest
+=head2 zMapDoRequest
 
 return true for success
 

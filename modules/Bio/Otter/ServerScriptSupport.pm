@@ -209,7 +209,7 @@ sub read_user_file {
 }
 
 
-=head2 sangerweb()
+=head2 sangerweb
 
 Instance method.  Cache and return an instance of L<SangerWeb>
 configured with our CGI instance.
@@ -270,7 +270,7 @@ sub internal_user {
 }
 
 
-=head2 local_user()
+=head2 local_user
 
 Is the caller on the WTSI internal network?
 

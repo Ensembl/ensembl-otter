@@ -24,7 +24,7 @@ __END__
 Extends its Bio::EnsEMBL::DnaDnaAlignFeature
 baseclass to add the method:
 
-=head1 get_HitDescription
+=head2 get_HitDescription
 
 Returns the Bio::Vega::HitDescription object
 attached to the feature.

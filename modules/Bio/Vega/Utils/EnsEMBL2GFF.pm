@@ -5,6 +5,7 @@ package Bio::Vega::Utils::EnsEMBL2GFF;
 use strict;
 use warnings;
 
+use Bio::EnsEMBL::Utils::Exception qw(verbose);
 use Bio::Vega::Utils::GFF;
 
 # This module allows conversion of ensembl/otter objects to GFF by inserting
@@ -15,8 +16,6 @@ use Bio::Vega::Utils::GFF;
 {
 
     package Bio::EnsEMBL::Slice;
-
-    use Bio::EnsEMBL::Utils::Exception qw(verbose);
 
     sub gff_header {
         my ($self, %args) = @_;
