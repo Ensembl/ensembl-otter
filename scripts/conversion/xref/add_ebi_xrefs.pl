@@ -160,14 +160,10 @@ if ($support->param('prune') and $support->user_proceed('Would you really like t
 }
 
 my %gene_stable_ids = map { $_, 1 }  $support->param('gene_stable_id');
-my $chr_length = $support->get_chrlength($dba,'','',1);
-my @chr_sorted = $support->sort_chromosomes($chr_length);
-
 my $parsed_xrefs = {};
 my $xref_file    = $SERVERROOT.'/'.$support->param('dbname')."-EBI-parsed_records.file";
 
 # read input files... either retrieve from disc
-
 if (-e $xref_file) {
   if ($support->user_proceed("Read xref records from a previously saved files - $xref_file ?\n")) {
     $parsed_xrefs = retrieve($xref_file);
@@ -189,23 +185,20 @@ if ($support->param('verbose')) {
 
 $support->log_stamped("Done.\n\n");
 
-# loop over chromosomes
-$support->log("Looping over chromosomes: @chr_sorted\n\n");
 my $overall_c = 0;
+my $chr_length = $support->get_chrlength($dba,'','chromosome',1); #will retrieve non-reference slices
+my @chr_sorted = $support->sort_chromosomes($chr_length);
 
+# fetch genes from db
+$support->log("Fetching genes...\n");
 foreach my $chr (@chr_sorted) {
-  my $chr_c = 0;
   $support->log_stamped("> Chromosome $chr (".$chr_length->{$chr}."bp).\n\n");
-
-  # fetch genes from db
-  $support->log("Fetching genes...\n");
   my $slice = $sa->fetch_by_region('toplevel', $chr);
-  my $genes = $ga->fetch_all_by_Slice($slice);
+  my ($genes) = $support->get_unique_genes($slice,'',1);
   $support->log_stamped("Done fetching ".scalar @$genes." genes.\n\n");
-
-  my $gnum = 0;
+  my $chr_c = 0;
  GENE:
-  foreach my $gene (@$genes) {
+  foreach my $gene (@{$genes}) {
     my $gsi = $gene->stable_id;	
 
     # filter to user-specified gene_stable_ids
@@ -215,7 +208,6 @@ foreach my $chr (@chr_sorted) {
 
     my $gene_name = $gene->display_xref->display_id;
     $support->log_verbose("Studying $gene_name ($gsi)...\n");
-    $gnum++;
 
     foreach my $trans (@{$gene->get_all_Transcripts()}) {
       if (my $trl = $trans->translation() ) {
@@ -284,7 +276,6 @@ sub parse_go {
   # read input file from GO
   open (EBI, '<', $support->param('ebifile')) or $support->throw(
     "Couldn't open ".$support->param('ebifile')." for reading: $!\n");
-#  my %evi_code;
   my %source_dbs;
   my $prev_tlsi;
   my $rec;
@@ -292,20 +283,19 @@ sub parse_go {
     next if $_ =~ /^#/;
     my @fields = split /\t/, $_;
     my $tlsi         = $fields[0]; # add GO and Uniprot xrefs to this *translation*
-
 #    next unless $tlsi eq 'OTTHUMP00000080295';
 
     my $uniprot      = $fields[1]; # used for Uniprot xrefs
     my $go_id        = $fields[2]; # self explanatory [= xref.display_label and xref.dbprimary_acc]
     my $go_name      = $fields[4]; # ie description of the GO term [= xref.description]
-    my $ev_code      = $fields[5]; # type of evidence, eg IEA [= ontology_xref.linkage]
-    my ($source_db,$source_acc) = split ':', $fields[7]; # source, ie the group / database that supplied the annotation - needs another xref linked to from ontology_xref.source_xref_id
+    my $ev_code      = $fields[5]; # type of evidence, eg IEA [= ontology_xref.linkage]# 
+    my ($extra_db,$extra_acc) = split ':', $fields[7]; # extra evidence that supports the annotation - used as 'annotation source' by e! code but inaccurately
+    my $assigned_by  = $fields[8]; # who made the connection [should be 'annotation sourc'e but can't fit it in the schema]
+    chomp $assigned_by;
+    $source_dbs{$assigned_by}++;
 
-#    $evi_code{$ev_code}++;
 #    my $go_aspect    = $fields[3]; # F(unction), P(rocess) or C(omponent) (not used)
 #    my $ref          = $fields[6]; # identifier of the source cited as the authority for attributing a GO term to a gene product (not used)
-#    $source_dbs{$source_db}++ if $fields[7] && $source_acc;
-#    my $assigned_by  = $fields[8]; # who made the connection (not used)
 
     #sanity checks
     chomp $go_id;
@@ -326,77 +316,57 @@ sub parse_go {
       };
     }
     push @{$rec->{$tlsi}{'go'}{$go_id}}, {
-        'pid'       => $go_id,
+        'pid'           => $go_id,
         'display_label' => $go_id,
-        'go_name'   => $go_name,
-        'ev_code'   => $ev_code,
-        'source_db' => $source_db,
-        'source_acc'=> $source_acc,
+        'go_name'       => $go_name,
+        'ev_code'       => $ev_code,
+        'assigned_by'   => $assigned_by,
+        'extra_db'      => $extra_db,
+        'extra_acc'     => $extra_acc,
       };
 
     $prev_tlsi  = $tlsi;
   }
 
   &cleanup_and_store($rec,$prev_tlsi);
-
-  #  warn Dumper(\%evi_code);
-  warn Dumper(\%source_dbs);
+  $support->log_verbose("Sources of annotation are ".Dumper(\%source_dbs)."\n",1);
 }
 
+#select just one of the GO records (by evidence code priority) and then add to $parsed_xrefs
 sub cleanup_and_store {
   my ($rec,$tlsi) = @_;
 
-  #remove records without a source if there are also ones with a source
+  # priorites from GOA
+  my %evidence_priorities = (
+    IDA => '1',   # inferred from direct assay
+    IMP => '2',   # inferred from mutant phenotype
+    IGI => '3',   # inferred from genetic interaction
+    IPI => '4',   # inferred from physical interaction
+    IEP => '5',   # inferred from expression pattern
+    EXP => '6',   # inferred from experiment
+    ISO => '7',   # inferred from sequence orthology
+    ISA => '7',   # inferred from sequence alignment
+    ISS => '8',   # inferred from sequence or structural similarity
+    IBD => '8',   # Inferred from Biological aspect of Descendant
+    IKR => '8',   # Inferred from Key Residues
+    IRD => '8',   # Inferred from Rapid Divergence
+    IBA => '8',   # Inferred from Biological aspect of Ancestor
+    IGC => '9',   # Inferred from Genomic Context
+    NAS => '10',  # non-traceable author statement
+    TAS => '11',  # traceable author statement
+    IC => '12',   # inferred by curator
+    RCA => '13',  # reviewed computational annotation
+    IEA  => '14', # inferred from electronic annotation
+    ND  => '15',  # no data
+  );
+
+  #select just one record after ordering by priority
   while ( my ($go_id,$go_rec) = each (%{$rec->{$tlsi}{'go'}}) ) {
     if (scalar(@$go_rec) > 1) {
-      my $source_found = 0;
-      foreach my $cit (@$go_rec) {
-        $source_found = 1 if $cit->{'source_db'};
-      }
-      if ($source_found) {
-        for (my $i; $i < scalar(@{$go_rec}); $i++) {
-          my $cit = $go_rec->[$i];
-          if (! $cit->{'source_db'}) {
-            $support->log_verbose("Removing non sourced go record for $tlsi ($go_id).\n");
-            splice(@{$go_rec}, $i, 1);
-            next;
-          }
-        }
-      }
-
-      #remove duplicate records from the same external source
-      my %sources;
-      for (my $i; $i < scalar(@{$go_rec}); $i++) {
-        my $cit = $go_rec->[$i];
-        if ($sources{$cit->{'source_db'}}) {
-          $support->log_verbose("Removing ".$cit->{'source_db'}." sourced GO record for $tlsi ($go_id) since one has already been seen.\n");
-          splice(@{$go_rec}, $i, 1);
-          next;
-        }
-        $sources{$cit->{'source_db'}}++;
-      }
-      #finally remove all but the first remaining record
-      if (scalar(@$go_rec) > 1) {
-        for (my $i; $i < scalar(@{$go_rec}); $i++) {
-          if ($i) {
-            $support->log_verbose("Removing all but one sourced GO record for $tlsi ($go_id).\n");
-            splice(@{$go_rec}, $i, 1);
-          }
-        }
-      }
+      my @sorted = sort { $evidence_priorities{$a->{'ev_code'}} <=> $evidence_priorities{$b->{'ev_code'}} } @$go_rec;
+      my $wanted_rec = shift @sorted;
+      $rec->{$tlsi}{'go'}{$go_id} = [ $wanted_rec ]
     }
   }
-
   $parsed_xrefs->{$tlsi} = $rec->{$tlsi};
-# warn Dumper($parsed_xrefs); exit;
- #store $rec on $xref
-
 }
-# my $sfs = $obj->get_all_supporting_features;
-#  for (my $i = 0; $i < scalar(@{$sfs}); $i++) {
-#    my $sf = $sfs->[$i];
-#    if ($sf->dbID == $id) {
-#      $support->log("Removing $type supporting_feature ".$sf->display_id." (".$sf->dbID.") from ".$obj->stable_id."\n",3);
-#      splice(@{$sfs}, $i, 1);
-#    }
-#  }
