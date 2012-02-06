@@ -352,6 +352,25 @@ sub password_problem{
     return $callback;
 }
 
+sub reauthorize_if_cookie_will_expire_soon {
+    my ($self) = @_;
+
+    # Soon is if cookie expires less than half an hour from now
+    my $soon = time + (30 * 60);
+    if ($self->cookie_expiry_time < $soon) {
+        my $re_authorized_ok = 0;
+        my $password_attempts = $self->password_attempts;
+        while ($password_attempts) {
+            my $re_authorized_ok = $self->authorize;
+            last if $re_authorized_ok;
+        }
+        return $re_authorized_ok;
+    }
+    else {
+        return 1;
+    }
+}
+
 sub authorize {
     my ($self) = @_;
 
@@ -429,14 +448,15 @@ sub get_CookieJar {
 
 sub create_CookieJar {
     my( $self ) = @_;
-    my $jar = $self->{_cookie_jar_file};
+
+    my $jar = $self->{'_cookie_jar_file'};
     return HTTP::Cookies::Netscape->new(file => $jar);
 }
 
 sub save_CookieJar {
     my ($self) = @_;
 
-    my $jar = $self->{_cookie_jar_file};
+    my $jar = $self->{'_cookie_jar_file'};
     if (-e $jar) {
         # Fix mode if not already mode 600
         my $mode = (stat(_))[2];
@@ -458,6 +478,25 @@ sub save_CookieJar {
         or confess "Failed to save cookie";
 
     return;
+}
+
+sub cookie_expiry_time {
+    my ($self) = @_;
+
+    my $jar = $self->get_CookieJar;
+    my $expiry_time = 0;
+    $jar->scan(sub{
+        my ($key, $expiry) = @_[1,8];
+
+        if ($key eq 'WTSISignOn') {
+            $expiry_time = $expiry;
+        }
+        return;
+    });
+
+    # warn "Cookie expiry time is ", scalar localtime($expiry_time), "\n";
+
+    return $expiry_time;
 }
 
 sub url_root {
