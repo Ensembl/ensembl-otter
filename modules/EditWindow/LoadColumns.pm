@@ -303,6 +303,7 @@ sub load_filters {
 
     if ($self->XaceSeqChooser) {
         if (@to_fetch) {
+            $self->AceDatabase->Client->reauthorize_if_cookie_will_expire_soon;
             my @featuresets = 
                 map { $_->{filter}->name } @to_fetch;
             $self->XaceSeqChooser->zMapLoadFeatures(@featuresets);
