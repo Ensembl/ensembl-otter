@@ -159,7 +159,7 @@ sub _print_feature {
 
     my $gap = join ' ', map {
         ($_->[0] eq 'S') ? ( ) : ( join '', @{$_} );
-    } @{$_->cigar_array};
+    } @{$feature->cigar_array};
 
     # $feature->l_qseq;
 
@@ -177,19 +177,19 @@ sub _print_feature {
     my $dna = $query->dna;
 
     my @attributes = (
-        Name     => [ $name   ],
-        Gap      => [ $gap    ],
-        Target   => [ $target ],
-        sequence => [ $dna    ],
+        Name     => $name,
+        Gap      => $gap,
+        Target   => $target,
+        sequence => $dna,
         );
 
     my @attribute_strings = ();
-    while ( my ($key, $values) = splice(@attributes, 0, 2) ) {
+    while ( my ($key, $value) = splice(@attributes, 0, 2) ) {
         unless ($key eq 'Target') { # the Target tag is already escaped
-            gff_escape_attribute for @{$values};
+            gff_escape_attribute for $value;
         }
         gff_escape_attribute for $key;
-        push @attribute_strings, sprintf $attributes_format, $key, join ",", @{$values};
+        push @attribute_strings, sprintf $attributes_format, $key, $value;
     }
     my $attributes_string = join ";", @attribute_strings;
 
