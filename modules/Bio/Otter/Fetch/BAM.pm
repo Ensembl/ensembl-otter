@@ -20,15 +20,15 @@ sub features {
         @{$self}{qw( -sam -chr_prefix )};
 
     $chr = "${chr_prefix}${chr}" if defined $chr_prefix;
-    my @read_pairs = $sam->features(
-        -type   => 'read_pair', # Why not fetch "match"?
-        -seq_id => $chr,
-        -start  => $start,
-        -end    => $end,
-        );
-    warn sprintf "found %d read pairs\n", scalar @read_pairs;
-
-    my $features = [ map { $_->get_SeqFeatures } @read_pairs ];
+    my $features = [
+        $sam->features(
+            -type   => 'match',
+            -seq_id => $chr,
+            -start  => $start,
+            -end    => $end,
+        )
+    ];
+    warn sprintf "found %d matches\n", scalar @$features;
 
     return $features;
 }
