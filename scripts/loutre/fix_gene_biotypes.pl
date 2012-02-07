@@ -149,11 +149,11 @@ sub set_biotype_status_from_transcripts {
     if (my @pseudo = grep { /pseudo/i } keys %tsct_biotype) {
         if (@pseudo > 1) {
             # throw(
-            #     sprintf "More than one psedogene type in gene %s (%s)",
+            #     sprintf "More than one pseudogene type in gene %s (%s)",
             #         $self->get_all_Attributes('name')->[0]->value,
             #         join(', ', @pseudo)
             #     );
-            die "More than one psedogene type in gene\n";
+            die "More than one pseudogene type in gene\n";
         }
         else {
             if ($tsct_biotype{'protein_coding'}) {
