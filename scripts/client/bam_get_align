@@ -162,20 +162,27 @@ sub _print_feature {
     # spaces in the query name
 
     my $query = $feature->query;
+
     my @align_fields = ($query->start, $query->end);
     my $query_strand = $strands->{$query->strand};
     push @align_fields, $query_strand if $query_strand;
-    my $cigar = $feature->cigar_str;
-    $cigar =~ s/\d+S//g;    # Remove BAM "S" clipping strings from CIGAR
+
+    my $q_length = $feature->l_qseq;
 
     my @attributes = (
-        Name        => qq{"$name"},
         Class       => qq{"Sequence"},
-        cigar       => qq{"$cigar"},
+        Name        => qq{"$name"},
         Align       => join(' ', @align_fields),
         Length      => $feature->l_qseq,
         percentID   => 100,
         );
+
+    my $cigar = $feature->cigar_str;
+    $cigar =~ s/\d+S//g;    # Remove BAM "S" clipping strings from CIGAR
+    if ($cigar !~ /^\d+M$/) {
+        # It isn't a simple match string, so we do need CIGAR
+        push(@attributes, cigar => qq{"$cigar"});
+    }
 
     my @attribute_strings = ();
     while ( my ($key, $value) = splice(@attributes, 0, 2) ) {
