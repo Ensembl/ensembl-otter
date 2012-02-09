@@ -112,12 +112,13 @@ $support->check_required_params('ebifile','xrefformat');
 # ask user to confirm parameters to proceed
 $support->confirm_params;
 
-if ($support->param('xrefformat') !~ /uniprot|go/) {
-  $support->log_error("Please set xrefformat option to 'uniprot' or 'go'\n");
-}
-
 # get log filehandle and print heading and parameters to logfile
 $support->init_log;
+
+my $xrefformat = $support->param('xrefformat');
+if ($xrefformat !~ /Uniprot\/SWISSPROT|GO/) {
+  $support->log_error("Please set xrefformat option to 'Uniprot/SWISSPROT' or 'GO'\n");
+}
 
 # connect to database and get adaptors
 my $dba = $support->get_database('ensembl');
@@ -127,10 +128,9 @@ my $ga  = $dba->get_GeneAdaptor();
 my $tla = $dba->get_TranslationAdaptor();
 my $ea  = $dba->get_DBEntryAdaptor();
 
-my $xrefformat = $support->param('xrefformat');
 
 # delete previous xrefs if --prune option is used
-if ($support->param('prune') and $support->user_proceed('Would you really like to delete $xrefformat xrefs from previous runs of this script?')) {
+if ($support->param('prune') and $support->user_proceed("Would you really like to delete $xrefformat xrefs from previous runs of this script?")) {
 
   $support->log("Deleting $xrefformat xrefs...\n");
 
@@ -150,8 +150,19 @@ if ($support->param('prune') and $support->user_proceed('Would you really like t
            WHERE x.xref_id IS NULL
         ));
   $support->log("Done deleting $num entries.\n");
-
-  if ($xrefformat eq 'go') {
+  
+  #GO source xrefs
+  if ($xrefformat eq 'GO') {
+    $support->log("Deleting GO source object_xrefs...\n");
+    my $num = $dba->dbc->do(qq(
+           DELETE x
+           FROM xref x, external_db edb
+           WHERE x.external_db_id = edb.external_db_id
+           AND edb.db_name = 'Quick_Go'));
+    $support->log("Done deleting $num entries.\n");
+  }
+	
+  if ($xrefformat eq 'GO') {
     # ontology_xrefs
     $support->log("Deleting ontology_xrefs...\n");
     $num = $dba->dbc->do(qq(DELETE FROM ontology_xref));
@@ -180,7 +191,7 @@ if (! %$parsed_xrefs ) {
 
 if ($support->param('verbose')) {
   $support->log("Parsed xrefs are ".Dumper($parsed_xrefs)."\n");
-  exit;
+#  exit;
 }
 
 $support->log_stamped("Done.\n\n");
@@ -211,58 +222,81 @@ foreach my $chr (@chr_sorted) {
 
     foreach my $trans (@{$gene->get_all_Transcripts()}) {
       if (my $trl = $trans->translation() ) {
+        my $tsi   = $trans->stable_id;
 	my $trlsi = $trl->stable_id;
 	my $trlid = $trl->dbID;
-	
-	$support->log_verbose("Searching for name $trlsi...\n",1);
-	if (my $links = $parsed_xrefs->{$trlsi}) {
-	  $support->log_verbose("Match found for $trlsi.\n",1);
+	my ($pid,$rec);
+	while ( ($pid,$rec) = each (%{$parsed_xrefs->{$trlsi}{$xrefformat}})) {
+	  $support->log_verbose("Match found for $tsi.\n",1);
+          unless ($rec->{'pid'}) {
+            $support->log_warning("Parsed file not in the correct format, please check\n");
+          }
+          $chr_c++;
+          $overall_c++;
 
-	MATCH:
-	  foreach my $match (@{$links->{'GO'}}) {
-	    $chr_c++;
-	    $overall_c++;
-	    my ($xid,$ev_type) = split /\|\|/, $match;
+          my $dbentry;
 
-	    unless ($xid) {
-	      $support->log_warning("Parsed file not in the correct format, please check\n");
-	      next MATCH;
-	    }
+          if ($xrefformat eq 'Uniprot/SWISSPROT') {
+            #uniprot is easy, just add an xref to the tranlsation
+            $support->log_verbose("Creating new $xrefformat xref for $trlsi $pid.\n", 2);
+            $dbentry = Bio::EnsEMBL::DBEntry->new(
+              -primary_id => $pid,
+              -display_id => $rec->{'display_label'},
+              -version    => 1,
+              -info_type  => 'DEPENDENT',
+              -dbname     => $xrefformat,
+            );
+          }
+          else {
+            #go requires an ontology xref and an xref (for Annotation source)
+            my $ev_type = $rec->{'ev_code'};
             unless ($ev_type) {
-              $support->log_warning("No evidence type associated with $xid ($trlsi), please check input file\n");
+              $support->log_warning("No evidence type associated with $pid ($trlsi), please check input file\n");
               $ev_type = '';
             }
-	    $support->log_verbose("Creating new GO xref for $trlsi--$match.\n", 2);
-	    my $dbentry = Bio::EnsEMBL::OntologyXref->new(
-	      -primary_id => $xid,
-	      -display_id => $xid,
-	      -version    => 1,
-	      -info_type  => 'DEPENDENT',
-	      -dbname     => 'GO',
-	    );
-	    $dbentry->add_linkage_type($ev_type);
+            $support->log_verbose("Creating new $xrefformat xref for $trlsi $pid.\n", 2);
+            $dbentry = Bio::EnsEMBL::OntologyXref->new(
+              -primary_id  => $pid,
+              -display_id  => $rec->{'display_label'},
+              -version     => 1,
+              -info_type   => 'DEPENDENT',
+              -dbname      => $xrefformat,
+              -description => $rec->{'go_name'},
+            );
 
-	    $trl->add_DBEntry($dbentry);
-	    if (! $support->param('dry_run')) {
-	      if (my $dbID = $ea->store($dbentry, $trlid, 'translation', 1)) {
-		$support->log_verbose("Stored GO xref (display_id = $xid, evidence = $ev_type) for $trlsi\n", 3);
-	      }
-	      else {
-		$support->log_warning("Failed to store GO xref for $trlsi\n");
-	      }
-	    }
-	  }
-	}								
-	else {
-	  $support->log_verbose("No match found for $trlsi.\n",1);					
-	}
+            my $source_xref = Bio::EnsEMBL::DBEntry->new(
+              -primary_id  => $rec->{'uniprot_acc'},
+              -display_id  => $rec->{'assigned_by'},
+              -info_type   => 'DEPENDENT',
+              -dbname      => 'Quick_Go_Extra',
+              -info_text   => 'Quick_Go:'.$rec->{'assigned_by'},
+            );
+            $dbentry->add_linkage_type($ev_type,$source_xref);
+
+            ##what's significance of info_type ?
+
+          }
+
+          $trl->add_DBEntry($dbentry);
+          if (! $support->param('dry_run')) {
+            if (my $dbID = $ea->store($dbentry, $trlid, 'translation', 1)) {
+              $support->log_verbose("Stored $xrefformat xref (display_id = $pid, dbID = $dbID, source_db = ".$rec->{'assigned_by'}." for $trlsi\n", 3);
+            }
+            else {
+              $support->log_warning("Failed to store GO xref for $trlsi\n");
+            }
+          }
+        }								
+        if (! $pid) {
+          $support->log_verbose("No match found for $trlsi.\n",1);					
+        }
       }
     }
   }
-  $support->log("$chr_c GO xrefs added for chromosome $chr\n");
+  $support->log("$chr_c $xrefformat xrefs added for chromosome $chr\n");
 }
 
-$support->log("$overall_c GO xrefs found\n");
+$support->log("$overall_c $xrefformat xrefs found in total\n");
 
 $support->finish_log;
 
@@ -285,17 +319,17 @@ sub parse_go {
     my $tlsi         = $fields[0]; # add GO and Uniprot xrefs to this *translation*
 #    next unless $tlsi eq 'OTTHUMP00000080295';
 
-    my $uniprot      = $fields[1]; # used for Uniprot xrefs
+    my $uniprot      = $fields[1]; # used for Uniprot xrefs and for links to Quick GO for 'Annotation source'
     my $go_id        = $fields[2]; # self explanatory [= xref.display_label and xref.dbprimary_acc]
     my $go_name      = $fields[4]; # ie description of the GO term [= xref.description]
     my $ev_code      = $fields[5]; # type of evidence, eg IEA [= ontology_xref.linkage]# 
-    my ($extra_db,$extra_acc) = split ':', $fields[7]; # extra evidence that supports the annotation - used as 'annotation source' by e! code but inaccurately
-    my $assigned_by  = $fields[8]; # who made the connection [should be 'annotation sourc'e but can't fit it in the schema]
+    my $assigned_by  = $fields[8]; # who made the connection, ie 'Annotation source' (also used for link to QuickGO
     chomp $assigned_by;
     $source_dbs{$assigned_by}++;
 
 #    my $go_aspect    = $fields[3]; # F(unction), P(rocess) or C(omponent) (not used)
 #    my $ref          = $fields[6]; # identifier of the source cited as the authority for attributing a GO term to a gene product (not used)
+#    my ($extra_db,$extra_acc) = split ':', $fields[7]; # extra evidence that supports the annotation - used as 'annotation source' by e! code but inaccurately
 
     #sanity checks
     chomp $go_id;
@@ -309,20 +343,23 @@ sub parse_go {
       $rec = {};
     }
 
-    if (! $rec->{$tlsi}{'uniprot'}{$uniprot}) {
-      push @{$rec->{$tlsi}{'uniprot'}{$uniprot}}, {
-        'pid'           => $uniprot,
-        'display_label' => $uniprot,
-      };
-    }
-    push @{$rec->{$tlsi}{'go'}{$go_id}}, {
+#    if (! $rec->{$tlsi}{'uniprot'}{$uniprot}) {
+#      push @{$rec->{$tlsi}{'uniprot'}{$uniprot}}, {
+#        'pid'           => $uniprot,
+#        'display_label' => $uniprot,
+#      };
+#    }
+    $rec->{$tlsi}{'Uniprot/SWISSPROT'}{$uniprot} = {
+      'pid'           => $uniprot,
+      'display_label' => $uniprot,
+    };
+    push @{$rec->{$tlsi}{'GO'}{$go_id}}, {
         'pid'           => $go_id,
         'display_label' => $go_id,
         'go_name'       => $go_name,
         'ev_code'       => $ev_code,
         'assigned_by'   => $assigned_by,
-        'extra_db'      => $extra_db,
-        'extra_acc'     => $extra_acc,
+        'uniprot_acc'   => $uniprot,
       };
 
     $prev_tlsi  = $tlsi;
@@ -361,12 +398,18 @@ sub cleanup_and_store {
   );
 
   #select just one record after ordering by priority
-  while ( my ($go_id,$go_rec) = each (%{$rec->{$tlsi}{'go'}}) ) {
+  my $wanted_rec;
+  while ( my ($go_id,$go_rec) = each (%{$rec->{$tlsi}{'GO'}}) ) {
     if (scalar(@$go_rec) > 1) {
       my @sorted = sort { $evidence_priorities{$a->{'ev_code'}} <=> $evidence_priorities{$b->{'ev_code'}} } @$go_rec;
-      my $wanted_rec = shift @sorted;
-      $rec->{$tlsi}{'go'}{$go_id} = [ $wanted_rec ]
+      $wanted_rec = shift @sorted;
     }
+    else {
+      $wanted_rec = shift @$go_rec;
+    }
+    $rec->{$tlsi}{'GO'}{$go_id} = $wanted_rec;
   }
   $parsed_xrefs->{$tlsi} = $rec->{$tlsi};
 }
+
+#http://www.ebi.ac.uk/QuickGO/GAnnotation?source=ZFIN&protein=Q90X37&db=ZFIN
