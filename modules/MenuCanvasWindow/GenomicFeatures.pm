@@ -5,6 +5,7 @@ package MenuCanvasWindow::GenomicFeatures;
 use strict;
 use warnings;
 use Carp;
+use Try::Tiny;
 use base 'MenuCanvasWindow';
 
 use Tk::NoPasteEntry;
@@ -52,7 +53,7 @@ sub paste_eucomm_data {
 
     # Parse the old otter exon IDs from the existing text field
     my $display_otter = {};
-    my $text = $genomic_feature->{display_label} || '';
+    my $text = $genomic_feature->{'display_label'} || '';
     foreach my $id (grep { /E\d{11}$/ } split /[^A-Z0-9]+/, $text) {
         $display_otter->{$id} = 1;
     }
@@ -76,7 +77,7 @@ sub paste_eucomm_data {
         $exon_length % 3,
         $name,
         join(' ', sort keys %$otter);
-    $genomic_feature->{display_label} = $str;
+    $genomic_feature->{'display_label'} = $str;
 
     return;
 }
@@ -190,9 +191,13 @@ sub Assembly_from_tk {
     
     my @sf_list;
     foreach my $hash (values %{$self->{'_gfs'}}) {
-        my $feat = $self->SimpleFeature_from_gfs_hash($hash)
-          or next;
-        push(@sf_list, $feat);
+        try {
+            my $feat = $self->SimpleFeature_from_gfs_hash($hash);
+            push(@sf_list, $feat);            
+        }
+        catch {
+            $self->exception_message($_);
+        }
     }
     $new_assembly->set_SimpleFeature_list(@sf_list);
     
@@ -209,30 +214,34 @@ sub new_SimpleFeature_from_method_name {
 
 sub SimpleFeature_from_gfs_hash {
     my ($self, $hash) = @_;
-    
-    my $fiveprime  = $hash->{'fiveprime'}
-      or return;
-    my $threeprime = $hash->{'threeprime'}
-      or return;
-    my $strand     = $hash->{'strand'}
-      or confess "strand not set";
-    
-    my $gf_type = $hash->{'gf_type'};
-    
+
+    my $fiveprime  = $hash->{'fiveprime'}  or confess "missing left coordinate";
+    my $threeprime = $hash->{'threeprime'} or confess "missing right coordinate";
+    my $strand     = $hash->{'strand'}     or confess "strand not set";
+    my $gf_type    = $hash->{'gf_type'}    or confess "Feature type not set";
+
+    my $method = $self->get_Method_by_name($gf_type)
+      or confess "Do not have method '$gf_type'";
+
+    unless (defined($hash->{'display_label'}) and $hash->{'display_label'} =~ /\w/) {
+        # Cannot have an empty name for a feature.  Default to feature type.
+        $hash->{'display_label'} = $gf_type;
+    }
+
     my $feat = $self->new_SimpleFeature_from_method_name($gf_type);
     if ($strand == 1) {
         $feat->seq_start($fiveprime);
         $feat->seq_end($threeprime);
-    } else {
+    }
+    else {
         $feat->seq_start($threeprime);
         $feat->seq_end($fiveprime);
     }
     $feat->seq_strand($strand);
-    
-    my $method = $self->get_Method_by_name($gf_type);
-    $feat->score($method->edit_score         ? $hash->{'score'}         : $def_score        );
-    $feat->text( $method->edit_display_label ? $hash->{'display_label'} : $hash->{'gf_type'});
-    
+
+    $feat->score($method->edit_score        ? $hash->{'score'}         : $def_score);
+    $feat->text($method->edit_display_label ? $hash->{'display_label'} : $hash->{'gf_type'});
+
     return $feat;
 }
 
@@ -396,42 +405,42 @@ sub add_genomic_feature {
     my @pack = (-side => 'left', -padx => 2);
 
     # Popup menu for choosing type of feature
-    $genomic_feature->{gf_type_menu} = $subframe->SmartOptionmenu(
+    $genomic_feature->{'gf_type_menu'} = $subframe->SmartOptionmenu(
        -options  => [ map { [ $_->remark => $_->name ] } ($self->get_all_Methods) ],
        -variable => \$genomic_feature->{'gf_type'},
        -command  => sub { $self->change_of_gf_type_callback($genomic_feature, shift @_); },
     )->pack(@pack);
 
     # Entry for "start" position
-    $genomic_feature->{fiveprime_entry} = $subframe->NoPasteEntry(
-       -textvariable => \$genomic_feature->{fiveprime},
+    $genomic_feature->{'fiveprime_entry'} = $subframe->NoPasteEntry(
+       -textvariable => \$genomic_feature->{'fiveprime'},
        -width        => 7,
        -justify      => 'right',
     )->pack(@pack);
     my $recalc_fiveprime = sub { $self->recalc_coords_callback($genomic_feature, 'fiveprime'); };
-    $genomic_feature->{fiveprime_entry}->bind('<Return>', $recalc_fiveprime);
-    $genomic_feature->{fiveprime_entry}->bind('<Up>',     $recalc_fiveprime);
-    $genomic_feature->{fiveprime_entry}->bind('<Down>',   $recalc_fiveprime);
+    $genomic_feature->{'fiveprime_entry'}->bind('<Return>', $recalc_fiveprime);
+    $genomic_feature->{'fiveprime_entry'}->bind('<Up>',     $recalc_fiveprime);
+    $genomic_feature->{'fiveprime_entry'}->bind('<Down>',   $recalc_fiveprime);
 
     # Right or left pointing arrow for forward or reverse strand indicator
-    $genomic_feature->{direction_button} = $subframe->Button(
+    $genomic_feature->{'direction_button'} = $subframe->Button(
         -command => sub { flip_direction_callback($genomic_feature); },
     )->pack(-side => 'left');
     show_direction_callback($genomic_feature); # show it once
 
     # Entry for "end" position
-    $genomic_feature->{threeprime_entry} = $subframe->NoPasteEntry(
+    $genomic_feature->{'threeprime_entry'} = $subframe->NoPasteEntry(
        -textvariable => \$genomic_feature->{threeprime},
        -width        => 7,
        -justify      => 'right',
     )->pack(@pack);
     my $recalc_threeprime = sub { $self->recalc_coords_callback($genomic_feature, 'threeprime'); };
-    $genomic_feature->{threeprime_entry}->bind('<Return>', $recalc_threeprime);
-    $genomic_feature->{threeprime_entry}->bind('<Up>',     $recalc_threeprime);
-    $genomic_feature->{threeprime_entry}->bind('<Down>',   $recalc_threeprime);
+    $genomic_feature->{'threeprime_entry'}->bind('<Return>', $recalc_threeprime);
+    $genomic_feature->{'threeprime_entry'}->bind('<Up>',     $recalc_threeprime);
+    $genomic_feature->{'threeprime_entry'}->bind('<Down>',   $recalc_threeprime);
 
     # Entry for score
-    $genomic_feature->{score_entry} = $subframe->NoPasteEntry(
+    $genomic_feature->{'score_entry'} = $subframe->NoPasteEntry(
        -textvariable => \$genomic_feature->{score},
        -width        => 4,
     )->pack(@pack);
@@ -449,20 +458,20 @@ sub add_genomic_feature {
     $delete_button->bind('<Destroy>', sub{ $self = undef });
     
     # Entry for display label / comment text
-    $genomic_feature->{display_label_entry} = $subframe->NoPasteEntry(
-       -textvariable => \$genomic_feature->{display_label},
+    $genomic_feature->{'display_label_entry'} = $subframe->NoPasteEntry(
+       -textvariable => \$genomic_feature->{'display_label'},
        -width        => 24,
     )->pack(@pack);
 
     # Add callbacks for pasting and middle button paste
     foreach my $event ('<<Paste>>', '<Button-2>') {
-        $genomic_feature->{fiveprime_entry}->bind(
+        $genomic_feature->{'fiveprime_entry'}->bind(
             $event,
             sub {
                 $self->paste_coords_callback($genomic_feature, 'fiveprime');
             }
         );
-        $genomic_feature->{threeprime_entry}->bind(
+        $genomic_feature->{'threeprime_entry'}->bind(
             $event,
             sub {
                 $self->paste_coords_callback($genomic_feature, 'threeprime');
@@ -489,7 +498,7 @@ sub add_genomic_feature {
     
     ### I don't think we need a destroy for all of these?
     for my $widget ('fiveprime_entry', 'threeprime_entry', 'direction_button', 'display_label_entry') {
-        $genomic_feature->{$widget}->bind('<Destroy>', sub{ $self=$genomic_feature=undef; } );
+        $genomic_feature->{$widget}->bind('<Destroy>', sub{ $self = $genomic_feature = undef; } );
     }
 
     $self->change_of_gf_type_callback($genomic_feature, $feat->method_name);
