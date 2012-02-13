@@ -7,7 +7,7 @@ use strict;
 use warnings;
 
 sub new {
-    my( $pkg, $tk ) = @_;
+    my ($pkg, $tk) = @_;
     
     my $self = bless {}, $pkg;
     $self->top($tk);
@@ -15,7 +15,7 @@ sub new {
 }
 
 sub top {
-    my( $self, $top ) = @_;
+    my ($self, $top) = @_;
     
     if ($top) {
         $self->{'_top'} = $top;
@@ -24,7 +24,7 @@ sub top {
 }
 
 sub balloon {
-    my( $self ) = @_;
+    my ($self) = @_;
     
     $self->{'_balloon'} ||= $self->top->Balloon(
         -state  => 'balloon',
