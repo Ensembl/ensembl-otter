@@ -161,8 +161,8 @@ sub fill_Properties {
 }
 
 sub make_labelled_text_widget {
-    my( $self, $widget, $name, $height, 
-        $button_text, $button_cmd, @fill ) = @_;
+    my ($self, $widget, $name, $height, 
+        $button_text, $button_cmd, @fill) = @_;
     
     my $std_border = 3;
     my $frame = $widget->Frame(
@@ -324,7 +324,7 @@ sub get_cleaned_text {
 }
 
 sub keyword_text {
-    my( $self, $keyword_text ) = @_;
+    my ($self, $keyword_text) = @_;
     
     if ($keyword_text) {
         $self->{'_keyword_text'} = $keyword_text;
@@ -333,7 +333,7 @@ sub keyword_text {
 }
 
 sub description_text {
-    my( $self, $description_text ) = @_;
+    my ($self, $description_text) = @_;
     
     if ($description_text) {
         $self->{'_description_text'} = $description_text;
@@ -342,7 +342,7 @@ sub description_text {
 }
 
 sub remark_text {
-    my( $self, $remark_text ) = @_;
+    my ($self, $remark_text) = @_;
     
     if ($remark_text) {
         $self->{'_remark_text'} = $remark_text;
@@ -352,7 +352,7 @@ sub remark_text {
 
 # Inserts (printing) characters with the same style as the rest of the line
 sub insert_char {
-    my( $text, $char ) = @_;
+    my ($text, $char) = @_;
         
     # We only want to insert printing characters in the Text box!
     # [:print:] is the POSIX class of printing characters.
@@ -419,7 +419,7 @@ sub insert_pad {
 }
 
 sub Clone {
-    my( $self, $Clone ) = @_;
+    my ($self, $Clone) = @_;
     
     if ($Clone) {
         $self->{'_Clone'} = $Clone;
@@ -428,7 +428,7 @@ sub Clone {
 }
 
 sub XaceSeqChooser {
-    my( $self, $XaceSeqChooser ) = @_;
+    my ($self, $XaceSeqChooser) = @_;
     
     if ($XaceSeqChooser) {
         $self->{'_XaceSeqChooser'} = $XaceSeqChooser;
@@ -437,7 +437,7 @@ sub XaceSeqChooser {
 }
 
 sub write_access {
-    my( $self ) = @_;
+    my ($self) = @_;
     
     return $self->XaceSeqChooser->AceDatabase->write_access;
 }

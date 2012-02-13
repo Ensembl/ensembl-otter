@@ -9,7 +9,7 @@ use Carp;
 use base 'EditWindow';
 
 sub initialise {
-    my( $self ) = @_;
+    my ($self) = @_;
     
     my $pad = 6;
     my $top = $self->top;
@@ -87,7 +87,7 @@ sub get_password {
 }
 
 sub passref {
-    my( $self, $passref ) = @_;
+    my ($self, $passref) = @_;
     
     if ($passref) {
         $self->{'_passref'} = $passref;
@@ -96,7 +96,7 @@ sub passref {
 }
 
 sub prompt_string {
-    my( $self, $prompt_string ) = @_;
+    my ($self, $prompt_string) = @_;
     
     if ($prompt_string) {
         $self->{'_prompt_string'} = $prompt_string;
@@ -105,7 +105,7 @@ sub prompt_string {
 }
 
 sub submit_button {
-    my( $self, $submit_button ) = @_;
+    my ($self, $submit_button) = @_;
     
     if ($submit_button) {
         $self->{'_submit_button'} = $submit_button;
@@ -114,7 +114,7 @@ sub submit_button {
 }
 
 sub password_field {
-    my( $self, $password_field ) = @_;
+    my ($self, $password_field) = @_;
     
     if ($password_field) {
         $self->{'_password_field'} = $password_field;
