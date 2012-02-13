@@ -12,7 +12,7 @@ use EditWindow::LoadColumns;
 use CanvasWindow::SequenceSetChooser;
 
 sub new {
-    my( $pkg, @args ) = @_;
+    my ($pkg, @args) = @_;
     
     my $self = $pkg->SUPER::new(@args);
     
@@ -66,7 +66,7 @@ sub new {
 }
 
 sub Client {
-    my( $self, $Client ) = @_;
+    my ($self, $Client) = @_;
     
     if ($Client) {
         $self->{'_Client'} = $Client;
@@ -75,7 +75,7 @@ sub Client {
 }
 
 sub select_dataset {
-    my( $self ) = @_;
+    my ($self) = @_;
     
     return if $self->delete_message;
     my $canvas = $self->canvas;
@@ -89,7 +89,7 @@ sub select_dataset {
 }
 
 sub open_dataset {
-    my( $self ) = @_;
+    my ($self) = @_;
     
     return if $self->recover_some_sessions;
     
@@ -131,7 +131,7 @@ sub open_dataset {
 }
 
 sub draw {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $canvas = $self->canvas;
 

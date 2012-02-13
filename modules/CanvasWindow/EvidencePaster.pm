@@ -19,7 +19,7 @@ Readonly my $EVI_TAG     => 'IsEvidence';
 Readonly my $CURRENT_EVI => "current&&${EVI_TAG}";
 
 sub initialise {
-    my( $self, $evidence_hash ) = @_;
+    my ($self, $evidence_hash) = @_;
 
     my $canvas = $self->canvas;
     my $top = $canvas->toplevel;
@@ -110,7 +110,7 @@ sub initialise {
 }
 
 sub ExonCanvas {
-    my( $self, $ExonCanvas ) = @_;
+    my ($self, $ExonCanvas) = @_;
 
     if ($ExonCanvas) {
         $self->{'_ExonCanvas'} = $ExonCanvas;
@@ -120,7 +120,7 @@ sub ExonCanvas {
 }
 
 sub align_button {
-    my( $self, $align_button ) = @_;
+    my ($self, $align_button) = @_;
 
     if ($align_button) {
         $self->{'_align_button'} = $align_button;
@@ -129,7 +129,7 @@ sub align_button {
 }
 
 sub dotter_button {
-    my( $self, $dotter_button ) = @_;
+    my ($self, $dotter_button) = @_;
 
     if ($dotter_button) {
         $self->{'_dotter_button'} = $dotter_button;
@@ -138,21 +138,21 @@ sub dotter_button {
 }
 
 sub align_enable {
-    my ( $self, $enable ) = @_;
+    my ($self, $enable) = @_;
     my $state = $enable ? 'normal' : 'disabled';
     $self->align_button->configure( -state => $state );
     return;
 }
 
 sub dotter_enable {
-    my ( $self, $enable ) = @_;
+    my ($self, $enable) = @_;
     my $state = $enable ? 'normal' : 'disabled';
     $self->dotter_button->configure( -state => $state );
     return;
 }
 
 sub control_buttons {
-    my ( $self ) = @_;
+    my ($self) = @_;
 
     my $sel_count = scalar($self->list_selected);
     $self->align_enable($sel_count);
@@ -162,7 +162,7 @@ sub control_buttons {
 }
 
 sub left_button_handler {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     return if $self->delete_message;
     $self->deselect_all;
@@ -172,7 +172,7 @@ sub left_button_handler {
 }
 
 sub control_left_button_handler {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $canvas = $self->canvas;
 
@@ -191,7 +191,7 @@ sub control_left_button_handler {
 }
 
 sub shift_left_button_handler {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $canvas = $self->canvas;
 
@@ -203,7 +203,7 @@ sub shift_left_button_handler {
 }
 
 sub select_all {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $canvas = $self->canvas;
 
@@ -220,7 +220,7 @@ sub select_all {
 }
 
 sub evidence_hash {
-    my( $self, $evidence_hash ) = @_;
+    my ($self, $evidence_hash) = @_;
 
     if ($evidence_hash) {
         $self->{'_evidence_hash'} = $evidence_hash;
@@ -229,7 +229,7 @@ sub evidence_hash {
 }
 
 sub remove_selected_from_evidence_list {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $canvas = $self->canvas;
     my $evi    = $self->evidence_hash;
@@ -251,7 +251,7 @@ sub remove_selected_from_evidence_list {
 }
 
 sub draw_evidence {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     $self->deselect_all;
 
@@ -299,7 +299,7 @@ sub draw_evidence {
 }
 
 sub paste_type_and_name {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     $self->top_window->Busy;    # Because it may involve a HTTP request
     if (my $clip = $self->get_clipboard_text) {
@@ -348,7 +348,7 @@ sub add_evidence_type_name_hash {
 }
 
 sub highlight_evidence_by_type_name {
-    my( $self, $type, $name ) = @_;
+    my ($self, $type, $name) = @_;
 
     my $canvas = $self->canvas;
     foreach my $obj ($canvas->find('withtag', $type)) {
@@ -363,7 +363,7 @@ sub highlight_evidence_by_type_name {
 }
 
 sub highlight {
-    my( $self, @args ) = @_;
+    my ($self, @args) = @_;
 
     $self->SUPER::highlight(@args);
     $self->canvas->SelectionOwn(
@@ -376,7 +376,7 @@ sub highlight {
 }
 
 sub deselect_all {
-    my ( $self ) = @_;
+    my ($self) = @_;
 
     $self->SUPER::deselect_all;
     $self->control_buttons;
@@ -458,7 +458,7 @@ sub dotter_to_transcript {
 }
 
 sub alignment_window {
-    my ( $self, $type, $alignment ) = @_;
+    my ($self, $type, $alignment) = @_;
 
     $self->{_alignment_window} ||= {};
     my $window = $self->{_alignment_window}->{$type};
@@ -478,7 +478,7 @@ sub delete_alignment_window {
 }
 
 sub DESTROY {
-    my( $self ) = @_;
+    my ($self) = @_;
     warn "Destroying ", ref($self), "\n";
     return;
 }

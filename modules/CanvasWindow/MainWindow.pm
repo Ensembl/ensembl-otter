@@ -15,7 +15,7 @@ $Tk::encodeFallback = 1; ## no critic(Variables::ProhibitPackageVars)
 use base qw( MainWindow );
 
 sub new {
-    my( $pkg, $title, @command_line ) = @_;
+    my ($pkg, $title, @command_line) = @_;
     
     $title ||= 'Canvas Window';
     
@@ -48,7 +48,7 @@ sub new {
 }
 
 sub add_default_bindings {
-    my( $mw ) = @_;
+    my ($mw) = @_;
     
     my $exit = sub{ exit; };
     $mw->bind('<Control-q>', $exit);

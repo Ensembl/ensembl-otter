@@ -13,7 +13,7 @@ use TransientWindow::LogWindow;
 use Hum::Sort 'ace_sort';
 
 sub new {
-    my( $pkg, @args ) = @_;
+    my ($pkg, @args) = @_;
     
     my $self = $pkg->SUPER::new(@args);
     
@@ -81,7 +81,7 @@ sub new {
 }
 
 sub name {
-    my( $self, $name ) = @_;
+    my ($self, $name) = @_;
     
     if ($name) {
         $self->{'_name'} = $name;
@@ -90,7 +90,7 @@ sub name {
 }
 
 sub Client {
-    my( $self, $Client ) = @_;
+    my ($self, $Client) = @_;
     
     if ($Client) {
         $self->{'_Client'} = $Client;
@@ -99,7 +99,7 @@ sub Client {
 }
 
 sub DataSet {
-    my( $self, $DataSet ) = @_;
+    my ($self, $DataSet) = @_;
     
     if ($DataSet) {
         $self->{'_DataSet'} = $DataSet;
@@ -108,7 +108,7 @@ sub DataSet {
 }
 
 sub DataSetChooser {
-    my( $self, $DataSetChooser ) = @_;
+    my ($self, $DataSetChooser) = @_;
     
     if ($DataSetChooser) {
         $self->{'_DataSetChooser'} = $DataSetChooser;
@@ -117,7 +117,7 @@ sub DataSetChooser {
 }
 
 sub draw {
-    my( $self ) = @_;
+    my ($self) = @_;
     
     my $size    = $self->font_size;
     my $canvas  = $self->canvas;
@@ -219,7 +219,7 @@ sub draw {
 }
 
 sub show_log{
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $tw = $self->{'__tw_log'};
     unless($tw){
@@ -234,7 +234,7 @@ sub show_log{
 }
 
 sub select_sequence_set {
-    my( $self ) = @_;
+    my ($self) = @_;
     
     return if $self->delete_message;
     my $canvas = $self->canvas;
@@ -292,7 +292,7 @@ sub clean_SequenceNotes{
 }
 
 sub open_sequence_set {
-    my( $self ) = @_;
+    my ($self) = @_;
     
     my ($obj) = $self->list_selected;
     my $canvas = $self->canvas;
@@ -344,7 +344,7 @@ sub open_sequence_set_by_ssname_subset {
 
 # brings up a window for searching for loci / clones
 sub search_window{
-    my ($self) = @_ ;
+    my ($self) = @_;
     
     my $search_window = $self->{'_search_window'};
   
@@ -360,7 +360,7 @@ sub search_window{
 }
 
 sub DESTROY {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my ($type) = ref($self) =~ /([^:]+)$/;
     my $name = $self->name;

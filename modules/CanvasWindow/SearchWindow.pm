@@ -9,7 +9,7 @@ use base 'CanvasWindow';
 use Hum::Sort 'ace_sort';
 
 sub Client {
-    my( $self, $Client ) = @_;
+    my ($self, $Client) = @_;
     
     if ($Client) {
         $self->{'_Client'} = $Client;
@@ -18,7 +18,7 @@ sub Client {
 }
 
 sub DataSet {
-    my( $self, $DataSet ) = @_;
+    my ($self, $DataSet) = @_;
     
     if($DataSet) {
         $self->{_DataSet} = $DataSet;
@@ -27,7 +27,7 @@ sub DataSet {
 }
 
 sub SequenceSetChooser {
-    my( $self, $SequenceSetChooser ) = @_;
+    my ($self, $SequenceSetChooser) = @_;
 
     if ($SequenceSetChooser) {
         $self->{'_SequenceSetChooser'} = $SequenceSetChooser;
@@ -208,7 +208,7 @@ sub _clone_names_label {
 }
 
 sub new {
-    my( $pkg, @args ) = @_;
+    my ($pkg, @args) = @_;
     
     my $self = $pkg->SUPER::new(@args);
     
