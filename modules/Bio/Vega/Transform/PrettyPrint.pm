@@ -6,7 +6,7 @@ use strict;
 use warnings;
 
 sub new {
-  my($class,@args) = @_;
+  my ($class, @args) = @_;
   my $self=bless {},$class;
   my ($name,$indent,$value)  = rearrange([qw(NAME INDENT VALUE)],@args);
   $self->name($name);
@@ -16,7 +16,7 @@ sub new {
 }
 
 sub name {
-  my ($self,$value) = @_;
+  my ($self, $value) = @_;
   if( defined $value) {
       $self->{'name'} = $value;
   }
@@ -24,7 +24,7 @@ sub name {
 }
 
 sub value {
-  my ($self,$value) = @_;
+  my ($self, $value) = @_;
   if( defined $value) {
       $self->{'value'} = $value;
   }
@@ -33,7 +33,7 @@ sub value {
 
 
 sub indent {
-  my ($self,$value) = @_;
+  my ($self, $value) = @_;
   if( defined $value) {
       $self->{'indent'} = $value;
   }
@@ -41,7 +41,7 @@ sub indent {
 }
 
 sub xmlformat {
-  my ($self,$value) = @_;
+  my ($self, $value) = @_;
   if( defined $value) {
       unless ($self->{'xmlformat'}){
           $self->{'xmlformat'}='';
@@ -52,7 +52,7 @@ sub xmlformat {
 }
 
 sub attribvals {
-  my ($self,$value) = @_;
+  my ($self, $value) = @_;
   if (defined $value){
      my $vals = $self->{'attribvals'} ||= [];
      push @$vals, $value;
@@ -61,7 +61,7 @@ sub attribvals {
 }
 
 sub attribobjs {
-  my ($self,$value)=@_;
+  my ($self, $value) = @_;
   if (defined $value){
       unless ($self->{'attribobjs'}){
           $self->{'attribobjs'}=[];

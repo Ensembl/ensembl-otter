@@ -219,7 +219,7 @@ sub get_single_attrib_value {
 }
 
 sub get_geneXML {
-  my ($self, $gene)=@_;
+  my ($self, $gene) = @_;
 
   my $ppobj=$self->generate_Locus($gene,2);
   my $gene_xml=$self->formatxml($ppobj);
@@ -394,7 +394,7 @@ sub generate_Locus {
 }
 
 sub generate_Transcript {
-    my ($self, $tran, $coord_offset)=@_;
+    my ($self, $tran, $coord_offset) = @_;
 
     my $t=$self->prettyprint('transcript');
     if($tran->stable_id) {
@@ -485,7 +485,7 @@ sub generate_Transcript {
 }
 
 sub generate_ExonSet {
-  my ($self,$tran,$coord_offset)=@_;
+  my ($self, $tran, $coord_offset) = @_;
 
   my $exon_set=$tran->get_all_Exons;
   my $exs=$self->prettyprint('exon_set');
@@ -506,7 +506,7 @@ sub generate_ExonSet {
 
 
 sub generate_EvidenceSet {
-    my ($self,$tran)=@_;
+    my ($self, $tran) = @_;
 
     my $evidence = $tran->evidence_list;
     return unless @$evidence;
