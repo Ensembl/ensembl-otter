@@ -151,18 +151,25 @@ if ($support->param('prune') and $support->user_proceed("Would you really like t
         ));
   $support->log("Done deleting $num entries.\n");
   
-  #GO source xrefs
   if ($xrefformat eq 'GO') {
+
+    #GOA Evidence xrefs
     $support->log("Deleting GO source object_xrefs...\n");
+    my $num = $dba->dbc->do(qq(
+           DELETE x
+           FROM xref x, external_db edb
+           WHERE x.external_db_id = edb.external_db_id
+           AND edb.db_name = 'Quick_Go_Evidence'));
+    $support->log("Done deleting $num entries.\n");
+
+    #GOA xrefs
     my $num = $dba->dbc->do(qq(
            DELETE x
            FROM xref x, external_db edb
            WHERE x.external_db_id = edb.external_db_id
            AND edb.db_name = 'Quick_Go'));
     $support->log("Done deleting $num entries.\n");
-  }
-	
-  if ($xrefformat eq 'GO') {
+
     # ontology_xrefs
     $support->log("Deleting ontology_xrefs...\n");
     $num = $dba->dbc->do(qq(DELETE FROM ontology_xref));
@@ -254,6 +261,26 @@ foreach my $chr (@chr_sorted) {
               $support->log_warning("No evidence type associated with $pid ($trlsi), please check input file\n");
               $ev_type = '';
             }
+
+            #add link to GOA
+            $dbentry = Bio::EnsEMBL::DBEntry->new(
+              -primary_id => $rec->{'uniprot_acc'},
+              -display_id => $rec->{'uniprot_acc'},
+              -version    => 1,
+              -info_type  => 'DEPENDENT',
+              -dbname     => 'Quick_Go',
+            );
+            $trl->add_DBEntry($dbentry);
+            if (! $support->param('dry_run')) {
+              if (my $dbID = $ea->store($dbentry, $trlid, 'translation', 1)) {
+                $support->log_verbose("Stored Quick_GO xref (display_id = $pid, dbID = $dbID, source_db = ".$rec->{'assigned_by'}." for $trlsi\n", 3);
+              }
+              else {
+                $support->log_warning("Failed to store Quick_GO xref for $trlsi\n");
+              }
+            }
+
+            #add GO xrefs
             $support->log_verbose("Creating new $xrefformat xref for $trlsi $pid.\n", 2);
             $dbentry = Bio::EnsEMBL::OntologyXref->new(
               -primary_id  => $pid,
@@ -268,7 +295,7 @@ foreach my $chr (@chr_sorted) {
               -primary_id  => $rec->{'uniprot_acc'},
               -display_id  => $rec->{'assigned_by'},
               -info_type   => 'DEPENDENT',
-              -dbname      => 'Quick_Go_Extra',
+              -dbname      => 'Quick_Go_Evidence',
               -info_text   => 'Quick_Go:'.$rec->{'assigned_by'},
             );
             $dbentry->add_linkage_type($ev_type,$source_xref);
