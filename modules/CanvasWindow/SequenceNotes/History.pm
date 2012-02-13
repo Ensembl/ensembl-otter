@@ -44,7 +44,7 @@ sub clone_index {
 }
 
 sub SequenceNotes {
-    my( $self, $SequenceNotes ) = @_;
+    my ($self, $SequenceNotes) = @_;
     
     if ($SequenceNotes) {
         $self->{'_SequenceNotes'} = $SequenceNotes;
@@ -205,7 +205,7 @@ sub initialise {
 }
 
 sub get_rows_list {
-    my ($self)    = @_;
+    my ($self) = @_;
     my $clone     = $self->current_clone;
     my $note_list = $clone->get_all_SequenceNotes;
     return $note_list;
@@ -336,7 +336,7 @@ sub get_row_id {
 }
 
 sub get_message {
-    my ($self)  = @_;
+    my ($self) = @_;
     my ($index) = $self->get_row_id;
     my $text    = $self->indexed_note_text($index);
     ${ $self->entry_text_ref() } = $text;
