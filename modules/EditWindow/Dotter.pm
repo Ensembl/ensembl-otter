@@ -11,7 +11,7 @@ use Tk::LabFrame;
 use base 'EditWindow';
 
 sub initialise {
-    my( $self ) = @_;
+    my ($self) = @_;
     
     my $top = $self->top;
     
@@ -203,7 +203,7 @@ sub XaceSeqChooser {
 }
 
 sub update_from_XaceSeqChooser {
-    my( $self, $xc ) = @_;
+    my ($self, $xc) = @_;
     
     $self->query_Sequence($xc->Assembly->Sequence);
     $self->genomic->configure(-state => 'normal');
@@ -218,7 +218,7 @@ sub update_from_XaceSeqChooser {
 }
 
 sub query_Sequence {
-    my( $self, $query_Sequence ) = @_;
+    my ($self, $query_Sequence) = @_;
     
     if ($query_Sequence) {
         $self->{'_query_Sequence'} = $query_Sequence;
@@ -227,7 +227,7 @@ sub query_Sequence {
 }
 
 sub update_from_clipboard {
-    my( $self ) = @_;
+    my ($self) = @_;
     
     if (my ($name, $start, $end) = $self->name_start_end_from_fMap_blue_box) {
         $self->set_entry('match', $name);
@@ -240,7 +240,7 @@ sub update_from_clipboard {
 }
 
 sub set_entry {
-    my( $self, $method, $txt ) = @_;
+    my ($self, $method, $txt) = @_;
     
     my $entry = $self->$method();
     $entry->delete(0, 'end');
@@ -250,7 +250,7 @@ sub set_entry {
 }
 
 sub get_entry {
-    my( $self, $method ) = @_;
+    my ($self, $method) = @_;
     
     my $txt = $self->$method()->get or return;
     $txt =~ s/\s//g;
@@ -258,7 +258,7 @@ sub get_entry {
 }
 
 sub match {
-    my( $self, $match ) = @_;
+    my ($self, $match) = @_;
     
     if ($match) {
         $self->{'_match'} = $match;
@@ -267,7 +267,7 @@ sub match {
 }
 
 sub genomic {
-    my( $self, $genomic ) = @_;
+    my ($self, $genomic) = @_;
     
     if ($genomic) {
         $self->{'_genomic'} = $genomic;
@@ -276,7 +276,7 @@ sub genomic {
 }
 
 sub genomic_start {
-    my( $self, $genomic_start ) = @_;
+    my ($self, $genomic_start) = @_;
     
     if (defined $genomic_start) {
         $self->{'_genomic_start'} = $genomic_start;
@@ -285,7 +285,7 @@ sub genomic_start {
 }
 
 sub genomic_end {
-    my( $self, $genomic_end ) = @_;
+    my ($self, $genomic_end) = @_;
     
     if (defined $genomic_end) {
         $self->{'_genomic_end'} = $genomic_end;
@@ -294,7 +294,7 @@ sub genomic_end {
 }
 
 sub flank {
-    my( $self, $flank ) = @_;
+    my ($self, $flank) = @_;
     
     if ($flank) {
         $self->{'_flank'} = $flank;
@@ -303,7 +303,7 @@ sub flank {
 }
 
 sub revcomp_ref {
-    my( $self, $revcomp_ref ) = @_;
+    my ($self, $revcomp_ref) = @_;
     
     if ($revcomp_ref) {
         $self->{'_revcomp_ref'} = $revcomp_ref;
@@ -312,7 +312,7 @@ sub revcomp_ref {
 }
 
 sub dotter {
-    my( $self, $dotter ) = @_;
+    my ($self, $dotter) = @_;
     
     if ($dotter) {
         $self->{'_dotter'} = $dotter;
@@ -321,7 +321,7 @@ sub dotter {
 }
 
 sub launch_dotter {
-    my( $self ) = @_;
+    my ($self) = @_;
     
     my $match_name = $self->get_entry('match');
     my $start      = $self->get_entry('genomic_start');
@@ -355,7 +355,7 @@ sub launch_dotter {
 }
 
 sub name_start_end_from_fMap_blue_box {
-    my( $self ) = @_;
+    my ($self) = @_;
     
     my $tk = $self->top;
 

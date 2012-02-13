@@ -35,7 +35,7 @@ my $_sort_methods = {
 };
 
 sub initialize {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $species = $self->species;
     $self->AceDatabase->DB;
@@ -209,7 +209,7 @@ sub initialize {
 }
 
 sub pipeline_progress_bar {
-    my ( $self, $pipeline_progress_bar ) = @_;
+    my ($self, $pipeline_progress_bar) = @_;
     $self->{_pipeline_progress_bar} = $pipeline_progress_bar if $pipeline_progress_bar;
     return $self->{_pipeline_progress_bar};
 }
@@ -235,7 +235,7 @@ sub reset_progress {
 }
 
 sub label_text {
-    my ( $self, $label_text ) = @_;
+    my ($self, $label_text) = @_;
     $self->{_label_text} = $label_text if defined $label_text;
     return $self->{_label_text};
 }
@@ -255,7 +255,7 @@ sub withdraw_or_destroy {
 }
 
 sub init_flag {
-    my( $self, $flag ) = @_;
+    my ($self, $flag) = @_;
     
     if (defined $flag) {
         $self->{'_init_flag'} = $flag ? 1 : 0;
@@ -351,7 +351,7 @@ sub set_filters_wanted {
 }
 
 sub sort_by_filter_method {
-    my ( $self, $method ) = @_;
+    my ($self, $method) = @_;
 
     my $flip = $self->{_flip} =
         $_sorted_by->{$self->species} eq $method
@@ -364,7 +364,7 @@ sub sort_by_filter_method {
 }
 
 sub sort_by_filter_method_ {
-    my ( $self, $method, $flip ) = @_; 
+    my ($self, $method, $flip) = @_; 
 
     my ( $sort_method, $arg ) = @{$_sort_methods->{$method}};
     my @sorted_names = $self->$sort_method($arg);
@@ -375,7 +375,7 @@ sub sort_by_filter_method_ {
 }
 
 sub _sorted_by_method {
-    my ( $self, $method ) = @_;
+    my ($self, $method) = @_;
 
     my $filters = $self->AceDatabase->filters;
     my @names = sort {
@@ -537,7 +537,7 @@ sub hlist {
 }
 
 sub XaceSeqChooser {
-    my ($self, $xc) = @_ ;
+    my ($self, $xc) = @_;
     
     if ($xc) {
         $self->{'_XaceSeqChooser'} = $xc;
@@ -548,7 +548,7 @@ sub XaceSeqChooser {
 }
 
 sub AceDatabase {
-    my ($self, $db) = @_ ;
+    my ($self, $db) = @_;
     $self->{'_AceDatabase'} = $db if $db;
     return $self->{'_AceDatabase'} ;
 }
@@ -562,19 +562,19 @@ sub drop_AceDatabase {
 }
 
 sub SequenceNotes {
-    my ($self, $sn) = @_ ;
+    my ($self, $sn) = @_;
     $self->{'_SequenceNotes'} = $sn if $sn;
     return $self->{'_SequenceNotes'} ;
 }
 
 sub DataSetChooser {
-    my ($self, $dc) = @_ ;
+    my ($self, $dc) = @_;
     $self->{'_DataSetChooser'} = $dc if $dc;
     return $self->{'_DataSetChooser'} ;
 }
 
 sub DESTROY {
-    my( $self ) = @_;
+    my ($self) = @_;
     
     warn "Destroying LoadColumns\n";
     if (my $sn = $self->SequenceNotes) {
