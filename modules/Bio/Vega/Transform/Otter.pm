@@ -510,7 +510,7 @@ sub build_Transcript {
 }
 
 sub translation_pos {
-  my ($self,$loc,$exon) = @_;
+  my ($self, $loc, $exon) = @_;
   if (($exon->start <= $loc) && ($loc <= $exon->end)) {
      if ($exon->strand == 1) {
         return $loc - $exon->start + 1;
