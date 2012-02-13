@@ -10,7 +10,7 @@ use warnings;
 $INC{q(Bio/EnsEMBL/Analysis/Config/Blast.pm)}++;
 
 sub import {
-    my ( $pack, @vars ) = @_;
+    my ($pack, @vars) = @_;
 
     my ($callpack) = caller(0); # Name of the calling package
 
