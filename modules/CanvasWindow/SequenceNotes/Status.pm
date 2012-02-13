@@ -70,7 +70,7 @@ sub current_clone {
 }
 
 sub initialise {
-    my( $self ) = @_;
+    my ($self) = @_;
     
     # Use a slightly smaller font so that more info fits on the screen
     $self->font_size(12);
@@ -151,13 +151,13 @@ sub initialise {
 }
 
 sub get_rows_list {
-    my ($self) = @_ ;         
+    my ($self) = @_;         
 
     return $self->current_clone->pipelineStatus->display_list;
 }
 
 sub DESTROY {
-    my( $self ) = @_;
+    my ($self) = @_;
     my $idx = $self->clone_index();
     warn "Destroying CanvasWindow::SequenceNotes::Status with idx $idx\n";
     return;
