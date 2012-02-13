@@ -10,7 +10,7 @@ our @EXPORT_OK = qw{ history };
 use Bio::EnsEMBL::Utils::Exception qw(throw);
 
 sub history{
-  my ($genes,$short) = @_;
+  my ($genes, $short) = @_;
   my $c=0;
   my $printarray;
   my $stable_version;push @$stable_version,"stable_id.version";
