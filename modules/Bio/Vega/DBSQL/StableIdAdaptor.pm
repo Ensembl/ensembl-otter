@@ -36,7 +36,7 @@ sub fetch_new_translation_stable_id {
 
 sub _fetch_new_by_type {
 
-  my( $self, $type, $type_prefix ) = @_;
+  my ($self, $type, $type_prefix) = @_;
 
   my $id     = $type . "_id";
   my $poolid = $type . "_pool_id";

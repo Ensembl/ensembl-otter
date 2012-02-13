@@ -58,7 +58,7 @@ sub fetch_by_contigSlice {
 
 
 sub store {
-    my ($self, $contig_info, $time_uniseconds ) = @_;
+    my ($self, $contig_info, $time_uniseconds) = @_;
 
     unless ($contig_info) {
         $self->throw("Must provide a ContigInfo object to the store method");

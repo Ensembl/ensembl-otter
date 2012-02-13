@@ -63,7 +63,7 @@ sub fetch_by_clone_list {
 
 sub _fetch_chr_coords_by_contig_projection {
 
-  my($self, $ctg_projection) = @_;
+  my ($self, $ctg_projection) = @_;
 
   my ($seq_region_name, $chr_slice, @chr_coords);
 

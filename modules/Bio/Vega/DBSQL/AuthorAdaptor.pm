@@ -76,7 +76,7 @@ sub _generic_sql_fetch {
 =cut
 
 sub fetch_by_dbID {
-    my ($self,$id) = @_;
+    my ($self, $id) = @_;
 
     if (!defined($id)) {
         $self->throw("Id must be entered to fetch an author object");
@@ -162,7 +162,7 @@ sub exists_in_db {
 =cut
 
 sub store {
-    my ($self,$author) = @_;
+    my ($self, $author) = @_;
     if (!defined($author)) {
         throw("Must provide an author object to the store method");
     } elsif (! $author->isa("Bio::Vega::Author")) {
@@ -205,7 +205,7 @@ sub store {
 }
 
 sub store_gene_author {
-  my ($self,$gene_id,$author_id) = @_;
+  my ($self, $gene_id, $author_id) = @_;
   unless ($gene_id || $author_id) {
       throw("gene_id:$gene_id and author_id:$author_id must be present to store a gene_author");
   }
@@ -228,7 +228,7 @@ sub remove_gene_author {
 }
 
 sub store_transcript_author {
-  my ($self,$transcript_id,$author_id) = @_;
+  my ($self, $transcript_id, $author_id) = @_;
   unless ($transcript_id || $author_id) {
       throw("transcript_id:$transcript_id and author_id:$author_id must be present to store a transcript_author");
   }
@@ -251,7 +251,7 @@ sub remove_transcript_author {
 }
 
 sub fetch_gene_author {
-  my ($self,$gene_id) = @_;
+  my ($self, $gene_id) = @_;
   unless ($gene_id) {
       throw("gene_id:$gene_id  must be present to fetch a gene_author");
   }
@@ -267,7 +267,7 @@ sub fetch_gene_author {
 }
 
 sub fetch_transcript_author {
-  my ($self,$transcript_id) = @_;
+  my ($self, $transcript_id) = @_;
   unless ($transcript_id) {
       throw("transcript_id:$transcript_id  must be present to fetch a transcript_author");
   }

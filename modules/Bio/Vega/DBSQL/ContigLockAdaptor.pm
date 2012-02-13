@@ -10,7 +10,7 @@ use base qw ( Bio::EnsEMBL::DBSQL::BaseAdaptor);
 
 
 sub _generic_sql_fetch {
-  my( $self, $where_clause, @param ) = @_;
+  my ($self, $where_clause, @param) = @_;
   my $sth = $self->prepare(q{
         SELECT contig_lock_id
           , seq_region_id
@@ -40,7 +40,7 @@ sub _generic_sql_fetch {
 }
 
 sub fetch_by_dbID {
-  my( $self, $id ) = @_;
+  my ($self, $id) = @_;
   if (!defined($id)) {
       throw("Id must be entered to fetch a ContigLock object");
   }
@@ -49,7 +49,7 @@ sub fetch_by_dbID {
 }
 
 sub fetch_by_contig_id {
-  my( $self, $id ) = @_;
+  my ($self, $id) = @_;
   throw("Contig seq_region_id must be entered to fetch a ContigLock object")
       unless $id;
   my ($obj) = $self->_generic_sql_fetch("where seq_region_id = ? ", $id);
@@ -58,7 +58,7 @@ sub fetch_by_contig_id {
 
 
 sub list_by_author {
-  my( $self, $auth ) = @_;
+  my ($self, $auth) = @_;
   throw("Author must be entered to fetch a ContigLock object")
       unless $auth;
   my $locks = $self->_generic_sql_fetch("where author_id = ? ", $auth->dbID);
@@ -67,7 +67,7 @@ sub list_by_author {
 
 
 sub store {
-  my( $self, $contig_lock ) = @_;
+  my ($self, $contig_lock) = @_;
   throw("Must provide a ContigLock object to the store method")
       unless $contig_lock;
   throw("Argument must be a ContigLock object to the store method.  Currently is [$contig_lock]")
@@ -99,7 +99,7 @@ sub store {
 }
 
 sub remove {
-  my( $self, $contig_lock ) = @_;
+  my ($self, $contig_lock) = @_;
   $self->throw("Must provide a ContigLock to the remove method")
       unless $contig_lock;
   my $contig_id = $contig_lock->contig_id

@@ -42,7 +42,7 @@ sub update  {
 
 sub fetch_by_stable_id_version {
 
-  my ($self, $stable_id,$version) = @_;
+  my ($self, $stable_id, $version) = @_;
 
   my $constraint = "esi.stable_id = '$stable_id' AND esi.version = $version ORDER BY esi.modified_date DESC, esi.exon_id DESC LIMIT 1";
   my ($exon) = @{ $self->generic_fetch($constraint) };
