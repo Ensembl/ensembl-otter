@@ -9,7 +9,7 @@ use Carp;
 use base qw( CanvasWindow );
 
 sub new {
-    my( $pkg, $tk, @rest ) = @_;
+    my ($pkg, $tk, @rest) = @_;
 
     my $menu_frame = $tk->Frame(
         -borderwidth    => 1,
@@ -26,7 +26,7 @@ sub new {
 }
 
 sub menu_bar {
-    my( $self, $bf ) = @_;
+    my ($self, $bf) = @_;
     
     if ($bf) {
         $self->{'_menu_bar'} = $bf;
@@ -36,7 +36,7 @@ sub menu_bar {
 
 
 sub make_menu {
-    my( $self, $name, $pos ) = @_;
+    my ($self, $name, $pos) = @_;
     
     $pos ||= 0;
     

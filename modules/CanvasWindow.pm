@@ -13,7 +13,7 @@ use Hum::Sort 'ace_sort';
 use Hum::ClipboardUtils 'integers_from_text';
 
 sub new {
-    my( $pkg, $tk, $x, $y, $where_scrollbars, $canvas_class) = @_;
+    my ($pkg, $tk, $x, $y, $where_scrollbars, $canvas_class) = @_;
     
     if(!defined($where_scrollbars)) { # NB: not just empty, but undefined
         $where_scrollbars = 'se';
@@ -68,7 +68,7 @@ sub new {
 }
 
 sub top_window {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     return $self->canvas->toplevel;
 }
@@ -88,7 +88,7 @@ sub icon_pixmap {
 }
 
 sub initial_canvas_size {
-    my( $self, $x, $y ) = @_;
+    my ($self, $x, $y) = @_;
     
     if ($x and $y) {
         $self->{'_initial_canvas_size'} = [$x, $y];
@@ -101,7 +101,7 @@ sub initial_canvas_size {
 }
 
 sub canvas {
-    my( $self, $canvas ) = @_;
+    my ($self, $canvas) = @_;
     
     if ($canvas) {
         $self->{'_canvas'} = $canvas;
@@ -112,7 +112,7 @@ sub canvas {
 # Default font and size for drawing on canvas
 
 sub font {
-    my( $self, $font ) = @_;
+    my ($self, $font) = @_;
     
     if ($font) {
         $self->{'_font'} = $font;
@@ -122,7 +122,7 @@ sub font {
 }
 
 sub font_size {
-    my( $self, $font_size ) = @_;
+    my ($self, $font_size) = @_;
 
     if ($font_size) {
         $self->{'_font_size'} = $font_size;
@@ -175,7 +175,7 @@ sub font_fixed_bold {
 }
 
 sub font_unit_width {
-    my( $self ) = @_;
+    my ($self) = @_;
     
     my( $uw );
     unless ($uw = $self->{'_font_unit_width'}) {
@@ -191,7 +191,7 @@ sub font_unit_width {
 }
 
 sub set_scroll_region {
-    my( $self ) = @_;
+    my ($self) = @_;
     
     my $canvas = $self->canvas;
     my @bbox = $canvas->bbox('all');
@@ -219,7 +219,7 @@ sub set_scroll_region {
 }
 
 sub minimum_scroll_bbox {
-    my( $self, @min_scroll ) = @_;
+    my ($self, @min_scroll) = @_;
     
     if (@min_scroll) {
         my $count = @min_scroll;
@@ -240,7 +240,7 @@ sub minimum_scroll_bbox {
 }
 
 sub bind_scroll_commands {
-    my( $self ) = @_;
+    my ($self) = @_;
     
     my $canvas = $self->canvas; # whether a self-managing or Scrolled
 
@@ -362,7 +362,7 @@ sub bind_scroll_commands {
 }
 
 sub scroll_to_obj {
-    my( $self, $obj ) = @_;
+    my ($self, $obj) = @_;
 
     my $margin = 10;
     
@@ -425,7 +425,7 @@ sub scroll_to_obj {
 }
 
 sub fix_window_min_max_sizes {
-    my( $self ) = @_;
+    my ($self) = @_;
     
     my $mw = $self->top_window();
     #$mw->withdraw;
@@ -469,7 +469,7 @@ sub fix_window_min_max_sizes {
 }
 
 sub set_scroll_region_and_maxsize {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $mw = $self->top_window();
     $mw->update;
@@ -511,7 +511,7 @@ sub set_scroll_region_and_maxsize {
 }
 
 sub set_window_size {
-    my( $self, $set_flag ) = @_;
+    my ($self, $set_flag) = @_;
     
     if ($set_flag) {
         my $mw = $self->top_window();
@@ -529,7 +529,7 @@ sub set_window_size {
 }
 
 sub print_postscript {
-    my( $self, $file_root ) = @_;
+    my ($self, $file_root) = @_;
     
     unless ($file_root) {
         $file_root = $self->top_window()->cget('title')
@@ -667,7 +667,7 @@ sub print_postscript {
 }
 
 sub page_width {
-    my( $self, $page_width ) = @_;
+    my ($self, $page_width) = @_;
     
     if ($page_width) {
         confess "Illegal page width '$page_width'"
@@ -679,7 +679,7 @@ sub page_width {
 }
 
 sub page_height {
-    my( $self, $page_height ) = @_;
+    my ($self, $page_height) = @_;
     
     if ($page_height) {
         confess "Illegal page height '$page_height'"
@@ -691,7 +691,7 @@ sub page_height {
 }
 
 sub page_border {
-    my( $self, $page_border ) = @_;
+    my ($self, $page_border) = @_;
     
     if ($page_border) {
         confess "Illegal page border '$page_border'"
@@ -703,7 +703,7 @@ sub page_border {
 }
 
 sub tile_overlap {
-    my( $self, $tile_overlap ) = @_;
+    my ($self, $tile_overlap) = @_;
     
     if ($tile_overlap) {
         confess "Illegal page border '$tile_overlap'"
@@ -715,7 +715,7 @@ sub tile_overlap {
 }
 
 sub landscape {
-    my( $self, $flag ) = @_;
+    my ($self, $flag) = @_;
     
     if (defined $flag) {
         $self->{'_print_landscape'} = $flag ? 1 : 0;
@@ -728,7 +728,7 @@ sub landscape {
 # Don't allow both horizontal and vertical tile to be set
 
 sub horizontal_tile {
-    my( $self, $count ) = @_;
+    my ($self, $count) = @_;
     
     if (defined $count) {
         confess "Illegal horizontal tile count '$count'"
@@ -740,7 +740,7 @@ sub horizontal_tile {
 }
 
 sub vertical_tile {
-    my( $self, $count ) = @_;
+    my ($self, $count) = @_;
     
     if (defined $count) {
         confess "Illegal vertical tile count '$count'"
@@ -752,7 +752,7 @@ sub vertical_tile {
 }
 
 sub visible_canvas_bbox {
-    my( $self ) = @_;
+    my ($self) = @_;
     
     my $canvas = $self->canvas;
     
@@ -774,14 +774,14 @@ sub visible_canvas_bbox {
 }
 
 sub visible_canvas_x_y {
-    my( $self ) = @_;
+    my ($self) = @_;
     
     my @bbox = $self->visible_canvas_bbox;
     return( $bbox[2] - $bbox[0], $bbox[3] - $bbox[1] );
 }
 
 sub exception_message {
-    my( $self, $except, @message ) = @_;
+    my ($self, $except, @message) = @_;
     
     # Take just the first part of long exception messages
     my @except_show = __partial_exception($except);
@@ -833,7 +833,7 @@ sub __catdent {
 }
 
 sub message {
-    my( $self, @message ) = @_;
+    my ($self, @message) = @_;
     
     my ($x1, $y1, $x2, $y2) = $self->visible_canvas_bbox;
     #warn "visible corners = ($x1, $y1, $x2, $y2)\n";
@@ -872,7 +872,7 @@ sub message {
 }
 
 sub message_at_x_y {
-    my( $self, $x, $y, $text_width, @message ) = @_;
+    my ($self, $x, $y, $text_width, @message) = @_;
 
     confess "Bad message width '$text_width'"
         unless $text_width =~ /^[\.\d]+$/;
@@ -922,7 +922,7 @@ sub message_at_x_y {
 }
 
 sub delete_message {
-    my( $self, $msg_id ) = @_;
+    my ($self, $msg_id) = @_;
     
     my $canvas = $self->canvas;
     unless ($msg_id) {
@@ -941,7 +941,7 @@ sub delete_message {
 }
 
 sub next_message_id {
-    my( $self ) = @_;
+    my ($self) = @_;
     
     return ++$self->{'_last_message_id'};
 }
@@ -951,7 +951,7 @@ sub next_message_id {
     my $was_tag = 'WasSelected';
 
     sub highlight {
-        my( $self, @obj ) = @_;
+        my ($self, @obj) = @_;
 
         my $canvas = $self->canvas;
         $canvas->delete($was_tag);
@@ -977,7 +977,7 @@ sub next_message_id {
     }
 
     sub re_highlight {
-        my( $self, @obj ) = @_;
+        my ($self, @obj) = @_;
 
         my $canvas = $self->canvas;
         foreach my $o (@obj) {
@@ -1019,7 +1019,7 @@ sub next_message_id {
     }
 
     sub deselect_all {
-        my( $self ) = @_;
+        my ($self) = @_;
 
         if (my $sel = $self->{'_selected_list'}) {
             my $canvas = $self->canvas;
@@ -1048,7 +1048,7 @@ sub next_message_id {
     }
 
     sub add_selected {
-        my( $self, $obj, $rect ) = @_;
+        my ($self, $obj, $rect) = @_;
 
         $self->{'_selected_list'}{$obj} = $rect;
 
@@ -1056,7 +1056,7 @@ sub next_message_id {
     }
 
     sub remove_selected {
-        my( $self, @obj ) = @_;
+        my ($self, @obj) = @_;
 
         my $canvas = $self->canvas;
         foreach my $o (@obj) {
@@ -1070,7 +1070,7 @@ sub next_message_id {
     }
 
     sub is_selected {
-        my( $self, $obj ) = @_;
+        my ($self, $obj) = @_;
 
         return $self->{'_selected_list'}{$obj} ? 1 : 0;
     }
@@ -1082,13 +1082,13 @@ sub next_message_id {
     }
 
     sub list_selected {
-        my( $self ) = @_;
+        my ($self) = @_;
 
         return $self->_get_sorted_list('_selected_list');
     }
 
     sub list_was_selected {
-        my( $self ) = @_;
+        my ($self) = @_;
 
         return $self->_get_sorted_list('_was_selected_list');
     }
@@ -1105,7 +1105,7 @@ sub next_message_id {
     }
 
     sub count_selected {
-        my( $self ) = @_;
+        my ($self) = @_;
 
         if (my $sel = $self->{'_selected_list'}) {
             return scalar keys %$sel;
@@ -1116,7 +1116,7 @@ sub next_message_id {
 }
 
 sub get_all_selected_text {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $canvas = $self->canvas;
     my( @text );
@@ -1130,7 +1130,7 @@ sub get_all_selected_text {
 }
 
 sub selected_text_to_clipboard {
-    my( $self, $offset, $max_bytes ) = @_;
+    my ($self, $offset, $max_bytes) = @_;
     
     my $text = join "\n", $self->get_all_selected_text;
     return substr($text, $offset, $max_bytes);
@@ -1197,7 +1197,7 @@ Description: clipboard is split on space for the processing by supplied
 =cut
 
 sub hash_from_clipboard {
-    my( $self, $regex_hash ) = @_;
+    my ($self, $regex_hash) = @_;
 
     warn "please pass me a nice hash" unless $regex_hash;
     my $results = { map { $_ => 0 } keys %$regex_hash };
