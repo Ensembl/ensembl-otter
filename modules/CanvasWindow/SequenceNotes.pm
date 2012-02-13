@@ -17,7 +17,7 @@ use POSIX qw(ceil);
 use Tk::Checkbutton;
 
 sub name {
-    my( $self, $name ) = @_;
+    my ($self, $name) = @_;
 
     if ($name) {
         $self->{'_name'} = $name;
@@ -26,7 +26,7 @@ sub name {
 }
 
 sub Client {
-    my( $self, $Client ) = @_;
+    my ($self, $Client) = @_;
 
     if ($Client) {
         $self->{'_Client'} = $Client;
@@ -35,7 +35,7 @@ sub Client {
 }
 
 sub SequenceSet {
-    my( $self, $SequenceSet ) = @_;
+    my ($self, $SequenceSet) = @_;
 
     if ($SequenceSet) {
         $self->{'_SequenceSet'} = $SequenceSet;
@@ -44,7 +44,7 @@ sub SequenceSet {
 }
 
 sub SequenceSetChooser {
-    my( $self, $SequenceSetChooser ) = @_;
+    my ($self, $SequenceSetChooser) = @_;
 
     if ($SequenceSetChooser) {
         $self->{'_SequenceSetChooser'} = $SequenceSetChooser;
@@ -54,7 +54,7 @@ sub SequenceSetChooser {
 
 
 sub get_CloneSequence_list {
-    my( $self , $force_update ) = @_;
+    my ($self, $force_update) = @_;
 
     #if $force_update is set to 1, then it should re-query the db rather than us the old list
     my $ss = $self->SequenceSet;
@@ -71,7 +71,7 @@ sub get_CloneSequence_list {
 ## now takes the column number to be refreshed (image or text) and refreshes it
 ## $i is the row index to start from - allows this method to be used by Searched SequenceNotes
 sub refresh_column {
-    my ($self, $col_no , $list_pos) = @_ ;
+    my ($self, $col_no, $list_pos) = @_;
 
     my $canvas = $self->canvas();
     my $col_tag = "col=$col_no";
@@ -117,7 +117,7 @@ sub refresh_lock_columns {
 # some of the columns have had different queries written to speed up the refresh ,
 # this method activates the appropriate one
 sub _refresh_SequenceSet{
-    my ($self , $column_number ) = @_ ;
+    my ($self, $column_number) = @_;
     $column_number ||= 0;
     my $cl = $self->Client();
     my $ds = $self->SequenceSetChooser->DataSet();
@@ -145,7 +145,7 @@ sub _refresh_SequenceSet{
 # and the second method that will produce the arguments for the first method
 # the first method will _column_write_text ($canvas->createText) or _column_draw_image ($canvas->createImage)
 sub column_methods {
-    my( $self, $methods ) = @_;
+    my ($self, $methods) = @_;
 
     if ($methods) {
         my $ok = 0;
@@ -211,7 +211,7 @@ sub column_methods {
 }
 
 sub _column_write_text {
-    my ($canvas, @args) = @_ ;
+    my ($canvas, @args) = @_;
 
     #warn "Drawing text with args [", join(', ', map "'$_'", @args), "]\n";
 
@@ -282,7 +282,7 @@ sub _column_text_pipeline_status {
 
 
 sub max_column_width {
-    my( $self, $max_column_width ) = @_;
+    my ($self, $max_column_width) = @_;
 
     if ($max_column_width) {
         $self->{'_max_column_width'} = $max_column_width;
@@ -291,7 +291,7 @@ sub max_column_width {
 }
 
 sub write_access_var_ref {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     unless(exists($self->{'_write_access_var'})) {
         $self->{'_write_access_var'} = $self->Client->write_access && $self->SequenceSet->write_access;
@@ -300,7 +300,7 @@ sub write_access_var_ref {
 }
 
 sub initialise {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     # Use a slightly smaller font so that more info fits on the screen
     $self->font_size(12);
@@ -452,7 +452,7 @@ sub initialise {
 }
 
 sub current_page_var_ref {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     unless(exists($self->{'_curr_page_var'})) {
         $self->{'_curr_page_var'} = 1;
@@ -461,21 +461,21 @@ sub current_page_var_ref {
 }
 
 sub go_left {
-    my( $self ) = @_;
+    my ($self) = @_;
     ${$self->current_page_var_ref}--;
     warn "Go_left button pressed\n";
     return;
 }
 
 sub go_right {
-    my( $self ) = @_;
+    my ($self) = @_;
     ${$self->current_page_var_ref}++;
     warn "Go_right button pressed\n";
     return;
 }
 
 sub bind_close_window{
-    my ($self , $top)  = @_ ;
+    my ($self, $top) = @_;
 
     my $close_window = sub{
         # This removes the seqSetCh.
@@ -496,7 +496,7 @@ sub bind_close_window{
 
 
 sub bind_item_selection{
-    my ($self , $canvas) = @_ ;
+    my ($self, $canvas) = @_;
 
     $canvas->configure(-selectbackground => 'gold');
     $canvas->CanvasBind('<Button-1>', sub {
@@ -513,7 +513,7 @@ sub bind_item_selection{
 
 
 sub make_matcher {
-    my( $self, $str ) = @_;
+    my ($self, $str) = @_;
 
     # Escape non word characters
     $str =~ s{(\W)}{\\$1}g;
@@ -522,7 +522,7 @@ sub make_matcher {
 }
 
 sub hunt_for_selection {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $canvas = $self->canvas;
 
@@ -604,7 +604,7 @@ sub hunt_for_selection {
 }
 
 sub make_button {
-    my( $self, $parent, $label, $command, $underline_index ) = @_;
+    my ($self, $parent, $label, $command, $underline_index) = @_;
 
     my @args = (
         -text => $label,
@@ -621,7 +621,7 @@ sub make_button {
 }
 
 sub set_selected_from_canvas {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $ss = $self->SequenceSet;
     if (my $sel_i = $self->selected_CloneSequence_indices) {
@@ -636,7 +636,7 @@ sub set_selected_from_canvas {
 }
 
 sub run_lace {
-    my ($self) = @_ ;
+    my ($self) = @_;
 
     ### Prevent opening of sequences already in lace sessions
     return unless $self->set_selected_from_canvas;
@@ -692,7 +692,7 @@ sub run_lace_on_slice{
 
 ## allows Searched SequenceNotes.pm to inherit the main part of the run_lace method
 sub _open_SequenceSet {
-    my ($self, $name) = @_ ;
+    my ($self, $name) = @_;
 
     my $cl = $self->Client;
     my $ss = $self->SequenceSet;
@@ -758,7 +758,7 @@ sub _open_SequenceSet {
 
 # creates a string based on the selected clones
 sub selected_clones_string {
-    my ($self ) = @_ ;
+    my ($self) = @_;
 
     my $selected = $self->selected_CloneSequence_indices;
 
@@ -931,7 +931,7 @@ sub draw_paging_buttons{
 }
 
 sub draw_all {
-    my ($self)   = @_;
+    my ($self) = @_;
 
     $self->_currently_paging(0);
 
@@ -989,7 +989,7 @@ sub draw_subset {
 }
 
 sub draw_range {
-    my ($self)   = @_;
+    my ($self) = @_;
 
     unless($self->_allow_paging()){
         return $self->draw_all();
@@ -1051,7 +1051,7 @@ sub _currently_paging {
 }
 
 sub draw {
-    my( $self ) = @_;
+    my ($self) = @_;
     # gets a list of CloneSequence objects.
     # draws a row for each of them
 
@@ -1146,7 +1146,7 @@ sub draw {
 
 
 sub deselect_all_selected_not_current {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $canvas = $self->canvas;
     $canvas->selectClear;
@@ -1158,7 +1158,7 @@ sub deselect_all_selected_not_current {
 }
 
 sub toggle_current {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $row_tag = $self->get_current_row_tag or return;
 
@@ -1169,7 +1169,7 @@ sub toggle_current {
 }
 
 sub extend_selection {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $canvas = $self->canvas;
     my $row_tag = $self->get_current_row_tag or return;
@@ -1224,7 +1224,7 @@ sub extend_selection {
 }
 
 sub selected_CloneSequence_indices {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $canvas = $self->canvas;
     my $select = [];
@@ -1245,7 +1245,7 @@ sub selected_CloneSequence_indices {
 }
 
 sub get_current_CloneSequence_index {
-    my( $self ) = @_ ;
+    my ($self) = @_;
     my $canvas = $self->canvas;
     my ($obj) = $canvas->find('withtag', 'current') or return;
 
@@ -1255,7 +1255,7 @@ sub get_current_CloneSequence_index {
 }
 
 sub get_current_row_tag {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $canvas = $self->canvas;
     my ($obj) = $canvas->find('withtag', 'current') or return;
@@ -1271,7 +1271,7 @@ sub get_current_row_tag {
 }
 
 sub toggle_selection {
-    my( $self, $obj ) = @_;
+    my ($self, $obj) = @_;
 
     my $canvas = $self->canvas;
     my $is_selected = grep { $_ eq 'selected' } $canvas->gettags($obj);
@@ -1291,7 +1291,7 @@ sub toggle_selection {
 }
 
 sub draw_row_backgrounds {
-    my( $self, $row_count, $gap_pos ) = @_;
+    my ($self, $row_count, $gap_pos) = @_;
 
     my $canvas = $self->canvas;
     my ($x1, $x2) = ($canvas->bbox('all'))[0,2];
@@ -1321,7 +1321,7 @@ sub draw_row_backgrounds {
 
 my $count ;
 sub layout_columns_and_rows {
-    my( $self, $max_col, $max_row ) = @_;
+    my ($self, $max_col, $max_row) = @_;
 
 warn "LayOut started...\n";
 
@@ -1361,7 +1361,7 @@ warn "LayOut finished.\n";
 }
 
 sub save_sequence_notes {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $text = ${$self->set_note_ref()};
     $text =~ s/\s/ /g;
@@ -1414,7 +1414,7 @@ sub save_sequence_notes {
 
 
 sub DESTROY {
-    my( $self ) = @_;
+    my ($self) = @_;
     my ($type) = ref($self) =~ /([^:]+)$/;
     my $name = $self->name;
     warn "Destroying $type $name\n";
@@ -1484,7 +1484,7 @@ sub popup_ana_seq_history{
 }
 
 sub add_Status{
-    my ($self , $status) = @_ ;
+    my ($self, $status) = @_;
     #add a new element to the hash
     if ($status){
         $self->{'_Status_win'} = $status;
@@ -1492,7 +1492,7 @@ sub add_Status{
     return $self->{'_Status_win'};
 }
 sub add_History{
-    my ($self , $history) = @_ ;
+    my ($self, $history) = @_;
     #add a new element to the hash
     if ($history){
         $self->{'_History_win'} = $history;
@@ -1502,7 +1502,7 @@ sub add_History{
 
 # so we dont bring up copies of the same window
 sub check_for_History{
-    my ($self , $index) = @_;
+    my ($self, $index) = @_;
     return 0 unless defined($index); # 0 is valid index
 
     my $hist_win = $self->{'_History_win'};
@@ -1515,7 +1515,7 @@ sub check_for_History{
 }
 # so we dont bring up copies of the same window
 sub check_for_Status{
-    my ($self , $index) = @_;
+    my ($self, $index) = @_;
     return 0 unless defined($index); # 0 is valid index
 
     my $status_win = $self->{'_Status_win'};
@@ -1533,7 +1533,7 @@ sub empty_canvas_message{
 
 
 sub _column_padlock_icon {
-    my ($cs, $i, $self) = @_ ;
+    my ($cs, $i, $self) = @_;
 
     my( $pixmap );
     if ($cs->get_lock_status){
@@ -1560,7 +1560,7 @@ sub _column_who_locked {
 }
 
 sub closed_padlock_pixmap {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my( $pix );
     unless ($pix = $self->{'_closed_padlock_pixmap'}) {
@@ -1596,7 +1596,7 @@ END_OF_PIXMAP
 ### blank at the moment - perhaps put an "unlocked" icon in there later
 ### Need an image of some sort in place of the "locked" icon - for the refresh columns methods
 sub open_padlock_pixmap {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my( $pix );
     unless ($pix = $self->{'_open_padlock_pixmap'}) {

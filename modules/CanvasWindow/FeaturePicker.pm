@@ -10,7 +10,7 @@ use Carp;
 use Hum::Ace::XaceRemote;
 
 sub new {
-    my( $pkg, @args ) = @_;
+    my ($pkg, @args) = @_;
     
     my $self = $pkg->SUPER::new(@args);
 
@@ -62,7 +62,7 @@ sub new {
 }
 
 sub next_match {
-    my( $self, $incr ) = @_;
+    my ($self, $incr) = @_;
     
     my ($obj) = $self->list_selected or return;
     $obj += $incr;
@@ -77,7 +77,7 @@ sub next_match {
 }
 
 sub select_feature {
-    my( $self ) = @_;
+    my ($self) = @_;
     
     return if $self->delete_message;
     my $canvas = $self->canvas;
@@ -90,7 +90,7 @@ sub select_feature {
 }
 
 sub show_selected_in_zmap {
-    my( $self ) = @_;
+    my ($self) = @_;
     
     my ($obj) = $self->list_selected or return;
     my $canvas = $self->canvas;
@@ -130,7 +130,7 @@ sub show_selected_in_zmap {
 }
 
 sub parse_feature_filehandle {
-    my( $self, $fh ) = @_;
+    my ($self, $fh) = @_;
     
     my $feat_list = $self->feature_list;
     
@@ -180,14 +180,14 @@ sub parse_feature_filehandle {
 }
 
 sub feature_list {
-    my( $self ) = @_;
+    my ($self) = @_;
     
     my $feat_list = $self->{'_feature_list'} ||= [];
     return $feat_list;
 }
 
 sub draw_feature_list {
-    my( $self ) = @_;
+    my ($self) = @_;
     
     my $feat_list = $self->feature_list;
     my @fields = qw{
@@ -241,7 +241,7 @@ sub draw_feature_list {
 }
 
 sub zmap_remote {
-    my( $self, $zmap_remote ) = @_;
+    my ($self, $zmap_remote) = @_;
     
     if ($zmap_remote) {
         warn "Saving $zmap_remote";
@@ -251,7 +251,7 @@ sub zmap_remote {
 }
 
 sub attach_zmap {
-    my( $self ) = @_;
+    my ($self) = @_;
     
     if (my $xwid = $self->get_zmap_window_id) {
         my $xrem = Hum::Ace::XaceRemote->new($xwid);
@@ -262,7 +262,7 @@ sub attach_zmap {
 }
 
 sub get_zmap_window_id {
-    my( $self ) = @_;
+    my ($self) = @_;
     
     my $mid = $self->message("Please click on the zMap main window with the cross-hairs");
     $self->delete_message($mid);
