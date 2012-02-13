@@ -6,7 +6,7 @@ use Bio::EnsEMBL::Utils::Argument qw ( rearrange );
 use base qw(Bio::EnsEMBL::Storable);
 
 sub new {
-  my($class,@args) = @_;
+  my ($class, @args) = @_;
   my $self = $class->SUPER::new(@args);
   my ($name,$email)  = rearrange([qw(
                             NAME
@@ -28,7 +28,7 @@ sub new {
 =cut
 
 sub name{
-   my ($self,$value) = @_;
+   my ($self, $value) = @_;
    if( defined $value) {
       $self->{'name'} = $value;
     }
@@ -45,7 +45,7 @@ sub name{
 =cut
 
 sub email{
-   my ($self,$value) = @_;
+   my ($self, $value) = @_;
    if( defined $value) {
       $self->{'email'} = $value;
     }

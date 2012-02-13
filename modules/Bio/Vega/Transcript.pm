@@ -8,7 +8,7 @@ use base 'Bio::EnsEMBL::Transcript';
 use Bio::Vega::Translation;
 
 sub new {
-  my($class,@args) = @_;
+  my ($class, @args) = @_;
   my $self = $class->SUPER::new(@args);
   my ($transcript_author,$evidence_list)  = rearrange([qw(AUTHOR EVIDENCE)],@args);
   $self->transcript_author($transcript_author);
@@ -32,7 +32,7 @@ sub get_all_Exons_ref {
 }
 
 sub transcript_author {
-  my ($self,$value) = @_;
+  my ($self, $value) = @_;
   if( defined $value) {
       if ($value->isa("Bio::Vega::Author")) {
           $self->{'transcript_author'} = $value;
@@ -62,7 +62,7 @@ sub evidence_list {
 }
 
 sub truncate_to_Slice {
-  my( $self, $slice ) = @_;
+  my ($self, $slice) = @_;
   # start and end exon are set to zero so that we can
   # safely use them in "==" without generating warnings
   # as we loop through the list of exons.

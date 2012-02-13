@@ -7,7 +7,7 @@ use base 'Bio::EnsEMBL::Feature';
 
 sub new {
 
-  my($class,@args) = @_;
+  my ($class, @args) = @_;
   my $self = $class->SUPER::new(@args);
   my ($seq_region_id, $seq_region_start, $seq_region_end, $seq_region_strand, $tag_type, $tag_info) =
     rearrange([qw(SEQ_REGION_ID SEQ_REGION_START SEQ_REGION_END SEQ_REGION_STRAND TAG_TYPE TAG_INFO)],@args);

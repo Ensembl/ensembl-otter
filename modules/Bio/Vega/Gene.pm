@@ -8,7 +8,7 @@ use base 'Bio::EnsEMBL::Gene';
 
 
 sub new {
-  my($class,@args) = @_;
+  my ($class, @args) = @_;
   my $self = $class->SUPER::new(@args);
   my ($gene_author)  = rearrange([qw(AUTHOR)],@args);
   $self->gene_author($gene_author);
@@ -16,7 +16,7 @@ sub new {
 }
 
 sub gene_author {
-  my ($self,$value) = @_;
+  my ($self, $value) = @_;
   if( defined $value) {
       if ($value->isa("Bio::Vega::Author")) {
           $self->{'gene_author'} = $value;
@@ -90,7 +90,7 @@ editable in the client.  Defaults to 0.
 =cut
 
 sub truncated_flag {
-  my( $self, $flag ) = @_;
+  my ($self, $flag) = @_;
   if (defined $flag) {
       $self->{'truncated_flag'} = $flag ? 1 : 0;
   }

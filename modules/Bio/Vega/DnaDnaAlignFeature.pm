@@ -8,7 +8,7 @@ use warnings;
 use base 'Bio::EnsEMBL::DnaDnaAlignFeature';
 
 sub get_HitDescription {
-    my( $self ) = @_;
+    my ($self) = @_;
     
     return $self->{'_hit_description'};
 }

@@ -8,7 +8,7 @@ use warnings;
 use base qw(Bio::EnsEMBL::Storable);
 
 sub new {
-  my($class,@args) = @_;
+  my ($class, @args) = @_;
   my $self = $class->SUPER::new(@args);
   my ($name,$email,$group)  = rearrange([qw(
     NAME
@@ -32,7 +32,7 @@ sub new {
 =cut
 
 sub email{
-   my ($self,$value) = @_;
+   my ($self, $value) = @_;
    if( defined $value) {
       $self->{'email'} = $value;
     }
@@ -49,7 +49,7 @@ sub email{
 =cut
 
 sub name{
-   my ($self,$value) = @_;
+   my ($self, $value) = @_;
    if( defined $value) {
       $self->{'name'} = $value;
     }
@@ -66,7 +66,7 @@ sub name{
 =cut
 
 sub group{
-  my ($self,$value) = @_;
+  my ($self, $value) = @_;
   if( defined $value) {
       $self->{'group'} = $value;
       if (! $value->isa("Bio::Vega::AuthorGroup") ) {

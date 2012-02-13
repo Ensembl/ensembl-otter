@@ -12,17 +12,17 @@ sub new {
 }
 
 sub formatopentag{
-  my ($self,$name,$indent)=@_;
+  my ($self, $name, $indent) = @_;
   return ((' ' x $indent).'<'.$name.'>'."\n");
 }
 
 sub formatclosetag{
-  my ($self,$name,$indent)=@_;
+  my ($self, $name, $indent) = @_;
   return ((' ' x $indent).'</'.$name.">\n");
 }
 
 sub formatopenendtag{
-  my ($self,$name,$indent,$value)=@_;
+  my ($self, $name, $indent, $value) = @_;
   $indent=$indent+2;
   unless (defined($value)) {
       warn "Value not defined for <$name> tag\n";
@@ -32,7 +32,7 @@ sub formatopenendtag{
 }
 
 sub prettyprint{
-  my ($self,$name,$value)=@_;
+  my ($self, $name, $value) = @_;
   my $element = Bio::Vega::Transform::PrettyPrint->new(
     -name  => $name,
     -value => defined($value) ? xml_escape($value) : undef,
@@ -41,7 +41,7 @@ sub prettyprint{
 }
 
 sub formatxml {
-  my ($self,$pp)=@_;
+  my ($self, $pp) = @_;
   $pp->xmlformat($self->formatopentag($pp->name,$pp->indent));
   my $attribvals=$pp->attribvals;
   foreach my $a (@$attribvals){
