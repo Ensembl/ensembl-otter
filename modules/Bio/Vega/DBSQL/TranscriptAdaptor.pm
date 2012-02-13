@@ -11,7 +11,7 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use base 'Bio::EnsEMBL::DBSQL::TranscriptAdaptor';
 
 sub fetch_transcript_author {
-  my ($self,$transcript)=@_;
+  my ($self, $transcript) = @_;
 
   my $author= $self->db->get_AuthorAdaptor->fetch_transcript_author($transcript->dbID);
   $transcript->transcript_author($author);
@@ -20,7 +20,7 @@ sub fetch_transcript_author {
 }
 
 sub fetch_evidence {
-  my ($self, $transcript)=@_;
+  my ($self, $transcript) = @_;
 
   if( !ref($transcript) || !$transcript->isa('Bio::EnsEMBL::Transcript') ) {
     throw('Transcript argument is required.');
@@ -44,7 +44,7 @@ sub fetch_evidence {
 }
 
 sub store_Evidence {
-  my ($self,$transcript_id,$evidence_list) = @_;
+  my ($self, $transcript_id, $evidence_list) = @_;
 
   unless ($evidence_list || $transcript_id) {
       throw("evidence object list :$evidence_list and transcript_id:$transcript_id must be entered to store an evidence");
@@ -130,7 +130,7 @@ sub fetch_by_stable_id_version  {
 }
 
 sub fetch_all_by_Slice  {
-  my ($self,$slice,$load_exons,$logic_name)  = @_;
+  my ($self, $slice, $load_exons, $logic_name) = @_;
 
   my ($transcripts) = $self->SUPER::fetch_all_by_Slice($slice,$load_exons,$logic_name);
   if ($transcripts){
@@ -143,7 +143,7 @@ sub fetch_all_by_Slice  {
 }
 
 sub fetch_all_by_Gene  {
-  my ($self,$gene)  = @_;
+  my ($self, $gene) = @_;
 
   my ($transcripts) = $self->SUPER::fetch_all_by_Gene($gene);
   if ($transcripts){
@@ -156,7 +156,7 @@ sub fetch_all_by_Gene  {
 }
 
 sub get_deleted_Transcript_by_slice{
-  my ($self, $transcript,$tran_version) = @_;
+  my ($self, $transcript, $tran_version) = @_;
 
   unless ($transcript || $tran_version){
       throw("no transcript passed on to fetch old transcript or no version supplied");

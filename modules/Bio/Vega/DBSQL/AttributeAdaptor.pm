@@ -9,7 +9,7 @@ use base 'Bio::EnsEMBL::DBSQL::AttributeAdaptor';
 
 sub fetch_all_by_ContigInfo  {
 
-  my ($self,$ci) = @_;
+  my ($self, $ci) = @_;
 
   if(!ref($ci) || !$ci->isa('Bio::Vega::ContigInfo')) {
     throw('ContigInfo argument is required.');
