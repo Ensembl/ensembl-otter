@@ -17,6 +17,7 @@ use Tk::SmartOptionmenu;
 use Hum::Ace::DotterLauncher;
 use CanvasWindow::EvidencePaster;
 use EditWindow::PfamWindow;
+use Bio::Otter::UI::TextWindow::Peptide;
 use Hum::Ace;
 
 use base qw( MenuCanvasWindow );
@@ -850,127 +851,14 @@ sub show_subseq {
 sub show_peptide {
     my( $self ) = @_;
 
-    unless ($self->{'_pep_peptext'}) {
-        my $master = $self->canvas->toplevel;
-        my $top = $master->Toplevel;
-        $top->transient($master);
-
-
-        my $peptext = $self->{'_pep_peptext'} = $top->Scrolled(
-            'ROText',
-            -scrollbars         => 'e',
-            -font           => $self->font_fixed,
-            #-justify        => 'left',
-            -padx                   => 6,
-            -pady                   => 6,
-            -relief                 => 'groove',
-            -background             => 'white',
-            -border                 => 2,
-            -selectbackground       => 'gold',
-            #-exportselection => 1,
-            )->pack(
-                -expand => 1,
-                -fill   => 'both',
-                );
-
-        # Red for stop codons
-        $peptext->tagConfigure('redstop',
-            -background => '#ef0000',
-            -foreground => 'white',
-            );
-
-        # Blue for "X", the unknown amino acid
-        $peptext->tagConfigure('blueunk',
-            -background => '#0000ef',
-            -foreground => 'white',
-            );
-
-        # Light grey background for hydrophobic amino acids
-        $peptext->tagConfigure('greyphobic',
-            -background => '#cccccc',
-            -foreground => 'black',
-            );
-
-        # Gold for methionine codons
-        $peptext->tagConfigure('goldmeth',
-            -background => '#ffd700',
-            -foreground => 'black',
-        );
-        $peptext->tagBind('goldmeth', '<Button-1>',
-            sub{ $self->trim_cds_coord_to_current_methionine; }
-            );
-        $peptext->tagBind('goldmeth', '<Enter>',
-            sub{ $peptext->configure(-cursor => 'arrow'); }
-            );
-        $peptext->tagBind('goldmeth', '<Leave>',
-            sub{ $peptext->configure(-cursor => 'xterm'); }
-            );
-        $peptext->tagBind('goldmeth' , '<Button-3>' ,
-            sub{ $self->check_kozak}
-            );
-
-        # Green for selenocysteines
-        $peptext->tagConfigure('greenseleno',
-            -background => '#32cd32',
-            -foreground => 'white',
-        );
-
-        # Frame for buttons
-        my $frame = $top->Frame(
-            -border => 6,
-            )->pack(
-                -side   => 'bottom',
-                -fill   => 'x',
-                );
-
-        my $trim_command = sub{
-            $self->trim_cds_coord_to_first_stop;
-            $self->show_peptide;
-            };
-        $frame->Button(
-            -text       => 'Trim',
-            -underline  => 0,
-            -command    => $trim_command ,
-            )->pack(-side => 'left');
-        $top->bind('<Control-t>',   $trim_command);
-        $top->bind('<Control-T>',   $trim_command);
-        $top->bind('<Return>',      $trim_command);
-        $top->bind('<KP_Enter>',    $trim_command);
-
-        $self->{'_highlight_hydrophobic'} = $highlight_hydrophobic;
-        my $toggle_hydrophobic = sub {
-            # Save preferred state for next translation window
-            $highlight_hydrophobic = $self->{'_highlight_hydrophobic'};
-            $self->update_translation;
-        };
-        my $hydrophobic = $frame->Checkbutton(
-            -command    => $toggle_hydrophobic,
-            -variable   => \$self->{'_highlight_hydrophobic'},
-            -text       => 'Highlight hydrophobic',
-            -padx       => 6,
-            )->pack(-side => 'left', -padx => 6);
-
-        # Close only unmaps it from the display
-        my $close_command = sub{ $top->withdraw };
-
-        my $exit = $frame->Button(
-            -text => 'Close',
-            -command => $close_command ,
-            )->pack(-side => 'right');
-        $top->bind(    '<Control-w>',      $close_command);
-        $top->bind(    '<Control-W>',      $close_command);
-        $top->bind(    '<Escape>',         $close_command);
-
-
-        # Closing with window manager only unmaps window
-        $top->protocol('WM_DELETE_WINDOW', $close_command);
-
-        $peptext->bind('<Destroy>', sub{ $self = undef });
+    my $peptext = $self->{'_pep_peptext'};
+    unless ($peptext) {
+        $peptext = $self->{'_pep_peptext'} = Bio::Otter::UI::TextWindow::Peptide->new($self);
     }
 
     if ($self->update_translation) {
         # Make the window visible
-        my $win = $self->{'_pep_peptext'}->toplevel;
+        my $win = $peptext->window->toplevel;
         $win->deiconify;
         $win->raise;
     }
@@ -1035,94 +923,13 @@ sub update_translation {
     my $sub = $self->current_SubSeq;
     unless ($sub->GeneMethod->coding) {
         if ($peptext) {
-            $peptext->toplevel->withdraw;
+            $peptext->window->toplevel->withdraw;
         }
         $self->message("non-coding transcript type");
         return;
     }
 
-    # Empty the text widget
-    $peptext->delete('1.0', 'end');
-
-    eval{ $sub->validate; };
-    if ($@) {
-        $self->exception_message($@, 'Invalid transcript');
-        $peptext->insert('end', "TRANSLATION ERROR");
-    } else {
-        # Put the new translation into the Text widget
-
-        my $pep = $sub->translator->translate($sub->translatable_Sequence);
-        $peptext->insert('end', sprintf(">%s\n", $pep->name));
-
-        my $line_length = 60;
-        my $str = $pep->sequence_string;
-        my $map = $sub->codon_start_map;
-        my %style = qw{
-            *   redstop
-            X   blueunk
-            M   goldmeth
-            U   greenseleno
-            };
-        if ($self->{'_highlight_hydrophobic'}) {
-            %style = (%style, qw{
-                A   greyphobic
-                C   greyphobic
-                G   greyphobic
-                I   greyphobic
-                L   greyphobic
-                F   greyphobic
-                P   greyphobic
-                W   greyphobic
-                V   greyphobic
-                });
-        }
-        my $pep_genomic = $self->{'_peptext_index_to_genomic_position'} = {};
-        
-        # If we are showing an "X" amino acid at the start due to a partial
-        # codon we need to take 1 off the index into the codon_start_map
-        my $offset = $str =~ /^X/ ? 1 : 0;
-        
-        for (my $i = 0; $i < length($str); $i++) {
-            my $char = substr($str, $i, 1);
-            my $tag = $style{$char};
-            $peptext->insert('end', $char, $tag);
-
-            if ($char eq 'M') {
-                my $index = $peptext->index('insert - 1 chars');
-                #printf STDERR "$index  $map->[$i]\n";
-                $pep_genomic->{$index} = $map->[$i - $offset];
-            }
-
-            unless (($i + 1) % $line_length) {
-                $peptext->insert('end', "\n");
-            }
-        }
-    }
-
-
-    # Size widget to fit
-    my ($lines) = $peptext->index('end') =~ /(\d+)\./;
-    $lines--;
-    if ($lines > 40) {
-        $peptext->configure(
-            -width  => 60,
-            -height => 40,
-            );
-    } else {
-        # This has slightly odd behaviour if the ROText starts off
-        # big to accomodate a large translation, and is then made
-        # smaller.  Does not seem to shrink below a certain minimum
-        # height.
-        $peptext->configure(
-            -width  => 60,
-            -height => $lines,
-            );
-    }
-
-    # Set the window title
-    $peptext->toplevel->configure( -title => sprintf("otter: Translation %s", $sub->name) );
-
-    return 1;
+    return $peptext->update_translation($sub);
 }
 
 sub evidence_hash {
@@ -1182,154 +989,8 @@ sub save_OtterTranscript_evidence {
     return;
 }
 
-sub check_kozak{
-    my ($self ) = @_ ;
-
-    my $kozak_window = $self->{'_kozak_window'} ;
-    # create a new window if none available
-    unless (defined $kozak_window){
-        my $master = $self->canvas->toplevel;
-        $kozak_window = $master->Toplevel(-title => 'otter: Kozak Checker');
-        $kozak_window->transient($master);
-
-        my $font = $self->font_fixed;
-
-        $kozak_window->Label(
-                -font           => $font,
-                -text           => "5'\n3'" ,
-                -padx                   => 6,
-                -pady                   => 6,
-                )->pack(-side   => 'left');
-
-        my $kozak_txt = $kozak_window->ROText(
-                -font           => $font,
-                #-justify        => 'left',
-                -padx                   => 6,
-                -pady                   => 6,
-                -relief                 => 'groove',
-                -background             => 'white',
-                -border                 => 2,
-                -selectbackground       => 'gold',
-                #-exportselection => 1,
-
-                -width                  => 10 ,
-                -height                 => 2 ,
-                )->pack(-side   => 'left' ,
-                        -expand => 1      ,
-                        -fill   => 'both' ,
-                        );
-
-
-        $kozak_window->Label(
-                -font           => $font,
-                -text           => "3'\n5'" ,
-                -padx                   => 6,
-                -pady                   => 6,
-                )->pack(-side   => 'left');
-
-        my $close_kozak = sub { $kozak_window->withdraw } ;
-        $kozak_window->bind('<Destroy>', sub{ $self = undef });
-        my $kozak_butt = $kozak_window->Button( -text       => 'close' ,
-                                            -command    => $close_kozak ,
-                                            )->pack(-side => 'left')  ;
-        $self->{'_kozak_txt'} = $kozak_txt ;
-        $self->{'_kozak_window'} = $kozak_window;
-
-    }
-
-    my $kozak_txt = $self->{'_kozak_txt'} ;
-
-    ### get index of selected methionine
-    my $peptext = $self->{'_pep_peptext'} or return;
-    my $pep_index = $peptext->index('current');
-    my $seq_index = $self->{'_peptext_index_to_genomic_position'}{$pep_index} or return;
-
-    my $subseq = $self->SubSeq ;
-    my $clone_seq = $subseq->clone_Sequence();
-    my $sequence_string = $clone_seq->sequence_string;
-    my $strand = $subseq->strand;
-
-    my $k_start ;
-
-    if ($strand == 1){
-        $k_start = ($seq_index  - 7 ) ;
-    }else{
-        $k_start = ($seq_index  - 4 ) ;
-    }
-
-    my $kozak ;
-    if ( $k_start >= 0 ){
-        $kozak = substr($sequence_string ,  $k_start  , 10 ) ;
-    }
-    else{
-        # if subseq  goes off start , this will pad it with '*'s to make it 10 chars long
-        $kozak =  "*" x ( $k_start * -1) . substr($sequence_string ,  0  , 10 + $k_start ) ;
-    }
-
-    my $rev_kozak = $kozak ;
-    $rev_kozak =~ tr{acgtrymkswhbvdnACGTRYMKSWHBVDN}
-                    {tgcayrkmswdvbhnTGCAYRKMSWDVBHN};
-    $kozak  =~ s/t/u/g  ;
-    $rev_kozak =~ s/t/u/g  ;
-
-
-    $kozak_window->resizable( 1 , 1)  ;
-    $kozak_txt->delete( '1.0' , 'end')  ;
-    $kozak_window->resizable(0 , 0)  ;
-
-    # higlight parts of sequence that match
-    # green for matches codons
-    $kozak_txt->tagConfigure('match',
-            -background => '#AAFF66',
-            );
-
-    # from an email from [cas]
-    # shows how the template matches various recognised Kozak consensi.
-    ############################  perfect, strong, adequate, chr22 version
-    my @template_kozak = ('(a|g)',   # G
-                          'c',       # C
-                          'c',       # C
-                          'a',       # A    A   G   G  Y     G
-                          'c',       # C    n   n   n  n     n
-                          'c',       # C    n   n   n  n     n
-                          'a',       # A    A   A   A  A     A
-                          'u',       # T    T   T   T  T     T
-                          'g',       # G    G   G   G  G     G
-                          'g');      # G    n   G   Y  G     A
-
-    ## for some reason (tk bug?) tk would not display tags added to the second line when using the index system - hence two loops rather than one
-    for( my $i = 0 ;  $i <= ( length($kozak) - 1) ; $i++ ){
-        my $pos_char = substr( $kozak , $i , 1) ;
-        my $template = $template_kozak[$i] ;
-        if ($pos_char  =~ /$template/ && $strand == 1){
-            $kozak_txt->insert('end' , "$pos_char" , 'match');
-        }else{
-            $kozak_txt->insert('end' , "$pos_char" );
-        }
-    }
-
-    for (my $i = 0 ;  $i <= ( length($rev_kozak) - 1) ; $i++ ){
-        my $template = $template_kozak[9 - $i] ;
-        my $neg_char = substr( $rev_kozak ,  $i   , 1) ;
-        if ($neg_char  =~ /$template/  && $strand == -1){
-            $kozak_txt->insert('end' , "$neg_char" , "match");
-        }else{
-            $kozak_txt->insert('end' , "$neg_char");
-        }
-    }
-
-    $kozak_window->deiconify;
-    $kozak_window->raise ;
-
-    return;
-}
-
-sub trim_cds_coord_to_current_methionine {
-    my( $self ) = @_;
-
-    my $peptext = $self->{'_pep_peptext'} or return;
-    my $index = $peptext->index('current');
-    my $new = $self->{'_peptext_index_to_genomic_position'}{$index} or return;
+sub adjust_tk_t_start {
+    my ($self, $new) = @_;
 
     $self->deselect_all;
     my $original = $self->tk_t_start;
