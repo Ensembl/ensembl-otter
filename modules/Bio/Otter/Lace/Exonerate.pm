@@ -30,12 +30,12 @@ use Hum::FastaFileIO;
 use Bio::EnsEMBL::Analysis::Runnable::Finished::Exonerate;
 
 sub new{
-    my( $pkg ) = @_;
+    my ($pkg) = @_;
     return bless {}, $pkg;
 }
 
 sub initialise {
-    my ($self,$fasta_file) = @_;
+    my ($self, $fasta_file) = @_;
 
     unless ($fasta_file =~ m{^/}) {
         confess "fasta file '$fasta_file' is not an absolute path";
@@ -85,7 +85,7 @@ sub write_seq_file {
 
 
 sub AceDatabase {
-    my( $self, $AceDatabase ) = @_;
+    my ($self, $AceDatabase) = @_;
 
     if ($AceDatabase) {
         $self->{'_AceDatabase'} = $AceDatabase;
@@ -94,7 +94,7 @@ sub AceDatabase {
 }
 
 sub analysis {
-    my( $self, $analysis ) = @_;
+    my ($self, $analysis) = @_;
 
     if ($analysis) {
         $self->{'_analysis'} = $analysis;
@@ -103,7 +103,7 @@ sub analysis {
 }
 
 sub genomic_seq {
-    my( $self, $genomic_seq ) = @_;
+    my ($self, $genomic_seq) = @_;
 
     if ($genomic_seq) {
         $self->{'_genomic_seq'} = $genomic_seq;
@@ -112,7 +112,7 @@ sub genomic_seq {
 }
 
 sub genomic_start {
-    my ( $self, $genomic_start ) = @_;
+    my ($self, $genomic_start) = @_;
     if ( defined $genomic_start ) {
         $self->{'_genomic_start'} = $genomic_start;
     }
@@ -120,7 +120,7 @@ sub genomic_start {
 }
 
 sub genomic_end {
-    my ( $self, $genomic_end ) = @_;
+    my ($self, $genomic_end) = @_;
     if ( defined $genomic_end ) {
         $self->{'_genomic_end'} = $genomic_end;
     }
@@ -128,7 +128,7 @@ sub genomic_end {
 }
 
 sub mask_target {
-    my ( $self, $mask_target ) = @_;
+    my ($self, $mask_target) = @_;
     if ( defined $mask_target ) {
         $self->{'_mask_target'} = $mask_target;
     }
@@ -136,7 +136,7 @@ sub mask_target {
 }
 
 sub query_seq {
-    my( $self, $seq ) = @_;
+    my ($self, $seq) = @_;
 
     if ($seq) {
         $self->{'_query_seq'} = $seq;
@@ -145,7 +145,7 @@ sub query_seq {
 }
 
 sub query_type {
-    my( $self, $query_type ) = @_;
+    my ($self, $query_type) = @_;
 
     if ($query_type) {
         my $type = lc($query_type);
@@ -160,7 +160,7 @@ sub query_type {
 }
 
 sub acedb_homol_tag {
-    my( $self, $tag ) = @_;
+    my ($self, $tag) = @_;
 
     if ($tag) {
         $self->{'_acedb_homol_tag'} = $tag;
@@ -170,7 +170,7 @@ sub acedb_homol_tag {
 }
 
 sub database {
-    my( $self, $database ) = @_;
+    my ($self, $database) = @_;
 
     if ($database) {
         $self->{'_database'} = $database;
@@ -179,7 +179,7 @@ sub database {
 }
 
 sub score {
-    my ( $self, $score ) = @_;
+    my ($self, $score) = @_;
     if ($score) {
         $self->{'_score'} = $score;
     }
@@ -187,7 +187,7 @@ sub score {
 }
 
 sub bestn {
-    my ( $self, $bestn) = @_;
+    my ($self, $bestn) = @_;
     if ($bestn) {
         $self->{'_bestn'} = $bestn;
     }
@@ -195,7 +195,7 @@ sub bestn {
 }
 
 sub max_intron_length {
-    my ( $self, $max_intron_length) = @_;
+    my ($self, $max_intron_length) = @_;
     if ($max_intron_length) {
         $self->{'_max_intron_length'} = $max_intron_length;
     }
@@ -203,7 +203,7 @@ sub max_intron_length {
 }
 
 sub dnahsp {
-    my ( $self, $dnahsp ) = @_;
+    my ($self, $dnahsp) = @_;
     if ($dnahsp) {
         $self->{'_dnahsp'} = $dnahsp;
     }
@@ -224,7 +224,7 @@ sub db_dirname{
 }
 
 sub homol_tag {
-    my( $self, $homol_tag ) = @_;
+    my ($self, $homol_tag) = @_;
 
     if ($homol_tag) {
         $self->{'_homol_tag'} = $homol_tag;
@@ -233,7 +233,7 @@ sub homol_tag {
 }
 
 sub method_tag {
-    my( $self, $method_tag ) = @_;
+    my ($self, $method_tag) = @_;
 
     if ($method_tag) {
         $self->{'_method_tag'} = $method_tag;
@@ -248,7 +248,7 @@ sub method_tag {
 }
 
 sub method_color {
-    my( $self, $method_color ) = @_;
+    my ($self, $method_color) = @_;
 
     if ($method_color) {
         $self->{'_method_color'} = $method_color;
@@ -257,7 +257,7 @@ sub method_color {
 }
 
 sub logic_name {
-    my( $self, $logic_name ) = @_;
+    my ($self, $logic_name) = @_;
 
     if ($logic_name) {
         $self->{'_logic_name'} = $logic_name;
@@ -267,7 +267,7 @@ sub logic_name {
 
 
 sub sequence_fetcher {
-    my( $self, $sequence_fetcher ) = @_;
+    my ($self, $sequence_fetcher) = @_;
 
     if ($sequence_fetcher) {
         $self->{'_sequence_fetcher'} = $sequence_fetcher;
@@ -286,7 +286,7 @@ sub ace_Method {
 
 
 sub run {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $ace = '';
     my $name = $self->genomic_seq->name;
@@ -331,7 +331,7 @@ sub run {
 my $debug = 0;
 
 sub append_polyA_tail {
-    my( $self, $features ) = @_;
+    my ($self, $features) = @_;
 
     # Group the DnaDnaAlignFeatures by hit_name
     my %by_hit_name;
@@ -451,7 +451,7 @@ sub run_exonerate {
 }
 
 sub add_hit_name {
-    my( $self, $name ) = @_;
+    my ($self, $name) = @_;
 
     $self->{'_hit_names'}{$name} = 1;
 
