@@ -19,7 +19,7 @@ sub new {
 }
 
 sub client_hostname {
-    my( $self, $hostname ) = @_;
+    my ($self, $hostname) = @_;
     if ($hostname) {
         $self->{'hostname'} = $hostname;
     }
@@ -27,7 +27,7 @@ sub client_hostname {
 }
 
 sub author {
-    my( $self, $author ) = @_;
+    my ($self, $author) = @_;
     if ($author) {
         if(! eval { $author->isa('Bio::Vega::Author') }) {
             throw("[$author] is not a Bio::Vega::Author");

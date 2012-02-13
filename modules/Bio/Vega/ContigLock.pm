@@ -10,7 +10,7 @@ use Bio::EnsEMBL::Utils::Argument qw ( rearrange );
 use base qw(Bio::EnsEMBL::Storable);
 
 sub new {
-    my($class, @args) = @_;
+    my ($class, @args) = @_;
     
     my $self = $class->SUPER::new(@args);
 
@@ -26,7 +26,7 @@ sub new {
 }
 
 sub contig_id {
-    my( $self, $contig_id ) = @_;
+    my ($self, $contig_id) = @_;
     if ($contig_id) {
         $self->{'contig_id'} = $contig_id;
     }
@@ -34,7 +34,7 @@ sub contig_id {
 }
 
 sub author{
-   my ($self,$value) = @_;
+   my ($self, $value) = @_;
    if( defined $value) {
        if ($value->isa("Bio::Vega::Author")) {
            $self->{'author'} = $value;
@@ -46,7 +46,7 @@ sub author{
 }
 
 sub timestamp{
-   my ($obj,$value) = @_;
+   my ($obj, $value) = @_;
    if( defined $value) {
       $obj->{'timestamp'} = $value;
     }
@@ -54,7 +54,7 @@ sub timestamp{
 }
 
 sub hostname {
-    my( $self, $hostname ) = @_;
+    my ($self, $hostname) = @_;
     if ($hostname) {
         $self->{'hostname'} = $hostname;
     }

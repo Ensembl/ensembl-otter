@@ -89,7 +89,7 @@ sub ensembl_slice {
 }
 
 sub otter_slice {
-    my( $self, $otter_slice ) = @_;
+    my ($self, $otter_slice) = @_;
 
     if ($otter_slice) {
         $otter_slice{$self} = $otter_slice;
@@ -117,7 +117,7 @@ sub clone_seq_list {
 }
 
 sub ace_handle {
-    my( $self, $ace_handle ) = @_;
+    my ($self, $ace_handle) = @_;
 
     if ($ace_handle) {
         $ace_database{$self} = $ace_handle;

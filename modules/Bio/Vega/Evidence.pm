@@ -7,7 +7,7 @@ use Bio::Vega::Evidence::Types qw( evidence_type_valid_all );
 use base 'Bio::EnsEMBL::Storable';
 
 sub new {
-  my($class,@args) = @_;
+  my ($class, @args) = @_;
   my $self = $class->SUPER::new(@args);
   my ($name,$type)  = rearrange([qw(
 NAME
@@ -21,7 +21,7 @@ TYPE
 }
 
 sub name {
-  my ($obj,$value) = @_;
+  my ($obj, $value) = @_;
   if( defined $value) {
       $obj->{'name'} = $value;
   }
@@ -29,7 +29,7 @@ sub name {
 }
 
 sub type{
-  my ($obj,$value) = @_;
+  my ($obj, $value) = @_;
   if( defined $value) {
       if (evidence_type_valid_all($value) or $value eq 'UNKNOWN') {
           $obj->{'type'} = $value;
