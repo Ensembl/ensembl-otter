@@ -9,7 +9,7 @@ use Carp;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 
 sub get_DBAdaptor {
-    my( $otter_db, $key, $class ) = @_;
+    my ($otter_db, $key, $class) = @_;
 
     confess "Missing otter_db argument" unless $otter_db;
 
@@ -25,7 +25,7 @@ sub get_DBAdaptor {
 }
 
 sub get_options_for_key {
-    my( $db, $key ) = @_;
+    my ($db, $key) = @_;
     
     my ($opt_str) = @{ $db->get_MetaContainer()->list_value_by_key($key) };
     if ($opt_str) {
@@ -55,7 +55,7 @@ sub remove_options_hash_for_key{
 }
 
 sub save_options_hash {
-    my( $db, $key, $options_hash ) = @_;
+    my ($db, $key, $options_hash) = @_;
     
     confess "missing key argument"          unless $key;
     confess "missing options hash argument" unless $options_hash;
