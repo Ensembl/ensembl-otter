@@ -407,23 +407,23 @@ sub _current_request_string {
 }
 
 sub __callback_data{
-    my($self, $dataRef) = @_;
+    my ($self, $dataRef) = @_;
     $self->{'_callback_data'} = $dataRef if ($dataRef && ref($dataRef) eq 'ARRAY');
     return $self->{'_callback_data'} || [];
 }
 sub __callback{
-    my($self, $codeRef) = @_;
+    my ($self, $codeRef) = @_;
     $self->{'_callback'} = $codeRef if ($codeRef && ref($codeRef) eq 'CODE');
     return $self->{'_callback'} || sub { warn "@_\nNo callback set.\n"; return (500,"") };
 }
 
 sub __post_callback_data{
-    my($self, $dataRef) = @_;
+    my ($self, $dataRef) = @_;
     $self->{'_post_callback_data'} = $dataRef if ($dataRef && ref($dataRef) eq 'ARRAY');
     return $self->{'_post_callback_data'} || [];
 }
 sub __post_callback{
-    my($self, $codeRef) = @_;
+    my ($self, $codeRef) = @_;
     $self->{'_post_callback'} = $codeRef if ($codeRef && ref($codeRef) eq 'CODE');
     return $self->{'_post_callback'};
 }
