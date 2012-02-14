@@ -275,7 +275,6 @@ my %extdb_def = (
   RefSeq_rna_predicted     => ['PRED'     , 0],
   RefSeq_genomic           => ['KNOWN'    , 0],
   MIM_GENE                 => ['KNOWNXREF', 0],
-  'Uniprot/SWISSPROT'      => ['KNOWN'    , 0],
   PUBMED                   => ['KNOWN'    , 0],
   TCAG                     => ['KNOWN'    , 0],
   IMGT_HLA                 => ['KNOWN'    , 0],
