@@ -138,7 +138,7 @@ sub seq_types {
 }
 
 sub seqs_for_type {
-    my ( $self, $type ) = @_;
+    my ($self, $type) = @_;
     return $self->seqs_by_type->{$type};
 }
 
@@ -154,7 +154,7 @@ sub _build_seqs_by_name {
 }
 
 sub seq_by_name {
-    my ( $self, $name ) = @_;
+    my ($self, $name) = @_;
     return $self->seqs_by_name->{$name};
 }
 
