@@ -6,6 +6,8 @@ use 5.012;
 use strict;
 use warnings;
 
+use Try::Tiny;
+
 use parent 'Bio::Otter::UI::TextWindow';
 
 my $highlight_hydrophobic = 0;
@@ -105,9 +107,15 @@ sub update_translation {
     # Empty the text widget
     $window->delete('1.0', 'end');
 
-    eval{ $subseq->validate; };
-    if ($@) {
-        $self->parent->exception_message($@, 'Invalid transcript');
+    my $error;
+    try {
+        $subseq->validate;
+    }
+    finally {
+        $error = shift;
+    };
+    if ($error) {
+        $self->parent->exception_message($error, 'Invalid transcript');
         $window->insert('end', "TRANSLATION ERROR");
     } else {
         # Put the new translation into the Text widget
