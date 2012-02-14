@@ -330,7 +330,7 @@ sub width {
 
 __END__
 
-=head1 NAME - Bio::Otter::UI::TextWindow
+=head1 NAME - Bio::Otter::UI::TextWindow::Peptide
 
 =head1 AUTHOR
 
