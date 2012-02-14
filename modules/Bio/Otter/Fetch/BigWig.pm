@@ -11,12 +11,12 @@ use Carp;
 my $bin_size = 40;
 
 sub new {
-    my ( $pkg, @args ) = @_;
+    my ($pkg, @args) = @_;
     return bless { @args }, $pkg;
 }
 
 sub features {
-    my ( $self, $chr, $start, $end ) = @_;
+    my ($self, $chr, $start, $end) = @_;
 
     my ( $bigwig, $chr_prefix ) =
         @{$self}{ qw( -bigwig -chr_prefix ) };
