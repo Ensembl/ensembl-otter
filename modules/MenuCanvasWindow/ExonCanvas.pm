@@ -27,7 +27,7 @@ my $highlight_hydrophobic = 0;
 # "new" is in MenuCanvasWindow
 
 sub initialize {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $canvas = $self->canvas;
     my $top = $canvas->toplevel;
@@ -405,7 +405,7 @@ sub initialize {
 
 
 sub name {
-    my( $self, $name ) = @_;
+    my ($self, $name) = @_;
 
     if ($name) {
         $self->{'_name'} = $name;
@@ -414,7 +414,7 @@ sub name {
 }
 
 sub SubSeq {
-    my( $self, $sub ) = @_;
+    my ($self, $sub) = @_;
 
     if ($sub) {
         my $expected = 'Hum::Ace::SubSeq';
@@ -428,7 +428,7 @@ sub SubSeq {
 }
 
 sub current_SubSeq {
-    my ( $self ) = @_;
+    my ($self) = @_;
     if ($self->is_mutable) {
         return $self->new_SubSeq_from_tk;
     } else {
@@ -437,7 +437,7 @@ sub current_SubSeq {
 }
 
 sub XaceSeqChooser {
-    my( $self, $chooser ) = @_;
+    my ($self, $chooser) = @_;
 
     if ($chooser) {
         $self->{'_XaceSeqChooser'} = $chooser;
@@ -447,12 +447,12 @@ sub XaceSeqChooser {
 }
 
 sub DataSet {
-    my( $self ) = @_;
+    my ($self) = @_;
     return $self->XaceSeqChooser->AceDatabase->DataSet;
 }
 
 sub add_subseq_exons {
-    my( $self, $subseq ) = @_;
+    my ($self, $subseq) = @_;
 
     my $expected = 'Hum::Ace::SubSeq';
     unless ($subseq->isa($expected)) {
@@ -474,7 +474,7 @@ sub add_subseq_exons {
     my $pp_field = '_position_pairs';
 
     sub position_pairs {
-        my( $self, @pairs ) = @_;
+        my ($self, @pairs) = @_;
 
         if (@pairs) {
             $self->{$pp_field} = [@pairs];
@@ -488,7 +488,7 @@ sub add_subseq_exons {
     }
 
     sub add_position_pair {
-        my( $self, @pair_and_id ) = @_;
+        my ($self, @pair_and_id) = @_;
 
         unless (@pair_and_id == 3) {
             confess "Expecting 2 numbers and exon_id";
@@ -500,7 +500,7 @@ sub add_subseq_exons {
     }
 
     sub next_position_pair_index {
-        my( $self ) = @_;
+        my ($self) = @_;
 
         if (my $pp = $self->{$pp_field}) {
             return scalar @$pp;
@@ -510,7 +510,7 @@ sub add_subseq_exons {
     }
 
     sub trim_position_pairs {
-        my( $self, $length, $strand ) = @_;
+        my ($self, $length, $strand) = @_;
 
         if (my $pp = $self->{$pp_field}) {
             my @del = splice(@$pp, -1 * $length, $length);
@@ -534,7 +534,7 @@ sub add_subseq_exons {
 
 
 sub all_position_pair_text {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $canvas = $self->canvas;
     my $empty  = $self->empty_string;
@@ -555,7 +555,7 @@ sub all_position_pair_text {
 }
 
 sub set_position_pair_text {
-    my( $self, $pp, $text_pair, $strand ) = @_;
+    my ($self, $pp, $text_pair, $strand) = @_;
 
     $strand ||= $self->strand_from_tk;
 
@@ -573,7 +573,7 @@ sub set_position_pair_text {
 }
 
 sub set_all_position_pair_text {
-    my( $self, @coord ) = @_;
+    my ($self, @coord) = @_;
 
     my @pp_list = $self->position_pairs;
     if (@pp_list != @coord) {
@@ -589,7 +589,7 @@ sub set_all_position_pair_text {
 }
 
 sub sort_all_coordinates {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     $self->delete_was_selected;
     $self->sort_position_pairs;
@@ -599,7 +599,7 @@ sub sort_all_coordinates {
 }
 
 sub sort_position_pairs {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my %was_selected = map { $_ => 1 } $self->get_all_selected_text;
     $self->deselect_all;
@@ -638,7 +638,7 @@ sub sort_position_pairs {
 }
 
 sub sort_translation_region {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my @region  = $self->translation_region_from_tk or return;
     my $strand  = $self->strand_from_tk;
@@ -654,7 +654,7 @@ sub sort_translation_region {
 }
 
 sub merge_position_pairs {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     $self->deselect_all;
     $self->sort_position_pairs;
@@ -695,7 +695,7 @@ sub merge_position_pairs {
 }
 
 sub delete_selected_exons {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $canvas = $self->canvas;
     my @selected = $self->list_selected;
@@ -744,7 +744,7 @@ sub delete_selected_exons {
 }
 
 sub exon_strand_from_tk {
-    my( $self, $exon_id ) = @_;
+    my ($self, $exon_id) = @_;
 
     confess "exon_id not given" unless $exon_id;
     if ($self->canvas->find('withtag', "plus_strand&&$exon_id")) {
@@ -755,7 +755,7 @@ sub exon_strand_from_tk {
 }
 
 sub add_coordinate_pair {
-    my( $self, $start, $end ) = @_;
+    my ($self, $start, $end) = @_;
 
     my $strand = 1;
     if ($start and $end and $start > $end) {
@@ -768,7 +768,7 @@ sub add_coordinate_pair {
 }
 
 sub draw_subseq {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $sub = $self->SubSeq;
     $self->add_subseq_exons($sub);
@@ -779,13 +779,13 @@ sub draw_subseq {
 }
 
 sub is_mutable {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     return $self->SubSeq->is_mutable;
 }
 
 sub window_close {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $xc = $self->XaceSeqChooser;
 
@@ -839,7 +839,7 @@ sub window_close {
 }
 
 sub show_subseq {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $success = $self->XaceSeqChooser->zMapZoomToSubSeq($self->SubSeq);
     
@@ -849,7 +849,7 @@ sub show_subseq {
 }
 
 sub show_peptide {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $peptext = $self->{'_pep_peptext'};
     unless ($peptext) {
@@ -867,7 +867,7 @@ sub show_peptide {
 }
 
 sub search_pfam {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $sub = $self->current_SubSeq;
     unless ($sub->GeneMethod->coding) {
@@ -916,7 +916,7 @@ sub search_pfam {
 }
 
 sub update_translation {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $peptext = $self->{'_pep_peptext'} or return;
 
@@ -933,7 +933,7 @@ sub update_translation {
 }
 
 sub evidence_hash {
-    my( $self, $evidence_hash ) = @_;
+    my ($self, $evidence_hash) = @_;
 
     if ($evidence_hash) {
         $self->{'_evidence_hash'} = $evidence_hash;
@@ -946,7 +946,7 @@ sub evidence_hash {
 }
 
 sub select_evidence {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $paster_top = $self->EvidencePaster->canvas->toplevel;
     $paster_top->deiconify;
@@ -974,7 +974,7 @@ sub EvidencePaster {
 }
 
 sub save_OtterTranscript_evidence {
-    my( $self, $transcript ) = @_;
+    my ($self, $transcript) = @_;
 
     my $info = $transcript->transcript_info;
     my $evi_hash = {};
@@ -1003,7 +1003,7 @@ sub adjust_tk_t_start {
 }
 
 sub trim_cds_coord_to_first_stop {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     unless ($self->get_GeneMethod_from_tk->coding) {
         $self->message('non-coding transcript type');
@@ -1074,7 +1074,7 @@ sub trim_cds_coord_to_first_stop {
 }
 
 sub add_locus_editing_widgets {
-    my( $self, $widget, $locus_attrib_menu ) = @_;
+    my ($self, $widget, $locus_attrib_menu) = @_;
 
     # Get the Locus name
     my( $locus_name, $locus_description, $locus_alias );
@@ -1166,13 +1166,13 @@ sub add_locus_editing_widgets {
 }
 
 sub get_locus_known {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     return ${$self->{'_locus_is_known_var'}} ? 1 : 0;
 }
 
 sub update_Locus_tk_fields {
-    my( $self, $locus ) = @_;
+    my ($self, $locus) = @_;
 
     ${$self->{'_locus_name_var'}} = $locus->name;
 
@@ -1205,7 +1205,7 @@ sub update_Locus_tk_fields {
 
 
 sub get_Locus_from_tk {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $name    = $self->get_locus_name or return;
     my $known   = $self->get_locus_known;
@@ -1249,7 +1249,7 @@ sub rename_locus {
 }
 
 sub update_Locus {
-    my( $self, $locus ) = @_;
+    my ($self, $locus) = @_;
 
     $self->update_Locus_tk_fields($locus);
     $self->SubSeq->Locus($locus);
@@ -1261,7 +1261,7 @@ my $ann_tag = 'Annotation';
 my $voc_tag = 'Controlled_Vocabulary';
 
 sub update_transcript_remark_widget {
-    my( $self, $sub ) = @_;
+    my ($self, $sub) = @_;
 
     $self->update_remark_Entry($self->transcript_remark_Entry,
                                $self->DataSet->vocab_transcript,
@@ -1271,7 +1271,7 @@ sub update_transcript_remark_widget {
 }
 
 sub update_locus_remark_widget {
-    my( $self, $locus ) = @_;
+    my ($self, $locus) = @_;
 
     $self->update_remark_Entry($self->locus_remark_Entry,
                                $self->DataSet->vocab_locus,
@@ -1281,7 +1281,7 @@ sub update_locus_remark_widget {
 }
 
 sub update_remark_Entry {
-    my( $self, $remark_text, $vocab, $obj ) = @_;
+    my ($self, $remark_text, $vocab, $obj) = @_;
 
     $remark_text->delete('1.0', 'end');
     foreach my $remark ($obj->list_remarks) {
@@ -1303,7 +1303,7 @@ sub update_remark_Entry {
 }
 
 sub add_transcript_remark_widget {
-    my( $self, $widget, $tsct_attrib_menu ) = @_;
+    my ($self, $widget, $tsct_attrib_menu) = @_;
 
     my $rt = $self->make_labelled_text_widget($widget, 'Remarks', $tsct_attrib_menu, -anchor => 'se');
     $self->transcript_remark_Entry($rt);
@@ -1313,7 +1313,7 @@ sub add_transcript_remark_widget {
 }
 
 sub add_subseq_rename_widget {
-    my( $self, $widget ) = @_;
+    my ($self, $widget) = @_;
 
     $self->subseq_name_Entry(
         $self->make_labelled_entry_widget($widget, 'Name', $self->SubSeq->name, 22, -side => 'top')
@@ -1375,7 +1375,7 @@ sub populate_attribute_menu {
 }
 
 sub make_labelled_text_widget {
-    my( $self, $widget, $name, $menu, @pack ) = @_;
+    my ($self, $widget, $name, $menu, @pack) = @_;
 
     @pack = (-side => 'left') unless @pack;
 
@@ -1608,7 +1608,7 @@ sub is_ctrl_vocab_char {
 
 # Inserts (printing) characters with the same style as the rest of the line
 sub insert_char {
-    my( $text, $char ) = @_;
+    my ($text, $char) = @_;
 
     # We only want to insert printing characters in the Text box!
     # [:print:] is the POSIX class of printing characters.
@@ -1630,7 +1630,7 @@ sub insert_char {
 }
 
 sub make_labelled_entry_widget {
-    my( $self, $widget, $name, $value, $size, @pack ) = @_;
+    my ($self, $widget, $name, $value, $size, @pack) = @_;
 
     @pack = (-side => 'left') unless @pack;
 
@@ -1654,7 +1654,7 @@ sub make_labelled_entry_widget {
 }
 
 sub add_start_end_method_widgets {
-    my( $self, $widget ) = @_;
+    my ($self, $widget) = @_;
 
     my $top = $widget->toplevel;
     my $frame = $widget->Frame(
@@ -1727,17 +1727,17 @@ sub add_start_end_method_widgets {
 }
 
 sub start_not_found_from_tk {
-    my( $self ) = @_;
+    my ($self) = @_;
     return ${$self->{'_start_not_found_variable'}} || 0;
 }
 
 sub end_not_found_from_tk {
-    my( $self ) = @_;
+    my ($self) = @_;
     return ${$self->{'_end_not_found_variable'}} || 0;
 }
 
 sub subseq_name_Entry {
-    my( $self, $entry ) = @_;
+    my ($self, $entry) = @_;
 
     if ($entry) {
         $self->{'_subseq_name_entry'} = $entry;
@@ -1746,7 +1746,7 @@ sub subseq_name_Entry {
 }
 
 sub transcript_remark_Entry {
-    my( $self, $transcript_remark_Entry ) = @_;
+    my ($self, $transcript_remark_Entry) = @_;
 
     if ($transcript_remark_Entry) {
         $self->{'_transcript_remark_Entry'} = $transcript_remark_Entry;
@@ -1755,7 +1755,7 @@ sub transcript_remark_Entry {
 }
 
 sub locus_remark_Entry {
-    my( $self, $locus_remark_Entry ) = @_;
+    my ($self, $locus_remark_Entry) = @_;
 
     if ($locus_remark_Entry) {
         $self->{'_locus_remark_Entry'} = $locus_remark_Entry;
@@ -1764,7 +1764,7 @@ sub locus_remark_Entry {
 }
 
 sub get_transcript_remarks {
-    my( $self, $sub ) = @_;
+    my ($self, $sub) = @_;
 
     confess "Missing SubSeq argument" unless $sub;
 
@@ -1772,7 +1772,7 @@ sub get_transcript_remarks {
 }
 
 sub get_locus_remarks {
-    my( $self, $locus ) = @_;
+    my ($self, $locus) = @_;
 
     confess "Missing Locus argument" unless $locus;
 
@@ -1780,7 +1780,7 @@ sub get_locus_remarks {
 }
 
 sub get_remarks_from_Entry {
-    my( $self, $text, $obj ) = @_;
+    my ($self, $text, $obj) = @_;
 
     my %ann_index = $text->tagRanges($ann_tag);
     my $line = 0;
@@ -1801,7 +1801,7 @@ sub get_remarks_from_Entry {
 }
 
 sub locus_description_Entry {
-    my( $self, $locus_description_Entry ) = @_;
+    my ($self, $locus_description_Entry) = @_;
 
     if ($locus_description_Entry) {
         $self->{'_locus_description_Entry'} = $locus_description_Entry;
@@ -1810,7 +1810,7 @@ sub locus_description_Entry {
 }
 
 sub get_locus_description {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $desc = $self->locus_description_Entry->get;
     $desc =~ s/(^\s+|\s+$)//g;
@@ -1822,7 +1822,7 @@ sub get_locus_description {
 }
 
 sub locus_alias_Entry {
-    my( $self, $locus_alias_Entry ) = @_;
+    my ($self, $locus_alias_Entry) = @_;
 
     if ($locus_alias_Entry) {
         $self->{'_locus_alias_Entry'} = $locus_alias_Entry;
@@ -1831,7 +1831,7 @@ sub locus_alias_Entry {
 }
 
 sub get_locus_aliases {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $alias_str = $self->locus_alias_Entry->get;
     $alias_str =~ s/(^\s+|\s+$)//g;
@@ -1844,7 +1844,7 @@ sub get_locus_aliases {
 }
 
 sub get_subseq_name {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $name = $self->subseq_name_Entry->get;
     $name =~ s/\s+//g;
@@ -1852,7 +1852,7 @@ sub get_subseq_name {
 }
 
 sub set_subseq_name {
-    my( $self, $new ) = @_;
+    my ($self, $new) = @_;
 
     my $entry = $self->subseq_name_Entry;
     $entry->delete(0, 'end');
@@ -1862,7 +1862,7 @@ sub set_subseq_name {
 }
 
 sub method_name_var {
-    my( $self, $var_ref ) = @_;
+    my ($self, $var_ref) = @_;
 
     if ($var_ref) {
         $self->{'_method_name_var'} = $var_ref;
@@ -1871,14 +1871,14 @@ sub method_name_var {
 }
 
 sub get_GeneMethod_from_tk {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $meth_name = ${$self->method_name_var};
     return $self->XaceSeqChooser->get_GeneMethod($meth_name);
 }
 
 sub canvas_insert_character {
-    my( $self, $canvas, $char ) = @_;
+    my ($self, $canvas, $char) = @_;
 
     my $text = $canvas->focus or return;
     $canvas->insert($text, 'insert', $char);
@@ -1890,7 +1890,7 @@ sub canvas_insert_character {
 }
 
 sub increment_int {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $canvas = $self->canvas;
     my $text = $canvas->focus or return;
@@ -1907,7 +1907,7 @@ sub increment_int {
 }
 
 sub decrement_int {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $canvas = $self->canvas;
     my $text = $canvas->focus or return;
@@ -1924,7 +1924,7 @@ sub decrement_int {
 }
 
 sub canvas_text_go_left {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $canvas = $self->canvas;
     my $text = $canvas->focus or return;
@@ -1935,7 +1935,7 @@ sub canvas_text_go_left {
 }
 
 sub canvas_text_go_right {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $canvas = $self->canvas;
     my $text = $canvas->focus or return;
@@ -1946,7 +1946,7 @@ sub canvas_text_go_right {
 }
 
 sub canvas_backspace {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $canvas = $self->canvas;
     my $text = $canvas->focus or return;
@@ -1961,14 +1961,14 @@ sub canvas_backspace {
 }
 
 sub select_all_exon_pos {
-    my( $self ) = @_ ;
+    my ($self) = @_;
 
     my $canvas = $self->canvas;
     return $self->highlight($canvas->find('withtag', 'exon_pos'));
 }
 
 sub delete_chooser_window_ref {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $name = $self->name;
     my $xc = $self->XaceSeqChooser;
@@ -1978,7 +1978,7 @@ sub delete_chooser_window_ref {
 }
 
 sub left_button_handler {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     return if $self->delete_message;
     $self->deselect_all;
@@ -1988,7 +1988,7 @@ sub left_button_handler {
 }
 
 sub focus_on_current_text {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $canvas = $self->canvas;
     my ($obj) = $canvas->find('withtag', 'current') or return;
@@ -2010,7 +2010,7 @@ sub focus_on_current_text {
 }
 
 sub shift_left_button_handler {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $canvas = $self->canvas;
     $canvas->focus("");
@@ -2042,7 +2042,7 @@ sub shift_left_button_handler {
 }
 
 sub control_left_button_handler {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $canvas = $self->canvas;
     my ($obj) = $canvas->find('withtag', 'current') or return;
@@ -2060,7 +2060,7 @@ sub control_left_button_handler {
 }
 
 sub set_tk_strand {
-    my( $self, $strand ) = @_;
+    my ($self, $strand) = @_;
 
     my( $del_tag, $draw_method );
     if ($strand == 1) {
@@ -2089,7 +2089,7 @@ sub set_tk_strand {
 }
 
 sub toggle_tk_strand {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     if ($self->strand_from_tk == 1) {
         $self->set_tk_strand(-1);
@@ -2105,7 +2105,7 @@ sub empty_string {
 }
 
 sub deselect_all {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $canvas = $self->canvas;
 
@@ -2128,7 +2128,7 @@ sub deselect_all {
 }
 
 sub export_highlighted_text_to_selection {
-    my( $self, $offset, $max_bytes ) = @_;
+    my ($self, $offset, $max_bytes) = @_;
 
     my @text = $self->get_all_selected_text;
     my $clip = '';
@@ -2146,7 +2146,7 @@ sub export_highlighted_text_to_selection {
 }
 
 sub export_ace_subseq_to_selection {
-    my( $self, $offset, $max_bytes ) = @_;
+    my ($self, $offset, $max_bytes) = @_;
 
     my $sub = $self->new_SubSeq_from_tk;
 
@@ -2154,7 +2154,7 @@ sub export_ace_subseq_to_selection {
 }
 
 sub middle_button_paste {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $canvas = $self->canvas;
 
@@ -2217,14 +2217,14 @@ sub middle_button_paste {
 }
 
 sub next_exon_holder_coords {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $i = $self->next_position_pair_index;
     return $self->exon_holder_coords($i);
 }
 
 sub exon_holder_coords {
-    my( $self, $i ) = @_;
+    my ($self, $i) = @_;
 
     $i++;   # Move exons down 1 line to make space for splice site sequence
     my( $size, $half, $pad, $text_len, @bbox ) = $self->_coord_matrix;
@@ -2235,7 +2235,7 @@ sub exon_holder_coords {
 }
 
 sub _coord_matrix {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my( $m );
     unless ($m = $self->{'_coord_matrix'}) {
@@ -2361,7 +2361,7 @@ sub get_splice_acceptor_donor_strings {
 }
 
 sub add_exon_holder {
-    my( $self, $start, $end, $strand) = @_;
+    my ($self, $start, $end, $strand) = @_;
     $start ||= $self->empty_string;
     $end   ||= $self->empty_string;
 
@@ -2435,7 +2435,7 @@ sub add_exon_holder {
 }
 
 sub position_mobile_elements {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $canvas = $self->canvas;
     return unless $canvas->find('withtag', 'mobile');
@@ -2451,7 +2451,7 @@ sub position_mobile_elements {
 }
 
 sub draw_plus {
-    my( $self, $x, $y, $size, @tags ) = @_;
+    my ($self, $x, $y, $size, @tags) = @_;
 
     my $third = $size / 3;
 
@@ -2478,7 +2478,7 @@ sub draw_plus {
 }
 
 sub draw_minus {
-    my( $self, $x, $y, $size, @tags ) = @_;
+    my ($self, $x, $y, $size, @tags) = @_;
 
     my $third = $size / 3;
 
@@ -2494,7 +2494,7 @@ sub draw_minus {
 }
 
 sub strand_from_tk {
-    my( $self, $keep_quiet ) = @_;
+    my ($self, $keep_quiet) = @_;
 
     my $canvas = $self->canvas;
     my @fwd = $canvas->find('withtag', 'plus_strand' );
@@ -2523,7 +2523,7 @@ sub strand_from_tk {
     my $tr_tag = 'translation_region';
 
     sub draw_translation_region {
-        my( $self, $sub ) = @_;
+        my ($self, $sub) = @_;
 
         # Get the translation region from the
         # canvas or the SubSequence
@@ -2597,7 +2597,7 @@ sub strand_from_tk {
     }
 
     sub translation_region_from_tk {
-        my( $self ) = @_;
+        my ($self) = @_;
 
         my $canvas = $self->canvas;
         my( @region );
@@ -2609,7 +2609,7 @@ sub strand_from_tk {
 }
 
 sub tk_t_start {
-    my( $self, $start ) = @_;
+    my ($self, $start) = @_;
 
     my $canvas = $self->canvas;
     my ($t_txt) = $canvas->find('withtag', 't_start')
@@ -2623,7 +2623,7 @@ sub tk_t_start {
 }
 
 sub tk_t_end {
-    my( $self, $end ) = @_;
+    my ($self, $end) = @_;
 
     my $canvas = $self->canvas;
     my ($t_txt) = $canvas->find('withtag', 't_end')
@@ -2637,7 +2637,7 @@ sub tk_t_end {
 }
 
 sub get_SubSeq_if_changed {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $old = $self->SubSeq;
     my $new = $self->new_SubSeq_from_tk;
@@ -2672,7 +2672,7 @@ sub get_SubSeq_if_changed {
 }
 
 sub manage_locus_otter_ids {
-    my( $self, $old, $new ) = @_;
+    my ($self, $old, $new) = @_;
 
     my $new_locus = $new->Locus;
     my $new_locus_name = $new_locus->name;
@@ -2706,7 +2706,7 @@ sub manage_locus_otter_ids {
 }
 
 sub new_SubSeq_from_tk {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $new = $self->SubSeq->clone;
     $new->unset_Locus;
@@ -2736,7 +2736,7 @@ sub new_SubSeq_from_tk {
 }
 
 sub save_if_changed {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     eval {
         if (my $sub = $self->get_SubSeq_if_changed) {
@@ -2750,7 +2750,7 @@ sub save_if_changed {
 }
 
 sub xace_save {
-    my( $self, $sub ) = @_;
+    my ($self, $sub) = @_;
 
     confess "Missing SubSeq argument" unless $sub;
     
@@ -2797,7 +2797,7 @@ sub xace_save {
 }
 
 sub Exons_from_canvas {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $done_message = 0;
     my( @exons );
@@ -2837,7 +2837,7 @@ sub check_for_errors {
 }
 
 sub check_get_mRNA_Sequence {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my( $cdna );
     try {
@@ -2852,7 +2852,7 @@ sub check_get_mRNA_Sequence {
 }
 
 sub run_dotter {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my( $hit_name );
     if (my $txt = $self->get_clipboard_text) {
@@ -2883,20 +2883,20 @@ sub launch_dotter {
 }
 
 sub max_exon_number {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     return $self->{'_max_exon_number'} || 0;
 }
 
 sub next_exon_number {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     $self->{'_max_exon_number'}++;
     return $self->{'_max_exon_number'};
 }
 
 sub decrement_exon_counter {
-    my( $self, $count ) = @_;
+    my ($self, $count) = @_;
 
     confess "No count given" unless defined $count;
     $self->{'_max_exon_number'} -= $count;
@@ -2905,7 +2905,7 @@ sub decrement_exon_counter {
 }
 
 sub DESTROY {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $name = $self->name;
     warn "Destroying ExonCanvas: '$name'\n";
