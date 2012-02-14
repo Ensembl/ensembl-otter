@@ -41,9 +41,45 @@ sub new {
         -fill   => 'x',
         );
 
-    $self->buttons($frame, $top);
+    my $close_command = $self->buttons($frame, $top);
+
+    if ($close_command) {
+        my $exit = $frame->Button(
+            -text => 'Close',
+            -command => $close_command ,
+            )->pack(-side => 'right');
+        $top->bind(    '<Control-w>',      $close_command);
+        $top->bind(    '<Control-W>',      $close_command);
+        $top->bind(    '<Escape>',         $close_command);
+
+        $top->protocol('WM_DELETE_WINDOW', $close_command);
+    }
 
     return $self;
+}
+
+sub size_widget {
+    my $self = shift;
+    my $window = $self->window;
+
+    my ($lines) = $window->index('end') =~ /(\d+)\./;
+    $lines--;
+    if ($lines > 40) {
+        $window->configure(
+            -width  => $self->width,
+            -height => 40,
+            );
+    } else {
+        # This has slightly odd behaviour if the ROText starts off
+        # big to accomodate a large translation, and is then made
+        # smaller.  Does not seem to shrink below a certain minimum
+        # height.
+        $window->configure(
+            -width  => $self->width,
+            -height => $lines,
+            );
+    }
+    return;
 }
 
 sub parent {

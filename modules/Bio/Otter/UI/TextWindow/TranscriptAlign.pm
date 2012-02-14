@@ -22,22 +22,10 @@ sub new {
 sub buttons {
     my ($self, $frame, $top) = @_;
 
-    # FIXME: likely duplication
     my $close_command = sub{ $top->withdraw; $self->parent->delete_alignment_window($self->type) };
-
-    my $exit = $frame->Button(
-        -text => 'Close',
-        -command => $close_command ,
-        )->pack(-side => 'right');
-    $top->bind(    '<Control-w>',      $close_command);
-    $top->bind(    '<Control-W>',      $close_command);
-    $top->bind(    '<Escape>',         $close_command);
-
     $self->window->bind('<Destroy>', $close_command);
 
-    $top->protocol('WM_DELETE_WINDOW', $close_command);
-
-    return;
+    return $close_command;
 }
 
 sub update_alignment {
@@ -48,25 +36,7 @@ sub update_alignment {
     $window->delete('1.0', 'end');
     $window->insert('end', $alignment); # just show it raw for now
 
-    # FIXME: more duplication (modulo width)
-    # Size widget to fit
-    my ($lines) = $window->index('end') =~ /(\d+)\./;
-    $lines--;
-    if ($lines > 40) {
-        $window->configure(
-            -width  => 80,
-            -height => 40,
-            );
-    } else {
-        # This has slightly odd behaviour if the ROText starts off
-        # big to accomodate a large translation, and is then made
-        # smaller.  Does not seem to shrink below a certain minimum
-        # height.
-        $window->configure(
-            -width  => 80,
-            -height => $lines,
-            );
-    }
+    $self->size_widget;
 
     my $toplevel = $window->toplevel;
 
