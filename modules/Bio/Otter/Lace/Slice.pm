@@ -7,7 +7,7 @@ use Bio::EnsEMBL::Slice;
 use Bio::EnsEMBL::CoordSystem;
 
 sub new {
-    my( $pkg,
+    my ($pkg, 
         $Client, # object
         $dsname, # e.g. 'human'
         $ssname, # e.g. 'chr20-03'
@@ -38,7 +38,7 @@ sub new {
 }
 
 sub Client {
-    my( $self, $dummy ) = @_;
+    my ($self, $dummy) = @_;
 
     die "You shouldn't need to change Client" if defined($dummy);
 
@@ -46,7 +46,7 @@ sub Client {
 }
 
 sub dsname {
-    my( $self, $dummy ) = @_;
+    my ($self, $dummy) = @_;
 
     die "You shouldn't need to change dsname" if defined($dummy);
 
@@ -54,7 +54,7 @@ sub dsname {
 }
 
 sub ssname {
-    my( $self, $dummy ) = @_;
+    my ($self, $dummy) = @_;
 
     die "You shouldn't need to change ssname" if defined($dummy);
 
@@ -63,7 +63,7 @@ sub ssname {
 
 
 sub csname {
-    my( $self, $dummy ) = @_;
+    my ($self, $dummy) = @_;
 
     die "You shouldn't need to change csname" if defined($dummy);
 
@@ -71,7 +71,7 @@ sub csname {
 }
 
 sub csver {
-    my( $self, $dummy ) = @_;
+    my ($self, $dummy) = @_;
 
     die "You shouldn't need to change csver" if defined($dummy);
 
@@ -79,7 +79,7 @@ sub csver {
 }
 
 sub seqname {
-    my( $self, $dummy ) = @_;
+    my ($self, $dummy) = @_;
 
     die "You shouldn't need to change seqname" if defined($dummy);
 
@@ -87,7 +87,7 @@ sub seqname {
 }
 
 sub start {
-    my( $self, $dummy ) = @_;
+    my ($self, $dummy) = @_;
 
     die "You shouldn't need to change start" if defined($dummy);
 
@@ -95,7 +95,7 @@ sub start {
 }
 
 sub end {
-    my( $self, $dummy ) = @_;
+    my ($self, $dummy) = @_;
 
     die "You shouldn't need to change end" if defined($dummy);
 
@@ -103,13 +103,13 @@ sub end {
 }
 
 sub length { ## no critic(Subroutines::ProhibitBuiltinHomonyms)
-    my ( $self ) = @_;
+    my ($self) = @_;
 
     return $self->end() - $self->start() + 1;
 }
 
 sub name {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     return sprintf "%s_%d-%d",
         $self->ssname,
