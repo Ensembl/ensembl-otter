@@ -31,7 +31,7 @@ sub new {
 # submits the sequence search and returns the XML that comes back from the
 # server
 sub submit_search {
-    my ( $self, $seq ) = @_;
+    my ($self, $seq) = @_;
 
     # create a user agent
     my $ua = LWP::UserAgent->new;
@@ -64,7 +64,7 @@ sub submit_search {
 # parses the submission XML and returns the URL for retrieving results and the
 # estimated job runtime
 sub check_submission {
-    my ( $self, $xml ) = @_;
+    my ($self, $xml) = @_;
 
     # parse the XML that came back from the server when we submitted the search
     my $parser = XML::LibXML->new();
@@ -94,7 +94,7 @@ sub check_submission {
 # polls the result URL as often as necessary (up to a hard limit) and returns
 # the results XML
 sub poll_results {
-    my ( $self, $result_url ) = @_;
+    my ($self, $result_url) = @_;
 
     # this is the request that we'll submit repeatedly
     my $req = HTTP::Request->new( GET => $result_url );
@@ -110,7 +110,7 @@ sub poll_results {
 
 # parses the results XML and return a hash containing the hits and locations
 sub parse_results {
-    my ( $self, $results_xml ) = @_;
+    my ($self, $results_xml) = @_;
     print STDOUT "parsing XML search results\n";
     my $parser = XML::LibXML->new();
     my $dom;
@@ -168,7 +168,7 @@ sub parse_results {
 # results hash
 
 sub retrieve_pfam_hmm {
-  my ( $self, $domains ) = @_;
+  my ($self, $domains) = @_;
 
   # create a user agent
   my $ua = LWP::UserAgent->new;
@@ -207,7 +207,7 @@ sub retrieve_pfam_hmm {
 }
 
 sub retrieve_pfam_seed {
-  my ( $self, $domains ) = @_;
+  my ($self, $domains) = @_;
 
   # create a user agent
   my $ua = LWP::UserAgent->new;
@@ -250,7 +250,7 @@ sub retrieve_pfam_seed {
 }
 
 sub get_seq_snippets {
-    my ( $self, $seq_name, $seq_string, $hit_locations) = @_;
+    my ($self, $seq_name, $seq_string, $hit_locations) = @_;
 
     my $s;
 
@@ -273,7 +273,7 @@ sub get_seq_snippets {
 # the resulting alignments to the working directory
 
 sub align_to_seed {
-  my ( $self, $seq, $domain, $hmm, $seed) = @_;
+  my ($self, $seq, $domain, $hmm, $seed) = @_;
 
   # the sequence that we'll be aligning
   my $seq_file = $self->create_filename($domain,"seq");
@@ -338,7 +338,7 @@ sub create_filename{
 }
 
 sub output_files {
-    my ($self,$file) = @_;
+    my ($self, $file) = @_;
     if ($file) {
         push @{$self->{_result_files}} , $file;
     }
