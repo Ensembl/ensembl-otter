@@ -14,7 +14,7 @@ sub new {
 }
 
 sub name {
-    my( $self, $name ) = @_;
+    my ($self, $name) = @_;
     
     if ($name) {
         $self->{'_name'} = $name;
@@ -23,7 +23,7 @@ sub name {
 }
 
 sub dataset_name {
-    my( $self, $dataset_name ) = @_;
+    my ($self, $dataset_name) = @_;
     
     if ($dataset_name) {
         $self->{'_dataset_name'} = $dataset_name;
@@ -32,7 +32,7 @@ sub dataset_name {
 }
 
 sub description {
-    my( $self, $description ) = @_;
+    my ($self, $description) = @_;
     
     if ($description) {
         $self->{'_description'} = $description;
@@ -41,7 +41,7 @@ sub description {
 }
 
 sub priority {
-    my( $self, $priority ) = @_;
+    my ($self, $priority) = @_;
     
     if ($priority) {
         $self->{'_priority'} = $priority;
@@ -50,7 +50,7 @@ sub priority {
 }
 
 sub is_hidden {
-    my( $self, $is_hidden ) = @_;
+    my ($self, $is_hidden) = @_;
     
     if (defined $is_hidden) {
         $self->{'_is_hidden'} = $is_hidden ? 1 : 0;
@@ -59,7 +59,7 @@ sub is_hidden {
 }
 
 sub vega_set_id {
-    my( $self, $vega_set_id ) = @_;
+    my ($self, $vega_set_id) = @_;
     
     if ($vega_set_id) {
         die "Expected INT for vega_set_id, but got: '$vega_set_id'"
@@ -70,7 +70,7 @@ sub vega_set_id {
 }
 
 sub write_access {
-    my( $self, $write_access ) = @_;
+    my ($self, $write_access) = @_;
     
     if (defined $write_access) {
         $self->{'_write_access'} = $write_access ? 1 : 0;
@@ -81,7 +81,7 @@ sub write_access {
 }
 
 sub CloneSequence_list {
-    my( $self, $CloneSequence_list ) = @_;
+    my ($self, $CloneSequence_list) = @_;
     
     if ($CloneSequence_list) {
         $self->{'_CloneSequence_list'} = $CloneSequence_list;
@@ -90,7 +90,7 @@ sub CloneSequence_list {
 }
 
 sub drop_CloneSequence_list {
-    my( $self ) = @_;
+    my ($self) = @_;
     
     $self->{'_CloneSequence_list'} = undef;
 
@@ -98,7 +98,7 @@ sub drop_CloneSequence_list {
 }
 
 sub selected_CloneSequences {
-    my( $self, $selected_CloneSequences ) = @_;
+    my ($self, $selected_CloneSequences) = @_;
     
     if ($selected_CloneSequences) {
         confess "Not a list ref: '$selected_CloneSequences'"
@@ -109,7 +109,7 @@ sub selected_CloneSequences {
 }
 
 sub unselect_all_CloneSequences {
-    my( $self ) = @_;
+    my ($self) = @_;
     
     $self->{'_selected_CloneSequences'} = undef;
 
@@ -117,7 +117,7 @@ sub unselect_all_CloneSequences {
 }
 
 sub select_CloneSequences_by_start_end_accessions {
-    my( $self, $start_acc, $end_acc ) = @_;
+    my ($self, $start_acc, $end_acc) = @_;
     
     my $ctg = [];
     my $in_contig = 0;
@@ -151,7 +151,7 @@ sub select_CloneSequences_by_start_end_accessions {
 }
 
 sub selected_CloneSequences_as_contig_list {
-    my( $self ) = @_;
+    my ($self) = @_;
     
     my $cs_list = $self->selected_CloneSequences
         or return;
@@ -176,7 +176,7 @@ sub selected_CloneSequences_parameters {
 }
 
 sub region_coordinates {
-    my( $self, $ctg ) = @_;
+    my ($self, $ctg) = @_;
 
     my $chr_name  = $ctg->[0]->chromosome;
     my $chr_start = $ctg->[0]->chr_start;
@@ -290,7 +290,7 @@ sub set_subset {
 }
 
 sub get_subset_names {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     return [ keys %{ $self->{'_belongs_to'} } ];
 }
