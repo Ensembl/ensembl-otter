@@ -32,13 +32,13 @@ my $ZMAP_DEBUG = $ENV{OTTERLACE_ZMAP_DEBUG};
 
 
 sub new {
-    my( $pkg ) = @_;
+    my ($pkg) = @_;
 
     return bless {}, $pkg;
 }
 
 sub Client {
-    my( $self, $client ) = @_;
+    my ($self, $client) = @_;
 
     if ($client) {
         $self->{'_Client'} = $client;
@@ -81,7 +81,7 @@ sub write_access {
 }
 
 sub home {
-    my( $self, $home ) = @_;
+    my ($self, $home) = @_;
 
     if ($home) {
         $self->{'_home'} = $home;
@@ -147,7 +147,7 @@ sub fetch_lock_region_xml {
 }
 
 sub tace {
-    my( $self, $tace ) = @_;
+    my ($self, $tace) = @_;
 
     if ($tace) {
         $self->{'_tace'} = $tace;
@@ -156,7 +156,7 @@ sub tace {
 }
 
 sub error_flag {
-    my( $self, $error_flag ) = @_;
+    my ($self, $error_flag) = @_;
 
     if (defined $error_flag) {
         $self->{'_error_flag'} = $error_flag;
@@ -165,7 +165,7 @@ sub error_flag {
 }
 
 sub post_exit_callback {
-    my( $self, $post_exit_callback ) = @_;
+    my ($self, $post_exit_callback) = @_;
 
     if ($post_exit_callback) {
         $self->{'_post_exit_callback'} = $post_exit_callback;
@@ -181,7 +181,7 @@ sub MethodCollection {
 }
 
 sub get_default_MethodCollection {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $styles_collection = Hum::ZMapStyleCollection->new_from_string($self->Client->get_otter_styles);
     my $collect = Hum::Ace::MethodCollection->new_from_string($self->Client->get_methods_ace, $styles_collection);
@@ -190,7 +190,7 @@ sub get_default_MethodCollection {
 }
 
 sub add_acefile {
-    my( $self, $acefile ) = @_;
+    my ($self, $acefile) = @_;
 
     my $af = $self->{'_acefile_list'} ||= [];
     push(@$af, $acefile);
@@ -198,7 +198,7 @@ sub add_acefile {
 }
 
 sub list_all_acefiles {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     if (my $af = $self->{'_acefile_list'}) {
         return @$af;
@@ -208,7 +208,7 @@ sub list_all_acefiles {
 }
 
 sub empty_acefile_list {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     $self->{'_acefile_list'} = undef;
 
@@ -216,7 +216,7 @@ sub empty_acefile_list {
 }
 
 sub init_AceDatabase {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     $self->add_misc_acefile;
 
@@ -238,7 +238,7 @@ sub init_AceDatabase {
 }
 
 sub write_otter_acefile {
-    my( $self, $parser ) = @_;
+    my ($self, $parser) = @_;
 
     # Storing ace_text in a file
     my $ace_filename = $self->home . '/rawdata/otter.ace';
@@ -312,7 +312,7 @@ sub recover_smart_slice_from_region_xml {
 }
 
 sub smart_slice {
-    my( $self, $smart_slice ) = @_;
+    my ($self, $smart_slice) = @_;
 
     if ($smart_slice) {
         $self->{'_offset'} = undef;
@@ -322,7 +322,7 @@ sub smart_slice {
 }
 
 sub slice_name {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $slice_name;
     unless ($slice_name = $self->{'_slice_name'}) {
@@ -628,7 +628,7 @@ sub offset {
 }
 
 sub save_ace_to_otter {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $client = $self->Client or confess "No Client attached";
     my $xml = $client->save_otter_xml($self->generate_XML_from_acedb, $self->smart_slice->dsname);
@@ -671,7 +671,7 @@ sub update_with_stable_ids {
 }
 
 sub unlock_otter_slice {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $smart_slice = $self->smart_slice();
     my $slice_name  = $smart_slice->name();
@@ -691,7 +691,7 @@ sub unlock_otter_slice {
 }
 
 sub ace_server {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $sgif;
     unless ($sgif = $self->{'_ace_server'}) {
@@ -705,19 +705,19 @@ sub ace_server {
 }
 
 sub ace_server_registered {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     return $self->{'_ace_server'};
 }
 
 sub aceperl_db_handle {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     return $self->ace_server->ace_handle;
 }
 
 sub make_database_directory {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $home = $self->home;
     my $tar  = $self->Client->get_lace_acedb_tar
@@ -748,7 +748,7 @@ sub make_database_directory {
 }
 
 sub write_methods_acefile {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $methods_file = $self->home . '/rawdata/methods.ace';
     my $collect = $self->MethodCollection;
@@ -759,7 +759,7 @@ sub write_methods_acefile {
 }
 
 sub make_passwd_wrm {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $passWrm = $self->home . '/wspec/passwd.wrm';
     my ($prog) = $0 =~ m{([^/]+)$};
@@ -786,7 +786,7 @@ sub make_passwd_wrm {
 }
 
 sub add_misc_acefile {
-    my( $self ) = @_;
+    my ($self) = @_;
     my $file = $self->Client->config_value('misc_acefile');
     return unless $file;
     confess "No such file '$file'" unless -e $file;
@@ -795,7 +795,7 @@ sub add_misc_acefile {
 }
 
 sub initialize_database {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $home = $self->home;
     my $tace = $self->tace;
@@ -845,14 +845,14 @@ sub initialize_database {
 
 
 sub db_initialized {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $init_file = join('/', $self->home, 'database/ACEDB.wrm');
     return -e $init_file;
 }
 
 sub write_dna_data {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $ace_filename = $self->home . '/rawdata/dna.ace';
     $self->add_acefile($ace_filename);
@@ -1050,7 +1050,7 @@ sub process_gff_file_from_Filter {
 }
 
 sub script_arguments {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $arguments = {
         client => 'otterlace',
@@ -1077,7 +1077,7 @@ sub http_response_content {
 
 
 sub DESTROY {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     #warn "Debug - leaving database intact"; return;
 
