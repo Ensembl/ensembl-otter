@@ -9,6 +9,7 @@ use Readonly;
 use Scalar::Util 'weaken';
 use Hum::Sort 'ace_sort';
 use Bio::Otter::Lace::OnTheFly::Transcript;
+use Bio::Otter::UI::TextWindow::TranscriptAlign;
 use Bio::Vega::Evidence::Types;
 use Tk::Utils::OnTheFly;
 
@@ -413,84 +414,16 @@ sub alignment_window {
     my $window = $self->{_alignment_window}->{$type};
 
     unless ($window) {
-
-        # FIXME: duplication with ExonCanvas.pm
-        my $master = $self->canvas->toplevel;
-        my $top = $master->Toplevel;
-        $top->transient($master);
-
-        # FIXME: more duplication
-        $window = $self->{_alignment_window}->{$type} = $top->Scrolled(
-            'ROText',
-            -scrollbars             => 'e',
-            -font                   => $self->font_fixed,
-            -padx                   => 6,
-            -pady                   => 6,
-            -relief                 => 'groove',
-            -background             => 'white',
-            -border                 => 2,
-            -selectbackground       => 'gold',
-            )->pack(
-                -expand => 1,
-                -fill   => 'both',
-            );
-
-        # And more duplication...
-        # Frame for buttons
-        my $frame = $top->Frame(
-            -border => 6,
-            )->pack(
-            -side   => 'bottom',
-            -fill   => 'x',
-            );
-
-        my $close_command = sub{ $top->withdraw; $window = $self->{_alignment_window}->{$type} = undef };
-
-        my $exit = $frame->Button(
-            -text => 'Close',
-            -command => $close_command ,
-            )->pack(-side => 'right');
-        $top->bind(    '<Control-w>',      $close_command);
-        $top->bind(    '<Control-W>',      $close_command);
-        $top->bind(    '<Escape>',         $close_command);
-
-        $window->bind('<Destroy>', $close_command);
+        $window = Bio::Otter::UI::TextWindow::TranscriptAlign->new($self, $type);
     }
 
-    # The dynamic bit - separate sub?
+    $window->update_alignment($alignment);
+    return;
+}
 
-    # Empty the text widget
-    $window->delete('1.0', 'end');
-    $window->insert('end', $alignment); # just show it raw for now
-
-    # FIXME: more duplication (modulo width)
-    # Size widget to fit
-    my ($lines) = $window->index('end') =~ /(\d+)\./;
-    $lines--;
-    if ($lines > 40) {
-        $window->configure(
-            -width  => 80,
-            -height => 40,
-            );
-    } else {
-        # This has slightly odd behaviour if the ROText starts off
-        # big to accomodate a large translation, and is then made
-        # smaller.  Does not seem to shrink below a certain minimum
-        # height.
-        $window->configure(
-            -width  => 80,
-            -height => $lines,
-            );
-    }
-
-    my $toplevel = $window->toplevel;
-
-    # Set the window title
-    $toplevel->configure( -title => sprintf("otter: %s alignment", $type) );
-
-    $toplevel->deiconify;
-    $toplevel->raise;
-
+sub delete_alignment_window {
+    my ($self, $type) = @_;
+    $self->{_alignment_window}->{$type} = undef;
     return;
 }
 
