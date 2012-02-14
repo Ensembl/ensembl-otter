@@ -2864,6 +2864,12 @@ sub run_dotter {
         return;
     }
 
+    return $self->launch_dotter($hit_name);
+}
+
+sub launch_dotter {
+    my ($self, $hit_name) = @_;
+
     my $cdna = $self->check_get_mRNA_Sequence;
     return unless $cdna;
 

@@ -25,7 +25,7 @@ sub initialise {
     my $top = $canvas->toplevel;
     $top->configure(-title => "otter: Evidence");
 
-    my $align_frame = $top->Frame->pack(
+    my $action_frame = $top->Frame->pack(
         -side => 'top',
         -fill => 'x',
         );
@@ -33,12 +33,22 @@ sub initialise {
     my $align = sub { $self->align_to_transcript; };
     $top->bind('<Control-t>', $align);
     $top->bind('<Control-T>', $align);
-    my $align_button = $align_frame->Button(
+    my $align_button = $action_frame->Button(
         -text =>    'Align to transcript',
         -command => $align,
         -state   => 'disabled',
-        )->pack(-side => 'left', -fill => 'x', -expand => 1);
+        )->pack(-side => 'left');
     $self->align_button($align_button);
+
+    my $dotter = sub { $self->dotter_to_transcript; };
+    $top->bind('<Control-period>',  $dotter);
+    $top->bind('<Control-greater>', $dotter);
+    my $dotter_button = $action_frame->Button(
+        -text =>    'Dotter',
+        -command => $dotter,
+        -state   => 'disabled',
+        )->pack(-side => 'left');
+    $self->dotter_button($dotter_button);
 
     my $button_frame = $top->Frame->pack(
         -side => 'top',
@@ -118,10 +128,36 @@ sub align_button {
     return $self->{'_align_button'};
 }
 
+sub dotter_button {
+    my( $self, $dotter_button ) = @_;
+
+    if ($dotter_button) {
+        $self->{'_dotter_button'} = $dotter_button;
+    }
+    return $self->{'_dotter_button'};
+}
+
 sub align_enable {
     my ( $self, $enable ) = @_;
     my $state = $enable ? 'normal' : 'disabled';
     $self->align_button->configure( -state => $state );
+    return;
+}
+
+sub dotter_enable {
+    my ( $self, $enable ) = @_;
+    my $state = $enable ? 'normal' : 'disabled';
+    $self->dotter_button->configure( -state => $state );
+    return;
+}
+
+sub control_buttons {
+    my ( $self ) = @_;
+
+    my $sel_count = scalar($self->list_selected);
+    $self->align_enable($sel_count);
+    $self->dotter_enable($sel_count == 1);
+
     return;
 }
 
@@ -145,10 +181,11 @@ sub control_left_button_handler {
 
     if ($self->is_selected($obj)) {
         $self->remove_selected($obj);
-        $self->align_enable(0) unless $self->list_selected;
     } else {
         $self->highlight($obj);
     }
+
+    $self->control_buttons;
 
     return;
 }
@@ -332,7 +369,7 @@ sub highlight {
     $self->canvas->SelectionOwn(
         -command    => sub{ $self->deselect_all },
         );
-    $self->align_enable(1);
+    $self->control_buttons;
     weaken $self;
 
     return;
@@ -342,12 +379,12 @@ sub deselect_all {
     my ( $self ) = @_;
 
     $self->SUPER::deselect_all;
-    $self->align_enable(0);
+    $self->control_buttons;
 
     return;
 }
 
-sub align_to_transcript {
+sub get_selected_accessions {
     my ($self) = @_;
     my $canvas = $self->canvas;
 
@@ -356,14 +393,19 @@ sub align_to_transcript {
         my ($type) = $canvas->gettags($sel);
         my $name   = $canvas->itemcget($sel, 'text');
         my @no_prefixes = Hum::ClipboardUtils::accessions_from_text($name);
-        my $no_prefix = join(',', @no_prefixes);                  # debug
-        print "Aligning: $type -\t$name\t[$no_prefix]\t($sel)\n"; # debug
         push @accessions, @no_prefixes;
     }
 
+    return @accessions;
+}
+
+sub align_to_transcript {
+    my ($self) = @_;
+
+    my @accessions = $self->get_selected_accessions;
+
     my $cdna = $self->ExonCanvas->check_get_mRNA_Sequence;
     return unless $cdna;
-    print STDERR "Spliced transcript is " . $cdna->sequence_length . " bp\n";
 
     my $top = $self->canvas->toplevel;
 
@@ -405,6 +447,14 @@ sub align_to_transcript {
     }
 
     return;
+}
+
+sub dotter_to_transcript {
+    my ($self) = @_;
+
+    my @accessions = $self->get_selected_accessions;
+
+    return $self->ExonCanvas->launch_dotter(@accessions);
 }
 
 sub alignment_window {
