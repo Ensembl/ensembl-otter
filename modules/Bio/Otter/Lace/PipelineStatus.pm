@@ -10,7 +10,7 @@ use Carp;
 my $ana_root = 'SubmitContig';
 
 sub new {
-    my( $pkg ) = @_;
+    my ($pkg) = @_;
     my $self = {
         'completed_count' => 0,
         '_entries' => {},
@@ -29,7 +29,7 @@ sub entry {
 }
 
 sub add_analysis {
-    my( $self, $ana_name, $values ) = @_;
+    my ($self, $ana_name, $values) = @_;
 
     if(@$values) {
         my ($created, $version) = @$values;
@@ -43,7 +43,7 @@ sub add_analysis {
 }
 
 sub all_analyses {
-    my( $self ) = @_;
+    my ($self) = @_;
     my @analyses =
         sort { ($a eq $ana_root) ? -1 : ($b eq $ana_root) ? 1 : ($a cmp $b); } keys %{$self->{_entries}};
     return @analyses;
@@ -52,7 +52,7 @@ sub all_analyses {
 # Returns an array used by CanvasWindow::SequenceNotes::Status
 # to display status information.
 sub display_list {
-    my( $self ) = @_;
+    my ($self) = @_;
     
     my @display_list = ();
     foreach my $ana_name ($self->all_analyses()) {
@@ -69,7 +69,7 @@ sub display_list {
 
 # Called by CanvasWindow::SequenceNotes for displaying overall status of clone
 sub short_display {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $total_entries = scalar(keys %{$self->{_entries}});
 
