@@ -31,7 +31,7 @@ use Bio::Otter::Lace::DB;
 use Bio::Otter::LogFile;
 
 sub new {
-    my( $pkg ) = @_;
+    my ($pkg) = @_;
 
     my ($script) = $0 =~ m{([^/]+)$};
     my $client_name = $script || 'otterlace';
@@ -51,7 +51,7 @@ sub new {
 }
 
 sub host {
-    my( $self, $host ) = @_;
+    my ($self, $host) = @_;
 
     warn "Set using the Config file please.\n" if $host;
 
@@ -59,7 +59,7 @@ sub host {
 }
 
 sub port {
-    my( $self, $port ) = @_;
+    my ($self, $port) = @_;
 
     warn "Set using the Config file please.\n" if $port;
 
@@ -67,7 +67,7 @@ sub port {
 }
 
 sub version {
-    my( $self, $version ) = @_;
+    my ($self, $version) = @_;
 
     warn "Set using the Config file please.\n" if $version;
 
@@ -75,7 +75,7 @@ sub version {
 }
 
 sub write_access {
-    my( $self, $write_access ) = @_;
+    my ($self, $write_access) = @_;
 
     warn "Set using the Config file please.\n" if $write_access;
 
@@ -83,7 +83,7 @@ sub write_access {
 }
 
 sub author {
-    my( $self, $author ) = @_;
+    my ($self, $author) = @_;
 
     warn "Set using the Config file please.\n" if $author;
 
@@ -91,7 +91,7 @@ sub author {
 }
 
 sub email {
-    my( $self, $email ) = @_;
+    my ($self, $email) = @_;
 
     warn "Set using the Config file please.\n" if $email;
 
@@ -99,7 +99,7 @@ sub email {
 }
 
 sub fetch_truncated_genes {
-    my( $self, $fetch_truncated_genes ) = @_;
+    my ($self, $fetch_truncated_genes) = @_;
 
     warn "Set using the Config file please.\n" if $fetch_truncated_genes;
 
@@ -121,7 +121,7 @@ sub debug {
 }
 
 sub password_attempts {
-    my( $self, $password_attempts ) = @_;
+    my ($self, $password_attempts) = @_;
 
     if (defined $password_attempts) {
         $self->{'_password_attempts'} = $password_attempts;
@@ -130,7 +130,7 @@ sub password_attempts {
 }
 
 sub get_log_dir {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $log_dir = $self->config_value('logdir')
         or return;
@@ -151,7 +151,7 @@ sub get_log_dir {
 }
 
 sub make_log_file {
-    my( $self, $file_root ) = @_;
+    my ($self, $file_root) = @_;
 
     $file_root ||= 'client';
     
@@ -170,7 +170,7 @@ sub make_log_file {
 }
 
 sub cleanup_log_dir {
-    my( $self, $file_root, $days ) = @_;
+    my ($self, $file_root, $days) = @_;
 
     # Files older than this number of days are deleted.
     $days ||= 14;
@@ -257,7 +257,7 @@ sub all_session_dirs {
 }
 
 sub new_AceDatabase {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $adb = Bio::Otter::Lace::AceDatabase->new;
     $adb->Client($self);
@@ -267,7 +267,7 @@ sub new_AceDatabase {
 }
 
 sub lock { ## no critic(Subroutines::ProhibitBuiltinHomonyms)
-    my( $self, @args ) = @_;
+    my ($self, @args) = @_;
 
     confess "lock takes no arguments" if @args;
 
@@ -275,7 +275,7 @@ sub lock { ## no critic(Subroutines::ProhibitBuiltinHomonyms)
 }
 
 sub client_hostname {
-    my( $self, $client_hostname ) = @_;
+    my ($self, $client_hostname) = @_;
 
     if ($client_hostname) {
         $self->{'_client_hostname'} = $client_hostname;
@@ -291,7 +291,7 @@ sub client_hostname {
 # please switch everywhere to using SequenceSet::region_coordinates()
 #
 sub chr_start_end_from_contig {
-    my( $self, $ctg ) = @_;
+    my ($self, $ctg) = @_;
 
     my $chr_name  = $ctg->[0]->chromosome;
     my $start     = $ctg->[0]->chr_start;
@@ -300,7 +300,7 @@ sub chr_start_end_from_contig {
 }
 
 sub get_DataSet_by_name {
-    my( $self, $name ) = @_;
+    my ($self, $name) = @_;
 
     foreach my $ds ($self->get_all_DataSets) {
         if ($ds->name eq $name) {
@@ -418,18 +418,18 @@ sub authorize {
 # ---- HTTP protocol related routines:
 
 sub request {
-    my( $self, $req ) = @_;
+    my ($self, $req) = @_;
     return $self->get_UserAgent->request($req);
 }
 
 sub get_UserAgent {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     return $self->{'_lwp_useragent'} ||= $self->create_UserAgent;
 }
 
 sub create_UserAgent {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $ua = LWP::UserAgent->new(timeout => 9000);
     $ua->env_proxy;
@@ -442,12 +442,12 @@ sub create_UserAgent {
 }
 
 sub get_CookieJar {
-    my( $self ) = @_;
+    my ($self) = @_;
     return $self->{'_cookie_jar'} ||= $self->create_CookieJar;
 }
 
 sub create_CookieJar {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $jar = $self->{'_cookie_jar_file'};
     return HTTP::Cookies::Netscape->new(file => $jar);
@@ -500,7 +500,7 @@ sub cookie_expiry_time {
 }
 
 sub url_root {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $host    = $self->host    or confess "host not set";
     my $port    = $self->port    or confess "port not set";
@@ -709,7 +709,7 @@ sub status_refresh_for_DataSet_SequenceSet{
 }
 
 sub find_string_match_in_clones {
-    my( $self, $dsname, $qnames_list ) = @_;
+    my ($self, $dsname, $qnames_list) = @_;
 
     my $qnames_string = join(',', @$qnames_list);
 
@@ -739,7 +739,7 @@ sub find_string_match_in_clones {
 }
 
 sub get_meta {
-    my ( $self, $dsname ) = @_;
+    my ($self, $dsname) = @_;
 
     my $response = $self->otter_response_content(
         'GET',
@@ -759,7 +759,7 @@ sub get_meta {
 }
 
 sub lock_refresh_for_DataSet_SequenceSet {
-    my( $self, $ds, $ss ) = @_;
+    my ($self, $ds, $ss) = @_;
 
     my $response = $self->otter_response_content(
         'GET',
@@ -801,7 +801,7 @@ sub lock_refresh_for_DataSet_SequenceSet {
 }
 
 sub fetch_all_SequenceNotes_for_DataSet_SequenceSet {
-    my( $self, $ds, $ss ) = @_;
+    my ($self, $ds, $ss) = @_;
 
     $ss ||= $ds->selected_SequenceSet
         || die "no selected_SequenceSet attached to DataSet";
@@ -856,7 +856,7 @@ sub fetch_all_SequenceNotes_for_DataSet_SequenceSet {
 }
 
 sub change_sequence_note {
-    my( $self, @args ) = @_;
+    my ($self, @args) = @_;
 
     $self->_sequence_note_action('change', @args);
 
@@ -864,7 +864,7 @@ sub change_sequence_note {
 }
 
 sub push_sequence_note {
-    my( $self, @args ) = @_;
+    my ($self, @args) = @_;
 
     $self->_sequence_note_action('push', @args);
 
@@ -872,7 +872,7 @@ sub push_sequence_note {
 }
 
 sub _sequence_note_action {
-    my( $self, $action, $dsname, $contig_name, $seq_note ) = @_;
+    my ($self, $action, $dsname, $contig_name, $seq_note) = @_;
 
     my $ds = $self->get_DataSet_by_name($dsname);
 
@@ -893,7 +893,7 @@ sub _sequence_note_action {
 }
 
 sub get_all_DataSets {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $ds = $self->{'_datasets'};
     if (! $ds) {
@@ -973,7 +973,7 @@ sub do_authentication {
 }
 
 sub get_all_SequenceSets_for_DataSet {
-  my( $self, $ds ) = @_;
+  my ($self, $ds) = @_;
   return [] unless $ds;
 
   my $dataset_name = $ds->name;
@@ -1031,7 +1031,7 @@ sub _make_SequenceSet {
 }
 
 sub get_all_CloneSequences_for_DataSet_SequenceSet {
-  my( $self, $ds, $ss) = @_;
+  my ($self, $ds, $ss) = @_;
   return [] unless $ss ;
   my $csl = $ss->CloneSequence_list;
   return $csl if (defined $csl && scalar @$csl);
@@ -1127,7 +1127,7 @@ sub get_methods_ace {
 }
 
 sub get_accession_types {
-    my( $self, @accessions ) = @_;
+    my ($self, @accessions) = @_;
 
     my $response = $self->http_response_content(
         'POST',
@@ -1138,7 +1138,7 @@ sub get_accession_types {
 }
 
 sub save_otter_xml {
-    my( $self, $xml, $dsname ) = @_;
+    my ($self, $xml, $dsname) = @_;
 
     confess "Don't have write access" unless $self->write_access;
 
@@ -1157,7 +1157,7 @@ sub save_otter_xml {
 }
 
 sub unlock_otter_xml {
-    my( $self, $xml, $dsname ) = @_;
+    my ($self, $xml, $dsname) = @_;
 
     my $ds = $self->get_DataSet_by_name($dsname);
 
@@ -1175,35 +1175,35 @@ sub unlock_otter_xml {
 # configuration
 
 sub config_value {
-    my ( $self, $key ) = @_;
+    my ($self, $key) = @_;
 
     return Bio::Otter::Lace::Defaults::config_value('client', $key);
 }
 
 sub config_value_list {
-    my ( $self, @keys ) = @_;
+    my ($self, @keys) = @_;
     return Bio::Otter::Lace::Defaults::config_value_list(@keys);
 }
 
 sub config_value_list_merged {
-    my ( $self, @keys ) = @_;
+    my ($self, @keys) = @_;
     return Bio::Otter::Lace::Defaults::config_value_list_merged(@keys);
 }
 
 sub config_section {
-    my ( $self, @keys ) = @_;
+    my ($self, @keys) = @_;
     return Bio::Otter::Lace::Defaults::config_section(@keys);
 }
 
 sub config_keys {
-    my ( $self, @keys ) = @_;
+    my ($self, @keys) = @_;
     return Bio::Otter::Lace::Defaults::config_keys(@keys);
 }
 
 ############## Session recovery methods ###################################
 
 sub sessions_needing_recovery {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $proc_table = Proc::ProcessTable->new;
     my @otterlace_procs = grep {$_->cmndline =~ /otterlace/} @{$proc_table->table};
