@@ -150,7 +150,7 @@ sub _parse_vulgar {
 # FIXME: doesn't really belong here: more general
 #
 sub construct_command {
-    my ( $self, $command, $args ) = @_;
+    my ($self, $command, $args) = @_;
     my @command_line = ( $command );
     foreach my $key ( keys %{$args} ) {
         if (defined (my $val = $args->{$key})) {
