@@ -50,7 +50,7 @@ sub update_alignment {
 }
 
 sub width {
-    return 60;
+    return 80;
 }
 
 sub type {
