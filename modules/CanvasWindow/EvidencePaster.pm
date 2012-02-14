@@ -9,6 +9,7 @@ use Readonly;
 use Scalar::Util 'weaken';
 use Hum::Sort 'ace_sort';
 use Bio::Otter::Lace::OnTheFly::Transcript;
+use Bio::Otter::UI::TextWindow::TranscriptAlign;
 use Bio::Vega::Evidence::Types;
 use Tk::Utils::OnTheFly;
 
@@ -24,7 +25,7 @@ sub initialise {
     my $top = $canvas->toplevel;
     $top->configure(-title => "otter: Evidence");
 
-    my $align_frame = $top->Frame->pack(
+    my $action_frame = $top->Frame->pack(
         -side => 'top',
         -fill => 'x',
         );
@@ -32,12 +33,22 @@ sub initialise {
     my $align = sub { $self->align_to_transcript; };
     $top->bind('<Control-t>', $align);
     $top->bind('<Control-T>', $align);
-    my $align_button = $align_frame->Button(
+    my $align_button = $action_frame->Button(
         -text =>    'Align to transcript',
         -command => $align,
         -state   => 'disabled',
-        )->pack(-side => 'left', -fill => 'x', -expand => 1);
+        )->pack(-side => 'left');
     $self->align_button($align_button);
+
+    my $dotter = sub { $self->dotter_to_transcript; };
+    $top->bind('<Control-period>',  $dotter);
+    $top->bind('<Control-greater>', $dotter);
+    my $dotter_button = $action_frame->Button(
+        -text =>    'Dotter',
+        -command => $dotter,
+        -state   => 'disabled',
+        )->pack(-side => 'left');
+    $self->dotter_button($dotter_button);
 
     my $button_frame = $top->Frame->pack(
         -side => 'top',
@@ -117,10 +128,36 @@ sub align_button {
     return $self->{'_align_button'};
 }
 
+sub dotter_button {
+    my( $self, $dotter_button ) = @_;
+
+    if ($dotter_button) {
+        $self->{'_dotter_button'} = $dotter_button;
+    }
+    return $self->{'_dotter_button'};
+}
+
 sub align_enable {
     my ( $self, $enable ) = @_;
     my $state = $enable ? 'normal' : 'disabled';
     $self->align_button->configure( -state => $state );
+    return;
+}
+
+sub dotter_enable {
+    my ( $self, $enable ) = @_;
+    my $state = $enable ? 'normal' : 'disabled';
+    $self->dotter_button->configure( -state => $state );
+    return;
+}
+
+sub control_buttons {
+    my ( $self ) = @_;
+
+    my $sel_count = scalar($self->list_selected);
+    $self->align_enable($sel_count);
+    $self->dotter_enable($sel_count == 1);
+
     return;
 }
 
@@ -144,10 +181,11 @@ sub control_left_button_handler {
 
     if ($self->is_selected($obj)) {
         $self->remove_selected($obj);
-        $self->align_enable(0) unless $self->list_selected;
     } else {
         $self->highlight($obj);
     }
+
+    $self->control_buttons;
 
     return;
 }
@@ -331,7 +369,7 @@ sub highlight {
     $self->canvas->SelectionOwn(
         -command    => sub{ $self->deselect_all },
         );
-    $self->align_enable(1);
+    $self->control_buttons;
     weaken $self;
 
     return;
@@ -341,12 +379,12 @@ sub deselect_all {
     my ( $self ) = @_;
 
     $self->SUPER::deselect_all;
-    $self->align_enable(0);
+    $self->control_buttons;
 
     return;
 }
 
-sub align_to_transcript {
+sub get_selected_accessions {
     my ($self) = @_;
     my $canvas = $self->canvas;
 
@@ -355,14 +393,19 @@ sub align_to_transcript {
         my ($type) = $canvas->gettags($sel);
         my $name   = $canvas->itemcget($sel, 'text');
         my @no_prefixes = Hum::ClipboardUtils::accessions_from_text($name);
-        my $no_prefix = join(',', @no_prefixes);                  # debug
-        print "Aligning: $type -\t$name\t[$no_prefix]\t($sel)\n"; # debug
         push @accessions, @no_prefixes;
     }
 
+    return @accessions;
+}
+
+sub align_to_transcript {
+    my ($self) = @_;
+
+    my @accessions = $self->get_selected_accessions;
+
     my $cdna = $self->ExonCanvas->check_get_mRNA_Sequence;
     return unless $cdna;
-    print STDERR "Spliced transcript is " . $cdna->sequence_length . " bp\n";
 
     my $top = $self->canvas->toplevel;
 
@@ -406,6 +449,14 @@ sub align_to_transcript {
     return;
 }
 
+sub dotter_to_transcript {
+    my ($self) = @_;
+
+    my @accessions = $self->get_selected_accessions;
+
+    return $self->ExonCanvas->launch_dotter(@accessions);
+}
+
 sub alignment_window {
     my ( $self, $type, $alignment ) = @_;
 
@@ -413,84 +464,16 @@ sub alignment_window {
     my $window = $self->{_alignment_window}->{$type};
 
     unless ($window) {
-
-        # FIXME: duplication with ExonCanvas.pm
-        my $master = $self->canvas->toplevel;
-        my $top = $master->Toplevel;
-        $top->transient($master);
-
-        # FIXME: more duplication
-        $window = $self->{_alignment_window}->{$type} = $top->Scrolled(
-            'ROText',
-            -scrollbars             => 'e',
-            -font                   => $self->font_fixed,
-            -padx                   => 6,
-            -pady                   => 6,
-            -relief                 => 'groove',
-            -background             => 'white',
-            -border                 => 2,
-            -selectbackground       => 'gold',
-            )->pack(
-                -expand => 1,
-                -fill   => 'both',
-            );
-
-        # And more duplication...
-        # Frame for buttons
-        my $frame = $top->Frame(
-            -border => 6,
-            )->pack(
-            -side   => 'bottom',
-            -fill   => 'x',
-            );
-
-        my $close_command = sub{ $top->withdraw; $window = $self->{_alignment_window}->{$type} = undef };
-
-        my $exit = $frame->Button(
-            -text => 'Close',
-            -command => $close_command ,
-            )->pack(-side => 'right');
-        $top->bind(    '<Control-w>',      $close_command);
-        $top->bind(    '<Control-W>',      $close_command);
-        $top->bind(    '<Escape>',         $close_command);
-
-        $window->bind('<Destroy>', $close_command);
+        $window = Bio::Otter::UI::TextWindow::TranscriptAlign->new($self, $type);
     }
 
-    # The dynamic bit - separate sub?
+    $window->update_alignment($alignment);
+    return;
+}
 
-    # Empty the text widget
-    $window->delete('1.0', 'end');
-    $window->insert('end', $alignment); # just show it raw for now
-
-    # FIXME: more duplication (modulo width)
-    # Size widget to fit
-    my ($lines) = $window->index('end') =~ /(\d+)\./;
-    $lines--;
-    if ($lines > 40) {
-        $window->configure(
-            -width  => 80,
-            -height => 40,
-            );
-    } else {
-        # This has slightly odd behaviour if the ROText starts off
-        # big to accomodate a large translation, and is then made
-        # smaller.  Does not seem to shrink below a certain minimum
-        # height.
-        $window->configure(
-            -width  => 80,
-            -height => $lines,
-            );
-    }
-
-    my $toplevel = $window->toplevel;
-
-    # Set the window title
-    $toplevel->configure( -title => sprintf("otter: %s alignment", $type) );
-
-    $toplevel->deiconify;
-    $toplevel->raise;
-
+sub delete_alignment_window {
+    my ($self, $type) = @_;
+    $self->{_alignment_window}->{$type} = undef;
     return;
 }
 
