@@ -9,12 +9,12 @@ use warnings;
 use Carp;
 
 sub new {
-    my ( $pkg, @args ) = @_;
+    my ($pkg, @args) = @_;
     return bless { @args }, $pkg;
 }
 
 sub features {
-    my ( $self, $chr, $start, $end ) = @_;
+    my ($self, $chr, $start, $end) = @_;
 
     my ( $sam, $chr_prefix ) =
         @{$self}{qw( -sam -chr_prefix )};
