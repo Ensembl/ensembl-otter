@@ -58,7 +58,7 @@ sub save_option {
 
 # not a method
 sub save_deep_option {
-    my ( undef, $getopt ) = @_; # ignore the option name
+    my (undef, $getopt) = @_; # ignore the option name
     my ($option, $value) = split(/=/, $getopt, 2);
     $option = [ split(/\./, $option) ];
     my $param = pop @$option;
@@ -208,7 +208,7 @@ sub options_from_file {
 }
 
 sub config_value {
-    my ( $section, $key ) = @_;
+    my ($section, $key) = @_;
 
     my $value;
     foreach my $ini ( @$CONFIG_INIFILES ) {
@@ -221,24 +221,24 @@ sub config_value {
 }
 
 sub config_value_list {
-    my ( $key1, $key2, $name ) = @_;
+    my ($key1, $key2, $name) = @_;
     my $keys = [ "default.$key2", "$key1.$key2" ];
     return [ map { _config_value_list_ini_keys_name($_, $keys, $name); } @$CONFIG_INIFILES, ];
 }
 
 sub _config_value_list_ini_keys_name {
-    my ( $ini, $keys, $name ) = @_;
+    my ($ini, $keys, $name) = @_;
     return map { _config_value_list_ini_key_name($ini, $_, $name); } @{$keys};
 }
 
 sub _config_value_list_ini_key_name {
-    my ( $ini, $key, $name ) = @_;
+    my ($ini, $key, $name) = @_;
     my $vs = $ini->{$key}{$name};
     return ref $vs ? @{$vs} : defined $vs ? ( $vs ) : ( );
 }
 
 sub config_value_list_merged {
-    my ( $key1, $key2, $name ) = @_;
+    my ($key1, $key2, $name) = @_;
 
     my @keys = ( "default.$key2", "$key1.$key2" );
 
@@ -260,7 +260,7 @@ sub config_value_list_merged {
 }
 
 sub _config_value_list_merge {
-    my ( $values, $vs ) = @_;
+    my ($values, $vs) = @_;
 
     # hash the new values
     my $vsh = { };
@@ -283,41 +283,41 @@ sub _config_value_list_merge {
 }
 
 sub config_section {
-    my ( $key1, $key2 ) = @_;
+    my ($key1, $key2) = @_;
     my $keys = [ "default.$key2", "$key1.$key2" ];
     return { map { _config_section_ini_keys($_, $keys) } @$CONFIG_INIFILES };
 }
 
 sub _config_section_ini_keys {
-    my ( $ini, $keys ) = @_;
+    my ($ini, $keys) = @_;
     return map { _config_section_ini_key($ini, $_); } @{$keys};
 }
 
 sub _config_section_ini_key {
-    my ( $ini, $key ) = @_;
+    my ($ini, $key) = @_;
     my $section = $ini->{$key};
     return defined $section ? %{$section} : ( );
 }
 
 sub config_keys {
-    my ( $key1, $key2 ) = @_;
+    my ($key1, $key2) = @_;
     my $keys = [ "default.$key2", "$key1.$key2" ];
     return [ map { _config_keys_ini_keys($_, $keys) } @$CONFIG_INIFILES ];
 }
 
 sub _config_keys_ini_keys {
-    my ( $ini, $keys ) = @_;
+    my ($ini, $keys) = @_;
     return map { _config_keys_ini_key($ini, $_); } @{$keys};
 }
 
 sub _config_keys_ini_key {
-    my ( $ini, $key ) = @_;
+    my ($ini, $key) = @_;
     my $obj = tied %{$ini};
     return map { _section_key($_, $key) } $obj->Sections;
 }
 
 sub _section_key {
-    my ( $section, $key ) = @_;
+    my ($section, $key) = @_;
     return unless my ( $key1, $key2 ) = $section =~ /^([^\.]*\.[^\.]*)\.(.*)$/;
     return unless $key1 eq $key;
     return $key2;
