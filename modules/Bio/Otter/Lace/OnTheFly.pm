@@ -47,7 +47,7 @@ has 'aligner_query_type_options' => (
     );
 
 sub BUILD {
-    my ( $self, $params ) = @_;
+    my ($self, $params) = @_;
 
     $self->_set_query_validator( Bio::Otter::Lace::OnTheFly::QueryValidator->new($params));
     $self->_set_target_seq_obj( $self->build_target_seq($params) );
