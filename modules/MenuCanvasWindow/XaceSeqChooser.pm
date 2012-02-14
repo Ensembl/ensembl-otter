@@ -38,7 +38,7 @@ my $DNA_SCORE  = 100;
 my $DNAHSP     = 120;
 
 sub new {
-    my( $pkg, $tk ) = @_;
+    my ($pkg, $tk) = @_;
 
     my $self = $pkg->SUPER::new($tk);
     
@@ -52,7 +52,7 @@ sub new {
 }
 
 sub AceDatabase {
-    my( $self, $AceDatabase ) = @_;
+    my ($self, $AceDatabase) = @_;
 
     if ($AceDatabase) {
         $self->{'_AceDatabase'} = $AceDatabase;
@@ -61,7 +61,7 @@ sub AceDatabase {
 }
 
 sub drop_AceDatabase {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     $self->{'_AceDatabase'} = undef;
 
@@ -78,7 +78,7 @@ sub SequenceNotes {
 }
 
 sub initialize {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     $self->set_window_title;
 
@@ -106,7 +106,7 @@ sub initialize {
 }
 
 sub menu_bar {
-    my( $self, $bf ) = @_;
+    my ($self, $bf) = @_;
 
     if ($bf) {
         $self->{'_menu_bar'} = $bf;
@@ -115,7 +115,7 @@ sub menu_bar {
 }
 
 sub clone_menu {
-    my( $self, $clone_menu ) = @_;
+    my ($self, $clone_menu) = @_;
 
     if ($clone_menu) {
         $self->{'_clone_menu'} = $clone_menu;
@@ -124,7 +124,7 @@ sub clone_menu {
 }
 
 sub balloon {
-    my( $self ) = @_;
+    my ($self) = @_;
     
     $self->{'_balloon'} ||= $self->top_window->Balloon(
         -state  => 'balloon',
@@ -145,7 +145,7 @@ sub set_known_GeneMethods {
 }
 
 sub get_GeneMethod {
-    my( $self, $name ) = @_;
+    my ($self, $name) = @_;
 
     my( $meth );
     unless ($meth = $self->{'_gene_methods'}{$name}) {
@@ -155,19 +155,19 @@ sub get_GeneMethod {
 }
 
 sub get_all_GeneMethods {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     return @{$self->{'_gene_methods_list'}};
 }
 
 sub get_all_mutable_GeneMethods {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     return $self->Assembly->MethodCollection->get_all_mutable_GeneMethods;
 }
 
 sub get_default_mutable_GeneMethod {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my @possible = grep { $_->coding } $self->get_all_mutable_GeneMethods;
     if (my ($supp) = grep { $_->name eq 'Coding' } @possible) {
@@ -183,7 +183,7 @@ sub get_default_mutable_GeneMethod {
 }
 
 sub get_Locus {
-    my( $self, $name ) = @_;
+    my ($self, $name) = @_;
 
     my( $locus );
     if (ref($name)) {
@@ -204,7 +204,7 @@ sub get_Locus {
 }
 
 sub set_Locus {
-    my( $self, $locus ) = @_;
+    my ($self, $locus) = @_;
 
     my $name = $locus->name;
     $self->{'_locus_cache'}{$name} = $locus;
@@ -213,19 +213,19 @@ sub set_Locus {
 }
 
 sub get_all_Loci {
-    my( $self ) = @_;
+    my ($self) = @_;
     my $lc = $self->{'_locus_cache'};
     return values %$lc;
 }
 
 sub list_Locus_names {
-    my( $self ) = @_;
+    my ($self) = @_;
     my @names = sort {lc $a cmp lc $b} map { $_->name } $self->get_all_Loci;
     return @names;
 }
 
 sub empty_Locus_cache {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     $self->{'_locus_cache'} = undef;
 
@@ -233,7 +233,7 @@ sub empty_Locus_cache {
 }
 
 sub update_Locus {
-    my( $self, $new_locus ) = @_;
+    my ($self, $new_locus) = @_;
 
     $self->set_Locus($new_locus);
 
@@ -258,7 +258,7 @@ sub update_Locus {
 }
 
 sub do_rename_locus {
-    my( $self, $old_name, $new_name ) = @_;
+    my ($self, $old_name, $new_name) = @_;
 
     my %done; # we update in three places - keep track
     my $ok = eval {
@@ -339,7 +339,7 @@ sub do_rename_locus {
 }
 
 sub fetch_SubSeqs_by_locus_name {
-   my( $self, $locus_name ) = @_;
+   my ($self, $locus_name) = @_;
 
    my @list;
    foreach my $name ($self->list_all_SubSeq_names) {
@@ -356,7 +356,7 @@ sub fetch_SubSeqs_by_locus_name {
 #------------------------------------------------------------------------------------------
 
 sub make_menu {
-    my( $self, $name, $pos, @rest ) = @_;
+    my ($self, $name, $pos, @rest) = @_;
 
     $pos ||= 0;
 
@@ -383,7 +383,7 @@ sub make_menu {
 }
 
 sub populate_menus {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $menu_frame = $self->menu_bar
         or confess "No menu_bar";
@@ -628,7 +628,7 @@ sub populate_menus {
 }
 
 sub LoadColumns {
-    my( $self, $lc ) = @_;
+    my ($self, $lc) = @_;
     
     $self->{'_LoadColumns'} = $lc if $lc;
     
@@ -671,7 +671,7 @@ sub populate_clone_menu {
 }
 
 sub bind_events {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $canvas = $self->canvas;
 
@@ -704,7 +704,7 @@ sub bind_events {
 }
 
 sub highlight {
-    my( $self, @args ) = @_;
+    my ($self, @args) = @_;
 
     $self->SUPER::highlight(@args);
 
@@ -728,7 +728,7 @@ sub GenomicFeatures {
 }
 
 sub launch_GenomicFeatures {
-    my( $self ) = @_;
+    my ($self) = @_;
     eval {
         if(my $gfs = $self->GenomicFeatures()) {
 
@@ -754,7 +754,7 @@ sub launch_GenomicFeatures {
 }
 
 sub close_GenomicFeatures {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     if(my $gfs = $self->GenomicFeatures()) {
         $gfs->try2save_and_quit();
@@ -767,7 +767,7 @@ sub close_GenomicFeatures {
     my( @holding_pen );
 
     sub copy_selected_subseqs {
-        my( $self ) = @_;
+        my ($self) = @_;
 
         # Empty holding pen
         @holding_pen = ();
@@ -787,7 +787,7 @@ sub close_GenomicFeatures {
     }
 
     sub paste_selected_subseqs {
-        my( $self ) = @_;
+        my ($self) = @_;
 
         unless (@holding_pen) {
             $self->message('No SubSequences on clipboard');
@@ -858,7 +858,7 @@ sub close_GenomicFeatures {
 }
 
 sub exit_save_data {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $adb = $self->AceDatabase;
     unless ($adb->write_access) {
@@ -944,7 +944,7 @@ sub exit_save_data {
 }
 
 sub close_all_edit_windows {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     $self->close_all_subseq_edit_windows or return;
     $self->close_all_clone_edit_windows or return;
@@ -987,7 +987,7 @@ sub save_data {
 }
 
 sub edit_double_clicked {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     return unless $self->list_selected;
 
@@ -1000,7 +1000,7 @@ sub edit_double_clicked {
 }
 
 sub left_button_handler {
-    my( $self, $canvas, $x, $y ) = @_;
+    my ($self, $canvas, $x, $y) = @_;
 
     return if $self->delete_message;
 
@@ -1013,7 +1013,7 @@ sub left_button_handler {
 }
 
 sub shift_left_button_handler {
-    my( $self, $canvas, $x, $y ) = @_;
+    my ($self, $canvas, $x, $y) = @_;
 
     return if $self->delete_message;
 
@@ -1138,13 +1138,13 @@ sub hunt_for_Entry_text {
 
 
 sub ace_path {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     return $self->AceDatabase->home;
 }
 
 sub save_ace {
-    my( $self, @args ) = @_;
+    my ($self, @args) = @_;
 
     my $adb = $self->AceDatabase;
 
@@ -1173,7 +1173,7 @@ sub flag_db_edits {
 }
 
 sub resync_with_db {
-    my( $self ) = @_;
+    my ($self) = @_;
 
 
     unless ($self->close_all_edit_windows) {
@@ -1205,13 +1205,13 @@ sub max_seq_list_length {
 }
 
 sub slice_name {
-    my( $self ) = @_;
+    my ($self) = @_;
     return $self->{_slice_name} ||=
         $self->AceDatabase->slice_name;
 }
 
 sub edit_subsequences {
-    my( $self, @sub_names ) = @_;
+    my ($self, @sub_names) = @_;
 
     my $retval = 1;
     
@@ -1240,19 +1240,19 @@ sub edit_subsequences {
 }
 
 sub default_locus_prefix {
-    my ( $self ) = @_;
+    my ($self) = @_;
     return $self->{_default_locus_prefix} ||=
         $self->_default_locus_prefix;
 }
 
 sub _default_locus_prefix {
-    my ( $self ) = @_;
+    my ($self) = @_;
     my $client = $self->AceDatabase->Client;
     return $client->config_value('gene_type_prefix') || '';
 }
 
 sub edit_new_subsequence {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my @sub_names = $self->list_selected_subseq_names;
     my $clip      = $self->get_clipboard_text || '';
@@ -1340,7 +1340,7 @@ sub region_name_and_next_locus_number {
 }
 
 sub make_variant_subsequence {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $clip      = $self->get_clipboard_text || '';
     my @sub_names = $self->list_selected_subseq_names;
@@ -1472,7 +1472,7 @@ sub fetch_external_SubSeqs {
 }
 
 sub delete_subsequences {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     # Make a list of editable SubSeqs from those selected,
     # which we are therefore allowed to delete.
@@ -1565,7 +1565,7 @@ sub delete_subsequences {
 }
 
 sub make_exoncanvas_edit_window {
-    my( $self, $sub ) = @_;
+    my ($self, $sub) = @_;
 
     my $sub_name = $sub->name;
     my $canvas = $self->canvas;
@@ -1586,7 +1586,7 @@ sub make_exoncanvas_edit_window {
 }
 
 sub raise_subseq_edit_window {
-    my( $self, $name ) = @_;
+    my ($self, $name) = @_;
 
     confess "no name given" unless $name;
 
@@ -1601,19 +1601,19 @@ sub raise_subseq_edit_window {
 }
 
 sub get_subseq_edit_window {
-    my( $self, $name ) = @_;
+    my ($self, $name) = @_;
 
     return $self->{'_subseq_edit_window'}{$name};
 }
 
 sub list_all_subseq_edit_window_names {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     return keys %{$self->{'_subseq_edit_window'}};
 }
 
 sub save_subseq_edit_window {
-    my( $self, $name, $ec ) = @_;
+    my ($self, $name, $ec) = @_;
 
     $self->{'_subseq_edit_window'}{$name} = $ec;
     weaken($self->{'_subseq_edit_window'}{$name});
@@ -1622,7 +1622,7 @@ sub save_subseq_edit_window {
 }
 
 sub delete_subseq_edit_window {
-    my( $self, $name ) = @_;
+    my ($self, $name) = @_;
 
     delete($self->{'_subseq_edit_window'}{$name});
 
@@ -1630,7 +1630,7 @@ sub delete_subseq_edit_window {
 }
 
 sub rename_subseq_edit_window {
-    my( $self, $old_name, $new_name ) = @_;
+    my ($self, $old_name, $new_name) = @_;
 
     my $win = $self->get_subseq_edit_window($old_name)
         or return;
@@ -1641,7 +1641,7 @@ sub rename_subseq_edit_window {
 }
 
 sub close_all_subseq_edit_windows {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     foreach my $name ($self->list_all_subseq_edit_window_names) {
         my $ec = $self->get_subseq_edit_window($name) or next;
@@ -1652,7 +1652,7 @@ sub close_all_subseq_edit_windows {
 }
 
 sub draw_subseq_list {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $canvas = $self->canvas;
 
@@ -1670,7 +1670,7 @@ sub draw_subseq_list {
 }
 
 sub get_all_Subseq_clusters {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $assembly = $self->Assembly;
     my @subseq = sort {
@@ -1778,7 +1778,7 @@ sub close_all_clone_edit_windows {
 }
 
 sub Assembly {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $canvas = $self->canvas;
     my $slice_name = $self->slice_name;
@@ -1826,7 +1826,7 @@ sub Assembly {
 }
 
 sub save_Assembly {
-    my( $self, $new ) = @_;
+    my ($self, $new) = @_;
 
     my @xml = Bio::Otter::ZMap::XML::update_SimpleFeatures_xml(
         $self->Assembly, $new, $self->AceDatabase->offset);
@@ -1870,7 +1870,7 @@ sub save_Assembly {
 }
 
 sub empty_Assembly_cache {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     $self->{'_assembly'} = undef;
 
@@ -1878,7 +1878,7 @@ sub empty_Assembly_cache {
 }
 
 sub delete_featuresets {
-    my( $self, @types ) = @_;
+    my ($self, @types) = @_;
 
     my $name = $self->Assembly->Sequence->name;
     my $ace = sprintf qq{\nSequence : "%s"\n}, $name;
@@ -1899,7 +1899,7 @@ sub delete_featuresets {
 }
 
 sub replace_SubSeq {
-    my( $self, $new, $old ) = @_;
+    my ($self, $new, $old) = @_;
 
     my $new_name = $new->name;
     my $old_name = $old->name || $new_name;
@@ -1962,7 +1962,7 @@ sub replace_SubSeq {
 }
 
 sub add_SubSeq {
-    my( $self, $sub ) = @_;
+    my ($self, $sub) = @_;
 
     my $name = $sub->name;
     if ($self->{'_subsequence_cache'}{$name}) {
@@ -1975,7 +1975,7 @@ sub add_SubSeq {
 }
 
 sub delete_SubSeq {
-    my( $self, $sub ) = @_;
+    my ($self, $sub) = @_;
 
     my $name = $sub->name;
     $self->Assembly->delete_SubSeq($name);
@@ -1989,7 +1989,7 @@ sub delete_SubSeq {
 }
 
 sub get_SubSeq {
-    my( $self, $name ) = @_;
+    my ($self, $name) = @_;
 
     confess "no name given" unless $name;
     return $self->{'_subsequence_cache'}{$name};
@@ -2006,7 +2006,7 @@ sub list_all_SubSeq_names {
 }
 
 sub empty_SubSeq_cache {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     $self->{'_subsequence_cache'} = undef;
 
@@ -2014,7 +2014,7 @@ sub empty_SubSeq_cache {
 }
 
 sub row_count {
-    my( $self, $slist ) = @_;
+    my ($self, $slist) = @_;
 
     # Work out number of rows to keep chooser
     # window roughly square.  Also a lower and
@@ -2048,7 +2048,7 @@ sub update_SubSeq_locus_level_errors {
 }
 
 sub launch_exonerate {
-    my( $self, $otf, $params ) = @_;
+    my ($self, $otf, $params) = @_;
 
     my $db_edited = 0;
     my @method_names;
@@ -2166,7 +2166,7 @@ sub ace_PEPTIDE {
 }
 
 sub draw_sequence_list {
-    my( $self, $slist ) = @_;
+    my ($self, $slist) = @_;
 
     $self->update_SubSeq_locus_level_errors;
 
@@ -2259,7 +2259,7 @@ sub draw_sequence_list {
 }
 
 sub highlight_by_name {
-    my( $self, @names ) = @_;
+    my ($self, @names) = @_;
 
     $self->highlight($self->subseq_names_to_canvas_obj(@names));
 
@@ -2309,13 +2309,13 @@ sub canvas_obj_to_subseq_names {
 }
 
 sub list_selected_subseq_names {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     return $self->canvas_obj_to_subseq_names($self->list_selected);
 }
 
 sub list_was_selected_subseq_names {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     return $self->canvas_obj_to_subseq_names($self->list_was_selected);
 }
@@ -2347,7 +2347,7 @@ sub rename_locus {
 }
 
 sub run_dotter {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $dw = $self->{'_dotter_window'};
     unless ($dw) {
@@ -2365,7 +2365,7 @@ sub run_dotter {
 }
 
 sub run_exonerate {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $ew = $self->{'_exonerate_window'};
     unless ($ew) {
@@ -2409,7 +2409,7 @@ sub update_window_title_unsaved_flag {
 }
 
 sub DESTROY {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     warn "Destroying XaceSeqChooser for ", $self->ace_path, "\n";
 

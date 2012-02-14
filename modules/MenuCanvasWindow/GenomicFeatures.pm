@@ -134,7 +134,7 @@ sub get_overlapping_exon_otter_id_start_end {
 # ---------------[getters/setters]----------------
 
 sub XaceSeqChooser{
-    my ($self , $seq_chooser) = @_ ;
+    my ($self, $seq_chooser) = @_;
     if ($seq_chooser){
 
         $self->{'_XaceSeqChooser'} = $seq_chooser;
@@ -599,7 +599,7 @@ sub try2save_and_quit {
 # -------------[fill it in]------------------------------------
 
 sub initialize {
-    my($self) = @_;
+    my ($self) = @_;
 
     my $top_window = $self->top_window();
 

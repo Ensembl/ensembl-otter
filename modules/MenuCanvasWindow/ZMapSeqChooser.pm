@@ -35,7 +35,7 @@ isn't a long term solution.
 =cut
 
 sub zMapInitialize {
-    my ( $self ) = @_;
+    my ($self) = @_;
 
     $self->{_zMap_ZMAP_CONNECTOR} =
         $self->zMapZmapConnectorNew;

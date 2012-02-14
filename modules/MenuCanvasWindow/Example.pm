@@ -9,7 +9,7 @@ use base 'MenuCanvasWindow';
 
 
 sub initialize {
-    my( $self ) = @_;
+    my ($self) = @_;
     
     my $file_menu = $self->make_menu('File');
     $file_menu->add('command',
