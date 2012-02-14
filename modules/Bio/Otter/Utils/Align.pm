@@ -55,7 +55,7 @@ the -wrap option.
 =cut
 
 sub print_feature_align {
-    my ( $feature, @options ) = @_;
+    my ($feature, @options) = @_;
     print_align
         (@{aligned_sequences($feature)}{qw( seq hit )},
          @options);
@@ -75,7 +75,7 @@ returned in a hash reference with keys "seq" and "hit".
 =cut
 
 sub aligned_sequences {
-    my ( $feature ) = @_;
+    my ($feature) = @_;
 
     my $segments = [ $feature->ungapped_features ];
     next unless @{$segments};
@@ -159,14 +159,14 @@ sub aligned_sequences {
 my $fetched = { }; # a cache to prevent repeated fetches
 
 sub fetch {
-    my ( $id ) = @_;
+    my ($id) = @_;
     return $fetched->{$id} ||= fetch_($id);
 }
 
 my $fetcher;
 
 sub fetch_ {
-    my ( $id ) = @_;
+    my ($id) = @_;
     $fetcher ||= Bio::EnsEMBL::Pipeline::SeqFetcher->new;
     my $seq = $fetcher->run_pfetch($id);
     croak sprintf "Cannot pfetch '%s'!\n", $id unless $seq;
@@ -189,7 +189,7 @@ the -wrap option.
 =cut
 
 sub print_align {
-    my ( $s0, $s1, @options ) = @_;
+    my ($s0, $s1, @options) = @_;
     my $options = { @options };
     my $wrap = $options->{-wrap} || $wrap_default;
  
@@ -205,7 +205,7 @@ sub print_align {
 }
 
 sub match_string {
-    my ( $s0, $s1 ) = @_;
+    my ($s0, $s1) = @_;
     croak sprintf "%s::%s(): inconsistent lengths (%d != %d)!\n"
         , __PACKAGE__, 'match_string', length($s0), length($s1)
         if length($s0) != length($s1);
@@ -217,7 +217,7 @@ sub match_string {
 }
 
 sub match_char {
-    my ( $c0, $c1 ) = @_;
+    my ($c0, $c1) = @_;
     my $match =
         $c0 =~ /[acgt]/ix
         && lc($c0) eq lc($c1);
