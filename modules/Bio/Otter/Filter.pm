@@ -116,7 +116,7 @@ sub name {
 }
 
 sub url_string {
-    my($self, $url_string) = @_;
+    my ($self, $url_string) = @_;
 
     if($url_string) {
         $self->{_url_string} = $url_string;
@@ -125,7 +125,7 @@ sub url_string {
 }
 
 sub description {
-    my($self, $description) = @_;
+    my ($self, $description) = @_;
 
     if($description) {
         $self->{_description} = $description;
@@ -226,7 +226,7 @@ sub ditypes {
 }
 
 sub process_gff_file {
-    my($self, $flag) = @_;
+    my ($self, $flag) = @_;
     
     if (defined $flag) {
         $self->{'_process_gff_file'} = $flag ? 1 : 0;
@@ -337,7 +337,7 @@ sub call_with_session_data_handle {
 }
 
 sub script_arguments {
-    my( $self, $session ) = @_;
+    my ($self, $session) = @_;
 
     my $params = {
         %{ $session->script_arguments },
@@ -356,7 +356,7 @@ sub script_arguments {
 }
 
 sub gff_source {
-    my( $self ) = @_;
+    my ($self) = @_;
     return $self->name;
 }
 
