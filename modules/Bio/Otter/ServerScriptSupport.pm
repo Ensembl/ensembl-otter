@@ -40,7 +40,7 @@ our $COMPRESSION_ENABLED;
 $COMPRESSION_ENABLED = 1 unless defined $COMPRESSION_ENABLED;
 
 sub new {
-    my ( $pkg, @args ) = @_;
+    my ($pkg, @args) = @_;
 
     my $self = {
         -cgi          => CGI->new,
