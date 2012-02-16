@@ -21,7 +21,7 @@ sub _map_new { ## no critic ( Subroutines::RequireArgUnpacking )
 }
 
 sub new_from_xml {
-    my ( $pkg, $xml ) = @_;
+    my ($pkg, $xml) = @_;
 
     my $data =
         XMLin($xml,
