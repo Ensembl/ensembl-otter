@@ -42,7 +42,7 @@ use Carp;
 use List::Util qw( min max );
 
 sub new {
-    my ( $pkg, @args ) = @_;
+    my ($pkg, @args) = @_;
     return bless { @args }, $pkg;
 }
 
@@ -84,7 +84,7 @@ sub range_remote_to_local {
 }
 
 sub do_features {
-    my ( $self, $source, $start_local, $end_local, $target ) = @_;
+    my ($self, $source, $start_local, $end_local, $target) = @_;
 
     for my $map (@{$self->{-map}}) {
         my $chr = $map->{chr};

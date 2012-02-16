@@ -12,14 +12,14 @@ use strict;
 use warnings;
 
 sub new {
-    my ( $pkg, @args ) = @_;
+    my ($pkg, @args) = @_;
     my $new = { @args };
     die "missing equivalent chr" unless $new->{-chr};
     return bless $new, $pkg;
 }
 
 sub do_features {
-    my ( $self, $source, $start, $end, $target ) = @_;
+    my ($self, $source, $start, $end, $target) = @_;
     $target->($_, $_->start, $_->end)
         for @{$source->features($self->{-chr}, $start, $end)};
     return;
