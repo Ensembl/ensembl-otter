@@ -18,7 +18,7 @@ use Bio::Otter::Lace::PipelineDB;
         'h|help!'       => $usage,
         'dataset=s'     => \$dataset_name,
         ) or $usage->();
-    
+
     # Client communicates with otter HTTP server
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
     
@@ -113,6 +113,21 @@ sub get_chromosome_attribs {
 __END__
 
 =head1 NAME - sync_set_attributes_and_coord_systems
+
+=head1 SYNOPSIS
+
+  sync_set_attributes_and_coord_systems [-dataset NAME]
+
+=head1 DESCRIPTION
+
+Synchronises chromosome coord_systems and attributes between otter and
+pipeline databases. Given a dataset argument it syncronises just that
+dataset. With no dataset argument it iterates through all the datasets.
+
+It will report chromosomes present in the otter database, but absent from
+the pipeline. Some datasets, such as human, have a lot of these. They are
+old chromosomes which were not loaded into new datasets, but are kept
+since they host old versions of genes.
 
 =head1 AUTHOR
 
