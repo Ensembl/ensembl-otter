@@ -132,7 +132,7 @@ my $strands = {
 my $attributes_format = $gff_version == 3 ? '%s=%s' : '%s %s';
 
 sub _print_feature {
-    my ( $feature, $start, $end ) = @_;
+    my ($feature, $start, $end) = @_;
 
     my $name = $feature->name;
     gff_escape_target for $name;
