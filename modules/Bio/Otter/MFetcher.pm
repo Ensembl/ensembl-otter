@@ -21,7 +21,7 @@ sub new { # just to make it possible to instantiate an object
 }
 
 sub dataset {
-    my( $self, $dataset ) = @_;
+    my ($self, $dataset) = @_;
 
     if($dataset) {
         $self->{'_dataset'} = $dataset;
