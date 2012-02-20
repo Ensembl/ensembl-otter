@@ -118,7 +118,7 @@ GFF
 }
 
 sub _print_feature {
-    my ( $feature, $start, $end ) = @_;
+    my ($feature, $start, $end) = @_;
 
     my @fields =
         (
