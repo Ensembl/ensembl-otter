@@ -177,7 +177,7 @@ sub update_translation {
 }
 
 sub check_kozak{
-    my ($self ) = @_ ;
+    my ($self) = @_;
 
     my $parent = $self->parent;
     my $pep_window = $self->window;
@@ -320,7 +320,7 @@ sub check_kozak{
 }
 
 sub trim_cds_coord_to_current_methionine {
-    my( $self ) = @_;
+    my ($self) = @_;
 
     my $index = $self->window->index('current');
     my $new = $self->{'_peptext_index_to_genomic_position'}{$index} or return;
