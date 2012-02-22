@@ -24,6 +24,8 @@ use Bio::Otter::Utils::Config::Ini qw( config_ini_format );
 use Hum::Ace::LocalServer;
 use Hum::Ace::MethodCollection;
 use Hum::ZMapStyleCollection;
+use Bio::Vega::Utils::MacProxyConfig qw{ mac_os_x_set_proxy_vars };
+
 use Hum::Conf qw{ PFETCH_SERVER_LIST };
 
 my $ZMAP_DEBUG = $ENV{OTTERLACE_ZMAP_DEBUG};
@@ -336,6 +338,12 @@ sub slice_name {
 
 sub zmap_launch {
     my ($self, $win_id) = @_;
+
+    if ($^O eq 'darwin') {
+        # Sadly, if someone moves network after launching zmap, it
+        # won't see new proxy variables.
+        mac_os_x_set_proxy_vars(\%ENV);
+    }
 
     my @e = (
         'zmap',

@@ -1,0 +1,152 @@
+
+### Bio::Vega::Utils::MacProxyConfig
+
+package Bio::Vega::Utils::MacProxyConfig;
+
+use strict;
+use warnings;
+use Mac::PropertyList qw{ parse_plist_file };
+use base 'Exporter';
+
+our @EXPORT_OK = qw{ mac_os_x_set_proxy_vars };
+
+sub mac_os_x_set_proxy_vars {
+    my ($env_hash) = @_;
+
+    my $plist = perlify_plist(
+        parse_plist_file('/Library/Preferences/SystemConfiguration/preferences.plist')
+    );
+
+    # CurrentSet points to the current network configuration, ie: Location
+    my $current = $plist->{'CurrentSet'}
+        or die "No key CurrentSet in plist";
+    my $set = fetch_node_from_path($plist, $current);
+
+    # The ServiceOrder lists the network adapters in the order in which they
+    # will be used.  We'll take the proxy info from the first active one.
+    # This might break if someone is using an IPv6 network!
+    my $ipv4_service_keys = $set->{'Network'}{'Global'}{'IPv4'}{'ServiceOrder'}
+        or die "No ServiceOrder list in 'Network.Global.IPv4'";
+    my @services;
+    foreach my $key (@$ipv4_service_keys) {
+        my $link = $set->{'Network'}{'Service'}{$key}{'__LINK__'}
+            or die "No '__LINK__' node in 'Network.Service.$key'";
+        my $serv = fetch_node_from_path($plist, $link);
+        push(@services, $serv);
+    }
+
+    # Protocol names we proxy, and the name of their environment variables.
+    # (Probably don't actually need HTTPS, but included anyway.)
+    my %proxy_env = qw{
+        HTTP    http_proxy
+        HTTPS   https_proxy
+        FTP     ftp_proxy
+    };
+
+    foreach my $serv (@services) {
+        my $name = $serv->{'UserDefinedName'};
+
+        # Skip inactive network services
+        my $active = $serv->{'__INACTIVE__'} ? 0 : 1;
+        next unless $active;
+
+        my $prox = $serv->{'Proxies'} || {};
+        foreach my $protocol (keys %proxy_env) {
+            my $var_name = $proxy_env{$protocol};
+            if ($prox->{"${protocol}Enable"}) {
+                # Fetch the values needed if there is an active proxy
+                my $host = $prox->{"${protocol}Proxy"}
+                    or die "No proxy host for '$protocol' protocol in '$name'";
+                my $port = $prox->{"${protocol}Port"}
+                    or die "No proxy port for '$protocol' protocol in '$name'";
+                $env_hash->{$var_name} = "http://$host:$port";
+            }
+            else {
+                # There may be proxies set from the previous network
+                # config.  We must remove them if there are.
+                delete($env_hash->{$var_name});
+            }
+        }
+
+        if (my $exc = $prox->{'ExceptionsList'}) {
+            $env_hash->{'no_proxy'} = join(',', @$exc);
+        }
+        else {
+            delete($env_hash->{'no_proxy'});
+        }
+
+        # Only take proxy config from first active service (which ought to
+        # be the one which is acutally used).
+        last;
+    }
+    return;
+}
+
+# Some keys in the plist point to other parts of the tree using a UNIX
+# filesystem like path. This subroutine fetches the node for a given path
+sub fetch_node_from_path {
+    my ($plist, $path) = @_;
+    
+    $path =~ s{^/}{}
+        or die "Path '$path' does not begin with '/'";
+    foreach my $ele (split m{/}, $path) {
+        $plist = $plist->{$ele}
+            or die "No node '$ele' when walking path '$path'";
+    }
+    return $plist;
+}
+
+# Takes the Mac::PropertyList data structure and coverts its objects into a
+# (more easily usable) plain perl datastructure.
+sub perlify_plist {
+    my ($item) = @_;
+    
+    if ($item->type eq 'dict') {
+        my $hash = {$item->value};
+        while (my ($key, $val) = each %$hash) {
+            $hash->{$key} = perlify_plist($val);
+        }
+        return $hash;
+    }
+    elsif ($item->type eq 'array') {
+        my $array = [];
+        foreach my $val ($item->value) {
+            push(@$array, perlify_plist($val));
+        }
+        return $array;
+    }
+    else {
+        return $item->value;
+    }
+}
+
+
+1;
+
+__END__
+
+=head1 NAME - Bio::Vega::Utils::MacProxyConfig
+
+=head1 SYNOPSIS
+
+    use Bio::Vega::Utils::MacProxyConfig qw{ mac_os_x_set_proxy_vars };
+
+    if ($^O eq 'darwin') {
+        mac_os_x_set_proxy_vars(\%ENV);
+    }
+
+=head1 DESCRIPTION
+
+Used to set the HTTP, HTTPS and FTP proxy environment vairables on Mac OS
+X. These variables are not propagated by the operating system, but the
+data needed to construct them is avaialble in the property list file:
+
+  /Library/Preferences/SystemConfiguration/preferences.plist
+
+This module is vulnerable to changes in the organisation of data in this
+property list.
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
