@@ -100,8 +100,7 @@ $OTTER_HOME/ensembl-otter/modules:\
 $OTTER_HOME/ensembl-analysis/modules:\
 $OTTER_HOME/ensembl/modules:\
 $OTTER_HOME/ensembl-variation/modules:\
-$OTTER_HOME/lib:\
-$OTTER_HOME/lib/site_perl:\
+$OTTER_HOME/lib/perl5:\
 $anasoft_distro/lib:\
 $anasoft_distro/lib/site_perl:\
 $anasoft/lib:\
