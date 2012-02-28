@@ -96,7 +96,7 @@ sub main {
         # it exits
     }
 
-    plan tests => 19;
+    plan tests => 23;
 
     my @warn;
     local $SIG{__WARN__} = sub {
@@ -112,12 +112,12 @@ sub main {
     cmdline_tt({qw{ host otterpipe1 database pipe_human }},
                [ 'pipe_human by args', 'human', 'ensembl:pipe' ]);
 
-    # 6
+    # 8
     server_tt('human',
               [ 'loutre_human as server', 'human', 'ensembl:loutre' ],
               [ 'pipe_human as server', 'human', 'ensembl:pipe' ]);
 
-    # 6
+    # 8
     client_tt('human',
               [ 'loutre_human via Server', 'human', 'ensembl:loutre' ],
               [ 'pipe_human via Server', 'human', 'ensembl:pipe' ]);
@@ -141,8 +141,8 @@ sub server_tt {
     my ($dataset_name, $check_loutre, $check_pipe) = @_;
 
     my $dataset = SpeciesDat()->dataset($dataset_name);
-    check_dbh($dataset->otter_dba->dbc->db_handle, @$check_loutre);
-    check_dbh($dataset->pipeline_dba->dbc->db_handle, @$check_pipe);
+    check_dba($dataset->otter_dba, @$check_loutre);
+    check_dba($dataset->pipeline_dba, @$check_pipe);
 }
 
 
@@ -158,8 +158,26 @@ sub client_tt {
 
     my $o_dba = $dataset->get_cached_DBAdaptor;
     my $p_dba = Bio::Otter::Lace::PipelineDB::get_rw_DBAdaptor($o_dba);
-    check_dbh($o_dba->dbc->db_handle, @$check_loutre);
-    check_dbh($p_dba->dbc->db_handle, @$check_pipe);
+    check_dba($o_dba, @$check_loutre);
+    check_dba($p_dba, @$check_pipe);
+}
+
+
+sub check_dba {
+    my ($dba, $what, $species_want, $schema_want) = @_;
+
+    my $dbh = $dba->dbc->db_handle;
+    my $schema_got = guess_schema($dbh);
+
+    # check type
+    my $class_want =
+      { 'ensembl:loutre' => 'Bio::Vega::DBSQL::DBAdaptor',
+        'ensembl:pipe' => 'Bio::EnsEMBL::Pipeline::DBSQL::Finished::DBAdaptor',
+      }->{$schema_want} || 'some subclass of DBAdaptor';
+
+    is(ref($dba), $class_want, "$what: class");
+
+    return check_dbh($dbh, $what, $species_want, $schema_want);
 }
 
 
