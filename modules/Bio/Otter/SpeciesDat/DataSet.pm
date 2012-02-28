@@ -79,11 +79,12 @@ sub _otter_dba {
 
 sub pipeline_dba {
     my ($self) = @_;
-    return $self->satellite_dba('pipeline_db_head');
+    return $self->satellite_dba('pipeline_db_head', 'Bio::EnsEMBL::Pipeline::DBSQL::Finished::DBAdaptor');
 }
 
 sub satellite_dba {
-    my ($self, $metakey) = @_;
+    my ($self, $metakey, $adaptor_class) = @_;
+    $adaptor_class ||= "Bio::EnsEMBL::DBSQL::DBAdaptor";
 
     # check for a cached dba
     my $dba_cached = $self->{_sdba}{$metakey};
@@ -94,7 +95,7 @@ sub satellite_dba {
     die "metakey '$metakey' is not defined" unless $options;
 
     # create the adaptor
-    my $dba = $self->satellite_dba_make($metakey, "Bio::EnsEMBL::DBSQL::DBAdaptor", $options);
+    my $dba = $self->satellite_dba_make($metakey, $adaptor_class, $options);
 
     # create the variation database (if there is one)
     my $vdba = $self->variation_satellite_dba_make("${metakey}_variation");
