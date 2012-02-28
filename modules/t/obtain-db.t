@@ -11,6 +11,8 @@ use File::Slurp 'read_dir';
 use Net::Netrc;
 use DBI;
 use Bio::Otter::SpeciesDat;
+use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Lace::PipelineDB;
 
 
 =head1 NAME
@@ -94,18 +96,25 @@ sub main {
         # it exits
     }
 
-    plan tests => 12;
+    plan tests => 18;
 
+    # 3
     cmdline_tt({qw{ host otterlive database loutre_human }},
                [ 'loutre_human by args', 'human', 'ensembl:loutre' ]);
 
+    # 3
     cmdline_tt({qw{ host otterpipe1 database pipe_human }},
                [ 'pipe_human by args', 'human', 'ensembl:pipe' ]);
 
+    # 6
     server_tt('human',
               [ 'loutre_human as server', 'human', 'ensembl:loutre' ],
               [ 'pipe_human as server', 'human', 'ensembl:pipe' ]);
 
+    # 6
+    client_tt('human',
+              [ 'loutre_human via Server', 'human', 'ensembl:loutre' ],
+              [ 'pipe_human via Server', 'human', 'ensembl:pipe' ]);
 }
 
 
@@ -123,6 +132,23 @@ sub server_tt {
     my $dataset = SpeciesDat()->dataset($dataset_name);
     check_dbh($dataset->otter_dba->dbc->db_handle, @$check_loutre);
     check_dbh($dataset->pipeline_dba->dbc->db_handle, @$check_pipe);
+}
+
+
+sub client_tt {
+    my ($dataset_name, $check_loutre, $check_pipe) = @_;
+
+    my $cl = make_Client();
+    my $dataset = $cl->get_DataSet_by_name($dataset_name);
+
+## XXX: asymmetry between BOL:SpeciesDat::DataSet and BOL:DataSet
+#    check_dbh($dataset->otter_dba->dbc->db_handle, @$check_loutre);
+#    check_dbh($dataset->pipeline_dba->dbc->db_handle, @$check_pipe);
+
+    my $o_dba = $dataset->get_cached_DBAdaptor;
+    my $p_dba = Bio::Otter::Lace::PipelineDB::get_rw_DBAdaptor($o_dba);
+    check_dbh($o_dba->dbc->db_handle, @$check_loutre);
+    check_dbh($p_dba->dbc->db_handle, @$check_pipe);
 }
 
 
@@ -167,6 +193,19 @@ sub netrc_dbh {
         $sp_dat ||= Bio::Otter::SpeciesDat->new(data_dir().'/species.dat');
         return $sp_dat;
     }
+}
+
+{
+    my $cl;
+    sub OtterClient {
+        return $cl ||= make_Client();
+    }
+}
+
+sub make_Client {
+    local @ARGV = ();
+    Bio::Otter::Lace::Defaults::do_getopt();
+    return Bio::Otter::Lace::Defaults::make_Client();
 }
 
 # This hack replaces several steps of Bio::Otter::ServerScriptSupport.
