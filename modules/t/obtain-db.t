@@ -5,9 +5,12 @@ use warnings;
 
 use Sys::Hostname 'hostname';
 use Test::More;
+use YAML 'Dump'; # for diag
+use File::Slurp 'read_dir';
+
 use Net::Netrc;
 use DBI;
-use YAML 'Dump'; # for diag
+use Bio::Otter::SpeciesDat;
 
 
 =head1 NAME
@@ -91,13 +94,17 @@ sub main {
         # it exits
     }
 
-    plan tests => 6;
+    plan tests => 12;
 
     cmdline_tt({qw{ host otterlive database loutre_human }},
                [ 'loutre_human by args', 'human', 'ensembl:loutre' ]);
 
     cmdline_tt({qw{ host otterpipe1 database pipe_human }},
                [ 'pipe_human by args', 'human', 'ensembl:pipe' ]);
+
+    server_tt('human',
+              [ 'loutre_human as server', 'human', 'ensembl:loutre' ],
+              [ 'pipe_human as server', 'human', 'ensembl:pipe' ]);
 
 }
 
@@ -107,6 +114,15 @@ sub cmdline_tt {
 
     my $dbh = eval { netrc_dbh(%$args) } || "perl_err=$@";
     check_dbh($dbh, @$check);
+}
+
+
+sub server_tt {
+    my ($dataset_name, $check_loutre, $check_pipe) = @_;
+
+    my $dataset = SpeciesDat()->dataset($dataset_name);
+    check_dbh($dataset->otter_dba->dbc->db_handle, @$check_loutre);
+    check_dbh($dataset->pipeline_dba->dbc->db_handle, @$check_pipe);
 }
 
 
@@ -142,6 +158,31 @@ sub netrc_dbh {
 
     my $dsn = "DBI:mysql:". join ';', map {"$_=$args{$_}"} qw( database host port );
     return DBI->connect($dsn, @args{qw{ user pass }}, { 'RaiseError' => 1 });
+}
+
+
+{
+    my $sp_dat;
+    sub SpeciesDat {
+        $sp_dat ||= Bio::Otter::SpeciesDat->new(data_dir().'/species.dat');
+        return $sp_dat;
+    }
+}
+
+# This hack replaces several steps of Bio::Otter::ServerScriptSupport.
+#
+# We don't expect to be running as a fully configured CGI script, but
+# can assume we are running "inside".  Replace with something better
+# as necessary.
+sub data_dir {
+    my $otter_data = '/nfs/WWWdev/SANGER_docs/data/otter';
+    my @vsn = sort { $a <=> $b } grep /^\d+$/, read_dir($otter_data);
+
+    # aim to take the last but one version - quite likely to be
+    # production
+    my $use_vsn = $vsn[-2] || $vsn[-1];
+
+    return "$otter_data/$use_vsn";
 }
 
 
