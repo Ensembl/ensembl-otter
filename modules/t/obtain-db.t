@@ -96,7 +96,7 @@ sub main {
         # it exits
     }
 
-    plan tests => 23;
+    plan tests => 27;
 
     my @warn;
     local $SIG{__WARN__} = sub {
@@ -117,7 +117,7 @@ sub main {
               [ 'loutre_human as server', 'human', 'ensembl:loutre' ],
               [ 'pipe_human as server', 'human', 'ensembl:pipe' ]);
 
-    # 8
+    # 12
     client_tt('human',
               [ 'loutre_human via Server', 'human', 'ensembl:loutre' ],
               [ 'pipe_human via Server', 'human', 'ensembl:pipe' ]);
@@ -157,9 +157,13 @@ sub client_tt {
 #    check_dbh($dataset->pipeline_dba->dbc->db_handle, @$check_pipe);
 
     my $o_dba = $dataset->get_cached_DBAdaptor;
-    my $p_dba = Bio::Otter::Lace::PipelineDB::get_rw_DBAdaptor($o_dba);
+    my $p_dba = Bio::Otter::Lace::PipelineDB::get_pipeline_rw_DBAdaptor($o_dba);
+    my $p_dba_ro = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($o_dba);
     check_dba($o_dba, @$check_loutre);
-    check_dba($p_dba, @$check_pipe);
+
+    my $pipe_what = shift @$check_pipe;
+    check_dba($p_dba, $pipe_what, @$check_pipe);
+    check_dba($p_dba_ro, "$pipe_what (ro)", @$check_pipe);
 }
 
 
