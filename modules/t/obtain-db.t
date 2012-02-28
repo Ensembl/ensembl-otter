@@ -96,7 +96,13 @@ sub main {
         # it exits
     }
 
-    plan tests => 18;
+    plan tests => 19;
+
+    my @warn;
+    local $SIG{__WARN__} = sub {
+        push @warn, "@_";
+#        warn "@_";
+    };
 
     # 3
     cmdline_tt({qw{ host otterlive database loutre_human }},
@@ -115,6 +121,11 @@ sub main {
     client_tt('human',
               [ 'loutre_human via Server', 'human', 'ensembl:loutre' ],
               [ 'pipe_human via Server', 'human', 'ensembl:pipe' ]);
+
+  TODO: {
+        local $TODO = "Noise to a logger";
+        is(scalar @warn, 0, "warnings") || diag(Dump({ warnings => \@warn }));
+    }
 }
 
 
