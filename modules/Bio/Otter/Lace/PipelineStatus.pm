@@ -53,7 +53,7 @@ sub all_analyses {
 # to display status information.
 sub display_list {
     my ($self) = @_;
-    
+
     my @display_list = ();
     foreach my $ana_name ($self->all_analyses()) {
         my $entry = $self->entry($ana_name);

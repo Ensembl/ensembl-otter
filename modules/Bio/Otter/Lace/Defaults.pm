@@ -153,7 +153,7 @@ sub do_getopt {
 
 sub save_server_otter_config {
     my ($config) = @_;
-    
+
     my $server_otter_config = "/tmp/server_otter_config.$$";
     open my $SRV_CFG, '>', $server_otter_config
         or die "Can't write to '$server_otter_config'; $!";
@@ -161,7 +161,7 @@ sub save_server_otter_config {
     close $SRV_CFG or die "Error writing to '$server_otter_config'; $!";
     my $ini = options_from_file($server_otter_config);
     unlink($server_otter_config);
-    
+
     # Server config file should be second in list, just after HARDWIRED
     splice(@$CONFIG_INIFILES, 1, 0, $ini);
 
@@ -196,7 +196,7 @@ sub parse_available_config_files {
 
 sub options_from_file {
     my ($file) = @_;
-    
+
     return unless -e $file;
 
     my $ini;

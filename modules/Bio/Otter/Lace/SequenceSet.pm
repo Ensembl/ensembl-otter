@@ -9,13 +9,13 @@ use Carp;
 
 sub new {
     my $pkg = shift;
-    
+
     return bless {}, $pkg;
 }
 
 sub name {
     my ($self, $name) = @_;
-    
+
     if ($name) {
         $self->{'_name'} = $name;
     }
@@ -24,7 +24,7 @@ sub name {
 
 sub dataset_name {
     my ($self, $dataset_name) = @_;
-    
+
     if ($dataset_name) {
         $self->{'_dataset_name'} = $dataset_name;
     }
@@ -33,7 +33,7 @@ sub dataset_name {
 
 sub description {
     my ($self, $description) = @_;
-    
+
     if ($description) {
         $self->{'_description'} = $description;
     }
@@ -42,7 +42,7 @@ sub description {
 
 sub priority {
     my ($self, $priority) = @_;
-    
+
     if ($priority) {
         $self->{'_priority'} = $priority;
     }
@@ -51,7 +51,7 @@ sub priority {
 
 sub is_hidden {
     my ($self, $is_hidden) = @_;
-    
+
     if (defined $is_hidden) {
         $self->{'_is_hidden'} = $is_hidden ? 1 : 0;
     }
@@ -60,7 +60,7 @@ sub is_hidden {
 
 sub vega_set_id {
     my ($self, $vega_set_id) = @_;
-    
+
     if ($vega_set_id) {
         die "Expected INT for vega_set_id, but got: '$vega_set_id'"
             unless $vega_set_id =~ /^\d+$/;
@@ -71,7 +71,7 @@ sub vega_set_id {
 
 sub write_access {
     my ($self, $write_access) = @_;
-    
+
     if (defined $write_access) {
         $self->{'_write_access'} = $write_access ? 1 : 0;
     }
@@ -82,7 +82,7 @@ sub write_access {
 
 sub CloneSequence_list {
     my ($self, $CloneSequence_list) = @_;
-    
+
     if ($CloneSequence_list) {
         $self->{'_CloneSequence_list'} = $CloneSequence_list;
     }
@@ -91,7 +91,7 @@ sub CloneSequence_list {
 
 sub drop_CloneSequence_list {
     my ($self) = @_;
-    
+
     $self->{'_CloneSequence_list'} = undef;
 
     return;
@@ -99,7 +99,7 @@ sub drop_CloneSequence_list {
 
 sub selected_CloneSequences {
     my ($self, $selected_CloneSequences) = @_;
-    
+
     if ($selected_CloneSequences) {
         confess "Not a list ref: '$selected_CloneSequences'"
             unless ref $selected_CloneSequences eq 'ARRAY';
@@ -110,7 +110,7 @@ sub selected_CloneSequences {
 
 sub unselect_all_CloneSequences {
     my ($self) = @_;
-    
+
     $self->{'_selected_CloneSequences'} = undef;
 
     return;
@@ -118,7 +118,7 @@ sub unselect_all_CloneSequences {
 
 sub select_CloneSequences_by_start_end_accessions {
     my ($self, $start_acc, $end_acc) = @_;
-    
+
     my $ctg = [];
     my $in_contig = 0;
     my $cs_list = $self->CloneSequence_list;
@@ -144,7 +144,7 @@ sub select_CloneSequences_by_start_end_accessions {
     elsif ($in_contig) {
         die "Failed to find end '$end_acc'\n";
     }
-    
+
     $self->selected_CloneSequences($ctg);
 
     return;
@@ -152,7 +152,7 @@ sub select_CloneSequences_by_start_end_accessions {
 
 sub selected_CloneSequences_as_contig_list {
     my ($self) = @_;
-    
+
     my $cs_list = $self->selected_CloneSequences
         or return;
     # Found that this funcionallity isn't desirable. Is better
@@ -163,7 +163,7 @@ sub selected_CloneSequences_as_contig_list {
 
 sub selected_CloneSequences_parameters {
     my ($self) = @_;
-    
+
     my $ssname  = $self->name;
     my $dsname  = $self->dataset_name;
     my $cs_list = $self->selected_CloneSequences;
@@ -187,9 +187,9 @@ sub region_coordinates {
 
 sub CloneSequence_contigs_split_on_gaps {
     my ($self) = @_;
-    
+
     my $cs_list = $self->CloneSequence_list;
-    
+
     my $ctg = [];
     my $ctg_list = [$ctg];
     foreach my $this (sort {
@@ -235,7 +235,7 @@ sub agp_data {
                   . "\n");
             $row++;
         }
-        
+
         my @fields = (
             $chr_name,         $chr_start,
             $chr_end,          $row,
@@ -246,7 +246,7 @@ sub agp_data {
         if ($superctg_name) {
             push(@fields, "# $superctg_name");
         }
-        
+
         push(
             @$data,
             join("\t", @fields)
@@ -299,7 +299,7 @@ sub get_subsets_first_last_index { # They are 0-based indices
 
     ## NB: make sure the CloneSequences have been loaded,
     ##     as it doesn't happen autimagically yet!
-    
+
     my ($self, $subset_tag) = @_;
 
     my ($index_first, $index_last);

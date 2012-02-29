@@ -22,14 +22,14 @@ sub DESTROY {
 
 sub new {
     my ($pkg) = @_;
-    
+
     my $str;
     return bless \$str, $pkg;
 }
 
 sub Client {
     my ($self, $client) = @_;
-    
+
     if ($client) {
         $client{$self} = $client;
     }
@@ -38,7 +38,7 @@ sub Client {
 
 sub DB {
     my ($self, $DB) = @_;
-    
+
     if ($DB) {
         $DB{$self} = $DB;
     }
@@ -47,13 +47,13 @@ sub DB {
 
 sub populate {
     my ($self, $name_list) = @_;
-    
+
     # Will fetch the latest version of any ACCESSION supplied without a SV.
-    
+
     my $dbh = $DB{$self}->dbh;
     my $check_full  = $dbh->prepare(q{ SELECT count(*) FROM accession_info WHERE accession_sv = ? });
     my $check_alias = $dbh->prepare(q{ SELECT count(*) FROM full_accession WHERE name = ? });
-    
+
     my (@to_fetch);
     foreach my $name (@$name_list) {
         $check_full->execute($name);
@@ -90,7 +90,7 @@ sub populate {
     my $save_alias = $dbh->prepare(q{
         INSERT INTO full_accession(name, accession_sv) VALUES (?,?)
     });
-    
+
     $dbh->begin_work;
     eval {
         foreach my $line (split /\n/, $response) {
@@ -125,7 +125,7 @@ sub populate {
 
 sub type_and_name_from_accession {
     my ($self, $acc) = @_;
-    
+
     my $dbh = $DB{$self}->dbh;
     my $sth = $dbh->prepare(q{
         SELECT evi_type
@@ -214,7 +214,7 @@ sub evidence_type_and_name_from_accession_list {
         my $name_list = $type_name->{$type} ||= [];
         push(@$name_list, $full_name);
     }
-    
+
     return $type_name;
 }
 
