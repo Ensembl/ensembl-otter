@@ -37,21 +37,21 @@ sub DESTROY {
 
 sub make_ace {
     my ($self) = @_;
-    
+
     # New top level object to generate whole chromosome coordinates
     my $ace_str = $self->make_ace_chr_assembly;
 
     # Assembly object from chromosome slice
     $ace_str .= $self->make_ace_assembly;
-    
+
     # Objects for each genomic clone
     $ace_str .= $self->make_ace_contigs;
-    
+
     # Genes and transcripts
     $ace_str .= $self->make_ace_genes_transcripts;
-    
+
     # Authors - we only store the author name
-    
+
     # Genomic features
     $ace_str .= $self->make_ace_genomic_features;
 
@@ -60,23 +60,23 @@ sub make_ace {
 
 sub make_ace_genes_transcripts {
     my ($self) = @_;
-    
+
     my $slice_ace   = $self->new_slice_ace_object;
     my $slice_name  = $self->make_assembly_name;
     my $tsct_str = '';
     my $gene_str = '';
-    
+
     foreach my $gene (@{$self->get_Genes}) {
         my $gene_name = get_first_attrib_value($gene, 'name');
         my $gene_ace = Hum::Ace::AceText->new_from_class_and_name_with_delete('Locus', $gene_name);
         fill_locus_AceText($gene, $gene_ace);
-        
+
         my $prefix = $gene->source eq 'havana'
             ? ''
             : $gene->source . ':';
-        
+
         my $trunc_suffix = $gene->truncated_flag ? '_trunc' : '';
-        
+
         foreach my $tsct (@{$gene->get_all_Transcripts}) {
             my $name = get_first_attrib_value($tsct, 'name') || $tsct->stable_id;
             confess "No name for transcript ", $tsct->dbID unless $name;
@@ -91,23 +91,23 @@ sub make_ace_genes_transcripts {
             $tsct_ace->add_tag('Source', $slice_name);
             $tsct_ace->add_tag('Locus', $gene_name);
             my $method = $prefix . biotype_status2method($tsct->biotype, $tsct->status) . $trunc_suffix;
-            
+
             $tsct_ace->add_tag('Method', $method);
-                        
+
             fill_transcript_AceText($tsct, $tsct_ace);
-            
+
             $tsct_str .= $tsct_ace->ace_string;
         }
-        
+
         $gene_str .= $gene_ace->ace_string;
     }
-    
+
     return join("\n", $slice_ace->ace_string, $tsct_str, $gene_str);
 }
 
 sub add_attributes_to_Ace {
     my ($obj, $attrib_code, $ace, $ace_key) = @_;
-    
+
     foreach my $attrib (@{$obj->get_all_Attributes($attrib_code)}) {
         $ace->add_tag($ace_key, $attrib->value);
     }
@@ -117,7 +117,7 @@ sub add_attributes_to_Ace {
 
 sub get_first_attrib_value {
     my ($obj, $attrib_code) = @_;
-    
+
     if (my ($attrib) = @{$obj->get_all_Attributes($attrib_code)}) {
         return $attrib->value;
     } else {
@@ -127,18 +127,18 @@ sub get_first_attrib_value {
 
 sub fill_transcript_AceText {
     my ($tsct, $ace) = @_;
-    
+
     if (my $stable = $tsct->stable_id) {
         $ace->add_tag('Transcript_id', $stable);
     }
-    
+
     if (my $author = $tsct->transcript_author) {
         $ace->add_tag('Transcript_author', $author->name);
     }
-    
+
     add_attributes_to_Ace($tsct, 'remark',        $ace, 'Remark');
     add_attributes_to_Ace($tsct, 'hidden_remark', $ace, 'Annotation_remark');
-    
+
     # Translation start and end
     if (my $translation = $tsct->translation) {
         $ace->add_tag('Translation_id', $translation->stable_id);
@@ -158,7 +158,7 @@ sub fill_transcript_AceText {
         $ace->add_tag('CDS');
         $ace->add_tag('Pseudogene');
     }
-    
+
     # Exon locations and stable IDs
     my $exons = $tsct->get_all_Exons;
     if ($tsct->strand == 1) {
@@ -182,7 +182,7 @@ sub fill_transcript_AceText {
                 );
         }
     }
-    
+
     # mRNA and CDS start not found tags
     if (get_first_attrib_value($tsct, 'cds_start_NF')) {
         my $tsl = $tsct->translation
@@ -198,7 +198,7 @@ sub fill_transcript_AceText {
     elsif (get_first_attrib_value($tsct, 'mRNA_start_NF')) {
         $ace->add_tag('Start_not_found');
     }
-    
+
     # mRNA and CDS end not found tags
     if (get_first_attrib_value($tsct, 'cds_end_NF') or
         get_first_attrib_value($tsct, 'mRNA_end_NF'))
@@ -216,7 +216,7 @@ sub fill_transcript_AceText {
 
 sub fill_locus_AceText {
     my ($gene, $ace) = @_;
-    
+
     if (my $stable = $gene->stable_id) {
         $ace->add_tag('Locus_id', $stable);
     }
@@ -233,7 +233,7 @@ sub fill_locus_AceText {
     add_attributes_to_Ace($gene, 'synonym', $ace, 'Alias');
     add_attributes_to_Ace($gene, 'remark',        $ace, 'Remark');
     add_attributes_to_Ace($gene, 'hidden_remark', $ace, 'Annotation_remark');
-    
+
     my $source = $gene->source;
     if ($source ne 'havana') {
         $ace->add_tag('Type_prefix', $source);
@@ -244,14 +244,14 @@ sub fill_locus_AceText {
 
 sub new_slice_ace_object {
     my ($self) = @_;
-    
+
     my $slice_name = $self->make_assembly_name;
     return Hum::Ace::AceText->new_from_class_and_name('Sequence', $slice_name);
 }
 
 sub make_assembly_name {
     my ($self) = @_;
-    
+
     my $chr_slice = $self->get_ChromosomeSlice;
     return sprintf "%s_%d-%d",
         $chr_slice->seq_region_name,
@@ -261,7 +261,7 @@ sub make_assembly_name {
 
 sub make_ace_chr_assembly {
     my ($self) = @_;
-    
+
     my $chr_slice = $self->get_ChromosomeSlice;
 
     my $ace = Hum::Ace::AceText->new_from_class_and_name('Sequence', $chr_slice->seq_region_name);
@@ -275,18 +275,18 @@ sub make_ace_chr_assembly {
 
 sub make_ace_assembly {
     my ($self) = @_;
-    
+
     my $dataset_name = $self->species or die "species tag is missing";
 
     my $ace = $self->new_slice_ace_object;
     $ace->add_tag('Assembly');
     $ace->add_tag('Species', $dataset_name);
-    
+
     $ace->add_tag('Assembly_name', $self->get_ChromosomeSlice->seq_region_name);
-    
+
     # Tiles are returned sorted in ascending order by their starts
     my @asm_tiles = $self->get_Tiles;
-    
+
     # For contigs which contribute more than once to the assembly
     # we need to record their spans for the Smap tags.
     my %ctg_spans;
@@ -301,7 +301,7 @@ sub make_ace_assembly {
             $ctg_spans{$name} = [$chr_start, $chr_end];
         }
     }
-    
+
     # Create the Smap tags used by acedb to assemble the genomic region
     # from the contigs.
     my $chr_offset = $asm_tiles[0][0] - 1;
@@ -329,13 +329,13 @@ sub make_ace_assembly {
                 );
         }
     }
-    
+
     return $ace->ace_string;
 }
 
 sub make_ace_contigs {
     my ($self) = @_;
-    
+
     my $str = '';
     foreach my $tile ($self->get_Tiles) {
         $str .= $self->make_ace_ctg($tile);
@@ -345,11 +345,11 @@ sub make_ace_contigs {
 
 sub make_ace_ctg {
     my ($self, $tile) = @_;
-    
+
     my ($chr_start, $chr_end, $ctg_slice, $attrib_list) = @$tile;
-    
+
     ### Authors don't get parsed from the XML
-    
+
     my $ace = Hum::Ace::AceText->new_from_class_and_name('Sequence', $ctg_slice->seq_region_name);
     foreach my $at (@$attrib_list) {
         my $code  = $at->code;
@@ -378,7 +378,7 @@ sub make_ace_ctg {
             $ace->add_tag('Keyword', $value);
         }
     }
-    
+
     return $ace->ace_string;
 }
 
@@ -412,7 +412,7 @@ sub mRNA_posn {
 
 sub make_ace_genomic_features {
     my ($self) = @_;
-    
+
     my $feat_list = $self->get_SimpleFeatures;
     unless (@$feat_list) {
         return '';
@@ -443,7 +443,7 @@ sub make_ace_genomic_features {
             $ace->add_tag('Feature', $type, $start, $end, $score);
         }
     }
-    
+
     return $ace->ace_string;
 }
 
