@@ -33,7 +33,7 @@ sub new{
 sub get_pid_list{
     my ($self) = @_;
     my ($list, $pid_hash);
-    
+
     $list ||= [];
 
     foreach my $xwid(keys(%$object_cache)){
@@ -118,7 +118,7 @@ sub remove_clients_to_bad_windows{
             delete $object_cache->{$id};
             delete $self->{'_self_windows'}->{$id};
         }
-            
+
     }
     return;
 }

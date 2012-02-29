@@ -184,7 +184,7 @@ Some xml which should be used in callback for error messages.
 
 sub handled_response {
     my ($self, $value) = @_;
-    
+
     my $hash = {
         response => {
                 handled => $value ? 1 : 0,
@@ -212,7 +212,7 @@ sub basic_error {
 
 sub protocol_add_request {
     my ($self, $hash) = @_;
-    
+
     $hash->{'request'} = [ xml_escape($self->_current_request_string) ];
 
     return;
@@ -256,17 +256,17 @@ sub widget{
         $widget = $tk->Label(
                              -text => "${qName}|${sName}|Widget",
                              )->pack(-side => 'left');
-        
+
         $self->{'_widget'} = $widget;
-        
+
         my $id = $self->server_window_id();
-        
+
         # we need to wait until the widget is mapped by the x server so that we 
         # can reliably initialise the xremote protocol so we must wait for the
         # <Map> event
-        
+
         my $mapped; # a flag used in waitVariable below to indicate that the widget is mapped
-        
+
         $widget->bind('<Map>' => sub {
             $widget->packForget;
             my $xr = $self->xremote($id);
@@ -318,7 +318,7 @@ sub post_respond_handler{
     }else{
         $self->{'_post_callback_data'} = $self->{'_post_callback'} = undef;
     }
-        
+
     return 1;
 }
 
@@ -391,7 +391,7 @@ sub _do_callback{
 
 sub _drop_current_request_string {
     my ($self) = @_;
-    
+
     $self->{'_current_request_string'} = undef;
 
     return;
@@ -399,7 +399,7 @@ sub _drop_current_request_string {
 
 sub _current_request_string {
     my ($self, $str) = @_;
-    
+
     if ($str) {
         $self->{'_current_request_string'} = $str;
     }
@@ -491,4 +491,4 @@ Ana Code B<email> anacode@sanger.ac.uk
 L<X11::XRemote>, L<Tk::event>, L<perl>.
 
 =cut
-    
+
