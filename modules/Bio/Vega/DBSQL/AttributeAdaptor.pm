@@ -55,7 +55,7 @@ WHERE  code = ?
 
         $attrib->name($name);
     }
-    
+
     return $self->SUPER::_store_type($attrib);
 }
 
@@ -88,9 +88,9 @@ sub store_on_ContigInfo  {
       $self->throw("Reference to list of Bio::EnsEMBL::Attribute objects " .
                    "argument expected.");
     }
-    
-   
-    
+
+
+
     my $atid = $self->_store_type( $attrib );
     $sth->execute( $contiginfo_id, $atid, $attrib->value() );
   }

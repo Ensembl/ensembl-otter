@@ -764,13 +764,13 @@ sub db_gene_update_is_current { # change is_current for an existing gene and its
         $db_gene_tran->is_current($is_current);
         $ta->update($db_gene_tran);
     }
-    
+
     my $ea = $self->db->get_ExonAdaptor();
     foreach my $db_gene_exon (@{ $db_gene->get_all_Exons() }) {
         $db_gene_exon->is_current($is_current);
         $ea->update($db_gene_exon);
     }
-    
+
     return 1;
 }
 

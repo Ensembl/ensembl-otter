@@ -34,9 +34,9 @@ sub fetch_by_name {
 
 sub store {
    my ($self, $group) = @_;
-   
+
    return 1 if $self->exists_in_db($group);
-   
+
    my $sth = $self->prepare(q{
         INSERT INTO author_group(group_name, group_email) VALUES (?,?)
         });
@@ -49,7 +49,7 @@ sub store {
 
 sub exists_in_db {
     my ($self, $group) = @_;
-    
+
     if (my $db_group = $self->fetch_by_name($group->name)) {
         $group->dbID($db_group->dbID);
         $group->email($db_group->email);

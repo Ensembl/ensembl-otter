@@ -38,7 +38,7 @@ sub fetch_into_hash {
 
         my $sth = $self->{_dbc}->prepare($sql_statement);
         $sth->execute();
-        
+
         my $bound_name;
         my %bound_hash;
         $sth->bind_columns( \$bound_name, map { \$bound_hash{$_} } values %$field_hp );
