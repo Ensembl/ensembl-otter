@@ -38,7 +38,7 @@ my %LangDesc = (
 
 sub struct_traverse_path {
     my ($struct, $path) = @_;
-    
+
     if(ref($path->[0]) eq 'ARRAY') { # recursive application of self to the parts
         my $join = join(';', map { my $foo = struct_traverse_path($struct, $_); defined($foo) ? $foo : 'UnDeF' } @$path );
         return ($join=~/UnDeF/) ? undef : $join;
@@ -122,7 +122,7 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS { # $feature_kind = 'SimpleFea
         'segment' => $segment_name,
         $analysis_name ? ('type' => $analysis_name) : (),
     });
-    
+
     # Bio::DAS::Lite object can do many requests.  We only do one, so we
     # get the value from the statuscodes hash, since the key may change
     # if Bio::DAS::Lite changes how it constructs its URLs.
@@ -139,9 +139,9 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS { # $feature_kind = 'SimpleFea
         }
 
         FEATURE: while(my $das_feature = shift @$das_features) {
-            
+
             my ($truncated_5_prime, $truncated_3_prime);
-            
+
                 # Filter out introns and other features that may be sent by the server but irrelevant for us:
             if($sieve) {
                 my $sieve_field = struct_traverse_path($das_feature, $sieve_field_path);
@@ -151,14 +151,14 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS { # $feature_kind = 'SimpleFea
                     next FEATURE;
                 }
             }
-            
+
             # Skip features that don't overlap segment (eg: exons in transcript which does overlap)
             # but flag that we have done so in the parent object (if any) 
-            
+
             if ($das_feature->{'end'} < $chr_start) {
                 $truncated_5_prime = 1;
             }
-            
+
             if ($das_feature->{'start'} > $chr_end) {
                 $truncated_3_prime = 1;
             }
@@ -186,22 +186,22 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS { # $feature_kind = 'SimpleFea
                     die "Could not guess a fitting group/label path, please specify it in the 'grouplabel=' parameter of the filter";
                 }
             }
-            
+
             if ($truncated_5_prime || $truncated_3_prime) {
                 if($parent_constructor) {
                     my $parent_feature = $feature_coll->{$pt_label} ||= $parent_constructor->new( -dbID => $pt_label, -slice => $slice );
-                    
+
                     if ($parent_feature->can('truncated_5_prime') && $truncated_5_prime) {
                         warn "truncating feature at 5' end";
                         $parent_feature->truncated_5_prime(1);
                     }
-                    
+
                     if ($parent_feature->can('truncated_3_prime') && $truncated_3_prime) {
                         warn "truncating feature at 3' end";
                         $parent_feature->truncated_3_prime(1);
                     }
                 }
-                
+
                 next FEATURE;
             }
 
@@ -227,12 +227,12 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS { # $feature_kind = 'SimpleFea
                 elsif ( $parent_feature->can('display_id') ) {
                     $parent_feature->display_id( $pt_label );
                 }
-                
+
                 eval {
                     warn "adding feature with start=".$feature->start()." and end=".$feature->end()."\n";
                     $parent_feature->$add_sub($feature);
                 };
-                
+
 
                 ## there may be a collision of exons - just ignore it for the moment
                 if($@) {
