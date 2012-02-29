@@ -78,7 +78,7 @@ sub find_containing_chromosomes {
 
         # EnsEMBL as of rel46 cannot perform ambigous clone|subregion->contig->chromosome mapping correctly.
         # So we prefer to do it using direct SQL:
-        
+
     my $sa = $slice->adaptor;
 
         # map the original slice onto contig_ids

@@ -27,7 +27,7 @@ sub new {
 
 sub hit_name {
     my ($self, $hit_name) = @_;
-    
+
     if ($hit_name) {
         $self->{'_hit_name'} = $hit_name;
     }
@@ -36,7 +36,7 @@ sub hit_name {
 
 sub hit_length {
     my ($self, $hit_length) = @_;
-    
+
     if ($hit_length) {
         $self->{'_hit_length'} = $hit_length;
     }
@@ -45,7 +45,7 @@ sub hit_length {
 
 sub description {
     my ($self, $description) = @_;
-    
+
     if ($description) {
         $self->{'_description'} = $description;
     }
@@ -54,7 +54,7 @@ sub description {
 
 sub taxon_id {
     my ($self, $taxon_id) = @_;
-    
+
     if ($taxon_id) {
         $self->{'_taxon_id'} = $taxon_id;
     }
@@ -63,7 +63,7 @@ sub taxon_id {
 
 sub db_name {
     my ($self, $db_name) = @_;
-    
+
     if ($db_name) {
         $self->{'_db_name'} = $db_name;
     }

@@ -71,7 +71,7 @@ sub parsefile {
 # been closed whilst we're building an object.
 sub parent_data {
     my ($self) = @_;
-    
+
     my $context = $tag_stack{$self}[0];
     # warn "Returning data under '$context', stored data: ", Dumper($object_data{$self});
     return $object_data{$self}{$context};
@@ -79,7 +79,7 @@ sub parent_data {
 
 sub _do_parse {
     my ($self, $file, $encoding, $method) = @_;
-    
+
     my @opt;
     if ($encoding) {
         if ($encoding eq 'latin1') {
@@ -88,7 +88,7 @@ sub _do_parse {
             confess "Unknown encoding '$encoding'";
         }
     }
-    
+
     my $parser = $self->new_Parser;
     $parser->$method($file, @opt);
 

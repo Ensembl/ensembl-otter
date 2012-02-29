@@ -42,7 +42,7 @@ sub author {
 
 sub check_slice_argument {
     my ($self, $slice) = @_;
-    
+
     unless (ref($slice) eq 'ARRAY') {
         $slice = [$slice];
     }
