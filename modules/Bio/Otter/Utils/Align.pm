@@ -192,7 +192,7 @@ sub print_align {
     my ($s0, $s1, @options) = @_;
     my $options = { @options };
     my $wrap = $options->{-wrap} || $wrap_default;
- 
+
     my ( $m ) = match_string($s0, $s1);
     while ( $s0 ) {
         my $ss0 = substr($s0, 0, $wrap, '');

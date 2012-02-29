@@ -46,41 +46,41 @@ sub _get_connection {
     my ($self, $category) = @_;
 
     my $dbh;
-    
+
     # get a connection to mm_ini to look up the correct tables/databases
     my $dsn_mm_ini = "DBI:mysql:".
         "database=".$self->name.
         ";host=".$self->host.
         ";port=".$self->port;
-        
+
     my $dbh_mm_ini = DBI->connect($dsn_mm_ini, $self->user, '', { 'RaiseError' => 1 });
 
     if ($category eq 'uniprot_archive') {
-        
+
         # find the correct host and db to connect to from the connections table
-        
+
         my $arch_sth = $dbh_mm_ini->prepare(qq{
             SELECT db_name, port, username, host, poss_nodes
             FROM connections
             WHERE is_active = 'yes'
             LIMIT 1
         });
-        
+
         $arch_sth->execute or die "Couldn't execute statement: " . $arch_sth->errstr;
-        
+
         my $db_details = $arch_sth->fetchrow_hashref or die "Failed to find active uniprot_archive";
-        
+
         my $dsn = "DBI:mysql:".
             "database=".$db_details->{'db_name'}.
             ";host=".$db_details->{'host'}.$db_details->{'poss_nodes'}.
             ";port=".$db_details->{'port'};
-            
+
         $dbh = DBI->connect($dsn, $db_details->{'username'}, '', { 'RaiseError' => 1 });
     }
     else {
-        
+
         # look for the current and available table for this category from the ini table
-      
+
         my $ini_sth = $dbh_mm_ini->prepare(qq{
             SELECT database_name 
             FROM ini
@@ -88,19 +88,19 @@ sub _get_connection {
             AND current = 'yes'
             AND available = 'yes'
         });
-        
+
         $ini_sth->execute($category) or die "Couldn't execute statement: " . $ini_sth->errstr;
-        
+
         my $db_details = $ini_sth->fetchrow_hashref or die "Failed to find available db for $category";
-        
+
         my $dsn = "DBI:mysql:".
             "database=".$db_details->{'database_name'}.
             ";host=".$self->host.
             ";port=".$self->port;
-        
+
         $dbh = DBI->connect($dsn, $self->user, '', { 'RaiseError' => 1 });
     }
-    
+
     return $dbh;
 }
 
@@ -239,7 +239,7 @@ JOIN taxonomy    t ON i.parent_entry_id = t.entry_id };
 
         return $results;
     }
-    
+
 
 }
 
