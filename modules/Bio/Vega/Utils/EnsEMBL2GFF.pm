@@ -369,19 +369,19 @@ use Bio::Vega::Utils::GFF;
         }
         return $gff_string;
     }
-    
+
     my $gene_count = 0;
     sub make_extra_attributes {
         my ($self, %args) = @_;
-        
+
         my $gene_numeric_id = $self->dbID || ++$gene_count;
-        
+
         my $extra_attrs = {};
-        
+
         if (my $stable = $self->stable_id) {
             $extra_attrs->{'Locus_Stable_ID'} = qq{"$stable"};
         }
-        
+
         if (my $url_fmt = $args{'url_string'}) {
             if ($url_fmt =~ /pfam\.sanger\.ac\.uk/) {
                 foreach my $xr (@{$self->get_all_DBEntries}) {
@@ -403,7 +403,7 @@ use Bio::Vega::Utils::GFF;
                 $extra_attrs->{'URL'} = qq{"$url"};
             }
         }
-        
+
         unless ($extra_attrs->{'Locus'}) {
             if (my $xr = $self->display_xref) {
                 $extra_attrs->{'synthetic_gene_name'} = $xr->display_id;
@@ -418,7 +418,7 @@ use Bio::Vega::Utils::GFF;
                 $extra_attrs->{'Locus'} = qq{"$disp"};
             }
         }
-        
+
         return $extra_attrs;
     }
 }
@@ -438,7 +438,7 @@ use Bio::Vega::Utils::GFF;
         if (my $stable = $self->stable_id) {
             $gff->{'attributes'}{'Stable_ID'} = qq{"$stable"};
         }
-        
+
         my $tsct_numeric_id = $self->dbID || ++$tsct_count;
         # Each transcript must have a (unique) name for GFF grouping purposes
         my $name;
@@ -477,7 +477,7 @@ use Bio::Vega::Utils::GFF;
 
         my $gff = $self->SUPER::to_gff(%args);
         my $gff_hash = $self->_gff_hash(%args);
-        
+
         # $name is already double-quoted
         my $name = $gff_hash->{'attributes'}{'Name'};
 
@@ -503,7 +503,7 @@ use Bio::Vega::Utils::GFF;
 
             my $start = $self->coding_region_start + $self->slice->start - 1;
             my $end   = $self->coding_region_end   + $self->slice->start - 1;
-            
+
             my $frame;
             if (defined(my $phase = $tsl->start_Exon->phase)) {
                 $frame = $ens_phase_to_gff_frame{$phase};
@@ -511,7 +511,7 @@ use Bio::Vega::Utils::GFF;
             else {
                 $frame = 0;
             }
-            
+
             my $attrib_str = qq{Class "Sequence" ; Name $name};
             if (my $stable = $tsl->stable_id) {
                 $attrib_str .= qq{ ; Stable_ID "$stable"};
