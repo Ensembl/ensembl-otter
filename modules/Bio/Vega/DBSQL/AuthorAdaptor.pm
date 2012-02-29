@@ -41,7 +41,7 @@ sub _generic_sql_fetch {
     $sth->execute(@args);
 
     if (my $ref = $sth->fetchrow_hashref) {
-        
+
         # Make a new author object
         my $author = Bio::Vega::Author->new;
         $author->dbID($ref->{author_id});
@@ -219,7 +219,7 @@ sub store_gene_author {
 
 sub remove_gene_author {
     my ($self, $gene_id, $author_id) = @_;
-    
+
     my $sth = $self->prepare(q{
         DELETE FROM gene_author where gene_id = ? AND author_id = ?
         });
@@ -242,7 +242,7 @@ sub store_transcript_author {
 
 sub remove_transcript_author {
     my ($self, $transcript_id, $author_id) = @_;
-    
+
     my $sth = $self->prepare(q{
         DELETE FROM transcript_author where transcript_id = ? AND author_id = ?
         });
