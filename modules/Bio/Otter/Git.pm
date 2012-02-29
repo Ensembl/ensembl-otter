@@ -10,7 +10,7 @@ use warnings;
 #  development hosts) so it will only find modules in default
 #  locations.  If you add any dependencies here then you *must* check
 #  that the installer still works.
- 
+
 use File::Basename;
 
 my $dir = dirname __FILE__;

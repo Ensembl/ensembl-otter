@@ -11,7 +11,7 @@ use IO::Handle;
 my $file;
 sub make_log {
     confess "Already logging to '$file'" if $file;
-    
+
     $file = shift;
 
     # Unbuffer STDOUT
@@ -24,7 +24,7 @@ sub make_log {
     }
     elsif (defined $pid) {
         open my $log, '>>', $file or confess "Can't append to logfile '$file': $!";
-        
+
         # Unbuffer logfile
         $log->autoflush(1);
 
