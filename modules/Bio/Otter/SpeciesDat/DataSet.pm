@@ -78,8 +78,12 @@ sub _otter_dba {
 }
 
 sub pipeline_dba {
-    my ($self) = @_;
-    return $self->satellite_dba('pipeline_db_head', 'Bio::EnsEMBL::Pipeline::DBSQL::Finished::DBAdaptor');
+    my ($self, $writable) = @_;
+    if ($writable) {
+        return $self->satellite_dba('pipeline_db_rw_head', 'Bio::EnsEMBL::Pipeline::DBSQL::Finished::DBAdaptor');
+    } else {
+        return $self->satellite_dba('pipeline_db_head', 'Bio::EnsEMBL::Pipeline::DBSQL::Finished::DBAdaptor');
+    }
 }
 
 sub satellite_dba {

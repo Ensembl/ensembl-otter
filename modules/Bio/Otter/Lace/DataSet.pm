@@ -496,6 +496,20 @@ sub make_Vega_DBAdaptor {
     return $self->_make_DBAdaptor_with_class('Bio::Vega::DBSQL::DBAdaptor');
 }
 
+sub get_pipeline_DBAdaptor {
+    my ($self, $writable) = @_;
+    my $o_dba = $self->get_cached_DBAdaptor;
+
+    # runtime, because most clients don't need it
+    require Bio::Otter::Lace::PipelineDB;
+
+    if ($writable) {
+        return Bio::Otter::Lace::PipelineDB::get_pipeline_rw_DBAdaptor($o_dba);
+    } else {
+        return Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($o_dba);
+    }
+}
+
 sub _make_DBAdaptor_with_class {
     my ( $self, $class ) = @_;
 
@@ -692,9 +706,9 @@ There are also objects to represent the extra
 tables found in the B<lace.sql> file in the otter
 distribution (such as sequence sets and notes).
 
-=head2 DataSet
+=head2 DataSet - client side
 
-The B<DataSet> object represents an entry in the
+The L<Bio::Otter::Lace::DataSet> object represents an entry in the
 B<species.dat> file, which is, usually, a species
 served by the otter server.
 
@@ -707,6 +721,11 @@ objects.
 
 Each DataSet contains one or more
 B<SequenceSet>s.
+
+=head2 DataSet - server side
+
+See also L<Bio::Otter::SpeciesDat::DataSet>, which is normally (as of
+v63) instantiated server-side.
 
 =head2 SequenceSet
 
