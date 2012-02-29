@@ -87,7 +87,7 @@ sub mac_os_x_set_proxy_vars {
 # filesystem like path. This subroutine fetches the node for a given path
 sub fetch_node_from_path {
     my ($plist, $path) = @_;
-    
+
     $path =~ s{^/}{}
         or die "Path '$path' does not begin with '/'";
     foreach my $ele (split m{/}, $path) {

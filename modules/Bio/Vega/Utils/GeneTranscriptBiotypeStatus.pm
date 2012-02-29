@@ -74,7 +74,7 @@ for (my $i = 0; $i < @method_biotype_status; $i += 3) {
 
 sub method2biotype_status {
     my ($method) = @_;
-    
+
     my ($biotype, $status);
     if (my $bs = $method_to_biotype_status{$method}) {
         return @$bs;
@@ -86,7 +86,7 @@ sub method2biotype_status {
 sub biotype_status2method {
     my $biotype = lc shift;
     my $status  = uc shift;
-    
+
     #warn "TESTING FOR: '$biotype.$status'";
     return $biotype_status_to_method{"$biotype.$status"}
         || $biotype_status_to_method{$biotype}

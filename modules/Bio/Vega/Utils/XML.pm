@@ -27,7 +27,7 @@ slice, and returned.
 
 sub freeze_thaw_gene {
     my ($gene) = @_;
-    
+
     my $slice = $gene->feature_Slice;
     $gene = $gene->transfer($slice);
     my $xml = Bio::Vega::Transform::XML->new->generate_OtterXML(
