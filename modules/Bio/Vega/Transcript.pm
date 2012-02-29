@@ -24,7 +24,7 @@ sub new {
 
 sub get_all_Exons_ref {
     my ($self) = @_;
-    
+
     $self->get_all_Exons;
     my $ref = $self->{'_trans_exon_array'};
     $self->throw("'_trans_exon_array' not set") unless $ref;
@@ -80,7 +80,7 @@ sub truncate_to_Slice {
 
   # Ref to list of exons for inplace editing
   my $ex_list = $self->get_all_Exons_ref;
-  
+
   for (my $i = 0; $i < @$ex_list;) {
       my $exon = $ex_list->[$i];
       my $exon_start = $exon->start;

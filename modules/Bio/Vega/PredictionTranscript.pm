@@ -16,7 +16,7 @@ sub new {
         'TRUNCATED_5_PRIME',
         'TRUNCATED_3_PRIME'
     ], @args);
-    
+
     $self->{truncated_5_prime} = $truncated_5_prime;
     $self->{truncated_3_prime} = $truncated_3_prime;
 

@@ -18,7 +18,7 @@ sub vega_hashkey_structure {
 
 sub vega_hashkey {
     my ($self) = @_;
-    
+
     return join('-',
         $self->seq_region_name,
         $self->seq_region_start,
@@ -43,10 +43,10 @@ sub last_db_version {
 
 sub swap_slice {
     my ($self, $new_slice) = @_;
-    
+
     my $old_slice = $self->slice;
     return if $old_slice == $new_slice;
-    
+
     my $offset = $old_slice->start - $new_slice->start;
     $self->start($self->start + $offset);
     $self->end(  $self->end   + $offset);

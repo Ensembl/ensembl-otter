@@ -250,7 +250,7 @@ sub exons_diff {
 # or not it is still used in a current transcript.
 sub set_exon_current_flags {
     my ($self, @gene_lists) = @_;
-    
+
     my %exon_db_id;
     foreach my $list (@gene_lists) {
         foreach my $gene (@$list) {
@@ -261,7 +261,7 @@ sub set_exon_current_flags {
             }
         }
     }
-    
+
     # Might need to limit number of exons in query if list is very large?
     my $exon_list = join(',', keys %exon_db_id);
     my $sql = qq{
@@ -279,7 +279,7 @@ sub set_exon_current_flags {
     warn $sql;
     my $find_exon_status = $self->db->dbc->prepare($sql);
     $find_exon_status->execute;
-    
+
     my $update_exon_current = $self->db->dbc->prepare(q{
         UPDATE exon SET is_current = ? WHERE exon_id = ?
     });
@@ -292,7 +292,7 @@ sub set_exon_current_flags {
             $update_exon_current->execute(0, $exon_id);
         }
     }
-    
+
     # We should get an answer for each exon.  If we don't there is something wrong.
     if (my @exon_id = keys %exon_db_id) {
         throw(sprintf "Did not find exons [%s] in results from query:\n%s",

@@ -37,7 +37,7 @@ sub source  {
 # Duplicated in Bio::Vega::Transcript
 sub all_Attributes_string {
     my ($self) = @_;
-    
+
     return join ('-',
         map {$_->code . '=' . $_->value}
         sort {$a->code cmp $b->code || $a->value cmp $b->value}
@@ -129,7 +129,7 @@ sub dissociate {
 
 sub attach_slice {
     my ($self, $slice) = @_;
-    
+
     $self->slice($slice);
     foreach my $tsct (@{$self->get_all_Transcripts}) {
         $tsct->slice($slice);
