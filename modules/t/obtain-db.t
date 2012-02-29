@@ -12,7 +12,6 @@ use Net::Netrc;
 use DBI;
 use Bio::Otter::SpeciesDat;
 use Bio::Otter::Lace::Defaults;
-use Bio::Otter::Lace::PipelineDB;
 
 
 =head1 NAME
@@ -86,6 +85,11 @@ Use the Otter Server's data files to reach databases.
 
 Call the Otter Server as a client and ask for datasets.
 
+
+=head1 SEE ALSO
+
+F<scripts/lace/example_script>
+
 =cut
 
 
@@ -157,8 +161,8 @@ sub client_tt {
 #    check_dbh($dataset->pipeline_dba->dbc->db_handle, @$check_pipe);
 
     my $o_dba = $dataset->get_cached_DBAdaptor;
-    my $p_dba = Bio::Otter::Lace::PipelineDB::get_pipeline_rw_DBAdaptor($o_dba);
-    my $p_dba_ro = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($o_dba);
+    my $p_dba = $dataset->get_pipeline_DBAdaptor('rw');
+    my $p_dba_ro = $dataset->get_pipeline_DBAdaptor;
     check_dba($o_dba, @$check_loutre);
 
     my $pipe_what = shift @$check_pipe;

@@ -72,7 +72,22 @@ DBAdaptor is returned.
 C<get_DBAdaptor> returns an instance of a
 C<Bio::EnsEMBL::DBSQL::DBAdaptor>, whereas
 C<get_pipeline_DBAdaptor> returns a
-C<Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor>.
+C<Bio::EnsEMBL::Pipeline::DBSQL::Finished::DBAdaptor>.
+
+=head2 Pipeline read-only vs. read-write
+
+Read-only handles may come from the slave database instance, to
+improve responsiveness during heavy writes.
+
+=head2 Usage pattern
+
+These subroutines are normally called in "client-side" mode, after
+obtaining a L<Bio::Otter::Lace::DataSet>.
+
+It is now (v63+) possible to do this with
+L<Bio::Otter::Lace::DataSet/get_pipeline_DBAdaptor> or
+L<Bio::Otter::SpeciesDat::DataSet/pipeline_dba>.  Defaults to
+read-only.
 
 =head1 AUTHOR
 

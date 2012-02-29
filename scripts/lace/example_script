@@ -44,6 +44,11 @@ __END__
 
 =head1 NAME - example_script
 
+=head1 SEE ALSO
+
+F<modules/t/obtain-db.t> which exercises various methods of obtaining
+a connection.
+
 =head1 AUTHOR
 
 Ana Code B<email> anacode@sanger.ac.uk
