@@ -40,7 +40,7 @@ use Hum::Ace::Locus;
                   , length)
             VALUES (?,?,?,?,?,?)
         });
-    
+
         open my $gff_fh, '<', $gff_file or confess "Can't read GFF file '$gff_file'; $!";
         while (<$gff_fh>) {
             next if /^\s*#/;
@@ -71,7 +71,7 @@ sub make_ace_transcripts_from_gff {
     open my $gff_fh, '<', $gff_file or confess "Can't read GFF file '$gff_file'; $!";
     make_ace_transcripts_from_gff_fh($gff_fh, \%tsct);
     close $gff_fh or confess "Can't close GFF file '$gff_file'; $!";
-    
+
     my (@ok_tsct);
     while (my ($name, $sub) = each %tsct) {
         if (eval { $sub->validate; 1; }) {
@@ -132,7 +132,7 @@ sub make_ace_transcripts_from_gff_fh {
             $sub->GeneMethod($gene_method);
             $tsct->{$name} = $sub;
         }
-        
+
         if ($feat_type eq 'Sequence') {
             $sub->strand($strand eq '-' ? -1 : 1);
             if (my $stable = $attrib->{'Stable_ID'}) {
@@ -158,7 +158,7 @@ sub make_ace_transcripts_from_gff_fh {
             next if $start > $seq_region_length;
             $start = 1 if $start < 0;
             $end = $seq_region_length if $end > $seq_region_length;
-            
+
             my $exon = $sub->new_Exon;
             $exon->start($start);
             $exon->end($end);
@@ -184,7 +184,7 @@ sub make_ace_transcripts_from_gff_fh {
 
 sub parse_gff_line {
     my ($line) = @_;
-    
+
     chomp($line);
     my ($seq_name, $source, $feat_type, $start, $end, $score, $strand, $frame, $group)
         = split(/\t/, $line, 9);

@@ -8,13 +8,13 @@ use warnings;
 
 sub new {
     my ($pkg) = @_;
-    
+
     return bless {}, $pkg;
 }
 
 sub accession {
     my ($self, $accession) = @_;
-    
+
     if ($accession) {
         $self->{'_accession'} = $accession;
     }
@@ -23,7 +23,7 @@ sub accession {
 
 sub sv {
     my ($self, $sv) = @_;
-    
+
     if (defined $sv) {
         $self->{'_sv'} = $sv;
     }
@@ -38,7 +38,7 @@ sub accession_dot_sv { # due to extreme popularity
 
 sub clone_name {
     my ($self, $clone_name) = @_;
-    
+
     if ($clone_name) {
         $self->{'_clone_name'} = $clone_name;
     }
@@ -47,7 +47,7 @@ sub clone_name {
 
 sub contig_name {
     my ($self, $contig_name) = @_;
-    
+
     if ($contig_name) {
         $self->{'_contig_name'} = $contig_name;
     }
@@ -56,7 +56,7 @@ sub contig_name {
 
 sub chromosome {
     my ($self, $chromosome) = @_;
-    
+
     if ($chromosome) {
         $self->{'_chromosome'} = $chromosome;
     }
@@ -65,7 +65,7 @@ sub chromosome {
 
 sub assembly_type {
     my ($self, $asm_type) = @_;
-    
+
     if ($asm_type) {
         $self->{'_asm_type'} = $asm_type;
     }
@@ -74,7 +74,7 @@ sub assembly_type {
 
 sub chr_start {
     my ($self, $chr_start) = @_;
-    
+
     if (defined $chr_start) {
         $self->{'_chr_start'} = $chr_start;
     }
@@ -83,7 +83,7 @@ sub chr_start {
 
 sub chr_end {
     my ($self, $chr_end) = @_;
-    
+
     if (defined $chr_end) {
         $self->{'_chr_end'} = $chr_end;
     }
@@ -92,7 +92,7 @@ sub chr_end {
 
 sub contig_start {
     my ($self, $contig_start) = @_;
-    
+
     if (defined $contig_start) {
         $self->{'_contig_start'} = $contig_start;
     }
@@ -101,7 +101,7 @@ sub contig_start {
 
 sub contig_end {
     my ($self, $contig_end) = @_;
-    
+
     if (defined $contig_end) {
         $self->{'_contig_end'} = $contig_end;
     }
@@ -110,7 +110,7 @@ sub contig_end {
 
 sub contig_strand {
     my ($self, $contig_strand) = @_;
-    
+
     if ($contig_strand) {
         $self->{'_contig_strand'} = $contig_strand;
     }
@@ -119,7 +119,7 @@ sub contig_strand {
 
 sub length { ## no critic(Subroutines::ProhibitBuiltinHomonyms)
     my ($self, $length) = @_;
-    
+
     if ($length) {
         $self->{'_length'} = $length;
     }
@@ -128,7 +128,7 @@ sub length { ## no critic(Subroutines::ProhibitBuiltinHomonyms)
 
 sub sequence {
     my ($self, $seq) = @_;
-    
+
     if ($seq) {
         $self->{'_seq'} = $seq;
     }
@@ -138,7 +138,7 @@ sub sequence {
 # --------- check if we really need the following ones: ------------
 sub contig_id {
     my ($self, $contig_id) = @_;
-    
+
     if ($contig_id) {
         $self->{'_contig_id'} = $contig_id;
     }
@@ -147,7 +147,7 @@ sub contig_id {
 
 sub super_contig_name {
     my ($self, $contig_name) = @_;
-    
+
     if ($contig_name) {
         $self->{'_super_contig_name'} = $contig_name;
     }
@@ -156,7 +156,7 @@ sub super_contig_name {
 
 sub pipeline_chromosome {
     my ($self, $chromosome) = @_;
-    
+
     if ($chromosome) {
         $self->{'_pipeline_chromosome'} = $chromosome;
     }
@@ -167,7 +167,7 @@ sub pipeline_chromosome {
 
 sub ContigInfo {
     my ($self, $ContigInfo) = @_;
-    
+
     if ($ContigInfo) {
         $self->{'_ContigInfo'} = $ContigInfo;
     }
@@ -193,7 +193,7 @@ sub drop_pipelineStatus {
 
 sub add_SequenceNote {
     my ($self, $note) = @_;
-    
+
     my $sn_list = $self->{'_SequenceNote_list'} ||= [];
     push(@$sn_list, $note);
 
@@ -208,15 +208,15 @@ sub truncate_SequenceNotes{
 
 sub get_all_SequenceNotes {
     my ($self) = @_;
-    
+
     return $self->{'_SequenceNote_list'};
 }
 
 sub current_SequenceNote {
     my ($self, $current_SequenceNote) = @_;
-    
+
     if ($current_SequenceNote) {
-        
+
         # Add this SequenceNote to the list if it
         # isn't one of the ones on the list
         my $sn_list = $self->get_all_SequenceNotes;
@@ -227,7 +227,7 @@ sub current_SequenceNote {
         unless ($found) {
             push(@$sn_list, $current_SequenceNote);
         }
-        
+
         $self->{'_current_SequenceNote'} = $current_SequenceNote;
     }
     return $self->{'_current_SequenceNote'};
@@ -235,7 +235,7 @@ sub current_SequenceNote {
 
 sub set_lock_status {
     my ($self, $lock_status) = @_;
-    
+
     $self->{'_lock_status'} = $lock_status;
 
     return;
@@ -249,7 +249,7 @@ sub get_lock_status {
 
 sub get_lock_as_CloneLock {
     my ($self) = @_;
-    
+
     return $self->{'_lock_status'};
 }
 

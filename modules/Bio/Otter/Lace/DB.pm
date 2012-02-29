@@ -15,7 +15,7 @@ my(
 
 sub DESTROY {
     my ($self) = @_;
-    
+
     delete($dbh{$self});
     delete($file{$self});
 
@@ -24,7 +24,7 @@ sub DESTROY {
 
 sub new {
     my ($pkg, $home) = @_;
-    
+
     unless ($home) {
         confess "Cannot create SQLite database without home parameter";
     }
@@ -33,13 +33,13 @@ sub new {
     my $file = "$home/otter.sqlite";
     $self->file($file);
     $self->init_db;
-    
+
     return $self;
 }
 
 sub dbh {
     my ($self, $arg) = @_;
-    
+
     if ($arg) {
         $dbh{$self} = $arg;
     }
@@ -48,7 +48,7 @@ sub dbh {
 
 sub file {
     my ($self, $arg) = @_;
-    
+
     if ($arg) {
         $file{$self} = $arg;
     }
@@ -57,7 +57,7 @@ sub file {
 
 sub get_tag_value {
     my ($self, $tag) = @_;
-    
+
     my $sth = $dbh{$self}->prepare(q{ SELECT value FROM tag_value WHERE tag = ? });
     $sth->execute($tag);
     my ($value) = $sth->fetchrow;
@@ -79,16 +79,16 @@ sub set_tag_value {
 
 sub init_db {
     my ($self) = @_;
-    
+
     my $file = $self->file or confess "Cannot create SQLite database: file not set";
     my $dbh = DBI->connect("dbi:SQLite:dbname=$file", undef, undef, {
         RaiseError => 1,
         AutoCommit => 1,
         });
     $dbh{$self} = $dbh;
-    
+
     $self->create_tables;
-    
+
     return 1;
 }
 
@@ -145,7 +145,7 @@ sub init_db {
                 $dbh->do("CREATE TABLE $tab ($table_defs{$tab})");
             }
         }
-        
+
         my %existing_index = map {$_->[0] => 1}
             @{ $dbh->selectall_arrayref(q{SELECT name FROM sqlite_master WHERE type = 'index'}) };
 
