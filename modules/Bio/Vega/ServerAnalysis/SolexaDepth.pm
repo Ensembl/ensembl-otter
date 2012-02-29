@@ -16,13 +16,13 @@ sub new {
 
 sub run {
     my ($self, $features) = @_;
-    
+
     my @depth_features;
-    
+
     my %depth;
-    
+
     my $slice;
-    
+
     for my $af (@$features) {
         $slice ||= $af->slice;
         my @fs = $af->ungapped_features;
@@ -34,22 +34,22 @@ sub run {
             #}
         }
     }
-    
+
     my ($start, $end, $tot_depth);
-    
+
     my $i = 0;
-    
+
     for my $b (sort { $a <=> $b } keys %depth) {
-        
+
         if (!$start) {
             $start = $b;
             $end = $b;
         }
         elsif ($b != $end+1) {
             # end this feature
-          
+
             my $score = ($tot_depth / ($end - $start));
-          
+
             my $sf = Bio::EnsEMBL::SimpleFeature->new(
                 -start         => $start,
                 -end           => $end+1,
@@ -58,11 +58,11 @@ sub run {
                 -score         => $score,
                 -display_label => sprintf("Average depth: %.2f", $score),
             );
-            
+
             push @depth_features, $sf;
-            
+
             #print "New feature: $start - $end\n";
-            
+
             $start = $b;
             $end = $b;
             $tot_depth = 0;
@@ -72,7 +72,7 @@ sub run {
             $tot_depth += $depth{$b};
         }
     }
-    
+
     return @depth_features;
 }
 
