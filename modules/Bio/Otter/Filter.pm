@@ -86,7 +86,7 @@ sub from_config {
 
 sub new {
     my ($obj_or_class, @args) = @_;
-    
+
     confess "No arguments to new" if @args;
 
     return bless {}, ref($obj_or_class) || $obj_or_class;
@@ -200,7 +200,7 @@ sub featuresets {
 
 sub zmap_column {
     my ($self, $zmap_column) = @_;
-    
+
     if ($zmap_column) {
         $self->{'_zmap_column'} = $zmap_column;
     }
@@ -209,7 +209,7 @@ sub zmap_column {
 
 sub zmap_style {
     my ($self, $zmap_style) = @_;
-    
+
     if ($zmap_style) {
         $self->{'_zmap_style'} = $zmap_style;
     }
@@ -218,7 +218,7 @@ sub zmap_style {
 
 sub ditypes {
     my ($self, $ditypes) = @_;
-    
+
     if ($ditypes) {
         $self->{'_ditypes'} = $ditypes;
     }
@@ -227,7 +227,7 @@ sub ditypes {
 
 sub process_gff_file {
     my ($self, $flag) = @_;
-    
+
     if (defined $flag) {
         $self->{'_process_gff_file'} = $flag ? 1 : 0;
     }
