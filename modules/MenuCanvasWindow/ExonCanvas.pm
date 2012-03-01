@@ -1038,7 +1038,7 @@ sub trim_cds_coord_to_first_stop {
 
     # Convert from peptide to CDS coordinates
     my $cds_coord = $sub->start_phase - 1 + ($stop_pos * 3);
-    printf STDERR "CDS coord = (%d x 3) + %d - 1 = $cds_coord\n",
+    warn sprintf "CDS coord = (%d x 3) + %d - 1 = $cds_coord\n",
         $stop_pos, $sub->start_phase, $cds_coord;
 
     # Get a list of exons in translation order
@@ -1109,7 +1109,7 @@ sub add_locus_editing_widgets {
         -selectbackground   => 'gold',
         -font               => $self->font_fixed,
         )->pack(-side => 'left');
-    #$be->bind('<Leave>', sub{ print STDERR "Variable now: ", ${$self->{'_locus_name_var'}}, "\n"; });
+    #$be->bind('<Leave>', sub{ warn "Variable now: ", ${$self->{'_locus_name_var'}}, "\n"; });
 
     $be->configure(
         -listcmd => sub{
@@ -2649,7 +2649,7 @@ sub get_SubSeq_if_changed {
     # an existing locus if we are renaming.
     $self->manage_locus_otter_ids($old, $new);
 
-    # printf STDERR "Comparing old:\n%s\nTo new:\n%s",
+    # warn sprintf "Comparing old:\n%s\nTo new:\n%s",
     #     $old->ace_string, $new->ace_string;
 
     if ($old->is_archival and $new->ace_string eq $old->ace_string) {
@@ -2657,7 +2657,7 @@ sub get_SubSeq_if_changed {
         return;
     }
 
-    # printf STDERR "OLD:\n>%s<\nNEW:>%s<\n", $old->ace_string, $new->ace_string;
+    # warn sprintf "OLD:\n>%s<\nNEW:>%s<\n", $old->ace_string, $new->ace_string;
 
     my $new_name = $new->name;
     if ($new_name ne $self->name) {

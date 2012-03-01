@@ -588,7 +588,7 @@ sub try2save_and_quit {
     if($self->XaceSeqChooser()) {
         $self->save_to_ace(0); # '0' means do it interactively
     } else {
-        print STDERR "No XaceSeqChooser, nowhere to write\n";
+        warn "No XaceSeqChooser, nowhere to write\n";
     }
 
     $self->top_window->destroy();

@@ -259,7 +259,7 @@ sub bind_scroll_commands {
     my $class = ref($canvas);
     foreach my $sequence ($canvas->Tk::bind($class)) {
         if ($sequence =~ /Key/) {
-            #print STDERR "seq=$sequence\n";
+            #warn "seq=$sequence\n";
             $canvas->Tk::bind($class, $sequence, '');
         }
     }
@@ -788,13 +788,13 @@ sub exception_message {
 
     # Put the message on the terminal, with delimiter
     $except = (defined $except ? qq{"""$except"""} : 'undef');
-    print STDERR qq{exception_message($except)\n};
+    warn qq{exception_message($except)\n};
 
     if (Tk::Exists($self->canvas)) {
         $self->message(@message, @except_show);
     } else {
         # we have been destroyed
-        print STDERR "Nowhere to stick the yellow message for this exception,\n".
+        warn "Nowhere to stick the yellow message for this exception,\n".
           __catdent('| ', @message);
     }
 
@@ -866,7 +866,7 @@ sub message {
 
     # Copy to the logs
     my $title = $self->top_window->title;
-    print STDERR qq{Yellow message on window="$title",\n}.__catdent('| ', @message);
+    warn qq{Yellow message on window="$title",\n}.__catdent('| ', @message);
 
     return $self->message_at_x_y($x, $y, $text_width, @message);
 }

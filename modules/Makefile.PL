@@ -26,7 +26,7 @@ foreach my $file (@files) {
 $tline = join('',@tline);
 $tline = "show_tests :\n\t\@echo \'type make test_<subtest> to run\'\n\t\@echo '$tset'\n$tline\n";
 
-print STDERR "Generated sub tests. go make show_tests to see available subtests\n";
+warn "Generated sub tests. go make show_tests to see available subtests\n";
 
 sub MY::postamble {
              $tline;

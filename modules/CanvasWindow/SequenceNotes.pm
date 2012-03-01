@@ -1123,16 +1123,11 @@ sub draw {
         }
 
     }
-    #print STDERR " done\n";
+
     my $col_count = scalar @$methods  + 1; # +1 fopr the padlock (non text column)
     my $row_count = scalar @$cs_list + $gaps;
-
-    #print STDERR "Laying out table...";
     $self->layout_columns_and_rows($col_count, $row_count);
-    #print STDERR " done\n";
-    #print STDERR "Drawing background rectangles...";
     $self->draw_row_backgrounds($row_count, $gap_pos);
-    #print STDERR " done\n";
 
     if($self->_currently_paging()) {
         $self->draw_paging_buttons();

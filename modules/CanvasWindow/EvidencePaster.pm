@@ -430,17 +430,17 @@ sub align_to_transcript {
         accession_type_cache => $self->ExonCanvas->XaceSeqChooser->AceDatabase->AccessionTypeCache,
         });
 
-    print STDERR "Found " . scalar( @{$otf->confirmed_seqs} ) . " sequences\n";
+    warn "Found " . scalar( @{$otf->confirmed_seqs} ) . " sequences\n";
 
     my $ts_file = $otf->target_fasta_file;
-    print STDERR "Wrote transcript sequence to ${ts_file}\n";
+    warn "Wrote transcript sequence to ${ts_file}\n";
 
     foreach my $aligner ( $otf->aligners_for_each_type ) {
 
-        print STDERR "Running exonerate for sequence(s) of type: ", $aligner->type, "\n";
+        warn "Running exonerate for sequence(s) of type: ", $aligner->type, "\n";
 
         my $seq_file = $aligner->fasta_file;
-        print STDERR "Wrote sequences to ${seq_file}\n";
+        warn "Wrote sequences to ${seq_file}\n";
         my $parsed_output = $aligner->run;
 
         $self->alignment_window($aligner->type, $parsed_output);

@@ -418,7 +418,7 @@ sub fetch_all_by_Slice {
                 my $gene_att = $gene->get_all_Attributes;
                 push @$gene_att, $remark_att;
                 $gene->truncated_flag(1);
-                print STDERR "Found a truncated gene\n";
+                warn "Found a truncated gene\n";
             }
         }
 
@@ -498,7 +498,7 @@ sub fetch_by_transcript_stable_id_constraint {
 
     if (keys %$seen_genes > 1) {
         my @gsids = keys %$seen_genes;
-        printf STDERR "$trans_stable_id (history) belongs to > 1 gene_stable_ids: @gsids\n";
+        warn "$trans_stable_id (history) belongs to > 1 gene_stable_ids: @gsids\n";
     }
 
     return $genes;
@@ -621,7 +621,7 @@ sub store {
           : 'DELETED';
 
         if ($gene_state eq 'UNCHANGED') {    # just leave as soon as possible
-            printf STDERR $log_pattern, $gene_state, $db_gene->stable_id, $db_gene->version;
+            warn sprintf $log_pattern, $gene_state, $db_gene->stable_id, $db_gene->version;
             return 0;
         }
 
@@ -731,7 +731,7 @@ sub store {
     # Actually save the gene to the database
     $self->store_only($gene);
 
-    printf STDERR $log_pattern, $gene_state, $gene->stable_id, $gene->version;
+    warn sprintf $log_pattern, $gene_state, $gene->stable_id, $gene->version;
     return 1;
 }
 

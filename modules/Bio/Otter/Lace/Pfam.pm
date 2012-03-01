@@ -196,7 +196,7 @@ sub retrieve_pfam_hmm {
     # submit the request
     my $res = $ua->request( $req );
 
-    print STDERR "$domain: HMM model retrieval failed: ". $res->status_line
+    warn "$domain: HMM model retrieval failed: ". $res->status_line
       unless $res->is_success;
 
     $data{$domain} = $res->content;
@@ -236,7 +236,7 @@ sub retrieve_pfam_seed {
     # submit the request
     my $res = $ua->request( $req );
 
-    print STDERR "$domain: seed alignment retrieval failed: ". $res->status_line
+    warn "$domain: seed alignment retrieval failed: ". $res->status_line
       unless $res->is_success;
 
     $data{$domain} = $res->content;
@@ -310,7 +310,7 @@ sub align_to_seed {
     print STDOUT "$domain: aligning\n";
 
     system( $cmd ) == 0
-      or print STDERR "$domain: couldn't run hmmalign '$cmd' [$!]\n";
+      or warn "$domain: couldn't run hmmalign '$cmd' [$!]\n";
 
     # delete tmp files
     unlink $seed_file ,  $hmm_file , $seq_file;

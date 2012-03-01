@@ -82,7 +82,7 @@ sub translations_diff {
             my $db_version   = $db_translation->version();
 
             if ($db_translation->stable_id ne $translation->stable_id) {
-                print STDERR "Translations being compared have different stable_ids: '"
+                warn "Translations being compared have different stable_ids: '"
                   . $db_translation->stable_id
                   . "' and '"
                   . $translation->stable_id . "'\n";

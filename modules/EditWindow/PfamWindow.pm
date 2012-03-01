@@ -348,7 +348,7 @@ sub open_url {
     $uri->query_form({});
     $url = $uri->as_string;
 
-    print STDERR "Pfam search result for " . $self->name . "\n$url\n";
+    warn "Pfam search result for " . $self->name . "\n$url\n";
     open_uri($url);
     return;
 }

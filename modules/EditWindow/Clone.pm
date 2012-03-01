@@ -297,7 +297,7 @@ sub get_new_Clone_if_changed {
         $new->add_remark($rem);
     }
     
-    # printf STDERR "\nOLD: <%s>\n\nNEW: <%s>\n\n",
+    # warn sprintf "\nOLD: <%s>\n\nNEW: <%s>\n\n",
     #    $old->ace_string, $new->ace_string;
     if ($old->ace_string ne $new->ace_string) {
         return $new;

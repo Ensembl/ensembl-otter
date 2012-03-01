@@ -2059,7 +2059,7 @@ sub launch_exonerate {
 
     for my $type ( $otf->seq_types ) {
 
-        print STDERR "Running exonerate for sequence(s) of type: $type\n";
+        warn "Running exonerate for sequence(s) of type: $type\n";
 
         my $score    = $type =~ /Protein/  ? $PROT_SCORE : $DNA_SCORE;
         my $ana_name = $type =~ /^Unknown/ ? $type       :
