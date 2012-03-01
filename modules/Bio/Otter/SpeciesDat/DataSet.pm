@@ -3,6 +3,8 @@ package Bio::Otter::SpeciesDat::DataSet;
 
 use strict;
 use warnings;
+use Carp;
+
 
 sub new {
     my ($pkg, $name, $params) = @_;
@@ -77,13 +79,28 @@ sub _otter_dba {
     return $odba;
 }
 
+# With no options, you get a read-only vanilla-ensembl DBAdaptor.
+# Pass opts 'pipe' and 'rw' to get a read-write B:E:Pipeline::Finished:DBA
 sub pipeline_dba {
-    my ($self, $writable) = @_;
-    if ($writable) {
-        return $self->satellite_dba('pipeline_db_rw_head', 'Bio::EnsEMBL::Pipeline::DBSQL::Finished::DBAdaptor');
-    } else {
-        return $self->satellite_dba('pipeline_db_head', 'Bio::EnsEMBL::Pipeline::DBSQL::Finished::DBAdaptor');
+    my ($self, @opt) = @_;
+
+    my %opt; @opt{@opt} = (1) x @opt;
+
+    my $class =
+      (delete $opt{pipe}
+       ? 'Bio::EnsEMBL::Pipeline::DBSQL::Finished::DBAdaptor'
+       : 'Bio::EnsEMBL::DBSQL::DBAdaptor');
+
+    my $key =
+      (delete $opt{rw}
+       ? 'pipeline_db_rw_head'
+       : 'pipeline_db_head');
+
+    if (my @unk = sort keys %opt) {
+        croak "Unknown options (@unk) to pipeline_dba";
     }
+
+    return $self->satellite_dba($key, $class);
 }
 
 sub satellite_dba {
