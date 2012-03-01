@@ -100,7 +100,7 @@ sub main {
         # it exits
     }
 
-    plan tests => 27;
+    plan tests => 29;
 
     my @warn;
     local $SIG{__WARN__} = sub {
@@ -116,7 +116,7 @@ sub main {
     cmdline_tt({qw{ host otterpipe1 database pipe_human }},
                [ 'pipe_human by args', 'human', 'ensembl:pipe' ]);
 
-    # 8
+    # 10
     server_tt('human',
               [ 'loutre_human as server', 'human', 'ensembl:loutre' ],
               [ 'pipe_human as server', 'human', 'ensembl:pipe' ]);
@@ -146,7 +146,14 @@ sub server_tt {
 
     my $dataset = SpeciesDat()->dataset($dataset_name);
     check_dba($dataset->otter_dba, @$check_loutre);
-    check_dba($dataset->pipeline_dba, @$check_pipe);
+    check_dba($dataset->pipeline_dba('pipe', 'rw'), @$check_pipe);
+
+    # The server doesn't have ensembl-pipeline so its scripts want a
+    # vanilla DBA
+    is(ref($dataset->pipeline_dba), 'Bio::EnsEMBL::DBSQL::DBAdaptor',
+       "$dataset_name pipe: server needs vanilla");
+    is(ref($dataset->pipeline_dba('rw')), 'Bio::EnsEMBL::DBSQL::DBAdaptor',
+       "$dataset_name pipe: caching bug lurks here");
 }
 
 
