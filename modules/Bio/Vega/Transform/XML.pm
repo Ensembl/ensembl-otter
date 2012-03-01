@@ -387,7 +387,7 @@ sub generate_Locus {
             $g->attribobjs($self->generate_Transcript($tran, $coord_offset));
         }
     } else {
-        throw "Cannot create Otter XML, no transcripts attched to this gene:$gene";
+        throw "Cannot create Otter XML, no transcripts attached to this gene:$gene";
     }
 
     return $g;
