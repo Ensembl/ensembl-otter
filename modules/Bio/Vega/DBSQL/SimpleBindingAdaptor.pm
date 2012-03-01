@@ -50,7 +50,7 @@ sub fetch_into_hash {
         }
         $sth->finish();
     } else {
-        print STDERR "No hit names to find the ${class}'s for\n";
+        warn "No hit names to find the ${class}'s for\n";
     }
 
     return $thehash;

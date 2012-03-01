@@ -26,7 +26,7 @@ my (
 sub DESTROY {
     my ($self) = @_;
 
-    # printf STDERR "Destroying '%s'\n", ref($self);
+    # warn sprintf "Destroying '%s'\n", ref($self);
 
     delete $tag_stack{$self};
     delete $current_object{$self};

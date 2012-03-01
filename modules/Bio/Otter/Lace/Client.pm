@@ -1232,7 +1232,7 @@ sub sessions_needing_recovery {
                 $lace_dir = $adb->home;
                 if ($adb->write_access) {
                     $adb->unlock_otter_slice;
-                    print STDERR "\nRemoved lock from uninitialised database in '$lace_dir'\n";
+                    warn "\nRemoved lock from uninitialised database in '$lace_dir'\n";
                 }
                 1;
             } or warn "error while recoving session '$lace_dir': $@";
@@ -1299,7 +1299,7 @@ sub kill_old_sgifaceserver {
         my ($cmnd, @args) = split /\s+/, $proc->cmndline;
         next unless $cmnd eq 'sgifaceserver';
         next unless $args[0] eq $dir;
-        printf STDERR "Killing old sgifaceserver '%s'\n", $proc->cmndline;
+        warn sprintf "Killing old sgifaceserver '%s'\n", $proc->cmndline;
         kill 9, $proc->pid;
     }
 

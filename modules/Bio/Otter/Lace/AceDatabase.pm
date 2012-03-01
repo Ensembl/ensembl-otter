@@ -925,9 +925,9 @@ sub reload_filter_state {
     while (my ($filter_name, $wanted, $failed, $done) = $sth->fetchrow) {
         my $filter = $filters->{$filter_name};
         if ($filter) {
-            print STDERR "Reloading state from file for $filter_name\n";
+            warn "Reloading state from file for $filter_name\n";
         } else {
-            print STDERR "Skipping obsolete coloumn '$filter_name'\n";
+            warn "Skipping obsolete coloumn '$filter_name'\n";
             push(@obsolete, $filter_name);
             next;
         }
@@ -1083,7 +1083,7 @@ sub DESTROY {
 
     my $home = $self->home;
     my $callback = $self->post_exit_callback;
-    print STDERR "DESTROY has been called for AceDatabase.pm with home $home\n";
+    warn "DESTROY has been called for AceDatabase.pm with home $home\n";
     if ($self->error_flag) {
         warn "Not cleaning up '$home' because error flag is set\n";
         return;

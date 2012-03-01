@@ -158,7 +158,7 @@ sub update_translation {
 
             if ($char eq 'M') {
                 my $index = $window->index('insert - 1 chars');
-                #printf STDERR "$index  $map->[$i]\n";
+                #warn sprintf "$index  $map->[$i]\n";
                 $pep_genomic->{$index} = $map->[$i - $offset];
             }
 

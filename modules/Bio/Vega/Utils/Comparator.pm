@@ -40,13 +40,13 @@ sub compare {
     ## First compare the main keys. If failed, try vega_hashkey_sub:
     if ($obj1_hash_key ne $obj2_hash_key) {
         $changed=1;
-        print STDERR "*Changes observed\n";
+        warn "*Changes observed\n";
         if ($obj1->isa('Bio::Vega::ContigInfo')) {
-            print STDERR "ContigInfo has changed due to change in main key\n";
+            warn "ContigInfo has changed due to change in main key\n";
         } else {
-            print STDERR $obj1->stable_id.".".$obj1->version." now has changed main key ".$obj1->vega_hashkey_structure()."\n";
+            warn $obj1->stable_id.".".$obj1->version." now has changed main key ".$obj1->vega_hashkey_structure()."\n";
         }
-        print STDERR
+        warn
             " Before-key: $obj1_hash_key\n",
             "  After-key: $obj2_hash_key\n";
 
@@ -59,13 +59,13 @@ sub compare {
             unless (exists $obj2_hash_sub->{$subkey}) {
                 $e_count++;
                 if ($e_count == 1) { # so it is only printed once
-                    print STDERR "*Changes observed\n";
+                    warn "*Changes observed\n";
                     $changed=1;
                 }
                 if($obj1->can('stable_id') && $obj1->can('version')) {
-                    print STDERR $obj1->stable_id.".".$obj1->version." now has changed or new attrib $subkey\n";
+                    warn $obj1->stable_id.".".$obj1->version." now has changed or new attrib $subkey\n";
                 } else {
-                    print STDERR $obj1->slice->name." ContigInfo now has changed or new attrib $subkey\n";
+                    warn $obj1->slice->name." ContigInfo now has changed or new attrib $subkey\n";
                 }
             }
         }

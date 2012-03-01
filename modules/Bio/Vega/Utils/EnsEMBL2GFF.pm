@@ -585,7 +585,7 @@ use Bio::Vega::Utils::GFF;
             }
             else {
 
-                #printf STDERR
+                #warn sprintf
                 #    "Checking if exon %s is within slice %s of length %d\n"
                 #    . "  being attached to %s and extending from %d to %d\n",
                 #    $exon->stable_id, $slice, $slice_length, $exon->contig, $exon_start, $exon_end;

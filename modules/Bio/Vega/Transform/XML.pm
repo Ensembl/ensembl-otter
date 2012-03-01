@@ -262,7 +262,7 @@ sub generate_SequenceSet {
     }
 
     foreach my $gene (sort $by_start_end_strand @$list_of_genes) {
-        # printf STDERR "Adding gene %6d .. %6d  %+d  %s\n", $gene->start, $gene->end, $gene->strand, $gene->display_id;
+        # warn sprintf "Adding gene %6d .. %6d  %+d  %s\n", $gene->start, $gene->end, $gene->strand, $gene->display_id;
         $ss->attribobjs($self->generate_Locus($gene));
     }
     return $ss;

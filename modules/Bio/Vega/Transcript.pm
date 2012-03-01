@@ -92,7 +92,7 @@ sub truncate_to_Slice {
           splice(@$ex_list, $i, 1);
           $exons_truncated++;
       } else {
-          #printf STDERR
+          #warn sprintf
           #    "Checking if exon %s is within slice %s of length %d\n"
           #    . "  being attached to %s and extending from %d to %d\n",
           #    $exon->stable_id, $slice, $slice_length, $exon->contig, $exon_start, $exon_end;

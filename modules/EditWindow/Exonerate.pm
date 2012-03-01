@@ -408,7 +408,7 @@ sub launch_exonerate {
 
     my $seqs = $otf->confirmed_seqs();
 
-    print STDERR "Found " . scalar(@$seqs) . " sequences\n";
+    warn "Found " . scalar(@$seqs) . " sequences\n";
 
     unless (@$seqs) {
         $self->top->messageBox(
