@@ -296,6 +296,7 @@ foreach my $chr (@chr_sorted) {
               -display_id  => $rec->{'assigned_by'},
               -info_type   => 'DEPENDENT',
               -dbname      => 'Quick_Go_Evidence',
+              -version => 1,
               -info_text   => 'Quick_Go:'.$rec->{'assigned_by'},
             );
             $dbentry->add_linkage_type($ev_type,$source_xref);
