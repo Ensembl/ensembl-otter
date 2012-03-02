@@ -448,6 +448,18 @@ foreach my $allele_id (keys %$alt_alleles) {
 }
 $support->log_stamped("Transferred $allele_count alt_allele allele_ids.\n\n");
 
+#delete redundant xrefs - these are just to the internal IDs of the vega translations and have to be ignored by the webcode
+$support->log_stamped("Deleting redundant Vega translation xrefs...\n");
+$sql = qq(DELETE x
+            FROM xref x, external_db edb
+           WHERE x.external_db_id = edb.external_db_id
+             AND edb.db_name = 'Vega_translation'
+             AND display_label NOT REGEXP '^OTT'
+             AND x.info_text IS NULL);	
+$c = $dbh->{'evega'}->do($sql);
+$support->log_stamped("Deleted $c orphan object_xref entries.\n\n");
+
+
 #delete any orphan object_xref entries
 $support->log_stamped("Deleting orphan object_xref entries...\n");
 $sql = qq(DELETE ox
