@@ -86,12 +86,12 @@ sub pipeline_dba {
 
     my %opt; @opt{@opt} = (1) x @opt;
 
-    my $class =
+    my $adaptor_class =
       (delete $opt{pipe}
        ? 'Bio::EnsEMBL::Pipeline::DBSQL::Finished::DBAdaptor'
        : 'Bio::EnsEMBL::DBSQL::DBAdaptor');
 
-    my $key =
+    my $meta_key =
       (delete $opt{rw}
        ? 'pipeline_db_rw_head'
        : 'pipeline_db_head');
@@ -100,7 +100,7 @@ sub pipeline_dba {
         croak "Unknown options (@unk) to pipeline_dba";
     }
 
-    return $self->satellite_dba($key, $class);
+    return $self->satellite_dba($meta_key, $adaptor_class);
 }
 
 sub satellite_dba {
@@ -108,42 +108,40 @@ sub satellite_dba {
     $adaptor_class ||= "Bio::EnsEMBL::DBSQL::DBAdaptor";
 
     # check for a cached dba
-    my $dba_cached = $self->{_sdba}{$metakey};
+    my $dba_cached = $self->{_sdba}{"$metakey; $adaptor_class"};
     return $dba_cached if $dba_cached;
 
-    # get and check the options
-    my $options = $self->_satellite_dba_options($metakey);
-    die "metakey '$metakey' is not defined" unless $options;
-
     # create the adaptor
-    my $dba = $self->_satellite_dba_make($metakey, $adaptor_class, $options);
+    my $dba = $self->_satellite_dba_make($metakey, $adaptor_class);
+    die "metakey '$metakey' is not defined" unless $dba;
 
     # create the variation database (if there is one)
-    my $vdba = $self->_variation_satellite_dba_make("${metakey}_variation");
+    my $vdba = $self->_variation_satellite_dba("${metakey}_variation");
     $vdba->dnadb($dba) if $vdba;
 
     return $dba;
 }
 
-sub _variation_satellite_dba_make {
+sub _variation_satellite_dba {
     my ($self, $metakey) = @_;
+    my $adaptor_class = "Bio::EnsEMBL::Variation::DBSQL::DBAdaptor";
 
     # check for a cached dba
-    my $dba = $self->{_sdba}{$metakey};
-    return $dba if $dba;
-
-    # get and check the options
-    my $options = $self->_satellite_dba_options($metakey);
-    return unless $options;
+    my $dba_cached = $self->{_sdba}{"$metakey; $adaptor_class"};
+    return $dba_cached if $dba_cached;
 
     # create the adaptor
-    $dba = $self->_satellite_dba_make($metakey, "Bio::EnsEMBL::Variation::DBSQL::DBAdaptor", $options);
+    my $dba = $self->_satellite_dba_make($metakey, $adaptor_class);
 
+    return unless $dba; # (there isn't one)
     return $dba;
 }
 
 sub _satellite_dba_make {
-    my ($self, $metakey, $adaptor_class, $options) = @_;
+    my ($self, $metakey, $adaptor_class) = @_;
+
+    my $options = $self->_satellite_dba_options($metakey);
+    return unless $options;
 
     my @options;
     {
@@ -171,7 +169,7 @@ sub _satellite_dba_make {
 
     warn "... with parameters: ".join(', ', map { "$_=".$uppercased_options{$_} } keys %uppercased_options )."\n";
 
-    $self->{_sdba}{$metakey} = $dba;
+    $self->{_sdba}{"$metakey; $adaptor_class"} = $dba;
 
     return $dba;
 }
