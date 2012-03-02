@@ -112,20 +112,20 @@ sub satellite_dba {
     return $dba_cached if $dba_cached;
 
     # get and check the options
-    my $options = $self->satellite_dba_options($metakey);
+    my $options = $self->_satellite_dba_options($metakey);
     die "metakey '$metakey' is not defined" unless $options;
 
     # create the adaptor
-    my $dba = $self->satellite_dba_make($metakey, $adaptor_class, $options);
+    my $dba = $self->_satellite_dba_make($metakey, $adaptor_class, $options);
 
     # create the variation database (if there is one)
-    my $vdba = $self->variation_satellite_dba_make("${metakey}_variation");
+    my $vdba = $self->_variation_satellite_dba_make("${metakey}_variation");
     $vdba->dnadb($dba) if $vdba;
 
     return $dba;
 }
 
-sub variation_satellite_dba_make {
+sub _variation_satellite_dba_make {
     my ($self, $metakey) = @_;
 
     # check for a cached dba
@@ -133,16 +133,16 @@ sub variation_satellite_dba_make {
     return $dba if $dba;
 
     # get and check the options
-    my $options = $self->satellite_dba_options($metakey);
+    my $options = $self->_satellite_dba_options($metakey);
     return unless $options;
 
     # create the adaptor
-    $dba = $self->satellite_dba_make($metakey, "Bio::EnsEMBL::Variation::DBSQL::DBAdaptor", $options);
+    $dba = $self->_satellite_dba_make($metakey, "Bio::EnsEMBL::Variation::DBSQL::DBAdaptor", $options);
 
     return $dba;
 }
 
-sub satellite_dba_make {
+sub _satellite_dba_make {
     my ($self, $metakey, $adaptor_class, $options) = @_;
 
     my @options;
@@ -176,7 +176,7 @@ sub satellite_dba_make {
     return $dba;
 }
 
-sub satellite_dba_options {
+sub _satellite_dba_options {
     my ($self, $metakey) = @_;
 
     my $meta_container = $self->otter_dba->get_MetaContainer;
