@@ -166,6 +166,11 @@ sub _satellite_dba_make {
     my $dba = $adaptor_class->new(%uppercased_options);
     die "Couldn't connect to '$metakey' satellite db"
         unless $dba;
+    if ((my $cls = ref($dba)) ne $adaptor_class) {
+        # DBAdaptor class is caching(?) these somewhere.  Probably
+        # don't need it to work right, but avoid silent surprises.
+        die "Instantiation of '$adaptor_class' failed, got a '$cls'";
+    }
 
     warn "... with parameters: ".join(', ', map { "$_=".$uppercased_options{$_} } keys %uppercased_options )."\n";
 
