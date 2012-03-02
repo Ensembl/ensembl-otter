@@ -163,7 +163,7 @@ if ($support->param('prune') and $support->user_proceed("Would you really like t
     $support->log("Done deleting $num entries.\n");
 
     #GOA xrefs
-    my $num = $dba->dbc->do(qq(
+    $num = $dba->dbc->do(qq(
            DELETE x
            FROM xref x, external_db edb
            WHERE x.external_db_id = edb.external_db_id
