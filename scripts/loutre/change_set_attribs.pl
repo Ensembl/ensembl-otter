@@ -48,6 +48,10 @@ here is an example commandline
       WHERE name like '%_20101111')
 
 
+=head1 SEE ALSO
+
+F<scripts/loutre/sync_set_attributes_and_coord_systems>
+
 =head1 CONTACT
 
 Mustapha Larbaoui B<email> ml6@sanger.ac.uk

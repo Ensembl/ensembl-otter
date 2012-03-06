@@ -129,6 +129,10 @@ the pipeline. Some datasets, such as human, have a lot of these. They are
 old chromosomes which were not loaded into new datasets, but are kept
 since they host old versions of genes.
 
+=head1 SEE ALSO
+
+F<scripts/loutre/change_set_attribs.pl>
+
 =head1 AUTHOR
 
 James Gilbert B<email> jgrg@sanger.ac.uk
