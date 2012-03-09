@@ -32,11 +32,19 @@ here is an example commandline
     -pass (check the ~/.netrc file)  For RDBs, what password to use
     -port (check the ~/.netrc file)   For RDBs, what port to use
 
-    -[write|read]   make the set writable or read-only
-    -[visible|hide] make the set visible or hide it
-    -csver <name>   change coordinate_system version (e.g. Otter, OtterArchive)
-    -set            comma separated list of sequence sets
-    -help|h         displays this documentation with PERLDOC
+    -dataset <species>   consult Otter Server for the database
+    -[loutre|pipe]       make the change on one database.  Default: both
+
+        -dbname and -dataset are mutually exclusive.
+        Only one database is touched when using -dbname.
+
+    -[write|read]        make the set writable or read-only
+    -[visible|hide]      make the set visible or hide it
+    -csver <name>        change coordinate_system version (e.g. Otter, OtterArchive)
+
+    -set                 comma separated list of sequence sets
+
+    -help|h              displays this documentation with PERLDOC
 
 =head1 SQL
 
@@ -73,6 +81,10 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
     my $port;
     my $host = 'otterlive';
     my $dbname;
+
+    my $dataset;
+    my ($sel_loutre, $sel_pipe);
+
     my $set;
     my $write;
     my $read;
@@ -82,24 +94,34 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 
     my $usage = sub { exec('perldoc', $0); };
 
-    GetOptions(
-        'host=s'   => \$host,
-        'port=n'   => \$port,
-        'dbname=s' => \$dbname,
-        'user=s'   => \$user,
-        'pass=s'   => \$pass,
-        'write!'   => \$write,
-        'read!'    => \$read,
-        'visible!' => \$visible,
-        'hide!'    => \$hide,
-        'csver=s'  => \$csver,
-        'set=s'    => \$set,
-        'h|help!'  => $usage
-    ) or $usage->();
 
-    if (!$dbname) {
-        throw("Need a target pipeline database name (dbname = ?)");
-    }
+    GetOptions
+      ('host=s'   => \$host,
+       'port=n'   => \$port,
+       'dbname=s' => \$dbname,
+       'user=s'   => \$user,
+       'pass=s'   => \$pass,
+
+       'dataset|D=s' => \$dataset,
+       'loutre!'  => \$sel_loutre,
+       'pipe!'    => \$sel_pipe,
+
+       'write!'   => \$write,
+       'read!'    => \$read,
+       'visible!' => \$visible,
+       'hide!'    => \$hide,
+       'csver=s'  => \$csver,
+       'set=s'    => \$set,
+       'h|help!'  => $usage) or $usage->();
+
+    throw("-dbname and -dataset are mutually exclusive")
+      if (defined $dbname && defined $dataset);
+    throw("-loutre and -pipe options require -dataaset")
+      if (($sel_loutre || $sel_pipe) && !$dataset);
+
+    throw("Need a target pipeline database name (-dbname or -dataset)")
+      unless ($dbname || $dataset);
+
 
     my @sets = split /,/, $set;
 
@@ -112,7 +134,41 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
         throw("Make the set either visible or hidden, not both !");
     }
 
-    my $sql = qq{
+    my @dbh;
+    if ($dbname) {
+        # Reading the DB connexion parameters from ~/.netrc
+        my $ref = Net::Netrc->lookup($host);
+        if (!$ref) {
+            print STDERR "No entry found in ~/.netrc for host $host\n";
+            next;
+        }
+        $user = $ref->login;
+        $pass = $ref->password;
+        $port = $ref->account;
+
+        # Creating the DB connection
+        my $dsn = "DBI:mysql:database=$dbname;host=$host;port=$port";
+        push @dbh, DBI->connect($dsn, $user, $pass, { 'RaiseError' => 1 });
+    } else {
+        if (!$sel_loutre || $sel_pipe) {
+            # default: both
+            $sel_loutre = $sel_pipe = 1;
+        }
+        push @dbh, otter_client_dbhs($dataset, $sel_loutre, $sel_pipe);
+    }
+
+
+    foreach my $dbh (@dbh) {
+        printf "Operating on %s \@ %s\n", $dbh->selectrow_array('select DATABASE(), @@hostname');
+        change_props($dbh, $write, $read, $visible, $hide, $csver, @sets);
+    }
+}
+
+
+sub change_props {
+    my ($dbh, $write, $read, $visible, $hide, $csver, @sets) = @_;
+
+    my $sth_attr = $dbh->prepare(qq{
         UPDATE attrib_type t
           , seq_region s
           , seq_region_attrib a
@@ -121,22 +177,7 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
           AND s.seq_region_id = a.seq_region_id
           AND t.code = ?
           AND t.attrib_type_id = a.attrib_type_id
-    };
-
-    # Reading the DB connexion parameters from ~/.netrc
-    my $ref = Net::Netrc->lookup($host);
-    if (!$ref) {
-        print STDERR "No entry found in ~/.netrc for host $host\n";
-        next;
-    }
-    $user = $ref->login;
-    $pass = $ref->password;
-    $port = $ref->account;
-
-    # Creating the DB connection
-    my $dsn = "DBI:mysql:database=$dbname;host=$host;port=$port";
-    my $dbh = DBI->connect($dsn, $user, $pass, { 'RaiseError' => 1 });
-    my $sth_attr = $dbh->prepare($sql);
+    });
 
     my $sth_cs = $dbh->prepare(q{
         UPDATE seq_region s
@@ -172,7 +213,7 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
             $cs = $sth_cs->execute($csver, $_);
         }
 
-        my $out = "Made $_\t";
+        my $out = "    Made $_\t";
         $out .= "Writable [" .  ($w > 0 ? "OK" : "FAILED") . "] " if $write;
         $out .= "Read-Only [" . ($r > 0 ? "OK" : "FAILED") . "] " if $read;
         $out .= "Visible [" .   ($v > 0 ? "OK" : "FAILED") . "] " if $visible;
@@ -181,4 +222,26 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 
         print $out. "\n";
     }
+}
+
+
+sub otter_client_dbhs {
+    my ($dataset_name, $sel_loutre, $sel_pipe) = @_;
+    die "expect list context" unless wantarray;
+
+    require Bio::Otter::Lace::Defaults;
+    require Bio::Otter::Lace::PipelineDB;
+    local @ARGV = (); Bio::Otter::Lace::Defaults::do_getopt();
+
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+
+    my $otter_dba = $ds->get_cached_DBAdaptor;
+    my $pipe_dba = Bio::Otter::Lace::PipelineDB::get_rw_DBAdaptor($otter_dba);
+
+    my @dbh;
+    push @dbh, $otter_dba->dbc->db_handle if $sel_loutre;
+    push @dbh, $pipe_dba->dbc->db_handle if $sel_pipe;
+    return @dbh;
 }
