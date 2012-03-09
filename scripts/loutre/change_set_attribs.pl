@@ -34,6 +34,7 @@ here is an example commandline
 
     -[write|read]   make the set writable or read-only
     -[visible|hide] make the set visible or hide it
+    -csver <name>   change coordinate_system version (e.g. Otter, OtterArchive)
     -set            comma separated list of sequence sets
     -help|h         displays this documentation with PERLDOC
 
@@ -76,6 +77,7 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
     my $write;
     my $read;
     my $visible;
+    my $csver;
     my $hide;
 
     my $usage = sub { exec('perldoc', $0); };
@@ -90,6 +92,7 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
         'read!'    => \$read,
         'visible!' => \$visible,
         'hide!'    => \$hide,
+        'csver=s'  => \$csver,
         'set=s'    => \$set,
         'h|help!'  => $usage
     ) or $usage->();
@@ -133,25 +136,40 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
     # Creating the DB connection
     my $dsn = "DBI:mysql:database=$dbname;host=$host;port=$port";
     my $dbh = DBI->connect($dsn, $user, $pass, { 'RaiseError' => 1 });
-    my $sth = $dbh->prepare($sql);
+    my $sth_attr = $dbh->prepare($sql);
+
+    my $sth_cs = $dbh->prepare(q{
+        UPDATE seq_region s
+         JOIN coord_system cs USING (coord_system_id)
+        SET s.coord_system_id =
+         (SELECT coord_system_id
+          FROM coord_system cs2
+          WHERE name = cs.name and version = ?)
+        where s.name = ?
+    });
 
     foreach (@sets) {
-        my ($r, $w, $v, $h);
+        my ($r, $w, $v, $h, $cs);
 
         # Make the set either read-only or visible
         if ($write) {
-            $w = $sth->execute(1, $_, 'write_access');
+            $w = $sth_attr->execute(1, $_, 'write_access');
         }
         elsif ($read) {
-            $r = $sth->execute(0, $_, 'write_access');
+            $r = $sth_attr->execute(0, $_, 'write_access');
         }
 
         # Make the set either visible or hidden
         if ($visible) {
-            $v = $sth->execute(0, $_, 'hidden');
+            $v = $sth_attr->execute(0, $_, 'hidden');
         }
         elsif ($hide) {
-            $h = $sth->execute(1, $_, 'hidden');
+            $h = $sth_attr->execute(1, $_, 'hidden');
+        }
+
+        # Change the coordinate_system
+        if ($csver) {
+            $cs = $sth_cs->execute($csver, $_);
         }
 
         my $out = "Made $_\t";
@@ -159,6 +177,7 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
         $out .= "Read-Only [" . ($r > 0 ? "OK" : "FAILED") . "] " if $read;
         $out .= "Visible [" .   ($v > 0 ? "OK" : "FAILED") . "] " if $visible;
         $out .= "Hidden [" .    ($h > 0 ? "OK" : "FAILED") . "] " if $hide;
+        $out .= "CSver [" .     ($cs> 0 ? "OK" : "FAILED") . "] " if $csver;
 
         print $out. "\n";
     }
