@@ -13,9 +13,10 @@ our @EXPORT_OK = qw{ mac_os_x_set_proxy_vars };
 sub mac_os_x_set_proxy_vars {
     my ($env_hash) = @_;
 
-    my $plist = perlify_plist(
-        parse_plist_file('/Library/Preferences/SystemConfiguration/preferences.plist')
-    );
+    my $netwk_prefs_file = '/Library/Preferences/SystemConfiguration/preferences.plist';
+    my $parsed = parse_plist_file($netwk_prefs_file)
+        or die "Error parsing PropertyList file '$netwk_prefs_file'";
+    my $plist = $parsed->as_perl;
 
     # CurrentSet points to the current network configuration, ie: Location
     my $current = $plist->{'CurrentSet'}
@@ -95,31 +96,6 @@ sub fetch_node_from_path {
     }
     return $plist;
 }
-
-# Takes the Mac::PropertyList data structure and coverts its objects into a
-# (more easily usable) plain perl datastructure.
-sub perlify_plist {
-    my ($item) = @_;
-    
-    if ($item->type eq 'dict') {
-        my $hash = {$item->value};
-        while (my ($key, $val) = each %$hash) {
-            $hash->{$key} = perlify_plist($val);
-        }
-        return $hash;
-    }
-    elsif ($item->type eq 'array') {
-        my $array = [];
-        foreach my $val ($item->value) {
-            push(@$array, perlify_plist($val));
-        }
-        return $array;
-    }
-    else {
-        return $item->value;
-    }
-}
-
 
 1;
 
