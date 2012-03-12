@@ -175,6 +175,7 @@ sub _print_feature {
         Align       => join(' ', @align_fields),
         Length      => $feature->l_qseq,
         percentID   => 100,
+        sequence    => $query->dna,
         );
 
     my $cigar = $feature->cigar_str;
