@@ -6,23 +6,18 @@ change_set_attribs.pl
 
 =head1 SYNOPSIS
 
-change_set_attribs.pl
+ change_set_attribs.pl -dataset dinosaur -old -set chr1-04,chr2-07
+ change_set_attribs.pl -dataset dinosaur -new      chr1-09 chr2-09
+
+or in the older connection-parameter style
+
+ change_set_attribs.pl -host otterlive -port 3324 -user pipuser -pass ***** \
+   -dbname loutre_human -visible -read ...
 
 =head1 DESCRIPTION
 
 This script is used to change the visibility and writability of a sequence set in
 any loutre database.
-
-here is an example commandline
-
-./change_set_attribs.pl
--host otterlive
--port 3324
--dbname loutre_human
--user pipuser
--pass *****
--visible
--read
 
 =head1 OPTIONS
 
@@ -42,7 +37,13 @@ here is an example commandline
     -[visible|hide]      make the set visible or hide it
     -csver <name>        change coordinate_system version (e.g. Otter, OtterArchive)
 
-    -set                 comma separated list of sequence sets
+    -new                 means "-write -visible -csver Otter"
+    -old                 means "-read  -hide    -csver OtterArchive"
+
+    -set                 comma separated list of sequence sets.
+        These may also be passed as space-separated trailing
+        arguments, for convenience with shell globbing.
+
 
     -help|h              displays this documentation with PERLDOC
 
@@ -111,6 +112,10 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
        'visible!' => \$visible,
        'hide!'    => \$hide,
        'csver=s'  => \$csver,
+
+       'new|N!'   => sub { $write = $visible = 1; $csver = 'Otter' },
+       'old|O!'   => sub { $read  = $hide    = 1; $csver = 'OtterArchive' },
+
        'set=s'    => \$set,
        'h|help!'  => $usage) or $usage->();
 
@@ -122,8 +127,9 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
     throw("Need a target pipeline database name (-dbname or -dataset)")
       unless ($dbname || $dataset);
 
-
-    my @sets = split /,/, $set;
+    my @sets;
+    push @sets, split /,/, $set if defined $set;
+    push @sets, @ARGV;
 
     throw("Must provide a list of set names") unless @sets;
 
@@ -218,7 +224,7 @@ sub change_props {
         $out .= "Read-Only [" . ($r > 0 ? "OK" : "FAILED") . "] " if $read;
         $out .= "Visible [" .   ($v > 0 ? "OK" : "FAILED") . "] " if $visible;
         $out .= "Hidden [" .    ($h > 0 ? "OK" : "FAILED") . "] " if $hide;
-        $out .= "CSver [" .     ($cs> 0 ? "OK" : "FAILED") . "] " if $csver;
+        $out .= "$csver [" .    ($cs> 0 ? "OK" : "FAILED") . "] " if $csver;
 
         print $out. "\n";
     }
