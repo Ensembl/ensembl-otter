@@ -10,7 +10,6 @@ use Bio::Otter::GappedAlignment::Element;
 
 use Readonly;
 
-# FIXME: also in Bio::Otter::Lace::OnTheFly::Aligner
 Readonly our @SUGAR_ORDER => qw(
     _query_id
     _query_start

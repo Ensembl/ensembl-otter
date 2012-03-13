@@ -13,21 +13,12 @@ with 'MooseX::Log::Log4perl';
 
 use Readonly;
 
+use Bio::Otter::GappedAlignment;
+
 Readonly our $RYO_FORMAT => 'RESULT: %S %pi %ql %tl %g %V\n';
-Readonly our @SUGAR_ORDER => qw(
-    q_id
-    q_start
-    q_end
-    q_strand
-    t_id
-    t_start
-    t_end
-    t_strand
-    score
-);
 Readonly our @RYO_ORDER => (
     'tag',
-    @SUGAR_ORDER, 
+    @Bio::Otter::GappedAlignment::SUGAR_ORDER, 
     qw(
         perc_id
         q_length
@@ -109,7 +100,7 @@ sub parse {
         my (%ryo_result, @vulgar_comps);
         (@ryo_result{@RYO_ORDER}, @vulgar_comps) = @line_parts;
         $ryo_result{vulgar} = $self->_parse_vulgar(\@vulgar_comps);
-        my $q_id = $ryo_result{q_id};
+        my $q_id = $ryo_result{_query_id};
         $self->log->info("RESULT found for ${q_id}");
 
         if ($by_query_id{$q_id}) {
