@@ -156,7 +156,7 @@ sub control_buttons {
 
     my $sel_count = scalar($self->list_selected);
     $self->align_enable($sel_count);
-    $self->dotter_enable($sel_count == 1);
+    $self->dotter_enable(defined($sel_count) and $sel_count == 1);
 
     return;
 }
