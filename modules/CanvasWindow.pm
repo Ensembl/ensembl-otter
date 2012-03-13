@@ -1096,12 +1096,10 @@ sub next_message_id {
     sub _get_sorted_list {
         my ($self, $list_name) = @_;
         
-        if (my $sel = $self->{$list_name}) {
-            my @selected = sort { ace_sort($a,$b) } keys %$sel;
-            return @selected;
-        } else {
-            return;
-        }
+        my $sel = $self->{$list_name};
+        my @selected = $sel ? sort { ace_sort($a,$b) } keys %$sel : ( );
+
+        return @selected;
     }
 
     sub count_selected {
