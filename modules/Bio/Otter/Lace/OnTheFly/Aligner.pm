@@ -99,7 +99,7 @@ sub parse {
         my @line_parts = split(' ',$line);
         my (%ryo_result, @vulgar_comps);
         (@ryo_result{@RYO_ORDER}, @vulgar_comps) = @line_parts;
-        $ryo_result{vulgar} = $self->_parse_vulgar(\%ryo_result, \@vulgar_comps);
+        $ryo_result{gapped_alignment} = $self->_parse_vulgar(\%ryo_result, \@vulgar_comps);
         my $q_id = $ryo_result{_query_id};
         $self->log->info("RESULT found for ${q_id}");
 
