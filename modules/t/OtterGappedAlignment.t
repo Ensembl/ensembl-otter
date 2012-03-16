@@ -9,6 +9,8 @@ use CriticModule;
 use Readonly;
 use Test::More;
 
+use Hum::Ace::SubSeq;
+
 Readonly my %expected => {
     'M' => { class => 'Match',      desc => 'match',                   q => 10, t => 10 },
     'C' => { class => 'Codon',      desc => 'codon',                   q => 10, t => 10 },
@@ -56,6 +58,18 @@ is($ga->target_end, 21, 'target_end');
 is($ga->target_strand, '+', 'target_strand');
 is($ga->score, 56, 'score');
 is($ga->n_elements, 6, 'n_elements');
+
+my $ts = Hum::Ace::SubSeq->new();
+$ts->strand(1);
+
+my $e;
+$e = Hum::Ace::Exon->new(); $e->start(21); $e->end(24); $ts->add_Exon($e);
+$e = Hum::Ace::Exon->new(); $e->start(27); $e->end(31); $ts->add_Exon($e);
+$e = Hum::Ace::Exon->new(); $e->start(35); $e->end(40); $ts->add_Exon($e);
+$e = Hum::Ace::Exon->new(); $e->start(45); $e->end(47); $ts->add_Exon($e);
+$e = Hum::Ace::Exon->new(); $e->start(50); $e->end(52); $ts->add_Exon($e);
+
+my @split = $ga->split_by_transcript_exons($ts);
 
 done_testing;
 
