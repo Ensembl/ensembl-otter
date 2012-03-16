@@ -23,8 +23,9 @@ Readonly our @SUGAR_ORDER => qw(
 );
 
 sub _new {
-    my ($pkg, %sugar) = @_;
+    my ($class, %sugar) = @_;
 
+    my $pkg = ref($class) || $class;
     my $self = bless { %sugar }, $pkg;
     $self->_clear_elements;
 
@@ -52,6 +53,14 @@ sub from_vulgar {
     }
 
     return $self;
+}
+
+sub vulgar_comps_string {
+    my $self = shift;
+    return unless $self->n_elements;
+
+    my @ele_strings = map { $_->string } @{$self->elements};
+    return join(' ', @ele_strings);
 }
 
 # FIXME: which of these should be r/w vs r/o ?
