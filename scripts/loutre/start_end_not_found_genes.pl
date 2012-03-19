@@ -38,6 +38,9 @@ use Bio::Otter::Lace::Defaults;
                 g.gene_id,
                 gsi.stable_id,
                 gan.value,
+                g.seq_region_start,
+                g.seq_region_end,
+                g.seq_region_strand,
                 t.transcript_id,
                 tsi.stable_id,
                 tan.value,
@@ -80,11 +83,16 @@ use Bio::Otter::Lace::Defaults;
     $list_transcripts->execute();
 
     my $count = 0;
-    my $out_format = "%s,%s,%s,%s,%s,%s\n";
-    printf( $out_format,
+    my $out_format = "%s,%s,%s,%d,%d,%d,%s,%s,%s\n";
+    my $hdr_format = $out_format;
+    $hdr_format =~ s/%d/%s/g;
+    printf( $hdr_format,
             "Chromosome",
             "Gene name",
             "Gene stable id",
+            "Gene start",
+            "Gene end",
+            "Gene strand",
             "Transcript name",
             "Transcript stable ID",
             "NF attributes"
@@ -93,6 +101,9 @@ use Bio::Otter::Lace::Defaults;
     while (my ($gid,
                $gene_sid,
                $gene_name,
+               $gene_start,
+               $gene_end,
+               $gene_strand,
                $tid,
                $transcript_sid,
                $transcript_name,
@@ -103,6 +114,9 @@ use Bio::Otter::Lace::Defaults;
                 $seq_region_name,
                 $gene_name,
                 $gene_sid,
+                $gene_start,
+                $gene_end,
+                $gene_strand,
                 $transcript_name,
                 $transcript_sid,
                 $attribs,
