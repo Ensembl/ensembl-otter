@@ -23,7 +23,19 @@ use Bio::Otter::Lace::PipelineDB;
     my $ds = $cl->get_DataSet_by_name($dataset);
     
     my $dbc = $ds->get_cached_DBAdaptor->dbc;
-    my $list_pseodo_tsct = $dbc->prepare(q{ SELECT gene_id, biotype FROM transcript WHERE is_current = 1 AND biotype LIKE '%pseudo%' });
+    my $list_pseodo_tsct = $dbc->prepare(q{
+        SELECT t.gene_id
+          , t.biotype
+        FROM transcript t
+          , seq_region_attrib sra
+          , attrib_type at
+        WHERE t.seq_region_id = sra.seq_region_id
+          AND sra.attrib_type_id = at.attrib_type_id
+          AND at.code = 'hidden'
+          AND sra.value = '0'
+          AND t.is_current = 1
+          AND biotype LIKE '%pseudo%'
+        });
     $list_pseodo_tsct->execute;
     
     my $count_tsct_in_gene = $dbc->prepare(q{ SELECT count(*) FROM transcript WHERE gene_id = ? });
