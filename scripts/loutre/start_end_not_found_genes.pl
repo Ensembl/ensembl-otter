@@ -75,6 +75,7 @@ use Bio::Otter::Lace::Defaults;
         WHERE
                 at.code LIKE '%NF'
             AND ta.value = 1
+            AND g.is_current = 1
             AND t.is_current = 1
             AND sra.value = 1
         GROUP BY tsi.stable_id
