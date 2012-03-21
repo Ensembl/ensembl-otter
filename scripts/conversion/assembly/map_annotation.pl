@@ -40,9 +40,9 @@ Specific options:
     --prune                             delete results from previous runs of
                                         this script first
     --logic_names=LIST                  restrict transfer to gene logic_names
-    --delete_overlap_evi                delete supporting evidence alignments that
+    --keep_overlap_evi                  keep supporting evidence alignments that
                                         overlap the edge of the seq_region (ie PATCH)
-                                        optional, default is no
+                                        optional, default is to delete them
 
 =head1 DESCRIPTION
 
@@ -66,7 +66,7 @@ For future release, there are plans to store incomplete matches by using the
 Ensembl API's SeqEdit facilities.
 
 Genes on PATCHES (non_ref top level seq_regions in Vega) are transferred by assigning
-them to a different seq_region rather than using thenassembly mapper and creating new
+them to a different seq_region rather than using the assembly mapper and creating new
 objects. There have been problems with some of these not transferring because
 transcript_supporting_feature (not supporting_feature, these are always removed)
 alignments overlapping the edge of the patch have failed to transfer - if the script
@@ -148,7 +148,7 @@ $support->parse_extra_options(
   'chromosomes|chr=s@',
   'logic_names=s@',
   'prune',
-  'delete_overlap_evi',
+  'keep_overlap_evi',
 );
 $support->allowed_params(
   $support->get_common_params,
@@ -160,7 +160,7 @@ $support->allowed_params(
   'chromosomes',
   'logic_names',
   'prune',
-  'delete_overlap_evi',
+  'keep_overlap_evi',
 );
 
 if ($support->param('help') or $support->error) {
@@ -446,7 +446,7 @@ sub transfer_vega_patch_gene {
     $found_trans = 1;
 
     my @tsfs = @{$transcript->get_all_supporting_features};
-    if ( $support->param('delete_overlap_evi')) {
+    unless ( $support->param('keep_overlap_evi')) {
     TSF:
       foreach my $sf (@tsfs) {
         #delete transcript supporting_features that lie outside the slice
