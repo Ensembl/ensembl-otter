@@ -176,6 +176,7 @@ else {
     $support->log_stamped("Ensembl $chrname\n",1);
     foreach my $ccds_gene ( @{$chr->get_all_Genes()} ){
       $ccds_gene = $ccds_gene->transform('chromosome', $path);
+    T:
       foreach my $ccds_trans (@{$ccds_gene->get_all_Transcripts()}){
         my %xref_hash;
         my $ccds_id;
@@ -184,10 +185,11 @@ else {
         }
         if (scalar keys %xref_hash != 1){
           my $tsi = $ccds_trans->stable_id;
-          $support->log_error("Something odd going on for $tsi, has ". scalar (keys %xref_hash) ." xrefs\n",1);
+          $support->log_warning("Something odd going on for $tsi, has ". scalar (keys %xref_hash) ." xrefs. Please check CCDS database.\n",1);
           foreach my $entry (keys %xref_hash){
             $support->log("xref $entry \n",2);
           }
+          next T;
         }
         else {
           foreach my $entry (keys %xref_hash){
