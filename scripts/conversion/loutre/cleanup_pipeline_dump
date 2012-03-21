@@ -130,7 +130,9 @@ my %lns_to_go = map {$_,1}
      Uniprot_SW
      Est2genome_other
      Halfwise
+     CRG_RACE_primer
    );
+
 
 #define which attrib_types are to be deleted
 my $sr_codes_to_go = join "','", qw(htg description write_access chr hidden);
@@ -324,8 +326,9 @@ if ($problem) {
   if (! $support->user_proceed("There are features with logic names that I don't know what to do with, please look at the logs. Do you really want to proceed with keeping them?\n")) {
     exit;
   }
-  $support->log_warning("There are logic_names that will be deleted even though this is not specifically defined\n");
+  $support->log_warning("There are logic_names that will be kept even though this is not specifically defined\n");
 }
+
 
 #calculate analysis_ids that are to be kept
 my $idsth = $pddbh->prepare(qq(
@@ -369,9 +372,9 @@ foreach my $t (keys %ids_to_stay) {
       $support->log_stamped("Deleting from $t by analysis_id...\n",1);
       $pddbh->do($sql);
       $pddbh->do(qq(TRUNCATE $t));
-      $pddbh->do(qq(INSERT into $t select * from tmp_$t));
+      my $c = $pddbh->do(qq(INSERT into $t select * from tmp_$t));
       $pddbh->do(qq(DROP TABLE tmp_$t));
-      $support->log_stamped("...finished deleting from $t by analysis_id.\n\n",1);
+      $support->log_stamped("...finished deleting from $t by analysis_id ($c left).\n\n",1);
     }
   }
   else {
@@ -487,20 +490,25 @@ while ((my ($id, $cs_id, $csname, $csversion) = $sth->fetchrow_array)) {
 
 # get coordinate systems used from meta_coord
 my $cssth = $pddbh->prepare(qq(
-               SELECT mc.table_name, cs.name
-               FROM   meta_coord mc, coord_system cs
-               WHERE  mc.coord_system_id = cs.coord_system_id
+               SELECT mc.table_name, group_concat(cs.name)
+                 FROM meta_coord mc, coord_system cs
+                WHERE mc.coord_system_id = cs.coord_system_id
+             GROUP BY mc.table_name;
        ));
 $cssth->execute();
 
-#delete from feature tables
+#delete from feature tables 
 while (my ($t, $cs_name) = $cssth->fetchrow_array){
   if (! $support->param('dry_run')) {
-    my $ids_to_keep = join("','",@{$seqregions{$cs_name}});
+    my $ids_to_keep;
+    foreach my $cs (split ',', $cs_name) {
+      $ids_to_keep .= join("','",@{$seqregions{$cs}});
+    }
     my $sql = qq(DELETE from $t WHERE seq_region_id not in ('$ids_to_keep'));
     $support->log_stamped("Deleting from $t by seq_region_id...\n",1);
-    $table_rows{$t}{'deleted_by_seq_region_id'} = $pddbh->do($sql);
-    $support->log_stamped("...finished deleting from $t by seq_region_id.\n\n",1);
+    my $c = $pddbh->do($sql);
+    $table_rows{$t}{'deleted_by_seq_region_id'} = $c;
+    $support->log_stamped("...finished deleting $c from $t by seq_region_id.\n\n",1);
   }
 }
 
@@ -581,9 +589,11 @@ foreach my $t (sort keys %table_rows) {
     next if ($type =~ /original|final/);
     $support->log("$type = $table_rows{$t}{$type}\n",2);
   }
+  if ( ($table_rows{$t}{'original'}) && (! $table_rows{$t}{'final'}) && ! $support->param('prepare_template') ) {
+    $support->log_warning("No features left for table $t\n");
+  }
 }
-
-#warn Dumper(\%table_rows);
 
 $support->finish_log;
 
+exit;
