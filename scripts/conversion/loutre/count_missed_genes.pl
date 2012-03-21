@@ -117,12 +117,14 @@ my $in  = $support->filehandle('<', $support->param('log_input'));
 my (%previous,%new,$seq_regions);
 
 while (<$in>) {
+  chomp;
   if ($_ =~ /annotation in progress/) {
     (my $gsi) = $_ =~ /(OTT\w{4}\d{11})/;
+    (my $author) = $_ =~ /\((\w+)\)$/;
     if (my $g = $ga->fetch_by_stable_id($gsi)) {
       $previous{$gsi}++;
       my $gname = $g->get_all_Attributes('name')->[0]->value;
-      push @{$seq_regions->{$g->seq_region_name}}, "$gsi ($gname)";
+      push @{$seq_regions->{$g->seq_region_name}}, "$gsi ($gname) ($author)";
     }
     else {
       $new{$gsi}++;
