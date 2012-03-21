@@ -258,7 +258,8 @@ my %lns_to_go = map {lc($_),1} qw(TATA_box
 			   ComparaCons
 			   evigan_predictions
 			   NovelLoci
-			   Yale_Pseudogene );
+			   Yale_Pseudogene
+                           CRG_RACE_primer );
 
 my $s = $vdbh->prepare(qq(
                 SELECT a.logic_name, a.analysis_id, count(*)
@@ -438,7 +439,7 @@ if ($alt_assembly = $support->param('ensemblassembly') ) {
     }
     if ( my $e_name = $e_attribs->[0]->value) {
       my $e_sr_id = $esa->fetch_by_region('chromosome',$e_name,'','','',$alt_assembly,)->get_seq_region_id;
-      if ( (grep { $_->value eq $alt_assembly } @{$l_chrom->get_all_Attributes('equiv_asm')}) ||( $v_name =~ /PATCH/) ) {
+      if ( (grep { $_->value eq $alt_assembly } @{$l_chrom->get_all_Attributes('equiv_asm')}) || ( $v_name =~ /PATCH/) ) {
 	$support->log("Chromosome $v_name is the same for VEGA and $alt_assembly; adding seq_regions etc mapping from ensembl\n",2);
 	my ($e_assembly_start)  = $edbh->selectrow_array(qq(
                 SELECT min(asm_start)
@@ -449,7 +450,7 @@ if ($alt_assembly = $support->param('ensemblassembly') ) {
 		FROM   assembly
 		WHERE  asm_seq_region_id = $e_sr_id));
 	my $e_length = $e_assembly_end - $e_assembly_start + 1;
-	unless ( $v_length == $e_length) {
+	if ( ($v_name !~ /PATCH/) && ($v_length != $e_length) ) {
 	  $support->log("Assembly table entries for chromosome $v_name are different in Vega ($v_assembly_start->$v_assembly_end:$v_length) and Ensembl ($e_assembly_start->$e_assembly_end:$e_length). You might want to check what's done is correct\n",2);
 	}
 #	my ($assembly_start,$assembly_end,$length);
@@ -475,6 +476,36 @@ if ($alt_assembly = $support->param('ensemblassembly') ) {
 	  my $c = $vdbh->do($sql);
 	  $support->log("Inserted $c assembly entries\n",3);
 	}
+
+        if ($v_name =~ /PATCH/) {
+          #compare accessions for PATCHES from Ensembl and Vega and warn if they're different
+          my @e_patch_names  = $edbh->selectrow_array(qq(
+                SELECT srs.synonym
+                  FROM seq_region sr, seq_region_synonym srs
+                 WHERE sr.seq_region_id = srs.seq_region_id
+                   AND sr.seq_region_id = $e_sr_id));
+          if (scalar(@e_patch_names > 1)) {
+            $support->log_warning("More than one e! seq_region_synonym found for $v_name, need to alter the code below\n");
+          }
+          if ($e_patch_names[0]) {
+            my ($v_patch_name) = $edbh->selectrow_array(qq(
+               SELECT concat(sra1.value,'.',sra2.value)
+                FROM seq_region sr, seq_region_attrib sra1, attrib_type at1, seq_region_attrib sra2, attrib_type at2
+               WHERE sr.seq_region_id    = sra1.seq_region_id
+                 AND sra1.attrib_type_id = at1.attrib_type_id
+                 AND at1.code            = 'embl_acc'
+                 AND sr.seq_region_id    = sra2.seq_region_id
+                 AND sra2.attrib_type_id = at2.attrib_type_id
+                 AND at2.code            = 'embl_version'
+                 AND sr.seq_region_id    = $v_sr_id));
+            if (! $v_patch_name) {
+              $support->log_warning("No accession for PATCH $v_name in Vega so we don't know if e! and Vega are using the same PATCH!\n");
+            }
+            elsif ($e_patch_names[0] ne $v_patch_name) {
+              $support->log_warning("Accession for PATCH $v_name differs between e! (".$e_patch_names[0].") and Vega ($v_patch_name). Have a look but I suspect this region will have to be deleted\n");
+            }
+          }
+        }
       }
       else {
 	$support->log("Chromosome $v_name has no equiv_asm seq_region_attribute (value should be $alt_assembly) so trying to take assembly mappings from loutre\n",2);
