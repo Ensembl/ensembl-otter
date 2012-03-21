@@ -1,0 +1,114 @@
+#!/usr/bin/env perl
+
+### detect_ncRNA_host_genes
+
+use strict;
+use warnings;
+use Bio::EnsEMBL::DBSQL::DBAdaptor;
+
+{
+    my $usage = sub { exec('perldoc', $0) };
+
+    my $merge_dba = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
+        -host    => 'genebuild5',
+        -port    => 3306,
+        -user    => 'ensro',
+        -dbname  => 'amonida_human_core_67_final',
+        -group   => 'ensembl',
+        -species => 'human',
+    );
+    my $gene_aptr = $merge_dba->get_GeneAdaptor;
+
+    my @host_biotype = qw{
+      protein_coding
+      processed_transcript
+      lincRNA
+      3prime_contained_ncrna
+      ambiguous_orf
+      antisense
+      ncrna_host
+      non_coding
+      retained_intron
+      sense_intronic
+      sense_contained
+    };
+
+    my @ncRNA_biotype = qw{
+      snRNA
+      snoRNA
+      rRNA
+      Mt_tRNA
+      Mt_rRNA
+      misc_RNA
+      miRNA
+    };
+
+    # check_db_for_biotypes($merge_dba->dbc, @host_biotype, @ncRNA_biotype);
+
+    my $host_biotype_list = join(', ', map { "'$_'" } @host_biotype);
+    my $host_sth = $merge_dba->dbc->prepare(qq{
+        SELECT g.gene_id
+          , g.seq_region_id
+          , g.seq_region_start
+          , g.seq_region_end
+          , g.seq_region_strand
+          , x.dbprimary_acc
+        FROM gene g
+          , object_xref ox
+          , xref x
+          , external_db ext_db
+        WHERE g.gene_id = ox.ensembl_id
+          AND ox.ensembl_object_type = 'Gene'
+          AND ox.xref_id = x.xref_id
+          AND x.external_db_id = ext_db.external_db_id
+          AND ext_db.db_name = 'OTTG'
+          AND g.biotype in ($host_biotype_list)
+    });
+    $host_sth->execute;
+
+    my $ncRNA_biotype_list = join(', ', map { "'$_'" } @ncRNA_biotype);
+    my $count_contained_nc_sth = $merge_dba->dbc->prepare(qq{
+        SELECT count(*)
+        FROM gene
+        WHERE seq_region_id = ?
+          AND seq_region_start >= ?
+          AND seq_region_end <= ?
+          AND seq_region_strand = ?
+          AND biotype in ($ncRNA_biotype_list)
+    });
+
+    while (my ($gene_id, $seq_region_id, $start, $end, $strand, $ott_stable_id) = $host_sth->fetchrow) {
+        $count_contained_nc_sth->execute($seq_region_id, $start, $end, $strand);
+        my ($count) = $count_contained_nc_sth->fetchrow;
+        if ($count) {
+            print "$ott_stable_id\n";
+        }
+    }
+}
+
+sub check_db_for_biotypes {
+    my ($dbc, @biotypes) = @_;
+
+    my $sth = $dbc->prepare(q{ SELECT count(*) FROM gene WHERE biotype = ? });
+    my @missing;
+    foreach my $bt (@biotypes) {
+        $sth->execute($bt);
+        my ($count) = $sth->fetchrow;
+        unless ($count) {
+            push(@missing, $bt);
+        }
+    }
+    if (@missing) {
+        die "Do not have any genes with these biotypes in db: ", join(", ", map { "'$_'" } @missing);
+    }
+    return 1;
+}
+
+__END__
+
+=head1 NAME - detect_ncRNA_host_genes
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
