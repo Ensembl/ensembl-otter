@@ -432,6 +432,5 @@ port=80
 version=64
 write_access=0
 debug=1
-show_zmap=1
 logdir=.otter
 fetch_truncated_genes=1
