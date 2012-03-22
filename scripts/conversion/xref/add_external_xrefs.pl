@@ -262,7 +262,7 @@ if ($support->param('xrefformat') eq 'imgt_hla') {
   }
 }
 
-# define each type of xref that can be set, and whether to set as display_xref or not
+# define xrefs that can be set, what type each xref is, and whether to set as display_xref or not
 my %extdb_def = (
   HGNC                     => ['KNOWNXREF', 1],
   EntrezGene               => ['KNOWNXREF', 0],
@@ -396,6 +396,10 @@ foreach my $chr (@chr_sorted) {
 
 	DB: foreach my $db (keys %{$links}) {
             next DB if $db eq 'Synonyms';
+
+            #only go further with this external_db if we've allowed it in the hash above.
+            next DB unless $extdb_def{$db};
+
 	    $support->log_verbose("Assessing link to $db\n",2);
 
 	    #sanity check - don't go any further if this gene already has an xref for this source
