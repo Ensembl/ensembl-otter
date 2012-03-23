@@ -260,7 +260,7 @@ sub initialize {
     }
 
     if ($self->is_mutable) {
-        
+
         my $attrib_menu = $self->make_menu('Attributes');
 
         my $tsct_attrib_menu = $attrib_menu->Menu(-tearoff => 0);
@@ -269,7 +269,7 @@ sub initialize {
             -label      => 'Transcript',
             -underline  => 0,
             );
-        
+
         my $locus_attrib_menu = $attrib_menu->Menu(-tearoff => 0);
         $attrib_menu->add('cascade',
             -menu       => $locus_attrib_menu,
@@ -460,11 +460,11 @@ sub add_subseq_exons {
     }
 
     my $strand = $subseq->strand;
-    
+
     foreach my $ex ($subseq->get_all_Exons_in_transcript_order) {
         $self->add_exon_holder($ex->start, $ex->end, $strand);
     }
-    
+
     $self->remove_spurious_splice_sites;
 
     return;
@@ -688,7 +688,7 @@ sub merge_position_pairs {
         $self->trim_position_pairs($over);
         $self->fix_window_min_max_sizes;
     }
-    
+
     $self->remove_spurious_splice_sites;
 
     return;
@@ -737,7 +737,7 @@ sub delete_selected_exons {
     unless ($self->position_pairs) {
         $self->add_exon_holder(undef, undef, 1);
     }
-        
+
     $self->fix_window_min_max_sizes;
 
     return;
@@ -842,7 +842,7 @@ sub show_subseq {
     my ($self) = @_;
 
     my $success = $self->XaceSeqChooser->zMapZoomToSubSeq($self->SubSeq);
-    
+
     $self->message("ZMap: zoom to subsequence failed") unless $success;
 
     return;
@@ -1024,7 +1024,7 @@ sub trim_cds_coord_to_first_stop {
     $sub = $self->new_SubSeq_from_tk;
     my $pep = $sub->translator->translate($sub->translatable_Sequence);
     my $pep_str = $pep->sequence_string;
-    
+
     # Trim leading partial amino acid if present
     $pep_str =~ s/^X//;
 
@@ -1324,7 +1324,7 @@ sub add_subseq_rename_widget {
 
 sub populate_transcript_attribute_menu {
     my ($self, $menu) = @_;
-    
+
     $self->populate_attribute_menu($menu,
                                    $self->transcript_remark_Entry,
                                    $self->DataSet->vocab_transcript);
@@ -1334,7 +1334,7 @@ sub populate_transcript_attribute_menu {
 
 sub populate_locus_attribute_menu {
     my ($self, $menu) = @_;
-    
+
     $self->populate_attribute_menu($menu,
                                    $self->locus_remark_Entry,
                                    $self->DataSet->vocab_locus);
@@ -1344,7 +1344,7 @@ sub populate_locus_attribute_menu {
 
 sub populate_attribute_menu {
     my ($self, $parent_menu, $text, $attribs) = @_;
-    
+
     my %sub_menus;
     foreach my $phrase (sort keys %$attribs) {
         my $value = $attribs->{$phrase};
@@ -1506,7 +1506,7 @@ sub make_labelled_text_widget {
             $text->tagAdd($ann_tag, @this_line);
         }
     });
-    
+
     return $tw;
 }
 
@@ -2162,7 +2162,7 @@ sub middle_button_paste {
     return unless @ints;
 
     $self->deselect_all;
-    
+
     my $did_paste = 0;
     if (my ($obj)  = $canvas->find('withtag', 'current')) {
         $did_paste = 1;
@@ -2193,7 +2193,7 @@ sub middle_button_paste {
             $self->highlight(@$pp[0,1]);
         }
     }
-    
+
     unless ($did_paste) {
         my @pos = $self->all_position_pair_text;
 
@@ -2210,7 +2210,7 @@ sub middle_button_paste {
 
         $self->fix_window_min_max_sizes;
     }
-    
+
     $self->remove_spurious_splice_sites;
 
     return;
@@ -2281,7 +2281,7 @@ sub update_splice_strings {
         my ($exon_id) = grep { /^exon_id/ } $canvas->gettags($obj);
         $exons_to_update{$exon_id} = 1 if $exon_id;
     }
-    
+
     my @good = (
         -font => $self->font_fixed,
         -fill => 'YellowGreen',
@@ -2290,24 +2290,24 @@ sub update_splice_strings {
         -font => $self->font_fixed_bold,
         -fill => "#ee2c2c",     # firebrick2
         );
-        
+
     foreach my $exon_id (keys %exons_to_update) {
-        
+
         my ($start, $end) = map { $canvas->itemcget($_, 'text') } $canvas->find('withtag', "$exon_id&&exon_pos");
         if ($start > $end) {
             ($start, $end) = ($end, $start);
         }
-        
+
         my $strand = $self->exon_strand_from_tk($exon_id);
         my ($acc_str, $don_str) = $self->get_splice_acceptor_donor_strings($start, $end, $strand);
-        
-       
+
+
         my ($acceptor_txt) = $canvas->find('withtag', "$exon_id&&splice_acceptor");
         $canvas->itemconfigure($acceptor_txt,
             -text => $acc_str,
             $acc_str eq 'ag' ? @good : @bad,
         );
-    
+
         my ($donor_txt) = $canvas->find('withtag', "$exon_id&&splice_donor");
         $canvas->itemconfigure($donor_txt,
             -text => substr($don_str, 1, 2),
@@ -2322,21 +2322,21 @@ sub update_splice_strings {
 
 sub remove_spurious_splice_sites {
     my ($self) = @_;
-    
+
     my $canvas = $self->canvas;
-    
+
     my @pps = sort { $a->[0] <=> $b->[0] } $self->position_pairs;
-    
+
     return unless @pps;
-    
+
     my $initial_exon_id = $pps[0]->[2];
     my $terminal_exon_id = $pps[-1]->[2];
-    
+
     $self->update_splice_strings('exon_end');
-    
+
     my ($acceptor_txt) = $canvas->find('withtag', "$initial_exon_id&&splice_acceptor");
     $canvas->itemconfigure($acceptor_txt, -text => '');
-    
+
     my ($donor_txt) = $canvas->find('withtag', "$terminal_exon_id&&splice_donor");
     $canvas->itemconfigure($donor_txt, -text => '');
 
@@ -2345,7 +2345,7 @@ sub remove_spurious_splice_sites {
 
 sub get_splice_acceptor_donor_strings {
     my ($self, $start, $end, $strand) = @_;
-    
+
     # Fetch the splice donor and acceptor sequences before switching start/end for reverse strand
     my ($splice_acceptor_str, $splice_donor_str);
     if ($start and $end) {
@@ -2575,7 +2575,7 @@ sub strand_from_tk {
             -font   => $font,
             -tags   => ['t_start', $tr_tag],
             );
-        
+
         # Put the CDS label between start and end editable text
         $canvas->createText(
             $x1 + (($x2 - $x1) / 2), $y1,
@@ -2729,7 +2729,7 @@ sub new_SubSeq_from_tk {
         $new->utr_start_not_found(0);
         $new->start_not_found($snf);
     }
-    
+
     # warn "Start not found ", $self->start_not_found_from_tk, "\n",
     #      "  End not found ", $self->end_not_found_from_tk,   "\n";
     return $new;
@@ -2753,7 +2753,7 @@ sub xace_save {
     my ($self, $sub) = @_;
 
     confess "Missing SubSeq argument" unless $sub;
-    
+
     my $top = $self->top_window;
     $top->grab;     # Stop user closing window before save is finished
 
@@ -2792,7 +2792,7 @@ sub xace_save {
     }
 
     $top->grabRelease;
-    
+
     return 1;
 }
 

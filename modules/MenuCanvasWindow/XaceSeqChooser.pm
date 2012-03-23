@@ -41,7 +41,7 @@ sub new {
     my ($pkg, $tk) = @_;
 
     my $self = $pkg->SUPER::new($tk);
-    
+
     $self->populate_menus;
     $self->make_search_panel;
     $self->bind_events;
@@ -125,7 +125,7 @@ sub clone_menu {
 
 sub balloon {
     my ($self) = @_;
-    
+
     $self->{'_balloon'} ||= $self->top_window->Balloon(
         -state  => 'balloon',
         );
@@ -629,9 +629,9 @@ sub populate_menus {
 
 sub LoadColumns {
     my ($self, $lc) = @_;
-    
+
     $self->{'_LoadColumns'} = $lc if $lc;
-    
+
     return $self->{'_LoadColumns'};
 }
 
@@ -1165,7 +1165,7 @@ sub save_ace {
 
 sub flag_db_edits {
     my ($self, $flag) = @_;
-    
+
     if (defined $flag) {
         $self->{'_flag_db_edits'} = $flag ? 1 : 0;
     }
@@ -1188,7 +1188,7 @@ sub resync_with_db {
     $self->empty_Assembly_cache;
     $self->empty_SubSeq_cache;
     $self->empty_Locus_cache;
-    
+
     # Refetch transcripts from GFF cache
     $self->fetch_external_SubSeqs;
 
@@ -1214,7 +1214,7 @@ sub edit_subsequences {
     my ($self, @sub_names) = @_;
 
     my $retval = 1;
-    
+
     @sub_names = $self->list_selected_subseq_names
         unless @sub_names;
     foreach my $sub_name (@sub_names) {
@@ -1235,7 +1235,7 @@ sub edit_subsequences {
             $retval = 0;
         }
     }
-    
+
     return $retval;
 }
 
@@ -1454,7 +1454,7 @@ sub add_external_SubSeqs {
 
 sub fetch_external_SubSeqs {
     my ($self) = @_;
-    
+
     my $sth = $self->AceDatabase->DB->dbh->prepare(
         q{ SELECT filter_name FROM otter_filter WHERE done = 1 AND process_gff = 1 }
         );
@@ -2036,7 +2036,7 @@ sub row_count {
 
 sub update_SubSeq_locus_level_errors {
     my ($self) = @_;
-    
+
     $self->Assembly->set_SubSeq_locus_level_errors;
     foreach my $sub_name ($self->list_all_subseq_edit_window_names) {
         my $ec = $self->get_subseq_edit_window($sub_name) or next;
@@ -2289,7 +2289,7 @@ sub subseq_names_to_canvas_obj {
             push(@to_select, $obj);
         }
     }
-    
+
     return @to_select;
 }
 
@@ -2387,7 +2387,7 @@ sub run_exonerate {
 
 sub set_window_title {
     my ($self) = @_;
-    
+
     my $name = $self->AceDatabase->name;
     my $unsaved_str = $self->AceDatabase->unsaved_changes ? '* ' : '';
     my $title = "${unsaved_str}otter: Session $name";
@@ -2398,7 +2398,7 @@ sub set_window_title {
 
 sub update_window_title_unsaved_flag {
     my ($self, $flag) = @_;
-    
+
     my $top = $self->top_window;
     my $title = $top->title;
     $title =~ s/^\* //;
