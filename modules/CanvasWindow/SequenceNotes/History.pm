@@ -45,7 +45,7 @@ sub clone_index {
 
 sub SequenceNotes {
     my ($self, $SequenceNotes) = @_;
-    
+
     if ($SequenceNotes) {
         $self->{'_SequenceNotes'} = $SequenceNotes;
         weaken($self->{'_SequenceNotes'});
@@ -355,7 +355,7 @@ sub update_db_comment {
 
     #gets the string from the varibale reference stored
     my $new_string = ${ $self->entry_text_ref } || '-';
-    
+
     my $dataset    = $self->SequenceSetChooser->DataSet;
     unless ($dataset) {
         warn

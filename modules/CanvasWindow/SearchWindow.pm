@@ -10,7 +10,7 @@ use Hum::Sort 'ace_sort';
 
 sub Client {
     my ($self, $Client) = @_;
-    
+
     if ($Client) {
         $self->{'_Client'} = $Client;
     }
@@ -19,7 +19,7 @@ sub Client {
 
 sub DataSet {
     my ($self, $DataSet) = @_;
-    
+
     if($DataSet) {
         $self->{_DataSet} = $DataSet;
     }
@@ -82,7 +82,7 @@ sub do_search {
             ->Label(-text => "Nothing found for $q_name_list")
             ->pack(-side => 'left', -fill => 'x');
     }
-    
+
     $self->fix_window_min_max_sizes;
     $self->top_window->Unbusy;
 
@@ -209,9 +209,9 @@ sub _clone_names_label {
 
 sub new {
     my ($pkg, @args) = @_;
-    
+
     my $self = $pkg->SUPER::new(@args);
-    
+
     $self->{_results_frame} = $self->canvas->Frame();
     $self->canvas->createWindow( 5, 5,
         -window => $self->{_results_frame},
@@ -244,7 +244,7 @@ sub new {
         -text       => 'Clear',
         -command    => sub { $self->search_field('') },
     )->pack(-side => 'left');
-        
+
     my $search_entry = $control_frame->Entry(
         -textvariable => $self->search_field(),
         -width => 36,
@@ -254,7 +254,7 @@ sub new {
         -text       => 'Close',
         -command    => sub { $self->hide_me() },
     )->pack(-side => 'right');
-        
+
     my $search_button = $control_frame->Button(
         -text    => 'Search',
         -command => sub { $self->do_search(); },

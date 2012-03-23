@@ -16,9 +16,9 @@ use base qw( MainWindow );
 
 sub new {
     my ($pkg, $title, @command_line) = @_;
-    
+
     $title ||= 'Canvas Window';
-    
+
     my $mw = $pkg->SUPER::new(
         -class => 'CanvasWindow',
         -title => $title,
@@ -31,25 +31,25 @@ sub new {
                         # This is important. Without it text and objects
                         # on the canvas are rendered with different
                         # relative sizes on screen and when printed.
-    
+
     if (@command_line) {
         $mw->command([@command_line]);
         #$mw->protocol('WM_SAVE_YOURSELF', sub{ warn "Saving myself..."; sleep 2; $mw->destroy });
         $mw->protocol('WM_SAVE_YOURSELF', "");
     }
-    
+
     #warn "Scaling = ", $mw->scaling, "\n";
-    
+
     $mw->add_default_options;
-    
+
     $mw->add_default_bindings;
-    
+
     return $mw;
 }
 
 sub add_default_bindings {
     my ($mw) = @_;
-    
+
     my $exit = sub{ exit; };
     $mw->bind('<Control-q>', $exit);
     $mw->bind('<Control-Q>', $exit);
@@ -59,10 +59,10 @@ sub add_default_bindings {
 
 sub add_default_options {
     my ($mw) = @_;
-    
+
     # Get warnings about "possible comments in qw"
     no warnings "qw"; ## no critic(TestingAndDebugging::ProhibitNoWarnings)
-    
+
     # Priority level of 40 is equivalent to an
     # application specific startup file.
     my $priority = 40;
@@ -91,13 +91,13 @@ sub add_default_options {
         CanvasWindow*ProgressBar*relief         sunken
         CanvasWindow*ProgressBar*foreground     gold
         };
-    
+
     for (my $i = 0; $i < @opt_val; $i += 2) {
         my ($opt, $val) = @opt_val[$i, $i + 1];
         #warn "Adding '$opt' : '$val'\n";
         $mw->optionAdd($opt, $val, $priority);
     }
-    
+
     my @entry_class = qw{ Entry NoPasteEntry };
     foreach my $class (@entry_class) {
         $mw->optionAdd("CanvasWindow\*$class.relief",       'sunken',       $priority);
