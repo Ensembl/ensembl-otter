@@ -11,7 +11,7 @@ sub draw{
     return if $self->{'_drawn'};
 
     my $trim_window = $self->window;
-    
+
     my $no_of_cs = ${$self->text_variable_ref('total')};
     my $max_pp   = ${$self->text_variable_ref('per_page')};
     my $label    = $trim_window->Label(-text => "It looks as though you are about to open" .
@@ -49,7 +49,7 @@ sub draw{
     };
     $search_entry1->bind('<FocusOut>', $auto_last_clone);
     $search_entry1->bind('<Destroy>', sub { $self = undef});
-    
+
     my $label2       = $entry_frame->Label(-text => "Last Clone: ($no_of_cs)"
                                            )->pack(-side   =>  'left');
     my $search_entry2 = $entry_frame->Entry(-width        => 5,
@@ -75,7 +75,7 @@ sub draw{
     my $cancel_button = $limit_cancel_frame->Button(-text    => 'Open All',
                                                     -command => [ $openAll, $self ],
                                                     )->pack(-side => 'right');
-    
+
     $limit_cancel_frame->bind('<Destroy>', sub { $self = undef});
     # clean up circulars
     $self->delete_all_actions();
