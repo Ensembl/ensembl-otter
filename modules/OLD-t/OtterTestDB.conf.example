@@ -9,21 +9,21 @@
 {
     # DBD driver to use - mandatory
     'driver'        => 'mysql',
-    
+
     # machine to connect to - mandatory
     'host'          => 'localhost',
-    
+
     # user to connect to server as - mandatory
     'user'          => 'root',
-    
+
     # port the server is running on - optional
     'port'          => '3306',
-    
+
     # Password if needed
     'pass'      => '',
-    
+
     # File containing the datbase schema in SQL format - mandatory
 
     'schema_sql'    => ['../sql/otter.sql','../../ensembl/sql/table.sql'],
-    
+
 }
