@@ -8,7 +8,7 @@ use warnings;
 
 sub new {
     my ($pkg, $tk) = @_;
-    
+
     my $self = bless {}, $pkg;
     $self->top($tk);
     return $self;
@@ -16,7 +16,7 @@ sub new {
 
 sub top {
     my ($self, $top) = @_;
-    
+
     if ($top) {
         $self->{'_top'} = $top;
     }
@@ -25,7 +25,7 @@ sub top {
 
 sub balloon {
     my ($self) = @_;
-    
+
     $self->{'_balloon'} ||= $self->top->Balloon(
         -state  => 'balloon',
         );
@@ -34,7 +34,7 @@ sub balloon {
 
 sub set_minsize {
     my ($self) = @_;
-    
+
     my $top = $self->top;
     $top->update;
     $top->minsize($top->width, $top->height);

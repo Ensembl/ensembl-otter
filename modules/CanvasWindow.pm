@@ -14,12 +14,12 @@ use Hum::ClipboardUtils 'integers_from_text';
 
 sub new {
     my ($pkg, $tk, $x, $y, $where_scrollbars, $canvas_class) = @_;
-    
+
     if(!defined($where_scrollbars)) { # NB: not just empty, but undefined
         $where_scrollbars = 'se';
     }
     $canvas_class ||= 'Canvas'; # or 'HeadedCanvas', for example
-    
+
     unless ($tk) {
         confess "Error usage: $pkg->new(<Tk::Widget object>)";
     }
@@ -27,7 +27,7 @@ sub new {
     # Make new object and set-get initial canvas size
     my $self = bless {}, $pkg;
     ($x, $y) = $self->initial_canvas_size($x, $y);
-    
+
     # Make and pack a canvas of the specified type
 
     my @creation_params = (
@@ -57,13 +57,13 @@ sub new {
     # Make a new CanvasWindow object, and return
     $self->canvas($canvas);
     $self->bind_scroll_commands;
-    
+
     # Does the module define a Pixmap for the icon?
     if (my $pix = $pkg->icon_pixmap) {
         my $mw = $self->top_window();
         $mw->Icon(-image => $mw->Pixmap(-data => $pix));
     }
-    
+
     return $self;
 }
 
@@ -75,7 +75,7 @@ sub top_window {
 
 sub deiconify_and_raise {
     my ($self) = @_;
-    
+
     my $top = $self->top_window;
     $top->deiconify;
     $top->raise;
@@ -89,7 +89,7 @@ sub icon_pixmap {
 
 sub initial_canvas_size {
     my ($self, $x, $y) = @_;
-    
+
     if ($x and $y) {
         $self->{'_initial_canvas_size'} = [$x, $y];
     }
@@ -102,7 +102,7 @@ sub initial_canvas_size {
 
 sub canvas {
     my ($self, $canvas) = @_;
-    
+
     if ($canvas) {
         $self->{'_canvas'} = $canvas;
     }
@@ -113,7 +113,7 @@ sub canvas {
 
 sub font {
     my ($self, $font) = @_;
-    
+
     if ($font) {
         $self->{'_font'} = $font;
         $self->clear_font_caches;
@@ -133,7 +133,7 @@ sub font_size {
 
 sub clear_font_caches {
     my ($self) = @_;
-    
+
     $self->{'_font_fixed'}      = undef;
     $self->{'_font_fixed_bold'} = undef;
     $self->{'_font_unit_width'} = undef;
@@ -148,7 +148,7 @@ sub xlfd_array {
 
 sub font_fixed {
     my ($self) = @_;
-    
+
     unless ($self->{'_font_fixed'}) {
         my @xlfd = $self->xlfd_array;
         $xlfd[1] = $self->font;
@@ -162,7 +162,7 @@ sub font_fixed {
 
 sub font_fixed_bold {
     my ($self) = @_;
-    
+
     unless ($self->{'_font_fixed_bold'}) {
         my @xlfd = $self->xlfd_array;
         $xlfd[1] = $self->font;
@@ -176,7 +176,7 @@ sub font_fixed_bold {
 
 sub font_unit_width {
     my ($self) = @_;
-    
+
     my( $uw );
     unless ($uw = $self->{'_font_unit_width'}) {
         my $string_length = 1000;
@@ -192,7 +192,7 @@ sub font_unit_width {
 
 sub set_scroll_region {
     my ($self) = @_;
-    
+
     my $canvas = $self->canvas;
     my @bbox = $canvas->bbox('all');
     expand_bbox(\@bbox, 5);
@@ -202,7 +202,7 @@ sub set_scroll_region {
         $bbox[2] = $min_bbox[2] if $min_bbox[2] > $bbox[2];
         $bbox[3] = $min_bbox[3] if $min_bbox[3] > $bbox[3];
     }
-    
+
     my ($init_x, $init_y) = $self->initial_canvas_size;
     if (($bbox[2] - $bbox[0]) < $init_x) {
         $bbox[2] = $bbox[0] + $init_x;
@@ -210,7 +210,7 @@ sub set_scroll_region {
     if (($bbox[3] - $bbox[1]) < $init_y) {
         $bbox[3] = $bbox[1] + $init_y;
     }
-    
+
     #warn "Setting scroll region to [@bbox]";
     $canvas->configure(
         -scrollregion => [@bbox],
@@ -220,7 +220,7 @@ sub set_scroll_region {
 
 sub minimum_scroll_bbox {
     my ($self, @min_scroll) = @_;
-    
+
     if (@min_scroll) {
         my $count = @min_scroll;
         confess "Wrong number of coordinates '$count' not '4'"
@@ -241,7 +241,7 @@ sub minimum_scroll_bbox {
 
 sub bind_scroll_commands {
     my ($self) = @_;
-    
+
     my $canvas = $self->canvas; # whether a self-managing or Scrolled
 
     my $scrolled = $canvas->can('Subwidget') # the owner of scrollbars
@@ -254,7 +254,7 @@ sub bind_scroll_commands {
     my $canvas_components = $canvas->can('canvases')
         ? $canvas->canvases()
         : [ $canvas ];
-    
+
     # Unbind the scrollbar keyboard events from the canvas
     my $class = ref($canvas);
     foreach my $sequence ($canvas->Tk::bind($class)) {
@@ -270,7 +270,7 @@ sub bind_scroll_commands {
             -takefocus => 0,
             );
     }
-    
+
     # ... Want canvas to do this instead
     $canvas->configure(
         -takefocus => 1,
@@ -278,7 +278,7 @@ sub bind_scroll_commands {
     $canvas->Tk::bind('<Enter>', sub{
         $canvas->Tk::focus;
         });
-    
+
     # Home and End keys
     $canvas->Tk::bind('<Home>', sub{
         $y_scroll->ScrlToPos(0);
@@ -286,7 +286,7 @@ sub bind_scroll_commands {
     $canvas->Tk::bind('<End>', sub{
         $y_scroll->ScrlToPos(1);
         });
-    
+
     # Page-Up and Page-Down keys
     $canvas->Tk::bind('<Next>', sub{
         $y_scroll->ScrlByPages('v', 1);
@@ -300,7 +300,7 @@ sub bind_scroll_commands {
     $canvas->Tk::bind('<Control-Up>', sub{
         $y_scroll->ScrlByPages('v', -1);
         });
-    
+
     # Ctrl-Left and Ctrl-Right
     $canvas->Tk::bind('<Control-Left>', sub{
         $x_scroll->ScrlByPages('h', -1);
@@ -308,7 +308,7 @@ sub bind_scroll_commands {
     $canvas->Tk::bind('<Control-Right>', sub{
         $x_scroll->ScrlByPages('h', 1);
         });
-    
+
     # Left and Right
     $canvas->Tk::bind('<Shift-Left>', sub{
         #warn "Shift-Left";
@@ -318,7 +318,7 @@ sub bind_scroll_commands {
         #warn "Shift-Right";
         $x_scroll->ScrlByUnits('h', 1);
         });
-    
+
     # Up and Down
     $canvas->Tk::bind('<Shift-Up>', sub{
         #warn "Shift-Up";
@@ -365,10 +365,10 @@ sub scroll_to_obj {
     my ($self, $obj) = @_;
 
     my $margin = 10;
-    
+
     confess "No object index given" unless $obj;
     my $canvas = $self->canvas;
-    
+
     my $scroll_ref = $canvas->cget('scrollregion')
         or confess "No scrollregion";
     my ($scr_left,$scr_top,$scr_right,$scr_bottom) = @$scroll_ref;
@@ -387,7 +387,7 @@ sub scroll_to_obj {
     $obj_right  -= $scr_left;
     $obj_top    -= $scr_top;
     $obj_bottom -= $scr_top;
-    
+
     my ($l_frac, $r_frac) = $canvas->xview;
     my $visible_left  = $width * $l_frac;
     my $visible_right = $width * $r_frac;
@@ -404,7 +404,7 @@ sub scroll_to_obj {
     else {
         # warn "object is visible in x axis\n";
     }
-    
+
     my ($t_frac, $b_frac) = $canvas->yview;
     my $visible_top  =   $height * $t_frac;
     my $visible_bottom = $height * $b_frac;
@@ -426,13 +426,13 @@ sub scroll_to_obj {
 
 sub fix_window_min_max_sizes {
     my ($self) = @_;
-    
+
     my $mw = $self->top_window();
     #$mw->withdraw;
-    
+
     my( $max_x, $max_y, $display_max_x, $display_max_y )
         = $self->set_scroll_region_and_maxsize;
-    
+
     # Get the current screen offsets
     my($x, $y) = $mw->geometry =~ /^=?\d+x\d+\+?(-?\d+)\+?(-?\d+)/;
 
@@ -477,7 +477,7 @@ sub set_scroll_region_and_maxsize {
     my @bbox = $self->set_scroll_region;
     my $canvas_width  = $bbox[2] - $bbox[0];
     my $canvas_height = $bbox[3] - $bbox[1];
-    
+
     my( $other_x, # other_x and other_y record the space occupied
         $other_y, # by the widgets other than the canvas in the
                   # window.
@@ -506,13 +506,13 @@ sub set_scroll_region_and_maxsize {
     $max_x = $display_max_x if $max_x > $display_max_x;
     $max_y = $display_max_y if $max_y > $display_max_y;
     $mw->maxsize($max_x, $max_y);
-    
+
     return($max_x, $max_y, $display_max_x, $display_max_y);
 }
 
 sub set_window_size {
     my ($self, $set_flag) = @_;
-    
+
     if ($set_flag) {
         my $mw = $self->top_window();
         my($x, $y) = $mw->geometry =~ /^(\d+)x(\d+)/;
@@ -530,14 +530,14 @@ sub set_window_size {
 
 sub print_postscript {
     my ($self, $file_root) = @_;
-    
+
     unless ($file_root) {
         $file_root = $self->top_window()->cget('title')
             || 'CanvasWindow';
         $file_root =~ s/\s/_/g;
     }
     $file_root =~ s/\.ps$//i;
-    
+
     my $canvas = $self->canvas;
     my $bbox = $canvas->cget('scrollregion');
     my $canvas_width  = $bbox->[2] - $bbox->[0];
@@ -551,12 +551,12 @@ sub print_postscript {
         confess "Page width must be greater than page height:\n",
             "  width = '$page_width', height = '$page_height'";
     }
-    
+
     my $horiz_tile      = $self->horizontal_tile;
     my $vert_tile       = $self->vertical_tile;
     my $landscape       = $self->landscape;
     my $tile_overlap    = $self->tile_overlap;
-    
+
     my $page_x = $page_border;
     my $page_y = $page_border;
     if ($landscape) {
@@ -564,18 +564,18 @@ sub print_postscript {
     } else {
         $page_y += $page_height;
     }
-    
+
     my( $print_width, $print_height,
         $tile_width, $tile_height,
         $canvas_tile_pad,
         @ps_args );
     if ($horiz_tile) {
         my $overlap_count = $horiz_tile - 1;
-        
+
         # Calculate the print width and height
         $print_width  = ($page_width * $horiz_tile) - ($tile_overlap * $overlap_count);
         $print_height = $print_width * ($canvas_height / $canvas_width);
-        
+
         # Calculate size of tile overlap on canavs
         $canvas_tile_pad = $tile_overlap * ($canvas_width / $print_width);
 
@@ -588,17 +588,17 @@ sub print_postscript {
     }
     elsif ($vert_tile) {
         my $overlap_count = $vert_tile - 1;
-        
+
         # Calculate print height and width
         $print_height = ($page_height * $vert_tile) - ($tile_overlap * $overlap_count);
         $print_width  = $print_height * ($canvas_width / $canvas_height);
-        
+
         # Calculate size of tile overlap on canavs
         $canvas_tile_pad = $tile_overlap * ($canvas_height / $print_height);
-        
+
         # Deduce the number of horizontal tiles
         $horiz_tile = 1 + int($print_width / ($page_width - $tile_overlap));
-        
+
         $tile_height = ($canvas_height + ($overlap_count * $canvas_tile_pad)) / $vert_tile;
         $tile_width  = $tile_height  * ($page_width / $page_height);
         push(@ps_args, '-pageheight', $page_height);
@@ -626,16 +626,16 @@ sub print_postscript {
             }
         }
     }
-    
+
     my $h_format = '%0'. length($horiz_tile) .'d';
     my $v_format = '%0'. length($vert_tile)  .'d';
-    
+
     # Foreach row ...
     my( @ps_files );
     for (my $i = 0; $i < $vert_tile; $i++) {
         my $v_num = $vert_tile == 1 ? '' : sprintf($v_format, $i + 1);
         my $y = $bbox->[1] + ($i * $tile_height) - ($i * $canvas_tile_pad);
-        
+
         # ... print each column
         for (my $j = 0; $j < $horiz_tile; $j++) {
             my $x = $bbox->[0] + ($j * $tile_width) - ($j * $canvas_tile_pad);
@@ -668,7 +668,7 @@ sub print_postscript {
 
 sub page_width {
     my ($self, $page_width) = @_;
-    
+
     if ($page_width) {
         confess "Illegal page width '$page_width'"
             unless $page_width =~ /^\d+$/;
@@ -680,7 +680,7 @@ sub page_width {
 
 sub page_height {
     my ($self, $page_height) = @_;
-    
+
     if ($page_height) {
         confess "Illegal page height '$page_height'"
             unless $page_height =~ /^\d+$/;
@@ -692,7 +692,7 @@ sub page_height {
 
 sub page_border {
     my ($self, $page_border) = @_;
-    
+
     if ($page_border) {
         confess "Illegal page border '$page_border'"
             unless $page_border =~ /^\d+$/;
@@ -704,7 +704,7 @@ sub page_border {
 
 sub tile_overlap {
     my ($self, $tile_overlap) = @_;
-    
+
     if ($tile_overlap) {
         confess "Illegal page border '$tile_overlap'"
             unless $tile_overlap =~ /^\d+$/;
@@ -716,7 +716,7 @@ sub tile_overlap {
 
 sub landscape {
     my ($self, $flag) = @_;
-    
+
     if (defined $flag) {
         $self->{'_print_landscape'} = $flag ? 1 : 0;
     }
@@ -729,7 +729,7 @@ sub landscape {
 
 sub horizontal_tile {
     my ($self, $count) = @_;
-    
+
     if (defined $count) {
         confess "Illegal horizontal tile count '$count'"
             unless $count =~ /^\d+$/;
@@ -741,7 +741,7 @@ sub horizontal_tile {
 
 sub vertical_tile {
     my ($self, $count) = @_;
-    
+
     if (defined $count) {
         confess "Illegal vertical tile count '$count'"
             unless $count =~ /^\d+$/;
@@ -753,13 +753,13 @@ sub vertical_tile {
 
 sub visible_canvas_bbox {
     my ($self) = @_;
-    
+
     my $canvas = $self->canvas;
-    
+
     my $scroll      = $canvas->cget('scrollregion') || [0, 0, 0, 0];
     my ($xf1, $xf2) = $canvas->xview;
     my ($yf1, $yf2) = $canvas->yview;
-    
+
     # Calculate corners of rectangle of visible area of canvas
     my $scroll_width  = $scroll->[2] - $scroll->[0];
     my $scroll_height = $scroll->[3] - $scroll->[1];
@@ -769,20 +769,20 @@ sub visible_canvas_bbox {
 
     my $y1 = ($yf1 * $scroll_height) + $scroll->[1];
     my $y2 = ($yf2 * $scroll_height) + $scroll->[1];
-    
+
     return($x1, $y1, $x2, $y2);
 }
 
 sub visible_canvas_x_y {
     my ($self) = @_;
-    
+
     my @bbox = $self->visible_canvas_bbox;
     return( $bbox[2] - $bbox[0], $bbox[3] - $bbox[1] );
 }
 
 sub exception_message {
     my ($self, $except, @message) = @_;
-    
+
     # Take just the first part of long exception messages
     my @except_show = __partial_exception($except);
 
@@ -834,14 +834,14 @@ sub __catdent {
 
 sub message {
     my ($self, @message) = @_;
-    
+
     my ($x1, $y1, $x2, $y2) = $self->visible_canvas_bbox;
     #warn "visible corners = ($x1, $y1, $x2, $y2)\n";
-    
+
     # Width and height of visible area
     my $visible_width  = $x2 - $x1;
     my $visible_height = $y2 - $y1;
-    
+
     # We have to make the message narrower if the
     # visible area of the canvas is smaller than
     # the desired message width.
@@ -853,7 +853,7 @@ sub message {
             $message_width = $smallest_width;
         }
     }
-    
+
     # Calculate where to draw the text
     my $pad = 5;
     my $x_offset = int(($visible_width - $message_width) / 2);
@@ -889,14 +889,14 @@ sub message_at_x_y {
         -width  => $text_width,
         -tags   => [@tags],
         );
-    
+
     # Expand the bbox of the text
     my @bbox = $canvas->bbox($text);
     $bbox[0] -= $pad;
     $bbox[1] -= $pad;
     $bbox[2] += $pad;
     $bbox[3] += $pad;
-    
+
     # Put a yellow rectangle under the text
     my $yellow_rec = $canvas->createRectangle(
         @bbox,
@@ -905,7 +905,7 @@ sub message_at_x_y {
         -tags       => [@tags],
         );
     $canvas->lower($yellow_rec, $text);
-    
+
     # Put a shadow under the yellow rectangle
     my @shadow_bbox = map {$_ + 3} @bbox;
     my $grey_rec = $canvas->createRectangle(
@@ -916,14 +916,14 @@ sub message_at_x_y {
         );
     $canvas->lower($grey_rec, $yellow_rec);
     $canvas->update;
-    
+
     $self->set_scroll_region_and_maxsize;
     return $msg_id;
 }
 
 sub delete_message {
     my ($self, $msg_id) = @_;
-    
+
     my $canvas = $self->canvas;
     unless ($msg_id) {
         my ($obj) = $canvas->find('withtag', 'current');
@@ -942,7 +942,7 @@ sub delete_message {
 
 sub next_message_id {
     my ($self) = @_;
-    
+
     return ++$self->{'_last_message_id'};
 }
 
@@ -1038,7 +1038,7 @@ sub next_message_id {
 
     sub delete_was_selected {
         my ($self) = @_;
-        
+
         if ($self->{'_was_selected_list'}) {
             $self->canvas->delete($was_tag);
             $self->{'_was_selected_list'} = undef;
@@ -1077,7 +1077,7 @@ sub next_message_id {
 
     sub was_selected {
         my ($self, $obj) = @_;
-        
+
         return $self->{'_was_selected_list'}{$obj} ? 1 : 0;
     }
 
@@ -1095,7 +1095,7 @@ sub next_message_id {
 
     sub _get_sorted_list {
         my ($self, $list_name) = @_;
-        
+
         my $sel = $self->{$list_name};
         my @selected = $sel ? sort { ace_sort($a,$b) } keys %$sel : ( );
 
@@ -1129,7 +1129,7 @@ sub get_all_selected_text {
 
 sub selected_text_to_clipboard {
     my ($self, $offset, $max_bytes) = @_;
-    
+
     my $text = join "\n", $self->get_all_selected_text;
     return substr($text, $offset, $max_bytes);
 }
@@ -1168,15 +1168,15 @@ sub integers_from_clipboard {
 
 sub class_object_start_end_from_clipboard {
     my ($self) = @_;
-    
+
     my $text = $self->get_clipboard_text or return;
-    
+
     # Sequence:"RP5-931H19.1-001"    -160499 -160298 (202)   Coding 
     my ($class, $obj_name, $start, $end) = $text =~ /^(?:([^:]+):)?"([^"]+)"\s+-?(\d+)\s+-?(\d+)/;
     # Having odd numbers of " messes up my syntax highlighting
-    
+
     #warn "class = '$class'  name = '$obj_name'  start = '$start'  end = '$end'";
-    
+
     return( $class, $obj_name, $start, $end );
 }
 
