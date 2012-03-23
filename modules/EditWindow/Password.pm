@@ -10,7 +10,7 @@ use base 'EditWindow';
 
 sub initialise {
     my ($self) = @_;
-    
+
     my $pad = 6;
     my $top = $self->top;
     my $top_frame = $top->Frame(-borderwidth => $pad)->pack( -side => 'top' );
@@ -19,7 +19,7 @@ sub initialise {
         -text   => $self->prompt_string || 'Enter password',
         -anchor => 's',
         )->pack(-side => 'top');
-    
+
     # Space between label and entry frame
     $top_frame->Frame(
         -height => $pad,
@@ -33,12 +33,12 @@ sub initialise {
             -textvariable   => $self->passref,
             )->pack(-side => 'left')
         );
-    
+
     # Space between password field and button
     $entry_frame->Frame(
         -width => $pad,
         )->pack(-side => 'left');
-    
+
     my $button = $entry_frame->Button(
         -default    => 'active',
         -text       => 'Send',
@@ -48,12 +48,12 @@ sub initialise {
             },
         )->pack( -side => 'left' );
     $self->submit_button($button);
-    
+
     my $submit = sub{ $button->focus; $button->invoke };
     $top->bind('<Return>',                  $submit);
     $top->bind('<KP_Enter>',                $submit);
     $top->protocol('WM_DELETE_WINDOW' =>    $submit);
-    
+
     $entry_frame->bind('<Destroy>', sub { $self = undef });
 
     return;
@@ -61,7 +61,7 @@ sub initialise {
 
 sub get_password {
     my ($self) = @_;
-    
+
     my $pass = '';
 
     # Check to see if another window has grabbed input
@@ -77,7 +77,7 @@ sub get_password {
     $self->top->Popup;
     $self->set_minsize;     # Does an "update"
     $self->submit_button->waitWindow;
-    
+
     # Restore input grab to original window
     if ($grab_window) {
         $grab_window->grab;
@@ -88,7 +88,7 @@ sub get_password {
 
 sub passref {
     my ($self, $passref) = @_;
-    
+
     if ($passref) {
         $self->{'_passref'} = $passref;
     }
@@ -97,7 +97,7 @@ sub passref {
 
 sub prompt_string {
     my ($self, $prompt_string) = @_;
-    
+
     if ($prompt_string) {
         $self->{'_prompt_string'} = $prompt_string;
     }
@@ -106,7 +106,7 @@ sub prompt_string {
 
 sub submit_button {
     my ($self, $submit_button) = @_;
-    
+
     if ($submit_button) {
         $self->{'_submit_button'} = $submit_button;
     }
@@ -115,7 +115,7 @@ sub submit_button {
 
 sub password_field {
     my ($self, $password_field) = @_;
-    
+
     if ($password_field) {
         $self->{'_password_field'} = $password_field;
     }

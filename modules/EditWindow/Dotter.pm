@@ -12,12 +12,12 @@ use base 'EditWindow';
 
 sub initialise {
     my ($self) = @_;
-    
+
     my $top = $self->top;
-    
+
     my $dotter = Hum::Ace::DotterLauncher->new;
     $self->dotter($dotter);
-        
+
     # Entry box for match at top
     my $match_frame = $top->Frame(
         -border => 3,
@@ -34,13 +34,13 @@ sub initialise {
             -width  => 16,
             )->pack(-side => 'left')
         );
-    
+
     # Pad between entries
     $match_frame->Frame(
         -width  => 10,
         )->pack(-side => 'left');
-    
-    
+
+
     # Whether to open dotter with rev-comp'd match sequence
     my $rev_comp = 0;
     $self->revcomp_ref(\$rev_comp);
@@ -49,7 +49,7 @@ sub initialise {
         -variable   => \$rev_comp,
         )->pack(-side => 'left');
 
-    
+
     # Labelled frame around all the Genomic stuff
     my $lab_frame = $top->LabFrame(
         -borderwidth    => 3,
@@ -58,7 +58,7 @@ sub initialise {
         )->pack(
             -side => 'top',
             );
-    
+
     # Name of genomic sequence
     my $name_frame = $lab_frame->Frame->pack(
         -side => 'top',
@@ -94,12 +94,12 @@ sub initialise {
             -justify    => 'right',
             )->pack(-side => 'left')
         );
-    
+
     # Pad between entries
     $frame->Frame(
         -width  => 10,
         )->pack(-side => 'left');
-    
+
     # Genomic start
     $frame->Label(
         -text   => 'Start:',
@@ -110,12 +110,12 @@ sub initialise {
             -justify    => 'right',
             )->pack(-side => 'left')
         );
-    
+
     # Pad between entries
     $frame->Frame(
         -width  => 10,
         )->pack(-side => 'left');
-    
+
     # Genomic end
     $frame->Label(
         -text   => 'End:',
@@ -126,9 +126,9 @@ sub initialise {
             -justify    => 'right',
             )->pack(-side => 'left')
         );
-        
+
     # Get mark radio button
-    
+
     $lab_frame->Checkbutton(
         -variable => \$self->{_use_mark},
         -command => sub {
@@ -148,14 +148,14 @@ sub initialise {
         -text => 'Use coordinates of marked region',
         -anchor => 'w',
     )->pack(-side => 'bottom');
-    
+
     $self->set_entry('flank', 50_000);
-    
+
     my $button_frame = $top->Frame->pack(
         -side   => 'top',
         -fill   => 'x',
         );
-    
+
     # Launch dotter
     my $launch = sub {
         $self->launch_dotter or return;
@@ -190,7 +190,7 @@ sub initialise {
     $top->bind('<Control-w>',           $close_window);
     $top->bind('<Control-W>',           $close_window);
     $top->protocol('WM_DELETE_WINDOW',  $close_window);
-    
+
     $top->bind('<Destroy>', sub{ $self = undef });
 
     return;
@@ -204,7 +204,7 @@ sub XaceSeqChooser {
 
 sub update_from_XaceSeqChooser {
     my ($self, $xc) = @_;
-    
+
     $self->query_Sequence($xc->Assembly->Sequence);
     $self->genomic->configure(-state => 'normal');
     $self->set_entry('genomic', $xc->slice_name);
@@ -219,7 +219,7 @@ sub update_from_XaceSeqChooser {
 
 sub query_Sequence {
     my ($self, $query_Sequence) = @_;
-    
+
     if ($query_Sequence) {
         $self->{'_query_Sequence'} = $query_Sequence;
     }
@@ -228,7 +228,7 @@ sub query_Sequence {
 
 sub update_from_clipboard {
     my ($self) = @_;
-    
+
     if (my ($name, $start, $end) = $self->name_start_end_from_fMap_blue_box) {
         $self->set_entry('match', $name);
         my $flank = $self->get_entry('flank') || 0;
@@ -241,7 +241,7 @@ sub update_from_clipboard {
 
 sub set_entry {
     my ($self, $method, $txt) = @_;
-    
+
     my $entry = $self->$method();
     $entry->delete(0, 'end');
     $entry->insert(0, $txt);
@@ -251,7 +251,7 @@ sub set_entry {
 
 sub get_entry {
     my ($self, $method) = @_;
-    
+
     my $txt = $self->$method()->get or return;
     $txt =~ s/\s//g;
     return $txt;
@@ -259,7 +259,7 @@ sub get_entry {
 
 sub match {
     my ($self, $match) = @_;
-    
+
     if ($match) {
         $self->{'_match'} = $match;
     }
@@ -268,7 +268,7 @@ sub match {
 
 sub genomic {
     my ($self, $genomic) = @_;
-    
+
     if ($genomic) {
         $self->{'_genomic'} = $genomic;
     }
@@ -277,7 +277,7 @@ sub genomic {
 
 sub genomic_start {
     my ($self, $genomic_start) = @_;
-    
+
     if (defined $genomic_start) {
         $self->{'_genomic_start'} = $genomic_start;
     }
@@ -286,7 +286,7 @@ sub genomic_start {
 
 sub genomic_end {
     my ($self, $genomic_end) = @_;
-    
+
     if (defined $genomic_end) {
         $self->{'_genomic_end'} = $genomic_end;
     }
@@ -295,7 +295,7 @@ sub genomic_end {
 
 sub flank {
     my ($self, $flank) = @_;
-    
+
     if ($flank) {
         $self->{'_flank'} = $flank;
     }
@@ -304,7 +304,7 @@ sub flank {
 
 sub revcomp_ref {
     my ($self, $revcomp_ref) = @_;
-    
+
     if ($revcomp_ref) {
         $self->{'_revcomp_ref'} = $revcomp_ref;
     }
@@ -313,7 +313,7 @@ sub revcomp_ref {
 
 sub dotter {
     my ($self, $dotter) = @_;
-    
+
     if ($dotter) {
         $self->{'_dotter'} = $dotter;
     }
@@ -322,47 +322,47 @@ sub dotter {
 
 sub launch_dotter {
     my ($self) = @_;
-    
+
     my $match_name = $self->get_entry('match');
     my $start      = $self->get_entry('genomic_start');
     my $end        = $self->get_entry('genomic_end');
     my $genomic    = $self->query_Sequence;
     my $revcomp    = $self->revcomp_ref;
-    
+
     unless ($match_name and $genomic and $start and $end and $genomic) {
         warn "Missing parameters\n";
         return;
     }
-    
+
     if ($start > $end) {
         ($start, $end) = ($end, $start);
         $self->set_entry('genomic_start', $start);
         $self->set_entry('genomic_end',   $end);
     }
-    
+
     my $length = $genomic->sequence_length;
     $start = 1       if $start < 1;
     $end   = $length if $end   > $length;
-    
+
     my $dotter = $self->dotter;
     $dotter->query_Sequence($genomic);
     $dotter->query_start($start);
     $dotter->query_end($end);
     $dotter->subject_name($match_name);
     $dotter->revcomp_subject($$revcomp);
-    
+
     return $dotter->fork_dotter;
 }
 
 sub name_start_end_from_fMap_blue_box {
     my ($self) = @_;
-    
+
     my $tk = $self->top;
 
     my $text = $self->get_clipboard_text or return;
-    
+
     #warn "clipboard: $text";
-    
+
     # Match fMap "blue box"
     if ($text =~ /^(?:<?(?:Protein|Sequence)[:>]?)?\"?([^\"\s]+)\"?\s+-?(\d+)\s+-?(\d+)\s+\(\d+\)/) {
         my $name  = $1;

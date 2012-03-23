@@ -14,7 +14,7 @@ use Scalar::Util 'weaken';
 
 sub initialise {
     my ($self) = @_;
-    
+
     my $top = $self->top;
 
     my $name_frame = $top->Frame(
@@ -29,9 +29,9 @@ sub initialise {
         -variable   => \$chosen,
     )->pack(-side => 'left');
     $self->{'_chosen_name'} = \$chosen;
-    
+
     $name_frame->Label(-text => 'to:')->pack(-side => 'left', -padx => 3);
-    
+
     # Entry for editing new name of loucs
     my $new_name = $name_frame->Entry(-width => 20)->pack(-side => 'left');
     $self->{'_new_name_entry'} = $new_name;
@@ -45,11 +45,11 @@ sub initialise {
     };
     $name_menu->configure(-command => $put_chosen_in_entry);
     $put_chosen_in_entry->();
-    
+
     my $button_frame = $top->Frame(
         -border     => 3,
         )->pack(-side => 'top', -fill => 'x');
-    
+
     # Button which renames the locus
     my $do_rename = sub { $self->do_rename };
     my $rename_button = $button_frame->Button(
@@ -63,13 +63,13 @@ sub initialise {
         };
     $top->bind('<Return>',      $press_rename_button);
     $top->bind('<KP_Enter>',    $press_rename_button);
-    
+
     my $cancel = sub { $top->destroy };
     $button_frame->Button(-text => 'Cancel', -command => $cancel)->pack(-side => 'right');
     $top->bind('<Escape>', $cancel);
-    
 
-    
+
+
     $top->bind('<Destroy>', sub{ $self = undef; });
 
     return;
@@ -77,7 +77,7 @@ sub initialise {
 
 sub do_rename {
     my ($self) = @_;
-    
+
     my $old_name = $self->chosen_name;
     my $new_name = $self->get_new_name;
     if ($old_name eq $new_name) {
@@ -94,7 +94,7 @@ sub do_rename {
 
 sub locus_name_arg {
     my ($self, $arg) = @_;
-    
+
     if ($arg) {
         $self->{'_locus_name_arg'} = $arg;
     }
@@ -103,19 +103,19 @@ sub locus_name_arg {
 
 sub chosen_name {
     my ($self) = @_;
-    
+
     return ${$self->{'_chosen_name'}};
 }
 
 sub get_new_name {
     my ($self) = @_;
-    
+
     return $self->{'_new_name_entry'}->get;
 }
 
 sub XaceSeqChooser {
     my ($self, $xc) = @_;
-    
+
     if ($xc) {
         $self->{'_xace_seq_chooser'} = $xc;
         weaken($self->{'_xace_seq_chooser'});
@@ -125,7 +125,7 @@ sub XaceSeqChooser {
 
 sub make_menu_choices {
     my ($self) = @_;
-    
+
     my $xc = $self->XaceSeqChooser;
     my $sel_locus_name = $self->locus_name_arg;
     my @locus_name = $xc->list_Locus_names;
@@ -141,7 +141,7 @@ sub make_menu_choices {
         }
     }
     $sel_locus_name = undef unless $saw;
-    
+
     # If we don't have a locus name, take the one from the first
     # selected subseq we find
     unless ($sel_locus_name) {
@@ -152,7 +152,7 @@ sub make_menu_choices {
             last;
         }
     }
-    
+
     # Or choose the one at the top of the menu.
     $sel_locus_name ||= $locus_name[0];
 
@@ -162,7 +162,7 @@ sub make_menu_choices {
 
 sub DESTROY {
     my ($self) = @_;
-    
+
     warn "Destroying a '", ref($self), "'";
 
     return;
