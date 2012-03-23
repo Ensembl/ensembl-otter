@@ -19,7 +19,7 @@ sub new {
         -side   => 'top',
         -fill   => 'x',
         );
-    
+
     my $self = $pkg->SUPER::new($tk, @rest);
     $self->menu_bar($menu_frame);
     return $self;
@@ -27,7 +27,7 @@ sub new {
 
 sub menu_bar {
     my ($self, $bf) = @_;
-    
+
     if ($bf) {
         $self->{'_menu_bar'} = $bf;
     }
@@ -37,9 +37,9 @@ sub menu_bar {
 
 sub make_menu {
     my ($self, $name, $pos) = @_;
-    
+
     $pos ||= 0;
-    
+
     my $menu_frame = $self->menu_bar
         or confess "No menu_bar";
     my $button = $menu_frame->Menubutton(
