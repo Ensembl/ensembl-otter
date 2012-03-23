@@ -647,12 +647,12 @@ sub zMapViewClosed {
 
 sub zMapFeaturesLoaded {
     my ($self, $xml) = @_;
-    
+
     my @featuresets = split(/;/, $xml->{'request'}{'featureset'}{'names'});
-    
+
     my $status = $xml->{'request'}{'status'}{'value'};
     my $msg    = $xml->{'request'}{'status'}{'message'};
-    
+
     my $filter_hash = $self->AceDatabase->filters;
     my $state_changed = 0;
 
@@ -684,21 +684,21 @@ sub zMapFeaturesLoaded {
         #     warn "Ignoring featurset '$set_name'";
         # }
     }
-    
+
     if ($state_changed) {
         # save the state of each gff filter to disk so we can recover the session
         $self->AceDatabase->save_filter_state;
-        
+
         # and update the delayed flags in the zmap config file
         $self->AceDatabase->zmap_config_update;
     }
-    
+
     return (200, $self->zMapZmapConnector->handled_response(1));
 }
 
 sub zMapIgnoreRequest {
     my ($self) = @_;
-    
+
     return(200, $self->zMapZmapConnector->handled_response(0));
 }
 
@@ -890,7 +890,7 @@ sub zMapDeleteFeaturesets {
     else {
         warn "Failed to get client for 'delete_feature'";
     }
-    
+
     return;
 }
 

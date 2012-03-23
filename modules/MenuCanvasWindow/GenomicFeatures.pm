@@ -156,7 +156,7 @@ sub Assembly {
 
 sub get_all_Methods {
     my ($self) = @_;
-    
+
     my $feat_meths;
     unless ($feat_meths = $self->{'_Method_objects'}) {
         $feat_meths = $self->{'_Method_objects'} = [];
@@ -169,7 +169,7 @@ sub get_all_Methods {
 
 sub get_Method_by_name {
     my ($self, $name) = @_;
-    
+
     my $method = $self->{'_Method_index'}{$name}
       or confess "No Method with name '$name'";
     return $method;
@@ -180,15 +180,15 @@ sub get_Method_by_name {
 
 sub Assembly_from_tk {
     my ($self) = @_;
-    
+
     my $old_assembly = $self->Assembly;
-    
+
     my $new_assembly = Hum::Ace::Assembly->new;
     $new_assembly->name($old_assembly->name);
     $new_assembly->MethodCollection($old_assembly->MethodCollection);
     $new_assembly->Sequence($old_assembly->Sequence);
     ### Can copy more properties of old_assembly if needed
-    
+
     my @sf_list;
     foreach my $hash (values %{$self->{'_gfs'}}) {
         try {
@@ -200,13 +200,13 @@ sub Assembly_from_tk {
         }
     }
     $new_assembly->set_SimpleFeature_list(@sf_list);
-    
+
     return $new_assembly;
 }
 
 sub new_SimpleFeature_from_method_name {
     my ($self, $method_name) = @_;
-    
+
     my $feat = Hum::Ace::SeqFeature::Simple->new;
     $feat->Method($self->get_Method_by_name($method_name));
     return $feat;
@@ -307,7 +307,7 @@ sub show_direction_callback {
 
 sub paste_label_callback {
     my ($self, $genomic_feature, $this, $x) = @_;
-        
+
     if ($genomic_feature->{'gf_type'} eq 'EUCOMM') {
         $self->paste_eucomm_data($genomic_feature);
         return 1;
@@ -453,10 +453,10 @@ sub add_genomic_feature {
             $self->set_scroll_region_and_maxsize;
             },
     )->pack(@pack);
-    
+
     # Break circular reference caused by closure
     $delete_button->bind('<Destroy>', sub{ $self = undef });
-    
+
     # Entry for display label / comment text
     $genomic_feature->{'display_label_entry'} = $subframe->NoPasteEntry(
        -textvariable => \$genomic_feature->{'display_label'},
@@ -495,7 +495,7 @@ sub add_genomic_feature {
             ]
         );
     }
-    
+
     ### I don't think we need a destroy for all of these?
     for my $widget ('fiveprime_entry', 'threeprime_entry', 'direction_button', 'display_label_entry') {
         $genomic_feature->{$widget}->bind('<Destroy>', sub{ $self = $genomic_feature = undef; } );
@@ -560,7 +560,7 @@ sub save_to_ace {
 
         # Ok, we may need saving - but do we want it?
         unless ($force) {
-            
+
             my $save_changes = $self->top_window->messageBox(
                 -title      => "otter: Save Genomic Features?" ,
                 -message    => "Do you wish to save the changes for '" . $new_assembly->name . "'?",
@@ -681,7 +681,7 @@ sub initialize {
 
     my $tl = $self->top_window;
     $tl->title("otter: Genomic Features on " . $self->Assembly->name);
-    
+
     $self->canvas->Tk::bind('<Destroy>', sub{ $self = undef });
 
     return;
