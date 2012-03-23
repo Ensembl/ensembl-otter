@@ -11,7 +11,7 @@ use Hum::Ace::XaceRemote;
 
 sub new {
     my ($pkg, @args) = @_;
-    
+
     my $self = $pkg->SUPER::new(@args);
 
     my $canvas = $self->canvas;
@@ -57,13 +57,13 @@ sub new {
         -text       => 'Quit',
         -command    => $close_window,
         )->pack(-side => 'right');
-        
+
     return $self;
 }
 
 sub next_match {
     my ($self, $incr) = @_;
-    
+
     my ($obj) = $self->list_selected or return;
     $obj += $incr;
     my $canvas = $self->canvas;
@@ -78,7 +78,7 @@ sub next_match {
 
 sub select_feature {
     my ($self) = @_;
-    
+
     return if $self->delete_message;
     my $canvas = $self->canvas;
     $self->deselect_all;
@@ -91,7 +91,7 @@ sub select_feature {
 
 sub show_selected_in_zmap {
     my ($self) = @_;
-    
+
     my ($obj) = $self->list_selected or return;
     my $canvas = $self->canvas;
     my $ftr_i = undef;
@@ -103,13 +103,13 @@ sub show_selected_in_zmap {
     }
     return unless defined($ftr_i);
     my $ftr = $self->feature_list->[$ftr_i];
-    
+
     my $zmap_rem = $self->zmap_remote;
     unless ($zmap_rem) {
         $self->message('No zMap attached');
         return;
     }
-    
+
     my $command = join(' ; ',
         'feature_find method = readpairs',
         'type = homol',
@@ -131,9 +131,9 @@ sub show_selected_in_zmap {
 
 sub parse_feature_filehandle {
     my ($self, $fh) = @_;
-    
+
     my $feat_list = $self->feature_list;
-    
+
     my $row = 0;
     while (<$fh>) {
         next if /^$/;
@@ -181,14 +181,14 @@ sub parse_feature_filehandle {
 
 sub feature_list {
     my ($self) = @_;
-    
+
     my $feat_list = $self->{'_feature_list'} ||= [];
     return $feat_list;
 }
 
 sub draw_feature_list {
     my ($self) = @_;
-    
+
     my $feat_list = $self->feature_list;
     my @fields = qw{
         row_num
@@ -211,7 +211,7 @@ sub draw_feature_list {
         confess "No data in '$fld' field" unless $max_width;
         $field_widths{$fld} = $max_width
     }
-    
+
     my( @format );
     foreach my $fld (@fields) {
         push(@format, "\%$field_widths{$fld}s");
@@ -221,7 +221,7 @@ sub draw_feature_list {
     my $font = 'courier';
     my $font_def = ['courier', $font_size];
     my $font_line_height = 1.2 * $font_size;
-    
+
     my $canvas = $self->canvas;
     for (my $i = 0; $i < @$feat_list; $i++) {
         my $x = 0;
@@ -234,7 +234,7 @@ sub draw_feature_list {
             -tags   => ["feature_index=$i"],
             );
     }
-    
+
     $self->fix_window_min_max_sizes;
 
     return;
@@ -242,7 +242,7 @@ sub draw_feature_list {
 
 sub zmap_remote {
     my ($self, $zmap_remote) = @_;
-    
+
     if ($zmap_remote) {
         warn "Saving $zmap_remote";
         $self->{'_zmap_remote'} = $zmap_remote;
@@ -252,7 +252,7 @@ sub zmap_remote {
 
 sub attach_zmap {
     my ($self) = @_;
-    
+
     if (my $xwid = $self->get_zmap_window_id) {
         my $xrem = Hum::Ace::XaceRemote->new($xwid);
         $self->zmap_remote($xrem);
@@ -263,7 +263,7 @@ sub attach_zmap {
 
 sub get_zmap_window_id {
     my ($self) = @_;
-    
+
     my $mid = $self->message("Please click on the zMap main window with the cross-hairs");
     $self->delete_message($mid);
     open my $xwid_pipe, '-|', 'xwininfo'

@@ -56,7 +56,7 @@ sub prev_button {
 
 sub current_clone {
     my ($self, $clone) = @_;
-    
+
     my $cs_list = $self->get_CloneSequence_list();
     my $i = $self->clone_index;
     my $cs = @$cs_list[$i];
@@ -71,16 +71,16 @@ sub current_clone {
 
 sub initialise {
     my ($self) = @_;
-    
+
     # Use a slightly smaller font so that more info fits on the screen
     $self->font_size(12);
 
     my $ss = $self->SequenceSet or confess "No SequenceSet or SequenceNotes attached";
     my $write = $ss->write_access;
-    
+
     my $canvas = $self->canvas;
     my $top = $canvas->toplevel;
-    
+
     my $button_frame = $top->Frame;
     $button_frame->pack(
         -side => 'top',
@@ -105,14 +105,14 @@ sub initialise {
     my $next = $self->make_button($button_frame, 'Next Clone', $next_clone);
     $self->prev_button($prev);
     $self->next_button($next);
-    
+
     $self->make_button($button_frame, 'Close', sub { $top->withdraw }, 0);
-    
+
     # I think this is already bound..... 
     # It all gets cleared up twice with it.
     # And I think normal behaviour without it.
     $self->bind_close_window($top);
-    
+
     # Define how the table gets drawn by supplying a column_methods array
     my $norm = $self->font_fixed;
     my $bold = $self->font_fixed_bold;   

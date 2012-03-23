@@ -13,9 +13,9 @@ use CanvasWindow::SequenceSetChooser;
 
 sub new {
     my ($pkg, @args) = @_;
-    
+
     my $self = $pkg->SUPER::new(@args);
-    
+
     my $canvas = $self->canvas;
     $canvas->Tk::bind('<Button-1>', sub{
             $self->deselect_all;
@@ -28,7 +28,7 @@ sub new {
     $canvas->Tk::bind('<Control-o>',        $open_command);
     $canvas->Tk::bind('<Control-O>',        $open_command);
     $canvas->Tk::bind('<Escape>', sub{ $self->deselect_all });
-    
+
     my $quit_command = sub{
         $self->canvas->toplevel->destroy;
         $self = undef;  # $self gets nicely DESTROY'd with this
@@ -37,7 +37,7 @@ sub new {
     $canvas->Tk::bind('<Control-Q>',    $quit_command);
     $canvas->toplevel
         ->protocol('WM_DELETE_WINDOW',  $quit_command);
-        
+
     my $top = $canvas->toplevel;
     my $button_frame = $top->Frame->pack(-side => 'top', -fill => 'x');
 
@@ -61,13 +61,13 @@ sub new {
         -text       => 'Quit',
         -command    => $quit_command,
     )->pack(-side => 'right');
-        
+
     return $self;
 }
 
 sub Client {
     my ($self, $Client) = @_;
-    
+
     if ($Client) {
         $self->{'_Client'} = $Client;
     }
@@ -76,7 +76,7 @@ sub Client {
 
 sub select_dataset {
     my ($self) = @_;
-    
+
     return if $self->delete_message;
     my $canvas = $self->canvas;
     if (my ($current) = $canvas->find('withtag', 'current')) {
@@ -90,12 +90,12 @@ sub select_dataset {
 
 sub open_dataset {
     my ($self) = @_;
-    
+
     return if $self->recover_some_sessions;
-    
+
     my ($obj) = $self->list_selected;
     return unless $obj;
-    
+
     my $canvas = $self->canvas;
     $canvas->Busy;
     foreach my $tag ($canvas->gettags($obj)) {
@@ -166,7 +166,7 @@ sub recover_some_sessions {
 
     my $client = $self->Client();
     my $recoverable_sessions = $client->sessions_needing_recovery();
-    
+
     if (@$recoverable_sessions) {
         my %session_wanted = map { $_->[0] => 1 } @$recoverable_sessions;
 
@@ -189,13 +189,13 @@ sub recover_some_sessions {
                 "You will need to recover and exit these sessions. There may be"
                 . " locks left in the otter database or some of your work which has"
                 . " not been saved.",
-                
+
                 "Please contact anacode if you still get an error when you attempt"
                 . " to exit the session, or have information about the error which"
                 . " caused a session to be left.",
                 ), 
         )->pack(-side=>'top', -fill=>'x', -expand=>1);
-        
+
         foreach my $rec (@$recoverable_sessions) {
             my ($session_dir, $date, $title) = @$rec;
             my $full_session_title = sprintf "%s - %s", scalar localtime($date), $title;
@@ -218,14 +218,14 @@ sub recover_some_sessions {
 
                 foreach my $rec (@selected_recs) {
                     my ($session_dir, $date, $title) = @$rec;
-                    
+
                     # Bring up GUI
                     my $adb = $client->recover_session($session_dir);
-                    
+
                     my $top = $canvas->Toplevel(
                         -title  => 'otter: Select Column Data to Load',
                     );
-                    
+
                     my $lc = EditWindow::LoadColumns->new($top);
                     $lc->AceDatabase($adb);
                     $lc->DataSetChooser($self);

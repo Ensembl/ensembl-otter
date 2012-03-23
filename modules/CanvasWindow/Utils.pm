@@ -16,7 +16,7 @@ use vars qw ( @EXPORT_OK );
 
 sub bbox_union {
     my ($bb1, $bb2) = @_;
-    
+
     my @new = @$bb1;
     $new[0] = $bb2->[0] if $bb2->[0] < $bb1->[0];
     $new[1] = $bb2->[1] if $bb2->[1] < $bb1->[1];
@@ -27,7 +27,7 @@ sub bbox_union {
 
 sub expand_bbox {
     my ($bbox, $pad) = @_;
-    
+
     $bbox->[0] -= $pad;
     $bbox->[1] -= $pad;
     $bbox->[2] += $pad;

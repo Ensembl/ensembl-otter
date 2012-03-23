@@ -14,9 +14,9 @@ use Hum::Sort 'ace_sort';
 
 sub new {
     my ($pkg, @args) = @_;
-    
+
     my $self = $pkg->SUPER::new(@args);
-    
+
     my $canvas = $self->canvas;
     $canvas->Tk::bind('<Button-1>', sub{
             $self->deselect_all;
@@ -29,7 +29,7 @@ sub new {
     $canvas->Tk::bind('<Control-o>',        $edit_command);
     $canvas->Tk::bind('<Control-O>',        $edit_command);
     $canvas->Tk::bind('<Escape>', sub{ $self->deselect_all });
-    
+
     my $close_window = sub{
         my $top = $self->DataSetChooser->canvas->toplevel;
         $top->deiconify;
@@ -42,7 +42,7 @@ sub new {
     $canvas->Tk::bind('<Control-W>',                $close_window);
     $canvas->toplevel->protocol('WM_DELETE_WINDOW', $close_window);
 
-        
+
     my $top = $canvas->toplevel;
     my $button_frame = $top->Frame->pack(-side => 'top', -fill => 'x');
     my $open = $button_frame->Button(
@@ -53,7 +53,7 @@ sub new {
             }
         },
         )->pack(-side => 'left');
-    
+
     my $search_command = sub { $self->search_window };
 
     my $search = $button_frame->Button(
@@ -62,7 +62,7 @@ sub new {
     )->pack(-side =>'left') ;
     $canvas->Tk::bind('<Control-f>', $search_command);
     $canvas->Tk::bind('<Control-F>', $search_command);
-    
+
     my $quit = $button_frame->Button(
         -text       => 'Close',
         -command    => $close_window,
@@ -71,7 +71,7 @@ sub new {
     my $show_err_log = sub {
         $self->show_log();
     };
-    
+
     my $err_log = $button_frame->Button(
         -text       => 'Error Log',
         -command    => $show_err_log,
@@ -82,7 +82,7 @@ sub new {
 
 sub name {
     my ($self, $name) = @_;
-    
+
     if ($name) {
         $self->{'_name'} = $name;
     }
@@ -91,7 +91,7 @@ sub name {
 
 sub Client {
     my ($self, $Client) = @_;
-    
+
     if ($Client) {
         $self->{'_Client'} = $Client;
     }
@@ -100,7 +100,7 @@ sub Client {
 
 sub DataSet {
     my ($self, $DataSet) = @_;
-    
+
     if ($DataSet) {
         $self->{'_DataSet'} = $DataSet;
     }
@@ -109,7 +109,7 @@ sub DataSet {
 
 sub DataSetChooser {
     my ($self, $DataSetChooser) = @_;
-    
+
     if ($DataSetChooser) {
         $self->{'_DataSetChooser'} = $DataSetChooser;
     }
@@ -118,7 +118,7 @@ sub DataSetChooser {
 
 sub draw {
     my ($self) = @_;
-    
+
     my $size    = $self->font_size;
     my $canvas  = $self->canvas;
 
@@ -163,7 +163,7 @@ sub draw {
             -tags   => ["row=$row", 'SetName', 'SequenceSet=' . $tag],
             );
         }
-        
+
         $x = ($canvas->bbox('SetName'))[2] + ($size * 2);
         for (my $i = 0; $i < @$all_pairs; $i++) {
             my ($display_name, $tag, $desc, $ss) = @{$all_pairs->[$i]};
@@ -177,7 +177,7 @@ sub draw {
             -tags   => ["row=$row", 'SetDescription', 'SequenceSet=' . $tag],
             );
         }
-        
+
         $x = ($canvas->bbox('SetDescription'))[2] + ($size * 2);
         for (my $i = 0; $i < @$all_pairs; $i++) {
             my ($display_name, $tag, $desc, $ss) = @{$all_pairs->[$i]};
@@ -193,7 +193,7 @@ sub draw {
             -tags   => ["row=$row", 'SetDescription', 'SequenceSet=' . $tag],
             );
         }
-        
+
         $x = $size;
         my $max_x = ($canvas->bbox('SetDescription'))[2];
         for (my $i = 0; $i < @$all_pairs; $i++) {
@@ -208,11 +208,11 @@ sub draw {
             );
             $canvas->lower($rec, "row=$row");
         }
-    
+
     } else {
         warn "Empty SequenceSet list returned, probably an error";
     }
-    
+
     $self->fix_window_min_max_sizes;
 
     return;
@@ -235,7 +235,7 @@ sub show_log{
 
 sub select_sequence_set {
     my ($self) = @_;
-    
+
     return if $self->delete_message;
     my $canvas = $self->canvas;
     if (my ($current) = $canvas->find('withtag', 'current')) {
@@ -282,7 +282,7 @@ sub find_cached_SequenceNotes_by_name{
 sub clean_SequenceNotes{
     my ($self) = @_;
     my $seqNotes = $self->{'_sequence_notes'} || {};
-     
+
     foreach my $hash_id(keys %$seqNotes){
 #        warn $hash_id ;
         $seqNotes->{"$hash_id"} = undef;
@@ -293,7 +293,7 @@ sub clean_SequenceNotes{
 
 sub open_sequence_set {
     my ($self) = @_;
-    
+
     my ($obj) = $self->list_selected;
     my $canvas = $self->canvas;
     my $top = $canvas->toplevel;
@@ -323,7 +323,7 @@ sub open_sequence_set_by_ssname_subset {
     } else {
         my $top = $self->top_window()->Toplevel(-title => "otter: Assembly $ss_name");
         my $ss = $self->DataSet->get_SequenceSet_by_name($ss_name);
-      
+
         $sn = CanvasWindow::SequenceNotes->new($top, 820, 100);
         $sn->name($ss_name);
         $sn->Client($self->Client);
@@ -345,9 +345,9 @@ sub open_sequence_set_by_ssname_subset {
 # brings up a window for searching for loci / clones
 sub search_window{
     my ($self) = @_;
-    
+
     my $search_window = $self->{'_search_window'};
-  
+
     unless (defined ($search_window) ){
         my $actual_window = $self->top_window()->Toplevel(-title => 'otter: Find Loci, Stable IDs or Clones');
         $self->{'_search_window'} = $search_window = CanvasWindow::SearchWindow->new($actual_window, 500, 60);
