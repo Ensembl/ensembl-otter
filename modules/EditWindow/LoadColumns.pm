@@ -90,7 +90,7 @@ sub initialize {
                    -itemtype => 'resizebutton', 
                    -command => sub { $self->sort_by_filter_method('name') }
         );
-    
+
     $hlist->header('create', $i++, 
                    -text => 'Description', 
                    -itemtype => 'resizebutton', 
@@ -110,37 +110,37 @@ sub initialize {
         #-expand => 0,
         #-fill => 'x'
         );
-    
+
     my $select_frame = $but_frame->Frame->pack(
         -side => 'top', 
         -expand => 0
         );
-    
+
     $select_frame->Button(
         -text => 'Default',
         -command => sub { $self->set_filters_wanted($_default_selection) },
         )->pack(-side => 'left');
-    
+
     $select_frame->Button(
         -text => 'Previous',
         -command => sub { $self->set_filters_wanted($_last_selection) },
         )->pack(-side => 'left');
-    
+
     $select_frame->Button(
         -text => 'All', 
         -command => sub { $self->change_checkbutton_state('select') },
         )->pack(-side => 'left');
-    
+
     $select_frame->Button(
         -text => 'None', 
         -command => sub { $self->change_checkbutton_state('deselect') },
         )->pack(-side => 'left');
-    
+
     $select_frame->Button(
         -text => 'Invert', 
         -command => sub { $self->change_checkbutton_state('toggle') },
         )->pack(-side => 'left');
-    
+
     $select_frame->Button(
         -text => 'Reselect failed', 
         -command => sub { $self->change_checkbutton_state('invoke', $STATE_COLORS{'failed'}) },
@@ -157,12 +157,12 @@ sub initialize {
         -expand => 0, 
         -fill => 'x'
         );
-    
+
     $control_frame->Button(
         -text => 'Load',
         -command => sub { $self->load_filters },
         )->pack(-side => 'left', -expand => 0);
-    
+
     # The user can press the Cancel button either before the AceDatabase is made
     # (in which case we destroy ourselves) or during an edit session (in which
     # case we just withdraw the window).
@@ -174,14 +174,14 @@ sub initialize {
     $top->protocol( 'WM_DELETE_WINDOW', $wod_cmd );
 
     $self->sort_by_filter_method_('name');
-    
-    
+
+
     $control_frame->Label(
         -textvariable => \$self->{_label_text}
         )->pack(-side => 'top');
-    
+
     $self->{_filters_done} = 0;
-    
+
     my $prog_bar = $progress_frame->ProgressBar(
         -width       => 20,
         -from        => 0,
@@ -194,13 +194,13 @@ sub initialize {
         -pady   => 5,
         -side => 'top'
             );
-    
+
     $self->pipeline_progress_bar($prog_bar);
     $self->reset_progress;
-    
+
     # Prevents window being made so small that controls disappear
     $self->set_minsize;
-    
+
     $top->bind('<Destroy>', sub{
         $self = undef;
                });
@@ -216,18 +216,18 @@ sub pipeline_progress_bar {
 
 sub reset_progress {
     my ($self) = @_;
-    
+
     my ($num_done, $num_failed) = (0, 0);
-    
+
     for (values %{ $self->AceDatabase->filters }) {
         my $state = $_->{state};
         $num_done++ if $state->{done} && ! $state->{failed};
         $num_failed++ if $state->{failed};
     }
-    
+
     my $label_text = "$num_done columns loaded";
     $label_text .= " ($num_failed failed)" if $num_failed;
-    
+
     $self->label_text($label_text);
     $self->{_filters_done} = 0;
 
@@ -242,7 +242,7 @@ sub label_text {
 
 sub withdraw_or_destroy {
     my ($self) = @_;
-    
+
     if ($self->init_flag) {
         # Destroy ourselves
         $self->AceDatabase->error_flag(0);
@@ -256,7 +256,7 @@ sub withdraw_or_destroy {
 
 sub init_flag {
     my ($self, $flag) = @_;
-    
+
     if (defined $flag) {
         $self->{'_init_flag'} = $flag ? 1 : 0;
     }
@@ -319,14 +319,14 @@ sub load_filters {
     } else {
         # we need to set up and show an XaceSeqChooser        
         my $xc = MenuCanvasWindow::XaceSeqChooser->new( $self->top->Toplevel );
-        
+
         $self->XaceSeqChooser($xc);
         $xc->AceDatabase($self->AceDatabase);
         $xc->SequenceNotes($self->SequenceNotes);
         $xc->LoadColumns($self);
         $xc->initialize;
     }
-    
+
     $top->Unbusy;
     $top->withdraw;
     $self->reset_progress;
@@ -346,7 +346,7 @@ sub set_filters_wanted {
         $filter->wanted($wanted);
         $filter_entry->{'state'}{'wanted'} = $wanted;
     }
- 
+
     return;
 }
 
@@ -410,9 +410,9 @@ sub _sort_by_method {
 
 sub change_checkbutton_state {
     my ($self, $fn, $state_color) = @_;
-    
+
     $state_color ||= $STATE_COLORS{'default'};
-    
+
     for (my $i = 0; $i < keys %{ $self->AceDatabase->filters }; $i++) {
         my $cb = $self->hlist->itemCget($i, 0, '-widget');
         if ($cb->cget('-selectcolor') eq $state_color) {
@@ -425,7 +425,7 @@ sub change_checkbutton_state {
 }
 
 sub show_filters {
-   
+
     my ($self, $names_in_order) = @_;
 
     my $filters = $self->AceDatabase->filters;
@@ -434,11 +434,11 @@ sub show_filters {
         $self->{_last_names_in_order} || keys %{ $filters };
 
     $self->{_last_names_in_order} = $names_in_order;
-    
+
     my $hlist = $self->hlist;
-    
+
     my $i = 0;
-    
+
     for my $name (@$names_in_order) {
 
         my $filter = $filters->{$name}{filter};
@@ -449,11 +449,11 @@ sub show_filters {
             ## no critic(ErrorHandling::RequireCheckingReturnValueOfEval)
             eval{ $hlist->delete('entry', $i) };
         }
-        
+
         $hlist->add($i);
-        
+
         my $cb_color = $STATE_COLORS{'default'};
-        
+
         if ($state_hash->{failed}) {
             $cb_color = $STATE_COLORS{'failed'};
         }
@@ -474,7 +474,7 @@ sub show_filters {
                                -selectcolor => $cb_color,
                            ),
             );
-        
+
         if ($state_hash->{done}) {
             my $cb = $hlist->itemCget($i, 0, '-widget');
             $cb->configure(-command => sub { $cb->select() });
@@ -484,7 +484,7 @@ sub show_filters {
                 $state_hash->{wanted} = 1;
             }
         }
-        
+
         if ($state_hash->{failed}) {
             my $fail_msg = $state_hash->{fail_msg};
             if (defined $fail_msg) {
@@ -497,7 +497,7 @@ sub show_filters {
             my $cb = $hlist->itemCget($i, 0, '-widget');
             my $balloon = $self->top->Balloon;
             $balloon->attach($cb, -balloonmsg => $fail_msg);
-            
+
             # configure the button such that the user can reselect 
             # a failed filter to try again
             $cb->configure(
@@ -525,7 +525,7 @@ sub show_filters {
 
 sub species {
     my ($self) = @_;
-    
+
     return $self->AceDatabase->DataSet->name;
 }
 
@@ -538,12 +538,12 @@ sub hlist {
 
 sub XaceSeqChooser {
     my ($self, $xc) = @_;
-    
+
     if ($xc) {
         $self->{'_XaceSeqChooser'} = $xc;
         weaken($self->{'_XaceSeqChooser'});
     }
-    
+
     return $self->{'_XaceSeqChooser'} ;
 }
 
@@ -555,7 +555,7 @@ sub AceDatabase {
 
 sub drop_AceDatabase {
     my ($self) = @_;
-    
+
     $self->{'_AceDatabase'} = undef;
 
     return;
@@ -575,7 +575,7 @@ sub DataSetChooser {
 
 sub DESTROY {
     my ($self) = @_;
-    
+
     warn "Destroying LoadColumns\n";
     if (my $sn = $self->SequenceNotes) {
         my $adb = $self->AceDatabase;
