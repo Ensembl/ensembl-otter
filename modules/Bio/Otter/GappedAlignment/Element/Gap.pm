@@ -19,6 +19,7 @@ sub long_type {
 sub validate {
     my $self = shift;
     ($self->query_length xor $self->target_length) or die "one of query_length or target_length must be 0";
+    return;
 }
 
 1;
