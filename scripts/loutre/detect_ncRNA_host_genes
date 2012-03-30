@@ -17,7 +17,6 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
         -group   => 'ensembl',
         -species => 'human',
     );
-    my $gene_aptr = $merge_dba->get_GeneAdaptor;
 
     my @host_biotype = qw{
       protein_coding
