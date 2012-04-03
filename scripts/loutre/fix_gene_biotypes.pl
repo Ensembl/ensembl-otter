@@ -59,8 +59,8 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
     # my $dsn = "dbname=homo_sapiens_vega_65_20111219_gb_4;host=ensdb-1-11;port=5317";
     # my $dsn = "dbname=amonida_human_vega_67;host=genebuild4;port=3306";
     
-    my $dsn = "species=human;dbname=vega_homo_sapiens_20120319_v66_GRCh37;host=ensdb-web-17;port=5317";
-    # my $dsn = "species=mouse;dbname=vega_mus_musculus_20120316_66_GRCm38;host=ensdb-web-17;port=5317";
+    # my $dsn = "species=human;dbname=vega_homo_sapiens_20120319_v66_GRCh37;host=ensdb-web-17;port=5317";
+    my $dsn = "species=mouse;dbname=vega_mus_musculus_20120316_66_GRCm38;host=ensdb-web-17;port=5317";
     my @args;
 
     my $now = scalar localtime;
