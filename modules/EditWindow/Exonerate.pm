@@ -447,6 +447,19 @@ OTF_Protein });
     $seq_chooser->flag_db_edits(1);
 
     if ($db_edited) {
+        my @misses = $otf->names_not_hit;
+        warn "Got misses: {" . join(', ', @misses) . "}\n";
+        if (@misses) {
+            $self->top->messageBox(
+                -title   => 'otter: Missing Matches',
+                -icon    => 'warning',
+                -message => join("\n",
+                                 'Exonerate did not find matches for:',
+                                 sort @misses,
+                                ),
+                -type    => 'OK',
+                );
+        }
         return 1;
     }
     else {

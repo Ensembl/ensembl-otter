@@ -18,7 +18,7 @@ use Bio::Otter::Lace::OnTheFly::TargetSeq;
 has 'query_validator' => (
     is      => 'ro',
     isa     => 'Bio::Otter::Lace::OnTheFly::QueryValidator',
-    handles => [qw( confirmed_seqs seq_types seqs_for_type seqs_by_name seq_by_name )],
+    handles => [qw( confirmed_seqs seq_types seqs_for_type seqs_by_name seq_by_name record_hit names_not_hit )],
     writer  => '_set_query_validator',
     );
 
