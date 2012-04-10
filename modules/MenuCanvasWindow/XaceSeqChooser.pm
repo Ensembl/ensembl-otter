@@ -2101,6 +2101,7 @@ sub launch_exonerate {
 
             # add hit sequences into ace text
             my $names = $exonerate->delete_all_hit_names;
+            $otf->record_hit(@$names);
 
             # only add the sequence to acedb if they are not pfetchable (i.e. they are unknown)
             if ($type =~ /^Unknown/) {

@@ -9,6 +9,8 @@ use warnings;
 use namespace::autoclean;
 use Moose;
 
+use Carp;
+
 use Bio::Vega::Evidence::Types qw{ new_evidence_type_valid };
 
 has accession_type_cache => ( is => 'ro', isa => 'Bio::Otter::Lace::AccessionTypeCache', required => 1 );
@@ -39,6 +41,8 @@ has seqs_by_name         => ( is => 'ro', isa => 'HashRef[Hum::Sequence]',
 #
 has _acc_type_full_cache => ( is => 'ro', isa => 'HashRef[ArrayRef[Str]]',
                               default => sub{ {} }, init_arg => undef );
+
+has _seq_hits            => ( is => 'ro', isa => 'HashRef', default => sub{ {} }, init_arg => undef );
 
 has _warnings            => ( is => 'ro', isa => 'HashRef', default => sub{ {} }, init_arg => undef );
 
@@ -259,6 +263,30 @@ sub _acc_type_full {
     $new_entry = [ $type, $full ] if ($type and $full);
     return $local_cache->{$acc} = $new_entry;
 }
+
+# keeping track of hits
+
+sub record_hit {
+    my ($self, @hit_names) = @_;
+    foreach my $name (@hit_names) {
+        croak "Don't know about '$name'" unless $self->seq_by_name($name);
+        $self->_seq_hits->{$name} = 1;
+    }
+    return;
+}
+
+sub names_not_hit {
+    my $self = shift;
+    my @no_hit;
+    foreach my $seq (@{$self->confirmed_seqs}) {
+        my $name = $seq->name;
+        next if $self->_seq_hits->{$name};
+        push @no_hit, $name;
+    }
+    return @no_hit;
+}
+
+# warnings
 
 sub _add_warning {
     my ($self, $type, $warning) = @_;
