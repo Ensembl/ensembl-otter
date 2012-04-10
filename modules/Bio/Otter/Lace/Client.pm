@@ -358,13 +358,12 @@ sub reauthorize_if_cookie_will_expire_soon {
     # Soon is if cookie expires less than half an hour from now
     my $soon = time + (30 * 60);
     if ($self->cookie_expiry_time < $soon) {
-        my $re_authorized_ok = 0;
         my $password_attempts = $self->password_attempts;
         while ($password_attempts) {
-            my $re_authorized_ok = $self->authorize;
-            last if $re_authorized_ok;
+            return 1 if $self->authorize;
+            $password_attempts--;
         }
-        return $re_authorized_ok;
+        return 0;
     }
     else {
         return 1;
