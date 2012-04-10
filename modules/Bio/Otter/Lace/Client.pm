@@ -98,14 +98,6 @@ sub email {
     return $self->config_value('email') || (getpwuid($<))[0];
 }
 
-sub fetch_truncated_genes {
-    my ($self, $fetch_truncated_genes) = @_;
-
-    warn "Set using the Config file please.\n" if $fetch_truncated_genes;
-
-    return $self->config_value('fetch_truncated_genes');
-}
-
 sub client_name {
     my ($self) = @_;
     return $self->{'_client_name'};
