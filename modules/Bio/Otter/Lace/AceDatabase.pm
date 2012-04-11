@@ -221,7 +221,7 @@ sub init_AceDatabase {
     $self->add_misc_acefile;
 
     my $xml_string = $self->http_response_content(
-        'GET', 'get_region', { 'trunc' => 1 });
+        'GET', 'get_region');
     $self->write_file('01_before.xml', $xml_string);
 
     my $parser = Bio::Vega::Transform::Otter::Ace->new;

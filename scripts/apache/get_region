@@ -15,14 +15,13 @@ use Bio::Vega::Transform::XML;
 sub get_region {
     my ($server) = @_;
 
-my $trunc  = $server->param('trunc');
 my $odba  = $server->otter_dba();
 my $slice = $server->get_requested_slice;
 
 warn "Converting slice to XML...\n";
 
 my $formatter = Bio::Vega::Transform::XML->new;
-$formatter->skip_truncated_genes($trunc ? 0 : 1);
+$formatter->skip_truncated_genes(0);
 $formatter->otter_dba($odba);
 $formatter->slice($slice);
 $formatter->fetch_data_from_otter_db;
