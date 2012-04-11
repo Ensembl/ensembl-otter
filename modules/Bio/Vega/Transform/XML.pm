@@ -21,7 +21,6 @@ my (
     %genes,
     %seq_features,
     %clone_seq_list,
-    %skip_trunc,
     );
 
 sub DESTROY {
@@ -33,7 +32,6 @@ sub DESTROY {
     delete(                   $genes{$self} );
     delete(            $seq_features{$self} );
     delete(          $clone_seq_list{$self} );
-    delete(              $skip_trunc{$self} );
 
     # So that any DESTROY methods in base classes get called:
     bless $self, 'Bio::Vega::Writer';
@@ -92,13 +90,6 @@ sub clone_seq_list {
 
     $clone_seq_list{$self} = shift @args if @args;
     return $clone_seq_list{$self};
-}
-
-sub skip_truncated_genes {
-    my ($self, @args) = @_;
-
-    $skip_trunc{$self} = shift @args if @args;
-    return $skip_trunc{$self} || 0;
 }
 
 # methods which fetch data from otter db
@@ -255,10 +246,6 @@ sub generate_SequenceSet {
     $ss->attribobjs($self->generate_FeatureSet);
 
     my $list_of_genes = $genes{$self} || [];
-
-    if ($skip_trunc{$self}) {
-        $list_of_genes = [grep { ! $_->truncated_flag } @$list_of_genes];
-    }
 
     foreach my $gene (sort $by_start_end_strand @$list_of_genes) {
         # warn sprintf "Adding gene %6d .. %6d  %+d  %s\n", $gene->start, $gene->end, $gene->strand, $gene->display_id;

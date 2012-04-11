@@ -21,7 +21,6 @@ my $slice = $server->get_requested_slice;
 warn "Converting slice to XML...\n";
 
 my $formatter = Bio::Vega::Transform::XML->new;
-$formatter->skip_truncated_genes(0);
 $formatter->otter_dba($odba);
 $formatter->slice($slice);
 $formatter->fetch_data_from_otter_db;
