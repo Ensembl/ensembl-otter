@@ -18,10 +18,10 @@ use POSIX ":sys_wait_h";
 
     Bio::Otter::Lace::Defaults::do_getopt();
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
-    $cl->cleanup_sessions;
-    $cl->cleanup_log_dir('otterlace');
     $cl->make_log_file('otterlace');
     # After this, we are writing logfile
+    $cl->cleanup_sessions;
+    $cl->cleanup_log_dir('otterlace');
 
     Bio::Otter::Git->dump;
 
