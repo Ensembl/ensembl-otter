@@ -9,7 +9,6 @@ use Carp;
 use base 'CanvasWindow';
 use CanvasWindow::SequenceNotes;
 use CanvasWindow::SearchWindow;
-use TransientWindow::LogWindow;
 use Hum::Sort 'ace_sort';
 
 sub new {
@@ -68,14 +67,10 @@ sub new {
         -command    => $close_window,
         )->pack(-side => 'right');
 
-    my $show_err_log = sub {
-        $self->show_log();
-    };
-
-    my $err_log = $button_frame->Button(
-        -text       => 'Error Log',
-        -command    => $show_err_log,
-        )->pack(-side => 'right');
+    # XXX: pointer to moved UI element - remove "later"
+    my $err_log = $button_frame->Label
+      (-text => "Error Log is now in\nSpecies List Help menu",
+       -fg => '#666')->pack(-side => 'right');
 
     return $self;
 }
@@ -214,21 +209,6 @@ sub draw {
     }
 
     $self->fix_window_min_max_sizes;
-
-    return;
-}
-
-sub show_log{
-    my ($self) = @_;
-
-    my $tw = $self->{'__tw_log'};
-    unless($tw){
-        $tw = TransientWindow::LogWindow->new($self->top_window(), 'log file - ' . $self->name);
-        $tw->initialise();
-        $tw->draw();
-        $self->{'__tw_log'} = $tw;
-    }
-    $tw->show_me();
 
     return;
 }
