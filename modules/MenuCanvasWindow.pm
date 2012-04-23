@@ -36,9 +36,10 @@ sub menu_bar {
 
 
 sub make_menu {
-    my ($self, $name, $pos) = @_;
+    my ($self, $name, $pos, $side) = @_;
 
     $pos ||= 0;
+    $side ||= 'left';
 
     my $menu_frame = $self->menu_bar
         or confess "No menu_bar";
@@ -49,7 +50,7 @@ sub make_menu {
         #-pady       => 6,
         );
     $button->pack(
-        -side       => 'left',
+        -side       => $side,
         );
     my $menu = $button->Menu(
         -tearoff    => 0,
