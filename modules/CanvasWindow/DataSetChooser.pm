@@ -107,6 +107,7 @@ sub show_about {
        -buttons => [qw[ Close ]]);
 
     $self->{'_about'}->Show;
+    return;
 }
 
 sub Client {
