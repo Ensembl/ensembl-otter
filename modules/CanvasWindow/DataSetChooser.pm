@@ -7,11 +7,11 @@ use strict;
 use warnings;
 use Carp;
 use Tk::DialogBox;
-use Tk::Dialog;
 use base 'MenuCanvasWindow';
 use EditWindow::LoadColumns;
 use CanvasWindow::SequenceSetChooser;
 use Bio::Otter::Git;
+use Bio::Vega::Utils::URI qw( open_uri );
 
 sub new {
     my ($pkg, @args) = @_;
@@ -93,22 +93,75 @@ sub new {
     $help_menu->add
       ('command',
        -label => 'About Otterlace...',
+       -underline => 0,
        -command => [ $self, 'show_about' ]);
 
     return $self;
 }
 
+
+sub about_text {
+    my $vsn = Bio::Otter::Git->as_text;
+    # Any number of URLs may be inserted.  If we want images or other
+    # markup, it's time to break out a new class.
+    return <<"TEXT";
+This is Otterlace version $vsn\n
+Otterlace web page
+  http://www.sanger.ac.uk/resources/software/otterlace/
+TEXT
+}
+
 sub show_about {
     my ($self) = @_;
-    $self->{'_about'} ||= $self->top_window->Dialog
-      (-title => 'About Otterlace',
-       -text => sprintf('This is Otterlace version %s',
-                        Bio::Otter::Git->as_text),
-       -buttons => [qw[ Close ]]);
+
+    $self->{'_about'} ||= do {
+        my $A = $self->top_window->DialogBox
+          (-title => 'About Otterlace',
+           -buttons => [qw[ Close ]]);
+
+        my $content = $self->about_text;
+
+        my ($x, $y) = (30, 0);
+        foreach my $ln (split /\n/, $content) {
+            $y++;
+            $x = length($ln) if length($ln) > $x;
+        }
+
+        my $txt = $A->ROText
+          (-bg => 'white',
+           -height => $y, -width => $x,
+           -selectborderwidth => 0,
+           -borderwidth => 0,
+           -font => [qw[ Helvetica 20 normal ]])->pack
+            (-side => 'top', -fill => 'both', -expand => 1);
+
+        foreach my $seg (split m{(\w+://\S+)}, $content) {
+            my @tag;
+            push @tag, 'link' if $seg =~ m{://};
+            $txt->insert(end => $seg, @tag);
+        }
+
+        $txt->tagConfigure(link => -foreground => 'blue', -underline => 1, -font => [qw[ Courier 16 normal ]]);
+        $txt->tagBind(link => '<Button-1>', [ $self, 'about_hyperlink', $txt, Tk::Ev('@') ]);
+        $txt->configure(-state => 'disabled');
+
+        $A;
+    };
 
     $self->{'_about'}->Show;
-    return;
+
+    return ();
 }
+
+# Find the link near click & open it
+sub about_hyperlink {
+    my ($self, $txt, $at) = @_;
+    my @idx = $txt->tagPrevrange(link => $at);
+    my $ln = $txt->get(@idx);
+#    warn "click! args=(@_) idx=(@idx) ln=$ln";
+    open_uri($ln);
+}
+
 
 sub Client {
     my ($self, $Client) = @_;
