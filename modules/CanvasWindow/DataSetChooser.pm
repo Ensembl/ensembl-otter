@@ -16,6 +16,15 @@ use Bio::Otter::Git;
 sub new {
     my ($pkg, @args) = @_;
 
+    @args = (@args, 220, 150, 'ose') if 1 == @args;
+    # Default params:
+    #
+    # x width: wide enough to show full title text (worksforme size),
+    # and for comfortable yellow-sticky-messages
+    #
+    # ose: size fitting doesn't account for 'o' scrollbar.  Leave east
+    # on, we won't need the south.
+
     my $self = $pkg->SUPER::new(@args);
 
     my $canvas = $self->canvas;
@@ -30,6 +39,10 @@ sub new {
     $canvas->Tk::bind('<Control-o>',        $open_command);
     $canvas->Tk::bind('<Control-O>',        $open_command);
     $canvas->Tk::bind('<Escape>', sub{ $self->deselect_all });
+
+    my $recover_command = sub{ $self->recover_some_sessions; };
+    $canvas->Tk::bind('<Control-r>',    $recover_command);
+    $canvas->Tk::bind('<Control-R>',    $recover_command);
 
     my $quit_command = sub{
         $self->canvas->toplevel->destroy;
@@ -61,9 +74,9 @@ sub new {
     $file_menu->add
        ('command',
         -label      => "Recover sessions",
-        -command    => sub{
-            $self->recover_some_sessions;
-        },
+        -accelerator => 'Ctrl+R',
+        -underline  => 1,
+        -command    => $recover_command,
        );
 
     $file_menu->add
