@@ -7,7 +7,7 @@ use strict;
 use warnings;
 use Carp;
 use Tk::DialogBox;
-use base 'CanvasWindow';
+use base 'MenuCanvasWindow';
 use EditWindow::LoadColumns;
 use CanvasWindow::SequenceSetChooser;
 
@@ -39,28 +39,42 @@ sub new {
         ->protocol('WM_DELETE_WINDOW',  $quit_command);
 
     my $top = $canvas->toplevel;
-    my $button_frame = $top->Frame->pack(-side => 'top', -fill => 'x');
 
-    my $open = $button_frame->Button(
-        -text       => 'Open',
+
+    # FILE MENU
+    my $file_menu = $self->make_menu('File');
+
+    $file_menu->add
+       ('command',
+        -label      => 'Open',
+        -accelerator => 'Ctrl+O',
+        -underline  => 1,
         -command    => sub{
             unless ($self->open_dataset) {
                 $self->message("No dataset selected - click on a name to select one");
             }
         },
-    )->pack(-side => 'left');
+       );
 
-    my $recover = $button_frame->Button(
-        -text       => "Recover sessions",
+    $file_menu->add
+       ('command',
+        -label      => "Recover sessions",
         -command    => sub{
             $self->recover_some_sessions;
         },
-    )->pack(-side => 'left');
+       );
 
-    my $quit = $button_frame->Button(
-        -text       => 'Quit',
+    $file_menu->add
+       ('command',
+        -label      => 'Quit',
+        -accelerator => 'Ctrl+Q',
+        -underline  => 1,
         -command    => $quit_command,
-    )->pack(-side => 'right');
+       );
+
+
+    # HELP MENU
+    my $help_menu = $self->make_menu('Help');
 
     return $self;
 }
