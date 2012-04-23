@@ -32,7 +32,11 @@ sub new {
             $self->deselect_all;
             $self->select_dataset;
         });
-    my $open_command = sub{ $self->open_dataset; };
+    my $open_command = sub{
+        unless ($self->open_dataset) {
+            $self->message("No dataset selected - click on a name to select one");
+        }
+    };
     $canvas->Tk::bind('<Double-Button-1>',  $open_command);
     $canvas->Tk::bind('<Return>',           $open_command);
     $canvas->Tk::bind('<KP_Enter>',         $open_command);
@@ -64,12 +68,7 @@ sub new {
         -label      => 'Open',
         -accelerator => 'Ctrl+O',
         -underline  => 1,
-        -command    => sub{
-            unless ($self->open_dataset) {
-                $self->message("No dataset selected - click on a name to select one");
-            }
-        },
-       );
+        -command    => $open_command);
 
     $file_menu->add
        ('command',
@@ -190,10 +189,10 @@ sub select_dataset {
 sub open_dataset {
     my ($self) = @_;
 
-    return if $self->recover_some_sessions;
+    return 1 if $self->recover_some_sessions;
 
     my ($obj) = $self->list_selected;
-    return unless $obj;
+    return 0 unless $obj;
 
     my $canvas = $self->canvas;
     $canvas->Busy;
@@ -226,7 +225,7 @@ sub open_dataset {
     }
     $canvas->Unbusy;
 
-    return;
+    return 0;
 }
 
 sub draw {
