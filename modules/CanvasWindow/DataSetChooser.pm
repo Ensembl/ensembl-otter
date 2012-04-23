@@ -95,6 +95,12 @@ sub new {
        -underline => 0,
        -command => [ $self, 'show_about' ]);
 
+    $help_menu->add
+      ('command',
+       -label => 'Show Error Log',
+       -underline => 11,
+       -command => [ $self, 'show_log' ]);
+
     return $self;
 }
 
@@ -161,6 +167,28 @@ sub about_hyperlink {
     open_uri($ln);
     return ();
 }
+
+
+sub show_log{
+    my ($self) = @_;
+
+    require TransientWindow::LogWindow;
+    require Bio::Otter::LogFile;
+
+    my $tw = $self->{'__tw_log'};
+    unless($tw){
+        $tw = TransientWindow::LogWindow->new
+          ($self->top_window(),
+           'Otter: log file - ' . Bio::Otter::LogFile->current_logfile);
+        $tw->initialise();
+        $tw->draw();
+        $self->{'__tw_log'} = $tw;
+    }
+    $tw->show_me();
+
+    return;
+}
+
 
 
 sub Client {
