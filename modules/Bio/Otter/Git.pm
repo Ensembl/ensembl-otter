@@ -41,6 +41,15 @@ sub dump { ## no critic (Subroutines::ProhibitBuiltinHomonyms)
     return;
 }
 
+# Show something more user friendly for released versions
+sub as_text {
+    my ($called) = @_;
+    my $head = $called->param('head');
+    return "v$1.$2" if $head =~ m{^humpub-release-(\d+)-(\d+)$};
+    return $head;
+}
+
+
 my $cache_template = <<'CACHE_TEMPLATE'
 
 package Bio::Otter::Git::Cache;

@@ -7,9 +7,11 @@ use strict;
 use warnings;
 use Carp;
 use Tk::DialogBox;
+use Tk::Dialog;
 use base 'MenuCanvasWindow';
 use EditWindow::LoadColumns;
 use CanvasWindow::SequenceSetChooser;
+use Bio::Otter::Git;
 
 sub new {
     my ($pkg, @args) = @_;
@@ -74,9 +76,24 @@ sub new {
 
 
     # HELP MENU
-    my $help_menu = $self->make_menu('Help');
+    my $help_menu = $self->make_menu('Help', 0, 'right');
+    $help_menu->add
+      ('command',
+       -label => 'About Otterlace...',
+       -command => [ $self, 'show_about' ]);
 
     return $self;
+}
+
+sub show_about {
+    my ($self) = @_;
+    $self->{'_about'} ||= $self->top_window->Dialog
+      (-title => 'About Otterlace',
+       -text => sprintf('This is Otterlace version %s',
+                        Bio::Otter::Git->as_text),
+       -buttons => [qw[ Close ]]);
+
+    $self->{'_about'}->Show;
 }
 
 sub Client {
