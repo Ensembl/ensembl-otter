@@ -160,6 +160,7 @@ sub about_hyperlink {
     my $ln = $txt->get(@idx);
 #    warn "click! args=(@_) idx=(@idx) ln=$ln";
     open_uri($ln);
+    return ();
 }
 
 
