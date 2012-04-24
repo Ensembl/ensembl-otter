@@ -78,6 +78,10 @@ sub initialise {
         -command => sub { $self->hide_me },
     )->pack(-side => 'right');
 
+    $lw->Tk::bind('<Escape>', [ $self, 'hide_me' ]);
+    $lw->Tk::bind('<Control-w>', [ $self, 'hide_me' ]);
+    $lw->Tk::bind('<Control-W>', [ $self, 'hide_me' ]);
+
     $but_frame->bind('<Destroy>', sub { $self = undef; });
 
     return;
