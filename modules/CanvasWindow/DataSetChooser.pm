@@ -123,6 +123,7 @@ sub show_about {
         my $A = $self->top_window->DialogBox
           (-title => 'About Otterlace',
            -buttons => [qw[ Close ]]);
+        $A->Tk::bind('<Escape>', [ $A, 'Exit' ]);
 
         my $content = $self->about_text;
 
@@ -300,6 +301,7 @@ sub recover_some_sessions {
             -title => 'otter: Recover Sessions',
             -buttons => ['Recover', 'Cancel'],
         );
+        $rss_dialog->Tk::bind('<Escape>', sub { $rss_dialog->Subwidget('B_Cancel')->invoke });
 
         $rss_dialog->add('Label',
             -wrap    => 400,
@@ -319,7 +321,7 @@ sub recover_some_sessions {
                 "Please contact anacode if you still get an error when you attempt"
                 . " to exit the session, or have information about the error which"
                 . " caused a session to be left.",
-                ), 
+                ),
         )->pack(-side=>'top', -fill=>'x', -expand=>1);
 
         foreach my $rec (@$recoverable_sessions) {
