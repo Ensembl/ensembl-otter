@@ -98,7 +98,17 @@ sub draw {
     $self->tail_process($pid);
     $self->logfile_handle($fh);
     my $txt = $self->readonly_text;
-    $txt->fileevent($fh, 'readable', sub { $self->show_output });
+    my $appender = sub {
+        if (defined $self) {
+            $self->show_output;
+        } else {
+            # We are in global destruction or window <Destroy>
+            close $fh;
+            $self->logfile_handle(undef);
+            warn "LogWindow: nowhere to write, closing the pipe";
+        }
+    };
+    $txt->fileevent($fh, 'readable', $appender);
     $txt->bind('<Destroy>', sub { $self = undef });
 
     # Unbuffer filehandle
@@ -122,10 +132,10 @@ sub tail_process {
 }
 
 sub logfile_handle {
-    my ($self, $logfile_handle) = @_;
+    my $self = shift;
 
-    if ($logfile_handle) {
-        $self->{'_logfile_handle'} = $logfile_handle;
+    if (@_) {
+        $self->{'_logfile_handle'} = shift;
     }
     return $self->{'_logfile_handle'};
 }
@@ -187,10 +197,10 @@ sub DESTROY {
     warn "Destroying logfile monitor for '", $self->current_logfile, "'\n";
 
     if (my $pid = $self->tail_process) {
-        kill 'TERM', $pid;
+        kill 'TERM', $pid if defined $pid;
     }
     if (my $fh = $self->logfile_handle) {
-        close($fh);
+        close($fh) if defined $fh;
     }
 
     return;
