@@ -855,6 +855,9 @@ use Bio::Vega::Utils::GFF;
             $desc =~ s/"/\\"/g;
             $gff->{'attributes'}{'Description'} = qq{"$desc"};
         }
+        if (my $seq = $hd->get_and_unset_hit_sequence_string) {
+            $gff->{'attributes'}{'sequence'} = qq{"$seq"};
+        }
 
         return $gff;
     }

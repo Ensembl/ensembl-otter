@@ -3,6 +3,7 @@ package Bio::Otter::Server::GFF::PslSql;
 
 use strict;
 use warnings;
+use Try::Tiny;
 
 use List::Util qw(max min);
 use Readonly;
@@ -258,6 +259,7 @@ sub get_requested_features {
 
     my $db_table = $self->require_argument('db_table');
     ($db_table) = $db_table =~ m/(\w+)/; # avoid sql injection
+    my $db_table_dna = $db_table . '_dna';
 
     my $chr_prefix = $self->param('chr_prefix');
     $chr_name = "${chr_prefix}${chr_name}" if defined $chr_prefix;
@@ -294,7 +296,7 @@ sub get_requested_features {
         qStarts,
         tStarts
     FROM
-        ${db_table}
+        $db_table
     WHERE
             tName   = ?
         AND tEnd   >= ?
@@ -308,6 +310,23 @@ sub get_requested_features {
         'get_all_features_via_psl_sql',
         [$self, $sth, $chr_name],
         $map);
+
+    try {
+        my $fetch_dna = $dbh->prepare(qq{
+            SELECT dna FROM $db_table_dna WHERE qName = ?
+        });
+        foreach my $feat (@$features) {
+            my $hd = $feat->get_HitDescription;
+            unless ($hd->hit_sequence_string) {
+                $fetch_dna->execute($hd->hit_name);
+                my ($seq_str) = $fetch_dna->fetchrow;
+                $hd->hit_sequence_string($seq_str);
+            }
+        }        
+    }
+    catch {
+        warn "Error: $_";
+    };
 
     return $features;
 }
