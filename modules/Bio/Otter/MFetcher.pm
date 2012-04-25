@@ -334,9 +334,6 @@ sub fetch_mapped_features_ensembl {
 
               if( my $transferred = $target_feature->transfer($original_slice_2) ) {
                   push @$features, $transferred;
-                  warn "Transfer OK".ref($transferred)."\n";
-              } else {
-                  warn "Transfer failed\n";
               }
           } # for each feature
       } # for each segment
