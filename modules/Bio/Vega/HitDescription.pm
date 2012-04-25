@@ -14,7 +14,7 @@ sub new {
     my ($caller, @args) = @_;
 
     my ($hit_name, $hit_length, $description, $taxon_id, $db_name) = rearrange(
-      [ 'HIT_NAME', 'HIT_LENGTH', 'DESCRIPTION', 'TAXON_ID', 'DB_NAME' ], @args);
+      [ 'HIT_NAME', 'HIT_LENGTH', 'HIT_SEQUENCE_STRING', 'DESCRIPTION', 'TAXON_ID', 'DB_NAME' ], @args);
     my $class = ref($caller) || $caller;
     return bless {
         _hit_name       => $hit_name,
@@ -41,6 +41,23 @@ sub hit_length {
         $self->{'_hit_length'} = $hit_length;
     }
     return $self->{'_hit_length'};
+}
+
+sub hit_sequence_string {
+    my ($self, $hit_sequence_string) = @_;
+    
+    if ($hit_sequence_string) {
+        $self->{'_hit_sequence_string'} = $hit_sequence_string;
+    }
+    return $self->{'_hit_sequence_string'};
+}
+
+sub get_and_unset_hit_sequence_string {
+    my ($self) = @_;
+    
+    my $seq = $self->{'_hit_sequence_string'};
+    $self->{'_hit_sequence_string'} = undef;
+    return $seq;
 }
 
 sub description {
