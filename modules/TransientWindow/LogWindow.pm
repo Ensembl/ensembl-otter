@@ -132,10 +132,10 @@ sub tail_process {
 }
 
 sub logfile_handle {
-    my $self = shift;
+    my ($self, $logfile_handle) = @_;
 
-    if (@_) {
-        $self->{'_logfile_handle'} = shift;
+    if ($logfile_handle) {
+        $self->{'_logfile_handle'} = $logfile_handle;
     }
     return $self->{'_logfile_handle'};
 }
