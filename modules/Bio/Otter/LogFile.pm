@@ -15,9 +15,10 @@ my $file;
 
 sub make_log {
     confess "Already logging to '$file'" if $file;
-    $file = shift;
+    my $config;
+    ($file, $config) = @_;
 
-    my $conf = qq(
+    my $default_conf = qq(
       log4perl.rootLogger = INFO, Logfile, Screen
 
       log4perl.appender.Logfile                          = Log::Log4perl::Appender::File
@@ -30,7 +31,9 @@ sub make_log {
       log4perl.appender.Screen.layout                    = Log::Log4perl::Layout::PatternLayout
       log4perl.appender.Screen.layout.ConversionPattern  = %m%n
     );
-    Log::Log4perl->init(\$conf);
+
+    $config ||= \$default_conf;
+    Log::Log4perl->init($config);
 
     my $logger = Log::Log4perl->get_logger;
     $logger->info('In parent, pid ', $$);
