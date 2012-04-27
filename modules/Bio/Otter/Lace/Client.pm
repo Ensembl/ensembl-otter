@@ -121,25 +121,44 @@ sub password_attempts {
     return $self->{'_password_attempts'} || 3;
 }
 
-sub get_log_dir {
-    my ($self) = @_;
+sub config_path_default_rel_home {
+    my ($self, $key) = @_;
 
-    my $log_dir = $self->config_value('logdir')
-        or return;
+    my $path = $self->config_value($key) or return;
 
-    # Make $log_dir into absolute file path
+    # Make $path into absolute file path
     # It is assumed to be relative to the home directory if not
     # already absolute or beginning with "~/".
     my $home = (getpwuid($<))[7];
-    $log_dir =~ s{^~/}{$home/};
-    unless ($log_dir =~ m{^/}) {
-        $log_dir = "$home/$log_dir";
+    $path =~ s{^~/}{$home/};
+    unless ($path =~ m{^/}) {
+        $path = "$home/$path";
     }
 
+    return $path;
+}
+
+sub get_log_dir {
+    my ($self) = @_;
+
+    my $log_dir = $self->config_path_default_rel_home('logdir') or return;
+
     if (mkdir($log_dir)) {
-        warn "Made logging directory '$log_dir'\n";
+        warn "Made logging directory '$log_dir'\n"; # logging not set up, so this must use 'warn'
     }
     return $log_dir;
+}
+
+sub get_log_config_file {
+    my ($self) = @_;
+
+    my $config_file = $self->config_path_default_rel_home('log_config') or return;
+
+    unless ( -f -r $config_file ) {
+        warn "log_config file '$config_file' not readable, will use defaults";
+        return;
+    }
+    return $config_file;
 }
 
 sub make_log_file {
@@ -155,9 +174,9 @@ sub make_log_file {
         $i++;
     } while (-e $log_file);
     if($self->debug()) {
-        warn "Logging output to '$log_file'\n";
+        warn "Logging output to '$log_file'\n"; # logging not set up, so this must use 'warn'
     }
-    Bio::Otter::LogFile::make_log($log_file);
+    Bio::Otter::LogFile::make_log($log_file, $self->get_log_config_file);
     return;
 }
 
