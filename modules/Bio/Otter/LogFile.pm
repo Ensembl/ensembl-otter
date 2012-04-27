@@ -6,41 +6,67 @@ package Bio::Otter::LogFile;
 use strict;
 use warnings;
 use Carp;
-use IO::Handle;
+
+use Log::Log4perl qw(:levels);
+
+use Bio::Otter::FileHandleLogger;
 
 my $file;
+
 sub make_log {
     confess "Already logging to '$file'" if $file;
-
     $file = shift;
+
+    my $conf = qq(
+      log4perl.rootLogger = INFO, Logfile, Screen
+
+      log4perl.appender.Logfile                          = Log::Log4perl::Appender::File
+      log4perl.appender.Logfile.filename                 = $file
+      log4perl.appender.Logfile.layout                   = Log::Log4perl::Layout::PatternLayout
+      log4perl.appender.Logfile.layout.ConversionPattern = %d %c %p: %m%n
+
+      log4perl.appender.Screen                           = Log::Log4perl::Appender::Screen
+      log4perl.appender.Screen.stderr                    = 0
+      log4perl.appender.Screen.layout                    = Log::Log4perl::Layout::PatternLayout
+      log4perl.appender.Screen.layout.ConversionPattern  = %m%n
+    );
+    Log::Log4perl->init(\$conf);
+
+    my $logger = Log::Log4perl->get_logger;
+    $logger->info('In parent, pid ', $$);
 
     # Unbuffer STDOUT
     STDOUT->autoflush(1);
 
     if (my $pid = open(STDOUT, "|-")) {
-        # Send parent's STDERR to the same place as STDOUT.
+
+        # Send parent's STDERR to the same place as STDOUT, for subprocesses.
         open STDERR, '>&', \*STDOUT or confess "Can't redirect STDERR to STDOUT";
+
+        # Now for us in perl land, tie STDERR and STDOUT to Log4perl.
+
+        tie *STDERR, 'Bio::Otter::FileHandleLogger',
+            level => $WARN, category => "otter.stderr" or die "tie failed ($!)";
+
+        tie *STDOUT, 'Bio::Otter::FileHandleLogger',
+            level => $INFO, category => "otter.stdout" or die "tie failed ($!)";
+
         return $pid; ### Could write a rotate_logfile sub if we record the pid.
-    }
-    elsif (defined $pid) {
-        open my $log, '>>', $file or confess "Can't append to logfile '$file': $!";
 
-        # Unbuffer logfile
-        $log->autoflush(1);
+    } elsif (defined $pid) {
 
-        # Parent will try to kill us if it finishes cleanly, but we
-        # may need to wait and write out the final logs.
-        $SIG{'TERM'} = 'IGNORE'; ## no critic (Variables::RequireLocalizedPunctuationVars)
+        $logger->info('In child, pid ', $$);
 
-        # Child filters output from parent
+        my $child_logger = Log::Log4perl->get_logger('otter.children');
+
         while (<STDIN>) { ## no critic(InputOutput::ProhibitExplicitStdin)
-            print STDERR $_;    # Still print to STDERR
-            printf $log "%s  %s", scalar(localtime), $_;
+            chomp;
+            $child_logger->warn($_);
         }
-        close $log;
+
         exit;   # Child must exit here!
-    }
-    else {
+
+    } else {
         confess "Can't fork output filter: $!";
     }
 }
