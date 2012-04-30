@@ -123,19 +123,8 @@ sub password_attempts {
 
 sub get_log_dir {
     my ($self) = @_;
-
-    my $log_dir = $self->config_value('logdir')
-        or return;
-
-    # Make $log_dir into absolute file path
-    # It is assumed to be relative to the home directory if not
-    # already absolute or beginning with "~/".
     my $home = (getpwuid($<))[7];
-    $log_dir =~ s{^~/}{$home/};
-    unless ($log_dir =~ m{^/}) {
-        $log_dir = "$home/$log_dir";
-    }
-
+    my $log_dir = "$home/.otter";
     if (mkdir($log_dir)) {
         warn "Made logging directory '$log_dir'\n";
     }

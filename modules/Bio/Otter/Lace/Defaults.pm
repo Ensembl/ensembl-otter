@@ -41,7 +41,6 @@ my @CLIENT_OPTIONS = qw(
     gene_type_prefix=s
     debug=i
     misc_acefile=s
-    logdir=s
     );
 
 # @CLIENT_OPTIONS is Getopt::GetOptions() keys which will be included in the 
@@ -431,4 +430,3 @@ port=80
 version=65
 write_access=0
 debug=1
-logdir=.otter
