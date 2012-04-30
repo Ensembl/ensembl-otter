@@ -9,6 +9,8 @@ use warnings;
 use namespace::autoclean;
 use Moose;
 
+with 'MooseX::Log::Log4perl';
+
 use Readonly;
 
 Readonly our $RYO_FORMAT => 'RESULT: %S %pi %ql %tl %g %V\n';
@@ -108,10 +110,10 @@ sub parse {
         (@ryo_result{@RYO_ORDER}, @vulgar_comps) = @line_parts;
         $ryo_result{vulgar} = $self->_parse_vulgar(\@vulgar_comps);
         my $q_id = $ryo_result{q_id};
-        print "RESULT found for ${q_id}\n";
+        $self->log->info("RESULT found for ${q_id}");
 
         if ($by_query_id{$q_id}) {
-            warn "Already have result for '$q_id'";
+            $self->log->warn("Already have result for '$q_id'");
         } else {
             $by_query_id{$q_id} = \%ryo_result;
         }
