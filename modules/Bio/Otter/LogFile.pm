@@ -33,6 +33,7 @@ sub make_log {
     );
 
     $config ||= \$default_conf;
+    # TODO: Use Log::Log4perl::Config::PropertyConfigurator here, then set filename as necessary.
     Log::Log4perl->init($config);
 
     my $logger = Log::Log4perl->get_logger;
