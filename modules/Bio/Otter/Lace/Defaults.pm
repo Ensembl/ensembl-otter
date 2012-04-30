@@ -27,7 +27,7 @@ push(@$CONFIG_INIFILES, $HARDWIRED);
 my $GETOPT = {};
 tie %$GETOPT, 'Config::IniFiles', (%OPTIONS_TO_TIE);
 
-my ($THIS_USER, $HOME_DIR) = (getpwuid($<))[0,7];
+my $HOME_DIR = (getpwuid($<))[7];
 my $CALLED = "$0 @ARGV";
 
 my @CLIENT_OPTIONS = qw(
