@@ -19,17 +19,16 @@ sub make_log {
     ($file, $config) = @_;
 
     my $default_conf = qq(
-      log4perl.rootLogger = INFO, Logfile, Screen
+      log4perl.rootLogger = INFO, SafeScreen, Logfile
+
+      log4perl.appender.SafeScreen                          = Bio::Otter::Log::Appender::SafeScreen
+      log4perl.appender.SafeScreen.layout                   = Log::Log4perl::Layout::PatternLayout
+      log4perl.appender.SafeScreen.layout.ConversionPattern = %m%n
 
       log4perl.appender.Logfile                          = Log::Log4perl::Appender::File
       log4perl.appender.Logfile.filename                 = $file
       log4perl.appender.Logfile.layout                   = Log::Log4perl::Layout::PatternLayout
       log4perl.appender.Logfile.layout.ConversionPattern = %d %c %p: %m%n
-
-      log4perl.appender.Screen                           = Log::Log4perl::Appender::Screen
-      log4perl.appender.Screen.stderr                    = 0
-      log4perl.appender.Screen.layout                    = Log::Log4perl::Layout::PatternLayout
-      log4perl.appender.Screen.layout.ConversionPattern  = %m%n
     );
 
     $config ||= \$default_conf;
