@@ -1,4 +1,4 @@
-package Bio::Otter::FileHandleLogger;
+package Bio::Otter::Log::TieHandle;
 
 use strict;
 use warnings;

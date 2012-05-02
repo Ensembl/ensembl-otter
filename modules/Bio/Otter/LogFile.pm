@@ -9,7 +9,7 @@ use Carp;
 
 use Log::Log4perl qw(:levels);
 
-use Bio::Otter::FileHandleLogger;
+use Bio::Otter::Log::TieHandle;
 
 my $file;
 
@@ -48,10 +48,10 @@ sub make_log {
 
         # Now for us in perl land, tie STDERR and STDOUT to Log4perl.
 
-        tie *STDERR, 'Bio::Otter::FileHandleLogger',
+        tie *STDERR, 'Bio::Otter::Log::TieHandle',
             level => $WARN, category => "otter.stderr" or die "tie failed ($!)";
 
-        tie *STDOUT, 'Bio::Otter::FileHandleLogger',
+        tie *STDOUT, 'Bio::Otter::Log::TieHandle',
             level => $INFO, category => "otter.stdout" or die "tie failed ($!)";
 
         return $pid; ### Could write a rotate_logfile sub if we record the pid.
