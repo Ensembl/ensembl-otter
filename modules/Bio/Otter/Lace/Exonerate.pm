@@ -33,7 +33,7 @@ use Bio::EnsEMBL::Analysis::Runnable::Finished::Exonerate;
 sub new {
     my ($pkg) = @_;
     my $self = bless {}, $pkg;
-    $self->logger(Log::Log4perl->get_logger);
+    $self->logger(Log::Log4perl->get_logger($pkg));
     return $self;
 }
 
