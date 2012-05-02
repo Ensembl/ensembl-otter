@@ -93,13 +93,15 @@ use Bio::Vega::ContigLockBroker;
     my $list_sth = $otter_dba->dbc->prepare(qq{
         SELECT g.gene_id
           , s.name
-          , g.description
+          , g.biotype
           , g.is_current
           , gsi.version
           , gsi.modified_date
           , a.author_name
+          , g.description
         FROM gene g
-          , gene_stable_id gsi,gene_author ga
+          , gene_stable_id gsi
+          , gene_author ga
           , seq_region s
           , author a
         WHERE gsi.stable_id = ?
@@ -187,13 +189,16 @@ sub get_history {
 
     $sth->execute($sid);
     
+    my $format = "%8d  %-10.10s  %-20.20s  %2d  %2d  %-19s  %-6.6s  %s\n";
     if ($sth->rows) {
-        print STDERR "gene_id\tassembly name\tdescription\tis_current\tversion\tmodified_date\tauthor\n";
+        my $header_format = $format;
+        $header_format =~ s/[a-z]/s/g;
+        printf STDERR $header_format, qw{ gene_id assembly biotype C V modified_date author description };
     }
 
     my $gene_ids = [];
     while (my @arr = $sth->fetchrow_array) {
-        print STDERR join("\t", @arr) . "\n";
+        printf STDERR $format, @arr;
         push @$gene_ids, $arr[0];
     }
 
