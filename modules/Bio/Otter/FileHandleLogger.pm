@@ -3,8 +3,6 @@ package Bio::Otter::FileHandleLogger;
 use strict;
 use warnings;
 
-open(my $realstdout, ">&STDOUT") or die "Can't dup STDOUT";
-
 use Log::Log4perl qw(:levels get_logger);
  
 sub TIEHANDLE {
@@ -23,9 +21,8 @@ sub TIEHANDLE {
  
 sub PRINT {
     my($self, @rest) = @_;
-    if ($Log::Log4perl::caller_depth) { # avoid recursion
-        print $realstdout @rest;
-    } else {
+    unless ($self->{called}) {
+        local $self->{called} = 1; # avoid recursion - thanks to Tie::Log4perl
         $Log::Log4perl::caller_depth++;
         $self->{logger}->log($self->{level}, @rest);
         $Log::Log4perl::caller_depth--;
