@@ -27,7 +27,7 @@ sub make_log {
 
       log4perl.appender.Logfile                          = Log::Log4perl::Appender::File
       log4perl.appender.Logfile.filename                 = $file
-      log4perl.appender.Logfile.layout                   = Log::Log4perl::Layout::PatternLayout
+      log4perl.appender.Logfile.layout                   = Log::Log4perl::Layout::PatternLayout::Multiline
       log4perl.appender.Logfile.layout.ConversionPattern = %d %c %p: %m%n
     );
 
