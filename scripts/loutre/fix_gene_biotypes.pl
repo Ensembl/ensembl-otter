@@ -4,66 +4,117 @@
 
 use strict;
 use warnings;
+use Try::Tiny;
 
 use Bio::Otter::Lace::Defaults;
-use DBI;
+use Bio::EnsEMBL::DBSQL::DBAdaptor;
+
+
 # use Bio::Otter::Lace::PipelineDB;
 
 {
+
     # $0 = 'otterlace';   # For testing, to see restricted dataset.
     # my $dataset_name = 'human_test';
 
     my $usage = sub { exec('perldoc', $0) };
+
     # This do_getopt() call is needed to parse the otter config files
     # even if you aren't giving any arguments on the command line.
     Bio::Otter::Lace::Defaults::do_getopt(
-        'h|help!'       => $usage,
+        'h|help!' => $usage,
+
         # 'dataset=s'     => \$dataset_name,
-        ) or $usage->();
+    ) or $usage->();
+
     # $usage->() unless $dataset_name;
-    
-    my $dba;
+
+
     # if (0) {
     #     # Client communicates with otter HTTP server
     #     my $cl = Bio::Otter::Lace::Defaults::make_Client();
-    # 
+    #
     #     # DataSet interacts directly with an otter database
     #     my $ds = $cl->get_DataSet_by_name($dataset_name);
-    # 
+    #
     #     my $otter_dba = $ds->get_cached_DBAdaptor;
     #     $dba = $otter_dba->dbc;
     # }
     # else {
-        # This is the version of the script used to patch vega_homo_sapiens_20110516_v62_GRCh37
+    # This is the version of the script used to patch vega_homo_sapiens_20110516_v62_GRCh37
 
-        # $dba = DBI->connect("DBI:mysql:database=vega_homo_sapiens_20110516_v62_GRCh37;host=ensdb-1-11;port=5317",
-        #     'ensadmin', 'ensembl', {RaiseError => 1});
+    # $dba = DBI->connect("dbname=vega_homo_sapiens_20110516_v62_GRCh37;host=ensdb-1-11;port=5317",
+    #     'ensadmin', 'ensembl', {RaiseError => 1});
 
-        # $dba = DBI->connect("DBI:mysql:database=vega_homo_sapiens_20110711_v63_GRCh37;host=ensdb-1-11;port=5317",
-        #     'ensadmin', 'ensembl', {RaiseError => 1});
+    # $dba = DBI->connect("dbname=vega_homo_sapiens_20110711_v63_GRCh37;host=ensdb-1-11;port=5317",
+    #     'ensadmin', 'ensembl', {RaiseError => 1});
 
-        # $dba = DBI->connect("DBI:mysql:database=vega_homo_sapiens_20111010_v64_GRCh37;host=ensdb-1-11;port=5317",
-        #     'ensadmin', 'ensembl', {RaiseError => 1});
+    # $dba = DBI->connect("dbname=vega_homo_sapiens_20111010_v64_GRCh37;host=ensdb-1-11;port=5317",
+    #     'ensadmin', 'ensembl', {RaiseError => 1});
 
-        # $dba = DBI->connect("DBI:mysql:database=vega_mus_musculus_20111010_v64_NCBIM37;host=ensdb-1-11;port=5317",
-        #     'ensadmin', 'ensembl', {RaiseError => 1});
+    # $dba = DBI->connect("dbname=vega_mus_musculus_20111010_v64_NCBIM37;host=ensdb-1-11;port=5317",
+    #     'ensadmin', 'ensembl', {RaiseError => 1});
 
-        # my $dsn = "DBI:mysql:database=vega_homo_sapiens_20111219_v65_GRCh37;host=ensdb-1-11;port=5317";
-        # my $dsn = "DBI:mysql:database=homo_sapiens_vega_65_20111219_gb_4;host=ensdb-1-11;port=5317";
-        my $dsn = "DBI:mysql:database=amonida_human_vega_67;host=genebuild4;port=3306";
+    # my $dsn = "dbname=vega_homo_sapiens_20111219_v65_GRCh37;host=ensdb-1-11;port=5317";
+    # my $dsn = "dbname=homo_sapiens_vega_65_20111219_gb_4;host=ensdb-1-11;port=5317";
+    # my $dsn = "dbname=amonida_human_vega_67;host=genebuild4;port=3306";
+    
+    # my $dsn = "species=human;dbname=vega_homo_sapiens_20120319_v66_GRCh37;host=ensdb-web-17;port=5317";
+    my $dsn = "species=mouse;dbname=vega_mus_musculus_20120316_66_GRCm38;host=ensdb-web-17;port=5317";
+    my @args;
 
-        my $now = scalar localtime;
-        print "$now fix_gene_biotypes.pl on $dsn\n";
-        $dba = DBI->connect($dsn, 'ensadmin', 'ensembl', {RaiseError => 1});
+    my $now = scalar localtime;
+    print "$now fix_gene_biotypes.pl on $dsn\n";
 
-        # $dba = DBI->connect("DBI:mysql:database=vega_danio_rerio_20111219_v65_Zv9;host=ensdb-1-11;port=5317",
-        #     'ensadmin', 'ensembl', {RaiseError => 1});
-    # }
+    my $ott_ncRNA_host;
+    if ($dsn =~ /homo_sapiens/) {
+        open my $nc_fh, '-|', './detect_ncRNA_host_genes'
+          or die "Can't open pipe from detect_ncRNA_host_genes; $!";
+        while (defined(my $ott = <$nc_fh>)) {
+            chomp($ott);
+            $ott_ncRNA_host->{$ott} = 1;
+        }
+        close $nc_fh or die "Error running detect_ncRNA_host_genes; exit $?";
+    }
 
-    my $sth = $dba->prepare(q{
+    foreach my $pair (split /;/, $dsn) {
+        my ($opt, $value) = split /=/, $pair;
+        push(@args, "-$opt", $value);
+    }
+    my $dba = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
+        @args,
+        -user  => 'ensadmin',
+        -pass  => 'ensembl',
+        -group => 'ensembl',
+    );
+    # my $dba = DBI->connect($dsn, 'ensadmin', 'ensembl', { RaiseError => 1 });
+    my $dbh = $dba->dbc->db_handle;
+    $dbh->begin_work;
+    
+    my $error = 0;
+    try {
+        fix_biotypes($dba, $ott_ncRNA_host);
+    }
+    catch {
+        $error = 1;
+        warn "Error: $_";
+        $dbh->rollback;
+    };
+    unless ($error) {
+        $dbh->commit;
+    }
+}
+
+sub fix_biotypes {
+    my ($dba, $ott_ncRNA_host) = @_;
+
+    my $dbc = $dba->dbc;
+    my $sth = $dbc->prepare(
+        q{
         SELECT g.biotype
           , g.status
           , g.gene_id
+          , g.stable_id
           , t.biotype
           , t.status
         FROM (gene g
@@ -75,62 +126,114 @@ use DBI;
         WHERE g.gene_id = t.gene_id
           AND g.is_current = 1
           AND ta.transcript_id IS NULL
-    });
+    }
+    );
     $sth->execute;
-    
-    # gene_id  stable_id           biotype    
+
+    # gene_id  stable_id           biotype
     # -------  ------------------  -----------
     # 364283   OTTHUMG00000030222  polymorphic
     # 352727   OTTHUMG00000163212  polymorphic
     # 380254   OTTHUMG00000166126  polymorphic
-    
+
     # AND g.gene_id in (364283, 352727, 380254)
-    
-    
-    my $update = $dba->prepare(q{
+
+    my $update = $dbc->prepare(q{
         UPDATE gene SET biotype = ?, status = ? WHERE gene_id = ?
     });
-    
+
     my %gene_tsct_biotypes;
-    while (my ($gene_biotype, $gene_status, $gene_id, $tsct_biotype, $tsct_status) = $sth->fetchrow) {
+    while (my ($gene_biotype, $gene_status, $gene_id, $gsid, $tsct_biotype, $tsct_status) = $sth->fetchrow) {
         $gene_status ||= '';
         $tsct_status ||= '';
         my $gene_data = $gene_tsct_biotypes{$gene_id} ||= {};
-        $gene_data->{'biotype'} = $gene_biotype;
-        $gene_data->{'status'}  = $gene_status;
+        $gene_data->{'biotype'}   = $gene_biotype;
+        $gene_data->{'status'}    = $gene_status;
+        $gene_data->{'stable_id'} = $gsid;
         $gene_data->{'tsct_biotype'}{$tsct_biotype}++;
-        $gene_data->{'tsct_status' }{$tsct_status }++;
+        $gene_data->{'tsct_status'}{$tsct_status}++;
     }
-    
+
     my %transitions;
-    foreach my $gene_id (sort {$a <=> $b} keys %gene_tsct_biotypes) {
-        my $gene_data = $gene_tsct_biotypes{$gene_id};
-        my ($gene_biotype) = $gene_data->{'biotype'};
-        my ($gene_status)  = $gene_data->{'status'};
+    my $transcribed_remark       = 'Transcribed pseudogene';
+    my $transcribed_remark_added = 0;
+    my $nc_RNA_host_remark       = 'ncRNA_host';
+    my $nc_RNA_host_remark_added = 0;
+    foreach my $gene_id (sort { $a <=> $b } keys %gene_tsct_biotypes) {
+        my $gene_data         = $gene_tsct_biotypes{$gene_id};
+        my ($gene_biotype)    = $gene_data->{'biotype'};
+        my ($gene_status)     = $gene_data->{'status'};
         my $tsct_biotype_hash = $gene_data->{'tsct_biotype'};
-        my $tsct_status_hash  = $gene_data->{'tsct_status' };
-        my ($new_biotype, $new_status) = set_biotype_status_from_transcripts($gene_status, $tsct_biotype_hash, $tsct_status_hash);
+        my $tsct_status_hash  = $gene_data->{'tsct_status'};
+        my ($new_biotype, $new_status) =
+          set_biotype_status_from_transcripts($gene_status, $tsct_biotype_hash, $tsct_status_hash);
+        if ($new_biotype =~ s/^transcribed_//) {
+
+            # transcribed_processed_pseudogene
+            # transcribed_unprocessed_pseudogene
+            $transcribed_remark_added += add_remark_attribute_if_missing($dba, $gene_id, $transcribed_remark);
+        }
+        if ($ott_ncRNA_host->{ $gene_data->{'stable_id'} }) {
+            $nc_RNA_host_remark_added += add_remark_attribute_if_missing($dba, $gene_id, $nc_RNA_host_remark);
+        }
         if ($new_biotype ne $gene_biotype or $new_status ne $gene_status) {
-            # if ("$gene_biotype ($gene_status) > $new_biotype ($new_status)" eq "processed_transcript (NOVEL) > antisense (PUTATIVE)") {
-            #     die $gene_id;
-            # }
             $transitions{"  $gene_biotype ($gene_status) > $new_biotype ($new_status)"}++;
             $transitions{"$gene_biotype > $new_biotype"}++;
             $update->execute($new_biotype, $new_status || undef, $gene_id);
         }
     }
-    
+
     foreach my $trans (sort keys %transitions) {
         printf "%8d  %s\n", $transitions{$trans}, $trans;
     }
+    print "Added $transcribed_remark_added '$transcribed_remark' remarks\n";
+    print "Added $nc_RNA_host_remark_added '$nc_RNA_host_remark' remarks\n";
 }
+
+{
+    my $attrib_insert;
+
+    sub add_remark_attribute_if_missing {
+        my ($dba, $gene_id, $remark) = @_;
+
+        $attrib_insert ||= $dba->dbc->prepare(qq{
+            INSERT INTO gene_attrib(gene_id, attrib_type_id, value)
+            VALUES (?, 54, ?)
+        });
+
+        my $gene_aptr = $dba->get_GeneAdaptor;
+        my $gene = $gene_aptr->fetch_by_dbID($gene_id)
+          or die "No gene with dbID '$gene_id'";
+        my $have_attrib = 0;
+        foreach my $attrib (@{ $gene->get_all_Attributes('remark') }) {
+            if ($attrib->value eq $remark) {
+                $have_attrib = 1;
+                last;
+            }
+        }
+        if ($have_attrib) {
+            return 0;
+        }
+        else {
+            $attrib_insert->execute($gene_id, $remark);
+            return 1;
+        }
+    }
+    
+}
+
+
+# ncRNA_host
+# transcribed pseudogene
 
 # Edited version of method in Bio::Vega::Gene
 sub set_biotype_status_from_transcripts {
+
     # my ($self) = @_;
     my ($gene_status, $tsct_biotype_hash, $tsct_status_hash) = @_;
 
     my (%tsct_biotype, %tsct_status);
+
     # TSCT: foreach my $tsct (@{$self->get_all_Transcripts}) {
     #     foreach my $attrib (@{ $self->get_all_Attributes('remark') }) {
     #         if ($attrib->value eq 'not for VEGA') {
@@ -159,16 +262,21 @@ sub set_biotype_status_from_transcripts {
             }
         }
     }
-    elsif ($tsct_biotype{'protein_coding'} or $tsct_biotype{'nonsense_mediated_decay'} or $tsct_biotype{'non_stop_decay'}) {
+    elsif ($tsct_biotype{'protein_coding'}
+        or $tsct_biotype{'nonsense_mediated_decay'}
+        or $tsct_biotype{'non_stop_decay'})
+    {
         $biotype = 'protein_coding';
     }
     elsif ($tsct_biotype{'retained_intron'} or $tsct_biotype{'ambiguous_orf'}) {
         $biotype = 'processed_transcript';
     }
     elsif (keys %tsct_biotype == 1) {
+
         # If there is just 1 transcript biotype, then the gene gets it too.
         ($biotype) = keys %tsct_biotype;
     }
+
     # $self->biotype($biotype);
 
     # Have already set status to KNOWN if Known was set in acedb.
@@ -176,24 +284,26 @@ sub set_biotype_status_from_transcripts {
     my $status = '';
     if ($gene_status eq 'KNOWN') {
         $status = 'KNOWN';
-    } else {
+    }
+    else {
+
         # Not setting gene status to KNOWN if there is a transcript
         # with status KNOWN.  So KNOWN is only set if radio button in
         # otterlace is checked.
         if ($tsct_status{'PUTATIVE'} and keys(%tsct_status) == 1) {
+
             # Gene status is PUTATIVE if that is the only kind of transcript
             $status = 'PUTATIVE';
         }
         elsif ($tsct_status{'NOVEL'} or ($biotype !~ /pseudo/i and $biotype ne 'TEC')) {
             $status = 'NOVEL';
         }
+
         # $self->status($status);
     }
 
     return ($biotype, $status);
 }
-
-
 
 __END__
 
