@@ -15,11 +15,11 @@ my $file;
 
 sub make_log {
     confess "Already logging to '$file'" if $file;
-    my $config;
-    ($file, $config) = @_;
+    my ($config, $level);
+    ($file, $level, $config) = @_;
 
     my $default_conf = qq(
-      log4perl.rootLogger = INFO, SafeScreen, Logfile
+      log4perl.rootLogger = $level, SafeScreen, Logfile
 
       log4perl.appender.SafeScreen                          = Bio::Otter::Log::Appender::SafeScreen
       log4perl.appender.SafeScreen.layout                   = Log::Log4perl::Layout::PatternLayout
