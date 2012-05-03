@@ -11,8 +11,9 @@ package Bio::Otter::Lace::Exonerate;
 
 use strict;
 use warnings;
-use Carp;
+
 use File::Basename;
+use Log::Log4perl;
 
 # pipeline configuration
 # this must come before Bio::EnsEMBL::Analysis::Runnable::Finished::Exonerate
@@ -29,23 +30,33 @@ use Hum::Ace::Method;
 use Hum::FastaFileIO;
 use Bio::EnsEMBL::Analysis::Runnable::Finished::Exonerate;
 
-sub new{
+sub new {
     my ($pkg) = @_;
     return bless {}, $pkg;
+}
+
+# This returns a logger with category set for the actual calling class,
+# if a subclass of this parent.
+# (Not really needed here, but provided for reference.)
+#
+sub logger {
+    my $self = shift;
+    my $class = ref $self || $self;
+    return Log::Log4perl->get_logger($class);
 }
 
 sub initialise {
     my ($self, $fasta_file) = @_;
 
     unless ($fasta_file =~ m{^/}) {
-        confess "fasta file '$fasta_file' is not an absolute path";
+        $self->logger->logconfess("fasta file '$fasta_file' is not an absolute path");
     }
 
     $self->database($fasta_file);
     unless (-e $fasta_file) {
-        confess "Fasta file '$fasta_file' defined in config does not exist";
+        $self->logger->logconfess("Fasta file '$fasta_file' defined in config does not exist");
     }
-    warn "Found exonerate database: '$fasta_file'\n";
+    $self->logger->info("Found exonerate database: '$fasta_file'");
 
     #$self->homol_tag(($self->query_type eq 'protein') ? 'Pep_homol' : 'DNA_homol');
     $self->homol_tag('DNA_homol');
@@ -151,7 +162,7 @@ sub query_type {
         my $type = lc($query_type);
         $type =~ s/\s//g;
         unless( $type eq 'dna' || $type eq 'protein' ){
-            confess "not the right query type: $type";
+            $self->logger->logconfess("not the right query type: $type");
         }
         $self->{'_query_type'} = $type;
     }
@@ -313,7 +324,7 @@ sub run {
     $_->seq($_->subseq($start, $end)) foreach $smasked, $unmasked;
 
     unless ($smasked->seq =~ /[ACGT]{5}/) {
-        warn "The genomic sequence is entirely repeat\n";
+        $self->logger->warn("The genomic sequence is entirely repeat");
         return $ace;
     }
 
@@ -328,8 +339,6 @@ sub run {
 # Extend the last or first align feature to incorporate
 # the query sequence PolyA/T tail if any
 
-my $debug = 0;
-
 sub append_polyA_tail {
     my ($self, $features) = @_;
 
@@ -338,8 +347,8 @@ sub append_polyA_tail {
     push @{$by_hit_name{$_->hseqname} ||= []}, $_ for @$features;
 
     while (my ($hit_name, $hit_features) = each %by_hit_name) {
-        print STDOUT "PolyA/T tail Search for $hit_name...\n";
-        print STDOUT "Processing $hit_name with ".scalar(@$hit_features)." Features\n" if $debug;
+        $self->logger->info("PolyA/T tail Search for $hit_name...");
+        $self->logger->debug("Processing $hit_name with ", scalar(@$hit_features), " Features\n");
         # fetch the hit sequence
         my $seq = $self->sequence_fetcher->{$hit_name};
         $self->append_polyA_tail_from_features($seq, $hit_features);
@@ -363,31 +372,34 @@ sub append_polyA_tail_from_features {
             $b->hend <=> $a->hend || $a->hstart <=> $b->hstart;
     } @$hit_features;
     $alt_exon = shift @$hit_features;
-    print STDOUT ($hit_strand == -1 ? "Reverse" : "Forward").
-        " strand: start ".$alt_exon->hstart." end ".$alt_exon->hend." length ".$seq->sequence_length."\n" if $debug;
+    $self->logger->debug(($hit_strand == -1 ? "Reverse" : "Forward"), " strand:",
+                         " start ",  $alt_exon->hstart,
+                         " end ",    $alt_exon->hend, 
+                         " length ", $seq->sequence_length,
+        );
     if($hit_strand == -1) {
         return unless $alt_exon->hstart > 1;
         $sub_seq = $seq->sub_sequence(1,($alt_exon->hstart-1));
-        print STDOUT "subseq <1-".($alt_exon->hstart-1)."> is\n$sub_seq\n" if $debug;
+        $self->logger->debug("subseq <1-", ($alt_exon->hstart-1), "> is\n$sub_seq\n");
         $pattern = '^(.*T{3,})$';  # <AGAGTTTTTTTTTTTTTTTTTTTTTT>ALT_EXON_START
     }
     else {
         return unless $alt_exon->hend < $seq->sequence_length;
         $sub_seq = $seq->sub_sequence(($alt_exon->hend+1),$seq->sequence_length);
-        print STDOUT "subseq <".($alt_exon->hend+1)."-".$seq->sequence_length."> is\n$sub_seq\n" if $debug;
+        $self->logger->debug("subseq <", ($alt_exon->hend+1), "-", $seq->sequence_length, "> is\n$sub_seq\n");
         $pattern = '^(A{3,}.*)$';  # ALT_EXON_END<AAAAAAAAAAAAAAAAAAAAAAAACGAG>
     }
 
     if($sub_seq =~ /$pattern/i ) {
         $match = length $1;
         $cigar = $alt_exon->cigar_string;
-        print STDOUT "Found $match bp long polyA/T tail\n";
+        $self->logger->info("Found $match bp long polyA/T tail");
 
         # change the feature cigar string
         if(not $cigar =~ s/(\d*)M$/($1+$match)."M"/e ) {
             $cigar = $cigar."${match}M";
         }
-        print STDOUT "old cigar $cigar new $cigar\n" if $debug;
+        $self->logger->debug("old cigar $cigar new $cigar");
         $alt_exon->cigar_string($cigar);
 
         # change the feature coordinates
@@ -429,7 +441,7 @@ sub run_exonerate {
     } elsif ($mask_target eq 'none') {
         $target = $unmasked;
     } else {
-        croak("mask_target type '$mask_target' not supported");
+        $self->logger->logcroak("mask_target type '$mask_target' not supported");
     }
 
     $exo_options .=
@@ -470,7 +482,7 @@ sub format_ace_output {
     my ($self, $contig_name, $fp_list) = @_;
 
     unless (@$fp_list) {
-        warn "No hits found on '$contig_name'\n";
+        $self->logger->warn("No hits found on '$contig_name'");
         return '';
     }
 
@@ -528,9 +540,9 @@ sub format_ace_output {
                 sprintf qq{Homol %s "%s" "%s" %.3f %d %d %d %d\n},
                 $hit_homol_tag, $contig_name, $method_tag, $fp->percent_id,
                 $hstart, $hend, $start, $end;
-            #print STDOUT sprintf qq{Homol %s "%s" "%s" %.3f %d %d %d %d\n},
-            #$homol_tag, $contig_name, $method_tag, $fp->percent_id,
-            #$fp->hstart, $fp->hend, $start, $end;
+            # $self->logger->info(sprintf qq{Homol %s "%s" "%s" %.3f %d %d %d %d\n},
+            #                     $homol_tag, $contig_name, $method_tag, $fp->percent_id,
+            #                     $fp->hstart, $fp->hend, $start, $end);
 
             # The first part of the line is all we need if there are no
             # gaps in the alignment between genomic sequence and hit.
@@ -589,11 +601,11 @@ sub get_softmasked_dna {
         $end   -= $offset;
 
         # sanity checks
-        confess "missing feature start in '$_'" unless defined $start;
-        confess "non-numeric feature start: $start"
+        $self->logger->logconfess("missing feature start in '$_'") unless defined $start;
+        $self->logger->logconfess("non-numeric feature start: $start")
             unless $start =~ /^[[:digit:]]+$/;
-        confess "missing feature end in '$_'" unless defined $end;
-        confess "non-numeric feature end: $end"
+        $self->logger->logconfess("missing feature end in '$_'") unless defined $end;
+        $self->logger->logconfess("non-numeric feature end: $end")
             unless $end =~ /^[[:digit:]]+$/;
 
         if ($start > $end) {
@@ -610,7 +622,7 @@ sub get_softmasked_dna {
     my $dataset = $self->AceDatabase->DataSet;
     foreach my $filter_name qw( trf RepeatMasker ) {
         my $filter = $dataset->filter_by_name($filter_name);
-        confess "no filter named '${filter_name}'" unless $filter;
+        $self->logger->logconfess("no filter named '${filter_name}'") unless $filter;
         $filter->call_with_session_data_handle(
             $self->AceDatabase,
             sub {
