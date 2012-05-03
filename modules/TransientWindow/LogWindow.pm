@@ -6,6 +6,7 @@ use warnings;
 
 use IO::Handle;
 use Bio::Otter::LogFile;
+use Bio::Otter::Git;
 use Bio::Vega::Utils::URI qw{ open_uri };
 use Net::Domain qw{ hostfqdn };
 
