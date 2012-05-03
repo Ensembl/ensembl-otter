@@ -32,15 +32,17 @@ use Bio::EnsEMBL::Analysis::Runnable::Finished::Exonerate;
 
 sub new {
     my ($pkg) = @_;
-    my $self = bless {}, $pkg;
-    $self->logger(Log::Log4perl->get_logger($pkg));
-    return $self;
+    return bless {}, $pkg;
 }
 
+# This returns a logger with category set for the actual calling class,
+# if a subclass of this parent.
+# (Not really needed here, but provided for reference.)
+#
 sub logger {
-    my ($self, @args) = @_;
-    ($self->{'_logger'}) = @args if @args;
-    return $self->{'_logger'};
+    my $self = shift;
+    my $class = ref $self || $self;
+    return Log::Log4perl->get_logger($class);
 }
 
 sub initialise {
