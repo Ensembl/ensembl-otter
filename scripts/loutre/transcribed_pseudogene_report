@@ -1,0 +1,73 @@
+#!/usr/bin/env perl
+
+### transcribed_pseudogene_report
+
+use strict;
+use warnings;
+use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Lace::PipelineDB;
+
+{
+
+    my $usage = sub { exec('perldoc', $0) };
+    my $dataset = 'mouse';
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'dataset=s'     => \$dataset,
+        'h|help!'       => $usage,
+        ) or $usage->();
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset);
+    
+    my $dbc = $ds->get_cached_DBAdaptor->dbc;
+    my $list_pseodo_tsct = $dbc->prepare(q{
+        SELECT t.gene_id
+          , t.biotype
+        FROM transcript t
+          , seq_region_attrib sra
+          , attrib_type at
+        WHERE t.seq_region_id = sra.seq_region_id
+          AND sra.attrib_type_id = at.attrib_type_id
+          AND at.code = 'hidden'
+          AND sra.value = '0'
+          AND t.is_current = 1
+          AND biotype LIKE '%pseudo%'
+        });
+    $list_pseodo_tsct->execute;
+    
+    my $count_tsct_in_gene = $dbc->prepare(q{ SELECT count(*) FROM transcript WHERE gene_id = ? });
+    my (%seen_gene_id, %biotype_counts);
+    while (my ($gene_id, $biotype) = $list_pseodo_tsct->fetchrow) {
+        next if $seen_gene_id{$gene_id};
+        $seen_gene_id{$gene_id} = 1;
+        $count_tsct_in_gene->execute($gene_id);
+        my ($count) = $count_tsct_in_gene->fetchrow;
+        $biotype_counts{$biotype}{$count}++;
+    }
+    
+    print "\ntranscripts per pseudogene in '$dataset'\n\n";
+    my $fmt = "%40s  %6s  %6s\n";
+    printf $fmt, 'biotype', 'tscts', 'genes';
+    print "\n";
+    foreach my $biotype (sort keys %biotype_counts) {
+        my $cnt_hash = $biotype_counts{$biotype};
+        foreach my $tsct_count (sort {$b <=> $a} keys %$cnt_hash) {
+            printf $fmt, $biotype, $tsct_count, $cnt_hash->{$tsct_count};
+        }
+    }
+}
+
+
+
+
+__END__
+
+=head1 NAME - transcribed_pseudogene_report
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+

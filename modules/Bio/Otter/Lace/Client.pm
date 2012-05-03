@@ -138,11 +138,11 @@ sub config_path_default_rel_home {
     return $path;
 }
 
+
 sub get_log_dir {
     my ($self) = @_;
-
-    my $log_dir = $self->config_path_default_rel_home('logdir') or return;
-
+    my $home = (getpwuid($<))[7];
+    my $log_dir = "$home/.otter";
     if (mkdir($log_dir)) {
         warn "Made logging directory '$log_dir'\n"; # logging not set up, so this must use 'warn'
     }

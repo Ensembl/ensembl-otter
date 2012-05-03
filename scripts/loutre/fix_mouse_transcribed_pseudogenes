@@ -1,0 +1,100 @@
+#!/usr/bin/env perl
+
+### fix_mouse_transcribed_pseudogenes
+
+use strict;
+use warnings;
+use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Lace::PipelineDB;
+
+{
+    my $usage = sub { exec('perldoc', $0) };
+    my $dataset_name = 'mouse';
+
+    # This do_getopt() call is needed to parse the otter config files
+    # even if you aren't giving any arguments on the command line.
+    Bio::Otter::Lace::Defaults::do_getopt('h|help!' => $usage,) or $usage->();
+
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+
+    my $ens_dba   = $ds->make_EnsEMBL_DBAdaptor;
+    my $gene_aptr = $ens_dba->get_GeneAdaptor;
+
+    my $update_gene       = $ens_dba->dbc->prepare(q{ UPDATE gene SET biotype = ? WHERE gene_id = ?});
+    my $update_transcript = $ens_dba->dbc->prepare(q{ UPDATE transcript SET biotype = ? WHERE transcript_id = ?});
+
+    # if (1) {
+    #     foreach my $biotype (qw{ processed_pseudogene unprocessed_pseudogene }) {
+    #         my $all = $gene_aptr->fetch_all_by_biotype($biotype);
+    #         while (my $gene = shift @$all) {
+    #             next unless @{$gene->get_all_Transcripts} > 1;
+    #             printf "  %s  %s\n", $gene->stable_id, $biotype;
+    #         }
+    #     }
+    #     die "DEBUG EXIT";
+    # }
+
+    foreach my $biotype (
+        qw{
+        transcribed_processed_pseudogene
+        transcribed_unprocessed_pseudogene
+        }
+      )
+    {
+        my ($un_transcribed_biotype) = $biotype =~ /transcribed_(.+)/
+          or die "Can't fetch un-transcribed biotype from '$biotype'";
+        my $all_genes       = $gene_aptr->fetch_all_by_biotype($biotype);
+        my $total           = @$all_genes;
+        my $not_transcribed = 0;
+      GENE: while (my $gene = shift @$all_genes) {
+
+            if (@{ $gene->get_all_Transcripts } > 1) {
+                next GENE;
+            }
+            my @overlapping_genes =
+              map { $_->transfer($gene->slice) } @{ $gene_aptr->fetch_all_by_Slice($gene->feature_Slice) };
+            my @others_same_strand =
+              grep { $_->dbID != $gene->dbID and $_->strand == $gene->strand } @overlapping_genes;
+            if (@others_same_strand) {
+                foreach my $gene_exon (@{ $gene->get_all_Exons }) {
+                    foreach my $this (@others_same_strand) {
+                        foreach my $this_exon (@{ $this->get_all_Exons }) {
+                            next GENE if $this_exon->overlaps($gene_exon);
+                        }
+                    }
+                }
+            }
+            $not_transcribed++;
+            my ($tsct) = @{ $gene->get_all_Transcripts };
+            die sprintf "No transcripts in gene dbID = %d", $gene->dbID
+              unless $tsct;
+            $update_gene->execute($un_transcribed_biotype, $gene->dbID);
+            $update_transcript->execute($un_transcribed_biotype, $tsct->dbID);
+        }
+        print STDERR "Fixed $not_transcribed $biotype genes not transcribed out of a total of $total\n";
+    }
+}
+
+__END__
+
+=head1 NAME - fix_mouse_transcribed_pseudogenes
+
+Ran:
+
+Fixed 2966 transcribed_processed_pseudogene genes not transcribed out of a total of 3486
+Fixed 647 transcribed_unprocessed_pseudogene genes not transcribed out of a total of 748
+
+Second run:
+
+Fixed 0 transcribed_processed_pseudogene genes not transcribed out of a total of 520
+Fixed 0 transcribed_unprocessed_pseudogene genes not transcribed out of a total of 101
+
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+

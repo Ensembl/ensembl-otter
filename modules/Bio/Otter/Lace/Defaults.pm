@@ -27,7 +27,7 @@ push(@$CONFIG_INIFILES, $HARDWIRED);
 my $GETOPT = {};
 tie %$GETOPT, 'Config::IniFiles', (%OPTIONS_TO_TIE);
 
-my ($THIS_USER, $HOME_DIR) = (getpwuid($<))[0,7];
+my $HOME_DIR = (getpwuid($<))[7];
 my $CALLED = "$0 @ARGV";
 
 my @CLIENT_OPTIONS = qw(
@@ -41,7 +41,6 @@ my @CLIENT_OPTIONS = qw(
     gene_type_prefix=s
     debug=i
     misc_acefile=s
-    logdir=s
     );
 
 # @CLIENT_OPTIONS is Getopt::GetOptions() keys which will be included in the 
@@ -431,5 +430,4 @@ port=80
 version=65
 write_access=0
 debug=1
-logdir=.otter
 log_level=INFO
