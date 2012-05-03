@@ -173,10 +173,18 @@ sub make_log_file {
         $log_file = "$log_dir/$file_root.$$-$i.log";
         $i++;
     } while (-e $log_file);
-    if($self->debug()) {
-        warn "Logging output to '$log_file'\n"; # logging not set up, so this must use 'warn'
+
+    my $log_level = $self->config_value('log_level');
+    my $config_file = $self->get_log_config_file;
+    # logging not set up, so must use 'warn'
+    if ($config_file) {
+        warn "Using log config file '$config_file'\n";
+    } else {
+        if($self->debug()) {
+            warn "Logging output to '$log_file'\n";
+        }
     }
-    Bio::Otter::LogFile::make_log($log_file, $self->get_log_config_file);
+    Bio::Otter::LogFile::make_log($log_file, $log_level, $config_file);
     return;
 }
 

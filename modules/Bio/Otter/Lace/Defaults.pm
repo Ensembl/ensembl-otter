@@ -432,3 +432,4 @@ version=65
 write_access=0
 debug=1
 logdir=.otter
+log_level=INFO
