@@ -430,3 +430,4 @@ port=80
 version=65
 write_access=0
 debug=1
+log_level=INFO
