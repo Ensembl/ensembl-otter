@@ -7,6 +7,7 @@ use strict;
 use warnings;
 use Carp;
 
+use IO::Handle;
 use Log::Log4perl qw(:levels);
 
 use Bio::Otter::Log::TieHandle;
