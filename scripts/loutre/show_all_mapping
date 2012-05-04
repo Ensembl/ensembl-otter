@@ -1,0 +1,124 @@
+#!/usr/bin/env perl
+
+### show_all_mapping
+
+use strict;
+use warnings;
+
+use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Lace::PipelineDB;
+
+{
+    my ($dataset_name, $seq_region_name);
+
+    my $usage = sub { exec('perldoc', $0) };
+
+    # This do_getopt() call is needed to parse the otter config files
+    # even if you aren't giving any arguments on the command line.
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'         => $usage,
+        'dataset=s'       => \$dataset_name,
+        'seq_region|sr=s' => \$seq_region_name,
+    ) or $usage->();
+    $usage->() unless $dataset_name and $seq_region_name;
+
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+
+    my $otter_dba = $ds->get_cached_DBAdaptor;
+
+    my $sql = q{
+        SELECT cs_asm.name
+          , cs_asm.version
+          , asm.name
+          , a.asm_start
+          , a.asm_end
+
+          , cs_cmp.name
+          , cs_cmp.version
+          , cmp.name
+          , a.cmp_start
+          , a.cmp_end
+
+          , a.ori
+        FROM assembly a
+          , seq_region asm
+          , seq_region cmp
+          , coord_system cs_asm
+          , coord_system cs_cmp
+        WHERE a.asm_seq_region_id = asm.seq_region_id
+          AND a.cmp_seq_region_id = cmp.seq_region_id
+          AND asm.coord_system_id = cs_asm.coord_system_id
+          AND cmp.coord_system_id = cs_cmp.coord_system_id
+          AND (asm.name = ? OR cmp.name = ?)
+        ORDER BY cs_asm.coord_system_id
+          , cs_cmp.coord_system_id
+          , asm.name
+          , a.asm_start
+    };
+
+    my $sth = $otter_dba->dbc->prepare($sql);
+    $sth->execute($seq_region_name, $seq_region_name);
+    my $results = $sth->fetchall_arrayref;
+    my $max_cmp_name_length = 0;
+    foreach my $row (@$results) {
+        my $cmp_name_length = length($row->[7]);
+        $max_cmp_name_length = $cmp_name_length if $cmp_name_length > $max_cmp_name_length;
+    }
+    my $prev_asm = '';
+    foreach my $row (@$results) {
+        my (
+            $asm_cs_name, $asm_cs_version, $asm_name, $asm_start, $asm_end,
+            $cmp_cs_name, $cmp_cs_version, $cmp_name, $cmp_start, $cmp_end, $ori,
+        )
+        = @$row;
+
+        foreach ($asm_cs_version, $cmp_cs_version) {
+            $_ ||= '';
+            $_ = '' if $_ eq 'none';
+        }
+        my $this_asm = "$asm_cs_name:$asm_cs_version:$asm_name to $cmp_cs_version:$cmp_cs_name";
+        if ($this_asm ne $prev_asm) {
+            print "\n$this_asm\n";
+            $prev_asm = $this_asm;
+        }
+        my $length = $asm_end - $asm_start + 1;
+        printf "  [ %11s  %11s ] \%${max_cmp_name_length}s [ %11s  %11s ]  %1s %11s\n",
+            comma_separate_thousands($asm_start), comma_separate_thousands($asm_end),
+            $cmp_name, 
+            comma_separate_thousands($cmp_start), comma_separate_thousands($cmp_end), 
+            $ori == 1 ? '+' : '-', comma_separate_thousands($length);
+    }
+
+}
+
+sub comma_separate_thousands {
+    my ($num) = @_;
+
+    for (my $i = length($num) - 3; $i > 0; $i -= 3) {
+        substr($num, $i, 0, ',');
+    }
+    return $num;
+}
+
+
+__END__
+
+=head1 NAME - show_all_mapping
+
+=head1 DESCRIPTION
+
+Given the name of a seq_region, displays the rows of all entries in the
+assmbly table where it is either a asm or cmp.
+
+=head1 EXAMPLE
+
+  ./show_all_mapping -dataset human -seq_region PATCH_NOVEL-HSCHR12_3_CTG2_1-01
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
