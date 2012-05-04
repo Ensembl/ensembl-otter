@@ -45,7 +45,7 @@ sub hit_length {
 
 sub hit_sequence_string {
     my ($self, $hit_sequence_string) = @_;
-    
+
     if ($hit_sequence_string) {
         $self->{'_hit_sequence_string'} = $hit_sequence_string;
     }
@@ -54,7 +54,7 @@ sub hit_sequence_string {
 
 sub get_and_unset_hit_sequence_string {
     my ($self) = @_;
-    
+
     my $seq = $self->{'_hit_sequence_string'};
     $self->{'_hit_sequence_string'} = undef;
     return $seq;
