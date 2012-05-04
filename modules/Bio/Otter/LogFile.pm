@@ -13,7 +13,7 @@ use Bio::Otter::Log::TieHandle;
 
 my $file;
 
-sub make_log {
+sub make_log { ## no critic (Subroutines::RequireArgUnpacking)
     confess "Already logging to '$file'" if $file;
     my ($config, $level);
     ($file, $level, $config) = @_;
