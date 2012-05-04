@@ -12,12 +12,12 @@ use Log::Log4perl qw(:levels);
 
 use Bio::Otter::Log::TieHandle;
 
-my $file;
+my $logfile;
 
-sub make_log { ## no critic (Subroutines::RequireArgUnpacking)
-    confess "Already logging to '$file'" if $file;
-    my ($config, $level);
-    ($file, $level, $config) = @_;
+sub make_log {
+    my ($file, $level, $config) = @_;
+    confess "Already logging to '$logfile'" if $logfile;
+    $logfile = $file;
 
     my $default_conf = qq(
       log4perl.rootLogger = $level, SafeScreen, Logfile
@@ -27,7 +27,7 @@ sub make_log { ## no critic (Subroutines::RequireArgUnpacking)
       log4perl.appender.SafeScreen.layout.ConversionPattern = %m%n
 
       log4perl.appender.Logfile                          = Log::Log4perl::Appender::File
-      log4perl.appender.Logfile.filename                 = $file
+      log4perl.appender.Logfile.filename                 = $logfile
       log4perl.appender.Logfile.layout                   = Log::Log4perl::Layout::PatternLayout::Multiline
       log4perl.appender.Logfile.layout.ConversionPattern = %d %c %p: %m%n
     );
@@ -76,7 +76,7 @@ sub make_log { ## no critic (Subroutines::RequireArgUnpacking)
 }
 
 sub current_logfile {
-    return $file;
+    return $logfile;
 }
 
 1;
