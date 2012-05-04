@@ -4,21 +4,21 @@ use strict;
 use warnings;
 
 use Log::Log4perl qw(:levels get_logger);
- 
+
 sub TIEHANDLE {
    my($class, %options) = @_;
- 
+
    my $self = {
        level    => $DEBUG,
        category => '',
        %options
    };
- 
+
    $self->{logger} = get_logger($self->{category});
    bless $self, $class;
    return $self;
 }
- 
+
 sub PRINT {
     my($self, @rest) = @_;
     unless ($self->{called}) {
@@ -29,7 +29,7 @@ sub PRINT {
     }
     return;
 }
- 
+
 sub PRINTF {
     my($self, $fmt, @rest) = @_;
     $Log::Log4perl::caller_depth++;
@@ -37,5 +37,5 @@ sub PRINTF {
     $Log::Log4perl::caller_depth--;
     return;
 }
- 
+
 1;

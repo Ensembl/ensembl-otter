@@ -22,7 +22,7 @@ sub new {
     bless $self, $class;
     return $self;
 }
-    
+
 sub log {
     my($self, %params) = @_;
 
