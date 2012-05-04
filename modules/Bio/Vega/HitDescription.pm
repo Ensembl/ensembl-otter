@@ -14,7 +14,9 @@ sub new {
     my ($caller, @args) = @_;
 
     my ($hit_name, $hit_length, $description, $taxon_id, $db_name) = rearrange(
-      [ 'HIT_NAME', 'HIT_LENGTH', 'HIT_SEQUENCE_STRING', 'DESCRIPTION', 'TAXON_ID', 'DB_NAME' ], @args);
+      [ 'HIT_NAME', 'HIT_LENGTH', 'HIT_SEQUENCE_STRING',
+        'DESCRIPTION', 'TAXON_ID', 'DB_NAME' ],
+        @args);
     my $class = ref($caller) || $caller;
     return bless {
         _hit_name       => $hit_name,
