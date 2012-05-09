@@ -38,6 +38,10 @@ __END__
 
 Bio::Otter::Log::Appender::SafeScreen - log to a copy of STDOUT
 
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
+
 =cut
 
 # EOF
