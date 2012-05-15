@@ -122,6 +122,10 @@ __END__
 
 =head1 NAME - check_gene_transcript_spans_by_ratio
 
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
+
 =head1 SYNOPSIS
 
   check_gene_transcript_spans_by_ratio -dataset <DATASET> [-vega] [-type <SET>]

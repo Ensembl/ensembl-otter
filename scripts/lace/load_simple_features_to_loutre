@@ -97,6 +97,10 @@ warn "\nParser now out of scope\n";
 
 1;
 
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
+
 =head1 DESCRIPTION
 
 load_vega_xml -dataset loutre_'species' -indir input_dir_of_XML_files

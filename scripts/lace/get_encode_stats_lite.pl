@@ -406,3 +406,7 @@ sub count_trans_with_supporting_evi {
 }
 
 __END__
+
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk

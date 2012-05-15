@@ -178,6 +178,10 @@ sub usage{ exit(exec('perldoc', $0)) }
 
 =head1 NAME - gene_info_from_stable_id
 
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
+
 =head1 DESCRIPTION
 
 fetch gene info about the latest version associated with a stable id

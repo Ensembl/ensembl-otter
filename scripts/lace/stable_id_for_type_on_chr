@@ -85,6 +85,10 @@ __END__
 
 =head1 NAME - stable_id_for_type_on_chr
 
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
+
 =head1 DESCRIPTION
 
  Get the Stable Id for the genes of type <TYPE> on Chromosome <CHR>.
