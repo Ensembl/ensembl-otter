@@ -69,6 +69,10 @@ sub get_list_of_slices{
 }
 
 
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
+
 =head1 DESCRIPTION
 
  wrapper to call realign_offtrack_genes on a whole chromosome n clones at a time.
