@@ -165,7 +165,7 @@ sub make_log_file {
     my ($self, $file_root) = @_;
 
     $file_root ||= 'client';
-    
+
     my $log_dir = $self->get_log_dir or return;
     my( $log_file );
     my $i = 'a';
@@ -1236,7 +1236,7 @@ sub sessions_needing_recovery {
         my $ace_wrm = "$lace_dir/database/ACEDB.wrm";
         if (-e $ace_wrm) {
             if (my $name = $self->get_name($lace_dir)) {
-                push(@$to_recover, [$lace_dir, $mtime, $name]);                
+                push(@$to_recover, [$lace_dir, $mtime, $name]);
             }
             else {
                 my $done = $self->move_to_done($lace_dir);
