@@ -285,7 +285,7 @@ sub new_AceDatabase {
     return $adb;
 }
 
-sub lock { ## no critic(Subroutines::ProhibitBuiltinHomonyms)
+sub lock {
     my ($self, @args) = @_;
 
     confess "lock takes no arguments" if @args;

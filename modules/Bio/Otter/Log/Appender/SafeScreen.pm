@@ -23,7 +23,7 @@ sub new {
     return $self;
 }
 
-sub log { ## no critic (Subroutines::ProhibitBuiltinHomonyms)
+sub log {
     my($self, %params) = @_;
 
     $self->{handle}->print($params{message});

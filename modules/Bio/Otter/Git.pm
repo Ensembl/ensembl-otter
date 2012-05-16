@@ -35,7 +35,7 @@ unless (eval { require Bio::Otter::Git::Cache; 1; }) {
     }
 }
 
-sub dump { ## no critic (Subroutines::ProhibitBuiltinHomonyms)
+sub dump {
     my ($pkg) = @_;
     warn sprintf "git HEAD: %s\n", $pkg->param('head');
     return;
