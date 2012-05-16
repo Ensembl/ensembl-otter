@@ -19,7 +19,7 @@ sub add_State {
     $self->{'_state_hash'} = $state;
 }
 
-sub state { ## no critic(Subroutines::ProhibitBuiltinHomonyms)
+sub state {
     my( $self ) = @_;
     
     return $self->{'_state_hash'};
