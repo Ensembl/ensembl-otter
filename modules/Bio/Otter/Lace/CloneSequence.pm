@@ -117,7 +117,7 @@ sub contig_strand {
     return $self->{'_contig_strand'};
 }
 
-sub length { ## no critic(Subroutines::ProhibitBuiltinHomonyms)
+sub length {
     my ($self, $length) = @_;
 
     if ($length) {

@@ -102,7 +102,7 @@ sub end {
     return $self->{_end};
 }
 
-sub length { ## no critic(Subroutines::ProhibitBuiltinHomonyms)
+sub length {
     my ($self) = @_;
 
     return $self->end() - $self->start() + 1;
