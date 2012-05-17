@@ -669,43 +669,24 @@ foreach my $name (@{$chr_names_wanted}) {
       }
 
       if (! $fsv_gene) {
-	foreach my $proj_clone (@{$lgene->feature_Slice->project('clone')}) {
-	  my $clone = $proj_clone->to_Slice();
 
-##	  ### just for debuging
-##	  my $clone_nameT = $clone->seq_region_name();
-##	  $support->log("      current clone: $clone_nameT; \n");
-	  
-	  my $attr = $clone->get_all_Attributes('annotated');
-	  
-##	  ### just for debuging
-##	  foreach my $at (@$attr) {
-##	    $support->log("             has attribute annotated: " . $at->value . "\n");
-##	  }
-	  if (grep { $_->value eq 'T'} @$attr) {
-	    $annotated_clone = 1;
-	    last;
-	    ## amended this to get the newly annotated genes only annotated on contigs
-	  }
-	}
+        #don't bother looking at clone annotation status sine that's hideously out of date (but keep
+        #the code in case if is ever done properly
+#	foreach my $proj_clone (@{$lgene->feature_Slice->project('clone')}) {
+#	  my $clone = $proj_clone->to_Slice();
+#	  my $attr = $clone->get_all_Attributes('annotated');
+#	  if (grep { $_->value eq 'T'} @$attr) {
+#	    $annotated_clone = 1;
+#	    last;
+#	  }
+#	}
 	if (! $annotated_clone) {
 	  foreach my $proj_contig (@{$lgene->feature_Slice->project('contig')}) {
 	    my $contig      = $proj_contig->to_Slice();
 	    my $contig_id   = $contig->get_seq_region_id();
 	    my $contig_info = $lcia ->fetch_by_seq_region_id($contig_id);
-	    
-##	    ### just for debuging
-##	    my $contig_nameT = $contig->seq_region_name();
-##	    $support->log("      current contig: $contig_nameT; \n");
-	    
 	    if (defined $contig_info) {
 	      my $attr_c = $contig_info->get_all_Attributes('annotated');
-	      
-##	      ### just for debuging
-##	      foreach my $at (@$attr_c) {
-##		$support->log("             has attribute annotated: " . $at->value . "\n");
-##	      }
-	      
 	      if ( grep {$_->value eq 'T'} @$attr_c) {
 		$annotated_clone = 1;
 		last;
