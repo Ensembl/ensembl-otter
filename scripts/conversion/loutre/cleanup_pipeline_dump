@@ -203,8 +203,12 @@ my $laa  = $ldba->get_AttributeAdaptor();
 my $ldbh = $ldba->dbc->db_handle;
 
 #sanity check to ensure the correct configuration file is being read
-(my $pipe_sp) = $pddbh->selectrow_array(qq(select meta_value from meta where meta_key = 'species.ensembl_alias_name'));
-(my $loutre_sp) = $ldbh->selectrow_array(qq(select meta_value from meta where meta_key = 'species.ensembl_alias_name'));
+my $sql = qq(select meta_value from meta where meta_key = 'species.ensembl_alias_name');
+(my $pipe_sp) = $pddbh->selectrow_array($sql);
+(my $loutre_sp) = $ldbh->selectrow_array($sql);
+unless ($loutre_sp) {
+  $support->log_warning("Can't read species from meta key so haven't been able to check that you've got the right config file\n");
+}
 if ($pipe_sp ne $loutre_sp) {
   $support->log_warning("You're reading different species for the loutre ($loutre_sp) and the pipeline dump ($pipe_sp) databases. Please check your configuration file\n");
   exit;
