@@ -491,14 +491,17 @@ if ($alt_assembly = $support->param('ensemblassembly') ) {
           #compare accessions for PATCHES from Ensembl and Vega and warn if they're different
           my @e_patch_names  = $edbh->selectrow_array(qq(
                 SELECT srs.synonym
-                  FROM seq_region sr, seq_region_synonym srs
-                 WHERE sr.seq_region_id = srs.seq_region_id
-                   AND sr.seq_region_id = $e_sr_id));
+                  FROM seq_region_synonym srs, seq_region sr
+                 WHERE srs.seq_region_id = sr.seq_region_id
+                   AND sr.name = $e_name));
           if (scalar(@e_patch_names > 1)) {
             $support->log_warning("More than one e! seq_region_synonym found for $v_name, need to alter the code below\n");
           }
-          if ($e_patch_names[0]) {
-            my ($v_patch_name) = $edbh->selectrow_array(qq(
+          elsif (! @e_patch_names ) {
+            $support->log_warning("No accession for PATCH $v_name in Ensembl so we don't know if e! and Vega are using the same PATCH!\n");
+          }
+          else {
+            my ($v_patch_name) = $vdbh->selectrow_array(qq(
                SELECT concat(sra1.value,'.',sra2.value)
                 FROM seq_region sr, seq_region_attrib sra1, attrib_type at1, seq_region_attrib sra2, attrib_type at2
                WHERE sr.seq_region_id    = sra1.seq_region_id
@@ -513,6 +516,9 @@ if ($alt_assembly = $support->param('ensemblassembly') ) {
             }
             elsif ($e_patch_names[0] ne $v_patch_name) {
               $support->log_warning("Accession for PATCH $v_name differs between e! (".$e_patch_names[0].") and Vega ($v_patch_name). Have a look but I suspect this region will have to be deleted\n");
+            }
+            else {
+              $support->log("Accessions match - $v_patch_name and ".$e_patch_names[0]."\n",1);
             }
           }
         }
