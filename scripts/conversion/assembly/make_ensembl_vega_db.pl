@@ -28,22 +28,17 @@ General options:
 
 Specific options:
 
+    --evegadbname=NAME                  use ensembl-vega (target) database NAME
+    --evegahost=HOST                    use ensembl-vega (target) database host HOST
+    --evegaport=PORT                    use ensembl-vega (target) database port PORT
+    --evegauser=USER                    use ensembl-vega (target) database username USER
+    --evegapass=PASS                    use ensembl-vega (target) database password PASS
     --ensembldbname=NAME                use Ensembl (source) database NAME
     --ensemblhost=HOST                  use Ensembl (source) database host HOST
     --ensemblport=PORT                  use Ensembl (source) database port PORT
-    --ensembluser=USER                  use Ensembl (source) database username
-                                        USER
-    --ensemblpass=PASS                  use Ensembl (source) database passwort
-                                        PASS
-    --evegadbname=NAME                  use ensembl-vega (target) database NAME
-    --evegahost=HOST                    use ensembl-vega (target) database host
-                                        HOST
-    --evegaport=PORT                    use ensembl-vega (target) database port
-                                        PORT
-    --evegauser=USER                    use ensembl-vega (target) database
-                                        username USER
-    --evegapass=PASS                    use ensembl-vega (target) database
-                                        passwort PASS
+    --ensembluser=USER                  use Ensembl (source) database username USER
+    --ensemblpass=PASS                  use Ensembl (source) database password PASS
+
     --extdbfile, --extdb=FILE           the path of the file containing
                                         the insert statements of the
                                         entries of the external_db table
@@ -327,6 +322,16 @@ $sql = qq(
 );
 $c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
 $support->log_stamped("Done transfering $c seq_region_attrib entries.\n\n");
+
+# transfer seq_region_synonyms from Ensembl
+$support->log_stamped("Transfering Ensembl seq_region_synonyms...\n");
+$sql = qq(
+    INSERT INTO $evega_db.seq_region_synonym (seq_region_id, synonym, external_db_id)
+    SELECT srs.seq_region_id+$sri_adjust, srs.synonym, srs.external_db_id
+    FROM seq_region_synonym srs
+);
+$c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
+$support->log_stamped("Done transfering $c seq_region_synonym entries.\n\n");
 
 #transfer attrib_type table from Vega
 $support->log_stamped("Transfering Vega attrib_type...\n");
