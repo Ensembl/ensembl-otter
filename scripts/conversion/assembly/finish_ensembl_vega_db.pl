@@ -29,14 +29,10 @@ General options:
 Specific options:
     --ensembldbname=NAME                use Ensembl (source) database NAME
     --evegadbname=NAME                  use ensembl-vega (target) database NAME
-    --evegahost=HOST                    use ensembl-vega (target) database host
-                                        HOST
-    --evegaport=PORT                    use ensembl-vega (target) database port
-                                        PORT
-    --evegauser=USER                    use ensembl-vega (target) database
-                                        username USER
-    --evegapass=PASS                    use ensembl-vega (target) database
-                                        passwort PASS
+    --evegahost=HOST                    use ensembl-vega (target) database host HOST
+    --evegaport=PORT                    use ensembl-vega (target) database port PORT
+    --evegauser=USER                    use ensembl-vega (target) database username USER
+    --evegapass=PASS                    use ensembl-vega (target) database password PASS
 
 =head1 DESCRIPTION
 
@@ -287,6 +283,11 @@ $sql = qq(DELETE FROM seq_region_attrib);
 $c = $dbh->{'evega'}->do($sql);
 $support->log_stamped("Done deleting $c seq_region_attrib entries.\n\n");
 
+$support->log_stamped("Deleting seq_region_synonym...\n");
+$sql = qq(DELETE FROM seq_region_synonym);
+$c = $dbh->{'evega'}->do($sql);
+$support->log_stamped("Done deleting $c seq_region_synonym entries.\n\n");
+
 $support->log_stamped("Deleting dna...\n");
 $sql = qq(DELETE FROM dna);
 $c = $dbh->{'evega'}->do($sql);
@@ -343,6 +344,15 @@ $sql = qq(
 );
 $c = $dbh->{'evega'}->do($sql);
 $support->log_stamped("Done transfering $c seq_region_attrib entries.\n\n");
+
+$support->log_stamped("Transfering Ensembl seq_region_synonyms...\n");
+$sql = qq(
+    INSERT INTO seq_region_synonym
+    SELECT *
+    FROM $ensembl_db.seq_region_synonym
+);
+$c = $dbh->{'evega'}->do($sql);
+$support->log_stamped("Done transfering $c seq_region_synonym entries.\n\n");
 
 # transfer Ensembl-Vega assembly information from tmp_seq_region and tmp_assembly back into main tables
 $support->log_stamped("Adding Vega seq_regions from tmp tables...\n");
