@@ -37,18 +37,13 @@ Specific options:
 
 =head1 DESCRIPTION
 
-This script extracts xrefs from an ensembl database that link OTT and ENST transcripts.
+This script extracts xrefs from an ensembl database that link VEGA and Havana genes and transcripts.
 For each pair of transcripts, the 'best' type is then added to Vega as an xref.
 
-It also identifies links between genes and adds comparable ones to Vega
-
-Identify where a Vega gene matches to more than one Ensembl one (these should not happen) by:
-   $ grep 'matches to multiple Ensembl' my_log.log
-
-Script will verbosely report on mappings between one Vega transcript and multiple Ensembl
+Script will warn where a particular pair of objects are linked wiht more than one external_db type.
 transcripts.
 
-WARNINGS also indicate where a Vega transcript used in Ensembl is no longer present in Vega,
+Other warnings indicate where a Vega transcript used in Ensembl is no longer present in Vega,
 and other problems such as failure to store an xref in the db for whatever reason
 
 =head1 LICENCE
@@ -175,9 +170,6 @@ if (-e $xref_file) {
   }
 }
 
-
-#warn Data::Dumper::Dumper($ens_ids); exit;
-
 if (! %$ens_ids) {
  CHR:
   foreach my $slice (@{$esa->fetch_all('chromosome',undef,1)}) {
@@ -191,11 +183,11 @@ if (! %$ens_ids) {
     GXREF:
       foreach my $x (@{$g->get_all_DBEntries}){
 	my $dbname = $x->dbname;
-	my $name = $x->primary_id;
+	my $vname = $x->primary_id;
 	next GXREF unless ($x->type =~ /ALT/);
-	next GXREF unless ($name =~ /OTT/);
+	next GXREF unless ($vname =~ /OTT/);
 	$assigned_gxrefs{$dbname}->{$g->biotype}++;
-	$ens_ids->{'genes'}{$name}{$gsi}{$dbname}++;
+	$ens_ids->{'genes'}{$vname}{$gsi}{$dbname}++;
       }
       foreach my $t (@{$g->get_all_Transcripts}) {
 	my $tsi = $t->stable_id;
@@ -203,11 +195,11 @@ if (! %$ens_ids) {
       TXREF:
 	foreach my $x (@{$t->get_all_DBEntries}){
 	  my $dbname = $x->dbname;
-	  my $name = $x->primary_id;
+	  my $vname = $x->primary_id;
 	  next TXREF unless ($x->type =~ /ALT/);
-	  next TXREF unless ($name =~ /OTT/);
+	  next TXREF unless ($vname =~ /OTT/);
 	  $assigned_txrefs{$dbname}->{$t->biotype}++;
-	  $ens_ids->{'transcripts'}{$name}{$tsi}{$dbname}++;
+	  $ens_ids->{'transcripts'}{$vname}{$tsi}{$dbname}++;
 	}
       }
     }
@@ -216,81 +208,67 @@ if (! %$ens_ids) {
 }
 
 
-#this defines the order in which the e! xrefs will be used, and which external_db 
-#they match in Vega
-my @priorities = qw(
-		  shares_CDS_and_UTR_with_OTTT:ENST_ident
-		  shares_CDS_with_OTTT:ENST_CDS
-		  OTTT:ENST_ident
-		  OTTG:ENSG
-		);
+#this defines which external_db they match in Vega
+my %vega_xref_names = (
+ 'shares_CDS_and_UTR_with_OTTT' => 'ENST_ident',
+ 'shares_CDS_with_OTTT'         => 'ENST_CDS',
+ 'OTTT'                         => 'ENST_ident',
+ 'OTTG'                         => 'ENSG',
+);
 
-#add one xref to each E! object
+my $seq_regions;
+
+#add xrefs to each E! object
 foreach my $type (qw(genes transcripts)) {
   my $ids = $ens_ids->{$type};
   foreach my $v_id (keys %$ids) {
     my $adaptor = $type eq 'genes' ? $ga : $ta;
     my $object = $adaptor->fetch_by_stable_id($v_id);
+    $seq_regions->{$object->seq_region_name}++;
     unless ($object) {
       $support->log_warning("Can't retrieve object $v_id from Vega\n");
       next;
     }
     $support->log("Studying object $v_id\n");
-    my @c = ();
+    my $c = {};
     while ( my ($e_id, $xrefs) =  each %{$ids->{$v_id}} ) {
-      push @c, $e_id;
-      my $found = 0;
-    DB:
-      foreach my $db (@priorities) {
-	my ($edb,$vdb) = split ':',$db;
-	next DB if $found;
-	if ($xrefs->{$edb}) {
-	  my $dbentry = Bio::EnsEMBL::DBEntry->new(
-	    -primary_id => $e_id,
-	    -display_id => $e_id,
-	    -version    => 1,
-	    -release    => 1,
-	    -dbname     => $vdb,
-	  );
-	  $type eq 'genes' ? $assigned_gxrefs{$vdb}->{$object->biotype}++ : $assigned_txrefs{$vdb}->{$object->biotype}++;
-	  $object->add_DBEntry($dbentry);
-	  if ($support->param('dry_run')) {
-	    $support->log_verbose("Would store $vdb xref $e_id for $v_id.\n", 1);
-	    $found = 1;
-	  }
-	  else {
-	    my $dbID = $ea->store($dbentry, $object->dbID, $type eq 'genes' ? 'gene' : 'transcript',1);
-	    # apparently, this xref had been stored already, so get
-	    # xref_id from db
-	    if (! $dbID) {
-	      my $sql = qq(
-                         SELECT x.xref_id
-                         FROM xref x, external_db ed
-                         WHERE x.external_db_id = ed.external_db_id
-                         AND x.dbprimary_acc = '$e_id'
-                         AND ed.db_name = '$vdb'
-                         );
-	      ($dbID) = @{ $dbh->selectall_arrayref($sql) || [] };
-	      $support->log_warning("Reused $vdb xref $e_id for $v_id. Check why this should be\n");
-	    }
-
-	    if ($dbID) {
-	      $support->log("Stored $vdb xref $e_id for $v_id.\n", 1);
-	      $found = 1;
-	    } else {
-	      $support->log_warning("No dbID for $vdb xref ($e_id) $v_id.\n", 1);
-	    }
-	  }
+    XREF:
+      foreach my $dbtype (keys %$xrefs) {
+        if ($c->{$e_id}{$dbtype}) {
+          $support->log_warning("Multiple xrefs of dbtype $dbtype for $e_id and $v_id\n",1);
+          next XREF;
         }
-      }
-    }
-    if (scalar(@c) > 1) {
-      my $ids = join ' ',@c;
-      if ($type eq 'transcripts') {
-	$support->log_verbose("Vega transcript $v_id matches to multiple Ensembl transcripts: $ids\n");
-      }
-      else {
-	$support->log_warning("Vega gene $v_id matches to multiple Ensembl genes: $ids\n");
+        my $vdb = $vega_xref_names{$dbtype};
+        my $dbentry = Bio::EnsEMBL::DBEntry->new(
+          -primary_id => $e_id,
+          -display_id => $e_id,
+          -version    => 1,
+          -release    => 1,
+          -dbname     => $vdb,
+        );
+        $type eq 'genes' ? $assigned_gxrefs{$vdb}->{$object->biotype}++ : $assigned_txrefs{$vdb}->{$object->biotype}++;
+        $object->add_DBEntry($dbentry);
+        if ($support->param('dry_run')) {
+          $support->log_verbose("Would store $vdb xref $e_id for $v_id.\n", 1);
+        }
+        else {
+          my $dbID = $ea->store($dbentry, $object->dbID, $type eq 'genes' ? 'gene' : 'transcript',1);
+          if (! $dbID) {
+            # apparently, this xref had been stored already, so get xref_id from db
+            my $sql = qq(
+               SELECT x.xref_id
+                 FROM xref x, external_db ed
+                WHERE x.external_db_id = ed.external_db_id
+                  AND x.dbprimary_acc = '$e_id'
+                  AND ed.db_name = '$vdb'
+                         );
+            ($dbID) = @{ $dbh->selectall_arrayref($sql) || [] };
+            $support->log_warning("Reused $vdb xref $e_id for $v_id. Check why this should be\n");
+          }
+          if ($dbID) {
+            $support->log("Stored $vdb xref $e_id for $v_id.\n", 1);
+          }
+        }
       }
     }
   }
