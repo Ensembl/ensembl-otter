@@ -246,6 +246,7 @@ my $V_chrlength = $support->get_chrlength($E_dba, $support->param('assembly'),'c
 my $E_chrlength = $support->get_chrlength($E_dba, $support->param('ensemblassembly'),'chromosome',1);
 my $ensembl_chr_map = $support->get_ensembl_chr_mapping($V_dba, $support->param('assembly'));
 
+CHROM:
 foreach my $V_chr ($support->sort_chromosomes($V_chrlength)) {
 
 #  next unless ($V_chr =~ /HS|HG/);
@@ -267,6 +268,49 @@ foreach my $V_chr ($support->sort_chromosomes($V_chrlength)) {
 
   if (! $E_slice ) {
     $support->log_warning("Can't get an Ensembl chromosome for $E_chr - have you used the right ensembl db as a template ?\n");
+  }
+
+  if ($V_chr =~ /HSCHR|PATCH/) {
+
+    my $v_sr_id = $V_slice->get_seq_region_id;
+
+    #compare accessions for PATCHES from Ensembl and Vega and warn if they're different
+    my @e_patch_names  = $E_dbh->selectrow_array(qq(
+           SELECT srs.synonym
+             FROM seq_region_synonym srs, seq_region sr
+            WHERE srs.seq_region_id = sr.seq_region_id
+              AND sr.name = '$E_chr'));
+    if (scalar(@e_patch_names > 1)) {
+      $support->log_warning("More than one e! seq_region_synonym found for $V_chr, need to alter the code below\n");
+    }
+    elsif (! @e_patch_names ) {
+      $support->log_warning("No accession for PATCH $V_chr in Ensembl so we don't know if e! and Vega are using the same PATCH. Will attempt to transfer annotation but you should check how it's worked\n");
+    }
+    else {
+      my ($v_patch_name) = $V_dbh->selectrow_array(qq(
+           SELECT concat(sra1.value,'.',sra2.value)
+             FROM seq_region sr, seq_region_attrib sra1, attrib_type at1, seq_region_attrib sra2, attrib_type at2
+            WHERE sr.seq_region_id    = sra1.seq_region_id
+              AND sra1.attrib_type_id = at1.attrib_type_id
+              AND at1.code            = 'embl_acc'
+              AND sr.seq_region_id    = sra2.seq_region_id
+              AND sra2.attrib_type_id = at2.attrib_type_id
+              AND at2.code            = 'embl_version'
+              AND sr.seq_region_id    = $v_sr_id));
+      if (! $v_patch_name) {
+        $support->log_warning("No accession for PATCH $V_chr in Vega so we don't know if e! and Vega are using the same PATCH!\n");
+      }
+      elsif ($e_patch_names[0] ne $v_patch_name) {
+
+        #maybe we should be skipping
+#        $support->log_warning("Accession for PATCH $V_chr differs between e! (".$e_patch_names[0].") and Vega ($v_patch_name). No annotation being transferred\n");
+#        next CHROM;
+        $support->log_warning("Accession for PATCH $V_chr differs between e! (".$e_patch_names[0].") and Vega ($v_patch_name). Will attempt to transfer annotation but you should check how it's worked\n");
+      }
+      else {
+        $support->log("Accessions match: $v_patch_name and ".$e_patch_names[0]."\n",1);
+      }
+    }
   }
 
   my ($genes) = $support->get_unique_genes($V_slice,$V_dba);
