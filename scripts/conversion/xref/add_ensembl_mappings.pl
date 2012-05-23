@@ -38,13 +38,13 @@ Specific options:
 =head1 DESCRIPTION
 
 This script extracts xrefs from an ensembl database that link VEGA and Havana genes and transcripts.
-For each pair of transcripts, the 'best' type is then added to Vega as an xref.
 
-Script will warn where a particular pair of objects are linked wiht more than one external_db type.
-transcripts.
+Script will warn where a particular pair of objects are linked with more than one external_db type.
 
 Other warnings indicate where a Vega transcript used in Ensembl is no longer present in Vega,
-and other problems such as failure to store an xref in the db for whatever reason
+and other problems such as failure to store an xref in the db for whatever reason.
+
+It will report where Vega genes / transcripts don't have e! xrefs (excludes TEC / artifact)
 
 =head1 LICENCE
 
@@ -125,6 +125,8 @@ my $dbh = $dba->dbc->db_handle;
 my $ta = $dba->get_TranscriptAdaptor();
 my $ga = $dba->get_GeneAdaptor();
 my $ea = $dba->get_DBEntryAdaptor();
+my $sa = $dba->get_SliceAdaptor();
+
 #ensembl db
 my $edba = $support->get_database('ensembl','ensembl');
 my $esa  = $edba->get_SliceAdaptor();
@@ -216,7 +218,6 @@ my %vega_xref_names = (
  'OTTG'                         => 'ENSG',
 );
 
-my $seq_regions;
 
 #add xrefs to each E! object
 foreach my $type (qw(genes transcripts)) {
@@ -224,7 +225,6 @@ foreach my $type (qw(genes transcripts)) {
   foreach my $v_id (keys %$ids) {
     my $adaptor = $type eq 'genes' ? $ga : $ta;
     my $object = $adaptor->fetch_by_stable_id($v_id);
-    $seq_regions->{$object->seq_region_name}++;
     unless ($object) {
       $support->log_warning("Can't retrieve object $v_id from Vega\n");
       next;
@@ -274,7 +274,43 @@ foreach my $type (qw(genes transcripts)) {
   }
 }
 
-warn "Transcript biotype are ".Dumper(\%assigned_txrefs);
-warn "Gene biotypes are ".Dumper(\%assigned_gxrefs);
+}
+
+#check which Vega genes / transcripts don't have xrefs
+$support->log("Looking to see which genes / transcripts don't have e! xrefs\n\n");
+my %ensembl_dbname = map {$_ => 1} %vega_xref_names;
+
+my $chr_length = $support->get_chrlength($dba,'','',1);
+my @chr_sorted = $support->sort_chromosomes($chr_length);
+foreach my $chr (@chr_sorted) {
+  $support->log_stamped("> Chromosome $chr (".$chr_length->{$chr}."bp).\n"); 
+  my $slice = $sa->fetch_by_region('chromosome', $chr);
+  my ($genes) = $support->get_unique_genes($slice);
+  foreach my $g (@$genes) {
+    next unless $g->analysis->logic_name eq 'otter';
+    next if $g->biotype =~ /TEC|artifact/;
+
+    $support->log_verbose("Studying object ".$g->stable_id."\n",1);
+    my $found = 0;
+    foreach my $db_name (keys  %ensembl_dbname) {
+      $found = 1 if @{$g->get_all_DBEntries($db_name)};
+    }
+    if (! $found) {
+      $support->log("No E! xrefs found for gene ".$g->stable_id." (".$g->biotype.")\n",1);
+    }
+    foreach my $t (@{$g->get_all_Transcripts()}) {
+      next if $t->biotype  =~ /TEC|artifact/;
+      my $found = 0;
+      foreach my $db_name (keys  %ensembl_dbname) {
+        $found = 1 if @{$t->get_all_DBEntries($db_name)};
+      }
+      if (! $found) {
+        $support->log("No E! xrefs found for transcript ".$t->stable_id." (".$t->biotype.")\n",2);
+      }
+    }
+  }
+}
 
 $support->finish_log;
+
+exit;
