@@ -525,8 +525,10 @@ sub format_ace_output {
             my $hstrand = $fp->hstrand;
 
             if ($hstrand ==-1){
-                $fp->hstrand(1);
-                $strand *= -1;
+                $self->logger->debug('Hit on reverse strand: swapping strands for ', $hname);
+                $fp->reverse_complement;
+                $hstrand = $fp->hstrand;
+                $strand  = $fp->strand;
             }
 
             if ($strand == -1){
