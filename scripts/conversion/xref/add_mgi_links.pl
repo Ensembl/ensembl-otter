@@ -147,7 +147,7 @@ foreach my $chr (@chr_sorted) {
 
     $support->log_verbose("Looking at gene $gsi - $display_name (current source = $disp_xref_dbname):\n");
 
-    if (my $rec = $records->{$gsi}) {
+    foreach my $rec (@{$records->{$gsi}}) {
       my $new_mgi_name = $rec->{'symbol'};
       if ($new_mgi_name eq $display_name) {
         $support->log_warning("Something's up, the name downloaded from MGI matches the name in Vega ($new_mgi_name) but the gene ($gsi) doesn't have an MGI display_xref\n",1);
@@ -245,14 +245,13 @@ sub parse_mgi {
     my $symbol  = $fields[1];
     my $desc    = $fields[2];
     my $ottid   = $fields[5]; 
-    if (exists($records->{$ottid})) {
-      $support->log_warning("Multiple records parsed for $ottid\n");
+    
+    push @{$records->{$ottid}},{ symbol  => $symbol,
+                                 mgi_pid => $mgi_pid,
+                                 desc    => $desc,
+                               };
     }
-    $records->{$ottid} = { symbol  => $symbol,
-                           mgi_pid => $mgi_pid,
-                           desc    => $desc,
-                         };
-  }
+
   return $records;
 }
 
