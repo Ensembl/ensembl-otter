@@ -274,8 +274,6 @@ foreach my $type (qw(genes transcripts)) {
   }
 }
 
-}
-
 #check which Vega genes / transcripts don't have xrefs
 $support->log("Looking to see which genes / transcripts don't have e! xrefs\n\n");
 my %ensembl_dbname = map {$_ => 1} %vega_xref_names;
