@@ -32,14 +32,11 @@ Specific options:
 
 =head1 DESCRIPTION
 
-Update display_xrefs for Vega mouse genes if they have a non-standard MGI name or an out of date MGI name.
-
-Parses a file from MGI and changes xref external_db from Vega_gene to MGI. In addition
-populates the info_text field so that the webcode can show these slightly differently.
+Parses a file from MGI and adds xrefs for any new MGI names. Reports on names
+that we don't use so these can be sent back to Havana.
 
 File to use is ftp://ftp.informatics.jax.org/pub/reports/MRK_VEGA.rpt
 
-Also warns on names that we have that are out of date.
 
 =head1 LICENCE
 
