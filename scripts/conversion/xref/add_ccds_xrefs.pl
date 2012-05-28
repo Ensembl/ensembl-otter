@@ -101,6 +101,7 @@ $support->parse_extra_options(
   'ccdsport=s',
   'ccdsuser=s',
   'ccdspass=s',
+  'ccdsdbname=s',
 );
 $support->allowed_params(
   $support->get_common_params,
