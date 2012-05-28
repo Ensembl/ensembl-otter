@@ -1005,10 +1005,9 @@ sub parse_imgt_hla {
 sub parse_imgt_gdb {
   my ($xrefs, $lcmap) = @_;
   $support->log_stamped("IMGT_GDB...\n", 1);
-  my $sql = qq(SELECT gsi.stable_id, x.display_label
-                 FROM gene_stable_id gsi, gene g, xref x
-                WHERE gsi.gene_id = g.gene_id
-                  AND g.display_xref_id = x.xref_id
+  my $sql = qq(SELECT g.stable_id, x.display_label
+                 FROM gene g, xref x
+                WHERE g.display_xref_id = x.xref_id
                   AND g.source = 'havana'
                   AND g.biotype in ('IG_gene','IG_pseudogene','TR_gene','TR_pseudogene'));
   my $sth = $dba->dbc->prepare($sql);
