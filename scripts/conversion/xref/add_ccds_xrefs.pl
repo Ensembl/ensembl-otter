@@ -53,7 +53,7 @@ For more information on the CCDS database see http://www.ensembl.org/Homo_sapien
 This code is distributed under an Apache style licence:
 Please see http://www.ensembl.org/code_licence.html for details
 
-=head1 AUTHORS
+=head1 AUTHOR
 
 Steve Trevanion <st3@sanger.ac.uk>
 
