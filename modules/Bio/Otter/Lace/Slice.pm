@@ -150,6 +150,25 @@ sub zmap_config_stanza {
     return $hash;
 }
 
+sub ensembl_slice {
+    my ($self) = @_;
+
+    my $ensembl_slice = Bio::EnsEMBL::Slice->new(
+        -seq_region_name    => $self->ssname,
+        -start              => $self->start,
+        -end                => $self->end,
+        -coord_system   => Bio::EnsEMBL::CoordSystem->new(
+            -name           => $self->csname,
+            -version        => $self->csver,
+            -rank           => 2,
+            -sequence_level => 0,
+            -default        => 1,
+        ),
+    );
+
+    return $ensembl_slice;
+}
+
 1;
 
 __END__
