@@ -10,8 +10,6 @@ use Carp;
 use Hum::Ace::AceText;
 use Hum::Sort qw{ ace_sort };
 
-use Bio::EnsEMBL::Slice;
-use Bio::EnsEMBL::CoordSystem;
 use Bio::EnsEMBL::SimpleFeature;
 use Bio::EnsEMBL::Attribute;
 use Bio::EnsEMBL::Analysis;
@@ -93,7 +91,7 @@ sub otter_slice {
 
     if ($otter_slice) {
         $otter_slice{$self} = $otter_slice;
-        $ensembl_slice{$self} = _ensembl_slice($otter_slice);
+        $ensembl_slice{$self} = $otter_slice->ensembl_slice;
     }
     return $otter_slice{$self};
 }
@@ -642,25 +640,6 @@ sub create_Attribute {
     );
 
     return;
-}
-
-sub _ensembl_slice {
-    my ($otter_slice) = @_;
-
-    my $ensembl_slice = Bio::EnsEMBL::Slice->new(
-        -seq_region_name    => $otter_slice->ssname,
-        -start              => $otter_slice->start,
-        -end                => $otter_slice->end,
-        -coord_system   => Bio::EnsEMBL::CoordSystem->new(
-            -name           => $otter_slice->csname,
-            -version        => $otter_slice->csver,
-            -rank           => 2,
-            -sequence_level => 0,
-            -default        => 1,
-        ),
-    );
-
-    return $ensembl_slice;
 }
 
 1;
