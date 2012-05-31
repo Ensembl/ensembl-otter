@@ -1,7 +1,7 @@
 
-### CanvasWindow::DataSetChooser
+### MenuCanvasWindow::DataSetChooser
 
-package CanvasWindow::DataSetChooser;
+package MenuCanvasWindow::DataSetChooser;
 
 use strict;
 use warnings;
@@ -382,7 +382,7 @@ sub recover_some_sessions {
 
 __END__
 
-=head1 NAME - CanvasWindow::DataSetChooser
+=head1 NAME - MenuCanvasWindow::DataSetChooser
 
 =head1 AUTHOR
 

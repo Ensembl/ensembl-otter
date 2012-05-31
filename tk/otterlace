@@ -5,7 +5,7 @@ use warnings;
 
 ### otterlace
 
-use CanvasWindow::DataSetChooser;
+use MenuCanvasWindow::DataSetChooser;
 use EditWindow::Password;
 use Bio::Otter::Lace::Defaults;
 use Bio::Otter::Git;
@@ -40,7 +40,7 @@ use Log::Log4perl;
         }
     );
 
-    my $dc = CanvasWindow::DataSetChooser->new($mw);
+    my $dc = MenuCanvasWindow::DataSetChooser->new($mw);
     $dc->Client($cl);
 
     my $prompt_sub = sub {
