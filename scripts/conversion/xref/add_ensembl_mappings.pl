@@ -34,6 +34,17 @@ Specific options:
     --ensembluser=USER                  use Ensembl database username USER
     --ensemblpass=PASS                  use Ensembl database password PASS
 
+    --db_type                           if set to 'ensembl-vega' updates ensembl vega database
+    --evegadbname                       NAME, HOST, PORT, USER, PASS used
+    --evegahost                           instead of the main database
+    --evegaport                           params if db_type set to
+    --evegauser                           ensembl-vega, otherwise ignored.
+    --evegapass
+
+    --assembly                          used to identify target chromosomes
+    --alt_assembly                      used instead of assembly iff
+                                          db_type is set to ensembl-vega
+
 
 =head1 DESCRIPTION
 
@@ -86,24 +97,18 @@ our $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
 
 # parse options
 $support->parse_common_options(@_);
-$support->parse_extra_options(
-  'chromosomes|chr=s@',
-  'ensemblhost=s',
-  'ensemblport=s',
-  'ensembluser=s',
-  'ensemblpass=s',
-  'ensembldbname=s',
-  'prune',
+$support->parse_extra_options(qw(
+    chromosomes|chr=s@ prune assembly=s alt_assembly=s db_type=s
+    ensemblhost=s ensemblport=s ensembluser=s ensemblpass=s ensembldbname=s
+    evegadbname=s evegahost=s evegaport=s evegauser=s evegapass=s
+  )
 );
 $support->allowed_params(
-  $support->get_common_params,
-  'chromosomes',
-  'ensemblhost',
-  'ensemblport',
-  'ensembluser',
-  'ensemblpass',
-  'ensembldbname',
-  'prune',
+  $support->get_common_params,qw(
+    chromosomes prune assembly alt_assembly db_type
+    ensemblhost ensemblport ensembluser ensemblpass ensembldbname
+    evegadbname evegahost evegaport evegauser evegapass
+  )
 );
 
 if ($support->param('help') or $support->error) {
@@ -120,14 +125,23 @@ $support->confirm_params;
 $support->init_log;
 
 # connect databases and get adaptors
-my $dba = $support->get_database('ensembl');
+#ensembl db
+my $dba;
+my $assembly;
+if($support->param('db_type') eq 'ensembl-vega') {
+  $dba = $support->get_database('ensembl','evega');
+  # don't set dnadb as then sa will use it including eg get_chrlength!
+  $assembly = $support->param('alt_assembly');
+} else {
+  $dba = $support->get_database('ensembl');
+  $assembly = $support->param('assembly');
+}
 my $dbh = $dba->dbc->db_handle;
 my $ta = $dba->get_TranscriptAdaptor();
 my $ga = $dba->get_GeneAdaptor();
 my $ea = $dba->get_DBEntryAdaptor();
 my $sa = $dba->get_SliceAdaptor();
 
-#ensembl db
 my $edba = $support->get_database('ensembl','ensembl');
 my $esa  = $edba->get_SliceAdaptor();
 
@@ -278,11 +292,12 @@ foreach my $type (qw(genes transcripts)) {
 $support->log("Looking to see which genes / transcripts don't have e! xrefs\n\n");
 my %ensembl_dbname = map {$_ => 1} %vega_xref_names;
 
-my $chr_length = $support->get_chrlength($dba,'','',1);
+my $chr_length = $support->get_chrlength($dba,$assembly,'',1);
 my @chr_sorted = $support->sort_chromosomes($chr_length);
 foreach my $chr (@chr_sorted) {
   $support->log_stamped("> Chromosome $chr (".$chr_length->{$chr}."bp).\n"); 
-  my $slice = $sa->fetch_by_region('chromosome', $chr);
+  my $slice = $sa->fetch_by_region('chromosome', $chr,undef,undef,undef,$assembly);
+  $support->log_warning("No such chromosome '$chr'") unless defined $slice;
   my ($genes) = $support->get_unique_genes($slice);
   foreach my $g (@$genes) {
     next unless $g->analysis->logic_name eq 'otter';
