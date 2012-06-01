@@ -184,7 +184,7 @@ sub check_missing {
   my $gsi_string = join("', '", @{ $gene_stable_ids });
   my $sql = qq(
         SELECT  stable_id
-        FROM    gene_stable_id
+        FROM    gene
         WHERE   stable_id IN ('$gsi_string')
     );
   my @genes_in_db = map { $_->[0] } @{ $dbh->selectall_arrayref($sql) || [] };
@@ -253,10 +253,9 @@ sub change_analysis {
   $support->log("Updating analysis of genes in list...\n");
   my $gsi_string = join("', '", @{ $gene_stable_ids });
   my $num = $dbh->do(qq(
-        UPDATE gene g, gene_stable_id gsi
+        UPDATE gene g
         SET analysis_id = $analysis_id
-        WHERE g.gene_id = gsi.gene_id
-        AND gsi.stable_id in ('$gsi_string')
+        WHERE g.stable_id in ('$gsi_string')
     ));
   $support->log("Done updating $num genes.\n\n");
 
