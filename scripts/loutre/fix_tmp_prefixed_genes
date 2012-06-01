@@ -9,16 +9,21 @@ use Bio::Otter::Lace::Defaults;
 
 {
     my $dataset_name = 'pig';
+    my $dry = 0;
 
     my $usage = sub { exec('perldoc', $0) };
     # This do_getopt() call is needed to parse the otter config files
     # even if you aren't giving any arguments on the command line.
     Bio::Otter::Lace::Defaults::do_getopt(
         'h|help!'       => $usage,
+        'n|dry_run|dry!'=> \$dry,
         'dataset=s'     => \$dataset_name,
         ) or $usage->();
     $usage->() unless $dataset_name;
     
+    my $old_re = '^TMP:';
+    my $re_subst = 'TMP-';
+
     # Client communicates with otter HTTP server
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
     
@@ -34,7 +39,7 @@ use Bio::Otter::Lace::Defaults;
         WHERE g.gene_id = ga.gene_id
           AND g.is_current = 1
           AND ga.attrib_type_id = 4
-          AND ga.value like 'TMP:%'}
+          AND ga.value rlike ?}
     );
 
     my $update_gene = $otter_dba->dbc->prepare(q{
@@ -58,23 +63,27 @@ use Bio::Otter::Lace::Defaults;
     );
     
     $otter_dba->begin_work;
-    
-    $gene_sth->execute;
+
+    $gene_sth->execute($old_re);
     while (my ($gene_id, $gene_name) = $gene_sth->fetchrow) {
         print STDERR "GENE: $gene_id\t$gene_name\n";
 
         my $new_gene_name = $gene_name;
-        $new_gene_name =~ s/^TMP:/TMP-/ or die "Unexpected name format: '$gene_name'";
+        $new_gene_name =~ s/$old_re/$re_subst/ or die "Unexpected name format: '$gene_name'";
 
-        $update_gene->execute($gene_id);
-        $update_gene_name->execute($new_gene_name, $gene_id);
+        unless ($dry) {
+            $update_gene->execute($gene_id);
+            $update_gene_name->execute($new_gene_name, $gene_id);
+        }
 
         $tsct_sth->execute($gene_id);
         while (my ($tsct_id, $tsct_name) = $tsct_sth->fetchrow) {
             print "  TSTC: $tsct_id\t$tsct_name\n";
             my $new_tsct_name = $tsct_name;
-            $new_tsct_name =~ s/^TMP:/TMP-/ or die "Unexpected name format: '$tsct_name'";
-            $update_tsct_name->execute($new_tsct_name, $tsct_id);
+            $new_tsct_name =~ s/$old_re/$re_subst/ or die "Unexpected name format: '$tsct_name'";
+            unless ($dry) {
+                $update_tsct_name->execute($new_tsct_name, $tsct_id);
+            }
         }
     }
     
@@ -90,6 +99,20 @@ use Bio::Otter::Lace::Defaults;
 __END__
 
 =head1 NAME - fix_tmp_prefixed_genes
+
+=head1 DESCRIPTION
+
+Do C<s/^TMP:/TMP-/> on gene and transcript names, and fix C<gene.source>.
+
+=head2 Used for
+
+Probably in L<https://rt.sanger.ac.uk/Ticket/Display.html?id=204852>,
+by title timing & updater.
+
+The C<TMP:> prefix may have come from
+F<ensembl-pipeline/scripts/Finished/assembly/transfer_annotation.pl>
+with C<-haplotype> option, but today's version of that doesn't put the
+prefix on transcript names...?
 
 =head1 AUTHOR
 
