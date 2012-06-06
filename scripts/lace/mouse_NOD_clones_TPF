@@ -615,7 +615,7 @@ sub results_table {
     return $t;
   }
 
-sub t_row { ## no critic(Subroutines::RequireArgUnpacking)
+sub t_row { ## no critic (Subroutines::RequireArgUnpacking)
   return qq{  <tr>\n} . join('', map { "$_\n" } @_) . qq{  </tr>\n};
 }
 

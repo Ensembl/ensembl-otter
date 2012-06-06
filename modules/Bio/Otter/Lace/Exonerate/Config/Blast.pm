@@ -1,5 +1,5 @@
 
-## no critic(Modules::RequireFilenameMatchesPackage)
+## no critic (Modules::RequireFilenameMatchesPackage)
 
 package Bio::EnsEMBL::Analysis::Config::Blast;
 
@@ -27,7 +27,7 @@ sub import {
 
     # Predeclare global variables in calling package
     {
-        ## no critic(BuiltinFunctions::ProhibitStringyEval)
+        ## no critic (BuiltinFunctions::ProhibitStringyEval)
         eval "package $callpack; use vars qw("
             . join(' ', map { '$'.$_ } @vars) . ")";
         die $@ if $@;
@@ -36,7 +36,7 @@ sub import {
 
     foreach (@vars) {
         if (defined $Config{ $_ }) {
-            ## no critic(TestingAndDebugging::ProhibitNoStrict)
+            ## no critic (TestingAndDebugging::ProhibitNoStrict)
             no strict 'refs';
             # Exporter does a similar job to the following
             # statement, but for function names, not

@@ -583,7 +583,7 @@ sub _wrap_search_errors {
 
 # these are private subroutines, *not* methods
 
-sub _strip_trailing_version_numbers { ## no critic(Subroutines::RequireArgUnpacking)
+sub _strip_trailing_version_numbers { ## no critic (Subroutines::RequireArgUnpacking)
     return map { /^(.*?)(?:\.[[:digit:]]+)?$/ } @_;
 }
 

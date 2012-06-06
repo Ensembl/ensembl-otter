@@ -11,7 +11,7 @@ use Bio::Vega::Utils::GFF;
 # This module allows conversion of ensembl/otter objects to GFF by inserting
 # to_gff (and supporting _gff_hash) methods into the necessary feature classes
 
-## no critic(Modules::ProhibitMultiplePackages)
+## no critic (Modules::ProhibitMultiplePackages)
 
 {
 

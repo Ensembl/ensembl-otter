@@ -129,8 +129,8 @@ warn "\n";
 foreach my $file ( @latest_agps ){
 
  # warn $file;
-  #my $chk_gap = `egrep '(clone|contig|N	50000)' $file`; ## no critic(CodeLayout::ProhibitHardTabs)
-  my $chk_gap = `egrep '(clone|contig|N	)' $file`; ## no critic(CodeLayout::ProhibitHardTabs)
+  #my $chk_gap = `egrep '(clone|contig|N	50000)' $file`; ## no critic (CodeLayout::ProhibitHardTabs)
+  my $chk_gap = `egrep '(clone|contig|N	)' $file`; ## no critic (CodeLayout::ProhibitHardTabs)
   if ( $chk_gap ){
     warn "UNFINISHED: $file\n";
 

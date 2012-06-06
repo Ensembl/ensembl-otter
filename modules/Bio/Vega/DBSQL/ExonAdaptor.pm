@@ -8,7 +8,7 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::Vega::Exon;
 
     # trying to substitute the class in all possible places at once (a hack)
-sub _objs_from_sth { ## no critic(Subroutines::ProhibitUnusedPrivateSubroutines)
+sub _objs_from_sth { ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
     my ($self, @arguments) = @_;
 
     my $array = $self->SUPER::_objs_from_sth(@arguments);

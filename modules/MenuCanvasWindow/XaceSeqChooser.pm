@@ -2226,7 +2226,7 @@ sub draw_sequence_list {
                 );
             if ($error) {
                 $error =~ s/\n$//;
-                $Text::Wrap::columns = 60; ## no critic(Variables::ProhibitPackageVars)
+                $Text::Wrap::columns = 60; ## no critic (Variables::ProhibitPackageVars)
                 my @fmt;
                 foreach my $line (split /\n/, $error) {
                     push(@fmt, wrap('', '  ', $line));

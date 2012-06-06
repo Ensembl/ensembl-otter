@@ -446,7 +446,7 @@ sub show_filters {
 
         {
             # eval because delete moans if entry doesn't exist
-            ## no critic(ErrorHandling::RequireCheckingReturnValueOfEval)
+            ## no critic (ErrorHandling::RequireCheckingReturnValueOfEval)
             eval{ $hlist->delete('entry', $i) };
         }
 

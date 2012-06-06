@@ -127,7 +127,7 @@ sub get_requested_features {
 
         if ($module_name =~ /^Bio::Vega::ServerAnalysis::\w+$/) {
 
-            eval "require $module_name"; ## no critic(BuiltinFunctions::ProhibitStringyEval)
+            eval "require $module_name"; ## no critic (BuiltinFunctions::ProhibitStringyEval)
 
             die "Failed to 'require' module $module_name: $@" if $@;
 

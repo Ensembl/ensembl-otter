@@ -103,7 +103,7 @@ sub _param {
     my $command = $commands->{$key};
     die qq(invalid git parameter key "${key}") unless $command;
     my $shell_command = sprintf q( cd '%s' && %s ), $dir, $command;
-    my $value = qx( $shell_command ); ## no critic(InputOutput::ProhibitBacktickOperators)
+    my $value = qx( $shell_command ); ## no critic (InputOutput::ProhibitBacktickOperators)
     chomp $value;
     unless ($? == 0) {
         warn qq("$shell_command" failed);
