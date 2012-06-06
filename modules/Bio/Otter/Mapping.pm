@@ -10,12 +10,12 @@ use warnings;
 
 use Carp;
 
-sub _equiv_new { ## no critic ( Subroutines::RequireArgUnpacking )
+sub _equiv_new { ## no critic (Subroutines::RequireArgUnpacking)
     require Bio::Otter::Mapping::Equiv;
     return Bio::Otter::Mapping::Equiv->new(@_);
 }
 
-sub _map_new { ## no critic ( Subroutines::RequireArgUnpacking )
+sub _map_new { ## no critic (Subroutines::RequireArgUnpacking)
     require Bio::Otter::Mapping::Map;
     return Bio::Otter::Mapping::Map->new(@_);
 }
