@@ -30,7 +30,7 @@ sub get_options_for_key {
     my ($opt_str) = @{ $db->get_MetaContainer()->list_value_by_key($key) };
     if ($opt_str) {
         my %options_hash =
-            (eval $opt_str); ## no critic(BuiltinFunctions::ProhibitStringyEval)
+            (eval $opt_str); ## no critic (BuiltinFunctions::ProhibitStringyEval)
         if ($@) {
             confess "Error evaluating '$opt_str' : $@";
         }

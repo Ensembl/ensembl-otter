@@ -203,7 +203,7 @@ sub parse_hugo_input {
     return $hugo_data;
 }
 
-sub fmt_list { ## no critic(Subroutines::RequireArgUnpacking)
+sub fmt_list { ## no critic (Subroutines::RequireArgUnpacking)
     return join(', ', map { "'$_'" } @_);
 }
 

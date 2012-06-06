@@ -21,7 +21,7 @@ use Bio::Otter::Lace::Exonerate::Config::General;
 use Bio::Otter::Lace::Exonerate::Config::Blast;
 use Bio::EnsEMBL::Analysis::Tools::BlastDBTracking;
 {
-    ## no critic(Subroutines::ProtectPrivateSubs)
+    ## no critic (Subroutines::ProtectPrivateSubs)
     Bio::EnsEMBL::Analysis::Tools::BlastDBTracking->_Fake_version_for_otf(1);
 }
 

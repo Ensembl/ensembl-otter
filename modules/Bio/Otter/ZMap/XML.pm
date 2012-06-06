@@ -30,7 +30,7 @@ sub update_SimpleFeatures_xml {
         );
 }
 
-sub _group_by_method_name { ## no critic(Subroutines::RequireArgUnpacking)
+sub _group_by_method_name { ## no critic (Subroutines::RequireArgUnpacking)
     my $featuresets = { };
     push @{$featuresets->{$_->method_name}}, $_ for @_;
     return $featuresets;

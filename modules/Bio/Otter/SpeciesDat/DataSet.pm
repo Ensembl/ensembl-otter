@@ -145,7 +145,7 @@ sub _satellite_dba_make {
 
     my @options;
     {
-        ## no critic(BuiltinFunctions::ProhibitStringyEval)
+        ## no critic (BuiltinFunctions::ProhibitStringyEval)
         @options = eval $options;
     }
     die "Error evaluating '$options' : $@" if $@;

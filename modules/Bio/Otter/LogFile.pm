@@ -63,7 +63,7 @@ sub make_log {
 
         my $child_logger = Log::Log4perl->get_logger('otter.children');
 
-        while (<STDIN>) { ## no critic(InputOutput::ProhibitExplicitStdin)
+        while (<STDIN>) { ## no critic (InputOutput::ProhibitExplicitStdin)
             chomp;
             $child_logger->warn($_);
         }

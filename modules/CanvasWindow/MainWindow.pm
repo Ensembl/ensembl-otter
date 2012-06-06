@@ -10,7 +10,7 @@ use Tk;
 
 # Work around UTF8 conversion bug
 # "selection conversion left too many bytes unconverted"
-$Tk::encodeFallback = 1; ## no critic(Variables::ProhibitPackageVars)
+$Tk::encodeFallback = 1; ## no critic (Variables::ProhibitPackageVars)
 
 use base qw( MainWindow );
 
@@ -61,7 +61,7 @@ sub add_default_options {
     my ($mw) = @_;
 
     # Get warnings about "possible comments in qw"
-    no warnings "qw"; ## no critic(TestingAndDebugging::ProhibitNoWarnings)
+    no warnings "qw"; ## no critic (TestingAndDebugging::ProhibitNoWarnings)
 
     # Priority level of 40 is equivalent to an
     # application specific startup file.

@@ -434,7 +434,7 @@ sub get_requested_slice {
 }
 
 
-## no critic(Modules::ProhibitMultiplePackages)
+## no critic (Modules::ProhibitMultiplePackages)
 
 package Bio::EnsEMBL::DBSQL::StatementHandle;
 

@@ -330,7 +330,7 @@ sub update_loutre {
   return;
 }
 
-sub fmt_list { ## no critic(Subroutines::RequireArgUnpacking)
+sub fmt_list { ## no critic (Subroutines::RequireArgUnpacking)
     return join(', ', map { "'$_'" } @_);
 }
 

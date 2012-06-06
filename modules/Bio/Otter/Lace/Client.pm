@@ -339,7 +339,7 @@ sub password_prompt{
         sub {
             my ($self) = @_;
 
-            unless (-t STDIN) { ## no critic(InputOutput::ProhibitInteractiveTest)
+            unless (-t STDIN) { ## no critic (InputOutput::ProhibitInteractiveTest)
                 warn "Cannot prompt for password - not attached to terminal\n";
                 return;
             }
@@ -536,7 +536,7 @@ sub pfetch_url {
 sub setup_pfetch_env {
     my ($self) = @_;
 
-    ## no critic(Variables::RequireLocalizedPunctuationVars)
+    ## no critic (Variables::RequireLocalizedPunctuationVars)
 
     # Need to use pfetch via HTTP proxy if we are outside Sanger
     my $hostname = hostfqdn();
