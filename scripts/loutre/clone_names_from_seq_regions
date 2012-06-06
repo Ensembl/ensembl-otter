@@ -1,0 +1,94 @@
+#!/usr/bin/env perl
+
+### clone_names_from_seq_regions
+
+use strict;
+use warnings;
+
+use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Lace::PipelineDB;
+
+{
+    my $dataset_name = 'mouse';
+
+    my $usage = sub { exec('perldoc', $0) };
+    # This do_getopt() call is needed to parse the otter config files
+    # even if you aren't giving any arguments on the command line.
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        'dataset=s'     => \$dataset_name,
+        ) or $usage->();
+    $usage->() unless $dataset_name;
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    
+    my $otter_dba = $ds->get_cached_DBAdaptor;
+    my $sth = $otter_dba->dbc->prepare(q{
+        SELECT clone.name as acc_sv
+          , clone_name.value as intl_clone_name
+        FROM seq_region as chr
+          , seq_region as contig
+          , seq_region as clone
+          , assembly as chr_asm
+          , assembly as clone_asm
+          , seq_region_attrib as chr_asm_name
+          , seq_region_attrib as clone_name
+          , seq_region_attrib as chr_name
+        WHERE chr.coord_system_id = 1
+          AND contig.coord_system_id = 3
+          AND clone.coord_system_id = 2
+          AND chr.seq_region_id = chr_asm.asm_seq_region_id
+          AND chr_asm.cmp_seq_region_id = contig.seq_region_id
+          AND clone.seq_region_id = clone_asm.asm_seq_region_id
+          AND clone_asm.cmp_seq_region_id = contig.seq_region_id
+          AND chr.seq_region_id = chr_asm_name.seq_region_id
+          AND chr_asm_name.attrib_type_id = 98
+          AND chr_asm_name.value = 'GRCm38'
+          AND clone.seq_region_id = clone_name.seq_region_id
+          AND clone_name.attrib_type_id = 95
+          AND chr.seq_region_id = chr_name.seq_region_id
+          AND chr_name.attrib_type_id = 118
+          AND chr_name.value = ?
+          AND chr_asm.asm_start <= ?
+          AND chr_asm.asm_end >= ?
+        ORDER BY chr_asm.asm_start
+    });
+    
+    while (<>) {
+        my ($chr, $start, $end, $strand, $gene) = split;
+        my $chr_bare = $chr;
+        $chr_bare =~ s/^chr//i;
+        if ($start > $end) {
+            die "Expected start < end, got '$start' > '$end'";
+        }
+        $sth->execute($chr_bare, $end, $start);
+        my @clones;
+        while (my ($acc_sv, $intl) = $sth->fetchrow) {
+            push(@clones, $acc_sv, $intl);
+        }
+        print join("\t", $chr, $start, $end, $strand, $gene, @clones), "\n";
+    }
+}
+
+
+
+
+
+
+__END__
+
+=head1 NAME - clone_names_from_seq_regions
+
+=head1 DESCRIPTION
+
+Prints out overlapping clone names given reference assembly coordinates.
+Specific for original task, but could easily be made more general.
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
