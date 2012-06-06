@@ -487,7 +487,7 @@ if ($alt_assembly = $support->param('ensemblassembly') ) {
 	  $support->log("Inserted $c assembly entries\n",3);
 	}
 
-        if ($v_name =~ /PATCH/) {
+        if ($v_name =~ /HSCHR|PATCH/) {
           #compare accessions for PATCHES from Ensembl and Vega and warn if they're different
           my @e_patch_names  = $edbh->selectrow_array(qq(
                 SELECT srs.synonym
@@ -511,11 +511,12 @@ if ($alt_assembly = $support->param('ensemblassembly') ) {
                  AND sra2.attrib_type_id = at2.attrib_type_id
                  AND at2.code            = 'embl_version'
                  AND sr.seq_region_id    = $v_sr_id));
+
             if (! $v_patch_name) {
               $support->log_warning("No accession for PATCH $v_name in Vega so we don't know if e! and Vega are using the same PATCH!\n");
             }
             elsif ($e_patch_names[0] ne $v_patch_name) {
-              $support->log_warning("Accession for PATCH $v_name differs between e! (".$e_patch_names[0].") and Vega ($v_patch_name). Have a look but I suspect this region will have to be deleted\n");
+              $support->log_warning("Accession for PATCH $v_name differs between e! (".$e_patch_names[0].") and Vega ($v_patch_name). This annotation will not be projected into ensembl-vega when you do this step\n");
             }
             else {
               $support->log("Accessions match - $v_patch_name and ".$e_patch_names[0]."\n",1);
