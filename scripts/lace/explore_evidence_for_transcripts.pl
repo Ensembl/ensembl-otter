@@ -37,7 +37,7 @@ sub new {
     return $self;
 }
 
-package main; ## no critic (ProhibitMultiplePackages)
+package main; ## no critic (Modules::ProhibitMultiplePackages)
 
 Readonly my $MAX_UNDERLAP        => 10;
 Readonly my $MAX_TRAIL           => 10;
