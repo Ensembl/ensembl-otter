@@ -298,14 +298,13 @@ foreach my $V_chr ($support->sort_chromosomes($V_chrlength)) {
               AND at2.code            = 'embl_version'
               AND sr.seq_region_id    = $v_sr_id));
       if (! $v_patch_name) {
-        $support->log_warning("No accession for PATCH $V_chr in Vega so we don't know if e! and Vega are using the same PATCH!\n");
+        $support->log_warning("No accession for PATCH $V_chr in Vega so we don't know if e! and Vega are using the same PATCH. Will attempt to transfer annotation but you should check how it's worked\n");
       }
       elsif ($e_patch_names[0] ne $v_patch_name) {
-
-        #maybe we should be skipping
-#        $support->log_warning("Accession for PATCH $V_chr differs between e! (".$e_patch_names[0].") and Vega ($v_patch_name). No annotation being transferred\n");
-#        next CHROM;
-        $support->log_warning("Accession for PATCH $V_chr differs between e! (".$e_patch_names[0].") and Vega ($v_patch_name). Will attempt to transfer annotation but you should check how it's worked\n");
+        #we used to transfer annotation on different patches, but this does cause problems so don't
+#        $support->log_warning("Accession for PATCH $V_chr differs between e! (".$e_patch_names[0].") and Vega ($v_patch_name). Will attempt to transfer annotation but you should check how it's worked\n");
+        $support->log_warning("Accession for PATCH $V_chr differs between e! (".$e_patch_names[0].") and Vega ($v_patch_name). No annotation being transferred\n");
+        next CHROM;
       }
       else {
         $support->log("Accessions match: $v_patch_name and ".$e_patch_names[0]."\n",1);
