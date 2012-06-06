@@ -23,10 +23,7 @@ sub features {
 
     my $size = ($end + 1 - $start);
     my $bin_count = $size / $bin_size;
-    {
-        ## no critic ( ControlStructures::ProhibitNegativeExpressionsInUnlessAndUntilConditions )
-        return unless $bin_count > 0;
-    }
+    return unless $bin_count;
 
     $chr = "${chr_prefix}${chr}" if defined $chr_prefix;
 
