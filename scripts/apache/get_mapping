@@ -39,7 +39,7 @@ XML
     ;
 chomp $mapping_map_maplet_xml_format;
 
-sub mapping_map_maplet_xml { ## no critic ( Subroutines::RequireArgUnpacking )
+sub mapping_map_maplet_xml { ## no critic (Subroutines::RequireArgUnpacking)
     my $xml = sprintf $mapping_map_maplet_xml_format, @_;
     return $xml;
 }
