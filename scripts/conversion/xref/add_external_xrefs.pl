@@ -194,6 +194,15 @@ if ($support->param('prune') and $support->user_proceed('Would you really like t
            WHERE x.xref_id IS NULL
         ));
 
+  # external_synonyms
+  $support->log("Deleting orphan external_synonyms...\n");
+  $num = $dba->dbc->do(qq(
+           DELETE es
+           FROM external_synonym es
+           LEFT JOIN xref x ON es.xref_id = x.xref_id
+           WHERE x.xref_id IS NULL
+        ));
+
   #reset display xrefs to gene stable ID unless we're using one of the specific formats
   unless ($refs_to_delete{$support->param('xrefformat')}) {
     $support->log("Resetting gene.display_xref_id...\n");
