@@ -140,11 +140,13 @@ our $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
 # parse options
 $support->parse_common_options(@_);
 $support->parse_extra_options(
+  'assembly=s',
   'evegahost=s',
   'evegaport=s',
   'evegauser=s',
   'evegapass=s',
   'evegadbname=s',
+  'ensemblassembly=s',
   'chromosomes|chr=s@',
   'logic_names=s@',
   'prune',
@@ -152,11 +154,13 @@ $support->parse_extra_options(
 );
 $support->allowed_params(
   $support->get_common_params,
+  'assembly',
   'evegahost',
   'evegaport',
   'evegauser',
   'evegapass',
   'evegadbname',
+  'ensemblassembly',
   'chromosomes',
   'logic_names',
   'prune',
@@ -200,8 +204,8 @@ my $E_pfa = $E_dba->get_ProteinFeatureAdaptor;
 my $cs_adaptor = $E_dba->get_CoordSystemAdaptor;
 my $asmap_adaptor = $E_dba->get_AssemblyMapperAdaptor;
 
-my $E_cs = $cs_adaptor->fetch_by_name('chromosome',$support->param('ensemblassembly'));
-my $V_cs = $cs_adaptor->fetch_by_name('chromosome',$support->param('assembly'));
+my $E_cs = $cs_adaptor->fetch_by_name('chromosome',$support->param('ensemblassembly')) || $support->log_error("Can't retrieve adapator for coord_system ".$support->param('ensemblassembly')."\n");
+my $V_cs = $cs_adaptor->fetch_by_name('chromosome',$support->param('assembly')) || $support->log_error("Can't retrieve adapator for coord_system ".$support->param('assembly')."\n");
 
 # get assembly mapper
 my $mapper = $asmap_adaptor->fetch_by_CoordSystems($E_cs, $V_cs);
