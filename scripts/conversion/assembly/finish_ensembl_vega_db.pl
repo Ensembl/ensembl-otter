@@ -145,6 +145,28 @@ my $vega_db     = $support->param('dbname');
 my $ensemblassembly = $support->param('ensemblassembly');
 my $vegaassembly    = $support->param('assembly');
 
+# hacky code to adjust align_features used to support transcripts on HSCHR17_1_CTG1
+$sql = qq(
+  SELECT cs.version, sr.seq_region_id
+    FROM seq_region sr, coord_system cs
+   WHERE sr.coord_system_id = cs.coord_system_id
+     AND sr.name = 'HSCHR17_1_CTG1'
+     AND cs.name = 'chromosome');
+$sth = $dbh->{'evega'}->prepare($sql);
+$sth->execute;
+my %sr_ids;
+while (my ($cs, $sr) = $sth->fetchrow_array) {
+  $sr_ids{$cs} = $sr;
+}
+foreach my $t (qw(protein dna)) {
+  $sql = qq(
+    UPDATE ${t}_align_feature
+       SET seq_region_id = $sr_ids{$ensemblassembly}
+     WHERE seq_region_id = $sr_ids{$vegaassembly});
+  my $c = $dbh->{'evega'}->do($sql);
+  $support->log("Adjusted $c seq_region_ids for table ${t}_align_feature (chromosome HSCHR17_1_CTG1)\n\n");
+}
+
 # retrieve adjustment factors for Ensembl seq_region_ids and coord_system_ids
 $sql = qq(
     SELECT meta_key, meta_value
@@ -495,7 +517,18 @@ $sql = qq(UPDATE meta
                  (SELECT meta_value from $vega_db.meta where meta_key = 'genebuild.havana_datafreeze_date')
            WHERE meta_key = 'genebuild.havana_datafreeze_date');
 $c = $dbh->{'evega'}->do($sql);
+#duplicates
+$c = $dbh->{'evega'}->do(qq(CREATE table nondup_meta like meta));
+$c = $dbh->{'evega'}->do(qq(INSERT into nondup_meta (select '',species_id, meta_key, meta_value from meta group by species_id, meta_key, meta_value)));
+$c = $dbh->{'evega'}->do(qq(DELETE from meta));
+$c = $dbh->{'evega'}->do(qq(INSERT into meta (select * from nondup_meta)));
+$c = $dbh->{'evega'}->do(qq(DROP table nondup_meta));
+
+#remove duplicate attribs
+$support->log_stamped("Removing any duplicates from attrib tables.\n\n");
+foreach my $t (qw(gene transcript translation seq_region)) {
+  $support->remove_duplicate_attribs($dbh->{'evega'},$t);
+}
 
 # finish logfile
 $support->finish_log;
-
