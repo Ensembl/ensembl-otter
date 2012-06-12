@@ -90,6 +90,10 @@ Call the Otter Server as a client and ask for datasets.
 
 F<scripts/lace/example_script>
 
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
+
 =cut
 
 
