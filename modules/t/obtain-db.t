@@ -261,20 +261,9 @@ sub make_Client {
     return Bio::Otter::Lace::Defaults::make_Client();
 }
 
-# This hack replaces several steps of Bio::Otter::ServerScriptSupport.
-#
-# We don't expect to be running as a fully configured CGI script, but
-# can assume we are running "inside".  Replace with something better
-# as necessary.
 sub data_dir {
     my $otter_data = '/nfs/WWWdev/SANGER_docs/data/otter';
-    my @vsn = sort { $a <=> $b } grep /^\d+$/, read_dir($otter_data);
-
-    # aim to take the last but one version - quite likely to be
-    # production
-    my $use_vsn = $vsn[-2] || $vsn[-1];
-
-    return "$otter_data/$use_vsn";
+    return $otter_data;
 }
 
 
