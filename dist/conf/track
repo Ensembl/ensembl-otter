@@ -1,8 +1,0 @@
-dev
-
-# This defines the development status of the code.  The valid values
-# are:
-
-# dev:  mainline development
-# test: pre-release, bug-fixes only
-# live: released, urgent hot-fixes only
