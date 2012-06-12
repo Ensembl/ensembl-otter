@@ -113,26 +113,16 @@ sub otter_version {
     return $ver;
 }
 
-sub server_root {
-    my ($self) = @_;
-
-    my $root;
-    unless ($root = $self->{'server_root'}) {
-        $root = $ENV{'DOCUMENT_ROOT'};
-        # Trim off the trailing /dir
-        $root =~ s{/[^/]+$}{}
-          or die "Unexpected DOCUMENT_ROOT format '$ENV{DOCUMENT_ROOT}'";
-        $self->{'server_root'} = $root;
-    }
-    return $root;
-}
-
 sub data_dir {
     my ($self) = @_;
 
     my $data_dir;
     unless ($data_dir = $self->{'data_dir'}) {
-        $data_dir = join('/', $self->server_root, 'data', 'otter', $self->otter_version);
+        my $root = $ENV{'DOCUMENT_ROOT'};
+        # Trim off the trailing /dir
+        $root =~ s{/[^/]+$}{}
+          or die "Unexpected DOCUMENT_ROOT format '$ENV{DOCUMENT_ROOT}'";
+        $data_dir = join('/', $root, 'data', 'otter', $self->otter_version);
     }
     return $data_dir;
 }
