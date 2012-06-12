@@ -122,7 +122,7 @@ sub data_dir {
         # Trim off the trailing /dir
         $root =~ s{/[^/]+$}{}
           or die "Unexpected DOCUMENT_ROOT format '$ENV{DOCUMENT_ROOT}'";
-        $data_dir = join('/', $root, 'data', 'otter', $self->otter_version);
+        $data_dir = join('/', $root, 'data', 'otter');
     }
     return $data_dir;
 }
@@ -291,7 +291,7 @@ sub send_file {
         sub {
             my ($self) = @_;
 
-            my $path = sprintf "%s/%s", $self->data_dir, $name;
+            my $path = sprintf "%s/%s/%s", $self->data_dir, $self->otter_version, $name;
             open my $fh, '<', $path or die "Can't read '$path' : $!";
             local $/ = undef;
             my $content = <$fh>;
