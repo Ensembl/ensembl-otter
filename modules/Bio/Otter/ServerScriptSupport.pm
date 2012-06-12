@@ -180,7 +180,7 @@ sub users_hash {
 
     my $usr;
     unless ($usr = $self->{'_users_hash'}) {
-        my $usr_file = join('/', $self->server_root, 'data', 'otter', $self->otter_version, 'users.txt');
+        my $usr_file = $self->data_dir . '/users.txt';
         $usr = $self->{'_users_hash'} = $self->read_user_file($usr_file);
     }
     return $usr;
