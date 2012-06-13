@@ -3,10 +3,16 @@
 use strict;
 use warnings;
 
-use Bio::Otter::Lace::Defaults;
+use Sys::Hostname;
+use Try::Tiny;
+use YAML 'Dump';
 
-{
-    my $dataset_name = 'pig';
+use Bio::Otter::Lace::Defaults;
+use Bio::Vega::ContigLockBroker;
+use Bio::Vega::Author;
+
+sub main {
+    my ($dataset_name, $author);
     my ($dry, $tsct_insist) = (0) x 2;
 
     my $old_re = '^TMP:';
@@ -18,12 +24,13 @@ use Bio::Otter::Lace::Defaults;
     Bio::Otter::Lace::Defaults::do_getopt(
         'h|help!'       => $usage,
         'n|dry_run|dry!'=> \$dry,
+        'a|author=s'    => \$author,
         'T|transcript_insist!' => \$tsct_insist,
         'M|match=s'     => \$old_re,
         'S|subst=s'     => \$re_subst,
         'dataset=s'     => \$dataset_name,
         ) or $usage->();
-    $usage->() unless $dataset_name;
+    $usage->() unless $dataset_name && (defined $author || $dry);
     
     # Client communicates with otter HTTP server
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
@@ -32,7 +39,11 @@ use Bio::Otter::Lace::Defaults;
     my $ds = $cl->get_DataSet_by_name($dataset_name);
     
     my $otter_dba = $ds->get_cached_DBAdaptor;
-    
+
+    my $gene_adaptor  = $otter_dba->get_GeneAdaptor;
+    my $contig_broker = Bio::Vega::ContigLockBroker->new(-hostname => hostname);
+    my $author_obj    = Bio::Vega::Author->new(-name => $author, -email => $author);
+
     my $gene_sth = $otter_dba->dbc->prepare(q{
         SELECT g.gene_id, ga.value, g.source, r.name
         FROM gene g
@@ -67,16 +78,32 @@ use Bio::Otter::Lace::Defaults;
     
     $otter_dba->begin_work;
 
+    my %count;
     $gene_sth->execute($old_re);
-    while (my @g_row = $gene_sth->fetchrow) {
+  GENE: while (my @g_row = $gene_sth->fetchrow) {
         my ($gene_id, $gene_name) = @g_row;
         my $new_gene_name = $gene_name;
         $new_gene_name =~ s/$old_re/$re_subst/ or die "Unexpected gene name format: '$gene_name'";
         printf "GENE: %s\t%s\tsource=%s\tsr=%s\t=> %s\n", @g_row, $new_gene_name;
 
-        unless ($dry) {
+        my $gene = $gene_adaptor->fetch_by_dbID($gene_id);
+
+        my $next_GENE;
+        try {
+            $contig_broker->lock_by_object($gene, $author_obj) unless $dry;
+        } catch {
+            warn "Skip - Cannot lock for gene $gene_id: $_\n";
+            $count{skip_because_locked} ++;
+            $next_GENE = 1;
+        };
+        next GENE if $next_GENE;
+
+        if ($dry) {
+            $count{dry_gene}++;
+        } else {
             $update_gene->execute($gene_id);
             $update_gene_name->execute($new_gene_name, $gene_id);
+            $count{renamed_gene} ++;
         }
 
         $tsct_sth->execute($gene_id);
@@ -85,18 +112,34 @@ use Bio::Otter::Lace::Defaults;
             my $new_tsct_name = $tsct_name;
             unless ($new_tsct_name =~ s/$old_re/$re_subst/) {
                 die "Unexpected name format: '$tsct_name'" if $tsct_insist;
+                $count{skipped_transcript} ++;
                 next;
             }
-            unless ($dry) {
+            if ($dry) {
+                $count{dry_transcript}++;
+            } else {
                 $update_tsct_name->execute($new_tsct_name, $tsct_id);
+                $count{renamed_transcript} ++;
             }
         }
+
+        try {
+            $contig_broker->remove_by_object($gene, $author_obj) unless $dry;
+        } catch {
+            $count{unlock_fail}++;
+            warn "Unlock failed!  $_\n".
+              "  Switching to dry-run mode, to ease the cleanup";
+            $dry = 1;
+        }
     }
-    
+
     $otter_dba->commit;
+
+    print Dump({ counts => \%count });
 }
 
 
+main();
 
 
 
@@ -129,6 +172,10 @@ prefix on transcript names...?
 =item -n | --dry
 
 Dry run.  Make no UPDATEs.
+
+=item -a | --author <user>
+
+For non-dry runs, this user does the locking.
 
 =item -T | --transcript_insist
 
