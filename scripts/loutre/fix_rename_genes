@@ -12,8 +12,8 @@ use Bio::Vega::ContigLockBroker;
 use Bio::Vega::Author;
 
 sub main {
-    $| = 1;
-    my ($dataset_name, $author, $limit);
+    local $| = 1;
+    my ($dataset_name, $limit);
     my ($dry, $tsct_insist) = (0) x 2;
 
     my $old_re = '^TMP:';
@@ -31,7 +31,7 @@ sub main {
         'dataset=s'     => \$dataset_name,
         'L|limit=s'     => \$limit,
         ) or $usage->();
-    $usage->() unless $dataset_name && (defined $author || $dry);
+    $usage->() unless $dataset_name;
     
     # Client communicates with otter HTTP server
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
@@ -148,15 +148,17 @@ sub main {
     $otter_dba->commit;
 
     print Dump({ counts => \%count });
+
+    return 0;
 }
 
 
 sub outside_limit {
     my ($limit, $G) = @_;
     return 0 unless defined $limit;
-    return 'chr'    unless $$limit{chr}   eq $G->seq_region_name;
-    return 'before' unless $$limit{start} <= $G->seq_region_start;
-    return 'after'  unless $$limit{end}   >= $G->seq_region_end;
+    return 'chr'    if $$limit{chr}   ne $G->seq_region_name;
+    return 'before' if $$limit{start} >  $G->seq_region_start;
+    return 'after'  if $$limit{end}   <  $G->seq_region_end;
     return 0;
 }
 
@@ -169,7 +171,7 @@ sub digest_limit {
 }
 
 
-main();
+exit main();
 
 
 
