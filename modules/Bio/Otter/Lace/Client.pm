@@ -50,22 +50,6 @@ sub new {
     return $new;
 }
 
-sub host {
-    my ($self, $host) = @_;
-
-    warn "Set using the Config file please.\n" if $host;
-
-    return $self->config_value('host');
-}
-
-sub port {
-    my ($self, $port) = @_;
-
-    warn "Set using the Config file please.\n" if $port;
-
-    return $self->config_value('port');
-}
-
 sub version {
     my ($self, $version) = @_;
 
@@ -519,12 +503,19 @@ sub cookie_expiry_time {
 
 sub url_root {
     my ($self) = @_;
+    return $self->{'url_root'} ||=
+        $self->_url_root;
+}
 
-    my $host    = $self->host    or confess "host not set";
-    my $port    = $self->port    or confess "port not set";
-    my $version = $self->version or confess "version not set";
-    $port =~ s/\D//g; # port only wants to be a number! no spaces etc
-    return "http://$host:$port/cgi-bin/otter/$version";
+sub _url_root {
+    my ($self) = @_;
+
+    my $url = sprintf '%s/%s'
+        , $self->config_value('url')
+        , $self->version
+        ;
+
+    return $url;
 }
 
 sub pfetch_url {
