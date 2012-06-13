@@ -1,0 +1,265 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use Sys::Hostname;
+use Try::Tiny;
+use YAML 'Dump';
+use List::MoreUtils 'uniq';
+use Carp;
+
+use Bio::Otter::Lace::Defaults;
+use Bio::Vega::ContigLockBroker;
+use Bio::Vega::Author;
+
+our $DEBUG = 0;
+
+
+sub desuffix {
+    my @name = @_;
+    confess "need list context" unless wantarray;
+    foreach (@name) { s/_\d+$// } # s///r is in 5.14.0
+    return @name;
+}
+
+
+sub main {
+    $| = 1;
+    my ($dataset_name);
+    my $wet = 0;
+
+    my $usage = sub { exec('perldoc', $0) };
+    # This do_getopt() call is needed to parse the otter config files
+    # even if you aren't giving any arguments on the command line.
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        'W|wet_run|wet!'=> \$wet,
+        'dataset=s'     => \$dataset_name,
+        ) or $usage->();
+    $usage->() unless $dataset_name;
+
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    my $otter_dba = $ds->get_cached_DBAdaptor;
+
+    my $dbh = $otter_dba->dbc->db_handle;
+    my @gene_basenames = candidate_gene_basenames($dbh);
+    my $chunked = chunked_all_transcripts($dbh, @gene_basenames);
+
+    my $gene_adaptor  = $otter_dba->get_GeneAdaptor;
+    my $contig_broker = Bio::Vega::ContigLockBroker->new(-hostname => hostname);
+    my $author_obj    = Bio::Vega::Author->new(-name => $cl->author, -email => $cl->email);
+
+    # take the relevant-together genes in order of distance between
+    foreach my $k (sort { $chunked->{$a}{pos}[2] <=> $chunked->{$b}{pos}[2] }
+                   keys %$chunked) {
+        my $v = $chunked->{$k};
+        printf "dist=%7d on %8s:%-15s\n", $v->{pos}[2], $v->{chr}, "$k:";
+        foreach my $gsid (sort keys %{ $v->{gsid} }) {
+            printf "  %s = %-15s\n", $gsid, $v->{gsid}{$gsid};
+        }
+#        my @G = map { $gene_adaptor->fetch_by_dbID($_) }
+#          uniq(map { $_->[2] } @{ $v->{rows} });
+#        print "loaded ".@G." genes\n";
+#        print "\n";
+    }
+
+    return 0;
+}
+
+
+sub candidate_gene_basenames {
+    my ($dbh) = @_;
+
+    ### Find potential genes to munge
+    #
+    # Where gene FOO was split into FOO_1 and FOO_2,
+    # return those FOO_1 and FOO_2
+    my $suffixed_genes = $dbh->selectcol_arrayref(q{
+ SELECT ga.value g_name
+ FROM gene g
+  join gene_attrib ga using (gene_id)
+   join attrib_type gat using (attrib_type_id)
+ WHERE g.is_current = 1
+   AND gat.code = 'name'
+   AND ga.value rlike '_[0-9]+$'
+ });
+
+    # Where FOO_1 and FOO_2 have been manually renamed back to FOO
+    # without restoring the shared stable_id (probably an accident),
+    # return that FOO
+    my $dup_genes = $dbh->selectall_arrayref(q{
+ SELECT ga.value g_name,
+   /* remaining fields are informational, code uses first column */
+   r.name chr,
+   group_concat(g.stable_id SEPARATOR ', ') stable_ids,
+   group_concat(concat_ws(':', g.seq_region_start, g.seq_region_end) SEPARATOR ', ') posns
+ FROM gene g
+  join gene_attrib ga using (gene_id)
+   join attrib_type gat using (attrib_type_id)
+  join seq_region r using (seq_region_id)
+ WHERE g.is_current = 1
+   AND gat.code = 'name'
+ GROUP BY g.seq_region_id, ga.value
+ HAVING count(g.stable_id) > 1
+ });
+
+    if ($DEBUG) {
+        warn "DEBUG: Dropping all but two of ".@$suffixed_genes." candidate gene names";
+        @$suffixed_genes = @$suffixed_genes[0..1];
+    }
+
+    my @gene_basenames = uniq desuffix
+      (@$suffixed_genes, map { $_->[0] } @$dup_genes);
+
+    print Dump({ suffixed_genes => $suffixed_genes,
+                 dup_genes => $dup_genes,
+                 genes_base => \@gene_basenames,
+                 count => { suffixed_genes => scalar @$suffixed_genes,
+                            dup_genes => scalar @$dup_genes,
+                            basenames => scalar @gene_basenames } })
+      if $DEBUG;
+
+    if (my @double_ = grep /_/, @gene_basenames) {
+        # In Perl we s/_d+$// but in SQL we s/_.*$// (because it's easier).
+        # Where these are not equivalent, genes will be skipped.
+        warn 'I assumed only m{_\d+$} underscores, but found others'.
+          "\n (@double_)\n which will false-negative, you may need to fix them by hand";
+    }
+
+    return @gene_basenames;
+}
+
+
+sub chunked_all_transcripts {
+    my ($dbh, @gene_basenames) = @_;
+
+    # Bulk fetch the transcripts & carve up into relevant pieces
+    my %chunked;
+    # key = "seq_region_id:gene_name_desuffixed",
+    # value = {
+    #   rows => \@relevant_raw_rows,
+    #   chr => $seq_region_name, # informational
+    #   pos => [ $start, $end, $distance ] # min,max positions on seq_region
+    #   gsid => { gene.stable_id => gene_name_full }
+    # }
+
+    # There is probably a limit on number of placeholders.  I don't
+    # expect to reach it for MySQL -> don't bother batching.
+    my $placeholders = join ',', (('?') x @gene_basenames);
+    my $all_tsct = $dbh->selectall_arrayref(qq{
+ SELECT r.name chr, g.seq_region_id,
+   g.gene_id,       g.stable_id, ga.value g_name,
+   t.transcript_id, t.stable_id, ta.value t_name,
+   g.seq_region_start, g.seq_region_end
+ FROM gene g
+   join seq_region r using (seq_region_id)
+   join gene_attrib ga using (gene_id)
+   join transcript t using (gene_id)
+     join transcript_attrib ta using (transcript_id),
+   attrib_type gtat
+ WHERE g.is_current = 1
+   AND t.is_current = 1
+   AND gtat.code = 'name'
+   AND gtat.attrib_type_id = ga.attrib_type_id
+   AND gtat.attrib_type_id = ta.attrib_type_id
+   AND left(ga.value,
+            if(locate('_', ga.value)=0,
+               length(ga.value),
+               locate('_', ga.value)-1))
+     /* full table scan, seems fast enough */
+     IN ($placeholders)
+ ORDER BY length(r.name), r.name, g.stable_id }, {}, @gene_basenames);
+
+    foreach my $row (@$all_tsct) {
+        my ($chr, $srid,  $gid, $gsid, $gname,  $tid, $tsid, $tname,  $g_start, $g_end)
+          = @$row;
+        my ($gname_base) = desuffix($gname);
+        my $v = $chunked{"$srid:$gname_base"} ||= { pos => [ 1E10, 0 ], chr => $chr };
+        push @{ $v->{rows} }, $row;
+        $v->{gsid}{$gsid} = $gname;
+        $v->{pos}[0] = $g_start if $g_start < $v->{pos}[0];
+        $v->{pos}[1] = $g_end   if $g_end   > $v->{pos}[1];
+        $v->{pos}[2] = $v->{pos}[1] - $v->{pos}[0] + 1;
+    }
+
+    print Dump({ all => $all_tsct, chunked => \%chunked })
+      if $DEBUG;
+
+    # whittle any false-positives
+    while (my ($k, $v) = each %chunked) {
+        my $n_genes = scalar keys %{ $v->{gsid} };
+        next if $n_genes > 1;
+        my ($gsid) = keys %{ $v->{gsid} };
+        warn "Ignoring false-positive $gsid ($k), not sure how it got there";
+        delete $chunked{$k};
+    }
+
+    return \%chunked;
+}
+
+
+exit main();
+
+
+=head1 NAME
+
+fix_split_gene_fusion - post-transfer fixup of split genes' names
+
+=head1 DESCRIPTION
+
+F<transfer_annotation.pl> splits genes where the mapping to the new
+assembly makes this necessary, and issues new gene stable_id(s) for
+the fragments.
+
+Usually these need looking at individually.  When there are very many
+of these, we may want to fuse the pieces back together in bulk.
+
+=head2 Relevant factors
+
+=over 4
+
+=item * Having two or more genes on a chromosome with the same name is
+bad.  It breaks Vega QC, and Otterlace will not load a session
+containing both genes.
+
+These are probably created accidentally, when fixing problems in a
+small region; then discovered by QC or when loading a larger region
+that contains both.
+
+=item * Genes may only be edited when the whole object is loaded into
+Otterlace.
+
+=over 2
+
+=item * Having a gene split across (with transcripts on) multiple
+chromosomes will prevent the gene ever being edited in Otterlace,
+since it will always be incomplete (grey).
+
+=item * Large gaps between transcripts of a gene will mean loading
+large regions into Otterlace.
+
+This is best avoided, but it is hard to set a simple cut-off.
+Therefore, during dry run sort the fusions by this parameter so
+annotators can draw the line.
+
+=back
+
+=item * The annotation guidelines require one gene to cover all the
+transcripts on the chromosome, and define attributes to describe the
+fragmentation.
+
+=item * Take the lowest-numbered stable_id, since the splits will have
+been allocated more recent ones.
+
+=back
+
+=head1 AUTHOR
+
+Matthew Astley mca@sanger.ac.uk
+
+=cut
