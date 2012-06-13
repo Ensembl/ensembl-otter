@@ -425,8 +425,7 @@ __DATA__
 # This is where the HARDWIRED ABSOLUTE DEFAULTS are stored
 
 [client]
-host=www.sanger.ac.uk
-port=80
+url=http://www.sanger.ac.uk/cgi-bin/otter
 version=66
 write_access=0
 debug=1
