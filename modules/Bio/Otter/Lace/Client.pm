@@ -6,7 +6,6 @@ use strict;
 use warnings;
 use Carp;
 
-use Readonly;
 use File::Path qw{ remove_tree };
 use Net::Domain qw{ hostname hostfqdn };
 use Proc::ProcessTable;
@@ -21,6 +20,7 @@ use XML::Simple;
 use Bio::Vega::Author;
 use Bio::Vega::ContigLock;
 
+use Bio::Otter::Version;
 use Bio::Otter::Lace::Defaults;
 use Bio::Otter::Lace::DataSet;
 use Bio::Otter::Lace::SequenceSet;
@@ -30,8 +30,6 @@ use Bio::Otter::Lace::SequenceNote;
 use Bio::Otter::Lace::AceDatabase;
 use Bio::Otter::Lace::DB;
 use Bio::Otter::LogFile;
-
-Readonly::Scalar my $VERSION => 66;
 
 sub new {
     my ($pkg) = @_;
@@ -216,7 +214,7 @@ sub session_path {
 
     return
         sprintf "%s_%d.%s.%d.%d",
-        $session_root, $VERSION, $user, $$, $session_number;
+        $session_root, Bio::Otter::Version->version, $user, $$, $session_number;
 }
 
 sub all_sessions {
@@ -249,7 +247,7 @@ sub all_session_dirs {
     my ($self) = @_;
 
     my $session_dir_pattern =
-        sprintf "%s_%s.*", $session_root, $VERSION;
+        sprintf "%s_%s.*", $session_root, Bio::Otter::Version->version;
     my @session_dirs = glob($session_dir_pattern);
     return @session_dirs;
 }
@@ -507,7 +505,7 @@ sub _url_root {
 
     my $url = sprintf '%s/%s'
         , $self->config_value('url')
-        , $VERSION
+        , Bio::Otter::Version->version
         ;
 
     return $url;
