@@ -106,6 +106,9 @@ Would remove the WU from all mouse WU: genes and their transcripts,
 change the source to 'havana', and add a hidden remark of "Gene
 originally annotated by WU" to each of these genes.
 
+See also F<fix_rename_genes> (formerly F<fix_tmp_prefixed_genes>),
+which also works on gene name prefixes.
+
 =head1 AUTHOR
 
 James Gilbert B<email> jgrg@sanger.ac.uk

@@ -25,7 +25,6 @@ sub main {
     Bio::Otter::Lace::Defaults::do_getopt(
         'h|help!'       => $usage,
         'n|dry_run|dry!'=> \$dry,
-        'a|author=s'    => \$author,
         'T|transcript_insist!' => \$tsct_insist,
         'M|match=s'     => \$old_re,
         'S|subst=s'     => \$re_subst,
@@ -44,7 +43,7 @@ sub main {
 
     my $gene_adaptor  = $otter_dba->get_GeneAdaptor;
     my $contig_broker = Bio::Vega::ContigLockBroker->new(-hostname => hostname);
-    my $author_obj    = Bio::Vega::Author->new(-name => $author, -email => $author);
+    my $author_obj    = Bio::Vega::Author->new(-name => $cl->author, -email => $cl->email);
 
     $limit = digest_limit($limit) if defined $limit;
 
@@ -209,9 +208,9 @@ prefix on transcript names...?
 
 Dry run.  Make no UPDATEs.
 
-=item -a | --author <user>
+=item -dataset <species>
 
-For non-dry runs, this user does the locking.
+Species to operate on.
 
 =item -T | --transcript_insist
 
@@ -232,6 +231,15 @@ C<RLIKE>.
 Default C<TMP->
 
 String to substitute for the match, for gene and transcript names.
+
+=item -L | --limit <chr>:<start>:<end>
+
+Restrict to the specified chromosomal coordinates.
+
+Implementation of this is inefficient, in that gene objects will be
+fetched even when we know the chromosome is wrong.  However (for small
+numbers of genes) this gives useful information in the counts at the
+end.
 
 =back
 
