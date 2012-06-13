@@ -5,6 +5,7 @@ use strict;
 use warnings;
 
 use Bio::Vega::Author;
+use Bio::Otter::Version;
 use Bio::Otter::SpeciesDat;
 
 use IO::Compress::Gzip qw(gzip);
@@ -99,19 +100,6 @@ sub make_map_value {
 
 
 ############## getters: ###########################
-
-sub otter_version {
-    my ($self) = @_;
-
-    my $ver;
-    unless($ver = $self->{'_otter_version'}) {
-        ($ver) = $ENV{'SCRIPT_NAME'} =~ m{/otter/(\d+)/};
-        die "Unexpected script location '$ENV{SCRIPT_NAME}'"
-          unless $ver;
-        $self->{'_otter_version'} = $ver;
-    }
-    return $ver;
-}
 
 sub data_dir {
     my ($self) = @_;
@@ -291,7 +279,8 @@ sub send_file {
         sub {
             my ($self) = @_;
 
-            my $path = sprintf "%s/%s/%s", $self->data_dir, $self->otter_version, $name;
+            my $path = sprintf "%s/%s/%s"
+                , $self->data_dir, Bio::Otter::Version->version, $name;
             open my $fh, '<', $path or die "Can't read '$path' : $!";
             local $/ = undef;
             my $content = <$fh>;
