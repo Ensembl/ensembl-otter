@@ -12,7 +12,8 @@ use Bio::Vega::ContigLockBroker;
 use Bio::Vega::Author;
 
 sub main {
-    my ($dataset_name, $author);
+    $| = 1;
+    my ($dataset_name, $author, $limit);
     my ($dry, $tsct_insist) = (0) x 2;
 
     my $old_re = '^TMP:';
@@ -29,6 +30,7 @@ sub main {
         'M|match=s'     => \$old_re,
         'S|subst=s'     => \$re_subst,
         'dataset=s'     => \$dataset_name,
+        'L|limit=s'     => \$limit,
         ) or $usage->();
     $usage->() unless $dataset_name && (defined $author || $dry);
     
@@ -43,6 +45,8 @@ sub main {
     my $gene_adaptor  = $otter_dba->get_GeneAdaptor;
     my $contig_broker = Bio::Vega::ContigLockBroker->new(-hostname => hostname);
     my $author_obj    = Bio::Vega::Author->new(-name => $author, -email => $author);
+
+    $limit = digest_limit($limit) if defined $limit;
 
     my $gene_sth = $otter_dba->dbc->prepare(q{
         SELECT g.gene_id, ga.value, g.source, r.name
@@ -81,22 +85,31 @@ sub main {
     my %count;
     $gene_sth->execute($old_re);
   GENE: while (my @g_row = $gene_sth->fetchrow) {
-        my ($gene_id, $gene_name) = @g_row;
+        my ($gene_id, $gene_name, undef, $gene_chr) = @g_row;
         my $new_gene_name = $gene_name;
         $new_gene_name =~ s/$old_re/$re_subst/ or die "Unexpected gene name format: '$gene_name'";
-        printf "GENE: %s\t%s\tsource=%s\tsr=%s\t=> %s\n", @g_row, $new_gene_name;
+        printf "GENE: %-6s %-20s source=%s sr=%s", @g_row;
 
         my $gene = $gene_adaptor->fetch_by_dbID($gene_id);
+        my $outside = outside_limit($limit, $gene);
+        if ($outside) {
+            printf "\t!! outside: %s\n", $outside;
+            $count{"skip_$outside"}++;
+            next GENE;
+        }
 
         my $next_GENE;
         try {
             $contig_broker->lock_by_object($gene, $author_obj) unless $dry;
         } catch {
             warn "Skip - Cannot lock for gene $gene_id: $_\n";
+            print "\t!! lock busy\n";
             $count{skip_because_locked} ++;
             $next_GENE = 1;
         };
         next GENE if $next_GENE;
+
+        printf "\t=> %s\n", $new_gene_name;
 
         if ($dry) {
             $count{dry_gene}++;
@@ -139,6 +152,24 @@ sub main {
 }
 
 
+sub outside_limit {
+    my ($limit, $G) = @_;
+    return 0 unless defined $limit;
+    return 'chr'    unless $$limit{chr}   eq $G->seq_region_name;
+    return 'before' unless $$limit{start} <= $G->seq_region_start;
+    return 'after'  unless $$limit{end}   >= $G->seq_region_end;
+    return 0;
+}
+
+sub digest_limit {
+    my ($txt) = @_;
+    my %lim;
+    my $parts = @lim{qw{ chr start end }} = split /:/, $txt;
+    die "Expected chr1-23:2345:45678 style for limit, got $txt" unless 3 == $parts;
+    return \%lim;
+}
+
+
 main();
 
 
@@ -150,6 +181,11 @@ __END__
 =head1 NAME
 
 fix_rename_genes - name =~ s/// genes and transcripts and reset gene.source
+
+=head1 EXAMPLE
+
+ scripts/loutre/fix_rename_genes -dataset pig -n -a mca \
+  -M TMP- -S DUROC- -L chr7-04:25275605:29807435 > report.txt
 
 =head1 DESCRIPTION
 
