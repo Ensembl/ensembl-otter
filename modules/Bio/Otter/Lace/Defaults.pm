@@ -122,11 +122,6 @@ sub do_getopt {
 
         # this is just a synonym feel free to add more
         'view' => sub { $GETOPT->{$CLIENT_STANZA}{'write_access'} = 0 },
-        'local_fasta=s' => sub { $GETOPT->{'local_blast'}{'database'} = pop },
-        'noblast' => sub {
-            map { $_->{'local_blast'} = {} if exists $_->{'local_blast'} }
-              @$CONFIG_INIFILES;
-        },
 
         # this allows multiple extra config file to be used
         'cfgfile=s' => sub {
