@@ -49,7 +49,7 @@ my @CLIENT_OPTIONS = qw(
 # not a method
 sub save_option {
     my ($option, $value) = @_;
-    $GETOPT->{$CLIENT_STANZA}->{$option} = $value;
+    (tied %$GETOPT)->newval($CLIENT_STANZA, $option, $value);
     return;
 }
 
