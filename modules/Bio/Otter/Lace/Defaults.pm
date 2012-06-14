@@ -31,8 +31,7 @@ my $HOME_DIR = (getpwuid($<))[7];
 my $CALLED = "$0 @ARGV";
 
 my @CLIENT_OPTIONS = qw(
-    host=s
-    port=s
+    url=s
     author=s
     email=s
     pipeline!
