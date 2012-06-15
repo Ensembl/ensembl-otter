@@ -404,14 +404,8 @@ my $alt_assembly;
 if ($alt_assembly = $support->param('ensemblassembly') ) {
   my $offset = 100000; #offset e! seq_region ids to ensure no overlap with vega seq_region_ids
   $support->log("Adding mappings for alternative assemblies\n");
-  my $sql = qq(SELECT coord_system_id, rank FROM coord_system WHERE name = 'chromosome' AND version = \'$alt_assembly\');
-  my ($other_coord_system_id,$other_rank) = $ldbh->selectrow_array($sql);
-  my ($other_coord_system_id2,$other_rank2) = $edbh->selectrow_array($sql);
-  $other_coord_system_id ||= $other_coord_system_id2;
-  $other_rank ||= $other_rank2; 
-  unless($other_coord_system_id eq $other_coord_system_id2 and $other_rank eq $other_rank2) {
-    die "Coord-system/rank don't match between ensembl and vega: you need to fix this!";
-  }
+  my $sql = qq(SELECT max(coord_system_id) FROM coord_system);
+  my ($other_coord_system_id) = $vdbh->selectrow_array($sql);
   $other_coord_system_id += 100;
   # Needs to have the lowest but one rank. The lowest must remain the default assembly chromosome to ensure some
   # API defaults still work. But the alt assembly must be lower in rank than anything it refers to eg contigs, etc.
@@ -448,7 +442,12 @@ if ($alt_assembly = $support->param('ensemblassembly') ) {
       next CHROM;
     }
     if ( my $e_name = $e_attribs->[0]->value) {
-      my $e_sr_id = $esa->fetch_by_region('chromosome',$e_name,'','','',$alt_assembly,)->get_seq_region_id;
+      my $e_sr = $esa->fetch_by_region('chromosome',$e_name,'','','',$alt_assembly,);
+      unless(defined $e_sr) {
+        $support->log("ensembl_name attribute is not in ensembl for chromosome $v_name, no mappings added\n",2);
+        next CHROM;
+      }
+      my $e_sr_id = $e_sr->get_seq_region_id;
       if ( (grep { $_->value eq $alt_assembly } @{$l_chrom->get_all_Attributes('equiv_asm')}) || ( $v_name =~ /PATCH/) ) {
 	$support->log("Chromosome $v_name is the same for VEGA and $alt_assembly; adding seq_regions etc mapping from ensembl\n",2);
 	my ($e_assembly_start)  = $edbh->selectrow_array(qq(
@@ -493,7 +492,7 @@ if ($alt_assembly = $support->param('ensemblassembly') ) {
                 SELECT srs.synonym
                   FROM seq_region_synonym srs, seq_region sr
                  WHERE srs.seq_region_id = sr.seq_region_id
-                   AND sr.name = $e_name));
+                   AND sr.name = '$e_name'));
           if (scalar(@e_patch_names > 1)) {
             $support->log_warning("More than one e! seq_region_synonym found for $v_name, need to alter the code below\n");
           }
@@ -765,7 +764,7 @@ foreach my $table (keys %attribs_to_go) {
 # exon_stable_id_pool #
 #######################
 
-my ($max_id) = $vdbh->selectrow_array(qq(select max(stable_id) from exon_stable_id));
+my ($max_id) = $vdbh->selectrow_array(qq(select max(stable_id) from exon));
 (my ($prefix,$number)) = $max_id =~ /(\w{7})(\d+)/;
 if ( ! $support->param('dry_run')) {
   $vdbh->do(qq(INSERT into exon_stable_id_pool values ($number)));
@@ -894,7 +893,6 @@ if ( ! $support->param('dry_run')) {
   $support->log("\nUpdating external_db table on ".$support->param('dbname')."...\n");
     system("../xref/update_external_dbs.pl $options") == 0
     or $support->log_warning("Error running update_external_dbs.pl: $!");
-
   #make a backup
   if ($make_backup) {
     my $dbname = $support->param('dbname');
@@ -904,12 +902,20 @@ if ( ! $support->param('dry_run')) {
     my $user   = $support->param('user');
     my $pass   = $support->param('pass');
     $support->log("Making a backup of $dbname to $new_dbname\n");
-    my $cmd = "mysql -u $user -p$pass -h $host -P $port -e 'drop database if exists $new_dbname'";
-    `$cmd`;
-    $cmd = "mysql -u $user -p$pass -h $host -P $port -e 'create database $new_dbname'";
-    `$cmd`;
-    $cmd = "mysqldump --opt -u $user -p$pass -h $host -P $port $dbname | mysql -u $user -p$pass -h $host -P $port $new_dbname";
-    `$cmd`;
+    my @cmds = (
+      "mysql -u $user -p$pass -h $host -P $port -e 'drop database if exists $new_dbname'",
+      "mysql -u $user -p$pass -h $host -P $port -e 'create database $new_dbname'",
+    "mysqldump --opt -u $user -p$pass -h $host -P $port $dbname >/tmp/fvc.$$.sql",
+    "mysql -u $user -p$pass -h $host -P $port $new_dbname </tmp/fvc.$$.sql",
+    "rm /tmp/fvc.$$.sql"
+    );
+    foreach $_ (@cmds) {
+      $support->log("Running: $_\n");
+      unless(system($_) == 0) {
+        $support->log_warning("Error creating backups: $_ -> $!");
+        last;
+      }
+    }
   }	
 }
 
