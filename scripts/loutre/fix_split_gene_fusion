@@ -14,7 +14,7 @@ use Bio::Vega::ContigLockBroker;
 use Bio::Vega::Author;
 
 our $DEBUG = 0;
-
+our ($AT_NAME, $AT_RMK);
 
 sub desuffix {
     my @name = @_;
@@ -23,9 +23,26 @@ sub desuffix {
     return @name;
 }
 
+sub stable_id_numeric {
+    my ($stable_id) = @_;
+    $stable_id =~ s/[^0-9]+//;
+    return 0+$stable_id;
+}
+
+# Returned as ARRAYref, for easy inlining in SQL qq{} .
+# Pass in all the values, but just to count them.
+#
+# There is probably a limit on number of placeholders.  I don't expect
+# to reach it for MySQL -> don't bother batching.
+sub placeholders {
+    my $n = scalar @_; ## no critic (Subroutines::RequireArgUnpacking)
+    my @ph = ('?') x $n;
+    return [ '('.(join ',', @ph).')' ];
+}
+
 
 sub main {
-    $| = 1;
+    local $| = 1;
     my ($dataset_name);
     my $wet = 0;
 
@@ -38,6 +55,7 @@ sub main {
         'dataset=s'     => \$dataset_name,
         ) or $usage->();
     $usage->() unless $dataset_name;
+    my @for_chr = @ARGV;
 
     # Client communicates with otter HTTP server
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
@@ -47,8 +65,19 @@ sub main {
     my $otter_dba = $ds->get_cached_DBAdaptor;
 
     my $dbh = $otter_dba->dbc->db_handle;
-    my @gene_basenames = candidate_gene_basenames($dbh);
-    my $chunked = chunked_all_transcripts($dbh, @gene_basenames);
+
+    ($AT_NAME) = $dbh->selectrow_array(q{SELECT attrib_type_id FROM attrib_type WHERE code='name'});
+    $AT_NAME .= q{/*name*/};
+
+    ($AT_RMK) = $dbh->selectrow_array(q{SELECT attrib_type_id FROM attrib_type WHERE code='remark'});
+    $AT_RMK .= q{/*remark*/};
+
+    @for_chr = visible_chr($dbh) unless @for_chr;
+    print((join "\n  ", "Running for each of chromosomes", @for_chr), "\n");
+    die "Oops, running for no chromosomes" unless @for_chr;
+
+    my @gene_basenames = candidate_gene_basenames($dbh, \@for_chr);
+    my $chunked = chunked_all_transcripts($dbh, \@for_chr, @gene_basenames);
 
     my $gene_adaptor  = $otter_dba->get_GeneAdaptor;
     my $contig_broker = Bio::Vega::ContigLockBroker->new(-hostname => hostname);
@@ -62,37 +91,261 @@ sub main {
         foreach my $gsid (sort keys %{ $v->{gsid} }) {
             printf "  %s = %-15s\n", $gsid, $v->{gsid}{$gsid};
         }
-#        my @G = map { $gene_adaptor->fetch_by_dbID($_) }
-#          uniq(map { $_->[2] } @{ $v->{rows} });
-#        print "loaded ".@G." genes\n";
-#        print "\n";
+
+        my @gsid = uniq(map { $_->[2] } @{ $v->{rows} });
+        my @G = sort { stable_id_numeric($a->stable_id) <=> stable_id_numeric($b->stable_id) }
+          map { $gene_adaptor->fetch_by_dbID($_) } @gsid;
+        # sorted by stable_id, merge into $G[0]
+        print "\n";
+
+        my @sql = calculate_merge($dbh, @G);
+        if ($wet) {
+            $otter_dba->begin_work;
+            # try { lock } catch skip
+# XXX: we loaded before locking!  do a chromosome at a time?
+            die "unimplemented";
+            # try { unlock } catch make dry
+            $otter_dba->commit;
+        } else {
+            if ($DEBUG) {
+                print Dump({ sql => \@sql });
+                @sql=();
+            }
+            foreach my $q (@sql) {
+                if (!ref($q)) {
+                    # comment
+                    print "    $q\n";
+                } else {
+                    my ($rowcount_want, $sql, @param) = @$q;
+                    print "  : $sql\n";
+                    print "   <=(@param)\n" if @param;
+                    print "   -- $rowcount_want" if defined $rowcount_want;
+                    print "\n";
+                }
+            }
+        }
     }
 
     return 0;
 }
 
 
-sub candidate_gene_basenames {
+sub visible_chr {
     my ($dbh) = @_;
+    my $chr = $dbh->selectcol_arrayref(qq{
+ SELECT DISTINCT r.name
+ FROM seq_region r
+   JOIN seq_region_attrib ra_w USING (seq_region_id)
+   JOIN seq_region_attrib ra_h USING (seq_region_id)
+   JOIN coord_system c USING (coord_system_id)
+ WHERE c.name = 'chromosome'
+   AND c.version = 'Otter'
+   AND ra_w.attrib_type_id = (select attrib_type_id from attrib_type where code='write_access')
+   AND ra_w.value = 1
+   AND ra_h.attrib_type_id = (select attrib_type_id from attrib_type where code='hidden')
+   AND ra_h.value = 0
+ ORDER BY length(r.name), r.name });
+    return @$chr;
+}
+
+
+sub calculate_merge {
+    my ($dbh, $g_into, @g_more) = @_;
+    my @sql; # list of [ $expected_rows, $sql_text, @params ] or "/* comment */"
+    confess "need list context" unless wantarray;
+
+    my $gsid_into = $g_into->stable_id;
+    my $gid_into = $g_into->dbID;
+
+
+    ### Actions on the genes
+    #
+    {
+        my @gid = map { $_->dbID } @g_more;
+
+        my %unexpect;
+        $unexpect{splice_ev} = $dbh->selectall_arrayref
+          (qq{SELECT splicing_event_id, gene_id, name, attrib_type_id FROM splicing_event WHERE gene_id in @{ placeholders(@gid) }},
+           {}, @gid);
+        $unexpect{unconventional_transcript_association} = $dbh->selectall_arrayref
+          (qq{SELECT DISTINCT gene_id, interaction_type FROM unconventional_transcript_association WHERE gene_id in @{ placeholders(@gid) }},
+           {}, @gid);
+        die "I need there to be no gene-linked stuff, but found\n".Dump(\%unexpect)
+          if grep { @$_ } values %unexpect; # if any rows
+    }
+
+    push @sql, qq[/*** Gene properties: $gsid_into */];
+    my $gi_name = $g_into->get_all_Attributes('name')->[0]->value;
+    my ($gi_name_new) = desuffix($gi_name);
+    {
+        my @gi_rmk = map { $_->value } @{ $g_into->get_all_Attributes('remark') };
+
+        if ($gi_name ne $gi_name_new) {
+            push @sql,
+              [ 1, qq{UPDATE gene_attrib a SET value=? WHERE gene_id=? AND attrib_type_id=$AT_NAME AND value=?},
+                $gi_name_new, $gid_into, $gi_name ];
+        } else {
+            push @sql, qq[/* (gene name $gi_name is correct) */];
+        }
+
+        if (grep { $_ eq 'fragmented locus' } @gi_rmk) {
+            push @sql, qq[/* (gene already marked 'fragmented locus') */];
+        } else {
+            push @sql,
+              [1, qq{INSERT INTO gene_attrib (gene_id, attrib_type_id, value) VALUES (?,$AT_RMK,?)},
+               $gid_into, 'fragmented locus' ];
+            my @maybe = grep { /fragment/ } @gi_rmk;
+            warn((join "\n  ", "gene_id=$gid_into: possible 'fragmented locus' remarks, now duplicates?", @maybe)."\n")
+              if @maybe;
+        }
+    }
+
+    push @sql, qq[/* Cancel other gene(s) */];
+    foreach my $g_from (@g_more) {
+        push @sql, [ 1, q{UPDATE gene SET is_current=0 WHERE gene_id=? AND is_current=1}, $g_from->dbID ];
+    }
+
+    push @sql, qq[/*** Merge transcripts into $gsid_into ($gid_into) */];
+    # Collect all transcripts, in (near enough) priority order for numbering
+    my @t_all = @{ $g_into->get_all_Transcripts };
+    foreach my $g_from (sort { $a->start <=> $b->start } @g_more) {
+        my $gsid = $g_from->stable_id;
+        push @sql, qq[/*   from $gsid */];
+        foreach my $t (sort { $a->start <=> $b->start }
+                       @{ $g_from->get_all_Transcripts }) {
+            push @sql,
+              [ 1, q{UPDATE transcript t SET t.gene_id=? WHERE t.transcript_id=? AND t.gene_id=?},
+                $gid_into, $t->dbID, $g_from->dbID ];
+            push @t_all, $t;
+        }
+    }
+
+
+    ### Make new transcript names
+    #
+    # key = transcript_id, value = new/old transcript_attrib.value[name]
+    my %t_old_name;
+    my %t_new_name;
+    foreach my $t (@t_all) {
+        my $tid = $t->dbID;
+        $t_old_name{$tid} = $t->get_all_Attributes('name')->[0]->value;
+
+        my %posn;
+        $posn{"-$_"} = $t->$_ foreach qw( start slice strand );
+
+        # transform just the start onto clone coord_system
+        my $t_start_clone = Bio::EnsEMBL::SimpleFeature->new
+          (%posn, -end => $posn{'-start'})->transform('clone')
+            or die "Cannot find the clone for transcript_id=$tid";
+
+        my $clone = $t_start_clone->slice->seq_region_Slice;
+        my ($clone_name) = map { $_->value } @{ $clone->get_all_Attributes('intl_clone_name') }
+          or die "Cannot find the clone name for transcript_id=$tid";
+
+        my $num_part = '.1-001';
+        if ($t_old_name{$tid} =~ m{(\.\d+-\d{3})(?:_\d+)?$}) {
+            # prefer old numeric parts - may still need to renumber
+            $num_part = $1;
+        }
+        $t_new_name{$tid} = "$clone_name$num_part";
+    }
+
+    # ensure transcript name uniqueness
+    {
+        my @tid = map { $_->dbID } @t_all;
+        my $tname_other = $dbh->selectcol_arrayref
+          (qq{SELECT DISTINCT ta.value FROM transcript t JOIN transcript_attrib ta USING (transcript_id) WHERE t.seq_region_id = ? AND t.transcript_id NOT IN @{ placeholders(@tid) }},
+           {}, $g_into->slice->get_seq_region_id, @tid);
+
+        # Hashes start with names of all transcripts on the chromosome
+        my %assigned; @assigned{ @$tname_other } = (1) x @$tname_other;
+        my %pending;  @pending{ values %t_old_name } = (1) x keys %t_old_name;
+        # During dry run we may allocate dups across final genes,
+        # because we assume @$tname_other reflects previous renames.
+
+        foreach my $t (@t_all) {
+            my $tid = $t->dbID;
+            my $old = $t_old_name{$tid};
+            my $new = $t_new_name{$tid};
+            my ($xxx, $y, $z) = $new =~ m{^(.*)\.(\d+)-(\d+)$};
+            # Transcript names to be of the form xxx.y-00z
+
+            if ($old eq $new && defined $y && !exists $assigned{$old}) {
+                # transcript can keep it's existing valid name
+            } else {
+                do {
+                    $y ++;
+                    $new = sprintf('%s.%d-%03d', $xxx, $y, $z);
+                } while (exists $assigned{$new} or exists $pending{$new});
+                # $new is now unique
+                $t_new_name{$tid} = $new;
+            }
+            $assigned{$new} = 1;
+            delete $pending{$new};
+        }
+    }
+
+
+    ### Actions on transcripts
+    #
+    my $t_frag_rmk =
+      ('gene fragments '.
+       (join ' and ', sort values %t_new_name).
+       ' are part of the same gene'.
+       '; an assembly gap between them contains one or more exons.');
+
+    push @sql, qq[/*** Rename & mark transcripts */];
+    foreach my $t (@t_all) {
+        my $tid = $t->dbID;
+
+        if ($t_old_name{$tid} ne $t_new_name{$tid}) {
+            push @sql, qq[/* (transcript rename $t_old_name{$tid} => $t_new_name{$tid} in locus $gi_name_new) */],
+              [ 1, qq{UPDATE transcript_attrib a SET value=? WHERE transcript_id=? AND attrib_type_id=$AT_NAME AND value=?},
+                $t_new_name{$tid}, $tid, $t_old_name{$tid} ];
+        } else {
+            push @sql, qq[/* (transcript name $t_old_name{$tid} retained in locus $gi_name_new) */];
+        }
+
+        my @t_rmk = map { $_->value } @{ $t->get_all_Attributes('remark') };
+        if (my @oldfrag = grep { /^gene fragments .* are part of the same gene/ } @t_rmk) {
+            push @sql,
+              [1, qq{DELETE FROM transcript_attrib WHERE transcript_id=? AND attrib_type_id=$AT_RMK AND value=?},
+               $tid, $_ ] foreach @oldfrag;
+        } elsif (my @maybe = grep { /gene fragments|fragments \S+ and \S+ are|part of the same gene|assembly gap/ } @t_rmk) {
+            warn join "\n  ", "transcript_id=$tid: possible 'gene fragments' remark(s) not removed", @maybe;
+        }
+
+        push @sql,
+          [1, qq{INSERT INTO transcript_attrib (transcript_id, attrib_type_id, value) VALUES (?,$AT_RMK,?)},
+           $tid, $t_frag_rmk ];
+    }
+
+    return @sql;
+}
+
+
+sub candidate_gene_basenames {
+    my ($dbh, $for_chr) = @_;
 
     ### Find potential genes to munge
     #
     # Where gene FOO was split into FOO_1 and FOO_2,
     # return those FOO_1 and FOO_2
-    my $suffixed_genes = $dbh->selectcol_arrayref(q{
+    my $suffixed_genes = $dbh->selectcol_arrayref(qq{
  SELECT ga.value g_name
  FROM gene g
+  join seq_region r using (seq_region_id)
   join gene_attrib ga using (gene_id)
-   join attrib_type gat using (attrib_type_id)
  WHERE g.is_current = 1
-   AND gat.code = 'name'
-   AND ga.value rlike '_[0-9]+$'
- });
+   AND ga.attrib_type_id = $AT_NAME
+   AND ga.value rlike '_[0-9]+\$'
+   AND r.name in @{ placeholders(@$for_chr) }
+ }, {}, @$for_chr);
 
     # Where FOO_1 and FOO_2 have been manually renamed back to FOO
     # without restoring the shared stable_id (probably an accident),
     # return that FOO
-    my $dup_genes = $dbh->selectall_arrayref(q{
+    my $dup_genes = $dbh->selectall_arrayref(qq{
  SELECT ga.value g_name,
    /* remaining fields are informational, code uses first column */
    r.name chr,
@@ -100,13 +353,13 @@ sub candidate_gene_basenames {
    group_concat(concat_ws(':', g.seq_region_start, g.seq_region_end) SEPARATOR ', ') posns
  FROM gene g
   join gene_attrib ga using (gene_id)
-   join attrib_type gat using (attrib_type_id)
   join seq_region r using (seq_region_id)
  WHERE g.is_current = 1
-   AND gat.code = 'name'
+   AND ga.attrib_type_id = $AT_NAME
+   AND r.name in @{ placeholders(@$for_chr) }
  GROUP BY g.seq_region_id, ga.value
  HAVING count(g.stable_id) > 1
- });
+ }, {}, @$for_chr);
 
     if ($DEBUG) {
         warn "DEBUG: Dropping all but two of ".@$suffixed_genes." candidate gene names";
@@ -136,7 +389,7 @@ sub candidate_gene_basenames {
 
 
 sub chunked_all_transcripts {
-    my ($dbh, @gene_basenames) = @_;
+    my ($dbh, $for_chr, @gene_basenames) = @_;
 
     # Bulk fetch the transcripts & carve up into relevant pieces
     my %chunked;
@@ -148,9 +401,6 @@ sub chunked_all_transcripts {
     #   gsid => { gene.stable_id => gene_name_full }
     # }
 
-    # There is probably a limit on number of placeholders.  I don't
-    # expect to reach it for MySQL -> don't bother batching.
-    my $placeholders = join ',', (('?') x @gene_basenames);
     my $all_tsct = $dbh->selectall_arrayref(qq{
  SELECT r.name chr, g.seq_region_id,
    g.gene_id,       g.stable_id, ga.value g_name,
@@ -160,20 +410,20 @@ sub chunked_all_transcripts {
    join seq_region r using (seq_region_id)
    join gene_attrib ga using (gene_id)
    join transcript t using (gene_id)
-     join transcript_attrib ta using (transcript_id),
-   attrib_type gtat
+     join transcript_attrib ta using (transcript_id)
  WHERE g.is_current = 1
    AND t.is_current = 1
-   AND gtat.code = 'name'
-   AND gtat.attrib_type_id = ga.attrib_type_id
-   AND gtat.attrib_type_id = ta.attrib_type_id
+   AND ga.attrib_type_id = $AT_NAME
+   AND ta.attrib_type_id = $AT_NAME
+   AND r.name IN @{ placeholders(@$for_chr) }
    AND left(ga.value,
             if(locate('_', ga.value)=0,
                length(ga.value),
                locate('_', ga.value)-1))
      /* full table scan, seems fast enough */
-     IN ($placeholders)
- ORDER BY length(r.name), r.name, g.stable_id }, {}, @gene_basenames);
+     IN @{ placeholders(@gene_basenames) }
+ ORDER BY length(r.name), r.name, g.stable_id
+ }, {}, @$for_chr, @gene_basenames);
 
     foreach my $row (@$all_tsct) {
         my ($chr, $srid,  $gid, $gsid, $gname,  $tid, $tsid, $tname,  $g_start, $g_end)
@@ -190,12 +440,12 @@ sub chunked_all_transcripts {
     print Dump({ all => $all_tsct, chunked => \%chunked })
       if $DEBUG;
 
-    # whittle any false-positives
+    # Whittle out false-positives
     while (my ($k, $v) = each %chunked) {
         my $n_genes = scalar keys %{ $v->{gsid} };
         next if $n_genes > 1;
         my ($gsid) = keys %{ $v->{gsid} };
-        warn "Ignoring false-positive $gsid ($k), not sure how it got there";
+        warn "Ignoring single gene $gsid ($k).  It needs renaming, not fusing.\n";
         delete $chunked{$k};
     }
 
@@ -210,6 +460,10 @@ exit main();
 
 fix_split_gene_fusion - post-transfer fixup of split genes' names
 
+=head1 SYNOPSIS
+
+ fix_split_gene_fusion -dataset <species> [ --wet_run ] [ <chr>* ]
+
 =head1 DESCRIPTION
 
 F<transfer_annotation.pl> splits genes where the mapping to the new
@@ -218,6 +472,12 @@ the fragments.
 
 Usually these need looking at individually.  When there are very many
 of these, we may want to fuse the pieces back together in bulk.
+
+=head2 Options
+
+Default is a dry run.
+
+If no chromosomes are specified, the currently visible set is taken.
 
 =head2 Relevant factors
 
