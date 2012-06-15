@@ -83,11 +83,14 @@ sub main {
     my $contig_broker = Bio::Vega::ContigLockBroker->new(-hostname => hostname);
     my $author_obj    = Bio::Vega::Author->new(-name => $cl->author, -email => $cl->email);
 
+    print "\n";
+
     # take the relevant-together genes in order of distance between
+    my @all_sql; # collected for wet run, in case we need to undo some
     foreach my $k (sort { $chunked->{$a}{pos}[2] <=> $chunked->{$b}{pos}[2] }
                    keys %$chunked) {
         my $v = $chunked->{$k};
-        printf "dist=%7d on %8s:%-15s\n", $v->{pos}[2], $v->{chr}, "$k:";
+        printf "\n* dist=%7d on %8s:%-15s\n", $v->{pos}[2], $v->{chr}, "$k:";
         foreach my $gsid (sort keys %{ $v->{gsid} }) {
             printf "  %s = %-15s\n", $gsid, $v->{gsid}{$gsid};
         }
@@ -100,12 +103,9 @@ sub main {
 
         my @sql = calculate_merge($dbh, @G);
         if ($wet) {
-            $otter_dba->begin_work;
-            # try { lock } catch skip
-# XXX: we loaded before locking!  do a chromosome at a time?
-            die "unimplemented";
-            # try { unlock } catch make dry
-            $otter_dba->commit;
+            execute_with_lock($otter_dba, $contig_broker, $author_obj, $dbh,
+                              \@G, \@gsid, @sql);
+            push @all_sql, @sql;
         } else {
             if ($DEBUG) {
                 print Dump({ sql => \@sql });
@@ -125,8 +125,67 @@ sub main {
             }
         }
     }
+    print Dump({ all_sql => \@all_sql }) if @all_sql;
 
     return 0;
+}
+
+
+sub execute_with_lock {
+    my ($otter_dba, $contig_broker, $author_obj, $dbh,
+        $genes, $gsids, @sql) = @_;
+
+    $otter_dba->begin_work;
+
+    my $skip;
+    try {
+        foreach my $gene (@$genes) {
+            $contig_broker->lock_by_object($gene, $author_obj);
+        }
+    } catch {
+        warn "Skip - Cannot lock for all genes @$gsids: $_";
+        print "\t!! lock busy\n";
+        $skip = 1;
+    };
+
+    if ($skip) {
+        $otter_dba->rollback; # including any locks we did get
+        return;
+    }
+
+    # XXX: we loaded before locking!  could do a chromosome at a time?
+
+    try {
+        foreach my $q (@sql) {
+            next unless ref($q); # it's a comment
+            my ($rowcount_want, $sql, @param) = @$q;
+            my $rv = $dbh->do($sql, {}, @param);
+            die "Query return incorrect number of rows affected.\n".
+              Dump({ want => $rowcount_want, got => $rv, query => $q })
+                unless $rv == $rowcount_want;
+        }
+    } catch {
+        warn "Error processing genes @$gsids: $_";
+        $skip = 1;
+    };
+
+    try {
+        foreach my $gene (@$genes) {
+            $contig_broker->remove_by_object($gene, $author_obj);
+        }
+    } catch {
+        warn "Unlock failed for some of @$gsids: $_";
+        $skip = 1;
+    };
+
+    if ($skip) {
+        $otter_dba->rollback; # changes & locks
+        die "Rolled back - bail out - these queries should run smoothly";
+    }
+
+    $otter_dba->commit;
+
+    return ();
 }
 
 
@@ -235,8 +294,14 @@ sub calculate_merge {
 
         # transform just the start onto clone coord_system
         my $t_start_clone = Bio::EnsEMBL::SimpleFeature->new
-          (%posn, -end => $posn{'-start'})->transform('clone')
-            or die "Cannot find the clone for transcript_id=$tid";
+          (%posn, -end => $posn{'-start'})->transform('clone');
+
+        if (!$t_start_clone) {
+            # CATSPERB_2 is mapping to a gap(?), carry on regardless
+            warn "Cannot find the clone for transcript_id=$tid";
+            $t_new_name{$tid} = 'unknown.1-001';
+            next;
+        }
 
         my $clone = $t_start_clone->slice->seq_region_Slice;
         my ($clone_name) = map { $_->value } @{ $clone->get_all_Attributes('intl_clone_name') }
@@ -312,7 +377,7 @@ sub calculate_merge {
               [1, qq{DELETE FROM transcript_attrib WHERE transcript_id=? AND attrib_type_id=$AT_RMK AND value=?},
                $tid, $_ ] foreach @oldfrag;
         } elsif (my @maybe = grep { /gene fragments|fragments \S+ and \S+ are|part of the same gene|assembly gap/ } @t_rmk) {
-            warn join "\n  ", "transcript_id=$tid: possible 'gene fragments' remark(s) not removed", @maybe;
+            warn((join "\n  ", "transcript_id=$tid: possible 'gene fragments' remark(s) not removed", @maybe)."\n");
         }
 
         push @sql,
@@ -441,13 +506,18 @@ sub chunked_all_transcripts {
       if $DEBUG;
 
     # Whittle out false-positives
+    my @fpos;
     while (my ($k, $v) = each %chunked) {
         my $n_genes = scalar keys %{ $v->{gsid} };
         next if $n_genes > 1;
         my ($gsid) = keys %{ $v->{gsid} };
-        warn "Ignoring single gene $gsid ($k).  It needs renaming, not fusing.\n";
+        push @fpos, qq{$gsid ($k)};
         delete $chunked{$k};
     }
+    warn((join "\n  ", "\nIgnoring single genes", @fpos).
+         "\nThey may need renaming, not fusing.  See if this goes away after first run.
+  This can occur if FOO_1 and FOO_2 need merging on chr1-02,
+  but FOO doesn't need merging on chr1-01\n") if @fpos;
 
     return \%chunked;
 }
