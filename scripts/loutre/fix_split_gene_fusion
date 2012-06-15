@@ -103,9 +103,11 @@ sub main {
 
         my @sql = calculate_merge($dbh, @G);
         if ($wet) {
-            execute_with_lock($otter_dba, $contig_broker, $author_obj, $dbh,
-                              \@G, \@gsid, @sql);
-            push @all_sql, @sql;
+            my $fail = execute_with_lock
+              ($otter_dba, $contig_broker, $author_obj, $dbh,
+               \@G, \@gsid, @sql);
+            push @all_sql, @sql unless $fail;
+            last if $fail > 1;
         } else {
             if ($DEBUG) {
                 print Dump({ sql => \@sql });
@@ -131,26 +133,28 @@ sub main {
 }
 
 
+# Return fail: 0=ok, 1=skip, 2=bail out
 sub execute_with_lock {
     my ($otter_dba, $contig_broker, $author_obj, $dbh,
         $genes, $gsids, @sql) = @_;
 
     $otter_dba->begin_work;
 
+    my $chr_slice = $genes->[0]->slice->seq_region_Slice;
+
     my $skip;
     try {
-        foreach my $gene (@$genes) {
-            $contig_broker->lock_by_object($gene, $author_obj);
-        }
+        $contig_broker->lock_clones_by_slice($chr_slice, $author_obj, $chr_slice->adaptor->db);
     } catch {
-        warn "Skip - Cannot lock for all genes @$gsids: $_";
+        my $name = $chr_slice->name;
+        warn "Skip - Cannot lock chr $name for genes @$gsids: $_";
         print "\t!! lock busy\n";
         $skip = 1;
     };
 
     if ($skip) {
         $otter_dba->rollback; # including any locks we did get
-        return;
+        return 1;
     }
 
     # XXX: we loaded before locking!  could do a chromosome at a time?
@@ -170,22 +174,20 @@ sub execute_with_lock {
     };
 
     try {
-        foreach my $gene (@$genes) {
-            $contig_broker->remove_by_object($gene, $author_obj);
-        }
+        $contig_broker->remove_by_slice($chr_slice, $author_obj, $chr_slice->adaptor->db);
     } catch {
-        warn "Unlock failed for some of @$gsids: $_";
+        warn "Unlock failed chr of @$gsids: $_";
         $skip = 1;
     };
 
     if ($skip) {
         $otter_dba->rollback; # changes & locks
-        die "Rolled back - bail out - these queries should run smoothly";
+        warn "Rolled back - bail out - these queries should run smoothly";
+        return 2;
+    } else {
+        $otter_dba->commit;
+        return 0;
     }
-
-    $otter_dba->commit;
-
-    return ();
 }
 
 
