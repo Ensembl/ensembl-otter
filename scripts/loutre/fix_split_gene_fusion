@@ -288,31 +288,7 @@ sub calculate_merge {
     foreach my $t (@t_all) {
         my $tid = $t->dbID;
         $t_old_name{$tid} = $t->get_all_Attributes('name')->[0]->value;
-
-        my %posn;
-        $posn{"-$_"} = $t->$_ foreach qw( start slice strand );
-
-        # transform just the start onto clone coord_system
-        my $t_start_clone = Bio::EnsEMBL::SimpleFeature->new
-          (%posn, -end => $posn{'-start'})->transform('clone');
-
-        if (!$t_start_clone) {
-            # CATSPERB_2 is mapping to a gap(?), carry on regardless
-            warn "Cannot find the clone for transcript_id=$tid";
-            $t_new_name{$tid} = 'unknown.1-001';
-            next;
-        }
-
-        my $clone = $t_start_clone->slice->seq_region_Slice;
-        my ($clone_name) = map { $_->value } @{ $clone->get_all_Attributes('intl_clone_name') }
-          or die "Cannot find the clone name for transcript_id=$tid";
-
-        my $num_part = '.1-001';
-        if ($t_old_name{$tid} =~ m{(\.\d+-\d{3})(?:_\d+)?$}) {
-            # prefer old numeric parts - may still need to renumber
-            $num_part = $1;
-        }
-        $t_new_name{$tid} = "$clone_name$num_part";
+        ($t_new_name{$tid}) = desuffix($t_old_name{$tid});
     }
 
     # ensure transcript name uniqueness
@@ -335,11 +311,13 @@ sub calculate_merge {
             my ($xxx, $y, $z) = $new =~ m{^(.*)\.(\d+)-(\d+)$};
             # Transcript names to be of the form xxx.y-00z
 
+            next unless defined $y; # there are just three of these wacky names, leave them
+
             if ($old eq $new && defined $y && !exists $assigned{$old}) {
                 # transcript can keep it's existing valid name
             } else {
                 do {
-                    $y ++;
+                    $z ++;
                     $new = sprintf('%s.%d-%03d', $xxx, $y, $z);
                 } while (exists $assigned{$new} or exists $pending{$new});
                 # $new is now unique
