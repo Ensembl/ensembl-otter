@@ -5,6 +5,7 @@ use warnings;
 
 ### otterlace
 
+use CanvasWindow::MainWindow;
 use MenuCanvasWindow::DataSetChooser;
 use EditWindow::Password;
 use Bio::Otter::Lace::Defaults;
