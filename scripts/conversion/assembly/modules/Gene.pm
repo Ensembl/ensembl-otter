@@ -34,7 +34,7 @@ sub store_gene {
     $support->log("Skipping gene ".$V_gene->stable_id." (no transcripts transfered).\n", 2);
     return;
   }
-
+  $support->log("About to store gene ".$V_gene->stable_id."\n", 2);
   # create xrefs to reference the Vega transcripts and translations
   create_vega_xrefs($E_transcripts);
 
@@ -68,16 +68,18 @@ sub store_gene {
     push @{$trans_strands{$E_trans->seq_region_strand}},$E_trans->stable_id;
   }
 
-  my $do_manually = 0;
+  my $gstable_id = $E_gene->stable_id;
 
-  #if there are multiple strands then decide which ones to keep
+  #if there are multiple strands for transripts within the gene then keep those on the strand with the most transcripts.
   if (keys %trans_strands > 1 ) {
+    my $compare_lengths = 0;
+    $support->log("Multiple strands for transcripts of gene $gstable_id - see which is the most popular strand...\n", 3);
     my $strand_to_keep;
     my $no_trans = 0;
     foreach my $t_strand (keys %trans_strands) {
       if ($strand_to_keep) {
         if (scalar @{$trans_strands{$t_strand}} == $no_trans) {
-          $do_manually = 1;
+          $compare_lengths = 1;
         }
         elsif (scalar @{$trans_strands{$t_strand}} > $no_trans) {
           $strand_to_keep = $t_strand;
@@ -88,26 +90,43 @@ sub store_gene {
         $no_trans = scalar @{$trans_strands{$t_strand}};
       }
     }
-    if ($do_manually) {
 
-      #otherwise just add all transcripts to the gene - this needs to be smarter for zfish by setting the gene strand equal to that of the longest transcript
-      $support->log_warning('Storing gene '.$E_gene->stable_id." even though it has transcripts on multiple strands, need to resolve manually\n", 2);
+    if ($compare_lengths) {
+      #otherwise set the strand equal to that of the longest transcript
+      $support->log("...equal numbers, now compare lengths of transcripts:\n", 3);
+      $strand_to_keep = '';
+      my $max_length = 1;
       foreach my $E_trans (@{ $E_transcripts }) {
-        $E_gene->add_Transcript($E_trans);
-      }
-    }
-    else {
-      my @trans_to_keep = @{$trans_strands{$strand_to_keep}};
-      foreach my $E_trans (@{ $E_transcripts }) {
-        if (grep { $_ eq $E_trans->stable_id } @trans_to_keep) {
-          $E_gene->add_Transcript($E_trans);
+        my $stable_id = $E_trans->stable_id;
+        my $length = $E_trans->length;
+        my $strand = $E_trans->strand;
+        $support->log("Transcript $stable_id on strand $strand has length of $length\n",4);
+        if ($strand_to_keep) {
+          if ($length > $max_length) {
+            $length = $max_length;
+            $strand_to_keep = $strand;
+          }
         }
         else {
-          $support->log_warning('Not storing transcript '.$E_trans->stable_id.' since gene '.$E_gene->stable_id." has transcripts on multiple strands\n", 2);
+          $max_length = $length;
+          $strand_to_keep = $strand;
+          $compare_lengths = 1;
         }
+      }
+    }
+    $support->log("Chosen strand $strand_to_keep\n", 3);
+
+    my @trans_to_keep = @{$trans_strands{$strand_to_keep}};
+    foreach my $E_trans (@{ $E_transcripts }) {
+      if (grep { $_ eq $E_trans->stable_id } @trans_to_keep) {
+        $E_gene->add_Transcript($E_trans);
+      }
+      else {
+        $support->log_warning('Not storing transcript '.$E_trans->stable_id." since gene $gstable_id has transcripts on multiple strands and this is not on the chosen one\n", 3);
       }
     }
   }
+
   else {
     #otherwise just add all transcripts to the gene
     foreach my $E_trans (@{ $E_transcripts }) {
@@ -132,7 +151,7 @@ sub store_gene {
   # store the bloody thing
   my $name = $E_gene->stable_id;
   $name .= '/'.$E_gene->display_xref->display_id if($E_gene->display_xref);
-  $support->log("Storing gene $name\n", 3);
+  $support->log_verbose("Storing gene $name\n", 3);
   eval {
     $E_ga->store($E_gene);
 
@@ -140,7 +159,7 @@ sub store_gene {
     foreach my $transcript (@{ $E_gene->get_all_Transcripts }) {
       if ($transcript->translation and
 	    $protein_features->{$transcript->stable_id}) {
-	$support->log_verbose("storing protein features\n", 3);
+	$support->log_verbose("Storing protein features\n", 3);
 	foreach my $pf (@{ $protein_features->{$transcript->stable_id} }) {
 	  $E_pfa->store($pf, $transcript->translation->dbID);
 	}
