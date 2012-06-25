@@ -246,9 +246,6 @@ my $V_chrlength = $support->get_chrlength($E_dba, $support->param('assembly'),'c
 my $E_chrlength = $support->get_chrlength($E_dba, $support->param('ensemblassembly'),'chromosome',1,[]);
 my $ensembl_chr_map = $support->get_ensembl_chr_mapping($V_dba, $support->param('assembly'));
 
-use Data::Dumper;
-print Dumper($V_chrlength,$E_chrlength);
-
 CHROM:
 foreach my $V_chr ($support->sort_chromosomes($V_chrlength)) {
 
