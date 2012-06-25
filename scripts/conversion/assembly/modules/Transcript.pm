@@ -21,6 +21,9 @@ use constant MAX_INTRON_LEN => 2e6;
 #these are long genes that have been OKeyed by Havana
 my %long_genes = map {$_,1 } qw(OTTHUMG00000150663 OTTHUMG00000086753 OTTHUMG00000086796 OTTHUMG00000030300 OTTMUSG00000022667 OTTMUSG00000031222 OTTMUSG00000026145 OTTHUMG00000166726);
 
+#Long genes that we've seen before
+my %long_genes_seen_as_bad = map {$_,1} qw(OTTDARG00000019998);
+
 #
 # sanity checks the interim exons, and splits this
 # interim transcript into parts
@@ -48,7 +51,7 @@ sub check_iexons {
   foreach my $iexon (@{ $itranscript->get_all_Exons }) {
 
     if ($iexon->fail || $iexon->is_fatal) {
-      $support->log("Exon ".$iexon->stable_id." failed to transfer. Skipping transcript $tsi.\n", 4);
+      $support->log("Exon ".$iexon->stable_id." failed to transfer. Skipping transcript $tsi.\n", 3);
       $fail_flag = 1;
       last EXON;
     }
@@ -81,7 +84,7 @@ sub check_iexons {
 	  $prev_end > $iexon->start) ||
 	    (defined($prev_start) && $iexon->strand == -1 &&
 	       $prev_start < $iexon->end)) {
-      $support->log("Exon ".$iexon->stable_id." in wrong order. Skipping transcript $tsi.\n", 4);
+      $support->log("Exon ".$iexon->stable_id." in wrong order. Skipping transcript $tsi.\n", 3);
       $fail_flag = 1;
       last EXON;
     }
@@ -89,7 +92,7 @@ sub check_iexons {
     if (!defined($transcript_strand)) {
       $transcript_strand = $iexon->strand;
     } elsif ($transcript_strand != $iexon->strand) {
-      $support->log("Exon ".$iexon->stable_id." on wrong strand. Skipping transcript $tsi.\n", 4);
+      $support->log("Exon ".$iexon->stable_id." on wrong strand. Skipping transcript $tsi.\n", 3);
       $fail_flag = 1;
       last EXON;
     }
@@ -107,12 +110,15 @@ sub check_iexons {
 
     if($intron_len > MAX_INTRON_LEN) {
       if ($long_genes{$gsi}) {
-	$support->log("Long intron in transcript but OKeyed by Havana\n",5);
+	$support->log("Long intron in transcript but gene OKeyed by Havana\n",5);
+      }
+      elsif ($long_genes_seen_as_bad{$gsi}) {
+	$support->log("Long intron in transcript known to be bad\n",5);
+        $fail_flag = 1;
+	last EXON;
       }
       else {
-	$support->log_warning("Very long intron ($intron_len bp) that has not been OKeyed. skipping transcript $tsi (gene $gsi).\n", 2);
-	$fail_flag = 1;
-	last EXON;
+	$support->log_warning("Very long intron ($intron_len bp) in gene that has not been OKeyed. Have a look at transcript $tsi (gene $gsi) and delete if neccesary - probably will be! Then add it to ignore list\n", 2);
       }
     }
 
