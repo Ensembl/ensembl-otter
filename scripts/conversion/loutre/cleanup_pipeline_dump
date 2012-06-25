@@ -110,7 +110,7 @@ my %lns_to_stay = (
   'prediction_transcript' => { map {$_,1} qw(Augustus Genscan) },
   'simple_feature'        => { map {$_,1} qw(CpG Eponine tRNAscan) },
   'repeat_feature'        => { map {$_,1} qw(RepeatMasker trf) },
-  'dna_align_feature'     => { map {$_,1} qw(Est2genome_clusters Est2genome_fish Est2genome_other Est2genome_human Est2genome_mouse vertrna refseq_zebrafish refseq_human refseq_mouse vertrna_other) },
+  'dna_align_feature'     => { map {$_,1} qw(Est2genome_clusters Est2genome_fish Est2genome_other Est2genome_human Est2genome_mouse Est2genome_pig vertrna refseq_zebrafish refseq_human refseq_mouse vertrna_other) },
   'protein_align_feature' => { map {$_,1} qw(Uniprot Uniprot_TR Uniprot_SW) },
 #  'gene'                  => { map {$_,1} qw(Halfwise) },
 #  'transcript'            => { map {$_,1} qw(Halfwise) },
@@ -127,10 +127,12 @@ my %lns_to_go = map {$_,1}
      Est2genome_human
      Est2genome_mouse
      Est2genome_fish
+     Est2genome_pig
      Uniprot_SW
      Est2genome_other
      Halfwise
      CRG_RACE_primer
+     Gap
    );
 
 
@@ -203,7 +205,7 @@ my $laa  = $ldba->get_AttributeAdaptor();
 my $ldbh = $ldba->dbc->db_handle;
 
 #sanity check to ensure the correct configuration file is being read
-my $sql = qq(select meta_value from meta where meta_key = 'species.ensembl_alias_name');
+my $sql = qq(select meta_value from meta where meta_key = 'species.production_name');
 (my $pipe_sp) = $pddbh->selectrow_array($sql);
 (my $loutre_sp) = $ldbh->selectrow_array($sql);
 unless ($loutre_sp) {
