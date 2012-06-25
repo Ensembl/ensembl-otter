@@ -297,7 +297,10 @@ my @chr_sorted = $support->sort_chromosomes($chr_length);
 foreach my $chr (@chr_sorted) {
   $support->log_stamped("> Chromosome $chr (".$chr_length->{$chr}."bp).\n"); 
   my $slice = $sa->fetch_by_region('chromosome', $chr,undef,undef,undef,$assembly);
-  $support->log_warning("No such chromosome '$chr'") unless defined $slice;
+  unless (defined $slice) {
+    $support->log_warning("No such chromosome '$chr'");
+    next;
+  }
   my ($genes) = $support->get_unique_genes($slice);
   foreach my $g (@$genes) {
     next unless $g->analysis->logic_name eq 'otter';
