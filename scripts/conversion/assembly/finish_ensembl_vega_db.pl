@@ -233,7 +233,7 @@ $sql = qq(
     DELETE FROM coord_system
     WHERE NOT (name = 'chromosome' AND version = '$vegaassembly')
 );
-my $c = $dbh->{'evega'}->do($sql);
+$c = $dbh->{'evega'}->do($sql);
 # adjust Vega coord_system_ids
 $sql = qq(
     UPDATE coord_system
