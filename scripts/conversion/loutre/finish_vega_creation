@@ -585,7 +585,7 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
   $support->log("\nRetrieving chromosome $loutre_name...\n");
   my @vega_names = @{$chrom->get_all_Attributes('vega_name')};
   if (scalar(@vega_names) > 1) {
-    $support->log_warning("Multiple vega_name attributes for loutre chromosome $loutre_name - ".(join ' ',@vega_names)." - not setting\n",1);
+    $support->log_warning("Multiple vega_name attributes for loutre chromosome $loutre_name - ".(join ' ', map {$_->value} @vega_names)." - not setting\n",1);
   }
   elsif (! @vega_names) {
     $support->log_warning("No vega_name attribute for loutre chromosome $loutre_name\n",1);
