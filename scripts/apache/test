@@ -9,6 +9,7 @@ use warnings;
 
 BEGIN { use lib ($ENV{OTTER_PERL_INC} || q{}) =~ m{([^:]+)}g }
 use SangerPaths qw{ core bioperl123 ensembl65 otter67 };
+use DBI;
 
 use Bio::Otter::ServerScriptSupport;
 
@@ -32,7 +33,7 @@ foreach my $var ($server->param) {
 $env .= sprintf "\nSangerWeb cgi = %s\n", $web->cgi;
 $env .= sprintf "\nSangerWeb username = %s\n", $web->username;
 
-my $dbh = DBI->connect("DBI:mysql:database=pipe_human;host=otterslave;port=3322", "ottro", undef);
+my $dbh = DBI->connect("DBI:mysql:database=pipe_human;host=otterp1slave;port=3322", "ottro", undef);
 $env .= "CONNECTED $dbh";
 
 return $server->local_user ? $env : "You are an external user\n";
