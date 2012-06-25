@@ -32,7 +32,7 @@ Options:
     -h, --help, -?                      print help (this message)
 
     -no_feature=1                       don't dump dna_ and protein_ align features
-    -sql_dump_location=DIR              location of SQL dump (defaults to /GPFS/tmp/vega_prep)
+    -sql_dump_location=DIR              location of SQL dump (defaults to /tmp/vega_prep)
     -file_name=FILE                     name of SQL file (defaults to species_date_create.sql)
 
 =head1 DESCRIPTION
