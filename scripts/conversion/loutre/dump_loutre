@@ -697,15 +697,15 @@ foreach my $name (@{$chr_names_wanted}) {
       }
 
       if ($fsv_gene) {
-	$support->log("Taking gene $gname ($lgsi) with fsv annotation flag\n");
+	$support->log("Taking gene $gname ($lgsi) with fsv annotation flag\n",1);
 	$fsv++;
       }
       elsif ($annotated_clone) {
-	$support->log("Taking gene $gname ($lgsi) with annotated clone flag\n");
+	$support->log("Taking gene $gname ($lgsi) with annotated contig flag\n",1);
 	$fsv++;
       }
       else {
-	$support->log("Skipping gene $gname ($lgsi) because no annotation flag present\n"); 
+	$support->log("Skipping gene $gname ($lgsi) because no annotation flag present\n",1); 
 	$non_fsv++;
 	next GENE;
       }
@@ -1118,6 +1118,9 @@ align_session                 i
 align_stage                   i
 tmp_align                     i
 tmp_mask                      i
+test_contig_info              i
+misc_feature_misc_set__bak    i
+misc_set__bak                 i
 ENDOFTEXT
   return $txt;
 }
