@@ -218,10 +218,8 @@ if ($support->param('prune') && $support->user_proceed("Do you want to delete al
   $E_dbh->do(qq(DELETE FROM analysis));
   $E_dbh->do(qq(DELETE FROM dna_align_feature));
   $E_dbh->do(qq(DELETE FROM exon));
-  $E_dbh->do(qq(DELETE FROM exon_stable_id));
   $E_dbh->do(qq(DELETE FROM exon_transcript));
   $E_dbh->do(qq(DELETE FROM gene));
-  $E_dbh->do(qq(DELETE FROM gene_stable_id));
   $E_dbh->do(qq(DELETE FROM gene_attrib));
   $E_dbh->do(qq(DELETE FROM object_xref));
   $E_dbh->do(qq(DELETE FROM protein_align_feature));
@@ -229,10 +227,8 @@ if ($support->param('prune') && $support->user_proceed("Do you want to delete al
   $E_dbh->do(qq(DELETE FROM transcript_supporting_feature));
   $E_dbh->do(qq(DELETE FROM supporting_feature));
   $E_dbh->do(qq(DELETE FROM transcript));
-  $E_dbh->do(qq(DELETE FROM transcript_stable_id));
   $E_dbh->do(qq(DELETE FROM transcript_attrib));
   $E_dbh->do(qq(DELETE FROM translation));
-  $E_dbh->do(qq(DELETE FROM translation_stable_id));
   $E_dbh->do(qq(DELETE FROM translation_attrib));
   $E_dbh->do(qq(DELETE x
                   FROM xref x, external_db ed
@@ -325,6 +321,7 @@ foreach my $V_chr ($support->sort_chromosomes($V_chrlength)) {
 
     #uncomment line here to debug overlapping supporting evidence (-verbose -chr HG185_PATCH)
 #    next unless ($gsi =~ /OTTHUMG00000174590|OTTHUMG00000174616|OTTHUMG00000174807/);
+#    next unless $gsi eq 'OTTDARG00000034786';
 
     my $ln = $gene->analysis->logic_name;
     my $name = $gene->display_xref->display_id;
@@ -392,7 +389,7 @@ foreach my $V_chr ($support->sort_chromosomes($V_chrlength)) {
 		       \@finished, \%all_protein_features);
     }
   }
-  $support->log("Done with chromosome $V_chr.\n", 1);
+  $support->log("Done with chromosome $V_chr.\n\n", 1);
 }
 
 #see if any transcripts / gene are different
