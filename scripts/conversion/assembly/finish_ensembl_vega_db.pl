@@ -158,13 +158,15 @@ my %sr_ids;
 while (my ($cs, $sr) = $sth->fetchrow_array) {
   $sr_ids{$cs} = $sr;
 }
-foreach my $t (qw(protein dna)) {
-  $sql = qq(
-    UPDATE ${t}_align_feature
-       SET seq_region_id = $sr_ids{$ensemblassembly}
-     WHERE seq_region_id = $sr_ids{$vegaassembly});
-  my $c = $dbh->{'evega'}->do($sql);
-  $support->log("Adjusted $c seq_region_ids for table ${t}_align_feature (chromosome HSCHR17_1_CTG1)\n\n");
+if (%sr_ids) {
+  foreach my $t (qw(protein dna)) {
+    $sql = qq(
+      UPDATE ${t}_align_feature
+         SET seq_region_id = $sr_ids{$ensemblassembly}
+       WHERE seq_region_id = $sr_ids{$vegaassembly});
+    my $c = $dbh->{'evega'}->do($sql);
+    $support->log("Adjusted $c seq_region_ids for table ${t}_align_feature (chromosome HSCHR17_1_CTG1)\n\n");
+  }
 }
 
 # retrieve adjustment factors for Ensembl seq_region_ids and coord_system_ids
@@ -231,7 +233,7 @@ $sql = qq(
     DELETE FROM coord_system
     WHERE NOT (name = 'chromosome' AND version = '$vegaassembly')
 );
-$c = $dbh->{'evega'}->do($sql);
+my $c = $dbh->{'evega'}->do($sql);
 # adjust Vega coord_system_ids
 $sql = qq(
     UPDATE coord_system
