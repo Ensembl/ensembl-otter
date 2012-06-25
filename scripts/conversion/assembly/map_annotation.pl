@@ -243,8 +243,11 @@ my (%stat_hash,%trans_numbers);
 # loop over chromosomes
 $support->log("Looping over chromosomes...\n");
 my $V_chrlength = $support->get_chrlength($E_dba, $support->param('assembly'),'chromosome',1);
-my $E_chrlength = $support->get_chrlength($E_dba, $support->param('ensemblassembly'),'chromosome',1);
+my $E_chrlength = $support->get_chrlength($E_dba, $support->param('ensemblassembly'),'chromosome',1,[]);
 my $ensembl_chr_map = $support->get_ensembl_chr_mapping($V_dba, $support->param('assembly'));
+
+use Data::Dumper;
+print Dumper($V_chrlength,$E_chrlength);
 
 CHROM:
 foreach my $V_chr ($support->sort_chromosomes($V_chrlength)) {
@@ -334,7 +337,7 @@ foreach my $V_chr ($support->sort_chromosomes($V_chrlength)) {
     $support->log("Gene $gsi/$name (logic_name $ln)\n", 1);
 
     #PATCH genes are identified as being on non-reference slices...
-    if ( ! $V_slice->is_reference() ) {
+    if ( ! $V_slice->is_reference() and ! $support->is_haplotype($V_slice,$V_dba) ) {
       &transfer_vega_patch_gene($gene,$V_chr);
       next GENE;
     }
