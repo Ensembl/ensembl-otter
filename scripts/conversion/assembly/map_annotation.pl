@@ -69,8 +69,8 @@ Genes on PATCHES (non_ref top level seq_regions in Vega) are transferred by assi
 them to a different seq_region rather than using the assembly mapper and creating new
 objects. There have been problems with some of these not transferring because
 transcript_supporting_feature (not supporting_feature, these are always removed)
-alignments overlapping the edge of the patch have failed to transfer - if the script
-complains about this and time is short, then use the delete_overlap_evi option to remove them.
+alignments overlapping the edge of the patch have failed to transfer. Once this is fixed
+then keep_overlap_evi option to keep them
 
 Genes transferred can be restricted on logic_name using the --logic_names
 option. Used for mouse (-logic_names otter,otter_external).
