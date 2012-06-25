@@ -226,15 +226,18 @@ if (! $support->param('dry_run')) {
 
 # create new ensembl-vega (target) database
 my $evega_db = $support->param('evegadbname');
-if ($support->user_proceed("Would you like to drop the ensembl-vega db $evega_db (if it exists) and create a new one?")) {
-  $support->log_stamped("Creating ensembl-vega db $evega_db...\n");
-  $support->log("Dropping existing ensembl-vega db...\n", 1);
-  $dbh->{'vega'}->do("DROP DATABASE IF EXISTS $evega_db") unless ($support->param('dry_run'));
-  $support->log("Done.\n", 1);
-  $support->log("Creating new ensembl-vega db...\n", 1);
-  $dbh->{'vega'}->do("CREATE DATABASE $evega_db") unless ($support->param('dry_run'));
-  $support->log("Done.\n", 1);
+my $sth = $dbh->{'vega'}->prepare("SHOW databases");
+$sth->execute;
+my $found = 0;
+if (grep {$_->[0] eq $evega_db} @{$sth->fetchall_arrayref}) {
+  if ($support->user_proceed("Would you like to drop the ensembl-vega db $evega_db and create a new one?")) {
+    $support->log("Dropping existing ensembl-vega db...\n", 1);
+    $dbh->{'vega'}->do("DROP DATABASE IF EXISTS $evega_db") unless ($support->param('dry_run'));
+    $support->log("Done.\n", 1);
+  }
 }
+$support->log("Creating new ensembl-vega db...\n", 1);
+$dbh->{'vega'}->do("CREATE DATABASE $evega_db") unless ($support->param('dry_run'));
 $support->log_stamped("Done.\n\n");
 
 # load schema into ensembl-vega db
