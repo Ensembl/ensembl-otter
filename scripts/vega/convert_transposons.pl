@@ -13,11 +13,11 @@ use Getopt::Long;
 
 my $repeat_class;
 
-my $dbhost = 'ensdb-1-11';
+my $dbhost = 'ensdb-web-17';
 my $dbport = 5317;
 my $dbuser = 'ensadmin';
 my $dbpass = 'ensembl';
-my $dbname = 'vega_danio_rerio_20111219_v65_Zv9';
+my $dbname = 'vega_danio_rerio_20120611_67_Zv9';
 
 my $hm = GetOptions(
         'dbhost:s' => \$dbhost,
