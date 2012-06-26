@@ -16,27 +16,31 @@ use Bio::Otter::ServerScriptSupport;
 sub test {
     my ($server) = @_;
 
-my $web = $server->sangerweb;
+    my $web = $server->sangerweb;
 
-my $user = $web->username;
+    my $user = $web->username;
 
-my $env = "ENV:\n";
-foreach my $var (sort keys %ENV) {
-    $env .= sprintf "%24s  %s\n", $var, $ENV{$var};
-}
+    my $env = "ENV:\n";
+    foreach my $var (sort keys %ENV) {
+        $env .= sprintf "%24s  %s\n", $var, $ENV{$var};
+    }
 
-$env .= "\nCGI param:\n";
-foreach my $var ($server->param) {
-    $env .= sprintf "%24s  %s\n", $var, $server->param($var);
-}
+    $env .= "\nCGI param:\n";
+    foreach my $var ($server->param) {
+        $env .= sprintf "%24s  %s\n", $var, $server->param($var);
+    }
 
-$env .= sprintf "\nSangerWeb cgi = %s\n", $web->cgi;
-$env .= sprintf "\nSangerWeb username = %s\n", $web->username;
+    $env .= sprintf "\nSangerWeb cgi = %s\n", $web->cgi;
+    $env .= sprintf "\nSangerWeb username = %s\n", $web->username;
 
-my $dbh = DBI->connect("DBI:mysql:database=pipe_human;host=otterp1slave;port=3322", "ottro", undef);
-$env .= "CONNECTED $dbh";
+    my $dbh = eval {
+        DBI->connect("DBI:mysql:database=pipe_human;host=otp1slave;port=3322",
+                     "ottro", undef,
+                     { RaiseError => 1 });
+    };
+    $env .= $dbh ? "CONNECTED: dbh=$dbh" : "NOT CONNECTED: err=$@";
 
-return $server->local_user ? $env : "You are an external user\n";
+    return $server->local_user ? $env : "You are an external user\n";
 }
 
 Bio::Otter::ServerScriptSupport->send_response(\&test);
