@@ -441,9 +441,10 @@ sub align_to_transcript {
 
         my $seq_file = $aligner->fasta_file;
         warn "Wrote sequences to ${seq_file}\n";
-        my $parsed_output = $aligner->run;
 
-        $self->alignment_window($aligner->type, $parsed_output);
+        my $result_set = $aligner->run;
+
+        $self->alignment_window($result_set);
     }
 
     return;
@@ -458,7 +459,9 @@ sub dotter_to_transcript {
 }
 
 sub alignment_window {
-    my ($self, $type, $alignment) = @_;
+    my ($self, $result_set) = @_;
+
+    my $type = $result_set->type;
 
     $self->{_alignment_window} ||= {};
     my $window = $self->{_alignment_window}->{$type};
@@ -467,7 +470,7 @@ sub alignment_window {
         $window = Bio::Otter::UI::TextWindow::TranscriptAlign->new($self, $type);
     }
 
-    $window->update_alignment($alignment);
+    $window->update_alignment($result_set->raw);
     return;
 }
 

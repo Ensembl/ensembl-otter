@@ -18,17 +18,16 @@ around 'parse' => sub {
 
     my $basic = $self->$orig(@args);
 
-    # FIXME: objectification required
-    foreach my $query ( keys %{$basic->{by_query_id}} ) {
-        my $split = $self->_split_alignment($basic->{by_query_id}->{$query});
+    foreach my $query ( $basic->query_ids ) {
+        my $split = $self->_split_alignment($basic->by_query_id($query));
     }
 
-    return $basic->{raw};
+    return $basic;              # temporary
 };
 
 sub _split_alignment {
-    my ($self, $basic) = @_;
-    return $basic->{gapped_alignment}->split_by_transcript_exons($self->transcript);
+    my ($self, $gapped_alignment) = @_;
+    return $gapped_alignment->split_by_transcript_exons($self->transcript);
 }
 
 1;
