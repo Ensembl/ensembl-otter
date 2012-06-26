@@ -14,11 +14,12 @@ with 'MooseX::Log::Log4perl';
 use Readonly;
 
 use Bio::Otter::GappedAlignment;
+use Bio::Otter::Lace::OnTheFly::ResultSet;
 
 Readonly our $RYO_FORMAT => 'RESULT: %S %pi %ql %tl %g %V\n';
 Readonly our @RYO_ORDER => (
     '_tag',
-    @Bio::Otter::GappedAlignment::SUGAR_ORDER, 
+    @Bio::Otter::GappedAlignment::SUGAR_ORDER,
     qw(
         _perc_id
         _query_length
@@ -88,32 +89,29 @@ sub run {
 sub parse {
     my ($self, $fh) = @_;
 
-    my $raw;
-    my %by_query_id;
+    my $result_set = Bio::Otter::Lace::OnTheFly::ResultSet->new(type => $self->type);
 
     while (my $line = <$fh>) {
-        $raw .= $line;
+        $result_set->add_raw_line($line);
 
         # We only parse our RYO lines
         next unless $line =~ /^RESULT:/;
         my @line_parts = split(' ',$line);
         my (%ryo_result, @vulgar_comps);
         (@ryo_result{@RYO_ORDER}, @vulgar_comps) = @line_parts;
-        $ryo_result{gapped_alignment} = $self->_parse_vulgar(\%ryo_result, \@vulgar_comps);
-        my $q_id = $ryo_result{_query_id};
-        $self->log->info("RESULT found for ${q_id}");
 
-        if ($by_query_id{$q_id}) {
+        my $gapped_alignment = $self->_parse_vulgar(\%ryo_result, \@vulgar_comps);
+        my $q_id = $gapped_alignment->query_id;
+        $self->logger->info("RESULT found for ${q_id}");
+
+        if ($result_set->by_query_id($q_id)) {
             $self->log->warn("Already have result for '$q_id'");
         } else {
-            $by_query_id{$q_id} = \%ryo_result;
+            $result_set->add_by_query_id($q_id => $gapped_alignment);
         }
     }
 
-    return {
-        raw         => $raw,
-        by_query_id => \%by_query_id,
-    };
+    return $result_set;
 }
 
 sub _parse_vulgar {
@@ -121,7 +119,7 @@ sub _parse_vulgar {
 
     my $vulgar_string = join(' ', @{$ryo_result}{@Bio::Otter::GappedAlignment::SUGAR_ORDER}, @$vulgar_comps);
 
-    return Bio::Otter::GappedAlignment->from_vulgar($vulgar_string); 
+    return Bio::Otter::GappedAlignment->from_vulgar($vulgar_string);
 }
 
 # FIXME: doesn't really belong here: more general
