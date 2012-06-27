@@ -15,13 +15,11 @@ my $DEBUG_CONFIG    = 0;
 #-------------------------------
 my $CONFIG_INIFILES = [];
 
-my $HARDWIRED = {};
-tie %$HARDWIRED, 'Config::IniFiles', (-file => \*DATA);
+my $HARDWIRED =Config::IniFiles->new(-file => \*DATA);
 push(@$CONFIG_INIFILES, $HARDWIRED);
 
-# The tied hash for the GetOptions variables
-my $GETOPT = {};
-tie %$GETOPT, 'Config::IniFiles';
+# The config object for the GetOptions variables
+my $GETOPT = Config::IniFiles->new;
 
 my $HOME_DIR = (getpwuid($<))[7];
 my $CALLED = "$0 @ARGV";
@@ -38,14 +36,14 @@ my @CLIENT_OPTIONS = qw(
     misc_acefile=s
     );
 
-# @CLIENT_OPTIONS is Getopt::GetOptions() keys which will be included in the 
-# $GETOPT->{$CLIENT_STANZA} hash.  To add another client option just include in above
+# @CLIENT_OPTIONS is Getopt::GetOptions() keys which will be included in the
+# $CLIENT_STANZA config.  To add another client option just include in above
 # and if necessary add to hardwired defaults in do_getopt().
 
 # not a method
 sub save_option {
     my ($option, $value) = @_;
-    (tied %$GETOPT)->newval($CLIENT_STANZA, $option, $value);
+    $GETOPT->newval($CLIENT_STANZA, $option, $value);
     return;
 }
 
@@ -57,7 +55,7 @@ sub save_deep_option {
     my $param = pop @$option;
     return unless @$option;
     my $opt_str = join('.', @$option);
-    $GETOPT->{$opt_str}->{$param} = $value;
+    $GETOPT->newval($opt_str, $param, $value);
     return;
 }
 
@@ -116,7 +114,7 @@ sub do_getopt {
         'cfgstr=s' => \&save_deep_option,
 
         # this is just a synonym feel free to add more
-        'view' => sub { $GETOPT->{$CLIENT_STANZA}{'write_access'} = 0 },
+        'view' => sub { $GETOPT->newval($CLIENT_STANZA, 'write_access', 0) },
 
         # this allows multiple extra config file to be used
         'cfgfile=s' => sub {
@@ -187,11 +185,9 @@ sub options_from_file {
 
     return unless -e $file;
 
-    my $ini;
     warn "Trying $file\n" if $DEBUG_CONFIG;
-    tie %$ini, 'Config::IniFiles', ( -file => $file )
-        or confess "Error opening '$file':\n",
-        join("\n", @Config::IniFiles::errors); ## no critic (Variables::ProhibitPackageVars)
+    my $ini = Config::IniFiles->new( -file => $file );
+
     return $ini;
 }
 
@@ -200,7 +196,7 @@ sub config_value {
 
     my $value;
     foreach my $ini ( @$CONFIG_INIFILES ) {
-        if (my $v = $ini->{$section}{$key}) {
+        if (my $v = $ini->val($section, $key)) {
             $value = $v;
         }
     }
@@ -216,13 +212,7 @@ sub config_value_list {
 
 sub _config_value_list_ini_keys_name {
     my ($ini, $keys, $name) = @_;
-    return map { _config_value_list_ini_key_name($ini, $_, $name); } @{$keys};
-}
-
-sub _config_value_list_ini_key_name {
-    my ($ini, $key, $name) = @_;
-    my $vs = $ini->{$key}{$name};
-    return ref $vs ? @{$vs} : defined $vs ? ( $vs ) : ( );
+    return map { $ini->val($_, $name); } @{$keys};
 }
 
 sub config_value_list_merged {
@@ -233,8 +223,9 @@ sub config_value_list_merged {
     my $values;
     foreach my $ini ( @$CONFIG_INIFILES ) {
         foreach my $key ( @keys ) {
-            my $vs = $ini->{$key}{$name};
-            next unless $vs && @{$vs};
+            my @vs = $ini->val($key, $name);
+            next unless @vs;
+            my $vs = \@vs;
             if ( $values ) {
                 _config_value_list_merge($values, $vs);
             }
@@ -283,8 +274,10 @@ sub _config_section_ini_keys {
 
 sub _config_section_ini_key {
     my ($ini, $key) = @_;
-    my $section = $ini->{$key};
-    return defined $section ? %{$section} : ( );
+    return
+        $ini->SectionExists($key)
+        ? ( map { $_ => $ini->val($key, $_) } $ini->Parameters($key) )
+        : ( );
 }
 
 sub config_keys {
@@ -300,8 +293,7 @@ sub _config_keys_ini_keys {
 
 sub _config_keys_ini_key {
     my ($ini, $key) = @_;
-    my $obj = tied %{$ini};
-    return map { _section_key($_, $key) } $obj->Sections;
+    return map { _section_key($_, $key) } $ini->Sections;
 }
 
 sub _section_key {
