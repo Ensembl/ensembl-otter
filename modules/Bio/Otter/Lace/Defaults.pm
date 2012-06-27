@@ -14,18 +14,14 @@ my $CLIENT_STANZA   = 'client';
 my $DEBUG_CONFIG    = 0;
 #-------------------------------
 my $CONFIG_INIFILES = [];
-my %OPTIONS_TO_TIE  = (
-                       -default     => 'default', 
-                       -reloadwarn  => 1,
-                       );
 
 my $HARDWIRED = {};
-tie %$HARDWIRED, 'Config::IniFiles', (-file => \*DATA, %OPTIONS_TO_TIE);
+tie %$HARDWIRED, 'Config::IniFiles', (-file => \*DATA);
 push(@$CONFIG_INIFILES, $HARDWIRED);
 
 # The tied hash for the GetOptions variables
 my $GETOPT = {};
-tie %$GETOPT, 'Config::IniFiles', (%OPTIONS_TO_TIE);
+tie %$GETOPT, 'Config::IniFiles';
 
 my $HOME_DIR = (getpwuid($<))[7];
 my $CALLED = "$0 @ARGV";
@@ -193,7 +189,7 @@ sub options_from_file {
 
     my $ini;
     warn "Trying $file\n" if $DEBUG_CONFIG;
-    tie %$ini, 'Config::IniFiles', ( -file => $file, %OPTIONS_TO_TIE)
+    tie %$ini, 'Config::IniFiles', ( -file => $file )
         or confess "Error opening '$file':\n",
         join("\n", @Config::IniFiles::errors); ## no critic (Variables::ProhibitPackageVars)
     return $ini;
