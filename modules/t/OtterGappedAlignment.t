@@ -291,7 +291,7 @@ Readonly my @split_expected => (
             ],
     },
 
-    # Test clone cases start here
+    # vvv Test clone cases start here vvv
 
     {
         name     => 'Test fwd region vs BC018923.fwd (+)',
@@ -595,6 +595,52 @@ Readonly my @split_expected => (
         # BS: BC018923.fwd 1166 974 - EMBOSS_001 51861 52054 + 0 M 159 159 G 0 1 M 33 33
         # BS: BC018923.fwd 974 0 - EMBOSS_001 54300 55274 + 0 M 974 974
     },
+
+    # ^^^ end of test clone cases ^^^
+
+    {
+        name     => 'RP1-90J20.6-002 vs BG212959.1 (failed 2012-06-26 due to overlap => 0)',
+        vulgar   => 'BG212959.1 928 0 - RP1-90J20.6-002 2281 3252 + 3570 M 9 9 G 0 1 M 3 3 G 0 3 M 6 6 G 0 4 M 11 11 G 0 2 M 6 6 G 0 3 M 4 4 G 0 1 M 1 1 G 0 1 M 4 4 G 0 1 M 1 1 G 0 1 M 2 2 G 0 1 M 10 10 G 0 1 M 3 3 G 0 1 M 5 5 G 0 1 M 2 2 G 0 1 M 4 4 G 0 1 M 3 3 G 0 1 M 6 6 G 0 2 M 6 6 G 0 1 M 6 6 G 0 1 M 10 10 G 0 1 M 5 5 G 0 1 M 3 3 G 0 1 M 10 10 G 0 2 M 20 20 G 0 1 M 3 3 G 0 1 M 9 9 G 0 1 M 6 6 G 0 1 M 10 10 G 0 1 M 7 7 G 1 0 M 4 4 G 0 1 M 57 57 G 0 1 M 20 20 G 0 1 M 17 17 G 0 1 M 9 9 G 0 1 M 7 7 G 0 1 M 8 8 G 1 0 M 15 15 G 0 1 M 614 614',
+
+        # transcript length is 3265
+
+        q_id     => 'BG212959.1',
+        q_start  => 928,
+        q_end    => 0,
+        q_strand => '-',
+        t_id     => 'RP1-90J20.6-002',
+        t_start  => 2281,
+        t_end    => 3252,
+        t_strand => '+',
+        score    => 3570,
+        n_ele    => 75,
+
+        ts_strand => -1,
+        exons     => [
+            [ 84023, 84563 ], # OTTHUME00000190873 len  541  ^   2725 3265
+            [ 84778, 84933 ], # OTTHUME00000190862 len  156  :   2569 2724
+            [ 88908, 89050 ], # OTTHUME00000190863 len  143  :   2426 2568
+            [ 90456, 90573 ], # OTTHUME00000190861 len  118  :   2308 2425
+            [ 91388, 91534 ], # OTTHUME00000190871 len  147  :   2161 2307
+            [ 95032, 97191 ], # OTTHUME00000190870 len 2160 cuml    1 2160
+            ],
+        clone_contig_offset => 100,    # contig starts at bp 100 in clone; ts is rel contig
+
+        intron_vulgar  => 'M 9 9 G 0 1 M 3 3 G 0 3 M 6 6 G 0 4 I 0 814 M 11 11 G 0 2 M 6 6 G 0 3 M 4 4 G 0 1 M 1 1 G 0 1 M 4 4 G 0 1 M 1 1 G 0 1 M 2 2 G 0 1 M 10 10 G 0 1 M 3 3 G 0 1 M 5 5 G 0 1 M 2 2 G 0 1 M 4 4 G 0 1 M 3 3 G 0 1 M 6 6 G 0 2 M 6 6 G 0 1 M 6 6 G 0 1 M 10 10 G 0 1 M 5 5 G 0 1 M 3 3 G 0 1 M 3 3 I 0 1405 M 7 7 G 0 2 M 20 20 G 0 1 M 3 3 G 0 1 M 9 9 G 0 1 M 6 6 G 0 1 M 10 10 G 0 1 M 7 7 G 1 0 M 4 4 G 0 1 M 57 57 G 0 1 M 11 11 I 0 3974 M 9 9 G 0 1 M 17 17 G 0 1 M 9 9 G 0 1 M 7 7 G 0 1 M 8 8 G 1 0 M 15 15 G 0 1 M 86 86 I 0 214 M 528 528',
+
+        intron_t_start => 91513,
+        intron_t_end   => 84135,
+        intron_t_strand=> '-',
+        intron_n_ele   => 75 + 4 + 1 + 1 + 1,
+
+        splits => [
+            'BG212959.1 928 910 - RP1-90J20.6-002 91513 91487 - 0 M 9 9 G 0 1 M 3 3 G 0 3 M 6 6 G 0 4',
+            'BG212959.1 910 815 - RP1-90J20.6-002 90673 90555 - 0 M 11 11 G 0 2 M 6 6 G 0 3 M 4 4 G 0 1 M 1 1 G 0 1 M 4 4 G 0 1 M 1 1 G 0 1 M 2 2 G 0 1 M 10 10 G 0 1 M 3 3 G 0 1 M 5 5 G 0 1 M 2 2 G 0 1 M 4 4 G 0 1 M 3 3 G 0 1 M 6 6 G 0 2 M 6 6 G 0 1 M 6 6 G 0 1 M 10 10 G 0 1 M 5 5 G 0 1 M 3 3 G 0 1 M 3 3',
+            'BG212959.1 815 680 - RP1-90J20.6-002 89150 89007 - 0 M 7 7 G 0 2 M 20 20 G 0 1 M 3 3 G 0 1 M 9 9 G 0 1 M 6 6 G 0 1 M 10 10 G 0 1 M 7 7 G 1 0 M 4 4 G 0 1 M 57 57 G 0 1 M 11 11',
+            'BG212959.1 680 528 - RP1-90J20.6-002 85033 84877 - 0 M 9 9 G 0 1 M 17 17 G 0 1 M 9 9 G 0 1 M 7 7 G 0 1 M 8 8 G 1 0 M 15 15 G 0 1 M 86 86',
+            'BG212959.1 528 0 - RP1-90J20.6-002 84663 84135 - 0 M 528 528',
+            ],
+    },
     );
 
 # Coverage matrix: . = tiny, * = real or test
@@ -605,7 +651,7 @@ Readonly my @split_expected => (
 # ---------+-----+-----+-----+-----
 #        + | .** | *   | *   | *
 # ---------+-----+-----+-----+-----
-#        - | .** | *   | *   | *
+#        - | .** | *   | **  | *
 # ---------+-----+-----+-----+-----
 
 

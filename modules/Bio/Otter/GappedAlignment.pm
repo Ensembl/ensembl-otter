@@ -252,7 +252,7 @@ sub _intronify_do_exon {
           $exon_ga->add_element_track_lengths($ele->make_copy);
           $data->{debug_exon_ga}->($exon_ga, '[whole ele]');
 
-      } else {
+      } elsif ($overlap > 0) {
 
           # Time to split an element
           # ...do splitting, put remainder back
@@ -269,6 +269,11 @@ sub _intronify_do_exon {
           $exon_ga->add_element_track_lengths($in_exon_ele->make_copy);
           $data->{debug_exon_ga}->($exon_ga, '[partial]  ');
 
+          last ELEMENTS;
+
+      } else {
+          # Put whole element back for next time
+          unshift @{$data->{elements}}, $ele;
           last ELEMENTS;
       }
 
