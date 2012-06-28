@@ -325,13 +325,9 @@ name, are:
 
 =over 4
 
-=item B<host>
+=item B<url>
 
-Defaults to B<localhost>
-
-=item B<port>
-
-Defaults to B<39312>
+Defaults to B<http://www.sanger.ac.uk/cgi-bin/otter>
 
 =item B<author>
 
