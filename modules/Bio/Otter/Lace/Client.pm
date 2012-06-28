@@ -672,8 +672,6 @@ sub do_http_request {
 sub status_refresh_for_DataSet_SequenceSet{
     my ($self, $ds, $ss) = @_;
 
-    # return unless Bio::Otter::Lace::Defaults::fetch_pipeline_switch();
-
     my $response = $self->otter_response_content(
         'GET',
         'get_analyses_status',
