@@ -21,9 +21,9 @@ Readonly my %ele_expected => {
     'C' => { class => 'Codon',      desc => 'codon',                   q => 10, t => 10 },
     'G' => { class => 'Gap',        desc => 'gap',                     q => 10, t =>  0 },
     'N' => { class => 'NER',        desc => 'non-equivalenced region', q => 10, t => 10 },
-    '5' => { class => 'SS_5P',      desc => "5' splice site",          q => 10, t => 10 },
-    '3' => { class => 'SS_3P',      desc => "3' splice site",          q => 10, t => 10 },
-    'I' => { class => 'Intron',     desc => 'intron',                  q => 10, t => 10 },
+    '5' => { class => 'SS_5P',      desc => "5' splice site",          q =>  0, t =>  2 },
+    '3' => { class => 'SS_3P',      desc => "3' splice site",          q =>  0, t =>  2 },
+    'I' => { class => 'Intron',     desc => 'intron',                  q =>  0, t => 10 },
     'S' => { class => 'SplitCodon', desc => 'split codon',             q => 10, t => 10 },
     'F' => { class => 'Frameshift', desc => 'frameshift',              q => 10, t => 10 },
 };
@@ -65,9 +65,12 @@ Readonly my %tiny_ts_expected => (
     t_strand => '+',
     score    => 56,
     n_ele    => 6,
+    e_cigar  => '5M3I5MD4M3I',
 
     intron_vulgar  => 'M 3 3 I 0 3 M 2 2 G 3 0 M 4 4 I 0 4 M 1 1 G 0 1 M 1 1 I 0 2 M 3 3 G 3 0',
     intron_n_ele   => 12,
+
+    i_e_cigar      => '3M3D2M3I4M4DMDM2D3M3I',
     );
 
 # Common expected components for test clone results
@@ -673,6 +676,8 @@ foreach my $test (@split_expected) {
     is($ga->n_elements,    $test->{n_ele},    'n_elements');
     is($ga->vulgar_string, $test->{vulgar},   'vulgar_string');
 
+    is($ga->ensembl_cigar_string, $test->{e_cigar}, 'ensembl_cigar') if $test->{e_cigar};
+
     my $ts = Hum::Ace::SubSeq->new();
     $ts->strand($test->{ts_strand});
     my $offset = $test->{clone_contig_offset} || 0;
@@ -697,6 +702,8 @@ foreach my $test (@split_expected) {
     is($intron_ga->target_strand, $test->{intron_t_strand},'target_strand');
     is($intron_ga->score,         $test->{score},          'score');
     is($intron_ga->n_elements,    $test->{intron_n_ele},   'n_elements');
+
+    is($intron_ga->ensembl_cigar_string, $test->{i_e_cigar}, 'i_ensembl_cigar') if $test->{i_e_cigar};
 
     my @split = $ga->split_by_transcript_exons($ts);
     my $n_splits = scalar(@split);

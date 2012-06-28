@@ -348,6 +348,14 @@ sub vulgar_string {
                    $self->vulgar_comps_string);
 }
 
+sub ensembl_cigar_string {
+    my $self = shift;
+    return unless $self->n_elements;
+
+    my @ele_strings = map { $_->ensembl_cigar_string } @{$self->elements};
+    return join('', @ele_strings);
+}
+
 sub reverse_alignment {
     my $self = shift;
     my $reversed = $self->_new_copy_basics;
