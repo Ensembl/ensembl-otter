@@ -10,8 +10,20 @@ use warnings;
 BEGIN { use lib ($ENV{OTTER_PERL_INC} || q{}) =~ m{([^:]+)}g }
 use SangerPaths qw{ core bioperl123 ensembl65 otter67 };
 use DBI;
+use YAML 'Dump';
 
 use Bio::Otter::ServerScriptSupport;
+
+
+# keep the align-to-centre layout, it's easier to read than YAML
+sub hash2table {
+    my ($hashref) = @_;
+    my $out;
+    foreach my $var (sort keys %$hashref) {
+        $out .= sprintf "%35s  %s\n", $var, $hashref->{$var};
+    }
+    return $out;
+}
 
 sub test {
     my ($server) = @_;
@@ -20,27 +32,33 @@ sub test {
 
     my $user = $web->username;
 
-    my $env = "ENV:\n";
-    foreach my $var (sort keys %ENV) {
-        $env .= sprintf "%24s  %s\n", $var, $ENV{$var};
-    }
+    my %out = (ENV => hash2table(\%ENV),
+               CGI_param => '');
 
-    $env .= "\nCGI param:\n";
     foreach my $var ($server->param) {
-        $env .= sprintf "%24s  %s\n", $var, $server->param($var);
+        $out{CGI_param} .= sprintf "%24s  %s\n", $var, $server->param($var);
     }
 
-    $env .= sprintf "\nSangerWeb cgi = %s\n", $web->cgi;
-    $env .= sprintf "\nSangerWeb username = %s\n", $web->username;
+    # avoiding exposing internals (private or verbose)
+    my $cgi = $web->cgi;
+    $out{SangerWeb} = { cgi => "$cgi",
+                        username =>  $web->username };
 
     my $dbh = eval {
         DBI->connect("DBI:mysql:database=pipe_human;host=otp1slave;port=3322",
                      "ottro", undef,
                      { RaiseError => 1 });
     };
-    $env .= $dbh ? "CONNECTED: dbh=$dbh" : "NOT CONNECTED: err=$@";
+    $out{DBI} = $dbh ? { connected => "$dbh" } : { error => $@ };
 
-    return $server->local_user ? $env : "You are an external user\n";
+    if ($server->param('more')) {
+        $out{Perl} =
+          { '$^X' => $^X, '$]' => $], '${^TAINT}' => ${^TAINT},
+            '@INC' => \@INC, '%INC' => hash2table(\%INC),
+          };
+    }
+
+    return $server->local_user ? Dump(\%out) : "You are an external user\n";
 }
 
 Bio::Otter::ServerScriptSupport->send_response(\&test);
