@@ -1328,7 +1328,7 @@ __END__
 =head1 DESCRIPTION
 
 A B<Client> object Communicates with an otter
-HTTP server on a particular host and port.  It
+HTTP server on a particular url.  It
 has methods to fetch annotated gene information
 in otter XML, lock and unlock clones, and save
 "ace" formatted annotation back.  It also returns
