@@ -11,6 +11,11 @@ use base 'Bio::Otter::GappedAlignment::ElementI';
 sub validate {
     my $self = shift;
     ($self->query_length and $self->target_length) or die "query_length and target_length must be > 0";
+    # Shouldn't they also be the same for a match?
+}
+
+sub cigar_type {
+    return 'M';
 }
 
 1;

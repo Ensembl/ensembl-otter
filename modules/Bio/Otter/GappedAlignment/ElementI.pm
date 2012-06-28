@@ -7,6 +7,7 @@ use strict;
 use warnings;
 
 use Carp;
+use List::Util qw(max);
 use Readonly;
 
 use Bio::Otter::GappedAlignment::ElementTypes;
@@ -75,6 +76,25 @@ sub validate {
 sub string {
     my $self = shift;
     return sprintf('%s %d %d', $self->type, $self->query_length, $self->target_length);
+}
+
+sub cigar_type {
+    my $self = shift;
+    # Pure virtual
+    my $type = ucfirst $self->long_type;
+    croak "cigar_type must be provided by child class '$type'";
+}
+
+sub cigar_length {
+    my $self = shift;
+    return max($self->query_length, $self->target_length);
+}
+
+sub ensembl_cigar_string {
+    my $self = shift;
+    my $len  = $self->cigar_length;
+    my $type = $self->cigar_type;
+    return $len > 1 ? $len . $type : $type;
 }
 
 sub is_intronic {
