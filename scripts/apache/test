@@ -8,9 +8,11 @@ use strict;
 use warnings;
 
 BEGIN { use lib ($ENV{OTTER_PERL_INC} || q{}) =~ m{([^:]+)}g }
-use SangerPaths qw{ core bioperl123 ensembl65 otter67 };
+use SangerPaths qw{ core bioperl123 ensembl65 otter67 humpub };
+
 use DBI;
 use YAML 'Dump';
+use File::Find;
 
 use Bio::Otter::ServerScriptSupport;
 
@@ -20,10 +22,44 @@ sub hash2table {
     my ($hashref) = @_;
     my $out;
     foreach my $var (sort keys %$hashref) {
-        $out .= sprintf "%35s  %s\n", $var, $hashref->{$var};
+        $out .= sprintf "%35s  %s\n", $var,
+          defined $hashref->{$var} ? $hashref->{$var} : '(undef)';
     }
     return $out;
 }
+
+# load all our modules, and their deps
+sub require_all {
+    my $dir = $INC{'Bio/Otter/ServerScriptSupport.pm'};
+    $dir =~ s{Otter/\w+\.pm$}{};
+
+    $ENV{PATH} = '/bin:/usr/bin'; # some modules need a clean PATH
+
+    my @mods;
+    my $wanted = sub {
+        if (-f && m{.*/(modules|\d+)/(Bio/.*)\.pm$}) {
+            my $modfn = $2; # untainted
+            $modfn =~ s{/}{::}g;
+            push @mods, $modfn;
+        }
+        return ();
+    };
+    find({ wanted => $wanted, no_chdir => 1 }, $dir);
+
+    my %out;
+    foreach my $mod (@mods) {
+        if (eval "require $mod;") {
+            push @{ $out{loaded} }, $mod;
+        } else {
+            my $err = $@;
+            $err =~ s{ \(\@INC contains: [^()]+\) at }{... at };
+            $out{error}->{$mod} = $err;
+        }
+    }
+
+    return \%out;
+}
+
 
 sub test {
     my ($server) = @_;
@@ -50,6 +86,11 @@ sub test {
                      { RaiseError => 1 });
     };
     $out{DBI} = $dbh ? { connected => "$dbh" } : { error => $@ };
+
+
+    if ($server->param('load')) {
+        $out{load_modules} = require_all();
+    }
 
     if ($server->param('more')) {
         $out{Perl} =
