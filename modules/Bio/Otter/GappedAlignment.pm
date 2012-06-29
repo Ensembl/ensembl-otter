@@ -8,10 +8,8 @@ use warnings;
 
 use Bio::Otter::GappedAlignment::Element;
 
-use Carp;
-use Readonly;
-
 use Log::Log4perl;
+use Readonly;
 
 Readonly our @SUGAR_ORDER => qw(
     _query_id
@@ -58,7 +56,7 @@ sub from_vulgar {
     while (@vulgar_comps) {
         my ($type, $q_len, $t_len) = splice(@vulgar_comps, 0, 3); # shift off 1st three
         unless ($type and defined $q_len and defined $t_len) {
-            die "Ran out of vulgar components in mid-triplet";
+            $self->logger->logdie("Ran out of vulgar components in mid-triplet");
         }
         my $element = Bio::Otter::GappedAlignment::Element->new($type, $q_len, $t_len);
         $self->add_element($element);
@@ -78,7 +76,7 @@ sub intronify_by_transcript_exons {
 
     return unless @{$self->elements};
 
-    croak('Already contains introns') if $self->has_introns;
+    $self->logger->logcroak('Already contains introns') if $self->has_introns;
 
     my $intron_ga;
 
@@ -130,7 +128,7 @@ sub _do_intronify {
         $data{offset} = $transcript->end + 1;
         $intron_ga->swap_target_strand;
     } else {
-        croak "Illegal transcript strand value '$ts_strand'";
+        $self->logger->logcroak("Illegal transcript strand value '$ts_strand'");
     }
 
     $data{t_splice_pos} = $self->target_start+1; # current spliced target pos, base 1
@@ -238,7 +236,7 @@ sub _intronify_do_exon {
   ELEMENTS: while (my $ele = shift @{$data->{elements}}) {
 
       if ($ele->is_intronic) {
-          croak sprintf 'Alignment already contains intronic element (%s)', $ele->string;
+          $self->logger->logcroak(sprintf 'Alignment already contains intronic element (%s)', $ele->string);
       }
 
       my $overlap = $e_end - $data->{t_splice_pos} + 1;
@@ -397,7 +395,7 @@ sub _strand {
             } elsif ($value == -1) {
                 $value = '-';
             } else {
-                croak "strand '$value' not valid";
+                $self->logger->logcroak("strand '$value' not valid");
             }
         }
         $self->{$key} = $value;
@@ -410,7 +408,7 @@ sub query_strand_sense {
     return $self->_strand_sense('query_strand');
 }
 
-sub _strand_sense {
+sub _strand_sense { ## no critic (Subroutines::RequireFinalReturn)
     my ($self, $accessor) = @_;
     my $strand = $self->$accessor;
     return if not defined $strand;
@@ -420,7 +418,7 @@ sub _strand_sense {
     } elsif ($strand eq '-') {
         return -1;
     } else {
-        croak "$accessor not '+' or '-'";
+        $self->logger->logcroak("$accessor not '+' or '-'");
     }
 }
 
