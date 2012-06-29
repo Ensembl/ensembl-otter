@@ -74,7 +74,36 @@ Insert introns into the alignment according to the exon boundaries in the suppli
 =cut
 
 sub intronify_by_transcript_exons {
-    my ($self, $transcript, $do_per_exon) = @_;
+    my ($self, $transcript) = @_;
+
+    return unless @{$self->elements};
+
+    croak('Already contains introns') if $self->has_introns;
+
+    my ($intron_ga, $exons);
+
+    if ($self->target_strand eq '-') {
+
+        my $reversed = $self->reverse_alignment;
+        ($intron_ga, $exons) = $reversed->_do_intronify($transcript);
+
+        $intron_ga = $intron_ga->reverse_alignment;
+
+        $exons = [ reverse map { $_->reverse_alignment } @$exons ];
+
+    } else {
+        ($intron_ga, $exons) = $self->_do_intronify($transcript);
+    }
+
+    if (wantarray) {
+        return ($intron_ga, $exons);
+    } else {
+        return $intron_ga;
+    }
+}
+
+sub _do_intronify {
+    my ($self, $transcript) = @_;
 
     my $ts_strand = $transcript->strand;
 
@@ -82,23 +111,6 @@ sub intronify_by_transcript_exons {
                          " (", $ts_strand, ")\t[", ref($transcript), "]");
     $self->logger->debug("            alignment  ", $self->target_start+1, " - ", $self->target_end,
                          " (", $self->target_strand, ")");
-
-    return unless @{$self->elements};
-
-    if ($self->target_strand eq '-') {
-
-        my $reversed = $self->reverse_alignment;
-        my ($intron_ga, $per_exon) = $reversed->intronify_by_transcript_exons($transcript, $do_per_exon);
-
-        $intron_ga = $intron_ga->reverse_alignment;
-
-        if ($do_per_exon) {
-            my $exons = [ reverse map { $_->reverse_alignment } @$per_exon ];
-            return ($intron_ga, $exons);
-        } else {
-            return $intron_ga;
-        }
-    }
 
     my @exons = $transcript->get_all_Exons_in_transcript_order;
 
@@ -133,11 +145,7 @@ sub intronify_by_transcript_exons {
 
     $self->logger->debug("Done (offset $data{offset})");
 
-    if ($do_per_exon) {
-        return ($intron_ga, $data{per_exon});
-    } else {
-        return $intron_ga;
-    }
+    return ($intron_ga, $data{per_exon});
 }
 
 sub _walk_exons {
@@ -319,7 +327,7 @@ Split into individual exon alignments, one per exon in the supplied transcript.
 sub split_by_transcript_exons {
     my ($self, $transcript, $include_unmatched_exons) = @_;
 
-    my ($intronified, $per_exon) = $self->intronify_by_transcript_exons($transcript, 1);
+    my ($intronified, $per_exon) = $self->intronify_by_transcript_exons($transcript);
     return ( @$per_exon ) if $include_unmatched_exons;
 
     my @filtered;
@@ -510,6 +518,7 @@ sub elements {
 sub add_element {
     my ($self, $element) = @_;
     push @{$self->elements}, $element;
+    $self->_set_has_introns if $element->is_intronic;
     return $self->elements;
 }
 
@@ -532,6 +541,16 @@ sub n_elements {
 sub _clear_elements {
     my $self = shift;
     return $self->{'_elements'} = [];
+}
+
+sub has_introns {
+    my $self = shift;
+    return $self->{_has_introns};
+}
+
+sub _set_has_introns {
+    my $self = shift;
+    return $self->{_has_introns} = 1;
 }
 
 sub logger {
