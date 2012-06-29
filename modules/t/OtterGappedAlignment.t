@@ -705,7 +705,7 @@ foreach my $test (@split_expected) {
 
     is($intron_ga->ensembl_cigar_string, $test->{i_e_cigar}, 'i_ensembl_cigar') if $test->{i_e_cigar};
 
-    my @split = $ga->split_by_transcript_exons($ts);
+    my @split = $intron_ga->exon_gapped_alignments;
     my $n_splits = scalar(@split);
 
     my @e_splits;

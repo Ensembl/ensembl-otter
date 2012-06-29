@@ -31,7 +31,7 @@ around 'parse' => sub {
 
 sub _split_alignment {
     my ($self, $gapped_alignment) = @_;
-    return $gapped_alignment->split_by_transcript_exons($self->transcript);
+    return $gapped_alignment->intronify_by_transcript_exons($self->transcript)->exon_gapped_alignments;
 }
 
 1;

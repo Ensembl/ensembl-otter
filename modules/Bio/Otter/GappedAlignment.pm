@@ -80,26 +80,20 @@ sub intronify_by_transcript_exons {
 
     croak('Already contains introns') if $self->has_introns;
 
-    my ($intron_ga, $exons);
+    my $intron_ga;
 
     if ($self->target_strand eq '-') {
 
         my $reversed = $self->reverse_alignment;
-        ($intron_ga, $exons) = $reversed->_do_intronify($transcript);
+        $intron_ga = $reversed->_do_intronify($transcript);
 
         $intron_ga = $intron_ga->reverse_alignment;
 
-        $exons = [ reverse map { $_->reverse_alignment } @$exons ];
-
     } else {
-        ($intron_ga, $exons) = $self->_do_intronify($transcript);
+        $intron_ga = $self->_do_intronify($transcript);
     }
 
-    if (wantarray) {
-        return ($intron_ga, $exons);
-    } else {
-        return $intron_ga;
-    }
+    return $intron_ga;
 }
 
 sub _do_intronify {
@@ -145,7 +139,8 @@ sub _do_intronify {
 
     $self->logger->debug("Done (offset $data{offset})");
 
-    return ($intron_ga, $data{per_exon});
+    $intron_ga->_set_exon_gapped_alignments($data{per_exon});
+    return $intron_ga;
 }
 
 sub _walk_exons {
@@ -318,25 +313,6 @@ sub _intronify_do_intron {
     return;
 }
 
-=head2 split_by_transcript_exons
-
-Split into individual exon alignments, one per exon in the supplied transcript.
-
-=cut
-
-sub split_by_transcript_exons {
-    my ($self, $transcript, $include_unmatched_exons) = @_;
-
-    my ($intronified, $per_exon) = $self->intronify_by_transcript_exons($transcript);
-    return ( @$per_exon ) if $include_unmatched_exons;
-
-    my @filtered;
-    foreach my $exon ( @$per_exon ) {
-        push @filtered, $exon if $exon;
-    }
-    return @filtered;
-}
-
 sub vulgar_comps_string {
     my $self = shift;
     return unless $self->n_elements;
@@ -366,10 +342,18 @@ sub ensembl_cigar_string {
 
 sub reverse_alignment {
     my $self = shift;
+
     my $reversed = $self->_new_copy_basics;
     $reversed->swap_query_strand;
     $reversed->swap_target_strand;
     $reversed->{_elements} = [ reverse @{$self->elements} ];
+
+    my @egas = $self->exon_gapped_alignments;
+    if (@egas) {
+        my $rev_egas = [ reverse map { $_->reverse_alignment } @egas ];
+        $reversed->_set_exon_gapped_alignments($rev_egas);
+    }
+
     return $reversed;
 }
 
@@ -551,6 +535,34 @@ sub has_introns {
 sub _set_has_introns {
     my $self = shift;
     return $self->{_has_introns} = 1;
+}
+
+sub exon_gapped_alignments {
+    my ($self, $include_unmatched_introns) = @_;
+
+    my $egas = $self->{_exon_gapped_alignments};
+    return unless $egas;
+
+    if ($self->{_ega_fingerprint}) {
+        unless ($self->vulgar_string eq $self->{_ega_fingerprint}) {
+            # Should regenerate from vulgar string here
+            $self->logger->logdie('Sorry, gapped alignment has changed since exon alignments were generated');
+        }
+    }
+
+    return ( @$egas ) if $include_unmatched_introns;
+
+    my @filtered;
+    foreach my $exon ( @$egas ) {
+        push @filtered, $exon if $exon;
+    }
+    return @filtered;
+}
+
+sub _set_exon_gapped_alignments {
+    my ($self, $egas) = @_;
+    $self->{_ega_fingerprint} = $self->vulgar_string;
+    return $self->{_exon_gapped_alignments} = $egas;
 }
 
 sub logger {
