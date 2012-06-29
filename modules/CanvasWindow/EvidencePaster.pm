@@ -5,6 +5,7 @@ package CanvasWindow::EvidencePaster;
 
 use strict;
 use warnings;
+use Log::Log4perl;
 use Readonly;
 use Scalar::Util 'weaken';
 use Hum::Sort 'ace_sort';
@@ -240,7 +241,6 @@ sub remove_selected_from_evidence_list {
         for (my $i = 0; $i < @$name_list; $i++) {
             if ($name_list->[$i] eq $name) {
                 splice(@$name_list, $i, 1);
-                #warn "Found '$name'!";
                 last;
             }
         }
@@ -430,17 +430,18 @@ sub align_to_transcript {
         accession_type_cache => $self->ExonCanvas->XaceSeqChooser->AceDatabase->AccessionTypeCache,
         });
 
-    warn "Found " . scalar( @{$otf->confirmed_seqs} ) . " sequences\n";
+    my $logger = $self->logger;
+    $logger->info("Found ", scalar( @{$otf->confirmed_seqs} ), " sequences");
 
     my $ts_file = $otf->target_fasta_file;
-    warn "Wrote transcript sequence to ${ts_file}\n";
+    $logger->info("Wrote transcript sequence to ${ts_file}");
 
     foreach my $aligner ( $otf->aligners_for_each_type ) {
 
-        warn "Running exonerate for sequence(s) of type: ", $aligner->type, "\n";
+        $logger->info("Running exonerate for sequence(s) of type: ", $aligner->type);
 
         my $seq_file = $aligner->fasta_file;
-        warn "Wrote sequences to ${seq_file}\n";
+        $logger->info("Wrote sequences to ${seq_file}");
 
         my $result_set = $aligner->run;
 
@@ -478,6 +479,10 @@ sub delete_alignment_window {
     my ($self, $type) = @_;
     $self->{_alignment_window}->{$type} = undef;
     return;
+}
+
+sub logger {
+    return Log::Log4perl->get_logger;
 }
 
 sub DESTROY {

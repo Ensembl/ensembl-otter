@@ -5,7 +5,8 @@ package EditWindow::Exonerate;
 
 use strict;
 use warnings;
-use Carp;
+
+use Log::Log4perl;
 
 use Bio::Otter::Lace::OnTheFly::Genomic;
 use Hum::Pfetch;
@@ -121,7 +122,7 @@ sub initialise {
             if ($fname) {
                 if (my ($dir) = $fname =~ m{^(.+?)[^/]+$}) {
 
-                    # warn "Setting inital dir to '$dir'";
+                    # $self->logger->warn("Setting inital dir to '$dir'");
                     $INITIAL_DIR = $dir;
                 }
             }
@@ -400,7 +401,7 @@ sub launch_exonerate {
     if ($self->{_use_marked_region}) {
         my ($mark_start, $mark_end) = $seq_chooser->zMapGetMark;
         if ($mark_start && $mark_end) {
-            warn "Setting exonerate genomic start & end to marked region: $mark_start - $mark_end\n";
+            $self->logger->warn("Setting exonerate genomic start & end to marked region: $mark_start - $mark_end");
             $otf->target_start($mark_start);
             $otf->target_end(  $mark_end);
         }
@@ -408,7 +409,7 @@ sub launch_exonerate {
 
     my $seqs = $otf->confirmed_seqs();
 
-    warn "Found " . scalar(@$seqs) . " sequences\n";
+    $self->logger->warn("Found ", scalar(@$seqs), " sequences");
 
     unless (@$seqs) {
         $self->top->messageBox(
@@ -483,7 +484,7 @@ sub entered_seqs {
 
     if (my $string = $self->fasta_txt->get('1.0', 'end')) {
         if ($string =~ /\S/ and $string !~ />/) {
-            warn "creating new seq tag num: $seq_tag\n";
+            $self->logger->warn("creating new seq tag num: $seq_tag");
             $string = ">OTF_seq_$seq_tag\n" . $string;
             $seq_tag++;
         }
@@ -509,6 +510,10 @@ sub entered_accessions {
         @supplied_accs = split(/[,;\|\s]+/, $txt);
     }
     return \@supplied_accs;
+}
+
+sub logger {
+    return Log::Log4perl->get_logger;
 }
 
 sub DESTROY {
