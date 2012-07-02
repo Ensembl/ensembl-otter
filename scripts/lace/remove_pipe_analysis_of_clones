@@ -13,12 +13,6 @@ use Bio::Otter::Lace::Defaults;
 
   my $help = sub { exec('perldoc', $0) };
 
-  # -pipeline option is needed for fetch_pipeline_ctg_ids_for_SequenceSet()
-  # otherwise the method Bio::Otter::Lace::Defaults::fetch_pipeline_switch()
-  # returns null
-
-  push (@ARGV, "-pipeline");
-
   Bio::Otter::Lace::Defaults::do_getopt(
       'ds|dataset=s' => \$dataset,
       's|set=s@'     => \@sets,
