@@ -32,7 +32,6 @@ my @CLIENT_OPTIONS = qw(
     group=s
     gene_type_prefix=s
     debug=i
-    misc_acefile=s
     );
 
 # @CLIENT_OPTIONS is Getopt::GetOptions() keys which will be included in the
