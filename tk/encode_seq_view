@@ -13,7 +13,7 @@ use MenuCanvasWindow::XaceSeqChooser;
     my $encode_region = shift || die "Missing region argument";
     my $encode_ace_dir = '/nfs/disk100/humpub/data/encode_proposed_pseudogenes';
     my $encode_acefile = "$encode_ace_dir/$encode_region.ace";
-    push(@ARGV, -misc_acefile => $encode_acefile, '-view');
+    push(@ARGV, '-view');
     Bio::Otter::Lace::Defaults::do_getopt();
     my $dataset_name = 'human';
     # Client communicates with otter HTTP server
@@ -35,6 +35,7 @@ use MenuCanvasWindow::XaceSeqChooser;
 
     ### Create AceDatabase
     my $db = $cl->new_AceDatabase;
+    $db->add_acefile($encode_acefile);
     $db->make_database_directory;
     $db->init_AceDatabase($ss);
     $db->error_flag(1);
