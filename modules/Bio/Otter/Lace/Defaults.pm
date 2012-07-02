@@ -28,7 +28,6 @@ my @CLIENT_OPTIONS = qw(
     url=s
     author=s
     email=s
-    pipeline!
     write_access!
     group=s
     gene_type_prefix=s
