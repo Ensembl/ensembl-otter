@@ -60,6 +60,17 @@ sub require_all {
     return \%out;
 }
 
+sub _is_SangerWeb_real {
+    my $src = $INC{'SangerWeb.pm'};
+    if (!defined $src) {
+        return 'None (?!)';
+    } elsif (SangerWeb->can('is_dev') && $SangerWeb::VERSION) {
+        return "Genuine $SangerWeb::VERSION from $src";
+    } else {
+        return "Bogus from $src";
+    }
+}
+
 
 sub test {
     my ($server) = @_;
@@ -78,7 +89,13 @@ sub test {
     # avoiding exposing internals (private or verbose)
     my $cgi = $web->cgi;
     $out{SangerWeb} = { cgi => "$cgi",
+                        origin => _is_SangerWeb_real(),
+                        HTTP_CLIENTREALM => $ENV{HTTP_CLIENTREALM},
                         username =>  $web->username };
+    $out{ServerScriptSupport} =
+      { local_user => $server->local_user,
+#        BOSSS => $server, # would leak users config & CGI internals
+        internal_user => $server->internal_user };
 
     my $dbh = eval {
         DBI->connect("DBI:mysql:database=pipe_human;host=otp1slave;port=3322",
