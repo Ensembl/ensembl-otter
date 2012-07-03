@@ -187,6 +187,13 @@ Readonly my @split_expected => (
             'Q 12 14 + T 44 47 + 0 M 1 1 G 0 1 M 1 1',
             'Q 14 20 + T 49 52 + 0 M 3 3 G 3 0',
             ],
+
+        ensembl_features => [
+            { start => 29, end => 31, strand => 1, hstart =>  1, hend =>  3, hstrand => 1, cigar => '3M', },
+            { start => 35, end => 40, strand => 1, hstart =>  4, hend => 12, hstrand => 1, cigar => '2M3I4M', },
+            { start => 45, end => 47, strand => 1, hstart => 13, hend => 14, hstrand => 1, cigar => 'MDM', },
+            { start => 50, end => 52, strand => 1, hstart => 15, hend => 20, hstrand => 1, cigar => '3M3I', },
+            ],
     },
     {
         name     => 'Tiny rev',
@@ -205,6 +212,13 @@ Readonly my @split_expected => (
             'Q 3 12 + T 73 67 - 0 M 2 2 G 3 0 M 4 4',
             'Q 12 14 + T 63 60 - 0 M 1 1 G 0 1 M 1 1',
             'Q 14 20 + T 58 55 - 0 M 3 3 G 3 0',
+            ],
+
+        ensembl_features => [
+            { start => 77, end => 79, strand => -1, hstart =>  1, hend =>  3, hstrand => 1, cigar => '3M', },
+            { start => 68, end => 73, strand => -1, hstart =>  4, hend => 12, hstrand => 1, cigar => '2M3I4M', },
+            { start => 61, end => 63, strand => -1, hstart => 13, hend => 14, hstrand => 1, cigar => 'MDM', },
+            { start => 56, end => 58, strand => -1, hstart => 15, hend => 20, hstrand => 1, cigar => '3M3I', },
             ],
     },
     {
@@ -722,6 +736,23 @@ foreach my $test (@split_expected) {
             is ($split[$n]->vulgar_string, $e_splits[$n], "split $n");
         }
     }
+
+    if ($test->{ensembl_features}) {
+        my @ensembl_features = $intron_ga->ensembl_features;
+
+        my $n_features = scalar(@ensembl_features);
+        my @exp_features = @{$test->{ensembl_features}};
+
+        is ($n_features, scalar(@exp_features), 'n ensembl_features');
+
+        foreach my $n ( 0 .. ($n_features - 1) ) {
+            isa_ok($ensembl_features[$n], 'Bio::EnsEMBL::DnaDnaAlignFeature', "feature $n: isa");
+            is ($ensembl_features[$n]->start,        $exp_features[$n]->{start},  "feature $n: start");
+            is ($ensembl_features[$n]->end,          $exp_features[$n]->{end},    "feature $n: end");
+            is ($ensembl_features[$n]->strand,       $exp_features[$n]->{strand}, "feature $n: strand");
+            is ($ensembl_features[$n]->cigar_string, $exp_features[$n]->{cigar},  "feature $n: cigar_string");
+        }
+    }
 }
 
 done_testing;
@@ -739,7 +770,7 @@ sub build_splits {
 
     # Get number of splits and check for consistency
     my $n;
-    map {
+    foreach (@$components) {
         if (reftype($_) and reftype($_) eq 'ARRAY') {
             my $this_n = scalar(@$_);
             if ($n) {
@@ -748,7 +779,7 @@ sub build_splits {
                 $n = scalar(@$_);
             }
         }
-    } @$components;
+    };
 
     my @splits;
     foreach my $i ( 0..($n-1) ) {
