@@ -8,6 +8,8 @@ use warnings;
 
 use Bio::Otter::GappedAlignment::Element;
 
+use Bio::EnsEMBL::DnaDnaAlignFeature;
+
 use Log::Log4perl;
 use Readonly;
 
@@ -338,6 +340,46 @@ sub ensembl_cigar_string {
     return join('', @ele_strings);
 }
 
+# Should these ensembl_* methods be mixed in via a separate module, rather than embedded?
+#
+sub ensembl_features {
+    my $self = shift;
+    return unless $self->n_elements;
+
+    my @egas = $self->exon_gapped_alignments;
+    return unless @egas;
+
+    my @ensembl_features;
+    foreach my $ega (@egas) {
+        next unless $ega;
+        push @ensembl_features, $ega->ensembl_feature;
+    }
+
+    return @ensembl_features;
+}
+
+sub ensembl_feature {
+    my $self = shift;
+    return unless $self->n_elements;
+
+    my ($t_start, $t_end, $t_strand) = $self->target_ensembl_coords;
+    my ($q_start, $q_end, $q_strand) = $self->query_ensembl_coords;
+
+    # FIXME: needs to support DnaPep as well as DnaDna
+    return Bio::EnsEMBL::DnaDnaAlignFeature->new(
+        -seqname      => $self->target_id,
+        -start        => $t_start,
+        -end          => $t_end,
+        -strand       => $t_strand,
+        -hseqname     => $self->query_id,
+        -hstart       => $q_start,
+        -hend         => $q_end,
+        -hstrand      => $q_strand,
+        -score        => $self->score,
+        -cigar_string => $self->ensembl_cigar_string,
+        );
+}
+
 sub reverse_alignment {
     my $self = shift;
 
@@ -420,6 +462,26 @@ sub _strand_sense { ## no critic (Subroutines::RequireFinalReturn)
     } else {
         $self->logger->logcroak("$accessor not '+' or '-'");
     }
+}
+
+sub target_ensembl_coords {
+    my $self = shift;
+    return $self->_ensembl_coords('target');
+}
+
+sub query_ensembl_coords {
+    my $self = shift;
+    return $self->_ensembl_coords('query');
+}
+
+sub _ensembl_coords {
+    my ($self, $which) = @_;
+
+    my ($start_acc, $end_acc, $ss_acc) = map { $which . $_ } qw( _start _end _strand_sense );
+    my @coords = sort { $a <=> $b } ($self->$start_acc, $self->$end_acc);
+    my $strand = $self->$ss_acc;
+
+    return $coords[0]+1, $coords[1], $strand;
 }
 
 sub target_id {
