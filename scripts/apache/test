@@ -33,7 +33,8 @@ sub require_all {
     my $dir = $INC{'Bio/Otter/ServerScriptSupport.pm'};
     $dir =~ s{Otter/\w+\.pm$}{};
 
-    $ENV{PATH} = '/bin:/usr/bin'; # some modules need a clean PATH
+    # some modules need a clean PATH
+    $ENV{PATH} = '/bin:/usr/bin'; ## no critic (Variables::RequireLocalizedPunctuationVars)
 
     my @mods;
     my $wanted = sub {
