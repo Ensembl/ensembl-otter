@@ -29,7 +29,6 @@ my @CLIENT_OPTIONS = qw(
     author=s
     email=s
     write_access!
-    group=s
     gene_type_prefix=s
     debug=i
     );
