@@ -205,10 +205,13 @@ sub cleanup_sessions {
     return;
 }
 
+sub new_session {
+    my ($self) = @_;
+    return ++$session_number;
+}
+
 sub session_path {
     my ($self) = @_;
-
-    $session_number++;
 
     my $user = (getpwuid($<))[0];
 
@@ -252,8 +255,13 @@ sub all_session_dirs {
     return @session_dirs;
 }
 
+# Only creates the object.
+# Does not create the directory, that's done by $adb->make_database_directory.
+#
 sub new_AceDatabase {
     my ($self) = @_;
+
+    $self->new_session;
 
     my $adb = Bio::Otter::Lace::AceDatabase->new;
     $adb->Client($self);
