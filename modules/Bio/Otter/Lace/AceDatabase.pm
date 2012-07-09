@@ -630,8 +630,11 @@ sub save_ace_to_otter {
 
     my $client = $self->Client or confess "No Client attached";
     my $xml = $client->save_otter_xml($self->generate_XML_from_acedb, $self->smart_slice->dsname);
+    return unless $xml;
 
-    return $self->update_with_stable_ids($xml);
+    my $parser = Bio::Vega::Transform::Otter::Ace->new;
+    $parser->parse($xml);
+    return $parser->make_ace_genes_transcripts;
 }
 
 sub generate_XML_from_acedb {
@@ -655,17 +658,6 @@ sub generate_XML_from_acedb {
     $formatter->seq_features(   $converter->seq_features    );
 
     return $formatter->generate_OtterXML;
-}
-
-sub update_with_stable_ids {
-    my ($self, $xml) = @_;
-
-    return unless $xml;
-
-    my $parser = Bio::Vega::Transform::Otter::Ace->new;
-    $parser->parse($xml);
-
-    return $parser->make_ace_genes_transcripts;
 }
 
 sub unlock_otter_slice {
