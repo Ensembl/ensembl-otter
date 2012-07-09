@@ -9,14 +9,13 @@ use strict;
 use Bio::Otter::Lace::Defaults;
 
 {
-  my( $dataset, $seqsetname, $dir,$pipehead );
+  my( $dataset, $seqsetname, $dir );
   my $usage = sub{ exec('perldoc', $0) };
   Bio::Otter::Lace::Defaults::do_getopt(
       'dataset=s'     => \$dataset,
       'set|seqset=s'  => \$seqsetname,
       'h|help!'       => $usage,
       'dir=s'         => \$dir,
-      'pipehead=i'    => \$pipehead
       ) or $usage->();
   $usage->() unless $dataset and $seqsetname;
   my $cl       = Bio::Otter::Lace::Defaults::make_Client();
@@ -65,7 +64,7 @@ use Bio::Otter::Lace::Defaults;
         close($in);
         my $lxml=length($xml);
         print "writing $ffile ($lxml)\n";
-        write_xml($xml,$dataset,$cl,$pipehead);
+        write_xml($xml,$dataset,$cl);
      }
   }
   else{
@@ -73,7 +72,7 @@ use Bio::Otter::Lace::Defaults;
         local $/ = undef;
         $xml = <>;
      }
-     write_xml($xml,$dataset,$cl,$pipehead);
+     write_xml($xml,$dataset,$cl);
   }
   open(my $out, '>', "/tmp/test_lock.xml")
       or die "failed to open /tmp/test_lock.xml: $!";
@@ -94,11 +93,11 @@ use Bio::Otter::Lace::Defaults;
 
 
   sub write_xml{
-     my($xml,$dataset,$cl,$pipehead)=@_;
+     my($xml,$dataset,$cl)=@_;
      return if $debug;
      my $success;
      eval{
-        $success  = $cl->save_otter_xml($xml, $dataset,$pipehead);
+        $success  = $cl->save_otter_xml($xml, $dataset);
         if ($success) {
           print "\nwritten successfully in the db\n";
         }
