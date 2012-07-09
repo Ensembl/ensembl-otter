@@ -1159,8 +1159,6 @@ sub save_otter_xml {
 
     confess "Don't have write access" unless $self->write_access;
 
-    my $ds = $self->get_DataSet_by_name($dsname);
-
     my $content = $self->http_response_content(
         'POST',
         'write_region',
@@ -1175,8 +1173,6 @@ sub save_otter_xml {
 
 sub unlock_otter_xml {
     my ($self, $xml, $dsname) = @_;
-
-    my $ds = $self->get_DataSet_by_name($dsname);
 
     $self->general_http_dialog(
         'POST',
