@@ -27,6 +27,7 @@ use Text::Wrap qw{ wrap };
 
 use Bio::Otter::Lace::Exonerate;
 use Bio::Otter::ZMap::XML;
+use Bio::Vega::Transform::Otter::Ace;
 
 use base qw{
 MenuCanvasWindow
@@ -966,7 +967,12 @@ sub save_data {
     $top->Busy;
 
     eval{
-        my $ace_data = $adb->save_ace_to_otter;
+        my $xml = $adb->Client->save_otter_xml(
+            $adb->generate_XML_from_acedb, $adb->DataSet->name);
+        die "save_otter_xml returned no XML" unless $xml;
+        my $parser = Bio::Vega::Transform::Otter::Ace->new;
+        $parser->parse($xml);
+        my $ace_data = $parser->make_ace_genes_transcripts;
         $adb->unsaved_changes(0);
         $self->flag_db_edits(0);    # or the save_ace() will set unsaved_changes back to "1"
         $self->save_ace($ace_data);
