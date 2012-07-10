@@ -46,7 +46,7 @@ use Bio::Otter::Lace::Defaults;
     $sat_opts->{'-DBNAME'} = $satdbname if $satdbname;
 
     # so we can use undefined password
-    delete($sat_opts->{'-PASS'}) unless $satpass;
+    delete($sat_opts->{'-PASS'}) if defined $satpass && $satpass eq '';
 
     # Check we can connect to the Satellite database with options supplied
     eval {
@@ -59,9 +59,11 @@ use Bio::Otter::Lace::Defaults;
         $sat_db = undef;
     };
     if ($@) {
-        die "Couldn't connect to SatelliteDB selected:\n"
+        die "Test it: Couldn't connect to SatelliteDB selected:\n"
           . show_current($sat_opts, 'SatelliteDB')
           . $@;
+    } else {
+        print "\t\tTest it: OK\n" if $view;
     }
 
     exit 0 if $view;
