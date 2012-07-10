@@ -5,8 +5,7 @@ use strict;
 use warnings;
 
 use Bio::Vega::Author;
-use Bio::Otter::Version;
-use Bio::Otter::SpeciesDat;
+use Bio::Otter::Server::Config;
 
 use IO::Compress::Gzip qw(gzip);
 
@@ -103,16 +102,9 @@ sub make_map_value {
 
 sub data_dir {
     my ($self) = @_;
-
-    my $data_dir;
-    unless ($data_dir = $self->{'data_dir'}) {
-        my $root = $ENV{'DOCUMENT_ROOT'};
-        # Trim off the trailing /dir
-        $root =~ s{/[^/]+$}{}
-          or die "Unexpected DOCUMENT_ROOT format '$ENV{DOCUMENT_ROOT}'";
-        $data_dir = join('/', $root, 'data', 'otter');
-    }
-    return $data_dir;
+    warn "old data_dir attrib ignored"
+      if $self->{'data_dir'}; # unused feature, removed during refactor
+    return Bio::Otter::Server::Config->data_dir;
 }
 
 sub dataset_default {
@@ -148,42 +140,12 @@ sub dataset_filter {
 
 sub SpeciesDat {
     my ($self) = @_;
-
-    return $self->{_SpeciesDat} ||=
-        Bio::Otter::SpeciesDat->new($self->data_dir . '/species.dat');
+    return $self->{_SpeciesDat} ||= Bio::Otter::Server::Config->SpeciesDat;
 }
 
 sub users_hash {
     my ($self) = @_;
-
-    my $usr;
-    unless ($usr = $self->{'_users_hash'}) {
-        my $usr_file = $self->data_dir . '/users.txt';
-        $usr = $self->{'_users_hash'} = $self->read_user_file($usr_file);
-    }
-    return $usr;
-}
-
-sub read_user_file {
-    my ($self, $usr_file) = @_;
-
-    my $usr_hash = {};
-
-    open my $list, '<', $usr_file
-        or die "Error opening '$usr_file'; $!";
-    while (<$list>) {
-        s/#.*//;            # Remove comments
-        s/(^\s+|\s+$)//g;   # Remove leading or trailing spaces
-        next if /^$/;       # Skip lines which are now blank
-        my ($user_name, @allowed_datasets) = split;
-        $user_name = lc($user_name);
-        foreach my $ds (@allowed_datasets) {
-            $usr_hash->{$user_name}{$ds} = 1;
-        }
-    }
-    close $list or die "Error closing '$usr_file'; $!";
-
-    return $usr_hash;
+    return $self->{'_users_hash'} ||= Bio::Otter::Server::Config->users_hash;
 }
 
 
@@ -278,15 +240,7 @@ sub send_file {
         @args, # passed to the constructor
         sub {
             my ($self) = @_;
-
-            my $path = sprintf "%s/%s/%s"
-                , $self->data_dir, Bio::Otter::Version->version, $name;
-            open my $fh, '<', $path or die "Can't read '$path' : $!";
-            local $/ = undef;
-            my $content = <$fh>;
-            close $fh;
-
-            return $content;
+	    return Bio::Otter::Server::Config->get_file($name);
         });
 
     return;
