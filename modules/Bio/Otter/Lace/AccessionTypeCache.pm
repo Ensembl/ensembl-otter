@@ -92,7 +92,7 @@ sub populate {
     });
 
     $dbh->begin_work;
-    eval {
+    try {
         foreach my $line (split /\n/, $response) {
             my ($name, $evi_type, $acc_sv, $source_db, $seq_length, $taxon_list, $description) = split /\t/, $line;
             my ($tax_id, @other_tax) = split /,/, $taxon_list; # /; # emacs highlighting workaround
@@ -111,14 +111,13 @@ sub populate {
                 $save_alias->execute($name, $acc_sv);
             }
         }
-    };
-    if (my $err = $@) {
+    }
+    catch {
         $dbh->rollback;
-        die "Error saving accession info: $@";
-    }
-    else {
-        $dbh->commit;
-    }
+        die "Error saving accession info: $::_";
+    };
+
+    $dbh->commit;
 
     return;
 }
