@@ -26,24 +26,11 @@ sub get_DBAdaptor {
 
 sub get_options_for_key {
     my ($db, $key) = @_;
-
     my ($opt_str) = @{ $db->get_MetaContainer()->list_value_by_key($key) };
-    if ($opt_str) {
-        my %options_hash =
-            (eval $opt_str); ## no critic (BuiltinFunctions::ProhibitStringyEval)
-        if ($@) {
-            confess "Error evaluating '$opt_str' : $@";
-        }
-
-        my %uppercased_hash = ();
-        while( my ($k,$v) = each %options_hash) {
-            $uppercased_hash{uc($k)} = $v;
-        }
-
-        return \%uppercased_hash;
-    } else {
-        return;
-    }
+    return unless $opt_str;
+    my %options = eval $opt_str; ## no critic (BuiltinFunctions::ProhibitStringyEval)
+    confess "Error evaluating '$opt_str' : $@" if $@;
+    return { map { uc $_ => $options{$_} } keys %options };
 }
 
 sub remove_options_hash_for_key{
