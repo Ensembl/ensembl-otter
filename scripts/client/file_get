@@ -1,0 +1,30 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+use URI::Escape qw(uri_unescape);
+
+# FIXME: copied from filter_get
+
+my %args;
+foreach my $pair (@ARGV) {
+    my ($key, $val) = split(/=/, $pair);
+    $args{uri_unescape($key)} = uri_unescape($val);
+}
+
+# test case
+die "failing as required" if $args{'fail'};
+
+my $session_dir     = delete $args{'session_dir'};
+chdir($session_dir) or die "Could not chdir to '$session_dir'; $!";
+
+my $path = $args{file_path};
+open my $file, '<', $path or die "Failed to open file '$path': $!";
+while (<$file>) { print; }
+close $file or die "Failed to close file '$path': $!";
+close STDOUT or die "Error writing to STDOUT; $!";
+
+exit;
+
+# EOF
