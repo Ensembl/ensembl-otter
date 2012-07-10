@@ -59,6 +59,11 @@ my @server_params = (
     translation_xref_dbs
     ),
 
+    # file_get
+    qw(
+    file_path
+    ),
+
     # FuncGen
     qw(
     feature_set
@@ -347,6 +352,12 @@ sub translation_xref_dbs {
     return $self->{_translation_xref_dbs};
 }
 
+sub file_path {
+    my ($self, $file_path) = @_;
+    $self->{_file_path} = $file_path if $file_path;
+    return $self->{_file_path};
+}
+
 sub feature_set {
     my ($self, $feature_set) = @_;
     $self->{_feature_set} = $feature_set if $feature_set;
@@ -404,7 +415,7 @@ sub script_arguments {
         push @$arguments, join "=", uri_escape($key), uri_escape($value);
     }
 
-    return $arguments; 
+    return $arguments;
 }
 
 sub gff_source {
