@@ -57,7 +57,7 @@ sub submit_search {
     my $res = $ua->request($req);
 
     # see if it was successful
-    warn( 'submission failed: ' . $res->status_line )
+    warn 'submission failed: ' . $res->status_line
       unless $res->is_success;
     return $res->content;
 }
