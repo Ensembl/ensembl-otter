@@ -10,6 +10,7 @@
 package Bio::Otter::Lace::Pfam;
 use strict;
 use warnings;
+use Try::Tiny;
 use LWP;
 use LWP::UserAgent;
 use HTTP::Request;
@@ -69,11 +70,9 @@ sub check_submission {
     # parse the XML that came back from the server when we submitted the search
     my $parser = XML::LibXML->new();
     my $dom;
-    eval { $dom = $parser->parse_string($xml); };
-    if ($@) {
-        warn("couldn't parse XML response for submission: $@");
-        return;
-    }
+    try { $dom = $parser->parse_string($xml); }
+    catch { warn "couldn't parse XML response for submission: $::_" };
+    return unless $dom;
 
     # the root element is "jobs"
     my $root = $dom->documentElement();
@@ -114,11 +113,9 @@ sub parse_results {
     print STDOUT "parsing XML search results\n";
     my $parser = XML::LibXML->new();
     my $dom;
-    eval { $dom = $parser->parse_string($results_xml); };
-    if ($@) {
-        warn("couldn't parse XML response for results: $@");
-        return;
-    }
+    try { $dom = $parser->parse_string($results_xml); }
+    catch { warn "couldn't parse XML response for results: $::_" };
+    return unless $dom;
 
     # set up the XPath stuff for this document
     my $root = $dom->documentElement();
