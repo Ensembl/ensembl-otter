@@ -6,6 +6,8 @@ use strict;
 use warnings;
 use Carp;
 
+use Try::Tiny;
+
 use File::Path qw{ remove_tree };
 use Net::Domain qw{ hostname hostfqdn };
 use Proc::ProcessTable;
@@ -1238,7 +1240,7 @@ sub sessions_needing_recovery {
                 die "Session with uninitialised or corrupted SQLite DB renamed to '$done'";
             }
         } else {
-            eval {
+            try {
                 # Attempt to release locks of uninitialised sessions
                 my $adb = $self->recover_session($lace_dir);
                 $adb->error_flag(0);    # It is uninitialised, so we want it to be removed
@@ -1247,8 +1249,8 @@ sub sessions_needing_recovery {
                     $adb->unlock_otter_slice;
                     warn "\nRemoved lock from uninitialised database in '$lace_dir'\n";
                 }
-                1;
-            } or warn "error while recoving session '$lace_dir': $@";
+            }
+            catch { warn "error while recoving session '$lace_dir': $::_"; };
             if (-d $lace_dir) {
                 # Belt and braces - if the session was unrecoverable we want it to be deleted.
                 my $done = $self->move_to_done($lace_dir);
@@ -1289,7 +1291,8 @@ sub recover_session {
     rename($dir, $home) or die "Cannot move '$dir' to '$home'; $!";
 
     unless ($adb->db_initialized) {
-        warn $@ unless eval { $adb->recover_smart_slice_from_region_xml; 1; };
+        try { $adb->recover_smart_slice_from_region_xml; }
+        catch { warn $::_; };
         return $adb;
     }
 
