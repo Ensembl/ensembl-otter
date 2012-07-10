@@ -11,6 +11,8 @@ use Hum::Ace::SubSeq;
 use Hum::Ace::Method;
 use Hum::Ace::Locus;
 
+use Try::Tiny;
+
 {
     ### Should add this to otter_config
     ### or parse it from the Zmap styles
@@ -74,12 +76,11 @@ sub make_ace_transcripts_from_gff {
 
     my (@ok_tsct);
     while (my ($name, $sub) = each %tsct) {
-        if (eval { $sub->validate; 1; }) {
+        try {
+            $sub->validate; # raises an error if invalid
             push(@ok_tsct, $sub);
         }
-        else {
-            warn "Error in SubSeq '$name':\n$@";
-        }
+        catch { warn "Error in SubSeq '$name':\n$::_"; };
     }
     return @ok_tsct;
 }
