@@ -26,6 +26,8 @@ $PORTS_RE = qr{\b($PORTS_RE)\b};
 {
     my $switch;
     my $dryrun = 0;
+    my $meta_key = 'pipeline_db_head';
+    my $only_port;
 
     my $usage = sub { exec('perldoc', $0) };
     # This do_getopt() call is needed to parse the otter config files
@@ -33,15 +35,16 @@ $PORTS_RE = qr{\b($PORTS_RE)\b};
     Bio::Otter::Lace::Defaults::do_getopt(
         'h|help!'       => $usage,
         'n|dryrun!'     => sub{ $dryrun = 1 },
+        'M|meta=s'      => \$meta_key,
+        'P|port=i'      => \$only_port,
         'slave!'        => sub{ $switch = 'slave' },
         'master!'       => sub{ $switch = 'master' },
         ) or $usage->();
     $usage->() unless $switch;
-    
+
     # Client communicates with otter HTTP server
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
-    
-    my $meta_key = 'pipeline_db_head';
+
     foreach my $ds ($cl->get_all_DataSets) {
         my $name = $ds->name;
         my $dba = $ds->make_Vega_DBAdaptor;
@@ -56,6 +59,11 @@ $PORTS_RE = qr{\b($PORTS_RE)\b};
         my ($satport) = $connect =~ $PORTS_RE;
 
         if ($sathost && $satport) {
+            if (defined $only_port && $satport != $only_port) {
+                warn "ok:  Dataset $name remains on $sathost:$satport\n";
+                next;
+            }
+
             if ($switch eq 'master' && $sathost eq $SLAVE{$satport}) {
                 $sathost = $MASTER{$satport};
             } elsif ($switch eq 'slave' && $sathost eq $MASTER{$satport}) {
@@ -96,26 +104,36 @@ __END__
 
 =head1 USAGE
 
-  satellite_switch <-slave|-master> [-dryrun]
+ satellite_switch <-slave|-master> [-dryrun] [ -M pipeline_db_rw_head ] [ -P portnumber ]
 
 =head1 DESCRIPTION
 
-Flip satellite databases to/from MySQL slaves
+Flip satellite databases to/from MySQL slaves by maintaining the port
+number and switching the hostname.
 
-This updates the C<pipeline_db_head> meta_key for all species in the
-server's C<species.dat> .  It maintains the port number and switches
-the hostname.  It is intended to switch the read-only queries from
-Otterlace via the CGI scripts, between master & slave database
-servers.
+By default it updates the C<pipeline_db_head> meta_key (or another if
+specified) to switch the read-only queries from Otterlace via the
+Otter Server, between master & slave database servers.
+
+By default it does this for all species in C<species.dat>.  By giving
+a portnumber, you can limit to one database.
+
+This has grown complex.  Dry run is recommended.
+
+=head2 Related
 
 The CNAME aliases (otterpipe1, otterpipe2) are not used.  In the event
 of database server failure, we can update these rows on accessible
 databases much faster than we can get the DNS changed.
 
+To switch the origin of loutre databases, edit F<species.dat>.
+
+See also L<http://mediawiki.internal.sanger.ac.uk/wiki/index.php/Anacode_Databases>
+
 =head1 CAVEATS
 
-There are also C<pipeline_db_rw_head> and other database pointers.
-This script does not touch those.
+In addition to C<pipeline_db(_rw)_head>, there are other database pointers.
+This script does not understand those.
 
 =head1 AUTHOR
 
