@@ -651,8 +651,16 @@ sub zMapFeaturesLoaded {
 
     my @featuresets = split(/;/, $xml->{'request'}{'featureset'}{'names'});
 
-    my $status = $xml->{'request'}{'status'}{'value'};
-    my $msg    = $xml->{'request'}{'status'}{'message'};
+    my $status  = $xml->{'request'}{'status'}{'value'};
+    my $message = $xml->{'request'}{'status'}{'message'};
+
+    $self->zircon_zmap_view_features_loaded($status, $message, @featuresets);
+
+    return (200, $self->zMapZmapConnector->handled_response(1));
+}
+
+sub zircon_zmap_view_features_loaded {
+    my ($self, $status, $message, @featuresets) = @_;
 
     my $filter_hash = $self->AceDatabase->filters;
     my $state_changed = 0;
@@ -664,7 +672,7 @@ sub zMapFeaturesLoaded {
             if ($status == 0 && ! $state_hash->{'failed'}) {
                 $state_changed = 1;
                 $state_hash->{'failed'} = 1;
-                $state_hash->{'fail_msg'} = $msg; ### Could store in SQLite db
+                $state_hash->{'fail_msg'} = $message; ### Could store in SQLite db
             }
             elsif ($status == 1 && ! $state_hash->{'done'}) {
                 $state_changed = 1;
@@ -694,7 +702,7 @@ sub zMapFeaturesLoaded {
         $self->AceDatabase->zmap_config_update;
     }
 
-    return (200, $self->zMapZmapConnector->handled_response(1));
+    return;
 }
 
 sub zMapIgnoreRequest {
