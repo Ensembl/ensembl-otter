@@ -271,6 +271,19 @@ use Bio::Vega::Utils::GFF;
         $gff->{'attributes'}{'Align'}     = $self->hstart . ' ' . $self->hend . ' ' . ($self->hstrand == -1 ? '-' : '+');
         $gff->{'attributes'}{'percentID'} = $self->percent_id;
 
+        return $gff;
+    }
+}
+
+{
+
+    package Bio::EnsEMBL::BaseAlignFeature;
+
+    sub _gff_hash {
+        my ($self, %args) = @_;
+
+        my $gff = $self->SUPER::_gff_hash(%args);
+
         my @fps = $self->ungapped_features;
         if (@fps > 1) {
             my $gap_string =
