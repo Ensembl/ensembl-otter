@@ -449,7 +449,6 @@ OTF_Protein });
 
     if ($db_edited) {
         my @misses = $otf->names_not_hit;
-        warn "Got misses: {" . join(', ', @misses) . "}\n";
         if (@misses) {
             $self->top->messageBox(
                 -title   => 'otter: Missing Matches',
