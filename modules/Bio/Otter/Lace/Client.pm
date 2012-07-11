@@ -33,6 +33,8 @@ use Bio::Otter::Lace::AceDatabase;
 use Bio::Otter::Lace::DB;
 use Bio::Otter::LogFile;
 
+use 5.009001; # for stacked -f -r which returns false under 5.8.8
+
 sub new {
     my ($pkg) = @_;
 
