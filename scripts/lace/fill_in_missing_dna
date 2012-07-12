@@ -10,7 +10,7 @@ use Bio::Otter::Lace::Defaults;
 use Bio::Otter::Lace::PipelineDB;
 use Hum::Pfetch 'get_Sequences';
 
-$| = 1; ## no critic (Variables::RequireLocalizedPunctuationVars)
+$| = 1;
 
 {
     my $dataset_name = undef;

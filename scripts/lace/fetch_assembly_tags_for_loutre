@@ -21,7 +21,7 @@ use Bio::Vega::AssemblyTag;
 
 use Getopt::Long 'GetOptions';
 
-$| = 1; ## no critic (Variables::RequireLocalizedPunctuationVars)
+$| = 1;
 
 # global
 my $mfeats = [];

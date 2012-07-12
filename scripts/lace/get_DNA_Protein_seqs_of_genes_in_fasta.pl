@@ -9,7 +9,7 @@ use strict;
 use Getopt::Long 'GetOptions';
 use Bio::Otter::Lace::Defaults;
 
-$| = 1; ## no critic (Variables::RequireLocalizedPunctuationVars)
+$| = 1;
 
 my ($dataset, @sets, $vega);
 

@@ -8,7 +8,7 @@ use warnings;
 use strict;
 use Bio::Otter::Lace::Defaults;
 
-$| = 1; ## no critic (Variables::RequireLocalizedPunctuationVars)
+$| = 1;
 
 {
     my $usage = sub { exec('perldoc', $0) };
