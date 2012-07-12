@@ -34,7 +34,7 @@ sub require_all {
     $dir =~ s{Otter/\w+\.pm$}{};
 
     # some modules need a clean PATH
-    $ENV{PATH} = '/bin:/usr/bin'; ## no critic (Variables::RequireLocalizedPunctuationVars)
+    $ENV{PATH} = '/bin:/usr/bin';
 
     my @mods;
     my $wanted = sub {
