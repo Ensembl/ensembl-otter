@@ -5,6 +5,7 @@ package Bio::Otter::Lace::AccessionTypeCache;
 
 use strict;
 use warnings;
+use Try::Tiny;
 use Hum::ClipboardUtils qw{ accessions_from_text };
 
 my (%client, %DB);
