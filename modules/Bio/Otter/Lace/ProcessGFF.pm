@@ -80,7 +80,11 @@ sub make_ace_transcripts_from_gff {
             $sub->validate; # raises an error if invalid
             push(@ok_tsct, $sub);
         }
-        catch { warn "Error in SubSeq '$name':\n$::_"; };
+        catch {
+            my $msg = $::_;
+            $msg =~ s{^(Translation coord '\d+' does not lie within any Exon\n) at .*}{$1}s; # special case for a common error - trim off stack trace - RT#273390
+            warn "Skipped SubSeq '$name'.  Error:\n$msg";
+        };
     }
     return @ok_tsct;
 }
