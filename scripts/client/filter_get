@@ -73,7 +73,7 @@ open $log_file, '>>', $log_path
 {
     ## no critic (InputOutput::ProhibitOneArgSelect)
     my $old_fh = select $log_file;
-    $| = 1; ## no critic (Variables::RequireLocalizedPunctuationVars)
+    $| = 1;
     select $old_fh;
 }
 log_message "starting";

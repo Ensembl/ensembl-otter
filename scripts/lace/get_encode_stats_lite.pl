@@ -40,7 +40,7 @@ use POSIX 'strftime';
 use POSIX 'mktime';
 use Time::Local;
 
-$| = 1; ## no critic (Variables::RequireLocalizedPunctuationVars)
+$| = 1;
 
 my ($dataset, @sets, $html_output, $cutoff_time_1, $cutoff_time_2);
 my $encode_list = "/nfs/team71/analysis/jgrg/work/encode/encode_sets.list";

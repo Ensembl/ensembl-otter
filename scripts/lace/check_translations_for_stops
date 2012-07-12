@@ -11,7 +11,7 @@ use Bio::Otter::Lace::Defaults;
 use Bio::Seq;
 use Bio::EnsEMBL::Intron;
 
-$| = 1; ## no critic (Variables::RequireLocalizedPunctuationVars)
+$| = 1;
 
 my ($out2, $out3, $out4, $out5, $out6, $out7);
 

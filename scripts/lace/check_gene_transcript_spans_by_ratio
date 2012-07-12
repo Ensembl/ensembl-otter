@@ -10,7 +10,7 @@ use Getopt::Long 'GetOptions';
 use Bio::Otter::Lace::Defaults;
 use Data::Dumper;
 
-$| = 1; ## no critic (Variables::RequireLocalizedPunctuationVars)
+$| = 1;
 
 my ($dataset, $verbose, @a_types);
 my $check_vega = 0;
