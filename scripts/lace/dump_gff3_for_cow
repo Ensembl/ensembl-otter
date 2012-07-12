@@ -41,7 +41,6 @@ use URI::Escape;
   #my $pipe_dba = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($otter_dba);
 
   unless ( @ARGV ) {
-    ## no critic (Variables::RequireLocalizedPunctuationVars)
     foreach ( @{$ds->get_all_visible_SequenceSets} ) {
       push(@ARGV, $_->name);
       @ARGV = sort { ace_sort($a, $b) } @ARGV;
