@@ -41,8 +41,6 @@ sub new {
     my ($script) = $0 =~ m{([^/]+)$};
     my $client_name = $script || 'otterlace';
 
-    ## no critic(Variables::RequireLocalizedPunctuationVars)
-
     $ENV{'OTTERLACE_COOKIE_JAR'} ||= "$ENV{HOME}/.otter/ns_cookie_jar";
 
     my $new = bless {
@@ -531,8 +529,6 @@ sub pfetch_url {
 
 sub setup_pfetch_env {
     my ($self) = @_;
-
-    ## no critic (Variables::RequireLocalizedPunctuationVars)
 
     # Need to use pfetch via HTTP proxy if we are outside Sanger
     my $hostname = hostfqdn();
