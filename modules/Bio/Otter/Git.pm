@@ -11,6 +11,7 @@ use warnings;
 #  locations.  If you add any dependencies here then you *must* check
 #  that the installer still works.
 
+use Try::Tiny;
 use File::Basename;
 
 my $dir = dirname __FILE__;
@@ -23,17 +24,18 @@ our $CACHE = {
 };
 
 #  Attempt to load a cache.
-unless (eval { require Bio::Otter::Git::Cache; 1; }) {
-    if ($@ =~ m(\A\QCan't locate Bio/Otter/Git/Cache.pm in \E)) {
+try { require Bio::Otter::Git::Cache; }
+catch {
+    if (m(\A\QCan't locate Bio/Otter/Git/Cache.pm in \E)) {
         warn "No git cache: assuming a git checkout.\n";
         my $command = q(git tag);
         system(qq(cd '$dir' && $command > /dev/null)) == 0
             or die "'$command' failed: something is wrong with your git checkout";
     }
     else {
-        die "cache error: $@";
+        die "cache error: $::_";
     }
-}
+};
 
 sub dump {
     my ($pkg) = @_;
