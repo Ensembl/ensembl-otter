@@ -5,6 +5,7 @@ use strict;
 use warnings;
 use Carp;
 
+use Try::Tiny;
 
 sub new {
     my ($pkg, $name, $params) = @_;
@@ -45,7 +46,7 @@ sub _otter_dba {
     require Bio::EnsEMBL::DBSQL::DBAdaptor;
 
     my $odba;
-    die "Failed opening otter database [$@]" unless eval {
+    try {
         $odba = Bio::Vega::DBSQL::DBAdaptor->new(
             -host    => $params->{HOST},
             -port    => $params->{PORT},
@@ -55,13 +56,13 @@ sub _otter_dba {
             -group   => 'otter',
             -species => $name,
             );
-        1;
-    };
+    }
+    catch { die "Failed opening otter database [$::_]"; };
 
     my $dna_dbname = $params->{DNA_DBNAME};
     if ($dna_dbname) {
         my $dnadb;
-        die "Failed opening dna database [$@]" unless eval {
+        try {
             $dnadb = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
                 -host    => $params->{DNA_HOST},
                 -port    => $params->{DNA_PORT},
@@ -71,8 +72,8 @@ sub _otter_dba {
                 -group   => 'dnadb',
                 -species => $name,
                 );
-            1;
-        };
+        }
+        catch { die "Failed opening dna database [$::_]"; };
         $odba->dnadb($dnadb);
     }
 
