@@ -8,6 +8,8 @@ use base qw( Bio::Otter::Server::GFF );
 
 my $http_proxy = $ENV{http_proxy};
 
+use Try::Tiny;
+
 use Bio::Das::Lite;
 use Bio::EnsEMBL::SimpleFeature;
 use Bio::Vega::PredictionTranscript;
@@ -228,16 +230,14 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS { # $feature_kind = 'SimpleFea
                     $parent_feature->display_id( $pt_label );
                 }
 
-                eval {
+                try {
                     warn "adding feature with start=".$feature->start()." and end=".$feature->end()."\n";
                     $parent_feature->$add_sub($feature);
-                };
-
-
-                ## there may be a collision of exons - just ignore it for the moment
-                if($@) {
-                    warn "Could not group feature: $@\n";
                 }
+                catch {
+                    ## there may be a collision of exons - just ignore it for the moment
+                    warn "Could not group feature: $::_\n";
+                };
             } else {
                 if ( $feature->can('display_label') ) {
                     $feature->display_label( $pt_label );
