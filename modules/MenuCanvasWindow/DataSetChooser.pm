@@ -6,6 +6,7 @@ package MenuCanvasWindow::DataSetChooser;
 use strict;
 use warnings;
 use Carp;
+use Try::Tiny;
 use Tk::DialogBox;
 use base 'MenuCanvasWindow';
 use EditWindow::LoadColumns;
@@ -341,7 +342,7 @@ sub recover_some_sessions {
         my @selected_recs = grep { $session_wanted{$_->[0]} } @$recoverable_sessions;
 
         if ($answer=~/recover/i && @selected_recs) {
-            eval{
+            try {
                 my $canvas = $self->canvas;
 
                 foreach my $rec (@selected_recs) {
@@ -362,11 +363,11 @@ sub recover_some_sessions {
                     $lc->load_filters;
                     $top->withdraw;
                 }
-                1;
             }
-              or $self->exception_message($@ || "[details in log file]\n",
-                                          # Destruction of the AceDatabase object prevents us seeing $@
-                                          'Error recovering lace sessions');
+            catch {
+                $self->exception_message(
+                    $::_, 'Error recovering lace sessions');
+            };
             # XXX: we should make a stronger protest if it fails - maybe a pop up error dialog, or put a sticker on the session itself (if it exists).  Also, some errors have already been eaten (e.g. in RT#231368)
             return 1;
         } else {
