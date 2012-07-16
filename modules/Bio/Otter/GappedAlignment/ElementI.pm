@@ -6,7 +6,7 @@ package Bio::Otter::GappedAlignment::ElementI;
 use strict;
 use warnings;
 
-use Carp;
+use Carp qw(cluck confess croak);
 use List::Util qw(max);
 use Readonly;
 
@@ -32,25 +32,61 @@ sub make_copy {
 }
 
 sub divide {
-    my ($self, $split_len) = @_;
+    my ($self, $t_split_len, $protein_query) = @_;
 
-    my $q_rem = $self->query_length  - $split_len;
-    my $t_rem = $self->target_length - $split_len;
+    my $q_split_len = $t_split_len;
+    my $t_split_rem;
 
-    if ($t_rem <= 0 and $q_rem <= 0) {
-        croak sprintf("Cannot split %s by %d", $self->string, $split_len);
+    if ($protein_query) {
+        $q_split_len = int($t_split_len / 3);
+        $t_split_rem = $t_split_len % 3;
+
+        warn "t_split_rem: $t_split_rem, q_split_len: $q_split_len";
+
+        if ($t_split_rem) {
+            $t_split_len -= $t_split_rem;
+        }
     }
 
+    my $q_rem = $self->query_length  - $q_split_len;
+    my $t_rem = $self->target_length - $t_split_len;
+
+    if ($t_rem <= 0 and $q_rem <= 0) {
+        croak sprintf("Cannot split %s by %d", $self->string, $t_split_len);
+    }
+
+    # FIXME - does this need a warning?
     $q_rem = 0 if $q_rem < 0;
     $t_rem = 0 if $t_rem < 0;
 
     my $q_split = $self->query_length  - $q_rem;
     my $t_split = $self->target_length - $t_rem;
 
-    my $first     = $self->new($q_split, $t_split);
-    my $remainder = $self->new($q_rem,   $t_rem);
+    my (@left, @right);
 
-    return ($first, $remainder);
+    push @left, $self->new($q_split, $t_split);
+
+    if ($t_split_rem) {
+
+        if ($self->is_match) {
+            push @left,  Bio::Otter::GappedAlignment::Element::SplitCodon->new(0, $t_split_rem);
+            push @right, Bio::Otter::GappedAlignment::Element::SplitCodon->new(1, 3 - $t_split_rem);
+        } else {
+            cluck("Non-match 'split codon' - not expected??");
+        }
+
+        $q_rem -= 1;
+        $t_rem -= 3;
+
+    }
+
+    # FIXME - does this need a warning?
+    $q_rem = 0 if $q_rem < 0;
+    $t_rem = 0 if $t_rem < 0;
+
+    push @right, $self->new($q_rem, $t_rem);
+
+    return (\@left, \@right);
 }
 
 sub query_length {
@@ -100,6 +136,10 @@ sub ensembl_cigar_string {
 sub is_intronic {
     my $self = shift;
     return $self->type =~ /^[35I]$/;
+}
+
+sub is_match {
+    return;
 }
 
 1;

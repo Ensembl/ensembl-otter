@@ -11,7 +11,8 @@ use Scalar::Util qw(reftype);
 use Test::More;
 
 use Log::Log4perl qw(:easy);
-my $level = $ENV{HARNESS_IS_VERBOSE} ? $DEBUG : $WARN;
+my $verbose = ($ENV{HARNESS_IS_VERBOSE} or defined $DB::single); # 'prove -v' or running under perl debugger
+my $level = $verbose ? $DEBUG : $WARN;
 Log::Log4perl->easy_init({ level => $level, file => 'stdout', layout => '# %p: %m%n' });
 
 use Hum::Ace::SubSeq;
@@ -84,6 +85,13 @@ my %test_clone_exp = (         # not Readonly as some components manufactured fr
         intron_n_ele => 17,
     },
 
+    protein_invariants => {
+        t_id         => 'EMBOSS_001',
+        score        => 3047,
+        n_ele        => 8,
+        intron_n_ele => 26,
+    },
+
     ts_vulgar_comps_fwd => 'M 1007 1007 G 0 1 M 214 214 G 2 0 M 1315 1315',
     ts_vulgar_comps_rev => 'M 1315 1315 G 2 0 M 214 214 G 0 1 M 1007 1007',
 
@@ -92,13 +100,13 @@ my %test_clone_exp = (         # not Readonly as some components manufactured fr
     intronified_vulgar_comps_rev  => 'M 739 739 I 0 603 M 80 80 I 0 762 M 156 156 I 0 3913 M 230 230 I 0 8901 M 110 110 G 2 0 M 55 55 I 0 1312 M 159 159 G 0 1 M 33 33 I 0 2246 M 974 974',
 
     exons_fwd_region => [
-        [ 120389, 121362 ],
-        [ 123609, 123801 ],
-        [ 125114, 125278 ],
-        [ 134180, 134409 ],
-        [ 138323, 138478 ],
-        [ 139241, 139320 ],
-        [ 139924, 140662 ],
+        [ 120389, 121362 ],     # 974 intron 2246
+        [ 123609, 123801 ],     # 193        1312
+        [ 125114, 125278 ],     # 165
+        [ 134180, 134409 ],     # 230
+        [ 138323, 138478 ],     # 156
+        [ 139241, 139320 ],     #  80
+        [ 139924, 140662 ],     # 739
     ],
 
     fwd_region_min   => 120389,
@@ -657,6 +665,41 @@ Readonly my @split_expected => (
             'BG212959.1 680 528 - RP1-90J20.6-002 85033 84877 - 0 M 9 9 G 0 1 M 17 17 G 0 1 M 9 9 G 0 1 M 7 7 G 0 1 M 8 8 G 1 0 M 15 15 G 0 1 M 86 86',
             'BG212959.1 528 0 - RP1-90J20.6-002 84663 84135 - 0 M 528 528',
             ],
+    },
+
+    # Protein to DNA alignment
+    {
+        name     => 'Test fwd region vs Q96S55',
+        vulgar   => 'Q96S55 0 665 . EMBOSS_001 152 2071 + 3047 M 285 855 F 0 1 M 52 156 G 25 0 M 19 57 F 0 1 G 1 0 M 283 849',
+
+        %{$test_clone_exp{protein_invariants}},
+
+        q_id     => 'Q96S55',
+        q_start  => 0,
+        q_end    => 665,
+        q_strand => '.',
+
+        t_start  => 152,
+        t_end    => 2071,
+        t_strand => '+',
+
+        ts_strand => 1,
+        exons     => $test_clone_exp{exons_fwd_region},
+
+        intron_vulgar  => 'M 274 822 I 0 2246 M 11 33 F 0 1 M 52 156 G 25 0 M 1 3 I 0 1312 M 18 54 F 0 1 G 1 0 M 36 108 S 0 2 I 0 8901 S 1 1 M 76 228 S 0 1 I 0 3913 S 1 2 M 51 153 S 0 1 I 0 762 S 1 2 M 26 78 I 0 603 M 91 273',
+        intron_t_start => 120540,
+        intron_t_end   => 140196,
+        intron_t_strand=> '+',
+
+        splits => [
+            'Q96S55 0 274 . EMBOSS_001 120540 121362 + 0 M 274 822',
+            'Q96S55 274 363 . EMBOSS_001 123608 123801 + 0 M 11 33 F 0 1 M 52 156 G 25 0 M 1 3',
+            'Q96S55 363 418 . EMBOSS_001 125113 125278 + 0 M 18 54 F 0 1 G 1 0 M 36 108 S 0 2',
+            'Q96S55 418 495 . EMBOSS_001 134179 134409 + 0 S 1 1 M 76 228 S 0 1',
+            'Q96S55 495 547 . EMBOSS_001 138322 138478 + 0 S 1 2 M 51 153 S 0 1',
+            'Q96S55 547 574 . EMBOSS_001 139240 139320 + 0 S 1 2 M 26 78',
+            'Q96S55 574 665 . EMBOSS_001 139923 140196 + 0 M 91 273',
+        ],
     },
     );
 
