@@ -5,6 +5,7 @@ package MenuCanvasWindow::ZMapSeqChooser;
 use strict;
 use warnings;
 use Carp;
+use Try::Tiny;
 use Data::Dumper;
 use XML::Simple;
 
@@ -177,8 +178,8 @@ sub zMapSendCommands {
         }
     }
     if (@err) {
-        eval { $self->xremote_cache->remove_clients_to_bad_windows(); 1 }
-          or warn "remove_clients_to_bad_windows failed: $@";
+        try { $self->xremote_cache->remove_clients_to_bad_windows(); }
+        catch { warn "remove_clients_to_bad_windows failed: $::_"; };
         my $msg = join "\n", map {"[$_]"} @err;
         $msg =~ s{\n*\z}{};
         die "ZMap commands failed: $msg\n";
