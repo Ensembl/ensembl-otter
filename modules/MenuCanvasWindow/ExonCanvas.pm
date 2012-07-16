@@ -414,9 +414,8 @@ sub SubSeq {
 
     if ($sub) {
         my $expected = 'Hum::Ace::SubSeq';
-        unless (eval { $sub->isa($expected) }) {
-            confess "Expected a '$expected', but got '$sub'";
-        }
+        my $ok; try { $ok = $sub->isa($expected) };
+        confess "Expected a '$expected', but got '$sub'" unless $ok;
         $self->{'_SubSeq'} = $sub;
         $self->canvas->toplevel->configure(-title => 'otter: Transcript ' . $sub->name);
     }
@@ -787,15 +786,13 @@ sub window_close {
 
     if ($self->is_mutable && $xc->AceDatabase->write_access) {
         my ($sub, $err);
-        eval{
-            $sub = $self->get_SubSeq_if_changed;
-            1;
-        } or $err = ($@ || '(error message got lost)');
-        # lost $@ guard is just paranoia, so far
+        my $ok = 0;
+        try { $sub = $self->get_SubSeq_if_changed; $ok = 1; }
+        catch { $err = $::_; };
 
         my $name = $self->name;
 
-        if ($err) {
+        if (! $ok) {
             $self->deiconify_and_raise;
             $self->exception_message($err, 'Error while detecting changes to save');
             my $dialog = $self->canvas->toplevel->Dialog(
@@ -871,10 +868,11 @@ sub search_pfam {
         return;
     }
 
-    eval{ $sub->validate; };
-    if ($@) {
-        $self->exception_message($@, 'Invalid transcript');
-    } else {
+    my $ok = 0;
+    try { $sub->validate; $ok = 1; }
+    catch { $self->exception_message($::_, 'Invalid transcript'); };
+
+    if ($ok) {
         my $pep = $sub->translator->translate($sub->translatable_Sequence);
         my $name = $pep->name;
         my $str = $pep->sequence_string;
@@ -2345,10 +2343,8 @@ sub get_splice_acceptor_donor_strings {
     # Fetch the splice donor and acceptor sequences before switching start/end for reverse strand
     my ($splice_acceptor_str, $splice_donor_str);
     if ($start and $end) {
-        eval { $splice_acceptor_str = $self->SubSeq->splice_acceptor_seq_string($start, $end, $strand) };
-        # warn $@ if $@;
-        eval { $splice_donor_str    = $self->SubSeq->splice_donor_seq_string(   $start, $end, $strand) };
-        # warn $@ if $@;
+        try { $splice_acceptor_str = $self->SubSeq->splice_acceptor_seq_string($start, $end, $strand) };
+        try { $splice_donor_str    = $self->SubSeq->splice_donor_seq_string(   $start, $end, $strand) };
     }
     $splice_acceptor_str ||= '??';
     $splice_donor_str    ||= '???';
@@ -2734,12 +2730,12 @@ sub new_SubSeq_from_tk {
 sub save_if_changed {
     my ($self) = @_;
 
-    eval {
+    try {
         if (my $sub = $self->get_SubSeq_if_changed) {
             $self->xace_save($sub);
         }
-        1;
-    } or $self->exception_message($@, 'Error saving transcript');
+    }
+    catch { $self->exception_message($::_, 'Error saving transcript'); };
     # Make sure the annotators see the messages!
 
     return;
