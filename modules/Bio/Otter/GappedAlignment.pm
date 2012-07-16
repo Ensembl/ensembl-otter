@@ -115,6 +115,8 @@ sub _do_intronify {
     $data{intron_ga} = $intron_ga = $self->_new_copy_basics; # this is what we're building!
     $data{per_exon}               = [];
 
+    $data{protein_query} = ($self->query_type eq 'P');
+
     $data{debug_exon_ga} = sub {
         my ($ga, $msg) = @_;
         $self->logger->debug(sprintf('Exon_ga %s q: %d-%d, t: %d-%d', $msg,
@@ -261,15 +263,18 @@ sub _intronify_do_exon {
           # ...do splitting, put remainder back
           $self->logger->debug("Adding ", $overlap, " of ", $ele->target_length);
 
-          my ($in_exon_ele, $remaining_ele) = $ele->divide($overlap);
+          my ($in_exon_eles, $remaining_eles) = $ele->divide($overlap, $data->{protein_query});
 
-          $intron_ga->add_element_track_lengths($in_exon_ele);
-          unshift @{$data->{elements}}, $remaining_ele;
+          foreach my $ele (@{$in_exon_eles}) {
+              $intron_ga->add_element_track_lengths($ele);
 
-          $data->{t_splice_pos} += $in_exon_ele->target_length;
-          $data->{query_pos}    += $in_exon_ele->query_length * $intron_ga->query_strand_sense;
+              $data->{t_splice_pos} += $ele->target_length;
+              $data->{query_pos}    += $ele->query_length * $intron_ga->query_strand_sense;
 
-          $exon_ga->add_element_track_lengths($in_exon_ele->make_copy);
+              $exon_ga->add_element_track_lengths($ele->make_copy);
+          }
+          unshift @{$data->{elements}}, @{$remaining_eles};
+
           $data->{debug_exon_ga}->($exon_ga, '[partial]  ');
 
           last ELEMENTS;
@@ -455,13 +460,33 @@ sub _strand_sense { ## no critic (Subroutines::RequireFinalReturn)
     my $strand = $self->$accessor;
     return if not defined $strand;
 
-    if ($strand eq '+') {
+    if ($strand eq '+' or $strand eq '.') {
         return 1;
     } elsif ($strand eq '-') {
         return -1;
     } else {
-        $self->logger->logcroak("$accessor not '+' or '-'");
+        $self->logger->logcroak("$accessor not '+', '-' or '.'");
     }
+}
+
+sub query_type {
+    my $self = shift;
+    return $self->_type('query_strand');
+}
+
+sub _type {
+    my ($self, $accessor) = @_;
+    my $strand = $self->$accessor;
+    return if not defined $strand;
+
+    if ($strand eq '+' or $strand eq '-') {
+        return 'N';
+    } elsif ($strand eq '.') {
+        return 'P';
+    } else {
+        $self->logger->logcroak("$accessor not '+', '-' or '.'");
+    }
+    return;                     # redundant but keeps perlcritic happy
 }
 
 sub target_ensembl_coords {
@@ -516,6 +541,11 @@ sub target_strand {
 sub target_strand_sense {
     my $self = shift;
     return $self->_strand_sense('target_strand');
+}
+
+sub target_type {
+    my $self = shift;
+    return $self->_type('target_strand');
 }
 
 sub swap_query_strand {
