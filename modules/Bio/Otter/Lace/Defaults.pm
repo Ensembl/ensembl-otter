@@ -273,8 +273,20 @@ sub _config_section_ini_key {
     my ($ini, $key) = @_;
     return
         $ini->SectionExists($key)
-        ? ( map { $_ => $ini->val($key, $_) } $ini->Parameters($key) )
+        ? ( map {
+            $_ => _config_section_ini_key_name($ini, $key, $_);
+            } $ini->Parameters($key) )
         : ( );
+}
+
+sub _config_section_ini_key_name {
+    my ($ini, $key, $name) = @_;
+    my @val = $ini->val($key, $name);
+    # convert a multi-value into an arrayref
+    my $val =
+        defined $ini->GetParameterEOT($key, $name)
+        ? [ @val ] : $val[0];
+    return $val;
 }
 
 sub config_keys {
