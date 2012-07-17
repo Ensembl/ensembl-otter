@@ -65,12 +65,8 @@ sub initialize {
         $top->bind('<Control-space>',   $show_pep_command);
         $canvas->Tk::bind('<space>',    $show_pep_command);
 
-        # Save changes on window close
-        my $window_close = sub {
-            $self->window_close or return;
-            };
-
         # Trap window close
+        my $window_close = sub { $self->window_close };
         $top->protocol('WM_DELETE_WINDOW', $window_close);
         $top->bind('<Control-w>',   $window_close);
         $top->bind('<Control-W>',   $window_close);
