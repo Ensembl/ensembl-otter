@@ -86,9 +86,21 @@ my %test_clone_exp = (         # not Readonly as some components manufactured fr
     },
 
     protein_invariants => {
+        vulgar   => 'Q96S55 0 665 . EMBOSS_001 152 2071 + 3047 M 285 855 F 0 1 M 52 156 G 25 0 M 19 57 F 0 1 G 1 0 M 283 849',
+        q_id     => 'Q96S55',
+        q_start  => 0,
+        q_end    => 665,
+        q_strand => '.',
+
         t_id         => 'EMBOSS_001',
+        t_start  => 152,
+        t_end    => 2071,
+        t_strand => '+',
+
         score        => 3047,
         n_ele        => 8,
+
+        intron_vulgar  => 'M 274 822 I 0 2246 M 11 33 F 0 1 M 52 156 G 25 0 M 1 3 I 0 1312 M 18 54 F 0 1 G 1 0 M 36 108 S 0 2 I 0 8901 S 1 1 M 76 228 S 0 1 I 0 3913 S 1 2 M 51 153 S 0 1 I 0 762 S 1 2 M 26 78 I 0 603 M 91 273',
         intron_n_ele => 26,
     },
 
@@ -164,6 +176,26 @@ my %test_clone_exp = (         # not Readonly as some components manufactured fr
         'M 110 110 G 2 0 M 55 55',
         'M 159 159 G 0 1 M 33 33',
         'M 974 974',
+    ],
+
+    v_protein_query_exons => [
+        [   0, 274 ],
+        [ 274, 363 ],
+        [ 363, 418 ],
+        [ 418, 495 ],
+        [ 495, 547 ],
+        [ 547, 574 ],
+        [ 574, 665 ],
+    ],
+
+    protein_exon_vulgars => [
+        'M 274 822',
+        'M 11 33 F 0 1 M 52 156 G 25 0 M 1 3',
+        'M 18 54 F 0 1 G 1 0 M 36 108 S 0 2',
+        'S 1 1 M 76 228 S 0 1',
+        'S 1 2 M 51 153 S 0 1',
+        'S 1 2 M 26 78',
+        'M 91 273',
     ],
     );
 
@@ -670,36 +702,72 @@ Readonly my @split_expected => (
     # Protein to DNA alignment
     {
         name     => 'Test fwd region vs Q96S55',
-        vulgar   => 'Q96S55 0 665 . EMBOSS_001 152 2071 + 3047 M 285 855 F 0 1 M 52 156 G 25 0 M 19 57 F 0 1 G 1 0 M 283 849',
 
         %{$test_clone_exp{protein_invariants}},
-
-        q_id     => 'Q96S55',
-        q_start  => 0,
-        q_end    => 665,
-        q_strand => '.',
-
-        t_start  => 152,
-        t_end    => 2071,
-        t_strand => '+',
 
         ts_strand => 1,
         exons     => $test_clone_exp{exons_fwd_region},
 
-        intron_vulgar  => 'M 274 822 I 0 2246 M 11 33 F 0 1 M 52 156 G 25 0 M 1 3 I 0 1312 M 18 54 F 0 1 G 1 0 M 36 108 S 0 2 I 0 8901 S 1 1 M 76 228 S 0 1 I 0 3913 S 1 2 M 51 153 S 0 1 I 0 762 S 1 2 M 26 78 I 0 603 M 91 273',
         intron_t_start => 120540,
         intron_t_end   => 140196,
         intron_t_strand=> '+',
 
-        splits => [
-            'Q96S55 0 274 . EMBOSS_001 120540 121362 + 0 M 274 822',
-            'Q96S55 274 363 . EMBOSS_001 123608 123801 + 0 M 11 33 F 0 1 M 52 156 G 25 0 M 1 3',
-            'Q96S55 363 418 . EMBOSS_001 125113 125278 + 0 M 18 54 F 0 1 G 1 0 M 36 108 S 0 2',
-            'Q96S55 418 495 . EMBOSS_001 134179 134409 + 0 S 1 1 M 76 228 S 0 1',
-            'Q96S55 495 547 . EMBOSS_001 138322 138478 + 0 S 1 2 M 51 153 S 0 1',
-            'Q96S55 547 574 . EMBOSS_001 139240 139320 + 0 S 1 2 M 26 78',
-            'Q96S55 574 665 . EMBOSS_001 139923 140196 + 0 M 91 273',
+        split_components => [
+            'Q96S55',     $test_clone_exp{v_protein_query_exons}, '.', # query
+            'EMBOSS_001', [
+                              [ 120540, 121362 ],
+                              [ 123608, 123801 ],
+                              [ 125113, 125278 ],
+                              [ 134179, 134409 ],
+                              [ 138322, 138478 ],
+                              [ 139240, 139320 ],
+                              [ 139923, 140196 ],
+                          ],                                      '+', # target
+            0, $test_clone_exp{protein_exon_vulgars},                  # score, vulgar string
         ],
+
+        # BS: Q96S55 0 274 . EMBOSS_001 120540 121362 + 0 M 274 822
+        # BS: Q96S55 274 363 . EMBOSS_001 123608 123801 + 0 M 11 33 F 0 1 M 52 156 G 25 0 M 1 3
+        # BS: Q96S55 363 418 . EMBOSS_001 125113 125278 + 0 M 18 54 F 0 1 G 1 0 M 36 108 S 0 2
+        # BS: Q96S55 418 495 . EMBOSS_001 134179 134409 + 0 S 1 1 M 76 228 S 0 1
+        # BS: Q96S55 495 547 . EMBOSS_001 138322 138478 + 0 S 1 2 M 51 153 S 0 1
+        # BS: Q96S55 547 574 . EMBOSS_001 139240 139320 + 0 S 1 2 M 26 78
+        # BS: Q96S55 574 665 . EMBOSS_001 139923 140196 + 0 M 91 273
+    },
+
+    {
+        name     => 'Test rev region vs Q96S55',
+
+        %{$test_clone_exp{protein_invariants}},
+
+        ts_strand => -1,
+        exons     => $test_clone_exp{exons_rev_region},
+
+        intron_t_start => 55122,
+        intron_t_end   => 35466,
+        intron_t_strand=> '-',
+
+        split_components => [
+            'Q96S55',     $test_clone_exp{v_protein_query_exons}, '.', # query
+            'EMBOSS_001', [
+                              [ 55122, 54300 ],
+                              [ 52054, 51861 ],
+                              [ 50549, 50384 ],
+                              [ 41483, 41253 ],
+                              [ 37340, 37184 ],
+                              [ 36422, 36342 ],
+                              [ 35739, 35466 ],
+                          ],                                      '-', # target
+            0, $test_clone_exp{protein_exon_vulgars},                  # score, vulgar string
+        ],
+
+        # BS: Q96S55 0 274 . EMBOSS_001 55122 54300 - 0 M 274 822
+        # BS: Q96S55 274 363 . EMBOSS_001 52054 51861 - 0 M 11 33 F 0 1 M 52 156 G 25 0 M 1 3
+        # BS: Q96S55 363 418 . EMBOSS_001 50549 50384 - 0 M 18 54 F 0 1 G 1 0 M 36 108 S 0 2
+        # BS: Q96S55 418 495 . EMBOSS_001 41483 41253 - 0 S 1 1 M 76 228 S 0 1
+        # BS: Q96S55 495 547 . EMBOSS_001 37340 37184 - 0 S 1 2 M 51 153 S 0 1
+        # BS: Q96S55 547 574 . EMBOSS_001 36422 36342 - 0 S 1 2 M 26 78
+        # BS: Q96S55 574 665 . EMBOSS_001 35739 35466 - 0 M 91 273
     },
     );
 
