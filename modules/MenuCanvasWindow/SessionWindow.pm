@@ -20,7 +20,7 @@ use EditWindow::Dotter;
 use EditWindow::Exonerate;
 use EditWindow::Clone;
 use EditWindow::LocusName;
-use MenuCanvasWindow::ExonCanvas;
+use MenuCanvasWindow::TranscriptWindow;
 use MenuCanvasWindow::GenomicFeatures;
 use Text::Wrap qw{ wrap };
 
@@ -247,9 +247,9 @@ sub update_Locus {
             # Replace locus in subseq with new copy
             $sub->Locus($new_locus);
 
-            # Is there an edit window open?
-            if (my $ec = $self->get_subseq_edit_window($sub_name)) {
-                $ec->update_Locus($new_locus);
+            # Is there a transcript window open?
+            if (my $transcript_window = $self->get_transcript_window($sub_name)) {
+                $transcript_window->update_Locus($new_locus);
             }
         }
     }
@@ -454,7 +454,7 @@ sub populate_menus {
 
     # Close all open subseq windows
     my $close_subseq_command = sub{
-        $self->close_all_subseq_edit_windows;
+        $self->close_all_transcript_windows;
         };
     $subseq->add('command',
         -label          => 'Close all',
@@ -850,7 +850,7 @@ sub close_GenomicFeatures {
         $self->highlight_by_name(map { $_->name } @new_subseq);
         $self->message(@msg) if @msg;
         foreach my $new (@new_subseq) {
-            $self->make_exoncanvas_edit_window($new);
+            $self->make_transcript_window($new);
         }
 
         return;
@@ -946,7 +946,7 @@ sub exit_save_data {
 sub close_all_edit_windows {
     my ($self) = @_;
 
-    $self->close_all_subseq_edit_windows or return;
+    $self->close_all_transcript_windows or return;
     $self->close_all_clone_edit_windows or return;
     $self->close_GenomicFeatures;
     return 1;
@@ -1224,7 +1224,7 @@ sub edit_subsequences {
         unless @sub_names;
     foreach my $sub_name (@sub_names) {
         # Just show the edit window if present
-        next if $self->raise_subseq_edit_window($sub_name);
+        next if $self->raise_transcript_window($sub_name);
 
         # Get a copy of the subseq
         if (my $sub = $self->get_SubSeq($sub_name)) {
@@ -1234,7 +1234,7 @@ sub edit_subsequences {
             $edit->is_archival($sub->is_archival);
             $edit->locus_level_errors($sub->locus_level_errors);
 
-            $self->make_exoncanvas_edit_window($edit);
+            $self->make_transcript_window($edit);
         } else {
             warn "Failed to get_SubSeq($sub_name)";
             $retval = 0;
@@ -1424,9 +1424,9 @@ sub add_SubSeq_and_paste_evidence {
     $self->draw_subseq_list;
     $self->highlight_by_name($sub->name);
 
-    my $ec = $self->make_exoncanvas_edit_window($sub);
-    $ec->merge_position_pairs;  # Useful if multiple overlapping evidence selected
-    $ec->EvidencePaster->add_evidence_from_text($clip);
+    my $transcript_window = $self->make_transcript_window($sub);
+    $transcript_window->merge_position_pairs;  # Useful if multiple overlapping evidence selected
+    $transcript_window->EvidencePaster->add_evidence_from_text($clip);
 
     return;
 }
@@ -1494,7 +1494,7 @@ sub delete_subsequences {
     # Check that none of the sequences to be deleted are being edited
     my $in_edit = 0;
     foreach my $sub (@to_die) {
-        $in_edit += $self->raise_subseq_edit_window($sub->name);
+        $in_edit += $self->raise_transcript_window($sub->name);
     }
     if ($in_edit) {
         $self->message("Must close edit windows before calling delete");
@@ -1569,7 +1569,7 @@ sub delete_subsequences {
     return;
 }
 
-sub make_exoncanvas_edit_window {
+sub make_transcript_window {
     my ($self, $sub) = @_;
 
     my $sub_name = $sub->name;
@@ -1578,25 +1578,25 @@ sub make_exoncanvas_edit_window {
     # Make a new window
     my $top = $canvas->Toplevel;
 
-    # Make new MenuCanvasWindow::ExonCanvas object and initialize
-    my $ec = MenuCanvasWindow::ExonCanvas->new($top, 345, 50);
-    $ec->name($sub_name);
-    $ec->SessionWindow($self);
-    $ec->SubSeq($sub);
-    $ec->initialize;
+    # Make new MenuCanvasWindow::TranscriptWindow object and initialize
+    my $transcript_window = MenuCanvasWindow::TranscriptWindow->new($top, 345, 50);
+    $transcript_window->name($sub_name);
+    $transcript_window->SessionWindow($self);
+    $transcript_window->SubSeq($sub);
+    $transcript_window->initialize;
 
-    $self->save_subseq_edit_window($sub_name, $ec);
+    $self->save_transcript_window($sub_name, $transcript_window);
 
-    return $ec;
+    return $transcript_window;
 }
 
-sub raise_subseq_edit_window {
+sub raise_transcript_window {
     my ($self, $name) = @_;
 
     confess "no name given" unless $name;
 
-    if (my $ec = $self->get_subseq_edit_window($name)) {
-        my $top = $ec->canvas->toplevel;
+    if (my $transcript_window = $self->get_transcript_window($name)) {
+        my $top = $transcript_window->canvas->toplevel;
         $top->deiconify;
         $top->raise;
         return 1;
@@ -1605,52 +1605,52 @@ sub raise_subseq_edit_window {
     }
 }
 
-sub get_subseq_edit_window {
+sub get_transcript_window {
     my ($self, $name) = @_;
 
-    return $self->{'_subseq_edit_window'}{$name};
+    return $self->{'_transcript_window'}{$name};
 }
 
-sub list_all_subseq_edit_window_names {
+sub list_all_transcript_window_names {
     my ($self) = @_;
 
-    return keys %{$self->{'_subseq_edit_window'}};
+    return keys %{$self->{'_transcript_window'}};
 }
 
-sub save_subseq_edit_window {
-    my ($self, $name, $ec) = @_;
+sub save_transcript_window {
+    my ($self, $name, $transcript_window) = @_;
 
-    $self->{'_subseq_edit_window'}{$name} = $ec;
-    weaken($self->{'_subseq_edit_window'}{$name});
+    $self->{'_transcript_window'}{$name} = $transcript_window;
+    weaken($self->{'_transcript_window'}{$name});
 
     return;
 }
 
-sub delete_subseq_edit_window {
+sub delete_transcript_window {
     my ($self, $name) = @_;
 
-    delete($self->{'_subseq_edit_window'}{$name});
+    delete($self->{'_transcript_window'}{$name});
 
     return;
 }
 
-sub rename_subseq_edit_window {
+sub rename_transcript_window {
     my ($self, $old_name, $new_name) = @_;
 
-    my $win = $self->get_subseq_edit_window($old_name)
+    my $transcript_window = $self->get_transcript_window($old_name)
         or return;
-    $self->delete_subseq_edit_window($old_name);
-    $self->save_subseq_edit_window($new_name, $win);
+    $self->delete_transcript_window($old_name);
+    $self->save_transcript_window($new_name, $transcript_window);
 
     return;
 }
 
-sub close_all_subseq_edit_windows {
+sub close_all_transcript_windows {
     my ($self) = @_;
 
-    foreach my $name ($self->list_all_subseq_edit_window_names) {
-        my $ec = $self->get_subseq_edit_window($name) or next;
-        $ec->window_close or return 0;
+    foreach my $name ($self->list_all_transcript_window_names) {
+        my $transcript_window = $self->get_transcript_window($name) or next;
+        $transcript_window->window_close or return 0;
     }
 
     return 1;
@@ -1936,7 +1936,7 @@ sub replace_SubSeq {
 
       if ($new_name ne $old_name) {
         $self->{'_subsequence_cache'}{$old_name} = undef;
-        $self->rename_subseq_edit_window($old_name, $new_name);
+        $self->rename_transcript_window($old_name, $new_name);
       }
       $self->{'_subsequence_cache'}{$new_name} = $new;
 
@@ -2043,10 +2043,10 @@ sub update_SubSeq_locus_level_errors {
     my ($self) = @_;
 
     $self->Assembly->set_SubSeq_locus_level_errors;
-    foreach my $sub_name ($self->list_all_subseq_edit_window_names) {
-        my $ec = $self->get_subseq_edit_window($sub_name) or next;
+    foreach my $sub_name ($self->list_all_transcript_window_names) {
+        my $transcript_window = $self->get_transcript_window($sub_name) or next;
         my $sub = $self->get_SubSeq($sub_name) or next;
-        $ec->SubSeq->locus_level_errors($sub->locus_level_errors);
+        $transcript_window->SubSeq->locus_level_errors($sub->locus_level_errors);
     }
 
     return;
@@ -2331,7 +2331,7 @@ sub rename_locus {
 
     warn "Renaming locus";
 
-    unless ($self->close_all_subseq_edit_windows) {
+    unless ($self->close_all_transcript_windows) {
         $self->message('Must close all clone editing windows before renaming locus');
         return;
     }

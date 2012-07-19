@@ -110,14 +110,14 @@ sub initialise {
     return;
 }
 
-sub ExonCanvas {
-    my ($self, $ExonCanvas) = @_;
+sub TranscriptWindow {
+    my ($self, $TranscriptWindow) = @_;
 
-    if ($ExonCanvas) {
-        $self->{'_ExonCanvas'} = $ExonCanvas;
-        weaken($self->{'_ExonCanvas'});
+    if ($TranscriptWindow) {
+        $self->{'_TranscriptWindow'} = $TranscriptWindow;
+        weaken($self->{'_TranscriptWindow'});
     }
-    return $self->{'_ExonCanvas'};
+    return $self->{'_TranscriptWindow'};
 }
 
 sub align_button {
@@ -291,7 +291,7 @@ sub draw_evidence {
     }
 
     $self->canvas->toplevel->configure(
-        -title => 'otter: Evidence ' . $self->ExonCanvas->SubSeq->name,
+        -title => 'otter: Evidence ' . $self->TranscriptWindow->SubSeq->name,
         );
     $self->fix_window_min_max_sizes;
 
@@ -313,7 +313,7 @@ sub paste_type_and_name {
 sub add_evidence_from_text {
     my ($self, $text) = @_;
 
-    my $cache = $self->ExonCanvas->SessionWindow->AceDatabase->AccessionTypeCache;
+    my $cache = $self->TranscriptWindow->SessionWindow->AceDatabase->AccessionTypeCache;
 
     my $acc_list = $cache->accession_list_from_text($text);
     $cache->populate($acc_list);
@@ -404,7 +404,7 @@ sub align_to_transcript {
 
     my @accessions = $self->get_selected_accessions;
 
-    my $cdna = $self->ExonCanvas->check_get_mRNA_Sequence;
+    my $cdna = $self->TranscriptWindow->check_get_mRNA_Sequence;
     return unless $cdna;
 
     my $top = $self->canvas->toplevel;
@@ -412,7 +412,7 @@ sub align_to_transcript {
     my $otf = Bio::Otter::Lace::OnTheFly::Transcript->new({
 
         accessions => \@accessions,
-        transcript => $self->ExonCanvas->current_SubSeq,
+        transcript => $self->TranscriptWindow->current_SubSeq,
 
         # aligner_* attribs may be better via Aligner subclass??
         aligner_options => {
@@ -427,7 +427,7 @@ sub align_to_transcript {
         problem_report_cb => sub { $top->Tk::Utils::OnTheFly::problem_box('Evidence Selected', @_) },
         long_query_cb     => sub { $top->Tk::Utils::OnTheFly::long_query_confirm(@_)  },
 
-        accession_type_cache => $self->ExonCanvas->SessionWindow->AceDatabase->AccessionTypeCache,
+        accession_type_cache => $self->TranscriptWindow->SessionWindow->AceDatabase->AccessionTypeCache,
         });
 
     my $logger = $self->logger;
@@ -456,7 +456,7 @@ sub dotter_to_transcript {
 
     my @accessions = $self->get_selected_accessions;
 
-    return $self->ExonCanvas->launch_dotter(@accessions);
+    return $self->TranscriptWindow->launch_dotter(@accessions);
 }
 
 sub alignment_window {

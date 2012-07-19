@@ -1,7 +1,7 @@
 
-### MenuCanvasWindow::ExonCanvas
+### MenuCanvasWindow::TranscriptWindow
 
-package MenuCanvasWindow::ExonCanvas;
+package MenuCanvasWindow::TranscriptWindow;
 
 use strict;
 use warnings;
@@ -962,7 +962,7 @@ sub EvidencePaster {
         my $paster_top = $self->canvas->Toplevel;
         $paster_top->transient($self->canvas->toplevel);
         $paster = $self->{'_evi_window'} = CanvasWindow::EvidencePaster->new($paster_top);
-        $paster->ExonCanvas($self);
+        $paster->TranscriptWindow($self);
         $paster->initialise($evi);
     }
     return $paster;
@@ -1191,8 +1191,8 @@ sub update_Locus_tk_fields {
 }
 
 # Locus renaming plan
-# On save the locus fields in all other ExonCanvases with the same Locus get updated
-# (Provide a button to open all ExonCanvases with same Locus?)
+# On save the locus fields in all other TranscriptWindows with the same Locus get updated
+# (Provide a button to open all TranscriptWindows with same Locus?)
 # Choosing a different Locus from the dropdown menu updates
 #   the Locus edit widgets with values from the other Locus.
 # Editing the name of the Locus and saving renames the locus if already
@@ -2891,7 +2891,7 @@ sub DESTROY {
     my ($self) = @_;
 
     my $name = $self->name;
-    warn "Destroying ExonCanvas: '$name'\n";
+    warn "Destroying TranscriptWindow: '$name'\n";
 
     return;
 }
@@ -2966,7 +2966,7 @@ END_OF_PIXMAP
 
 __END__
 
-=head1 NAME - MenuCanvasWindow::ExonCanvas
+=head1 NAME - MenuCanvasWindow::TranscriptWindow
 
 =head1 AUTHOR
 
