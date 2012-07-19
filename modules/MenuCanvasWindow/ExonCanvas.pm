@@ -825,7 +825,7 @@ sub window_close {
             }
         }
     }
-    #$self->delete_chooser_window_ref;
+
     $self->top_window->destroy;
 
     return 1;
@@ -1959,16 +1959,6 @@ sub select_all_exon_pos {
 
     my $canvas = $self->canvas;
     return $self->highlight($canvas->find('withtag', 'exon_pos'));
-}
-
-sub delete_chooser_window_ref {
-    my ($self) = @_;
-
-    my $name = $self->name;
-    my $SessionWindow = $self->SessionWindow;
-    $SessionWindow->delete_subseq_edit_window($name);
-
-    return;
 }
 
 sub left_button_handler {
