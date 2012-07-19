@@ -113,13 +113,13 @@ sub initialise {
 
     my $button_frame = $top->Frame->pack(@frame_pack);
 
-    my $xace_save = sub { $self->xace_save };
+    my $save = sub { $self->save };
     $button_frame->Button(
         -text       => 'Save',
-        -command    => $xace_save,
+        -command    => $save,
         )->pack( -side => 'left' );
-    $top->bind('<Control-s>', $xace_save);
-    $top->bind('<Control-S>', $xace_save);
+    $top->bind('<Control-s>', $save);
+    $top->bind('<Control-S>', $save);
 
     my $close_window = sub { $self->close_window };
     $button_frame->Button(
@@ -229,18 +229,18 @@ sub generate_desc {
     return;
 }
 
-sub xace_save {
+sub save {
     my ($self) = @_;
 
     if (my $clone = $self->get_new_Clone_if_changed) {
-        $self->xace_save_Clone($clone);
+        $self->save_Clone($clone);
         $self->fill_Properties;
     }
 
     return;
 }
 
-sub xace_save_Clone {
+sub save_Clone {
     my ($self, $clone) = @_;
 
     $self->SessionWindow->save_Clone($clone);
@@ -269,7 +269,7 @@ sub close_window {
             return; # Abandon window close
         }
         elsif ($ans eq 'Yes') {
-            $self->xace_save_Clone($clone) or return;
+            $self->save_Clone($clone) or return;
         }
     }
 
