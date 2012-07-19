@@ -6,8 +6,8 @@ package Bio::Otter::GappedAlignment::ElementI;
 use strict;
 use warnings;
 
-use Carp qw(cluck confess croak);
 use List::Util qw(max);
+use Log::Log4perl;
 use Readonly;
 
 use Bio::Otter::GappedAlignment::ElementTypes;
@@ -41,7 +41,7 @@ sub divide {
         $q_split_len = int($t_split_len / 3);
         $t_split_rem = $t_split_len % 3;
 
-        warn "t_split_rem: $t_split_rem, q_split_len: $q_split_len";
+        $self->logger->debug("t_split_rem: $t_split_rem, q_split_len: $q_split_len");
 
         if ($t_split_rem) {
             $t_split_len -= $t_split_rem;
@@ -52,7 +52,7 @@ sub divide {
     my $t_rem = $self->target_length - $t_split_len;
 
     if ($t_rem <= 0 and $q_rem <= 0) {
-        croak sprintf("Cannot split %s by %d", $self->string, $t_split_len);
+        $self->logger->logcroak(sprintf("Cannot split %s by %d", $self->string, $t_split_len));
     }
 
     # FIXME - does this need a warning?
@@ -72,7 +72,7 @@ sub divide {
             push @left,  Bio::Otter::GappedAlignment::Element::SplitCodon->new(0, $t_split_rem);
             push @right, Bio::Otter::GappedAlignment::Element::SplitCodon->new(1, 3 - $t_split_rem);
         } else {
-            cluck("Non-match 'split codon' - not expected??");
+            $self->logger->logcluck("Non-match 'split codon' - not expected??");
         }
 
         $q_rem -= 1;
@@ -118,7 +118,8 @@ sub cigar_type {
     my $self = shift;
     # Pure virtual
     my $type = ucfirst $self->long_type;
-    croak "cigar_type must be provided by child class '$type'";
+    $self->logger->logcroak("cigar_type must be provided by child class '$type'");
+    return;                     # not that we ever get here.
 }
 
 sub cigar_length {
@@ -140,6 +141,11 @@ sub is_intronic {
 
 sub is_match {
     return;
+}
+
+sub logger {
+    my $self = shift;
+    return Log::Log4perl->get_logger(ref($self));
 }
 
 1;
