@@ -133,7 +133,7 @@ sub initialise {
         -variable => \$self->{_use_mark},
         -command => sub {
             if ($self->{_use_mark}) {
-                my ($mark_start, $mark_end) = $self->XaceSeqChooser->zMapGetMark;
+                my ($mark_start, $mark_end) = $self->SessionWindow->zMapGetMark;
                 if ($mark_start && $mark_end) {
                     warn "Setting dotter genomic start & end to marked region: $mark_start - $mark_end";
                     $self->set_entry('genomic_start', $mark_start);
@@ -196,18 +196,18 @@ sub initialise {
     return;
 }
 
-sub XaceSeqChooser {
-    my ($self, $xc) = @_;
-    $self->{_XaceSeqChooser} = $xc if $xc;
-    return $self->{_XaceSeqChooser};
+sub SessionWindow {
+    my ($self, $SessionWindow) = @_;
+    $self->{_SessionWindow} = $SessionWindow if $SessionWindow;
+    return $self->{_SessionWindow};
 }
 
-sub update_from_XaceSeqChooser {
-    my ($self, $xc) = @_;
+sub update_from_SessionWindow {
+    my ($self, $SessionWindow) = @_;
 
-    $self->query_Sequence($xc->Assembly->Sequence);
+    $self->query_Sequence($SessionWindow->Assembly->Sequence);
     $self->genomic->configure(-state => 'normal');
-    $self->set_entry('genomic', $xc->slice_name);
+    $self->set_entry('genomic', $SessionWindow->slice_name);
     $self->genomic->configure(-state => 'disabled');
     $self->update_from_clipboard;
     my $top = $self->top;

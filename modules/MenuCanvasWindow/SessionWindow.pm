@@ -1,5 +1,5 @@
 
-package MenuCanvasWindow::XaceSeqChooser;
+package MenuCanvasWindow::SessionWindow;
 
 use strict;
 use warnings;
@@ -741,7 +741,7 @@ sub launch_GenomicFeatures {
 
             $gfs = MenuCanvasWindow::GenomicFeatures->new($gfw);
             $self->GenomicFeatures($gfs);
-            $gfs->XaceSeqChooser($self);
+            $gfs->SessionWindow($self);
             $gfs->initialize;
         }
     };
@@ -1582,7 +1582,7 @@ sub make_exoncanvas_edit_window {
     # Make new MenuCanvasWindow::ExonCanvas object and initialize
     my $ec = MenuCanvasWindow::ExonCanvas->new($top, 345, 50);
     $ec->name($sub_name);
-    $ec->XaceSeqChooser($self);
+    $ec->SessionWindow($self);
     $ec->SubSeq($sub);
     $ec->initialize;
 
@@ -1739,7 +1739,7 @@ sub edit_Clone {
         $cew = EditWindow::Clone->new($self->top_window->Toplevel(
             -title => sprintf("otter: Clone %s", $clone->clone_name),
             ));
-        $cew->XaceSeqChooser($self);
+        $cew->SessionWindow($self);
         $cew->Clone($clone);
         $cew->initialise;
         $self->{'_clone_edit_window'}{$name} = $cew;
@@ -2022,7 +2022,7 @@ sub empty_SubSeq_cache {
 sub row_count {
     my ($self, $slist) = @_;
 
-    # Work out number of rows to keep chooser
+    # Work out number of rows to keep the session
     # window roughly square.  Also a lower and
     # an upper limit of 20 and 40 rows.
     my $total_name_length = 0;
@@ -2344,7 +2344,7 @@ sub rename_locus {
     my $top = $parent->Toplevel(-title => 'otter: Rename Locus');
     $top->transient($parent);
     my $lr = EditWindow::LocusName->new($top);
-    $lr->XaceSeqChooser($self);
+    $lr->SessionWindow($self);
     $lr->locus_name_arg($locus_name);
     $lr->initialise;
     $self->{'_locus_rename_window'} = $lr;
@@ -2363,10 +2363,10 @@ sub run_dotter {
         $top->transient($parent);
         $dw = EditWindow::Dotter->new($top);
         $dw->initialise;
-        $dw->XaceSeqChooser($self);
+        $dw->SessionWindow($self);
         $self->{'_dotter_window'} = $dw;
     }
-    $dw->update_from_XaceSeqChooser($self);
+    $dw->update_from_SessionWindow($self);
 
     return 1;
 }
@@ -2382,12 +2382,12 @@ sub run_exonerate {
             );
         $top->transient($parent);
         $ew = EditWindow::Exonerate->new($top);
-        $ew->XaceSeqChooser($self);
+        $ew->SessionWindow($self);
         $ew->initialise();
         $self->{'_exonerate_window'} = $ew;
         weaken($self->{'_exonerate_window'});
     }
-    $ew->update_from_XaceSeqChooser;
+    $ew->update_from_SessionWindow;
 
     return 1;
 }
@@ -2418,7 +2418,7 @@ sub update_window_title_unsaved_flag {
 sub DESTROY {
     my ($self) = @_;
 
-    warn "Destroying XaceSeqChooser for ", $self->ace_path, "\n";
+    warn "Destroying SessionWindow for ", $self->ace_path, "\n";
 
     $self->zMapKillZmap;
     $self->drop_AceDatabase;
@@ -2430,7 +2430,7 @@ sub DESTROY {
 
 __END__
 
-=head1 NAME - MenuCanvasWindow::XaceSeqChooser
+=head1 NAME - MenuCanvasWindow::SessionWindow
 
 =head1 AUTHOR
 

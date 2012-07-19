@@ -148,7 +148,7 @@ sub initialise {
             -height     => 12,
             -width      => 62,
             -scrollbars => 'se',
-            -font       => $self->XaceSeqChooser->font_fixed,
+            -font       => $self->SessionWindow->font_fixed,
           )->pack(@frame_expand)
     );
 
@@ -260,7 +260,7 @@ sub initialise {
     return;
 }
 
-sub update_from_XaceSeqChooser {
+sub update_from_SessionWindow {
     my ($self) = @_;
     $self->accessions_from_clipboard;
     my $top = $self->top;
@@ -370,36 +370,36 @@ sub match {
     return $self->{'_match'};
 }
 
-sub XaceSeqChooser {
-    my ($self, $xc) = @_;
-    if ($xc) {
-        $self->{'_xc'} = $xc;
+sub SessionWindow {
+    my ($self, $SessionWindow) = @_;
+    if ($SessionWindow) {
+        $self->{'_SessionWindow'} = $SessionWindow;
     }
-    return $self->{'_xc'};
+    return $self->{'_SessionWindow'};
 }
 
 sub launch_exonerate {
     my ($self) = @_;
-    my $seq_chooser = $self->XaceSeqChooser;
+    my $SessionWindow = $self->SessionWindow;
 
     my $otf = Bio::Otter::Lace::OnTheFly::Genomic->new(
 
         seqs       => $self->entered_seqs,
         accessions => $self->entered_accessions,
 
-        full_seq => $seq_chooser->Assembly->Sequence,
+        full_seq => $SessionWindow->Assembly->Sequence,
 
         lowercase_poly_a_t_tails => 1, # to avoid spurious exons
 
         problem_report_cb => sub { $self->top->Tk::Utils::OnTheFly::problem_box('Accessions Supplied', @_) },
         long_query_cb     => sub { $self->top->Tk::Utils::OnTheFly::long_query_confirm(@_)  },
 
-        accession_type_cache => $seq_chooser->AceDatabase->AccessionTypeCache,
+        accession_type_cache => $SessionWindow->AceDatabase->AccessionTypeCache,
         );
 
     # get marked region (if requested)
     if ($self->{_use_marked_region}) {
-        my ($mark_start, $mark_end) = $seq_chooser->zMapGetMark;
+        my ($mark_start, $mark_end) = $SessionWindow->zMapGetMark;
         if ($mark_start && $mark_end) {
             $self->logger->warn("Setting exonerate genomic start & end to marked region: $mark_start - $mark_end");
             $otf->target_start($mark_start);
@@ -424,10 +424,10 @@ sub launch_exonerate {
     $self->top->Busy;
 
     # OTF should not influence unsaved changes state of the session
-    $seq_chooser->flag_db_edits(0);
+    $SessionWindow->flag_db_edits(0);
 
     if ($self->{'_clear_existing'}) {
-        $seq_chooser->delete_featuresets(qw{
+        $SessionWindow->delete_featuresets(qw{
 Unknown_DNA
 Unknown_Protein
 OTF_EST
@@ -441,11 +441,11 @@ OTF_Protein });
         -max_intron_length => ($self->get_entry('max_intron_length') || 0),
         -mask_target       => $self->{_mask_target},
         };
-    my $db_edited = $seq_chooser->launch_exonerate($otf, $exonerate_params);
+    my $db_edited = $SessionWindow->launch_exonerate($otf, $exonerate_params);
 
     $self->top->Unbusy;
 
-    $seq_chooser->flag_db_edits(1);
+    $SessionWindow->flag_db_edits(1);
 
     if ($db_edited) {
         my @misses = $otf->names_not_hit;

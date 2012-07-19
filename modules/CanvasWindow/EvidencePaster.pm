@@ -313,7 +313,7 @@ sub paste_type_and_name {
 sub add_evidence_from_text {
     my ($self, $text) = @_;
 
-    my $cache = $self->ExonCanvas->XaceSeqChooser->AceDatabase->AccessionTypeCache;
+    my $cache = $self->ExonCanvas->SessionWindow->AceDatabase->AccessionTypeCache;
 
     my $acc_list = $cache->accession_list_from_text($text);
     $cache->populate($acc_list);
@@ -427,7 +427,7 @@ sub align_to_transcript {
         problem_report_cb => sub { $top->Tk::Utils::OnTheFly::problem_box('Evidence Selected', @_) },
         long_query_cb     => sub { $top->Tk::Utils::OnTheFly::long_query_confirm(@_)  },
 
-        accession_type_cache => $self->ExonCanvas->XaceSeqChooser->AceDatabase->AccessionTypeCache,
+        accession_type_cache => $self->ExonCanvas->SessionWindow->AceDatabase->AccessionTypeCache,
         });
 
     my $logger = $self->logger;

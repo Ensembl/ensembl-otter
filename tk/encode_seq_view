@@ -7,7 +7,7 @@ use warnings;
 ### encode_seq_view
 
 use Bio::Otter::Lace::Defaults;
-use MenuCanvasWindow::XaceSeqChooser;
+use MenuCanvasWindow::SessionWindow;
 
 {
     my $encode_region = shift || die "Missing region argument";
@@ -40,12 +40,12 @@ use MenuCanvasWindow::XaceSeqChooser;
     $db->init_AceDatabase($ss);
     $db->error_flag(1);
 
-    ### Attach to XaceSeqChooser
+    ### Attach to SessionWindow
     my $mw = CanvasWindow::MainWindow->new("encode: $encode_region");
-    my $xc = MenuCanvasWindow::XaceSeqChooser->new($mw);
-    $xc->write_access(0);
-    $xc->AceDatabase($db);
-    $xc->initialize;
+    my $SessionWindow = MenuCanvasWindow::SessionWindow->new($mw);
+    $SessionWindow->write_access(0);
+    $SessionWindow->AceDatabase($db);
+    $SessionWindow->initialize;
     ### launch xace
     ### Display region containing hit in fMap - see code in ExonCanvas
 

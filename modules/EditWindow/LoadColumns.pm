@@ -13,7 +13,7 @@ use Tk::Checkbutton;
 use Tk::LabFrame;
 use Tk::Balloon;
 
-use MenuCanvasWindow::XaceSeqChooser;
+use MenuCanvasWindow::SessionWindow;
 use Hum::Sort 'ace_sort';
 
 use base 'EditWindow';
@@ -301,12 +301,12 @@ sub load_filters {
 
     $self->AceDatabase->save_filter_state if @to_fetch;
 
-    if ($self->XaceSeqChooser) {
+    if ($self->SessionWindow) {
         if (@to_fetch) {
             $self->AceDatabase->Client->reauthorize_if_cookie_will_expire_soon;
             my @featuresets = 
                 map { $_->{filter}->name } @to_fetch;
-            $self->XaceSeqChooser->zMapLoadFeatures(@featuresets);
+            $self->SessionWindow->zMapLoadFeatures(@featuresets);
         }
         else {
             $top->messageBox(
@@ -317,14 +317,14 @@ sub load_filters {
                 );            
         }
     } else {
-        # we need to set up and show an XaceSeqChooser        
-        my $xc = MenuCanvasWindow::XaceSeqChooser->new( $self->top->Toplevel );
+        # we need to set up and show an SessionWindow        
+        my $SessionWindow = MenuCanvasWindow::SessionWindow->new( $self->top->Toplevel );
 
-        $self->XaceSeqChooser($xc);
-        $xc->AceDatabase($self->AceDatabase);
-        $xc->SequenceNotes($self->SequenceNotes);
-        $xc->LoadColumns($self);
-        $xc->initialize;
+        $self->SessionWindow($SessionWindow);
+        $SessionWindow->AceDatabase($self->AceDatabase);
+        $SessionWindow->SequenceNotes($self->SequenceNotes);
+        $SessionWindow->LoadColumns($self);
+        $SessionWindow->initialize;
     }
 
     $top->Unbusy;
@@ -536,15 +536,15 @@ sub hlist {
     return $self->{'_hlist'};
 }
 
-sub XaceSeqChooser {
-    my ($self, $xc) = @_;
+sub SessionWindow {
+    my ($self, $SessionWindow) = @_;
 
-    if ($xc) {
-        $self->{'_XaceSeqChooser'} = $xc;
-        weaken($self->{'_XaceSeqChooser'});
+    if ($SessionWindow) {
+        $self->{'_SessionWindow'} = $SessionWindow;
+        weaken($self->{'_SessionWindow'});
     }
 
-    return $self->{'_XaceSeqChooser'} ;
+    return $self->{'_SessionWindow'} ;
 }
 
 sub AceDatabase {

@@ -329,7 +329,7 @@ sub initialize {
         # Widget for changing transcript type (acedb method).
         my $current_method = $self->SubSeq->GeneMethod->name;
         $self->method_name_var(\$current_method);
-        my @mutable_gene_methods = $self->XaceSeqChooser->get_all_mutable_GeneMethods;
+        my @mutable_gene_methods = $self->SessionWindow->get_all_mutable_GeneMethods;
 
         my $type_frame = $frame->Frame(
             -border => 3,
@@ -431,19 +431,19 @@ sub current_SubSeq {
     }
 }
 
-sub XaceSeqChooser {
-    my ($self, $chooser) = @_;
+sub SessionWindow {
+    my ($self, $SessionWindow) = @_;
 
-    if ($chooser) {
-        $self->{'_XaceSeqChooser'} = $chooser;
-        weaken $self->{'_XaceSeqChooser'};
+    if ($SessionWindow) {
+        $self->{'_SessionWindow'} = $SessionWindow;
+        weaken $self->{'_SessionWindow'};
     }
-    return $self->{'_XaceSeqChooser'};
+    return $self->{'_SessionWindow'};
 }
 
 sub DataSet {
     my ($self) = @_;
-    return $self->XaceSeqChooser->AceDatabase->DataSet;
+    return $self->SessionWindow->AceDatabase->DataSet;
 }
 
 sub add_subseq_exons {
@@ -782,9 +782,9 @@ sub is_mutable {
 sub window_close {
     my ($self) = @_;
 
-    my $xc = $self->XaceSeqChooser;
+    my $SessionWindow = $self->SessionWindow;
 
-    if ($self->is_mutable && $xc->AceDatabase->write_access) {
+    if ($self->is_mutable && $SessionWindow->AceDatabase->write_access) {
         my ($sub, $err);
         my $ok = 0;
         try { $sub = $self->get_SubSeq_if_changed; $ok = 1; }
@@ -834,7 +834,7 @@ sub window_close {
 sub show_subseq {
     my ($self) = @_;
 
-    my $success = $self->XaceSeqChooser->zMapZoomToSubSeq($self->SubSeq);
+    my $success = $self->SessionWindow->zMapZoomToSubSeq($self->SubSeq);
 
     $self->message("ZMap: zoom to subsequence failed") unless $success;
 
@@ -1095,7 +1095,7 @@ sub add_locus_editing_widgets {
         -command    => sub{
             #warn "Locus is now '${$self->{'_locus_name_var'}}'\n";
             my $name = ${$self->{'_locus_name_var'}};
-            my $locus = $self->XaceSeqChooser->get_Locus($name);
+            my $locus = $self->SessionWindow->get_Locus($name);
             $self->update_Locus_tk_fields($locus);
             },
         -exportselection    => 1,
@@ -1107,7 +1107,7 @@ sub add_locus_editing_widgets {
 
     $be->configure(
         -listcmd => sub{
-            my @names = $self->XaceSeqChooser->list_Locus_names;
+            my @names = $self->SessionWindow->list_Locus_names;
             $be->configure(
                 -choices   => [@names],
                 #-listwidth => scalar @names,
@@ -1237,7 +1237,7 @@ sub rename_locus {
     my ($self) = @_;
 
     my $name = $self->get_locus_name or return;
-    $self->XaceSeqChooser->rename_locus($name);
+    $self->SessionWindow->rename_locus($name);
 
     return;
 }
@@ -1868,7 +1868,7 @@ sub get_GeneMethod_from_tk {
     my ($self) = @_;
 
     my $meth_name = ${$self->method_name_var};
-    return $self->XaceSeqChooser->get_GeneMethod($meth_name);
+    return $self->SessionWindow->get_GeneMethod($meth_name);
 }
 
 sub canvas_insert_character {
@@ -1965,8 +1965,8 @@ sub delete_chooser_window_ref {
     my ($self) = @_;
 
     my $name = $self->name;
-    my $xc = $self->XaceSeqChooser;
-    $xc->delete_subseq_edit_window($name);
+    my $SessionWindow = $self->SessionWindow;
+    $SessionWindow->delete_subseq_edit_window($name);
 
     return;
 }
@@ -2653,7 +2653,7 @@ sub get_SubSeq_if_changed {
 
     my $new_name = $new->name;
     if ($new_name ne $self->name) {
-        if ($self->XaceSeqChooser->get_SubSeq($new_name)) {
+        if ($self->SessionWindow->get_SubSeq($new_name)) {
             confess "Error: SubSeq '$new_name' already exists\n";
         }
     }
@@ -2670,9 +2670,9 @@ sub manage_locus_otter_ids {
     my $new_locus_name = $new_locus->name;
 
     # Copy locus otter_id from existing Locus of same name if present
-    my $xc_locus = $self->XaceSeqChooser->get_Locus($new_locus_name);
-    if (my $xc_locus_otter_id = $xc_locus->otter_id) {
-        $new_locus->otter_id($xc_locus_otter_id);
+    my $SessionWindow_locus = $self->SessionWindow->get_Locus($new_locus_name);
+    if (my $SessionWindow_locus_otter_id = $SessionWindow_locus->otter_id) {
+        $new_locus->otter_id($SessionWindow_locus_otter_id);
     }
     elsif (my $old_locus = $old->Locus) {
         # We don't have an otter_id, but did the old locus have an otter_id?
@@ -2766,9 +2766,9 @@ sub xace_save {
         $top->grabRelease;
         return;
     }
-    my $xc = $self->XaceSeqChooser;
+    my $SessionWindow = $self->SessionWindow;
 
-    if ($xc->replace_SubSeq($sub, $old)) {
+    if ($SessionWindow->replace_SubSeq($sub, $old)) {
       # more updating of internal state - if we're OK to do that
 
       $self->SubSeq($sub);
@@ -2777,8 +2777,8 @@ sub xace_save {
       $self->evidence_hash($sub->clone_evidence_hash);
 
       # update_Locus in this object will be called
-      # from update_Locus in the XaceSeqChooser
-      $xc->update_Locus($sub->Locus);
+      # from update_Locus in the SessionWindow
+      $SessionWindow->update_Locus($sub->Locus);
 
       $sub->is_archival(1);
     }
