@@ -185,8 +185,8 @@ sub exit_callback {
 
             use Data::Dumper;
             print Dumper($self->{_transcript}->transcript_info);
-            if (my $ec = $self->ExonCanvas) {
-                $ec->save_OtterTranscript_evidence($self->{_transcript});
+            if (my $transcript_window = $self->TranscriptWindow) {
+                $transcript_window->save_OtterTranscript_evidence($self->{_transcript});
             }
         } else {
             warn "Refused to save the changes";
@@ -214,13 +214,13 @@ sub launch_blixem_callback {
      $self->{_blixem}->forklaunch($unit);
 }
 
-sub ExonCanvas {
-    my( $self, $ExonCanvas ) = @_;
+sub TranscriptWindow {
+    my( $self, $TranscriptWindow ) = @_;
     
-    if ($ExonCanvas) {
-        $self->{'_ExonCanvas'} = $ExonCanvas;
+    if ($TranscriptWindow) {
+        $self->{'_TranscriptWindow'} = $TranscriptWindow;
     }
-    return $self->{'_ExonCanvas'};
+    return $self->{'_TranscriptWindow'};
 }
 
 sub populate_scale {
