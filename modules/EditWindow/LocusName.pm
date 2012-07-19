@@ -85,7 +85,7 @@ sub do_rename {
     }
     warn "Renaming Locus '$old_name' to '$new_name'\n";
 
-    if ($self->XaceSeqChooser->do_rename_locus($old_name, $new_name)) {
+    if ($self->SessionWindow->do_rename_locus($old_name, $new_name)) {
         $self->top->destroy;
     } # else it failed politely, leave the window open to try again
 
@@ -113,22 +113,22 @@ sub get_new_name {
     return $self->{'_new_name_entry'}->get;
 }
 
-sub XaceSeqChooser {
-    my ($self, $xc) = @_;
+sub SessionWindow {
+    my ($self, $SessionWindow) = @_;
 
-    if ($xc) {
-        $self->{'_xace_seq_chooser'} = $xc;
-        weaken($self->{'_xace_seq_chooser'});
+    if ($SessionWindow) {
+        $self->{'_SessionWindow'} = $SessionWindow;
+        weaken($self->{'_SessionWindow'});
     }
-    return $self->{'_xace_seq_chooser'};
+    return $self->{'_SessionWindow'};
 }
 
 sub make_menu_choices {
     my ($self) = @_;
 
-    my $xc = $self->XaceSeqChooser;
+    my $SessionWindow = $self->SessionWindow;
     my $sel_locus_name = $self->locus_name_arg;
-    my @locus_name = $xc->list_Locus_names;
+    my @locus_name = $SessionWindow->list_Locus_names;
 
     # If we were passed a locus name, check that it is actually a locus name
     my $saw = 0;
@@ -145,8 +145,8 @@ sub make_menu_choices {
     # If we don't have a locus name, take the one from the first
     # selected subseq we find
     unless ($sel_locus_name) {
-        foreach my $name ($xc->list_selected_subseq_names) {
-            my $sub = $xc->get_SubSeq($name) or next;
+        foreach my $name ($SessionWindow->list_selected_subseq_names) {
+            my $sub = $SessionWindow->get_SubSeq($name) or next;
             my $locus = $sub->Locus or next;
             $sel_locus_name = $locus->name;
             last;

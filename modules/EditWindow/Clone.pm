@@ -205,7 +205,7 @@ sub make_labelled_text_widget {
 sub generate_desc {
     my ($self) = @_;
 
-    my $desc = $self->XaceSeqChooser->Assembly
+    my $desc = $self->SessionWindow->Assembly
         ->generate_description_for_clone($self->Clone);
 
     unless ($desc) {
@@ -243,7 +243,7 @@ sub xace_save {
 sub xace_save_Clone {
     my ($self, $clone) = @_;
 
-    $self->XaceSeqChooser->save_Clone($clone);
+    $self->SessionWindow->save_Clone($clone);
     $self->Clone($clone);
 
     return 1;
@@ -427,19 +427,19 @@ sub Clone {
     return $self->{'_Clone'};
 }
 
-sub XaceSeqChooser {
-    my ($self, $XaceSeqChooser) = @_;
+sub SessionWindow {
+    my ($self, $SessionWindow) = @_;
 
-    if ($XaceSeqChooser) {
-        $self->{'_XaceSeqChooser'} = $XaceSeqChooser;
+    if ($SessionWindow) {
+        $self->{'_SessionWindow'} = $SessionWindow;
     }
-    return $self->{'_XaceSeqChooser'};
+    return $self->{'_SessionWindow'};
 }
 
 sub write_access {
     my ($self) = @_;
 
-    return $self->XaceSeqChooser->AceDatabase->write_access;
+    return $self->SessionWindow->AceDatabase->write_access;
 }
 
 sub DESTROY {

@@ -91,7 +91,7 @@ sub get_overlapping_exon_otter_id_start_end {
     $search_exon->start($search_start);
     $search_exon->end($search_end);
 
-    my $subseq = $self->XaceSeqChooser->get_SubSeq($name) or return;
+    my $subseq = $self->SessionWindow->get_SubSeq($name) or return;
     return unless $subseq->translation_region_is_set;
 
     my $strand = $subseq->strand();
@@ -133,25 +133,25 @@ sub get_overlapping_exon_otter_id_start_end {
 
 # ---------------[getters/setters]----------------
 
-sub XaceSeqChooser{
-    my ($self, $seq_chooser) = @_;
-    if ($seq_chooser){
+sub SessionWindow{
+    my ($self, $SessionWindow) = @_;
+    if ($SessionWindow){
 
-        $self->{'_XaceSeqChooser'} = $seq_chooser;
+        $self->{'_SessionWindow'} = $SessionWindow;
     }
-    return $self->{'_XaceSeqChooser'} ;
+    return $self->{'_SessionWindow'} ;
 }
 
 sub AceDatabase {
     my ($self) = @_;
 
-    return $self->XaceSeqChooser->AceDatabase;
+    return $self->SessionWindow->AceDatabase;
 }
 
 sub Assembly {
     my ($self) = @_;
 
-    return $self->XaceSeqChooser->Assembly;
+    return $self->SessionWindow->Assembly;
 }
 
 sub get_all_Methods {
@@ -160,7 +160,7 @@ sub get_all_Methods {
     my $feat_meths;
     unless ($feat_meths = $self->{'_Method_objects'}) {
         $feat_meths = $self->{'_Method_objects'} = [];
-        my $collection = $self->XaceSeqChooser->Assembly->MethodCollection;
+        my $collection = $self->SessionWindow->Assembly->MethodCollection;
         @$feat_meths = $collection->get_all_mutable_non_transcript_Methods;
         $self->{'_Method_index'} = {map {$_->name, $_} @$feat_meths};
     }
@@ -574,7 +574,7 @@ sub save_to_ace {
             }
         }
 
-        $self->XaceSeqChooser->save_Assembly($new_assembly);
+        $self->SessionWindow->save_Assembly($new_assembly);
     }
 
     return;
@@ -585,10 +585,10 @@ sub save_to_ace {
 sub try2save_and_quit {
     my ($self) = @_;
 
-    if($self->XaceSeqChooser()) {
+    if($self->SessionWindow()) {
         $self->save_to_ace(0); # '0' means do it interactively
     } else {
-        warn "No XaceSeqChooser, nowhere to write\n";
+        warn "No SessionWindow, nowhere to write\n";
     }
 
     $self->top_window->destroy();

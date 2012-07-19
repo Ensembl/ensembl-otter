@@ -29,7 +29,7 @@ $Data::Dumper::Indent = 1;
 
 =head1 WARNING
 
-This module is included into MenuCanvasWindow::XaceSeqChooser.  All
+This module is included into MenuCanvasWindow::SessionWindow.  All
 methods have been prefixed with "zMap" to avoid any clashes, but this
 isn't a long term solution.
 
@@ -52,7 +52,7 @@ sub zMapInitialize {
 =head2 zMapLaunchZmap
 
 This is where it all starts.  This is the method which gets called
-on 'Launch ZMap' menu item in xaceseqchooser window.
+on 'Launch ZMap' menu item in the session window.
 
 =cut
 
@@ -764,7 +764,7 @@ sub zMapGetXRemoteClientByAction {
 }
 
 # This is not a method on self, but a standalone function taking a
-# Bio::Otter::ZMap::Connect and a MenuCanvasWindow::XaceSeqChooser.
+# Bio::Otter::ZMap::Connect and a MenuCanvasWindow::SessionWindow.
 
 sub open_clones {
     my ($zmap, $self) = @_;
