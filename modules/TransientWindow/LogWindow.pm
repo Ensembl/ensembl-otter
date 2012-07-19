@@ -7,7 +7,7 @@ use warnings;
 use IO::Handle;
 use Bio::Otter::LogFile;
 use Bio::Otter::Git;
-use Bio::Vega::Utils::URI qw{ open_uri };
+use Bio::Vega::Utils::URI qw{ open_uri uri_config_how };
 use Net::Domain qw{ hostfqdn };
 
 
@@ -66,6 +66,7 @@ sub initialise {
             }
         );
     }
+    $ROText->tagConfigure(seenmark => -background => '#d00', -foreground => '#fff');
     $self->readonly_text($ROText);
 
     my $email_dev = sub { $self->mail_contents(); };
@@ -187,9 +188,25 @@ sub mail_contents {
     open_uri("mailto:$to", {
         subject => $subj,
         body    => "\n<ADD FURTHER INFORMATION ABOUT PROBLEM HERE>\n\n--------\n$info--------\n$mess",
-    }) or warn "Error opening email client to send email to '$to'";
+    }) or do {
+        $self->message_highlight("Could not open your email client");
+        # nb. this works OK for GUI mail clients, but those that run
+        # in a terminal don't return an error to us!
+        warn "Error opening email client to send email to '$to'";
+        warn uri_config_how();
+    };
 
     return;
+}
+
+sub message_highlight {
+    my ($self, $msg) = @_;
+
+    my $txt = $self->readonly_text;
+    $txt->insert('end', "$msg\n", 'seenmark');
+    warn "(LogWindow mark inserted to highlight entry: $msg)\n";
+
+    return ();
 }
 
 sub DESTROY {

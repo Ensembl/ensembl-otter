@@ -9,18 +9,35 @@ use URI::Escape qw{ uri_escape };
 
 use base 'Exporter';
 
-our @EXPORT_OK = qw{ open_uri };
+our @EXPORT_OK = qw{ open_uri uri_config_how };
 
 sub open_uri {
     my ($path, $param_hash) = @_;
-
-    my $command = $^O eq 'darwin' ? 'open' : 'xdg-open';
 
     my $form = '';
     if ($param_hash) {
         $form = '?' . join('&', map { "$_=" . uri_escape($param_hash->{$_}) } keys %$param_hash);
     }
-    return system($command, $path . $form) == 0;
+    return system(open_uri_command(), $path . $form) == 0;
+}
+
+sub open_uri_command {
+    return $^O eq 'darwin' ? 'open' : 'xdg-open';
+}
+
+
+sub uri_config_how {
+    my ($self) = @_;
+    if (-x '/usr/bin/gnome-default-applications-properties') {
+        return
+          (" You appear to be using the Gnome environment.\n".
+           " Please update your System > Preferences > Preferred Applications.\n");
+    } else {
+        return
+          (" Please consult your operating system's manual or\n".
+           " systems administrator to find out how to make\n".
+           " the '".open_uri_command()."' command work.\n");
+    }
 }
 
 
