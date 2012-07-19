@@ -14,6 +14,7 @@ use Log::Log4perl qw(:easy);
 my $verbose = ($ENV{HARNESS_IS_VERBOSE} or defined $DB::single); # 'prove -v' or running under perl debugger
 my $level = $verbose ? $DEBUG : $WARN;
 Log::Log4perl->easy_init({ level => $level, file => 'stdout', layout => '# %p: %m%n' });
+$DB::single = 0;                # avoid 'used only once' warning
 
 use Hum::Ace::SubSeq;
 
