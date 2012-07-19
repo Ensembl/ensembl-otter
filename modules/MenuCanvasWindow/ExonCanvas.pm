@@ -821,7 +821,7 @@ sub window_close {
                 return; # Abandon window close
             }
             elsif ($ans eq 'Yes') {
-                $self->xace_save($sub) or return;
+                $self->save_sub($sub) or return;
             }
         }
     }
@@ -2732,7 +2732,7 @@ sub save_if_changed {
 
     try {
         if (my $sub = $self->get_SubSeq_if_changed) {
-            $self->xace_save($sub);
+            $self->save_sub($sub);
         }
     }
     catch { $self->exception_message($::_, 'Error saving transcript'); };
@@ -2741,7 +2741,7 @@ sub save_if_changed {
     return;
 }
 
-sub xace_save {
+sub save_sub {
     my ($self, $sub) = @_;
 
     confess "Missing SubSeq argument" unless $sub;
