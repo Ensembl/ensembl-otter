@@ -80,6 +80,9 @@ sub intronify_by_transcript_exons {
 
     $self->logger->logcroak('Already contains introns') if $self->has_introns;
 
+    $self->logger->debug("Intronify for q:'", $self->query_id, "', t: '", $self->target_id, "'");
+    $self->logger->debug("   vulgar comps: ", $self->vulgar_comps_string);
+
     my $intron_ga;
 
     if ($self->target_strand eq '-') {
@@ -238,6 +241,8 @@ sub _intronify_do_exon {
     $data->{debug_exon_ga}->($exon_ga, '[initial]  ');
 
   ELEMENTS: while (my $ele = shift @{$data->{elements}}) {
+
+      $self->logger->debug("Considering: ", $ele->string);
 
       if ($ele->is_intronic) {
           $self->logger->logcroak(sprintf 'Alignment already contains intronic element (%s)', $ele->string);
