@@ -18,12 +18,8 @@ around 'parse' => sub {
 
     my $basic = $self->$orig(@args);
 
-    if ($self->is_protein) {
-        $self->logger->warn('Cannot split protein alignments yet');
-    } else {
-        foreach my $query ( $basic->query_ids ) {
-            my $split = $self->_split_alignment($basic->by_query_id($query));
-        }
+    foreach my $query ( $basic->query_ids ) {
+        my $split = $self->_split_alignment($basic->by_query_id($query));
     }
 
     return $basic;              # temporary
