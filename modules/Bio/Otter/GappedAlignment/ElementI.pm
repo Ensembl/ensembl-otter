@@ -55,7 +55,7 @@ sub divide {
         $self->logger->logcroak(sprintf("Cannot split %s by %d", $self->string, $t_split_len));
     }
 
-    # FIXME - does this need a warning?
+    $self->logger->warn("q_rem: $q_rem, t_rem: $t_rem") if $q_rem < 0 or $t_rem < 0;
     $q_rem = 0 if $q_rem < 0;
     $t_rem = 0 if $t_rem < 0;
 
@@ -78,11 +78,10 @@ sub divide {
         $q_rem -= 1;
         $t_rem -= 3;
 
+        $self->logger->warn("split codon; q_rem: $q_rem, t_rem: $t_rem") if $q_rem < 0 or $t_rem < 0;
+        $q_rem = 0 if $q_rem < 0;
+        $t_rem = 0 if $t_rem < 0;
     }
-
-    # FIXME - does this need a warning?
-    $q_rem = 0 if $q_rem < 0;
-    $t_rem = 0 if $t_rem < 0;
 
     push @right, $self->new($q_rem, $t_rem);
 
