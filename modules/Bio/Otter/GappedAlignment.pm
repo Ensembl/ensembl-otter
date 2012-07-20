@@ -145,6 +145,8 @@ sub _do_intronify {
     $self->logger->debug("Done (offset $data{offset})");
 
     $intron_ga->_set_exon_gapped_alignments($data{per_exon});
+    $self->_verify_lengths($intron_ga) if $self->logger->is_debug;
+
     return $intron_ga;
 }
 
@@ -494,6 +496,16 @@ sub _type {
     return;                     # redundant but keeps perlcritic happy
 }
 
+sub query_length {
+    my $self = shift;
+    return $self->_length($self->query_start, $self->query_end);
+}
+
+sub _length {
+    my ($self, $start, $end) = @_;
+    return abs($end - $start);
+}
+
 sub target_ensembl_coords {
     my $self = shift;
     return $self->_ensembl_coords('target');
@@ -551,6 +563,11 @@ sub target_strand_sense {
 sub target_type {
     my $self = shift;
     return $self->_type('target_strand');
+}
+
+sub target_length {
+    my $self = shift;
+    return $self->_length($self->target_start, $self->target_end);
 }
 
 sub swap_query_strand {
@@ -658,6 +675,21 @@ sub _set_exon_gapped_alignments {
     my ($self, $egas) = @_;
     $self->{_ega_fingerprint} = $self->vulgar_string;
     return $self->{_exon_gapped_alignments} = $egas;
+}
+
+sub _verify_lengths {
+    my ($self, $intron_ga) = @_;
+    my ($q_len, $t_len) = (0, 0);
+    foreach my $ega ($intron_ga->exon_gapped_alignments) {
+        $q_len += $ega->query_length;
+        $t_len += $ega->target_length;
+    }
+    if ($q_len != $self->query_length or $t_len != $self->target_length) {
+        $self->logger->fatal("sum(q_len): $q_len vs q_len: ", $self->query_length)  if $q_len != $self->query_length;
+        $self->logger->fatal("sum(t_len): $t_len vs t_len: ", $self->target_length) if $t_len != $self->target_length;
+        $self->logger->confess('Intronify length mismatch');
+    }
+    return;
 }
 
 sub logger {
