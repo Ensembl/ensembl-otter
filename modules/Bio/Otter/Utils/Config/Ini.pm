@@ -5,6 +5,7 @@ package Bio::Otter::Utils::Config::Ini;
 
 use strict;
 use warnings;
+use Hum::Sort qw( ace_sort );
 
 use base qw( Exporter );
 
@@ -14,7 +15,7 @@ our @EXPORT_OK = qw(
 
 sub config_ini_format {
     my ($config, $key) = @_;
-    my @keys = keys %{$config};
+    my @keys = sort { ace_sort($a, $b) } keys %{$config};
     # move the special key to the front if possible
     @keys = ( $key, grep { $_ ne $key } @keys )
         if defined $key && defined $config->{$key};
@@ -24,7 +25,7 @@ sub config_ini_format {
 sub _format_stanza {
     my ($name, $stanza) = @_;
     return sprintf "[%s]\n%s"
-        , $name, join '', map { _format_key_value($_, $stanza->{$_}) } sort keys %{$stanza};
+        , $name, join '', map { _format_key_value($_, $stanza->{$_}) } sort { ace_sort($a, $b) } keys %{$stanza};
 }
 
 sub _format_key_value {
