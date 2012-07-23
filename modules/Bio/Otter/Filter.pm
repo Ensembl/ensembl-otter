@@ -198,6 +198,15 @@ sub featuresets {
     return $self->{_featuresets} || [ $self->name ];
 }
 
+sub blixem_data_type {
+    my ($self, $blixem_data_type) = @_;
+
+    if ($blixem_data_type) {
+        $self->{'_blixem_data_type'} = $blixem_data_type;
+    }
+    return $self->{'_blixem_data_type'};
+}
+
 sub zmap_column {
     my ($self, $zmap_column) = @_;
 

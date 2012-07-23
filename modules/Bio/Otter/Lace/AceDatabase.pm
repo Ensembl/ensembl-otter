@@ -10,7 +10,6 @@ use Carp;
 use Fcntl qw{ O_WRONLY O_CREAT };
 use Config::IniFiles;
 use POSIX();
-use Try::Tiny;
 
 use Bio::Vega::Transform::Otter::Ace;
 use Bio::Vega::AceConverter;
@@ -176,24 +175,18 @@ sub post_exit_callback {
 
 sub MethodCollection {
     my ($self) = @_;
-    return $self->{'_MethodCollection'} ||=
-        _MethodCollection($self->Client);
+
+    my $collect = $self->{'_MethodCollection'} ||= $self->get_default_MethodCollection;
+    return $collect;
 }
 
-# not a method, possibly belongs elsewhere
-sub _MethodCollection {
-    my ($client) = @_;
+sub get_default_MethodCollection {
+    my ($self) = @_;
 
-    my $otter_styles = $client->get_otter_styles;
-    my $style_collection =
-        Hum::ZMapStyleCollection->new_from_string($otter_styles);
-
-    my $methods_ace = $client->get_methods_ace;
-    my $method_collection =
-        Hum::Ace::MethodCollection->new_from_string($methods_ace, $style_collection);
-    $method_collection->process_for_otterlace;
-
-    return $method_collection;
+    my $styles_collection = Hum::ZMapStyleCollection->new_from_string($self->Client->get_otter_styles);
+    my $collect = Hum::Ace::MethodCollection->new_from_string($self->Client->get_methods_ace, $styles_collection);
+    $collect->process_for_otterlace;
+    return $collect;
 }
 
 sub add_acefile {
@@ -224,6 +217,8 @@ sub empty_acefile_list {
 
 sub init_AceDatabase {
     my ($self) = @_;
+
+    $self->add_misc_acefile;
 
     my $xml_string = $self->http_response_content(
         'GET', 'get_region');
@@ -522,39 +517,126 @@ sub ace_config {
 sub blixem_config {
     my ($self) = @_;
 
-    my $pfetch = $self->Client->pfetch_url;
-    my $default_fetch_mode =
-        $ENV{'PFETCH_WWW'} ? 'pfetch-http' : 'pfetch-socket';
+    my @pfetch_common_config = (
+        'separator'     => '" "',
+        );
+
+    my @pfetch_socket_config = (
+        @pfetch_common_config,
+        'fetch-mode'    => 'socket',
+        'errors'        => ['no match'],
+        'node'          => $PFETCH_SERVER_LIST->[0][0],
+        'port'          => $PFETCH_SERVER_LIST->[0][1],
+        'command'       => 'pfetch',
+        );
+
+    my @pfetch_http_config = (
+        @pfetch_common_config,
+        'fetch-mode'    => 'http',
+        'errors'        => ['no match', 'Not authorized'],
+        'url'           => $self->Client->pfetch_url,
+        'cookie-jar'    => $ENV{'OTTERLACE_COOKIE_JAR'},
+        'port'          => 80,
+        );
+
+    my $connect = $ENV{'PFETCH_WWW'} ? 'http' : 'socket';
+    # my $connect = 'http';
+    my $raw_fetch   = "pfetch-$connect-raw";
+    my $fasta_fetch = "pfetch-$connect-fasta";
+    my $embl_fetch  = "pfetch-$connect-embl";
 
     my $config = {
 
-        'blixem' => {
-            'default-fetch-mode' => $default_fetch_mode,
+        'blixem'  => {
+            'link-features-by-name' => 'false',
+            'bulk-fetch'            => 'none',
+            'user-fetch'            => 'internal',
+            # Zmap stylesfile is used to pick up colours for transcripts
+            'stylesfile'            => $self->stylesfile,
         },
 
-        'pfetch-http' => {
-            'pfetch-mode' => 'http',
-            'pfetch'      => $pfetch,
-            'cookie-jar'  => $ENV{'OTTERLACE_COOKIE_JAR'},
-            'port'        => 80,
+
+        # Data types
+
+        'none' => {
+            'fetch-mode'    => 'none',
         },
 
-        'pfetch-socket' => {
-            'pfetch-mode' => 'socket',
-            'node'        => $PFETCH_SERVER_LIST->[0][0],
-            'port'        => $PFETCH_SERVER_LIST->[0][1],
+        'internal' => {
+            'fetch-mode'    => 'internal',
         },
 
-        'short-read' => {
-            'bulk-fetch' => 'region-fetch',
+        'variation-fetch'   => {
+            'fetch-mode'    => 'www',
+            'url'           => 'http://www.ensembl.org/Homo_sapiens/Variation/Summary',
+            'request'       => 'v=%m',
+        },
+        
+        'dna-match' => {
+            'link-features-by-name' => 'true',
+            'bulk-fetch'            => [$embl_fetch, $raw_fetch],
+            'user-fetch'            => [$embl_fetch, $fasta_fetch, 'internal'],
+        },
+        
+        'protein-match' => {
+            'link-features-by-name' => 'true',
+            'bulk-fetch'            => $raw_fetch,
+            'user-fetch'            => [$embl_fetch, $fasta_fetch, 'internal'],
         },
 
-        'region-fetch' => {
-            'script' => 'bam_get',
+        'psl' => {
+            'link-features-by-name' => 'true',
+            'bulk-fetch'            => 'none',
+            'user-fetch'            => 'internal',
         },
 
+        'ensembl-variation' => {
+            'link-features-by-name' => 'false',
+            'bulk-fetch'            => 'none',
+            'user-fetch'            => 'variation-fetch',
+        },
+
+
+        # Fetch methods
+
+        'pfetch-socket-embl'  => {
+            @pfetch_socket_config,
+            'args'      => 'args=--client=%p_%h_%u -C -F %m',
+            'output'    => 'embl',
+        },
+
+        'pfetch-socket-fasta'   => {
+            @pfetch_socket_config,
+            'args'      => 'args=--client=%p_%h_%u -C %m',
+            'output'    => 'fasta',
+        },
+
+        'pfetch-socket-raw'     => {
+            @pfetch_socket_config,
+            'args'      => 'args=--client=%p_%h_%u -q -C %m',
+            'output'    => 'raw',
+        },
+
+        'pfetch-http-embl'      => {
+            @pfetch_http_config,
+            'request'   => 'request=-F %m',
+            'output'     => 'embl',
+        },
+
+        'pfetch-http-fasta'     => {
+            @pfetch_http_config,
+            'request'   => 'request=%m',
+            'output'    => 'fasta',
+        },
+
+        'pfetch-http-raw'     => {
+            @pfetch_http_config,
+            'request'   => 'request=-q %m',
+            'output'    => 'raw',
+        },
     };
 
+    # Merge in dataset specific blixem config (BAM sources)
     _config_merge($config, $self->DataSet->blixem_config);
 
     return $config;
@@ -632,6 +714,15 @@ sub offset {
     return $offset;
 }
 
+sub save_ace_to_otter {
+    my ($self) = @_;
+
+    my $client = $self->Client or confess "No Client attached";
+    my $xml = $client->save_otter_xml($self->generate_XML_from_acedb, $self->smart_slice->dsname);
+
+    return $self->update_with_stable_ids($xml);
+}
+
 sub generate_XML_from_acedb {
     my ($self) = @_;
 
@@ -653,6 +744,17 @@ sub generate_XML_from_acedb {
     $formatter->seq_features(   $converter->seq_features    );
 
     return $formatter->generate_OtterXML;
+}
+
+sub update_with_stable_ids {
+    my ($self, $xml) = @_;
+
+    return unless $xml;
+
+    my $parser = Bio::Vega::Transform::Otter::Ace->new;
+    $parser->parse($xml);
+
+    return $parser->make_ace_genes_transcripts;
 }
 
 sub unlock_otter_slice {
@@ -710,15 +812,16 @@ sub make_database_directory {
     mkdir($home, 0777) or die "Can't mkdir('$home') : $!\n";
 
     my $tar_command = "cd '$home' && tar xzf -";
-    try {
-        open my $expand, '|-', $tar_command or die "Can't open pipe '$tar_command'; $?";
-        print $expand $tar;
-        close $expand or die "Error running pipe '$tar_command'; $?";
-    }
-    catch {
+    unless (
+        eval {
+            open my $expand, '|-', $tar_command or die "Can't open pipe '$tar_command'; $?";
+            print $expand $tar;
+            close $expand or die "Error running pipe '$tar_command'; $?";
+            1;
+        }) {
         $self->error_flag(1);
-        confess $::_;
-    };
+        confess $@;
+    }
 
     # rawdata used to be in tar file, but no longer because
     # it doesn't (yet) contain any files.
@@ -766,6 +869,15 @@ sub make_passwd_wrm {
 
     close $fh;    # Must close to ensure buffer is flushed into file
 
+    return;
+}
+
+sub add_misc_acefile {
+    my ($self) = @_;
+    my $file = $self->Client->config_value('misc_acefile');
+    return unless $file;
+    confess "No such file '$file'" unless -e $file;
+    $self->add_acefile($file);
     return;
 }
 
@@ -1064,18 +1176,21 @@ sub DESTROY {
         return;
     }
     my $client = $self->Client;
-    try {
-        if ($self->ace_server_registered) {
-            $self->ace_server->kill_server;
-        }
-        if ($client) {
-            $self->unlock_otter_slice() if $self->write_access;
-        }
+    if (
+        eval {
+            if ($self->ace_server_registered) {
+                $self->ace_server->kill_server;
+            }
+            if ($client) {
+                $self->unlock_otter_slice() if $self->write_access;
+            }
+            1;
+        }) {
+        rename($home, "${home}.done")
+            or die "Error renaming the session directory; $!";
+    } else {
+        warn "Error in AceDatabase::DESTROY : $@";
     }
-    catch { warn "Error in AceDatabase::DESTROY : $::_"; };
-
-    rename($home, "${home}.done")
-        or die "Error renaming the session directory; $!";
 
     if ($callback) {
         $callback->();
