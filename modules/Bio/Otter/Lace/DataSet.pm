@@ -8,7 +8,6 @@ use warnings;
 use Carp;
 use Scalar::Util 'weaken';
 use URI::Escape qw( uri_escape );
-use Try::Tiny;
 
 use Bio::Otter::Filter;
 use Bio::Otter::BAM;
@@ -201,26 +200,70 @@ sub _query_string {
 sub blixem_config {
     my ($self) = @_;
 
-    my $config = {
-        ( map {
-            $_->name => {
-                description => $_->description,
-                args => $self->blixem_bam_args($_),
-            },
-          } @{$self->bam_list} ),
-    };
 
+    my $config = {};
+    $self->generate_blixem_bam_config($config);
+    $self->generate_blixem_data_type_config($config);
     return $config;
 }
 
-sub blixem_bam_args {
-    my ($self, $bam) = @_;
+sub generate_blixem_bam_config {
+    my ($self, $config) = @_;
 
-    my $args = join ' ', map {
-        $bam->$_ ? sprintf '-%s=%s', $_, uri_escape($bam->$_) : ( );
-    } @{$bam->bam_parameters};
+    my $ds_name = $self->name;
+    my $common_args = '-gff_feature_source=%S -chr=%r -start=%s -end=%e -file=%f';
+    foreach my $bam (@{$self->bam_list}) {
+        # Add a bam fetch method to the config if we don't have one.
+        my $csver  = $bam->csver;
+        my $prefix = $bam->chr_prefix;
+        my $fetch_name = "bam-fetch-$csver";
+        my $prefix_arg = '';
+        if ($prefix) {
+            $fetch_name .= "-$prefix";
+            $prefix_arg = "-chr_prefix=$prefix ";
+        }
+        $config->{$fetch_name} ||= {
+            'fetch-mode'    => 'command',
+            'command'       => 'bam_get',
+            'args'          => "-dataset=$ds_name -csver=$csver $prefix_arg$common_args",
+            'output'        => 'gff',
+        };
 
-    return $args;
+        ### Hack - need some way to allow out multiple BAM fetch-methods
+        if (my $other = $config->{'short-read'}{'bulk-fetch'}) {
+            if ($other ne $fetch_name) {
+                die "Cannot currently specify more than one bulk fetch method for [short-read]\nHave both '$other' and '$fetch_name'";
+            }
+        }
+        else {
+            $config->{'short-read'} = {
+                'link-features-by-name' => 'false',
+                'bulk-fetch'            => $fetch_name,
+                'user-fetch'            => 'none',
+            };
+        }
+        
+        # Add the bam source itself
+        $config->{$bam->name} = {
+            'description'   => $bam->description,
+            'file'          => $bam->file,
+        };
+    }
+
+    return;
+}
+
+sub generate_blixem_data_type_config {
+    my ($self, $config) = @_;
+
+    my $dt_config = $config->{'source-data-types'} = {};
+    foreach my $filter (@{$self->filters}) {
+        if (my $blx_dt = $filter->blixem_data_type) {
+            $dt_config->{$filter->name} = $blx_dt;
+        }
+    }
+
+    return;
 }
 
 sub _bam_load {
@@ -229,8 +272,8 @@ sub _bam_load {
     my $bam_by_name = $self->{_bam_by_name} = { };
     for my $name ( @{$self->config_keys("bam")} ) {
         my $config = $self->config_section("bam.${name}");
-        try { $bam_by_name->{$name} = Bio::Otter::BAM->new($name, $config); }
-        catch { warn sprintf "BAM section for ${name}: ignored: $::_"; };
+        eval { $bam_by_name->{$name} = Bio::Otter::BAM->new($name, $config); 1; } or
+            warn sprintf "BAM section for ${name}: ignored: $@";
     }
 
     my $config = $self->config_section('bam_list');
@@ -257,12 +300,13 @@ sub _filter_load {
     my $filter_by_name = $self->{_filter_by_name} = { };
     for my $name ( @{$self->config_keys("filter")} ) {
         my $config = $self->config_section("filter.${name}");
-        try {
+        eval {
             my $filter= Bio::Otter::Filter->from_config($config);
             $filter->name($name);
             $filter_by_name->{$name} = $filter;
+            1;
         }
-        catch { warn sprintf "filter section for ${name}: ignored: $::_"; };
+        or warn sprintf "filter section for ${name}: ignored: $@";
     }
 
     my $filters = $self->{_filters} = [ ];
