@@ -601,19 +601,19 @@ sub blixem_config {
 
         'pfetch-socket-embl'  => {
             @pfetch_socket_config,
-            'args'      => 'args=--client=%p_%h_%u -C -F %m',
+            'args'      => '--client=%p_%h_%u -C -F %m',
             'output'    => 'embl',
         },
 
         'pfetch-socket-fasta'   => {
             @pfetch_socket_config,
-            'args'      => 'args=--client=%p_%h_%u -C %m',
+            'args'      => '--client=%p_%h_%u -C %m',
             'output'    => 'fasta',
         },
 
         'pfetch-socket-raw'     => {
             @pfetch_socket_config,
-            'args'      => 'args=--client=%p_%h_%u -q -C %m',
+            'args'      => '--client=%p_%h_%u -q -C %m',
             'output'    => 'raw',
         },
 
