@@ -32,8 +32,8 @@ use Tk::FileSelect;
     $menu->add('separator');
     
     $chooser->add('command',
-        -label          => 'Attach Xace',
-        -command        => sub { warn "Called Attach Xace" },
+        -label          => 'Attach ZMap',
+        -command        => sub { warn "Called Attach ZMap" },
         -accelerator    => 'Ctrl-X',
         -underline      => 0,
         );
