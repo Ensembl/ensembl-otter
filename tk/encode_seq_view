@@ -46,10 +46,6 @@ use MenuCanvasWindow::SessionWindow;
     $SessionWindow->write_access(0);
     $SessionWindow->AceDatabase($db);
     $SessionWindow->initialize;
-    ### launch xace
-    ### Display region containing hit in fMap - see code in ExonCanvas
-
-    
 
     Tk::MainLoop();
 }
