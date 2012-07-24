@@ -576,13 +576,13 @@ sub blixem_config {
             'url'           => 'http://www.ensembl.org/Homo_sapiens/Variation/Summary',
             'request'       => 'v=%m',
         },
-        
+
         'dna-match' => {
             'link-features-by-name' => 'true',
             'bulk-fetch'            => [$embl_fetch, $raw_fetch],
             'user-fetch'            => [$embl_fetch, $fasta_fetch, 'internal'],
         },
-        
+
         'protein-match' => {
             'link-features-by-name' => 'true',
             'bulk-fetch'            => $raw_fetch,
