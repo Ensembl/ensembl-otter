@@ -243,7 +243,7 @@ sub generate_blixem_bam_config {
                 'user-fetch'            => 'none',
             };
         }
-        
+
         # Add the bam source itself
         $config->{$bam->name} = {
             'description'   => $bam->description,
