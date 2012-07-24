@@ -15,10 +15,13 @@ use Bio::Otter::Lace::Defaults;
 
 my %MASTER = (3322 => 'lutra5', 3323 => 'lutra7'); # lutra8:3324 is otterlive, not relevant in this script
 my %SLAVE  = (3322 => 'lutra6', 3323 => 'lutra6'); # lutra6:3324 also exists
+my @other_hosts = qw( mcs30 mcs31 );
 
+# Switching Otter Server's "otterlive" is done via species.dat
+# see http://mediawiki.internal.sanger.ac.uk/wiki/index.php/Anacode_Databases#Downtime
 
 # Build regexps
-my $HOSTS_RE = join "|", sort( uniq( values %MASTER, values %SLAVE ));
+my $HOSTS_RE = join "|", sort( uniq( values %MASTER, values %SLAVE, @other_hosts ));
 my $PORTS_RE = join "|", keys %MASTER;
 $HOSTS_RE = qr{\b($HOSTS_RE)\b};
 $PORTS_RE = qr{\b($PORTS_RE)\b};
@@ -28,6 +31,8 @@ $PORTS_RE = qr{\b($PORTS_RE)\b};
     my $dryrun = 0;
     my $meta_key = 'pipeline_db_head';
     my $only_port;
+    my $progdir = $0;
+    $progdir =~ s{/[^/]+$}{};
 
     my $usage = sub { exec('perldoc', $0) };
     # This do_getopt() call is needed to parse the otter config files
@@ -57,19 +62,22 @@ $PORTS_RE = qr{\b($PORTS_RE)\b};
         # warn "$name: Looking at $connect\n";
         my ($sathost) = $connect =~ $HOSTS_RE;
         my ($satport) = $connect =~ $PORTS_RE;
+        my $old_sathost = $sathost;
 
         if ($sathost && $satport) {
             if (defined $only_port && $satport != $only_port) {
-                warn "ok:  Dataset $name remains on $sathost:$satport\n";
+                warn "skip:  Dataset $name remains on $sathost:$satport - is not port $only_port\n";
                 next;
             }
 
-            if ($switch eq 'master' && $sathost eq $SLAVE{$satport}) {
+            if ($switch eq 'master') {
                 $sathost = $MASTER{$satport};
-            } elsif ($switch eq 'slave' && $sathost eq $MASTER{$satport}) {
+            } elsif ($switch eq 'slave') {
                 $sathost = $SLAVE{$satport};
-            } elsif ($sathost eq $SLAVE{$satport} || $sathost eq $MASTER{$satport}) {
-                warn "ok:  Dataset $name is already on $switch ($sathost:$satport)\n";
+            }
+
+            if ($old_sathost eq $sathost) {
+                warn "no-op:  Dataset $name is already on $switch ($sathost:$satport)\n";
                 next;
             }
 
@@ -78,9 +86,9 @@ $PORTS_RE = qr{\b($PORTS_RE)\b};
             next;
         }
 
-        print STDERR "\n=>  Switching $name to $switch\n";
+        print STDERR "\n=>  Switching $name to $switch ($old_sathost to $sathost)\n";
         my @command = (
-            './save_satellite_db',
+            "$progdir/save_satellite_db",
             -dataset    => $name,
             -key        => $meta_key,
             -sathost    => $sathost,
