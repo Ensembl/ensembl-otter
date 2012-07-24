@@ -25,7 +25,7 @@ XML.  The otter lace client transforms the XML
 data into acedb format data, provides a Perl/Tk
 based interface that makes it easier for the
 annotator to create genes, and drives a copy of
-B<xace>.
+B<zmap>.
 
 =head2 Software neeeded
 
@@ -41,7 +41,7 @@ MyISAM tables for speed.
 =item acedb
 
 A recent version of acedb is needed.  The B<tace>
-and B<xace> binaries are used.
+binary is used.
 
 =item Perl
 
