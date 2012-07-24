@@ -12,7 +12,6 @@ require Tk::Balloon;
 
 use Hum::Ace::SubSeq;
 use Hum::Ace::Locus;
-use Hum::Ace::XaceRemote;
 use Hum::Ace::Assembly;
 use Hum::Analysis::Factory::ExonLocator;
 use Hum::Sort qw{ ace_sort };
