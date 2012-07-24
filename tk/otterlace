@@ -97,7 +97,7 @@ __END__
 
 B<otterlace> is a graphical client for the otter
 annotation database that uses a local acedb
-database with xace and perl/Tk tools to provide a
+database with ZMap and Perl/Tk tools to provide a
 gene annotation interface.
 
 =head1 COMMAND LINE
