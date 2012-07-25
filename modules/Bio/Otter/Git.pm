@@ -17,7 +17,7 @@ use File::Basename;
 my $dir = dirname __FILE__;
 
 my $commands = {
-    head => q(git describe --tags HEAD),
+    head => q(git describe --tags --match 'humpub-release-*' HEAD),
 };
 
 our $CACHE = {
