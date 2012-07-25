@@ -14,11 +14,12 @@ use Tk::ROText;
 use Tk::LabFrame;
 use Tk::ComboBox;
 use Tk::SmartOptionmenu;
+use Hum::Ace::Locus;
+use Hum::Ace::Exon;
 use Hum::Ace::DotterLauncher;
 use CanvasWindow::EvidencePaster;
 use EditWindow::PfamWindow;
 use Bio::Otter::UI::TextWindow::Peptide;
-use Hum::Ace;
 
 use base qw( MenuCanvasWindow );
 
