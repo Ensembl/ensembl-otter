@@ -41,17 +41,15 @@ use Bio::EnsEMBL::Utils::Exception qw(warning);
         my $sql = qq{
             SELECT oa.value
               , COUNT(DISTINCT stable_id) cnt
-              , GROUP_CONCAT(CONCAT(osi.${component}_id,':',stable_id,':',sr.name,':',o.seq_region_start,':',o.seq_region_end)
-                ORDER BY osi.${component}_id ASC )
+              , GROUP_CONCAT(CONCAT(o.${component}_id,':',stable_id,':',sr.name,':',o.seq_region_start,':',o.seq_region_end)
+                ORDER BY o.${component}_id ASC )
             FROM ${component}_attrib oa
               , $component o
-              , ${component}_stable_id osi
               , attrib_type at
               , seq_region sr
             WHERE at.code = 'name'
               AND oa.attrib_type_id = at.attrib_type_id
               AND oa.${component}_id = o.${component}_id
-              AND o.${component}_id = osi.${component}_id
               AND o.seq_region_id = sr.seq_region_id
         }
           . ($notsets  ? '  AND sr.name NOT IN (' . join(',', map { "'$_'" } @not_sets) . ")\n"  : '')
