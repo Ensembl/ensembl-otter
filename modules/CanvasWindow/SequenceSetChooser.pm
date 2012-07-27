@@ -126,18 +126,9 @@ sub draw {
 
     if(@$ss_list) {
 
-        my $full_pairs = [ map { [$_->name(), $_->name().':', $_->description(), $_ ] }
-                            sort { ace_sort($a->name, $b->name) } @$ss_list ];
-
-        my $sub_pairs = [];
-        foreach my $ss (@$ss_list) {
-            foreach my $sub_name (@{$ss->get_subset_names()}) {
-                push @$sub_pairs, [$sub_name, $ss->name().':'.$sub_name, "Subregion of ".$ss->name(), $ss];
-            }
-        }
-        $sub_pairs = [sort { $a->[0] cmp $b->[0] } @$sub_pairs];
-
-        my $all_pairs = [@$full_pairs, @$sub_pairs];
+        my $all_pairs = [ map { [$_->name(), $_->name().':', $_->description(), $_ ] }
+                           sort { ace_sort($a->name, $b->name) } @$ss_list ];
+        # sub_pairs were included from $ss->get_subset_names, until RT#275972
 
         my $row_height = int $size * 1.5;
         my $x = $size;
@@ -313,7 +304,12 @@ sub open_sequence_set_by_ssname_subset {
         $self->add_SequenceNotes($sn);
     }
 
-    if( $subset_name ) { # we assume that whoever calls this has set the subset previously
+    if( $subset_name ) {
+        # we assume that whoever calls this has set the subset previously
+        #
+        # If the SequenceNotes was destroyed & recreated, old subset
+        # names will be invalid; code routes for this deleted in
+        # RT#275972 but state storage still supports it.
         $sn->draw_subset($subset_name);
     } elsif(! $sn->canvas->find('withtag', 'all')) {
         $sn->draw_all();    
