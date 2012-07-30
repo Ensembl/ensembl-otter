@@ -101,6 +101,9 @@ my %test_clone_exp = (         # not Readonly as some components manufactured fr
         score        => 3047,
         n_ele        => 8,
 
+#       e_cigar      => '855MD156M75I57MD3I849M', # mine
+        e_cigar      => '855MD156M25I57MDI849M',  # according to exonerate - counts on I's is query side
+
         intron_vulgar  => 'M 274 822 I 0 2246 M 11 33 F 0 1 M 52 156 G 25 0 M 1 3 I 0 1312 M 18 54 F 0 1 G 1 0 M 36 108 S 0 2 I 0 8901 S 1 1 M 76 228 S 0 1 I 0 3913 S 1 2 M 51 153 S 0 1 I 0 762 S 1 2 M 26 78 I 0 603 M 91 273',
         intron_n_ele => 26,
     },
