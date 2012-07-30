@@ -6,7 +6,7 @@ package Bio::Otter::GappedAlignment::Element::Frameshift;
 use strict;
 use warnings;
 
-use base 'Bio::Otter::GappedAlignment::ElementI';
+use base 'Bio::Otter::GappedAlignment::Element::GapT';
 
 sub type {
     return 'F';

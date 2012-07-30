@@ -27,7 +27,7 @@ Readonly my %ele_expected => {
     '3' => { class => 'SS_3P',      desc => "3' splice site",          q =>  0, t =>  2 },
     'I' => { class => 'Intron',     desc => 'intron',                  q =>  0, t => 10 },
     'S' => { class => 'SplitCodon', desc => 'split codon',             q => 10, t => 10 },
-    'F' => { class => 'Frameshift', desc => 'frameshift',              q => 10, t => 10 },
+    'F' => { class => 'Frameshift', desc => 'frameshift',              q =>  0, t =>  1 },
 };
 
 my ($ele_module, $ga_module);
