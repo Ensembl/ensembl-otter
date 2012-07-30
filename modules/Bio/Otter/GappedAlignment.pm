@@ -348,7 +348,20 @@ sub ensembl_cigar_string {
     my $self = shift;
     return unless $self->n_elements;
 
-    my @ele_strings = map { $_->ensembl_cigar_string } @{$self->elements};
+    my @elements = ( @{$self->elements} ); # make a copy to consume
+    my @ele_strings;
+    while (my $this_ele = shift @elements) {
+        my $length = $this_ele->cigar_length;
+        my $next_ele;
+        while (     $next_ele = $elements[0]
+                and $this_ele->cigar_type eq $next_ele->cigar_type )
+        {
+            $length += $next_ele->cigar_length; # combine
+            shift @elements;                    # and discard
+        }
+        my $cigar_string = ($length > 1 ? $length : '') . $this_ele->cigar_type;
+        push @ele_strings, $cigar_string;
+    }
     return join('', @ele_strings);
 }
 
