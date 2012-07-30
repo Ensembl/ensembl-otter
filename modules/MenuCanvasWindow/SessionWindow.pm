@@ -2414,6 +2414,60 @@ sub update_window_title_unsaved_flag {
     return;
 }
 
+
+### BEGIN: ZMap control interface
+
+
+sub zircon_zmap_view_features_loaded {
+    my ($self, $status, $message, @featuresets) = @_;
+
+    my $filter_hash = $self->AceDatabase->filters;
+    my $state_changed = 0;
+
+    foreach my $set_name (@featuresets) {
+        # NB: careful not to auto-vivify entries in $filter_hash !
+        if (my $filter_entry = $filter_hash->{$set_name}) {
+            my $state_hash = $filter_entry->{'state'};
+            if ($status == 0 && ! $state_hash->{'failed'}) {
+                $state_changed = 1;
+                $state_hash->{'failed'} = 1;
+                $state_hash->{'fail_msg'} = $message; ### Could store in SQLite db
+            }
+            elsif ($status == 1 && ! $state_hash->{'done'}) {
+                $state_changed = 1;
+                $state_hash->{'done'} = 1;
+                $state_hash->{'failed'} = 0; # reset failed flag if filter succeeds
+                my $filter = $filter_entry->{'filter'};
+                if ($filter->process_gff_file) {
+                    my @tsct = $self->AceDatabase->process_gff_file_from_Filter($filter);
+                    if (@tsct) {
+                        $self->add_external_SubSeqs(@tsct);
+                        $self->draw_subseq_list;
+                    }
+                }
+            }
+        }
+        # else {
+        #     # We see a warning for each acedb featureset
+        #     warn "Ignoring featurset '$set_name'";
+        # }
+    }
+
+    if ($state_changed) {
+        # save the state of each gff filter to disk so we can recover the session
+        $self->AceDatabase->save_filter_state;
+
+        # and update the delayed flags in the zmap config file
+        $self->AceDatabase->zmap_config_update;
+    }
+
+    return;
+}
+
+
+### END: ZMap control interface
+
+
 sub DESTROY {
     my ($self) = @_;
 
