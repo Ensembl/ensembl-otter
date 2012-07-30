@@ -16,6 +16,15 @@ sub long_type {
     return 'split codon';
 }
 
+sub cigar_type {
+    my $self = shift;
+    if ($self->query_length and $self->target_length) {
+        return 'M';
+    } else {
+        return Bio::Otter::GappedAlignment::Element::GapT::cigar_type($self);
+    }
+}
+
 1;
 
 __END__
