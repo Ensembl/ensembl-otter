@@ -106,6 +106,10 @@ my %test_clone_exp = (         # not Readonly as some components manufactured fr
 
         intron_vulgar  => 'M 274 822 I 0 2246 M 11 33 F 0 1 M 52 156 G 25 0 M 1 3 I 0 1312 M 18 54 F 0 1 G 1 0 M 36 108 S 0 2 I 0 8901 S 1 1 M 76 228 S 0 1 I 0 3913 S 1 2 M 51 153 S 0 1 I 0 762 S 1 2 M 26 78 I 0 603 M 91 273',
         intron_n_ele => 26,
+
+        i_e_cigar => '822M2246D33MD156M25I3M1312D54MDI108M8903D229M3914D155M763D80M603D273M',
+
+        ensembl_feature_type => 'Bio::EnsEMBL::DnaPepAlignFeature',
     },
 
     ts_vulgar_comps_fwd => 'M 1007 1007 G 0 1 M 214 214 G 2 0 M 1315 1315',
@@ -232,6 +236,7 @@ Readonly my @split_expected => (
             'Q 14 20 + T 49 52 + 0 M 3 3 G 3 0',
             ],
 
+        ensembl_feature_type => 'Bio::EnsEMBL::DnaDnaAlignFeature',
         ensembl_features => [
             { start => 29, end => 31, strand => 1, hstart =>  1, hend =>  3, hstrand => 1, cigar => '3M', },
             { start => 35, end => 40, strand => 1, hstart =>  4, hend => 12, hstrand => 1, cigar => '2M3I4M', },
@@ -258,6 +263,7 @@ Readonly my @split_expected => (
             'Q 14 20 + T 58 55 - 0 M 3 3 G 3 0',
             ],
 
+        ensembl_feature_type => 'Bio::EnsEMBL::DnaDnaAlignFeature',
         ensembl_features => [
             { start => 77, end => 79, strand => -1, hstart =>  1, hend =>  3, hstrand => 1, cigar => '3M', },
             { start => 68, end => 73, strand => -1, hstart =>  4, hend => 12, hstrand => 1, cigar => '2M3I4M', },
@@ -737,6 +743,16 @@ Readonly my @split_expected => (
         # BS: Q96S55 495 547 . EMBOSS_001 138322 138478 + 0 S 1 2 M 51 153 S 0 1
         # BS: Q96S55 547 574 . EMBOSS_001 139240 139320 + 0 S 1 2 M 26 78
         # BS: Q96S55 574 665 . EMBOSS_001 139923 140196 + 0 M 91 273
+
+        ensembl_features => [
+            { start => 120541, end => 121362, strand => 1, hstart =>   1, hend => 274, cigar => '822M', },
+            { start => 123609, end => 123801, strand => 1, hstart => 275, hend => 363, cigar => '33MD156M25I3M', },
+            { start => 125114, end => 125278, strand => 1, hstart => 364, hend => 418, cigar => '54MDI108M2D', },
+            { start => 134180, end => 134409, strand => 1, hstart => 419, hend => 495, cigar => '229MD', },
+            { start => 138323, end => 138478, strand => 1, hstart => 496, hend => 547, cigar => '155MD', },
+            { start => 139241, end => 139320, strand => 1, hstart => 548, hend => 574, cigar => '80M', },
+            { start => 139924, end => 140196, strand => 1, hstart => 575, hend => 665, cigar => '273M', },
+        ],
     },
 
     {
@@ -772,6 +788,17 @@ Readonly my @split_expected => (
         # BS: Q96S55 495 547 . EMBOSS_001 37340 37184 - 0 S 1 2 M 51 153 S 0 1
         # BS: Q96S55 547 574 . EMBOSS_001 36422 36342 - 0 S 1 2 M 26 78
         # BS: Q96S55 574 665 . EMBOSS_001 35739 35466 - 0 M 91 273
+
+        ensembl_feature_type => 'Bio::EnsEMBL::DnaPepAlignFeature',
+        ensembl_features => [
+            { start => 54301, end => 55122, strand => -1, hstart =>   1, hend => 274, cigar => '822M', },
+            { start => 51862, end => 52054, strand => -1, hstart => 275, hend => 363, cigar => '33MD156M25I3M', },
+            { start => 50385, end => 50549, strand => -1, hstart => 364, hend => 418, cigar => '54MDI108M2D', },
+            { start => 41254, end => 41483, strand => -1, hstart => 419, hend => 495, cigar => '229MD', },
+            { start => 37185, end => 37340, strand => -1, hstart => 496, hend => 547, cigar => '155MD', },
+            { start => 36343, end => 36422, strand => -1, hstart => 548, hend => 574, cigar => '80M', },
+            { start => 35467, end => 35739, strand => -1, hstart => 575, hend => 665, cigar => '273M', },
+        ],
     },
     );
 
@@ -861,7 +888,7 @@ foreach my $test (@split_expected) {
         is ($n_features, scalar(@exp_features), 'n ensembl_features');
 
         foreach my $n ( 0 .. ($n_features - 1) ) {
-            isa_ok($ensembl_features[$n], 'Bio::EnsEMBL::DnaDnaAlignFeature', "feature $n: isa");
+            isa_ok($ensembl_features[$n], $test->{ensembl_feature_type}, "feature $n: isa");
             is ($ensembl_features[$n]->start,        $exp_features[$n]->{start},  "feature $n: start");
             is ($ensembl_features[$n]->end,          $exp_features[$n]->{end},    "feature $n: end");
             is ($ensembl_features[$n]->strand,       $exp_features[$n]->{strand}, "feature $n: strand");
