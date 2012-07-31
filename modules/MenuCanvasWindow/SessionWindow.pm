@@ -7,6 +7,8 @@ use warnings;
 use Carp;
 use Scalar::Util 'weaken';
 
+use Try::Tiny;
+
 require Tk::Dialog;
 require Tk::Balloon;
 
@@ -486,12 +488,8 @@ sub populate_menus {
 
     # Paste selected subseqs, realigning them to the genomic sequence
     my $paste_subseq = sub{
-        eval {
-            $self->paste_selected_subseqs;
-        };
-        if ($@) {
-            $self->exception_message($@);
-        }
+        try { $self->paste_selected_subseqs; }
+        catch { $self->exception_message($::_); };
     };
     $subseq->add('command',
         -label          => 'Paste',
@@ -735,7 +733,7 @@ sub GenomicFeatures {
 
 sub launch_GenomicFeatures {
     my ($self) = @_;
-    eval {
+    try {
         if(my $gfs = $self->GenomicFeatures()) {
 
             my $gfw = $gfs->top_window();
@@ -749,12 +747,12 @@ sub launch_GenomicFeatures {
             $gfs->SessionWindow($self);
             $gfs->initialize;
         }
-    };
-    if ($@) {
-        my $msg = "Error creating GenomicFeatures window: $@";
+    }
+    catch {
+        my $msg = "Error creating GenomicFeatures window: $::_";
         warn $msg;
         $self->exception_message($msg);
-    }
+    };
 
     return;
 }
@@ -835,13 +833,13 @@ sub close_GenomicFeatures {
                 $new->clone_Sequence($assembly->Sequence);
                 $assembly->add_SubSeq($new);
                 if ($sub->translation_region_is_set) {
-                    eval {
+                    try {
                         $new->set_translation_region_from_cds_coords($sub->cds_coords);
-                    };
-                    if ($@) {
+                    }
+                    catch {
                         push(@msg, "Failed to set translation region - check translation of '$temp_name'");
                         $new->translation_region($new->start, $new->end);
-                    }
+                    };
                 }
                 $new->Locus($self->get_Locus($sub->Locus->name));
                 ### set locus gene_type_prefix() here ?
@@ -907,13 +905,10 @@ sub exit_save_data {
                 $self->update_Locus($locus);
             }
 
-            eval {
-                $self->save_ace($ace);
-            };
-            if (my $err = $@) {
-                warn "Aborting lace session exit:\n$err";
-                return;
-            }
+            my $ok = 0;
+            try { $self->save_ace($ace); $ok = 1; }
+            catch  { warn "Aborting lace session exit:\n$::_"; };
+            return unless $ok;
 
             if ($self->save_data) {
                 $adb->error_flag(0);
@@ -980,7 +975,8 @@ sub save_data {
 
     $top->Busy;
 
-    eval{
+    my $ok = 0;
+    try {
         my $xml = $adb->Client->save_otter_xml(
             $adb->generate_XML_from_acedb, $adb->DataSet->name);
         die "save_otter_xml returned no XML" unless $xml;
@@ -993,17 +989,12 @@ sub save_data {
         $self->flag_db_edits(1);
         $self->resync_with_db;
         $self->update_window_title_unsaved_flag(0);
-    };
-    my $err = $@;
-
-    $top->Unbusy;
-
-    if ($err) {
-        $self->exception_message($err, 'Error saving to otter');
-        return 0;
-    } else {
-        return 1;
+        $ok = 1;
     }
+    catch { $self->exception_message($::_, 'Error saving to otter'); }
+    finally { $top->Unbusy; };
+
+    return $ok;
 }
 
 sub edit_double_clicked {
@@ -1106,7 +1097,7 @@ sub hunt_for_Entry_text {
 
     my $canvas = $self->canvas;
     my( $query_str, $regex );
-    eval{
+    try {
         $query_str = $entry->get();
         $query_str =~ s{([^\w\*\?\\])}{\\$1}g;
         $query_str =~ s{\*}{.*}g;
@@ -1123,19 +1114,19 @@ sub hunt_for_Entry_text {
     my @ace_fail_names;
     foreach my $name ($self->list_all_SubSeq_names) {
         my $sub = $self->get_SubSeq($name) or next;
-        my $str = eval { $sub->ace_string };
-        if ($@) {
+        try {
+            my $str = $sub->ace_string;
+            if (my ($hit) = $str =~ /$regex/) {
+                push(@matching_sub_names, $name);
+            }
+        }
+        catch {
             # Data outside our control may break Hum::Ace::SubSeq  RT:188195, 189606
-            my $err = $@;
-            warn "hunt_for_Entry_text on $name: $err";
+            warn "hunt_for_Entry_text on $name: $::_";
             push @ace_fail_names, $name;
             # It could be a real error, not just some broken data.
             # We'll mention that if there are no results.
-            next;
-        }
-        if (my ($hit) = $str =~ /$regex/) {
-            push(@matching_sub_names, $name);
-        }
+        };
     }
 
     if (@ace_fail_names && !@matching_sub_names) {
@@ -1169,18 +1160,18 @@ sub save_ace {
     my $adb = $self->AceDatabase;
 
     my $val;
-    eval { $val = $adb->ace_server->save_ace(@args) };
-    if (my $err = $@) {
-        $self->exception_message($err, "Error saving to acedb");
-        confess "Error saving to acedb: $err";
+    try { $val = $adb->ace_server->save_ace(@args); }
+    catch {
+        $self->exception_message($::_, "Error saving to acedb");
+        confess "Error saving to acedb: $::_";
+    };
+
+    if ($self->flag_db_edits) {
+        $self->AceDatabase->unsaved_changes(1);
+        $self->update_window_title_unsaved_flag(1);            
     }
-    else {
-        if ($self->flag_db_edits) {
-            $self->AceDatabase->unsaved_changes(1);
-            $self->update_window_title_unsaved_flag(1);            
-        }
-        return $val;
-    }
+
+    return $val;
 }
 
 sub flag_db_edits {
@@ -2272,9 +2263,7 @@ sub draw_sequence_list {
     }
 
     # Raise messages above everything else
-    eval{
-        $canvas->raise('msg', 'subseq');
-    };
+    try { $canvas->raise('msg', 'subseq'); };
 
     return;
 }
