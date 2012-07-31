@@ -9,6 +9,7 @@ use warnings;
 use Bio::Otter::GappedAlignment::Element;
 
 use Bio::EnsEMBL::DnaDnaAlignFeature;
+use Bio::EnsEMBL::DnaPepAlignFeature;
 
 use Log::Log4perl;
 use Readonly;
@@ -390,8 +391,9 @@ sub ensembl_feature {
     my ($t_start, $t_end, $t_strand) = $self->target_ensembl_coords;
     my ($q_start, $q_end, $q_strand) = $self->query_ensembl_coords;
 
-    # FIXME: needs to support DnaPep as well as DnaDna
-    return Bio::EnsEMBL::DnaDnaAlignFeature->new(
+    my $af_type = $self->query_type eq 'P' ? 'Bio::EnsEMBL::DnaPepAlignFeature' : 'Bio::EnsEMBL::DnaDnaAlignFeature';
+
+    return $af_type->new(
         -seqname      => $self->target_id,
         -start        => $t_start,
         -end          => $t_end,
