@@ -117,15 +117,8 @@ sub _do_intronify {
 
     $data{elements}               = [ @{$self->elements} ];  # make a copy we can consume
     $data{intron_ga} = $intron_ga = $self->_new_copy_basics; # this is what we're building!
-    $data{per_exon}               = [];
 
     $data{protein_query} = ($self->query_type eq 'P');
-
-    $data{debug_exon_ga} = sub {
-        my ($ga, $msg) = @_;
-        $self->logger->debug(sprintf('Exon_ga %s q: %d-%d, t: %d-%d', $msg,
-                                     @$ga{qw(_query_start _query_end _target_start _target_end)}));
-    };
 
     # $data{offset} is offset between transcript in genomic or clone coords, and spliced transcript (cDNA)
 
@@ -145,7 +138,6 @@ sub _do_intronify {
 
     $self->logger->debug("Done (offset $data{offset})");
 
-    $intron_ga->_set_exon_gapped_alignments($data{per_exon});
     $self->_verify_lengths($intron_ga) if $self->logger->is_debug;
 
     return $intron_ga;
@@ -202,12 +194,10 @@ sub _intronify_do_exon {
 
     if ($e_end   < $data->{t_splice_pos}) {
         $self->logger->debug("  not there yet");
-        push @{$data->{per_exon}}, undef;
         return;
     }
     if ($e_start > $self->target_end) {
         $self->logger->debug("  beyond");
-        push @{$data->{per_exon}}, undef;
         return;
     }
 
@@ -232,17 +222,6 @@ sub _intronify_do_exon {
         $data->{query_pos} = $self->query_start;
     }
 
-    # per-exon - do it even if we don't need it
-
-    my $exon_ga = $intron_ga->_new_copy_basics;
-
-    $exon_ga->score(0); # cannot easily split score between exons
-    $exon_ga->target_start($t_split_pos);
-    $exon_ga->query_start($data->{query_pos});
-    $exon_ga->target_end($exon_ga->target_start); # will be updated by add_element_track_lengths()
-    $exon_ga->query_end( $exon_ga->query_start ); # --"--
-    $data->{debug_exon_ga}->($exon_ga, '[initial]  ');
-
   ELEMENTS: while (my $ele = shift @{$data->{elements}}) {
 
       $self->logger->debug("Considering: ", $ele->string);
@@ -262,9 +241,6 @@ sub _intronify_do_exon {
           $data->{t_splice_pos} += $ele->target_length;
           $data->{query_pos}    += $ele->query_length * $intron_ga->query_strand_sense;
 
-          $exon_ga->add_element_track_lengths($ele->make_copy);
-          $data->{debug_exon_ga}->($exon_ga, '[whole ele]');
-
       } elsif ($overlap > 0) {
 
           # Time to split an element
@@ -278,12 +254,8 @@ sub _intronify_do_exon {
 
               $data->{t_splice_pos} += $ele->target_length;
               $data->{query_pos}    += $ele->query_length * $intron_ga->query_strand_sense;
-
-              $exon_ga->add_element_track_lengths($ele->make_copy);
           }
           unshift @{$data->{elements}}, @{$remaining_eles};
-
-          $data->{debug_exon_ga}->($exon_ga, '[partial]  ');
 
           last ELEMENTS;
 
@@ -301,8 +273,6 @@ sub _intronify_do_exon {
         $self->logger->debug("Ran out of elements so no longer in alignment");
         $data->{in_alignment} = 0;
     }
-
-    push @{$data->{per_exon}}, $exon_ga;
 
     return;
 }
@@ -740,6 +710,7 @@ sub _verify_lengths {
         $self->logger->fatal("sum(t_len): $t_len vs t_len: ", $self->target_length) if $t_len != $self->target_length;
         $self->logger->confess('Intronify length mismatch');
     }
+    $self->logger->debug('Lengths ok');
     return;
 }
 
