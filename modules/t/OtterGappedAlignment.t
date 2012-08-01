@@ -832,6 +832,8 @@ foreach my $test (@split_expected) {
     is($ga->n_elements,    $test->{n_ele},    'n_elements');
     is($ga->vulgar_string, $test->{vulgar},   'vulgar_string');
 
+    is(scalar($ga->exon_gapped_alignments), 1, 'exon_gapped_alignments for ungapped');
+
     is($ga->ensembl_cigar_string, $test->{e_cigar}, 'ensembl_cigar') if $test->{e_cigar};
 
     my $ts = Hum::Ace::SubSeq->new();
