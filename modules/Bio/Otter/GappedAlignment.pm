@@ -415,12 +415,6 @@ sub reverse_alignment {
     $reversed->swap_target_strand;
     $reversed->{_elements} = [ reverse @{$self->elements} ];
 
-    my @egas = $self->exon_gapped_alignments;
-    if (@egas) {
-        my $rev_egas = [ reverse map { $_->reverse_alignment } @egas ];
-        $reversed->_set_exon_gapped_alignments($rev_egas);
-    }
-
     return $reversed;
 }
 
@@ -668,13 +662,9 @@ sub exon_gapped_alignments {
     my ($self, $include_unmatched_introns) = @_;
 
     my $egas = $self->{_exon_gapped_alignments};
-    return unless $egas;
 
-    if ($self->{_ega_fingerprint}) {
-        unless ($self->vulgar_string eq $self->{_ega_fingerprint}) {
-            # Should regenerate from vulgar string here
-            $self->logger->logdie('Sorry, gapped alignment has changed since exon alignments were generated');
-        }
+    if (not($egas) or ($self->vulgar_string ne $self->{_ega_fingerprint})) {
+        $egas = $self->_generate_exon_gapped_alignments;
     }
 
     return ( @$egas ) if $include_unmatched_introns;
@@ -684,6 +674,52 @@ sub exon_gapped_alignments {
         push @filtered, $exon if $exon;
     }
     return @filtered;
+}
+
+sub _generate_exon_gapped_alignments {
+    my $self = shift;
+
+    my @egas;
+
+    my $exon_ga;
+    my $state = 'idle';
+    my $q_pos = $self->query_start;
+    my $t_pos = $self->target_start;
+
+    foreach my $ele (@{$self->elements}) {
+
+        if ($ele->is_intronic) {
+
+            if ($state eq 'exon') {
+                push @egas, $exon_ga;
+                $exon_ga = undef;
+            }
+            $state = 'intron';
+
+        } else {
+
+            unless ($state eq 'exon') {
+                $exon_ga = $self->_new_copy_basics;
+                $exon_ga->score(0); # cannot easily split score between exons
+                $exon_ga->target_start($t_pos);
+                $exon_ga->query_start($q_pos);
+                $exon_ga->target_end($exon_ga->target_start); # will be updated by add_element_track_lengths()
+                $exon_ga->query_end( $exon_ga->query_start ); # --"--
+            }
+            $state = 'exon';
+            $exon_ga->add_element_track_lengths($ele->make_copy);
+        }
+
+        $q_pos += $self->query_strand_sense  * $ele->query_length;
+        $t_pos += $self->target_strand_sense * $ele->target_length;
+
+    }
+
+    if ($state eq 'exon') {
+        # Last one
+        push @egas, $exon_ga;
+    }
+    return $self->_set_exon_gapped_alignments(\@egas);
 }
 
 sub _set_exon_gapped_alignments {
