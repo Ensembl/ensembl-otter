@@ -568,6 +568,8 @@ sub _make_DBAdaptor_with_class {
             push(@args, "-$prop", $val);
         }
     }
+    warn "About to $class->new without a username - server didn't give me config?"
+      unless grep { $_ eq '-USER' } @args;
 
     return $class->new(@args);
 }
