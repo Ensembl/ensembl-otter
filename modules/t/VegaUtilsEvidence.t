@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use lib "${ENV{ANACODE_TEAM_TOOLS}}/t/tlib";
-use CriticModule;
+use Test::CriticModule;
 
 use Bio::Seq;
 
