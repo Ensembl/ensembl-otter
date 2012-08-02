@@ -5,16 +5,11 @@ use warnings;
 
 use lib "${ENV{ANACODE_TEAM_TOOLS}}/t/tlib";
 use Test::CriticModule;
+use Test::SetupLog4perl;
 
 use Readonly;
 use Scalar::Util qw(reftype);
 use Test::More;
-
-use Log::Log4perl qw(:easy);
-my $verbose = ($ENV{HARNESS_IS_VERBOSE} or defined $DB::single); # 'prove -v' or running under perl debugger
-my $level = $verbose ? $DEBUG : $WARN;
-Log::Log4perl->easy_init({ level => $level, file => 'stdout', layout => '# %p: %m%n' });
-$level = $DB::single; # avoid 'used only once' warning
 
 use Hum::Ace::SubSeq;
 
