@@ -50,7 +50,26 @@ my $aligner = new_ok( 'Bio::Otter::Lace::OnTheFly::Aligner::Genomic' => [{
     type   => 'OTF_EST',
     seqs   => \@seqs,
     target => $target,
-                  }]);
+    options => {
+        '--bestn'          => 1,
+        '-M'               => 500,
+        '--maxintron'      => 200000,
+        '--score'          => 100,
+        '--softmasktarget' => 'yes',
+        '--softmaskquery'  => 'yes',
+        '--showalignment'  => 'false',
+    },
+    query_type_options => {
+        dna => {
+            '--model'           => 'e2g',
+            '--geneseed'        => 300,
+            '--dnahspthreshold' => 120,
+        },
+        protein => {
+            '--model' => 'p2g',
+        },
+    },
+                                                                         }]);
 
 my $result_set = $aligner->run;
 isa_ok($result_set, 'Bio::Otter::Lace::OnTheFly::ResultSet');
