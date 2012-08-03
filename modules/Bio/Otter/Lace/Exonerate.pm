@@ -28,6 +28,7 @@ use Bio::EnsEMBL::Analysis::Tools::BlastDBTracking;
 use Bio::Seq;
 use Hum::Ace::Method;
 use Hum::FastaFileIO;
+use Bio::EnsEMBL::Analysis;
 use Bio::EnsEMBL::Analysis::Runnable::Finished::Exonerate;
 
 sub new {
