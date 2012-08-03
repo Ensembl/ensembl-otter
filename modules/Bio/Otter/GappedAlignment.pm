@@ -373,6 +373,7 @@ sub ensembl_feature {
         -hend         => $q_end,
         -hstrand      => $q_strand,
         -score        => $self->score,
+        -percent_id   => $self->percent_id,
         -cigar_string => $self->ensembl_cigar_string,
         );
 }
@@ -583,6 +584,14 @@ sub score {
         $self->{'_score'} = $score;
     }
     return $self->{'_score'};
+}
+
+sub percent_id {
+    my ($self, $percent_id) = @_;
+    if (defined $percent_id) {
+        $self->{'_percent_id'} = $percent_id;
+    }
+    return $self->{'_percent_id'};
 }
 
 sub elements {
