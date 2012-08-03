@@ -81,6 +81,7 @@ sub run {
         );
 
     my @command_line = $self->construct_command( $command, \%args );
+    $self->logger->info('Running: ', join ' ', @command_line);
     open my $raw_align, '-|', @command_line or $self->logger->logconfess("failed to run $command: $!");
 
     return $self->parse($raw_align);
