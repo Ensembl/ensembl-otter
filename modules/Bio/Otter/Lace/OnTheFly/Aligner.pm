@@ -76,6 +76,8 @@ sub run {
         '--query'      => $query_file,
         '--ryo'        => $RYO_FORMAT,
         '--showvulgar' => 'false',
+        '--showsugar'  => 'false',
+        '--showcigar'  => 'false',
         %{$self->options},
         %{$self->query_type_options->{$query_type}},
         );
