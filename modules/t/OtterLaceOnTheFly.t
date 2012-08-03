@@ -9,6 +9,8 @@ use Test::SetupLog4perl;
 
 use Test::More;
 
+use FindBin qw($Bin);
+
 use Bio::Otter::Lace::Exonerate;
 use Hum::FastaFileIO;
 
@@ -38,8 +40,7 @@ foreach my $module ( @modules ) {
     critic_module_ok($module);
 }
 
-# FIXME: absolute path!!
-my $path = '/Users/mg13/Work/Misc/Vulgar/RP11-420G6.2-002';
+my $path = "$Bin/etc/align";
 my $target_file = "${path}/test_clone.fa";
 my $query_file  = "${path}/test_query.fa";
 
