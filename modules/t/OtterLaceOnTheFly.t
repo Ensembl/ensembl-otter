@@ -38,13 +38,16 @@ foreach my $module ( @modules ) {
     critic_module_ok($module);
 }
 
+# FIXME: absolute path!!
 my $path = '/Users/mg13/Work/Misc/Vulgar/RP11-420G6.2-002';
+my $target_file = "${path}/test_clone.fa";
+my $query_file  = "${path}/test_query.fa";
 
 my $target = new_ok('Bio::Otter::Lace::OnTheFly::TargetSeq' =>
-    [ full_seq => Hum::FastaFileIO->new_DNA_IO("${path}/test_clone.fa")->read_one_sequence ]
+    [ full_seq => Hum::FastaFileIO->new_DNA_IO($target_file)->read_one_sequence ]
     );
 
-my @seqs = ( Hum::FastaFileIO->new_DNA_IO("${path}/test_query.fa")->read_all_sequences );
+my @seqs = ( Hum::FastaFileIO->new_DNA_IO($query_file)->read_all_sequences );
 
 my $aligner = new_ok( 'Bio::Otter::Lace::OnTheFly::Aligner::Genomic' => [{
     type   => 'OTF_EST',
@@ -74,7 +77,44 @@ my $aligner = new_ok( 'Bio::Otter::Lace::OnTheFly::Aligner::Genomic' => [{
 my $result_set = $aligner->run;
 isa_ok($result_set, 'Bio::Otter::Lace::OnTheFly::ResultSet');
 
+my @qids = sort $result_set->query_ids;
+is(scalar(@qids), 2, 'n(query_ids)');
+is_deeply(\@qids, [qw(BC018923.fwd BC018923.rev)], 'query_ids');
+
+my @new_features = sort feature_sort map { $_->ensembl_features } map { $result_set->by_query_id($_) } @qids;
+note("n(new_features): ", scalar(@new_features));
+
+# Do it the old way, for comparison
+
+my $target_seq = $target->target_seq;
+my $dna_str = $target_seq->sequence_string;
+$dna_str =~ s/-/N/g;
+my $target_bio_seq = Bio::Seq->new( -id => $target_seq->name, -seq => $dna_str, -alphabet => 'dna');
+
+my $exonerate = Bio::Otter::Lace::Exonerate->new;
+$exonerate->initialise($query_file);
+$exonerate->bestn(1);
+$exonerate->max_intron_length(200000);
+$exonerate->score(100);
+$exonerate->dnahsp(120);
+
+my $output = $exonerate->run_exonerate($target_bio_seq, $target_bio_seq);
+my @output_features = sort feature_sort @$output;
+
+note("n(output_features): ", scalar(@output_features));
+is(scalar @new_features, scalar@output_features, 'n(new_features)');
+is_deeply(\@new_features, \@output_features, 'new_features');
+
 done_testing;
+
+sub feature_sort {
+    return
+        $a->hseqname cmp $b->hseqname
+        ||
+        $a->start    cmp $b->start
+        ||
+        $a->end      cmp $b->end;
+}
 
 1;
 
