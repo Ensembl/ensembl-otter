@@ -121,7 +121,9 @@ sub _parse_vulgar {
 
     my $vulgar_string = join(' ', @{$ryo_result}{@Bio::Otter::GappedAlignment::SUGAR_ORDER}, @$vulgar_comps);
 
-    return Bio::Otter::GappedAlignment->from_vulgar($vulgar_string);
+    my $ga = Bio::Otter::GappedAlignment->from_vulgar($vulgar_string);
+    $ga->percent_id($ryo_result->{_perc_id});
+    return $ga;
 }
 
 # FIXME: doesn't really belong here: more general
