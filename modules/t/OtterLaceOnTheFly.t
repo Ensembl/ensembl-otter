@@ -82,7 +82,8 @@ my @qids = sort $result_set->query_ids;
 is(scalar(@qids), 2, 'n(query_ids)');
 is_deeply(\@qids, [qw(BC018923.fwd BC018923.rev)], 'query_ids');
 
-my @new_features = sort feature_sort map { $_->ensembl_features } map { $result_set->by_query_id($_) } @qids;
+my @gapped_alignments =  map { @{$result_set->by_query_id($_)} } @qids;
+my @new_features = sort feature_sort map { $_->ensembl_features } @gapped_alignments;
 note("n(new_features): ", scalar(@new_features));
 
 # Do it the old way, for comparison

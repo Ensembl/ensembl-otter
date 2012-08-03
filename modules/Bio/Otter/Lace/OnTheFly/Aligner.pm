@@ -109,9 +109,8 @@ sub parse {
 
         if ($result_set->by_query_id($q_id)) {
             $self->log->warn("Already have result for '$q_id'");
-        } else {
-            $result_set->add_by_query_id($q_id => $gapped_alignment);
         }
+        $result_set->add_by_query_id($q_id => $gapped_alignment);
     }
 
     return $result_set;

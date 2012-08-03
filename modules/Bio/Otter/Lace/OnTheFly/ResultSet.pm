@@ -23,15 +23,25 @@ has raw => (
 
 has _by_query_id => (
     traits   => [ 'Hash' ],
-    isa      => 'HashRef[Bio::Otter::GappedAlignment]',
+    isa      => 'HashRef[ArrayRef[Bio::Otter::GappedAlignment]]',
     default  => sub { {} },
     init_arg => undef,
     handles  => {
-        add_by_query_id => 'set',
-        by_query_id     => 'get',
-        query_ids       => 'keys',
+        _set_by_query_id => 'set',
+        by_query_id      => 'get',
+        query_ids        => 'keys',
     },
     );
+
+sub add_by_query_id {
+    my ($self, $q_id, $ga) = @_;
+    my $by_query_id;
+    unless ($by_query_id = $self->by_query_id($q_id)) {
+        $by_query_id = $self->_set_by_query_id($q_id => []);
+    }
+    push @$by_query_id, $ga;
+    return $ga;
+}
 
 1;
 
