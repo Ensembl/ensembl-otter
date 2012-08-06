@@ -126,6 +126,13 @@ sub cigar_length {
     return max($self->query_length, $self->target_length);
 }
 
+# Overridden as necessary
+#
+sub ensembl_cigar_type {
+    my $self = shift;
+    return $self->cigar_type;
+}
+
 sub ensembl_cigar_string {
     my $self = shift;
     my $len  = $self->cigar_length;

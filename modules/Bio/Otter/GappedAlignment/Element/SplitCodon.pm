@@ -25,6 +25,15 @@ sub cigar_type {
     }
 }
 
+sub ensembl_cigar_type {
+    my $self = shift;
+    if ($self->query_length and $self->target_length) {
+        return 'M';
+    } else {
+        return Bio::Otter::GappedAlignment::Element::GapT::ensembl_cigar_type($self);
+    }
+}
+
 1;
 
 __END__

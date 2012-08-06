@@ -19,6 +19,14 @@ sub cigar_type {
     }
 }
 
+# At least as far as we're concerned, ensembl do things the wrong way round
+#
+sub ensembl_cigar_type {
+    my $self = shift;
+    my $ct = $self->cigar_type;
+    return $ct eq 'D' ? 'I' : 'D'; # swap D's and I's
+}
+
 sub validate {
     my $self = shift;
     ($self->query_length xor $self->target_length) or die "one of query_length or target_length must be 0";
