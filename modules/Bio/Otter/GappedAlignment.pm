@@ -315,9 +315,8 @@ sub vulgar_string {
                    $self->vulgar_comps_string);
 }
 
-sub ensembl_cigar_string {
-    my $self = shift;
-    return unless $self->n_elements;
+sub _coalesce_cigar_strings {
+    my ($self, $ele_type_sub, $ele_format_sub) = @_;
 
     my @elements = ( @{$self->elements} ); # make a copy to consume
     my @ele_strings;
@@ -325,15 +324,38 @@ sub ensembl_cigar_string {
         my $length = $this_ele->cigar_length;
         my $next_ele;
         while (     $next_ele = $elements[0]
-                and $this_ele->cigar_type eq $next_ele->cigar_type )
+                and $ele_type_sub->($this_ele) eq $ele_type_sub->($next_ele) )
         {
             $length += $next_ele->cigar_length; # combine
             shift @elements;                    # and discard
         }
-        my $cigar_string = ($length > 1 ? $length : '') . $this_ele->cigar_type;
+        my $cigar_string = $ele_format_sub->($this_ele, $length);
         push @ele_strings, $cigar_string;
     }
+    return @ele_strings;
+}
+
+# FIXME: needs to use ensembl_cigar_type()
+sub ensembl_cigar_string {
+    my $self = shift;
+    return unless $self->n_elements;
+
+    my @ele_strings = $self->_coalesce_cigar_strings(
+        sub { return shift->cigar_type; },
+        sub { my ($self, $length) = @_; return ($length > 1 ? $length : '') . $self->cigar_type; },
+        );
     return join('', @ele_strings);
+}
+
+sub exonerate_cigar_string {
+    my $self = shift;
+    return unless $self->n_elements;
+
+    my @ele_strings = $self->_coalesce_cigar_strings(
+        sub { return shift->cigar_type; },
+        sub { my ($self, $length) = @_; return $self->cigar_type . ' ' . $length; },
+        );
+    return join(' ', @ele_strings);
 }
 
 # Should these ensembl_* methods be mixed in via a separate module, rather than embedded?

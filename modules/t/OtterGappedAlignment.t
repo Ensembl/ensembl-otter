@@ -62,12 +62,13 @@ Readonly my %tiny_ts_expected => (
     t_strand => '+',
     score    => 56,
     n_ele    => 6,
-    e_cigar  => '5M3I5MD4M3I',
+    cigar_exonerate => 'M 5 I 3 M 5 D 1 M 4 I 3',
+    cigar_ensembl   => '5M3I5MD4M3I',
 
     intron_vulgar  => 'M 3 3 I 0 3 M 2 2 G 3 0 M 4 4 I 0 4 M 1 1 G 0 1 M 1 1 I 0 2 M 3 3 G 3 0',
     intron_n_ele   => 12,
 
-    i_e_cigar      => '3M3D2M3I4M4DMDM2D3M3I',
+    i_cigar_ensembl      => '3M3D2M3I4M4DMDM2D3M3I',
     );
 
 # Common expected components for test clone results
@@ -96,19 +97,22 @@ my %test_clone_exp = (         # not Readonly as some components manufactured fr
         score        => 3047,
         n_ele        => 8,
 
-#       e_cigar      => '855MD156M75I57MD3I849M', # mine
-        e_cigar      => '855MD156M25I57MDI849M',  # according to exonerate - counts on I's is query side
+#       cigar_ensembl      => '855MD156M75I57MD3I849M', # mine
+        cigar_ensembl      => '855MD156M25I57MDI849M',  # according to exonerate - counts on I's is query side
 
         intron_vulgar  => 'M 274 822 I 0 2246 M 11 33 F 0 1 M 52 156 G 25 0 M 1 3 I 0 1312 M 18 54 F 0 1 G 1 0 M 36 108 S 0 2 I 0 8901 S 1 1 M 76 228 S 0 1 I 0 3913 S 1 2 M 51 153 S 0 1 I 0 762 S 1 2 M 26 78 I 0 603 M 91 273',
         intron_n_ele => 26,
 
-        i_e_cigar => '822M2246D33MD156M25I3M1312D54MDI108M8903D229M3914D155M763D80M603D273M',
+        i_cigar_ensembl => '822M2246D33MD156M25I3M1312D54MDI108M8903D229M3914D155M763D80M603D273M',
 
         ensembl_feature_type => 'Bio::EnsEMBL::DnaPepAlignFeature',
     },
 
     ts_vulgar_comps_fwd => 'M 1007 1007 G 0 1 M 214 214 G 2 0 M 1315 1315',
     ts_vulgar_comps_rev => 'M 1315 1315 G 2 0 M 214 214 G 0 1 M 1007 1007',
+
+    ts_cigar_exonerate_fwd => 'M 1007 D 1 M 214 I 2 M 1315',
+    ts_cigar_exonerate_rev => 'M 1315 I 2 M 214 D 1 M 1007',
 
     intronified_vulgar_comps_fwd  => 'M 974 974 I 0 2246 M 33 33 G 0 1 M 159 159 I 0 1312 M 55 55 G 2 0 M 110 110 I 0 8901 M 230 230 I 0 3913 M 156 156 I 0 762 M 80 80 I 0 603 M 739 739',
 
@@ -361,6 +365,8 @@ Readonly my @split_expected => (
 
         %{$test_clone_exp{invariants}},
 
+        cigar_exonerate => $test_clone_exp{ts_cigar_exonerate_fwd},
+
         q_id     => 'BC018923.fwd',
         q_start  => 0,
         q_end    => 2538,
@@ -397,6 +403,8 @@ Readonly my @split_expected => (
         vulgar   => 'BC018923.rev 15 2553 + EMBOSS_001 2537 0 - 12625 ' . $test_clone_exp{ts_vulgar_comps_rev},
 
         %{$test_clone_exp{invariants}},
+
+        cigar_exonerate => $test_clone_exp{ts_cigar_exonerate_rev},
 
         q_id     => 'BC018923.rev',
         q_start  => 15,
@@ -435,6 +443,8 @@ Readonly my @split_expected => (
 
         %{$test_clone_exp{invariants}},
 
+        cigar_exonerate => $test_clone_exp{ts_cigar_exonerate_rev},
+
         q_id     => 'BC018923.rev',
         q_start  => 15,
         q_end    => 2553,
@@ -472,6 +482,8 @@ Readonly my @split_expected => (
 
         %{$test_clone_exp{invariants}},
 
+        cigar_exonerate => $test_clone_exp{ts_cigar_exonerate_fwd},
+
         q_id     => 'BC018923.fwd',
         q_start  => 0,
         q_end    => 2538,
@@ -508,6 +520,8 @@ Readonly my @split_expected => (
         vulgar   => 'BC018923.fwd 2538 0 - EMBOSS_001 2537 0 - 12625 ' . $test_clone_exp{ts_vulgar_comps_rev},
 
         %{$test_clone_exp{invariants}},
+
+        cigar_exonerate => $test_clone_exp{ts_cigar_exonerate_rev},
 
         q_id     => 'BC018923.fwd',
         q_start  => 2538,
@@ -549,6 +563,8 @@ Readonly my @split_expected => (
 
         %{$test_clone_exp{invariants}},
 
+        cigar_exonerate => $test_clone_exp{ts_cigar_exonerate_fwd},
+
         q_id     => 'BC018923.rev',
         q_start  => 2553,
         q_end    => 15,
@@ -589,6 +605,8 @@ Readonly my @split_expected => (
 
         %{$test_clone_exp{invariants}},
 
+        cigar_exonerate => $test_clone_exp{ts_cigar_exonerate_fwd},
+
         q_id     => 'BC018923.rev',
         q_start  => 2553,
         q_end    => 15,
@@ -625,6 +643,8 @@ Readonly my @split_expected => (
         vulgar   => 'BC018923.fwd 2538 0 - EMBOSS_001 2537 0 - 12625 ' . $test_clone_exp{ts_vulgar_comps_rev},
 
         %{$test_clone_exp{invariants}},
+
+        cigar_exonerate => $test_clone_exp{ts_cigar_exonerate_rev},
 
         q_id     => 'BC018923.fwd',
         q_start  => 2538,
@@ -829,7 +849,8 @@ foreach my $test (@split_expected) {
 
     is(scalar($ga->exon_gapped_alignments), 1, 'exon_gapped_alignments for ungapped');
 
-    is($ga->ensembl_cigar_string, $test->{e_cigar}, 'ensembl_cigar') if $test->{e_cigar};
+    is($ga->exonerate_cigar_string, $test->{cigar_exonerate}, 'cigar_exonerate') if $test->{cigar_exonerate};
+    is($ga->ensembl_cigar_string,   $test->{cigar_ensembl},   'cigar_ensembl')   if $test->{cigar_ensembl};
 
     my $ts = Hum::Ace::SubSeq->new();
     $ts->strand($test->{ts_strand});
@@ -856,7 +877,7 @@ foreach my $test (@split_expected) {
     is($intron_ga->score,         $test->{score},          'score');
     is($intron_ga->n_elements,    $test->{intron_n_ele},   'n_elements');
 
-    is($intron_ga->ensembl_cigar_string, $test->{i_e_cigar}, 'i_ensembl_cigar') if $test->{i_e_cigar};
+    is($intron_ga->ensembl_cigar_string, $test->{i_cigar_ensembl}, 'i_ensembl_cigar') if $test->{i_cigar_ensembl};
 
     my @split = $intron_ga->exon_gapped_alignments;
     my $n_splits = scalar(@split);
