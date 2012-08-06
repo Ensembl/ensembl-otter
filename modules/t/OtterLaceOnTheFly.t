@@ -105,7 +105,34 @@ my @output_features = sort feature_sort @$output;
 
 note("n(output_features): ", scalar(@output_features));
 is(scalar @new_features, scalar@output_features, 'n(new_features)');
-is_deeply(\@new_features, \@output_features, 'new_features');
+foreach my $n ( 0 .. scalar(@new_features) - 1 ) {
+    subtest "Feature $n" => sub {
+        foreach my $member (
+            qw{
+                seqname
+                start
+                end
+                strand
+
+                hseqname
+                hstart
+                hend
+                hstrand
+
+                cigar_string
+
+                percent_id
+              }
+              # Not implemented yet:
+                # hcoverage
+                # score
+            )
+        {
+            is($new_features[$n]->$member(), $output_features[$n]->$member(), $member);
+        }
+        done_testing;
+    }
+}
 
 done_testing;
 
