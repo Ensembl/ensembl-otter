@@ -335,14 +335,13 @@ sub _coalesce_cigar_strings {
     return @ele_strings;
 }
 
-# FIXME: needs to use ensembl_cigar_type()
 sub ensembl_cigar_string {
     my $self = shift;
     return unless $self->n_elements;
 
     my @ele_strings = $self->_coalesce_cigar_strings(
-        sub { return shift->cigar_type; },
-        sub { my ($self, $length) = @_; return ($length > 1 ? $length : '') . $self->cigar_type; },
+        sub { return shift->ensembl_cigar_type; },
+        sub { my ($self, $length) = @_; return ($length > 1 ? $length : '') . $self->ensembl_cigar_type; },
         );
     return join('', @ele_strings);
 }

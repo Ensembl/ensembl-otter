@@ -63,12 +63,12 @@ Readonly my %tiny_ts_expected => (
     score    => 56,
     n_ele    => 6,
     cigar_exonerate => 'M 5 I 3 M 5 D 1 M 4 I 3',
-    cigar_ensembl   => '5M3I5MD4M3I',
+    cigar_ensembl   => '5M3D5MI4M3D',
 
     intron_vulgar  => 'M 3 3 I 0 3 M 2 2 G 3 0 M 4 4 I 0 4 M 1 1 G 0 1 M 1 1 I 0 2 M 3 3 G 3 0',
     intron_n_ele   => 12,
 
-    i_cigar_ensembl      => '3M3D2M3I4M4DMDM2D3M3I',
+    i_cigar_ensembl      => '3M3I2M3D4M4IMIM2I3M3D',
     );
 
 # Common expected components for test clone results
@@ -97,13 +97,13 @@ my %test_clone_exp = (         # not Readonly as some components manufactured fr
         score        => 3047,
         n_ele        => 8,
 
-#       cigar_ensembl      => '855MD156M75I57MD3I849M', # mine
-        cigar_ensembl      => '855MD156M25I57MDI849M',  # according to exonerate - counts on I's is query side
+#       cigar_ensembl      => '855MI156M75D57MI3D849M', # mine
+        cigar_ensembl      => '855MI156M25D57MID849M',  # according to exonerate - counts on I's is query side
 
         intron_vulgar  => 'M 274 822 I 0 2246 M 11 33 F 0 1 M 52 156 G 25 0 M 1 3 I 0 1312 M 18 54 F 0 1 G 1 0 M 36 108 S 0 2 I 0 8901 S 1 1 M 76 228 S 0 1 I 0 3913 S 1 2 M 51 153 S 0 1 I 0 762 S 1 2 M 26 78 I 0 603 M 91 273',
         intron_n_ele => 26,
 
-        i_cigar_ensembl => '822M2246D33MD156M25I3M1312D54MDI108M8903D229M3914D155M763D80M603D273M',
+        i_cigar_ensembl => '822M2246I33MI156M25D3M1312I54MID108M8903I229M3914I155M763I80M603I273M',
 
         ensembl_feature_type => 'Bio::EnsEMBL::DnaPepAlignFeature',
     },
@@ -238,9 +238,9 @@ Readonly my @split_expected => (
         ensembl_feature_type => 'Bio::EnsEMBL::DnaDnaAlignFeature',
         ensembl_features => [
             { start => 29, end => 31, strand => 1, hstart =>  1, hend =>  3, hstrand => 1, cigar => '3M', },
-            { start => 35, end => 40, strand => 1, hstart =>  4, hend => 12, hstrand => 1, cigar => '2M3I4M', },
-            { start => 45, end => 47, strand => 1, hstart => 13, hend => 14, hstrand => 1, cigar => 'MDM', },
-            { start => 50, end => 52, strand => 1, hstart => 15, hend => 20, hstrand => 1, cigar => '3M3I', },
+            { start => 35, end => 40, strand => 1, hstart =>  4, hend => 12, hstrand => 1, cigar => '2M3D4M', },
+            { start => 45, end => 47, strand => 1, hstart => 13, hend => 14, hstrand => 1, cigar => 'MIM', },
+            { start => 50, end => 52, strand => 1, hstart => 15, hend => 20, hstrand => 1, cigar => '3M3D', },
             ],
     },
     {
@@ -265,9 +265,9 @@ Readonly my @split_expected => (
         ensembl_feature_type => 'Bio::EnsEMBL::DnaDnaAlignFeature',
         ensembl_features => [
             { start => 77, end => 79, strand => -1, hstart =>  1, hend =>  3, hstrand => 1, cigar => '3M', },
-            { start => 68, end => 73, strand => -1, hstart =>  4, hend => 12, hstrand => 1, cigar => '2M3I4M', },
-            { start => 61, end => 63, strand => -1, hstart => 13, hend => 14, hstrand => 1, cigar => 'MDM', },
-            { start => 56, end => 58, strand => -1, hstart => 15, hend => 20, hstrand => 1, cigar => '3M3I', },
+            { start => 68, end => 73, strand => -1, hstart =>  4, hend => 12, hstrand => 1, cigar => '2M3D4M', },
+            { start => 61, end => 63, strand => -1, hstart => 13, hend => 14, hstrand => 1, cigar => 'MIM', },
+            { start => 56, end => 58, strand => -1, hstart => 15, hend => 20, hstrand => 1, cigar => '3M3D', },
             ],
     },
     {
@@ -761,10 +761,10 @@ Readonly my @split_expected => (
 
         ensembl_features => [
             { start => 120541, end => 121362, strand => 1, hstart =>   1, hend => 274, cigar => '822M', },
-            { start => 123609, end => 123801, strand => 1, hstart => 275, hend => 363, cigar => '33MD156M25I3M', },
-            { start => 125114, end => 125278, strand => 1, hstart => 364, hend => 418, cigar => '54MDI108M2D', },
-            { start => 134180, end => 134409, strand => 1, hstart => 419, hend => 495, cigar => '229MD', },
-            { start => 138323, end => 138478, strand => 1, hstart => 496, hend => 547, cigar => '155MD', },
+            { start => 123609, end => 123801, strand => 1, hstart => 275, hend => 363, cigar => '33MI156M25D3M', },
+            { start => 125114, end => 125278, strand => 1, hstart => 364, hend => 418, cigar => '54MID108M2I', },
+            { start => 134180, end => 134409, strand => 1, hstart => 419, hend => 495, cigar => '229MI', },
+            { start => 138323, end => 138478, strand => 1, hstart => 496, hend => 547, cigar => '155MI', },
             { start => 139241, end => 139320, strand => 1, hstart => 548, hend => 574, cigar => '80M', },
             { start => 139924, end => 140196, strand => 1, hstart => 575, hend => 665, cigar => '273M', },
         ],
@@ -807,10 +807,10 @@ Readonly my @split_expected => (
         ensembl_feature_type => 'Bio::EnsEMBL::DnaPepAlignFeature',
         ensembl_features => [
             { start => 54301, end => 55122, strand => -1, hstart =>   1, hend => 274, cigar => '822M', },
-            { start => 51862, end => 52054, strand => -1, hstart => 275, hend => 363, cigar => '33MD156M25I3M', },
-            { start => 50385, end => 50549, strand => -1, hstart => 364, hend => 418, cigar => '54MDI108M2D', },
-            { start => 41254, end => 41483, strand => -1, hstart => 419, hend => 495, cigar => '229MD', },
-            { start => 37185, end => 37340, strand => -1, hstart => 496, hend => 547, cigar => '155MD', },
+            { start => 51862, end => 52054, strand => -1, hstart => 275, hend => 363, cigar => '33MI156M25D3M', },
+            { start => 50385, end => 50549, strand => -1, hstart => 364, hend => 418, cigar => '54MID108M2I', },
+            { start => 41254, end => 41483, strand => -1, hstart => 419, hend => 495, cigar => '229MI', },
+            { start => 37185, end => 37340, strand => -1, hstart => 496, hend => 547, cigar => '155MI', },
             { start => 36343, end => 36422, strand => -1, hstart => 548, hend => 574, cigar => '80M', },
             { start => 35467, end => 35739, strand => -1, hstart => 575, hend => 665, cigar => '273M', },
         ],
