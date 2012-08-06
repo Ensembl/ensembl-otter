@@ -1,0 +1,67 @@
+#!/usr/bin/env perl
+
+### list_annotation_in_progress_genes
+
+use strict;
+use warnings;
+
+use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Lace::PipelineDB;
+
+{
+    my $dataset_name = 'human';
+
+    my $usage = sub { exec('perldoc', $0) };
+    # This do_getopt() call is needed to parse the otter config files
+    # even if you aren't giving any arguments on the command line.
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        'dataset=s'     => \$dataset_name,
+        ) or $usage->();
+    $usage->() unless $dataset_name;
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    
+    my $otter_dba = $ds->get_cached_DBAdaptor;
+    
+    my $sth = $otter_dba->dbc->prepare(q{
+        SELECT a.author_email
+          , g.modified_date
+          , g.stable_id
+        FROM gene_attrib g_attr
+          , gene g
+          , gene_author ga
+          , author a
+        WHERE g_attr.gene_id = g.gene_id
+          AND g.gene_id = ga.gene_id
+          AND ga.author_id = a.author_id
+          AND g.is_current = 1
+          AND g_attr.attrib_type_id = 54
+          AND g_attr.value = 'annotation in progress'
+        ORDER BY a.author_email
+          , g.modified_date
+          , g.stable_id
+    });
+    $sth->execute;
+    
+    while (my ($author, $when, $gsid) = $sth->fetchrow) {
+        print join("\t", $author, $when, $gsid), "\n";
+    }
+}
+
+
+
+
+
+__END__
+
+=head1 NAME - list_annotation_in_progress_genes
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
