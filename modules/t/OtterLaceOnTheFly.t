@@ -83,7 +83,12 @@ is(scalar(@qids), 2, 'n(query_ids)');
 is_deeply(\@qids, [qw(BC018923.fwd BC018923.rev)], 'query_ids');
 
 my @gapped_alignments =  map { @{$result_set->by_query_id($_)} } @qids;
-my @new_features = sort feature_sort map { $_->ensembl_features } @gapped_alignments;
+my @new_features;
+foreach my $ga ( @gapped_alignments ) {
+    push @new_features, $ga->ensembl_features;
+    note $ga->query_id, ': QS ', $ga->query_strand, ', TS ', $ga->target_strand, ', GO ', $ga->gene_orientation;
+}
+@new_features = sort feature_sort @new_features;
 note("n(new_features): ", scalar(@new_features));
 
 # Do it the old way, for comparison
