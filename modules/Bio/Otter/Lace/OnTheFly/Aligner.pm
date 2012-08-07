@@ -122,7 +122,12 @@ sub _parse_vulgar {
     my $vulgar_string = join(' ', @{$ryo_result}{@Bio::Otter::GappedAlignment::SUGAR_ORDER}, @$vulgar_comps);
 
     my $ga = Bio::Otter::GappedAlignment->from_vulgar($vulgar_string);
+
     $ga->percent_id($ryo_result->{_perc_id});
+    $ga->gene_orientation($ryo_result->{_gene_orientation});
+
+    $ga = $ga->reverse_alignment if $ga->gene_orientation eq '-';
+
     return $ga;
 }
 
