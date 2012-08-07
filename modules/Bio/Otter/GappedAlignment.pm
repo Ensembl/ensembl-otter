@@ -405,6 +405,7 @@ sub reverse_alignment {
     my $reversed = $self->_new_copy_basics;
     $reversed->swap_query_strand;
     $reversed->swap_target_strand;
+    $reversed->swap_gene_orientation;
     $reversed->{_elements} = [ reverse @{$self->elements} ];
 
     return $reversed;
@@ -599,6 +600,14 @@ sub swap_target_strand {
     return $self->target_strand($sense);
 }
 
+sub swap_gene_orientation {
+    my $self = shift;
+    return unless defined $self->gene_orientation;
+    return if $self->gene_orientation eq '.';
+    my $sense = $self->_strand_sense('gene_orientation');
+    return $self->_strand($sense * -1, '_gene_orientation');
+}
+
 sub score {
     my ($self, $score) = @_;
     if (defined $score) {
@@ -613,6 +622,14 @@ sub percent_id {
         $self->{'_percent_id'} = $percent_id;
     }
     return $self->{'_percent_id'};
+}
+
+sub gene_orientation {
+    my ($self, $gene_orientation) = @_;
+    if (defined $gene_orientation) {
+        $self->{'_gene_orientation'} = $gene_orientation;
+    }
+    return $self->{'_gene_orientation'};
 }
 
 sub elements {
