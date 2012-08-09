@@ -236,7 +236,7 @@ if (grep {$_->[0] eq $evega_db} @{$sth->fetchall_arrayref}) {
     $support->log("Done.\n", 1);
   }
 }
-$support->log("Creating new ensembl-vega db...\n", 1);
+$support->log("Creating new ensembl-vega db...\n");
 $dbh->{'vega'}->do("CREATE DATABASE $evega_db") unless ($support->param('dry_run'));
 $support->log_stamped("Done.\n\n");
 
