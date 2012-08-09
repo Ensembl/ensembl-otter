@@ -243,7 +243,7 @@ foreach my $type (qw(genes transcripts)) {
       $support->log_warning("Can't retrieve object $v_id from Vega\n");
       next;
     }
-    $support->log("Studying object $v_id\n");
+    $support->log_verbose("Studying object $v_id\n");
     my $c = {};
     while ( my ($e_id, $xrefs) =  each %{$ids->{$v_id}} ) {
     XREF:
@@ -280,7 +280,7 @@ foreach my $type (qw(genes transcripts)) {
             $support->log_warning("Reused $vdb xref $e_id for $v_id. Check why this should be\n");
           }
           if ($dbID) {
-            $support->log("Stored $vdb xref $e_id for $v_id.\n", 1);
+            $support->log_verbose("Stored $vdb xref $e_id for $v_id.\n", 1);
           }
         }
       }
