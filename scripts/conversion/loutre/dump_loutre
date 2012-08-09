@@ -716,7 +716,7 @@ foreach my $name (@{$chr_names_wanted}) {
   #transfer other seq_region based features
   if (! $support->param('dry_run') && ! $support->param('add_genes') ) {
 
-    #transfer chromsome seq_region_attributes
+    #transfer chromosome seq_region_attributes
     &transfer_sra($lslice,$vslice,$att_types_wanted);
 
     if (! $support->param('live_update')) {
