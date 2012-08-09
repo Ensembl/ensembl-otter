@@ -463,15 +463,11 @@ my $attribs_to_keep = "('" . (join '\',\'',@attrib_types_to_keep) . "\')";
 if ($support->param('prune') && $support->user_proceed("\nDo you want to delete all entries from all previous runs of this script?")) {
   $support->log("Deleting db entries from previous runs of this script...\n");
   $vdbh->do(qq(DELETE FROM exon));
-  $vdbh->do(qq(DELETE FROM exon_stable_id));
   $vdbh->do(qq(DELETE FROM exon_transcript));
   $vdbh->do(qq(DELETE FROM gene));
-  $vdbh->do(qq(DELETE FROM gene_stable_id));
   $vdbh->do(qq(DELETE FROM protein_feature));
   $vdbh->do(qq(DELETE FROM transcript));
-  $vdbh->do(qq(DELETE FROM transcript_stable_id));
   $vdbh->do(qq(DELETE FROM translation));
-  $vdbh->do(qq(DELETE FROM translation_stable_id));
   $vdbh->do(qq(DELETE FROM interpro));
   $vdbh->do(qq(DELETE FROM object_xref));
   $vdbh->do(qq(DELETE FROM xref));
@@ -720,16 +716,14 @@ foreach my $name (@{$chr_names_wanted}) {
   #transfer other seq_region based features
   if (! $support->param('dry_run') && ! $support->param('add_genes') ) {
 
-    ####does this transfer 'annotated' seq_region_attributes on clones ????####
-    #transfer seq_region_attributes
+    #transfer chromsome seq_region_attributes
     &transfer_sra($lslice,$vslice,$att_types_wanted);
 
     if (! $support->param('live_update')) {
       #transfer simple features 
       &transfer_simple_features($lslice,$vslice);
 
-      ####remove this when we're sure they're in as seq_region_attribs on clones####	
-      #transform contig_attribs into seq_region_attribs
+      #transform 'annotated' contig_attribs into contig seq_region_attribs
       my $attribs_to_move = ['annotated'];
       &transfer_contig_attribs($lslice,$vslice,$attribs_to_move);
 
@@ -741,7 +735,8 @@ foreach my $name (@{$chr_names_wanted}) {
     }
   }
 }
-  $support->log("Got $fsv fsv genes and $non_fsv non_fsv genes\n");
+
+$support->log("Got $fsv fsv genes and $non_fsv non_fsv genes\n");
 
 #add date of datafreeze
 my $datafreeze =  strftime "%Y-%m-%d", localtime;
