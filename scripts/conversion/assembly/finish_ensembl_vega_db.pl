@@ -512,13 +512,28 @@ $c = $dbh->{'evega'}->do($sql);
 #tidy up meta table entries
 $support->log_stamped("Deleting and updating meta table entries.\n\n");
 $sql = qq(DELETE from meta
-           WHERE meta_key in ('assembly.num_toplevel_seqs', 'genebuild.vega_merge_db','genebuild.version', 'removed_evidence_flag.ensembl_dbversion', 'removed_evidence_flag.uniprot_dbversion','sri_adjust','csi_adjust'));
+           WHERE meta_key in ('assembly.num_toplevel_seqs', 'genebuild.vega_merge_db','genebuild.version', 'removed_evidence_flag.ensembl_dbversion', 'removed_evidence_flag.uniprot_dbversion','sri_adjust','csi_adjust','marker.priority','liftover.mapping'));
 $c = $dbh->{'evega'}->do($sql);
+
 $sql = qq(UPDATE meta
              SET meta_value = 
                  (SELECT meta_value from $vega_db.meta where meta_key = 'genebuild.havana_datafreeze_date')
            WHERE meta_key = 'genebuild.havana_datafreeze_date');
 $c = $dbh->{'evega'}->do($sql);
+
+$sth = $dbh->{'evega'}->prepare(qq(SELECT meta_value FROM meta where meta_key = 'assembly.default'));
+$sth->execute;
+if (my ($assembly_default) = $sth->fetchrow_array) {
+  if ($assembly_default ne $ensemblassembly) {
+    $support->log_warning("Please check why meta.assembly_default does not equal parameter for ensembl assembly\n");
+  }
+}
+else {
+  $c = $dbh->{'evega'}->do(qq(INSERT into meta ('',1,'assembly_default','$ensemblassembly')));
+  $support->log("Inserted $c values for meta.assembly.default\n");
+}
+
+
 #duplicates
 $c = $dbh->{'evega'}->do(qq(CREATE table nondup_meta like meta));
 $c = $dbh->{'evega'}->do(qq(INSERT into nondup_meta (select '',species_id, meta_key, meta_value from meta group by species_id, meta_key, meta_value)));
