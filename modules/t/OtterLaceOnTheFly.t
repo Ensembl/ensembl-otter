@@ -69,7 +69,37 @@ my @tests = (
     },
     );
 
+my @todo_tests = (
+    {
+        name        => 'AL139092 vs. protein Q96S55',
+        target_path => "${path}/AL139092.12.fasta",
+        query_path  => "${path}/Q96S55.fasta",
+        query_ids   => [qw(sp|Q96S55|WRIP1_HUMAN)],
+        type        => 'Test_Protein',
+    },
+    {
+        name        => 'test_clone vs. protein Q96S55',
+        target_path => "${path}/test_clone.fa",
+        query_path  => "${path}/Q96S55.fasta",
+        query_ids   => [qw(sp|Q96S55|WRIP1_HUMAN)],
+        type        => 'Test_Protein',
+    },
+    );
+
 foreach my $test ( @tests ) {
+    run_test($test);
+}
+
+TODO: {
+    local $TODO = "Protein handling not yet compatible for frameshift and split codon";
+
+    foreach my $test ( @todo_tests ) {
+        run_test($test);
+    }
+}
+
+sub run_test {
+    my $test = shift;
 
     note 'Test: ', $test->{name};
 
@@ -80,7 +110,7 @@ foreach my $test ( @tests ) {
     my @seqs = ( Hum::FastaFileIO->new_DNA_IO($test->{query_path})->read_all_sequences );
 
     my $aligner = new_ok( 'Bio::Otter::Lace::OnTheFly::Aligner::Genomic' => [{
-        type   => 'OTF_EST',
+        type   => $test->{type} || 'Test_EST',
         seqs   => \@seqs,
         target => $target,
         options => {
@@ -133,6 +163,8 @@ foreach my $test ( @tests ) {
     $exonerate->max_intron_length(200000);
     $exonerate->score(100);
     $exonerate->dnahsp(120);
+
+    $exonerate->query_type('protein') if $test->{type} and $test->{type} =~ /protein/i;
 
     my $output = $exonerate->run_exonerate($target_bio_seq, $target_bio_seq);
     my @output_features = sort feature_sort @$output;
