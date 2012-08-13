@@ -50,13 +50,13 @@ my @tests = (
         query_ids   => [qw(BC018923.fwd BC018923.rev)],
     },
     {
-        name        => 'AL129092 vs. BC018923',
+        name        => 'AL139092 vs. BC018923',
         target_path => "${path}/AL139092.12.fasta",
         query_path  => "${path}/BC018923.fasta",
         query_ids   => [qw(ENA|BC018923|BC018923.2)],
     },
     {
-        name        => 'AL129092 vs. BI831275',
+        name        => 'AL139092 vs. BI831275',
         target_path => "${path}/AL139092.12.fasta",
         query_path  => "${path}/BI831275.fasta",
         query_ids   => [qw(ENA|BI831275|BI831275.1)],
