@@ -9,9 +9,11 @@ package Bio::Vega::CloneFinder;
 use strict;
 use warnings;
 
-my $wrap_search_errors = 1; # set this to 0 to aid command-line debugging
+use Readonly;
 
-my $component = 'clone'; # this is the type of components we want the found matches mapped on
+Readonly my $WRAP_SEARCH_ERRORS    => 1;       # set this to 0 to aid command-line debugging
+
+Readonly my $TARGET_COMPONENT_TYPE => 'clone'; # this is the type of components we want the found matches mapped on
 
 sub new {
     my ($class, $server) = @_;
@@ -58,7 +60,7 @@ sub results {
     return $self->{_results};
 }
 
-my $find_containing_chromosomes_sql_template = <<'SQL'
+Readonly my $FIND_CONTAINING_CHROMOSOMES_SQL_TEMPLATE => <<'SQL'
     SELECT    chr.name,
               group_concat(distinct a.cmp_seq_region_id) as joined_cmps
     FROM      assembly a,
@@ -89,7 +91,7 @@ sub find_containing_chromosomes {
 
     # now map those contig_ids back onto a chromosome
     my $sql = sprintf
-        $find_containing_chromosomes_sql_template,
+        $FIND_CONTAINING_CHROMOSOMES_SQL_TEMPLATE,
         (join ' , ', ('?') x @{$seq_level_slice_ids});
     my $sth = $sa->dbc->prepare($sql);
     $sth->execute(@{$seq_level_slice_ids});
@@ -142,12 +144,12 @@ sub register_local_slice {
 
     my $cs_name = $feature_slice->coord_system_name;
 
-    my $component_names = [ ($cs_name eq $component)
+    my $component_names = [ ($cs_name eq $TARGET_COMPONENT_TYPE)
         ? $feature_slice->seq_region_name
         : map { $_->to_Slice->seq_region_name }
                     # NOTE: order of projection segments WAS strand-dependent
                 sort { ($a->from_start <=> $b->from_start)*$feature_slice->strand }
-                    @{ $feature_slice->project($component) } ];
+                    @{ $feature_slice->project($TARGET_COMPONENT_TYPE) } ];
 
     my $found_chromosome_slices = ($cs_name eq 'chromosome')
         ? [ $feature_slice ]
@@ -177,7 +179,7 @@ sub find_by_remote_stable_ids {
     return;
 }
 
-my $id_adaptor_fetcher_by_type = {
+Readonly my $ID_ADAPTOR_FETCHER_BY_TYPE => {
     'G' => [
         'gene_stable_id',
         'get_GeneAdaptor',
@@ -227,7 +229,7 @@ sub _find_by_stable_ids {
         my ($typeletter) = uc($qname) =~ $qname_pattern;
         next unless $typeletter;
 
-        my $id_adaptor_fetcher = $id_adaptor_fetcher_by_type->{$typeletter};
+        my $id_adaptor_fetcher = $ID_ADAPTOR_FETCHER_BY_TYPE->{$typeletter};
         next unless $id_adaptor_fetcher;
         my ( $id, $adaptor, $fetcher ) = @{$id_adaptor_fetcher};
 
@@ -254,7 +256,7 @@ sub find_by_feature_attributes {
     return;
 }
 
-my $find_by_feature_attributes_sql_template = <<'SQL'
+Readonly my $FIND_BY_FEATURE_ATTRIBUTES_SQL_TEMPLATE => <<'SQL'
     SELECT %s, value
       FROM %s
      WHERE attrib_type_id = (SELECT attrib_type_id from attrib_type where code='%s')
@@ -268,7 +270,7 @@ sub _find_by_feature_attributes {
     my ($qtype, $table, $id_field, $code, $adaptor_call) = @{$parameters};
 
     my $sql =
-        sprintf $find_by_feature_attributes_sql_template,
+        sprintf $FIND_BY_FEATURE_ATTRIBUTES_SQL_TEMPLATE,
         $id_field, $table, $code, $condition;
     my $dbc = $self->otter_dba->dbc;
     my $sth = $dbc->prepare($sql);
@@ -292,7 +294,7 @@ sub find_by_seqregion_names {
     return;
 }
 
-my $find_by_seqregion_names_sql_template = <<'SQL'
+Readonly my $FIND_BY_SEQREGION_NAMES_SQL_TEMPLATE => <<'SQL'
     SELECT cs.name, sr.name
       FROM seq_region sr, coord_system cs
      WHERE sr.coord_system_id=cs.coord_system_id
@@ -305,7 +307,7 @@ sub _find_by_seqregion_names {
     my ($self, $names) = @_;
 
     my $sql = sprintf
-        $find_by_seqregion_names_sql_template,
+        $FIND_BY_SEQREGION_NAMES_SQL_TEMPLATE,
         (join ' , ', ('?') x @{$names});
     my $dbc = $self->otter_dba->dbc;
     my $sth = $dbc->prepare($sql);
@@ -327,7 +329,7 @@ sub find_by_seqregion_attributes {
     return;
 }
 
-my $find_by_seqregion_attributes_sql_template = <<'SQL'
+Readonly my $FIND_BY_SEQREGION_ATTRIBUTES_SQL_TEMPLATE => <<'SQL'
     SELECT sr.name, sra.value
       FROM seq_region sr, coord_system cs, seq_region_attrib sra
      WHERE cs.name = '%s'
@@ -344,7 +346,7 @@ sub _find_by_seqregion_attributes {
     my ($qtype, $cs_name, $code) = @{$parameters};
 
     my $sql = sprintf
-        $find_by_seqregion_attributes_sql_template,
+        $FIND_BY_SEQREGION_ATTRIBUTES_SQL_TEMPLATE,
         $cs_name, $code, (join ' , ', ('?') x @{$names});
     my $dbc = $self->otter_dba->dbc;
     my $sth = $dbc->prepare($sql);
@@ -366,7 +368,7 @@ sub find_by_xref {
     return;
 }
 
-my $find_by_xref_sql_template = <<'SQL'
+Readonly my $FIND_BY_XREF_SQL_TEMPLATE => <<'SQL'
     SELECT DISTINCT
             edb.db_name
           , x.dbprimary_acc
@@ -413,7 +415,7 @@ sub _find_by_xref {
     my $satellite_dba = $self->satellite_dba($metakey);
 
     my $sql = sprintf
-        $find_by_xref_sql_template,
+        $FIND_BY_XREF_SQL_TEMPLATE,
         (join ' , ', ('?') x @{$names});
     my $dbc = $satellite_dba->dbc;
     my $sth = $dbc->prepare($sql);
@@ -436,7 +438,7 @@ sub find_by_hit_name {
     return;
 }
 
-my $find_by_hit_name_sql_template = <<'SQL'
+Readonly my $FIND_BY_HIT_NAME_SQL_TEMPLATE => <<'SQL'
     SELECT af.hit_name
          , sr.name
          , cs.name
@@ -472,7 +474,7 @@ sub _find_by_hit_name {
     my $pipe_dba = $self->pipeline_dba;
 
     my $sql = sprintf
-        $find_by_hit_name_sql_template,
+        $FIND_BY_HIT_NAME_SQL_TEMPLATE,
         $table_name, (join ' , ', ('?') x @{$names});
     my $dbc = $pipe_dba->dbc;
     my $sth = $dbc->prepare($sql);
@@ -489,35 +491,35 @@ sub _find_by_hit_name {
     return;
 }
 
-my $remote_stable_ids_parameters = [
+Readonly my @REMOTE_STABLE_IDS_PARAMETERS => (
     #     prefix       metakey
     [ qw( EnsEMBL:     ensembl_core_db_head    ) ],
     [ qw( EnsEMBL_EST: ensembl_estgene_db_head ) ],
-    ];
+    );
 
-my $hit_name_parameters = [
+Readonly my @HIT_NAME_PARAMETERS => (
     #     kind
     [ qw( dna     ) ],
     [ qw( protein ) ],
-    ];
+    );
 
-my $xref_parameters = [
+Readonly my @XREF_PARAMETERS => (
     #     prefix,  metakey
     [ qw( CCDS_db: ens_livemirror_ccds_db ) ],
-    ];
+    );
 
-my $feature_attributes_parameters = [
+Readonly my @FEATURE_ATTRIBUTES_PARAMETERS => (
     #     qtype           table               id_field      code    adaptor
     [ qw( gene_name       gene_attrib         gene_id       name    get_GeneAdaptor       ) ],
     [ qw( gene_synonym    gene_attrib         gene_id       synonym get_GeneAdaptor       ) ],
     [ qw( transcript_name transcript_attrib   transcript_id name    get_TranscriptAdaptor ) ],
-    ];
+    );
 
-my $seqregion_attributes_parameters = [
+Readonly my @SEQREGION_ATTRIBUTES_PARAMETERS => (
     #     qtype,                   cs_name code
     [ qw( international_clone_name clone   intl_clone_name ) ],
     [ qw( clone_accession          clone   embl_acc        ) ],
-    ];
+    );
 
 sub find {
     my ($self) = @_;
@@ -541,11 +543,11 @@ sub find {
     $self->find_by_seqregion_names($names);
 
     $self->find_by_otter_stable_ids;
-    $self->find_by_remote_stable_ids($_) for @{$remote_stable_ids_parameters};
-    $self->find_by_hit_name($_, $names) for @{$hit_name_parameters};
-    $self->find_by_xref($_, $names_2) for @{$xref_parameters};
-    $self->find_by_feature_attributes($_, $fa_condition, $fa_args) for @{$feature_attributes_parameters};
-    $self->find_by_seqregion_attributes($_, $names) for @{$seqregion_attributes_parameters};
+    $self->find_by_remote_stable_ids($_) for @REMOTE_STABLE_IDS_PARAMETERS;
+    $self->find_by_hit_name($_, $names) for @HIT_NAME_PARAMETERS;
+    $self->find_by_xref($_, $names_2) for @XREF_PARAMETERS;
+    $self->find_by_feature_attributes($_, $fa_condition, $fa_args) for @FEATURE_ATTRIBUTES_PARAMETERS;
+    $self->find_by_seqregion_attributes($_, $names) for @SEQREGION_ATTRIBUTES_PARAMETERS;
 
     return;
 }
@@ -572,7 +574,7 @@ sub generate_output {
 
 sub _wrap_search_errors {
     my ($self, $coderef, @args) = @_;
-    if ($wrap_search_errors) {
+    if ($WRAP_SEARCH_ERRORS) {
         eval { $self->$coderef(@args); 1; } or return; 
     }
     else {
