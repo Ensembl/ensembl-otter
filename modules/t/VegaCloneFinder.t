@@ -29,10 +29,16 @@ my @tests = (
         queries => {
             OTTHUMT00000039641 =>
                 "OTTHUMT00000039641\tOtter:transcript_stable_id\tAL139092.12\tchr6-18\n",
+
             'OTTHUMG00000014126,OTTHUMP00000015944,RP11-420G6.2' => <<"__EO_RESULT__",
 OTTHUMG00000014126\tOtter:gene_stable_id\tAL139092.12\tchr6-18
 OTTHUMP00000015944\tOtter:translation_stable_id\tAL139092.12\tchr6-18
 RP11-420G6.2\tgene_synonym\tAL139092.12\tchr6-18
+__EO_RESULT__
+
+            'ENST00000380773,ENSG00000124535' => <<"__EO_RESULT__",
+ENST00000380773\tEnsEMBL:ensembl_havana_transcript:transcript_stable_id\tAL139092.12\tchr6-18
+ENSG00000124535\tEnsEMBL:ensembl_havana_gene:gene_stable_id\tAL139092.12\tchr6-18
 __EO_RESULT__
         },
     },
