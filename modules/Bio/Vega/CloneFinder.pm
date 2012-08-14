@@ -144,12 +144,17 @@ sub register_local_slice {
 
     my $cs_name = $feature_slice->coord_system_name;
 
-    my $component_names = [ ($cs_name eq $TARGET_COMPONENT_TYPE)
-        ? $feature_slice->seq_region_name
-        : map { $_->to_Slice->seq_region_name }
-                    # NOTE: order of projection segments WAS strand-dependent
-                sort { ($a->from_start <=> $b->from_start)*$feature_slice->strand }
-                    @{ $feature_slice->project($TARGET_COMPONENT_TYPE) } ];
+    my @component_names;
+    if ($cs_name eq $TARGET_COMPONENT_TYPE) {
+        @component_names = ( $feature_slice->seq_region_name );
+    } else {
+        # NOTE: order of projection segments WAS strand-dependent
+        my @sorted_projections =
+            sort { ($a->from_start <=> $b->from_start)*$feature_slice->strand }
+                 @{ $feature_slice->project($TARGET_COMPONENT_TYPE) };
+
+        @component_names = map { $_->to_Slice->seq_region_name } @sorted_projections;
+    }
 
     my $found_chromosome_slices = ($cs_name eq 'chromosome')
         ? [ $feature_slice ]
@@ -161,7 +166,7 @@ sub register_local_slice {
         my $chr_name = $chr_slice->seq_region_name;
         push
             @{ $self->results->{uc($qname)}{$chr_name} },
-            [ $qtype, $component_names ];
+            [ $qtype, \@component_names ];
     }
 
     return;
