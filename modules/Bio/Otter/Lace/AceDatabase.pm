@@ -156,6 +156,9 @@ sub tace {
     return $self->{'_tace'} || 'tace';
 }
 
+
+# It's more of a "don't delete this directory" flag.  It is cleared
+# while closing the session iff saving is done or not wanted.
 sub error_flag {
     my ($self, $error_flag) = @_;
 

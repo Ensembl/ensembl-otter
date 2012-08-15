@@ -28,6 +28,8 @@ use Bio::Otter::Lace::Exonerate;
 use Bio::Otter::ZMap::XML;
 use Bio::Vega::Transform::Otter::Ace;
 
+use Log::Log4perl;
+
 use base qw{
 MenuCanvasWindow
 MenuCanvasWindow::ZMapSeqChooser
@@ -103,6 +105,10 @@ sub initialize {
     $self->top_window->raise;
 
     return;
+}
+
+sub logger {
+    return Log::Log4perl->get_logger;
 }
 
 sub menu_bar {
@@ -861,9 +867,12 @@ sub exit_save_data {
     my ($self) = @_;
 
     my $adb = $self->AceDatabase;
+    my $dir = $self->ace_path;
     unless ($adb->write_access) {
         $adb->error_flag(0);
         $self->close_GenomicFeatures;   ### Why is this special?
+        my $changed = $self->AceDatabase->unsaved_changes;
+        $self->logger->info("Closing $dir (no write access, changed = $changed)");
         return 1;
     }
 
@@ -908,6 +917,7 @@ sub exit_save_data {
 
             if ($self->save_data) {
                 $adb->error_flag(0);
+                $self->logger->info("Closing $dir (saved data, annotation is complete)");
                 return 1;
             }
             else {
@@ -933,7 +943,12 @@ sub exit_save_data {
         elsif ($ans eq 'Yes') {
             # Return false if there is a problem saving
             $self->save_data or return;
+            $self->logger->info("Closing $dir (saved data)");
+        } else {
+            $self->logger->info("Closing $dir (Save = $ans)");
         }
+    } else {
+        $self->logger->info("Closing $dir (nothing to save)");
     }
 
     # Unsetting the error_flag means that AceDatabase
