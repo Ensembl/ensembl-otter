@@ -166,7 +166,7 @@ sub fix_biotypes {
     my %transitions;
     my $transcribed_remark       = 'Transcribed pseudogene';
     my $transcribed_remark_added = 0;
-    my $nc_RNA_host_remark       = 'ncRNA_host';
+    my $nc_RNA_host_remark       = 'ncRNA host';
     my $nc_RNA_host_remark_added = 0;
     foreach my $gene_id (sort { $a <=> $b } keys %gene_tsct_biotypes) {
         my $gene_data         = $gene_tsct_biotypes{$gene_id};
