@@ -9,11 +9,15 @@ package Bio::Vega::CloneFinder;
 use strict;
 use warnings;
 
-use Readonly;
+# Readonly seems to cause SIGSEGVs at exit, in conjunction with failing eval blocks.
+# This is a shame.  I suspect only arrays and hashes are affected, but all are disabled to be safe.
+# Global 'my' variables IN_CAPS should be Readonly.
+#
+# use Readonly;
 
-Readonly my $WRAP_SEARCH_ERRORS    => 1;       # set this to 0 to aid command-line debugging
+my $WRAP_SEARCH_ERRORS    = 1;       # set this to 0 to aid command-line debugging
 
-Readonly my $TARGET_COMPONENT_TYPE => 'clone'; # this is the type of components we want the found matches mapped on
+my $TARGET_COMPONENT_TYPE = 'clone'; # this is the type of components we want the found matches mapped on
 
 sub new {
     my ($class, $server) = @_;
@@ -60,7 +64,7 @@ sub results {
     return $self->{_results};
 }
 
-Readonly my $FIND_CONTAINING_CHROMOSOMES_SQL_TEMPLATE => <<'SQL'
+my $FIND_CONTAINING_CHROMOSOMES_SQL_TEMPLATE = <<'SQL'
     SELECT    chr.name,
               group_concat(distinct a.cmp_seq_region_id) as joined_cmps
     FROM      assembly a,
@@ -183,7 +187,7 @@ sub find_by_remote_stable_ids {
     return;
 }
 
-Readonly my $ID_ADAPTOR_FETCHER_BY_TYPE => {
+my $ID_ADAPTOR_FETCHER_BY_TYPE = {
     'G' => [
         'gene_stable_id',
         'get_GeneAdaptor',
@@ -260,7 +264,7 @@ sub find_by_feature_attributes {
     return;
 }
 
-Readonly my $FIND_BY_FEATURE_ATTRIBUTES_SQL_TEMPLATE => <<'SQL'
+my $FIND_BY_FEATURE_ATTRIBUTES_SQL_TEMPLATE = <<'SQL'
     SELECT %s, value
       FROM %s
      WHERE attrib_type_id = (SELECT attrib_type_id from attrib_type where code='%s')
@@ -298,7 +302,7 @@ sub find_by_seqregion_names {
     return;
 }
 
-Readonly my $FIND_BY_SEQREGION_NAMES_SQL_TEMPLATE => <<'SQL'
+my $FIND_BY_SEQREGION_NAMES_SQL_TEMPLATE = <<'SQL'
     SELECT cs.name, sr.name
       FROM seq_region sr, coord_system cs
      WHERE sr.coord_system_id=cs.coord_system_id
@@ -333,7 +337,7 @@ sub find_by_seqregion_attributes {
     return;
 }
 
-Readonly my $FIND_BY_SEQREGION_ATTRIBUTES_SQL_TEMPLATE => <<'SQL'
+my $FIND_BY_SEQREGION_ATTRIBUTES_SQL_TEMPLATE = <<'SQL'
     SELECT sr.name, sra.value
       FROM seq_region sr, coord_system cs, seq_region_attrib sra
      WHERE cs.name = '%s'
@@ -372,7 +376,7 @@ sub find_by_xref {
     return;
 }
 
-Readonly my $FIND_BY_XREF_SQL_TEMPLATE => <<'SQL'
+my $FIND_BY_XREF_SQL_TEMPLATE = <<'SQL'
     SELECT DISTINCT
             edb.db_name
           , x.dbprimary_acc
@@ -442,7 +446,7 @@ sub find_by_hit_name {
     return;
 }
 
-Readonly my $FIND_BY_HIT_NAME_SQL_TEMPLATE => <<'SQL'
+my $FIND_BY_HIT_NAME_SQL_TEMPLATE = <<'SQL'
     SELECT af.hit_name
          , sr.name
          , cs.name
@@ -495,31 +499,31 @@ sub _find_by_hit_name {
     return;
 }
 
-Readonly my @REMOTE_STABLE_IDS_PARAMETERS => (
+my @REMOTE_STABLE_IDS_PARAMETERS = (
     #     prefix       metakey
     [ qw( EnsEMBL:     ensembl_core_db_head    ) ],
     [ qw( EnsEMBL_EST: ensembl_estgene_db_head ) ],
     );
 
-Readonly my @HIT_NAME_PARAMETERS => (
+my @HIT_NAME_PARAMETERS = (
     #     kind
     [ qw( dna     ) ],
     [ qw( protein ) ],
     );
 
-Readonly my @XREF_PARAMETERS => (
+my @XREF_PARAMETERS = (
     #     prefix,  metakey
     [ qw( CCDS_db: ens_livemirror_ccds_db ) ],
     );
 
-Readonly my @FEATURE_ATTRIBUTES_PARAMETERS => (
+my @FEATURE_ATTRIBUTES_PARAMETERS = (
     #     qtype           table               id_field      code    adaptor
     [ qw( gene_name       gene_attrib         gene_id       name    get_GeneAdaptor       ) ],
     [ qw( gene_synonym    gene_attrib         gene_id       synonym get_GeneAdaptor       ) ],
     [ qw( transcript_name transcript_attrib   transcript_id name    get_TranscriptAdaptor ) ],
     );
 
-Readonly my @SEQREGION_ATTRIBUTES_PARAMETERS => (
+my @SEQREGION_ATTRIBUTES_PARAMETERS = (
     #     qtype,                   cs_name code
     [ qw( international_clone_name clone   intl_clone_name ) ],
     [ qw( clone_accession          clone   embl_acc        ) ],
