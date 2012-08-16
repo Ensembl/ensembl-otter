@@ -164,9 +164,8 @@ sub register_local_slice {
         my ($hidden) = ((map {$_->value} @{$chr_slice->get_all_Attributes('hidden')}), 1);
         next if $hidden;
         my $chr_name = $chr_slice->seq_region_name;
-        push
-            @{ $self->results->{uc($qname)}{$chr_name} },
-            [ $qtype, \@component_names ];
+        my $key = join ',', @component_names;
+        ++ $self->results->{uc($qname)}->{$chr_name}->{$qtype}->{$key};
     }
 
     return;
@@ -565,11 +564,11 @@ sub generate_output {
     my $results = $self->results;
     while (my ($qname, $qname_results) = each %{$results}) {
         while (my ($chr_name, $chr_name_results) = each %{$qname_results}) {
-            for (@{$chr_name_results}) {
-                my ( $qtype, $component_names ) = @{$_};
-                my $components = join ',', @{$component_names};
-                $output_string .=
-                    join("\t", $qname, $qtype, $components, $chr_name)."\n";
+            while (my ($qtype, $qtype_results) = each %{$chr_name_results}) {
+                while (my ($components, $count) = each %{$qtype_results}) {
+                    $output_string .=
+                        join("\t", $qname, $qtype, $components, $chr_name)."\n";
+                }
             }
         }
     }

@@ -16,7 +16,6 @@ use Bio::Otter::ServerScriptSupport;
 my $vcf_module;
 
 BEGIN {
-
     $vcf_module = qw( Bio::Vega::CloneFinder );
     use_ok($vcf_module);
 }
@@ -45,8 +44,10 @@ __EO_RESULT__
     {
         dataset => 'zebrafish',
         queries => {
-            ENSDARG00000086319 =>
-                "ENSDARG00000086319\tEnsEMBL:ensembl:gene_stable_id\tFQ482077.1,CR847984.14\tchr11_20110419\n",
+            ENSDARG00000086319 => <<"__EO_RESULT__",
+ENSDARG00000086319\tEnsEMBL:ensembl:gene_stable_id\tFQ482077.1,CR847984.14\tchr11_20110419
+ENSDARG00000086319\tEnsEMBL:ensembl:gene_stable_id\tFQ482077.1\tchr11_20110419
+__EO_RESULT__
         },
     },
     );
