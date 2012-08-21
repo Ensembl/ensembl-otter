@@ -292,7 +292,7 @@ foreach my $type (qw(genes transcripts)) {
 $support->log("Looking to see which genes / transcripts don't have e! xrefs\n\n");
 my %ensembl_dbname = map {$_ => 1} %vega_xref_names;
 
-my $chr_length = $support->get_chrlength($dba,$assembly,'',1);
+my $chr_length = $support->get_chrlength($dba,$assembly,'chromosome',1);
 my @chr_sorted = $support->sort_chromosomes($chr_length);
 foreach my $chr (@chr_sorted) {
   $support->log_stamped("> Chromosome $chr (".$chr_length->{$chr}."bp).\n"); 
