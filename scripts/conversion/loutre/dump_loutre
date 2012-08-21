@@ -223,6 +223,7 @@ $support->confirm_params;
 # get log filehandle and print heading and parameters to logfile
 $support->init_log;
 
+$support->log_warning("LOF hack applied. Check if this has been fixed (#279897) and remove if it has; nag if it hasn't\n");
 # connect to loutre database and get adaptors
 my $ldba = $support->get_database('loutre','loutre');
 my $lsa  = $ldba->get_SliceAdaptor();
@@ -492,7 +493,7 @@ if ($support->param('prune') && $support->user_proceed("\nDo you want to delete 
   $vdbh->do(qq(DELETE FROM misc_attrib));
   foreach my $t (keys %constraints) {
     if ($constraints{$t} =~ /d|s/) {
-      $vdbh->do(qq(DROP table $t));
+      $vdbh->do(qq(DROP TABLE IF EXISTS $t));
     }
   }	
   $vdbh->do(qq(DELETE FROM meta where meta_key = 'genebuild.havana_datafreeze_date'));
@@ -803,10 +804,13 @@ sub transfer_gene {
   my $needs_updateing=0;
   my @transcripts = @{$lgene->get_all_Transcripts};
 
+  my $lof = ($lgene->source eq 'LOF');
+  $support->log("Ignoring not for Vega on LOF gene\n") if($lof);
+
  TRANS:
   foreach my $transcript (@transcripts){
 
-    if ( grep { $_->value eq 'not for VEGA' } @{$transcript->get_all_Attributes('remark')}  ) {
+    if ( grep { $_->value eq 'not for VEGA' } @{$transcript->get_all_Attributes('remark')} and not $lof  ) {
       $support->log("Didn't transfer 'not for Vega' transcript ".$transcript->stable_id."\n",2);
       # # #remove from gene object
       $needs_updateing=1;
@@ -1116,6 +1120,12 @@ tmp_mask                      i
 test_contig_info              i
 misc_feature_misc_set__bak    i
 misc_set__bak                 i
+translation_stable_id         i
+operon_transcript_stable_id   i
+transcript_stable_id          i
+operon_stable_id              i
+exon_stable_id                i
+gene_stable_id                i
 ENDOFTEXT
   return $txt;
 }
