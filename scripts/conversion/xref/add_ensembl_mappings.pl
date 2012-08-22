@@ -289,7 +289,7 @@ foreach my $type (qw(genes transcripts)) {
 }
 
 #check which Vega genes / transcripts don't have xrefs
-$support->log("Looking to see which genes / transcripts don't have e! xrefs\n\n");
+$support->log("Looking to see which genes / transcripts don't have e! xrefs\n:");
 my %ensembl_dbname = map {$_ => 1} %vega_xref_names;
 
 my $chr_length = $support->get_chrlength($dba,$assembly,'chromosome',1);
@@ -298,7 +298,7 @@ foreach my $chr (@chr_sorted) {
   $support->log_stamped("> Chromosome $chr (".$chr_length->{$chr}."bp).\n"); 
   my $slice = $sa->fetch_by_region('chromosome', $chr,undef,undef,undef,$assembly);
   unless (defined $slice) {
-    $support->log_warning("No such chromosome '$chr'");
+    $support->log_verbose("No such chromosome '$chr'");
     next;
   }
   my ($genes) = $support->get_unique_genes($slice);
@@ -312,7 +312,7 @@ foreach my $chr (@chr_sorted) {
       $found = 1 if @{$g->get_all_DBEntries($db_name)};
     }
     if (! $found) {
-      $support->log("No E! xrefs found for gene ".$g->stable_id." (".$g->biotype.")\n",1);
+      $support->log_warning("No E! xrefs found for gene ".$g->stable_id." (".$g->biotype.")\n",1);
     }
     foreach my $t (@{$g->get_all_Transcripts()}) {
       next if $t->biotype  =~ /TEC|artifact/;
@@ -321,7 +321,7 @@ foreach my $chr (@chr_sorted) {
         $found = 1 if @{$t->get_all_DBEntries($db_name)};
       }
       if (! $found) {
-        $support->log("No E! xrefs found for transcript ".$t->stable_id." (".$t->biotype.")\n",2);
+        $support->log_warning("No E! xrefs found for transcript ".$t->stable_id." (".$t->biotype.")\n",2);
       }
     }
   }
