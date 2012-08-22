@@ -51,7 +51,8 @@ features on analysis_id and seq_region_id - this worked for small database but f
 human.
 
 Move the table definitions at the end to dump halfwise genes once we worked out what to do with
-them.
+them (they are part of the analysis pipeline, showing pfam domain matches from pfam HMM alignments
+originally located by swissprot blast hits.)
 
 Transfer of features from the dna_ and protein_align_feature tables can be completely
 prevented using the -no_feature option to the script.
@@ -184,7 +185,7 @@ while (my ($analysis_id,$logic_name) = $gtn->fetchrow){
   }
 }
 
-#check we've only got halfwise xrefs
+#check we've only got Halfwise gene xrefs
 $gtn = $pdbh->prepare(qq(SELECT distinct ensembl_object_type FROM object_xref));
 $gtn->execute();
 while (my $type = $gtn->fetchrow){
