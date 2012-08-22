@@ -144,6 +144,7 @@ if (my $c = keys %previous) {
   foreach my $k (keys %previous) {
     $support->log("$k\n");
   }
+  $support->log("If you need to dump them use this list:\n" . join(',',keys %previous) . "\n");
   $support->log("\nThese are on the following seq_regions:\n");
   $support->log(Dumper($seq_regions));
 }
