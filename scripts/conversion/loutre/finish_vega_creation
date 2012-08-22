@@ -429,12 +429,19 @@ if ($alt_assembly = $support->param('ensemblassembly') ) {
 
     my ($v_assembly_start)  = $vdbh->selectrow_array(qq(
                 SELECT min(asm_start)
-		FROM   assembly
-		WHERE  asm_seq_region_id = $v_sr_id));
+		FROM   assembly a, seq_region sr, coord_system cs
+		WHERE  a.cmp_seq_region_id = sr.seq_region_id
+                AND    sr.coord_system_id = cs.coord_system_id
+                AND    cs.name != 'chromosome'
+                AND    a.asm_seq_region_id = $v_sr_id));
+
     my ($v_assembly_end)  = $vdbh->selectrow_array(qq(
                 SELECT max(asm_end)
-		FROM   assembly
-		WHERE  asm_seq_region_id = $v_sr_id));
+		FROM   assembly a, seq_region sr, coord_system cs
+		WHERE  a.cmp_seq_region_id = sr.seq_region_id
+                AND    sr.coord_system_id = cs.coord_system_id
+                AND    cs.name != 'chromosome'
+                AND    a.asm_seq_region_id = $v_sr_id));
     my $v_length = $v_assembly_end - $v_assembly_start + 1;
     my $e_attribs = $chrom->get_all_Attributes('ensembl_name');
     unless (@$e_attribs) {
@@ -452,12 +459,18 @@ if ($alt_assembly = $support->param('ensemblassembly') ) {
 	$support->log("Chromosome $v_name is the same for VEGA and $alt_assembly; adding seq_regions etc mapping from ensembl\n",2);
 	my ($e_assembly_start)  = $edbh->selectrow_array(qq(
                 SELECT min(asm_start)
-		FROM   assembly
-		WHERE  asm_seq_region_id = $e_sr_id));
+		FROM   assembly a, seq_region sr, coord_system cs
+		WHERE  a.cmp_seq_region_id = sr.seq_region_id
+                AND    sr.coord_system_id = cs.coord_system_id
+                AND    cs.name != 'chromosome'
+                AND    a.asm_seq_region_id = $e_sr_id));
 	my ($e_assembly_end)  = $edbh->selectrow_array(qq(
                 SELECT max(asm_end)
-		FROM   assembly
-		WHERE  asm_seq_region_id = $e_sr_id));
+        	FROM   assembly a, seq_region sr, coord_system cs
+		WHERE  a.cmp_seq_region_id = sr.seq_region_id
+                AND    sr.coord_system_id = cs.coord_system_id
+                AND    cs.name != 'chromosome'
+                AND    a.asm_seq_region_id = $e_sr_id));
 	my $e_length = $e_assembly_end - $e_assembly_start + 1;
 	if ( ($v_name !~ /PATCH/) && ($v_length != $e_length) ) {
 	  $support->log("Assembly table entries for chromosome $v_name are different in Vega ($v_assembly_start->$v_assembly_end:$v_length) and Ensembl ($e_assembly_start->$e_assembly_end:$e_length). You might want to check what's done is correct\n",2);
