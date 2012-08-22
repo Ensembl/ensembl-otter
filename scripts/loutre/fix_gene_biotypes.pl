@@ -64,34 +64,38 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
 
     # my $dsn = "species=zebrafish;dbname=vega_danio_rerio_20120611_67_Zv9;host=ensdb-web-17;port=5317";
     # my $dsn = "species=human;dbname=vega_homo_sapiens_20120611_67_GRCh37;host=ensdb-web-17;port=5317";
-    my $dsn = "species=pig;dbname=vega_sus_scrofa_20120618_67;host=ensdb-web-17;port=5317";
+    # my $dsn = "species=pig;dbname=vega_sus_scrofa_20120618_67;host=ensdb-web-17;port=5317";
 
-    my @args;
+    # my @args = qw( -dbname vega_mus_musculus_20120821_68_GRCm38 -host ensdb-web-17 -port 5317 );
+    my @args = qw( -dbname vega_homo_sapiens_20120813_68_GRCh37 -host ensdb-web-17 -port 5317 );
 
     my $now = scalar localtime;
-    print "$now fix_gene_biotypes.pl on $dsn\n";
+    print "$now fix_gene_biotypes.pl on (@args)\n";
 
-    my $ott_ncRNA_host;
-    if ($dsn =~ /homo_sapiens/) {
-        open my $nc_fh, '-|', './detect_ncRNA_host_genes'
-          or die "Can't open pipe from detect_ncRNA_host_genes; $!";
-        while (defined(my $ott = <$nc_fh>)) {
-            chomp($ott);
-            $ott_ncRNA_host->{$ott} = 1;
-        }
-        close $nc_fh or die "Error running detect_ncRNA_host_genes; exit $?";
-    }
-
-    foreach my $pair (split /;/, $dsn) {
-        my ($opt, $value) = split /=/, $pair;
-        push(@args, "-$opt", $value);
-    }
     my $dba = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
         @args,
         -user  => 'ensadmin',
         -pass  => 'ensembl',
         -group => 'ensembl',
     );
+
+    my $species = $dba->get_MetaContainer->get_Species->common_name; # meta_key = 'species.common_name'
+
+    my $ott_ncRNA_host;
+    if ($species eq 'human') {
+        my $progdir = $0;
+        $progdir =~ s{/[^/]+$}{};
+        open my $nc_fh, '-|', "$progdir/detect_ncRNA_host_genes"
+          or die "Can't open pipe from detect_ncRNA_host_genes; $!";
+        while (defined(my $ott = <$nc_fh>)) {
+            chomp($ott);
+            $ott_ncRNA_host->{$ott} = 1;
+        }
+        close $nc_fh or die "Error running detect_ncRNA_host_genes; exit $?";
+        my $n = keys %$ott_ncRNA_host;
+        warn "Found $n ncRNA_host genes\n";
+    }
+
     # my $dba = DBI->connect($dsn, 'ensadmin', 'ensembl', { RaiseError => 1 });
     my $dbh = $dba->dbc->db_handle;
     $dbh->begin_work;
@@ -193,6 +197,7 @@ sub fix_biotypes {
     }
     print "Added $transcribed_remark_added '$transcribed_remark' remarks\n";
     print "Added $nc_RNA_host_remark_added '$nc_RNA_host_remark' remarks\n";
+    return ();
 }
 
 {
