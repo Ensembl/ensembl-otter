@@ -72,7 +72,7 @@ A comma seperated list of stable IDs to be transferred can be defined using the 
 option. Where possible this should be used together with the chr argument to prevent looping through
 all genes on unwanted chromosomes [option should be rewritten to transfer just these genes rather than
 first having to loop through all chromosomes in order to find them.] This option prevents the transfer
-of any non gene features, for example simple features, and prevents sql table yupdates, ie it can only
+of any non gene features, for example simple features, and prevents sql table updates, ie it can only
 be used after doing a normal transfer.
 
 --filter_prefix can be used to define a list of genes names prefixes to be ignored,
@@ -265,8 +265,8 @@ else {
   $chr_names_wanted = $support->get_wanted_chromosomes($laa,$lsa);
 }
 
-my $seq_regions = join "\n", @{$chr_names_wanted}; 
-if (! $support->user_proceed("\nAnnotation on the following seq_regions will be dumped from loutre, proceed ?\n$seq_regions")) {
+my $seq_regions = join "\n", @{$chr_names_wanted};
+if (! $support->param('add_genes') &&! $support->user_proceed("\nAnnotation on the following seq_regions will be dumped from loutre, proceed ?\n$seq_regions")) {
   exit;
 }
 
@@ -278,6 +278,9 @@ if ($support->param('ignore_authors')) {
 my $genes_to_dump = [];
 if ($support->param('add_genes')) {
   $genes_to_dump = [ $support->param('add_genes') ] ;
+  if (! $support->user_proceed("\nAnnotation of just the following genes will be dumped, proceed ?\n". join("\n",@$genes_to_dump))) {
+    exit;
+  }
 }
 
 ################################
@@ -590,6 +593,7 @@ foreach my $name (@{$chr_names_wanted}) {
  GENE:
   foreach my $lgene (@{$lga->fetch_all_by_Slice($lslice)} ) {
     my $lgsi = $lgene->stable_id;
+    my $gname = $lgene->get_all_Attributes('name')->[0]->value;
 
     #filter on stable id
     if ($support->param('add_genes')) {
@@ -598,40 +602,97 @@ foreach my $name (@{$chr_names_wanted}) {
       }
       $support->log("Doing specific dump of gene $lgsi",2);
     }
-    my $gname = $lgene->get_all_Attributes('name')->[0]->value;
 
-    #filter on source	
-    if ($support->param('filter_prefix')) {
-      if (grep { $lgene->source eq $_} $support->param('filter_prefix')) {
-        $support->log("Skipping gene $gname ($lgsi) because of incorrect source\n",1);
+    else {
+      #filter on source	
+      if ($support->param('filter_prefix')) {
+        if (grep { $lgene->source eq $_} $support->param('filter_prefix')) {
+          $support->log("Skipping gene $gname ($lgsi) because of incorrect source\n",1);
+          next GENE;
+        }
+      }	
+      #filter on biotype
+      if ($support->param('filter_biotype') ) {
+        if (grep {lc($lgene->biotype) eq lc($_)} $support->param('filter_biotype') ) {
+          $support->log("Skipping gene $gname ($lgsi) because of incorrect biotype (".$lgene->biotype.")\n",1);
+          next GENE;
+        }
+      }
+      #skip not for VEGA genes
+      if ( grep { $_->value eq 'not for VEGA' } @{$lgene->get_all_Attributes('remark')} ) {
+        $support->log("Skipping gene $gname ($lgsi) because of a 'not for VEGA' remark\n",1);
         next GENE;
       }
-    }	
-    #filter on biotype
-    if ($support->param('filter_biotype') ) {
-      if (grep {lc($lgene->biotype) eq lc($_)} $support->param('filter_biotype') ) {
-        $support->log("Skipping gene $gname ($lgsi) because of incorrect biotype (".$lgene->biotype.")\n",1);
+      #skip annotation in progress genes
+      if ( grep { $_->value eq 'annotation in progress' } @{$lgene->get_all_Attributes('remark')} ) {
+        $support->log("Skipping gene $gname ($lgsi) because of an 'annotation in progress' remark (".$lgene->gene_author->name.")\n",1);
         next GENE;
       }
-    }
-    #skip not for VEGA genes
-    if ( grep { $_->value eq 'not for VEGA' } @{$lgene->get_all_Attributes('remark')} ) {
-      $support->log("Skipping gene $gname ($lgsi) because of a 'not for VEGA' remark\n",1);
-      next GENE;
-    }
-
-    #skip annotation in progress genes
-    if ( grep { $_->value eq 'annotation in progress' } @{$lgene->get_all_Attributes('remark')} ) {
-      $support->log("Skipping gene $gname ($lgsi) because of an 'annotation in progress' remark (".$lgene->gene_author->name.")\n",1);
-      next GENE;
-    }
-
-    #ignore genes by particular authors
-    if ($support->param('ignore_authors')) {
-      if (grep { $lgene->gene_author->name eq $_} @{$ignore_authors}) {
-	$support->log("Skipping gene $gname ($lgsi) because of untrusted author (".$lgene->gene_author->name.")\n",1);
-	next GENE;
+      #ignore genes by particular authors
+      if ($support->param('ignore_authors')) {
+        if (grep { $lgene->gene_author->name eq $_} @{$ignore_authors}) {
+          $support->log("Skipping gene $gname ($lgsi) because of untrusted author (".$lgene->gene_author->name.")\n",1);
+          next GENE;
+        }
       }
+      #filter out genes on non-anotated clones and without fsv tags
+      if ($support->param('dbname') =~ /danio/) {
+        my $annotated_clone = 0;
+        my $fsv_gene        = 0;
+
+        my $gene_hidrem = $lgene->get_all_Attributes('hidden_remark');
+        if ( grep { $_->value eq 'fsv' } @$gene_hidrem ) {
+          $fsv_gene = 1;
+        }
+        if (! $fsv_gene ) {
+          my $gene_rem = $lgene->get_all_Attributes('remark');
+          if (grep { $_->value eq 'fsv' } @$gene_rem ) {
+            $fsv_gene = 1;
+          }
+        }
+
+        if (! $fsv_gene) {
+
+        #don't bother looking at clone annotation status sine that's hideously out of date (but keep
+        #the code in case if is ever done properly
+#	foreach my $proj_clone (@{$lgene->feature_Slice->project('clone')}) {
+#	  my $clone = $proj_clone->to_Slice();
+#	  my $attr = $clone->get_all_Attributes('annotated');
+#	  if (grep { $_->value eq 'T'} @$attr) {
+#	    $annotated_clone = 1;
+#	    last;
+#	  }
+#	}
+          if (! $annotated_clone) {
+            foreach my $proj_contig (@{$lgene->feature_Slice->project('contig')}) {
+              my $contig      = $proj_contig->to_Slice();
+              my $contig_id   = $contig->get_seq_region_id();
+              my $contig_info = $lcia ->fetch_by_seq_region_id($contig_id);
+              if (defined $contig_info) {
+                my $attr_c = $contig_info->get_all_Attributes('annotated');
+                if ( grep {$_->value eq 'T'} @$attr_c) {
+                  $annotated_clone = 1;
+                  last;
+                }
+              }
+            }
+          }
+        }
+
+        if ($fsv_gene) {
+          $support->log("Taking gene $gname ($lgsi) with fsv annotation flag\n",1);
+          $fsv++;
+        }
+        elsif ($annotated_clone) {
+          $support->log("Taking gene $gname ($lgsi) with annotated contig flag\n",1);
+          $fsv++;
+        }
+        else {
+          $support->log("Skipping gene $gname ($lgsi) because no annotation flag present\n",1); 
+          $non_fsv++;
+          next GENE;
+        }
+      }		
     }
 
     if ($support->param('live_update')) {
@@ -649,64 +710,6 @@ foreach my $name (@{$chr_names_wanted}) {
       }
     }
 
-    #filter out genes on non-anotated clones and without fsv tags
-    if ($support->param('dbname') =~ /danio/) {
-      my $annotated_clone = 0;
-      my $fsv_gene        = 0;
-
-      my $gene_hidrem = $lgene->get_all_Attributes('hidden_remark');
-      if ( grep { $_->value eq 'fsv' } @$gene_hidrem ) {
-	$fsv_gene = 1;
-      }
-      if (! $fsv_gene ) {
-	my $gene_rem = $lgene->get_all_Attributes('remark');
-	if (grep { $_->value eq 'fsv' } @$gene_rem ) {
-	  $fsv_gene = 1;
-	}
-      }
-
-      if (! $fsv_gene) {
-
-        #don't bother looking at clone annotation status sine that's hideously out of date (but keep
-        #the code in case if is ever done properly
-#	foreach my $proj_clone (@{$lgene->feature_Slice->project('clone')}) {
-#	  my $clone = $proj_clone->to_Slice();
-#	  my $attr = $clone->get_all_Attributes('annotated');
-#	  if (grep { $_->value eq 'T'} @$attr) {
-#	    $annotated_clone = 1;
-#	    last;
-#	  }
-#	}
-	if (! $annotated_clone) {
-	  foreach my $proj_contig (@{$lgene->feature_Slice->project('contig')}) {
-	    my $contig      = $proj_contig->to_Slice();
-	    my $contig_id   = $contig->get_seq_region_id();
-	    my $contig_info = $lcia ->fetch_by_seq_region_id($contig_id);
-	    if (defined $contig_info) {
-	      my $attr_c = $contig_info->get_all_Attributes('annotated');
-	      if ( grep {$_->value eq 'T'} @$attr_c) {
-		$annotated_clone = 1;
-		last;
-	      }
-	    }
-	  }
-	}
-      }
-
-      if ($fsv_gene) {
-	$support->log("Taking gene $gname ($lgsi) with fsv annotation flag\n",1);
-	$fsv++;
-      }
-      elsif ($annotated_clone) {
-	$support->log("Taking gene $gname ($lgsi) with annotated contig flag\n",1);
-	$fsv++;
-      }
-      else {
-	$support->log("Skipping gene $gname ($lgsi) because no annotation flag present\n",1); 
-	$non_fsv++;
-	next GENE;
-      }
-    }		
 
     if (&transfer_gene($lgene)) {
       $c++;
@@ -1101,6 +1104,14 @@ gene_author                   s
 transcript_author             s
 evidence                      s   #will have to be fixed (ie removed from loutre) eventually but OK for now
 exon_stable_id_pool           s   #not used for website but is needed if there are duplicate stable IDs
+
+translation_stable_id         i
+operon_transcript_stable_id   i
+tmp_assembly                  i
+transcript_stable_id          i
+operon_stable_id              i
+exon_stable_id                i
+gene_stable_id                i
 
 assembly_tag                  i   #fixed by CK
 assembly_tagged_contig        i
