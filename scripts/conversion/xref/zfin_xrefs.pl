@@ -2,14 +2,14 @@
 
 =head1 NAME
 
-add_external_xrefs.pl - adds xrefs to external databases from various types
-of input files
+zfin_xrefs.pl - adds gene xrefs for Zebrafish according to files downloaded from Zfin
 
 =head1 SYNOPSIS
 
-zfin_xrefs.pladd_external_xrefs.pl [options]
+zfin_xrefs.pl [options]
 
 General options:
+
     --conffile, --conf=FILE             read parameters from FILE
                                         (default: conf/Conversion.ini)
 
