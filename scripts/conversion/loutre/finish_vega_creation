@@ -336,13 +336,7 @@ $support->log("\nChecking sources of genes...\n");
 my %all_logic_names = (
   'havana' => ['otter',          'Havana',    'vega@sanger.ac.uk'],
   'WU'     => ['otter_external', 'Washu',     'jspieth@watson.wust'],
-  'JGI'    => ['otter_external', 'JGI',       'UHellsten@lbl.gov'],
-  'GC'     => ['otter_external', 'Genoscope', 'ralph@genoscope.cns.fr'],
-  'SK'     => ['otter_external', 'Sick_Kids', 'jmacdonald@sickkids.ca'],
-  'BCM'    => ['otter_external', 'BCM',       'sabo@bcm.tmc.edu'],
-  'MIT'    => ['otter_external', 'Broad',     'daved@broad.mit.edu'],
-  'C22'    => ['otter_external', 'Sanger',    'chr22@sanger.ac.uk'],
-  'GD'     => ['otter_external', 'EGAG',      'egag@sanger.ac.uk'],
+  'LOF'    => ['otter_lof',      'LOF',       'vega@sanger.ac.uk'],
   'KO'     => ['otter_eucomm',   'Havana',    'vega@sanger.ac.uk'],
 );
 
