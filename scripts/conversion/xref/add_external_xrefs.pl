@@ -120,6 +120,8 @@ $support->parse_extra_options(
   'xrefformat=s',
   'hgncfile=s',
   'mgifile=s',
+  'mgifile_uni_ref=s',
+  'mgifile_entrez=s',
   'imgt_hlafile=s',
   'mismatch',
   'prune',
@@ -131,6 +133,8 @@ $support->allowed_params(
   'xrefformat',
   'hgncfile',
   'mgifile',
+  'mgifile_uni_ref',
+  'mgifile_entrez',
   'imgt_hlafile',
   'mismatch',
   'prune',
@@ -172,8 +176,31 @@ if ($support->param('prune') and $support->user_proceed('Would you really like t
     imgt_gdb => qq(= 'IMGT/GENE_DB'),
   );
 
-  my $num;
+  #reset display xrefs back to using the Vega_gene one (unless we're using one of the specific formats in which case don't touch display_xref)
+#  unless ($refs_to_delete{$support->param('xrefformat')}) {
+#    $support->log("Resetting gene.display_xref_id...\n");
+#    my $sql = qq(
+#       SELECT g.stable_id, g.gene_id, x.xref_id, g.display_xref_id, x2.xref_id
+#         FROM external_db edb, xref x, xref x2, gene g
+#        WHERE g.display_xref_id = x.xref_id
+#          AND x.display_label = x2.display_label
+#          AND x2.external_db_id = edb.external_db_id
+#          AND x2.dbprimary_acc = g.stable_id 
+#          AND x.external_db_id != x2.external_db_id
+#          AND edb.db_name = 'Vega_gene');
+#    my $sth = $dba->dbc->db_handle->prepare($sql);
+#    $sth->execute;
+#    my $recs = $sth->fetchall_arrayref;
+#    my $c = 0;
+#    foreach my $rec (@$recs) {
+#      $c++;
+#      $sth_display_xref->execute($rec->[4],$rec->[1]);
+#    }
+#    $support->log("Updated $c display_xrefs\n");
+#  }
+
   # xrefs
+  my $num = 0;
   $support->log("Deleting  external xrefs...\n");
   my $cond = $refs_to_delete{$support->param('xrefformat')}
     || qq(not in ('Vega_gene','Vega_transcript','Vega_translation','Interpro','CCDS','Havana_gene','ENST','ENST_CDS','GO','ENST_ident','IMGT_HLA','IMGT/GENE_DB'));
@@ -183,9 +210,10 @@ if ($support->param('prune') and $support->user_proceed('Would you really like t
            FROM xref x, external_db ed
            WHERE x.external_db_id = ed.external_db_id
            AND ed.db_name $cond));
-  $support->log("Done deleting $num entries.\n");
+  $support->log("Done deleting $num entries.\n",1);
 
   # object_xrefs
+  $num = 0;
   $support->log("Deleting orphan object_xrefs...\n");
   $num = $dba->dbc->do(qq(
            DELETE ox
@@ -193,8 +221,10 @@ if ($support->param('prune') and $support->user_proceed('Would you really like t
            LEFT JOIN xref x ON ox.xref_id = x.xref_id
            WHERE x.xref_id IS NULL
         ));
+  $support->log("Done deleting $num entries.\n",1);
 
   # external_synonyms
+  $num = 0;
   $support->log("Deleting orphan external_synonyms...\n");
   $num = $dba->dbc->do(qq(
            DELETE es
@@ -202,18 +232,17 @@ if ($support->param('prune') and $support->user_proceed('Would you really like t
            LEFT JOIN xref x ON es.xref_id = x.xref_id
            WHERE x.xref_id IS NULL
         ));
+  $support->log("Done deleting $num entries.\n",1);
 
   #reset display xrefs to gene stable ID unless we're using one of the specific formats
   unless ($refs_to_delete{$support->param('xrefformat')}) {
     $support->log("Resetting gene.display_xref_id...\n");
     $num = $dba->dbc->do(qq(
-           UPDATE gene g, gene_stable_id gsi, xref x
+           UPDATE gene g, xref x
            SET g.display_xref_id = x.xref_id
-           WHERE g.gene_id = gsi.gene_id
-           AND gsi.stable_id = x.dbprimary_acc
+           WHERE g.stable_id = x.dbprimary_acc
         ));
-		
-    $support->log("Done deleting $num entries.\n");
+    $support->log("Done resetting $num display_xrefs.\n");
   }
 }
 
@@ -245,7 +274,7 @@ if (-e $xref_file) {
   }
 }
 		
-#or parse.
+#or parse..
 else {
   $support->log_stamped("Reading xref input files...\n");
   my $parser = "parse_$format";
@@ -255,7 +284,7 @@ else {
   store($lcmap,$lc_xref_file);
 }
 
-if ($support->param('verbose')) {
+if ( $support->param('verbose') && $support->param('dry_run')) {
   $support->log("Parsed xrefs are ".Dumper($parsed_xrefs)."\n");
   $support->log("Parsed lc xrefs are ".Dumper($lcmap)."\n");
 }
@@ -877,63 +906,96 @@ sub parse_mgivega {
 =cut
 
 sub parse_mgi {
-  my ($xrefs, $lcmap) = @_;
-  $support->log_stamped("MGI...\n", 1);
-  
-  # read input file
-  my $mgifile = $support->param('mgifile');
-  open(MGI, "< $mgifile")
-    or $support->throw("Couldn't open $mgifile for reading: $!\n");
-  
-  #parse input file
-  my %types;
-  while (<MGI>) {
-    my @fields = split /\t/;
-    
+  my ($xrefs, $lcmap) = @_; 
 
-    # MGI record contains all sorts of entries as well as genes, eg markers.
-    # There doesn't seem to be any way of distinguishing between them, but could
-    # skip all apparent non-gene entries in the input file ?
-    #	   next if $fields[2] =~ /^RIKEN cDNA/;
-    #	   next if $fields[2] =~ /^DNA segment/;
-    
-    #add mgi entries
-    my $gene_name = $fields[1];
+  #define which columns to parse out of the record. Note this does parse Uniprot although we don't add this to the genes
+  #(we use ad_ebi_xrefs.pl to add it to the transcripts)
+  my $wanted_columns = {
+    'mgifile' => {
+      'MGI Accession ID'        => 'MGI_PID',
+      'Marker Symbol'           => 'MGI',
+    },
+    'mgifile_entrez' => {
+      'Mouse Marker Symbol'     => 'MGI',
+      'Mouse MGI Accession ID'  => 'MGI_PID',
+      'Mouse Entrez Gene ID'    => 'EntrezGene'
+    },
+    'mgifile_uni_ref' => {
+      'MGI Marker Accession ID' => 'MGI_PID',
+      'Marker Symbol'           => 'MGI',
+      'RefSeq transcript ID'    => 'RefSeq_dna',
+      'RefSeq protein ID'       => 'RefSeq_peptide',
+      'UniProt ID'              => 'Uniprot',
+      'TrEMBL ID'               => 'TrEMBL',
+    },
+  };
 
- #   if ($gene_name eq 'Arpc1b') {
- #     warn Dumper(\@fields);
- #     exit;
- #   }
+  foreach my $file (sort keys %$wanted_columns) {
 
-    my $mgi_pid = $fields[0];
-    $xrefs->{$gene_name}->{'MGI'} = [ $gene_name .'||'. $mgi_pid ];
-    
-    #add refseq dna entries
-    my $refseqs = $fields[21];
-    my (@ids) = split ',',$refseqs; 
-    foreach my $id (@ids) {
-      if ($id =~ /^NM_|NR_/) {
-	push @{$xrefs->{$gene_name}->{'RefSeq_dna'}}, $id.'||'.$id ;
+    # read input file
+    $support->log_stamped("$file...\n", 1);
+
+    my $mgifile = $support->param($file);
+    open(MGI, "< $mgifile")
+      or $support->throw("Couldn't open $mgifile for reading: $!\n");
+    my $page = do { local $/; <MGI> };
+    my @recs = split "\n", $page;
+    close MGI;
+
+    # read header containing column titles and check all wanted columns are there
+    my $line = shift @recs;
+    chomp $line;
+    my @columns =  split /\t/, $line;
+
+    foreach my $wanted (keys %{$wanted_columns->{$file}}) {
+      unless (grep { $_ eq $wanted} @columns ) {
+        $support->log_error("Can't find $wanted column in MGI record\n");
       }
-      if ($id =~ /^NP_/) {
-	push @{$xrefs->{$gene_name}->{'RefSeq_peptide'}}, $id.'||'.$id ;
+    }
+
+    #make a note of positions of wanted fields
+    my %fieldnames;
+    for (my $i=0; $i < scalar(@columns); $i++) {
+      my $column_label = $columns[$i];
+      next if (! $wanted_columns->{$file}{$column_label});
+      $fieldnames{$i} = $wanted_columns->{$file}{$column_label};
+    }
+
+    #parse input file
+  REC:
+    foreach my $l (@recs) {
+      chomp $l;
+      my @fields = split /\t/, $l, -1;
+      my %accessions;
+      my $marker_symbol;
+
+      foreach my $i (keys %fieldnames) {
+        my $type = $fieldnames{$i};
+        if ($type eq 'MGI') {
+          $marker_symbol = $fields[$i];
+        }
+        if ($fields[$i]) {
+          $accessions{$type} = $fields[$i];
+        }
       }
-    }
 
-    #add swissprot entry
-    my $swissptrots = $fields[26];
-    foreach (split ',',$swissptrots) {
-      push @{$xrefs->{$gene_name}->{'Uniprot/SWISSPROT'}}, $_ .'||'.$_ ;
+      foreach my $db (keys %accessions) {
+        if ($db eq 'MGI') {
+          $xrefs->{$marker_symbol}{$db} = [ $marker_symbol .'||'. $accessions{'MGI_PID'} ] unless $xrefs->{$marker_symbol}{$db};
+        }
+        elsif ($db =~ /Uniprot|TrEMBL/) {
+          foreach my $acc (split (/\|/, $accessions{$db})) {
+            push @{$xrefs->{$marker_symbol}{'Uniprot/SWISSPROT'}}, $acc .'||'. $acc ;
+          }
+        }
+        elsif ( $db ne 'MGI_PID') {
+          foreach my $acc (split (/\|/, $accessions{$db})) {
+            push @{$xrefs->{$marker_symbol}{$db}}, $acc .'||'. $acc ;
+          }
+        }
+      }
+      push @{ $lcmap->{lc($marker_symbol)} }, $marker_symbol unless $lcmap->{lc($marker_symbol)};
     }
-
-    #add entrezgene entry
-    my $entrezgenes = $fields[4];
-    foreach (split ',',$entrezgenes ) {
-      push @{$xrefs->{$gene_name}->{'EntrezGene'}}, $_ .'||'. $_;
-    }
-
-    #store lower case name to catch case mismatches
-    push @{ $lcmap->{lc($gene_name)} }, $gene_name;
   }
 }
 
