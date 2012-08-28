@@ -520,20 +520,6 @@ $sql = qq(
 $c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
 $support->log_stamped("Done transfering $c meta entries.\n\n");
 
-#add vega genebuild.start_date info
-$support->log_stamped("Updating random meta entries...\n");
-$sql = qq(
-    INSERT IGNORE INTO $evega_db.meta
-    SELECT * FROM meta WHERE meta_key = 'genebuild.version'
-);
-$c = $dbh->{'vega'}->do($sql) unless ($support->param('dry_run'));
-$sql = qq(
-    DELETE
-      FROM $evega_db.meta
-     WHERE meta_key in ('xref.timestamp','repeat.analysis','assembly.date','genebuild.id','genebuild.initial_release_date','genebuild.last_geneset_update'));
-$c += $dbh->{'vega'}->do($sql) unless ($support->param('dry_run'));
-$support->log_stamped("Done deleting / updating $c meta entries.\n\n");
-
 # add assembly.mapping to meta table
 # get the values for vega_assembly and ensembl_assembly from the db
 my $ensembl_assembly;
