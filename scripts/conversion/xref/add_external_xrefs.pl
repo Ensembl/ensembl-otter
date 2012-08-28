@@ -176,29 +176,6 @@ if ($support->param('prune') and $support->user_proceed('Would you really like t
     imgt_gdb => qq(= 'IMGT/GENE_DB'),
   );
 
-  #reset display xrefs back to using the Vega_gene one (unless we're using one of the specific formats in which case don't touch display_xref)
-#  unless ($refs_to_delete{$support->param('xrefformat')}) {
-#    $support->log("Resetting gene.display_xref_id...\n");
-#    my $sql = qq(
-#       SELECT g.stable_id, g.gene_id, x.xref_id, g.display_xref_id, x2.xref_id
-#         FROM external_db edb, xref x, xref x2, gene g
-#        WHERE g.display_xref_id = x.xref_id
-#          AND x.display_label = x2.display_label
-#          AND x2.external_db_id = edb.external_db_id
-#          AND x2.dbprimary_acc = g.stable_id 
-#          AND x.external_db_id != x2.external_db_id
-#          AND edb.db_name = 'Vega_gene');
-#    my $sth = $dba->dbc->db_handle->prepare($sql);
-#    $sth->execute;
-#    my $recs = $sth->fetchall_arrayref;
-#    my $c = 0;
-#    foreach my $rec (@$recs) {
-#      $c++;
-#      $sth_display_xref->execute($rec->[4],$rec->[1]);
-#    }
-#    $support->log("Updated $c display_xrefs\n");
-#  }
-
   # xrefs
   my $num = 0;
   $support->log("Deleting  external xrefs...\n");
