@@ -804,12 +804,16 @@ push @sql_fixes, "DELETE from meta where meta_value like \'%OtterArchive%\';\n";
 my $date = strftime "%Y-%m", localtime;
 my $gene_build = $date.'-Vega';
 my $gene_build_date =  strftime "%Y-%m-%d", localtime;
-push @sql_fixes, "INSERT ignore into meta (meta_key,meta_value) VALUES (\'genebuild.version\',\'$gene_build\');\n";
+
+#add date of datafreeze
+my $datafreeze =  strftime "%Y-%m-%d", localtime;
+push @sql_fixes, "INSERT ignore into meta (species_id,meta_key,meta_value) VALUES (1,\'genebuild.last_geneset_update\',\'$gene_build_date\');\n";
+push @sql_fixes, "INSERT ignore into meta (species_id,meta_key,meta_value) VALUES (1,\'genebuild.version\',\'$gene_build\');\n";
 push @sql_fixes, "INSERT into meta (meta_key,meta_value) VALUES ('genebuild.level','toplevel'),('transcriptbuild.level','toplevel'),('exonbuild.level','toplevel');\n";
 push @sql_fixes, "INSERT ignore into meta (meta_key,meta_value) VALUES (\'initial_release.version\',\'$release_no\');\n"; #needed for blast config
 push @sql_fixes, "INSERT ignore into meta (meta_key,meta_value) VALUES (\'ensembl.link\','yes');\n"; # needed for front page hyperlink to e! so might be 'no' occasionally
 
-#needed for compara
+#needed for compara (
 push @sql_fixes, "INSERT ignore into meta (meta_key,meta_value) VALUES (\'assembly.coverage_depth\',\'high\');\n";
 push @sql_fixes, "INSERT ignore into meta (meta_key,meta_value) VALUES (\'genebuild.start_date\',\'$gene_build_date\');\n";
 #push @sql_fixes, "INSERT ignore into meta (meta_key,meta_value) VALUES (\'species.production_name\',\'homo_sapiens\')\n";
