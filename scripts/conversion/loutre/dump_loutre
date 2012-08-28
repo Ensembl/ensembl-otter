@@ -600,7 +600,7 @@ foreach my $name (@{$chr_names_wanted}) {
       unless (grep { $lgene->stable_id eq $_ } @{$genes_to_dump}) {
         next GENE;
       }
-      $support->log("Doing specific dump of gene $lgsi",2);
+      $support->log("Doing specific dump of gene $lgsi\n",2);
     }
 
     else {
@@ -744,8 +744,14 @@ $support->log("Got $fsv fsv genes and $non_fsv non_fsv genes\n");
 
 #add date of datafreeze
 my $datafreeze =  strftime "%Y-%m-%d", localtime;
-$vdbh->do(qq(INSERT ignore into meta (meta_key,meta_value) VALUES (\'genebuild.havana_datafreeze_date\',\'$datafreeze\')));
-$support->log("Added meta key of $datafreeze for genebuild.havana_datafreeze_date\n");
+if ($support->param('add_genes')) {
+  $vdbh->do(qq(UPDATE meta set meta_value = \'$datafreeze\' where meta_key = \'genebuild.havana_datafreeze_date\'));
+  $support->log("Updated date for genebuild.havana_datafreeze_date meta entry\n");
+}
+else {
+  $vdbh->do(qq(INSERT ignore into meta (meta_key,meta_value) VALUES (\'genebuild.havana_datafreeze_date\',\'$datafreeze\')));
+  $support->log("Added meta key of $datafreeze for genebuild.havana_datafreeze_date\n");
+}
 
 $support->finish_log;
 
