@@ -510,17 +510,43 @@ $sql = qq(DROP TABLE tmp_seq_region);
 $c = $dbh->{'evega'}->do($sql);
 
 #tidy up meta table entries
+
+#remove unwanted ensembl ones
 $support->log_stamped("Deleting and updating meta table entries.\n\n");
 $sql = qq(DELETE from meta
-           WHERE meta_key in ('assembly.num_toplevel_seqs', 'genebuild.vega_merge_db','genebuild.version', 'removed_evidence_flag.ensembl_dbversion', 'removed_evidence_flag.uniprot_dbversion','sri_adjust','csi_adjust','marker.priority','liftover.mapping'));
+           WHERE meta_key in ('assembly.num_toplevel_seqs', 'genebuild.vega_merge_db','genebuild.version', 'removed_evidence_flag.ensembl_dbversion', 'removed_evidence_flag.uniprot_dbversion','sri_adjust','csi_adjust','marker.priority','liftover.mapping','assembly.web_accession_type','assembly.web_accession_source','xref.timestamp','repeat.analysis','assembly.date'));
+
+$sql = qq(DELETE from meta
+           WHERE meta_key in ('genebuild.id','genebuild.method','genebuild.id','genebuild.start_date','genebuild.initial_release_date','genebuild.last_geneset_update','genebuild.havana_datafreeze_date'));
 $c = $dbh->{'evega'}->do($sql);
 
-$sql = qq(UPDATE meta
-             SET meta_value = 
-                 (SELECT meta_value from $vega_db.meta where meta_key = 'genebuild.havana_datafreeze_date')
-           WHERE meta_key = 'genebuild.havana_datafreeze_date');
+
+#add genebuild info
+$support->log_stamped("Updating genebuild meta entries...\n");
+$sql = qq(
+    INSERT IGNORE INTO meta (meta_key,meta_value)
+    SELECT meta_key,meta_value FROM $vega_db.meta WHERE meta_key = 'genebuild.version');
 $c = $dbh->{'evega'}->do($sql);
 
+$sql = qq(
+    INSERT IGNORE INTO meta (meta_key,meta_value)
+    SELECT meta_key,meta_value FROM $vega_db.meta WHERE meta_key = 'genebuild.start_date');
+$c = $dbh->{'evega'}->do($sql);
+
+$sql = qq(
+    INSERT IGNORE INTO meta (meta_key,meta_value)
+    SELECT meta_key,meta_value FROM $vega_db.meta WHERE meta_key = 'genebuild.havana_datafreeze_date');
+$c = $dbh->{'evega'}->do($sql);
+
+$sql = qq(
+    INSERT IGNORE INTO meta (meta_key,meta_value)
+    SELECT meta_key,meta_value FROM $vega_db.meta WHERE meta_key = 'genebuild.last_geneset_update');
+$c = $dbh->{'evega'}->do($sql);
+unless ($c) {
+  $support->log_warning("Did not insert correct genebuild.last_geneset_update meta key, this will cause HC noise\n");
+}
+
+$support->log_stamped("Updating assembly.default entries...\n");
 $sth = $dbh->{'evega'}->prepare(qq(SELECT meta_value FROM meta where meta_key = 'assembly.default'));
 $sth->execute;
 if (my ($assembly_default) = $sth->fetchrow_array) {
@@ -533,8 +559,7 @@ else {
   $support->log("Inserted $c values for meta.assembly.default\n");
 }
 
-
-#duplicates
+#remove duplicate meta entries
 $c = $dbh->{'evega'}->do(qq(CREATE table nondup_meta like meta));
 $c = $dbh->{'evega'}->do(qq(INSERT into nondup_meta (select '',species_id, meta_key, meta_value from meta group by species_id, meta_key, meta_value)));
 $c = $dbh->{'evega'}->do(qq(DELETE from meta));
