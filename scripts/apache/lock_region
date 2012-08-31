@@ -13,11 +13,14 @@ use SangerPaths qw{ core bioperl123 ensembl65 otter69 };
 use Bio::Otter::ServerScriptSupport;
 use Bio::Vega::ContigLockBroker;
 use Bio::Vega::Transform::XML;
+use Try::Tiny;
+
 
 sub lock_region {
     my ($server) = @_;
 
     my $odba = $server->otter_dba();
+    $odba->begin_work;
 
     my $cl_host = $server->param('hostname') || $ENV{REMOTE_ADDR};
     my $cb = Bio::Vega::ContigLockBroker->new;
@@ -27,14 +30,23 @@ sub lock_region {
     my $author_obj = $server->make_Author_obj();
 
     warn "Attempting to lock clones...\n";
-    $cb->lock_clones_by_slice($slice, $author_obj, $odba);
-    my $formatter = Bio::Vega::Transform::XML->new;
-    $formatter->otter_dba($odba);
-    $formatter->slice($slice);
-    $formatter->fetch_species;
-    $formatter->fetch_CloneSequences;
-    my $xml = $formatter->generate_OtterXML;
-    warn "Obtained the locks.\n";
+    my $xml;
+    try {
+        $cb->lock_clones_by_slice($slice, $author_obj, $odba);
+
+        my $formatter = Bio::Vega::Transform::XML->new;
+        $formatter->otter_dba($odba);
+        $formatter->slice($slice);
+        $formatter->fetch_species;
+        $formatter->fetch_CloneSequences;
+
+        $xml = $formatter->generate_OtterXML;
+        $odba->commit;
+        warn "Obtained the locks.\n";
+    } catch {
+        $odba->rollback;
+        die "Locking clones failed [$::_]";
+    };
 
     return $xml;
 }
