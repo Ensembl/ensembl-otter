@@ -256,7 +256,7 @@ $parallel->divert('RUN','POST','END');
 
 my @chrs = $support->sort_chromosomes($V_chrlength);
 #@chrs = grep { /^HG1/ } @chrs;
-$parallel->register(@chrs);
+$parallel->register(\@chrs);
 
 RUN: 1;
 
