@@ -29,23 +29,24 @@ sub lock_region {
     my $slice = $server->get_requested_slice;
     my $author_obj = $server->make_Author_obj();
 
-    warn "Attempting to lock clones...\n";
-    my $xml;
+    my ($xml, $action);
     try {
+        $action = 'locking';
         $cb->lock_clones_by_slice($slice, $author_obj, $odba);
 
+        $action = 'result setup';
         my $formatter = Bio::Vega::Transform::XML->new;
         $formatter->otter_dba($odba);
         $formatter->slice($slice);
         $formatter->fetch_species;
         $formatter->fetch_CloneSequences;
 
+        $action = 'output';
         $xml = $formatter->generate_OtterXML;
         $odba->commit;
-        warn "Obtained the locks.\n";
     } catch {
         $odba->rollback;
-        die "Locking clones failed [$::_]";
+        die "Locking clones failed during $action \[$::_]";
     };
 
     return $xml;
