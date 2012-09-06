@@ -257,6 +257,7 @@ $parallel->divert('RUN','POST','END');
 my @chrs = $support->sort_chromosomes($V_chrlength);
 #@chrs = grep { /^HG1/ } @chrs;
 @chrs = map {; { name => $_, size => (/^[0-9]+$/ or /^[XY]$/)?1:(1/20) } } @chrs;
+$parallel->job_params({ memory => 3000 });
 $parallel->register(\@chrs);
 
 RUN: 1;
