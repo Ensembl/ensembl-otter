@@ -70,48 +70,25 @@ sub store_gene {
 
   my $gstable_id = $E_gene->stable_id;
 
-  #if there are multiple strands for transripts within the gene then keep those on the strand with the most transcripts.
+  #if there are multiple strands for transcripts within the gene then keep those on the strand with the longest transcript.
   if (keys %trans_strands > 1 ) {
-    my $compare_lengths = 0;
-    $support->log("Multiple strands for transcripts of gene $gstable_id - see which is the most popular strand...\n", 3);
     my $strand_to_keep;
-    my $no_trans = 0;
-    foreach my $t_strand (keys %trans_strands) {
+    $support->log("Multiple strands for transcripts of gene $gstable_id - see which has the longest...\n", 3);
+    my $max_length = 1;
+    foreach my $E_trans (@{ $E_transcripts }) {
+      my $stable_id = $E_trans->stable_id;
+      my $length = $E_trans->length;
+      my $strand = $E_trans->strand;
+      $support->log("Transcript $stable_id on strand $strand has length of $length\n",4);
       if ($strand_to_keep) {
-        if (scalar @{$trans_strands{$t_strand}} == $no_trans) {
-          $compare_lengths = 1;
-        }
-        elsif (scalar @{$trans_strands{$t_strand}} > $no_trans) {
-          $strand_to_keep = $t_strand;
+        if ($length > $max_length) {
+          $length = $max_length;
+          $strand_to_keep = $strand;
         }
       }
       else {
-        $strand_to_keep = $t_strand;
-        $no_trans = scalar @{$trans_strands{$t_strand}};
-      }
-    }
-
-    if ($compare_lengths) {
-      #otherwise set the strand equal to that of the longest transcript
-      $support->log("...equal numbers, now compare lengths of transcripts:\n", 3);
-      $strand_to_keep = '';
-      my $max_length = 1;
-      foreach my $E_trans (@{ $E_transcripts }) {
-        my $stable_id = $E_trans->stable_id;
-        my $length = $E_trans->length;
-        my $strand = $E_trans->strand;
-        $support->log("Transcript $stable_id on strand $strand has length of $length\n",4);
-        if ($strand_to_keep) {
-          if ($length > $max_length) {
-            $length = $max_length;
-            $strand_to_keep = $strand;
-          }
-        }
-        else {
-          $max_length = $length;
-          $strand_to_keep = $strand;
-          $compare_lengths = 1;
-        }
+        $max_length = $length;
+        $strand_to_keep = $strand;
       }
     }
     $support->log("Chosen strand $strand_to_keep\n", 3);
