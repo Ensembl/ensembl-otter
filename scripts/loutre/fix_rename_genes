@@ -86,7 +86,14 @@ sub main {
   GENE: while (my @g_row = $gene_sth->fetchrow) {
         my ($gene_id, $gene_name, undef, $gene_chr) = @g_row;
         my $new_gene_name = $gene_name;
-        $new_gene_name =~ s/$old_re/$re_subst/ or die "Unexpected gene name format: '$gene_name'";
+        unless ($new_gene_name =~ s/$old_re/$re_subst/) {
+            if ($new_gene_name =~ s/$old_re/$re_subst/i) {
+                warn "Skipping case-insensitive mismatch: '$gene_name'\n";
+                next GENE;
+            } else {
+                die "Unexpected gene name format: '$gene_name'";
+            }
+        }
         printf "GENE: %-6s %-20s source=%s sr=%s", @g_row;
 
         my $gene = $gene_adaptor->fetch_by_dbID($gene_id);
