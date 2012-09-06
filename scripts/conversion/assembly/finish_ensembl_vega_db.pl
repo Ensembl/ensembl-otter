@@ -555,7 +555,7 @@ if (my ($assembly_default) = $sth->fetchrow_array) {
   }
 }
 else {
-  $c = $dbh->{'evega'}->do(qq(INSERT into meta ('',1,'assembly_default','$ensemblassembly')));
+  $c = $dbh->{'evega'}->do(qq(INSERT into meta values ('',1,'assembly_default','$ensemblassembly')));
   $support->log("Inserted $c values for meta.assembly.default\n");
 }
 
