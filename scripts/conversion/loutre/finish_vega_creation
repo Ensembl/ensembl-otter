@@ -158,7 +158,6 @@ if ($support->param('release_type' ne 'External')) {
   exit;
 }
 
-
 if ($support->param('host') ne $support->param('ensemblhost') ) {
   $support->log_error("Ensembl and Vega databases must be on the same host.\n");
 }
@@ -608,7 +607,13 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
 
   #add non_ref seq_region_attributes to Vega PATCH chromosomes
   if ($loutre_name =~ /patch/i) {
-    $support->log("Adding non-ref seq_region_attrib for chromosome $loutre_name",1);
+    $support->log("Adding non-ref seq_region_attrib for patch chromosome $loutre_name",1);
+    if (! $support->param('dry_run')) {
+      $sth2->execute($sr_id);
+    }
+  }
+  if ($loutre_name =~ /MHC|LRC|IDD/i) {
+    $support->log("Adding non-ref seq_region_attrib for haplotype/strain chromosome $loutre_name",1);
     if (! $support->param('dry_run')) {
       $sth2->execute($sr_id);
     }
