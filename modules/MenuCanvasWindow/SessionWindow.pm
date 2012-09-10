@@ -1963,9 +1963,9 @@ sub replace_SubSeq {
     } else {
       my $msg;
       if ($done_ace) {
-	$msg = "Saved OK, but please restart ZMap";
+        $msg = "Saved OK, but please restart ZMap";
       } else {
-	$msg = "Aborted save, failed to save to Ace";
+        $msg = "Aborted save, failed to save to Ace";
       }
       $self->exception_message("$msg: $err");
       return $done_ace;
