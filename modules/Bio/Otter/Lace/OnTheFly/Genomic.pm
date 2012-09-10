@@ -19,15 +19,15 @@ has 'full_seq' => ( is => 'ro', isa => 'Hum::Sequence', required => 1 );
 sub build_target_seq {
     my $self = shift;
     return Bio::Otter::Lace::OnTheFly::TargetSeq->new(
-	full_seq => $self->full_seq,
-	);
+        full_seq => $self->full_seq,
+        );
 }
 
 sub build_aligner {
     my ($self, @params) = @_;
     return Bio::Otter::Lace::OnTheFly::Aligner::Genomic->new(
-	@params,
-	);
+        @params,
+        );
 }
 
 1;
