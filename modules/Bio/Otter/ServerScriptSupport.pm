@@ -240,7 +240,7 @@ sub send_file {
         @args, # passed to the constructor
         sub {
             my ($self) = @_;
-	    return Bio::Otter::Server::Config->get_file($name);
+            return Bio::Otter::Server::Config->get_file($name);
         });
 
     return;
