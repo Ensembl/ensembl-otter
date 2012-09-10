@@ -11,10 +11,6 @@ use Hum::Submission;
 
 {
 
-    # Stop another repair_intl_clone_names running at the same time
-    my $project = "repair_intl_clone_names";
-    Hum::Submission::create_lock($project);
-
     my $dataset_name = undef;
     my $rescan_flag  = 0;       # Re-scan the names even if they are already in the database
     my $change_flag  = 0;       # Whether we should change or just show the stats
@@ -33,6 +29,12 @@ use Hum::Submission;
     else {
         @datasets = $cl->get_all_DataSets();
     }
+
+    get_international_clone_name('junk'); # ensure we can, before grabbing the lock
+
+    # Stop another repair_intl_clone_names running at the same time
+    my $project = "repair_intl_clone_names";
+    Hum::Submission::create_lock($project);
 
     while (my $ds = shift @datasets) {
 
@@ -265,14 +267,13 @@ __END__
 
 =head1 SYNOPSIS
 
-  repair_intl_clone_names -dataset <DATASET_NAME> [ -otter | -head ]
+  repair_intl_clone_names [ -dataset <DATASET_NAME> ] [ -change ]
 
 =head1 DESCRIPTION
 
-Fills in the international clone names for EITHER
-otter database itself (use with -otter) OR
-old schema pipeline database (default behaviour) OR
-new schema pipeline database (use with -head).
+Fills in the international clone names for loutre & pipe databases,
+for the specified dataset OR for all datasets (except cow) if none is
+specified.
 
 It uses the tracking database to find the int. clone name
 for those clones  that have name = embl_acc.embl_version.
