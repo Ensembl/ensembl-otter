@@ -19,16 +19,16 @@ has 'transcript' => ( is => 'ro', isa => 'Hum::Ace::SubSeq', required => 1 );
 sub build_target_seq {
     my $self = shift;
     return Bio::Otter::Lace::OnTheFly::TargetSeq->new(
-	full_seq => $self->transcript->mRNA_Sequence
-	);
+        full_seq => $self->transcript->mRNA_Sequence
+        );
 }
 
 sub build_aligner {
     my ($self, @params) = @_;
     return Bio::Otter::Lace::OnTheFly::Aligner::Transcript->new(
-	@params,
-	transcript => $self->transcript,
-	);
+        @params,
+        transcript => $self->transcript,
+        );
 }
 
 1;
