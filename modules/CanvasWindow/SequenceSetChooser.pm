@@ -30,7 +30,7 @@ sub new {
     $canvas->Tk::bind('<Escape>', sub{ $self->deselect_all });
 
     my $close_window = sub{
-        my $top = $self->DataSetChooser->canvas->toplevel;
+        my $top = $self->SpeciesListWindow->canvas->toplevel;
         $top->deiconify;
         $top->raise;
         $self->canvas->toplevel->destroy;
@@ -102,13 +102,13 @@ sub DataSet {
     return $self->{'_DataSet'};
 }
 
-sub DataSetChooser {
-    my ($self, $DataSetChooser) = @_;
+sub SpeciesListWindow {
+    my ($self, $SpeciesListWindow) = @_;
 
-    if ($DataSetChooser) {
-        $self->{'_DataSetChooser'} = $DataSetChooser;
+    if ($SpeciesListWindow) {
+        $self->{'_SpeciesListWindow'} = $SpeciesListWindow;
     }
-    return $self->{'_DataSetChooser'};
+    return $self->{'_SpeciesListWindow'};
 }
 
 sub draw {

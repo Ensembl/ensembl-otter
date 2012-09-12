@@ -567,10 +567,10 @@ sub SequenceNotes {
     return $self->{'_SequenceNotes'} ;
 }
 
-sub DataSetChooser {
-    my ($self, $dc) = @_;
-    $self->{'_DataSetChooser'} = $dc if $dc;
-    return $self->{'_DataSetChooser'} ;
+sub SpeciesListWindow {
+    my ($self, $SpeciesListWindow) = @_;
+    $self->{'_SpeciesListWindow'} = $SpeciesListWindow if $SpeciesListWindow;
+    return $self->{'_SpeciesListWindow'} ;
 }
 
 sub DESTROY {

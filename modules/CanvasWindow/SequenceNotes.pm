@@ -750,7 +750,7 @@ sub _open_SequenceSet {
     $lc->init_flag(1);
     $lc->AceDatabase($adb);
     $lc->SequenceNotes($self);
-    $lc->DataSetChooser($self->SequenceSetChooser->DataSetChooser);
+    $lc->SpeciesListWindow($self->SequenceSetChooser->SpeciesListWindow);
     $lc->initialize;
 
     return;
