@@ -1,7 +1,7 @@
 
-### MenuCanvasWindow::DataSetChooser
+### MenuCanvasWindow::SpeciesListWindow
 
-package MenuCanvasWindow::DataSetChooser;
+package MenuCanvasWindow::SpeciesListWindow;
 
 use strict;
 use warnings;
@@ -244,7 +244,7 @@ sub open_dataset {
                 $ssc->name($name);
                 $ssc->Client($client);
                 $ssc->DataSet($ds);
-                $ssc->DataSetChooser($self);
+                $ssc->SpeciesListWindow($self);
                 $ssc->draw;
 
                 $self->{'_sequence_set_chooser'}{$name} = $top;
@@ -357,7 +357,7 @@ sub recover_some_sessions {
 
                     my $lc = EditWindow::LoadColumns->new($top);
                     $lc->AceDatabase($adb);
-                    $lc->DataSetChooser($self);
+                    $lc->SpeciesListWindow($self);
                     $lc->initialize;
                     $lc->change_checkbutton_state('deselect');
                     $lc->load_filters;
@@ -383,7 +383,7 @@ sub recover_some_sessions {
 
 __END__
 
-=head1 NAME - MenuCanvasWindow::DataSetChooser
+=head1 NAME - MenuCanvasWindow::SpeciesListWindow
 
 =head1 AUTHOR
 

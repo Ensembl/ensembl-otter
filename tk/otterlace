@@ -6,7 +6,7 @@ use warnings;
 ### otterlace
 
 use CanvasWindow::MainWindow;
-use MenuCanvasWindow::DataSetChooser;
+use MenuCanvasWindow::SpeciesListWindow;
 use EditWindow::Password;
 use Bio::Otter::Lace::Defaults;
 use Bio::Otter::Git;
@@ -41,8 +41,8 @@ use Log::Log4perl;
         }
     );
 
-    my $dc = MenuCanvasWindow::DataSetChooser->new($mw);
-    $dc->Client($cl);
+    my $SpeciesListWindow = MenuCanvasWindow::SpeciesListWindow->new($mw);
+    $SpeciesListWindow->Client($cl);
 
     my $prompt_sub = sub {
         my ($self) = @_;
@@ -71,7 +71,7 @@ use Log::Log4perl;
 
     $cl->get_server_otter_config;
 
-    $dc->draw;
+    $SpeciesListWindow->draw;
 
     Tk::MainLoop();
 
