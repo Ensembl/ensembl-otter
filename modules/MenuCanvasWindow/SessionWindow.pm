@@ -1911,59 +1911,62 @@ sub replace_SubSeq {
     my $old_name = $old->name || $new_name;
 
     my $rename_needed = $old->is_archival && $new_name ne $old_name;
-    my $ace = $rename_needed
-        ? $new->ace_string($old_name)
-        : $new->ace_string;
+    my $ace =
+        $rename_needed
+      ? $new->ace_string($old_name)
+      : $new->ace_string;
 
     my $offset = $self->AceDatabase->offset;
     my @xml = (
-        ( $old->is_archival ? $old->zmap_delete_xml_string($offset) : () ),
+        ($old->is_archival ? $old->zmap_delete_xml_string($offset) : ()),
         $new->zmap_create_xml_string($offset),
-        );
+    );
 
     my $done_ace;
     my $done_zmap = eval {
-      $self->save_ace($ace);
-      $done_ace = 1;
-
-      $self->zMapSendCommands(@xml);
-      1;
+        $self->save_ace($ace);
+        $done_ace = 1;
+        $self->zMapSendCommands(@xml);
+        1;
     };
     my $err = $@;
 
     if ($done_ace) {
-      # update internal state
-      $self->Assembly->replace_SubSeq($new, $old_name);
 
-      if ($new_name ne $old_name) {
-        $self->{'_subsequence_cache'}{$old_name} = undef;
-        $self->rename_transcript_window($old_name, $new_name);
-      }
-      $self->{'_subsequence_cache'}{$new_name} = $new;
+        # update internal state
+        $self->Assembly->replace_SubSeq($new, $old_name);
 
-      my $locus = $new->Locus;
-      if (my $prev_name = $locus->drop_previous_name) {
-        warn "Unsetting otter_id for locus '$prev_name'\n";
-        $self->get_Locus($prev_name)->drop_otter_id;
-      }
-      $self->set_Locus($locus);
+        if ($new_name ne $old_name) {
+            $self->{'_subsequence_cache'}{$old_name} = undef;
+            $self->rename_transcript_window($old_name, $new_name);
+        }
+        $self->{'_subsequence_cache'}{$new_name} = $new;
 
-      ### Update all subseq edit windows (needs a sane Ace server)
-      $self->draw_subseq_list;
+        my $locus = $new->Locus;
+        if (my $prev_name = $locus->drop_previous_name) {
+            warn "Unsetting otter_id for locus '$prev_name'\n";
+            $self->get_Locus($prev_name)->drop_otter_id;
+        }
+        $self->set_Locus($locus);
+
+        ### Update all subseq edit windows (needs a sane Ace server)
+        $self->draw_subseq_list;
     }
 
     if ($done_zmap) {
-      # all OK
-      return 1;
-    } else {
-      my $msg;
-      if ($done_ace) {
-        $msg = "Saved OK, but please restart ZMap";
-      } else {
-        $msg = "Aborted save, failed to save to Ace";
-      }
-      $self->exception_message("$msg: $err");
-      return $done_ace;
+        # all OK
+        return 1;
+    }
+    else {
+        my $msg;
+        if ($done_ace) {
+            $msg = "Saved OK, but please restart ZMap";
+        }
+        else {
+            $msg = "Aborted save, failed to save to Ace";
+        }
+        $self->exception_message($err, $msg);
+        return $done_ace;
     }
 }
 

@@ -2738,16 +2738,17 @@ sub save_sub {
     confess "Missing SubSeq argument" unless $sub;
 
     my $top = $self->top_window;
-    $top->grab;     # Stop user closing window before save is finished
+    $top->grab;    # Stop user closing window before save is finished
+                   ### Should be "busy"? ###
 
-    my $old = $self->SubSeq;
+    my $old      = $self->SubSeq;
     my $old_name = $old->name;
     my $new_name = $sub->name;
 
     # Allow the "annotation in progress" remark to be deleted. If the old
     # locus had it, but the new one does not, then it was deliberately
-    # deleted, so don't set it again.    
-    unless ($old->Locus->annotation_in_progress && ! $sub->Locus->annotation_in_progress) {
+    # deleted, so don't set it again.
+    unless ($old->Locus->annotation_in_progress && !$sub->Locus->annotation_in_progress) {
         $sub->Locus->set_annotation_in_progress;
     }
 
@@ -2760,18 +2761,19 @@ sub save_sub {
     my $SessionWindow = $self->SessionWindow;
 
     if ($SessionWindow->replace_SubSeq($sub, $old)) {
-      # more updating of internal state - if we're OK to do that
 
-      $self->SubSeq($sub);
-      $self->update_transcript_remark_widget($sub);
-      $self->name($new_name);
-      $self->evidence_hash($sub->clone_evidence_hash);
+        # more updating of internal state - if we're OK to do that
 
-      # update_Locus in this object will be called
-      # from update_Locus in the SessionWindow
-      $SessionWindow->update_Locus($sub->Locus);
+        $self->SubSeq($sub);    ### Fails here
+        $self->update_transcript_remark_widget($sub);
+        $self->name($new_name);
+        $self->evidence_hash($sub->clone_evidence_hash);
 
-      $sub->is_archival(1);
+        # update_Locus in this object will be called
+        # from update_Locus in the SessionWindow
+        $SessionWindow->update_Locus($sub->Locus);
+
+        $sub->is_archival(1);
     }
 
     $top->grabRelease;
