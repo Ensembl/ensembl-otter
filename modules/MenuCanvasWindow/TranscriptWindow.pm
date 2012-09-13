@@ -795,7 +795,7 @@ sub window_close {
 
         if (! $ok) {
             $self->deiconify_and_raise;
-            $self->exception_message($err, 'Error while detecting changes to save');
+            $self->exception_message($err, 'Error checking for changes to transcript');
             my $dialog = $self->canvas->toplevel->Dialog(
                 -title          => 'otter: Abandon?',
                 -bitmap         => 'question',
@@ -2721,25 +2721,39 @@ sub new_SubSeq_from_tk {
 sub save_if_changed {
     my ($self) = @_;
 
-    try {
-        if (my $sub = $self->get_SubSeq_if_changed) {
-            $self->save_sub($sub);
-        }
+    my $sub = try {
+        $self->get_SubSeq_if_changed;
     }
-    catch { $self->exception_message($::_, 'Error saving transcript'); };
-    # Make sure the annotators see the messages!
+    catch {
+        # Make sure the annotators see the messages!
+        $self->exception_message($::_, 'Error checking for changes to transcript');
+        return;
+    };
 
-    return;
+    return $self->save_sub($sub);
 }
 
 sub save_sub {
     my ($self, $sub) = @_;
 
-    confess "Missing SubSeq argument" unless $sub;
-
     my $top = $self->top_window;
-    $top->grab;    # Stop user closing window before save is finished
-                   ### Should be "busy"? ###
+    $top->Busy;
+    return try {
+        $self->_do_save_subseq_work($sub);
+    }
+    catch {
+        $self->exception_message($::_, 'Error saving transcipt');
+        return 0;
+    }
+    finally {
+        $top->Unbusy;
+    }
+}
+
+sub _do_save_subseq_work {
+    my ($self, $sub) = @_;
+    
+    confess "Missing SubSeq argument" unless $sub;
 
     my $old      = $self->SubSeq;
     my $old_name = $old->name;
@@ -2754,17 +2768,17 @@ sub save_sub {
 
     my $clone_name = $sub->clone_Sequence->name;
     if ($clone_name eq $new_name) {
-        $self->message("Can't have SubSequence with same name as clone!");
-        $top->grabRelease;
-        return;
+        die("Can't have SubSequence with same name as clone!\n");
     }
-    my $SessionWindow = $self->SessionWindow;
 
+    my $SessionWindow = $self->SessionWindow;
+    
+    # replace_SubSeq() saves to persistent storage and zmap
     if ($SessionWindow->replace_SubSeq($sub, $old)) {
 
         # more updating of internal state - if we're OK to do that
 
-        $self->SubSeq($sub);    ### Fails here
+        $self->SubSeq($sub);
         $self->update_transcript_remark_widget($sub);
         $self->name($new_name);
         $self->evidence_hash($sub->clone_evidence_hash);
@@ -2775,8 +2789,6 @@ sub save_sub {
 
         $sub->is_archival(1);
     }
-
-    $top->grabRelease;
 
     return 1;
 }
