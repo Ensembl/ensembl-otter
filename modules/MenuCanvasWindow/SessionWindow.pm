@@ -1106,10 +1106,8 @@ sub _do_search {
     foreach my $name ($self->list_all_SubSeq_names) {
         my $sub = $self->get_SubSeq($name) or next;
         try {
-            my $str = $sub->ace_string;
-            if (my ($hit) = $str =~ /$regex/) {
-                push(@matching_sub_names, $name);
-            }
+            push @matching_sub_names, $name
+                if $sub->ace_string =~ /$regex/;
         }
         catch {
             # Data outside our control may break Hum::Ace::SubSeq  RT:188195, 189606
