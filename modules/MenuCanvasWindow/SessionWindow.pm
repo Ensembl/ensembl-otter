@@ -1094,19 +1094,11 @@ sub _do_search {
     # Searches for the text given in the supplied Entry in
     # the acedb string representation of all the subsequences.
 
-    my $canvas = $self->canvas;
-    my( $query_str, $regex );
-    try {
-        $query_str = $search_box->get();
-        $query_str =~ s{([^\w\*\?\\])}{\\$1}g;
-        $query_str =~ s{\*}{.*}g;
-        $query_str =~ s{\?}{.}g;
-        $regex =  qr/($query_str)/i;
-    };
-    return unless $query_str;
-    # warn $query_str;
-    # warn $regex;
-    $canvas->delete('msg');
+    my $query_str = $search_box->get;
+    my $regex = _search_regex($query_str);
+    return unless $regex;
+
+    $self->canvas->delete('msg');
     $self->deselect_all();
 
     my @matching_sub_names;
@@ -1146,6 +1138,17 @@ sub _do_search {
     return;
 }
 
+sub _search_regex {
+    # not a method
+    my ($query_str) = @_;
+    $query_str =~ s{([^\w\*\?\\])}{\\$1}g;
+    $query_str =~ s{\*}{.*}g;
+    $query_str =~ s{\?}{.}g;
+    return unless $query_str;
+    my $regex;
+    try { $regex = qr/($query_str)/i; }; # catch syntax errors
+    return $regex;
+}
 
 sub ace_path {
     my ($self) = @_;
