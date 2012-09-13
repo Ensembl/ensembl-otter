@@ -67,7 +67,13 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
     # my $dsn = "species=pig;dbname=vega_sus_scrofa_20120618_67;host=ensdb-web-17;port=5317";
 
     # my @args = qw( -dbname vega_mus_musculus_20120821_68_GRCm38 -host ensdb-web-17 -port 5317 );
-    my @args = qw( -dbname vega_homo_sapiens_20120813_68_GRCh37 -host ensdb-web-17 -port 5317 );
+    # my @args = qw( -dbname vega_homo_sapiens_20120813_68_GRCh37 -host ensdb-web-17 -port 5317 );
+
+    # my @args = qw( -dbname vega_mus_musculus_20120821_68_GRCm38 -host ensdb-web-17 -port 5317 );
+    # my @args = qw( -dbname vega_homo_sapiens_20120813_68_GRCh37 -host ensdb-web-17 -port 5317 );
+
+    # my @args = qw( -dbname vega_homo_sapiens_20120822_68_GRCh37 -host ensdb-web-17 -port 5317 );
+    my @args = qw( -dbname vega_mus_musculus_20120822_68_GRCm38 -host ensdb-web-17 -port 5317 );
 
     my $now = scalar localtime;
     print "$now fix_gene_biotypes.pl on (@args)\n";
