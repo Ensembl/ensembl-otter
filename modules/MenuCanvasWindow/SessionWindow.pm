@@ -1055,7 +1055,7 @@ sub make_search_panel {
     # Is hunting in CanvasWindow?
     my $hunter = sub{
         $top->Busy;
-        $self->hunt_for_Entry_text($search_box);
+        $self->_do_search($search_box);
         $top->Unbusy;
     };
     my $button = $search_frame->Button(
@@ -1088,8 +1088,8 @@ sub make_search_panel {
 }
 
 
-sub hunt_for_Entry_text {
-    my ($self, $entry) = @_;
+sub _do_search {
+    my ($self, $search_box) = @_;
 
     # Searches for the text given in the supplied Entry in
     # the acedb string representation of all the subsequences.
@@ -1097,7 +1097,7 @@ sub hunt_for_Entry_text {
     my $canvas = $self->canvas;
     my( $query_str, $regex );
     try {
-        $query_str = $entry->get();
+        $query_str = $search_box->get();
         $query_str =~ s{([^\w\*\?\\])}{\\$1}g;
         $query_str =~ s{\*}{.*}g;
         $query_str =~ s{\?}{.}g;
@@ -1121,7 +1121,7 @@ sub hunt_for_Entry_text {
         }
         catch {
             # Data outside our control may break Hum::Ace::SubSeq  RT:188195, 189606
-            warn "hunt_for_Entry_text on $name: $::_";
+            warn sprintf "%s::_do_search(): $name: $::_", __PACKAGE__;
             push @ace_fail_names, $name;
             # It could be a real error, not just some broken data.
             # We'll mention that if there are no results.
@@ -1130,11 +1130,11 @@ sub hunt_for_Entry_text {
 
     if (@ace_fail_names && !@matching_sub_names) {
         # We see only errors.  Highlight them.
-        $self->message("hunt_for_Entry_text: NO RESULTS, but did encounter errors while searching.  Highlighting those instead.");
+        $self->message("Search: NO RESULTS, but did encounter errors while searching.  Highlighting those instead.");
         @matching_sub_names = @ace_fail_names;
     } elsif (@ace_fail_names) {
         # Mixture of errors and hits.  Highlight the hits.
-        $self->message("hunt_for_Entry_text: I also saw some errors while searching.  Search for 'wibble' to highlight those.");
+        $self->message("Search: I also saw some errors while searching.  Search for 'wibble' to highlight those.");
     }
 
     if (@matching_sub_names) {
