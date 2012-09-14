@@ -341,7 +341,7 @@ sub do_rename_locus {
         } else {
             $msg = "Could not rename";
         }
-        $self->exception_message("$msg\nwhile renaming locus '$old_name' to '$new_name': $err");
+        $self->exception_message($err, "$msg\nwhile renaming locus '$old_name' to '$new_name'");
         return -1;
     }
 }
@@ -749,9 +749,8 @@ sub launch_GenomicFeatures {
         }
     }
     catch {
-        my $msg = "Error creating GenomicFeatures window: $::_";
-        warn $msg;
-        $self->exception_message($msg);
+        my $msg = 'Error creating GenomicFeatures window';
+        $self->exception_message($::_, $msg);
     };
 
     return;
@@ -1473,7 +1472,13 @@ sub fetch_external_SubSeqs {
     my $filter_hash = $self->AceDatabase->filters;
     while (my ($filter_name) = $sth->fetchrow) {
         my $filter = $filter_hash->{$filter_name}{'filter'};
-        my @tsct = $self->AceDatabase->process_gff_file_from_Filter($filter);
+        my @tsct = try {
+            $self->AceDatabase->process_gff_file_from_Filter($filter);
+        }
+        catch {
+            $self->exception_message($::_, "Error processing '$filter_name' GFF file");
+            return;
+        };
         if (@tsct) {
             $self->add_external_SubSeqs(@tsct);
         }
@@ -1550,7 +1555,7 @@ sub delete_subsequences {
     # delete from acedb
     $ok = 0;
     try { $self->save_ace($ace); $ok = 1; }
-    catch { $self->exception_message("Aborted delete, failed to save to Ace: $::_"); };
+    catch { $self->exception_message($::_, 'Aborted delete, failed to save to Ace'); };
     $ok or return;
 
     # Remove from our objects
@@ -1562,7 +1567,7 @@ sub delete_subsequences {
     # delete from Zmap
     $ok = 0;
     try { $self->zMapSendCommands(@xml); $ok = 1; }
-    catch { $self->exception_message("Deleted OK, but please restart ZMap: $::_"); };
+    catch { $self->exception_message($::_, 'Deleted OK, but please restart ZMap'); };
     $ok or return;
 
     return;
@@ -1804,7 +1809,7 @@ sub Assembly {
             $ok = 1;
         }
         catch {
-            $self->exception_message($@, "Can't fetch Assembly '$slice_name'");
+            $self->exception_message($::_, "Can't fetch Assembly '$slice_name'");
         };
         $ok or return;
 
@@ -1838,15 +1843,18 @@ sub save_Assembly {
         $self->Assembly, $new, $self->AceDatabase->offset);
     my $ace = $new->ace_string;
 
-    my $done_ace;
-    my $done_zmap = eval {
+    my $done_ace = 0;
+    my $err = undef;
+    my $done_zmap = try {
         $self->save_ace($ace);
         $done_ace = 1;
 
         $self->zMapSendCommands(@xml);
         return 1;
+    }
+    catch {
+        $err = $::_;
     };
-    my $err = $@;
 
     # Set internal state only if we saved to Ace OK
     if ($done_ace) {
@@ -1869,7 +1877,7 @@ sub save_Assembly {
         # exception_message, it is covered by widgets
         #
         # Yellow note goes on the session window, somewhat invisible
-        $self->exception_message("$msg: $err");
+        $self->exception_message($err, $msg);
         # Exception box goes to Bio::Otter::Error / Tk::Error
         die "$msg\n";
     }
@@ -2441,7 +2449,13 @@ sub zircon_zmap_view_features_loaded {
                 $state_hash->{'failed'} = 0; # reset failed flag if filter succeeds
                 my $filter = $filter_entry->{'filter'};
                 if ($filter->process_gff_file) {
-                    my @tsct = $self->AceDatabase->process_gff_file_from_Filter($filter);
+                    my @tsct = try {
+                        $self->AceDatabase->process_gff_file_from_Filter($filter);
+                    }
+                    catch {
+                        $self->exception_message($::_, "Error processing '$set_name' GFF file");
+                        return;
+                    };
                     if (@tsct) {
                         $self->add_external_SubSeqs(@tsct);
                         $self->draw_subseq_list;
