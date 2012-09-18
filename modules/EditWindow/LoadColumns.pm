@@ -307,7 +307,7 @@ sub load_filters {
             $self->AceDatabase->Client->reauthorize_if_cookie_will_expire_soon;
             my @featuresets = 
                 map { $_->{filter}->name } @to_fetch;
-            $self->SessionWindow->zMapLoadFeatures(@featuresets);
+            $self->SessionWindow->zmap->load_features(@featuresets);
         }
         else {
             $top->messageBox(

@@ -437,7 +437,7 @@ sub launch_exonerate {
 
     # get marked region (if requested)
     if ($self->{_use_marked_region}) {
-        my ($mark_start, $mark_end) = $SessionWindow->zMapGetMark;
+        my ($mark_start, $mark_end) = $SessionWindow->zmap->get_mark;
         if ($mark_start && $mark_end) {
             $self->logger->warn("Setting exonerate genomic start & end to marked region: $mark_start - $mark_end");
             $otf->target_start($mark_start);
