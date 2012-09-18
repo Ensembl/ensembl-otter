@@ -24,32 +24,28 @@ my $ZMAP_DEBUG = $ENV{OTTERLACE_ZMAP_DEBUG};
 $Data::Dumper::Terse = 1;
 $Data::Dumper::Indent = 1;
 
-#==============================================================================#
-#
-# WARNING: THESE ARE INJECTED METHODS!!!!
-#  I HAVE PREFIXED THEM ALL WITH zMap SO NONE SHOULD CLASH
-#  BUT ALL WILL NEED CHANGING LATER (RDS)
-#
-#==============================================================================#
+sub new {
+    my ($pkg, @args) = @_;
+    my $new = bless { }, $pkg;
+    $new->_init(@args);
+    return $new;
+}
 
-=head1 WARNING
-
-This module is included into MenuCanvasWindow::SessionWindow.  All
-methods have been prefixed with "zMap" to avoid any clashes, but this
-isn't a long term solution.
-
-=cut
-
-sub zMapInitialize {
-    my ($self) = @_;
+sub _init {
+    my ($self, $SessionWindow, %args) = @_;
+    $self->{_SessionWindow} = $SessionWindow;
+    weaken $self->{_SessionWindow};
+    @{$self}{qw( conf_dir arg_list )} =
+        @args{qw( -conf_dir -arg_list )};
     $self->{_zMap_ZMAP_CONNECTOR} =
         $self->zMapZmapConnectorNew;
     $self->{_xremote_cache} =
         Bio::Otter::ZMap::XRemoteCache->new;
+    $self->launch_zmap;
     return;
 }
 
-=head2 zMapLaunchZmap
+=head2 launch_zmap
 
 This is where it all starts.  This is the method which gets called
 on 'Launch ZMap' menu item in the session window.
@@ -72,15 +68,13 @@ sub _launchZMap {
     }
 
     my $win_id = $self->zMapZmapConnector->server_window_id;
-    my $conf_dir = $self->AceDatabase->zmap_dir;
-    my $zmap_arg_list =
-        $self->AceDatabase->DataSet->config_value_list('zmap_config', 'arguments');
+    my $arg_list = $self->arg_list;
 
     my @e = (
         'zmap',
-        '--conf_dir' => $conf_dir,
+        '--conf_dir' => $self->conf_dir,
         '--win_id'   => $win_id,
-        @{$zmap_arg_list},
+        ($arg_list ? @{$arg_list} : ()),
     );
 
     warn "Running: @e\n";
@@ -103,36 +97,36 @@ sub _launchZMap {
     return; # unreached, quietens perlcritic
 }
 
-=head2 zMapLaunchZmap
+=head2 launch_zmap
 
 Launches zmap, displaying the features of $self->slice_name(), killing
 an existing one if it exists.
 
 =cut
 
-sub zMapLaunchZmap {
+sub launch_zmap {
     my ($self) = @_;
 
     my $relaunch = 1;
 
-    if (!$self->zMapKillZmap($relaunch)) {
+    if (!$self->_kill_zmap($relaunch)) {
         $self->_launchZMap();
     }
 
     return;
 }
 
-=head2 zMapLaunchInAZmap
+=head2 launch_in_a_zmap
 
 Uses an existing ZMap to display the features of $self->slice_name().
 
 =cut
 
-sub zMapLaunchInAZmap {
+sub launch_in_a_zmap {
     my ($self) = @_;
 
     # If we already have a Zmap attached, shut it down
-    if (!$self->zMapKillZmap(0, 1)) {
+    if (!$self->_kill_zmap(0, 1)) {
         $self->_launchInAZMap();
     }
 
@@ -141,7 +135,7 @@ sub zMapLaunchInAZmap {
 
 =head2 _launchInAZMap
 
-The real part of zMapLaunchInAZmap()
+The real part of launch_in_a_zmap()
 
 =cut
 
@@ -180,19 +174,19 @@ sub _launchInAZMap {
     }
 
     $self->zMapPID($pid);
-    my $config = config_ini_format($self->AceDatabase->ace_config, 'ZMap');
+    my $config = config_ini_format($self->SessionWindow->AceDatabase->ace_config, 'ZMap');
     $self->zMapNewView($xremote, $config);
 
     return;
 }
 
-sub zMapSendCommands {
+sub send_commands {
     my ($self, @xml) = @_;
 
     my $xr = $self->zMapGetXRemoteClientByName($self->slice_name());
     unless ($xr) {
         my $for = $self->slice_name();
-        die "zMapSendCommands cannot contact ZMap: no current window for $for";
+        die "send_commands cannot contact ZMap: no current window for $for";
     }
     warn "Sending window '", $xr->window_id, "' this xml:\n", @xml;
 
@@ -280,17 +274,17 @@ sub zMapFinalised {
     return (200, "all closed");
 }
 
-=head2 zMapKillZmap
+=head2 _kill_zmap
 
 Attempts  to kill  zmap,  return true  if  it succeeded  and false  on
-failure.  If relaunch = true and zMapKillZmap returns true then zmap
+failure.  If relaunch = true and _kill_zmap returns true then zmap
 should relaunch, any other combination probably means no relaunch will
 occur. There will still be a call to RelaunchZMap though as a finalised
 request will be sent from zmap.
 
 =cut
 
-sub zMapKillZmap {
+sub _kill_zmap {
     my ($self, $relaunch, $in_a_zmap) = @_;
 
     ### We're only using the pid as marker for zmap having been started
@@ -325,7 +319,7 @@ sub zMapKillZmap {
             $self->xremote_cache->remove_client_with_id($xr->window_id());
         }
 
-        warn sprintf "finishing %s", "zMapKillZmap";
+        warn sprintf "finishing %s", "_kill_zmap";
 
         return $rval;
     }
@@ -367,7 +361,7 @@ sub zMapZmapConnector {
 
 sub zMapZmapConnectorNew {
     my ($self) = @_;
-    my $mb = $self->menu_bar();
+    my $mb = $self->SessionWindow->menu_bar();
     my $zc = Bio::Otter::ZMap::Connect->new;
     $zc->init($mb, \&_zmap_request_callback, $self->zmap_callback_data);
     my $id = $zc->server_window_id();
@@ -386,7 +380,7 @@ sub xremote_cache {
 
 sub main_window_name {
     my ($self) = @_;
-    my $name = 'ZMap port #' . $self->AceDatabase->ace_server->port();
+    my $name = 'ZMap port #' . $self->SessionWindow->AceDatabase->ace_server->port();
     return $name;
 }
 
@@ -445,7 +439,7 @@ sub _zMapEdit {
     my ($name, $feat) = %$feat_hash;
     my $style = $feat->{'style'};
     if ($style && lc($style) eq 'genomic_canonical') {
-        $self->zircon_zmap_view_edit_clone($name);
+        $self->SessionWindow->zircon_zmap_view_edit_clone($name);
         return 1;
     }
     else {
@@ -455,7 +449,7 @@ sub _zMapEdit {
             or confess "Unexpected feature format for ${name}";
         for my $s (@$subs) {
             if ($s->{'ontology'} eq 'exon') {
-                return $self->zircon_zmap_view_edit_transcript($name);
+                return $self->SessionWindow->zircon_zmap_view_edit_transcript($name);
             }
         }
         return 0;
@@ -473,7 +467,8 @@ sub zMapSingleSelect {
     my $zc = $self->zMapZmapConnector;
     my $features_hash =
         $xml_hash->{'request'}{'align'}{'block'}{'featureset'}{'feature'} || {};
-    $self->zircon_zmap_view_single_select([ keys %$features_hash ]);
+    $self->SessionWindow->zircon_zmap_view_single_select(
+        [ keys %$features_hash ]);
     return (200, $zc->handled_response(1));
 }
 
@@ -489,7 +484,8 @@ sub zMapMultipleSelect {
     my $zc = $self->zMapZmapConnector;
     my $features_hash =
         $xml_hash->{'request'}{'align'}{'block'}{'featureset'}{'feature'} || {};
-    $self->zircon_zmap_view_multiple_select([ keys %$features_hash ]);
+    $self->SessionWindow->zircon_zmap_view_multiple_select(
+        [ keys %$features_hash ]);
     return (200, $zc->handled_response(1));
 }
 
@@ -522,7 +518,7 @@ sub _zMapFeatureDetailsXml {
     my $feature_hash = $xml_hash->{'request'}{'align'}{'block'}{'featureset'}{'feature'};
     return unless $feature_hash && keys %{$feature_hash};
     my $feature_details_xml =
-        $self->zircon_zmap_view_feature_details_xml(%{$feature_hash});
+        $self->SessionWindow->zircon_zmap_view_feature_details_xml(%{$feature_hash});
     return $feature_details_xml;
 }
 
@@ -555,7 +551,7 @@ sub zMapFeaturesLoaded {
     my $status  = $xml->{'request'}{'status'}{'value'};
     my $message = $xml->{'request'}{'status'}{'message'};
 
-    $self->zircon_zmap_view_features_loaded($status, $message, @featuresets);
+    $self->SessionWindow->zircon_zmap_view_features_loaded($status, $message, @featuresets);
 
     return (200, $self->zMapZmapConnector->handled_response(1));
 }
@@ -669,7 +665,7 @@ sub zMapRegisterClientRequest {
     return;
 }
 
-sub zMapGetMark {
+sub get_mark {
 
     my ($self) = @_;
 
@@ -700,7 +696,7 @@ sub zMapGetMark {
     return;
 }
 
-sub zMapLoadFeatures {
+sub load_features {
     my ($self, @featuresets) = @_;
 
     if (my $client = $self->zMapGetXRemoteClientByAction('load_features')) {
@@ -735,7 +731,7 @@ sub zMapLoadFeatures {
     return;
 }
 
-sub zMapDeleteFeaturesets {
+sub delete_featuresets {
     my ($self, @featuresets) = @_;
 
     if (my $client = $self->zMapGetXRemoteClientByAction('delete_feature')) {
@@ -772,7 +768,7 @@ sub zMapDeleteFeaturesets {
     return;
 }
 
-sub zMapZoomToSubSeq {
+sub zoom_to_subseq {
 
     my ($self, $subseq) = @_;
 
@@ -783,7 +779,7 @@ sub zMapZoomToSubSeq {
         $xml->open_tag('align');
         $xml->open_tag('block');
         $xml->open_tag('featureset', { name => $subseq->GeneMethod->name });
-        $subseq->zmap_xml_feature_tag($xml, $self->AceDatabase->offset);
+        $subseq->zmap_xml_feature_tag($xml, $self->SessionWindow->AceDatabase->offset);
         $xml->close_all_open_tags;
 
         my $command = $xml->flush;
@@ -814,7 +810,7 @@ FORMAT
 sub _zmap_new_view_xml {
     my ($self, $config) = @_;
 
-    my $slice = $self->AceDatabase->smart_slice;
+    my $slice = $self->SessionWindow->AceDatabase->smart_slice;
 
     my $segment = $slice->ssname;
     my $start   = $slice->start;
@@ -944,6 +940,36 @@ sub zMapParseResponse {
     my ($status, $xml) = split(/$delimit/, $response, 2);
     my $hash   = XMLin($xml);
     return ($status, $hash);
+}
+
+sub slice_name {
+    my ($self) = @_;
+    my $slice_name = $self->SessionWindow->slice_name;
+    return;
+}
+
+sub SessionWindow {
+    my ($self) = @_;
+    my $SessionWindow = $self->{'_SessionWindow'};
+    return $SessionWindow;
+}
+
+sub conf_dir {
+    my ($self) = @_;
+    my $conf_dir = $self->{'conf_dir'};
+    return $conf_dir;
+}
+
+sub arg_list {
+    my ($self) = @_;
+    my $arg_list = $self->{'arg_list'};
+    return $arg_list;
+}
+
+sub DESTROY {
+    my ($self) = @_;
+    $self->_kill_zmap;
+    return;
 }
 
 1;

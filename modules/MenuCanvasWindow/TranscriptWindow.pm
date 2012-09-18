@@ -835,7 +835,7 @@ sub window_close {
 sub show_subseq {
     my ($self) = @_;
 
-    my $success = $self->SessionWindow->zMapZoomToSubSeq($self->SubSeq);
+    my $success = $self->SessionWindow->zmap->zoom_to_subseq($self->SubSeq);
 
     $self->message("ZMap: zoom to subsequence failed") unless $success;
 

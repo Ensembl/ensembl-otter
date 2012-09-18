@@ -256,7 +256,7 @@ sub launch_dotter {
     my $length = $genomic->sequence_length;
     my ($start, $end) =
         ($self->{'_use_mark'})
-        ? $self->SessionWindow->zMapGetMark
+        ? $self->SessionWindow->zmap->get_mark
         : (1, $length);
     (defined $start && $start >= 1)       or $start = 1;
     (defined $end   && $end   <= $length) or $end   = $length;

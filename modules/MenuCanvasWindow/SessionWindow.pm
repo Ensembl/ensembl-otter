@@ -26,6 +26,7 @@ use EditWindow::Clone;
 use EditWindow::LocusName;
 use MenuCanvasWindow::TranscriptWindow;
 use MenuCanvasWindow::GenomicFeaturesWindow;
+use MenuCanvasWindow::ZMapSeqChooser;
 use Text::Wrap qw{ wrap };
 
 use Bio::Otter::Lace::Exonerate;
@@ -34,10 +35,7 @@ use Bio::Vega::Transform::Otter::Ace;
 
 use Log::Log4perl;
 
-use base qw{
-MenuCanvasWindow
-MenuCanvasWindow::ZMapSeqChooser
-};
+use base qw{ MenuCanvasWindow };
 
 my $PROT_SCORE = 100;
 my $DNA_SCORE  = 100;
@@ -97,8 +95,7 @@ sub initialize {
     $self->draw_subseq_list;
     $self->populate_clone_menu;
     $self->AceDatabase->zmap_dir_init;
-    $self->zMapInitialize;
-    $self->zMapLaunchZmap;
+    $self->launch_zmap;
     $self->top_window->raise;
 
     return;
@@ -309,7 +306,7 @@ sub do_rename_locus {
         $self->save_ace($ace);
         $done{'ace'} = 1;
 
-        $self->zMapSendCommands(@xml);
+        $self->zmap->send_commands(@xml);
         $done{'zmap'} = 1;
 
         return 1;
@@ -536,7 +533,7 @@ sub populate_menus {
     my $tools_menu = $self->make_menu("Tools");
 
     # Launch Zmap
-    my $zmap_launch_command = sub { $self->zMapLaunchZmap };
+    my $zmap_launch_command = sub { $self->launch_zmap };
     $tools_menu->add('command',
                -label          => 'Launch ZMap',
                -command        => $zmap_launch_command,
@@ -546,7 +543,7 @@ sub populate_menus {
     $top->bind('<Control-z>', $zmap_launch_command);
     $top->bind('<Control-Z>', $zmap_launch_command);
 
-    $zmap_launch_command = sub { $self->zMapLaunchInAZmap };
+    $zmap_launch_command = sub { $self->zmap->launch_in_a_zmap };
     $tools_menu->add('command',
                -label          => 'Launch In A ZMap',
                -command        => $zmap_launch_command,
@@ -1561,7 +1558,7 @@ sub delete_subsequences {
     $self->draw_subseq_list;
 
     # delete from Zmap
-    try { $self->zMapSendCommands(@xml); return 1; }
+    try { $self->zmap->send_commands(@xml); return 1; }
     catch {
         $self->exception_message($_, 'Deleted OK, but please restart ZMap');
         return 0;
@@ -1847,7 +1844,7 @@ sub save_Assembly {
         $self->save_ace($ace);
         $done_ace = 1;
 
-        $self->zMapSendCommands(@xml);
+        $self->zmap->send_commands(@xml);
         return 1;
     }
     catch {
@@ -1902,7 +1899,7 @@ sub delete_featuresets {
         # deleting anything if any featureset does not currently exist
         # in the zmap window
 
-        $self->zMapDeleteFeaturesets($type);
+        $self->zmap->delete_featuresets($type);
     }
 
     $self->save_ace($ace);
@@ -1932,7 +1929,7 @@ sub replace_SubSeq {
     try {
         $self->save_ace($ace);
         $done_ace = 1;
-        $self->zMapSendCommands(@xml);
+        $self->zmap->send_commands(@xml);
         $done_zmap = 1;
     }
     catch { $err = $_; };
@@ -2158,7 +2155,7 @@ sub launch_exonerate {
 
     $self->save_ace($ace_text);
 
-    $self->zMapLoadFeatures(@method_names) if $db_edited;
+    $self->zmap->load_features(@method_names) if $db_edited;
 
     return $db_edited;
 }
@@ -2430,9 +2427,31 @@ sub update_window_title_unsaved_flag {
     return;
 }
 
+sub launch_zmap {
+    my ($self) = @_;
+    delete $self->{'zmap'};
+    my $conf_dir = $self->AceDatabase->zmap_dir;
+    my $arg_list =
+        $self->AceDatabase->DataSet->config_value_list(
+            'zmap_config', 'arguments');
+    my $zmap = 
+        $self->_zmap_create(
+            '-conf_dir' => $conf_dir,
+            '-arg_list' => $arg_list,
+        );
+    $self->{'zmap'} = $zmap;
+    return;
+}
+
 
 ### BEGIN: ZMap control interface
 
+
+sub _zmap_create {
+    my ($self, @args) = @_;
+    my $zmap = MenuCanvasWindow::ZMapSeqChooser->new($self, @args);
+    return $zmap;
+}
 
 sub zircon_zmap_view_features_loaded {
     my ($self, $status, $message, @featuresets) = @_;
@@ -2628,6 +2647,11 @@ sub zircon_zmap_view_multiple_select {
     return;
 }
 
+sub zmap {
+    my ($self) = @_;
+    my $zmap = $self->{'zmap'};
+    return $zmap;
+}
 
 ### END: ZMap control interface
 
@@ -2637,7 +2661,7 @@ sub DESTROY {
 
     warn "Destroying SessionWindow for ", $self->ace_path, "\n";
 
-    $self->zMapKillZmap;
+    delete $self->{'zmap'};
     delete $self->{'_AceDatabase'};
 
     return;
