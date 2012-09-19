@@ -60,33 +60,45 @@ sub initialise {
             );
 
     # Name of genomic sequence
-    my $name_frame = $lab_frame->Frame->pack(
-        -side => 'top',
-        -ipady  => 6,
-        );
-    $name_frame->Label(
-        -text   => 'Name:',
-        -anchor => 's',
-        -padx   => 6,
-        )->pack(-side => 'left');
-    $self->genomic(
-        $name_frame->Entry(
-            -width  => 30,
-            -state  => 'disabled',
-            # Recent versions of Tk::Entry have a
-            # third state "readonly" which allows
-            # the name to still be selected to copy
-            # it to the clipboard.
-            )->pack(-side => 'left')
-        );
+    Tk::grid(
+        $lab_frame->Label(
+            -text   => 'Name:',
+            -anchor => 'w',
+        ),
+        $self->genomic(
+            $lab_frame->Entry(
+                -width  => 30,
+                -state  => 'disabled',
+                # Recent versions of Tk::Entry have a
+                # third state "readonly" which allows
+                # the name to still be selected to copy
+                # it to the clipboard.
+            ),
+        ),
+        '-sticky' => 'nsew');
 
-    # Get mark radio button
-
-    $lab_frame->Checkbutton(
-        -variable => \$self->{_use_mark},
-        -text => 'Use coordinates of marked region',
-        -anchor => 'w',
-    )->pack(-side => 'top');
+    # Region radio buttons
+    my $region_frame = $lab_frame->Frame;
+    Tk::grid(
+        $lab_frame->Label(
+            -text   => 'Region:',
+            -anchor => 'w',
+        ),
+        $region_frame,
+        '-sticky' => 'nsew');
+    Tk::grid(
+        (map { ## no critic (BuiltinFunctions::ProhibitComplexMappings)
+            my ($text, $value) = @{$_};
+            $region_frame->Radiobutton(
+                -variable => \$self->{_use_mark},
+                -text     => $text,
+                -value    => $value,
+                );
+         } ([ 'All',  0 ], [ 'Marked region', 1 ], )),
+        '-sticky' => 'ns');
+    $region_frame->gridColumnconfigure($_, '-weight' => 1)
+        for 0..1;
+    $self->{_use_mark} = 1;
 
     my $button_frame = $top->Frame->pack(
         -side   => 'top',
