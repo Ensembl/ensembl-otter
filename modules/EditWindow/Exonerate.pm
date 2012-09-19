@@ -214,12 +214,6 @@ sub initialise {
 
     my $cb_frame = $param_frame->Frame->pack(-side => 'left', -fill => 'x');
 
-    $cb_frame->Checkbutton(
-        -variable => \$self->{_clear_existing},
-        -text     => 'Clear existing OTF alignments',
-        -anchor   => 'w',
-    )->pack(-side => 'top', -expand => 1, -fill => 'x');
-
     $self->{_use_marked_region} = 1;
 
     $cb_frame->Checkbutton(
@@ -227,6 +221,12 @@ sub initialise {
         -text     => 'Only search within marked region',
         -anchor   => 'w',
     )->pack(-side => 'top', -expand => 1, -fill => 'x');
+
+    $top->Checkbutton(
+        -variable => \$self->{_clear_existing},
+        -text     => 'Clear existing OTF alignments',
+        -anchor   => 'w',
+    )->pack(-side => 'top');
 
     ### Commands
     my $button_frame = $top->Frame->pack(@frame_pack);
