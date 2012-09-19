@@ -80,35 +80,13 @@ sub initialise {
             )->pack(-side => 'left')
         );
 
-    # Length of flank sequence
-    my $frame = $lab_frame->Frame->pack(
-        -side   => 'top',
-        -ipady  => 6,
-        );
-    $frame->Label(
-        -text   => 'Flank:',
-        )->pack(-side => 'left');
-    $self->flank(
-        $frame->Entry(
-            -width      => 6,
-            -justify    => 'right',
-            )->pack(-side => 'left')
-        );
-
-    # Pad between entries
-    $frame->Frame(
-        -width  => 10,
-        )->pack(-side => 'left');
-
     # Get mark radio button
 
-    $frame->Checkbutton(
+    $lab_frame->Checkbutton(
         -variable => \$self->{_use_mark},
         -text => 'Use coordinates of marked region',
         -anchor => 'w',
-    )->pack(-side => 'left');
-
-    $self->set_entry('flank', 50_000);
+    )->pack(-side => 'top');
 
     my $button_frame = $top->Frame->pack(
         -side   => 'top',
@@ -230,15 +208,6 @@ sub genomic {
         $self->{'_genomic'} = $genomic;
     }
     return $self->{'_genomic'};
-}
-
-sub flank {
-    my ($self, $flank) = @_;
-
-    if ($flank) {
-        $self->{'_flank'} = $flank;
-    }
-    return $self->{'_flank'};
 }
 
 sub revcomp_ref {
