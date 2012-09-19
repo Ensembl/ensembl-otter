@@ -38,7 +38,6 @@ sub initialise {
     ### Query frame
     my $query_frame = $top->LabFrame(
         -label     => 'Query sequences',
-        -labelside => 'acrosstop',
         -border    => 3,
     )->pack(@frame_expand);
 
@@ -155,13 +154,11 @@ sub initialise {
     ### Parameters
     my $param_frame = $top->LabFrame(
         -label     => 'Parameters',
-        -labelside => 'acrosstop',
         -border    => 3,
     )->pack(@frame_pack);
 
     my $repeat_radio_frame = $param_frame->LabFrame(
         -label     => 'Repeat masking',
-        -labelside => 'acrosstop',
         -border    => 3,
     )->pack(-side => 'bottom', -fill => 'y');
 

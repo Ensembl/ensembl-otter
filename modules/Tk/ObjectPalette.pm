@@ -25,7 +25,6 @@ sub Populate {
 	$self->SUPER::Populate($args);
 
     $self->{_mo_lf} = $self->LabFrame(
-		-labelside => 'acrosstop',
 	)->pack(
 		-side => 'top',
 		-padx => 10,
@@ -40,7 +39,6 @@ sub Populate {
     );
 
 	$self->{_ce_lf} = $self->LabFrame(
-		-labelside => 'acrosstop',
 	)->pack(
 		-side => 'left',
 		-padx => 10,
