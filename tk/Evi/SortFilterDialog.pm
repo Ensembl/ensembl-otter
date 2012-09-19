@@ -55,7 +55,6 @@ sub open {
 
             my $uframe = $currtab->LabFrame(
                 -label => 'Uniqueness of names:',
-                -labelside => 'acrosstop',
             )->pack(
                 -side => 'top',
                 -padx => 10,

@@ -43,7 +43,6 @@ sub initialise {
 
     my $clone_frame = $top->LabFrame(
         -label      => 'Clone',
-        -labelside  => 'acrosstop',
         -border     => 3,
         )->pack(@frame_pack);
 
@@ -65,7 +64,6 @@ sub initialise {
 
     my $assembly_frame = $top->LabFrame(
         -label      => 'Assembly',
-        -labelside  => 'acrosstop',
         -border     => 3,
         )->pack(@frame_pack);
     $self->make_entry($assembly_frame, 'Start: ',   'assembly_start',           8);
@@ -76,7 +74,6 @@ sub initialise {
 
     my $edit_frame = $top->LabFrame(
         -label      => 'Properties',
-        -labelside  => 'acrosstop',
         -border     => 3,
         )->pack(@frame_pack, -expand => 1, -fill => 'both' );
 
