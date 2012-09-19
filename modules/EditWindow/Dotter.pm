@@ -100,54 +100,13 @@ sub initialise {
         -width  => 10,
         )->pack(-side => 'left');
 
-    # Genomic start
-    $frame->Label(
-        -text   => 'Start:',
-        )->pack(-side => 'left');
-    $self->genomic_start(
-        $frame->Entry(
-            -width      => 9,
-            -justify    => 'right',
-            )->pack(-side => 'left')
-        );
-
-    # Pad between entries
-    $frame->Frame(
-        -width  => 10,
-        )->pack(-side => 'left');
-
-    # Genomic end
-    $frame->Label(
-        -text   => 'End:',
-        )->pack(-side => 'left');
-    $self->genomic_end(
-        $frame->Entry(
-            -width      => 9,
-            -justify    => 'right',
-            )->pack(-side => 'left')
-        );
-
     # Get mark radio button
 
-    $lab_frame->Checkbutton(
+    $frame->Checkbutton(
         -variable => \$self->{_use_mark},
-        -command => sub {
-            if ($self->{_use_mark}) {
-                my ($mark_start, $mark_end) = $self->SessionWindow->zMapGetMark;
-                if ($mark_start && $mark_end) {
-                    warn "Setting dotter genomic start & end to marked region: $mark_start - $mark_end";
-                    $self->set_entry('genomic_start', $mark_start);
-                    $self->set_entry('genomic_end', $mark_end);
-                }
-            }
-            else {
-                $self->set_entry('genomic_start', '');
-                $self->set_entry('genomic_end', '');
-            }
-        },
         -text => 'Use coordinates of marked region',
         -anchor => 'w',
-    )->pack(-side => 'bottom');
+    )->pack(-side => 'left');
 
     $self->set_entry('flank', 50_000);
 
@@ -273,24 +232,6 @@ sub genomic {
     return $self->{'_genomic'};
 }
 
-sub genomic_start {
-    my ($self, $genomic_start) = @_;
-
-    if (defined $genomic_start) {
-        $self->{'_genomic_start'} = $genomic_start;
-    }
-    return $self->{'_genomic_start'};
-}
-
-sub genomic_end {
-    my ($self, $genomic_end) = @_;
-
-    if (defined $genomic_end) {
-        $self->{'_genomic_end'} = $genomic_end;
-    }
-    return $self->{'_genomic_end'};
-}
-
 sub flank {
     my ($self, $flank) = @_;
 
@@ -322,25 +263,22 @@ sub launch_dotter {
     my ($self) = @_;
 
     my $match_name = $self->get_entry('match');
-    my $start      = $self->get_entry('genomic_start');
-    my $end        = $self->get_entry('genomic_end');
     my $genomic    = $self->query_Sequence;
     my $revcomp    = $self->revcomp_ref;
 
-    unless ($match_name and $genomic and $start and $end and $genomic) {
+    unless ($match_name and $genomic and $genomic) {
         warn "Missing parameters\n";
         return;
     }
 
-    if ($start > $end) {
-        ($start, $end) = ($end, $start);
-        $self->set_entry('genomic_start', $start);
-        $self->set_entry('genomic_end',   $end);
-    }
-
     my $length = $genomic->sequence_length;
-    $start = 1       if $start < 1;
-    $end   = $length if $end   > $length;
+    my ($start, $end) =
+        ($self->{'_use_mark'})
+        ? $self->SessionWindow->zMapGetMark
+        : (1, $length);
+    (defined $start && $start >= 1)       or $start = 1;
+    (defined $end   && $end   <= $length) or $end   = $length;
+    ($start, $end) = ($end, $start) if $start > $end;
 
     my $dotter = $self->dotter;
     $dotter->query_Sequence($genomic);
