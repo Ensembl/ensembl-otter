@@ -52,12 +52,13 @@ sub initialise {
 
     # Labelled frame around all the Genomic stuff
     my $lab_frame = $top->LabFrame(
-        -borderwidth    => 3,
-        -label          => 'Genomic sequence',
-        -labelside      => 'acrosstop',
+        -border => 3,
+        -label  => 'Genomic sequence',
         )->pack(
-            -side => 'top',
-            );
+        -side   => 'top',
+        -expand => 1,
+        -fill   => 'both',
+        );
 
     # Name of genomic sequence
     Tk::grid(
