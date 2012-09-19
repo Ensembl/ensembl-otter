@@ -226,16 +226,14 @@ sub query_Sequence {
     return $self->{'_query_Sequence'};
 }
 
+my $name_from_clipboard_pattern = # match fMap "blue box"
+    qr!^(?:<?(?:Protein|Sequence)[:>]?)?\"?([^\"\s]+)\"?\s+-?\d+\s+-?\d+\s+\(\d+\)!;
+
 sub update_from_clipboard {
     my ($self) = @_;
-
-    if (my ($name, $start, $end) = $self->name_start_end_from_fMap_blue_box) {
-        $self->set_entry('match', $name);
-        my $flank = $self->get_entry('flank') || 0;
-        $self->set_entry('genomic_start', $start - $flank);
-        $self->set_entry('genomic_end',   $end   + $flank);
-    }
-
+    my $text = $self->get_clipboard_text or return;
+    my ($name) = $text =~ /$name_from_clipboard_pattern/ or return;
+    $self->set_entry('match', $name);
     return;
 }
 
@@ -352,28 +350,6 @@ sub launch_dotter {
     $dotter->revcomp_subject($$revcomp);
 
     return $dotter->fork_dotter;
-}
-
-sub name_start_end_from_fMap_blue_box {
-    my ($self) = @_;
-
-    my $tk = $self->top;
-
-    my $text = $self->get_clipboard_text or return;
-
-    #warn "clipboard: $text";
-
-    # Match fMap "blue box"
-    if ($text =~ /^(?:<?(?:Protein|Sequence)[:>]?)?\"?([^\"\s]+)\"?\s+-?(\d+)\s+-?(\d+)\s+\(\d+\)/) {
-        my $name  = $1;
-        my $start = $2;
-        my $end   = $3;
-        ($start, $end) = ($end, $start) if $start > $end;
-        #warn "Got ($name, $start, $end)";
-        return ($name, $start, $end);
-    } else {
-        return;
-    }
 }
 
 sub DESTROY {
