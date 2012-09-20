@@ -1,7 +1,7 @@
 
-### MenuCanvasWindow::Example
+### MenuCanvasWindow::ExampleWindow
 
-package MenuCanvasWindow::Example;
+package MenuCanvasWindow::ExampleWindow;
 
 use strict;
 use warnings;
@@ -27,7 +27,7 @@ sub initialize {
 
 __END__
 
-=head1 NAME - MenuCanvasWindow::Example
+=head1 NAME - MenuCanvasWindow::ExampleWindow
 
 =head1 AUTHOR
 

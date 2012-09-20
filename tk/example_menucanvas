@@ -6,11 +6,11 @@ use warnings;
 
 ### example_menucanvas
 
-use MenuCanvasWindow::Example;
+use MenuCanvasWindow::ExampleWindow;
 
 {
     my $cw = CanvasWindow::MainWindow->new('menu example');
-    my $mw = MenuCanvasWindow::Example->new($cw);
+    my $mw = MenuCanvasWindow::ExampleWindow->new($cw);
     $mw->initialize;
     
     Tk::MainLoop();
