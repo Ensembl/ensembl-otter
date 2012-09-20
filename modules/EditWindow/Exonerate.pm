@@ -156,12 +156,23 @@ sub initialise {
 
     $self->{_use_marked_region} = 1;
 
-    my $mark_button = 
-        $input_frame->Checkbutton(
-            -variable => \$self->{_use_marked_region},
-            -text     => 'Only search within marked region',
-            -anchor   => 'w',
+    my $region_radio_frame =
+        $input_frame->LabFrame(
+            -label     => 'Region',
+            -border    => 3,
         )->pack(-side => 'left', -expand => 1, -fill => 'x');
+
+    $region_radio_frame->Radiobutton(
+        -variable => \$self->{_use_marked_region}, 
+        -text     => 'All',
+        -value    => 0,
+    )->pack(-side => 'left', -expand => 1, -fill => 'x');
+
+    $region_radio_frame->Radiobutton(
+        -variable => \$self->{_use_marked_region}, 
+        -text     => 'Marked region',
+        -value    => 1,
+    )->pack(-side => 'left', -expand => 1, -fill => 'x');
 
     my $repeat_radio_frame =
         $input_frame->LabFrame(
