@@ -154,45 +154,31 @@ sub initialise {
     ### Input
     my $input_frame = $top->Frame->pack(@frame_pack);
 
-    $self->{_use_marked_region} = 1;
+    my $input_widgets = [
+        [ '_use_marked_region', 1, 'Region',
+          [ [ 'All', 0 ], [ 'Marked region', 1 ] ] ],
+        [ '_mask_target', $MASK_TARGET, 'Repeat masking',
+          [ [ 'Unmasked', 'none' ], [ 'Soft masked', 'soft' ] ] ],
+        ];
 
-    my $region_radio_frame =
-        $input_frame->LabFrame(
-            -label     => 'Region',
-            -border    => 3,
-        )->pack(-side => 'left', -expand => 1, -fill => 'x');
-
-    $region_radio_frame->Radiobutton(
-        -variable => \$self->{_use_marked_region}, 
-        -text     => 'All',
-        -value    => 0,
-    )->pack(-side => 'left', -expand => 1, -fill => 'x');
-
-    $region_radio_frame->Radiobutton(
-        -variable => \$self->{_use_marked_region}, 
-        -text     => 'Marked region',
-        -value    => 1,
-    )->pack(-side => 'left', -expand => 1, -fill => 'x');
-
-    my $repeat_radio_frame =
-        $input_frame->LabFrame(
-            -label     => 'Repeat masking',
-            -border    => 3,
-        )->pack(-side => 'left', -expand => 1, -fill => 'x');
-
-    $self->{_mask_target} = $MASK_TARGET;
-
-    $repeat_radio_frame->Radiobutton(
-        -variable => \$self->{_mask_target}, 
-        -text     => 'Unmasked',
-        -value    => 'none',
-    )->pack(-side => 'left', -expand => 1, -fill => 'x');
-
-    $repeat_radio_frame->Radiobutton(
-        -variable => \$self->{_mask_target}, 
-        -text     => 'Soft masked',
-        -value    => 'soft',
-    )->pack(-side => 'left', -expand => 1, -fill => 'x');
+    for (@{$input_widgets}) {
+        my ($key, $default, $name, $button_list) = @{$_};
+        $self->{$key} = $default;
+        my $button_list_frame =
+            $input_frame->LabFrame(
+                -label  => $name,
+                -border => 3,
+            )->pack(-side => 'left', -expand => 1, -fill => 'x');
+        my $variable = \($self->{$key});
+        for (@{$button_list}) {
+            my ($text, $value) = @{$_};
+            $button_list_frame->Radiobutton(
+                -variable => $variable,
+                -text     => $text,
+                -value    => $value,
+                )->pack(-side => 'left', -expand => 1, -fill => 'x');
+        }
+    }
 
     ### Parameters
     my $param_frame = $top->LabFrame(
