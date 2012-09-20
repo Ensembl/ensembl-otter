@@ -1,6 +1,6 @@
-## MenuCanvasWindow::GenomicFeatures
+## MenuCanvasWindow::GenomicFeaturesWindow
 
-package MenuCanvasWindow::GenomicFeatures;
+package MenuCanvasWindow::GenomicFeaturesWindow;
 
 use strict;
 use warnings;
@@ -691,7 +691,7 @@ sub initialize {
 
 __END__
 
-=head1 NAME - MenuCanvasWindow::GenomicFeatures
+=head1 NAME - MenuCanvasWindow::GenomicFeaturesWindow
 
 =head1 AUTHOR
 

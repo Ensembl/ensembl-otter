@@ -23,7 +23,7 @@ use EditWindow::Exonerate;
 use EditWindow::Clone;
 use EditWindow::LocusName;
 use MenuCanvasWindow::TranscriptWindow;
-use MenuCanvasWindow::GenomicFeatures;
+use MenuCanvasWindow::GenomicFeaturesWindow;
 use Text::Wrap qw{ wrap };
 
 use Bio::Otter::Lace::Exonerate;
@@ -566,7 +566,7 @@ sub populate_menus {
                );
 
     # Genomic Features editing window
-    my $gf_command = sub { $self->launch_GenomicFeatures };
+    my $gf_command = sub { $self->launch_GenomicFeaturesWindow };
     $tools_menu->add('command' ,
         -label          => 'Genomic Features',
         -command        => $gf_command,
@@ -721,7 +721,7 @@ sub highlight {
     return;
 }
 
-sub GenomicFeatures {
+sub GenomicFeaturesWindow {
     my ($self, $gfs) = @_;
 
     if(defined($gfs)){
@@ -731,10 +731,10 @@ sub GenomicFeatures {
     return $self->{'_gfs'};
 }
 
-sub launch_GenomicFeatures {
+sub launch_GenomicFeaturesWindow {
     my ($self) = @_;
     try {
-        if(my $gfs = $self->GenomicFeatures()) {
+        if(my $gfs = $self->GenomicFeaturesWindow()) {
 
             my $gfw = $gfs->top_window();
             $gfw->deiconify;
@@ -742,24 +742,24 @@ sub launch_GenomicFeatures {
         } else {
             my $gfw = $self->canvas->Toplevel;
 
-            $gfs = MenuCanvasWindow::GenomicFeatures->new($gfw);
-            $self->GenomicFeatures($gfs);
+            $gfs = MenuCanvasWindow::GenomicFeaturesWindow->new($gfw);
+            $self->GenomicFeaturesWindow($gfs);
             $gfs->SessionWindow($self);
             $gfs->initialize;
         }
     }
     catch {
-        my $msg = 'Error creating GenomicFeatures window';
+        my $msg = 'Error creating Genomic Features window';
         $self->exception_message($::_, $msg);
     };
 
     return;
 }
 
-sub close_GenomicFeatures {
+sub close_GenomicFeaturesWindow {
     my ($self) = @_;
 
-    if(my $gfs = $self->GenomicFeatures()) {
+    if(my $gfs = $self->GenomicFeaturesWindow()) {
         $gfs->try2save_and_quit();
     }
 
@@ -867,7 +867,7 @@ sub exit_save_data {
     my $dir = $self->ace_path;
     unless ($adb->write_access) {
         $adb->error_flag(0);
-        $self->close_GenomicFeatures;   ### Why is this special?
+        $self->close_GenomicFeaturesWindow;   ### Why is this special?
         my $changed = $self->AceDatabase->unsaved_changes;
         $self->logger->info("Closing $dir (no write access, changed = $changed)");
         return 1;
@@ -957,7 +957,7 @@ sub close_all_edit_windows {
 
     $self->close_all_transcript_windows or return;
     $self->close_all_clone_edit_windows or return;
-    $self->close_GenomicFeatures;
+    $self->close_GenomicFeaturesWindow;
     return 1;
 }
 
@@ -1875,7 +1875,7 @@ sub save_Assembly {
         }
 
         # Where to put error message?
-        # MenuCanvasWindow::GenomicFeatures doesn't display the
+        # MenuCanvasWindow::GenomicFeaturesWindow doesn't display the
         # exception_message, it is covered by widgets
         #
         # Yellow note goes on the session window, somewhat invisible
