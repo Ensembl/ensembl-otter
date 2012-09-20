@@ -2757,7 +2757,7 @@ sub save_sub {
 
 sub _do_save_subseq_work {
     my ($self, $sub) = @_;
-    
+
     confess "Missing SubSeq argument" unless $sub;
 
     my $old      = $self->SubSeq;
@@ -2777,7 +2777,7 @@ sub _do_save_subseq_work {
     }
 
     my $SessionWindow = $self->SessionWindow;
-    
+
     # replace_SubSeq() saves to persistent storage and zmap
     if ($SessionWindow->replace_SubSeq($sub, $old)) {
 
