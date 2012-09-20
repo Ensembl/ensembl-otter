@@ -151,16 +151,23 @@ sub initialise {
           )->pack(@frame_expand)
     );
 
-    ### Parameters
-    my $param_frame = $top->LabFrame(
-        -label     => 'Parameters',
-        -border    => 3,
-    )->pack(@frame_pack);
+    ### Input
+    my $input_frame = $top->Frame->pack(@frame_pack);
 
-    my $repeat_radio_frame = $param_frame->LabFrame(
-        -label     => 'Repeat masking',
-        -border    => 3,
-    )->pack(-side => 'bottom', -fill => 'y');
+    $self->{_use_marked_region} = 1;
+
+    my $mark_button = 
+        $input_frame->Checkbutton(
+            -variable => \$self->{_use_marked_region},
+            -text     => 'Only search within marked region',
+            -anchor   => 'w',
+        )->pack(-side => 'left', -expand => 1, -fill => 'x');
+
+    my $repeat_radio_frame =
+        $input_frame->LabFrame(
+            -label     => 'Repeat masking',
+            -border    => 3,
+        )->pack(-side => 'left', -expand => 1, -fill => 'x');
 
     $self->{_mask_target} = $MASK_TARGET;
 
@@ -176,51 +183,41 @@ sub initialise {
         -value    => 'soft',
     )->pack(-side => 'left', -expand => 1, -fill => 'x');
 
-    my $option_frame = $param_frame->Frame->pack(-side => 'right', -fill => 'x');
+    ### Parameters
+    my $param_frame = $top->LabFrame(
+        -label     => 'Alignment parameters',
+        -border    => 3,
+    )->pack(@frame_pack);
 
-    my $bestn_frame = $option_frame->Frame->pack(@frame_pack);
-
-    $self->bestn(
-        $bestn_frame->Entry(
-            -width   => 9,
-            -justify => 'right',
-          )->pack(-side => 'right')
-    );
-
+    # bestn parameter
+    Tk::grid(
+        $param_frame->Label(
+            -text   => 'Number of transcript alignments to report (0 for all):',
+            -anchor => 'e',
+            -padx   => 6,
+        ),
+        $self->bestn(
+            $param_frame->Entry(
+                -width   => 9,
+                -justify => 'right',
+            )),
+        );
     $self->set_entry('bestn', $BEST_N);
 
-    $bestn_frame->Label(
-        -text   => 'Number of transcript alignments to report (0 for all):',
-        -anchor => 'e',
-        -padx   => 6,
-    )->pack(-side => 'right', -fill => 'x');
-
-    my $intron_length_frame = $option_frame->Frame->pack(-side => 'bottom', -fill => 'x');
-
-    $self->max_intron_length(
-        $intron_length_frame->Entry(
-            -width   => 9,
-            -justify => 'right',
-          )->pack(-side => 'right')
-    );
-
+    # max intron length parameter
+    Tk::grid(
+        $param_frame->Label(
+            -text   => 'Maximum intron length:',
+            -anchor => 'e',
+            -padx   => 6,
+        ),
+        $self->max_intron_length(
+            $param_frame->Entry(
+                -width   => 9,
+                -justify => 'right',
+            )),
+        );
     $self->set_entry('max_intron_length', $MAX_INTRON_LENGTH);
-
-    $intron_length_frame->Label(
-        -text   => 'Maximum intron length:',
-        -anchor => 'e',
-        -padx   => 6,
-    )->pack(-side => 'right', -fill => 'x');
-
-    my $cb_frame = $param_frame->Frame->pack(-side => 'left', -fill => 'x');
-
-    $self->{_use_marked_region} = 1;
-
-    $cb_frame->Checkbutton(
-        -variable => \$self->{_use_marked_region},
-        -text     => 'Only search within marked region',
-        -anchor   => 'w',
-    )->pack(-side => 'top', -expand => 1, -fill => 'x');
 
     $top->Checkbutton(
         -variable => \$self->{_clear_existing},
