@@ -2224,8 +2224,8 @@ sub draw_sequence_list {
                 $style = 'normal';
             }
             else {
-                eval{ $error = $sub->pre_otter_save_error };
-                $error = $@ ? $@ : $error;
+                try { $error = $sub->pre_otter_save_error; }
+                catch { $error = $_; };
                 if ($error) {
                     # Don't highlight errors in transcripts from other centres
                     if ($sub->Locus->name =~ /$locus_type_pattern/) {
