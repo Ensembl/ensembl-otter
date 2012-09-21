@@ -1932,14 +1932,14 @@ sub replace_SubSeq {
         $new->zmap_create_xml_string($offset),
     );
 
-    my $done_ace;
-    my $done_zmap = eval {
+    my ($done_ace, $done_zmap, $err);
+    try {
         $self->save_ace($ace);
         $done_ace = 1;
         $self->zMapSendCommands(@xml);
-        1;
-    };
-    my $err = $@;
+        $done_zmap = 1;
+    }
+    catch { $err = $_; };
 
     if ($done_ace) {
 
