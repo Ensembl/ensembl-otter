@@ -236,7 +236,7 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS { # $feature_kind = 'SimpleFea
                 }
                 catch {
                     ## there may be a collision of exons - just ignore it for the moment
-                    warn "Could not group feature: $::_\n";
+                    warn "Could not group feature: $_\n";
                 };
             } else {
                 if ( $feature->can('display_label') ) {

@@ -816,7 +816,7 @@ sub make_database_directory {
     }
     catch {
         $self->error_flag(1);
-        confess $::_;
+        confess $_;
     };
 
     # rawdata used to be in tar file, but no longer because
@@ -1171,7 +1171,7 @@ sub DESTROY {
             $self->unlock_otter_slice() if $self->write_access;
         }
     }
-    catch { warn "Error in AceDatabase::DESTROY : $::_"; };
+    catch { warn "Error in AceDatabase::DESTROY : $_"; };
 
     rename($home, "${home}.done")
         or die "Error renaming the session directory; $!";

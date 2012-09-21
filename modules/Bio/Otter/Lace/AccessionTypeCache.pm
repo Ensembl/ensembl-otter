@@ -115,7 +115,7 @@ sub populate {
     }
     catch {
         $dbh->rollback;
-        die "Error saving accession info: $::_";
+        die "Error saving accession info: $_";
     };
 
     $dbh->commit;

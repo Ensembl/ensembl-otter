@@ -1248,7 +1248,7 @@ sub sessions_needing_recovery {
                     warn "\nRemoved lock from uninitialised database in '$lace_dir'\n";
                 }
             }
-            catch { warn "error while recoving session '$lace_dir': $::_"; };
+            catch { warn "error while recoving session '$lace_dir': $_"; };
             if (-d $lace_dir) {
                 # Belt and braces - if the session was unrecoverable we want it to be deleted.
                 my $done = $self->move_to_done($lace_dir);
@@ -1290,7 +1290,7 @@ sub recover_session {
 
     unless ($adb->db_initialized) {
         try { $adb->recover_smart_slice_from_region_xml; }
-        catch { warn $::_; };
+        catch { warn $_; };
         return $adb;
     }
 

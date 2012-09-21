@@ -33,7 +33,7 @@ catch {
             or die "'$command' failed: something is wrong with your git checkout";
     }
     else {
-        die "cache error: $::_";
+        die "cache error: $_";
     }
 };
 

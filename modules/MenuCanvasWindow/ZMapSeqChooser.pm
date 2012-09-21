@@ -179,7 +179,7 @@ sub zMapSendCommands {
     }
     if (@err) {
         try { $self->xremote_cache->remove_clients_to_bad_windows(); }
-        catch { warn "remove_clients_to_bad_windows failed: $::_"; };
+        catch { warn "remove_clients_to_bad_windows failed: $_"; };
         my $msg = join "\n", map {"[$_]"} @err;
         $msg =~ s{\n*\z}{};
         die "ZMap commands failed: $msg\n";
