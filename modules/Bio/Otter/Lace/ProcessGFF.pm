@@ -81,9 +81,9 @@ sub make_ace_transcripts_from_gff {
             push(@ok_tsct, $sub);
         }
         catch {
-            my $msg = $_;
-            $msg =~ s{^(Translation coord '\d+' does not lie within any Exon\n) at .*}{$1}s; # special case for a common error - trim off stack trace - RT#273390
-            warn "Skipped SubSeq '$name'.  Error:\n$msg";
+            # special case for a common error - trim off stack trace - RT#273390
+            s{^(Translation coord '\d+' does not lie within any Exon\n) at .*}{$1}s;
+            warn "Skipped SubSeq '$name'.  Error:\n$_";
         };
     }
     return @ok_tsct;
