@@ -63,7 +63,7 @@ sub unlock_region {
       $odba->commit;
   } catch {
       $odba->rollback;
-      die "Failed $action \[$::_]";
+      die "Failed $action \[$_]";
   };
 
   return $server->otter_wrap_response("<response>\n</response>\n");

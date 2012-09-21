@@ -274,7 +274,7 @@ sub _bam_load {
     for my $name ( @{$self->config_keys("bam")} ) {
         my $config = $self->config_section("bam.${name}");
         try { $bam_by_name->{$name} = Bio::Otter::BAM->new($name, $config); }
-        catch { warn sprintf "BAM section for ${name}: ignored: $::_"; };
+        catch { warn sprintf "BAM section for ${name}: ignored: $_"; };
     }
 
     my $config = $self->config_section('bam_list');
@@ -306,7 +306,7 @@ sub _filter_load {
             $filter->name($name);
             $filter_by_name->{$name} = $filter;
         }
-        catch { warn sprintf "filter section for ${name}: ignored: $::_"; };
+        catch { warn sprintf "filter section for ${name}: ignored: $_"; };
     }
 
     my $filters = $self->{_filters} = [ ];

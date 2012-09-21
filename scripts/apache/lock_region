@@ -46,7 +46,7 @@ sub lock_region {
         $odba->commit;
     } catch {
         $odba->rollback;
-        die "Locking clones failed during $action \[$::_]";
+        die "Locking clones failed during $action \[$_]";
     };
 
     return $xml;

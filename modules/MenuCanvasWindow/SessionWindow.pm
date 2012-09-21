@@ -489,7 +489,7 @@ sub populate_menus {
     # Paste selected subseqs, realigning them to the genomic sequence
     my $paste_subseq = sub{
         try { $self->paste_selected_subseqs; }
-        catch { $self->exception_message($::_); };
+        catch { $self->exception_message($_); };
     };
     $subseq->add('command',
         -label          => 'Paste',
@@ -750,7 +750,7 @@ sub launch_GenomicFeaturesWindow {
     }
     catch {
         my $msg = 'Error creating Genomic Features window';
-        $self->exception_message($::_, $msg);
+        $self->exception_message($_, $msg);
     };
 
     return;
@@ -906,7 +906,7 @@ sub exit_save_data {
 
             my $ok = 0;
             try { $self->save_ace($ace); $ok = 1; }
-            catch  { warn "Aborting lace session exit:\n$::_"; };
+            catch  { warn "Aborting lace session exit:\n$_"; };
             return unless $ok;
 
             if ($self->save_data) {
@@ -990,7 +990,7 @@ sub save_data {
         $self->update_window_title_unsaved_flag(0);
         $ok = 1;
     }
-    catch { $self->exception_message($::_, 'Error saving to otter'); }
+    catch { $self->exception_message($_, 'Error saving to otter'); }
     finally { $top->Unbusy; };
 
     return $ok;
@@ -1111,7 +1111,7 @@ sub _do_search {
         }
         catch {
             # Data outside our control may break Hum::Ace::SubSeq  RT:188195, 189606
-            warn sprintf "%s::_do_search(): $name: $::_", __PACKAGE__;
+            warn sprintf "%s::_do_search(): $name: $_", __PACKAGE__;
             push @ace_fail_names, $name;
             # It could be a real error, not just some broken data.
             # We'll mention that if there are no results.
@@ -1163,8 +1163,8 @@ sub save_ace {
     my $val;
     try { $val = $adb->ace_server->save_ace(@args); }
     catch {
-        $self->exception_message($::_, "Error saving to acedb");
-        confess "Error saving to acedb: $::_";
+        $self->exception_message($_, "Error saving to acedb");
+        confess "Error saving to acedb: $_";
     };
 
     if ($self->flag_db_edits) {
@@ -1478,7 +1478,7 @@ sub fetch_external_SubSeqs {
             $self->AceDatabase->process_gff_file_from_Filter($filter);
         }
         catch {
-            $self->exception_message($::_, "Error processing '$filter_name' GFF file");
+            $self->exception_message($_, "Error processing '$filter_name' GFF file");
             return;
         };
         if (@tsct) {
@@ -1557,7 +1557,7 @@ sub delete_subsequences {
     # delete from acedb
     $ok = 0;
     try { $self->save_ace($ace); $ok = 1; }
-    catch { $self->exception_message($::_, 'Aborted delete, failed to save to Ace'); };
+    catch { $self->exception_message($_, 'Aborted delete, failed to save to Ace'); };
     $ok or return;
 
     # Remove from our objects
@@ -1569,7 +1569,7 @@ sub delete_subsequences {
     # delete from Zmap
     $ok = 0;
     try { $self->zMapSendCommands(@xml); $ok = 1; }
-    catch { $self->exception_message($::_, 'Deleted OK, but please restart ZMap'); };
+    catch { $self->exception_message($_, 'Deleted OK, but please restart ZMap'); };
     $ok or return;
 
     return;
@@ -1811,7 +1811,7 @@ sub Assembly {
             $ok = 1;
         }
         catch {
-            $self->exception_message($::_, "Can't fetch Assembly '$slice_name'");
+            $self->exception_message($_, "Can't fetch Assembly '$slice_name'");
         };
         $ok or return;
 
@@ -1855,7 +1855,7 @@ sub save_Assembly {
         return 1;
     }
     catch {
-        $err = $::_;
+        $err = $_;
     };
 
     # Set internal state only if we saved to Ace OK
@@ -2455,7 +2455,7 @@ sub zircon_zmap_view_features_loaded {
                         $self->AceDatabase->process_gff_file_from_Filter($filter);
                     }
                     catch {
-                        $self->exception_message($::_, "Error processing '$set_name' GFF file");
+                        $self->exception_message($_, "Error processing '$set_name' GFF file");
                         return;
                     };
                     if (@tsct) {

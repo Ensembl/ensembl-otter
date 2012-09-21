@@ -71,7 +71,7 @@ sub check_submission {
     my $parser = XML::LibXML->new();
     my $dom;
     try { $dom = $parser->parse_string($xml); }
-    catch { warn "couldn't parse XML response for submission: $::_" };
+    catch { warn "couldn't parse XML response for submission: $_" };
     return unless $dom;
 
     # the root element is "jobs"
@@ -114,7 +114,7 @@ sub parse_results {
     my $parser = XML::LibXML->new();
     my $dom;
     try { $dom = $parser->parse_string($results_xml); }
-    catch { warn "couldn't parse XML response for results: $::_" };
+    catch { warn "couldn't parse XML response for results: $_" };
     return unless $dom;
 
     # set up the XPath stuff for this document

@@ -789,7 +789,7 @@ sub window_close {
         my ($sub, $err);
         my $ok = 0;
         try { $sub = $self->get_SubSeq_if_changed; $ok = 1; }
-        catch { $err = $::_; };
+        catch { $err = $_; };
 
         my $name = $self->name;
 
@@ -871,7 +871,7 @@ sub search_pfam {
 
     my $ok = 0;
     try { $sub->validate; $ok = 1; }
-    catch { $self->exception_message($::_, 'Invalid transcript'); };
+    catch { $self->exception_message($_, 'Invalid transcript'); };
 
     if ($ok) {
         my $pep = $sub->translator->translate($sub->translatable_Sequence);
@@ -2726,7 +2726,7 @@ sub save_if_changed {
     }
     catch {
         # Make sure the annotators see the messages!
-        $self->exception_message($::_, 'Error checking for changes to transcript');
+        $self->exception_message($_, 'Error checking for changes to transcript');
         return;
     };
 
@@ -2747,7 +2747,7 @@ sub save_sub {
         $self->_do_save_subseq_work($sub);
     }
     catch {
-        $self->exception_message($::_, 'Error saving transcipt');
+        $self->exception_message($_, 'Error saving transcipt');
         return 0;
     }
     finally {

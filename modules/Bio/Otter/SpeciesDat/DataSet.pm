@@ -57,7 +57,7 @@ sub _otter_dba {
             -species => $name,
             );
     }
-    catch { die "Failed opening otter database [$::_]"; };
+    catch { die "Failed opening otter database [$_]"; };
 
     my $dna_dbname = $params->{DNA_DBNAME};
     if ($dna_dbname) {
@@ -73,7 +73,7 @@ sub _otter_dba {
                 -species => $name,
                 );
         }
-        catch { die "Failed opening dna database [$::_]"; };
+        catch { die "Failed opening dna database [$_]"; };
         $odba->dnadb($dnadb);
     }
 
