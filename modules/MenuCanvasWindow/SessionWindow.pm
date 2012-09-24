@@ -806,20 +806,8 @@ sub close_GenomicFeaturesWindow {
         my( @msg, @new_subseq, $i );
         foreach my $sub (@holding_pen) {
             my $name = $sub->name;
-            my $exon_seq = $sub->exon_Sequence_array;
-            my $fs = $finder->find_best_Feature_set($exon_seq);
-            my @exons = $sub->get_all_Exons;
-            my( $strand, @new_exons );
-            for (my $i = 0; $i < @exons; $i++) {
-                my $feat = $fs->[$i] or next;
-                my $ex = Hum::Ace::Exon->new;
-                $ex->start($feat->seq_start);
-                $ex->end($feat->seq_end);
-                $strand ||= $feat->seq_strand;
-                push(@new_exons, $ex);
-            }
-
-            if (@new_exons) {
+            my ($new_exons, $strand) = @{_new_exons_strand($finder, $sub)};
+            if (@{$new_exons}) {
                 my $new = $sub->clone;
                 my( $temp_name );
                 do {
@@ -828,7 +816,7 @@ sub close_GenomicFeaturesWindow {
                 #my $temp_name = sprintf "TEMP-%03d", ++$i;
                 $new->name($temp_name);
                 $new->strand($strand);
-                $new->replace_all_Exons(@new_exons);
+                $new->replace_all_Exons(@{$new_exons});
                 $new->clone_Sequence($assembly->Sequence);
                 $assembly->add_SubSeq($new);
                 if ($sub->translation_region_is_set) {
@@ -858,6 +846,24 @@ sub close_GenomicFeaturesWindow {
 
         return;
     }
+}
+
+sub _new_exons_strand {
+    # not a method
+    my ($finder, $sub) = @_;
+    my $exon_seq = $sub->exon_Sequence_array;
+    my $fs = $finder->find_best_Feature_set($exon_seq);
+    my @exons = $sub->get_all_Exons;
+    my( $strand, @new_exons );
+    for (my $i = 0; $i < @exons; $i++) {
+        my $feat = $fs->[$i] or next;
+        my $ex = Hum::Ace::Exon->new;
+        $ex->start($feat->seq_start);
+        $ex->end($feat->seq_end);
+        $strand ||= $feat->seq_strand;
+        push(@new_exons, $ex);
+    }
+    return [ \@new_exons, $strand ];
 }
 
 sub exit_save_data {
