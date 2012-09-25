@@ -761,8 +761,10 @@ Readonly my @split_expected => (
 
         ensembl_features => [
             { start => 120541, end => 121362, strand => 1, hstart =>   1, hend => 274, cigar => '822M', },
-            { start => 123609, end => 123801, strand => 1, hstart => 275, hend => 363, cigar => '33MI156M25D3M', },
-            { start => 125114, end => 125276, strand => 1, hstart => 364, hend => 418, cigar => '54MID108M', },
+            { start => 123609, end => 123641, strand => 1, hstart => 275, hend => 285, cigar => '33M', },
+            { start => 123643, end => 123801, strand => 1, hstart => 286, hend => 363, cigar => '156M25D3M', },
+            { start => 125114, end => 125167, strand => 1, hstart => 364, hend => 381, cigar => '54M', },
+            { start => 125169, end => 125276, strand => 1, hstart => 382, hend => 418, cigar => 'D108M', },
             { start => 134181, end => 134408, strand => 1, hstart => 420, hend => 495, cigar => '228M', },
             { start => 138325, end => 138477, strand => 1, hstart => 497, hend => 547, cigar => '153M', },
             { start => 139243, end => 139320, strand => 1, hstart => 549, hend => 574, cigar => '78M', },
@@ -807,8 +809,10 @@ Readonly my @split_expected => (
         ensembl_feature_type => 'Bio::EnsEMBL::DnaPepAlignFeature',
         ensembl_features => [
             { start => 54301, end => 55122, strand => -1, hstart =>   1, hend => 274, cigar => '822M', },
-            { start => 51862, end => 52054, strand => -1, hstart => 275, hend => 363, cigar => '33MI156M25D3M', },
-            { start => 50387, end => 50549, strand => -1, hstart => 364, hend => 418, cigar => '54MID108M', },
+            { start => 52022, end => 52054, strand => -1, hstart => 275, hend => 285, cigar => '33M', },
+            { start => 51862, end => 52020, strand => -1, hstart => 286, hend => 363, cigar => '156M25D3M', },
+            { start => 50496, end => 50549, strand => -1, hstart => 364, hend => 381, cigar => '54M', },
+            { start => 50387, end => 50494, strand => -1, hstart => 382, hend => 418, cigar => 'D108M', },
             { start => 41255, end => 41482, strand => -1, hstart => 420, hend => 495, cigar => '228M', },
             { start => 37186, end => 37338, strand => -1, hstart => 497, hend => 547, cigar => '153M', },
             { start => 36343, end => 36420, strand => -1, hstart => 549, hend => 574, cigar => '78M', },

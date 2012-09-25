@@ -366,6 +366,8 @@ sub ensembl_features {
     my @egas = $self->exon_gapped_alignments;
     return unless @egas;
 
+    @egas = map { $_->_split_at_frameshifts } @egas;
+
     my @ensembl_features;
     foreach my $ega (@egas) {
         next unless $ega;
@@ -397,6 +399,41 @@ sub ensembl_feature {
         -percent_id   => $self->percent_id,
         -cigar_string => $self->ensembl_cigar_string,
         );
+}
+
+sub _split_at_frameshifts {
+    my $self = shift;
+    my @elements = @{$self->elements};
+    return $self unless grep { $_->type eq 'F' } @elements;
+
+    my $target_pos = $self->target_start;
+    my $query_pos  = $self->query_start;
+
+    my @splits;
+    my $current;
+
+    while (my $ele = shift @elements) {
+        if ($ele->type eq 'F') {
+            if ($current) {
+                push @splits, $current;
+                $current = undef;
+            }
+        } else {
+            unless ($current) {
+                $current = $self->_new_copy_basics;
+                $current->target_start($target_pos);
+                $current->query_start( $query_pos);
+                $current->target_end($target_pos); # will be updated by add_element_track_lengths()
+                $current->query_end( $query_pos);  # --"--
+            }
+            $current->add_element_track_lengths($ele);
+        }
+        $target_pos += $self->target_strand_sense * $ele->target_length;
+        $query_pos  += $self->query_strand_sense  * $ele->query_length;
+    }
+    push @splits, $current if $current;
+
+    return @splits;
 }
 
 sub _strip_split_codons {
