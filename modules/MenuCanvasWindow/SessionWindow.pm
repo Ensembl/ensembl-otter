@@ -64,14 +64,6 @@ sub AceDatabase {
     return $self->{'_AceDatabase'};
 }
 
-sub drop_AceDatabase {
-    my ($self) = @_;
-
-    $self->{'_AceDatabase'} = undef;
-
-    return;
-}
-
 sub SequenceNotes {
     my ($self, $sn) = @_;
 
@@ -2491,7 +2483,7 @@ sub DESTROY {
     warn "Destroying SessionWindow for ", $self->ace_path, "\n";
 
     $self->zMapKillZmap;
-    $self->drop_AceDatabase;
+    delete $self->{'_AceDatabase'};
 
     return;
 }
