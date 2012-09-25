@@ -445,11 +445,8 @@ sub show_filters {
         my $filter = $filters->{$name}{filter};
         my $state_hash = $filters->{$name}{state};
 
-        {
-            # eval because delete moans if entry doesn't exist
-            ## no critic (ErrorHandling::RequireCheckingReturnValueOfEval)
-            eval{ $hlist->delete('entry', $i) };
-        }
+        # try because delete moans if entry doesn't exist
+        try { $hlist->delete('entry', $i) };
 
         $hlist->add($i);
 
