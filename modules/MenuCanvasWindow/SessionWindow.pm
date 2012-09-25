@@ -269,7 +269,7 @@ sub do_rename_locus {
     my ($self, $old_name, $new_name) = @_;
 
     my %done; # we update in three places - keep track
-    my $ok = eval {
+    return try {
         my @xml;
         my $offset = $self->AceDatabase->offset;
         foreach my $sub ($self->fetch_SubSeqs_by_locus_name($old_name)) {
@@ -318,18 +318,11 @@ sub do_rename_locus {
         $done{'zmap'} = 1;
 
         return 1;
-    };
-    my $err = $@;
-
-    if ($ok) {
-        # success
-        return 1;
-    } elsif (defined $ok) {
-        # controlled fail, message given, could try again
-        return 0;
-    } else {
+    }
+    catch {
         # breakage, probably a partial update.
         # explain, return true to close the window.
+        my $err = $_;
         my $msg;
         $err ||= 'unknown error';
         if ($done{'ace'}) {
