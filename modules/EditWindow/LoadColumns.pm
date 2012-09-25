@@ -551,14 +551,6 @@ sub AceDatabase {
     return $self->{'_AceDatabase'} ;
 }
 
-sub drop_AceDatabase {
-    my ($self) = @_;
-
-    $self->{'_AceDatabase'} = undef;
-
-    return;
-}
-
 sub SequenceNotes {
     my ($self, $sn) = @_;
     $self->{'_SequenceNotes'} = $sn if $sn;
