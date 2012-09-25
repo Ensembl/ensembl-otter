@@ -762,10 +762,10 @@ Readonly my @split_expected => (
         ensembl_features => [
             { start => 120541, end => 121362, strand => 1, hstart =>   1, hend => 274, cigar => '822M', },
             { start => 123609, end => 123801, strand => 1, hstart => 275, hend => 363, cigar => '33MI156M25D3M', },
-            { start => 125114, end => 125278, strand => 1, hstart => 364, hend => 418, cigar => '54MID108M2I', },
-            { start => 134180, end => 134409, strand => 1, hstart => 419, hend => 495, cigar => '229MI', },
-            { start => 138323, end => 138478, strand => 1, hstart => 496, hend => 547, cigar => '155MI', },
-            { start => 139241, end => 139320, strand => 1, hstart => 548, hend => 574, cigar => '80M', },
+            { start => 125114, end => 125276, strand => 1, hstart => 364, hend => 418, cigar => '54MID108M', },
+            { start => 134181, end => 134408, strand => 1, hstart => 420, hend => 495, cigar => '228M', },
+            { start => 138325, end => 138477, strand => 1, hstart => 497, hend => 547, cigar => '153M', },
+            { start => 139243, end => 139320, strand => 1, hstart => 549, hend => 574, cigar => '78M', },
             { start => 139924, end => 140196, strand => 1, hstart => 575, hend => 665, cigar => '273M', },
         ],
     },
@@ -808,10 +808,10 @@ Readonly my @split_expected => (
         ensembl_features => [
             { start => 54301, end => 55122, strand => -1, hstart =>   1, hend => 274, cigar => '822M', },
             { start => 51862, end => 52054, strand => -1, hstart => 275, hend => 363, cigar => '33MI156M25D3M', },
-            { start => 50385, end => 50549, strand => -1, hstart => 364, hend => 418, cigar => '54MID108M2I', },
-            { start => 41254, end => 41483, strand => -1, hstart => 419, hend => 495, cigar => '229MI', },
-            { start => 37185, end => 37340, strand => -1, hstart => 496, hend => 547, cigar => '155MI', },
-            { start => 36343, end => 36422, strand => -1, hstart => 548, hend => 574, cigar => '80M', },
+            { start => 50387, end => 50549, strand => -1, hstart => 364, hend => 418, cigar => '54MID108M', },
+            { start => 41255, end => 41482, strand => -1, hstart => 420, hend => 495, cigar => '228M', },
+            { start => 37186, end => 37338, strand => -1, hstart => 497, hend => 547, cigar => '153M', },
+            { start => 36343, end => 36420, strand => -1, hstart => 549, hend => 574, cigar => '78M', },
             { start => 35467, end => 35739, strand => -1, hstart => 575, hend => 665, cigar => '273M', },
         ],
     },
@@ -910,6 +910,10 @@ foreach my $test (@split_expected) {
             is ($ensembl_features[$n]->start,        $exp_features[$n]->{start},  "feature $n: start");
             is ($ensembl_features[$n]->end,          $exp_features[$n]->{end},    "feature $n: end");
             is ($ensembl_features[$n]->strand,       $exp_features[$n]->{strand}, "feature $n: strand");
+            is ($ensembl_features[$n]->hstart,       $exp_features[$n]->{hstart}, "feature $n: hstart");
+            is ($ensembl_features[$n]->hend,         $exp_features[$n]->{hend},   "feature $n: hend");
+            is ($ensembl_features[$n]->hstrand,      $exp_features[$n]->{hstrand},"feature $n: hstrand")
+                if $exp_features[$n]->{hstrand};
             is ($ensembl_features[$n]->cigar_string, $exp_features[$n]->{cigar},  "feature $n: cigar_string");
         }
     }
