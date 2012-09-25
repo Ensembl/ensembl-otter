@@ -7,6 +7,7 @@ use strict;
 use warnings;
 use Carp;
 use Scalar::Util 'weaken';
+use Try::Tiny;
 
 use Tk::HListplusplus;
 use Tk::Checkbutton;
@@ -288,15 +289,15 @@ sub load_filters {
     if ($self->init_flag) {
         my $adb = $self->AceDatabase;
         # now initialise the database
-        if (eval { $adb->init_AceDatabase; 1; }) {
-            $self->init_flag(0);
-        }
-        else {
+        my $ok = 0;
+        try { $adb->init_AceDatabase; $ok = 1; }
+        catch {
             $self->SequenceNotes->exception_message($@, "Error initialising database");
             $adb->error_flag(0);
             $top->destroy;
-            return;
-        }
+        };
+        $ok or return;
+        $self->init_flag(0);
     }
 
     $self->AceDatabase->save_filter_state if @to_fetch;
