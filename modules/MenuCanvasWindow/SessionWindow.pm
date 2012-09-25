@@ -94,6 +94,7 @@ sub initialize {
     $self->fetch_external_SubSeqs;
     $self->draw_subseq_list;
     $self->populate_clone_menu;
+    $self->AceDatabase->zmap_dir_init;
     $self->zMapInitialize;
     $self->zMapLaunchZmap;
     $self->top_window->raise;

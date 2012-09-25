@@ -37,15 +37,10 @@ isn't a long term solution.
 
 sub zMapInitialize {
     my ($self) = @_;
-
     $self->{_zMap_ZMAP_CONNECTOR} =
         $self->zMapZmapConnectorNew;
-
     $self->{_xremote_cache} =
         Bio::Otter::ZMap::XRemoteCache->new;
-
-    $self->AceDatabase->zmap_dir_init;
-
     return;
 }
 
