@@ -67,9 +67,6 @@ my @tests = (
         query_path  => "${path}/BG212959.1.fa",
         query_ids   => [qw(BG212959.1)],
     },
-    );
-
-my @todo_tests = (
     {
         name        => 'AL139092 vs. protein Q96S55',
         target_path => "${path}/AL139092.12.fasta",
@@ -77,6 +74,9 @@ my @todo_tests = (
         query_ids   => [qw(sp|Q96S55|WRIP1_HUMAN)],
         type        => 'Test_Protein',
     },
+    );
+
+my @todo_tests = (
     {
         name        => 'test_clone vs. protein Q96S55',
         target_path => "${path}/test_clone.fa",
