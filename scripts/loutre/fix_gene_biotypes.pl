@@ -141,6 +141,7 @@ sub fix_biotypes {
         WHERE g.gene_id = t.gene_id
           AND g.is_current = 1
           AND ta.transcript_id IS NULL
+          AND t.biotype != 'artifact'
     }
     );
     $sth->execute;
