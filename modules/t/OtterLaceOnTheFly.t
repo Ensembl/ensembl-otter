@@ -74,9 +74,6 @@ my @tests = (
         query_ids   => [qw(sp|Q96S55|WRIP1_HUMAN)],
         type        => 'Test_Protein',
     },
-    );
-
-my @todo_tests = (
     {
         name        => 'test_clone vs. protein Q96S55',
         target_path => "${path}/test_clone.fa",
@@ -84,6 +81,9 @@ my @todo_tests = (
         query_ids   => [qw(sp|Q96S55|WRIP1_HUMAN)],
         type        => 'Test_Protein',
     },
+    );
+
+my @todo_tests = (
     );
 
 foreach my $test ( @tests ) {
