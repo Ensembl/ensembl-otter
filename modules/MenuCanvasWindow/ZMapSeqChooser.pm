@@ -344,10 +344,8 @@ sub xremote_cache {
 }
 
 sub main_window_name {
-    my ($self, $name) = @_;
-
-    $name = 'ZMap port #' . $self->AceDatabase->ace_server->port();
-
+    my ($self) = @_;
+    my $name = 'ZMap port #' . $self->AceDatabase->ace_server->port();
     return $name;
 }
 
