@@ -371,7 +371,7 @@ sub ensembl_features {
     my @ensembl_features;
     foreach my $ega (@egas) {
         next unless $ega;
-        push @ensembl_features, $ega->_strip_split_codons->ensembl_feature;
+        push @ensembl_features, $ega->_strip_for_ensembl->ensembl_feature;
     }
 
     return @ensembl_features;
@@ -436,19 +436,25 @@ sub _split_at_frameshifts {
     return @splits;
 }
 
-sub _strip_split_codons {
+# Remove split codons (which will be at ends) and leading or trailing singleton indels
+#
+sub _strip_for_ensembl {
     my $self = shift;
 
     my $stripped = $self->_new_copy_basics;
     my $elements = $stripped->{_elements} = [ @{$self->elements} ];
 
-    if ($elements->[0]->type eq 'S') {
+    # Should these strip repeatedly in a while loop?
+
+    if ($elements->[0] and (    $elements->[0]->type eq 'S'
+                            or ($elements->[0]->type eq 'G' and $elements->[0]->cigar_length == 1))) {
         my $sc = shift(@$elements);
         $stripped->target_start($self->target_start + $self->target_strand_sense * $sc->target_length);
         $stripped->query_start( $self->query_start  + $self->query_strand_sense  * $sc->query_length);
     }
 
-    if ($elements->[-1] and $elements->[-1]->type eq 'S') {
+    if ($elements->[-1] and (    $elements->[-1]->type eq 'S'
+                             or ($elements->[-1]->type eq 'G' and $elements->[-1]->cigar_length == 1))) {
         my $sc = pop(@$elements);
         $stripped->target_end($self->target_end - $self->target_strand_sense * $sc->target_length);
         $stripped->query_end( $self->query_end  - $self->query_strand_sense  * $sc->query_length);
