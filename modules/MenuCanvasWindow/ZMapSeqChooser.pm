@@ -427,7 +427,8 @@ sub zMapEdit {
 sub _zMapEdit {
     my ($self, $xml_hash) = @_;
 
-    if ($xml_hash->{'request'}->{'action'} eq 'edit') {
+    $xml_hash->{'request'}->{'action'} eq 'edit'
+        or confess "Not an 'edit' action";
 
         my $feat_hash = $xml_hash->{'request'}->{'align'}->{'block'}->{'featureset'}{'feature'};
         $feat_hash or return 0;
@@ -471,10 +472,6 @@ sub _zMapEdit {
         else {
             return 0;
         }
-    }
-    else {
-        confess "Not an 'edit' action";
-    }
 
 }
 
