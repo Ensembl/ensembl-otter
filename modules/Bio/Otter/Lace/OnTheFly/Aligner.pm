@@ -36,6 +36,26 @@ has options => ( is => 'ro', isa => 'HashRef', default => sub { {} } );
 has query_type_options => ( is => 'ro', isa => 'HashRef[HashRef]',
                             default => sub { { dna => {}, protein => {} } } );
 
+has default_options    => ( is => 'ro', isa => 'HashRef', init_arg => undef, builder => '_build_default_options' );
+has default_qt_options => ( is => 'ro', isa => 'HashRef', init_arg => undef, builder => '_build_default_qt_options' );
+
+sub _default_options    { return { '--bestn' => 1 }; };
+sub _default_qt_options { return { dna => {}, protein => {} }; };
+
+sub _build_default_options {
+    my $self = shift;
+    my $defaults       = $self->_default_options;
+    my $child_defaults = inner() || { };
+    return { %{$defaults}, %{$child_defaults} };
+}
+
+sub _build_default_qt_options {
+    my $self = shift;
+    my $defaults       = $self->_default_qt_options;
+    my $child_defaults = inner() || { dna => {}, protein => {} };
+    return { map { $_ => { %{$defaults->{$_}}, %{$child_defaults->{$_}} } } qw( dna protein ) };
+}
+
 has fasta_description => ( is => 'ro', isa => 'Str', lazy => 1, builder => '_build_fasta_description' );
 
 sub _build_fasta_description {
@@ -78,6 +98,8 @@ sub run {
         '--showvulgar' => 'false',
         '--showsugar'  => 'false',
         '--showcigar'  => 'false',
+        %{$self->default_options},
+        %{$self->default_qt_options->{$query_type}},
         %{$self->options},
         %{$self->query_type_options->{$query_type}},
         );

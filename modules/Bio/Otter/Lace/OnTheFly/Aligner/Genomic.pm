@@ -11,7 +11,29 @@ use Moose;
 
 extends 'Bio::Otter::Lace::OnTheFly::Aligner';
 
-# Empty for now
+augment '_build_default_options'    => sub {
+    return {
+        '-M'               => 500,
+        '--maxintron'      => 200000,
+        '--score'          => 100,
+        '--softmasktarget' => 'yes',
+        '--softmaskquery'  => 'yes',
+        '--showalignment'  => 'false',
+    };
+};
+
+augment '_build_default_qt_options' => sub {
+    return {
+        dna => {
+            '--model'           => 'e2g',
+            '--geneseed'        => 300,
+            '--dnahspthreshold' => 120,
+        },
+        protein => {
+            '--model' => 'p2g',
+        },
+    };
+};
 
 1;
 

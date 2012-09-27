@@ -13,6 +13,14 @@ extends 'Bio::Otter::Lace::OnTheFly::Aligner';
 
 has transcript => ( is => 'ro', isa => 'Hum::Ace::SubSeq', required => 1 );
 
+augment '_build_default_options'    => sub { return { } };
+augment '_build_default_qt_options' => sub {
+    return {
+        protein => { '--model' => 'protein2dna:bestfit', '--exhaustive' => undef },
+        dna     => { '--model' => 'affine:bestfit',      '--exhaustive' => undef },
+    };
+};
+
 around 'parse' => sub {
     my ($orig, $self, @args) = @_;
 
