@@ -435,7 +435,7 @@ sub populate_menus {
 
     # Edit subsequence
     my $edit_command = sub{
-        $self->edit_subsequences;
+        $self->edit_selected_subsequences;
         };
     $subseq->add('command',
         -label          => 'Edit',
@@ -995,7 +995,7 @@ sub edit_double_clicked {
 
     my $canvas = $self->canvas;
     $canvas->Busy;
-    $self->edit_subsequences;
+    $self->edit_selected_subsequences;
     $canvas->Unbusy;
 
     return;
@@ -1214,13 +1214,17 @@ sub slice_name {
         $self->AceDatabase->slice_name;
 }
 
+sub edit_selected_subsequences {
+    my ($self) = @_;
+    $self->edit_subsequences($self->list_selected_subseq_names);
+    return;
+}
+
 sub edit_subsequences {
     my ($self, @sub_names) = @_;
 
     my $retval = 1;
 
-    @sub_names = $self->list_selected_subseq_names
-        unless @sub_names;
     foreach my $sub_name (@sub_names) {
         # Just show the edit window if present
         next if $self->raise_transcript_window($sub_name);
