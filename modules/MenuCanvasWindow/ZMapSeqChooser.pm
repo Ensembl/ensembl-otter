@@ -8,11 +8,13 @@ use Carp;
 use Try::Tiny;
 use Data::Dumper;
 use XML::Simple;
+use POSIX();
 
 use Bio::Otter::ZMap::Connect;
 use Bio::Otter::ZMap::XRemoteCache;
 use Bio::Otter::Utils::Config::Ini qw( config_ini_format );
 use Bio::Vega::Utils::XmlEscape qw{ xml_escape };
+use Bio::Vega::Utils::MacProxyConfig qw{ mac_os_x_set_proxy_vars };
 
 my $ZMAP_DEBUG = $ENV{OTTERLACE_ZMAP_DEBUG};
 
@@ -59,10 +61,40 @@ The guts of the code to launch and display the features in a zmap.
 
 sub _launchZMap {
     my ($self) = @_;
+
+    if ($^O eq 'darwin') {
+        # Sadly, if someone moves network after launching zmap, it
+        # won't see new proxy variables.
+        mac_os_x_set_proxy_vars(\%ENV);
+    }
+
     my $win_id = $self->zMapZmapConnector->server_window_id;
-    my $pid = $self->AceDatabase->zmap_launch($win_id);
-    $self->zMapPID($pid);
-    return;
+    my $conf_dir = $self->AceDatabase->zmap_dir;
+    my $zmap_arg_list =
+        $self->AceDatabase->DataSet->config_value_list('zmap_config', 'arguments');
+
+    my @e = (
+        'zmap',
+        '--conf_dir' => $conf_dir,
+        '--win_id'   => $win_id,
+        @{$zmap_arg_list},
+    );
+
+    warn "Running: @e\n";
+
+    my $pid = fork;
+    if ($pid) {
+        $self->zMapPID($pid);
+        return;
+    }
+    confess "Error: couldn't fork()\n" unless defined $pid;
+
+    exec @e;
+    warn "exec '@e' failed : $!";
+    close STDERR; # _exit does not flush
+    POSIX::_exit(1); # avoid triggering DESTROY
+
+    return; # unreached, quietens perlcritic
 }
 
 =head2 zMapLaunchZmap

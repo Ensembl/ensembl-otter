@@ -9,7 +9,6 @@ use Carp;
 
 use Fcntl qw{ O_WRONLY O_CREAT };
 use Config::IniFiles;
-use POSIX();
 use Try::Tiny;
 
 use Bio::Vega::Transform::Otter::Ace;
@@ -25,7 +24,6 @@ use Bio::Otter::Utils::Config::Ini qw( config_ini_format );
 use Hum::Ace::LocalServer;
 use Hum::Ace::MethodCollection;
 use Hum::ZMapStyleCollection;
-use Bio::Vega::Utils::MacProxyConfig qw{ mac_os_x_set_proxy_vars };
 
 use Hum::Conf qw{ PFETCH_SERVER_LIST };
 
@@ -342,35 +340,6 @@ sub slice_name {
     }
 
     return $slice_name;
-}
-
-sub zmap_launch {
-    my ($self, $win_id) = @_;
-
-    if ($^O eq 'darwin') {
-        # Sadly, if someone moves network after launching zmap, it
-        # won't see new proxy variables.
-        mac_os_x_set_proxy_vars(\%ENV);
-    }
-
-    my @e = (
-        'zmap',
-        '--conf_dir' => $self->zmap_dir,
-        '--win_id'   => $win_id,
-        @{$self->DataSet->config_value_list('zmap_config', 'arguments')},
-    );
-
-    warn "Running: @e\n";
-
-    my $pid = fork;
-    return $pid if $pid;
-    confess "Error: couldn't fork()\n" unless defined $pid;
-    exec @e;
-    warn "exec '@e' failed : $!";
-    close STDERR; # _exit does not flush
-    POSIX::_exit(1); # avoid triggering DESTROY
-
-    return;
 }
 
 my $gtkrc = <<'GTKRC'
