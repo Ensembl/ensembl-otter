@@ -419,13 +419,18 @@ A handler to handle edit requests.  Returns a basic response.
 
 sub zMapEdit {
     my ($self, $xml_hash) = @_;
-
-    my $response;
     my $zc = $self->zMapZmapConnector;
+    my $response = $self->_zMapEdit($xml_hash);
+    return (200, $zc->handled_response($response));
+}
+
+sub _zMapEdit {
+    my ($self, $xml_hash) = @_;
+
     if ($xml_hash->{'request'}->{'action'} eq 'edit') {
 
-        my $feat_hash = $xml_hash->{'request'}->{'align'}->{'block'}->{'featureset'}{'feature'}
-          or return return (200, $zc->handled_response(0));
+        my $feat_hash = $xml_hash->{'request'}->{'align'}->{'block'}->{'featureset'}{'feature'};
+        $feat_hash or return 0;
 
         # Are there any transcripts in the list of features?
         my @subseq_names;
@@ -441,7 +446,7 @@ sub zMapEdit {
     - [[:alpha:]]+ # strand
     $ /x;
                     $self->edit_Clone_by_accession_version($accession_version);
-                    return (200, $zc->handled_response(1));
+                    return 1;
                 }
             }
             my $subs = $feat->{'subfeature'}
@@ -461,10 +466,10 @@ sub zMapEdit {
 
         if (@subseq_names) {
             my $success = $self->edit_subsequences(@subseq_names);
-            return (200, $zc->handled_response($success));
+            return $success;
         }
         else {
-            return (200, $zc->handled_response(0));
+            return 0;
         }
     }
     else {
