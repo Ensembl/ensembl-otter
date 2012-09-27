@@ -46,6 +46,22 @@ has 'aligner_query_type_options' => (
     default => sub { { dna => {}, protein => {} } },
     );
 
+sub _aligner_option_accessor {
+    my ($self, $option, @args) = @_;
+    ($self->aligner_options->{$option}) = @args if @args;
+    return $self->aligner_options->{$option};
+}
+
+sub bestn {
+    my ($self, @args) = @_;
+    return $self->_aligner_option_accessor('bestn', @args);
+}
+
+sub maxintron {
+    my ($self, @args) = @_;
+    return $self->_aligner_option_accessor('maxintron', @args);
+}
+
 sub BUILD {
     my ($self, $params) = @_;
 
