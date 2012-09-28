@@ -10,6 +10,8 @@ use Data::Dumper;
 use XML::Simple;
 use POSIX();
 
+use Hum::XmlWriter;
+
 use Bio::Otter::ZMap::Connect;
 use Bio::Otter::ZMap::XRemoteCache;
 use Bio::Otter::Utils::Config::Ini qw( config_ini_format );
