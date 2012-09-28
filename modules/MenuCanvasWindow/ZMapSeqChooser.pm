@@ -434,7 +434,6 @@ sub _zMapEdit {
         $feat_hash or return 0;
 
         # Are there any transcripts in the list of features?
-        my @subseq_names;
             my ($name, $feat) = %$feat_hash;
             if (my $style = $feat->{'style'}) {
                 if (lc($style) eq 'genomic_canonical') {
@@ -458,18 +457,11 @@ sub _zMapEdit {
 
                 # Only transcripts have exons
                 if ($s->{'ontology'} eq 'exon') {
-                    push(@subseq_names, $name);
-                    last;
+                    return $self->edit_subsequences($name)
                 }
             }
 
-        if (@subseq_names) {
-            my $success = $self->edit_subsequences(@subseq_names);
-            return $success;
-        }
-        else {
-            return 0;
-        }
+        return 0;
 
 }
 
