@@ -508,117 +508,27 @@ response.
 sub zMapFeatureDetails {
     my ($self, $xml_hash) = @_;
 
-    my $pages = "";
-    if ($xml_hash->{'request'}->{'action'} eq 'feature_details') {
-        my $feature_hash = $xml_hash->{'request'}{'align'}{'block'}{'featureset'}{'feature'} || {};
-
-        # There is only ever 1 feature in the XML from Zmap
-        my ($name) = keys %$feature_hash;
-
-        unless ($name) {
-            warn "No feature in featureset of XML";
-        }
-        elsif (my $subseq = $self->get_SubSeq($name)) {
-            $pages .= $subseq->zmap_info_xml;
-        }
-        elsif (! $feature_hash->{$name}{'subfeature'}) {
-            # It is not a transcript if it doesn't have subfeatures
-            $pages .= $self->zmap_feature_details_xml($name);
-            $pages .= $self->zmap_feature_evidence_xml($name);
-        }
-    }
+    my $feature_details_xml =
+        $self->_zMapFeatureDetailsXml($xml_hash);
+    my $handled = $feature_details_xml ? 'true' : 'false';
 
     my $xml = Hum::XmlWriter->new;
-    $xml->open_tag('response', { handled => $pages ? 'true' : 'false' });
-    if ($pages) {
-        $xml->open_tag('notebook');
-        $xml->open_tag('chapter');
-        $xml->add_raw_data($pages);
-    }
+    $xml->open_tag('response', { handled => $handled });
+    $xml->add_raw_data($feature_details_xml)
+        if $feature_details_xml;
     $xml->close_all_open_tags;
 
     return (200, $xml->flush);
 }
 
-my $zmap_feature_details_xml_sql = <<'SQL'
-SELECT source_db, taxon_id, description FROM accession_info WHERE accession_sv = ?
-SQL
-    ;
-
-sub zmap_feature_details_xml {
-    my ($self, $feat_name) = @_;
-
-    my $row = $self->AceDatabase->DB->dbh->selectrow_arrayref(
-        $zmap_feature_details_xml_sql, {}, $feat_name);
-    return '' unless $row;
-    my ($source_db, $taxon_id, $desc) = @{$row};
-
-    # Put this on the "Details" page which already exists.
-    my $xml = Hum::XmlWriter->new(5);
-    $xml->open_tag('page',       { name => 'Details' });
-    $xml->open_tag('subsection', { name => 'Feature' });
-    $xml->open_tag('paragraph',  { type => 'tagvalue_table' });
-    $xml->full_tag('tagvalue', { name => 'Source database', type => 'simple' }, $source_db);
-    $xml->full_tag('tagvalue', { name => 'Taxon ID',        type => 'simple' }, $taxon_id);
-    $xml->full_tag('tagvalue', { name => 'Description', type => 'scrolled_text' }, $desc);
-    $xml->close_all_open_tags;
-
-    return $xml->flush;
-}
-
-sub zmap_feature_evidence_xml {
-    my ($self, $feat_name) = @_;
-
-    my $feat_name_is_prefixed =
-        $feat_name =~ /\A[[:alnum:]]{2}:/;
-
-    my $subseq_list = [];
-    foreach my $name ($self->list_all_SubSeq_names) {
-        if (my $subseq = $self->get_SubSeq($name)) {
-            push(@$subseq_list, $subseq);
-        }
-    }
-    my $used_subseq_names = [];
-  SUBSEQ: foreach my $subseq (@$subseq_list) {
-
-        #warn "Looking at: ", $subseq->name;
-        my $evi_hash = $subseq->evidence_hash();
-
-        # evidence_hash looks like this
-        # evidence = {
-        #   type    => [ qw(evidence names) ],
-        #   EST     => [ qw(Em:BC01234.1 Em:CR01234.2) ],
-        #   cDNA    => [ qw(Em:AB01221.3) ],
-        #   ncRNA   => [ qw(Em:AF480562.1) ],
-        #   Protein => [ qw(Sw:Q99IVF1) ]
-        # }
-
-        foreach my $evi_type (keys %$evi_hash) {
-            my $evi_array = $evi_hash->{$evi_type};
-            foreach my $evi_name (@$evi_array) {
-                $evi_name =~ s/\A[[:alnum:]]{2}://
-                    if ! $feat_name_is_prefixed;
-                if ($feat_name eq $evi_name) {
-                    push(@$used_subseq_names, $subseq->name);
-                    next SUBSEQ;
-                }
-            }
-        }
-    }
-    if (@$used_subseq_names) {
-        my $xml = Hum::XmlWriter->new(5);
-        $xml->open_tag('page',       { name => 'Details' });
-        $xml->open_tag('subsection', { name => 'Feature' });
-        $xml->open_tag('paragraph',  { name => 'Evidence', type => 'homogenous' });
-        foreach my $name (@$used_subseq_names) {
-            $xml->full_tag('tagvalue', { name => 'for transcript', type => 'simple' }, $name);
-        }
-        $xml->close_all_open_tags;
-        return $xml->flush;
-    }
-    else {
-        return '';
-    }
+sub _zMapFeatureDetailsXml {
+    my ($self, $xml_hash) = @_;
+    return unless $xml_hash->{'request'}->{'action'} eq 'feature_details';
+    my $feature_hash = $xml_hash->{'request'}{'align'}{'block'}{'featureset'}{'feature'};
+    return unless $feature_hash && keys %{$feature_hash};
+    my $feature_details_xml =
+        $self->zircon_zmap_view_feature_details_xml(%{$feature_hash});
+    return $feature_details_xml;
 }
 
 sub zMapViewClosed {
