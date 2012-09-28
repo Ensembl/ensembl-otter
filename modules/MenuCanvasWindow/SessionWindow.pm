@@ -2478,6 +2478,27 @@ sub zircon_zmap_view_features_loaded {
     return;
 }
 
+my $name_pattern = qr! ^
+    (.*) \. [[:digit:]]+ \. [[:digit:]]+
+    - [[:digit:]]+ # start
+    - [[:digit:]]+ # end
+    - [[:alpha:]]+ # strand
+    $ !x;
+
+sub zircon_zmap_view_edit_clone {
+    my ($self, $name) = @_;
+    my ($accession_version) = $name =~ $name_pattern
+        or confess "invalid name for a genomic_canonical feature: ${name}";
+    $self->edit_Clone_by_accession_version($accession_version);
+    return;
+}
+
+sub zircon_zmap_view_edit_transcript {
+    my ($self, $name) = @_;
+    my $result = $self->edit_subsequences($name);
+    return $result;
+}
+
 
 ### END: ZMap control interface
 
