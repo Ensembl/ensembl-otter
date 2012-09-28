@@ -46,7 +46,8 @@ sub _build_default_options {
     my $self = shift;
     my $defaults       = $self->_default_options;
     my $child_defaults = inner() || { };
-    return { %{$defaults}, %{$child_defaults} };
+    my $default_options = { %{$defaults}, %{$child_defaults} };
+    return $default_options;
 }
 
 sub _build_default_qt_options {
