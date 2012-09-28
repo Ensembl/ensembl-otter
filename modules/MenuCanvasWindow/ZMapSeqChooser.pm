@@ -540,17 +540,6 @@ sub zMapFeatureDetails {
     return (200, $xml->flush);
 }
 
-my $zmap_feature_details_tags = [
-    [ taxon_id => {
-        name => 'Taxon ID',
-        type => 'simple',
-      }, ],
-    [ description => {
-        name => 'Description',
-        type => 'scrolled_text',
-      }, ],
-    ];
-
 my $zmap_feature_details_xml_sql = <<'SQL'
 SELECT source_db, taxon_id, description FROM accession_info WHERE accession_sv = ?
 SQL
