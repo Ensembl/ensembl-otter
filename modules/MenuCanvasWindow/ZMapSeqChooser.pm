@@ -437,14 +437,7 @@ sub _zMapEdit {
             my ($name, $feat) = %$feat_hash;
             if (my $style = $feat->{'style'}) {
                 if (lc($style) eq 'genomic_canonical') {
-                    confess "invalid name for a genomic_canonical feature: ${name}"
-                        unless my ( $accession_version ) = $name =~ / ^
-    (.*) \. [[:digit:]]+ \. [[:digit:]]+
-    - [[:digit:]]+ # start
-    - [[:digit:]]+ # end
-    - [[:alpha:]]+ # strand
-    $ /x;
-                    $self->edit_Clone_by_accession_version($accession_version);
+                    $self->zircon_zmap_view_edit_clone($name);
                     return 1;
                 }
             }
@@ -457,7 +450,7 @@ sub _zMapEdit {
 
                 # Only transcripts have exons
                 if ($s->{'ontology'} eq 'exon') {
-                    return $self->edit_subsequences($name)
+                    return $self->zircon_zmap_view_edit_transcript($name);
                 }
             }
 
