@@ -12,7 +12,7 @@ use Moose;
 extends 'Bio::Otter::Lace::OnTheFly::Aligner';
 
 augment '_build_default_options'    => sub {
-    return {
+    my $default_options = {
         '-M'               => 500,
         '--maxintron'      => 200000,
         '--score'          => 100,
@@ -20,10 +20,11 @@ augment '_build_default_options'    => sub {
         '--softmaskquery'  => 'yes',
         '--showalignment'  => 'false',
     };
+    return $default_options;
 };
 
 augment '_build_default_qt_options' => sub {
-    return {
+    my $default_qt_options = {
         dna => {
             '--model'           => 'e2g',
             '--geneseed'        => 300,
@@ -33,6 +34,7 @@ augment '_build_default_qt_options' => sub {
             '--model' => 'p2g',
         },
     };
+    return $default_qt_options;
 };
 
 1;
