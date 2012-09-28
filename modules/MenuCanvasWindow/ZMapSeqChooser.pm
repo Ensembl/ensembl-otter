@@ -430,32 +430,27 @@ sub _zMapEdit {
     $xml_hash->{'request'}->{'action'} eq 'edit'
         or confess "Not an 'edit' action";
 
-        my $feat_hash = $xml_hash->{'request'}->{'align'}->{'block'}->{'featureset'}{'feature'};
-        $feat_hash or return 0;
+    my $feat_hash = $xml_hash->{'request'}{'align'}{'block'}{'featureset'}{'feature'};
+    $feat_hash or return 0;
 
-        # Are there any transcripts in the list of features?
-            my ($name, $feat) = %$feat_hash;
-            if (my $style = $feat->{'style'}) {
-                if (lc($style) eq 'genomic_canonical') {
-                    $self->zircon_zmap_view_edit_clone($name);
-                    return 1;
-                }
+    my ($name, $feat) = %$feat_hash;
+    my $style = $feat->{'style'};
+    if ($style && lc($style) eq 'genomic_canonical') {
+        $self->zircon_zmap_view_edit_clone($name);
+        return 1;
+    }
+    else {
+        my $subs = $feat->{'subfeature'};
+        $subs or return 0;
+        ref $subs eq 'ARRAY'
+            or confess "Unexpected feature format for ${name}";
+        for my $s (@$subs) {
+            if ($s->{'ontology'} eq 'exon') {
+                return $self->zircon_zmap_view_edit_transcript($name);
             }
-            my $subs = $feat->{'subfeature'}
-                or return 0;
-            unless (ref $subs eq 'ARRAY') {
-                confess "Unexpected feature format for ${name}";
-            }
-            foreach my $s (@$subs) {
-
-                # Only transcripts have exons
-                if ($s->{'ontology'} eq 'exon') {
-                    return $self->zircon_zmap_view_edit_transcript($name);
-                }
-            }
-
+        }
         return 0;
-
+    }
 }
 
 =head2 zMapHighlight
