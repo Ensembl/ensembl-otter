@@ -18,6 +18,8 @@ use Hum::Ace::Assembly;
 use Hum::Analysis::Factory::ExonLocator;
 use Hum::Sort qw{ ace_sort };
 use Hum::ClipboardUtils qw{ text_is_zmap_clip };
+use Hum::XmlWriter;
+
 use EditWindow::Dotter;
 use EditWindow::Exonerate;
 use EditWindow::Clone;
@@ -2497,6 +2499,112 @@ sub zircon_zmap_view_edit_transcript {
     my ($self, $name) = @_;
     my $result = $self->edit_subsequences($name);
     return $result;
+}
+
+sub zircon_zmap_view_feature_details_xml {
+    my ($self, $name, $feature_hash) = @_;
+    my $feature_details_xml =
+        $self->_feature_details_xml($name, $feature_hash);
+    $feature_details_xml or return;
+    my $xml = Hum::XmlWriter->new;
+    $xml->open_tag('notebook');
+    $xml->open_tag('chapter');
+    $xml->add_raw_data($feature_details_xml);
+    $xml->close_all_open_tags;
+    return $xml->flush;
+}
+
+sub _feature_details_xml {
+    my ($self, $name, $feature_hash) = @_;
+    my $subseq = $self->get_SubSeq($name);
+    return $subseq->zmap_info_xml if $subseq;
+    return if $feature_hash->{'subfeature'};
+    my @feature_details_xml = (
+        $self->_feature_accession_info_xml($name),
+        $self->_feature_evidence_xml($name),
+        );
+    return unless @feature_details_xml;
+    return join '', @feature_details_xml;
+}
+
+my $feature_accession_info_sql = <<'SQL'
+SELECT source_db, taxon_id, description FROM accession_info WHERE accession_sv = ?
+SQL
+    ;
+
+sub _feature_accession_info_xml {
+    my ($self, $feat_name) = @_;
+
+    my $row = $self->AceDatabase->DB->dbh->selectrow_arrayref(
+        $feature_accession_info_sql, {}, $feat_name);
+    return unless $row;
+    my ($source_db, $taxon_id, $desc) = @{$row};
+
+    # Put this on the "Details" page which already exists.
+    my $xml = Hum::XmlWriter->new(5);
+    $xml->open_tag('page',       { name => 'Details' });
+    $xml->open_tag('subsection', { name => 'Feature' });
+    $xml->open_tag('paragraph',  { type => 'tagvalue_table' });
+    $xml->full_tag('tagvalue', { name => 'Source database', type => 'simple' }, $source_db);
+    $xml->full_tag('tagvalue', { name => 'Taxon ID',        type => 'simple' }, $taxon_id);
+    $xml->full_tag('tagvalue', { name => 'Description', type => 'scrolled_text' }, $desc);
+    $xml->close_all_open_tags;
+
+    return $xml->flush;
+}
+
+sub _feature_evidence_xml {
+    my ($self, $feat_name) = @_;
+
+    my $feat_name_is_prefixed =
+        $feat_name =~ /\A[[:alnum:]]{2}:/;
+
+    my $subseq_list = [];
+    foreach my $name ($self->list_all_SubSeq_names) {
+        if (my $subseq = $self->get_SubSeq($name)) {
+            push(@$subseq_list, $subseq);
+        }
+    }
+    my $used_subseq_names = [];
+  SUBSEQ: foreach my $subseq (@$subseq_list) {
+
+        #warn "Looking at: ", $subseq->name;
+        my $evi_hash = $subseq->evidence_hash();
+
+        # evidence_hash looks like this
+        # evidence = {
+        #   type    => [ qw(evidence names) ],
+        #   EST     => [ qw(Em:BC01234.1 Em:CR01234.2) ],
+        #   cDNA    => [ qw(Em:AB01221.3) ],
+        #   ncRNA   => [ qw(Em:AF480562.1) ],
+        #   Protein => [ qw(Sw:Q99IVF1) ]
+        # }
+
+        foreach my $evi_type (keys %$evi_hash) {
+            my $evi_array = $evi_hash->{$evi_type};
+            foreach my $evi_name (@$evi_array) {
+                $evi_name =~ s/\A[[:alnum:]]{2}://
+                    if ! $feat_name_is_prefixed;
+                if ($feat_name eq $evi_name) {
+                    push(@$used_subseq_names, $subseq->name);
+                    next SUBSEQ;
+                }
+            }
+        }
+    }
+
+    return unless @{$used_subseq_names};
+
+    my $xml = Hum::XmlWriter->new(5);
+    $xml->open_tag('page',       { name => 'Details' });
+    $xml->open_tag('subsection', { name => 'Feature' });
+    $xml->open_tag('paragraph',  { name => 'Evidence', type => 'homogenous' });
+    foreach my $name (@$used_subseq_names) {
+        $xml->full_tag('tagvalue', { name => 'for transcript', type => 'simple' }, $name);
+    }
+    $xml->close_all_open_tags;
+
+    return $xml->flush;
 }
 
 
