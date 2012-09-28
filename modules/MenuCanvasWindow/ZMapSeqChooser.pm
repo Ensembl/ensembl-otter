@@ -435,8 +435,7 @@ sub _zMapEdit {
 
         # Are there any transcripts in the list of features?
         my @subseq_names;
-      NAME: foreach my $name (keys %$feat_hash) {
-            my $feat = $feat_hash->{$name};
+            my ($name, $feat) = %$feat_hash;
             if (my $style = $feat->{'style'}) {
                 if (lc($style) eq 'genomic_canonical') {
                     confess "invalid name for a genomic_canonical feature: ${name}"
@@ -451,7 +450,7 @@ sub _zMapEdit {
                 }
             }
             my $subs = $feat->{'subfeature'}
-              or next;
+                or return 0;
             unless (ref $subs eq 'ARRAY') {
                 confess "Unexpected feature format for ${name}";
             }
@@ -460,10 +459,9 @@ sub _zMapEdit {
                 # Only transcripts have exons
                 if ($s->{'ontology'} eq 'exon') {
                     push(@subseq_names, $name);
-                    next NAME;
+                    last;
                 }
             }
-        }
 
         if (@subseq_names) {
             my $success = $self->edit_subsequences(@subseq_names);
