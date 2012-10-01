@@ -3,7 +3,6 @@ e_*.fa
 insert.fa
 random.fa
 region.*.fa
-test_clone.fa
 tmp_clone.fa
 *.out
 *.full
