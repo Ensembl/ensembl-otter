@@ -486,16 +486,40 @@ sub zMapHighlight {
     return (200, $zc->handled_response(1));
 }
 
-# some aliases for naming consistency
+=head2 zMapSingleSelect
+
+A handler to handle single_select.  returns a basic response.
+
+=cut
 
 sub zMapSingleSelect {
-    my ($self, @args) = @_;
-    return $self->zMapHighlight(@args);
+    my ($self, $xml_hash) = @_;
+    my $zc = $self->zMapZmapConnector;
+    my $features_hash =
+        $xml_hash->{'request'}{'align'}{'block'}{'featureset'}{'feature'} || {};
+    $self->deselect_all();
+    foreach my $name (keys(%$features_hash)) {
+        $self->highlight_by_name_without_owning_clipboard($name);
+    }
+    return (200, $zc->handled_response(1));
 }
 
+=head2 zMapMultipleSelect
+
+A handler to handle multiple_select requests.  returns a basic
+response.
+
+=cut
+
 sub zMapMultipleSelect {
-    my ($self, @args) = @_;
-    return $self->zMapHighlight(@args);
+    my ($self, $xml_hash) = @_;
+    my $zc = $self->zMapZmapConnector;
+    my $features_hash =
+        $xml_hash->{'request'}{'align'}{'block'}{'featureset'}{'feature'} || {};
+    foreach my $name (keys(%$features_hash)) {
+        $self->highlight_by_name_without_owning_clipboard($name);
+    }
+    return (200, $zc->handled_response(1));
 }
 
 =head2 zMapFeatureDetails
