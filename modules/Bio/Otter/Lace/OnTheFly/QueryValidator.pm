@@ -53,7 +53,7 @@ sub BUILD {
     return;
 }
 
-sub _build_confirmed_seqs {
+sub _build_confirmed_seqs {     ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
     my ($self) = @_;
 
     {
@@ -116,7 +116,7 @@ sub _build_confirmed_seqs {
     return \@confirmed_seqs;
 }
 
-sub _build_seqs_by_type {
+sub _build_seqs_by_type {       ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
     my $self = shift;
 
     my %seqs_by_type;
@@ -146,7 +146,7 @@ sub seqs_for_type {
     return $self->seqs_by_type->{$type};
 }
 
-sub _build_seqs_by_name {
+sub _build_seqs_by_name {       ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
     my $self = shift;
 
     my %name_seq;
