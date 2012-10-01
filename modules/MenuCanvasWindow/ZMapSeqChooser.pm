@@ -455,37 +455,6 @@ sub _zMapEdit {
     }
 }
 
-=head2 zMapHighlight
-
-A  handler  to  handle  single_select  and  multiple_select  requests.
-returns a basic response.
-
-=cut
-
-sub zMapHighlight {
-    my ($self, $xml_hash) = @_;
-
-    my $zc = $self->zMapZmapConnector;
-
-    my $features_hash = $xml_hash->{'request'}{'align'}{'block'}{'featureset'}{'feature'} || {};
-
-    # Needs to do something interesting to find the object to highlight.
-    if ($xml_hash->{'request'}->{'action'} eq 'single_select') {
-        $self->deselect_all();
-        foreach my $name (keys(%$features_hash)) {
-            $self->highlight_by_name_without_owning_clipboard($name);
-        }
-    }
-    elsif ($xml_hash->{'request'}->{'action'} eq 'multiple_select') {
-        foreach my $name (keys(%$features_hash)) {
-            $self->highlight_by_name_without_owning_clipboard($name);
-        }
-    }
-    else { confess "Not a 'select' action\n"; }
-
-    return (200, $zc->handled_response(1));
-}
-
 =head2 zMapSingleSelect
 
 A handler to handle single_select.  returns a basic response.
