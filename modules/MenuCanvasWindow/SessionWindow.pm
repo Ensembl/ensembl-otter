@@ -2615,6 +2615,13 @@ sub zircon_zmap_view_single_select {
     return;
 }
 
+sub zircon_zmap_view_multiple_select {
+    my ($self, $name_list) = @_;
+    $self->highlight_by_name_without_owning_clipboard($_)
+        for @{$name_list};
+    return;
+}
+
 
 ### END: ZMap control interface
 
