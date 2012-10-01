@@ -26,16 +26,18 @@ sub fasta_sequences {
 
 with 'Bio::Otter::Lace::OnTheFly::FastaFile';
 
-sub _build_start {              # could use 'default' for this, but for symmetry with _build_end:
+# could use 'default' for this, but for symmetry with _build_end:
+#
+sub _build_start {              ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
     return 1;
 }
 
-sub _build_end {
+sub _build_end {                ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
     my $self = shift;
     return $self->full_seq->sequence_length;
 }
 
-sub _build_target_seq {
+sub _build_target_seq {         ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
     my $self = shift;
     my $target_seq = $self->full_seq->sub_sequence($self->start, $self->end);
     $target_seq->name($self->full_seq->name);

@@ -42,7 +42,7 @@ has default_qt_options => ( is => 'ro', isa => 'HashRef', init_arg => undef, bui
 sub _default_options    { return { '--bestn' => 1 }; };
 sub _default_qt_options { return { dna => {}, protein => {} }; };
 
-sub _build_default_options {
+sub _build_default_options {    ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
     my $self = shift;
     my $defaults       = $self->_default_options;
     my $child_defaults = inner() || { };
@@ -50,7 +50,7 @@ sub _build_default_options {
     return $default_options;
 }
 
-sub _build_default_qt_options {
+sub _build_default_qt_options { ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
     my $self = shift;
     my $defaults       = $self->_default_qt_options;
     my $child_defaults = inner() || { dna => {}, protein => {} };
@@ -59,7 +59,7 @@ sub _build_default_qt_options {
 
 has fasta_description => ( is => 'ro', isa => 'Str', lazy => 1, builder => '_build_fasta_description' );
 
-sub _build_fasta_description {
+sub _build_fasta_description {  ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
     my $self = shift;
     return sprintf('query_%s', $self->type);
 }

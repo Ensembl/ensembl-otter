@@ -18,7 +18,7 @@ use Hum::FastaFileIO;
 has 'fasta_file'   => ( is => 'ro', isa => 'File::Temp',
                         lazy => 1, builder => '_build_fasta_file', init_arg => undef );
 
-sub _build_fasta_file {
+sub _build_fasta_file {         ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
     my $self = shift;
 
     my $template = sprintf("otf_%s_%d_XXXXX", $self->fasta_description, $$);
