@@ -2607,6 +2607,14 @@ sub _feature_evidence_xml {
     return $xml->flush;
 }
 
+sub zircon_zmap_view_single_select {
+    my ($self, $name_list) = @_;
+    $self->deselect_all();
+    $self->highlight_by_name_without_owning_clipboard($_)
+        for @{$name_list};
+    return;
+}
+
 
 ### END: ZMap control interface
 
