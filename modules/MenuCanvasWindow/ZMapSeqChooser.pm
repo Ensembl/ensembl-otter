@@ -482,9 +482,7 @@ sub zMapMultipleSelect {
     my $zc = $self->zMapZmapConnector;
     my $features_hash =
         $xml_hash->{'request'}{'align'}{'block'}{'featureset'}{'feature'} || {};
-    foreach my $name (keys(%$features_hash)) {
-        $self->highlight_by_name_without_owning_clipboard($name);
-    }
+    $self->zircon_zmap_view_multiple_select([ keys %$features_hash ]);
     return (200, $zc->handled_response(1));
 }
 
