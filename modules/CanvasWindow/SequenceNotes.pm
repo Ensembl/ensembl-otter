@@ -6,6 +6,7 @@ package CanvasWindow::SequenceNotes;
 use strict;
 use warnings;
 use Carp;
+use Try::Tiny;
 
 use base 'CanvasWindow';
 use CanvasWindow::SequenceNotes::History;
@@ -714,30 +715,28 @@ sub _open_SequenceSet {
 
     if ($adb_write_access) {
         # only lock the region if we have write access.
-        eval{
-            $adb->try_to_lock_the_block;
-        };
-
-        if ($@) {
+        my $ok = 0;
+        try { $adb->try_to_lock_the_block; $ok = 1; }
+        catch {
             $adb->error_flag(0);
             $adb->write_access(0);  # Stops AceDatabase DESTROY from trying to unlock clones
-            if ($@ =~ /Clones locked/) {
+            if (/Clones locked/) {
                 # if our error is because of locked clones, display these to the user
                 my $message = "Some of the clones you are trying to open are locked\n";
-                my @lines = split /\n/ , $@ ;
-                print STDERR $@ ;
-                foreach my $line (@lines ){
-                    if (my ($clone_name , $author) = $line =~ m/(\S+) has been locked by \'(\S+)\'/ ){
+                print STDERR $_ ;
+                for (split /\n/){
+                    if (my ($clone_name , $author) =
+                        m/(\S+) has been locked by \'(\S+)\'/ ){
                         $message  .= "$clone_name is locked by $author \n";
                     }
                 }
                 $self->message( $message  );
             } else {
-                $self->exception_message($@, 'Error initialising database');
-                print $@;
+                $self->exception_message($_, 'Error initialising database');
+                print $_;
             }
-            return;
         }
+        $ok or return;
     }
 
     $self->refresh_lock_columns;
