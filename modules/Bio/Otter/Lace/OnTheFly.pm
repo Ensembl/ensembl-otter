@@ -34,6 +34,8 @@ has 'target_seq_obj'  => (
     writer => '_set_target_seq_obj',
     );
 
+has 'softmask_target' => ( is => 'ro', isa => 'Bool' );
+
 has 'aligner_options' => (
     is  => 'ro',
     isa => 'HashRef',
@@ -54,12 +56,12 @@ sub _aligner_option_accessor {
 
 sub bestn {
     my ($self, @args) = @_;
-    return $self->_aligner_option_accessor('bestn', @args);
+    return $self->_aligner_option_accessor('--bestn', @args);
 }
 
 sub maxintron {
     my ($self, @args) = @_;
-    return $self->_aligner_option_accessor('maxintron', @args);
+    return $self->_aligner_option_accessor('--maxintron', @args);
 }
 
 sub BUILD {
@@ -80,6 +82,7 @@ sub aligners_for_each_type {
             type               => $type,
             seqs               => $self->seqs_for_type($type),
             target             => $self->target_seq_obj,
+            softmask_target    => $self->softmask_target,
             options            => $self->aligner_options,
             query_type_options => $self->aligner_query_type_options,
             );

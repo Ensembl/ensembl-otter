@@ -2074,9 +2074,17 @@ sub launch_exonerate {
     my $max_intron_length = $params->{-max_intron_length};
     my $mask_target = $params->{-mask_target};
 
-    for my $type ( $otf->seq_types ) {
+    $otf->bestn($best_n);
+    $otf->maxintron($max_intron_length);
+
+    for my $aligner ( $otf->aligners_for_each_type ) {
+
+        my $type = $aligner->type;
 
         warn "Running exonerate for sequence(s) of type: $type\n";
+
+        # The new way:
+        # my $result_set = $aligner->run;
 
         my $score    = $type =~ /Protein/  ? $PROT_SCORE : $DNA_SCORE;
         my $ana_name = $type =~ /^Unknown/ ? $type       :

@@ -16,7 +16,6 @@ augment '_build_default_options'    => sub {
         '-M'               => 500,
         '--maxintron'      => 200000,
         '--score'          => 100,
-        '--softmasktarget' => 'yes',
         '--softmaskquery'  => 'yes',
         '--showalignment'  => 'false',
     };
