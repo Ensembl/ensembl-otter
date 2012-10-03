@@ -156,7 +156,7 @@ sub column_methods {
     }
     elsif (! $self->{'_column_methods'}) {
         # Setup some default column methods
-        my $text_method  = \&_column_write_text ;   # this is the default method to be used  to display text (rather than drawing s graphic)
+        my $text_method  = \&_column_write_text ;
         my $image_method = \&_column_draw_image ;
 
         my $norm = $self->font_fixed;
