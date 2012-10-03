@@ -369,6 +369,51 @@ sub SessionWindow {
     return $self->{'_SessionWindow'};
 }
 
+sub _repeat_masker {
+    my ($self, $apply_mask_sub) = @_;
+
+    my $ace_database = $self->SessionWindow->AceDatabase;
+    my $offset = $ace_database->offset;
+
+    my $dataset = $ace_database->DataSet;
+    foreach my $filter_name qw( trf RepeatMasker ) {
+        my $filter = $dataset->filter_by_name($filter_name);
+        $self->logger->logconfess("no filter named '${filter_name}'") unless $filter;
+        $filter->call_with_session_data_handle(
+            $ace_database,
+            sub {
+                my ($data_h) = @_;
+                $self->logger->info('In _repeat_masker filter callback');
+                while (<$data_h>) {
+                    chomp;
+                    next if /^\#\#/; # skip GFF headers
+
+                    # feature parameters
+                    my ( $start, $end ) = (split /\t/)[3,4];
+                    $start -= $offset;
+                    $end   -= $offset;
+
+                    # sanity checks
+                    $self->logger->logconfess("missing feature start in '$_'") unless defined $start;
+                    $self->logger->logconfess("non-numeric feature start: $start")
+                        unless $start =~ /^[[:digit:]]+$/;
+                    $self->logger->logconfess("missing feature end in '$_'") unless defined $end;
+                    $self->logger->logconfess("non-numeric feature end: $end")
+                        unless $end =~ /^[[:digit:]]+$/;
+
+                    if ($start > $end) {
+                        ($start, $end) = ($end, $start);
+                    }
+
+                    # mask against this feature
+                    $apply_mask_sub->($start, $end);
+                }
+                return;
+            });
+    }
+    return;
+}
+
 sub launch_exonerate {
     my ($self) = @_;
     my $SessionWindow = $self->SessionWindow;
@@ -378,7 +423,9 @@ sub launch_exonerate {
         seqs       => $self->entered_seqs,
         accessions => $self->entered_accessions,
 
-        full_seq => $SessionWindow->Assembly->Sequence,
+        full_seq        => $SessionWindow->Assembly->Sequence,
+        softmask_target => ($self->{_mask_target} eq 'soft'),
+        repeat_masker   => sub { my $apply_mask_sub = shift; $self->_repeat_masker($apply_mask_sub); },
 
         lowercase_poly_a_t_tails => 1, # to avoid spurious exons
 

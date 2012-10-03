@@ -32,6 +32,8 @@ has type   => ( is => 'ro', isa => 'Str',                                   requ
 has seqs   => ( is => 'ro', isa => 'ArrayRef[Hum::Sequence]',               required => 1 );
 has target => ( is => 'ro', isa => 'Bio::Otter::Lace::OnTheFly::TargetSeq', required => 1 );
 
+has softmask_target => ( is => 'ro', isa => 'Bool' );
+
 has options => ( is => 'ro', isa => 'HashRef', default => sub { {} } );
 has query_type_options => ( is => 'ro', isa => 'HashRef[HashRef]',
                             default => sub { { dna => {}, protein => {} } } );
@@ -103,6 +105,7 @@ sub run {
         %{$self->default_qt_options->{$query_type}},
         %{$self->options},
         %{$self->query_type_options->{$query_type}},
+        '--softmasktarget' => $self->softmask_target ? 'yes' : 'no',
         );
 
     my @command_line = $self->construct_command( $command, \%args );
