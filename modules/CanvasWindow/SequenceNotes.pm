@@ -150,8 +150,8 @@ sub column_methods {
 
     if ($methods) {
         my $ok = 0;
-        eval{ $ok = 1 if ref($methods) eq 'ARRAY' };
-        confess "Expected array ref but argument is '$methods'" unless $ok;
+        ref($methods) eq 'ARRAY'
+            or confess "Expected array ref but argument is '$methods'";
         $self->{'_column_methods'} = $methods;
     }
     elsif (! $self->{'_column_methods'}) {
