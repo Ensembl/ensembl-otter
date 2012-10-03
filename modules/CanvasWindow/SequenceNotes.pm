@@ -774,7 +774,8 @@ sub selected_clones_string {
 }
 
 
-## this returns the rows to be displayed - havent used get_CloneSequence_list directly, as this allows for easier inheritence of the module
+## this returns the rows to be displayed - havent used get_CloneSequence_list
+## directly, as this allows for easier inheritence of the module
 sub get_rows_list{
     my ($self) = @_;
     my $cs_list = $self->get_CloneSequence_list;
