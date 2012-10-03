@@ -140,10 +140,11 @@ sub _refresh_SequenceSet{
 }
 
 
-# this method returns an anonymous array. Each element of the array consists of another annonymous array of two elements.
-# the first of the two elements is the method to be called on the canvas,
-# and the second method that will produce the arguments for the first method
-# the first method will _column_write_text ($canvas->createText) or _column_draw_image ($canvas->createImage)
+# This method returns an array of pairs.
+# The first element of each pair is a method to be called on the canvas,
+# it is either \&_column_write_text or \&_column_draw_image .
+# The second element of each pair is a method that will produce the arguments
+# for the first method.
 sub column_methods {
     my ($self, $methods) = @_;
 
