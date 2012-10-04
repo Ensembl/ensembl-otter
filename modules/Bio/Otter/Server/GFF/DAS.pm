@@ -43,8 +43,13 @@ my %LangDesc = (
 sub struct_traverse_path {
     my ($struct, $path) = @_;
 
-    if(ref($path->[0]) eq 'ARRAY') { # recursive application of self to the parts
-        my $join = join(';', map { my $foo = struct_traverse_path($struct, $_); defined($foo) ? $foo : 'UnDeF' } @$path );
+    if(ref($path->[0]) eq 'ARRAY') {
+        # recursive application of self to the parts
+        my $join = join(
+            ';', map {
+                my $foo = struct_traverse_path($struct, $_);
+                defined($foo) ? $foo : 'UnDeF';
+            } @$path );
         return ($join=~/UnDeF/) ? undef : $join;
     }
 
