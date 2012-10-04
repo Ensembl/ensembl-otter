@@ -22,9 +22,12 @@ sub draw{
 
     my $slice_window = $self->window;
     # The clones do not get truncated.
-    my $label        = $slice_window->Label(-text => qq(Enter chromosome coordinates for the start and end of the slice) .
-                                     qq( to open the clones contained.)
-                                     )->pack(-side => 'top');
+    my $label =
+        $slice_window->Label(
+            -text =>
+            qq(Enter chromosome coordinates for the start and end of the slice) .
+            qq( to open the clones contained.)
+        )->pack(-side => 'top');
     $label->bind('<Destroy>' , sub { $self = undef });
 
     my $entry_frame  = $slice_window->Frame()->pack(-side => 'top', 
