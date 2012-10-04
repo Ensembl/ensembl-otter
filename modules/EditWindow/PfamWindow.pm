@@ -267,7 +267,7 @@ sub initialize {
                 if (my $pid = fork) {
                     return 1;
                 } elsif (defined $pid) {
-                    my @command ("belvu", $alignments->{$domain});
+                    my @command = ("belvu", $alignments->{$domain});
                     # DUP: MenuCanvasWindow::ZMapSeqChooser::_launchZMap
                     { exec(@command) };
                     warn "Failed to exec '@command': $!";
