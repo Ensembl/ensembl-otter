@@ -287,7 +287,9 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS {
                 }
 
                 try {
-                    warn "adding feature with start=".$feature->start()." and end=".$feature->end()."\n";
+                    warn sprintf
+                        "adding feature with start=%d and end=%d\n"
+                        , $feature->start, $feature->end;
                     $parent_feature->$add_sub($feature);
                 }
                 catch {
