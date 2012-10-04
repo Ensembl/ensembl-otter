@@ -33,7 +33,9 @@ my %LangDesc = (
     },
 
     DnaDnaAlignFeature => {
-        -constructor => sub { return Bio::EnsEMBL::DnaDnaAlignFeature->new_fast({}); },
+        -constructor => sub {
+            return Bio::EnsEMBL::DnaDnaAlignFeature->new_fast({});
+        },
     },
 
     );
