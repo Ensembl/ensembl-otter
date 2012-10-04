@@ -3,8 +3,8 @@
 
 =head1 DESCRIPTION
 
-    The package formerly known as Bio::Otter::Lace::Exonerate.
-    Similar to a Pipeline RunnableDB, but for Otter on the fly Exonerate.
+The package formerly known as Bio::Otter::Lace::Exonerate.
+Similar to a Pipeline RunnableDB, but for Otter on the fly Exonerate.
 
 =cut
 
