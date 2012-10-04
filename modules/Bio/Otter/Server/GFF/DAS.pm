@@ -68,7 +68,8 @@ sub struct_traverse_path {
 sub struct_show_path {
     my ($struct, $path) = @_;
 
-    if(ref($path->[0]) eq 'ARRAY') { # recoursive application of self to the parts
+    if(ref($path->[0]) eq 'ARRAY') {
+        # recoursive application of self to the parts
         return join('.', map { struct_show_path($struct, $_) } @$path );
     }
 
