@@ -293,7 +293,8 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS {
                     $parent_feature->$add_sub($feature);
                 }
                 catch {
-                    ## there may be a collision of exons - just ignore it for the moment
+                    ## there may be a collision of exons -
+                    ## just ignore it for the moment
                     warn "Could not group feature: $_\n";
                 };
             } else {
