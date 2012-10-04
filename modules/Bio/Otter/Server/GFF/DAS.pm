@@ -154,7 +154,9 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS {
         die "Error from DAS request: $code\n";
     }
 
-    my $feature_coll; # collection(hash/array) of top-level features (prediction_transcripts | simple_features)
+    # collection(hash/array) of top-level features
+    # (prediction_transcripts | simple_features)
+    my $feature_coll;
 
     foreach my $das_features (values %$response) {
         if(!$das_features || ref($das_features) ne 'ARRAY') {
