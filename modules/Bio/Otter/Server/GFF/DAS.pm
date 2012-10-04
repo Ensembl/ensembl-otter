@@ -320,7 +320,10 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS {
         }
     }
 
-    return (ref($feature_coll) eq 'HASH') ? [ values %$feature_coll ] : $feature_coll || [];
+    return
+        (ref($feature_coll) eq 'HASH')
+        ? [ values %$feature_coll ]
+        : $feature_coll || [];
 }
 
 sub get_requested_features {
