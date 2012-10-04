@@ -37,7 +37,10 @@ sub draw{
             -pady =>  5,
             -fill => 'x'
         );   
-    my $min_label       = $entry_frame->Label(-text => "Slice:  start")->pack(-side   =>  'left');
+    my $min_label =
+        $entry_frame->Label(
+            -text => "Slice:  start"
+        )->pack(-side => 'left');
     my $slice_min_entry = $entry_frame->Entry(-width        => 15,
                                               -relief       => 'sunken',
                                               -borderwidth  => 2,
