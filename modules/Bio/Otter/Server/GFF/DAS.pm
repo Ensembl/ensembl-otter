@@ -110,8 +110,13 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS {
     }
 
     my @paths_to_try = $parent_constructor
-        ? ( ['group',0,'group_label'], ['group',0,'group_id'], ['feature_label'], ['feature_id'] )
-        : ( [['group',0,'group_label'], ['type']], [['group',0,'group_id'], ['type']], ['type'], ['type_id'], ['feature_label'], ['feature_id'] );
+        ? ( ['group',0,'group_label'],
+            ['group',0,'group_id'],
+            ['feature_label'],
+            ['feature_id'] )
+        : ( [['group',0,'group_label'], ['type']],
+            [['group',0,'group_id'], ['type']],
+            ['type'], ['type_id'], ['feature_label'], ['feature_id'] );
 
     my $chr_start = $slice->start();
     my $chr_end   = $slice->end();
