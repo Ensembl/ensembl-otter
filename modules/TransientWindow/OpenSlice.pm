@@ -30,11 +30,13 @@ sub draw{
         )->pack(-side => 'top');
     $label->bind('<Destroy>' , sub { $self = undef });
 
-    my $entry_frame  = $slice_window->Frame()->pack(-side => 'top', 
-                                                   -padx =>  5,
-                                                   -pady =>  5,
-                                                   -fill => 'x'
-                                                   );   
+    my $entry_frame =
+        $slice_window->Frame()->pack(
+            -side => 'top', 
+            -padx =>  5,
+            -pady =>  5,
+            -fill => 'x'
+        );   
     my $min_label       = $entry_frame->Label(-text => "Slice:  start")->pack(-side   =>  'left');
     my $slice_min_entry = $entry_frame->Entry(-width        => 15,
                                               -relief       => 'sunken',
