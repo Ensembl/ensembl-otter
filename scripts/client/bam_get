@@ -134,6 +134,7 @@ my $attributes_format = $gff_version == 3 ? '%s=%s' : '%s "%s"';
 sub _print_feature {
     my ($feature, $start, $end) = @_;
 
+    # See Bio::DB::Bam::Alignment for documentation of available methods on $feature
     my $name = $feature->name;
 
     # the -gff_feature_source flag overrides the source from the BAM file
@@ -175,6 +176,7 @@ sub _print_feature {
     my $target .= join ' ', $query_name, @target_fields;
 
     my $dna = $query->dna;
+    # my $dna = $query->qseq;
 
     my @attributes = (
         Name     => $name,
