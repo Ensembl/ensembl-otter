@@ -8,7 +8,7 @@ use Carp;
 use Try::Tiny;
 use Data::Dumper;
 use XML::Simple;
-use POSIX();
+use POSIX ();
 
 use Hum::XmlWriter;
 
@@ -91,10 +91,13 @@ sub _launchZMap {
     }
     confess "Error: couldn't fork()\n" unless defined $pid;
 
-    exec @e;
+    { exec @e; }
+    # DUP: EditWindow::PfamWindow::initialize $launch_belvu
+    # DUP: Hum::Ace::LocalServer
     warn "exec '@e' failed : $!";
     close STDERR; # _exit does not flush
-    POSIX::_exit(1); # avoid triggering DESTROY
+    close STDOUT;
+    POSIX::_exit(127); # avoid triggering DESTROY
 
     return; # unreached, quietens perlcritic
 }

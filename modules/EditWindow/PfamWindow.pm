@@ -4,7 +4,7 @@ package EditWindow::PfamWindow;
 use strict;
 use warnings;
 use Carp;
-use POSIX();
+use POSIX ();
 use URI;
 use Tk::ProgressBar;
 use Bio::Otter::Lace::Pfam;
@@ -266,10 +266,16 @@ sub initialize {
             my $launch_belvu = sub {
                 if (my $pid = fork) {
                     return 1;
-                }
-                elsif (defined $pid) {
-                    my $command = "belvu " . $alignments->{$domain};
-                    exec($command) or warn "Failed to exec '$command' : $!";
+                } elsif (defined $pid) {
+                    my @command ("belvu", $alignments->{$domain});
+                    # DUP: MenuCanvasWindow::ZMapSeqChooser::_launchZMap
+                    { exec(@command) };
+                    warn "Failed to exec '@command': $!";
+                    close STDERR; # _exit does not flush
+                    close STDOUT;
+                    POSIX::_exit(127); # avoid triggering DESTROY
+                } else {
+                    warn "fork for belvu failed: $!";
                 }
             };
 
