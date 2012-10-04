@@ -292,7 +292,9 @@ sub check_kozak{
                           'g',       # G    G   G   G  G     G
                           'g');      # G    n   G   Y  G     A
 
-    ## for some reason (tk bug?) tk would not display tags added to the second line when using the index system - hence two loops rather than one
+    ## for some reason (tk bug?) tk would not display tags added to the
+    ## second line when using the index system - hence two loops rather
+    ## than one
     for( my $i = 0 ;  $i <= ( length($kozak) - 1) ; $i++ ){
         my $pos_char = substr( $kozak , $i , 1) ;
         my $template = $template_kozak[$i] ;
