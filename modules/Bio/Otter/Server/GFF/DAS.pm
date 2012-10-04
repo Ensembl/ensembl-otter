@@ -274,7 +274,10 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS {
             }
 
             if($parent_constructor) {
-                my $parent_feature = $feature_coll->{$pt_label} ||= $parent_constructor->new( -dbID => $pt_label, -slice => $slice );
+                my $parent_feature =
+                    $feature_coll->{$pt_label} ||=
+                    $parent_constructor->new(
+                        -dbID => $pt_label, -slice => $slice );
 
                 if ( $parent_feature->can('display_label') ) {
                     $parent_feature->display_label( $pt_label );
