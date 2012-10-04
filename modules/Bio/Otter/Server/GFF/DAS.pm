@@ -103,7 +103,8 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS {
         : sub { return $feature_constructor->new(); };
     my ($parent_constructor, $add_sub, $parent_feature_type);
 
-    if(my $cmp_uplink = $feature_subhash->{-add_one_cmp}) {  # component link is two-way (parent keeps a list of its components)
+    if(my $cmp_uplink = $feature_subhash->{-add_one_cmp}) {
+        # component link is two-way (parent keeps a list of its components)
         ($parent_feature_type, $add_sub) = @$cmp_uplink;
         $parent_constructor = $LangDesc{$parent_feature_type}{-constructor};
     }
