@@ -239,12 +239,14 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS {
                         $parent_constructor->new(
                             -dbID => $pt_label, -slice => $slice );
 
-                    if ($parent_feature->can('truncated_5_prime') && $truncated_5_prime) {
+                    if ($parent_feature->can('truncated_5_prime')
+                        && $truncated_5_prime) {
                         warn "truncating feature at 5' end";
                         $parent_feature->truncated_5_prime(1);
                     }
 
-                    if ($parent_feature->can('truncated_3_prime') && $truncated_3_prime) {
+                    if ($parent_feature->can('truncated_3_prime')
+                        && $truncated_3_prime) {
                         warn "truncating feature at 3' end";
                         $parent_feature->truncated_3_prime(1);
                     }
