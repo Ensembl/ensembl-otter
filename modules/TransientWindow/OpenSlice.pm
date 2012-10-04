@@ -41,15 +41,18 @@ sub draw{
         $entry_frame->Label(
             -text => "Slice:  start"
         )->pack(-side => 'left');
-    my $slice_min_entry = $entry_frame->Entry(-width        => 15,
-                                              -relief       => 'sunken',
-                                              -borderwidth  => 2,
-                                              -textvariable => $self->text_variable_ref('slice_start'),
-                                              #-font       =>   'Helvetica-14',   
-                                              )->pack(-side => 'left', 
-                                                      -padx => 5,
-                                                      -fill => 'x'
-                                                      );
+    my $slice_min_entry =
+        $entry_frame->Entry(
+            -width        => 15,
+            -relief       => 'sunken',
+            -borderwidth  => 2,
+            -textvariable => $self->text_variable_ref('slice_start'),
+            #-font       =>   'Helvetica-14',   
+        )->pack(
+            -side => 'left', 
+            -padx => 5,
+            -fill => 'x',
+        );
     my $auto_slice_end = sub {
         my $min = ${$self->text_variable_ref('slice_start')};
         my $max = ${$self->text_variable_ref('set_end')};
