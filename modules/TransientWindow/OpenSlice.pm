@@ -82,11 +82,13 @@ sub draw{
         );
     $entry_frame->bind('<Destroy>' , sub { $self = undef }  );
 
-    my $run_cancel_frame = $slice_window->Frame()->pack(-side => 'bottom', 
-                                                        -padx =>  5,
-                                                        -pady =>  5,
-                                                        -fill => 'x'
-                                                        );  
+    my $run_cancel_frame =
+        $slice_window->Frame()->pack(
+            -side => 'bottom', 
+            -padx =>  5,
+            -pady =>  5,
+            -fill => 'x',
+        );  
     my $runLace = $self->action('runLace');
     my $run_button = $run_cancel_frame->Button(-text    => 'Run lace',
                                                -command => [ $runLace, $self ],
