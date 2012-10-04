@@ -200,7 +200,9 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS {
             my $pt_label;
 
             if($grouplabel_field_path) {
-                $pt_label = struct_traverse_path($das_feature, $grouplabel_field_path) || 'NONAME?';
+                $pt_label =
+                    struct_traverse_path($das_feature, $grouplabel_field_path)
+                    || 'NONAME?';
             } else {
                 warn "Trying to guess a fitting group/label path:\n";
                 my $show_path;
