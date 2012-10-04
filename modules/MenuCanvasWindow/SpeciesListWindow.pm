@@ -368,7 +368,10 @@ sub recover_some_sessions {
                 $self->exception_message(
                     $_, 'Error recovering lace sessions');
             };
-            # XXX: we should make a stronger protest if it fails - maybe a pop up error dialog, or put a sticker on the session itself (if it exists).  Also, some errors have already been eaten (e.g. in RT#231368)
+            # XXX: we should make a stronger protest if it fails - maybe a
+            # pop up error dialog, or put a sticker on the session itself
+            # (if it exists).  Also, some errors have already been eaten
+            # (e.g. in RT#231368)
             return 1;
         } else {
             return 0;
