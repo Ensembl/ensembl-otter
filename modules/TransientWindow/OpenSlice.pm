@@ -90,9 +90,11 @@ sub draw{
             -fill => 'x',
         );  
     my $runLace = $self->action('runLace');
-    my $run_button = $run_cancel_frame->Button(-text    => 'Run lace',
-                                               -command => [ $runLace, $self ],
-                                               )->pack(-side => 'left');
+    my $run_button =
+        $run_cancel_frame->Button(
+            -text    => 'Run lace',
+            -command => [ $runLace, $self ],
+        )->pack(-side => 'left');
 
     my $cancel_button = $run_cancel_frame->Button(-text    => 'Cancel',
                                                   -command => $self->hide_me_ref,
