@@ -234,7 +234,10 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS {
 
             if ($truncated_5_prime || $truncated_3_prime) {
                 if($parent_constructor) {
-                    my $parent_feature = $feature_coll->{$pt_label} ||= $parent_constructor->new( -dbID => $pt_label, -slice => $slice );
+                    my $parent_feature =
+                        $feature_coll->{$pt_label} ||=
+                        $parent_constructor->new(
+                            -dbID => $pt_label, -slice => $slice );
 
                     if ($parent_feature->can('truncated_5_prime') && $truncated_5_prime) {
                         warn "truncating feature at 5' end";
