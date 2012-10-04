@@ -96,9 +96,11 @@ sub draw{
             -command => [ $runLace, $self ],
         )->pack(-side => 'left');
 
-    my $cancel_button = $run_cancel_frame->Button(-text    => 'Cancel',
-                                                  -command => $self->hide_me_ref,
-                                                  )->pack(-side => 'right');
+    my $cancel_button =
+        $run_cancel_frame->Button(
+            -text    => 'Cancel',
+            -command => $self->hide_me_ref,
+        )->pack(-side => 'right');
 
     $run_cancel_frame->bind('<Destroy>' , sub { $self = undef }  );
 
