@@ -139,7 +139,9 @@ while (
 
     if (my $prev = $cs_list[-1]) {
         # Merge adjacent segments of the same contig together.
-        if ($cs->{'contig_name'} eq $prev->{'contig_name'}) {
+        if (    $cs->{'contig_name'}   eq $prev->{'contig_name'}
+            and $cs->{'contig_strand'} eq $prev->{'contig_strand'})
+        {
             $prev->{'chr_end'} = $cs->{'chr_end'};
             $prev->{'contig_start'} = $cs->{'contig_start'}
                 if $cs->{'contig_start'} < $prev->{'contig_start'};
