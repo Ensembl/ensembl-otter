@@ -150,7 +150,6 @@ sub column_methods {
     my ($self, $methods) = @_;
 
     if ($methods) {
-        my $ok = 0;
         ref($methods) eq 'ARRAY'
             or confess "Expected array ref but argument is '$methods'";
         $self->{'_column_methods'} = $methods;
