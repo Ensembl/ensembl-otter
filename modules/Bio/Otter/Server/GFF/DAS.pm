@@ -89,8 +89,11 @@ sub struct_show_path {
     return $output;
 }
 
-sub Bio::EnsEMBL::Slice::get_all_features_via_DAS { # $feature_kind = 'SimpleFeature' || 'PredictionExon'
-    my ($slice, $server, $das, $chr_name, $analysis_name, $feature_kind, $sieve, $grouplabel) = @_;
+sub Bio::EnsEMBL::Slice::get_all_features_via_DAS {
+    # $feature_kind = 'SimpleFeature' || 'PredictionExon'
+    my ($slice, $server, $das, $chr_name, $analysis_name,
+        $feature_kind, $sieve, $grouplabel,
+        ) = @_;
 
     my $feature_subhash     = $LangDesc{$feature_kind};
     my $feature_constructor = $feature_subhash->{-constructor};
