@@ -68,15 +68,18 @@ sub draw{
             -text => " end "
         )->pack(-side => 'left');
     $max_label->bind('<Destroy>' , sub { $self = undef }  );
-    my $slice_max_entry = $entry_frame->Entry(-width        => 15,
-                                              -relief       => 'sunken',
-                                              -borderwidth  => 2,
-                                              -textvariable => $self->text_variable_ref('slice_end'),
-                                              #-font       =>   'Helvetica-14',   
-                                              )->pack(-side => 'left', 
-                                                      -padx => 5,
-                                                      -fill => 'x',
-                                                      );
+    my $slice_max_entry =
+        $entry_frame->Entry(
+            -width        => 15,
+            -relief       => 'sunken',
+            -borderwidth  => 2,
+            -textvariable => $self->text_variable_ref('slice_end'),
+            #-font       =>   'Helvetica-14',   
+        )->pack(
+            -side => 'left', 
+            -padx => 5,
+            -fill => 'x',
+        );
     $entry_frame->bind('<Destroy>' , sub { $self = undef }  );
 
     my $run_cancel_frame = $slice_window->Frame()->pack(-side => 'bottom', 
