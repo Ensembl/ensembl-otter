@@ -329,8 +329,9 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS {
 sub get_requested_features {
     my ($self) = @_;
 
-    my $chr_name      = $self->param('name');  ## Since in our new schema name is substituted for type,
+    ## Since in our new schema name is substituted for type,
     ## we need it clean for outer sources
+    my $chr_name = $self->param('name');
 
     my $source        = $self->require_argument('source');
     my $dsn           = $self->require_argument('dsn');
@@ -344,13 +345,15 @@ sub get_requested_features {
         $http_proxy ? ('http_proxy' => $http_proxy) : (),
                                   });
 
-    # Default timeout was 5 seconds, which is not long enough for UCSC!  Could make it a parameter.
+    # Default timeout was 5 seconds, which is not long enough for UCSC!
+    # Could make it a parameter.
     $das->timeout(2 * 60);
 
     my $map = $self->make_map;
     my $features = $self->fetch_mapped_features_das(
         'get_all_features_via_DAS',
-        [$self, $das, $chr_name, $analysis_name, $feature_kind, $sieve, $grouplabel],
+        [$self, $das, $chr_name, $analysis_name,
+         $feature_kind, $sieve, $grouplabel],
         $map);
 
     return $features;
