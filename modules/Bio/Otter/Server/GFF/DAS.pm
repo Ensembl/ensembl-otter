@@ -220,9 +220,15 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS {
                     }
                 }
                 if(defined $pt_label) {
-                    warn "After much deliberation the following group/label path was selected: $show_path\n";
+                    warn
+                        "After much deliberation"
+                        . "the following group/label path was selected:"
+                        . "$show_path\n";
                 } else {
-                    die "Could not guess a fitting group/label path, please specify it in the 'grouplabel=' parameter of the filter";
+                    die
+                        "Could not guess a fitting group/label path,"
+                        . "please specify it in the 'grouplabel='"
+                        . "parameter of the filter";
                 }
             }
 
