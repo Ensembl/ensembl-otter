@@ -56,10 +56,10 @@ sub draw{
     my $auto_slice_end = sub {
         my $min = ${$self->text_variable_ref('slice_start')};
         my $max = ${$self->text_variable_ref('set_end')};
-        $self->text_variable_ref('slice_end', 
-                                 $min + $DEFAULT_SLICE_SIZE > $max ? $max : $min + $DEFAULT_SLICE_SIZE,
-                                 1
-                                 );
+        my $default =
+            $min + $DEFAULT_SLICE_SIZE > $max
+            ? $max : $min + $DEFAULT_SLICE_SIZE;
+        $self->text_variable_ref('slice_end', $default, 1);
     };
     $slice_min_entry->bind('<FocusOut>', $auto_slice_end);
 
