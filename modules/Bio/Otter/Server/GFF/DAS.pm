@@ -258,9 +258,14 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS {
             my $feature = $feature_sub->();
 
             $feature->slice(   $slice );
-            # Set feature start and end to start and end of segment if it extends beyond
-            $feature->start( $das_feature->{'start'} < $chr_start ? 1        : $das_feature->{'start'} - $chr_start + 1 );
-            $feature->end(   $das_feature->{'end'}   > $chr_end   ? $chr_end : $das_feature->{'end'}   - $chr_start + 1 );
+            # Set feature start and end to start and end of segment
+            # if it extends beyond
+            $feature->start(
+                $das_feature->{'start'} < $chr_start
+                ? 1 : $das_feature->{'start'} - $chr_start + 1 );
+            $feature->end(
+                $das_feature->{'end'}   > $chr_end
+                ? $chr_end : $das_feature->{'end'}   - $chr_start + 1 );
             $feature->strand( $das_feature->{'orientation'} =~ /^-/ ? -1 : 1 );
             if($feature->can('score')) {
                     ## should we fake the value when it is not available? :
