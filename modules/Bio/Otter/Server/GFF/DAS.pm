@@ -185,7 +185,8 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS {
                 }
             }
 
-            # Skip features that don't overlap segment (eg: exons in transcript which does overlap)
+            # Skip features that don't overlap segment
+            # (eg: exons in transcript which does overlap)
             # but flag that we have done so in the parent object (if any) 
 
             if ($das_feature->{'end'} < $chr_start) {
