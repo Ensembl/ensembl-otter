@@ -233,7 +233,9 @@ sub generate_blixem_bam_config {
         ### Hack - need some way to allow out multiple BAM fetch-methods
         if (my $other = $config->{'short-read'}{'bulk-fetch'}) {
             if ($other ne $fetch_name) {
-                die "Cannot currently specify more than one bulk fetch method for [short-read]\nHave both '$other' and '$fetch_name'";
+                die
+                    "Cannot currently specify more than one bulk fetch method "
+                    . "for [short-read]\nHave both '$other' and '$fetch_name'";
             }
         }
         else {
