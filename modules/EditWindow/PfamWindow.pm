@@ -6,6 +6,7 @@ use warnings;
 use Carp;
 use POSIX ();
 use URI;
+use Try::Tiny;
 use Tk::ProgressBar;
 use Bio::Otter::Lace::Pfam;
 use Bio::Vega::Utils::URI qw{ open_uri };
@@ -123,12 +124,11 @@ sub initialize {
     for (my $block = 1; $block <= 30; $block++) {
         $self->progress($block);
         $self->top->toplevel->update;
-        eval { $self->top->toplevel->after($wait * 1000); };
-        if ($@) {
-
-            # catch "XStoSubCmd: Not a Tk Window" error when the search is canceled
-            return;
-        }
+        # catch "XStoSubCmd: Not a Tk Window" error when the search is canceled
+        try {
+            $self->top->toplevel->after($wait * 1000);
+            return 1;
+        } or return;
     }
     my $tries = 1;
     $wait = 0;
@@ -144,12 +144,11 @@ sub initialize {
         $self->top->toplevel->update;
         $wait += $tries;
         $tries++;
-        eval { $self->top->toplevel->after($wait * 1000); };
-        if ($@) {
-
-            # catch "XStoSubCmd: Not a Tk Window" error when the search is canceled
-            return;
-        }
+        # catch "XStoSubCmd: Not a Tk Window" error when the search is canceled
+        try {
+            $self->top->toplevel->after($wait * 1000);
+            return 1;
+        } or return;
     }
 
     if ($res) {
