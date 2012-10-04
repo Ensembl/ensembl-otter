@@ -63,7 +63,10 @@ sub draw{
     };
     $slice_min_entry->bind('<FocusOut>', $auto_slice_end);
 
-    my $max_label       = $entry_frame->Label(-text => " end ")->pack(-side => 'left');
+    my $max_label =
+        $entry_frame->Label(
+            -text => " end "
+        )->pack(-side => 'left');
     $max_label->bind('<Destroy>' , sub { $self = undef }  );
     my $slice_max_entry = $entry_frame->Entry(-width        => 15,
                                               -relief       => 'sunken',
