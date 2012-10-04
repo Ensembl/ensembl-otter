@@ -170,10 +170,17 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS {
                 # Filter out introns and other features that may be sent by
                 # the server but irrelevant for us:
             if($sieve) {
-                my $sieve_field = struct_traverse_path($das_feature, $sieve_field_path);
-                if( (($sieve_sign eq '--CONTAINS--') && ($sieve_field!~/$sieve_value/i)) # wanted to include it, but it's not here
-                 || (($sieve_sign eq '--LACKS--') && ($sieve_field=~/$sieve_value/i)) # wanted to exclude it, but it's here
-                ) {
+                my $sieve_field =
+                    struct_traverse_path($das_feature, $sieve_field_path);
+                if( 
+                    # wanted to include it, but it's not here
+                    (($sieve_sign eq '--CONTAINS--')
+                     && ($sieve_field!~/$sieve_value/i))
+                    ||
+                    # wanted to exclude it, but it's here
+                    (($sieve_sign eq '--LACKS--')
+                     && ($sieve_field=~/$sieve_value/i))
+                    ) {
                     next FEATURE;
                 }
             }
