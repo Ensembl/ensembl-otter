@@ -208,8 +208,11 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS {
                 my $show_path;
                 CANDIDATE: foreach my $path (@paths_to_try) {
                     $show_path = struct_show_path($das_feature, $path);
-                    if(defined($pt_label = struct_traverse_path($das_feature, $path))) {
-                        $grouplabel_field_path = $path; # by doing this we also ensure we only run this experiment once
+                    if(defined($pt_label =
+                               struct_traverse_path($das_feature, $path))) {
+                        # by doing this we also ensure we only run this
+                        # experiment once
+                        $grouplabel_field_path = $path;
                         warn "Trying $show_path - seems suitable\n";
                         last CANDIDATE;
                     } else {
