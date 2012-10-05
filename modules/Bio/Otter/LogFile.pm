@@ -68,11 +68,19 @@ sub make_log {
             $child_logger->warn($_);
         }
 
-        exit;   # Child must exit here!
+        # close the output file & screen writer.  _exit does not flush.
+        Log::Log4perl->eradicate_appender('Logfile');
+        Log::Log4perl->eradicate_appender('SafeScreen');
+
+        # Child must exit here.  Do not called outstanding DESTROY
+        # methods (there should be none, but don't assume that)
+        POSIX::_exit(0);
 
     } else {
         confess "Can't fork output filter: $!";
     }
+
+    return (); # not reached
 }
 
 sub current_logfile {
