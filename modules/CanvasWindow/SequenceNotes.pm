@@ -918,8 +918,10 @@ sub draw_paging_buttons{
         $self->_user_last_clone_seq($next_new_max);
         $self->draw();
     };
-    $top->bind('<Control-Shift-Key-space>', ($prev_state eq 'normal' ? $prev_cmd : undef));
-    $top->bind('<Control-Key-space>', ($next_state eq 'normal' ? $next_cmd : undef));
+    $top->bind('<Control-Shift-Key-space>',
+               ($prev_state eq 'normal' ? $prev_cmd : undef));
+    $top->bind('<Control-Key-space>',
+               ($next_state eq 'normal' ? $next_cmd : undef));
 
     my $prev = $pg_frame->Button(-text => 'prev',
                                  -state => $prev_state,
