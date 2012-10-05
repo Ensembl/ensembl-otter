@@ -346,14 +346,18 @@ sub initialise {
         $comment_label->pack(-side => 'left',);
         my $comment_text = '';
         $self->set_note_ref(\$comment_text);
-        my $comment = $button_frame_notes->Entry(-width        => 55,
-                                          -textvariable => $self->set_note_ref(),
-                                          -font         => ['Helvetica', $self->font_size, 'normal'],
-        );
+        my $comment =
+            $button_frame_notes->Entry(
+                -width        => 55,
+                -textvariable => $self->set_note_ref(),
+                -font         => ['Helvetica', $self->font_size, 'normal'],
+            );
         $comment->pack(-side => 'left');
-        my $clear_button = $button_frame_notes->Button(-text    => 'clear'   ,
-                                                   -command => sub { my $ref = $self->set_note_ref(); $$ref = undef; }
-                                                   )->pack(-side => 'right');
+        my $clear_button =
+            $button_frame_notes->Button(
+                -text    => 'clear',
+                -command => sub { my $ref = $self->set_note_ref(); $$ref = undef; },
+            )->pack(-side => 'right');
 
         # Remove Control-H binding from Entry
         $comment->bind(ref($comment), '<Control-h>', '');
