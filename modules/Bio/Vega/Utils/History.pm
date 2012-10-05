@@ -1,4 +1,5 @@
-## Vega module for comparison of two objects, gene vs gene, transcript vs transcript, translation vs translation and exon vs exon
+## Vega module for comparison of two objects, gene vs gene, transcript vs
+## transcript, translation vs translation and exon vs exon
 
 package Bio::Vega::Utils::History;
 
