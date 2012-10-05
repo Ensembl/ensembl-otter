@@ -40,7 +40,8 @@ use Bio::Vega::Utils::GFF;
 
         my ($self, %args) = @_;
 
-        my $analyses = $args{analyses} || ['']; # if we're not given any analyses, search for features from all analyses
+        # if we're not given any analyses, search for features from all analyses
+        my $analyses = $args{analyses} || [''];
         my $feature_types  = $args{feature_types};
         my $verbose        = $args{verbose};
         my $target_slice   = $args{target_slice} || $self;
@@ -265,10 +266,14 @@ use Bio::Vega::Utils::GFF;
         $gff->{'feature'} = ($self->analysis && $self->analysis->gff_feature) || 'similarity';
 
         my $name = $self->hseqname;
+        my $align =
+            $self->hstart . ' ' .
+            $self->hend . ' ' .
+            ($self->hstrand == -1 ? '-' : '+');
 
         $gff->{'attributes'}{'Class'}     = qq{"Sequence"};
         $gff->{'attributes'}{'Name'}      = qq{"$name"};
-        $gff->{'attributes'}{'Align'}     = $self->hstart . ' ' . $self->hend . ' ' . ($self->hstrand == -1 ? '-' : '+');
+        $gff->{'attributes'}{'Align'}     = $align;
         $gff->{'attributes'}{'percentID'} = $self->percent_id;
 
         return $gff;
@@ -828,11 +833,16 @@ use Bio::Vega::Utils::GFF;
  #        my ($self, @args) = @_;
  #        my $gff  = $self->SUPER::_gff_hash(@args);
  #
+ #        my $align =
+ #            $self->hit_start.' '.
+ #            $self->hit_end.' '.
+ #            ( $self->hit_strand == -1 ? '-' : '+' );
+ #
  #        $gff->{feature} = 'similarity';
  #
  #        $gff->{attributes}->{Class} = qq("Sequence");
  #        $gff->{attributes}->{Name} = '"'.$self->ditag->type.':'.$self->ditag->name.'"';
- #        $gff->{attributes}->{Align} = $self->hit_start.' '.$self->hit_end.' '.( $self->hit_strand == -1 ? '-' : '+' );
+ #        $gff->{attributes}->{Align} = $align;
  #
  #        return $gff;
  #    }
