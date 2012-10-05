@@ -123,7 +123,23 @@ sub history{
       my $t_s_v_ref;push @$t_s_v_ref,"trans-stable-version";
       my $s_s_v_ref;push @$s_s_v_ref,"translation-stable-version";
       my $t_start_ref;push @$t_start_ref,"transcript_start";
-      my $t_slice_name;push @$t_slice_name,"tran_slice_name";my $t_end;push @$t_end,"tran-end";my $t_strand;push @$t_strand,"tran-strand";my $t_biotype; push @$t_biotype,"tran-biotype";my $t_status;push @$t_status,"tran-status";my $t_exon_count; push @$t_exon_count,"tran-exon-count";my $t_desc;push @$t_desc,"tran-description";my $t_name;push @$t_name,"tran-name";my $t_att_count;push @$t_att_count,"tran-att-count";my $t_msnf;push @$t_msnf,"tran-msNF";my $t_menf;push @$t_menf,"tran-meNF";my $t_csnf;push @$t_csnf,"tran-csNF";my $t_cenf;push @$t_cenf,"tran-ceNF";my $t_evi_count;push @$t_evi_count,"tran_evi_count";my $t_remarks;push @$t_remarks,"tran-remarks";my $t_hidden_remarks;push @$t_hidden_remarks,"tran-hid-remarks";my $t_evidence;push @$t_evidence,"tran-evidence";
+      my $t_slice_name;push @$t_slice_name,"tran_slice_name";
+      my $t_end;push @$t_end,"tran-end";
+      my $t_strand;push @$t_strand,"tran-strand";
+      my $t_biotype; push @$t_biotype,"tran-biotype";
+      my $t_status;push @$t_status,"tran-status";
+      my $t_exon_count; push @$t_exon_count,"tran-exon-count";
+      my $t_desc;push @$t_desc,"tran-description";
+      my $t_name;push @$t_name,"tran-name";
+      my $t_att_count;push @$t_att_count,"tran-att-count";
+      my $t_msnf;push @$t_msnf,"tran-msNF";
+      my $t_menf;push @$t_menf,"tran-meNF";
+      my $t_csnf;push @$t_csnf,"tran-csNF";
+      my $t_cenf;push @$t_cenf,"tran-ceNF";
+      my $t_evi_count;push @$t_evi_count,"tran_evi_count";
+      my $t_remarks;push @$t_remarks,"tran-remarks";
+      my $t_hidden_remarks;push @$t_hidden_remarks,"tran-hid-remarks";
+      my $t_evidence;push @$t_evidence,"tran-evidence";
 
       for (my $i=0;$i<$gene_count;$i++){
           if ($ta->[$i]){
