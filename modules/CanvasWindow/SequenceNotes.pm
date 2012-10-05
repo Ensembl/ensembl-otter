@@ -311,7 +311,8 @@ sub write_access_var_ref {
     my ($self) = @_;
 
     unless(exists($self->{'_write_access_var'})) {
-        $self->{'_write_access_var'} = $self->Client->write_access && $self->SequenceSet->write_access;
+        $self->{'_write_access_var'} =
+            $self->Client->write_access && $self->SequenceSet->write_access;
     }
     return \$self->{'_write_access_var'};
 }
