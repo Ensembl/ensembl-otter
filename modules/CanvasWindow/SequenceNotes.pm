@@ -923,25 +923,28 @@ sub draw_paging_buttons{
     $top->bind('<Control-Key-space>',
                ($next_state eq 'normal' ? $next_cmd : undef));
 
-    my $prev = $pg_frame->Button(-text => 'prev',
-                                 -state => $prev_state,
-                                 -command => $prev_cmd
-                                 )->pack(
-                                         -side  => 'left'
-                                         );
-    my $mssg = $pg_frame->Label(-text => #"You are viewing a paged display of this sequence set. "
-                                "Page $n of $t",
-                                -justify => 'center',
-                                -background => 'white',
-                                )->pack(-side   => 'left',
-                                        -fill   => 'x',
-                                        -expand => 1);
-    my $next = $pg_frame->Button(-text => 'next',
-                                 -state => $next_state,
-                                 -command => $next_cmd
-                                 )->pack(
-                                         -side  => 'right'
-                                         );
+    my $prev =
+        $pg_frame->Button(
+            -text => 'prev',
+            -state => $prev_state,
+            -command => $prev_cmd,
+        )->pack(-side  => 'left');
+    my $mssg =
+        $pg_frame->Label(
+            -text => "Page $n of $t",
+            -justify => 'center',
+            -background => 'white',
+        )->pack(
+            -side   => 'left',
+            -fill   => 'x',
+            -expand => 1,
+        );
+    my $next =
+        $pg_frame->Button(
+            -text => 'next',
+            -state => $next_state,
+            -command => $next_cmd,
+        )->pack(-side  => 'right');
     my @bbox  = $canvas->bbox('all');
     my $x     = $self->font_size();
     my $y     = $bbox[3] + $x;
