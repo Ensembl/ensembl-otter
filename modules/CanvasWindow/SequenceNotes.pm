@@ -380,8 +380,10 @@ sub initialise {
 
     } else {
         # $button_frame_cmds = $top->Frame->pack(-side => 'top');
-        $button_frame_cmds->Label(-text => 'Read Only   ',
-                               -foreground => 'red')->pack(-side => 'left');
+        $button_frame_cmds->Label(
+            -text => 'Read Only   ',
+            -foreground => 'red',
+            )->pack(-side => 'left');
         $button_frame_cmds->bind('<Destroy>', sub { $self = undef });
     }
 
