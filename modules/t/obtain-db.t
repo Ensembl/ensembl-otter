@@ -12,6 +12,7 @@ use Net::Netrc;
 use DBI;
 use Bio::Otter::SpeciesDat;
 use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Server::Config;
 
 
 =head1 NAME
@@ -173,7 +174,7 @@ sub server_tt {
 sub client_tt {
     my ($dataset_name, $check_loutre, $check_pipe) = @_;
 
-    my $cl = make_Client();
+    my $cl = OtterClient();
     my $dataset = $cl->get_DataSet_by_name($dataset_name);
 
 ## XXX: asymmetry between BOL:SpeciesDat::DataSet and BOL:DataSet
@@ -247,7 +248,10 @@ sub netrc_dbh {
 {
     my $sp_dat;
     sub SpeciesDat {
-        $sp_dat ||= Bio::Otter::SpeciesDat->new(data_dir().'/species.dat');
+        local $ENV{DOCUMENT_ROOT} = '/nfs/WWWdev/SANGER_docs/htdocs';
+        # ugh, but B:O:S:C needs it (at v67..70)
+
+        $sp_dat ||= Bio::Otter::Server::Config->SpeciesDat;
         return $sp_dat;
     }
 }
@@ -255,19 +259,14 @@ sub netrc_dbh {
 {
     my $cl;
     sub OtterClient {
-        return $cl ||= make_Client();
+        return $cl ||= _make_Client();
     }
 }
 
-sub make_Client {
+sub _make_Client {
     local @ARGV = ();
     Bio::Otter::Lace::Defaults::do_getopt();
     return Bio::Otter::Lace::Defaults::make_Client();
-}
-
-sub data_dir {
-    my $otter_data = '/nfs/WWWdev/SANGER_docs/data/otter';
-    return $otter_data;
 }
 
 
