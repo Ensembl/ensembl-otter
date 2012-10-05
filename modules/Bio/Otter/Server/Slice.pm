@@ -5,6 +5,8 @@ use warnings;
 
 use Readonly;
 
+use Bio::Vega::Transform::XML;
+
 =head1 NAME
 
 Bio::Otter::Server::Slice - server requests on a slice
@@ -93,6 +95,20 @@ sub get_assembly_dna {
     }
 
     return $output_string;
+}
+
+sub get_region {
+    my $self = shift;
+
+    my $odba  = $self->server->otter_dba;
+    my $slice = $self->slice;
+
+    my $formatter = Bio::Vega::Transform::XML->new;
+    $formatter->otter_dba($odba);
+    $formatter->slice($slice);
+    $formatter->fetch_data_from_otter_db;
+
+    return $formatter;
 }
 
 ### Accessors
