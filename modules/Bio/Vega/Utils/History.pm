@@ -92,7 +92,11 @@ sub history{
           push @$synonym,$string;
       }
   }
-  $printarray=[$stable_version,$slice_name,$gene_name,$gene_start,$gene_end,$gene_strand,$gene_biotype,$gene_status,$gene_source,$gene_description,$transcript_count,$attribute_count,$remark,$hidden_remark,$synonym];
+  $printarray=[
+      $stable_version,$slice_name,$gene_name,$gene_start,$gene_end,
+      $gene_strand,$gene_biotype,$gene_status,$gene_source,$gene_description,
+      $transcript_count,$attribute_count,$remark,$hidden_remark,$synonym,
+      ];
 
   my $j=0;
   my $i=0;
