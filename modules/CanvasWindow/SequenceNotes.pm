@@ -1080,9 +1080,7 @@ sub draw {
             my $cs_last = $cs_list->[$i - 1];
 
             my $gap = 0; # default for non SequenceNotes methods inheriting this method
-            if ( eval { $cs->can('chr_start'); } ){
-                $gap = $cs->chr_start - $cs_last->chr_end - 1;
-            }
+            try { $gap = $cs->chr_start - $cs_last->chr_end - 1; };
             if ($gap > 0) {
                 $gap_pos->{$row} = 1;
                 # Put spaces between thousands in gap length
