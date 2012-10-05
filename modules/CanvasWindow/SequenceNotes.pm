@@ -169,12 +169,18 @@ sub column_methods {
                  my ($cs, $i, $self, $ss) = @_;
                  my $accsv = $cs->accession_dot_sv();
                  my $current_subset_tag = $self->current_subset_tag();
-                 my $fontcolour = $ss->accsv_belongs_to_subset($accsv, $current_subset_tag)
+                 my $fontcolour =
+                     $ss->accsv_belongs_to_subset($accsv, $current_subset_tag)
                      ? 'red'
                      : $ss->accsv_belongs_to_subset($accsv)
                      ? 'DarkRed'
                      : 'black';
-                 return {-text => $accsv, -font => $bold, -fill => $fontcolour, -tags => ['searchable']};
+                 return {
+                     -text => $accsv,
+                     -font => $bold,
+                     -fill => $fontcolour,
+                     -tags => ['searchable'],
+                 };
              }],
             [$text_method,
              sub{
@@ -182,12 +188,18 @@ sub column_methods {
                  my ($cs, $i, $self, $ss) = @_;
                  my $accsv = $cs->accession_dot_sv();
                  my $current_subset_tag = $self->current_subset_tag();
-                 my $fontcolour = $ss->accsv_belongs_to_subset($accsv, $current_subset_tag)
+                 my $fontcolour =
+                     $ss->accsv_belongs_to_subset($accsv, $current_subset_tag)
                      ? 'red'
                      : $ss->accsv_belongs_to_subset($accsv)
                      ? 'DarkRed'
                      : 'black';
-                 return {-text => $cs->clone_name, -font => $bold, -fill => $fontcolour, -tags => ['searchable'] };
+                 return {
+                     -text => $cs->clone_name,
+                     -font => $bold,
+                     -fill => $fontcolour,
+                     -tags => ['searchable'],
+                 };
              }],
             [$text_method, \&_column_text_pipeline_status],
             [$text_method ,
@@ -197,7 +209,11 @@ sub column_methods {
                      my $time = $sn->timestamp;
                      my( $year, $month, $mday ) = (localtime($time))[5,4,3];
                      my $txt = sprintf "%04d-%02d-%02d", 1900 + $year, 1 + $month, $mday;
-                     return { -text => $txt, -font => $norm, -tags => ['searchable']};
+                     return {
+                         -text => $txt,
+                         -font => $norm,
+                         -tags => ['searchable'],
+                     };
                  } else {
                      return;
                  }
