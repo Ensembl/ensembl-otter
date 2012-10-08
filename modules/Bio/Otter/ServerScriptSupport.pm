@@ -350,23 +350,6 @@ sub make_Author_obj {
 }
 
 
-############## the requested region: ###########################
-
-sub get_requested_slice {
-    my ($self) = @_;
-
-    my $cs      = $self->require_argument('cs');
-    my $csver   = $self->require_argument('csver');
-    my $type    = $self->require_argument('type');
-    my $start   = $self->require_argument('start');
-    my $end     = $self->require_argument('end');
-    my $strand  = 1;
-
-    return $self->otter_dba->get_SliceAdaptor->fetch_by_region(
-        $cs, $type, $start, $end, $strand, $csver);
-}
-
-
 ## no critic (Modules::ProhibitMultiplePackages)
 
 package Bio::EnsEMBL::DBSQL::StatementHandle;
