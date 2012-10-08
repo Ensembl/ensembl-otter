@@ -107,12 +107,10 @@ sub data_dir {
     return Bio::Otter::Server::Config->data_dir;
 }
 
-sub dataset_default {
+sub dataset_name {
     my ($self) = @_;
     my $dataset_name = $self->require_argument('dataset');
-    my $dataset = $self->SpeciesDat->dataset($dataset_name);
-    die "no dataset" unless $dataset;
-    return $dataset;
+    return $dataset_name;
 }
 
 sub allowed_datasets {
@@ -136,11 +134,6 @@ sub dataset_filter {
         my $restrict_rejected = $is_restricted && ( $user_is_external || ! $is_listed );
         return ! ( $list_rejected || $restrict_rejected );
     };
-}
-
-sub SpeciesDat {
-    my ($self) = @_;
-    return $self->{_SpeciesDat} ||= Bio::Otter::Server::Config->SpeciesDat;
 }
 
 sub users_hash {
