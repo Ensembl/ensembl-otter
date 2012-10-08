@@ -11,62 +11,17 @@ BEGIN { use lib ($ENV{OTTER_PERL_INC} || q{}) =~ m{([^:]+)}g }
 use SangerPaths qw{ core bioperl123 ensembl65 otter70 };
 
 use Bio::Otter::ServerScriptSupport;
-use Bio::Vega::ContigLockBroker;
-use Bio::Vega::Transform::Otter;
-use Try::Tiny;
-
+use Bio::Otter::ServerAction::Slice;
 
 sub unlock_region {
     my ($server) = @_;
 
-  my $odba        = $server->otter_dba();
-  $odba->begin_work;
-  my $author_obj  = $server->make_Author_obj();
-  my $slice;
+    my $params = $server->require_arguments('data');
+    my $slicer = Bio::Otter::ServerAction::Slice->new_no_slice($server, $params);
 
-  # the original string lives here:
-  my $xml_string = $server->require_argument('data');
+    $slicer->unlock_region;
 
-  my $action;
-  try {
-      $action = 'converting XML to otter';
-
-      my $parser = Bio::Vega::Transform::Otter->new;
-      $parser->parse($xml_string);
-
-      my $chr_slice    = $parser->get_ChromosomeSlice;
-      my $seq_reg_name = $chr_slice->seq_region_name;
-      my $start        = $chr_slice->start;
-      my $end          = $chr_slice->end;
-      my $strand       = $chr_slice->strand;
-      my $cs           = $chr_slice->coord_system->name;
-      my $cs_version   = $chr_slice->coord_system->version;
-
-      $slice = $odba->get_SliceAdaptor()->fetch_by_region(
-          $cs, $seq_reg_name, $start, $end, $strand, $cs_version);
-      warn "Processed incoming xml file with slice: [$seq_reg_name] [$start] [$end]\n";
-
-
-      $action = 'checking locks';
-      warn "Checking region is locked...\n";
-      my $cb=Bio::Vega::ContigLockBroker->new;
-      $cb->check_locks_exist_by_slice($slice,$author_obj,$odba);
-      warn "Done checking region is locked.\n";
-
-
-      $action = 'to unlock clones';
-      warn "Unlocking clones...\n";
-      $cb->remove_by_slice($slice,$author_obj,$odba);
-      # previously: die "Failed to unlock clones\n $@\n***\n";
-      warn "Done unlocking clones.\n";
-
-      $odba->commit;
-  } catch {
-      $odba->rollback;
-      die "Failed $action \[$_]";
-  };
-
-  return $server->otter_wrap_response("<response>\n</response>\n");
+    return $server->otter_wrap_response("<response>\n</response>\n");
 }
 
 Bio::Otter::ServerScriptSupport->send_response(\&unlock_region);
