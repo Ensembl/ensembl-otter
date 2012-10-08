@@ -11,47 +11,15 @@ BEGIN { use lib ($ENV{OTTER_PERL_INC} || q{}) =~ m{([^:]+)}g }
 use SangerPaths qw{ core bioperl123 ensembl65 otter70 };
 
 use Bio::Otter::ServerScriptSupport;
+use Bio::Otter::ServerAction::Slice;
 
 sub get_assembly_dna {
     my ($server) = @_;
 
-my $slice = $server->get_requested_slice;
+    my $params = $server->require_arguments(@Bio::Otter::ServerAction::Slice::REQUIRED_PARAMS);
+    my $slice = Bio::Otter::ServerAction::Slice->new($server, $params);
 
-my $output_string = $slice->seq . "\n";
-
-my $posn = 0;
-foreach my $tile (@{ $slice->project('seqlevel') }) {
-    my $tile_slice = $tile->to_Slice;
-    my $start = $tile->from_start;
-    my $end   = $tile->from_end;
-
-    # Is there a gap before this piece?
-    if (my $gap = $start - $posn - 1) {
-        # Debugging.  Show the char immediately before and after the string of "N".
-        # $output_string .= substr($output_string, $posn == 0 ? 0 : $posn - 1, $posn == 0 ? $gap + 1 : $gap + 2) . "\n";
-        # Change assembly gaps to dashes.
-        substr($output_string, $posn, $gap, '-' x $gap);
-    }
-    $posn = $end;
-
-    # To save copying large strings, we append onto the
-    # end of the sequence in the output string.
-    $output_string .= join("\t",
-        $tile->from_start,
-        $tile->from_end,
-        $tile_slice->seq_region_name,
-        $tile_slice->start,
-        $tile_slice->end,
-        $tile_slice->strand,
-        $tile_slice->seq_region_Slice->length,
-        ) . "\n";
-}
-if (my $gap = $slice->length - $posn) {
-    # If the slice ends in a gap, turn to dashes too
-    substr($output_string, $posn, $gap, '-' x $gap);
-}
-
-    return $output_string;
+    return $slice->get_assembly_dna;
 }
 
 Bio::Otter::ServerScriptSupport->send_response(\&get_assembly_dna);

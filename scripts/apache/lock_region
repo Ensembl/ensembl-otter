@@ -11,45 +11,17 @@ BEGIN { use lib ($ENV{OTTER_PERL_INC} || q{}) =~ m{([^:]+)}g }
 use SangerPaths qw{ core bioperl123 ensembl65 otter70 };
 
 use Bio::Otter::ServerScriptSupport;
-use Bio::Vega::ContigLockBroker;
-use Bio::Vega::Transform::XML;
-use Try::Tiny;
-
+use Bio::Otter::ServerAction::Slice;
 
 sub lock_region {
     my ($server) = @_;
 
-    my $odba = $server->otter_dba();
-    $odba->begin_work;
+    my $params = $server->require_arguments(@Bio::Otter::ServerAction::Slice::REQUIRED_PARAMS);
+    $params->{cl_host} = $server->param('hostname') || $ENV{REMOTE_ADDR};
 
-    my $cl_host = $server->param('hostname') || $ENV{REMOTE_ADDR};
-    my $cb = Bio::Vega::ContigLockBroker->new;
-    $cb->client_hostname($cl_host);
+    my $slice = Bio::Otter::ServerAction::Slice->new($server, $params);
 
-    my $slice = $server->get_requested_slice;
-    my $author_obj = $server->make_Author_obj();
-
-    my ($xml, $action);
-    try {
-        $action = 'locking';
-        $cb->lock_clones_by_slice($slice, $author_obj, $odba);
-
-        $action = 'result setup';
-        my $formatter = Bio::Vega::Transform::XML->new;
-        $formatter->otter_dba($odba);
-        $formatter->slice($slice);
-        $formatter->fetch_species;
-        $formatter->fetch_CloneSequences;
-
-        $action = 'output';
-        $xml = $formatter->generate_OtterXML;
-        $odba->commit;
-    } catch {
-        $odba->rollback;
-        die "Locking clones failed during $action \[$_]";
-    };
-
-    return $xml;
+    return $slice->lock_region;
 }
 
 Bio::Otter::ServerScriptSupport->send_response(\&lock_region);

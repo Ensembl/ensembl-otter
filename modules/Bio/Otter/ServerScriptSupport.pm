@@ -107,12 +107,10 @@ sub data_dir {
     return Bio::Otter::Server::Config->data_dir;
 }
 
-sub dataset_default {
+sub dataset_name {
     my ($self) = @_;
     my $dataset_name = $self->require_argument('dataset');
-    my $dataset = $self->SpeciesDat->dataset($dataset_name);
-    die "no dataset" unless $dataset;
-    return $dataset;
+    return $dataset_name;
 }
 
 sub allowed_datasets {
@@ -136,11 +134,6 @@ sub dataset_filter {
         my $restrict_rejected = $is_restricted && ( $user_is_external || ! $is_listed );
         return ! ( $list_rejected || $restrict_rejected );
     };
-}
-
-sub SpeciesDat {
-    my ($self) = @_;
-    return $self->{_SpeciesDat} ||= Bio::Otter::Server::Config->SpeciesDat;
 }
 
 sub users_hash {
@@ -335,6 +328,13 @@ sub require_argument {
     return $value;
 }
 
+sub require_arguments {
+    my ($self, @arg_names) = @_;
+
+    my %params = map { $_ => $self->require_argument($_) } @arg_names;
+    return \%params;
+}
+
 ############# Creation of an Author object #######
 
 sub make_Author_obj {
@@ -347,23 +347,6 @@ sub make_Author_obj {
         -name  => $author_name,
         -email => $author_name,
         );
-}
-
-
-############## the requested region: ###########################
-
-sub get_requested_slice {
-    my ($self) = @_;
-
-    my $cs      = $self->require_argument('cs');
-    my $csver   = $self->require_argument('csver');
-    my $type    = $self->require_argument('type');
-    my $start   = $self->require_argument('start');
-    my $end     = $self->require_argument('end');
-    my $strand  = 1;
-
-    return $self->otter_dba->get_SliceAdaptor->fetch_by_region(
-        $cs, $type, $start, $end, $strand, $csver);
 }
 
 
