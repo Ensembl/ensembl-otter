@@ -1546,13 +1546,13 @@ sub delete_subsequences {
         }
     }
 
-    my $ok;
-
     # delete from acedb
-    $ok = 0;
-    try { $self->save_ace($ace); $ok = 1; }
-    catch { $self->exception_message($_, 'Aborted delete, failed to save to Ace'); };
-    $ok or return;
+    try { $self->save_ace($ace); return 1; }
+    catch {
+        $self->exception_message($_, 'Aborted delete, failed to save to Ace');
+        return 0;
+    }
+    or return;
 
     # Remove from our objects
     foreach my $sub (@to_die) {
@@ -1561,10 +1561,12 @@ sub delete_subsequences {
     $self->draw_subseq_list;
 
     # delete from Zmap
-    $ok = 0;
-    try { $self->zMapSendCommands(@xml); $ok = 1; }
-    catch { $self->exception_message($_, 'Deleted OK, but please restart ZMap'); };
-    $ok or return;
+    try { $self->zMapSendCommands(@xml); return 1; }
+    catch {
+        $self->exception_message($_, 'Deleted OK, but please restart ZMap');
+        return 0;
+    }
+    or return;
 
     return;
 }
