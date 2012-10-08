@@ -967,8 +967,7 @@ sub save_data {
 
     $top->Busy;
 
-    my $ok = 0;
-    try {
+    return try {
         my $xml = $adb->Client->save_otter_xml(
             $adb->generate_XML_from_acedb, $adb->DataSet->name);
         die "save_otter_xml returned no XML" unless $xml;
@@ -981,12 +980,10 @@ sub save_data {
         $self->flag_db_edits(1);
         $self->resync_with_db;
         $self->update_window_title_unsaved_flag(0);
-        $ok = 1;
+        return 1;
     }
-    catch { $self->exception_message($_, 'Error saving to otter'); }
+    catch { $self->exception_message($_, 'Error saving to otter'); return 0; }
     finally { $top->Unbusy; };
-
-    return $ok;
 }
 
 sub edit_double_clicked {
