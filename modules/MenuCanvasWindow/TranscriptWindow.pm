@@ -415,8 +415,7 @@ sub SubSeq {
 
     if ($sub) {
         my $expected = 'Hum::Ace::SubSeq';
-        my $ok; try { $ok = $sub->isa($expected) };
-        confess "Expected a '$expected', but got '$sub'" unless $ok;
+        try { $sub->isa($expected) } or confess "Expected a '$expected', but got '$sub'";
         $self->{'_SubSeq'} = $sub;
         $self->canvas->toplevel->configure(-title => 'otter: Transcript ' . $sub->name);
     }
