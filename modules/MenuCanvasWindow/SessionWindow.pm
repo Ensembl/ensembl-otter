@@ -898,10 +898,9 @@ sub exit_save_data {
                 $self->update_Locus($locus);
             }
 
-            my $ok = 0;
-            try { $self->save_ace($ace); $ok = 1; }
-            catch  { warn "Aborting lace session exit:\n$_"; };
-            return unless $ok;
+            try { $self->save_ace($ace); return 1; }
+            catch  { warn "Aborting lace session exit:\n$_"; return 0; }
+            or return;
 
             if ($self->save_data) {
                 $adb->error_flag(0);
