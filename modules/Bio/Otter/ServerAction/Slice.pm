@@ -4,7 +4,10 @@ use strict;
 use warnings;
 
 use Readonly;
+use Try::Tiny;
 
+use Bio::Vega::ContigLockBroker;
+use Bio::Vega::Transform::Otter;
 use Bio::Vega::Transform::XML;
 
 =head1 NAME
@@ -24,16 +27,25 @@ Readonly our @REQUIRED_PARAMS => qw(
 
 ### Constructors
 
-sub new {
-    my ($pkg, $server, $slice_params) = @_;
+sub new_no_slice {
+    my ($pkg, $server, $params) = @_;
 
     my $self = {
         _server => $server,
+        _params => $params,
     };
     my $class = ref($pkg) || $pkg;
     bless $self, $class;
 
-    my $slice = $self->_get_requested_slice($slice_params);
+    return $self;
+}
+
+sub new {
+    my ($pkg, $server, $params) = @_;
+
+    my $self = $pkg->new_no_slice($server, $params);
+
+    my $slice = $self->_get_requested_slice($params);
     $self->slice($slice);
 
     return $self;
@@ -111,6 +123,100 @@ sub get_region {
     return $formatter;
 }
 
+# Really the XML generation should be factored out to the apache script, but
+# for now we treat the XML as a black-box token to be returned to unlock_region.
+#
+sub lock_region {
+    my $self = shift;
+
+    my $server = $self->server;
+    my $odba = $server->otter_dba();
+    $odba->begin_work;
+
+    my $cb = Bio::Vega::ContigLockBroker->new;
+    $cb->client_hostname($self->param('cl_host'));
+
+    my $slice = $self->slice;
+    my $author_obj = $server->make_Author_obj();
+
+    my ($xml, $action);
+    try {
+        $action = 'locking';
+        $cb->lock_clones_by_slice($slice, $author_obj, $odba);
+
+        $action = 'result setup';
+        my $formatter = Bio::Vega::Transform::XML->new;
+        $formatter->otter_dba($odba);
+        $formatter->slice($slice);
+        $formatter->fetch_species;
+        $formatter->fetch_CloneSequences;
+
+        $action = 'output';
+        $xml = $formatter->generate_OtterXML;
+        $odba->commit;
+    } catch {
+        $odba->rollback;
+        die "Locking clones failed during $action \[$_]";
+    };
+
+    return $xml;
+}
+
+# This doesn't really need the services of ServerAction::Slice, but for symmetry it
+# should live here.
+#
+sub unlock_region {
+    my $self = shift;
+
+    my $server = $self->server;
+    my $odba   = $server->otter_dba();
+
+    $odba->begin_work;
+    my $author_obj = $server->make_Author_obj();
+    my $slice;
+
+    # the original string lives here:
+    my $xml_string = $self->param('data');
+
+    my $action;
+    try {
+        $action = 'converting XML to otter';
+
+        my $parser = Bio::Vega::Transform::Otter->new;
+        $parser->parse($xml_string);
+
+        my $chr_slice    = $parser->get_ChromosomeSlice;
+        my $seq_reg_name = $chr_slice->seq_region_name;
+        my $start        = $chr_slice->start;
+        my $end          = $chr_slice->end;
+        my $strand       = $chr_slice->strand;
+        my $cs           = $chr_slice->coord_system->name;
+        my $cs_version   = $chr_slice->coord_system->version;
+
+        $slice = $odba->get_SliceAdaptor()->fetch_by_region(
+            $cs, $seq_reg_name, $start, $end, $strand, $cs_version);
+        warn "Processed incoming xml file with slice: [$seq_reg_name] [$start] [$end]\n";
+
+        $action = 'checking locks';
+        warn "Checking region is locked...\n";
+        my $cb=Bio::Vega::ContigLockBroker->new;
+        $cb->check_locks_exist_by_slice($slice,$author_obj,$odba);
+        warn "Done checking region is locked.\n";
+
+        $action = 'to unlock clones';
+        warn "Unlocking clones...\n";
+        $cb->remove_by_slice($slice,$author_obj,$odba);
+        warn "Done unlocking clones.\n";
+
+        $odba->commit;
+    } catch {
+        $odba->rollback;
+        die "Failed $action \[$_]";
+    };
+
+    return;
+}
+
 ### Accessors
 
 sub server {
@@ -121,6 +227,11 @@ sub slice {
     my ($self, @args) = @_;
     ($self->{_slice}) = @args if @args;
     return $self->{_slice};
+}
+
+sub param {
+    my ($self, $key) = @_;
+    return $self->{_params}->{$key};
 }
 
 =head1 AUTHOR
