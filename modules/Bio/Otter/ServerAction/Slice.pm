@@ -1,4 +1,4 @@
-package Bio::Otter::Server::Slice;
+package Bio::Otter::ServerAction::Slice;
 
 use strict;
 use warnings;
@@ -9,7 +9,7 @@ use Bio::Vega::Transform::XML;
 
 =head1 NAME
 
-Bio::Otter::Server::Slice - server requests on a slice
+Bio::Otter::ServerAction::Slice - server requests on a slice
 
 =cut
 
