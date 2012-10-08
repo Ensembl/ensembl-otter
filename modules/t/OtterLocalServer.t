@@ -58,6 +58,9 @@ my $dna = $slice->get_assembly_dna;
 ok($dna, 'get_assembly_dna');
 note('Got ', length $dna, ' bp');
 
+my $region = $slice->get_region;
+isa_ok($region, 'Bio::Vega::Transform::XML');
+
 my $local_server_2 = $localserver_module->new({otter_dba => $otter_dba});
 isa_ok($local_server, $localserver_module);
 my $otter_dba_2 = $local_server->otter_dba;
