@@ -26,7 +26,7 @@ BEGIN {
     $localserver_module = 'Bio::Otter::LocalServer';
     use_ok($localserver_module);
 
-    $slice_module = 'Bio::Otter::Server::Slice';
+    $slice_module = 'Bio::Otter::ServerAction::Slice';
     use_ok($slice_module);
 }
 
