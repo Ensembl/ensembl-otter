@@ -868,9 +868,9 @@ sub search_pfam {
         return;
     }
 
-    my $ok = 0;
-    try { $sub->validate; $ok = 1; }
-    catch { $self->exception_message($_, 'Invalid transcript'); };
+    my $ok =
+        try { $sub->validate; return 1; }
+        catch { $self->exception_message($_, 'Invalid transcript'); return 0; };
 
     if ($ok) {
         my $pep = $sub->translator->translate($sub->translatable_Sequence);
