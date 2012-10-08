@@ -20,6 +20,7 @@ sub data_dir {
     my ($pkg) = @_;
 
     my $root = $ENV{'DOCUMENT_ROOT'};
+    $root or die 'DOCUMENT_ROOT not set';
     # Trim off the trailing /dir (usually htdocs)
     $root =~ s{/[^/]+$}{}
       or die "Unexpected DOCUMENT_ROOT format '$ENV{DOCUMENT_ROOT}'";
