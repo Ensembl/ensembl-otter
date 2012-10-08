@@ -786,9 +786,9 @@ sub window_close {
 
     if ($self->is_mutable && $SessionWindow->AceDatabase->write_access) {
         my ($sub, $err);
-        my $ok = 0;
-        try { $sub = $self->get_SubSeq_if_changed; $ok = 1; }
-        catch { $err = $_; };
+        my $ok =
+            try { $sub = $self->get_SubSeq_if_changed; return 1; }
+            catch { $err = $_; return 0; };
 
         my $name = $self->name;
 
