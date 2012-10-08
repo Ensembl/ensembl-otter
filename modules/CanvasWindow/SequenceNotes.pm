@@ -737,8 +737,7 @@ sub _open_SequenceSet {
 
     if ($adb_write_access) {
         # only lock the region if we have write access.
-        my $ok = 0;
-        try { $adb->try_to_lock_the_block; $ok = 1; }
+        try { $adb->try_to_lock_the_block; return 1; }
         catch {
             $adb->error_flag(0);
             $adb->write_access(0);  # Stops AceDatabase DESTROY from trying to unlock clones
@@ -757,8 +756,9 @@ sub _open_SequenceSet {
                 $self->exception_message($_, 'Error initialising database');
                 print $_;
             }
+            return 0;
         }
-        $ok or return;
+        or return;
     }
 
     $self->refresh_lock_columns;
