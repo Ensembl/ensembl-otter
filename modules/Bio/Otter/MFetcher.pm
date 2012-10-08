@@ -12,50 +12,9 @@ use strict;
 use warnings;
 use Carp;
 
-sub new { # just to make it possible to instantiate an object
-    my ($pkg, @arguments) = @_;
+use base 'Bio::Otter::Server';
 
-    my $self = bless { @arguments }, $pkg;
-
-    return $self;
-}
-
-sub dataset {
-    my ($self, $dataset) = @_;
-
-    if($dataset) {
-        $self->{'_dataset'} = $dataset;
-    }
-
-    return $self->{'_dataset'} ||=
-        $self->dataset_default;
-}
-
-sub dataset_default {
-    die "no default dataset";
-}
-
-sub otter_dba {
-    my ($self, @args) = @_;
-
-    if($self->{'_odba'} && !scalar(@args)) {   # cached value and no override
-        return $self->{'_odba'};
-    }
-
-    my $adaptor_class = 'Bio::Vega::DBSQL::DBAdaptor';
-
-    if(@args) { # let's check that the class is ok
-        my $odba = shift @args;
-        if(eval { $odba->isa($adaptor_class) }) {
-            return $self->{'_odba'} = $odba;
-        } else {
-            die "The object you assign to otter_dba must be a '$adaptor_class'";
-        }
-    }
-
-    return $self->{'_odba'} ||=
-        $self->dataset->otter_dba;
-}
+# new() provided by Bio::Otter::Server
 
 sub get_slice {
     my ($self, $dba, $cs, $name, $type, $start, $end, $csver) = @_;
