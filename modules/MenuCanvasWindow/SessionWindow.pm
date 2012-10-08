@@ -1798,18 +1798,18 @@ sub Assembly {
             );
 
         my( $assembly );
-        my $ok = 0;
         try {
             $assembly = Hum::Ace::Assembly->new;
             $assembly->name($slice_name);
             $assembly->MethodCollection($self->AceDatabase->MethodCollection);
             $assembly->express_data_fetch($ace);
-            $ok = 1;
+            return 1;
         }
         catch {
             $self->exception_message($_, "Can't fetch Assembly '$slice_name'");
-        };
-        $ok or return;
+            return 0;
+        }
+        or return;
 
         foreach my $sub ($assembly->get_all_SubSeqs) {
             $self->add_SubSeq($sub);
