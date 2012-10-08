@@ -242,11 +242,8 @@ Cleanup any bad windows that might exist & call _launchInAZMap
 
 sub post_response_client_cleanup_launch_in_a_zmap {
     my ($zmap, $self) = @_;
-
     post_response_client_cleanup($zmap, $self);
-
     $self->_launchInAZMap();
-
     return;
 }
 
