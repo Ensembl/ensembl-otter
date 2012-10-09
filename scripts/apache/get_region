@@ -11,17 +11,17 @@ BEGIN { use lib ($ENV{OTTER_PERL_INC} || q{}) =~ m{([^:]+)}g }
 use SangerPaths qw{ core bioperl123 ensembl65 otter70 };
 
 use Bio::Otter::ServerScriptSupport;
-use Bio::Otter::ServerAction::Slice;
+use Bio::Otter::ServerAction::Region;
 
 sub get_region {
     my ($server) = @_;
 
-    my $params = $server->require_arguments(@Bio::Otter::ServerAction::Slice::REQUIRED_PARAMS);
-    my $slice = Bio::Otter::ServerAction::Slice->new($server, $params);
+    my $params = $server->require_arguments(@Bio::Otter::ServerAction::Region::REQUIRED_PARAMS);
+    my $sa_region = Bio::Otter::ServerAction::Region->new($server, $params);
 
     warn "Converting slice to XML...\n";
 
-    my $xml = $slice->get_region->generate_OtterXML;
+    my $xml = $sa_region->get_region->generate_OtterXML;
 
     warn "Done converting slice to XML. Length of XML = " . length($xml) . "\n";
 

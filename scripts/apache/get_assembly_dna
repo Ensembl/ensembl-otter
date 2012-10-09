@@ -11,15 +11,15 @@ BEGIN { use lib ($ENV{OTTER_PERL_INC} || q{}) =~ m{([^:]+)}g }
 use SangerPaths qw{ core bioperl123 ensembl65 otter70 };
 
 use Bio::Otter::ServerScriptSupport;
-use Bio::Otter::ServerAction::Slice;
+use Bio::Otter::ServerAction::Region;
 
 sub get_assembly_dna {
     my ($server) = @_;
 
-    my $params = $server->require_arguments(@Bio::Otter::ServerAction::Slice::REQUIRED_PARAMS);
-    my $slice = Bio::Otter::ServerAction::Slice->new($server, $params);
+    my $params = $server->require_arguments(@Bio::Otter::ServerAction::Region::REQUIRED_PARAMS);
+    my $sa_region = Bio::Otter::ServerAction::Region->new($server, $params);
 
-    return $slice->get_assembly_dna;
+    return $sa_region->get_assembly_dna;
 }
 
 Bio::Otter::ServerScriptSupport->send_response(\&get_assembly_dna);

@@ -1,4 +1,4 @@
-package Bio::Otter::ServerAction::Slice;
+package Bio::Otter::ServerAction::Region;
 
 use strict;
 use warnings;
@@ -12,7 +12,7 @@ use Bio::Vega::Transform::XML;
 
 =head1 NAME
 
-Bio::Otter::ServerAction::Slice - server requests on a slice
+Bio::Otter::ServerAction::Region - server requests on a region
 
 =cut
 
@@ -162,7 +162,7 @@ sub lock_region {
     return $xml;
 }
 
-# This doesn't really need the services of ServerAction::Slice, but for symmetry it
+# This doesn't really need the services of ServerAction::Region, but for symmetry it
 # should live here.
 #
 sub unlock_region {

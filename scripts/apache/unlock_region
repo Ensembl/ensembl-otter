@@ -11,15 +11,15 @@ BEGIN { use lib ($ENV{OTTER_PERL_INC} || q{}) =~ m{([^:]+)}g }
 use SangerPaths qw{ core bioperl123 ensembl65 otter70 };
 
 use Bio::Otter::ServerScriptSupport;
-use Bio::Otter::ServerAction::Slice;
+use Bio::Otter::ServerAction::Region;
 
 sub unlock_region {
     my ($server) = @_;
 
     my $params = $server->require_arguments('data');
-    my $slicer = Bio::Otter::ServerAction::Slice->new_no_slice($server, $params);
+    my $sa_regionr = Bio::Otter::ServerAction::Region->new_no_slice($server, $params);
 
-    $slicer->unlock_region;
+    $sa_regionr->unlock_region;
 
     return $server->otter_wrap_response("<response>\n</response>\n");
 }
