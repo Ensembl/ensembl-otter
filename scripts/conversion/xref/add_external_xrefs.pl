@@ -302,13 +302,28 @@ my $seen_xrefs;
 my (%overall_stats,%overall_xrefs);
 
 foreach my $chr (@chr_sorted) {
-  $support->log_stamped("> Chromosome $chr (".$chr_length->{$chr}."bp).\n\n");
+
+#  next if ($chr =~ /GL/);
+#  next unless ($chr =~ /HS|HG/);
+#  next if ($chr =~ /MHC/);
+#  my $slice = $sa->fetch_by_region('chromosome', $chr,undef,undef,undef,'GRCh37');
+
+  my $slice = $sa->fetch_by_region('chromosome', $chr);
+
+  $support->log_stamped("> Chromosome $chr (".$chr_length->{$chr}."bp).\n");
 
   # fetch genes from db
-  $support->log("Fetching genes...\n");
-  my $slice = $sa->fetch_by_region('chromosome', $chr);
-  my ($genes) = $support->get_unique_genes($slice);
-  $support->log_stamped("Done fetching ".scalar @$genes." genes.\n\n");
+  my $genes;
+  if ($slice) {
+    $support->log("Fetching genes...\n",1);
+    ($genes) = $support->get_unique_genes($slice);
+  }
+  else {
+    $support->log_warning("Can't get a slice for $chr\n",1);
+    next;
+  }
+  $support->log_stamped("Done fetching ".scalar @$genes." genes.\n\n",1);
+
 
   # loop over genes
   my %stats = map { $_ => 0 } keys %extdb_def;
