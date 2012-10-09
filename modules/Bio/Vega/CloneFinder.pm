@@ -488,9 +488,12 @@ sub _find_by_hit_name {
     $sth->execute(@{$names});
 
     my $adaptor;
-    while( my ($qname, $sr_name, $cs_name, $cs_version, $start, $end, $strand, $analysis_name, $score) = $sth->fetchrow ) {
+    while( my ($qname, $sr_name, $cs_name, $cs_version,
+               $start, $end, $strand, $analysis_name, $score)
+           = $sth->fetchrow ) {
         $adaptor ||= $pipe_dba->get_SliceAdaptor;
-        my $slice = $adaptor->fetch_by_region($cs_name, $sr_name, $start, $end, $strand, $cs_version);
+        my $slice = $adaptor->fetch_by_region(
+            $cs_name, $sr_name, $start, $end, $strand, $cs_version);
         my $qtype = "Pipeline_${kind}_hit:${analysis_name}(score=$score)";
         $self->register_slice($qname, $qtype, $slice);
     }
