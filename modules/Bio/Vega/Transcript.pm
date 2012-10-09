@@ -156,7 +156,8 @@ sub vega_hashkey {
   my $status            = $self->status
       || throw(           'status must be set to generate correct vega_hashkey.');
 
-  my $exon_count = scalar @{$self->get_all_Exons} || throw("there are no exons for this transcript to generate correct vega_hashkey");
+  my $exon_count = scalar @{$self->get_all_Exons}
+      || throw("there are no exons for this transcript to generate correct vega_hashkey");
   my $description = $self->{'description'} ? $self->{'description'}: '' ;
   my $attrib_string = $self->all_Attributes_string;
 
