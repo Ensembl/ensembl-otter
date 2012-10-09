@@ -143,12 +143,18 @@ sub all_Attributes_string {
 sub vega_hashkey {
   my ($self) = @_;
 
-  my $seq_region_name   = $self->seq_region_name    || throw(  'seq_region_name must be set to generate correct vega_hashkey.');
-  my $seq_region_start  = $self->seq_region_start   || throw( 'seq_region_start must be set to generate correct vega_hashkey.');
-  my $seq_region_end    = $self->seq_region_end     || throw(   'seq_region_end must be set to generate correct vega_hashkey.');
-  my $seq_region_strand = $self->seq_region_strand  || throw('seq_region_strand must be set to generate correct vega_hashkey.');
-  my $biotype           = $self->biotype            || throw(          'biotype must be set to generate correct vega_hashkey.');
-  my $status            = $self->status             || throw(           'status must be set to generate correct vega_hashkey.');
+  my $seq_region_name   = $self->seq_region_name
+      || throw(  'seq_region_name must be set to generate correct vega_hashkey.');
+  my $seq_region_start  = $self->seq_region_start
+      || throw( 'seq_region_start must be set to generate correct vega_hashkey.');
+  my $seq_region_end    = $self->seq_region_end
+      || throw(   'seq_region_end must be set to generate correct vega_hashkey.');
+  my $seq_region_strand = $self->seq_region_strand
+      || throw('seq_region_strand must be set to generate correct vega_hashkey.');
+  my $biotype           = $self->biotype
+      || throw(          'biotype must be set to generate correct vega_hashkey.');
+  my $status            = $self->status
+      || throw(           'status must be set to generate correct vega_hashkey.');
 
   my $exon_count = scalar @{$self->get_all_Exons} || throw("there are no exons for this transcript to generate correct vega_hashkey");
   my $description = $self->{'description'} ? $self->{'description'}: '' ;
