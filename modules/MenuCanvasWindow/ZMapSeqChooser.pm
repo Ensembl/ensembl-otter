@@ -9,6 +9,7 @@ use Try::Tiny;
 use Data::Dumper;
 use XML::Simple;
 use POSIX ();
+use Scalar::Util qw( weaken );
 
 use Hum::XmlWriter;
 
@@ -229,6 +230,7 @@ Primary user of this is the zMapFinalised function.
 
 sub post_response_client_cleanup {
     my ($zmap, $self) = @_;
+    defined $self or return;
     $zmap->post_respond_handler();
     $self->xremote_cache->remove_clients_to_bad_windows();
     return;
@@ -242,6 +244,7 @@ Cleanup any bad windows that might exist & call _launchInAZMap
 
 sub post_response_client_cleanup_launch_in_a_zmap {
     my ($zmap, $self) = @_;
+    defined $self or return;
     post_response_client_cleanup($zmap, $self);
     $self->_launchInAZMap();
     return;
@@ -263,11 +266,15 @@ sub zMapFinalised {
         $self->{'_relaunch_zmap'} = 0;
     }
     elsif ($self->{'_launch_in_a_zmap'}) {
-        $self->zMapZmapConnector->post_respond_handler(\&post_response_client_cleanup_launch_in_a_zmap, [$self]);
+        $self->zMapZmapConnector->post_respond_handler(
+            \&post_response_client_cleanup_launch_in_a_zmap,
+            $self->zmap_callback_data);
         $self->{'_launch_in_a_zmap'} = 0;
     }
     else {
-        $self->zMapZmapConnector->post_respond_handler(\&post_response_client_cleanup, [$self]);
+        $self->zMapZmapConnector->post_respond_handler(
+            \&post_response_client_cleanup,
+            $self->zmap_callback_data);
     }
 
     return (200, "all closed");
@@ -362,7 +369,7 @@ sub zMapZmapConnectorNew {
     my ($self) = @_;
     my $mb = $self->menu_bar();
     my $zc = Bio::Otter::ZMap::Connect->new;
-    $zc->init($mb, \&_zmap_request_callback, [ $self, qw() ]);
+    $zc->init($mb, \&_zmap_request_callback, $self->zmap_callback_data);
     my $id = $zc->server_window_id();
     return $zc;
 }
@@ -406,7 +413,7 @@ sub zMapRegisterClient {
 
     $self->zMapProcessNewClientXML($xml, $self->main_window_name());
 
-    $zc->post_respond_handler(\&open_clones, [$self]);
+    $zc->post_respond_handler(\&open_clones, $self->zmap_callback_data);
 
     my $response_xml = $zc->client_registered_response;
 
@@ -593,6 +600,19 @@ sub _zmap_request_callback {
     return @result;
 }
 
+sub zmap_callback_data {
+    my ($self) = @_;
+    return $self->{'zmap_callback_data'} ||=
+        $self->_zmap_callback_data;
+}
+
+sub _zmap_callback_data {
+    my ($self) = @_;
+    my $zmap_callback_data = [ $self ];
+    weaken $zmap_callback_data->[0];
+    return $zmap_callback_data;
+}
+
 =head2 zMapGetXRemoteClientByName
 
 The XRemoteCache caches objects based on their window ids. This module
@@ -624,6 +644,7 @@ sub zMapGetXRemoteClientByAction {
 
 sub open_clones {
     my ($zmap, $self) = @_;
+    defined $self or return;
     $zmap->post_respond_handler();    # clear the handler...
     $self->zMapOpenClones;
     return;
