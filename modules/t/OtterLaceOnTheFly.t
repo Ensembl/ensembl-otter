@@ -9,9 +9,19 @@ use Test::SetupLog4perl;
 
 use Test::More;
 
-use FindBin qw($Bin);
+use File::Temp;
 
+use FindBin qw($Bin);
+use lib "$Bin/lib";
+use OtterTest::Client;
+
+use Bio::Otter::Lace::AccessionTypeCache;
+use Bio::Otter::Lace::DB;
 use Bio::Otter::Lace::Exonerate;
+use Bio::Otter::LocalServer;
+use Bio::Otter::ServerAction::Region;
+
+use Hum::ClipboardUtils;
 use Hum::FastaFileIO;
 
 my @modules;
@@ -86,6 +96,12 @@ my @tests = (
 my @todo_tests = (
     );
 
+my %species_tests = (
+    human => [
+        { title => 'AL133351.34', type => 'chr6-18', start => 2864371, end => 3037940, },
+    ],
+    );
+
 foreach my $test ( @tests ) {
     run_test($test);
 }
@@ -97,6 +113,20 @@ TODO: {
         run_test($test);
     }
 }
+
+local $ENV{DOCUMENT_ROOT} = '/nfs/WWWdev/SANGER_docs/htdocs';
+my $tmp_dir = File::Temp->newdir;
+my $at_cache = setup_accession_type_cache($tmp_dir->dirname);
+
+while (my ($species, $regions) = each %species_tests) {
+    note("Live tests for: $species");
+    my $local_server = Bio::Otter::LocalServer->new({dataset => $species});
+    foreach my $region ( @$regions ) {
+        run_region($local_server, $region, $at_cache);
+    }
+}
+
+done_testing;
 
 sub run_test {
     my $test = shift;
@@ -183,7 +213,53 @@ sub run_test {
 
 }
 
-done_testing;
+sub run_region {
+    my ($local_server, $region, $at_cache) = @_;
+    note("  Region: ", $region->{title});
+    my $sa_region = Bio::Otter::ServerAction::Region->new_with_slice($local_server, $region);
+
+    my $dna = $sa_region->get_assembly_dna;
+    my $target_seq = Hum::Sequence::DNA->new;
+    $target_seq->name($region->{title});
+    $target_seq->sequence_string($dna);
+
+    my $genes = $sa_region->get_region->genes;
+    foreach my $gene (@$genes) {
+        note("    Gene: ", $gene->stable_id);
+        my $transcripts = $gene->get_all_Transcripts;
+        foreach my $ts (@$transcripts) {
+            note("      Transcript: ", $ts->stable_id);
+            my $evi_list = $ts->evidence_list;
+            my $q_validator = get_query_validator($at_cache, $evi_list);
+            note("        ", join(',', map{ $_->name } @{$q_validator->confirmed_seqs}));
+        }
+    }
+}
+
+sub get_query_validator {
+    my ($at_cache, $evi_list) = @_;
+    my @evi_names = map { Hum::ClipboardUtils::accessions_from_text($_->name) } @$evi_list;
+    my $q_validator = Bio::Otter::Lace::OnTheFly::QueryValidator->new(
+        accession_type_cache => $at_cache,
+        accessions           => \@evi_names,
+        problem_report_cb    => sub {
+            my ($self, $msgs) = @_;
+            map { diag("QV ", $_, ": ", $msgs->{$_}) if $msgs->{$_} } keys %$msgs;
+        },
+        long_query_cb        => sub { diag("QV long q: ", shift, "(", shift, ")"); },
+        );
+    return $q_validator;
+}
+
+sub setup_accession_type_cache {
+    my $tmp_dir = shift;
+    my $test_client = OtterTest::Client->new;
+    my $test_db = Bio::Otter::Lace::DB->new($tmp_dir);
+    $at_cache = Bio::Otter::Lace::AccessionTypeCache->new;
+    $at_cache->Client($test_client);
+    $at_cache->DB($test_db);
+    return $at_cache;
+}
 
 sub feature_sort {
     return
