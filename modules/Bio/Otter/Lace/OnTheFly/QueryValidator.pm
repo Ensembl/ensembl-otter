@@ -12,6 +12,7 @@ use Moose;
 use Carp;
 
 use Bio::Vega::Evidence::Types qw{ new_evidence_type_valid };
+use Hum::Pfetch;
 
 has accession_type_cache => ( is => 'ro', isa => 'Bio::Otter::Lace::AccessionTypeCache', required => 1 );
 
