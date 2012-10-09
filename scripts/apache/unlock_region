@@ -17,7 +17,7 @@ sub unlock_region {
     my ($server) = @_;
 
     my $params = $server->require_arguments('data');
-    my $sa_regionr = Bio::Otter::ServerAction::Region->new_no_slice($server, $params);
+    my $sa_regionr = Bio::Otter::ServerAction::Region->new($server, $params);
 
     $sa_regionr->unlock_region;
 

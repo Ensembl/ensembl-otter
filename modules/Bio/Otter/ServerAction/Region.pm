@@ -27,7 +27,7 @@ Readonly our @REQUIRED_PARAMS => qw(
 
 ### Constructors
 
-sub new_no_slice {
+sub new {
     my ($pkg, $server, $params) = @_;
 
     my $self = {
@@ -40,10 +40,10 @@ sub new_no_slice {
     return $self;
 }
 
-sub new {
+sub new_with_slice {
     my ($pkg, $server, $params) = @_;
 
-    my $self = $pkg->new_no_slice($server, $params);
+    my $self = $pkg->new($server, $params);
 
     my $slice = $self->_get_requested_slice($params);
     $self->slice($slice);
