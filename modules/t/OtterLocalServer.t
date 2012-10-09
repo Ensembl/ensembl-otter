@@ -51,7 +51,7 @@ isa_ok($local_server, $localserver_module);
 my $otter_dba = $local_server->otter_dba;
 isa_ok($otter_dba, 'Bio::Vega::DBSQL::DBAdaptor');
 
-my $sa_region = $region_module->new($local_server, \%params);
+my $sa_region = $region_module->new_with_slice($local_server, \%params);
 isa_ok($sa_region, $region_module);
 
 my $dna = $sa_region->get_assembly_dna;

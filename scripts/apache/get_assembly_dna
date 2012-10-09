@@ -17,7 +17,7 @@ sub get_assembly_dna {
     my ($server) = @_;
 
     my $params = $server->require_arguments(@Bio::Otter::ServerAction::Region::REQUIRED_PARAMS);
-    my $sa_region = Bio::Otter::ServerAction::Region->new($server, $params);
+    my $sa_region = Bio::Otter::ServerAction::Region->new_with_slice($server, $params);
 
     return $sa_region->get_assembly_dna;
 }
