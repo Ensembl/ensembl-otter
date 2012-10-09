@@ -68,7 +68,10 @@ sub vega_hashkey {
     my $description = $self->description || '';
     my $attrib_string = $self->all_Attributes_string;
 
-    return "$seq_region_name-$start-$end-$strand-$biotype-$status-$source-$description-$tran_count-$attrib_string";
+    return join '-'
+        , $seq_region_name, $start, $end, $strand
+        , $biotype, $status, $source, $description, $tran_count, $attrib_string
+        ;
 }
 
 sub vega_hashkey_structure {
