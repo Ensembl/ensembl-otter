@@ -170,7 +170,18 @@ sub vega_hashkey {
 }
 
 sub vega_hashkey_structure {
-    return 'seq_region_name-seq_region_start-seq_region_end-seq_region_strand-biotype-status-exon_count-description-evidence_count-attrib_string';
+    return join '-', qw(
+        seq_region_name
+        seq_region_start
+        seq_region_end
+        seq_region_strand
+        biotype
+        status
+        exon_count
+        description
+        evidence_count
+        attrib_string
+        );
 }
 
 sub vega_hashkey_sub {
