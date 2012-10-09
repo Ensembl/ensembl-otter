@@ -11,17 +11,17 @@ BEGIN { use lib ($ENV{OTTER_PERL_INC} || q{}) =~ m{([^:]+)}g }
 use SangerPaths qw{ core bioperl123 ensembl65 otter70 };
 
 use Bio::Otter::ServerScriptSupport;
-use Bio::Otter::ServerAction::Slice;
+use Bio::Otter::ServerAction::Region;
 
 sub lock_region {
     my ($server) = @_;
 
-    my $params = $server->require_arguments(@Bio::Otter::ServerAction::Slice::REQUIRED_PARAMS);
+    my $params = $server->require_arguments(@Bio::Otter::ServerAction::Region::REQUIRED_PARAMS);
     $params->{cl_host} = $server->param('hostname') || $ENV{REMOTE_ADDR};
 
-    my $slice = Bio::Otter::ServerAction::Slice->new($server, $params);
+    my $sa_region = Bio::Otter::ServerAction::Region->new($server, $params);
 
-    return $slice->lock_region;
+    return $sa_region->lock_region;
 }
 
 Bio::Otter::ServerScriptSupport->send_response(\&lock_region);
