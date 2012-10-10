@@ -91,6 +91,14 @@ my @tests = (
         query_ids   => [qw(sp|Q96S55|WRIP1_HUMAN)],
         type        => 'Test_Protein',
     },
+    {
+        name        => 'AL133351 vs. protein Q8VHQ0.1',
+        target_path => "${path}/AL133351.34.fasta",
+        query_path  => "${path}/Q8VHQ0.fasta",
+        query_ids   => [qw(Q8VHQ0.1)],
+        type        => 'Test_Protein',
+    },
+
     );
 
 my @todo_tests = (
