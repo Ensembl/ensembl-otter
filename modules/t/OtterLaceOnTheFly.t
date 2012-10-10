@@ -111,14 +111,14 @@ my %species_tests = (
     );
 
 foreach my $test ( @tests ) {
-    run_test($test);
+    run_fixed_test($test);
 }
 
 TODO: {
     local $TODO = "Protein handling not yet compatible for frameshift and split codon";
 
     foreach my $test ( @todo_tests ) {
-        run_test($test);
+        run_fixed_test($test);
     }
 }
 
@@ -136,20 +136,28 @@ while (my ($species, $regions) = each %species_tests) {
 
 done_testing;
 
+sub run_fixed_test {
+    my $test = shift;
+
+    $test->{target_seq} = Hum::FastaFileIO->new_DNA_IO($test->{target_path})->read_one_sequence;
+    $test->{strict_hit_list} = 1;
+    run_test($test);
+}
+
 sub run_test {
     my $test = shift;
 
     note 'Test: ', $test->{name};
 
-    my $target = new_ok('Bio::Otter::Lace::OnTheFly::TargetSeq' =>
-                        [ full_seq => Hum::FastaFileIO->new_DNA_IO($test->{target_path})->read_one_sequence ]
-        );
+    my $target = new_ok('Bio::Otter::Lace::OnTheFly::TargetSeq' => [ full_seq => $test->{target_seq} ]);
 
-    my @seqs = ( Hum::FastaFileIO->new_DNA_IO($test->{query_path})->read_all_sequences );
+    if ($test->{query_path}) {
+        $test->{query_seqs} = [ Hum::FastaFileIO->new_DNA_IO($test->{query_path})->read_all_sequences ];
+    }
 
     my $aligner = new_ok( 'Bio::Otter::Lace::OnTheFly::Aligner::Genomic' => [{
         type   => $test->{type} || 'Test_EST',
-        seqs   => \@seqs,
+        seqs   => $test->{query_seqs},
         target => $target,
                                                                              }]);
 
@@ -157,8 +165,10 @@ sub run_test {
     isa_ok($result_set, 'Bio::Otter::Lace::OnTheFly::ResultSet');
 
     my @qids = sort $result_set->query_ids;
-    is(scalar(@qids), scalar(@{$test->{query_ids}}), 'n(query_ids)');
-    is_deeply(\@qids, $test->{query_ids}, 'query_ids');
+    if ($test->{strict_hit_list}) {
+        is(scalar(@qids), scalar(@{$test->{query_ids}}), 'n(query_ids)');
+        is_deeply(\@qids, $test->{query_ids}, 'query_ids');
+    }
 
     my @gapped_alignments =  map { @{$result_set->by_query_id($_)} } @qids;
     my @new_features;
@@ -177,7 +187,13 @@ sub run_test {
     my $target_bio_seq = Bio::Seq->new( -id => $target_seq->name, -seq => $dna_str, -alphabet => 'dna');
 
     my $exonerate = Bio::Otter::Lace::Exonerate->new;
-    $exonerate->initialise($test->{query_path});
+    if ($test->{query_path}) {
+        $exonerate->initialise($test->{query_path});
+    } else {
+        $exonerate->query_seq($test->{query_seqs});
+        $exonerate->initialise($exonerate->write_seq_file);
+    }
+
     $exonerate->bestn(1);
     $exonerate->max_intron_length(200000);
     $exonerate->score(100);
@@ -191,7 +207,8 @@ sub run_test {
     note("n(output_features): ", scalar(@output_features));
     is(scalar @new_features, scalar@output_features, 'n(new_features)');
     foreach my $n ( 0 .. scalar(@new_features) - 1 ) {
-        subtest "Feature $n" => sub {
+        my $name = $output_features[$n]->hseqname;
+        subtest "Feature $n ($name)" => sub {
             foreach my $member (
                 qw{
                 seqname
@@ -218,7 +235,6 @@ sub run_test {
             done_testing;
         }
     }
-
 }
 
 sub run_region {
@@ -226,7 +242,8 @@ sub run_region {
     note("  Region: ", $region->{title});
     my $sa_region = Bio::Otter::ServerAction::Region->new_with_slice($local_server, $region);
 
-    my $dna = $sa_region->get_assembly_dna;
+    # FIXME: get_assembly_dna should return components
+    my ($dna, @tiles) = split(/\n/, $sa_region->get_assembly_dna);
     my $target_seq = Hum::Sequence::DNA->new;
     $target_seq->name($region->{title});
     $target_seq->sequence_string($dna);
@@ -239,7 +256,18 @@ sub run_region {
             note("      Transcript: ", $ts->stable_id);
             my $evi_list = $ts->evidence_list;
             my $q_validator = get_query_validator($at_cache, $evi_list);
-            note("        ", join(',', map{ $_->name } @{$q_validator->confirmed_seqs}));
+            foreach my $type ( $q_validator->seq_types ) {
+                my $seqs = $q_validator->seqs_for_type($type);
+                my @seq_names = map{ $_->name } @$seqs;
+                note("        ", $type, ": ", join(',', @seq_names));
+                run_test({
+                    name       => join('_', $ts->stable_id, $type),
+                    target_seq => $target_seq,
+                    query_seqs => $seqs,
+                    query_ids  => \@seq_names,
+                    type       => $type,
+                         });
+            }
         }
     }
 }
