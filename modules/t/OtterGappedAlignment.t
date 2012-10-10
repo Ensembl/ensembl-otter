@@ -97,13 +97,14 @@ my %test_clone_exp = (         # not Readonly as some components manufactured fr
         score        => 3047,
         n_ele        => 8,
 
-#       cigar_ensembl      => '855MI156M75D57MI3D849M', # mine
-        cigar_ensembl      => '855MI156M25D57MID849M',  # according to exonerate - counts on I's is query side
+        cigar_exonerate    => 'M 855 D 1 M 156 I 25 M 57 D 1 I 1 M 849',
+        cigar_ensembl      => '855MI156M75D57MI3D849M', # mine - rest follow this convention
+#       cigar_ensembl      => '855MI156M25D57MID849M',  # according to exonerate - counts on I's is from query side
 
         intron_vulgar  => 'M 274 822 I 0 2246 M 11 33 F 0 1 M 52 156 G 25 0 M 1 3 I 0 1312 M 18 54 F 0 1 G 1 0 M 36 108 S 0 2 I 0 8901 S 1 1 M 76 228 S 0 1 I 0 3913 S 1 2 M 51 153 S 0 1 I 0 762 S 1 2 M 26 78 I 0 603 M 91 273',
         intron_n_ele => 26,
 
-        i_cigar_ensembl => '822M2246I33MI156M25D3M1312I54MID108M8903I229M3914I155M763I80M603I273M',
+        i_cigar_ensembl => '822M2246I33MI156M75D3M1312I54MI3D108M8903I229M3914I155M763I80M603I273M',
 
         ensembl_feature_type => 'Bio::EnsEMBL::DnaPepAlignFeature',
     },
@@ -762,7 +763,7 @@ Readonly my @split_expected => (
         ensembl_features => [
             { start => 120541, end => 121362, strand => 1, hstart =>   1, hend => 274, cigar => '822M', },
             { start => 123609, end => 123641, strand => 1, hstart => 275, hend => 285, cigar => '33M', },
-            { start => 123643, end => 123801, strand => 1, hstart => 286, hend => 363, cigar => '156M25D3M', },
+            { start => 123643, end => 123801, strand => 1, hstart => 286, hend => 363, cigar => '156M75D3M', },
             { start => 125114, end => 125167, strand => 1, hstart => 364, hend => 381, cigar => '54M', },
             { start => 125169, end => 125276, strand => 1, hstart => 383, hend => 418, cigar => '108M', },
             { start => 134181, end => 134408, strand => 1, hstart => 420, hend => 495, cigar => '228M', },
@@ -810,7 +811,7 @@ Readonly my @split_expected => (
         ensembl_features => [
             { start => 54301, end => 55122, strand => -1, hstart =>   1, hend => 274, cigar => '822M', },
             { start => 52022, end => 52054, strand => -1, hstart => 275, hend => 285, cigar => '33M', },
-            { start => 51862, end => 52020, strand => -1, hstart => 286, hend => 363, cigar => '156M25D3M', },
+            { start => 51862, end => 52020, strand => -1, hstart => 286, hend => 363, cigar => '156M75D3M', },
             { start => 50496, end => 50549, strand => -1, hstart => 364, hend => 381, cigar => '54M', },
             { start => 50387, end => 50494, strand => -1, hstart => 383, hend => 418, cigar => '108M', },
             { start => 41255, end => 41482, strand => -1, hstart => 420, hend => 495, cigar => '228M', },
