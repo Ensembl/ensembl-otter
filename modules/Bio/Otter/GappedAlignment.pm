@@ -329,7 +329,7 @@ sub _coalesce_cigar_strings {
             $length += $next_ele->cigar_length; # combine
             shift @elements;                    # and discard
         }
-        my $cigar_string = $ele_format_sub->($this_ele, $length);
+        my $cigar_string = $ele_format_sub->($this_ele, $length, $self);
         push @ele_strings, $cigar_string;
     }
     return @ele_strings;
@@ -341,7 +341,16 @@ sub ensembl_cigar_string {
 
     my @ele_strings = $self->_coalesce_cigar_strings(
         sub { return shift->ensembl_cigar_type; },
-        sub { my ($self, $length) = @_; return ($length > 1 ? $length : '') . $self->ensembl_cigar_type; },
+        sub {
+            my ($ele, $length, $ga) = @_;
+            my $type = $ele->ensembl_cigar_type;
+            if (   ($type eq 'D' and $ga->query_type eq 'P' and $ga->target_type ne 'P')
+                or ($type eq 'I' and $ga->query_type ne 'P' and $ga->target_type eq 'P') )
+            {
+                $length *= 3;   # peptide -> nucleotide
+            }
+            return ($length > 1 ? $length : '') . $type;
+        },
         );
     return join('', @ele_strings);
 }
@@ -352,7 +361,7 @@ sub exonerate_cigar_string {
 
     my @ele_strings = $self->_coalesce_cigar_strings(
         sub { return shift->cigar_type; },
-        sub { my ($self, $length) = @_; return $self->cigar_type . ' ' . $length; },
+        sub { my ($ele, $length) = @_; return $ele->cigar_type . ' ' . $length; },
         );
     return join(' ', @ele_strings);
 }
