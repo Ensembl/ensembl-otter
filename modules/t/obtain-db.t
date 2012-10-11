@@ -3,8 +3,9 @@
 use strict;
 use warnings;
 
-use Sys::Hostname 'hostname';
 use Test::More;
+use t::lib::Test::Otter qw( ^db_or_skipall );
+
 use YAML 'Dump'; # for diag
 use File::Slurp 'read_dir';
 
@@ -99,12 +100,6 @@ Ana Code B<email> anacode@sanger.ac.uk
 
 
 sub main {
-    my $host = hostname(); # not FQDN on my deskpro
-    unless (hostname =~ /\.sanger\.ac\.uk$/ || -d "/software/anacode" || $ENV{WTSI_INTERNAL}) {
-        plan skip_all => "Direct database access not expected to work from $host - set WTSI_INTERNAL=1 to try";
-        # it exits
-    }
-
     plan tests => 30;
 
     my @warn;
