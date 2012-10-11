@@ -445,7 +445,7 @@ sub _split_at_frameshifts {
     return @splits;
 }
 
-# Remove split codons (which will be at ends) and leading or trailing singleton indels
+# Remove split codons (which will be at ends) and leading or trailing indels
 #
 sub _strip_for_ensembl {
     my $self = shift;
@@ -455,15 +455,13 @@ sub _strip_for_ensembl {
 
     # Should these strip repeatedly in a while loop?
 
-    if ($elements->[0] and (    $elements->[0]->type eq 'S'
-                            or ($elements->[0]->type eq 'G' and $elements->[0]->cigar_length == 1))) {
+    if ($elements->[0] and ($elements->[0]->type eq 'S' or $elements->[0]->type eq 'G')) {
         my $sc = shift(@$elements);
         $stripped->target_start($self->target_start + $self->target_strand_sense * $sc->target_length);
         $stripped->query_start( $self->query_start  + $self->query_strand_sense  * $sc->query_length);
     }
 
-    if ($elements->[-1] and (    $elements->[-1]->type eq 'S'
-                             or ($elements->[-1]->type eq 'G' and $elements->[-1]->cigar_length == 1))) {
+    if ($elements->[-1] and ($elements->[-1]->type eq 'S' or $elements->[-1]->type eq 'G')) {
         my $sc = pop(@$elements);
         $stripped->target_end($self->target_end - $self->target_strand_sense * $sc->target_length);
         $stripped->query_end( $self->query_end  - $self->query_strand_sense  * $sc->query_length);
