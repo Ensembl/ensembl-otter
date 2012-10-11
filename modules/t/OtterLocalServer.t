@@ -7,22 +7,12 @@ use lib "${ENV{ANACODE_TEAM_TOOLS}}/t/tlib";
 use Test::CriticModule;
 use Test::SetupLog4perl;
 
-use Sys::Hostname 'hostname';
-
 use Test::More;
+
+use t::lib::Test::Otter qw( ^db_or_skipall ); # may skip test
 
 my ($localserver_module, $region_module);
 BEGIN {
-    my $host = hostname(); # not FQDN on my deskpro
-    unless (   hostname =~ /\.sanger\.ac\.uk$/
-            || -d "/software/anacode"
-            || $ENV{WTSI_INTERNAL}
-        ) {
-        plan skip_all =>
-          "Direct database access not expected to work from $host - set WTSI_INTERNAL=1 to try";
-        # it exits
-    }
-
     $localserver_module = 'Bio::Otter::LocalServer';
     use_ok($localserver_module);
 
