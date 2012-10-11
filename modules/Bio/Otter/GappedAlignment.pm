@@ -787,8 +787,7 @@ sub _generate_exon_gapped_alignments {
         } else {
 
             unless ($state eq 'exon') {
-                $exon_ga = $self->_new_copy_basics;
-                $exon_ga->score(0); # cannot easily split score between exons
+                $exon_ga = $self->_new_copy_basics; # note this naively copies score, percent_id, hcoverage, etc.
                 $exon_ga->target_start($t_pos);
                 $exon_ga->query_start($q_pos);
                 $exon_ga->target_end($exon_ga->target_start); # will be updated by add_element_track_lengths()
