@@ -230,10 +230,10 @@ Readonly my @split_expected => (
         intron_t_strand=> '+',
 
         splits => [
-            'Q 0 3 + T 28 31 + 0 M 3 3',
-            'Q 3 12 + T 34 40 + 0 M 2 2 G 3 0 M 4 4',
-            'Q 12 14 + T 44 47 + 0 M 1 1 G 0 1 M 1 1',
-            'Q 14 20 + T 49 52 + 0 M 3 3 G 3 0',
+            'Q 0 3 + T 28 31 + 56 M 3 3',
+            'Q 3 12 + T 34 40 + 56 M 2 2 G 3 0 M 4 4',
+            'Q 12 14 + T 44 47 + 56 M 1 1 G 0 1 M 1 1',
+            'Q 14 20 + T 49 52 + 56 M 3 3 G 3 0',
             ],
 
         ensembl_feature_type => 'Bio::EnsEMBL::DnaDnaAlignFeature',
@@ -257,10 +257,10 @@ Readonly my @split_expected => (
         intron_t_strand=> '-',
 
         splits => [
-            'Q 0 3 + T 79 76 - 0 M 3 3',
-            'Q 3 12 + T 73 67 - 0 M 2 2 G 3 0 M 4 4',
-            'Q 12 14 + T 63 60 - 0 M 1 1 G 0 1 M 1 1',
-            'Q 14 20 + T 58 55 - 0 M 3 3 G 3 0',
+            'Q 0 3 + T 79 76 - 56 M 3 3',
+            'Q 3 12 + T 73 67 - 56 M 2 2 G 3 0 M 4 4',
+            'Q 12 14 + T 63 60 - 56 M 1 1 G 0 1 M 1 1',
+            'Q 14 20 + T 58 55 - 56 M 3 3 G 3 0',
             ],
 
         ensembl_feature_type => 'Bio::EnsEMBL::DnaDnaAlignFeature',
@@ -305,13 +305,13 @@ Readonly my @split_expected => (
         intron_n_ele   => 13,
 
         splits => [
-            'BC018923.2 0 974 + ENST00000380771 69481 70455 + 0 M 974 974',
-            'BC018923.2 974 1166 + ENST00000380771 72701 72893 + 0 M 192 192',
-            'BC018923.2 1166 1333 + ENST00000380771 74205 74372 + 0 M 167 167',
-            'BC018923.2 1333 1563 + ENST00000380771 83273 83503 + 0 M 230 230',
-            'BC018923.2 1563 1719 + ENST00000380771 87416 87572 + 0 M 156 156',
-            'BC018923.2 1719 1799 + ENST00000380771 88334 88414 + 0 M 80 80',
-            'BC018923.2 1799 2538 + ENST00000380771 89017 89756 + 0 M 739 739'
+            'BC018923.2 0 974 + ENST00000380771 69481 70455 + 12663 M 974 974',
+            'BC018923.2 974 1166 + ENST00000380771 72701 72893 + 12663 M 192 192',
+            'BC018923.2 1166 1333 + ENST00000380771 74205 74372 + 12663 M 167 167',
+            'BC018923.2 1333 1563 + ENST00000380771 83273 83503 + 12663 M 230 230',
+            'BC018923.2 1563 1719 + ENST00000380771 87416 87572 + 12663 M 156 156',
+            'BC018923.2 1719 1799 + ENST00000380771 88334 88414 + 12663 M 80 80',
+            'BC018923.2 1799 2538 + ENST00000380771 89017 89756 + 12663 M 739 739'
             ],
     },
     {
@@ -349,12 +349,12 @@ Readonly my @split_expected => (
         intron_n_ele   => 31,
 
         splits => [
-            'BI831275.1 0 136 + OTTHUMT00000039637 145960 145822 - 0 M 12 12 G 0 1 M 2 2 G 0 1 M 122 122',
-            'BI831275.1 136 312 + OTTHUMT00000039637 144605 144429 - 0 M 176 176',
-            'BI831275.1 312 450 + OTTHUMT00000039637 142697 142559 - 0 M 138 138',
-            'BI831275.1 450 570 + OTTHUMT00000039637 142010 141892 - 0 M 40 40 G 1 0 M 64 64 G 1 0 M 14 14',
-            'BI831275.1 570 718 + OTTHUMT00000039637 140261 140118 - 0 M 12 12 G 1 0 M 53 53 G 1 0 M 38 38 G 1 0 M 4 4 G 1 0 M 25 25 G 1 0 M 11 11',
-            'BI831275.1 718 746 + OTTHUMT00000039637 140034 140007 - 0 M 12 12 G 1 0 M 15 15',
+            'BI831275.1 0 136 + OTTHUMT00000039637 145960 145822 - 3471 M 12 12 G 0 1 M 2 2 G 0 1 M 122 122',
+            'BI831275.1 136 312 + OTTHUMT00000039637 144605 144429 - 3471 M 176 176',
+            'BI831275.1 312 450 + OTTHUMT00000039637 142697 142559 - 3471 M 138 138',
+            'BI831275.1 450 570 + OTTHUMT00000039637 142010 141892 - 3471 M 40 40 G 1 0 M 64 64 G 1 0 M 14 14',
+            'BI831275.1 570 718 + OTTHUMT00000039637 140261 140118 - 3471 M 12 12 G 1 0 M 53 53 G 1 0 M 38 38 G 1 0 M 4 4 G 1 0 M 25 25 G 1 0 M 11 11',
+            'BI831275.1 718 746 + OTTHUMT00000039637 140034 140007 - 3471 M 12 12 G 1 0 M 15 15',
             ],
     },
 
@@ -388,16 +388,16 @@ Readonly my @split_expected => (
         split_components => [
             'BC018923.fwd', $test_clone_exp{v_fwd_query_exons_fwd}, '+', # query
             'EMBOSS_001',   $test_clone_exp{v_exons_fwd_region},    '+', # target
-            0,              $test_clone_exp{exon_vulgars_fwd},           # score, vulgar string
+            12625,          $test_clone_exp{exon_vulgars_fwd},           # score, vulgar string
         ],
 
-        # BS: BC018923.fwd 0 974 + EMBOSS_001 120388 121362 + 0 M 974 974
-        # BS: BC018923.fwd 974 1166 + EMBOSS_001 123608 123801 + 0 M 33 33 G 0 1 M 159 159
-        # BS: BC018923.fwd 1166 1333 + EMBOSS_001 125113 125278 + 0 M 55 55 G 2 0 M 110 110
-        # BS: BC018923.fwd 1333 1563 + EMBOSS_001 134179 134409 + 0 M 230 230
-        # BS: BC018923.fwd 1563 1719 + EMBOSS_001 138322 138478 + 0 M 156 156
-        # BS: BC018923.fwd 1719 1799 + EMBOSS_001 139240 139320 + 0 M 80 80
-        # BS: BC018923.fwd 1799 2538 + EMBOSS_001 139923 140662 + 0 M 739 739
+        # BS: BC018923.fwd 0 974 + EMBOSS_001 120388 121362 + 12625 M 974 974
+        # BS: BC018923.fwd 974 1166 + EMBOSS_001 123608 123801 + 12625 M 33 33 G 0 1 M 159 159
+        # BS: BC018923.fwd 1166 1333 + EMBOSS_001 125113 125278 + 12625 M 55 55 G 2 0 M 110 110
+        # BS: BC018923.fwd 1333 1563 + EMBOSS_001 134179 134409 + 12625 M 230 230
+        # BS: BC018923.fwd 1563 1719 + EMBOSS_001 138322 138478 + 12625 M 156 156
+        # BS: BC018923.fwd 1719 1799 + EMBOSS_001 139240 139320 + 12625 M 80 80
+        # BS: BC018923.fwd 1799 2538 + EMBOSS_001 139923 140662 + 12625 M 739 739
     },
     {
         name     => 'Test rev region vs BC018923.rev (+)',
@@ -427,16 +427,16 @@ Readonly my @split_expected => (
         split_components => [
             'BC018923.rev', $test_clone_exp{v_rev_query_exons_fwd}, '+', # query
             'EMBOSS_001',   $test_clone_exp{v_exons_rev_region},    '+', # target
-            0,              $test_clone_exp{exon_vulgars_rev},           # score, vulgar string
+            12625,          $test_clone_exp{exon_vulgars_rev},           # score, vulgar string
             ],
 
-        # BS: BC018923.rev 15 754 + EMBOSS_001 35000 35739 + 0 M 739 739
-        # BS: BC018923.rev 754 834 + EMBOSS_001 36342 36422 + 0 M 80 80
-        # BS: BC018923.rev 834 990 + EMBOSS_001 37184 37340 + 0 M 156 156
-        # BS: BC018923.rev 990 1220 + EMBOSS_001 41253 41483 + 0 M 230 230
-        # BS: BC018923.rev 1220 1387 + EMBOSS_001 50384 50549 + 0 M 110 110 G 2 0 M 55 55
-        # BS: BC018923.rev 1387 1579 + EMBOSS_001 51861 52054 + 0 M 159 159 G 0 1 M 33 33
-        # BS: BC018923.rev 1579 2553 + EMBOSS_001 54300 55274 + 0 M 974 974
+        # BS: BC018923.rev 15 754 + EMBOSS_001 35000 35739 + 12625 M 739 739
+        # BS: BC018923.rev 754 834 + EMBOSS_001 36342 36422 + 12625 M 80 80
+        # BS: BC018923.rev 834 990 + EMBOSS_001 37184 37340 + 12625 M 156 156
+        # BS: BC018923.rev 990 1220 + EMBOSS_001 41253 41483 + 12625 M 230 230
+        # BS: BC018923.rev 1220 1387 + EMBOSS_001 50384 50549 + 12625 M 110 110 G 2 0 M 55 55
+        # BS: BC018923.rev 1387 1579 + EMBOSS_001 51861 52054 + 12625 M 159 159 G 0 1 M 33 33
+        # BS: BC018923.rev 1579 2553 + EMBOSS_001 54300 55274 + 12625 M 974 974
     },
     {
         name     => 'Test fwd region vs BC018923.rev (+)',
@@ -466,16 +466,16 @@ Readonly my @split_expected => (
         split_components => [
             'BC018923.rev', $test_clone_exp{v_rev_query_exons_fwd},   '+', # query
             'EMBOSS_001',   $test_clone_exp{v_exons_fwd_region_revd}, '-', # target
-            0,              $test_clone_exp{exon_vulgars_rev},             # score, vulgar string
+            12625,          $test_clone_exp{exon_vulgars_rev},             # score, vulgar string
             ],
 
-        # BS: BC018923.rev 15 754 + EMBOSS_001 140662 139923 - 0 M 739 739
-        # BS: BC018923.rev 754 834 + EMBOSS_001 139320 139240 - 0 M 80 80
-        # BS: BC018923.rev 834 990 + EMBOSS_001 138478 138322 - 0 M 156 156
-        # BS: BC018923.rev 990 1220 + EMBOSS_001 134409 134179 - 0 M 230 230
-        # BS: BC018923.rev 1220 1387 + EMBOSS_001 125278 125113 - 0 M 110 110 G 2 0 M 55 55
-        # BS: BC018923.rev 1387 1579 + EMBOSS_001 123801 123608 - 0 M 159 159 G 0 1 M 33 33
-        # BS: BC018923.rev 1579 2553 + EMBOSS_001 121362 120388 - 0 M 974 974
+        # BS: BC018923.rev 15 754 + EMBOSS_001 140662 139923 - 12625 M 739 739
+        # BS: BC018923.rev 754 834 + EMBOSS_001 139320 139240 - 12625 M 80 80
+        # BS: BC018923.rev 834 990 + EMBOSS_001 138478 138322 - 12625 M 156 156
+        # BS: BC018923.rev 990 1220 + EMBOSS_001 134409 134179 - 12625 M 230 230
+        # BS: BC018923.rev 1220 1387 + EMBOSS_001 125278 125113 - 12625 M 110 110 G 2 0 M 55 55
+        # BS: BC018923.rev 1387 1579 + EMBOSS_001 123801 123608 - 12625 M 159 159 G 0 1 M 33 33
+        # BS: BC018923.rev 1579 2553 + EMBOSS_001 121362 120388 - 12625 M 974 974
     },
     {
         name     => 'Test rev region vs BC018923.fwd (+)',
@@ -505,16 +505,16 @@ Readonly my @split_expected => (
         split_components => [
             'BC018923.fwd', $test_clone_exp{v_fwd_query_exons_fwd},   '+', # query
             'EMBOSS_001',   $test_clone_exp{v_exons_rev_region_revd}, '-', # target
-            0,              $test_clone_exp{exon_vulgars_fwd},             # score, vulgar string
+            12625,          $test_clone_exp{exon_vulgars_fwd},             # score, vulgar string
             ],
 
-        # BS: BC018923.fwd 0 974 + EMBOSS_001 55274 54300 - 0 M 974 974
-        # BS: BC018923.fwd 974 1166 + EMBOSS_001 52054 51861 - 0 M 33 33 G 0 1 M 159 159
-        # BS: BC018923.fwd 1166 1333 + EMBOSS_001 50549 50384 - 0 M 55 55 G 2 0 M 110 110
-        # BS: BC018923.fwd 1333 1563 + EMBOSS_001 41483 41253 - 0 M 230 230
-        # BS: BC018923.fwd 1563 1719 + EMBOSS_001 37340 37184 - 0 M 156 156
-        # BS: BC018923.fwd 1719 1799 + EMBOSS_001 36422 36342 - 0 M 80 80
-        # BS: BC018923.fwd 1799 2538 + EMBOSS_001 35739 35000 - 0 M 739 739
+        # BS: BC018923.fwd 0 974 + EMBOSS_001 55274 54300 - 12625 M 974 974
+        # BS: BC018923.fwd 974 1166 + EMBOSS_001 52054 51861 - 12625 M 33 33 G 0 1 M 159 159
+        # BS: BC018923.fwd 1166 1333 + EMBOSS_001 50549 50384 - 12625 M 55 55 G 2 0 M 110 110
+        # BS: BC018923.fwd 1333 1563 + EMBOSS_001 41483 41253 - 12625 M 230 230
+        # BS: BC018923.fwd 1563 1719 + EMBOSS_001 37340 37184 - 12625 M 156 156
+        # BS: BC018923.fwd 1719 1799 + EMBOSS_001 36422 36342 - 12625 M 80 80
+        # BS: BC018923.fwd 1799 2538 + EMBOSS_001 35739 35000 - 12625 M 739 739
     },
     {
         name     => 'Test fwd region vs BC018923.fwd (-)',
@@ -547,16 +547,16 @@ Readonly my @split_expected => (
         split_components => [
             'BC018923.fwd', $test_clone_exp{v_fwd_query_exons_rev},   '-', # query
             'EMBOSS_001',   $test_clone_exp{v_exons_fwd_region_revd}, '-', # target
-            0,              $test_clone_exp{exon_vulgars_rev},             # score, vulgar string
+            12625,          $test_clone_exp{exon_vulgars_rev},             # score, vulgar string
             ],
 
-        # BS: BC018923.fwd 2538 1799 - EMBOSS_001 140662 139923 - 0 M 739 739
-        # BS: BC018923.fwd 1799 1719 - EMBOSS_001 139320 139240 - 0 M 80 80
-        # BS: BC018923.fwd 1719 1563 - EMBOSS_001 138478 138322 - 0 M 156 156
-        # BS: BC018923.fwd 1563 1333 - EMBOSS_001 134409 134179 - 0 M 230 230
-        # BS: BC018923.fwd 1333 1166 - EMBOSS_001 125278 125113 - 0 M 110 110 G 2 0 M 55 55
-        # BS: BC018923.fwd 1166 974 - EMBOSS_001 123801 123608 - 0 M 159 159 G 0 1 M 33 33
-        # BS: BC018923.fwd 974 0 - EMBOSS_001 121362 120388 - 0 M 974 974
+        # BS: BC018923.fwd 2538 1799 - EMBOSS_001 140662 139923 - 12625 M 739 739
+        # BS: BC018923.fwd 1799 1719 - EMBOSS_001 139320 139240 - 12625 M 80 80
+        # BS: BC018923.fwd 1719 1563 - EMBOSS_001 138478 138322 - 12625 M 156 156
+        # BS: BC018923.fwd 1563 1333 - EMBOSS_001 134409 134179 - 12625 M 230 230
+        # BS: BC018923.fwd 1333 1166 - EMBOSS_001 125278 125113 - 12625 M 110 110 G 2 0 M 55 55
+        # BS: BC018923.fwd 1166 974 - EMBOSS_001 123801 123608 - 12625 M 159 159 G 0 1 M 33 33
+        # BS: BC018923.fwd 974 0 - EMBOSS_001 121362 120388 - 12625 M 974 974
     },
     {
         name     => 'Test rev region vs BC018923.rev (-)',
@@ -589,16 +589,16 @@ Readonly my @split_expected => (
         split_components => [
             'BC018923.rev', $test_clone_exp{v_rev_query_exons_rev},   '-', # query
             'EMBOSS_001',   $test_clone_exp{v_exons_rev_region_revd}, '-', # target
-            0,              $test_clone_exp{exon_vulgars_fwd},             # score, vulgar string
+            12625,          $test_clone_exp{exon_vulgars_fwd},             # score, vulgar string
             ],
 
-        # BS: BC018923.rev 2553 1579 - EMBOSS_001 55274 54300 - 0 M 974 974
-        # BS: BC018923.rev 1579 1387 - EMBOSS_001 52054 51861 - 0 M 33 33 G 0 1 M 159 159
-        # BS: BC018923.rev 1387 1220 - EMBOSS_001 50549 50384 - 0 M 55 55 G 2 0 M 110 110
-        # BS: BC018923.rev 1220 990 - EMBOSS_001 41483 41253 - 0 M 230 230
-        # BS: BC018923.rev 990 834 - EMBOSS_001 37340 37184 - 0 M 156 156
-        # BS: BC018923.rev 834 754 - EMBOSS_001 36422 36342 - 0 M 80 80
-        # BS: BC018923.rev 754 15 - EMBOSS_001 35739 35000 - 0 M 739 739
+        # BS: BC018923.rev 2553 1579 - EMBOSS_001 55274 54300 - 12625 M 974 974
+        # BS: BC018923.rev 1579 1387 - EMBOSS_001 52054 51861 - 12625 M 33 33 G 0 1 M 159 159
+        # BS: BC018923.rev 1387 1220 - EMBOSS_001 50549 50384 - 12625 M 55 55 G 2 0 M 110 110
+        # BS: BC018923.rev 1220 990 - EMBOSS_001 41483 41253 - 12625 M 230 230
+        # BS: BC018923.rev 990 834 - EMBOSS_001 37340 37184 - 12625 M 156 156
+        # BS: BC018923.rev 834 754 - EMBOSS_001 36422 36342 - 12625 M 80 80
+        # BS: BC018923.rev 754 15 - EMBOSS_001 35739 35000 - 12625 M 739 739
     },
     {
         name     => 'Test fwd region vs BC018923.rev (-)',
@@ -628,16 +628,16 @@ Readonly my @split_expected => (
         split_components => [
             'BC018923.rev', $test_clone_exp{v_rev_query_exons_rev},   '-', # query
             'EMBOSS_001',   $test_clone_exp{v_exons_fwd_region},      '+', # target
-            0,              $test_clone_exp{exon_vulgars_fwd},             # score, vulgar string
+            12625,          $test_clone_exp{exon_vulgars_fwd},             # score, vulgar string
             ],
 
-        # BS: BC018923.rev 2553 1579 - EMBOSS_001 120388 121362 + 0 M 974 974
-        # BS: BC018923.rev 1579 1387 - EMBOSS_001 123608 123801 + 0 M 33 33 G 0 1 M 159 159
-        # BS: BC018923.rev 1387 1220 - EMBOSS_001 125113 125278 + 0 M 55 55 G 2 0 M 110 110
-        # BS: BC018923.rev 1220 990 - EMBOSS_001 134179 134409 + 0 M 230 230
-        # BS: BC018923.rev 990 834 - EMBOSS_001 138322 138478 + 0 M 156 156
-        # BS: BC018923.rev 834 754 - EMBOSS_001 139240 139320 + 0 M 80 80
-        # BS: BC018923.rev 754 15 - EMBOSS_001 139923 140662 + 0 M 739 739
+        # BS: BC018923.rev 2553 1579 - EMBOSS_001 120388 121362 + 12625 M 974 974
+        # BS: BC018923.rev 1579 1387 - EMBOSS_001 123608 123801 + 12625 M 33 33 G 0 1 M 159 159
+        # BS: BC018923.rev 1387 1220 - EMBOSS_001 125113 125278 + 12625 M 55 55 G 2 0 M 110 110
+        # BS: BC018923.rev 1220 990 - EMBOSS_001 134179 134409 + 12625 M 230 230
+        # BS: BC018923.rev 990 834 - EMBOSS_001 138322 138478 + 12625 M 156 156
+        # BS: BC018923.rev 834 754 - EMBOSS_001 139240 139320 + 12625 M 80 80
+        # BS: BC018923.rev 754 15 - EMBOSS_001 139923 140662 + 12625 M 739 739
     },
    {
         name     => 'Test rev region vs BC018923.fwd (-)',
@@ -667,16 +667,16 @@ Readonly my @split_expected => (
         split_components => [
             'BC018923.fwd', $test_clone_exp{v_fwd_query_exons_rev},   '-', # query
             'EMBOSS_001',   $test_clone_exp{v_exons_rev_region},      '+', # target
-            0,              $test_clone_exp{exon_vulgars_rev},             # score, vulgar string
+            12625,          $test_clone_exp{exon_vulgars_rev},             # score, vulgar string
             ],
 
-        # BS: BC018923.fwd 2538 1799 - EMBOSS_001 35000 35739 + 0 M 739 739
-        # BS: BC018923.fwd 1799 1719 - EMBOSS_001 36342 36422 + 0 M 80 80
-        # BS: BC018923.fwd 1719 1563 - EMBOSS_001 37184 37340 + 0 M 156 156
-        # BS: BC018923.fwd 1563 1333 - EMBOSS_001 41253 41483 + 0 M 230 230
-        # BS: BC018923.fwd 1333 1166 - EMBOSS_001 50384 50549 + 0 M 110 110 G 2 0 M 55 55
-        # BS: BC018923.fwd 1166 974 - EMBOSS_001 51861 52054 + 0 M 159 159 G 0 1 M 33 33
-        # BS: BC018923.fwd 974 0 - EMBOSS_001 54300 55274 + 0 M 974 974
+        # BS: BC018923.fwd 2538 1799 - EMBOSS_001 35000 35739 + 12625 M 739 739
+        # BS: BC018923.fwd 1799 1719 - EMBOSS_001 36342 36422 + 12625 M 80 80
+        # BS: BC018923.fwd 1719 1563 - EMBOSS_001 37184 37340 + 12625 M 156 156
+        # BS: BC018923.fwd 1563 1333 - EMBOSS_001 41253 41483 + 12625 M 230 230
+        # BS: BC018923.fwd 1333 1166 - EMBOSS_001 50384 50549 + 12625 M 110 110 G 2 0 M 55 55
+        # BS: BC018923.fwd 1166 974 - EMBOSS_001 51861 52054 + 12625 M 159 159 G 0 1 M 33 33
+        # BS: BC018923.fwd 974 0 - EMBOSS_001 54300 55274 + 12625 M 974 974
     },
 
     # ^^^ end of test clone cases ^^^
@@ -717,11 +717,11 @@ Readonly my @split_expected => (
         intron_n_ele   => 75 + 4 + 1 + 1 + 1,
 
         splits => [
-            'BG212959.1 928 910 - RP1-90J20.6-002 91513 91487 - 0 M 9 9 G 0 1 M 3 3 G 0 3 M 6 6 G 0 4',
-            'BG212959.1 910 815 - RP1-90J20.6-002 90673 90555 - 0 M 11 11 G 0 2 M 6 6 G 0 3 M 4 4 G 0 1 M 1 1 G 0 1 M 4 4 G 0 1 M 1 1 G 0 1 M 2 2 G 0 1 M 10 10 G 0 1 M 3 3 G 0 1 M 5 5 G 0 1 M 2 2 G 0 1 M 4 4 G 0 1 M 3 3 G 0 1 M 6 6 G 0 2 M 6 6 G 0 1 M 6 6 G 0 1 M 10 10 G 0 1 M 5 5 G 0 1 M 3 3 G 0 1 M 3 3',
-            'BG212959.1 815 680 - RP1-90J20.6-002 89150 89007 - 0 M 7 7 G 0 2 M 20 20 G 0 1 M 3 3 G 0 1 M 9 9 G 0 1 M 6 6 G 0 1 M 10 10 G 0 1 M 7 7 G 1 0 M 4 4 G 0 1 M 57 57 G 0 1 M 11 11',
-            'BG212959.1 680 528 - RP1-90J20.6-002 85033 84877 - 0 M 9 9 G 0 1 M 17 17 G 0 1 M 9 9 G 0 1 M 7 7 G 0 1 M 8 8 G 1 0 M 15 15 G 0 1 M 86 86',
-            'BG212959.1 528 0 - RP1-90J20.6-002 84663 84135 - 0 M 528 528',
+            'BG212959.1 928 910 - RP1-90J20.6-002 91513 91487 - 3570 M 9 9 G 0 1 M 3 3 G 0 3 M 6 6 G 0 4',
+            'BG212959.1 910 815 - RP1-90J20.6-002 90673 90555 - 3570 M 11 11 G 0 2 M 6 6 G 0 3 M 4 4 G 0 1 M 1 1 G 0 1 M 4 4 G 0 1 M 1 1 G 0 1 M 2 2 G 0 1 M 10 10 G 0 1 M 3 3 G 0 1 M 5 5 G 0 1 M 2 2 G 0 1 M 4 4 G 0 1 M 3 3 G 0 1 M 6 6 G 0 2 M 6 6 G 0 1 M 6 6 G 0 1 M 10 10 G 0 1 M 5 5 G 0 1 M 3 3 G 0 1 M 3 3',
+            'BG212959.1 815 680 - RP1-90J20.6-002 89150 89007 - 3570 M 7 7 G 0 2 M 20 20 G 0 1 M 3 3 G 0 1 M 9 9 G 0 1 M 6 6 G 0 1 M 10 10 G 0 1 M 7 7 G 1 0 M 4 4 G 0 1 M 57 57 G 0 1 M 11 11',
+            'BG212959.1 680 528 - RP1-90J20.6-002 85033 84877 - 3570 M 9 9 G 0 1 M 17 17 G 0 1 M 9 9 G 0 1 M 7 7 G 0 1 M 8 8 G 1 0 M 15 15 G 0 1 M 86 86',
+            'BG212959.1 528 0 - RP1-90J20.6-002 84663 84135 - 3570 M 528 528',
             ],
     },
 
@@ -749,16 +749,16 @@ Readonly my @split_expected => (
                               [ 139240, 139320 ],
                               [ 139923, 140196 ],
                           ],                                      '+', # target
-            0, $test_clone_exp{protein_exon_vulgars},                  # score, vulgar string
+            3047, $test_clone_exp{protein_exon_vulgars},               # score, vulgar string
         ],
 
-        # BS: Q96S55 0 274 . EMBOSS_001 120540 121362 + 0 M 274 822
-        # BS: Q96S55 274 363 . EMBOSS_001 123608 123801 + 0 M 11 33 F 0 1 M 52 156 G 25 0 M 1 3
-        # BS: Q96S55 363 418 . EMBOSS_001 125113 125278 + 0 M 18 54 F 0 1 G 1 0 M 36 108 S 0 2
-        # BS: Q96S55 418 495 . EMBOSS_001 134179 134409 + 0 S 1 1 M 76 228 S 0 1
-        # BS: Q96S55 495 547 . EMBOSS_001 138322 138478 + 0 S 1 2 M 51 153 S 0 1
-        # BS: Q96S55 547 574 . EMBOSS_001 139240 139320 + 0 S 1 2 M 26 78
-        # BS: Q96S55 574 665 . EMBOSS_001 139923 140196 + 0 M 91 273
+        # BS: Q96S55 0 274 . EMBOSS_001 120540 121362 + 3047 M 274 822
+        # BS: Q96S55 274 363 . EMBOSS_001 123608 123801 + 3047 M 11 33 F 0 1 M 52 156 G 25 0 M 1 3
+        # BS: Q96S55 363 418 . EMBOSS_001 125113 125278 + 3047 M 18 54 F 0 1 G 1 0 M 36 108 S 0 2
+        # BS: Q96S55 418 495 . EMBOSS_001 134179 134409 + 3047 S 1 1 M 76 228 S 0 1
+        # BS: Q96S55 495 547 . EMBOSS_001 138322 138478 + 3047 S 1 2 M 51 153 S 0 1
+        # BS: Q96S55 547 574 . EMBOSS_001 139240 139320 + 3047 S 1 2 M 26 78
+        # BS: Q96S55 574 665 . EMBOSS_001 139923 140196 + 3047 M 91 273
 
         ensembl_features => [
             { start => 120541, end => 121362, strand => 1, hstart =>   1, hend => 274, cigar => '822M', },
@@ -796,16 +796,16 @@ Readonly my @split_expected => (
                               [ 36422, 36342 ],
                               [ 35739, 35466 ],
                           ],                                      '-', # target
-            0, $test_clone_exp{protein_exon_vulgars},                  # score, vulgar string
+            3047, $test_clone_exp{protein_exon_vulgars},               # score, vulgar string
         ],
 
-        # BS: Q96S55 0 274 . EMBOSS_001 55122 54300 - 0 M 274 822
-        # BS: Q96S55 274 363 . EMBOSS_001 52054 51861 - 0 M 11 33 F 0 1 M 52 156 G 25 0 M 1 3
-        # BS: Q96S55 363 418 . EMBOSS_001 50549 50384 - 0 M 18 54 F 0 1 G 1 0 M 36 108 S 0 2
-        # BS: Q96S55 418 495 . EMBOSS_001 41483 41253 - 0 S 1 1 M 76 228 S 0 1
-        # BS: Q96S55 495 547 . EMBOSS_001 37340 37184 - 0 S 1 2 M 51 153 S 0 1
-        # BS: Q96S55 547 574 . EMBOSS_001 36422 36342 - 0 S 1 2 M 26 78
-        # BS: Q96S55 574 665 . EMBOSS_001 35739 35466 - 0 M 91 273
+        # BS: Q96S55 0 274 . EMBOSS_001 55122 54300 - 3047 M 274 822
+        # BS: Q96S55 274 363 . EMBOSS_001 52054 51861 - 3047 M 11 33 F 0 1 M 52 156 G 25 0 M 1 3
+        # BS: Q96S55 363 418 . EMBOSS_001 50549 50384 - 3047 M 18 54 F 0 1 G 1 0 M 36 108 S 0 2
+        # BS: Q96S55 418 495 . EMBOSS_001 41483 41253 - 3047 S 1 1 M 76 228 S 0 1
+        # BS: Q96S55 495 547 . EMBOSS_001 37340 37184 - 3047 S 1 2 M 51 153 S 0 1
+        # BS: Q96S55 547 574 . EMBOSS_001 36422 36342 - 3047 S 1 2 M 26 78
+        # BS: Q96S55 574 665 . EMBOSS_001 35739 35466 - 3047 M 91 273
 
         ensembl_feature_type => 'Bio::EnsEMBL::DnaPepAlignFeature',
         ensembl_features => [
