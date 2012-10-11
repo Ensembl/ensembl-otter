@@ -133,6 +133,11 @@ TODO: {
     }
 }
 
+if ($ENV{OTF_SKIP_LIVE_TESTS}) {
+    done_testing;
+    exit;
+}
+
 local $ENV{DOCUMENT_ROOT} = '/nfs/WWWdev/SANGER_docs/htdocs';
 my $tmp_dir = File::Temp->newdir;
 my $at_cache = setup_accession_type_cache($tmp_dir->dirname);
