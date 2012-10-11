@@ -98,7 +98,12 @@ my @tests = (
         query_ids   => [qw(Q8VHQ0.1)],
         type        => 'Test_Protein',
     },
-
+    {
+        name        => 'CR753817.13 vs. AW134265.1 (trim leading/trailing indels)',
+        target_path => "${path}/CR753817.13.fasta",
+        query_path  => "${path}/AW134265.1.fasta",
+        query_ids   => [qw(AW134265.1)],
+    },
     );
 
 my @todo_tests = (
