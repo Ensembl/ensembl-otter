@@ -241,7 +241,7 @@ Readonly my @split_expected => (
             { start => 29, end => 31, strand => 1, hstart =>  1, hend =>  3, hstrand => 1, cigar => '3M', },
             { start => 35, end => 40, strand => 1, hstart =>  4, hend => 12, hstrand => 1, cigar => '2M3D4M', },
             { start => 45, end => 47, strand => 1, hstart => 13, hend => 14, hstrand => 1, cigar => 'MIM', },
-            { start => 50, end => 52, strand => 1, hstart => 15, hend => 20, hstrand => 1, cigar => '3M3D', },
+            { start => 50, end => 52, strand => 1, hstart => 15, hend => 17, hstrand => 1, cigar => '3M', },
             ],
     },
     {
@@ -268,7 +268,7 @@ Readonly my @split_expected => (
             { start => 77, end => 79, strand => -1, hstart =>  1, hend =>  3, hstrand => 1, cigar => '3M', },
             { start => 68, end => 73, strand => -1, hstart =>  4, hend => 12, hstrand => 1, cigar => '2M3D4M', },
             { start => 61, end => 63, strand => -1, hstart => 13, hend => 14, hstrand => 1, cigar => 'MIM', },
-            { start => 56, end => 58, strand => -1, hstart => 15, hend => 20, hstrand => 1, cigar => '3M3D', },
+            { start => 56, end => 58, strand => -1, hstart => 15, hend => 17, hstrand => 1, cigar => '3M', },
             ],
     },
     {
