@@ -240,10 +240,8 @@ sub run_test {
                 cigar_string
 
                 percent_id
+                score
               }
-                # Not implemented yet:
-                # hcoverage
-                # score
                 )
             {
                 is($new_features[$n]->$member(), $output_features[$n]->$member(), $member);
