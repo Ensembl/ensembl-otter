@@ -46,7 +46,7 @@ Nothing is imported by default.
 use Sys::Hostname 'hostname';
 
 use base 'Exporter';
-our @EXPORT_OK = qw( db_or_skipall );
+our @EXPORT_OK = qw( db_or_skipall get_BOLDatasets );
 
 
 sub import {
@@ -120,6 +120,42 @@ sub db_or_skipall {
     # (or if absent falls over in a heap, job done)
 
     return (); # not reached
+}
+
+
+=head2 get_BOLDatasets(@name)
+
+This wraps up L<Bio::Otter::Lace::Defaults/make_Client> to return a
+list of datasets.
+
+The requested L<Bio::Otter::Lace::DataSet> object is returned for each
+element of C<@name>. Methods C<get_cached_DBAdaptor> and
+C<get_pipeline_DBAdaptor> give the loutre and pipe databases.
+
+Defining C<get_BOSDatasets> for L<Bio::Otter::SpeciesDat::DataSet> may
+be better but is not yet implemented.  Equivalent methods are named
+C<otter_dba> and C<pipeline_dba>, there is also C<satellite_dba>.
+
+Some tag for 'all' would be useful, allowing for restricted and
+unlisted datasets.
+
+=cut
+
+{
+    my $cl;
+    sub _otter_client { # to make public if needed
+        return $cl ||= do {
+            local @ARGV = ();
+            Bio::Otter::Lace::Defaults::do_getopt();
+            Bio::Otter::Lace::Defaults::make_Client();
+        };
+    }
+}
+
+sub get_BOLDatasets {
+    my @name = @_;
+    my $cl = _otter_client();
+    return map { $cl->get_DataSet_by_name($_) } @name;
 }
 
 
