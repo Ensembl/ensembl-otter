@@ -11,7 +11,7 @@ use Moose;
 
 with 'MooseX::Log::Log4perl';
 
-has 'full_seq'     => ( is => 'ro', isa => 'Hum::Sequence', required => 1 );
+has 'full_seq'     => ( is => 'ro', isa => 'Hum::Sequence', required => 1, handles =>[qw( name )] );
 
 has 'start'        => ( is => 'rw', isa => 'Int', lazy => 1, builder => '_build_start', trigger => \&_too_late );
 has 'end'          => ( is => 'rw', isa => 'Int', lazy => 1, builder => '_build_end',   trigger => \&_too_late );

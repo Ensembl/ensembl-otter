@@ -20,6 +20,7 @@ use Bio::Otter::Lace::DB;
 use Bio::Otter::Lace::Exonerate;
 use Bio::Otter::LocalServer;
 use Bio::Otter::ServerAction::Region;
+use Bio::Otter::Utils::FeatureSort qw( feature_sort );
 
 use Hum::ClipboardUtils;
 use Hum::FastaFileIO;
@@ -30,6 +31,7 @@ BEGIN {
 
     @modules = qw(
         Bio::Otter::Lace::OnTheFly
+        Bio::Otter::Lace::OnTheFly::Ace
         Bio::Otter::Lace::OnTheFly::Aligner
         Bio::Otter::Lace::OnTheFly::Aligner::Genomic
         Bio::Otter::Lace::OnTheFly::Aligner::Transcript
@@ -171,8 +173,9 @@ sub run_test {
         $test->{query_seqs} = [ Hum::FastaFileIO->new_DNA_IO($test->{query_path})->read_all_sequences ];
     }
 
+    my $type = $test->{type} || 'Test_EST';
     my $aligner = new_ok( 'Bio::Otter::Lace::OnTheFly::Aligner::Genomic' => [{
-        type   => $test->{type} || 'Test_EST',
+        type   => $type,
         seqs   => $test->{query_seqs},
         target => $target,
                                                                              }]);
@@ -215,7 +218,7 @@ sub run_test {
     $exonerate->score(100);
     $exonerate->dnahsp(120);
 
-    $exonerate->query_type('protein') if $test->{type} and $test->{type} =~ /protein/i;
+    $exonerate->query_type('protein') if $type and $type =~ /protein/i;
 
     my $output = $exonerate->run_exonerate($target_bio_seq, $target_bio_seq);
     my @output_features = sort feature_sort @$output;
@@ -249,6 +252,17 @@ sub run_test {
             done_testing;
         }
     }
+
+    my $ana_name = $type =~ /^Unknown/ ? $type       :
+        $type eq 'cDNA' ? "OTF_mRNA" : "OTF_$type";
+    $exonerate->acedb_homol_tag($ana_name . '_homol');
+    $exonerate->genomic_start($target->start);
+    $exonerate->method_tag($ana_name);
+    $exonerate->sequence_fetcher($result_set->query_seqs_by_name);
+
+    my $old_ace = $exonerate->format_ace_output($target_seq->name, $output);
+    my $new_ace = $result_set->ace;
+    is($new_ace, $old_ace, 'Ace');
 }
 
 sub run_region {
@@ -309,15 +323,6 @@ sub setup_accession_type_cache {
     $at_cache->Client($test_client);
     $at_cache->DB($test_db);
     return $at_cache;
-}
-
-sub feature_sort {
-    return
-        $a->hseqname cmp $b->hseqname
-        ||
-        $a->start    cmp $b->start
-        ||
-        $a->end      cmp $b->end;
 }
 
 1;

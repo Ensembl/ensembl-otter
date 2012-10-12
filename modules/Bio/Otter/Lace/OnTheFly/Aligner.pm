@@ -118,7 +118,7 @@ sub run {
 sub parse {
     my ($self, $fh) = @_;
 
-    my $result_set = Bio::Otter::Lace::OnTheFly::ResultSet->new(type => $self->type);
+    my $result_set = Bio::Otter::Lace::OnTheFly::ResultSet->new(aligner => $self);
 
     while (my $line = <$fh>) {
         $result_set->add_raw_line($line);
