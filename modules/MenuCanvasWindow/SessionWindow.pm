@@ -2075,13 +2075,15 @@ sub launch_exonerate {
     for my $aligner ( $otf->aligners_for_each_type ) {
 
         my $type = $aligner->type;
+        my $is_protein = ($type =~ /protein/i);
 
         warn "Running exonerate for sequence(s) of type: $type\n";
 
         # The new way:
-        # my $result_set = $aligner->run;
+        my $result_set = $aligner->run;
+        my $new_ace = $result_set->ace;
 
-        my $score    = $type =~ /Protein/  ? $PROT_SCORE : $DNA_SCORE;
+        my $score    = $is_protein ? $PROT_SCORE : $DNA_SCORE;
         my $ana_name = $type =~ /^Unknown/ ? $type       :
             $type eq 'cDNA' ? "OTF_mRNA" : "OTF_$type";
         my $dnahsp   = $DNAHSP;
@@ -2094,7 +2096,7 @@ sub launch_exonerate {
         $exonerate->query_seq($otf->seqs_for_type($type));
         $exonerate->sequence_fetcher($otf->seqs_by_name);
         $exonerate->acedb_homol_tag($ana_name . '_homol');
-        $exonerate->query_type($type =~ /Protein/ ? 'protein' : 'dna');
+        $exonerate->query_type($is_protein ? 'protein' : 'dna');
         $exonerate->score($score);
         $exonerate->dnahsp($dnahsp);
         $exonerate->bestn($best_n);
@@ -2109,10 +2111,16 @@ sub launch_exonerate {
             $exonerate->initialise($seq_file);
             my $ace_output = $exonerate->run;
 
+            if ($ace_output ne $new_ace) {
+                warn "Ace output differs:\n";
+                warn "New:\nvvvvvvvv\n${new_ace}\n^^^^^^^^\n";
+                warn "Old:\nvvvvvvvv\n${ace_output}\n^^^^^^^^\n";
+            }
+
             # delete query file
             unlink $seq_file;
 
-            if ($ace_output) {
+            if ($new_ace) {
                 $db_edited = 1;
             }
             else {
@@ -2120,15 +2128,15 @@ sub launch_exonerate {
             }
 
             # add hit sequences into ace text
-            my $names = $exonerate->delete_all_hit_names;
-            $otf->record_hit(@$names);
+            my @names = sort $result_set->query_ids;
+            $otf->record_hit(@names);
 
             # only add the sequence to acedb if they are not pfetchable (i.e. they are unknown)
             if ($type =~ /^Unknown/) {
-                foreach my $hit_name (@$names) {
+                foreach my $hit_name (@names) {
                     my $seq = $otf->seq_by_name($hit_name);
 
-                    if ($exonerate->query_type eq 'protein') {
+                    if ($is_protein) {
                         $ace_output .= $self->ace_PEPTIDE($hit_name, $seq);
                     }
                     else {
@@ -2138,9 +2146,12 @@ sub launch_exonerate {
             }
 
             # Need to add new method to collection if we don't have it already
-            my $coll      = $exonerate->AceDatabase->MethodCollection;
+            my $coll      = $self->AceDatabase->MethodCollection;
             my $coll_zmap = $self->Assembly->MethodCollection;
-            my $method    = $exonerate->ace_Method;
+
+            my $method    = Hum::Ace::Method->new;
+            $method->name($result_set->analysis_name);
+
             push @method_names, $method->name;
             unless ($coll->get_Method_by_name($method->name)
                 || $coll_zmap->get_Method_by_name($method->name))
