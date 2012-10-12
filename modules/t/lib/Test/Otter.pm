@@ -46,7 +46,7 @@ Nothing is imported by default.
 use Sys::Hostname 'hostname';
 
 use base 'Exporter';
-our @EXPORT_OK = qw( db_or_skipall get_BOLDatasets );
+our @EXPORT_OK = qw( db_or_skipall get_BOLDatasets diagdump );
 
 
 sub import {
@@ -159,10 +159,30 @@ sub get_BOLDatasets {
 }
 
 
+=head2 diagdump(%info)
+
+Shortcut for L<Test::More/diag> with L<YAML/Dump>, as in
+
+ is(scalar @stuff, 1, 'no dup stuff') or
+   diagdump(stuff => \@stuff);
+
+=cut
+
+sub diagdump {
+    my %info = @_;
+    require YAML;
+    return main::diag YAML::Dump(\%info);
+}
+
+
 =head1 CAVEATS
 
 L</mods_rel> may be fragile in the face of chdir(2), but could be
 fixed to deal with that.
+
+L</diagdump> assumes the caller is in C<main::> and used
+L<Test::More>.
+
 
 =head1 AUTHOR
 
