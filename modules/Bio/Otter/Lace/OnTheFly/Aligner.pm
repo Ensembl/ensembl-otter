@@ -157,6 +157,15 @@ sub _parse_vulgar {
     return $ga;
 }
 
+sub analysis_name {
+    my $self = shift;
+
+    my $type = $self->type;
+    if    ($type =~ /^Unknown/) { return $type;       }
+    elsif ($type eq 'cDNA')     { return "OTF_mRNA";  }
+    else                        { return "OTF_$type"; }
+}
+
 # FIXME: doesn't really belong here: more general
 #
 sub construct_command {

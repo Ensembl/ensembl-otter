@@ -16,6 +16,7 @@ with 'MooseX::Log::Log4perl';
 
 use Bio::Otter::Utils::FeatureSort;
 
+requires 'analysis_name';
 requires 'by_query_id';
 requires 'query_ids';
 requires 'query_seq_by_name';
@@ -34,7 +35,7 @@ sub ace {
 
     my $is_protein = ($self->type =~ /protein/i);
 
-    my $method_tag  = $self->_ana_name;
+    my $method_tag  = $self->analysis_name;
     my $acedb_homol_tag = $method_tag . '_homol';
     my $hit_homol_tag = 'DNA_homol';
 
@@ -116,15 +117,6 @@ sub ace {
     }
 
     return $ace;
-}
-
-sub _ana_name {
-    my $self = shift;
-
-    my $type = $self->type;
-    if    ($type =~ /^Unknown/) { return $type;       }
-    elsif ($type eq 'cDNA')     { return "OTF_mRNA";  }
-    else                        { return "OTF_$type"; }
 }
 
 1;
