@@ -38,9 +38,10 @@ has aligner => (
     isa => 'Bio::Otter::Lace::OnTheFly::Aligner',
     required => 1,
     handles => {
-        query_seqs => 'seqs',
-        target => 'target',
-        type   => 'type',
+        analysis_name => 'analysis_name',
+        query_seqs    => 'seqs',
+        target        => 'target',
+        type          => 'type',
     }
     );
 
