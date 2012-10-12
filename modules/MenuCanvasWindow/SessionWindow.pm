@@ -29,7 +29,6 @@ use MenuCanvasWindow::GenomicFeaturesWindow;
 use MenuCanvasWindow::ZMapSeqChooser;
 use Text::Wrap qw{ wrap };
 
-use Bio::Otter::Lace::Exonerate;
 use Bio::Otter::ZMap::XML;
 use Bio::Vega::Transform::Otter::Ace;
 
@@ -2081,87 +2080,49 @@ sub launch_exonerate {
 
         # The new way:
         my $result_set = $aligner->run;
-        my $new_ace = $result_set->ace;
+        my $ace_output = $result_set->ace;
 
-        my $score    = $is_protein ? $PROT_SCORE : $DNA_SCORE;
-        my $ana_name = $type =~ /^Unknown/ ? $type       :
-            $type eq 'cDNA' ? "OTF_mRNA" : "OTF_$type";
-        my $dnahsp   = $DNAHSP;
+        if ($ace_output) {
+            $db_edited = 1;
+        }
+        else {
+            next;
+        }
 
-        my $exonerate = Bio::Otter::Lace::Exonerate->new;
-        $exonerate->AceDatabase($self->AceDatabase);
-        $exonerate->genomic_seq($self->Assembly->Sequence);
-        $exonerate->genomic_start($otf->target_start);
-        $exonerate->genomic_end($otf->target_end);
-        $exonerate->query_seq($otf->seqs_for_type($type));
-        $exonerate->sequence_fetcher($otf->seqs_by_name);
-        $exonerate->acedb_homol_tag($ana_name . '_homol');
-        $exonerate->query_type($is_protein ? 'protein' : 'dna');
-        $exonerate->score($score);
-        $exonerate->dnahsp($dnahsp);
-        $exonerate->bestn($best_n);
-        $exonerate->mask_target($mask_target);
-        $exonerate->max_intron_length($max_intron_length);
-        $exonerate->method_tag($ana_name);
-        $exonerate->logic_name($ana_name);
+        # add hit sequences into ace text
+        my @names = sort $result_set->query_ids;
+        $otf->record_hit(@names);
 
-        my $seq_file = $exonerate->write_seq_file();
+        # only add the sequence to acedb if they are not pfetchable (i.e. they are unknown)
+        if ($type =~ /^Unknown/) {
+            foreach my $hit_name (@names) {
+                my $seq = $otf->seq_by_name($hit_name);
 
-        if ($seq_file) {
-            $exonerate->initialise($seq_file);
-            my $ace_output = $exonerate->run;
-
-            if ($ace_output ne $new_ace) {
-                warn "Ace output differs:\n";
-                warn "New:\nvvvvvvvv\n${new_ace}\n^^^^^^^^\n";
-                warn "Old:\nvvvvvvvv\n${ace_output}\n^^^^^^^^\n";
-            }
-
-            # delete query file
-            unlink $seq_file;
-
-            if ($new_ace) {
-                $db_edited = 1;
-            }
-            else {
-                next;
-            }
-
-            # add hit sequences into ace text
-            my @names = sort $result_set->query_ids;
-            $otf->record_hit(@names);
-
-            # only add the sequence to acedb if they are not pfetchable (i.e. they are unknown)
-            if ($type =~ /^Unknown/) {
-                foreach my $hit_name (@names) {
-                    my $seq = $otf->seq_by_name($hit_name);
-
-                    if ($is_protein) {
-                        $ace_output .= $self->ace_PEPTIDE($hit_name, $seq);
-                    }
-                    else {
-                        $ace_output .= $self->ace_DNA($hit_name, $seq);
-                    }
+                if ($is_protein) {
+                    $ace_output .= $self->ace_PEPTIDE($hit_name, $seq);
+                }
+                else {
+                    $ace_output .= $self->ace_DNA($hit_name, $seq);
                 }
             }
-
-            # Need to add new method to collection if we don't have it already
-            my $coll      = $self->AceDatabase->MethodCollection;
-            my $coll_zmap = $self->Assembly->MethodCollection;
-
-            my $method    = Hum::Ace::Method->new;
-            $method->name($result_set->analysis_name);
-
-            push @method_names, $method->name;
-            unless ($coll->get_Method_by_name($method->name)
-                || $coll_zmap->get_Method_by_name($method->name))
-            {
-                $coll->add_Method($method);
-                $coll_zmap->add_Method($method);
-                $self->save_ace($coll->ace_string());
-            }
-            $ace_text .= $ace_output;
         }
+
+        # Need to add new method to collection if we don't have it already
+        my $coll      = $self->AceDatabase->MethodCollection;
+        my $coll_zmap = $self->Assembly->MethodCollection;
+
+        my $method    = Hum::Ace::Method->new;
+        $method->name($result_set->analysis_name);
+
+        push @method_names, $method->name;
+        unless ($coll->get_Method_by_name($method->name)
+                || $coll_zmap->get_Method_by_name($method->name))
+        {
+            $coll->add_Method($method);
+            $coll_zmap->add_Method($method);
+            $self->save_ace($coll->ace_string());
+        }
+        $ace_text .= $ace_output;
     }
 
     $self->save_ace($ace_text);
