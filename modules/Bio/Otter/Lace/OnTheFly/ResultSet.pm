@@ -9,8 +9,6 @@ use warnings;
 use Moose;
 use namespace::autoclean;
 
-has type => ( is => 'ro', isa => 'Str', required => 1 );
-
 has raw => (
     traits  => [ 'String' ],
     is      => 'rw',
@@ -21,6 +19,8 @@ has raw => (
     },
     );
 
+# This is the main results structure
+#
 has _by_query_id => (
     traits   => [ 'Hash' ],
     isa      => 'HashRef[ArrayRef[Bio::Otter::GappedAlignment]]',
@@ -33,6 +33,22 @@ has _by_query_id => (
     },
     );
 
+has aligner => (
+    is => 'ro',
+    isa => 'Bio::Otter::Lace::OnTheFly::Aligner',
+    required => 1,
+    handles => {
+        query_seqs => 'seqs',
+        target => 'target',
+        type   => 'type',
+    }
+    );
+
+has query_seqs_by_name => ( is => 'ro', isa => 'HashRef[Hum::Sequence]',
+                            lazy => 1, builder => '_build_query_seqs_by_name', init_arg => undef );
+
+with 'Bio::Otter::Lace::OnTheFly::Ace';
+
 sub add_by_query_id {
     my ($self, $q_id, $ga) = @_;
     my $by_query_id;
@@ -41,6 +57,22 @@ sub add_by_query_id {
     }
     push @$by_query_id, $ga;
     return $ga;
+}
+
+sub query_seq_by_name {
+    my ($self, $q_id) = @_;
+    return $self->query_seqs_by_name->{$q_id};
+}
+
+sub _build_query_seqs_by_name { ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
+    my $self = shift;
+
+    my %name_seq;
+    for my $seq (@{$self->query_seqs}) {
+        $name_seq{ $seq->name } = $seq;
+    }
+
+    return \%name_seq;
 }
 
 1;
