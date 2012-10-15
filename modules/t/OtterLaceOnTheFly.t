@@ -261,7 +261,7 @@ sub run_test {
     $exonerate->sequence_fetcher($result_set->query_seqs_by_name);
 
     my $old_ace = $exonerate->format_ace_output($target_seq->name, $output);
-    my $new_ace = $result_set->ace;
+    my $new_ace = $result_set->ace || ''; # $old_ace will be empty string rather than undef
     is($new_ace, $old_ace, 'Ace');
 }
 
