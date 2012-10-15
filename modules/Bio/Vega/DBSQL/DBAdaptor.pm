@@ -27,6 +27,7 @@ sub get_GeneAdaptor {
   }
   return $self->{'VegaGene'};
 }
+
 sub get_SliceAdaptor {
   my ($self) = @_;
   if ( !exists $self->{'VegaSlice'} ){
