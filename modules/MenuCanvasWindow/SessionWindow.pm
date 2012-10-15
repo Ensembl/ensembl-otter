@@ -2059,17 +2059,11 @@ sub update_SubSeq_locus_level_errors {
 }
 
 sub launch_exonerate {
-    my ($self, $otf, $params) = @_;
+    my ($self, $otf) = @_;
 
     my $db_edited = 0;
     my @method_names;
     my $ace_text = '';
-    my $best_n   = $params->{-best_n};
-    my $max_intron_length = $params->{-max_intron_length};
-    my $mask_target = $params->{-mask_target};
-
-    $otf->bestn($best_n);
-    $otf->maxintron($max_intron_length);
 
     for my $aligner ( $otf->aligners_for_each_type ) {
 
