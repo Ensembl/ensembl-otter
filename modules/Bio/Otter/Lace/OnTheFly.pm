@@ -37,9 +37,13 @@ has 'target_seq_obj'  => (
 has 'softmask_target' => ( is => 'ro', isa => 'Bool' );
 
 has 'aligner_options' => (
+    traits => [ 'Hash' ],
     is  => 'ro',
     isa => 'HashRef',
     default => sub { {} },
+    handles => {
+        _set_aligner_option => 'set',
+    },
     );
 
 has 'aligner_query_type_options' => (
@@ -48,21 +52,17 @@ has 'aligner_query_type_options' => (
     default => sub { { dna => {}, protein => {} } },
     );
 
-sub _aligner_option_accessor {
-    my ($self, $option, @args) = @_;
-    ($self->aligner_options->{$option}) = @args if @args;
-    return $self->aligner_options->{$option};
-}
+has 'bestn'    => (
+    is => 'ro',
+    isa => 'Int',
+    trigger => sub { my ($self, $val) = @_; $self->_set_aligner_option('--bestn', $val) },
+);
 
-sub bestn {
-    my ($self, @args) = @_;
-    return $self->_aligner_option_accessor('--bestn', @args);
-}
-
-sub maxintron {
-    my ($self, @args) = @_;
-    return $self->_aligner_option_accessor('--maxintron', @args);
-}
+has 'maxintron'    => (
+    is => 'ro',
+    isa => 'Int',
+    trigger => sub { my ($self, $val) = @_; $self->_set_aligner_option('--maxintron', $val) },
+);
 
 sub BUILD {
     my ($self, $params) = @_;

@@ -418,14 +418,20 @@ sub launch_exonerate {
     my ($self) = @_;
     my $SessionWindow = $self->SessionWindow;
 
+    my $bestn     = $self->get_entry('bestn') || 0;
+    my $maxintron = $self->get_entry('max_intron_length') || 0;
+
     my $otf = Bio::Otter::Lace::OnTheFly::Genomic->new(
 
         seqs       => $self->entered_seqs,
         accessions => $self->entered_accessions,
 
         full_seq        => $SessionWindow->Assembly->Sequence,
-        softmask_target => ($self->{_mask_target} eq 'soft'),
         repeat_masker   => sub { my $apply_mask_sub = shift; $self->_repeat_masker($apply_mask_sub); },
+
+        softmask_target => ($self->{_mask_target} eq 'soft'),
+        bestn           => $bestn,
+        maxintron       => $maxintron,
 
         lowercase_poly_a_t_tails => 1, # to avoid spurious exons
 
@@ -474,12 +480,7 @@ OTF_mRNA
 OTF_Protein });
     }
 
-    my $exonerate_params = {
-        -best_n            => ($self->get_entry('bestn') || 0),
-        -max_intron_length => ($self->get_entry('max_intron_length') || 0),
-        -mask_target       => $self->{_mask_target},
-        };
-    my $db_edited = $SessionWindow->launch_exonerate($otf, $exonerate_params);
+    my $db_edited = $SessionWindow->launch_exonerate($otf);
 
     $self->top->Unbusy;
 
