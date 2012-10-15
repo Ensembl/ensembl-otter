@@ -96,6 +96,7 @@ my %evidence_priorities = (
   IKR => '8',   # Inferred from Key Residues
   IRD => '8',   # Inferred from Rapid Divergence
   IBA => '8',   # Inferred from Biological aspect of Ancestor
+  ISM => '8',   # Inferred from sequence model
   IGC => '9',   # Inferred from Genomic Context
   NAS => '10',  # non-traceable author statement
   TAS => '11',  # traceable author statement
