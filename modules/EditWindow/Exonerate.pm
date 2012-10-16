@@ -451,6 +451,16 @@ sub launch_exonerate {
         }
     }
 
+    if ($otf->target_all_repeat) {
+        $self->top->messageBox(
+            -title   => 'otter: All Repeat',
+            -icon    => 'warning',
+            -message => 'The genomic sequence is entirely repeat',
+            -type    => 'OK',
+        );
+        return;
+    }
+
     my $seqs = $otf->confirmed_seqs();
 
     $self->logger->warn("Found ", scalar(@$seqs), " sequences");
