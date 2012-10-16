@@ -69,6 +69,9 @@ sub _build_target_seq {         ## no critic (Subroutines::ProhibitUnusedPrivate
     my $full_seq = $self->softmask_target ? $self->softmasked_full_seq : $self->full_seq;
     my $target_seq = $full_seq->sub_sequence($self->start, $self->end);
     $target_seq->name($full_seq->name);
+    my $dna = $target_seq->sequence_string;
+    $dna =~ s/-/N/g;            # exonerate doesn't like dashes
+    $target_seq->sequence_string($dna);
     return $target_seq;
 }
 
