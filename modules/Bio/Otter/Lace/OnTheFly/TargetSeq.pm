@@ -47,7 +47,7 @@ sub _build_end {                ## no critic (Subroutines::ProhibitUnusedPrivate
 }
 
 sub _too_late {
-    my ($self, $old, $new) = @_;
+    my ($self, $new, $old) = @_;
     if ($self->_target_seq_built) {
         $self->logger->logconfess('Too late to change start or end of TargetSeq');
     }
