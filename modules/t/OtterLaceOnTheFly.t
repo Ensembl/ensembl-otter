@@ -121,6 +121,9 @@ my %species_tests = (
     zebrafish => [
         { title => 'CR753817.13', type => 'chr6_20110419', start => 35489955, end => 35724691, },
     ],
+    tas_devil => [
+        { title => 'With_gap', type => 'MHC-06', start => 139316, end => 424882, },
+    ],
     );
 
 foreach my $test ( @tests ) {
