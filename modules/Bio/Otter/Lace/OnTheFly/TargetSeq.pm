@@ -35,6 +35,16 @@ sub fasta_sequences {
 
 with 'Bio::Otter::Lace::OnTheFly::FastaFile';
 
+sub all_repeat {
+    my $self = shift;
+    if ($self->softmask_target) {
+        my $sm_dna = $self->target_seq->sequence_string;
+        my $has_unmasked = ($sm_dna =~/[ACGT]{5}/);
+        return not $has_unmasked;
+    }
+    return;
+}
+
 # could use 'default' for this, but for symmetry with _build_end:
 #
 sub _build_start {              ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)

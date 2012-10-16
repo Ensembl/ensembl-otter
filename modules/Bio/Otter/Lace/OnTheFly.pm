@@ -30,6 +30,7 @@ has 'target_seq_obj'  => (
         target_start      => 'start',
         target_end        => 'end',
         target_seq        => 'target_seq',
+        target_all_repeat => 'all_repeat',
         },
     writer => '_set_target_seq_obj',
     );
