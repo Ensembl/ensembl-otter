@@ -126,36 +126,42 @@ my %species_tests = (
     ],
     );
 
-foreach my $test ( @tests ) {
-    run_fixed_test($test);
-}
+main_tests();
+done_testing;
 
-TODO: {
-    local $TODO = "Protein handling not yet compatible for frameshift and split codon";
+sub main_tests {
 
-    foreach my $test ( @todo_tests ) {
+    foreach my $test ( @tests ) {
         run_fixed_test($test);
     }
-}
 
-if ($ENV{OTF_SKIP_LIVE_TESTS}) {
-    done_testing;
-    exit;
-}
+  TODO: {
+      local $TODO = "Protein handling not yet compatible for frameshift and split codon";
 
-local $ENV{DOCUMENT_ROOT} = '/nfs/WWWdev/SANGER_docs/htdocs';
-my $tmp_dir = File::Temp->newdir;
-my $at_cache = setup_accession_type_cache($tmp_dir->dirname);
-
-while (my ($species, $regions) = each %species_tests) {
-    note("Live tests for: $species");
-    my $local_server = Bio::Otter::LocalServer->new({dataset => $species});
-    foreach my $region ( @$regions ) {
-        run_region($local_server, $region, $at_cache);
+      foreach my $test ( @todo_tests ) {
+          run_fixed_test($test);
+      }
     }
-}
 
-done_testing;
+    if ($ENV{OTF_SKIP_LIVE_TESTS}) {
+        done_testing;
+        exit;
+    }
+
+    local $ENV{DOCUMENT_ROOT} = '/nfs/WWWdev/SANGER_docs/htdocs';
+    my $tmp_dir = File::Temp->newdir;
+    my $at_cache = setup_accession_type_cache($tmp_dir->dirname);
+
+    while (my ($species, $regions) = each %species_tests) {
+        note("Live tests for: $species");
+        my $local_server = Bio::Otter::LocalServer->new({dataset => $species});
+        foreach my $region ( @$regions ) {
+            run_region($local_server, $region, $at_cache);
+        }
+    }
+
+    return;
+}
 
 sub run_fixed_test {
     my $test = shift;
@@ -163,6 +169,7 @@ sub run_fixed_test {
     $test->{target_seq} = Hum::FastaFileIO->new_DNA_IO($test->{target_path})->read_one_sequence;
     $test->{strict_hit_list} = 1;
     run_test($test);
+    return;
 }
 
 sub run_test {
@@ -266,6 +273,7 @@ sub run_test {
     my $old_ace = $exonerate->format_ace_output($target_seq->name, $output);
     my $new_ace = $result_set->ace || ''; # $old_ace will be empty string rather than undef
     is($new_ace, $old_ace, 'Ace');
+    return;
 }
 
 sub run_region {
@@ -301,6 +309,7 @@ sub run_region {
             }
         }
     }
+    return;
 }
 
 sub get_query_validator {
@@ -322,7 +331,7 @@ sub setup_accession_type_cache {
     my $tmp_dir = shift;
     my $test_client = OtterTest::Client->new;
     my $test_db = Bio::Otter::Lace::DB->new($tmp_dir);
-    $at_cache = Bio::Otter::Lace::AccessionTypeCache->new;
+    my $at_cache = Bio::Otter::Lace::AccessionTypeCache->new;
     $at_cache->Client($test_client);
     $at_cache->DB($test_db);
     return $at_cache;
