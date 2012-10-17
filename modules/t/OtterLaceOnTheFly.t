@@ -198,7 +198,7 @@ sub run_test {
         push @new_features, $ga->ensembl_features;
         note $ga->query_id, ': QS ', $ga->query_strand, ', TS ', $ga->target_strand, ', GO ', $ga->gene_orientation;
     }
-    @new_features = sort feature_sort @new_features;
+    @new_features = feature_sort @new_features;
     note("n(new_features): ", scalar(@new_features));
 
     # Do it the old way, for comparison
@@ -224,7 +224,7 @@ sub run_test {
     $exonerate->query_type('protein') if $type and $type =~ /protein/i;
 
     my $output = $exonerate->run_exonerate($target_bio_seq, $target_bio_seq);
-    my @output_features = sort feature_sort @$output;
+    my @output_features = feature_sort @$output;
 
     note("n(output_features): ", scalar(@output_features));
     is(scalar @new_features, scalar@output_features, 'n(new_features)');

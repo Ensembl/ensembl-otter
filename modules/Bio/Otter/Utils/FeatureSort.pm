@@ -8,8 +8,13 @@ our @EXPORT_OK = qw( feature_sort );
 
 # Not a method
 #
-sub feature_sort ($$) {
-    my ($a, $b) = @_;
+sub feature_sort {
+    my (@unsorted) = @_;
+    my @sorted = sort _feature_cmp @unsorted;
+    return @sorted;
+}
+
+sub _feature_cmp {
     return
         $a->hseqname cmp $b->hseqname
         ||
