@@ -516,7 +516,7 @@ sub format_ace_output {
         my $hit_length = $self->sequence_fetcher->{$hname}->sequence_length;
         my $hit_ace = qq{\n$prefix : "$hname"\nLength $hit_length\n};
 
-        foreach my $fp (sort feature_sort @{ $name_fp_list{$hname} }) {
+        foreach my $fp (feature_sort @{ $name_fp_list{$hname} }) {
 
             # In acedb strand is encoded by start being greater
             # than end if the feature is on the negative strand.

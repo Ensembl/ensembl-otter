@@ -14,7 +14,7 @@ use Moose::Role;
 
 with 'MooseX::Log::Log4perl';
 
-use Bio::Otter::Utils::FeatureSort;
+use Bio::Otter::Utils::FeatureSort qw( feature_sort );
 
 requires 'analysis_name';
 requires 'by_query_id';
@@ -57,7 +57,7 @@ sub ace {
                 $a->query_start  <=> $b->query_start
                         } @{ $self->by_query_id($hname) }) {
 
-            foreach my $fp ( sort Bio::Otter::Utils::FeatureSort::feature_sort $ga->ensembl_features ) {
+            foreach my $fp ( feature_sort $ga->ensembl_features ) {
 
                 # In acedb strand is encoded by start being greater
                 # than end if the feature is on the negative strand.
