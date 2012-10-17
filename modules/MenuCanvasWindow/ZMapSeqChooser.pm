@@ -429,31 +429,13 @@ sub zMapEdit {
 
 sub _zMapEdit {
     my ($self, $xml_hash) = @_;
-
     $xml_hash->{'request'}->{'action'} eq 'edit'
         or confess "Not an 'edit' action";
-
     my $feat_hash = $xml_hash->{'request'}{'align'}{'block'}{'featureset'}{'feature'};
     $feat_hash or return 0;
-
     my ($name, $feat) = %$feat_hash;
-    my $style = $feat->{'style'};
-    if ($style && lc($style) eq 'genomic_canonical') {
-        $self->SessionWindow->zircon_zmap_view_edit_clone($name);
-        return 1;
-    }
-    else {
-        my $subs = $feat->{'subfeature'};
-        $subs or return 0;
-        ref $subs eq 'ARRAY'
-            or confess "Unexpected feature format for ${name}";
-        for my $s (@$subs) {
-            if ($s->{'ontology'} eq 'exon') {
-                return $self->SessionWindow->zircon_zmap_view_edit_transcript($name);
-            }
-        }
-        return 0;
-    }
+    my ($style, $sub_list) = @{$feat}{qw( style subfeature )};
+    return $self->SessionWindow->zircon_zmap_view_edit($name, $style, $sub_list);
 }
 
 =head2 zMapSingleSelect

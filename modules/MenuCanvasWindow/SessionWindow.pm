@@ -2478,18 +2478,26 @@ my $name_pattern = qr! ^
     - [[:alpha:]]+ # strand
     $ !x;
 
-sub zircon_zmap_view_edit_clone {
-    my ($self, $name) = @_;
-    my ($accession_version) = $name =~ $name_pattern
-        or confess "invalid name for a genomic_canonical feature: ${name}";
-    $self->edit_Clone_by_accession_version($accession_version);
-    return;
-}
+sub zircon_zmap_view_edit {
+    my ($self, $name, $style, $sub_list) = @_;
 
-sub zircon_zmap_view_edit_transcript {
-    my ($self, $name) = @_;
-    my $result = $self->edit_subsequences($name);
-    return $result;
+    if ($style && lc($style) eq 'genomic_canonical') {
+        my ($accession_version) = $name =~ $name_pattern
+            or confess "invalid name for a genomic_canonical feature: ${name}";
+        $self->edit_Clone_by_accession_version($accession_version);
+        return 1;
+    }
+    else {
+        $sub_list or return 0;
+        ref $sub_list eq 'ARRAY'
+            or confess "Unexpected feature format for ${name}";
+        for my $s (@$sub_list) {
+            if ($s->{'ontology'} eq 'exon') {
+                return $self->edit_subsequences($name);
+            }
+        }
+        return 0;
+    }
 }
 
 sub zircon_zmap_view_feature_details_xml {
