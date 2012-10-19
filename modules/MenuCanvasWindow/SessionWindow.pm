@@ -647,7 +647,7 @@ sub populate_clone_menu {
             -label          => $clone->clone_name,
             # Not an accelerator - just for formatting!
             -accelerator    => $clone->accession_version,
-            -command        => sub{ $self->edit_Clone_by_name($clone->name) },
+            -command        => sub{ $self->edit_Clone($clone) },
             );
     }
 
@@ -1745,15 +1745,6 @@ sub edit_Clone {
     my $top = $cew->top;
     $top->deiconify;
     $top->raise;
-
-    return;
-}
-
-sub edit_Clone_by_name {
-    my ($self, $name) = @_;
-
-    my $clone = $self->Assembly->get_Clone($name);
-    $self->edit_Clone($clone);
 
     return;
 }
