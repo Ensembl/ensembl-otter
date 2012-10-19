@@ -1758,15 +1758,6 @@ sub edit_Clone_by_name {
     return;
 }
 
-sub edit_Clone_by_accession_version {
-    my ($self, $accession_version) = @_;
-
-    my $clone = $self->Assembly->get_Clone_by_accession_version($accession_version);
-    $self->edit_Clone($clone);
-
-    return;
-}
-
 sub close_all_clone_edit_windows {
     my ($self) = @_;
 
@@ -2484,7 +2475,8 @@ sub zircon_zmap_view_edit {
     if ($style && lc($style) eq 'genomic_canonical') {
         my ($accession_version) = $name =~ $name_pattern
             or confess "invalid name for a genomic_canonical feature: ${name}";
-        $self->edit_Clone_by_accession_version($accession_version);
+        my $clone = $self->Assembly->get_Clone_by_accession_version($accession_version);
+        $self->edit_Clone($clone);
         return 1;
     }
     else {
