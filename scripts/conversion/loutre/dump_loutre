@@ -136,6 +136,8 @@ our $AUTHOR;
 
 my $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
 
+### PARALLEL # $support ###
+
 # parse options
 $support->parse_common_options(@_);
 $support->parse_extra_options(
@@ -246,7 +248,7 @@ my $vdbh = $vdba->dbc->db_handle;
 my $current_genes = {};
 if ($support->param('live_update')) {
   my $current_vdba = $support->get_database('ensembl','current');
-  my $sql = qq(SELECT stable_id, version from gene_stable_id);
+  my $sql = qq(SELECT stable_id, version from gene);
   my $sth = $current_vdba->dbc->db_handle->prepare($sql);
   $sth->execute;
   while ( my ($gsi,$version) = $sth->fetchrow_array) {
@@ -417,6 +419,10 @@ if ( @new_seq_region_attribs ) {
   exit;
 }
 
+my ($fsv,$non_fsv);
+
+### PRE # # $fsv $non_fsv ###
+
 ######################################################
 # delete any entries from previous runs if requested #
 ######################################################
@@ -530,7 +536,9 @@ if ( ! exists($current_vega_tables{'author'} )) {
   my $lpass   = $support->param('loutrepass');
 
   my @mysql_commands;
-  my $mcom   = "mysqldump --opt --skip-lock-tables $cs --single-transaction -q -u $luser -P $lport -p$lpass -h $lhost $ldbname";
+  my $passopt = "";
+  $passopt ="-p$lpass" if $lpass;
+  my $mcom   = "mysqldump --opt --skip-lock-tables $cs --single-transaction -q -u $luser -P $lport $passopt -h $lhost $ldbname";
 
   #read constraints
   my %tables_to_report;
@@ -581,7 +589,11 @@ if ( ! exists($current_vega_tables{'author'} )) {
 # do the real work and copy the genes and other features across #
 #################################################################
 
-my ($fsv,$non_fsv);
+### SIZE # MHC.* # 0.5 ###
+### SIZE # chr(\d+|X|Y)-\d+ # 1 ###
+### SIZE # # 0.1 ###
+### RUN # $chr_names_wanted ###
+
 foreach my $name (@{$chr_names_wanted}) {
   my $lslice = $lsa->fetch_by_region('chromosome',$name,undef,undef,undef,'Otter');
   my $vslice = $vsa->fetch_by_region('chromosome',$name,undef,undef,undef,'Otter');
@@ -740,6 +752,8 @@ foreach my $name (@{$chr_names_wanted}) {
   }
 }
 
+### POST ###
+
 $support->log("Got $fsv fsv genes and $non_fsv non_fsv genes\n");
 
 #add date of datafreeze
@@ -752,6 +766,8 @@ else {
   $vdbh->do(qq(INSERT ignore into meta (meta_key,meta_value) VALUES (\'genebuild.havana_datafreeze_date\',\'$datafreeze\')));
   $support->log("Added meta key of $datafreeze for genebuild.havana_datafreeze_date\n");
 }
+
+### END ###
 
 $support->finish_log;
 
