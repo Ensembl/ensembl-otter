@@ -2325,6 +2325,7 @@ sub run_dotter {
         $dw->initialise;
         $dw->SessionWindow($self);
         $self->{'_dotter_window'} = $dw;
+        weaken($self->{'_dotter_window'});
     }
     $dw->update_from_SessionWindow($self);
 
