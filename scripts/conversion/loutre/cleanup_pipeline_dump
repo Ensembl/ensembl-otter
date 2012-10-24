@@ -532,7 +532,7 @@ while (my ($t, $cs_name) = $cssth->fetchrow_array){
 my $all_ids_to_stay = join("','",@all_ids);
 if (! $support->param('dry_run')) {
   foreach my $t (qw(seq_region seq_region_attrib dna)) {
-    if ($support->param('create_template') && $t eq 'dna') {
+    if ($support->param('prepare_template') && $t eq 'dna') {
       #remove everything from the dna table if we're creating a template
       $support->log_stamped("Deleting everything from $t...\n",1);
       my $sql = qq(DELETE FROM $t);
