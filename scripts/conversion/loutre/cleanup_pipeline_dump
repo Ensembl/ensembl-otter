@@ -135,7 +135,6 @@ my %lns_to_go = map {$_,1}
      Gap
    );
 
-
 #define which attrib_types are to be deleted
 my $sr_codes_to_go = join "','", qw(htg description write_access chr hidden);
 
@@ -310,20 +309,23 @@ foreach my $t (keys %lns_to_stay) {
 #compare the logic names present with those that we know we are going to keep
 #and those that we know we are going to delete -> will identify any new ones
 my $problem = 0;
-foreach my $t (keys %original_lncounts) {
-  foreach my $ln (keys %{$original_lncounts{$t}}) {
-    if (! exists($lns_to_stay{$t}{$ln}) ) {
-      if (! exists($lns_to_go{$ln}) ) {
-	$support->log_warning("I don't know what to do with logic name $ln for table $t, I suggest keeping them but please help me out\n");
-	$lns_to_stay{$t}{$ln} = 1;
-	$problem = 1;
+
+unless($support->param('prepare_template')) {
+  foreach my $t (keys %original_lncounts) {
+    foreach my $ln (keys %{$original_lncounts{$t}}) {
+      if (! exists($lns_to_stay{$t}{$ln}) ) {
+        if (! exists($lns_to_go{$ln}) ) {
+    $support->log_warning("I don't know what to do with logic name $ln for table $t, I suggest keeping them but please help me out\n");
+    $lns_to_stay{$t}{$ln} = 1;
+    $problem = 1;
+        }
+        else {
+    $support->log("Will delete features of logic name $ln from table $t\n",1);
+        }
       }
       else {
-	$support->log("Will delete features of logic name $ln from table $t\n",1);
+        $support->log("Will keep features of logic name $ln from table $t\n",1);
       }
-    }
-    else {
-      $support->log("Will keep features of logic name $ln from table $t\n",1);
     }
   }
 }
@@ -437,11 +439,17 @@ if (!$support->param('dry_run')) {
 my $chr_to_keep = join("', '",@{$chr_names_wanted});
 
 #chr seq_region_ids
+
+my $names="";
+unless($support->param('prepare_template')) {
+  $names = "and sr.name in ('$chr_to_keep')";
+}
+
 my $sth = $pddbh->prepare(qq(
         select seq_region_id, sr.coord_system_id, cs.name, cs.coord_system_id
         from seq_region sr, coord_system cs
         where sr.coord_system_id = cs.coord_system_id
-        and sr.name in ('$chr_to_keep')
+        $names
     ));
 
 #contig seq_region_ids
