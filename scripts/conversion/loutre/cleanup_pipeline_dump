@@ -440,16 +440,11 @@ my $chr_to_keep = join("', '",@{$chr_names_wanted});
 
 #chr seq_region_ids
 
-my $names="";
-unless($support->param('prepare_template')) {
-  $names = "and sr.name in ('$chr_to_keep')";
-}
-
 my $sth = $pddbh->prepare(qq(
         select seq_region_id, sr.coord_system_id, cs.name, cs.coord_system_id
         from seq_region sr, coord_system cs
         where sr.coord_system_id = cs.coord_system_id
-        $names
+        and sr.name in ('$chr_to_keep')
     ));
 
 #contig seq_region_ids
