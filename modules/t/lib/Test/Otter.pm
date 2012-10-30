@@ -146,6 +146,7 @@ unlisted datasets.
     sub _otter_client { # to make public if needed
         return $cl ||= do {
             local @ARGV = ();
+            require Bio::Otter::Lace::Defaults;
             Bio::Otter::Lace::Defaults::do_getopt();
             Bio::Otter::Lace::Defaults::make_Client();
         };
