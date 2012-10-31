@@ -1,13 +1,14 @@
 
-=head1 NAME - Bio::Otter::Lace::Exonerate
+=head1 NAME - OtterTest::Exonerate
 
 =head1 DESCRIPTION
 
-    Similar to a Pipeline RunnableDB, but for Otter on the fly Exonerate
+    The package formerly known as Bio::Otter::Lace::Exonerate.
+    Similar to a Pipeline RunnableDB, but for Otter on the fly Exonerate.
 
 =cut
 
-package Bio::Otter::Lace::Exonerate;
+package OtterTest::Exonerate;
 
 use strict;
 use warnings;
@@ -17,8 +18,8 @@ use Log::Log4perl;
 
 # pipeline configuration
 # this must come before Bio::EnsEMBL::Analysis::Runnable::Finished::Exonerate
-use Bio::Otter::Lace::Exonerate::Config::General;
-use Bio::Otter::Lace::Exonerate::Config::Blast;
+use OtterTest::Exonerate::Config::General;
+use OtterTest::Exonerate::Config::Blast;
 use Bio::EnsEMBL::Analysis::Tools::BlastDBTracking;
 {
     ## no critic (Subroutines::ProtectPrivateSubs)
