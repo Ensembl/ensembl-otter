@@ -46,7 +46,7 @@ Nothing is imported by default.
 use Sys::Hostname 'hostname';
 
 use base 'Exporter';
-our @EXPORT_OK = qw( db_or_skipall get_BOLDatasets diagdump );
+our @EXPORT_OK = qw( db_or_skipall farm_or_skipall get_BOLDatasets diagdump );
 
 
 sub import {
@@ -114,12 +114,34 @@ sub db_or_skipall {
                   || -d "/software/anacode"
                   || $ENV{WTSI_INTERNAL});
 
-    # Else - need to skip the test
-    Test::More::plan skip_all => "Direct database access not expected to work from $host - set WTSI_INTERNAL=1 to try";
+    return _skipall("Direct database access not expected to work from $host - set WTSI_INTERNAL=1 to try");
+}
+
+sub _skipall {
+    my ($why) = @_;
+    Test::More::plan skip_all => $why;
     # it exits
     # (or if absent falls over in a heap, job done)
 
     return (); # not reached
+}
+
+
+=head2 farm_or_skipall()
+
+If it thinks you are on Farm2, returns nothing.
+
+Otherwise it will skip the entire test.
+
+TODO: C<exec ssh farm2-login> if you're not, reproducing sufficient
+Perl environment, and then continue.
+
+=cut
+
+sub farm_or_skipall {
+    return () if -d '/lustre';
+    my $host = hostname(); # is not FQDN on my deskpro
+    return _skipall("Test expects to run on Farm2, but is on $host");
 }
 
 
@@ -132,12 +154,15 @@ The requested L<Bio::Otter::Lace::DataSet> object is returned for each
 element of C<@name>. Methods C<get_cached_DBAdaptor> and
 C<get_pipeline_DBAdaptor> give the loutre and pipe databases.
 
+If C<"@name" eq "ALL"> then all published species are used.  This
+won't include C<human_dev> etc..
+
 Defining C<get_BOSDatasets> for L<Bio::Otter::SpeciesDat::DataSet> may
 be better but is not yet implemented.  Equivalent methods are named
 C<otter_dba> and C<pipeline_dba>, there is also C<satellite_dba>.
 
-Some tag for 'all' would be useful, allowing for restricted and
-unlisted datasets.
+Further tags like C<ALL_UNLISTED> would be useful, allowing for
+restricted and unlisted datasets.
 
 =cut
 
@@ -156,6 +181,8 @@ unlisted datasets.
 sub get_BOLDatasets {
     my @name = @_;
     my $cl = _otter_client();
+    warn "No datasets requested" unless @name;
+    return $cl->get_all_DataSets if "@name" eq 'ALL';
     return map { $cl->get_DataSet_by_name($_) } @name;
 }
 
