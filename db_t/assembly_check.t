@@ -4,7 +4,6 @@ use warnings;
 
 use Test::More;
 use t::lib::Test::Otter qw( ^db_or_skipall get_BOLDatasets diagdump );
-use Bio::Otter::Lace::Defaults;
 
 =head1 DESCRIPTION
 

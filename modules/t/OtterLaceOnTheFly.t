@@ -17,7 +17,7 @@ use OtterTest::Client;
 
 use Bio::Otter::Lace::AccessionTypeCache;
 use Bio::Otter::Lace::DB;
-use Bio::Otter::Lace::Exonerate;
+use OtterTest::Exonerate;
 use Bio::Otter::LocalServer;
 use Bio::Otter::ServerAction::Region;
 use Bio::Otter::Utils::FeatureSort qw( feature_sort );
@@ -215,7 +215,7 @@ sub run_test {
     $dna_str =~ s/-/N/g;
     my $target_bio_seq = Bio::Seq->new( -id => $target_seq->name, -seq => $dna_str, -alphabet => 'dna');
 
-    my $exonerate = Bio::Otter::Lace::Exonerate->new;
+    my $exonerate = OtterTest::Exonerate->new;
     if ($test->{query_path}) {
         $exonerate->initialise($test->{query_path});
     } else {
