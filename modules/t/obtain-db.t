@@ -8,6 +8,7 @@ use t::lib::Test::Otter qw( ^db_or_skipall );
 
 use YAML 'Dump'; # for diag
 use File::Slurp 'read_dir';
+use Try::Tiny;
 
 use Net::Netrc;
 use DBI;
@@ -135,14 +136,18 @@ sub main {
         local $TODO = "Noise to a logger";
         is(scalar @warn, 0, "warnings") || diag(Dump({ warnings => \@warn }));
     }
+
+    return ();
 }
 
 
 sub cmdline_tt {
     my ($args, $check) = @_;
 
-    my $dbh = eval { netrc_dbh(%$args) } || "perl_err=$@";
+    my $dbh = try { netrc_dbh(%$args) } catch { "perl_err=$_" };
     check_dbh($dbh, @$check);
+
+    return ();
 }
 
 
@@ -160,9 +165,11 @@ sub server_tt {
 
     # Despite fixing a caching bug in BOS:DataSet, this is broken.
     # For now we only ensure it isn't silently broken.
-    my $dba_rw = eval { ref($dataset->pipeline_dba('rw')) } || "ERR:$@";
+    my $dba_rw = try { ref($dataset->pipeline_dba('rw')) } catch { "ERR:$_" };
     like($dba_rw, qr/^Bio::EnsEMBL::DBSQL::DBAdaptor$|^ERR:/,
          "$dataset_name pipe: caching bug must not be silent");
+
+    return ();
 }
 
 
@@ -184,6 +191,8 @@ sub client_tt {
     my $pipe_what = shift @$check_pipe;
     check_dba($p_dba, $pipe_what, @$check_pipe);
     check_dba($p_dba_ro, "$pipe_what (ro)", @$check_pipe);
+
+    return ();
 }
 
 
@@ -201,7 +210,8 @@ sub check_dba {
 
     is(ref($dba), $class_want, "$what: class");
 
-    return check_dbh($dbh, $what, $species_want, $schema_want);
+    check_dbh($dbh, $what, $species_want, $schema_want);
+    return ();
 }
 
 
@@ -223,6 +233,8 @@ sub check_dbh {
         is($species_got->{'meta_value'}, $species_want, "$what: species")
           || diag(Dump($species_got));
     }
+
+    return ();
 }
 
 
@@ -267,11 +279,13 @@ sub _make_Client {
 
 sub rowhash {
     my ($dbh, $sql) = @_;
-    return eval {
+    return try {
         local $dbh->{PrintError} = 0;
         $dbh->selectrow_hashref($sql)
           || { DBI_err => $dbh->err };
-    } || { perl_err => $@ };
+    } catch {
+        { perl_err => $_ }
+    };
 }
 
 sub fields_string {
