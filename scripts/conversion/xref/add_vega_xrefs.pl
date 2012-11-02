@@ -30,7 +30,6 @@ Specific options:
     --gene_stable_id, --gsi=LIST|FILE   only process LIST gene_stable_ids
                                         (or read list from FILE)
     --gene_type=TYPE                    only process genes of type TYPE
-    --start_gid=NUM                     start at gene with gene_id NUM
     --prune                             delete all xrefs (except Interpro) and
                                         gene/transcript.display_xref_ids before
                                         running the script
@@ -83,7 +82,6 @@ $support->parse_extra_options(
   'chromosomes|chr=s@',
   'gene_stable_id|gsi=s@',
   'gene_type=s',
-  'start_gid=s',
   'prune',
 );
 $support->allowed_params(
@@ -91,7 +89,6 @@ $support->allowed_params(
   'chromosomes',
   'gene_stable_id',
   'gene_type',
-  'start_gid',
   'prune',
 );
 
@@ -153,7 +150,6 @@ if ($support->param('prune') and $support->user_proceed('Would you really like t
   $support->log("Done resetting $num transcripts.\n");
 }
 
-my $found = 0;
 my @gene_stable_ids = $support->param('gene_stable_id');
 my %gene_stable_ids = map { $_, 1 } @gene_stable_ids;
 my $chr_length = $support->get_chrlength($dba,'','',1);
@@ -191,17 +187,6 @@ foreach my $chr (@chr_sorted) {
     my $gene_type = $support->param('gene_type');
     if ($gene_type and ($gene_type ne $gene->type)){
       $support->log_verbose("Skipping gene - not of type $gene_type.\n", 1);
-      next;
-    }
-		
-    # allow a restart of script at specified gene_stable_id
-    if($support->param('start_gid') && !$found){
-      if($gid == $support->param('start_gid')){
-	$found = 1;
-	$support->log("Found $gid - starting at next gene.\n", 1);
-      } else {
-	$support->log("Skipping gene - waiting for start gene_id.\n", 1);
-      }
       next;
     }
 		
