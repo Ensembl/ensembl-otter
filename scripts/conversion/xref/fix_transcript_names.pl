@@ -76,6 +76,7 @@ use Data::Dumper;
 $| = 1;
 
 my $support = new Bio::EnsEMBL::Utils::VegaCuration::Transcript($SERVERROOT);
+### PARALLEL # $support ###
 
 # parse options
 $support->parse_common_options(@_);
@@ -107,6 +108,10 @@ my $fix_names = 0;
 
 my $dbname = $support->param('dbname');
 my $n_flist_fh;
+my ($c1,$c2,$c3) = (0,0,0);
+
+### PRE # $fix_names # $c1 $c2 $c3 ###
+
 if (! $support->param('update')) {
 
   #are duplicate transcript names going to be fixed later on ?
@@ -136,10 +141,17 @@ if (! $support->param('update')) {
   }
 }
 
-my ($c1,$c2,$c3) = (0,0,0);
 my $chr_length = $support->get_chrlength($dba,'','',1);
 my @chr_sorted = $support->sort_chromosomes($chr_length);
-foreach my $chr (@chr_sorted) {
+my $chrs = \@chr_sorted;
+
+### SIZE # (\d+|X|Y)+ # 0.25 ###
+### SIZE # # 0.05 ###
+### RUN # $chrs ###
+
+$support->log("fix names = $fix_names\n");
+
+foreach my $chr (@$chrs) {
   $support->log_stamped("\n\nLooping over Chromosome $chr\n");
   my $chrom = $sa->fetch_by_region('toplevel', $chr);
  GENE:
@@ -234,8 +246,15 @@ foreach my $chr (@chr_sorted) {
   }
 }
 
+### POST ###
+
+warn "fix_names = $fix_names\n";
+
 $support->log("\nDone updating xrefs for $c1 transcripts\n");
 $support->log("\nIdentified $c3 transcripts from $c2 genes as updatable.\n") if $fix_names;
+
+### END ###
+
 $support->finish_log;
 
 
