@@ -248,8 +248,6 @@ foreach my $chr (@$chrs) {
 
 ### POST ###
 
-warn "fix_names = $fix_names\n";
-
 $support->log("\nDone updating xrefs for $c1 transcripts\n");
 $support->log("\nIdentified $c3 transcripts from $c2 genes as updatable.\n") if $fix_names;
 
