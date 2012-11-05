@@ -120,6 +120,7 @@ $support->parse_extra_options(
   'ensemblpass=s',
   'ensembldbname=s',
   'ensemblassembly=s',
+  'nobackup',
   'prune',
 );
 $support->allowed_params(
@@ -130,6 +131,7 @@ $support->allowed_params(
   'ensemblpass',
   'ensembldbname',
   'ensemblassembly',
+  'nobackup',
   $support->get_common_params,
   $support->get_loutre_params,
 );
@@ -203,7 +205,7 @@ map { $_ =~ s/`//g; $_ =~ s/$dbname.//g; $tabs{$_} += 1; } $vdbh->tables;
 
 my $make_backup = 0;
 if (! $support->param('dry_run')) {
-  if ($support->user_proceed("Would you like to make a backup of this database made when everything else has been done ?\n")) {
+  if ((not $support->param('nobackup')) and $support->user_proceed("Would you like to make a backup of this database made when everything else has been done ?\n")) {
     $make_backup = 1;
   }
 }
