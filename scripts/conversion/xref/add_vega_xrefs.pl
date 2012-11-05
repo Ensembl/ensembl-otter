@@ -76,6 +76,8 @@ $| = 1;
 
 my $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
 
+### PARALLEL # $support ###
+
 # parse options
 $support->parse_common_options(@_);
 $support->parse_extra_options(
@@ -116,6 +118,9 @@ my $ea = $dba->get_DBEntryAdaptor();
 my $sth_gene  = $dba->dbc->prepare("update gene set display_xref_id=? where gene_id=?");
 my $sth_trans = $dba->dbc->prepare("update transcript set display_xref_id=? where transcript_id=?");
 
+my (@chr_sorted,@gene_stable_ids,$chr_length);
+### PRE # @gene_stable_ids $chr_length # ###
+
 # delete all xrefs if --prune option is used
 if ($support->param('prune') and $support->user_proceed('Would you really like to delete all vega and external xrefs  before running this script?')) {
 
@@ -150,14 +155,21 @@ if ($support->param('prune') and $support->user_proceed('Would you really like t
   $support->log("Done resetting $num transcripts.\n");
 }
 
-my @gene_stable_ids = $support->param('gene_stable_id');
+@gene_stable_ids = $support->param('gene_stable_id');
+$chr_length = $support->get_chrlength($dba,'','',1);
+@chr_sorted = $support->sort_chromosomes($chr_length);
+my $chrs = \@chr_sorted;
+
+$support->log("Looping over chromosomes: @chr_sorted\n\n");
+
+### SIZE # (\d+|X|Y)+ # 1 ###
+### SIZE # # 0.25 ###
+### RUN # $chrs ###
+
 my %gene_stable_ids = map { $_, 1 } @gene_stable_ids;
-my $chr_length = $support->get_chrlength($dba,'','',1);
-my @chr_sorted = $support->sort_chromosomes($chr_length);
 
 # loop over chromosomes
-$support->log("Looping over chromosomes: @chr_sorted\n\n");
-foreach my $chr (@chr_sorted) {
+foreach my $chr (@$chrs) {
   $support->log_stamped("> Chromosome $chr (".$chr_length->{$chr}."bp).\n\n");
   # fetch genes from db
   $support->log("Fetching genes...\n");
@@ -260,9 +272,12 @@ foreach my $chr (@chr_sorted) {
   $support->log_stamped("Done with chromosome $chr.\n\n");
 }
 
+### POST ###
+
 # finish log
 $support->finish_log;
 
+### END ###
 
 sub get_name {
   my $obj = shift;
