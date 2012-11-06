@@ -41,7 +41,7 @@ chrAB_20060711	AB	Chromosome AB
 --end--
 
 --pig--
-mhc	7-MHC	MHC region of Chromosome 7
+mhc	7-LW	MHC region of Chromosome 7
 chr17-SSC17_MAX1	17-H20q13	H20q13 fragment of Chromosome 17
 Chr_6_NKG	6-LRC	LRC region of Chromosome 6
 chr1	1	Chromosome 1	1	
