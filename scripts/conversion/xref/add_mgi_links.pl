@@ -133,6 +133,7 @@ foreach my $chr (@chr_sorted) {
     my $display_name;
     my $gsi = $gene->stable_id;
     my $gid = $gene->dbID;
+    my $biotype = $gene->biotype;
 
     eval { $display_name = $gene->display_xref->display_id};
     if ($@) {
@@ -150,7 +151,7 @@ foreach my $chr (@chr_sorted) {
         $support->log_warning("Something's up, the name downloaded from MGI matches the name in Vega ($new_mgi_name) but the gene ($gsi) doesn't have an MGI display_xref\n",1);
       }
 
-      $support->log("Gene $gsi ($display_name) has a name at MGI ($new_mgi_name), need to add an xref\n");
+      $support->log_verbose("Gene $gsi ($display_name) has a name at MGI ($new_mgi_name), need to add an xref\n");
       my ($existing_xref,$dbID);
       my $mgi_pid = $rec->{'mgi_pid'};
 
@@ -187,16 +188,19 @@ foreach my $chr (@chr_sorted) {
         $support->log_warning("Failed to store MGI xref for gene $display_name ($gsi)\n");
       }
 
-      #for passing on to havana
-      if ( ($new_mgi_name =~ /[A-Z]{2}|Gm/) 
-             || ($new_mgi_name =~ /Rik$/) ) {
-        push @ignored_new_names, [$gsi,$display_name,$new_mgi_name];
-        $support->log_verbose("Ignoring it since wrong format\n",1);
+      #for passing on to havana as potential names first exclude many styles of names
+      if (  ($new_mgi_name =~ /[A-Z]{2}|Gm/)
+         || ($new_mgi_name =~ /Rik\d{0,1}$/)
+         || ($new_mgi_name =~ /^D\d{1,2}[A-Z]/)
+         || ($new_mgi_name =~ /^D[X|Y][A-Z]\d{6}/)
+         || ($new_mgi_name =~ /^[A-Z]\d{5}/) ) {
+        push @ignored_new_names, [$gsi,$display_name,$new_mgi_name,$biotype];
+        $support->log_verbose("Ignoring $new_mgi_name since wrong format\n",1);
       }
       else {
         my $desc    = $rec->{'desc'};
         $support->log_verbose("Consider this name ($new_mgi_name) for an update\n",1);
-        push @potential_names, [$gsi,$display_name,$new_mgi_name,$desc];
+        push @potential_names, [$gsi,$display_name,$new_mgi_name,$desc,$biotype];
       }
     }
   }
@@ -217,9 +221,9 @@ else {
 
 $c = scalar(@potential_names);
 $support->log("\nNames to consider)($c):\n\n");
-$support->log(sprintf("%-30s%-20s%-20s%-20s\n", qw(STABLE_ID OLD_NAME NEW_NAME NEW_DESC)));
+$support->log(sprintf("%-25s%-30s%-20s%-20s%-20s\n", qw(STABLE_ID BIOTYPE OLD_NAME NEW_NAME NEW_DESC)));
 foreach my $rec (@potential_names) {
-  $support->log(sprintf("%-30s%-20s%-20s%-20s\n", $rec->[0], $rec->[1], $rec->[2], $rec->[3]));
+  $support->log(sprintf("%-25s%-30s%-20s%-20s%-20s\n", $rec->[0], $rec->[4], $rec->[1], $rec->[2], $rec->[3]));
 }
 
 $support->log("\nAdded $add_c MGI xrefs\n");
