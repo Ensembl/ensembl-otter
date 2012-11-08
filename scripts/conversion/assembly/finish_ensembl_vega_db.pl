@@ -509,17 +509,19 @@ $c = $dbh->{'evega'}->do($sql);
 $sql = qq(DROP TABLE tmp_seq_region);
 $c = $dbh->{'evega'}->do($sql);
 
-#tidy up meta table entries
+##tidy up meta table entries
 
 #remove unwanted ensembl ones
 $support->log_stamped("Deleting and updating meta table entries.\n\n");
 $sql = qq(DELETE from meta
            WHERE meta_key in ('assembly.num_toplevel_seqs', 'genebuild.vega_merge_db','genebuild.version', 'removed_evidence_flag.ensembl_dbversion', 'removed_evidence_flag.uniprot_dbversion','sri_adjust','csi_adjust','marker.priority','liftover.mapping','assembly.web_accession_type','assembly.web_accession_source','xref.timestamp','repeat.analysis','assembly.date'));
-
+$c += $dbh->{'evega'}->do($sql);
 $sql = qq(DELETE from meta
            WHERE meta_key in ('genebuild.id','genebuild.method','genebuild.id','genebuild.start_date','genebuild.initial_release_date','genebuild.last_geneset_update','genebuild.havana_datafreeze_date'));
-$c = $dbh->{'evega'}->do($sql);
-
+$c += $dbh->{'evega'}->do($sql);
+$sql = qq(DELETE from meta WHERE meta_key = 'patch');
+$c += $dbh->{'evega'}->do($sql);
+$support->log_stamped("Deleted $c meta table entries.\n\n");
 
 #add genebuild info
 $support->log_stamped("Updating genebuild meta entries...\n");
@@ -559,7 +561,25 @@ else {
   $support->log("Inserted $c values for meta.assembly.default\n");
 }
 
+#make sure meta table build level matches that in vega and is restricted to tables that have features
+$support->log_stamped("Setting meta buildlevel entries...\n");
+$dbh->{'evega'}->do(qq(DELETE FROM meta WHERE meta_key LIKE '%build.level'));
+$sth =  $dbh->{'vega'}->prepare(qq(SELECT species_id, meta_key, meta_value from meta where meta_key like '%build.level'));
+$sth->execute;
+foreach my $vme (@{$sth->fetchall_arrayref}) {
+  my $table = $vme->[1];
+  $table =~ s/build.level//;
+  my $c = $dbh->{'evega'}->selectrow_array(qq(SELECT count(*) from $table));
+  if ($c) {
+    $sql = qq(INSERT INTO meta values ('',$vme->[0],'$vme->[1]','$vme->[2]'));
+    if (! $support->param('dry_run')) {
+      $dbh->{'evega'}->do($sql);
+    }
+  }
+}
+
 #remove duplicate meta entries
+$support->log_stamped("Removing duplicate meta entries...\n");
 $c = $dbh->{'evega'}->do(qq(CREATE table nondup_meta like meta));
 $c = $dbh->{'evega'}->do(qq(INSERT into nondup_meta (select '',species_id, meta_key, meta_value from meta group by species_id, meta_key, meta_value)));
 $c = $dbh->{'evega'}->do(qq(DELETE from meta));
@@ -571,6 +591,15 @@ $support->log_stamped("Removing any duplicates from attrib tables.\n\n");
 foreach my $t (qw(gene transcript translation seq_region)) {
   $support->remove_duplicate_attribs($dbh->{'evega'},$t);
 }
+
+#remove orphan codon_usage seq_region_attribs since they keep on appearing (come from core dbs) only to be deleted
+$support->log_stamped("Removing orphan codon_usage seq_region_attribs.\n\n");
+$c = $dbh->{'evega'}->do(qq(DELETE sra FROM attrib_type at, seq_region_attrib sra
+                                   LEFT JOIN seq_region sr ON sra.seq_region_id = sr.seq_region_id
+                             WHERE sra.attrib_type_id = at.attrib_type_id
+                               AND at.code = 'codon_table'
+                               AND sr.seq_region_id IS NULL));
+$support->log("Removed $c seq_region_attib entries\n");
 
 # finish logfile
 $support->finish_log;
