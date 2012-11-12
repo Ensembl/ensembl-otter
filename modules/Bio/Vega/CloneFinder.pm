@@ -9,6 +9,8 @@ package Bio::Vega::CloneFinder;
 use strict;
 use warnings;
 
+use Try::Tiny;
+
 # Readonly seems to cause SIGSEGVs at exit, in conjunction with failing eval blocks.
 # This is a shame.  I suspect only arrays and hashes are affected, but all are disabled to be safe.
 # Global 'my' variables IN_CAPS should be Readonly.
@@ -243,10 +245,7 @@ sub _find_by_stable_ids {
 
         # Just imagine: they raise an EXCEPTION to indicate nothing was found. Terrific!
         my $feature;
-        {
-            ## no critic (ErrorHandling::RequireCheckingReturnValueOfEval)
-            eval { $feature = $dba->$adaptor->$fetcher($qname); };
-        }
+        try { $feature = $dba->$adaptor->$fetcher($qname); };
         next unless $feature;
 
         my $feature_slice  = $feature->feature_Slice;
@@ -583,7 +582,7 @@ sub generate_output {
 sub _wrap_search_errors {
     my ($self, $coderef, @args) = @_;
     if ($WRAP_SEARCH_ERRORS) {
-        eval { $self->$coderef(@args); 1; } or return; 
+        try { $self->$coderef(@args); return 1; } or return;
     }
     else {
         $self->$coderef(@args);
