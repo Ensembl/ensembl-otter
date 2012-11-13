@@ -16,14 +16,13 @@ sub new {
 sub features {
     my ($self, $chr, $start, $end) = @_;
 
-    my ( $sam, $chr_prefix ) =
-        @{$self}{qw( -sam -chr_prefix )};
+    my $sam = $self->sam;
+    my $seq_id = $self->seq_id_from_chr($chr);
 
-    $chr = "${chr_prefix}${chr}" if defined $chr_prefix;
     my $features = [
         $sam->features(
             -type   => 'match',
-            -seq_id => $chr,
+            -seq_id => $seq_id,
             -start  => $start,
             -end    => $end,
         )
@@ -31,6 +30,29 @@ sub features {
     warn sprintf "found %d matches\n", scalar @$features;
 
     return $features;
+}
+
+# The seq_ids in many BAM files prepend "chr" to the name of the
+# chromosome so we look for both "$chr" and "chr${chr}".
+
+sub seq_id_from_chr {
+    my ($self, $chr) = @_;
+
+    my $seq_id_hash = { };
+    $seq_id_hash->{$_}++ for $self->sam->seq_ids;
+    for ( $chr, "chr${chr}" ) {
+        return $_ if $seq_id_hash->{$_};
+    }
+
+    croak sprintf "no such seq_id: '%s'", $chr;
+}
+
+# attributes
+
+sub sam {
+    my ($self) = @_;
+    my $sam = $self->{'-sam'};
+    return $sam;
 }
 
 1;
