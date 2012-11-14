@@ -217,7 +217,7 @@ if (! $support->param('filter_biotype')) {
 $support->comma_to_list('filter_biotype');
 
 #loutre seq_region_attributes to transfer or ignore - add new ones here
-my $att_types_wanted = [qw(name toplevel vega_name vega_release vega_export_mod ensembl_name intl_clone_name annotated equiv_asm embl_acc embl_version)];
+my $att_types_wanted = [qw(name toplevel vega_name vega_release vega_export_mod ensembl_name intl_clone_name annotated equiv_asm embl_acc embl_version patch_fix patch_novel)];
 my $att_types_to_ignore = [qw(chr description htg hidden write_access ack)];
 
 # ask user to confirm parameters to proceed
