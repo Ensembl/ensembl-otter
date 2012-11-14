@@ -163,7 +163,7 @@ sub _add_zmap_bam_config {
                 chr   => $slice->ssname,
                 start => $slice->start,
                 end   => $slice->end,
-                ( map { ( $_ => $bam->$_ ) } qw( csver chr_prefix ) ),
+                csver => $bam->csver,
                 file   => $file,
                 strand => $strand,
                 gff_feature_source => $featureset,
@@ -221,17 +221,11 @@ sub generate_blixem_bam_config {
     foreach my $bam (@{$self->bam_list}) {
         # Add a bam fetch method to the config if we don't have one.
         my $csver  = $bam->csver;
-        my $prefix = $bam->chr_prefix;
         my $fetch_name = "bam-fetch-$csver";
-        my $prefix_arg = '';
-        if ($prefix) {
-            $fetch_name .= "-$prefix";
-            $prefix_arg = "-chr_prefix=$prefix ";
-        }
         $config->{$fetch_name} ||= {
             'fetch-mode'    => 'command',
             'command'       => 'bam_get',
-            'args'          => "-dataset=$ds_name -csver=$csver $prefix_arg$common_args",
+            'args'          => "-dataset=$ds_name -csver=$csver $common_args",
             'output'        => 'gff',
         };
 

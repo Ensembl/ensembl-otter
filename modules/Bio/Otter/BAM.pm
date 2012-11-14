@@ -46,11 +46,6 @@ sub csver {
     return $self->{csver};
 }
 
-sub chr_prefix {
-    my ($self) = @_;
-    return $self->{chr_prefix};
-}
-
 sub parent_column {
     my ($self) = @_;
     return $self->{parent_column};
@@ -105,7 +100,6 @@ sub gff_feature_source {
 my $bam_parameters = [ qw(
     file
     csver
-    chr_prefix
     gff_feature_source
     ) ];
 
