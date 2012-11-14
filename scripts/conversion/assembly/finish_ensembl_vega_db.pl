@@ -601,5 +601,14 @@ $c = $dbh->{'evega'}->do(qq(DELETE sra FROM attrib_type at, seq_region_attrib sr
                                AND sr.seq_region_id IS NULL));
 $support->log("Removed $c seq_region_attib entries\n");
 
+#tidy up xrefs with incorrect version (HC noise)
+$support->log_stamped("Setting correct default version for xrefs.\n\n");
+$c = $dbh->{'evega'}->do(qq(UPDATE xref SET version = 0 WHERE version = ''));
+$support->log("Updated versions of $c xrefs\n");
+#tidy up xrefs with info_type (HC noise)
+$support->log_stamped("Setting correct default info_type for xrefs.\n\n");
+$c = $dbh->{'evega'}->do(qq(UPDATE xref SET info_type = 'NONE' WHERE version = ''));
+$support->log("Updated info_type of $c xrefs\n");
+
 # finish logfile
 $support->finish_log;
