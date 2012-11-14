@@ -446,11 +446,11 @@ if ($alt_assembly = $support->param('ensemblassembly') ) {
     if ( my $e_name = $e_attribs->[0]->value) {
       my $e_sr = $esa->fetch_by_region('chromosome',$e_name,'','','',$alt_assembly,);
       unless(defined $e_sr) {
-        $support->log("ensembl_name attribute is not in ensembl for chromosome $v_name, no mappings added\n",2);
+        $support->log("Loutre chromosome $v_name (ensembl_name $e_name) is not in Ensembl, no mappings added\n",2);
         next CHROM;
       }
       my $e_sr_id = $e_sr->get_seq_region_id;
-      if ( (grep { $_->value eq $alt_assembly } @{$l_chrom->get_all_Attributes('equiv_asm')}) || ( $v_name =~ /PATCH/) ) {
+      if ( (grep { $_->value eq $alt_assembly } @{$l_chrom->get_all_Attributes('equiv_asm')}) || ( $support->is_patch($chrom) )) {
 	$support->log("Chromosome $v_name is the same for VEGA and $alt_assembly; adding seq_regions etc mapping from ensembl\n",2);
 	my ($e_assembly_start)  = $edbh->selectrow_array(qq(
                 SELECT min(asm_start)
@@ -467,7 +467,7 @@ if ($alt_assembly = $support->param('ensemblassembly') ) {
                 AND    cs.name != 'chromosome'
                 AND    a.asm_seq_region_id = $e_sr_id));
 	my $e_length = $e_assembly_end - $e_assembly_start + 1;
-	if ( ($v_name !~ /PATCH/) && ($v_length != $e_length) ) {
+	if ( (! $support->is_patch($chrom)) && ($v_length != $e_length) ) {
 	  $support->log("Assembly table entries for chromosome $v_name are different in Vega ($v_assembly_start->$v_assembly_end:$v_length) and Ensembl ($e_assembly_start->$e_assembly_end:$e_length). You might want to check what's done is correct\n",2);
 	}
 #	my ($assembly_start,$assembly_end,$length);
@@ -494,7 +494,7 @@ if ($alt_assembly = $support->param('ensemblassembly') ) {
 	  $support->log("Inserted $c assembly entries\n",3);
 	}
 
-        if ($v_name =~ /HSCHR|PATCH/) {
+        if ($support->is_patch($chrom)) {
           #compare accessions for PATCHES from Ensembl and Vega and warn if they're different
           my @e_patch_names  = $edbh->selectrow_array(qq(
                 SELECT srs.synonym
@@ -502,10 +502,10 @@ if ($alt_assembly = $support->param('ensemblassembly') ) {
                  WHERE srs.seq_region_id = sr.seq_region_id
                    AND sr.name = '$e_name'));
           if (scalar(@e_patch_names > 1)) {
-            $support->log_warning("More than one e! seq_region_synonym found for $v_name, need to alter the code below\n");
+            $support->log_warning("More than one e! seq_region_synonym found for $v_name, need to alter the code below\n",2);
           }
           elsif (! @e_patch_names ) {
-            $support->log_warning("No accession for PATCH $v_name in Ensembl so we don't know if e! and Vega are using the same PATCH!\n");
+            $support->log_warning("No accession for PATCH $v_name in Ensembl so we don't know if e! and Vega are using the same PATCH!\n",2);
           }
           else {
             my ($v_patch_name) = $vdbh->selectrow_array(qq(
@@ -520,19 +520,19 @@ if ($alt_assembly = $support->param('ensemblassembly') ) {
                  AND sr.seq_region_id    = $v_sr_id));
 
             if (! $v_patch_name) {
-              $support->log_warning("No accession for PATCH $v_name in Vega so we don't know if e! and Vega are using the same PATCH!\n");
+              $support->log_warning("No accession for PATCH $v_name in Vega so we don't know if e! and Vega are using the same PATCH!\n",2);
             }
             elsif ($e_patch_names[0] ne $v_patch_name) {
-              $support->log_warning("Accession for PATCH $v_name differs between e! (".$e_patch_names[0].") and Vega ($v_patch_name). This annotation will not be projected into ensembl-vega when you do this step\n");
+              $support->log_warning("Accession for PATCH $v_name differs between e! (".$e_patch_names[0].") and Vega ($v_patch_name). This annotation will not be projected into ensembl-vega when you do this step\n",2);
             }
             else {
-              $support->log("Accessions match - $v_patch_name and ".$e_patch_names[0]."\n",1);
+              $support->log("Accessions match - $v_patch_name\n",2);
             }
           }
         }
       }
       else {
-	$support->log("Chromosome $v_name has no equiv_asm seq_region_attribute (value should be $alt_assembly) so trying to take assembly mappings from loutre\n",2);
+	$support->log("Chromosome $v_name is not a patch nor has it an equiv_asm seq_region_attribute (value should be $alt_assembly) so trying to take assembly mappings from loutre\n",2);
 	my $le_sr_id = $lsa->fetch_by_region('chromosome',$e_name,'','','',$alt_assembly,)->get_seq_region_id;
 	my $l_sr_id  = $l_chrom->get_seq_region_id;
 	my $id_diff  = $e_sr_id-$le_sr_id;
@@ -608,7 +608,7 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
   }
 
   #add non_ref seq_region_attributes to Vega PATCH chromosomes
-  if ($loutre_name =~ /patch/i) {
+  if ( $support->is_patch($chrom) ) {
     $support->log("Adding non-ref seq_region_attrib for patch chromosome $loutre_name",1);
     if (! $support->param('dry_run')) {
       $sth2->execute($sr_id);
