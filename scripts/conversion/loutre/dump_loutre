@@ -590,7 +590,7 @@ if ( ! exists($current_vega_tables{'author'} )) {
 #################################################################
 
 ### SIZE # MHC.* # 0.5 ###
-### SIZE # chr(\d+|X|Y)-\d+ # 1 ###
+### SIZE # chr(\d+|X|Y)[-_]\d+ # 1 ###
 ### SIZE # # 0.1 ###
 ### RUN # $chr_names_wanted ###
 
