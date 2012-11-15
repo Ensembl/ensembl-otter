@@ -854,6 +854,9 @@ push @sql_fixes, "DELETE from repeat_feature where repeat_end < 1;\n";
 #set all logic_names to be lowercase
 push @sql_fixes, "UPDATE analysis set logic_name = lower(logic_name);\n";
 
+#fix schema for author_group
+push @sql_fixes, "UPDATE author_group SET group_email=null WHERE group_email='';\n";
+
 if (! $support->param('dry_run')) {
   $support->log("\nFixing meta table, updating gene / transcript types\n");
   foreach my $fix (@sql_fixes) {
