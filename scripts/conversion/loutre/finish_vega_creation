@@ -857,13 +857,16 @@ push @sql_fixes, "UPDATE analysis set logic_name = lower(logic_name);\n";
 #fix schema for author_group
 push @sql_fixes, "UPDATE author_group SET group_email=null WHERE group_email='';\n";
 
+#delete 'not for Vega' transcript_attribs on LOF genes
+push @sql_fixes, "DELETE ta FROM gene g, transcript t, transcript_attrib ta WHERE g.gene_id = t.gene_id AND t.transcript_id = ta.transcript_id AND g.source = 'LOF'AND ta.value = 'not for VEGA';\n";
+
 if (! $support->param('dry_run')) {
   $support->log("\nFixing meta table, updating gene / transcript types\n");
   foreach my $fix (@sql_fixes) {
     eval {
       if (my $r = $vdbh->do("$fix")) {
 	if ($r eq '0E0') {
-	  $support->log("No rows affected for $fix");
+	  $support->log("No rows affected for $fix",2);
 	}
 	else {
 	  $support->log("Updated $r rows for $fix",1);
@@ -926,9 +929,9 @@ if ( ! $support->param('dry_run')) {
     my @cmds = (
       "mysql -u $user -p$pass -h $host -P $port -e 'drop database if exists $new_dbname'",
       "mysql -u $user -p$pass -h $host -P $port -e 'create database $new_dbname'",
-    "mysqldump --opt -u $user -p$pass -h $host -P $port $dbname >/tmp/fvc.$$.sql",
-    "mysql -u $user -p$pass -h $host -P $port $new_dbname </tmp/fvc.$$.sql",
-    "rm /tmp/fvc.$$.sql"
+      "mysqldump --opt -u $user -p$pass -h $host -P $port $dbname >/tmp/fvc.$$.sql",
+      "mysql -u $user -p$pass -h $host -P $port $new_dbname </tmp/fvc.$$.sql",
+      "rm /tmp/fvc.$$.sql"
     );
     foreach $_ (@cmds) {
       $support->log("Running: $_\n");
