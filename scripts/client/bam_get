@@ -27,7 +27,6 @@ my @options_specs = qw(
     start=i
     end=i
     gff_feature_source=s
-    chr_prefix=s
     gff_seqname=s
     );
 
@@ -66,7 +65,6 @@ my (
     $start,
     $end,
     $gff_feature_source,
-    $chr_prefix,
     $gff_seqname
     ) = @{$options}{@keys};
 
@@ -76,10 +74,7 @@ my $sam = Bio::DB::Sam->new
      # -fasta => $fasta_path,
     );
 
-my $bam_fetch = Bio::Otter::Fetch::BAM->new(
-    -sam        => $sam,
-    -chr_prefix => $chr_prefix,
-    );
+my $bam_fetch = Bio::Otter::Fetch::BAM->new( -sam => $sam );
 
 sub gff_escape {
     # escapes a minimal set of characters
