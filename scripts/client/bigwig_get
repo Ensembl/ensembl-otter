@@ -28,7 +28,6 @@ my @options_specs = qw(
     end=i
     strand=s
     gff_feature_source=s
-    chr_prefix=s
     gff_seqname=s
     );
 
@@ -70,7 +69,6 @@ my (
     $end,
     $strand,
     $gff_feature_source,
-    $chr_prefix,
     $gff_seqname
     ) = @{$options}{@keys};
 
@@ -79,10 +77,7 @@ my $strand_field =
 
 my $bigwig = Bio::DB::BigWig->new( -bigwig => $file );
 
-my $bigwig_fetch = Bio::Otter::Fetch::BigWig->new(
-    -bigwig     => $bigwig,
-    -chr_prefix => $chr_prefix,
-    );
+my $bigwig_fetch = Bio::Otter::Fetch::BigWig->new( -bigwig => $bigwig );
 
 sub gff_escape {
     # escapes a minimal set of characters
