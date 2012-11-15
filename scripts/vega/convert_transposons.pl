@@ -17,7 +17,7 @@ my $dbhost = 'ensdb-web-17';
 my $dbport = 5317;
 my $dbuser = 'ensadmin';
 my $dbpass = 'ensembl';
-my $dbname = 'vega_danio_rerio_20120611_67_Zv9';
+my $dbname;
 
 my $hm = GetOptions(
         'dbhost:s' => \$dbhost,
@@ -25,8 +25,11 @@ my $hm = GetOptions(
         'dbuser:s' => \$dbuser,
         'dbpass:s' => \$dbpass,
         'dbport:s' => \$dbport,
+        'dbname=s' => \$dbname,
         'repeatclass:s' => \$repeat_class,
 );
+
+die "--dbanme is mandatory" unless $dbname;
 
 # ?? insert into repeat_class values (236343,'novel_transposon','novel_transposon',\N,\N);
 # ?? insert into repeat_consensus values (236343,'novel_transposon','novel_transposon','transposon',\N);
