@@ -104,15 +104,6 @@ sub logger {
     return Log::Log4perl->get_logger;
 }
 
-sub menu_bar {
-    my ($self, $bf) = @_;
-
-    if ($bf) {
-        $self->{'_menu_bar'} = $bf;
-    }
-    return $self->{'_menu_bar'};
-}
-
 sub clone_menu {
     my ($self, $clone_menu) = @_;
 
@@ -347,39 +338,10 @@ sub fetch_SubSeqs_by_locus_name {
 
 #------------------------------------------------------------------------------------------
 
-sub make_menu {
-    my ($self, $name, $pos, @rest) = @_;
-
-    $pos ||= 0;
-
-    my $menu_frame = $self->menu_bar
-        or confess "No menu_bar";
-    my $button = $menu_frame->Menubutton(
-        -text       => $name,
-        -underline  => $pos,
-        #-padx       => 8,
-        #-pady       => 6,
-        );
-    $button->pack(
-        -side       => 'left',
-        );
-    my $menu = $button->Menu(
-        -tearoff    => 0,
-        @rest,
-    );
-    $button->configure(
-        -menu       => $menu,
-    );
-
-    return $menu;
-}
-
 sub populate_menus {
     my ($self) = @_;
 
-    my $menu_frame = $self->menu_bar
-        or confess "No menu_bar";
-    my $top = $menu_frame->toplevel;
+    my $top = $self->top_window;
 
     # File menu
     my $file = $self->make_menu('File');
