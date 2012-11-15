@@ -375,6 +375,19 @@ sub populate_menus {
     $top->bind('<Control-r>', $resync_command);
     $top->bind('<Control-R>', $resync_command);
 
+    # Debug options: get (current!) session directory name
+    my $debug_menu = $file->Menu(-tearoff => 0);
+    $file->add('cascade', -menu => $debug_menu,
+               -label => 'Debug', -underline => 0);
+    $debug_menu->add('command',
+                     -label => 'Copy directory name to selection',
+                     -underline => 5,
+                     -command => [ $self, '_clipboard_setup', 0 ]);
+    $debug_menu->add('command',
+                     -label => 'Copy host:directory to selection',
+                     -underline => 5,
+                     -command => [ $self, '_clipboard_setup', 1 ]);
+
     # Close window
     my $exit_command = sub {
         $self->exit_save_data or return;
@@ -1185,6 +1198,26 @@ sub resync_with_db {
 
     return;
 }
+
+
+sub _clipboard_setup {
+    my ($self, $with_host) = @_;
+    # use toplevel to hold selection, else we need an invisible widget
+
+    $self->top_window->SelectionHandle(''); # clear old
+    $self->top_window->SelectionHandle([ $self, '_clipboard_contents', $with_host ]);
+    $self->top_window->SelectionOwn();
+    return ();
+}
+
+sub _clipboard_contents {
+    my ($self, $with_host, $offset, $maxlen) = @_;
+    my $host = $self->AceDatabase->Client->client_hostname;
+    my $txt = $self->AceDatabase->home;
+    $txt = "$host:$txt" if $with_host;
+    return substr($txt, $offset, $maxlen); # substr per selection handler spec
+}
+
 
 sub max_seq_list_length {
     return 1000;
