@@ -570,6 +570,18 @@ sub populate_menus {
                -command        => sub {$self->show_lcd_dialog()},
     );
 
+    # Show selected subsequence in ZMap
+    my $show_subseq = [ $self, 'show_subseq' ];
+    $tools_menu->add
+      ('command',
+       -label          => 'Hunt in Zmap',
+       -command        => $show_subseq,
+       -accelerator    => 'Ctrl+H',
+       -underline      => 0,
+      );
+    $top->bind('<Control-h>',   $show_subseq);
+    $top->bind('<Control-H>',   $show_subseq);
+
     $subseq->bind('<Destroy>', sub{
         $self = undef;
     });
@@ -595,6 +607,20 @@ sub show_lcd_dialog {
     $lc->show_filters;
     $top->deiconify;
     $top->raise;
+
+    return;
+}
+
+sub show_subseq {
+    my ($self) = @_;
+
+    my @subseq = $self->list_selected_subseq_objs;
+    if (1 == @subseq) {
+        my $success = $self->zmap->zoom_to_subseq($subseq[0]);
+        $self->message("ZMap: zoom to subsequence failed") unless $success;
+    } else {
+        $self->message("Zoom to subsequence requires a selection of one item");
+    }
 
     return;
 }
@@ -1218,14 +1244,8 @@ sub _default_locus_prefix {
 sub edit_new_subsequence {
     my ($self) = @_;
 
-    my @sub_names = $self->list_selected_subseq_names;
+    my @subseq = $self->list_selected_subseq_objs;
     my $clip      = $self->get_clipboard_text || '';
-
-    my( @subseq );
-    foreach my $sn (@sub_names) {
-        my $sub = $self->get_SubSeq($sn);
-        push(@subseq, $sub);
-    }
 
     my ($new);
     if (@subseq) {
@@ -2241,6 +2261,11 @@ sub list_selected_subseq_names {
     my ($self) = @_;
 
     return $self->canvas_obj_to_subseq_names($self->list_selected);
+}
+
+sub list_selected_subseq_objs {
+    my ($self) = @_;
+    return map { $self->get_SubSeq($_) } $self->list_selected_subseq_names;
 }
 
 sub list_was_selected_subseq_names {
