@@ -194,13 +194,31 @@ foreach my $chr (@chr_sorted) {
          || ($new_mgi_name =~ /^D\d{1,2}[A-Z]/)
          || ($new_mgi_name =~ /^D[X|Y][A-Z]\d{6}/)
          || ($new_mgi_name =~ /^[A-Z]\d{5}/) ) {
-        push @ignored_new_names, [$gsi,$display_name,$new_mgi_name,$biotype];
+        push @ignored_new_names, [$gsi,$display_name,$new_mgi_name,$biotype,$chr];
         $support->log_verbose("Ignoring $new_mgi_name since wrong format\n",1);
       }
       else {
         my $desc    = $rec->{'desc'};
         $support->log_verbose("Consider this name ($new_mgi_name) for an update\n",1);
-        push @potential_names, [$gsi,$display_name,$new_mgi_name,$desc,$biotype];
+        push @potential_names, [$gsi,$display_name,$new_mgi_name,$desc,$biotype,$chr];
+
+        #look for other genes that share the same name and are on non-reference slices, ie should have their names updated as well
+        my @genes = @{$ga->fetch_all_by_display_label($display_name)};
+        if (scalar(@genes) > 1) {
+          foreach my $g (@genes) {
+            my $other_gsi = $g->stable_id;
+            next if $other_gsi eq $gsi;
+            my $slice = $g->slice;
+            my $sr = $slice->seq_region_name;
+            if ($slice->is_reference()) {
+              $support->log_warning("Gene $other_gsi shares a name ($display_name) but is on region $sr, a reference slice\n");
+            }
+            else {
+              $support->log("Consider this other gene ($other_gsi on $sr) for an update to $new_mgi_name\n",1);
+              push @potential_names, [$other_gsi,$display_name,$new_mgi_name,$desc,$biotype,$sr];
+            }
+          }
+        }
       }
     }
   }
@@ -221,9 +239,9 @@ else {
 
 $c = scalar(@potential_names);
 $support->log("\nNames to consider)($c):\n\n");
-$support->log(sprintf("%-25s%-30s%-20s%-20s%-20s\n", qw(STABLE_ID BIOTYPE OLD_NAME NEW_NAME NEW_DESC)));
+$support->log(sprintf("%-25s%-30s%-20s%-20s%-20s%-20s\n", qw(STABLE_ID BIOTYPE SEQ_REGION OLD_NAME NEW_NAME NEW_DESC)));
 foreach my $rec (@potential_names) {
-  $support->log(sprintf("%-25s%-30s%-20s%-20s%-20s\n", $rec->[0], $rec->[4], $rec->[1], $rec->[2], $rec->[3]));
+  $support->log(sprintf("%-25s%-30s%-20s%-20s%-20s%-20s\n", $rec->[0], $rec->[4], $rec->[5], $rec->[1], $rec->[2], $rec->[3]));
 }
 
 $support->log("\nAdded $add_c MGI xrefs\n");
