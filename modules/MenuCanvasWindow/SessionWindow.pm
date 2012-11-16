@@ -382,11 +382,11 @@ sub populate_menus {
     $debug_menu->add('command',
                      -label => 'Copy directory name to selection',
                      -underline => 5,
-                     -command => [ $self, '_clipboard_setup', 0 ]);
+                     -command => sub { $self->_clipboard_setup(0) });
     $debug_menu->add('command',
                      -label => 'Copy host:directory to selection',
                      -underline => 5,
-                     -command => [ $self, '_clipboard_setup', 1 ]);
+                     -command => sub { $self->_clipboard_setup(1) });
 
     # Close window
     my $exit_command = sub {
@@ -1205,7 +1205,7 @@ sub _clipboard_setup {
     # use toplevel to hold selection, else we need an invisible widget
 
     $self->top_window->SelectionHandle(''); # clear old
-    $self->top_window->SelectionHandle([ $self, '_clipboard_contents', $with_host ]);
+    $self->top_window->SelectionHandle(sub { $self->_clipboard_contents($with_host, @_) });
     $self->top_window->SelectionOwn();
     return ();
 }
