@@ -180,7 +180,7 @@ if ($support->param('prune') and $support->user_proceed('Would you really like t
   my $num = 0;
   $support->log("Deleting  external xrefs...\n");
   my $cond = $refs_to_delete{$support->param('xrefformat')}
-    || qq(not in ('Vega_gene','Vega_transcript','Vega_translation','Interpro','CCDS','Havana_gene','ENST','ENST_CDS','GO','ENST_ident','IMGT_HLA','IMGT/GENE_DB'));
+    || qq(not in ('Vega_gene','Vega_transcript','Vega_translation','Interpro','CCDS','Uniprot/SWISSPROT','Havana_gene','ENSG','ENST','ENST_CDS','ENST_ident','IMGT_HLA','IMGT/GENE_DB','GO','Quick_Go','Quick_Go_Evidence'));
 	
   $num = $dba->dbc->do(qq(
            DELETE x
