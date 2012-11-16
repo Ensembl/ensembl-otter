@@ -1,4 +1,3 @@
-
 package TransientWindow::LogWindow;
 
 use strict;
@@ -13,10 +12,9 @@ use Net::Domain qw{ hostfqdn };
 
 use base qw( TransientWindow );
 
-my $email     = q(anacode);
-my $domain    = q(sanger.ac.uk);
-my @mail      = qw(smtp Server localhost);
-my $loggingOn = 0;
+my @mailto; # file global, init-once
+__mailto_init();
+
 
 sub initialise {
     my ($self, @args) = @_;
@@ -74,6 +72,12 @@ sub initialise {
         -text    => 'Report bug',
         -command => $email_dev,
     )->pack(-side => 'left');
+
+    $but_frame->Label(-text => ' for ')->pack(-side => 'left');
+    my $dest = $but_frame->SmartOptionmenu
+      (-options => \@mailto,
+       -variable => \$self->{_mailto},
+      )->pack(-side => 'left');
 
     $but_frame->Button(
         -text    => 'Close',
@@ -181,10 +185,38 @@ sub get_log_contents {
     return $txt->get('end - 250 lines', 'end');
 }
 
+sub __mailto_init {
+    my $domain    = '@sanger.ac.uk';
+    @mailto =
+      ([ 'The Otterlace application, pipeline and data' =>  "anacode$domain" ],
+       [ 'The ZMap application'                         =>     "zmap$domain" ],
+       [ 'Blixem, Dotter and Belvu applications'        => "seqtools$domain" ],
+       [ 'All bugs found during testing'                => "annotest$domain" ]);
+
+    # We may get clues that tickets should go to annotest or developer.
+    # May only work for internal Linux.  RT#267390 may bring improvement.
+    my $clue = $ENV{OTTERLACE_RAN_AS} || '';
+    $clue =~ s{otterlace}{otter}g;
+
+    @mailto[0,3] = @mailto[3,0]
+      if $clue =~ m{\botter_test|test_otter\b};
+
+    my $me = getpwuid($<);
+    unshift @mailto, [ 'Myself' => "$me$domain" ]
+      if $clue =~ m{\botter_dev|dev_otter\b};
+
+    return ();
+}
+
+sub _mailto {
+    my ($self) = @_;
+    return $self->{_mailto}; # set by SmartOptionmenu $dest
+}
+
 sub mail_contents {
     my ($self) = @_;
 
-    my $to      = $email . '@' . $domain;
+    my $to      = $self->_mailto();
     my $file    = hostfqdn() . ":" . $self->current_logfile;
     my $subj    = "otterlace error: <PLEASE REPLACE WITH SHORT DESCRIPTION>";
     my $mess    = $self->get_log_contents();
@@ -192,6 +224,8 @@ sub mail_contents {
         "Program version: " . Bio::Otter::Git->param('head') . "\n"
         . "Program script name: $0\n"
         . "Log file: $file\n";
+    $info .= "Program ran as: $ENV{OTTERLACE_RAN_AS}\n"
+      if $ENV{OTTERLACE_RAN_AS};
 
     open_uri("mailto:$to", {
         subject => $subj,
