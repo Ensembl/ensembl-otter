@@ -16,6 +16,7 @@ if $otterlace_installed || [ -z "$OTTER_HOME" ] ; then
     #     and we want to resolve all links to reduce load on NFS
     if the_real_me="$( readlink -f "$0" 2>/dev/null )"; then
         # Canonicalised: all links resolved
+        OTTERLACE_RAN_AS="$0 -> $( readlink -n "$0" ) -> $the_real_me"
         . "$( dirname "$the_real_me" )/otterlace_env.sh"
     else
         # "readlink -f" doesn't work.  Probably MacOS, so
@@ -25,9 +26,13 @@ if $otterlace_installed || [ -z "$OTTER_HOME" ] ; then
         if [ -z "${my_real_dir}" ] ; then
             my_real_dir="${my_dir}"
         fi
+        OTTERLACE_RAN_AS="$0 -> $my_real_dir"
         . "${my_real_dir}/otterlace_env.sh"
     fi
 fi
+
+# exported as an optional hint, for the benefit of LogWindow
+export OTTERLACE_RAN_AS
 
 # sanity check
 if [ -z "$OTTER_HOME" ]
