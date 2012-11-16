@@ -158,7 +158,15 @@ sub show_output {
 
     my $fh  = $self->logfile_handle;
     my $txt = $self->readonly_text;
-    $txt->insert('end', <$fh>);
+
+    # Logfile can contain binary junk from Otterlace or child
+    # processes.  We can't prevent it & Tk::ROText cannot accept it.
+    # => Quote here
+    my $add = join '', <$fh>;
+    $add =~ s{\\x([0-9a-fA-F][0-9a-fA-F])}{\\5Cx$1}g; # Literal \x00 to \x5Cx00
+    $add =~ s{([^ -~\n])}{sprintf('\\x%02X', ord($1))}eg; # quote non-ASCII
+
+    $txt->insert('end', $add);
     $txt->yview('end');
 
     return;
