@@ -33,7 +33,8 @@ Specific options:
 =head1 DESCRIPTION
 
 Parses a file from MGI and adds xrefs for any new MGI names. Reports on names
-that we don't use so these can be sent back to Havana.
+that we don't use so these can be sent back to Havana. Checks if old names are also
+attached to genes on non-reference slices (ie DIL regions)
 
 File to use is ftp://ftp.informatics.jax.org/pub/reports/MRK_VEGA.rpt
 
@@ -214,7 +215,7 @@ foreach my $chr (@chr_sorted) {
               $support->log_warning("Gene $other_gsi shares a name ($display_name) but is on region $sr, a reference slice\n");
             }
             else {
-              $support->log("Consider this other gene ($other_gsi on $sr) for an update to $new_mgi_name\n",1);
+              $support->log_verbose("Consider this other gene ($other_gsi on $sr) for an update to $new_mgi_name\n",1);
               push @potential_names, [$other_gsi,$display_name,$new_mgi_name,$desc,$biotype,$sr];
             }
           }
