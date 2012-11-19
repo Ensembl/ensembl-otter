@@ -337,7 +337,7 @@ $support->log("\nChecking sources of genes...\n");
 my %all_logic_names = (
   'havana' => ['otter',          'Havana',    'vega@sanger.ac.uk'],
   'WU'     => ['otter_external', 'Washu',     'jspieth@watson.wust'],
-  'LOF'    => ['otter_lof',      'LOF',       'vega@sanger.ac.uk'],
+  'LOF'    => ['otter_lof',      'Havana',    'vega@sanger.ac.uk'],
   'KO'     => ['otter_eucomm',   'Havana',    'vega@sanger.ac.uk'],
 );
 
