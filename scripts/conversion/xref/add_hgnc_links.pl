@@ -67,6 +67,7 @@ use Getopt::Long;
 use Pod::Usage;
 use Bio::EnsEMBL::Utils::ConversionSupport;
 use LWP::UserAgent;
+use Storable;
 use Data::Dumper;
 
 my $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
@@ -93,7 +94,25 @@ my $ga = $dba->get_GeneAdaptor;
 my $ea  = $dba->get_DBEntryAdaptor();
 
 #get info from HGNC
-my $records = &parse_hgnc;
+my $records;
+my $xref_file = $support->param('logpath')."-hgnc_update-parsed_records.file";
+if (-e $xref_file) {
+  if ($support->user_proceed("Read xref records from a previously saved files - $xref_file ?\n")) {
+    $records = retrieve($xref_file);
+  }
+  #or parse..
+  else {
+    $support->log_stamped("Reading xref input files...\n");
+    $records = &parse_hgnc;
+    store($records,$xref_file);
+  }
+}
+else {
+  $support->log_stamped("Reading xref input files...\n");
+  $records = &parse_hgnc;
+  store($records,$xref_file);
+}
+#warn Dumper($records);
 
 #create backup first time around
 my %tables;
@@ -112,7 +131,7 @@ if ($support->param('prune') and $support->user_proceed('Would you really like t
   $dbh->do(qq(INSERT INTO object_xref SELECT * FROM backup_uhgncl_object_xref));
 }
 
-my (@potential_names,@ignored_new_names,@hgnc_errors);
+my (@potential_names,@potential_biotype_mismatches,@ignored_new_names,@hgnc_errors);
 my $add_c = 0;
 foreach my $gsi (keys %$records) {
   my $gene = $ga->fetch_by_stable_id($gsi);
@@ -204,7 +223,7 @@ foreach my $gsi (keys %$records) {
     $support->log_warning("Failed to store HGNC xref for gene $display_name ($gsi)\n");
   }
 
-  my $desc    = $hgnc_rec->{'desc'};
+  my $desc    = $hgnc_rec->{'description'};
   my $biotype = $gene->biotype;
   my $sr      = $gene->seq_region_name;
 
@@ -213,24 +232,31 @@ foreach my $gsi (keys %$records) {
     push @ignored_new_names, [$gsi,$display_name,$new_hgnc_name,$desc,$biotype,$sr];
   }
   else {
-    $support->log_verbose("Consider this name ($new_hgnc_name) for an update\n",1);
-    push @potential_names, [$gsi,$display_name,$new_hgnc_name,$desc,$biotype,$sr];
+    if ( $hgnc_rec->{'type'} eq 'gene with protein product') {
+      $support->log_verbose("Consider this name ($new_hgnc_name) for an update\n",1);
+      push @potential_names, [$gsi,$biotype,$sr,$display_name,$new_hgnc_name,$desc];
 
-    #look for other genes that share the same name and are on non-reference slices, ie should have their names updated as well
-    if (scalar(@vega_genes) > 1) {
-      foreach my $g (@vega_genes) {
-        my $other_gsi = $g->stable_id;
-        next if $other_gsi eq $gsi;
-        my $slice = $g->slice;
-        my $sr = $slice->seq_region_name;
-        if ($slice->is_reference()) {
-          $support->log_warning("Gene $other_gsi shares a name ($display_name) but is on region $sr, a reference slice\n");
-        }
-        else {
-          $support->log_verbose("Consider this other gene ($other_gsi on $sr) for an update to $new_hgnc_name\n",1);
-          push @potential_names, [$other_gsi,$display_name,$new_hgnc_name,$desc,$biotype,$sr];
+      #look for other genes that share the same name and are on non-reference slices, ie should have their names updated as well
+      if (scalar(@vega_genes) > 1) {
+        foreach my $g (@vega_genes) {
+          my $other_gsi = $g->stable_id;
+          next if $other_gsi eq $gsi;
+          my $slice = $g->slice;
+          my $sr = $slice->seq_region_name;
+          if ($slice->is_reference()) {
+            $support->log_warning("Gene $other_gsi shares a name ($display_name) but is on region $sr, a reference slice\n");
+          }
+          else {
+            $support->log_verbose("Consider this other gene ($other_gsi on $sr) for an update to $new_hgnc_name\n",1);
+            push @potential_names, [$other_gsi,$biotype,$sr,$display_name,$new_hgnc_name,$desc];
+          }
         }
       }
+    }
+    else {
+      my $hgnc_biotype = $hgnc_rec->{'type'};
+      $support->log_verbose("Biotype mismatch as well as name mismatch between Vega and HGNC ($hgnc_biotype) for $gsi ($new_hgnc_name)\n",1);
+      push @potential_biotype_mismatches, [$gsi,$biotype,$hgnc_biotype,$sr,$display_name,$new_hgnc_name,$desc];
     }
   }
 }
@@ -249,11 +275,18 @@ else {
   $support->log("\nThere are $c ignored names, to see these rerun in verbose mode\n\n");
 }
 
+my $c = scalar(@potential_biotype_mismatches);
+$support->log("\nBiotype mismatches to consider)($c):\n\n");
+$support->log(sprintf("%-25s%-25s%-25s%-20s%-20s%-20s%-20s\n", qw(STABLE_ID VEGA_BIOTYPE HGNC_BIOTYPE SEQ_REGION OLD_NAME NEW_NAME NEW_DESC)));
+foreach my $rec (sort { $a->[3] <=> $b->[3] } @potential_biotype_mismatches) {
+  $support->log(sprintf("%-25s%-25s%-25s%-20s%-20s%-20s%-20s\n", $rec->[0], $rec->[1], $rec->[2], $rec->[3], $rec->[4], $rec->[5], $rec->[6]));
+}
+
 my $c = scalar(@potential_names);
 $support->log("\nNames to consider)($c):\n\n");
-$support->log(sprintf("%-25s%-30s%-20s%-20s%-20s\n", qw(STABLE_ID BIOTYPE SEQ_REGION OLD_NAME NEW_NAME NEW_DESC)));
-foreach my $rec (sort { $a->[5] <=> $b->[5] } @potential_names) {
-  $support->log(sprintf("%-25s%-30s%-20s%-20s%-20s\n", $rec->[0], $rec->[4], $rec->[5], $rec->[1], $rec->[2], $rec->[3]));
+$support->log(sprintf("%-25s%-30s%-20s%-20s%-20s%-20s\n", qw(STABLE_ID VEGA_BIOTYPE SEQ_REGION OLD_NAME NEW_NAME NEW_DESC)));
+foreach my $rec (sort { $a->[2] <=> $b->[2] } @potential_names) {
+  $support->log(sprintf("%-25s%-30s%-20s%-20s%-20s%-20s\n", $rec->[0], $rec->[1], $rec->[2], $rec->[3], $rec->[4], $rec->[5]));
 }
 
 $support->finish_log;
@@ -265,7 +298,7 @@ sub parse_hgnc {
   $support->log_stamped("Parsing HGNC for links and descriptions...\n", 1);
   my $url = "http://www.genenames.org/cgi-bin/hgnc_downloads.cgi?" .
             "title=HGNC+output+data&col=gd_hgnc_id&col=gd_app_sym&" .
-            "col=gd_app_name&col=gd_vega_ids&status=Approved&status_opt=2&" .
+            "col=gd_app_name&col=gd_locus_type&col=gd_vega_ids&status=Approved&status_opt=2&" .
             "where=&order_by=gd_app_sym_sort&format=text&limit=&submit=submit&" .
             ".cgifields=&.cgifields=chr&.cgifields=status&.cgifields=hgnc_dbtag";
   my $ua = LWP::UserAgent->new;
@@ -289,6 +322,7 @@ sub parse_hgnc {
     'HGNC ID'         => 'hgnc_pid',
     'Approved Symbol' => 'hgnc_symbol',
     'Approved Name'   => 'description',
+    'Locus Type'      => 'type',
     'VEGA IDs'        => 'vega_id',
   );
 
