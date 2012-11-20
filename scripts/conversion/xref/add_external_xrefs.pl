@@ -984,6 +984,10 @@ sub parse_mgi {
             push @{$xrefs->{$marker_symbol}{$db}}, $acc .'||'. $acc ;
           }
         }
+        elsif ( $db eq 'RefSeq_peptide') {
+          $db = 'RefSeq_peptide_predicted' if ($acc =~ /^XP_/);
+          push @{$xrefs->{$marker_symbol}{$db}}, $acc .'||'. $acc ;
+        }
       }
       push @{ $lcmap->{lc($marker_symbol)} }, $marker_symbol unless $lcmap->{lc($marker_symbol)};
     }
