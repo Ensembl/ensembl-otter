@@ -149,7 +149,7 @@ sub main_tests {
     }
 
     local $ENV{DOCUMENT_ROOT} = '/nfs/WWWdev/SANGER_docs/htdocs';
-    my $tmp_dir = File::Temp->newdir;
+    my $tmp_dir = File::Temp->newdir('OtterLaceOnTheFly.t.XXXXXX');
     my $at_cache = setup_accession_type_cache($tmp_dir->dirname);
 
     while (my ($species, $regions) = each %species_tests) {

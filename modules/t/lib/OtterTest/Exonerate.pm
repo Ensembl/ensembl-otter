@@ -14,6 +14,7 @@ use strict;
 use warnings;
 
 use File::Basename;
+use File::Temp 'tempfile';
 use Log::Log4perl;
 
 # pipeline configuration
@@ -82,11 +83,14 @@ sub initialise {
 
 sub write_seq_file {
     my ($self) = @_;
-    my $query_file   = "/tmp/query_seq.$$.fa";
+
     # Write out the query sequence
     my $seq = $self->query_seq();
     if(@$seq) {
-        my $query_out = Hum::FastaFileIO->new("> $query_file");
+        my ($query_fh, $query_file) = tempfile
+          ('query_seq.XXXXXX', SUFFIX => '.fa', TMPDIR => 1, UNLINK => 1);
+
+        my $query_out = Hum::FastaFileIO->new($query_fh); # accepts GLOB type fh
         $query_out->write_sequences(@$seq);
         $query_out = undef;
 
