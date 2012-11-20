@@ -33,7 +33,9 @@ sub _module_name {
 #
 foreach my $class (keys %TYPE_CLASS) {
     my $module = __PACKAGE__->_module_name($class);
-    eval "require $module" or die "Couldn't load $module"; ## no critic (ProhibitStringyEval)
+    ## no critic (ProhibitStringyEval)
+    ## no critic (Anacode::ProhibitEval)
+    eval "require $module" or die "Couldn't load $module";
 }
 
 sub new {
