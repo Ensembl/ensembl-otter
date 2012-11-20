@@ -5,6 +5,7 @@
 use strict;
 use warnings;
 use Getopt::Long 'GetOptions';
+use File::Temp;
 
 {
     my $tag = 'transcript';
@@ -20,11 +21,12 @@ use Getopt::Long 'GetOptions';
     
     my @before_tran = sort {$$a cmp $$b} $before->get_subtags($tag);
     my  @after_tran = sort {$$a cmp $$b}  $after->get_subtags($tag);
-    
-    my $before_tmp = "/tmp/xml.$$.before";
-    my  $after_tmp = "/tmp/xml.$$.after";
-    END{ unlink($before_tmp, $after_tmp) if $before_tmp; }
-    
+
+    my ($before_tmp, $after_tmp) = map {
+        File::Temp->new
+            (TEMPLATE => 'xml.XXXXXX', TMPDIR => 1, SUFFIX => ".$_")
+        } qw( before after );
+
     print_xml($before_tmp, @before_tran);
     print_xml( $after_tmp,  @after_tran);
     
@@ -34,11 +36,12 @@ use Getopt::Long 'GetOptions';
 }
 
 sub print_xml {
-    my( $file, @data ) = @_;
+    my( $fh, @data ) = @_;
     
-    open FILE, "> $file" or die "Can't write to '$file' : $!";
-    print FILE map $$_, @data;
-    close FILE;
+    print {$fh} map $$_, @data
+      or die "print{$fh} failed: $!";
+    close $fh
+      or die "close($fh) failed: $!";
 }
 
 sub get_file {
@@ -50,6 +53,8 @@ sub get_file {
     close FILE;
     return OtterParse->new(\$str);
 }
+
+
 
 package OtterParse;
 
