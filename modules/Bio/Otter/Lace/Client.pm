@@ -396,17 +396,20 @@ sub authorize {
     my $response = $self->request($req);
     if ($response->is_success) {
         # Cookie will have been given to UserAgent
-        warn sprintf "Authorized OK: %s\n",
-            $response->status_line;
+        warn sprintf("Authenticated as %s: %s\n",
+                     $self->author, $response->status_line);
         $self->save_CookieJar;
         return 1;
     } else {
         my $content = $response->decoded_content;
-        my $msg = sprintf "Authorize failed: %s (%s)\n",
-            $response->status_line, $content;
+        warn sprintf("Authentication as %s failed: %s (((%s)))\n",
+                     $self->author, $response->status_line, $content);
+        # log the detail - content may be large
+        my $msg = sprintf("Authentication as %s failed: %s\n",
+                          $self->author, $response->status_line);
         if ($content =~ m{<title>Sanger Single Sign-on login}) {
             # Some common special cases
-            if ($content =~ m{<P>(Invalid account details\. Please try again)</P>}i) {
+            if ($content =~ m{<P>(Invalid account details\. Please try again|Please enter your login and password to authenticate)</P>}i) {
                 $msg = "Login failed: $1";
             } elsif ($content =~
                      m{The account <b>(.*)</b> has been temporarily locked}) {
@@ -956,6 +959,18 @@ sub _make_DataSet {
 
 sub get_server_otter_config {
     my ($self) = @_;
+
+    # Is user associated with the cookiejar the one configured?
+    # Done here because it's the first action of Otterlace.
+    my $who_am_i = $self->do_authentication;
+    if ($who_am_i ne $self->author) {
+        my $a = $self->author;
+        warn "Clearing existing cookie for author='$who_am_i'.  Configuration is for author='$a'\n";
+        $self->get_CookieJar->clear;
+    } else {
+        # This shows authentication AND authorization
+        warn "Authorised as $who_am_i\n";
+    }
 
     my $content = $self->http_response_content(
         'GET',
