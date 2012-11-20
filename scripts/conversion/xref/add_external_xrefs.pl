@@ -263,7 +263,7 @@ else {
 
 if ( $support->param('verbose') && $support->param('dry_run')) {
   $support->log("Parsed xrefs are ".Dumper($parsed_xrefs)."\n");
-  $support->log("Parsed lc xrefs are ".Dumper($lcmap)."\n");
+#  $support->log("Parsed lc xrefs are ".Dumper($lcmap)."\n");
 }
 
 use strict 'refs';
@@ -303,11 +303,11 @@ my (%overall_stats,%overall_xrefs);
 
 foreach my $chr (@chr_sorted) {
 
-#  next if ($chr =~ /GL/);
-#  next unless ($chr =~ /HS|HG/);
-#  next if ($chr =~ /MHC/);
+  ####
+  #if you're working on ensembl-vega then switch these next two lines around, otherwise you
+  #won't get haplotypes and patch genes
+  ####
 #  my $slice = $sa->fetch_by_region('chromosome', $chr,undef,undef,undef,'GRCh37');
-
   my $slice = $sa->fetch_by_region('chromosome', $chr);
 
   $support->log_stamped("> Chromosome $chr (".$chr_length->{$chr}."bp).\n");
@@ -323,7 +323,6 @@ foreach my $chr (@chr_sorted) {
     next;
   }
   $support->log_stamped("Done fetching ".scalar @$genes." genes.\n\n",1);
-
 
   # loop over genes
   my %stats = map { $_ => 0 } keys %extdb_def;
