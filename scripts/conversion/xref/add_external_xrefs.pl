@@ -261,7 +261,7 @@ else {
   store($lcmap,$lc_xref_file);
 }
 
-if ( $support->param('verbose') && $support->param('dry_run')) {
+if ( $support->param('verbose') ) {
   $support->log("Parsed xrefs are ".Dumper($parsed_xrefs)."\n");
 #  $support->log("Parsed lc xrefs are ".Dumper($lcmap)."\n");
 }
@@ -979,14 +979,17 @@ sub parse_mgi {
             push @{$xrefs->{$marker_symbol}{'Uniprot/SWISSPROT'}}, $acc .'||'. $acc ;
           }
         }
+        elsif ( $db eq 'RefSeq_peptide') {
+          foreach my $acc (split (/\|/, $accessions{$db})) {
+            $db = 'RefSeq_peptide_predicted' if ($acc =~ /^XP_/);
+            push @{$xrefs->{$marker_symbol}{$db}}, $acc .'||'. $acc ;
+            $db = 'RefSeq_peptide';
+          }
+        }
         elsif ( $db ne 'MGI_PID') {
           foreach my $acc (split (/\|/, $accessions{$db})) {
             push @{$xrefs->{$marker_symbol}{$db}}, $acc .'||'. $acc ;
           }
-        }
-        elsif ( $db eq 'RefSeq_peptide') {
-          $db = 'RefSeq_peptide_predicted' if ($acc =~ /^XP_/);
-          push @{$xrefs->{$marker_symbol}{$db}}, $acc .'||'. $acc ;
         }
       }
       push @{ $lcmap->{lc($marker_symbol)} }, $marker_symbol unless $lcmap->{lc($marker_symbol)};
