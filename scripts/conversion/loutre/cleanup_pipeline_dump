@@ -139,6 +139,7 @@ my %lns_to_go = map {$_,1}
 my $sr_codes_to_go = join "','", qw(htg description write_access chr hidden);
 
 my $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
+### PARALLEL # $support ###
 
 # parse options
 $support->parse_common_options(@_);
@@ -203,6 +204,12 @@ my $lsa  = $ldba->get_SliceAdaptor();
 my $laa  = $ldba->get_AttributeAdaptor();
 my $ldbh = $ldba->dbc->db_handle;
 
+my %ids_to_stay;
+my %table_rows;
+my $chr_names_wanted;
+my @target_tables;
+### PRE # %ids_to_stay %table_rows $chr_names_wanted @target_tables # ###
+
 #sanity check to ensure the correct configuration file is being read
 my $sql = qq(select meta_value from meta where meta_key = 'species.production_name');
 (my $pipe_sp) = $pddbh->selectrow_array($sql);
@@ -216,7 +223,7 @@ if ($pipe_sp ne $loutre_sp) {
 }
 
 #these are tables that will be cleaned up (defined here just for logging, nothing else)
-my @target_tables = qw(analysis
+@target_tables = qw(analysis
 		       assembly
 		       dna
 		       dna_align_feature
@@ -239,7 +246,6 @@ my @target_tables = qw(analysis
 #		       exon
 
 #store counts of original number of features in each table
-my %table_rows;
 foreach my $t (@target_tables) {
   ($table_rows{$t}{'original'}) = $pddbh->selectrow_array("SELECT COUNT(*) FROM $t");
 }
@@ -272,7 +278,6 @@ if ($support->param('count_rows')) {
 #note that ignore_chr param is dealt with by get_wanted_chromosomes
 my $export_mode = $support->param('release_type');
 my $release = $support->param('vega_release');
-my $chr_names_wanted;
 if ($support->param('chr')) {
   $chr_names_wanted = [ $support->param('chr') ];
 }
@@ -344,7 +349,6 @@ my $idsth = $pddbh->prepare(qq(
                   FROM analysis
     ));
 $idsth->execute();
-my %ids_to_stay;
 while (my ($analysis_id,$logic_name) = $idsth->fetchrow){
   foreach my $t (keys %lns_to_stay) {
     my $all_to_go = 1;
@@ -372,7 +376,10 @@ $support->log("Doing the deletions:\n") if (! $support->param('dry_run'));
 # unless of course we're deleting everything as we do for a template db
 ##
 
-foreach my $t (keys %ids_to_stay) {
+my @tables = keys %ids_to_stay;
+### RUN # @tables ###
+
+foreach my $t (@tables) {
   if (@{$ids_to_stay{$t}}) {
     my $ids_to_keep = join("','",@{$ids_to_stay{$t}});
     my $sql = qq(CREATE TABLE tmp_$t SELECT * from $t WHERE analysis_id in ('$ids_to_keep'));
@@ -394,6 +401,9 @@ foreach my $t (keys %ids_to_stay) {
     }
   }
 }
+
+### POST ###
+
 foreach my $t (keys %ids_to_stay) {
   my $c1 = $table_rows{$t}{'original'};
   my $c2 = $pddbh->selectrow_array("SELECT COUNT(*) FROM $t");
@@ -602,6 +612,8 @@ foreach my $t (sort keys %table_rows) {
     $support->log_warning("No features left for table $t\n");
   }
 }
+
+### END ###
 
 $support->finish_log;
 
