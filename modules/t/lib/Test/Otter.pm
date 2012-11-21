@@ -46,7 +46,7 @@ Nothing is imported by default.
 use Sys::Hostname 'hostname';
 
 use base 'Exporter';
-our @EXPORT_OK = qw( db_or_skipall farm_or_skipall get_BOLDatasets diagdump );
+our @EXPORT_OK = qw( db_or_skipall farm_or_skipall OtterClient get_BOLDatasets diagdump );
 
 
 sub import {
@@ -119,7 +119,7 @@ sub db_or_skipall {
 
 sub _skipall {
     my ($why) = @_;
-    Test::More::plan skip_all => $why;
+    Test::More::plan(skip_all => $why);
     # it exits
     # (or if absent falls over in a heap, job done)
 
@@ -145,6 +145,11 @@ sub farm_or_skipall {
 }
 
 
+=head2 OtterClient()
+
+Caches and returns an L<Bio::Otter::Lace::Client> made with no extra
+parameters.
+
 =head2 get_BOLDatasets(@name)
 
 This wraps up L<Bio::Otter::Lace::Defaults/make_Client> to return a
@@ -168,7 +173,7 @@ restricted and unlisted datasets.
 
 {
     my $cl;
-    sub _otter_client { # to make public if needed
+    sub OtterClient {
         return $cl ||= do {
             local @ARGV = ();
             require Bio::Otter::Lace::Defaults;
@@ -180,7 +185,7 @@ restricted and unlisted datasets.
 
 sub get_BOLDatasets {
     my @name = @_;
-    my $cl = _otter_client();
+    my $cl = OtterClient();
     warn "No datasets requested" unless @name;
     return $cl->get_all_DataSets if "@name" eq 'ALL';
     return map { $cl->get_DataSet_by_name($_) } @name;

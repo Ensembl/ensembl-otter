@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use Test::More;
-use t::lib::Test::Otter qw( ^db_or_skipall );
+use t::lib::Test::Otter qw( ^db_or_skipall OtterClient );
 
 use YAML 'Dump'; # for diag
 use File::Slurp 'read_dir';
@@ -111,11 +111,11 @@ sub main {
 
     # 3
     cmdline_tt({qw{ host otterlive database loutre_human }},
-               [ 'loutre_human by args', 'human', 'ensembl:loutre' ]);
+               [ 'loutre_human by netrc args', 'human', 'ensembl:loutre' ]);
 
     # 3
     cmdline_tt({qw{ host otterpipe1 database pipe_human }},
-               [ 'pipe_human by args', 'human', 'ensembl:pipe' ]);
+               [ 'pipe_human by netrc args', 'human', 'ensembl:pipe' ]);
 
     # 10
     server_tt('human',
@@ -261,19 +261,6 @@ sub netrc_dbh {
         $sp_dat ||= Bio::Otter::Server::Config->SpeciesDat;
         return $sp_dat;
     }
-}
-
-{
-    my $cl;
-    sub OtterClient {
-        return $cl ||= _make_Client();
-    }
-}
-
-sub _make_Client {
-    local @ARGV = ();
-    Bio::Otter::Lace::Defaults::do_getopt();
-    return Bio::Otter::Lace::Defaults::make_Client();
 }
 
 
