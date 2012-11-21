@@ -131,7 +131,7 @@ if ($support->param('prune') and $support->user_proceed('Would you really like t
   $dbh->do(qq(INSERT INTO object_xref SELECT * FROM backup_uhgncl_object_xref));
 }
 
-my (@potential_names,@potential_biotype_mismatches,@ignored_new_names,@hgnc_errors);
+my (@potential_names_manual,@potential_names_script,@potential_biotype_mismatches,@ignored_new_names,@hgnc_errors);
 my $add_c = 0;
 foreach my $gsi (keys %$records) {
   my $gene = $ga->fetch_by_stable_id($gsi);
@@ -233,8 +233,18 @@ foreach my $gsi (keys %$records) {
   }
   else {
     if ( $hgnc_rec->{'type'} eq 'gene with protein product') {
-      $support->log_verbose("Consider this name ($new_hgnc_name) for an update\n",1);
-      push @potential_names, [$gsi,$biotype,$sr,$display_name,$new_hgnc_name,$desc];
+      my $manual = 1;
+      if (    ($display_name =~ /^C[XY\d]{1,2}orf/)
+           || ($display_name =~ /^A[BCFLP]\d+\.\d{1,2}$/)
+           || ($display_name =~ /^RP\d{1,2}-/) ) {
+        $support->log_verbose("Consider this name ($new_hgnc_name) for an automatic name update\n",1);
+        $manual = 0;
+        push @potential_names_script, [$gsi,$biotype,$sr,$display_name,$new_hgnc_name,$desc];
+      }
+      else {
+        $support->log_verbose("Consider this name ($new_hgnc_name) for an update\n",1);
+        push @potential_names_manual, [$gsi,$biotype,$sr,$display_name,$new_hgnc_name,$desc];
+      }
 
       #look for other genes that share the same name and are on non-reference slices, ie should have their names updated as well
       if (scalar(@vega_genes) > 1) {
@@ -248,7 +258,10 @@ foreach my $gsi (keys %$records) {
           }
           else {
             $support->log_verbose("Consider this other gene ($other_gsi on $sr) for an update to $new_hgnc_name\n",1);
-            push @potential_names, [$other_gsi,$biotype,$sr,$display_name,$new_hgnc_name,$desc];
+            no strict 'refs';
+            my $logname = $manual ? 'potential_names_manual' : 'potential_names_script';
+            push @$logname, [$other_gsi,$biotype,$sr,$display_name,$new_hgnc_name,$desc];
+            use strict 'refs';
           }
         }
       }
@@ -272,20 +285,32 @@ if ($support->param('verbose')) {
   }
 }
 else {
-  $support->log("\nThere are $c ignored names, to see these rerun in verbose mode\n\n");
+  $support->log("\nThere are $c ignored names (because the Vega gene is not protein_coding), to see these rerun in verbose mode\n\n");
 }
 
 my $c = scalar(@potential_biotype_mismatches);
-$support->log("\nBiotype mismatches to consider)($c):\n\n");
+$support->log("\nBiotype mismatches to consider ($c):\n\n");
 $support->log(sprintf("%-25s%-25s%-25s%-20s%-20s%-20s%-20s\n", qw(STABLE_ID VEGA_BIOTYPE HGNC_BIOTYPE SEQ_REGION OLD_NAME NEW_NAME NEW_DESC)));
 foreach my $rec (sort { $a->[3] <=> $b->[3] } @potential_biotype_mismatches) {
   $support->log(sprintf("%-25s%-25s%-25s%-20s%-20s%-20s%-20s\n", $rec->[0], $rec->[1], $rec->[2], $rec->[3], $rec->[4], $rec->[5], $rec->[6]));
 }
 
-my $c = scalar(@potential_names);
-$support->log("\nNames to consider)($c):\n\n");
+$support->log("\nBiotype mismatches in a format for Jane ($c):\n\n");
+foreach my $rec (sort { $a->[3] <=> $b->[3] } @potential_biotype_mismatches) {
+  $support->log(sprintf("%s,%s,%s,%s,%s,%s,%s\n", $rec->[0], $rec->[1], $rec->[2], $rec->[3], $rec->[4], $rec->[5], $rec->[6]));
+}
+
+my $c = scalar(@potential_names_manual);
+$support->log("\nNames to look at manually ($c):\n\n");
 $support->log(sprintf("%-25s%-30s%-20s%-20s%-20s%-20s\n", qw(STABLE_ID VEGA_BIOTYPE SEQ_REGION OLD_NAME NEW_NAME NEW_DESC)));
-foreach my $rec (sort { $a->[2] <=> $b->[2] } @potential_names) {
+foreach my $rec (sort { $a->[2] <=> $b->[2] } @potential_names_manual) {
+  $support->log(sprintf("%-25s%-30s%-20s%-20s%-20s%-20s\n", $rec->[0], $rec->[1], $rec->[2], $rec->[3], $rec->[4], $rec->[5]));
+}
+
+my $c = scalar(@potential_names_script);
+$support->log("\nNames to update by script ($c):\n\n");
+$support->log(sprintf("%-25s%-30s%-20s%-20s%-20s%-20s\n", qw(STABLE_ID VEGA_BIOTYPE SEQ_REGION OLD_NAME NEW_NAME NEW_DESC)));
+foreach my $rec (sort { $a->[2] <=> $b->[2] } @potential_names_script) {
   $support->log(sprintf("%-25s%-30s%-20s%-20s%-20s%-20s\n", $rec->[0], $rec->[1], $rec->[2], $rec->[3], $rec->[4], $rec->[5]));
 }
 
