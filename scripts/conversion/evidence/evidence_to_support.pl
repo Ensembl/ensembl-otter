@@ -102,6 +102,7 @@ BEGIN {
   $SERVERROOT = "$Bin/../../../..";
   unshift(@INC, "$SERVERROOT/ensembl-otter/modules");
   unshift(@INC, "$SERVERROOT/ensembl/modules");
+  unshift(@INC, "$SERVERROOT/sanger-plugins/vega/modules");
   unshift(@INC, "$SERVERROOT/ensembl-variation/modules");
   unshift(@INC, "$SERVERROOT/bioperl-live");
 }
@@ -114,6 +115,7 @@ use Data::Dumper;
 $| = 1;
 
 my $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
+### PARALLEL # $support ###
 
 # parse options
 $support->parse_common_options(@_);
@@ -170,7 +172,6 @@ my %gene_stable_ids = map { $_, 1 } @gene_stable_ids;
 #get chromosomes
 my $chr_length = $support->get_chrlength($dba,'','chromosome',1); #will retrieve non-reference slices
 
-my @chr_sorted = $support->sort_chromosomes($chr_length);
 my %analysis = map { $_->logic_name => $_ } @{ $aa->fetch_all };
 my %ftype = (
   'Bio::EnsEMBL::DnaDnaAlignFeature' => 'dna_align_feature',
@@ -188,8 +189,14 @@ my %genes_without_support;
 my %transcripts_without_evidence;
 my %genes_without_evidence;
 
+### PRE # # $stats %transcripts_without_support %genes_without_support %transcripts_without_evidence %genes_without_evidence $all_alignments $all_evidence ###
+
 # loop over chromosomes
+my @chr_sorted = $support->sort_chromosomes($chr_length);
 $support->log("Looping over chromosomes: @chr_sorted\n\n");
+
+### RUN # @chr_sorted ###
+
 foreach my $chr (@chr_sorted) {
   my %chr_stats;
   $support->log_stamped("> Chromosome $chr (".$chr_length->{$chr}."bp).\n\n");
@@ -361,6 +368,8 @@ foreach my $chr (@chr_sorted) {
   $support->log("Done with chromosome $chr. ".$support->date_and_mem."\n\n");
 }
 
+### POST ###
+
 #summarise genes missing support / evidence
 foreach my $source (keys %{$stats}) {
 
@@ -428,6 +437,8 @@ if ($support->param('check_evidence_table')) {
     }
   }
 }
+
+### END ###
 	
 # finish log
 $support->finish_log;
