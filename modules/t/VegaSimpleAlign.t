@@ -212,6 +212,8 @@ sub compare_exon_split {
         is( $exon_aligns->[$e]->reference_seq->seq, $test_spec->{ref}->[$e],  "$name - ref seq alignment $e");
         is( $exon_aligns->[$e]->feature_seq->seq,   $test_spec->{feat}->[$e], "$name - feature seq alignment $e");
     }
+
+    return;
 }
 
 {
@@ -222,7 +224,7 @@ sub compare_exon_split {
         my $f_seq      = shift;
         my $do_reverse = shift;
 
-        my $aligner ||= new Bio::Vega::Utils::Align;
+        my $aligner ||= Bio::Vega::Utils::Align->new;
 
         if ($do_reverse) {
             $f_seq = reverse_seq($f_seq);
