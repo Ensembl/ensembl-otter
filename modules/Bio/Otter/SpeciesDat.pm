@@ -54,7 +54,6 @@ sub _dataset_hash {
                 die "Error: first section in species.dat should be 'defaults'";
             }
             elsif ($1 eq "defaults") {
-                warn "Got default section\n";
                 $curhash = $defhash;
             }
             else {

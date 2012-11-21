@@ -173,8 +173,6 @@ sub _satellite_dba_make {
         die "Instantiation of '$adaptor_class' failed, got a '$cls'";
     }
 
-    warn "... with parameters: ".join(', ', map { "$_=".$uppercased_options{$_} } keys %uppercased_options )."\n";
-
     $self->{_sdba}{"$metakey; $adaptor_class"} = $dba;
 
     return $dba;
