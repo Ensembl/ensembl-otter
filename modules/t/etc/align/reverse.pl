@@ -6,11 +6,12 @@ use warnings;
 use Bio::Otter::GappedAlignment;
 
 my $src = shift;
-open SRC, $src;
+open my $src_h, '<', $src
+    or die "failed to open '$src': $!";
 
 my $vulgar_re = qr/^vulgar: /;
 
-while (my $line = <SRC>) {
+while (my $line = <$src_h>) {
     chomp $line;
     next unless $line =~ $vulgar_re;
 

@@ -16,8 +16,8 @@ my $opt_ok = GetOptions(
     );
 die 'Bad options' unless $opt_ok;
 
-my $spec_file;
-open $spec_file, $spec_fn;
+open my $spec_file, '<', $spec_fn
+    or die "failed to open ${spec_fn}: $!";
 
 my @coords;
 
