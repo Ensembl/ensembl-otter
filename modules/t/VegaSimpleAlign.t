@@ -224,7 +224,7 @@ sub compare_exon_split {
         my $f_seq      = shift;
         my $do_reverse = shift;
 
-        my $aligner ||= Bio::Vega::Utils::Align->new;
+        $aligner ||= Bio::Vega::Utils::Align->new;
 
         if ($do_reverse) {
             $f_seq = reverse_seq($f_seq);
