@@ -146,6 +146,7 @@ sub _satellite_dba_make {
 
     my @options;
     {
+        ## no critic (Anacode::ProhibitEval)
         ## no critic (BuiltinFunctions::ProhibitStringyEval)
         @options = eval $options;
     }
@@ -162,8 +163,12 @@ sub _satellite_dba_make {
         $uppercased_options{uc($k)} = $v;
     }
 
-    eval "require $adaptor_class" ## no critic (BuiltinFunctions::ProhibitStringyEval)
-        or die "'require $adaptor_class' failed";
+    {
+        ## no critic (Anacode::ProhibitEval)
+        ## no critic (BuiltinFunctions::ProhibitStringyEval)
+        eval "require $adaptor_class"
+            or die "'require $adaptor_class' failed";
+    }
     my $dba = $adaptor_class->new(%uppercased_options);
     die "Couldn't connect to '$metakey' satellite db"
         unless $dba;
