@@ -115,6 +115,7 @@ BEGIN {
   $SERVERROOT = "$Bin/../../../..";
   unshift(@INC, "./modules");
   unshift(@INC, "$SERVERROOT/ensembl/modules");
+  unshift(@INC, "$SERVERROOT/sanger-plugins/vega/modules");
   unshift(@INC, "$SERVERROOT/bioperl-live");
 }
 
@@ -134,6 +135,7 @@ use Data::Dumper;
 $| = 1;
 
 our $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
+### PARALLEL # $support ###
 
 #$SIG{INT}= 'do_stats_logging';      # signal handler for Ctrl-C, i.e. will call sub do_stats_logging
 
@@ -246,8 +248,16 @@ my $V_chrlength = $support->get_chrlength($E_dba, $support->param('assembly'),'c
 my $E_chrlength = $support->get_chrlength($E_dba, $support->param('ensemblassembly'),'chromosome',1,[]);
 my $ensembl_chr_map = $support->get_ensembl_chr_mapping($V_dba, $support->param('assembly'));
 
+### PRE # # %stat_hash %trans_numbers ###
+
+my @chrs = $support->sort_chromosomes($V_chrlength);
+
+### SIZE # (\d+|X|Y) # 1 ###
+### SIZE # # 0.05 ###
+### RUN # @chrs ###
+
 CHROM:
-foreach my $V_chr ($support->sort_chromosomes($V_chrlength)) {
+foreach my $V_chr (@chrs) {
 
 #  next unless ($V_chr =~ /HS|HG/);
 
@@ -392,6 +402,8 @@ foreach my $V_chr ($support->sort_chromosomes($V_chrlength)) {
   $support->log("Done with chromosome $V_chr.\n\n", 1);
 }
 
+### POST ###
+
 #see if any transcripts / gene are different
 foreach my $gsi (keys %trans_numbers) {
   if ($trans_numbers{$gsi}->{'vega'} != $trans_numbers{$gsi}->{'evega'}) {
@@ -403,6 +415,8 @@ foreach my $gsi (keys %trans_numbers) {
 
 # write out to statslog file
 do_stats_logging();
+
+### END ###
 
 # finish logfile
 $support->finish_log;
