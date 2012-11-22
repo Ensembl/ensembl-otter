@@ -1,4 +1,4 @@
-#!/usr/bin/env perl
+#!/usr/local/bin/perl
 # Author: Kerstin Jekosch
 # Email: kj2@sanger.ac.uk
 
@@ -8,12 +8,13 @@
 
 
 use strict;
+use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::EnsEMBL::DBSQL::DBConnection;
 use Getopt::Long;
 
-my $dbhost = 'ensdb-1-11';
+my $dbhost = 'ensdb-web-17';
 my $dbuser = 'ensro';
-my $dbname = 'vega_danio_rerio_20111219_v65_Zv9';
+my $dbname = 'vega_danio_rerio_20121112_69_Zv9';
 my $dbpass = '';
 my $dbport = 5317;
 #my $dbhost = 'ecs3f';
@@ -66,9 +67,9 @@ while (my @row = $sth1->fetchrow_array) {
 
 my %name;
 my $sth1a = $dbc->prepare(q{
-    select gsi.stable_id, ga.value
-    from gene_stable_id gsi, gene_attrib ga
-    where gsi.gene_id = ga.gene_id and ga.attrib_type_id = 4
+    select g.stable_id, ga.value
+    from gene g, gene_attrib ga
+    where g.gene_id = ga.gene_id and ga.attrib_type_id = 4
 });
 $sth1a->execute();
 while (my @row = $sth1a->fetchrow_array) {
