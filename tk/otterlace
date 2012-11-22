@@ -72,6 +72,7 @@ use Log::Log4perl;
     $cl->get_server_otter_config;
 
     $SpeciesListWindow->draw;
+    $SpeciesListWindow->ensure_tools;
 
     Tk::MainLoop();
 

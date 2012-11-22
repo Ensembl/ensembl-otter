@@ -11,7 +11,7 @@ use Tk::DialogBox;
 use base 'MenuCanvasWindow';
 use EditWindow::LoadColumns;
 use CanvasWindow::SequenceSetChooser;
-use Bio::Otter::Git;
+use Bio::Otter::Utils::About;
 use Bio::Vega::Utils::URI qw( open_uri );
 
 sub new {
@@ -106,15 +106,23 @@ sub new {
 }
 
 
-sub about_text {
-    my $vsn = Bio::Otter::Git->as_text;
-    # Any number of URLs may be inserted.  If we want images or other
-    # markup, it's time to break out a new class.
-    return <<"TEXT";
-This is Otterlace version $vsn\n
-Otterlace web page
-  http://www.sanger.ac.uk/resources/software/otterlace/
-TEXT
+sub ensure_tools {
+    my ($self) = @_;
+
+    # Check zmap --version, lest we load up a session before finding
+    # its absence.
+    my @v = try {
+        Bio::Otter::Utils::About->annotools_versions;
+    } catch {
+        warn "_ensure_tools: $_";
+        ();
+    };
+
+    $self->message("Some parts of Otterlace are not working\n".
+                   "See Help > About... for info")
+      unless @v;
+
+    return ();
 }
 
 sub show_about {
@@ -126,7 +134,9 @@ sub show_about {
            -buttons => [qw[ Close ]]);
         $A->Tk::bind('<Escape>', [ $A, 'Exit' ]);
 
-        my $content = $self->about_text;
+        my $content = Bio::Otter::Utils::About->about_text;
+        # Any number of URLs may be inserted.  If we want images or
+        # other markup, it's time to break out a new class.
 
         my ($x, $y) = (30, 0);
         foreach my $ln (split /\n/, $content) {
@@ -165,7 +175,6 @@ sub about_hyperlink {
     my ($self, $txt, $at) = @_;
     my @idx = $txt->tagPrevrange(link => $at);
     my $ln = $txt->get(@idx);
-#    warn "click! args=(@_) idx=(@idx) ln=$ln";
     open_uri($ln);
     return ();
 }
