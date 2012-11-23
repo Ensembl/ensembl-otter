@@ -74,16 +74,24 @@ my $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
 $support->parse_common_options(@_);
 $support->parse_extra_options(
   'hgncfixfile=s',
+  'anacode_file=s',
+  'jel_file=s',
   'prune');
 $support->allowed_params(
   $support->get_common_params,
   'hgncfixfile',
+  'anacode_file',
+  'jel_file',
   'prune');
 
 if ($support->param('help') or $support->error) {
   warn $support->error if $support->error;
   pod2usage(1);
 }
+
+$support->param('anacode_file',($support->param('logpath').'hgnc_names_to_fix.txt')) unless $support->param('anacode_file');
+$support->param('jel_file',($support->param('logpath').'hgnc_links_to_review.txt')) unless $support->param('jel_file');
+
 $support->confirm_params;
 $support->init_log;
 
@@ -93,9 +101,12 @@ my $dbh = $dba->dbc->db_handle;
 my $ga = $dba->get_GeneAdaptor;
 my $ea  = $dba->get_DBEntryAdaptor();
 
+my $anacode_fh = $support->filehandle('>', $support->param('anacode_file'));
+my $jel_fh     = $support->filehandle('>', $support->param('jel_file'));
+
 #get info from HGNC
 my $records;
-my $xref_file = $support->param('logpath')."-hgnc_update-parsed_records.file";
+my $xref_file = $support->param('logpath').$support->param('dbname')."-hgnc_update-parsed_records.file";
 if (-e $xref_file) {
   if ($support->user_proceed("Read xref records from a previously saved files - $xref_file ?\n")) {
     $records = retrieve($xref_file);
@@ -258,10 +269,13 @@ foreach my $gsi (keys %$records) {
           }
           else {
             $support->log_verbose("Consider this other gene ($other_gsi on $sr) for an update to $new_hgnc_name\n",1);
-            no strict 'refs';
-            my $logname = $manual ? 'potential_names_manual' : 'potential_names_script';
-            push @$logname, [$other_gsi,$biotype,$sr,$display_name,$new_hgnc_name,$desc];
-            use strict 'refs';
+            my $rec = [$other_gsi,$biotype,$sr,$display_name,$new_hgnc_name,$desc];
+            if ($manual) {
+              push @potential_names_manual,$rec;
+            }
+            else {
+              push @potential_names_script,$rec;
+            }
           }
         }
       }
@@ -291,27 +305,28 @@ else {
 my $c = scalar(@potential_biotype_mismatches);
 $support->log("\nBiotype mismatches to consider ($c):\n\n");
 $support->log(sprintf("%-25s%-25s%-25s%-20s%-20s%-20s%-20s\n", qw(STABLE_ID VEGA_BIOTYPE HGNC_BIOTYPE SEQ_REGION OLD_NAME NEW_NAME NEW_DESC)));
+print $jel_fh sprintf("%s\t%s\t%s\t%s\t%s\t%s\t%s\n", qw(STABLE_ID VEGA_BIOTYPE HGNC_BIOTYPE SEQ_REGION OLD_NAME NEW_NAME NEW_DESC));
 foreach my $rec (sort { $a->[3] <=> $b->[3] } @potential_biotype_mismatches) {
   $support->log(sprintf("%-25s%-25s%-25s%-20s%-20s%-20s%-20s\n", $rec->[0], $rec->[1], $rec->[2], $rec->[3], $rec->[4], $rec->[5], $rec->[6]));
-}
-
-$support->log("\nBiotype mismatches in a format for Jane ($c):\n\n");
-foreach my $rec (sort { $a->[3] <=> $b->[3] } @potential_biotype_mismatches) {
-  $support->log(sprintf("%s,%s,%s,%s,%s,%s,%s\n", $rec->[0], $rec->[1], $rec->[2], $rec->[3], $rec->[4], $rec->[5], $rec->[6]));
+  print $jel_fh sprintf("%s\t%s\t%s\t%s\t%s\t%s\t%s\n",$rec->[0], $rec->[1], $rec->[2], $rec->[3], $rec->[4], $rec->[5], $rec->[6]);
 }
 
 my $c = scalar(@potential_names_manual);
 $support->log("\nNames to look at manually ($c):\n\n");
 $support->log(sprintf("%-25s%-30s%-20s%-20s%-20s%-20s\n", qw(STABLE_ID VEGA_BIOTYPE SEQ_REGION OLD_NAME NEW_NAME NEW_DESC)));
+print $jel_fh sprintf("\n%s\t%s\t%s\t%s\t%s\t%s\n",qw(STABLE_ID VEGA_BIOTYPE SEQ_REGION OLD_NAME NEW_NAME NEW_DESC));
 foreach my $rec (sort { $a->[2] <=> $b->[2] } @potential_names_manual) {
   $support->log(sprintf("%-25s%-30s%-20s%-20s%-20s%-20s\n", $rec->[0], $rec->[1], $rec->[2], $rec->[3], $rec->[4], $rec->[5]));
+  print $jel_fh sprintf("%s\t%s\t%s\t%s\t%s\t%s\n",$rec->[0], $rec->[1], $rec->[2], $rec->[3], $rec->[4], $rec->[5]);
 }
 
 my $c = scalar(@potential_names_script);
 $support->log("\nNames to update by script ($c):\n\n");
 $support->log(sprintf("%-25s%-30s%-20s%-20s%-20s%-20s\n", qw(STABLE_ID VEGA_BIOTYPE SEQ_REGION OLD_NAME NEW_NAME NEW_DESC)));
+print $anacode_fh sprintf("%s\t%s\t%s\t%s\t%s\t%s\n", qw(STABLE_ID VEGA_BIOTYPE SEQ_REGION OLD_NAME NEW_NAME NEW_DESC));
 foreach my $rec (sort { $a->[2] <=> $b->[2] } @potential_names_script) {
   $support->log(sprintf("%-25s%-30s%-20s%-20s%-20s%-20s\n", $rec->[0], $rec->[1], $rec->[2], $rec->[3], $rec->[4], $rec->[5]));
+  print $anacode_fh sprintf("%s\t%s\t%s\t%s\t%s\t%s\n", $rec->[0], $rec->[1], $rec->[2], $rec->[3], $rec->[4], $rec->[5]);
 }
 
 $support->finish_log;
