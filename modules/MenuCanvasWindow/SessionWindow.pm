@@ -475,7 +475,7 @@ sub populate_menus {
     $top->bind('<Control-n>', $new_command);
     $top->bind('<Control-N>', $new_command);
 
-    # Make an variant of the current selected sequence
+    # Make a variant of the current selected sequence
     my $variant_command = sub{
         $self->make_variant_subsequence;
         };

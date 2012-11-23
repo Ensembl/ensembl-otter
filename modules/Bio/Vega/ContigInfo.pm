@@ -64,7 +64,7 @@ sub add_Attributes {
 
     foreach my $attrib ( @attrib_list ) {
         if (! $attrib->isa('Bio::EnsEMBL::Attribute')) {
-            $self->throw( "Argument to add_Attribute has to be an Bio::EnsEMBL::Attribute" );
+            $self->throw( "Argument to add_Attribute has to be a Bio::EnsEMBL::Attribute" );
         }
         push( @$al, $attrib );
     }
