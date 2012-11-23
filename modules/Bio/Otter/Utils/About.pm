@@ -48,7 +48,7 @@ Dies if any tool will not run and provide its version.
 
 sub annotools_versions {
     my @v;
-    my @prog = qw( zmap ); # current blixemh writes to stderr with exitcode 1
+    my @prog = qw( zmap blixemh );
     foreach my $prog (@prog) {
         my @cmd = ($prog, '--version');
         open my $fh, '-|', @cmd

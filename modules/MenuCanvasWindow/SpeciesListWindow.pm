@@ -106,7 +106,7 @@ sub new {
 }
 
 
-sub ensure_tools {
+sub ensure_annotools {
     my ($self) = @_;
 
     # Check zmap --version, lest we load up a session before finding
@@ -118,9 +118,13 @@ sub ensure_tools {
         ();
     };
 
-    $self->message("Some parts of Otterlace are not working\n".
-                   "See Help > About... for info")
-      unless @v;
+    if (@v) {
+        local $" = ', ';
+        warn "Annotools are @v\n";
+    } else {
+        $self->message("Some parts of Otterlace are not working\n".
+                       "See Help > About... for info");
+    }
 
     return ();
 }
