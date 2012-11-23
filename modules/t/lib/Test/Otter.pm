@@ -89,6 +89,39 @@ sub mods_rel {
 }
 
 
+=head2 cachedir()
+
+Return a directory which exists and is writable, and can be used for
+caching stuff between tests.  Files written inside should be 0664.
+
+Has a list of preferences and a fallback.  Could probably use some
+environment variable to choose team-shared vs. developer, and
+permanence.  If the directory is not being shared, make it private.
+
+=cut
+
+sub cachedir {
+    my ($pkg) = @_;
+    my @dir = ("$ENV{HOME}/t-cache/ensembl-otter",
+               '/nfs/anacode/t-cache/ensembl-otter');
+    @dir = grep { -d $_ && -w _ } @dir;
+    if (!@dir) {
+        my $fn = $pkg->mods_rel('../t-cache~'); # is git-ignore'd
+        # my $fn = '/tmp/t-cache.ensembl-otter'
+
+        if (-e $fn) {
+            die "$fn exists and is not yours, can't mkdir"
+              unless -d _ && -O _ && -w _;
+        } else {
+            mkdir $fn, 0700
+              or die "mkdir $fn: $!";
+        }
+        push @dir, $fn;
+    }
+    return $dir[0];
+}
+
+
 =head1 EXPORTABLE SUBROUTINES
 
 =head2 db_or_skipall()
