@@ -462,8 +462,8 @@ for the reply  from the callback, while your window  will be sending a
 command to a window which cannot respond.
 
 The prevention of this race condition has been coded into this module
-and the L<X11::XRemote> module and you will be warned of an C< Avoided 
-race condition >.
+and the L<X11::XRemote> module and you will be warned of an C<Avoided 
+race condition>.
 problem.
 
 The recommended solution to this common problem is to send yourself a
