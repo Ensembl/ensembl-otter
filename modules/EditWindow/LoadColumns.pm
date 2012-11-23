@@ -317,7 +317,7 @@ sub load_filters {
                 );            
         }
     } else {
-        # we need to set up and show an SessionWindow        
+        # we need to set up and show a SessionWindow        
         my $SessionWindow = MenuCanvasWindow::SessionWindow->new( $self->top->Toplevel );
 
         $self->SessionWindow($SessionWindow);

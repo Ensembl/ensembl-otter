@@ -147,7 +147,7 @@ sub farm_or_skipall {
 
 =head2 OtterClient()
 
-Caches and returns an L<Bio::Otter::Lace::Client> made with no extra
+Caches and returns a L<Bio::Otter::Lace::Client> made with no extra
 parameters.
 
 =head2 get_BOLDatasets(@name)
