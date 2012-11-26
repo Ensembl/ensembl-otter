@@ -46,7 +46,7 @@ sub fetch_evidence {
 sub store_Evidence {
   my ($self, $transcript_id, $evidence_list) = @_;
 
-  unless ($evidence_list || $transcript_id) {
+  unless ($evidence_list && $transcript_id) {
       throw("evidence object list :$evidence_list and transcript_id:$transcript_id must be entered to store an evidence");
   }
   # Insert new evidence
