@@ -9,6 +9,8 @@ use Test::CriticModule;
 use Try::Tiny;
 use Test::More;
 
+use Bio::EnsEMBL::DBSQL::BaseAdaptor;
+
 my $module;
 BEGIN {
     $module = 'Bio::Vega::Evidence::Types';
