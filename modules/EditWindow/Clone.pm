@@ -19,7 +19,7 @@ use base 'EditWindow';
 
     -- Assembly --
 
-    assembly_start  assembly_end  assembly_strand    
+    assembly_start  assembly_end  assembly_strand
 
     -- Annotation --
 
@@ -79,8 +79,8 @@ sub initialise {
 
     $self->keyword_text(
         $self->make_labelled_text_widget(
-            $edit_frame, 
-            "Keywords: \n(one per \nline )",     
+            $edit_frame,
+            "Keywords: \n(one per \nline )",
             8,
             undef,
             undef,
@@ -89,8 +89,8 @@ sub initialise {
 
     $self->description_text(
         $self->make_labelled_text_widget(
-            $edit_frame, 
-            'Description: ',   
+            $edit_frame,
+            'Description: ',
             12,
             'Generate',
             sub { $self->generate_desc },
@@ -100,8 +100,8 @@ sub initialise {
 
     $self->remark_text(
         $self->make_labelled_text_widget(
-            $edit_frame, 
-            'Remarks: ',       
+            $edit_frame,
+            'Remarks: ',
             4,
             undef,
             undef,
@@ -158,7 +158,7 @@ sub fill_Properties {
 }
 
 sub make_labelled_text_widget {
-    my ($self, $widget, $name, $height, 
+    my ($self, $widget, $name, $height,
         $button_text, $button_cmd, @fill) = @_;
 
     my $std_border = 3;
