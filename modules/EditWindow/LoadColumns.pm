@@ -79,31 +79,31 @@ sub initialize {
 
     my $i = 0;
 
-    $hlist->header('create', $i++,  
-                   -itemtype => 'resizebutton', 
+    $hlist->header('create', $i++,
+                   -itemtype => 'resizebutton',
                    -command => sub {
                        # $self->sort_by_filter_method('wanted');
                    }
         );
 
-    $hlist->header('create', $i++, 
-                   -text => 'Name', 
-                   -itemtype => 'resizebutton', 
+    $hlist->header('create', $i++,
+                   -text => 'Name',
+                   -itemtype => 'resizebutton',
                    -command => sub { $self->sort_by_filter_method('name') }
         );
 
-    $hlist->header('create', $i++, 
-                   -text => 'Description', 
-                   -itemtype => 'resizebutton', 
+    $hlist->header('create', $i++,
+                   -text => 'Description',
+                   -itemtype => 'resizebutton',
                    -command => sub { $self->sort_by_filter_method('description') }
         );
 
     $self->hlist($hlist);
 
     my $bottom_frame = $top->Frame->pack(
-        -side => 'bottom', 
+        -side => 'bottom',
         -expand => 0,
-        -fill => 'x'    
+        -fill => 'x'
         );
 
     my $but_frame = $bottom_frame->pack(
@@ -113,7 +113,7 @@ sub initialize {
         );
 
     my $select_frame = $but_frame->Frame->pack(
-        -side => 'top', 
+        -side => 'top',
         -expand => 0
         );
 
@@ -128,34 +128,34 @@ sub initialize {
         )->pack(-side => 'left');
 
     $select_frame->Button(
-        -text => 'All', 
+        -text => 'All',
         -command => sub { $self->change_checkbutton_state('select') },
         )->pack(-side => 'left');
 
     $select_frame->Button(
-        -text => 'None', 
+        -text => 'None',
         -command => sub { $self->change_checkbutton_state('deselect') },
         )->pack(-side => 'left');
 
     $select_frame->Button(
-        -text => 'Invert', 
+        -text => 'Invert',
         -command => sub { $self->change_checkbutton_state('toggle') },
         )->pack(-side => 'left');
 
     $select_frame->Button(
-        -text => 'Reselect failed', 
+        -text => 'Reselect failed',
         -command => sub { $self->change_checkbutton_state('invoke', $STATE_COLORS{'failed'}) },
         )->pack(-side => 'right');
 
     my $progress_frame = $bottom_frame->Frame->pack(
-        -side   => 'bottom', 
-        -fill   => 'x', 
+        -side   => 'bottom',
+        -fill   => 'x',
         -expand => 1
     );
 
     my $control_frame = $progress_frame->Frame->pack(
-        -side => 'bottom', 
-        -expand => 0, 
+        -side => 'bottom',
+        -expand => 0,
         -fill => 'x'
         );
 
@@ -169,7 +169,7 @@ sub initialize {
     # case we just withdraw the window).
     my $wod_cmd = sub { $self->withdraw_or_destroy };
     $control_frame->Button(
-        -text => 'Cancel', 
+        -text => 'Cancel',
         -command => $wod_cmd,
         )->pack(-side => 'right', -expand => 0);
     $top->protocol( 'WM_DELETE_WINDOW', $wod_cmd );
@@ -188,7 +188,7 @@ sub initialize {
         -from        => 0,
         -blocks      => 1,
         -variable    => \$self->{_filters_done}
-        )->pack( 
+        )->pack(
         -fill   => 'x',
         -expand => 1,
         -padx   => 5,
@@ -280,7 +280,7 @@ sub load_filters {
         } @filters,
     };
 
-    my @to_fetch = grep { 
+    my @to_fetch = grep {
         $_->{state}{wanted}
         && ! $_->{state}{done}
         && ! $_->{state}{failed}
@@ -304,7 +304,7 @@ sub load_filters {
     if ($self->SessionWindow) {
         if (@to_fetch) {
             $self->AceDatabase->Client->reauthorize_if_cookie_will_expire_soon;
-            my @featuresets = 
+            my @featuresets =
                 map { $_->{filter}->name } @to_fetch;
             $self->SessionWindow->zmap->load_features(@featuresets);
         }
@@ -314,10 +314,10 @@ sub load_filters {
                 -icon       => 'warning',
                 -message    => 'All selected columns have already been loaded',
                 -type       => 'OK',
-                );            
+                );
         }
     } else {
-        # we need to set up and show a SessionWindow        
+        # we need to set up and show a SessionWindow
         my $SessionWindow = MenuCanvasWindow::SessionWindow->new( $self->top->Toplevel );
 
         $self->SessionWindow($SessionWindow);
@@ -364,7 +364,7 @@ sub sort_by_filter_method {
 }
 
 sub sort_by_filter_method_ {
-    my ($self, $method, $flip) = @_; 
+    my ($self, $method, $flip) = @_;
 
     my ( $sort_method, $arg ) = @{$_sort_methods->{$method}};
     my @sorted_names = $self->$sort_method($arg);
@@ -458,8 +458,8 @@ sub show_filters {
             $cb_color = $STATE_COLORS{'done'};
         }
 
-        $hlist->itemCreate($i, 0, 
-                           -itemtype => 'window', 
+        $hlist->itemCreate($i, 0,
+                           -itemtype => 'window',
                            -widget => $hlist->Checkbutton(
                                -variable => \ $state_hash->{wanted},
                                -command => sub {
@@ -495,13 +495,13 @@ sub show_filters {
             my $balloon = $self->top->Balloon;
             $balloon->attach($cb, -balloonmsg => $fail_msg);
 
-            # configure the button such that the user can reselect 
+            # configure the button such that the user can reselect
             # a failed filter to try again
             $cb->configure(
                 -command => sub {
                     $state_hash->{failed} = 0;
                     $cb->configure(
-                        -selectcolor => $STATE_COLORS{'default'}, 
+                        -selectcolor => $STATE_COLORS{'default'},
                         -command => undef,
                         );
                     $cb->select;
@@ -568,7 +568,7 @@ sub DESTROY {
     warn "Destroying LoadColumns\n";
     if (my $sn = $self->SequenceNotes) {
         $self->AceDatabase->post_exit_callback(sub{
-            $sn->refresh_lock_columns;    
+            $sn->refresh_lock_columns;
         });
     }
 
