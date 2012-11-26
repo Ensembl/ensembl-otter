@@ -7,6 +7,8 @@ use strict;
 use warnings;
 use Carp;
 
+use Try::Tiny;
+
 use base 'EditWindow';
 
 =pod
@@ -216,9 +218,8 @@ sub generate_desc {
         return;
     }
 
-    # delete any existing text that is highlighted (we have to eval
-    # because if nothing is highlighted this errors)
-    eval{$self->description_text->delete('sel.first', 'sel.last')};
+    # delete any existing text that is highlighted (if nothing is highlighted this errors)
+    try {$self->description_text->delete('sel.first', 'sel.last')};
 
     # and insert the new text at the current cursor position
     $self->description_text->insert('insert', $desc);
@@ -378,7 +379,7 @@ sub fill_Entries {
         $entry->insert(0, $text);
 
         # Not all versions of Entry have the "readonly" state
-        eval { $entry->configure(-state => 'readonly'); };
+        try { $entry->configure(-state => 'readonly'); };
         $entry->configure(-state => 'disabled') if $@;
     }
 
