@@ -48,8 +48,6 @@ use URI::Escape;
   my $slice_Ad = $loutre_dba->get_SliceAdaptor;
   my $gene_Ad  = $loutre_dba->get_GeneAdaptor;
 
-  #my $pipe_dba = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($loutre_dba);
-
   my @sets;
   my $mouse_set_slice = {};
   my $mouse_subregion_accSvs = {};

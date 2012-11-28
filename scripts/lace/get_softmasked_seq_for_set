@@ -45,8 +45,6 @@ use Bio::Otter::Lace::SatelliteDB;
         $otter_dba, 'pipeline_db_head', 'Bio::EnsEMBL::DBSQL::DBAdaptor',
         );
     my $slice_aptr = $pipe_dba->get_SliceAdaptor;
-    #my $pipe_dba = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($otter_dba);
-    #my $ctg_aptr = $pipe_dba->get_RawContigAdaptor;
 
     my $cs_list = $ss->CloneSequence_list;
     
@@ -64,9 +62,6 @@ use Bio::Otter::Lace::SatelliteDB;
         my $ctg_name = $cs->contig_name();
         my $slice = $slice_aptr->fetch_by_region('contig', $ctg_name);
         my $seq = $slice->get_repeatmasked_seq($repeat_mask, $soft);
-        #my $ctg = $ctg_aptr->fetch_by_name($ctg_name)
-        #  or die "No such contig '$ctg_name'";
-        #my $seq = $ctg->get_repeatmasked_seq($repeat_mask, $soft);
 	if ($stats_only) {
 	    my $char = seq2stats($seq->seq);
 	    printf("%-25s %s\n", $seq->seq_region_name, join "  ", stats2txt($char));
