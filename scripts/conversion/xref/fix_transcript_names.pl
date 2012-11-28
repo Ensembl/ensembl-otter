@@ -141,9 +141,19 @@ if (! $support->param('update')) {
   }
 }
 
-my $chr_length = $support->get_chrlength($dba,'','',1);
-my @chr_sorted = $support->sort_chromosomes($chr_length);
-my $chrs = \@chr_sorted;
+# which chromosomes do we study?
+my @top_slices;
+if ($support->param('chromosomes')) {
+  foreach ($support->param('chromosomes')) {
+    push @top_slices, $sa->fetch_by_region("toplevel", $_);
+  }
+}
+else {
+  my $chr_length = $support->get_chrlength($dba,'','chromosome',1); #will retrieve non-reference slices
+  foreach my $chr ($support->sort_chromosomes($chr_length)) {
+    push @top_slices, $sa->fetch_by_region('toplevel', $chr);
+  }
+}
 
 ### SIZE # (\d+|X|Y)+ # 0.25 ###
 ### SIZE # # 0.05 ###
@@ -151,11 +161,12 @@ my $chrs = \@chr_sorted;
 
 $support->log("fix names = $fix_names\n");
 
-foreach my $chr (@$chrs) {
-  $support->log_stamped("\n\nLooping over Chromosome $chr\n");
-  my $chrom = $sa->fetch_by_region('toplevel', $chr);
+foreach my $chrom (@top_slices) {
+  my $chrom_name = $chrom->seq_region_name();
+  $support->log_stamped("Checking chromosome $chrom_name\n");
  GENE:
-  foreach my $gene (@{$chrom->get_all_Genes()}) {
+  my ($genes) = $support->get_unique_genes($chrom);
+  foreach my $gene (@$genes){
     my $gsi    = $gene->stable_id;
     my $transnames;
     my %seen_names;
@@ -178,7 +189,7 @@ foreach my $chr (@$chrs) {
         || ($base_name =~ s/__\d{1,2}$//)
         || ($base_name =~ s/_\d$//)
 	|| ($base_name =~ s/\.\d+$//)) {
-	unless ( ($support->param('dbname') =~ /rerio/) && ($chr eq 'AB')) {
+	unless ( ($support->param('dbname') =~ /rerio/) && ($chrom_name eq 'AB')) {
 	  $support->log_warning("UNEXPECTED transcript name $t_name\n");
 	}
       }
