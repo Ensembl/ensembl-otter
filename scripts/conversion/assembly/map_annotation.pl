@@ -176,14 +176,14 @@ if ($support->param('help') or $support->error) {
 
 $support->comma_to_list('chromosomes');
 $support->comma_to_list('logic_names');
-my @logic_names = ( $support->param('logic_names'));
 
-if ($support->param('dbname') =~ /mus_musculus/) {
+#set logic_names if not already
+if ($support->param('dbname') =~ /[mus_musculus|homo_sapiens]/) {
   unless ($support->param('logic_names')) {
-    @logic_names = qw(otter otter_external);
-    $support->param('logic_names','otter,otter_external');
+    $support->param('logic_names','otter');
   }
 }
+my @logic_names = ( $support->param('logic_names'));
 
 # ask user to confirm parameters to proceed
 $support->confirm_params;
