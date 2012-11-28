@@ -28,15 +28,17 @@ General options:
 
 Specific options:
 
-    -mgi_file=FILE                      read MGI description from file
+    -hgncfixfile=FILE                   read HGNC details from file
 
 =head1 DESCRIPTION
 
-Parses a file from MGI and adds xrefs for any new MGI names. Reports on names
-that we don't use so these can be sent back to Havana.
-
-File to use is ftp://ftp.informatics.jax.org/pub/reports/MRK_VEGA.rpt
-
+Parses a file from HGNC and adds xrefs for any new HGNC names. Reports on differences in
+(i) stable IDs used by HGNC that are not in Vega
+(ii) names of protein coding genes that are out of sync between us and HGNC. Vega names that are old clone based
+ones can be programatically updated in Vega and loutre (hgnc_names_to_fix.txt), more complex cases names should
+be referred to Jane (hgnc_links_to_review.txt)
+(iii) Where the name mismatch is accompanied by a biotype difference (ie where HGNC think the stable ID is not
+protein coding genes then these are reported seperately (hgnc_links_to_review.txt)
 
 =head1 LICENCE
 
