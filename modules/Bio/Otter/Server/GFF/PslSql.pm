@@ -185,7 +185,8 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_psl_sql {
     my $chr_start = $slice->start();
     my $chr_end   = $slice->end();
 
-    $sth->execute($chr_name, $chr_start, $chr_end);
+    my @chr_name_list = ( $chr_name, "chr${chr_name}" );
+    $sth->execute(@chr_name_list, $chr_start, $chr_end);
 
     my @feature_coll;
 
@@ -261,9 +262,6 @@ sub get_requested_features {
     ($db_table) = $db_table =~ m/(\w+)/; # avoid sql injection
     my $db_table_dna = $db_table . '_dna';
 
-    my $chr_prefix = $self->param('chr_prefix');
-    $chr_name = "${chr_prefix}${chr_name}" if defined $chr_prefix;
-
     my $connecting = sprintf("connecting to '%s' %s %s, table %s\n",
         $db_dsn,
         $db_user ? "as '${db_user}'" : "[no user]",
@@ -298,7 +296,7 @@ sub get_requested_features {
     FROM
         $db_table
     WHERE
-            tName   = ?
+            tName   in ( ? , ? )
         AND tEnd   >= ?
         AND tStart <= ?
     ORDER BY
