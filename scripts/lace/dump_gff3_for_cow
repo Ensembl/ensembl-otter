@@ -38,8 +38,6 @@ use URI::Escape;
   my $slice_aptr = $otter_dba->get_SliceAdaptor;
   my $gene_aptr  = $otter_dba->get_GeneAdaptor;
 
-  #my $pipe_dba = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($otter_dba);
-
   unless ( @ARGV ) {
     foreach ( @{$ds->get_all_visible_SequenceSets} ) {
       push(@ARGV, $_->name);
