@@ -43,10 +43,12 @@ Nothing is imported by default.
 
 =cut
 
+use Carp;
 use Sys::Hostname 'hostname';
+use Try::Tiny;
 
 use base 'Exporter';
-our @EXPORT_OK = qw( db_or_skipall farm_or_skipall OtterClient get_BOLDatasets diagdump );
+our @EXPORT_OK = qw( db_or_skipall farm_or_skipall OtterClient get_BOLDatasets diagdump excused );
 
 
 sub import {
@@ -68,6 +70,53 @@ sub import {
 
     # export the remainder
     return $pkg->export_to_level(1, $pkg, @imp_tag);
+}
+
+
+=head2 excused($test_sub, \@tree, @arg)
+
+Wrapper to run a test comparison with an excuse.  Looks up in
+L</excuses> using C<@tree> as keys into nested hashes, and sets
+C<local $TODO> to the result.  Finds code for subroutine
+C<${caller}::$test_sub>.  Calls it with C<@arg, $tree[-1]>.
+
+Returns (scalar test result || excuse).
+
+When formulating C<@arg> beware the lack of the prototypes provided by
+the original subs.
+
+=cut
+
+our $TODO;
+sub excused {
+    my ($test_sub, $tree, @arg) = @_;
+    my $caller_pkg = caller();
+
+    croak "Need keys for the hash-tree" unless eval { scalar @$tree };
+    my $code = $caller_pkg->can($test_sub)
+      or croak "Subroutine ${caller_pkg}::$test_sub not found";
+
+    my $excuse = __PACKAGE__->excuses();
+    foreach my $ele (@$tree) {
+        $excuse = try {
+            $excuse->{$ele}
+        } catch {
+            local $" = "', '";
+            $excuse = '(undef)' unless defined $excuse;
+            die "Bad excuse tree ['@$tree'] => '$excuse'->{'$ele'}: $_";
+        };
+        last unless defined $excuse;
+    }
+
+    my $name = $tree->[-1];
+
+    local $TODO = $excuse; # caller() is used find our $TODO, not $main::TODO
+    my $result = $code->(@arg, $name);
+
+#    diagdump(tree => $tree, excuse => $excuse, caller_pkg => $caller_pkg)
+#      unless $result;
+
+    return $result || $excuse
 }
 
 
@@ -119,6 +168,39 @@ sub cachedir {
         push @dir, $fn;
     }
     return $dir[0];
+}
+
+
+=head2 excuses()
+
+Load, cache and return a hashref for the "excused" test failures.  See
+also L</excused>.  The purpose is not to skip the test, but to run it
+expecting failure because "we know that is broken".
+
+Top level is a test name, further levels are some test-specific
+detail.
+
+Data comes from team_tools.git and is used to downgrade test failures
+into TODOs.  Tests should consider it read-only; auto-vivification
+will cause confusion.
+
+Generates a warning if the data can't be loaded, then returns C< {} >.
+
+=cut
+
+my $_excuses;
+sub excuses {
+    my ($pkg) = @_;
+    require YAML;
+    return $_excuses ||= try {
+        die '$ANACODE_TEAM_TOOLS not available' unless -d $ENV{ANACODE_TEAM_TOOLS};
+        YAML::LoadFile("$ENV{ANACODE_TEAM_TOOLS}/config/test-excuses.yaml");
+    } catch {
+        my $msg = $_;
+        $msg =~ s{^}{  }mg;
+        warn "$pkg->excuses returns nothing, continue without.\n$msg";
+        {};
+    };
 }
 
 
