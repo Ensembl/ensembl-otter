@@ -593,20 +593,20 @@ foreach my $t (qw(gene transcript translation seq_region)) {
 }
 
 #remove orphan codon_usage seq_region_attribs since they keep on appearing (come from core dbs) only to be deleted
-$support->log_stamped("Removing orphan codon_usage seq_region_attribs.\n\n");
+$support->log_stamped("Removing orphan codon_usage seq_region_attribs.\n");
 $c = $dbh->{'evega'}->do(qq(DELETE sra FROM attrib_type at, seq_region_attrib sra
                                    LEFT JOIN seq_region sr ON sra.seq_region_id = sr.seq_region_id
                              WHERE sra.attrib_type_id = at.attrib_type_id
                                AND at.code = 'codon_table'
                                AND sr.seq_region_id IS NULL));
-$support->log("Removed $c seq_region_attib entries\n");
+$support->log("Removed $c seq_region_attib entries\n\n");
 
 #tidy up xrefs with incorrect version (HC noise)
-$support->log_stamped("Setting correct default version for xrefs.\n\n");
+$support->log_stamped("Setting correct default version for xrefs.\n");
 $c = $dbh->{'evega'}->do(qq(UPDATE xref SET version = 0 WHERE version = ''));
-$support->log("Updated versions of $c xrefs\n");
+$support->log("Updated versions of $c xrefs\n\n");
 #tidy up xrefs with info_type (HC noise)
-$support->log_stamped("Setting correct default info_type for xrefs.\n\n");
+$support->log_stamped("Setting correct default info_type for xrefs.\n");
 $c = $dbh->{'evega'}->do(qq(UPDATE xref SET info_type = 'NONE' WHERE version = ''));
 $support->log("Updated info_type of $c xrefs\n");
 
