@@ -146,6 +146,10 @@ while (my $line = <$infile>) {
     my $current_xrefid = $current_dispxref->dbID;
     my $current_location = $gene->seq_region_name;
 
+    #if you need to go back and do some more as I did for Vega51, then uncomment this line
+#    next unless ($new_name ne $current_name);
+
+
     #double check it's not an HGNC xref
     if ($current_source eq 'HGNC') {
       $support->log_warning("$gsi ($old_name->$new_name)) already has an HGNC xref, needs checking so skipping\n",1);
@@ -153,8 +157,8 @@ while (my $line = <$infile>) {
     }
     #double check it's the right one
     if ($current_name ne $old_name) {
-  #    $support->log_warning("$gsi has a different name in the file ($old_name) than in the db($current_name), needs checking so skipping\n",1);
-  #    next;
+      $support->log_warning("$gsi has a different name in the file ($old_name) than in the db ($current_name), needs checking so skipping\n",1);
+      next;
     }
     #check there's none by this name already.
     my @genes = @{$ga->fetch_all_by_display_label($new_name) || []};
@@ -172,8 +176,6 @@ while (my $line = <$infile>) {
             $reg_end += 50000;
             my $gene_start = $gene->seq_region_start;
             my $gene_end = $gene->seq_region_end;
-            warn "$gene_start -- $gene_end";
-            warn "$reg_start -- $reg_end";
             if ( ($gene_start < $reg_end) && ($gene_end > $reg_start) ) {
               last;
             }
@@ -199,9 +201,7 @@ while (my $line = <$infile>) {
         foreach my $g (@genes) {
           next if $not_wanted;
           my $chrom_name = $g->seq_region_name;
-#          warn $chrom_name;
           foreach my $comparison (@{$allowed_regions}) {
-#            warn Data::Dumper::Dumper($comparison);
             if (my $region = $comparison->{$chrom_name}) {
               if ($region ne 'all') {
                 #only get genes that start or end within the defined region
@@ -211,12 +211,9 @@ while (my $line = <$infile>) {
                 $reg_end += 50000;
                 my $gene_start = $g->seq_region_start;
                 my $gene_end = $g->seq_region_end;
-#                warn "$gene_start -- $gene_end";
-#                warn "$reg_start -- $reg_end";
                 if ( ($gene_start < $reg_end) && ($gene_end > $reg_start) ) {
-#                  warn "OK";
-                  last;
                   #that's OK
+                  last;
                 }
                 else {
                   $not_wanted = $chrom_name;
