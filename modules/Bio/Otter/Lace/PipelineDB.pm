@@ -24,29 +24,21 @@ sub get_rw_DBAdaptor {
 }
 
 sub get_pipeline_DBAdaptor {
-    my ($otter_db, $inherit_assembly_type) = @_;
+    my ($otter_db) = @_;
 
     require Bio::EnsEMBL::Pipeline::DBSQL::Finished::DBAdaptor;
     my $pipe_db = Bio::Otter::Lace::SatelliteDB::get_DBAdaptor(
         $otter_db, 'pipeline_db_head', 'Bio::EnsEMBL::Pipeline::DBSQL::Finished::DBAdaptor');
 
-    if($inherit_assembly_type) {
-        $pipe_db->assembly_type($otter_db->assembly_type());
-    }
-
     return $pipe_db;
 }
 
 sub get_pipeline_rw_DBAdaptor {
-    my ($otter_db, $inherit_assembly_type) = @_;
+    my ($otter_db) = @_;
 
     require Bio::EnsEMBL::Pipeline::DBSQL::Finished::DBAdaptor;
     my $pipe_db =  Bio::Otter::Lace::SatelliteDB::get_DBAdaptor(
         $otter_db, 'pipeline_db_rw_head', 'Bio::EnsEMBL::Pipeline::DBSQL::Finished::DBAdaptor');
-
-    if($inherit_assembly_type) {
-        $pipe_db->assembly_type($otter_db->assembly_type());
-    }
 
     return $pipe_db;
 }
