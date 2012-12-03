@@ -6,8 +6,6 @@ use warnings;
 
 use base qw( Bio::Otter::Server::GFF );
 
-my $http_proxy = $ENV{http_proxy};
-
 use Try::Tiny;
 
 use Bio::Das::Lite;
@@ -342,7 +340,7 @@ sub get_requested_features {
 
     my $das = Bio::Das::Lite->new({
         'dsn' => $source.'/'.$dsn,
-        $http_proxy ? ('http_proxy' => $http_proxy) : (),
+        'http_proxy' => $ENV{'http_proxy'},
                                   });
 
     # Default timeout was 5 seconds, which is not long enough for UCSC!
