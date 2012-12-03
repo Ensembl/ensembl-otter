@@ -379,8 +379,8 @@ sub fill_Entries {
         $entry->insert(0, $text);
 
         # Not all versions of Entry have the "readonly" state
-        try { $entry->configure(-state => 'readonly'); };
-        $entry->configure(-state => 'disabled') if $@;
+        try { $entry->configure(-state => 'readonly'); }
+        catch { $entry->configure(-state => 'disabled'); };
     }
 
     return;
