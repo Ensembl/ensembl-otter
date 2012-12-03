@@ -24,15 +24,15 @@ my @r = get_accession_type('AA913908.1');
 ok(scalar(@r), 'get versioned accession');
 
 my ($type, $acc_sv, $src_db, $seq_len, $taxon_list, $desc) = @r;
-is ($type, 'EST');
-is ($acc_sv, 'AA913908.1');
+is ($type, 'EST', 'type (versioned accession)');
+is ($acc_sv, 'AA913908.1', 'acc_sv (versioned_accession)');
 
 @r = get_accession_type('AA913908');
 ok(scalar(@r), 'get unversioned accession');
 
 ($type, $acc_sv, $src_db, $seq_len, $taxon_list, $desc) = @r;
-is ($type, 'EST');
-is ($acc_sv, 'AA913908.1');
+is ($type, 'EST', 'type (unversioned accession)');
+is ($acc_sv, 'AA913908.1', 'acc_sv (unversioned accession)');
 
 my $f_seq = Bio::Seq->new(
     -seq   => 'GATTACCA',
@@ -40,8 +40,8 @@ my $f_seq = Bio::Seq->new(
     );
 my $r_seq = reverse_seq( $f_seq );
 ok($r_seq, 'reverse_seq did something');
-is($r_seq->seq, 'TGGTAATC');
-is($r_seq->display_id, 'test.rev');
+is($r_seq->seq, 'TGGTAATC', 'seq');
+is($r_seq->display_id, 'test.rev', 'display_id');
 
 1;
 
