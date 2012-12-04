@@ -96,7 +96,8 @@ sub populate {
     try {
         foreach my $line (split /\n/, $response) {
             my ($name, $evi_type, $acc_sv, $source_db, $seq_length, $taxon_list, $description) = split /\t/, $line;
-            my ($tax_id, @other_tax) = split /,/, $taxon_list; # /; # emacs highlighting workaround
+            my ($tax_id, @other_tax);
+            ($tax_id, @other_tax) = split /,/, $taxon_list if $taxon_list; # /; # emacs highlighting workaround
             if (@other_tax) {
                 # Some SwissProt entries contain the same protein and multiple species.
                 warn "Discarding taxon info from '$taxon_list' for '$acc_sv'; keeping only '$tax_id'";
