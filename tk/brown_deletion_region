@@ -126,7 +126,6 @@ use Bio::Otter::Lace::PipelineDB;
 
     my $db = Hum::EnsCmdLineDB::connect();
     my $pipe_db = Bio::Otter::Lace::PipelineDB::get_DBAdaptor($db);
-    $pipe_db->assembly_type($db->assembly_type);
 	my      $stadp =      $db->get_SliceAdaptor();
     my $pipe_stadp = $pipe_db->get_SliceAdaptor();
 

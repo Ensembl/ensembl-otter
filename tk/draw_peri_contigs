@@ -74,7 +74,6 @@ use GenomeCanvas::Band::GeneKey;
     my $ctg_list = $ss->CloneSequence_contigs_split_on_gaps;
     
     my $otter_dba = $ds->get_cached_DBAdaptor;
-    $otter_dba->assembly_type($set_name);
     my $otter_slice_aptr = $otter_dba->get_SliceAdaptor;
     my $pipe_dba = Bio::Otter::Lace::PipelineDB::get_pipeline_DBAdaptor($otter_dba);
     
