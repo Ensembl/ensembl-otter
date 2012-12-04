@@ -82,7 +82,6 @@ sub get_sequence {
     my $ds = $cl->get_DataSet_by_name($dataset_name);
 
     my $otter_dba = $ds->get_cached_DBAdaptor;
-    $otter_dba->assembly_type($sequence_set);
     my $slice = $otter_dba->get_SliceAdaptor->fetch_by_chr_start_end($chr, $start, $end);
     push @{$return_lines}, "DATASET\t$dataset_name";
     push @{$return_lines}, "CHR\t$chr";
@@ -148,8 +147,6 @@ sub get_otter_gene_structure {
     if(!$containing_set){
       return ["ERROR\tThe list of possible sequence sets -- ".(join ",",@possible_sets)." -- doesnt contain any member of the allowed sets -- ".(join ",",keys %allowed_sets)."\n"];
     }
-
-    $otter_dba->assembly_type($containing_set);
 
     if(!$containing_set){
       return ["ERROR\tno allowed sequence set contains the input gene\n"];
