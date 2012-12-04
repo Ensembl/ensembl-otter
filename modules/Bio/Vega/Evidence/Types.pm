@@ -9,6 +9,7 @@ our @EXPORT_OK = qw(new_evidence_type_valid evidence_type_valid_all evidence_is_
 use Readonly;
 
 # Order is important - used for presentation in CanvasWindow::EvidencePaster
+# [ note that this list is duplicated in Hum::Ace::SubSeq :-( ]
 #
 Readonly our @VALID => qw( Protein ncRNA cDNA EST SRA );
 Readonly our @ALL   => ( @VALID, 'Genomic');
