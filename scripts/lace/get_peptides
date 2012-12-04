@@ -65,7 +65,6 @@ use Bio::SeqIO;
     my $slice_aptr = $ds->get_cached_DBAdaptor->get_SliceAdaptor;
     my $gene_aptr  = $ds->get_cached_DBAdaptor->get_GeneAdaptor;
     my $ctg_list = $ss->selected_CloneSequences_as_contig_list;
-    $ds->get_cached_DBAdaptor->assembly_type($set_name);    # Why do I have to set this?
     my $gene_count = 0;
     foreach my $ctg (@$ctg_list) {
         my( $gene_id );

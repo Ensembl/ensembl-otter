@@ -42,8 +42,6 @@ if ( @sets ) {
 
     print "\nExamining gene IDs on '$set'\n";
 
-    $otter_db->assembly_type($set); # replace the default sequence set setting
-
     my $seqSet    = $dset->get_SequenceSet_by_name($set);
     $dset->fetch_all_CloneSequences_for_SequenceSet($seqSet);
 

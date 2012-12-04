@@ -30,7 +30,6 @@ use Bio::SeqIO;
     # DataSet interacts directly with an otter database
     my $ds        = $cl->get_DataSet_by_name($dataset_name);
     my $otter_dba = $ds->get_cached_DBAdaptor;
-    $otter_dba->assembly_type($set_name);
 
     my $gene_aptr  = $otter_dba->get_GeneAdaptor;
     my $slice_aptr = $otter_dba->get_SliceAdaptor;

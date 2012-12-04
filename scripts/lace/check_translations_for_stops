@@ -101,7 +101,6 @@ my ($out2, $out3, $out4, $out5, $out6, $out7);
       exit if scalar(@$gene_id_list)==0;
     } elsif ($sequence_set) {
         my $slice_aptr = $otter_db->get_SliceAdaptor;
-        $otter_db->assembly_type($sequence_set);
 
         # code warns to set this, but doesn't exist/work...
         #$client->get_SequenceSets_for_DataSet($dset);

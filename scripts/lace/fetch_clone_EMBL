@@ -25,7 +25,6 @@ use Bio::Otter::Lace::Defaults;
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
     my $ds = $cl->get_DataSet_by_name($dataset_name);
     my $otter_db = $ds->make_Vega_DBAdaptor;
-    $otter_db->assembly_type($sequence_set);
     my $slice_aptr = $otter_db->get_SliceAdaptor;
     my $gene_aptr  = $otter_db->get_GeneAdaptor;
 
