@@ -39,7 +39,6 @@ use Evi::Tictoc;
     my $ds = $cl->get_DataSet_by_name($dataset_name);
     
     my $otter_dba = $ds->get_cached_DBAdaptor;
-    $otter_dba->assembly_type($set_name);
 
     my $otter_slice;
 
