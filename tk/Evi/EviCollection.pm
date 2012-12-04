@@ -22,8 +22,6 @@ sub otter_to_pipeline { # class method
     #   # connect to master: [for debug purposes]
     # my $pipeline_dba  = Bio::Otter::Lace::PipelineDB::get_rw_DBAdaptor($otter_dba);
 
-    $pipeline_dba->assembly_type($otter_dba->assembly_type());
-
     my $pipeline_slice = $pipeline_dba->get_SliceAdaptor()->fetch_by_chr_start_end(
             $otter_slice->chr_name(),
             $otter_slice->chr_start(),
