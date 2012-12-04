@@ -26,7 +26,6 @@ use CanvasWindow;
 {
     Hum::EnsCmdLineDB::do_getopt();
     my $dba = Hum::EnsCmdLineDB::connect();
-    my $type = $dba->assembly_type('peri_short');
     my $slice_aptr = $dba->get_SliceAdaptor;
     my $ana_aptr   = $dba->get_AnalysisAdaptor;
     
