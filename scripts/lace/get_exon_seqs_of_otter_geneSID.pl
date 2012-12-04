@@ -40,8 +40,6 @@ if ( $infile ){
 
 foreach my $gsid ( @$geneSID_list ){
   my $gsidref = [$gsid];
-  my $asm_type = $client->find_string_match_in_clones($dataset, $gsidref)->[0]{assembly};
-  $otter_db->assembly_type($asm_type);
 
   my $gene = $geneAd->fetch_by_stable_id($gsid);
   my $slice = $sliceAd->fetch_by_gene_stable_id( $gsid, ($flank_left + $flank_right) );

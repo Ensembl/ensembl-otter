@@ -25,7 +25,6 @@ use Bio::Otter::Lace::Defaults;
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
     my $ds = $cl->get_DataSet_by_name($dataset_name);
     my $otter_db = $ds->make_Vega_DBAdaptor;
-    $otter_db->assembly_type($set_name);
     
     my @current_gene_id = fetch_current_gene_id_for_transcript($otter_db, $tsct_name);
     foreach my $gid (@current_gene_id) {

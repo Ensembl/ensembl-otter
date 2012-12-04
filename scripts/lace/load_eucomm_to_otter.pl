@@ -88,7 +88,6 @@ sub load_simple_features {
 
     my $fcounter = 0;
 
-    $otter_db->assembly_type($atype);
     $atype =~ /chr(\d+)-.+/i;
     my $chr_digit = $1;
 

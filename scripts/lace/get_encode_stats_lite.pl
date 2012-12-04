@@ -112,8 +112,6 @@ if ( @sets ) {
     my ($total_gene_set);
     my ($trans_has_evi, $trans_no_evi );
 
-    $otter_db->assembly_type($set); # replace the default sequence set setting
-
     my $seqSet = $dset->get_SequenceSet_by_name($set);
     $dset->fetch_all_CloneSequences_for_SequenceSet($seqSet);
     my $chrom = $seqSet->CloneSequence_list()->[0]->chromosome;

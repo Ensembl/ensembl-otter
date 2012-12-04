@@ -34,7 +34,6 @@ use Bio::Otter::Lace::Defaults;
         $ds->selected_SequenceSet($ss);
         $ds->fetch_all_CloneSequences_for_SequenceSet($ss);
 
-        $dba->assembly_type($set_name); # Why do I have to do this?
         my $slice_aptr = $dba->get_SliceAdaptor;
 
         my ($chr, $chr_start, $chr_end) = $cl->chr_start_end_from_contig($ss->CloneSequence_list);

@@ -59,7 +59,6 @@ $| = 1;
     my $slice_aptr = $dba->get_SliceAdaptor;
     foreach my $ss (@$ss_list) {
         my $set_name = $ss->name;
-        $dba->assembly_type($set_name);
         $ds->fetch_all_CloneSequences_for_SequenceSet($ss);
         if ($chr_start_acc or $chr_end_acc) {
             die sprintf("Need both start_acc (got '%s') and end_acc (got '%s')\n",

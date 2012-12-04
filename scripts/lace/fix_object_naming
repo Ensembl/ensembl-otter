@@ -40,7 +40,6 @@ use Hum::Submission 'prepare_cached_statement';
     my $gene_db_id;
     if ($set_name) {
         my $ss = $ds->get_SequenceSet_by_name($set_name);
-        $dba->assembly_type($set_name);
         $ds->fetch_all_CloneSequences_for_SequenceSet($ss);
         $ss->selected_CloneSequences($ss->CloneSequence_list);
         my ($chr, $chr_start, $chr_end) =

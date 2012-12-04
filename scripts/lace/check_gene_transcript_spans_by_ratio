@@ -54,8 +54,6 @@ foreach my $type ( @a_types ) {
 
   print STDERR "\nExamining genes on '$type'\n";
 
-  $otter_db->assembly_type($type); # replace the default sequence set setting
-
   my $seqSet    = $dset->get_SequenceSet_by_name($type);
   $dset->fetch_all_CloneSequences_for_SequenceSet($seqSet);
   my $chrom     = $seqSet->CloneSequence_list()->[0]->chromosome;

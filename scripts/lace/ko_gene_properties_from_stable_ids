@@ -71,7 +71,6 @@ use Bio::Otter::Lace::Defaults;
         my ($asm_type, $chr_name) = @{$asm[0]};
         
         # Get the slice
-        $otter_dba->assembly_type($asm_type);
         my $slice = $slices_hash{$asm_type}
           ||= $slice_aptr->fetch_by_chr_name($chr_name);
 

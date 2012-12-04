@@ -33,7 +33,6 @@ use Bio::Otter::Lace::Defaults;
     $ss->selected_CloneSequences($ss->CloneSequence_list);
     
     my $otter_dba = $ds->get_cached_DBAdaptor;
-    $otter_dba->assembly_type($set_name);   # Really shouldn't need this!
     
     my ($chr, $chr_start, $chr_end) = $cl->chr_start_end_from_contig($ss->selected_CloneSequences);
     warn "$chr $chr_start $chr_end";

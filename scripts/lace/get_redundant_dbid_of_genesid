@@ -49,8 +49,6 @@ sub get_gene_dbid_list_of_atype {
   my $atype = shift;
   print STDOUT "Working on $atype\n";
 
-  $otter_db->assembly_type($atype); # replace the default sequence set setting
-
   my $seqSet = $dset->get_SequenceSet_by_name($atype);
   $dset->fetch_all_CloneSequences_for_SequenceSet($seqSet);
 

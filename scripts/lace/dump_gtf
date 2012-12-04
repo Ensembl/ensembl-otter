@@ -36,7 +36,6 @@ use Bio::Vega::DBSQL::DBAdaptor;
     my $gene_aptr  = $otter_dba->get_GeneAdaptor;
 
     foreach my $set_name (@ARGV) {
-        $otter_dba->assembly_type($set_name);
 
         # Get the slice of the whole sequence set
         my $ss = $ds->get_SequenceSet_by_name($set_name);

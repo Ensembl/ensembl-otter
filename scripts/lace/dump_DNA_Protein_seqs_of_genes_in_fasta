@@ -49,8 +49,6 @@ if ( @sets ) {
 
     $stblID_acc = gene_stable_id_2_acc_sv($set) if $filter;
 
-    $otter_db->assembly_type($set); # replace the default sequence set setting
-
     my $seqSet    = $dset->get_SequenceSet_by_name($set);
     $dset->fetch_all_CloneSequences_for_SequenceSet($seqSet);
 

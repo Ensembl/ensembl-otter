@@ -33,7 +33,6 @@ use Bio::Otter::Lace::Defaults;
     my $ds = $cl->get_DataSet_by_name($dataset_name);
     
     my $otter_dba = $ds->get_cached_DBAdaptor;
-    $otter_dba->assembly_type($set_name);
 
     print STDERR "DataSet      = '$dataset_name'\n";
     print STDERR "Chromosome   = '$chr_name'\n";
