@@ -64,6 +64,7 @@ sub get_sample_accession_types {
     my $results = $self->get_sample_accessions(@accessions);
     foreach my $acc ( keys %$results ) {
         my $result = $results->{$acc};
+        #                    type,  acc,  source_db,    len, taxon_id,                          description
         $acc_types{$acc} = [ 'SRA', $acc, 'SRA_Sample', '', $result->{SAMPLE_NAME}->{TAXON_ID}, $result->{TITLE} ];
     }
 
