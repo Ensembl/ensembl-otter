@@ -7,7 +7,6 @@ use strict;
 use warnings;
 
 use DBI;
-use Bio::Vega::Evidence::Types qw(evidence_is_sra_sample_accession);
 
 =pod
 
@@ -165,17 +164,6 @@ JOIN taxonomy    t ON i.parent_entry_id = t.entry_id };
 
         my %acc_hash = map { $_ => 1 } @$accs;
         my $results = {};
-
-        # This is a quick fix to check that SRA accessions are handled correctly once admitted
-        #
-        foreach my $name (keys %acc_hash) {
-            if (evidence_is_sra_sample_accession($name)) {
-                $results->{$name} = [ 'SRA', $name, 'SRA' ];
-                delete $acc_hash{$name};
-            }
-        }
-        # Return unless there's still work to do
-        return $results unless keys %acc_hash;
 
         for my $db_name (@DB_CATEGORIES) {
             my $dbh = $self->dbh($db_name);
