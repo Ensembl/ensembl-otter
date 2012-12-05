@@ -51,6 +51,12 @@ foreach my $invalid ( @invalid_accs ) {
     ok(not($at), "$invalid: no at_result");
 }
 
+# Singleton
+my $acc = $valid_accs[1];
+my $s_results = $ena->get_sample_accessions($acc);
+is(ref($s_results), 'HASH', 's_results hash');
+ok($s_results->{$acc}, 'result is for singleton acc');
+
 done_testing;
 
 1;

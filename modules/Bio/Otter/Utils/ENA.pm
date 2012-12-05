@@ -47,6 +47,7 @@ sub get_sample_accessions {
     my %results;
     my $samples = $ref->{SAMPLE};
     if ($samples) {
+        $samples = [ $samples ] unless ref($samples) eq 'ARRAY'; # single result comes as hashref not as arrayref
         foreach my $sample (@$samples) {
             my $sample_acc = $sample->{accession};
             $results{$sample_acc} = $sample;
