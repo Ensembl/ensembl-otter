@@ -10,6 +10,8 @@ use warnings;
 BEGIN { use lib ($ENV{OTTER_PERL_INC} || q{}) =~ m{([^:]+)}g }
 use SangerPaths qw{ core bioperl123 ensembl66 otter72 };
 
+use Try::Tiny;
+
 use Bio::Otter::ServerScriptSupport;
 use Bio::Otter::Utils::MM;
 use Bio::Otter::Utils::ENA;
@@ -33,18 +35,24 @@ Bio::Otter::ServerScriptSupport->send_response(
         }
 
         my $mm_types;
-        eval {
+        try {
             my $mm = Bio::Otter::Utils::MM->new;
             $mm_types = $mm->get_accession_types(\@mm_acc_list);
             1;
-        } or die "Failed to fetch MM accession type info: $@";
+        }
+        catch {
+            die "Failed to fetch MM accession type info: $_";
+        };
 
         my $ena_types;
-        eval {
+        try {
             my $ena = Bio::Otter::Utils::ENA->new;
             $ena_types = $ena->get_sample_accession_types(@sra_acc_list);
             1;
-        } or die "Failed to fetch ENA accession type info: $@";
+        }
+        catch {
+            die "Failed to fetch ENA accession type info: $_";
+        };
 
         my $response = '';
         foreach my $acc (keys %$mm_types) {
