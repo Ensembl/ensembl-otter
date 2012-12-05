@@ -85,33 +85,57 @@ Returns (scalar test result || excuse).
 When formulating C<@arg> beware the lack of the prototypes provided by
 the original subs.
 
+This wrapper takes measures to "pass the stacktrace buck" for L<Carp>
+and L<Test::Builder>, but C<caller>-based warning and error messages
+will blame the wrong place.
+
 =cut
 
-our $TODO;
 sub excused {
     my ($test_sub, $tree, @arg) = @_;
-    my $caller_pkg = caller();
-
-    croak "Need keys for the hash-tree" unless eval { scalar @$tree };
-    my $code = $caller_pkg->can($test_sub)
-      or croak "Subroutine ${caller_pkg}::$test_sub not found";
 
     my $excuse = __PACKAGE__->excuses();
     foreach my $ele (@$tree) {
         $excuse = try {
             $excuse->{$ele}
         } catch {
+            # path @$tree is too long OR excuses structure is broken
             local $" = "', '";
             $excuse = '(undef)' unless defined $excuse;
             die "Bad excuse tree ['@$tree'] => '$excuse'->{'$ele'}: $_";
         };
         last unless defined $excuse;
     }
+    if (ref($excuse) eq 'HASH') {
+        # it seems the given path @$tree is too short
+        local $" = "', '";
+        die "Incomplete excuse tree ['@$tree'] => $excuse";
+    }
+
+    my $caller_pkg = caller();
+
+    croak "Need keys for the hash-tree" unless eval { scalar @$tree };
+    my $code = $caller_pkg->can($test_sub)
+      or croak "Subroutine ${caller_pkg}::$test_sub not found";
+
+    my $todo_pkg = caller($Test::Builder::Level-1); # trickyness; $Level is probably 1
+    # warn "Use \$${todo_pkg}::TODO for Level=$Test::Builder::Level\n";
 
     my $name = $tree->[-1];
 
-    local $TODO = $excuse; # caller() is used find our $TODO, not $main::TODO
-    my $result = $code->(@arg, $name);
+    my $result = do {
+        # pass the stacktrace buck to $code
+        local $Carp::Internal{ (__PACKAGE__) } = 1;
+        local $Test::Builder::Level = $Test::Builder::Level + 1;
+
+        # Test::Builder would find our $TODO, except we bumped the level
+        my $varname = $todo_pkg.'::TODO';
+        no strict 'refs';
+        local ${ $varname } = $excuse ? "excused: $excuse" : undef;
+        use strict 'refs';
+
+        $code->(@arg, $name);
+    };
 
 #    diagdump(tree => $tree, excuse => $excuse, caller_pkg => $caller_pkg)
 #      unless $result;
