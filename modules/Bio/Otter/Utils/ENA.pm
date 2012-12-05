@@ -49,15 +49,24 @@ sub get_sample_accessions {
     if ($samples) {
         foreach my $sample (@$samples) {
             my $sample_acc = $sample->{accession};
-            $results{$sample_acc} = {
-                alias    => $sample->{alias},
-                taxon_id => $sample->{SAMPLE_NAME}->{TAXON_ID},
-                title    => $sample->{TITLE},
-            };
+            $results{$sample_acc} = $sample;
         }
     }
 
     return \%results;
+}
+
+sub get_sample_accession_types {
+    my ($self, @accessions) = @_;
+
+    my %acc_types;
+    my $results = $self->get_sample_accessions(@accessions);
+    foreach my $acc ( keys %$results ) {
+        my $result = $results->{$acc};
+        $acc_types{$acc} = [ 'SRA', $acc, 'SRA_Sample', '', $result->{SAMPLE_NAME}->{TAXON_ID}, $result->{TITLE} ];
+    }
+
+    return \%acc_types;
 }
 
 sub _user_agent {
