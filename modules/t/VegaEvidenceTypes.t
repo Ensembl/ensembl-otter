@@ -14,7 +14,7 @@ use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 my $module;
 BEGIN {
     $module = 'Bio::Vega::Evidence::Types';
-    use_ok($module, qw(new_evidence_type_valid evidence_type_valid_all));
+    use_ok($module, qw(new_evidence_type_valid evidence_type_valid_all evidence_is_sra_sample_accession));
 }
 
 use Bio::Vega::Evidence;
@@ -35,6 +35,9 @@ ok($evi_types->valid_all('Genomic'),              'Genomic valid_all (OO)');
 ok(not($evi_types->valid_for_new_evi('Garbage')), 'Garbage is NOT valid_for_new_evi (OO)');
 ok(not($evi_types->valid_all('Garbage')),         'Garbage is NOT valid_all (OO)');
 
+ok($evi_types->is_sra_sample_accession('DRS000234'), 'SRA sample accession (OO)');
+ok(not($evi_types->is_sra_sample_accession('DRA000234')), 'SRA submission accession NOT a sample (OO)');
+
 # Function
 
 ok(new_evidence_type_valid('ncRNA'), 'ncRNA valid_for_new_evi (func)');
@@ -45,6 +48,9 @@ ok(evidence_type_valid_all('Genomic'),      'Genomic valid_all (func)');
 
 ok(not(new_evidence_type_valid('Garbage')), 'Garbage is NOT valid_for_new_evi (func)');
 ok(not(evidence_type_valid_all('Garbage')), 'Garbage is NOT valid_all (func)');
+
+ok(evidence_is_sra_sample_accession('SRS000012'), 'SRA sample accession (func)');
+ok(not(evidence_is_sra_sample_accession('AC123456.7')), 'Not an SRA sample accession (func)');
 
 # Check it works in a client module
 
@@ -64,7 +70,7 @@ try {
     $error = $_;
 };
 ok(not($okay), 'cannot mis-set type');
-like($error, qr/Must be one of Protein,ncRNA,cDNA,EST,Genomic/, 'error message ok');
+like($error, qr/Must be one of Protein,ncRNA,cDNA,EST,SRA,Genomic/, 'error message ok');
 is($evi->type,'Genomic',  'type is still Genomic');
 
 done_testing;

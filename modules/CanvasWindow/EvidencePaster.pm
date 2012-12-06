@@ -11,7 +11,7 @@ use Scalar::Util 'weaken';
 use Hum::Sort 'ace_sort';
 use Bio::Otter::Lace::OnTheFly::Transcript;
 use Bio::Otter::UI::TextWindow::TranscriptAlign;
-use Bio::Vega::Evidence::Types;
+use Bio::Vega::Evidence::Types qw(evidence_is_sra_sample_accession);
 use Tk::Utils::OnTheFly;
 
 use base 'CanvasWindow';
@@ -393,7 +393,10 @@ sub get_selected_accessions {
         my ($type) = $canvas->gettags($sel);
         my $name   = $canvas->itemcget($sel, 'text');
         my @no_prefixes = Hum::ClipboardUtils::accessions_from_text($name);
-        push @accessions, @no_prefixes;
+        # Temporary fix to eliminate SRA accessions from dotter / OTF vs transcript.
+        foreach my $acc ( @no_prefixes ) {
+            push @accessions, $acc unless evidence_is_sra_sample_accession($acc);
+        }
     }
 
     return @accessions;
