@@ -10,26 +10,56 @@ use warnings;
 BEGIN { use lib ($ENV{OTTER_PERL_INC} || q{}) =~ m{([^:]+)}g }
 use SangerPaths qw{ core bioperl123 ensembl66 otter72 };
 
+use Try::Tiny;
+
 use Bio::Otter::ServerScriptSupport;
 use Bio::Otter::Utils::MM;
+use Bio::Otter::Utils::ENA;
+use Bio::Vega::Evidence::Types qw(evidence_is_sra_sample_accession);
 
 Bio::Otter::ServerScriptSupport->send_response(
     sub {
         my ($server) = @_;
 
         my $accs = $server->param('accessions');
-        my $acc_list = [ split(/,/, $accs) ];
+        my @acc_list = split(/,/, $accs);
 
-        my $types;
-        eval {
+        my @mm_acc_list;
+        my @sra_acc_list;
+        foreach my $acc ( @acc_list ) {
+            if (evidence_is_sra_sample_accession($acc)) {
+                push @sra_acc_list, $acc;
+            } else {
+                push @mm_acc_list, $acc;
+            }
+        }
+
+        my $mm_types;
+        try {
             my $mm = Bio::Otter::Utils::MM->new;
-            $types = $mm->get_accession_types($acc_list);
+            $mm_types = $mm->get_accession_types(\@mm_acc_list);
             1;
-        } or die "Failed to fetch accession type info: $@";
+        }
+        catch {
+            die "Failed to fetch MM accession type info: $_";
+        };
+
+        my $ena_types;
+        try {
+            my $ena = Bio::Otter::Utils::ENA->new;
+            $ena_types = $ena->get_sample_accession_types(@sra_acc_list);
+            1;
+        }
+        catch {
+            die "Failed to fetch ENA accession type info: $_";
+        };
 
         my $response = '';
-        foreach my $acc (keys %$types) {
-            $response .= join("\t", $acc, @{$types->{$acc}}) . "\n";
+        foreach my $acc (keys %$mm_types) {
+            $response .= join("\t", $acc, @{$mm_types->{$acc}}) . "\n";
+        }
+        foreach my $acc (keys %$ena_types) {
+            $response .= join("\t", $acc, @{$ena_types->{$acc}}) . "\n";
         }
 
         return $response;

@@ -9,6 +9,7 @@ use warnings;
 use Log::Log4perl;
 
 use Bio::Otter::Lace::OnTheFly::Genomic;
+use Bio::Vega::Evidence::Types qw(evidence_is_sra_sample_accession);
 use Hum::Pfetch;
 use Hum::FastaFileIO;
 use Hum::ClipboardUtils qw{ accessions_from_text };
@@ -281,7 +282,11 @@ sub accessions_from_clipboard {
 
     # accessions_from_text extracts all the accessions from its
     # text argument and removes duplicates from the list
-    if (my @acc = accessions_from_text($text)) {
+
+    # Temporary fix to eliminate SRA accessions from dotter / OTF vs transcript.
+    my @acc = grep { not evidence_is_sra_sample_accession($_) } accessions_from_text($text);
+
+    if (@acc) {
         $self->set_entry('match', join ' ', @acc);
 
         # Show the end of the Entry so that the annotator sees

@@ -4,13 +4,14 @@ use strict;
 use warnings;
 
 use Exporter qw(import);
-our @EXPORT_OK = qw(new_evidence_type_valid evidence_type_valid_all);
+our @EXPORT_OK = qw(new_evidence_type_valid evidence_type_valid_all evidence_is_sra_sample_accession);
 
 use Readonly;
 
 # Order is important - used for presentation in CanvasWindow::EvidencePaster
+# [ note that this list is duplicated in Hum::Ace::SubSeq :-( ]
 #
-Readonly our @VALID => qw( Protein ncRNA cDNA EST );
+Readonly our @VALID => qw( Protein ncRNA cDNA EST SRA );
 Readonly our @ALL   => ( @VALID, 'Genomic');
 
 sub new {
@@ -45,6 +46,19 @@ sub _in_list {
     return;
 }
 
+# This may not be exactly the right place for this, but it'll do for now
+#
+sub is_sra_sample_accession {
+    my ($self, $acc) = @_;
+
+    # Examples:
+    #   ERS000123
+    #   SRS000012
+    #   DRS000234
+
+    return ($acc =~ /^[ESD]RS\d{6}$/);
+}
+
 # Non-member-function wrappers
 
 {
@@ -60,6 +74,12 @@ sub _in_list {
         my ($type) = @_;
         $evi_type ||= __PACKAGE__->new;
         return $evi_type->valid_all($type);
+    }
+
+    sub evidence_is_sra_sample_accession {
+        my ($acc) = @_;
+        $evi_type ||= __PACKAGE__->new;
+        return $evi_type->is_sra_sample_accession($acc);
     }
 }
 
