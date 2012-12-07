@@ -461,6 +461,14 @@ sub _zmap_config {
     return $config;
 }
 
+sub import_argument_string {
+    my ($self) = @_;
+    my $ds_name = $self->DataSet->name;
+    my $import_argument_string =
+        "--dataset=${ds_name} --gff_version=2";
+    return $import_argument_string;
+}
+
 sub ace_config {
     my ($self) = @_;
 
