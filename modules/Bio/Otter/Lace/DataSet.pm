@@ -50,7 +50,7 @@ sub zmap_config {
     my ($self, $session) = @_;
 
     my $ds_name = $self->name;
-    my $import_argument_string = "--dataset=${ds_name} --gff_version=2";
+    my $import_argument_string = $session->import_argument_string;
 
     my $stanza = { %{ $self->config_section('zmap') } };
 
