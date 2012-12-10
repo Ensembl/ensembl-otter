@@ -290,7 +290,7 @@ sub load_filters {
         # now initialise the database
         try { $self->AceDatabase->init_AceDatabase; return 1; }
         catch {
-            $self->SequenceNotes->exception_message($@, "Error initialising database");
+            $self->SequenceNotes->exception_message($_, "Error initialising database");
             $self->AceDatabase->error_flag(0);
             $top->destroy;
             return 0;
