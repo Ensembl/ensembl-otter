@@ -76,7 +76,7 @@ CREATE TABLE evidence (
 
    transcript_id        INT UNSIGNED NOT NULL REFERENCES transcript(transcript_id),
    name                VARCHAR(40) NOT NULL,
-   type                ENUM('EST','ncRNA','cDNA','Protein','Genomic','UNKNOWN'),
+   type                ENUM('EST','ncRNA','cDNA','Protein','Genomic','SRA','UNKNOWN'),
 
    PRIMARY KEY ( transcript_id,name,type )
 
