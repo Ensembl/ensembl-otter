@@ -142,6 +142,7 @@ my $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
 $support->parse_common_options(@_);
 $support->parse_extra_options(
   $support->get_loutre_params(1),
+  $support->get_annotrack_params(1),
   'currentdbname=s',
   'currenthost=s',
   'currentport=s',
@@ -176,6 +177,7 @@ $support->allowed_params(
   'live_update',
   $support->get_loutre_params,
   $support->get_common_params,
+  $support->get_annotrack_params,
 );
 
 $support->check_required_params(
@@ -283,6 +285,11 @@ if ($support->param('add_genes')) {
   if (! $support->user_proceed("\nAnnotation of just the following genes will be dumped, proceed ?\n". join("\n",@$genes_to_dump))) {
     exit;
   }
+}
+
+my $annotrack_genes = {};
+if (! $support->param('ignore_annotrack')) {
+  $annotrack_genes = &get_QC_issues;
 }
 
 ################################
@@ -585,6 +592,8 @@ if ( ! exists($current_vega_tables{'author'} )) {
   }
 }
 
+my %skipped_obj = ();
+
 #################################################################
 # do the real work and copy the genes and other features across #
 #################################################################
@@ -597,7 +606,6 @@ if ( ! exists($current_vega_tables{'author'} )) {
 foreach my $name (@{$chr_names_wanted}) {
   my $lslice = $lsa->fetch_by_region('chromosome',$name,undef,undef,undef,'Otter');
   my $vslice = $vsa->fetch_by_region('chromosome',$name,undef,undef,undef,'Otter');
-
   $support->log_stamped("Looking at Chromosome $name...\n");
   my $c = 0;
 
@@ -606,6 +614,13 @@ foreach my $name (@{$chr_names_wanted}) {
   foreach my $lgene (@{$lga->fetch_all_by_Slice($lslice)} ) {
     my $lgsi = $lgene->stable_id;
     my $gname = $lgene->get_all_Attributes('name')->[0]->value;
+
+    #filter on gene that has outstanding QC in Loutre
+    if (my $vqc = $annotrack_genes->{'Genes'}{$lgsi}{'not_fixed'}) {
+      $support->log("Skipping gene $lgsi because of outstanding QC ($vqc)\n",1);
+#      $skipped_obj{'Genes'}++;
+      next GENE;
+    }
 
     #filter on stable id
     if ($support->param('add_genes')) {
@@ -719,6 +734,9 @@ foreach my $name (@{$chr_names_wanted}) {
       }
       else {
         $support->log("Taking new gene $gname ($lgsi) (version ".$lgene->version.").\n",1);
+        if (my $dets = $annotrack_genes->{'Genes'}{$lgsi}) {
+          $support->log_verbose("Dumping gene $lgsi although it has previously resolved QC issues" . Data::Dumper::Dumper($dets) . "\n",2);
+        }
       }
     }
 
@@ -730,7 +748,7 @@ foreach my $name (@{$chr_names_wanted}) {
   $support->log("Transferred $c genes from chromosome $name\n");
 
   #transfer other seq_region based features
-  if (! $support->param('dry_run') && ! $support->param('add_genes') ) {
+  if (! $support->param('dry_run') && ! $support->param('add_genes') && ! $support->param('live_update') ) {
 
     #transfer chromosome seq_region_attributes
     &transfer_sra($lslice,$vslice,$att_types_wanted);
@@ -834,14 +852,27 @@ sub transfer_gene {
 
  TRANS:
   foreach my $transcript (@transcripts){
+    my $skip =0;
+    my $ltsi = $transcript->stable_id;
 
+    #see if they are not for Vega or have outstanding QC
     if ( grep { $_->value eq 'not for VEGA' } @{$transcript->get_all_Attributes('remark')} and not $lof  ) {
-      $support->log("Didn't transfer 'not for Vega' transcript ".$transcript->stable_id."\n",2);
-      # # #remove from gene object
-      $needs_updateing=1;
+      $support->log("Didn't transfer 'not for Vega' transcript $ltsi\n",2);
+      $needs_updateing = 1;
+      $skip = 1;
+    }
+    elsif (my $vqc = $annotrack_genes->{'Trans'}{$ltsi}{'not_fixed'}) {
+      $support->log("Skipping transcript $ltsi because of outstanding QC ($vqc)\n",2);
+      $needs_updateing = 1;
+      $skip = 1;
+#      $skipped_obj{'Trans'}++;
+    }
+
+    #remove transcript
+    if ($skip) {
       my $i=0;
       while ($i< scalar @{$lgene->{'_transcript_array'}} ){
-        if($lgene->{'_transcript_array'}->[$i]->stable_id eq $transcript->stable_id){
+        if($lgene->{'_transcript_array'}->[$i]->stable_id eq $ltsi){
           splice (@{$lgene->{'_transcript_array'}}, $i,1);
         }else{
           $i++;
@@ -866,7 +897,7 @@ sub transfer_gene {
       }
     }
   }
-  if($needs_updateing){#if we deleted a transcript the biotype * start/stop need updating
+  if ($needs_updateing){ #if we deleted a transcript the biotype * start/stop need updating
     my $old_biotype = $lgene->biotype;
     $lgene->set_biotype_status_from_transcripts;# update biotype;
     my $new_biotype = $lgene->biotype;
@@ -887,7 +918,7 @@ sub transfer_gene {
   }
 
   unless ($found_trans) {
-    $support->log("No transcripts found for gene ".$lgene->stable_id." (all 'not for VEGA'). Skipping...\n");
+    $support->log("No transcripts found for gene ".$lgene->stable_id." (all ignored ('not for VEGA' or outstanding QC'). Skipping...\n",1);
     return 0;
   }
 
@@ -1105,6 +1136,64 @@ sub transfer_simple_features {
   $vsfa->store(@features) if (@features);
   $support->log("$c simple features transferred for chromosome ".$lslice->seq_region_name."\n",1);
 }
+
+
+sub get_QC_issues {
+  my $dbh = $support->get_dbconnection('annotrack');
+  my $dets;
+
+  #details of who annotated the QC and when
+  my $det_sql = qq(
+     SELECT u.login, u.firstname, u.lastname, j.created_on, j.notes
+       FROM users u, journals j
+      WHERE j.user_id = u.id
+        AND j.journalized_id = ?
+        AND j.notes like ?);
+  my $det_sth = $dbh->prepare( $det_sql );
+
+  #details of outstanding and fixed QC issues
+  my $sql = qq(
+     SELECT p.name, i.subject, f.issue_id, f.flag_name, f.reason, s.name
+       FROM issue_statuses s, issues i, flags f, projects p
+      WHERE s.id = i.status_id
+        AND i.id = f.issue_id
+        AND i.project_id = p.id
+        AND s.name IN ('New','Updated')
+        AND f.flag_name like 'VQ%');
+  my $sth = $dbh->prepare($sql);
+  $sth->execute;
+  while (my ($gsi, $tsi, $at_id, $vqc, $fix_reason, $code) = $sth->fetchrow_array) {
+    my ($id,$type);
+    if ($vqc =~ /VQCG/) {
+      $type = 'Genes';
+      $id   = $gsi;
+    }
+    else {
+      $type = 'Trans';
+      $id   = $tsi;
+    }
+
+    #QC issue is outstanding if flag.reason is NULL
+    if (! $fix_reason ) {
+      $dets->{$type}{$id}{'not_fixed'} = $vqc;
+    }
+    else {
+      #save some details so that we can QC the QC
+      $det_sth->execute($at_id, qq(Resolved flag "$vqc"%));
+      while (my ($login, $fn, $ln, $date, $notes) = $det_sth->fetchrow_array) {
+        push @{$dets->{$type}{$id}{$vqc}{'fixes'}},
+          { 'fix'   => $fix_reason,
+            'code'  => $code,
+            'name'  => "$fn $ln",
+            'notes' => $notes,
+            'date'  => $date,
+          };
+      }
+    }
+  }
+  return $dets;
+}
+
 
 =head2 constraints
 
