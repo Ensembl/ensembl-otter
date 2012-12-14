@@ -11,6 +11,7 @@ use base 'MenuCanvasWindow';
 use Tk::NoPasteEntry;
 use Tk::SmartOptionmenu;
 
+use Bio::Otter::Lace::Client;
 use Hum::Ace::Assembly;
 use Hum::Ace::SeqFeature::Simple;
 
@@ -562,7 +563,7 @@ sub save_to_ace {
         unless ($force) {
 
             my $save_changes = $self->top_window->messageBox(
-                -title      => "otter: Save Genomic Features?" ,
+                -title      => $Bio::Otter::Lace::Client::PFX.'Save Genomic Features?',
                 -message    => "Do you wish to save the changes for '" . $new_assembly->name . "'?",
                 -type       => 'YesNo',
                 -icon       => 'question',
@@ -680,7 +681,8 @@ sub initialize {
 
 
     my $tl = $self->top_window;
-    $tl->title("otter: Genomic Features on " . $self->Assembly->name);
+    $tl->title($Bio::Otter::Lace::Client::PFX.
+               'Genomic Features on '. $self->Assembly->name);
 
     $self->canvas->Tk::bind('<Destroy>', sub{ $self = undef });
 

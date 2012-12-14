@@ -10,6 +10,7 @@ use Log::Log4perl;
 
 use Bio::Otter::Lace::OnTheFly::Genomic;
 use Bio::Vega::Evidence::Types qw(evidence_is_sra_sample_accession);
+use Bio::Otter::Lace::Client;
 use Hum::Pfetch;
 use Hum::FastaFileIO;
 use Hum::ClipboardUtils qw{ accessions_from_text };
@@ -89,7 +90,7 @@ sub initialise {
         -text    => 'Browse...',
         -command => sub {
             $fname = $top->getOpenFile(
-                -title      => 'otter: Choose Fasta File',
+                -title      => $Bio::Otter::Lace::Client::PFX.'Choose Fasta File',
                 -initialdir => $INITIAL_DIR,
                 -filetypes  => [
 
@@ -458,7 +459,7 @@ sub launch_exonerate {
 
     if ($otf->target_all_repeat) {
         $self->top->messageBox(
-            -title   => 'otter: All Repeat',
+            -title   => $Bio::Otter::Lace::Client::PFX.'All Repeat',
             -icon    => 'warning',
             -message => 'The genomic sequence is entirely repeat',
             -type    => 'OK',
@@ -472,7 +473,7 @@ sub launch_exonerate {
 
     unless (@$seqs) {
         $self->top->messageBox(
-            -title   => 'otter: No Sequence',
+            -title   => $Bio::Otter::Lace::Client::PFX.'No Sequence',
             -icon    => 'warning',
             -message => 'Did not get any sequence data',
             -type    => 'OK',
@@ -505,7 +506,7 @@ OTF_Protein });
         my @misses = $otf->names_not_hit;
         if (@misses) {
             $self->top->messageBox(
-                -title   => 'otter: Missing Matches',
+                -title   => $Bio::Otter::Lace::Client::PFX.'Missing Matches',
                 -icon    => 'warning',
                 -message => join("\n",
                                  'Exonerate did not find matches for:',
@@ -518,7 +519,7 @@ OTF_Protein });
     }
     else {
         $self->top->messageBox(
-            -title   => 'otter: No Matches',
+            -title   => $Bio::Otter::Lace::Client::PFX.'No Matches',
             -icon    => 'warning',
             -message => 'Exonerate did not find any matches on genomic sequence',
             -type    => 'OK',

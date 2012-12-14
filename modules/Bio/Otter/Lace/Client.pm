@@ -35,8 +35,23 @@ use Bio::Otter::LogFile;
 
 use 5.009001; # for stacked -f -r which returns false under 5.8.8
 
+# Window title prefix.
+#
+# Is a global for ease of interpolation.  Don't expect existing
+# windows to update when it changes.
+our $PFX = 'otter: ';
+
+sub _pkginit {
+    my ($pkg) = @_;
+    $PFX = 'o:' if $pkg->config_value('short_window_title_prefix'); # opt-in
+    return 1;
+}
+
+
 sub new {
     my ($pkg) = @_;
+
+    __PACKAGE__->_pkginit; # needs do_getopt to have happened
 
     my ($script) = $0 =~ m{([^/]+)$};
     my $client_name = $script || 'otterlace';

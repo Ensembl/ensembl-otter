@@ -9,6 +9,7 @@ use Carp;
 use Try::Tiny;
 
 use base 'CanvasWindow';
+use Bio::Otter::Lace::Client;
 use CanvasWindow::SequenceNotes::History;
 use CanvasWindow::SequenceNotes::Status;
 use TransientWindow::OpenRange;
@@ -765,9 +766,8 @@ sub _open_SequenceSet {
 
     warn "Making LoadColumns";
 
-    my $top = $self->canvas->Toplevel(
-        -title  => 'otter: Select column data to load',
-    );
+    my $top = $self->canvas->Toplevel
+      (-title  => $Bio::Otter::Lace::Client::PFX.'Select column data to load');
     my $lc = EditWindow::LoadColumns->new($top);
     $lc->init_flag(1);
     $lc->AceDatabase($adb);

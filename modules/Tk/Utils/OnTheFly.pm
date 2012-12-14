@@ -7,7 +7,7 @@ use warnings;
 sub problem_box {
     my ($top, $title, $warnings) = @_;
     $top->messageBox(
-        -title   => 'otter: Problems With ' . $title,
+        -title   => $Bio::Otter::Lace::Client::PFX.'Problems With ' . $title,
         -icon    => 'warning',
         -message => $warnings->{missing} . $warnings->{remapped} . $warnings->{unclaimed},
         -type    => 'OK',
@@ -18,7 +18,7 @@ sub problem_box {
 sub long_query_confirm {
     my ($top, $details) = @_;
     my $response = $top->messageBox(
-        -title   => 'otter: Unusually Long Query Sequence',
+        -title   => $Bio::Otter::Lace::Client::PFX.'Unusually Long Query Sequence',
         -icon    => 'warning',
         -message => $details->{name} . " is "
                   . $details->{length}

@@ -9,6 +9,7 @@ use Log::Log4perl;
 use Readonly;
 use Scalar::Util 'weaken';
 use Hum::Sort 'ace_sort';
+use Bio::Otter::Lace::Client;
 use Bio::Otter::Lace::OnTheFly::Transcript;
 use Bio::Otter::UI::TextWindow::TranscriptAlign;
 use Bio::Vega::Evidence::Types qw(evidence_is_sra_sample_accession);
@@ -24,7 +25,7 @@ sub initialise {
 
     my $canvas = $self->canvas;
     my $top = $canvas->toplevel;
-    $top->configure(-title => "otter: Evidence");
+    $top->configure(-title => $Bio::Otter::Lace::Client::PFX.'Evidence');
 
     my $action_frame = $top->Frame->pack(
         -side => 'top',
@@ -290,9 +291,9 @@ sub draw_evidence {
         $y += $type_pad
     }
 
-    $self->canvas->toplevel->configure(
-        -title => 'otter: Evidence ' . $self->TranscriptWindow->SubSeq->name,
-        );
+    $self->canvas->toplevel->configure
+      (-title => $Bio::Otter::Lace::Client::PFX.
+       'Evidence ' . $self->TranscriptWindow->SubSeq->name);
     $self->fix_window_min_max_sizes;
 
     return;

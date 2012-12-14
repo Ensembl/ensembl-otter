@@ -29,6 +29,7 @@ use MenuCanvasWindow::GenomicFeaturesWindow;
 use MenuCanvasWindow::ZMapSeqChooser;
 use Text::Wrap qw{ wrap };
 
+use Bio::Otter::Lace::Client;
 use Bio::Otter::ZMap::XML;
 use Bio::Vega::Transform::Otter::Ace;
 
@@ -877,7 +878,7 @@ sub exit_save_data {
             . "Is $what_phrase annotation now complete? Answering 'Yes' will remove $flag_phrase and save to otter";
 
         my $dialog = $self->top_window()->Dialog(
-            -title          => 'otter: Annotation complete?',
+            -title          => $Bio::Otter::Lace::Client::PFX.'Annotation complete?',
             -bitmap         => 'question',
             -text           => $txt,
             -default_button => 'No',
@@ -913,7 +914,7 @@ sub exit_save_data {
     if ($self->AceDatabase->unsaved_changes) {
         # Ask the user if any changes should be saved
         my $dialog = $self->top_window()->Dialog(
-            -title          => 'otter: Save?',
+            -title          => $Bio::Otter::Lace::Client::PFX.'Save?',
             -bitmap         => 'question',
             -text           => "Save any changes to otter server?",
             -default_button => 'Yes',
@@ -1531,7 +1532,7 @@ sub delete_subsequences {
             . $to_die[0]->name ."\n";
     }
     my $dialog = $self->top_window()->Dialog(
-        -title          => 'otter: Delete Transcripts?',
+        -title          => $Bio::Otter::Lace::Client::PFX.'Delete Transcripts?',
         -bitmap         => 'question',
         -text           => $question,
         -default_button => 'Yes',
@@ -1749,7 +1750,9 @@ sub edit_Clone {
     my $cew;
     unless ($cew = $self->{'_clone_edit_window'}{$name}) {
         $cew = EditWindow::Clone->new($self->top_window->Toplevel(
-            -title => sprintf("otter: Clone %s", $clone->clone_name),
+            -title => sprintf('%sClone %s',
+                              $Bio::Otter::Lace::Client::PFX,
+                              $clone->clone_name),
             ));
         $cew->SessionWindow($self);
         $cew->Clone($clone);
@@ -2321,7 +2324,7 @@ sub rename_locus {
         $ren_window->top->destroy;
     }
     my $parent = $self->top_window;
-    my $top = $parent->Toplevel(-title => 'otter: Rename Locus');
+    my $top = $parent->Toplevel(-title => $Bio::Otter::Lace::Client::PFX.'Rename Locus');
     $top->transient($parent);
     my $lr = EditWindow::LocusName->new($top);
     $lr->SessionWindow($self);
@@ -2339,7 +2342,7 @@ sub run_dotter {
     my $dw = $self->{'_dotter_window'};
     unless ($dw) {
         my $parent = $self->top_window();
-        my $top = $parent->Toplevel(-title => 'otter: Run Dotter');
+        my $top = $parent->Toplevel(-title => $Bio::Otter::Lace::Client::PFX.'Run Dotter');
         $top->transient($parent);
         $dw = EditWindow::Dotter->new($top);
         $dw->initialise;
@@ -2358,9 +2361,9 @@ sub run_exonerate {
     my $ew = $self->{'_exonerate_window'};
     unless ($ew) {
         my $parent = $self->top_window();
-        my $top = $parent->Toplevel(
-            -title => 'otter: On The Fly (OTF) Alignment'
-            );
+        my $top = $parent->Toplevel
+          (-title => $Bio::Otter::Lace::Client::PFX.
+           'On The Fly (OTF) Alignment');
         $top->transient($parent);
         $ew = EditWindow::Exonerate->new($top);
         $ew->SessionWindow($self);
@@ -2378,8 +2381,9 @@ sub set_window_title {
 
     my $name = $self->AceDatabase->name;
     my $unsaved_str = $self->AceDatabase->unsaved_changes ? '* ' : '';
-    my $title = "${unsaved_str}otter: Session $name";
-    $self->top_window->title($title);
+    $self->top_window->title
+      (sprintf('%s%s Session %s',
+               $unsaved_str, $Bio::Otter::Lace::Client::PFX, $name));
 
     return;
 }

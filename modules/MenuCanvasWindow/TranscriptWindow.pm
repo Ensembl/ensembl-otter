@@ -19,6 +19,7 @@ use Hum::Ace::Exon;
 use Hum::Ace::DotterLauncher;
 use CanvasWindow::EvidencePaster;
 use EditWindow::PfamWindow;
+use Bio::Otter::Lace::Client;
 use Bio::Otter::UI::TextWindow::Peptide;
 
 use base qw( MenuCanvasWindow );
@@ -417,7 +418,8 @@ sub SubSeq {
         my $expected = 'Hum::Ace::SubSeq';
         try { $sub->isa($expected) } or confess "Expected a '$expected', but got '$sub'";
         $self->{'_SubSeq'} = $sub;
-        $self->canvas->toplevel->configure(-title => 'otter: Transcript ' . $sub->name);
+        $self->canvas->toplevel->configure
+          (-title => $Bio::Otter::Lace::Client::PFX.'Transcript ' . $sub->name);
     }
     return $self->{'_SubSeq'};
 }
@@ -796,7 +798,7 @@ sub window_close {
             $self->deiconify_and_raise;
             $self->exception_message($err, 'Error checking for changes to transcript');
             my $dialog = $self->canvas->toplevel->Dialog(
-                -title          => 'otter: Abandon?',
+                -title          => $Bio::Otter::Lace::Client::PFX.'Abandon?',
                 -bitmap         => 'question',
                 -text           => "Transcript '$name' has errors.\nAbandon changes?",
                 -default_button => 'No',
@@ -809,7 +811,7 @@ sub window_close {
             # Ask the user if changes should be saved
             $self->deiconify_and_raise;
             my $dialog = $self->canvas->toplevel->Dialog(
-                -title          => 'otter: Save changes?',
+                -title          => $Bio::Otter::Lace::Client::PFX.'Save changes?',
                 -bitmap         => 'question',
                 -text           => "Save changes to Transcript '$name' ?",
                 -default_button => 'Yes',
@@ -882,7 +884,7 @@ sub search_pfam {
             $pfam = $self->{'_pfam'};
             if($pfam->query() ne $str) {
                 $pfam->top->destroy;
-                $pfam = EditWindow::PfamWindow->new($self->canvas->Toplevel(-title => "otter: Pfam $name"));
+                $pfam = $self->_new_window($name);
             } else {
                 $pfam->top->deiconify;
                 $pfam->top->raise;
@@ -894,10 +896,10 @@ sub search_pfam {
             $pfam = $self->{'_pfam'};
             my $result_url = $pfam->result_url;
             my $prev_query = $pfam->query();
-            $pfam = EditWindow::PfamWindow->new($self->canvas->Toplevel(-title => "otter: Pfam $name"));
+            $pfam = $self->_new_window($name);
             $pfam->result_url($result_url) unless $prev_query ne $str;
         } else {
-            $pfam = EditWindow::PfamWindow->new($self->canvas->Toplevel(-title => "otter: Pfam $name"));
+            $pfam = $self->_new_window($name);
         }
 
         $pfam->query($str);
@@ -907,6 +909,13 @@ sub search_pfam {
     }
 
     return;
+}
+
+sub _new_window {
+    my ($self, $name) = @_;
+    my $tl = $self->canvas->Toplevel
+      (-title => $Bio::Otter::Lace::Client::PFX."Pfam $name");
+    return EditWindow::PfamWindow->new($tl);
 }
 
 sub update_translation {

@@ -6,6 +6,8 @@ use 5.012;
 use strict;
 use warnings;
 
+use Bio::Otter::Lace::Client;
+
 use parent 'Bio::Otter::UI::TextWindow';
 
 my $highlight_hydrophobic = 0;
@@ -41,7 +43,9 @@ sub update_alignment {
     my $toplevel = $window->toplevel;
 
     # Set the window title
-    $toplevel->configure( -title => sprintf("otter: %s alignment", $self->type) );
+    $toplevel->configure( -title => sprintf('%s%s alignment',
+                                            $Bio::Otter::Lace::Client::PFX,
+                                            $self->type) );
 
     $toplevel->deiconify;
     $toplevel->raise;
