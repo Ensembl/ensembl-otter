@@ -12,6 +12,7 @@ use base 'MenuCanvasWindow';
 use EditWindow::LoadColumns;
 use CanvasWindow::SequenceSetChooser;
 use Bio::Otter::Utils::About;
+use Bio::Otter::Lace::Client;
 use Bio::Vega::Utils::URI qw( open_uri );
 
 sub new {
@@ -194,7 +195,8 @@ sub show_log{
     unless($tw){
         $tw = TransientWindow::LogWindow->new
           ($self->top_window(),
-           'Otter: log file - ' . Bio::Otter::LogFile->current_logfile);
+           $Bio::Otter::Lace::Client::PFX.'log file - '.
+           Bio::Otter::LogFile->current_logfile);
         $tw->initialise();
         $tw->draw();
         $self->{'__tw_log'} = $tw;
@@ -251,7 +253,8 @@ sub open_dataset {
                 $top->deiconify;
                 $top->raise;
             } else {
-                $top = $canvas->Toplevel(-title => "otter: Assembly List $name");
+                $top = $canvas->Toplevel(-title => $Bio::Otter::Lace::Client::PFX.
+                                         "Assembly List $name");
                 my $ssc = CanvasWindow::SequenceSetChooser->new($top);
 
                 $ssc->name($name);
@@ -312,7 +315,7 @@ sub recover_some_sessions {
         my %session_wanted = map { $_->[0] => 1 } @$recoverable_sessions;
 
         my $rss_dialog = $self->canvas->toplevel->DialogBox(
-            -title => 'otter: Recover Sessions',
+            -title => $Bio::Otter::Lace::Client::PFX.'Recover Sessions',
             -buttons => ['Recover', 'Cancel'],
         );
         $rss_dialog->Tk::bind('<Escape>', sub { $rss_dialog->Subwidget('B_Cancel')->invoke });
@@ -364,9 +367,9 @@ sub recover_some_sessions {
                     # Bring up GUI
                     my $adb = $client->recover_session($session_dir);
 
-                    my $top = $canvas->Toplevel(
-                        -title  => 'otter: Select Column Data to Load',
-                    );
+                    my $top = $canvas->Toplevel
+                      (-title  => $Bio::Otter::Lace::Client::PFX.
+                       'Select Column Data to Load');
 
                     my $lc = EditWindow::LoadColumns->new($top);
                     $lc->AceDatabase($adb);

@@ -8,6 +8,8 @@ use warnings;
 
 use Try::Tiny;
 
+use Bio::Otter::Lace::Client;
+
 use parent 'Bio::Otter::UI::TextWindow';
 
 my $highlight_hydrophobic = 0;
@@ -171,7 +173,9 @@ sub update_translation {
     $self->size_widget;
 
     # Set the window title
-    $window->toplevel->configure( -title => sprintf("otter: Translation %s", $subseq->name) );
+    $window->toplevel->configure(-title => sprintf("%sTranslation %s",
+                                                   $Bio::Otter::Lace::Client::PFX,
+                                                   $subseq->name) );
 
     return 1;
 }
@@ -185,7 +189,8 @@ sub check_kozak{
     # create a new window if none available
     unless (defined $kozak_window){
         my $master = $parent->canvas->toplevel;
-        $kozak_window = $master->Toplevel(-title => 'otter: Kozak Checker');
+        $kozak_window = $master->Toplevel
+          (-title => $Bio::Otter::Lace::Client::PFX.'Kozak Checker');
         $kozak_window->transient($master);
 
         my $font = $parent->font_fixed;

@@ -8,7 +8,7 @@ use warnings;
 use CanvasWindow::MainWindow;
 use MenuCanvasWindow::SpeciesListWindow;
 use EditWindow::Password;
-use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Lace::Client;
 use Bio::Otter::Git;
 use Bio::Otter::Error;
 use POSIX ":sys_wait_h";
@@ -29,7 +29,8 @@ use Log::Log4perl;
 
     Bio::Otter::Git->dump;
 
-    my $mw = CanvasWindow::MainWindow->new("otter: Species List");
+    my $mw = CanvasWindow::MainWindow->new
+      ($Bio::Otter::Lace::Client::PFX."Species List");
 
     # Look for zombies every 5 seconds
     $mw->repeat(
@@ -49,7 +50,9 @@ use Log::Log4perl;
         my $user = $self->author;
 
         my $pass = '';
-        my $pass_win = EditWindow::Password->new($mw->Toplevel(-title => 'otter: Enter Password'));
+        my $tl = $mw->Toplevel
+          (-title => $Bio::Otter::Lace::Client::PFX.'Enter Password');
+        my $pass_win = EditWindow::Password->new($tl);
         $pass_win->prompt_string("Enter web password for '$user'");
         $pass_win->passref(\$pass);
         $pass_win->initialise;
@@ -59,7 +62,7 @@ use Log::Log4perl;
     my $passwarn_sub = sub {
         my ($client, $msg) = @_;
         my $dialog = $mw->DialogBox
-          (-title => 'otter: Problem logging in',
+          (-title => $Bio::Otter::Lace::Client::PFX.'Problem logging in',
            -buttons => ['Ok'],);
         $dialog->add(qw( Label -justify left -text ), $msg)->pack;
         $dialog->Show;

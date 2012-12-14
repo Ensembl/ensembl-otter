@@ -9,6 +9,8 @@ use Carp;
 
 use Try::Tiny;
 
+use Bio::Otter::Lace::Client;
+
 use base 'EditWindow';
 
 =pod
@@ -209,7 +211,7 @@ sub generate_desc {
 
     unless ($desc) {
         $self->top->messageBox(
-            -title      => 'otter: No description',
+            -title      => $Bio::Otter::Lace::Client::PFX.'No description',
             -icon       => 'warning',
             -message    => "I didn't find anything to describe",
             -type       => 'OK',
@@ -255,7 +257,7 @@ sub close_window {
         # Ask the user if changes should be saved
         my $name = $clone->clone_name;
         my $dialog = $self->top->Dialog(
-            -title          => 'otter: Save changes?',
+            -title          => $Bio::Otter::Lace::Client::PFX.'Save changes?',
             -bitmap         => 'question',
             -text           => "Save changes to Clone '$name'?",
             -default_button => 'Yes',

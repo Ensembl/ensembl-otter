@@ -61,10 +61,12 @@ sub current_clone {
     my $i = $self->clone_index;
     my $cs = @$cs_list[$i];
 
-    my $title = sprintf "otter: Pipline Status of #%d  %s  (%s)",
+    my $title = sprintf
+      ('%sPipline Status of #%d  %s  (%s)',
+       $Bio::Otter::Lace::Client::PFX,
         $i + 1,
         $cs->accession . '.' . $cs->sv,
-        $cs->clone_name;
+        $cs->clone_name);
     $self->canvas->toplevel->title($title);
     return $cs;
 }

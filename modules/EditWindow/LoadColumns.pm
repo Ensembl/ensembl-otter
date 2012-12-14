@@ -14,6 +14,7 @@ use Tk::Checkbutton;
 use Tk::LabFrame;
 use Tk::Balloon;
 
+use Bio::Otter::Lace::Client;
 use MenuCanvasWindow::SessionWindow;
 use Hum::Sort 'ace_sort';
 
@@ -310,7 +311,7 @@ sub load_filters {
         }
         else {
             $top->messageBox(
-                -title      => 'otter: Nothing to fetch',
+                -title      => $Bio::Otter::Lace::Client::PFX.'Nothing to fetch',
                 -icon       => 'warning',
                 -message    => 'All selected columns have already been loaded',
                 -type       => 'OK',
