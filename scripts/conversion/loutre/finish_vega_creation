@@ -863,7 +863,7 @@ push @sql_fixes, "UPDATE author_group SET group_email=null WHERE group_email='';
 push @sql_fixes, "DELETE ta FROM gene g, transcript t, transcript_attrib ta WHERE g.gene_id = t.gene_id AND t.transcript_id = ta.transcript_id AND g.source = 'LOF'AND ta.value = 'not for VEGA';\n";
 
 #analysis update for vega_update
-if (support->param('live_update')) {
+if ($support->param('live_update')) {
   push @sql_fixes, "UPDATE analysis set logic_name = \'otter_update\' where logic_name = \'otter\';\n";
   push @sql_fixes, "UPDATE analysis set logic_name = \'otter_lof_update\' where logic_name = \'otter_lof\';\n";
 }
