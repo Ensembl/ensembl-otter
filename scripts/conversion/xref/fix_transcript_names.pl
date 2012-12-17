@@ -145,24 +145,24 @@ if (! $support->param('update')) {
 my @top_slices;
 if ($support->param('chromosomes')) {
   foreach ($support->param('chromosomes')) {
-    push @top_slices, $sa->fetch_by_region("toplevel", $_);
+    push @top_slices, $_;
   }
 }
 else {
   my $chr_length = $support->get_chrlength($dba,'','chromosome',1); #will retrieve non-reference slices
   foreach my $chr ($support->sort_chromosomes($chr_length)) {
-    push @top_slices, $sa->fetch_by_region('toplevel', $chr);
+    push @top_slices, $chr;
   }
 }
 
 ### SIZE # (\d+|X|Y)+ # 0.25 ###
 ### SIZE # # 0.05 ###
-### RUN # $chrs ###
+### RUN # @top_slices ###
 
 $support->log("fix names = $fix_names\n");
 
-foreach my $chrom (@top_slices) {
-  my $chrom_name = $chrom->seq_region_name();
+foreach my $chrom_name (@top_slices) {
+  my $chrom = $sa->fetch_by_region('toplevel',$chrom_name);
   $support->log_stamped("Checking chromosome $chrom_name\n");
  GENE:
   my ($genes) = $support->get_unique_genes($chrom);
