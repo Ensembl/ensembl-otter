@@ -748,7 +748,7 @@ foreach my $name (@{$chr_names_wanted}) {
   $support->log("Transferred $c genes from chromosome $name\n");
 
   #transfer other seq_region based features
-  if (! $support->param('dry_run') && ! $support->param('add_genes') && ! $support->param('live_update') ) {
+  if (! $support->param('dry_run') && ! $support->param('add_genes') ) {
 
     #transfer chromosome seq_region_attributes
     &transfer_sra($lslice,$vslice,$att_types_wanted);
