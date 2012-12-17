@@ -904,7 +904,7 @@ if ( ! $support->param('dry_run')) {
   #update attribute table
   my $options = $support->create_commandline_options({
     'allowed_params' => 1,
-    'exclude' => ['prune','ensemblhost','ensemblport','ensembluser','ensemblpass','ensembldbname','ensemblassembly','loutrehost','loutreport','loutreuser','loutredbname','loutrepass','nobackup'],
+    'exclude' => ['prune','ensemblhost','ensemblport','ensembluser','ensemblpass','ensembldbname','ensemblassembly','loutrehost','loutreport','loutreuser','loutredbname','loutrepass','nobackup','live_update'],
     'replace' => {
       'interactive' => 0,	
       'logfile'     => 'finish_vega_creation_update_attributes.log',
@@ -916,7 +916,7 @@ if ( ! $support->param('dry_run')) {
 
   $options = $support->create_commandline_options({
     'allowed_params' => 1,
-    'exclude' => ['prune','ensemblhost','ensemblport','ensembluser','ensemblpass','ensembldbname','ensemblassembly','loutrehost','loutreport','loutreuser','loutredbname','loutrepass','nobackup'],
+    'exclude' => ['prune','ensemblhost','ensemblport','ensembluser','ensemblpass','ensembldbname','ensemblassembly','loutrehost','loutreport','loutreuser','loutredbname','loutrepass','nobackup','live_update'],
     'replace' => {
       'interactive' => 0,	
       'logfile'     => 'finish_vega_creation_update_external_dbs.log',
