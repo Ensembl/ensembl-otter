@@ -120,6 +120,7 @@ $support->parse_extra_options(
   'ensemblpass=s',
   'ensembldbname=s',
   'ensemblassembly=s',
+  'currentdbname=s',
   'nobackup',
   'prune',
   'live_update',
@@ -132,6 +133,7 @@ $support->allowed_params(
   'ensemblpass',
   'ensembldbname',
   'ensemblassembly',
+  'currentdbname',
   'nobackup',
   'live_update',
   $support->get_common_params,
@@ -786,6 +788,7 @@ if ( ! $support->param('dry_run')) {
   $vdbh->do(qq(INSERT into exon_stable_id_pool values ($number)));
 }
 
+
 ##############
 # misc fixes #
 ##############
@@ -869,6 +872,47 @@ if ($support->param('live_update')) {
 }
 
 
+#########
+# stats #
+#########
+
+# Generate stats that can be into the meta table so that the webcode can show them
+# (where we store them will change, but this needs a schema change from core,
+# this is unlikely to happen before e72)
+my %update_stats;
+if ($support->param('live_update')) {
+  my $current_dbname = $support->param('currentdbname');
+  my $sql = qq(
+      SELECT g.source, count(*)
+        FROM gene g
+             LEFT JOIN $current_dbname.gene g2 ON g.stable_id = g2.stable_id
+       WHERE g2.stable_id IS NOT null
+       GROUP BY g.source);
+  my $sth = $vdbh->prepare($sql);
+  $sth->execute;
+  while (my ($source, $c) = $sth->fetchrow_array) {
+    $update_stats{'update'}->{$source} = $c;
+  }
+  $sql = qq(
+      SELECT g.source, count(*)
+        FROM gene g
+             LEFT JOIN $current_dbname.gene g2 ON g.stable_id = g2.stable_id
+       WHERE g2.stable_id IS null
+       GROUP BY g.source);
+  $sth = $vdbh->prepare($sql);
+  $sth->execute;
+  while (my ($source, $c) = $sth->fetchrow_array) {
+    $update_stats{'new'}->{$source} = $c;
+  }
+}
+
+foreach my $type (keys %update_stats) {
+  while (my ($source,$count) = each %{$update_stats{$type}}) {
+    $source = $source . '_' . $type;
+    push @sql_fixes, "INSERT into meta (meta_key,meta_value) VALUES (\'$source\',\'$count\');\n";
+  }
+}
+
 
 if (! $support->param('dry_run')) {
   $support->log("\nFixing meta table, updating gene / transcript types\n");
@@ -904,7 +948,7 @@ if ( ! $support->param('dry_run')) {
   #update attribute table
   my $options = $support->create_commandline_options({
     'allowed_params' => 1,
-    'exclude' => ['prune','ensemblhost','ensemblport','ensembluser','ensemblpass','ensembldbname','ensemblassembly','loutrehost','loutreport','loutreuser','loutredbname','loutrepass','nobackup','live_update'],
+    'exclude' => ['prune','ensemblhost','ensemblport','ensembluser','ensemblpass','ensembldbname','ensemblassembly','loutrehost','loutreport','loutreuser','loutredbname','loutrepass','currentdbname','nobackup','live_update',],
     'replace' => {
       'interactive' => 0,	
       'logfile'     => 'finish_vega_creation_update_attributes.log',
@@ -914,19 +958,21 @@ if ( ! $support->param('dry_run')) {
     system("../update_attributes.pl $options") == 0
     or $support->log_warning("Error running update_attributes.pl: $!");
 
+
+  #update external db table
   $options = $support->create_commandline_options({
     'allowed_params' => 1,
-    'exclude' => ['prune','ensemblhost','ensemblport','ensembluser','ensemblpass','ensembldbname','ensemblassembly','loutrehost','loutreport','loutreuser','loutredbname','loutrepass','nobackup','live_update'],
+    'exclude' => ['prune','ensemblhost','ensemblport','ensembluser','ensemblpass','ensembldbname','ensemblassembly','loutrehost','loutreport','loutreuser','loutredbname','loutrepass','currentdbname','nobackup','live_update',],
     'replace' => {
       'interactive' => 0,	
       'logfile'     => 'finish_vega_creation_update_external_dbs.log',
     }
   });
-
-  #update external db table
   $support->log("\nUpdating external_db table on ".$support->param('dbname')."...\n");
     system("../xref/update_external_dbs.pl $options") == 0
     or $support->log_warning("Error running update_external_dbs.pl: $!");
+
+
   #make a backup
   if ($make_backup) {
     my $dbname = $support->param('dbname');
