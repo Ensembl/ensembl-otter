@@ -130,7 +130,7 @@ sub excused {
 
         # Test::Builder would find our $TODO, except we bumped the level
         my $varname = $todo_pkg.'::TODO';
-        no strict 'refs';
+        no strict 'refs'; ## no critic(TestingAndDebugging::ProhibitNoStrict)
         local ${ $varname } = $excuse ? "excused: $excuse" : undef;
         use strict 'refs';
 
