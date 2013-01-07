@@ -757,20 +757,22 @@ sub find_clones {
         },
     );
 
-    my @results_list = ();
+    my $result_list = [ map { _find_clone_result($_); } split /\n/, $response ];
 
-    for my $line (split(/\n/,$response)) {
-        my ($qname, $qtype, $component_names, $assembly) = split(/\t/, $line);
-        my $components = $component_names ? [ split(/,/, $component_names) ] : [];
-        push @results_list, {
-            qname      => $qname,
-            qtype      => $qtype,
-            components => $components,
-            assembly   => $assembly,
-        };
-    }
+    return $result_list;
+}
 
-    return \@results_list;
+sub _find_clone_result {
+    my ($line) = @_;
+    my ($qname, $qtype, $component_names, $assembly) = split /\t/, $line;
+    my $components = $component_names ? [ split /,/, $component_names ] : [];
+    my $result = {
+        qname      => $qname,
+        qtype      => $qtype,
+        components => $components,
+        assembly   => $assembly,
+    };
+    return $result;
 }
 
 sub get_meta {
