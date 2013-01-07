@@ -743,7 +743,7 @@ sub status_refresh_for_DataSet_SequenceSet{
     return;
 }
 
-sub find_string_match_in_clones {
+sub find_clones {
     my ($self, $dsname, $qnames_list) = @_;
 
     my $qnames_string = join(',', @$qnames_list);

@@ -71,8 +71,7 @@ sub do_search {
     my $qnames = [ split(/[\s,]+/, ${$self->search_field()} ) ];
 
     my $result_list =
-        $self->Client->find_string_match_in_clones(
-            $self->DataSet->name, $qnames);
+        $self->Client->find_clones($self->DataSet->name, $qnames);
     my $result_hash = { };
     push @{$result_hash->{$_->{'qname'}}}, $_ for @{$result_list};
 
