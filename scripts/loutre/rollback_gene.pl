@@ -95,21 +95,19 @@ use Bio::Vega::ContigLockBroker;
           , s.name
           , g.biotype
           , g.is_current
-          , gsi.version
-          , gsi.modified_date
+          , g.version
+          , g.modified_date
           , a.author_name
           , g.description
         FROM gene g
-          , gene_stable_id gsi
           , gene_author ga
           , seq_region s
           , author a
-        WHERE gsi.stable_id = ?
-          AND gsi.gene_id = g.gene_id
+        WHERE g.stable_id = ?
           AND s.seq_region_id = g.seq_region_id
           AND ga.gene_id = g.gene_id
           AND ga.author_id = a.author_id
-        ORDER BY gsi.modified_date DESC
+        ORDER BY g.modified_date DESC
     });
 
     my $gene_adaptor = $otter_dba->get_GeneAdaptor;
