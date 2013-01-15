@@ -44,6 +44,10 @@ Mustapha Larbaoui B<ml6@sanger.ac.uk>
 
 Refactored to use Bio::Otter::Lace::Defaults by James Gilbert B<jgrg@sanger.ac.uk>
 
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
+
 =cut
 
 use strict;
