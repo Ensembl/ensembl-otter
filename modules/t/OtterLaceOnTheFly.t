@@ -62,6 +62,14 @@ my @tests = (
         query_ids   => [qw(BC018923.fwd BC018923.rev)],
     },
     {
+        name        => 'test_clone vs. test_query with mark',
+        target_path => "${path}/test_clone.fa",
+        query_path  => "${path}/test_query.fa",
+        query_ids   => [qw(BC018923.fwd BC018923.rev)],
+        start       => 35000,
+        end         => 141000,
+    },
+    {
         name        => 'AL139092 vs. BC018923',
         target_path => "${path}/AL139092.12.fasta",
         query_path  => "${path}/BC018923.fasta",
@@ -177,7 +185,11 @@ sub run_test {
 
     note 'Test: ', $test->{name};
 
-    my $target = new_ok('Bio::Otter::Lace::OnTheFly::TargetSeq' => [ full_seq => $test->{target_seq} ]);
+    my @target_seq_args = ( full_seq => $test->{target_seq} );
+    push @target_seq_args, start => $test->{start} if $test->{start};
+    push @target_seq_args, end   => $test->{end}   if $test->{end};
+
+    my $target = new_ok('Bio::Otter::Lace::OnTheFly::TargetSeq' => \@target_seq_args);
 
     if ($test->{query_path}) {
         $test->{query_seqs} = [ Hum::FastaFileIO->new_DNA_IO($test->{query_path})->read_all_sequences ];
@@ -267,6 +279,7 @@ sub run_test {
         $type eq 'cDNA' ? "OTF_mRNA" : "OTF_$type";
     $exonerate->acedb_homol_tag($ana_name . '_homol');
     $exonerate->genomic_start($target->start);
+    $exonerate->genomic_end($target->end);
     $exonerate->method_tag($ana_name);
     $exonerate->sequence_fetcher($result_set->query_seqs_by_name);
 
