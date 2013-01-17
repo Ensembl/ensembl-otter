@@ -1198,7 +1198,7 @@ sub get_QC_issues {
 =head2 constraints
 
   Arg         : None
-  Description : Defines contraints on MySQL dumping
+  Description : Defines constraints on MySQL dumping
   Exceptions  : none
   Caller      : internal
 
@@ -1215,14 +1215,6 @@ gene_author                   s
 transcript_author             s
 evidence                      s   #will have to be fixed (ie removed from loutre) eventually but OK for now
 exon_stable_id_pool           s   #not used for website but is needed if there are duplicate stable IDs
-
-translation_stable_id         i
-operon_transcript_stable_id   i
-tmp_assembly                  i
-transcript_stable_id          i
-operon_stable_id              i
-exon_stable_id                i
-gene_stable_id                i
 
 assembly_tag                  i   #fixed by CK
 assembly_tagged_contig        i
@@ -1242,12 +1234,9 @@ tmp_mask                      i
 test_contig_info              i
 misc_feature_misc_set__bak    i
 misc_set__bak                 i
-translation_stable_id         i
-operon_transcript_stable_id   i
-transcript_stable_id          i
-operon_stable_id              i
-exon_stable_id                i
-gene_stable_id                i
+intron_supporting_evidence    i
+transcript_intron_supporting_evidence i
+
 ENDOFTEXT
   return $txt;
 }
