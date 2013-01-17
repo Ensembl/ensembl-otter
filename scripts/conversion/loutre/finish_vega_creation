@@ -845,6 +845,7 @@ push @sql_fixes, "UPDATE gene SET biotype = 'transcribed_pseudogene' WHERE bioty
 push @sql_fixes, "UPDATE transcript SET biotype = 'transcribed_pseudogene' WHERE biotype = 'expressed_pseudogene';\n";
 push @sql_fixes, "UPDATE transcript SET biotype = 'processed_transcript', status  = 'PUTATIVE' WHERE biotype = 'putative' AND status  = 'UNKNOWN';\n";
 push @sql_fixes, qq(UPDATE transcript SET biotype = "3prime_overlapping_ncrna" where biotype = "3'_overlapping_ncrna";\n);
+push @sql_fixes, "UPDATE transcript SET biotype = '3prime_overlapping_ncrna' where biotype = 'ncrna_host'";\n);
 
 push @sql_fixes, "UPDATE gene SET status = 'NOVEL' WHERE biotype = 'processed_transcript' AND status = 'UNKNOWN';\n";
 push @sql_fixes, "UPDATE gene SET status = NULL WHERE biotype in ('processed_pseudogene','pseudogene','transcribed_processed_pseudogene','transcribed_unitary_pseudogene','transcribed_unprocessed_pseudogene','unprocessed_pseudogene','unitary_pseudogene');\n";
