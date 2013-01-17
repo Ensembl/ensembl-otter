@@ -232,7 +232,6 @@ my %vega_xref_names = (
  'OTTG'                         => 'ENSG',
 );
 
-
 #add xrefs to each E! object
 foreach my $type (qw(genes transcripts)) {
   my $ids = $ens_ids->{$type};
@@ -291,14 +290,28 @@ foreach my $type (qw(genes transcripts)) {
 #check which Vega genes / transcripts don't have xrefs
 $support->log("Looking to see which genes / transcripts don't have e! xrefs\n:");
 my %ensembl_dbname = map {$_ => 1} %vega_xref_names;
-
 my $chr_length = $support->get_chrlength($dba,$assembly,'chromosome',1);
 my @chr_sorted = $support->sort_chromosomes($chr_length);
+my @enames = map {$_->seq_region_name} @{$esa->fetch_all('chromosome',undef,1)};
+
 foreach my $chr (@chr_sorted) {
   $support->log_stamped("> Chromosome $chr (".$chr_length->{$chr}."bp).\n"); 
   my $slice = $sa->fetch_by_region('chromosome', $chr,undef,undef,undef,$assembly);
   unless (defined $slice) {
-    $support->log_verbose("No such chromosome '$chr'");
+    $support->log_warning("No such chromosome '$chr'\n");
+    next;
+  }
+  #skip chromosomes that are not in Ensembl
+  my $e_name;
+  if (my @attribs = @{$slice->get_all_Attributes('ensembl_name') || []}) {
+    $e_name = $attribs[0]->value;
+  }
+  if (!$e_name) {
+    $support->log("Skipping chromosome '$chr' since it doesn't have an ensembl_name seq_region_attribute\n");
+    next;
+  }
+  if (! grep {$e_name eq $_} @enames) {
+    $support->log_warning("Skipping chromosome '$chr' since we can't retrieve it from ensembl\n");
     next;
   }
   my ($genes) = $support->get_unique_genes($slice);
