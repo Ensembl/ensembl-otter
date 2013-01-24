@@ -13,6 +13,7 @@ use Bio::Otter::Git;
 use Bio::Otter::Error;
 use POSIX ":sys_wait_h";
 use Log::Log4perl;
+use Try::Tiny;
 
 {
     # Become leader of process group so that "kill -$$" at end works
@@ -61,6 +62,7 @@ use Log::Log4perl;
     };
     my $passwarn_sub = sub {
         my ($client, $msg) = @_;
+        warn "passwarn: $msg";
         my $dialog = $mw->DialogBox
           (-title => $Bio::Otter::Lace::Client::PFX.'Problem logging in',
            -buttons => ['Ok'],);
@@ -72,7 +74,12 @@ use Log::Log4perl;
     $cl->password_prompt($prompt_sub);
     $cl->password_problem($passwarn_sub);
 
-    $cl->get_server_otter_config;
+    try {
+        $cl->get_server_otter_config;
+    } catch {
+        $passwarn_sub->($cl, $_);
+        die "Cannot start\n";
+    };
 
     $SpeciesListWindow->draw;
     $SpeciesListWindow->ensure_annotools;
