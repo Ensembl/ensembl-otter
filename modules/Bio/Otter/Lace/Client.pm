@@ -630,6 +630,10 @@ sub general_http_dialog {
                 }
             }
             die "Authorization failed";
+        } elsif ($code == 410) {
+            # 410 = Gone.  Not coming back; probably concise.  RT#234724
+            die sprintf "Otter Server is gone.\n%s",
+              __truncdent_for_log($response->decoded_content, 10240, '* ');
         } else {
             print STDERR "\nGot error $code\n";
             print STDERR __truncdent_for_log($response->decoded_content, 10240, '| ');
@@ -648,7 +652,7 @@ sub __truncdent_for_log {
     my ($txt, $maxlen, $dent) = @_;
     my $len = length($txt);
     substr($txt, $maxlen, $len, "[...truncated from $len bytes]\n") if $len > $maxlen;
-    $txt =~ s/^/| /g;
+    $txt =~ s/^/$dent/mg;
     $txt =~ s/\n*\z/\n/;
     return $txt;
 }
