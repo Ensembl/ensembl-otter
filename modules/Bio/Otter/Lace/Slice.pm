@@ -143,6 +143,7 @@ sub zmap_config_stanza {
         'sequence' => $self->ssname,
         'csname'   => $self->csname,
         'csver'    => $self->csver,
+        'chr'      => $self->ssname,
         'start'    => $self->start,
         'end'      => $self->end,
     };
