@@ -70,6 +70,7 @@ sub zmap_config {
             'bigWig' => 'short-read-coverage',
         },
         'import' => {
+            'gff_get'       => [ 'GFF',    $import_argument_string ],
             'bam_get_align' => [ 'BAM',    $import_argument_string ],
             'bigwig_get'    => [ 'bigWig', $import_argument_string ],
         },
