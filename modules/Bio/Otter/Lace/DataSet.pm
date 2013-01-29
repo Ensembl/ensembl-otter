@@ -779,6 +779,8 @@ B<SequenceSet>s.
 See also L<Bio::Otter::SpeciesDat::DataSet>, which is normally (as of
 v63) instantiated server-side.
 
+It can be reached via L<Bio::Otter::Server::Config/SpeciesDat>.
+
 =head2 SequenceSet
 
 A SequenceSet is any list of clones that
