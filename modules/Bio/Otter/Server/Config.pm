@@ -13,6 +13,12 @@ Bio::Otter::Server::Config - obtain config data for Otter Server
 
 This module contains only class methods.
 
+=head1 CLASS METHODS
+
+=head2 data_dir()
+
+Return the Otter Server config directory.
+
 =cut
 
 
@@ -46,6 +52,13 @@ sub data_dir {
 }
 
 
+=head2 SpeciesDat()
+
+Return a fresh instance of L<Bio::Otter::SpeciesDat> from the Otter
+Server config directory.
+
+=cut
+
 sub SpeciesDat {
     my ($pkg) = @_;
     my $fn = $pkg->data_dir . '/species.dat';
@@ -53,12 +66,58 @@ sub SpeciesDat {
 }
 
 
+=head2 designations()
+
+Return hashref of intended version designations, name to version
+number.  Versions may be C<major> or C<major.minor>.
+
+All versions of the code will return the same centrally configured
+result, unless some config files are out of sync.
+
+Pointers to clients in various places should match this hash, else
+something needs updating.
+
+This replaces the old version controlled F<dist/conf/track> file.
+
+=cut
+
+sub designations {
+    my ($pkg) = @_;
+    my $fn = $pkg->data_dir . '/designations.txt';
+    return $pkg->_desig($fn);
+}
+
+sub _desig {
+    my ($pkg, $fn) = @_;
+    my %desig;
+    open my $fh, '<', $fn
+      or die "Error reading version designations $fn: $!";
+    while (<$fh>) {
+        next if /^\s+$|^#/;
+        if (m{^(\S+)\s+(\d+(?:\.\d+)?)$}) {
+            $desig{$1} = $2;
+        } else {
+            warn "Skipped bad version designation $_"
+        }
+    }
+    close $fh;
+    return \%desig;
+}
+
+
+
+=head2 users_hash()
+
+Return a freshly loaded hash C<< ->{$user}{$dataset} = 1 >> from the
+Otter Server config directory.
+
+=cut
+
 sub users_hash {
     my ($pkg) = @_;
     my $usr_file = $pkg->data_dir . '/users.txt';
     return $pkg->_read_user_file($usr_file);
 }
-
 
 sub _read_user_file {
     my ($pkg, $usr_file) = @_;
@@ -83,6 +142,14 @@ sub _read_user_file {
 }
 
 
+
+=head2 get_file($name)
+
+Return the contents of the Otter Server config file C<$name> for the
+current major version.
+
+=cut
+
 sub get_file {
     my ($pkg, $name) = @_;
 
@@ -95,6 +162,7 @@ sub get_file {
 
     return $content;
 }
+
 
 =head1 AUTHOR
 
