@@ -10,6 +10,7 @@ use warnings;
 
 use Bio::Otter::SpeciesDat::DataSet;
 
+# consider using Bio::Otter::Server::Config->SpeciesDat instead
 sub new {
     my ($pkg, $file) = @_;
     my $dataset_hash = _dataset_hash($file);

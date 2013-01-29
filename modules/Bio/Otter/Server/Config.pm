@@ -19,12 +19,30 @@ This module contains only class methods.
 sub data_dir {
     my ($pkg) = @_;
 
-    my $root = $ENV{'DOCUMENT_ROOT'};
-    $root or die 'DOCUMENT_ROOT not set';
+    my ($root, $src) = ($ENV{'DOCUMENT_ROOT'}, '%ENV');
+
+    if (!defined $root) {
+        # For internal non-web machines, provide the central copy to
+        # remove the need to pretend we have DOCUMENT_ROOT .
+
+        ($root, $src) = ('/nfs/WWWdev/SANGER_docs/htdocs', 'fallback')
+          if -d '/software/anacode';
+        # Web machines shouldn't have a fallback, too magical.
+    }
+
+    die "Cannot find data_dir via DOCUMENT_ROOT or fallback" # need another way?
+      unless defined $root;
+
     # Trim off the trailing /dir (usually htdocs)
-    $root =~ s{/[^/]+$}{}
-      or die "Unexpected DOCUMENT_ROOT format '$ENV{DOCUMENT_ROOT}'";
-    return join('/', $root, 'data', 'otter');
+    my $data = $root;
+    $data =~ s{/[^/]+$}{}
+      or die "Unexpected DOCUMENT_ROOT format '$root' from $src";
+    $data = join('/', $data, 'data', 'otter');
+
+    die "data_dir $data (near root '$root' from $src): not found"
+      unless -d $data;
+
+    return $data;
 }
 
 
