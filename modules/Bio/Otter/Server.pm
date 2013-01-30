@@ -9,6 +9,8 @@ Bio::Otter::Server - common parent for MFetcher/ServerScriptSupport and LocalSer
 
 =cut
 
+use Try::Tiny;
+
 use Bio::Otter::Server::Config;
 
 sub new { # just to make it possible to instantiate an object
@@ -58,11 +60,9 @@ sub otter_dba {
 
     if(@args) { # let's check that the class is ok
         my $odba = shift @args;
-        if(eval { $odba->isa($adaptor_class) }) {
-            return $self->{'_odba'} = $odba;
-        } else {
-            die "The object you assign to otter_dba must be a '$adaptor_class'";
-        }
+        try { $odba->isa($adaptor_class) }
+            or die "The object you assign to otter_dba must be a '$adaptor_class'";
+        return $self->{'_odba'} = $odba;
     }
 
     return $self->{'_odba'} ||=
