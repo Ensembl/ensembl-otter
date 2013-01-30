@@ -14,7 +14,7 @@ sub enrich {
     my ($afs, $enriched_class) = @_;
 
     die "'require $enriched_class' failed"
-        unless eval "require $enriched_class"; ## no critic (BuiltinFunctions::ProhibitStringyEval)
+        unless eval "require $enriched_class"; ## no critic (BuiltinFunctions::ProhibitStringyEval,Anacode::ProhibitEval)
 
     # Put the names into the hit_description hash:
     my %hd_hash = ();
