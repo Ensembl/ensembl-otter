@@ -5,6 +5,8 @@ package Bio::Vega::Utils::EnsEMBL2GFF;
 use strict;
 use warnings;
 
+use Try::Tiny;
+
 use Bio::EnsEMBL::Utils::Exception qw(verbose);
 use Bio::Vega::Utils::GFF;
 
@@ -771,15 +773,15 @@ use Bio::Vega::Utils::GFF;
             # we only return some GFF for L side ditags, as the R side one will be included here
 
             my ($df1, $df2);
-            eval {
+            try {
                 ($df1, $df2) =
-                  @{ $self->adaptor->fetch_all_by_ditagID($self->ditag_id, $self->ditag_pair_id, $self->analysis->dbID)
-                  };
-            };
-
-            if ($@ || !defined($df1) || !defined($df2)) {
-                die "Failed to find matching ditag pair: $@";
+                    @{$self->adaptor->fetch_all_by_ditagID(
+                          $self->ditag_id, $self->ditag_pair_id, $self->analysis->dbID)};
             }
+            catch { die "Failed to find matching ditag pair: $_"; };
+
+            (defined $df1 && defined $df2)
+                or die "Failed to find matching ditag pair";
 
             die "Mismatching strands on in a ditag feature pair" unless $df1->strand == $df2->strand;
 
