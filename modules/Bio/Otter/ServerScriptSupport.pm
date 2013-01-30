@@ -4,6 +4,8 @@ package Bio::Otter::ServerScriptSupport;
 use strict;
 use warnings;
 
+use Try::Tiny;
+
 use Bio::Vega::Author;
 use Bio::Otter::Server::Config;
 
@@ -244,12 +246,13 @@ sub send_response {
 
     my $sub = pop @args;
     my $server = $self->new(@args);
-    my $response;
-    if (eval { $response = $sub->($server); 1; }) {
+
+    try {
+        my $response = $sub->($server);
         $server->_send_response($response);
     }
-    else {
-        my $error = $@;
+    catch {
+        my $error = $_;
         die $error unless $ERROR_WRAPPING_ENABLED;
         chomp($error);
         print
@@ -260,7 +263,7 @@ sub send_response {
             $server->otter_wrap_response(" <response>\n    ERROR: $error\n </response>\n"),
             ;
         warn "ERROR: $error\n";
-    }
+    };
 
     return;
 }
