@@ -28,7 +28,7 @@ sub get_options_for_key {
     my ($db, $key) = @_;
     my ($opt_str) = @{ $db->get_MetaContainer()->list_value_by_key($key) };
     return unless $opt_str;
-    my %options = eval $opt_str; ## no critic (BuiltinFunctions::ProhibitStringyEval)
+    my %options = eval $opt_str; ## no critic (BuiltinFunctions::ProhibitStringyEval,Anacode::ProhibitEval)
     confess "Error evaluating '$opt_str' : $@" if $@;
     return { map { uc $_ => $options{$_} } keys %options };
 }
