@@ -6,6 +6,9 @@ package CanvasWindow;
 use strict;
 use warnings;
 use Carp;
+
+use Try::Tiny;
+
 use CanvasWindow::MainWindow;
 use CanvasWindow::Utils 'expand_bbox';
 use Tk::HeadedCanvas;
@@ -1143,19 +1146,12 @@ sub get_clipboard_text {
     my $canvas = $self->canvas;
     return unless Tk::Exists($canvas);
 
-    my ($text);
-    eval {
-        $text = $canvas->SelectionGet(
+    return try {
+        return $canvas->SelectionGet(
             -selection => 'PRIMARY',
             -type      => 'STRING',
             );
-        };
-    if ($@) {
-        #warn "Clipboard error: $@";
-        return;
-    } else {
-        return $text;
-    }
+    };
 }
 
 sub integers_from_clipboard {
