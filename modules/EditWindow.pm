@@ -6,6 +6,8 @@ package EditWindow;
 use strict;
 use warnings;
 
+use Try::Tiny;
+
 sub new {
     my ($pkg, $tk) = @_;
 
@@ -47,19 +49,12 @@ sub get_clipboard_text {
     my $top = $self->top;
     return unless Tk::Exists($top);
 
-    my ($text);
-    eval {
-        $text = $top->SelectionGet(
+    return try {
+        return $top->SelectionGet(
             -selection => 'PRIMARY',
             -type      => 'STRING',
             );
-        };
-    if ($@) {
-        #warn "Clipboard error: $@";
-        return;
-    } else {
-        return $text;
-    }
+    };
 }
 
 1;
