@@ -7,7 +7,6 @@ use warnings;
 
 use Bio::Otter::Lace::Defaults;
 use Bio::Vega::DBSQL::DBAdaptor;
-use Hum::Chromoview::Utils qw(unixtime2YYYYMMDD);
 
 # not doing gene type update anymore,
 # as HGNC no longer assign gene type and takes the data from Otter
@@ -218,7 +217,6 @@ sub update_gene_name_and_description {
   my $biotype = $gene->biotype;
   my $status  = $gene->status;
   my $info = '';
-  my $last_modified_date = unixtime2YYYYMMDD($gene->modified_date);
 
   if ( $updated_gsid{$gsid} ){
     print STDERR "SKIP $gsid ($curr_gene_id): already updated\n";
