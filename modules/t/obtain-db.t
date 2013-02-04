@@ -255,9 +255,6 @@ sub netrc_dbh {
 {
     my $sp_dat;
     sub SpeciesDat {
-        local $ENV{DOCUMENT_ROOT} = '/nfs/WWWdev/SANGER_docs/htdocs';
-        # ugh, but B:O:S:C needs it (at v67..70)
-
         $sp_dat ||= Bio::Otter::Server::Config->SpeciesDat;
         return $sp_dat;
     }

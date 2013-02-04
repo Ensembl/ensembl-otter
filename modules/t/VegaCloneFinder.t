@@ -10,7 +10,6 @@ use Test::More;
 
 use lib "${ENV{ANACODE_TEAM_TOOLS}}/otterlace/server/perl"; # find 'fake' SangerWeb modules
 $ENV{HTTP_CLIENTREALM} = 'sanger';                          # emulate a local user
-$ENV{DOCUMENT_ROOT}    = '/nfs/WWWdev/SANGER_docs/htdocs';  # use standard otter config (eventually)
 use Bio::Otter::ServerScriptSupport;
 
 my $vcf_module;

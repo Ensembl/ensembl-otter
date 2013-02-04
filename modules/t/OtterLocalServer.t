@@ -23,8 +23,6 @@ BEGIN {
 critic_module_ok($localserver_module);
 critic_module_ok($region_module);
 
-local $ENV{DOCUMENT_ROOT} = '/nfs/WWWdev/SANGER_docs/htdocs';
-
 my %params = (
     dataset => 'human_test',
     name    => '6',
