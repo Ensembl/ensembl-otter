@@ -169,10 +169,13 @@ my $chroms = $support->fetch_non_hidden_slices($aa,$sa);
 
 my $patch_regions_wanted_details;
 #each release check with jon if there are any new ones, and if these are still to be ignored
-my @not_yet_wanted_patches = map {$_.'_PATCH'} qw(HG1257 HG1007 HG280); #fix patches
+my @not_yet_wanted_patches = map {$_.'_PATCH'} qw(HG1007 HG280); #fix patches
 push @not_yet_wanted_patches, qw(HSCHR2_2_CTG12 HSCHR9_1_CTG35 HSCHR10_1_CTG2); #novel patches
+push @not_yet_wanted_patches, qw(HG1000_2_PATCH HG506_HG1000_1_PATCH HG142_HG150_HG151_PATCH HG681_PATCH); # vega52 - patches that are out of date with what e! have so exclude them (even though the annotation is OK)
 push @not_yet_wanted_patches, qw(HSCHR19LRC_COX1_CTG1 HSCHR19LRC_COX2_CTG1 HSCHR19LRC_LRC_I_CTG1 HSCHR19LRC_LRC_J_CTG1 HSCHR19LRC_LRC_S_CTG1 HSCHR19LRC_LRC_T_CTG1 HSCHR19LRC_PGF1_CTG1 HSCHR19LRC_PGF2_CTG1); #LRC patches
 # HAP-HSCHR17_1-01 and HAP-HSCHR4_1-01 are old patches but cannot be used yet (they are haplotypes in e!) - no need to explicitly exclude them since this is done by line 183 below 
+
+
 
 my @wanted_patches;
 my @found_patches;
@@ -236,6 +239,11 @@ foreach my $k (keys(%$regions_wanted_details), keys(%$patch_regions_wanted_detai
   else {
     my $poss_sr = ($k =~ /^PATCH/) ? $k : "$k-";
     %possibles = map {$_->seq_region_name => $_} grep { $_->seq_region_name =~ /^$poss_sr/ } @$chroms;
+    if (! %possibles) {
+      #try the seq_region without any numerical extension
+      $support->log("\nNo seq_regions with extension, trying key $k itself");
+      %possibles = map {$_->seq_region_name => $_} grep { $_->seq_region_name =~ /^$k/ } @$chroms;
+    }
     if (scalar(keys %possibles) > 1) {
       my $max_version = 0;
       foreach my $sr_name ( keys %possibles ) {
@@ -262,7 +270,7 @@ foreach my $k (keys(%$regions_wanted_details), keys(%$patch_regions_wanted_detai
           }
         }
         else {
-	  $support->log_warning("There is a non standard assembly name in loutre which has been ignored - $sr_name\n");
+          $support->log_warning("There is a non standard assembly name in loutre which has been ignored - $sr_name\n");
         }
       }
     }
