@@ -161,8 +161,89 @@ if (-e $vega_ids_file) {
   if ($support->user_proceed("Read CCDS records from a previously saved file ($vega_ids_file) ?\n")) {
     $vega_ids = retrieve($vega_ids_file);
   }
+  else {
+    $vega_ids = &parse_ccds;
+  }
 }
 else {
+  $vega_ids = &parse_ccds;
+  store($vega_ids,$vega_ids_file);
+}
+
+foreach my $vid (keys %$vega_ids) {
+  $ccds_ids->{$vega_ids->{$vid}}++;
+}
+$support->log_stamped("Done parsing, retrieved ".scalar(keys %$vega_ids)." transcripts and ".scalar(keys %$ccds_ids)." CCDS entries\n");
+
+# loop over Vega transcripts, updating db with CCDS identifier
+$support->log_stamped("Adding xrefs to vega db...\n");
+my ($no_trans, $num_success, $no_match) = (0, 0, 0);
+my (%sources, %transcript_ids);
+my ($successful, $non_translating, $missing_transcript);
+while (my ($tsi, $ccds_idnt) = each %$vega_ids) {
+  if (my $transcript = $ta->fetch_by_stable_id($tsi)) {
+    if (my $translation = $transcript->translation) {
+      $sources{$transcript->analysis->logic_name}++;
+      $transcript_ids{$tsi}++;
+      $num_success++;
+      my $internal_id = $translation->dbID;
+      my ($prim_acc) = $ccds_idnt =~ /(\w*)/;
+      $successful .= sprintf "    %-30s%-20s%-20s\n", $tsi, $internal_id, $ccds_idnt;
+      my $dbentry = Bio::EnsEMBL::DBEntry->new(
+	-primary_id => $prim_acc,
+	-display_id => $ccds_idnt,
+	-version    => 1,
+	-dbname     => 'CCDS',
+      );
+      unless ($support->param('dry_run')) {
+	$ea->store($dbentry, $internal_id, 'Translation');
+      }
+    } else {
+      $no_trans++;
+      $non_translating .= "    $tsi\n";
+    }
+  } else {
+    $no_match++;
+    $missing_transcript .= "    $tsi\n";
+  }
+}
+$support->log("Done. ".$support->date_and_mem."\n\n");
+
+# print log results
+$support->log("\nProcessed ".scalar(keys %$vega_ids)." identifiers.\n");
+$support->log("OK: $num_success\n");
+if ($successful) {
+  $support->log("\nTranscripts which had a CCDS identifier added:\n");
+  $support->log(sprintf "    %-30s%-20s%-20s\n", qw(STABLE_ID DBID CCDS_ID));
+  $support->log("    " . "-"x70 . "\n");
+  $support->log($successful);
+}
+
+if ($missing_transcript) {
+  $support->log_warning("\n\n\nIdentifiers with no matching transcript in Vega: $no_match.", 1);
+  $support->log($missing_transcript);
+}
+
+if ($non_translating) {
+  $support->log_warning("\n\n\nTranscripts in this set that don't translate: $no_trans.", 1);
+  $support->log($non_translating);
+}
+
+$support->log("\nTranscripts with xrefs added had the following logic_names:\n");
+while (my ($ln, $c) = each %sources) {
+  $support->log("$c with logic_name of $ln\n",1);
+}
+my @dup_ids = grep {$transcript_ids{$_} > 1} keys %transcript_ids;
+if (@dup_ids) {
+  $support->log_warning("There are scalar(@dup_ids) with duplicates:\n" . join "\n" , @dup_ids . "\n");
+}
+
+
+# finish log
+$support->finish_log;
+
+sub parse_ccds {
+  my $ids;
   my $e_dba = $support->get_database('ensembl','ensembl');
   my $ev_dba = $support->get_database('ensembl','evega');
   my $ev_sa = $ev_dba->get_SliceAdaptor;
@@ -220,7 +301,7 @@ else {
                 #}
               }
               if ($match == scalar @exons){
-                $vega_ids->{$trans->stable_id} = $ccds_id;
+                $ids->{$trans->stable_id} = $ccds_id;
               }
             }
           }
@@ -228,78 +309,5 @@ else {
       }
     }
   }
-  store($vega_ids,$vega_ids_file);
+  return $ids;
 }
-
-foreach my $vid (keys %$vega_ids) {
-  $ccds_ids->{$vega_ids->{$vid}}++;
-}
-$support->log_stamped("Done parsing, retrieved ".scalar(keys %$vega_ids)." transcripts and ".scalar(keys %$ccds_ids)." CCDS entries\n");
-
-# loop over Vega transcripts, updating db with CCDS identifier
-$support->log_stamped("Adding xrefs to vega db...\n");
-my ($no_trans, $num_success, $no_match) = (0, 0, 0);
-my (%sources, %transcript_ids);
-my ($successful, $non_translating, $missing_transcript);
-while (my ($tsi, $ccds_idnt) = each %$vega_ids) {
-  if (my $transcript = $ta->fetch_by_stable_id($tsi)) {
-    if (my $translation = $transcript->translation) {
-      $sources{$transcript->analysis->logic_name}++;
-      $transcript_ids{$tsi}++;
-      $num_success++;
-      my $internal_id = $translation->dbID;
-      my ($prim_acc) = $ccds_idnt =~ /(\w*)/;
-      $successful .= sprintf "    %-30s%-20s%-20s\n", $tsi, $internal_id, $ccds_idnt;
-      my $dbentry = Bio::EnsEMBL::DBEntry->new(
-	-primary_id => $prim_acc,
-	-display_id => $ccds_idnt,
-	-version    => 1,
-	-dbname     => 'CCDS',
-      );
-      unless ($support->param('dry_run')) {
-	$ea->store($dbentry, $internal_id, 'Translation');
-      }
-    } else {
-      $no_trans++;
-      $non_translating .= "    $tsi\n";
-    }
-  } else {
-    $no_match++;
-    $missing_transcript .= "    $tsi\n";
-  }
-}
-$support->log("Done. ".$support->date_and_mem."\n\n");
-
-# print log results
-$support->log("\nProcessed ".scalar(keys %$vega_ids)." identifiers.\n");
-$support->log("OK: $num_success\n");
-if ($successful) {
-  $support->log("\nTranscripts which had a CCDS identifier added:\n");
-  $support->log(sprintf "    %-30s%-20s%-20s\n", qw(STABLE_ID DBID CCDS_ID));
-  $support->log("    " . "-"x70 . "\n");
-  $support->log($successful);
-}
-
-if ($missing_transcript) {
-  $support->log_warning("\n\nIdentifiers with no matching transcript in Vega: $no_match.\n", 1);
-  $support->log($missing_transcript);
-}
-
-if ($non_translating) {
-  $support->log_warning("\n\nTranscripts in this set that don't translate: $no_trans.\n", 1);
-  $support->log($non_translating);
-}
-
-$support->log("\nTranscripts with xrefs added had the following logic_names:\n");
-while (my ($ln, $c) = each %sources) {
-  $support->log("$c with logic_name of $ln\n",1);
-}
-my @dup_ids = grep {$transcript_ids{$_} > 1} keys %transcript_ids;
-if (@dup_ids) {
-  $support->log_warning("There are scalar(@dup_ids) with duplicates:\n" . join "\n" , @dup_ids . "\n");
-}
-
-
-# finish log
-$support->finish_log;
-
