@@ -25,7 +25,6 @@ BEGIN {
 critic_module_ok($module);
 
 # FIXME: copy-and-paste from OtterLaceOnTheFly.t
-local $ENV{DOCUMENT_ROOT} = '/nfs/WWWdev/SANGER_docs/htdocs';
 my $tmp_dir = File::Temp->newdir('OtterLaceOTFQueryValidator.t.XXXXXX');
 my $at_cache = setup_accession_type_cache($tmp_dir->dirname);
 my $problem_report_cb = sub {

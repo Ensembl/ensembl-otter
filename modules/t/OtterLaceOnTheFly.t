@@ -156,7 +156,6 @@ sub main_tests {
         exit;
     }
 
-    local $ENV{DOCUMENT_ROOT} = '/nfs/WWWdev/SANGER_docs/htdocs';
     my $tmp_dir = File::Temp->newdir('OtterLaceOnTheFly.t.XXXXXX');
     my $at_cache = setup_accession_type_cache($tmp_dir->dirname);
 
