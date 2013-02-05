@@ -280,7 +280,7 @@ foreach my $V_chr (@chrs) {
     $support->log_warning("Can't get an Ensembl chromosome for $E_chr - have you used the right ensembl db as a template ?\n");
   }
 
-  if ($V_chr =~ /HSCHR|PATCH/) {
+  if ($support->is_patch($V_slice)) {
 
     my $v_sr_id = $V_slice->get_seq_region_id;
 
@@ -320,7 +320,7 @@ foreach my $V_chr (@chrs) {
         $support->log("Accessions match: $v_patch_name and ".$e_patch_names[0]."\n",1);
       }
     }
-  }
+  } 
 
   my ($genes) = $support->get_unique_genes($V_slice,$V_dba);
   $support->log("Looping over ".scalar(@$genes)." genes...\n", 1);
