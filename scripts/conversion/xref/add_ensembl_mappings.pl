@@ -98,14 +98,14 @@ our $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
 # parse options
 $support->parse_common_options(@_);
 $support->parse_extra_options(qw(
-    chromosomes|chr=s@ prune assembly=s alt_assembly=s db_type=s
+    chromosomes|chr=s@ prune assembly=s alt_assembly=s dbtype=s
     ensemblhost=s ensemblport=s ensembluser=s ensemblpass=s ensembldbname=s
     evegadbname=s evegahost=s evegaport=s evegauser=s evegapass=s
   )
 );
 $support->allowed_params(
   $support->get_common_params,qw(
-    chromosomes prune assembly alt_assembly db_type
+    chromosomes prune assembly alt_assembly dbtype
     ensemblhost ensemblport ensembluser ensemblpass ensembldbname
     evegadbname evegahost evegaport evegauser evegapass
   )
@@ -128,10 +128,12 @@ $support->init_log;
 #ensembl db
 my $dba;
 my $assembly;
-if($support->param('db_type') eq 'ensembl-vega') {
+if($support->param('dbtype') eq 'ensembl-vega') {
   $dba = $support->get_database('ensembl','evega');
   # don't set dnadb as then sa will use it including eg get_chrlength!
   $assembly = $support->param('alt_assembly');
+} elsif($support->param('dbtype')){
+  $support->log_error("Incorrect dbtype, must be 'ensembl-vega'\n");
 } else {
   $dba = $support->get_database('ensembl');
   $assembly = $support->param('assembly');
@@ -305,7 +307,7 @@ foreach my $chr (@chr_sorted) {
   }
   #skip chromosomes that are not in Ensembl
   my $e_name;
-  if ($support->param('db_type') ne 'ensembl-vega') {
+  if ($support->param('dbtype') ne 'ensembl-vega') {
     if (my @attribs = @{$slice->get_all_Attributes('ensembl_name') || []}) {
       $e_name = $attribs[0]->value;
     }
@@ -318,7 +320,7 @@ foreach my $chr (@chr_sorted) {
       next;
     }
   }
-  my ($genes) = $support->get_unique_genes($slice);
+  my ($genes) = $support->get_unique_genes($slice,$dba);
   foreach my $g (@$genes) {
     next unless $g->analysis->logic_name eq 'otter';
     next if $g->biotype =~ /TEC|artifact/;
