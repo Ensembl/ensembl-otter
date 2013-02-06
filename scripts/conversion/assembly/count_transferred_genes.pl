@@ -6,7 +6,7 @@ count_transferred_genes.pl - compare gene / transcripts numbers in two databases
 
 =head1 SYNOPSIS
 
-    ./ount_transferred_genes.pl
+    ./count_transferred_genes.pl
     --conffile, --conf=FILE             read parameters from FILE
                                         (default: conf/Conversion.ini)
     --logfile, --log=FILE               log to FILE (default: *STDOUT)
@@ -135,9 +135,6 @@ $support->log(sprintf($fmt, 'Chromosome','New trans count','Old trans count','Di
 foreach my $sr (sort keys %{$new->{'transcript'}} ) {
   $support->log(sprintf($fmt,$sr,$new->{'transcript'}{$sr},$old->{'transcript'}{$sr},$new->{'transcript'}{$sr}-$old->{'transcript'}{$sr}));
 }
-
-#warn Dumper($new);
-
 
 $support->log("Done.\n");
 
