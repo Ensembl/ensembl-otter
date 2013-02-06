@@ -525,6 +525,12 @@ $support->log_stamped("Deleted $c meta table entries.\n\n");
 
 #add genebuild info
 $support->log_stamped("Updating genebuild meta entries...\n");
+foreach my $meta ('genebuild.level','transcriptbuild.level','exonbuild.level') {
+  $sql = qq(
+    INSERT IGNORE INTO meta (meta_key,meta_value)
+    SELECT meta_key,meta_value FROM $vega_db.meta WHERE meta_key = '$meta');
+  $c = $dbh->{'evega'}->do($sql);
+}
 $sql = qq(
     INSERT IGNORE INTO meta (meta_key,meta_value)
     SELECT meta_key,meta_value FROM $vega_db.meta WHERE meta_key = 'genebuild.version');
