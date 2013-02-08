@@ -45,6 +45,11 @@ sub data_dir {
       or die "Unexpected DOCUMENT_ROOT format '$root' from $src";
     $data = join('/', $data, 'data', 'otter');
 
+    # Possible override for testing config
+    if (defined(my $dev_cfg = $pkg->_dev_config)) {
+        ($data, $src) = ($dev_cfg, 'mua_dev');
+    }
+
     die "data_dir $data (near root '$root' from $src): not found"
       unless -d $data;
 
@@ -91,6 +96,24 @@ sub mid_url_args {
         warn "No mid_url_args: SCRIPT_NAME mismatch";
     }
     return \%out;
+}
+
+
+# Accept configuration from another user iff they exist and are a
+# member of our primary group.
+sub _dev_config {
+    my ($pkg) = @_;
+    my $developer = $pkg->mid_url_args->{'~'};
+    return () unless defined $developer;
+
+    my $dev_home = (getpwnam($developer))[7];
+    die "Developer config for $developer: unknown user" unless defined $dev_home;
+    my ($gname, $gmemb) = (getgrgid( $( ))[0, 3];
+    my @ok_user = split / /, $gmemb;
+    die "Developer config for $developer: not a member of group $gname"
+      unless grep { $developer eq $_ } @ok_user;
+
+    return "$dev_home/.otter/server-config";
 }
 
 
