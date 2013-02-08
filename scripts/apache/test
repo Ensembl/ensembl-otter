@@ -15,6 +15,8 @@ use YAML 'Dump';
 use File::Find;
 
 use Bio::Otter::ServerScriptSupport;
+use Bio::Otter::Version;
+use Bio::Otter::Git;
 
 
 # keep the align-to-centre layout, it's easier to read than YAML
@@ -93,10 +95,18 @@ sub test {
                         origin => _is_SangerWeb_real(),
                         HTTP_CLIENTREALM => $ENV{HTTP_CLIENTREALM},
                         username =>  $web->username };
-    $out{ServerScriptSupport} =
+    $out{'B:O:ServerScriptSupport'} =
       { local_user => $server->local_user,
 #        BOSSS => $server, # would leak users config & CGI internals
         internal_user => $server->internal_user };
+    $out{'B:O:Server::Config'} =
+      { data_dir => Bio::Otter::Server::Config->data_dir,
+        mid_url_args => Bio::Otter::Server::Config->mid_url_args,
+        designations => Bio::Otter::Server::Config->designations };
+    $out{version} =
+      { major => Bio::Otter::Version->version,
+        '$^X' => $^X, '$]' => $],
+        code => Bio::Otter::Git->as_text };
 
     my $dbh = eval {
         DBI->connect("DBI:mysql:database=pipe_human;host=otp1slave;port=3322",
@@ -112,7 +122,7 @@ sub test {
 
     if ($server->param('more')) {
         $out{Perl} =
-          { '$^X' => $^X, '$]' => $], '${^TAINT}' => ${^TAINT},
+          { '${^TAINT}' => ${^TAINT},
             '@INC' => \@INC, '%INC' => hash2table(\%INC),
           };
     }
