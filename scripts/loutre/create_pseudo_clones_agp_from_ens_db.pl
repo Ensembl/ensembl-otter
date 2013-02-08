@@ -4,19 +4,27 @@
 
 use strict;
 use warnings;
-use GetOpt::Long qw{ GetOptions };
+use Getopt::Long qw{ GetOptions };
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Hum::FastaFileIO;
 use Hum::AGP;
 
 {
+    my ($chr_name);
+
+    my $usage = sub { exec('perlodc', $0) };
+    GetOptions(
+        'h|help!'       => \$usage,
+        'chromosome=s'  => \$chr_name,
+        ) or $usage->();
+    $usage->() unless $chr_name;
+
     my $dba = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
         -user   => 'ensro',
         -group  => 'ensembl',
         -dbname => 'db8_rattus_norvegicus_core_70_5',
         -host   => 'genebuild1',
         );
-    my $chr_name = 5;
     my $assembly = $dba->get_CoordSystemAdaptor->fetch_by_name('chromosome')->version;
     my $chr_length = $dba->get_SliceAdaptor->fetch_by_region('chromosome', $chr_name)->length;
     my $pc_length = 100_000;
