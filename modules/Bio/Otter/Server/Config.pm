@@ -52,6 +52,48 @@ sub data_dir {
 }
 
 
+=head mid_url_args()
+
+Return a hashref of key-value items taken from C<$1> of URL
+C<http://server:port/cgi-bin/otter([^/]*)/\d+/\w+>
+
+This is empty in normal production use, and will be empty if the
+pattern doesn't match (no errors raised).
+
+In DEVEL mode servers it may be used to point L</data_dir> elsewhere.
+CGI escapes are %-decoded and the result is re-tainted.
+
+=cut
+
+sub mid_url_args {
+    my ($pkg) = @_;
+    my %out;
+    my $retaint = substr("$0$^X",0,0); # CGI.pm 3.49 does this too
+
+    if ($ENV{REQUEST_URI} =~ m{^/cgi-bin/otter([^/]*)/\d+/}) {
+        my $mu = $1;
+        foreach my $arg (split /;/, $mu) {
+            if ($arg =~ m{^~([-a-z0-9]{1,16})$}) {
+                # short case for a username, detainted
+                $out{'~'} = $1;
+            } elsif ($arg =~ m{^([-a-zA-Z0-9_.]+)=(.*)$}) {
+                # regex is not intended to de-taint!
+                my ($k, $v) = ($1, $2);
+                foreach ($k, $v) {
+                    s/%([0-9a-f]{2})/chr(hex($1))/eig;
+                }
+                $out{$k} = $v . $retaint;
+            } else {
+                warn "mid_url_args($arg): not understood";
+            }
+        }
+    } else {
+        warn "No mid_url_args: SCRIPT_NAME mismatch";
+    }
+    return \%out;
+}
+
+
 =head2 SpeciesDat()
 
 Return a fresh instance of L<Bio::Otter::SpeciesDat> from the Otter
