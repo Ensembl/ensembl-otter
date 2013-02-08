@@ -218,6 +218,8 @@ sub set_biotype_status_from_transcripts {
 
     my (%tsct_biotype, %tsct_status);
     foreach my $tsct (@{$self->get_all_Transcripts}) {
+        # Ignore "not for VEGA" transcripts when setting gene biotype
+        next if grep {$_->value eq 'not for VEGA'} @{ $tsct->get_all_Attributes('remark') };
         $tsct_biotype{$tsct->biotype}++;
         $tsct_status{ $tsct->status }++;
     }
