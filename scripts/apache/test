@@ -108,12 +108,10 @@ sub test {
         '$^X' => $^X, '$]' => $],
         code => Bio::Otter::Git->as_text };
 
-    my $dbh = eval {
-        DBI->connect("DBI:mysql:database=pipe_human;host=otp1slave;port=3322",
-                     "ottro", undef,
-                     { RaiseError => 1 });
-    };
-    $out{DBI} = $dbh ? { connected => "$dbh" } : { error => $@ };
+    my $dbh = DBI->connect
+      ("DBI:mysql:database=pipe_human;host=otp1slave;port=3322",
+       "ottro", undef, { RaiseError => 0 });
+    $out{DBI} = $dbh ? { connected => "$dbh" } : { error => DBI->errstr };
 
 
     if ($server->param('load')) {
