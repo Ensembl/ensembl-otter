@@ -213,20 +213,6 @@ sub post_response_client_cleanup {
     return;
 }
 
-=head2 post_response_client_cleanup_launch_in_a_zmap
-
-Cleanup any bad windows that might exist & call _launchInAZMap
-
-=cut
-
-sub post_response_client_cleanup_launch_in_a_zmap {
-    my ($zmap, $self) = @_;
-    defined $self or return;
-    post_response_client_cleanup($zmap, $self);
-    $self->_launchInAZMap();
-    return;
-}
-
 =head2 zMapFinalised
 
 A  handler to  handle finalise  requests. ZMap  sends these  when it's
@@ -241,12 +227,6 @@ sub zMapFinalised {
     if ($self->{'_relaunch_zmap'}) {
         $self->_launchZMap();
         $self->{'_relaunch_zmap'} = 0;
-    }
-    elsif ($self->{'_launch_in_a_zmap'}) {
-        $self->zMapZmapConnector->post_respond_handler(
-            \&post_response_client_cleanup_launch_in_a_zmap,
-            $self->zmap_callback_data);
-        $self->{'_launch_in_a_zmap'} = 0;
     }
     else {
         $self->zMapZmapConnector->post_respond_handler(
@@ -268,7 +248,7 @@ request will be sent from zmap.
 =cut
 
 sub _kill_zmap {
-    my ($self, $relaunch, $in_a_zmap) = @_;
+    my ($self, $relaunch) = @_;
 
     ### We're only using the pid as marker for zmap having been started
     if (my $pid = $self->zMapPID) {
@@ -283,7 +263,6 @@ sub _kill_zmap {
             if ($xr->ping()) {
                 warn "Ping OK - sending 'shutdown'";
                 $self->{'_relaunch_zmap'}    = $relaunch;
-                $self->{'_launch_in_a_zmap'} = $in_a_zmap;
 
                 $xr->send_commands('<zmap><request action="shutdown"/></zmap>');
 
