@@ -116,53 +116,6 @@ sub launch_zmap {
     return;
 }
 
-=head2 _launchInAZMap
-
-The real part of launch_in_a_zmap()
-
-=cut
-
-sub _launchInAZMap {
-    my ($self) = @_;
-
-    my $xremote_cache = $self->xremote_cache;
-
-    my $pid_list = $xremote_cache->get_pid_list;
-    unless($pid_list) {
-        warn "Failed to get a process id list from the cache. Is zmap running?";
-        return;
-    }
-
-    if (@{$pid_list} < 1) {
-        warn "Process id list is empty. Is zmap running?";
-        return;
-    }
-
-    if (@{$pid_list} > 1) {
-        warn "More than one process id in list, How to choose?";
-        return;
-    }
-
-    if ($self->zMapGetXRemoteClientByName($self->slice_name)) {
-        $self->message("Already launched in a ZMap");
-        return;
-    }
-
-    my ($pid) = @{$pid_list};
-    my $xremote = $xremote_cache->get_client_for_action_pid("new_view", $pid);
-    unless ($xremote) {
-        # couldn't find a client who can new_view, probably need to
-        $self->zMapOpenClones;
-        return;
-    }
-
-    $self->zMapPID($pid);
-    my $config = config_ini_format($self->SessionWindow->AceDatabase->ace_config, 'ZMap');
-    $self->zMapNewView($xremote, $config);
-
-    return;
-}
-
 sub send_commands {
     my ($self, @xml) = @_;
 
