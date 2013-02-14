@@ -190,13 +190,13 @@ sub fetch_stable_id_by_name {
 
         $attrib_value = lc($attrib_value);     # for case-insensitive comparison later
         my $sql = qq{
-                SELECT distinct gsi.stable_id
+                SELECT distinct g.stable_id
                   , ma.value
-                FROM gene_stable_id gsi
+                FROM gene g
                   , $mode m
                   , attrib_type a
                   , $mode_attrib ma
-                WHERE gsi.gene_id = m.gene_id
+                WHERE g.gene_id = m.gene_id
                   AND $join
                   AND ma.attrib_type_id = a.attrib_type_id
                   AND a.code = ?
@@ -474,9 +474,8 @@ sub fetch_by_transcript_stable_id_constraint {
     my $sth = $self->prepare(
         qq(
         SELECT  tr.gene_id
-        FROM    transcript tr, transcript_stable_id tsi
-        WHERE   tsi.stable_id = ?
-        AND     tr.transcript_id = tsi.transcript_id
+        FROM    transcript tr
+        WHERE   tr.stable_id = ?
     )
     );
 
