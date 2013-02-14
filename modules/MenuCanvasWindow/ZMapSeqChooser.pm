@@ -41,7 +41,7 @@ sub _init {
         $self->zMapZmapConnectorNew;
     $self->{_xremote_cache} =
         Bio::Otter::ZMap::XRemoteCache->new;
-    $self->launch_zmap;
+    $self->_launchZMap;
     return;
 }
 
