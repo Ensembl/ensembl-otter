@@ -78,8 +78,8 @@ sub process_query {
 
 sub check_query_exists {
   my ($otter_db, $mw, $query, $mode) = @_;
-  my $mode_sql = { gene  => [qq{SELECT count(*) FROM gene_stable_id WHERE stable_id=?}],
-				   trans => [qq{SELECT count(*) FROM transcript_stable_id WHERE stable_id=?}],
+  my $mode_sql = { gene  => [qq{SELECT count(*) FROM gene WHERE stable_id=?}],
+				   trans => [qq{SELECT count(*) FROM transcript WHERE stable_id=?}],
                    name  => [
                              qq{SELECT count(*) FROM gene_attrib ga, attrib_type at
                                WHERE ga.value=? AND ga.attrib_type_id=at.attrib_type_id
@@ -240,9 +240,8 @@ sub get_all_gname_sym_from_all_ver_of_gene {
   my ($otter_db, $gsid) = @_;
   my $qry = $otter_db->dbc->prepare(qq{
                                        SELECT DISTINCT ga.value
-                                       FROM gene_stable_id gsi, gene g, gene_attrib ga, attrib_type at
-                                       WHERE gsi.stable_id=?
-                                       AND gsi.gene_id=g.gene_id
+                                       FROM gene g, gene_attrib ga, attrib_type at
+                                       WHERE g.stable_id=?
                                        AND g.gene_id=ga.gene_id
                                        AND ga.attrib_type_id=at.attrib_type_id
                                        AND at.code in ('name', 'synonym')
@@ -311,13 +310,11 @@ sub sid_2_atype_UNSAFE { # implementation is not safe (e.g. Gorilla has OTTGORT0
 
   my ($dataset, $stable_id)= @_;
 
-  my ($stable_id_type, $mol);
+  my ($mol);
 
   if ( $stable_id =~ /OTT.*G/ ) {
-	$stable_id_type = "gene_stable_id";
 	$mol = "gene";
   } elsif ( $stable_id =~ /OTT.*T/ ) {
-	$stable_id_type = "transcript_stable_id";
 	$mol = "transcript";
   }
 
@@ -344,9 +341,8 @@ sub sid_2_atype_UNSAFE { # implementation is not safe (e.g. Gorilla has OTTGORT0
 
   my $qry = $otter_db->prepare(qq{
 								  SELECT sr.name
-								  FROM $stable_id_type sid, $mol m, seq_region sr, assembly a
-								  WHERE sid.stable_id = ?
-								  AND sid.$mol_col=m.$mol_col
+								  FROM $mol m, seq_region sr, assembly a
+								  WHERE m.stable_id = ?
 								  AND m.seq_region_id=sr.seq_region_id
 								  AND sr.seq_region_id=a.asm_seq_region_id
 								  AND sr.coord_system_id=2
