@@ -79,7 +79,10 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
     # my @args = qw( -dbname vega_mus_musculus_20120822_69_GRCm38 -host ensdb-web-17 -port 5317 );
 
     # my @args = qw( -dbname vega_danio_rerio_20121112_69_Zv9 -host ensdb-web-17 -port 5317 );
-    my @args = qw( -dbname vega_homo_sapiens_20121112_69_GRCh37 -host ensdb-web-17 -port 5317 );
+    # my @args = qw( -dbname vega_homo_sapiens_20121112_69_GRCh37 -host ensdb-web-17 -port 5317 );
+
+    # my @args = qw( -dbname vega_homo_sapiens_20130211_70_GRCh37 -host ensdb-web-17 -port 5317 );
+    my @args = qw( -dbname vega_mus_musculus_20130211_70_GRCm38 -host ensdb-web-17 -port 5317 );
 
     my $now = scalar localtime;
     print "$now fix_gene_biotypes.pl on (@args)\n";
@@ -91,7 +94,7 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
         -group => 'ensembl',
     );
 
-    my $species = $dba->get_MetaContainer->get_Species->common_name; # meta_key = 'species.common_name'
+    my $species = $dba->get_MetaContainer->get_common_name; # meta_key = 'species.common_name'
 
     my $ott_ncRNA_host;
     if ($species eq 'human') {
@@ -211,7 +214,7 @@ sub fix_biotypes {
     }
     print "Added $transcribed_remark_added '$transcribed_remark' remarks\n";
     print "Added $nc_RNA_host_remark_added '$nc_RNA_host_remark' remarks\n";
-    return ();
+    return;
 }
 
 {
