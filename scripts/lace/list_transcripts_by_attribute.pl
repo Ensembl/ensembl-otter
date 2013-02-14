@@ -39,19 +39,17 @@ use Bio::Otter::Lace::Defaults;
     my $list_transcripts = $otter_dba->dbc->prepare(q{
         SELECT
                 g.gene_id,
-                gsi.stable_id,
+                g.stable_id,
                 gan.value,
                 t.transcript_id,
-                tsi.stable_id,
+                t.stable_id,
                 tan.value,
                 ta.value,
                 sr.name
         FROM
                 transcript           t
            JOIN transcript_attrib    ta  USING (transcript_id)
-           JOIN transcript_stable_id tsi USING (transcript_id)
            JOIN gene                 g   ON t.gene_id = g.gene_id
-           JOIN gene_stable_id       gsi ON g.gene_id = gsi.gene_id
            JOIN gene_attrib          gan ON     g.gene_id = gan.gene_id 
                                     AND gan.attrib_type_id = (
                                         SELECT attrib_type_id
@@ -73,7 +71,7 @@ use Bio::Otter::Lace::Defaults;
                                      FROM   attrib_type
                                      WHERE  code = ?
                                     )
-        ORDER BY gsi.stable_id, tsi.stable_id
+        ORDER BY g.stable_id, t.stable_id
     });
     $list_transcripts->execute($attrib_pattern, $attrib_code);
 
