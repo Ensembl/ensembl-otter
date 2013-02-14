@@ -518,13 +518,6 @@ sub populate_menus {
     $top->bind('<Control-z>', $zmap_launch_command);
     $top->bind('<Control-Z>', $zmap_launch_command);
 
-    $zmap_launch_command = sub { $self->zmap->launch_in_a_zmap };
-    $tools_menu->add('command',
-               -label          => 'Launch In A ZMap',
-               -command        => $zmap_launch_command,
-               -underline      => 7,
-               );
-
     # Genomic Features editing window
     my $gf_command = sub { $self->launch_GenomicFeaturesWindow };
     $tools_menu->add('command' ,
