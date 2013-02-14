@@ -116,23 +116,6 @@ sub launch_zmap {
     return;
 }
 
-=head2 launch_in_a_zmap
-
-Uses an existing ZMap to display the features of $self->slice_name().
-
-=cut
-
-sub launch_in_a_zmap {
-    my ($self) = @_;
-
-    # If we already have a Zmap attached, shut it down
-    if (!$self->_kill_zmap(0, 1)) {
-        $self->_launchInAZMap();
-    }
-
-    return;
-}
-
 =head2 _launchInAZMap
 
 The real part of launch_in_a_zmap()
