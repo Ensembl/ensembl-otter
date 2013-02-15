@@ -80,11 +80,8 @@ sub _launchZMap {
     warn "Running: @e\n";
 
     my $pid = fork;
-    if ($pid) {
-        $self->zMapPID($pid);
-        return;
-    }
     confess "Error: couldn't fork()\n" unless defined $pid;
+    return if $pid;
 
     { exec @e; }
     # DUP: EditWindow::PfamWindow::initialize $launch_belvu
@@ -95,25 +92,6 @@ sub _launchZMap {
     POSIX::_exit(127); # avoid triggering DESTROY
 
     return; # unreached, quietens perlcritic
-}
-
-=head2 launch_zmap
-
-Launches zmap, displaying the features of $self->slice_name(), killing
-an existing one if it exists.
-
-=cut
-
-sub launch_zmap {
-    my ($self) = @_;
-
-    my $relaunch = 1;
-
-    if (!$self->_kill_zmap($relaunch)) {
-        $self->_launchZMap();
-    }
-
-    return;
 }
 
 sub send_commands {
@@ -151,83 +129,43 @@ sub send_commands {
 
 =head2 zMapFinalised
 
-A  handler to  handle finalise  requests. ZMap  sends these  when it's
-closing the  whole program. Depending  on whether we want  to relaunch
-zmap might be launched again.
+A handler to handle finalise requests. ZMap sends these when it's
+closing the whole program.
 
 =cut
 
 sub zMapFinalised {
     my ($self, $xml) = @_;
-    if ($self->{'_relaunch_zmap'}) {
-        $self->_launchZMap();
-        $self->{'_relaunch_zmap'} = 0;
-    }
     return (200, "all closed");
 }
 
 =head2 _kill_zmap
 
-Attempts  to kill  zmap,  return true  if  it succeeded  and false  on
-failure.  If relaunch = true and _kill_zmap returns true then zmap
-should relaunch, any other combination probably means no relaunch will
-occur. There will still be a call to RelaunchZMap though as a finalised
-request will be sent from zmap.
+Attempts to kill zmap.
 
 =cut
 
 sub _kill_zmap {
-    my ($self, $relaunch) = @_;
+    my ($self) = @_;
 
-    ### We're only using the pid as marker for zmap having been started
-    if (my $pid = $self->zMapPID) {
-        my $rval             = 0;
-        my $main_window_name = $self->main_window_name();
+    my $main_window_name = $self->main_window_name();
+    warn "Looking for $main_window_name";
 
-        warn "Looking for $main_window_name";
-
-        if (my $xr = $self->zMapGetXRemoteClientByName($main_window_name)) {
-
-            # check we can ping...
-            if ($xr->ping()) {
-                warn "Ping OK - sending 'shutdown'";
-                $self->{'_relaunch_zmap'}    = $relaunch;
-
-                $xr->send_commands('<zmap><request action="shutdown"/></zmap>');
-
-                $rval = 1;    # everything has been as successful as can be
-                ### Check shutdown by checking property set by ZMap?
-                ### This is done in zMapFinalised...
-            }
-            else {
-
-                # zmap probably died without sending us a message... seg fault...
-                warn sprintf "Failed to ping %s, zmap probably crashed.", $xr->window_id();
-                $rval = 0;
-            }
+    if (my $xr = $self->zMapGetXRemoteClientByName($main_window_name)) {
+        # check we can ping...
+        if ($xr->ping()) {
+            warn "Ping OK - sending 'shutdown'";
+            $xr->send_commands('<zmap><request action="shutdown"/></zmap>');
         }
-
-        warn sprintf "finishing %s", "_kill_zmap";
-
-        return $rval;
+        else {
+            # zmap probably died without sending us a message... seg fault...
+            warn sprintf "Failed to ping %s, zmap probably crashed.", $xr->window_id();
+        }
     }
 
-    return 0;
-}
+    warn sprintf "finishing %s", "_kill_zmap";
 
-=head2 zMapPID
-
-Stores the process id for zmap.
-
-=cut
-
-sub zMapPID {
-    my ($self, $zmap_process_id) = @_;
-
-    if ($zmap_process_id) {
-        $self->{'_zMap_ZMAP_PROCESS_ID'} = $zmap_process_id;
-    }
-    return $self->{'_zMap_ZMAP_PROCESS_ID'};
+    return;
 }
 
 sub zMapXRemoteClients {
