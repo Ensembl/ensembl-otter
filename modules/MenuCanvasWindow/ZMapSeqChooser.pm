@@ -149,20 +149,6 @@ sub send_commands {
     return;
 }
 
-=head2 post_response_client_cleanup
-
-A function to cleanup any bad windows that might exist.
-Primary user of this is the zMapFinalised function.
-
-=cut
-
-sub post_response_client_cleanup {
-    my ($zmap, $self) = @_;
-    defined $self or return;
-    $zmap->post_respond_handler();
-    return;
-}
-
 =head2 zMapFinalised
 
 A  handler to  handle finalise  requests. ZMap  sends these  when it's
@@ -173,17 +159,10 @@ zmap might be launched again.
 
 sub zMapFinalised {
     my ($self, $xml) = @_;
-
     if ($self->{'_relaunch_zmap'}) {
         $self->_launchZMap();
         $self->{'_relaunch_zmap'} = 0;
     }
-    else {
-        $self->zMapZmapConnector->post_respond_handler(
-            \&post_response_client_cleanup,
-            $self->zmap_callback_data);
-    }
-
     return (200, "all closed");
 }
 
@@ -310,7 +289,7 @@ sub zMapRegisterClient {
 
     $self->zMapProcessNewClientXML($xml, $self->main_window_name());
 
-    $zc->post_respond_handler(\&open_clones, $self->zmap_callback_data);
+    $self->{'open_clones'} = 1;
 
     my $response_xml = $zc->client_registered_response;
 
@@ -466,6 +445,16 @@ sub xremote_callback {
     return @result;
 }
 
+sub xremote_callback_post {
+    my ($self) = @_;
+    defined $self or return;
+    if ($self->{'open_clones'}) {
+        $self->{'open_clones'} = 0;
+        $self->zMapOpenClones;
+    }
+    return;
+}
+
 sub zmap_callback_data {
     my ($self) = @_;
     return $self->{'zmap_callback_data'} ||=
@@ -489,17 +478,6 @@ sub zMapGetXRemoteClientByAction {
     my ($self, $key) = @_;
     my $client = $self->{'action_client_hash'}{$key};
     return $client;
-}
-
-# This is not a method on self, but a standalone function taking a
-# Bio::Otter::ZMap::Connect and a MenuCanvasWindow::SessionWindow.
-
-sub open_clones {
-    my ($zmap, $self) = @_;
-    defined $self or return;
-    $zmap->post_respond_handler();    # clear the handler...
-    $self->zMapOpenClones;
-    return;
 }
 
 sub zMapOpenClones {

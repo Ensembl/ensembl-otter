@@ -239,18 +239,6 @@ sub _widget{
     return $widget;
 }
 
-sub post_respond_handler{
-    my ($self, $callback, $data) = @_;
-    if($callback && $data){
-        $self->__post_callback($callback);
-        $self->__post_callback_data($data);
-    }else{
-        $self->{'_post_callback_data'} = $self->{'_post_callback'} = undef;
-    }
-
-    return 1;
-}
-
 # ======================================================== #
 #                      INTERNALS                           #
 # ======================================================== #
@@ -309,10 +297,7 @@ sub _do_callback{
     warn "Connect $reply\n" if $DEBUG_CALLBACK;
     $self->xremote->send_reply($reply);
 
-    if(my $post_cb = $self->__post_callback()){
-        my @post_data = @{$self->__post_callback_data()};
-        $post_cb->($self, @post_data);
-    }
+    $handler->xremote_callback_post if defined $handler;
 
     return;
 }
@@ -332,17 +317,6 @@ sub _current_request_string {
         $self->{'_current_request_string'} = $str;
     }
     return $self->{'_current_request_string'};
-}
-
-sub __post_callback_data{
-    my ($self, $dataRef) = @_;
-    $self->{'_post_callback_data'} = $dataRef if ($dataRef && ref($dataRef) eq 'ARRAY');
-    return $self->{'_post_callback_data'} || [];
-}
-sub __post_callback{
-    my ($self, $codeRef) = @_;
-    $self->{'_post_callback'} = $codeRef if ($codeRef && ref($codeRef) eq 'CODE');
-    return $self->{'_post_callback'};
 }
 
 # ======================================================== #
