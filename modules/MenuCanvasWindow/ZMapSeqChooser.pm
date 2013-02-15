@@ -825,6 +825,7 @@ sub arg_list {
 sub DESTROY {
     my ($self) = @_;
     $self->_kill_zmap;
+    delete $self->{_zMap_ZMAP_CONNECTOR};
     return;
 }
 
