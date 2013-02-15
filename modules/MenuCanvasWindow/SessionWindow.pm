@@ -507,17 +507,6 @@ sub populate_menus {
 
     my $tools_menu = $self->make_menu("Tools");
 
-    # Launch Zmap
-    my $zmap_launch_command = sub { $self->launch_zmap };
-    $tools_menu->add('command',
-               -label          => 'Launch ZMap',
-               -command        => $zmap_launch_command,
-               -accelerator    => 'Ctrl+Z',
-               -underline      => 7,
-               );
-    $top->bind('<Control-z>', $zmap_launch_command);
-    $top->bind('<Control-Z>', $zmap_launch_command);
-
     # Genomic Features editing window
     my $gf_command = sub { $self->launch_GenomicFeaturesWindow };
     $tools_menu->add('command' ,
@@ -2396,7 +2385,6 @@ sub update_window_title_unsaved_flag {
 
 sub launch_zmap {
     my ($self) = @_;
-    delete $self->{'zmap'};
     my $conf_dir = $self->AceDatabase->zmap_dir;
     my $arg_list =
         $self->AceDatabase->DataSet->config_value_list(
