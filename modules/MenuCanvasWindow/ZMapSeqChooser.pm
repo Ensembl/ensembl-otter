@@ -168,11 +168,6 @@ sub _kill_zmap {
     return;
 }
 
-sub zMapXRemoteClients {
-    my ($self) = @_;
-    return $self->{'_zMap_ZMAP_XREMOTE_CLIENTS'} ||= { };
-}
-
 =head2 zMapZmapConnector
 
 This is the way we receive commands from zmap.
