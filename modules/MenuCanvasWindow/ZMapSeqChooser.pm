@@ -37,10 +37,9 @@ sub _init {
     weaken $self->{_SessionWindow};
     @{$self}{qw( conf_dir arg_list )} =
         @args{qw( -conf_dir -arg_list )};
-    $self->{_zMap_ZMAP_CONNECTOR} =
-        $self->zMapZmapConnectorNew;
     $self->{'action_client_hash'} = { };
     $self->{'name_client_hash'} = { };
+    $self->{_zmap} = $self->_zmap;
     $self->_launchZMap;
     return;
 }
@@ -67,7 +66,7 @@ sub _launchZMap {
         mac_os_x_set_proxy_vars(\%ENV);
     }
 
-    my $win_id = $self->zMapZmapConnector->server_window_id;
+    my $win_id = $self->zmap->server_window_id;
     my $arg_list = $self->arg_list;
 
     my @e = (
@@ -168,27 +167,27 @@ sub _kill_zmap {
     return;
 }
 
-=head2 zMapZmapConnector
+=head2 zmap
 
 This is the way we receive commands from zmap.
 
 =cut
 
-sub zMapZmapConnector {
+sub zmap {
     my ($self) = @_;
-    my $zc = $self->{_zMap_ZMAP_CONNECTOR};
-    return $zc;
+    my $zmap = $self->{_zmap};
+    return $zmap;
 }
 
-sub zMapZmapConnectorNew {
+sub _zmap {
     my ($self) = @_;
     my $mb = $self->SessionWindow->menu_bar();
-    my $zc =
+    my $zmap =
         Bio::Otter::ZMap::Connect->new(
             '-handler' => $self,
             '-tk'      => $mb,
         );
-    return $zc;
+    return $zmap;
 }
 
 #===========================================================
@@ -208,8 +207,6 @@ A handler to handle register_client requests.
 sub zMapRegisterClient {
     my ($self, $xml) = @_;
 
-    my $zc = $self->zMapZmapConnector;
-
     unless ($xml->{'request'}->{'client'}->{'xwid'}
         && $xml->{'request'}->{'client'}->{'request_atom'}
         && $xml->{'request'}->{'client'}->{'response_atom'})
@@ -217,14 +214,14 @@ sub zMapRegisterClient {
         warn "mismatched request for register_client:\n",
           "id, request and response required\n",
           "Got '${xml}'\n";
-        return (403, $zc->basic_error("Bad Request!"));
+        return (403, $self->zmap->basic_error("Bad Request!"));
     }
 
     $self->zMapProcessNewClientXML($xml, $self->main_window_name());
 
     $self->{'open_clones'} = 1;
 
-    my $response_xml = $zc->client_registered_response;
+    my $response_xml = $self->zmap->client_registered_response;
 
     return (200, $response_xml);
 }
@@ -237,9 +234,8 @@ A handler to handle edit requests.  Returns a basic response.
 
 sub zMapEdit {
     my ($self, $xml_hash) = @_;
-    my $zc = $self->zMapZmapConnector;
     my $response = $self->_zMapEdit($xml_hash);
-    return (200, $zc->handled_response($response));
+    return (200, $self->zmap->handled_response($response));
 }
 
 sub _zMapEdit {
@@ -261,12 +257,11 @@ A handler to handle single_select.  returns a basic response.
 
 sub zMapSingleSelect {
     my ($self, $xml_hash) = @_;
-    my $zc = $self->zMapZmapConnector;
     my $features_hash =
         $xml_hash->{'request'}{'align'}{'block'}{'featureset'}{'feature'} || {};
     $self->SessionWindow->zircon_zmap_view_single_select(
         [ keys %$features_hash ]);
-    return (200, $zc->handled_response(1));
+    return (200, $self->zmap->handled_response(1));
 }
 
 =head2 zMapMultipleSelect
@@ -278,12 +273,11 @@ response.
 
 sub zMapMultipleSelect {
     my ($self, $xml_hash) = @_;
-    my $zc = $self->zMapZmapConnector;
     my $features_hash =
         $xml_hash->{'request'}{'align'}{'block'}{'featureset'}{'feature'} || {};
     $self->SessionWindow->zircon_zmap_view_multiple_select(
         [ keys %$features_hash ]);
-    return (200, $zc->handled_response(1));
+    return (200, $self->zmap->handled_response(1));
 }
 
 =head2 zMapFeatureDetails
@@ -321,8 +315,7 @@ sub _zMapFeatureDetailsXml {
 
 sub zMapViewClosed {
     my ($self, $xml) = @_;
-    my $zc = $self->zMapZmapConnector;
-    return (200, $zc->handled_response(1));
+    return (200, $self->zmap->handled_response(1));
 }
 
 sub zMapFeaturesLoaded {
@@ -335,13 +328,13 @@ sub zMapFeaturesLoaded {
 
     $self->SessionWindow->zircon_zmap_view_features_loaded($status, $message, @featuresets);
 
-    return (200, $self->zMapZmapConnector->handled_response(1));
+    return (200, $self->zmap->handled_response(1));
 }
 
 sub zMapIgnoreRequest {
     my ($self) = @_;
 
-    return(200, $self->zMapZmapConnector->handled_response(0));
+    return(200, $self->zmap->handled_response(0));
 }
 
 my $action_method_hash = {
@@ -368,7 +361,7 @@ sub xremote_callback {
     my @result =
         $method
         ? $self->$method($reqXML)
-        : (404, $self->zMapZmapConnector->basic_error("Unknown Command"));
+        : (404, $self->zmap->basic_error("Unknown Command"));
 
     warn sprintf
         "\n_zmap_request_callback\nstatus:%d\nresponse\n>>>\n%s\n<<<\n"
@@ -413,7 +406,7 @@ sub zMapOpenClones {
 sub zMapRegisterClientRequest {
     my ($self, $xremote) = @_;
 
-    my $zmap = $self->zMapZmapConnector;
+    my $zmap = $self->zmap;
     $self->zMapDoRequest($xremote, "register_client", $zmap->connect_request());
 
     return;
@@ -725,7 +718,7 @@ sub arg_list {
 sub DESTROY {
     my ($self) = @_;
     $self->_kill_zmap;
-    delete $self->{_zMap_ZMAP_CONNECTOR};
+    delete $self->{_zmap};
     return;
 }
 
