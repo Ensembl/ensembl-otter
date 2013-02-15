@@ -455,19 +455,6 @@ sub xremote_callback_post {
     return;
 }
 
-sub zmap_callback_data {
-    my ($self) = @_;
-    return $self->{'zmap_callback_data'} ||=
-        $self->_zmap_callback_data;
-}
-
-sub _zmap_callback_data {
-    my ($self) = @_;
-    my $zmap_callback_data = [ $self ];
-    weaken $zmap_callback_data->[0];
-    return $zmap_callback_data;
-}
-
 sub zMapGetXRemoteClientByName {
     my ($self, $key) = @_;
     my $client = $self->{'name_client_hash'}{$key};
