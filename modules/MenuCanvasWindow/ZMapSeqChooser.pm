@@ -13,8 +13,8 @@ use Scalar::Util qw( weaken );
 
 use Hum::XmlWriter;
 
+use X11::XRemote;
 use Bio::Otter::ZMap::Connect;
-use Bio::Otter::ZMap::XRemoteCache;
 use Bio::Otter::Utils::Config::Ini qw( config_ini_format );
 use Bio::Vega::Utils::XmlEscape qw{ xml_escape };
 use Bio::Vega::Utils::MacProxyConfig qw{ mac_os_x_set_proxy_vars };
@@ -39,8 +39,8 @@ sub _init {
         @args{qw( -conf_dir -arg_list )};
     $self->{_zMap_ZMAP_CONNECTOR} =
         $self->zMapZmapConnectorNew;
-    $self->{_xremote_cache} =
-        Bio::Otter::ZMap::XRemoteCache->new;
+    $self->{'action_client_hash'} = { };
+    $self->{'name_client_hash'} = { };
     $self->_launchZMap;
     return;
 }
@@ -141,8 +141,6 @@ sub send_commands {
         }
     }
     if (@err) {
-        try { $self->xremote_cache->remove_clients_to_bad_windows(); }
-        catch { warn "remove_clients_to_bad_windows failed: $_"; };
         my $msg = join "\n", map {"[$_]"} @err;
         $msg =~ s{\n*\z}{};
         die "ZMap commands failed: $msg\n";
@@ -162,7 +160,6 @@ sub post_response_client_cleanup {
     my ($zmap, $self) = @_;
     defined $self or return;
     $zmap->post_respond_handler();
-    $self->xremote_cache->remove_clients_to_bad_windows();
     return;
 }
 
@@ -229,9 +226,6 @@ sub _kill_zmap {
                 warn sprintf "Failed to ping %s, zmap probably crashed.", $xr->window_id();
                 $rval = 0;
             }
-
-            warn sprintf "About to delete client %s", $xr->window_id;
-            $self->xremote_cache->remove_client_with_id($xr->window_id());
         }
 
         warn sprintf "finishing %s", "_kill_zmap";
@@ -284,14 +278,6 @@ sub zMapZmapConnectorNew {
 }
 
 #===========================================================
-
-sub xremote_cache {
-    my ($self) = @_;
-
-    my $cache = $self->{'_xremote_cache'};
-
-    return $cache;
-}
 
 sub main_window_name {
     my ($self) = @_;
@@ -421,22 +407,7 @@ sub _zMapFeatureDetailsXml {
 
 sub zMapViewClosed {
     my ($self, $xml) = @_;
-
-    # I guess all we need to do here is remove the associated xid from the cache...
-
-    my ($client_tag, $xid);
-
     my $zc = $self->zMapZmapConnector;
-
-    if ($client_tag = $xml->{'request'}->{'client'}) {
-        $xid = $client_tag->{'xwid'};
-    }
-
-    if ($xid) {
-        warn sprintf "... going to remove %s", $xid;
-        $self->xremote_cache->remove_client_with_id($xid);
-    }
-
     return (200, $zc->handled_response(1));
 }
 
@@ -506,29 +477,15 @@ sub _zmap_callback_data {
     return $zmap_callback_data;
 }
 
-=head2 zMapGetXRemoteClientByName
-
-The XRemoteCache caches objects based on their window ids. This module
-needs some  way to get  the object cached  for a particular  window id
-based on a name. e.g. the window that's displaying the features.
-
-=cut
-
 sub zMapGetXRemoteClientByName {
     my ($self, $key) = @_;
-
-    my $client = $self->zMapXRemoteClients->{$key};
-
+    my $client = $self->{'name_client_hash'}{$key};
     return $client;
 }
 
 sub zMapGetXRemoteClientByAction {
-    my ($self, $action) = @_;
-
-    my $cache = $self->xremote_cache;
-    my $pid = $self->zMapPID();
-    my $client = $cache->get_own_client_for_action_pid($action, $pid);
-
+    my ($self, $key) = @_;
+    my $client = $self->{'action_client_hash'}{$key};
     return $client;
 }
 
@@ -768,15 +725,12 @@ sub zMapDoRequest {
         return 1;
     }
     else {
-        $self->xremote_cache->remove_clients_to_bad_windows if $status == 412;
         return 0;
     }
 }
 
 sub zMapProcessNewClientXML {
     my ($self, $xml, $lookup_key) = @_;
-
-    my $cache = $self->xremote_cache;
 
     my ($client_tag, $id);
 
@@ -817,9 +771,14 @@ sub zMapProcessNewClientXML {
                 else {
                     warn "Odd for a client to not have actions.";
                 }
+
                 my $xr =
-                    $cache->create_client_with_pid_id_actions($self->zMapPID(), $id, @actions);
-                $self->zMapXRemoteClients->{$full_key} = $xr;
+                    X11::XRemote->new(
+                        -id     => $id, 
+                        -server => 0,
+                    );
+                $self->{'action_client_hash'}{$_} = $xr for @actions;
+                $self->{'name_client_hash'}{$full_key} = $xr;
             }
             $counter++;
         }
