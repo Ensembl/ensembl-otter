@@ -11,6 +11,9 @@ useable as a server.
 
 use strict;
 use warnings;
+
+use Scalar::Util qw( weaken );
+
 use XML::Simple;
 use X11::XRemote;
 use Tk::X;
@@ -27,55 +30,23 @@ Creates a new Bio::Otter::ZMap::Connect Object.
 =cut
 
 sub new{
-    my ($pkg) = @_;
+    my ($pkg, %arg_hash) = @_;
     my $self = { };
     bless($self, $pkg);
+    $self->init(\%arg_hash);
     return $self;
 }
 
-
-=head2 init
-
-Initialises  the new  object  so  it is  useable. 
-Requires the  B<Tk> object.  The  B<handler> is 
-the callback which  gets called  when the window
-is sent a message via an  atom.  It is called by
-THIS module as C<<< $callback->($self, $request,
-@data) >>>.  Note the data supplied as a  list
-ref  to this  function gets  dereferenced when 
-passed  to the callback.   The request  string 
-is  supplied free  of  charge so  the callback
-does  not have to  navigate its way  to it from 
-this module (supplied as $self above).
-
- Usage:
-
- my $fruits = [qw(apples pears bananas)];
- my $veg    = [qw(carrots potatoes)];
- my $callback = sub{ 
-     my ($zmap, $req, $f, $v) = @_;
-     if($req =~ /fruits/){
-        print "I know about these fruits: " . join(", ", @$f) . "\n";
-     }elsif($req =~ /veg/){
-        print "I know about these vegetables: " . join(", ", @$v) . "\n";
-     }
-     return (200, "printed my knowledge.");
- };
-
- my $zmap = Bio::Otter::ZMap::Connect->new();
- $zmap->init($tk, $callback, [$fruits, $veg]);
-
-=cut
-
 sub init{
-    my ($self, $tk, $callback, $data) = @_;
-    unless($tk){
-        warn "usage: ".__PACKAGE__."->init(Tk_Object, [SubRoutine_Ref, [Data_Array_Ref]]);\n"; 
-        return;
-    }
+    my ($self, $arg_hash) = @_;
+    my ($tk, $handler) = @{$arg_hash}{qw( -tk -handler )};
 
-    $self->widget($tk);
-    $self->respond_handler($callback, $data);
+    $self->{'handler'} = $handler;
+    weaken $self->{'handler'};
+    my $widget = $self->{'_widget'} = $self->_widget($tk);
+
+    my $self_ = $self; weaken $self_;
+    $widget->bind('<Property>', [ \&_do_callback , $self_ ] );
 
     return;
 }
@@ -146,18 +117,6 @@ The xremote Object [C<<< X11::XRemote >>>].
 sub xremote{
     my ($self, $id) = @_;
     my $xr = $self->{'_xremote'};
-    if (!$xr) {
-        if (defined $id) {
-            $xr = X11::XRemote->new(
-                -server => 1,
-                -id     => $id
-                );
-        }
-        else {
-            die "Bio::Otter::ZMap::Connect::xremote called as server without providing a window ID";
-        }
-        $self->{'_xremote'} = $xr;
-    }
     return $xr;
 }
 
@@ -239,76 +198,46 @@ sub response_name{
     return X11::XRemote::client_response_name;
 }
 
-=head2 widget
-
-Set/Get the widget.
-
-=cut
-
 sub widget{
-    my ($self, $tk) = @_;
+    my ($self) = @_;
     my $widget = $self->{'_widget'};
-    if($tk && !$widget){
-        my $qName = $self->request_name();
-        my $sName = $self->response_name();
-        # we create a new widget so our binding stay alive
-        # and our users bindings don't get trampled on.
-        $widget = $tk->Label(
-                             -text => "${qName}|${sName}|Widget",
-                             )->pack(-side => 'left');
+    return $widget;
+}
 
-        $self->{'_widget'} = $widget;
+sub _widget{
+    my ($self, $tk) = @_;
+    my $qName = $self->request_name();
+    my $sName = $self->response_name();
+    # we create a new widget so our binding stay alive
+    # and our users bindings don't get trampled on.
+    my $widget =
+        $tk
+        ->Label( -text => "${qName}|${sName}|Widget" )
+        ->pack(-side => 'left');
 
-        my $id = $self->server_window_id();
+    # we need to wait until the widget is mapped by the x server so that we 
+    # can reliably initialise the xremote protocol so we must wait for the
+    # <Map> event
 
-        # we need to wait until the widget is mapped by the x server so that we 
-        # can reliably initialise the xremote protocol so we must wait for the
-        # <Map> event
+    my $mapped; # a flag used in waitVariable below to indicate that the widget is mapped
 
-        my $mapped; # a flag used in waitVariable below to indicate that the widget is mapped
-
-        $widget->bind('<Map>' => sub {
+    $widget->bind(
+        '<Map>' =>
+        sub {
             $widget->packForget;
-            my $xr = $self->xremote($id);
+            my $xr = $self->{'_xremote'} =
+                X11::XRemote->new( -server => 1, -id => $widget->id, );
             $xr->request_name($self->request_name);
             $xr->response_name($self->response_name);
             $mapped = 1;
         });
 
-        # this call will essentially block until the widget is mapped and the
-        # xremote protocol is initialised (the tk event loop will continue though)
-        $widget->waitVariable(\$mapped);
-    }
+    # this call will essentially block until the widget is mapped and the
+    # xremote protocol is initialised (the tk event loop will continue though)
+    $widget->waitVariable(\$mapped);
+
     return $widget;
 }
-
-=head2 respond_handler
-
-Set/Get the callback which will get called.
-
-=cut
-
-sub respond_handler{
-    my ($self, $callback, $data) = @_;
-    $self->__callback($callback);
-    $self->__callback_data($data);
-    my $handler = \&_do_callback;
-    if(my $widget = $self->widget){
-        $widget->bind('<Property>', [ $handler , $self ] );
-        $widget->bind('<Destroy>', sub {
-            $self->{'_xremote'}       = undef;
-            $self->{'_callback_data'} = undef; 
-            $self = undef;
-        });
-    }else{
-        warn "Suggested usage:\n" . 
-            "my \$c = ".__PACKAGE__."->new([options]);\n" .
-            "\$c->init(\$tk, \$callback, \$callback_data);\n";
-    }
-
-    return;
-}
-
 
 sub post_respond_handler{
     my ($self, $callback, $data) = @_;
@@ -334,6 +263,7 @@ my @xml_request_parse_parameters =
 
 sub _do_callback{
     my ($tk, $self) = @_;
+    defined $self or return;
     my $id    = $tk->id();
     my $ev    = $tk->XEvent(); # Get the event
     my $state = ($ev->s ? $ev->s : 0); # assume zero (PropertyDelete I think)
@@ -359,17 +289,15 @@ sub _do_callback{
     $self->_current_request_string($request_string);
     warn "Event has request string $request_string\n" if $DEBUG_CALLBACK;
     #=========================================================
-    my $cb = $self->__callback();
     my $request = XMLin($request_string, @xml_request_parse_parameters);
-    my @data = @{$self->__callback_data};
     my $reply;
     my $fstr  = $self->xremote->format_string;
     my $intSE = $self->basic_error("Internal Server Error");
+    my $handler = $self->{'handler'};
     my $success = eval{ 
         X11::XRemote::block(); # this gets automatically unblocked for us, besides we have no way to do that!
-        my ($status, $xmlstr) = $cb->($self, $request, @data);
-        $status ||= 500; # If callback returns undef...
-        $xmlstr ||= $intSE;
+        my ($status, $xmlstr) =
+            defined $handler ? $handler->xremote_callback($request) : (500, $intSE);
         $reply = sprintf($fstr, $status, $xmlstr);
         1;
     };
@@ -404,17 +332,6 @@ sub _current_request_string {
         $self->{'_current_request_string'} = $str;
     }
     return $self->{'_current_request_string'};
-}
-
-sub __callback_data{
-    my ($self, $dataRef) = @_;
-    $self->{'_callback_data'} = $dataRef if ($dataRef && ref($dataRef) eq 'ARRAY');
-    return $self->{'_callback_data'} || [];
-}
-sub __callback{
-    my ($self, $codeRef) = @_;
-    $self->{'_callback'} = $codeRef if ($codeRef && ref($codeRef) eq 'CODE');
-    return $self->{'_callback'} || sub { warn "@_\nNo callback set.\n"; return (500,"") };
 }
 
 sub __post_callback_data{

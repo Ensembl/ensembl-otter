@@ -271,9 +271,11 @@ sub zMapZmapConnector {
 sub zMapZmapConnectorNew {
     my ($self) = @_;
     my $mb = $self->SessionWindow->menu_bar();
-    my $zc = Bio::Otter::ZMap::Connect->new;
-    $zc->init($mb, \&_zmap_request_callback, $self->zmap_callback_data);
-    my $id = $zc->server_window_id();
+    my $zc =
+        Bio::Otter::ZMap::Connect->new(
+            '-handler' => $self,
+            '-tk'      => $mb,
+        );
     return $zc;
 }
 
@@ -441,8 +443,8 @@ my $action_method_hash = {
     features_loaded => 'zMapFeaturesLoaded',
 };
 
-sub _zmap_request_callback {
-    my ($connect, $reqXML, $obj) = @_;
+sub xremote_callback {
+    my ($self, $reqXML) = @_;
 
     my $action = $reqXML->{'request'}{'action'};
     warn sprintf
@@ -453,8 +455,8 @@ sub _zmap_request_callback {
     my $method = $action_method_hash->{$action};
     my @result =
         $method
-        ? $obj->$method($reqXML)
-        : (404, $obj->zMapZmapConnector->basic_error("Unknown Command"));
+        ? $self->$method($reqXML)
+        : (404, $self->zMapZmapConnector->basic_error("Unknown Command"));
 
     warn sprintf
         "\n_zmap_request_callback\nstatus:%d\nresponse\n>>>\n%s\n<<<\n"
