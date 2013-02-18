@@ -164,9 +164,9 @@ The xremote Object [C<<< X11::XRemote >>>].
 
 =cut
 
-sub xremote{
+sub xremote_server{
     my ($self, $id) = @_;
-    my $xr = $self->{'_xremote'};
+    my $xr = $self->{'_xremote_server'};
     return $xr;
 }
 
@@ -233,8 +233,8 @@ sub protocol_add_meta {
     $hash->{'meta'} = {
         display     => $ENV{DISPLAY},
         windowid    => $self->server_window_id,
-        application => $self->xremote->application,
-        version     => $self->xremote->version,
+        application => $self->xremote_server->application,
+        version     => $self->xremote_server->version,
     };
 
     return;
@@ -275,7 +275,7 @@ sub _widget{
         '<Map>' =>
         sub {
             $widget->packForget;
-            my $xr = $self->{'_xremote'} =
+            my $xr = $self->{'_xremote_server'} =
                 X11::XRemote->new( -server => 1, -id => $widget->id, );
             $xr->request_name($self->request_name);
             $xr->response_name($self->response_name);
@@ -323,14 +323,14 @@ sub _do_callback{
         warn "Event was NOT for this.\n" if $DEBUG_CALLBACK;
         return ; # Tk->break
     }
-    my $request_string = $self->xremote->request_string();
+    my $request_string = $self->xremote_server->request_string();
     $self->_current_request_string($request_string);
     warn "Event has request string $request_string\n" if $DEBUG_CALLBACK;
     #=========================================================
     my $request = XMLin($request_string, @xml_request_parse_parameters);
     my $handler = $self->{'handler'};
     my $reply =
-        sprintf $self->xremote->format_string,
+        sprintf $self->xremote_server->format_string,
         ( try {
             X11::XRemote::block();
             return $handler->xremote_callback($request);
@@ -340,7 +340,7 @@ sub _do_callback{
           } );
     $self->_drop_current_request_string;
     warn "Connect $reply\n" if $DEBUG_CALLBACK;
-    $self->xremote->send_reply($reply);
+    $self->xremote_server->send_reply($reply);
 
     $handler->xremote_callback_post;
 
