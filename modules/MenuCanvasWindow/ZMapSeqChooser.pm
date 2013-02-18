@@ -7,7 +7,6 @@ use warnings;
 use Carp;
 use Try::Tiny;
 use Data::Dumper;
-use XML::Simple;
 use POSIX ();
 use Scalar::Util qw( weaken );
 
@@ -95,34 +94,24 @@ sub _launchZMap {
 
 sub send_commands {
     my ($self, @xml) = @_;
-
-    my $xr = $self->zMapGetXRemoteClientByName($self->slice_name());
-    unless ($xr) {
+    my $xremote = $self->zMapGetXRemoteClientByName($self->slice_name());
+    unless ($xremote) {
         my $for = $self->slice_name();
         die "send_commands cannot contact ZMap: no current window for $for";
     }
-    warn "Sending window '", $xr->window_id, "' this xml:\n", @xml;
-
-    my @a = $xr->send_commands(@xml);
-
-    my @err;
-    warn "OK?  There was no answer\n" unless @a;
-    for(my $i = 0; $i < @xml; $i++){
-        my ($status, $xmlHash) = zMapParseResponse($a[$i]);
-        if ($status =~ /^2\d\d/) { # 200s
-            warn "OK\n";
-        } else {
+    warn "Sending window '", $xremote->window_id, "' this xml:\n", @xml;
+    my @response_list = $self->zmap->send_commands($xremote, @xml);
+    warn "OK?  There was no answer\n" unless @response_list;
+    my $fail = 0;
+    for (@response_list) {
+        my ($status, $xmlHash) = @{$_};
+        if ($status !~ /^2\d\d/) {
             my $error = $xmlHash->{'error'}{'message'};
-            warn "ERROR: $a[$i]\n$error\n";
-            push @err, $error;
+            warn "ERROR: $error\n";
+            $fail = 1;
         }
     }
-    if (@err) {
-        my $msg = join "\n", map {"[$_]"} @err;
-        $msg =~ s{\n*\z}{};
-        die "ZMap commands failed: $msg\n";
-    }
-
+    die "ZMap commands failed\n" if $fail;
     return;
 }
 
@@ -420,9 +409,9 @@ sub get_mark {
 
         my $xml = qq(<zmap><request action="get_mark" /></zmap>);
 
-        my ($response) = $client->send_commands($xml);
+        my ($response) = $self->zmap->send_commands($client, $xml);
 
-        my ($status, $hash) = zMapParseResponse($response);
+        my ($status, $hash) = @{$response};
 
         if ($status =~ /^2/ && $hash->{response}->{mark}->{exists} eq "true") {
 
@@ -463,9 +452,9 @@ sub load_features {
         }
         $xml->close_all_open_tags;
 
-        my ($response) = $client->send_commands($xml->flush);
+        my ($response) = $self->zmap->send_commands($client, $xml->flush);
 
-        my ($status, $hash) = zMapParseResponse($response);
+        my ($status, $hash) = @{$response};
 
         unless ($status =~ /^2/) {
             warn "Problem loading featuresets";
@@ -495,9 +484,9 @@ sub delete_featuresets {
         }
         $xml->close_all_open_tags;
 
-        my ($response) = $client->send_commands($xml->flush);
+        my ($response) = $self->zmap->send_commands($client, $xml->flush);
 
-        my ($status, $hash) = zMapParseResponse($response);
+        my ($status, $hash) = @{$response};
 
         unless ($status =~ /^2/) {
             unless ($hash->{error}->{message} =~ /Unknown FeatureSet/) {
@@ -530,8 +519,8 @@ sub zoom_to_subseq {
         $xml->close_all_open_tags;
 
         my $command = $xml->flush;
-        my ($response) = $client->send_commands($command);
-        my ($status, $hash) = zMapParseResponse($response);
+        my ($response) = $self->zmap->send_commands($client, $command);
+        my ($status, $hash) = @{$response};
         if ($status =~ /^2/ && $hash->{response} =~ /executed/) {
             return 1;
         }
@@ -601,10 +590,10 @@ sub zMapDoRequest {
     my ($self, $xremote, $action, $command) = @_;
 
     warn sprintf "\nzMapDoRequest:command\n>>>\n%s\n<<<\n", $command if $ZMAP_DEBUG;
-    my ($response) = $xremote->send_commands($command);
+    my ($response) = $self->zmap->send_commands($xremote, $command);
     warn sprintf "\nzMapDoRequest:response\n>>>\n%s\n<<<\n", $response if $ZMAP_DEBUG;
 
-    my ($status, $xmlHash) = zMapParseResponse($response);
+    my ($status, $xmlHash) = @{$response};
     if ($status =~ /^2\d\d/) {    # 200s
         if ($action eq 'new_zmap') {
             $self->zMapProcessNewClientXML($xmlHash, "ZMap");
@@ -681,14 +670,6 @@ sub zMapProcessNewClientXML {
     }
 
     return;
-}
-
-sub zMapParseResponse {
-    my ($response) = @_;
-    my $delimit  = X11::XRemote::delimiter();
-    my ($status, $xml) = split(/$delimit/, $response, 2);
-    my $hash   = XMLin($xml);
-    return ($status, $hash);
 }
 
 sub slice_name {

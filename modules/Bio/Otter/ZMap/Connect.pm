@@ -319,6 +319,21 @@ sub _current_request_string {
     return $self->{'_current_request_string'};
 }
 
+sub send_commands {
+    my ($self, $xremote, @xml) = @_;
+    my @response_list = map { parse_response($_) } $xremote->send_commands(@xml);
+    return @response_list;
+}
+
+sub parse_response {
+    my ($response) = @_;
+    my $delimit  = X11::XRemote::delimiter();
+    my ($status, $xml) = split(/$delimit/, $response, 2);
+    my $hash = XMLin($xml);
+    my $parse = [ $status, $hash ];
+    return $parse;
+}
+
 # ======================================================== #
 # DESTROY: Hopefully won't need to do anything             #
 # ======================================================== #
