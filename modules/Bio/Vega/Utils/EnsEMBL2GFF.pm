@@ -403,6 +403,9 @@ use Bio::Vega::Utils::GFF;
         }
 
         if (my $url_fmt = $args{'url_string'}) {
+            die "Cannot detaint url_string=$url_fmt"
+              unless $url_fmt =~ m{^(http[-=_:?/\\.=_a-zA-Z0-9]+\%s[-=_:?/\\.a-zA-Z0-9]*)$};
+            $url_fmt = $1;
             if ($url_fmt =~ /pfam\.sanger\.ac\.uk/) {
                 foreach my $xr (@{$self->get_all_DBEntries}) {
                     if ($xr->dbname() eq 'PFAM') {
