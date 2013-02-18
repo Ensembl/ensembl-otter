@@ -7,7 +7,6 @@ use warnings;
 use Carp;
 use Try::Tiny;
 use Data::Dumper;
-use POSIX ();
 use Scalar::Util qw( weaken );
 
 use Hum::XmlWriter;
@@ -39,57 +38,7 @@ sub _init {
     $self->{'action_client_hash'} = { };
     $self->{'name_client_hash'} = { };
     $self->{_zmap} = $self->_zmap;
-    $self->_launchZMap;
     return;
-}
-
-=head2 launch_zmap
-
-This is where it all starts.  This is the method which gets called
-on 'Launch ZMap' menu item in the session window.
-
-=cut
-
-=head2 _launchZMap
-
-The guts of the code to launch and display the features in a zmap.
-
-=cut
-
-sub _launchZMap {
-    my ($self) = @_;
-
-    if ($^O eq 'darwin') {
-        # Sadly, if someone moves network after launching zmap, it
-        # won't see new proxy variables.
-        mac_os_x_set_proxy_vars(\%ENV);
-    }
-
-    my $win_id = $self->zmap->server_window_id;
-    my $arg_list = $self->arg_list;
-
-    my @e = (
-        'zmap',
-        '--conf_dir' => $self->conf_dir,
-        '--win_id'   => $win_id,
-        ($arg_list ? @{$arg_list} : ()),
-    );
-
-    warn "Running: @e\n";
-
-    my $pid = fork;
-    confess "Error: couldn't fork()\n" unless defined $pid;
-    return if $pid;
-
-    { exec @e; }
-    # DUP: EditWindow::PfamWindow::initialize $launch_belvu
-    # DUP: Hum::Ace::LocalServer
-    warn "exec '@e' failed : $!";
-    close STDERR; # _exit does not flush
-    close STDOUT;
-    POSIX::_exit(127); # avoid triggering DESTROY
-
-    return; # unreached, quietens perlcritic
 }
 
 sub send_commands {
@@ -173,8 +122,10 @@ sub _zmap {
     my $mb = $self->SessionWindow->menu_bar();
     my $zmap =
         Bio::Otter::ZMap::Connect->new(
-            '-handler' => $self,
-            '-tk'      => $mb,
+            '-handler'  => $self,
+            '-tk'       => $mb,
+            '-conf_dir' => $self->conf_dir,
+            '-arg_list' => $self->arg_list,
         );
     return $zmap;
 }
