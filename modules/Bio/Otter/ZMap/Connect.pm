@@ -91,6 +91,16 @@ sub _launch_zmap {
     return; # unreached, quietens perlcritic
 }
 
+sub xremote_client_new {
+    my ($self, $id) = @_;
+    my $xremote =
+        X11::XRemote->new(
+            -id     => $id, 
+            -server => 0,
+        );
+    return $xremote;
+}
+
 =head2 connect_request
 
 This maybe  used to  get the  string for registering  the server  as a
