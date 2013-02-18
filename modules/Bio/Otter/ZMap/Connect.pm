@@ -15,6 +15,7 @@ use warnings;
 use Carp;
 use Scalar::Util qw( weaken );
 use POSIX ();
+use Try::Tiny;
 
 use XML::Simple;
 use X11::XRemote;
@@ -317,20 +318,16 @@ sub _do_callback{
     warn "Event has request string $request_string\n" if $DEBUG_CALLBACK;
     #=========================================================
     my $request = XMLin($request_string, @xml_request_parse_parameters);
-    my $reply;
-    my $fstr  = $self->xremote->format_string;
-    my $intSE = $self->basic_error("Internal Server Error");
     my $handler = $self->{'handler'};
-    my $success = eval{ 
-        X11::XRemote::block(); # this gets automatically unblocked for us, besides we have no way to do that!
-        my ($status, $xmlstr) = $handler->xremote_callback($request);
-        $reply = sprintf($fstr, $status, $xmlstr);
-        1;
-    };
-    # $@ needs xml escaping!
-    $reply ||= sprintf($fstr, 500, $self->basic_error("Internal Server Error $@"))
-        unless $success;
-    $reply ||= sprintf($fstr, 500, $intSE);
+    my $reply =
+        sprintf $self->xremote->format_string,
+        ( try {
+            X11::XRemote::block();
+            return $handler->xremote_callback($request);
+          }
+          catch {
+              return ( 500, $self->basic_error("Internal Server Error $_") );
+          } );
     $self->_drop_current_request_string;
     warn "Connect $reply\n" if $DEBUG_CALLBACK;
     $self->xremote->send_reply($reply);
