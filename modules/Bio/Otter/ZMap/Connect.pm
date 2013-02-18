@@ -44,6 +44,7 @@ sub init{
     my ($tk, $handler, $conf_dir, $arg_list) =
         @{$arg_hash}{qw( -tk -handler -conf_dir -arg_list )};
 
+    $handler or confess "no handler object supplied";
     $self->{'handler'} = $handler;
     weaken $self->{'handler'};
     my $widget = $self->{'_widget'} = $self->_widget($tk);
@@ -322,8 +323,7 @@ sub _do_callback{
     my $handler = $self->{'handler'};
     my $success = eval{ 
         X11::XRemote::block(); # this gets automatically unblocked for us, besides we have no way to do that!
-        my ($status, $xmlstr) =
-            defined $handler ? $handler->xremote_callback($request) : (500, $intSE);
+        my ($status, $xmlstr) = $handler->xremote_callback($request);
         $reply = sprintf($fstr, $status, $xmlstr);
         1;
     };
@@ -335,7 +335,7 @@ sub _do_callback{
     warn "Connect $reply\n" if $DEBUG_CALLBACK;
     $self->xremote->send_reply($reply);
 
-    $handler->xremote_callback_post if defined $handler;
+    $handler->xremote_callback_post;
 
     return;
 }
