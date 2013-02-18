@@ -11,7 +11,6 @@ use Scalar::Util qw( weaken );
 
 use Hum::XmlWriter;
 
-use X11::XRemote;
 use Bio::Otter::ZMap::Connect;
 use Bio::Otter::Utils::Config::Ini qw( config_ini_format );
 use Bio::Vega::Utils::XmlEscape qw{ xml_escape };
@@ -605,11 +604,7 @@ sub zMapProcessNewClientXML {
                     warn "Odd for a client to not have actions.";
                 }
 
-                my $xr =
-                    X11::XRemote->new(
-                        -id     => $id, 
-                        -server => 0,
-                    );
+                my $xr = $self->zmap->xremote_client_new($id);
                 $self->{'action_client_hash'}{$_} = $xr for @actions;
                 $self->{'name_client_hash'}{$full_key} = $xr;
             }
