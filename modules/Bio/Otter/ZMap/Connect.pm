@@ -12,7 +12,9 @@ useable as a server.
 use strict;
 use warnings;
 
+use Carp;
 use Scalar::Util qw( weaken );
+use POSIX ();
 
 use XML::Simple;
 use X11::XRemote;
@@ -39,7 +41,8 @@ sub new{
 
 sub init{
     my ($self, $arg_hash) = @_;
-    my ($tk, $handler) = @{$arg_hash}{qw( -tk -handler )};
+    my ($tk, $handler, $conf_dir, $arg_list) =
+        @{$arg_hash}{qw( -tk -handler -conf_dir -arg_list )};
 
     $self->{'handler'} = $handler;
     weaken $self->{'handler'};
@@ -48,7 +51,42 @@ sub init{
     my $self_ = $self; weaken $self_;
     $widget->bind('<Property>', [ \&_do_callback , $self_ ] );
 
+    $self->_launch_zmap($conf_dir, $arg_list);
+
     return;
+}
+
+sub _launch_zmap {
+    my ($self, $conf_dir, $arg_list) = @_;
+
+    if ($^O eq 'darwin') {
+        # Sadly, if someone moves network after launching zmap, it
+        # won't see new proxy variables.
+        mac_os_x_set_proxy_vars(\%ENV);
+    }
+
+    my @e = (
+        'zmap',
+        '--conf_dir' => $conf_dir,
+        '--win_id'   => $self->server_window_id,
+        ($arg_list ? @{$arg_list} : ()),
+    );
+
+    warn "Running: @e\n";
+
+    my $pid = fork;
+    confess "Error: couldn't fork()\n" unless defined $pid;
+    return if $pid;
+
+    { exec @e; }
+    # DUP: EditWindow::PfamWindow::initialize $launch_belvu
+    # DUP: Hum::Ace::LocalServer
+    warn "exec '@e' failed : $!";
+    close STDERR; # _exit does not flush
+    close STDOUT;
+    POSIX::_exit(127); # avoid triggering DESTROY
+
+    return; # unreached, quietens perlcritic
 }
 
 =head2 connect_request
