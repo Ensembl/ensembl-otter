@@ -305,6 +305,22 @@ sub zoom_to_subseq {
     return 0;
 }
 
+sub send_command {
+    my ($self, $command, $xml_sub) = @_;
+    my $xml = Hum::XmlWriter->new;
+    $xml->open_tag('zmap');
+    $xml->open_tag('request', { action => $command });
+    $xml_sub->($xml) if $xml_sub;
+    $xml->close_all_open_tags;
+    my ($response) = $self->send_commands($xml->flush);
+    my ($status, $hash) = @{$response};
+    $status =~ /^2/
+        or die sprintf
+        "XRemote command '%s' failed: status = %s\n"
+        , $command, $status;
+    return $hash;
+}
+
 sub zmap_new_view_parameter_hash {
     my ($self) = @_;
     my $slice = $self->SessionWindow->AceDatabase->smart_slice;
