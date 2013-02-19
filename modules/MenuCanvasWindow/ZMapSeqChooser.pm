@@ -6,7 +6,6 @@ use strict;
 use warnings;
 use Carp;
 use Try::Tiny;
-use Data::Dumper;
 use Scalar::Util qw( weaken );
 
 use Hum::XmlWriter;
@@ -14,11 +13,6 @@ use Hum::XmlWriter;
 use Bio::Otter::ZMap::Connect;
 use Bio::Otter::Utils::Config::Ini qw( config_ini_format );
 use Bio::Vega::Utils::MacProxyConfig qw{ mac_os_x_set_proxy_vars };
-
-my $ZMAP_DEBUG = $ENV{OTTERLACE_ZMAP_DEBUG};
-
-$Data::Dumper::Terse = 1;
-$Data::Dumper::Indent = 1;
 
 sub new {
     my ($pkg, @args) = @_;
@@ -205,24 +199,12 @@ my $action_method_hash = {
 
 sub xremote_callback {
     my ($self, $reqXML) = @_;
-
     my $action = $reqXML->{'request'}{'action'};
-    warn sprintf
-        "\n_zmap_request_callback:\naction: %s\nrequest:\n>>>\n%s\n<<<\n",
-        $action, Dumper($reqXML)
-        if $ZMAP_DEBUG;
-
     my $method = $action_method_hash->{$action};
     my @result =
         $method
         ? $self->$method($reqXML)
         : (404, $self->zmap->basic_error("Unknown Command"));
-
-    warn sprintf
-        "\n_zmap_request_callback\nstatus:%d\nresponse\n>>>\n%s\n<<<\n"
-        , @result
-        if $ZMAP_DEBUG;
-
     return @result;
 }
 
