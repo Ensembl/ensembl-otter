@@ -228,81 +228,60 @@ sub xremote_callback {
 
 sub get_mark {
     my ($self) = @_;
-    my $xml = Hum::XmlWriter->new;
-    $xml->open_tag('zmap');
-    $xml->open_tag('request', { action => 'get_mark' });
-    $xml->close_all_open_tags;
-    my ($response) = $self->send_commands($xml->flush);
-    my ($status, $hash) = @{$response};
-    if ($status =~ /^2/ && $hash->{response}->{mark}->{exists} eq "true") {
-        my $start = abs($hash->{response}->{mark}->{start});
-        my $end   = abs($hash->{response}->{mark}->{end});
-        if ($end < $start) {
-            ($start, $end) = ($end, $start);
-        }
-        return ($start, $end);
+    my $hash = $self->send_command('get_mark');
+    $hash->{response}->{mark}->{exists} eq "true" or return;
+    my $start = abs($hash->{response}->{mark}->{start});
+    my $end   = abs($hash->{response}->{mark}->{end});
+    if ($end < $start) {
+        ($start, $end) = ($end, $start);
     }
-    return;
+    return ($start, $end);
 }
 
 sub load_features {
     my ($self, @featuresets) = @_;
-    my $xml = Hum::XmlWriter->new;
-    $xml->open_tag('zmap');
-    $xml->open_tag('request', { action => 'load_features' });
-    $xml->open_tag('align');
-    $xml->open_tag('block');
-    foreach my $fs_name (@featuresets) {
-        $xml->open_tag('featureset', { name => $fs_name });
-        $xml->close_tag;
-    }
-    $xml->close_all_open_tags;
-    my ($response) = $self->send_commands($xml->flush);
-    my ($status, $hash) = @{$response};
-    unless ($status =~ /^2/) {
-        warn "Problem loading featuresets";
-    }
+    my $hash = $self->send_command(
+        'load_features',
+        sub {
+            my ($xml) = @_;
+            $xml->open_tag('align');
+            $xml->open_tag('block');
+            foreach my $fs_name (@featuresets) {
+                $xml->open_tag('featureset', { name => $fs_name });
+                $xml->close_tag;
+            }
+        });
     return;
 }
 
 sub delete_featuresets {
     my ($self, @featuresets) = @_;
-    my $xml = Hum::XmlWriter->new;
-    $xml->open_tag('zmap');
-    $xml->open_tag('request', { action => 'delete_feature' });
-    $xml->open_tag('align');
-    $xml->open_tag('block');
-    for my $featureset (@featuresets) {
-        $xml->open_tag('featureset', { name => $featureset });
-        $xml->close_tag;
-    }
-    $xml->close_all_open_tags;
-    my ($response) = $self->send_commands($xml->flush);
-    my ($status, $hash) = @{$response};
-    unless ($status =~ /^2/) {
-        unless ($hash->{error}->{message} =~ /Unknown FeatureSet/) {
-            warn "Problem deleting featuresets: " . $hash->{error}->{message};
-        }
-    }
+    my $hash = $self->send_command(
+        'delete_feature',
+        sub {
+            my ($xml) = @_;
+            $xml->open_tag('align');
+            $xml->open_tag('block');
+            for my $featureset (@featuresets) {
+                $xml->open_tag('featureset', { name => $featureset });
+                $xml->close_tag;
+            }
+        });
     return;
 }
 
 sub zoom_to_subseq {
     my ($self, $subseq) = @_;
-    my $xml = Hum::XmlWriter->new;
-    $xml->open_tag('zmap');
-    $xml->open_tag('request', { action => 'zoom_to' });
-    $xml->open_tag('align');
-    $xml->open_tag('block');
-    $xml->open_tag('featureset', { name => $subseq->GeneMethod->name });
-    $subseq->zmap_xml_feature_tag($xml, $self->SessionWindow->AceDatabase->offset);
-    $xml->close_all_open_tags;
-    my ($response) = $self->send_commands($xml->flush);
-    my ($status, $hash) = @{$response};
-    if ($status =~ /^2/ && $hash->{response} =~ /executed/) {
-        return 1;
-    }
-    return 0;
+    my $hash = $self->send_command(
+        'zoom_to',
+        sub {
+            my ($xml) = @_;
+            $xml->open_tag('align');
+            $xml->open_tag('block');
+            $xml->open_tag('featureset', { name => $subseq->GeneMethod->name });
+            $subseq->zmap_xml_feature_tag($xml, $self->SessionWindow->AceDatabase->offset);
+        });
+    return $hash->{response} =~ /executed/ ? 1 : 0;
 }
 
 sub send_command {
