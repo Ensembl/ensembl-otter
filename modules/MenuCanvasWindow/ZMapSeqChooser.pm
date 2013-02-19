@@ -228,8 +228,11 @@ sub xremote_callback {
 
 sub get_mark {
     my ($self) = @_;
-    my $xml = qq(<zmap><request action="get_mark" /></zmap>);
-    my ($response) = $self->send_commands($xml);
+    my $xml = Hum::XmlWriter->new;
+    $xml->open_tag('zmap');
+    $xml->open_tag('request', { action => 'get_mark' });
+    $xml->close_all_open_tags;
+    my ($response) = $self->send_commands($xml->flush);
     my ($status, $hash) = @{$response};
     if ($status =~ /^2/ && $hash->{response}->{mark}->{exists} eq "true") {
         my $start = abs($hash->{response}->{mark}->{start});
