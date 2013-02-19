@@ -404,21 +404,11 @@ use Bio::Vega::Utils::GFF;
 
         if (my $url_fmt = $args{'url_string'}) {
             die "Cannot detaint url_string=$url_fmt"
-              unless $url_fmt =~ m{^(http[-=_:?/\\.=_a-zA-Z0-9]+\%s[-=_:?/\\.a-zA-Z0-9]*)$};
+              unless $url_fmt =~ m{^(http[-=_:?/\\.=_a-zA-Z0-9]+\%(?:s|\{pfam\})[-=_:?/\\.a-zA-Z0-9]*)$};
             $url_fmt = $1;
-            if ($url_fmt =~ /pfam\.sanger\.ac\.uk/) {
-                foreach my $xr (@{$self->get_all_DBEntries}) {
-                    if ($xr->dbname() eq 'PFAM') {
-                        $extra_attrs->{'synthetic_gene_name'} = $xr->display_id;
-                        my $name = sprintf "%s.%d", $xr->display_id, $gene_numeric_id;
-                        my $url = sprintf $url_fmt, $xr->primary_id;
-                        $extra_attrs->{'Locus'} = qq{"$name"};
-                        $extra_attrs->{'URL'}   = qq{"$url"};
-                    }
-                }
-                unless (keys %$extra_attrs) {
-                    die "Couldn't find PFAM XRef";
-                }
+            if ($url_fmt =~ s{%\{pfam\}}{%s}) {
+                my $kv = $self->_urlsubst_pfam($url_fmt, $gene_numeric_id);
+                @{$extra_attrs}{ keys %$kv } = values %$kv;
             }
             else {
                 # Assume it is an ensembl gene
@@ -443,6 +433,24 @@ use Bio::Vega::Utils::GFF;
         }
 
         return $extra_attrs;
+    }
+
+    sub _urlsubst_pfam {
+        my ($self, $url_fmt, $gene_numeric_id) = @_;
+        my %out;
+        foreach my $xr (@{$self->get_all_DBEntries}) {
+            if ($xr->dbname() eq 'PFAM') {
+                $out{'synthetic_gene_name'} = $xr->display_id;
+                my $name = sprintf "%s.%d", $xr->display_id, $gene_numeric_id;
+                my $url = sprintf $url_fmt, $xr->primary_id;
+                $out{'Locus'} = qq{"$name"};
+                $out{'URL'}   = qq{"$url"};
+            }
+        }
+        unless (keys %out) {
+            die "Couldn't find PFAM XRef";
+        }
+        return \%out;
     }
 }
 
