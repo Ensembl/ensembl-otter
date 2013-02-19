@@ -13,7 +13,6 @@ use Hum::XmlWriter;
 
 use Bio::Otter::ZMap::Connect;
 use Bio::Otter::Utils::Config::Ini qw( config_ini_format );
-use Bio::Vega::Utils::XmlEscape qw{ xml_escape };
 use Bio::Vega::Utils::MacProxyConfig qw{ mac_os_x_set_proxy_vars };
 
 my $ZMAP_DEBUG = $ENV{OTTERLACE_ZMAP_DEBUG};
@@ -303,30 +302,15 @@ sub zoom_to_subseq {
     return 0;
 }
 
-my $zmap_new_view_xml_format = <<'FORMAT'
-<zmap>
- <request action="new_view">
-  <segment sequence="%s" start="%d" end="%d">
-  </segment>
- </request>
-</zmap>
-FORMAT
-    ;
-
-sub zmap_new_view_xml {
+sub zmap_new_view_parameter_hash {
     my ($self) = @_;
-
     my $slice = $self->SessionWindow->AceDatabase->smart_slice;
-
-    my $segment = $slice->ssname;
-    my $start   = $slice->start;
-    my $end     = $slice->end;
-
-    my @fields = ( $segment, $start, $end );
-    my @xml_escaped_fields = map { xml_escape($_) } @fields;
-    my $xml = sprintf $zmap_new_view_xml_format, @xml_escaped_fields;
-
-    return $xml;
+    my $hash = {
+        'sequence' => $slice->ssname,
+        'start'    => $slice->start,
+        'end'      => $slice->end,
+    };
+    return $hash;
 }
 
 sub xremote {

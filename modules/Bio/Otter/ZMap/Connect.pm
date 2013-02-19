@@ -141,6 +141,16 @@ sub register_client_post {
 
 }
 
+my $new_view_xml_format = <<'FORMAT'
+<zmap>
+ <request action="new_view">
+  <segment sequence="%s" start="%d" end="%d">
+  </segment>
+ </request>
+</zmap>
+FORMAT
+    ;
+
 sub new_view {
     my ($self) = @_;
 
@@ -148,7 +158,10 @@ sub new_view {
     my ($response, $status, $hash);
 
     my $window_xremote = $self->{'_xremote_client_window'};
-    my $new_view_xml = $handler->zmap_new_view_xml;
+    my $parameter_hash = $handler->zmap_new_view_parameter_hash;
+    my @parameter_list = @{$parameter_hash}{qw( sequence start end )};
+    my $new_view_xml =
+        sprintf $new_view_xml_format, map { xml_escape($_) } @parameter_list;
     ($response) = $self->send_commands($window_xremote, $new_view_xml);
     ($status, $hash) = @{$response};
     $status =~ /^2/
