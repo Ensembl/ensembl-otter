@@ -67,7 +67,7 @@ sub _zmap {
     my $mb = $self->SessionWindow->menu_bar();
     my $zmap =
         Bio::Otter::ZMap::Connect->new(
-            '-handler'  => $self,
+            '-view'     => $self,
             '-tk'       => $mb,
             '-conf_dir' => $self->conf_dir,
             '-arg_list' => $self->arg_list,

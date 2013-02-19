@@ -44,12 +44,12 @@ sub new{
 
 sub init{
     my ($self, $arg_hash) = @_;
-    my ($tk, $handler, $conf_dir, $arg_list) =
-        @{$arg_hash}{qw( -tk -handler -conf_dir -arg_list )};
+    my ($tk, $view, $conf_dir, $arg_list) =
+        @{$arg_hash}{qw( -tk -view -conf_dir -arg_list )};
 
-    $handler or confess "no handler object supplied";
-    $self->{'handler'} = $handler;
-    weaken $self->{'handler'};
+    $view or confess "no view object supplied";
+    $self->{'view'} = $view;
+    weaken $self->{'view'};
     my $widget = $self->{'_widget'} = $self->_widget($tk);
 
     my $self_ = $self; weaken $self_;
@@ -154,11 +154,11 @@ FORMAT
 sub new_view {
     my ($self) = @_;
 
-    my $handler = $self->{'handler'};
+    my $view = $self->{'view'};
     my ($response, $status, $hash);
 
     my $window_xremote = $self->{'_xremote_client_window'};
-    my $parameter_hash = $handler->zmap_new_view_parameter_hash;
+    my $parameter_hash = $view->zmap_new_view_parameter_hash;
     my @parameter_list = @{$parameter_hash}{qw( sequence start end )};
     my $new_view_xml =
         sprintf $new_view_xml_format, map { xml_escape($_) } @parameter_list;
@@ -172,7 +172,7 @@ sub new_view {
     my $view_xremote = $self->xremote_client_new($id);
     $self->send_commands($view_xremote, $self->connect_request);
 
-    $handler->xremote($view_xremote);
+    $view->xremote($view_xremote);
 
     return;
 }
@@ -415,7 +415,7 @@ sub _do_callback{
     #=========================================================
     my $request = XMLin($request_string, @xml_request_parse_parameters);
     my $action = $request->{'request'}{'action'};
-    my $handler = $self->{'handler'};
+    my $view = $self->{'view'};
     my $reply =
         sprintf $self->xremote_server->format_string,
         ( try {
@@ -423,7 +423,7 @@ sub _do_callback{
             for ($action) {
                 when ('register_client') { return $self->register_client($request); }
                 when ('finalised') { return (200, "all closed"); }
-                default { return $handler->xremote_callback($request); }
+                default { return $view->xremote_callback($request); }
             }
           }
           catch {
