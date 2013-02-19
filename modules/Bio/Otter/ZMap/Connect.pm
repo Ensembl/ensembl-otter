@@ -117,6 +117,53 @@ sub register_client {
     return (200, $response_xml);
 }
 
+sub register_client_post {
+    my ($self) = @_;
+
+    my ($response, $status, $hash);
+
+    my $command = qq!<zmap><request action="new_zmap"/></zmap>!;
+    my $app_xremote = $self->{'_xremote_client_app'};
+    ($response) = $self->send_commands($app_xremote, $command);
+    ($status, $hash) = @{$response};
+    $status =~ /^2/
+        or die "register_client_post(): 'new_zmap' failed\n";
+    my $id = $hash->{'response'}{'client'}{'xwid'}
+    or die "register_client_post(): missing window ID\n";
+    my $window_xremote = 
+        $self->{'_xremote_client_window'} =
+        $self->xremote_client_new($id);
+    $self->send_commands($window_xremote, $self->connect_request);
+
+    $self->new_view;
+
+    return;
+
+}
+
+sub new_view {
+    my ($self) = @_;
+
+    my $handler = $self->{'handler'};
+    my ($response, $status, $hash);
+
+    my $window_xremote = $self->{'_xremote_client_window'};
+    my $new_view_xml = $handler->zmap_new_view_xml;
+    ($response) = $self->send_commands($window_xremote, $new_view_xml);
+    ($status, $hash) = @{$response};
+    $status =~ /^2/
+        or die "new_view(): 'new_view' failed\n";
+    my $id = $hash->{'response'}{'client'}{'xwid'}
+        or die "register_client_post(): missing window ID\n";
+
+    my $view_xremote = $self->xremote_client_new($id);
+    $self->send_commands($view_xremote, $self->connect_request);
+
+    $handler->xremote($view_xremote);
+
+    return;
+}
+
 sub xremote_client_new {
     my ($self, $id) = @_;
     my $xremote =
@@ -374,7 +421,7 @@ sub _do_callback{
     warn "Connect $reply\n" if $DEBUG_CALLBACK;
     $self->xremote_server->send_reply($reply);
 
-    $handler->zMapOpenClones($self->{'_xremote_client_app'})
+    $self->register_client_post
         if defined $action && $action eq 'register_client';
 
     return;

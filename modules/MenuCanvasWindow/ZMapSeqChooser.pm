@@ -34,19 +34,13 @@ sub _init {
     weaken $self->{_SessionWindow};
     @{$self}{qw( conf_dir arg_list )} =
         @args{qw( -conf_dir -arg_list )};
-    $self->{'action_client_hash'} = { };
-    $self->{'name_client_hash'} = { };
     $self->{_zmap} = $self->_zmap;
     return;
 }
 
 sub send_commands {
     my ($self, @xml) = @_;
-    my $xremote = $self->zMapGetXRemoteClientByName($self->slice_name());
-    unless ($xremote) {
-        my $for = $self->slice_name();
-        die "send_commands cannot contact ZMap: no current window for $for";
-    }
+    my $xremote = $self->xremote;
     warn "Sending window '", $xremote->window_id, "' this xml:\n", @xml;
     my @response_list = $self->zmap->send_commands($xremote, @xml);
     warn "OK?  There was no answer\n" unless @response_list;
@@ -233,44 +227,11 @@ sub xremote_callback {
     return @result;
 }
 
-sub zMapGetXRemoteClientByName {
-    my ($self, $key) = @_;
-    my $client = $self->{'name_client_hash'}{$key};
-    return $client;
-}
-
-sub zMapGetXRemoteClientByAction {
-    my ($self, $key) = @_;
-    my $client = $self->{'action_client_hash'}{$key};
-    return $client;
-}
-
-sub zMapOpenClones {
-    my ($self, $zmap_xremote) = @_;
-    $self->zMapDoRequest(
-        $zmap_xremote, "new_zmap",
-        qq!<zmap><request action="new_zmap"/></zmap>!)
-        or return;
-    my $xremote = $self->zMapGetXRemoteClientByName("ZMap");
-    $self->zMapRegisterClientRequest($xremote);
-    $self->zMapNewView($xremote);
-    return;
-}
-
-sub zMapRegisterClientRequest {
-    my ($self, $xremote) = @_;
-
-    my $zmap = $self->zmap;
-    $self->zMapDoRequest($xremote, "register_client", $zmap->connect_request());
-
-    return;
-}
-
 sub get_mark {
 
     my ($self) = @_;
 
-    if (my $client = $self->zMapGetXRemoteClientByAction('get_mark')) {
+    if (my $client = $self->xremote) {
 
         my $xml = qq(<zmap><request action="get_mark" /></zmap>);
 
@@ -300,7 +261,7 @@ sub get_mark {
 sub load_features {
     my ($self, @featuresets) = @_;
 
-    if (my $client = $self->zMapGetXRemoteClientByAction('load_features')) {
+    if (my $client = $self->xremote) {
 
         my $xml = Hum::XmlWriter->new;
         $xml->open_tag('zmap');
@@ -335,7 +296,7 @@ sub load_features {
 sub delete_featuresets {
     my ($self, @featuresets) = @_;
 
-    if (my $client = $self->zMapGetXRemoteClientByAction('delete_feature')) {
+    if (my $client = $self->xremote) {
 
         my $xml = Hum::XmlWriter->new;
         $xml->open_tag('zmap');
@@ -373,7 +334,7 @@ sub zoom_to_subseq {
 
     my ($self, $subseq) = @_;
 
-    if (my $client = $self->zMapGetXRemoteClientByAction('zoom_to')) {
+    if (my $client = $self->xremote) {
         my $xml = Hum::XmlWriter->new;
         $xml->open_tag('zmap');
         $xml->open_tag('request', { action => 'zoom_to' });
@@ -401,15 +362,14 @@ my $zmap_new_view_xml_format = <<'FORMAT'
 <zmap>
  <request action="new_view">
   <segment sequence="%s" start="%d" end="%d">
-%s
   </segment>
  </request>
 </zmap>
 FORMAT
     ;
 
-sub _zmap_new_view_xml {
-    my ($self, $config) = @_;
+sub zmap_new_view_xml {
+    my ($self) = @_;
 
     my $slice = $self->SessionWindow->AceDatabase->smart_slice;
 
@@ -417,126 +377,18 @@ sub _zmap_new_view_xml {
     my $start   = $slice->start;
     my $end     = $slice->end;
 
-    my @fields = ( $segment, $start, $end, $config );
+    my @fields = ( $segment, $start, $end );
     my @xml_escaped_fields = map { xml_escape($_) } @fields;
     my $xml = sprintf $zmap_new_view_xml_format, @xml_escaped_fields;
 
     return $xml;
 }
 
-sub zMapNewView {
-    my ($self, $xremote, $config) = @_;
-
-    $config = "" unless defined $config;
-
-    my $new_view_xml = $self->_zmap_new_view_xml($config);
-    unless ($self->zMapDoRequest($xremote, "new_view", $new_view_xml)) {
-        warn "Failed to create a new view";
-        return;
-    }
-
-    my $xremote_new = $self->zMapGetXRemoteClientByName($self->slice_name);
-    unless ($xremote_new) {
-        warn "Failed to find the new xremote client";
-        return;
-    }
-    $self->zMapRegisterClientRequest($xremote_new);
-
-    return;
-}
-
-=head2 zMapDoRequest
-
-return true for success
-
-=cut
-
-sub zMapDoRequest {
-    my ($self, $xremote, $action, $command) = @_;
-
-    warn sprintf "\nzMapDoRequest:command\n>>>\n%s\n<<<\n", $command if $ZMAP_DEBUG;
-    my ($response) = $self->zmap->send_commands($xremote, $command);
-    warn sprintf "\nzMapDoRequest:response\n>>>\n%s\n<<<\n", $response if $ZMAP_DEBUG;
-
-    my ($status, $xmlHash) = @{$response};
-    if ($status =~ /^2\d\d/) {    # 200s
-        if ($action eq 'new_zmap') {
-            $self->zMapProcessNewClientXML($xmlHash, "ZMap");
-        }
-        elsif ($action eq 'new_view') {
-            $self->zMapProcessNewClientXML($xmlHash, $self->slice_name());
-        }
-        elsif ($action eq 'list_windows') {
-            $self->zMapProcessNewClientXML($xmlHash, "ZMapWindow");
-        }
-        return 1;
-    }
-    else {
-        return 0;
-    }
-}
-
-sub zMapProcessNewClientXML {
-    my ($self, $xml, $lookup_key) = @_;
-
-    my ($client_tag, $id);
-
-    if (exists($xml->{'response'})) {
-        $client_tag = $xml->{'response'}->{'client'};
-    }
-    else {
-        $client_tag = $xml->{'request'}->{'client'};
-    }
-
-    if ($client_tag) {
-        my $client_array = [];
-        my $add_counter  = 0;
-        my $counter      = 0;
-        my $full_key     = $lookup_key;
-
-        if (ref($client_tag) eq 'ARRAY') {
-            $client_array = $client_tag;
-            $add_counter  = 1;
-        }
-        else {
-            $client_array = [$client_tag];
-        }
-
-        foreach my $client (@{$client_array}) {
-            $full_key = "$lookup_key.$counter" if ($add_counter);
-            if ($id = $client->{'xwid'}) {
-
-                # get actions array from xml.
-                my @actions = qw();
-                my $subtag  = q!action!;
-                if (ref($client->{$subtag}) eq 'ARRAY') {
-                    push(@actions, @{ $client->{$subtag} });
-                }
-                elsif (defined($client->{$subtag}) && !ref($client->{$subtag})) {
-                    push(@actions, $client->{$subtag});
-                }
-                else {
-                    warn "Odd for a client to not have actions.";
-                }
-
-                my $xr = $self->zmap->xremote_client_new($id);
-                $self->{'action_client_hash'}{$_} = $xr for @actions;
-                $self->{'name_client_hash'}{$full_key} = $xr;
-            }
-            $counter++;
-        }
-    }
-    else {
-        warn "malformed register client xml [no window id]";
-    }
-
-    return;
-}
-
-sub slice_name {
-    my ($self) = @_;
-    my $slice_name = $self->SessionWindow->slice_name;
-    return;
+sub xremote {
+    my ($self, @args) = @_;
+    ($self->{'_xremote'}) = @args if @args;
+    my $xremote = $self->{'_xremote'};
+    return $xremote;
 }
 
 sub SessionWindow {
