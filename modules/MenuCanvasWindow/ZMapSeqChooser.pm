@@ -63,47 +63,6 @@ sub send_commands {
     return;
 }
 
-=head2 zMapFinalised
-
-A handler to handle finalise requests. ZMap sends these when it's
-closing the whole program.
-
-=cut
-
-sub zMapFinalised {
-    my ($self, $xml) = @_;
-    return (200, "all closed");
-}
-
-=head2 _kill_zmap
-
-Attempts to kill zmap.
-
-=cut
-
-sub _kill_zmap {
-    my ($self) = @_;
-
-    my $main_window_name = $self->main_window_name();
-    warn "Looking for $main_window_name";
-
-    if (my $xr = $self->zMapGetXRemoteClientByName($main_window_name)) {
-        # check we can ping...
-        if ($xr->ping()) {
-            warn "Ping OK - sending 'shutdown'";
-            $xr->send_commands('<zmap><request action="shutdown"/></zmap>');
-        }
-        else {
-            # zmap probably died without sending us a message... seg fault...
-            warn sprintf "Failed to ping %s, zmap probably crashed.", $xr->window_id();
-        }
-    }
-
-    warn sprintf "finishing %s", "_kill_zmap";
-
-    return;
-}
-
 =head2 zmap
 
 This is the way we receive commands from zmap.
@@ -130,40 +89,6 @@ sub _zmap {
 }
 
 #===========================================================
-
-sub main_window_name {
-    my ($self) = @_;
-    my $name = 'ZMap port #' . $self->SessionWindow->AceDatabase->ace_server->port();
-    return $name;
-}
-
-=head2 zMapRegisterClient
-
-A handler to handle register_client requests.
-
-=cut
-
-sub zMapRegisterClient {
-    my ($self, $xml) = @_;
-
-    unless ($xml->{'request'}->{'client'}->{'xwid'}
-        && $xml->{'request'}->{'client'}->{'request_atom'}
-        && $xml->{'request'}->{'client'}->{'response_atom'})
-    {
-        warn "mismatched request for register_client:\n",
-          "id, request and response required\n",
-          "Got '${xml}'\n";
-        return (403, $self->zmap->basic_error("Bad Request!"));
-    }
-
-    $self->zMapProcessNewClientXML($xml, $self->main_window_name());
-
-    $self->{'open_clones'} = 1;
-
-    my $response_xml = $self->zmap->client_registered_response;
-
-    return (200, $response_xml);
-}
 
 =head2 zMapEdit
 
@@ -277,11 +202,9 @@ sub zMapIgnoreRequest {
 }
 
 my $action_method_hash = {
-    register_client => 'zMapRegisterClient',
     edit            => 'zMapEdit',
     single_select   => 'zMapSingleSelect',
     multiple_select => 'zMapMultipleSelect',
-    finalised       => 'zMapFinalised',
     feature_details => 'zMapFeatureDetails',
     view_closed     => 'zMapViewClosed',
     features_loaded => 'zMapFeaturesLoaded',
@@ -310,16 +233,6 @@ sub xremote_callback {
     return @result;
 }
 
-sub xremote_callback_post {
-    my ($self) = @_;
-    defined $self or return;
-    if ($self->{'open_clones'}) {
-        $self->{'open_clones'} = 0;
-        $self->zMapOpenClones;
-    }
-    return;
-}
-
 sub zMapGetXRemoteClientByName {
     my ($self, $key) = @_;
     my $client = $self->{'name_client_hash'}{$key};
@@ -333,10 +246,12 @@ sub zMapGetXRemoteClientByAction {
 }
 
 sub zMapOpenClones {
-    my ($self) = @_;
-    my $xremote = $self->zMapGetXRemoteClientByName($self->main_window_name());
-    return unless $self->zMapDoRequest($xremote, "new_zmap", qq!<zmap><request action="new_zmap"/></zmap>!);
-    $xremote = $self->zMapGetXRemoteClientByName("ZMap");
+    my ($self, $zmap_xremote) = @_;
+    $self->zMapDoRequest(
+        $zmap_xremote, "new_zmap",
+        qq!<zmap><request action="new_zmap"/></zmap>!)
+        or return;
+    my $xremote = $self->zMapGetXRemoteClientByName("ZMap");
     $self->zMapRegisterClientRequest($xremote);
     $self->zMapNewView($xremote);
     return;
@@ -644,7 +559,6 @@ sub arg_list {
 
 sub DESTROY {
     my ($self) = @_;
-    $self->_kill_zmap;
     delete $self->{_zmap};
     return;
 }

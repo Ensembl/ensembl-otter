@@ -12,6 +12,8 @@ useable as a server.
 use strict;
 use warnings;
 
+use feature qw( switch );
+
 use Carp;
 use Scalar::Util qw( weaken );
 use POSIX ();
@@ -89,6 +91,30 @@ sub _launch_zmap {
     POSIX::_exit(127); # avoid triggering DESTROY
 
     return; # unreached, quietens perlcritic
+}
+
+sub _kill_zmap {
+    my ($self) = @_;
+    my $xremote = $self->{'_xremote_client_app'};
+    if ($xremote->ping) {
+        warn "Ping OK - sending 'shutdown'";
+        $xremote->send_commands('<zmap><request action="shutdown"/></zmap>');
+    }
+    else {
+        # zmap probably died without sending us a message... seg fault...
+        warn sprintf
+            "Failed to ping %s, zmap probably crashed."
+            , $xremote->window_id();
+    }
+    return;
+}
+
+sub register_client {
+    my ($self, $request) = @_;
+    my $id = $request->{'request'}{'client'}{'xwid'};
+    $self->{'_xremote_client_app'} = $self->xremote_client_new($id);
+    my $response_xml = $self->client_registered_response;
+    return (200, $response_xml);
 }
 
 sub xremote_client_new {
@@ -328,21 +354,28 @@ sub _do_callback{
     warn "Event has request string $request_string\n" if $DEBUG_CALLBACK;
     #=========================================================
     my $request = XMLin($request_string, @xml_request_parse_parameters);
+    my $action = $request->{'request'}{'action'};
     my $handler = $self->{'handler'};
     my $reply =
         sprintf $self->xremote_server->format_string,
         ( try {
             X11::XRemote::block();
-            return $handler->xremote_callback($request);
+            for ($action) {
+                when ('register_client') { return $self->register_client($request); }
+                when ('finalised') { return (200, "all closed"); }
+                default { return $handler->xremote_callback($request); }
+            }
           }
           catch {
               return ( 500, $self->basic_error("Internal Server Error $_") );
           } );
+
     $self->_drop_current_request_string;
     warn "Connect $reply\n" if $DEBUG_CALLBACK;
     $self->xremote_server->send_reply($reply);
 
-    $handler->xremote_callback_post;
+    $handler->zMapOpenClones($self->{'_xremote_client_app'})
+        if defined $action && $action eq 'register_client';
 
     return;
 }
@@ -379,12 +412,10 @@ sub parse_response {
     return $parse;
 }
 
-# ======================================================== #
-# DESTROY: Hopefully won't need to do anything             #
-# ======================================================== #
 sub DESTROY{
     my ($self) = @_;
     warn "Destroying $self";
+    $self->_kill_zmap;
     return;
 }
 
