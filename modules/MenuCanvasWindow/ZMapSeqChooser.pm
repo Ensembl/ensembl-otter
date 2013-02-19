@@ -10,7 +10,7 @@ use Scalar::Util qw( weaken );
 
 use Hum::XmlWriter;
 
-use Bio::Otter::ZMap::Connect;
+use Bio::Otter::ZMap;
 use Bio::Otter::Utils::Config::Ini qw( config_ini_format );
 use Bio::Vega::Utils::MacProxyConfig qw{ mac_os_x_set_proxy_vars };
 
@@ -66,7 +66,7 @@ sub _zmap {
     my ($self) = @_;
     my $mb = $self->SessionWindow->menu_bar();
     my $zmap =
-        Bio::Otter::ZMap::Connect->new(
+        Bio::Otter::ZMap->new(
             '-view'     => $self,
             '-tk'       => $mb,
             '-conf_dir' => $self->conf_dir,

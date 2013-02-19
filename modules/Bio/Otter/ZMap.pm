@@ -1,6 +1,6 @@
-package Bio::Otter::ZMap::Connect;
+package Bio::Otter::ZMap;
 
-=head1 NAME - Bio::Otter::ZMap::Connect
+=head1 NAME - Bio::Otter::ZMap
 
 =head1 DESCRIPTION
 
@@ -30,7 +30,7 @@ my $DEBUG_EVENTS   = 0;
 
 =head2 new
 
-Creates a new Bio::Otter::ZMap::Connect Object.
+Creates a new Bio::Otter::ZMap Object.
 
 =cut
 
