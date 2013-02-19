@@ -54,7 +54,7 @@ sub send_commands {
         }
     }
     die "ZMap commands failed\n" if $fail;
-    return;
+    return @response_list;
 }
 
 =head2 zmap
@@ -228,133 +228,78 @@ sub xremote_callback {
 }
 
 sub get_mark {
-
     my ($self) = @_;
-
-    if (my $client = $self->xremote) {
-
-        my $xml = qq(<zmap><request action="get_mark" /></zmap>);
-
-        my ($response) = $self->zmap->send_commands($client, $xml);
-
-        my ($status, $hash) = @{$response};
-
-        if ($status =~ /^2/ && $hash->{response}->{mark}->{exists} eq "true") {
-
-            my $start = abs($hash->{response}->{mark}->{start});
-            my $end   = abs($hash->{response}->{mark}->{end});
-
-            if ($end < $start) {
-                ($start, $end) = ($end, $start);
-            }
-
-            return ($start, $end);
+    my $xml = qq(<zmap><request action="get_mark" /></zmap>);
+    my ($response) = $self->send_commands($xml);
+    my ($status, $hash) = @{$response};
+    if ($status =~ /^2/ && $hash->{response}->{mark}->{exists} eq "true") {
+        my $start = abs($hash->{response}->{mark}->{start});
+        my $end   = abs($hash->{response}->{mark}->{end});
+        if ($end < $start) {
+            ($start, $end) = ($end, $start);
         }
+        return ($start, $end);
     }
-    else {
-        warn "Failed to get client for 'get_mark'";
-    }
-
     return;
 }
 
 sub load_features {
     my ($self, @featuresets) = @_;
-
-    if (my $client = $self->xremote) {
-
-        my $xml = Hum::XmlWriter->new;
-        $xml->open_tag('zmap');
-        $xml->open_tag('request',
-                       {
-                           action => 'load_features',
-                           # load => 'mark', # not used at the moment
-                       });
-        $xml->open_tag('align');
-        $xml->open_tag('block');
-        foreach my $fs_name (@featuresets) {
-            $xml->open_tag('featureset', { name => $fs_name });
-            $xml->close_tag;
-        }
-        $xml->close_all_open_tags;
-
-        my ($response) = $self->zmap->send_commands($client, $xml->flush);
-
-        my ($status, $hash) = @{$response};
-
-        unless ($status =~ /^2/) {
-            warn "Problem loading featuresets";
-        }
+    my $xml = Hum::XmlWriter->new;
+    $xml->open_tag('zmap');
+    $xml->open_tag('request', { action => 'load_features' });
+    $xml->open_tag('align');
+    $xml->open_tag('block');
+    foreach my $fs_name (@featuresets) {
+        $xml->open_tag('featureset', { name => $fs_name });
+        $xml->close_tag;
     }
-    else {
-        warn "Failed to get client for 'load_features'";
+    $xml->close_all_open_tags;
+    my ($response) = $self->send_commands($xml->flush);
+    my ($status, $hash) = @{$response};
+    unless ($status =~ /^2/) {
+        warn "Problem loading featuresets";
     }
-
     return;
 }
 
 sub delete_featuresets {
     my ($self, @featuresets) = @_;
-
-    if (my $client = $self->xremote) {
-
-        my $xml = Hum::XmlWriter->new;
-        $xml->open_tag('zmap');
-        $xml->open_tag('request', { action => 'delete_feature' });
-        $xml->open_tag('align');
-        $xml->open_tag('block');
-
-        for my $featureset (@featuresets) {
-            $xml->open_tag('featureset', { name => $featureset });
-            $xml->close_tag;
-        }
-        $xml->close_all_open_tags;
-
-        my ($response) = $self->zmap->send_commands($client, $xml->flush);
-
-        my ($status, $hash) = @{$response};
-
-        unless ($status =~ /^2/) {
-            unless ($hash->{error}->{message} =~ /Unknown FeatureSet/) {
-
-                # XXX: temporarily ignore this error message, as we want to be able to call
-                # delete_feature on featuresets that aren't currently in the zmap window
-                warn "Problem deleting featuresets: " . $hash->{error}->{message};
-            }
+    my $xml = Hum::XmlWriter->new;
+    $xml->open_tag('zmap');
+    $xml->open_tag('request', { action => 'delete_feature' });
+    $xml->open_tag('align');
+    $xml->open_tag('block');
+    for my $featureset (@featuresets) {
+        $xml->open_tag('featureset', { name => $featureset });
+        $xml->close_tag;
+    }
+    $xml->close_all_open_tags;
+    my ($response) = $self->send_commands($xml->flush);
+    my ($status, $hash) = @{$response};
+    unless ($status =~ /^2/) {
+        unless ($hash->{error}->{message} =~ /Unknown FeatureSet/) {
+            warn "Problem deleting featuresets: " . $hash->{error}->{message};
         }
     }
-    else {
-        warn "Failed to get client for 'delete_feature'";
-    }
-
     return;
 }
 
 sub zoom_to_subseq {
-
     my ($self, $subseq) = @_;
-
-    if (my $client = $self->xremote) {
-        my $xml = Hum::XmlWriter->new;
-        $xml->open_tag('zmap');
-        $xml->open_tag('request', { action => 'zoom_to' });
-        $xml->open_tag('align');
-        $xml->open_tag('block');
-        $xml->open_tag('featureset', { name => $subseq->GeneMethod->name });
-        $subseq->zmap_xml_feature_tag($xml, $self->SessionWindow->AceDatabase->offset);
-        $xml->close_all_open_tags;
-
-        my $command = $xml->flush;
-        my ($response) = $self->zmap->send_commands($client, $command);
-        my ($status, $hash) = @{$response};
-        if ($status =~ /^2/ && $hash->{response} =~ /executed/) {
-            return 1;
-        }
+    my $xml = Hum::XmlWriter->new;
+    $xml->open_tag('zmap');
+    $xml->open_tag('request', { action => 'zoom_to' });
+    $xml->open_tag('align');
+    $xml->open_tag('block');
+    $xml->open_tag('featureset', { name => $subseq->GeneMethod->name });
+    $subseq->zmap_xml_feature_tag($xml, $self->SessionWindow->AceDatabase->offset);
+    $xml->close_all_open_tags;
+    my ($response) = $self->send_commands($xml->flush);
+    my ($status, $hash) = @{$response};
+    if ($status =~ /^2/ && $hash->{response} =~ /executed/) {
+        return 1;
     }
-    else {
-        warn "Failed to get client for 'zoom_to'";
-    }
-
     return 0;
 }
 
