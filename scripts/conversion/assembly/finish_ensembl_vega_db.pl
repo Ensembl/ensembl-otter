@@ -519,8 +519,6 @@ $c += $dbh->{'evega'}->do($sql);
 $sql = qq(DELETE from meta
            WHERE meta_key in ('genebuild.id','genebuild.method','genebuild.id','genebuild.start_date','genebuild.initial_release_date','genebuild.last_geneset_update','genebuild.havana_datafreeze_date'));
 $c += $dbh->{'evega'}->do($sql);
-$sql = qq(DELETE from meta WHERE meta_key = 'patch');
-$c += $dbh->{'evega'}->do($sql);
 $support->log_stamped("Deleted $c meta table entries.\n\n");
 
 #add genebuild info
