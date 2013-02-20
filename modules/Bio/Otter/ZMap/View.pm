@@ -27,7 +27,8 @@ sub _init {
     weaken $self->{_SessionWindow};
     @{$self}{qw( conf_dir arg_list )} =
         @args{qw( -conf_dir -arg_list )};
-    $self->{_zmap} = $self->_zmap;
+    my $zmap = $self->{_zmap} = $self->_zmap;
+    $zmap->new_view($self);
     return;
 }
 
