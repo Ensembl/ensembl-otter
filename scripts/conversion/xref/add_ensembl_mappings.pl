@@ -97,19 +97,15 @@ our $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
 
 # parse options
 $support->parse_common_options(@_);
-$support->parse_extra_options(qw(
-    chromosomes|chr=s@ prune assembly=s alt_assembly=s dbtype=s
-    ensemblhost=s ensemblport=s ensembluser=s ensemblpass=s ensembldbname=s
-    evegadbname=s evegahost=s evegaport=s evegauser=s evegapass=s
-  )
-);
-$support->allowed_params(
-  $support->get_common_params,qw(
-    chromosomes prune assembly alt_assembly dbtype
-    ensemblhost ensemblport ensembluser ensemblpass ensembldbname
-    evegadbname evegahost evegaport evegauser evegapass
-  )
-);
+$support->parse_extra_options(qw(chromosomes|chr=s@ prune assembly=s dbtype=s ensemblhost=s ensemblport=s ensembluser=s ensemblpass=s ensembldbname=s));
+if ($support->param('dbtype') eq 'ensembl-vega') {
+  $support->parse_extra_options(qw(alt_assembly=s evegadbname=s evegahost=s evegaport=s evegauser=s evegapass=s));
+}
+my @allowed_params = ($support->get_common_params, qw(chromosomes prune assembly dbtype ensemblhost ensemblport ensembluser ensemblpass ensembldbname));
+if ($support->param('dbtype') eq 'ensembl-vega') {
+  push @allowed_params, qw(alt_assembly evegadbname evegahost evegaport evegauser evegapass);
+}
+$support->allowed_params( @allowed_params );
 
 if ($support->param('help') or $support->error) {
   warn $support->error if $support->error;
@@ -125,19 +121,15 @@ $support->confirm_params;
 $support->init_log;
 
 # connect databases and get adaptors
-#ensembl db
-my $dba;
-my $assembly;
+my $dba = $support->get_database('ensembl');;
+my $assembly = $support->param('assembly');;
 if($support->param('dbtype') eq 'ensembl-vega') {
   $dba = $support->get_database('ensembl','evega');
-  # don't set dnadb as then sa will use it including eg get_chrlength!
   $assembly = $support->param('alt_assembly');
 } elsif($support->param('dbtype')){
   $support->log_error("Incorrect dbtype, must be 'ensembl-vega'\n");
-} else {
-  $dba = $support->get_database('ensembl');
-  $assembly = $support->param('assembly');
 }
+
 my $dbh = $dba->dbc->db_handle;
 my $ta = $dba->get_TranscriptAdaptor();
 my $ga = $dba->get_GeneAdaptor();
@@ -152,7 +144,7 @@ if (!$support->param('dry_run')) {
   if ($support->param('prune') and $support->user_proceed("Would you really like to delete all previously added ENS xrefs before running this script?")) {
     my $num;
     # xrefs
-    $support->log("Deleting all ensembl_id xrefs...\n");
+    $support->log("Deleting alll ensembl_id xrefs...\n");
     $num = $dba->dbc->do(qq(
            DELETE x
            FROM xref x, external_db ed
