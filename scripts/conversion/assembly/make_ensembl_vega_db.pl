@@ -260,6 +260,13 @@ $support->log_stamped("Done.\n\n");
 $dba->{'evega'} = $support->get_database('evega', 'evega');
 $dbh->{'evega'} = $dba->{'evega'}->dbc->db_handle;
 
+#make a note of  meta keys we've just loaded since we don't want to overwrite these with ones from Ensembl later
+$sql= "select distinct meta_key from meta";
+$sth = $dbh->{'evega'}->prepare($sql) or $support->log_error("Couldn't prepare statement: " . $dbh->errstr);
+$sth->execute() or $support->log_error("Couldn't execute statement: " . $sth->errstr);
+my @orig_meta_keys = @{$sth->fetchall_arrayref};
+my $orig_meta_keys = join("','", map {$_->[0]} @orig_meta_keys);
+
 # transfer chromosome seq_regions from Vega db (with same internal IDs and
 # names as in source db)
 my $c = 0;
@@ -511,11 +518,12 @@ $sql = qq(
 $c += $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
 $support->log_stamped("Done transfering $c meta_coord entries.\n\n");
 
-# populate meta
+# populate meta from ensembl, ignoring keys that were loaded from table.sql
 $support->log_stamped("Tranfering meta...\n");
 $sql = qq(
     INSERT IGNORE INTO $evega_db.meta
     SELECT * FROM meta
+     WHERE meta_key not in ('$orig_meta_keys')
 );
 $c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
 $support->log_stamped("Done transfering $c meta entries.\n\n");
