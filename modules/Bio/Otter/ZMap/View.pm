@@ -70,7 +70,6 @@ sub _zmap {
         Bio::Otter::ZMap->new(
             '-view'     => $self,
             '-tk'       => $mb,
-            '-conf_dir' => $self->conf_dir,
             '-arg_list' => $self->arg_list,
         );
     return $zmap;
@@ -285,11 +284,13 @@ sub send_command {
 
 sub zmap_new_view_parameter_hash {
     my ($self) = @_;
+    my $config_file = sprintf "%s/ZMap", $self->conf_dir;
     my $slice = $self->SessionWindow->AceDatabase->smart_slice;
     my $hash = {
-        'sequence' => $slice->ssname,
-        'start'    => $slice->start,
-        'end'      => $slice->end,
+        'sequence'    => $slice->ssname,
+        'start'       => $slice->start,
+        'end'         => $slice->end,
+        'config_file' => $config_file,
     };
     return $hash;
 }
