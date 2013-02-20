@@ -329,12 +329,12 @@ sub search_window{
     unless (defined ($search_window) ){
         my $actual_window = $self->top_window()->Toplevel
           (-title => $Bio::Otter::Lace::Client::PFX.
-           'Find Loci, Stable IDs or Clones');
+           'Find Loci, Stable IDs or Clones ('.($self->name).')');
         $self->{'_search_window'} = $search_window = CanvasWindow::SearchWindow->new($actual_window, 500, 60);
         $search_window->Client($self->Client());
         $search_window->DataSet($self->DataSet());
         $search_window->SequenceSetChooser($self);
-    }    
+    }
     $search_window->show_me;
     return $search_window;
 }
