@@ -47,18 +47,56 @@ sub new{
 
 sub init{
     my ($self, $arg_hash) = @_;
-    my ($tk, $conf_dir, $arg_list) =
-        @{$arg_hash}{qw( -tk -conf_dir -arg_list )};
+    my ($tk, $arg_list) =
+        @{$arg_hash}{qw( -tk -arg_list )};
     my $widget = $self->{'_widget'} = $self->_widget($tk);
     my $self_ = $self; weaken $self_;
     $widget->bind('<Property>', [ \&_do_callback , $self_ ] );
-    $self->_launch_zmap($conf_dir, $arg_list);
+    $self->{'_conf_dir'} = $self->_conf_dir;
+    $self->_make_conf;
+    $self->_launch_zmap($arg_list);
     $self->wait;
     return;
 }
 
+sub _conf_dir {
+    my $conf_dir = q(/var/tmp);
+    my $user = getpwuid($<);
+    my $dir_name = "otter_${user}";
+    my $key = sprintf "%09d", int(rand(1_000_000_000));
+    for ($dir_name, 'ZMap', $key) {
+        $conf_dir .= "/$_";
+        -d $conf_dir
+            or mkdir $conf_dir
+            or die sprintf "mkdir('%s') failed: $!", $conf_dir;
+    }
+    return $conf_dir;
+}
+
+my $conf = <<'CONF'
+
+[ZMap]
+show-mainwindow = false
+CONF
+    ;
+
+sub _make_conf {
+    my ($self) = @_;
+    my $conf_file = sprintf "%s/ZMap", $self->conf_dir;
+    open my $conf_file_h, '>', $conf_file
+        or die sprintf
+        "failed to open the configuration file '%s': $!"
+        , $conf_file;
+    print $conf_file_h $conf;
+    close $conf_file_h
+        or die sprintf
+        "failed to close the configuration file '%s': $!"
+        , $conf_file;
+    return;
+}
+
 sub _launch_zmap {
-    my ($self, $conf_dir, $arg_list) = @_;
+    my ($self, $arg_list) = @_;
 
     if ($^O eq 'darwin') {
         # Sadly, if someone moves network after launching zmap, it
@@ -68,7 +106,7 @@ sub _launch_zmap {
 
     my @e = (
         'zmap',
-        '--conf_dir' => $conf_dir,
+        '--conf_dir' => $self->conf_dir,
         '--win_id'   => $self->server_window_id,
         ($arg_list ? @{$arg_list} : ()),
     );
@@ -136,7 +174,7 @@ sub register_client_post {
 my $new_view_xml_format = <<'FORMAT'
 <zmap>
  <request action="new_view">
-  <segment sequence="%s" start="%d" end="%d">
+  <segment sequence="%s" start="%d" end="%d" config-file="%s">
   </segment>
  </request>
 </zmap>
@@ -154,7 +192,7 @@ sub new_view {
 
     my $window_xremote = $self->{'_xremote_client_window'};
     my $parameter_hash = $view->zmap_new_view_parameter_hash;
-    my @parameter_list = @{$parameter_hash}{qw( sequence start end )};
+    my @parameter_list = @{$parameter_hash}{qw( sequence start end config_file )};
     my $new_view_xml =
         sprintf $new_view_xml_format, map { xml_escape($_) } @parameter_list;
     ($response) = $self->send_commands($window_xremote, $new_view_xml);
@@ -499,6 +537,12 @@ sub xml_escape{
     my ($data) = shift;
     my $escaped = $xml_escape_parser->escape_value($data);
     return $escaped;
+}
+
+sub conf_dir {
+    my ($self) = @_;
+    my $conf_dir = $self->{'_conf_dir'};
+    return $conf_dir;
 }
 
 1;
