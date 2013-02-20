@@ -249,23 +249,28 @@ if ($support->param('prune') && $support->user_proceed("\nDo you want to undo al
 ##########################################################################
 # delete unwanted loutre-derived simple_features                         #
 ##########################################################################
-my %lns_to_stay = map {lc($_),1} qw(CpG
-			     Eponine
-			     polyA_signal
-			     polyA_site
-			     pseudo_polyA
-			     RSS
-			     tRNAscan
-			     EUCOMM );
-my %lns_to_go = map {lc($_),1} qw(TATA_box
-			   EUCOMM_AUTO
-			   phastCons
-			   ComparaCons
-			   evigan_predictions
-			   NovelLoci
-			   Yale_Pseudogene
-                           CRG_RACE_primer );
-
+my %lns_to_stay = map {lc($_),1}
+  qw(CpG
+     Eponine
+     polyA_signal
+     polyA_site
+     pseudo_polyA
+     RSS
+     tRNAscan
+     EUCOMM
+     polya-seq_signal
+     polya-seq_site
+   );
+my %lns_to_go = map {lc($_),1}
+  qw(TATA_box
+     EUCOMM_AUTO
+     phastCons
+     ComparaCons
+     evigan_predictions
+     NovelLoci
+     Yale_Pseudogene
+     CRG_RACE_primer
+   );
 my $s = $vdbh->prepare(qq(
                 SELECT a.logic_name, a.analysis_id, count(*)
                 FROM analysis a, simple_feature sf
@@ -828,11 +833,11 @@ push @sql_fixes, "INSERT ignore into meta (meta_key,meta_value) VALUES (\'ensemb
 #needed for compara (
 push @sql_fixes, "INSERT ignore into meta (meta_key,meta_value) VALUES (\'assembly.coverage_depth\',\'high\');\n";
 push @sql_fixes, "INSERT ignore into meta (meta_key,meta_value) VALUES (\'genebuild.start_date\',\'$gene_build_date\');\n";
-#push @sql_fixes, "INSERT ignore into meta (meta_key,meta_value) VALUES (\'species.production_name\',\'homo_sapiens\')\n";
-#delete patch script entries
-push @sql_fixes, "DELETE from meta WHERE meta_key = \'patch\';\n";
 
-#update biotypes of some genes/transcripts for website display purposes
+#delete patch script entries - comment out since they are valid
+#push @sql_fixes, "DELETE from meta WHERE meta_key = \'patch\';\n";
+
+#update case of biotypes of some genes/transcripts for website display purposes
 push @sql_fixes, "UPDATE gene SET biotype = 'IG_gene' WHERE biotype = 'ig_gene';\n";
 push @sql_fixes, "UPDATE gene SET biotype = 'IG_pseudogene' WHERE biotype = 'ig_pseudogene';\n";
 push @sql_fixes, "UPDATE gene SET biotype = 'TEC' WHERE biotype = 'tec';\n";
@@ -840,18 +845,21 @@ push @sql_fixes, "UPDATE transcript SET biotype = 'IG_gene' WHERE biotype = 'ig_
 push @sql_fixes, "UPDATE transcript SET biotype = 'IG_pseudogene' WHERE biotype = 'ig_pseudogene';\n";
 push @sql_fixes, "UPDATE transcript SET biotype = 'TEC' WHERE biotype = 'tec';\n";
 push @sql_fixes, "UPDATE transcript SET biotype = 'lincRNA' WHERE biotype = 'lincrna';\n";
-push @sql_fixes, "UPDATE gene SET biotype = 'processed_transcript' WHERE biotype = 'novel_transcript';\n";
-push @sql_fixes, "UPDATE gene SET biotype = 'transcribed_pseudogene' WHERE biotype = 'expressed_pseudogene';\n";
-push @sql_fixes, "UPDATE transcript SET biotype = 'transcribed_pseudogene' WHERE biotype = 'expressed_pseudogene';\n";
-push @sql_fixes, "UPDATE transcript SET biotype = 'processed_transcript', status  = 'PUTATIVE' WHERE biotype = 'putative' AND status  = 'UNKNOWN';\n";
 push @sql_fixes, qq(UPDATE transcript SET biotype = "3prime_overlapping_ncrna" where biotype = "3'_overlapping_ncrna";\n);
-push @sql_fixes, "UPDATE transcript SET biotype = '3prime_overlapping_ncrna' where biotype = 'ncrna_host'";\n);
 
+#update some statuses
 push @sql_fixes, "UPDATE gene SET status = 'NOVEL' WHERE biotype = 'processed_transcript' AND status = 'UNKNOWN';\n";
 push @sql_fixes, "UPDATE gene SET status = NULL WHERE biotype in ('processed_pseudogene','pseudogene','transcribed_processed_pseudogene','transcribed_unitary_pseudogene','transcribed_unprocessed_pseudogene','unprocessed_pseudogene','unitary_pseudogene');\n";
 push @sql_fixes, "UPDATE transcript SET status = NULL WHERE status = 'UNKNOWN';\n";
 push @sql_fixes, "UPDATE gene SET status = NULL WHERE status = 'UNKNOWN';\n";
 push @sql_fixes, "UPDATE gene SET status = 'NOVEL' WHERE status = 'PUTATIVE' and biotype = 'protein_coding';\n";
+
+#gene biotype fixes - commented out in 52 since we really shouldn't be doing this
+#push @sql_fixes, "UPDATE gene SET biotype = 'processed_transcript' WHERE biotype = 'novel_transcript';\n";
+#push @sql_fixes, "UPDATE gene SET biotype = 'transcribed_pseudogene' WHERE biotype = 'expressed_pseudogene';\n";
+#push @sql_fixes, "UPDATE transcript SET biotype = 'transcribed_pseudogene' WHERE biotype = 'expressed_pseudogene';\n";
+#push @sql_fixes, "UPDATE transcript SET biotype = 'processed_transcript', status  = 'PUTATIVE' WHERE biotype = 'putative' AND status  = 'UNKNOWN';\n";
+#push @sql_fixes, "UPDATE transcript SET biotype = '3prime_overlapping_ncrna' where biotype = 'ncrna_host'";\n);
 
 #misc fix for repeat features
 push @sql_fixes, "DELETE from repeat_feature where repeat_start < 1;\n";
@@ -863,8 +871,13 @@ push @sql_fixes, "UPDATE analysis set logic_name = lower(logic_name);\n";
 #fix schema for author_group
 push @sql_fixes, "UPDATE author_group SET group_email=null WHERE group_email='';\n";
 
-#delete 'not for Vega' transcript_attribs on LOF genes
+#hack - delete 'not for Vega' transcript_attribs on LOF genes
 push @sql_fixes, "DELETE ta FROM gene g, transcript t, transcript_attrib ta WHERE g.gene_id = t.gene_id AND t.transcript_id = ta.transcript_id AND g.source = 'LOF'AND ta.value = 'not for VEGA';\n";
+
+#CV terms from loutre are always 'remarks' but we want them as 'hidden_remarks' so as to not show them
+my $hidden_attrib_types = qq('EnsEMBL merge exception');
+push @sql_fixes, "UPDATE gene_attrib set attrib_type_id = (SELECT attrib_type_id from attrib_type where code = 'hidden_remark') where value in ($hidden_attrib_types);\n";
+push @sql_fixes, "UPDATE gene_attrib set attrib_type_id = (SELECT attrib_type_id from attrib_type where code = 'hidden_remark') where attrib_type_id = (SELECT attrib_type_id from attrib_type where code = 'remark') and value like 'ASB\_%';\n";
 
 #analysis update for vega_update
 if ($support->param('live_update')) {
