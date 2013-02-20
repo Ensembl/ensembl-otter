@@ -51,9 +51,10 @@ sub new {
     $window->tagBind('goldmeth', '<Leave>',
                       sub{ $window->configure(-cursor => 'xterm'); }
         );
-    $window->tagBind('goldmeth' , '<Button-3>' ,
-                      sub{ $self->check_kozak}
-        );
+#    check_kozak needs overhaul.
+#    $window->tagBind('goldmeth' , '<Button-3>' ,
+#                      sub{ $self->check_kozak}
+#        );
 
     # Green for selenocysteines
     $window->tagConfigure('greenseleno',
