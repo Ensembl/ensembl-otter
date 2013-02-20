@@ -1,6 +1,6 @@
-### MenuCanvasWindow::ZMapSeqChooser
+### Bio::Otter::ZMap::View
 
-package MenuCanvasWindow::ZMapSeqChooser;
+package Bio::Otter::ZMap::View;
 
 use strict;
 use warnings;
@@ -329,7 +329,7 @@ sub DESTROY {
 __END__
 
 
-=head1 NAME - MenuCanvasWindow::ZmapSeqChooser
+=head1 NAME - Bio::Otter::ZMap::View
 
 =head1 AUTHOR
 

@@ -26,10 +26,10 @@ use EditWindow::Clone;
 use EditWindow::LocusName;
 use MenuCanvasWindow::TranscriptWindow;
 use MenuCanvasWindow::GenomicFeaturesWindow;
-use MenuCanvasWindow::ZMapSeqChooser;
 use Text::Wrap qw{ wrap };
 
 use Bio::Otter::Lace::Client;
+use Bio::Otter::ZMap::View;
 use Bio::Otter::ZMap::XML;
 use Bio::Vega::Transform::Otter::Ace;
 
@@ -2404,7 +2404,7 @@ sub launch_zmap {
 
 sub _zmap_create {
     my ($self, @args) = @_;
-    my $zmap = MenuCanvasWindow::ZMapSeqChooser->new($self, @args);
+    my $zmap = Bio::Otter::ZMap::View->new($self, @args);
     return $zmap;
 }
 
