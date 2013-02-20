@@ -1,0 +1,60 @@
+#! /software/bin/perl-5.12.2
+use strict;
+use warnings;
+
+=head1 SYNOPSIS
+
+ dump_repeats -host otterpipe2 -port 3323 -dbname pipe_pig -user mumble chrY-08
+
+=head1 DESCRIPTION
+
+Dump information about repeats in an ad-hoc format, see RT#310242.
+
+=head1 AUTHOR
+
+Matthew Astley mca@sanger.ac.uk
+
+=cut
+
+use Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor;
+
+sub main {
+    my $chr_name = pop @ARGV;
+    my $dba = Bio::EnsEMBL::Pipeline::DBSQL::DBAdaptor->new(@ARGV);
+    my $sl = $dba->get_SliceAdaptor->fetch_by_region('chromosome', $chr_name);
+    die "no slice" unless $sl;
+    my @rf = @{ $sl->get_all_RepeatFeatures() };
+    warn 'got '.@rf.' repeat features';
+
+    foreach my $f (sort { $a->start <=> $b->start } @rf) {
+        my $clf = $f->transform('clone') or die "$f not on clone";
+        my $rc = $f->repeat_consensus;
+        my $fseq =
+          ($f->strand
+           ? $f->seq # for trf, "Cannot retrieve sequence for unstranded feature"
+           : $f->slice->subseq($f->start(), $f->end(), 1));
+
+        printf(qq{%s:%d..%d[%s] %s:%d..%d[%s] (%d); Source %s; Score %d; Align %d %d; Name "%s"; Consensus Class "%s" Seq "%s"; Feature Seq "%s"\n},
+               $sl->seq_region_name, $f->start, $f->end, strand($f),
+               $clf->feature_Slice->seq_region_name, $clf->start, $clf->end, strand($clf),
+               $f->length,
+               $f->analysis->logic_name,
+               $f->score,
+               $f->hstart, $f->hend, # hstrand always +1
+               $clf->display_id,
+               $rc->desc,
+               $rc->seq,
+               $fseq);
+    }
+    return ();
+}
+
+sub strand {
+    my ($f) = @_;
+    my $s = $f->strand;
+    return '-' if $s < 0;
+    return '+' if $s > 0;
+    return '.';
+}
+
+main();
