@@ -707,16 +707,17 @@ sub parse_hgnc {
   my @recs = split "\n", $page;
 
   #define which columns to parse out of the record
+  #key = column title, value = external_db.name (apart from status which is used to check symbol has not been withdrawn)
   my %wanted_columns = (
-    'HGNC ID'                                       => 'HGNC_PID',
-    'Approved Symbol'                               => 'HGNC',
-    'Status'                                        => 'Status',
-    'Synonyms'                                      => 'Synonyms',
-    'Pubmed IDs'                                    => 'PUBMED',
-    'Entrez Gene ID (mapped data supplied by NCBI)' => 'EntrezGene',
-    'OMIM ID (mapped data supplied by NCBI)'        => 'MIM_GENE',
-    'UniProt ID (mapped data supplied by UniProt)'  => 'Uniprot/SWISSPROT',
-    'RefSeq (mapped data supplied by NCBI)'         => 'RefSeq',
+    'HGNC ID'         => 'HGNC_PID',
+    'Approved Symbol' => 'HGNC',
+    'Status'          => 'Status',
+    'Synonyms'        => 'Synonyms',
+    'Pubmed IDs'      => 'PUBMED',
+    'Entrez Gene ID'  => 'EntrezGene',
+    'OMIM ID'         => 'MIM_GENE',
+    'UniProt ID'      => 'Uniprot/SWISSPROT',
+    'RefSeq'          => 'RefSeq',
   );
 
   #define relationships between RefSeq accession number and database (this is not in the download file)
