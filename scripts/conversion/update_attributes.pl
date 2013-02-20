@@ -31,8 +31,7 @@ Specific options:
 
 =head1 DESCRIPTION
 
-This script populates the attrib_type table from a file with attribute type
-definitions. This file is maintained by Ensembl and stored in cvs. The script is
+This script populates the attrib_type table from the ensembl_production database. The script is
 rarely called directly from the command line but is executed during vega and ensembl-vega
 preparation.
 
@@ -129,7 +128,7 @@ $production_sth->finish;
 
 $support->log("Done reading ".scalar(@rows)." entries.\n");
 
-# check for consistency between database and file
+# check for consistency between ensembl_production and vega databases
 if (check_consistency($dbh, \@rows)) {
     # consistent
     $support->log("Deleting from attrib_type...\n");
@@ -137,13 +136,13 @@ if (check_consistency($dbh, \@rows)) {
     $support->log("Done.\n");
 
     # load attributes from file
-    $support->log("Loading attributes from file...\n");
+    $support->log("Loading attributes from ensembl_production file...\n");
     load_attribs($dbh, \@rows);
     $support->log("Done.\n");
 
 } else {
     # inconsistent, try to fix
-    $support->log("Database and definition file not consistent, repairing database...\n");
+    $support->log("Ensembl production and Vega databases not consistent, repairing Vega...\n");
     repair($dbh, \@rows);
     $support->log("Done.\n");
 }
@@ -153,8 +152,7 @@ if (check_consistency($dbh, \@rows)) {
 =head2 repair
 
   Arg[1]      : DBI $dbh - a database handle
-  Arg[2]      : Hashref $attribs - hashref containing the attribute_types loaded
-                from the definition file
+  Arg[2]      : Hashref $attribs - hashref containing the attribute_types loaded from ensembl_production
   Description :
   Return type : none
   Exceptions  : none
@@ -177,8 +175,8 @@ sub repair {
     $dbh->do($create_table);
     $support->log("Done.\n", 1);
 
-    # load attributes from file
-    $support->log("Loading attributes from file...\n", 1);
+    # load attributes from ensembl_production
+    $support->log("Loading attributes from  ensembl_production...\n", 1);
     load_attribs($dbh, $attribs);
     $support->log("Done.\n", 1);
 
@@ -217,7 +215,7 @@ sub repair {
     $dbh->do("DROP TABLE tmp_attrib_types");
 
     if (@{ $ref }) {
-      $support->log_warning("These codes are in the db but the not the file, please check: '".join("','", map { $_->[0] } @{ $ref })."'\n", 2);
+      $support->log_warning("These codes are in Vega but ensembl_production, please check: '".join("','", map { $_->[0] } @{ $ref })."'\n", 2);
     }
 
     my %missing_codes = map { $_->[0], 1 } @{ $ref };
@@ -252,8 +250,7 @@ sub repair {
 =head2 load_attribs
 
   Arg[1]      : DBI $dbh - a database handle
-  Arg[2]      : Hashref $attribs - hashref containing the attribute_types loaded
-                from the definition file
+  Arg[2]      : Hashref $attribs - hashref containing the attribute_types loaded from ensembl_production
   Description : 
   Return type : none
   Exceptions  : none
@@ -281,9 +278,8 @@ sub load_attribs {
 =head2 check_consistency
 
   Arg[1]      : DBI $dbh - a database handle
-  Arg[2]      : Hashref $attribs - hashref containing the attribute_types loaded
-                from the definition file
-  Description : 
+  Arg[2]      : Hashref $attribs - hashref containing the attribute_types loaded from ensembl_production
+  Description :
   Return type : 1 if consistent, 0 if not
   Exceptions  : none
   Caller      : internal
@@ -306,7 +302,7 @@ sub check_consistency {
     $db_codes{$arr->[0]} = $arr->[1];
   }
 
-  # check if any ids in the database collide with the file
+  # check if any ids in Vega collide with ensembl_production
   my $consistent = 1;
   for my $dbid (keys %db_codes) {
     if (!exists $file_codes{$dbid} || $file_codes{$dbid} ne $db_codes{$dbid}) {
@@ -316,6 +312,3 @@ sub check_consistency {
 
   return $consistent;
 }
-
-
-
