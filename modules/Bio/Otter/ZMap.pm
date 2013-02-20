@@ -42,21 +42,18 @@ sub new{
     return $self;
 }
 
+# NB: sub init() calls wait() because some initialisation happens in
+# XRemote callbacks and we must not return until it is all done.
+
 sub init{
     my ($self, $arg_hash) = @_;
-    my ($tk, $view, $conf_dir, $arg_list) =
-        @{$arg_hash}{qw( -tk -view -conf_dir -arg_list )};
-
-    $view or confess "no view object supplied";
-    $self->{'view'} = $view;
-    weaken $self->{'view'};
+    my ($tk, $conf_dir, $arg_list) =
+        @{$arg_hash}{qw( -tk -conf_dir -arg_list )};
     my $widget = $self->{'_widget'} = $self->_widget($tk);
-
     my $self_ = $self; weaken $self_;
     $widget->bind('<Property>', [ \&_do_callback , $self_ ] );
-
     $self->_launch_zmap($conf_dir, $arg_list);
-
+    $self->wait;
     return;
 }
 
@@ -119,9 +116,7 @@ sub register_client {
 
 sub register_client_post {
     my ($self) = @_;
-
     my ($response, $status, $hash);
-
     my $command = qq!<zmap><request action="new_zmap"/></zmap>!;
     my $app_xremote = $self->{'_xremote_client_app'};
     ($response) = $self->send_commands($app_xremote, $command);
@@ -134,11 +129,8 @@ sub register_client_post {
         $self->{'_xremote_client_window'} =
         $self->xremote_client_new($id);
     $self->send_commands($window_xremote, $self->connect_request);
-
-    $self->new_view;
-
+    $self->wait_finish;
     return;
-
 }
 
 my $new_view_xml_format = <<'FORMAT'
@@ -152,9 +144,12 @@ FORMAT
     ;
 
 sub new_view {
-    my ($self) = @_;
+    my ($self, $view) = @_;
 
-    my $view = $self->{'view'};
+    $view or confess "no view object supplied";
+    $self->{'view'} = $view;
+    weaken $self->{'view'};
+
     my ($response, $status, $hash);
 
     my $window_xremote = $self->{'_xremote_client_window'};
@@ -470,6 +465,20 @@ sub parse_response {
     my $hash = XMLin($xml);
     my $parse = [ $status, $hash ];
     return $parse;
+}
+
+sub wait {
+    my ($self) = @_;
+    $self->{'_wait'} = 1;
+    $self->widget->waitVariable(\ $self->{'_wait'});
+    return;
+}
+
+sub wait_finish {
+    my ($self) = @_;
+    $self->{'_wait'} = 0;
+    delete $self->{'_wait'};
+    return;
 }
 
 sub DESTROY{
