@@ -2383,32 +2383,40 @@ sub update_window_title_unsaved_flag {
     return;
 }
 
+sub zmap_arg_list {
+    my ($self) = @_;
+    my $arg_list =
+        $self->AceDatabase->DataSet->zmap_arg_list;
+    return $arg_list;
+}
+
+sub zmap_view_arg_hash {
+    my ($self) = @_;
+    my $config_file = sprintf "%s/ZMap", $self->AceDatabase->zmap_dir;
+    my $slice = $self->AceDatabase->smart_slice;
+    my $hash = {
+        '-sequence'    => $slice->ssname,
+        '-start'       => $slice->start,
+        '-end'         => $slice->end,
+        '-config_file' => $config_file,
+    };
+    return $hash;
+}
+
 
 ### BEGIN: ZMap control interface
 
 sub _zmap_view {
     my ($self) = @_;
-
-    my $config_file = sprintf "%s/ZMap", $self->AceDatabase->zmap_dir;
-    my $arg_list =
-        $self->AceDatabase->DataSet->config_value_list(
-            'zmap_config', 'arguments');
-
     my $zmap =
         Bio::Otter::ZMap->new(
             '-tk'       => $self->menu_bar,
-            '-arg_list' => $arg_list,
+            '-arg_list' => $self->zmap_arg_list,
         );
-
-    my $slice = $self->AceDatabase->smart_slice;
     my $zmap_view = $zmap->new_view(
-        '-sequence'      => $slice->ssname,
-        '-start'         => $slice->start,
-        '-end'           => $slice->end,
-        '-config_file'   => $config_file,
+        %{$self->zmap_view_arg_hash},
         '-SessionWindow' => $self,
         );
-
     return $zmap_view;
 }
 
