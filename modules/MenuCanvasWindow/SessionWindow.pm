@@ -2383,16 +2383,6 @@ sub update_window_title_unsaved_flag {
     return;
 }
 
-sub launch_zmap {
-    my ($self) = @_;
-    my $config_file = sprintf "%s/ZMap", $self->AceDatabase->zmap_dir;
-    my $arg_list =
-        $self->AceDatabase->DataSet->config_value_list(
-            'zmap_config', 'arguments');
-    $self->{'_zmap_view'} = $self->_zmap_view($config_file, $arg_list);
-    return;
-}
-
 
 ### BEGIN: ZMap control interface
 
