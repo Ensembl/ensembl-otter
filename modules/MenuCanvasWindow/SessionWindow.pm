@@ -95,7 +95,9 @@ sub initialize {
     $self->draw_subseq_list;
     $self->populate_clone_menu;
     $self->AceDatabase->zmap_dir_init;
+    $self->{'_zmap'} = $self->_zmap;
     $self->{'_zmap_view'} = $self->_zmap_view;
+    delete $self->{'_zmap'};
     $self->top_window->raise;
 
     return;
@@ -2406,13 +2408,19 @@ sub zmap_view_arg_hash {
 
 ### BEGIN: ZMap control interface
 
-sub _zmap_view {
+sub _zmap {
     my ($self) = @_;
     my $zmap =
         Bio::Otter::ZMap->new(
             '-tk'       => $self->menu_bar,
             '-arg_list' => $self->zmap_arg_list,
         );
+    return $zmap;
+}
+
+sub _zmap_view {
+    my ($self) = @_;
+    my $zmap = $self->{'_zmap'};
     my $zmap_view = $zmap->new_view(
         %{$self->zmap_view_arg_hash},
         '-SessionWindow' => $self,
