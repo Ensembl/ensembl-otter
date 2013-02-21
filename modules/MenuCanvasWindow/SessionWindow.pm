@@ -2389,14 +2389,14 @@ sub launch_zmap {
     my $arg_list =
         $self->AceDatabase->DataSet->config_value_list(
             'zmap_config', 'arguments');
-    $self->{'zmap'} = $self->_zmap($config_file, $arg_list);
+    $self->{'_zmap_view'} = $self->_zmap_view($config_file, $arg_list);
     return;
 }
 
 
 ### BEGIN: ZMap control interface
 
-sub _zmap {
+sub _zmap_view {
     my ($self, $config_file, $arg_list) = @_;
 
     my $zmap =
@@ -2406,7 +2406,7 @@ sub _zmap {
         );
 
     my $slice = $self->AceDatabase->smart_slice;
-    my $view = $zmap->new_view(
+    my $zmap_view = $zmap->new_view(
         '-sequence'      => $slice->ssname,
         '-start'         => $slice->start,
         '-end'           => $slice->end,
@@ -2414,7 +2414,7 @@ sub _zmap {
         '-SessionWindow' => $self,
         );
 
-    return $view;
+    return $zmap_view;
 }
 
 sub zircon_zmap_view_features_loaded {
@@ -2622,8 +2622,8 @@ sub zircon_zmap_view_multiple_select {
 
 sub zmap {
     my ($self) = @_;
-    my $zmap = $self->{'zmap'};
-    return $zmap;
+    my $zmap_view = $self->{'_zmap_view'};
+    return $zmap_view;
 }
 
 ### END: ZMap control interface
@@ -2634,7 +2634,7 @@ sub DESTROY {
 
     warn "Destroying SessionWindow for ", $self->ace_path, "\n";
 
-    delete $self->{'zmap'};
+    delete $self->{'_zmap_view'};
     delete $self->{'_AceDatabase'};
 
     return;
