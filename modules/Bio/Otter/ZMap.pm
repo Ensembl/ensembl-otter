@@ -23,6 +23,8 @@ use XML::Simple;
 use X11::XRemote;
 use Tk::X;
 
+use Bio::Otter::ZMap::View;
+
 my $DEBUG_CALLBACK = 0;
 my $DEBUG_EVENTS   = 0;
 
@@ -182,21 +184,16 @@ FORMAT
     ;
 
 sub new_view {
-    my ($self, $view) = @_;
+    my ($self, %parameter_hash) = @_;
 
-    $view or confess "no view object supplied";
-    $self->{'view'} = $view;
-    weaken $self->{'view'};
-
-    my ($response, $status, $hash);
-
-    my $window_xremote = $self->{'_xremote_client_window'};
-    my $parameter_hash = $view->zmap_new_view_parameter_hash;
-    my @parameter_list = @{$parameter_hash}{qw( sequence start end config_file )};
+    my @parameter_list =
+        @parameter_hash{qw( -sequence -start -end -config_file )};
     my $new_view_xml =
         sprintf $new_view_xml_format, map { xml_escape($_) } @parameter_list;
-    ($response) = $self->send_commands($window_xremote, $new_view_xml);
-    ($status, $hash) = @{$response};
+
+    my $window_xremote = $self->{'_xremote_client_window'};
+    my ($response) = $self->send_commands($window_xremote, $new_view_xml);
+    my ($status, $hash) = @{$response};
     $status =~ /^2/
         or die "new_view(): 'new_view' failed\n";
     my $id = $hash->{'response'}{'client'}{'xwid'}
@@ -205,9 +202,15 @@ sub new_view {
     my $view_xremote = $self->xremote_client_new($id);
     $self->send_commands($view_xremote, $self->connect_request);
 
-    $view->xremote($view_xremote);
+    my $view = $self->{'view'} =
+        Bio::Otter::ZMap::View->new(
+            '-zmap'          => $self,
+            '-xremote'       => $view_xremote,
+            '-SessionWindow' => $parameter_hash{'-SessionWindow'},
+        );
+    weaken $self->{'view'};
 
-    return;
+    return $view;
 }
 
 sub xremote_client_new {

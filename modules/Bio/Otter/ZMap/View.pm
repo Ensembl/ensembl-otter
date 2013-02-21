@@ -10,25 +10,21 @@ use Scalar::Util qw( weaken );
 
 use Hum::XmlWriter;
 
-use Bio::Otter::ZMap;
 use Bio::Otter::Utils::Config::Ini qw( config_ini_format );
 use Bio::Vega::Utils::MacProxyConfig qw{ mac_os_x_set_proxy_vars };
 
 sub new {
-    my ($pkg, @args) = @_;
+    my ($pkg, %arg_hash) = @_;
     my $new = bless { }, $pkg;
-    $new->_init(@args);
+    $new->_init(\%arg_hash);
     return $new;
 }
 
 sub _init {
-    my ($self, $SessionWindow, %args) = @_;
-    $self->{_SessionWindow} = $SessionWindow;
+    my ($self, $arg_hash) = @_;
+    @{$self}{qw( _zmap _xremote _SessionWindow )} =
+        @{$arg_hash}{qw( -zmap -xremote -SessionWindow )};
     weaken $self->{_SessionWindow};
-    @{$self}{qw( conf_dir arg_list )} =
-        @args{qw( -conf_dir -arg_list )};
-    my $zmap = $self->{_zmap} = $self->_zmap;
-    $zmap->new_view($self);
     return;
 }
 
@@ -60,18 +56,6 @@ This is the way we receive commands from zmap.
 sub zmap {
     my ($self) = @_;
     my $zmap = $self->{_zmap};
-    return $zmap;
-}
-
-sub _zmap {
-    my ($self) = @_;
-    my $mb = $self->SessionWindow->menu_bar();
-    my $zmap =
-        Bio::Otter::ZMap->new(
-            '-view'     => $self,
-            '-tk'       => $mb,
-            '-arg_list' => $self->arg_list,
-        );
     return $zmap;
 }
 
@@ -282,22 +266,8 @@ sub send_command {
     return $hash;
 }
 
-sub zmap_new_view_parameter_hash {
-    my ($self) = @_;
-    my $config_file = sprintf "%s/ZMap", $self->conf_dir;
-    my $slice = $self->SessionWindow->AceDatabase->smart_slice;
-    my $hash = {
-        'sequence'    => $slice->ssname,
-        'start'       => $slice->start,
-        'end'         => $slice->end,
-        'config_file' => $config_file,
-    };
-    return $hash;
-}
-
 sub xremote {
     my ($self, @args) = @_;
-    ($self->{'_xremote'}) = @args if @args;
     my $xremote = $self->{'_xremote'};
     return $xremote;
 }
@@ -306,18 +276,6 @@ sub SessionWindow {
     my ($self) = @_;
     my $SessionWindow = $self->{'_SessionWindow'};
     return $SessionWindow;
-}
-
-sub conf_dir {
-    my ($self) = @_;
-    my $conf_dir = $self->{'conf_dir'};
-    return $conf_dir;
-}
-
-sub arg_list {
-    my ($self) = @_;
-    my $arg_list = $self->{'arg_list'};
-    return $arg_list;
 }
 
 sub DESTROY {

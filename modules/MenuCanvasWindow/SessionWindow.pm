@@ -29,7 +29,7 @@ use MenuCanvasWindow::GenomicFeaturesWindow;
 use Text::Wrap qw{ wrap };
 
 use Bio::Otter::Lace::Client;
-use Bio::Otter::ZMap::View;
+use Bio::Otter::ZMap;
 use Bio::Otter::ZMap::XML;
 use Bio::Vega::Transform::Otter::Ace;
 
@@ -2385,27 +2385,36 @@ sub update_window_title_unsaved_flag {
 
 sub launch_zmap {
     my ($self) = @_;
-    my $conf_dir = $self->AceDatabase->zmap_dir;
+    my $config_file = sprintf "%s/ZMap", $self->AceDatabase->zmap_dir;
     my $arg_list =
         $self->AceDatabase->DataSet->config_value_list(
             'zmap_config', 'arguments');
-    my $zmap = 
-        $self->_zmap_create(
-            '-conf_dir' => $conf_dir,
-            '-arg_list' => $arg_list,
-        );
-    $self->{'zmap'} = $zmap;
+    $self->{'zmap'} = $self->_zmap($config_file, $arg_list);
     return;
 }
 
 
 ### BEGIN: ZMap control interface
 
+sub _zmap {
+    my ($self, $config_file, $arg_list) = @_;
 
-sub _zmap_create {
-    my ($self, @args) = @_;
-    my $zmap = Bio::Otter::ZMap::View->new($self, @args);
-    return $zmap;
+    my $zmap =
+        Bio::Otter::ZMap->new(
+            '-tk'       => $self->menu_bar,
+            '-arg_list' => $arg_list,
+        );
+
+    my $slice = $self->AceDatabase->smart_slice;
+    my $view = $zmap->new_view(
+        '-sequence'      => $slice->ssname,
+        '-start'         => $slice->start,
+        '-end'           => $slice->end,
+        '-config_file'   => $config_file,
+        '-SessionWindow' => $self,
+        );
+
+    return $view;
 }
 
 sub zircon_zmap_view_features_loaded {
