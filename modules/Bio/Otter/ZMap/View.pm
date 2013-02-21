@@ -24,6 +24,7 @@ sub _init {
     my ($self, $arg_hash) = @_;
     @{$self}{qw( _zmap _xremote _SessionWindow )} =
         @{$arg_hash}{qw( -zmap -xremote -SessionWindow )};
+    $self->{'_zmap_proxy'} = $self->zmap->proxy;
     weaken $self->{_SessionWindow};
     return;
 }
@@ -281,6 +282,7 @@ sub SessionWindow {
 sub DESTROY {
     my ($self) = @_;
     delete $self->{_zmap};
+    delete $self->{_zmap_proxy};
     return;
 }
 
