@@ -517,6 +517,13 @@ sub fetch_notes_locks_status_for_SequenceSet {
     return;
 }
 
+sub zmap_arg_list {
+    my ($self, $ss) = @_;
+    my $arg_list =
+        $self->config_value_list('zmap_config', 'arguments');
+    return $arg_list;
+}
+
 #
 # DB connection handling
 #-------------------------------------------------------------------------------
