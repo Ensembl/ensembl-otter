@@ -15,6 +15,8 @@ use Tk::LabFrame;
 use Tk::Balloon;
 
 use Bio::Otter::Lace::Client;
+use Bio::Otter::ZMap;
+
 use MenuCanvasWindow::SessionWindow;
 use Hum::Sort 'ace_sort';
 
@@ -319,7 +321,14 @@ sub load_filters {
         }
     } else {
         # we need to set up and show a SessionWindow
-        my $SessionWindow = MenuCanvasWindow::SessionWindow->new( $self->top->Toplevel );
+        my $zmap =
+            Bio::Otter::ZMap->new(
+                '-tk'       => $self->SpeciesListWindow->menu_bar,
+                '-arg_list' => $self->AceDatabase->DataSet->zmap_arg_list
+            );
+        my $SessionWindow =
+            MenuCanvasWindow::SessionWindow->new(
+                $self->top->Toplevel, '-zmap' => $zmap);
 
         $self->SessionWindow($SessionWindow);
         $SessionWindow->AceDatabase($self->AceDatabase);
