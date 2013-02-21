@@ -95,7 +95,7 @@ sub initialize {
     $self->draw_subseq_list;
     $self->populate_clone_menu;
     $self->AceDatabase->zmap_dir_init;
-    $self->launch_zmap;
+    $self->{'_zmap_view'} = $self->_zmap_view;
     $self->top_window->raise;
 
     return;
@@ -2397,7 +2397,12 @@ sub launch_zmap {
 ### BEGIN: ZMap control interface
 
 sub _zmap_view {
-    my ($self, $config_file, $arg_list) = @_;
+    my ($self) = @_;
+
+    my $config_file = sprintf "%s/ZMap", $self->AceDatabase->zmap_dir;
+    my $arg_list =
+        $self->AceDatabase->DataSet->config_value_list(
+            'zmap_config', 'arguments');
 
     my $zmap =
         Bio::Otter::ZMap->new(
