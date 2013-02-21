@@ -42,7 +42,7 @@ my $DNA_SCORE  = 100;
 my $DNAHSP     = 120;
 
 sub new {
-    my ($pkg, $tk) = @_;
+    my ($pkg, $tk, %arg_hash) = @_;
 
     my $self = $pkg->SUPER::new($tk);
 
@@ -51,6 +51,8 @@ sub new {
     $self->bind_events;
     $self->minimum_scroll_bbox(0,0, 380,200);
     $self->flag_db_edits(1);
+
+    $self->{'_zmap'} = $arg_hash{'-zmap'};
 
     return $self;
 }
@@ -95,7 +97,7 @@ sub initialize {
     $self->draw_subseq_list;
     $self->populate_clone_menu;
     $self->AceDatabase->zmap_dir_init;
-    $self->{'_zmap'} = $self->_zmap;
+    $self->{'_zmap'} ||= $self->_zmap;
     $self->{'_zmap_view'} = $self->_zmap_view;
     delete $self->{'_zmap'};
     $self->top_window->raise;
