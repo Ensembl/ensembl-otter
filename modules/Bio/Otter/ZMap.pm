@@ -23,6 +23,7 @@ use XML::Simple;
 use X11::XRemote;
 use Tk::X;
 
+use Bio::Otter::ZMap::Proxy;
 use Bio::Otter::ZMap::View;
 
 my $DEBUG_CALLBACK = 0;
@@ -51,9 +52,9 @@ sub init{
     my ($self, $arg_hash) = @_;
     my ($tk, $arg_list) =
         @{$arg_hash}{qw( -tk -arg_list )};
-    my $widget = $self->{'_widget'} = $self->_widget($tk);
-    my $self_ = $self; weaken $self_;
-    $widget->bind('<Property>', [ \&_do_callback , $self_ ] );
+    $self->{'_widget'} = $self->_widget($tk);
+    my $callback = sub { $self->_callback };
+    $self->widget->bind('<Property>', $callback);
     $self->{'_conf_dir'} = $self->_conf_dir;
     $self->_make_conf;
     $self->_launch_zmap($arg_list);
@@ -421,9 +422,9 @@ my @xml_request_parse_parameters =
      ForceArray => [ 'feature', 'subfeature' ],
     );
 
-sub _do_callback{
-    my ($tk, $self) = @_;
-    defined $self or return;
+sub _callback{
+    my ($self) = @_;
+    my $tk = $self->widget;
     my $id    = $tk->id();
     my $ev    = $tk->XEvent(); # Get the event
     my $state = ($ev->s ? $ev->s : 0); # assume zero (PropertyDelete I think)
@@ -522,10 +523,21 @@ sub wait_finish {
     return;
 }
 
-sub DESTROY{
+sub proxy {
     my ($self) = @_;
-    warn "Destroying $self";
+    my $proxy = $self->{'_proxy'};
+    unless ($proxy) {
+        $proxy = $self->{'_proxy'} =
+            Bio::Otter::ZMap::Proxy->new($self);
+        weaken $self->{'_proxy'};
+    }
+    return $proxy;
+}
+
+sub destroy {
+    my ($self) = @_;
     $self->_kill_zmap;
+    $self->widget->destroy;
     return;
 }
 
