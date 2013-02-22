@@ -242,12 +242,14 @@ sub new {
 
     $help_frame->Label(
         -text => "Search for:\n\n"
-                ."* Locus names or synonyms,\n"
-                ."* international or EMBL clone names,\n"
-                ."* Otter Gene/Transcript/Translation/Exon OTT... stable_IDs,\n"
-                ."* EnsEMBL Gene/Transcript/Translation/Exon ENS... stable_IDs,\n"
-                ."* CCDS names or\n"
-                ."* Pipeline hit names.\n",
+                ."+ Locus names or synonyms [accepts * wildcards],\n"
+                ."+ Transcript names [accepts * wildcards],\n"
+                ."+ international or EMBL clone names,\n"
+                ."+ Otter Gene/Transcript/Translation/Exon OTT... stable_IDs,\n"
+                ."+ EnsEMBL Gene/Transcript/Translation/Exon ENS... stable_IDs,\n"
+                ."+ CCDS names or\n"
+                ."+ Pipeline hit names.\n"
+                ."\nnb. wildcards as prefixes are slower to run.",
         -justify => 'left',
     )->pack(-side => 'top', -fill => 'both');
 
