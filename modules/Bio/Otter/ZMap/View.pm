@@ -22,8 +22,8 @@ sub new {
 
 sub _init {
     my ($self, $arg_hash) = @_;
-    @{$self}{qw( _zmap _xremote _SessionWindow )} =
-        @{$arg_hash}{qw( -zmap -xremote -SessionWindow )};
+    @{$self}{qw( _name _zmap _xremote _SessionWindow )} =
+        @{$arg_hash}{qw( -name -zmap -xremote -SessionWindow )};
     $self->{'_zmap_proxy'} = $self->zmap->proxy;
     weaken $self->{_SessionWindow};
     return;
@@ -265,6 +265,12 @@ sub send_command {
         "XRemote command '%s' failed: status = %s\n"
         , $command, $status;
     return $hash;
+}
+
+sub name {
+    my ($self) = @_;
+    my $name = $self->{'_name'};
+    return $name;
 }
 
 sub xremote {

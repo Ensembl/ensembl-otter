@@ -188,10 +188,14 @@ FORMAT
 sub new_view {
     my ($self, %parameter_hash) = @_;
 
-    my @parameter_list =
+    my @new_view_parameter_list =
         @parameter_hash{qw( -sequence -start -end -config_file )};
+    my ($name, $SessionWindow) =
+        @parameter_hash{qw( -name -SessionWindow )};
+
     my $new_view_xml =
-        sprintf $new_view_xml_format, map { xml_escape($_) } @parameter_list;
+        sprintf $new_view_xml_format
+        , map { xml_escape($_) } @new_view_parameter_list;
 
     my $window_xremote = $self->{'_xremote_client_window'};
     my ($response) = $self->send_commands($window_xremote, $new_view_xml);
@@ -206,9 +210,10 @@ sub new_view {
 
     my $view =
         Bio::Otter::ZMap::View->new(
+            '-name'          => $name,
             '-zmap'          => $self,
             '-xremote'       => $view_xremote,
-            '-SessionWindow' => $parameter_hash{'-SessionWindow'},
+            '-SessionWindow' => $SessionWindow,
         );
     $self->id_view_hash->{$id} = $view;
     weaken $self->id_view_hash->{$id};

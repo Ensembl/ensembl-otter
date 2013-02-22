@@ -2398,10 +2398,15 @@ sub zmap_view_arg_hash {
     my ($self) = @_;
     my $config_file = sprintf "%s/ZMap", $self->AceDatabase->zmap_dir;
     my $slice = $self->AceDatabase->smart_slice;
+    my $sequence = $slice->ssname,
+    my $start    = $slice->start;
+    my $end      = $slice->end;
+    my $name = sprintf "%s:%d-%d", $sequence, $start, $end;
     my $hash = {
-        '-sequence'    => $slice->ssname,
-        '-start'       => $slice->start,
-        '-end'         => $slice->end,
+        '-name'        => $name,
+        '-sequence'    => $sequence,
+        '-start'       => $start,
+        '-end'         => $end,
         '-config_file' => $config_file,
     };
     return $hash;
