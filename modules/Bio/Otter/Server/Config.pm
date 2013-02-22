@@ -75,7 +75,12 @@ sub mid_url_args {
     my %out;
     my $retaint = substr("$0$^X",0,0); # CGI.pm 3.49 does this too
 
-    if ($ENV{REQUEST_URI} =~ m{^/cgi-bin/otter([^/]*)/\d+/}) {
+    if (!defined $ENV{REQUEST_URI}) {
+        # Running outside the normal CGI environment, probably for
+        # test & debug purposes.
+        #
+        # Maybe pick up developer config when present?
+    } elsif ($ENV{REQUEST_URI} =~ m{^/cgi-bin/otter([^/]*)/\d+/}) {
         my $mu = $1;
         foreach my $arg (split /;/, $mu) {
             if ($arg =~ m{^~([-a-z0-9]{1,16})$}) {
