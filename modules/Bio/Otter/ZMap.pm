@@ -46,6 +46,14 @@ sub list {
     return $list;
 }
 
+my $_string_zmap_hash = { };
+
+sub from_string {
+    my ($pkg, $string) = @_;
+    my $zmap = $_string_zmap_hash->{$string};
+    return $zmap;
+}
+
 sub new{
     my ($pkg, %arg_hash) = @_;
     my $self = { };
@@ -53,6 +61,8 @@ sub new{
     $self->init(\%arg_hash);
     push @_list, $self;
     weaken $_list[-1];
+    $_string_zmap_hash->{"$self"} = $self;
+    weaken $_string_zmap_hash->{"$self"};
     return $self;
 }
 
