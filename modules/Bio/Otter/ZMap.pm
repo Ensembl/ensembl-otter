@@ -37,11 +37,22 @@ Creates a new Bio::Otter::ZMap Object.
 
 =cut
 
+my @_list = ( );
+
+sub list {
+    my ($pkg) = @_;
+    # filter the list because weak references may become undef
+    my $list = [ grep { defined } @_list ];
+    return $list;
+}
+
 sub new{
     my ($pkg, %arg_hash) = @_;
     my $self = { };
     bless($self, $pkg);
     $self->init(\%arg_hash);
+    push @_list, $self;
+    weaken $_list[-1];
     return $self;
 }
 
