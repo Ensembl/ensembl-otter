@@ -53,6 +53,7 @@ sub init{
     my ($tk, $arg_list) =
         @{$arg_hash}{qw( -tk -arg_list )};
     $self->{'_id_view_hash'} = { };
+    $self->{'_view_list'} = [ ];
     $self->{'_widget'} = $self->_widget($tk);
     my $callback = sub { $self->_callback };
     $self->widget->bind('<Property>', $callback);
@@ -217,6 +218,8 @@ sub new_view {
         );
     $self->id_view_hash->{$id} = $view;
     weaken $self->id_view_hash->{$id};
+    push @{$self->_view_list}, $view;
+    weaken $self->_view_list->[-1];
 
     return $view;
 }
@@ -576,6 +579,19 @@ sub id_view_hash {
     my ($self) = @_;
     my $id_view_hash = $self->{'_id_view_hash'};
     return $id_view_hash;
+}
+
+sub view_list {
+    my ($self) = @_;
+    # filter the list because weak references may become undef
+    my $view_list = [ grep { defined } @{$self->_view_list} ];
+    return $view_list;
+}
+
+sub _view_list {
+    my ($self) = @_;
+    my $view_list = $self->{'_view_list'};
+    return $view_list;
 }
 
 1;
