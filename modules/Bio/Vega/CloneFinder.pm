@@ -525,6 +525,15 @@ my @FEATURE_ATTRIBUTES_PARAMETERS = (
     [ qw( transcript_name transcript_attrib   transcript_id name    get_TranscriptAdaptor ) ],
     );
 
+my @FEATURE_ATTRIBUTES_PREFIXES = qw( WU );
+# Plain gene & transcript names 'foo' also search these 'prefix:foo'.
+#
+# Hardwired because obtaining a live set of current prefixes is slow.
+# Don't want to maintain an explicit cache.
+#
+# Many prefixes (KO, LOF) will co-occur with the plain name, so it is
+# less important to search for them when not requested.
+
 my @SEQREGION_ATTRIBUTES_PARAMETERS = (
     #     qtype,                   cs_name code
     [ qw( international_clone_name clone   intl_clone_name ) ],
@@ -538,17 +547,28 @@ sub find {
     my $names = $self->qnames;
     my $names_2 = [ _strip_trailing_version_numbers(@{$names}) ];
 
-    # conditions and arguments for find_by_feature_attributes
-    my $fa_condition_unprefixed =
-        sprintf ' ( value IN ( %s ) ) ', (join ' , ', ('?') x @{$names});
-    my $fa_condition =
-        join ' OR ',
-        $fa_condition_unprefixed,
-        ((' ( value LIKE ? ) ') x @{$names} );
-    my $fa_args = [
-        @{$names},
-        ( map { "%:$_" } @{$names} ),
-        ];
+    ### conditions and arguments for find_by_feature_attributes
+    #
+    # LIKE uses the fast (left-anchored) index.  RLIKE and
+    # left-wildcard LIKE cannot.
+    #
+    # Chose speed.  Support wildcards, search only for known prefixes
+    # unless requested.
+    my @fa_name = map { # add prefixed versions of plain names
+        my $n = $_;
+        (($n =~ /:|^\*/)
+         ? ($n)
+         : ($n, map { "$_:$n" } @FEATURE_ATTRIBUTES_PREFIXES));
+    } @{$names};
+    @fa_name = map { # add de-duping suffix, unless we have suffix
+        my $n = $_;
+        (($n =~ /_|\*$/)
+         ? ($_)
+         : ($_, $_.'_*'))
+    } @fa_name;
+
+    my $fa_args = [ __tamecard_like(@fa_name) ];
+    my $fa_condition = join ' OR ', (('( value LIKE ? )') x @$fa_args);
 
     $self->find_by_seqregion_names($names);
 
@@ -598,6 +618,22 @@ sub _wrap_search_errors {
 sub _strip_trailing_version_numbers { ## no critic (Subroutines::RequireArgUnpacking)
     return map { /^(.*?)(?:\.[[:digit:]]+)?$/ } @_;
 }
+
+sub __tamecard_like {
+    my (@n) = @_;
+    # MySQL backslashing rules say to pair them to quench C-style
+    # escaping, but placeholders don't need that.  Then backslash
+    # escapes one LIKE metacharacter.
+    foreach (@n) {
+        s{\\}{\x5c\x5c}g;   # literal backslash in LIKE
+        s{([_%])}{\x5c$1}g; # literal _ and %
+
+        # We offer * as wildcard
+        s{\*}{%}g;
+    }
+    return @n;
+}
+
 
 1;
 
