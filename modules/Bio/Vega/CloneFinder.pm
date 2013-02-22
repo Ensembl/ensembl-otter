@@ -552,20 +552,9 @@ sub find {
     #
     # Chose speed.  Support wildcards, search only for known prefixes
     # unless requested.
-    my @fa_name = map { # add prefixed versions of plain names
-        my $n = $_;
-        (($n =~ /:|^\*/)
-         ? ($n)
-         : ($n, map { "$_:$n" } @FEATURE_ATTRIBUTES_PREFIXES));
-    } @{$names};
-    @fa_name = map { # add de-duping suffix, unless we have suffix
-        my $n = $_;
-        (($n =~ /_|\*$/)
-         ? ($_)
-         : ($_, $_.'_*'))
-    } @fa_name;
-
-    my $fa_args = [ __tamecard_like(@fa_name) ];
+    my @fa_name = map { __fa_add_prefixes($_) }
+      map { __fa_add_dupsfx($_) } @{$names};
+    my $fa_args = [ map { __tamecard_like($_) } @fa_name ];
     my $fa_condition = join ' OR ', (('( value LIKE ? )') x @$fa_args);
 
     $self->find_by_seqregion_names($names);
@@ -617,19 +606,36 @@ sub _strip_trailing_version_numbers { ## no critic (Subroutines::RequireArgUnpac
     return map { /^(.*?)(?:\.[[:digit:]]+)?$/ } @_;
 }
 
+# add prefixed versions of plain names
+sub __fa_add_prefixes {
+    my ($n) = @_;
+    return (($n =~ /:|^\*/)
+            ? ($n)
+            : ($n, map { "$_:$n" } @FEATURE_ATTRIBUTES_PREFIXES));
+}
+
+# add de-duping suffix, unless we have suffix
+sub __fa_add_dupsfx {
+    my ($n) = @_;
+    return (($n =~ /_|\*$/)
+            ? ($_)
+            : ($_, $_.'_*'));
+}
+
+# implement the *-as-wildcard for LIKE
 sub __tamecard_like {
-    my (@n) = @_;
+    my ($n) = @_;
     # MySQL backslashing rules say to pair them to quench C-style
     # escaping, but placeholders don't need that.  Then backslash
     # escapes one LIKE metacharacter.
-    foreach (@n) {
-        s{\\}{\x5c\x5c}g;   # literal backslash in LIKE
-        s{([_%])}{\x5c$1}g; # literal _ and %
 
-        # We offer * as wildcard
-        s{\*}{%}g;
-    }
-    return @n;
+    $n =~ s{\\}{\x5c\x5c}g;   # literal backslash in LIKE
+    $n =~ s{([_%])}{\x5c$1}g; # literal _ and %
+
+    # We offer * as wildcard
+    $n =~ s{\*}{%}g;
+
+    return $n;
 }
 
 
