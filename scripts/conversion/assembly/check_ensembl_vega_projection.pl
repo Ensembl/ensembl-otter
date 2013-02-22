@@ -69,6 +69,7 @@ use Pod::Usage;
 use Fcntl;
 
 my $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
+### PARALLEL # $support ###
 
 # parse options
 $support->parse_common_options(@_);
@@ -123,7 +124,7 @@ my $v_ga  = $v_dba->get_GeneAdaptor;
 my $e_dba  =$support->get_database('ensembl','ensembl');
 $ev_dba->dnadb($e_dba);
 
-
+### PRE # # ###
 
 # which chromosomes do we study?
 $support->comma_to_list('chromosomes');
@@ -137,9 +138,13 @@ else {
   @ev_top_slices = sort { $a->seq_region_name() cmp $b->seq_region_name()} @{$ev_sa->fetch_all("toplevel")};
 }
 
+my @ev_names = map { $_->seq_region_name } @ev_top_slices;
+
+### RUN # @ev_names ###
+
 my $c=1;
-foreach my $ev_slice (@ev_top_slices) {
-  my $chrom_name = $ev_slice->seq_region_name();
+foreach my $chrom_name (@ev_names) {
+  my $ev_slice = $ev_sa->fetch_by_region(undef,$chrom_name);
   $support->log_stamped("\n\nExamining chromosome $chrom_name in ensembl-vega database\n");
  GENE: foreach my $ev_gene ( @{$ev_slice->get_all_Genes()} ) {
     my $gsi = $ev_gene->stable_id;
@@ -186,5 +191,9 @@ foreach my $ev_slice (@ev_top_slices) {
 
 $support->log("Done.\n");
 
+### POST ###
+
 # finish log
 $support->finish_log;
+
+### END ###
