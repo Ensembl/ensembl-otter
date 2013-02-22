@@ -52,6 +52,7 @@ sub init{
     my ($self, $arg_hash) = @_;
     my ($tk, $arg_list) =
         @{$arg_hash}{qw( -tk -arg_list )};
+    $self->{'_id_view_hash'} = { };
     $self->{'_widget'} = $self->_widget($tk);
     my $callback = sub { $self->_callback };
     $self->widget->bind('<Property>', $callback);
@@ -203,13 +204,14 @@ sub new_view {
     my $view_xremote = $self->xremote_client_new($id);
     $self->send_commands($view_xremote, $self->connect_request);
 
-    my $view = $self->{'view'} =
+    my $view =
         Bio::Otter::ZMap::View->new(
             '-zmap'          => $self,
             '-xremote'       => $view_xremote,
             '-SessionWindow' => $parameter_hash{'-SessionWindow'},
         );
-    weaken $self->{'view'};
+    $self->id_view_hash->{$id} = $view;
+    weaken $self->id_view_hash->{$id};
 
     return $view;
 }
@@ -452,7 +454,6 @@ sub _callback{
     #=========================================================
     my $request = XMLin($request_string, @xml_request_parse_parameters);
     my $action = $request->{'request'}{'action'};
-    my $view = $self->{'view'};
     my $reply =
         sprintf $self->xremote_server->format_string,
         ( try {
@@ -460,7 +461,13 @@ sub _callback{
             for ($action) {
                 when ('register_client') { return $self->register_client($request); }
                 when ('finalised') { return (200, "all closed"); }
-                default { return $view->xremote_callback($request); }
+                default {
+                    my $view_id = $request->{'request'}{'xwid'};
+                    defined $view_id or die "missing request ID";
+                    my $view = $self->id_view_hash->{$view_id};
+                    defined $view or die sprintf "no view for ID '%s'", $id;
+                    return $view->xremote_callback($request);
+                }
             }
           }
           catch {
@@ -558,6 +565,12 @@ sub conf_dir {
     my ($self) = @_;
     my $conf_dir = $self->{'_conf_dir'};
     return $conf_dir;
+}
+
+sub id_view_hash {
+    my ($self) = @_;
+    my $id_view_hash = $self->{'_id_view_hash'};
+    return $id_view_hash;
 }
 
 1;
