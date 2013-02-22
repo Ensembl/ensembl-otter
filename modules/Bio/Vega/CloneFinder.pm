@@ -263,22 +263,22 @@ sub find_by_feature_attributes {
     return;
 }
 
-my $FIND_BY_FEATURE_ATTRIBUTES_SQL_TEMPLATE = <<'SQL'
+my $FIND_BY_FEATURE_ATTRIBUTES_SQL_TEMPLATE = <<'SQL';
     SELECT %s, value
-      FROM %s
-     WHERE attrib_type_id = (SELECT attrib_type_id from attrib_type where code='%s')
+      FROM %s f JOIN %s a USING (%s) JOIN attrib_type t USING (attrib_type_id)
+     WHERE code='%s'
+       AND f.is_current=1
        AND ( %s )
 SQL
-    ;
 
 sub _find_by_feature_attributes {
     my ($self, $parameters, $condition, $args) = @_;
 
-    my ($qtype, $table, $id_field, $code, $adaptor_call) = @{$parameters};
+    my ($qtype, $feat, $code, $adaptor_call) = @{$parameters};
 
     my $sql =
         sprintf $FIND_BY_FEATURE_ATTRIBUTES_SQL_TEMPLATE,
-        $id_field, $table, $code, $condition;
+        $feat.'_id', $feat, $feat.'_attrib', $feat.'_id', $code, $condition;
     my $dbc = $self->otter_dba->dbc;
     my $sth = $dbc->prepare($sql);
     $sth->execute(@{$args});
@@ -287,9 +287,7 @@ sub _find_by_feature_attributes {
     while( my ($feature_id, $qname) = $sth->fetchrow ) {
         $adaptor ||= $self->otter_dba->$adaptor_call; # only do it if we found something
         my $feature = $adaptor->fetch_by_dbID($feature_id);
-        if($feature->is_current) {
-            $self->register_local_slice($qname, $qtype, $feature->feature_Slice);
-        }
+        $self->register_local_slice($qname, $qtype, $feature->feature_Slice);
     }
 
     return;
@@ -519,10 +517,10 @@ my @XREF_PARAMETERS = (
     );
 
 my @FEATURE_ATTRIBUTES_PARAMETERS = (
-    #     qtype           table               id_field      code    adaptor
-    [ qw( gene_name       gene_attrib         gene_id       name    get_GeneAdaptor       ) ],
-    [ qw( gene_synonym    gene_attrib         gene_id       synonym get_GeneAdaptor       ) ],
-    [ qw( transcript_name transcript_attrib   transcript_id name    get_TranscriptAdaptor ) ],
+    #     qtype           feature    code    adaptor
+    [ qw( gene_name       gene       name    get_GeneAdaptor       ) ],
+    [ qw( gene_synonym    gene       synonym get_GeneAdaptor       ) ],
+    [ qw( transcript_name transcript name    get_TranscriptAdaptor ) ],
     );
 
 my @FEATURE_ATTRIBUTES_PREFIXES = qw( WU );
