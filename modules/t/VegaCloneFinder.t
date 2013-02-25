@@ -7,6 +7,7 @@ use lib "${ENV{ANACODE_TEAM_TOOLS}}/t/tlib";
 use Test::CriticModule;
 
 use Test::More;
+use Time::HiRes qw( gettimeofday tv_interval );
 
 use lib "${ENV{ANACODE_TEAM_TOOLS}}/otterlace/server/perl"; # find 'fake' SangerWeb modules
 $ENV{HTTP_CLIENTREALM} = 'sanger';                          # emulate a local user
@@ -58,36 +59,65 @@ __EO_RESULT__
             SPDYB => # auto-find the WU: variant
 "SPDYB\tgene_name\tAC123686.11\tchr5-38
 WU:SPDYB\tgene_synonym\tAC123686.11\tchr5-38",
-            "*:SPDYB" => # wildcard find prefixed variants
+            "*:SPDYB" => [ # prefix-wildcard finds prefixed variants, slowly
 "KO:SPDYB\tgene_name\tAC123686.11\tchr5-38
-WU:SPDYB\tgene_synonym\tAC123686.11\tchr5-38",
+WU:SPDYB\tgene_synonym\tAC123686.11\tchr5-38", 10 ],
         },
     },
     );
 
-foreach my $test ( @tests ) {
+sub do_find {
+    my (@param) = @_;
+    my $t0 = [ gettimeofday() ];
+
+    # $server can be re-used, only for the same dataset
+    my $server = Bio::Otter::ServerScriptSupport->new;
+    while (my ($k, $v) = splice @param, 0, 2) {
+        $server->param($k, $v);
+    }
+
+    my $finder = new_ok($vcf_module => [ $server ]);
+    $finder->find;
+
+    return ($finder->generate_output, tv_interval($t0));
+}
+
+sub tt_testlist {
+    my ($test) = @_;
     note "Tests for dataset: $test->{dataset}";
 
-    my $server = Bio::Otter::ServerScriptSupport->new;
-    $server->param(dataset => $test->{dataset});
-
     while (my ($query, $want) = each %{$test->{queries}} ) {
+        my $t_allow = 1.25; # sec - a bit lenient
+        ($want, $t_allow) = @$want if ref($want);
+
         subtest "Query: $query" => sub {
-            $server->param('qnames'  => $query);
-            my $finder = new_ok($vcf_module => [ $server ]);
-            $finder->find;
-            my $got = $finder->generate_output;
-            $got = join "\n", sort split /\n/, $got;
+            my ($got, $t_took) =
+              do_find(qnames  => $query, dataset => $test->{dataset});
+            $got = join "\n", sort split /\n/, $got; # test stability sort
             $want =~ s{\n*\Z}{};
-            is($got, $want, 'result');
+            is($got, $want, "query($query) result");
+            cmp_ok($t_took, '<=', $t_allow, "query($query) time");
             done_testing;
         }
     }
+    return ();
 }
 
-done_testing;
+sub tt_overflow {
+    my ($got, $t_took) = do_find(dataset => 'human', qnames => 'D*'); # ~ 6k hits
+    like($got, qr{\A\tToo many search results}, 'human D* hit overflow');
+    return ();
+}
 
-1;
+sub main {
+    tt_testlist($_) foreach @tests;
+    tt_overflow();
+
+    done_testing;
+    return ();
+}
+
+main();
 
 # Local Variables:
 # mode: perl
