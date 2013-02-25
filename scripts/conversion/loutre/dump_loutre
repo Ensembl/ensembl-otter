@@ -21,6 +21,7 @@ Options:
     --dump_assembly_tags=BOOLEAN        choose to dump or not dump assembly_tag misc_features
     --ignore_authors=LIST               comma seperated list of (gene) authors to ignore (optional)
     --add_genes=LIST                    comma seperated list of stable IDs to transfer
+    --skip_genes=LIST                   comma separated list of stable IDs to skip
     --live_update                       transfer only genes that are newer than what's in current Vega
 
     --loutredbname=NAME                 use loutre database NAME
@@ -157,6 +158,7 @@ $support->parse_extra_options(
   'dump_assembly_tags=s',
   'ignore_authors=s',
   'add_genes=s',
+  'skip_genes=s',
   'live_update',
 );
 $support->allowed_params(
@@ -174,6 +176,7 @@ $support->allowed_params(
   'dump_assembly_tags',
   'ignore_authors',
   'add_genes',
+  'skip_genes',
   'live_update',
   $support->get_loutre_params,
   $support->get_common_params,
@@ -200,6 +203,7 @@ $support->comma_to_list('ignore_chr');
 $support->comma_to_list('chr');
 $support->comma_to_list('ignore_authors');
 $support->comma_to_list('add_genes');
+$support->comma_to_list('skip_genes');
 
 #set gene prefixes to ignore for transfer if they are not already defined by the user
 if (! $support->param('filter_prefix')) {
@@ -285,6 +289,10 @@ if ($support->param('add_genes')) {
   if (! $support->user_proceed("\nAnnotation of just the following genes will be dumped, proceed ?\n". join("\n",@$genes_to_dump))) {
     exit;
   }
+}
+my $genes_to_skip = [];
+if($support->param('skip_genes')) {
+  $genes_to_skip = [ $support->param('skip_genes') ];
 }
 
 my $annotrack_genes = {};
@@ -628,6 +636,9 @@ foreach my $name (@{$chr_names_wanted}) {
         next GENE;
       }
       $support->log("Doing specific dump of gene $lgsi\n",2);
+    }
+    if($support->param('skip_genes')) {
+      next if grep { $lgene->stable_id eq $_ } @{$genes_to_skip};
     }
 
     else {
