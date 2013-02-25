@@ -73,7 +73,15 @@ sub do_search {
     my $result_list =
         $self->Client->find_clones($self->DataSet->name, $qnames);
     my $result_hash = { };
-    push @{$result_hash->{$_->{'qname'}}}, $_ for @{$result_list};
+    foreach (@{$result_list}) {
+        if ($_->{text}) {
+            # something else - text jumps to the top
+            $self->_add_text($_);
+        } else {
+            # normal result
+            push @{$result_hash->{$_->{'qname'}}}, $_;
+        }
+    }
 
     for my $qname ( sort { ace_sort($a, $b); } keys %{$result_hash} ) {
         for my $res_hash (@{$result_hash->{$qname}}) {
@@ -137,6 +145,14 @@ sub _result_label_1 {
         ->Label(-text => $label_text,)
         ->pack(-side => 'left', -fill => 'x');
 
+    return;
+}
+
+sub _add_text {
+    my ($self, $item) = @_;
+    my $f = $self->_new_result_frame;
+    $f->Label(-text => $item->{text}, -foreground => 'darkred')
+      ->pack(-side => 'top', -fill => 'x');
     return;
 }
 

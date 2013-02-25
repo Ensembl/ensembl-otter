@@ -21,6 +21,9 @@ my $WRAP_SEARCH_ERRORS    = 1;       # set this to 0 to aid command-line debuggi
 
 my $TARGET_COMPONENT_TYPE = 'clone'; # this is the type of components we want the found matches mapped on
 
+my $MAX_HITS = 50; # approx, due to later find_by_* calls
+
+
 sub new {
     my ($class, $server) = @_;
 
@@ -28,6 +31,7 @@ sub new {
         _server => $server,
         _qnames => [ split ',', $server->require_argument('qnames') ],
         _results => {},
+        _result_count => 0,
     };
 
     return bless $self, $class;
@@ -64,6 +68,11 @@ sub qnames {
 sub results {
     my ($self) = @_;
     return $self->{_results};
+}
+
+sub result_count {
+    my ($self, $bump) = @_;
+    return $self->{_result_count} += ($bump || 0);
 }
 
 my $FIND_CONTAINING_CHROMOSOMES_SQL_TEMPLATE = <<'SQL'
@@ -172,6 +181,9 @@ sub register_local_slice {
         my $chr_name = $chr_slice->seq_region_name;
         my $key = join ',', @component_names;
         ++ $self->results->{uc($qname)}->{$chr_name}->{$qtype}->{$key};
+
+        die "Too many hits" # will be caught per find_by_*
+          if $self->result_count(1) > $MAX_HITS;
     }
 
     return;
@@ -573,6 +585,8 @@ sub generate_output {
     my ($self) = @_;
 
     my $output_string = '';
+    $output_string .= "\tToo many search results, some were omitted - please be more specific\n"
+      if $self->result_count > $MAX_HITS;
 
     my $results = $self->results;
     while (my ($qname, $qname_results) = each %{$results}) {

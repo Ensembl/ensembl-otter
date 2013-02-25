@@ -771,14 +771,17 @@ sub find_clones {
 sub _find_clone_result {
     my ($line) = @_;
     my ($qname, $qtype, $component_names, $assembly) = split /\t/, $line;
-    my $components = $component_names ? [ split /,/, $component_names ] : [];
-    my $result = {
-        qname      => $qname,
-        qtype      => $qtype,
-        components => $components,
-        assembly   => $assembly,
-    };
-    return $result;
+    if ($qname eq '') {
+        return { text => $line };
+    } else {
+        my $components = $component_names ? [ split /,/, $component_names ] : [];
+        return {
+                qname      => $qname,
+                qtype      => $qtype,
+                components => $components,
+                assembly   => $assembly,
+               };
+    }
 }
 
 sub get_meta {
