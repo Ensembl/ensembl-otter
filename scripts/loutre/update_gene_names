@@ -1,0 +1,142 @@
+#!/usr/bin/env perl
+
+### update_gene_names
+
+use strict;
+use warnings;
+use Try::Tiny;
+use Data::Dumper;
+use Sys::Hostname;
+
+$Data::Dumper::Terse = 1;
+# $0 = 'otterlace';     # Needed to access restricted test datasets
+
+use Bio::Otter::Lace::Defaults;
+use Bio::Vega::ContigLockBroker;
+
+{
+    # Parse gene name + description + gene stable ID input file
+    # Search database for genes, and group by seq_region
+    # Check that new names will not create duplicates
+    # Lock each seq_region and update gene names
+    # Commit or rollback on errors
+    # Unlock seq_region
+
+    my $usage = sub { exec('perldoc', $0) };
+    # This do_getopt() call is needed to parse the otter config files
+    # even if you aren't giving any arguments on the command line.
+    Bio::Otter::Lace::Defaults::do_getopt(
+      'h|help!'       => $usage,
+      ) or $usage->();
+
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name('human');
+
+    my $otter_dba = $ds->get_cached_DBAdaptor;
+
+    my $sth = $otter_dba->dbc->prepare('
+        SELECT ga.value as name
+          , g.description
+          , g.stable_id
+          , g.seq_region_id
+        FROM gene g
+          , gene_attrib ga
+        WHERE g.gene_id = ga.gene_id
+          AND ga.attrib_type_id = 4
+          AND g.is_current = 1
+    ');
+    $sth->execute;
+    my %current_genes;
+    while (my ($old_name, $old_desc, $stable_id, $seq_region_id) = $sth->fetchrow) {
+        $current_genes{$stable_id} = {
+            old_name        => $old_name,
+            old_desc        => $old_desc,
+            stable_id       => $stable_id,
+            seq_region_id   => $seq_region_id,
+        };
+    }
+
+    # Parse gene name input file
+    my @fields = qw{ stable_id vega_biotype seq_region old_name new_name new_desc };
+    my @gene_data;
+    while (<>) {
+        next if /^#/;
+        chomp;
+        my @values = split /\t/, $_;
+        unless (@values == @fields) {
+            die sprintf "Wrong number of fields (got %d, expected %d)\nInvalid line: %s\n",
+                scalar @values, scalar @fields, $_;
+        }
+        my $data = {};
+        for (my $i = 0; $i < @fields; $i++) {
+            $data->{$fields[$i]} = $values[$i];
+        }
+        push @gene_data, $data;
+    }
+    
+    my $cb = Bio::Vega::ContigLockBroker->new(-hostname => hostname);
+    my $author_obj = Bio::Vega::Author->new(-name => $cl->author, -email => $cl->email);
+    
+    foreach my $data (@gene_data) {
+        my $stable_id = $data->{'stable_id'};
+        my $current = $current_genes{$stable_id};
+        unless ($current) {
+            warn "No current gene: ", Dumper($data);
+            next;
+        }
+        # Do we care if the old_name fields don't match?
+        $data->{'old_name'} = $current->{'old_name'};
+        $data->{'old_desc'} = $current->{'old_desc'};
+        
+        if ($data->{'new_name'} eq $data->{'old_name'} and $data->{'new_desc'} eq $data->{'old_desc'}) {
+            warn "Up to date: ", Dumper($data);
+            next;
+        }
+        
+        update_gene_name($cb, $author_obj, $otter_dba, $data);
+    }
+}
+
+sub update_gene_name {
+    my ($cb, $author_obj, $otter_dba, $data) = @_;
+
+    my $gene_aptr = $otter_dba->get_GeneAdaptor;
+    my $gene = $gene_aptr->fetch_by_stable_id($data->{'stable_id'});
+    $gene->get_all_Attributes('name')->[0]->value($data->{'new_name'});
+    $gene->description($data->{'new_desc'});
+    unless (grep {$_->value eq $data->{'old_name'}} @{ $gene->get_all_Attributes('synonym') }) {
+        # warn "Adding synonym '$data->{old_name}'\n";
+        my $syn = Bio::EnsEMBL::Attribute->new(
+            -CODE   => 'synonym',
+            -VALUE  => $data->{'old_name'},
+            );
+        $gene->add_Attributes($syn);
+    }
+    unless ($gene->biotype =~ /pseudo/i) {
+        $gene->status('KNOWN');
+    }
+    
+    try {
+        $cb->lock_by_object($gene, $author_obj);
+    }
+    catch {
+        warn "Cannot lock region for: ", Dumper($data), $_;
+        return;
+    };
+    $gene_aptr->store($gene);
+    $cb->remove_by_object($gene, $author_obj);
+}
+
+
+
+__END__
+
+=head1 NAME - update_gene_names
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
