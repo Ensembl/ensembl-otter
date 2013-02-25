@@ -287,8 +287,11 @@ sub SessionWindow {
 
 sub DESTROY {
     my ($self) = @_;
-    delete $self->{_zmap};
-    delete $self->{_zmap_proxy};
+
+    # this method deliberately left blank; we do not delete _zmap or
+    # _zmap_proxy so as to ensure that the ZMap object is destroyed
+    # *after* all of its views
+
     return;
 }
 
