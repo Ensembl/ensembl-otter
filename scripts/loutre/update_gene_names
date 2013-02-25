@@ -139,6 +139,23 @@ __END__
 
 =head1 NAME - update_gene_names
 
+=head1 EXAMPLE
+
+  grep OTTHUMG hgnc_names_to_fix_2013-02-25.txt | ./update_gene_names \
+    -dataset human > hgnc_names_to_fix_2013-02-25.log 2>&1
+
+=head1 EXAMPLE DATA
+
+The following fields in the tab separated text input file:
+
+  STABLE_ID	VEGA_BIOTYPE	SEQ_REGION	OLD_NAME	NEW_NAME	NEW_DESC
+
+  #Clone based names to update by script
+  OTTHUMG00000151795	protein_coding	2	AC010872.2	TDRD15	tudor domain containing 15
+  OTTHUMG00000129541	protein_coding	2	AC008074.1	LGALSL	lectin, galactoside-binding-like
+  OTTHUMG00000130686	protein_coding	2	C2orf29	CNOT11	CCR4-NOT transcription complex, subunit 11
+  OTTHUMG00000163649	protein_coding	5	C5orf44	TRAPPC13	trafficking protein particle complex 13
+
 =head1 AUTHOR
 
 James Gilbert B<email> jgrg@sanger.ac.uk
