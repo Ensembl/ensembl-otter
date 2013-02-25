@@ -23,17 +23,20 @@ use Bio::Vega::ContigLockBroker;
     # Unlock seq_region
 
     my $usage = sub { exec('perldoc', $0) };
+    my $dataset = undef;
     # This do_getopt() call is needed to parse the otter config files
     # even if you aren't giving any arguments on the command line.
     Bio::Otter::Lace::Defaults::do_getopt(
-      'h|help!'       => $usage,
+      'h|help!'     => $usage,
+      'dataset=s'   => \$dataset,
       ) or $usage->();
+    $usage->() unless $dataset;
 
     # Client communicates with otter HTTP server
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
 
     # DataSet interacts directly with an otter database
-    my $ds = $cl->get_DataSet_by_name('human');
+    my $ds = $cl->get_DataSet_by_name($dataset);
 
     my $otter_dba = $ds->get_cached_DBAdaptor;
 
