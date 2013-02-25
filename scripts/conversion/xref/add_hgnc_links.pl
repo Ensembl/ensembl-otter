@@ -28,15 +28,13 @@ General options:
 
 Specific options:
 
-    -hgncfixfile=FILE                   read HGNC details from file
+    -hgncfixfile=FILE                   read HGNC details from file (optional, to download is default)
 
 =head1 DESCRIPTION
 
-Parses a file from HGNC and adds xrefs for any new HGNC names. Reports on differences in
+Downloads a file from HGNC (or reuses an existing one) and adds xrefs for any new HGNC names. Reports on differences in
 (i) stable IDs used by HGNC that are not in Vega
-(ii) names of protein coding genes that are out of sync between us and HGNC. Vega names that are old clone based
-ones can be programatically updated in Vega and loutre (hgnc_names_to_fix.txt), more complex cases names should
-be referred to Jane (hgnc_links_to_review.txt)
+(ii) names of protein coding genes that are out of sync between us and HGNC - send to anacode for fixing (hgnc_names_to_fix.txt).
 (iii) Where the name mismatch is accompanied by a biotype difference (ie where HGNC think the stable ID is not
 protein coding genes then these are reported seperately (hgnc_links_to_review.txt)
 
@@ -68,6 +66,7 @@ BEGIN {
 use Getopt::Long;
 use Pod::Usage;
 use Bio::EnsEMBL::Utils::ConversionSupport;
+use POSIX qw(strftime);
 use LWP::UserAgent;
 use Storable;
 use Data::Dumper;
@@ -91,8 +90,9 @@ if ($support->param('help') or $support->error) {
   pod2usage(1);
 }
 
-$support->param('anacode_file',($support->param('logpath').'hgnc_names_to_fix.txt')) unless $support->param('anacode_file');
-$support->param('jel_file',($support->param('logpath').'hgnc_links_to_review.txt')) unless $support->param('jel_file');
+my $date = strftime "%Y-%m-%d", localtime;
+$support->param('anacode_file',($support->param('logpath')."/hgnc_names_to_fix_${date}.txt")) unless $support->param('anacode_file');
+$support->param('jel_file',($support->param('logpath')."/hgnc_links_to_review_${date}.txt")) unless $support->param('jel_file');
 
 $support->confirm_params;
 $support->init_log;
@@ -144,7 +144,7 @@ if ($support->param('prune') and $support->user_proceed('Would you really like t
   $dbh->do(qq(INSERT INTO object_xref SELECT * FROM backup_uhgncl_object_xref));
 }
 
-my (@potential_names_manual,@potential_names_script,@potential_biotype_mismatches,@ignored_new_names,@hgnc_errors);
+my (@potential_names_script_2,@potential_names_script,@potential_biotype_mismatches,@ignored_new_names,@hgnc_errors);
 my $add_c = 0;
 foreach my $gsi (keys %$records) {
   my $gene = $ga->fetch_by_stable_id($gsi);
@@ -256,7 +256,7 @@ foreach my $gsi (keys %$records) {
       }
       else {
         $support->log_verbose("Consider this name ($new_hgnc_name) for an update\n",1);
-        push @potential_names_manual, [$gsi,$biotype,$sr,$display_name,$new_hgnc_name,$desc];
+        push @potential_names_script_2, [$gsi,$biotype,$sr,$display_name,$new_hgnc_name,$desc];
       }
 
       #look for other genes that share the same name and are on non-reference slices, ie should have their names updated as well
@@ -273,7 +273,7 @@ foreach my $gsi (keys %$records) {
             $support->log_verbose("Consider this other gene ($other_gsi on $sr) for an update to $new_hgnc_name\n",1);
             my $rec = [$other_gsi,$biotype,$sr,$display_name,$new_hgnc_name,$desc];
             if ($manual) {
-              push @potential_names_manual,$rec;
+              push @potential_names_script_2,$rec;
             }
             else {
               push @potential_names_script,$rec;
@@ -313,22 +313,24 @@ foreach my $rec (sort { $a->[3] <=> $b->[3] } @potential_biotype_mismatches) {
   print $jel_fh sprintf("%s\t%s\t%s\t%s\t%s\t%s\t%s\n",$rec->[0], $rec->[1], $rec->[2], $rec->[3], $rec->[4], $rec->[5], $rec->[6]);
 }
 
-my $c = scalar(@potential_names_manual);
-$support->log("\nNames to look at manually ($c):\n\n");
-$support->log(sprintf("%-25s%-30s%-20s%-20s%-20s%-20s\n", qw(STABLE_ID VEGA_BIOTYPE SEQ_REGION OLD_NAME NEW_NAME NEW_DESC)));
-print $jel_fh sprintf("\n%s\t%s\t%s\t%s\t%s\t%s\n",qw(STABLE_ID VEGA_BIOTYPE SEQ_REGION OLD_NAME NEW_NAME NEW_DESC));
-foreach my $rec (sort { $a->[2] <=> $b->[2] } @potential_names_manual) {
-  $support->log(sprintf("%-25s%-30s%-20s%-20s%-20s%-20s\n", $rec->[0], $rec->[1], $rec->[2], $rec->[3], $rec->[4], $rec->[5]));
-  print $jel_fh sprintf("%s\t%s\t%s\t%s\t%s\t%s\n",$rec->[0], $rec->[1], $rec->[2], $rec->[3], $rec->[4], $rec->[5]);
-}
-
 my $c = scalar(@potential_names_script);
-$support->log("\nNames to update by script ($c):\n\n");
+$support->log("\nClone based names to update by script ($c):\n\n");
 $support->log(sprintf("%-25s%-30s%-20s%-20s%-20s%-20s\n", qw(STABLE_ID VEGA_BIOTYPE SEQ_REGION OLD_NAME NEW_NAME NEW_DESC)));
 print $anacode_fh sprintf("%s\t%s\t%s\t%s\t%s\t%s\n", qw(STABLE_ID VEGA_BIOTYPE SEQ_REGION OLD_NAME NEW_NAME NEW_DESC));
+print $anacode_fh sprintf("\n#Clone based names to update by script\n");
 foreach my $rec (sort { $a->[2] <=> $b->[2] } @potential_names_script) {
   $support->log(sprintf("%-25s%-30s%-20s%-20s%-20s%-20s\n", $rec->[0], $rec->[1], $rec->[2], $rec->[3], $rec->[4], $rec->[5]));
   print $anacode_fh sprintf("%s\t%s\t%s\t%s\t%s\t%s\n", $rec->[0], $rec->[1], $rec->[2], $rec->[3], $rec->[4], $rec->[5]);
+}
+
+my $c = scalar(@potential_names_script_2);
+$support->log("\nOther names to update by script ($c):\n\n");
+$support->log(sprintf("%-25s%-30s%-20s%-20s%-20s%-20s\n", qw(STABLE_ID VEGA_BIOTYPE SEQ_REGION OLD_NAME NEW_NAME NEW_DESC)));
+print $anacode_fh sprintf("\n#Other names to update by script\n");
+#print $anacode_fh sprintf("\n%s\t%s\t%s\t%s\t%s\t%s\n",qw(STABLE_ID VEGA_BIOTYPE SEQ_REGION OLD_NAME NEW_NAME NEW_DESC));
+foreach my $rec (sort { $a->[2] <=> $b->[2] } @potential_names_script_2) {
+  $support->log(sprintf("%-25s%-30s%-20s%-20s%-20s%-20s\n", $rec->[0], $rec->[1], $rec->[2], $rec->[3], $rec->[4], $rec->[5]));
+  print $anacode_fh sprintf("%s\t%s\t%s\t%s\t%s\t%s\n",$rec->[0], $rec->[1], $rec->[2], $rec->[3], $rec->[4], $rec->[5]);
 }
 
 $support->finish_log;
