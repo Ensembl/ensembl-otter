@@ -630,18 +630,16 @@ foreach my $name (@{$chr_names_wanted}) {
       next GENE;
     }
 
+    if($support->param('skip_genes')) {
+      next if grep { $lgene->stable_id eq $_ } @{$genes_to_skip};
+    }
     #filter on stable id
     if ($support->param('add_genes')) {
       unless (grep { $lgene->stable_id eq $_ } @{$genes_to_dump}) {
         next GENE;
       }
       $support->log("Doing specific dump of gene $lgsi\n",2);
-    }
-    if($support->param('skip_genes')) {
-      next if grep { $lgene->stable_id eq $_ } @{$genes_to_skip};
-    }
-
-    else {
+    } else {
       #filter on source	
       if ($support->param('filter_prefix')) {
         if (grep { $lgene->source eq $_} $support->param('filter_prefix')) {
