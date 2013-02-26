@@ -285,6 +285,12 @@ sub SessionWindow {
     return $SessionWindow;
 }
 
+sub id {
+    my ($self) = @_;
+    my $id = $self->xremote->window_id;
+    return $id;
+}
+
 sub DESTROY {
     my ($self) = @_;
 

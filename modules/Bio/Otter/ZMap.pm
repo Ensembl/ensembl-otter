@@ -245,6 +245,24 @@ sub new_view {
     return $view;
 }
 
+my $close_view_xml_format = <<'FORMAT'
+<zmap>
+   <request action="close_view">
+     <client xwid="%s" />
+   </request>
+</zmap>
+FORMAT
+    ;
+
+sub close_view {
+    my ($self, $view) = @_;
+    my $close_view_xml =
+        sprintf $close_view_xml_format, $view->id;
+    my $window_xremote = $self->{'_xremote_client_window'};
+    $window_xremote->send_commands($close_view_xml);
+    return;
+}
+
 sub xremote_client_new {
     my ($self, $id) = @_;
     my $xremote =
