@@ -102,13 +102,6 @@ sub make_map_value {
 
 ############## getters: ###########################
 
-sub data_dir {
-    my ($self) = @_;
-    warn "old data_dir attrib ignored"
-      if $self->{'data_dir'}; # unused feature, removed during refactor
-    return Bio::Otter::Server::Config->data_dir;
-}
-
 sub dataset_name {
     my ($self) = @_;
     my $dataset_name = $self->require_argument('dataset');
