@@ -293,11 +293,9 @@ sub id {
 
 sub DESTROY {
     my ($self) = @_;
-
-    # this method deliberately left blank; we do not delete _zmap or
-    # _zmap_proxy so as to ensure that the ZMap object is destroyed
-    # *after* all of its views
-
+    # we do not delete _zmap or _zmap_proxy so as to ensure that the
+    # ZMap object is destroyed *after* all of its views
+    $self->zmap->close_view($self);
     return;
 }
 
