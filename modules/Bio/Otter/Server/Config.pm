@@ -110,12 +110,14 @@ sub _dev_config {
     my $developer = $pkg->mid_url_args->{'~'};
     return () unless defined $developer;
 
-    my $dev_home = (getpwnam($developer))[7];
+    my ($dev_home, $dev_group) = (getpwnam($developer))[7, 3];
     die "Developer config for $developer: unknown user" unless defined $dev_home;
-    my ($gname, $gmemb) = (getgrgid( $( ))[0, 3];
+
+    my $ok_group = $(;
+    my ($gname, $gmemb) = (getgrgid( $ok_group ))[0, 3];
     my @ok_user = split / /, $gmemb;
     die "Developer config for $developer: not a member of group $gname"
-      unless grep { $developer eq $_ } @ok_user;
+      unless $dev_group == $ok_group || grep { $developer eq $_ } @ok_user;
 
     my $dir = "$dev_home/.otter/server-config";
     die "Developer config $dir: not a readable directory"
