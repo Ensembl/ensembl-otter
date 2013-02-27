@@ -101,6 +101,8 @@ sub test {
         internal_user => $server->internal_user };
     $out{'B:O:Server::Config'} =
       { data_dir => Bio::Otter::Server::Config->data_dir,
+        data_filename => { root => [ Bio::Otter::Server::Config->data_filename('foo') ],
+                           vsn => [ Bio::Otter::Server::Config->data_filename(foo => 1) ] },
         mid_url_args => Bio::Otter::Server::Config->mid_url_args,
         designations => Bio::Otter::Server::Config->designations };
     $out{version} =

@@ -4,6 +4,7 @@ use warnings;
 
 use Bio::Otter::SpeciesDat;
 use Bio::Otter::Version;
+use Try::Tiny;
 
 =head1 NAME
 
@@ -17,10 +18,13 @@ This module contains only class methods.
 
 =head2 data_dir()
 
-Return the Otter Server config directory.
+Return the default Otter Server config directory, as configured with
+the webserver or from some "well known" central place.
+
+This does not allow for per-developer configuration override.  See
+also L</data_filename> which does.
 
 =cut
-
 
 sub data_dir {
     my ($pkg) = @_;
@@ -45,11 +49,6 @@ sub data_dir {
       or die "Unexpected DOCUMENT_ROOT format '$root' from $src";
     $data = join('/', $data, 'data', 'otter');
 
-    # Possible override for testing config
-    if (defined(my $dev_cfg = $pkg->_dev_config)) {
-        ($data, $src) = ($dev_cfg, 'mua_dev');
-    }
-
     die "data_dir $data (near root '$root' from $src): not found"
       unless -d $data;
 
@@ -65,8 +64,8 @@ C<http://server:port/cgi-bin/otter([^/]*)/\d+/\w+>
 This is empty in normal production use, and will be empty if the
 pattern doesn't match (no errors raised).
 
-In DEVEL mode servers it may be used to point L</data_dir> elsewhere.
-CGI escapes are %-decoded and the result is re-tainted.
+In DEVEL mode servers it may be used to point L</data_filename>
+elsewhere.  CGI escapes are %-decoded and the result is re-tainted.
 
 =cut
 
@@ -118,7 +117,85 @@ sub _dev_config {
     die "Developer config for $developer: not a member of group $gname"
       unless grep { $developer eq $_ } @ok_user;
 
-    return "$dev_home/.otter/server-config";
+    my $dir = "$dev_home/.otter/server-config";
+    die "Developer config $dir: not a readable directory"
+      unless -d $dir && -r _;
+
+    return $dir;
+}
+
+
+=head2 data_filename($fn, $add_vsn)
+
+Return the full pathname of Otter Server Config file C<$fn>, prefixed
+with the current major version number if C<$add_vsn> is true.  In list
+context, return also the description of the config source.
+
+This method accepts (via L</mid_url_args> containing a C<~username>
+element) files from a developer's local configuration, to ease the
+process of testing new configuration.
+
+It can return the name of a file which does not exist, or die failing
+to obtain configuration.
+
+=cut
+
+sub data_filename {
+    my ($pkg, $fn, $add_vsn) = @_;
+
+    my $vsn = Bio::Otter::Version->version;
+    $fn =~ s{^/*}{$vsn/} if $add_vsn;
+
+    my $data_dir = $pkg->data_dir;
+    my @out;
+
+    # Possible override for testing config
+    my $dev_cfg = $pkg->_dev_config;
+
+    if (!defined $dev_cfg) {
+        @out = ("$data_dir/$fn", 'default');
+    } elsif (-f "$dev_cfg/species.dat" && -f "$dev_cfg/$vsn/otter_config") {
+        @out = ("$dev_cfg/$fn", 'developer (full)');
+    } else {
+        # We have a partial override, e.g. checkout of a major version
+        # branch.  This is needed for cherry-picking but interferes
+        # with having neat developer config.
+        #
+        # Brush the mess under this small carpet.
+        my ($want_vsn, $vsn_file) = $fn =~ m{^(\d{2,4})/(.+)$};
+        ($want_vsn, $vsn_file) = (root => $fn) unless defined $want_vsn;
+        my ($have_vsn, $cfg_branch) = try { __git_head($dev_cfg) }
+          catch { die "Examining config from $dev_cfg: $_" };
+        if ($have_vsn eq $want_vsn) {
+            @out = ("$dev_cfg/$vsn_file",
+                    "developer ($have_vsn from $cfg_branch)");
+        } else {
+            @out = ("$data_dir/$fn",
+                    "default; developer checkout is $cfg_branch");
+        }
+    }
+    return wantarray ? @out : $out[0];
+}
+
+sub __git_head {
+    my ($dir) = @_;
+    my $head_fn = "$dir/.git/HEAD";
+    open my $fh, '<', $head_fn or die "$!";
+    my $txt = <$fh>;
+    chomp $txt;
+    die "detached HEAD ($txt)" unless $txt =~ m{^ref: (\S+)$};
+    my $branch = $1;
+    my $vsn;
+    if ($branch =~ m{^refs/heads/(root|\d+)$}) {
+        # simple branch checkouts
+        $vsn = $1;
+    } elsif ($branch =~ m{^refs/heads/(?:\w+/)?(root|\d+)-}) {
+        # recognisable developer branch
+        $vsn = $1;
+    } else {
+        die "branch name '$branch' does not tell me (major version|root)";
+    }
+    return ($vsn, $branch);
 }
 
 
@@ -131,7 +208,7 @@ Server config directory.
 
 sub SpeciesDat {
     my ($pkg) = @_;
-    my $fn = $pkg->data_dir . '/species.dat';
+    my $fn = $pkg->data_filename('/species.dat');
     return Bio::Otter::SpeciesDat->new($fn);
 }
 
@@ -153,7 +230,7 @@ This replaces the old version controlled F<dist/conf/track> file.
 
 sub designations {
     my ($pkg) = @_;
-    my $fn = $pkg->data_dir . '/designations.txt';
+    my $fn = $pkg->data_filename('designations.txt');
     return $pkg->_desig($fn);
 }
 
@@ -185,7 +262,7 @@ Otter Server config directory.
 
 sub users_hash {
     my ($pkg) = @_;
-    my $usr_file = $pkg->data_dir . '/users.txt';
+    my $usr_file = $pkg->data_filename('users.txt');
     return $pkg->_read_user_file($usr_file);
 }
 
@@ -223,8 +300,7 @@ current major version.
 sub get_file {
     my ($pkg, $name) = @_;
 
-    my $path = sprintf "%s/%s/%s"
-        , $pkg->data_dir, Bio::Otter::Version->version, $name;
+    my $path = $pkg->data_filename($name, 1);
     open my $fh, '<', $path or die "Can't read '$path' : $!";
     local $/ = undef;
     my $content = <$fh>;
