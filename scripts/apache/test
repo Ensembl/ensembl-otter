@@ -51,7 +51,7 @@ sub require_all {
 
     my %out;
     foreach my $mod (@mods) {
-        if (eval "require $mod;") { ## no critic(BuiltinFunctions::ProhibitStringyEval)
+        if (eval "require $mod;") { ## no critic(BuiltinFunctions::ProhibitStringyEval Anacode::ProhibitEval)
             push @{ $out{loaded} }, $mod;
         } else {
             my $err = $@;
