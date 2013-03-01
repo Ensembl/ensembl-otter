@@ -1,0 +1,125 @@
+#!/usr/bin/env perl
+
+### assembly_similarity_features
+
+use strict;
+use warnings;
+
+use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Lace::PipelineDB;
+
+{
+    my $dataset_name = 'sheep';
+    my @chr_name_list = qw{ 3 11 };
+    my $assembly_suffix = "-31";
+
+    my $usage = sub { exec('perldoc', $0) };
+    # This do_getopt() call is needed to parse the otter config files
+    # even if you aren't giving any arguments on the command line.
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        'dataset=s'     => \$dataset_name,
+        ) or $usage->();
+    $usage->() unless $dataset_name;
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    
+    my $otter_dba = $ds->get_cached_DBAdaptor;
+    my $pipe_dba = Bio::Otter::Lace::PipelineDB::get_pipeline_rw_DBAdaptor($otter_dba);
+    my $ens_dba = Bio::Otter::Lace::SatelliteDB::get_DBAdaptor($otter_dba, 'ensembl_core_db_head');
+    
+    my $ens_ctg_coord_sys_id  = $ens_dba->get_CoordSystemAdaptor->fetch_by_name('contig')->dbID;
+    
+    my $get_asm = $ens_dba->dbc->prepare(q{
+        SELECT a.asm_start
+          , a.asm_end
+          , a.cmp_start
+          , a.cmp_end
+          , a.ori
+          , ctg.length
+          , ctg.name
+        FROM assembly a
+          , seq_region ctg
+        WHERE a.cmp_seq_region_id = ctg.seq_region_id
+          AND ctg.coord_system_id = ?
+          AND a.asm_seq_region_id = ?
+    });
+
+    my $write_similarity_feature = $pipe_dba->dbc->prepare(q{
+        INSERT dna_align_feature (
+                seq_region_id
+              , seq_region_start
+              , seq_region_end
+              , seq_region_strand
+
+              , hit_start
+              , hit_end
+              , hit_strand
+              , hit_name
+
+              , analysis_id
+              , score
+              , perc_ident
+              , cigar_line )
+        VALUES (
+            ?, ?, ?, 1,
+            ?, ?, ?, ?,
+            ?, 100, 100,
+            ?)
+    });
+    
+    my $assembly_analysis_id = $pipe_dba->get_AnalysisAdaptor->fetch_by_logic_name('assembly_contigs')->dbID;
+
+    my $max_length = 0;
+    foreach my $chr_name (@chr_name_list) {
+        my $chr_slice = $ens_dba->get_SliceAdaptor->fetch_by_region('chromosome', $chr_name);
+        $get_asm->execute($ens_ctg_coord_sys_id, $chr_slice->get_seq_region_id);
+        my $pipe_chr_id = $pipe_dba->get_SliceAdaptor->fetch_by_region('chromosome', "chr$chr_name$assembly_suffix")->get_seq_region_id;
+        while (my ($chr_start, $chr_end,
+                   $ctg_start, $ctg_end, $ctg_strand, $ctg_length, $ctg_name) = $get_asm->fetchrow) {
+            if ($ctg_start != 1 or $ctg_end != $ctg_length) {
+                warn "Only part of contig '$ctg_name' used in assembly:\n  ",
+                join("\t", $chr_name, $chr_start, $chr_end, $ctg_start, $ctg_end, $ctg_strand, $ctg_length), "\n";
+            }
+            my $length_on_chr = $chr_end - $chr_start + 1;
+            $write_similarity_feature->execute(
+                $pipe_chr_id, $chr_start, $chr_end,
+                $ctg_start, $ctg_end, $ctg_strand, $ctg_name,
+                $assembly_analysis_id, "${length_on_chr}M"
+                );
+            if ($length_on_chr > $max_length) {
+                $max_length = $length_on_chr;
+            }
+        }
+    }
+    
+    # Update the meta_coord table (or features will not appear!)
+    $pipe_dba->get_MetaCoordContainer->add_feature_type(
+        $pipe_dba->get_CoordSystemAdaptor->fetch_by_name('chromosome'),
+        'dna_align_feature',
+        $max_length,
+        );
+}
+
+
+
+
+__END__
+
+=head1 NAME - assembly_similarity_features
+
+=head1 DESCRIPTION
+
+Script written to make dna_align_features in our rat pipeline database
+which correspond to the assembly contigs in the EnsEMBL rat database.
+
+It is not general, so will need adapting if used on other databases.
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
