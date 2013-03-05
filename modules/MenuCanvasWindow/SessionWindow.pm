@@ -2417,6 +2417,13 @@ sub zmap_view_arg_hash {
 
 sub _zmap {
     my ($self) = @_;
+    my $zmap_factory = $self->LoadColumns || $self;
+    my $zmap_new = $zmap_factory->zmap_new;
+    return $zmap_new;
+}
+
+sub zmap_new {
+    my ($self) = @_;
     my $zmap =
         Bio::Otter::ZMap->new(
             '-tk'       => $self->menu_bar,
