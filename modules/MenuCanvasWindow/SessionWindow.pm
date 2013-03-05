@@ -35,7 +35,10 @@ use Bio::Vega::Transform::Otter::Ace;
 
 use Log::Log4perl;
 
-use base qw{ MenuCanvasWindow };
+use base qw{
+    MenuCanvasWindow
+    Bio::Otter::UI::ZMapSelectMixin
+    };
 
 my $PROT_SCORE = 100;
 my $DNA_SCORE  = 100;
@@ -45,6 +48,8 @@ sub new {
     my ($pkg, $tk, %arg_hash) = @_;
 
     my $self = $pkg->SUPER::new($tk);
+
+    $self->zmap_select_initialize;
 
     $self->populate_menus;
     $self->make_search_panel;
@@ -97,8 +102,7 @@ sub initialize {
     $self->draw_subseq_list;
     $self->populate_clone_menu;
     $self->AceDatabase->zmap_dir_init;
-    $self->{'_zmap'} ||= $self->_zmap;
-    $self->{'_zmap_view'} = $self->_zmap_view;
+    $self->_zmap_view_new($self->{'_zmap'});
     delete $self->{'_zmap'};
     $self->top_window->raise;
 
@@ -569,6 +573,22 @@ sub populate_menus {
                -label          => 'Load column data',
                -command        => sub {$self->show_lcd_dialog()},
     );
+
+    # launch in ZMap
+    $tools_menu->add
+      ('command',
+       -label          => 'Launch in Zmap',
+       -command        => sub { $self->_zmap_view_new($self->zmap_select) },
+       -underline      => 0,
+      );
+
+    # select ZMap
+    $tools_menu->add
+      ('command',
+       -label          => 'Select Zmap',
+       -command        => sub { $self->zmap_select_window },
+       -underline      => 0,
+      );
 
     # Show selected subsequence in ZMap
     my $show_subseq = [ $self, 'show_subseq' ];
@@ -2432,14 +2452,16 @@ sub zmap_new {
     return $zmap;
 }
 
-sub _zmap_view {
-    my ($self) = @_;
-    my $zmap = $self->{'_zmap'};
-    my $zmap_view = $zmap->new_view(
-        %{$self->zmap_view_arg_hash},
-        '-SessionWindow' => $self,
+sub _zmap_view_new {
+    my ($self, $zmap) = @_;
+    $zmap ||= $self->_zmap;
+    delete $self->{'_zmap_view'};
+    $self->{'_zmap_view'} =
+        $zmap->new_view(
+            %{$self->zmap_view_arg_hash},
+            '-SessionWindow' => $self,
         );
-    return $zmap_view;
+    return;
 }
 
 sub zircon_zmap_view_features_loaded {
@@ -2658,6 +2680,8 @@ sub DESTROY {
     my ($self) = @_;
 
     warn "Destroying SessionWindow for ", $self->ace_path, "\n";
+
+    $self->zmap_select_destroy;
 
     delete $self->{'_zmap_view'};
     delete $self->{'_AceDatabase'};
