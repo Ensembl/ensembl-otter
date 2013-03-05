@@ -334,12 +334,7 @@ sub load_filters {
         }
     } else {
         # we need to set up and show a SessionWindow
-        my $zmap =
-            $self->zmap_select ||
-            Bio::Otter::ZMap->new(
-                '-tk'       => $self->SpeciesListWindow->menu_bar,
-                '-arg_list' => $self->AceDatabase->DataSet->zmap_arg_list
-            );
+        my $zmap = $self->zmap_select || $self->zmap_new;
         my $SessionWindow =
             MenuCanvasWindow::SessionWindow->new(
                 $self->top->Toplevel, '-zmap' => $zmap);
@@ -357,6 +352,16 @@ sub load_filters {
     $self->reset_progress;
 
     return;
+}
+
+sub zmap_new {
+    my ($self) = @_;
+    my $zmap_new =
+        Bio::Otter::ZMap->new(
+            '-tk'       => $self->SpeciesListWindow->menu_bar,
+            '-arg_list' => $self->AceDatabase->DataSet->zmap_arg_list
+        );
+    return $zmap_new;
 }
 
 sub set_filters_wanted {
