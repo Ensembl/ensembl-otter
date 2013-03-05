@@ -2435,13 +2435,6 @@ sub zmap_view_arg_hash {
 
 ### BEGIN: ZMap control interface
 
-sub _zmap {
-    my ($self) = @_;
-    my $zmap_factory = $self->LoadColumns || $self;
-    my $zmap_new = $zmap_factory->zmap_new;
-    return $zmap_new;
-}
-
 sub zmap_new {
     my ($self) = @_;
     my $zmap =
@@ -2454,7 +2447,7 @@ sub zmap_new {
 
 sub _zmap_view_new {
     my ($self, $zmap) = @_;
-    $zmap ||= $self->_zmap;
+    $zmap ||= (($self->LoadColumns || $self)->zmap_new);
     delete $self->{'_zmap_view'};
     $self->{'_zmap_view'} =
         $zmap->new_view(
