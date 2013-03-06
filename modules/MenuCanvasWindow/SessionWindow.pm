@@ -26,31 +26,38 @@ use EditWindow::Clone;
 use EditWindow::LocusName;
 use MenuCanvasWindow::TranscriptWindow;
 use MenuCanvasWindow::GenomicFeaturesWindow;
-use MenuCanvasWindow::ZMapSeqChooser;
 use Text::Wrap qw{ wrap };
 
 use Bio::Otter::Lace::Client;
+use Bio::Otter::ZMap;
 use Bio::Otter::ZMap::XML;
 use Bio::Vega::Transform::Otter::Ace;
 
 use Log::Log4perl;
 
-use base qw{ MenuCanvasWindow };
+use base qw{
+    MenuCanvasWindow
+    Bio::Otter::UI::ZMapSelectMixin
+    };
 
 my $PROT_SCORE = 100;
 my $DNA_SCORE  = 100;
 my $DNAHSP     = 120;
 
 sub new {
-    my ($pkg, $tk) = @_;
+    my ($pkg, $tk, %arg_hash) = @_;
 
     my $self = $pkg->SUPER::new($tk);
+
+    $self->zmap_select_initialize;
 
     $self->populate_menus;
     $self->make_search_panel;
     $self->bind_events;
     $self->minimum_scroll_bbox(0,0, 380,200);
     $self->flag_db_edits(1);
+
+    $self->{'_zmap'} = $arg_hash{'-zmap'};
 
     return $self;
 }
@@ -95,7 +102,8 @@ sub initialize {
     $self->draw_subseq_list;
     $self->populate_clone_menu;
     $self->AceDatabase->zmap_dir_init;
-    $self->launch_zmap;
+    $self->_zmap_view_new($self->{'_zmap'});
+    delete $self->{'_zmap'};
     $self->top_window->raise;
 
     return;
@@ -507,24 +515,6 @@ sub populate_menus {
 
     my $tools_menu = $self->make_menu("Tools");
 
-    # Launch Zmap
-    my $zmap_launch_command = sub { $self->launch_zmap };
-    $tools_menu->add('command',
-               -label          => 'Launch ZMap',
-               -command        => $zmap_launch_command,
-               -accelerator    => 'Ctrl+Z',
-               -underline      => 7,
-               );
-    $top->bind('<Control-z>', $zmap_launch_command);
-    $top->bind('<Control-Z>', $zmap_launch_command);
-
-    $zmap_launch_command = sub { $self->zmap->launch_in_a_zmap };
-    $tools_menu->add('command',
-               -label          => 'Launch In A ZMap',
-               -command        => $zmap_launch_command,
-               -underline      => 7,
-               );
-
     # Genomic Features editing window
     my $gf_command = sub { $self->launch_GenomicFeaturesWindow };
     $tools_menu->add('command' ,
@@ -583,6 +573,22 @@ sub populate_menus {
                -label          => 'Load column data',
                -command        => sub {$self->show_lcd_dialog()},
     );
+
+    # launch in ZMap
+    $tools_menu->add
+      ('command',
+       -label          => 'Launch in Zmap',
+       -command        => sub { $self->_zmap_view_new($self->zmap_select) },
+       -underline      => 0,
+      );
+
+    # select ZMap
+    $tools_menu->add
+      ('command',
+       -label          => 'Select Zmap',
+       -command        => sub { $self->zmap_select_window },
+       -underline      => 0,
+      );
 
     # Show selected subsequence in ZMap
     my $show_subseq = [ $self, 'show_subseq' ];
@@ -2401,30 +2407,54 @@ sub update_window_title_unsaved_flag {
     return;
 }
 
-sub launch_zmap {
+sub zmap_arg_list {
     my ($self) = @_;
-    delete $self->{'zmap'};
-    my $conf_dir = $self->AceDatabase->zmap_dir;
     my $arg_list =
-        $self->AceDatabase->DataSet->config_value_list(
-            'zmap_config', 'arguments');
-    my $zmap = 
-        $self->_zmap_create(
-            '-conf_dir' => $conf_dir,
-            '-arg_list' => $arg_list,
-        );
-    $self->{'zmap'} = $zmap;
-    return;
+        $self->AceDatabase->DataSet->zmap_arg_list;
+    return $arg_list;
+}
+
+sub zmap_view_arg_hash {
+    my ($self) = @_;
+    my $config_file = sprintf "%s/ZMap", $self->AceDatabase->zmap_dir;
+    my $slice = $self->AceDatabase->smart_slice;
+    my $sequence = $slice->ssname,
+    my $start    = $slice->start;
+    my $end      = $slice->end;
+    my $name = sprintf "%s:%d-%d", $sequence, $start, $end;
+    my $hash = {
+        '-name'        => $name,
+        '-sequence'    => $sequence,
+        '-start'       => $start,
+        '-end'         => $end,
+        '-config_file' => $config_file,
+    };
+    return $hash;
 }
 
 
 ### BEGIN: ZMap control interface
 
-
-sub _zmap_create {
-    my ($self, @args) = @_;
-    my $zmap = MenuCanvasWindow::ZMapSeqChooser->new($self, @args);
+sub zmap_new {
+    my ($self) = @_;
+    my $zmap =
+        Bio::Otter::ZMap->new(
+            '-tk'       => $self->menu_bar,
+            '-arg_list' => $self->zmap_arg_list,
+        );
     return $zmap;
+}
+
+sub _zmap_view_new {
+    my ($self, $zmap) = @_;
+    $zmap ||= (($self->LoadColumns || $self)->zmap_new);
+    delete $self->{'_zmap_view'};
+    $self->{'_zmap_view'} =
+        $zmap->new_view(
+            %{$self->zmap_view_arg_hash},
+            '-SessionWindow' => $self,
+        );
+    return;
 }
 
 sub zircon_zmap_view_features_loaded {
@@ -2632,8 +2662,8 @@ sub zircon_zmap_view_multiple_select {
 
 sub zmap {
     my ($self) = @_;
-    my $zmap = $self->{'zmap'};
-    return $zmap;
+    my $zmap_view = $self->{'_zmap_view'};
+    return $zmap_view;
 }
 
 ### END: ZMap control interface
@@ -2644,7 +2674,9 @@ sub DESTROY {
 
     warn "Destroying SessionWindow for ", $self->ace_path, "\n";
 
-    delete $self->{'zmap'};
+    $self->zmap_select_destroy;
+
+    delete $self->{'_zmap_view'};
     delete $self->{'_AceDatabase'};
 
     return;
