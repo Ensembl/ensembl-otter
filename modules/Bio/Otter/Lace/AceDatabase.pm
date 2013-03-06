@@ -1163,7 +1163,8 @@ sub DESTROY {
     my $client = $self->Client;
     try {
         if ($self->ace_server_registered) {
-            $self->ace_server->kill_server;
+            # $self->ace_server->kill_server; # this may hang...
+            $self->kill_ace_server;           # ...so do this instead
         }
         if ($client) {
             $self->unlock_otter_slice() if $self->write_access;
@@ -1178,6 +1179,21 @@ sub DESTROY {
         $callback->();
     }
 
+    return;
+}
+
+#  This is basically $self->ace_server->kill_server except that it
+#  does not call waitpid to wait for the Ace server process to exit.
+#  This is necessary to prevent lockups when closing Otter sessions.
+
+sub kill_ace_server {
+    my( $self ) = @_;
+    my $ace_server = $self->ace_server;
+    my $ace_handle = $ace_server->ace_handle;
+    $ace_handle->raw_query('shutdown') if $ace_handle;
+    $ace_server->disconnect_client;
+    $ace_server->forget_port;
+    $ace_server->server_pid(undef);
     return;
 }
 

@@ -10,15 +10,21 @@ use Scalar::Util 'weaken';
 use Try::Tiny;
 
 use Tk::HListplusplus;
+use Tk::Toplevel;
 use Tk::Checkbutton;
 use Tk::LabFrame;
 use Tk::Balloon;
 
 use Bio::Otter::Lace::Client;
+use Bio::Otter::ZMap;
+
 use MenuCanvasWindow::SessionWindow;
 use Hum::Sort 'ace_sort';
 
-use base 'EditWindow';
+use base qw(
+    EditWindow
+    Bio::Otter::UI::ZMapSelectMixin
+    );
 
 my %STATE_COLORS = (
     default => 'gold',
@@ -38,6 +44,8 @@ my $_sort_methods = {
 
 sub initialize {
     my ($self) = @_;
+
+    $self->zmap_select_initialize;
 
     my $species = $self->species;
     $self->AceDatabase->DB;
@@ -165,6 +173,11 @@ sub initialize {
         -command => sub { $self->load_filters },
         )->pack(-side => 'left', -expand => 0);
 
+    $control_frame->Button(
+        -text => 'Select ZMap',
+        -command => sub { $self->zmap_select_window },
+        )->pack(-side => 'left', -expand => 0);
+
     # The user can press the Cancel button either before the AceDatabase is made
     # (in which case we destroy ourselves) or during an edit session (in which
     # case we just withdraw the window).
@@ -245,6 +258,8 @@ sub label_text {
 sub withdraw_or_destroy {
     my ($self) = @_;
 
+    $self->zmap_select_destroy;
+
     if ($self->init_flag) {
         # Destroy ourselves
         $self->AceDatabase->error_flag(0);
@@ -319,7 +334,10 @@ sub load_filters {
         }
     } else {
         # we need to set up and show a SessionWindow
-        my $SessionWindow = MenuCanvasWindow::SessionWindow->new( $self->top->Toplevel );
+        my $zmap = $self->zmap_select || $self->zmap_new;
+        my $SessionWindow =
+            MenuCanvasWindow::SessionWindow->new(
+                $self->top->Toplevel, '-zmap' => $zmap);
 
         $self->SessionWindow($SessionWindow);
         $SessionWindow->AceDatabase($self->AceDatabase);
@@ -330,9 +348,20 @@ sub load_filters {
 
     $top->Unbusy;
     $top->withdraw;
+    $self->zmap_select_destroy;
     $self->reset_progress;
 
     return;
+}
+
+sub zmap_new {
+    my ($self) = @_;
+    my $zmap_new =
+        Bio::Otter::ZMap->new(
+            '-tk'       => $self->SpeciesListWindow->menu_bar,
+            '-arg_list' => $self->AceDatabase->DataSet->zmap_arg_list
+        );
+    return $zmap_new;
 }
 
 sub set_filters_wanted {
@@ -565,6 +594,8 @@ sub SpeciesListWindow {
 
 sub DESTROY {
     my ($self) = @_;
+
+    $self->zmap_select_destroy;
 
     warn "Destroying LoadColumns\n";
     if (my $sn = $self->SequenceNotes) {

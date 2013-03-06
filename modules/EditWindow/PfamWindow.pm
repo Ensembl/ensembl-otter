@@ -267,7 +267,7 @@ sub initialize {
                     return 1;
                 } elsif (defined $pid) {
                     my @command = ("belvu", $alignments->{$domain});
-                    # DUP: MenuCanvasWindow::ZMapSeqChooser::_launchZMap
+                    # DUP: Bio::Otter::Zmap::_launchZMap()
                     { exec(@command) };
                     warn "Failed to exec '@command': $!";
                     close STDERR; # _exit does not flush
