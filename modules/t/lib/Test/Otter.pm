@@ -2,14 +2,14 @@ package Test::Otter;
 use strict;
 use warnings;
 
-=haed1 NAME
+=head1 NAME
 
 Test::Otter - test setup boilerplate for ensembl-otter
 
 =head1 SYNOPSIS
 
  # do something to ensure ensembl-otter/modules/ is on @INC
- 
+
  # don't need to mess with FindBin or use lib
  use t::lib::Test::Otter;
 
