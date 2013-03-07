@@ -40,14 +40,23 @@ sub species_prefix {
     return $mc->get_species_prefix;
 }
 
-sub type_for_id {
-    my ($self, $stable_id) = @_;
+sub type_pattern {
+    my $self = shift;
+
+    my $type_pattern = $self->{_type_pattern};
+    return $type_pattern if $type_pattern;
 
     my $prefix_primary = $self->primary_prefix || '\w{3}';
     my $prefix_species = $self->species_prefix || '\w{0,6}'; # this seems generous for otter
-    my $qname_pattern = qr(^${prefix_primary}${prefix_species}([TPGE])\d+)i;
+    $type_pattern = qr(^${prefix_primary}${prefix_species}([TPGE])\d+)i;
 
-    my ($typeletter) = uc($stable_id) =~ $qname_pattern;
+    return $self->{_type_pattern} = $type_pattern;
+}
+
+sub type_for_id {
+    my ($self, $stable_id) = @_;
+
+    my ($typeletter) = uc($stable_id) =~ $self->type_pattern;
     return unless $typeletter;
 
     return $TYPE_MAP{$typeletter};
