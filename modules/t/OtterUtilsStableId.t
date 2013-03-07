@@ -24,14 +24,31 @@ my $sid = new_ok($module => [ $dataset->otter_dba ]);
 is($sid->primary_prefix, 'OTT', 'primary prefix for human');
 is($sid->species_prefix, 'HUM', 'species prefix for human');
 
-is($sid->type_for_id('OTTHUMT00000010323'), 'Transcript',  'OTTHUMT... is transcript');
-is($sid->type_for_id('OTTHUMG00000003645'), 'Gene',        'OTTHUMG... is gene');
-is($sid->type_for_id('OTTHUMP00000000234'), 'Translation', 'OTTHUMP... is translation');
-is($sid->type_for_id('OTTHUME00000000012'), 'Exon',        'OTTHUME... is exon');
+ott_tests("with dataset", $sid);
+
+is($sid->type_for_id('OTTMUST00000010323'), undef, 'OTTMUST... is undef');
+is($sid->type_for_id('ENSHUMG00000012345'), undef, 'ENSHUMG... is undef');
 
 my $sid_no_ds = new_ok($module);
 
+ott_tests("no dataset", $sid_no_ds);
+
+is($sid_no_ds->type_for_id('OTTMUST00000010323'), 'Transcript', 'OTTMUST... is transcript');
+is($sid_no_ds->type_for_id('ENSHUMG00000012345'), 'Gene',       'ENSHUMG... is gene');
+
 done_testing;
+
+sub ott_tests {
+    my ($name, $stabid) = @_;
+    subtest "OTT: $name" => sub {
+        is($stabid->type_for_id('OTTHUMT00000010323'), 'Transcript',  'OTTHUMT... is transcript');
+        is($stabid->type_for_id('OTTHUMG00000003645'), 'Gene',        'OTTHUMG... is gene');
+        is($stabid->type_for_id('OTTHUMP00000000234'), 'Translation', 'OTTHUMP... is translation');
+        is($stabid->type_for_id('OTTHUME00000000012'), 'Exon',        'OTTHUME... is exon');
+        is($stabid->type_for_id('OTTHUMA00000000012'), undef,         'OTTHUMA... is undef');
+    };
+    return;
+}
 
 1;
 
