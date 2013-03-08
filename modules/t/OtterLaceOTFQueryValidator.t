@@ -25,8 +25,8 @@ BEGIN {
 critic_module_ok($module);
 
 # FIXME: copy-and-paste from OtterLaceOnTheFly.t
-my $tmp_dir = File::Temp->newdir('OtterLaceOTFQueryValidator.t.XXXXXX');
-my $at_cache = setup_accession_type_cache($tmp_dir->dirname);
+my $_tmp_dir = File::Temp->newdir('OtterLaceOTFQueryValidator.t.XXXXXX');
+my $_at_cache = setup_accession_type_cache($_tmp_dir->dirname);
 my $problem_report_cb = sub {
     my ($msgs) = @_;
     map { diag("QV ", $_, ": ", $msgs->{$_}) if $msgs->{$_} } keys %$msgs;
@@ -34,7 +34,7 @@ my $problem_report_cb = sub {
 my $long_query_cb = sub { diag("QV long q: ", shift, "(", shift, ")"); };
 
 my $qv = $module->new(
-    accession_type_cache => $at_cache,
+    accession_type_cache => $_at_cache,
     problem_report_cb    => $problem_report_cb,
     long_query_cb        => $long_query_cb,
     accessions           => [ qw( AL542381.3 ERS000123 ) ],
