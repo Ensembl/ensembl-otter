@@ -90,14 +90,15 @@ sub get_sequencesets {
 
         # mapping between subregions and chromosomes:
 
-    my $sth = $odba->dbc()->prepare($select_mapping_sql);
-    $sth->execute();
+    my $select_mapping_sth = $odba->dbc()->prepare($select_mapping_sql);
+    $select_mapping_sth->execute();
 
     my %sub_contig_count = ();
     my %chr_2_sub = ();
     my %sub_contigs = ();
     my %sub_hidden = ();
-    while( my ($sub_name, $chr_name, $cnt, $contig_list, $sub_hidden) = $sth->fetchrow() ) {
+    while( my ($sub_name, $chr_name, $cnt, $contig_list, $sub_hidden) =
+           $select_mapping_sth->fetchrow() ) {
         if(!defined($sub_contig_count{$sub_name})) { # this is the first time we see it
             $sub_contig_count{$sub_name} = $cnt;
             $sub_contigs{$sub_name} = $contig_list; # just as comma-separated list
@@ -142,10 +143,10 @@ XML
 
         # An attempt at finer, by-author's-name control over visibility/writability of sequence sets
         #
-        my $sth=$odba->dbc()->prepare($select_access_sql);
-        $sth->execute($author, $chr_name);
-        if (my($access) = $sth->fetchrow) {  # we're only expecting max one value
-                                             # due to schema restrictions
+        my $select_access_sth=$odba->dbc()->prepare($select_access_sql);
+        $select_access_sth->execute($author, $chr_name);
+        if (my($access) = $select_access_sth->fetchrow) {
+            # we're only expecting max one value due to schema restrictions
             $write_access = ($access=~/W/) || 0;
             $hidden       = ($access!~/R/) || 0;
         }
