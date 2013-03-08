@@ -8,6 +8,8 @@ use warnings;
 
 use Readonly;
 
+use Bio::Otter::Utils::StableId;
+
 Readonly my $ENSEMBL_METAKEY => 'ensembl_core_db_head';
 
 sub new {
@@ -29,7 +31,7 @@ sub stable_id_from_otter_id {
     my $external_db = undef;    # all external DBs
 
     my $dba = $self->ensembl_dba;
-    my $object_type = 'Transcript'; # FIXME
+    my $object_type = $self->_stable_id_utils->type_for_id($otter_id);
     my $object_adaptor = $dba->get_adaptor($object_type);
 
     my $objects = $object_adaptor->fetch_all_by_external_name($otter_id, $external_db);
@@ -50,6 +52,13 @@ sub _dataset {
     ($self->{'_dataset'}) = @args if @args;
     my $_dataset = $self->{'_dataset'};
     return $_dataset;
+}
+
+sub _stable_id_utils {
+    my $self = shift;
+    my $siu = $self->{'_stable_id_utils'};
+    return $siu if $siu;
+    return $self->{'_stable_id_utils'} = Bio::Otter::Utils::StableId->new($self->_dataset->otter_dba);
 }
 
 1;
