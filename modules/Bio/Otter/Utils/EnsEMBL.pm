@@ -32,8 +32,9 @@ sub stable_id_from_otter_id {
 
     my $dba = $self->ensembl_dba;
     my $object_type = $self->_stable_id_utils->type_for_id($otter_id);
-    my $object_adaptor = $dba->get_adaptor($object_type);
+    die "EnsEMBL stable id lookup not supported for exons" if $object_type eq 'Exon';
 
+    my $object_adaptor = $dba->get_adaptor($object_type);
     my $objects = $object_adaptor->fetch_all_by_external_name($otter_id, $external_db);
 
     my %results_by_name;
