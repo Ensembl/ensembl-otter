@@ -22,8 +22,8 @@ use Bio::Otter::Lace::Defaults;
     Bio::Otter::Lace::Defaults::do_getopt(
         'h|help!'       => $usage,
         'dataset=s'     => \$dataset_name,
-    'attrib=s'      => \$attrib_pattern,
-    'code:s'        => \$attrib_code,
+        'attrib=s'      => \$attrib_pattern,
+        'code:s'        => \$attrib_code,
         'quiet!'        => \$quiet,
         'total!'        => \$total,
         ) or $usage->();
@@ -31,7 +31,7 @@ use Bio::Otter::Lace::Defaults;
 
     # Client communicates with otter HTTP server
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
-    
+
     # DataSet interacts directly with an otter database
     my $ds = $cl->get_DataSet_by_name($dataset_name);
     my $otter_dba = $ds->get_cached_DBAdaptor;
@@ -50,7 +50,7 @@ use Bio::Otter::Lace::Defaults;
                 transcript           t
            JOIN transcript_attrib    ta  USING (transcript_id)
            JOIN gene                 g   ON t.gene_id = g.gene_id
-           JOIN gene_attrib          gan ON     g.gene_id = gan.gene_id 
+           JOIN gene_attrib          gan ON     g.gene_id = gan.gene_id
                                     AND gan.attrib_type_id = (
                                         SELECT attrib_type_id
                                         FROM   attrib_type
@@ -81,15 +81,15 @@ use Bio::Otter::Lace::Defaults;
         "Chromosome", "Gene name", "stable id",
         "Transcript name", "stable ID",
         "Attribute" ) unless $quiet;
-    
-    while (my ($gid, $gene_sid, $gene_name, 
+
+    while (my ($gid, $gene_sid, $gene_name,
            $tid, $transcript_sid, $transcript_name,
            $attrib_value, $seq_region_name) = $list_transcripts->fetchrow()) {
         ++$count;
         printf( $out_format,
                 $seq_region_name, $gene_name, $gene_sid,
-        $transcript_name, $transcript_sid,
-        $attrib_value,
+                $transcript_name, $transcript_sid,
+                $attrib_value,
             ) unless $quiet;
     }
     printf "Total: %d\n", $count if $total;
@@ -104,12 +104,12 @@ __END__
 
 =head1 SYNOPSIS
 
-list_transcripts_by_attribute -dataset <DATASET NAME> -attrib <ATTRIB PATTERN> 
+list_transcripts_by_attribute -dataset <DATASET NAME> -attrib <ATTRIB PATTERN>
                               [-code <ATTRIB CODE>] [-quiet] [-total]
 
 =head1 DESCRIPTION
 
-Checks for current transcripts having the specified atttribute value 
+Checks for current transcripts having the specified atttribute value
 in an attribute of the specified code.
 
 The attribute value can contain SQL wildcards.
