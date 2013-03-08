@@ -11,6 +11,8 @@ use warnings;
 
 use Try::Tiny;
 
+use Bio::Otter::Utils::StableId;
+
 # Readonly seems to cause SIGSEGVs at exit, in conjunction with failing eval blocks.
 # This is a shame.  I suspect only arrays and hashes are affected, but all are disabled to be safe.
 # Global 'my' variables IN_CAPS should be Readonly.
@@ -202,22 +204,22 @@ sub find_by_remote_stable_ids {
 }
 
 my $ID_ADAPTOR_FETCHER_BY_TYPE = {
-    'G' => [
+    'Gene' => [
         'gene_stable_id',
         'get_GeneAdaptor',
         'fetch_by_stable_id',
         ],
-    'T' => [
+    'Transcript' => [
         'transcript_stable_id',
         'get_TranscriptAdaptor',
         'fetch_by_stable_id',
     ],
-    'P' => [
+    'Translation' => [
         'translation_stable_id',
         'get_TranscriptAdaptor',
         'fetch_by_translation_stable_id',
     ],
-    'E' => [
+    'Exon' => [
         'exon_stable_id',
         'get_ExonAdaptor',
         'fetch_by_stable_id',
@@ -241,17 +243,14 @@ sub _find_by_remote_stable_ids {
 sub _find_by_stable_ids {
     my ($self, $dba, $qtype_prefix) = @_;
 
-    my $meta_con = bless $dba->get_MetaContainer, 'Bio::Vega::DBSQL::MetaContainer';
-    my $prefix_primary = $meta_con->get_primary_prefix || 'ENS';
-    my $prefix_species = $meta_con->get_species_prefix || '\w{0,6}';
-    my $qname_pattern = qr(^${prefix_primary}${prefix_species}([TPGE])\d+)i;
+    my $stable_id_utils = Bio::Otter::Utils::StableId->new($dba);
 
     foreach my $qname (@{$self->qnames}) {
 
-        my ($typeletter) = uc($qname) =~ $qname_pattern;
-        next unless $typeletter;
+        my $id_type = $stable_id_utils->type_for_id($qname);
+        next unless $id_type;
 
-        my $id_adaptor_fetcher = $ID_ADAPTOR_FETCHER_BY_TYPE->{$typeletter};
+        my $id_adaptor_fetcher = $ID_ADAPTOR_FETCHER_BY_TYPE->{$id_type};
         next unless $id_adaptor_fetcher;
         my ( $id, $adaptor, $fetcher ) = @{$id_adaptor_fetcher};
 
