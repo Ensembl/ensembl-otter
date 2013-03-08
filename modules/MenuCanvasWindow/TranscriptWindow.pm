@@ -678,8 +678,8 @@ sub merge_position_pairs {
     }
 
     my @pairs  = $self->position_pairs;
-    for (my $i = 0; $i < @pos; $i++) {
-        $self->set_position_pair_text($pairs[$i], $pos[$i]);
+    for (my $j = 0; $j < @pos; $j++) {
+        $self->set_position_pair_text($pairs[$j], $pos[$j]);
     }
     if (my $over = @pairs - @pos) {
         $self->trim_position_pairs($over);
@@ -1528,8 +1528,8 @@ sub insert_phrase {
     my $see_i;
     for (my $i = 0; $i < @vocab_lines; $i += 2) {
         my ($a, $b) = @vocab_lines[$i, $i + 1];
-        my $text = $text->get($a, $b);
-        if ($text eq $phrase) {
+        my $subtext = $text->get($a, $b);
+        if ($subtext eq $phrase) {
             $see_i = $a;
             last;
         }
