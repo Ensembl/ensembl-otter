@@ -8,6 +8,7 @@ use strict;
 use Carp;
 use Bio::Otter::Lace::Defaults;
 use Bio::Otter::Server::Config;
+use Bio::Otter::Utils::EnsEMBL;
 
 {
     my $dataset_name = undef;
@@ -16,6 +17,7 @@ use Bio::Otter::Server::Config;
 
     my $total = 0;
     my $quiet = 0;
+    my $ensembl_ids = 0;
 
     my $usage = sub { exec('perldoc', $0) };
     # This do_getopt() call is needed to parse the otter config files
@@ -25,6 +27,7 @@ use Bio::Otter::Server::Config;
         'dataset=s'     => \$dataset_name,
         'attrib=s'      => \$attrib_pattern,
         'code:s'        => \$attrib_code,
+        'ensembl!'      => \$ensembl_ids,
         'quiet!'        => \$quiet,
         'total!'        => \$total,
         ) or $usage->();
@@ -74,22 +77,54 @@ use Bio::Otter::Server::Config;
     $list_transcripts->execute($attrib_pattern, $attrib_code);
 
     my $count = 0;
-    my $out_format = "%s\t%s\t%s\t%s\t%s\t%s\n";
-    printf( $out_format,
-        "Chromosome", "Gene name", "stable id",
-        "Transcript name", "stable ID",
-        "Attribute" ) unless $quiet;
+    my $out_format;
+    my $ensembl_utils;
+
+    unless ($quiet) {
+        if ($ensembl_ids) {
+            $out_format = "%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n";
+            printf(
+                $out_format,
+                "Chromosome", "Gene_name", "OTT_id", "ENS_id", "Transcript_name", "OTT_id", "ENS_id", "Attribute",
+            );
+            $ensembl_utils = Bio::Otter::Utils::EnsEMBL->new($ds);
+        } else {
+            $out_format = "%s\t%s\t%s\t%s\t%s\t%s\n";
+            printf(
+                $out_format,
+                "Chromosome", "Gene_name", "stable_id", "Transcript_name", "stable_id", "Attribute",
+                );
+        }
+    }
 
     while (my ($gid, $gene_sid, $gene_name,
            $tid, $transcript_sid, $transcript_name,
            $attrib_value, $seq_region_name) = $list_transcripts->fetchrow()) {
+
         ++$count;
-        printf( $out_format,
-                $seq_region_name, $gene_name, $gene_sid,
-                $transcript_name, $transcript_sid,
-                $attrib_value,
-            ) unless $quiet;
+
+        unless ($quiet) {
+            if ($ensembl_ids) {
+
+                my $ens_gene_sids =       join(';', $ensembl_utils->stable_ids_from_otter_id($gene_sid)) || '';
+                my $ens_transcript_sids = join(';', $ensembl_utils->stable_ids_from_otter_id($transcript_sid)) || '';
+
+                printf( $out_format,
+                        $seq_region_name, $gene_name, $gene_sid, $ens_gene_sids,
+                        $transcript_name, $transcript_sid, $ens_transcript_sids,
+                        $attrib_value,
+                    );
+            } else {
+                printf( $out_format,
+                        $seq_region_name, $gene_name, $gene_sid,
+                        $transcript_name, $transcript_sid,
+                        $attrib_value,
+                    );
+            }
+        }
+
     }
+
     printf "Total: %d\n", $count if $total;
 
 }
@@ -103,7 +138,7 @@ __END__
 =head1 SYNOPSIS
 
 list_transcripts_by_attribute -dataset <DATASET NAME> -attrib <ATTRIB PATTERN>
-                              [-code <ATTRIB CODE>] [-quiet] [-total]
+                              [-code <ATTRIB CODE>] [-quiet] [-total] [-ensembl]
 
 =head1 DESCRIPTION
 
@@ -112,6 +147,9 @@ in an attribute of the specified code.
 
 The attribute value can contain SQL wildcards.
 The attribute code defaults to 'remark'.
+
+The -ensembl flag looks up EnsEMBL stable ids for genes and transcripts
+and adds these columns to the output.
 
 =head1 EXAMPLE
 
