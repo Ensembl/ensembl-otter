@@ -22,18 +22,18 @@ my $dataset = Bio::Otter::Server::Config->SpeciesDat->dataset('human');
 
 my $ens = new_ok($module => [ $dataset ]);
 
-my $ens_id = $ens->stable_id_from_otter_id('OTTHUMT00000010323');
+my $ens_id = $ens->stable_ids_from_otter_id('OTTHUMT00000010323');
 is($ens_id, 'ENST00000373833', 'EnsEMBL transcript id from Otter transcript id');
 
-$ens_id = $ens->stable_id_from_otter_id('OTTHUMG00000012711');
+$ens_id = $ens->stable_ids_from_otter_id('OTTHUMG00000012711');
 is($ens_id, 'ENSG00000254875', 'EnsEMBL gene id from Otter gene id');
 
-$ens_id = $ens->stable_id_from_otter_id('OTTHUMP00000018803');
+$ens_id = $ens->stable_ids_from_otter_id('OTTHUMP00000018803');
 is($ens_id, 'ENSP00000369497', 'EnsEMBL translation id from Otter translation id');
 
 my ($okay, $error);
 try {
-    $ens_id = $ens->stable_id_from_otter_id('OTTHUME00000230228');
+    $ens_id = $ens->stable_ids_from_otter_id('OTTHUME00000230228');
     $okay = 1;
 } catch {
     $error = $_;

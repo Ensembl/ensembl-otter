@@ -25,7 +25,7 @@ sub ensembl_dba {
     return $self->_dataset->satellite_dba($ENSEMBL_METAKEY);
 }
 
-sub stable_id_from_otter_id {
+sub stable_ids_from_otter_id {
     my ($self, $otter_id) = @_;
 
     my $external_db = undef;    # all external DBs
@@ -43,16 +43,24 @@ sub stable_id_from_otter_id {
     }
 
     my @stable_ids = keys %results_by_name;
-    warn('More than one stable_id found') if scalar(@stable_ids) > 1;
 
-    return $stable_ids[0];
+    if (wantarray) {
+        return @stable_ids;
+    } else {
+        warn('More than one stable_id found') if scalar(@stable_ids) > 1;
+        return $stable_ids[0];
+    }
 }
 
 sub _dataset {
     my ($self, @args) = @_;
-    ($self->{'_dataset'}) = @args if @args;
-    my $_dataset = $self->{'_dataset'};
-    return $_dataset;
+    if (@args) {
+        my ($_dataset) = @args;
+        die "dataset must be a Bio::Otter::SpeciesDat::DataSet"
+            unless ref $_dataset and $_dataset->isa('Bio::Otter::SpeciesDat::DataSet');
+        return $self->{'_dataset'} = $_dataset;
+    }
+    return $self->{'_dataset'};
 }
 
 sub _stable_id_utils {
