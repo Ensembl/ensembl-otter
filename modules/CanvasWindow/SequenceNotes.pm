@@ -508,8 +508,7 @@ sub bind_close_window{
         # of this object is deiconified [get_SequenceNotes_by_name in ssc]!!!!
         # not necessary ATM.
         # $self->clean_SequenceSetChooser();
-        my $top = $self->canvas->toplevel;
-        $top->withdraw;
+        $self->canvas->toplevel->withdraw;
     };
     $top->protocol('WM_DELETE_WINDOW', $close_window);
     $top->bind('<Control-w>',          $close_window);
