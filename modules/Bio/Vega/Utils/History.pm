@@ -99,8 +99,6 @@ sub history{
       ];
 
   my $j=0;
-  my $i=0;
-
   foreach my $g (@$genes){
       my $txs=$g->get_all_Transcripts;
       foreach my $t (@$txs){
@@ -113,7 +111,6 @@ sub history{
 
               }
           }
-          $i++;##not used denotes row id
       }
       $j++;##genecount
   }
