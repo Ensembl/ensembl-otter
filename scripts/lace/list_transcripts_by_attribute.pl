@@ -7,6 +7,7 @@ use strict;
 
 use Carp;
 use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Server::Config;
 
 {
     my $dataset_name = undef;
@@ -29,12 +30,9 @@ use Bio::Otter::Lace::Defaults;
         ) or $usage->();
     $usage->() unless ($dataset_name and $attrib_pattern);
 
-    # Client communicates with otter HTTP server
-    my $cl = Bio::Otter::Lace::Defaults::make_Client();
-
-    # DataSet interacts directly with an otter database
-    my $ds = $cl->get_DataSet_by_name($dataset_name);
-    my $otter_dba = $ds->get_cached_DBAdaptor;
+    # Go direct, not via http to server.
+    my $ds = Bio::Otter::Server::Config->SpeciesDat->dataset($dataset_name);
+    my $otter_dba = $ds->otter_dba;
 
     my $list_transcripts = $otter_dba->dbc->prepare(q{
         SELECT
