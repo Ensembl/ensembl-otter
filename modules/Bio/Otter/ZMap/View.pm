@@ -10,7 +10,6 @@ use Scalar::Util qw( weaken );
 
 use Hum::XmlWriter;
 
-use Bio::Otter::Utils::Config::Ini qw( config_ini_format );
 use Bio::Vega::Utils::MacProxyConfig qw{ mac_os_x_set_proxy_vars };
 
 sub new {
