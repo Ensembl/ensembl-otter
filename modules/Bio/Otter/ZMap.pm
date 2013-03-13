@@ -23,6 +23,8 @@ use XML::Simple;
 use X11::XRemote;
 use Tk::X;
 
+use Bio::Vega::Utils::MacProxyConfig qw{ mac_os_x_set_proxy_vars };
+
 use Bio::Otter::ZMap::Proxy;
 use Bio::Otter::ZMap::View;
 

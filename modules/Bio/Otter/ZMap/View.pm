@@ -10,8 +10,6 @@ use Scalar::Util qw( weaken );
 
 use Hum::XmlWriter;
 
-use Bio::Vega::Utils::MacProxyConfig qw{ mac_os_x_set_proxy_vars };
-
 sub new {
     my ($pkg, %arg_hash) = @_;
     my $new = bless { }, $pkg;
