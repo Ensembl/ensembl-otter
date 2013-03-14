@@ -23,19 +23,39 @@ my $commands = {
 our $CACHE = {
 };
 
-#  Attempt to load a cache.
-try { require Bio::Otter::Git::Cache; }
-catch {
-    if (m(\A\QCan't locate Bio/Otter/Git/Cache.pm in \E)) {
-        warn "No git cache: assuming a git checkout.\n";
+sub _getcache {
+    #  Attempt to load a cache.
+    return try { require Bio::Otter::Git::Cache; 1 }
+      catch {
+        if (m(\A\QCan't locate Bio/Otter/Git/Cache.pm in \E)) {
+            warn "No git cache: assuming a git checkout.\n";
+            0;
+        }
+        else {
+            die "cache error: $_";
+        }
+    };
+}
+
+sub _try_git {
+    return try {
         my $command = q(git tag);
-        system(qq(cd '$dir' && $command > /dev/null)) == 0
-            or die "'$command' failed: something is wrong with your git checkout";
-    }
-    else {
-        die "cache error: $_";
-    }
-};
+        my $ok = system(qq(cd '$dir' && $command > /dev/null)) == 0;
+        warn "'$command' failed: something is wrong with your git checkout"
+          unless $ok;
+        $ok;
+    } catch {
+        if (m(Insecure .* while running with -T switch)) {
+            warn "Dev checkout under Apache? Cannot run git: $_";
+            0;
+        } else {
+            die "unexpected error with Git: $_";
+        }
+    };
+}
+
+_getcache() || _try_git();
+# Or we dev checkout and can't run Git.  ->param will return undef.
 
 sub dump {
     my ($pkg) = @_;
@@ -93,6 +113,7 @@ sub _create_cache { ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
     return;
 }
 
+# may error or return undef when data is not available
 sub param {
     my ($pkg, $key) = @_;
     $CACHE->{$key} = $pkg->_param($key)

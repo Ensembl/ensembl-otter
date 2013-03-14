@@ -13,6 +13,7 @@ use SangerPaths qw{ core bioperl123 ensembl70 otter73 humpub };
 use DBI;
 use YAML 'Dump';
 use File::Find;
+use Try::Tiny;
 
 use Bio::Otter::ServerScriptSupport;
 use Bio::Otter::Version;
@@ -108,7 +109,7 @@ sub test {
     $out{version} =
       { major => Bio::Otter::Version->version,
         '$^X' => $^X, '$]' => $],
-        code => Bio::Otter::Git->as_text };
+        code => try { Bio::Otter::Git->as_text } catch { "FAIL: $_" } };
 
     my $dbh = DBI->connect
       ("DBI:mysql:database=pipe_human;host=otp1slave;port=3322",
