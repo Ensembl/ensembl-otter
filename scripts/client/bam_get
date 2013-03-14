@@ -170,14 +170,16 @@ sub _print_feature {
     push @target_fields, $query_strand if $query_strand;
     my $target .= join ' ', $query_name, @target_fields;
 
-    my $dna = $query->dna;
-    # my $dna = $query->qseq;
+    my $seq = $query->seq;
+    if ($query->strand == -1) {
+        $seq = $seq->revcom;
+    }
 
     my @attributes = (
         Name     => $name,
         Gap      => $gap,
         Target   => $target,
-        sequence => $dna,
+        sequence => $seq->seq,
         );
 
     my @attribute_strings = ();
