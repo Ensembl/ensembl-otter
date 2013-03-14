@@ -1,0 +1,45 @@
+#!/usr/bin/perl -Tw
+
+# Author:        anacode
+# Group:         anacode
+# Maintainer:    anacode
+
+use strict;
+use warnings;
+
+BEGIN { use lib ($ENV{OTTER_PERL_INC} || q{}) =~ m{([^:]+)}g }
+use SangerPaths qw{ core bioperl123 ensembl70 otter73 };
+
+use Bio::Otter::ServerScriptSupport;
+use Bio::Otter::Server::Config;
+
+my %PERMITTED = (
+    lace_acedb_tar => { filename => 'lace_acedb.tar.gz', content_type => 'application/x-tar-gzip' },
+    methods_ace    => { filename => 'methods.ace'      },
+    otter_config   => { filename => 'otter_config'     },
+    otter_styles   => { filename => 'otter_styles.ini' },
+);
+
+sub get_config {
+    my ($server) = @_;
+    my $key = $server->require_argument('key');
+
+    my $spec = $PERMITTED{$key};
+    die "No such config '$key'" unless $spec;
+
+    my $content_type = $spec->{content_type};
+    $server->content_type($content_type) if $content_type;
+
+    return Bio::Otter::Server::Config->get_file($spec->{filename});
+}
+
+Bio::Otter::ServerScriptSupport->send_response(\&get_config);
+
+__END__
+
+=head1 NAME - get_config
+
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
+

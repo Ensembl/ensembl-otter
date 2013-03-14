@@ -44,13 +44,16 @@ $COMPRESSION_ENABLED = 1 unless defined $COMPRESSION_ENABLED;
 sub new {
     my ($pkg, @args) = @_;
 
-    my $self = {
-        -cgi          => CGI->new,
+    my %options = (
         -compression  => 0,
         -content_type => 'text/plain',
         @args,
-    };
-    bless $self, $pkg;
+    );
+
+    my $self = bless { }, $pkg;
+    $self->cgi(CGI->new);
+    $self->compression($options{-compression});
+    $self->content_type($options{-content_type});
 
     if ($self->show_restricted_datasets || ! $self->local_user) {
         $self->authorized_user;
@@ -62,8 +65,24 @@ sub new {
 }
 
 sub cgi {
-    my ($self) = @_;
-    return $self->{-cgi};
+    my ($self, @args) = @_;
+    ($self->{'cgi'}) = @args if @args;
+    my $cgi = $self->{'cgi'};
+    return $cgi;
+}
+
+sub compression {
+    my ($self, @args) = @_;
+    ($self->{'compression'}) = @args if @args;
+    my $compression = $self->{'compression'};
+    return $compression;
+}
+
+sub content_type {
+    my ($self, @args) = @_;
+    ($self->{'content_type'}) = @args if @args;
+    my $content_type = $self->{'content_type'};
+    return $content_type;
 }
 
 sub header {
@@ -220,7 +239,7 @@ sub show_restricted_datasets {
 }
 
 ############## I/O: ################################
-
+# FIXME: will be redundant when get_lace_acedb_tar and its siblings are removed.
 sub send_file {
     my ($pkg, $name, @args) = @_;
 
@@ -265,9 +284,9 @@ sub _send_response {
 
     my ($self, $response) = @_;
 
-    my $content_type = $self->{-content_type};
+    my $content_type = $self->content_type;
 
-    if ($COMPRESSION_ENABLED && $self->{-compression}) {
+    if ($COMPRESSION_ENABLED && $self->compression) {
         my $gzipped;
         gzip \$response => \$gzipped;
         print
