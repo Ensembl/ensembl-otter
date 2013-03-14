@@ -1019,25 +1019,34 @@ sub get_server_otter_config {
         warn "Authorised as $who_am_i\n";
     }
 
-    my $content = $self->http_response_content(
-        'GET',
-        'get_otter_config',
-        {},
-    );
-
+    my $content = $self->_get_config_file('otter_config');
     Bio::Otter::Lace::Defaults::save_server_otter_config($content);
 
     return;
 }
 
+sub _get_config_file {
+    my ($self, $key) = @_;
+    return $self->http_response_content(
+        'GET',
+        'get_config',
+        { 'key' => $key },
+        );
+}
+
+sub _get_cache_config_file {
+    my ($self, $key) = @_;
+
+    # We cache the whole file in memory
+    unless ($self->{$key}) {
+        $self->{$key} = $self->_get_config_file($key);
+    }
+    return $self->{$key};
+}
+
 sub get_otter_styles {
     my ($self) = @_;
-
-    # We cache the whole otter_styles file in memory
-    unless ($self->{'_otter_styles'}) {
-        $self->{'_otter_styles'} = $self->http_response_content('GET', 'get_otter_styles', {});
-    }
-    return $self->{'_otter_styles'};
+    return $self->_get_cache_config_file('otter_styles');
 }
 
 sub do_authentication {
@@ -1187,22 +1196,12 @@ sub _make_CloneSequence {
 
 sub get_lace_acedb_tar {
     my ($self) = @_;
-
-    # We cache the whole lace_acedb tar.gz file in memory
-    unless ($self->{'_lace_acedb_tar'}) {
-        $self->{'_lace_acedb_tar'} = $self->http_response_content( 'GET', 'get_lace_acedb_tar', {});
-    }
-    return $self->{'_lace_acedb_tar'};
+    return $self->_get_cache_config_file('lace_acedb_tar');
 }
 
 sub get_methods_ace {
     my ($self) = @_;
-
-    # We cache the whole methods.ace file in memory
-    unless ($self->{'_methods_ace'}) {
-        $self->{'_methods_ace'} = $self->http_response_content('GET', 'get_methods_ace', {});
-    }
-    return $self->{'_methods_ace'};
+    return $self->_get_cache_config_file('methods_ace');
 }
 
 sub get_accession_types {
