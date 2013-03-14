@@ -16,6 +16,7 @@ use File::Find;
 
 use Bio::Otter::ServerScriptSupport;
 use Bio::Otter::Version;
+use Bio::Otter::Git;
 
 
 # keep the align-to-centre layout, it's easier to read than YAML
@@ -104,14 +105,10 @@ sub test {
                            vsn => [ Bio::Otter::Server::Config->data_filename(foo => 1) ] },
         mid_url_args => Bio::Otter::Server::Config->mid_url_args,
         designations => Bio::Otter::Server::Config->designations };
-
-    my $bog_code = eval "require Bio::Otter::Git; Bio::Otter::Git->as_text" ||
-      "require Bio::Otter::Git failed: $@";
-
     $out{version} =
       { major => Bio::Otter::Version->version,
         '$^X' => $^X, '$]' => $],
-        code => $bog_code };
+        code => Bio::Otter::Git->as_text };
 
     my $dbh = DBI->connect
       ("DBI:mysql:database=pipe_human;host=otp1slave;port=3322",
