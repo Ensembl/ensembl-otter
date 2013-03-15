@@ -77,6 +77,14 @@ sub set_tag_value {
     return;
 }
 
+sub _has_table {
+    my ($self, $table) = @_;
+    my $sth = $dbh{$self}->table_info(undef, 'main', $table, 'TABLE');
+    my $table_info = $sth->fetchrow_hashref;
+    return unless $table_info;
+    return $table_info->{TABLE_NAME};
+}
+
 sub init_db {
     my ($self) = @_;
 
@@ -87,7 +95,7 @@ sub init_db {
         });
     $dbh{$self} = $dbh;
 
-    $self->create_tables;
+    $self->create_tables unless $self->_has_table('tag_value') and $self->get_tag_value('initialised');
 
     return 1;
 }
@@ -154,6 +162,8 @@ sub init_db {
                 $dbh->do("CREATE INDEX $idx ON $index_defs{$idx}");
             }
         }
+
+        $self->set_tag_value('initialised', 1);
         $dbh->commit;
 
         return;
