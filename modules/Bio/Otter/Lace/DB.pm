@@ -23,7 +23,7 @@ sub DESTROY {
 }
 
 sub new {
-    my ($pkg, $home) = @_;
+    my ($pkg, $home, $client) = @_;
 
     unless ($home) {
         confess "Cannot create SQLite database without home parameter";
@@ -32,7 +32,7 @@ sub new {
     my $self = bless \$ref, $pkg;
     my $file = "$home/otter.sqlite";
     $self->file($file);
-    $self->init_db;
+    $self->init_db($client);
 
     return $self;
 }
@@ -86,7 +86,7 @@ sub _has_table {
 }
 
 sub init_db {
-    my ($self) = @_;
+    my ($self, $client) = @_;
 
     my $file = $self->file or confess "Cannot create SQLite database: file not set";
     my $dbh = DBI->connect("dbi:SQLite:dbname=$file", undef, undef, {
