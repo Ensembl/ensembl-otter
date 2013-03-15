@@ -92,82 +92,27 @@ sub init_db {
     my $dbh = DBI->connect("dbi:SQLite:dbname=$file", undef, undef, {
         RaiseError => 1,
         AutoCommit => 1,
+        sqlite_allow_multiple_statements => 1,
         });
     $dbh{$self} = $dbh;
 
-    $self->create_tables unless $self->_has_table('tag_value') and $self->get_tag_value('initialised');
+    $self->create_tables($client) unless $self->_has_table('tag_value') and $self->get_tag_value('initialised');
 
     return 1;
 }
 
-{
-    my %table_defs = (
-        otter_filter  => q{
-            filter_name     TEXT PRIMARY KEY
-            , wanted        INTEGER DEFAULT 0
-            , failed        INTEGER DEFAULT 0
-            , done          INTEGER DEFAULT 0
-            , gff_file      TEXT
-            , process_gff   INTEGER DEFAULT 0
-        },
-        accession_info  => q{
-            accession_sv    TEXT PRIMARY KEY
-            , taxon_id      INTEGER
-            , evi_type      TEXT
-            , description   TEXT
-            , source_db     TEXT
-            , length        INTEGER
-            , sequence      TEXT
-        },
-        full_accession  => q{
-            name            TEXT PRIMARY KEY
-            , accession_sv  TEXT
-        },
-        species_info => q{
-            taxon_id        INTEGER PRIMARY KEY
-            , genus         TEXT
-            , species       TEXT
-            , common_name   TEXT
-        },
-        tag_value => q{
-            tag             TEXT PRIMARY KEY
-            , value         TEXT
-        },
-    );
+sub create_tables {
+    my ($self, $client) = @_;
 
-    my %index_defs = (
-        idx_full_accession  => q{ full_accession( accession_sv, name ) },
-    );
+    my $schema = $client->get_otter_schema;
 
-    sub create_tables {
-        my ($self) = @_;
+    my $dbh = $dbh{$self};
+    $dbh->begin_work;
+    $dbh->do($schema);
+    $self->set_tag_value('initialised', 1);
+    $dbh->commit;
 
-        my $dbh = $dbh{$self};
-        $dbh->begin_work;
-
-        my %existing_table = map {$_->[0] => 1}
-            @{ $dbh->selectall_arrayref(q{SELECT name FROM sqlite_master WHERE type = 'table'}) };
-
-        foreach my $tab (sort keys %table_defs) {
-            unless ($existing_table{$tab}) {
-                $dbh->do("CREATE TABLE $tab ($table_defs{$tab})");
-            }
-        }
-
-        my %existing_index = map {$_->[0] => 1}
-            @{ $dbh->selectall_arrayref(q{SELECT name FROM sqlite_master WHERE type = 'index'}) };
-
-        foreach my $idx (sort keys %index_defs) {
-            unless ($existing_index{$idx}) {
-                $dbh->do("CREATE INDEX $idx ON $index_defs{$idx}");
-            }
-        }
-
-        $self->set_tag_value('initialised', 1);
-        $dbh->commit;
-
-        return;
-    }
+    return;
 }
 
 1;
