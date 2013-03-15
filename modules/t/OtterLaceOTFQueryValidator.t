@@ -50,7 +50,7 @@ done_testing;
 sub setup_accession_type_cache {
     my $tmp_dir = shift;
     my $test_client = OtterTest::Client->new;
-    my $test_db = Bio::Otter::Lace::DB->new($tmp_dir);
+    my $test_db = Bio::Otter::Lace::DB->new($tmp_dir, $test_client);
     my $at_cache = Bio::Otter::Lace::AccessionTypeCache->new;
     $at_cache->Client($test_client);
     $at_cache->DB($test_db);

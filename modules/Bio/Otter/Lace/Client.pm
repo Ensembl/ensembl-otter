@@ -1340,7 +1340,7 @@ sub move_to_done {
 sub get_name {
     my ($self, $home_dir) = @_;
 
-    my $db = Bio::Otter::Lace::DB->new($home_dir);
+    my $db = Bio::Otter::Lace::DB->new($home_dir, $self);
     return $db->get_tag_value('name');
 }
 

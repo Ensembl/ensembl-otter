@@ -65,7 +65,7 @@ sub DB {
     my ($self) = @_;
 
     my $db = $self->{'_sqlite_database'}
-        ||= Bio::Otter::Lace::DB->new($self->home);
+        ||= Bio::Otter::Lace::DB->new($self->home, $self->Client);
     return $db;
 }
 
