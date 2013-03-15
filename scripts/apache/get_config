@@ -17,6 +17,7 @@ my %PERMITTED = (
     lace_acedb_tar => { filename => 'lace_acedb.tar.gz', content_type => 'application/x-tar-gzip' },
     methods_ace    => { filename => 'methods.ace'      },
     otter_config   => { filename => 'otter_config'     },
+    otter_schema   => { filename => 'otter_schema.sql' },
     otter_styles   => { filename => 'otter_styles.ini' },
 );
 
