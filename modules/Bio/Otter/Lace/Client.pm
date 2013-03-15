@@ -1049,6 +1049,11 @@ sub get_otter_styles {
     return $self->_get_cache_config_file('otter_styles');
 }
 
+sub get_otter_schema {
+    my ($self) = @_;
+    return $self->_get_cache_config_file('otter_schema');
+}
+
 sub do_authentication {
     my ($self) = @_;
 
