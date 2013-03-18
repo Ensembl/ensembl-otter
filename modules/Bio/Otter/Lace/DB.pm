@@ -111,21 +111,21 @@ sub init_db {
         });
     $dbh{$self} = $dbh;
 
-    $self->create_tables($client) unless $self->_has_schema('otter');
+    $self->create_tables($client->get_otter_schema,  'otter')  unless $self->_has_schema('otter');
+    $self->create_tables($client->get_loutre_schema, 'loutre') unless $self->_has_schema('loutre');
 
     return 1;
 }
 
 sub create_tables {
-    my ($self, $client) = @_;
-
-    my $schema = $client->get_otter_schema;
+    my ($self, $schema, $name) = @_;
 
     my $dbh = $dbh{$self};
     $dbh->begin_work;
     $dbh->do($schema);
-    $self->_has_schema('otter', 1);
     $dbh->commit;
+
+    $self->_has_schema($name, 1);
 
     return;
 }
