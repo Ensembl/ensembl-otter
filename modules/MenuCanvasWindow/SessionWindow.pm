@@ -29,9 +29,11 @@ use MenuCanvasWindow::TranscriptWindow;
 use MenuCanvasWindow::GenomicFeaturesWindow;
 use Text::Wrap qw{ wrap };
 
+use Zircon::Tk::Context;
+use Zircon::ZMap;
+
 use Bio::Otter::Lace::Client;
 use Bio::Otter::Lace::DB::FilterAdaptor;
-use Bio::Otter::ZMap;
 use Bio::Otter::ZMap::XML;
 use Bio::Vega::Transform::Otter::Ace;
 
@@ -61,7 +63,8 @@ sub new {
     $self->minimum_scroll_bbox(0,0, 380,200);
     $self->flag_db_edits(1);
 
-    $self->{'_zmap'} = $arg_hash{'-zmap'};
+    @{$self}{qw( _zmap _zircon_context )} =
+        @arg_hash{qw( -zmap -zircon_context )};
 
     return $self;
 }
@@ -2436,13 +2439,11 @@ sub zmap_view_arg_hash {
     my ($self) = @_;
     my $config_file = sprintf "%s/ZMap", $self->AceDatabase->zmap_dir;
     my $slice = $self->AceDatabase->smart_slice;
-    my $sequence = $slice->ssname,
-    my $start    = $slice->start;
-    my $end      = $slice->end;
-    my $name = sprintf "%s:%d-%d", $sequence, $start, $end;
+    my $name  = $slice->ssname,
+    my $start = $slice->start;
+    my $end   = $slice->end;
     my $hash = {
         '-name'        => $name,
-        '-sequence'    => $sequence,
         '-start'       => $start,
         '-end'         => $end,
         '-config_file' => $config_file,
@@ -2453,27 +2454,44 @@ sub zmap_view_arg_hash {
 
 ### BEGIN: ZMap control interface
 
+sub zircon_context {
+    my ($self) = @_;
+    my $zircon_context =
+        $self->{'_zircon_context'} ||=
+        Zircon::Tk::Context->new(
+            '-widget' => $self->menu_bar);
+    return $zircon_context;
+}
+
 sub zmap_new {
     my ($self) = @_;
     mac_os_x_set_proxy_vars(\%ENV) if $^O eq 'darwin';
     my $DataSet = $self->AceDatabase->DataSet;
     my $zmap =
-        Bio::Otter::ZMap->new(
-            '-tk'       => $self->menu_bar,
+        Zircon::ZMap->new(
+            '-app_id'   => $self->zircon_app_id,
+            '-context'  => $self->zircon_context,
             '-arg_list' => $DataSet->zmap_arg_list,
             '-config'   => $DataSet->zmap_config_global,
         );
     return $zmap;
 }
 
+sub zircon_app_id {
+    my ($self) = @_;
+    my $widget_id = $self->top_window->id;
+    my $zircon_app_id = "Otterlace_${widget_id}";
+    return $zircon_app_id;
+}
+
 sub _zmap_view_new {
     my ($self, $zmap) = @_;
-    $zmap ||= (($self->LoadColumns || $self)->zmap_new);
+    $zmap ||= $self->zmap_new;
     delete $self->{'_zmap_view'};
     $self->{'_zmap_view'} =
         $zmap->new_view(
             %{$self->zmap_view_arg_hash},
-            '-SessionWindow' => $self,
+            '-handler' => $self,
         );
     return;
 }

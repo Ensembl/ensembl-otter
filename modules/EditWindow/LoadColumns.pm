@@ -16,12 +16,9 @@ use Tk::LabFrame;
 use Tk::Balloon;
 
 use Bio::Otter::Lace::Client;
-use Bio::Otter::ZMap;
 
 use MenuCanvasWindow::SessionWindow;
 use Hum::Sort 'ace_sort';
-
-use Bio::Vega::Utils::MacProxyConfig qw{ mac_os_x_set_proxy_vars };
 
 use base qw(
     EditWindow
@@ -336,10 +333,14 @@ sub load_filters {
         }
     } else {
         # we need to set up and show a SessionWindow
-        my $zmap = $self->zmap_select || $self->zmap_new;
+        my $zmap = $self->zmap_select;
+        my $zircon_context = $self->SpeciesListWindow->zircon_context;
         my $SessionWindow =
             MenuCanvasWindow::SessionWindow->new(
-                $self->top->Toplevel, '-zmap' => $zmap);
+                $self->top->Toplevel,
+                '-zmap'           => $zmap,
+                '-zircon_context' => $zircon_context,
+            );
 
         $self->SessionWindow($SessionWindow);
         $SessionWindow->AceDatabase($self->AceDatabase);
@@ -354,19 +355,6 @@ sub load_filters {
     $self->reset_progress;
 
     return;
-}
-
-sub zmap_new {
-    my ($self) = @_;
-    mac_os_x_set_proxy_vars(\%ENV) if $^O eq 'darwin';
-    my $DataSet = $self->AceDatabase->DataSet;
-    my $zmap_new =
-        Bio::Otter::ZMap->new(
-            '-tk'       => $self->SpeciesListWindow->menu_bar,
-            '-arg_list' => $DataSet->zmap_arg_list,
-            '-config'   => $DataSet->zmap_config_global,
-        );
-    return $zmap_new;
 }
 
 sub set_filters_wanted {

@@ -10,7 +10,7 @@ use warnings;
 use Tk::Toplevel;
 use Tk::Radiobutton;
 
-use Bio::Otter::ZMap;
+use Zircon::ZMap;
 
 sub zmap_select_initialize {
     my ($self) = @_;
@@ -35,7 +35,7 @@ sub zmap_select_window {
     $window->protocol( 'WM_DELETE_WINDOW', $close_command );
 
     $self->_zmap_select_button($_) for
-        '', @{Bio::Otter::ZMap->list};
+        '', @{Zircon::ZMap->list};
 
     $window->Button(
         -text    => 'Close',
@@ -70,7 +70,7 @@ sub zmap_select {
     my ($self) = @_;
     my $zmap;
     if (my $zmap_string = $self->{'_zmap_select'}) {
-        $zmap = Bio::Otter::ZMap->from_string($zmap_string)
+        $zmap = Zircon::ZMap->from_string($zmap_string)
             or warn sprintf "ZMap '%s' has disappeared", $zmap_string;
     }
     return $zmap;

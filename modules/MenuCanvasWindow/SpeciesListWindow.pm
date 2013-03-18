@@ -16,6 +16,8 @@ use Bio::Otter::Utils::About;
 use Bio::Otter::Lace::Client;
 use Bio::Vega::Utils::URI qw( open_uri );
 
+use Zircon::Tk::Context;
+
 sub new {
     my ($pkg, @args) = @_;
 
@@ -421,6 +423,16 @@ sub recover_some_sessions {
     }
 }
 
+# Zircon interface
+
+sub zircon_context {
+    my ($self) = @_;
+    my $zircon_context =
+        $self->{'_zircon_context'} ||=
+        Zircon::Tk::Context->new(
+            '-widget' => $self->menu_bar);
+    return $zircon_context;
+}
 
 1;
 
