@@ -1097,6 +1097,11 @@ sub get_otter_schema {
     return $self->_get_cache_config_file('otter_schema');
 }
 
+sub get_loutre_schema {
+    my ($self) = @_;
+    return $self->_get_cache_config_file('loutre_schema');
+}
+
 sub do_authentication {
     my ($self) = @_;
 
