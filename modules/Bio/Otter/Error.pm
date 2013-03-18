@@ -23,8 +23,8 @@ BEGIN {
             : "Unidentified problem: $error\n\nI suggest you raise a helpdesk ticket!"
             ;
 
-        $tk_error_dialog->($w, $message, @messages); # pop up the dialog
         print STDERR $error, map { qq( $_\n) } @messages; # dump to the log
+        $tk_error_dialog->($w, $message, @messages); # pop up the dialog
         return;
     }
 }
