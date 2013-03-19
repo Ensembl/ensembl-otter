@@ -38,6 +38,7 @@ sub new {
     $_string_zmap_hash->{"$new"} = $new;
     weaken $_string_zmap_hash->{"$new"};
     $new->_init(\%arg_hash);
+    $new->launch_zmap(\%arg_hash);
     return $new;
 }
 
@@ -47,8 +48,6 @@ sub _init {
     $self->{'_view_list'} = [ ];
     $self->{'_conf_dir'} = $self->_conf_dir;
     $self->{'_short_title'} = delete $arg_hash->{'-short_title'}; # goes in config
-    $self->_make_conf;
-    $self->launch_zmap($arg_hash);
     return;
 }
 
@@ -100,6 +99,8 @@ sub launch_zmap {
         # won't see new proxy variables.
         mac_os_x_set_proxy_vars(\%ENV);
     }
+
+    $self->_make_conf;
 
     my @e = $self->zmap_command($arg_hash);
     warn "Running: @e\n";
