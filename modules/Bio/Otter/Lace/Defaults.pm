@@ -16,13 +16,14 @@ my $DEBUG_CONFIG    = 0;
 #-------------------------------
 my $CONFIG_INIFILES = [];
 
-my $HARDWIRED =Config::IniFiles->new(-file => \*DATA);
-push(@$CONFIG_INIFILES, $HARDWIRED);
+{
+    my $hardwired =Config::IniFiles->new(-file => \*DATA);
+    push @$CONFIG_INIFILES, $hardwired;
+}
 
 # The config object for the GetOptions variables
 my $GETOPT = Config::IniFiles->new;
 
-my $HOME_DIR = (getpwuid($<))[7];
 my $CALLED = "$0 @ARGV";
 
 my @CLIENT_OPTIONS = qw(
@@ -38,15 +39,13 @@ my @CLIENT_OPTIONS = qw(
 # $CLIENT_STANZA config.  To add another client option just include in above
 # and if necessary add to hardwired defaults in do_getopt().
 
-# not a method
-sub save_option {
+sub __save_option {
     my ($option, $value) = @_;
     $GETOPT->newval($CLIENT_STANZA, $option, $value);
     return;
 }
 
-# not a method
-sub save_deep_option {
+sub __save_deep_option {
     my (undef, $getopt) = @_; # ignore the option name
     my ($option, $value) = split(/=/, $getopt, 2);
     $option = [ split(/\./, $option) ];
@@ -57,9 +56,10 @@ sub save_deep_option {
     return;
 }
 
+
 ################################################
 #
-## PUBLIC METHODS
+## PUBLIC SUBROUTINES (there are no methods in here)
 #
 ################################################
 
@@ -97,29 +97,26 @@ sub do_getopt {
     #  over the configuration files' settings, unshift them into @ARGV
     #  before running do_getopt()
 
-    push(@$CONFIG_INIFILES, parse_available_config_files());
+    push(@$CONFIG_INIFILES, __parse_available_config_files());
     ############################################################################
     ############################################################################
-    my $start = "Called as:\n\t$CALLED\nGetOptions() Error parsing options:";
     GetOptions(
         'h|help!' => \&show_help,
 
         # map {} makes these lines dynamically from @CLIENT_OPTIONS
-        # 'host=s'        => \&save_option,
-        (map { $_ => \&save_option } @CLIENT_OPTIONS),
+        # 'host=s'        => \&__save_option,
+        (map { $_ => \&__save_option } @CLIENT_OPTIONS),
 
         # this allows setting of options as in the config file
-        'cfgstr=s' => \&save_deep_option,
+        'cfgstr=s' => \&__save_deep_option,
 
         # this is just a synonym feel free to add more
         'view' => sub { $GETOPT->newval($CLIENT_STANZA, 'write_access', 0) },
 
         # this allows multiple extra config file to be used
         'cfgfile=s' => sub {
-            push(@$CONFIG_INIFILES, options_from_file(pop));
+            push(@$CONFIG_INIFILES, __options_from_file(pop));
         },
-
-        # 'prebinpath=s' => sub { $ENV{PATH} = "$_[1]:$ENV{PATH}"; },
 
         # these are the caller script's options
         @script_args,
@@ -135,24 +132,6 @@ sub do_getopt {
     return 1;
 }
 
-sub save_server_otter_config {
-    my ($config) = @_;
-
-    my $tmp = File::Temp->new
-      (TEMPLATE => 'server_otter_config.XXXXXX',
-       TMPDIR => 1, SUFFIX => '.ini');
-    unless ((print {$tmp} $config) && close $tmp) {
-        die sprintf('Error writing to %s; %s', $tmp->filename, $!);
-    }
-    my $ini = options_from_file($tmp->filename);
-    undef $tmp; # DESTROY unlinks it
-
-    # Server config file should be second in list, just after HARDWIRED
-    splice(@$CONFIG_INIFILES, 1, 0, $ini);
-
-    return;
-}
-
 sub show_help {
     exec('perldoc', $0);
 }
@@ -162,24 +141,24 @@ sub make_Client {
     return Bio::Otter::Lace::Client->new;
 }
 
-sub parse_available_config_files {
+sub __parse_available_config_files {
     my @conf_files = ("/etc/otter_config");
     if ($ENV{'OTTER_HOME'}) {
         push(@conf_files, "$ENV{OTTER_HOME}/otter_config");
     }
-    push(@conf_files, "$HOME_DIR/.otter_config");
+    push(@conf_files, (getpwuid($<))[7]."/.otter_config");
 
     my @ini;
     foreach my $file (@conf_files) {
         next unless -e $file;
-        if (my $file_opts = options_from_file($file)) {
+        if (my $file_opts = __options_from_file($file)) {
             push(@ini, $file_opts);
         }
     }
     return @ini;
 }
 
-sub options_from_file {
+sub __options_from_file {
     my ($file) = @_;
 
     return unless -e $file;
@@ -188,6 +167,31 @@ sub options_from_file {
     my $ini = Config::IniFiles->new( -file => $file );
 
     return $ini;
+}
+
+
+################################################
+#
+##  Subroutines called from Bio::Otter::Lace::Client only
+#
+################################################
+
+sub save_server_otter_config {
+    my ($config) = @_;
+
+    my $tmp = File::Temp->new
+      (TEMPLATE => 'server_otter_config.XXXXXX',
+       TMPDIR => 1, SUFFIX => '.ini');
+    unless ((print {$tmp} $config) && close $tmp) {
+        die sprintf('Error writing to %s; %s', $tmp->filename, $!);
+    }
+    my $ini = __options_from_file($tmp->filename);
+    undef $tmp; # DESTROY unlinks it
+
+    # Server config file should be second in list, just after $hardwired
+    splice(@$CONFIG_INIFILES, 1, 0, $ini);
+
+    return;
 }
 
 sub config_value {
@@ -323,11 +327,12 @@ sub _section_key {
 Loads default values needed for creation of an
 otter client from:
 
-  command line
-  anything that you have unshifted into @ARGV before running do_getopt
+  command line settings
+  --cfgfile options on @ARGV when do_getopt ran
   ~/.otter_config
-  $ENV{'OTTER_HOME'}/otter_config
+  $ENV{'OTTER_HOME'}/otter_config (if defined)
   /etc/otter_config
+  Otter Server's otter_config (spliced in late)
   hardwired defaults (in this module)
 
 in that order.  The values filled in, which can
