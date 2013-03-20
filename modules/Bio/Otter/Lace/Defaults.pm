@@ -416,5 +416,5 @@ __DATA__
 [client]
 url=http://www.sanger.ac.uk/cgi-bin/otter
 write_access=0
-debug=1
+debug=Client
 log_level=INFO

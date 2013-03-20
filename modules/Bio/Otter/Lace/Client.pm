@@ -22,6 +22,7 @@ use XML::Simple;
 use Bio::Vega::Author;
 use Bio::Vega::ContigLock;
 
+use Bio::Otter::Debug;
 use Bio::Otter::Version;
 use Bio::Otter::Lace::Defaults;
 use Bio::Otter::Lace::DataSet;
@@ -34,6 +35,12 @@ use Bio::Otter::Lace::DB;
 use Bio::Otter::LogFile;
 
 use 5.009001; # for stacked -f -r which returns false under 5.8.8
+
+# we add "1" and "2" as keys for backwards compatibility with "debug=1" and "debug=2"
+Bio::Otter::Debug->add_keys(qw(
+    Client 1
+    Server 2
+    ));
 
 # Window title prefix.
 #
@@ -64,6 +71,9 @@ sub new {
         _client_name     => $client_name,
         _cookie_jar_file => $ENV{'OTTERLACE_COOKIE_JAR'},
     }, $pkg;
+
+    my $debug = $new->config_value('debug');
+    Bio::Otter::Debug->set($debug) if defined $debug;
 
     $new->setup_pfetch_env;
 
@@ -99,13 +109,25 @@ sub client_name {
     return $self->{'_client_name'};
 }
 
-sub debug {
-    my ($self, $debug) = @_;
+sub debug_client {
+    my ($self) = @_;
+    # backwards compatibility with "debug=1" and "debug=2"
+    my $debug_client = 0
+        || Bio::Otter::Debug->debug('Client')
+        || Bio::Otter::Debug->debug('1')
+        || Bio::Otter::Debug->debug('2')
+        ;
+    return $debug_client;
+}
 
-    warn "Set using the Config file please.\n" if $debug;
-
-    my $val = $self->config_value('debug');
-    return $val ? $val : 0;
+sub debug_server {
+    my ($self) = @_;
+    # backwards compatibility with "debug=2"
+    my $debug_server = 0
+        || Bio::Otter::Debug->debug('Server')
+        || Bio::Otter::Debug->debug('2')
+        ;
+    return $debug_server;
 }
 
 sub password_attempts {
@@ -176,7 +198,7 @@ sub make_log_file {
     if ($config_file) {
         warn "Using log config file '$config_file'\n";
     } else {
-        if($self->debug()) {
+        if($self->debug_client) {
             warn "Logging output to '$log_file'\n";
         }
     }
@@ -571,7 +593,7 @@ sub otter_response_content {
     my $xml = $response->content();
 
     if (my ($content) = $xml =~ m{<otter[^\>]*\>\s*(.*)</otter>}s) {
-        if ($self->debug) {
+        if ($self->debug_client) {
             warn $self->response_info($scriptname, $params, length($content));
         }
         return $content;
@@ -589,7 +611,7 @@ sub http_response_content {
     my $xml = $response->content();
     #warn $xml;
 
-    if ($self->debug) {
+    if ($self->debug_client) {
         warn $self->response_info($scriptname, $params, length($xml));
     }
     return $xml;
@@ -607,8 +629,7 @@ sub response_info {
 sub general_http_dialog {
     my ($self, $method, $scriptname, $params) = @_;
 
-    # Set debug to 2 or more to turn on debugging on server side
-    $params->{'log'} = 1 if $self->debug > 1;
+    $params->{'log'} = 1 if $self->debug_server;
     $params->{'client'} = $self->client_name;
 
     my $password_attempts = $self->password_attempts;
@@ -679,7 +700,7 @@ sub do_http_request {
         my $get = $url . ($paramstring ? "?$paramstring" : '');
         $request->uri($get);
 
-        if($self->debug()) {
+        if($self->debug_client) {
             warn "GET  $get\n";
         }
     }
@@ -687,7 +708,7 @@ sub do_http_request {
         $request->uri($url);
         $request->content($paramstring);
 
-        if($self->debug()) {
+        if($self->debug_client) {
             warn "POST  $url\n";
         }
         #warn "paramstring: $paramstring";
