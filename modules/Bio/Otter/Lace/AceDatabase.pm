@@ -15,6 +15,7 @@ use Bio::Vega::Transform::Otter::Ace;
 use Bio::Vega::AceConverter;
 use Bio::Vega::Transform::XML;
 
+use Bio::Otter::Debug;
 use Bio::Otter::Lace::AccessionTypeCache;
 use Bio::Otter::Lace::DB;
 use Bio::Otter::Lace::Slice; # a new kind of Slice that knows how to get pipeline data
@@ -27,8 +28,10 @@ use Hum::ZMapStyleCollection;
 
 use Hum::Conf qw{ PFETCH_SERVER_LIST };
 
-my $ZMAP_DEBUG = $ENV{OTTERLACE_ZMAP_DEBUG};
 
+Bio::Otter::Debug->add_keys(qw(
+    XRemote
+    ));
 
 sub new {
     my ($pkg) = @_;
@@ -420,6 +423,7 @@ sub _zmap_config {
     my $pfetch_url = $self->Client->pfetch_url;
 
     my $blixemrc = sprintf '%s/blixemrc', $self->zmap_dir;
+    my $xremote_debug = Bio::Otter::Debug->debug('XRemote');
 
     my $config = {
 
@@ -428,7 +432,7 @@ sub _zmap_config {
             'cookie-jar'      => $ENV{'OTTERLACE_COOKIE_JAR'},
             'pfetch-mode'     => ( $pfetch_www ? 'http' : 'pipe' ),
             'pfetch'          => ( $pfetch_www ? $pfetch_url : 'pfetch' ),
-            'xremote-debug'   => $ZMAP_DEBUG ? 'true' : 'false',
+            'xremote-debug'   => $xremote_debug ? 'true' : 'false',
             'stylesfile'      => $self->stylesfile,
             'abbrev-window-title' => ( $self->Client->config_value('short_window_title_prefix') ? 'true' : 'false' ),
             %{$self->smart_slice->zmap_config_stanza},
