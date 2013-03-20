@@ -24,11 +24,13 @@ use XML::Simple;
 use X11::XRemote;
 use Tk::X;
 
+use Bio::Otter::Debug;
 use Bio::Otter::ZMap::Proxy;
 use Bio::Otter::ZMap::View;
 
-my $DEBUG_CALLBACK = 0;
-my $DEBUG_EVENTS   = 0;
+Bio::Otter::Debug->add_keys(qw(
+    XRemote
+    ));
 
 =head1 METHODS
 
@@ -373,31 +375,32 @@ my @xml_request_parse_parameters =
 
 sub _callback{
     my ($self) = @_;
+    my $debug = Bio::Otter::Debug->debug('XRemote');
     my $tk = $self->widget;
     my $id    = $tk->id();
     my $ev    = $tk->XEvent(); # Get the event
     my $state = ($ev->s ? $ev->s : 0); # assume zero (PropertyDelete I think)
     my $reqnm = $self->request_name(); # atom name of the request
     if ($state == PropertyDelete){
-        warn "Event had state 'PropertyDelete', returning...\n" if $DEBUG_EVENTS;
+        warn "Event had state 'PropertyDelete', returning...\n" if $debug;
         return ; # Tk->break
     }
     #====================================================================
     # DEBUG STUFF
-    warn "//========== _do_callback ========== window id: $id\n" if $DEBUG_CALLBACK;
-    if($DEBUG_EVENTS){
+    warn "//========== _do_callback ========== window id: $id\n" if $debug;
+    if($debug){
         foreach my $m('a'..'z','A'..'Z','#'){
             warn "Event on method '$m' - ". $ev->$m() . " " .sprintf("0x%lx", $ev->$m) . " \n" if $ev->$m();
         }
     }
     unless($ev->T eq 'PropertyNotify'){ warn "Odd Not a propertyNotify\n"; }
     unless($ev->d eq $reqnm){
-        warn "Event was NOT for this.\n" if $DEBUG_CALLBACK;
+        warn "Event was NOT for this.\n" if $debug;
         return ; # Tk->break
     }
     my $request_string = $self->xremote_server->request_string();
     $self->_current_request_string($request_string);
-    warn "Event has request string $request_string\n" if $DEBUG_CALLBACK;
+    warn "Event has request string $request_string\n" if $debug;
     #=========================================================
     my $request = XMLin($request_string, @xml_request_parse_parameters);
     my $action = $request->{'request'}{'action'};
@@ -422,7 +425,7 @@ sub _callback{
           } );
 
     $self->_drop_current_request_string;
-    warn "Connect $reply\n" if $DEBUG_CALLBACK;
+    warn "Connect $reply\n" if $debug;
     $self->xremote_server->send_reply($reply);
 
     $self->register_client_post
