@@ -366,7 +366,7 @@ Here's an example config file:
 
 
   [client]
-  port=33999
+  url=http://dev.sanger.ac.uk/cgi-bin/otter
 
   [default.use_filters]
   trf=1
@@ -396,9 +396,9 @@ above does.
   # Script can add Getopt::Long compatible options:
   my $foo = 'bar';
 
-  # or override the defaults from .otter_config onwards
+  # or override the defaults from ~/.otter_config onwards
   # (but allow the user's command line options to take precedence) :
-  unshift @ARGV, '--port=33977', '--host=ottertest';
+  unshift @ARGV, '--write_access=0', '--debug=2';
 
   Bio::Otter::Lace::Defaults::do_getopt(
       'foo=s'   => \$foo,     
