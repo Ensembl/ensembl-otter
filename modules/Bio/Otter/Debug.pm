@@ -6,6 +6,13 @@ use warnings;
 
 my $DEBUG = { };
 
+sub _init {
+    my ($pkg) = @_;
+    my $debug = $ENV{'OTTER_DEBUG'};
+    $pkg->set($debug) if defined $debug;
+    return ();
+}
+
 sub debug {
     my ($pkg, $key, @args) = @_;
     _verify_keys($key);
@@ -51,6 +58,8 @@ sub _verify_keys { ## no critic (Subroutines::RequireArgUnpacking)
     $_ = uc $_ for @_;
     return;
 }
+
+__PACKAGE__->_init;
 
 1;
 
