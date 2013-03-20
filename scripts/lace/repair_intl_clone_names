@@ -277,7 +277,7 @@ specified.
 
 It uses the tracking database to find the int. clone name
 for those clones  that have name = embl_acc.embl_version.
-Connection details come from $OTTER_HOME/.otter_config or
+Connection details come from $OTTER_HOME/otter_config or
 ~/.otter_config or command line in a similar manner
 to the rest of the scripts in this directory.
 
