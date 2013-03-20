@@ -11,6 +11,7 @@ use EditWindow::Password;
 use Bio::Otter::Lace::Client;
 use Bio::Otter::Git;
 use Bio::Otter::Error;
+use Bio::Otter::Debug;
 use POSIX ":sys_wait_h";
 use Log::Log4perl;
 use Try::Tiny;
@@ -18,6 +19,9 @@ use Try::Tiny;
 {
     # Become leader of process group so that "kill -$$" at end works
     setpgrp();
+
+    my $debug = $ENV{'OTTER_DEBUG'};
+    Bio::Otter::Debug->set($debug) if defined $debug;
 
     Bio::Otter::Lace::Defaults::do_getopt();
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
