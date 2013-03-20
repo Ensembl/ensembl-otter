@@ -96,7 +96,7 @@ sub launch_zmap {
         mac_os_x_set_proxy_vars(\%ENV);
     }
 
-    my @e = ('zmap', @{$self->zmap_arg_list($arg_hash)} );
+    my @e = $self->zmap_command($arg_hash);
     warn "Running: @e\n";
     my $pid = fork;
     confess "Error: couldn't fork()\n" unless defined $pid;
@@ -110,6 +110,12 @@ sub launch_zmap {
     POSIX::_exit(127); # avoid triggering DESTROY
 
     return; # unreached, quietens perlcritic
+}
+
+sub zmap_command {
+    my ($self, $arg_hash) = @_;
+    my @zmap_command = ('zmap', @{$self->zmap_arg_list($arg_hash)} );
+    return @zmap_command;
 }
 
 sub zmap_arg_list {
