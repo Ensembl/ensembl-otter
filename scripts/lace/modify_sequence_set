@@ -181,7 +181,7 @@ __END__
 
  Simple script to either B<delete>, B<update> or B<show> a sequence set from 
 an B<otter> and of B<pipeline> database. Connection details come from 
-$OTTER_HOME/.otter_config or ~/.otter_config or command line in a similar 
+$OTTER_HOME/otter_config or ~/.otter_config or command line in a similar 
 manner to the rest of the scripts in this directory.
 
 =head2 -delete
