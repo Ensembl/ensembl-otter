@@ -30,6 +30,7 @@ use Bio::Otter::ZMap::View;
 
 Bio::Otter::Debug->add_keys(qw(
     XRemote
+    ZMap-Valgrind
     ));
 
 =head1 METHODS
@@ -48,6 +49,14 @@ sub launch_zmap {
     $self->SUPER::launch_zmap($arg_hash);
     $self->wait;
     return;
+}
+
+sub zmap_command {
+    my ($self, $arg_hash) = @_;
+    my @zmap_command = $self->SUPER::zmap_command($arg_hash);
+    unshift @zmap_command, 'valgrind'
+        if Bio::Otter::Debug->debug('ZMap-Valgrind');
+    return @zmap_command;
 }
 
 sub zmap_arg_list {
