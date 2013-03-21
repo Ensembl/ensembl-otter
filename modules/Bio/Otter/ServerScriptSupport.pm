@@ -239,19 +239,6 @@ sub show_restricted_datasets {
 }
 
 ############## I/O: ################################
-# FIXME: will be redundant when get_lace_acedb_tar and its siblings are removed.
-sub send_file {
-    my ($pkg, $name, @args) = @_;
-
-    $pkg->send_response(
-        @args, # passed to the constructor
-        sub {
-            my ($self) = @_;
-            return Bio::Otter::Server::Config->get_file($name);
-        });
-
-    return;
-}
 
 sub send_response {
     my ($self, @args) = @_;
