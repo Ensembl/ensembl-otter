@@ -19,7 +19,7 @@ my $DEBUG_CONFIG    = 0;
 ### Package state
 my $CONFIG_INIFILES; # arrayref of config object
 my $GETOPT;          # config object for the GetOptions variables
-my $DONE_GETOPT;     # bool
+my $DONE_GETOPT;     # tristate bool
 my $_USERCFG_FN;     # for testing
 {
     my $hardwired;
@@ -31,7 +31,7 @@ my $_USERCFG_FN;     # for testing
         }
         $CONFIG_INIFILES = [ $hardwired ];
         $GETOPT = Config::IniFiles->new;
-        $DONE_GETOPT = 0;
+        undef $DONE_GETOPT;
         return ();
     }
 }
@@ -100,8 +100,8 @@ Suggested usage:
 sub do_getopt {
     my (@script_args) = @_;
 
-    confess "do_getopt already called" if $DONE_GETOPT;
-    $DONE_GETOPT = 1;
+    confess "do_getopt already called" if defined $DONE_GETOPT;
+    $DONE_GETOPT = 0;
 
     ## If you have any 'local defaults' that you want to take precedence
     #  over the configuration files' settings, unshift them into @ARGV
@@ -136,6 +136,7 @@ sub do_getopt {
     ############################################################################
 
     push(@$CONFIG_INIFILES, $GETOPT);
+    $DONE_GETOPT = 1;
 
     # now safe to call any subs which are required to setup stuff
 
@@ -219,6 +220,7 @@ sub __options_from_file {
 # No action taken here to make change take effect on running process.
 sub set_and_save {
     my ($section, $param, $value) = @_;
+    __ready();
 
     # Get config
     my $ucfg_fn = user_config_filename();
@@ -290,6 +292,7 @@ sub __cfgini_to_txt {
 
 sub save_server_otter_config {
     my ($config) = @_;
+    __ready();
 
     my $tmp = File::Temp->new
       (TEMPLATE => 'server_otter_config.XXXXXX',
@@ -306,8 +309,15 @@ sub save_server_otter_config {
     return;
 }
 
+sub __ready {
+    confess "Not ready to operate on configuration until after do_getopt"
+      unless $DONE_GETOPT;
+    return ();
+}
+
 sub config_value {
     my ($section, $key) = @_;
+    __ready();
 
     my $value;
     foreach my $ini ( @$CONFIG_INIFILES ) {
@@ -321,6 +331,8 @@ sub config_value {
 
 sub config_value_list {
     my ($key1, $key2, $name) = @_;
+    __ready();
+
     my $keys = [ "default.$key2", "$key1.$key2" ];
     return [ map { _config_value_list_ini_keys_name($_, $keys, $name); } @$CONFIG_INIFILES, ];
 }
@@ -332,6 +344,7 @@ sub _config_value_list_ini_keys_name {
 
 sub config_value_list_merged {
     my ($key1, $key2, $name) = @_;
+    __ready();
 
     my @keys = ( "default.$key2", "$key1.$key2" );
 
@@ -378,6 +391,8 @@ sub _config_value_list_merge {
 
 sub config_section {
     my ($key1, $key2) = @_;
+    __ready();
+
     my $keys = [ "default.$key2", "$key1.$key2" ];
     return { map { _config_section_ini_keys($_, $keys) } @$CONFIG_INIFILES };
 }
@@ -409,6 +424,8 @@ sub _config_section_ini_key_name {
 
 sub config_keys {
     my ($key1, $key2) = @_;
+    __ready();
+
     my $keys = [ "default.$key2", "$key1.$key2" ];
     return [ map { _config_keys_ini_keys($_, $keys) } @$CONFIG_INIFILES ];
 }
