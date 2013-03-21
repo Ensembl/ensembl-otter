@@ -14,15 +14,27 @@ use File::Temp;
 my $CLIENT_STANZA   = 'client';
 my $DEBUG_CONFIG    = 0;
 #-------------------------------
-my $CONFIG_INIFILES = [];
 
+### Package state
+my $CONFIG_INIFILES; # arrayref of config object
+my $GETOPT;          # config object for the GetOptions variables
+my $DONE_GETOPT;     # bool
+my $_USERCFG_FN;     # for testing
 {
-    my $hardwired =Config::IniFiles->new(-file => \*DATA);
-    push @$CONFIG_INIFILES, $hardwired;
+    my $hardwired;
+    sub __init {
+        if (!defined $hardwired) {
+            $hardwired = Config::IniFiles->new(-file => \*DATA)
+              or die "Builtin config fail";
+            close DATA; # avoids ", <DATA> line 8." on errors
+        }
+        $CONFIG_INIFILES = [ $hardwired ];
+        $GETOPT = Config::IniFiles->new;
+        $DONE_GETOPT = 0;
+        return ();
+    }
 }
-
-# The config object for the GetOptions variables
-my $GETOPT = Config::IniFiles->new;
+__init();
 
 my $CALLED = "$0 @ARGV";
 
@@ -33,7 +45,7 @@ my @CLIENT_OPTIONS = qw(
     write_access!
     gene_type_prefix=s
     debug=i
-    );
+    ); # a "constant"
 
 # @CLIENT_OPTIONS is Getopt::GetOptions() keys which will be included in the
 # $CLIENT_STANZA config.  To add another client option just include in above
@@ -86,7 +98,6 @@ Suggested usage:
 
 =cut
 
-my $DONE_GETOPT = 0;
 sub do_getopt {
     my (@script_args) = @_;
 
@@ -141,6 +152,12 @@ sub make_Client {
     return Bio::Otter::Lace::Client->new;
 }
 
+sub testmode_redirect_reset {
+    ($_USERCFG_FN) = @_;
+    __init();
+    return ();
+}
+
 # Public function to return name of config file in ~/ to enable
 # transition.  There should be only one config file, else previous
 # versions will see something different.
@@ -159,6 +176,8 @@ sub user_config_filename {
         warn "No user config present yet (expected at $fn)\n";
         $fn = $fn[0];
     } # else we have it
+
+    return $_USERCFG_FN if defined $_USERCFG_FN; # for testing
     return $fn;
 }
 
