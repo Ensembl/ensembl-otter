@@ -141,12 +141,33 @@ sub make_Client {
     return Bio::Otter::Lace::Client->new;
 }
 
+# Public function to return name of config file in ~/ to enable
+# transition.  There should be only one config file, else previous
+# versions will see something different.
+#
+# When all supported releases have this trick (late 2013?), we can
+# rename the config cleanly and safely.
+sub user_config_filename {
+    my $user_home = (getpwuid($<))[7];
+    my @fn = ("$user_home/.otter_config",  # since always
+              "$user_home/.otter/config"); # newfangled and tidy
+
+    my ($fn, $spare) = grep { -f $_ } @fn; # take first that exists
+    if (defined $spare) {
+        warn "Ignoring spare user config file $spare, taking $fn\n";
+    } elsif (!defined $fn) {
+        warn "No user config present yet (expected at $fn)\n";
+        $fn = $fn[0];
+    } # else we have it
+    return $fn;
+}
+
 sub __parse_available_config_files {
     my @conf_files = ("/etc/otter_config");
     if ($ENV{'OTTER_HOME'}) {
         push(@conf_files, "$ENV{OTTER_HOME}/otter_config");
     }
-    push(@conf_files, (getpwuid($<))[7]."/.otter_config");
+    push @conf_files, user_config_filename();
 
     my @ini;
     foreach my $file (@conf_files) {
@@ -329,7 +350,7 @@ otter client from:
 
   command line settings
   --cfgfile options on @ARGV when do_getopt ran
-  ~/.otter_config
+  ~/.otter_config  (but see user_config_filename())
   $ENV{'OTTER_HOME'}/otter_config (if defined)
   /etc/otter_config
   Otter Server's otter_config (spliced in late)
