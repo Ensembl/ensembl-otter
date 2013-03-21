@@ -38,12 +38,13 @@ sub new {
     $_string_zmap_hash->{"$new"} = $new;
     weaken $_string_zmap_hash->{"$new"};
     $new->_init(\%arg_hash);
-    $new->launch_zmap(\%arg_hash);
+    $new->launch_zmap;
     return $new;
 }
 
 sub _init {
     my ($self, $arg_hash) = @_;
+    $self->{'_arg_list'} = $arg_hash->{'-arg_list'};
     $self->{'_id_view_hash'} = { };
     $self->{'_view_list'} = [ ];
     $self->{'_conf_dir'} = $self->_conf_dir;
@@ -92,7 +93,7 @@ sub _make_conf {
 }
 
 sub launch_zmap {
-    my ($self, $arg_hash) = @_;
+    my ($self) = @_;
 
     if ($^O eq 'darwin') {
         # Sadly, if someone moves network after launching zmap, it
@@ -102,7 +103,7 @@ sub launch_zmap {
 
     $self->_make_conf;
 
-    my @e = $self->zmap_command($arg_hash);
+    my @e = $self->zmap_command;
     warn "Running: @e\n";
     my $pid = fork;
     confess "Error: couldn't fork()\n" unless defined $pid;
@@ -119,17 +120,15 @@ sub launch_zmap {
 }
 
 sub zmap_command {
-    my ($self, $arg_hash) = @_;
-    my @zmap_command = ('zmap', @{$self->zmap_arg_list($arg_hash)} );
+    my ($self) = @_;
+    my @zmap_command = ('zmap', @{$self->zmap_arg_list} );
     return @zmap_command;
 }
 
 sub zmap_arg_list {
-    my ($self, $arg_hash) = @_;
-    my $zmap_arg_list = [
-        '--conf_dir' => $self->conf_dir,
-    ];
-    my $arg_list = $arg_hash->{'-arg_list'};
+    my ($self) = @_;
+    my $zmap_arg_list = [ '--conf_dir' => $self->conf_dir ];
+    my $arg_list = $self->arg_list;
     push @{$zmap_arg_list}, @{$arg_list} if $arg_list;
     return $zmap_arg_list;
 }
@@ -165,6 +164,12 @@ sub conf_dir {
     my ($self) = @_;
     my $conf_dir = $self->{'_conf_dir'};
     return $conf_dir;
+}
+
+sub arg_list {
+    my ($self) = @_;
+    my $arg_list = $self->{'_arg_list'};
+    return $arg_list;
 }
 
 sub id_view_hash {
