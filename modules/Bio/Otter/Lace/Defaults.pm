@@ -36,8 +36,6 @@ my $_USERCFG_FN;     # for testing
 }
 __init();
 
-my $CALLED = "$0 @ARGV";
-
 my @CLIENT_OPTIONS = qw(
     url=s
     author=s
