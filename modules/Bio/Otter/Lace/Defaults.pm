@@ -9,6 +9,7 @@ use Carp;
 use Getopt::Long 'GetOptions';
 use Config::IniFiles;
 use File::Temp;
+use Try::Tiny;
 
 
 my $CLIENT_STANZA   = 'client';
@@ -203,10 +204,83 @@ sub __options_from_file {
 
     warn "Trying $file\n" if $DEBUG_CONFIG;
     my $ini = Config::IniFiles->new( -file => $file );
+    die "Errors found in configuration $file: @Config::IniFiles::errors"
+      unless defined $ini;
 
     return $ini;
 }
 
+
+# Set option in user config and save (if necessary, create) the file.
+# Comments are preserved.  Whitespace on "k = v" and "\n\n" are not.
+#
+# Set undef to clear (but note that our defaults may overlay the
+# absence).  Can die for various reasons - config should be unchanged.
+# No action taken here to make change take effect on running process.
+sub set_and_save {
+    my ($section, $param, $value) = @_;
+
+    # Get config
+    my $ucfg_fn = user_config_filename();
+    my $ucfg = grep { $_->GetFileName eq $ucfg_fn } @$CONFIG_INIFILES;
+
+    # Ensure we can write safely
+    if (!$ucfg) {
+        # No config file at startup
+        $ucfg = Config::IniFiles->new();
+        $ucfg->SetFileName($ucfg_fn);
+        $ucfg->SetSectionComment(client => "Config auto-created ".localtime());
+        die "File $ucfg_fn was created since this Otterlace started"
+          if -f $ucfg_fn;
+    } else {
+        # Did another Otterlace change the file since we loaded it?
+        # (No file locks because we expect to be Quick)
+        my $ucfg_new = Config::IniFiles->new(-file => $ucfg_fn);
+        die "File $ucfg_fn changed and can no longer be read: @Config::IniFiles::errors"
+          unless $ucfg_new;
+        my $old = __cfgini_to_txt($ucfg);
+        my $new = __cfgini_to_txt($ucfg_new);
+        if ($old ne $new) {
+            warn "Config change detail:\n---\n$old\n+++\n$new\n";
+            die "File $ucfg_fn changed since this Otterlace started";
+        }
+    }
+
+    # Mark file as edited
+    my @comm = $ucfg->GetSectionComment('client');
+    my $CAU = "Config auto-updated ";
+    @comm = grep { not m{^$CAU} } @comm;
+    push @comm, $CAU.localtime();
+    $ucfg->SetSectionComment(client => @comm);
+
+    # Config change
+    if (defined $value) {
+        $ucfg->newval($section, $param, $value);
+    } else {
+        $ucfg->delval($section, $param);
+    }
+
+    $ucfg->RewriteConfig
+      or die "Option changed but saving configuration failed.  ".
+        "Please check the Error Log.\n";
+
+    return ();
+}
+
+sub __cfgini_to_txt {
+    my ($cfg) = @_;
+    my $out = '';
+    open my $fh, '>', \$out or die "PerlIO::scalar open fail: $!";
+    my $old;
+    try {
+        $old = select $fh;
+        $cfg->OutputConfig;
+        close $fh or die "PerlIO::scalar close fail: $!";
+    } finally {
+        select $old;
+    };
+    return $out;
+}
 
 ################################################
 #
