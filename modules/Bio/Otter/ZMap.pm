@@ -37,32 +37,38 @@ Bio::Otter::Debug->add_keys(qw(
 
 =cut
 
+sub _init { ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
+    my ($self, $arg_hash) = @_;
+    $self->SUPER::_init($arg_hash);
+    my $tk = $arg_hash->{'-tk'};
+    $self->{'_widget'} = $self->_widget($tk);
+    return;
+}
+
 # NB: sub launch_zmap() calls wait() because some initialisation happens in
 # XRemote callbacks and we must not return until it is all done.
 
 sub launch_zmap {
-    my ($self, $arg_hash) = @_;
-    my $tk = $arg_hash->{'-tk'};
-    $self->{'_widget'} = $self->_widget($tk);
+    my ($self) = @_;
     my $callback = sub { $self->_callback };
     $self->widget->bind('<Property>', $callback);
-    $self->SUPER::launch_zmap($arg_hash);
+    $self->SUPER::launch_zmap;
     $self->wait;
     return;
 }
 
 sub zmap_command {
-    my ($self, $arg_hash) = @_;
-    my @zmap_command = $self->SUPER::zmap_command($arg_hash);
+    my ($self) = @_;
+    my @zmap_command = $self->SUPER::zmap_command;
     unshift @zmap_command, 'valgrind'
         if Bio::Otter::Debug->debug('ZMap-Valgrind');
     return @zmap_command;
 }
 
 sub zmap_arg_list {
-    my ($self, $arg_hash) = @_;
+    my ($self) = @_;
     my $zmap_arg_list = [
-        @{$self->SUPER::zmap_arg_list($arg_hash)},
+        @{$self->SUPER::zmap_arg_list},
         '--win_id' => $self->server_window_id,
         ];
     return $zmap_arg_list;
