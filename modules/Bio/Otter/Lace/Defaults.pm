@@ -18,6 +18,7 @@ my $DEBUG_CONFIG    = 0;
 
 ### Package state
 my $CONFIG_INIFILES; # arrayref of config object
+my $UCFG_POS;        # array index for user's config (present or absent)
 my $GETOPT;          # config object for the GetOptions variables
 my $DONE_GETOPT;     # tristate bool
 my $_USERCFG_FN;     # for testing
@@ -107,7 +108,7 @@ sub do_getopt {
     #  over the configuration files' settings, unshift them into @ARGV
     #  before running do_getopt()
 
-    push(@$CONFIG_INIFILES, __parse_available_config_files());
+    __parse_available_config_files();
     ############################################################################
     ############################################################################
     GetOptions(
@@ -182,20 +183,23 @@ sub user_config_filename {
 }
 
 sub __parse_available_config_files {
+    my $ucfg_fn = user_config_filename();
     my @conf_files = ("/etc/otter_config");
     if ($ENV{'OTTER_HOME'}) {
         push(@conf_files, "$ENV{OTTER_HOME}/otter_config");
     }
-    push @conf_files, user_config_filename();
+    push @conf_files, $ucfg_fn;
 
-    my @ini;
     foreach my $file (@conf_files) {
+        $UCFG_POS = @{$CONFIG_INIFILES} if $file eq $ucfg_fn;
         next unless -e $file;
         if (my $file_opts = __options_from_file($file)) {
-            push(@ini, $file_opts);
+            push @$CONFIG_INIFILES, $file_opts;
         }
     }
-    return @ini;
+    die "confused" unless defined $UCFG_POS;
+
+    return ();
 }
 
 sub __options_from_file {
@@ -234,6 +238,7 @@ sub set_and_save {
         $ucfg->SetSectionComment(client => "Config auto-created ".localtime());
         die "File $ucfg_fn was created since this Otterlace started"
           if -f $ucfg_fn;
+        splice(@$CONFIG_INIFILES, $UCFG_POS, 0, $ucfg);
     } else {
         # Did another Otterlace change the file since we loaded it?
         # (No file locks because we expect to be Quick)
@@ -283,6 +288,16 @@ sub __cfgini_to_txt {
     };
     return $out;
 }
+
+sub __fn_map { # debug function -> config names
+    my @config = @_;
+    return map { if (!defined $_) { 'anon' }
+                 elsif (ref($_) && $_ == \*DATA) { 'DATA' }
+                 else { $_ } }
+      map { if ($_ == $GETOPT) { 'getopt' } else { $_->GetFileName } }
+        @config;
+}
+
 
 ################################################
 #
