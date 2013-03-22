@@ -1111,7 +1111,7 @@ sub process_gff_file_from_Filter {
         return Bio::Otter::Lace::ProcessGFF::make_ace_transcripts_from_gff($full_gff_file);
     }
     elsif ($filter->feature_kind =~ /AlignFeature/) {
-        Bio::Otter::Lace::ProcessGFF::store_hit_data_from_gff($self->DB->dbh, $full_gff_file);
+        Bio::Otter::Lace::ProcessGFF::store_hit_data_from_gff($self->AccessionTypeCache, $full_gff_file);
         # Unset flag so that we don't reprocess this file if we recover the session.
         my $dbh = $self->DB->dbh;
         $dbh->begin_work;
