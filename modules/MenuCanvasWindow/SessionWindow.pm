@@ -2566,7 +2566,7 @@ sub _feature_details_xml {
 }
 
 my $feature_accession_info_sql = <<'SQL'
-SELECT source_db, taxon_id, description FROM accession_info WHERE accession_sv = ?
+SELECT source_db, taxon_id, description FROM otter_accession_info WHERE accession_sv = ?
 SQL
     ;
 

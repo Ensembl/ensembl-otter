@@ -52,8 +52,8 @@ sub populate {
     # Will fetch the latest version of any ACCESSION supplied without a SV.
 
     my $dbh = $DB{$self}->dbh;
-    my $check_full  = $dbh->prepare(q{ SELECT count(*) FROM accession_info WHERE accession_sv = ? });
-    my $check_alias = $dbh->prepare(q{ SELECT count(*) FROM full_accession WHERE name = ? });
+    my $check_full  = $dbh->prepare(q{ SELECT count(*) FROM otter_accession_info WHERE accession_sv = ? });
+    my $check_alias = $dbh->prepare(q{ SELECT count(*) FROM otter_full_accession WHERE name = ? });
 
     my (@to_fetch);
     foreach my $name (@$name_list) {
@@ -79,7 +79,7 @@ sub populate {
     my $response = $self->Client->get_accession_types(@to_fetch);
 
     my $save_acc_info = $dbh->prepare(q{
-        INSERT INTO accession_info (
+        INSERT INTO otter_accession_info (
               accession_sv
               , taxon_id
               , evi_type
@@ -89,7 +89,7 @@ sub populate {
         VALUES (?,?,?,?,?,?)
     });
     my $save_alias = $dbh->prepare(q{
-        INSERT INTO full_accession(name, accession_sv) VALUES (?,?)
+        INSERT INTO otter_full_accession(name, accession_sv) VALUES (?,?)
     });
 
     $dbh->begin_work;
@@ -131,7 +131,7 @@ sub type_and_name_from_accession {
     my $sth = $dbh->prepare(q{
         SELECT evi_type
           , accession_sv
-        FROM accession_info
+        FROM otter_accession_info
         WHERE accession_sv = ?
         });
     $sth->execute($acc);
@@ -139,8 +139,8 @@ sub type_and_name_from_accession {
     unless ($type and $acc_sv) {
         $sth = $dbh->prepare(q{
             SELECT ai.evi_type, ai.accession_sv
-            FROM accession_info ai
-              , full_accession f
+            FROM otter_accession_info ai
+              , otter_full_accession f
             WHERE ai.accession_sv = f.accession_sv
             AND f.name = ?
             });
@@ -169,15 +169,15 @@ sub evidence_type_and_name_from_accession_list {
         SELECT evi_type
           , accession_sv
           , source_db
-        FROM accession_info
+        FROM otter_accession_info
         WHERE accession_sv = ?
         });
     my $alias_fetch = $dbh->prepare(q{
         SELECT ai.evi_type
           , ai.accession_sv
           , ai.source_db
-        FROM accession_info ai
-          , full_accession f
+        FROM otter_accession_info ai
+          , otter_full_accession f
         WHERE ai.accession_sv = f.accession_sv
           AND f.name = ?
         });
@@ -185,7 +185,7 @@ sub evidence_type_and_name_from_accession_list {
         SELECT evi_type
           , accession_sv
           , source_db
-        FROM accession_info
+        FROM otter_accession_info
         WHERE accession_sv LIKE ?
         });
 
@@ -195,7 +195,7 @@ sub evidence_type_and_name_from_accession_list {
         $full_fetch->execute($acc);
         my ($type, $full_name, $source_db) = $full_fetch->fetchrow;
         unless ($type) {
-            # If the SV was left off, try the full_accession table first to
+            # If the SV was left off, try the otter_full_accession table first to
             # ensure that the most recent version is returned, if cached.
             $alias_fetch->execute($acc);
             ($type, $full_name, $source_db) = $alias_fetch->fetchrow;
