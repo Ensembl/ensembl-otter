@@ -85,6 +85,21 @@ sub _has_table {
     return $table_info->{TABLE_NAME};
 }
 
+sub _has_schema {
+    my ($self, $name, $value) = @_;
+
+    my $has_tag_table = $self->_has_table('otter_tag_value');
+    my $tag_name = 'schema_' . $name;
+
+    if (defined $value) {
+        die "No otter_tag_value table when setting '$tag_name' tag." unless $has_tag_table;
+        return $self->set_tag_value($tag_name, $value);
+    }
+
+    return unless $has_tag_table;
+    return $self->get_tag_value($tag_name);
+}
+
 sub init_db {
     my ($self, $client) = @_;
 
@@ -96,7 +111,7 @@ sub init_db {
         });
     $dbh{$self} = $dbh;
 
-    $self->create_tables($client) unless $self->_has_table('otter_tag_value') and $self->get_tag_value('initialised');
+    $self->create_tables($client) unless $self->_has_schema('otter');
 
     return 1;
 }
@@ -109,7 +124,7 @@ sub create_tables {
     my $dbh = $dbh{$self};
     $dbh->begin_work;
     $dbh->do($schema);
-    $self->set_tag_value('initialised', 1);
+    $self->_has_schema('otter', 1);
     $dbh->commit;
 
     return;
