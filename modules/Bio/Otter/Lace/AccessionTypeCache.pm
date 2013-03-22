@@ -231,6 +231,18 @@ sub evidence_type_and_name_from_accession_list {
     return $type_name;
 }
 
+{
+    my $feature_accession_info_sql = q{
+        SELECT source_db, taxon_id, description FROM otter_accession_info WHERE accession_sv = ?
+    };
+
+    sub feature_accession_info {
+        my ($self, $feature_name) = @_;
+        my $row = $DB{$self}->dbh->selectrow_arrayref($feature_accession_info_sql, {}, $feature_name);
+        return $row;
+    }
+}
+
 sub begin_work { my ($self) = @_; return $DB{$self}->dbh->begin_work; }
 sub commit     { my ($self) = @_; return $DB{$self}->dbh->commit;     }
 sub rollback   { my ($self) = @_; return $DB{$self}->dbh->rollback;   }
