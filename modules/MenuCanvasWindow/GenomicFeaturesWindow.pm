@@ -14,6 +14,7 @@ use Tk::SmartOptionmenu;
 use Bio::Otter::Lace::Client;
 use Hum::Ace::Assembly;
 use Hum::Ace::SeqFeature::Simple;
+use Bio::Otter::ZMap::XML::SeqFeature::Simple;
 
 my %strand_name = (
      1 => 'Fwd',
