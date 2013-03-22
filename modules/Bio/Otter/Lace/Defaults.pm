@@ -228,13 +228,14 @@ sub set_and_save {
 
     # Get config
     my $ucfg_fn = user_config_filename();
-    my $ucfg = grep { $_->GetFileName eq $ucfg_fn } @$CONFIG_INIFILES;
+    my ($ucfg) = grep { my $ofn = $_->GetFileName; defined $ofn && $ofn eq $ucfg_fn } @$CONFIG_INIFILES;
 
     # Ensure we can write safely
     if (!$ucfg) {
         # No config file at startup
         $ucfg = Config::IniFiles->new();
         $ucfg->SetFileName($ucfg_fn);
+        $ucfg->AddSection('client');
         $ucfg->SetSectionComment(client => "Config auto-created ".localtime());
         die "File $ucfg_fn was created since this Otterlace started"
           if -f $ucfg_fn;
@@ -248,9 +249,10 @@ sub set_and_save {
         my $old = __cfgini_to_txt($ucfg);
         my $new = __cfgini_to_txt($ucfg_new);
         if ($old ne $new) {
-            warn "Config change detail:\n---\n$old\n+++\n$new\n";
+            warn "Config change detail in $ucfg_fn:\n---\n$old\n+++\n$new\n";
             die "File $ucfg_fn changed since this Otterlace started";
         }
+        # nb. whitespace changes ignored because we can't preserve them
     }
 
     # Mark file as edited
@@ -279,6 +281,8 @@ sub __cfgini_to_txt {
     my $out = '';
     open my $fh, '>', \$out or die "PerlIO::scalar open fail: $!";
     my $old;
+    ## no critic (InputOutput::ProhibitOneArgSelect)
+    # that is the API
     try {
         $old = select $fh;
         $cfg->OutputConfig;
@@ -289,8 +293,10 @@ sub __cfgini_to_txt {
     return $out;
 }
 
-sub __fn_map { # debug function -> config names
+# debug (cfg -> config name) fn needed to explain $CONFIG_INIFILES
+sub __fn_map { ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
     my @config = @_;
+    ## no critic (BuiltinFunctions::ProhibitComplexMappings)
     return map { if (!defined $_) { 'anon' }
                  elsif (ref($_) && $_ == \*DATA) { 'DATA' }
                  else { $_ } }
