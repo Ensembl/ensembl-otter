@@ -78,16 +78,6 @@ sub populate {
     # Query the webserver (mole database) for the information.
     my $response = $self->Client->get_accession_types(@to_fetch);
 
-    my $save_acc_info = $dbh->prepare(q{
-        INSERT INTO otter_accession_info (
-              accession_sv
-              , taxon_id
-              , evi_type
-              , description
-              , source_db
-              , length)
-        VALUES (?,?,?,?,?,?)
-    });
     my $save_alias = $dbh->prepare(q{
         INSERT INTO otter_full_accession(name, accession_sv) VALUES (?,?)
     });
@@ -107,7 +97,7 @@ sub populate {
             my ($have_full) = $check_full->fetchrow;
             unless ($have_full) {
                 # It is new, so save it
-                $save_acc_info->execute($acc_sv, $tax_id, $evi_type, $description, $source_db, $seq_length);
+                $self->save_accession_info($acc_sv, $tax_id, $evi_type, $description, $source_db, $seq_length);
             }
             if ($name ne $acc_sv) {
                 $save_alias->execute($name, $acc_sv);
@@ -122,6 +112,28 @@ sub populate {
     $dbh->commit;
 
     return;
+}
+
+{
+    my %save_acc_info_sth;
+
+    my $save_acc_info_sql = q{
+        INSERT OR REPLACE INTO otter_accession_info (
+              accession_sv
+              , taxon_id
+              , evi_type
+              , description
+              , source_db
+              , length)
+        VALUES (?,?,?,?,?,?)
+    };
+
+    sub save_accession_info {
+        my ($self, $accession_sv, $taxon_id, $evi_type, $description, $source_db, $length) = @_;
+        my $sth = $save_acc_info_sth{$self} ||= $DB{$self}->dbh->prepare($save_acc_info_sql);
+
+        return $sth->execute($accession_sv, $taxon_id, $evi_type, $description, $source_db, $length);
+    }
 }
 
 sub type_and_name_from_accession {
@@ -219,6 +231,9 @@ sub evidence_type_and_name_from_accession_list {
     return $type_name;
 }
 
+sub begin_work { my ($self) = @_; return $DB{$self}->dbh->begin_work; }
+sub commit     { my ($self) = @_; return $DB{$self}->dbh->commit;     }
+sub rollback   { my ($self) = @_; return $DB{$self}->dbh->rollback;   }
 
 1;
 

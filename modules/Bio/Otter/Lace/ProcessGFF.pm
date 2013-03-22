@@ -30,18 +30,9 @@ use Try::Tiny;
 
 
     sub store_hit_data_from_gff {
-        my ($dbh, $gff_file) = @_;
+        my ($accession_type_cache, $gff_file) = @_;
 
-        $dbh->begin_work;
-        my $store = $dbh->prepare(q{
-            INSERT OR REPLACE INTO otter_accession_info (accession_sv
-                  , taxon_id
-                  , evi_type
-                  , description
-                  , source_db
-                  , length)
-            VALUES (?,?,?,?,?,?)
-        });
+        $accession_type_cache->begin_work;
 
         open my $gff_fh, '<', $gff_file or confess "Can't read GFF file '$gff_file'; $!";
         while (<$gff_fh>) {
@@ -49,7 +40,7 @@ use Try::Tiny;
             my ($seq_name, $source, $feat_type, $start, $end, $score, $strand, $frame, $attrib)
                 = parse_gff_line($_);
             next unless $attrib->{'Name'};
-            $store->execute(
+            $accession_type_cache->save_accession_info(
                 $attrib->{'Name'},
                 $attrib->{'Taxon_ID'},
                 substr($source, 0, 4) eq 'EST_' ? 'EST' : $evidence_type{$source},
@@ -60,7 +51,7 @@ use Try::Tiny;
         }
         close $gff_fh or confess "Error reading GFF file '$gff_file'; $!";
 
-        $dbh->commit;
+        $accession_type_cache->commit;
 
         return;
     }
