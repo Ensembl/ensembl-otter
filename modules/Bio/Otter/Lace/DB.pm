@@ -58,7 +58,7 @@ sub file {
 sub get_tag_value {
     my ($self, $tag) = @_;
 
-    my $sth = $dbh{$self}->prepare(q{ SELECT value FROM tag_value WHERE tag = ? });
+    my $sth = $dbh{$self}->prepare(q{ SELECT value FROM otter_tag_value WHERE tag = ? });
     $sth->execute($tag);
     my ($value) = $sth->fetchrow;
     return $value;
@@ -71,7 +71,7 @@ sub set_tag_value {
         confess "No value provided";
     }
 
-    my $sth = $dbh{$self}->prepare(q{ INSERT OR REPLACE INTO tag_value (tag, value) VALUES (?,?) });
+    my $sth = $dbh{$self}->prepare(q{ INSERT OR REPLACE INTO otter_tag_value (tag, value) VALUES (?,?) });
     $sth->execute($tag, $value);
 
     return;
@@ -96,7 +96,7 @@ sub init_db {
         });
     $dbh{$self} = $dbh;
 
-    $self->create_tables($client) unless $self->_has_table('tag_value') and $self->get_tag_value('initialised');
+    $self->create_tables($client) unless $self->_has_table('otter_tag_value') and $self->get_tag_value('initialised');
 
     return 1;
 }

@@ -34,7 +34,7 @@ use Try::Tiny;
 
         $dbh->begin_work;
         my $store = $dbh->prepare(q{
-            INSERT OR REPLACE INTO accession_info (accession_sv
+            INSERT OR REPLACE INTO otter_accession_info (accession_sv
                   , taxon_id
                   , evi_type
                   , description
