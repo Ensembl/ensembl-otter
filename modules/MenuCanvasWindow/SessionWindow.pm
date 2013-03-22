@@ -2566,16 +2566,10 @@ sub _feature_details_xml {
     return join '', @feature_details_xml;
 }
 
-my $feature_accession_info_sql = <<'SQL'
-SELECT source_db, taxon_id, description FROM otter_accession_info WHERE accession_sv = ?
-SQL
-    ;
-
 sub _feature_accession_info_xml {
     my ($self, $feat_name) = @_;
 
-    my $row = $self->AceDatabase->DB->dbh->selectrow_arrayref(
-        $feature_accession_info_sql, {}, $feat_name);
+    my $row = $self->AceDatabase->AccessionTypeCache->feature_accession_info($feat_name);
     return unless $row;
     my ($source_db, $taxon_id, $desc) = @{$row};
 
