@@ -10,6 +10,7 @@ use Try::Tiny;
 use Tk::DialogBox;
 use base 'MenuCanvasWindow';
 use EditWindow::LoadColumns;
+use EditWindow::Preferences;
 use CanvasWindow::SequenceSetChooser;
 use Bio::Otter::Utils::About;
 use Bio::Otter::Lace::Client;
@@ -50,6 +51,10 @@ sub new {
     $canvas->Tk::bind('<Control-r>',    $recover_command);
     $canvas->Tk::bind('<Control-R>',    $recover_command);
 
+    my $prefs_command = [ $self, 'show_preferences' ];
+    $canvas->Tk::bind('<Control-p>', $prefs_command);
+    $canvas->Tk::bind('<Control-P>', $prefs_command);
+
     my $quit_command = sub{
         $self->canvas->toplevel->destroy;
         $self = undef;  # $self gets nicely DESTROY'd with this
@@ -78,6 +83,14 @@ sub new {
         -accelerator => 'Ctrl+R',
         -underline  => 1,
         -command    => $recover_command,
+       );
+
+    $file_menu->add
+       ('command',
+        -label      => "Preferences...",
+        -accelerator => 'Ctrl+P',
+        -underline  => 1,
+        -command    => $prefs_command,
        );
 
     $file_menu->add
@@ -172,6 +185,16 @@ sub show_about {
 
     $self->{'_about'}->Show;
 
+    return ();
+}
+
+sub show_preferences {
+    my ($self) = @_;
+    EditWindow::Preferences->show_for_parent
+        (\$self->{_prefs_win},
+         from => $self->top_window,
+         linkage => { Client => $self->Client },
+         title => 'Preferences');
     return ();
 }
 
