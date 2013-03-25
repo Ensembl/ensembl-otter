@@ -734,6 +734,7 @@ sub _open_SequenceSet {
     $adb->write_access($adb_write_access);
     $adb->name($name);
     $adb->smart_slice($smart_slice);
+    $adb->load_dataset_info;
 
     if ($adb_write_access) {
         # only lock the region if we have write access.
