@@ -85,6 +85,11 @@ sub DB {
     return $db;
 }
 
+sub load_dataset_info {
+    my ($self) = @_;
+    return $self->DB->load_dataset_info($self->DataSet);
+}
+
 sub write_access {
     my ($self, $flag) = @_;
 

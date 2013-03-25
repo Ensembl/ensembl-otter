@@ -129,6 +129,30 @@ sub create_tables {
     return;
 }
 
+sub load_dataset_info {
+    my ($self, $dataset) = @_;
+    return if $self->_is_loaded('dataset_info');
+
+    my $dbh = $dbh{$self};
+    my $sth = $dbh->prepare(q{ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (?, ?, ?) });
+
+    my $meta_hash = $dataset->meta_hash;
+    $dbh->begin_work;
+    while (my ($key, $details) = each %{$meta_hash}) {
+
+        next if $key eq 'assembly.mapping'; # we only use chromosome coords on client
+
+        foreach my $value (@{$details->{values}}) {
+            $sth->execute($details->{species_id}, $key, $value);
+        }
+    }
+    $dbh->commit;
+
+    $self->_is_loaded('dataset_info', 1);
+
+    return;
+}
+
 1;
 
 __END__
