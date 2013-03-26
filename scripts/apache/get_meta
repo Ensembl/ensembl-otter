@@ -19,8 +19,19 @@ my $select_meta_sql = <<'SQL'
 SQL
     ;
 
+my @white_list = qw(
+    assembly
+    patch
+    prefix
+    schema_type
+    schema_version
+    species
+);
+
 sub get_meta {
     my ($server) = @_;
+
+    my %white_list = map { $_ => 1 } @white_list;
 
     my $sth = $server->otter_dba()->dbc()->prepare($select_meta_sql);
     $sth->execute;
@@ -28,8 +39,13 @@ sub get_meta {
     my $counter = 0;
     my $output_string ='';
     while (my ($species_id, $meta_key, $meta_value) = $sth->fetchrow) {
+
+        my ($key_prefix) = $meta_key =~ /^(\w+)\.?/;
+        next unless $white_list{$key_prefix};
+
         $species_id = '' unless defined $species_id;
         $meta_value=~s/\s+/ /g; # get rid of newlines and tabs
+
         $output_string .= join("\t", $meta_key, $meta_value, $species_id)."\n";
         $counter++;
     }
