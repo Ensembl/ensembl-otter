@@ -258,7 +258,7 @@ sub set_and_save {
     # Mark file as edited
     my @comm = $ucfg->GetSectionComment('client');
     my $CAU = "Config auto-updated ";
-    @comm = grep { not m{^$CAU} } @comm;
+    @comm = grep { not m{^# $CAU} } @comm;
     push @comm, $CAU.localtime();
     $ucfg->SetSectionComment(client => @comm);
 

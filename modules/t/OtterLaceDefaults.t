@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More tests => 5;
+use Test::More tests => 6;
 use File::Temp 'tempdir';
 use File::Slurp qw( slurp write_file );
 use Try::Tiny;
@@ -19,6 +19,7 @@ sub main {
     subtest defaults => \&defaults_tt;
     subtest makenew => \&makenew_tt;
     subtest async_edit => \&async_edit_tt;
+    subtest multiwrite => \&multiwrite_tt;
 
     return ();
 }
@@ -176,6 +177,20 @@ sub hack_config {
                { atomic => 1 },
                $cfg);
     return $cfg;
+}
+
+sub multiwrite_tt {
+    plan tests => 1;
+
+    test_config('multiwrite_tt');
+    getopt_with_args();
+
+    foreach my $A (qw( Bob Fred Gina )) {
+        putcfg(client => author => $A);
+    }
+    like(wholecfg(), qr{\A# Config auto-created .*\n# Config auto-updated .*\n\[client]\nauthor=Gina\n\z},
+         'config auto-comments and one option');
+    return ();
 }
 
 main();
