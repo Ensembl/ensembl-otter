@@ -401,7 +401,7 @@ sub meta_hash {
 sub get_meta_value {
     my ($self, $key) = @_;
 
-    my $values = $self->meta_hash->{$key};
+    my $values = $self->meta_hash->{values}->{$key};
 
     confess "No entry in meta table under key '$key'" if ! @{$values};
     confess "Multiple entries in meta table under key '$key'" if @{$values} > 1;
