@@ -853,8 +853,10 @@ sub get_meta {
 
     my $meta_hash = {};
     for my $line (split(/\n/,$response)) {
-        my($meta_key, $meta_value) = split(/\t/,$line);
-        push @{$meta_hash->{$meta_key}}, $meta_value; # as there can be multiple values for one key
+        my($meta_key, $meta_value, $species_id) = split(/\t/,$line);
+        $species_id = undef if $species_id eq '';
+        $meta_hash->{$meta_key}->{species_id} = $species_id;
+        push @{$meta_hash->{$meta_key}->{values}}, $meta_value; # as there can be multiple values for one key
     }
 
     return $meta_hash;
