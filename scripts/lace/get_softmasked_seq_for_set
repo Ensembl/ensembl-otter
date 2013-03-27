@@ -1,14 +1,6 @@
 #!/usr/bin/env perl
 
 use warnings;
-
-
-# Need to point at ensembl head API
-use lib '/nfs/team71/analysis/jgrg/work/ensembl-head/modules';
-use lib '/nfs/team71/analysis/jgrg/work/ensembl-pipeline-head/modules';
-
-### get_softmasked_seq_for_set
-
 use strict;
 
 use Bio::SeqIO;
@@ -17,7 +9,7 @@ use Bio::Vega::DBSQL::DBAdaptor;
 use Bio::Otter::Lace::SatelliteDB;
 
 {
-    my( $dataset_name, $set_name, $stats_only );
+    my( $dataset_name, $set_name, $stats_only, $whole_chr );
 
     my $usage = sub { exec('perldoc', $0) };
     Bio::Otter::Lace::Defaults::do_getopt(
@@ -25,6 +17,7 @@ use Bio::Otter::Lace::SatelliteDB;
         'dataset=s'     => \$dataset_name,
         'set|chr=s'     => \$set_name,
         'stats!'        => \$stats_only,
+        'whole!'        => \$whole_chr, # with N-filled gaps
         ) or $usage->();
     $usage->() unless $dataset_name and $set_name;
     
@@ -46,9 +39,15 @@ use Bio::Otter::Lace::SatelliteDB;
         );
     my $slice_aptr = $pipe_dba->get_SliceAdaptor;
 
-    my $cs_list = $ss->CloneSequence_list;
-    
-    
+    my $cs_list;
+    if ($whole_chr) {
+        $cs_list = [ $set_name ];
+        # one chromosome
+    } else {
+        $cs_list = $ss->CloneSequence_list;
+        # listref of Bio::Otter::Lace::CloneSequence
+    }
+
     my $seq_out = Bio::SeqIO->new(
         -fh     => \*STDOUT,
         -format => 'fasta',
@@ -57,10 +56,16 @@ use Bio::Otter::Lace::SatelliteDB;
     my $repeat_mask = ['trf', 'RepeatMasker'];
     my $soft = 1;
     my %total; # stats chr=>count
-    foreach my $cs (@$cs_list) {
-        # my $ctg_id = $cs->pipeline_contig_id or die "No pipeline contig ID";
-        my $ctg_name = $cs->contig_name();
-        my $slice = $slice_aptr->fetch_by_region('contig', $ctg_name);
+    foreach my $obj (@$cs_list) {
+        my $slice;
+        if (ref($obj)) {
+            my $cs = $obj;
+            # my $ctg_id = $cs->pipeline_contig_id or die "No pipeline contig ID";
+            my $ctg_name = $cs->contig_name();
+            $slice = $slice_aptr->fetch_by_region('contig', $ctg_name);
+        } else {
+            $slice = $slice_aptr->fetch_by_region(chromosome => $obj);
+        }
         my $seq = $slice->get_repeatmasked_seq($repeat_mask, $soft);
 	if ($stats_only) {
 	    my $char = seq2stats($seq->seq);
@@ -121,7 +126,7 @@ Dump softmasked sequence to STDOUT
 
 =head1 SYNOPSIS
 
- get_softmasked_seq_for_set -dataset <species> -chr <chromosome> [ -stats ]
+ get_softmasked_seq_for_set -dataset <species> -chr <chromosome> [ -stats ] [ -whole ]
 
 =head1 AUTHOR
 
