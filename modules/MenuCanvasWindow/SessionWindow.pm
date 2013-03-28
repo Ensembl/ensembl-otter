@@ -30,6 +30,7 @@ use MenuCanvasWindow::GenomicFeaturesWindow;
 use Text::Wrap qw{ wrap };
 
 use Bio::Otter::Lace::Client;
+use Bio::Otter::Lace::DB::FilterAdaptor;
 use Bio::Otter::ZMap;
 use Bio::Otter::ZMap::XML;
 use Bio::Vega::Transform::Otter::Ace;
@@ -1481,12 +1482,12 @@ sub add_external_SubSeqs {
 sub fetch_external_SubSeqs {
     my ($self) = @_;
 
-    my $sth = $self->AceDatabase->DB->dbh->prepare(
-        q{ SELECT filter_name FROM otter_filter WHERE done = 1 AND process_gff = 1 }
-        );
-    $sth->execute;
+    my $db_filter_adaptor = Bio::Otter::Lace::DB::FilterAdaptor->new($self->AceDatabase->DB->dbh);
+    my @db_filters = $db_filter_adaptor->fetch_where('done = 1 AND process_gff = 1');
+
     my $filter_hash = $self->AceDatabase->filters;
-    while (my ($filter_name) = $sth->fetchrow) {
+    foreach my $db_filter (@db_filters) {
+        my $filter_name = $db_filter->filter_name;
         my $filter = $filter_hash->{$filter_name}{'filter'};
         my @tsct = try {
             $self->AceDatabase->process_gff_file_from_Filter($filter);
