@@ -144,6 +144,10 @@ sub _prepare_cached {
     return $self->{$name} = $self->dbh->prepare($sql);
 }
 
+sub begin_work { return shift->dbh->begin_work; }
+sub commit     { return shift->dbh->commit;     }
+sub rollback   { return shift->dbh->rollback;   }
+
 1;
 
 __END__

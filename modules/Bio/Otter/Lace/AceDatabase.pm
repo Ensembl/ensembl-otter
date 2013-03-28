@@ -18,6 +18,8 @@ use Bio::Vega::Transform::XML;
 use Bio::Otter::Debug;
 use Bio::Otter::Lace::AccessionTypeCache;
 use Bio::Otter::Lace::DB;
+use Bio::Otter::Lace::DB::Filter;
+use Bio::Otter::Lace::DB::FilterAdaptor;
 use Bio::Otter::Lace::Slice; # a new kind of Slice that knows how to get pipeline data
 use Bio::Otter::Lace::ProcessGFF;
 use Bio::Otter::Utils::Config::Ini qw( config_ini_format );
@@ -969,37 +971,34 @@ sub dna_ace_data {
 sub reload_filter_state {
     my ($self) = @_;
 
-    my $dbh = $self->DB->dbh;
-    my $sth = $dbh->prepare(q{
-        SELECT filter_name, wanted, failed, done FROM otter_filter
-    });
-    $sth->execute;
+    my $db_filter_adaptor = Bio::Otter::Lace::DB::FilterAdaptor->new($self->DB->dbh);
+    my @db_filters = $db_filter_adaptor->fetch_all;
 
     my $filters = $self->filters;
 
     my @obsolete;
-    while (my ($filter_name, $wanted, $failed, $done) = $sth->fetchrow) {
+    foreach my $db_filter ( @db_filters ) {
+        my $filter_name = $db_filter->filter_name;
         my $filter = $filters->{$filter_name};
         if ($filter) {
             warn "Reloading state from file for $filter_name\n";
         } else {
-            warn "Skipping obsolete coloumn '$filter_name'\n";
-            push(@obsolete, $filter_name);
+            warn "Skipping obsolete column '$filter_name'\n";
+            push(@obsolete, $db_filter);
             next;
         }
         my $state_hash = $filters->{$filter_name}{'state'};
-        $state_hash->{'wanted'} = $wanted;
-        $state_hash->{'failed'} = $failed;
-        $state_hash->{'done'}   = $done;
+        $state_hash->{'wanted'} = $db_filter->wanted;
+        $state_hash->{'failed'} = $db_filter->failed;
+        $state_hash->{'done'}   = $db_filter->done;
     }
 
     if (@obsolete) {
-        $dbh->begin_work;
-        my $del = $dbh->prepare(q{ DELETE FROM otter_filter WHERE filter_name = ? });
-        foreach my $filter_name (@obsolete) {
-            $del->execute($filter_name);
+        $db_filter_adaptor->begin_work;
+        foreach my $db_filter (@obsolete) {
+            $db_filter_adaptor->delete($db_filter);
         }
-        $dbh->commit;
+        $db_filter_adaptor->commit;
     }
 
     return;
@@ -1008,27 +1007,27 @@ sub reload_filter_state {
 sub save_filter_state {
     my ($self) = @_;
 
-    my $dbh = $self->DB->dbh;
-    $dbh->begin_work;
+    my $db_filter_adaptor = Bio::Otter::Lace::DB::FilterAdaptor->new($self->DB->dbh);
+    $db_filter_adaptor->begin_work;
 
-    my $insert = $dbh->prepare(q{
-        INSERT OR IGNORE INTO otter_filter (filter_name) VALUES (?)
-    });
-    my $update = $dbh->prepare(q{
-        UPDATE otter_filter SET wanted = ?, failed = ?, done = ? WHERE filter_name = ?
-    });
+    my %existing = map { $_->filter_name => $_ } $db_filter_adaptor->fetch_all;
 
     while ( my ($name, $value) = each %{$self->filters} ) {
         my $state_hash = $value->{'state'};
-        $insert->execute($name);
-        $update->execute(
-            $state_hash->{'wanted'},
-            $state_hash->{'failed'},
-            $state_hash->{'done'},
-            $name, 
-            );
+        my $db_filter = $existing{$name};
+        $db_filter = Bio::Otter::Lace::DB::Filter->new( filter_name => $name ) unless $db_filter;
+
+        $db_filter->wanted($state_hash->{'wanted'});
+        $db_filter->failed($state_hash->{'failed'});
+        $db_filter->done(  $state_hash->{'done'});
+
+        if ($db_filter->is_stored) {
+            $db_filter_adaptor->update($db_filter);
+        } else {
+            $db_filter_adaptor->store($db_filter);
+        }
     }
-    $dbh->commit;
+    $db_filter_adaptor->commit;
 
     return;
 }
@@ -1078,14 +1077,15 @@ sub DataSet {
 sub process_gff_file_from_Filter {
     my ($self, $filter) = @_;
 
+    my $db_filter_adaptor = Bio::Otter::Lace::DB::FilterAdaptor->new($self->DB->dbh);
+
     my $filter_name = $filter->name;
-    my $sth = $self->DB->dbh->prepare(q{ SELECT gff_file, process_gff FROM otter_filter WHERE filter_name = ? });
-    $sth->execute($filter_name);
-    my ($gff_file, $load_gff) = $sth->fetchrow;
+    my $db_filter = $db_filter_adaptor->fetch_by_name($filter_name);
+    my $gff_file = $db_filter->gff_file;
     unless ($gff_file) {
         confess "gff_file column not set for '$filter_name' in otter_filter table in SQLite DB";
     }
-    unless ($load_gff) {
+    unless ($db_filter->process_gff) {
         return;
     }
 
@@ -1112,11 +1112,10 @@ sub process_gff_file_from_Filter {
     elsif ($filter->feature_kind =~ /AlignFeature/) {
         Bio::Otter::Lace::ProcessGFF::store_hit_data_from_gff($self->AccessionTypeCache, $full_gff_file);
         # Unset flag so that we don't reprocess this file if we recover the session.
-        my $dbh = $self->DB->dbh;
-        $dbh->begin_work;
-        my $no_reload = $dbh->prepare(q{ UPDATE otter_filter SET process_gff = 0 WHERE filter_name = ? });
-        $no_reload->execute($filter_name);
-        $dbh->commit;
+        $db_filter_adaptor->begin_work;
+        $db_filter->process_gff(0);
+        $db_filter_adaptor->update($db_filter);
+        $db_filter_adaptor->commit;
         return;
     }
     else {
