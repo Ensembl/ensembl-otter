@@ -1,0 +1,130 @@
+#! /usr/bin/env perl
+use strict;
+use warnings;
+
+use lib '/software/anacode/cubane/lib';
+use Report::Spreadsheet;
+
+# This is an ex-oneliner, looking for clone vs. clone likeness between
+# two chromosomes.
+#
+# Probably doesn't notice alphabet, provided there's no translation.
+
+use YAML 'Dump';
+use List::Util qw( min max );
+use Bio::SeqIO;
+
+# lastz ... --out=output.axt+ --format=axt+ target.fa[multiple,nameparse=full] query.fa[nameparse=full]
+# axt_munge target.fa query.fa < output.axt+
+
+my @bin; # align size stats
+my $binW = 100; # bin width / bp
+
+my @aln;
+my %seq_len; # key=name, val= [ total_len_bp, unmasked_len_bp ]
+
+my $spreadsheet;
+
+sub main {
+    %seq_len = map { load_seq_info($_) } @ARGV;
+
+    while (<STDIN>) {
+        if (/^#\s*([^=]*)/) {
+            push @aln, $_ if grep { $1 eq $_ } qw{ identity coverage };
+        } elsif (/^$/) { aln(\@aln) }
+        else { push @aln, $_ }
+    }
+    aln(\@aln);
+    undef $spreadsheet; # close it before global destruction
+}
+
+sub aln {
+    my ($alnref) = @_;
+    return unless @$alnref; # nothing yet
+    my @orig = @$alnref;
+    my ($descr, $L, $R) = @orig[-3,-2,-1];
+    die "bad aln '$descr'" unless $descr =~ m{^\d+ .* [-+] \d+$};
+    die "bad lengths '$descr'" unless length($L) eq length($R);
+    @$alnref = ();
+
+    my %comment;
+    foreach (@orig) {
+        $comment{$1} = $2 if m{^#\s*([^=]+)\s*=\s*(.*)$};
+    }
+
+    my @seqid = $descr =~ m{>(\S+)}g;
+    die "Need that nameparse=full, or more smarts here [$descr]"
+      unless 2 == @seqid;
+    if (my @lost = grep { ! $seq_len{$_} } @seqid) {
+        die "Got no seqinfo for @lost \[$descr]";
+    }
+
+    my $ulen = unmasked_len($L);
+    $bin[ int($ulen / $binW) ]++;
+
+    my @out;
+    my @tlen_seq = map { $seq_len{$_}[0] } @seqid;
+    my @ulen_seq  = map { $seq_len{$_}[1] } @seqid;
+    push @out, sprintf
+      ("# unmasked %5.2f%% %s (%5d/%6dbp),  %5.2f%% %s (%5d/%6dbp)\n",
+       map {( $ulen / $ulen_seq[$_] * 100, $seqid[$_], $ulen, $ulen_seq[$_] )} (0, 1));
+
+    my @nglen = map { nongap_len($_) } ($L, $R);
+    my @ng_pc = map { $nglen[$_] / $tlen_seq[$_] * 100 } (0, 1);
+    push @out, sprintf
+      ("# nongap   %5.2f%% %s (%5d/%6dbp),  %5.2f%% %s (%5d/%6dbp)\n",
+       map {( $ng_pc[$_], $seqid[$_], $nglen[$_], $tlen_seq[$_] )} (0,1));
+
+    push @out, @orig, "\n";
+#    splice @out, -2; # without seq
+
+    # nb. mostly-masked regions may score very high match% (or even
+    # divide by zero)
+    return unless
+      (($ulen > 2000 && $ulen / min(@ulen_seq) * 100 > 40) ||
+       max(@ng_pc) > 40);
+
+    if (!$spreadsheet) {
+        $spreadsheet = Report::Spreadsheet->new('summary');
+        $spreadsheet->add_row(qw( target query identity coverage unmask% nongap% unmask_detail nongap_detail ));
+    }
+    $spreadsheet->add_row(@seqid, $ulen / min(@ulen_seq) * 100,
+                          @comment{qw{ identity coverage }},
+                          max(@ng_pc), @out[0,1]);
+
+    print @out;
+}
+
+sub unmasked_len {
+    my ($seq) = @_;
+    $seq =~ s{[acgtnN-]+}{}g;
+    return length($seq);
+}
+
+sub nongap_len {
+    my ($seq) = @_;
+    $seq =~ s{-+}{}g;
+    return length($seq);
+}
+
+sub load_seq_info {
+    my ($fn) = @_;
+    my $in = Bio::SeqIO->new(-file => $fn);
+    my @out;
+    while (my $seq = $in->next_seq()) {
+        my $id = $seq->display_id;
+        push @out, $id, [ $seq->length, unmasked_len($seq->seq) ];
+    }
+    return @out;
+}
+
+sub bins2csv { # csv is evil, but ok for numbers
+    print "unmasked_match_len,count\n";
+    for (my $b=0; $b<@bin; $b++) {
+        print $b * $binW, ",", $bin[$b], "\n"
+          if $bin[$b];
+    }
+}
+
+
+main();

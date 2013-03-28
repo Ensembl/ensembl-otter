@@ -1,0 +1,11 @@
+#! /usr/bin/perl -p
+use strict;
+use warnings;
+
+# Likes the input from scripts/lace/get_softmasked_seq_for_set
+#
+# Output is preferred by lastz
+
+if (m{^>(?:contig|chromosome):[^:]*:([^:]+):\d+:\d+:-?1 }) {
+    $_ = ">$1\n";
+}
