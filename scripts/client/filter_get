@@ -7,6 +7,8 @@ use Digest::MD5 qw(md5_hex);
 use URI::Escape qw(uri_escape uri_unescape);
 use Time::HiRes qw(time);
 
+use Bio::Otter::Lace::DB::FilterAdaptor;
+
 my $gff_source;
 sub _log_prefix {
     my @t = localtime;
@@ -180,19 +182,22 @@ if ($response->is_success) {
             RaiseError => 1,
             AutoCommit => 1,
         });
+        my $db_filter_adaptor = Bio::Otter::Lace::DB::FilterAdaptor->new($dbh);
         if ( eval {
-            $dbh->begin_work;
-            my $sth = $dbh->prepare(
-                q{ UPDATE otter_filter SET done = 1, failed = 0, gff_file = ?, process_gff = ? WHERE filter_name = ? }
-                );
-            $sth->execute($cache_file, $process_gff || 0, $gff_source);
+            $db_filter_adaptor->begin_work;
+            my $db_filter = $db_filter_adaptor->fetch_by_name($gff_source);
+            $db_filter->done(1);
+            $db_filter->failed(0);
+            $db_filter->gff_file($cache_file);
+            $db_filter->process_gff($process_gff || 0);
+            $db_filter_adaptor->update($db_filter);
             1;
              } ) {
-            $dbh->commit;
+            $db_filter_adaptor->commit;
         }
         else {
             my $err = $@;
-            $dbh->rollback;
+            $db_filter_adaptor->rollback;
             my $msg = "Update of otter_filter table in SQLite db failed; $err";
             log_message $msg;
             die $msg;
