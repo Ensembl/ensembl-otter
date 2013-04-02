@@ -2388,9 +2388,9 @@ sub set_window_title {
     my ($self) = @_;
 
     my $name = $self->AceDatabase->name;
-    my $unsaved_str = $self->AceDatabase->unsaved_changes ? '* ' : '';
+    my $unsaved_str = $self->AceDatabase->unsaved_changes ? '*' : '';
     $self->top_window->title
-      (sprintf('%s%s Session %s',
+      (sprintf('%s%sSession %s',
                $unsaved_str, $Bio::Otter::Lace::Client::PFX, $name));
 
     return;
