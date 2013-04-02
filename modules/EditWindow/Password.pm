@@ -56,6 +56,7 @@ sub initialise {
 
     $entry_frame->bind('<Destroy>', sub { $self = undef });
 
+    $top->withdraw;
     return;
 }
 
@@ -72,9 +73,9 @@ sub get_password {
         $grab_window->grabRelease;
     }
 
+    $self->top->Popup;
     $self->top->toplevel->Busy;
     $self->password_field->focus;
-    $self->top->Popup;
     $self->set_minsize;     # Does an "update"
     $self->submit_button->waitWindow;
 
