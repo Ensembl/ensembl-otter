@@ -415,6 +415,36 @@ sub reauthorize_if_cookie_will_expire_soon {
     }
 }
 
+# Generates errors when rejecting config changes
+sub config_set {
+    my ($self, $section, $param, $value) = @_;
+
+    # Be conservative.  Most code still assumes the config is static
+    # after initialisation.
+    my $target = qq{[$section]$param};
+    die "Runtime setting of preference $target is not yet implemented"
+      unless grep { $_ eq $target }
+        qw{ [client]author [client]write_access };
+
+    Bio::Otter::Lace::Defaults::set_and_save($section, $param, $value);
+    # Save was successful - update client state
+
+    if ($target eq '[client]author') {
+        try {
+            $self->ensure_authorised;
+        } catch {
+            warn "After config_set $target, auth failed: $_";
+            # we now have no valid authorisation
+        };
+    } # else no update needed
+
+    # app is built on the assumption that these don't change, which we
+    # will initially avoid by only showing prefs when auth fails
+    warn "XXX: $target=$value changed; need to invalidate several windows";
+
+    return ();
+}
+
 sub authorize {
     my ($self) = @_;
 
@@ -1007,6 +1037,16 @@ sub _make_DataSet {
 sub get_server_otter_config {
     my ($self) = @_;
 
+    $self->ensure_authorised;
+    my $content = $self->_get_config_file('otter_config');
+    Bio::Otter::Lace::Defaults::save_server_otter_config($content);
+
+    return;
+}
+
+sub ensure_authorised {
+    my ($self) = @_;
+
     # Is user associated with the cookiejar the one configured?
     # Done here because it's the first action of Otterlace.
     my $who_am_i = $self->do_authentication;
@@ -1014,16 +1054,14 @@ sub get_server_otter_config {
         my $a = $self->author;
         warn "Clearing existing cookie for author='$who_am_i'.  Configuration is for author='$a'\n";
         $self->get_CookieJar->clear;
-    } else {
-        # This shows authentication AND authorization
-        warn "Authorised as $who_am_i\n";
+        $who_am_i = $self->do_authentication;
     }
 
-    my $content = $self->_get_config_file('otter_config');
-    Bio::Otter::Lace::Defaults::save_server_otter_config($content);
-
-    return;
+    # This shows authentication AND authorization
+    warn "Authorised as $who_am_i\n";
+    return ();
 }
+
 
 sub _get_config_file {
     my ($self, $key) = @_;

@@ -216,6 +216,39 @@ sub __options_from_file {
 }
 
 
+
+################################################
+#
+##  Subroutines called from Bio::Otter::Lace::Client only
+#
+################################################
+
+sub save_server_otter_config {
+    my ($config) = @_;
+    __ready();
+
+    my $tmp = File::Temp->new
+      (TEMPLATE => 'server_otter_config.XXXXXX',
+       TMPDIR => 1, SUFFIX => '.ini');
+    unless ((print {$tmp} $config) && close $tmp) {
+        die sprintf('Error writing to %s; %s', $tmp->filename, $!);
+    }
+    my $ini = __options_from_file($tmp->filename);
+    undef $tmp; # DESTROY unlinks it
+
+    # Server config file should be second in list, just after $hardwired
+    splice(@$CONFIG_INIFILES, 1, 0, $ini);
+
+    return;
+}
+
+sub __ready {
+    confess "Not ready to operate on configuration until after do_getopt"
+      unless $DONE_GETOPT;
+    return ();
+}
+
+
 # Set option in user config and save (if necessary, create) the file.
 # Comments are preserved.  Whitespace on "k = v" and "\n\n" are not.
 #
@@ -304,37 +337,6 @@ sub __fn_map { ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
         @config;
 }
 
-
-################################################
-#
-##  Subroutines called from Bio::Otter::Lace::Client only
-#
-################################################
-
-sub save_server_otter_config {
-    my ($config) = @_;
-    __ready();
-
-    my $tmp = File::Temp->new
-      (TEMPLATE => 'server_otter_config.XXXXXX',
-       TMPDIR => 1, SUFFIX => '.ini');
-    unless ((print {$tmp} $config) && close $tmp) {
-        die sprintf('Error writing to %s; %s', $tmp->filename, $!);
-    }
-    my $ini = __options_from_file($tmp->filename);
-    undef $tmp; # DESTROY unlinks it
-
-    # Server config file should be second in list, just after $hardwired
-    splice(@$CONFIG_INIFILES, 1, 0, $ini);
-
-    return;
-}
-
-sub __ready {
-    confess "Not ready to operate on configuration until after do_getopt"
-      unless $DONE_GETOPT;
-    return ();
-}
 
 sub config_value {
     my ($section, $key) = @_;
