@@ -258,7 +258,7 @@ sub _save { ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
             next unless $self->_check_state($cfg);
             my $var_ref = $v->{var};
             $S = $v->{status};
-            Bio::Otter::Lace::Defaults::set_and_save('client', $cfg, $$var_ref);
+            $self->Client->config_set('client', $cfg, $$var_ref);
             $S->configure(-text => 'saved', -fg => 'darkgreen');
         }
         1;
