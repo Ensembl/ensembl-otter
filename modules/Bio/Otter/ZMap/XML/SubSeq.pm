@@ -10,15 +10,11 @@ use Hum::XmlWriter;
 
 sub zmap_featureset_name {
     my ($self) = @_;
-    
     # we need to prepend the prefix if our Locus has one
-    
     my $prefix = '';
-    
     if ($self->Locus and my $pre = $self->Locus->gene_type_prefix) {
         $prefix = "$pre:";
     }
-    
     return $prefix.$self->GeneMethod->name;
 }
 
@@ -97,7 +93,7 @@ sub zmap_xml_feature_tag {
     $offset ||= 0;
 
     #my $style = $self->GeneMethod->style_name;
-    
+
     #print "XXX: gene method name: ".$self->GeneMethod->name."\n";
     #print "XXX: gene method style name: ".$self->GeneMethod->style_name."\n";
 
