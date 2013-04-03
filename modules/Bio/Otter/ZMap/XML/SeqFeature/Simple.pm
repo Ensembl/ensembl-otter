@@ -1,4 +1,6 @@
 
+## no critic (Modules::RequireFilenameMatchesPackage)
+
 package Hum::Ace::SeqFeature::Simple;
 
 use strict;

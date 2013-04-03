@@ -1,4 +1,6 @@
 
+## no critic (Modules::RequireFilenameMatchesPackage)
+
 package Hum::Ace::SubSeq;
 
 use strict;
