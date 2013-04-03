@@ -6,9 +6,9 @@ use warnings;
 
 sub zmap_xml_feature_tag {
     my ($self, $offset) = @_;
-    
+
     $offset ||= 0;
-    
+
     return sprintf qq{<feature name="%s" start="%d" end="%d" strand="%s" style="%s" score="%.3f"></feature>\n},
         $self->text,
         $offset + $self->seq_start,
