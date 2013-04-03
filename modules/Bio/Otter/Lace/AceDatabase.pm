@@ -434,7 +434,6 @@ sub _zmap_config {
             'pfetch'          => ( $pfetch_www ? $pfetch_url : 'pfetch' ),
             'xremote-debug'   => $xremote_debug ? 'true' : 'false',
             'stylesfile'      => $self->stylesfile,
-            'abbrev-window-title' => ( $self->Client->config_value('short_window_title_prefix') ? 'true' : 'false' ),
             %{$self->smart_slice->zmap_config_stanza},
         },
 
