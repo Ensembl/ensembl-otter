@@ -16,6 +16,7 @@ sub cigar_type {
         return 'I';
     } else {
         $self->logger->logconfess('Neither of target_length and query_length is non-zero');
+        return;
     }
 }
 
