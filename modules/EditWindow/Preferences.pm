@@ -26,6 +26,18 @@ sub initialise {
       (write_access => 'Request write access', 'Checkbutton',
        'When this is off, Otterlace will not ask to save your changes to the Otter Server.');
 
+    if ($self->Client->no_user_config) {
+        my $f = $self->opt_frame;
+        my (undef, $r) = $f->gridSize;
+        $f->Label(-text => 'Please check and save your settings to create the '.
+                  'configuration file, then close this window.',
+                  -wraplength => 500,
+                  -justify => 'left',
+                  -font => $self->font('help'))->grid
+                    (-row => $r, -column => 0, -columnspan => 3,
+                     -pady => 12, -sticky => 'nsew');
+    }
+
     $self->_opts_done;
     $self->_size_fix;
     $self->_reset;
@@ -55,7 +67,8 @@ sub _size_fix {
     $h += $self->widg('optsf')->Subwidget('xscrollbar')->height;
 
     $top->maxsize($w, $h);
-    $top->configure(-width => $w, -height => $h);
+    $top->geometry("${w}x${h}");
+
     return ($w, $h);
 }
 
@@ -235,6 +248,14 @@ sub _opts_done {
 }
 
 
+sub _button_state {
+    my ($self) = @_;
+    my @noconf = (-state => $self->Client->no_user_config ? 'disabled' : 'normal');
+    # when there is no config file, we need a save
+    $self->widg('botf.close')->configure(@noconf);
+    return ();
+}
+
 sub _reset { # button
     my ($self) = @_;
     foreach my $cfg (keys %{ $self->{_widg} }) {
@@ -242,6 +263,7 @@ sub _reset { # button
         $$var_ref = $self->_get_state($cfg);
         $self->_check_state($cfg);
     }
+    $self->_button_state;
     return ();
 }
 
@@ -252,14 +274,21 @@ sub _close {
 
 sub _save { ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
     my ($self) = @_;
+    my $need_save = $self->Client->no_user_config;
     my ($cfg, $S);
     return try {
         while (($cfg, my $v) = each %{ $self->{_widg} }) {
-            next unless $self->_check_state($cfg);
+            if ($need_save && $cfg eq 'author') {
+                # save, even if it matches the default
+            } elsif (!$self->_check_state($cfg)) {
+                # nothing to do
+                next;
+            }
             my $var_ref = $v->{var};
             $S = $v->{status};
             $self->Client->config_set('client', $cfg, $$var_ref);
             $S->configure(-text => 'saved', -fg => 'darkgreen');
+            $self->_button_state;
         }
         1;
     } catch {

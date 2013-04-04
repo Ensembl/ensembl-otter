@@ -19,6 +19,7 @@ sub new {
 
 sub show_for_parent {
     my ($pkg, $obj_ref, %opt) = @_;
+    my $wait_close = delete $opt{wait};
 
     if (!$$obj_ref) {
         $$obj_ref = $pkg->_create_for_parent(%opt);
@@ -27,6 +28,9 @@ sub show_for_parent {
     my $self = $$obj_ref;
     $self->top->deiconify;
     $self->top->raise;
+
+    $self->top->waitWindow if $wait_close;
+
     return $self;
 }
 
