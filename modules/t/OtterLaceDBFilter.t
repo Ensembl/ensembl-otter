@@ -27,8 +27,8 @@ my %f1_spec = ( filter_name => 'test', wanted => 1, done => 0, gff_file => '/aaa
 my $f1 = new_ok($filter_module => [ %f1_spec ]);
 filter_ok ($f1, { %f1_spec, is_stored => undef }, 'from new()');
 
-my $dbh = test_schema();
-my $fa = new_ok($adaptor_module => [ $dbh ]);
+my $test_schema_dbh = test_schema();
+my $fa = new_ok($adaptor_module => [ $test_schema_dbh ]);
 ok($fa->store($f1), 'store');
 is($f1->is_stored, 1, 'is_stored');
 
