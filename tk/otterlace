@@ -74,11 +74,16 @@ use Try::Tiny;
     $cl->password_prompt($prompt_sub);
     $cl->password_problem($passwarn_sub);
 
+    if ($cl->no_user_config) {
+        $SpeciesListWindow->show_preferences(wait => 1);
+    }
+
     try {
         $cl->get_server_otter_config;
     } catch {
-        $passwarn_sub->($cl, $_);
-        die "Cannot start\n";
+        my $msg = "Cannot start: $_";
+        $passwarn_sub->($cl, $msg);
+        die $msg;
     };
 
     $SpeciesListWindow->draw;

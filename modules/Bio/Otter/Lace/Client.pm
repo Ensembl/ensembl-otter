@@ -130,6 +130,11 @@ sub debug_server {
     return $debug_server;
 }
 
+sub no_user_config {
+    my $cfg = Bio::Otter::Lace::Defaults::user_config_filename();
+    return !-f $cfg;
+}
+
 sub password_attempts {
     my ($self, $password_attempts) = @_;
 
