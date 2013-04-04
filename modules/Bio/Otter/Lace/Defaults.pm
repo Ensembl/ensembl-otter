@@ -168,14 +168,14 @@ sub testmode_redirect_reset {
 sub user_config_filename {
     my $user_home = (getpwuid($<))[7];
     my @fn = ("$user_home/.otter_config",  # since always
-              "$user_home/.otter/config"); # newfangled and tidy
+              "$user_home/.otter/config.ini"); # newfangled and tidy
 
     my ($fn, $spare) = grep { -f $_ } @fn; # take first that exists
     if (defined $spare) {
         warn "Ignoring spare user config file $spare, taking $fn\n";
     } elsif (!defined $fn) {
-        warn "No user config present yet (expected at $fn)\n";
         $fn = $fn[0];
+        warn "No user config present yet (expected at $fn)\n";
     } # else we have it
 
     return $_USERCFG_FN if defined $_USERCFG_FN; # for testing
