@@ -89,7 +89,8 @@ sub filter_ok {
             is($result->$attrib(), $expected->{$attrib}, $attrib);
         }
         done_testing;
-    }
+    };
+    return;
 }
 
 my ($tmp_dir, $sqlite);
@@ -124,6 +125,7 @@ CREATE TABLE otter_filter (
 sub cleanup_temp {
     unlink $sqlite;
     rmdir  $tmp_dir;
+    return;
 }
 
 1;
