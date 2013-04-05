@@ -27,15 +27,18 @@ sub initialise {
        'When this is off, Otterlace will not ask to save your changes to the Otter Server.');
 
     if ($self->Client->no_user_config) {
-        my $f = $self->opt_frame;
-        my (undef, $r) = $f->gridSize;
-        $f->Label(-text => 'Please check and save your settings to create the '.
-                  'configuration file, then close this window.',
-                  -wraplength => 500,
-                  -justify => 'left',
-                  -font => $self->font('help'))->grid
-                    (-row => $r, -column => 0, -columnspan => 3,
-                     -pady => 12, -sticky => 'nsew');
+        $self->opt_banner('Please check and save your settings to create the '.
+                          'configuration file, then close this window.');
+    } else {
+        # TEMPORARY
+        $self->opt_banner('Sorry, Otterlace is not ready for established users to reconfigure '.
+                          'it while it is running.  You may edit the configuration file '.
+                          'directly, and changes will take effect after you restart the '.
+                          'application.  On the Mac the Edit button helps with this.');
+        foreach my $cfg (qw( author write_access )) {
+            my $e = $self->{_widg}{$cfg}{entry};
+            $e->configure(-state => 'disabled');
+        }
     }
 
     $self->_opts_done;
@@ -221,6 +224,7 @@ sub _mkframes {
 
     my @but = ($bf->Button(Name => 'close', -text => 'Close'),
                $bf->Button(Name => 'reset', -text => 'Reset'),
+               $bf->Button(Name => 'edit', -text => 'Edit directly'),
                $bf->Button(Name => 'save', -text => 'Save'));
 
     for (my $i=0; $i<@but; $i++) {
@@ -232,6 +236,19 @@ sub _mkframes {
         $top->bind("<Alt-$k>", [ $B => 'invoke' ]);
     }
 
+    return ();
+}
+
+sub opt_banner {
+    my ($self, $msg) = @_;
+    my $f = $self->opt_frame;
+    my (undef, $r) = $f->gridSize;
+    $f->Label(-text => $msg,
+              -wraplength => 500,
+              -justify => 'left',
+              -font => $self->font('help'),
+             )->grid(-row => $r, -column => 0, -columnspan => 3,
+                     -pady => 12, -sticky => 'nsew');
     return ();
 }
 
@@ -250,9 +267,15 @@ sub _opts_done {
 
 sub _button_state {
     my ($self) = @_;
-    my @noconf = (-state => $self->Client->no_user_config ? 'disabled' : 'normal');
+
+    my $absent = $self->Client->no_user_config;
+    my $can_edit = $self->_edit_cmd && !$absent;
+
+    $self->widg('botf.edit')->configure(-state => $can_edit ? 'normal' : 'disabled');
+
     # when there is no config file, we need a save
-    $self->widg('botf.close')->configure(@noconf);
+    $self->widg('botf.close')->configure(-state => $absent ? 'disabled' : 'normal');
+
     return ();
 }
 
@@ -311,6 +334,24 @@ sub _error {
        -text => $txt,
        -buttons => [ 'OK' ]);
     $err->Show;
+    return ();
+}
+
+sub _edit { ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
+    my ($self) = @_;
+    my @cmd = $self->_edit_cmd;
+    push @cmd, Bio::Otter::Lace::Defaults::user_config_filename();
+    warn "Running '@cmd'";
+    system(@cmd) && warn "Edit config failed: $?";
+    $self->_close;
+    return ();
+}
+
+sub _edit_cmd {
+    my ($self) = @_;
+    return qw( open -e ) if $^O eq 'darwin';
+#    return qw( gedit ) if -x '/usr/bin/gedit'; # doesn't background - fix later
+# xdg-open won't edit my config.ini
     return ();
 }
 
