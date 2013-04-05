@@ -378,6 +378,12 @@ sub _widget{
     return $widget;
 }
 
+sub waitVariable {
+    my ($self, $var) = @_;
+    $self->widget->waitVariable($var);
+    return;
+}
+
 # ======================================================== #
 #                      INTERNALS                           #
 # ======================================================== #

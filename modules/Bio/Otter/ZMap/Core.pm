@@ -147,8 +147,16 @@ sub add_view {
 sub wait {
     my ($self) = @_;
     $self->{'_wait'} = 1;
-    $self->widget->waitVariable(\ $self->{'_wait'});
+    $self->waitVariable(\ $self->{'_wait'});
     return;
+}
+
+sub waitVariable {
+    my ($self, $var) = @_;
+    die sprintf
+        "waitVariable() is not implemented in %s, "
+        . "derived classes must implement it"
+        , __PACKAGE__;
 }
 
 sub wait_finish {
