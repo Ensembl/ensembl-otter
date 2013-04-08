@@ -14,7 +14,7 @@ use Bio::Otter::ZMap;
 
 sub zmap_select_initialize {
     my ($self) = @_;
-    $self->{'_zmap'} = '';
+    $self->{'_zmap_select'} = '';
     return;
 }
 
@@ -57,7 +57,7 @@ sub _zmap_select_button {
     $self->ZMapSelectWindow->Radiobutton(
         -text     => $text,
         -value    => "$zmap",
-        -variable => \ $self->{'_zmap'},
+        -variable => \ $self->{'_zmap_select'},
         )
         ->pack(
         -side => 'top',
@@ -69,7 +69,7 @@ sub _zmap_select_button {
 sub zmap_select {
     my ($self) = @_;
     my $zmap;
-    if (my $zmap_string = $self->{'_zmap'}) {
+    if (my $zmap_string = $self->{'_zmap_select'}) {
         $zmap = Bio::Otter::ZMap->from_string($zmap_string)
             or warn sprintf "ZMap '%s' has disappeared", $zmap_string;
     }
