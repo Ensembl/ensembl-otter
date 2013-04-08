@@ -31,7 +31,6 @@ sub zmap_select_window {
     my $close_command = sub {
         $window->destroy;
         $self->ZMapSelectWindow(undef);
-        weaken $self->{'_zmap'} if ref $self->{'_zmap'};
     };
     $window->protocol( 'WM_DELETE_WINDOW', $close_command );
 
