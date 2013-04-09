@@ -78,7 +78,7 @@ sub _size_fix {
 
 
 sub Client {
-    my ($self, @set) = shift;
+    my ($self, @set) = @_;
     ($self->{_client}) = @set if @set;
     return $self->{_client};
 }
