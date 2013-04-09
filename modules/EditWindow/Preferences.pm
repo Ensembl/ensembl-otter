@@ -27,14 +27,16 @@ sub initialise {
        'When this is off, Otterlace will not ask to save your changes to the Otter Server.');
 
     if ($self->Client->no_user_config) {
-        $self->opt_banner('Please check and save your settings to create the '.
-                          'configuration file, then close this window.');
+        $self->opt_banner
+          ("Please check and 'Save' your settings which will create the ".
+           "configuration file and authenticate you.  Then 'Close' this window.");
     } else {
         # TEMPORARY
-        $self->opt_banner('Sorry, Otterlace is not ready for established users to reconfigure '.
-                          'it while it is running.  You may edit the configuration file '.
-                          'directly, and changes will take effect after you restart the '.
-                          'application.  On the Mac the Edit button helps with this.');
+        $self->opt_banner
+          ("Sorry, Otterlace is not ready for established users to reconfigure ".
+           "it while it is running.  You may edit the configuration file ".
+           "directly, and changes will take effect after you restart the ".
+           "application.  On the Mac the 'Edit directly' button helps with this.");
         foreach my $cfg (qw( author write_access )) {
             my $e = $self->{_widg}{$cfg}{entry};
             $e->configure(-state => 'disabled');
