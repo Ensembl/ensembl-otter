@@ -55,7 +55,6 @@ sub _request_xml {
 
     my $xml = Hum::XmlWriter->new;
 
-    $xml->open_tag('zmap');
     $xml->open_tag('request', {action => $action});
     $xml->open_tag('align');
     $xml->open_tag('block');
