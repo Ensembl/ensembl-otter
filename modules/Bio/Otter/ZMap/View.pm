@@ -28,16 +28,39 @@ sub _init {
 
 sub send_commands {
     my ($self, @xml) = @_;
+
+    my $debug = Bio::Otter::Debug->debug('XRemote');
+
+    # Enclose each command in <zmap> ... </zmap>
+    @xml = map {
+        my $x = Hum::XmlWriter->new;
+        $x->open_tag('zmap');   # Zircon attributes to be added here.
+        $x->add_raw_data_with_indent($_);
+        $x->close_tag;
+        $x->flush;
+    } @xml;
+
     my $xremote = $self->xremote;
     warn "Sending window '", $xremote->window_id, "' this xml:\n", @xml;
     my @response_list = $self->zmap->send_commands($xremote, @xml);
     warn "OK?  There was no answer\n" unless @response_list;
     my $fail = 0;
-    for (@response_list) {
-        my ($status, $xmlHash) = @{$_};
-        if ($status !~ /^2\d\d/) {
+    for (my $i = 0; $i < @xml; $i++) {
+        my $command = $xml[$i];
+        my $response = $response_list[$i]
+            or die "Missing response to command:\n$command";
+        my ($status, $xmlHash) = @$response;
+        if ($status =~ /^2\d\d/) {
+            if ($debug) {
+                warn sprintf "XRemote command OK:\n%s\n", $command
+            }
+        }
+        else {
             my $error = $xmlHash->{'error'}{'message'};
-            warn "ERROR: $error\n";
+            if ($debug) {
+                warn sprintf "XRemote command FAILED: status='%s'; %s\n%s",
+                    $status, $error, $command;
+            }
             $fail = 1;
         }
     }
@@ -251,16 +274,11 @@ sub zoom_to_subseq {
 sub send_command {
     my ($self, $command, $xml_sub) = @_;
     my $xml = Hum::XmlWriter->new;
-    $xml->open_tag('zmap');
     $xml->open_tag('request', { action => $command });
     $xml_sub->($xml) if $xml_sub;
     $xml->close_all_open_tags;
     my ($response) = $self->send_commands($xml->flush);
     my ($status, $hash) = @{$response};
-    $status =~ /^2/
-        or die sprintf
-        "XRemote command '%s' failed: status = %s\n"
-        , $command, $status;
     return $hash;
 }
 
