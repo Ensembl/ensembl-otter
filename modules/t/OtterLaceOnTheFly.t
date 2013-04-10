@@ -9,14 +9,12 @@ use Test::SetupLog4perl;
 
 use Test::More;
 
-use File::Temp;
-
 use FindBin qw($Bin);
 use lib "$Bin/lib";
 use OtterTest::Client;
+use OtterTest::DB;
 
 use Bio::Otter::Lace::AccessionTypeCache;
-use Bio::Otter::Lace::DB;
 use OtterTest::Exonerate;
 use Bio::Otter::LocalServer;
 use Bio::Otter::ServerAction::Region;
@@ -156,8 +154,7 @@ sub main_tests {
         exit;
     }
 
-    my $tmp_dir = File::Temp->newdir('OtterLaceOnTheFly.t.XXXXXX');
-    my $at_cache = setup_accession_type_cache($tmp_dir->dirname);
+    my $at_cache = setup_accession_type_cache();
 
     while (my ($species, $regions) = each %species_tests) {
         note("Live tests for: $species");
@@ -340,9 +337,8 @@ sub get_query_validator {
 }
 
 sub setup_accession_type_cache {
-    my $tmp_dir = shift;
     my $test_client = OtterTest::Client->new;
-    my $test_db = Bio::Otter::Lace::DB->new($tmp_dir, $test_client);
+    my $test_db = OtterTest::DB->new($test_client);
     my $at_cache = Bio::Otter::Lace::AccessionTypeCache->new;
     $at_cache->Client($test_client);
     $at_cache->DB($test_db);
