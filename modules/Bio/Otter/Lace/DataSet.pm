@@ -409,6 +409,22 @@ sub get_meta_value {
     return $values->[0];
 }
 
+sub db_info_hash {
+    my ($self) = @_;
+    # Get all db_info in one call
+    return $self->{'_db_info_hash'} ||=
+        $self->Client->get_db_info($self->name);
+}
+
+sub get_db_info_item {
+    my ($self, $key) = @_;
+
+    my $item = $self->db_info_hash->{$key};
+    confess "No entry in db_info under key '$key'" unless $item;
+
+    return $item;
+}
+
 sub vocab_locus {
     my ($self) = @_;
     return $self->{'_vocab_locus'} ||=

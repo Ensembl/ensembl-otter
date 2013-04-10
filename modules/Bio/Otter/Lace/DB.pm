@@ -134,18 +134,27 @@ sub load_dataset_info {
     return if $self->_is_loaded('dataset_info');
 
     my $dbh = $dbh{$self};
-    my $sth = $dbh->prepare(q{ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (?, ?, ?) });
 
+    my $meta_sth = $dbh->prepare(q{ INSERT INTO meta (species_id, meta_key, meta_value) VALUES (?, ?, ?) });
     my $meta_hash = $dataset->meta_hash;
+
+    my $cs_sth = $dbh->prepare(q{ INSERT INTO coord_system (coord_system_id, species_id, name, version, rank, attrib)
+                                                    VALUES (?, ?, ?, ?, ?, ?) });
+    my ($cs_id, $species_id, $cs_name, $cs_version, $rank) = @{$dataset->get_db_info_item('coord_system.chromosome')};
+
     $dbh->begin_work;
+
     while (my ($key, $details) = each %{$meta_hash}) {
 
         next if $key eq 'assembly.mapping'; # we only use chromosome coords on client
 
         foreach my $value (@{$details->{values}}) {
-            $sth->execute($details->{species_id}, $key, $value);
+            $meta_sth->execute($details->{species_id}, $key, $value);
         }
     }
+
+    $cs_sth->execute($cs_id, $species_id, $cs_name, $cs_version, $rank, 'default_version,sequence_level');
+
     $dbh->commit;
 
     $self->_is_loaded('dataset_info', 1);
