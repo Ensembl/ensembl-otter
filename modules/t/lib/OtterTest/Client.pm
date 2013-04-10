@@ -6,6 +6,7 @@ use strict;
 use warnings;
 
 use Bio::Otter::Utils::MM;
+use Bio::Otter::Server::Config;
 
 sub new {
     my ($pkg) = @_;
@@ -27,6 +28,19 @@ sub get_accession_types {
 sub mm {
     my $self = shift;
     return $self->{_mm} ||= Bio::Otter::Utils::MM->new;
+}
+
+# FIXME: scripts/apache/get_config needs reimplementing with a Bio::Otter::ServerAction:: class,
+#        which we can then use here rather than duplicating the file names.
+#
+sub get_otter_schema {
+    my $self = shift;
+    return Bio::Otter::Server::Config->get_file('otter_schema.sql');
+}
+
+sub get_loutre_schema {
+    my $self = shift;
+    return Bio::Otter::Server::Config->get_file('loutre_schema_sqlite.sql');
 }
 
 1;
