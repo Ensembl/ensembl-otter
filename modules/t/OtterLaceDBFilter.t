@@ -3,9 +3,9 @@
 use strict;
 use warnings;
 
-use DBI;
-use File::Spec;
-use File::Temp;
+use FindBin qw($Bin);
+use lib "$Bin/lib";
+use OtterTest::DB;
 
 use Test::More;
 
@@ -27,8 +27,8 @@ my %f1_spec = ( filter_name => 'test', wanted => 1, done => 0, gff_file => '/aaa
 my $f1 = new_ok($filter_module => [ %f1_spec ]);
 filter_ok ($f1, { %f1_spec, is_stored => undef }, 'from new()');
 
-my $test_schema_dbh = test_schema();
-my $fa = new_ok($adaptor_module => [ $test_schema_dbh ]);
+my $test_db = OtterTest::DB->new;
+my $fa = new_ok($adaptor_module => [ $test_db->dbh ]);
 ok($fa->store($f1), 'store');
 is($f1->is_stored, 1, 'is_stored');
 
@@ -79,7 +79,6 @@ filter_ok($fewer_by_name{'test'},      { %f1_spec, is_stored => 1 }, "fetch_all 
 filter_ok($fewer_by_name{'test_free'}, { %f3_spec, is_stored => 1 }, "fetch_all 'test_free'" );
 
 done_testing;
-cleanup_temp();
 
 sub filter_ok {
     my ($result, $expected, $desc) = @_;
@@ -90,41 +89,6 @@ sub filter_ok {
         }
         done_testing;
     };
-    return;
-}
-
-my ($tmp_dir, $sqlite);
-
-sub test_schema {
-    $tmp_dir = File::Temp->newdir('OtterLaceDBFilter.t.XXXXXX', TMPDIR => 1, CLEANUP => 0);
-    $sqlite  = File::Spec->catfile($tmp_dir, 'otter.sqlite');
-    note "SQLite db is: $sqlite";
-
-    my $dbh = DBI->connect("dbi:SQLite:dbname=${sqlite}",
-                           undef,
-                           undef,
-                           {
-                               RaiseError => 1,
-                               AutoCommit => 1,
-                           });
-
-    $dbh->do(q{
-CREATE TABLE otter_filter (
-            filter_name     TEXT PRIMARY KEY
-            , wanted        INTEGER DEFAULT 0
-            , failed        INTEGER DEFAULT 0
-            , done          INTEGER DEFAULT 0
-            , gff_file      TEXT
-            , process_gff   INTEGER DEFAULT 0
-        );
-              });
-
-    return $dbh;
-}
-
-sub cleanup_temp {
-    unlink $sqlite;
-    rmdir  $tmp_dir;
     return;
 }
 
