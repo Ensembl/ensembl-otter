@@ -862,6 +862,26 @@ sub get_meta {
     return $meta_hash;
 }
 
+sub get_db_info {
+    my ($self, $dsname) = @_;
+
+    my $response = $self->otter_response_content(
+        'GET',
+        'get_db_info',
+        {
+            'dataset'  => $dsname,
+        },
+    );
+
+    my $db_info_hash = {};
+    for my $line (split(/\n/,$response)) {
+        my($key, @values) = split(/\t/,$line);
+        $db_info_hash->{$key} = [ @values ];
+    }
+
+    return $db_info_hash;
+}
+
 sub lock_refresh_for_DataSet_SequenceSet {
     my ($self, $ds, $ss) = @_;
 
