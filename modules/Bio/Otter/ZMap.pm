@@ -371,6 +371,12 @@ sub _widget{
             $mapped = 1;
         });
 
+    # ensure the widget's window is deiconified *and* raised,
+    # otherwise we may block when waiting for it to be mapped,
+
+    $widget->toplevel->deiconify;
+    $widget->toplevel->raise;
+
     # this call will essentially block until the widget is mapped and the
     # xremote protocol is initialised (the tk event loop will continue though)
     $widget->waitVariable(\$mapped);
