@@ -11,10 +11,8 @@ use Test::More;
 
 use FindBin qw($Bin);
 use lib "$Bin/lib";
-use OtterTest::Client;
-use OtterTest::DB;
+use OtterTest::AccessionTypeCache;
 
-use Bio::Otter::Lace::AccessionTypeCache;
 use OtterTest::Exonerate;
 use Bio::Otter::LocalServer;
 use Bio::Otter::ServerAction::Region;
@@ -154,7 +152,7 @@ sub main_tests {
         exit;
     }
 
-    my $at_cache = setup_accession_type_cache();
+    my $at_cache = OtterTest::AccessionTypeCache->new();
 
     while (my ($species, $regions) = each %species_tests) {
         note("Live tests for: $species");
@@ -334,15 +332,6 @@ sub get_query_validator {
         long_query_cb        => sub { diag("QV long q: ", shift, "(", shift, ")"); },
         );
     return $q_validator;
-}
-
-sub setup_accession_type_cache {
-    my $test_client = OtterTest::Client->new;
-    my $test_db = OtterTest::DB->new($test_client);
-    my $at_cache = Bio::Otter::Lace::AccessionTypeCache->new;
-    $at_cache->Client($test_client);
-    $at_cache->DB($test_db);
-    return $at_cache;
 }
 
 1;
