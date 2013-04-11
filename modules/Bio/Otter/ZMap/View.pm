@@ -26,57 +26,55 @@ sub _init {
     return;
 }
 
-sub send_commands {
-    my ($self, @xml) = @_;
+sub send_command_and_xml {
+    my ($self, $command, @xml) = @_;
 
     my $debug = Bio::Otter::Debug->debug('XRemote');
 
-    # Enclose each command in <zmap> ... </zmap>
-    @xml = map {
-        my $x = Hum::XmlWriter->new;
-        $x->open_tag('zmap');   # Zircon attributes to be added here.
-        $x->add_raw_data_with_indent($_);
-        $x->close_tag;
-        $x->flush;
-    } @xml;
-
-    my $xremote = $self->xremote;
-    warn "Sending window '", $xremote->window_id, "' this xml:\n", @xml;
-    my @response_list = $self->zmap->send_commands($xremote, @xml);
-    warn "OK?  There was no answer\n" unless @response_list;
-    my $fail = 0;
-    for (my $i = 0; $i < @xml; $i++) {
-        my $command = $xml[$i];
-        my $response = $response_list[$i]
-            or die "Missing response to command:\n$command";
-        my ($status, $xmlHash) = @$response;
-        if ($status =~ /^2\d\d/) {
-            if ($debug) {
-                warn sprintf "XRemote command OK:\n%s\n", $command
-            }
-        }
-        else {
-            my $error = $xmlHash->{'error'}{'message'};
-            if ($debug) {
-                warn sprintf "XRemote command FAILED: status='%s'; %s\n%s",
-                    $status, $error, $command;
-            }
-            $fail = 1;
+    my $request = Hum::XmlWriter->new;
+    $request->open_tag('zmap');
+    $request->open_tag('request', { action => $command });
+    if (@xml) {
+        $request->open_tag('align');
+        $request->open_tag('block');
+        foreach my $x (@xml) {
+            $request->add_raw_data_with_indent($x);
         }
     }
-    die "ZMap commands failed\n" if $fail;
-    return @response_list;
+    $request->close_all_open_tags;
+    my $request_xml = $request->flush;
+
+    my $xremote = $self->xremote;
+    if ($debug) {
+        warn sprintf "Sending window '%s' this xml:\n%s", $xremote->window_id, $request_xml;
+    }
+    my ($response) = $self->zmap->send_commands($xremote, $request_xml);
+    my ($status, $xmlHash) = @$response;
+    if ($status =~ /^2\d\d/) {
+        if ($debug) {
+            warn sprintf "XRemote command OK:\n%s\n", $command
+        }
+        return $xmlHash;
+    }
+    else {
+        my $error = $xmlHash->{'error'}{'message'};
+        if ($debug) {
+            warn sprintf "XRemote command FAILED: status='%s'; %s\n%s",
+                $status, $error, $command;
+        }
+        die "ZMap commands failed\n";
+    }
 }
 
 =head2 zmap
 
-This is the way we receive commands from zmap.
+A Bio::Otter::ZMap object which is used to communicate with zmap.
 
 =cut
 
 sub zmap {
     my ($self) = @_;
-    my $zmap = $self->{_zmap};
+    my $zmap = $self->{'_zmap'};
     return $zmap;
 }
 
@@ -215,7 +213,7 @@ sub xremote_callback {
 
 sub get_mark {
     my ($self) = @_;
-    my $hash = $self->send_command('get_mark');
+    my $hash = $self->send_command_and_xml('get_mark');
     $hash->{response}->{mark}->{exists} eq "true" or return;
     my $start = abs($hash->{response}->{mark}->{start});
     my $end   = abs($hash->{response}->{mark}->{end});
@@ -227,59 +225,38 @@ sub get_mark {
 
 sub load_features {
     my ($self, @featuresets) = @_;
-    my $hash = $self->send_command(
-        'load_features',
-        sub {
-            my ($xml) = @_;
-            $xml->open_tag('align');
-            $xml->open_tag('block');
-            foreach my $fs_name (@featuresets) {
-                $xml->open_tag('featureset', { name => $fs_name });
-                $xml->close_tag;
-            }
-        });
+    
+    my $xml = Hum::XmlWriter->new;
+    foreach my $fs_name (@featuresets) {
+        $xml->open_tag('featureset', { name => $fs_name });
+        $xml->close_tag;
+    }
+    
+    $self->send_command_and_xml('load_features', $xml->flush);
     return;
 }
 
 sub delete_featuresets {
     my ($self, @featuresets) = @_;
-    my $hash = $self->send_command(
-        'delete_feature',
-        sub {
-            my ($xml) = @_;
-            $xml->open_tag('align');
-            $xml->open_tag('block');
-            for my $featureset (@featuresets) {
-                $xml->open_tag('featureset', { name => $featureset });
-                $xml->close_tag;
-            }
-        });
+
+    my $xml = Hum::XmlWriter->new;
+    foreach my $featureset (@featuresets) {
+        $xml->open_tag('featureset', { name => $featureset });
+        $xml->close_tag;
+    }
+    $self->send_command_and_xml('delete_feature', $xml->flush);
     return;
 }
 
 sub zoom_to_subseq {
     my ($self, $subseq) = @_;
-    my $hash = $self->send_command(
-        'zoom_to',
-        sub {
-            my ($xml) = @_;
-            $xml->open_tag('align');
-            $xml->open_tag('block');
-            $xml->open_tag('featureset', { name => $subseq->GeneMethod->name });
-            $subseq->zmap_xml_feature_tag($xml, $self->SessionWindow->AceDatabase->offset);
-        });
-    return $hash->{response} =~ /executed/ ? 1 : 0;
-}
 
-sub send_command {
-    my ($self, $command, $xml_sub) = @_;
     my $xml = Hum::XmlWriter->new;
-    $xml->open_tag('request', { action => $command });
-    $xml_sub->($xml) if $xml_sub;
+    $xml->open_tag('featureset', { name => $subseq->GeneMethod->name });
+    $subseq->zmap_xml_feature_tag($xml, $self->SessionWindow->AceDatabase->offset);
     $xml->close_all_open_tags;
-    my ($response) = $self->send_commands($xml->flush);
-    my ($status, $hash) = @{$response};
-    return $hash;
+    my $hash = $self->send_command_and_xml('zoom_to', $xml->flush);
+    return $hash->{response} =~ /executed/ ? 1 : 0;
 }
 
 sub name {
