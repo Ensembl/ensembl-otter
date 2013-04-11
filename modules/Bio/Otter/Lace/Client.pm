@@ -851,6 +851,14 @@ sub get_meta {
         },
     );
 
+    return _build_meta_hash($response);
+}
+
+# Factored out for use in OtterTest::Client
+#
+sub _build_meta_hash {
+    my ($self, $response) = @_;
+
     my $meta_hash = {};
     for my $line (split(/\n/,$response)) {
         my($meta_key, $meta_value, $species_id) = split(/\t/,$line);
@@ -858,7 +866,6 @@ sub get_meta {
         $meta_hash->{$meta_key}->{species_id} = $species_id;
         push @{$meta_hash->{$meta_key}->{values}}, $meta_value; # as there can be multiple values for one key
     }
-
     return $meta_hash;
 }
 
