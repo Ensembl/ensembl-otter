@@ -31,7 +31,9 @@ sub from_string {
 
 sub new {
     my ($pkg, %arg_hash) = @_;
-    my $new = { };
+    my $new = {
+        '_program' => 'zmap',
+    };
     bless($new, $pkg);
     push @_list, $new;
     weaken $_list[-1];
@@ -44,6 +46,8 @@ sub new {
 
 sub _init {
     my ($self, $arg_hash) = @_;
+    my $program = $arg_hash->{'-program'};
+    $self->{'_program'} = $program if $program;
     $self->{'_arg_list'} = $arg_hash->{'-arg_list'};
     $self->{'_id_view_hash'} = { };
     $self->{'_view_list'} = [ ];
@@ -110,7 +114,7 @@ sub launch_zmap {
 
 sub zmap_command {
     my ($self) = @_;
-    my @zmap_command = ('zmap', @{$self->zmap_arg_list} );
+    my @zmap_command = ( $self->program, @{$self->zmap_arg_list} );
     return @zmap_command;
 }
 
@@ -167,6 +171,12 @@ sub conf_dir {
     my ($self) = @_;
     my $conf_dir = $self->{'_conf_dir'};
     return $conf_dir;
+}
+
+sub program {
+    my ($self) = @_;
+    my $program = $self->{'_program'};
+    return $program;
 }
 
 sub arg_list {
