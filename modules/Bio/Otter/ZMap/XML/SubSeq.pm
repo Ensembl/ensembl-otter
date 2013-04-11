@@ -24,9 +24,6 @@ sub zmap_delete_xml_string {
     my ($self, $offset) = @_;
 
     my $xml = Hum::XmlWriter->new;
-    $xml->open_tag('request', {action => 'delete_feature'});
-    $xml->open_tag('align');
-    $xml->open_tag('block');
     $xml->open_tag('featureset', {name => $self->zmap_featureset_name});
     $self->zmap_xml_feature_tag($xml, $offset);
     $xml->close_all_open_tags;
@@ -42,9 +39,6 @@ sub zmap_create_xml_string {
     ### if there is more than one in the Zmap. Can probably be
     ### taken from the attached clone_Sequence.
     my $xml = Hum::XmlWriter->new;
-    $xml->open_tag('request', {action => 'create_feature'});
-    $xml->open_tag('align');
-    $xml->open_tag('block');
     $xml->open_tag('featureset', {name => $self->zmap_featureset_name});
     $self->zmap_xml_feature_tag($xml, $offset);
 

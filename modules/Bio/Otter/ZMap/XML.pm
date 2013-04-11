@@ -25,8 +25,8 @@ sub update_SimpleFeatures_xml {
     }
 
     return (
-        _request_xml('delete_feature', $delete_featureset_xml),
-        _request_xml('create_feature', $create_featureset_xml),
+        _xml_string($delete_featureset_xml),
+        _xml_string($create_featureset_xml),
         );
 }
 
@@ -42,22 +42,17 @@ sub _featureset_xml {
     return [ map { $_->zmap_xml_feature_tag($offset) } @{$featureset_list} ];
 }
 
-sub _request_xml {
-    my ($action, $featureset_xml_hash) = @_;
+sub _xml_string {
+    my ($featureset_xml_hash) = @_;
 
     # ZMap does not handle XML requests with no features, so we remove
-    # all empty lists and return nothing if the hash is empty
+    # all empty lists.
 
     for ( keys %{$featureset_xml_hash} ) {
         delete $featureset_xml_hash->{$_} unless @{$featureset_xml_hash->{$_}};
     }
-    return unless keys %{$featureset_xml_hash};
 
     my $xml = Hum::XmlWriter->new;
-
-    $xml->open_tag('request', {action => $action});
-    $xml->open_tag('align');
-    $xml->open_tag('block');
 
     while ( my ($fs, $fs_xml) = each %$featureset_xml_hash ) {
         $xml->open_tag('featureset', {name => $fs});

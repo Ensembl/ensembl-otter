@@ -263,10 +263,10 @@ sub do_rename_locus {
 
     my %done; # we update in three places - keep track
     return try {
-        my @xml;
+        my @delete_xml;
         my $offset = $self->AceDatabase->offset;
         foreach my $sub ($self->fetch_SubSeqs_by_locus_name($old_name)) {
-            push @xml, $sub->zmap_delete_xml_string($offset);
+            push @delete_xml, $sub->zmap_delete_xml_string($offset);
         }
 
         my $locus_cache = $self->{'_locus_cache'}
@@ -300,14 +300,21 @@ sub do_rename_locus {
         }
 
         # Now we need to update Zmap with the new locus names
+        my @create_xml;
         foreach my $sub ($self->fetch_SubSeqs_by_locus_name($new_name)) {
-            push @xml, $sub->zmap_create_xml_string($offset);
+            push @create_xml, $sub->zmap_create_xml_string($offset);
         }
 
         $self->save_ace($ace);
         $done{'ace'} = 1;
 
-        $self->zmap->send_commands(@xml);
+        my $zmap = $self->zmap;
+        foreach my $del (@delete_xml) {
+            $zmap->send_command_and_xml('delete_feature', $del);
+        }
+        foreach my $cre (@create_xml) {
+            $zmap->send_command_and_xml('create_feature', $cre);
+        }
         $done{'zmap'} = 1;
 
         return 1;
@@ -1585,7 +1592,12 @@ sub delete_subsequences {
     $self->draw_subseq_list;
 
     # delete from Zmap
-    try { $self->zmap->send_commands(@xml); return 1; }
+    try {
+        foreach my $del (@xml) {
+            $self->zmap->send_command_and_xml('delete_feature', $del);
+        }
+        return 1;
+    }
     catch {
         $self->exception_message($_, 'Deleted OK, but please restart ZMap');
         return 0;
@@ -1845,7 +1857,7 @@ sub Assembly {
 sub save_Assembly {
     my ($self, $new) = @_;
 
-    my @xml = Bio::Otter::ZMap::XML::update_SimpleFeatures_xml(
+    my ($delete_xml, $create_xml) = Bio::Otter::ZMap::XML::update_SimpleFeatures_xml(
         $self->Assembly, $new, $self->AceDatabase->offset);
     my $ace = $new->ace_string;
 
@@ -1854,8 +1866,12 @@ sub save_Assembly {
     my $done_zmap = try {
         $self->save_ace($ace);
         $done_ace = 1;
-
-        $self->zmap->send_commands(@xml);
+        if ($delete_xml) {
+            $self->zmap->send_command_and_xml('delete_feature', $delete_xml);
+        }
+        if ($create_xml) {
+            $self->zmap->send_command_and_xml('create_feature', $create_xml);
+        }
         return 1;
     }
     catch {
@@ -1934,17 +1950,15 @@ sub replace_SubSeq {
       ? $new->ace_string($old_name)
       : $new->ace_string;
 
-    my $offset = $self->AceDatabase->offset;
-    my @xml = (
-        ($old->is_archival ? $old->zmap_delete_xml_string($offset) : ()),
-        $new->zmap_create_xml_string($offset),
-    );
-
     my ($done_ace, $done_zmap, $err);
+    my $offset = $self->AceDatabase->offset;
     try {
         $self->save_ace($ace);
         $done_ace = 1;
-        $self->zmap->send_commands(@xml);
+        if ($old->is_archival) {
+            $self->zmap->send_command_and_xml('delete_feature', $old->zmap_delete_xml_string($offset));
+        }
+        $self->zmap->send_command_and_xml('create_feature', $new->zmap_create_xml_string($offset));
         $done_zmap = 1;
     }
     catch { $err = $_; };
