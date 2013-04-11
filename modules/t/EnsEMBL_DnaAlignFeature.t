@@ -3,6 +3,9 @@
 use strict;
 use warnings;
 
+use Bio::EnsEMBL::Analysis;
+use Bio::EnsEMBL::DnaDnaAlignFeature;
+
 use FindBin qw($Bin);
 use lib "$Bin/lib";
 use OtterTest::DB;
@@ -11,12 +14,92 @@ use Test::More;
 
 my $test_db = OtterTest::DB->new_with_dataset_info(undef, 'human');
 
+setup_slice($test_db->dbh);
+
 my $vega_dba = $test_db->vega_dba;
 isa_ok($vega_dba, 'Bio::Vega::DBSQL::DBAdaptor');
 my $daf_adaptor = $vega_dba->get_DnaAlignFeatureAdaptor;
 isa_ok($daf_adaptor, 'Bio::EnsEMBL::DBSQL::DnaAlignFeatureAdaptor');
 
+my $slice = $vega_dba->get_SliceAdaptor->fetch_by_region('chromosome', 'test_chr', 1, 4_000_000);
+isa_ok($slice, 'Bio::EnsEMBL::Slice');
+
+my $analysis = Bio::EnsEMBL::Analysis->new( -LOGIC_NAME => 'otter_test_analysis' );
+
+# Cut'n'paste from EnsEMBL dnaAlignFeatureAdaptor.t
+my $start      = 100_100;
+my $end        = 100_200;
+my $strand     = 1;
+my $hstart     = 10;
+my $hend       = 110;
+my $hstrand    = -1;
+my $hseqname   = 'test';
+my $score      = 80;
+my $percent_id = 90;
+my $evalue     = 23.2;
+my $cigar_string = '100M';
+my $hcoverage  = 99.5;
+my $external_db_id = 2200;
+my $pair_dna_align_feature_id = 10;
+
+my $feat = Bio::EnsEMBL::DnaDnaAlignFeature->new
+  (-START  => $start,
+   -END    => $end,
+   -STRAND => $strand,
+   -SLICE  => $slice,
+   -HSTART => $hstart,
+   -HEND   => $hend,
+   -HSTRAND => $hstrand,
+   -HSEQNAME => $hseqname,
+   -CIGAR_STRING => '100M',
+   -PERCENT_ID => $percent_id,
+   -SCORE    => $score,
+   -P_VALUE => $evalue,
+   -ANALYSIS => $analysis,
+   -HCOVERAGE => $hcoverage,
+   -EXTERNAL_DB_ID => $external_db_id,
+   -PAIR_DNA_ALIGN_FEATURE_ID => $pair_dna_align_feature_id );
+
+ok(not($feat->is_stored($vega_dba)), 'not stored yet');
+
+$daf_adaptor->store($feat);
+
+ok($feat->is_stored($vega_dba), 'now stored');
+
+my $dbID = $feat->dbID();
+my $r_feat = $daf_adaptor->fetch_by_dbID($dbID, 'contig');
+
+is($r_feat->dbID, $dbID, "dbID");
+is($r_feat->start, $start, "start");
+is($r_feat->end, $end, "end");
+is($r_feat->strand, $strand, "strand");
+is($r_feat->slice->name, $slice->name, "slice->name");
+is($r_feat->hstart, $hstart, "hstart");
+is($r_feat->hend, $hend, "hend");
+is($r_feat->hstrand, $hstrand, "hstrand");
+is($r_feat->hseqname, $hseqname, "hseqname");
+is($r_feat->cigar_string, $cigar_string, "cigar_string");
+is($r_feat->percent_id, $percent_id, "percent_id");
+is($r_feat->score, $score, "score");
+is($r_feat->p_value, $evalue, "p_value");
+is($r_feat->analysis->logic_name, $analysis->logic_name, "analysis->logic_name");
+is($r_feat->external_db_id, $external_db_id, "external_db_id");
+is($r_feat->hcoverage, $hcoverage, "hcoverage");
+is($r_feat->pair_dna_align_feature_id, $pair_dna_align_feature_id, "pair_dna_align_feature_id");
+
 done_testing;
+
+sub setup_slice {
+    my $dbh = shift;
+    $dbh->begin_work;
+    $dbh->do(<< '_EO_SQL_');
+    INSERT INTO seq_region (seq_region_id, name, coord_system_id, length)
+                   SELECT 10111, 'test_chr', coord_system_id, 4000000
+                     FROM coord_system cs WHERE cs.name = 'chromosome'
+_EO_SQL_
+    $dbh->commit;
+    return;
+}
 
 # Local Variables:
 # mode: perl
