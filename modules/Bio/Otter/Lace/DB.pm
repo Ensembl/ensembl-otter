@@ -8,9 +8,12 @@ use warnings;
 use Carp;
 use DBI;
 
+use Bio::Vega::DBSQL::DBAdaptor;
+
 my(
     %dbh,
     %file,
+    %vega_dba,
     );
 
 sub DESTROY {
@@ -18,6 +21,7 @@ sub DESTROY {
 
     delete($dbh{$self});
     delete($file{$self});
+    delete($vega_dba{$self});
 
     return;
 }
@@ -53,6 +57,19 @@ sub file {
         $file{$self} = $arg;
     }
     return $file{$self};
+}
+
+sub vega_dba {
+    my ($self) = @_;
+    return $vega_dba{$self} if $vega_dba{$self};
+
+    confess "Cannot create Vega adaptor until dataset info is loaded" unless $self->_is_loaded('dataset_info');
+    my $dbc = Bio::Vega::DBSQL::DBAdaptor->new(
+        -driver => 'SQLite',
+        -dbname => $file{$self}
+        );
+
+    return $vega_dba{$self} = $dbc;
 }
 
 sub get_tag_value {
@@ -132,6 +149,8 @@ sub create_tables {
 sub load_dataset_info {
     my ($self, $dataset) = @_;
     return if $self->_is_loaded('dataset_info');
+
+    confess "Cannot load dataset info: loutre schema not loaded" unless $self->_is_loaded('schema_loutre');
 
     my $dbh = $dbh{$self};
 
