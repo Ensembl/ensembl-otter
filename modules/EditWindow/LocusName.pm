@@ -36,15 +36,13 @@ sub initialise {
     my $new_name = $name_frame->Entry(-width => 20)->pack(-side => 'left');
     $self->{'_new_name_entry'} = $new_name;
 
-    # Command which copies the chosen name to the new name Entry widget
-    my $put_chosen_in_entry = sub {
+    # Command which copies the empties new name Entry widget
+    my $zero_entry = sub {
         $new_name->delete(0, 'end');
-        $new_name->insert(0, ${$self->{'_chosen_name'}});
-        $new_name->selectionRange(0, 'end');
         $new_name->focus;
     };
-    $name_menu->configure(-command => $put_chosen_in_entry);
-    $put_chosen_in_entry->();
+    $name_menu->configure(-command => $zero_entry);
+    $zero_entry->();
 
     my $button_frame = $top->Frame(
         -border     => 3,
