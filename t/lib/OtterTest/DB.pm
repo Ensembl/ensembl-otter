@@ -11,11 +11,16 @@ use File::Temp;
 use FindBin qw($Script);
 use Test::More;
 
+use Bio::Otter::Lace::DataSet;
+
 use OtterTest::Client;
 
 use parent 'Bio::Otter::Lace::DB';
 
-my %home;
+my (
+    %test_home,
+    %test_client,
+    );
 
 sub new {
     my ($pkg, $client) = @_;
@@ -23,35 +28,59 @@ sub new {
     $client ||= OtterTest::Client->new;
 
     my $_tmp_dir = File::Temp->newdir("${Script}.XXXXXX", TMPDIR => 1, CLEANUP => 0);
-    my $home = $_tmp_dir->dirname;
-    note "SQLite DB is in: '$home'";
+    my $test_home = $_tmp_dir->dirname;
+    note "SQLite DB is in: '$test_home'";
 
-    my $db = $pkg->SUPER::new($home, $client);
+    my $db = $pkg->SUPER::new($test_home, $client);
 
-    $db->home($home);
+    $db->test_client($client);
+    $db->test_home($test_home);
+
     return $db;
 }
 
-sub home {
+sub new_with_dataset_info {
+    my ($pkg, $client, $dataset_name) = @_;
+
+    my $db = $pkg->new($client);
+
+    my $test_dataset = Bio::Otter::Lace::DataSet->new;
+    $test_dataset->Client($db->test_client);
+    $db->load_dataset_info($test_dataset);
+
+    return $db;
+}
+
+sub test_client {
     my ($self, $arg) = @_;
 
     if ($arg) {
-        $home{$self} = $arg;
+        $test_client{$self} = $arg;
     }
-    return $home{$self};
+    return $test_client{$self};
+}
+
+sub test_home {
+    my ($self, $arg) = @_;
+
+    if ($arg) {
+        $test_home{$self} = $arg;
+    }
+    return $test_home{$self};
 }
 
 sub DESTROY {
     my $self = shift;
 
     my $file = $self->file;
-    my $home = $self->home;
+    my $test_home = $self->test_home;
 
     note "Removing '$file'";
     unlink $file;
-    rmdir $home;
+    rmdir $test_home;
 
-    delete($home{$self});
+    delete($test_home{$self});
+    delete($test_client{$self});
 
     return;
 }
