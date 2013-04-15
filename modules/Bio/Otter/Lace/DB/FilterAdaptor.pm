@@ -47,6 +47,10 @@ my %SQL = (
                           },
     fetch_where_stem => qq{ SELECT ${all_columns} FROM otter_filter WHERE
                            },
+    update_for_filter_get => qq{ UPDATE otter_filter
+                                    SET done = 1, failed = 0, gff_file = ?, process_gff = ?
+                                  WHERE filter_name = ?
+                               },
 );
 
 sub store {
@@ -124,6 +128,14 @@ sub _do_fetch_multi {
         push @filters, Bio::Otter::Lace::DB::Filter->new(%$attribs, is_stored => 1);
     }
     return @filters;
+}
+
+# Special atomic update for filter_get script.
+#
+sub update_for_filter_get {
+    my ($self, $filter_name, $gff_file, $process_gff) = @_;
+    my $sth = $self->dbh->prepare($SQL{update_for_filter_get});
+    return $sth->execute($gff_file, $process_gff, $filter_name);
 }
 
 sub _store_sth         { return shift->_prepare_canned('store'); }

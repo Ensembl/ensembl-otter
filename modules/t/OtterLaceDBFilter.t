@@ -78,6 +78,12 @@ my %fewer_by_name = map { $_->filter_name => $_ } @fewer;
 filter_ok($fewer_by_name{'test'},      { %f1_spec, is_stored => 1 }, "fetch_all 'test'" );
 filter_ok($fewer_by_name{'test_free'}, { %f3_spec, is_stored => 1 }, "fetch_all 'test_free'" );
 
+$fa->update_for_filter_get('test', '/set/by/filter_get.gff', 1);
+$f1_r = $fa->fetch_by_name('test');
+filter_ok($f1_r,
+          { %f1_spec, is_stored => 1, done => 1, failed => 0, gff_file => '/set/by/filter_get.gff', process_gff => 1 },
+          'update_for_filter_get()');
+
 done_testing;
 
 sub filter_ok {
