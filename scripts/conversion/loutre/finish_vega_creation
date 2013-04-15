@@ -843,6 +843,8 @@ push @sql_fixes, "UPDATE gene SET biotype = 'IG_pseudogene' WHERE biotype = 'ig_
 push @sql_fixes, "UPDATE gene SET biotype = 'TEC' WHERE biotype = 'tec';\n";
 push @sql_fixes, "UPDATE transcript SET biotype = 'IG_gene' WHERE biotype = 'ig_gene';\n";
 push @sql_fixes, "UPDATE transcript SET biotype = 'IG_pseudogene' WHERE biotype = 'ig_pseudogene';\n";
+push @sql_fixes, "UPDATE transcript SET biotype = 'TR_pseudogene' WHERE biotype = 'tr_pseudogene';\n";
+push @sql_fixes, "UPDATE transcript SET biotype = 'TR_gene' WHERE biotype = 'tr_gene';\n";
 push @sql_fixes, "UPDATE transcript SET biotype = 'TEC' WHERE biotype = 'tec';\n";
 push @sql_fixes, "UPDATE transcript SET biotype = 'lincRNA' WHERE biotype = 'lincrna';\n";
 push @sql_fixes, qq(UPDATE transcript SET biotype = "3prime_overlapping_ncrna" where biotype = "3'_overlapping_ncrna";\n);
