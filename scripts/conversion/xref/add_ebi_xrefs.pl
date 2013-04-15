@@ -80,6 +80,7 @@ use Data::Dumper;
 $| = 1;
 
 my $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
+### PARALLEL # $support ###
 
 # priorites from GOA
 my %evidence_priorities = (
@@ -147,6 +148,10 @@ my $ga  = $dba->get_GeneAdaptor();
 my $tla = $dba->get_TranslationAdaptor();
 my $ea  = $dba->get_DBEntryAdaptor();
 
+my ($chr_length,$overall_c,$parsed_xrefs);
+$parsed_xrefs = {};
+### PRE # $chr_length $parsed_xrefs # $overall_c ###
+
 # delete previous xrefs if --prune option is used
 if ($support->param('prune') and $support->user_proceed("Would you really like to delete xrefs from previous runs of this script?")) {
 
@@ -177,7 +182,6 @@ if ($support->param('prune') and $support->user_proceed("Would you really like t
 }
 
 my %gene_stable_ids = map { $_, 1 }  $support->param('gene_stable_id');
-my $parsed_xrefs = {};
 my $xref_file    = $support->param('logpath').'/'.$support->param('dbname')."-EBI-parsed_records.file";
 
 # read input files... either retrieve from disc
@@ -202,9 +206,12 @@ if ($support->param('verbose')) {
 
 $support->log_stamped("Done.\n\n");
 
-my $overall_c = 0;
-my $chr_length = $support->get_chrlength($dba,'','chromosome',1); #will retrieve non-reference slices
+$chr_length = $support->get_chrlength($dba,'','chromosome',1); #will retrieve non-reference slices
 my @chr_sorted = $support->sort_chromosomes($chr_length);
+
+### RUN # @chr_sorted ###
+
+$overall_c = 0;
 
 # fetch genes from db
 $support->log("Fetching genes...\n");
@@ -328,7 +335,11 @@ foreach my $chr (@chr_sorted) {
   $support->log("$chr_c GO xrefs added for chromosome $chr\n");
 }
 
+### POST ###
+
 $support->log("$overall_c GO xrefs found in total\n");
+
+### END ###
 
 $support->finish_log;
 
