@@ -340,11 +340,8 @@ sub parse_hgnc {
 
   #try and download direct
   $support->log_stamped("Parsing HGNC for links and descriptions...\n", 1);
-  my $url = "http://www.genenames.org/cgi-bin/hgnc_downloads.cgi?" .
-            "title=HGNC+output+data&col=gd_hgnc_id&col=gd_app_sym&" .
-            "col=gd_app_name&col=gd_locus_type&col=gd_vega_ids&status=Approved&status_opt=2&" .
-            "where=&order_by=gd_app_sym_sort&format=text&limit=&submit=submit&" .
-            ".cgifields=&.cgifields=chr&.cgifields=status&.cgifields=hgnc_dbtag";
+  my $url = "http://www.genenames.org/cgi-bin/hgnc_downloads?col=gd_hgnc_id&col=gd_app_sym&col=gd_app_name&col=gd_locus_type&col=gd_vega_ids&status=Approved&status_opt=2&where=&order_by=gd_hgnc_id&format=text&limit=&hgnc_dbtag=on&submit=submit";
+
   my $ua = LWP::UserAgent->new;
   $ua->proxy(['http'], 'http://webcache.sanger.ac.uk:3128');
   my $resp = $ua->get($url);
