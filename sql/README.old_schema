@@ -1,0 +1,10 @@
+The following files in this directory related to the old schema and
+were deleted by this commit:
+
+    lace.sql
+    otter.sql
+    otter_transact.sql
+    table_to_transact.vi
+    table_transact.sql
+
+otter_new_schema.sql was renamed to otter_schema.sql.

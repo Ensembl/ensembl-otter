@@ -1,3 +1,0 @@
-:1,$ s/TYPE=MyISAM/TYPE=InnoDB/c
-:1,$ s/;/ TYPE=InnoDB;/c
-
