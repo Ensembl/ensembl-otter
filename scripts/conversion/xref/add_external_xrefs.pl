@@ -669,25 +669,19 @@ sub parse_ensdb {
                     }
                 }
   Description : Downloads from HGNC, or parses a data file manually downloaded from HGNC
+                [HGNC record has supplied IDs for Omim and Uniprot, curated IDs for RefSeq and Pubmed
   Return type : none
   Exceptions  : thrown if input file can't be read
   Caller      : internal
 
 =cut
 
-#URL for manual download = 
-#http://www.genenames.org/cgi-bin/hgnc_downloads.cgi?title=HGNC+output+data&hgnc_dbtag=on&col=gd_hgnc_id&col=gd_app_sym&col=gd_status&col=gd_aliases&col=gd_pubmed_ids&col=md_eg_id&col=md_mim_id&col=md_refseq_id&col=md_prot_id&status=Approved&status_opt=2&=on&where=&order_by=gd_app_sym_sort&format=text&limit=&submit=submit&.cgifields=&.cgifields=chr&.cgifields=status&.cgifields=hgnc_dbtag
-
 sub parse_hgnc {
   my ($xrefs, $lcmap) = @_;
   $support->log_stamped("HGNC...\n", 1);
 
-  my $url = "http://www.genenames.org/cgi-bin/hgnc_downloads.cgi?".
-    "title=HGNC%20output%20data&hgnc_dbtag=on&col=gd_hgnc_id&col=gd_app_sym&col=gd_status&".
-    "col=gd_aliases&col=gd_pubmed_ids&col=md_eg_id&col=md_mim_id&col=md_refseq_id&".
-    "col=md_prot_id&status=Approved&status_opt=2&=on&where=&".
-    "order_by=gd_app_sym_sort&format=text&limit=&submit=submit&.cgifields=&".
-    ".cgifields=status&.cgifields=chr&.cgifields=hgnc_dbtag";
+ my $url = "http://www.genenames.org/cgi-bin/hgnc_downloads?col=gd_hgnc_id&col=gd_app_sym&col=gd_status&col=gd_aliases&col=gd_pub_eg_id&col=gd_pubmed_ids&col=gd_pub_refseq_ids&col=md_mim_id&col=md_prot_id&status=Approved&status_opt=2&where=&order_by=gd_hgnc_id&format=text&limit=&hgnc_dbtag=on&submit=submit";
+
 
   #try and download direct
   my $ua = LWP::UserAgent->new;
@@ -717,7 +711,7 @@ sub parse_hgnc {
     'Entrez Gene ID'  => 'EntrezGene',
     'OMIM ID'         => 'MIM_GENE',
     'UniProt ID'      => 'Uniprot/SWISSPROT',
-    'RefSeq'          => 'RefSeq',
+    'RefSeq IDs'      => 'RefSeq',
   );
 
   #define relationships between RefSeq accession number and database (this is not in the download file)
@@ -797,12 +791,14 @@ sub parse_hgnc {
       }
 
       #set RefSeq records to the correct type of molecule
+      my %report_once;
       elsif ($db eq 'RefSeq') {
 	if (my ($prefix) = $accessions{$db} =~ /^([A-Z]{2})_/) {
 	  if (my $type = $refseq_dbs{$prefix}) {
 	    $xrefs->{$gene_name}->{$type}[0] = $accessions{$db} .'||'. $accessions{$db};
 	  }
-	  else {
+	  elsif (! $report_once{$prefix}) {
+            $report_once{$prefix}++;
 	    $support->log_warning("RefSeq prefix $prefix not recognised\n");
 	  }
 	}
