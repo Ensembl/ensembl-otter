@@ -86,6 +86,7 @@ use Bio::EnsEMBL::Utils::ConversionSupport;
 $| = 1;
 
 my $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
+### PARALLEL # $support ###
 
 # parse options
 $support->parse_common_options(@_);
@@ -135,6 +136,9 @@ my $dba = $support->get_database('ensembl');
 my $ta = $dba->get_TranscriptAdaptor;
 my $ea = $dba->get_DBEntryAdaptor;
 
+my ($vega_ids,$ccds_ids,$vega_ids_file,$parse);
+### PRE # $vega_ids_file $parse # $vega_ids ###
+
 if ($support->param('prune') and $support->user_proceed('Would you really like to delete all previous CCDS xrefs?')) {
   $support->log("Deleting  CCDS  xrefs...\n");
   my $num = $dba->dbc->do(qq(
@@ -155,18 +159,32 @@ if ($support->param('prune') and $support->user_proceed('Would you really like t
 }
 
 #parse ccds info
-my ($vega_ids,$ccds_ids);
-my $vega_ids_file = $support->param('logpath').'/'.$support->param('ccdsdbname')."-parsed_vega_ids_for_ccds.file";
+$vega_ids_file = $support->param('logpath').'/'.$support->param('ccdsdbname')."-parsed_vega_ids_for_ccds.file";
 if (-e $vega_ids_file) {
   if ($support->user_proceed("Read CCDS records from a previously saved file ($vega_ids_file) ?\n")) {
     $vega_ids = retrieve($vega_ids_file);
   }
-  else {
-    $vega_ids = &parse_ccds;
+}
+$parse = !(defined $vega_ids);
+my @chrnames;
+if($parse) {
+  my $ccds_dba = $support->get_database('ensembl','ccds');
+  my $ccds_sa = $ccds_dba->get_SliceAdaptor;
+  push @chrnames,$_->name for (@{$ccds_sa->fetch_all('chromosome')});
+}
+
+### RUN # @chrnames ###
+
+if($parse) {
+  $vega_ids = {};
+  foreach my $chr (@chrnames) {
+    parse_ccds($vega_ids,$chr);
   }
 }
-else {
-  $vega_ids = &parse_ccds;
+
+### POST ###
+
+if($parse) {
   store($vega_ids,$vega_ids_file);
 }
 
@@ -238,12 +256,13 @@ if (@dup_ids) {
   $support->log_warning("There are scalar(@dup_ids) with duplicates:\n" . join "\n" , @dup_ids . "\n");
 }
 
+### END ###
 
 # finish log
 $support->finish_log;
 
 sub parse_ccds {
-  my $ids;
+  my ($ids,$chrname) = @_;
   my $e_dba = $support->get_database('ensembl','ensembl');
   my $ev_dba = $support->get_database('ensembl','evega');
   my $ev_sa = $ev_dba->get_SliceAdaptor;
@@ -253,61 +272,58 @@ sub parse_ccds {
   $ccds_dba->dnadb($e_dba);
   my $path = $support->param('evegaassembly');
   $support->log_stamped("Retrieving info from CCDS database\n");
-  foreach my $chr ( @{$ccds_sa->fetch_all('chromosome')}){
-    my $chrname = $chr->name;
-    $support->log_stamped("Ensembl $chrname\n",1);
-    foreach my $ccds_gene ( @{$chr->get_all_Genes()} ){
-      $ccds_gene = $ccds_gene->transform('chromosome', $path);
-    T:
-      foreach my $ccds_trans (@{$ccds_gene->get_all_Transcripts()}){
-        my %xref_hash;
-        my $ccds_id;
-        foreach my $entry (@{$ccds_trans->get_all_DBEntries('CCDS')}) {
-          $xref_hash{$entry->display_id()} = 1;
+  my $chr = $ccds_sa->fetch_by_name($chrname);
+  $support->log_stamped("Ensembl $chrname\n",1);
+  foreach my $ccds_gene ( @{$chr->get_all_Genes()} ){
+    $ccds_gene = $ccds_gene->transform('chromosome', $path);
+  T:
+    foreach my $ccds_trans (@{$ccds_gene->get_all_Transcripts()}){
+      my %xref_hash;
+      my $ccds_id;
+      foreach my $entry (@{$ccds_trans->get_all_DBEntries('CCDS')}) {
+        $xref_hash{$entry->display_id()} = 1;
+      }
+      if (scalar keys %xref_hash != 1){
+        my $tsi = $ccds_trans->stable_id;
+        $support->log_warning("Something odd going on for $tsi, has ". scalar (keys %xref_hash) ." xrefs. Please check CCDS database.\n",1);
+        foreach my $entry (keys %xref_hash){
+          $support->log("xref $entry \n",2);
         }
-        if (scalar keys %xref_hash != 1){
-          my $tsi = $ccds_trans->stable_id;
-          $support->log_warning("Something odd going on for $tsi, has ". scalar (keys %xref_hash) ." xrefs. Please check CCDS database.\n",1);
-          foreach my $entry (keys %xref_hash){
-            $support->log("xref $entry \n",2);
-          }
-          next T;
+        next T;
+      }
+      else {
+        foreach my $entry (keys %xref_hash){
+          $ccds_id = $entry;
         }
-        else {
-          foreach my $entry (keys %xref_hash){
-            $ccds_id = $entry;
-          }
-        }
-        my $chr_name = $ccds_trans->slice->seq_region_name;
-        my $start = $ccds_trans->start();
-        my $end   = $ccds_trans->end();
-        my @ccds_exons = @{$ccds_trans->get_all_translateable_Exons()};
-        my $slice = $ev_sa->fetch_by_region('chromosome',$chr_name, $start, $end, '1', $path );
-        foreach my $gene (@{$slice->get_all_Genes()}){
-          next if ($gene->biotype ne "protein_coding");
-          $gene = $gene->transform('chromosome', $path);
-          foreach my $trans (@{$gene->get_all_Transcripts}){
-            my @exons = @{$trans->get_all_translateable_Exons()};
-            my $match = 0;
-            if (scalar @exons == scalar @ccds_exons){
-              for (my $i = 0; $i < @exons; $i++){
-                if ($ccds_exons[$i]->start == $exons[$i]->start
-                      && $ccds_exons[$i]->end == $exons[$i]->end){
-                  $match++;
-                }
-                #else{
-                #  print "no match ".$ccds_exons[$i]->start." != ".$exons[$i]->start." or ".
-                #	$ccds_exons[$i]->end." != ".$exons[$i]->end."\n";
-                #}
+      }
+      my $chr_name = $ccds_trans->slice->seq_region_name;
+      my $start = $ccds_trans->start();
+      my $end   = $ccds_trans->end();
+      my @ccds_exons = @{$ccds_trans->get_all_translateable_Exons()};
+      my $slice = $ev_sa->fetch_by_region('chromosome',$chr_name, $start, $end, '1', $path );
+      foreach my $gene (@{$slice->get_all_Genes()}){
+        next if ($gene->biotype ne "protein_coding");
+        $gene = $gene->transform('chromosome', $path);
+        foreach my $trans (@{$gene->get_all_Transcripts}){
+          my @exons = @{$trans->get_all_translateable_Exons()};
+          my $match = 0;
+          if (scalar @exons == scalar @ccds_exons){
+            for (my $i = 0; $i < @exons; $i++){
+              if ($ccds_exons[$i]->start == $exons[$i]->start
+                    && $ccds_exons[$i]->end == $exons[$i]->end){
+                $match++;
               }
-              if ($match == scalar @exons){
-                $ids->{$trans->stable_id} = $ccds_id;
-              }
+              #else{
+              #  print "no match ".$ccds_exons[$i]->start." != ".$exons[$i]->start." or ".
+              #	$ccds_exons[$i]->end." != ".$exons[$i]->end."\n";
+              #}
+            }
+            if ($match == scalar @exons){
+              $ids->{$trans->stable_id} = $ccds_id;
             }
           }
         }
       }
     }
   }
-  return $ids;
 }
