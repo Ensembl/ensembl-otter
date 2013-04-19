@@ -136,7 +136,7 @@ my %lns_to_go = map {$_,1}
    );
 
 #define which attrib_types are to be deleted
-my $sr_codes_to_go = join "','", qw(htg description write_access chr hidden);
+my $sr_codes_to_go = join "','", qw(htg write_access chr hidden);
 
 my $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
 ### PARALLEL # $support ###
