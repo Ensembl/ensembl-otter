@@ -227,8 +227,6 @@ foreach my $chrom (@$chroms) {
   }
 }
 
-exit;
-
 #get all chromosomes
 my $all_chromosomes = $sa->fetch_all('Chromosome','Otter');
 
