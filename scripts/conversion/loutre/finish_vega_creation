@@ -57,7 +57,9 @@ This script does a number of jobs:
 - synchronises attribute table with ensembl/misc-scripts/attribute_types/attrib_types.txt
 - synchronises external_db table with ensembl/misc-scripts/external_db/external_dbs.txt
 - populates exon_stable_id_pool with max value (might be needed for removing duplicate stable IDS)
-- patches some biotypes
+- patches some biotypes, both due to differences in loutre and setting by annotators (ASB_*)
+- makes sure CV terms are either hidden_remarks and havana_cv attributes (note if there are any new terms
+then we won't know about them unless we are told about them
 
 The first time it is run it creates backup copies of the original tables; then when run
 subsequently with the -prune 1 option it restores these tables to their original state. Can
@@ -200,8 +202,8 @@ my @tables = qw(coord_system
 		transcript
 		gene_attrib
 		transcript_attrib
-		seq_region_attrib
                 exon_stable_id_pool
+		seq_region_attrib
                 simple_feature);
 my (%tabs);
 my $dbname = $support->param('dbname');
@@ -655,6 +657,10 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
                    SET    source = ?
                    WHERE  gene_id = ?
         ));	
+
+    #SQL to update gene biotype;
+    my $gbsth = $vdbh->prepare(qq(UPDATE gene SET biotype = ? where stable_id = ?));
+
 	
     #loop through genes
     foreach my $gene (@{$chrom->get_all_Genes()}) {
@@ -665,12 +671,11 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
       $support->log_verbose("Studying gene $gsid\n");
       my $gname;
       #cope with no name attribute (although if this happens you're probably in the poo!)
-      eval {  $gene->get_all_Attributes('name')->[0]->value; };
-      if ($@) { 
+      eval { $gname = $gene->get_all_Attributes('name')->[0]->value; };
+      if ($@) {
 	$support->log_warning("Gene $gsid doesn't have a name attrib: $@");
 	$gname = 'Unknown';
       }
-	
       if ($source ne 'havana') {
 	$source = uc($source);
 	if ($gene->source ne $source) {
@@ -680,6 +685,26 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
       }
       my $old_gln = $gene->analysis->logic_name;
       my $new_ln = $used_logic_names{$source};
+
+      #patch biotype according to ASB_* remark
+      my @remarks = @{$gene->get_all_Attributes('remark') || []};
+      my @user_set_biotypes = map {$_->value =~ /^ASB_(.+)/; $1} grep {$_->value =~ /^ASB_/} @remarks;
+      if (@user_set_biotypes) {
+        if (scalar(@user_set_biotypes) > 1) {
+          $support->log_warning("\nThere is more than one annotator set biotype for gene $gsid ($gname), check. Not setting\n");
+        }
+        else {
+          my $user_biotype = $user_set_biotypes[0];
+          my $orig_biotype = $gene->biotype;
+          if ($user_biotype ne  $orig_biotype) {
+            $support->log("\nGene $gsid ($gname) biotype changed from $orig_biotype to $user_biotype because of ASB remark\n");
+            $gbsth->execute($user_biotype,$gsid);
+          }
+          else {
+            $support->log("\nGene $gsid ($gname) - original biotype and ASB set one are the same ($orig_biotype)\n");
+          }
+        }
+      }
 
       #patch analysis_ids
       if ($new_ln ne $old_gln) {
@@ -797,7 +822,7 @@ if ( ! $support->param('dry_run')) {
 ##############
 # misc fixes #
 ##############
-		
+
 my @sql_fixes;
 my $release_no = $support->param('vega_release');
 
@@ -871,22 +896,49 @@ push @sql_fixes, "DELETE from repeat_feature where repeat_end < 1;\n";
 push @sql_fixes, "UPDATE analysis set logic_name = lower(logic_name);\n";
 
 #fix schema for author_group
-push @sql_fixes, "UPDATE author_group SET group_email=null WHERE group_email='';\n";
+push @sql_fixes, "UPDATE author_group SET group_email=NULL WHERE group_email='';\n";
 
 #hack - delete 'not for Vega' transcript_attribs on LOF genes
 push @sql_fixes, "DELETE ta FROM gene g, transcript t, transcript_attrib ta WHERE g.gene_id = t.gene_id AND t.transcript_id = ta.transcript_id AND g.source = 'LOF'AND ta.value = 'not for VEGA';\n";
 
-#CV terms from loutre are always 'remarks' but we want them as 'hidden_remarks' so as to not show them
-my $hidden_attrib_types = qq('EnsEMBL merge exception');
-push @sql_fixes, "UPDATE gene_attrib set attrib_type_id = (SELECT attrib_type_id from attrib_type where code = 'hidden_remark') where value in ($hidden_attrib_types);\n";
-push @sql_fixes, "UPDATE gene_attrib set attrib_type_id = (SELECT attrib_type_id from attrib_type where code = 'hidden_remark') where attrib_type_id = (SELECT attrib_type_id from attrib_type where code = 'remark') and value like 'ASB\_%';\n";
+#CV terms from loutre are always 'remarks' but we want
+#i) some of them as 'hidden_remarks' so as to not show them at all
+$sth = $vdbh->prepare(qq(SELECT attrib_type_id from attrib_type where code = \'remark\'));
+$sth->execute;
+my ($rem_at) = $sth->fetchrow_array;
+$sth = $vdbh->prepare(qq(SELECT attrib_type_id from attrib_type where code = \'hidden_remark\'));
+$sth->execute;
+my ($hidden_rem_at) = $sth->fetchrow_array;
+my @hidden_gene_attribs = ('not for VEGA','confirm experimentally','annotation in progress','EnsEMBL merge exception','EnsEMBL merge exception');
+$sth = $vdbh->prepare(qq(SELECT value from gene_attrib where value like 'ASB\\_%' group by value));
+$sth->execute;
+while (my ($value) = $sth->fetchrow_array) {
+  push @hidden_gene_attribs, $value;
+}
+my $string = join "','",@hidden_gene_attribs;
+push @sql_fixes, "UPDATE gene_attrib set attrib_type_id = $hidden_rem_at where attrib_type_id = $rem_at and value in (\'$string\');\n";
+my @hidden_trans_attribs = ('NMD likely if extended','Genoscope mRNA only','not for VEGA','confirm experimentally','QC splicing correct');
+$string = join "','",@hidden_trans_attribs;
+push @sql_fixes, "UPDATE transcript_attrib set attrib_type_id = $hidden_rem_at where attrib_type_id = $rem_at and value in (\'$string\');\n";
+
+#(ii) ones that are visible have a different attrib_type
+$sth = $vdbh->prepare(qq(SELECT attrib_type_id from attrib_type where code = \'havana_cv\'));
+$sth->execute;
+my ($havana_cv) = $sth->fetchrow_array || 0;
+my @cv_gene_attribs = ('semi-processed','retrogene','reference genome error','overlapping locus','orphan','ncRNA_host','fragmented locus');
+$string = join "','",@cv_gene_attribs;
+#push @sql_fixes, "UPDATE gene_attrib set attrib_type_id = $havana_cv where attrib_type_id = $rem_at and value in (\'$string\');\n";
+push @sql_fixes, "UPDATE gene_attrib set attrib_type_id = $havana_cv where attrib_type_id in (\'$rem_at\',\'$hidden_rem_at') and value in (\'$string\');\n";
+my @cv_trans_attribs = ('NAGNAG_splice_site','alternative_5_UTR','alternative_3_UTR','non_canonical_U12','non_canonical_conserved','non_canonical_genome_sequence_error','non_canonical_polymorphism','non_canonical_TEC','non_canonical_other','NMD_exception','cds_start_NF','cds_end_NF','non_ATG_start','upstream_uORF','overlapping_uORF','seleno','upstream_ATG','downstream_ATG','RP supported TIS','retained intron first','retained intron final','retained intron CDS','bicistronic','not_best-in-genome_evidence','not_organism-supported','non-submitted evidence','low sequence quality','inferred transcript model','inferred exon combination','dotter confirmed','RNA-Seq supported only','CAGE_supported_TSS');
+$string = join "','",@cv_trans_attribs;
+#push @sql_fixes, "UPDATE transcript_attrib set attrib_type_id = $havana_cv where attrib_type_id = $rem_at and value in (\'$string\');\n";
+push @sql_fixes, "UPDATE transcript_attrib set attrib_type_id = $havana_cv where attrib_type_id in (\'$rem_at\',\'$hidden_rem_at') and value in (\'$string\');\n";
 
 #analysis update for vega_update
 if ($support->param('live_update')) {
   push @sql_fixes, "UPDATE analysis set logic_name = \'otter_update\' where logic_name = \'otter\';\n";
   push @sql_fixes, "UPDATE analysis set logic_name = \'otter_lof_update\' where logic_name = \'otter_lof\';\n";
 }
-
 
 #########
 # stats #
