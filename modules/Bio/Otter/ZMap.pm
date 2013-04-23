@@ -12,7 +12,7 @@ useable as a server.
 use strict;
 use warnings;
 
-use base qw( Bio::Otter::ZMap::Core );
+use base qw( Zircon::ZMap::Core );
 
 use feature qw( switch );
 
