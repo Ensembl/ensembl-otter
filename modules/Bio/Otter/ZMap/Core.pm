@@ -10,8 +10,6 @@ use Carp;
 use Scalar::Util qw( weaken );
 use POSIX ();
 
-use Bio::Vega::Utils::MacProxyConfig qw{ mac_os_x_set_proxy_vars };
-
 my @_list = ( );
 
 sub list {
@@ -87,12 +85,6 @@ sub _make_conf {
 
 sub launch_zmap {
     my ($self) = @_;
-
-    if ($^O eq 'darwin') {
-        # Sadly, if someone moves network after launching zmap, it
-        # won't see new proxy variables.
-        mac_os_x_set_proxy_vars(\%ENV);
-    }
 
     $self->_make_conf;
 
