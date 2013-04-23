@@ -12,6 +12,7 @@ use Cwd qw(abs_path);
 use File::HomeDir qw(my_home);
 use Pod::Usage;
 use List::Util qw(shuffle);
+use Try::Tiny;
 
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
 use Bio::Vega::Utils::EnsEMBL2GFF;
@@ -292,13 +293,11 @@ if (%features) {
             
             if ($slice_adaptor->can($method)) {
                 
-                my $slice;
-                
-                eval {
-                    $slice = $slice_adaptor->$method($feature, $flank);
+                my $slice = try {
+                    return $slice_adaptor->$method($feature, $flank);
                 };
                 
-                if ($slice && !$@) {
+                if ($slice) {
                     
                     my $cs = $slice->coord_system_name;
                     my $region = $slice->seq_region_name;
