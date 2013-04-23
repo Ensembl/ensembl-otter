@@ -230,7 +230,7 @@ if (-e $cfg_file) {
                         
                         # note the name of all feature_types
                         
-                        map { $feature_type_settings{$_} ||= {} } @{ $dbs{$db}->{feature_types} };
+                        $feature_type_settings{$_} ||= {} for @{ $dbs{$db}->{feature_types} };
                 }
                 
                 unless (keys %$requested_region || %features) {
