@@ -356,11 +356,12 @@ sub load_filters {
 
 sub zmap_new {
     my ($self) = @_;
+    my $DataSet = $self->AceDatabase->DataSet;
     my $zmap_new =
         Bio::Otter::ZMap->new(
             '-tk'       => $self->SpeciesListWindow->menu_bar,
-            '-arg_list' => $self->AceDatabase->DataSet->zmap_arg_list,
-            '-short_title' => $self->AceDatabase->Client->config_value('short_window_title_prefix'),
+            '-arg_list' => $DataSet->zmap_arg_list,
+            '-config'   => $DataSet->zmap_config_global,
         );
     return $zmap_new;
 }

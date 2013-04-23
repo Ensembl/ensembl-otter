@@ -10,7 +10,6 @@ use Carp;
 use Scalar::Util qw( weaken );
 use POSIX ();
 
-use Bio::Otter::Debug;
 use Bio::Vega::Utils::MacProxyConfig qw{ mac_os_x_set_proxy_vars };
 
 my @_list = ( );
@@ -49,7 +48,7 @@ sub _init {
     $self->{'_id_view_hash'} = { };
     $self->{'_view_list'} = [ ];
     $self->{'_conf_dir'} = $self->_conf_dir;
-    $self->{'_short_title'} = delete $arg_hash->{'-short_title'}; # goes in config
+    $self->{'_config'} = $arg_hash->{'-config'};
     return;
 }
 
@@ -67,20 +66,6 @@ sub _conf_dir {
     return $conf_dir;
 }
 
-sub _conf_txt {
-    my ($self) = @_;
-    my $shorttl = $self->{'_short_title'} ? 'true' : 'false';
-    my $xremote_debug = Bio::Otter::Debug->debug('XRemote');
-    my $xrd = $xremote_debug ? 'true' : 'false';
-    return <<"CONF";
-
-[ZMap]
-show-mainwindow = false
-abbrev-window-title = $shorttl
-xremote-debug = $xrd
-CONF
-}
-
 sub _make_conf {
     my ($self) = @_;
     my $conf_file = sprintf "%s/ZMap", $self->conf_dir;
@@ -88,7 +73,7 @@ sub _make_conf {
         or die sprintf
         "failed to open the configuration file '%s': $!"
         , $conf_file;
-    print $conf_file_h $self->_conf_txt;
+    print $conf_file_h $self->config;
     close $conf_file_h
         or die sprintf
         "failed to close the configuration file '%s': $!"
@@ -171,6 +156,12 @@ sub wait_finish {
 }
 
 # attributes
+
+sub config {
+    my ($self) = @_;
+    my $config = $self->{'_config'};
+    return $config;
+}
 
 sub conf_dir {
     my ($self) = @_;
