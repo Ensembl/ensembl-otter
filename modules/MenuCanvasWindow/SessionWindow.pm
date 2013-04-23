@@ -35,6 +35,8 @@ use Bio::Otter::ZMap;
 use Bio::Otter::ZMap::XML;
 use Bio::Vega::Transform::Otter::Ace;
 
+use Bio::Vega::Utils::MacProxyConfig qw{ mac_os_x_set_proxy_vars };
+
 use Log::Log4perl;
 
 use base qw{
@@ -2453,6 +2455,7 @@ sub zmap_view_arg_hash {
 
 sub zmap_new {
     my ($self) = @_;
+    mac_os_x_set_proxy_vars(\%ENV) if $^O eq 'darwin';
     my $DataSet = $self->AceDatabase->DataSet;
     my $zmap =
         Bio::Otter::ZMap->new(

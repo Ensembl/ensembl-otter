@@ -21,6 +21,8 @@ use Bio::Otter::ZMap;
 use MenuCanvasWindow::SessionWindow;
 use Hum::Sort 'ace_sort';
 
+use Bio::Vega::Utils::MacProxyConfig qw{ mac_os_x_set_proxy_vars };
+
 use base qw(
     EditWindow
     Bio::Otter::UI::ZMapSelectMixin
@@ -356,6 +358,7 @@ sub load_filters {
 
 sub zmap_new {
     my ($self) = @_;
+    mac_os_x_set_proxy_vars(\%ENV) if $^O eq 'darwin';
     my $DataSet = $self->AceDatabase->DataSet;
     my $zmap_new =
         Bio::Otter::ZMap->new(
