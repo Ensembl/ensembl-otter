@@ -2430,13 +2430,6 @@ sub update_window_title_unsaved_flag {
     return;
 }
 
-sub zmap_arg_list {
-    my ($self) = @_;
-    my $arg_list =
-        $self->AceDatabase->DataSet->zmap_arg_list;
-    return $arg_list;
-}
-
 sub zmap_view_arg_hash {
     my ($self) = @_;
     my $config_file = sprintf "%s/ZMap", $self->AceDatabase->zmap_dir;
@@ -2460,11 +2453,12 @@ sub zmap_view_arg_hash {
 
 sub zmap_new {
     my ($self) = @_;
+    my $DataSet = $self->AceDatabase->DataSet;
     my $zmap =
         Bio::Otter::ZMap->new(
             '-tk'       => $self->menu_bar,
-            '-arg_list' => $self->zmap_arg_list,
-            '-short_title' => $self->AceDatabase->Client->config_value('short_window_title_prefix'),
+            '-arg_list' => $DataSet->zmap_arg_list,
+            '-config'   => $DataSet->zmap_config_global,
         );
     return $zmap;
 }

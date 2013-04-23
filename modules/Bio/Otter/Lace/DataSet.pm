@@ -10,6 +10,7 @@ use Scalar::Util 'weaken';
 use URI::Escape qw( uri_escape );
 use Try::Tiny;
 
+use Bio::Otter::Debug;
 use Bio::Otter::Filter;
 use Bio::Otter::BAM;
 
@@ -44,6 +45,21 @@ sub name {
         $self->{'_name'} = $name;
     }
     return $self->{'_name'};
+}
+
+sub zmap_config_global {
+    my ($self) = @_;
+    my $short_title => $self->Client->config_value('short_window_title_prefix');
+    my $st = $short_title ? 'true' : 'false';
+    my $xremote_debug = Bio::Otter::Debug->debug('XRemote');
+    my $xrd = $xremote_debug ? 'true' : 'false';
+    return <<"CONF";
+
+[ZMap]
+show-mainwindow = false
+abbrev-window-title = $st
+xremote-debug = $xrd
+CONF
 }
 
 sub zmap_config {
