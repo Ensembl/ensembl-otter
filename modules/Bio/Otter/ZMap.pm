@@ -145,7 +145,7 @@ sub new_view {
     $status =~ /^2/
         or die "new_view(): 'new_view' failed\n";
     my $id = $hash->{'response'}{'client'}{'xwid'}
-        or die "register_client_post(): missing window ID\n";
+        or die "new_view(): missing window ID\n";
 
     my $view_xremote = $self->xremote_client_new($id);
     $self->send_commands($view_xremote, $self->connect_request);
