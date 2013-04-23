@@ -95,7 +95,7 @@ sub dbh_from_registry {
 sub dbh_from_db {
     my ( $cfg, $db ) = @_;
 
-    return new Bio::EnsEMBL::DBSQL::DBAdaptor(
+    return Bio::EnsEMBL::DBSQL::DBAdaptor->new(
         -host   => $cfg->val($db,'host'),
         -user   => $cfg->val($db,'user'),
         -pass   => $cfg->val($db,'pass') || '',
@@ -152,7 +152,7 @@ if ($dbname && $user) {
         die "Can only supply settings for one database from the command line (try using a config file)\n" 
                 if $dbname =~ /$CFG_DELIM/;
         
-        my $dbh = new Bio::EnsEMBL::DBSQL::DBAdaptor(
+        my $dbh = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
                 -host   => $host,
                 -user   => $user,
                 -pass   => $pass,
@@ -172,7 +172,7 @@ elsif ($dbname) {
 # read the config file
 
 if (-e $cfg_file) {
-        my $cfg = new Config::IniFiles( -file => $cfg_file ) 
+        my $cfg = Config::IniFiles->new( -file => $cfg_file ) 
                 or die "'$cfg_file' doesn't look like a valid enzembl config file\n";
         
         if ($cfg->SectionExists('enzembl')) {
@@ -517,7 +517,7 @@ for my $db (keys %dbs) {
 
 # create the styles file
 
-my $styles_cfg = new Config::IniFiles( -file => $styles_file ) 
+my $styles_cfg = Config::IniFiles->new( -file => $styles_file ) 
         or die "Failed to read styles file: $styles_file\n";
         
 my %provided_styles = map { $_ => 1 } $styles_cfg->Sections;
@@ -650,7 +650,7 @@ my $tsct_sources = join (';',
 
 # add the necessary entries to the zmap config file, over-writing existing entries
 
-my $zmap_cfg = new Config::IniFiles( -file => $zmap_config_file );
+my $zmap_cfg = Config::IniFiles->new( -file => $zmap_config_file );
 
 $zmap_cfg->newval('ZMap', 'default-sequence', $sequence_name);
 $zmap_cfg->newval('source', 'url','file:///'.$gff_filename);
