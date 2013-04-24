@@ -156,7 +156,7 @@ sub _prepare_cached {
     return $self->{$name} = $self->dbh->prepare($sql);
 }
 
-sub begin_work { return shift->dbh->begin_work; }
+sub begin_work { return shift->dbh->do('BEGIN IMMEDIATE TRANSACTION'); }
 sub commit     { return shift->dbh->commit;     }
 sub rollback   { return shift->dbh->rollback;   }
 
