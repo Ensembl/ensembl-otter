@@ -585,6 +585,14 @@ if ($alt_assembly = $support->param('ensemblassembly') ) {
 # Chromosome names, gene source etc #
 #####################################
 
+# Record reference genome errors because we need to find them to determine
+# if NoTransRefError should be set.
+
+my %ref_errors = map { $_->{'stable_id'} => 1 }
+  @{ $vdbh->selectall_arrayref(qq(
+select g.stable_id from gene g join gene_attrib ga1 on g.gene_id = ga1.gene_id join attrib_type at1 on ga1.attrib_type_id = at1.attrib_type_id where at1.code in ('remark','hidden_remark') and ga1.value = 'reference genome error'
+),{ Slice => {} }) };
+
 #SQL to update chromosome name
 $sth = $vdbh->prepare(qq(
            UPDATE seq_region
@@ -696,9 +704,22 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
         else {
           my $user_biotype = $user_set_biotypes[0];
           my $orig_biotype = $gene->biotype;
+          # Only add NoTransRefError if there are no transcripts at all
+          # with translations, ie gene biotype not already protein coding.
           if ($user_biotype ne  $orig_biotype) {
             $support->log("\nGene $gsid ($gname) biotype changed from $orig_biotype to $user_biotype because of ASB remark\n");
             $gbsth->execute($user_biotype,$gsid);
+            if($user_biotype eq 'protein_coding' and $ref_errors{$gsid}) {
+              $support->log("\nAdding NoTransRefError to $gsid\n");
+              $vata->store_on_Gene($gid,[
+                Bio::EnsEMBL::Attribute->new(
+                  -CODE => 'NoTransRefError',
+                  -NAME => 'No translations due to reference error',
+                  -DESCRIPTION => 'This gene is believed to include protein coding transcripts, but no transcript has a translation due to a reference assembly error making specifying the translation impossible.',
+                  -VALUE => 1,
+                )
+              ]);
+            }
           }
           else {
             $support->log("\nGene $gsid ($gname) - original biotype and ASB set one are the same ($orig_biotype)\n");
