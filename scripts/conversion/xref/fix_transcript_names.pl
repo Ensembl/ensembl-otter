@@ -289,12 +289,12 @@ sub check_remarks_and_update_names {
   my $gid    = $gene->dbID;
   my $g_name;
 
-  my $gene_remark = 'This locus has been annotated as fragmented because either there is not enough evidence covering the whole locus to identify the exact exon structure of the transcript, or because the transcript spans a gap in the assembly';
+  my $gene_remark = 'fragmented locus';
   my $attrib = [
     Bio::EnsEMBL::Attribute->new(
-      -CODE => 'remark',
-      -NAME => 'Remark',
-      -DESCRIPTION => 'Annotation remark',
+      -CODE => 'havana_cv',
+      -NAME => 'Havana CV term',
+      -DESCRIPTION => 'Controlled vocabulary terms from Havana',
       -VALUE => $gene_remark,
     ) ];
 
@@ -310,15 +310,15 @@ sub check_remarks_and_update_names {
 
   #shout if there is no remark to identify this as being fragmented locus
   if ( ! grep {$_ eq 'fragmented locus' } @$remarks) {
-    $support->log_warning("Gene $g_name has duplicate transcript names but no fragmented_locus remark, this should be added\n");
+    $support->log_warning("Gene $g_name ($gsi) has duplicate transcript names but no fragmented_locus CV term, this should be added\n");
   }
 
   #add the correct gene remark if it's needed
   if ( grep {$_ eq $gene_remark } @$remarks) {
-    $support->log_verbose("Gene remark regarding fragmentation of the locus already present\n");
+    $support->log_verbose("Gene $g_name ($gsi) - CV term regarding fragmentation of the locus already present\n");
   }
   else {
-    $support->log("Adding gene remark regarding fragmentation of the locus\n",2);
+    $support->log("Gene $g_name ($gsi) - adding gene CV term regarding fragmentation of the locus\n",2);
     if (! $support->param('dry_run')) {
       $aa->store_on_Gene($gid,$attrib);
     }
