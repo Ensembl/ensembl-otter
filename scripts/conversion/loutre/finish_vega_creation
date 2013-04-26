@@ -950,13 +950,13 @@ my @cv_gene_attribs = ('semi-processed','retrogene','reference genome error','ov
 $string = join ",",(map { $vdbh->quote($_) } @cv_gene_attribs);
 #push @sql_fixes, "UPDATE gene_attrib set attrib_type_id = $havana_cv where attrib_type_id = $rem_at and value in ($string);\n";
 push @sql_fixes, "UPDATE gene_attrib set attrib_type_id = $havana_cv where attrib_type_id in (\'$rem_at\',\'$hidden_rem_at') and value in ($string);\n";
-my @cv_trans_attribs = ('NAGNAG_splice_site','alternative_5_UTR','alternative_3_UTR','non_canonical_U12','non_canonical_conserved','non_canonical_genome_sequence_error','non_canonical_polymorphism','non_canonical_TEC','non_canonical_other','NMD_exception','cds_start_NF','cds_end_NF','non_ATG_start','upstream_uORF','overlapping_uORF','seleno','upstream_ATG','downstream_ATG','RP supported TIS','retained intron first','retained intron final','retained intron CDS','bicistronic','not_best-in-genome_evidence','not_organism-supported','non-submitted evidence','low sequence quality','inferred transcript model','inferred exon combination','dotter confirmed','RNA-Seq supported only','CAGE_supported_TSS');
+my @cv_trans_attribs = ('NAGNAG_splice_site','alternative_5_UTR','alternative_3_UTR','non_canonical_U12','non_canonical_conserved','non_canonical_genome_sequence_error','non_canonical_polymorphism','non_canonical_TEC','non_canonical_other','NMD_exception','cds_start_NF','cds_end_NF','non_ATG_start','upstream_uORF','overlapping_uORF','seleno','upstream_ATG','downstream_ATG','RP supported TIS','retained intron first','retained intron final','retained intron CDS','bicistronic','not_best-in-genome_evidence','not_organism-supported','non-submitted evidence','low sequence quality','inferred transcript model','inferred exon combination','dotter confirmed','RNA-Seq supported only','CAGE_supported_TSS','readthrough');
 $string = join ",",(map { $vdbh->quote($_) } @cv_trans_attribs);
 #push @sql_fixes, "UPDATE transcript_attrib set attrib_type_id = $havana_cv where attrib_type_id = $rem_at and value in ($string);\n";
 push @sql_fixes, "UPDATE transcript_attrib set attrib_type_id = $havana_cv where attrib_type_id in (\'$rem_at\',\'$hidden_rem_at') and value in ($string);\n";
 
 # EnsEMBL/Havana differ on what they think is the correct biotype.
-push @sql_fixes, qq(UPDATE gene SET biotype = "3prime_overlapping_ncrna" where biotype = "3'_overlapping_ncrna";\n); 
+push @sql_fixes, qq(UPDATE gene SET biotype = "3prime_overlapping_ncrna" where biotype = "3'_overlapping_ncrna";\n);
 
 #analysis update for vega_update
 if ($support->param('live_update')) {
