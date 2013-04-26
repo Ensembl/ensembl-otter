@@ -34,16 +34,16 @@ Specific options:
     --ensembluser=USER                  use Ensembl database username USER
     --ensemblpass=PASS                  use Ensembl database password PASS
 
-    --db_type                           if set to 'ensembl-vega' updates ensembl vega database
+    --dbtype                           if set to 'ensembl-vega' updates ensembl vega database
     --evegadbname                       NAME, HOST, PORT, USER, PASS used
     --evegahost                           instead of the main database
-    --evegaport                           params if db_type set to
+    --evegaport                           params if dbtype set to
     --evegauser                           ensembl-vega, otherwise ignored.
     --evegapass
 
     --assembly                          used to identify target chromosomes
     --alt_assembly                      used instead of assembly iff
-                                          db_type is set to ensembl-vega
+                                          dbtype is set to ensembl-vega
 
 
 =head1 DESCRIPTION
