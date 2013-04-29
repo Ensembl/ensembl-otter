@@ -225,37 +225,22 @@ sub get_mark {
 
 sub load_features {
     my ($self, @featuresets) = @_;
-    
-    my $xml = Hum::XmlWriter->new;
-    foreach my $fs_name (@featuresets) {
-        $xml->open_tag('featureset', { name => $fs_name });
-        $xml->close_tag;
-    }
-    
-    $self->send_command_and_xml('load_features', $xml->flush);
+    my $xml = $self->SessionWindow->zircon_zmap_view_load_features_xml(@featuresets);    
+    $self->send_command_and_xml('load_features', $xml);
     return;
 }
 
 sub delete_featuresets {
     my ($self, @featuresets) = @_;
-
-    my $xml = Hum::XmlWriter->new;
-    foreach my $featureset (@featuresets) {
-        $xml->open_tag('featureset', { name => $featureset });
-        $xml->close_tag;
-    }
-    $self->send_command_and_xml('delete_feature', $xml->flush);
+    my $xml = $self->SessionWindow->zircon_zmap_view_delete_featuresets_xml(@featuresets);
+    $self->send_command_and_xml('delete_feature', $xml);
     return;
 }
 
 sub zoom_to_subseq {
     my ($self, $subseq) = @_;
-
-    my $xml = Hum::XmlWriter->new;
-    $xml->open_tag('featureset', { name => $subseq->GeneMethod->name });
-    $subseq->zmap_xml_feature_tag($xml, $self->SessionWindow->AceDatabase->offset);
-    $xml->close_all_open_tags;
-    my $hash = $self->send_command_and_xml('zoom_to', $xml->flush);
+    my $xml = $self->SessionWindow->zircon_zmap_view_zoom_to_subseq_xml($subseq);
+    my $hash = $self->send_command_and_xml('zoom_to', $xml);
     return $hash->{response} =~ /executed/ ? 1 : 0;
 }
 
