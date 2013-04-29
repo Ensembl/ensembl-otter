@@ -528,6 +528,10 @@ $sql = qq(
 $c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
 $support->log_stamped("Done transfering $c meta entries.\n\n");
 
+# remove genebuild.version from meta table
+$sql="delete from meta where meta_key = 'genebuild.version'";
+$dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
+
 # add assembly.mapping to meta table
 # get the values for vega_assembly and ensembl_assembly from the db
 my $ensembl_assembly;
