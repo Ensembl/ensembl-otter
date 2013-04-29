@@ -2660,6 +2660,41 @@ sub _feature_evidence_xml {
     return $xml->flush;
 }
 
+sub zircon_zmap_view_load_features_xml {
+    my ($self, @featuresets) = @_;
+    
+    my $xml = Hum::XmlWriter->new;
+    foreach my $fs_name (@featuresets) {
+        $xml->open_tag('featureset', { name => $fs_name });
+        $xml->close_tag;
+    }
+    
+    return $xml->flush;
+}
+
+sub zircon_zmap_view_delete_featuresets_xml {
+    my ($self, @featuresets) = @_;
+
+    my $xml = Hum::XmlWriter->new;
+    foreach my $featureset (@featuresets) {
+        $xml->open_tag('featureset', { name => $featureset });
+        $xml->close_tag;
+    }
+
+    return $xml->flush;
+}
+
+sub zircon_zmap_view_zoom_to_subseq_xml {
+    my ($self, $subseq) = @_;
+
+    my $xml = Hum::XmlWriter->new;
+    $xml->open_tag('featureset', { name => $subseq->GeneMethod->name });
+    $subseq->zmap_xml_feature_tag($xml, $self->AceDatabase->offset);
+    $xml->close_all_open_tags;
+
+    return $xml->flush;
+}
+
 sub zircon_zmap_view_single_select {
     my ($self, $name_list) = @_;
     $self->deselect_all();
