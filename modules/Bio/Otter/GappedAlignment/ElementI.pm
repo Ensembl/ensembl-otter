@@ -142,7 +142,7 @@ sub ensembl_cigar_string {
 
 sub is_intronic {
     my $self = shift;
-    return $self->type =~ /^[35I]$/;
+    return $self->isa('Bio::Otter::GappedAlignment::Element::Intron');
 }
 
 sub is_match {
