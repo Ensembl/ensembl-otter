@@ -12,26 +12,15 @@ use Bio::EnsEMBL::DnaDnaAlignFeature;
 use Bio::EnsEMBL::DnaPepAlignFeature;
 
 use Log::Log4perl;
-use Readonly;
 
-Readonly our @SUGAR_ORDER => qw(
-    _query_id
-    _query_start
-    _query_end
-    _query_strand
-    _target_id
-    _target_start
-    _target_end
-    _target_strand
-    _score
-);
+use parent 'Bio::Otter::Utils::Vulgar';
 
 sub _new {
-    my ($class, %sugar) = @_;
+    my ($class, %attrs) = @_;
 
     my $pkg = ref($class) || $class;
-    ## no critic (Anacode::ProhibitRebless)
-    my $self = bless { %sugar }, $pkg;
+    my $self = $pkg->SUPER::new(%attrs);
+
     $self->_clear_elements;
 
     return $self;
@@ -40,32 +29,34 @@ sub _new {
 sub _new_copy_basics {
     my $self = shift;
 
-    ## no critic (Anacode::ProhibitRebless)
-    my $new = bless { %$self }, ref($self);
+    my $new = $self->SUPER::copy;
     $new->_clear_elements;
 
     return $new;
 }
 
 sub from_vulgar {
-    my ($pkg, $vulgar) = @_;
+    my ($pkg, $vulgar_string) = @_;
+    return $pkg->_parse_vulgar(vulgar_string => $vulgar_string);
+}
 
-    my @vulgar_parts = split(' ', $vulgar);
-    my (%sugar_result, @vulgar_comps);
-    (@sugar_result{@SUGAR_ORDER}, @vulgar_comps) = @vulgar_parts;
+sub from_vulgar_comps_string {
+    my ($pkg, $vulgar_comps_string) = @_;
+    return $pkg->_parse_vulgar(vulgar_comps_string => $vulgar_comps_string);
+}
 
-    # FIXME: error handling on %sugar_result
+sub _parse_vulgar {
+    my ($pkg, @args) = @_;
 
-    my $self = $pkg->_new(%sugar_result);
+    my $self = $pkg->_new(@args);
 
-    while (@vulgar_comps) {
-        my ($type, $q_len, $t_len) = splice(@vulgar_comps, 0, 3); # shift off 1st three
-        unless ($type and defined $q_len and defined $t_len) {
-            $self->logger->logdie("Ran out of vulgar components in mid-triplet");
+    $self->parse_align_comps(   # in parent Bio::Otter::Utils::Vulgar
+        sub {
+            my ($type, $q_len, $t_len) = @_;
+            my $element = Bio::Otter::GappedAlignment::Element->new($type, $q_len, $t_len);
+            $self->add_element($element);
         }
-        my $element = Bio::Otter::GappedAlignment::Element->new($type, $q_len, $t_len);
-        $self->add_element($element);
-    }
+        );
 
     return $self;
 }
@@ -298,6 +289,9 @@ sub _intronify_do_intron {
     return;
 }
 
+# N.B.: vulgar_comps_string and vulgar_string CANNOT be taken directly from $self->vulgar,
+#       as here the list of GappedAlignment::Element's is primary.
+
 sub vulgar_comps_string {
     my $self = shift;
     return unless $self->n_elements;
@@ -306,15 +300,24 @@ sub vulgar_comps_string {
     return join(' ', @ele_strings);
 }
 
+sub align_comps_string {
+    my $self = shift;
+    return $self->vulgar_comps_string;
+}
+
 sub vulgar_string {
     my $self = shift;
     return unless $self->n_elements;
 
-    return sprintf('%s %d %d %s %s %d %d %s %d %s',
-                   $self->query_id,  $self->query_start,  $self->query_end,  $self->query_strand,
-                   $self->target_id, $self->target_start, $self->target_end, $self->target_strand,
-                   $self->score,
-                   $self->vulgar_comps_string);
+    my $sugar_string        = $self->sugar_string;
+    my $vulgar_comps_string = $self->vulgar_comps_string;
+
+    return "$sugar_string $vulgar_comps_string";
+}
+
+sub string {
+    my $self = shift;
+    return $self->vulgar_string;
 }
 
 sub _coalesce_cigar_strings {
@@ -484,76 +487,24 @@ sub reverse_alignment {
     return $reversed;
 }
 
-# FIXME: which of these should be r/w vs r/o ?
-
-sub query_id {
-    my ($self, $query_id) = @_;
-    if ($query_id) {
-        $self->{'_query_id'} = $query_id;
-    }
-    return $self->{'_query_id'};
-}
-
-sub query_start {
-    my ($self, $query_start) = @_;
-    if (defined $query_start) {
-        $self->{'_query_start'} = $query_start;
-    }
-    return $self->{'_query_start'};
-}
-
-sub query_end {
-    my ($self, $query_end) = @_;
-    if (defined $query_end) {
-        $self->{'_query_end'} = $query_end;
-    }
-    return $self->{'_query_end'};
-}
-
-sub query_strand {
-    my ($self, $query_strand) = @_;
-    return $self->_strand($query_strand, '_query_strand');
-}
-
-sub _strand {
-    my ($self, $value, $key) = @_;
-    if ($value) {
-        unless ($value =~ /^[+-]$/) {
-            if ($value == 1) {
-                $value = '+';
-            } elsif ($value == -1) {
-                $value = '-';
-            } else {
-                $self->logger->logcroak("strand '$value' not valid");
-            }
-        }
-        $self->{$key} = $value;
-    }
-    return $self->{$key};
-}
-
-sub query_strand_sense {
-    my $self = shift;
-    return $self->_strand_sense('query_strand');
-}
-
-sub _strand_sense { ## no critic (Subroutines::RequireFinalReturn)
-    my ($self, $accessor) = @_;
-    my $strand = $self->$accessor;
-    return if not defined $strand;
-
-    if ($strand eq '+' or $strand eq '.') {
-        return 1;
-    } elsif ($strand eq '-') {
-        return -1;
-    } else {
-        $self->logger->logcroak("$accessor not '+', '-' or '.'");
-    }
-}
-
 sub query_type {
     my $self = shift;
     return $self->_type('query_strand');
+}
+
+sub query_length {
+    my $self = shift;
+    return $self->_length($self->query_start, $self->query_end);
+}
+
+sub target_type {
+    my $self = shift;
+    return $self->_type('target_strand');
+}
+
+sub target_length {
+    my $self = shift;
+    return $self->_length($self->target_start, $self->target_end);
 }
 
 sub _type {
@@ -571,78 +522,9 @@ sub _type {
     return;                     # redundant but keeps perlcritic happy
 }
 
-sub query_length {
-    my $self = shift;
-    return $self->_length($self->query_start, $self->query_end);
-}
-
 sub _length {
     my ($self, $start, $end) = @_;
     return abs($end - $start);
-}
-
-sub target_ensembl_coords {
-    my $self = shift;
-    return $self->_ensembl_coords('target');
-}
-
-sub query_ensembl_coords {
-    my $self = shift;
-    return $self->_ensembl_coords('query');
-}
-
-sub _ensembl_coords {
-    my ($self, $which) = @_;
-
-    my ($start_acc, $end_acc, $ss_acc) = map { $which . $_ } qw( _start _end _strand_sense );
-    my @coords = sort { $a <=> $b } ($self->$start_acc, $self->$end_acc);
-    my $strand = $self->$ss_acc;
-
-    return $coords[0]+1, $coords[1], $strand;
-}
-
-sub target_id {
-    my ($self, $target_id) = @_;
-    if ($target_id) {
-        $self->{'_target_id'} = $target_id;
-    }
-    return $self->{'_target_id'};
-}
-
-sub target_start {
-    my ($self, $target_start) = @_;
-    if (defined $target_start) {
-        $self->{'_target_start'} = $target_start;
-    }
-    return $self->{'_target_start'};
-}
-
-sub target_end {
-    my ($self, $target_end) = @_;
-    if (defined $target_end) {
-        $self->{'_target_end'} = $target_end;
-    }
-    return $self->{'_target_end'};
-}
-
-sub target_strand {
-    my ($self, $target_strand) = @_;
-    return $self->_strand($target_strand, '_target_strand');
-}
-
-sub target_strand_sense {
-    my $self = shift;
-    return $self->_strand_sense('target_strand');
-}
-
-sub target_type {
-    my $self = shift;
-    return $self->_type('target_strand');
-}
-
-sub target_length {
-    my $self = shift;
-    return $self->_length($self->target_start, $self->target_end);
 }
 
 sub swap_query_strand {
@@ -679,14 +561,6 @@ sub swap_gene_orientation {
     return if $self->gene_orientation eq '.';
     my $sense = $self->_strand_sense('gene_orientation');
     return $self->_strand($sense * -1, '_gene_orientation');
-}
-
-sub score {
-    my ($self, $score) = @_;
-    if (defined $score) {
-        $self->{'_score'} = $score;
-    }
-    return $self->{'_score'};
 }
 
 sub percent_id {
@@ -831,6 +705,24 @@ sub _verify_lengths {
     }
     $self->logger->debug('Lengths ok');
     return;
+}
+
+# See perldoc Bio::EnsEMBL::Exon for ASCII art on phase and end_phase
+#
+sub phase {
+    my ($self) = @_;
+    my @elements = @{$self->elements};
+    return -1 unless @elements;
+    return  0 unless $elements[0]->isa('Bio::Otter::GappedAlignment::Element::SplitCodon');
+    return (3 - $elements[0]->target_length);
+}
+
+sub end_phase {
+    my ($self) = @_;
+    my @elements = @{$self->elements};
+    return -1 unless @elements;
+    return  0 unless $elements[-1]->isa('Bio::Otter::GappedAlignment::Element::SplitCodon');
+    return $elements[-1]->target_length;
 }
 
 sub logger {
