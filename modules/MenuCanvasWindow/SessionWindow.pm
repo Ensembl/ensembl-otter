@@ -2499,12 +2499,15 @@ sub zmap_new {
     my $config_dir = $self->_make_zmap_config_dir;
     my $config = $DataSet->zmap_config_global;
     $self->_make_config($config_dir, $config);
+    my $arg_list = [
+        '--conf_dir' => $config_dir,
+        @{$DataSet->zmap_arg_list},
+        ];
     my $zmap =
         Zircon::ZMap->new(
             '-app_id'     => $self->zircon_app_id,
             '-context'    => $self->zircon_context,
-            '-arg_list'   => $DataSet->zmap_arg_list,
-            '-config_dir' => $config_dir,
+            '-arg_list'   => $arg_list,
         );
     return $zmap;
 }
