@@ -363,11 +363,14 @@ sub zmap_new {
     my $config_dir = $self->_make_zmap_config_dir;
     my $config = $DataSet->zmap_config_global;
     $self->_make_config($config_dir, $config);
+    my $arg_list = [
+        '--conf_dir' => $config_dir,
+        @{$DataSet->zmap_arg_list},
+        ];
     my $zmap_new =
         Bio::Otter::ZMap->new(
             '-tk'         => $self->SpeciesListWindow->menu_bar,
-            '-arg_list'   => $DataSet->zmap_arg_list,
-            '-config_dir' => $DataSet->zmap_config_global,
+            '-arg_list'   => $arg_list,
         );
     return $zmap_new;
 }
