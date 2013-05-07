@@ -6,7 +6,7 @@ package Bio::Otter::GappedAlignment::Element::SS_3P;
 use strict;
 use warnings;
 
-use base 'Bio::Otter::GappedAlignment::Element::GapT';
+use base 'Bio::Otter::GappedAlignment::Element::Intron';
 
 sub type {
     return '3';

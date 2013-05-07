@@ -48,6 +48,21 @@ foreach my $type (keys %ele_expected) {
     critic_module_ok($class);
 }
 
+my $fvc = $ga_module->from_vulgar_comps_string('M 5 5 G 3 0 M 5 5 G 0 1 M 4 4 G 3 0');
+$fvc->query_strand('+');
+$fvc->target_strand('+');
+isa_ok($fvc, $ga_module);
+is($fvc->ensembl_cigar_string, '5M3D5MI4M3D', 'ensembl_cigar_string');
+
+$fvc->set_target_from_ensembl(7, 21, 1);
+$fvc->set_query_from_ensembl(1, 20, -1);
+is($fvc->target_start,    6, 'target_start');
+is($fvc->target_end,     21, 'target_end');
+is($fvc->target_strand, '+', 'target_strand');
+is($fvc->query_start,    20, 'query_start');
+is($fvc->query_end,       0, 'query_end');
+is($fvc->query_strand,  '-', 'query_strand');
+
 Readonly my %tiny_ts_expected => (
 
     vulgar   => 'Q 0 20 + T 6 21 + 56 M 5 5 G 3 0 M 5 5 G 0 1 M 4 4 G 3 0',
@@ -962,6 +977,11 @@ foreach my $test (@split_expected) {
             is ($ensembl_features[$n]->cigar_string, $exp_features[$n]->{cigar},  "feature $n: cigar_string");
         }
     }
+}
+
+TODO: {
+    local $TODO = 'Tests not written yet.';
+    fail 'Must test phase and end_phase.';
 }
 
 done_testing;
