@@ -2451,6 +2451,35 @@ sub zmap_view_arg_hash {
     return $hash;
 }
 
+sub _make_config {
+    my ($self, $config_dir, $config) = @_;
+    my $config_file = sprintf "%s/ZMap", $config_dir;
+    open my $config_file_h, '>', $config_file
+        or die sprintf
+        "failed to open the configuration file '%s': $!"
+        , $config_file;
+    print $config_file_h $config if defined $config;
+    close $config_file_h
+        or die sprintf
+        "failed to close the configuration file '%s': $!"
+        , $config_file;
+    return;
+}
+
+sub _make_zmap_config_dir {
+    my $config_dir = q(/var/tmp);
+    my $user = getpwuid($<);
+    my $dir_name = "otter_${user}";
+    my $key = sprintf "%09d", int(rand(1_000_000_000));
+    for ($dir_name, 'ZMap', $key) {
+        $config_dir .= "/$_";
+        -d $config_dir
+            or mkdir $config_dir
+            or die sprintf "mkdir('%s') failed: $!", $config_dir;
+    }
+    return $config_dir;
+}
+
 
 ### BEGIN: ZMap control interface
 
@@ -2467,12 +2496,15 @@ sub zmap_new {
     my ($self) = @_;
     mac_os_x_set_proxy_vars(\%ENV) if $^O eq 'darwin';
     my $DataSet = $self->AceDatabase->DataSet;
+    my $config_dir = $self->_make_zmap_config_dir;
+    my $config = $DataSet->zmap_config_global;
+    $self->_make_config($config_dir, $config);
     my $zmap =
         Zircon::ZMap->new(
-            '-app_id'   => $self->zircon_app_id,
-            '-context'  => $self->zircon_context,
-            '-arg_list' => $DataSet->zmap_arg_list,
-            '-config'   => $DataSet->zmap_config_global,
+            '-app_id'     => $self->zircon_app_id,
+            '-context'    => $self->zircon_context,
+            '-arg_list'   => $DataSet->zmap_arg_list,
+            '-config_dir' => $config_dir,
         );
     return $zmap;
 }
