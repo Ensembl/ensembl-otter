@@ -229,7 +229,7 @@ sub get_all_introns {
     my @exons = $self->get_all_exons;
 
     my $n_exons = scalar(@exons);
-    return unless $n_exons > 1;
+    return if $n_exons < 2;
 
     my @introns;
     for my $i ( 0 .. ($n_exons - 2) ) {
