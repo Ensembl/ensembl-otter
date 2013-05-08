@@ -22,13 +22,13 @@ use Bio::Otter::Utils::Vulgar;
 use base 'Bio::EnsEMBL::BaseAlignFeature';
 
 sub new {
-    my $caller = shift;
+    my ($caller, @args) = @_;
     my $class = ref($caller) || $caller;
 
     my $self;
 
     my ($cigar_string, $vulgar_comps_string, $vulgar_string, $features) = rearrange(
-     [qw(CIGAR_STRING   VULGAR_COMPS_STRING   VULGAR_STRING   FEATURES)], @_
+     [qw(CIGAR_STRING   VULGAR_COMPS_STRING   VULGAR_STRING   FEATURES)], @args
         );
 
     my $count_args = 0;
@@ -47,12 +47,12 @@ sub new {
         when ($_ == 1) {
 
             if ($features) {
-                $self = $class->SUPER::new(@_);
+                $self = $class->SUPER::new(@args);
                 $self->_parse_features($features);
             }
 
             if ($cigar_string) {
-                $self = $class->SUPER::new(@_);
+                $self = $class->SUPER::new(@args);
                 $self->cigar_string($cigar_string);
                 delete $self->{cigar_string};
             }
@@ -78,7 +78,7 @@ sub new {
             }
 
             if ($vulgar_comps_string) {
-                $self = $class->SUPER::new(@_, %from_vulgar, -cigar_string => 'M'); # dummy match, replaced by:
+                $self = $class->SUPER::new(@args, %from_vulgar, -cigar_string => 'M'); # dummy match, replaced by:
                 $self->vulgar_comps_string($vulgar_comps_string);
                 delete $self->{cigar_string};
             }
