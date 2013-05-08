@@ -34,7 +34,7 @@ sub new {
     my $count_args = 0;
     map { $count_args++ if $_ } ( $cigar_string, $vulgar_comps_string, $vulgar_string, $features );
 
-    given ($count_args) {
+    for ($count_args) {
 
         when ($_ < 1) {
             throw("One of CIGAR_STRING, VULGAR_COMPS_STRING, VULGAR_STRING or FEATURES argument is required");
