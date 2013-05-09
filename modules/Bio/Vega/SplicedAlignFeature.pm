@@ -89,11 +89,24 @@ sub new {
     return $self;
 }
 
+# Currently an alias for alignment_string
+#
 sub vulgar_comps_string {
     my ($self, @args) = @_;
-    ($self->{'vulgar_comps_string'}) = @args if @args;
-    my $vulgar_comps_string = $self->{'vulgar_comps_string'};
-    return $vulgar_comps_string;
+    return $self->alignment_string(@args);
+}
+
+# Currently fixed as 'vulgar_exonerate_components'
+#
+sub alignment_type {
+    return 'vulgar_exonerate_components';
+}
+
+sub alignment_string {
+    my ($self, @args) = @_;
+    ($self->{'alignment_string'}) = @args if @args;
+    my $alignment_string = $self->{'alignment_string'};
+    return $alignment_string;
 }
 
 sub cigar_string {

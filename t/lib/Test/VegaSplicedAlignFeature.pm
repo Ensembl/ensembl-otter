@@ -20,7 +20,8 @@ sub test_exons {
 
                 my $exon_exp = $exp->{exons}->[$i];
 
-                is($exon->vulgar_comps_string, $exon_exp->{vcs},    'vulgar_comps_string') if $exon->can('vulgar_comps_string');
+                is($exon->vulgar_comps_string, $exon_exp->{vcs},    'vulgar_comps_string')
+                    if $exon->can('vulgar_comps_string');
 
                 is($exon->start,               $exon_exp->{start},  'start');
                 is($exon->end,                 $exon_exp->{end},    'end');
@@ -34,6 +35,9 @@ sub test_exons {
                 is($exon->hstrand,  $exp->{hstrand},  'hstrand');
                 is($exon->seqname,  $exp->{seqname},  'seqname');
                 is($exon->hseqname, $exp->{hseqname}, 'hseqname');
+
+                is($exon->alignment_type, 'vulgar_exonerate_components', 'alignment_type')
+                    if $exon->can('alignment_type');
 
                 done_testing;
             };
