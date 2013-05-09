@@ -11,6 +11,13 @@ use base qw(
             Bio::EnsEMBL::DnaPepAlignFeature
            );
 
+# SUPER works lexically. We need to specify which parent's new we need.
+#
+sub my_SUPER_new {
+    my ($caller, @args) = @_;
+    return $caller->Bio::EnsEMBL::DnaPepAlignFeature::new(@args);
+}
+
 {
     ## no critic (Subroutines::ProtectPrivateSubs,Subroutines::ProhibitUnusedPrivateSubroutines)
     sub _hit_unit   { my ($self, @args) = @_; return $self->Bio::EnsEMBL::DnaPepAlignFeature::_hit_unit(@args); }

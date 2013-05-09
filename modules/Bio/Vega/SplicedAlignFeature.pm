@@ -47,12 +47,12 @@ sub new {
         when ($_ == 1) {
 
             if ($features) {
-                $self = $class->SUPER::new(@args);
+                $self = $class->my_SUPER_new(@args);
                 $self->_parse_features($features);
             }
 
             if ($cigar_string) {
-                $self = $class->SUPER::new(@args);
+                $self = $class->my_SUPER_new(@args);
                 $self->cigar_string($cigar_string);
                 delete $self->{cigar_string};
             }
@@ -78,7 +78,7 @@ sub new {
             }
 
             if ($vulgar_comps_string) {
-                $self = $class->SUPER::new(@args, %from_vulgar, -cigar_string => 'M'); # dummy match, replaced by:
+                $self = $class->my_SUPER_new(@args, %from_vulgar, -cigar_string => 'M'); # dummy match, replaced by:
                 $self->vulgar_comps_string($vulgar_comps_string);
                 delete $self->{cigar_string};
             }
