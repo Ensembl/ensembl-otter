@@ -69,6 +69,20 @@ sub test_home {
     return $test_home{$self};
 }
 
+sub setup_chromosome_slice {
+    my ($self) = @_;
+    my $dbh = $self->dbh;
+
+    $dbh->begin_work;
+    $dbh->do(<< '_EO_SQL_');
+    INSERT INTO seq_region (seq_region_id, name, coord_system_id, length)
+                   SELECT 10111, 'test_chr', coord_system_id, 4000000
+                     FROM coord_system cs WHERE cs.name = 'chromosome'
+_EO_SQL_
+    $dbh->commit;
+    return;
+}
+
 sub DESTROY {
     my $self = shift;
 
