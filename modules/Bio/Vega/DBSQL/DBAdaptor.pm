@@ -16,6 +16,8 @@ use Bio::Vega::DBSQL::AssemblyTagAdaptor;
 use Bio::Vega::DBSQL::ContigLockAdaptor;
 use Bio::Vega::DBSQL::MetaContainer;
 use Bio::Vega::DBSQL::SliceAdaptor;
+use Bio::Vega::DBSQL::SplicedAlignFeature::DnaAdaptor;
+use Bio::Vega::DBSQL::SplicedAlignFeature::ProteinAdaptor;
 
 use base 'Bio::EnsEMBL::DBSQL::DBAdaptor';
 
@@ -122,6 +124,24 @@ sub get_ContigLockAdaptor {
       $self->{'ContigLock'}=$ad;
   }
   return $self->{'ContigLock'};
+}
+
+sub get_DnaSplicedAlignFeatureAdaptor {
+  my ($self) = @_;
+  if ( !exists $self->{'VegaSplicedAlignFeatureDNA'} ){
+      my $ad=Bio::Vega::DBSQL::SplicedAlignFeature::DnaAdaptor->new($self);
+      $self->{'VegaSplicedAlignFeatureDNA'}=$ad;
+  }
+  return $self->{'VegaSplicedAlignFeatureDNA'};
+}
+
+sub get_ProteinSplicedAlignFeatureAdaptor {
+  my ($self) = @_;
+  if ( !exists $self->{'VegaSplicedAlignFeatureProtein'} ){
+      my $ad=Bio::Vega::DBSQL::SplicedAlignFeature::ProteinAdaptor->new($self);
+      $self->{'VegaSplicedAlignFeatureProtein'}=$ad;
+  }
+  return $self->{'VegaSplicedAlignFeatureProtein'};
 }
 
 sub get_MetaContainer {

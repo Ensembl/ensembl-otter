@@ -109,6 +109,28 @@ sub alignment_string {
     return $alignment_string;
 }
 
+# Used by adaptors
+#
+sub check_fetch_alignment {
+    my ($self) = @_;
+
+    my $alignment_type = $self->alignment_type();
+    unless ($alignment_type ) {
+        throw( "SplicedAlignFeature does not define an alignment_type." );
+    }
+    if ( $alignment_type ne 'vulgar_exonerate_components' ) {
+        throw( "alignment_type '$alignment_type' not supported." );
+    }
+
+    # This'll need to be pluggable if we support more than one alignment_type
+    my $alignment_string = $self->alignment_string();
+    unless ($alignment_string) {
+        throw( "SplicedAlignFeature does not define an alignment_string." );
+    }
+
+    return ($alignment_type, $alignment_string);
+}
+
 sub cigar_string {
     my ($self, @args) = @_;
     my $cigar_string;
