@@ -13,8 +13,7 @@ use OtterTest::DB;
 use Test::More;
 
 my $test_db = OtterTest::DB->new_with_dataset_info(undef, 'human');
-
-setup_slice($test_db->dbh);
+$test_db->setup_chromosome_slice;
 
 my $vega_dba = $test_db->vega_dba;
 isa_ok($vega_dba, 'Bio::Vega::DBSQL::DBAdaptor');
@@ -88,18 +87,6 @@ is($r_feat->hcoverage, $hcoverage, "hcoverage");
 is($r_feat->pair_dna_align_feature_id, $pair_dna_align_feature_id, "pair_dna_align_feature_id");
 
 done_testing;
-
-sub setup_slice {
-    my $dbh = shift;
-    $dbh->begin_work;
-    $dbh->do(<< '_EO_SQL_');
-    INSERT INTO seq_region (seq_region_id, name, coord_system_id, length)
-                   SELECT 10111, 'test_chr', coord_system_id, 4000000
-                     FROM coord_system cs WHERE cs.name = 'chromosome'
-_EO_SQL_
-    $dbh->commit;
-    return;
-}
 
 # Local Variables:
 # mode: perl
