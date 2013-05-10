@@ -10,10 +10,10 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
     my $usage = sub { exec('perldoc', $0) };
 
     my $merge_dba = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
-        -host    => 'genebuild5',
+        -host    => 'ens-livemirror',
         -port    => 3306,
         -user    => 'ensro',
-        -dbname  => 'amonida_human_core_67_final',
+        -dbname  => 'homo_sapiens_core_71_37',
         -group   => 'ensembl',
         -species => 'human',
     );
