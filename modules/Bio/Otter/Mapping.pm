@@ -49,7 +49,7 @@ sub new_from_xml {
 
 __END__
 
-=head1 NAME - Bio::Otter::BAM
+=head1 NAME - Bio::Otter::Mapping
 
 =head1 AUTHOR
 

@@ -12,14 +12,15 @@ use base qw(
            );
 
 {
-    ## no critic (Subroutines::ProtectPrivateSubs)
+    ## no critic (Subroutines::ProtectPrivateSubs,Subroutines::ProhibitUnusedPrivateSubroutines)
     sub _hit_unit   { my ($self, @args) = @_; return $self->Bio::EnsEMBL::DnaDnaAlignFeature::_hit_unit(@args); }
     sub _query_unit { my ($self, @args) = @_; return $self->Bio::EnsEMBL::DnaDnaAlignFeature::_query_unit(@args); }
-}
 
-sub _hstrand_or_protein {
-    my $self = shift;
-    return $self->hstrand // 1;
+    sub _hstrand_or_protein {
+        my $self = shift;
+        return $self->hstrand // 1;
+    }
+
 }
 
 1;

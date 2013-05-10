@@ -22,19 +22,19 @@ use Bio::Otter::Utils::Vulgar;
 use base 'Bio::EnsEMBL::BaseAlignFeature';
 
 sub new {
-    my $caller = shift;
+    my ($caller, @args) = @_;
     my $class = ref($caller) || $caller;
 
     my $self;
 
     my ($cigar_string, $vulgar_comps_string, $vulgar_string, $features) = rearrange(
-     [qw(CIGAR_STRING   VULGAR_COMPS_STRING   VULGAR_STRING   FEATURES)], @_
+     [qw(CIGAR_STRING   VULGAR_COMPS_STRING   VULGAR_STRING   FEATURES)], @args
         );
 
     my $count_args = 0;
     map { $count_args++ if $_ } ( $cigar_string, $vulgar_comps_string, $vulgar_string, $features );
 
-    given ($count_args) {
+    for ($count_args) {
 
         when ($_ < 1) {
             throw("One of CIGAR_STRING, VULGAR_COMPS_STRING, VULGAR_STRING or FEATURES argument is required");
@@ -47,12 +47,12 @@ sub new {
         when ($_ == 1) {
 
             if ($features) {
-                $self = $class->SUPER::new(@_);
+                $self = $class->SUPER::new(@args);
                 $self->_parse_features($features);
             }
 
             if ($cigar_string) {
-                $self = $class->SUPER::new(@_);
+                $self = $class->SUPER::new(@args);
                 $self->cigar_string($cigar_string);
                 delete $self->{cigar_string};
             }
@@ -78,7 +78,7 @@ sub new {
             }
 
             if ($vulgar_comps_string) {
-                $self = $class->SUPER::new(@_, %from_vulgar, -cigar_string => 'M'); # dummy match, replaced by:
+                $self = $class->SUPER::new(@args, %from_vulgar, -cigar_string => 'M'); # dummy match, replaced by:
                 $self->vulgar_comps_string($vulgar_comps_string);
                 delete $self->{cigar_string};
             }
@@ -229,7 +229,7 @@ sub get_all_introns {
     my @exons = $self->get_all_exons;
 
     my $n_exons = scalar(@exons);
-    return unless $n_exons > 1;
+    return if $n_exons < 2;
 
     my @introns;
     for my $i ( 0 .. ($n_exons - 2) ) {
