@@ -22,6 +22,8 @@ sub test_exons {
 
                 is($exon->vulgar_comps_string, $exon_exp->{vcs},    'vulgar_comps_string')
                     if $exon->can('vulgar_comps_string');
+                is($exon->vulgar_string,       $exon_exp->{vulgar_string}, 'vulgar_string')
+                    if exists $exon_exp->{'vulgar_string'};
 
                 is($exon->start,               $exon_exp->{start},  'start');
                 is($exon->end,                 $exon_exp->{end},    'end');
