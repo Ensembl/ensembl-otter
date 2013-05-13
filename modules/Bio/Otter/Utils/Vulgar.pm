@@ -200,8 +200,12 @@ sub _set_coords_from_ensembl {
     my ($self, $which, $start, $end, $strand) = @_;
 
     my ($start_acc, $end_acc, $strand_acc) = map { $which . $_ } qw( _start _end _strand );
-    my @coords = sort { $a <=> $b } ($start, $end);
-    $coords[0] -= 1;
+
+    my @coords;
+    if (defined $start and defined $end) {
+        @coords = sort { $a <=> $b } ($start, $end);
+        $coords[0] -= 1;
+    }
 
     my $is_protein;
     $is_protein = 1 if $strand eq '.';
