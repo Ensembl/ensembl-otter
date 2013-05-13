@@ -341,6 +341,10 @@ foreach my $V_chr (@chrs) {
 	next GENE;
       }
     }
+    if ($gene->biotype eq 'TEC') {
+	$support->log("Gene: ".$gene->stable_id." skipping because it's a 'TEC'\n", 3);
+	next GENE;
+      }
     $support->log("Gene $gsi/$name (logic_name $ln)\n", 1);
 
     #PATCH genes are identified as being on non-reference slices...
@@ -357,6 +361,10 @@ foreach my $V_chr (@chrs) {
     foreach my $transcript (@{ $transcripts }) {
       if ($transcript->biotype eq 'artifact') {
 	$support->log("Transcript: ".$transcript->stable_id." skipping because it's an 'artifact'\n", 3);
+	next TRANS;
+      }
+      if ($transcript->biotype eq 'TEC') {
+	$support->log("Transcript: ".$transcript->stable_id." skipping because it's a 'TEC'\n", 3);
 	next TRANS;
       }
       $c++;
