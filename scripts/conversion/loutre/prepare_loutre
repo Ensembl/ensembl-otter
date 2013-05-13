@@ -116,7 +116,7 @@ if (! (($species) = $support->param('loutredbname') =~ /loutre_(\S+)_*/ ) ) {
   $support->log_warning("No species name interpreted from loutredbname ".$support->param('loutredbname')." check configuration\n");
   exit;
 }
-unless (grep {$_ eq $species} qw(human mouse dog pig zebrafish gorilla wallaby chimp)) {
+unless (grep {$_ eq $species} qw(human mouse dog pig zebrafish gorilla wallaby chimp rat)) {
   $support->log_warning("Species $species not recognised, please check\n");
   exit;
 }
