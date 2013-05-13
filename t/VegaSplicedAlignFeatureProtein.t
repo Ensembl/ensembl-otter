@@ -99,7 +99,8 @@ my $exp = {
         { start =>  4726, end =>  4890, hstart => 364, hend => 418, phase => 0, end_phase => 2, vcs => 'M 18 54 F 0 1 G 1 0 M 36 108 S 0 2' },
         { start => 13792, end => 14021, hstart => 419, hend => 495, phase => 2, end_phase => 1, vcs => 'S 1 1 M 76 228 S 0 1' },
         { start => 17935, end => 18090, hstart => 496, hend => 547, phase => 1, end_phase => 1, vcs => 'S 1 2 M 51 153 S 0 1' },
-        { start => 18853, end => 18932, hstart => 548, hend => 574, phase => 1, end_phase => 0, vcs => 'S 1 2 M 26 78' },
+        { start => 18853, end => 18932, hstart => 548, hend => 574, phase => 1, end_phase => 0, vcs => 'S 1 2 M 26 78',
+          vulgar_string => 'QueryP 547 574 . TargetP 18852 18932 + 0 S 1 2 M 26 78' },
         { start => 19536, end => 19808, hstart => 575, hend => 665, phase => 0, end_phase => 0, vcs => 'M 91 273' },
         ],
     strand   => 1,
@@ -137,6 +138,7 @@ $exp->{exons}->[2]->{start} = 50385; $exp->{exons}->[2]->{end} = 50549;
 $exp->{exons}->[3]->{start} = 41254; $exp->{exons}->[3]->{end} = 41483;
 $exp->{exons}->[4]->{start} = 37185; $exp->{exons}->[4]->{end} = 37340;
 $exp->{exons}->[5]->{start} = 36343; $exp->{exons}->[5]->{end} = 36422;
+$exp->{exons}->[5]->{vulgar_string} = 'QRev 547 574 . TRev 36422 36342 - 0 S 1 2 M 26 78';
 $exp->{exons}->[6]->{start} = 35467; $exp->{exons}->[6]->{end} = 35739;
 $exp->{strand} = -1;
 $exp->{seqname} = 'TRev';

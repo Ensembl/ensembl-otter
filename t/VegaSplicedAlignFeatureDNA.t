@@ -103,7 +103,8 @@ is(scalar(@exons), 4, 'n_exons');
 my $exp = {
     exons => [
         { start => 23234, end => 23236, hstart =>  1, hend =>  3, vcs => 'M 3 3' },
-        { start => 23240, end => 23245, hstart =>  4, hend => 12, vcs => 'M 2 2 G 3 0 M 4 4' },
+        { start => 23240, end => 23245, hstart =>  4, hend => 12, vcs => 'M 2 2 G 3 0 M 4 4',
+          vulgar_string => 'Qseq 3 12 + Tseq 23239 23245 + 0 M 2 2 G 3 0 M 4 4'},
         { start => 23250, end => 23252, hstart => 13, hend => 14, vcs => 'M 1 1 G 0 1 M 1 1' },
         { start => 23255, end => 23257, hstart => 15, hend => 20, vcs => 'M 3 3 G 3 0' },
         ],

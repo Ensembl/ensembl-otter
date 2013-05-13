@@ -109,6 +109,15 @@ sub alignment_string {
     return $alignment_string;
 }
 
+# Currently read-only - any need for it to be read-write?
+#
+sub vulgar_string {
+    my ($self) = @_;
+    $self->_verify_attribs;
+    my $gapped_alignment = $self->gapped_alignment;
+    return $gapped_alignment->vulgar_string;
+}
+
 # Used by adaptors
 #
 sub check_fetch_alignment {
@@ -221,33 +230,39 @@ sub gapped_alignment {
     my $vulgar_comps = $self->vulgar_comps_string;
     my $gapped_alignment = Bio::Otter::GappedAlignment->from_vulgar_comps_string($vulgar_comps);
 
-    # Strands needed for most operations.
-    $gapped_alignment->query_strand( $self->_hstrand_or_protein);
-    $gapped_alignment->target_strand($self->strand // 1);
-
-    return $gapped_alignment;
-}
-
-sub get_all_exon_alignments {
-    my ($self) = @_;
-
-    my $gapped_alignment = $self->gapped_alignment;
-
-    # Not sure if some of these should be set by gapped_alignment():
-
-    my $start  = $self->start  // $self->logger->logcroak('start not set');
-    my $end    = $self->end    // $self->logger->logcroak('end not set');
+    my $start  = $self->start;
+    my $end    = $self->end;
     my $strand = $self->strand // 1;
     $gapped_alignment->set_target_from_ensembl($start, $end, $strand);
 
-    my $hstart  = $self->hstart  // $self->logger->logcroak('hstart not set');
-    my $hend    = $self->hend    // $self->logger->logcroak('hend not set');
+    my $hstart  = $self->hstart;
+    my $hend    = $self->hend;
     my $hstrand = $self->_hstrand_or_protein;
     $gapped_alignment->set_query_from_ensembl($hstart, $hend, $hstrand);
 
     $gapped_alignment->target_id($self->seqname);
     $gapped_alignment->query_id($self->hseqname);
 
+    return $gapped_alignment;
+}
+
+sub _verify_attribs {
+    my ($self) = @_;
+
+    $self->start  // $self->logger->logcroak('start not set');
+    $self->end    // $self->logger->logcroak('end not set');
+
+    $self->hstart  // $self->logger->logcroak('hstart not set');
+    $self->hend    // $self->logger->logcroak('hend not set');
+
+    return;
+}
+
+sub get_all_exon_alignments {
+    my ($self) = @_;
+
+    $self->_verify_attribs;
+    my $gapped_alignment = $self->gapped_alignment;
     my @egas = $gapped_alignment->exon_gapped_alignments;
 
     return map { $self->new( -vulgar_string => $_->vulgar_string, -slice => $self->slice ) } @egas;
