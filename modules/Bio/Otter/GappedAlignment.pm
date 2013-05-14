@@ -111,7 +111,7 @@ sub _do_intronify {
     $data{elements}               = [ @{$self->elements} ];  # make a copy we can consume
     $data{intron_ga} = $intron_ga = $self->_new_copy_basics; # this is what we're building!
 
-    $data{protein_query} = ($self->query_type eq 'P');
+    $data{protein_query} = $self->query_is_protein;
 
     # $data{offset} is offset between transcript in genomic or clone coords, and spliced transcript (cDNA)
 
@@ -349,8 +349,8 @@ sub ensembl_cigar_string {
         sub {
             my ($ele, $length, $ga) = @_;
             my $type = $ele->ensembl_cigar_type;
-            if (   ($type eq 'D' and $ga->query_type eq 'P' and $ga->target_type ne 'P')
-                or ($type eq 'I' and $ga->query_type ne 'P' and $ga->target_type eq 'P') )
+            if (   ($type eq 'D' and     $ga->query_is_protein  and not($ga->target_is_protein))
+                or ($type eq 'I' and not($ga->query_is_protein) and     $ga->target_is_protein) )
             {
                 $length *= 3;   # peptide -> nucleotide
             }
@@ -398,7 +398,7 @@ sub ensembl_feature {
     my ($t_start, $t_end, $t_strand) = $self->target_ensembl_coords;
     my ($q_start, $q_end, $q_strand) = $self->query_ensembl_coords;
 
-    my $af_type = $self->query_type eq 'P' ? 'Bio::EnsEMBL::DnaPepAlignFeature' : 'Bio::EnsEMBL::DnaDnaAlignFeature';
+    my $af_type = $self->query_is_protein ? 'Bio::EnsEMBL::DnaPepAlignFeature' : 'Bio::EnsEMBL::DnaDnaAlignFeature';
 
     return $af_type->new(
         -seqname      => $self->target_id,
@@ -487,39 +487,14 @@ sub reverse_alignment {
     return $reversed;
 }
 
-sub query_type {
-    my $self = shift;
-    return $self->_type('query_strand');
-}
-
 sub query_length {
     my $self = shift;
     return $self->_length($self->query_start, $self->query_end);
 }
 
-sub target_type {
-    my $self = shift;
-    return $self->_type('target_strand');
-}
-
 sub target_length {
     my $self = shift;
     return $self->_length($self->target_start, $self->target_end);
-}
-
-sub _type {
-    my ($self, $accessor) = @_;
-    my $strand = $self->$accessor;
-    return if not defined $strand;
-
-    if ($strand eq '+' or $strand eq '-') {
-        return 'N';
-    } elsif ($strand eq '.') {
-        return 'P';
-    } else {
-        $self->logger->logcroak("$accessor not '+', '-' or '.'");
-    }
-    return;                     # redundant but keeps perlcritic happy
 }
 
 sub _length {
