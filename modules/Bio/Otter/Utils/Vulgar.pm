@@ -6,6 +6,8 @@ package Bio::Otter::Utils::Vulgar;
 use strict;
 use warnings;
 
+use feature 'switch';
+
 use Log::Log4perl;
 use Readonly;
 
@@ -95,6 +97,16 @@ sub query_strand_sense {
     return $self->_strand_sense('query_strand');
 }
 
+sub query_type {
+    my $self = shift;
+    return $self->_type('query_strand');
+}
+
+sub query_is_protein {
+    my $self = shift;
+    return ($self->query_type eq 'P');
+}
+
 sub query_ensembl_coords {
     my $self = shift;
     return $self->_ensembl_coords('query');
@@ -134,6 +146,16 @@ sub target_strand {
 sub target_strand_sense {
     my $self = shift;
     return $self->_strand_sense('target_strand');
+}
+
+sub target_type {
+    my $self = shift;
+    return $self->_type('target_strand');
+}
+
+sub target_is_protein {
+    my $self = shift;
+    return ($self->target_type eq 'P');
 }
 
 sub target_ensembl_coords {
@@ -176,13 +198,29 @@ sub _strand_sense { ## no critic (Subroutines::RequireFinalReturn)
     my $strand = $self->$accessor;
     return if not defined $strand;
 
-    if ($strand eq '+' or $strand eq '.') {
-        return 1;
-    } elsif ($strand eq '-') {
-        return -1;
+    for ($strand) {
+        when ($_ eq '+') { return  1; }
+        when ($_ eq '-') { return -1; }
+        when ($_ eq '.') { return  1; }
+        default {
+            $self->logger->logcroak("$accessor not '+', '-' or '.'");
+        }
+    }
+}
+
+sub _type {
+    my ($self, $accessor) = @_;
+    my $strand = $self->$accessor;
+    return if not defined $strand;
+
+    if ($strand eq '+' or $strand eq '-') {
+        return 'N';
+    } elsif ($strand eq '.') {
+        return 'P';
     } else {
         $self->logger->logcroak("$accessor not '+', '-' or '.'");
     }
+    return;                     # redundant but keeps perlcritic happy
 }
 
 sub _ensembl_coords {
