@@ -227,7 +227,6 @@ sub map_it {
     );
   } else {
     my $slice = $E_sa->fetch_by_region(undef,$f->slice->seq_region_name,undef,undef,undef,$E_cs->version);
-    warn "slice = ".$slice->get_seq_region_id."\n";
     return (Bio::EnsEMBL::Mapper::Coordinate->new($slice->get_seq_region_id,$f->seq_region_start,$f->seq_region_end,$f->strand,$E_cs));
   }
 }
