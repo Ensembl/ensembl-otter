@@ -222,6 +222,27 @@ sub _vulgar_comps_to_cigar {
     return $gapped_alignment->ensembl_cigar_string;
 }
 
+sub as_AlignFeature {
+    my ($self) = @_;
+
+    my $class = $self->_align_feature_class; # inheritance work-around again.
+    my @extra_attribs = $self->_extra_fields;
+
+    my @common_attribs = qw(
+        slice
+        start  end  strand  seqname  species
+        hstart hend hstrand hseqname hspecies hcoverage
+        percent_id score p_value
+        analysis external_db_id extra_data
+        cigar_string
+      );
+
+    my %args = map { '-' . $_ => $self->$_() } @common_attribs, @extra_attribs;
+    my $align_feature = $class->new(%args);
+
+    return $align_feature;
+}
+
 sub gapped_alignment {
     my ($self) = @_;
 
@@ -295,6 +316,13 @@ sub as_exon {
     my %args = map { '-' . $_ => $self->$_() } qw( slice start end strand seqname phase end_phase dbID );
     my $exon = Bio::EnsEMBL::Exon->new(%args);
     return $exon;
+}
+
+sub ungapped_features {
+    my ($self) = @_;
+    my @exon_alignments = $self->get_all_exon_alignments;
+    my @ungapped_features = map { $_->as_AlignFeature->ungapped_features } @exon_alignments;
+    return @ungapped_features;
 }
 
 # These two increase the pressure on caching gapped_alignment
