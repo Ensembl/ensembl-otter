@@ -698,7 +698,6 @@ sub transfer_transcript {
     my @coords = map_it($mapper,$sf);
     if (@coords == 1) {
       my $c = $coords[0];
-      warn $c->id;
       unless ($c->isa('Bio::EnsEMBL::Mapper::Gap')) {
 	$sf->start($c->start);
 	$sf->end($c->end);
