@@ -54,20 +54,25 @@ my $dpaf = new_ok($saf_protein_module => [ -features => \@feats ]);
 is($dpaf->hseqname, 'dummy-hid', 'dpaf hseqname');
 is($dpaf->cigar_string, '3M3I6M', 'dpaf cigar_string');
 
-my $strand = $dpaf->strand;
-my $hstrand = $dpaf->hstrand;
-$dpaf->reverse_complement;
-is($dpaf->cigar_string, '6M3I3M', 'dpaf reverse_complement cigar_string');
-is($dpaf->strand,  $strand  * -1, 'dpaf reverse_complement strand');
-is($dpaf->hstrand, $hstrand * -1, 'dpaf reverse_complement hstrand');
+my $paf = $dpaf->as_AlignFeature;
+isa_ok($paf, 'Bio::EnsEMBL::DnaPepAlignFeature');
+# FIXME: more tests here
 
-is($dpaf->start, 5, 'dpaf start');
-is($dpaf->end,  16, 'dpaf end');
-
-SKIP: {
-    skip('ungapped_features not implemented for SplicedAlignFeatures yet.', 1);
-    is(scalar($dpaf->ungapped_features), 2, 'dpaf n-ungapped_features');
-}
+$dpaf->seqname('ugf_test');
+my @ungapped_features = $dpaf->ungapped_features;
+is(scalar(@ungapped_features), 2, 'dpaf n-ungapped_features');
+my $ugf_exp = {
+    package => 'Bio::EnsEMBL::FeaturePair',
+    strand  => 1,
+    hstrand => 1,
+    hseqname => 'dummy-hid',
+    seqname => 'ugf_test',
+    exons    => [
+        { start =>  5, end =>  7, hstart => 105, hend => 105 },
+        { start => 11, end => 16, hstart => 106, hend => 107 },
+        ],
+};
+test_exons(\@ungapped_features, $ugf_exp, 'dpaf ungapped_features');
 
 # Yuck, a lot of this is copied and mashed from OtterGappedAlignment.t
 

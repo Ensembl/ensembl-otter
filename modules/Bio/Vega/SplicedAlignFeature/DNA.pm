@@ -28,6 +28,8 @@ sub my_SUPER_new {
         return $self->hstrand // 1;
     }
 
+    sub _align_feature_class { return 'Bio::EnsEMBL::DnaDnaAlignFeature'; }
+    sub _extra_fields        { return qw( pair_dna_align_feature_id ); }
 }
 
 1;

@@ -28,6 +28,8 @@ sub my_SUPER_new {
         return '.';
     }
 
+    sub _align_feature_class { return 'Bio::EnsEMBL::DnaPepAlignFeature'; }
+    sub _extra_fields        { return; }
 }
 
 1;

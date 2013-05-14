@@ -65,10 +65,25 @@ is($dnaf->hstrand, $hstrand * -1, 'dnaf reverse_complement hstrand');
 is($dnaf->start, 5, 'dnaf start');
 is($dnaf->end,  14, 'dnaf end');
 
-SKIP: {
-    skip('ungapped_features not implemented for SplicedAlignFeatures yet.', 1);
-    is(scalar($dnaf->ungapped_features), 2, 'dnaf n-ungapped_features');
-}
+my $daf = $dnaf->as_AlignFeature;
+isa_ok($daf, 'Bio::EnsEMBL::DnaDnaAlignFeature');
+# FIXME: more tests here
+
+$dnaf->seqname('ugf_test');
+my @ungapped_features = $dnaf->ungapped_features;
+is(scalar(@ungapped_features), 2, 'dnaf n-ungapped_features');
+my $ugf_exp = {
+    package => 'Bio::EnsEMBL::FeaturePair',
+    strand  => $strand * -1,
+    hstrand => $hstrand * -1,
+    hseqname => 'dummy-hid',
+    seqname => 'ugf_test',
+    exons    => [
+        { start => 10, end => 14, hstart => 108, hend => 112 },
+        { start =>  5, end =>  7, hstart => 105, hend => 107 },
+        ],
+};
+test_exons(\@ungapped_features, $ugf_exp, 'dnaf ungapped_features');
 
 my $v_string = 'Query 0 20 + Target 21 6 - 56 M 5 5 G 3 0 M 5 5 G 0 1 M 4 4 G 3 0';
 $safd = new_ok($saf_dna_module => [ -vulgar_string => $v_string ], 'new from vulgar_string');
