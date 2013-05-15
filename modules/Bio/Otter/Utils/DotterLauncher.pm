@@ -5,10 +5,13 @@ package Bio::Otter::Utils::DotterLauncher;
 
 use strict;
 use warnings;
+
 use Carp;
+use POSIX ();
+use Try::Tiny;
+
 use Hum::FastaFileIO;
 use Hum::Pfetch;
-use POSIX ();
 
 sub new {
     my( $pkg ) = @_;
@@ -76,7 +79,7 @@ sub fork_dotter {
         my $prefix = "/tmp/dotter.$$";
         my $query_file   = "$prefix.query";
         my $subject_file = "$prefix.subject";
-        eval{
+        try {
             my $query_seq = $seq->sub_sequence($start, $end);
             $query_seq->name($seq->name);
 
@@ -89,6 +92,7 @@ sub fork_dotter {
             my ($subject_seq) = Hum::Pfetch::get_Sequences($subject_name);
             die "Can't fetch '$subject_name'\n" unless $subject_seq;
             if ($self->revcomp_subject) {
+                ## no critic (Anacode::ProhibitRebless)
                 bless($subject_seq, 'Hum::Sequence::DNA');  # hack!
                 $subject_seq = $subject_seq->reverse_complement;
             }
@@ -107,21 +111,22 @@ sub fork_dotter {
             my $dotter_command = "dotter -q $offset $query_file $subject_file ; rm $query_file $subject_file ; echo 'Dotter finished'";
             warn "RUNNING: $dotter_command\n";
             exec($dotter_command) or warn "Failed to exec '$dotter_command' : $!";
-        };
-        if ($@) {
-            warn $@;
+        }
+        catch {
+            warn $_;
             # Exec'ing rm here, which replaces the perl process
             # with rm, ensures that the perl DESTROY methods
             # don't get called by this child.
             unlink $query_file, $subject_file
               or warn "Some input file(s) not tidied up: $!\n";
-        }
+        };
         warn "dotter launch aborted\n";
         POSIX::_exit(127); # avoid triggering DESTROY
     }
     else {
         confess "Can't fork: $!";
     }
+    return;                     # never reached but keeps perlcritic happy
 }
 
 sub change_dashes_to_n {
@@ -129,7 +134,7 @@ sub change_dashes_to_n {
 
     my $str = $seq->sequence_string;
     $str =~ tr/-/n/;
-    $seq->sequence_string($str);
+    return $seq->sequence_string($str);
 }
 
 1;
