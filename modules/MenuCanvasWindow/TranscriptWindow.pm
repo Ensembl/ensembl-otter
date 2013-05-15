@@ -16,7 +16,7 @@ use Tk::ComboBox;
 use Tk::SmartOptionmenu;
 use Hum::Ace::Locus;
 use Hum::Ace::Exon;
-use Hum::Ace::DotterLauncher;
+use Bio::Otter::Utils::DotterLauncher;
 use CanvasWindow::EvidencePaster;
 use EditWindow::PfamWindow;
 use Bio::Otter::Lace::Client;
@@ -2883,7 +2883,7 @@ sub launch_dotter {
     my $cdna = $self->check_get_mRNA_Sequence;
     return unless $cdna;
 
-    my $dotter = Hum::Ace::DotterLauncher->new;
+    my $dotter = Bio::Otter::Utils::DotterLauncher->new;
     $dotter->query_Sequence($cdna);
     $dotter->query_start(1);
     $dotter->query_end($cdna->sequence_length);

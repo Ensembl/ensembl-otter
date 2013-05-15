@@ -6,7 +6,7 @@ package EditWindow::Dotter;
 use strict;
 use warnings;
 use Carp;
-use Hum::Ace::DotterLauncher;
+use Bio::Otter::Utils::DotterLauncher;
 use Tk::LabFrame;
 use base 'EditWindow';
 
@@ -15,7 +15,7 @@ sub initialise {
 
     my $top = $self->top;
 
-    my $dotter = Hum::Ace::DotterLauncher->new;
+    my $dotter = Bio::Otter::Utils::DotterLauncher->new;
     $self->dotter($dotter);
 
     # Entry box for match at top
