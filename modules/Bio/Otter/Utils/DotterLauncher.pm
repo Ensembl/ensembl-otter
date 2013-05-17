@@ -69,6 +69,13 @@ sub subject_type {
     return $subject_type;
 }
 
+sub problem_report_cb {
+    my ($self, @args) = @_;
+    ($self->{'problem_report_cb'}) = @args if @args;
+    my $problem_report_cb = $self->{'problem_report_cb'};
+    return $problem_report_cb;
+}
+
 sub revcomp_subject {
     my( $self, $flag ) = @_;
 
@@ -86,60 +93,66 @@ sub fork_dotter {
     my $seq             = $self->query_Sequence or confess "query_Sequence not set";
     my $subject_name    = $self->subject_name   or confess "subject_name not set";
 
+    my $prefix = "/tmp/dotter.$$";
+    my $query_file   = "$prefix.query";
+    my $subject_file = "$prefix.subject";
+    try {
+        my $query_seq = $seq->sub_sequence($start, $end);
+        $query_seq->name($seq->name);
+
+        # Gaps between clones are emitted as dashes by acedb but dotter
+        # splcies them out, which affects the coordinates, so we must
+        # change them to "n"s.
+        $self->change_dashes_to_n($query_seq);
+
+        # Write the subject with pfetch
+        my ($subject_seq) = Hum::Pfetch::get_Sequences($subject_name);
+        die "Can't fetch '$subject_name'\n" unless $subject_seq;
+        if ($self->revcomp_subject) {
+            ## no critic (Anacode::ProhibitRebless)
+            bless($subject_seq, 'Hum::Sequence::DNA');  # hack!
+            $subject_seq = $subject_seq->reverse_complement;
+        }
+        my $subject_out = Hum::FastaFileIO->new("> $subject_file");
+        $subject_out->write_sequences($subject_seq);
+        $subject_out = undef;
+
+        # Write out the query sequence
+        my $query_out = Hum::FastaFileIO->new("> $query_file");
+        $query_out->write_sequences($query_seq);
+        $query_out = undef;
+        1;
+    }
+    catch {
+        warn $_;
+        if ($self->problem_report_cb) {
+            &{$self->problem_report_cb}($_);
+        }
+        0;
+    } or return;
+
+    # Run dotter. Offset ensures that annotators see the global coordinates of the whole assembly in dotter.
+    my %options;
+    my $offset = $start - 1;
+    $options{'-q'} = $offset;
+    $options{'--horizontal-type'} = $self->query_type   if defined $self->query_type;
+    $options{'--vertical-type'}   = $self->subject_type if defined $self->subject_type;
+    my $dotter_opts = join(' ', %options);
+
+    my $dotter_command =
+        "dotter $dotter_opts $query_file $subject_file ; rm $query_file $subject_file ; echo 'Dotter finished'";
+    warn "RUNNING: $dotter_command\n";
+
     if (my $pid = fork) {
         return 1;
     }
     elsif (defined $pid) {
-        my $prefix = "/tmp/dotter.$$";
-        my $query_file   = "$prefix.query";
-        my $subject_file = "$prefix.subject";
-        try {
-            my $query_seq = $seq->sub_sequence($start, $end);
-            $query_seq->name($seq->name);
-
-            # Gaps between clones are emitted as dashes by acedb but dotter
-            # splcies them out, which affects the coordinates, so we must
-            # change them to "n"s.
-            $self->change_dashes_to_n($query_seq);
-
-            # Write the subject with pfetch
-            my ($subject_seq) = Hum::Pfetch::get_Sequences($subject_name);
-            die "Can't fetch '$subject_name'\n" unless $subject_seq;
-            if ($self->revcomp_subject) {
-                ## no critic (Anacode::ProhibitRebless)
-                bless($subject_seq, 'Hum::Sequence::DNA');  # hack!
-                $subject_seq = $subject_seq->reverse_complement;
-            }
-            my $subject_out = Hum::FastaFileIO->new("> $subject_file");
-            $subject_out->write_sequences($subject_seq);
-            $subject_out = undef;
-
-            # Write out the query sequence
-            my $query_out = Hum::FastaFileIO->new("> $query_file");
-            $query_out->write_sequences($query_seq);
-            $query_out = undef;
-
-            # Run dotter. Offset ensures that annotators see the global
-            # coordinates of the whole assembly in dotter.
-            my %options;
-            my $offset = $start - 1;
-            $options{'-q'} = $offset;
-            $options{'--horizontal-type'} = $self->query_type   if defined $self->query_type;
-            $options{'--vertical-type'}   = $self->subject_type if defined $self->subject_type;
-            my $dotter_opts = join(' ', %options);
-
-            my $dotter_command = "dotter $dotter_opts $query_file $subject_file ; rm $query_file $subject_file ; echo 'Dotter finished'";
-            warn "RUNNING: $dotter_command\n";
-            exec($dotter_command) or warn "Failed to exec '$dotter_command' : $!";
-        }
-        catch {
-            warn $_;
-            # Exec'ing rm here, which replaces the perl process
-            # with rm, ensures that the perl DESTROY methods
-            # don't get called by this child.
-            unlink $query_file, $subject_file
-              or warn "Some input file(s) not tidied up: $!\n";
-        };
+        exec($dotter_command) or warn "Failed to exec '$dotter_command' : $!";
+        # Exec'ing rm here, which replaces the perl process
+        # with rm, ensures that the perl DESTROY methods
+        # don't get called by this child.
+        unlink $query_file, $subject_file
+            or warn "Some input file(s) not tidied up: $!\n";
         warn "dotter launch aborted\n";
         POSIX::_exit(127); # avoid triggering DESTROY
     }
