@@ -6,8 +6,10 @@ package EditWindow::Dotter;
 use strict;
 use warnings;
 use Carp;
-use Hum::Ace::DotterLauncher;
+use Bio::Otter::Utils::DotterLauncher;
 use Tk::LabFrame;
+use Tk::Utils::Dotter;
+
 use base 'EditWindow';
 
 sub initialise {
@@ -15,7 +17,8 @@ sub initialise {
 
     my $top = $self->top;
 
-    my $dotter = Hum::Ace::DotterLauncher->new;
+    my $dotter = Bio::Otter::Utils::DotterLauncher->new;
+    $dotter->problem_report_cb( sub { $top->Tk::Utils::Dotter::problem_box(@_) } );
     $self->dotter($dotter);
 
     # Entry box for match at top
@@ -266,6 +269,7 @@ sub launch_dotter {
     $dotter->query_Sequence($genomic);
     $dotter->query_start($start);
     $dotter->query_end($end);
+    $dotter->query_type('d');
     $dotter->subject_name($match_name);
     $dotter->revcomp_subject($$revcomp);
 
