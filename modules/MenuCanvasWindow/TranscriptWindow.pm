@@ -14,6 +14,7 @@ use Tk::ROText;
 use Tk::LabFrame;
 use Tk::ComboBox;
 use Tk::SmartOptionmenu;
+use Tk::Utils::Dotter;
 use Hum::Ace::Locus;
 use Hum::Ace::Exon;
 use Bio::Otter::Utils::DotterLauncher;
@@ -2884,6 +2885,10 @@ sub launch_dotter {
     return unless $cdna;
 
     my $dotter = Bio::Otter::Utils::DotterLauncher->new;
+
+    my $top = $self->canvas->toplevel;
+    $dotter->problem_report_cb( sub { $top->Tk::Utils::Dotter::problem_box(@_) } );
+
     $dotter->query_Sequence($cdna);
     $dotter->query_start(1);
     $dotter->query_end($cdna->sequence_length);

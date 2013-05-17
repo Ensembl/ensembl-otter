@@ -8,6 +8,8 @@ use warnings;
 use Carp;
 use Bio::Otter::Utils::DotterLauncher;
 use Tk::LabFrame;
+use Tk::Utils::Dotter;
+
 use base 'EditWindow';
 
 sub initialise {
@@ -16,6 +18,7 @@ sub initialise {
     my $top = $self->top;
 
     my $dotter = Bio::Otter::Utils::DotterLauncher->new;
+    $dotter->problem_report_cb( sub { $top->Tk::Utils::Dotter::problem_box(@_) } );
     $self->dotter($dotter);
 
     # Entry box for match at top
