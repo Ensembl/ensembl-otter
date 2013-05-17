@@ -210,9 +210,26 @@ my $E_cs = $cs_adaptor->fetch_by_name('chromosome',$support->param('ensemblassem
 my $V_cs = $cs_adaptor->fetch_by_name('chromosome',$support->param('assembly')) || $support->log_error("Can't retrieve adapator for coord_system ".$support->param('assembly')."\n");
 
 # get assembly mapper
-my $mapper = $asmap_adaptor->fetch_by_CoordSystems($E_cs, $V_cs);
-$mapper->max_pair_count( 6_000_000 );
-$mapper->register_all;
+my $mapper_chr = $asmap_adaptor->fetch_by_CoordSystems($E_cs, $V_cs);
+$mapper_chr->max_pair_count( 6_000_000 );
+$mapper_chr->register_all;
+
+sub map_it {
+  my ($mapper,$f) = @_;
+ 
+  if($mapper) { 
+    return $mapper->map(
+      $f->seq_region_name,
+      $f->seq_region_start,
+      $f->seq_region_end,
+      $f->seq_region_strand,
+      $V_cs,
+    );
+  } else {
+    my $slice = $E_sa->fetch_by_region(undef,$f->slice->seq_region_name,undef,undef,undef,$E_cs->version);
+    return (Bio::EnsEMBL::Mapper::Coordinate->new($slice->get_seq_region_id,$f->seq_region_start,$f->seq_region_end,$f->strand,$E_cs));
+  }
+}
 
 # if desired, delete entries from previous runs of this script
 if ($support->param('prune') && $support->user_proceed("Do you want to delete all entries from previous runs of this script?")) {
@@ -245,7 +262,10 @@ my (%stat_hash,%trans_numbers);
 # loop over chromosomes
 $support->log("Looping over chromosomes...\n");
 my $V_chrlength = $support->get_chrlength($E_dba, $support->param('assembly'),'chromosome',1);
-my $E_chrlength = $support->get_chrlength($E_dba, $support->param('ensemblassembly'),'chromosome',1,[]);
+my $E_chrlength = {
+  %{$support->get_chrlength($E_dba, $support->param('ensemblassembly'),'chromosome',1,[])},
+  %{$support->get_chrlength($E_dba, $support->param('ensemblassembly'),'supercontig',1,[])},
+};
 my $ensembl_chr_map = $support->get_ensembl_chr_mapping($V_dba, $support->param('assembly'));
 
 ### PRE # # %stat_hash %trans_numbers ###
@@ -273,8 +293,15 @@ foreach my $V_chr (@chrs) {
   # fetch chromosome slices
   my $V_slice = $V_sa->fetch_by_region('chromosome', $V_chr, undef, undef,
 				       undef, $support->param('assembly'));
+  my $mapper;
   my $E_slice = $E_sa->fetch_by_region('chromosome', $E_chr, undef, undef,
 				       undef, $support->param('ensemblassembly'));
+  if($E_slice) {
+    $mapper = $mapper_chr;
+  } else {
+    $E_slice = $E_sa->fetch_by_region('supercontig', $E_chr, undef, undef,
+              undef, $support->param('ensemblassembly'));
+  }
 
   if (! $E_slice ) {
     $support->log_warning("Can't get an Ensembl chromosome for $E_chr - have you used the right ensembl db as a template ?\n");
@@ -341,6 +368,10 @@ foreach my $V_chr (@chrs) {
 	next GENE;
       }
     }
+    if ($gene->biotype eq 'TEC') {
+	$support->log("Gene: ".$gene->stable_id." skipping because it's a 'TEC'\n", 3);
+	next GENE;
+      }
     $support->log("Gene $gsi/$name (logic_name $ln)\n", 1);
 
     #PATCH genes are identified as being on non-reference slices...
@@ -357,6 +388,10 @@ foreach my $V_chr (@chrs) {
     foreach my $transcript (@{ $transcripts }) {
       if ($transcript->biotype eq 'artifact') {
 	$support->log("Transcript: ".$transcript->stable_id." skipping because it's an 'artifact'\n", 3);
+	next TRANS;
+      }
+      if ($transcript->biotype eq 'TEC') {
+	$support->log("Transcript: ".$transcript->stable_id." skipping because it's a 'TEC'\n", 3);
 	next TRANS;
       }
       $c++;
@@ -617,7 +652,7 @@ sub remove_Transcript {
 =head2 transfer_transcript
 
   Arg[1]      : Bio::EnsEMBL::Transcript $transcript - Vega source transcript
-  Arg[2]      : Bio::EnsEMBL::ChainedAssemblyMapper $mapper - assembly mapper
+  Arg[2]      : Bio::EnsEMBL::ChainedAssemblyMapper $mapper - assembly mappers
   Arg[3]      : Bio::EnsEMBL::CoordSystem $V_cs - Vega coordinate system
   Arg[4]      : Bio::EnsEMBL::ProteinFeatureAdaptor $V_pfa - Vega protein
                 feature adaptor
@@ -660,13 +695,7 @@ sub transfer_transcript {
   # transcript supporting evidence
   foreach my $sf (@{ $transcript->get_all_supporting_features }) {
     # map coordinates
-    my @coords = $mapper->map(
-      $sf->seq_region_name,
-      $sf->seq_region_start,
-      $sf->seq_region_end,
-      $sf->seq_region_strand,
-      $V_cs,
-    );
+    my @coords = map_it($mapper,$sf);
     if (@coords == 1) {
       my $c = $coords[0];
       unless ($c->isa('Bio::EnsEMBL::Mapper::Gap')) {
@@ -704,13 +733,7 @@ sub transfer_transcript {
     # supporting evidence
     foreach my $sf (@{ $V_exon->get_all_supporting_features }) {
       # map coordinates
-      my @coords = $mapper->map(
-	$sf->seq_region_name,
-	$sf->seq_region_start,
-	$sf->seq_region_end,
-	$sf->seq_region_strand,
-	$V_cs,
-      );
+      my @coords = map_it($mapper,$sf);
       if (@coords == 1) {
 	my $c = $coords[0];
 	unless ($c->isa('Bio::EnsEMBL::Mapper::Gap')) {
@@ -724,13 +747,7 @@ sub transfer_transcript {
     }
 
     # map exon coordinates
-    my @coords = $mapper->map(
-      $V_exon->seq_region_name,
-      $V_exon->seq_region_start,
-      $V_exon->seq_region_end,
-      $V_exon->seq_region_strand,
-      $V_cs,
-    );
+    my @coords = map_it($mapper,$V_exon);
 
     if (@coords == 1) {
       my $c = $coords[0];
@@ -739,6 +756,7 @@ sub transfer_transcript {
 	#
 	# Case 1: Complete failure to map exon
 	#
+  warn "Complete failure to transfer exon\n";
 	$E_exon->fail(1);
 
       }

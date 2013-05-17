@@ -750,6 +750,8 @@ sub parse_hgnc {
     withdrawn  => 0,
   );
 
+  # prime with prefixes we don't care about
+  my %report_once = ( YP => 1, NC => 1 );
   #parse records, storing only data in those columns defined above
   #also ignore 'withdrawn' symbols
  REC:
@@ -791,7 +793,6 @@ sub parse_hgnc {
       }
 
       #set RefSeq records to the correct type of molecule
-      my %report_once;
       elsif ($db eq 'RefSeq') {
 	if (my ($prefix) = $accessions{$db} =~ /^([A-Z]{2})_/) {
 	  if (my $type = $refseq_dbs{$prefix}) {

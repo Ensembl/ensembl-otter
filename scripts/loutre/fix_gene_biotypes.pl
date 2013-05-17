@@ -23,7 +23,6 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
     # even if you aren't giving any arguments on the command line.
     Bio::Otter::Lace::Defaults::do_getopt(
         'h|help!' => $usage,
-
         # 'dataset=s'     => \$dataset_name,
     ) or $usage->();
 
@@ -82,7 +81,10 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
     # my @args = qw( -dbname vega_homo_sapiens_20121112_69_GRCh37 -host ensdb-web-17 -port 5317 );
 
     # my @args = qw( -dbname vega_homo_sapiens_20130211_70_GRCh37 -host ensdb-web-17 -port 5317 );
-    my @args = qw( -dbname vega_mus_musculus_20130211_70_GRCm38 -host ensdb-web-17 -port 5317 );
+    # my @args = qw( -dbname vega_mus_musculus_20130211_70_GRCm38 -host ensdb-web-17 -port 5317 );
+
+    # my @args = qw( -dbname vega_homo_sapiens_20130422_71_GRCh37 -host ensdb-web-17 -port 5317 );
+    my @args = qw( -dbname vega_danio_rerio_20130422_71_Zv9 -host ensdb-web-17 -port 5317 );
 
     my $now = scalar localtime;
     print "$now fix_gene_biotypes.pl on (@args)\n";
@@ -180,6 +182,31 @@ sub fix_biotypes {
         $gene_data->{'tsct_status'}{$tsct_status}++;
     }
 
+    # Look for Annotator Set Biotypes (ASB), which allow
+    # the annotator to override the biotype which would
+    # be automatically selected for the locus.
+    my $fetch_asb = $dbc->prepare(
+        q{
+            SELECT g.gene_id
+              , ga.value
+            FROM gene g
+              , gene_attrib ga
+            WHERE g.gene_id = ga.gene_id
+              AND g.is_current = 1
+              AND ga.attrib_type_id IN(54, 123)
+              AND SUBSTR(ga.value, 1, 4) = 'ASB_' 
+        }
+    );
+    $fetch_asb->execute;
+    
+    my %gene_asb;
+    while (my ($gene_id, $asb) = $fetch_asb->fetchrow) {
+        my $gene_data = $gene_tsct_biotypes{$gene_id}
+            or die "No gene data for gene_id = '$gene_id'";
+        $asb =~ s/^ASB_//;
+        $gene_data->{'annotator_set_biotype'} = $asb;
+    }
+
     my %transitions;
     my $transcribed_remark       = 'Transcribed pseudogene';
     my $transcribed_remark_added = 0;
@@ -193,6 +220,13 @@ sub fix_biotypes {
         my $tsct_status_hash  = $gene_data->{'tsct_status'};
         my ($new_biotype, $new_status) =
           set_biotype_status_from_transcripts($gene_status, $tsct_biotype_hash, $tsct_status_hash);
+        if (my $asb = $gene_data->{'annotator_set_biotype'}) {
+            $new_biotype = $asb;
+        }
+        
+        # EnsEMBL fear the single quote
+        $new_biotype =~ s/3'_/3prime_/;
+
         if ($new_biotype =~ s/^transcribed_//) {
 
             # transcribed_processed_pseudogene
@@ -272,6 +306,8 @@ sub set_biotype_status_from_transcripts {
     #     $tsct_status{ $tsct->status }++;
     # }
 
+    my $annotator_set_biotype;
+
     %tsct_biotype = %$tsct_biotype_hash;
     %tsct_status  = %$tsct_status_hash;
 
@@ -281,12 +317,7 @@ sub set_biotype_status_from_transcripts {
             die "More than one pseudogene type in gene\n";
         }
         else {
-            if ($tsct_biotype{'protein_coding'}) {
-                $biotype = 'polymorphic';
-            }
-            else {
-                $biotype = $pseudo[0];
-            }
+            $biotype = $pseudo[0];
         }
     }
     elsif ($tsct_biotype{'protein_coding'}
