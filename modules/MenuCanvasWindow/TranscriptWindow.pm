@@ -2887,6 +2887,7 @@ sub launch_dotter {
     $dotter->query_Sequence($cdna);
     $dotter->query_start(1);
     $dotter->query_end($cdna->sequence_length);
+    $dotter->query_type('d');
     $dotter->subject_name($hit_name);
 
     return $dotter->fork_dotter;

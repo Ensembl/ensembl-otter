@@ -46,6 +46,13 @@ sub query_Sequence {
     return $self->{'_query_Sequence'};
 }
 
+sub query_type {
+    my ($self, @args) = @_;
+    ($self->{'query_type'}) = @args if @args;
+    my $query_type = $self->{'query_type'};
+    return $query_type;
+}
+
 sub subject_name {
     my( $self, $subject_name ) = @_;
 
@@ -53,6 +60,13 @@ sub subject_name {
         $self->{'_subject_name'} = $subject_name;
     }
     return $self->{'_subject_name'};
+}
+
+sub subject_type {
+    my ($self, @args) = @_;
+    ($self->{'subject_type'}) = @args if @args;
+    my $subject_type = $self->{'subject_type'};
+    return $subject_type;
 }
 
 sub revcomp_subject {
@@ -107,8 +121,14 @@ sub fork_dotter {
 
             # Run dotter. Offset ensures that annotators see the global
             # coordinates of the whole assembly in dotter.
+            my %options;
             my $offset = $start - 1;
-            my $dotter_command = "dotter -q $offset $query_file $subject_file ; rm $query_file $subject_file ; echo 'Dotter finished'";
+            $options{'-q'} = $offset;
+            $options{'--horizontal-type'} = $self->query_type   if defined $self->query_type;
+            $options{'--vertical-type'}   = $self->subject_type if defined $self->subject_type;
+            my $dotter_opts = join(' ', %options);
+
+            my $dotter_command = "dotter $dotter_opts $query_file $subject_file ; rm $query_file $subject_file ; echo 'Dotter finished'";
             warn "RUNNING: $dotter_command\n";
             exec($dotter_command) or warn "Failed to exec '$dotter_command' : $!";
         }

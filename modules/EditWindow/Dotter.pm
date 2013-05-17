@@ -266,6 +266,7 @@ sub launch_dotter {
     $dotter->query_Sequence($genomic);
     $dotter->query_start($start);
     $dotter->query_end($end);
+    $dotter->query_type('d');
     $dotter->subject_name($match_name);
     $dotter->revcomp_subject($$revcomp);
 
