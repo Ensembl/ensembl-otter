@@ -267,7 +267,7 @@ foreach my $gsi (keys %$records) {
           my $slice = $g->slice;
           my $sr = $slice->seq_region_name;
           if ($slice->is_reference()) {
-            $support->log_warning("Gene $other_gsi shares a name ($display_name) but is on region $sr, a reference slice\n");
+            $support->log_warning("Gene $gsi shares a name ($display_name) with $other_gsi, but the latter is on region $sr, a reference slice\n");
           }
           else {
             $support->log_verbose("Consider this other gene ($other_gsi on $sr) for an update to $new_hgnc_name\n",1);

@@ -310,7 +310,7 @@ sub check_remarks_and_update_names {
 
   #shout if there is no remark to identify this as being fragmented locus
   if ( ! grep {$_ eq 'fragmented locus' } @$remarks) {
-    $support->log_warning("Gene $g_name ($gsi) has duplicate transcript names but no fragmented_locus CV term, this should be added\n");
+    $support->log("Gene $g_name ($gsi) has duplicate transcript names but no fragmented_locus CV term, this will be added\n");
   }
 
   #add the correct gene remark if it's needed
