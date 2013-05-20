@@ -224,6 +224,7 @@ sub _vulgar_comps_to_cigar {
 
 sub as_AlignFeature {
     my ($self) = @_;
+    $self->_verify_attribs;
 
     my $class = $self->_align_feature_class; # inheritance work-around again.
     my @extra_attribs = $self->_extra_fields;
