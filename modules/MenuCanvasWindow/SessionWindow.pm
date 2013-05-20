@@ -2411,6 +2411,12 @@ sub run_exonerate {
     return 1;
 }
 
+sub get_mark_in_slice_coords {
+    my ($self) = @_;
+    my @mark = $self->zmap->get_mark;
+    return @mark;
+}
+
 sub set_window_title {
     my ($self) = @_;
 
