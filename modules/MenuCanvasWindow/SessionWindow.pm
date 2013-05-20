@@ -2414,6 +2414,8 @@ sub run_exonerate {
 sub get_mark_in_slice_coords {
     my ($self) = @_;
     my @mark = $self->zmap->get_mark;
+    my $offset = $self->AceDatabase->offset;
+    $_ -= $offset for @mark;
     return @mark;
 }
 
