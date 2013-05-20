@@ -11,6 +11,27 @@ use base qw(
             Bio::EnsEMBL::DnaPepAlignFeature
            );
 
+sub hstrand {
+    my ($self, @args) = @_;
+    if (@args) {
+        my ($hstrand) = @args;
+        $self->logger->logcroak("hstrand '$hstrand' not valid for protein") unless $hstrand == 1;
+    }
+    return $self->SUPER::hstrand(@args);
+}
+
+sub _verify_attribs {
+    my ($self) = @_;
+    $self->SUPER::_verify_attribs;
+
+    my $hstrand = $self->hstrand;
+    if (defined $hstrand and $hstrand != 1) {
+        $self->logger->logcroak("hstrand '$hstrand' not valid for protein");
+    }
+
+    return;
+}
+
 # SUPER works lexically. We need to specify which parent's new we need.
 #
 sub my_SUPER_new {
