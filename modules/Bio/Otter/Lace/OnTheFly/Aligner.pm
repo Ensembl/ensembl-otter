@@ -15,11 +15,12 @@ use Readonly;
 
 use Bio::Otter::GappedAlignment;
 use Bio::Otter::Lace::OnTheFly::ResultSet;
+use Bio::Otter::Utils::Vulgar;
 
 Readonly our $RYO_FORMAT => 'RESULT: %S %pi %ql %tl %g %V\n';
 Readonly our @RYO_ORDER => (
     '_tag',
-    @Bio::Otter::GappedAlignment::SUGAR_ORDER,
+    @Bio::Otter::Utils::Vulgar::SUGAR_ORDER,
     qw(
         _perc_id
         _query_length
@@ -145,7 +146,7 @@ sub parse {
 sub _parse_vulgar {
     my ($self, $ryo_result, $vulgar_comps) = @_;
 
-    my $vulgar_string = join(' ', @{$ryo_result}{@Bio::Otter::GappedAlignment::SUGAR_ORDER}, @$vulgar_comps);
+    my $vulgar_string = join(' ', @{$ryo_result}{@Bio::Otter::Utils::Vulgar::SUGAR_ORDER}, @$vulgar_comps);
 
     my $ga = Bio::Otter::GappedAlignment->from_vulgar($vulgar_string);
 
