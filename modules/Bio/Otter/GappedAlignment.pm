@@ -560,7 +560,7 @@ sub swap_gene_orientation {
     return unless defined $self->gene_orientation;
     return if $self->gene_orientation eq '.';
     my $sense = $self->_strand_sense('gene_orientation');
-    return $self->_strand($sense * -1, '_gene_orientation');
+    return $self->_strand('_gene_orientation', $sense * -1);
 }
 
 sub percent_id {
