@@ -56,7 +56,7 @@ sub _parse_vulgar {
             my $element = Bio::Otter::GappedAlignment::Element->new($type, $q_len, $t_len);
             $self->add_element($element);
         }
-        );
+        ) or $self->logger->confess('parse_align_comps() failed');
 
     return $self;
 }
