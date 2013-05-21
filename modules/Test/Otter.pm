@@ -164,9 +164,9 @@ this module.
 sub proj_rel {
     my ($pkg, $path) = @_;
     my $fn = __FILE__;
-    $fn =~ s{/(?:modules|lib)/Test/Otter\.pm$}{}
+    $fn =~ s{(^|/)(?:modules|lib)/Test/Otter\.pm$}{$1}
       or die "Couldn't make \$PROJ/$path name from $fn";
-    return "$fn/$path";
+    return "${fn}${path}";
 }
 
 
