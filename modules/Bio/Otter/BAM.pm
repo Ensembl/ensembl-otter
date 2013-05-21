@@ -119,7 +119,7 @@ sub url_query {
         -start => $slice->start,
         -end   => $slice->end,
         ( map { ( "-$_" => $self->$_ ) } @{$bam_parameters} ),
-        gff_version => 2,
+        -gff_version => 2,
     };
     return $query;
 }
