@@ -4,7 +4,7 @@ use strict;
 use warnings;
 
 use Test::More;
-use t::lib::Test::Otter qw( ^db_or_skipall OtterClient );
+use Test::Otter qw( ^db_or_skipall OtterClient );
 
 use YAML 'Dump'; # for diag
 use File::Slurp 'read_dir';

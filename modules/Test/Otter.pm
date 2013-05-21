@@ -11,29 +11,25 @@ Test::Otter - test setup boilerplate for ensembl-otter
  # do something to ensure ensembl-otter/modules/ is on @INC
 
  # don't need to mess with FindBin or use lib
- use t::lib::Test::Otter;
+ use Test::Otter;
 
 =head1 DESCRIPTION
 
 The aim of this module is to move most of the boilerplate code out of
 test scripts.
 
-=head2 What C<use t::lib::Test::Otter> does
-
-On the assumption that the F<t/lib/> directory was not already on
-C<@INC>, add it.
-
-The C<%INC> entry for L<Test::Otter> is set, so it may then be C<use>d
-again by the real name.
-
-Import then continues as for C<use Test::Otter>.
-
 =head2 What C<use Test::Otter> does
 
 =over 4
 
+=item * Ensure that C<t/lib/> is on C<@INC>
+
+Other modules related to testing can be left out of the main tree.
+
 =item * Import tags with a C<^> prefix are shortcuts to run the named
 subroutine.
+
+They are run from this package, before the import happens.
 
 =item * Import to caller's namespace continues with L<Exporter>.
 
@@ -54,6 +50,8 @@ our @EXPORT_OK = qw( db_or_skipall farm_or_skipall OtterClient get_BOLDatasets d
 sub import {
     my ($pkg, @tag) = @_;
 
+    $pkg->_ensure_tlib;
+
     # run some
     my @imp_tag;
     foreach my $t (@tag) {
@@ -70,6 +68,16 @@ sub import {
 
     # export the remainder
     return $pkg->export_to_level(1, $pkg, @imp_tag);
+}
+
+
+sub _ensure_tlib {
+    # Be able to find other test modules
+    require lib;
+    my $fn = Test::Otter->proj_rel('t/lib');
+    lib->import($fn);
+
+    return ();
 }
 
 
@@ -146,18 +154,18 @@ sub excused {
 
 =head1 CLASS METHODS
 
-=head2 mods_rel($path)
+=head2 proj_rel($path)
 
-Return C<< .../ensembl-otter/modules/$path >> by reference to the
-filename of this module.
+Return C<< .../ensembl-otter/$path >> by reference to the filename of
+this module.
 
 =cut
 
-sub mods_rel {
+sub proj_rel {
     my ($pkg, $path) = @_;
     my $fn = __FILE__;
-    $fn =~ s{/t/lib/Test/Otter\.pm$}{}
-      or die "Couldn't make modules/ name from $fn";
+    $fn =~ s{/(?:modules|lib)/Test/Otter\.pm$}{}
+      or die "Couldn't make \$PROJ/$path name from $fn";
     return "$fn/$path";
 }
 
@@ -179,7 +187,7 @@ sub cachedir {
                '/nfs/anacode/t-cache/ensembl-otter');
     @dir = grep { -d $_ && -w _ } @dir;
     if (!@dir) {
-        my $fn = $pkg->mods_rel('../t-cache~'); # is git-ignore'd
+        my $fn = $pkg->proj_rel('t-cache~'); # is git-ignore'd
         # my $fn = '/tmp/t-cache.ensembl-otter'
 
         if (-e $fn) {
@@ -349,7 +357,7 @@ sub diagdump {
 
 =head1 CAVEATS
 
-L</mods_rel> may be fragile in the face of chdir(2), but could be
+L</proj_rel> may be fragile in the face of chdir(2), but could be
 fixed to deal with that.
 
 L</diagdump> assumes the caller is in C<main::> and used
@@ -361,32 +369,6 @@ L<Test::More>.
 Matthew Astley mca@sanger.ac.uk
 
 =cut
-
-
-
-package t::lib::Test::Otter; ## no critic (Modules::ProhibitMultiplePackages)
-#
-# This package is the "bogus twin", merely Test::Otter by a longer
-# path through the filesystem.
-#
-# The choice of t/lib/ over t/tlib/ was arbitrary, but dictates our
-# packagename.
-
-sub import { ## no critic (Subroutines::RequireArgUnpacking)
-    my ($pkg, @tag) = @_;
-
-    # Make it clear the "good twin" is also present.
-    $INC{'Test/Otter.pm'} = __FILE__; ## no critic (Variables::RequireLocalizedPunctuationVars)
-
-    # Be able to find "good twin"'s siblings.
-    require lib;
-    my $fn = Test::Otter->mods_rel('t/lib');
-    lib->import($fn);
-
-    # goto make export_to_level simpler
-    @_ = ('Test::Otter', @tag);
-    goto &Test::Otter::import;;
-}
 
 
 1;
