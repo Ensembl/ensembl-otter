@@ -118,6 +118,7 @@ sub url_query {
         -chr   => $slice->ssname,
         -start => $slice->start,
         -end   => $slice->end,
+        -dataset => $session->DataSet->name,
         ( map { ( "-$_" => $self->$_ ) } @{$bam_parameters} ),
         -gff_version => 2,
     };
