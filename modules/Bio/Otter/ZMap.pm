@@ -60,10 +60,18 @@ sub launch_zmap {
 sub zmap_command {
     my ($self) = @_;
     my @zmap_command = $self->SUPER::zmap_command;
-    push @zmap_command, '--win_id' => $self->server_window_id;
     unshift @zmap_command, 'valgrind'
         if Bio::Otter::Debug->debug('ZMap-Valgrind');
     return @zmap_command;
+}
+
+sub zmap_arg_list {
+    my ($self) = @_;
+    my $zmap_arg_list = [
+        @{$self->SUPER::zmap_arg_list},
+        '--win_id' => $self->server_window_id,
+        ];
+    return $zmap_arg_list;
 }
 
 sub _kill_zmap {
