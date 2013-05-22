@@ -4,7 +4,7 @@ use warnings;
 
 use Test::More;
 use Digest::MD5 'md5_hex';
-use t::lib::Test::Otter qw( ^db_or_skipall get_BOLDatasets diagdump excused );
+use Test::Otter qw( ^db_or_skipall get_BOLDatasets diagdump excused );
 
 use AccessionChecksum;
 

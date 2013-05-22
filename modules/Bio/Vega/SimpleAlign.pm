@@ -59,6 +59,7 @@ sub promote_BioSimpleAlign {
     if ($align->isa($class)) {
         # warn "SimpleAlign is already a $class"
     } else {
+        ## no critic (Anacode::ProhibitRebless)
         bless $align, $class;
     }
 
