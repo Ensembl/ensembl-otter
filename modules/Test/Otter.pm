@@ -42,6 +42,7 @@ Nothing is imported by default.
 use Carp;
 use Sys::Hostname 'hostname';
 use Try::Tiny;
+use Test::Requires;
 
 use parent qw(Exporter Test::Builder::Module);
 
@@ -258,6 +259,9 @@ This works nicely with C<< use Test::Otter qw( ^db_or_skipall ); >>.
 =cut
 
 sub db_or_skipall {
+
+    test_requires('DBD::mysql');
+
     my $host = hostname(); # is not FQDN on my deskpro
     return () if ($host =~ /\.sanger\.ac\.uk$/
                   || -d "/software/anacode"
