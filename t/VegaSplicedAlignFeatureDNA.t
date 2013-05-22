@@ -7,7 +7,7 @@ use Test::More;
 use lib "${ENV{ANACODE_TEAM_TOOLS}}/t/tlib";
 use Test::CriticModule;
 
-use t::lib::Test::Otter;
+use Test::Otter;
 use OtterTest::ContigSlice;
 use Test::VegaSplicedAlignFeature qw(test_exons test_introns);
 

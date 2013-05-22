@@ -3,7 +3,7 @@ use strict;
 use warnings;
 
 use Test::More;
-use t::lib::Test::Otter qw( ^db_or_skipall ^farm_or_skipall get_BOLDatasets diagdump );
+use Test::Otter qw( ^db_or_skipall ^farm_or_skipall get_BOLDatasets diagdump );
 
 =head1 DESCRIPTION
 
