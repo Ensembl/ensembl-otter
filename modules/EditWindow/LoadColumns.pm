@@ -16,12 +16,9 @@ use Tk::LabFrame;
 use Tk::Balloon;
 
 use Bio::Otter::Lace::Client;
-use Bio::Otter::ZMap;
 
 use MenuCanvasWindow::SessionWindow;
 use Hum::Sort 'ace_sort';
-
-use Bio::Vega::Utils::MacProxyConfig qw{ mac_os_x_set_proxy_vars };
 
 use base qw(
     EditWindow
@@ -336,10 +333,14 @@ sub load_filters {
         }
     } else {
         # we need to set up and show a SessionWindow
-        my $zmap = $self->zmap_select || $self->zmap_new;
+        my $zmap = $self->zmap_select;
+        my $zircon_context = $self->SpeciesListWindow->zircon_context;
         my $SessionWindow =
             MenuCanvasWindow::SessionWindow->new(
-                $self->top->Toplevel, '-zmap' => $zmap);
+                $self->top->Toplevel,
+                '-zmap'           => $zmap,
+                '-zircon_context' => $zircon_context,
+            );
 
         $self->SessionWindow($SessionWindow);
         $SessionWindow->AceDatabase($self->AceDatabase);
@@ -354,54 +355,6 @@ sub load_filters {
     $self->reset_progress;
 
     return;
-}
-
-sub zmap_new {
-    my ($self) = @_;
-    mac_os_x_set_proxy_vars(\%ENV) if $^O eq 'darwin';
-    my $DataSet = $self->AceDatabase->DataSet;
-    my $config_dir = $self->_make_zmap_config_dir;
-    my $config = $DataSet->zmap_config_global;
-    $self->_make_config($config_dir, $config);
-    my $arg_list = [
-        '--conf_dir' => $config_dir,
-        @{$DataSet->zmap_arg_list},
-        ];
-    my $zmap_new =
-        Bio::Otter::ZMap->new(
-            '-tk'         => $self->SpeciesListWindow->menu_bar,
-            '-arg_list'   => $arg_list,
-        );
-    return $zmap_new;
-}
-
-sub _make_config {
-    my ($self, $config_dir, $config) = @_;
-    my $config_file = sprintf "%s/ZMap", $config_dir;
-    open my $config_file_h, '>', $config_file
-        or die sprintf
-        "failed to open the configuration file '%s': $!"
-        , $config_file;
-    print $config_file_h $config if defined $config;
-    close $config_file_h
-        or die sprintf
-        "failed to close the configuration file '%s': $!"
-        , $config_file;
-    return;
-}
-
-sub _make_zmap_config_dir {
-    my $config_dir = q(/var/tmp);
-    my $user = getpwuid($<);
-    my $dir_name = "otter_${user}";
-    my $key = sprintf "%09d", int(rand(1_000_000_000));
-    for ($dir_name, 'ZMap', $key) {
-        $config_dir .= "/$_";
-        -d $config_dir
-            or mkdir $config_dir
-            or die sprintf "mkdir('%s') failed: $!", $config_dir;
-    }
-    return $config_dir;
 }
 
 sub set_filters_wanted {
