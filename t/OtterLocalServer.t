@@ -9,7 +9,7 @@ use Test::SetupLog4perl;
 
 use Test::More;
 
-use Test::Otter qw( ^db_or_skipall ); # may skip test
+use Test::Otter qw( ^db_or_skipall ^data_dir_or_skipall ); # may skip test
 
 my ($localserver_module, $region_module);
 BEGIN {
