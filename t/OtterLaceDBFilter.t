@@ -3,11 +3,10 @@
 use strict;
 use warnings;
 
-use FindBin qw($Bin);
-use lib "$Bin/lib";
-use OtterTest::DB;
-
 use Test::More;
+
+use Test::Otter qw( ^data_dir_or_skipall ); # also finds test libraries
+use OtterTest::DB;
 
 use lib "${ENV{ANACODE_TEAM_TOOLS}}/t/tlib";
 use Test::CriticModule;
