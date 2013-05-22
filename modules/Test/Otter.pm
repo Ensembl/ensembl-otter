@@ -44,7 +44,13 @@ use Sys::Hostname 'hostname';
 use Try::Tiny;
 
 use base 'Exporter';
-our @EXPORT_OK = qw( db_or_skipall farm_or_skipall OtterClient get_BOLDatasets diagdump excused );
+our @EXPORT_OK = qw( db_or_skipall
+                     data_dir_or_skipall
+                     farm_or_skipall
+                     OtterClient
+                     get_BOLDatasets
+                     diagdump
+                     excused );
 
 
 sub import {
@@ -292,6 +298,26 @@ sub farm_or_skipall {
     return _skipall("Test expects to run on Farm2, but is on $host");
 }
 
+
+=head2 data_dir_or_skipall
+
+If it thinks the otter data directory can be found, returns nothing.
+
+Otherwise it will skip the entire test.
+
+=cut
+
+sub data_dir_or_skipall {
+    my $data_dir;
+    eval {
+        require Bio::Otter::Server::Config;
+        $data_dir = Bio::Otter::Server::Config::data_dir();
+    };
+    if (my $error = $@) {
+        return _skipall("Test cannot find otter data_dir: '$error'");
+    }
+    return;                     # ok
+}
 
 =head2 OtterClient()
 
