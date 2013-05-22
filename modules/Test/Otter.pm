@@ -43,7 +43,8 @@ use Carp;
 use Sys::Hostname 'hostname';
 use Try::Tiny;
 
-use base 'Exporter';
+use parent qw(Exporter Test::Builder::Module);
+
 our @EXPORT_OK = qw( db_or_skipall
                      data_dir_or_skipall
                      farm_or_skipall
@@ -250,19 +251,13 @@ sub excuses {
 If it thinks you have direct access to internal databases, returns
 nothing.
 
-Otherwise it will skip the entire test - with a clean skip and C<exit>
-if L<Test::More> is loaded, else with an error.
+Otherwise it will skip the entire test.
 
 This works nicely with C<< use Test::Otter qw( ^db_or_skipall ); >>.
-
-Do it after C<< use Test::More >> or fix it to cope.
 
 =cut
 
 sub db_or_skipall {
-    warn "Currently assuming Test::More is loaded - it isn't"
-      unless $INC{'Test/More.pm'};
-
     my $host = hostname(); # is not FQDN on my deskpro
     return () if ($host =~ /\.sanger\.ac\.uk$/
                   || -d "/software/anacode"
@@ -273,7 +268,8 @@ sub db_or_skipall {
 
 sub _skipall {
     my ($why) = @_;
-    Test::More::plan(skip_all => $why);
+    my $builder = __PACKAGE__->builder;
+    $builder->skip_all($why);
     # it exits
     # (or if absent falls over in a heap, job done)
 
