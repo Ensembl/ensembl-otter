@@ -7,6 +7,7 @@ use lib "${ENV{ANACODE_TEAM_TOOLS}}/t/tlib";
 use Test::CriticModule;
 
 use Test::More;
+use Test::Otter qw( ^db_or_skipall );
 use Time::HiRes qw( gettimeofday tv_interval );
 
 use lib "${ENV{ANACODE_TEAM_TOOLS}}/otterlace/server/perl"; # find 'fake' SangerWeb modules
