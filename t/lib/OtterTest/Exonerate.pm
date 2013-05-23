@@ -21,6 +21,8 @@ use Log::Log4perl;
 # this must come before Bio::EnsEMBL::Analysis::Runnable::Finished::Exonerate
 use OtterTest::Exonerate::Config::General;
 use OtterTest::Exonerate::Config::Blast;
+
+use Test::Requires qw( Bio::EnsEMBL::Analysis::Tools::BlastDBTracking );
 use Bio::EnsEMBL::Analysis::Tools::BlastDBTracking;
 {
     ## no critic (Subroutines::ProtectPrivateSubs)
