@@ -16,6 +16,7 @@ use Bio::Otter::SpeciesDat;
 use Bio::Otter::Lace::Defaults;
 use Bio::Otter::Server::Config;
 
+use Test::Requires qw(Bio::EnsEMBL::Pipeline::DBSQL::Finished::DBAdaptor);
 
 =head1 NAME
 
