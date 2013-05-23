@@ -102,6 +102,7 @@ will blame the wrong place.
 sub excused {
     my ($test_sub, $tree, @arg) = @_;
 
+    croak "Need keys for the hash-tree" unless try { scalar @$tree };
     my $excuse = __PACKAGE__->excuses();
     foreach my $ele (@$tree) {
         $excuse = try {
@@ -122,10 +123,10 @@ sub excused {
 
     my $caller_pkg = caller();
 
-    croak "Need keys for the hash-tree" unless eval { scalar @$tree };
     my $code = $caller_pkg->can($test_sub)
       or croak "Subroutine ${caller_pkg}::$test_sub not found";
 
+    ## no critic(Variables::ProhibitPackageVars) for use of $Test::Builder::Level
     my $todo_pkg = caller($Test::Builder::Level-1); # trickyness; $Level is probably 1
     # warn "Use \$${todo_pkg}::TODO for Level=$Test::Builder::Level\n";
 
