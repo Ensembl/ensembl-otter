@@ -7,13 +7,14 @@ use lib "${ENV{ANACODE_TEAM_TOOLS}}/t/tlib";
 use Test::CriticModule;
 use Test::SetupLog4perl;
 
+use FindBin qw($Bin);
 use Test::More;
 
-use FindBin qw($Bin);
-use lib "$Bin/lib";
+use Test::Otter;
 use OtterTest::AccessionTypeCache;
 
 use OtterTest::Exonerate;
+
 use Bio::Otter::LocalServer;
 use Bio::Otter::ServerAction::Region;
 use Bio::Otter::Utils::FeatureSort qw( feature_sort );
