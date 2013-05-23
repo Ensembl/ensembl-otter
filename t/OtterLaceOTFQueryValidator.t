@@ -6,11 +6,10 @@ use warnings;
 use lib "${ENV{ANACODE_TEAM_TOOLS}}/t/tlib";
 use Test::CriticModule;
 
-use FindBin qw($Bin);
-use lib "$Bin/lib";
-use OtterTest::AccessionTypeCache;
-
 use Test::More;
+
+use Test::Otter qw( ^db_or_skipall );
+use OtterTest::AccessionTypeCache;
 
 my $module;
 BEGIN {
