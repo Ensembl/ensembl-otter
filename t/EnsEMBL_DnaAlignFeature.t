@@ -6,8 +6,7 @@ use warnings;
 use Bio::EnsEMBL::Analysis;
 use Bio::EnsEMBL::DnaDnaAlignFeature;
 
-use FindBin qw($Bin);
-use lib "$Bin/lib";
+use Test::Otter;
 use OtterTest::DB;
 
 use Test::More;
