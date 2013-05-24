@@ -38,8 +38,9 @@ Bio::Otter::Debug->add_keys(qw(
 
 sub __test_hackage {
     # temporary - inactivate when made live
-    Bio::Otter::Debug->set('Zircon,XRemote') if $ENV{OTTERLACE_RAN_AS} =~ /otter(?:lace)?_zircon/;
-    warn "debug check - ORA=$ENV{OTTERLACE_RAN_AS}\n";
+    my $ora = $ENV{OTTERLACE_RAN_AS} // '';
+    Bio::Otter::Debug->set('Zircon,XRemote') if $ora =~ /otter(?:lace)?_zircon/;
+    warn "debug check - OTTERLACE_RAN_AS=$ora\n";
 
     if (Bio::Otter::Debug->debug('Zircon')) {
         $ENV{$_}=1 foreach
