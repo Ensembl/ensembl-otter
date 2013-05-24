@@ -34,6 +34,7 @@ There should be a C<require_ok> test for every module which is the subject of L<
 require_ok('Bio::EnsEMBL::Analysis::Tools::BlastDBTracking');
 require_ok('Bio::EnsEMBL::Pipeline::DBSQL::Finished::DBAdaptor');
 require_ok('DBD::mysql');
+require_ok('Bio::EnsEMBL::DBSQL::Driver::SQLite');
 
 =head2 Test::Otter *_or_skipall
 

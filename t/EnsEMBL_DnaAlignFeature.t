@@ -10,6 +10,7 @@ use Test::Otter;
 use OtterTest::DB;
 
 use Test::More;
+use Test::Requires qw( Bio::EnsEMBL::DBSQL::Driver::SQLite );
 
 my $test_db = OtterTest::DB->new_with_dataset_info(undef, 'human');
 $test_db->setup_chromosome_slice;
