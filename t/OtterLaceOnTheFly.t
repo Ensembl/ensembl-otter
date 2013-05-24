@@ -152,20 +152,25 @@ sub main_tests {
       }
     }
 
-    unless ($ENV{OTTER_OTF_RUN_LIVE_TESTS}) {
-        done_testing;
-        exit;
-    }
+  SKIP: {
 
-    my $at_cache = OtterTest::AccessionTypeCache->new();
+      unless ($ENV{OTTER_OTF_RUN_LIVE_TESTS}) {
+          my $msg = 'live tests as OTTER_OTF_RUN_LIVE_TESTS is not set';
+          diag "skipping $msg"; # to show in non-verbose mode.
+          skip $msg, 1;
+      }
 
-    while (my ($species, $regions) = each %species_tests) {
-        note("Live tests for: $species");
-        my $local_server = Bio::Otter::LocalServer->new({dataset => $species});
-        foreach my $region ( @$regions ) {
-            run_region($local_server, $region, $at_cache);
-        }
-    }
+      my $at_cache = OtterTest::AccessionTypeCache->new();
+
+      while (my ($species, $regions) = each %species_tests) {
+          note("Live tests for: $species");
+          my $local_server = Bio::Otter::LocalServer->new({dataset => $species});
+          foreach my $region ( @$regions ) {
+              run_region($local_server, $region, $at_cache);
+          }
+      }
+
+    } # SKIP
 
     return;
 }
