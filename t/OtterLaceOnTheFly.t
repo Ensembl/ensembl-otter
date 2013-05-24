@@ -10,7 +10,7 @@ use Test::SetupLog4perl;
 use FindBin qw($Bin);
 use Test::More;
 
-use Test::Otter;
+use Test::Otter qw( db_or_skipall );
 use OtterTest::AccessionTypeCache;
 
 use OtterTest::Exonerate;
@@ -25,6 +25,10 @@ use Hum::FastaFileIO;
 my @modules;
 
 BEGIN {
+
+    if ($ENV{OTTER_OTF_RUN_LIVE_TESTS}) {
+        db_or_skipall();
+    }
 
     @modules = qw(
         Bio::Otter::Lace::OnTheFly
@@ -148,7 +152,7 @@ sub main_tests {
       }
     }
 
-    if ($ENV{OTF_SKIP_LIVE_TESTS}) {
+    unless ($ENV{OTTER_OTF_RUN_LIVE_TESTS}) {
         done_testing;
         exit;
     }
