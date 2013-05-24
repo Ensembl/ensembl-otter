@@ -262,12 +262,22 @@ sub db_or_skipall {
 
     test_requires('DBD::mysql');
 
-    my $host = hostname(); # is not FQDN on my deskpro
-    return () if ($host =~ /\.sanger\.ac\.uk$/
-                  || -d "/software/anacode"
-                  || $ENV{WTSI_INTERNAL});
+    my $error = check_db();
+    return unless $error;
 
-    return _skipall("Direct database access not expected to work from $host - set WTSI_INTERNAL=1 to try");
+    return _skipall($error);
+}
+
+# Factored out for the benefit of 00_FailBulkSkips.t
+# Silence is golden.
+#
+sub check_db {
+    my $host = hostname(); # is not FQDN on my deskpro
+    return if ( $host =~ /\.sanger\.ac\.uk$/
+                || -d "/software/anacode"
+                || $ENV{WTSI_INTERNAL}
+        );
+    return "Direct database access not expected to work from $host - set WTSI_INTERNAL=1 to try";
 }
 
 sub _skipall {
@@ -308,13 +318,23 @@ Otherwise it will skip the entire test.
 =cut
 
 sub data_dir_or_skipall {
+    my $error = check_data_dir();
+    return unless $error;
+
+    return _skipall($error);
+}
+
+# Factored out for the benefit of 00_FailBulkSkips.t
+# Silence is golden.
+#
+sub check_data_dir {
     my $data_dir;
     eval {
         require Bio::Otter::Server::Config;
         $data_dir = Bio::Otter::Server::Config::data_dir();
     };
     if (my $error = $@) {
-        return _skipall("Test cannot find otter data_dir: '$error'");
+        return "Test cannot find otter data_dir: '$error'";
     }
     return;                     # ok
 }
