@@ -47,6 +47,8 @@ sub __test_hackage {
           (qw( ZIRCON_CONNECTION_TRACE ZIRCON_PROTOCOL_TRACE
                ZIRCON_CONTEXT_TRACE    ZIRCON_SELECTION_TRACE ));
     }
+
+    return;
 }
 __test_hackage();
 
