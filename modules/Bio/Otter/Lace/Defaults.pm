@@ -346,12 +346,15 @@ sub __cfgini_to_txt {
 # debug (cfg -> config name) fn needed to explain $CONFIG_INIFILES
 sub __fn_map { ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
     my @config = @_;
-    ## no critic (BuiltinFunctions::ProhibitComplexMappings)
-    return map { if (!defined $_) { 'anon' }
-                 elsif (ref($_) && $_ == \*DATA) { 'DATA' }
-                 else { $_ } }
-      map { if ($_ == $GETOPT) { 'getopt' } else { $_->GetFileName } }
-        @config;
+    my @file = map {
+        ($_ == $GETOPT) ? 'getopt' : $_->GetFileName;
+    } @config;
+    my @filename = map {
+        (!defined $_) ? 'anon'
+            : (ref($_) && $_ == \*DATA) ? 'DATA'
+            : $_;
+    } @file;
+    return @filename;
 }
 
 
