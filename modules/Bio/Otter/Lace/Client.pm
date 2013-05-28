@@ -542,8 +542,10 @@ sub save_CookieJar {
     if (-e $jar) {
         # Fix mode if not already mode 600
         my $mode = (stat(_))[2];
-        if ($mode != 0600) { ## no critic(ValuesAndExpressions::ProhibitLeadingZeros)
-            chmod(0600, $jar) or confess "chmod(0600, '$jar') failed; $!";
+        my $mode_required = oct(600);
+        if ($mode != $mode_required) {
+            chmod($mode_required, $jar)
+                or confess sprintf "chmod(0%o, '$jar') failed; $!", $mode_required;
         }
     } else {
         # Create file with mode 600

@@ -41,8 +41,7 @@ sub new {
       unless $SIG{INT};
 
     my %pfetch_cache;
-    tie %pfetch_cache, 'GDBM_File', $fn, GDBM_WRCREAT,
-      0664; ## no critic (ValuesAndExpressions::ProhibitLeadingZeros)
+    tie %pfetch_cache, 'GDBM_File', $fn, GDBM_WRCREAT, oct(664);
     # nb. GDBM doesn't store undef
 
     my $self = { _cache => \%pfetch_cache, _fn => $fn, _species => $species };
