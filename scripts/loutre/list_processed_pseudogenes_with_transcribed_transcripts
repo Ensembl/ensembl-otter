@@ -1,0 +1,57 @@
+#!/usr/bin/env perl
+
+### list_processed_pseudogenes_with_transcribed_transcripts
+
+use strict;
+use warnings;
+
+
+use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Lace::PipelineDB;
+
+{
+    my $usage = sub { exec('perldoc', $0) };
+    # This do_getopt() call is needed to parse the otter config files
+    # even if you aren't giving any arguments on the command line.
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        ) or $usage->();
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    # DataSet interacts directly with an otter database
+    foreach my $ds ($cl->get_all_DataSets) {
+        my $dba = $ds->get_cached_DBAdaptor;
+        my $sth = $dba->dbc->prepare(q{
+            SELECT g.stable_id
+              , group_concat(DISTINCT t.biotype
+                ORDER BY t.biotype SEPARATOR ' ') tbt
+            FROM gene g
+              , transcript t
+            WHERE g.gene_id = t.gene_id
+              AND g.biotype = 'processed_pseudogene'
+              AND g.is_current = 1
+            GROUP BY g.gene_id
+            HAVING tbt != 'processed_pseudogene'
+        });
+        $sth->execute;
+
+        next unless $sth->rows;
+
+        printf "\n --- %s (%d genes) ---\n\n", $ds->name, $sth->rows;
+        while (my ($stable, $tsct_biotypes) = $sth->fetchrow) {
+            print "$stable\t$tsct_biotypes\n";
+        }
+    }
+}
+
+
+__END__
+
+=head1 NAME - list_processed_pseudogenes_with_transcribed_transcripts
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
