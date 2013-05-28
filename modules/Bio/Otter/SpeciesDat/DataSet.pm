@@ -146,8 +146,7 @@ sub _satellite_dba_make {
 
     my @options;
     {
-        ## no critic (Anacode::ProhibitEval)
-        ## no critic (BuiltinFunctions::ProhibitStringyEval)
+        ## no critic (BuiltinFunctions::ProhibitStringyEval,Anacode::ProhibitEval)
         @options = eval $options;
     }
     die "Error evaluating '$options' : $@" if $@;
@@ -164,8 +163,7 @@ sub _satellite_dba_make {
     }
 
     {
-        ## no critic (Anacode::ProhibitEval)
-        ## no critic (BuiltinFunctions::ProhibitStringyEval)
+        ## no critic (BuiltinFunctions::ProhibitStringyEval,Anacode::ProhibitEval)
         eval "require $adaptor_class"
             or die "'require $adaptor_class' failed";
     }
