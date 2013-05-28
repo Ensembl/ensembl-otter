@@ -33,8 +33,7 @@ sub _module_name {
 #
 foreach my $class (keys %TYPE_CLASS) {
     my $module = __PACKAGE__->_module_name($class);
-    ## no critic (ProhibitStringyEval)
-    ## no critic (Anacode::ProhibitEval)
+    ## no critic (BuiltinFunctions::ProhibitStringyEval,Anacode::ProhibitEval)
     eval "require $module" or die "Couldn't load $module: '$@'";
 }
 
