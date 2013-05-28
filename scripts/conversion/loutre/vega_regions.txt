@@ -150,8 +150,8 @@ NOD_IDD10.1	3-Idd10_DIL	Idd10 region of chromosome 3 (DIL NOD strain)
 CHO_IDD16.1	17-Idd16.1_CHO	Idd16.1 region of chromosome 17 (CHORI-29 NOD strain)
 NOD_IDD18.1	3-Idd18.1_DIL	Idd18.1 region of chromosome 3 (DIL NOD strain)
 NOD_IDD18.2	3-Idd18.2_DIL	Idd18.2 region of chromosome 3 (DIL NOD strain)
-CHO_IDD1	17-Idd1_CHO	Idd1 region of chromosome 17 (CHORI-29 NOD strain)
-NOD_IDD1	17-Idd1_DIL	Idd1 region of chromosome 17 (DIL NOD strain)
+CHO_IDD1	17-Idd1_CHO (MHC)	Idd1 region of chromosome 17 (CHORI-29 NOD strain) (MHC)
+NOD_IDD1	17-Idd1_DIL (MHC)	Idd1 region of chromosome 17 (DIL NOD strain) (MHC)
 --end--
 
 --gorilla--
