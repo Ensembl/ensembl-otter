@@ -91,13 +91,8 @@ sub initialise {
         $region_frame,
         '-sticky' => 'nsew');
     Tk::grid(
-        (map { ## no critic (BuiltinFunctions::ProhibitComplexMappings)
-            my ($text, $value) = @{$_};
-            $region_frame->Radiobutton(
-                -variable => \$self->{_use_mark},
-                -text     => $text,
-                -value    => $value,
-                );
+        (map {
+            $self->_mark_widget($region_frame, @{$_});
          } ([ 'All',  0 ], [ 'Marked region', 1 ], )),
         '-sticky' => 'ns');
     $region_frame->gridColumnconfigure($_, '-weight' => 1)
@@ -147,6 +142,17 @@ sub initialise {
     $top->bind('<Destroy>', sub{ $self = undef });
 
     return;
+}
+
+sub _mark_widget {
+    my ($self, $frame, $text, $value) = @_;
+    my $widget =
+        $frame->Radiobutton(
+            -variable => \$self->{_use_mark},
+            -text     => $text,
+            -value    => $value,
+        );
+    return $widget;
 }
 
 sub SessionWindow {
