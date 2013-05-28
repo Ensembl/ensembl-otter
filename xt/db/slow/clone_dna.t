@@ -64,6 +64,8 @@ sub main {
             other_dna_tt($ds, $O); # plan inside
         };
     }
+
+    return;
 }
 
 
@@ -270,6 +272,8 @@ sub other_dna_tt {
                           len => \%len);
         }
     }
+
+    return;
 }
 
 
