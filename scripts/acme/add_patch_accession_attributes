@@ -1,0 +1,76 @@
+#!/usr/bin/env perl
+
+### add_patch_accession_attributes
+
+use strict;
+use warnings;
+
+use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Lace::PipelineDB;
+
+{
+    my $dataset_name = 'human';
+
+    my $usage = sub { exec('perldoc', $0) };
+    # This do_getopt() call is needed to parse the otter config files
+    # even if you aren't giving any arguments on the command line.
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        'dataset=s'     => \$dataset_name,
+        ) or $usage->();
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    
+    my $otter_dba = $ds->get_cached_DBAdaptor;
+    my $sth = $otter_dba->dbc->prepare(q{
+        SELECT sr.seq_region_id
+          , sr.name
+          , sra.value
+        FROM (seq_region sr
+          , seq_region_attrib sra)
+        LEFT JOIN seq_region_attrib has_acc
+          ON sr.seq_region_id = has_acc.seq_region_id
+          AND has_acc.attrib_type_id = 1
+        WHERE sr.seq_region_id = sra.seq_region_id
+          AND sr.name rlike '^(PATCH_(FIX|NOVEL)|HAP)-'
+          AND sra.attrib_type_id = 49
+          AND has_acc.seq_region_id IS NULL
+        });
+    $sth->execute;
+
+    # select * from attrib_type where code like 'embl%';
+    # 
+    #   attrib_type_id  code          name                                              description
+    #   --------------  ------------  ------------------------------------------------  -----------
+    #   1               embl_acc      European Nucleotide Archive (was EMBL) accession             
+    #   96              embl_version  European Nucleotide Archive (was EMBL) Version               
+    
+    my $insert = $otter_dba->dbc->prepare(q{
+        INSERT INTO seq_region_attrib(seq_region_id, attrib_type_id, value)
+        VALUES (?,?,?)
+    });
+
+    # PATCH_NOVEL-HSCHR9_1_CTG1-01           chr9 GRC PATCH_NOVEL GL383539.1 (HSCHR9_1_CTG1 in Ensembl)
+    while (my ($sr_id, $name, $desc) = $sth->fetchrow) {
+        my ($acc, $sv) = $desc =~ m{ (\w+)\.(\d+) \(}
+            or die "Can't match accession in '$desc'";
+        warn "acc = '$acc'; sv = '$sv' ($name)\n";
+        $insert->execute($sr_id, 1, $acc);
+        $insert->execute($sr_id, 96, $sv);
+    }
+}
+
+
+
+__END__
+
+=head1 NAME - add_patch_accession_attributes
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
