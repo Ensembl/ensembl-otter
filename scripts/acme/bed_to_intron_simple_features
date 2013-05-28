@@ -1,0 +1,120 @@
+#!/usr/bin/env perl
+
+### bed_to_intron_simple_features
+
+use strict;
+use warnings;
+use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Lace::PipelineDB;
+
+{
+    my $dataset_name = 'rat';
+    my $assembly_suffix = "-50";
+
+    my $usage = sub { exec('perldoc', $0) };
+    # This do_getopt() call is needed to parse the otter config files
+    # even if you aren't giving any arguments on the command line.
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        'dataset=s'     => \$dataset_name,
+        ) or $usage->();
+    $usage->() unless $dataset_name;
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    
+    my $otter_dba = $ds->get_cached_DBAdaptor;
+    my $pipe_dba = Bio::Otter::Lace::PipelineDB::get_pipeline_rw_DBAdaptor($otter_dba);
+
+    my $write_similarity_feature = $pipe_dba->dbc->prepare(q{
+        INSERT simple_feature (
+                seq_region_id
+              , seq_region_start
+              , seq_region_end
+              , seq_region_strand
+
+              , display_label
+              , analysis_id
+              , score )
+        VALUES (
+            ?, ?, ?, ?,
+            ?, ?, ? )
+    });
+    
+    my $tophat_analysis_id = $pipe_dba->get_AnalysisAdaptor->fetch_by_logic_name('tophat_introns')->dbID;
+
+    my $max_length = 0;
+    my $bed_first_line = <>;
+    die "Error, tabs in first line. Is BED header line missing?\n$bed_first_line"
+        if $bed_first_line =~ /\t/;
+    my %bed_to_ens = qw{ + +1 - -1 };
+    while (defined(my $line = <>)) {
+        chomp($line);
+        my ($chr_name, $chr_start, $chr_end,
+            $feature_name, $score, $bed_strand,
+            $thick_start, $thick_end, $color,
+            $block_count, $block_sizes, $block_starts) = split /\t/, $line;
+        next if $chr_name eq 'MT';
+
+        my ($block_1, $block_2) = split /,/, $block_sizes;
+        unless ($block_1 and $block_2 and $block_count == 2) {
+            die "Expect two blocks but got count = '$block_count', sizes = '$block_sizes' in BED line:\n$line";
+        }
+
+        $chr_start = $chr_start + $block_1; # In BED files the start coordinate is in zero-based coordinate space
+        $chr_end   = $chr_end   - $block_2 + 1;
+
+        my $ens_strand = $bed_to_ens{$bed_strand} or die "Bad BED strand '$bed_strand' in line:\n$line";
+
+        my $chr_seq_region_id = get_chr_seq_region_id($pipe_dba, "chr$chr_name$assembly_suffix");
+
+        $write_similarity_feature->execute(
+            $chr_seq_region_id, $chr_start, $chr_end, $ens_strand,
+            $feature_name, $tophat_analysis_id, $score,
+            );
+
+        my $chr_length = $chr_end - $chr_start + 1;
+        if ($chr_length > $max_length) {
+            $max_length = $chr_length;
+        }
+    }
+    
+    # Update the meta_coord table (or features will not appear!)
+    $pipe_dba->get_MetaCoordContainer->add_feature_type(
+        $pipe_dba->get_CoordSystemAdaptor->fetch_by_name('chromosome'),
+        'simple_feature',
+        $max_length,
+        );
+}
+
+{
+    my %name_to_seq_region_id;
+    sub get_chr_seq_region_id {
+        my ($dba, $chr_name) = @_;
+
+        if (my $sr_id = $name_to_seq_region_id{$chr_name}) {
+            return $sr_id;
+        }
+
+        my $chr_slice = $dba->get_SliceAdaptor->fetch_by_region('chromosome', $chr_name)
+            or die "Cannot fetch chromosome '$chr_name'";
+        my $sr_id = $chr_slice->get_seq_region_id;
+        $name_to_seq_region_id{$chr_name} = $sr_id;
+        return $sr_id;
+    }
+    
+}
+
+
+
+__END__
+
+=head1 NAME - bed_to_intron_simple_features
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
