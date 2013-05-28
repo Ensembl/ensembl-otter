@@ -212,6 +212,9 @@ if (! $support->param('filter_prefix')) {
   }
   elsif ($support->param('loutredbname') =~ /mouse/) {
     $support->param('filter_prefix','INT');
+    if ($support->param('live_update')){
+      $support->param('filter_prefix','INT,KO');
+    }
   }
 }
 $support->comma_to_list('filter_prefix');
