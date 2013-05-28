@@ -117,7 +117,7 @@ sub main {
         return "not in your groups $)"
           unless exists $my_group{ $s[5] };
 
-        my $mode = $s[2] & 07777; ## no critic (ValuesAndExpressions::ProhibitLeadingZeros)
+        my $mode = $s[2] & oct(7777);
         return sprintf("mode 0%o not in validity list %s", $mode, $valid_mode)
           unless exists $valid_mode{$mode};
 
