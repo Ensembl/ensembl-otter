@@ -38,7 +38,7 @@ sub import {
 
     # Predeclare global variables in calling package
     {
-        ## no critic (BuiltinFunctions::ProhibitStringyEval)
+        ## no critic (BuiltinFunctions::ProhibitStringyEval,Anacode::ProhibitEval)
         eval "package $callpack; use vars qw("
             . join(' ', map { '$'.$_ } @vars) . ")";
         die $@ if $@;
