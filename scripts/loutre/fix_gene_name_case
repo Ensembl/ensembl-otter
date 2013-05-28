@@ -1,0 +1,87 @@
+#!/usr/bin/env perl
+
+### fix_gene_name_case
+
+use strict;
+use warnings;
+
+
+use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Lace::PipelineDB;
+
+{
+    my( $dataset_name );
+
+    my $usage = sub { exec('perldoc', $0) };
+    # This do_getopt() call is needed to parse the otter config files
+    # even if you aren't giving any arguments on the command line.
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        'dataset=s'     => \$dataset_name,
+        ) or $usage->();
+    $usage->() unless $dataset_name;
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    my $otter_dba = $ds->get_cached_DBAdaptor;
+
+    my $sth = $otter_dba->dbc->prepare(q{
+        UPDATE gene_attrib ga
+        JOIN gene g
+          ON ga.gene_id = g.gene_id
+        SET ga.value = ?
+        WHERE g.stable_id = ?
+          AND g.is_current = 1
+          AND ga.attrib_type_id = 4
+          AND ga.value = ?
+    });
+
+    while (<>) {
+        my ($gene_stable_id, $old_name, $new_name) = split;
+        my $msg = "rename of '$gene_stable_id' from '$old_name' to '$new_name'";
+
+        # Should run a proper gene name update to write a new version of a
+        # gene if we're doing more than just fixing case.
+        if (lc $old_name ne lc $new_name) {
+            warn "Skipping $msg; not just a change of case\n";
+            next;
+        }
+
+        $sth->execute($new_name, $gene_stable_id, $old_name);
+        my $rows = $sth->rows;
+
+        if ($rows == 1) {
+            warn "Done $msg OK\n";
+        }
+        elsif ($rows == 0) {
+            warn "No change made for $msg\n";
+        }
+        else {
+            warn "Error, changed $rows rows during $msg\n";
+        }
+    }
+}
+
+
+__END__
+
+=head1 NAME - fix_gene_name_case
+
+    Done rename of 'OTTMUSG00000015182' from 'Trav6D-4' to 'Trav6d-4' OK
+    Done rename of 'OTTMUSG00000015181' from 'Trav7D-4' to 'Trav7d-4' OK
+    Done rename of 'OTTMUSG00000015179' from 'Trav8D-1' to 'Trav8d-1' OK
+    Done rename of 'OTTMUSG00000015209' from 'Trav7D-5' to 'Trav7d-5' OK
+    Done rename of 'OTTMUSG00000015222' from 'Trav13D-1' to 'Trav13d-1' OK
+    Done rename of 'OTTMUSG00000015165' from 'Trav7D-2' to 'Trav7d-2' OK
+    No change made for rename of 'OTTMUSG00000015124' from 'Trav14D-1' to 'Trav14d-1'
+
+    Done rename of 'OTTHUMG00000150448' from 'Mettl15' to 'METTL15' OK
+    Done rename of 'OTTHUMG00000132405' from 'c16orf98' to 'C16orf98' OK
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
