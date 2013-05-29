@@ -2450,10 +2450,12 @@ sub zmap_view_arg_hash {
     my $name  = $slice->ssname;
     my $start = $slice->start;
     my $end   = $slice->end;
+    my $view_name = sprintf '%s:%d-%d', $name, $start, $end;
     my $hash = {
         '-name'        => $name,
         '-start'       => $start,
         '-end'         => $end,
+        '-view_name'   => $view_name,
         '-config_file' => $config_file,
     };
     return $hash;
