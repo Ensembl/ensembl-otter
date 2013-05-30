@@ -8,7 +8,7 @@ use warnings;
 use Exporter qw(import);
 use Test::More;
 
-our @EXPORT_OK = qw(test_exons test_introns);
+our @EXPORT_OK = qw(test_exons test_introns compare_saf_ok);
 
 sub test_exons {
     my ($exons, $exp, $desc) = @_;
@@ -68,6 +68,35 @@ sub test_introns {
             $i++;
         }
     };
+    return;
+}
+
+sub compare_saf_ok {
+    my ($subj, $exp, $desc, $skips) = @_;
+
+    my %skip;
+    %skip = map { $_ => 1 } @$skips if $skips;
+
+    subtest $desc => sub {
+        foreach my $attr ( $exp->_our_attribs, 'vulgar_comps_string' ) {
+            next if $skip{$attr};
+            next if $attr =~ /strand$/;
+            next if $attr eq 'score';
+            is($subj->$attr(), $exp->$attr(), $attr);
+        }
+        strand_is($subj->strand,  $exp->strand,  'strand');
+        strand_is($subj->hstrand, $exp->hstrand, 'hstrand');
+        is($subj->score // 0, $exp->score // 0, 'score');
+        done_testing;
+    };
+    return;
+}
+
+sub strand_is {
+    my ($subj, $exp, $desc) = @_;
+    $subj //= 1;
+    $exp  //= 1;
+    is($subj, $exp, $desc);
     return;
 }
 

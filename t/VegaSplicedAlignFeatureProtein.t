@@ -6,10 +6,11 @@ use warnings;
 use Test::More;
 use lib "${ENV{ANACODE_TEAM_TOOLS}}/t/tlib";
 use Test::CriticModule;
+use Test::SetupLog4perl;
 
 use Test::Otter;
 use OtterTest::ContigSlice;
-use Test::VegaSplicedAlignFeature qw(test_exons test_introns);
+use Test::VegaSplicedAlignFeature qw(test_exons test_introns compare_saf_ok);
 
 use Bio::EnsEMBL::FeaturePair;
 
@@ -28,8 +29,8 @@ is($safd->vulgar_comps_string, 'M 34 102', 'vulgar_comps_string');
 
 my $ctg_slice = OtterTest::ContigSlice->new->contig_slice;
 
-my @feats;
-push @feats, Bio::EnsEMBL::FeaturePair->new
+my @fp_feats;
+push @fp_feats, Bio::EnsEMBL::FeaturePair->new
   (-start  => 5,
    -end    => 7,
    -score  => 10,
@@ -39,7 +40,7 @@ push @feats, Bio::EnsEMBL::FeaturePair->new
    -hend   => 105,
    -hstrand => 1,
    -hseqname => 'dummy-hid');
-push @feats, Bio::EnsEMBL::FeaturePair->new
+push @fp_feats, Bio::EnsEMBL::FeaturePair->new
   (-start  => 11,
    -end    => 16,
    -score  => 10,
@@ -50,12 +51,18 @@ push @feats, Bio::EnsEMBL::FeaturePair->new
    -hstrand => 1,
    -hseqname => 'dummy-hid');
 
-my $dpaf = new_ok($saf_protein_module => [ -features => \@feats ]);
+my $ddpaf = new_ok('Bio::EnsEMBL::DnaPepAlignFeature' => [ -features => \@fp_feats ]);
+
+my @dp_feats;
+push @dp_feats, $ddpaf;
+
+my $dpaf = new_ok($saf_protein_module => [ -features => \@dp_feats ]);
 is($dpaf->hseqname, 'dummy-hid', 'dpaf hseqname');
 is($dpaf->cigar_string, '3M3I6M', 'dpaf cigar_string');
 
-my $paf = $dpaf->as_AlignFeature;
-isa_ok($paf, 'Bio::EnsEMBL::DnaPepAlignFeature');
+my @afs = $dpaf->as_AlignFeatures;
+is(scalar(@afs), 1, 'one align_feature');
+isa_ok($afs[0], 'Bio::EnsEMBL::DnaPepAlignFeature');
 # FIXME: more tests here
 
 $dpaf->seqname('ugf_test');
@@ -105,7 +112,7 @@ my $exp = {
         { start => 13792, end => 14021, hstart => 419, hend => 495, phase => 2, end_phase => 1, vcs => 'S 1 1 M 76 228 S 0 1' },
         { start => 17935, end => 18090, hstart => 496, hend => 547, phase => 1, end_phase => 1, vcs => 'S 1 2 M 51 153 S 0 1' },
         { start => 18853, end => 18932, hstart => 548, hend => 574, phase => 1, end_phase => 0, vcs => 'S 1 2 M 26 78',
-          vulgar_string => 'QueryP 547 574 . TargetP 18852 18932 + 0 S 1 2 M 26 78' },
+          vulgar_string => 'QueryP 547 574 . TargetP 18852 18932 + 3047 S 1 2 M 26 78' },
         { start => 19536, end => 19808, hstart => 575, hend => 665, phase => 0, end_phase => 0, vcs => 'M 91 273' },
         ],
     strand   => 1,
@@ -120,6 +127,16 @@ my @introns = $safd->get_all_introns;
 is(scalar(@introns), 6, 'n_introns');
 test_introns(\@introns, $exp, 'get_all_introns (fwd)');
 
+my @pafs = map { $_->as_AlignFeatures } @exons;
+my $rebuilt = new_ok($saf_protein_module => [ -features => \@pafs ]);
+compare_saf_ok($rebuilt, $safd, 'new from features (fwd)', [ 'vulgar_comps_string' ]);
+$vcs = $safd->vulgar_comps_string;
+$vcs =~ s/S 0 2 I 0 8901 S 1 1/I 0 8904 G 1 0/; # fix up 1st split codon
+$vcs =~ s/S 0 1 I 0 3913 S 1 2/I 0 3916 G 1 0/; # fix up 2nd split codon
+$vcs =~ s/S 0 1 I 0 762 S 1 2/I 0 765 G 1 0/;   # fix up 3rd split codon
+is($rebuilt->vulgar_comps_string, $vcs, 'rebuilt vulgar comps');
+
+$vcs = $safd->vulgar_comps_string;
 $safd = new_ok($saf_protein_module => [ -vulgar_comps_string => $vcs ], 'new from vulgar_comps_string');
 $safd->seqname('TRev');
 $safd->start(35467);

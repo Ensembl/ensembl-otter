@@ -39,6 +39,18 @@ sub my_SUPER_new {
     return $caller->Bio::EnsEMBL::DnaPepAlignFeature::new(@args);
 }
 
+sub looks_like_frameshift {
+    my ($self, $gap, $hgap) = @_;
+    return unless ($gap == 1 or $gap == 2);
+    return unless ($hgap == 0 or $hgap == 1);
+    return 1;
+}
+
+sub looks_like_split_codon {
+    my ($self, $gap, $hgap) = @_;
+    return ($hgap == 1);
+}
+
 {
     ## no critic (Subroutines::ProtectPrivateSubs,Subroutines::ProhibitUnusedPrivateSubroutines)
     sub _hit_unit   { my ($self, @args) = @_; return $self->Bio::EnsEMBL::DnaPepAlignFeature::_hit_unit(@args); }
@@ -50,7 +62,7 @@ sub my_SUPER_new {
     }
 
     sub _align_feature_class { return 'Bio::EnsEMBL::DnaPepAlignFeature'; }
-    sub _extra_fields        { return; }
+    sub _extra_attribs       { return; }
 }
 
 1;

@@ -8,6 +8,7 @@ use warnings;
 
 use feature 'switch';
 
+use List::MoreUtils;
 use Log::Log4perl;
 
 use Bio::EnsEMBL::Exon;
@@ -17,6 +18,7 @@ use Bio::EnsEMBL::Utils::Argument qw(rearrange);
 use Bio::EnsEMBL::Utils::Exception qw(throw);
 
 use Bio::Otter::GappedAlignment;
+use Bio::Otter::Utils::Constants qw(intron_minimum_length);
 use Bio::Otter::Utils::Vulgar;
 
 use base 'Bio::EnsEMBL::BaseAlignFeature';
@@ -47,14 +49,18 @@ sub new {
         when ($_ == 1) {
 
             if ($features) {
-                $self = $class->my_SUPER_new(@args);
+
+                # Delete -features from @args
+                my $idx = List::MoreUtils::first_index { uc $_ eq '-FEATURES' } @args;
+                splice(@args, $idx, 2);
+
+                $self = $class->my_SUPER_new(@args, -cigar_string => 'M'); # dummy match, replaced by:
                 $self->_parse_features($features);
             }
 
             if ($cigar_string) {
                 $self = $class->my_SUPER_new(@args);
                 $self->cigar_string($cigar_string);
-                delete $self->{cigar_string};
             }
 
             my %from_vulgar;
@@ -80,12 +86,12 @@ sub new {
             if ($vulgar_comps_string) {
                 $self = $class->my_SUPER_new(@args, %from_vulgar, -cigar_string => 'M'); # dummy match, replaced by:
                 $self->vulgar_comps_string($vulgar_comps_string);
-                delete $self->{cigar_string};
             }
 
         }
     }
 
+    delete $self->{cigar_string}; # replaced by alignment_string here
     return $self;
 }
 
@@ -155,11 +161,197 @@ sub cigar_string {
 
 sub _parse_features {
     my ($self, $features) = @_;
-    # FIXME: need to do more than this
-    $self->SUPER::_parse_features($features);
-    $self->cigar_string($self->{cigar_string});
-    delete $self->{cigar_string};
+
+    # FIXME: a lot of the sanity checks are duplicated from Bio::EnsEMBL::BaseAlignFeature :-(
+
+    # Basic sanity checks
+    #
+    unless (ref($features) eq 'ARRAY') {
+        my $actual = ref($features);
+        throw("features must be an array reference (not a '$actual')");
+    }
+    unless (@$features) {
+        throw("must supply at least one feature");
+    }
+
+    my $afc = $self->_align_feature_class;
+    foreach my $feature ( @$features ) {
+        unless ($feature->isa($afc)) {
+            my $actual = ref($feature);
+            throw("Feature must be a '$afc' (not a '$actual')");
+        }
+    }
+
+    # Sort the features on their start position
+    # Ascending order on positive strand, descending on negative strand
+    #
+    my $strand  = $features->[0]->strand  // 1;
+    my $hstrand = $features->[0]->hstrand // 1;
+    my $fwd     = ($strand  == 1);
+    my $hfwd    = ($hstrand == 1);
+
+    my @f;
+    if ($fwd) {
+        @f = sort {$a->start <=> $b->start} @$features;
+    } else {
+        @f = sort {$b->start <=> $a->start} @$features;
+    }
+
+    $self->_sanity_check_feature_list(\@f);
+
+    # Now do the work
+
+    # Set the basics from the first feature. Some will be overwritten later.
+    #
+    my $first_f = $f[0];
+    foreach my $attrib ( $self->_our_attribs ) {
+        $self->$attrib($first_f->$attrib());
+    }
+
+    if ($fwd) {
+        $self->end($f[-1]->end);
+    } else {
+        $self->start($f[-1]->start);
+    }
+
+    if ($hfwd) {
+        $self->hend($f[-1]->hend);
+    } else {
+        $self->hstart($f[-1]->hstart);
+    }
+
+    my @vulgar_comps_strings;
+    my ($prev, $hprev);
+    while (my $f = shift @f) {
+
+        if (defined $prev) {
+
+            my $gap_length =  ($fwd  ? $f->start  - $prev  : $prev  - $f->end)  - 1;
+            my $hgap_length = ($hfwd ? $f->hstart - $hprev : $hprev - $f->hend) - 1;
+
+            my @comps = $self->_process_gap($gap_length, $hgap_length);
+            push @vulgar_comps_strings, @comps;
+
+        }
+
+        push @vulgar_comps_strings, $self->_cigar_to_vulgar_comps($f->cigar_string);
+
+        $prev  = $fwd  ? $f->end  : $f->start;
+        $hprev = $hfwd ? $f->hend : $f->hstart;
+    }
+    my $vcs = join(' ', @vulgar_comps_strings);
+    $self->vulgar_comps_string($vcs);
+
+    # For testing
+    my $ga = $self->gapped_alignment;
+    $ga->_verify_element_lengths($ga);
+
     return $self;
+}
+
+sub _process_gap {
+    my ($self, $gap_length, $hgap_length) = @_;
+
+    my @comps_strings;
+
+    my $gap_intronic = ($gap_length >= intron_minimum_length);
+
+    if ($gap_intronic) {
+
+        my $split_codon_gap;
+        if ($self->looks_like_split_codon($gap_length, $hgap_length)) {
+
+            $self->logger->warn("Skipping possible split codon [gap:${gap_length}, hgap:${hgap_length}]");
+            $split_codon_gap = Bio::Otter::GappedAlignment::Element::Gap->new($hgap_length, 0)->string;
+
+        } elsif ($hgap_length) {
+            $self->logger->logconfess("Unexpected intron hgap [gap:${gap_length}, hgap:${hgap_length}]");
+        }
+
+        my $intron = Bio::Otter::GappedAlignment::Element::Intron->new(0, $gap_length);
+        push @comps_strings, $intron->string;
+        push @comps_strings, $split_codon_gap if $split_codon_gap;
+
+    } else {
+
+        if ($self->looks_like_frameshift($gap_length, $hgap_length)) {
+
+            my $fs = Bio::Otter::GappedAlignment::Element::Frameshift->new(0, $gap_length);
+            push @comps_strings, $fs->string;
+            if ($hgap_length) {
+                my $gap = Bio::Otter::GappedAlignment::Element::Gap->new($hgap_length, 0);
+                push @comps_strings, $gap->string;
+            }
+
+        } else {
+
+            # short gaps should be added as gaps, not introns
+
+            # if on both sides, add target first? But for now...
+            if ($gap_length and $hgap_length) {
+                $self->logger->logconfess("Non-frameshift gaps both sides ",
+                                          "[gap:${gap_length}, hgap:${hgap_length}]");
+            }
+
+            my $gap = Bio::Otter::GappedAlignment::Element::Gap->new($hgap_length, $gap_length);
+            push @comps_strings, $gap->string;
+
+        }
+    }
+    return @comps_strings;
+}
+
+sub _sanity_check_feature_list {
+    my ($self, $features) = @_; # @$features is sorted at this point
+    my $fwd  = (($features->[0]->strand // 1) == 1);
+
+    # Sanity checks on subsequent features
+    #
+    my $first_f = $features->[0];
+    my $prev  = $fwd ? $first_f->end : $first_f->start;
+
+    for my $i ( 1 .. $#{$features} ) {
+        my $this_f = $features->[$i];
+        my $is_same = sub {
+            # captures $first_f and $this_f in closure
+            my ($what, $method) = @_;
+            my $first = $first_f->$what(); my $first_d = defined ($first);
+            my $this  = $this_f->$what();  my $this_d  = defined ($this);
+            throw("Inconsistent ${what}s in feature array (def/undef)") if ($first_d xor $this_d);
+            if ($first_d) {
+                my $cmp_ok;
+                if ($method eq 'string') {
+                    $cmp_ok = ($first eq $this);
+                } else {
+                    $cmp_ok = ($first == $this);
+                }
+                throw("Inconsistent ${what}s in feature array") unless $cmp_ok;
+            }
+        };
+        $is_same->('hstrand',    'numeric');
+        $is_same->('strand',     'numeric');
+        $is_same->('seqname',    'string' );
+        $is_same->('hseqname',   'string' );
+        $is_same->('score',      'numeric');
+        $is_same->('percent_id', 'numeric');
+        $is_same->('p_value',    'numeric');
+        $is_same->('seqname',    'string' );
+
+        if ($fwd) {
+            my $start = $this_f->start;
+            if ($start <= $prev) {
+                throw("Inconsistent coords in feature array (forward strand):\n" .
+                      "Start [$start] should be greater than previous end [$prev].");
+            }
+        } else {
+            my $end = $this_f->end;
+            if ($end >= $prev) {
+                throw("Inconsistent coords in feature array (reverse strand):\n" .
+                      "End [$end] should be less than previous start [$prev].");
+            }
+        }
+    }
+    return;
 }
 
 sub _cigar_to_vulgar_comps {
@@ -222,26 +414,79 @@ sub _vulgar_comps_to_cigar {
     return $gapped_alignment->ensembl_cigar_string;
 }
 
+# These represent which attributes (named as for this module) are present
+# in which component modules.
+
+sub _vulgar_attribs {
+    return qw(
+        start  end  strand  seqname
+        hstart hend hstrand hseqname
+        score
+        );
+}
+
+sub _ga_extra_attribs {
+    return qw( percent_id );
+}
+
+sub _ga_attribs {
+    my $self = shift;
+    return ( $self->_vulgar_attribs, $self->_ga_extra_attribs );
+}
+
+sub _common_extra_attribs {
+    return qw(
+        slice
+        species  coverage
+        hspecies hcoverage
+        p_value
+        analysis external_db_id extra_data
+        );
+}
+
+sub _common_attribs {
+    my $self = shift;
+    return ( $self->_ga_attribs, $self->_common_extra_attribs );
+}
+
+sub _our_attribs {
+    my $self = shift;
+    return ( $self->_common_attribs, $self->_extra_attribs );
+}
+
+# Warning: dangerous for proteins - doesn't cope with frameshifts and split codons
+#
 sub as_AlignFeature {
     my ($self) = @_;
     $self->_verify_attribs;
 
     my $class = $self->_align_feature_class; # inheritance work-around again.
-    my @extra_attribs = $self->_extra_fields;
 
-    my @common_attribs = qw(
-        slice
-        start  end  strand  seqname  species
-        hstart hend hstrand hseqname hspecies hcoverage
-        percent_id score p_value
-        analysis external_db_id extra_data
-        cigar_string
-      );
-
-    my %args = map { '-' . $_ => $self->$_() } @common_attribs, @extra_attribs;
+    my %args = map { '-' . $_ => $self->$_() } $self->_our_attribs, 'cigar_string';
     my $align_feature = $class->new(%args);
 
     return $align_feature;
+}
+
+sub as_AlignFeatures {
+    my ($self) = @_;
+
+    $self->_verify_attribs;
+    my $gapped_alignment = $self->gapped_alignment;
+    my @afs = $gapped_alignment->ensembl_features;
+
+    $self->_augment([ $self->_common_extra_attribs, $self->_extra_attribs ], @afs);
+    return @afs;
+}
+
+sub _augment {
+    my ($self, $attribs, @items) = @_;
+    foreach my $item ( @items ) {
+        foreach my $attrib ( @$attribs ) {
+            $item->$attrib($self->$attrib());
+        }
+    }
+    return @items;
 }
 
 sub gapped_alignment {
@@ -264,6 +509,8 @@ sub gapped_alignment {
 
     $gapped_alignment->target_id($self->seqname);
     $gapped_alignment->query_id($self->hseqname);
+    $gapped_alignment->score($self->score);
+    $gapped_alignment->percent_id($self->percent_id);
 
     return $gapped_alignment;
 }
@@ -287,7 +534,9 @@ sub get_all_exon_alignments {
     my $gapped_alignment = $self->gapped_alignment;
     my @egas = $gapped_alignment->exon_gapped_alignments;
 
-    return map { $self->new( -vulgar_string => $_->vulgar_string, -slice => $self->slice ) } @egas;
+    # FIXME: redo this as $self->new( -gapped_alignment => $_ )
+    my @safs = map { $self->new( -vulgar_string => $_->vulgar_string ) } @egas;
+    return $self->_augment( [ $self->_ga_extra_attribs, $self->_common_extra_attribs, $self->_extra_attribs ], @safs);
 }
 
 sub get_all_exons {
@@ -322,7 +571,8 @@ sub as_exon {
 sub ungapped_features {
     my ($self) = @_;
     my @exon_alignments = $self->get_all_exon_alignments;
-    my @ungapped_features = map { $_->as_AlignFeature->ungapped_features } @exon_alignments;
+    my @align_features = map { $_->as_AlignFeatures } @exon_alignments;
+    my @ungapped_features = map { $_->ungapped_features } @align_features;
     return @ungapped_features;
 }
 
@@ -338,6 +588,16 @@ sub end_phase {
     my ($self) = @_;
     my $gapped_alignment = $self->gapped_alignment;
     return $gapped_alignment->end_phase;
+}
+
+# Implemented in Protein subclass
+sub looks_like_frameshift {
+    return;
+}
+
+# Implemented in Protein subclass
+sub looks_like_split_codon {
+    return;
 }
 
 sub logger {

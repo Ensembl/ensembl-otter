@@ -6,11 +6,13 @@ use warnings;
 use Test::More;
 use lib "${ENV{ANACODE_TEAM_TOOLS}}/t/tlib";
 use Test::CriticModule;
+use Test::SetupLog4perl;
 
 use Test::Otter;
 use OtterTest::ContigSlice;
-use Test::VegaSplicedAlignFeature qw(test_exons test_introns);
+use Test::VegaSplicedAlignFeature qw(test_exons test_introns compare_saf_ok);
 
+use Bio::EnsEMBL::DnaDnaAlignFeature;
 use Bio::EnsEMBL::FeaturePair;
 
 my $saf_dna_module;
@@ -28,8 +30,8 @@ is($safd->vulgar_comps_string, 'M 100 100', 'vulgar_comps_string');
 
 my $ctg_slice = OtterTest::ContigSlice->new->contig_slice;
 
-my @feats;
-push @feats, Bio::EnsEMBL::FeaturePair->new
+my @fp_feats;
+push @fp_feats, Bio::EnsEMBL::FeaturePair->new
   (-START => 5,
    -END   => 7,
    -STRAND => 1,
@@ -40,7 +42,7 @@ push @feats, Bio::EnsEMBL::FeaturePair->new
    -HSTRAND => 1,
    -HSEQNAME => 'dummy-hid');
 
-push @feats, Bio::EnsEMBL::FeaturePair->new
+push @fp_feats, Bio::EnsEMBL::FeaturePair->new
   (-start   => 10,
    -end     => 14,
    -strand  => 1,
@@ -51,7 +53,12 @@ push @feats, Bio::EnsEMBL::FeaturePair->new
    -hstrand => 1,
    -hseqname => 'dummy-hid');
 
-my $dnaf = new_ok($saf_dna_module => [ -features => \@feats ]);
+my $ddaf = new_ok('Bio::EnsEMBL::DnaDnaAlignFeature' => [ -features => \@fp_feats ]);
+
+my @dd_feats;
+push @dd_feats, $ddaf;
+
+my $dnaf = new_ok($saf_dna_module => [ -features => \@dd_feats ]);
 is($dnaf->hseqname, 'dummy-hid', 'dnaf hseqname');
 is($dnaf->cigar_string, '3M2I5M', 'dnaf cigar_string');
 
@@ -65,8 +72,9 @@ is($dnaf->hstrand, $hstrand * -1, 'dnaf reverse_complement hstrand');
 is($dnaf->start, 5, 'dnaf start');
 is($dnaf->end,  14, 'dnaf end');
 
-my $daf = $dnaf->as_AlignFeature;
-isa_ok($daf, 'Bio::EnsEMBL::DnaDnaAlignFeature');
+my @afs = $dnaf->as_AlignFeatures;
+is(scalar(@afs), 1, 'one align_feature');
+isa_ok($afs[0], 'Bio::EnsEMBL::DnaDnaAlignFeature');
 # FIXME: more tests here
 
 $dnaf->seqname('ugf_test');
@@ -135,6 +143,12 @@ my @introns = $safd->get_all_introns;
 is(scalar(@introns), 3, 'n_introns');
 test_introns(\@introns, $exp, 'get_all_introns (fwd)');
 
+my @dafs = map { $_->as_AlignFeatures } @exons;
+my $rebuilt = new_ok($saf_dna_module => [ -features => \@dafs ]);
+compare_saf_ok($rebuilt, $safd, 'new from features (fwd)', [ qw(hend vulgar_comps_string) ]);
+is($rebuilt->hend, $safd->hend - 3, 'rebuilt hend');
+is($rebuilt->vulgar_comps_string, substr($safd->vulgar_comps_string, 0, -6), 'rebuilt vulgar comps');
+
 # Copied from OtterGappedAlignment.t
 # not sure about target strand!
 my $vulgar = 'BG212959.1 928 0 - RP1-90J20.6-002 91513 84135 - 3570 M 9 9 G 0 1 M 3 3 G 0 3 M 6 6 G 0 4 I 0 814 M 11 11 G 0 2 M 6 6 G 0 3 M 4 4 G 0 1 M 1 1 G 0 1 M 4 4 G 0 1 M 1 1 G 0 1 M 2 2 G 0 1 M 10 10 G 0 1 M 3 3 G 0 1 M 5 5 G 0 1 M 2 2 G 0 1 M 4 4 G 0 1 M 3 3 G 0 1 M 6 6 G 0 2 M 6 6 G 0 1 M 6 6 G 0 1 M 10 10 G 0 1 M 5 5 G 0 1 M 3 3 G 0 1 M 3 3 I 0 1405 M 7 7 G 0 2 M 20 20 G 0 1 M 3 3 G 0 1 M 9 9 G 0 1 M 6 6 G 0 1 M 10 10 G 0 1 M 7 7 G 1 0 M 4 4 G 0 1 M 57 57 G 0 1 M 11 11 I 0 3974 M 9 9 G 0 1 M 17 17 G 0 1 M 9 9 G 0 1 M 7 7 G 0 1 M 8 8 G 1 0 M 15 15 G 0 1 M 86 86 I 0 214 M 528 528';
@@ -149,6 +163,18 @@ is($safd->start,                84136, 'start');
 is($safd->end,                  91513, 'end');
 is($safd->strand,                  -1, 'strand');
 is($safd->score,                 3570, 'score');
+
+# Ensure pass-through
+$safd->species('9000');
+$safd->hspecies('9001');
+$safd->coverage(53);
+$safd->hcoverage(63);
+$safd->percent_id(97.7);
+$safd->p_value(1.33e-07);
+# $safd->analysis(445); # FIXME: need Analysis object
+$safd->external_db_id(10023);
+$safd->extra_data('Answer_42');
+$safd->pair_dna_align_feature_id(22001);
 
 $safd->slice($ctg_slice);
 my @r_exons = $safd->get_all_exon_alignments;
@@ -182,6 +208,13 @@ test_exons(\@r_exons, $r_exp, 'get_all_exon_alignments (rev)');
 my @r_introns = $safd->get_all_introns;
 is(scalar(@r_introns), 4, 'n_introns');
 test_introns(\@r_introns, $r_exp, 'get_all_introns (rev)');
+
+my @r_dafs = map { $_->as_AlignFeatures } @r_exons;
+my $r_rebuilt = new_ok($saf_dna_module => [ -features => \@r_dafs ]);
+compare_saf_ok($r_rebuilt, $safd, 'new from features (rev/rev)', [ 'vulgar_comps_string' ]);
+$vcs = $safd->vulgar_comps_string;
+$vcs =~ s/G 0 4 I 0 814/I 0 818/; # remove exon trailing indel
+is($r_rebuilt->vulgar_comps_string, $vcs, 'rebuilt vulgar comps');
 
 done_testing;
 
