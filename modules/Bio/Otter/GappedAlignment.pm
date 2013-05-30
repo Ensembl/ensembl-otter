@@ -131,7 +131,7 @@ sub _do_intronify {
 
     $self->logger->debug("Done (offset $data{offset})");
 
-    $self->_verify_lengths($intron_ga) if $self->logger->is_debug;
+    $self->_verify_intronified_lengths($intron_ga) if $self->logger->is_debug;
 
     return $intron_ga;
 }
@@ -666,7 +666,7 @@ sub _set_exon_gapped_alignments {
     return $self->{_exon_gapped_alignments} = $egas;
 }
 
-sub _verify_lengths {
+sub _verify_intronified_lengths {
     my ($self, $intron_ga) = @_;
     my ($q_len, $t_len) = (0, 0);
     foreach my $ega ($intron_ga->exon_gapped_alignments) {
@@ -679,6 +679,22 @@ sub _verify_lengths {
         $self->logger->confess('Intronify length mismatch');
     }
     $self->logger->debug('Lengths ok');
+    return;
+}
+
+sub _verify_element_lengths {
+    my ($self) = @_;
+    my ($q_len, $t_len) = (0, 0);
+    foreach my $e ( @{$self->elements} ) {
+        $q_len += $e->query_length;
+        $t_len += $e->target_length;
+    }
+    if ($q_len != $self->query_length or $t_len != $self->target_length) {
+        $self->logger->fatal("sum(q_len): $q_len vs q_len: ", $self->query_length)  if $q_len != $self->query_length;
+        $self->logger->fatal("sum(t_len): $t_len vs t_len: ", $self->target_length) if $t_len != $self->target_length;
+        $self->logger->confess('Element length mismatch');
+    }
+    $self->logger->debug('Element lengths ok');
     return;
 }
 
