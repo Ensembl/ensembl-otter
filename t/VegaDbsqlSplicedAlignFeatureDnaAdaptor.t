@@ -6,10 +6,12 @@ use warnings;
 use Bio::EnsEMBL::Analysis;
 use Bio::Vega::SplicedAlignFeature::DNA;
 
-use Test::Otter;
+use Test::Otter qw( ^data_dir_or_skipall );
 use OtterTest::DB;
 
 use Test::More;
+use Test::Requires qw( Bio::EnsEMBL::DBSQL::Driver::SQLite );
+
 use lib "${ENV{ANACODE_TEAM_TOOLS}}/t/tlib";
 use Test::CriticModule;
 
