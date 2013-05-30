@@ -29,7 +29,7 @@ sub my_SUPER_new {
     }
 
     sub _align_feature_class { return 'Bio::EnsEMBL::DnaDnaAlignFeature'; }
-    sub _extra_fields        { return qw( pair_dna_align_feature_id ); }
+    sub _extra_attribs       { return qw( pair_dna_align_feature_id ); }
 }
 
 1;
