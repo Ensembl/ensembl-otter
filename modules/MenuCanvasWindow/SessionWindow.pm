@@ -2265,7 +2265,7 @@ sub draw_sequence_list {
         }
     }
     if (keys %$err_hash) {
-        # $balloon->detatch($canvas);
+        # $balloon->detach($canvas);
         $self->balloon->attach($canvas,
             -balloonposition => 'mouse',
             -msg => $err_hash,
