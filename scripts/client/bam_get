@@ -189,6 +189,7 @@ sub _print_feature {
         Class      => 'Sequence',
         Name       => $name,
         Align      => join(' ', @align_fields),
+        Length     => $feature->l_qseq,
         Gap        => $gap,
         Target     => $target,
         sequence   => $seq->seq,
