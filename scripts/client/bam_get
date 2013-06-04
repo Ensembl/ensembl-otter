@@ -124,7 +124,13 @@ my $strands = {
     -1 => '-',
 };
 
-my $attributes_format = $gff_version == 3 ? '%s=%s' : '%s "%s"';
+my    ($attributes_format, $attributes_quote) = ($gff_version == 3)
+    ? ('%s=%s',            0                )
+    : ('%s %s',            1                )
+    ;
+
+my @attributes_quotable = qw( Name Class cigar_bam );
+my $attributes_quotable = { map { $_ => 1 } @attributes_quotable };
 
 sub _print_feature {
     my ($feature, $start, $end) = @_;
@@ -184,6 +190,9 @@ sub _print_feature {
 
     my @attribute_strings = ();
     while ( my ($key, $value) = splice(@attributes, 0, 2) ) {
+        if ($attributes_quote && $attributes_quotable->{$key}) {
+            $value = qq{"$value"};
+        }
         unless ($key eq 'Target') { # the Target tag is already escaped
             gff_escape_attribute for $value;
         }

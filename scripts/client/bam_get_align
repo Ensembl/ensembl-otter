@@ -124,7 +124,13 @@ my $strands = {
     -1 => '-',
 };
 
-my $attributes_format = $gff_version == 3 ? '%s=%s' : '%s %s';
+my    ($attributes_format, $attributes_quote) = ($gff_version == 3)
+    ? ('%s=%s',            0                )
+    : ('%s %s',            1                )
+    ;
+
+my @attributes_quotable = qw( Name Class cigar_bam );
+my $attributes_quotable = { map { $_ => 1 } @attributes_quotable };
 
 sub _print_feature {
     my ($feature, $start, $end) = @_;
@@ -166,8 +172,8 @@ sub _print_feature {
     my $q_length = $feature->l_qseq;
 
     my @attributes = (
-        Class       => qq{"Sequence"},
-        Name        => qq{"$name"},
+        Class       => 'Sequence',
+        Name        => $name,
         Align       => join(' ', @align_fields),
         Length      => $feature->l_qseq,
         percentID   => 100,
@@ -178,11 +184,14 @@ sub _print_feature {
     $cigar =~ s/\d+S//g;    # Remove BAM "S" clipping strings from CIGAR
     if ($cigar !~ /^\d+M$/) {
         # It isn't a simple match string, so we do need CIGAR
-        push(@attributes, cigar_bam => qq{"$cigar"});
+        push(@attributes, cigar_bam => $cigar);
     }
 
     my @attribute_strings = ();
     while ( my ($key, $value) = splice(@attributes, 0, 2) ) {
+        if ($attributes_quote && $attributes_quotable->{$key}) {
+            $value = qq{"$value"};
+        }
         push @attribute_strings, sprintf $attributes_format, $key, $value;
     }
     my $attributes_string = join ";", @attribute_strings;
