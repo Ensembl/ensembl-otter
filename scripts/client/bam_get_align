@@ -140,7 +140,7 @@ sub _print_feature {
 
     my @fields =
         (
-         'similarity',
+         'read',
          (sprintf "%d", $start),
          (sprintf "%d", $end),
          (defined $score ? (sprintf "%f", $score) : '.'),
