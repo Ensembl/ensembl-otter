@@ -189,7 +189,8 @@ sub _print_feature {
 
     gff_escape_source for $source;
     gff_escape for @fields;
-    print join("\t", $chr_field, $source, @fields, $attributes_string), "\n";
+    printf "%s\n", join "\t"
+        , $chr_field, $source, @fields, $attributes_string;
 
     return;
 }
