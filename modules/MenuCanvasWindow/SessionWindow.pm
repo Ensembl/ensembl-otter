@@ -2725,13 +2725,13 @@ sub _feature_evidence_xml {
 
 sub zircon_zmap_view_load_features_xml {
     my ($self, @featuresets) = @_;
-    
+
     my $xml = Hum::XmlWriter->new;
     foreach my $fs_name (@featuresets) {
         $xml->open_tag('featureset', { name => $fs_name });
         $xml->close_tag;
     }
-    
+
     return $xml->flush;
 }
 
