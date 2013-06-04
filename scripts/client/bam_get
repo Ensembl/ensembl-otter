@@ -172,6 +172,7 @@ sub _print_feature {
         gff_escape_target for $query_name;
     }
     my $query_strand = $strands->{$query->strand};
+
     my @target_fields = ( $query->start, $query->end );
     push @target_fields, $query_strand if $query_strand;
     my $target .= join ' ', $query_name, @target_fields;
