@@ -173,6 +173,9 @@ sub _print_feature {
     }
     my $query_strand = $strands->{$query->strand};
 
+    my @align_fields = ($query->start, $query->end);
+    push @align_fields, $query_strand if $query_strand;
+
     my @target_fields = ( $query->start, $query->end );
     push @target_fields, $query_strand if $query_strand;
     my $target .= join ' ', $query_name, @target_fields;
@@ -185,6 +188,7 @@ sub _print_feature {
     my @attributes = (
         Class      => 'Sequence',
         Name       => $name,
+        Align      => join(' ', @align_fields),
         Gap        => $gap,
         Target     => $target,
         sequence   => $seq->seq,
