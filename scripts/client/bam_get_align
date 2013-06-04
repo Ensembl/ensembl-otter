@@ -185,7 +185,7 @@ sub _print_feature {
     while ( my ($key, $value) = splice(@attributes, 0, 2) ) {
         push @attribute_strings, sprintf $attributes_format, $key, $value;
     }
-    my $attributes_string = join " ; ", @attribute_strings;
+    my $attributes_string = join ";", @attribute_strings;
 
     gff_escape_source for $source;
     gff_escape for @fields;
