@@ -195,6 +195,13 @@ sub _print_feature {
         sequence   => $seq->seq,
         );
 
+    my $cigar = $feature->cigar_str;
+    $cigar =~ s/\d+S//g;    # Remove BAM "S" clipping strings from CIGAR
+    if ($cigar !~ /^\d+M$/) {
+        # It isn't a simple match string, so we do need CIGAR
+        push(@attributes, cigar_bam => $cigar);
+    }
+
     my @attribute_strings = ();
     while ( my ($key, $value) = splice(@attributes, 0, 2) ) {
         if ($attributes_quote && $attributes_quotable->{$key}) {
