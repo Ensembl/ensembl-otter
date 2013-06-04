@@ -172,12 +172,12 @@ sub _print_feature {
     my $q_length = $feature->l_qseq;
 
     my @attributes = (
-        Class       => 'Sequence',
-        Name        => $name,
-        Align       => join(' ', @align_fields),
-        Length      => $feature->l_qseq,
-        percentID   => 100,
-        sequence    => $query->dna,
+        Class      => 'Sequence',
+        Name       => $name,
+        Align      => join(' ', @align_fields),
+        Length     => $feature->l_qseq,
+        percentID  => 100,
+        sequence   => $query->dna,
         );
 
     my $cigar = $feature->cigar_str;

@@ -184,10 +184,10 @@ sub _print_feature {
     }
 
     my @attributes = (
-        Name     => $name,
-        Gap      => $gap,
-        Target   => $target,
-        sequence => $seq->seq,
+        Name       => $name,
+        Gap        => $gap,
+        Target     => $target,
+        sequence   => $seq->seq,
         );
 
     my @attribute_strings = ();
