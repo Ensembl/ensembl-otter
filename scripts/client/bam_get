@@ -159,10 +159,6 @@ sub _print_feature {
     # and count arguments in the right order for the Gap tag even
     # though $feature->cigar_str has them in the wrong order)
 
-    my $gap = join ' ', map {
-        ($_->[0] eq 'S') ? ( ) : ( join '', @{$_} );
-    } @{$feature->cigar_array};
-
     # the Target tag - escaping this requires special handling of
     # spaces in the query name
 
@@ -175,6 +171,10 @@ sub _print_feature {
 
     my @align_fields = ($query->start, $query->end);
     push @align_fields, $query_strand if $query_strand;
+
+    my $gap = join ' ', map {
+        ($_->[0] eq 'S') ? ( ) : ( join '', @{$_} );
+    } @{$feature->cigar_array};
 
     my @target_fields = ( $query->start, $query->end );
     push @target_fields, $query_strand if $query_strand;
