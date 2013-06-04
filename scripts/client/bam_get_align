@@ -169,8 +169,6 @@ sub _print_feature {
     my $query_strand = $strands->{$query->strand};
     push @align_fields, $query_strand if $query_strand;
 
-    my $q_length = $feature->l_qseq;
-
     my @attributes = (
         Class      => 'Sequence',
         Name       => $name,
