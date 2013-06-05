@@ -137,6 +137,7 @@ sub _print_feature {
 
     # See Bio::DB::Bam::Alignment for documentation of available methods on $feature
     my $name = $feature->name;
+    gff_escape_target for $name;
 
     # the -gff_feature_source flag overrides the source from the BAM file
     my $source = $gff_feature_source || $feature->source_tag;
