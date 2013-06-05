@@ -175,6 +175,11 @@ sub _print_feature {
     push @target_fields, $query_strand if $query_strand;
     my $target .= join ' ', $query_name, @target_fields;
 
+    my $seq = $query->seq;
+    if ($query->strand == -1) {
+        $seq = $seq->revcom;
+    }
+
     my @attributes = (
         Class      => 'Sequence',
         Name       => $name,
@@ -182,7 +187,7 @@ sub _print_feature {
         Length     => $feature->l_qseq,
         Gap        => $gap,
         Target     => $target,
-        sequence   => $query->dna,
+        sequence   => $seq->seq,
         );
 
     # $feature->cigar_str has the wrong format for the Gap tag
