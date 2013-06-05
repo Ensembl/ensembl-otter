@@ -169,11 +169,16 @@ sub _print_feature {
     my @align_fields = ($query->start, $query->end);
     push @align_fields, $query_strand if $query_strand;
 
+    my $gap = join ' ', map {
+        ($_->[0] eq 'S') ? ( ) : ( join '', @{$_} );
+    } @{$feature->cigar_array};
+
     my @attributes = (
         Class      => 'Sequence',
         Name       => $name,
         Align      => join(' ', @align_fields),
         Length     => $feature->l_qseq,
+        Gap        => $gap,
         sequence   => $query->dna,
         );
 
