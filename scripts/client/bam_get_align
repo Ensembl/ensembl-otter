@@ -154,15 +154,6 @@ sub _print_feature {
          $feature->phase || '.',
         );
 
-    # $feature->cigar_str has the wrong format for the Gap tag
-    # (eg. 76M instead of M76) so we have to build it from
-    # $feature->cigar_array (which, strangely, has the operator
-    # and count arguments in the right order for the Gap tag even
-    # though $feature->cigar_str has them in the wrong order)
-
-    # the Target tag - escaping this requires special handling of
-    # spaces in the query name
-
     my $query = $feature->query;
     my $query_strand = $strands->{$query->strand};
 
@@ -173,6 +164,9 @@ sub _print_feature {
         ($_->[0] eq 'S') ? ( ) : ( join '', @{$_} );
     } @{$feature->cigar_array};
 
+    # the Target tag - escaping this requires special handling of
+    # spaces in the query name
+
     my @attributes = (
         Class      => 'Sequence',
         Name       => $name,
@@ -181,6 +175,12 @@ sub _print_feature {
         Gap        => $gap,
         sequence   => $query->dna,
         );
+
+    # $feature->cigar_str has the wrong format for the Gap tag
+    # (eg. 76M instead of M76) so we have to build it from
+    # $feature->cigar_array (which, strangely, has the operator
+    # and count arguments in the right order for the Gap tag even
+    # though $feature->cigar_str has them in the wrong order)
 
     my $cigar = $feature->cigar_str;
     $cigar =~ s/\d+S//g;    # Remove BAM "S" clipping strings from CIGAR
