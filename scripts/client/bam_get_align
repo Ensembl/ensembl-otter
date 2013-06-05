@@ -167,12 +167,21 @@ sub _print_feature {
     # the Target tag - escaping this requires special handling of
     # spaces in the query name
 
+    my $query_name = $query->name;
+    if ($attributes_escape) {
+        gff_escape_target for $query_name;
+    }
+    my @target_fields = ( $query->start, $query->end );
+    push @target_fields, $query_strand if $query_strand;
+    my $target .= join ' ', $query_name, @target_fields;
+
     my @attributes = (
         Class      => 'Sequence',
         Name       => $name,
         Align      => join(' ', @align_fields),
         Length     => $feature->l_qseq,
         Gap        => $gap,
+        Target     => $target,
         sequence   => $query->dna,
         );
 
