@@ -154,10 +154,6 @@ sub _print_feature {
         );
 
     my $query = $feature->query;
-    my $query_name = $query->name;
-    if ($attributes_escape) {
-        gff_escape_target for $query_name;
-    }
     my $query_strand = $strands->{$query->strand};
 
     my @align_fields = ($query->start, $query->end);
@@ -170,6 +166,10 @@ sub _print_feature {
     # the Target tag - escaping this requires special handling of
     # spaces in the query name
 
+    my $query_name = $query->name;
+    if ($attributes_escape) {
+        gff_escape_target for $query_name;
+    }
     my @target_fields = ( $query->start, $query->end );
     push @target_fields, $query_strand if $query_strand;
     my $target .= join ' ', $query_name, @target_fields;
