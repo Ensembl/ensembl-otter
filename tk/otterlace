@@ -20,6 +20,15 @@ use Try::Tiny;
     setpgrp();
 
     Bio::Otter::Lace::Defaults::do_getopt();
+    if (@ARGV) {
+        my $name = $ENV{OTTERLACE_RAN_AS};
+        if (defined $name) {
+            $name =~ s{ -> .*}{};
+        } else {
+            $name = $0;
+        }
+        die "$name: options (@ARGV) were not understood"; # RT#334602
+    }
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
     $cl->make_log_file('otterlace');
     # After this, we are writing logfile
