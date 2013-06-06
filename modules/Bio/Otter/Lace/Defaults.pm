@@ -78,7 +78,7 @@ sub __save_deep_option {
 
 =head2 do_getopt
 
- A wrapper function around GetOptions
+A wrapper function around GetOptions
 
     We get options from:
      - files provided by list_config_files()
@@ -96,10 +96,27 @@ Suggested usage:
     -dataset => \$dataset,
     );
 
+
+Iff L<Tk> is already loaded, this function gives L<Tk::CmdLine> a
+chance to use and remove options first.  These include
+
+ -display
+ -name
+ -title
+ -synchronous
+
+This can provoke errors for incorrect options or invalid X11 displays.
+It will eat the options, preventing both their visibility to the
+application and the invocation of perldoc when they were not requested
+by the application.  L<Tk> will also stop at (and remove) a C<-->.
+
 =cut
 
 sub do_getopt {
     my (@script_args) = @_;
+
+    # Tk::CmdLine takes X11-related options, one time only
+    Tk::CmdLine->GetArguments() if $INC{'Tk.pm'};
 
     confess "do_getopt already called" if defined $DONE_GETOPT;
     $DONE_GETOPT = 0;
