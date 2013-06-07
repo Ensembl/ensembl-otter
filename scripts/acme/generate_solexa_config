@@ -4,25 +4,136 @@
 
 use strict;
 use warnings;
+use Hum::Sort qw{ ace_sort };
+use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Lace::SatelliteDB;
 
 {
+
+    my $usage = sub { exec('perldoc', $0) };
+    # This do_getopt() call is needed to parse the otter config files
+    # even if you aren't giving any arguments on the command line.
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        ) or $usage->();
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name('zebrafish');
+    
+    my $otter_dba = $ds->get_cached_DBAdaptor;
+
+    my $head = "\n[zebrafish.use_filters]\nsolexa_genes=1\n";
+    my $body = q{
+[zebrafish.filter.solexa_genes]
+server_script=get_gff_genes
+metakey=ensembl_solexagene_mar2010_db_head
+csver_remote=Zv9
+analysis=refine_all,refine_1dpf,refine_2dpf,refine_3dpf,refine_5dpf,refine_14dpf,refine_female_body,refine_female_head,refine_male_head,refine_male_body,refine_ovary
+description=RNAseq Solexa genes from ensembl (March 2010)
+process_gff_file=1
+};
+
     my %solex = qw{
-        ERS000081 1dpf
-        ERS000082 2dpf
-        ERS000083 3dpf
-        ERS000084 5dpf
-        ERS000085 14dpf
-        ERS000086 female_body
-        ERS000087 male_body
-        ERS000088 female_head
-        ERS000089 male_head
-        ERS000090 ovary
+        1dpf            ERS000081
+        2dpf            ERS000082
+        3dpf            ERS000083
+        5dpf            ERS000084
+        14dpf           ERS000085
+        female_body     ERS000086
+        male_body       ERS000087
+        female_head     ERS000088
+        male_head       ERS000089
+        ovary           ERS000090
+
+        DHAB.B1         NONE
+        28dpf           NONE
+
+        all             NONE
     };
 
-    my @templates = (
+    my $template = q{
+[zebrafish.filter.%s]
+server_script=get_gff_features
+filter_module=Bio::Vega::ServerAnalysis::SolexaIntronFilter
+analysis=%s
+metakey=solexa_raw_introns
+description=Filtered set of intron-confirming RNAseq reads (%s)
+feature_kind=DnaDnaAlignFeature
+zmap_column=solexa_introns
+zmap_style=solexa_introns
+};
+
+    my ($meta_key) = $template =~ /metakey=(\S+)/;
+    my $meta_db = Bio::Otter::Lace::SatelliteDB::get_DBAdaptor($otter_dba, $meta_key)->dbc;
+
+    my $field_count = $template =~ tr/%/%/;
+    foreach my $stage (sort {ace_sort($a, $b)} keys %solex) {
+        # Check that there is analysis to fetch!
+        my $sth = $meta_db->prepare(q{ SELECT COUNT(*) FROM analysis WHERE logic_name = ? });
+        $sth->execute($stage);
+        my ($count) = $sth->fetchrow;
+        next unless $count;
+
+        my $acc = $solex{$stage};
+        my $source = 'solexa_intron_' . $stage . ($acc eq 'NONE' ? '' : "-$acc");
+        $source =~ s/\./-/g;
+        my @args = ($source);
+        until (@args == $field_count) {
+            push(@args, $stage);
+        }
+        $body .= sprintf $template, @args;
+        $head .= "$source=1\n";
+    }
+
+    $template = q{
+[zebrafish.filter.%s]
+server_script=get_gff_features
+filter_module=Bio::Vega::ServerAnalysis::SolexaDepthBins
+analysis=%s
+metakey=solexa_raw_reads
+csver_remote=Zv9
+description=Coverage plot of RNAseq reads (%s)
+feature_kind=DnaDnaAlignFeature
+zmap_column=solexa_coverage
+zmap_style=solexa_coverage
+};
+
+    ($meta_key) = $template =~ /metakey=(\S+)/;
+    $meta_db = Bio::Otter::Lace::SatelliteDB::get_DBAdaptor($otter_dba, $meta_key)->dbc;
+
+    $field_count = $template =~ tr/%/%/;
+    foreach my $stage (sort {ace_sort($a, $b)} keys %solex) {
+        my $acc = $solex{$stage};
+        my $source = 'solexa_coverage_' . $stage . ($acc eq 'NONE' ? '' : "-$acc");
+        $source =~ s/\./-/g;
+        my $sth = $meta_db->prepare(q{ SELECT logic_name FROM analysis WHERE gff_feature LIKE ? });
+        $sth->execute("\%$stage\%");
+        my @logic_names;
+        while (my ($logic) = $sth->fetchrow) {
+            push(@logic_names, $logic);
+        }
+        next unless @logic_names;
+        my @args = ($source, join(',', sort {ace_sort($a, $b)} @logic_names));
+        until (@args == $field_count) {
+            push(@args, $stage);
+        }
+        $body .= sprintf $template, @args;
+        $head .= "$source=1\n";
+    }
+
+    print $head, $body;
+}
+
+
+__END__
+
+Could add these as separate tracks so that accessions are available, if needed:
 
 q{
-[zebrafish.filter.sg_%s-%s]
+[zebrafish.filter.sg_%s%s]
 server_script=get_gff_genes
 metakey=ensembl_solexagene_mar2010_db_head
 csver_remote=Zv9
@@ -31,57 +142,15 @@ description=RNAseq Solexa genes from ensembl (%s / March 2010)
 process_gff_file=1
 zmap_column=solexa_genes
 zmap_style=solexa_genes
-},
+};
 
 q{
-[zebrafish.filter.si_%s-%s]
-server_script=get_gff_features
-filter_module=Bio::Vega::ServerAnalysis::SolexaIntronFilter
-analysis=1dpf
-metakey=solexa_raw_introns
-description=Filtered set of intron-confirming RNAseq reads (%s)
-feature_kind=DnaDnaAlignFeature
-zmap_column=solexa_introns
-zmap_style=solexa_introns
-},
+SELECT DISTINCT a.logic_name
+FROM analysis a
+  , gene g
+WHERE a.analysis_id = g.analysis_id
+};
 
-q{
-[zebrafish.filter.sc_%s-%s]
-server_script=get_gff_features
-filter_module=Bio::Vega::ServerAnalysis::SolexaDepthBins
-analysis=37bp_%s_ga,76bp_%s_ga
-metakey=solexa_raw_reads
-csver_remote=Zv9
-description=Coverage plot of RNAseq reads (%s)
-feature_kind=DnaDnaAlignFeature
-zmap_column=solexa_coverage
-zmap_style=solexa_coverage
-},
-
-);    
-
-    my $head = "\n[zebrafish.use_filters]\n";
-    my $body = "";
-    foreach my $config (@templates) {
-        my $fields = $config =~ tr/%/%/;
-        foreach my $acc (sort keys %solex) {
-            my $stage = $solex{$acc};
-            my @args = ($stage, $acc);
-            until (@args == $fields) {
-                push(@args, $stage);
-            }
-            my $this .= sprintf $config, @args;
-            my ($filter) = $this =~ /\[zebrafish.filter.([^\}]+)\]/;
-            $head .= "$filter=1\n";
-            $body .= $this;
-        }
-    }
-    print $head, $body;
-}
-
-
-
-__END__
 
 =head1 NAME - generate_solexa_config
 
