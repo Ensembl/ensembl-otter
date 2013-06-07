@@ -326,10 +326,10 @@ sub make_start_codon_features {
     }
 
     unless ($pepgencoords[0]->isa('Bio::EnsEMBL::Mapper::Coordinate')) {
-        die("pep start maps to gap\n");
+        die("pep start maps to gap [@pepgencoords]\n");
     }
     unless ($pepgencoords[-1]->isa('Bio::EnsEMBL::Mapper::Coordinate')) {
-        die("pep start (end of) maps to gap\n");
+        die("pep start (end of) maps to gap [@pepgencoords]\n");
     }
 
     my @startc_feat;
@@ -376,10 +376,10 @@ sub make_stop_codon_features {
     }
 
     unless ($pepgencoords[0]->isa('Bio::EnsEMBL::Mapper::Coordinate')) {
-        die("pep end maps to gap\n");
+        die("pep end maps to gap [@pepgencoords]\n");
     }
     unless ($pepgencoords[-1]->isa('Bio::EnsEMBL::Mapper::Coordinate')) {
-        die("pep end (end of) maps to gap\n");
+        die("pep end (end of) maps to gap [@pepgencoords]\n");
     }
 
     my @stopc_feat;
