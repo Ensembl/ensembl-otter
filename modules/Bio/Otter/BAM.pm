@@ -91,7 +91,7 @@ sub url {
 }
 
 sub script_name {
-    return "bam_get_align";
+    return "bam_get";
 }
 
 # GFF methods 
