@@ -127,7 +127,8 @@ sub write_transcript_gtf {
             push(@nfs, $nf);
         }
     }
-    my $notes .= join(', ', @nfs) if @nfs;
+    my $notes;
+    $notes = join(', ', @nfs) if @nfs;
 
     if ($notes) {
         print $trans_line . ";Note=\"" . $notes . "\"\n";
