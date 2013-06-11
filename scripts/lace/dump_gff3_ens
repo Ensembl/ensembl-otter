@@ -3,6 +3,8 @@
 ### dump_gff3_ens
 
 use strict;
+use warnings;
+
 use Getopt::Long 'GetOptions';
 use URI::Escape;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
