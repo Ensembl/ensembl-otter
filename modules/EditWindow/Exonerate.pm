@@ -25,7 +25,7 @@ use base 'EditWindow';
 my $BEST_N            = 1;
 my $MAX_INTRON_LENGTH = 200000;
 my $MAX_QUERY_LENGTH  = 10000;
-my $MASK_TARGET       = 'soft';
+my $MASK_TARGET       = 'none';
 
 my $INITIAL_DIR = (getpwuid($<))[7];
 
