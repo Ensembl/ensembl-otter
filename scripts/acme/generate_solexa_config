@@ -25,23 +25,21 @@ use Bio::Otter::Lace::SatelliteDB;
     
     my $otter_dba = $ds->get_cached_DBAdaptor;
 
-    my $head = "\n[zebrafish.use_filters]\nsolexa_genes=1\n";
-    my $body = q{
-[zebrafish.filter.solexa_genes]
-server_script=get_gff_genes
-metakey=ensembl_solexagene_mar2010_db_head
-csver_remote=Zv9
-analysis=refine_all,refine_1dpf,refine_2dpf,refine_3dpf,refine_5dpf,refine_14dpf,refine_female_body,refine_female_head,refine_male_head,refine_male_body,refine_ovary
-description=RNAseq Solexa genes from ensembl (March 2010)
-process_gff_file=1
-};
+    my $head = "\n[zebrafish.use_filters]\n";
+    my $body = '';
 
     my %solex = qw{
+        6hpf            NONE
+        2cells          NONE
+
         1dpf            ERS000081
         2dpf            ERS000082
         3dpf            ERS000083
         5dpf            ERS000084
         14dpf           ERS000085
+        
+        28dpf           NONE
+        
         female_body     ERS000086
         male_body       ERS000087
         female_head     ERS000088
@@ -49,12 +47,53 @@ process_gff_file=1
         ovary           ERS000090
 
         DHAB.B1         NONE
-        28dpf           NONE
-
         all             NONE
     };
 
-    my $template = q{
+    {
+        my $template = q{
+[zebrafish.filter.%s]
+server_script=get_gff_genes
+metakey=ensembl_solexagene_mar2010_db_head
+csver_remote=Zv9
+analysis=%s
+description=RNAseq Solexa genes from ensembl (%s / March 2010)
+process_gff_file=1
+zmap_column=solexa_genes
+zmap_style=solexa_genes
+};
+
+        my ($meta_key) = $template =~ /metakey=(\S+)/;
+        my $meta_db = Bio::Otter::Lace::SatelliteDB::get_DBAdaptor($otter_dba, $meta_key)->dbc;
+
+        my $field_count = $template =~ tr/%/%/;
+        foreach my $stage (sort {ace_sort($a, $b)} keys %solex) {
+            my $acc = $solex{$stage};
+            my $source = 'solexa_genes_' . $stage . ($acc eq 'NONE' ? '' : "-$acc");
+            $source =~ s/\./-/g;
+            my $sth = $meta_db->prepare(q{
+                SELECT count(*)
+                FROM analysis a
+                  , gene g
+                WHERE a.analysis_id = g.analysis_id
+                  AND g.is_current = 1
+                  AND a.logic_name = ?
+            });
+            my $logic_name = "refine_$stage";
+            $sth->execute($logic_name);
+            my ($count) = $sth->fetchrow;
+            next unless $count;
+            my @args = ($source, $logic_name);
+            until (@args == $field_count) {
+                push(@args, $stage);
+            }
+            $body .= sprintf $template, @args;
+            $head .= "$source=1\n";
+        }
+    }
+
+    {
+        my $template = q{
 [zebrafish.filter.%s]
 server_script=get_gff_features
 filter_module=Bio::Vega::ServerAnalysis::SolexaIntronFilter
@@ -66,29 +105,32 @@ zmap_column=solexa_introns
 zmap_style=solexa_introns
 };
 
-    my ($meta_key) = $template =~ /metakey=(\S+)/;
-    my $meta_db = Bio::Otter::Lace::SatelliteDB::get_DBAdaptor($otter_dba, $meta_key)->dbc;
+        my ($meta_key) = $template =~ /metakey=(\S+)/;
+        my $meta_db = Bio::Otter::Lace::SatelliteDB::get_DBAdaptor($otter_dba, $meta_key)->dbc;
 
-    my $field_count = $template =~ tr/%/%/;
-    foreach my $stage (sort {ace_sort($a, $b)} keys %solex) {
-        # Check that there is analysis to fetch!
-        my $sth = $meta_db->prepare(q{ SELECT COUNT(*) FROM analysis WHERE logic_name = ? });
-        $sth->execute($stage);
-        my ($count) = $sth->fetchrow;
-        next unless $count;
+        my $field_count = $template =~ tr/%/%/;
+        foreach my $stage (sort {ace_sort($a, $b)} keys %solex) {
+            # Check that there is analysis to fetch!
+            my $sth = $meta_db->prepare(q{ SELECT COUNT(*) FROM analysis WHERE logic_name = ? });
+            $sth->execute($stage);
+            my ($count) = $sth->fetchrow;
+            next unless $count;
 
-        my $acc = $solex{$stage};
-        my $source = 'solexa_intron_' . $stage . ($acc eq 'NONE' ? '' : "-$acc");
-        $source =~ s/\./-/g;
-        my @args = ($source);
-        until (@args == $field_count) {
-            push(@args, $stage);
+            my $acc = $solex{$stage};
+            my $source = 'solexa_introns_' . $stage . ($acc eq 'NONE' ? '' : "-$acc");
+            $source =~ s/\./-/g;
+            my @args = ($source);
+            until (@args == $field_count) {
+                push(@args, $stage);
+            }
+            $body .= sprintf $template, @args;
+            $head .= "$source=1\n";
         }
-        $body .= sprintf $template, @args;
-        $head .= "$source=1\n";
+        
     }
 
-    $template = q{
+    {
+        my $template = q{
 [zebrafish.filter.%s]
 server_script=get_gff_features
 filter_module=Bio::Vega::ServerAnalysis::SolexaDepthBins
@@ -101,27 +143,28 @@ zmap_column=solexa_coverage
 zmap_style=solexa_coverage
 };
 
-    ($meta_key) = $template =~ /metakey=(\S+)/;
-    $meta_db = Bio::Otter::Lace::SatelliteDB::get_DBAdaptor($otter_dba, $meta_key)->dbc;
+        my ($meta_key) = $template =~ /metakey=(\S+)/;
+        my $meta_db = Bio::Otter::Lace::SatelliteDB::get_DBAdaptor($otter_dba, $meta_key)->dbc;
 
-    $field_count = $template =~ tr/%/%/;
-    foreach my $stage (sort {ace_sort($a, $b)} keys %solex) {
-        my $acc = $solex{$stage};
-        my $source = 'solexa_coverage_' . $stage . ($acc eq 'NONE' ? '' : "-$acc");
-        $source =~ s/\./-/g;
-        my $sth = $meta_db->prepare(q{ SELECT logic_name FROM analysis WHERE gff_feature LIKE ? });
-        $sth->execute("\%$stage\%");
-        my @logic_names;
-        while (my ($logic) = $sth->fetchrow) {
-            push(@logic_names, $logic);
+        my $field_count = $template =~ tr/%/%/;
+        foreach my $stage (sort {ace_sort($a, $b)} keys %solex) {
+            my $acc = $solex{$stage};
+            my $source = 'solexa_coverage_' . $stage . ($acc eq 'NONE' ? '' : "-$acc");
+            $source =~ s/\./-/g;
+            my $sth = $meta_db->prepare(q{ SELECT logic_name FROM analysis WHERE gff_feature LIKE ? });
+            $sth->execute("\%$stage\%");
+            my @logic_names;
+            while (my ($logic) = $sth->fetchrow) {
+                push(@logic_names, $logic);
+            }
+            next unless @logic_names;
+            my @args = ($source, join(',', sort {ace_sort($a, $b)} @logic_names));
+            until (@args == $field_count) {
+                push(@args, $stage);
+            }
+            $body .= sprintf $template, @args;
+            $head .= "$source=1\n";
         }
-        next unless @logic_names;
-        my @args = ($source, join(',', sort {ace_sort($a, $b)} @logic_names));
-        until (@args == $field_count) {
-            push(@args, $stage);
-        }
-        $body .= sprintf $template, @args;
-        $head .= "$source=1\n";
     }
 
     print $head, $body;
@@ -129,28 +172,6 @@ zmap_style=solexa_coverage
 
 
 __END__
-
-Could add these as separate tracks so that accessions are available, if needed:
-
-q{
-[zebrafish.filter.sg_%s%s]
-server_script=get_gff_genes
-metakey=ensembl_solexagene_mar2010_db_head
-csver_remote=Zv9
-analysis=refine_%s
-description=RNAseq Solexa genes from ensembl (%s / March 2010)
-process_gff_file=1
-zmap_column=solexa_genes
-zmap_style=solexa_genes
-};
-
-q{
-SELECT DISTINCT a.logic_name
-FROM analysis a
-  , gene g
-WHERE a.analysis_id = g.analysis_id
-};
-
 
 =head1 NAME - generate_solexa_config
 
