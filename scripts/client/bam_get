@@ -129,7 +129,7 @@ my    ($attributes_format, $attributes_quote, $attributes_escape) = ($gff_versio
     : ('%s %s',            1,                 0                 )
     ;
 
-my @attributes_quotable = qw( Name Class cigar_bam );
+my @attributes_quotable = qw( Name Class Target cigar_bam );
 my $attributes_quotable = { map { $_ => 1 } @attributes_quotable };
 
 sub _print_feature {
