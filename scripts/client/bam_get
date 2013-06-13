@@ -124,13 +124,20 @@ my $strands = {
     -1 => '-',
 };
 
-my $attributes_format = $gff_version == 3 ? '%s=%s' : '%s "%s"';
+my    ($attributes_format, $attributes_quote, $attributes_escape) = ($gff_version == 3)
+    ? ('%s=%s',            0,                 1                 )
+    : ('%s %s',            1,                 0                 )
+    ;
+
+my @attributes_quotable = qw( Name Class Target cigar_bam );
+my $attributes_quotable = { map { $_ => 1 } @attributes_quotable };
 
 sub _print_feature {
     my ($feature, $start, $end) = @_;
 
     # See Bio::DB::Bam::Alignment for documentation of available methods on $feature
     my $name = $feature->name;
+    gff_escape_target for $name;
 
     # the -gff_feature_source flag overrides the source from the BAM file
     my $source = $gff_feature_source || $feature->source_tag;
@@ -147,25 +154,23 @@ sub _print_feature {
          $feature->phase || '.',
         );
 
-    # $feature->cigar_str has the wrong format for the Gap tag
-    # (eg. 76M instead of M76) so we have to build it from
-    # $feature->cigar_array (which, strangely, has the operator
-    # and count arguments in the right order for the Gap tag even
-    # though $feature->cigar_str has them in the wrong order)
+    my $query = $feature->query;
+    my $query_strand = $strands->{$query->strand};
+
+    my @align_fields = ($query->start, $query->end);
+    push @align_fields, $query_strand if $query_strand;
 
     my $gap = join ' ', map {
         ($_->[0] eq 'S') ? ( ) : ( join '', @{$_} );
     } @{$feature->cigar_array};
 
-    # $feature->l_qseq;
-
     # the Target tag - escaping this requires special handling of
     # spaces in the query name
 
-    my $query = $feature->query;
     my $query_name = $query->name;
-    gff_escape_target for $query_name;
-    my $query_strand = $strands->{$query->strand};
+    if ($attributes_escape) {
+        gff_escape_target for $query_name;
+    }
     my @target_fields = ( $query->start, $query->end );
     push @target_fields, $query_strand if $query_strand;
     my $target .= join ' ', $query_name, @target_fields;
@@ -176,18 +181,39 @@ sub _print_feature {
     }
 
     my @attributes = (
-        Name     => $name,
-        Gap      => $gap,
-        Target   => $target,
-        sequence => $seq->seq,
+        Class      => 'Sequence',
+        Name       => $name,
+        Align      => join(' ', @align_fields),
+        Length     => $feature->l_qseq,
+        Gap        => $gap,
+        Target     => $target,
+        sequence   => $seq->seq,
         );
+
+    # $feature->cigar_str has the wrong format for the Gap tag
+    # (eg. 76M instead of M76) so we have to build it from
+    # $feature->cigar_array (which, strangely, has the operator
+    # and count arguments in the right order for the Gap tag even
+    # though $feature->cigar_str has them in the wrong order)
+
+    my $cigar = $feature->cigar_str;
+    $cigar =~ s/\d+S//g;    # Remove BAM "S" clipping strings from CIGAR
+    if ($cigar !~ /^\d+M$/) {
+        # It isn't a simple match string, so we do need CIGAR
+        push(@attributes, cigar_bam => $cigar);
+    }
 
     my @attribute_strings = ();
     while ( my ($key, $value) = splice(@attributes, 0, 2) ) {
-        unless ($key eq 'Target') { # the Target tag is already escaped
-            gff_escape_attribute for $value;
+        if ($attributes_quote && $attributes_quotable->{$key}) {
+            $value = qq{"$value"};
         }
-        gff_escape_attribute for $key;
+        if ($attributes_escape) {
+            unless ($key eq 'Target') { # the Target tag is already escaped
+                gff_escape_attribute for $value;
+            }
+            gff_escape_attribute for $key;
+        }
         push @attribute_strings, sprintf $attributes_format, $key, $value;
     }
     my $attributes_string = join ";", @attribute_strings;
