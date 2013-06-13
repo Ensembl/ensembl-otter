@@ -29,8 +29,8 @@ use Bio::Otter::Lace::SatelliteDB;
     my $body = '';
 
     my %solex = qw{
-        6hpf            NONE
-        2cells          NONE
+        6hpf            ERS017423
+        2cells          ERS017427
 
         1dpf            ERS000081
         2dpf            ERS000082
