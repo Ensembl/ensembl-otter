@@ -174,7 +174,6 @@ sub _print_feature {
         Name       => $name,
         Align      => join(' ', @align_fields),
         Length     => $feature->l_qseq,
-        percentID  => 100,
         sequence   => $query->dna,
         );
 
