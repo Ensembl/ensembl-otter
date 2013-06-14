@@ -28,6 +28,11 @@ sub store_gene {
   my $V_gene = shift;
   my $E_transcripts = shift;
   my $protein_features = shift;
+  my $failed_transcripts = shift;
+  my $biotype = $V_gene->biotype;
+
+#  warn Data::Dumper::Dumper($failed_transcripts);
+#  warn "Vega biotype is $biotype";
 
   # skip gene if it has no transcripts left after mapping
   unless (@{ $E_transcripts }) {
@@ -44,10 +49,10 @@ sub store_gene {
   my $E_gene = Bio::EnsEMBL::Gene->new;
   $E_gene->stable_id($V_gene->stable_id);
   $E_gene->slice($E_slice);
+  $E_gene->biotype($biotype); #need to set this now even though we might chage it later (defaults to 'protein_coding' if we don't)
   $E_gene->version($V_gene->version);
   $E_gene->created_date($V_gene->created_date);
   $E_gene->modified_date($V_gene->modified_date);
-  $E_gene->biotype($V_gene->biotype);
   $E_gene->status($V_gene->status);
   $E_gene->description($V_gene->description);
   $E_gene->source($V_gene->source);
@@ -100,6 +105,8 @@ sub store_gene {
       }
       else {
         $support->log_warning('Not storing transcript '.$E_trans->stable_id." since gene $gstable_id has transcripts on multiple strands and this is not on the chosen one\n", 3);
+        $failed_transcripts->{$E_trans->stable_id}{'biotype'} = $E_trans->biotype;
+        push @{$failed_transcripts->{$E_trans->stable_id}{'details'}}, {'reason' => 'gene-transcript strand mismatch'};
       }
     }
   }
@@ -109,6 +116,12 @@ sub store_gene {
     foreach my $E_trans (@{ $E_transcripts }) {
       $E_gene->add_Transcript($E_trans);
     }
+  }
+
+  #change biotype if we know that we should
+  if ($failed_transcripts) {
+    $biotype = check_biotype($support,$E_gene,$failed_transcripts);
+    $E_gene->biotype($biotype);
   }
 
   foreach my $gx (@{$V_gene->get_all_DBEntries}) {
@@ -129,6 +142,7 @@ sub store_gene {
   my $name = $E_gene->stable_id;
   $name .= '/'.$E_gene->display_xref->display_id if($E_gene->display_xref);
   $support->log_verbose("Storing gene $name\n", 3);
+
   eval {
     $E_ga->store($E_gene);
 
@@ -149,6 +163,42 @@ sub store_gene {
   return;
 }
 
+sub check_biotype {
+  my $support = shift;
+  my $E_gene = shift;
+  my $failed_transcripts = shift;
+
+  #we're only dealing with protein_coding transcripts
+  if ($E_gene->biotype ne 'protein_coding') {
+    return $E_gene->biotype;
+  }
+
+  #don't do anything with genes that have the NoTransRefError attribute since they are protein_coding no matter what
+  if (@{$E_gene->get_all_Attributes('NoTransRefError') || []}) {
+    $support->log("Leaving gene ".$E_gene->stable_id." as ".$E_gene->biotype." since it has a NoTransRefError attribute\n",3);
+    return $E_gene->biotype;
+  }
+
+  my $transcripts_left = $E_gene->get_all_Transcripts;
+
+  #no problem if we have a protein_coding transcript
+  if (grep {$_->biotype =~ /protein_coding|nonsense_mediated_decay/} @$transcripts_left) {
+    $support->log("Leaving gene ".$E_gene->stable_id." as ".$E_gene->biotype." since it has protein coding or nmd transcripts\n",3);
+    return $E_gene->biotype;
+  }
+
+  #patch to processed_transcript if we've lost a protein_coding coding transcript. Note that processed_transcript might not be the right thing to use, should be checking the list from Havana
+  if (grep {$_->{'biotype'} eq 'protein_coding'} values %$failed_transcripts) {
+    my %existing_biotypes = map { $_->biotype => 1; } @$transcripts_left;
+    my $other_biotypes = join ',',keys(%existing_biotypes);
+    $support->log_warning("Patching protein coding gene ".$E_gene->stable_id." to processed_transcript but this might not be right - transcript biotypes left at this locus are: $other_biotypes\n",3);
+    return 'processed_transcript';
+  }
+  else {
+    $support->log_warning("Leaving gene ".$E_gene->stable_id." as ".$E_gene->biotype." even though it hasn't lost any protein_coding transcripts - this sounds wrong\n",3);
+    return $E_gene->biotype;
+  }
+}
 
 sub transfer_xrefs {
   my $support =  shift;
