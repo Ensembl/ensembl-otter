@@ -2,6 +2,7 @@ package Bio::Otter::Utils::Script;
 
 use strict;
 use warnings;
+use 5.010;
 
 use Carp;
 
@@ -113,6 +114,8 @@ sub validate_args {
     }
     $self->_datasets(@datasets);
 
+    $self->verbose($opt->{verbose});
+
     $self->ottscript_validate_args($opt, $args);
     return;
 }
@@ -200,6 +203,13 @@ sub execute {
             next;
         }
         my $ds_obj = Bio::Otter::Utils::Script::DataSet->new(otter_sd_ds => $ds, script => $self);
+
+        if ($self->verbose) {
+            say '-' x 72;
+            say "$ds_name";
+            say '=' x length($ds_name);
+        }
+
         $self->process_dataset($ds_obj);
     }
 
@@ -287,6 +297,7 @@ sub _standard_opt_spec {
     return (
         @dataset,
         [],
+        [ "verbose|v",    "verbose output" ],
         [ "help|usage|h", "show usage" ],
         );
 }
@@ -305,6 +316,17 @@ sub setup_data {
     ($self->{'setup_data'}) = @args if @args;
     my $setup_data = $self->{'setup_data'};
     return $setup_data;
+}
+
+=head2 verbose
+
+=cut
+
+sub verbose {
+    my ($self, @args) = @_;
+    ($self->{'verbose'}) = @args if @args;
+    my $verbose = $self->{'verbose'};
+    return $verbose;
 }
 
 =head1 AUTHOR

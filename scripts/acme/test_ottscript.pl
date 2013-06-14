@@ -29,14 +29,13 @@ sub ottscript_options {
 sub process_dataset {
   my ($self, $dataset) = @_;
   my $ds_name = $dataset->name;
-  say "Dataset is '$ds_name'";
   $dataset->iterate_transcripts(
       sub {
           my ($self, $ts) = @_;
           my $ts_name   = $ts->name;
           my $sr_name   = $ts->seq_region_name;
           my $sr_hidden = $ts->seq_region_hidden;
-          say "\tTranscript is '$ts_name' on '$sr_name' ($sr_hidden)";
+          say "\t'$ds_name': '$ts_name' on '$sr_name' ($sr_hidden)";
           return;
       }
       );

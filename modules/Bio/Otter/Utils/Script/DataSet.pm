@@ -1,5 +1,6 @@
 package Bio::Otter::Utils::Script::DataSet;
 
+use 5.010;
 use namespace::autoclean;
 
 use Bio::Otter::Utils::Script::Transcript;
@@ -17,7 +18,7 @@ has 'script' => (
     is       => 'ro',
     isa      => 'Bio::Otter::Utils::Script',
     weak_ref => 1,
-    handles  => [ qw( setup_data ) ],
+    handles  => [ qw( setup_data verbose ) ],
     );
 
 has '_transcript_sth' => (
@@ -34,6 +35,11 @@ sub iterate_transcripts {
 
     while (my $cols = $sth->fetchrow_hashref) {
         my $ts = Bio::Otter::Utils::Script::Transcript->new(%$cols, dataset => $self);
+        if ($self->verbose) {
+            my $stable_id = $ts->stable_id;
+            my $name      = $ts->name;
+            say "  $stable_id ($name)";
+        }
         $self->script->$ts_method($ts);
     }
     return;
