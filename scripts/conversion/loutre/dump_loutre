@@ -23,12 +23,21 @@ Options:
     --add_genes=LIST                    comma seperated list of stable IDs to transfer
     --skip_genes=LIST                   comma separated list of stable IDs to skip
     --live_update                       transfer only genes that are newer than what's in current Vega
+    --dump_in_progress                  transfer genes that have the 'in progress' remark (use with care)
 
     --loutredbname=NAME                 use loutre database NAME
     --loutrehost=HOST                   use loutre database host HOST
     --loutreport=PORT                   use loutre database port PORT
     --loutreuser=USER                   use loutre database username USER
     --loutrepass=PASS                   use loutre database password PASS
+
+    --ignore_annotrack                  Don't check against Annotrack for QC errors
+
+    --annotrackhost=s                   Annotrack DB host
+    --annotrackport=s                   Annotrack DB port
+    --annotrackuser=s                   Annotrack DB user
+    --annotrackpass=s                   Annotrack DB pass
+    --annotrackdbname=s                 Annotrack DB name
 
     --dbname=NAME                       use Vega database NAME
     --host=HOST                         use Vega database host HOST
@@ -54,6 +63,11 @@ Options:
 This script uses the API to transfer genes and other features (simple features, misc features
 and seq_region attributes) from Loutre.  MYSQLdump is also used to transfer a limited set of
 tables and data from the loutre database.
+
+The script checks against Annotrack, ignoring any genes / transcripts with outstanding QC issues. This
+behaviour can be bypassed using the 'ignore_annotrack' option, but this should only be used where it has to be, ie
+where there is no Annotrack DB to query. Similarly, genes with 'in progress' remarks are also skipped by default
+but this can be bypassed using the 'dump_in_progress' option.
 
 The 'chr' options specify a comma separated list of chromosomes to use. In the abscence
 of either of these the script examines the loutre database to see which chromosomes
@@ -160,6 +174,7 @@ $support->parse_extra_options(
   'add_genes=s',
   'skip_genes=s',
   'live_update',
+  'dump_in_progress'
 );
 $support->allowed_params(
   'currentdbname',
@@ -178,6 +193,7 @@ $support->allowed_params(
   'add_genes',
   'skip_genes',
   'live_update',
+  'dump_in_progress',
   $support->get_loutre_params,
   $support->get_common_params,
   $support->get_annotrack_params,
@@ -664,8 +680,13 @@ foreach my $name (@{$chr_names_wanted}) {
       }
       #skip annotation in progress genes
       if ( grep { $_->value eq 'annotation in progress' } @{$lgene->get_all_Attributes('remark')} ) {
-        $support->log("Skipping gene $gname ($lgsi) because of an 'annotation in progress' remark (".$lgene->gene_author->name.")\n",1);
-        next GENE;
+        if ($support->param('dump_in_progress')) {
+          $support->log_warning("Dumping gene $gname ($lgsi) even though it's has an 'annotation in progress' remark (".$lgene->gene_author->name.")\n",1);
+        }
+        else {
+          $support->log("Skipping gene $gname ($lgsi) because of an 'annotation in progress' remark (".$lgene->gene_author->name.")\n",1);
+          next GENE;
+        }
       }
       #ignore genes by particular authors
       if ($support->param('ignore_authors')) {
