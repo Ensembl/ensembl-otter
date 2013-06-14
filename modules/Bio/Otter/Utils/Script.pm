@@ -5,6 +5,7 @@ use warnings;
 
 use Carp;
 
+use Bio::Otter::Utils::Script::DataSet;
 use Bio::Otter::Server::Config;
 
 use parent 'App::Cmd::Simple';
@@ -39,7 +40,7 @@ In F<list_foobars.pl>:
   }
 
   sub process_dataset {
-    my ($self, $dataset, $cb_data) = @_;
+    my ($self, $dataset) = @_;
     # Do useful stuff to $dataset
   }
 
@@ -131,7 +132,7 @@ script.
 
 =item only_one
 
-A single dataset.
+A single dataset. (DEFAULT)
 
 =item one_or_all
 
@@ -183,7 +184,7 @@ sub execute {
         croak("execute() should be implemented by $class when dataset_mode is 'none'");
     }
 
-    my $cb_data = $self->setup($opt, $args);
+    $self->setup_data($self->setup($opt, $args));
 
     my $species_dat = Bio::Otter::Server::Config->SpeciesDat;
 
@@ -198,7 +199,8 @@ sub execute {
             $self->_dataset_error("Cannot find dataset '$ds_name'");
             next;
         }
-        $self->process_dataset($ds, $cb_data);
+        my $ds_obj = Bio::Otter::Utils::Script::DataSet->new(otter_sd_ds => $ds, script => $self);
+        $self->process_dataset($ds_obj);
     }
 
     return;
@@ -226,22 +228,25 @@ sub _dataset_error {
 
 =head2 process_dataset
 
-  $cmd->process_dataset($dataset, $cb_data);
+  $cmd->process_dataset($dataset);
 
-Must be provided unless C<dataset_mode> option is 'none'. Called with
-the dataset object for each dataset in turn. If C<setup> returns a value,
-this will be passed to each invocation of <process_dataset> as the second
-argument.
+Must be provided unless C<dataset_mode> option is 'none'. 
 
-For most scripts this will be the primary action method.
+Called with a dataset object for each dataset in turn.  The dataset
+object is an enhanced L<Bio::Otter::SpeciesDat::DataSet>, which
+provides useful iterators. Script methods are available via
+C<$dataset->script>.
+
+For most scripts C<process_dataset> will be the primary action method.
 
 =head2 setup
 
-  $cb_data = $cmd->setup($opt, $args);
+  $setup_data = $cmd->setup($opt, $args);
 
 May be overridden to perform one-off setup for the script, before
-processing datasets. If a value is returned, this will be passed
-as callback data to each invocation of C<process_dataset>.
+processing datasets. If a value is returned, it will be stored and
+made available via C<setup_data> (which can be accessed within each
+invocation of C<process_dataset> via C<$dataset->script->setup_data>).
 
 =cut
 
@@ -286,6 +291,21 @@ sub _standard_opt_spec {
         );
 }
 
+=head1 OTHER METHODS
+
+=head2 setup_data
+
+Returns the data provided by the C<setup> method, if anything was
+returned.
+
+=cut
+
+sub setup_data {
+    my ($self, @args) = @_;
+    ($self->{'setup_data'}) = @args if @args;
+    my $setup_data = $self->{'setup_data'};
+    return $setup_data;
+}
 
 =head1 AUTHOR
 
