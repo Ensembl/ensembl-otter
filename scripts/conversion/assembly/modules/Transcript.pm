@@ -34,11 +34,12 @@ sub check_iexons {
   my $itranscript = shift;
   my $gsi = shift;
   my $itranscript_array = shift;
-  
-  my $prev_start = undef;
-  my $prev_end = undef;
+
+  my $prev_start            = undef;
+  my $prev_end              = undef;
   my $transcript_seq_region = undef;
   my $transcript_strand     = undef;
+  my $failed_transcript     = {};
 
   my $tsi = $itranscript->stable_id;
 
@@ -49,9 +50,11 @@ sub check_iexons {
 
  EXON:
   foreach my $iexon (@{ $itranscript->get_all_Exons }) {
-
     if ($iexon->fail || $iexon->is_fatal) {
       $support->log("Exon ".$iexon->stable_id." failed to transfer. Skipping transcript $tsi.\n", 3);
+      $failed_transcript = {
+        'reason'  => 'exon failure',
+        'exon_id' => $iexon->stable_id};
       $fail_flag = 1;
       last EXON;
     }
@@ -71,8 +74,8 @@ sub check_iexons {
     # sanity check: cdna length must equal length
     if($iexon->length != $iexon->cdna_end - $iexon->cdna_start + 1) {
       $support->log_warning("Unexpected: exon cdna length != exon length: ".
-			      $iexon->stable_id.": ".$iexon->start.'-'.$iexon->end .
-				$iexon->cdna_start.'-'.$iexon->cdna_end."\n", 6);
+			     $iexon->stable_id.": ".$iexon->start.'-'.$iexon->end .
+			     $iexon->cdna_start.'-'.$iexon->cdna_end."\n", 6);
     }
 
     if (!defined($transcript_seq_region)) {
@@ -85,6 +88,9 @@ sub check_iexons {
 	    (defined($prev_start) && $iexon->strand == -1 &&
 	       $prev_start < $iexon->end)) {
       $support->log("Exon ".$iexon->stable_id." in wrong order. Skipping transcript $tsi.\n", 3);
+      $failed_transcript = {
+        'reason'  => 'exon order',
+        'exon_id' => $iexon->stable_id};
       $fail_flag = 1;
       last EXON;
     }
@@ -93,6 +99,9 @@ sub check_iexons {
       $transcript_strand = $iexon->strand;
     } elsif ($transcript_strand != $iexon->strand) {
       $support->log("Exon ".$iexon->stable_id." on wrong strand. Skipping transcript $tsi.\n", 3);
+      $failed_transcript = {
+        'reason'  => 'exon strand',
+        'exon_id' => $iexon->stable_id};
       $fail_flag = 1;
       last EXON;
     }
@@ -114,6 +123,8 @@ sub check_iexons {
       }
       elsif ($long_genes_seen_as_bad{$gsi}) {
 	$support->log("Long intron in transcript known to be bad\n",5);
+        $failed_transcript = {
+          'reason'    => 'known bad long intron'};
         $fail_flag = 1;
 	last EXON;
       }
@@ -140,7 +151,7 @@ sub check_iexons {
         $support->log_verbose("no exons left in transcript\n", 4);
       }
     }
-  return $itranscript_array;
+  return $itranscript_array,$failed_transcript;
 }
 
 
