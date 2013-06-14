@@ -234,7 +234,7 @@ sub generate_blixem_bam_config {
     my ($self, $config) = @_;
 
     my $ds_name = $self->name;
-    my $common_args = '-gff_feature_source=%S -chr=%r -start=%s -end=%e -file=%f';
+    my $common_args = '--gff_feature_source=%S --chr=%r --start=%s --end=%e --file=%f';
     foreach my $bam (@{$self->bam_list}) {
         # Add a bam fetch method to the config if we don't have one.
         my $csver  = $bam->csver;
@@ -242,7 +242,7 @@ sub generate_blixem_bam_config {
         $config->{$fetch_name} ||= {
             'fetch-mode'    => 'command',
             'command'       => 'bam_get',
-            'args'          => "-dataset=$ds_name -csver=$csver $common_args",
+            'args'          => "--dataset=$ds_name --csver=$csver $common_args",
             'output'        => 'gff',
         };
 
