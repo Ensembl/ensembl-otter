@@ -279,7 +279,7 @@ my @chrs = $support->sort_chromosomes($V_chrlength);
 CHROM:
 foreach my $V_chr (@chrs) {
 
-#  next unless ($V_chr =~ /HS|HG/);
+#  next unless ($V_chr == 1);
 
   $support->log_stamped("Chromosome $V_chr...\n");
 
@@ -347,7 +347,7 @@ foreach my $V_chr (@chrs) {
         $support->log("Accessions match: $v_patch_name and ".$e_patch_names[0]."\n",1);
       }
     }
-  } 
+  }
 
   my ($genes) = $support->get_unique_genes($V_slice,$V_dba);
   $support->log("Looping over ".scalar(@$genes)." genes...\n", 1);
@@ -358,7 +358,7 @@ foreach my $V_chr (@chrs) {
 
     #uncomment line here to debug overlapping supporting evidence (-verbose -chr HG185_PATCH)
 #    next unless ($gsi =~ /OTTHUMG00000174590|OTTHUMG00000174616|OTTHUMG00000174807/);
-#    next unless $gsi eq 'OTTDARG00000034786';
+#    next unless $gsi eq 'OTTHUMG00000183896';
 
     my $ln = $gene->analysis->logic_name;
     my $name = $gene->display_xref->display_id;
@@ -368,8 +368,8 @@ foreach my $V_chr (@chrs) {
 	next GENE;
       }
     }
-    if ($gene->biotype eq 'TEC') {
-	$support->log("Gene: ".$gene->stable_id." skipping because it's a 'TEC'\n", 3);
+    if ($gene->biotype =~ /artifact|TEC/) {
+	$support->log("Gene: ".$gene->stable_id." skipping because of its biotype (".$gene->biotype . ")\n", 2);
 	next GENE;
       }
     $support->log("Gene $gsi/$name (logic_name $ln)\n", 1);
@@ -382,22 +382,29 @@ foreach my $V_chr (@chrs) {
 
     #All other genes
     my $transcripts = $gene->get_all_Transcripts;
-    my (@finished, %all_protein_features);
+    my (@finished, %all_protein_features, $failed_transcripts);
     my $c = 0;
   TRANS:
     foreach my $transcript (@{ $transcripts }) {
-      if ($transcript->biotype eq 'artifact') {
-	$support->log("Transcript: ".$transcript->stable_id." skipping because it's an 'artifact'\n", 3);
-	next TRANS;
+      my $tsi = $transcript->stable_id;
+      if ($transcript->biotype =~ /artifact|TEC/) {
+        $support->log("Transcript: $tsi skipping because of its biotype (" . $transcript->biotype. ")\n", 2);
+        $failed_transcripts->{$tsi}{'biotype'} = $transcript->biotype;
+        push @{$failed_transcripts->{$tsi}{'details'}}, {'reason' => 'disallowed biotype'};
+        next TRANS;
       }
-      if ($transcript->biotype eq 'TEC') {
-	$support->log("Transcript: ".$transcript->stable_id." skipping because it's a 'TEC'\n", 3);
-	next TRANS;
+
+      my ($interim_transcript,$failed_transcript) = transfer_transcript($transcript, $mapper, $V_cs, $V_pfa, $E_slice);
+      if (%$failed_transcript) {
+        $failed_transcripts->{$tsi}{'biotype'} = $transcript->biotype;
+        push @{$failed_transcripts->{$tsi}{'details'}}, $failed_transcript;
       }
       $c++;
-
-      my $interim_transcript = transfer_transcript($transcript, $mapper, $V_cs, $V_pfa, $E_slice);
-      my ($finished_transcripts, $protein_features) = create_transcripts($interim_transcript, $E_sa, $gsi);
+      my ($finished_transcripts, $protein_features, $another_failed_transcript) = create_transcripts($interim_transcript, $E_sa, $gsi);
+      if (%$failed_transcript) {
+        $failed_transcripts->{$tsi}{'biotype'} = $transcript->biotype;
+        push @{$failed_transcripts->{$tsi}{'details'}}, $another_failed_transcript;
+      }
 
       # set the translation stable identifier on the finished transcripts
       foreach my $tr (@{ $finished_transcripts }) {
@@ -428,10 +435,10 @@ foreach my $V_chr (@chrs) {
     #count gene and transcript if it's been transferred
     $stat_hash{$V_chr}->{'genes'}++;
     $stat_hash{$V_chr}->{'transcripts'} += $c;
-	
+
     unless ($support->param('dry_run')) {
       Gene::store_gene($support, $E_slice, $E_ga, $E_ta, $E_pfa, $gene,
-		       \@finished, \%all_protein_features);
+		       \@finished, \%all_protein_features, $failed_transcripts);
     }
   }
   $support->log("Done with chromosome $V_chr.\n\n", 1);
@@ -523,8 +530,8 @@ sub transfer_vega_patch_gene {
   my $c = 0;
  TRANS:
   foreach my $transcript (@transcripts){
-    if ($transcript->biotype eq 'artifact') {
-      $support->log("Transcript: ".$transcript->stable_id." skipping because it's an 'artifact'\n", 3);
+    if ($transcript->biotype =~ /artifact|TEC/) {
+      $support->log("Transcript: ".$transcript->stable_id." skipped because of its biotype (" . $transcript->biotype .")\n", 2);
       $needs_updating = 1;
       $artifact_ids{$transcript->stable_id} = 1;
       next TRANS;
@@ -673,14 +680,19 @@ sub transfer_transcript {
   my $V_pfa = shift;
   my $E_slice = shift;
 
-  $support->log_verbose("Transcript: " . $transcript->stable_id."\n", 3);
+  my $tsi = $transcript->stable_id;
+
+  $support->log_verbose("Transcript: $tsi\n", 3);
+
+  my $failed_transcript = {};
 
   my $V_exons = $transcript->get_all_Exons;
   my $E_cdna_pos = 0;
   my $cdna_exon_start = 1;
 
   my $E_transcript = InterimTranscript->new;
-  $E_transcript->stable_id($transcript->stable_id);
+
+  $E_transcript->stable_id($tsi);
   $E_transcript->version($transcript->version);
   $E_transcript->biotype($transcript->biotype);
   $E_transcript->status($transcript->status);
@@ -717,8 +729,8 @@ sub transfer_transcript {
 
  EXON:
   foreach my $V_exon (@{ $V_exons }) {
-    $support->log_verbose("Exon: " . $V_exon->stable_id . " chr=" . 
-			    $V_exon->slice->seq_region_name . " start=". 
+    $support->log_verbose("Exon: " . $V_exon->stable_id . " chr=" .
+			    $V_exon->slice->seq_region_name . " start=".
 			      $V_exon->seq_region_start."\n", 4);
 
     my $E_exon = InterimExon->new;
@@ -756,9 +768,13 @@ sub transfer_transcript {
 	#
 	# Case 1: Complete failure to map exon
 	#
-  warn "Complete failure to transfer exon\n";
+        if ($support->param('verbose')) {
+          $support->log_warning("Reason: Complete failure to transfer exon ".$V_exon->stable_id."\n",4);
+        }
+        $failed_transcript = {
+          'reason'    => 'non mapped exon',
+          'exon_id'   => $V_exon->stable_id};
 	$E_exon->fail(1);
-
       }
       else {
 	#
@@ -783,8 +799,13 @@ sub transfer_transcript {
       #
 	if ($c->isa('Bio::EnsEMBL::Mapper::Gap')) {
 	  $E_exon->fail(1);
-	  $support->log("Reason: Exon ".$E_exon->stable_id." mapping has a gap\n",4);
+          if ($support->param('verbose')) {
+            $support->log("Reason: Exon ".$V_exon->stable_id." mapping has a gap\n",4);
+          }
 	  $gap = 1;
+          $failed_transcript = {
+            'reason'    => 'exon maps to gap',
+            'exon_id'   => $V_exon->stable_id};
 	  last;
 	}
       }
@@ -797,7 +818,12 @@ sub transfer_transcript {
 	  if ($last_end) {
 	    if ($c->start != $last_end) {
 	      $E_exon->fail(1);
-	      $support->log("Reason: Exon mapping has a mismatch in coords\n",4);
+              if ($support->param('verbose')) {
+                $support->log("Reason: Exon ".$V_exon->stable_id." mapping has a mismatch in coords\n",4);
+              }
+              $failed_transcript = {
+                'reason'    => 'exon coord mismatch',
+                'exon_id'   => $V_exon->stable_id};
 	      last;
 	    }
 	  }
@@ -832,7 +858,7 @@ sub transfer_transcript {
 
     $E_transcript->add_Exon($E_exon);
   }
-  return $E_transcript;
+  return $E_transcript,$failed_transcript;
 }
 
 
@@ -857,7 +883,7 @@ sub create_transcripts {
   my $gsi = shift;
 
   # check the exons and split transcripts where exons are bad
-  my $itranscripts = Transcript::check_iexons($support, $itranscript, $gsi);
+  my ($itranscripts,$failed_transcript) = Transcript::check_iexons($support, $itranscript, $gsi);
 
   my @finished_transcripts;
   my %protein_features;
@@ -871,7 +897,7 @@ sub create_transcripts {
       $support->log("Transcript ". $itrans->stable_id . " has no exons left.\n", 3);
     }
   }
-  return \@finished_transcripts, \%protein_features;
+  return \@finished_transcripts, \%protein_features, $failed_transcript;
 }
 
 sub do_stats_logging{
