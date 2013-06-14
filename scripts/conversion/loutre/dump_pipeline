@@ -414,12 +414,6 @@ job_status                       i
 protein_align_feature_history    i
 rule_conditions                  i
 rule_goal                        i
-exon_stable_id                   i
-translation_stable_id            i
-transcript_stable_id             i
-gene_stable_id                   i
-operon_stable_id                 i
-operon_transcript_stable_id      i
 
 assembly                         d
 seq_region                       d
