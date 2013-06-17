@@ -21,6 +21,17 @@ has 'script' => (
     handles  => [ qw( setup_data verbose ) ],
     );
 
+has '_callback_data' => (
+    traits   => ['Hash'],
+    is       => 'ro',
+    isa      => 'HashRef',        # not up to us to police the contents
+    default  => sub { {} },
+    init_arg => undef,
+    handles  => {
+        callback_data => 'accessor',
+    },
+    );
+
 has '_transcript_sth' => (
     is      => 'ro',
     builder => '_build_transcript_sth',
@@ -35,12 +46,17 @@ sub iterate_transcripts {
 
     while (my $cols = $sth->fetchrow_hashref) {
         my $ts = Bio::Otter::Utils::Script::Transcript->new(%$cols, dataset => $self);
+        my ($msg, $verbose_msg) = $self->$ts_method($ts);
+        my $stable_id = $ts->stable_id;
         if ($self->verbose) {
-            my $stable_id = $ts->stable_id;
+            $verbose_msg ||= '.';
             my $name      = $ts->name;
-            say "  $stable_id ($name)";
+            my $sr_name   = $ts->seq_region_name;
+            my $sr_hidden = $ts->seq_region_hidden ? " (HIDDEN)" : "";
+            say "  $stable_id ($name) [${sr_name}${sr_hidden}]: $verbose_msg";
+        } elsif ($msg) {
+            say "$stable_id: $msg";
         }
-        $self->script->$ts_method($ts);
     }
     return;
 }
