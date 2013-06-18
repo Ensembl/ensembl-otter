@@ -36,12 +36,7 @@ Bio::Otter::Debug->add_keys(qw(
     Zircon
     ));
 
-sub __test_hackage {
-    # temporary - inactivate when made live
-    my $ora = $ENV{OTTERLACE_RAN_AS} // '';
-    Bio::Otter::Debug->set('Zircon,XRemote') if $ora =~ /otter(?:lace)?_zircon/;
-    warn "debug check - OTTERLACE_RAN_AS=$ora\n";
-
+sub __push_zircon_debug {
     if (Bio::Otter::Debug->debug('Zircon')) {
         $ENV{$_}=1 foreach
           (qw( ZIRCON_CONNECTION_TRACE ZIRCON_PROTOCOL_TRACE
@@ -50,7 +45,7 @@ sub __test_hackage {
 
     return;
 }
-__test_hackage();
+__push_zircon_debug();
 
 sub new {
     my ($pkg) = @_;
