@@ -77,6 +77,7 @@ use Pod::Usage;
 use Bio::EnsEMBL::Utils::ConversionSupport;
 use Bio::SeqIO::genbank;
 use Data::Dumper;
+use LWP::UserAgent;
 
 $| = 1;
 
@@ -108,10 +109,6 @@ if ($support->param('help') or $support->error) {
 
 $support->confirm_params;
 $support->init_log;
-
-my $vegafile = $support->param('zfin_name_file');  #http://zfin.org/data_transfer/Downloads/vega_transcript.txt
-my $zfinfile = $support->param('zfin_desc_file');  #http://zfin.org/transfer/MEOW/zfin_genes.txt
-my $alias    = $support->param('zfin_alias_file'); #http://zfin.org/data_transfer/Downloads/aliases.txt
 
 my $dba = $support->get_database('ensembl');
 my $ga  = $dba->get_GeneAdaptor();
@@ -158,29 +155,77 @@ my $sth_gene_desc     = $dba->dbc->prepare("UPDATE gene SET description = ? WHER
 my $sth_gene_status   = $dba->dbc->prepare("UPDATE gene SET status = 'KNOWN' WHERE gene_id = ?");
 my $sth_trans_desc    = $dba->dbc->prepare("UPDATE transcript SET description = ? WHERE transcript_id = ?");
 
+#$support->param('zfin_name_file') = http://zfin.org/data_transfer/Downloads/vega_transcript.txt
+#$support->param('zfin_desc_file') = http://zfin.org/transfer/MEOW/zfin_genes.txt
+#$support->param('zfin_alias_file')= http://zfin.org/data_transfer/Downloads/aliases.txt
+
+#try and download direct
+my $urls = {
+  alias    => 'http://zfin.org/data_transfer/Downloads/aliases.txt',
+  vegafile => 'http://zfin.org/data_transfer/Downloads/vega_transcript.txt',
+  zfinfile => 'http://zfin.org/transfer/MEOW/zfin_genes.txt',
+};
+
+my $ua = LWP::UserAgent->new;
+$ua->proxy(['http'], 'http://webcache.sanger.ac.uk:3128');
+my (%aliases,%zfin,%otter_zfin_links,%crossrefs);
+
 # get ZFIN aliases
-open(AL,$alias) or die "cannot open $alias";
-my (%aliases,%zfin,%otter_zfin_links);
-while (<AL>) {
+my $resp = $ua->get($urls->{'alias'});
+my $page = $resp->content;
+if ($page) {
+  $support->log("Alias file downloaded from ZFIN\n");
+}
+else {
+  $support->log("Unable to download alias file from ZFIN, trying to read from disc: ".$support->param('zfin_alias_file')."\n",1);
+  open (NOM, '<', $support->param('zfin_alias_file')) or $support->throw(
+    "Couldn't open ".$support->param('zfin_alias_file')." for reading: $!\n");
+  $page = do { local $/; <NOM> };
+}
+my @recs = split "\n", $page;
+foreach (@recs) {
   chomp;
   next unless (/ZDB-GENE/);
-  my ($zfinid,$desc,$name,$alias) = split /\t/;
+  my ($zfinid,$desc,$name,$alias,$so) = split /\t/;
   $aliases{$zfinid}->{$alias}++;
 }
 
-# get names matched to ZFIN entries
-open(NAME,$vegafile) or die "Cannot open $vegafile $!\n";
-while (<NAME>) {
-  my ($zfinid,$name,$ottid) = split /\s+/;
+#get vega names
+$resp = $ua->get($urls->{'vegafile'});
+$page = $resp->content;
+if ($page) {
+  $support->log("Names downloaded from ZFIN\n");
+}
+else {
+  $support->log("Unable to download Vega name file from ZFIN, trying to read from disc: ".$support->param('zfin_name_file')."\n",1);
+  open (NOM, '<', $support->param('zfin_name_file')) or $support->throw(
+    "Couldn't open ".$support->param('zfin_name_file')." for reading: $!\n");
+  $page = do { local $/; <NOM> };
+}
+@recs = split "\n", $page;
+foreach (@recs) {
+  chomp;
+  my ($zfinid,$so,$name,$ottid) = split /\s+/;
   $zfin{$zfinid}->{name} = $name;
   push @{$zfin{$zfinid}->{'vega_ids'}}, $ottid;
   $otter_zfin_links{$ottid} = $zfinid;
 }
 
-# get descriptions of ZFIN entries
-open(DESC,$zfinfile) or die "cannot open $zfinfile";
-my %crossrefs;
-while (<DESC>) {
+#get zfin descriptions
+$resp = $ua->get($urls->{'zfinfile'});
+$page = $resp->content;
+if ($page) {
+  $support->log("Descriptions downloaded from Zfin\n\n");
+}
+else {
+  $support->log("Unable to download descriptions from ZFIN, trying to read from disc: ".$support->param('zfin_desc_file')."\n",1);
+  open (NOM, '<', $support->param('zfin_desc_file')) or $support->throw(
+    "Couldn't open ".$support->param('zfin_desc_file')." for reading: $!\n");
+  $page = do { local $/; <NOM> };
+}
+@recs = split "\n", $page;
+foreach (@recs) {
+  chomp;
   my ($zfinid,$desc,$name,$lg,$pub) = split /\t/;
   if (exists $zfin{$zfinid}) {
     $zfin{$zfinid}->{desc} = $desc;
@@ -357,7 +402,7 @@ sub update_gene_details {
   $gene->add_DBEntry($dbentry);
   my $update_desc = 0;
   if ( ($desc ne $zfin_name) && ($desc ne $vega_g_desc) ) {
-    $support->log("Updating description for $gsi '$vega_g_desc->$desc\n",2);
+    $support->log("Updating description for $gsi '$vega_g_desc'->'$desc'\n",2);
     push @changed_names, "$gsi\t$zfin_name\t$desc";
     $update_desc = 1;
   }
