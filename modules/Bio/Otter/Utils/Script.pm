@@ -54,7 +54,8 @@ In F<list_foobars.pl>:
 =head2 ottscript_opt_spec
 
 This method should be overridden to specify the options this command
-provides, in addition to the standard options listed FIXME:below.
+provides, in addition to the standard options (see L</STANDARD
+OPTIONS> below).
 
 See L<App::Cmd::Simple/opt_spec> and L<Getopt::Long::Descriptive>
 for full details.
@@ -114,7 +115,9 @@ sub validate_args {
     }
     $self->_datasets(@datasets);
 
-    $self->verbose($opt->{verbose});
+    foreach my $option (qw{ dry_run limit modify_limit verbose }) {
+        $self->$option($opt->{$option});
+    }
 
     $self->ottscript_validate_args($opt, $args);
     return;
@@ -147,6 +150,22 @@ One or more datasets, which can be specified by multiple C<--dataset>
 options or separated by commas.
 
 =back
+
+=head3 allow_iteration_limit
+
+Enables the C<--limit> option, which should be used to limit the total
+number of iterations performed by the script.
+
+Used by L<Bio::Otter::SpeciesDat::DataSet/iterate_transcripts>.
+
+=head3 allow_modify_limit
+
+Enables the C<--modify-limit> option, which should be used to limit
+the number of modifications made before reverting to dry-run
+processing.
+
+See L</inc_modified_count> and L</may_modify> methods for supporting
+infrastructure.
 
 =cut
 
@@ -272,7 +291,25 @@ sub setup {
 Specify the dataset(s) to be used. See also the C<dataset_mode>
 setting to C<ottscript_option> above.
 
-=head2 --help
+=head2 --verbose | -v
+
+Produce verbose output. Available via the L</verbose> method.
+
+=head2 --limit | -l
+
+Limit total number of iterations. See L</allow_iteration_limit>
+ottscript_option. Available via the L</limit> method.
+
+=head2 --modify-limit | -m
+
+Limit number of modifications to be made. See L</allow_modify_limit>
+ottscript_option.
+
+=head2 --dry-run | -n
+
+Do not make any modifications. Available via the L</dry_run> method.
+
+=head2 --help | -h
 
 Produce the usage message. This is assembled automatically from
 C<ottscript_opt_spec>.
@@ -294,10 +331,16 @@ sub _standard_opt_spec {
         push @dataset, [ "dataset=${dataset_spec}",    "dataset name" ];
     }
 
+    my @limits;
+    push @limits, [ "limit|l=i",        "limit number of iterations" ]    if $class->_option('allow_iteration_limit');
+    push @limits, [ "modify-limit|m=i", "limit number of modifications" ] if $class->_option('allow_modify_limit');
+
     return (
         @dataset,
         [],
         [ "verbose|v",    "verbose output" ],
+        [ "dry-run|n",    "dry run - no changes made" ],
+        @limits,
         [ "help|usage|h", "show usage" ],
         );
 }
@@ -318,7 +361,83 @@ sub setup_data {
     return $setup_data;
 }
 
+=head2 dry_run
+
+Returns true if L</--dry-run> option has been given.
+
+=cut
+
+sub dry_run {
+    my ($self, @args) = @_;
+    ($self->{'dry_run'}) = @args if @args;
+    my $dry_run = $self->{'dry_run'};
+    return $dry_run;
+}
+
+=head2 limit
+
+Returns the limit set by the C<--limit> option, if enabled.
+
+=cut
+
+sub limit {
+    my ($self, @args) = @_;
+    ($self->{'limit'}) = @args if @args;
+    my $limit = $self->{'limit'};
+    return $limit;
+}
+
+=head2 modify_limit
+
+Returns the limit set by the C<--modify-limit> option, if enabled.
+
+=cut
+
+sub modify_limit {
+    my ($self, @args) = @_;
+    ($self->{'modify_limit'}) = @args if @args;
+    my $modify_limit = $self->{'modify_limit'};
+    return $modify_limit;
+}
+
+=head2 inc_modified_count
+
+Increment the internal script counter of the number of modifications
+made. See L</may_modify> below.
+
+=cut
+
+sub inc_modified_count {
+    my ($self, $inc) = @_;
+    $inc ||= 1;
+    return $self->modified_count($self->modified_count + $inc);
+}
+
+sub modified_count {
+    my ($self, @args) = @_;
+    ($self->{'modified_count'}) = @args if @args;
+    my $modified_count = $self->{'modified_count'} || 0;
+    return $modified_count;
+}
+
+=head2 may_modify
+
+Returns true unless the L</--dry-run> option has been specified, or
+else unless the number of modifications made exceeds the limit set by
+the L</--modify-limit> option if specified.
+
+=cut
+
+sub may_modify {
+    my $self = shift;
+    return if $self->dry_run;            # never allow if dry_run, otherwise...
+    return 1 unless $self->modify_limit; # always allow if no modify_limit...
+    return ($self->modified_count < $self->modify_limit);
+}
+
 =head2 verbose
+
+Returns true if L</--verbose> option has been given.
 
 =cut
 

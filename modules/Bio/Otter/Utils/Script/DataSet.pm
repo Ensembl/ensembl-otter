@@ -18,7 +18,7 @@ has 'script' => (
     is       => 'ro',
     isa      => 'Bio::Otter::Utils::Script',
     weak_ref => 1,
-    handles  => [ qw( setup_data verbose ) ],
+    handles  => [ qw( setup_data dry_run may_modify inc_modified_count verbose ) ],
     );
 
 has '_callback_data' => (
@@ -44,9 +44,11 @@ sub iterate_transcripts {
     my $sth = $self->_transcript_sth;
     $sth->execute;
 
+    my $count = 0;
     while (my $cols = $sth->fetchrow_hashref) {
         my $ts = Bio::Otter::Utils::Script::Transcript->new(%$cols, dataset => $self);
         my ($msg, $verbose_msg) = $self->$ts_method($ts);
+        ++$count;
         my $stable_id = $ts->stable_id;
         if ($self->verbose) {
             $verbose_msg ||= '.';
@@ -58,13 +60,14 @@ sub iterate_transcripts {
             say "$stable_id: $msg";
         }
     }
+    say "Modified ", $self->script->modified_count, " of $count transcripts" if $self->verbose;
     return;
 }
 
 sub _build_transcript_sth {
     my $self = shift;
     my $dbc = $self->otter_dba->dbc;
-    my $sth = $dbc->prepare(q{
+    my $sql = q{
         SELECT
                 g.gene_id        as gene_id,
                 g.stable_id      as gene_stable_id,
@@ -100,7 +103,12 @@ sub _build_transcript_sth {
                 t.is_current = 1
             AND g.is_current = 1
         ORDER BY g.stable_id, t.stable_id
-    });
+    };
+
+    my $limit = $self->script->limit;
+    $sql .= " LIMIT $limit" if $limit;
+
+    my $sth = $dbc->prepare($sql);
     return $sth;
 }
 
