@@ -29,8 +29,8 @@ General options:
 
 Specific options:
 
-    --genbank=FILE                      ZFIN genbank file (from http://zfin.org/data_transfer/Downloads/genbank.txt or similar)
-    --xpat=FILE                         ZFIN xpat file (from http://zfin.org/data_transfer/Downloads/xpat.txt or similar)
+    --genbank=FILE                      ZFIN genbank file (from http://zfin.org/downloads/genbank.txt)
+    --xpat=FILE                         ZFIN xpat file (from http://zfin.org/downloads/xpat.txt)
     --outputdir=PATH                    Directory where script should write its output files (defaults to log dir)
 
 =head1 DESCRIPTION
@@ -61,6 +61,7 @@ use warnings;
 no warnings 'uninitialized';
 
 use Storable;
+use LWP::UserAgent;
 use Data::Dumper;
 use FindBin qw($Bin);
 use vars qw($SERVERROOT);
@@ -82,14 +83,12 @@ $support->parse_common_options(@_);
 $support->parse_extra_options(
   'genbank=s',
   'xpat=s',
-  'outputdir=s',
   'prune',
 );
 $support->allowed_params(
   $support->get_common_params,
   'genbank',
   'xpat',
-  'outputdir',
   'prune',
 );
 
@@ -103,10 +102,6 @@ my $min_hit_length = 150;
 
 $support->check_required_params('genbank');
 $support->check_required_params('xpat');
-if (! $support->param('outputdir')) {
-  $support->param('outputdir',$support->param('logpath'));
-}
-#$support->check_required_params('outputdir');
 $support->confirm_params;
 $support->init_log;
 
@@ -121,25 +116,51 @@ if($support->param("prune") and $support->user_proceed('Would you really like to
   $dbh->do("delete xref from xref join external_db using (external_db_id) where db_name = 'ZFIN_xpat'");
 }
 
-# Read in ZFIN EST ID <-> Genbank accession mapping
-$support->log("Parsing Genbank file...\n",1);
-my %est2accession;
-my $genbank_file = $support->param('genbank');
-open(IN, "<$genbank_file") or die "Can't open $genbank_file: $!\n";
-foreach (<IN>) {
-  my ($zfin_est_id, undef, $accession) = split(/\t/, $_);
+my (%est2accession,%genes2accession);
+
+#download direct or read from file
+my $urls = {
+  genbank => 'http://zfin.org/downloads/genbank.txt',
+  xpat    => 'http://zfin.org/downloads/xpat.txt',
+};
+
+my $ua = LWP::UserAgent->new;
+$ua->proxy(['http'], 'http://webcache.sanger.ac.uk:3128');
+
+# get ZFIN genbank records
+my $resp = $ua->get($urls->{'genbank'});
+my $page = $resp->content;
+if ($page) {
+  $support->log("Genbank file downloaded from ZFIN\n");
+}
+else {
+  $support->log("Unable to download Genbank file from ZFIN, trying to read from disc: ".$support->param('genbank')."\n",1);
+  open (NOM, '<', $support->param('genbank')) or $support->throw(
+    "Couldn't open ".$support->param('genbank')." for reading: $!\n");
+  $page = do { local $/; <NOM> };
+}
+my @recs = split "\n", $page;
+foreach (@recs) {
+  my ($zfin_est_id, $so, undef, $accession) = split(/\t/, $_);
   next unless $zfin_est_id =~ m/^ZDB-EST-/ || $zfin_est_id =~ m/^ZDB-CDNA-/;
   $est2accession{$zfin_est_id} = $accession;
 }
-close IN;
 
 # Read in ZFIN Gene IDs having expression patterns and associated EST ID
-$support->log("Parsing xpat file file...\n",1);
-my %genes2accession;
 my ($count_xpat_no_est,$count_xpat_est) = (0,0);
-my $xpat_file = $support->param('xpat');
-open(IN, "<$xpat_file") or die "Can't open $xpat_file: $!\n";
-foreach (<IN>) {
+$resp = $ua->get($urls->{'xpat'});
+$page = $resp->content;
+if ($page) {
+  $support->log("xpat file downloaded from ZFIN\n");
+}
+else {
+  $support->log("Unable to download xpat file from ZFIN, trying to read from disc: ".$support->param('xpat')."\n",1);
+  open (NOM, '<', $support->param('xpat')) or $support->throw(
+    "Couldn't open ".$support->param('xpat')." for reading: $!\n");
+  $page = do { local $/; <NOM> };
+}
+@recs = split "\n", $page;
+foreach (@recs) {
   my ($zfin_gene_id, undef, $zfin_est_id, undef, undef, $zfin_xpat_id) = split(/\t/, $_);
   if (!$zfin_est_id) {
     $count_xpat_no_est++;
@@ -154,7 +175,6 @@ foreach (<IN>) {
     $genes2accession{$zfin_gene_id}{$est2accession{$zfin_est_id}} = 1;
   }
 }
-close IN;
 
 if ($support->param('verbose')) {
   $support->log("Genes with ESTs are ".Dumper(\%genes2accession)."\n");
@@ -244,7 +264,7 @@ $support->log("ZFIN Gene IDs linked to Ensembl genes by ESTs and by xrefs: " . s
 
 
 #not sure on purpose of this, but leave it in for now
-my $output_dir = $support->param('outputdir');
+my $output_dir = $support->param('logpath');
 $output_dir =~ s|/$||;
 if(!$support->param('dry_run')) {
   open(OUT, ">$output_dir/xpat.out") or die "Can't write to $output_dir/xpat.out: $!\n";
