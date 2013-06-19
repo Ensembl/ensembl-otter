@@ -1,3 +1,5 @@
+#!/usr/bin/env perl
+
 package Bio::Otter::Script::ListFooBars;
 
 use strict;
