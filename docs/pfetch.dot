@@ -1,0 +1,111 @@
+
+digraph pfetch {
+
+  label="What does pfetch?\n -- mca 2013-06-18"
+  pencolor=grey
+
+  /* Pagination runes */
+  page="8.26,11.69"
+  margin=0.2
+  size="7.85,11.28"
+  ratio=compress
+
+  subgraph cluster_Key { label="Key"
+    edge [ minlen=0 ]
+    node [ shape=point ]
+    a -> b [ label=http, color=red ]
+    c -> d [ label=socket, color=green ]
+    e -> f [ label=configure, color=blue ]
+
+    edge [ minlen=1, style=invis]
+    a -> c -> e
+  }
+  stop -> f [ style=invis,minlen=0 ]
+
+
+  "nil?" -> "Bio::Otter::Utils::Align" -> "Bio::EnsEMBL::Pipeline::SeqFetcher::run_pfetch" -> "pfetch via $PATH"
+  "e-o scripts" -> "Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch"
+  "Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch" -> "pfetch.sanger.ac.uk:22400" [ color=green ]
+
+  "scripts/apache/pfetch" -> "pfetch.sanger.ac.uk:22400" [ label="query: filtered\nresponse: pass-through", color=green ]
+
+  "Hum::Pfetch::get_EMBL_entries" -> "Hum::Pfetch::do_query" [ label="-F @id\\n" ]
+  "Hum::Pfetch::get_lengths"      -> "Hum::Pfetch::do_query" [ label="-l @id\\n" ]
+  "Hum::Pfetch::get_descriptions" -> "Hum::Pfetch::do_query" [ label="-D @id\\n" ]
+  "Hum::Pfetch::get_Sequences"    -> "Hum::Pfetch::do_query" [ label="-q @id\\n" ]
+
+  "Hum::Pfetch::do_query" -> hum_pfetch_decide -> { PFETCH_SERVER_LIST pfetch_response_handle }
+  pfetch_response_handle -> confess
+  PFETCH_SERVER_LIST -> "pfetch.sanger.ac.uk:22400" [ color=green ]
+  "$ENV{PFETCH_WWW}" -> hum_pfetch_decide [ color=blue ]
+  pfetch_response_handle -> "scripts/apache/pfetch" [ color=red ]
+
+  "$ENV{PFETCH_WWW}" -> "Bio::Otter::Lace::AceDatabase" -> { zmap_config blixemrc } [ color=blue ]
+
+  Blixem -> "pfetch via $PATH" [ label="double-click\non seq" ]
+  Blixem -> blixemrc [ label="bulk + feature fetches" ]
+  ZMap -> zmap_config
+
+  { zmap_config blixemrc } -> "pfetch.sanger.ac.uk:22400" [ color=green ]
+  { zmap_config blixemrc } -> "scripts/apache/pfetch" [ color=red ]
+  zmap_config -> "pfetch via $PATH"
+
+  "Bio::Otter::Lace::Client::setup_pfetch_env" -> "$ENV{PFETCH_WWW}" [ label="export" ]
+
+  client -> { Blixem ZMap }
+  client -> { "Bio::Otter::Utils::DotterLauncher" "Bio::Otter::Lace::OnTheFly::QueryValidator" } -> "Hum::Pfetch::get_Sequences"
+
+  "pfetch via $PATH" -> { "/software/bin/pfetch" "scripts/MacOS/client/pfetch" }
+  "scripts/MacOS/client/pfetch" -> "Hum::Pfetch::do_query"
+  "/software/bin/pfetch" -> avc_pfetch [ label="query: filtered\nresponse: pass-through" ]
+  avc_pfetch -> { "pfetch.sanger.ac.uk:22400" int_trc ext_trc } [ color=green ]
+
+
+
+  pfetch_response_handle [ label="Hum::Pfetch\npfetch_response_handle\n\nLWP POST, UA=hum_pfetch/0.1\nOTTERLACE_COOKIE_JAR\n" ]
+  "Bio::Otter::Lace::Client::setup_pfetch_env" [ label="Bio::Otter::Lace::Client\nsetup_pfetch_env" ]
+  "Hum::Pfetch::get_EMBL_entries"  [ label="Hum::Pfetch\nget_EMBL_entries", color=grey ]
+  "Hum::Pfetch::get_lengths"       [ label="Hum::Pfetch\nget_lengths", color=grey      ]
+  "Hum::Pfetch::get_descriptions"  [ label="Hum::Pfetch\nget_descriptions", color=grey ]
+  "Hum::Pfetch::get_Sequences"     [ label="Hum::Pfetch\nget_Sequences"    ]
+  "Bio::EnsEMBL::Pipeline::SeqFetcher::run_pfetch" [ label="Bio::EnsEMBL::Pipeline::SeqFetcher\nrun_pfetch" ]
+  "Bio::EnsEMBL::Pipeline::SeqFetcher::Finished_Pfetch" [ label="Bio::EnsEMBL::Pipeline::SeqFetcher\n::Finished_Pfetch->new" ]
+
+  PFETCH_SERVER_LIST [ label="Hum::Conf\n$PFETCH_SERVER_LIST" ]
+
+  "/software/bin/pfetch" [ color=red ]
+
+  zmap_config [ shape=diamond ]
+  blixemrc [ shape=diamond ]
+
+  "pfetch via $PATH" [ peripheries=2 ]
+  avc_pfetch [ shape=point ]
+  int_trc [ label="internal trace server\nseq1s:22100", shape=box ]
+  ext_trc [ label="external trace server\nseq1s:22200", shape=box ]
+
+  "pfetch.sanger.ac.uk:22400" -> "cbi5:22400" [ color=green ]
+  "cbi5:22400" -> stop
+
+  confess [ shape=octagon ]
+  "cbi5:22400" [ shape=box, label="cbi5b:22400\n(only?)" ]
+  "pfetch.sanger.ac.uk:22400" [ shape=box, label="pfetch.sanger.ac.uk:22400\n(zxtm)" ]
+
+  { rank="same"
+    "cbi5:22400"
+    int_trc
+    ext_trc
+  }
+
+  { rank="same"
+    zmap_config
+    blixemrc
+  }
+
+  start [ shape=circle ]
+  stop [ shape=circle ]
+  start -> client
+  confess -> stop
+  start -> stop [ style=invis, minlen=5 ]
+
+}
+
