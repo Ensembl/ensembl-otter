@@ -115,6 +115,19 @@ sub validate_args {
     }
     $self->_datasets(@datasets);
 
+    if (my $sso = $self->_option('sequence_set')) {
+        for ( $sso ) {
+            if ( /^required$/ ) {
+                $self->usage_error("sequence-set must be specified") unless $opt->{sequence_set};
+                last;
+            }
+            unless ( /^optional$/ ) {
+                croak "Don't understand sequence_set mode '$_'";
+            }
+        }
+        $self->sequence_set_name($opt->{sequence_set});
+    }
+
     foreach my $option (qw{ dry_run limit modify_limit verbose }) {
         $self->$option($opt->{$option});
     }
@@ -222,6 +235,15 @@ sub execute {
             next;
         }
         my $ds_obj = Bio::Otter::Utils::Script::DataSet->new(otter_sd_ds => $ds, script => $self);
+        my $ss_obj;
+        if (my $ss_name = $self->sequence_set_name) {
+            my $ssa = $ds_obj->otter_dba->get_SliceAdaptor;
+            $ss_obj = $ssa->fetch_by_region('chromosome', $ss_name);
+            unless ($ss_obj) {
+                $self->_dataset_error("Cannot retrieve sequence_set '$ss_name' for dataset '$ds_name'");
+                next;
+            }
+        }
 
         if ($self->verbose) {
             say '-' x 72;
@@ -229,7 +251,7 @@ sub execute {
             say '=' x length($ds_name);
         }
 
-        $self->process_dataset($ds_obj);
+        $self->process_dataset($ds_obj, $ss_obj);
     }
 
     return;
@@ -329,6 +351,8 @@ sub _standard_opt_spec {
     my @dataset;
     if ($dataset_spec) {
         push @dataset, [ "dataset=${dataset_spec}",    "dataset name" ];
+        push @dataset, [ "sequence-set|set|chr=s",     "sequence set or chromosome name" ]
+            if $class->_option('sequence_set');
     }
 
     my @limits;
@@ -359,6 +383,20 @@ sub setup_data {
     ($self->{'setup_data'}) = @args if @args;
     my $setup_data = $self->{'setup_data'};
     return $setup_data;
+}
+
+=head2 sequence_set
+
+Returns the sequence set name set by the C<--sequence-set> option, if
+enabled.
+
+=cut
+
+sub sequence_set_name {
+    my ($self, @args) = @_;
+    ($self->{'sequence_set_name'}) = @args if @args;
+    my $sequence_set_name = $self->{'sequence_set_name'};
+    return $sequence_set_name;
 }
 
 =head2 dry_run
