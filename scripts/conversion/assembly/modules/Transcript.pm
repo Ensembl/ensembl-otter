@@ -135,22 +135,22 @@ sub check_iexons {
 
     $prev_end = $iexon->end;
     $prev_start = $iexon->start;
-    }
+  }
+  
+  $itranscript_array ||= [];
 
-    $itranscript_array ||= [];
-
-    #
-    # if there exons left after all the splitting,
-    # then add this transcript to the array
-    #
-    unless ($fail_flag) {
-      my $total_exons = scalar(@{ $itranscript->get_all_Exons });
-      if ($total_exons > 0) {
-        push @$itranscript_array, $itranscript;
-      } else {
-        $support->log_verbose("no exons left in transcript\n", 4);
-      }
+  #
+  # if there exons left after all the splitting,
+  # then add this transcript to the array
+  #
+  unless ($fail_flag) {
+    my $total_exons = scalar(@{ $itranscript->get_all_Exons });
+    if ($total_exons > 0) {
+      push @$itranscript_array, $itranscript;
+    } else {
+      $support->log_verbose("no exons left in transcript\n", 4);
     }
+  }
   return $itranscript_array,$failed_transcript;
 }
 
