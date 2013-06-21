@@ -42,8 +42,6 @@ chrAB_20060711	AB	Chromosome AB
 
 --pig--
 mhc	7-LW	MHC region of Chromosome 7
-chr17-SSC17_MAX1	17-H20q13	H20q13 fragment of Chromosome 17
-Chr_6_NKG	6-LRC	LRC region of Chromosome 6
 chr1	1	Chromosome 1	1	
 chr2	2	Chromosome 2	2	
 chr3	3	Chromosome 3	3	
@@ -62,8 +60,9 @@ chr15	15	Chromosome 15	15
 chr16	16	Chromosome 16	16	
 chr17	17	Chromosome 17	17	
 chr18	18	Chromosome 18	18	
-chrX	X	Chromosome X	X	
-chrY	Y-WTSI	Chromosome Y	
+chrX-11	X	Chromosome X	X	
+chrX-15	X-WTSI	Chromosome X-WTSI
+chrY	Y-WTSI	Chromosome Y-WTSI	
 --end--
 
 --human--
