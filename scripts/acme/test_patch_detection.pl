@@ -54,6 +54,8 @@ sub process_dataset {
     }
     my $all_features = $patch_mapper->all_features;
     say "All features: ", scalar @$all_features;
+    my $by_contig = $patch_mapper->patches_by_contig;
+    say "By_contig for: ", scalar keys %$by_contig;
     return;
 }
 
