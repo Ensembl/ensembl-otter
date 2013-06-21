@@ -60,6 +60,20 @@ sub all_features {
     return [ sort { $a->seq_region_start <=> $b->seq_region_start } @features ];
 }
 
+sub patches_by_contig {
+    my ($self) = @_;
+    my @patches = $self->patches;
+    my $by_contig = {};
+    foreach my $patch ( @patches ) {
+        my $fpc = $patch->feature_per_contig;
+        foreach my $contig ( keys %$fpc ) {
+            my $contig_list = $by_contig->{$contig} ||= [];
+            push @$contig_list, $patch;
+        }
+    }
+    return $by_contig;
+}
+
 sub _all_patches {
     my ($self) = @_;
     my $_all_patches = $self->{'_all_patches'};
