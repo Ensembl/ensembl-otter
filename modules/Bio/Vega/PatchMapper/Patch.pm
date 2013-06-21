@@ -102,11 +102,13 @@ sub coverage_slice {
     my $coverage_slice = $self->{'coverage_slice'};
     return $coverage_slice if $coverage_slice;
 
-    my $sr_sub_slice = $self->_mapper->sub_slice;
-    my $start = max($sr_sub_slice->start, $self->chr_start);
-    my $end   = min($sr_sub_slice->end,   $self->chr_end);
+    my $sr_slice = $self->_mapper->seq_region_slice;
+    my $sr_start = $sr_slice->start;
 
-    $coverage_slice = $sr_sub_slice->sub_Slice($start, $end, 1);
+    my $start = max($sr_start,        $self->chr_start);
+    my $end   = min($sr_slice->end,   $self->chr_end);
+
+    $coverage_slice = $sr_slice->sub_Slice($start - $sr_start + 1, $end - $sr_start + 1, 1);
 
     return $self->{'coverage_slice'} = $coverage_slice;
 }
@@ -117,8 +119,8 @@ Generate one SimpleFeature on the source chromosome per contig covered
 by the patch.
 
 Project the coverage_slice into the contig coordinate space and
-generate one SimpleFeature per contig, named after the patch. Then
-project this back to the chromosome.
+generate one SimpleFeature per contig, named after the patch, but on
+the coverage_slice which is in chromosome coords.
 
 These are returned as a hashref keyed by contig name.
 
@@ -131,7 +133,6 @@ sub feature_per_contig {
 
     my $coverage_slice = $self->coverage_slice;
     my $src_name   = $coverage_slice->name;
-    my $cv_start   = $coverage_slice->start;
 
     my $contig_projs = $coverage_slice->project('contig');
 
@@ -145,8 +146,8 @@ sub feature_per_contig {
         }
 
         my $contig_sf = Bio::EnsEMBL::SimpleFeature->new(
-            -start         => $proj->from_start + $cv_start - 1,
-            -end           => $proj->from_end   + $cv_start - 1,
+            -start         => $proj->from_start,
+            -end           => $proj->from_end,
             -strand        => 1,
             -slice         => $coverage_slice,
             -display_label => $patch_name,

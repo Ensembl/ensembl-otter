@@ -27,7 +27,9 @@ sub process_dataset {
     my ($self, $dataset, $sequence_set) = @_;
     say "processing ", $sequence_set->name;
 
-    my $patch_mapper = Bio::Vega::PatchMapper->new($sequence_set);
+    # my $patch_mapper = Bio::Vega::PatchMapper->new($sequence_set);
+    my $sub_set = $sequence_set->sub_Slice(21000000, 21500000);
+    my $patch_mapper = Bio::Vega::PatchMapper->new($sub_set);
 
     my $equiv_slice = $patch_mapper->_equiv_slice;
     my $equiv_name = $equiv_slice->seq_region_name;
@@ -42,6 +44,13 @@ sub process_dataset {
 
         my $fpc = $p->feature_per_contig;
         say "\tFeatures: ", scalar(keys %$fpc);
+
+        foreach my $ctg (keys %$fpc) {
+            my $sf = $fpc->{$ctg};
+            if ($sf->seq_region_start < $p->chr_start or $sf->seq_region_end > $p->chr_end) {
+                say "\t\tOops: ", $ctg;
+            }
+        }
     }
     my $all_features = $patch_mapper->all_features;
     say "All features: ", scalar @$all_features;
