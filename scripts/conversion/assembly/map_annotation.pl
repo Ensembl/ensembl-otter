@@ -279,8 +279,6 @@ my @chrs = $support->sort_chromosomes($V_chrlength);
 CHROM:
 foreach my $V_chr (@chrs) {
 
-#  next unless ($V_chr == 1);
-
   $support->log_stamped("Chromosome $V_chr...\n");
 
   # skip non-ensembl chromosomes
@@ -358,7 +356,7 @@ foreach my $V_chr (@chrs) {
 
     #uncomment line here to debug overlapping supporting evidence (-verbose -chr HG185_PATCH)
 #    next unless ($gsi =~ /OTTHUMG00000174590|OTTHUMG00000174616|OTTHUMG00000174807/);
-#    next unless $gsi eq 'OTTHUMG00000183896';
+#    next unless $gsi eq 'OTTDARG00000036477';
 
     my $ln = $gene->analysis->logic_name;
     my $name = $gene->display_xref->display_id;
@@ -401,7 +399,7 @@ foreach my $V_chr (@chrs) {
       }
       $c++;
       my ($finished_transcripts, $protein_features, $another_failed_transcript) = create_transcripts($interim_transcript, $E_sa, $gsi);
-      if (%$failed_transcript) {
+      if (%$another_failed_transcript) {
         $failed_transcripts->{$tsi}{'biotype'} = $transcript->biotype;
         push @{$failed_transcripts->{$tsi}{'details'}}, $another_failed_transcript;
       }
