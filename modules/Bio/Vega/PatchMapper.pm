@@ -25,45 +25,9 @@ sub new {
     return $self;
 }
 
-sub start {
-    my ($self, @args) = @_;
-    ($self->{'start'}) = @args if @args;
-    my $start = $self->{'start'};
-    return $start // $self->seq_region_slice->start;
-}
-
-sub start_is_set {
-    my ($self) = @_;
-    return defined $self->{'start'};
-}
-
-sub end {
-    my ($self, @args) = @_;
-    ($self->{'end'}) = @args if @args;
-    my $end = $self->{'end'};
-    return $end // $self->seq_region_slice->end;
-}
-
-sub end_is_set {
-    my ($self) = @_;
-    return defined $self->{'end'};
-}
-
 sub seq_region_slice {
     my ($self) = @_;
     return $self->{'seq_region_slice'};
-}
-
-sub sub_slice {
-    my ($self) = @_;
-
-    my $sr_slice = $self->seq_region_slice;
-
-    if ($self->start_is_set or $self->end_is_set) {
-        return $sr_slice->sub_Slice($self->start, $self->end);
-    } else {
-        return $sr_slice;       # maybe should just sub_Slice anyway?
-    }
 }
 
 sub patch_names {
@@ -79,8 +43,8 @@ sub patches {
     # Filtered to overlapping start -> end
 
     my @patches = $self->_all_patches;
-    my $start   = $self->start;
-    my $end     = $self->end;
+    my $start   = $self->seq_region_slice->start;
+    my $end     = $self->seq_region_slice->end;
 
     return grep { $start <= $_->chr_end and $end >= $_->chr_start } @patches;
 }
@@ -93,7 +57,7 @@ sub all_features {
         my $fpc = $patch->feature_per_contig;
         push @features, values %$fpc;
     }
-    return [ sort { $a->start <=> $b->start } @features ];
+    return [ sort { $a->seq_region_start <=> $b->seq_region_start } @features ];
 }
 
 sub _all_patches {
