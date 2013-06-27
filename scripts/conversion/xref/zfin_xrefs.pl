@@ -155,10 +155,6 @@ my $sth_gene_desc     = $dba->dbc->prepare("UPDATE gene SET description = ? WHER
 my $sth_gene_status   = $dba->dbc->prepare("UPDATE gene SET status = 'KNOWN' WHERE gene_id = ?");
 my $sth_trans_desc    = $dba->dbc->prepare("UPDATE transcript SET description = ? WHERE transcript_id = ?");
 
-#$support->param('zfin_name_file') = http://zfin.org/data_transfer/Downloads/vega_transcript.txt
-#$support->param('zfin_desc_file') = http://zfin.org/transfer/MEOW/zfin_genes.txt
-#$support->param('zfin_alias_file')= http://zfin.org/data_transfer/Downloads/aliases.txt
-
 #try and download direct
 my $urls = {
   alias    => 'http://zfin.org/data_transfer/Downloads/aliases.txt',
