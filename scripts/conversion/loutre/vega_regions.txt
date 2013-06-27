@@ -60,8 +60,7 @@ chr15	15	Chromosome 15	15
 chr16	16	Chromosome 16	16	
 chr17	17	Chromosome 17	17	
 chr18	18	Chromosome 18	18	
-chrX-11	X	Chromosome X	X	
-chrX-15	X-WTSI	Chromosome X-WTSI
+chrX-16	X-WTSI	Chromosome X-WTSI
 chrY	Y-WTSI	Chromosome Y-WTSI	
 --end--
 
