@@ -23,6 +23,7 @@ my $WRAP_SEARCH_ERRORS    = 1;       # set this to 0 to aid command-line debuggi
 
 my $TARGET_COMPONENT_TYPE = 'clone'; # this is the type of components we want the found matches mapped on
 
+my $MAX_TERMS = 50; # arbitrary limit to reduce DoS
 my $MAX_HITS = 50; # approx, due to later find_by_* calls
 
 
@@ -35,6 +36,9 @@ sub new {
         _results => {},
         _result_count => 0,
     };
+
+    die "Too many query terms"
+      if @{ $self->qnames } > $MAX_TERMS;
 
     return bless $self, $class;
 }
