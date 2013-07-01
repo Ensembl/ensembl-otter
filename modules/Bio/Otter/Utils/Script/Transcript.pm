@@ -1,5 +1,11 @@
 package Bio::Otter::Utils::Script::Transcript;
 
+## Moose provides these, but webpublish doesn't know that!
+##
+use strict;
+use warnings;
+##
+
 use namespace::autoclean;
 
 use Moose;
@@ -57,5 +63,11 @@ around BUILDARGS => sub {
 __PACKAGE__->meta->make_immutable;
 
 1;
+
+__END__
+
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
 
 # EOF
