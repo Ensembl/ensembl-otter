@@ -1,5 +1,11 @@
 package Bio::Otter::Utils::Script::DataSet;
 
+## Moose provides these, but webpublish doesn't know that!
+##
+use strict;
+use warnings;
+##
+
 use 5.010;
 use namespace::autoclean;
 
@@ -115,5 +121,11 @@ sub _build_transcript_sth {
 __PACKAGE__->meta->make_immutable;
 
 1;
+
+__END__
+
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
 
 # EOF
