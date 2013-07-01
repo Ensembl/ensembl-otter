@@ -108,7 +108,11 @@ sub chosen_name {
 sub get_new_name {
     my ($self) = @_;
 
-    return $self->{'_new_name_entry'}->get;
+    my $new_name = $self->{'_new_name_entry'}->get;
+    $new_name =~ s/\A[[:space:]]+//;
+    $new_name =~ s/[[:space:]]+\z//;
+
+    return $new_name;
 }
 
 sub SessionWindow {
