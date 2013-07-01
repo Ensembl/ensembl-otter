@@ -226,7 +226,7 @@ sub __options_from_file {
 
     warn "Trying $file\n" if $DEBUG_CONFIG;
     my $ini = Config::IniFiles->new( -file => $file );
-    die "Errors found in configuration $file: @Config::IniFiles::errors"
+    confess "Errors found in configuration $file: @Config::IniFiles::errors"
       unless defined $ini;
 
     return $ini;
