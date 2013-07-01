@@ -95,6 +95,7 @@ use CanvasWindow;
             );
 
         $canvas->bind($name, '<Button-1>', sub{
+            print STDERR "$hex\t$name\n";
             set_selection($hex_on_clip ? $hex : $name);
             $canvas->SelectionOwn;
             });
