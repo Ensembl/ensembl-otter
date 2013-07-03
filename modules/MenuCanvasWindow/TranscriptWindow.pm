@@ -1626,7 +1626,10 @@ sub insert_char {
     $text->deleteSelected;
 
     # There will only ever be one or zero tags per line in out Text box.
-    my ($tag) = grep { $_ eq $ann_tag } $text->tagNames('insert linestart');
+    my ($tag) =
+        $text->compare('insert linestart', '==', 'insert lineend')
+        ? ( $ann_tag )
+        : grep { $_ eq $ann_tag } $text->tagNames('insert linestart');
 
     $text->insert('insert', $char, $tag);
 
