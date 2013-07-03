@@ -12,6 +12,7 @@ use File::Path qw{ remove_tree };
 use Net::Domain qw{ hostname hostfqdn };
 use Proc::ProcessTable;
 
+use List::MoreUtils qw( uniq );
 use LWP;
 use URI::Escape qw{ uri_escape };
 use HTTP::Cookies::Netscape;
@@ -521,6 +522,28 @@ sub create_UserAgent {
     $ua->cookie_jar($self->get_CookieJar);
 
     return $ua;
+}
+
+sub ua_tell_proxies {
+    my ($self) = @_;
+    my $ua = $self->get_UserAgent;
+    my %info;
+    @info{qw{ http https }} = map { defined $_ ? $_ : 'none' }
+      $ua->proxy([qw[ http https ]]);
+    if ($info{http} eq $info{https}) {
+        $info{'http[s]'} = delete $info{http};
+        delete $info{https};
+    }
+    my @nopr = @{ $ua->{no_proxy} }; # there is no get accessor
+    $info{no_proxy} = join ',', uniq(@nopr) if @nopr;
+    $info{set_in_ENV} = join ',',
+      map { m{^(.).*_(.).*$} ? "$1$2" : $_ }
+        grep { defined $ENV{$_} }
+          map {( $_, uc($_) )}
+            qw( http_proxy https_proxy no_proxy );
+
+    warn 'Proxy: '.(join ' ', map {"$_=$info{$_}"} sort keys %info)."\n";
+    return;
 }
 
 sub get_CookieJar {

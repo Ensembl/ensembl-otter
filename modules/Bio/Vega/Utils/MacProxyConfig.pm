@@ -74,20 +74,20 @@ sub mac_os_x_set_proxy_vars {
                 or die "No proxy host for '$protocol' protocol in '$first_network_service_name'";
             my $port = $prox->{"${protocol}Port"}
                 or die "No proxy port for '$protocol' protocol in '$first_network_service_name'";
-            $env_hash->{$var_name} = "http://$host:$port";
+            __setenv($env_hash, $var_name, "http://$host:$port");
         }
         else {
             # There may be proxies set from the previous network
             # config.  We must remove them if there are.
-            delete($env_hash->{$var_name});
+            __setenv($env_hash, $var_name);
         }
     }
 
     if (my $exc = $prox->{'ExceptionsList'}) {
-        $env_hash->{'no_proxy'} = join(',', @$exc);
+        __setenv($env_hash, 'no_proxy', join(',', @$exc));
     }
     else {
-        delete($env_hash->{'no_proxy'});
+        __setenv($env_hash, 'no_proxy');
     }
 
     return;
@@ -105,6 +105,31 @@ sub fetch_node_from_path {
             or die "No node '$ele' when walking path '$path'";
     }
     return $plist;
+}
+
+sub __setenv {
+    my ($env_hash, $key, $val) = @_;
+
+    my $old_val = $env_hash->{$key};
+    if ((!exists $env_hash->{$key} && !defined $val) or
+        (defined $old_val && $old_val eq $val)) {
+        # no-op, so keep quiet
+    } elsif (defined $val) {
+        my $was = (defined $old_val ? "'$old_val'"
+                   : (exists $env_hash->{$key} ? 'undef' : 'absent'));
+        warn sprintf("%s: Setting %s=%s, was %s\n", __PACKAGE__, $key,
+                     defined $val ? "'$val'" : '(delete)',
+                     $was);
+        # we don't say in which hash we set, but it is invariably %ENV
+    }
+
+    if (defined $val) {
+        $env_hash->{$key} = $val;
+    } else {
+        delete $env_hash->{$key};
+    }
+
+    return;
 }
 
 1;
