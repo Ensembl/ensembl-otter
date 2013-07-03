@@ -39,6 +39,8 @@ use Try::Tiny;
 
     Bio::Otter::Git->dump;
 
+    $cl->ua_tell_proxies;
+
     my $mw = CanvasWindow::MainWindow->new
       ($Bio::Otter::Lace::Client::PFX."Species List");
 
