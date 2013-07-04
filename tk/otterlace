@@ -49,7 +49,11 @@ use Try::Tiny;
         5000,
         sub {
             while ((my $dead_pid = waitpid(-1, WNOHANG)) > 0) {
-                $logger->warn("Process $dead_pid exited $?");
+                my $rc = $?;
+                $rc .= ($rc & 127
+                        ? ' = signal '.($rc & 127)
+                        : ' = rc '.($rc >> 8)) if $rc != 0;
+                $logger->warn("Process $dead_pid exited $rc");
             }
         }
     );
