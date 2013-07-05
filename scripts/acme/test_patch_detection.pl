@@ -28,6 +28,7 @@ sub process_dataset {
     say "processing ", $sequence_set->name;
 
     # my $patch_mapper = Bio::Vega::PatchMapper->new($sequence_set);
+    # range designed for human chr17-03
     my $sub_set = $sequence_set->sub_Slice(21000000, 21500000);
     my $patch_mapper = Bio::Vega::PatchMapper->new($sub_set);
 
