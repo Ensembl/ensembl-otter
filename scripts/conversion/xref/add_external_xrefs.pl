@@ -730,8 +730,8 @@ sub parse_hgnc {
   chomp $line;
   my @columns =  split /\t/, $line;
   foreach my $wanted (keys %wanted_columns) {
-    unless (grep { $_ eq $wanted} @columns ) {
-      $support->log_error("Can't find $wanted column in HGNC record\n");
+    unless (grep { /$wanted/ } @columns ) {
+      $support->log_error("Can't find $wanted column in HGNC record: $line\n");
     }
   }
 
