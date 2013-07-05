@@ -385,7 +385,7 @@ sub setup_data {
     return $setup_data;
 }
 
-=head2 sequence_set
+=head2 sequence_set_name
 
 Returns the sequence set name set by the C<--sequence-set> option, if
 enabled.
