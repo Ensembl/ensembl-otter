@@ -50,7 +50,7 @@ sub new {
         @args,
     );
 
-    my $self = bless { }, $pkg;
+    my $self = $pkg->SUPER::new();
     $self->cgi(CGI->new);
     $self->compression($options{-compression});
     $self->content_type($options{-content_type});
