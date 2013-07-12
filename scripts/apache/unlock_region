@@ -16,10 +16,9 @@ use Bio::Otter::ServerAction::Region;
 sub unlock_region {
     my ($server) = @_;
 
-    my $params = $server->require_arguments('data');
-    my $sa_regionr = Bio::Otter::ServerAction::Region->new($server, $params);
+    my $sa_region = Bio::Otter::ServerAction::Region->new($server);
 
-    $sa_regionr->unlock_region;
+    $sa_region->unlock_region;
 
     return $server->otter_wrap_response("<response>\n</response>\n");
 }

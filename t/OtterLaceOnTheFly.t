@@ -164,9 +164,11 @@ sub main_tests {
 
       while (my ($species, $regions) = each %species_tests) {
           note("Live tests for: $species");
-          my $local_server = Bio::Otter::LocalServer->new(dataset => $species);
+          my $local_server = Bio::Otter::LocalServer->new();
           foreach my $region ( @$regions ) {
-              run_region($local_server, $region, $at_cache);
+              $local_server->set_params(%$region, dataset => $species, cs => 'chromosome', csver => 'Otter');
+              my $sa_region = Bio::Otter::ServerAction::Region->new_with_slice($local_server);
+              run_region($region->{title}, $sa_region, $at_cache);
           }
       }
 
@@ -294,14 +296,13 @@ sub run_test {
 }
 
 sub run_region {
-    my ($local_server, $region, $at_cache) = @_;
-    note("  Region: ", $region->{title});
-    my $sa_region = Bio::Otter::ServerAction::Region->new_with_slice($local_server, $region);
+    my ($title, $sa_region, $at_cache) = @_;
+    note("  Region: ", $title);
 
     # FIXME: get_assembly_dna should return components
     my ($dna, @tiles) = split(/\n/, $sa_region->get_assembly_dna);
     my $target_seq = Hum::Sequence::DNA->new;
-    $target_seq->name($region->{title});
+    $target_seq->name($title);
     $target_seq->sequence_string($dna);
 
     my $genes = $sa_region->get_region->genes;

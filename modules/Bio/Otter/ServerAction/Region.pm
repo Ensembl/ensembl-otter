@@ -16,7 +16,21 @@ Bio::Otter::ServerAction::Region - server requests on a region
 
 =cut
 
-Readonly our @REQUIRED_PARAMS => qw(
+### Constructors
+
+sub new {
+    my ($pkg, $server) = @_;
+
+    my $self = {
+        _server => $server,
+    };
+    my $class = ref($pkg) || $pkg;
+    bless $self, $class;
+
+    return $self;
+}
+
+Readonly my @SLICE_REQUIRED_PARAMS => qw(
     dataset
     cs
     csver
@@ -25,26 +39,12 @@ Readonly our @REQUIRED_PARAMS => qw(
     end
 );
 
-### Constructors
-
-sub new {
-    my ($pkg, $server, $params) = @_;
-
-    my $self = {
-        _server => $server,
-        _params => $params,
-    };
-    my $class = ref($pkg) || $pkg;
-    bless $self, $class;
-
-    return $self;
-}
-
 sub new_with_slice {
-    my ($pkg, $server, $params) = @_;
+    my ($pkg, $server) = @_;
 
-    my $self = $pkg->new($server, $params);
+    my $self = $pkg->new($server);
 
+    my $params = $server->require_arguments(@SLICE_REQUIRED_PARAMS);
     my $slice = $self->_get_requested_slice($params);
     $self->slice($slice);
 
@@ -133,8 +133,9 @@ sub lock_region {
     my $odba = $server->otter_dba();
     $odba->begin_work;
 
+    my $cl_host = $server->param('hostname') || $ENV{REMOTE_ADDR};
     my $cb = Bio::Vega::ContigLockBroker->new;
-    $cb->client_hostname($self->param('cl_host'));
+    $cb->client_hostname($cl_host);
 
     my $slice = $self->slice;
     my $author_obj = $server->make_Author_obj();
@@ -176,7 +177,7 @@ sub unlock_region {
     my $slice;
 
     # the original string lives here:
-    my $xml_string = $self->param('data');
+    my $xml_string = $server->require_argument('data');
 
     my $action;
     try {
@@ -227,11 +228,6 @@ sub slice {
     my ($self, @args) = @_;
     ($self->{_slice}) = @args if @args;
     return $self->{_slice};
-}
-
-sub param {
-    my ($self, $key) = @_;
-    return $self->{_params}->{$key};
 }
 
 =head1 AUTHOR

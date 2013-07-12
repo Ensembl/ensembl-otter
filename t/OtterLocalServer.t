@@ -33,12 +33,14 @@ my %params = (
     end     => 3037940,
     );
 
-my $local_server = new_ok($localserver_module, [ %params ]);
+my $local_server = new_ok($localserver_module);
+ok($local_server->set_params(%params), 'set_params');
+is($local_server->param($_), $params{$_}, "param '$_'") foreach keys %params;
 
 my $otter_dba = $local_server->otter_dba;
 isa_ok($otter_dba, 'Bio::Vega::DBSQL::DBAdaptor');
 
-my $sa_region = $region_module->new_with_slice($local_server, \%params);
+my $sa_region = $region_module->new_with_slice($local_server);
 isa_ok($sa_region, $region_module);
 
 my $dna = $sa_region->get_assembly_dna;
