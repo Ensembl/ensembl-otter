@@ -6,7 +6,7 @@ use warnings;
 use Bio::EnsEMBL::Analysis;
 use Bio::EnsEMBL::DnaDnaAlignFeature;
 
-use Test::Otter;
+use Test::Otter qw( ^data_dir_or_skipall );
 use OtterTest::DB;
 
 use Test::More;
