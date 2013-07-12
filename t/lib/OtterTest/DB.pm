@@ -17,10 +17,7 @@ use OtterTest::Client;
 
 use parent 'Bio::Otter::Lace::DB';
 
-my (
-    %test_home,
-    %test_client,
-    );
+my %test_client;
 
 sub new {
     my ($pkg, $client) = @_;
@@ -34,7 +31,6 @@ sub new {
     my $db = $pkg->SUPER::new($test_home, $client);
 
     $db->test_client($client);
-    $db->test_home($test_home);
 
     return $db;
 }
@@ -60,15 +56,6 @@ sub test_client {
     return $test_client{$self};
 }
 
-sub test_home {
-    my ($self, $arg) = @_;
-
-    if ($arg) {
-        $test_home{$self} = $arg;
-    }
-    return $test_home{$self};
-}
-
 sub setup_chromosome_slice {
     my ($self) = @_;
     my $dbh = $self->dbh;
@@ -87,13 +74,12 @@ sub DESTROY {
     my $self = shift;
 
     my $file = $self->file;
-    my $test_home = $self->test_home;
+    my $test_home = dirname $file;
 
     note "Removing '$file'";
     unlink $file;
     rmdir $test_home;
 
-    delete($test_home{$self});
     delete($test_client{$self});
 
     return;
