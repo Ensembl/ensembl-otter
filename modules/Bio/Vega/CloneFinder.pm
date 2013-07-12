@@ -36,11 +36,12 @@ sub new {
         _results => {},
         _result_count => 0,
     };
+    bless $self, $class;
 
     die "Too many query terms"
       if @{ $self->qnames } > $MAX_TERMS;
 
-    return bless $self, $class;
+    return $self;
 }
 
 sub server {
