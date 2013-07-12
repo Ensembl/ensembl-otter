@@ -8,9 +8,7 @@ use base 'Bio::Otter::Server';
 sub new {
     my ($pkg, $params) = @_;
 
-    my $self = { };
-    my $class = ref($pkg) || $pkg;
-    bless $self, $class;
+    my $self = $pkg->SUPER::new();
 
     # Sensible either-or left to instantiator to enforce
     $self->dataset_name($params->{dataset}) if $params->{dataset};
