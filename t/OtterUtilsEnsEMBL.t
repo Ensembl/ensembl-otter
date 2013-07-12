@@ -8,6 +8,8 @@ use Test::CriticModule;
 
 use Test::More;
 use Test::Otter qw( ^data_dir_or_skipall ^db_or_skipall );
+use Test::Requires qw( Bio::EnsEMBL::Variation::DBSQL::DBAdaptor );
+
 use Try::Tiny;
 
 use Bio::Otter::Server::Config;
