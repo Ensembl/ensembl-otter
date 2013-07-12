@@ -16,10 +16,7 @@ use Bio::Otter::ServerAction::Region;
 sub lock_region {
     my ($server) = @_;
 
-    my $params = $server->require_arguments(@Bio::Otter::ServerAction::Region::REQUIRED_PARAMS);
-    $params->{cl_host} = $server->param('hostname') || $ENV{REMOTE_ADDR};
-
-    my $sa_region = Bio::Otter::ServerAction::Region->new_with_slice($server, $params);
+    my $sa_region = Bio::Otter::ServerAction::Region->new_with_slice($server);
 
     return $sa_region->lock_region;
 }

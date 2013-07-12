@@ -69,6 +69,24 @@ sub otter_dba {
         $self->dataset->otter_dba;
 }
 
+sub require_argument {
+    my ($self, $argname) = @_;
+
+    my $value = $self->param($argname);
+
+    die "No '$argname' argument defined"
+        unless defined $value;
+
+    return $value;
+}
+
+sub require_arguments {
+    my ($self, @arg_names) = @_;
+
+    my %params = map { $_ => $self->require_argument($_) } @arg_names;
+    return \%params;
+}
+
 =head1 AUTHOR
 
 Ana Code B<email> anacode@sanger.ac.uk

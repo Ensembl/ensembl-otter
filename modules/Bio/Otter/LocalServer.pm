@@ -13,6 +13,7 @@ sub new {
     # Sensible either-or left to instantiator to enforce
     $self->dataset_name($options{dataset}) if $options{dataset};
     $self->otter_dba($options{otter_dba})  if $options{otter_dba};
+    $self->set_params(%{$options{params}}) if $options{params};
 
     return $self;
 }
@@ -26,7 +27,19 @@ sub new {
 sub dataset_name {
     my ($self, @args) = @_;
     ($self->{_dataset_name}) = @args if @args;
-    return $self->{_dataset_name};
+    return $self->{_dataset_name} || $self->require_argument('dataset');
+}
+
+sub set_params {
+    my ($self, %params) = @_;
+    return $self->{_params} = { %params };
+}
+
+sub param {
+    my ($self, $key) = @_;
+    my $params = $self->{_params};
+    return unless $params;
+    return $params->{$key};
 }
 
 =head1 AUTHOR

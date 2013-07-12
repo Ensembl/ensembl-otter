@@ -319,24 +319,6 @@ sub unauth_exit {
     exit(1);
 }
 
-sub require_argument {
-    my ($self, $argname) = @_;
-
-    my $value = $self->param($argname);
-
-    die "No '$argname' argument defined"
-        unless defined $value;
-
-    return $value;
-}
-
-sub require_arguments {
-    my ($self, @arg_names) = @_;
-
-    my %params = map { $_ => $self->require_argument($_) } @arg_names;
-    return \%params;
-}
-
 ############# Creation of an Author object #######
 
 sub make_Author_obj {
