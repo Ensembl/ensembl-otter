@@ -33,8 +33,7 @@ my %params = (
     end     => 3037940,
     );
 
-my $local_server = $localserver_module->new(\%params);
-isa_ok($local_server, $localserver_module);
+my $local_server = new_ok($localserver_module, [ %params ]);
 
 my $otter_dba = $local_server->otter_dba;
 isa_ok($otter_dba, 'Bio::Vega::DBSQL::DBAdaptor');
@@ -49,8 +48,8 @@ note('Got ', length $dna, ' bp');
 my $region = $sa_region->get_region;
 isa_ok($region, 'Bio::Vega::Transform::XML');
 
-my $local_server_2 = $localserver_module->new({otter_dba => $otter_dba});
-isa_ok($local_server, $localserver_module);
+my $local_server_2 = new_ok($localserver_module, [ otter_dba => $otter_dba ]);
+
 my $otter_dba_2 = $local_server->otter_dba;
 isa_ok($otter_dba_2, 'Bio::Vega::DBSQL::DBAdaptor');
 is($otter_dba_2, $otter_dba, 'instantiate with otter_dba');

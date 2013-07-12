@@ -164,7 +164,7 @@ sub main_tests {
 
       while (my ($species, $regions) = each %species_tests) {
           note("Live tests for: $species");
-          my $local_server = Bio::Otter::LocalServer->new({dataset => $species});
+          my $local_server = Bio::Otter::LocalServer->new(dataset => $species);
           foreach my $region ( @$regions ) {
               run_region($local_server, $region, $at_cache);
           }

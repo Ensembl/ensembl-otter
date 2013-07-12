@@ -6,13 +6,13 @@ use warnings;
 use base 'Bio::Otter::Server';
 
 sub new {
-    my ($pkg, $params) = @_;
+    my ($pkg, %options) = @_;
 
     my $self = $pkg->SUPER::new();
 
     # Sensible either-or left to instantiator to enforce
-    $self->dataset_name($params->{dataset}) if $params->{dataset};
-    $self->otter_dba($params->{otter_dba})  if $params->{otter_dba};
+    $self->dataset_name($options{dataset}) if $options{dataset};
+    $self->otter_dba($options{otter_dba})  if $options{otter_dba};
 
     return $self;
 }
