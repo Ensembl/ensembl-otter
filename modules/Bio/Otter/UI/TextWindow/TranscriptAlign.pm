@@ -10,8 +10,6 @@ use Bio::Otter::Lace::Client;
 
 use parent 'Bio::Otter::UI::TextWindow';
 
-my $highlight_hydrophobic = 0;
-
 sub new {
     my ($pkg, $parent, $type) = @_;
     my $self = $pkg->SUPER::new($parent);
