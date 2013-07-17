@@ -30,6 +30,8 @@ sub freeze_thaw_gene {
 
     my $slice = $gene->feature_Slice;
     $gene = $gene->transfer($slice);
+    die("Broken before refactoring of Bio::Vega::Transform::XML on 2013-07-15.") if 1;
+    # ...as generate_OtterXML takes no arguments.
     my $xml = Bio::Vega::Transform::XML->new->generate_OtterXML(
         $slice,
         $gene->adaptor->db,

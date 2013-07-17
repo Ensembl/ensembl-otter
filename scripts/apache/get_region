@@ -12,15 +12,19 @@ use SangerPaths qw{ core bioperl123 ensembl71 otter76 };
 
 use Bio::Otter::ServerScriptSupport;
 use Bio::Otter::ServerAction::Region;
+use Bio::Vega::Transform::XML;
 
 sub get_region {
     my ($server) = @_;
 
-    my $sa_region = Bio::Otter::ServerAction::Region->new_with_slice($server);
+    my $region = Bio::Otter::ServerAction::Region->new_with_slice($server)->get_region;
 
     warn "Converting slice to XML...\n";
 
-    my $xml = $sa_region->get_region->generate_OtterXML;
+    my $formatter = Bio::Vega::Transform::XML->new;
+    $formatter->region($region);
+
+    my $xml = $formatter->generate_OtterXML;
 
     warn "Done converting slice to XML. Length of XML = " . length($xml) . "\n";
 

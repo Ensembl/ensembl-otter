@@ -48,7 +48,7 @@ ok($dna, 'get_assembly_dna');
 note('Got ', length $dna, ' bp');
 
 my $region = $sa_region->get_region;
-isa_ok($region, 'Bio::Vega::Transform::XML');
+isa_ok($region, 'Bio::Vega::Region');
 
 my $local_server_2 = new_ok($localserver_module, [ otter_dba => $otter_dba ]);
 
