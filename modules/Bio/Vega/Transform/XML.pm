@@ -394,14 +394,6 @@ sub generate_FeatureSet {
 }
 
 
-sub generate_DNA {
-    my ($self, $slice);
-
-    my $dna=$self->prettyprint('dna', $slice->seq);
-
-    return $dna;
-}
-
 1;
 
 __END__
