@@ -11,6 +11,7 @@ use Fcntl qw{ O_WRONLY O_CREAT };
 use Config::IniFiles;
 use Try::Tiny;
 
+use Bio::Vega::Region;
 use Bio::Vega::Transform::Otter::Ace;
 use Bio::Vega::AceConverter;
 use Bio::Vega::Transform::XML;
@@ -737,13 +738,15 @@ sub generate_XML_from_acedb {
     $converter->generate_vega_objects;
 
     # Pass the Ensembl objects to the XML formatter
-    my $formatter = Bio::Vega::Transform::XML->new;
-    $formatter->species($self->smart_slice->dsname);
-    $formatter->slice(          $converter->ensembl_slice   );
-    $formatter->clone_seq_list( $converter->clone_seq_list  );
-    $formatter->genes(          $converter->genes           );
-    $formatter->seq_features(   $converter->seq_features    );
+    my $region = Bio::Vega::Region->new;
+    $region->species($self->smart_slice->dsname);
+    $region->slice(           $converter->ensembl_slice     );
+    $region->clone_sequences( @{$converter->clone_seq_list} );
+    $region->genes(           @{$converter->genes}          );
+    $region->seq_features(    @{$converter->seq_features}   );
 
+    my $formatter = Bio::Vega::Transform::XML->new;
+    $formatter->region($region);
     return $formatter->generate_OtterXML;
 }
 

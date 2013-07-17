@@ -7,8 +7,7 @@ use Readonly;
 use Try::Tiny;
 
 use Bio::Vega::ContigLockBroker;
-use Bio::Vega::Transform::Otter;
-use Bio::Vega::Transform::XML;
+use Bio::Vega::Region;
 
 =head1 NAME
 
@@ -115,19 +114,16 @@ sub get_region {
     my $odba  = $self->server->otter_dba;
     my $slice = $self->slice;
 
-    my $formatter = Bio::Vega::Transform::XML->new;
-    $formatter->otter_dba($odba);
-    $formatter->slice($slice);
-    $formatter->fetch_data_from_otter_db;
+    my $region = Bio::Vega::Region->new_from_otter_db(
+        otter_dba => $odba,
+        slice     => $slice,
+        );
 
-    return $formatter;
+    return $region;
 }
 
-# Really the XML generation should be factored out to the apache script, but
-# for now we treat the XML as a black-box token to be returned to unlock_region.
-#
 sub lock_region {
-    my $self = shift;
+    my ($self, $serialise_lock_object) = @_;
 
     my $server = $self->server;
     my $odba = $server->otter_dba();
@@ -140,34 +136,32 @@ sub lock_region {
     my $slice = $self->slice;
     my $author_obj = $server->make_Author_obj();
 
-    my ($xml, $action);
+    my ($lock_token, $action);
     try {
         $action = 'locking';
         $cb->lock_clones_by_slice($slice, $author_obj, $odba);
 
         $action = 'result setup';
-        my $formatter = Bio::Vega::Transform::XML->new;
-        $formatter->otter_dba($odba);
-        $formatter->slice($slice);
-        $formatter->fetch_species;
-        $formatter->fetch_CloneSequences;
+        my $region = Bio::Vega::Region->new(
+            otter_dba => $odba,
+            slice     => $slice,
+            );
+        $region->fetch_species;
+        $region->fetch_CloneSequences;
 
         $action = 'output';
-        $xml = $formatter->generate_OtterXML;
+        $lock_token = &$serialise_lock_object($region);
         $odba->commit;
     } catch {
         $odba->rollback;
         die "Locking clones failed during $action \[$_]";
     };
 
-    return $xml;
+    return $lock_token;
 }
 
-# This doesn't really need the services of ServerAction::Region, but for symmetry it
-# should live here.
-#
 sub unlock_region {
-    my $self = shift;
+    my ($self, $deserialise_lock_token) = @_;
 
     my $server = $self->server;
     my $odba   = $server->otter_dba();
@@ -177,16 +171,14 @@ sub unlock_region {
     my $slice;
 
     # the original string lives here:
-    my $xml_string = $server->require_argument('data');
+    my $lock_token = $server->require_argument('data');
 
     my $action;
     try {
         $action = 'converting XML to otter';
 
-        my $parser = Bio::Vega::Transform::Otter->new;
-        $parser->parse($xml_string);
+        my $chr_slice = &$deserialise_lock_token($lock_token);
 
-        my $chr_slice    = $parser->get_ChromosomeSlice;
         my $seq_reg_name = $chr_slice->seq_region_name;
         my $start        = $chr_slice->start;
         my $end          = $chr_slice->end;

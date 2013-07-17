@@ -12,6 +12,7 @@ use SangerPaths qw{ core bioperl123 ensembl71 otter76 };
 
 use Bio::Otter::ServerScriptSupport;
 use Bio::Vega::ContigLockBroker;
+use Bio::Vega::Region;
 use Bio::Vega::Transform::Otter;
 use Bio::Vega::Transform::XML;
 
@@ -123,7 +124,7 @@ sub write_region {
         warn "Attaching gene to slice \n";
 
 
-        my $changed_genes = [];
+        my @changed_genes;
         foreach my $gene (@$xml_genes) {
             # attach gene and its components to the right slice
             $gene->slice($db_slice);
@@ -139,10 +140,10 @@ sub write_region {
             # update all gene and its components in db (new/mod)
             $gene->is_current(1);
             if ($gene_adaptor->store($gene, $time_now)) {
-                push(@$changed_genes, $gene);
+                push(@changed_genes, $gene);
             }
         }
-        warn "Updated " . scalar(@$changed_genes) . " genes\n";
+        warn "Updated " . scalar(@changed_genes) . " genes\n";
 
         my %stored_genes_hash = map {$_->stable_id, $_} @$xml_genes;
 
@@ -201,13 +202,17 @@ sub write_region {
         ##the response xml has all the above changes done in this session
 
         ##pass on to the xml generator the current set of genes , simple features
+        my $region =  Bio::Vega::Region->new(
+            otter_dba => $odba,
+            slice     => $db_slice,
+            );
+        $region->genes(@changed_genes);
+        $region->seq_features(@$xml_simple_features);
+        $region->fetch_species;
+        $region->fetch_CloneSequences;
+
         my $formatter =  Bio::Vega::Transform::XML->new;
-        $formatter->genes($changed_genes);
-        $formatter->seq_features($xml_simple_features);
-        $formatter->slice($db_slice);
-        $formatter->otter_dba($odba);
-        $formatter->fetch_species;
-        $formatter->fetch_CloneSequences;
+        $formatter->region($region);
         $output_xml = $formatter->generate_OtterXML;
     };
     if ($@) {

@@ -12,13 +12,23 @@ use SangerPaths qw{ core bioperl123 ensembl71 otter76 };
 
 use Bio::Otter::ServerScriptSupport;
 use Bio::Otter::ServerAction::Region;
+use Bio::Vega::Transform::XML;
 
 sub lock_region {
     my ($server) = @_;
 
     my $sa_region = Bio::Otter::ServerAction::Region->new_with_slice($server);
 
-    return $sa_region->lock_region;
+    return $sa_region->lock_region(\&serialise_lock_object);
+}
+
+sub serialise_lock_object {
+    my ($lock_object) = @_;
+
+    my $formatter = Bio::Vega::Transform::XML->new;
+    $formatter->region($lock_object);
+
+    return $formatter->generate_OtterXML;
 }
 
 Bio::Otter::ServerScriptSupport->send_response(\&lock_region);

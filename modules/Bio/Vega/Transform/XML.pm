@@ -11,28 +11,16 @@ use NEXT;
 
 use Bio::EnsEMBL::Utils::Exception qw (throw);
 use Bio::Vega::Utils::GeneTranscriptBiotypeStatus 'biotype_status2method';
-use Bio::Otter::Lace::CloneSequence;
+use Bio::Otter::Utils::Attribute qw( get_single_attrib_value );
 
 use base 'Bio::Vega::Writer';
 
-my (
-    %species,
-    %slice,
-    %otter_dba,
-    %genes,
-    %seq_features,
-    %clone_seq_list,
-    );
+my %region;
 
 sub DESTROY {
     my ($self) = @_;
 
-    delete(                 $species{$self} );
-    delete(                   $slice{$self} );
-    delete(               $otter_dba{$self} );
-    delete(                   $genes{$self} );
-    delete(            $seq_features{$self} );
-    delete(          $clone_seq_list{$self} );
+    delete( $region{$self} );
 
     $self->NEXT::DESTROY;
 
@@ -50,163 +38,11 @@ my $by_start_end_strand = sub {
 
 # get/set methods exposed on object interface
 
-sub species {
+sub region {
     my ($self, @args) = @_;
 
-    $species{$self} = shift @args if @args;
-    return $species{$self};
-}
-
-sub slice {
-    my ($self, @args) = @_;
-
-    $slice{$self} = shift @args if @args;
-    return $slice{$self};
-}
-
-sub otter_dba {
-    my ($self, @args) = @_;
-
-    $otter_dba{$self} = shift @args if @args;
-    return $otter_dba{$self};
-}
-
-sub genes {
-    my ($self, @args) = @_;
-
-    $genes{$self} = shift @args if @args;
-    return $genes{$self};
-}
-
-sub seq_features {
-    my ($self, @args) = @_;
-
-    $seq_features{$self} = shift @args if @args;
-    return $seq_features{$self};
-}
-
-sub clone_seq_list {
-    my ($self, @args) = @_;
-
-    $clone_seq_list{$self} = shift @args if @args;
-    return $clone_seq_list{$self};
-}
-
-# methods which fetch data from otter db
-
-sub fetch_data_from_otter_db {
-    my ($self) = @_;
-
-    confess "Cannot fetch data without slice"     unless $slice{$self};
-    confess "Cannot fetch data without otter_dba" unless $otter_dba{$self};
-
-    $self->fetch_CloneSequences;
-    $self->fetch_species;
-    $self->fetch_SimpleFeatures;
-    $self->fetch_Genes;
-
-    return;
-}
-
-sub fetch_species {
-    my ($self) = @_;
-
-    $species{$self} = $otter_dba{$self}->species;
-
-    return;
-}
-
-sub fetch_SimpleFeatures {
-    my ($self) = @_;
-
-    my $slice = $slice{$self};
-    my $features        = $slice->get_all_SimpleFeatures;
-    my $slice_length    = $slice->length;
-
-    # Discard features which overlap the ends of the slice
-    for (my $i = 0; $i < @$features; ) {
-        my $sf = $features->[$i];
-        if ($sf->start < 1 or $sf->end > $slice_length) {
-            splice(@$features, $i, 1);
-        } else {
-            $i++;
-        }
-    }
-
-    $seq_features{$self} = $features;
-
-    return;
-}
-
-sub fetch_Genes {
-    my ($self) = @_;
-
-    $genes{$self} = $slice{$self}->get_all_Genes;
-
-    return;
-}
-
-sub fetch_CloneSequences {
-    my ($self) = @_;
-
-    my $slice_projection = $slice{$self}->project('contig');
-    my $cs_list = $clone_seq_list{$self} = [];
-    foreach my $contig_seg (@$slice_projection) {
-        my $cs = $self->fetch_CloneSeq($contig_seg);
-        push @$cs_list, $cs;
-    }
-
-    return;
-}
-
-sub fetch_CloneSeq {
-    my ($self, $contig_seg) = @_;
-
-    my $contig_slice = $contig_seg->to_Slice();
-
-    my $cs = Bio::Otter::Lace::CloneSequence->new;
-    $cs->chromosome(get_single_attrib_value($slice{$self}, 'chr'));
-    $cs->contig_name($contig_slice->seq_region_name);
-
-    my $clone_slice = $contig_slice->project('clone')->[0]->to_Slice;
-    $cs->accession(     get_single_attrib_value($clone_slice, 'embl_acc')           );
-    $cs->sv(            get_single_attrib_value($clone_slice, 'embl_version')       );
-
-    if (my ($cna) = @{$clone_slice->get_all_Attributes('intl_clone_name')}) {
-        $cs->clone_name($cna->value);
-    } else {
-        $cs->clone_name($cs->accession_dot_sv);
-    }
-
-    my $assembly_offset = $slice{$self}->start - 1;
-    $cs->chr_start( $contig_seg->from_start + $assembly_offset  );
-    $cs->chr_end(   $contig_seg->from_end   + $assembly_offset  );
-    $cs->contig_start(  $contig_slice->start                );
-    $cs->contig_end(    $contig_slice->end                  );
-    $cs->contig_strand( $contig_slice->strand               );
-    $cs->length(        $contig_slice->seq_region_length    );
-
-    if (my $ci = $otter_dba{$self}->get_ContigInfoAdaptor->fetch_by_contigSlice($contig_slice)) {
-        $cs->ContigInfo($ci);
-    }
-
-    return $cs;
-}
-
-sub get_single_attrib_value {
-    my ($obj, $code) = @_;
-
-    my $attr = $obj->get_all_Attributes($code);
-    if (@$attr == 1) {
-        return $attr->[0]->value;
-    }
-    elsif (@$attr == 0) {
-        return;
-    }
-    else {
-        confess sprintf("Got %d %s Attributes on %s",
-            scalar(@$attr), $code, ref($obj));
-    }
+    $region{$self} = shift @args if @args;
+    return $region{$self};
 }
 
 sub get_geneXML {
@@ -223,7 +59,8 @@ sub generate_OtterXML {
 
     my $ot = $self->prettyprint('otter');
     $ot->indent(1);
-    my $dataset_name = $species{$self} or confess "No species set";
+    my $region = $region{$self} or confess "No region set";
+    my $dataset_name = $region->species or confess "Region species not set";
     $ot->attribvals($self->prettyprint('species', $dataset_name));
     $ot->attribobjs($self->generate_SequenceSet);
 
@@ -236,8 +73,8 @@ sub generate_SequenceSet {
     my $ss=$self->prettyprint('sequence_set');
     $ss->attribvals($self->generate_AssemblyType);
 
-    my $cs_list = $clone_seq_list{$self} || [];
-    foreach my $cs (@$cs_list) {
+    my @cs_list = $region{$self}->clone_sequences;
+    foreach my $cs (@cs_list) {
         ### I think we will generate contig attributes multiple times
         ### for contigs which appear multiple times in the assembly
         $ss->attribobjs($self->generate_SequenceFragment($cs));
@@ -245,7 +82,7 @@ sub generate_SequenceSet {
 
     $ss->attribobjs($self->generate_FeatureSet);
 
-    my $list_of_genes = $genes{$self} || [];
+    my $list_of_genes = [ $region{$self}->genes ];
 
     foreach my $gene (sort $by_start_end_strand @$list_of_genes) {
         # warn sprintf "Adding gene %6d .. %6d  %+d  %s\n", $gene->start, $gene->end, $gene->strand, $gene->display_id;
@@ -257,7 +94,7 @@ sub generate_SequenceSet {
 sub generate_AssemblyType {
     my ($self) = @_;
 
-    my $atype = $self->prettyprint('assembly_type', $slice{$self}->seq_region_name);
+    my $atype = $self->prettyprint('assembly_type', $region{$self}->slice->seq_region_name);
 
     return $atype;
 }
@@ -511,13 +348,13 @@ sub generate_EvidenceSet {
 sub generate_FeatureSet {
   my ($self) = @_;
 
-  my $features = $seq_features{$self} or return;
-  my $slice = $slice{$self};
+  my @features = $region{$self}->seq_features or return;
+  my $slice = $region{$self}->slice;
 
   my $fs=$self->prettyprint('feature_set');
   my $offset=$slice->start-1;
 
-  foreach my $feature (sort $by_start_end_strand @$features) {
+  foreach my $feature (sort $by_start_end_strand @features) {
 
       my $f = $self->prettyprint('feature');
       if ($feature->analysis){
