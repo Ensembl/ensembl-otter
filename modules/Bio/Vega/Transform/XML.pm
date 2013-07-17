@@ -7,6 +7,7 @@ package Bio::Vega::Transform::XML;
 use strict;
 use warnings;
 use Carp;
+use NEXT;
 
 use Bio::EnsEMBL::Utils::Exception qw (throw);
 use Bio::Vega::Utils::GeneTranscriptBiotypeStatus 'biotype_status2method';
@@ -33,8 +34,7 @@ sub DESTROY {
     delete(            $seq_features{$self} );
     delete(          $clone_seq_list{$self} );
 
-    # So that any DESTROY methods in base classes get called:
-    bless $self, 'Bio::Vega::Writer';
+    $self->NEXT::DESTROY;
 
     return;
 }

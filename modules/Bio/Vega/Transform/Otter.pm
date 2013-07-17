@@ -7,6 +7,8 @@ use strict;
 use warnings;
 
 use Carp;
+use NEXT;
+
 use Bio::Vega::Exon;
 use Bio::Vega::Transcript;
 use Bio::Vega::Gene;
@@ -70,8 +72,7 @@ sub DESTROY {
     delete $chr_coord_system{$self};
     delete $ctg_coord_system{$self};
 
-    # So that DESTROY gets called in baseclass:
-    bless $self, 'Bio::Vega::Transform';
+    $self->NEXT::DESTROY;
 
     return;
 }

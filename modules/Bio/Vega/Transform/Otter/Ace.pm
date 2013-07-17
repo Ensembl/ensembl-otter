@@ -6,6 +6,8 @@ package Bio::Vega::Transform::Otter::Ace;
 use strict;
 use warnings;
 use Carp;
+use NEXT;
+
 use Hum::Ace::AceText;
 use Bio::Vega::Utils::GeneTranscriptBiotypeStatus 'biotype_status2method';
 
@@ -26,8 +28,7 @@ sub DESTROY {
 
     # delete $ace_string{$self};
 
-    # So that DESTROY gets called in baseclass:
-    bless $self, 'Bio::Vega::Transform::Otter';
+    $self->NEXT::DESTROY;
 
     return;
 }
