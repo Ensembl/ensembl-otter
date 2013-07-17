@@ -25,8 +25,6 @@ use Bio::Otter::UI::TextWindow::Peptide;
 
 use base qw( MenuCanvasWindow );
 
-my $highlight_hydrophobic = 0;
-
 # "new" is in MenuCanvasWindow
 
 sub initialize {
