@@ -319,20 +319,6 @@ sub unauth_exit {
     exit(1);
 }
 
-############# Creation of an Author object #######
-
-sub make_Author_obj {
-    my ($self) = @_;
-
-    my $author_name = $self->authorized_user;
-    #my $author_email = $self->require_argument('email');
-
-    return Bio::Vega::Author->new(
-        -name  => $author_name,
-        -email => $author_name,
-        );
-}
-
 
 ## no critic (Modules::ProhibitMultiplePackages)
 

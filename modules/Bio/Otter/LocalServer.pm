@@ -20,7 +20,10 @@ sub new {
 
 ### Methods
 
-
+sub authorized_user {
+    my $uname = getpwuid($<);
+    return $uname;
+}
 
 ### Accessors
 

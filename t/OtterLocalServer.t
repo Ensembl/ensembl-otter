@@ -8,6 +8,7 @@ use Test::CriticModule;
 use Test::SetupLog4perl;
 
 use Test::More;
+use Try::Tiny;
 
 use Test::Otter qw( ^db_or_skipall ^data_dir_or_skipall ); # may skip test
 
@@ -49,6 +50,27 @@ note('Got ', length $dna, ' bp');
 
 my $region = $sa_region->get_region;
 isa_ok($region, 'Bio::Vega::Region');
+
+TODO: {
+    local $TODO = "convert region's clone sequences into tiles :-(, possibly by converting to/from XML";
+    fail;
+}
+# For now, ensure write_region dies appropriately.
+#
+my ($okay, $error);
+try {
+    $local_server->set_params( data => $region );
+    my $new_region = $sa_region->write_region(
+        sub { return shift },
+        sub { return shift },
+        );
+    isa_ok($new_region, 'Bio::Vega::Region');
+} catch {
+    $error = $_;
+};
+ok(not($okay), 'attempt to write_region dies as expected');
+like($error, qr/numbers of tiles/, 'error message ok');
+
 
 my $local_server_2 = new_ok($localserver_module, [ otter_dba => $otter_dba ]);
 
