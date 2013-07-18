@@ -88,7 +88,6 @@ use Getopt::Long qw{ GetOptions };
         sgifaceserver
         blixemh
         dotter
-        xremote
         }
     ) {
         my $from = "$ace_bin_dir/$exe";
@@ -135,29 +134,7 @@ use Getopt::Long qw{ GetOptions };
         system(@cvs) == 0
             or die "Error running '@cvs'; exit $?";
     }
-    
-    # Tagged with:  xargs cvs tag humpub-release-48 < MANIFEST
-    warn "Exporting X11::Xremote code\n";
-    my $xremote_dir = 'X11-XRemote-0.01';
-    my @xremote_cvs = (
-        'cvs', '-Q',
-        -d => ':ext:cvs.internal.sanger.ac.uk:/repos/cvs/zmap',
-        'export',
-        -r => $release,
-        -d => $xremote_dir,
-        "ZMap/src/perl/$xremote_dir",
-        );
-    system(@xremote_cvs) == 0
-        or die "Error running '@xremote_cvs'; exit $?";
-    my @copy = ('cp', '-r', '-p', "$ace_dir/lib", "$ace_dir/include", "$xremote_dir/");
-    system(@copy) == 0
-        or die "Error running '@copy'; $!";
-    
-    #perl Makefile.PL PREFIX=~/work/otter_home \
-    #--with-zmap-inc=/nfs/team71/acedb/zmap/BIN.DEVELOPMENT/LINUX/include \
-    #--with-zmap-libs=/nfs/team71/acedb/zmap/BIN.DEVELOPMENT/LINUX/lib \
-    #--with-symbols
-    
+
     if ($internal_flag) {
         warn "Made release dir: $release_dir\n";
     } else {
