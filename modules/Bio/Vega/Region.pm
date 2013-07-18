@@ -85,6 +85,23 @@ sub clone_sequences {
     return @$clone_sequences;
 }
 
+# FIXME: this should be merged with clone_sequences.
+#        provided only to support refactoring of apache/write_region.
+#
+sub tiles {
+    my ($self, @args) = @_;
+    $self->_tile_list( [ @args ] ) if @args;
+    my $tiles = $self->_tile_list;
+    return @$tiles;
+}
+
+sub _tile_list {
+    my ($self, @args) = @_;
+    ($self->{'_tile_list'}) = @args if @args;
+    my $_tile_list = $self->{'_tile_list'} ||= [];
+    return $_tile_list;
+}
+
 sub fetch_CloneSequences {
     my ($self) = @_;
 
