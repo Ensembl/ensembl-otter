@@ -12,6 +12,9 @@ installed somewhere in your PATH, or the system PATH. Edit the commented out
 line near top so that OTTER_HOME points to the directory where you expanded
 the otterlace client (ie: the one this ReadMe.txt file is in).
 
+Otterlace makes use of other code (Zircon and the Hum::* modules)
+which have not been published.  Please contact us if you need them.
+
 You will almost certainly need to install some perl modules from CPAN before
 otterlace will compile. Some of these CPAN modules will be provided as
 optional components by most Linux distributions, so try your package manager
