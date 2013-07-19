@@ -32,6 +32,7 @@ Options:
     --loutrepass=PASS                   use loutre database password PASS
 
     --ignore_annotrack                  Don't check against Annotrack for QC errors
+    --ignore_QCreports=s                Don't exclude genes with outstanding QC issues of type specified (comma seperate list)
 
     --annotrackhost=s                   Annotrack DB host
     --annotrackport=s                   Annotrack DB port
@@ -65,9 +66,12 @@ and seq_region attributes) from Loutre.  MYSQLdump is also used to transfer a li
 tables and data from the loutre database.
 
 The script checks against Annotrack, ignoring any genes / transcripts with outstanding QC issues. This
-behaviour can be bypassed using the 'ignore_annotrack' option, but this should only be used where it has to be, ie
-where there is no Annotrack DB to query. Similarly, genes with 'in progress' remarks are also skipped by default
-but this can be bypassed using the 'dump_in_progress' option.
+behaviour can be bypassed in two ways (i) particular classes of QC report, for example 'VQCT_Bicis' can be
+ignored using the 'ignore_QCreports' option (ii) Querying of annotrack can be completely skipped by using the
+'ignore_annotrack' option - this should only be used where it has to be, ie where there is no Annotrack DB to query.
+
+Similarly, genes with 'in progress' remarks are also skipped by default but this can be bypassed using the
+'dump_in_progress' option.
 
 The 'chr' options specify a comma separated list of chromosomes to use. In the abscence
 of either of these the script examines the loutre database to see which chromosomes
@@ -174,7 +178,9 @@ $support->parse_extra_options(
   'add_genes=s',
   'skip_genes=s',
   'live_update',
-  'dump_in_progress'
+  'dump_in_progress',
+  'ignore_annotrack',
+  'ignore_QCreports=s',
 );
 $support->allowed_params(
   'currentdbname',
@@ -194,6 +200,8 @@ $support->allowed_params(
   'skip_genes',
   'live_update',
   'dump_in_progress',
+  'ignore_annotrack',
+  'ignore_QCreports',
   $support->get_loutre_params,
   $support->get_common_params,
   $support->get_annotrack_params,
@@ -220,6 +228,7 @@ $support->comma_to_list('chr');
 $support->comma_to_list('ignore_authors');
 $support->comma_to_list('add_genes');
 $support->comma_to_list('skip_genes');
+$support->comma_to_list('ignore_QCreports');
 
 #set gene prefixes to ignore for transfer if they are not already defined by the user
 if (! $support->param('filter_prefix')) {
@@ -642,11 +651,15 @@ foreach my $name (@{$chr_names_wanted}) {
     my $lgsi = $lgene->stable_id;
     my $gname = $lgene->get_all_Attributes('name')->[0]->value;
 
-    #filter on gene that has outstanding QC in Loutre
-    if (my $vqc = $annotrack_genes->{'Genes'}{$lgsi}{'not_fixed'}) {
+    #filter out genes that have outstanding QC in Loutre
+    if (my $vqc = $annotrack_genes->{'Genes'}{$lgsi}{'not_allowed'}) {
       $support->log("Skipping gene $lgsi because of outstanding QC ($vqc)\n",1);
 #      $skipped_obj{'Genes'}++;
       next GENE;
+    }
+    #report on Genes with outstanding QC that we've let through
+    if (my $vqc = $annotrack_genes->{'Genes'}{$lgsi}{'allowed'}) {
+      $support->log("Gene $lgsi with outstanding QC ($vqc) allowed since we've explicitly asked for this\n",2);
     }
 
     if($support->param('skip_genes')) {
@@ -894,11 +907,15 @@ sub transfer_gene {
       $needs_updateing = 1;
       $skip = 1;
     }
-    elsif (my $vqc = $annotrack_genes->{'Trans'}{$ltsi}{'not_fixed'}) {
+    elsif (my $vqc = $annotrack_genes->{'Trans'}{$ltsi}{'not_allowed'}) {
       $support->log("Skipping transcript $ltsi because of outstanding QC ($vqc)\n",2);
       $needs_updateing = 1;
       $skip = 1;
 #      $skipped_obj{'Trans'}++;
+    }
+    #report on Transcripts with outstanding QC that we've let through
+    if (my $vqc = $annotrack_genes->{'Trans'}{$ltsi}{'allowed'}) {
+      $support->log("Transcript $ltsi with outstanding QC ($vqc) allowed since we've explicitly asked for this\n",2);
     }
 
     #remove transcript
@@ -1208,7 +1225,20 @@ sub get_QC_issues {
 
     #QC issue is outstanding if flag.reason is NULL
     if (! $fix_reason ) {
-      $dets->{$type}{$id}{'not_fixed'} = $vqc;
+
+      #if we're excluding a QC report type then check if this is one of these
+      if ($support->param('ignore_QCreports')) {
+        if (grep {$vqc eq $_} $support->param('ignore_QCreports')) {
+          $dets->{$type}{$id}{'allowed'} = $vqc;
+        }
+        else {
+          $dets->{$type}{$id}{'not_allowed'} = $vqc;
+        }
+      }
+      else {
+        #otherwise exclude
+        $dets->{$type}{$id}{'not_allowed'} = $vqc;
+      }
     }
     else {
       #save some details so that we can QC the QC
