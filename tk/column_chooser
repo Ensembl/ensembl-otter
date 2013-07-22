@@ -1,0 +1,73 @@
+#!/usr/bin/env perl
+
+### column_chooser
+
+use strict;
+use warnings;
+use CanvasWindow::ColumnChooser;
+use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Lace::PipelineDB;
+use Data::Dumper;
+use File::Slurp qw{ slurp };
+
+use Hum::Sort qw{ ace_sort };
+
+$Data::Dumper::Terse = 1;
+
+{
+    my $dataset_name = 'human';
+
+    my $usage = sub { exec('perldoc', $0) };
+    # This do_getopt() call is needed to parse the otter config files
+    # even if you aren't giving any arguments on the command line.
+    Bio::Otter::Lace::Defaults::do_getopt(
+        'h|help!'       => $usage,
+        'dataset=s'     => \$dataset_name,
+        ) or $usage->();
+    $usage->() unless $dataset_name;
+    
+    # Client communicates with otter HTTP server
+    my $cl = Bio::Otter::Lace::Defaults::make_Client();
+    if (0) {
+        $cl->get_server_otter_config;
+    }
+    else {
+        Bio::Otter::Lace::Defaults::save_server_otter_config(scalar slurp("./otter_config"));
+    }
+    
+    
+    # DataSet interacts directly with an otter database
+    my $ds = $cl->get_DataSet_by_name($dataset_name);
+    $ds->load_client_config;
+
+    # foreach my $source (@{$ds->sources}) {
+    #     print Dumper($source);
+    # }
+    # exit;
+
+    my $sources = [ sort {ace_sort($a->name, $b->name)} @{$ds->sources} ];
+    # foreach my $filter (@$sources) {
+    #     print $filter->name, "\t", $filter->description, "\n";
+    # }
+    # exit;
+
+    my $mw = CanvasWindow::MainWindow->new;
+    $mw->title('Column Chooser');
+    my $cc = CanvasWindow::ColumnChooser->new($mw);
+    $cc->initialise;
+    $cc->column_set($sources);
+    $cc->do_render;
+
+    Tk::MainLoop();
+}
+
+
+
+__END__
+
+=head1 NAME - column_chooser
+
+=head1 AUTHOR
+
+James Gilbert B<email> jgrg@sanger.ac.uk
+
