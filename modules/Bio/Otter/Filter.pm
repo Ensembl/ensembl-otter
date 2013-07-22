@@ -115,6 +115,21 @@ sub name {
     return $self->{_name};
 }
 
+sub classification {
+    my ($self, $class) = @_;
+    
+    if ($class) {
+        $self->{'_classification'} = [split /\s*>\s*/, $class];
+    }
+
+    if (my $c_ref = $self->{'_classification'}) {
+        return @$c_ref;
+    }
+    else {
+        return;
+    }
+}
+
 sub url_string {
     my ($self, $url_string) = @_;
 
