@@ -905,9 +905,9 @@ sub parse_mgi {
       'Marker Symbol'           => 'MGI',
     },
     'mgifile_entrez' => {
-      'Mouse Marker Symbol'     => 'MGI',
-      'Mouse MGI Accession ID'  => 'MGI_PID',
-      'Mouse Entrez Gene ID'    => 'EntrezGene'
+      '1. MGI accession id'     => 'MGI_PID',
+      '3. marker symbol'        => 'MGI',
+      '6. Entrez gene id'       => 'EntrezGene',
     },
     'mgifile_uni_ref' => {
       'MGI Marker Accession ID' => 'MGI_PID',
