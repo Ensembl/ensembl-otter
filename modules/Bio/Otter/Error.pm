@@ -4,13 +4,8 @@ package Bio::Otter::Error;
 use strict;
 use warnings;
 
-use Tk::ErrorDialog;
-
-# grab a reference to Tk::ErrorDialog's Tk::Error()
-my $tk_error_dialog;
-BEGIN {
-    $tk_error_dialog = \&Tk::Error;
-}
+use Try::Tiny;
+use TransientWindow::LogWindow;
 
 # redefine Tk::Error() 
 {
@@ -19,20 +14,34 @@ BEGIN {
         my ($w, $error, @messages) = @_;
         # nb. @messages are a stacktrace, truncated by Tk where we
         # emerged from innermost event handler
+        return Bio::Otter::Error->show($w, $error, @messages);
+    }
 
-        my $message = $error =~ /web server/
+}
+
+sub show {
+    my ($pkg, $w, $error, @messages) = @_;
+
+    my $message = $error =~ /web server/
             ? 'There seems to be a problem with the web server, please try again later.'
             : "Unidentified problem: $error\n\nI suggest you raise a helpdesk ticket!"
             ;
 
-        print STDERR "Tk::Error: $error", map { qq( $_\n) } @messages; # dump to the log
-        $tk_error_dialog->($w, $message, @messages); # pop up the dialog
+    my @log = ("Tk::Error: $error", map { qq( $_\n) } @messages);
 
-        # show that we have left the nested event loop
-        print STDERR "(back from Tk::Error)\n";
+    try {
+        my $err_log = TransientWindow::LogWindow->show_for($w);
+        $err_log->message_highlight($message);
+        # This GUI-only highlight can appear ~1000 lines above the
+        # logged error, when the log window was previously not open;
+        # or other distances when logs are accumulating fast.
+    } catch {
+        warn "GUI error during Tk::Error: $_\n";
+    };
+    print STDERR @log;          # dump to the log
 
-        return;
-    }
+#    $w->break; # ignores further errors
+    return;
 }
 
 1;
