@@ -863,6 +863,9 @@ push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA$release_no|cont
 push @sql_fixes, "UPDATE meta set meta_value = \'chromosome:VEGA$release_no|contig|clone\' WHERE meta_value = \'chromosome:Otter|contig|clone\';\n";
 push @sql_fixes, "DELETE from meta where meta_value like \'%OtterArchive%\';\n";
 
+#pig fix
+push @sql_fixes, "DELETE from meta where meta_value like \'%OtterFuture%\';\n";
+
 #add misc info to meta table
 my $date = strftime "%Y-%m", localtime;
 my $gene_build = $date.'-Vega';
@@ -879,9 +882,6 @@ push @sql_fixes, "INSERT ignore into meta (meta_key,meta_value) VALUES (\'ensemb
 #needed for compara (
 push @sql_fixes, "INSERT ignore into meta (meta_key,meta_value) VALUES (\'assembly.coverage_depth\',\'high\');\n";
 push @sql_fixes, "INSERT ignore into meta (meta_key,meta_value) VALUES (\'genebuild.start_date\',\'$gene_build_date\');\n";
-
-#delete patch script entries - comment out since they are valid
-#push @sql_fixes, "DELETE from meta WHERE meta_key = \'patch\';\n";
 
 #update case of biotypes of some genes/transcripts for website display purposes
 push @sql_fixes, "UPDATE gene SET biotype = 'IG_gene' WHERE biotype = 'ig_gene';\n";
@@ -902,12 +902,6 @@ push @sql_fixes, "UPDATE transcript SET status = NULL WHERE status = 'UNKNOWN';\
 push @sql_fixes, "UPDATE gene SET status = NULL WHERE status = 'UNKNOWN';\n";
 push @sql_fixes, "UPDATE gene SET status = 'NOVEL' WHERE status = 'PUTATIVE' and biotype = 'protein_coding';\n";
 
-#gene biotype fixes - commented out in 52 since we really shouldn't be doing this
-#push @sql_fixes, "UPDATE gene SET biotype = 'processed_transcript' WHERE biotype = 'novel_transcript';\n";
-#push @sql_fixes, "UPDATE gene SET biotype = 'transcribed_pseudogene' WHERE biotype = 'expressed_pseudogene';\n";
-#push @sql_fixes, "UPDATE transcript SET biotype = 'transcribed_pseudogene' WHERE biotype = 'expressed_pseudogene';\n";
-#push @sql_fixes, "UPDATE transcript SET biotype = 'processed_transcript', status  = 'PUTATIVE' WHERE biotype = 'putative' AND status  = 'UNKNOWN';\n";
-#push @sql_fixes, "UPDATE transcript SET biotype = '3prime_overlapping_ncrna' where biotype = 'ncrna_host'";\n);
 
 #misc fix for repeat features
 push @sql_fixes, "DELETE from repeat_feature where repeat_start < 1;\n";
@@ -931,6 +925,7 @@ $sth = $vdbh->prepare(qq(SELECT attrib_type_id from attrib_type where code = \'h
 $sth->execute;
 my ($hidden_rem_at) = $sth->fetchrow_array;
 my @hidden_gene_attribs = ('not for VEGA','confirm experimentally','annotation in progress','EnsEMBL merge exception','EnsEMBL merge exception');
+push @hidden_gene_attribs, 'fragmented mixed strand locus'; #this is not a CV term but we don't want to show it
 $sth = $vdbh->prepare(qq(SELECT value from gene_attrib where value like 'ASB\\_%' group by value));
 $sth->execute;
 while (my ($value) = $sth->fetchrow_array) {
