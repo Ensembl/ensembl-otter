@@ -267,7 +267,7 @@ sub write_region {
             $new_feat->slice($db_slice);
             $sfa->store($new_feat);
         }
-        "Saved " . scalar(@$save_sf) . " SimpleFeatures\n" unless $@;
+        warn "Saved " . scalar(@$save_sf) . " SimpleFeatures\n" unless $@;
 
         ##assembly_tags are not taken into account here, as they are not part of annotation nor versioned ,
         ##but may be required in the future
