@@ -711,7 +711,7 @@ sub parse_hgnc {
     'Entrez Gene ID'  => 'EntrezGene',
     'OMIM ID'         => 'MIM_GENE',
     'UniProt ID(supplied by NCBI)'     => 'Uniprot/SWISSPROT',
-    'RefSeq IDs((supplied by UniProt)' => 'RefSeq',
+    'RefSeq IDs(supplied by UniProt)' => 'RefSeq',
   );
 
   #define relationships between RefSeq accession number and database (this is not in the download file)
