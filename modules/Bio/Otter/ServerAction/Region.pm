@@ -132,7 +132,8 @@ sub get_region {
         slice     => $slice,
         );
 
-    return $region;
+    my $serialised_region = $self->serialise_region($region);
+    return $serialised_region;
 }
 
 =head2 write_region
