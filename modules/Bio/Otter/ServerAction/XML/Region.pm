@@ -15,32 +15,19 @@ Bio::Otter::ServerAction::XML::Region - server requests on a region, serialised 
 
 =cut
 
-=head2 get_region
-=cut
-
-sub get_region {
-    my $self = shift;
-    my $region = $self->SUPER::get_region;
-
-    warn "Converting slice to XML...\n";
-    my $xml = $self->serialise_region($self);
-    warn "Done converting slice to XML. Length of XML = " . length($xml) . "\n";
-
-    return $xml;
-}
-
-# Other actions handled by overriding serialise & deserialise methods here.
-
 
 ### Serialisation & Deserialisation methods
 
 sub serialise_region {
     my ($self, $region) = @_;
 
+    warn "Converting slice to XML...\n";
     my $formatter = Bio::Vega::Transform::XML->new;
     $formatter->region($region);
+    my $xml = $formatter->generate_OtterXML;
+    warn "Done converting slice to XML. Length of XML = " . length($xml) . "\n";
 
-    return $formatter->generate_OtterXML;
+    return $xml;
 }
 
 sub deserialise_region {
