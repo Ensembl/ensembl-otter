@@ -139,7 +139,7 @@ sub get_region {
 =cut
 
 sub write_region {
-    my ($self, $deserialise_region, $serialise_region) = @_;
+    my ($self) = @_;
 
     my $server = $self->server;
 
@@ -151,7 +151,7 @@ sub write_region {
     my ($new_region, $db_region, $ci_hash, $action);
     try {
         $action = 'converting XML to otter';
-        $new_region = &$deserialise_region($xml_string);
+        $new_region = $self->deserialise_region($xml_string);
 
         $action = 'comparing XML assembly with database assembly';
         $db_region = $self->_fetch_db_region($new_region);
@@ -170,7 +170,7 @@ sub write_region {
     # everything that needs saving should use this timestamp:
     my $time_now = time;
 
-    my $output_xml;
+    my $serialised_output;
 
     $odba->begin_work;
     try {
@@ -284,14 +284,14 @@ sub write_region {
         $current_region->fetch_species;
         $current_region->fetch_CloneSequences;
 
-        $output_xml = &$serialise_region($current_region);
+        $serialised_output = $self->serialise_region($current_region);
 
         $odba->commit;
     } catch {
         $odba->rollback;
         die "Writing region failed writing annotations [$_]";
     };
-    return $output_xml;
+    return $serialised_output;
 }
 
 sub _fetch_db_region {
@@ -395,7 +395,7 @@ sub _strip_incomplete_genes {
 =cut
 
 sub lock_region {
-    my ($self, $serialise_lock_object) = @_;
+    my ($self) = @_;
 
     my $server = $self->server;
     my $odba = $server->otter_dba();
@@ -422,7 +422,7 @@ sub lock_region {
         $region->fetch_CloneSequences;
 
         $action = 'output';
-        $lock_token = &$serialise_lock_object($region);
+        $lock_token = $self->serialise_region($region);
         $odba->commit;
     } catch {
         $odba->rollback;
@@ -436,7 +436,7 @@ sub lock_region {
 =cut
 
 sub unlock_region {
-    my ($self, $deserialise_lock_token) = @_;
+    my ($self) = @_;
 
     my $server = $self->server;
     my $odba   = $server->otter_dba();
@@ -452,7 +452,7 @@ sub unlock_region {
     try {
         $action = 'converting XML to otter';
 
-        my $chr_slice = &$deserialise_lock_token($lock_token);
+        my $chr_slice = $self->deserialise_lock_token($lock_token);
 
         my $seq_reg_name = $chr_slice->seq_region_name;
         my $start        = $chr_slice->start;
@@ -461,6 +461,7 @@ sub unlock_region {
         my $cs           = $chr_slice->coord_system->name;
         my $cs_version   = $chr_slice->coord_system->version;
 
+        $action = 'retrieving database slice';
         $slice = $odba->get_SliceAdaptor()->fetch_by_region(
             $cs, $seq_reg_name, $start, $end, $strand, $cs_version);
         warn "Processed incoming xml file with slice: [$seq_reg_name] [$start] [$end]\n";
@@ -483,6 +484,23 @@ sub unlock_region {
     };
 
     return;
+}
+
+### Null serialisation & deserialisation methods
+
+sub serialise_region {
+    my ($self, $region) = @_;
+    return $region;
+}
+
+sub deserialise_region {
+    my ($self, $region) = @_;
+    return $region;
+}
+
+sub deserialise_lock_token {
+    my ($self, $slice) = @_;
+    return $slice;
 }
 
 ### Accessors
