@@ -710,8 +710,8 @@ sub parse_hgnc {
     'Pubmed IDs'      => 'PUBMED',
     'Entrez Gene ID'  => 'EntrezGene',
     'OMIM ID'         => 'MIM_GENE',
-    'UniProt ID(supplied by NCBI)'     => 'Uniprot/SWISSPROT',
-    'RefSeq IDs(supplied by UniProt)' => 'RefSeq',
+    'UniProt ID'     => 'Uniprot/SWISSPROT',
+    'RefSeq IDs' => 'RefSeq',
   );
 
   #define relationships between RefSeq accession number and database (this is not in the download file)
@@ -723,6 +723,7 @@ sub parse_hgnc {
     NR => 'RefSeq_rna',
     XR => 'RefSeq_rna_predicted',
     NG => 'RefSeq_genomic',
+    NT => 'RefSeq_genomic',
   );
 
   # read header (containing external db names) and check all wanted columns are there
