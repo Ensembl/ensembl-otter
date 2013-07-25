@@ -633,7 +633,7 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
       $sth2->execute($sr_id);
     }
   }
-  if ($loutre_name =~ /MHC|LRC|IDD/i) {
+  if ($loutre_name =~ /MHC|LRC|IDD|LW/i) {
     $support->log("Adding non-ref seq_region_attrib for haplotype/strain chromosome $loutre_name",1);
     if (! $support->param('dry_run')) {
       $sth2->execute($sr_id);
@@ -897,7 +897,7 @@ push @sql_fixes, qq(UPDATE transcript SET biotype = "3prime_overlapping_ncrna" w
 
 #update some statuses
 push @sql_fixes, "UPDATE gene SET status = 'NOVEL' WHERE biotype = 'processed_transcript' AND status = 'UNKNOWN';\n";
-push @sql_fixes, "UPDATE gene SET status = NULL WHERE biotype in ('processed_pseudogene','pseudogene','transcribed_processed_pseudogene','transcribed_unitary_pseudogene','transcribed_unprocessed_pseudogene','unprocessed_pseudogene','unitary_pseudogene');\n";
+push @sql_fixes, "UPDATE gene SET status = NULL WHERE biotype in ('processed_pseudogene','pseudogene','transcribed_processed_pseudogene','transcribed_unitary_pseudogene','transcribed_unprocessed_pseudogene','unprocessed_pseudogene','unitary_pseudogene','translated_processed_pseudogene',''translated_unprocessed_pseudogene','IG_pseudogene','TR_pseudogene');\n";
 push @sql_fixes, "UPDATE transcript SET status = NULL WHERE status = 'UNKNOWN';\n";
 push @sql_fixes, "UPDATE gene SET status = NULL WHERE status = 'UNKNOWN';\n";
 push @sql_fixes, "UPDATE gene SET status = 'NOVEL' WHERE status = 'PUTATIVE' and biotype = 'protein_coding';\n";
