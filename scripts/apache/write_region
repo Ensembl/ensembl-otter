@@ -10,45 +10,16 @@ use warnings;
 BEGIN { use lib ($ENV{OTTER_PERL_INC} || q{}) =~ m{([^:]+)}g }
 use SangerPaths qw{ core bioperl123 ensembl71 otter76 };
 
-use Bio::Otter::ServerAction::Region;
+use Bio::Otter::ServerAction::XML::Region;
 use Bio::Otter::ServerScriptSupport;
-use Bio::Vega::Region;
-use Bio::Vega::Transform::Otter;
-use Bio::Vega::Transform::XML;
 
 sub write_region {
     my ($server) = @_;
 
-    my $sa_region = Bio::Otter::ServerAction::Region->new($server);
-    my $output_xml = $sa_region->write_region(\&deserialise_region, \&serialise_region);
+    my $sa_region = Bio::Otter::ServerAction::XML::Region->new($server);
+    my $output_xml = $sa_region->write_region;
 
     return $output_xml;
-}
-
-sub deserialise_region {
-    my ($xml_string) = @_;
-
-    my $parser = Bio::Vega::Transform::Otter->new;
-    $parser->parse($xml_string);
-
-    my $region = Bio::Vega::Region->new;
-    $region->slice($parser->get_ChromosomeSlice);
-    $region->tiles($parser->get_Tiles); # FIXME: should use clone_sequences
-    $region->genes(@{$parser->get_Genes});
-    $region->seq_features(@{$parser->get_SimpleFeatures});
-
-    return $region;
-}
-
-# DRY error: this looks a lot like lock_region's serialise_lock_object().
-#
-sub serialise_region {
-    my ($region) = @_;
-
-    my $formatter =  Bio::Vega::Transform::XML->new;
-    $formatter->region($region);
-
-    return $formatter->generate_OtterXML;
 }
 
 Bio::Otter::ServerScriptSupport->send_response(\&write_region);
