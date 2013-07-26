@@ -12,17 +12,19 @@ use Try::Tiny;
 
 use Test::Otter qw( ^db_or_skipall ^data_dir_or_skipall ); # may skip test
 
-my ($localserver_module, $region_module);
-BEGIN {
-    $localserver_module = 'Bio::Otter::LocalServer';
-    use_ok($localserver_module);
+my %modules;
 
-    $region_module = 'Bio::Otter::ServerAction::Region';
-    use_ok($region_module);
+BEGIN {
+    %modules = (
+        localserver => 'Bio::Otter::LocalServer',
+        region      => 'Bio::Otter::ServerAction::Region',
+        xml_region  => 'Bio::Otter::ServerAction::XML::Region',
+        );
+
+    use_ok($_) foreach sort values %modules;
 }
 
-critic_module_ok($localserver_module);
-critic_module_ok($region_module);
+critic_module_ok($_) foreach sort values %modules;
 
 my %params = (
     dataset => 'human_test',
@@ -34,15 +36,15 @@ my %params = (
     end     => 3037940,
     );
 
-my $local_server = new_ok($localserver_module);
+my $local_server = new_ok($modules{localserver});
 ok($local_server->set_params(%params), 'set_params');
 is($local_server->param($_), $params{$_}, "param '$_'") foreach keys %params;
 
 my $otter_dba = $local_server->otter_dba;
 isa_ok($otter_dba, 'Bio::Vega::DBSQL::DBAdaptor');
 
-my $sa_region = $region_module->new_with_slice($local_server);
-isa_ok($sa_region, $region_module);
+my $sa_region = $modules{region}->new_with_slice($local_server);
+isa_ok($sa_region, $modules{region});
 
 my $dna = $sa_region->get_assembly_dna;
 ok($dna, 'get_assembly_dna');
@@ -53,32 +55,45 @@ isa_ok($region, 'Bio::Vega::Region');
 
 TODO: {
     local $TODO = "convert region's clone sequences into tiles :-(, possibly by converting to/from XML";
-    fail;
+    fail 'todo';
 }
 # For now, ensure write_region dies appropriately.
 #
-my ($okay, $error);
-try {
-    $local_server->set_params( data => $region );
-    my $new_region = $sa_region->write_region(
-        sub { return shift },
-        sub { return shift },
-        );
-    isa_ok($new_region, 'Bio::Vega::Region');
-} catch {
-    $error = $_;
-};
+my ($okay, $region_out, $error) = try_write_region($sa_region, $region);
 ok(not($okay), 'attempt to write_region dies as expected');
 like($error, qr/numbers of tiles/, 'error message ok');
 
+ok($local_server->set_params(%params), 'set_params');
+my $sa_xml_region = $modules{xml_region}->new_with_slice($local_server);
+isa_ok($sa_xml_region, $modules{xml_region});
 
-my $local_server_2 = new_ok($localserver_module, [ otter_dba => $otter_dba ]);
+my $xml = $sa_xml_region->get_region;
+ok($xml, 'get_region as XML');
+note('Got ', length $xml, ' chrs');
+
+($okay, $region_out, $error) = try_write_region($sa_xml_region, $xml);
+ok(not($okay), 'attempt to write_region from XML dies as expected');
+like($error, qr/not locked/, 'error message ok');
+
+my $local_server_2 = new_ok($modules{localserver}, [ otter_dba => $otter_dba ]);
 
 my $otter_dba_2 = $local_server->otter_dba;
 isa_ok($otter_dba_2, 'Bio::Vega::DBSQL::DBAdaptor');
 is($otter_dba_2, $otter_dba, 'instantiate with otter_dba');
 
 done_testing;
+
+sub try_write_region {
+    my ($sa_class, $data_in) = @_;
+    my ($ok, $data_out, $err);
+    try {
+        $local_server->set_params( data => $data_in );
+        $data_out = $sa_class->write_region;
+    } catch {
+        $err = $_;
+    };
+    return ($ok, $data_out, $err);
+}
 
 1;
 
