@@ -84,7 +84,12 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
     # my @args = qw( -dbname vega_mus_musculus_20130211_70_GRCm38 -host ensdb-web-17 -port 5317 );
 
     # my @args = qw( -dbname vega_homo_sapiens_20130422_71_GRCh37 -host ensdb-web-17 -port 5317 );
-    my @args = qw( -dbname vega_danio_rerio_20130422_71_Zv9 -host ensdb-web-17 -port 5317 );
+    # my @args = qw( -dbname vega_danio_rerio_20130422_71_Zv9 -host ensdb-web-17 -port 5317 );
+
+    # my @args = qw( -dbname vega_homo_sapiens_20130722_72_GRCh37 -host ensdb-web-17 -port 5317 );
+    # my @args = qw( -dbname vega_mus_musculus_20130722_72_GRCm38 -host ensdb-web-17 -port 5317 );
+    # my @args = qw( -dbname vega_sus_scrofa_20130722_72 -host ensdb-web-17 -port 5317 );
+    my @args = qw( -dbname vega_rattus_norvegicus_20130610_72_5a -host ensdb-web-17 -port 5317 );
 
     my $now = scalar localtime;
     print "$now fix_gene_biotypes.pl on (@args)\n";
@@ -209,8 +214,6 @@ sub fix_biotypes {
     }
 
     my %transitions;
-    my $transcribed_remark       = 'Transcribed pseudogene';
-    my $transcribed_remark_added = 0;
     my $nc_RNA_host_remark       = 'ncRNA host';
     my $nc_RNA_host_remark_added = 0;
     foreach my $gene_id (sort { $a <=> $b } keys %gene_tsct_biotypes) {
@@ -228,12 +231,6 @@ sub fix_biotypes {
         # EnsEMBL fear the single quote
         $new_biotype =~ s/3'_/3prime_/;
 
-        if ($new_biotype =~ s/^transcribed_//) {
-
-            # transcribed_processed_pseudogene
-            # transcribed_unprocessed_pseudogene
-            $transcribed_remark_added += add_remark_attribute_if_missing($dba, $gene_id, $transcribed_remark);
-        }
         if ($ott_ncRNA_host->{ $gene_data->{'stable_id'} }) {
             $nc_RNA_host_remark_added += add_remark_attribute_if_missing($dba, $gene_id, $nc_RNA_host_remark);
         }
@@ -247,7 +244,6 @@ sub fix_biotypes {
     foreach my $trans (sort keys %transitions) {
         printf "%8d  %s\n", $transitions{$trans}, $trans;
     }
-    print "Added $transcribed_remark_added '$transcribed_remark' remarks\n";
     print "Added $nc_RNA_host_remark_added '$nc_RNA_host_remark' remarks\n";
     return;
 }
