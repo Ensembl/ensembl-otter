@@ -13,7 +13,7 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
         -host    => 'ens-livemirror',
         -port    => 3306,
         -user    => 'ensro',
-        -dbname  => 'homo_sapiens_core_71_37',
+        -dbname  => 'homo_sapiens_core_72_37',
         -group   => 'ensembl',
         -species => 'human',
     );
