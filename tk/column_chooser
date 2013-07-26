@@ -7,6 +7,7 @@ use warnings;
 use CanvasWindow::ColumnChooser;
 use Bio::Otter::Lace::Defaults;
 use Bio::Otter::Lace::PipelineDB;
+use Bio::Otter::Lace::Source::Collection;
 use Data::Dumper;
 use File::Slurp qw{ slurp };
 
@@ -45,17 +46,19 @@ $Data::Dumper::Terse = 1;
     # }
     # exit;
 
-    my $sources = [ sort {ace_sort($a->name, $b->name)} @{$ds->sources} ];
-    # foreach my $filter (@$sources) {
-    #     print $filter->name, "\t", $filter->description, "\n";
-    # }
-    # exit;
+    # my $cllctn = Bio::Otter::Lace::Source::Collection->new_from_Filter_list(@{$ds->sources});
+    my $cllctn = Bio::Otter::Lace::Source::Collection->new_from_Filter_list(@{$ds->filters});
+    foreach my $item ($cllctn->list_Items) {
+        print "  " x $item->indent;
+        print $item->is_Bracket ? '> ' : ". ", $item->name, "\n";
+    }
+    exit;
 
     my $mw = CanvasWindow::MainWindow->new;
     $mw->title('Column Chooser');
     my $cc = CanvasWindow::ColumnChooser->new($mw);
     $cc->initialise;
-    $cc->column_set($sources);
+    $cc->column_Collection($cllctn);
     $cc->do_render;
 
     Tk::MainLoop();
