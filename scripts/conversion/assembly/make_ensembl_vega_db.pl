@@ -288,7 +288,6 @@ unless ($c > 1) {
 }
 
 ### transfer seq_regions from Ensembl db
-my $sth;
 $support->log_stamped("Transfering Ensembl seq_regions...\n");
 
 # determine max(seq_region_id) and max(coord_system_id) in Vega and use to offset the Ensembl seq_regions so they don't clash
