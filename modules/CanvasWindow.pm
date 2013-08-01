@@ -5,7 +5,7 @@ package CanvasWindow;
 
 use strict;
 use warnings;
-use Carp;
+use Carp qw{ confess cluck };
 
 use Try::Tiny;
 
@@ -444,13 +444,6 @@ sub fix_window_min_max_sizes {
         $max_x = $fix_x;
         $max_y = $fix_y;
     } else {
-        if (($x + $max_x) > $display_max_x) {
-            $x = $display_max_x - $max_x;
-        }
-        if (($y + $max_y) > $display_max_y) {
-            $y = $display_max_y - $max_y;
-        }
-
         # Leave at least 100 pixels
         my $border = 100;
         if ($max_x > $display_max_x - $border) {
@@ -458,6 +451,13 @@ sub fix_window_min_max_sizes {
         }
         if ($max_y > $display_max_y - $border) {
             $max_y = $display_max_y - $border;
+        }
+
+        if (($x + $max_x) > $display_max_x) {
+            $x = $display_max_x - $max_x;
+        }
+        if (($y + $max_y) > $display_max_y) {
+            $y = $display_max_y - $max_y;
         }
     }
     # Nudge the window onto the screen.
