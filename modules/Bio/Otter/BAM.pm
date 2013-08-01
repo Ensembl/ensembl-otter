@@ -42,6 +42,12 @@ sub description {
     return $self->{description};
 }
 
+sub classification {
+    my ($self) = @_;
+
+    return 'BAM', split m{\s*/\s*}, $self->description;
+}
+
 sub file {
     my ($self) = @_;
     return $self->{file};

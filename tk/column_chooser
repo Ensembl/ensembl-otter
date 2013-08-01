@@ -48,17 +48,16 @@ $Data::Dumper::Terse = 1;
 
     # my $cllctn = Bio::Otter::Lace::Source::Collection->new_from_Filter_list(@{$ds->sources});
     my $cllctn = Bio::Otter::Lace::Source::Collection->new_from_Filter_list(@{$ds->filters});
-    foreach my $item ($cllctn->list_Items) {
-        print "  " x $item->indent;
-        print $item->is_Bracket ? '> ' : ". ", $item->name, "\n";
-    }
-    exit;
+    # foreach my $item ($cllctn->list_Items) {
+    #     print "  " x $item->indent;
+    #     print $item->is_Bracket ? '> ' : ". ", $item->name, "\n";
+    # }
+    # exit;
 
     my $mw = CanvasWindow::MainWindow->new;
     $mw->title('Column Chooser');
-    my $cc = CanvasWindow::ColumnChooser->new($mw);
-    $cc->initialise;
-    $cc->column_Collection($cllctn);
+    my $cc = CanvasWindow::ColumnChooser->new($mw, 800, 600);
+    $cc->initialise($cllctn);
     $cc->do_render;
 
     Tk::MainLoop();

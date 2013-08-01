@@ -126,7 +126,7 @@ sub classification {
         return @$c_ref;
     }
     else {
-        return;
+        return 'misc';
     }
 }
 

@@ -18,7 +18,8 @@ sub new {
     my ($pkg) = @_;
 
     return bless {
-        '_item_list'    => [],
+        '_item_list'        => [],
+        '_search_string'    => '',
     }, $pkg;
 }
 
@@ -90,7 +91,7 @@ sub construct_regex_list {
         if ($term ne '-' and $term =~ s/^-//) {
             $test = 0;
         }
-        push(@$r_list, [$test, qr{$term}m]);
+        push(@$r_list, [$test, qr{$term}im]);
     }
 }
 
@@ -125,7 +126,51 @@ sub clear_Items {
     my ($self) = @_;
 
     $self->{'_item_list'} = [];
+    $self->{'_is_matched'} = {};
+    $self->{'_is_collapsed'} = {};
     return;
+}
+
+sub list_visible_Items {
+    my ($self) = @_;
+
+    my $hide_level = 0;
+    my @all = $self->list_Items;
+    my @visible;
+    while (my $item = shift @all) {
+        push @visible, $item;
+        if ($self->is_collapsed($item)) {
+            my $level = $item->indent;
+            # Remove everything inside this Bracket from the list
+            while (my $item = shift @all) {
+                if ($item->indent <= $level) {
+                    # We're back outside the Bracket. Put this one back.
+                    unshift(@all, $item);
+                    last;
+                }
+            }
+        }
+    }
+    return @visible;
+}
+
+sub is_matched {
+    my ($self, $item, $flag) = @_;
+    
+    if (defined $flag) {
+        $self->{'_is_matched'}{$item} = $flag ? 1 : 0;
+    }
+    return $self->{'_is_matched'}{$item};
+}
+
+sub is_collapsed {
+    my ($self, $item, $flag) = @_;
+    
+    if (defined $flag) {
+        confess "Not a Bracket" unless $item->is_Bracket;
+        $self->{'_is_collapsed'}{$item} = $flag ? 1 : 0;
+    }
+    return $self->{'_is_collapsed'}{$item};
 }
 
 sub filter {
@@ -141,7 +186,7 @@ sub filter {
     my @tests = $self->regex_list;
     my @item_list = $self->list_Items;
     my @hit_i;
-    for (my $i = 0; $i < @item_list;) {
+    for (my $i = 0; $i < @item_list; $i++) {
         my $item = $item_list[$i];
         my $hit = 0;
         foreach my $t (@tests) {
@@ -160,6 +205,7 @@ sub filter {
         }
         if ($hit) {
             $hit_i[$i] = 1;
+            $new->is_matched($item, 1);
             my $this_indent = $item->indent;
             if ($item->is_Bracket) {
                 # Add every following item with an indent great than this
@@ -176,7 +222,7 @@ sub filter {
             }
             # Add every prevous Bracket with an intent less than this so that
             # the new collection has all the branches which lead to this node.
-            for (my $j = $i - 1; $j > 0; $j--) {
+            for (my $j = $i - 1; $j >= 0; $j--) {
                 my $other = $item_list[$j];
                 if ($other->is_Bracket) {
                     my $other_indent = $other->indent;
@@ -190,11 +236,13 @@ sub filter {
         }
     }
 
-    # Loop through @hit_i because it may be shorter than @item_list
+    # Loop through @hit_i because it will usually be shorter than @item_list
     for (my $i = 0; $i < @hit_i; $i++) {
         if ($hit_i[$i]) {
             # Copy matched item into new object
-            $new->add_Item($self->{'_item_list'}[$i]);
+            my $item = $self->{'_item_list'}[$i];
+            $new->add_Item($item);
+            $new->is_collapsed($item, $self->is_collapsed($item));
         }
     }
     return $new;
