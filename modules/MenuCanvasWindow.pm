@@ -11,6 +11,16 @@ use base qw( CanvasWindow );
 sub new {
     my ($pkg, $tk, @rest) = @_;
 
+    my $menu_frame = $pkg->make_menu_widget($tk);
+
+    my $self = $pkg->SUPER::new($tk, @rest);
+    $self->menu_bar($menu_frame);
+    return $self;
+}
+
+sub make_menu_widget {
+    my ($pkg, $tk) = @_;
+
     my $menu_frame = $tk->Frame(
         -borderwidth    => 1,
         -relief         => 'raised',
@@ -19,10 +29,7 @@ sub new {
         -side   => 'top',
         -fill   => 'x',
         );
-
-    my $self = $pkg->SUPER::new($tk, @rest);
-    $self->menu_bar($menu_frame);
-    return $self;
+    return $menu_frame;
 }
 
 sub menu_bar {
