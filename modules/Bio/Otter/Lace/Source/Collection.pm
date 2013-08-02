@@ -10,9 +10,6 @@ use Text::ParseWords qw{ quotewords };
 use Hum::Sort qw{ ace_sort array_ace_sort };
 use Bio::Otter::Lace::Source::Item::Bracket;
 use Bio::Otter::Lace::Source::Item::Column;
-use Data::Dumper;
-
-$Data::Dumper::Terse = 1;
 
 sub new {
     my ($pkg) = @_;
@@ -187,32 +184,42 @@ sub filter {
     my @item_list = $self->list_Items;
     my @hit_i;
     for (my $i = 0; $i < @item_list; $i++) {
+        if (defined $hit_i[$i]) {
+            # Already included or excluded as part of a bracket.
+            next;
+        }
         my $item = $item_list[$i];
-        my $hit = 0;
+
+        my $hit  = 0;
+        my $miss = 0;
         foreach my $t (@tests) {
             my ($true, $regex) = @$t;
-            if ($true) {
-                if ($item->string =~ /$regex/) {
+            if ($item->string =~ /$regex/) {
+                if ($true) {
                     $hit = 1;
                 }
-            }
-            else {
-                if ($item->string !~ /$regex/) {
-                    $hit = 1;
+                else {
+                    $miss = 1;
                 }
+                last;
             }
-            last if $hit;
+            elsif (! $true and ! $item->is_Bracket) {
+                # Keep each column which doesn't match negated search terms
+                $hit = 1;
+                last;
+            }
         }
-        if ($hit) {
-            $hit_i[$i] = 1;
+
+        if ($hit or $miss) {
+            $hit_i[$i] = $hit ? 1 : 0;
             $new->is_matched($item, 1);
             my $this_indent = $item->indent;
             if ($item->is_Bracket) {
-                # Add every following item with an indent great than this
+                # Flag every following item with an indent great than this
                 for (my $j = $i + 1; $j < @item_list; $j++) {
                     my $other = $item_list[$j];
                     if ($other->indent > $this_indent) {
-                        $hit_i[$j] = 1;
+                        $hit_i[$j] = $hit ? 1 : 0;
                     }
                     else {
                         # We're back to an item at the same level as the match
@@ -222,15 +229,17 @@ sub filter {
             }
             # Add every prevous Bracket with an intent less than this so that
             # the new collection has all the branches which lead to this node.
-            for (my $j = $i - 1; $j >= 0; $j--) {
-                my $other = $item_list[$j];
-                if ($other->is_Bracket) {
-                    my $other_indent = $other->indent;
-                    if ($other_indent < $this_indent) {
-                        $hit_i[$j] = 1;
-                        $this_indent--;     # or we would add all brackets at highter level!
+            if ($hit) {
+                for (my $j = $i - 1; $j >= 0; $j--) {
+                    my $other = $item_list[$j];
+                    if ($other->is_Bracket) {
+                        my $other_indent = $other->indent;
+                        if ($other_indent < $this_indent) {
+                            $hit_i[$j] = 1;
+                            $this_indent--;     # or we would add all brackets at highter level!
+                        }
+                        last if $other_indent == 0;
                     }
-                    last if $other_indent == 0;
                 }
             }
         }
@@ -242,7 +251,6 @@ sub filter {
             # Copy matched item into new object
             my $item = $self->{'_item_list'}[$i];
             $new->add_Item($item);
-            $new->is_collapsed($item, $self->is_collapsed($item));
         }
     }
     return $new;

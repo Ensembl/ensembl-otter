@@ -21,28 +21,33 @@ sub new {
 }
 
 sub search {
-    my ($self) = @_;
+    my ($self, $search_string) = @_;
 
-    my $i = $self->{'_index'};
+    unless (defined $search_string and $search_string =~ /\S/) {
+        return;
+    }
+
+    my $i = \$self->{'_index'};
     my $cllctn_list = $self->{'_collection_list'};
-    my $cllctn = $cllctn_list->[$i];
-    my $new_cllctn = $cllctn->filter($cllctn_list->[$i + 1]);
-    push(@{$self->{'_collection_list'}}, $new_cllctn);
-    $self->{'_index'}++;
+    my $cllctn = $cllctn_list->[$$i];
+    return unless $cllctn->list_Items;
+    $cllctn->search_string($search_string);
+    $$i++;
+    my $new_cllctn = $cllctn->filter($cllctn_list->[$$i]);
+    splice(@{$self->{'_collection_list'}}, $$i, 1, $new_cllctn);
     return $new_cllctn;
 }
 
 sub back {
     my ($self) = @_;
 
-    my $i = $self->{'_index'};
-    if ($i == 0) {
+    my $i = \$self->{'_index'};
+    if ($$i == 0) {
         return; # Already at start
     }
     else {
-        $i--;
-        $self->{'_index'} = $i;
-        return $self->{'_collection_list'}[$i];        
+        $$i--;
+        return $self->{'_collection_list'}[$$i];        
     }
 }
 
@@ -57,10 +62,13 @@ sub snail_trail_text {
 
     my $i = $self->{'_index'};
     if ($i == 0) {
-        return '';
+        return 'Column list is unfiltered';
     }
     else {
-        return join ' > ', map $_->search_string, @{$self->{'_collection_list'}}[0 .. $self->{'_index'} - 1];
+        return 'Filtered on: ' . join(' > ',
+            map $_->search_string,
+            @{$self->{'_collection_list'}}[0 .. $self->{'_index'} - 1]
+            );
     }
 }
 
