@@ -60,7 +60,7 @@ sub initialise {
     my $snail_frame  = $top_frame->Frame->pack(-side => 'top');
     my $search_frame = $top_frame->Frame->pack(-side => 'top');
 
-    $self->{'_snail_trail_text'} = 'Snail trail';
+    $self->{'_snail_trail_text'} = $hist->snail_trail_text;
     $snail_frame->Label(
         -textvariable => \$self->{'_snail_trail_text'},
         )->pack(-side => 'left');
@@ -73,10 +73,11 @@ sub initialise {
 
     my $filter = sub{ $self->do_filter };
     $search_frame->Button(-text => 'Filter', -command => $filter)->pack(-side => 'left');
-    $entry->bind('<Return>', $filter);
 
     my $back = sub{ $self->go_back };
     $search_frame->Button(-text => 'Back', -command => $back)->pack(-side => 'left');
+
+    $entry->bind('<Return>', $filter);
     $entry->bind('<Escape>', $back);
 
     $top->bind('<Destroy>', sub{ $self = undef });
@@ -88,10 +89,8 @@ sub initialise {
 sub do_filter {
     my ($self) = @_;
     
-    my $cllctn = $self->current_Collection;
-    return unless $cllctn->list_Items;
-    $cllctn->search_string($self->{'_entry_search_string'});
-    my $new_cllctn = $self->SearchHistory->search;
+    my $new_cllctn = $self->SearchHistory->search($self->{'_entry_search_string'})
+        or return;
     $self->set_search_entry($new_cllctn->search_string);
     $self->update_snail_trail_label;
     $self->do_render;
