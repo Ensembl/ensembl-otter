@@ -7,12 +7,13 @@ use lib "${ENV{ANACODE_TEAM_TOOLS}}/t/tlib";
 use Test::CriticModule;
 use Test::SetupLog4perl;
 
+use Sys::Hostname;
 use Test::More;
 use Try::Tiny;
 
 use Test::Otter qw( ^db_or_skipall ^data_dir_or_skipall ); # may skip test
 
-use OtterTest::TestRegion;
+use OtterTest::TestRegion qw( %test_region_params );
 
 my %modules;
 
@@ -27,7 +28,8 @@ BEGIN {
 
 critic_module_ok($_) foreach sort values %modules;
 
-my $sa_region = $modules{region}->new_with_slice(OtterTest::TestRegion->local_server);
+my $local_server = OtterTest::TestRegion->local_server; # complete with region params
+my $sa_region = $modules{region}->new_with_slice($local_server);
 isa_ok($sa_region, $modules{region});
 
 my $dna = $sa_region->get_assembly_dna;
@@ -58,6 +60,14 @@ note('Got ', length $xml, ' chrs');
 ok(not($okay), 'attempt to write_region from XML dies as expected');
 like($error, qr/not locked/, 'error message ok');
 
+my $lock;
+($okay, $lock, $error) = try_lock_region($sa_region);
+ok($okay, 'locked okay');
+note("Lock is:\n$lock");
+
+($okay, $error) = try_unlock_region($sa_region, $lock);
+ok($okay, 'unlocked okay');
+
 done_testing;
 
 sub try_write_region {
@@ -66,10 +76,37 @@ sub try_write_region {
     try {
         $server_action_region->server->set_params( data => $data_in );
         $data_out = $server_action_region->write_region;
+        $ok = 1;
     } catch {
         $err = $_;
     };
     return ($ok, $data_out, $err);
+}
+
+sub try_lock_region {
+    my ($server_action_region) = @_;
+    my ($ok, $data_out, $err);
+    try {
+        $server_action_region->server->set_params( %test_region_params, hostname => hostname );
+        $data_out = $server_action_region->lock_region;
+        $ok = 1;
+    } catch {
+        $err = $_;
+    };
+    return ($ok, $data_out, $err);
+}
+
+sub try_unlock_region {
+    my ($server_action_region, $lock) = @_;
+    my ($ok, $err);
+    try {
+        $server_action_region->server->set_params( data => $lock );
+        $server_action_region->unlock_region;
+        $ok = 1;
+    } catch {
+        $err = $_;
+    };
+    return ($ok, $err);
 }
 
 1;
