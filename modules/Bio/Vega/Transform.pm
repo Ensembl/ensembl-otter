@@ -33,7 +33,7 @@ sub DESTROY {
     delete $current_string{$self};
     delete $object_builders{$self};
     if (my $data = delete $object_data{$self}) {
-        warn "Unused data after parse: ", Dumper($data);
+        confess "Unused data after parse: ", Dumper($data);
     }
     delete $is_multiple{$self};
 
