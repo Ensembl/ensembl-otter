@@ -876,7 +876,7 @@ sub get_meta {
         },
     );
 
-    return _build_meta_hash($response);
+    return $self->_build_meta_hash($response);
 }
 
 # Factored out for use in OtterTest::Client
