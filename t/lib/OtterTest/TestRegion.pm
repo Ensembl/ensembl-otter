@@ -16,8 +16,8 @@ our %test_region_params = (   ## no critic (Variables::ProhibitPackageVars)
     type    => 'chr6-18',
     cs      => 'chromosome',
     csver   => 'Otter',
-    start   => 2864371,
-    end     => 3037940,
+    start   => 2_558_000,
+    end     => 2_648_000,
     );
 
 sub local_server {
