@@ -500,8 +500,8 @@ sub deserialise_region {
 }
 
 sub deserialise_lock_token {
-    my ($self, $slice) = @_;
-    return $slice;
+    my ($self, $region) = @_;
+    return $region->slice;
 }
 
 ### Accessors
