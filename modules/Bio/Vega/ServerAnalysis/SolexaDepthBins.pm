@@ -5,8 +5,6 @@ package Bio::Vega::ServerAnalysis::SolexaDepthBins;
 use strict;
 use warnings;
 
-use Data::Dumper;
-
 use Bio::EnsEMBL::SimpleFeature;
 
 my $BIN_SIZE = 10;
