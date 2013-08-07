@@ -103,6 +103,10 @@ sub __need_tools {
        # [ belvu => '--version' ], # part of Seqtools
 
        [ filter_get => '--version' ], # Bio::Otter::Filter
+
+       [ gff_get => '--version' ],
+       [ bam_get => '--version' ],
+       [ bigwig_get => '--version' ],
       );
 }
 
