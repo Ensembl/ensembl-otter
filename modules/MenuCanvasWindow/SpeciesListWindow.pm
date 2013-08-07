@@ -137,7 +137,7 @@ sub ensure_tools {
     };
 
     if (@v) {
-        local $" = ', ';
+        local $" = "\n  ";
         warn "Tools are @v\n";
     } else {
         $self->message("Some parts of Otterlace are not working\n".
