@@ -26,12 +26,14 @@ sub about_text {
     my ($pkg) = @_;
 
     my $vsn = Bio::Otter::Git->as_text;
-    my $anno = join ', ', try { $pkg->tools_versions() }
-      catch { "some parts broken: $_" };
+    my $anno = join '', map {"  $_\n"}
+      try { $pkg->tools_versions() }
+        catch { "some parts broken: $_" };
 
     return <<"TEXT";
 This is Otterlace version $vsn
-with $anno\n
+with
+$anno\n
 Otterlace web page
   http://www.sanger.ac.uk/resources/software/otterlace/
 TEXT
@@ -72,6 +74,14 @@ sub tools_versions {
             }
         }
         die "Command '@cmd' failed, $fail\n" if defined $fail;
+
+        open $fh, '-|', which => $prog
+          or die "Failed to pipe from 'which': $!\n";
+        my $which = do { local $/ = undef; <$fh> }; # slurp
+        close $fh; # ignore exit
+
+        chomp ($txt, $which);
+        push @v, "$txt from $which";
     }
     return @v;
 }
