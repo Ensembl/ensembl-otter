@@ -143,6 +143,7 @@ sub do_render {
     $self->canvas->delete('all');
 
     my $cllctn = $self->current_Collection;
+    $cllctn->update_all_Bracket_selection;
     my @items = $cllctn->list_visible_Items;
     for (my $i = 0; $i < @items; $i++) {
         $self->draw_Item($i, $items[$i]);
@@ -163,6 +164,7 @@ sub draw_Item {
     if ($item->is_Bracket) {
         $self->draw_arrow($item, $x_start, $y_start);
     }
+    $self->draw_checkbutton($item, $x_start + $row_height, $y_start);
     $canvas->createText(
         $x_start + (2 * $row_height), $y_start,
         -anchor => 'nw',
@@ -182,6 +184,46 @@ sub draw_Item {
     #     -fill       => 'LightBlue',
     #     -outline    => undef,
     #     );
+}
+
+{
+    my $on_checkbutton_xpm;
+    my $off_checkbutton_xpm;
+
+    sub draw_checkbutton {
+        my ($self, $item, $x, $y) = @_;
+
+        my $canvas = $self->canvas;
+        my $is_selected = $item->selected;
+        my $img;
+        if ($is_selected) {
+            $img = $on_checkbutton_xpm ||= Tk::Utils::CanvasXPMs::on_checkbutton_xpm($canvas);
+        }
+        else {
+            $img = $off_checkbutton_xpm ||= Tk::Utils::CanvasXPMs::off_checkbutton_xpm($canvas);
+        }
+        my $img_id = $canvas->createImage(
+            $x, $y,
+            -anchor => 'nw',
+            -image  => $img,
+            );
+        $canvas->bind($img_id, '<Button-1>', sub {
+            # $canvas->delete($img_id);
+            $item->selected(! $is_selected);
+            # $self->draw_checkbutton($item, $x, $y);
+            $self->update_brackets($item);
+            });
+    }
+}
+
+sub update_brackets {
+    my ($self, $item) = @_;
+
+    my $cllctn = $self->current_Collection;
+    if ($item->is_Bracket) {
+        $cllctn->select_Bracket($item);
+    }
+    $self->do_render;
 }
 
 {

@@ -26,21 +26,23 @@ sub new_from_Filter_list {
     @list = sort { array_ace_sort([$a->classification], [$b->classification])
                    || ace_sort($a->name, $b->name) } @list;
 
-    my $cllctn = Bio::Otter::Lace::Source::Collection->new;
+    my $self = Bio::Otter::Lace::Source::Collection->new;
     my $bkt_path = [];
     foreach my $filter (@list) {
         my $col = Bio::Otter::Lace::Source::Item::Column->new;
         $col->name($filter->name);
         $col->Filter($filter);
+        $col->selected($filter->wanted);
         my @new_bkt = __maintain_Bracket_array($bkt_path, [ $filter->classification ]);
         foreach my $bkt (@new_bkt) {
-            $cllctn->add_Item($bkt);
+            $self->add_Item($bkt);
         }
         $col->indent(@$bkt_path || 0);
-        $cllctn->add_Item($col);
+        $self->add_Item($col);
     }
+    $self->update_all_Bracket_selection;
 
-    return $cllctn;
+    return $self;
 }
 
 sub __maintain_Bracket_array {
@@ -168,6 +170,55 @@ sub is_collapsed {
         $self->{'_is_collapsed'}{$item} = $flag ? 1 : 0;
     }
     return $self->{'_is_collapsed'}{$item};
+}
+
+sub get_Bracket_contents {
+    my ($self, $bracket) = @_;
+
+    confess "Not a Bracket: $bracket" unless $bracket->is_Bracket;
+
+    my @item_list = $self->list_Items;
+    while (my $item = shift @item_list) {
+        last if $item == $bracket;
+    }
+    my @contents;
+    while (my $item = shift @item_list) {
+        last if $item->indent <= $bracket->indent;
+        push(@contents, $item);
+    }
+    return @contents;
+}
+
+sub select_Bracket {
+    my ($self, $bracket) = @_;
+
+    my $flag = $bracket->selected;
+    foreach my $item ($self->get_Bracket_contents($bracket)) {
+        $item->selected($flag);
+    }
+}
+
+sub update_all_Bracket_selection {
+    my ($self) = @_;
+
+    my @item_list = $self->list_Items;
+    my @bracket_path;
+    my $skip_to_next_bracket = 0;
+    while (my $item = shift @item_list) {
+        if ($item->is_Bracket) {
+            $item->selected(1);
+            $skip_to_next_bracket = 0;
+            splice(@bracket_path, $item->indent, @bracket_path - $item->indent, $item);
+        }
+        elsif (! $skip_to_next_bracket and ! $item->selected) {
+            # There's an unselected column at this level, so
+            # unselect all brackets down to this level 
+            foreach my $bkt (@bracket_path) {
+                $bkt->selected(0);
+            }
+            $skip_to_next_bracket = 1;
+        }
+    }
 }
 
 sub filter {
