@@ -9,6 +9,22 @@ use Time::HiRes qw(time);
 
 use Bio::Otter::Lace::DB::FilterAdaptor;
 
+sub do_requires {
+    require LWP::UserAgent;
+    require HTTP::Request;
+    require HTTP::Cookies::Netscape;
+    require DBI;
+    return;
+}
+
+sub show_version {
+    # Check dependencies, report (arbitrary) version
+    do_requires();
+    my $dbh = DBI->connect("dbi:SQLite:dbname=:memory:","","");
+    print "filter_get 0.5\n";
+    exit 0;
+}
+
 my $gff_source;
 sub _log_prefix {
     my @t = localtime;
@@ -53,6 +69,8 @@ foreach my $pair (@ARGV) {
     my ($key, $val) = split(/=/, $pair);
     $args{uri_unescape($key)} = uri_unescape($val);
 }
+
+show_version() if exists $args{'--version'}; # exits
 
 $gff_source = $args{gff_source};
 
@@ -119,11 +137,7 @@ if (-e $cache_file) {
 # cache miss
 
 # only require these packages now, so we don't take the import hit on a cache hit
-
-require LWP::UserAgent;
-require HTTP::Request;
-require HTTP::Cookies::Netscape;
-require DBI;
+do_requires();
 
 log_message "cache file: $gff_filename: cache miss";
 
