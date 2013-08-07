@@ -363,7 +363,7 @@ sub gff_source {
 }
 
 sub script_name {
-    return "filter_get";
+    return "filter_get"; # see also Bio::Otter::Utils::About
 }
 
 1;
