@@ -48,7 +48,7 @@ sub row_height {
 sub initialise {
     my ($self, $cllctn) = @_;
 
-    $self->make_menu('File');
+    my $search_menu = $self->make_menu('Search');
 
     $self->font_size(12);
 
@@ -80,13 +80,38 @@ sub initialise {
     my $back = sub{ $self->go_back };
     $search_frame->Button(-text => 'Back', -command => $back)->pack(-side => 'left', -padx => 4);
 
-    $entry->bind('<Return>', $filter);
-    $entry->bind('<Escape>', $back);
+    $search_menu->add('command',
+        -label          => 'Filter',
+        -command        => $filter,
+        -accelerator    => 'Return',
+        );
+    $search_menu->add('command',
+        -label          => 'Back',
+        -command        => $back,
+        -accelerator    => 'Esc',
+        );
+    my $reset = sub{ $self->reset_search };
+    $search_menu->add('command',
+           -label          => 'Reset',
+           -command        => $reset,
+           -accelerator    => 'Ctrl+R',
+           );
 
+    $top->bind('<Control-r>', $reset);
+    $top->bind('<Control-R>', $reset);
+    $top->bind('<Return>', $filter);
+    $top->bind('<Escape>', $back);
     $top->bind('<Destroy>', sub{ $self = undef });
-    $self->fix_window_min_max_sizes;
 
+    $self->fix_window_min_max_sizes;
     return;
+}
+
+sub redraw {
+    my ($self) = @_;
+
+    $self->update_snail_trail;
+    $self->do_render;
 }
 
 sub do_filter {
@@ -95,8 +120,7 @@ sub do_filter {
     my $new_cllctn = $self->SearchHistory->search($self->{'_entry_search_string'})
         or return;
     $self->set_search_entry($new_cllctn->search_string);
-    $self->update_snail_trail;
-    $self->do_render;
+    $self->redraw;
 }
 
 sub go_back {
@@ -108,8 +132,20 @@ sub go_back {
     my $sh = $self->SearchHistory;
     my $cllctn = $sh->back or return;
     $self->set_search_entry($cllctn->search_string);
-    $self->update_snail_trail;
-    $self->do_render;
+    $self->redraw;
+}
+
+sub reset_search {
+    my ($self) = @_;
+
+    my $sh = $self->SearchHistory;
+    $sh->reset_search;
+    $self->set_search_entry('');
+    my $steps = $self->snail_trail_steps;
+    foreach my $s (@$steps) {
+        $s->packForget;
+    }
+    $self->redraw;
 }
 
 sub set_search_entry {
@@ -123,19 +159,26 @@ sub update_snail_trail {
     my ($self) = @_;
 
     my ($I, @trail) = $self->SearchHistory->index_and_search_string_list;
-    my $trail_steps = $self->{'_snail_trail_steps'} ||= [];
+    my $trail_steps = $self->snail_trail_steps;
     for (my $i = 0; $i < @trail; $i++) {
         my $step = $trail_steps->[$i] ||= $self->{'_snail_trail_frame'}->Label(
             -relief => 'groove',
             -padx   => 10,
             -pady   => 2,
             -borderwidth => 2,
-            )->pack(-side => 'left', -padx => 2);
+            );
+        $step->pack(-side => 'left', -padx => 2);
         $step->configure(
             -text => $trail[$i],
-            -font   => ['Helvetica', $self->font_size, $i == $I ? 'bold' : 'normal'],
-            )
+            -font   => ['Helvetica', 12, $i == $I ? 'bold' : 'normal'],
+            );
     }
+}
+
+sub snail_trail_steps {
+    my ($self) = @_;
+
+    return $self->{'_snail_trail_steps'} ||= [];
 }
 
 sub SearchHistory {
