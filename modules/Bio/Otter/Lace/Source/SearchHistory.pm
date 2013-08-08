@@ -61,15 +61,17 @@ sub snail_trail_text {
     my ($self) = @_;
 
     my $i = $self->{'_index'};
-    if ($i == 0) {
-        return 'Column list is unfiltered';
-    }
-    else {
-        return 'Filtered on: ' . join(' > ',
-            map $_->search_string,
-            @{$self->{'_collection_list'}}[0 .. $self->{'_index'} - 1]
-            );
-    }
+    my @trail = map { $_->search_string } @{$self->{'_collection_list'}};
+    $trail[$i] = "{ $trail[$i] }";  # Current term is in the edit field        
+    return 'Filter trail: ' . join(' > ', @trail);
+}
+
+sub index_and_search_string_list {
+    my ($self) = @_;
+
+    my @trail = map { $_->search_string } @{$self->{'_collection_list'}};
+    pop @trail;
+    return ($self->{'_index'}, @trail);
 }
 
 1;

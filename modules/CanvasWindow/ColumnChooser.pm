@@ -57,25 +57,28 @@ sub initialise {
 
     my $top = $self->top_window;
     my $top_frame = $self->top_frame;
-    my $snail_frame  = $top_frame->Frame->pack(-side => 'top');
-    my $search_frame = $top_frame->Frame->pack(-side => 'top');
+    my @packing = qw{ -side top -fill x -expand 1 -padx 4 -pady 4 };
+    my $snail_frame  = $top_frame->Frame->pack(@packing);
+    my $search_frame = $top_frame->Frame->pack(@packing);
 
-    $self->{'_snail_trail_text'} = $hist->snail_trail_text;
+    $self->{'_snail_trail_frame'} = $snail_frame;
     $snail_frame->Label(
-        -textvariable => \$self->{'_snail_trail_text'},
+        -text => 'Filter trail: ',
+        -padx => 4,
+        -pady => 4,
         )->pack(-side => 'left');
 
     my $entry = $self->{'_search_Entry'} = $search_frame->Entry(
         -width        => 60,
         -textvariable => \$self->{'_entry_search_string'},
-    )->pack(-side => 'left');
+    )->pack(-side => 'left', -padx => 4);
     $self->set_search_entry($cllctn->search_string);
 
     my $filter = sub{ $self->do_filter };
-    $search_frame->Button(-text => 'Filter', -command => $filter)->pack(-side => 'left');
+    $search_frame->Button(-text => 'Filter', -command => $filter)->pack(-side => 'left', -padx => 4);
 
     my $back = sub{ $self->go_back };
-    $search_frame->Button(-text => 'Back', -command => $back)->pack(-side => 'left');
+    $search_frame->Button(-text => 'Back', -command => $back)->pack(-side => 'left', -padx => 4);
 
     $entry->bind('<Return>', $filter);
     $entry->bind('<Escape>', $back);
@@ -92,7 +95,7 @@ sub do_filter {
     my $new_cllctn = $self->SearchHistory->search($self->{'_entry_search_string'})
         or return;
     $self->set_search_entry($new_cllctn->search_string);
-    $self->update_snail_trail_label;
+    $self->update_snail_trail;
     $self->do_render;
 }
 
@@ -105,7 +108,7 @@ sub go_back {
     my $sh = $self->SearchHistory;
     my $cllctn = $sh->back or return;
     $self->set_search_entry($cllctn->search_string);
-    $self->update_snail_trail_label;
+    $self->update_snail_trail;
     $self->do_render;
 }
 
@@ -116,10 +119,23 @@ sub set_search_entry {
     $self->{'_search_Entry'}->icursor('end');    
 }
 
-sub update_snail_trail_label {
+sub update_snail_trail {
     my ($self) = @_;
 
-    $self->{'_snail_trail_text'} = $self->SearchHistory->snail_trail_text;
+    my ($I, @trail) = $self->SearchHistory->index_and_search_string_list;
+    my $trail_steps = $self->{'_snail_trail_steps'} ||= [];
+    for (my $i = 0; $i < @trail; $i++) {
+        my $step = $trail_steps->[$i] ||= $self->{'_snail_trail_frame'}->Label(
+            -relief => 'groove',
+            -padx   => 10,
+            -pady   => 2,
+            -borderwidth => 2,
+            )->pack(-side => 'left', -padx => 2);
+        $step->configure(
+            -text => $trail[$i],
+            -font   => ['Helvetica', $self->font_size, $i == $I ? 'bold' : 'normal'],
+            )
+    }
 }
 
 sub SearchHistory {
