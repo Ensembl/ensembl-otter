@@ -85,7 +85,9 @@ sub construct_regex_list {
     # Make a fresh new reference
     my $r_list = $self->{'_regex_list'} = [];
     
-    foreach my $term (quotewords('\s+', 0, $self->search_string)) {
+    my $string = $self->search_string;
+    $string =~ s{\\}{\\\\};     # So that perl regex escapes survive quotewords()
+    foreach my $term (quotewords('\s+', 0, $string)) {
         my $test = 1;
         if ($term ne '-' and $term =~ s/^-//) {
             $test = 0;
