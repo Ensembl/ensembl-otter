@@ -307,6 +307,30 @@ sub filter {
     return $new;
 }
 
+sub expand_all {
+    my ($self) = @_;
+
+    foreach my $bracket (grep { $_->is_Bracket } $self->list_Items) {
+        $self->is_collapsed($bracket, 0);
+    }
+}
+
+sub collapse_all {
+    my ($self) = @_;
+
+    foreach my $bracket (grep { $_->is_Bracket } $self->list_Items) {
+        $self->is_collapsed($bracket, 1);
+    }
+}
+
+sub set_search_entry {
+    my ($self, $string) = @_;
+
+    $self->{'_entry_search_string'} = $string;
+    $self->{'_search_Entry'}->icursor('end');    
+}
+
+
 1;
 
 __END__

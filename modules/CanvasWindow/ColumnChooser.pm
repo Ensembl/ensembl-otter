@@ -49,6 +49,7 @@ sub initialise {
     my ($self, $cllctn) = @_;
 
     my $search_menu = $self->make_menu('Search');
+    my $view_menu = $self->make_menu('View');
 
     $self->font_size(12);
 
@@ -92,15 +93,30 @@ sub initialise {
         );
     my $reset = sub{ $self->reset_search };
     $search_menu->add('command',
-           -label          => 'Reset',
-           -command        => $reset,
-           -accelerator    => 'Ctrl+R',
-           );
+       -label          => 'Reset',
+       -command        => $reset,
+       -accelerator    => 'Ctrl+R',
+       );
 
-    $top->bind('<Control-r>', $reset);
-    $top->bind('<Control-R>', $reset);
+    my $collapse_all = sub{ $self->collapse_all };
+    $view_menu->add('command',
+        -label          => 'Collapse all',
+        -command        => $collapse_all,
+        -accelerator    => 'Ctrl+Left',
+        );
+    my $expand_all = sub{ $self->expand_all };
+    $view_menu->add('command',
+        -label          => 'Expand all',
+        -command        => $expand_all,
+        -accelerator    => 'Ctrl+Right',
+        );
+
     $top->bind('<Return>', $filter);
     $top->bind('<Escape>', $back);
+    $top->bind('<Control-r>', $reset);
+    $top->bind('<Control-R>', $reset);
+    $top->bind('<Control-Left>', $collapse_all);
+    $top->bind('<Control-Right>', $expand_all);
     $top->bind('<Destroy>', sub{ $self = undef });
 
     $self->fix_window_min_max_sizes;
@@ -145,6 +161,20 @@ sub reset_search {
     foreach my $s (@$steps) {
         $s->packForget;
     }
+    $self->redraw;
+}
+
+sub collapse_all {
+    my ($self) = @_;
+
+    $self->current_Collection->collapse_all;
+    $self->redraw;
+}
+
+sub expand_all {
+    my ($self) = @_;
+
+    $self->current_Collection->expand_all;
     $self->redraw;
 }
 
