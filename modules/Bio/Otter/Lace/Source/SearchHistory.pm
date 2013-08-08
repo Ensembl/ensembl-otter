@@ -70,8 +70,17 @@ sub index_and_search_string_list {
     my ($self) = @_;
 
     my @trail = map { $_->search_string } @{$self->{'_collection_list'}};
-    pop @trail;
     return ($self->{'_index'}, @trail);
+}
+
+sub reset_search {
+    my ($self) = @_;
+
+    my $cllctn_list = $self->{'_collection_list'};
+    splice(@$cllctn_list, 1, @$cllctn_list - 1);
+    $self->{'_index'} = 0;
+    $self->current_Collection->search_string('');
+    return 1;
 }
 
 1;

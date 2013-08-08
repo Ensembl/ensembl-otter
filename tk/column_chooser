@@ -58,7 +58,7 @@ $Data::Dumper::Terse = 1;
     $mw->title('Column Chooser');
     my $cc = CanvasWindow::ColumnChooser->new($mw, 800, 600);
     $cc->initialise($cllctn);
-    $cc->do_render;
+    $cc->redraw;
 
     Tk::MainLoop();
 }
