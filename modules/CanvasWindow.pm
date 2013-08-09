@@ -1209,6 +1209,24 @@ sub hash_from_clipboard {
     return $results;
 }
 
+sub max_x_y_of_text_array {
+    my ($self, $font, @text_list) = @_;
+
+    my $canvas = $self->canvas;
+    my $tag = 'max_x_y_of_text_array_temp_tag';
+    foreach my $txt (@text_list) {
+        $canvas->createText(0,0,
+            -text   => $txt,
+            -font   => $font,
+            -anchor => 'nw',
+            -tags   => [$tag],
+            );
+    }
+    my ($max_x, $max_y) = @{$canvas->bbox($tag)}[2,3];
+    $canvas->delete($tag);
+    return ($max_x, $max_y);
+}
+
 1;
 
 __END__
