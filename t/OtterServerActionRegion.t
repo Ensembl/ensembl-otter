@@ -63,7 +63,18 @@ like($error, qr/not locked/, 'error message ok');
 my $lock;
 ($okay, $lock, $error) = try_lock_region($sa_region);
 ok($okay, 'locked okay');
-note("Lock is:\n$lock");
+
+my $lock2;
+($okay, $lock2, $error) = try_lock_region($sa_region);
+ok(not($okay), 'second lock attempt fails as expected');
+
+($okay, $region_out, $error) = try_write_region($sa_xml_region, $xml);
+ok($okay, 'write_region (unchanged) from XML');
+ok($region_out, 'write_region returns some stuff');
+
+my $xml2 = $sa_xml_region->get_region;
+ok($xml2, 'get_region as XML again');
+is($xml2, $xml, 'XML unchanged');
 
 ($okay, $error) = try_unlock_region($sa_region, $lock);
 ok($okay, 'unlocked okay');
