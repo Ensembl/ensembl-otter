@@ -4,14 +4,27 @@
 package Bio::Otter::Lace::Source::Item::Column;
 
 use strict;
-use warnings;
 use Carp;
 use base 'Bio::Otter::Lace::Source::Item';
 
-my @valid_status = qw{
-    Loading Visible Hidden Empty Error
+my @_status_color_ini = qw{
+    Available   #cccccc         #f0f0f0
+    Selected    #ffe249         #fff4b6
+    Loading     #ffbf49         #ffe5b6
+    Visible     #a6dd33         #ccf37c
+    Hidden      #d4f68d         #effed1
+    Empty       #c0d4ee         #e2edfc
+    Error       #ff907c         #ffbcb0
 };
-my %valid_status = map {$_ => 1} @valid_status;
+
+my (@valid_status, %status_color);
+for (my $i = 0; $i < @_status_color_ini; $i += 3) {
+    my ($status, $dark, $light) = @_status_color_ini[$i .. $i + 3];
+    push(@valid_status, $status);
+    $status_color{$status} = [$dark, $light];
+}
+
+use warnings;
 
 sub VALID_STATUS_LIST {
     return @valid_status;
@@ -25,13 +38,19 @@ sub status {
     my ($self, $status) = @_;
 
     if ($status) {
-        unless ($valid_status{$status}) {
+        unless ($status_color{$status}) {
             confess "Invalid status '$status'\n",
-                "Should be one of: ", join(', ', keys %valid_status);
+                "Should be one of: @valid_status";
         }
         $self->{'_status'} = $status;
     }
-    return $self->{'_status'} || $self->selected ? 'Selected' : 'Unwanted';
+    return $self->{'_status'} || ($self->selected ? 'Selected' : 'Available');
+}
+
+sub status_colors {
+    my ($self) = @_;
+
+    return @{$status_color{$self->status}};
 }
 
 # For storing further info such as error messages, shown on mouse-over

@@ -266,42 +266,111 @@ sub do_render {
 
 sub draw_Item {
     my ($self, $row, $item) = @_;
-    
+
     my $canvas = $self->canvas;
     my $row_height = $self->row_height;
     my $pad = int $self->font_size * 0.4;
-    my $y_start = $row * ($row_height + $pad);
-    my $x_start = $row_height * $item->indent;
+    my $x = $row_height * $item->indent;
+    my $y = $row * ($row_height + $pad);
+
+    # Brackets have an arrow to expand or contract thier contents
     if ($item->is_Bracket) {
-        $self->draw_arrow($item, $x_start, $y_start);
+        $self->draw_arrow($item, $x, $y);
         $self->current_Bracket($item);
     }
-    $self->draw_checkbutton($item, $x_start + $row_height, $y_start);
-    $canvas->createText(
-        $x_start + (2 * $row_height), $y_start,
+
+    # Both Brackets and Columns have a checkbutton and their name drawn
+    $x += $row_height;
+    $self->draw_checkbutton($item, $x, $y);
+    $x += $row_height;
+
+    my $txt_id = $canvas->createText(
+        $x, $y,
         -anchor => 'nw',
         -text   => $item->name,
         -font   => $self->normal_font,
         );
+    $canvas->bind($txt_id, '<Button-1>', sub {
+        $item->selected(! $item->selected);
+        $self->update_item_select_state($item);
+        });
+
+    # Draw status indicator and description for Columns
     unless ($item->is_Bracket) {
+        $x += $row_height + $self->name_max_x;
+        $self->draw_status_indicator($item, $x, $y);
+        $x += $row_height + $self->{'_status_max_x'};
         $canvas->createText(
-            $x_start + (3 * $row_height) + $self->name_max_x, $y_start,
+            $x, $y,
             -anchor => 'nw',
             -text   => $item->Filter->description,
             -font   => $self->normal_font,
             );        
     }
-    # $canvas->createRectangle(
-    #     0, $y_start, 60 * $self->font_size, $y_start + $row_height,
-    #     -fill       => 'LightBlue',
-    #     -outline    => undef,
-    #     );
 }
 
 sub normal_font {
     my ($self) = @_;
 
     return ['Helvetica', $self->font_size, 'normal'],
+}
+
+sub draw_status_indicator {
+    my ($self, $item, $x, $y) = @_;
+
+    my $canvas = $self->canvas;
+    my ($dark, $light) = $item->status_colors;
+    my $width = $self->{'_status_max_x'};
+    $canvas->createRectangle(
+        $x - 1, $y - 1, $x + $width + 1, $y + $self->{'_max_y'} + 1,
+        -fill       => $light,
+        -outline    => $dark,
+        -tags       => ["STATUS_RECTANGLE $item"],
+        );
+
+    $canvas->createText(
+        $x + ($width / 2), $y,
+        -anchor => 'n',
+        -text   => $item->status,
+        -font   => $self->normal_font,
+        -tags       => ["STATUS_LABEL $item"],
+        );
+
+    # For looking at appearance of status indicators
+    my $next = sub { $self->next_status($item) };
+    $canvas->bind("STATUS_RECTANGLE $item", '<Button-1>', $next);
+    $canvas->bind("STATUS_LABEL $item",     '<Button-1>', $next);
+}
+
+sub next_status {
+    my ($self, $item) = @_;
+
+    my @status = Bio::Otter::Lace::Source::Item::Column::VALID_STATUS_LIST();
+    my $this = $item->status;
+    for (my $i = 0; $i < @status; $i++) {
+        if ($status[$i] eq $this) {
+            my $j = $i + 1;
+            if ($j == @status) {
+                $j = 0;
+            }
+            $item->status($status[$j]);
+            $self->update_status_indicator($item);
+        }
+    }
+}
+
+sub update_status_indicator {
+    my ($self, $item) = @_;
+
+    my $canvas = $self->canvas;
+    my ($dark, $light) = $item->status_colors;
+    $canvas->itemconfigure("STATUS_RECTANGLE $item",
+        -fill       => $light,
+        -outline    => $dark,
+        );
+    $canvas->itemconfigure("STATUS_LABEL $item",
+        -text   => $item->status,
+        );
 }
 
 {
@@ -326,15 +395,13 @@ sub normal_font {
             -image  => $img,
             );
         $canvas->bind($img_id, '<Button-1>', sub {
-            # $canvas->delete($img_id);
             $item->selected(! $is_selected);
-            # $self->draw_checkbutton($item, $x, $y);
-            $self->update_brackets($item);
+            $self->update_item_select_state($item);
             });
     }
 }
 
-sub update_brackets {
+sub update_item_select_state {
     my ($self, $item) = @_;
 
     my $cllctn = $self->current_Collection;
@@ -386,8 +453,9 @@ sub calcualte_text_column_sizes {
     my $cllctn = $self->current_Collection;
 
     my @status = Bio::Otter::Lace::Source::Item::Column::VALID_STATUS_LIST();
-    my ($status_max_x) = $self->max_x_y_of_text_array($font, @status);
-    $self->{'_status_max_x'} = $status_max_x;
+    my ($status_max_x, $max_y) = $self->max_x_y_of_text_array($font, @status);
+    $self->{'_status_max_x'} = 4 + $status_max_x;
+    $self->{'_max_y'} = $max_y;
 
     foreach my $bkt ($cllctn->list_Brackets) {
         my $next_level = $bkt->indent + 1;
