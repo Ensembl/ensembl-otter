@@ -228,6 +228,26 @@ sub current_Collection {
     return $self->SearchHistory->current_Collection;
 }
 
+sub current_Bracket {
+    my ($self, $bkt) = @_;
+    
+    if ($bkt) {
+        $self->{'_current_Bracket'} = $bkt;
+    }
+    return $self->{'_current_Bracket'};
+}
+
+sub name_max_x {
+    my ($self, $bkt, $max_x) = @_;
+
+    if ($bkt and $max_x) {
+        $self->{'_name_max_x'}{$bkt} = $max_x;
+    }
+    else {
+        return $self->{'_name_max_x'}{$self->current_Bracket};
+    }
+}
+
 sub do_render {
     my ($self) = @_;
 
@@ -254,6 +274,7 @@ sub draw_Item {
     my $x_start = $row_height * $item->indent;
     if ($item->is_Bracket) {
         $self->draw_arrow($item, $x_start, $y_start);
+        $self->current_Bracket($item);
     }
     $self->draw_checkbutton($item, $x_start + $row_height, $y_start);
     $canvas->createText(
@@ -264,7 +285,7 @@ sub draw_Item {
         );
     unless ($item->is_Bracket) {
         $canvas->createText(
-            $x_start + (3 * $row_height) + $self->{'_name_max_x'}, $y_start,
+            $x_start + (3 * $row_height) + $self->name_max_x, $y_start,
             -anchor => 'nw',
             -text   => $item->Filter->description,
             -font   => $self->normal_font,
@@ -363,13 +384,18 @@ sub calcualte_text_column_sizes {
 
     my $font = $self->normal_font;
     my $cllctn = $self->current_Collection;
-    my @names = map { $_->name } $cllctn->list_Items;
+
     my @status = Bio::Otter::Lace::Source::Item::Column::VALID_STATUS_LIST();
-    my ($name_max_x, $max_y) = $self->max_x_y_of_text_array($font, @names);
     my ($status_max_x) = $self->max_x_y_of_text_array($font, @status);
-    $self->{'_name_max_x'} = $name_max_x;
     $self->{'_status_max_x'} = $status_max_x;
-    $self->{'_max_y'} = $max_y;
+
+    foreach my $bkt ($cllctn->list_Brackets) {
+        my $next_level = $bkt->indent + 1;
+        my @names = map { $_->name }
+            grep { $_->indent == $next_level } $cllctn->get_Bracket_contents($bkt);
+        my ($name_max_x) = $self->max_x_y_of_text_array($font, @names);
+        $self->name_max_x($bkt, $name_max_x);
+    }
 }
 
 1;
