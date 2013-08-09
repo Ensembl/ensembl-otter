@@ -56,7 +56,7 @@ $Data::Dumper::Terse = 1;
 
     my $mw = CanvasWindow::MainWindow->new;
     $mw->title('Column Chooser');
-    my $cc = CanvasWindow::ColumnChooser->new($mw, 800, 600);
+    my $cc = CanvasWindow::ColumnChooser->new($mw, 600, 400);
     $cc->initialise($cllctn);
     $cc->redraw;
 
