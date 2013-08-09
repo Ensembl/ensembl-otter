@@ -123,6 +123,18 @@ sub list_Items {
     }
 }
 
+sub list_Brackets {
+    my ($self) = @_;
+
+    return grep { $_->is_Bracket } $self->list_Items;
+}
+
+sub list_Columns {
+    my ($self) = @_;
+
+    return grep { ! $_->is_Bracket } $self->list_Items;
+}
+
 sub clear_Items {
     my ($self) = @_;
 
