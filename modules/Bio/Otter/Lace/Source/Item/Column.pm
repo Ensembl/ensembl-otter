@@ -8,10 +8,14 @@ use warnings;
 use Carp;
 use base 'Bio::Otter::Lace::Source::Item';
 
-
-my %valid_status = map {$_ => 1} qw{
+my @valid_status = qw{
     Loading Visible Hidden Empty Error
 };
+my %valid_status = map {$_ => 1} @valid_status;
+
+sub VALID_STATUS_LIST {
+    return @valid_status;
+}
 
 sub is_Bracket {
     return 0;

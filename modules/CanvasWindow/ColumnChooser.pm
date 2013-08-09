@@ -119,6 +119,8 @@ sub initialise {
     $top->bind('<Control-Right>', $expand_all);
     $top->bind('<Destroy>', sub{ $self = undef });
 
+    $self->calcualte_text_column_sizes;
+
     $self->fix_window_min_max_sizes;
     return;
 }
@@ -258,14 +260,14 @@ sub draw_Item {
         $x_start + (2 * $row_height), $y_start,
         -anchor => 'nw',
         -text   => $item->name,
-        -font   => ['Helvetica', $self->font_size, 'normal'],
+        -font   => $self->normal_font,
         );
     unless ($item->is_Bracket) {
         $canvas->createText(
-            $x_start + (20 * $row_height), $y_start,
+            $x_start + (3 * $row_height) + $self->{'_name_max_x'}, $y_start,
             -anchor => 'nw',
             -text   => $item->Filter->description,
-            -font   => ['Helvetica', $self->font_size, 'normal'],
+            -font   => $self->normal_font,
             );        
     }
     # $canvas->createRectangle(
@@ -273,6 +275,12 @@ sub draw_Item {
     #     -fill       => 'LightBlue',
     #     -outline    => undef,
     #     );
+}
+
+sub normal_font {
+    my ($self) = @_;
+
+    return ['Helvetica', $self->font_size, 'normal'],
 }
 
 {
@@ -350,6 +358,19 @@ sub update_brackets {
     
 }
 
+sub calcualte_text_column_sizes {
+    my ($self) = @_;
+
+    my $font = $self->normal_font;
+    my $cllctn = $self->current_Collection;
+    my @names = map { $_->name } $cllctn->list_Items;
+    my @status = Bio::Otter::Lace::Source::Item::Column::VALID_STATUS_LIST();
+    my ($name_max_x, $max_y) = $self->max_x_y_of_text_array($font, @names);
+    my ($status_max_x) = $self->max_x_y_of_text_array($font, @status);
+    $self->{'_name_max_x'} = $name_max_x;
+    $self->{'_status_max_x'} = $status_max_x;
+    $self->{'_max_y'} = $max_y;
+}
 
 1;
 
