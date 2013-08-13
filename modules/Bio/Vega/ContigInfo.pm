@@ -9,9 +9,12 @@ use base qw(Bio::EnsEMBL::Storable);
 sub new {
     my ($class, @args) = @_;
 
-    my $self = $class->SUPER::new(@args);
-    my ($slice, $author, $attributes, $created_date )  =
-        rearrange([qw( SLICE AUTHOR ATTRIBUTES CREATED_DATE )], @args);
+    my $self = bless {}, $class;
+    my ($adaptor, $dbID, $slice, $author, $attributes, $created_date )  =
+        rearrange([qw( ADAPTOR dbID SLICE AUTHOR ATTRIBUTES CREATED_DATE )], @args);
+
+    $self->dbID($dbID)                      if $dbID;
+    $self->adaptor($adaptor)                if $adaptor;
 
     $self->slice($slice)                    if $slice;
     $self->author($author)                  if $author;

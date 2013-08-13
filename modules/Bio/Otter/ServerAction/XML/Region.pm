@@ -38,7 +38,7 @@ sub deserialise_region {
 
     my $region = Bio::Vega::Region->new;
     $region->slice($parser->get_ChromosomeSlice);
-    $region->tiles($parser->get_Tiles); # FIXME: should use clone_sequences
+    $region->clone_sequences($parser->get_CloneSequences);
     $region->genes(@{$parser->get_Genes});
     $region->seq_features(@{$parser->get_SimpleFeatures});
 

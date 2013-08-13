@@ -6,6 +6,7 @@ use warnings;
 use Readonly;
 use Try::Tiny;
 
+use Bio::Otter::Lace::CloneSequence;
 use Bio::Vega::ContigInfo;
 use Bio::Vega::ContigLockBroker;
 use Bio::Vega::Region;
@@ -315,7 +316,24 @@ sub _fetch_db_region {
     $db_region->slice($db_slice);
 
     my @db_tiles = sort { $a->from_start() <=> $b->from_start() } @{ $db_slice->project('contig') };
-    $db_region->tiles(@db_tiles); # FIXME: should use clone_sequences?
+
+    my @db_clone_sequences;
+    foreach my $tile ( @db_tiles ) {
+        my $ctg_slice = $tile->to_Slice;
+
+        my $cs = Bio::Otter::Lace::CloneSequence->new;
+        $cs->chr_start(    $tile->from_start + $new_slice->start - 1 );
+        $cs->chr_end(      $tile->from_end   + $new_slice->start - 1 );
+        $cs->contig_start( $ctg_slice->start  );
+        $cs->contig_end(   $ctg_slice->end    );
+        $cs->contig_strand($ctg_slice->strand );
+
+        my $ci = Bio::Vega::ContigInfo->new( -slice => $ctg_slice );
+        $cs->ContigInfo($ci);
+
+        push @db_clone_sequences, $cs;
+    }
+    $db_region->clone_sequences(@db_clone_sequences);
 
     return $db_region;
 }
@@ -325,22 +343,25 @@ sub _compare_region_create_ci_hash {
 
     my $db_slice = $db_region->slice;
 
-    # This is horrible as it stands because new_tiles and db_tiles are NOT THE SAME THING.
-    my @new_tiles = $new_region->tiles;
-    my @db_tiles  = $db_region->tiles;
+    my @new_clone_sequences = $new_region->clone_sequences;
+    my @db_clone_sequences  = $db_region->clone_sequences;
 
-    if (@db_tiles != @new_tiles) {
+    if (@db_clone_sequences != @new_clone_sequences) {
         die "The numbers of tiles in new_region and DB_region do not match";
     }
 
     my %contig_info_hash;
 
-    for (my $i = 0; $i < @db_tiles; $i++) {
+    for (my $i = 0; $i < @db_clone_sequences; $i++) {
 
-        my $db_asm_start = $db_tiles[$i]->from_start() + $db_slice->start() - 1;
-        my $db_asm_end   = $db_tiles[$i]->from_end()   + $db_slice->start() - 1;
-        my $db_ctg_slice = $db_tiles[$i]->to_Slice();
-        my ($new_asm_start, $new_asm_end, $new_ctg_slice, $new_ci_attribs) = @{ $new_tiles[$i] };
+        my $db_asm_start = $db_clone_sequences[$i]->chr_start();
+        my $db_asm_end   = $db_clone_sequences[$i]->chr_end();
+        my $db_ctg_slice = $db_clone_sequences[$i]->ContigInfo->slice();
+
+        my $new_asm_start  = $new_clone_sequences[$i]->chr_start();
+        my $new_asm_end    = $new_clone_sequences[$i]->chr_end();
+        my $new_ctg_slice  = $new_clone_sequences[$i]->ContigInfo->slice();
+        my $new_ci_attribs = $new_clone_sequences[$i]->ContigInfo->get_all_Attributes();
 
         if($db_asm_start != $new_asm_start) {
             die "In tile number $i 'asm_start' is different (new_value='$new_asm_start', db_value='$db_asm_start') ";
