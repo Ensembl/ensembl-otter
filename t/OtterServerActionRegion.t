@@ -48,7 +48,7 @@ TODO: {
 #
 my ($okay, $region_out, $error) = try_write_region($sa_region, $region);
 ok(not($okay), 'attempt to write_region dies as expected');
-like($error, qr/numbers of tiles/, 'error message ok');
+like($error, qr/not locked/, 'error message ok');
 
 my $sa_xml_region = $modules{xml_region}->new_with_slice(OtterTest::TestRegion->local_server);
 isa_ok($sa_xml_region, $modules{xml_region});
