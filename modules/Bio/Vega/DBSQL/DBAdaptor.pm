@@ -19,6 +19,9 @@ use Bio::Vega::DBSQL::SliceAdaptor;
 
 use base 'Bio::EnsEMBL::DBSQL::DBAdaptor';
 
+## BE SURE TO MAINTAIN sub _adaptor_tag_list() below,
+## if adding, renaming or removing adaptors.
+
 sub get_GeneAdaptor {
   my ($self) = @_;
   if ( !exists $self->{'VegaGene'} ){
@@ -154,6 +157,35 @@ sub rollback {
   my ($self) = @_;
   $self->dbc->do('ROLLBACK');
   return;
+}
+
+sub _adaptor_tag_list {
+    return qw{
+        VegaGene
+        VegaSlice
+        ContigInfo
+        Author
+        AuthorGroup
+        ContigAttribute
+        StableId
+        VegaExon
+        VegaTranscript
+        AssemblyTag
+        ContigLock
+        VegaMetaContainer
+        AnnotationBroker
+    };
+}
+
+sub clear_caches {
+    my ($self) = @_;
+    foreach my $adaptor_tag ( $self->_adaptor_tag_list() ) {
+        my $adaptor = $self->{$adaptor_tag};
+        if ($adaptor and $adaptor->can('clear_cache')) {
+            $adaptor->clear_cache();
+        }
+    }
+    return $self->SUPER::clear_caches();
 }
 
 
