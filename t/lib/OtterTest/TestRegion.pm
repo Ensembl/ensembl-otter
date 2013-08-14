@@ -39,7 +39,6 @@ sub check_xml {
 {
     my $extra_gene = <<'__EO_GENE_XML__';
      <locus>
-       <stable_id></stable_id>
        <description>TEST COPY of chromosome 6 open reading frame 195</description>
        <name>ANACODE-TEST-GENE</name>
        <type>Known_CDS</type>
@@ -50,7 +49,6 @@ sub check_xml {
        <author>anacode</author>
        <author_email>anacode</author_email>
        <transcript>
-         <stable_id></stable_id>
          <author>anacode</author>
          <author_email>anacode</author_email>
          <remark>TEST COPY of novel protein (FLJ31934)</remark>
@@ -58,7 +56,6 @@ sub check_xml {
          <name>ANACODE-TEST-TRANSCRIPT-001</name>
          <translation_start>2591909</translation_start>
          <translation_end>2591526</translation_end>
-         <translation_stable_id></translation_stable_id>
          <evidence_set>
            <evidence>
              <name>Em:AK056496</name>

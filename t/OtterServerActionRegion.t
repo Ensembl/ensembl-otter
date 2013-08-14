@@ -82,8 +82,18 @@ ok($region_out, 'write_region returns some stuff');
 my $xml2 = $sa_xml_region->get_region;
 ok($xml2, 'get_region as XML again');
 isnt($xml2, $xml, 'XML has changed');
-my $diffs = diff(\$xml, \$xml2);
-note("XML diffs:\n", $diffs);
+
+# This is a bit hacky. Would be better, but harder, to parse and interpret the XML.
+# It also assumes that pre- and post-diffs each produce just a single chunk which is
+# the added gene.
+my $pre_diffs = diff(\$xml, \$new_xml, { STYLE => 'Unified', CONTEXT => 0 });
+$pre_diffs =~ s/^[-+ ]//mg;
+$pre_diffs =~ s/^@@.*$//mg;
+my $post_diffs = diff(\$xml, \$xml2, { STYLE => 'Unified', CONTEXT => 0 });
+$post_diffs =~ s/^[-+ ]//mg;
+$post_diffs =~ s/^@@.*$//mg;
+my $gene_diffs = diff(\$pre_diffs, \$post_diffs);
+note("XML diffs:\n", $gene_diffs);
 
 ($okay, $region_out, $error) = try_write_region($sa_xml_region, $xml2);
 ok($okay, 'write_region (unchanged again) from XML');
