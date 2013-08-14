@@ -85,13 +85,21 @@ isnt($xml2, $xml, 'XML has changed');
 my $diffs = diff(\$xml, \$xml2);
 note("XML diffs:\n", $diffs);
 
+($okay, $region_out, $error) = try_write_region($sa_xml_region, $xml2);
+ok($okay, 'write_region (unchanged again) from XML');
+ok($region_out, 'write_region returns some stuff');
+
+my $xml3 = $sa_xml_region->get_region;
+ok($xml3, 'get_region as XML yet again');
+is($xml3, $xml2, 'XML unchanged');
+
 ($okay, $region_out, $error) = try_write_region($sa_xml_region, $xml);
 ok($okay, 'write_region (back to scratch) from XML');
 ok($region_out, 'write_region returns some stuff');
 
-$xml2 = $sa_xml_region->get_region;
-ok($xml2, 'get_region as XML again');
-is($xml2, $xml, 'XML now changed back');
+my $xml4 = $sa_xml_region->get_region;
+ok($xml4, 'get_region as XML again');
+is($xml4, $xml, 'XML now changed back');
 
 ($okay, $error) = try_unlock_region($sa_region, $lock);
 ok($okay, 'unlocked okay');
