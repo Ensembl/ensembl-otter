@@ -9,11 +9,12 @@ use Test::SetupLog4perl;
 
 use Sys::Hostname;
 use Test::More;
+use Text::Diff;
 use Try::Tiny;
 
 use Test::Otter qw( ^db_or_skipall ^data_dir_or_skipall ); # may skip test
 
-use OtterTest::TestRegion qw( %test_region_params );
+use OtterTest::TestRegion qw( check_xml add_extra_gene_xml %test_region_params );
 
 my %modules;
 
@@ -55,6 +56,7 @@ isa_ok($sa_xml_region, $modules{xml_region});
 my $xml = $sa_xml_region->get_region;
 ok($xml, 'get_region as XML');
 note('Got ', length $xml, ' chrs');
+check_xml($xml, 'XML is as expected');
 
 ($okay, $region_out, $error) = try_write_region($sa_xml_region, $xml);
 ok(not($okay), 'attempt to write_region from XML dies as expected');
@@ -72,9 +74,24 @@ ok(not($okay), 'second lock attempt fails as expected');
 ok($okay, 'write_region (unchanged) from XML');
 ok($region_out, 'write_region returns some stuff');
 
+my $new_xml = add_extra_gene_xml($xml);
+($okay, $region_out, $error) = try_write_region($sa_xml_region, $new_xml);
+ok($okay, 'write_region (new gene) from XML');
+ok($region_out, 'write_region returns some stuff');
+
 my $xml2 = $sa_xml_region->get_region;
 ok($xml2, 'get_region as XML again');
-is($xml2, $xml, 'XML unchanged');
+isnt($xml2, $xml, 'XML has changed');
+my $diffs = diff(\$xml, \$xml2);
+note("XML diffs:\n", $diffs);
+
+($okay, $region_out, $error) = try_write_region($sa_xml_region, $xml);
+ok($okay, 'write_region (back to scratch) from XML');
+ok($region_out, 'write_region returns some stuff');
+
+$xml2 = $sa_xml_region->get_region;
+ok($xml2, 'get_region as XML again');
+is($xml2, $xml, 'XML now changed back');
 
 ($okay, $error) = try_unlock_region($sa_region, $lock);
 ok($okay, 'unlocked okay');
@@ -108,10 +125,10 @@ sub try_lock_region {
 }
 
 sub try_unlock_region {
-    my ($server_action_region, $lock) = @_;
+    my ($server_action_region, $lock_obj) = @_;
     my ($ok, $err);
     try {
-        $server_action_region->server->set_params( data => $lock );
+        $server_action_region->server->set_params( data => $lock_obj );
         $server_action_region->unlock_region;
         $ok = 1;
     } catch {
