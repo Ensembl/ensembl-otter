@@ -288,6 +288,7 @@ sub write_region {
         $serialised_output = $self->serialise_region($current_region);
 
         $odba->commit;
+        $odba->clear_caches;
     } catch {
         $odba->rollback;
         die "Writing region failed writing annotations [$_]";
