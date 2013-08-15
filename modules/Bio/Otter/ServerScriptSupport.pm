@@ -8,6 +8,7 @@ use Try::Tiny;
 
 use Bio::Vega::Author;
 use Bio::Otter::Server::Config;
+use Bio::Otter::Auth::SSO;
 
 use IO::Compress::Gzip qw(gzip);
 
@@ -175,23 +176,11 @@ sub authenticate_user {
     my ($self) = @_;
 
     my $sw = $self->sangerweb;
+    my $users = $self->users_hash;
+    my %set = Bio::Otter::Auth::SSO->auth_user($sw, $users);
 
-    if (my $user = lc($sw->username)) {
-        my $auth_flag     = 0;
-        my $internal_flag = 0;
-
-        if ($user =~ /^[a-z0-9]+$/) {   # Internal users (simple user name)
-            $auth_flag = 1;
-            $internal_flag = 1;
-        } elsif($self->users_hash->{$user}) {  # Check external users (email address)
-            $auth_flag = 1;
-        }
-
-        if ($auth_flag) {
-            $self->{'_authorized_user'} = $user;
-            $self->{'_internal_user'}   = $internal_flag;
-        }
-    }
+    # Merge properties (_authorized_user, _internal_user) into %$self
+    @{ $self }{ keys %set } = values %set;
 
     return;
 }
