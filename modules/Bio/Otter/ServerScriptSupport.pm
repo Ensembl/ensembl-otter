@@ -56,10 +56,9 @@ sub new {
     $self->compression($options{-compression});
     $self->content_type($options{-content_type});
 
+    $self->authenticate_user;
     if ($self->show_restricted_datasets || ! $self->local_user) {
         $self->authorized_user;
-    } else {
-        $self->authenticate_user;
     }
 
     return $self;
@@ -179,7 +178,7 @@ sub authenticate_user {
     my $users = $self->users_hash;
     my %set = Bio::Otter::Auth::SSO->auth_user($sw, $users);
 
-    # Merge properties (_authorized_user, _internal_user) into %$self
+    # Merge properties (_authorized_user, _internal_user, _local_user) into %$self
     @{ $self }{ keys %set } = values %set;
 
     return;
@@ -188,19 +187,16 @@ sub authenticate_user {
 sub authorized_user {
     my ($self) = @_;
 
-    my $user;
-    unless ($user = $self->{'_authorized_user'}) {
-        $self->authenticate_user;
-        $self->unauth_exit('User not authorized')
-            unless $self->{'_authorized_user'};
-    }
+    my $user = $self->{'_authorized_user'};
+    $self->unauth_exit('User not authorized') unless $user;
+
     return $user;
 }
 
 sub internal_user {
     my ($self) = @_;
 
-    # authorized_user sets '_internal_user', and is called
+    # authenticate_user sets '_internal_user', and is called
     # by new(), so this hash key will be populated.
     return $self->{'_internal_user'};
 }
@@ -213,8 +209,11 @@ Is the caller on the WTSI internal network?
 =cut
 
 sub local_user {
+    my ($self) = @_;
 
-    return $ENV{'HTTP_CLIENTREALM'} =~ /sanger/ ? 1 : 0;
+    # authenticate_user sets '_local_user', and is called
+    # by new(), so this hash key will be populated.
+    return $self->{'_local_user'};
 }
 
 sub show_restricted_datasets {
