@@ -25,7 +25,10 @@ use base 'EditWindow';
 my $BEST_N            = 1;
 my $MAX_INTRON_LENGTH = 200000;
 my $MAX_QUERY_LENGTH  = 10000;
-my $MASK_TARGET       = 'none';
+
+my $MASK_TARGET_NONE    = 'none';
+my $MASK_TARGET_SOFT    = 'soft';
+my $MASK_TARGET_DEFAULT = $MASK_TARGET_NONE;
 
 my $INITIAL_DIR = (getpwuid($<))[7];
 
@@ -159,8 +162,11 @@ sub initialise {
     my $input_widgets = [
         [ '_use_marked_region', 1, 'Region',
           [ [ 'All', 0 ], [ 'Marked region', 1 ] ] ],
-        [ '_mask_target', $MASK_TARGET, 'Repeat masking',
-          [ [ 'Unmasked', 'none' ], [ 'Soft masked', 'soft' ] ] ],
+        [ '_mask_target', $MASK_TARGET_DEFAULT, 'Repeat masking',
+          [
+           [ 'Unmasked',    $MASK_TARGET_NONE ],
+           [ 'Soft masked', $MASK_TARGET_SOFT ],
+          ] ],
         ];
 
     for (@{$input_widgets}) {
@@ -442,7 +448,7 @@ sub launch_exonerate {
         full_seq        => $SessionWindow->Assembly->Sequence,
         repeat_masker   => sub { my $apply_mask_sub = shift; $self->_repeat_masker($apply_mask_sub); },
 
-        softmask_target => ($self->{_mask_target} eq 'soft'),
+        softmask_target => ($self->{_mask_target} eq $MASK_TARGET_SOFT),
         bestn           => $bestn,
         maxintron       => $maxintron,
 
