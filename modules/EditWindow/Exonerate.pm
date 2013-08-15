@@ -26,6 +26,10 @@ my $BEST_N            = 1;
 my $MAX_INTRON_LENGTH = 200000;
 my $MAX_QUERY_LENGTH  = 10000;
 
+my $REGION_TARGET_ALL     = 'all';
+my $REGION_TARGET_MARKED  = 'marked';
+my $REGION_TARGET_DEFAULT = $REGION_TARGET_MARKED;
+
 my $MASK_TARGET_NONE    = 'none';
 my $MASK_TARGET_SOFT    = 'soft';
 my $MASK_TARGET_DEFAULT = $MASK_TARGET_NONE;
@@ -160,8 +164,11 @@ sub initialise {
     my $input_frame = $top->Frame->pack(@frame_pack);
 
     my $input_widgets = [
-        [ '_use_marked_region', 1, 'Region',
-          [ [ 'All', 0 ], [ 'Marked region', 1 ] ] ],
+        [ '_region_target', $REGION_TARGET_DEFAULT, 'Region',
+          [
+           [ 'All',           $REGION_TARGET_ALL    ],
+           [ 'Marked region', $REGION_TARGET_MARKED ],
+          ] ],
         [ '_mask_target', $MASK_TARGET_DEFAULT, 'Repeat masking',
           [
            [ 'Unmasked',    $MASK_TARGET_NONE ],
@@ -461,7 +468,7 @@ sub launch_exonerate {
         );
 
     # get marked region (if requested)
-    if ($self->{_use_marked_region}) {
+    if ($self->{_region_target} eq $REGION_TARGET_MARKED) {
         my ($mark_start, $mark_end) = $SessionWindow->get_mark_in_slice_coords;
         if ($mark_start && $mark_end) {
             $self->logger->warn("Setting exonerate genomic start & end to marked region: $mark_start - $mark_end");
