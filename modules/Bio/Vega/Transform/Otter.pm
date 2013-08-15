@@ -37,7 +37,6 @@ my (
     %xref_list,
     %logic_ana,
     %coord_system,
-    %tiles,
     %clone_sequence_list,
     %chrslice,
     %seen_transcript_name,
@@ -63,7 +62,6 @@ sub DESTROY {
     delete $xref_list{$self};
     delete $logic_ana{$self};
     delete $coord_system{$self};
-    delete $tiles{$self};
     delete $clone_sequence_list{$self};
     delete $chrslice{$self};
     delete $seen_gene_name{$self};
@@ -257,11 +255,6 @@ sub build_SequenceFragment {
         -coord_system       => $ctg_coord_system{$self},
     );
 
-    my $tile = [$start, $end, $ctg_cmp_slice, $cln_attrib_list];
-    my $tile_list = $tiles{$self} ||= [];
-    push @$tile_list, $tile;
-
-    # This will take over from the tile list
     my $cs = Bio::Otter::Lace::CloneSequence->new;
     $cs->chromosome(   $chromosome_name{$self});
     $cs->contig_name(  $ctg_name              );
@@ -280,8 +273,8 @@ sub build_SequenceFragment {
         # -author   => $cln_author, # see FIXME above about $cln_author
         -attributes => $cln_attrib_list,
         );
-
     $cs->ContigInfo($ci);
+
     my $cs_list = $clone_sequence_list{$self} ||= [];
     push @$cs_list, $cs;
 
@@ -678,17 +671,6 @@ sub set_ChromosomeSlice {
     $chrslice{$self} = $slice;
 
     return;
-}
-
-sub get_Tiles {
-    my ($self) = @_;
-
-    if (my $t = $tiles{$self}) {
-        my @tiles = sort { $a->[0] <=> $b->[0] } @$t;
-        return @tiles;
-    } else {
-        return;
-    }
 }
 
 sub get_CloneSequences {

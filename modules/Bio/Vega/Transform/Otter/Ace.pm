@@ -285,14 +285,16 @@ sub make_ace_assembly {
 
     $ace->add_tag('Assembly_name', $self->get_ChromosomeSlice->seq_region_name);
 
-    # Tiles are returned sorted in ascending order by their starts
-    my @asm_tiles = $self->get_Tiles;
+    # Clone sequences are returned sorted in ascending order by their starts
+    my @asm_clone_sequences = $self->get_CloneSequences;
 
     # For contigs which contribute more than once to the assembly
     # we need to record their spans for the Smap tags.
     my %ctg_spans;
-    foreach my $tile (@asm_tiles) {
-        my ($chr_start, $chr_end, $ctg_slice) = @$tile;
+    foreach my $acs (@asm_clone_sequences) {
+        my $chr_start = $acs->chr_start();
+        my $chr_end   = $acs->chr_end();
+        my $ctg_slice = $acs->ContigInfo->slice();
         my $name = $ctg_slice->seq_region_name;
         if (my $span = $ctg_spans{$name}) {
             # Extend the span
@@ -305,9 +307,12 @@ sub make_ace_assembly {
 
     # Create the Smap tags used by acedb to assemble the genomic region
     # from the contigs.
-    my $chr_offset = $asm_tiles[0][0] - 1;
-    foreach my $tile ($self->get_Tiles) {
-        my ($chr_start, $chr_end, $ctg_slice, $attrib_list) = @$tile;
+    my $chr_offset = $asm_clone_sequences[0]->chr_start() - 1;
+    foreach my $acs (@asm_clone_sequences) {
+        my $chr_start   = $acs->chr_start();
+        my $chr_end     = $acs->chr_end();
+        my $ctg_slice   = $acs->ContigInfo->slice();
+        my $attrib_list = $acs->ContigInfo->get_all_Attributes();
         my $name = $ctg_slice->seq_region_name;
         my ($span_start, $span_end) = @{$ctg_spans{$name}};
         if ($ctg_slice->strand == 1) {
@@ -338,16 +343,19 @@ sub make_ace_contigs {
     my ($self) = @_;
 
     my $str = '';
-    foreach my $tile ($self->get_Tiles) {
-        $str .= $self->make_ace_ctg($tile);
+    foreach my $cs ($self->get_CloneSequences) {
+        $str .= $self->make_ace_ctg($cs);
     }
     return $str;
 }
 
 sub make_ace_ctg {
-    my ($self, $tile) = @_;
+    my ($self, $clone_sequence) = @_;
 
-    my ($chr_start, $chr_end, $ctg_slice, $attrib_list) = @$tile;
+    my $chr_start   = $clone_sequence->chr_start();
+    my $chr_end     = $clone_sequence->chr_end();
+    my $ctg_slice   = $clone_sequence->ContigInfo->slice();
+    my $attrib_list = $clone_sequence->ContigInfo->get_all_Attributes();
 
     ### Authors don't get parsed from the XML
 
