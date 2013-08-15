@@ -125,6 +125,18 @@ sub auth_user {
 }
 
 
+=head2 test_key()
+
+Return the name of the key output by L<scripts/apache/test> which
+exposes cookie interpretation.
+
+=cut
+
+sub test_key {
+    return 'B:O:Auth::SSO';
+}
+
+
 1;
 
 =head1 AUTHOR
