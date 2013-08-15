@@ -21,6 +21,8 @@ L<LWP::UserAgent> on the client, L<SangerWeb> on the server.
 
 =head2 login($fetcher, $user, $pass)
 
+Client side.  Given a valid username and password, obtain a cookie.
+
 Returns C<($status, $failed, $detail)>.  $failed is a brief
 explanation of the problem, or false on success.  $detail is the full
 body of the reply.
@@ -68,6 +70,58 @@ sub login {
         $failed = $msg;
     }
     return ($response->status_line, $failed, $content);
+}
+
+
+=head2 auth_user($sangerweb, $external_users_hash)
+
+Server side.  Given an existing L<SangerWeb> object containing the
+client's authentication cookie, and a hash of external users, set
+flags for the user.
+
+Returns a list of hash key => value pairs suitable for inserting into
+L<Bio::Otter::ServerScriptSupport> objects,
+
+=over 4
+
+=item _authorized_user
+
+The username, or C<undef> if none.
+
+=item _internal_user
+
+True iff the user is authorised and "internal", i.e. a member of staff
+or visiting worker.
+
+=back
+
+Note that this rolls authentication and authorisation into one lump.
+
+=cut
+
+sub auth_user {
+    my ($called, $sangerweb, $users_hash) = @_;
+    my %out = (_authorized_user => undef, _internal_user => 0);
+
+    if (my $user = lc($sangerweb->username)) {
+        my $auth_flag     = 0;
+        my $internal_flag = 0;
+
+        if ($user =~ /^[a-z0-9]+$/) {   # Internal users (simple user name)
+            $auth_flag = 1;
+            $internal_flag = 1;
+        } elsif ($users_hash->{$user}) {  # Check external users (email address)
+            $auth_flag = 1;
+        } # else not auth
+
+        if ($auth_flag) {
+            $out{'_authorized_user'} = $user;
+            $out{'_internal_user'}   = $internal_flag;
+        }
+    }
+
+    die 'wantarray!' unless wantarray;
+    return %out;
 }
 
 
