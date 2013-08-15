@@ -103,6 +103,9 @@ sub auth_user {
     my ($called, $sangerweb, $users_hash) = @_;
     my %out = (_authorized_user => undef, _internal_user => 0);
 
+    $out{_local_user} = ($ENV{'HTTP_CLIENTREALM'} =~ /sanger/ ? 1 : 0);
+    # ...from the HTTP header added by front end proxy
+
     if (my $user = lc($sangerweb->username)) {
         my $auth_flag     = 0;
         my $internal_flag = 0;
