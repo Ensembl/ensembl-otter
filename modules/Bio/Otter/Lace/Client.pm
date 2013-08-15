@@ -33,6 +33,7 @@ use Bio::Otter::Lace::SequenceNote;
 use Bio::Otter::Lace::AceDatabase;
 use Bio::Otter::Lace::DB;
 use Bio::Otter::LogFile;
+use Bio::Otter::Auth::SSO;
 
 use 5.009001; # for stacked -f -r which returns false under 5.8.8
 
@@ -457,42 +458,19 @@ sub authorize {
     my $password = $self->password_prompt()->($self)
       or die "No password given";
 
-    # need to url-encode these
-    $user     = uri_escape($user);      # possibly not worth it...
-    $password = uri_escape($password);  # definitely worth it!
+    my ($status, $failed, $detail) =
+      Bio::Otter::Auth::SSO->login($self->get_UserAgent, $user, $password);
 
-    my $req = HTTP::Request->new;
-    $req->method('POST');
-    $req->uri("https://enigma.sanger.ac.uk/LOGIN");
-    $req->content_type('application/x-www-form-urlencoded');
-    $req->content("credential_0=$user&credential_1=$password&destination=/");
-
-    my $response = $self->request($req);
-    if ($response->is_success) {
+    if (!$failed) {
         # Cookie will have been given to UserAgent
         warn sprintf("Authenticated as %s: %s\n",
-                     $self->author, $response->status_line);
+                     $self->author, $status);
         $self->save_CookieJar;
         return 1;
     } else {
-        my $content = $response->decoded_content;
         warn sprintf("Authentication as %s failed: %s (((%s)))\n",
-                     $self->author, $response->status_line, $content);
-        # log the detail - content may be large
-        my $msg = sprintf("Authentication as %s failed: %s\n",
-                          $self->author, $response->status_line);
-        if ($content =~ m{<title>Sanger Single Sign-on login}) {
-            # Some common special cases
-            if ($content =~ m{<P>(Invalid account details\. Please try again|Please enter your login and password to authenticate)</P>}i) {
-                $msg = "Login failed: $1";
-            } elsif ($content =~
-                     m{The account <b>(.*)</b> has been temporarily locked}) {
-                $msg = "Login failed and account $1 is now temporarily locked.";
-                $msg .= "\nPlease wait $1 and try again, or contact Anacode for support"
-                  if $content =~ m{Please try again in ((\d+ hours?)?,? \d+ minutes?)};
-            } # else probably an entire HTML page
-        }
-        $self->password_problem()->($self, $msg);
+                     $self->author, $status, $detail);
+        $self->password_problem()->($self, $failed);
         return 0;
     }
 }
