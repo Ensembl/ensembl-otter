@@ -14,7 +14,7 @@ use Try::Tiny;
 
 use Test::Otter qw( ^db_or_skipall ^data_dir_or_skipall ); # may skip test
 
-use OtterTest::TestRegion qw( check_xml add_extra_gene_xml %test_region_params );
+use OtterTest::TestRegion qw( check_xml extra_gene add_extra_gene_xml region_is %test_region_params );
 
 my %modules;
 
@@ -40,12 +40,6 @@ note('Got ', length $dna, ' bp');
 my $region = $sa_region->get_region;
 isa_ok($region, 'Bio::Vega::Region');
 
-TODO: {
-    local $TODO = "convert region's clone sequences into tiles :-(, possibly by converting to/from XML";
-    fail 'todo';
-}
-# For now, ensure write_region dies appropriately.
-#
 my ($okay, $region_out, $error) = try_write_region($sa_region, $region);
 ok(not($okay), 'attempt to write_region dies as expected');
 like($error, qr/not locked/, 'error message ok');
@@ -110,6 +104,31 @@ ok($region_out, 'write_region returns some stuff');
 my $xml4 = $sa_xml_region->get_region;
 ok($xml4, 'get_region as XML again');
 is($xml4, $xml, 'XML now changed back');
+
+# Back to using a Bio::Vega::Region object
+my $region2 = Bio::Vega::Region->new(
+    slice   => $region->slice,
+    species => $region->species,
+    );
+$region2->seq_features(   $region->seq_features);
+$region2->clone_sequences($region->clone_sequences);
+my @genes = ( $region->genes, extra_gene($region->slice) );
+$region2->genes(@genes);
+
+($okay, $region_out, $error) = try_write_region($sa_region, $region2);
+ok($okay, 'write_region (new gene) from Bio::Vega::Region object');
+ok($region_out, 'write_region returns some stuff');
+
+my $region3 = $sa_region->get_region;
+ok ($region3, 'get_region as B:V:Region object again');
+region_is($region3, $region2, 'region has extra gene');
+
+($okay, $region_out, $error) = try_write_region($sa_region, $region);
+ok($okay, 'write_region (back to scratch) from Bio::Vega::Region object');
+ok($region_out, 'write_region returns some stuff');
+
+my $region4 = $sa_region->get_region;
+region_is($region4, $region, 'region back to starting point');
 
 ($okay, $error) = try_unlock_region($sa_region, $lock);
 ok($okay, 'unlocked okay');

@@ -8,9 +8,11 @@ use warnings;
 use Test::Builder;
 
 use Bio::Otter::LocalServer;
+use Bio::Vega::Gene;
+use Bio::Vega::Transform::Otter;
 
 use Exporter qw( import );
-our @EXPORT_OK = qw( check_xml add_extra_gene_xml %test_region_params );
+our @EXPORT_OK = qw( check_xml extra_gene  add_extra_gene_xml region_is %test_region_params );
 
 our %test_region_params = (   ## no critic (Variables::ProhibitPackageVars)
     dataset => 'human_test',
@@ -34,6 +36,96 @@ sub check_xml {
     my $tb = Test::Builder->new;
     $tb->is_eq($xml, local_xml_copy(), $desc);
     return;
+}
+
+sub region_is {
+    my $tb = Test::Builder->new;
+    $tb->diag("region_is(): NOT YET IMPLEMENTED");
+}
+
+# May have been easier to just user our parser to parse XML, *sigh*
+#
+sub extra_gene {
+    my ($slice) = @_;
+    my $bvt_otter = Bio::Vega::Transform::Otter->new; # just for utility methods
+
+    my $analysis = $bvt_otter->get_Analysis('Otter');
+    my $author   = $bvt_otter->make_Author('anacode', 'anacode');
+
+    my $gene = Bio::Vega::Gene->new(
+        -slice =>       $slice,
+        -description => 'TEST COPY of chromosome 6 open reading frame 195 (via B:V:Region)',
+        -analysis    => $analysis,
+        );
+    $gene->source('havana');
+    $gene->biotype('protein_coding');
+    $gene->status('KNOWN');
+    $gene->gene_author($author);
+
+    my @gene_attributes;
+    push @gene_attributes, $bvt_otter->make_Attribute('name',    'ANACODE-TEST-GENE-2');
+    push @gene_attributes, $bvt_otter->make_Attribute('synonym', 'TEST-GENE-2-SYN-1');
+    push @gene_attributes, $bvt_otter->make_Attribute('synonym', 'TEST-GENE-2-SYN-2');
+    $gene->add_Attributes(@gene_attributes);
+
+    my $transcript = Bio::Vega::Transcript->new(
+        -slice    => $slice,
+        -analysis => $analysis,
+        );
+    $transcript->biotype('protein_coding');
+    $transcript->status('KNOWN');
+    $transcript->transcript_author($author);
+
+    my @transcript_attributes;
+    push @transcript_attributes, $bvt_otter->make_Attribute('name',   'ANACODE-TEST-TRANSCRIPT-2');
+    push @transcript_attributes, $bvt_otter->make_Attribute('remark', 'TEST COPY 2 of novel protein (FLJ31934)');
+    $transcript->add_Attributes(@transcript_attributes);
+
+    my @exon_specs = (
+        { start => 2_622_652, end => 2_622_690, strand => -1 },
+        { start => 2_621_692, end => 2_621_879, strand => -1 },
+        { start => 2_610_000, end => 2_612_206, strand => -1 },
+        );
+    my $tran_start_pos = 2_611_909 - $test_region_params{start} + 1;
+    my $tran_end_pos   = 2_611_526 - $test_region_params{start} + 1;
+
+    my @exons;
+    my ($start_Exon,$start_Exon_Pos,$end_Exon,$end_Exon_Pos); # FIXME: dup with B:V:Transform::Otter
+    foreach my $e_spec (@exon_specs) {
+        my $exon = Bio::Vega::Exon->new(
+            -start     => ($e_spec->{'start'} - $test_region_params{start} + 1),
+            -end       => ($e_spec->{'end'}   - $test_region_params{start} + 1),
+            -strand    => $e_spec->{'strand'},
+            -slice     => $slice,
+            -phase     => -1,
+            -end_phase => -1,
+            );
+        $transcript->add_Exon($exon);
+        push @exons, $exon;
+        unless (defined $start_Exon_Pos) {
+            $start_Exon_Pos = $bvt_otter->translation_pos($tran_start_pos, $exon);
+            $start_Exon = $exon if defined $start_Exon_Pos;
+        }
+        unless (defined $end_Exon_Pos) {
+            $end_Exon_Pos = $bvt_otter->translation_pos($tran_end_pos,$exon);
+            $end_Exon = $exon if defined $end_Exon_Pos;
+        }
+    }
+
+    my $translation = Bio::Vega::Translation->new();
+    $translation->start_Exon($start_Exon);
+    $translation->start($start_Exon_Pos);
+    $translation->end_Exon($end_Exon);
+    $translation->end($end_Exon_Pos);
+    $transcript->translation($translation);
+
+    my @evidence_list;
+    push @evidence_list, Bio::Vega::Evidence->new( -name => 'Em:AK056496', -type => 'Genomic' );
+    push @evidence_list, Bio::Vega::Evidence->new( -name => 'Sw:Q96MT4',   -type => 'Protein' );
+    $transcript->evidence_list(\@evidence_list);
+
+    $gene->add_Transcript($transcript);
+    return $gene;
 }
 
 {
