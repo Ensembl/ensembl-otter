@@ -101,7 +101,9 @@ Note that this rolls authentication and authorisation into one lump.
 
 sub auth_user {
     my ($called, $sangerweb, $users_hash) = @_;
-    my %out = (_authorized_user => undef, _internal_user => 0);
+    my %out = (_authenticated_user => undef,
+               _authorized_user => undef,
+               _internal_user => 0);
 
     $out{_local_user} = ($ENV{'HTTP_CLIENTREALM'} =~ /sanger/ ? 1 : 0);
     # ...from the HTTP header added by front end proxy
@@ -116,6 +118,8 @@ sub auth_user {
         } elsif ($users_hash->{$user}) {  # Check external users (email address)
             $auth_flag = 1;
         } # else not auth
+
+        $out{_authenticated_user} = $user; # not used by B:O:SSS
 
         if ($auth_flag) {
             $out{'_authorized_user'} = $user;
