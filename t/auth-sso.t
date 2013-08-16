@@ -5,13 +5,17 @@ use warnings;
 
 use Test::More;
 use LWP::UserAgent;
-use YAML 'Dump';
+use YAML qw( Dump Load );
+use Try::Tiny;
 
+use Bio::Otter::Server::Config;
 use Bio::Otter::Auth::SSO;
+use Bio::Otter::Lace::Defaults;
+use File::Temp 'tempfile';
 
 
 sub main {
-    my @subt = qw( login_tt lockout_tt );
+    my @subt = qw( login_tt lockout_tt auth_tt external_tt );
     plan tests => scalar @subt;
     foreach my $subt (@subt) {
         subtest $subt => main->can($subt);
@@ -65,6 +69,110 @@ sub get_ua {
     $ua->cookie_jar({});
 
     return $ua;
+}
+
+sub get_interpretation {
+    my ($client, $auth_class) = @_;
+
+    my $txt = $client->http_response_content('GET', 'test');
+    my $key = $auth_class->test_key;
+
+    # scripts/apache/test emits YAML since e295bb7a 2012-06-28 v67
+    my @data = Load($txt);
+
+    die "Result does not include key '$key'" unless exists $data[0]->{$key};
+    return ($data[0]->{$key}, $data[0]->{'B:O:Server::Config'});
+}
+
+
+sub auth_tt {
+    my @cred = grep { $_->[0] eq 'sso' } creds();
+
+    # Find suitable user:pass
+    my $users_hash = Bio::Otter::Server::Config->users_hash;
+    my $users_fn_here = Bio::Otter::Server::Config->data_filename('users.txt');
+    @cred = grep {
+        my $u = $_->[1];
+        (exists $users_hash->{ $u } && # authorised here, so should be on server
+         $_->[1] =~ /\@/ && $_->[1] !~ /\@sanger/); # not internal
+    } @cred;
+
+    if (!@cred) {
+        plan skip_all => "Need a type='sso' credential, listed in users_hash at $users_fn_here";
+        return;
+    }
+    plan tests => 12;
+
+    ### Obtain a standard client
+    #
+    # Do not trample caller's cookies!
+    my ($fh, $fn) = tempfile('auth_tt.cookies.XXXXXX', TMPDIR => 1, CLEANUP => 1);
+    local $ENV{'OTTERLACE_COOKIE_JAR'} = $fn;
+
+    local @ARGV = ();
+    Bio::Otter::Lace::Defaults::do_getopt();
+    my $cl_safejar = Bio::Otter::Lace::Defaults::make_Client();
+
+    # Do not pester for password
+    $cl_safejar->password_prompt
+      (sub { die "Test expected to be authorised\n".
+               "  or Inside (possibly via env_proxy) ..?\n" });
+
+    ### Check test info - logged out
+    #
+    my $ua = $cl_safejar->get_UserAgent;
+    $ua->cookie_jar->clear;
+    my ($info, $conf_there) = try {
+        get_interpretation($cl_safejar, 'Bio::Otter::Auth::SSO');
+    } catch { "ERR:$_" };
+
+  SKIP: {
+        unless (is(ref($info), 'HASH', 'Interpretation (logged out)')) {
+            diag Dump({ interpretation => $info });
+            skip "Can't get interpretation", 5;
+        }
+
+        my @i_key = sort keys %$info;
+        my @want_key = qw( _authenticated_user _authorized_user _internal_user _local_user );
+        is("@i_key", "@want_key", '  Keys');
+        is($info->{_authenticated_user}, undef, '  Authenticated');
+        is($info->{_authorized_user}, undef, '  Unauthorised');
+        is($info->{_internal_user}, 0, '  Not internal');
+        is($info->{_local_user}, 1, '  Local (must be - we are seeing test data)');
+    }
+
+    ### Log in (not via B:O:L:Client)
+    #
+    my (undef, $user, $password) = @{ $cred[0] };
+    my ($status, $failed, $detail) =
+      Bio::Otter::Auth::SSO->login($ua, $user, $password);
+    is($failed, '', "Login OK (user=$user)")
+    $ua->cookie_jar->save;
+
+    ($info) = try {
+        get_interpretation($cl_safejar, 'Bio::Otter::Auth::SSO');
+    } catch { "ERR:$_" };
+
+  SKIP: {
+        unless (is(ref($info), 'HASH', "Interpretation (logged in)")) {
+            diag Dump({ interpretation => $info });
+            skip "Can't get interpretation", 4;
+        }
+
+        my $authen =
+          is($info->{_authenticated_user}, $user, '  Authenticated')
+            ? 'true' : 'false';
+
+        is($info->{_authorized_user}, $user, '  Authorised')
+          or diag("\nWhen listed in $users_fn_here (true),\n".
+                  "and authenticated ($authen),\n".
+                  "Could still be not authorised on server?  It reports config as\n".
+                  Dump($conf_there));
+        is($info->{_internal_user}, 0, '  Not internal'); # unix login password stored in local file == FAIL
+        is($info->{_local_user}, 1, '  Local (must be - we are seeing test data)');
+    }
+
+    return;
 }
 
 
@@ -140,6 +248,17 @@ sub lockout_tt {
 
     like($failed, qr{temporarily locked}, 'Lockout detected')
       or diag Dump({ detail => $detail });
+
+    return;
+}
+
+
+sub external_tt {
+    plan tests => 1;
+    my $ua = get_ua();
+
+    local $TODO = "We have no external proxy, so cannot view Otter Server from 'Outside'";
+    fail('try it from outside');
 
     return;
 }
