@@ -7,7 +7,7 @@ use Bio::Vega::Region;
 use Bio::Vega::Transform::Otter;
 use Bio::Vega::Transform::XML;
 
-use parent 'Bio::Otter::ServerAction::Region';
+use base 'Bio::Otter::ServerAction::Region';
 
 =head1 NAME
 
