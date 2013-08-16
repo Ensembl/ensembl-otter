@@ -146,7 +146,7 @@ sub auth_tt {
     my (undef, $user, $password) = @{ $cred[0] };
     my ($status, $failed, $detail) =
       Bio::Otter::Auth::SSO->login($ua, $user, $password);
-    is($failed, '', "Login OK (user=$user)")
+    is($failed, '', "Login OK (user=$user)");
     $ua->cookie_jar->save;
 
     ($info) = try {
