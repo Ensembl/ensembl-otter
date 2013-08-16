@@ -289,6 +289,7 @@ sub _read_user_file {
         next if /^$/;       # Skip lines which are now blank
         my ($user_name, @allowed_datasets) = split;
         $user_name = lc($user_name);
+        $usr_hash->{$user_name} ||= {}; # accept "authorised for no datasets", for code testing
         foreach my $ds (@allowed_datasets) {
             $usr_hash->{$user_name}{$ds} = 1;
         }
