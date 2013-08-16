@@ -33,10 +33,10 @@ authenticated requests.
 =cut
 
 sub login {
-    my ($called, $fetcher, $user, $password) = @_;
+    my ($called, $fetcher, $orig_user, $password) = @_;
 
     # need to url-encode these
-    $user     = uri_escape($user);      # possibly not worth it...
+    my $user  = uri_escape($orig_user); # possibly not worth it...
     $password = uri_escape($password);  # definitely worth it!
 
     my $req = HTTP::Request->new;
@@ -49,12 +49,12 @@ sub login {
     my $content = $response->decoded_content;
     my $failed;
 
-    if ($response->is_success) {
+    if ($response->is_success || $response->is_redirect) {
         $failed = '';
     } else {
         # log the detail - content may be large
         my $msg = sprintf("Authentication as %s failed: %s\n",
-                          $user, $response->status_line);
+                          $orig_user, $response->status_line);
         if ($content =~ m{<title>Sanger Single Sign-on login}) {
             # Some common special cases
             if ($content =~ m{<P>(Invalid account details\. Please try again|Please enter your login and password to authenticate)</P>}i) {
