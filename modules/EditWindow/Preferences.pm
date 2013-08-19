@@ -10,6 +10,8 @@ require Tk::Dialog;
 use base 'EditWindow';
 
 use Try::Tiny;
+use POSIX ();
+
 use Bio::Otter::Lace::Defaults;
 
 
@@ -343,8 +345,19 @@ sub _edit { ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
     my ($self) = @_;
     my @cmd = $self->_edit_cmd;
     push @cmd, Bio::Otter::Lace::Defaults::user_config_filename();
-    warn "Running '@cmd'";
-    system(@cmd) && warn "Edit config failed: $?";
+
+    # Run in the background.  For Mac 'open', this is superfluous.
+    # For gedit it is necessary, this way or system("@cmd &")
+    my $pid = fork();
+    if (!defined $pid) {
+        die "Could not edit, fork failed $!"; # will be a background Tk error
+    } elsif ($pid) {
+        warn "Ran '@cmd', pid=$pid\n";
+        # (No UI error if it fails)
+    } else {
+        { exec(@cmd); }
+        POSIX::_exit(127); # avoid triggering DESTROY
+    }
     $self->_close;
     return ();
 }
@@ -352,8 +365,11 @@ sub _edit { ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
 sub _edit_cmd {
     my ($self) = @_;
     return qw( open -e ) if $^O eq 'darwin';
-#    return qw( gedit ) if -x '/usr/bin/gedit'; # doesn't background - fix later
 # xdg-open won't edit my config.ini
+    foreach my $bin (qw( /usr/bin/gedit /usr/bin/nedit )) {
+        return $bin if -x $bin && -r _;
+    }
+    warn "I can find no editor here";
     return ();
 }
 
