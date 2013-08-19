@@ -9,6 +9,7 @@ use Try::Tiny;
 use Bio::Otter::ServerScriptSupport;
 use Bio::Otter::Version;
 use Bio::Otter::Git;
+use Bio::Otter::Auth::Pagesmith;
 use Bio::Otter::Auth::SSO;
 
 
@@ -94,8 +95,9 @@ sub generate {
 #        BOSSS => $server, # would leak users config & CGI internals
         internal_user => $server->internal_user };
 
-    $out{ Bio::Otter::Auth::SSO->test_key } =
-      { Bio::Otter::Auth::SSO->auth_user($web, $server->users_hash) };
+    foreach my $mod (qw( Bio::Otter::Auth::SSO Bio::Otter::Auth::Pagesmith )) {
+        $out{ $mod->test_key } = { $mod->auth_user($web, $server->users_hash) };
+    }
 
     $out{'B:O:Server::Config'} =
       { data_dir => Bio::Otter::Server::Config->data_dir,
