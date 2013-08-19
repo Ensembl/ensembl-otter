@@ -84,14 +84,26 @@ L<Bio::Otter::ServerScriptSupport> objects,
 
 =over 4
 
+=item _authenticated_user
+
+The username, or C<undef> if none.
+
+We know who it is, but maybe they should not be using our services.
+
 =item _authorized_user
 
 The username, or C<undef> if none.
+
+User is allowed to use services, possibly with other restrictions.
 
 =item _internal_user
 
 True iff the user is authorised and "internal", i.e. a member of staff
 or visiting worker.
+
+=item _local_user
+
+True iff the request originated inside the firewall.
 
 =back
 
@@ -141,6 +153,18 @@ exposes cookie interpretation.
 
 sub test_key {
     return 'B:O:Auth::SSO';
+}
+
+
+=head2 cookie_name()
+
+Return the name of the cookie used by this system.  This is present to
+reduce magic strings in the automated test.
+
+=cut
+
+sub cookie_name {
+    return 'WTSISignOn';
 }
 
 

@@ -9,15 +9,28 @@ use YAML qw( Dump Load );
 use Try::Tiny;
 
 use Bio::Otter::Server::Config;
-use Bio::Otter::Auth::SSO;
 use Bio::Otter::Lace::Defaults;
 use File::Temp 'tempfile';
 
+use Bio::Otter::Auth::SSO;
+use Bio::Otter::Auth::Pagesmith;
 
+
+our ($MODE, $CLASS);
 sub main {
-    my @subt = qw( login_tt lockout_tt auth_tt external_tt );
-    plan tests => scalar @subt;
-    foreach my $subt (@subt) {
+    my @sso = qw( login_tt auth_tt external_tt lockout_tt );
+    my @ps  = qw( login_tt auth_tt external_tt );
+    plan tests => @sso + @ps;
+
+    $MODE = 'SSO';
+    $CLASS = "Bio::Otter::Auth::$MODE";
+    foreach my $subt (@sso) {
+        subtest $subt => main->can($subt);
+    }
+
+    $MODE = 'Pagesmith';
+    $CLASS = "Bio::Otter::Auth::$MODE";
+    foreach my $subt (@ps) {
         subtest $subt => main->can($subt);
     }
 }
@@ -86,7 +99,7 @@ sub get_interpretation {
 
 
 sub auth_tt {
-    my @cred = grep { $_->[0] eq 'sso' } creds();
+    my @cred = grep { $_->[0] eq "\L$MODE" } creds();
 
     # Find suitable user:pass
     my $users_hash = Bio::Otter::Server::Config->users_hash;
@@ -98,7 +111,7 @@ sub auth_tt {
     } @cred;
 
     if (!@cred) {
-        plan skip_all => "Need a type='sso' credential, listed in users_hash at $users_fn_here";
+        plan skip_all => "Need a type='\L$MODE\E' credential, listed in users_hash at $users_fn_here";
         return;
     }
     plan tests => 12;
@@ -123,7 +136,7 @@ sub auth_tt {
     my $ua = $cl_safejar->get_UserAgent;
     $ua->cookie_jar->clear;
     my ($info, $conf_there) = try {
-        get_interpretation($cl_safejar, 'Bio::Otter::Auth::SSO');
+        get_interpretation($cl_safejar, $CLASS);
     } catch { "ERR:$_" };
 
   SKIP: {
@@ -145,12 +158,12 @@ sub auth_tt {
     #
     my (undef, $user, $password) = @{ $cred[0] };
     my ($status, $failed, $detail) =
-      Bio::Otter::Auth::SSO->login($ua, $user, $password);
+      $CLASS->login($ua, $user, $password);
     is($failed, '', "Login OK (user=$user)");
     $ua->cookie_jar->save;
 
     ($info) = try {
-        get_interpretation($cl_safejar, 'Bio::Otter::Auth::SSO');
+        get_interpretation($cl_safejar, $CLASS);
     } catch { "ERR:$_" };
 
   SKIP: {
@@ -177,10 +190,10 @@ sub auth_tt {
 
 
 sub login_tt {
-    my @cred = grep { $_->[0] eq 'sso' } creds();
+    my @cred = grep { $_->[0] eq "\L$MODE" } creds();
     if (!@cred) {
         my $fn = creds_fn();
-        plan skip_all => "No credentials with type='sso' in $fn .  Please add a junk account.";
+        plan skip_all => "No credentials with type='\L$MODE\E' in $fn .  Please add a junk account.";
         return;
     }
 
@@ -193,24 +206,26 @@ sub login_tt {
 
     my (undef, $user, $password) = @{ $cred[0] };
     my ($status, $failed, $detail) =
-      Bio::Otter::Auth::SSO->login($ua, $user, $password);
+      $CLASS->login($ua, $user, $password);
     my @n = cookie_names($ua);
 
+    my $cookey = $CLASS->cookie_name;
     is($failed, '', "Login OK (user=$user)")
       or diag Dump({ detail => $detail });
-    like((join ',', @n), qr{(^|,)WTSISignOn($|,)}, 'Expected cookie present');
+    like((join ',', @n), qr{(^|,)$cookey($|,)}, 'Expected cookie present');
     is($status, '302 Found', 'Status redirect');
 
     ### Junk password login
     #
     $ua->cookie_jar->clear;
     ($status, $failed, $detail) =
-      Bio::Otter::Auth::SSO->login($ua, $user, 'junketty-junk');
+      $CLASS->login($ua, $user, 'junketty-junk');
     @n = cookie_names($ua);
 
-    like($failed, qr{^Login failed: (Please enter your login|Invalid account details)}, 'Junk login fail');
+    like($failed, qr{^Login failed: (Please enter your login|Invalid account details)}, 'Junk login fail')
+      or diag Dump({ detail => $detail });
 # qr{^Authentication as \Q$user\E failed: mumbly bumble},
-    unlike((join ',', @n), qr{(^|,)WTSISignOn($|,)}, 'Expected cookie absent');
+    unlike((join ',', @n), qr{(^|,)$cookey($|,)}, 'Expected cookie absent');
     is($status, '403 Forbidden', 'Status forbidden');
 
     ### Valid again, redirected
@@ -219,7 +234,7 @@ sub login_tt {
 
     $ua->cookie_jar->clear;
     ($status, $failed, $detail) =
-      Bio::Otter::Auth::SSO->login($ua, $user, $password);
+      $CLASS->login($ua, $user, $password);
     @n = cookie_names($ua);
 
     is($failed, '', "Login, redirected")
@@ -241,7 +256,7 @@ sub lockout_tt {
     my $retry = 3;
     while ($retry --) {
         ($status, $failed, $detail) =
-          Bio::Otter::Auth::SSO->login($ua, 'locksmith', 'lost-my-key');
+          $CLASS->login($ua, 'locksmith', 'lost-my-key');
         last if $failed =~ /locked/;
         diag "Failed = $failed; $retry left.";
     }
