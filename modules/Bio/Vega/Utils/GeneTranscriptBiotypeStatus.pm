@@ -40,6 +40,15 @@ my @method_biotype_status = qw{
         ncRNA_host                  =                       -
         3'_overlapping_ncRNA        =                       -
 
+    Known_ncRNA                     =                       -
+        miRNA                       =                       -
+        piRNA                       =                       -
+        rRNA                        =                       -
+        siRNA                       =                       -
+        snRNA                       =                       -
+        snoRNA                      =                       -
+        tRNA                        =                       -
+
     Pseudogene                      =                       -
         Processed_pseudogene        =                       -
         Unprocessed_pseudogene      =                       -
