@@ -41,6 +41,7 @@ sub check_xml {
 sub region_is {
     my $tb = Test::Builder->new;
     $tb->diag("region_is(): NOT YET IMPLEMENTED");
+    return;
 }
 
 # May have been easier to just user our parser to parse XML, *sigh*
