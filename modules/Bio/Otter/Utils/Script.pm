@@ -6,7 +6,6 @@ use 5.010;
 
 use Carp;
 
-use Bio::Otter::Utils::Script::DataSet;
 use Bio::Otter::Server::Config;
 
 use parent 'App::Cmd::Simple';
@@ -169,7 +168,7 @@ options or separated by commas.
 Enables the C<--limit> option, which should be used to limit the total
 number of iterations performed by the script.
 
-Used by L<Bio::Otter::SpeciesDat::DataSet/iterate_transcripts>.
+Used by L<Bio::Utils::Script::DataSet/iterate_transcripts>.
 
 =head3 allow_modify_limit
 
@@ -192,7 +191,8 @@ sub ottscript_options {
     sub _options {
         my $class = shift;
         return $_options_hashref ||= {
-            dataset_mode => 'only_one',
+            dataset_mode  => 'only_one',
+            dataset_class => 'Bio::Otter::Utils::Script::DataSet',
             $class->ottscript_options,
         };
     }
@@ -221,6 +221,13 @@ sub execute {
 
     $self->setup_data($self->setup($opt, $args));
 
+    my $dataset_class = $self->_option('dataset_class');
+    {
+        ## no critic (BuiltinFunctions::ProhibitStringyEval,Anacode::ProhibitEval)
+        eval "require $dataset_class" or 1;
+        # if that failed, we assume that the dataset class is provided in the script file
+    }
+
     my $species_dat = Bio::Otter::Server::Config->SpeciesDat;
 
     my @ds_names = $self->_datasets;
@@ -234,7 +241,7 @@ sub execute {
             $self->_dataset_error("Cannot find dataset '$ds_name'");
             next;
         }
-        my $ds_obj = Bio::Otter::Utils::Script::DataSet->new(otter_sd_ds => $ds, script => $self);
+        my $ds_obj = $dataset_class->new(otter_sd_ds => $ds, script => $self);
         my $ss_obj;
         if (my $ss_name = $self->sequence_set_name) {
             my $ssa = $ds_obj->otter_dba->get_SliceAdaptor;
