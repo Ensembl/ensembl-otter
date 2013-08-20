@@ -34,6 +34,8 @@ sub main {
     foreach my $subt (@ps) {
         subtest $subt => main->can($subt);
     }
+
+    return;
 }
 
 main();
@@ -59,7 +61,7 @@ sub creds {
 
     open my $fh, '<', $fn
       or die "Reading $fn: $!";
-    my @ln = grep { ! /^\s*(#|$)/ } <$fh>;
+    my @ln = grep { ! /^\s*(?:#|$)/ } <$fh>;
     chomp @ln;
     return map {[ split /\s+/, $_ ]} @ln;
 }
