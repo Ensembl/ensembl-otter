@@ -9,6 +9,7 @@ use YAML qw( Dump Load );
 use Try::Tiny;
 
 use Bio::Otter::Server::Config;
+use Bio::Otter::Lace::Client;
 use Bio::Otter::Lace::Defaults;
 use File::Temp 'tempfile';
 
@@ -226,7 +227,11 @@ sub login_tt {
       or diag Dump({ detail => $detail });
 # qr{^Authentication as \Q$user\E failed: mumbly bumble},
     unlike((join ',', @n), qr{(^|,)$cookey($|,)}, 'Expected cookie absent');
-    is($status, '403 Forbidden', 'Status forbidden');
+
+    # status of the last request can't be part of the interface, it
+    # doesn't indicate anything in Pagesmith
+    my $want_status = $MODE eq 'SSO' ? '403 Forbidden' : '302 Found';
+    is($status, $want_status, "Status(junk) $want_status");
 
     ### Valid again, redirected
     #
@@ -239,7 +244,10 @@ sub login_tt {
 
     is($failed, '', "Login, redirected")
       or diag Dump({ detail => $detail });
-    is($status, '200 OK', 'Status 200');
+    # status of the last request can't be part of the interface, it
+    # doesn't indicate anything in Pagesmith
+    $want_status = $MODE eq 'SSO' ? '200 OK' : '302 Found';
+    is($status, $want_status, "Status(redirected) $want_status");
 
     return;
 }
