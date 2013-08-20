@@ -191,8 +191,10 @@ sub ottscript_options {
     sub _options {
         my $class = shift;
         return $_options_hashref ||= {
-            dataset_mode  => 'only_one',
-            dataset_class => 'Bio::Otter::Utils::Script::DataSet',
+            dataset_mode     => 'only_one',
+            dataset_class    => 'Bio::Otter::Utils::Script::DataSet',
+            gene_class       => 'Bio::Otter::Utils::Script::Gene',
+            transcript_class => 'Bio::Otter::Utils::Script::Transcript',
             $class->ottscript_options,
         };
     }
@@ -288,7 +290,7 @@ sub _dataset_error {
 
   $cmd->process_dataset($dataset);
 
-Must be provided unless C<dataset_mode> option is 'none'. 
+Must be provided unless C<dataset_mode> option is 'none'.
 
 Called with a dataset object for each dataset in turn.  The dataset
 object is an enhanced L<Bio::Otter::SpeciesDat::DataSet>, which
