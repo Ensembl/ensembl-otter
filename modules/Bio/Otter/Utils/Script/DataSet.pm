@@ -70,9 +70,8 @@ sub iterate_transcripts {
     return;
 }
 
-sub _build_transcript_sth {
+sub transcript_sql {
     my $self = shift;
-    my $dbc = $self->otter_dba->dbc;
     my $sql = q{
         SELECT
                 g.gene_id        as gene_id,
@@ -83,6 +82,7 @@ sub _build_transcript_sth {
                 tan.value        as transcript_name,
                 sr.name          as seq_region_name,
                 srh.value        as seq_region_hidden
+                __EXTRA_COLUMNS__
         FROM
                 transcript           t
            JOIN gene                 g   ON t.gene_id = g.gene_id
@@ -105,14 +105,30 @@ sub _build_transcript_sth {
                                               FROM   attrib_type
                                               WHERE  code = 'hidden'
                                             )
+           __EXTRA_JOINS__
         WHERE
                 t.is_current = 1
             AND g.is_current = 1
+            __EXTRA_CONDITIONS__
         ORDER BY g.stable_id, t.stable_id
+        __LIMIT__
     };
+}
 
-    my $limit = $self->script->limit;
-    $sql .= " LIMIT $limit" if $limit;
+sub _build_transcript_sth {
+    my $self = shift;
+    my $dbc = $self->otter_dba->dbc;
+    my $sql = $self->transcript_sql;
+
+    # I'd really rather use DBIx::Class...
+
+    my $limit = $self->script->limit ? $self->script->limit : '';
+    $sql =~ s/__LIMIT__/LIMIT $limit/;
+
+    foreach my $key (qw( COLUMNS JOINS CONDITIONS )) {
+        my $placeholder = "__EXTRA_${key}__";
+        $sql =~ s/$placeholder//;
+    }
 
     my $sth = $dbc->prepare($sql);
     return $sth;
