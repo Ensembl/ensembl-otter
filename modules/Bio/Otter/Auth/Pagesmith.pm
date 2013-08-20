@@ -55,12 +55,16 @@ sub login {
     my $user  = uri_escape($orig_user); # possibly not worth it...
     $password = uri_escape($password);  # definitely worth it!
 
+    my $init_uri = 'https://www.sanger.ac.uk/about/';
+    # url needs to exist, but is irrelevant
+
     my $req = HTTP::Request->new;
     $req->uri('https://www.sanger.ac.uk/login');
     $req->method('GET');
+    $req->header(Referer => $init_uri);
     $req->header(Accept => 'application/xhtml+xml');
-    my $form_resp = $fetcher->request($req);
-    __redirect_once($fetcher, $req, $form_resp) if $form_resp->is_redirect;
+    my $form_resp = $fetcher->simple_request($req);
+    $form_resp = __redirect_once($fetcher, $req, $form_resp) if $form_resp->is_redirect;
     my $form = $form_resp->decoded_content;
 
     unless ($form_resp->is_success) {
@@ -84,12 +88,12 @@ sub login {
     }
 
     my @node_txt = map { $_->toString } $nodeset->get_nodelist;
-    my ($url, $formkey);
+    my ($formurl, $formkey);
     foreach my $node (@node_txt) {
         last if
-          ($url, $formkey) = $node =~ m{.*"(.*\/-(.{20,25}))"};
+          ($formurl, $formkey) = $node =~ m{.*"(.*\/-(.{20,25}))"};
     }
-    unless ($url =~ m{^https:}) {
+    unless ($formurl =~ m{^https:}) {
         return ($form_resp->status_line,
                 'Cannot attempt to log in - failed to extract login URL from form',
                 join "\n", @node_txt);
@@ -98,36 +102,70 @@ sub login {
     # Do the login
     $req = HTTP::Request->new;
     $req->method('POST');
-    $req->uri($url);
+    $req->uri($formurl);
     $req->content_type('application/x-www-form-urlencoded');
     $req->content("__utf8=%C2%A3&action=next&next=Login&email=$user&p$formkey=$password");
 
-    my $response = $fetcher->request($req);
+    my $response = $fetcher->simple_request($req);
     my $content = $response->decoded_content;
-    $content = $response->as_string unless $content =~ /\S/;
+#    $content = $response->as_string unless $content =~ /\S/; # could leak Set-Cookie: to 0644 logfile
     my $failed;
 
-    if ($response->is_success) {
+    my $redir;
+    $redir = $response->header('Location') if $response->is_redirect;
+
+    my $set_cookie = join "\n",
+      map { $response->header($_) } qw( Set-Cookie Set-Cookie2 );
+    my $want_cookie = $called->cookie_name;
+
+    if ($redir eq $init_uri && $set_cookie =~ m{^$want_cookie=}mi) {
+        # Success!
+        #
+        # Indications
+        #  1) redirect is back to a www.sanger.ac.uk page containing
+        #     <div id="user">$USER_NAME logged in <a href="/action/logout"><img id="logout" src="/core/gfx/blank.gif" alt="Logout" ></a></div>
+        #  2) "Set-Cookie: Pagesmith_User=..." header
         $failed = '';
+
+    } elsif ($redir eq $formurl && $set_cookie !~ m{$want_cookie}i) {
+        # Fail!
+        #
+        # Indications
+        #  1) redirect is back to (the same?) login form, containing
+        #     <div id="user"><a href="/login"><img id="login" src="/core/gfx/blank.gif" alt="Login" /></a></div>
+        #  2) no Set-Cookie: header
+
+        $failed = 'Login failed: Invalid account details';
+        # We must assume something like this - message chosen to match
+        # old system.
+
     } else {
-        # log the detail - content may be large
-        my $msg = sprintf("Authentication as %s failed: %s\n",
+        # Indeterminate.  Follow it for the debug log.  Then if we
+        # have a cookie, some later request might seem valid..?
+        $failed = sprintf("Authentication as %s failed: Indeterminate response '%s'\n",
                           $orig_user, $response->status_line);
-        # no special text to notice yet
-        $failed = $msg;
+
+        if ($response->is_redirect) {
+            # most likely - for pass or fail
+            my $followed = __redirect_once($fetcher, $req, $response);
+            $content .= "\n--- redirected to $redir ---\n".
+              $followed->decoded_content;
+        }
     }
+
     return ($response->status_line, $failed, $content);
 }
 
 sub __redirect_once {
     my ($fetcher, $req, $resp) = @_;
 
-    # follow one redirect (UA was not configured to do so)
+    # follow one redirect (we don't want auto-follow because the
+    # redirects are significant)
     $req = HTTP::Request->new;
     $req->method('GET');
     $req->uri( $resp->header('Location') );
     $req->header(Accept => 'application/xhtml+xml');
-    $resp = $fetcher->request;
+    $resp = $fetcher->simple_request($req);
 
     return $resp;
 }
