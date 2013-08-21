@@ -14,6 +14,13 @@ extends 'Bio::Otter::Utils::Script::Object';
 
 has 'gene_id' => ( is => 'ro', isa => 'Int', required => 1 );
 
+has 'vega_gene' => (
+    is      => 'ro',
+    isa     => 'Bio::Vega::Gene',
+    builder => '_load_vega_gene',
+    lazy    => 1,
+    );
+
 around BUILDARGS => sub {
     my ($orig ,$class, %args) = @_;
 
@@ -32,6 +39,12 @@ around BUILDARGS => sub {
 
     return $class->$orig(%args);
 };
+
+sub _load_vega_gene {
+    my $self = shift;
+    my $adaptor = $self->dataset->otter_dba->get_GeneAdaptor;
+    return $adaptor->fetch_by_dbID($self->gene_id);
+}
 
 __PACKAGE__->meta->make_immutable;
 
