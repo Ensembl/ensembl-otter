@@ -21,8 +21,11 @@ sub new {
 ### Methods
 
 sub authorized_user {
-    my $uname = getpwuid($<);
-    return $uname;
+    my ($self, @args) = @_;
+    ($self->{'_authorized_user'}) = @args if @args;
+    my $authorized_user = $self->{'_authorized_user'};
+    $authorized_user ||= getpwuid($<);
+    return $authorized_user;
 }
 
 ### Accessors
@@ -36,6 +39,12 @@ sub dataset_name {
 sub set_params {
     my ($self, %params) = @_;
     return $self->{_params} = { %params };
+}
+
+sub add_param {
+    my ($self, $key, $value) = @_;
+    my $params = $self->{_params} ||= {};
+    return $params->{$key} = $value;
 }
 
 sub param {
