@@ -99,14 +99,16 @@ sub transcript_sql {
     my $self = shift;
     my $sql = q{
         SELECT
-                g.gene_id        as gene_id,
-                g.stable_id      as gene_stable_id,
-                gan.value        as gene_name,
-                t.transcript_id  as transcript_id,
-                t.stable_id      as transcript_stable_id,
-                tan.value        as transcript_name,
-                sr.name          as seq_region_name,
-                srh.value        as seq_region_hidden
+                g.gene_id          AS gene_id,
+                g.stable_id        AS gene_stable_id,
+                gan.value          AS gene_name,
+                t.transcript_id    AS transcript_id,
+                t.stable_id        AS transcript_stable_id,
+                t.seq_region_start AS transcript_start,
+                t.seq_region_end   AS transcript_end,
+                tan.value          AS transcript_name,
+                sr.name            AS seq_region_name,
+                srh.value          AS seq_region_hidden
                 __EXTRA_COLUMNS__
         FROM
                 transcript           t
@@ -155,11 +157,13 @@ sub gene_sql {
     my $self = shift;
     my $sql = q{
         SELECT
-                g.gene_id        as gene_id,
-                g.stable_id      as gene_stable_id,
-                gan.value        as gene_name,
-                sr.name          as seq_region_name,
-                srh.value        as seq_region_hidden
+                g.gene_id          AS gene_id,
+                g.stable_id        AS gene_stable_id,
+                g.seq_region_start AS gene_start,
+                g.seq_region_end   AS gene_end,
+                gan.value          AS gene_name,
+                sr.name            AS seq_region_name,
+                srh.value          AS seq_region_hidden
                 __EXTRA_COLUMNS__
         FROM
                 gene                 g
