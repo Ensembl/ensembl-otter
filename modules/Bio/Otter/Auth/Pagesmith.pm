@@ -4,7 +4,6 @@ use warnings;
 
 use URI::Escape qw{ uri_escape };
 use HTTP::Request;
-use XML::XPath;
 
 
 =head1 NAME
@@ -62,42 +61,24 @@ sub login {
     $req->uri('https://www.sanger.ac.uk/login');
     $req->method('GET');
     $req->header(Referer => $init_uri);
-    $req->header(Accept => 'application/xhtml+xml');
     my $form_resp = $fetcher->simple_request($req);
-    $form_resp = __redirect_once($fetcher, $req, $form_resp) if $form_resp->is_redirect;
-    my $form = $form_resp->decoded_content;
+    my $form_dbg = $form_resp->as_string; # no secrets in these headers
 
-    unless ($form_resp->is_success) {
+    unless ($form_resp->is_redirect) {
         return ($form_resp->status_line,
-                'Cannot attempt to log in - no login form',
-                $form);
+                'Cannot attempt to log in - no login redirect',
+                $form_dbg);
     }
 
-    # We got the login form, now extract features (recipe from mw6)
-    $form =~ s{^<\?xml.*dtd">}{};
-    $form =~ s{&pound;|&raquo;}{X}g;
-
-    my $xpath = XML::XPath->new(xml => $form);
-    my $nodeset = $xpath->find('//*/form/@action');
-
-    unless ($nodeset->isa('XML::XPath::NodeSet') &&
-            $nodeset->size) {
-        return ($form_resp->status_line,
-                'Cannot attempt to log in - did not understand login form',
-                $form);
-    }
-
-    my @node_txt = map { $_->toString } $nodeset->get_nodelist;
-    my ($formurl, $formkey);
-    foreach my $node (@node_txt) {
-        last if
-          ($formurl, $formkey) = $node =~ m{.*"(.*\/-(.{20,25}))"};
-    }
-    unless ($formurl =~ m{^https:}) {
+    my ($formurl, $formkey) = $form_resp->header('Location')
+      # e.g. https://www.sanger.ac.uk/form/-uqfpBomhQB2YxQ8HyUC9Rg
+      =~ m{^(https:.*/-(.{20,25}))$};
+    unless ($formkey) {
         return ($form_resp->status_line,
                 'Cannot attempt to log in - failed to extract login URL from form',
-                join "\n", @node_txt);
+                $form_dbg);
     }
+    $form_dbg .= "formurl=$formurl\nformkey=$formkey\n";
 
     # Do the login
     $req = HTTP::Request->new;
@@ -109,6 +90,7 @@ sub login {
     my $response = $fetcher->simple_request($req);
     my $content = $response->decoded_content;
 #    $content = $response->as_string unless $content =~ /\S/; # could leak Set-Cookie: to 0644 logfile
+    $content .= "\nInputs,\n$form_dbg";
     my $failed;
 
     my $redir;
@@ -164,7 +146,6 @@ sub __redirect_once {
     $req = HTTP::Request->new;
     $req->method('GET');
     $req->uri( $resp->header('Location') );
-    $req->header(Accept => 'application/xhtml+xml');
     $resp = $fetcher->simple_request($req);
 
     return $resp;
