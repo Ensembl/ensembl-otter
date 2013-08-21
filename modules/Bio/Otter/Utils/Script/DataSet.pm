@@ -12,6 +12,8 @@ use namespace::autoclean;
 use Bio::Otter::Utils::Script::Gene;
 use Bio::Otter::Utils::Script::Transcript;
 
+use Bio::Otter::LocalServer;
+
 use Moose;
 
 has 'otter_sd_ds' => (
@@ -26,6 +28,13 @@ has 'script' => (
     isa      => 'Bio::Otter::Utils::Script',
     weak_ref => 1,
     handles  => [ qw( setup_data dry_run may_modify inc_modified_count verbose ) ],
+    );
+
+has 'local_server' => (
+    is       => 'ro',
+    isa      => 'Bio::Otter::LocalServer',
+    builder  => '_build_local_server',
+    lazy     => 1,
     );
 
 has '_callback_data' => (
@@ -50,6 +59,11 @@ has '_gene_sth' => (
     builder => '_build_gene_sth',
     lazy    => 1,
     );
+
+sub _build_local_server {
+    my $self = shift;
+    return Bio::Otter::LocalServer->new( otter_dba => $self->otter_dba );
+}
 
 sub _iterate_something {
     my ($self, $obj_method, $sth, $obj_class) = @_;
