@@ -94,10 +94,15 @@ sub get_interpretation {
     my $key = $auth_class->test_key;
 
     # scripts/apache/test emits YAML since e295bb7a 2012-06-28 v67
-    my @data = Load($txt);
+    my ($data) = Load($txt);
 
-    die "Result does not include key '$key'" unless exists $data[0]->{$key};
-    return ($data[0]->{$key}, $data[0]->{'B:O:Server::Config'});
+    # both the keys we need are included since c11b6c86 2013-08-19 v76
+    unless (try { exists $data->{$key} }) {
+        diag "Otter Server test output:\n$txt";
+        my $server_url = $client->url_root;
+        die "Result '$data' from $server_url test does not include key '$key'";
+    }
+    return ($data->{$key}, $data->{'B:O:Server::Config'}, $data);
 }
 
 
@@ -138,13 +143,13 @@ sub auth_tt {
     #
     my $ua = $cl_safejar->get_UserAgent;
     $ua->cookie_jar->clear;
-    my ($info, $conf_there) = try {
+    my ($info, $conf_there, $full) = try {
         get_interpretation($cl_safejar, $CLASS);
     } catch { "ERR:$_" };
 
   SKIP: {
         unless (is(ref($info), 'HASH', 'Interpretation (logged out)')) {
-            diag Dump({ interpretation => $info });
+#            diag Dump({ interpretation => $info, full => $full });
             skip "Can't get interpretation", 5;
         }
 
@@ -165,13 +170,13 @@ sub auth_tt {
     is($failed, '', "Login OK (user=$user)");
     $ua->cookie_jar->save;
 
-    ($info) = try {
+    ($info, undef, $full) = try {
         get_interpretation($cl_safejar, $CLASS);
     } catch { "ERR:$_" };
 
   SKIP: {
         unless (is(ref($info), 'HASH', "Interpretation (logged in)")) {
-            diag Dump({ interpretation => $info });
+#            diag Dump({ interpretation => $info, full => $full });
             skip "Can't get interpretation", 4;
         }
 
