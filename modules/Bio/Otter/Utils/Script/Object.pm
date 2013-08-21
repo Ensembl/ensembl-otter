@@ -12,6 +12,8 @@ use Moose;
 
 has 'stable_id'     => ( is => 'ro', isa => 'Str' );
 has 'name'          => ( is => 'ro', isa => 'Str' );
+has 'start'         => ( is => 'ro', isa => 'Int' );
+has 'end'           => ( is => 'ro', isa => 'Int' );
 
 # has 'seq_region' => (
 #     is       => 'ro',

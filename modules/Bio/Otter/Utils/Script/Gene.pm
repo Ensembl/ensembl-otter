@@ -26,6 +26,8 @@ around BUILDARGS => sub {
 
     $args{stable_id} = delete $args{gene_stable_id};
     $args{name}      = delete $args{gene_name};
+    $args{start}     = delete $args{gene_start};
+    $args{end}       = delete $args{gene_end};
 
     # This is hokey as we need a dataset list of genes
     # if (my $gene_id = delete $args{gene_id}) {
