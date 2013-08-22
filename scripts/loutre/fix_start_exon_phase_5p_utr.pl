@@ -10,7 +10,7 @@ use parent 'Bio::Otter::Utils::Script';
 use Sys::Hostname;
 use Try::Tiny;
 
-use Bio::Otter::ServerAction::Region;
+use Bio::Otter::ServerAction::Script::Region;
 
 sub ottscript_options {
     return (
@@ -45,7 +45,7 @@ sub do_gene {
         cs      => $script_gene->cs_name,
         csver   => $script_gene->cs_version,
         );
-    my $region_action = Bio::Otter::ServerAction::Region->new_with_slice($local_server);
+    my $region_action = Bio::Otter::ServerAction::Script::Region->new_with_slice($local_server);
     my $region = $region_action->get_region;
 
     my $verbose = $dataset->verbose;
@@ -71,9 +71,6 @@ sub do_gene {
         if ($tl->start > 0 and $se->phase != -1) {
             $status = $se->stable_id . ' needs fixing';
             $se->phase(-1);
-            # Need to force an exon write
-            $se->dbID(undef);
-            $se->adaptor(undef);
             $changed = 1;
         } else {
             $status = 'SELECTED IN ERROR!';
@@ -120,7 +117,6 @@ sub _write_gene_region {
     if ($lock) {
         my $new_region;
         try {
-            $region->otter_dba->clear_caches;
             $region_action->server->set_params( data => $region );
             $new_region = $region_action->write_region;
             push @msg, 'write ok';
