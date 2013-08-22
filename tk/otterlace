@@ -11,7 +11,7 @@ use EditWindow::Password;
 use Bio::Otter::Lace::Client;
 use Bio::Otter::Git;
 use Bio::Otter::Error;
-use POSIX ":sys_wait_h";
+use POSIX ();
 use Log::Log4perl;
 use Try::Tiny;
 
@@ -48,7 +48,7 @@ use Try::Tiny;
     $mw->repeat(
         5000,
         sub {
-            while ((my $dead_pid = waitpid(-1, WNOHANG)) > 0) {
+            while ((my $dead_pid = waitpid(-1, POSIX::WNOHANG)) > 0) {
                 my $rc = $?;
                 $rc .= ($rc & 127
                         ? ' = signal '.($rc & 127)
