@@ -20,8 +20,9 @@ my %modules;
 
 BEGIN {
     %modules = (
-        region      => 'Bio::Otter::ServerAction::Region',
-        xml_region  => 'Bio::Otter::ServerAction::XML::Region',
+        region        => 'Bio::Otter::ServerAction::Region',
+        script_region => 'Bio::Otter::ServerAction::Script::Region',
+        xml_region    => 'Bio::Otter::ServerAction::XML::Region',
         );
 
     use_ok($_) foreach sort values %modules;
