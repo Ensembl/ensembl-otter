@@ -7,6 +7,9 @@ use 5.010;
 package Bio::Otter::Script::FixStartExonPhase5P_UTR;
 use parent 'Bio::Otter::Utils::Script';
 
+use Sys::Hostname;
+use Try::Tiny;
+
 use Bio::Otter::ServerAction::Region;
 
 sub ottscript_options {
@@ -22,16 +25,17 @@ sub ottscript_options {
 sub process_dataset {
   my ($self, $dataset) = @_;
 
-  $dataset->iterate_genes(\&do_gene);
+  $dataset->iterate_genes( sub { my ($dataset, $gene) = @_; return $self->do_gene($dataset, $gene); } );
 
   return;
 }
 
 sub do_gene {
-    my ($dataset, $script_gene) = @_;
+    my ($self, $dataset, $script_gene) = @_;
 
     my %ts_map = map { $_ => 1 } split ',', $script_gene->transcripts;
 
+    # Possibly some of this region/slice stuff should go into a DataSet method
     my $local_server = $dataset->local_server;
     $local_server->set_params(
         dataset => $dataset->name,
@@ -41,8 +45,8 @@ sub do_gene {
         cs      => $script_gene->cs_name,
         csver   => $script_gene->cs_version,
         );
-    my $sa_region = Bio::Otter::ServerAction::Region->new_with_slice($local_server);
-    my $region = $sa_region->get_region;
+    my $region_action = Bio::Otter::ServerAction::Region->new_with_slice($local_server);
+    my $region = $region_action->get_region;
 
     my $verbose = $dataset->verbose;
     my ($msg, $verbose_msg);
@@ -56,14 +60,83 @@ sub do_gene {
         }
     }
 
+    my $changed;
     foreach my $ts ( @{$gene->get_all_Transcripts} ) {
         next unless $ts_map{$ts->dbID};
-        my $ts_msg = sprintf("\n\t%s", $ts->stable_id);
+
+        my $tl = $ts->translation;
+        my $se = $tl->start_Exon;
+
+        my $status = '';
+        if ($tl->start > 0 and $se->phase != -1) {
+            $status = $se->stable_id . ' needs fixing';
+            $se->phase(-1);
+            # Need to force an exon write
+            $se->dbID(undef);
+            $se->adaptor(undef);
+            $changed = 1;
+        } else {
+            $status = 'SELECTED IN ERROR!';
+        }
+        my $ts_msg = sprintf("\n\t%s [%s]", $ts->stable_id, $status);
         $msg .= $ts_msg;
         $verbose_msg .= $ts_msg;
     }
 
+    my $g_msg = "gene not modified";
+    if ($changed) {
+        if ($dataset->may_modify) {
+            $local_server->authorized_user($gene->gene_author->name); # preserve authorship
+            $g_msg = $self->_write_gene_region($region_action, $region);
+            $dataset->inc_modified_count;
+        } else {
+            $g_msg = "gene modified: would write region here"
+        }
+    }
+
+    $g_msg = "\n\t" . $g_msg;
+    $msg .= $g_msg;
+    $verbose_msg .= $g_msg;
+
     return ($msg, $verbose_msg);
+}
+
+sub _write_gene_region {
+    my ($self, $region_action, $region) = @_;
+
+    my @msg;
+
+    my $lock;
+    try {
+        $region_action->server->add_param( hostname => hostname );
+        $lock = $region_action->lock_region;
+        push @msg, 'lock ok';
+    }
+    catch {
+        my ($err) = ($_ =~ m/^MSG: (Failed to lock.*)$/m);
+        push @msg, "lock failed: '$err'";
+    };
+
+    if ($lock) {
+        my $new_region;
+        try {
+            $region->otter_dba->clear_caches;
+            $region_action->server->set_params( data => $region );
+            $new_region = $region_action->write_region;
+            push @msg, 'write ok';
+        }
+        catch {
+            my $err = $_;
+            chomp $err;
+            push @msg, "write failed: '$err'";
+        };
+
+        $region_action->server->set_params( data => $lock );
+        $region_action->unlock_region;
+        push @msg, 'unlock ok';
+    }
+
+    return join(',', @msg);
 }
 
 # End of module
