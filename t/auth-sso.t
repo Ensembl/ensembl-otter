@@ -16,6 +16,8 @@ use File::Temp 'tempfile';
 use Bio::Otter::Auth::SSO;
 use Bio::Otter::Auth::Pagesmith;
 
+use Test::Otter 'OtterClient';
+
 
 our ($MODE, $CLASS);
 sub main {
@@ -129,10 +131,13 @@ sub auth_tt {
     # Do not trample caller's cookies!
     my ($fh, $fn) = tempfile('auth_tt.cookies.XXXXXX', TMPDIR => 1, CLEANUP => 1);
     local $ENV{'OTTERLACE_COOKIE_JAR'} = $fn;
-
-    local @ARGV = ();
-    Bio::Otter::Lace::Defaults::do_getopt();
-    my $cl_safejar = Bio::Otter::Lace::Defaults::make_Client();
+    my $cl_safejar = OtterClient();
+    my $ua = $cl_safejar->get_UserAgent;
+    my @usr_cookie = cookie_names($ua);
+    die "Otter Client instantiation control failed?\n".
+      "I see your cookies (@usr_cookie) in my jar"
+."\n".$ua->cookie_jar->as_string
+        if @usr_cookie;
 
     # Do not pester for password
     $cl_safejar->password_prompt
@@ -141,7 +146,6 @@ sub auth_tt {
 
     ### Check test info - logged out
     #
-    my $ua = $cl_safejar->get_UserAgent;
     $ua->cookie_jar->clear;
     my ($info, $conf_there, $full) = try {
         get_interpretation($cl_safejar, $CLASS);
@@ -188,10 +192,15 @@ sub auth_tt {
           or diag("\nWhen listed in $users_fn_here (true),\n".
                   "and authenticated ($authen),\n".
                   "Could still be not authorised on server?  It reports config as\n".
-                  Dump($conf_there));
+                  Dump({ conf_there => $conf_there,
+#                         full => $full,
+                       }));
         is($info->{_internal_user}, 0, '  Not internal'); # unix login password stored in local file == FAIL
         is($info->{_local_user}, 1, '  Local (must be - we are seeing test data)');
     }
+
+    # Clear the jar for the second pass
+    $ua->cookie_jar->clear;
 
     return;
 }
