@@ -90,7 +90,7 @@ With the above table created in loutre_'species',
 run the following.
 
   /ensembl-otter/scripts/load_loutre_contig_info \
-    -dbhost otterlive -dbport 3324 -dbpass lutralutra \
+    -dbhost otterlive -dbport 3324 -dbpass ********** \
     -dbuser ottadmin -dbname loutre_'species' \
     >> load_contig_info.log 2>> load_contig_info_error.log
 

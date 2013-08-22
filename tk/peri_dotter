@@ -17,7 +17,7 @@ use CanvasWindow;
     -host vegabuild
     -port 3304
     -user ottadmin
-    -password lutralutra
+    -password **********
     -dbname vega_homo_sapiens_chr9peri_20051103
     -sgp peri_short
 
