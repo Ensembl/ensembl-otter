@@ -78,6 +78,7 @@ sub login {
                 'Cannot attempt to log in - failed to extract login URL from form',
                 $form_dbg);
     }
+    $formkey =~ s/-/_/g; # we get '-' in 33% of formurl; not valid in formkey
     $form_dbg .= "formurl=$formurl\nformkey=$formkey\n";
 
     # Do the login
