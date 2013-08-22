@@ -2,7 +2,7 @@
 
 =head1 DESCRIPTION
 
-load_loutre_contig_info -dbhost otterlive -dbport 3324 -dbname loutre_pig -dbuser ottadmin -dbpass wibble 
+load_loutre_contig_info -dbhost otterlive -dbport 3324 -dbname loutre_pig -dbuser ottadmin -dbpass ********** 
 
 =head1 OPTIONS
 
@@ -25,6 +25,10 @@ insert into loutre_pig.test_contig_info(contig_info_id,contig_name,author_name,a
 
 With the above table created in loutre_pig, this script can be run as shown in description, to populate tables contig_info and contig_attrib
 
+
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
 
 =cut
 

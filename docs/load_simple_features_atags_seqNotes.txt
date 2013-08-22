@@ -14,6 +14,6 @@
 
 
 4. load sequence_notes to loutre db
-   Run scripts/lace/copy_sequence_notes_2_new_otter -ds otter_dset_name -newdb loutre_dbname -pass wibble
+   Run scripts/lace/copy_sequence_notes_2_new_otter -ds otter_dset_name -newdb loutre_dbname -pass **********
 
 
