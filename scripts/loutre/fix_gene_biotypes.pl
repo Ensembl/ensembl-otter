@@ -92,9 +92,10 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
     my $dba = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
         @args,
         -user  => 'ensadmin',
-        -pass  => 'ensembl',
+        -pass  => '*******',
         -group => 'ensembl',
     );
+BEGIN { die "Broken - needs password" }
 
     my $species = $dba->get_MetaContainer->get_common_name; # meta_key = 'species.common_name'
 
