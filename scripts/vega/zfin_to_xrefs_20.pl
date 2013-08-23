@@ -9,15 +9,16 @@ use Getopt::Long;
 
 my $host   = 'vegabuild';
 my $user   = 'ottadmin';
-my $pass   = 'lutralutra';
+#my $pass   = '**********';
 my $port   = 5304;
 my $dbname = 'vega_danio_rerio_20091117';
 
 #my $host   = 'ecs3f';
 #my $user   = 'ensadmin';
-#my $pass   = 'ensembl';
+#my $pass   = '*******';
 #my $port   = 3310;
 #my $dbname = 'vega_danio_rerio_ext_20060725_v40';
+BEGIN { die "Broken script; not used by Vega team" }
 
 my $zfinfile; # lives in /lustre/cbi4/work1/zfish/ZFIN/downloads/ftp/zfin_genes.txt
 my $vegafile;
