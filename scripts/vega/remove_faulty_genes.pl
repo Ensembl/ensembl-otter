@@ -16,8 +16,9 @@ my ($dbhost,$dbuser,$dbname,$dbpass,$dbport,$file);
 $dbhost = 'vegabuild';
 #$dbname = 'vega_danio_rerio_20070523';
 $dbuser = 'ottadmin';
-$dbpass = 'wibble';
+#$dbpass = '**********';
 #$dbport = 3304;
+BEGIN { die "Broken script; not used by Vega team" }
 
 my $hm = GetOptions(
         'dbhost:s' => \$dbhost,
