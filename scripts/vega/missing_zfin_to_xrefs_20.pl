@@ -10,7 +10,8 @@ use Getopt::Long;
 
 my $host   = 'ecs3d';
 my $user   = 'ensadmin';
-my $pass   = 'ensembl';
+#my $pass   = '*******';
+BEGIN { die "Broken - needs password" }
 my $port   = 3307;
 my $dbname = 'vega_danio_rerio_core_23_7';
 my $zfinfile;
