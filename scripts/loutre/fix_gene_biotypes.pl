@@ -43,16 +43,16 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
     # This is the version of the script used to patch vega_homo_sapiens_20110516_v62_GRCh37
 
     # $dba = DBI->connect("dbname=vega_homo_sapiens_20110516_v62_GRCh37;host=ensdb-1-11;port=5317",
-    #     'ensadmin', 'ensembl', {RaiseError => 1});
+    #     'ensadmin', '*******', {RaiseError => 1});
 
     # $dba = DBI->connect("dbname=vega_homo_sapiens_20110711_v63_GRCh37;host=ensdb-1-11;port=5317",
-    #     'ensadmin', 'ensembl', {RaiseError => 1});
+    #     'ensadmin', '*******', {RaiseError => 1});
 
     # $dba = DBI->connect("dbname=vega_homo_sapiens_20111010_v64_GRCh37;host=ensdb-1-11;port=5317",
-    #     'ensadmin', 'ensembl', {RaiseError => 1});
+    #     'ensadmin', '*******', {RaiseError => 1});
 
     # $dba = DBI->connect("dbname=vega_mus_musculus_20111010_v64_NCBIM37;host=ensdb-1-11;port=5317",
-    #     'ensadmin', 'ensembl', {RaiseError => 1});
+    #     'ensadmin', '*******', {RaiseError => 1});
 
     # my $dsn = "dbname=vega_homo_sapiens_20111219_v65_GRCh37;host=ensdb-1-11;port=5317";
     # my $dsn = "dbname=homo_sapiens_vega_65_20111219_gb_4;host=ensdb-1-11;port=5317";
@@ -113,7 +113,7 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
         warn "Found $n ncRNA_host genes\n";
     }
 
-    # my $dba = DBI->connect($dsn, 'ensadmin', 'ensembl', { RaiseError => 1 });
+    # my $dba = DBI->connect($dsn, 'ensadmin', '*******', { RaiseError => 1 });
     my $dbh = $dba->dbc->db_handle;
     $dbh->begin_work;
     
