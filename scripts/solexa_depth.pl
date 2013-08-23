@@ -17,9 +17,10 @@ my $result_dba = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
     -host   => 'otterpipe2',
     -port   => 3323,
     -user   => 'ottadmin',
-    -pass   => 'wibble',
+    -pass   => '**********',
     -dbname => 'gr5_zebrafish_solexa',
 );
+BEGIN { die "Broken - needs password" }
 
 my $aa = $result_dba->get_AnalysisAdaptor;
 
