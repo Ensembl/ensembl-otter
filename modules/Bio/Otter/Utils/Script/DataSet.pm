@@ -141,6 +141,7 @@ sub transcript_sql {
         ORDER BY g.stable_id, t.stable_id
         __LIMIT__
     };
+    return $sql;
 }
 
 sub _build_transcript_sth {
@@ -188,6 +189,7 @@ sub gene_sql {
         ORDER BY g.stable_id
         __LIMIT__
     };
+    return $sql;
 }
 
 sub _build_gene_sth {
