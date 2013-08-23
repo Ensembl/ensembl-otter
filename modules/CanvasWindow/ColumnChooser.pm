@@ -280,20 +280,17 @@ sub draw_Item {
     }
 
     # Both Brackets and Columns have a checkbutton and their name drawn
-    $x += $row_height;
-    $self->draw_checkbutton($item, $x, $y);
-    $x += $row_height;
-
+    $x += 2 * $row_height;
     my $txt_id = $canvas->createText(
         $x, $y,
         -anchor => 'nw',
         -text   => $item->name,
         -font   => $self->normal_font,
         );
-    $canvas->bind($txt_id, '<Button-1>', sub {
-        $item->selected(! $item->selected);
-        $self->update_item_select_state($item);
-        });
+    $x -= $row_height;
+    # Draw text first, so we can pass $txt_id to draw_checkbutton()
+    $self->draw_checkbutton($item, $x, $y, $txt_id);
+    $x += $row_height;
 
     # Draw status indicator and description for Columns
     unless ($item->is_Bracket) {
@@ -355,6 +352,7 @@ sub next_status {
             }
             $item->status($status[$j]);
             $self->update_status_indicator($item);
+            last;
         }
     }
 }
@@ -378,26 +376,36 @@ sub update_status_indicator {
     my $off_checkbutton_xpm;
 
     sub draw_checkbutton {
-        my ($self, $item, $x, $y) = @_;
+        my ($self, $item, $x, $y, $txt_id) = @_;
 
         my $canvas = $self->canvas;
+        $on_checkbutton_xpm  ||= Tk::Utils::CanvasXPMs::on_checkbutton_xpm($canvas);
+        $off_checkbutton_xpm ||= Tk::Utils::CanvasXPMs::off_checkbutton_xpm($canvas);
+
         my $is_selected = $item->selected;
-        my $img;
+        my ($img, $other_img);
         if ($is_selected) {
-            $img = $on_checkbutton_xpm ||= Tk::Utils::CanvasXPMs::on_checkbutton_xpm($canvas);
+            $img       = $on_checkbutton_xpm;
+            $other_img = $off_checkbutton_xpm;
         }
         else {
-            $img = $off_checkbutton_xpm ||= Tk::Utils::CanvasXPMs::off_checkbutton_xpm($canvas);
+            $img       = $off_checkbutton_xpm;
+            $other_img = $on_checkbutton_xpm;
         }
         my $img_id = $canvas->createImage(
             $x, $y,
             -anchor => 'nw',
             -image  => $img,
             );
-        $canvas->bind($img_id, '<Button-1>', sub {
-            $item->selected(! $is_selected);
-            $self->update_item_select_state($item);
-            });
+        foreach my $id ($img_id, $txt_id) {
+            $canvas->bind($id, '<Button-1>', sub {
+                # Update image immediately to provide feedback on slow connections
+                $canvas->itemconfigure($img_id, -image => $other_img);
+                $item->selected(! $is_selected);
+                # update_item_select_state() redraws whole canvas
+                $self->update_item_select_state($item);
+                });
+        }
     }
 }
 
