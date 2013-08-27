@@ -24,10 +24,10 @@ copy databases
     create new database
     (see above)
     
-        mysqldump --opt -hecs4 -P3352 -uensro zebrafish_finished | mysql -hecs4 -P3351 -uensadmin -pensembl zfish_vega_1104
+        mysqldump --opt -hecs4 -P3352 -uensro zebrafish_finished | mysql -hecs4 -P3351 -uensadmin -p******* zfish_vega_1104
     
     load necessary additional tables:
-        mysql -hecs4 -P3351 -uensadmin -pensembl zfish_vega_1104 < /nfs/team71/zfish/kj2/cvs_bin/ensembl-otter/sql/otter.sql
+        mysql -hecs4 -P3351 -uensadmin -p******* zfish_vega_1104 < /nfs/team71/zfish/kj2/cvs_bin/ensembl-otter/sql/otter.sql
 
     delete halfwise genes and clean up tables (e.g. delete from job etc.)
         delete from job; job_status; job_bak; gene; transcript; exon; exon_transcript; translation; xref; object_xref; external_db;
@@ -67,7 +67,7 @@ tidy up
 transfer clone_remarks
 ======================
 
-        perl /ecs4/work4/kj2/vega/scripts/transfer_clone_remark.pl -dbname zfish_vega_0904 -dbhost ecs4 -dbport 3352 -dbuser ensadmin -dbpass ensembl -otname otter_zebrafish -othost humsrv1 -otuser ensro
+        perl /ecs4/work4/kj2/vega/scripts/transfer_clone_remark.pl -dbname zfish_vega_0904 -dbhost ecs4 -dbport 3352 -dbuser ensadmin -dbpass ******* -otname otter_zebrafish -othost humsrv1 -otuser ensro
     
     compare counts of clones with remark like
         select count(distinct cl.clone_id) from clone cl, clone_info ci, clone_remark cr, assembly a, contig c where cr.remark like '%annotated%' and cr.clone_info_id = ci.clone_info_id and ci.clone_id = cl.clone_id and cl.clone_id = c.clone_id and c.contig_id = a.contig_id and a.type like 'chrAB%';   
@@ -83,9 +83,9 @@ transfer genes
     ***CAVEAT: Just transfer annotation from clones with Annotation_remark 'annotated' and do not change assembly.type to VEGA just yet***
 
     for all chromosomes, do:
-        /nfs/team71/zfish/kj2/cvs_bin/ensembl-otter/scripts/conversion/assembly/transfer_annotation(_test).pl -host humsrv1 -user ensadmin -pass ensembl -dbname otter_zebrafish 
-        -c_host humsrv1 -c_user ensadmin -c_pass ensembl -c_dbname otter_zebrafish 
-        -t_host ecs4 -t_user ensadmin -t_pass ensembl -t_port 3351 -t_dbname zfish_vega_1104 
+        /nfs/team71/zfish/kj2/cvs_bin/ensembl-otter/scripts/conversion/assembly/transfer_annotation(_test).pl -host humsrv1 -user ensadmin -pass ******* -dbname otter_zebrafish 
+        -c_host humsrv1 -c_user ensadmin -c_pass ******* -c_dbname otter_zebrafish 
+        -t_host ecs4 -t_user ensadmin -t_pass ******* -t_port 3351 -t_dbname zfish_vega_1104 
         -chr 1 -path chr1_040518 -t_path chr1_041108 -c_path chr1_041108 -filter_gd -filter_obs -filter_annotation > & transfer1.log &
     
     check whether genes are split over different chromosomes
@@ -138,8 +138,8 @@ load marker data
     insert into rule_goal values (22,22);
     insert into input_id_type_analysis values (22,'CONTIG');
     
-    perl RuleManager3.pl -dbname zfish_vega_1104 -dbhost ecs4 -dbport 3351 -dbuser ensadmin -dbpass ensembl -start_from SubmitContig -analysis 22
-    perl $FENS/load_map_weight.pl -dbhost ecs4 -dbport 3351 -dbuser ensadmin -dbpass ensembl -dbname zfish_vega_1104
+    perl RuleManager3.pl -dbname zfish_vega_1104 -dbhost ecs4 -dbport 3351 -dbuser ensadmin -dbpass ******* -start_from SubmitContig -analysis 22
+    perl $FENS/load_map_weight.pl -dbhost ecs4 -dbport 3351 -dbuser ensadmin -dbpass ******* -dbname zfish_vega_1104
     
     
 polyA_features
@@ -176,7 +176,7 @@ get rid of transposons
     run $FENS/convert_transposons_into_vega_repeats.pl (don't forget to change the parameters in the script, esp. the repeat_class and analysis!)
     part output into what has to be read into repeat_feature table and genes to be deleted
     use ensembl-pipeline/scripts/GeneBuild/delete_genes.pl to get rid of them
-    perl /nfs/farm/Fish/kj2/branch-ensembl-25/ensembl-pipeline/scripts/GeneBuild/delete_genes.pl -dbname zfish_vega_1104 -dbhost ecs4 -dbuser ensadmin -dbpass ensembl -dbport 3351 genes2delete.txt
+    perl /nfs/farm/Fish/kj2/branch-ensembl-25/ensembl-pipeline/scripts/GeneBuild/delete_genes.pl -dbname zfish_vega_1104 -dbhost ecs4 -dbuser ensadmin -dbpass ******* -dbport 3351 genes2delete.txt
     
     then:  
     with the gene_ids also do:
@@ -293,8 +293,8 @@ protein annotation
     in vega directory: mkdir chunks
     /nfs/farm/Fish/kj2/branch-ensembl-19/ensembl-pipeline/scripts/protein_pipeline/chunk_protein_file.pl
     
-    perl $FENS/fillin_ids.pl -dbname zfish_vega_1104 -dbhost ecs4 -dbport 3351 -dbuser ensadmin -dbpass ensembl -id 1000 -translation  
-    perl $FENS/fillin_ids.pl -dbname zfish_vega_1104 -dbhost ecs4 -dbport 3351 -dbuser ensadmin -dbpass ensembl -id 1001 -file /ecs4/work4/kj2/vega/041201/chunks
+    perl $FENS/fillin_ids.pl -dbname zfish_vega_1104 -dbhost ecs4 -dbport 3351 -dbuser ensadmin -dbpass ******* -id 1000 -translation  
+    perl $FENS/fillin_ids.pl -dbname zfish_vega_1104 -dbhost ecs4 -dbport 3351 -dbuser ensadmin -dbpass ******* -id 1001 -file /ecs4/work4/kj2/vega/041201/chunks
     insert into input_id_analysis values ('proteome','PROTEOME',1002,now(),'','',0);
 
     insert into input_id_type_analysis values (1046,'FILENAME');
@@ -317,7 +317,7 @@ protein annotation
     dump translation_id from translation and dump translation_id from dumped proteins, do the following to them:
     they all came from one clone that looked fine (DKEY-7C18)
     delete from input_id_analysis where input_id in  (40372,40373,40375,40376,40377,40378,40379,40380,40381,40382,40383,40384,40389,40391,40393,40394)
-    perl RuleManager3.pl -dbname zfish_vega_1104 -dbhost ecs4 -dbport 3351 -dbuser ensadmin -dbpass ensembl -analysis ... -start_from ... -once for all of them
+    perl RuleManager3.pl -dbname zfish_vega_1104 -dbhost ecs4 -dbport 3351 -dbuser ensadmin -dbpass ******* -analysis ... -start_from ... -once for all of them
 
     submitted
     1046

@@ -37,7 +37,7 @@ my (
     %xref_list,
     %logic_ana,
     %coord_system,
-    %tiles,
+    %clone_sequence_list,
     %chrslice,
     %seen_transcript_name,
     %seen_gene_name,
@@ -62,7 +62,7 @@ sub DESTROY {
     delete $xref_list{$self};
     delete $logic_ana{$self};
     delete $coord_system{$self};
-    delete $tiles{$self};
+    delete $clone_sequence_list{$self};
     delete $chrslice{$self};
     delete $seen_gene_name{$self};
     delete $seen_transcript_name{$self};
@@ -255,9 +255,28 @@ sub build_SequenceFragment {
         -coord_system       => $ctg_coord_system{$self},
     );
 
-    my $tile = [$start, $end, $ctg_cmp_slice, $cln_attrib_list];
-    my $tile_list = $tiles{$self} ||= [];
-    push @$tile_list, $tile;
+    my $cs = Bio::Otter::Lace::CloneSequence->new;
+    $cs->chromosome(   $chromosome_name{$self});
+    $cs->contig_name(  $ctg_name              );
+    $cs->accession(    $accession             );
+    $cs->sv(           $sv                    );
+    $cs->clone_name(   $intl_clone_name       );
+    $cs->chr_start(    $start                 );
+    $cs->chr_end(      $end                   );
+    $cs->contig_start( $cmp_start             );
+    $cs->contig_end(   $cmp_end               );
+    $cs->contig_strand($strand                );
+    $cs->length(       $cln_length            );
+
+    my $ci = Bio::Vega::ContigInfo->new(
+        -slice      => $ctg_cmp_slice,
+        # -author   => $cln_author, # see FIXME above about $cln_author
+        -attributes => $cln_attrib_list,
+        );
+    $cs->ContigInfo($ci);
+
+    my $cs_list = $clone_sequence_list{$self} ||= [];
+    push @$cs_list, $cs;
 
     return;
 }
@@ -654,12 +673,12 @@ sub set_ChromosomeSlice {
     return;
 }
 
-sub get_Tiles {
+sub get_CloneSequences {
     my ($self) = @_;
 
-    if (my $t = $tiles{$self}) {
-        my @tiles = sort { $a->[0] <=> $b->[0] } @$t;
-        return @tiles;
+    if (my $cs = $clone_sequence_list{$self}) {
+        my @clone_sequences = sort { $a->chr_start() <=> $b->chr_start() } @$cs;
+        return @clone_sequences;
     } else {
         return;
     }

@@ -102,7 +102,9 @@ use Try::Tiny;
     };
 
     $SpeciesListWindow->draw;
-    $SpeciesListWindow->ensure_annotools;
+
+    # postpone slow checks, for improved responsiveness
+    $mw->after(750, [ $SpeciesListWindow, 'ensure_tools' ]);
 
     Tk::MainLoop();
 

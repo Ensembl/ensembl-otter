@@ -21,7 +21,8 @@ my $hm = GetOptions(
 $dbhost = 'ecs4';
 $dbport = 3351;
 $dbuser = 'ensadmin';
-$dbpass = 'ensembl';
+#$dbpass = '*******';
+BEGIN { die "Broken - needs password" }
 $dbname = 'zfish_vega_1104';
 $repeat_class = 75664;
 

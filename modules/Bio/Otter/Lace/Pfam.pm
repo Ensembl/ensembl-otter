@@ -22,7 +22,7 @@ my $HMM_URL    = 'http://pfam.sanger.ac.uk/family/hmm';
 my $SEED_URL   = 'http://pfam.sanger.ac.uk/family/alignment/download/format';
 
 # full path for hmmalign
-my $HMMALIGN = 'hmmalign';
+my $HMMALIGN = 'hmmalign'; # see also Bio::Otter::Utils::About
 
 sub new {
     my ($self) = @_;

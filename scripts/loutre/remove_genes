@@ -20,7 +20,7 @@ use Bio::Otter::Lace::Defaults;
             -host   => 'otterlive',
             -port   => 3324,
             -user   => 'ottadmin',
-            -pass   => 'wibble',
+            -pass   => '**********',
             -dbname => 'loutre_human',
             );
     } else {

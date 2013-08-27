@@ -12,7 +12,7 @@
 #
 # if you want to delete a sequence_set use
 # /software/anacode/pipeline/ensembl-pipeline/scripts/Finished/delete_sequence_set.pl
-# -host otterpipe2 -port 3323 -user ottadmin -pass wibble -dbname pipe_zebrafish -delete -set set1 -set set2 etc.
+# -host otterpipe2 -port 3323 -user ottadmin -pass ********** -dbname pipe_zebrafish -delete -set set1 -set set2 etc.
 
 use strict;
 use warnings;
@@ -187,8 +187,8 @@ unless (($skip =~ /newagp/) || ($skip =~ /load/) || ($skip =~ /realign/)){
 die("Stopping: You chose not to load the agps into the database\n") if ($noload);
 
 # to load directly from agp into new pipedb and loutr db
-# perl /software/anacode/pipeline/ensembl-pipeline/scripts/Finished/load_from_agp.pl -set chrH_20090616 -description chrH_20090616 -host otterpipe2 -user ottadmin -pass wibble -port 3323 -dbname pipe_zebrafish_new ../haplo_agp_090616/chrH.fullagp
-# perl /software/anacode/pipeline/ensembl-pipeline/scripts/Finished/load_from_agp.pl -set chrH_20090616 -description chrH_20090616 -host otterlive -user ottadmin -pass wibble -port 3324 -dbname loutre_zebrafish ../haplo_agp_090616/chrH.fullagp
+# perl /software/anacode/pipeline/ensembl-pipeline/scripts/Finished/load_from_agp.pl -set chrH_20090616 -description chrH_20090616 -host otterpipe2 -user ottadmin -pass ********** -port 3323 -dbname pipe_zebrafish_new ../haplo_agp_090616/chrH.fullagp
+# perl /software/anacode/pipeline/ensembl-pipeline/scripts/Finished/load_from_agp.pl -set chrH_20090616 -description chrH_20090616 -host otterlive -user ottadmin -pass ********** -port 3324 -dbname loutre_zebrafish ../haplo_agp_090616/chrH.fullagp
 
 
 # LOAD AGPS INTO LOUTRE_ZEBRAFISH AND PIPE_ZEBRAFISH
@@ -241,12 +241,12 @@ print "all done";
 # cd /software/anacode/pipeline/ensembl-pipeline/scripts/Finished/assembly/
 #
 # foreach i (1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 H U)
-#   perl align_by_component_identity.pl -host otterlive -port 3324 -user ottroot -pass lutrasuper -dbname loutre_zebrafish \
+#   perl align_by_component_identity.pl -host otterlive -port 3324 -user ottroot -pass ********** -dbname loutre_zebrafish \
 #   -assembly Otter -altassembly Otter -chromosomes chr${i}_20080117 -altchromosomes chr${i}_20080214 > & /lustre/cbi4/work1/zfish/agps/agp_080214/transfer${i}.log
 # end
 #
 # foreach i (1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 H U)
-#   perl align_nonident.pl -host otterlive -port 3324 -user ottroot -pass lutrasuper -dbname loutre_zebrafish -assembly Otter -altassembly Otter \
+#   perl align_nonident.pl -host otterlive -port 3324 -user ottroot -pass ********** -dbname loutre_zebrafish -assembly Otter -altassembly Otter \
 #   -chromosomes chr${i}_20080117 -altchromosomes chr${i}_20080214 > & /lustre/cbi4/work1/zfish/agps/agp_080214/transferb${i}.log
 # end
 

@@ -87,7 +87,7 @@ sub query_type {
 sub run {
     my $self = shift;
 
-    my $command = 'exonerate';
+    my $command = 'exonerate'; # see also Bio::Otter::Utils::About
 
     my $query_file  = $self->fasta_file;
     my $query_type  = $self->query_type;

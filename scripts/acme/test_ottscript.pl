@@ -1,11 +1,10 @@
 #!/usr/bin/env perl
 
-package Bio::Otter::Script::ListFooBars;
-
 use strict;
 use warnings;
 use 5.010;
 
+package Bio::Otter::Script::ListFooBars;
 use parent 'Bio::Otter::Utils::Script';
 
 sub ottscript_opt_spec {
@@ -24,7 +23,8 @@ sub ottscript_validate_args {
 
 sub ottscript_options {
     return (
-        dataset_mode => 'one_or_all',
+        dataset_mode  => 'one_or_all',
+        dataset_class => 'Bio::Otter::DataSet::ListFooBars',
         );
 }
 
@@ -43,6 +43,21 @@ sub process_dataset {
       );
   return;
 }
+
+# End of module
+
+package Bio::Otter::DataSet::ListFooBars;
+use Moose;
+extends 'Bio::Otter::Utils::Script::DataSet';
+
+around 'transcript_sql' => sub {
+    my ($orig, $self) = @_;
+    my $sql = $self->$orig;
+    $sql =~ s/__EXTRA_CONDITIONS__/AND tan.value LIKE 'A%'/;
+    return $sql;
+};
+
+1;
 
 # End of module
 
