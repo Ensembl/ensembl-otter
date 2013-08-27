@@ -350,6 +350,7 @@ my %all_logic_names = (
   'WU'     => ['otter_external', 'Washu',     'jspieth@watson.wust'],
   'LOF'    => ['otter_lof',      'Havana',    'vega@sanger.ac.uk'],
   'KO'     => ['otter_eucomm',   'Havana',    'vega@sanger.ac.uk'],
+  'IRAG'   => ['otter'           'IRAG',      'pig-irag@sanger.ac.uk'],
 );
 
 #get all the logic names that are used
@@ -897,7 +898,7 @@ push @sql_fixes, qq(UPDATE transcript SET biotype = "3prime_overlapping_ncrna" w
 
 #update some statuses
 push @sql_fixes, "UPDATE gene SET status = 'NOVEL' WHERE biotype = 'processed_transcript' AND status = 'UNKNOWN';\n";
-push @sql_fixes, "UPDATE gene SET status = NULL WHERE biotype in ('processed_pseudogene','pseudogene','transcribed_processed_pseudogene','transcribed_unitary_pseudogene','transcribed_unprocessed_pseudogene','unprocessed_pseudogene','unitary_pseudogene','translated_processed_pseudogene',''translated_unprocessed_pseudogene','IG_pseudogene','TR_pseudogene');\n";
+push @sql_fixes, "UPDATE gene SET status = NULL WHERE biotype in ('processed_pseudogene','pseudogene','transcribed_processed_pseudogene','transcribed_unitary_pseudogene','transcribed_unprocessed_pseudogene','unprocessed_pseudogene','unitary_pseudogene','translated_processed_pseudogene','translated_unprocessed_pseudogene','IG_pseudogene','TR_pseudogene');\n";
 push @sql_fixes, "UPDATE transcript SET status = NULL WHERE status = 'UNKNOWN';\n";
 push @sql_fixes, "UPDATE gene SET status = NULL WHERE status = 'UNKNOWN';\n";
 push @sql_fixes, "UPDATE gene SET status = 'NOVEL' WHERE status = 'PUTATIVE' and biotype = 'protein_coding';\n";
