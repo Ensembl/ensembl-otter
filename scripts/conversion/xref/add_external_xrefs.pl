@@ -38,6 +38,7 @@ Specific options:
     --mgi=FILE                          read MGI data from FILE
     --tcagfile=FILE                     read TCAG input from FILE
     --imgt_hlafile=FILE                 read IMGT_HLA input from FILE
+    --rgd=FILE                          read RGT input from file
     --refseqfile=FILE                   read Refseq input from FILE
     --mismatch                          correct case mismatches in the db
                                           overrides dry-run, doesn't add xrefs
@@ -64,11 +65,16 @@ IMGT_GDB is used to add xrefs for IG genes
 
 For mouse, mgi xrefformat adds links both to MGI and to external databases.
 
+For rat, rgd adds links to MGI, Uniprot, RefSeq, PubMed and EntrezGene
+
 Currently, these input formats are supported:
 
     hgnc        => http://www.genenames.org/cgi-bin/hgnc_downloads.cgi
-                   - use the URL shown in the parse_hgnc  method below, or just let lwp do it for you!
-    mgi         => ftp://ftp.informatics.jax.org/pub/reports/MGI_MouseHumanSequence.rpt
+                   - use the URL shown in the parse_hgnc method below, or just let lwp do it for you
+    mgi         => mgifile = ftp://ftp.informatics.jax.org/pub/reports/MRK_List2.rpt (all current MGI symbols)
+                   mgifile_uni_ref = ftp://ftp.informatics.jax.org/pub/reports/MRK_Sequence.rpt [links between marker symbols and TrEMBL / RefSeq])
+                    mgifile_entrez = ftp://ftp.informatics.jax.org/pub/reports/MGI_Gene_Model_Coord.rpt [links between marker symbols and Entrezgene])
+    rgd         => ftp://rgd.mcw.edu/pub/data_release/GENES_RAT_5.0.txt (lwp does it for you)
     imgt_hla    => by email Steven Marsh <marsh@ebi.ac.uk>
     imgt_gdb    => use vega database
 
@@ -180,7 +186,7 @@ if ($support->param('prune') and $support->user_proceed('Would you really like t
   my $num = 0;
   $support->log("Deleting  external xrefs...\n");
   my $cond = $refs_to_delete{$support->param('xrefformat')}
-    || qq(not in ('Vega_gene','Vega_transcript','Vega_translation','Interpro','CCDS','Uniprot/SWISSPROT','Havana_gene','ENSG','ENST','ENST_CDS','ENST_ident','IMGT_HLA','IMGT/GENE_DB','GO','Quick_Go','Quick_Go_Evidence'));
+    || qq(not in ('Vega_gene','Vega_transcript','Vega_translation','Interpro','CCDS','Havana_gene','ENSG','ENST','ENST_CDS','ENST_ident','IMGT_HLA','IMGT/GENE_DB','GO','Quick_Go','Quick_Go_Evidence'));
 	
   $num = $dba->dbc->do(qq(
            DELETE x
@@ -263,7 +269,7 @@ else {
 
 if ( $support->param('verbose') ) {
   $support->log("Parsed xrefs are ".Dumper($parsed_xrefs)."\n");
-#  $support->log("Parsed lc xrefs are ".Dumper($lcmap)."\n");
+  $support->log("Parsed lc xrefs are ".Dumper($lcmap)."\n");
 }
 
 use strict 'refs';
@@ -282,6 +288,7 @@ my %extdb_def = (
   HGNC                     => ['KNOWNXREF', 1],
   EntrezGene               => ['KNOWNXREF', 0],
   MGI                      => ['KNOWNXREF', 1],
+  RGD                      => ['KNOWNXREF', 1],
   RefSeq_dna               => ['KNOWN'    , 0],
   RefSeq_dna_predicted     => ['PRED'     , 0],
   RefSeq_peptide           => ['KNOWN'    , 0],
@@ -294,6 +301,7 @@ my %extdb_def = (
   TCAG                     => ['KNOWN'    , 0],
   IMGT_HLA                 => ['KNOWN'    , 0],
   'IMGT/GENE_DB'           => ['KNOWN'    , 0],
+  'Uniprot/SWISSPROT'      => ['KNOWN'    , 0],
 );
 
 # loop over chromosomes
@@ -669,7 +677,7 @@ sub parse_ensdb {
                     }
                 }
   Description : Downloads from HGNC, or parses a data file manually downloaded from HGNC
-                [HGNC record has supplied IDs for Omim and Uniprot, curated IDs for RefSeq and Pubmed
+                [HGNC record has supplied IDs for Omim, curated IDs for RefSeq and Pubmed
   Return type : none
   Exceptions  : thrown if input file can't be read
   Caller      : internal
@@ -710,7 +718,6 @@ sub parse_hgnc {
     'Pubmed IDs'      => 'PUBMED',
     'Entrez Gene ID'  => 'EntrezGene',
     'OMIM ID'         => 'MIM_GENE',
-    'UniProt ID'     => 'Uniprot/SWISSPROT',
     'RefSeq IDs' => 'RefSeq',
   );
 
@@ -839,6 +846,173 @@ sub parse_hgnc {
   $support->log("$stats{'withdrawn'} gene names withdrawn\n", 1);
 }
 
+
+=head2 parse_rgd
+
+  Arg[1]      : Hashref $xrefs - keys: gene names, values: hashref (extDB =>
+                extID)
+  Arg[2]      : Hashref $lcmap - keys: lowercase gene names, values: list of
+                gene names (with case preserved)
+  Example     : &parse_rgd($xrefs, $lcmap);
+                foreach my $gene (keys %$xrefs) {
+                    foreach my $extdb (keys %{ $xrefs->{$gene} }) {
+                        print "DB $extdb, extID ".$xrefs->{$gene}->{$extdb}."\n";
+                    }
+                }
+  Description : Downloads and parses a file from RGD, or parses a file previously downloaded
+  Return type : none
+  Exceptions  : thrown if input file can't be read
+  Caller      : internal
+
+=cut
+
+sub parse_rgd {
+  my ($xrefs, $lcmap) = @_;
+  $support->log_stamped("RGD...\n", 1);
+
+  my $url = "ftp://rgd.mcw.edu/pub/data_release/GENES_RAT_5.0.txt";
+
+  #try and download direct
+  my $ua = LWP::UserAgent->new;
+  $ua->proxy(['http'], 'http://webcache.sanger.ac.uk:3128');
+  my $resp = $ua->get($url);
+  my $page = $resp->content;
+  if ($page) {
+    $support->log("File downloaded from RGD\n",1);
+  }
+  else {
+    # read input file
+    $support->log("Unable to download from RGD, trying to read from disc: ".$support->param('rgdfile')."\n",1);
+    open (NOM, '<', $support->param('rgdfile')) or $support->throw(
+      "Couldn't open ".$support->param('rgdfile')." for reading: $!\n");
+    $page = do { local $/; <NOM> };
+  }
+  my @recs = split "\n", $page;
+
+  #define which columns to parse out of the record
+  #key = column title, value = external_db.name (apart from status which is used to check symbol has not been withdrawn)
+  my %wanted_columns = (
+    'GENE_RGD_ID'           => 'RGD_PID',
+    'SYMBOL'                => 'RGD',
+    'CURATED_REF_PUBMED_ID' => 'PUBMED',
+    'ENTREZ_GENE'           => 'EntrezGene',
+    'UNIPROT_ID'            => 'Uniprot/SWISSPROT',
+    'GENBANK_NUCLEOTIDE'    => 'RefSeq_dna',
+    'GENBANK_PROTEIN'       => 'RefSeq_peptide',
+  );
+
+  #define relationships between RefSeq accession number and database (this is not in the download file)
+  my %refseq_dbs = (
+    NM => 'RefSeq_dna',
+    XM => 'RefSeq_dna_predicted',
+    NP => 'RefSeq_peptide',
+    XP => 'RefSeq_peptide_predicted',
+    NR => 'RefSeq_rna',
+    XR => 'RefSeq_rna_predicted',
+    NG => 'RefSeq_genomic',
+    NT => 'RefSeq_genomic',
+  );
+
+  # prime with prefixes we don't care about
+  my %report_once = ( YP => 1, NC => 1 );
+
+  my %stats = (
+    total      => 0,
+  );
+
+  # read header (containing external db names) and check all wanted columns are there
+  my %fieldnames;
+  while( my $line = shift @recs) {
+    next if $line =~ /^#/;
+    chomp $line;
+    my @columns =  split /\t/, $line;
+    foreach my $wanted (keys %wanted_columns) {
+      unless (grep { /$wanted/ } @columns ) {
+        $support->log_error("Can't find $wanted column in HGNC record: $line\n");
+      }
+    }
+
+    #make a note of positions of wanted fields
+    for (my $i=0; $i < scalar(@columns); $i++) {
+      my $column_label =  $columns[$i];
+      next if (! $wanted_columns{$column_label});
+      $fieldnames{$i} = $wanted_columns{$column_label};
+    }
+    last;
+  }
+
+  #parse records, storing only data in those columns defined above
+ REC:
+  foreach my $l (@recs) {
+    $stats{'total'}++;
+    chomp $l;
+    my @fields = split /\t/, $l, -1;
+    my %accessions;
+    my $gene_name;
+
+    foreach my $i (keys %fieldnames) {
+      my $type = $fieldnames{$i};
+      if ($type eq 'RGD') {
+	$gene_name = $fields[$i];
+      }
+      if ($fields[$i]) {
+	$accessions{$type} = $fields[$i];
+      }
+    }
+
+    #set records for each gene
+    foreach my $db (keys %accessions) {
+      next if ($db eq 'RGD_PID');
+
+      #set record where display name and pid are different
+      if ($db eq 'RGD') {
+	$xrefs->{$gene_name}->{$db}[0] = $gene_name .'||'. $accessions{'RGD_PID'};
+      }
+      elsif ($db eq 'EntrezGene') {
+	$xrefs->{$gene_name}->{$db}[0] = $gene_name .'||'. $accessions{$db};
+      }
+
+      #set RefSeq records to the correct type of molecule
+      elsif ($db =~ /RefSeq/) {
+        my @records = split ';',$accessions{$db};
+        foreach my $rec (@records) {
+          if (my ($prefix) = $rec =~ /^([A-Z]{2})_/) {
+            if (my $type = $refseq_dbs{$prefix}) {
+              push @{$xrefs->{$gene_name}->{$type}}, $rec .'||'. $rec;
+            }
+            elsif (! $report_once{$prefix}) {
+              $report_once{$prefix}++;
+              $support->log_warning("RefSeq prefix $prefix not recognised\n");
+            }
+          }
+	}
+      }
+
+      #set PUBMED / Uniprot records where you can have more than one per record
+      elsif ($db =~ /PUBMED|Uniprot/) {
+	foreach my $record (split ';', $accessions{$db}) {
+	  $record =~ s/^\s+//;
+	  $record =~ s/\s+$//;
+	  push @{$xrefs->{$gene_name}->{$db}}, $record.'||'.$record;
+	}
+      }
+
+      #get rest of xrefs where the pid is the same as the name
+      else {
+	push @{$xrefs->{$gene_name}->{$db}}, $accessions{$db}.'||'. $accessions{$db};
+      }
+    }
+
+    #store lowercase name for matching
+    push @{ $lcmap->{lc($gene_name)} }, $gene_name;
+  }
+
+  close(NOM);
+
+  $support->log_stamped("Done processing ".$stats{'total'}." records:\n", 1);
+}
+
+
 =head2 parse_mgivega
 
   Arg[1]      : Hashref $xrefs - keys: gene names, values: hashref (extDB =>
@@ -915,7 +1089,6 @@ sub parse_mgi {
       'Marker Symbol'           => 'MGI',
       'RefSeq transcript ID'    => 'RefSeq_dna',
       'RefSeq protein ID'       => 'RefSeq_peptide',
-      'UniProt ID'              => 'Uniprot',
       'TrEMBL ID'               => 'TrEMBL',
     },
   };
@@ -972,11 +1145,6 @@ sub parse_mgi {
       foreach my $db (keys %accessions) {
         if ($db eq 'MGI') {
           $xrefs->{$marker_symbol}{$db} = [ $marker_symbol .'||'. $accessions{'MGI_PID'} ] unless $xrefs->{$marker_symbol}{$db};
-        }
-        elsif ($db =~ /Uniprot|TrEMBL/) {
-          foreach my $acc (split (/\|/, $accessions{$db})) {
-            push @{$xrefs->{$marker_symbol}{'Uniprot/SWISSPROT'}}, $acc .'||'. $acc ;
-          }
         }
         elsif ( $db eq 'RefSeq_peptide') {
           foreach my $acc (split (/\|/, $accessions{$db})) {
