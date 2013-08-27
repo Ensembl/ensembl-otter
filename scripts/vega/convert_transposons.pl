@@ -16,7 +16,8 @@ my $repeat_class;
 my $dbhost = 'ensdb-web-17';
 my $dbport = 5317;
 my $dbuser = 'ensadmin';
-my $dbpass = 'ensembl';
+#my $dbpass = '*******';
+BEGIN { die "Broken - needs password" }
 my $dbname;
 
 my $hm = GetOptions(

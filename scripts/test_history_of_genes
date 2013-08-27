@@ -8,12 +8,15 @@ if output is redirected to file the tab separated output can be opened in excel
 =head1 OPTIONS
 
 can run like this 
-~/work/ensembl-otter/scripts/test_history_of_genes -dbhost otterpipe2 -dbport 3323 -dbpass lutralutra -dbuser ottadmin -dbname sp1_human_new_corrected   -stable 'OTTHUMG00000003732'
+~/work/ensembl-otter/scripts/test_history_of_genes -dbhost otterpipe2 -dbport 3323 -dbpass ********** -dbuser ottadmin -dbname sp1_human_new_corrected   -stable 'OTTHUMG00000003732'
 
 or this
-~/work/ensembl-otter/scripts/test_history_of_genes -dbhost otterpipe2 -dbport 3323 -dbpass lutralutra -dbuser ottadmin -dbname sp1_human_new_corrected  -short -stable 'OTTHUMG00000003732'
+~/work/ensembl-otter/scripts/test_history_of_genes -dbhost otterpipe2 -dbport 3323 -dbpass ********** -dbuser ottadmin -dbname sp1_human_new_corrected  -short -stable 'OTTHUMG00000003732'
 
 
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
 
 =cut
 

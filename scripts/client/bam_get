@@ -10,8 +10,6 @@ use Bio::Otter::Lace::Defaults;
 use Bio::Otter::Fetch::BAM;
 use Bio::Otter::Mapping;
 
-print STDERR "$0", ( map { " '$_'" } @ARGV ), "\n";
-
 # parse the command line
 
 my $options = {
@@ -28,6 +26,7 @@ my @options_specs = qw(
     end=i
     gff_feature_source=s
     gff_seqname=s
+    version
     );
 
 my @options_required = qw(
@@ -40,17 +39,26 @@ my @options_required = qw(
     );
 
 sub _key {
-    my ($key) = m(^(.*?)=);
+    my ($key) = m(^(.*?)(?:=|$));
     return $key;
 }
 sub _option {
     return ( $_, \$options->{_key()} );
 }
 
+sub show_version {
+    print "bam_get 0.5\n";
+    exit 0;
+}
+
 my @keys    = map { _key()    } @options_specs;
 my @options = map { _option() } @options_specs;
 
+my @old_ARGV = @ARGV;
 Bio::Otter::Lace::Defaults::do_getopt(@options);
+show_version() if $options->{version};
+print STDERR "$0", ( map { " '$_'" } @old_ARGV ), "\n";
+
 my @options_missing = grep { ! defined $options->{$_} } @options_required;
 die sprintf "missing options: %s\n",
     join ', ', sort @options_missing

@@ -124,21 +124,21 @@ sub new {
 }
 
 
-sub ensure_annotools {
+sub ensure_tools {
     my ($self) = @_;
 
-    # Check zmap --version, lest we load up a session before finding
-    # its absence.
+    # Check `zmap --version` et al., lest we load up a session before
+    # finding its absence.
     my @v = try {
-        Bio::Otter::Utils::About->annotools_versions;
+        Bio::Otter::Utils::About->tools_versions;
     } catch {
         warn "_ensure_tools: $_";
         ();
     };
 
     if (@v) {
-        local $" = ', ';
-        warn "Annotools are @v\n";
+        local $" = "\n  ";
+        warn "Tools are @v\n";
     } else {
         $self->message("Some parts of Otterlace are not working\n".
                        "See Help > About... for info");
@@ -430,6 +430,10 @@ sub zircon_delete {
         for my $view (@{$zmap->view_list}) {
             delete $view->handler->{'_zmap_view'};
         }
+    }
+    for my $ref (values %{$self->zircon_context->waitVariable_hash}) {
+        defined $ref or next;
+        ${$ref} = 'zircon_delete';
     }
     return;
 }

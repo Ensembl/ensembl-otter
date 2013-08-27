@@ -11,37 +11,27 @@ use Test::More;
 
 use Test::Otter qw( ^db_or_skipall ^data_dir_or_skipall ); # may skip test
 
-my ($localserver_module, $region_module);
-BEGIN {
-    $localserver_module = 'Bio::Otter::LocalServer';
-    use_ok($localserver_module);
+use OtterTest::TestRegion qw( %test_region_params );
+use Bio::Otter::ServerAction::Region; # a specimen ServerAction.
 
-    $region_module = 'Bio::Otter::ServerAction::Region';
-    use_ok($region_module);
+my $module;
+
+BEGIN {
+    $module = 'Bio::Otter::LocalServer';
+    use_ok($module);
 }
 
-critic_module_ok($localserver_module);
-critic_module_ok($region_module);
+critic_module_ok($module);
 
-my %params = (
-    dataset => 'human_test',
-    name    => '6',
-    type    => 'chr6-18',
-    cs      => 'chromosome',
-    csver   => 'Otter',
-    start   => 2864371,
-    end     => 3037940,
-    );
-
-my $local_server = new_ok($localserver_module);
-ok($local_server->set_params(%params), 'set_params');
-is($local_server->param($_), $params{$_}, "param '$_'") foreach keys %params;
+my $local_server = new_ok($module);
+ok($local_server->set_params(%test_region_params), 'set_params');
+is($local_server->param($_), $test_region_params{$_}, "param '$_'") foreach keys %test_region_params;
 
 my $otter_dba = $local_server->otter_dba;
 isa_ok($otter_dba, 'Bio::Vega::DBSQL::DBAdaptor');
 
-my $sa_region = $region_module->new_with_slice($local_server);
-isa_ok($sa_region, $region_module);
+my $sa_region = Bio::Otter::ServerAction::Region->new_with_slice($local_server);
+isa_ok($sa_region, 'Bio::Otter::ServerAction::Region');
 
 my $dna = $sa_region->get_assembly_dna;
 ok($dna, 'get_assembly_dna');
@@ -50,7 +40,7 @@ note('Got ', length $dna, ' bp');
 my $region = $sa_region->get_region;
 isa_ok($region, 'Bio::Vega::Region');
 
-my $local_server_2 = new_ok($localserver_module, [ otter_dba => $otter_dba ]);
+my $local_server_2 = new_ok($module, [ otter_dba => $otter_dba ]);
 
 my $otter_dba_2 = $local_server->otter_dba;
 isa_ok($otter_dba_2, 'Bio::Vega::DBSQL::DBAdaptor');

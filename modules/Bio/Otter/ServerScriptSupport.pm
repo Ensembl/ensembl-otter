@@ -8,6 +8,7 @@ use Try::Tiny;
 
 use Bio::Vega::Author;
 use Bio::Otter::Server::Config;
+use Bio::Otter::Auth::SSO;
 
 use IO::Compress::Gzip qw(gzip);
 
@@ -55,10 +56,9 @@ sub new {
     $self->compression($options{-compression});
     $self->content_type($options{-content_type});
 
+    $self->authenticate_user;
     if ($self->show_restricted_datasets || ! $self->local_user) {
         $self->authorized_user;
-    } else {
-        $self->authenticate_user;
     }
 
     return $self;
@@ -175,23 +175,11 @@ sub authenticate_user {
     my ($self) = @_;
 
     my $sw = $self->sangerweb;
+    my $users = $self->users_hash;
+    my %set = Bio::Otter::Auth::SSO->auth_user($sw, $users);
 
-    if (my $user = lc($sw->username)) {
-        my $auth_flag     = 0;
-        my $internal_flag = 0;
-
-        if ($user =~ /^[a-z0-9]+$/) {   # Internal users (simple user name)
-            $auth_flag = 1;
-            $internal_flag = 1;
-        } elsif($self->users_hash->{$user}) {  # Check external users (email address)
-            $auth_flag = 1;
-        }
-
-        if ($auth_flag) {
-            $self->{'_authorized_user'} = $user;
-            $self->{'_internal_user'}   = $internal_flag;
-        }
-    }
+    # Merge properties (_authorized_user, _internal_user, _local_user) into %$self
+    @{ $self }{ keys %set } = values %set;
 
     return;
 }
@@ -199,19 +187,16 @@ sub authenticate_user {
 sub authorized_user {
     my ($self) = @_;
 
-    my $user;
-    unless ($user = $self->{'_authorized_user'}) {
-        $self->authenticate_user;
-        $self->unauth_exit('User not authorized')
-            unless $self->{'_authorized_user'};
-    }
+    my $user = $self->{'_authorized_user'};
+    $self->unauth_exit('User not authorized') unless $user;
+
     return $user;
 }
 
 sub internal_user {
     my ($self) = @_;
 
-    # authorized_user sets '_internal_user', and is called
+    # authenticate_user sets '_internal_user', and is called
     # by new(), so this hash key will be populated.
     return $self->{'_internal_user'};
 }
@@ -224,8 +209,11 @@ Is the caller on the WTSI internal network?
 =cut
 
 sub local_user {
+    my ($self) = @_;
 
-    return $ENV{'HTTP_CLIENTREALM'} =~ /sanger/ ? 1 : 0;
+    # authenticate_user sets '_local_user', and is called
+    # by new(), so this hash key will be populated.
+    return $self->{'_local_user'};
 }
 
 sub show_restricted_datasets {
@@ -317,20 +305,6 @@ sub unauth_exit {
         -type   => 'text/plain',
         ), $reason;
     exit(1);
-}
-
-############# Creation of an Author object #######
-
-sub make_Author_obj {
-    my ($self) = @_;
-
-    my $author_name = $self->authorized_user;
-    #my $author_email = $self->require_argument('email');
-
-    return Bio::Vega::Author->new(
-        -name  => $author_name,
-        -email => $author_name,
-        );
 }
 
 

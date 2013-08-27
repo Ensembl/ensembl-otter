@@ -106,7 +106,8 @@ sub get_requested_features {
                 if($param_value && $param_separator) {
                     $param_value = [split(/$param_separator/,$param_value)];
                 }
-                $param_value = $analysis_name if $param_value =~ /$analysis_name/;
+                $param_value = $analysis_name
+                    if $param_value && $param_value =~ /$analysis_name/;
                 push @param_list, $param_value;
             }
 

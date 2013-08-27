@@ -5,7 +5,7 @@ package Bio::Vega::Transform;
 
 use strict;
 use warnings;
-use Carp;
+use Carp qw( confess cluck );
 use XML::Parser;
 use Data::Dumper;   # For debugging
 
@@ -32,8 +32,9 @@ sub DESTROY {
     delete $current_object{$self};
     delete $current_string{$self};
     delete $object_builders{$self};
-    if (my $data = delete $object_data{$self}) {
-        warn "Unused data after parse: ", Dumper($data);
+    my $data = delete $object_data{$self};
+    if ($data and %$data) {
+        cluck "Unused data after parse: ", Dumper($data);
     }
     delete $is_multiple{$self};
 

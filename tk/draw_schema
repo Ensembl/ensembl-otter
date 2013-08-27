@@ -20,7 +20,8 @@ use Hum::Submission;
         my $host   = 'humsrv1';
         $dbname = 'otter_human';
         my $port   = 3306;
-        my $password = 'ensembl';
+#        my $password = '*******';
+BEGIN { die "Broken - needs password" }
 
         $dbh = DBI->connect(
             "DBI:mysql:host=$host;port=$port;database=$dbname",

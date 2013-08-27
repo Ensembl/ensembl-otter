@@ -123,7 +123,7 @@ sub last_db_version {
 }
 
 sub dissociate {
-    my ($self) = @_;
+    my ($self, %options) = @_;
 
     $self->dbID(undef);
     $self->adaptor(undef);
@@ -131,6 +131,14 @@ sub dissociate {
         $tran->dbID(undef);
         $tran->adaptor(undef);
         # NB: exons do not need to be duplicated
+        #     but for script usage only, we provide the option to
+        #     properly dissociate exons too.
+        if ($options{dissociate_exons}) {
+            foreach my $exon (@{ $tran->get_all_Exons() }) {
+                $exon->dbID(undef);
+                $exon->adaptor(undef);
+            }
+        }
         if ($tran->translation){
             $tran->translation->dbID(undef);
             $tran->translation->adaptor(undef);

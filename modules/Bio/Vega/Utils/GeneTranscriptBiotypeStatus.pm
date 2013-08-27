@@ -32,6 +32,7 @@ my @method_biotype_status = qw{
         IG_gene                     =                       -
         IG_pseudogene               =                       -
         TR_gene                     =                       -
+        TR_pseudogene               =                       -
         Putative                    processed_transcript    PUTATIVE
 
     Non_coding                      =                       -
@@ -39,6 +40,15 @@ my @method_biotype_status = qw{
         Antisense                   =                       -
         ncRNA_host                  =                       -
         3'_overlapping_ncRNA        =                       -
+
+    Known_ncRNA                     =                       -
+        miRNA                       =                       -
+        piRNA                       =                       -
+        rRNA                        =                       -
+        siRNA                       =                       -
+        snRNA                       =                       -
+        snoRNA                      =                       -
+        tRNA                        =                       -
 
     Pseudogene                      =                       -
         Processed_pseudogene        =                       -

@@ -25,7 +25,14 @@ use base 'EditWindow';
 my $BEST_N            = 1;
 my $MAX_INTRON_LENGTH = 200000;
 my $MAX_QUERY_LENGTH  = 10000;
-my $MASK_TARGET       = 'none';
+
+my $REGION_TARGET_ALL     = 'all';
+my $REGION_TARGET_MARKED  = 'marked';
+my $REGION_TARGET_DEFAULT = $REGION_TARGET_MARKED;
+
+my $MASK_TARGET_NONE    = 'none';
+my $MASK_TARGET_SOFT    = 'soft';
+my $MASK_TARGET_DEFAULT = $MASK_TARGET_NONE;
 
 my $INITIAL_DIR = (getpwuid($<))[7];
 
@@ -157,10 +164,16 @@ sub initialise {
     my $input_frame = $top->Frame->pack(@frame_pack);
 
     my $input_widgets = [
-        [ '_use_marked_region', 1, 'Region',
-          [ [ 'All', 0 ], [ 'Marked region', 1 ] ] ],
-        [ '_mask_target', $MASK_TARGET, 'Repeat masking',
-          [ [ 'Unmasked', 'none' ], [ 'Soft masked', 'soft' ] ] ],
+        [ '_region_target', $REGION_TARGET_DEFAULT, 'Region',
+          [
+           [ 'All',           $REGION_TARGET_ALL    ],
+           [ 'Marked region', $REGION_TARGET_MARKED ],
+          ] ],
+        [ '_mask_target', $MASK_TARGET_DEFAULT, 'Repeat masking',
+          [
+           [ 'Unmasked',    $MASK_TARGET_NONE ],
+           [ 'Soft masked', $MASK_TARGET_SOFT ],
+          ] ],
         ];
 
     for (@{$input_widgets}) {
@@ -389,7 +402,7 @@ sub _repeat_masker {
     my $offset = $ace_database->offset;
 
     my $dataset = $ace_database->DataSet;
-    foreach my $filter_name qw( trf RepeatMasker ) {
+    foreach my $filter_name (qw( trf RepeatMasker )) {
         my $filter = $dataset->filter_by_name($filter_name);
         $self->logger->logconfess("no filter named '${filter_name}'") unless $filter;
         $filter->call_with_session_data_handle(
@@ -442,7 +455,7 @@ sub launch_exonerate {
         full_seq        => $SessionWindow->Assembly->Sequence,
         repeat_masker   => sub { my $apply_mask_sub = shift; $self->_repeat_masker($apply_mask_sub); },
 
-        softmask_target => ($self->{_mask_target} eq 'soft'),
+        softmask_target => ($self->{_mask_target} eq $MASK_TARGET_SOFT),
         bestn           => $bestn,
         maxintron       => $maxintron,
 
@@ -455,7 +468,7 @@ sub launch_exonerate {
         );
 
     # get marked region (if requested)
-    if ($self->{_use_marked_region}) {
+    if ($self->{_region_target} eq $REGION_TARGET_MARKED) {
         my ($mark_start, $mark_end) = $SessionWindow->get_mark_in_slice_coords;
         if ($mark_start && $mark_end) {
             $self->logger->warn("Setting exonerate genomic start & end to marked region: $mark_start - $mark_end");
