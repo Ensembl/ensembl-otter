@@ -152,29 +152,24 @@ sub _print_feature {
 
     my ($score) = $feature->get_tag_values('AS');
 
+    my $query = $feature->query;
+    my $query_strand = $strands->{$query->strand};
+
     my @fields =
         (
          'read',
          (sprintf "%d", $start),
          (sprintf "%d", $end),
          (defined $score ? (sprintf "%f", $score) : '.'),
-         '+', # strand
+         $query_strand,
          $feature->phase || '.',
         );
-
-    my $query = $feature->query;
-    my $query_strand = $strands->{$query->strand};
 
     my @align_fields = ($query->start, $query->end);
     push @align_fields, $query_strand if $query_strand;
 
-    my $gap = join ' ', map {
-        ($_->[0] eq 'S') ? ( ) : ( join '', @{$_} );
-    } @{$feature->cigar_array};
-
     # the Target tag - escaping this requires special handling of
     # spaces in the query name
-
     my $query_name = $query->name;
     if ($attributes_escape) {
         gff_escape_target for $query_name;
@@ -183,9 +178,11 @@ sub _print_feature {
     push @target_fields, $query_strand if $query_strand;
     my $target .= join ' ', $query_name, @target_fields;
 
-    my $seq = $query->seq;
-    if ($query->strand == -1) {
-        $seq = $seq->revcom;
+    my @gap = map {
+        ($_->[0] eq 'S') ? ( ) : ( join '', @{$_} );
+    } @{$feature->cigar_array};
+    if ($query_strand eq '-') {
+        @gap = reverse @gap;
     }
 
     my @attributes = (
@@ -193,9 +190,9 @@ sub _print_feature {
         Name       => $name,
         Align      => join(' ', @align_fields),
         Length     => $feature->l_qseq,
-        Gap        => $gap,
+        Gap        => join(' ', @gap),
         Target     => $target,
-        sequence   => $seq->seq,
+        sequence   => $query->seq->seq,
         );
 
     # $feature->cigar_str has the wrong format for the Gap tag
