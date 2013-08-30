@@ -202,7 +202,7 @@ sub update_snail_trail {
         $step->pack(-side => 'left', -padx => 2);
         $step->configure(
             -text => $trail[$i],
-            -font   => ['Helvetica', 12, $i == $I ? 'bold' : 'normal'],
+            -font   => ['Helvetica', 12, $i == $I ? ('bold', 'underline') : ('normal')],
             );
     }
 }
@@ -401,6 +401,7 @@ sub update_status_indicator {
             $canvas->bind($id, '<Button-1>', sub {
                 # Update image immediately to provide feedback on slow connections
                 $canvas->itemconfigure($img_id, -image => $other_img);
+                $canvas->update;
                 $item->selected(! $is_selected);
                 # update_item_select_state() redraws whole canvas
                 $self->update_item_select_state($item);
