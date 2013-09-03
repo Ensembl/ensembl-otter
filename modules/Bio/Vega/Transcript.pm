@@ -5,8 +5,10 @@ use warnings;
 use Bio::EnsEMBL::Utils::Argument qw ( rearrange );
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::Vega::Utils::Attributes;
-use base 'Bio::EnsEMBL::Transcript';
+use Bio::Vega::Evidence;
 use Bio::Vega::Translation;
+
+use base 'Bio::EnsEMBL::Transcript';
 
 sub new {
   my ($class, @args) = @_;
@@ -21,6 +23,68 @@ sub new {
       }
   }
   return $self;
+}
+
+sub new_dissociated_copy {
+    my ($self) = @_;
+
+    my $pkg = ref($self);
+    my $copy = $pkg->new_fast({
+        map { $_ => $self->{$_} } (
+            'analysis',         # ok to share object?
+            'biotype',
+            'created_date',
+            'description',
+            'display_xref',     # ok to share object?
+            'edits_enabled',
+            'end',
+            'external_db',
+            'external_name',
+            'external_status',
+            'is_current',
+            'modified_date',
+            'slice',            # ok to share object?
+            'stable_id',
+            'start',
+            'status',
+            'strand',
+            'transcript_author',
+            'version',
+        )
+                               });
+
+    my ($start_exon, $end_exon);
+    my ($new_start_exon, $new_end_exon);
+    my $translation = $self->translation;
+    if ($translation) {
+        $start_exon = $translation->start_Exon;
+        $end_exon   = $translation->end_Exon;
+    }
+
+    foreach my $ex ( @{$self->get_all_Exons} ) {
+        my $new_ex = $ex->new_dissociated_copy;
+        $copy->add_Exon($new_ex);
+        if ($translation) {
+            $new_start_exon = $new_ex if $start_exon == $ex;
+            $new_end_exon   = $new_ex if $end_exon   == $ex;
+        }
+    }
+
+    my @evidence_list;
+    foreach my $ev ( @{$self->evidence_list} ) {
+        my $ev_pkg = ref($ev);
+        push @evidence_list, $ev_pkg->new(-name => $ev->name, -type => $ev->type);
+    }
+    $copy->evidence_list(\@evidence_list);
+
+    $copy->translation($translation->new_dissociated_copy($copy, $new_start_exon, $new_end_exon)) if $translation;
+
+    foreach my $at ( @{$self->get_all_Attributes} ) {
+        my $at_pkg = ref($at);
+        $copy->add_Attributes($at_pkg->new_fast({%$at}));
+    }
+
+    return $copy;
 }
 
 sub get_all_Exons_ref {

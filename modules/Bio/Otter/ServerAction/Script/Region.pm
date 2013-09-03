@@ -22,27 +22,13 @@ sub deserialise_region {
 
     my $dba = $region->otter_dba;
 
-    $region->otter_dba(undef);
-    $region->slice->adaptor(undef) if $region->slice;
-
-    # FIXME: this really ought to create a dissociated deep copy of the region, rather than mangle it!
-
-    foreach my $cs ($region->clone_sequences) {
-        # FIXME: dissociate clone sequence here
-    }
-
-    foreach my $sf ($region->seq_features) {
-        # FIXME: dissociate simple feature here
-    }
-
-    foreach my $g ($region->genes) {
-        $g->dissociate( dissociate_exons => 1 );
-    }
+    my $new_region = $region->new_dissociated_copy;
+    $new_region->otter_dba($dba);
 
     # Removing dbIDs renders EnsEMBL's caches invalid, so clear them if we can.
     $dba->clear_caches if $dba;
 
-    return $region;
+    return $new_region;
 }
 
 =head1 AUTHOR

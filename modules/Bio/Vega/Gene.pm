@@ -16,6 +16,49 @@ sub new {
   return $self;
 }
 
+sub new_dissociated_copy {
+    my ($self) = @_;
+
+    my $pkg = ref($self);
+    my $copy = $pkg->new_fast({
+        map { $_ => $self->{$_} } (
+            'analysis',     # ok to share object?
+            'biotype',
+            # 'canonical_transcript',    # not used by otter
+            # 'canonical_transcript_id', # --"--
+            'created_date',
+            'description',
+            'display_xref', # ok to share object?
+            'end',
+            'external_db',
+            'external_name',
+            'external_status',
+            'gene_author',
+            'is_current',
+            'modified_date',
+            'slice',        # ok to share object?
+            'source',
+            'stable_id',
+            'start',
+            'status',
+            'strand',
+            'truncated_flag',
+            'version',
+        )
+                               });
+
+    foreach my $ts ( @{$self->get_all_Transcripts} ) {
+        $copy->add_Transcript($ts->new_dissociated_copy);
+    }
+
+    foreach my $at ( @{$self->get_all_Attributes} ) {
+        my $at_pkg = ref($at);
+        $copy->add_Attributes($at_pkg->new_fast({%$at}));
+    }
+
+    return $copy;
+}
+
 sub gene_author {
   my ($self, $value) = @_;
   if( defined $value) {
