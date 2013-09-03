@@ -4,6 +4,30 @@ use strict;
 use warnings;
 use base 'Bio::EnsEMBL::Exon';
 
+sub new_dissociated_copy {
+    my ($self) = @_;
+
+    my $pkg = ref($self);
+    my $copy = $pkg->new_fast({
+        map { $_ => $self->{$_} } (
+            'created_date',
+            'end',
+            'end_phase',
+            'is_constitutive',
+            'is_current',
+            'modified_date',
+            'phase',
+            'slice',
+            'stable_id',
+            'start',
+            'strand',
+            'version',
+        )
+                               });
+
+    return $copy;
+}
+
 sub adjust_start_end {
     my ($self, @args) = @_;
 

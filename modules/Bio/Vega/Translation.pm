@@ -7,6 +7,30 @@ use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 
 use base 'Bio::EnsEMBL::Translation';
 
+sub new_dissociated_copy {
+    my ($self, $transcript, $start_exon, $end_exon) = @_;
+
+    my $pkg = ref($self);
+    my $copy = $pkg->new_fast({
+        map { $_ => $self->{$_} } (
+            'created_date',
+            'end',
+            'modified_date',
+            'stable_id',
+            'start',
+            'start_exon',
+            'transcript',
+            'version',
+        )
+                               });
+
+    $copy->transcript($transcript);
+    $copy->start_Exon($start_exon);
+    $copy->end_Exon($end_exon);
+
+    return $copy;
+}
+
 sub vega_hashkey {
   my ($self) = @_;
 

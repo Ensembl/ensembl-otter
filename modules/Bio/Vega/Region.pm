@@ -5,6 +5,8 @@ use warnings;
 
 use Carp;
 
+use Bio::EnsEMBL::SimpleFeature;
+use Bio::EnsEMBL::Slice;
 use Bio::Otter::Lace::CloneSequence;
 use Bio::Otter::Utils::Attribute qw( get_single_attrib_value );
 
@@ -23,7 +25,8 @@ encoding.
 sub new {
     my ($class, %options) = @_;
 
-    my $self = bless { %options }, $class;
+    my $pkg = ref($class) || $class;
+    my $self = bless { %options }, $pkg;
     return $self;
 }
 
@@ -41,6 +44,38 @@ sub new_from_otter_db {
     $self->fetch_Genes;
 
     return $self;
+}
+
+sub new_dissociated_copy {
+    my ($self) = @_;
+
+    my $copy = $self->new( species => $self->species );
+    $copy->clone_sequences($self->clone_sequences);
+
+    my $slice = $self->slice;
+    my $new_slice;
+    if ($slice->adaptor) {
+        my $slice_pkg = ref($slice);
+        $new_slice = $slice_pkg->new_fast({%$slice});
+        delete $new_slice->{adaptor};
+        $copy->slice($new_slice);
+    }
+    # Should $new_slice be propagated to dissociated copies below ?
+
+    my @genes = map { $_->new_dissociated_copy } $self->genes;
+    $copy->genes(@genes);
+
+    my @seq_features;
+    foreach my $sf ( $self->seq_features ) {
+        my $sf_pkg = ref($sf);
+        my $new_sf = $sf_pkg->new_fast({%$sf});
+        delete $new_sf->{adaptor};
+        delete $new_sf->{dbID};
+        push @seq_features, $new_sf;
+    }
+    $copy->seq_features(@seq_features);
+
+    return $copy;
 }
 
 sub otter_dba {
