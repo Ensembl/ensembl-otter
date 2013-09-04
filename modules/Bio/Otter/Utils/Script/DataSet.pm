@@ -203,8 +203,8 @@ sub _build_sth {
 
     # I'd really rather use DBIx::Class...
 
-    my $limit = $self->script->limit ? $self->script->limit : '';
-    $sql =~ s/__LIMIT__/LIMIT $limit/;
+    my $limit = $self->script->limit ? 'LIMIT ' . $self->script->limit : '';
+    $sql =~ s/__LIMIT__/$limit/;
 
     foreach my $key (qw( COLUMNS JOINS CONDITIONS )) {
         my $placeholder = "__EXTRA_${key}__";
