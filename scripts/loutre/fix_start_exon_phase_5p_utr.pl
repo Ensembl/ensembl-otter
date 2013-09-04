@@ -177,6 +177,7 @@ has 'transcripts' => ( is => 'ro', isa => 'Str', required => 1 );
 
 package main;
 
+$|++;                           # unbuffer stdout for sane interleaving with stderr
 Bio::Otter::Script::FixStartExonPhase5P_UTR->import->run;
 
 exit;
