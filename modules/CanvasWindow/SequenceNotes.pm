@@ -1340,13 +1340,8 @@ sub draw_row_backgrounds {
     return;
 }
 
-my $count ;
 sub layout_columns_and_rows {
     my ($self, $max_col, $max_row) = @_;
-
-warn "LayOut started...\n";
-
-    if (defined $count)  { ($count ++ )} else { $count  = 0};
 
     my $canvas = $self->canvas;
     $canvas->delete('clone_seq_rectangle');
@@ -1375,8 +1370,6 @@ warn "LayOut started...\n";
         $canvas->move($row_tag, 0, $y_shift);
         $y = $y2 + $y_shift + $y_pad;
     }
-
-warn "LayOut finished.\n";
 
     return;
 }
