@@ -154,7 +154,6 @@ around 'gene_sql' => sub {
               JOIN exon         se ON se.exon_id        = tl.start_exon_id
               JOIN coord_system cs ON cs.coord_system_id = sr.coord_system_id /;
     $sql =~ s/__EXTRA_CONDITIONS__/
-              AND srh.value != 1    -- not hidden
               AND ts.is_current = 1
               AND tl.seq_start > 1
               AND se.phase != -1 /;
