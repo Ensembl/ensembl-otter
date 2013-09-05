@@ -9,6 +9,7 @@ use Bio::EnsEMBL::SimpleFeature;
 use Bio::EnsEMBL::Slice;
 use Bio::Otter::Lace::CloneSequence;
 use Bio::Otter::Utils::Attribute qw( get_single_attrib_value );
+use Bio::Vega::ContigInfo;
 
 =head1 NAME
 
@@ -162,6 +163,8 @@ sub fetch_CloneSeq {
 
     if (my $ci = $self->otter_dba->get_ContigInfoAdaptor->fetch_by_contigSlice($contig_slice)) {
         $cs->ContigInfo($ci);
+    } else {
+        $cs->ContigInfo(Bio::Vega::ContigInfo->new(-slice => $contig_slice));
     }
 
     return $cs;
