@@ -150,9 +150,9 @@ sub make_ace_transcripts_from_gff_fh {
         ### HACK: Should truncate to Slice on server
         elsif ($feat_type eq 'exon') {
             # Truncate exons to slice
-            next if $end < 0;
+            next if $end < 1;
             next if $start > $seq_region_length;
-            $start = 1 if $start < 0;
+            $start = 1 if $start < 1;
             $end = $seq_region_length if $end > $seq_region_length;
 
             my $exon = $sub->new_Exon;
@@ -164,7 +164,7 @@ sub make_ace_transcripts_from_gff_fh {
         }
         elsif ($feat_type eq 'CDS') {            
             # Don't attempt truncated CDS
-            next if $start < 0;
+            next if $start < 1;
             next if $end > $seq_region_length;
 
             $sub->translation_region($start, $end);
