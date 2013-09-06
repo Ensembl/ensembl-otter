@@ -1,7 +1,7 @@
 
-### CanvasWindow::ColumnChooser
+### MenuCanvasWindow::ColumnChooser
 
-package CanvasWindow::ColumnChooser;
+package MenuCanvasWindow::ColumnChooser;
 
 use strict;
 use warnings;
@@ -545,7 +545,7 @@ sub DESTROY {
 
 __END__
 
-=head1 NAME - CanvasWindow::ColumnChooser
+=head1 NAME - MenuCanvasWindow::ColumnChooser
 
 =head1 AUTHOR
 
