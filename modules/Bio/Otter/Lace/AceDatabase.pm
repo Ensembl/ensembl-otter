@@ -1088,11 +1088,11 @@ sub process_gff_file_from_Filter {
     my $filter_name = $filter->name;
     my $db_filter = $db_filter_adaptor->fetch_by_name($filter_name);
     my $gff_file = $db_filter->gff_file;
-    unless ($gff_file) {
-        confess "gff_file column not set for '$filter_name' in otter_filter table in SQLite DB";
-    }
     unless ($db_filter->process_gff) {
         return;
+    }
+    unless ($gff_file) {
+        confess "gff_file column not set for '$filter_name' in otter_filter table in SQLite DB";
     }
 
     my $full_gff_file = $self->home . "/$gff_file";
