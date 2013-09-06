@@ -9,7 +9,11 @@ use Bio::Otter::Lace::Source::Collection;
 use Bio::Otter::Lace::Source::SearchHistory;
 use Tk::Utils::CanvasXPMs;
 
-use base 'MenuCanvasWindow';
+use base qw{
+    MenuCanvasWindow
+    Bio::Otter::UI::ZMapSelectMixin
+    };
+
 
 sub new {
     my ($pkg, $tk, @rest) = @_;
@@ -25,8 +29,14 @@ sub new {
     my $self = CanvasWindow->new($tk, @rest);
     bless($self, $pkg);
 
+    my $bottom_frame = $tk->Frame->pack(
+        -side => 'top',
+        -fill => 'x',
+    );
+
     $self->menu_bar($menu_frame);
     $self->top_frame($top_frame);
+    $self->bottom_frame($bottom_frame);
     return $self;
 }
 
@@ -38,6 +48,16 @@ sub top_frame {
     }
     return $self->{'_top_frame'};
 }
+
+sub bottom_frame {
+    my ($self, $bottom_frame) = @_;
+    
+    if ($bottom_frame) {
+        $self->{'_bottom_frame'} = $bottom_frame;
+    }
+    return $self->{'_bottom_frame'};
+}
+
 
 sub row_height {
     my ($self) = @_;
@@ -474,6 +494,52 @@ sub calcualte_text_column_sizes {
         $self->name_max_x($bkt, $name_max_x);
     }
 }
+
+
+sub SessionWindow {
+    my ($self, $SessionWindow) = @_;
+
+    if ($SessionWindow) {
+        $self->{'_SessionWindow'} = $SessionWindow;
+        weaken($self->{'_SessionWindow'});
+    }
+
+    return $self->{'_SessionWindow'} ;
+}
+
+sub AceDatabase {
+    my ($self, $db) = @_;
+    $self->{'_AceDatabase'} = $db if $db;
+    return $self->{'_AceDatabase'} ;
+}
+
+sub SequenceNotes {
+    my ($self, $sn) = @_;
+    $self->{'_SequenceNotes'} = $sn if $sn;
+    return $self->{'_SequenceNotes'} ;
+}
+
+sub SpeciesListWindow {
+    my ($self, $SpeciesListWindow) = @_;
+    $self->{'_SpeciesListWindow'} = $SpeciesListWindow if $SpeciesListWindow;
+    return $self->{'_SpeciesListWindow'} ;
+}
+
+sub DESTROY {
+    my ($self) = @_;
+
+    $self->zmap_select_destroy;
+
+    warn "Destroying LoadColumns\n";
+    if (my $sn = $self->SequenceNotes) {
+        $self->AceDatabase->post_exit_callback(sub{
+            $sn->refresh_lock_columns;
+        });
+    }
+
+    return;
+}
+
 
 1;
 
