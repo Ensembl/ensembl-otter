@@ -1501,19 +1501,19 @@ sub fetch_external_SubSeqs {
     my @db_filters = $db_filter_adaptor->fetch_where('done = 1 AND process_gff = 1');
 
     my $filter_hash = $self->AceDatabase->filters;
-    foreach my $db_filter (@db_filters) {
-        my $filter_name = $db_filter->filter_name;
-        my $filter = $filter_hash->{$filter_name}{'filter'};
-        my @tsct = try {
-            $self->AceDatabase->process_gff_file_from_Filter($filter);
-        }
-        catch {
-            $self->exception_message($_, "Error processing '$filter_name' GFF file");
-            return;
-        };
-        if (@tsct) {
-            $self->add_external_SubSeqs(@tsct);
-        }
+    my @filters = map { $filter_hash->{$_->filter_name}{'filter'} } @db_filters;
+
+    my $process_result =
+        $self->AceDatabase->process_gff_Filters(\@filters);
+    my ($transcripts, $failed) =
+        @{$process_result}{qw( -transcripts -failed )};
+
+    $self->add_external_SubSeqs(@{$transcripts});
+    if (@{$failed}) {
+        my $message = sprintf
+            'Failed to load any transcripts from column(s): %s'
+            , join ', ', sort map { $_->name } @{$failed};
+        $self->message($message);
     }
 
     return;
@@ -2551,6 +2551,7 @@ sub zircon_zmap_view_features_loaded {
     my $filter_hash = $self->AceDatabase->filters;
     my $state_changed = 0;
 
+    my @filters_to_process = ( );
     foreach my $set_name (@featuresets) {
         # NB: careful not to auto-vivify entries in $filter_hash !
         if (my $filter_entry = $filter_hash->{$set_name}) {
@@ -2564,20 +2565,7 @@ sub zircon_zmap_view_features_loaded {
                 $state_changed = 1;
                 $state_hash->{'done'} = 1;
                 $state_hash->{'failed'} = 0; # reset failed flag if filter succeeds
-                my $filter = $filter_entry->{'filter'};
-                if ($filter->process_gff_file) {
-                    my @tsct = try {
-                        $self->AceDatabase->process_gff_file_from_Filter($filter);
-                    }
-                    catch {
-                        $self->exception_message($_, "Error processing '$set_name' GFF file");
-                        return;
-                    };
-                    if (@tsct) {
-                        $self->add_external_SubSeqs(@tsct);
-                        $self->draw_subseq_list;
-                    }
-                }
+                push @filters_to_process, $filter_entry->{'filter'};
             }
         }
         # else {
@@ -2585,6 +2573,21 @@ sub zircon_zmap_view_features_loaded {
         #     warn "Ignoring featurset '$set_name'";
         # }
     }
+
+    my $process_result =
+        $self->AceDatabase->process_gff_Filters(\@filters_to_process);
+    my ($transcripts, $failed) =
+        @{$process_result}{qw( -transcripts -failed )};
+
+    $self->add_external_SubSeqs(@{$transcripts});
+    if (@{$failed}) {
+        my $message = sprintf
+            'Failed to load any transcripts from column(s): %s'
+            , join ', ', sort map { $_->name } @{$failed};
+        $self->message($message);
+    }
+
+    $self->draw_subseq_list;
 
     if ($state_changed) {
         # save the state of each gff filter to disk so we can recover the session
