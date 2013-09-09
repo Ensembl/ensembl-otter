@@ -27,7 +27,7 @@ has 'script' => (
     is       => 'ro',
     isa      => 'Bio::Otter::Utils::Script',
     weak_ref => 1,
-    handles  => [ qw( setup_data dry_run may_modify inc_modified_count verbose ) ],
+    handles  => [ qw( setup_data dry_run may_modify inc_modified_count modified_count verbose ) ],
     );
 
 has 'local_server' => (
@@ -86,7 +86,7 @@ sub _iterate_something {
             say "$stable_id: $msg";
         }
     }
-    say "Modified ", $self->script->modified_count, " of $count transcripts" if $self->verbose;
+    say "Modified ", $self->modified_count, " of $count transcripts" if $self->verbose;
     return;
 }
 
