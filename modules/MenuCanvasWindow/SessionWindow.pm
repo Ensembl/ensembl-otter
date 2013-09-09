@@ -106,7 +106,6 @@ sub initialize {
     }
 
     $self->fetch_external_SubSeqs;
-    $self->draw_subseq_list;
     $self->populate_clone_menu;
     $self->AceDatabase->zmap_dir_init;
     $self->_zmap_view_new($self->{'_zmap'});
@@ -1216,9 +1215,6 @@ sub resync_with_db {
     # Refetch transcripts from GFF cache
     $self->fetch_external_SubSeqs;
 
-    # Redisplay
-    $self->draw_subseq_list;
-
     $self->canvas->Unbusy;
 
     return;
@@ -1521,6 +1517,7 @@ sub update_from_process_result {
             , join ', ', sort map { $_->name } @{$failed};
         $self->message($message);
     }
+    $self->draw_subseq_list;
     return;
 }
 
@@ -2582,8 +2579,6 @@ sub zircon_zmap_view_features_loaded {
     my $process_result =
         $self->AceDatabase->process_gff_Filters(\@filters_to_process);
     $self->update_from_process_result($process_result);
-
-    $self->draw_subseq_list;
 
     if ($state_changed) {
         # save the state of each gff filter to disk so we can recover the session
