@@ -1080,6 +1080,25 @@ sub DataSet {
     return $self->Client->get_DataSet_by_name($self->smart_slice->dsname);
 }
 
+sub process_gff_Filters {
+    my ($self, $filters) = @_;
+
+    my $transcripts = [ ];
+    my $failed = [ ];
+
+    foreach my $filter (@{$filters}) {
+        try { push @{$transcripts}, $self->process_gff_file_from_Filter($filter); }
+        catch { warn $_; push @{$failed}, $filter; };
+    }
+
+    my $result = {
+        '-transcripts' => $transcripts,
+        '-failed'      => $failed,
+    };
+
+    return $result;
+}
+
 sub process_gff_file_from_Filter {
     my ($self, $filter) = @_;
 
