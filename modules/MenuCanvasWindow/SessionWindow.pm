@@ -1505,9 +1505,15 @@ sub fetch_external_SubSeqs {
 
     my $process_result =
         $self->AceDatabase->process_gff_Filters(\@filters);
+    $self->update_from_process_result($process_result);
+
+    return;
+}
+
+sub update_from_process_result {
+    my ($self, $process_result) = @_;
     my ($transcripts, $failed) =
         @{$process_result}{qw( -transcripts -failed )};
-
     $self->add_external_SubSeqs(@{$transcripts});
     if (@{$failed}) {
         my $message = sprintf
@@ -1515,7 +1521,6 @@ sub fetch_external_SubSeqs {
             , join ', ', sort map { $_->name } @{$failed};
         $self->message($message);
     }
-
     return;
 }
 
@@ -2576,16 +2581,7 @@ sub zircon_zmap_view_features_loaded {
 
     my $process_result =
         $self->AceDatabase->process_gff_Filters(\@filters_to_process);
-    my ($transcripts, $failed) =
-        @{$process_result}{qw( -transcripts -failed )};
-
-    $self->add_external_SubSeqs(@{$transcripts});
-    if (@{$failed}) {
-        my $message = sprintf
-            'Failed to load any transcripts from column(s): %s'
-            , join ', ', sort map { $_->name } @{$failed};
-        $self->message($message);
-    }
+    $self->update_from_process_result($process_result);
 
     $self->draw_subseq_list;
 
