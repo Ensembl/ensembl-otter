@@ -106,7 +106,7 @@ sub set_clone_annotation_status {
             $in_zone = 1 if $clone_name eq $zone_start;
             if ($in_zone) {
                 unless ($annot_clone_id_name->{$clone_id}) {
-                    printf STDERR "Setting annoated:  $chr_name  $clone_name\n";
+                    printf STDERR "Setting annotated:  $chr_name  $clone_name\n";
                     $insert->execute($clone_id, $annot_id);
                 }
                 if ($clone_name eq $zone_end) {
