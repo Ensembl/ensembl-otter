@@ -82,6 +82,9 @@ line options and arguments. It is called after the standard options have
 been checked. It should throw an exception by calling C<usage_error> if
 checks fail, or else simply C<return> if all is okay.
 
+Note that ottscript_validate_args should shift anything it processes off
+\@args, as any left-overs will be treated as an arguments error.
+
 =cut
 
 sub ottscript_validate_args {
@@ -132,6 +135,12 @@ sub validate_args {
     }
 
     $self->ottscript_validate_args($opt, $args);
+
+    if (@$args) {
+        my $unexpected = join ' ', @$args;
+        $self->usage_error("Unexpected arguments: '$unexpected'");
+    }
+
     return;
 }
 
