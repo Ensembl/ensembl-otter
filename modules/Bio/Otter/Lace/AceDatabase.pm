@@ -1101,13 +1101,17 @@ sub process_gff_Filters_where {
     my @db_filters = $dbfa->fetch_where(
         "${where} AND process_gff = 1", '-bind_values' => $bind_values);
     my $filter_hash = $self->filters;
-    my @filters = map { $filter_hash->{$_->filter_name}{'filter'} } @db_filters;
 
     my $transcripts = [ ];
     my $failed = [ ];
 
-    foreach my $filter (@filters) {
-        try { push @{$transcripts}, $self->process_gff_file_from_Filter($filter); }
+    foreach my $db_filter (@db_filters) {
+        my $filter = $filter_hash->{$db_filter->{'filter_name'}}{'filter'};
+        try {
+            my @filter_transcripts =
+                $self->process_gff_file_from_Filter($dbfa, $db_filter, $filter);
+            push @{$transcripts}, @filter_transcripts;
+        }
         catch { warn $_; push @{$failed}, $filter; };
     }
 
@@ -1120,12 +1124,9 @@ sub process_gff_Filters_where {
 }
 
 sub process_gff_file_from_Filter {
-    my ($self, $filter) = @_;
-
-    my $db_filter_adaptor = Bio::Otter::Lace::DB::FilterAdaptor->new($self->DB->dbh);
+    my ($self, $db_filter_adaptor, $db_filter, $filter) = @_;
 
     my $filter_name = $filter->name;
-    my $db_filter = $db_filter_adaptor->fetch_by_name($filter_name);
     my $gff_file = $db_filter->gff_file;
     unless ($db_filter->process_gff) {
         return;
