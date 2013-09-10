@@ -114,16 +114,19 @@ sub fetch_all {
 }
 
 sub fetch_where {
-    my ($self, $condition) = @_;
+    my ($self, $condition, @args) = @_;
+    my $arg_hash = { @args };
+    my $bind_values = $arg_hash->{'-bind_values'};
     my $sql = sprintf('%s %s', $SQL{'fetch_where_stem'}, $condition);
     my $sth = $self->_prepare_cached('_fetch_where_' . $condition, $sql);
-    return $self->_do_fetch_multi($sth);
+    return $self->_do_fetch_multi($sth, $bind_values);
 }
 
 sub _do_fetch_multi {
-    my ($self, $sth) = @_;
+    my ($self, $sth, $bind_values) = @_;
+    $bind_values ||= [ ];
     my @filters;
-    $sth->execute;
+    $sth->execute(@{$bind_values});
     while (my $attribs = $sth->fetchrow_hashref) {
         push @filters, Bio::Otter::Lace::DB::Filter->new(%$attribs, is_stored => 1);
     }
