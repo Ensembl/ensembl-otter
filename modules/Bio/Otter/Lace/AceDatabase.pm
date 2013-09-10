@@ -1080,6 +1080,23 @@ sub DataSet {
     return $self->Client->get_DataSet_by_name($self->smart_slice->dsname);
 }
 
+sub process_gff_Filters_where_done {
+    my ($self) = @_;
+    my $result = $self->process_gff_Filters_where('done = 1');
+    return $result;
+}
+
+sub process_gff_Filters_where {
+    my ($self, $where) = @_;
+    my $dbh = $self->DB->dbh;
+    my $dbfa = Bio::Otter::Lace::DB::FilterAdaptor->new($dbh);
+    my @db_filters = $dbfa->fetch_where("${where} AND process_gff = 1");
+    my $filter_hash = $self->filters;
+    my @filters = map { $filter_hash->{$_->filter_name}{'filter'} } @db_filters;
+    my $result = $self->process_gff_Filters(\@filters);
+    return $result;
+}
+
 sub process_gff_Filters {
     my ($self, $filters) = @_;
 
