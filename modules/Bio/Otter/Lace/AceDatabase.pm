@@ -1128,9 +1128,6 @@ sub process_gff_file_from_Filter {
 
     my $filter_name = $filter->name;
     my $gff_file = $db_filter->gff_file;
-    unless ($db_filter->process_gff) {
-        return;
-    }
     unless ($gff_file) {
         confess "gff_file column not set for '$filter_name' in otter_filter table in SQLite DB";
     }
