@@ -54,9 +54,21 @@ has '_transcript_sth' => (
     lazy    => 1,
     );
 
+has 'transcript_adaptor' => (
+    is      => 'ro',
+    builder => '_build_transcript_adaptor',
+    lazy    => 1,
+    );
+
 has '_gene_sth' => (
     is      => 'ro',
     builder => '_build_gene_sth',
+    lazy    => 1,
+    );
+
+has 'gene_adaptor' => (
+    is      => 'ro',
+    builder => '_build_gene_adaptor',
     lazy    => 1,
     );
 
@@ -149,6 +161,16 @@ sub _build_transcript_sth {
     return $self->_build_sth($self->transcript_sql);
 }
 
+sub fetch_vega_transcript_by_stable_id {
+    my ($self, $stable_id) = @_;
+    return $self->transcript_adaptor->fetch_by_stable_id($stable_id);
+}
+
+sub _build_transcript_adaptor {
+    my $self = shift;
+    return $self->otter_dba->get_TranscriptAdaptor;
+}
+
 sub iterate_genes {
     my ($self, $ts_method) = @_;
     return $self->_iterate_something($ts_method, $self->_gene_sth, $self->script->_option('gene_class'));
@@ -195,6 +217,16 @@ sub gene_sql {
 sub _build_gene_sth {
     my $self = shift;
     return $self->_build_sth($self->gene_sql);
+}
+
+sub fetch_vega_gene_by_stable_id {
+    my ($self, $stable_id) = @_;
+    return $self->gene_adaptor->fetch_by_stable_id($stable_id);
+}
+
+sub _build_gene_adaptor {
+    my $self = shift;
+    return $self->otter_dba->get_GeneAdaptor;
 }
 
 sub _build_sth {
