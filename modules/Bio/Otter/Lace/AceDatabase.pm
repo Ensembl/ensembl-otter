@@ -1080,6 +1080,13 @@ sub DataSet {
     return $self->Client->get_DataSet_by_name($self->smart_slice->dsname);
 }
 
+sub process_gff_Filters_by_name {
+    my ($self, $names) = @_;
+    my $condition = sprintf 'filter_name in ( %s )', join ' , ', ('?') x @{$names};
+    my $result = $self->process_gff_Filters_where($condition, $names);
+    return $result;
+}
+
 sub process_gff_Filters_where_done {
     my ($self) = @_;
     my $result = $self->process_gff_Filters_where('done = 1');
@@ -1087,10 +1094,11 @@ sub process_gff_Filters_where_done {
 }
 
 sub process_gff_Filters_where {
-    my ($self, $where) = @_;
+    my ($self, $where, $bind_values) = @_;
     my $dbh = $self->DB->dbh;
     my $dbfa = Bio::Otter::Lace::DB::FilterAdaptor->new($dbh);
-    my @db_filters = $dbfa->fetch_where("${where} AND process_gff = 1");
+    my @db_filters = $dbfa->fetch_where(
+        "${where} AND process_gff = 1", '-bind_values' => $bind_values);
     my $filter_hash = $self->filters;
     my @filters = map { $filter_hash->{$_->filter_name}{'filter'} } @db_filters;
     my $result = $self->process_gff_Filters(\@filters);

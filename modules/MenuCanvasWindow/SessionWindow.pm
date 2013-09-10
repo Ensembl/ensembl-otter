@@ -2559,7 +2559,7 @@ sub zircon_zmap_view_features_loaded {
                 $state_changed = 1;
                 $state_hash->{'done'} = 1;
                 $state_hash->{'failed'} = 0; # reset failed flag if filter succeeds
-                push @filters_to_process, $filter_entry->{'filter'};
+                push @filters_to_process, $set_name;
             }
         }
         # else {
@@ -2569,7 +2569,7 @@ sub zircon_zmap_view_features_loaded {
     }
 
     my $process_result =
-        $self->AceDatabase->process_gff_Filters(\@filters_to_process);
+        $self->AceDatabase->process_gff_Filters_by_name(\@filters_to_process);
     $self->update_from_process_result($process_result);
 
     if ($state_changed) {
