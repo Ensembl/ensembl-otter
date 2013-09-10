@@ -1492,17 +1492,9 @@ sub add_external_SubSeqs {
 
 sub fetch_external_SubSeqs {
     my ($self) = @_;
-
-    my $db_filter_adaptor = Bio::Otter::Lace::DB::FilterAdaptor->new($self->AceDatabase->DB->dbh);
-    my @db_filters = $db_filter_adaptor->fetch_where('done = 1 AND process_gff = 1');
-
-    my $filter_hash = $self->AceDatabase->filters;
-    my @filters = map { $filter_hash->{$_->filter_name}{'filter'} } @db_filters;
-
     my $process_result =
-        $self->AceDatabase->process_gff_Filters(\@filters);
+        $self->AceDatabase->process_gff_Filters_where_done;
     $self->update_from_process_result($process_result);
-
     return;
 }
 
