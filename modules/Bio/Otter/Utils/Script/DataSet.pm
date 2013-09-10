@@ -9,6 +9,8 @@ use warnings;
 use 5.010;
 use namespace::autoclean;
 
+use Carp;
+
 use Bio::Otter::Utils::Script::Gene;
 use Bio::Otter::Utils::Script::Transcript;
 
@@ -246,6 +248,28 @@ sub _build_sth {
 
     my $sth = $dbc->prepare($sql);
     return $sth;
+}
+
+sub fetch_region_by_slice {
+    my ($self, %args) = @_;
+    my $slice = $args{slice} or croak "fetch_region_by_slice(): must supply slice argument";
+
+    my $start = $args{start} || $slice->start;
+    my $end   = $args{end}   || $slice->end;
+
+    my $local_server = $self->local_server;
+    $local_server->set_params(
+        dataset => $self->name,
+        type    => $slice->seq_region_name,
+        start   => $start,
+        end     => $end,
+        cs      => $slice->coord_system->name,
+        csver   => $slice->coord_system->version,
+        );
+    my $region_action = Bio::Otter::ServerAction::Script::Region->new_with_slice($local_server);
+    my $region = $region_action->get_region;
+
+    return $region;
 }
 
 __PACKAGE__->meta->make_immutable;
