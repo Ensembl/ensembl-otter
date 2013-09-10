@@ -1095,23 +1095,18 @@ sub process_gff_Filters_where_done {
 
 sub process_gff_Filters_where {
     my ($self, $where, $bind_values) = @_;
+
     my $dbh = $self->DB->dbh;
     my $dbfa = Bio::Otter::Lace::DB::FilterAdaptor->new($dbh);
     my @db_filters = $dbfa->fetch_where(
         "${where} AND process_gff = 1", '-bind_values' => $bind_values);
     my $filter_hash = $self->filters;
     my @filters = map { $filter_hash->{$_->filter_name}{'filter'} } @db_filters;
-    my $result = $self->process_gff_Filters(\@filters);
-    return $result;
-}
-
-sub process_gff_Filters {
-    my ($self, $filters) = @_;
 
     my $transcripts = [ ];
     my $failed = [ ];
 
-    foreach my $filter (@{$filters}) {
+    foreach my $filter (@filters) {
         try { push @{$transcripts}, $self->process_gff_file_from_Filter($filter); }
         catch { warn $_; push @{$failed}, $filter; };
     }
