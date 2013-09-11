@@ -269,6 +269,8 @@ sub generate_blixem_bam_config {
                 'link-features-by-name' => 'false',
                 'bulk-fetch'            => $fetch_name,
                 'user-fetch'            => 'none',
+                'squash-linked-features'    => 'false',
+                'squash-identical-features' => 'true',
             };
         }
 
