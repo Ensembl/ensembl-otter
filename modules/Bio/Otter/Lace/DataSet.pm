@@ -266,9 +266,9 @@ sub generate_blixem_bam_config {
         }
         else {
             $config->{'short-read'} = {
-                'link-features-by-name' => 'false',
-                'bulk-fetch'            => $fetch_name,
-                'user-fetch'            => 'none',
+                'link-features-by-name'     => 'false',
+                'bulk-fetch'                => $fetch_name,
+                'user-fetch'                => 'none',
                 'squash-linked-features'    => 'false',
                 'squash-identical-features' => 'true',
             };
