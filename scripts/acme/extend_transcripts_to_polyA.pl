@@ -7,23 +7,26 @@ use 5.010;
 package Bio::Otter::Script::ExtendTranscriptsToPolyA;
 use parent 'Bio::Otter::Utils::Script';
 
-use Spreadsheet::ParseExcel;
+use Readonly;
+use Spreadsheet::ParseExcel::SaveParser;
 use Sys::Hostname;
 use Try::Tiny;
 
 use Bio::Otter::ServerAction::Script::Region;
 
+Readonly my $ADDITIONAL_COLUMNS_OFFSET => 4;
+
 sub ottscript_opt_spec {
   return (
-    [ "excel-file=s",  "Excel file containing transcript specs",      { required => 1 } ],
-    [ "excel-sheet=s", "Excel worksheet containing transcript specs", { default => 'Sheet1' } ],
+    [ "excel-file=s",      "Excel file containing transcript specs",      { required => 1 }       ],
+    [ "excel-sheet=s",     "Excel worksheet containing transcript specs", { default => 'Sheet1' } ],
+    [ "excel-save-file=s", "Excel file for output log",                                           ],
   );
 }
 
 sub ottscript_options {
     return (
         dataset_mode          => 'only_one',
-        allow_iteration_limit => 1,
         allow_modify_limit    => 1,
         );
 }
@@ -36,15 +39,25 @@ sub ottscript_validate_args {
     }
     $self->excel_path($excel_path);
     $self->excel_sheet($opt->{excel_sheet});
+    $self->excel_save_path($opt->{excel_save_file});
+
     return;
 }
 
 sub process_dataset {
   my ($self, $dataset) = @_;
 
-  my @transcripts = $self->read_worksheet( debug => 1 );
-  my $status;
+  my ($sheet, $workbook) = $self->open_parse_spreadsheet;
+  my @transcripts = $self->read_worksheet( sheet => $sheet, debug => 1 );
+
+  $self->add_sheet_headers($sheet);
+  my $row = 1;
+
+  my ($status, $polyA_3p_coord, $ts_3p_coord, $delta);
   foreach my $ts ( @transcripts ) {
+
+      $polyA_3p_coord = $ts_3p_coord = $delta = undef;
+      my $strand = $ts->{strand};
 
       $status = 'ts_not_found_in_db';
       my $vega_ts = $dataset->fetch_vega_transcript_by_stable_id($ts->{transcript});
@@ -58,38 +71,43 @@ sub process_dataset {
       my $region_ts = $self->find_transcript_in_region($region, $ts->{transcript});
       next unless $region_ts;
 
+      $status = 'ts_strand_mismatch';
+      next unless $region_ts->strand == $strand;
+      $ts_3p_coord = $strand == 1 ? $region_ts->seq_region_end : $region_ts->seq_region_start;
+
       $status = 'polyA_not_found';
       my $polyA_feature = $self->find_polyA_feature($region, $region_ts, $ts->{end_coordinate});
       next unless $polyA_feature;
+      $polyA_3p_coord = $strand == 1 ? $polyA_feature->seq_region_end : $polyA_feature->seq_region_start;
 
       # We now have a suitable transcript and feature, do a few final checks...
 
-      my ($low, $high, $report);
-      if ($region_ts->strand == 1) {
-          $low  = $region_ts->seq_region_end;
-          $high = $polyA_feature->seq_region_end;
-          $report = "strand +, ts $low, polyA $high";
-      } else {
-          $low = $polyA_feature->seq_region_start;
-          $high = $region_ts->seq_region_start;
-          $report = "strand -, ts $high, polyA $low";
-      }
-
       $status = 'already_fixed';
-      next if $low == $high;
+      next if $ts_3p_coord == $polyA_3p_coord;
 
-      my $delta = $high - $low;
-      if ($delta < 1 or $delta > 20) {
-          $status = "delta_out_of_range: $report, delta $delta";
-          next;
-      }
+      $status = 'delta_out_of_range';
+      $delta = ($polyA_3p_coord - $ts_3p_coord) * $strand;
+      next if ($delta < 1 or $delta > 20);
 
       $status = 'ready_to_extend';
 
   } continue {
-      say sprintf('%s [%s]: %s', $ts->{transcript}, $ts->{chromosome}, $status);
+      say sprintf('%s [%s]: %s, ts3p: %s, pa3p: %s, delta: %s',
+                  $ts->{transcript}, $ts->{chromosome}, $status,
+                  $ts_3p_coord    ? $ts_3p_coord    : '-',
+                  $polyA_3p_coord ? $polyA_3p_coord : '-',
+                  $delta          ? $delta          : '-',
+          );
+
+      my $col = $ADDITIONAL_COLUMNS_OFFSET;
+      $sheet->AddCell($row, $col+0, $ts_3p_coord) if $ts_3p_coord;
+      $sheet->AddCell($row, $col+1, $delta)       if $delta;
+      $sheet->AddCell($row, $col+2, $status);
+
+      $row++;
   }
 
+  $self->write_spreadsheet($workbook);
   return;
 }
 
@@ -132,22 +150,30 @@ sub find_polyA_feature {
     return;
 }
 
+sub open_parse_spreadsheet {
+    my ($self) = shift;
+
+    my $excel_path  = $self->excel_path;
+    my $excel_sheet = $self->excel_sheet;
+
+    my $parser   = Spreadsheet::ParseExcel::SaveParser->new;
+    my $workbook = $parser->Parse($excel_path);
+    die "Parsing '$excel_path': ", $parser->error_code unless $workbook;
+
+    my $sheet = $workbook->worksheet($excel_sheet);
+    die "No sheet '$excel_sheet' in '$excel_path'" unless $sheet;
+
+    return ($sheet, $workbook);
+}
+
 # This is fairly general-purpose (see ~mg13/Work/Investigations/Misc/RT296944/kill_polya.pl)
 # so ought to go into a module if used again!
 #
 sub read_worksheet {
     my ($self, %options) = @_;
+
+    my $sheet = $options{sheet};
     my $debug = $options{debug};
-
-    my $excel_path  = $self->excel_path;
-    my $excel_sheet = $self->excel_sheet;
-
-    my $parser   = Spreadsheet::ParseExcel->new;
-    my $workbook = $parser->parse($excel_path);
-    die "Parsing '$excel_path': ", $parser->error_code unless $workbook;
-
-    my $sheet = $workbook->worksheet($self->excel_sheet);
-    die "No sheet '$excel_sheet' in '$excel_path'" unless $sheet;
 
     my ($col_min, $col_max) = $sheet->col_range;
     my ($row_min, $row_max) = $sheet->row_range;
@@ -176,6 +202,29 @@ sub read_worksheet {
     return @results;
 }
 
+sub add_sheet_headers {
+    my ($self, $sheet) = @_;
+    my $col = $ADDITIONAL_COLUMNS_OFFSET;
+    foreach my $header (
+        'ts end coordinate',
+        'delta',
+        'status',
+        ) {
+        $sheet->AddCell(0, $col++, $header);
+    }
+    return;
+}
+
+sub write_spreadsheet {
+    my ($self, $workbook) = @_;
+
+    my $save_path = $self->excel_save_path;
+    return unless $save_path;
+
+    $workbook->SaveAs($save_path);
+    return;
+}
+
 sub transcript_adaptor {
     my ($self, @args) = @_;
     ($self->{'transcript_adaptor'}) = @args if @args;
@@ -195,6 +244,13 @@ sub excel_sheet {
     ($self->{'excel_sheet'}) = @args if @args;
     my $excel_sheet = $self->{'excel_sheet'};
     return $excel_sheet;
+}
+
+sub excel_save_path {
+    my ($self, @args) = @_;
+    ($self->{'excel_save_path'}) = @args if @args;
+    my $excel_save_path = $self->{'excel_save_path'};
+    return $excel_save_path;
 }
 
 # End of module
