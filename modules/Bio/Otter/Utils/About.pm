@@ -97,7 +97,7 @@ sub __need_tools {
          qr{(exonerate version .*)} ],
 
        [ hmmalign => '-h', # Bio::Otter::Lace::Pfam
-         qr{(hmmer.*?\d+\.\d+[.a-z]\d+.*?)(?:;|$)}im ],
+         qr{(HMMER\s+\d\S+)}im ],
 
        # EditWindow::PfamWindow
        # [ belvu => '--version' ], # part of Seqtools
