@@ -9,9 +9,8 @@ use parent 'Bio::Otter::Utils::Script';
 
 use Readonly;
 use Spreadsheet::ParseExcel::SaveParser;
-use Sys::Hostname;
-use Try::Tiny;
 
+use Bio::EnsEMBL::Attribute;
 use Bio::Otter::ServerAction::Script::Region;
 
 Readonly my $ADDITIONAL_COLUMNS_OFFSET => 4;
@@ -89,7 +88,31 @@ sub process_dataset {
       $delta = ($polyA_3p_coord - $ts_3p_coord) * $strand;
       next if ($delta < 1 or $delta > 20);
 
+      $status = 'extension_mismatch_oops';
+      my $end_exon = $region_ts->end_Exon;
+      if ($strand == 1) {
+          $end_exon->end( $polyA_feature->end);
+          $region_ts->end($polyA_feature->end);
+          next unless $region_ts->seq_region_end == $polyA_3p_coord;
+      } else {
+          $end_exon->start( $polyA_feature->start);
+          $region_ts->start($polyA_feature->start);
+          next unless $region_ts->seq_region_start == $polyA_3p_coord;
+      }
+      $region_ts->add_Attributes($self->make_hidden_remark);
+
       $status = 'ready_to_extend';
+      if ($dataset->may_modify) {
+          my ($new_region, $write_status) = $dataset->write_region($region);
+          unless ($new_region) {
+              $status = "write_failed: '$write_status'";
+              next;
+          }
+          $status = 'EXTENDED';
+          $dataset->inc_modified_count;
+      } else {
+          $status = 'would_extend';
+      }
 
   } continue {
       say sprintf('%s [%s]: %s, ts3p: %s, pa3p: %s, delta: %s',
@@ -148,6 +171,13 @@ sub find_polyA_feature {
         }
     }
     return;
+}
+
+sub make_hidden_remark {
+    return Bio::EnsEMBL::Attribute->new(
+        -code  => 'hidden_remark',
+        -value => 'extended by script extend_transcripts_to_polyA.pl',
+        );
 }
 
 sub open_parse_spreadsheet {
