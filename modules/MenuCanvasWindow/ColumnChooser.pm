@@ -443,7 +443,6 @@ sub update_status_indicator {
     $canvas->itemconfigure("STATUS_LABEL $item",
         -text   => $item->status,
         );
-    $self->top_window->raise;
 }
 
 {
