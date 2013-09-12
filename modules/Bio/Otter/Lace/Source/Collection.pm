@@ -363,6 +363,31 @@ sub collapse_all {
     }
 }
 
+sub select_default {
+    my ($self) = @_;
+
+    foreach my $col ($self->list_Columns) {
+        $col->selected($col->Filter->wanted_default);
+    }
+    $self->update_all_Bracket_selection;
+}
+
+sub select_all {
+    my ($self) = @_;
+
+    foreach my $item ($self->list_Items) {
+        $item->selected(1);
+    }
+}
+
+sub select_none {
+    my ($self) = @_;
+
+    foreach my $item ($self->list_Items) {
+        $item->selected(0);
+    }
+}
+
 sub set_search_entry {
     my ($self, $string) = @_;
 
