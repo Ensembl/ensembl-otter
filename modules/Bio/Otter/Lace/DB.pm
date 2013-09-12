@@ -8,12 +8,14 @@ use warnings;
 use Carp;
 use DBI;
 
+use Bio::Otter::Lace::DB::ColumnAdaptor;
 use Bio::Vega::DBSQL::DBAdaptor;
 
 my(
     %dbh,
     %file,
     %vega_dba,
+    %ColumnAdaptor,
     );
 
 sub DESTROY {
@@ -22,6 +24,7 @@ sub DESTROY {
     delete($dbh{$self});
     delete($file{$self});
     delete($vega_dba{$self});
+    delete($ColumnAdaptor{$self});
 
     return;
 }
@@ -48,6 +51,13 @@ sub dbh {
         $dbh{$self} = $arg;
     }
     return $dbh{$self};
+}
+
+sub ColumnAdaptor {
+    my ($self) = @_;
+
+    return $ColumnAdaptor{$self} ||=
+        Bio::Otter::Lace::DB::ColumnAdaptor->new($self->dbh);
 }
 
 sub file {

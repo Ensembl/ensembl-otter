@@ -57,6 +57,12 @@ sub current_Collection {
     return $self->{'_collection_list'}[$self->{'_index'}];
 }
 
+sub root_Collection {
+    my ($self) = @_;
+
+    return $self->{'_collection_list'}[0];
+}
+
 sub snail_trail_text {
     my ($self) = @_;
 

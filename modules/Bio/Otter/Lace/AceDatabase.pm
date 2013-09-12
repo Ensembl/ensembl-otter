@@ -682,12 +682,12 @@ sub zmap_config_update {
     my $cfg = $self->{_zmap_cfg} ||=
         Config::IniFiles->new( -file => $cfg_path );
 
-    while ( my ( $name, $value ) = each %{$self->filters}) {
-        my $state_hash = $value->{state};
-        if ($state_hash->{done}) {
+    foreach my $column ($self->ColumnCollection->list_Columns) {
+        my $name = $column->name;
+        if ($column->status eq 'Visible') {
             $cfg->setval($name,'delayed','false');
         }
-        if ($state_hash->{failed}) {
+        else {
             $cfg->setval($name,'delayed','true');
         }
     }
@@ -980,35 +980,8 @@ sub dna_ace_data {
 sub reload_filter_state {
     my ($self) = @_;
 
-    my $db_filter_adaptor = Bio::Otter::Lace::DB::FilterAdaptor->new($self->DB->dbh);
-    my @db_filters = $db_filter_adaptor->fetch_all;
-
-    my $filters = $self->filters;
-
-    my @obsolete;
-    foreach my $db_filter ( @db_filters ) {
-        my $filter_name = $db_filter->filter_name;
-        my $filter = $filters->{$filter_name};
-        if ($filter) {
-            warn "Reloading state from file for $filter_name\n";
-        } else {
-            warn "Skipping obsolete column '$filter_name'\n";
-            push(@obsolete, $db_filter);
-            next;
-        }
-        my $state_hash = $filters->{$filter_name}{'state'};
-        $state_hash->{'wanted'} = $db_filter->wanted;
-        $state_hash->{'failed'} = $db_filter->failed;
-        $state_hash->{'done'}   = $db_filter->done;
-    }
-
-    if (@obsolete) {
-        $db_filter_adaptor->begin_work;
-        foreach my $db_filter (@obsolete) {
-            $db_filter_adaptor->delete($db_filter);
-        }
-        $db_filter_adaptor->commit;
-    }
+    my $col_aptr = $self->DB->ColumnAdaptor;
+    $col_aptr->fetch_ColumnCollection_state($self->ColumnCollection);
 
     return;
 }
@@ -1016,64 +989,42 @@ sub reload_filter_state {
 sub save_filter_state {
     my ($self) = @_;
 
-    my $db_filter_adaptor = Bio::Otter::Lace::DB::FilterAdaptor->new($self->DB->dbh);
-    $db_filter_adaptor->begin_work;
-
-    my %existing = map { $_->filter_name => $_ } $db_filter_adaptor->fetch_all;
-
-    while ( my ($name, $value) = each %{$self->filters} ) {
-        my $state_hash = $value->{'state'};
-        my $db_filter = $existing{$name};
-        $db_filter = Bio::Otter::Lace::DB::Filter->new( filter_name => $name ) unless $db_filter;
-
-        $db_filter->wanted($state_hash->{'wanted'});
-        $db_filter->failed($state_hash->{'failed'});
-        $db_filter->done(  $state_hash->{'done'});
-
-        if ($db_filter->is_stored) {
-            $db_filter_adaptor->update($db_filter);
-        } else {
-            $db_filter_adaptor->store($db_filter);
-        }
-    }
-    $db_filter_adaptor->commit;
+    my $col_aptr = $self->DB->ColumnAdaptor;
+    $col_aptr->store_ColumnCollection_state($self->ColumnCollection);
 
     return;
 }
 
 sub delayed {
     my ($self, $source) = @_;
-    my $filter = $self->filters->{$source->name};
-    $filter or return 1;
-    my $state = $filter->{state};
-    my $delayed = ! $state->{wanted} || $state->{failed};
-    return $delayed;
+
+    my $column = $self->ColumnCollection->get_Item_by_name($source->name)
+        or return 1;
+    if ($column->status eq 'Visible') {
+        return 0;
+    }
+    elsif ($column->status eq 'Selected') {
+        return 0;
+    }
+    elsif ($column->status eq 'Loading') {
+        return 0;
+    }
+    return 1;
 }
 
-sub filters {
+sub ColumnCollection {
     my ($self) = @_;
 
-    return $self->{'_filters'} ||= {
-        map {
-            $_->name => {
-                filter => $_,
-                state => {
-                    wanted => $_->wanted,
-                    done   => 0,
-                    failed => 0,
-                },
-            };
-        } (
-            @{$self->DataSet->filters},
-            ( grep { _bam_is_filter($_) } @{$self->DataSet->bam_list} ),
-        )
-    };
+    return $self->{'_ColumnCollection'} ||=
+      Bio::Otter::Lace::Source::Collection->new_from_Filter_list(
+          @{ $self->DataSet->filters },
+          (grep { _bam_is_filter($_) } @{ $self->DataSet->bam_list }));
 }
 
 sub _bam_is_filter {
     my ($bam) = @_;
     my $bam_is_filter =
-        ! ( $_->coverage_plus || $_->coverage_minus );
+        ! ( $bam->coverage_plus || $bam->coverage_minus );
     return $bam_is_filter;
 }
 
@@ -1083,39 +1034,26 @@ sub DataSet {
     return $self->Client->get_DataSet_by_name($self->smart_slice->dsname);
 }
 
-sub process_gff_Filters_by_name {
-    my ($self, $names) = @_;
-    my $condition = sprintf 'filter_name in ( %s )', join ' , ', ('?') x @{$names};
-    my $result = $self->process_gff_Filters_where($condition, $names);
-    return $result;
-}
-
-sub process_gff_Filters_where_done {
+sub process_gff_Visible_Columns {
     my ($self) = @_;
-    my $result = $self->process_gff_Filters_where('done = 1');
-    return $result;
+    
+    return $self->process_gff_for_Columns(
+        grep { $_->process_gff and $_->status eq 'Visible' }
+        $self->ColumnCollection->list_Columns
+        );
 }
 
-sub process_gff_Filters_where {
-    my ($self, $where, $bind_values) = @_;
-
-    my $dbh = $self->DB->dbh;
-    my $dbfa = Bio::Otter::Lace::DB::FilterAdaptor->new($dbh);
-    my @db_filters = $dbfa->fetch_where(
-        "${where} AND process_gff = 1", '-bind_values' => $bind_values);
-    my $filter_hash = $self->filters;
+sub process_gff_for_Columns {
+    my ($self, @columns) = @_;
 
     my $transcripts = [ ];
-    my $failed = [ ];
-
-    foreach my $db_filter (@db_filters) {
-        my $filter = $filter_hash->{$db_filter->{'filter_name'}}{'filter'};
+    my $failed      = [ ];
+    foreach my $col (@columns) {
         try {
-            my @filter_transcripts =
-                $self->process_gff_file_from_Filter($dbfa, $db_filter, $filter);
-            push @{$transcripts}, @filter_transcripts;
+            my @filter_transcripts = $self->process_gff_file_from_Column($col);
+            push @$transcripts, @filter_transcripts;
         }
-        catch { warn $_; push @{$failed}, $filter; };
+        catch { warn $_; push @$failed, $col; };        
     }
 
     my $result = {
@@ -1126,11 +1064,12 @@ sub process_gff_Filters_where {
     return $result;
 }
 
-sub process_gff_file_from_Filter {
-    my ($self, $db_filter_adaptor, $db_filter, $filter) = @_;
+sub process_gff_file_from_Column {
+    my ($self, $column) = @_;
 
+    my $filter = $column->Filter;
     my $filter_name = $filter->name;
-    my $gff_file = $db_filter->gff_file;
+    my $gff_file = $column->gff_file;
     unless ($gff_file) {
         confess "gff_file column not set for '$filter_name' in otter_filter table in SQLite DB";
     }
@@ -1158,10 +1097,8 @@ sub process_gff_file_from_Filter {
     elsif ($filter->feature_kind =~ /AlignFeature/) {
         Bio::Otter::Lace::ProcessGFF::store_hit_data_from_gff($self->AccessionTypeCache, $full_gff_file);
         # Unset flag so that we don't reprocess this file if we recover the session.
-        $db_filter_adaptor->begin_work;
-        $db_filter->process_gff(0);
-        $db_filter_adaptor->update($db_filter);
-        $db_filter_adaptor->commit;
+        $column->process_gff(0);
+        $self->DB->ColumnAdaptor->store_Column_state($column);
         return;
     }
     else {

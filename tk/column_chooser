@@ -4,7 +4,7 @@
 
 use strict;
 use warnings;
-use CanvasWindow::ColumnChooser;
+use MenuCanvasWindow::ColumnChooser;
 use Bio::Otter::Lace::Defaults;
 use Bio::Otter::Lace::PipelineDB;
 use Bio::Otter::Lace::Source::Collection;
@@ -56,7 +56,7 @@ $Data::Dumper::Terse = 1;
 
     my $mw = CanvasWindow::MainWindow->new;
     $mw->title('Column Chooser');
-    my $cc = CanvasWindow::ColumnChooser->new($mw, 600, 400);
+    my $cc = MenuCanvasWindow::ColumnChooser->new($mw, 600, 400);
     $cc->initialise($cllctn);
     $cc->redraw;
 
