@@ -15,6 +15,9 @@ use Bio::Otter::ServerAction::Script::Region;
 
 Readonly my $ADDITIONAL_COLUMNS_OFFSET => 4;
 
+Readonly my $EXTENSION_HEADROOM => 100;
+Readonly my $MAX_DELTA          =>  20;
+
 sub ottscript_opt_spec {
   return (
     [ "excel-file=s",      "Excel file containing transcript specs",      { required => 1 }       ],
@@ -62,8 +65,12 @@ sub process_dataset {
       my $vega_ts = $dataset->fetch_vega_transcript_by_stable_id($ts->{transcript});
       next unless $vega_ts;
 
+      $status = 'gene_not_found_in_db';
+      my $vega_gene = $vega_ts->get_Gene;
+      next unless $vega_gene;
+
       $status = 'error_fetching_region';
-      my $region = $self->fetch_transcript_region($dataset, $vega_ts);
+      my $region = $self->fetch_gene_region($dataset, $vega_gene);
       next unless $region;
 
       $status = 'ts_not_found_in_region';
@@ -86,7 +93,7 @@ sub process_dataset {
 
       $status = 'delta_out_of_range';
       $delta = ($polyA_3p_coord - $ts_3p_coord) * $strand;
-      next if ($delta < 1 or $delta > 20);
+      next if ($delta < 1 or $delta > $MAX_DELTA);
 
       $status = 'extension_mismatch_oops';
       my $end_exon = $region_ts->end_Exon;
@@ -134,18 +141,18 @@ sub process_dataset {
   return;
 }
 
-sub fetch_transcript_region {
-    my ($self, $dataset, $ts) = @_;
-    my ($start, $end) = ($ts->start, $ts->end);
-    if ($ts->{strand} == 1) {
-        $end += 100;
+sub fetch_gene_region {
+    my ($self, $dataset, $gene) = @_;
+    my ($start, $end) = ($gene->start, $gene->end);
+    if ($gene->strand == 1) {
+        $end += $EXTENSION_HEADROOM;
     } else {
-        $start -= 100;
+        $start -= $EXTENSION_HEADROOM;
     }
     return $dataset->fetch_region_by_slice(
         start => $start,
         end   => $end,
-        slice => $ts->slice,
+        slice => $gene->slice,
         );
 }
 
