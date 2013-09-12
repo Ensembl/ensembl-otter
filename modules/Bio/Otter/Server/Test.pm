@@ -5,6 +5,8 @@ use warnings;
 use DBI;
 use File::Find;
 use Try::Tiny;
+use Sys::Hostname 'hostname';
+use Cwd 'cwd';
 
 use Bio::Otter::ServerScriptSupport;
 use Bio::Otter::Version;
@@ -89,6 +91,13 @@ sub generate {
                         origin => _is_SangerWeb_real(),
                         HTTP_CLIENTREALM => $ENV{HTTP_CLIENTREALM},
                         username =>  $web->username };
+
+    $out{webserver} =
+      { hostname => scalar hostname(),
+        user => scalar getpwuid($<),
+        group => [ map { "$_: ".getgrgid($_) } split / /, $( ],
+        cwd => scalar cwd(),
+        pid => $$ };
 
     $out{'B:O:ServerScriptSupport'} =
       { local_user => $server->local_user,
