@@ -129,8 +129,9 @@ sub get_region {
     my $slice = $self->slice;
 
     my $region = Bio::Vega::Region->new_from_otter_db(
-        otter_dba => $odba,
-        slice     => $slice,
+        otter_dba     => $odba,
+        slice         => $slice,
+        server_action => $self,
         );
 
     my $serialised_region = $self->serialise_region($region);
@@ -278,8 +279,9 @@ sub write_region {
 
         ##pass on to the xml generator the current set of genes , simple features
         my $current_region =  Bio::Vega::Region->new(
-            otter_dba => $odba,
-            slice     => $db_slice,
+            otter_dba     => $odba,
+            slice         => $db_slice,
+            server_action => $self,
             );
         $current_region->genes(@changed_genes);
         $current_region->seq_features(@new_simple_features);
@@ -438,8 +440,9 @@ sub lock_region {
 
         $action = 'result setup';
         my $region = Bio::Vega::Region->new(
-            otter_dba => $odba,
-            slice     => $slice,
+            otter_dba     => $odba,
+            slice         => $slice,
+            server_action => $self,
             );
         $region->fetch_species;
         $region->fetch_CloneSequences;

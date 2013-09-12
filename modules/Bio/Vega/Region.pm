@@ -28,6 +28,7 @@ sub new {
 
     my $pkg = ref($class) || $class;
     my $self = bless { %options }, $pkg;
+
     return $self;
 }
 
@@ -225,6 +226,15 @@ sub _gene_list {
     ($self->{'_gene_list'}) = @args if @args;
     my $_gene_list = $self->{'_gene_list'} ||= [];
     return $_gene_list;
+}
+
+# This mainly for the benefit of scripts.
+#
+sub server_action {
+    my ($self, @args) = @_;
+    ($self->{'server_action'}) = @args if @args;
+    my $server_action = $self->{'server_action'};
+    return $server_action;
 }
 
 1;
