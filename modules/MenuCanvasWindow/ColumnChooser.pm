@@ -5,8 +5,11 @@ package MenuCanvasWindow::ColumnChooser;
 
 use strict;
 use warnings;
+use Try::Tiny;
+use Scalar::Util qw{ weaken };
 use Bio::Otter::Lace::Source::Collection;
 use Bio::Otter::Lace::Source::SearchHistory;
+use MenuCanvasWindow::SessionWindow;
 use Tk::Utils::CanvasXPMs;
 
 use base qw{
@@ -30,14 +33,38 @@ sub new {
     bless($self, $pkg);
 
     my $bottom_frame = $tk->Frame->pack(
-        -side => 'top',
-        -fill => 'x',
+        qw{ -side top -padx 4 -pady 4 }
     );
 
     $self->menu_bar($menu_frame);
     $self->top_frame($top_frame);
     $self->bottom_frame($bottom_frame);
     return $self;
+}
+
+sub withdraw_or_destroy {
+    my ($self) = @_;
+
+    $self->zmap_select_destroy;
+
+    if ($self->init_flag) {
+        # Destroy ourselves
+        $self->AceDatabase->error_flag(0);
+        $self->top_window->destroy;
+    } else {
+        $self->top_window->withdraw;
+    }
+
+    return;
+}
+
+sub init_flag {
+    my($self, $flag) = @_;
+    
+    if (defined $flag) {
+        $self->{'_init_flag'} = $flag ? 1 : 0;
+    }
+    return $self->{'_init_flag'};
 }
 
 sub top_frame {
@@ -65,14 +92,16 @@ sub row_height {
     return int 1.5 * $self->font_size;
 }
 
-sub initialise {
-    my ($self, $cllctn) = @_;
+sub initialize {
+    my ($self) = @_;
 
     my $search_menu = $self->make_menu('Search');
     my $view_menu = $self->make_menu('View');
 
     $self->font_size(12);
+    my @button_pack = qw{ -side left -padx 4 };
 
+    my $cllctn = $self->AceDatabase->ColumnCollection;
     my $hist = Bio::Otter::Lace::Source::SearchHistory->new($cllctn);
     $self->SearchHistory($hist);
 
@@ -96,10 +125,10 @@ sub initialise {
     $self->set_search_entry($cllctn->search_string);
 
     my $filter = sub{ $self->do_filter };
-    $search_frame->Button(-text => 'Filter', -command => $filter)->pack(-side => 'left', -padx => 4);
+    $search_frame->Button(-text => 'Filter', -command => $filter)->pack(@button_pack);
 
     my $back = sub{ $self->go_back };
-    $search_frame->Button(-text => 'Back', -command => $back)->pack(-side => 'left', -padx => 4);
+    $search_frame->Button(-text => 'Back', -command => $back)->pack(@button_pack);
 
     $search_menu->add('command',
         -label          => 'Filter',
@@ -131,6 +160,28 @@ sub initialise {
         -accelerator    => 'Ctrl+Right',
         );
 
+    my $bottom_frame = $self->bottom_frame;
+
+    # The user can press the Cancel button either before the AceDatabase is made
+    # (in which case we destroy ourselves) or during an edit session (in which
+    # case we just withdraw the window).
+    my $wod_cmd = sub { $self->withdraw_or_destroy };
+    $bottom_frame->Button(
+        -text => 'Cancel',
+        -command => $wod_cmd,
+        )->pack(@button_pack);
+    $top->protocol( 'WM_DELETE_WINDOW', $wod_cmd );
+
+    $bottom_frame->Button(
+        -text => 'Select ZMap',
+        -command => sub { $self->zmap_select_window },
+        )->pack(@button_pack);
+
+    $bottom_frame->Button(
+        -text => 'Load',
+        -command => sub { $self->load_filters },
+        )->pack(@button_pack);
+
     $top->bind('<Return>', $filter);
     $top->bind('<Escape>', $back);
     $top->bind('<Control-r>', $reset);
@@ -138,10 +189,11 @@ sub initialise {
     $top->bind('<Control-Left>', $collapse_all);
     $top->bind('<Control-Right>', $expand_all);
     $top->bind('<Destroy>', sub{ $self = undef });
+    
 
     $self->calcualte_text_column_sizes;
-
     $self->fix_window_min_max_sizes;
+    $self->redraw;
     return;
 }
 
@@ -353,29 +405,31 @@ sub draw_status_indicator {
         -tags       => ["STATUS_LABEL $item"],
         );
 
-    # For looking at appearance of status indicators
-    my $next = sub { $self->next_status($item) };
-    $canvas->bind("STATUS_RECTANGLE $item", '<Button-1>', $next);
-    $canvas->bind("STATUS_LABEL $item",     '<Button-1>', $next);
+    $item->status_callback([$self, 'update_status_indicator']);
+
+    # # For looking at appearance of status indicators
+    # my $next = sub { $self->next_status($item) };
+    # $canvas->bind("STATUS_RECTANGLE $item", '<Button-1>', $next);
+    # $canvas->bind("STATUS_LABEL $item",     '<Button-1>', $next);
 }
 
-sub next_status {
-    my ($self, $item) = @_;
-
-    my @status = Bio::Otter::Lace::Source::Item::Column::VALID_STATUS_LIST();
-    my $this = $item->status;
-    for (my $i = 0; $i < @status; $i++) {
-        if ($status[$i] eq $this) {
-            my $j = $i + 1;
-            if ($j == @status) {
-                $j = 0;
-            }
-            $item->status($status[$j]);
-            $self->update_status_indicator($item);
-            last;
-        }
-    }
-}
+# sub next_status {
+#     my ($self, $item) = @_;
+# 
+#     my @status = Bio::Otter::Lace::Source::Item::Column::VALID_STATUS_LIST();
+#     my $this = $item->status;
+#     for (my $i = 0; $i < @status; $i++) {
+#         if ($status[$i] eq $this) {
+#             my $j = $i + 1;
+#             if ($j == @status) {
+#                 $j = 0;
+#             }
+#             $item->status($status[$j]);
+#             $self->update_status_indicator($item);
+#             last;
+#         }
+#     }
+# }
 
 sub update_status_indicator {
     my ($self, $item) = @_;
@@ -389,6 +443,7 @@ sub update_status_indicator {
     $canvas->itemconfigure("STATUS_LABEL $item",
         -text   => $item->status,
         );
+    $self->top_window->raise;
 }
 
 {
@@ -475,6 +530,75 @@ sub update_item_select_state {
     
 }
 
+sub load_filters {
+    my ($self) = @_;
+
+    my $top = $self->top_window;
+    $top->Busy(-recurse => 1);
+
+    my $cllctn = $self->SearchHistory->root_Collection;
+    # So that next session will use current selected filters:
+    warn "save_Columns_selected_flag_to_Filter_wanted...";
+    $cllctn->save_Columns_selected_flag_to_Filter_wanted;
+    my @to_fetch = $cllctn->list_Columns_with_status('Selected');
+    foreach my $col (@to_fetch) {
+        $col->status('Loading');
+    }
+
+    if ($self->init_flag) {
+        # now initialise the database
+        try { $self->AceDatabase->init_AceDatabase; return 1; }
+        catch {
+            $self->SequenceNotes->exception_message($_, "Error initialising database");
+            $self->AceDatabase->error_flag(0);
+            $top->Unbusy;
+            $top->destroy;
+            return 0;
+        }
+        or return;
+        $self->init_flag(0);
+    }
+
+    $self->AceDatabase->save_filter_state if @to_fetch;
+
+    if ($self->SessionWindow) {
+        if (@to_fetch) {
+            $self->AceDatabase->Client->reauthorize_if_cookie_will_expire_soon;
+            $self->SessionWindow->zmap->load_features(map { $_->Filter->name } @to_fetch);
+        }
+        else {
+            $top->messageBox(
+                -title      => $Bio::Otter::Lace::Client::PFX.'Nothing to fetch',
+                -icon       => 'warning',
+                -message    => 'All selected columns have already been loaded',
+                -type       => 'OK',
+                );
+        }
+    } else {
+        # we need to set up and show a SessionWindow
+        my $zmap = $self->zmap_select;
+        my $zircon_context = $self->SpeciesListWindow->zircon_context;
+        my $SessionWindow =
+            MenuCanvasWindow::SessionWindow->new(
+                $self->top_window->Toplevel,
+                '-zmap'           => $zmap,
+                '-zircon_context' => $zircon_context,
+            );
+
+        $self->SessionWindow($SessionWindow);
+        $SessionWindow->AceDatabase($self->AceDatabase);
+        $SessionWindow->SequenceNotes($self->SequenceNotes);
+        $SessionWindow->ColumnChooser($self);
+        $SessionWindow->initialize;
+    }
+
+    $top->Unbusy;
+    # $top->withdraw;
+    $self->zmap_select_destroy;
+
+    return;
+}
+
 sub calcualte_text_column_sizes {
     my ($self) = @_;
 
@@ -530,7 +654,7 @@ sub DESTROY {
 
     $self->zmap_select_destroy;
 
-    warn "Destroying LoadColumns\n";
+    warn "Destroying ColumnChooser\n";
     if (my $sn = $self->SequenceNotes) {
         $self->AceDatabase->post_exit_callback(sub{
             $sn->refresh_lock_columns;

@@ -107,9 +107,19 @@ sub regex_list {
 sub add_Item {
     my ($self, $item) = @_;
 
+    my $name = $item->name or confess "No name in item";
+    $self->{'_items_by_name'}{$name} = $item;
+
     my $i_ref = $self->{'_item_list'};
     push @$i_ref, $item;
+
     return;
+}
+
+sub get_Item_by_name {
+    my ($self, $name) = @_;
+
+    return $self->{'_items_by_name'}{$name};
 }
 
 sub list_Items {
@@ -135,10 +145,26 @@ sub list_Columns {
     return grep { ! $_->is_Bracket } $self->list_Items;
 }
 
+sub list_Columns_with_status {
+    my ($self, $status) = @_;
+
+    Bio::Otter::Lace::Source::Item::Column->confess_if_not_valid_status($status);
+    return grep { $_->status eq $status } $self->list_Columns;
+}
+
+sub save_Columns_selected_flag_to_Filter_wanted {
+    my ($self) = @_;
+
+    foreach my $col ($self->list_Columns) {
+        $col->Filter->wanted($col->selected);
+    }
+}
+
 sub clear_Items {
     my ($self) = @_;
 
     $self->{'_item_list'} = [];
+    $self->{'_items_by_name'} = {};
     $self->{'_is_matched'} = {};
     $self->{'_is_collapsed'} = {};
     return;

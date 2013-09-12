@@ -14,7 +14,7 @@ use CanvasWindow::SequenceNotes::History;
 use CanvasWindow::SequenceNotes::Status;
 use TransientWindow::OpenRange;
 use TransientWindow::OpenSlice;
-use EditWindow::LoadColumns;
+use MenuCanvasWindow::ColumnChooser;
 use POSIX qw(ceil);
 use Tk::Checkbutton;
 
@@ -764,16 +764,16 @@ sub _open_SequenceSet {
 
     $self->refresh_lock_columns;
 
-    warn "Making LoadColumns";
+    warn "Making ColumnChooser";
 
     my $top = $self->canvas->Toplevel
       (-title  => $Bio::Otter::Lace::Client::PFX.'Select column data to load');
-    my $lc = EditWindow::LoadColumns->new($top);
-    $lc->init_flag(1);
-    $lc->AceDatabase($adb);
-    $lc->SequenceNotes($self);
-    $lc->SpeciesListWindow($self->SequenceSetChooser->SpeciesListWindow);
-    $lc->initialize;
+    my $cc = MenuCanvasWindow::ColumnChooser->new($top, 600, 400);
+    $cc->init_flag(1);
+    $cc->AceDatabase($adb);
+    $cc->SequenceNotes($self);
+    $cc->SpeciesListWindow($self->SequenceSetChooser->SpeciesListWindow);
+    $cc->initialize;
 
     return;
 }

@@ -33,7 +33,6 @@ use Zircon::Tk::Context;
 use Zircon::ZMap;
 
 use Bio::Otter::Lace::Client;
-use Bio::Otter::Lace::DB::FilterAdaptor;
 use Bio::Otter::ZMap::XML;
 use Bio::Vega::Transform::Otter::Ace;
 
@@ -413,7 +412,7 @@ sub populate_menus {
     # Close window
     my $exit_command = sub {
         $self->exit_save_data or return;
-        $self->LoadColumns->top->destroy;
+        $self->ColumnChooser->top_window->destroy;
         };
     $file->add('command',
         -label          => 'Close',
@@ -584,7 +583,7 @@ sub populate_menus {
 
     $tools_menu->add('command',
                -label          => 'Load column data',
-               -command        => sub {$self->show_lcd_dialog()},
+               -command        => sub {$self->show_column_chooser()},
     );
 
     # launch in ZMap
@@ -625,22 +624,19 @@ sub populate_menus {
     return;
 }
 
-sub LoadColumns {
+sub ColumnChooser {
     my ($self, $lc) = @_;
 
-    $self->{'_LoadColumns'} = $lc if $lc;
+    $self->{'_ColumnChooser'} = $lc if $lc;
 
-    return $self->{'_LoadColumns'};
+    return $self->{'_ColumnChooser'};
 }
 
-sub show_lcd_dialog {
+sub show_column_chooser {
     my ($self) = @_;
 
-    my $lc = $self->LoadColumns;
-    my $top = $lc->top;
-    # we need to force a redraw
-    $lc->reset_progress;
-    $lc->show_filters;
+    my $cc = $self->ColumnChooser;
+    my $top = $cc->top_window;
     $top->deiconify;
     $top->raise;
 
@@ -1492,8 +1488,8 @@ sub add_external_SubSeqs {
 
 sub fetch_external_SubSeqs {
     my ($self) = @_;
-    my $process_result =
-        $self->AceDatabase->process_gff_Filters_where_done;
+
+    my $process_result = $self->AceDatabase->process_gff_Visible_Columns;
     $self->update_from_process_result($process_result);
     return;
 }
@@ -2542,25 +2538,38 @@ sub _zmap_view_new {
 sub zircon_zmap_view_features_loaded {
     my ($self, $status, $message, @featuresets) = @_;
 
-    my $filter_hash = $self->AceDatabase->filters;
+    my $cllctn = $self->AceDatabase->ColumnCollection;
+    my $col_aptr = $self->AceDatabase->DB->ColumnAdaptor;
     my $state_changed = 0;
 
-    my @filters_to_process = ( );
+    my ($feature_count) = $message =~ /(\d+)\sfeatures\sloaded/;
+
+    my @columns_to_process = ();
     foreach my $set_name (@featuresets) {
-        # NB: careful not to auto-vivify entries in $filter_hash !
-        if (my $filter_entry = $filter_hash->{$set_name}) {
-            my $state_hash = $filter_entry->{'state'};
-            if ($status == 0 && ! $state_hash->{'failed'}) {
+        if (my $column = $cllctn->get_Item_by_name($set_name)) {
+            # filter_get will have updated gff_file field in SQLite db
+            # so we need to fetch it from the database:
+            $col_aptr->fetch_state($column);
+            if ($status == 0 and $column->status ne 'Error') {
                 $state_changed = 1;
-                $state_hash->{'failed'} = 1;
-                $state_hash->{'fail_msg'} = $message; ### Could store in SQLite db
+                $column->status('Error');
             }
-            elsif ($status == 1 && ! $state_hash->{'done'}) {
-                $state_changed = 1;
-                $state_hash->{'done'} = 1;
-                $state_hash->{'failed'} = 0; # reset failed flag if filter succeeds
-                push @filters_to_process, $set_name;
+            elsif ($status == 1) {
+                # Column loaded OK, but does it have anything in it?
+                if ($column->status ne 'Visible' and $feature_count) {
+                    $state_changed = 1;
+                    $column->status('Visible');
+                    if ($column->process_gff) {
+                        push @columns_to_process, $column;
+                    }
+                }
+                elsif ($column->status ne 'Empty' and $feature_count == 0) {
+                    $state_changed = 1;
+                    $column->status('Empty');
+                }
             }
+            $column->status_detail($message);
+            $col_aptr->store_Column_state($column);
         }
         # else {
         #     # We see a warning for each acedb featureset
@@ -2569,19 +2578,17 @@ sub zircon_zmap_view_features_loaded {
     }
 
     my $process_result =
-        $self->AceDatabase->process_gff_Filters_by_name(\@filters_to_process);
+        $self->AceDatabase->process_gff_for_Columns(@columns_to_process);
     $self->update_from_process_result($process_result);
 
     if ($state_changed) {
-        # save the state of each gff filter to disk so we can recover the session
-        $self->AceDatabase->save_filter_state;
-
         # and update the delayed flags in the zmap config file
         $self->AceDatabase->zmap_config_update;
     }
 
     return;
 }
+
 
 my $name_pattern = qr! ^
     (.*) \. [[:digit:]]+ \. [[:digit:]]+

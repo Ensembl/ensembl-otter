@@ -9,7 +9,7 @@ use Carp;
 use Try::Tiny;
 use Tk::DialogBox;
 use base 'MenuCanvasWindow';
-use EditWindow::LoadColumns;
+use MenuCanvasWindow::ColumnChooser;
 use EditWindow::Preferences;
 use CanvasWindow::SequenceSetChooser;
 use Bio::Otter::Utils::About;
@@ -387,12 +387,11 @@ sub recover_some_sessions {
                       (-title  => $Bio::Otter::Lace::Client::PFX.
                        'Select Column Data to Load');
 
-                    my $lc = EditWindow::LoadColumns->new($top);
-                    $lc->AceDatabase($adb);
-                    $lc->SpeciesListWindow($self);
-                    $lc->initialize;
-                    $lc->change_checkbutton_state('deselect');
-                    $lc->load_filters;
+                    my $cc = MenuCanvasWindow::ColumnChooser->new($top, 600, 400);
+                    $cc->AceDatabase($adb);
+                    $cc->SpeciesListWindow($self);
+                    $cc->initialize;
+                    $cc->load_filters;
                     $top->withdraw;
                 }
             }
