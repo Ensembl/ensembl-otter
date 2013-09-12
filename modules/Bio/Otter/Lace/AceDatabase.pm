@@ -769,10 +769,13 @@ sub ace_server {
 
     my $sgif;
     unless ($sgif = $self->{'_ace_server'}) {
-        $sgif = Hum::Ace::LocalServer->new($self->home);
+        my $home = $self->home;
+        $sgif = Hum::Ace::LocalServer->new($home);
         $sgif->server_executable('sgifaceserver');
         $sgif->start_server() or return 0; # this only check the fork was successful
+        my $pid = $sgif->server_pid;
         $sgif->ace_handle(1)  or return 0; # this checks it can connect
+        warn "sgifaceserver on $home running, pid $pid\n";
         $self->{'_ace_server'} = $sgif;
     }
     return $sgif;
