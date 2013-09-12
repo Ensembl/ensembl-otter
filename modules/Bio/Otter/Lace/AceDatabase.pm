@@ -19,8 +19,6 @@ use Bio::Vega::Transform::XML;
 use Bio::Otter::Debug;
 use Bio::Otter::Lace::AccessionTypeCache;
 use Bio::Otter::Lace::DB;
-use Bio::Otter::Lace::DB::Filter;
-use Bio::Otter::Lace::DB::FilterAdaptor;
 use Bio::Otter::Lace::Slice; # a new kind of Slice that knows how to get pipeline data
 use Bio::Otter::Lace::ProcessGFF;
 use Bio::Otter::Utils::Config::Ini qw( config_ini_format );
