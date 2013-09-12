@@ -10,11 +10,14 @@ use 5.010;
 use namespace::autoclean;
 
 use Carp;
+use Sys::Hostname;
+use Try::Tiny;
 
 use Bio::Otter::Utils::Script::Gene;
 use Bio::Otter::Utils::Script::Transcript;
 
 use Bio::Otter::LocalServer;
+use Bio::Otter::ServerAction::Script::Region;
 
 use Moose;
 
@@ -270,6 +273,56 @@ sub fetch_region_by_slice {
     my $region = $region_action->get_region;
 
     return $region;
+}
+
+sub write_region {
+    my ($self, $region, $author) = @_;
+
+    my @msg;
+    my $new_region;
+
+  WRITE_REGION: {
+
+      my $region_action = $region->server_action;
+      unless ($region_action) {
+          push @msg, 'no server_action set for region';
+          last WRITE_REGION;
+      }
+
+      if ($author) {
+          $region_action->server->authorized_user($author);
+      }
+
+      my $lock;
+      try {
+          $region_action->server->add_param( hostname => hostname );
+          $lock = $region_action->lock_region;
+          push @msg, 'lock ok';
+      }
+      catch {
+          my ($err) = ($_ =~ m/^MSG: (Failed to lock.*)$/m);
+          push @msg, "lock failed: '$err'";
+      };
+      last WRITE_REGION unless $lock;
+
+      try {
+          $region_action->server->set_params( data => $region );
+          $new_region = $region_action->write_region;
+          push @msg, 'write ok';
+      }
+      catch {
+          my $err = $_;
+          chomp $err;
+          push @msg, "write failed: '$err'";
+      };
+
+      $region_action->server->set_params( data => $lock );
+      $region_action->unlock_region;
+      push @msg, 'unlock ok';
+
+    } # WRITE_REGION
+
+    return ($new_region, join(',', @msg));
 }
 
 __PACKAGE__->meta->make_immutable;
