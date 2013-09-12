@@ -96,7 +96,8 @@ sub initialize {
     my ($self) = @_;
 
     my $search_menu = $self->make_menu('Search');
-    my $view_menu = $self->make_menu('View');
+    my $view_menu   = $self->make_menu('View');
+    my $select_menu = $self->make_menu('Select');
 
     $self->font_size(12);
     my @button_pack = qw{ -side left -padx 4 };
@@ -158,6 +159,19 @@ sub initialize {
         -label          => 'Expand all',
         -command        => $expand_all,
         -accelerator    => 'Ctrl+Right',
+        );
+
+    $select_menu->add('command',
+        -label      => 'Default',
+        -command    => sub{ $self->change_selection('select_default') },
+        );
+    $select_menu->add('command',
+        -label      => 'All',
+        -command    => sub{ $self->change_selection('select_all') },
+        );
+    $select_menu->add('command',
+        -label      => 'None',
+        -command    => sub{ $self->change_selection('select_none') },
         );
 
     my $bottom_frame = $self->bottom_frame;
@@ -249,6 +263,13 @@ sub expand_all {
     my ($self) = @_;
 
     $self->current_Collection->expand_all;
+    $self->redraw;
+}
+
+sub change_selection {
+    my ($self, $method) = @_;
+
+    $self->current_Collection->$method();
     $self->redraw;
 }
 

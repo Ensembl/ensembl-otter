@@ -102,17 +102,34 @@ sub wanted { # it's a flag showing whether the user wants this filter to be load
              # ( initialized from ['species'.use_filters] section of otter_config )
     my ($self, $wanted) = @_;
 
-    if(defined($wanted)) {
-        $self->{_wanted} = $wanted;
+    if (defined($wanted)) {
+        $self->{'_wanted'} = $wanted ? 1 : 0;
+        unless (defined $self->{'_wanted_default'}) {
+            $self->{'_wanted_default'} = $self->{'_wanted'};
+        }
     }
-    return $self->{_wanted};
+    return $self->{'_wanted'};
+}
+
+sub wanted_default {
+    my ($self, @args) = @_;
+
+    if (@args) {
+        confess "wanted_default is a read-only method";
+    }
+    elsif (! defined $self->{'_wanted_default'}) {
+        confess "Error: wanted must be set before wanted_default is called";
+    }
+    else {
+        return $self->{'_wanted_default'};
+    }
 }
 
 sub name {
     # the canonical name for this filter
     my ($self, $name) = @_;
-    $self->{_name} = $name if $name;
-    return $self->{_name};
+    $self->{'_name'} = $name if $name;
+    return $self->{'_name'};
 }
 
 sub classification {
