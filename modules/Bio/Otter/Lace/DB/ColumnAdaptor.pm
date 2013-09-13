@@ -43,10 +43,6 @@ my %SQL = (
                           },
     fetch_by_name =>    qq{ SELECT ${all_columns} FROM otter_column WHERE name = ?
                           },
-    fetch_all     =>    qq{ SELECT ${all_columns} FROM otter_column
-                          },
-    fetch_where_stem => qq{ SELECT ${all_columns} FROM otter_column WHERE
-                           },
     update_for_filter_get => qq{ UPDATE otter_column
                                     SET status = 'Loading', gff_file = ?, process_gff = ?
                                   WHERE name = ?
@@ -108,42 +104,6 @@ sub _check_column {
     return $column;
 }
 
-# sub fetch_by_name {
-#     my ($self, $name) = @_;
-# 
-#     my $sth = $self->_fetch_by_name_sth;
-#     $sth->execute($name);
-#     my $attribs = $self->_fetch_by_name_sth->fetchrow_hashref;
-#     return unless $attribs;
-# 
-#     return Bio::Otter::Lace::DB::Column->new(%$attribs, is_stored => 1);
-# }
-
-# sub fetch_all {
-#     my ($self) = @_;
-#     my $sth = $self->_fetch_all_sth;
-#     return $self->_do_fetch_multi($sth);
-# }
-# 
-# sub fetch_where {
-#     my ($self, $condition, @args) = @_;
-#     my $arg_hash = { @args };
-#     my $bind_values = $arg_hash->{'-bind_values'};
-#     my $sql = sprintf('%s %s', $SQL{'fetch_where_stem'}, $condition);
-#     my $sth = $self->_prepare_cached('_fetch_where_' . $condition, $sql);
-#     return $self->_do_fetch_multi($sth, $bind_values);
-# }
-# 
-# sub _do_fetch_multi {
-#     my ($self, $sth, $bind_values) = @_;
-#     $bind_values ||= [ ];
-#     my @columns;
-#     $sth->execute(@{$bind_values});
-#     while (my $attribs = $sth->fetchrow_hashref) {
-#         push @columns, Bio::Otter::Lace::DB::Column->new(%$attribs, is_stored => 1);
-#     }
-#     return @columns;
-# }
 
 # Special atomic update for filter_get script.
 #
@@ -157,7 +117,6 @@ sub _store_sth         { return shift->_prepare_canned('store'); }
 sub _update_sth        { return shift->_prepare_canned('update'); }
 sub _delete_sth        { return shift->_prepare_canned('delete'); }
 sub _fetch_by_name_sth { return shift->_prepare_canned('fetch_by_name'); }
-sub _fetch_all_sth     { return shift->_prepare_canned('fetch_all'); }
 
 sub _prepare_canned {
     my ($self, $name) = @_;
