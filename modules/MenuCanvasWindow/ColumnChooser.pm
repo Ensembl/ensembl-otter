@@ -216,6 +216,8 @@ sub redraw {
 
     $self->update_snail_trail;
     $self->do_render;
+
+    return;
 }
 
 sub do_filter {
@@ -225,6 +227,8 @@ sub do_filter {
         or return;
     $self->set_search_entry($new_cllctn->search_string);
     $self->redraw;
+
+    return;
 }
 
 sub go_back {
@@ -237,6 +241,8 @@ sub go_back {
     my $cllctn = $sh->back or return;
     $self->set_search_entry($cllctn->search_string);
     $self->redraw;
+
+    return;
 }
 
 sub reset_search {
@@ -250,6 +256,8 @@ sub reset_search {
         $s->packForget;
     }
     $self->redraw;
+
+    return;
 }
 
 sub collapse_all {
@@ -257,6 +265,8 @@ sub collapse_all {
 
     $self->current_Collection->collapse_all;
     $self->redraw;
+
+    return;
 }
 
 sub expand_all {
@@ -264,6 +274,8 @@ sub expand_all {
 
     $self->current_Collection->expand_all;
     $self->redraw;
+
+    return;
 }
 
 sub change_selection {
@@ -271,6 +283,8 @@ sub change_selection {
 
     $self->current_Collection->$method();
     $self->redraw;
+
+    return;
 }
 
 sub set_search_entry {
@@ -278,6 +292,8 @@ sub set_search_entry {
 
     $self->{'_entry_search_string'} = $string;
     $self->{'_search_Entry'}->icursor('end');    
+
+    return;
 }
 
 sub update_snail_trail {
@@ -298,6 +314,8 @@ sub update_snail_trail {
             -font   => ['Helvetica', 12, $i == $I ? ('bold', 'underline') : ('normal')],
             );
     }
+
+    return;
 }
 
 sub snail_trail_steps {
@@ -335,6 +353,7 @@ sub name_max_x {
 
     if ($bkt and $max_x) {
         $self->{'_name_max_x'}{$bkt} = $max_x;
+        return;
     }
     else {
         return $self->{'_name_max_x'}{$self->current_Bracket};
@@ -397,6 +416,8 @@ sub draw_Item {
             -font   => $self->normal_font,
             );        
     }
+
+    return;
 }
 
 sub normal_font {
@@ -432,6 +453,8 @@ sub draw_status_indicator {
     # my $next = sub { $self->next_status($item) };
     # $canvas->bind("STATUS_RECTANGLE $item", '<Button-1>', $next);
     # $canvas->bind("STATUS_LABEL $item",     '<Button-1>', $next);
+
+    return;
 }
 
 # sub next_status {
@@ -464,6 +487,8 @@ sub update_status_indicator {
     $canvas->itemconfigure("STATUS_LABEL $item",
         -text   => $item->status,
         );
+
+    return;
 }
 
 {
@@ -502,6 +527,8 @@ sub update_status_indicator {
                 $self->update_item_select_state($item);
                 });
         }
+
+        return;
     }
 }
 
@@ -513,6 +540,8 @@ sub update_item_select_state {
         $cllctn->select_Bracket($item);
     }
     $self->do_render;
+
+    return;
 }
 
 {
@@ -546,6 +575,8 @@ sub update_item_select_state {
             $self->current_Collection->is_collapsed($item, ! $is_collapsed);
             $self->do_render;
             });
+
+        return;
     }
     
 }
@@ -637,6 +668,8 @@ sub calcualte_text_column_sizes {
         my ($name_max_x) = $self->max_x_y_of_text_array($font, @names);
         $self->name_max_x($bkt, $name_max_x);
     }
+
+    return;
 }
 
 
