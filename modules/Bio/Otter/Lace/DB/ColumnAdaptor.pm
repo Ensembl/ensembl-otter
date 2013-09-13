@@ -92,6 +92,8 @@ sub fetch_state {
         $column->$key($value);
     }
     $column->is_stored(1);
+
+    return;
 }
 
 sub _check_column {
@@ -140,6 +142,8 @@ sub fetch_ColumnCollection_state {
     foreach my $col ($clltn->list_Columns) {
         $self->fetch_state($col);
     }
+
+    return;
 }
 
 sub store_ColumnCollection_state {
@@ -155,6 +159,8 @@ sub store_ColumnCollection_state {
         }
     }
     $self->commit;
+
+    return;
 }
 
 sub store_Column_state {
@@ -168,6 +174,8 @@ sub store_Column_state {
         $self->store($col);
     }
     $self->commit;
+
+    return;
 }
 
 
