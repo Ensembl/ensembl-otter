@@ -37,9 +37,11 @@ sub VALID_STATUS_LIST {
 sub new {
     my ($pkg) = @_;
 
-    return bless {
+    my $new = {
         '_status'   => 'Available',
-    }, $pkg;
+    };
+
+    return bless $new, $pkg;
 }
 
 sub is_Bracket {
