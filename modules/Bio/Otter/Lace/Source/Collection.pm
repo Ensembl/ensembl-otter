@@ -94,6 +94,8 @@ sub construct_regex_list {
         }
         push(@$r_list, [$test, qr{$term}im]);
     }
+
+    return;
 }
 
 sub regex_list {
@@ -158,6 +160,8 @@ sub save_Columns_selected_flag_to_Filter_wanted {
     foreach my $col ($self->list_Columns) {
         $col->Filter->wanted($col->selected);
     }
+
+    return;
 }
 
 sub clear_Items {
@@ -236,6 +240,8 @@ sub select_Bracket {
     foreach my $item ($self->get_Bracket_contents($bracket)) {
         $item->selected($flag);
     }
+
+    return;
 }
 
 sub update_all_Bracket_selection {
@@ -259,6 +265,8 @@ sub update_all_Bracket_selection {
             $skip_to_next_bracket = 1;
         }
     }
+
+    return;
 }
 
 sub filter {
@@ -353,6 +361,8 @@ sub expand_all {
     foreach my $bracket (grep { $_->is_Bracket } $self->list_Items) {
         $self->is_collapsed($bracket, 0);
     }
+
+    return;
 }
 
 sub collapse_all {
@@ -361,6 +371,8 @@ sub collapse_all {
     foreach my $bracket (grep { $_->is_Bracket } $self->list_Items) {
         $self->is_collapsed($bracket, 1);
     }
+
+    return;
 }
 
 sub select_default {
@@ -370,6 +382,8 @@ sub select_default {
         $col->selected($col->Filter->wanted_default);
     }
     $self->update_all_Bracket_selection;
+
+    return;
 }
 
 sub select_all {
@@ -378,6 +392,8 @@ sub select_all {
     foreach my $item ($self->list_Items) {
         $item->selected(1);
     }
+
+    return;
 }
 
 sub select_none {
@@ -386,6 +402,8 @@ sub select_none {
     foreach my $item ($self->list_Items) {
         $item->selected(0);
     }
+
+    return;
 }
 
 sub set_search_entry {
@@ -393,6 +411,8 @@ sub set_search_entry {
 
     $self->{'_entry_search_string'} = $string;
     $self->{'_search_Entry'}->icursor('end');    
+
+    return;
 }
 
 
