@@ -14,10 +14,12 @@ use Bio::Otter::Lace::Source::Item::Column;
 sub new {
     my ($pkg) = @_;
 
-    return bless {
+    my $new = {
         '_item_list'        => [],
         '_search_string'    => '',
-    }, $pkg;
+    };
+
+    return bless $new, $pkg;
 }
 
 sub new_from_Filter_list {
