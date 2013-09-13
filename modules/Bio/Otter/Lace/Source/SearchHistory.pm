@@ -76,7 +76,7 @@ sub index_and_search_string_list {
     my ($self) = @_;
 
     my @trail = map { $_->search_string } @{$self->{'_collection_list'}};
-    $trail[$#trail] = '...';    # Last element will always be empty
+    $trail[-1] = '...';    # Last element will always be empty
     return ($self->{'_index'}, @trail);
 }
 
