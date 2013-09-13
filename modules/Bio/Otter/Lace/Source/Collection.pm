@@ -58,7 +58,7 @@ sub __maintain_Bracket_array {
         # we don't need to deal with shortening the array of Brackets
         # if the classification list is shorter than the array of
         # Brackets, since it must contain a new name.
-        unless (($bkt and defined($name)) and lc($bkt->name) eq lc($name)) {
+        unless (($bkt && defined($name)) && lc($bkt->name) eq lc($name)) {
             $bkt = Bio::Otter::Lace::Source::Item::Bracket->new;
             $bkt->name($name);  # We use the capitalisation of the fist occurrence of this name
             $bkt->indent($i);
@@ -91,7 +91,7 @@ sub construct_regex_list {
     $string =~ s{\\}{\\\\};     # So that perl regex escapes survive quotewords()
     foreach my $term (quotewords('\s+', 0, $string)) {
         my $test = 1;
-        if ($term ne '-' and $term =~ s/^-//) {
+        if ($term ne '-' && $term =~ s/^-//) {
             $test = 0;
         }
         push(@$r_list, [$test, qr{$term}im]);
@@ -258,7 +258,7 @@ sub update_all_Bracket_selection {
             $skip_to_next_bracket = 0;
             splice(@bracket_path, $item->indent, @bracket_path - $item->indent, $item);
         }
-        elsif (! $skip_to_next_bracket and ! $item->selected) {
+        elsif (! $skip_to_next_bracket && ! $item->selected) {
             # There's an unselected column at this level, so
             # unselect all brackets down to this level 
             foreach my $bkt (@bracket_path) {
@@ -304,7 +304,7 @@ sub filter {
                 }
                 last;
             }
-            elsif (! $true and ! $item->is_Bracket) {
+            elsif (! $true && ! $item->is_Bracket) {
                 # Keep each column which doesn't match negated search terms
                 $hit = 1;
                 last;

@@ -351,7 +351,7 @@ sub current_Bracket {
 sub name_max_x {
     my ($self, $bkt, $max_x) = @_;
 
-    if ($bkt and $max_x) {
+    if ($bkt && $max_x) {
         $self->{'_name_max_x'}{$bkt} = $max_x;
         return;
     }

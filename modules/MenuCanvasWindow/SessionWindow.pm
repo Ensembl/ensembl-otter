@@ -1348,7 +1348,7 @@ sub region_name_and_next_locus_number {
 
     my $assembly = $self->Assembly;
     # Check that our coordinate is not off the end of the assembly
-    if ($most_3prime and ($most_3prime < 0 or $most_3prime > $assembly->Sequence->sequence_length)) {
+    if ($most_3prime && ($most_3prime < 0 || $most_3prime > $assembly->Sequence->sequence_length)) {
         $most_3prime = undef;
     }
     my $region_name = $most_3prime
@@ -1364,7 +1364,7 @@ sub region_name_and_next_locus_number {
     my $max = 0;
     foreach my $sub ($assembly->get_all_SubSeqs) {
         my ($n) = $sub->name =~ /$regex/;
-        if ($n and $n > $max) {
+        if ($n && $n > $max) {
             $max = $n;
         }
     }
@@ -1405,7 +1405,7 @@ sub make_variant_subsequence {
         my $max = 0;
         foreach my $sub ($assembly->get_all_SubSeqs) {
             my ($n) = $sub->name =~ /$regex/;
-            if ($n and $n > $max) {
+            if ($n && $n > $max) {
                 $max = $n;
             }
         }
@@ -1726,8 +1726,8 @@ sub get_all_Subseq_clusters {
     for (my $i = 1; $i < @subseq; $i++) {
         my $this = $subseq[$i];
         if ($this->strand == $strand
-            and $this->start <= $y
-            and $this->end   >= $x)
+            && $this->start <= $y
+            && $this->end   >= $x)
         {
             push(@{$clust[$ci]}, $this);
             $x = $this->start if $this->start < $x;
@@ -2550,20 +2550,20 @@ sub zircon_zmap_view_features_loaded {
             # filter_get will have updated gff_file field in SQLite db
             # so we need to fetch it from the database:
             $col_aptr->fetch_state($column);
-            if ($status == 0 and $column->status ne 'Error') {
+            if ($status == 0 && $column->status ne 'Error') {
                 $state_changed = 1;
                 $column->status('Error');
             }
             elsif ($status == 1) {
                 # Column loaded OK, but does it have anything in it?
-                if ($column->status ne 'Visible' and $feature_count) {
+                if ($column->status ne 'Visible' && $feature_count) {
                     $state_changed = 1;
                     $column->status('Visible');
                     if ($column->process_gff) {
                         push @columns_to_process, $column;
                     }
                 }
-                elsif ($column->status ne 'Empty' and $feature_count == 0) {
+                elsif ($column->status ne 'Empty' && $feature_count == 0) {
                     $state_changed = 1;
                     $column->status('Empty');
                 }
