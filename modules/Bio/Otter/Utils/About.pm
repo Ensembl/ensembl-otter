@@ -4,6 +4,7 @@ use warnings;
 
 use Bio::Otter::Git;
 use Try::Tiny;
+use Bio::EnsEMBL::ApiVersion ();
 
 
 =head1 NAME
@@ -83,6 +84,11 @@ sub tools_versions {
         chomp ($txt, $which);
         push @v, "$txt from $which";
     }
+
+    push @v, sprintf('Client EnsEMBL %s from %s',
+                     Bio::EnsEMBL::ApiVersion::software_version(),
+                     $INC{'Bio/EnsEMBL/ApiVersion.pm'});
+
     return @v;
 }
 
