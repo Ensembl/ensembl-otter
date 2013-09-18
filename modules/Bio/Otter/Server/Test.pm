@@ -14,6 +14,8 @@ use Bio::Otter::Git;
 use Bio::Otter::Auth::Pagesmith;
 use Bio::Otter::Auth::SSO;
 
+use Bio::EnsEMBL::ApiVersion ();
+
 
 # keep the align-to-centre layout, it's easier to read than YAML
 sub __hash2table {
@@ -118,7 +120,15 @@ sub generate {
     $out{version} =
       { major => Bio::Otter::Version->version,
         '$^X' => $^X, '$]' => $],
-        code => try { Bio::Otter::Git->as_text } catch { "FAIL: $_" } };
+        ensembl_api => Bio::EnsEMBL::ApiVersion::software_version(),
+        ensembl_from => $INC{'Bio/EnsEMBL/ApiVersion.pm'},
+        otter_from => __FILE__,
+        otter_origin => $INC{'Bio/Otter/Git/Cache.pm'} ? 'build' : 'clone',
+      };
+    $out{version}{code} = try {
+        local $ENV{PATH} = '/bin:/usr/bin';
+        Bio::Otter::Git->as_text;
+    } catch { "FAIL: $_" };
 
     my $dbh = DBI->connect
       ("DBI:mysql:database=pipe_human;host=otp1slave;port=3322",
