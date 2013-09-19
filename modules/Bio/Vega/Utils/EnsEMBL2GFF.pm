@@ -291,6 +291,9 @@ use Bio::Vega::Utils::GFF;
 
         my $gff = $self->SUPER::_gff_hash(%args);
 
+        my $cigar_string = $self->cigar_string;
+        $gff->{'attributes'}->{'cigar_ensembl'} = qq{"$cigar_string"};
+
         my @fps = $self->ungapped_features;
         if (@fps > 1) {
             my $gap_string =
