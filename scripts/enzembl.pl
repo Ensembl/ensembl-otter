@@ -63,6 +63,8 @@ my $usage = sub { exec('perldoc', $0) };
 my $requested_region = {};
 my $common_region = {};
 
+my $gff_version = 2;
+
 # subroutines
 
 sub dbh_from_cfg {
@@ -145,6 +147,7 @@ GetOptions(
         'zmap_cfg:s',   \$zmap_config_file,
         'verbose|v',    \$verbose,
         'persist|p',    \$persist,
+        'gff_version:s',\$gff_version,
         'help|h',               sub { exec('perldoc', $0) },
 ) or pod2usage(1);
 
@@ -498,7 +501,7 @@ for my $db (keys %dbs) {
         print "Database $db:\n" if $verbose;
 
         $gff_header ||=
-            ($t_slice || $slice)->gff_header(include_dna => 1);
+            ($t_slice || $slice)->gff_header(gff_version => $gff_version, include_dna => 1);
         $gff .= $slice->to_gff(
                 analyses                        => $dbs{$db}->{analyses},
                 feature_types           => $dbs{$db}->{feature_types},

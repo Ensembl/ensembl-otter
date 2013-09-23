@@ -5,8 +5,12 @@ package Bio::Vega::Utils::GFF;
 use strict;
 use warnings;
 
+use Carp;
+
+use Bio::Vega::Utils::GFF::Format;
+
 sub gff_header {
-    my ($name, $start, $end, $dna) = @_;
+    my ($gff_version, $name, $start, $end, $dna) = @_;
 
     # build up a date string in the format specified by the GFF spec
 
@@ -16,7 +20,7 @@ sub gff_header {
     my $date = sprintf "%4d-%02d-%02d", $year, $mon, $mday;
 
     my $hdr =
-        "##gff-version 2\n"
+        "##gff-version $gff_version\n"
       . "##source-version EnsEMBL2GFF 1.0\n"
       . "##date $date\n"
       . "##sequence-region $name $start $end\n";
@@ -24,6 +28,28 @@ sub gff_header {
     $hdr .= "##DNA\n##$dna\n##end-DNA\n" if $dna;
 
     return $hdr;
+}
+
+my $version_format_hash = {
+
+    2 => {
+        'attribute_format' => '%s %s',
+        'attribute_escape' => 0,
+    },
+
+    3 => {
+        'attribute_format' => '%s=%s',
+        'attribute_escape' => 1,
+    },
+
+};
+
+sub gff_format {
+    my ($gff_version) = @_;
+    my $format_hash = $version_format_hash->{$gff_version};
+    defined $format_hash or croak sprintf "unsupported GFF version: '%s'", $gff_version;
+    my $format = Bio::Vega::Utils::GFF::Format->new($format_hash);
+    return $format;
 }
 
 1;

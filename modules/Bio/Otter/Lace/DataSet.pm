@@ -47,6 +47,12 @@ sub name {
     return $self->{'_name'};
 }
 
+sub gff_version {
+    my ($self) = @_;
+    return $self->{'_gff_version'} ||=
+        $self->Client->config_value('gff_version');
+}
+
 sub zmap_config_global {
     my ($self) = @_;
     my $short_title => $self->Client->config_value('short_window_title_prefix');
@@ -75,8 +81,9 @@ sub zmap_config {
     my ($self, $session) = @_;
 
     my $ds_name = $self->name;
+    my $gff_version = $self->gff_version;
     my $import_argument_string =
-        "--dataset=${ds_name} --gff_version=2";
+        "--dataset=${ds_name} --gff_version=${gff_version}";
 
     my $stanza = { %{ $self->config_section('zmap') } };
 

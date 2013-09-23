@@ -162,11 +162,12 @@ sub gff_header {
 
     my ($self) = @_;
 
+    my $gff_version = $self->param('gff_version');
     my $name    = $self->param('type');
     my $start   = $self->param('start');
     my $end     = $self->param('end');
 
-    return Bio::Vega::Utils::GFF::gff_header($name, $start, $end);
+    return Bio::Vega::Utils::GFF::gff_header($gff_version, $name, $start, $end);
 }
 
 sub _features_gff {
@@ -174,6 +175,8 @@ sub _features_gff {
 
     my %gff_args = ();
     $gff_args{$_} = $self->param($_) for $self->_gff_keys;
+    my $gff_version = $self->param('gff_version');
+    $gff_args{'gff_format'} = Bio::Vega::Utils::GFF::gff_format($gff_version);
     my $features_gff = join '', map { $_->to_gff(%gff_args) || '' } @{$features};
 
     return $features_gff;
