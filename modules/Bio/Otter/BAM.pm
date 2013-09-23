@@ -120,13 +120,14 @@ sub bam_parameters {
 sub url_query {
     my ($self, $session) = @_;
     my $slice = $session->smart_slice;
+    my $DataSet = $session->DataSet;
     my $query = {
         -chr   => $slice->ssname,
         -start => $slice->start,
         -end   => $slice->end,
-        -dataset => $session->DataSet->name,
+        -dataset => $DataSet->name,
         ( map { ( "-$_" => $self->$_ ) } @{$bam_parameters} ),
-        -gff_version => 2,
+        -gff_version => $DataSet->gff_version,
     };
     return $query;
 }

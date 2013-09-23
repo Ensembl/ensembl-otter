@@ -1102,6 +1102,7 @@ sub script_arguments {
     my $arguments = {
         client => 'otterlace',
         %{$self->smart_slice->toHash},
+        gff_version => $self->DataSet->gff_version,
         session_dir => $self->home,
         url_root    => $self->Client->url_root,
         cookie_jar  => $ENV{'OTTERLACE_COOKIE_JAR'},

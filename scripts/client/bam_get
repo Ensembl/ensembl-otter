@@ -9,6 +9,7 @@ use Bio::DB::Sam;
 use Bio::Otter::Lace::Defaults;
 use Bio::Otter::Fetch::BAM;
 use Bio::Otter::Mapping;
+use Bio::Vega::Utils::GFF;
 
 # parse the command line
 
@@ -83,39 +84,7 @@ my $sam = Bio::DB::Sam->new
     );
 
 my $bam_fetch = Bio::Otter::Fetch::BAM->new( -sam => $sam );
-
-sub gff_escape {
-    # escapes a minimal set of characters
-    s/([\t\r\n[:cntrl:];=%&])/sprintf "%%%02X", ord($1)/eg;
-    return;
-}
-
-sub gff_escape_seqid {
-    # escapes everything except a restricted set of characters
-    s/([^-a-zA-Z0-9.:^*$@!+_?|])/sprintf "%%%02X", ord($1)/eg;
-    return;
-}
-
-sub gff_escape_source {
-    # escapes everything except a restricted set of characters
-    s/([^-a-zA-Z0-9.:^*$@!+_? ])/sprintf "%%%02X", ord($1)/eg;
-    return;
-}
-
-sub gff_escape_attribute {
-    # like gff_escape, but escapes commas too
-    s/([\t\r\n[:cntrl:];=%&,])/sprintf "%%%02X", ord($1)/eg;
-    return;
-}
-
-sub gff_escape_target {
-    # like gff_escape, but escapes commas and spaces too
-    s/([\t\r\n[:cntrl:];=%&, ])/sprintf "%%%02X", ord($1)/eg;
-    return;
-}
-
-my $chr_field = $chr;
-gff_escape_seqid for $chr_field;
+my $gff_format = Bio::Vega::Utils::GFF::gff_format($gff_version);
 
 sub _print_header {
     print
@@ -127,56 +96,21 @@ GFF
     return;
 }
 
-my $strands = {
-    1  => '+',
-    -1 => '-',
-};
-
-my    ($attributes_format, $attributes_quote, $attributes_escape) = ($gff_version == 3)
-    ? ('%s=%s',            0,                 1                 )
-    : ('%s %s',            1,                 0                 )
-    ;
-
-my @attributes_quotable = qw( Name Class Target cigar_bam );
-my $attributes_quotable = { map { $_ => 1 } @attributes_quotable };
-
 sub _print_feature {
     my ($feature, $start, $end) = @_;
 
-    # See Bio::DB::Bam::Alignment for documentation of available methods on $feature
-    my $name = $feature->name;
-    gff_escape_target for $name;
-
     # the -gff_feature_source flag overrides the source from the BAM file
     my $source = $gff_feature_source || $feature->source_tag;
-
     my ($score) = $feature->get_tag_values('AS');
-
     my $query = $feature->query;
-    my $query_strand = $strands->{$query->strand};
 
-    my @fields =
-        (
-         'read',
-         (sprintf "%d", $start),
-         (sprintf "%d", $end),
-         (defined $score ? (sprintf "%f", $score) : '.'),
-         $query_strand,
-         $feature->phase || '.',
-        );
-
-    my @align_fields = ($query->start, $query->end);
-    push @align_fields, $query_strand if $query_strand;
-
-    # the Target tag - escaping this requires special handling of
-    # spaces in the query name
-    my $query_name = $query->name;
-    if ($attributes_escape) {
-        gff_escape_target for $query_name;
+    my @align_fields = ( $query->start, $query->end );
+    my @target_fields = ( $query->name, $query->start, $query->end );
+    my $query_strand = $query->strand;
+    if ($query_strand) {
+        push @align_fields, $query_strand;
+        push @target_fields, $query_strand;
     }
-    my @target_fields = ( $query->start, $query->end );
-    push @target_fields, $query_strand if $query_strand;
-    my $target .= join ' ', $query_name, @target_fields;
 
     my $cigar = $feature->cigar_str;
     $cigar =~ s/\d+S//g;    # Remove BAM "S" clipping strings from CIGAR
@@ -190,40 +124,28 @@ sub _print_feature {
     my @gap = map {
         ($_->[0] eq 'S') ? ( ) : ( join '', @{$_} );
     } @{$feature->cigar_array};
-    if ($query_strand eq '-') {
+    if ($query_strand == -1) {
         @gap = reverse @gap;
     }
 
-    my @attributes = (
+    my $attribute_hash = {
         Class      => 'Sequence',
-        Name       => $name,
-        Align      => join(' ', @align_fields),
+        Name       => $feature->name,
+        Align      => \ @align_fields,
         Length     => $feature->l_qseq,
         cigar_bam  => $cigar,
         Gap        => join(' ', @gap),
-        Target     => $target,
+        Target     => \ @target_fields,
         sequence   => $query->seq->seq,
-        );
+    };
 
-    my @attribute_strings = ();
-    while ( my ($key, $value) = splice(@attributes, 0, 2) ) {
-        if ($attributes_quote && $attributes_quotable->{$key}) {
-            $value = qq{"$value"};
-        }
-        if ($attributes_escape) {
-            unless ($key eq 'Target') { # the Target tag is already escaped
-                gff_escape_attribute for $value;
-            }
-            gff_escape_attribute for $key;
-        }
-        push @attribute_strings, sprintf $attributes_format, $key, $value;
-    }
-    my $attributes_string = join ";", @attribute_strings;
+    my $strand = $query->strand;
+    my $phase = $feature->phase;
 
-    gff_escape_source for $source;
-    gff_escape for @fields;
-    printf "%s\n", join "\t"
-        , $chr_field, $source, @fields, $attributes_string;
+    print $gff_format->gff_line(
+        $chr, $source, 'read',
+        $start, $end, $score, $strand, $phase,
+        $attribute_hash);
 
     return;
 }

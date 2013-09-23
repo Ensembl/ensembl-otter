@@ -22,12 +22,13 @@ use Bio::Vega::Utils::GFF;
     sub gff_header {
         my ($self, %args) = @_;
 
+        my $gff_version = $args{gff_version};
         my $name  = $args{gff_seqname} || $self->seq_region_name;
         my $start = $self->start;
         my $end   = $self->end;
         my $seq   = $args{include_dna} ? $self->seq : undef;
 
-        return Bio::Vega::Utils::GFF::gff_header($name, $start, $end, $seq);
+        return Bio::Vega::Utils::GFF::gff_header($gff_version, $name, $start, $end, $seq);
     }
 
     sub to_gff {
@@ -48,8 +49,12 @@ use Bio::Vega::Utils::GFF;
         my $verbose        = $args{verbose};
         my $target_slice   = $args{target_slice} || $self;
         my $common_slice   = $args{common_slice};
-        my $gff_source     = $args{gff_source};
-        my $gff_seqname    = $args{gff_seqname};
+
+        my %gff_arg_hash = (
+            gff_format  => Bio::Vega::Utils::GFF::gff_format($args{gff_version}),
+            gff_source  => $args{gff_source},
+            gff_seqname => $args{gff_seqname},
+            );
 
         my $sources_to_types = $args{sources_to_types};
 
@@ -111,9 +116,7 @@ use Bio::Vega::Utils::GFF;
                             print "Truncated transcript: " . $feature->display_id . "\n" if $truncated && $verbose;
                         }
 
-                        $gff .=
-                            $feature->to_gff(gff_source => $gff_source,
-                                             gff_seqname => $gff_seqname);
+                        $gff .= $feature->to_gff(%gff_arg_hash);
 
                         if ($sources_to_types) {
 
@@ -164,17 +167,6 @@ use Bio::Vega::Utils::GFF;
 
         my $gff = $self->_gff_hash(%args);
 
-        $gff->{score}  = '.' unless defined $gff->{score};
-        $gff->{strand} = '.' unless defined $gff->{strand};
-        $gff->{frame}  = '.' unless defined $gff->{frame};
-
-        # order as per GFF spec: http://www.sanger.ac.uk/Software/formats/GFF/GFF_Spec.shtml
-
-        my $gff_str = join("\t",
-            $gff->{seqname}, $gff->{source}, $gff->{feature}, $gff->{start},
-            $gff->{end},     $gff->{score},  $gff->{strand},  $gff->{frame},
-        );
-
         if ($extra_attrs) {
 
             # combine the extra attributes with any existing ones (duplicate keys will get squashed!)
@@ -182,16 +174,9 @@ use Bio::Vega::Utils::GFF;
             @{ $gff->{attributes} }{ keys %$extra_attrs } = values %$extra_attrs;
         }
 
-        if ($gff->{attributes}) {
-
-            my @attrs = map {
-                my $attribute = $gff->{attributes}->{$_};
-                defined $attribute ? ( $_ . ' ' . $attribute ) : ( );
-            } keys %{ $gff->{attributes} };
-
-            $gff_str .= "\t" . join(' ; ', @attrs);
-        }
-        $gff_str .= "\n";
+        my $gff_format = ${args}{gff_format};
+        my $gff_str = $gff_format->gff_line(@{$gff}{
+            qw( seqname source feature start end score strand frame attributes)});
 
         return $gff_str;
     }
@@ -208,7 +193,7 @@ use Bio::Vega::Utils::GFF;
             feature => $self->_gff_feature,
             start   => $self->seq_region_start,
             end     => $self->seq_region_end,
-            strand  => ($self->strand == 1 ? '+' : ($self->strand == -1 ? '-' : '.'))
+            strand  => $self->strand,
         };
 
         return $gff;
@@ -246,10 +231,9 @@ use Bio::Vega::Utils::GFF;
         $gff->{score}   = $self->score;
         $gff->{feature} = 'misc_feature';
 
-        my $display_label =
+        $gff->{attributes}->{Name} =
             $self->display_label ||
             $self->analysis->logic_name;
-        $gff->{attributes}->{Name} = '"' . $display_label . '"';
 
         return $gff;
     }
@@ -267,14 +251,10 @@ use Bio::Vega::Utils::GFF;
         $gff->{'score'} = $self->score;
         $gff->{'feature'} = ($self->analysis && $self->analysis->gff_feature) || 'similarity';
 
-        my $name = $self->hseqname;
-        my $align =
-            $self->hstart . ' ' .
-            $self->hend . ' ' .
-            ($self->hstrand == -1 ? '-' : '+');
+        my $align = [ $self->hstart, $self->hend, $self->hstrand ];
 
-        $gff->{'attributes'}{'Class'}     = qq{"Sequence"};
-        $gff->{'attributes'}{'Name'}      = qq{"$name"};
+        $gff->{'attributes'}{'Class'}     = 'Sequence';
+        $gff->{'attributes'}{'Name'}      = $self->hseqname;
         $gff->{'attributes'}{'Align'}     = $align;
         $gff->{'attributes'}{'percentID'} = $self->percent_id;
 
@@ -291,8 +271,7 @@ use Bio::Vega::Utils::GFF;
 
         my $gff = $self->SUPER::_gff_hash(%args);
 
-        my $cigar_string = $self->cigar_string;
-        $gff->{'attributes'}->{'cigar_ensembl'} = qq{"$cigar_string"};
+        $gff->{'attributes'}->{'cigar_ensembl'} = $self->cigar_string;
 
         my @fps = $self->ungapped_features;
         if (@fps > 1) {
@@ -300,7 +279,7 @@ use Bio::Vega::Utils::GFF;
                 join ',', map {
                     join ' ', $_->seq_region_start, $_->seq_region_end, $_->hstart, $_->hend;
             } @fps;
-            $gff->{'attributes'}->{'Gaps'} = qq{"$gap_string"};
+            $gff->{'attributes'}->{'Gaps'} = $gap_string;
         }
 
         return $gff;
@@ -315,7 +294,7 @@ use Bio::Vega::Utils::GFF;
         my ($self, @args) = @_;
 
         my $gff = $self->SUPER::_gff_hash(@args);
-        $gff->{attributes}{'Class'} = qq{"Protein"};
+        $gff->{attributes}{'Class'} = 'Protein';
         return $gff;
     }
 }
@@ -402,7 +381,7 @@ use Bio::Vega::Utils::GFF;
         my $extra_attrs = {};
 
         if (my $stable = $self->stable_id) {
-            $extra_attrs->{'Locus_Stable_ID'} = qq{"$stable"};
+            $extra_attrs->{'Locus_Stable_ID'} = $stable;
         }
 
         if (my $url_fmt = $args{'url_string'}) {
@@ -416,7 +395,7 @@ use Bio::Vega::Utils::GFF;
             else {
                 # Assume it is an ensembl gene
                 my $url = sprintf $url_fmt, $self->stable_id;
-                $extra_attrs->{'URL'} = qq{"$url"};
+                $extra_attrs->{'URL'} = $url;
             }
         }
 
@@ -424,14 +403,14 @@ use Bio::Vega::Utils::GFF;
             if (my $xr = $self->display_xref) {
                 $extra_attrs->{'synthetic_gene_name'} = $xr->display_id;
                 my $name = sprintf "%s.%d", $xr->display_id, $gene_numeric_id;
-                $extra_attrs->{'Locus'} = qq{"$name"};
+                $extra_attrs->{'Locus'} = $name;
             }
             elsif (my $stable = $self->stable_id) {
-                $extra_attrs->{'Locus'} = qq{"$stable"};
+                $extra_attrs->{'Locus'} = $stable;
             }
             else {
                 my $disp = $self->display_id;
-                $extra_attrs->{'Locus'} = qq{"$disp"};
+                $extra_attrs->{'Locus'} = $disp;
             }
         }
 
@@ -446,8 +425,8 @@ use Bio::Vega::Utils::GFF;
                 $out{'synthetic_gene_name'} = $xr->display_id;
                 my $name = sprintf "%s.%d", $xr->display_id, $gene_numeric_id;
                 my $url = sprintf $url_fmt, $xr->primary_id;
-                $out{'Locus'} = qq{"$name"};
-                $out{'URL'}   = qq{"$url"};
+                $out{'Locus'} = $name;
+                $out{'URL'}   = $url;
             }
         }
         unless (keys %out) {
@@ -468,9 +447,9 @@ use Bio::Vega::Utils::GFF;
         my $gff = $self->SUPER::_gff_hash(%args);
 
         $gff->{'feature'} = 'Sequence';
-        $gff->{'attributes'}{'Class'} = qq{"Sequence"};
+        $gff->{'attributes'}{'Class'} = 'Sequence';
         if (my $stable = $self->stable_id) {
-            $gff->{'attributes'}{'Stable_ID'} = qq{"$stable"};
+            $gff->{'attributes'}{'Stable_ID'} = $stable;
         }
 
         my $tsct_numeric_id = $self->dbID || ++$tsct_count;
@@ -488,7 +467,7 @@ use Bio::Vega::Utils::GFF;
         elsif (my $ana = $self->analysis) {
             $name = sprintf "%s.%d", $ana->logic_name, $tsct_numeric_id;
         }
-        $gff->{attributes}->{Name} = qq{"$name"};
+        $gff->{attributes}->{Name} = $name;
         return $gff;
     }
 
@@ -512,7 +491,6 @@ use Bio::Vega::Utils::GFF;
         my $gff = $self->SUPER::to_gff(%args);
         my $gff_hash = $self->_gff_hash(%args);
 
-        # $name is already double-quoted
         my $name = $gff_hash->{'attributes'}{'Name'};
 
         # add gff lines for each of the introns and exons
@@ -546,12 +524,15 @@ use Bio::Vega::Utils::GFF;
                 $frame = 0;
             }
 
-            my $attrib_str = qq{Class "Sequence" ; Name $name};
+            my $attrib_hash = {
+                Class => 'Sequence',
+                Name  => $name,
+            };
             if (my $stable = $tsl->stable_id) {
-                $attrib_str .= qq{ ; Stable_ID "$stable"};
+                $attrib_hash->{Stable_ID} = $stable;
             }
-            $gff .= join(
-                "\t",
+            my $gff_format = $args{gff_format};
+            $gff .= $gff_format->gff_line(
                 $gff_hash->{'seqname'},
                 $gff_hash->{'source'},
                 'CDS',    # feature
@@ -560,8 +541,8 @@ use Bio::Vega::Utils::GFF;
                 '.',      # score
                 $gff_hash->{'strand'},
                 $frame,
-                $attrib_str,
-            ) . "\n";
+                $attrib_hash,
+                );
         }
 
         return $gff;
@@ -674,9 +655,9 @@ use Bio::Vega::Utils::GFF;
         my ($self, @args) = @_;
         my $gff = $self->SUPER::_gff_hash(@args);
         $gff->{'feature'} = 'exon';
-        $gff->{'attributes'}{'Class'} = qq{"Sequence"};
+        $gff->{'attributes'}{'Class'} = 'Sequence';
         if (my $stable = $self->stable_id) {
-            $gff->{'attributes'}{'Stable_ID'} = qq{"$stable"};
+            $gff->{'attributes'}{'Stable_ID'} = $stable;
         }
         return $gff;
     }
@@ -690,7 +671,7 @@ use Bio::Vega::Utils::GFF;
         my ($self, @args) = @_;
         my $gff = $self->SUPER::_gff_hash(@args);
         $gff->{feature} = 'intron';
-        $gff->{attributes}->{Class} = qq("Sequence");
+        $gff->{attributes}->{Class} = 'Sequence';
         return $gff;
     }
 }
@@ -715,8 +696,8 @@ use Bio::Vega::Utils::GFF;
             @{$gff}{qw( start end )} = ($end, $start);
         }
 
-        $gff->{attributes}->{Name} = qq("$name - $allele");
-        $gff->{attributes}->{URL}  = qq("$url");
+        $gff->{attributes}->{Name} = "$name - $allele";
+        $gff->{attributes}->{URL}  = $url;
 
         return $gff;
     }
@@ -747,9 +728,10 @@ use Bio::Vega::Utils::GFF;
             $gff->{feature} = 'similarity';
             $gff->{score}   = $self->score;
 
-            $gff->{attributes}->{Class} = qq("Motif");
-            $gff->{attributes}->{Name}  = '"' . $self->repeat_consensus->name . '"';
-            $gff->{attributes}->{Align} = $self->hstart . ' ' . $self->hend . ' ' . ($self->hstrand == -1 ? '-' : '+');
+            $gff->{attributes}->{Class} = 'Motif';
+            $gff->{attributes}->{Name}  = $self->repeat_consensus->name;
+            $gff->{attributes}->{Align} =
+                [ $self->hstart, $self->hend, $self->hstrand ];
         }
         elsif ($self->analysis->logic_name =~ /trf/i) {
             $gff->{feature} = 'misc_feature';
@@ -757,7 +739,7 @@ use Bio::Vega::Utils::GFF;
             my $cons   = $self->repeat_consensus->repeat_consensus;
             my $len    = length($cons);
             my $copies = sprintf "%.1f", ($self->end - $self->start + 1) / $len;
-            $gff->{attributes}->{Name} = qq("$copies copies $len mer $cons");
+            $gff->{attributes}->{Name} = "$copies copies $len mer $cons";
         }
 
         return $gff;
@@ -888,11 +870,11 @@ use Bio::Vega::Utils::GFF;
         $gff->{'attributes'}{'Length'}   = $hd->hit_length;
         $gff->{'attributes'}{'Taxon_ID'} = $hd->taxon_id;
         if (my $db_name = $hd->db_name) {
-            $gff->{'attributes'}{'DB_Name'} = qq{"$db_name"};
+            $gff->{'attributes'}{'DB_Name'} = $db_name;
         }
         if (my $desc = $hd->description) {
             $desc =~ s/"/\\"/g;
-            $gff->{'attributes'}{'Description'} = qq{"$desc"};
+            $gff->{'attributes'}{'Description'} = $desc;
         }
         if (my $seq = $hd->get_and_unset_hit_sequence_string) {
             $gff->{'attributes'}{'sequence'} = $seq;
@@ -914,11 +896,11 @@ use Bio::Vega::Utils::GFF;
         $gff->{'attributes'}{'Length'}   = $hd->hit_length;
         $gff->{'attributes'}{'Taxon_ID'} = $hd->taxon_id;
         if (my $db_name = $hd->db_name) {
-            $gff->{'attributes'}{'DB_Name'} = qq{"$db_name"};
+            $gff->{'attributes'}{'DB_Name'} = $db_name;
         }
         if (my $desc = $hd->description) {
             $desc =~ s/"/\\"/g;
-            $gff->{'attributes'}{'Description'} = qq{"$desc"};
+            $gff->{'attributes'}{'Description'} = $desc;
         }
 
         return $gff;
