@@ -2573,7 +2573,7 @@ sub zircon_zmap_view_features_loaded {
         }
         # else {
         #     # We see a warning for each acedb featureset
-        #     warn "Ignoring featurset '$set_name'";
+        #     warn "Ignoring featureset '$set_name'";
         # }
     }
 
