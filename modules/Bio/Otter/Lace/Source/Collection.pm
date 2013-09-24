@@ -73,7 +73,7 @@ sub __maintain_Bracket_array {
 
 sub search_string {
     my ($self, $search_string) = @_;
-    
+
     if (defined $search_string) {
         $self->{'_search_string'} = $search_string;
         $self->construct_regex_list;
@@ -86,7 +86,7 @@ sub construct_regex_list {
 
     # Make a fresh new reference
     my $r_list = $self->{'_regex_list'} = [];
-    
+
     my $string = $self->search_string;
     $string =~ s{\\}{\\\\};     # So that perl regex escapes survive quotewords()
     foreach my $term (quotewords('\s+', 0, $string)) {
@@ -102,7 +102,7 @@ sub construct_regex_list {
 
 sub regex_list {
     my ($self) = @_;
-    
+
     my $r_list = $self->{'_regex_list'}
         or confess "No regex list - construct_regex_list() not called?";
     return @$r_list;
@@ -128,7 +128,7 @@ sub get_Item_by_name {
 
 sub list_Items {
     my ($self) = @_;
-    
+
     if (my $i_ref = $self->{'_item_list'}) {
         return @$i_ref;
     }
@@ -201,7 +201,7 @@ sub list_visible_Items {
 
 sub is_matched {
     my ($self, $item, $flag) = @_;
-    
+
     if (defined $flag) {
         $self->{'_is_matched'}{$item} = $flag ? 1 : 0;
     }
@@ -210,7 +210,7 @@ sub is_matched {
 
 sub is_collapsed {
     my ($self, $item, $flag) = @_;
-    
+
     if (defined $flag) {
         confess "Not a Bracket" unless $item->is_Bracket;
         $self->{'_is_collapsed'}{$item} = $flag ? 1 : 0;

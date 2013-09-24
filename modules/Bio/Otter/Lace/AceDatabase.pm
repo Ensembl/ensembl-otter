@@ -1026,7 +1026,7 @@ sub DataSet {
 
 sub process_gff_Visible_Columns {
     my ($self) = @_;
-    
+
     return $self->process_gff_for_Columns(
         grep { $_->process_gff && $_->status eq 'Visible' }
         $self->ColumnCollection->list_Columns

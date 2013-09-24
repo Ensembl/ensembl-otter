@@ -50,7 +50,7 @@ sub is_Bracket {
 
 sub is_stored {
     my($self, $flag) = @_;
-    
+
     if (defined $flag) {
         $self->{'_is_stored'} = $flag ? 1 : 0;
     }
@@ -68,7 +68,7 @@ sub confess_if_not_valid_status {
 
 sub selected {
     my($self, $flag) = @_;
-    
+
     if (defined $flag) {
         $self->{'_selected'} = $flag ? 1 : 0;
         my $status = $self->status;
@@ -141,7 +141,7 @@ sub status_callback {
 
 sub gff_file {
     my ($self, $gff_file) = @_;
-    
+
     if ($gff_file) {
         $self->{'_gff_file'} = $gff_file;
     }
@@ -150,7 +150,7 @@ sub gff_file {
 
 sub process_gff {
     my($self, $flag) = @_;
-    
+
     if (defined $flag) {
         $self->{'_process_gff'} = $flag ? 1 : 0;
     }
@@ -165,7 +165,7 @@ sub string {
 
 sub Filter {
     my ($self, $Filter) = @_;
-    
+
     if ($Filter) {
         $self->{'_Filter'} = $Filter;
         $self->name($Filter->name);
