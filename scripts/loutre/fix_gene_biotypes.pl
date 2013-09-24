@@ -5,6 +5,7 @@
 use strict;
 use warnings;
 use Try::Tiny;
+use Net::Netrc;
 
 use Bio::Otter::Lace::Defaults;
 use Bio::EnsEMBL::DBSQL::DBAdaptor;
@@ -89,18 +90,19 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
     # my @args = qw( -dbname vega_homo_sapiens_20130722_72_GRCh37 -host ensdb-web-17 -port 5317 );
     # my @args = qw( -dbname vega_mus_musculus_20130722_72_GRCm38 -host ensdb-web-17 -port 5317 );
     # my @args = qw( -dbname vega_sus_scrofa_20130722_72 -host ensdb-web-17 -port 5317 );
-    my @args = qw( -dbname vega_rattus_norvegicus_20130610_72_5a -host ensdb-web-17 -port 5317 );
+    # my @args = qw( -dbname vega_rattus_norvegicus_20130610_72_5a -host ensdb-web-17 -port 5317 );
+    my %args = qw( -dbname vega_sarcophilus_harrisii_20130909_72 -host ensdb-web-17 );
 
-    my $now = scalar localtime;
-    print "$now fix_gene_biotypes.pl on (@args)\n";
+    printf "%s fix_gene_biotypes.pl on (%s)\n", scalar(localtime), join(" ", %args);
 
-    my $dba = Bio::EnsEMBL::DBSQL::DBAdaptor->new(
-        @args,
-        -user  => 'ensadmin',
-        -pass  => '*******',
-        -group => 'ensembl',
-    );
-BEGIN { die "Broken - needs password" }
+    my $mchn = Net::Netrc->lookup($args{'-host'})
+      or die "No entry for '$args{-host}' in ~/.netrc";
+    $args{'-user'}  = $mchn->login;
+    $args{'-pass'}  = $mchn->password;
+    $args{'-port'}  = $mchn->account;
+    $args{'-group'} = 'ensembl';
+
+    my $dba = Bio::EnsEMBL::DBSQL::DBAdaptor->new(%args);
 
     my $species = $dba->get_MetaContainer->get_common_name; # meta_key = 'species.common_name'
 
