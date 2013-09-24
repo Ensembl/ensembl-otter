@@ -160,7 +160,9 @@ sub process_gff {
 sub string {
     my ($self) = @_;
 
-    return join("\n", $self->name, $self->Filter->description, $self->status);
+    my $descr = $self->Filter->description;
+    $descr = '' unless defined $descr;
+    return join("\n", $self->name, $descr, $self->status);
 }
 
 sub Filter {
