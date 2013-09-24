@@ -134,7 +134,7 @@ sub name {
 
 sub classification {
     my ($self, $class) = @_;
-    
+
     if ($class) {
         $self->{'_classification'} = [split /\s*>\s*/, $class];
     }

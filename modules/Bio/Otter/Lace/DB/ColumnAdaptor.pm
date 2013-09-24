@@ -20,7 +20,7 @@ sub new {
 
 sub dbh {
     my ($self, $dbh) = @_;
-    
+
     if ($dbh) {
         $self->{'_dbh'} = $dbh;
     }

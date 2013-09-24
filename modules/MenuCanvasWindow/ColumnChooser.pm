@@ -27,7 +27,7 @@ sub new {
         -side => 'top',
         -fill => 'x',
         );
-    
+
     # ... before we make the canvas
     my $self = CanvasWindow->new($tk, @rest);
     bless($self, $pkg);
@@ -60,7 +60,7 @@ sub withdraw_or_destroy {
 
 sub init_flag {
     my($self, $flag) = @_;
-    
+
     if (defined $flag) {
         $self->{'_init_flag'} = $flag ? 1 : 0;
     }
@@ -69,7 +69,7 @@ sub init_flag {
 
 sub top_frame {
     my ($self, $top_frame) = @_;
-    
+
     if ($top_frame) {
         $self->{'_top_frame'} = $top_frame;
     }
@@ -78,7 +78,7 @@ sub top_frame {
 
 sub bottom_frame {
     my ($self, $bottom_frame) = @_;
-    
+
     if ($bottom_frame) {
         $self->{'_bottom_frame'} = $bottom_frame;
     }
@@ -203,7 +203,7 @@ sub initialize {
     $top->bind('<Control-Left>', $collapse_all);
     $top->bind('<Control-Right>', $expand_all);
     $top->bind('<Destroy>', sub{ $self = undef });
-    
+
 
     $self->calcualte_text_column_sizes;
     $self->fix_window_min_max_sizes;
@@ -222,7 +222,7 @@ sub redraw {
 
 sub do_filter {
     my ($self) = @_;
-    
+
     my $new_cllctn = $self->SearchHistory->search($self->{'_entry_search_string'})
         or return;
     $self->set_search_entry($new_cllctn->search_string);
@@ -326,7 +326,7 @@ sub snail_trail_steps {
 
 sub SearchHistory {
     my ($self, $hist) = @_;
-    
+
     if ($hist) {
         $self->{'_SearchHistory'} = $hist;
     }
@@ -341,7 +341,7 @@ sub current_Collection {
 
 sub current_Bracket {
     my ($self, $bkt) = @_;
-    
+
     if ($bkt) {
         $self->{'_current_Bracket'} = $bkt;
     }
@@ -578,7 +578,7 @@ sub update_item_select_state {
 
         return;
     }
-    
+
 }
 
 sub load_filters {

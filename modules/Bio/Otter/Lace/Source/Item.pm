@@ -23,7 +23,7 @@ sub is_Bracket {
 
 sub indent {
     my ($self, $indent) = @_;
-    
+
     if (defined $indent) {
         $self->{'_indent'} = $indent;
     }
@@ -32,7 +32,7 @@ sub indent {
 
 sub name {
     my ($self, $name) = @_;
-    
+
     if ($name) {
         $self->{'_name'} = $name;
     }
@@ -41,7 +41,7 @@ sub name {
 
 sub selected {
     my($self, $flag) = @_;
-    
+
     if (defined $flag) {
         $self->{'_selected'} = $flag ? 1 : 0;
     }
