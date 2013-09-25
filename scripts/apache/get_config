@@ -20,6 +20,7 @@ my %PERMITTED = (
     otter_config   => { filename => 'otter_config'     },
     otter_schema   => { filename => 'otter_schema.sql' },
     otter_styles   => { filename => 'otter_styles.ini' },
+    ensembl_version => { code => \&_ens_version },
 );
 
 sub get_config {
@@ -32,7 +33,18 @@ sub get_config {
     my $content_type = $spec->{content_type};
     $server->content_type($content_type) if $content_type;
 
-    return Bio::Otter::Server::Config->get_file($spec->{filename});
+    if ($spec->{filename}) {
+        return Bio::Otter::Server::Config->get_file($spec->{filename});
+    } elsif ($spec->{code}) {
+        return $spec->{code}->();
+    } else {
+        die "Bad spec '$key'";
+    }
+}
+
+sub _ens_version {
+    require Bio::EnsEMBL::ApiVersion;
+    return Bio::EnsEMBL::ApiVersion::software_version()."\n";
 }
 
 Bio::Otter::ServerScriptSupport->send_response(\&get_config);

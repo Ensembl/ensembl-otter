@@ -1146,6 +1146,11 @@ sub get_loutre_schema {
     return $self->_get_cache_config_file('loutre_schema');
 }
 
+sub get_server_ensembl_version {
+    my ($self) = @_;
+    return $self->_get_cache_config_file('ensembl_version');
+}
+
 sub do_authentication {
     my ($self) = @_;
 
