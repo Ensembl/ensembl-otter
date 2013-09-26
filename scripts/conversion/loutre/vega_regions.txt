@@ -165,6 +165,10 @@ mhc	2-MHC	MHC region of Chromosome 2
 mhc	5-MHC	MHC region of Chromosome 5
 --end--
 
+--tas_devil--
+MHC	4-MHC	MHC region of Chromosome 4
+--end--
+
 --rat--
 chr1-50	1	Chromosome 1	1
 chr2-50	2	Chromosome 2	2
