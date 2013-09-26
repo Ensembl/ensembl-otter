@@ -350,7 +350,7 @@ my %all_logic_names = (
   'WU'     => ['otter_external', 'Washu',     'jspieth@watson.wust'],
   'LOF'    => ['otter_lof',      'Havana',    'vega@sanger.ac.uk'],
   'KO'     => ['otter_eucomm',   'Havana',    'vega@sanger.ac.uk'],
-  'IRAG'   => ['otter'           'IRAG',      'pig-irag@sanger.ac.uk'],
+  'IRAG'   => ['otter',          'IRAG',      'pig-irag@sanger.ac.uk'],
 );
 
 #get all the logic names that are used
