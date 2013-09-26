@@ -74,7 +74,7 @@ BEGIN {
 use Getopt::Long;
 use Pod::Usage;
 use Bio::EnsEMBL::Utils::ConversionSupport;
-use Bio::SeqIO::genbank;
+#use Bio::SeqIO::genbank;
 use Data::Dumper;
 
 $| = 1;
