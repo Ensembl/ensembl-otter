@@ -595,6 +595,21 @@ if (! $support->param('dry_run') ) {
   }
 }
 
+# copy seq_region_mapping and mapping_set
+$support->log_stamped("Adding seq_region_mapping and mapping_set...\n");
+$sql = qq(
+    INSERT INTO $evega_db.seq_region_mapping
+      SELECT * FROM seq_region_mapping
+);
+$c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
+$support->log_stamped("Done inserting $c seq_region_mapping entries.\n\n");
+$sql = qq(
+    INSERT INTO $evega_db.mapping_set
+      SELECT * FROM mapping_set
+);
+$c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
+$support->log_stamped("Done inserting $c mapping_set entries.\n\n");
+
 # finish logfile
 $support->finish_log;
 
