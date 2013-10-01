@@ -286,7 +286,7 @@ $sql = qq(
 $c = $dbh->{'evega'}->do($sql);
 $support->log_stamped("Done.\n\n");
 
-# delete from assembly, seq_region, dna, dnac, repeat_consensus, repeat_feature
+# delete from assembly, seq_region, dna repeat_consensus, repeat_feature
 $support->log_stamped("Deleting assembly...\n");
 $sql = qq(DELETE FROM assembly);
 $c = $dbh->{'evega'}->do($sql);
@@ -316,11 +316,6 @@ $support->log_stamped("Deleting dna...\n");
 $sql = qq(DELETE FROM dna);
 $c = $dbh->{'evega'}->do($sql);
 $support->log_stamped("Done deleting $c dna entries.\n\n");
-
-$support->log_stamped("Deleting dnac...\n");
-$sql = qq(DELETE FROM dnac);
-$c = $dbh->{'evega'}->do($sql);
-$support->log_stamped("Done deleting $c dnac entries.\n\n");
 
 $support->log_stamped("Deleting repeat_consensus...\n");
 $sql = qq(DELETE FROM repeat_consensus);
