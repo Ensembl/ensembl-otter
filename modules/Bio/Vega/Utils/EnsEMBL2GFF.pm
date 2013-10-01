@@ -303,18 +303,6 @@ use Bio::Vega::Utils::GFF;
 
     package Bio::EnsEMBL::Gene;
 
-    # sub _gff_hash {
-    #     my ($self, %args) = @_;
-    #     
-    #     my $gff = $self->SUPER::_gff_hash(%args);
-    #     $gff->{'feature'} = 'Locus';
-    #     $gff->{'attributes'}{'Class'} = qq{"Locus"};
-    #     if (my $stable = $self->stable_id) {
-    #         $gff->{'attributes'}{'Stable_ID'} = qq{"$stable"};
-    #     }
-    #     return $gff;
-    # }
-
     sub to_gff {
         my ($self, %args) = @_;
 
@@ -622,25 +610,6 @@ use Bio::Vega::Utils::GFF;
             }
         }
 
-        ### Hack until we fiddle with translation stuff
-        #        if ($exons_truncated) {
-        #            $self->{'translation'}     = undef;
-        #            $self->{'_translation_id'} = undef;
-        #            my $attrib = $self->get_all_Attributes;
-        #            for ( my $i = 0 ; $i < @$attrib ; ) {
-        #                my $this = $attrib->[$i];
-        #
-        #                # Should not have CDS start/end not found attributes
-        #                # if there is no CDS!
-        #                if ( $this->code =~ /^cds_(start|end)_NF$/ ) {
-        #                    splice( @$attrib, $i, 1 );
-        #                }
-        #                else {
-        #                    $i++;
-        #                }
-        #            }
-        #        }
-
         $self->recalculate_coordinates;
 
         return $exons_truncated;
@@ -826,36 +795,7 @@ use Bio::Vega::Utils::GFF;
         return $daf->to_gff(@args);
     }
 
- #    sub _gff_hash {
- #
- #        my ($self, @args) = @_;
- #        my $gff  = $self->SUPER::_gff_hash(@args);
- #
- #        my $align =
- #            $self->hit_start.' '.
- #            $self->hit_end.' '.
- #            ( $self->hit_strand == -1 ? '-' : '+' );
- #
- #        $gff->{feature} = 'similarity';
- #
- #        $gff->{attributes}->{Class} = qq("Sequence");
- #        $gff->{attributes}->{Name} = '"'.$self->ditag->type.':'.$self->ditag->name.'"';
- #        $gff->{attributes}->{Align} = $align;
- #
- #        return $gff;
- #    }
-
 }
-
-# my ($hit_description, $db_name, $hseq_prefix);
-# if (   $self->can('get_HitDescription')
-#     && ($hit_description = $self->get_HitDescription)
-#     && ($db_name         = $hit_description->db_name)
-#     && ($hseq_prefix     = $db_prefix->{$db_name}))
-# {
-#     $name = "$hseq_prefix:$name";
-#     $gff->{'attributes'}{''}
-# }
 
 
 {
