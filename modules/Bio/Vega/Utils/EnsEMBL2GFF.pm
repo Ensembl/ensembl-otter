@@ -129,9 +129,9 @@ use Bio::Vega::Utils::GFF;
                             if ($sources_to_types->{$source}) {
                                 unless ($sources_to_types->{$source} eq $feature_type) {
                                     die "Can't have multiple gff sources from one analysis:\n"
-                                      . "('$analysis' seems to have both '"
-                                      . $sources_to_types->{$source}
-                                      . "' and '$feature_type')\n";
+                                        . "('$analysis' seems to have both '"
+                                        . $sources_to_types->{$source}
+                                        . "' and '$feature_type')\n";
                                 }
                             }
                             else {
@@ -204,7 +204,7 @@ use Bio::Vega::Utils::GFF;
 
         if ($self->analysis) {
             return $self->analysis->gff_source
-              || $self->analysis->logic_name;
+                || $self->analysis->logic_name;
         }
         else {
             return ref($self);
@@ -215,7 +215,7 @@ use Bio::Vega::Utils::GFF;
         my ($self) = @_;
 
         return ($self->analysis && $self->analysis->gff_feature)
-          || 'misc_feature';
+            || 'misc_feature';
     }
 }
 
@@ -310,13 +310,13 @@ use Bio::Vega::Utils::GFF;
         # Choose ensembl or Pfam style naming and URL filling
 
         my $allowed_transcript_analyses_hash =
-          $args{'transcript_analyses'}
-          ? { map { $_ => 1 } split(/,/, $args{'transcript_analyses'}) }
-          : '';
+            ($args{'transcript_analyses'})
+            ? ( { map { $_ => 1 } split(/,/, $args{'transcript_analyses'}) } )
+            : '';
         my $allowed_translation_xref_db_hash =
-          $args{'translation_xref_dbs'}
-          ? { map { $_ => 1 } split(/,/, $args{'translation_xref_dbs'}) }
-          : '';
+            ($args{'translation_xref_dbs'})
+            ? ( { map { $_ => 1 } split(/,/, $args{'translation_xref_dbs'}) } )
+            : '';
 
         # filter the transcripts according to the transcript_analyses & translation_xref_db params
 
@@ -324,7 +324,7 @@ use Bio::Vega::Utils::GFF;
         for my $tsct (@{ $self->get_all_Transcripts }) {
 
             if (  !$allowed_transcript_analyses_hash
-                || $allowed_transcript_analyses_hash->{ $tsct->analysis->logic_name })
+                  || $allowed_transcript_analyses_hash->{ $tsct->analysis->logic_name })
             {
 
                 my $allowed = !$allowed_translation_xref_db_hash;
@@ -374,7 +374,7 @@ use Bio::Vega::Utils::GFF;
 
         if (my $url_fmt = $args{'url_string'}) {
             die "Cannot detaint url_string=$url_fmt"
-              unless $url_fmt =~ m{^(http[-=_:?/\\.=_a-zA-Z0-9]+\%(?:s|\{pfam\})[-=_:?/\\.a-zA-Z0-9]*)$};
+                unless $url_fmt =~ m{^(http[-=_:?/\\.=_a-zA-Z0-9]+\%(?:s|\{pfam\})[-=_:?/\\.a-zA-Z0-9]*)$};
             $url_fmt = $1;
             if ($url_fmt =~ s{%\{pfam\}}{%s}) {
                 my $kv = $self->_urlsubst_pfam($url_fmt, $gene_numeric_id);
@@ -464,7 +464,7 @@ use Bio::Vega::Utils::GFF;
         1  => 2,
         2  => 1,
         -1 => 0,    # Start phase is (always?) -1 for first coding exon
-    );
+        );
 
     sub to_gff {
         my ($self, %args) = @_;
@@ -578,8 +578,8 @@ use Bio::Vega::Utils::GFF;
             # now compare slice names instead of slice references
             # slice references can be different not the slice names
             if (   $exon->slice->name ne $slice->name
-                or $exon_end < 1
-                or $exon_start > $slice_length)
+                   or $exon_end < 1
+                   or $exon_start > $slice_length)
             {
 
                 #warn "removing exon that is off slice";
@@ -790,7 +790,7 @@ use Bio::Vega::Utils::GFF;
             -hstrand      => $self->hit_strand,
             -analysis     => $self->analysis,
             -cigar_string => $cigar_string,
-        );
+            );
 
         return $daf->to_gff(@args);
     }
