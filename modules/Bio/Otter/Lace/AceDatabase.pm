@@ -762,7 +762,10 @@ sub ace_server {
         my $home = $self->home;
         $sgif = Hum::Ace::LocalServer->new($home);
         $sgif->server_executable('sgifaceserver');
-        $sgif->start_server() or return 0; # this only check the fork was successful
+        my $gff_version = $self->DataSet->gff_version;
+        my $serverconfig = [ [ 'GFF_VERSION' => $gff_version ] ];
+        $sgif->start_server( 'serverconfig' => $serverconfig )
+            or return 0; # this only check the fork was successful
         my $pid = $sgif->server_pid;
         $sgif->ace_handle(1)  or return 0; # this checks it can connect
         warn "sgifaceserver on $home running, pid $pid\n";
