@@ -3,6 +3,7 @@ use strict;
 use warnings;
 
 use Bio::Otter::Git;
+use Bio::Otter::Lace::Client;
 use Try::Tiny;
 use Bio::EnsEMBL::ApiVersion ();
 
@@ -88,6 +89,13 @@ sub tools_versions {
     push @v, sprintf('Client EnsEMBL %s from %s',
                      Bio::EnsEMBL::ApiVersion::software_version(),
                      $INC{'Bio/EnsEMBL/ApiVersion.pm'});
+
+    my $client = Bio::Otter::Lace::Client->the;
+    push @v, sprintf('Server EnsEMBL %s',
+                     $client->get_server_ensembl_version); # cached
+    # we may have blocked for a while,
+    # but probably not failed because a) it's cached and b) it is
+    # requested at startup right after an authentication check
 
     return @v;
 }
