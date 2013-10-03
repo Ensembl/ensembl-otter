@@ -52,6 +52,7 @@ our $PFX = 'otter: ';
 
 sub _pkginit {
     my ($pkg) = @_;
+    # needs do_getopt to have happened
     my $short = $pkg->config_value('short_window_title_prefix');
     $PFX = 'o: ' if $short && $short > 0;
     # opt-out by negative values - B:O:L:D does not merge false values
@@ -59,10 +60,21 @@ sub _pkginit {
 }
 
 
+{
+    my $singleton;
+    sub the {
+        my ($pkg) = @_;
+        return $singleton ||= $pkg->new;
+    }
+}
+
 sub new {
     my ($pkg) = @_;
 
-    __PACKAGE__->_pkginit; # needs do_getopt to have happened
+    # don't proceed without do_getopt
+    Bio::Otter::Lace::Defaults->Client_needs_ready;
+
+    __PACKAGE__->_pkginit;
 
     my ($script) = $0 =~ m{([^/]+)$};
     my $client_name = $script || 'otterlace';
@@ -1488,6 +1500,21 @@ in otter XML, lock and unlock clones, and save
 "ace" formatted annotation back.  It also returns
 lists of B<DataSet> objects provided by the
 server.
+
+
+=head1 CLASS METHODS
+
+=head2 the()
+
+Return a singleton instance, instantiating it if necessary.
+
+Objects which are tied (by an instance variable / property) to a
+particular client instance should avoid using this.
+
+=head2 new()
+
+An ordinary constructor, making instances as requested.
+
 
 =head1 AUTHOR
 
