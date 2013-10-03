@@ -167,7 +167,12 @@ sub show_help {
 
 sub make_Client {
     require Bio::Otter::Lace::Client;
-    return Bio::Otter::Lace::Client->new;
+    return Bio::Otter::Lace::Client->the;
+}
+
+sub Client_needs_ready {
+    my ($pkg) = @_;
+    return __ready(); # () or error
 }
 
 sub testmode_redirect_reset {
@@ -576,7 +581,7 @@ above does.
       'foo=s'   => \$foo,     
       );
 
-  # Make a Bio::Otter::Lace::Client
+  # Obtain the singleton Bio::Otter::Lace::Client instance
   my $client = Bio::Otter::Lace::Defaults::make_Client();
 
 =head1 AUTHOR
