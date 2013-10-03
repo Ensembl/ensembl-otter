@@ -1,0 +1,15 @@
+#!/usr/bin/perl -Tw
+
+# Author:        mg13
+# Group:         anacode
+# Maintainer:    mg13
+
+use strict;
+use warnings;
+
+BEGIN { use lib ($ENV{OTTER_PERL_INC} || q{}) =~ m{([^:]+)}g }
+use SangerPaths qw{ core bioperl123 ensembl72 otter77 };
+
+use Bio::Otter::Server::GFF::FuncGen;
+
+Bio::Otter::Server::GFF::FuncGen->send_requested_features;
