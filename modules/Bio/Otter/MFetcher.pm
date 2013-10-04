@@ -206,6 +206,13 @@ sub _default_assembly {
     return $assembly;
 }
 
+# A Bio::Server::GFF subclass can override the default by reimplementing this method.
+#
+sub ensembl_adaptor_class {
+    my ($self) = @_;
+    return undef;
+}
+
 sub fetch_mapped_features_ensembl {
     my ($self, $fetching_method, $call_parms, $map, $metakey) = @_;
 
@@ -217,8 +224,10 @@ sub fetch_mapped_features_ensembl {
     confess "invalid coordinate system version: '${csver_orig}'"
         unless $csver_orig eq 'Otter';
 
+    my $adaptor_class = $self->ensembl_adaptor_class;
+
     if (! $csver_remote && $metakey) {
-        my $sdba = $self->dataset->satellite_dba( $metakey );
+        my $sdba = $self->dataset->satellite_dba( $metakey, $adaptor_class );
         my $assembly = _default_assembly($sdba);
         $csver_remote = $map->{csver_remote} = $assembly
     }
@@ -233,7 +242,7 @@ sub fetch_mapped_features_ensembl {
     elsif( ($self->otter_assembly_equiv_hash()->{$csver_remote}{$name} || '') eq $type) {
         # no mapping, just (cross)-fetching:
         warn "Assuming the mappings to be identical, just fetching from {$metakey}$cs:$csver_remote\n";
-        my $sdba = $self->dataset->satellite_dba( $metakey );
+        my $sdba = $self->dataset->satellite_dba( $metakey, $adaptor_class );
         my $original_slice = $self->get_slice($sdba, $cs, $name, $type, $start, $end, $csver_remote);
         $features = $original_slice->$fetching_method(@$call_parms);
     } else { # let's try to do the mapping:
@@ -243,7 +252,7 @@ sub fetch_mapped_features_ensembl {
         my $original_slice_2 = $self->get_slice($odba, $cs, $name, $type, $start, $end, $csver_orig);
         my $proj_slices_2 = $self->fetch_mapped_slices($original_slice_2, $map);
 
-        my $sdba = $self->dataset->satellite_dba( $metakey );
+        my $sdba = $self->dataset->satellite_dba( $metakey, $adaptor_class );
         my $sa_on_target = $sdba->get_SliceAdaptor();
 
       SEGMENT: foreach my $projected_slice_2 (@$proj_slices_2) {
