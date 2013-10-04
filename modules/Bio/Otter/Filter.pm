@@ -58,6 +58,11 @@ my @server_params = (
     translation_xref_dbs
     ),
 
+    # FuncGen
+    qw(
+    feature_set
+    feature_type
+    ),
     );
 
 sub from_config {
@@ -339,6 +344,18 @@ sub translation_xref_dbs {
     my ($self, $translation_xref_dbs) = @_;
     $self->{_translation_xref_dbs} = $translation_xref_dbs if $translation_xref_dbs;
     return $self->{_translation_xref_dbs};
+}
+
+sub feature_set {
+    my ($self, $feature_set) = @_;
+    $self->{_feature_set} = $feature_set if $feature_set;
+    return $self->{_feature_set};
+}
+
+sub feature_type {
+    my ($self, $feature_type) = @_;
+    $self->{_feature_type} = $feature_type if $feature_type;
+    return $self->{_feature_type};
 }
 
 # session handling
