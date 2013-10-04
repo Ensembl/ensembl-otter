@@ -23,6 +23,11 @@ sub Bio::EnsEMBL::Slice::get_all_SegmentationFeatures {
     return $seg_features;
 }
 
+sub ensembl_adaptor_class {
+    my ($self) = @_;
+    return 'Bio::EnsEMBL::Funcgen::DBSQL::DBAdaptor';
+}
+
 # TODO: make the call_args list sub-classable in Bio::Otter::Server::GFF so that we can do away
 #       with reimplementing this - especially if we need to add other feature_kinds.
 
