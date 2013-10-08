@@ -129,6 +129,7 @@ $support->parse_extra_options(
   'mgifile_uni_ref=s',
   'mgifile_entrez=s',
   'imgt_hlafile=s',
+  'rgdfile=s',
   'mismatch',
   'prune',
 );
@@ -142,6 +143,7 @@ $support->allowed_params(
   'mgifile_uni_ref',
   'mgifile_entrez',
   'imgt_hlafile',
+  'rgdfile',
   'mismatch',
   'prune',
 );
