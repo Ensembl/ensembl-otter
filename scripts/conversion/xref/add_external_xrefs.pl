@@ -38,7 +38,7 @@ Specific options:
     --mgi=FILE                          read MGI data from FILE
     --tcagfile=FILE                     read TCAG input from FILE
     --imgt_hlafile=FILE                 read IMGT_HLA input from FILE
-    --rgd=FILE                          read RGT input from file
+    --rgdfile=FILE                          read RGT input from file
     --refseqfile=FILE                   read Refseq input from FILE
     --mismatch                          correct case mismatches in the db
                                           overrides dry-run, doesn't add xrefs
@@ -128,6 +128,7 @@ $support->parse_extra_options(
   'mgifile=s',
   'mgifile_uni_ref=s',
   'mgifile_entrez=s',
+  'rgdfile=s',
   'imgt_hlafile=s',
   'rgdfile=s',
   'mismatch',
@@ -142,6 +143,7 @@ $support->allowed_params(
   'mgifile',
   'mgifile_uni_ref',
   'mgifile_entrez',
+  'rgdfile',
   'imgt_hlafile',
   'rgdfile',
   'mismatch',
