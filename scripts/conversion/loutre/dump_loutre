@@ -304,7 +304,10 @@ else {
   $chr_names_wanted = $support->get_wanted_chromosomes($laa,$lsa);
 }
 
-my $seq_regions = join "\n", @{$chr_names_wanted};
+my $seq_regions = join "\n", @{$chr_names_wanted || []};
+unless ($seq_regions) {
+  $support->log_error("No seq_regions to be dumped - is the vega_release param correct?\n");
+}
 if (! $support->param('add_genes') &&! $support->user_proceed("\nAnnotation on the following seq_regions will be dumped from loutre, proceed ?\n$seq_regions")) {
   exit;
 }
