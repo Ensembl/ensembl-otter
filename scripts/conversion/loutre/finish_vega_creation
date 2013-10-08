@@ -147,7 +147,7 @@ $support->check_required_params(
   'ensembldbname',
   'loutredbname',
   'vega_release',
-#  $support->get_loutre_params,
+  $support->get_loutre_params,
 );
 
 if ($support->param('help') or $support->error) {
@@ -287,7 +287,7 @@ while (my ($logic_name,$analysis_id,$c) = $s->fetchrow) {
 my $problem = 0;
 foreach my $ln (keys %sf_features) {
   if (! exists($lns_to_stay{lc($ln)}) ) {
-    if (! exists($lns_to_go{lc($ln)}) ) {
+    if ( (! exists($lns_to_go{lc($ln)})) && (! $support->param('live_update')) ) {
       $support->log_warning("I don't know what to do with $ln simple features, please help me out\n");
       $problem = 1;
     }
@@ -300,7 +300,7 @@ foreach my $ln (keys %sf_features) {
   }
 }
 
-if ($problem) {
+if ($problem && (! $support->param('live_update'))) {
   if (! $support->user_proceed("There are features with logic names that I don't know what to do with, please look at the logs. Do you really want to proceed?\n")) {
     exit;
   }
@@ -513,10 +513,10 @@ if ($alt_assembly = $support->param('ensemblassembly') ) {
                   FROM seq_region_synonym srs, seq_region sr
                  WHERE srs.seq_region_id = sr.seq_region_id
                    AND sr.name = '$e_name'));
-          if (scalar(@e_patch_names > 1)) {
+          if (scalar(@e_patch_names > 1) && (! $support->param('live_update')) ) {
             $support->log_warning("More than one e! seq_region_synonym found for $v_name, need to alter the code below\n",2);
           }
-          elsif (! @e_patch_names ) {
+          elsif ( (! @e_patch_names) && (! $support->param('live_update')) ) {
             $support->log_warning("No accession for PATCH $v_name in Ensembl so we don't know if e! and Vega are using the same PATCH!\n",2);
           }
           else {
@@ -531,10 +531,10 @@ if ($alt_assembly = $support->param('ensemblassembly') ) {
                  AND at2.code            = 'embl_version'
                  AND sr.seq_region_id    = $v_sr_id));
 
-            if (! $v_patch_name) {
+            if ( (! $v_patch_name) && (! $support->param('live_update')) ) {
               $support->log_warning("No accession for PATCH $v_name in Vega so we don't know if e! and Vega are using the same PATCH!\n",2);
             }
-            elsif ($e_patch_names[0] ne $v_patch_name) {
+            elsif ( ($e_patch_names[0] ne $v_patch_name) && (! $support->param('live_update')) ) {
               $support->log_warning("Accession for PATCH $v_name differs between e! (".$e_patch_names[0].") and Vega ($v_patch_name). This annotation will not be projected into ensembl-vega when you do this step\n",2);
             }
             else {
