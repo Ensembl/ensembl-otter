@@ -259,7 +259,10 @@ $support->confirm_params;
 # get log filehandle and print heading and parameters to logfile
 $support->init_log;
 
-$support->log_warning("LOF hack applied. Check if this has been fixed (#279897) and remove if it has; nag if it hasn't\n");
+if (! $support->param('live_update') )  {
+  $support->log_warning("LOF hack applied. Check if this has been fixed (#279897) and remove if it has; nag if it hasn't\n");
+}
+
 # connect to loutre database and get adaptors
 my $ldba = $support->get_database('loutre','loutre');
 my $lsa  = $ldba->get_SliceAdaptor();
@@ -352,7 +355,7 @@ foreach my $line (split(/\n/,$txt)){
   my ($table,@constraints) = split(/\s+/,$line);
 
   #sanity check
-  if (! exists($constraints{$table})) {
+  if (! exists($constraints{$table}) ) {
     $support->log_warning("You have definitions for a table ($table) that is not found in the loutre database. Skipping\n\n");
     next TABLE;
   }
@@ -458,8 +461,10 @@ while (my ($code) = $lsth->fetchrow_array) {
 }
 if ( @new_seq_region_attribs ) {
   my $names = join ', ', @new_seq_region_attribs;
-  $support->log_warning("There are new seq_region_attribs in loutre ($names), please investigate and decide what to do with them\n");
-  exit;
+  if (! $support->param('live_update')) {
+    $support->log_warning("There are new seq_region_attribs in loutre ($names), please investigate and decide what to do with them\n");
+    exit;
+  }
 }
 
 my ($fsv,$non_fsv);
