@@ -29,12 +29,17 @@ sub Bio::EnsEMBL::Slice::get_all_SegmentationFeatures {
     my $segmentation_feature_adaptor = $funcgen_dba->get_adaptor('segmentationfeature');
     my $seg_features = $segmentation_feature_adaptor->fetch_all_by_Slice_FeatureSets($slice, [ $featureset ]);
 
-    return $seg_features unless $featuretype_name;
 
-    # It would be better to do this in the fetch query, but that would mean extending / injecting into
-    # Bio::EnsEMBL::Funcgen::SegmentedFeatureAdaptor (probably via SetFeatureAdaptor).
+    if ($featuretype_name) {
+        # It would be better to do this in the fetch query, but that would mean extending / injecting into
+        # Bio::EnsEMBL::Funcgen::SegmentedFeatureAdaptor (probably via SetFeatureAdaptor).
+        # (and anyway at time of writing we are not using the feature_type selector in the config)
+        $seg_features = [ grep { $_->feature_type->name eq $featuretype_name } @$seg_features ];
+    }
 
-    return [ grep { $_->feature_type->name eq $featuretype_name } @$seg_features ];
+    # Discard overlaps to keep ZMap happy?
+    return [ grep {     $_->seq_region_start >= $slice->start
+                    and $_->seq_region_end   <= $slice->end   } @$seg_features ];
 }
 
 sub ensembl_adaptor_class {
