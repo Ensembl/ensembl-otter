@@ -799,6 +799,22 @@ use Bio::Vega::Utils::GFF;
 
 
 {
+    package Bio::EnsEMBL::Funcgen::SegmentationFeature;
+
+    sub _gff_hash {
+        my ($self, @args) = @_;
+
+        my $feature_type = $self->feature_type->name;
+
+        my $gff = $self->SUPER::_gff_hash(@args);
+        $gff->{source} = $feature_type;
+
+        return $gff;
+    }
+
+}
+
+{
     package Bio::Vega::DnaDnaAlignFeature;
 
     sub _gff_hash {
