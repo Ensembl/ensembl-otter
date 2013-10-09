@@ -210,7 +210,8 @@ sub _default_assembly {
 #
 sub ensembl_adaptor_class {
     my ($self) = @_;
-    return undef;
+    my $ensembl_adaptor_class = undef;
+    return $ensembl_adaptor_class;
 }
 
 sub fetch_mapped_features_ensembl {
