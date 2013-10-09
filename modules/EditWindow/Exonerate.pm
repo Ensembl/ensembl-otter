@@ -7,6 +7,7 @@ use strict;
 use warnings;
 
 use Log::Log4perl;
+use Try::Tiny;
 
 use Bio::Otter::Lace::OnTheFly::Genomic;
 use Bio::Vega::Evidence::Types qw(evidence_is_sra_sample_accession);
@@ -246,8 +247,18 @@ sub initialise {
             return;
         }
         $doing_launch = 1;
-        my $okay = $self->launch_exonerate;
-        $top->withdraw if $okay;
+        try {
+            $self->launch_exonerate;
+        }
+        catch {
+            my $err = $_;
+            $self->top->messageBox(
+                -title   => $Bio::Otter::Lace::Client::PFX.'Error',
+                -icon    => 'warning',
+                -message => 'Error running exonerate: ' . $err,
+                -type    => 'OK',
+            );
+        };
         $doing_launch = 0;
     };
     $button_frame->Button(
@@ -503,6 +514,8 @@ sub launch_exonerate {
 
     # OTF should not influence unsaved changes state of the session
     $SessionWindow->flag_db_edits(0);
+    my $top = $self->top;
+    $top->withdraw;
 
     if ($self->{'_clear_existing'}) {
         $SessionWindow->delete_featuresets(qw{
@@ -521,6 +534,8 @@ OTF_Protein });
     if ($db_edited) {
         my @misses = $otf->names_not_hit;
         if (@misses) {
+            $top->deiconify;
+            $top->raise;
             $self->top->messageBox(
                 -title   => $Bio::Otter::Lace::Client::PFX.'Missing Matches',
                 -icon    => 'warning',
@@ -534,6 +549,8 @@ OTF_Protein });
         return 1;
     }
     else {
+        $top->deiconify;
+        $top->raise;
         $self->top->messageBox(
             -title   => $Bio::Otter::Lace::Client::PFX.'No Matches',
             -icon    => 'warning',
