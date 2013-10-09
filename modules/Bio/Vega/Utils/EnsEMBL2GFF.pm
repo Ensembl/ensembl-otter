@@ -801,13 +801,26 @@ use Bio::Vega::Utils::GFF;
 {
     package Bio::EnsEMBL::Funcgen::SegmentationFeature;
 
+    # abbreviations defined at http://www.ensembl.org/info/genome/funcgen/regulatory_segmentation.html
+    my %feature_type_to_abbrev = (
+        'CTCF enriched'                           => 'CTCF',
+        'Predicted Weak Enhancer/Cis-reg element' => 'WE',
+        'Predicted Transcribed Region'            => 'T',
+        'Predicted Enhancer'                      => 'E',
+        'Predicted Promoter Flank'                => 'PF',
+        'Predicted Repressed/Low Activity'        => 'R',
+        'Predicted Promoter with TSS'             => 'TSS',
+        );
+
     sub _gff_hash {
         my ($self, @args) = @_;
 
         my $feature_type = $self->feature_type->name;
+        my $feature_type_abbrev = $feature_type_to_abbrev{$feature_type};
+        my $source = $feature_type_abbrev ? "funcgen_type_${feature_type_abbrev}" : "funcgen_type_unknown";
 
         my $gff = $self->SUPER::_gff_hash(@args);
-        $gff->{source} = $feature_type;
+        $gff->{source} = $source;
 
         return $gff;
     }
