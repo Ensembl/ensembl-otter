@@ -7,6 +7,7 @@ use File::Find;
 use Try::Tiny;
 use Sys::Hostname 'hostname';
 use Cwd 'cwd';
+use Digest::SHA 'sha1_hex';
 
 use Bio::Otter::ServerScriptSupport;
 use Bio::Otter::Version;
@@ -58,6 +59,21 @@ sub _require_all {
         }
     }
 
+    return \%out;
+}
+
+sub _code_sums {
+    my %out;
+    while (my ($mod, $fn) = each %INC) {
+        if (!defined $fn) {
+            $out{$mod} = undef;
+        } elsif (open my $fh, '<', $fn) {
+            my $txt = do { local $/; <$fh> };
+            $out{$mod} = sha1_hex($txt);
+        } else {
+            $out{$mod} = "$fn: $!";
+        }
+    }
     return \%out;
 }
 
@@ -144,6 +160,7 @@ sub generate {
         $out{Perl} =
           { '${^TAINT}' => ${^TAINT},
             '@INC' => \@INC, '%INC' => __hash2table(\%INC),
+            '%INC_sum' => _code_sums(),
           };
     }
 
