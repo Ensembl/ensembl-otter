@@ -801,7 +801,8 @@ use Bio::Vega::Utils::GFF;
 {
     package Bio::EnsEMBL::Funcgen::SegmentationFeature;
 
-    # abbreviations defined at http://www.ensembl.org/info/genome/funcgen/regulatory_segmentation.html
+    # Not ideal to have the DB-side full names hard-coded here :-(
+    # Abbreviations defined at http://www.ensembl.org/info/genome/funcgen/regulatory_segmentation.html
     my %feature_type_to_abbrev = (
         'CTCF enriched'                           => 'CTCF',
         'Predicted Weak Enhancer/Cis-reg element' => 'WE',
@@ -816,8 +817,12 @@ use Bio::Vega::Utils::GFF;
         my ($self, @args) = @_;
 
         my $feature_type = $self->feature_type->name;
-        my $feature_type_abbrev = $feature_type_to_abbrev{$feature_type};
-        my $source = $feature_type_abbrev ? "funcgen_type_${feature_type_abbrev}" : "funcgen_type_unknown";
+        my $feature_type_abbrev = $feature_type_to_abbrev{$feature_type} || 'unknown';
+
+        my $feature_set = $self->feature_set->name;
+        $feature_set =~ s/^Segmentation://; # again, a bit yucky to have this hard-coded
+
+        my $source = "funcgen_${feature_set}_${feature_type_abbrev}";
 
         my $gff = $self->SUPER::_gff_hash(@args);
         $gff->{source} = $source;
