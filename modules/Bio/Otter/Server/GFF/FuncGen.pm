@@ -37,9 +37,15 @@ sub Bio::EnsEMBL::Slice::get_all_SegmentationFeatures {
         $seg_features = [ grep { $_->feature_type->name eq $featuretype_name } @$seg_features ];
     }
 
-    # Discard overlaps to keep ZMap happy?
-    return [ grep {     $_->seq_region_start >= $slice->start
-                    and $_->seq_region_end   <= $slice->end   } @$seg_features ];
+    # Truncate to slice to keep ZMap happy.
+    my $start = $slice->start;
+    my $end   = $slice->end;
+    foreach my $sf (@$seg_features) {
+        $sf->start(1)            if $sf->seq_region_start < $start;
+        $sf->end($slice->length) if $sf->seq_region_end   > $end;
+    }
+
+    return $seg_features;
 }
 
 sub ensembl_adaptor_class {
