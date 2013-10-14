@@ -32,7 +32,7 @@ sub render {
     my $placeholder = '__U_S_T_MSG__';
     my $wrapping = $self->SUPER::render($placeholder, $category, $priority, $caller_level+1);
 
-    # ZMap log timestamps are of form MM/dd/yyyy  HH:mm:ss.SSSSSS
+    # ZMap log timestamps are of form yyyy/MM/dd  HH:mm:ss,SSSSSS
     my $zmap_ts_r = qr'
         ^
         (?<Z_pre>.*)
