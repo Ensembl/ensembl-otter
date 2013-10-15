@@ -37,6 +37,10 @@ my $segmentation_feature_adaptor = $funcgen_dba->get_adaptor('segmentationfeatur
 my $seg_features = $segmentation_feature_adaptor->fetch_all_by_Slice_FeatureSets($slice, [$featureset]);
 say "Got ", scalar @$seg_features, " features.";
 
+foreach my $sf ( @$seg_features ) {
+    say join("\t", $sf->display_label, $sf->start, $sf->end, $sf->feature_type->name);
+}
+
 exit;
 
 # EOF
