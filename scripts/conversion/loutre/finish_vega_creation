@@ -914,6 +914,10 @@ push @sql_fixes, "UPDATE analysis set logic_name = lower(logic_name);\n";
 #fix schema for author_group
 push @sql_fixes, "UPDATE author_group SET group_email=NULL WHERE group_email='';\n";
 
+# set LOF gene and transcript statuses to PUTATIVE
+push @sql_fixes, "UPDATE gene SET status='PUTATIVE' WHERE source='LOF';\n";
+push @sql_fixes, "UPDATE transcript t JOIN gene g using (gene_id) SET t.status='PUTATIVE' WHERE g.source='LOF';\n";
+
 #hack - delete 'not for Vega' transcript_attribs on LOF genes
 push @sql_fixes, "DELETE ta FROM gene g, transcript t, transcript_attrib ta WHERE g.gene_id = t.gene_id AND t.transcript_id = ta.transcript_id AND g.source = 'LOF'AND ta.value = 'not for VEGA';\n";
 
