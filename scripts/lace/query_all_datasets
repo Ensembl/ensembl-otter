@@ -6,15 +6,18 @@ use strict;
 use warnings;
 use Bio::Otter::Lace::Defaults;
 use Bio::Otter::Lace::PipelineDB;
+use Try::Tiny;
 
 {
     my $sql;
-    my $pipe_flag = 0;
-    my   $do_flag = 0;
+    my   $pipe_flag = 0;
+    my     $do_flag = 0;
+    my $ignore_flag = 0;
     Bio::Otter::Lace::Defaults::do_getopt(
         'query=s' => \$sql,
         'pipe!'   => \$pipe_flag,
         'do!'     => \$do_flag,
+        'ignore!' => \$ignore_flag,
     );
     unless ($sql) {
         local $/ = undef; # slurp the whole of STDIN
@@ -35,7 +38,17 @@ use Bio::Otter::Lace::PipelineDB;
 
         my $row_count;
         if ($do_flag) {
-            $row_count = $query_dba->dbc->do($sql);
+            try {
+                $row_count = $query_dba->dbc->do($sql);
+            }
+            catch {
+                if ($ignore_flag) {
+                    warn $_;
+                }
+                else {
+                    die $_;
+                }
+            };
         }
         else {
             my $sth = $query_dba->dbc->prepare($sql);
@@ -83,6 +96,10 @@ For non-SELECT statements, uses the C<DBI $dbh-E<gt>do()> method to run them.
 =item B<-query>
 
 The SQL to send to each database. Alternatively it will take SQL from STDIN.
+
+=item B<-ignore>
+
+Ignore otherwise fatal errors from executing queries when running in C<-do> mode.
 
 =back
 
