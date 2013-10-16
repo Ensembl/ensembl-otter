@@ -300,11 +300,11 @@ use Bio::Vega::Utils::GFF;
 
         my $allowed_transcript_analyses_hash =
             ($args{'transcript_analyses'})
-            ? ( { map { $_ => 1 } split(/,/, $args{'transcript_analyses'}) } )
+            ? ( +{ map { $_ => 1 } split(/,/, $args{'transcript_analyses'}) } )
             : '';
         my $allowed_translation_xref_db_hash =
             ($args{'translation_xref_dbs'})
-            ? ( { map { $_ => 1 } split(/,/, $args{'translation_xref_dbs'}) } )
+            ? ( +{ map { $_ => 1 } split(/,/, $args{'translation_xref_dbs'}) } )
             : '';
 
         # filter the transcripts according to the transcript_analyses & translation_xref_db params
