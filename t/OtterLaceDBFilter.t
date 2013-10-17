@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Test::More;
+use Test::More skip_all => 'replaced by OtterLaceDBColumnAdaptor.t';
 
 use Test::Otter qw( ^data_dir_or_skipall ); # also finds test libraries
 use OtterTest::DB;
