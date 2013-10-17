@@ -336,6 +336,8 @@ sub check_data_dir {
     if (my $error = $@) {
         return "Test cannot find otter data_dir: '$error'";
     }
+    my $builder = __PACKAGE__->builder;
+    $builder->note("data_dir: '$data_dir'");
     return;                     # ok
 }
 
