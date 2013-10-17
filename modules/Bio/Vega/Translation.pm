@@ -11,7 +11,7 @@ sub new_dissociated_copy {
     my ($self, $transcript, $start_exon, $end_exon) = @_;
 
     my $pkg = ref($self);
-    my $copy = $pkg->new_fast({
+    my $copy = $pkg->new_fast(+{
         map { $_ => $self->{$_} } (
             'created_date',
             'end',
