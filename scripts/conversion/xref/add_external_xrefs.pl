@@ -42,6 +42,7 @@ Specific options:
     --refseqfile=FILE                   read Refseq input from FILE
     --mismatch                          correct case mismatches in the db
                                           overrides dry-run, doesn't add xrefs
+    --onlydb=NAME,NAME                  only add DBs NAME, NAME (HGNC ONLY!)
     --prune                             reset to the state before running this
                                         script (i.e. after running
                                         add_vega_xrefs.pl)
@@ -131,6 +132,7 @@ $support->parse_extra_options(
   'rgdfile=s',
   'imgt_hlafile=s',
   'rgdfile=s',
+  'onlydb=s',
   'mismatch',
   'prune',
 );
@@ -146,6 +148,7 @@ $support->allowed_params(
   'rgdfile',
   'imgt_hlafile',
   'rgdfile',
+  'onlydb',
   'mismatch',
   'prune',
 );
@@ -795,6 +798,8 @@ sub parse_hgnc {
     #set records for each gene
     foreach my $db (keys %accessions) {
       next if ($db eq 'HGNC_PID');
+      next if($support->param('onlydb')
+        and not grep { $_ eq $db } split(/,/,$support->param('onlydb')));
 
       #set record where display name and pid are different
       if ($db eq 'HGNC') {
