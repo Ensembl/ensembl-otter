@@ -20,7 +20,7 @@ sub new_dissociated_copy {
     my ($self) = @_;
 
     my $pkg = ref($self);
-    my $copy = $pkg->new_fast({
+    my $copy = $pkg->new_fast(+{
         map { $_ => $self->{$_} } (
             'analysis',     # ok to share object?
             'biotype',
