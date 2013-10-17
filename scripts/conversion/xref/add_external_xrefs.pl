@@ -738,23 +738,23 @@ sub parse_hgnc {
   );
 
   # read header (containing external db names) and check all wanted columns are there
+  my ($status_column,%fieldnames);
   my $line = $recs[0];
   chomp $line;
   my @columns =  split /\t/, $line;
   foreach my $wanted (keys %wanted_columns) {
-    unless (grep { /$wanted/ } @columns ) {
+    my $found = 0;
+    foreach my $i (0..$#columns) {
+      if($columns[$i] =~ /$wanted/) {
+        $fieldnames{$i} = $wanted_columns{$wanted};
+        $status_column = $i if $wanted eq 'Status';
+        $found = 1;
+        last;
+      }
+    }
+    unless($found) {
       $support->log_error("Can't find $wanted column in HGNC record: $line\n");
     }
-  }
-
-  #make a note of positions of wanted fields
-  my $status_column;
-  my %fieldnames;
-  for (my $i=0; $i < scalar(@columns); $i++) {
-    my $column_label =  $columns[$i];
-    $status_column = $i if $column_label eq 'Status';
-    next if (! $wanted_columns{$column_label});
-    $fieldnames{$i} = $wanted_columns{$column_label};
   }
 
   my %stats = (
