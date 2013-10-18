@@ -68,7 +68,7 @@ sub _code_sums {
         if (!defined $fn) {
             $out{$mod} = undef;
         } elsif (open my $fh, '<', $fn) {
-            my $txt = do { local $/; <$fh> };
+            my $txt = do { local $/ = undef; <$fh> };
             $out{$mod} = sha1_hex($txt);
         } else {
             $out{$mod} = "$fn: $!";
