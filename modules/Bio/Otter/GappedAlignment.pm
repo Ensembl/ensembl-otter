@@ -56,7 +56,7 @@ sub _parse_vulgar {
             my $element = Bio::Otter::GappedAlignment::Element->new($type, $q_len, $t_len);
             $self->add_element($element);
         }
-        ) or $self->logger->confess('parse_align_comps() failed');
+        ) or $self->logger->logconfess('parse_align_comps() failed');
 
     return $self;
 }
@@ -676,7 +676,7 @@ sub _verify_intronified_lengths {
     if ($q_len != $self->query_length or $t_len != $self->target_length) {
         $self->logger->fatal("sum(q_len): $q_len vs q_len: ", $self->query_length)  if $q_len != $self->query_length;
         $self->logger->fatal("sum(t_len): $t_len vs t_len: ", $self->target_length) if $t_len != $self->target_length;
-        $self->logger->confess('Intronify length mismatch');
+        $self->logger->logconfess('Intronify length mismatch');
     }
     $self->logger->debug('Lengths ok');
     return;
@@ -692,7 +692,7 @@ sub _verify_element_lengths {
     if ($q_len != $self->query_length or $t_len != $self->target_length) {
         $self->logger->fatal("sum(q_len): $q_len vs q_len: ", $self->query_length)  if $q_len != $self->query_length;
         $self->logger->fatal("sum(t_len): $t_len vs t_len: ", $self->target_length) if $t_len != $self->target_length;
-        $self->logger->confess('Element length mismatch');
+        $self->logger->logconfess('Element length mismatch');
     }
     $self->logger->debug('Element lengths ok');
     return;
