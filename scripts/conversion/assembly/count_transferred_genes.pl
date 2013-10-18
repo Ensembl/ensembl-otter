@@ -124,16 +124,18 @@ foreach my $t (qw(gene transcript)) {
   $old->{$t}       = { map { @$_ } @{$old_dbh->selectall_arrayref( "select sr.name, count(*) from  analysis a, $t t, seq_region sr where a.analysis_id = t.analysis_id and t.seq_region_id = sr.seq_region_id group by sr.name" )} };
 }
 
+my %all_chroms = map {$_ => 1} (keys %{$new->{'gene'}}, keys %{$old->{'gene'}});
+
 my $fmt = "%-20s%-20s%-20s%-25s%-25s\n";
 $support->log("\nGene numbers:\n");
 $support->log(sprintf($fmt, 'Chromosome','New gene count','Old gene count','Difference'));
-foreach my $sr (sort keys %{$new->{'gene'}} ) {
-  $support->log(sprintf($fmt,$sr,$new->{'gene'}{$sr},$old->{'gene'}{$sr},$new->{'gene'}{$sr}-$old->{'gene'}{$sr}));
+foreach my $sr (sort keys %all_chroms ) {
+  $support->log(sprintf($fmt,$sr,$new->{'gene'}{$sr}||'-',$old->{'gene'}{$sr}||'-',$new->{'gene'}{$sr}-$old->{'gene'}{$sr}));
 }
 $support->log("\nTranscript numbers:\n");
 $support->log(sprintf($fmt, 'Chromosome','New trans count','Old trans count','Difference'));
-foreach my $sr (sort keys %{$new->{'transcript'}} ) {
-  $support->log(sprintf($fmt,$sr,$new->{'transcript'}{$sr},$old->{'transcript'}{$sr},$new->{'transcript'}{$sr}-$old->{'transcript'}{$sr}));
+foreach my $sr (sort keys %all_chroms ) {
+  $support->log(sprintf($fmt,$sr,$new->{'transcript'}{$sr}||'-',$old->{'transcript'}{$sr}||'-',$new->{'transcript'}{$sr}-$old->{'transcript'}{$sr}));
 }
 
 $support->log("Done.\n");
