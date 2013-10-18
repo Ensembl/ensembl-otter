@@ -470,11 +470,10 @@ use Bio::Vega::Utils::GFF;
 
         my $name = $gff_hash->{'attributes'}{'Name'};
 
-        # add gff lines for each of the introns and exons
-        # (adding lines for both seems a bit redundant to me, but zmap seems to like it!)
-        foreach my $feat (@{ $self->get_all_Exons }, @{ $self->get_all_Introns }) {
+        # add gff lines for each of the exons
+        foreach my $feat (@{ $self->get_all_Exons }) {
 
-            # exons and introns don't have analyses attached, so temporarily give them the transcript's one
+            # exons don't have analyses attached, so temporarily give them the transcript's one
             $feat->analysis($self->analysis);
 
             # and add the feature's gff line to our string, including the sequence name information as an attribute
