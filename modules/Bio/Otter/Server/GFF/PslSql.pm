@@ -6,10 +6,10 @@ use warnings;
 use Try::Tiny;
 
 use List::Util qw(max min);
-use Readonly;
-Readonly my $INTRON_MIN => 30;
 
 use base qw( Bio::Otter::Server::GFF );
+
+use Bio::Otter::Utils::Constants qw(intron_minimum_length);
 
 use Bio::Vega::DnaDnaAlignFeature;
 use Bio::Vega::HitDescription;
@@ -137,8 +137,8 @@ sub _psl_split_gapped_feature {
         my $t_intron_len = $this->{t_start} - $prev->{t_end} - 1;
 
         # Don't understand why we need all of these conditions
-        if (    $t_intron_len < $INTRON_MIN
-                and $q_intron_len < $INTRON_MIN
+        if (    $t_intron_len < intron_minimum_length
+                and $q_intron_len < intron_minimum_length
                 and ($t_intron_len == 0 or $q_intron_len == 0 or $t_intron_len == $q_intron_len)
             ) {
 
