@@ -212,7 +212,7 @@ sub initialize {
         # Show the subsequence in fMap
         my $show_subseq = sub{ $self->show_subseq };
         $tools_menu->add('command',
-            -label          => 'Hunt in Zmap',
+            -label          => 'Hunt in ZMap',
             -command        => $show_subseq,
             -accelerator    => 'Ctrl+H',
             -underline      => 0,

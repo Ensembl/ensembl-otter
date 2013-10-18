@@ -304,7 +304,7 @@ sub do_rename_locus {
             $ace .= qq{\nLocus "$new_name"\n-D Type_prefix\n};
         }
 
-        # Now we need to update Zmap with the new locus names
+        # Now we need to update ZMap with the new locus names
         my @create_xml;
         foreach my $sub ($self->fetch_SubSeqs_by_locus_name($new_name)) {
             push @create_xml, $sub->zmap_create_xml_string($offset);
@@ -543,7 +543,7 @@ sub populate_menus {
     ## Spawn dotter Ctrl .
     my $run_dotter_command = sub { $self->run_dotter };
     $tools_menu->add('command',
-        -label          => 'Dotter Zmap hit',
+        -label          => 'Dotter ZMap hit',
         -command        => $run_dotter_command,
         -accelerator    => 'Ctrl+.',
         -underline      => 0,
@@ -592,7 +592,7 @@ sub populate_menus {
     my $relaunch_zmap = sub { $self->_zmap_view_new($self->zmap_select) };
     $tools_menu->add
       ('command',
-       -label          => 'Relaunch Zmap',
+       -label          => 'Relaunch ZMap',
        -command        => $relaunch_zmap,
        -accelerator    => 'Ctrl+L',
        -underline      => 2,
@@ -602,7 +602,7 @@ sub populate_menus {
     # select ZMap
     $tools_menu->add
       ('command',
-       -label          => 'Select Zmap',
+       -label          => 'Select ZMap',
        -command        => sub { $self->zmap_select_window },
        -underline      => 0,
       );
@@ -611,7 +611,7 @@ sub populate_menus {
     my $show_subseq = [ $self, 'show_subseq' ];
     $tools_menu->add
       ('command',
-       -label          => 'Hunt in Zmap',
+       -label          => 'Hunt in ZMap',
        -command        => $show_subseq,
        -accelerator    => 'Ctrl+H',
        -underline      => 0,
@@ -1465,7 +1465,7 @@ sub add_SubSeq_and_paste_evidence {
 sub add_external_SubSeqs {
     my ($self, @ext_subs) = @_;
 
-    # Subsequences from Zmap gff which are not in acedb database
+    # Subsequences from ZMap gff which are not in acedb database
     my $asm = $self->Assembly;
     my $dna = $asm->Sequence;
     foreach my $sub (@ext_subs) {
@@ -1590,7 +1590,7 @@ sub delete_subsequences {
     }
     $self->draw_subseq_list;
 
-    # delete from Zmap
+    # delete from ZMap
     try {
         foreach my $del (@xml) {
             $self->zmap->send_command_and_xml('delete_feature', $del);

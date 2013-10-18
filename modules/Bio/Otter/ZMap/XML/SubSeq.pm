@@ -36,7 +36,7 @@ sub zmap_create_xml_string {
     $offset ||= 0;
 
     ### featureset tag will require "align" and "block" attributes
-    ### if there is more than one in the Zmap. Can probably be
+    ### if there is more than one in the ZMap. Can probably be
     ### taken from the attached clone_Sequence.
     my $xml = Hum::XmlWriter->new;
     $xml->open_tag('featureset', {name => $self->zmap_featureset_name});
@@ -186,7 +186,7 @@ sub zmap_info_xml {
 
     my $xml = Hum::XmlWriter->new(5);
 
-    # We can add our info for Zmap into the "Feature" and "Annotation" subsections of the "Details" page.
+    # We can add our info for ZMap into the "Feature" and "Annotation" subsections of the "Details" page.
     $xml->open_tag('page', {name => 'Details'});
 
     if (my $t_info_xml = $self->zmap_transcript_info_xml) {

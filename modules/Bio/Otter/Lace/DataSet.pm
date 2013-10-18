@@ -94,7 +94,7 @@ sub zmap_config {
         'ZMap' => $stanza,
         'ZMapWindow' => $self->config_section('ZMapWindow'),
 
-        # BAM and bigWig imported via Zmap File menu
+        # BAM and bigWig imported via ZMap File menu
         'columns' => {
             'Short Read Data' => [qw{ BAM bigWig }],
         },

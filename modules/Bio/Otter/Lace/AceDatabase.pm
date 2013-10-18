@@ -537,7 +537,7 @@ sub blixem_config {
             'link-features-by-name' => 'false',
             'bulk-fetch'            => 'none',
             'user-fetch'            => 'internal',
-            # Zmap stylesfile is used to pick up colours for transcripts
+            # ZMap stylesfile is used to pick up colours for transcripts
             'stylesfile'            => $self->stylesfile,
         },
 
