@@ -15,7 +15,7 @@ use Try::Tiny;
 
 {
     ### Should add this to otter_config
-    ### or parse it from the Zmap styles
+    ### or parse it from the ZMap styles
     my %evidence_type = (
         vertebrate_mRNA  => 'cDNA',
         vertebrate_ncRNA => 'ncRNA',

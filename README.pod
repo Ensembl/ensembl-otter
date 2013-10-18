@@ -7,7 +7,7 @@ attempting to install it.
 =head2 Otterlace
 
 Otterlace is an interactive, graphical client, which uses a local acedb
-database with Zmap and perl/Tk tools to curate genomic annotation.
+database with ZMap and perl/Tk tools to curate genomic annotation.
 Annotation is stored in an extended Ensembl schema (the "otter" database),
 which presents the annotator with contiguous regions of a chromosome.  The
 acedb database provides local persistent storage, so that if the software or
