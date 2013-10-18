@@ -873,7 +873,7 @@ my $gene_build = $date.'-Vega';
 my $gene_build_date =  strftime "%Y-%m-%d", localtime;
 
 #add date of datafreeze
-my $datafreeze =  strftime "%Y-%m-%d", localtime;
+my $datafreeze =  strftime "%d-%m-%Y", localtime;
 push @sql_fixes, "INSERT ignore into meta (species_id,meta_key,meta_value) VALUES (1,\'genebuild.last_geneset_update\',\'$gene_build_date\');\n";
 push @sql_fixes, "INSERT ignore into meta (species_id,meta_key,meta_value) VALUES (1,\'genebuild.version\',\'$gene_build\');\n";
 push @sql_fixes, "INSERT into meta (meta_key,meta_value) VALUES ('genebuild.level','toplevel'),('transcriptbuild.level','toplevel'),('exonbuild.level','toplevel');\n";
