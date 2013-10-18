@@ -99,14 +99,14 @@ is($safd->end,            21, 'end');
 is($safd->strand,         -1, 'strand');
 is($safd->score,          56, 'score');
 
-my $vcs = 'M 3 3 I 0 3 M 2 2 G 3 0 M 4 4 I 0 4 M 1 1 G 0 1 M 1 1 I 0 2 M 3 3 G 3 0';
+my $vcs = 'M 3 3 I 0 43 M 2 2 G 3 0 M 4 4 I 0 44 M 1 1 G 0 1 M 1 1 I 0 42 M 3 3 G 3 0';
 $safd = new_ok($saf_dna_module => [ -vulgar_comps_string => $vcs ], 'new from vulgar_comps_string');
 is($safd->vulgar_comps_string, $vcs, 'vulgar_comps_string');
 note 'Expect warning "Intron info will be lost..."';
-is($safd->cigar_string, '3M3I2M3D4M4IMIM2I3M3D', 'cigar_string');
+is($safd->cigar_string, '3M43I2M3D4M44IMIM42I3M3D', 'cigar_string');
 
 $safd->start(23234);
-$safd->end(23257);
+$safd->end(23377);
 $safd->hstart(1);
 $safd->hend(20);
 $safd->seqname('Tseq');
@@ -118,10 +118,10 @@ is(scalar(@exons), 4, 'n_exons');
 my $exp = {
     exons => [
         { start => 23234, end => 23236, hstart =>  1, hend =>  3, vcs => 'M 3 3' },
-        { start => 23240, end => 23245, hstart =>  4, hend => 12, vcs => 'M 2 2 G 3 0 M 4 4',
-          vulgar_string => 'Qseq 3 12 + Tseq 23239 23245 + 0 M 2 2 G 3 0 M 4 4'},
-        { start => 23250, end => 23252, hstart => 13, hend => 14, vcs => 'M 1 1 G 0 1 M 1 1' },
-        { start => 23255, end => 23257, hstart => 15, hend => 20, vcs => 'M 3 3 G 3 0' },
+        { start => 23280, end => 23285, hstart =>  4, hend => 12, vcs => 'M 2 2 G 3 0 M 4 4',
+          vulgar_string => 'Qseq 3 12 + Tseq 23279 23285 + 0 M 2 2 G 3 0 M 4 4'},
+        { start => 23330, end => 23332, hstart => 13, hend => 14, vcs => 'M 1 1 G 0 1 M 1 1' },
+        { start => 23375, end => 23377, hstart => 15, hend => 20, vcs => 'M 3 3 G 3 0' },
         ],
     strand  => 1,
     hstrand => 1,
