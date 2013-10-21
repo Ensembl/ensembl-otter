@@ -520,7 +520,7 @@ name, are:
 
 =item B<url>
 
-Defaults to B<http://www.sanger.ac.uk/cgi-bin/otter>
+Defaults to B<http://otter.sanger.ac.uk/cgi-bin/otter>
 
 =item B<author>
 
@@ -541,9 +541,8 @@ Defaults to B<0>
 
 Here's an example config file:
 
-
   [client]
-  url=http://dev.sanger.ac.uk/cgi-bin/otter
+  url=http://otter.dev.sanger.ac.uk/cgi-bin/otter
 
   [default.use_filters]
   trf=1
@@ -596,7 +595,7 @@ __DATA__
 # This is where the HARDWIRED ABSOLUTE DEFAULTS are stored
 
 [client]
-url=http://www.sanger.ac.uk/cgi-bin/otter
+url=http://otter.sanger.ac.uk/cgi-bin/otter
 write_access=0
 gff_version=2
 debug=Client,Zircon,XRemote
