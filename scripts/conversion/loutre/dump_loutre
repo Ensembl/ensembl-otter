@@ -36,7 +36,7 @@ Options:
 
     --annotrackhost=s                   Annotrack DB host
     --annotrackport=s                   Annotrack DB port
-    --annotrackuser=s                   Annotrack DB user
+   --annotrackuser=s                   Annotrack DB user
     --annotrackpass=s                   Annotrack DB pass
     --annotrackdbname=s                 Annotrack DB name
 
@@ -829,7 +829,7 @@ foreach my $name (@{$chr_names_wanted}) {
 $support->log("Got $fsv fsv genes and $non_fsv non_fsv genes\n");
 
 #add date of datafreeze
-my $datafreeze =  strftime "%Y-%m-%d", localtime;
+my $datafreeze =  strftime "%d-%m-%Y", localtime;
 if ($support->param('add_genes')) {
   $vdbh->do(qq(UPDATE meta set meta_value = \'$datafreeze\' where meta_key = \'genebuild.havana_datafreeze_date\'));
   $support->log("Updated date for genebuild.havana_datafreeze_date meta entry\n");
