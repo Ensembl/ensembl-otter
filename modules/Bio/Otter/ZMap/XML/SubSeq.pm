@@ -189,21 +189,6 @@ sub zmap_info_xml {
     # We can add our info for ZMap into the "Feature" and "Annotation" subsections of the "Details" page.
     $xml->open_tag('page', {name => 'Details'});
 
-    if (my $t_info_xml = $self->zmap_transcript_info_xml) {
-        $xml->open_tag('subsection', {name => 'Annotation'});
-        $xml->add_raw_data($t_info_xml);
-        $xml->close_tag;
-    }
-
-    # Description field was added to the object for displaying DE_line info for Halfwise (Pfam) objects
-    if (my $desc = $self->description) {
-        $xml->open_tag('subsection', {name => 'Feature'});
-        $xml->open_tag('paragraph', {type => 'tagvalue_table'});
-        $xml->full_tag('tagvalue', {name => 'Description', type => 'scrolled_text'}, $desc);
-        $xml->close_tag;
-        $xml->close_tag;
-    }
-
     if (my $locus = $self->Locus) {
         # This Locus stuff might be better in Hum::Ace::Locus
         $xml->open_tag('subsection', {name => 'Locus'});
@@ -237,6 +222,22 @@ sub zmap_info_xml {
 
         $xml->close_tag;
     }
+
+    if (my $t_info_xml = $self->zmap_transcript_info_xml) {
+        $xml->open_tag('subsection', {name => 'Annotation'});
+        $xml->add_raw_data($t_info_xml);
+        $xml->close_tag;
+    }
+
+    # Description field was added to the object for displaying DE_line info for Halfwise (Pfam) objects
+    if (my $desc = $self->description) {
+        $xml->open_tag('subsection', {name => 'Feature'});
+        $xml->open_tag('paragraph', {type => 'tagvalue_table'});
+        $xml->full_tag('tagvalue', {name => 'Description', type => 'scrolled_text'}, $desc);
+        $xml->close_tag;
+        $xml->close_tag;
+    }
+
     $xml->close_tag;
 
     # Add our own page called "Exons"
