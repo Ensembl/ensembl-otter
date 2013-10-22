@@ -64,7 +64,7 @@ sub _meta_response {
 sub _meta_response_embedded {
     # NB: field separator is //, trailing separators are intentional.
     return << '_EO_RESPONSE_';
-schema_version//70//
+schema_version//72//
 patch//patch_40_41_a.sql|analysis_description_displayable//
 patch//patch_40_41_b.sql|info_type_enum//
 patch//patch_40_41_c.sql|xref_priority//
@@ -239,6 +239,10 @@ patch//patch_69_70_b.sql|add_mapping_set_history//
 patch//patch_69_70_c.sql|column_datatype_consistency//
 patch//patch_69_70_d.sql|data_file_id_auto_increment//
 patch//patch_69_70_e.sql|protein_feature_hit_description//
+patch//patch_70_71_a.sql|schema_version//
+patch//patch_70_71_b.sql|mapping_set_index//
+patch//patch_71_72_a.sql|schema_version//
+patch//patch_71_72_b.sql|associated_xref//
 _EO_RESPONSE_
 }
 
