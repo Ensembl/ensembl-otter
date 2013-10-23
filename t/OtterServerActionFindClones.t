@@ -10,9 +10,7 @@ use Test::More;
 use Test::Otter qw( ^db_or_skipall );
 use Time::HiRes qw( gettimeofday tv_interval );
 
-use lib "${ENV{ANACODE_TEAM_TOOLS}}/otterlace/server/perl"; # find 'fake' SangerWeb modules
-$ENV{HTTP_CLIENTREALM} = 'sanger';                          # emulate a local user
-use Bio::Otter::ServerScriptSupport;
+use Bio::Otter::LocalServer;
 
 my $vcf_module;
 
@@ -68,14 +66,12 @@ WU:SPDYB\tgene_synonym\tAC123686.11\tchr5-38", 10 ],
     );
 
 sub do_find {
-    my (@param) = @_;
+    my (%params) = @_;
     my $t0 = [ gettimeofday() ];
 
     # $server can be re-used, only for the same dataset
-    my $server = Bio::Otter::ServerScriptSupport->new;
-    while (my ($k, $v) = splice @param, 0, 2) {
-        $server->param($k, $v);
-    }
+    my $server = Bio::Otter::LocalServer->new;
+    $server->set_params(%params);
 
     my $finder = new_ok($vcf_module => [ $server ]);
     $finder->find;
