@@ -1,5 +1,5 @@
 
-package Bio::Vega::CloneFinder;
+package Bio::Otter::ServerAction::FindClones;
 
 #
 # A module used by server script 'find_clones' to find things on clones

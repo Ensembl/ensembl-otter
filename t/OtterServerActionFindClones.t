@@ -17,7 +17,7 @@ use Bio::Otter::ServerScriptSupport;
 my $vcf_module;
 
 BEGIN {
-    $vcf_module = qw( Bio::Vega::CloneFinder );
+    $vcf_module = qw( Bio::Otter::ServerAction::FindClones );
     use_ok($vcf_module);
 }
 

@@ -11,12 +11,12 @@ BEGIN { use lib ($ENV{OTTER_PERL_INC} || q{}) =~ m{([^:]+)}g }
 use SangerPaths qw{ core bioperl123 ensembl72 otter78 };
 
 use Bio::Otter::ServerScriptSupport;
-use Bio::Vega::CloneFinder;
+use Bio::Otter::ServerAction::FindClones;
 
 Bio::Otter::ServerScriptSupport->send_response(
     sub {
         my ($server) = @_;
-        my $finder = Bio::Vega::CloneFinder->new($server);
+        my $finder = Bio::Otter::ServerAction::FindClones->new($server);
         $finder->find;
         my $output = $finder->generate_output;
         return $output;
