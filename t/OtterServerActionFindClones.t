@@ -8,6 +8,7 @@ use Test::CriticModule;
 
 use Test::More;
 use Test::Otter qw( ^db_or_skipall );
+use Test::Requires qw( Bio::EnsEMBL::Variation::DBSQL::DBAdaptor );
 use Time::HiRes qw( gettimeofday tv_interval );
 
 use Bio::Otter::LocalServer;
