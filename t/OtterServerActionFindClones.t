@@ -13,14 +13,14 @@ use Time::HiRes qw( gettimeofday tv_interval );
 
 use Bio::Otter::LocalServer;
 
-my $vcf_module;
+my $safc_module;
 
 BEGIN {
-    $vcf_module = qw( Bio::Otter::ServerAction::FindClones );
-    use_ok($vcf_module);
+    $safc_module = qw( Bio::Otter::ServerAction::FindClones );
+    use_ok($safc_module);
 }
 
-critic_module_ok($vcf_module);
+critic_module_ok($safc_module);
 
 my @tests = (
     {
@@ -74,7 +74,7 @@ sub do_find {
     my $server = Bio::Otter::LocalServer->new;
     $server->set_params(%params);
 
-    my $finder = new_ok($vcf_module => [ $server ]);
+    my $finder = new_ok($safc_module => [ $server ]);
     $finder->find;
 
     return ($finder->generate_output, tv_interval($t0));
