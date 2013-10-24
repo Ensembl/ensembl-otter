@@ -585,26 +585,22 @@ sub find {
     return;
 }
 
-sub generate_output {
+sub result_overflow {
     my ($self) = @_;
+    return $self->result_count > $MAX_HITS;
+}
 
-    my $output_string = '';
-    $output_string .= "\tToo many search results, some were omitted - please be more specific\n"
-      if $self->result_count > $MAX_HITS;
+sub find_clones {
+    my ($self) = @_;
+    $self->find;
+    my $output = $self->serialise_output($self->results);
+    return $output;
+}
 
-    my $results = $self->results;
-    while (my ($qname, $qname_results) = each %{$results}) {
-        while (my ($chr_name, $chr_name_results) = each %{$qname_results}) {
-            while (my ($qtype, $qtype_results) = each %{$chr_name_results}) {
-                while (my ($components, $count) = each %{$qtype_results}) {
-                    $output_string .=
-                        join("\t", $qname, $qtype, $components, $chr_name)."\n";
-                }
-            }
-        }
-    }
-
-    return $output_string;
+# Null serialiser, overridden in B:O:SA:TSV::FindClones
+sub serialise_output {
+    my ($self, $results) = @_;
+    return $results;
 }
 
 sub _wrap_search_errors {
