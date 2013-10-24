@@ -9,10 +9,12 @@ use Test::CriticModule;
 use Test::More;
 use Test::Otter qw( ^db_or_skipall );
 use Test::Requires qw( Bio::EnsEMBL::Variation::DBSQL::DBAdaptor );
+use List::Util  qw( max );
 use Time::HiRes qw( gettimeofday tv_interval );
 
 use Bio::Otter::LocalServer;
 
+my $TIMEOUT = $ENV{FIND_CLONES_TEST_TIMEOUT} || 1.25; # sec - a bit lenient
 my $safc_module;
 
 BEGIN {
@@ -61,7 +63,7 @@ __EO_RESULT__
 WU:SPDYB\tgene_synonym\tAC123686.11\tchr5-38",
             "*:SPDYB" => [ # prefix-wildcard finds prefixed variants, slowly
 "KO:SPDYB\tgene_name\tAC123686.11\tchr5-38
-WU:SPDYB\tgene_synonym\tAC123686.11\tchr5-38", 10 ],
+WU:SPDYB\tgene_synonym\tAC123686.11\tchr5-38", max($TIMEOUT, 10) ],
         },
     },
     );
@@ -85,7 +87,7 @@ sub tt_testlist {
     note "Tests for dataset: $test->{dataset}";
 
     while (my ($query, $want) = each %{$test->{queries}} ) {
-        my $t_allow = 1.25; # sec - a bit lenient
+        my $t_allow = $TIMEOUT;
         ($want, $t_allow) = @$want if ref($want);
 
         subtest "Query: $query" => sub {
