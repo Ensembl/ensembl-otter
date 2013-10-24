@@ -15,14 +15,18 @@ use Time::HiRes qw( gettimeofday tv_interval );
 use Bio::Otter::LocalServer;
 
 my $TIMEOUT = $ENV{FIND_CLONES_TEST_TIMEOUT} || 1.25; # sec - a bit lenient
-my $safc_module;
+
+my ($safc_module, $safc_tsv_module);
 
 BEGIN {
     $safc_module = qw( Bio::Otter::ServerAction::FindClones );
+    $safc_tsv_module = qw( Bio::Otter::ServerAction::TSV::FindClones );
     use_ok($safc_module);
+    use_ok($safc_tsv_module);
 }
 
 critic_module_ok($safc_module);
+critic_module_ok($safc_tsv_module);
 
 my @tests = (
     {
@@ -69,17 +73,42 @@ WU:SPDYB\tgene_synonym\tAC123686.11\tchr5-38", max($TIMEOUT, 10) ],
     );
 
 sub do_find {
-    my (%params) = @_;
+    my ($module, %params) = @_;
     my $t0 = [ gettimeofday() ];
 
     # $server can be re-used, only for the same dataset
     my $server = Bio::Otter::LocalServer->new;
     $server->set_params(%params);
 
-    my $finder = new_ok($safc_module => [ $server ]);
-    $finder->find;
+    my $finder = new_ok($module => [ $server ]);
+    return ($finder->find_clones, tv_interval($t0));
+}
 
-    return ($finder->generate_output, tv_interval($t0));
+sub do_find_raw {
+    my (%params) = @_;
+    return do_find($safc_module, %params);
+}
+
+sub do_find_tsv {
+    my (%params) = @_;
+    return do_find($safc_tsv_module, %params);
+}
+
+sub tt_raw {
+    subtest 'Raw query' => sub {
+        my ($got, $t_took) = do_find_raw(dataset => 'human', qnames => 'OTTHUMT00000039641');
+        is_deeply($got,
+                  { OTTHUMT00000039641 => {
+                      'chr6-18' => {
+                          'Otter:transcript_stable_id' => { 'AL139092.12' => 1 },
+                      }
+                    }
+                  },
+                  'raw result');
+        cmp_ok($t_took, '<=', $TIMEOUT, "raw query time");
+        done_testing;
+    };
+    return;
 }
 
 sub tt_testlist {
@@ -92,7 +121,7 @@ sub tt_testlist {
 
         subtest "Query: $query" => sub {
             my ($got, $t_took) =
-              do_find(qnames  => $query, dataset => $test->{dataset});
+              do_find_tsv(qnames  => $query, dataset => $test->{dataset});
             $got = join "\n", sort split /\n/, $got; # test stability sort
             $want =~ s{\n*\Z}{};
             is($got, $want, "query($query) result");
@@ -104,12 +133,13 @@ sub tt_testlist {
 }
 
 sub tt_overflow {
-    my ($got, $t_took) = do_find(dataset => 'human', qnames => 'D*'); # ~ 6k hits
+    my ($got, $t_took) = do_find_tsv(dataset => 'human', qnames => 'D*'); # ~ 6k hits
     like($got, qr{\A\tToo many search results}, 'human D* hit overflow');
     return ();
 }
 
 sub main {
+    tt_raw();
     tt_testlist($_) foreach @tests;
     tt_overflow();
 
