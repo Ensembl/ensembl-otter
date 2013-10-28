@@ -1084,7 +1084,7 @@ sub transfer_contig_attribs {
       $c_tot++;
     }
     if ($attribs_to_store) {
-      $vata->store_on_('Slice',$vega_contig,$attribs_to_store);
+      $vata->store_on_Slice($vega_contig,$attribs_to_store);
     }
     $support->log_verbose("Transferred $c contig attribs for contig $srname (dbID = $dbID)\n",1);
   }
