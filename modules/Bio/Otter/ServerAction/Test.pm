@@ -1,4 +1,4 @@
-package Bio::Otter::Server::Test;
+package Bio::Otter::ServerAction::Test;
 use strict;
 use warnings;
 
@@ -8,6 +8,7 @@ use Try::Tiny;
 use Sys::Hostname 'hostname';
 use Cwd 'cwd';
 use Digest::SHA 'sha1_hex';
+use YAML 'Dump';
 
 use Bio::Otter::ServerScriptSupport;
 use Bio::Otter::Version;
@@ -16,6 +17,28 @@ use Bio::Otter::Auth::Pagesmith;
 use Bio::Otter::Auth::SSO;
 
 use Bio::EnsEMBL::ApiVersion ();
+
+
+sub new {
+    my ($pkg, $server) = @_;
+    my $self = { _server => $server };
+    bless $self, $pkg;
+    return $self;
+}
+
+sub server {
+    my ($self) = @_;
+    return $self->{_server};
+}
+
+sub as_yaml {
+    my ($self) = @_;
+
+    return "You are an external user\n" unless $self->server->local_user;
+
+    my %out = $self->generate;
+    return Dump(\%out);
+}
 
 
 # keep the align-to-centre layout, it's easier to read than YAML
@@ -31,8 +54,9 @@ sub __hash2table {
 
 # load all our modules, and their deps
 sub _require_all {
-    my $dir = $INC{'Bio/Otter/ServerScriptSupport.pm'};
-    $dir =~ s{Otter/\w+\.pm$}{};
+    my $dir = __FILE__;
+    $dir =~ s{Otter/\w+/\w+\.pm$}{}
+      or die "Cannot reconstruct dir from $dir";
 
     # some modules need a clean PATH
     $ENV{PATH} = '/bin:/usr/bin';
@@ -47,6 +71,12 @@ sub _require_all {
         return ();
     };
     find({ wanted => $wanted, no_chdir => 1 }, $dir);
+
+    # Safety check - we want Bio::Otter and Bio::Vega,
+    # but not the entire Perl
+    my $n = @mods;
+    die "Expected 100 - 300 modules, now looking at $n"
+      if $n < 100 || $n > 300;
 
     my %out;
     foreach my $mod (@mods) {
@@ -90,8 +120,8 @@ sub _is_SangerWeb_real {
 
 
 sub generate {
-    my ($called, $server) = @_;
-
+    my ($self) = @_;
+    my $server = $self->server;
     my $web = $server->sangerweb;
 
     my $user = $web->username;
