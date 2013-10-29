@@ -5,6 +5,8 @@ use warnings;
 use Bio::Otter::SpeciesDat;
 use Bio::Otter::Version;
 use Try::Tiny;
+use List::MoreUtils 'uniq';
+
 
 =head1 NAME
 
@@ -261,6 +263,29 @@ sub _desig {
     return \%desig;
 }
 
+
+=head2 extant_versions()
+
+Consulting L</designations>, return a list of (uniq and ascending)
+major version numbers which should exist on the server.
+
+=cut
+
+sub extant_versions {
+    my ($called) = @_;
+    my $desig = $called->designations;
+    my $desig_re = qr{^(\d{2,4})(?:\.\d+)?$};
+    my @version = map {
+        ## no critic (RegularExpressions::ProhibitCaptureWithoutTest)
+        ($desig->{$_} =~ $desig_re
+         ? $1 # <-- capture var in test.  Perlcritic bug?
+         : die "Didn't understand desig($_ => $desig->{$_}) with $desig_re");
+    } keys %$desig;
+    @version = uniq(sort {$a <=> $b} @version);
+
+    die unless wantarray;
+    return @version;
+}
 
 
 =head2 users_hash()
