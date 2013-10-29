@@ -1,11 +1,11 @@
-package Bio::Otter::Server;
+package Bio::Otter::Server::Support;
 
 use strict;
 use warnings;
 
 =head1 NAME
 
-Bio::Otter::Server - common parent for MFetcher/ServerScriptSupport and LocalServer
+Bio::Otter::Server::Support - common parent for MFetcher/ServerScriptSupport and LocalServer
 
 =cut
 
