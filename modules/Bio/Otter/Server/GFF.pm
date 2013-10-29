@@ -8,7 +8,7 @@ use Bio::Vega::Enrich::SliceGetAllAlignFeatures;
 use Bio::Vega::Utils::GFF;
 use Bio::Vega::Utils::EnsEMBL2GFF;
 
-use base qw( Bio::Otter::ServerScriptSupport );
+use base qw( Bio::Otter::Server::Support::Web );
 
 my @gff_keys = qw(
     gff_source

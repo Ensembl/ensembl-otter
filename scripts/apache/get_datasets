@@ -10,7 +10,7 @@ use warnings;
 BEGIN { use lib ($ENV{OTTER_PERL_INC} || q{}) =~ m{([^:]+)}g }
 use SangerPaths qw{ core bioperl123 ensembl72 otter78 };
 
-use Bio::Otter::ServerScriptSupport;
+use Bio::Otter::Server::Support::Web;
 
 # For added security we don't show mysql connection details to clients outside
 # the Sanger. We only need connection details to for scripts running at Sanger.
@@ -58,7 +58,7 @@ sub get_datasets {
     return $server->otter_wrap_response($xml);
 }
 
-Bio::Otter::ServerScriptSupport->send_response(\&get_datasets);
+Bio::Otter::Server::Support::Web->send_response(\&get_datasets);
 
 __END__
 

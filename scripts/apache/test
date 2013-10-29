@@ -11,7 +11,7 @@ BEGIN { use lib ($ENV{OTTER_PERL_INC} || q{}) =~ m{([^:]+)}g }
 use SangerPaths qw{ core bioperl123 ensembl72 otter78 humpub };
 
 use Bio::Otter::ServerAction::Test;
-use Bio::Otter::ServerScriptSupport;
+use Bio::Otter::Server::Support::Web;
 
 sub test {
     my ($server) = @_;
@@ -21,4 +21,4 @@ sub test {
     return $test->as_yaml;
 }
 
-Bio::Otter::ServerScriptSupport->send_response(\&test);
+Bio::Otter::Server::Support::Web->send_response(\&test);

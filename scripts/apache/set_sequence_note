@@ -10,7 +10,7 @@ use warnings;
 BEGIN { use lib ($ENV{OTTER_PERL_INC} || q{}) =~ m{([^:]+)}g }
 use SangerPaths qw{ core bioperl123 ensembl72 otter78 };
 
-use Bio::Otter::ServerScriptSupport;
+use Bio::Otter::Server::Support::Web;
 
 sub set_sequence_note {
     my ($server) = @_;
@@ -77,4 +77,4 @@ sub set_sequence_note {
     return $server->otter_wrap_response("Done\n");
 }
 
-Bio::Otter::ServerScriptSupport->send_response(\&set_sequence_note);
+Bio::Otter::Server::Support::Web->send_response(\&set_sequence_note);

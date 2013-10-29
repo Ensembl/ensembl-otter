@@ -10,7 +10,7 @@ use warnings;
 BEGIN { use lib ($ENV{OTTER_PERL_INC} || q{}) =~ m{([^:]+)}g }
 use SangerPaths qw{ core bioperl123 ensembl72 otter78 };
 
-use Bio::Otter::ServerScriptSupport;
+use Bio::Otter::Server::Support::Web;
 use Bio::Otter::ServerAction::Region;
 
 sub get_assembly_dna {
@@ -21,7 +21,7 @@ sub get_assembly_dna {
     return $sa_region->get_assembly_dna;
 }
 
-Bio::Otter::ServerScriptSupport->send_response(\&get_assembly_dna);
+Bio::Otter::Server::Support::Web->send_response(\&get_assembly_dna);
 
 __END__
 
