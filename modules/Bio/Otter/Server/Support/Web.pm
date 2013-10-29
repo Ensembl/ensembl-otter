@@ -1,5 +1,5 @@
 
-package Bio::Otter::ServerScriptSupport;
+package Bio::Otter::Server::Support::Web;
 
 use strict;
 use warnings;

@@ -5,7 +5,7 @@ use warnings;
 
 =head1 NAME
 
-Bio::Otter::Server::Support - common parent for MFetcher/ServerScriptSupport and B:O:Server::Support::Local
+Bio::Otter::Server::Support - common parent for MFetcher/B:O:Server::Support::{Local,Web}
 
 =cut
 

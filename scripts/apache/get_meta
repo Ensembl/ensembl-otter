@@ -10,7 +10,7 @@ use warnings;
 BEGIN { use lib ($ENV{OTTER_PERL_INC} || q{}) =~ m{([^:]+)}g }
 use SangerPaths qw{ core bioperl123 ensembl72 otter78 };
 
-use Bio::Otter::ServerScriptSupport;
+use Bio::Otter::Server::Support::Web;
 
 my $select_meta_sql = <<'SQL'
     SELECT species_id, meta_key, meta_value
@@ -55,4 +55,4 @@ sub get_meta {
     return $server->otter_wrap_response($output_string);
 }
 
-Bio::Otter::ServerScriptSupport->send_response(\&get_meta);
+Bio::Otter::Server::Support::Web->send_response(\&get_meta);

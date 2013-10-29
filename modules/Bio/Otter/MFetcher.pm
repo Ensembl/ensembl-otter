@@ -1,7 +1,7 @@
 
 package Bio::Otter::MFetcher;
 
-# Previously a part of ServerScriptSupport,
+# Previously a part of Bio::Otter::Server::Support::Web,
 # this module only deals with data layer:
 # interprets the metakeys to create and manage DBAdaptors
 # and performs mapping between assemblies.

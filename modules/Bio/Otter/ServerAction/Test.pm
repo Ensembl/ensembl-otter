@@ -10,7 +10,7 @@ use Cwd 'cwd';
 use Digest::SHA 'sha1_hex';
 use YAML 'Dump';
 
-use Bio::Otter::ServerScriptSupport;
+use Bio::Otter::Server::Support::Web;
 use Bio::Otter::Version;
 use Bio::Otter::Git;
 use Bio::Otter::Auth::Pagesmith;
@@ -147,7 +147,7 @@ sub generate {
         cwd => scalar cwd(),
         pid => $$ };
 
-    $out{'B:O:ServerScriptSupport'} =
+    $out{'B:O:Server::Support::Web'} =
       { local_user => $server->local_user,
 #        BOSSS => $server, # would leak users config & CGI internals
         internal_user => $server->internal_user };

@@ -10,7 +10,7 @@ use warnings;
 BEGIN { use lib ($ENV{OTTER_PERL_INC} || q{}) =~ m{([^:]+)}g }
 use SangerPaths qw{ core bioperl123 ensembl72 otter78 };
 
-use Bio::Otter::ServerScriptSupport;
+use Bio::Otter::Server::Support::Web;
 
 my $mapping_none_xml = <<'XML'
   <mapping type="none">
@@ -167,4 +167,4 @@ sub get_mapping_xml {
     }
 }
 
-Bio::Otter::ServerScriptSupport->send_response(\&get_mapping);
+Bio::Otter::Server::Support::Web->send_response(\&get_mapping);

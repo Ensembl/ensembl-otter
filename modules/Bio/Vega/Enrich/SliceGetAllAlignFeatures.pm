@@ -8,7 +8,7 @@ use warnings;
 use Bio::EnsEMBL::Slice;
 use Bio::Vega::DBSQL::SimpleBindingAdaptor;
 
-# Code in this module was originally embedded in Bio::Otter::ServerScriptSupport
+# Code in this module was originally embedded in Bio::Otter::Server::Support::Web
 
 sub enrich {
     my ($afs, $enriched_class) = @_;

@@ -80,7 +80,7 @@ client's authentication cookie, and a hash of external users, set
 flags for the user.
 
 Returns a list of hash key => value pairs suitable for inserting into
-L<Bio::Otter::ServerScriptSupport> objects,
+L<Bio::Otter::Server::Support::Web> objects,
 
 =over 4
 

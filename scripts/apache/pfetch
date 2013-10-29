@@ -17,7 +17,7 @@ use CGI;
 ### We avoid these for faster turnaround of requests, but have to
 #   replicate equivalent functionality inline.
 #
-# use Bio::Otter::ServerScriptSupport;
+# use Bio::Otter::Server::Support::Web;
 # use Hum::Conf qw{ PFETCH_SERVER_LIST };
 #
 # Listed here for the benefit of greppers...

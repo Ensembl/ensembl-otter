@@ -12,12 +12,12 @@ use SangerPaths qw{ core bioperl123 ensembl72 otter78 };
 
 use Try::Tiny;
 
-use Bio::Otter::ServerScriptSupport;
+use Bio::Otter::Server::Support::Web;
 use Bio::Otter::Utils::MM;
 use Bio::Otter::Utils::ENA;
 use Bio::Vega::Evidence::Types qw(evidence_is_sra_sample_accession);
 
-Bio::Otter::ServerScriptSupport->send_response(
+Bio::Otter::Server::Support::Web->send_response(
     sub {
         my ($server) = @_;
 
