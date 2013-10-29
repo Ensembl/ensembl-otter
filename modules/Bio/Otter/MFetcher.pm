@@ -12,9 +12,9 @@ use strict;
 use warnings;
 use Carp;
 
-use base 'Bio::Otter::Server';
+use base 'Bio::Otter::Server::Support';
 
-# new() provided by Bio::Otter::Server
+# new() provided by Bio::Otter::Server::Support
 
 sub get_slice {
     my ($self, $dba, $cs, $name, $type, $start, $end, $csver) = @_;
