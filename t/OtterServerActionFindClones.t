@@ -133,8 +133,17 @@ sub tt_testlist {
 }
 
 sub tt_overflow {
-    my ($got, $t_took) = do_find_tsv(dataset => 'human', qnames => 'D*'); # ~ 6k hits
-    like($got, qr{\A\tToo many search results}, 'human D* hit overflow');
+  SKIP: {
+
+      if ($ENV{OTTER_SKIP_SLOW_DB_TESTS}) {
+          my $msg = 'tt_overflow as OTTER_SKIP_SLOW_DB_TESTS is set';
+          diag "skipping $msg";
+          skip $msg, 1;
+      }
+
+      my ($got, $t_took) = do_find_tsv(dataset => 'human', qnames => 'D*'); # ~ 6k hits
+      like($got, qr{\A\tToo many search results}, 'human D* hit overflow');
+    }
     return ();
 }
 
