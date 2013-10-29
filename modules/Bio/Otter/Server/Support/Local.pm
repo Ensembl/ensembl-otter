@@ -1,4 +1,4 @@
-package Bio::Otter::LocalServer;
+package Bio::Otter::Server::Support::Local;
 
 use strict;
 use warnings;
