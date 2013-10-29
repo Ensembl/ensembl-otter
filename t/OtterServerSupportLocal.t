@@ -17,7 +17,7 @@ use Bio::Otter::ServerAction::Region; # a specimen ServerAction.
 my $module;
 
 BEGIN {
-    $module = 'Bio::Otter::LocalServer';
+    $module = 'Bio::Otter::Server::Support::Local';
     use_ok($module);
 }
 

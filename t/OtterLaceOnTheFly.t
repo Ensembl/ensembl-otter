@@ -15,7 +15,7 @@ use OtterTest::AccessionTypeCache;
 
 use OtterTest::Exonerate;
 
-use Bio::Otter::LocalServer;
+use Bio::Otter::Server::Support::Local;
 use Bio::Otter::ServerAction::Region;
 use Bio::Otter::Utils::FeatureSort qw( feature_sort );
 
@@ -164,7 +164,7 @@ sub main_tests {
 
       while (my ($species, $regions) = each %species_tests) {
           note("Live tests for: $species");
-          my $local_server = Bio::Otter::LocalServer->new();
+          my $local_server = Bio::Otter::Server::Support::Local->new();
           foreach my $region ( @$regions ) {
               $local_server->set_params(%$region, dataset => $species, cs => 'chromosome', csver => 'Otter');
               my $sa_region = Bio::Otter::ServerAction::Region->new_with_slice($local_server);

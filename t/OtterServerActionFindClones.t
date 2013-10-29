@@ -12,7 +12,7 @@ use Test::Requires qw( Bio::EnsEMBL::Variation::DBSQL::DBAdaptor );
 use List::Util  qw( max );
 use Time::HiRes qw( gettimeofday tv_interval );
 
-use Bio::Otter::LocalServer;
+use Bio::Otter::Server::Support::Local;
 
 my $TIMEOUT = $ENV{FIND_CLONES_TEST_TIMEOUT} || 1.25; # sec - a bit lenient
 
@@ -77,7 +77,7 @@ sub do_find {
     my $t0 = [ gettimeofday() ];
 
     # $server can be re-used, only for the same dataset
-    my $server = Bio::Otter::LocalServer->new;
+    my $server = Bio::Otter::Server::Support::Local->new;
     $server->set_params(%params);
 
     my $finder = new_ok($module => [ $server ]);

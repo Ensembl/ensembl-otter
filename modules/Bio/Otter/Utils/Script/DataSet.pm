@@ -16,7 +16,7 @@ use Try::Tiny;
 use Bio::Otter::Utils::Script::Gene;
 use Bio::Otter::Utils::Script::Transcript;
 
-use Bio::Otter::LocalServer;
+use Bio::Otter::Server::Support::Local;
 use Bio::Otter::ServerAction::Script::Region;
 
 use Moose;
@@ -37,7 +37,7 @@ has 'script' => (
 
 has 'local_server' => (
     is       => 'ro',
-    isa      => 'Bio::Otter::LocalServer',
+    isa      => 'Bio::Otter::Server::Support::Local',
     builder  => '_build_local_server',
     lazy     => 1,
     );
@@ -79,7 +79,7 @@ has 'gene_adaptor' => (
 
 sub _build_local_server {
     my $self = shift;
-    return Bio::Otter::LocalServer->new( otter_dba => $self->otter_dba );
+    return Bio::Otter::Server::Support::Local->new( otter_dba => $self->otter_dba );
 }
 
 sub _iterate_something {

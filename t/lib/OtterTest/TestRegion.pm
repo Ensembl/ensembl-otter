@@ -7,7 +7,7 @@ use warnings;
 
 use Test::Builder;
 
-use Bio::Otter::LocalServer;
+use Bio::Otter::Server::Support::Local;
 use Bio::Vega::Gene;
 use Bio::Vega::Transform::Otter;
 
@@ -25,7 +25,7 @@ our %test_region_params = (   ## no critic (Variables::ProhibitPackageVars)
     );
 
 sub local_server {
-    my $local_server = Bio::Otter::LocalServer->new;
+    my $local_server = Bio::Otter::Server::Support::Local->new;
     $local_server->set_params(%test_region_params);
     return $local_server;
 }
