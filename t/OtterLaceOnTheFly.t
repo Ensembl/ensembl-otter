@@ -305,8 +305,8 @@ sub run_region {
     $target_seq->name($title);
     $target_seq->sequence_string($dna);
 
-    my $genes = $sa_region->get_region->genes;
-    foreach my $gene (@$genes) {
+    my @genes = $sa_region->get_region->genes;
+    foreach my $gene (@genes) {
         note("    Gene: ", $gene->stable_id);
         my $transcripts = $gene->get_all_Transcripts;
         foreach my $ts (@$transcripts) {
