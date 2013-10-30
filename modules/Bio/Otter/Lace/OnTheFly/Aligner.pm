@@ -125,6 +125,10 @@ sub parse {
         (@ryo_result{@RYO_ORDER}, @vulgar_comps) = @line_parts;
 
         my $gapped_alignment = $self->_parse_vulgar(\%ryo_result, \@vulgar_comps);
+
+        my $target_start = $self->target->start;
+        $gapped_alignment->apply_target_offset($target_start - 1) if $target_start > 1;
+
         my $q_id = $gapped_alignment->query_id;
         $self->logger->info("RESULT found for ${q_id}");
 

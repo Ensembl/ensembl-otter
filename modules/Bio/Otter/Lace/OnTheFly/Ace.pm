@@ -33,8 +33,6 @@ sub ace {
     my $acedb_homol_tag = $method_tag . '_homol';
     my $hit_homol_tag = 'DNA_homol';
 
-    my $offset = $self->target->start - 1;
-
     my $ace = '';
 
     foreach my $hname (sort $self->query_ids) {
@@ -56,8 +54,8 @@ sub ace {
                 # In acedb strand is encoded by start being greater
                 # than end if the feature is on the negative strand.
                 my $strand  = $fp->strand;
-                my $start   = $fp->start + $offset;
-                my $end     = $fp->end + $offset;
+                my $start   = $fp->start;
+                my $end     = $fp->end;
                 my $hstart  = $fp->hstart;
                 my $hend    = $fp->hend;
                 my $hstrand = $fp->hstrand;
@@ -93,7 +91,7 @@ sub ace {
                     # each block so that they all end up under the same tag once
                     # they are parsed into acedb.
                     foreach my $ugf (@ugfs){
-                        my $ref_coord   = ($strand  == -1 ? $ugf->end  : $ugf->start) + $offset;
+                        my $ref_coord   = ($strand  == -1 ? $ugf->end  : $ugf->start);
                         my $match_coord = $hstrand == -1 ? $ugf->hend : $ugf->hstart;
                         my $length      = ($ugf->hend - $ugf->hstart) + 1;
                         $ace .=

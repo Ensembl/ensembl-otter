@@ -156,7 +156,18 @@ sub run_test {
     note("n(output_features): ", scalar(@output_features));
     is(scalar @new_features, scalar@output_features, 'n(new_features)');
     foreach my $n ( 0 .. scalar(@new_features) - 1 ) {
-        my $name = $output_features[$n]->hseqname;
+        my $of = $output_features[$n];
+
+        # old-fashioned exonerate output is not shifted according to the start (marked region),
+        # so do it here:
+        if (my $start = $test->{start}) {
+            my $newf = ref($of)->new_fast({ %$of });
+            $newf->start($of->start + $start - 1);
+            $newf->end(  $of->end   + $start - 1);
+            $of = $newf;
+        }
+
+        my $name = $of->hseqname;
         subtest "Feature $n ($name)" => sub {
             foreach my $member (
                 qw{
@@ -177,7 +188,7 @@ sub run_test {
               }
                 )
             {
-                is($new_features[$n]->$member(), $output_features[$n]->$member(), $member);
+                is($new_features[$n]->$member(), $of->$member(), $member);
             }
             done_testing;
         }
