@@ -33,13 +33,13 @@ BEGIN {
 
     @modules = qw(
         Bio::Otter::Lace::OnTheFly
-        Bio::Otter::Lace::OnTheFly::Ace
         Bio::Otter::Lace::OnTheFly::Aligner
         Bio::Otter::Lace::OnTheFly::Aligner::Genomic
         Bio::Otter::Lace::OnTheFly::Aligner::Transcript
         Bio::Otter::Lace::OnTheFly::FastaFile
+        Bio::Otter::Lace::OnTheFly::Format::Ace
+        Bio::Otter::Lace::OnTheFly::Format::GFF
         Bio::Otter::Lace::OnTheFly::Genomic
-        Bio::Otter::Lace::OnTheFly::GFF
         Bio::Otter::Lace::OnTheFly::QueryValidator
         Bio::Otter::Lace::OnTheFly::ResultSet
         Bio::Otter::Lace::OnTheFly::TargetSeq
