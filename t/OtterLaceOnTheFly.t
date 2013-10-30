@@ -221,7 +221,11 @@ sub run_test {
         );
     my $new_gff = $result_set->gff($slice);
     # there is no old_gff
-    ok($new_gff, 'GFF');
+    if (@output_features) {
+        ok($new_gff, 'GFF');
+    } else {
+        is($new_gff, undef, 'No GFF if no features');
+    }
 
     return;
 }
