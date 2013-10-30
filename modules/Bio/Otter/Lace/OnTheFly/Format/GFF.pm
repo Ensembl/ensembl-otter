@@ -1,4 +1,4 @@
-package Bio::Otter::Lace::OnTheFly::GFF;
+package Bio::Otter::Lace::OnTheFly::Format::GFF;
 
 use namespace::autoclean;
 

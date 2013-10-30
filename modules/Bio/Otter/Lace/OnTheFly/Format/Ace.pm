@@ -1,4 +1,4 @@
-package Bio::Otter::Lace::OnTheFly::Ace;
+package Bio::Otter::Lace::OnTheFly::Format::Ace;
 
 use namespace::autoclean;
 
