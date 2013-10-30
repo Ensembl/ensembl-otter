@@ -2130,8 +2130,9 @@ sub launch_exonerate {
         # The new way:
         my $result_set = $aligner->run;
         my $ace_output = $result_set->ace($aligner->target->name);
+        my $gff_output = $result_set->gff($self->AceDatabase->smart_slice->ensembl_slice);
 
-        if ($ace_output) {
+        if ($ace_output or $gff_output) {
             $db_edited = 1;
         }
         else {
@@ -2158,21 +2159,30 @@ sub launch_exonerate {
         }
 
         # Need to add new method to collection if we don't have it already
+        # (Looks as if $coll & $coll_zmap are often the same object)
         my $coll      = $self->AceDatabase->MethodCollection;
         my $coll_zmap = $self->Assembly->MethodCollection;
 
-        my $method    = Hum::Ace::Method->new;
-        $method->name($result_set->analysis_name);
+        # TEMP for testing: both ace and gff
+        foreach my $tag ($result_set->analysis_name, $result_set->gff_method_tag) {
 
-        push @method_names, $method->name;
-        unless ($coll->get_Method_by_name($method->name)
-                || $coll_zmap->get_Method_by_name($method->name))
-        {
-            $coll->add_Method($method);
-            $coll_zmap->add_Method($method);
-            $self->save_ace($coll->ace_string());
+            push @method_names, $tag;
+
+            my $method = Hum::Ace::Method->new;
+            $method->name($tag);
+
+            my $new_methods;
+            foreach my $c ($coll, $coll_zmap) {
+                unless ($c->get_Method_by_name($tag)) {
+                    $c->add_Method($method);
+                    $new_methods++;
+                }
+            }
+            $self->save_ace($coll->ace_string()) if $new_methods;
         }
+
         $ace_text .= $ace_output;
+        $self->_save_gff($gff_output, $result_set->gff_method_tag);
     }
 
     $self->save_ace($ace_text);
@@ -2206,6 +2216,28 @@ sub ace_PEPTIDE {
         $ace .= $1 . "\n";
     }
     return $ace;
+}
+
+sub _save_gff {
+    my ($self, $gff, $type) = @_;
+
+    my $dir = $self->_ensure_otf_dir;
+    my $path = sprintf('%s/%s.gff', $dir, $type);
+
+    open( my $fh, ">$path" ) or confess "can't create '$path'; $!";
+    print $fh $gff;
+    close $fh or confess "error writing to '$path'; $!";
+
+    return;
+}
+
+sub _ensure_otf_dir {
+    my $self = shift;
+    my $dir = sprintf('%s/otf', $self->AceDatabase->home);
+    unless (-d $dir) {
+        mkdir $dir or confess "failed to create directory '$dir'; $!";
+    }
+    return $dir;
 }
 
 sub draw_sequence_list {
