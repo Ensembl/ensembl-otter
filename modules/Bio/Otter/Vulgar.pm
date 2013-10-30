@@ -168,6 +168,13 @@ sub set_target_from_ensembl {
     return $self->_set_coords_from_ensembl('target', @args);
 }
 
+sub apply_target_offset {
+    my ($self, $offset) = @_;
+    $self->target_start($self->target_start + $offset);
+    $self->target_end(  $self->target_end   + $offset);
+    return $self;
+}
+
 sub score {
     my ($self, @args) = @_;
     ($self->{'score'}) = @args if @args;
