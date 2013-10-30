@@ -38,6 +38,7 @@ has query_seqs_by_name => ( is => 'ro', isa => 'HashRef[Hum::Sequence]',
                             lazy => 1, builder => '_build_query_seqs_by_name', init_arg => undef );
 
 with 'Bio::Otter::Lace::OnTheFly::Ace';
+with 'Bio::Otter::Lace::OnTheFly::GFF';
 
 sub add_hit_by_query_id {
     my ($self, $q_id, $ga) = @_;
