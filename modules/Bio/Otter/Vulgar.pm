@@ -1,7 +1,7 @@
 
-### Bio::Otter::Utils::Vulgar
+### Bio::Otter::Vulgar
 
-package Bio::Otter::Utils::Vulgar;
+package Bio::Otter::Vulgar;
 
 use strict;
 use warnings;
@@ -335,7 +335,7 @@ sub logger {
 
 __END__
 
-=head1 NAME - Bio::Otter::Utils::Vulgar
+=head1 NAME - Bio::Otter::Vulgar
 
 =head1 AUTHOR
 

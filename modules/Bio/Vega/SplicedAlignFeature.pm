@@ -19,7 +19,7 @@ use Bio::EnsEMBL::Utils::Exception qw(throw);
 
 use Bio::Otter::GappedAlignment;
 use Bio::Otter::Utils::Constants qw(intron_minimum_length);
-use Bio::Otter::Utils::Vulgar;
+use Bio::Otter::Vulgar;
 
 use base 'Bio::EnsEMBL::BaseAlignFeature';
 
@@ -65,7 +65,7 @@ sub new {
 
             my %from_vulgar;
             if ($vulgar_string) {
-                my $vulgar = Bio::Otter::Utils::Vulgar->new($vulgar_string);
+                my $vulgar = Bio::Otter::Vulgar->new($vulgar_string);
                 $vulgar_comps_string = $vulgar->align_comps_string;
                 my ($t_start, $t_end, $t_strand) = $vulgar->target_ensembl_coords;
                 my ($q_start, $q_end, $q_strand) = $vulgar->query_ensembl_coords;
