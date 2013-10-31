@@ -203,7 +203,7 @@ my @tables = qw(coord_system
 		transcript
 		gene_attrib
 		transcript_attrib
-
+                exon_stable_id_pool
 		seq_region_attrib
                 simple_feature);
 my (%tabs);
