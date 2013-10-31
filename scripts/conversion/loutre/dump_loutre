@@ -898,7 +898,7 @@ sub transfer_gene {
     return 0;
   }
   my $found_trans = 0;
-  my $needs_updateing=0;
+  my $needs_updating = 0;
   my @transcripts = @{$lgene->get_all_Transcripts};
 
   my $lof = ($lgene->source eq 'LOF');
@@ -912,12 +912,12 @@ sub transfer_gene {
     #see if they are not for Vega or have outstanding QC
     if ( grep { $_->value eq 'not for VEGA' } @{$transcript->get_all_Attributes('remark')} and not $lof  ) {
       $support->log("Didn't transfer 'not for Vega' transcript $ltsi\n",2);
-      $needs_updateing = 1;
+      $needs_updating = 1;
       $skip = 1;
     }
     elsif (my $vqc = $annotrack_genes->{'Trans'}{$ltsi}{'not_allowed'}) {
       $support->log("Skipping transcript $ltsi because of outstanding QC ($vqc)\n",2);
-      $needs_updateing = 1;
+      $needs_updating = 1;
       $skip = 1;
 #      $skipped_obj{'Trans'}++;
     }
@@ -955,11 +955,15 @@ sub transfer_gene {
       }
     }
   }
-  if ($needs_updateing){ #if we deleted a transcript the biotype * start/stop need updating
+  if ($needs_updating){ #if we deleted a transcript the biotype * start/stop need updating
     my $old_biotype = $lgene->biotype;
     $lgene->set_biotype_status_from_transcripts;# update biotype;
     my $new_biotype = $lgene->biotype;
-    if ($old_biotype ne $new_biotype) {
+    if ($new_biotype eq 'artifact') {
+      $support->log("Biotype of ".$lgene->stable_id." is now 'artifact', will not be transferred\n",2);
+      return 0;
+    }
+    elsif ($old_biotype ne $new_biotype) {
       $support->log("Biotype of ".$lgene->stable_id." changed from $old_biotype to $new_biotype\n",2);
     }
 
