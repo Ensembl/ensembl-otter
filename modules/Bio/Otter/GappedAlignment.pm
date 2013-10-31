@@ -13,7 +13,7 @@ use Bio::EnsEMBL::DnaPepAlignFeature;
 
 use Log::Log4perl;
 
-use parent 'Bio::Otter::Utils::Vulgar';
+use parent 'Bio::Otter::Vulgar';
 
 sub _new {
     my ($class, %attrs) = @_;
@@ -50,7 +50,7 @@ sub _parse_vulgar {
 
     my $self = $pkg->_new(@args);
 
-    $self->parse_align_comps(   # in parent Bio::Otter::Utils::Vulgar
+    $self->parse_align_comps(   # in parent Bio::Otter::Vulgar
         sub {
             my ($type, $q_len, $t_len) = @_;
             my $element = Bio::Otter::GappedAlignment::Element->new($type, $q_len, $t_len);

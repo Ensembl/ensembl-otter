@@ -10,7 +10,7 @@ use Test::More;
 
 my $module;
 BEGIN {
-    $module = 'Bio::Otter::Utils::Vulgar';
+    $module = 'Bio::Otter::Vulgar';
     use_ok($module);
 }
 critic_module_ok($module);
