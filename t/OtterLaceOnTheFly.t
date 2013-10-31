@@ -36,6 +36,7 @@ BEGIN {
         Bio::Otter::Lace::OnTheFly::Aligner
         Bio::Otter::Lace::OnTheFly::Aligner::Genomic
         Bio::Otter::Lace::OnTheFly::Aligner::Transcript
+        Bio::Otter::Lace::OnTheFly::DBStore
         Bio::Otter::Lace::OnTheFly::FastaFile
         Bio::Otter::Lace::OnTheFly::Format::Ace
         Bio::Otter::Lace::OnTheFly::Format::GFF
