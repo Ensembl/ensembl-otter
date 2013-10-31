@@ -29,21 +29,24 @@ sub new {
 
     my $self;
 
-    my ($cigar_string, $vulgar_comps_string, $vulgar_string, $features) = rearrange(
-     [qw(CIGAR_STRING   VULGAR_COMPS_STRING   VULGAR_STRING   FEATURES)], @args
-        );
+    my @opts = qw(CIGAR_STRING   VULGAR_COMPS_STRING   VULGAR_STRING   VULGAR   FEATURES);
+    my          ($cigar_string, $vulgar_comps_string, $vulgar_string, $vulgar, $features) = rearrange(\@opts, @args);
 
     my $count_args = 0;
-    map { $count_args++ if $_ } ( $cigar_string, $vulgar_comps_string, $vulgar_string, $features );
+    map { $count_args++ if $_ } ( $cigar_string, $vulgar_comps_string, $vulgar_string, $vulgar, $features );
 
     for ($count_args) {
 
+        my @all_but_last = @opts;
+        my $last_opt = pop @all_but_last;
+        my $most_opts = join(', ', @all_but_last);
+
         when ($_ < 1) {
-            throw("One of CIGAR_STRING, VULGAR_COMPS_STRING, VULGAR_STRING or FEATURES argument is required");
+            throw("One of $most_opts or $last_opt argument is required");
         }
 
         when ($_ > 1) {
-            throw("Only one of CIGAR_STRING, VULGAR_COMPS_STRING, VULGAR_STRING and FEATURES arguments is permitted.");
+            throw("Only one of $most_opts and $last_opt arguments is permitted.");
         }
 
         when ($_ == 1) {
@@ -65,7 +68,15 @@ sub new {
 
             my %from_vulgar;
             if ($vulgar_string) {
-                my $vulgar = Bio::Otter::Vulgar->new($vulgar_string);
+                $vulgar = Bio::Otter::Vulgar->new($vulgar_string);
+                # drop through to process $vulgar...
+            }
+
+            if ($vulgar) {
+                unless ($vulgar->isa('Bio::Otter::Vulgar')) {
+                    my $actual = ref($vulgar);
+                    throw("Feature must be a 'Bio::Otter::Vulgar' (not a '$actual')");
+                }
                 $vulgar_comps_string = $vulgar->align_comps_string;
                 my ($t_start, $t_end, $t_strand) = $vulgar->target_ensembl_coords;
                 my ($q_start, $q_end, $q_strand) = $vulgar->query_ensembl_coords;

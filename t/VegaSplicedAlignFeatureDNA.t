@@ -107,6 +107,10 @@ is($safd->end,            21, 'end');
 is($safd->strand,         -1, 'strand');
 is($safd->score,          56, 'score');
 
+my $v_obj = Bio::Otter::Vulgar->new($v_string);
+my $v_safd = new_ok($saf_dna_module => [ -vulgar => $v_obj ], 'new from vulgar object');
+compare_saf_ok($v_safd, $safd, 'matches from vulgar_string');
+
 my $vcs = 'M 3 3 I 0 43 M 2 2 G 3 0 M 4 4 I 0 44 M 1 1 G 0 1 M 1 1 I 0 42 M 3 3 G 3 0';
 $safd = new_ok($saf_dna_module => [ -vulgar_comps_string => $vcs ], 'new from vulgar_comps_string');
 is($safd->vulgar_comps_string, $vcs, 'vulgar_comps_string');
