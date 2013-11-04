@@ -2120,6 +2120,8 @@ sub launch_exonerate {
     my @method_names;
     my $ace_text = '';
 
+    my $db_slice = $self->AceDatabase->db_slice;
+
     for my $aligner ( $otf->aligners_for_each_type ) {
 
         my $type = $aligner->type;
@@ -2129,10 +2131,11 @@ sub launch_exonerate {
 
         # The new way:
         my $result_set = $aligner->run;
-        my $ace_output = $result_set->ace($aligner->target->name);
-        my $gff_output = $result_set->gff($self->AceDatabase->smart_slice->ensembl_slice);
 
-        if ($ace_output or $gff_output) {
+        my $ace_output = $result_set->ace($aligner->target->name);
+        my $db_count   = $result_set->db_store($db_slice);
+
+        if ($ace_output or $db_count) {
             $db_edited = 1;
         }
         else {
@@ -2182,6 +2185,9 @@ sub launch_exonerate {
         }
 
         $ace_text .= $ace_output;
+
+#       my $gff_output = $result_set->gff($self->AceDatabase->smart_slice->ensembl_slice);
+        my $gff_output = $result_set->gff_from_db($db_slice);
         $self->_save_gff($gff_output, $result_set->gff_method_tag);
     }
 
