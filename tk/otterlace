@@ -32,23 +32,23 @@ use EditWindow::Password;
         }
         die "$name: options (@ARGV) were not understood"; # RT#334602
     }
-    my $cl = Bio::Otter::Lace::Defaults::make_Client();
-    $cl->make_log_file('otterlace');
+    my $client = Bio::Otter::Lace::Defaults::make_Client();
+    $client->make_log_file('otterlace');
     # After this, we are writing logfile
     my $logger = Log::Log4perl->get_logger('otter.main');
 
-    $cl->cleanup_sessions;
-    $cl->cleanup_log_dir('otterlace');
+    $client->cleanup_sessions;
+    $client->cleanup_log_dir('otterlace');
 
     Bio::Otter::Git->dump;
 
-    $cl->ua_tell_proxies;
+    $client->ua_tell_proxies;
 
-    my $mw = CanvasWindow::MainWindow->new
+    my $main_window = CanvasWindow::MainWindow->new
       ($Bio::Otter::Lace::Client::PFX."Species List");
 
     # Look for zombies every 5 seconds
-    $mw->repeat(
+    $main_window->repeat(
         5000,
         sub {
             while ((my $dead_pid = waitpid(-1, POSIX::WNOHANG)) > 0) {
@@ -62,19 +62,19 @@ use EditWindow::Password;
     );
 
     # When we wake up late, log it
-    my $rvw_ticker = Bio::Otter::Utils::RipVanWinkle->new($mw, 1000, 3);
+    my $rvw_ticker = Bio::Otter::Utils::RipVanWinkle->new($main_window, 1000, 3);
 
-    my $SpeciesListWindow = MenuCanvasWindow::SpeciesListWindow->new($mw);
-    $SpeciesListWindow->Client($cl);
+    my $SpeciesListWindow = MenuCanvasWindow::SpeciesListWindow->new($main_window);
+    $SpeciesListWindow->Client($client);
 
     my $prompt_sub = sub {
         my ($self) = @_;
         my $user = $self->author;
 
         my $pass = '';
-        my $tl = $mw->Toplevel
+        my $toplevel = $main_window->Toplevel
           (-title => $Bio::Otter::Lace::Client::PFX.'Enter Password');
-        my $pass_win = EditWindow::Password->new($tl);
+        my $pass_win = EditWindow::Password->new($toplevel);
         $pass_win->prompt_string("Enter web password for '$user'");
         $pass_win->passref(\$pass);
         $pass_win->initialise;
@@ -84,7 +84,7 @@ use EditWindow::Password;
     my $passwarn_sub = sub {
         my ($self, $msg) = @_;
         warn "passwarn: $msg";
-        my $dialog = $mw->DialogBox
+        my $dialog = $main_window->DialogBox
           (-title => $Bio::Otter::Lace::Client::PFX.'Problem logging in',
            -buttons => ['Ok'],);
         $dialog->add(qw( Label -justify left -text ), $msg)->pack;
@@ -92,25 +92,25 @@ use EditWindow::Password;
         return;
     };
 
-    $cl->password_prompt($prompt_sub);
-    $cl->password_problem($passwarn_sub);
+    $client->password_prompt($prompt_sub);
+    $client->password_problem($passwarn_sub);
 
-    if ($cl->no_user_config) {
+    if ($client->no_user_config) {
         $SpeciesListWindow->show_preferences(wait => 1);
     }
 
     try {
-        $cl->get_server_otter_config;
+        $client->get_server_otter_config;
     } catch {
         my $msg = "Cannot start: $_";
-        $passwarn_sub->($cl, $msg);
+        $passwarn_sub->($client, $msg);
         die $msg;
     };
 
     $SpeciesListWindow->draw;
 
     # postpone slow checks, for improved responsiveness
-    $mw->after(750, [ $SpeciesListWindow, 'ensure_tools' ]);
+    $main_window->after(750, [ $SpeciesListWindow, 'ensure_tools' ]);
 
     Tk::MainLoop();
 
