@@ -5,16 +5,18 @@ use warnings;
 
 ### otterlace
 
-use CanvasWindow::MainWindow;
-use MenuCanvasWindow::SpeciesListWindow;
-use EditWindow::Password;
-use Bio::Otter::Lace::Client;
-use Bio::Otter::Git;
-use Bio::Otter::Error;
 use POSIX ();
 use Log::Log4perl;
 use Try::Tiny;
+
+use Bio::Otter::Lace::Client;
+use Bio::Otter::Git;
+use Bio::Otter::Error;
 use Bio::Otter::Utils::RipVanWinkle;
+
+use CanvasWindow::MainWindow;
+use MenuCanvasWindow::SpeciesListWindow;
+use EditWindow::Password;
 
 {
     # Become leader of process group so that "kill -$$" at end works
