@@ -82,7 +82,7 @@ use EditWindow::Password;
         return $pass;
     };
     my $passwarn_sub = sub {
-        my ($client, $msg) = @_;
+        my ($self, $msg) = @_;
         warn "passwarn: $msg";
         my $dialog = $mw->DialogBox
           (-title => $Bio::Otter::Lace::Client::PFX.'Problem logging in',
