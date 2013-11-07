@@ -23,6 +23,8 @@ use Bio::Otter::Vulgar;
 
 use base 'Bio::EnsEMBL::BaseAlignFeature';
 
+use Bio::Vega::Utils::EnsEMBL2GFF; # enrich base class
+
 sub new {
     my ($caller, @args) = @_;
     my $class = ref($caller) || $caller;
@@ -609,6 +611,19 @@ sub looks_like_frameshift {
 # Implemented in Protein subclass
 sub looks_like_split_codon {
     return;
+}
+
+sub to_gff {
+    my ($self, %args) = @_;
+
+    # For now we process each unspliced feature separately.
+    # This will change if we send vulgar strings.
+    #
+    my $gff = '';
+    foreach my $af ($self->as_AlignFeatures) {
+        $gff .= $af->to_gff(%args);
+    }
+    return $gff;
 }
 
 sub logger {
