@@ -10,7 +10,7 @@ use Test::SetupLog4perl;
 
 use Test::Otter;
 use OtterTest::ContigSlice;
-use Test::VegaSplicedAlignFeature qw(test_exons test_introns compare_saf_ok);
+use Test::VegaSplicedAlignFeature qw(test_exons test_introns compare_saf_ok gff_args);
 
 use Bio::EnsEMBL::FeaturePair;
 
@@ -102,6 +102,20 @@ is($safd->strand,          1, 'strand');
 is($safd->score,        3047, 'score');
 
 $safd->slice($ctg_slice);
+$safd->percent_id(78.9);
+
+is($safd->to_gff(gff_args()), <<'__EO_GFF__', 'safd GFF');
+AL359765.6.1.13780	VSAF_test	similarity	153	974	3047.000000	+	.	Align 1 274 +;cigar_ensembl "822M";percentID 78.9;Class "Protein";Name "QueryP"
+AL359765.6.1.13780	VSAF_test	similarity	3221	3253	3047.000000	+	.	Align 275 285 +;cigar_ensembl "33M";percentID 78.9;Class "Protein";Name "QueryP"
+AL359765.6.1.13780	VSAF_test	similarity	3255	3413	3047.000000	+	.	Align 286 363 +;cigar_ensembl "156M75D3M";percentID 78.9;Class "Protein";Name "QueryP"
+AL359765.6.1.13780	VSAF_test	similarity	4726	4779	3047.000000	+	.	Align 364 381 +;cigar_ensembl "54M";percentID 78.9;Class "Protein";Name "QueryP"
+AL359765.6.1.13780	VSAF_test	similarity	4781	4888	3047.000000	+	.	Align 383 418 +;cigar_ensembl "108M";percentID 78.9;Class "Protein";Name "QueryP"
+AL359765.6.1.13780	VSAF_test	similarity	13793	14020	3047.000000	+	.	Align 420 495 +;cigar_ensembl "228M";percentID 78.9;Class "Protein";Name "QueryP"
+AL359765.6.1.13780	VSAF_test	similarity	17937	18089	3047.000000	+	.	Align 497 547 +;cigar_ensembl "153M";percentID 78.9;Class "Protein";Name "QueryP"
+AL359765.6.1.13780	VSAF_test	similarity	18855	18932	3047.000000	+	.	Align 549 574 +;cigar_ensembl "78M";percentID 78.9;Class "Protein";Name "QueryP"
+AL359765.6.1.13780	VSAF_test	similarity	19536	19808	3047.000000	+	.	Align 575 665 +;cigar_ensembl "273M";percentID 78.9;Class "Protein";Name "QueryP"
+__EO_GFF__
+
 my @exons = $safd->get_all_exon_alignments;
 is(scalar(@exons), 7, 'n_exons');
 my $exp = {

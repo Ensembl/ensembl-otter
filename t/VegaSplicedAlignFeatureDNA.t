@@ -10,7 +10,7 @@ use Test::SetupLog4perl;
 
 use Test::Otter;
 use OtterTest::ContigSlice;
-use Test::VegaSplicedAlignFeature qw(test_exons test_introns compare_saf_ok);
+use Test::VegaSplicedAlignFeature qw(test_exons test_introns compare_saf_ok gff_args);
 
 use Bio::EnsEMBL::DnaDnaAlignFeature;
 use Bio::EnsEMBL::FeaturePair;
@@ -72,6 +72,11 @@ is($dnaf->hstrand, $hstrand * -1, 'dnaf reverse_complement hstrand');
 is($dnaf->start, 5, 'dnaf start');
 is($dnaf->end,  14, 'dnaf end');
 
+$dnaf->percent_id(58.3);
+is($dnaf->to_gff(gff_args()), <<'__EO_GFF__', 'dnaf GFF');
+AL359765.6.1.13780	VSAF_test	similarity	5	14	10.000000	-	.	Align 105 112 -;cigar_ensembl "5M2I3M";percentID 58.3;Class "Sequence";Name "dummy-hid"
+__EO_GFF__
+
 my @afs = $dnaf->as_AlignFeatures;
 is(scalar(@afs), 1, 'one align_feature');
 isa_ok($afs[0], 'Bio::EnsEMBL::DnaDnaAlignFeature');
@@ -124,6 +129,14 @@ $safd->hend(20);
 $safd->seqname('Tseq');
 $safd->hseqname('Qseq');
 $safd->slice($ctg_slice);
+$safd->percent_id(67.8);
+
+is($safd->to_gff(gff_args()), <<'__EO_GFF__', 'safd GFF');
+AL359765.6.1.13780	VSAF_test	similarity	23234	23236	.	+	.	Align 1 3 +;cigar_ensembl "3M";percentID 67.8;Class "Sequence";Name "Qseq"
+AL359765.6.1.13780	VSAF_test	similarity	23280	23285	.	+	.	Align 4 12 +;cigar_ensembl "2M3D4M";percentID 67.8;Class "Sequence";Name "Qseq"
+AL359765.6.1.13780	VSAF_test	similarity	23330	23332	.	+	.	Align 13 14 +;cigar_ensembl "MIM";percentID 67.8;Class "Sequence";Name "Qseq"
+AL359765.6.1.13780	VSAF_test	similarity	23375	23377	.	+	.	Align 15 17 +;cigar_ensembl "3M";percentID 67.8;Class "Sequence";Name "Qseq"
+__EO_GFF__
 
 my @exons = $safd->get_all_exon_alignments;
 is(scalar(@exons), 4, 'n_exons');

@@ -8,7 +8,9 @@ use warnings;
 use Exporter qw(import);
 use Test::More;
 
-our @EXPORT_OK = qw(test_exons test_introns compare_saf_ok);
+use Bio::Vega::Utils::GFF;
+
+our @EXPORT_OK = qw(test_exons test_introns compare_saf_ok gff_args);
 
 sub test_exons {
     my ($exons, $exp, $desc) = @_;
@@ -98,6 +100,13 @@ sub strand_is {
     $exp  //= 1;
     is($subj, $exp, $desc);
     return;
+}
+
+sub gff_args {
+    return (
+        gff_format => Bio::Vega::Utils::GFF::gff_format(2),
+        gff_source => 'VSAF_test',
+        );
 }
 
 1;
