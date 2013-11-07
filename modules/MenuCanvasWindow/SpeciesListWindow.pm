@@ -5,19 +5,23 @@ package MenuCanvasWindow::SpeciesListWindow;
 
 use strict;
 use warnings;
+
 use Carp;
 use Try::Tiny;
 use Tk::DialogBox;
-use base 'MenuCanvasWindow';
-use MenuCanvasWindow::ColumnChooser;
-use EditWindow::Preferences;
-use CanvasWindow::SequenceSetChooser;
+
+use Zircon::ZMap;
+use Zircon::Tk::Context;
+
 use Bio::Otter::Utils::About;
 use Bio::Otter::Lace::Client;
 use Bio::Vega::Utils::URI qw( open_uri );
 
-use Zircon::ZMap;
-use Zircon::Tk::Context;
+use MenuCanvasWindow::ColumnChooser;
+use EditWindow::Preferences;
+use CanvasWindow::SequenceSetChooser;
+
+use base qw( MenuCanvasWindow );
 
 sub new {
     my ($pkg, @args) = @_;
