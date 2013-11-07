@@ -3,27 +3,27 @@
 use strict;
 use warnings;
 
-use URI::Escape qw(uri_unescape);
+use Bio::Otter::Utils::GetScript;
 
-# FIXME: copied from filter_get
+my $helper = Bio::Otter::Utils::GetScript->new;
+my $args   = $helper->parse_uri_style_args;
 
-my %args;
-foreach my $pair (@ARGV) {
-    my ($key, $val) = split(/=/, $pair);
-    $args{uri_unescape($key)} = uri_unescape($val);
-}
+my ($session_dir) = $helper->read_delete_args('session_dir');
+$helper->use_session_dir($session_dir);
 
-# test case
-die "failing as required" if $args{'fail'};
+my $path = $args->{file_path};
+$helper->log_context("FILE:$path");
 
-my $session_dir     = delete $args{'session_dir'};
-chdir($session_dir) or die "Could not chdir to '$session_dir'; $!";
+$helper->open_log('gff_log.txt');
+$helper->log_message("starting");
+$helper->log_arguments;
 
-my $path = $args{file_path};
 open my $file, '<', $path or die "Failed to open file '$path': $!";
 while (<$file>) { print; }
 close $file or die "Failed to close file '$path': $!";
 close STDOUT or die "Error writing to STDOUT; $!";
+
+$helper->log_message("finished");
 
 exit;
 
