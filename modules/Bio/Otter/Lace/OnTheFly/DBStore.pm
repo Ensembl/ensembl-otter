@@ -62,7 +62,6 @@ sub db_store {
 
 # Doesn't really belong here - currently only used in t/OtterLaceOTFDBStore.t
 #
-use Bio::Vega::Utils::EnsEMBL2GFF; # injection of to_gff() into EnsEMBL objects
 use Bio::Vega::Utils::GFF;
 
 sub gff_from_db {
@@ -95,14 +94,7 @@ sub gff_from_db {
                                                 $slice->end);
 
     foreach my $saf (@$features) {
-
-        foreach my $af ($saf->as_AlignFeatures) {
-
-            # $af->slice($slice);
-            $gff .= $af->to_gff(%gff_args);
-
-        }
-
+        $gff .= $saf->to_gff(%gff_args);
     }
 
     return $gff;
