@@ -6,7 +6,16 @@ use strict;
 use warnings;
 
 use IO::Handle;
+use Time::HiRes qw(time);
 use URI::Escape qw(uri_unescape);
+
+# Deferred until needed on cache miss
+#
+sub do_requires {
+    require DBI;
+    require Bio::Otter::Lace::DB::ColumnAdaptor;
+    return;
+}
 
 # NB GetScript is a singleton...
 
@@ -14,11 +23,10 @@ my $me;
 
 # ...hence these class members are simple variables.
 
-my $context = 'not-set';
-my $log_file;
-my $session_dir;
+my $getscript_log_context = 'not-set';
+my $getscript_session_dir;
 
-my %args;
+my %getscript_args;
 
 sub new {
     my ($pkg) = @_;
@@ -30,45 +38,43 @@ sub new {
     return $me;
 }
 
-
 sub log_context {
     my ($self, @args) = @_;
-    ($context) = @args if @args;
-    return $context;
+    ($getscript_log_context) = @args if @args;
+    return $getscript_log_context;
 }
-
 
 sub parse_uri_style_args {
     my ($self) = @_;
 
     foreach my $pair (@ARGV) {
         my ($key, $val) = split(/=/, $pair);
-        $args{uri_unescape($key)} = uri_unescape($val);
+        $getscript_args{uri_unescape($key)} = uri_unescape($val);
     }
-    return \%args;
+    return \%getscript_args;
 }
 
 sub args {
-    return \%args;
+    return \%getscript_args;
 }
 
 sub read_delete_args {
     my ($self, @wanted) = @_;
-    return delete @args{@wanted};
+    return delete @getscript_args{@wanted};
 }
 
 sub log_arguments {
     my ($self) = @_;
-    $self->log_message(sprintf "argument: %s: %s", $_, $args{$_}) for sort keys %args;
+    $self->log_message(sprintf "argument: %s: %s", $_, $getscript_args{$_}) for sort keys %getscript_args;
     return;
 }
 
 sub use_session_dir {
     my ($self, $sda) = @_;
-    $session_dir = $sda;
-    die "No session_dir argument" unless $session_dir;
-    chdir($session_dir) or die "Could not chdir to '$session_dir'; $!";
-    return $session_dir;
+    $getscript_session_dir = $sda;
+    die "No session_dir argument" unless $getscript_session_dir;
+    chdir($getscript_session_dir) or die "Could not chdir to '$getscript_session_dir'; $!";
+    return $getscript_session_dir;
 }
 
 sub mkdir_tested {
@@ -84,37 +90,86 @@ sub mkdir_tested {
     return $dir_path;
 }
 
-sub open_log {
-    my ($self, $log_path) = @_;
-    open $log_file, '>>', $log_path
-        or die "failed to open the log file '${log_path}'";
-    $log_file->autoflush(1);
-    return $log_file;
+{
+    my $log_file;
+
+    sub open_log {
+        my ($self, $log_path) = @_;
+        open $log_file, '>>', $log_path
+            or die "failed to open the log file '${log_path}'";
+        $log_file->autoflush(1);
+        return $log_file;
+    }
+
+    # Not a method
+    sub _log_prefix {
+        my @t = localtime;
+        my @date = ( 1900+$t[5], $t[4]+1, @t[3,2,1,0] );
+        return sprintf "%4d-%02d-%02d %02d:%02d:%02d: %6d: %-35s "
+            , @date, $$, $getscript_log_context;
+    }
+
+    sub log_message {
+        my ($self, $message) = @_;
+        return unless $log_file;
+        printf $log_file "%s: %s\n", _log_prefix, $message;
+        return;
+    }
+
+    sub log_chunk {
+        my ($self, $prefix, $chunk) = @_;
+        return unless $log_file;
+        my $prefix_full = sprintf "%s: %s: ", _log_prefix, $prefix;
+        chomp $chunk;
+        $chunk .= "\n";
+        $chunk =~ s/^/$prefix_full/gm;
+        print $log_file $chunk;
+        return;
+    }
 }
 
-# Not a method
-sub _log_prefix {
-    my @t = localtime;
-    my @date = ( 1900+$t[5], $t[4]+1, @t[3,2,1,0] );
-    return sprintf "%4d-%02d-%02d %02d:%02d:%02d: %6d: %-35s "
-        , @date, $$, $context;
-}
+sub time_diff_for {
+    my ($self, $log, $code) = @_;
 
-sub log_message {
-    my ($self, $message) = @_;
-    return unless $log_file;
-    printf $log_file "%s: %s\n", _log_prefix, $message;
+    $self->log_message("$log: start");
+
+    my $start_time = time;
+    $code->();
+    my $end_time = time;
+
+    my $time = sprintf "time (sec): %.3f", $end_time - $start_time;
+    $self->log_message("$log: finish: $time");
+
     return;
 }
 
-sub log_chunk {
-    my ($self, $prefix, $chunk) = @_;
-    return unless $log_file;
-    my $prefix_full = sprintf "%s: %s: ", _log_prefix, $prefix;
-    chomp $chunk;
-    $chunk .= "\n";
-    $chunk =~ s/^/$prefix_full/gm;
-    print $log_file $chunk;
+sub update_local_db {
+    my ($self, $column_name, $cache_file, $process_gff) = @_;
+
+    $self->time_diff_for('SQLite update', sub {
+        my $dbh = DBI->connect("dbi:SQLite:dbname=$getscript_session_dir/otter.sqlite", undef, undef, {
+            RaiseError => 1,
+            AutoCommit => 1,
+        });
+        my $db_filter_adaptor = Bio::Otter::Lace::DB::ColumnAdaptor->new($dbh);
+        ## no critic (Anacode::ProhibitEval)
+        unless (eval {
+            # No transaction!  Make only one statement.  Transactions
+            # require more complex retrying when database is busy.
+            my $rv = $db_filter_adaptor->update_for_filter_get
+              ($column_name, # WHERE: name
+               $cache_file, # SET: gff_file, status = 'Visible'
+               $process_gff || 0); # SET: process_gff flag
+            die "Changed $rv rows" unless 1 == $rv;
+            1;
+             } ) {
+            my $err = $@;
+            my $msg = "Update of otter_filter table in SQLite db failed; $err";
+            $self->log_message($msg);
+            die $msg;
+        }
+        $dbh->disconnect;
+    } );
     return;
 }
 
