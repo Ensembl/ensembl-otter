@@ -1,11 +1,5 @@
 package Bio::Otter::Lace::OnTheFly::Ace;
 
-## Moose provides these, but webpublish doesn't know that!
-##
-use strict;
-use warnings;
-##
-
 use namespace::autoclean;
 
 # Designed to mix in with Bio::Otter::Lace::OnTheFly::ResultSet

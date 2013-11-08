@@ -1,11 +1,5 @@
 package Bio::Otter::Utils::Script::DataSet;
 
-## Moose provides these, but webpublish doesn't know that!
-##
-use strict;
-use warnings;
-##
-
 use 5.010;
 use namespace::autoclean;
 
