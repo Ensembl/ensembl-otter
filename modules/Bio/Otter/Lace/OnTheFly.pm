@@ -1,11 +1,5 @@
 package Bio::Otter::Lace::OnTheFly;
 
-## Moose provides these, but webpublish doesn't know that!
-##
-use strict;
-use warnings;
-##
-
 use namespace::autoclean;
 use Moose::Role;
 
