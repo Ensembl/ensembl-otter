@@ -36,11 +36,13 @@ sub data_dir {
     if (!defined $root) {
         # For internal non-web machines, provide the central copy to
         # remove the need to pretend we have DOCUMENT_ROOT .
-
-        my $nfs = 'nfs'; # hiding from 'webpublish'
-        ($root, $src) = ("/$nfs/WWWdev/SANGER_docs/htdocs", 'fallback')
-          if -d '/software/anacode';
+        #
         # Web machines shouldn't have a fallback, too magical.
+        # (They don't have /software/ )
+        ($root, $src) =
+          ("/nfs/anacode/WEBVM_docs.live/htdocs", # DUP also in team_tools pubweblish
+           'fallback')
+          if -d '/software/anacode';
     }
 
     die "Cannot find data_dir via DOCUMENT_ROOT or fallback" # need another way?
