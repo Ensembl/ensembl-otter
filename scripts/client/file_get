@@ -8,7 +8,7 @@ use Bio::Otter::Utils::GetScript;
 my $helper = Bio::Otter::Utils::GetScript->new;
 my $args   = $helper->parse_uri_style_args;
 
-my ($session_dir) = $helper->read_delete_args('session_dir');
+my ($session_dir, $process_gff) = $helper->read_delete_args(qw( session_dir process_gff ));
 $helper->use_session_dir($session_dir);
 
 my $path = $args->{file_path};
@@ -18,9 +18,21 @@ $helper->open_log('gff_log.txt');
 $helper->log_message("starting");
 $helper->log_arguments;
 
+$helper->do_requires;
+
 open my $file, '<', $path or die "Failed to open file '$path': $!";
-while (<$file>) { print; }
+$helper->time_diff_for( 'relaying data', sub {
+    while (<$file>) { print; }
+} );
 close $file or die "Failed to close file '$path': $!";
+
+# update the SQLite db
+$helper->update_local_db($args->{gff_source}, $path, $process_gff);
+
+# zmap waits for STDOUT to be closed as an indication that all
+# data has been sent, so we close the handle now so that zmap
+# doesn't tell otterlace about the successful loading of the column
+# before we have the SQLite db updated.
 close STDOUT or die "Error writing to STDOUT; $!";
 
 $helper->log_message("finished");
