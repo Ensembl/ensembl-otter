@@ -5,35 +5,27 @@ use warnings;
 
 use Digest::MD5 qw(md5_hex);
 use URI::Escape qw(uri_escape);
-use Time::HiRes qw(time);
 
 use Bio::Otter::Utils::GetScript;
 
-use Bio::Otter::Lace::DB::ColumnAdaptor;
-
 sub do_requires {
+    my ($helper) = @_;
+
     require LWP::UserAgent;
     require HTTP::Request;
     require HTTP::Cookies::Netscape;
-    require DBI;
+    $helper->do_requires;
+
     return;
 }
 
 sub show_version {
     # Check dependencies, report (arbitrary) version
-    do_requires();
+    my ($helper) = @_;
+    do_requires($helper);
     my $dbh = DBI->connect("dbi:SQLite:dbname=:memory:","","");
     print "filter_get 0.5\n";
     exit 0;
-}
-
-sub time_diff_for {
-    my ($code) = @_;
-    my $start_time = time;
-    $code->();
-    my $end_time = time;
-
-    return sprintf "time (sec): %.3f", $end_time - $start_time;
 }
 
 my $LOG     = 1;
@@ -41,7 +33,7 @@ my $LOG     = 1;
 my $helper = Bio::Otter::Utils::GetScript->new;
 my $args   = $helper->parse_uri_style_args;
 
-show_version() if exists $args->{'--version'}; # exits
+show_version($helper) if exists $args->{'--version'}; # exits
 
 # test case
 die "failing as required" if $args->{'fail'};
@@ -89,7 +81,7 @@ if (-e $cache_file) {
 # cache miss
 
 # only require these packages now, so we don't take the import hit on a cache hit
-do_requires();
+do_requires($helper);
 
 $helper->log_message("cache file: $gff_filename: cache miss");
 
@@ -116,18 +108,16 @@ my $ua = LWP::UserAgent->new(
 );
 
 # do the request
-$helper->log_message("http: start");
 my $response;
-my $request_time = time_diff_for sub {
+$helper->time_diff_for( 'http', sub {
     $response = $ua->request($request);
     die "No response for $gff_source\n" unless $response;
-};
-$helper->log_message(sprintf("http: finish: %s  bytes: %d (decoded), %d (raw)  status: %s",
-                             $request_time,
-                             length($response->decoded_content),
-                             length($response->content),
-                             $response->status_line)
-    );
+    $helper->log_message(sprintf("http: bytes: %d (decoded), %d (raw)  status: %s",
+                                 length($response->decoded_content),
+                                 length($response->content),
+                                 $response->status_line)
+        );
+} );
 
 if ($response->is_success) {
 
@@ -135,51 +125,23 @@ if ($response->is_success) {
     die "Unexpected response for $gff_source: $gff\n" unless $gff =~ /EnsEMBL2GFF/;
 
     # cache the result
-    $helper->log_message("caching: start");
-    my $cache_time = time_diff_for sub {
+    $helper->time_diff_for( 'caching', sub {
         open my $cache_file_h, '>', $cache_file or die "Cannot write to cache file '$cache_file'; $!\n";
         print $cache_file_h $gff;
         close $cache_file_h or die "Error writing to '$cache_file'; $!";
-    };
-    $helper->log_message("caching: finish: $cache_time");
+    } );
 
     # update the SQLite db
-    $helper->log_message("SQLite update: start");
-    my $sqlite_update_time = time_diff_for sub {
-        my $dbh = DBI->connect("dbi:SQLite:dbname=$session_dir/otter.sqlite", undef, undef, {
-            RaiseError => 1,
-            AutoCommit => 1,
-        });
-        my $db_filter_adaptor = Bio::Otter::Lace::DB::ColumnAdaptor->new($dbh);
-        unless (eval {
-            # No transaction!  Make only one statement.  Transactions
-            # require more complex retrying when database is busy.
-            my $rv = $db_filter_adaptor->update_for_filter_get
-              ($gff_source, # WHERE: name
-               $cache_file, # SET: gff_file, status = 'Visible'
-               $process_gff || 0); # SET: process_gff flag
-            die "Changed $rv rows" unless 1 == $rv;
-            1;
-             } ) {
-            my $err = $@;
-            my $msg = "Update of otter_filter table in SQLite db failed; $err";
-            $helper->log_message($msg);
-            die $msg;
-        }
-        $dbh->disconnect;
-    };
-    $helper->log_message("SQLite update: finish: $sqlite_update_time");
+    $helper->update_local_db($gff_source, $cache_file, $process_gff);
 
     # if (rand() < 0.5) {
     #     die "Horribly";
     # }
 
     # Send data to zmap on STDOUT
-    $helper->log_message("sending data: start");
-    my $send_data_time = time_diff_for sub {
+    $helper->time_diff_for( 'sending data', sub {
         print STDOUT $gff;
-    };
-    $helper->log_message("sending data: finish: $send_data_time");
+    } );
 
     # zmap waits for STDOUT to be closed as an indication that all
     # data has been sent, so we close the handle now so that zmap
