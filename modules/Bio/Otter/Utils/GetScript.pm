@@ -13,6 +13,7 @@ use URI::Escape qw(uri_unescape);
 #
 sub do_requires {
     require DBI;
+    require Bio::Otter::Lace::DB;
     require Bio::Otter::Lace::DB::ColumnAdaptor;
     return;
 }
@@ -25,6 +26,7 @@ my $me;
 
 my $getscript_log_context = 'not-set';
 my $getscript_session_dir;
+my $getscript_local_db;
 
 my %getscript_args;
 
@@ -143,14 +145,19 @@ sub time_diff_for {
     return;
 }
 
+sub local_db {
+    my ($self) = @_;
+
+    return $getscript_local_db if $getscript_local_db;
+
+    return $getscript_local_db = Bio::Otter::Lace::DB->new($getscript_session_dir);
+}
+
 sub update_local_db {
     my ($self, $column_name, $cache_file, $process_gff) = @_;
 
     $self->time_diff_for('SQLite update', sub {
-        my $dbh = DBI->connect("dbi:SQLite:dbname=$getscript_session_dir/otter.sqlite", undef, undef, {
-            RaiseError => 1,
-            AutoCommit => 1,
-        });
+        my $dbh = $self->local_db->dbh;
         my $db_filter_adaptor = Bio::Otter::Lace::DB::ColumnAdaptor->new($dbh);
         ## no critic (Anacode::ProhibitEval)
         unless (eval {
