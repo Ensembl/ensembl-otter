@@ -2187,8 +2187,9 @@ sub launch_exonerate {
         $ace_text .= $ace_output;
 
 #       my $gff_output = $result_set->gff($self->AceDatabase->smart_slice->ensembl_slice);
-        my $gff_output = $result_set->gff_from_db($db_slice);
-        $self->_save_gff($gff_output, $result_set->gff_method_tag);
+
+#        my $gff_output = $result_set->gff_from_db($db_slice);
+#        $self->_save_gff($gff_output, $result_set->gff_method_tag);
     }
 
     $self->save_ace($ace_text);
