@@ -2122,6 +2122,9 @@ sub launch_exonerate {
 
     my $db_slice = $self->AceDatabase->db_slice;
 
+    my $cllctn = $self->AceDatabase->ColumnCollection;
+    my $col_aptr = $self->AceDatabase->DB->ColumnAdaptor;
+
     for my $aligner ( $otf->aligners_for_each_type ) {
 
         my $type = $aligner->type;
@@ -2182,6 +2185,13 @@ sub launch_exonerate {
                 }
             }
             $self->save_ace($coll->ace_string()) if $new_methods;
+
+            # Ensure new-style columns are selected if used
+            my $column = $cllctn->get_Item_by_name($tag);
+            if ($column and not $column->selected) {
+                $column->selected(1);
+                $col_aptr->store_Column_state($column);
+            }
         }
 
         $ace_text .= $ace_output;
