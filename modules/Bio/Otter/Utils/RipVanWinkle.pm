@@ -2,6 +2,7 @@ package Bio::Otter::Utils::RipVanWinkle;
 use strict;
 use warnings;
 use Time::HiRes qw( tv_interval gettimeofday );
+use Try::Tiny;
 
 
 =head1 NAME
@@ -27,6 +28,20 @@ sub new {
     return $self;
 }
 
+{
+    my $have_loadavg;
+    sub _init {
+        $have_loadavg = try { require Sys::LoadAvg };
+        return;
+    }
+
+    sub __load_info {
+        return 'load(unknown)' unless $have_loadavg;
+        my @load = Sys::LoadAvg::loadavg();
+        return "load(@load)";
+    }
+}
+
 sub tick {
     my ($self) = @_;
 
@@ -45,9 +60,10 @@ sub tick {
 
         if ($got > $want * $max_factor) {
             my $cpu_used = $$self{cpu} - $last_cpu;
-            warn sprintf("RvW: woke late.  %.2fs late on %.2fs tick (%.1fx); used %.2f CPUsec (%.1f%%)\n",
+            warn sprintf("RvW: woke late.  %.2fs late on %.2fs tick (%.1fx); used %.2f CPUsec (%.1f%%); %s\n",
                          $got - $want, $want, $got / $want,
-                         $cpu_used, 100 * $cpu_used / $got);
+                         $cpu_used, 100 * $cpu_used / $got,
+                         __load_info());
         }
     }
     return;
@@ -67,6 +83,8 @@ sub DESTROY {
     return;
 }
 
+
+__PACKAGE__->_init;
 
 =head1 AUTHOR
 
