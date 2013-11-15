@@ -109,7 +109,7 @@ sub satellite_dba {
     $adaptor_class ||= "Bio::EnsEMBL::DBSQL::DBAdaptor";
 
     # check for a cached dba
-    my $dba_cached = $self->{_sdba}{"$metakey; $adaptor_class"};
+    my $dba_cached = $self->{_sdba}{$metakey}{$adaptor_class};
     return $dba_cached if $dba_cached;
 
     # create the adaptor
@@ -128,7 +128,7 @@ sub _variation_satellite_dba {
     my $adaptor_class = "Bio::EnsEMBL::Variation::DBSQL::DBAdaptor";
 
     # check for a cached dba
-    my $dba_cached = $self->{_sdba}{"$metakey; $adaptor_class"};
+    my $dba_cached = $self->{_sdba}{$metakey}{$adaptor_class};
     return $dba_cached if $dba_cached;
 
     # create the adaptor
@@ -176,7 +176,7 @@ sub _satellite_dba_make {
         die "Instantiation of '$adaptor_class' failed, got a '$cls'";
     }
 
-    $self->{_sdba}{"$metakey; $adaptor_class"} = $dba;
+    $self->{_sdba}{$metakey}{$adaptor_class} = $dba;
 
     return $dba;
 }
