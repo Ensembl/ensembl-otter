@@ -78,7 +78,7 @@ sub gff_line { ## no critic( Subroutines::ProhibitManyArgs )
          (sprintf "%d", $end),
          (defined $score ? (sprintf "%f", $score) : '.'),
          $strand_hash->{$strand} || $strand || '.',
-         $phase || '.',
+         defined $phase ? $phase : '.',
         );
     _gff_escape_field for @field_list;
 
