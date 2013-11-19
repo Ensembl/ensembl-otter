@@ -9,3 +9,6 @@
 
 # t/auth*.t
 t/.auth-credentials
+
+# OtterTest::Client
+t/.OTC.meta_response.*.txt
