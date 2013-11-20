@@ -194,6 +194,7 @@ sub _add_zmap_bam_config {
             $config->{'featureset-style'}{$featureset} = 'short-read-coverage';
             $config->{'featureset-related'}{$featureset} = $related_column;
             my $query = {
+                dataset => $self->name,
                 chr   => $slice->ssname,
                 start => $slice->start,
                 end   => $slice->end,
