@@ -11,6 +11,8 @@ use Bio::Vega::ContigInfo;
 use Bio::Vega::ContigLockBroker;
 use Bio::Vega::Region;
 
+use base 'Bio::Otter::ServerAction';
+
 =head1 NAME
 
 Bio::Otter::ServerAction::Region - server requests on a region
@@ -18,21 +20,6 @@ Bio::Otter::ServerAction::Region - server requests on a region
 =cut
 
 ### Constructors
-
-=head2 new
-=cut
-
-sub new {
-    my ($pkg, $server) = @_;
-
-    my $self = {
-        _server => $server,
-    };
-    my $class = ref($pkg) || $pkg;
-    bless $self, $class;
-
-    return $self;
-}
 
 Readonly my @SLICE_REQUIRED_PARAMS => qw(
     dataset

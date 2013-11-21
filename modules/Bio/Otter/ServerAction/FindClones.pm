@@ -13,6 +13,8 @@ use Try::Tiny;
 
 use Bio::Otter::Utils::StableId;
 
+use base 'Bio::Otter::ServerAction';
+
 # Readonly seems to cause SIGSEGVs at exit, in conjunction with failing eval blocks.
 # This is a shame.  I suspect only arrays and hashes are affected, but all are disabled to be safe.
 # Global 'my' variables IN_CAPS should be Readonly.
@@ -30,23 +32,16 @@ my $MAX_HITS = 50; # approx, due to later find_by_* calls
 sub new {
     my ($class, $server) = @_;
 
-    my $self = {
-        _server => $server,
-        _qnames => [ split ',', $server->require_argument('qnames') ],
-        _results => {},
-        _result_count => 0,
-    };
-    bless $self, $class;
+    my $self = $class->SUPER::new($server);
+
+    $self->{_qnames}       = [ split ',', $server->require_argument('qnames') ];
+    $self->{_results}      = {};
+    $self->{_result_count} = 0;
 
     die "Too many query terms"
       if @{ $self->qnames } > $MAX_TERMS;
 
     return $self;
-}
-
-sub server {
-    my ($self) = @_;
-    return $self->{_server};
 }
 
 sub otter_dba {
