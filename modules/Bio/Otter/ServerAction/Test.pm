@@ -18,18 +18,7 @@ use Bio::Otter::Auth::SSO;
 
 use Bio::EnsEMBL::ApiVersion ();
 
-
-sub new {
-    my ($pkg, $server) = @_;
-    my $self = { _server => $server };
-    bless $self, $pkg;
-    return $self;
-}
-
-sub server {
-    my ($self) = @_;
-    return $self->{_server};
-}
+use base 'Bio::Otter::ServerAction';
 
 sub as_yaml {
     my ($self) = @_;
