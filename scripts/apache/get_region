@@ -23,7 +23,7 @@ Bio::Otter::Server::Support::Web->send_response(\&get_region);
 
 __END__
 
-=head1 NAME - get_assembly_dna
+=head1 NAME - get_region
 
 =head1 AUTHOR
 
