@@ -11,13 +11,25 @@ Bio::Otter::ServerAction::TSV::LoutreDB - serve requests for info from loutre db
 
 =cut
 
-sub serialise_output {
+sub serialise_meta {
     my ($self, $results) = @_;
 
     my $tsv_string = '';
 
     foreach my $r ( @$results ) {
         $tsv_string .= join("\t", $r->{meta_key}, $r->{meta_value}, $r->{species_id} // '') . "\n";
+    }
+
+    return $tsv_string;
+}
+
+sub serialise_db_info {
+    my ($self, $results) = @_;
+
+    my $tsv_string = '';
+
+    foreach my $key ( keys %$results ) {
+        $tsv_string .= join("\t", $key, @{$results->{$key}}) . "\n";
     }
 
     return $tsv_string;
