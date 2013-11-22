@@ -11,30 +11,19 @@ BEGIN { use lib ($ENV{OTTER_PERL_INC} || q{}) =~ m{([^:]+)}g }
 use SangerPaths qw{ core bioperl123 ensembl72 otter78 };
 
 use Bio::Otter::Server::Support::Web;
-
-my $select_cs_sql = <<'SQL';
-    SELECT coord_system_id, species_id, name, version, rank, attrib
-      FROM coord_system
-     WHERE name = 'chromosome' AND version = 'Otter'
-SQL
+use Bio::Otter::ServerAction::TSV::LoutreDB;
 
 sub get_db_info {
     my ($server) = @_;
-
-    my $sth = $server->otter_dba()->dbc()->prepare($select_cs_sql);
-    $sth->execute;
-    my @cs_chromosome = $sth->fetchrow;
-
-    my $output_string = join("\t", 'coord_system.chromosome', @cs_chromosome) . "\n";
-
-    return $server->otter_wrap_response($output_string);
+    my $tsv = Bio::Otter::ServerAction::TSV::LoutreDB->new($server)->get_db_info;
+    return $tsv;
 }
 
 Bio::Otter::Server::Support::Web->send_response(\&get_db_info);
 
 __END__
 
-=head1 NAME - get_config
+=head1 NAME - get_db_info
 
 =head1 AUTHOR
 

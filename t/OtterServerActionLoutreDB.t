@@ -27,14 +27,23 @@ my $server = Bio::Otter::Server::Support::Local->new;
 $server->set_params( dataset => 'human_test' );
 
 my $ldb_plain = new_ok($saldb_module => [ $server ]);
-my $results = $ldb_plain->get_meta;
-ok($results, 'get_meta');
-note('Got ', scalar @$results, ' entries');
+
+my $meta = $ldb_plain->get_meta;
+ok($meta, 'get_meta');
+note('Got ', scalar @$meta, ' entries');
+
+my $db_info = $ldb_plain->get_db_info;
+ok($db_info, 'get_db_info');
+note('Got ', scalar keys %$db_info, ' entries');
 
 my $ldb_tsv = new_ok($saldb_tsv_module => [ $server ]);
-my $tsv = $ldb_tsv->get_meta;
-ok($tsv, 'get_meta - TSV');
-note("Got:\n", $tsv);
+my $meta_tsv = $ldb_tsv->get_meta;
+ok($meta_tsv, 'get_meta - TSV');
+note("Got:\n", $meta_tsv);
+
+my $db_info_tsv = $ldb_tsv->get_db_info;
+ok($db_info_tsv, 'get_db_info - TSV');
+note("Got:\n", $db_info_tsv);
 
 done_testing;
 

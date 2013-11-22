@@ -58,11 +58,40 @@ sub get_meta {
 
     warn "Total of $counter meta table pairs whitelisted\n";
 
-    return $self->serialise_output(\@results);
+    return $self->serialise_meta(\@results);
 }
 
 # Null serialiser, overridden in B:O:SA:TSV::LoutreDB
-sub serialise_output {
+sub serialise_meta {
+    my ($self, $results) = @_;
+    return $results;
+}
+
+=head2 get_db_info
+=cut
+
+my $select_cs_sql = <<'SQL';
+    SELECT coord_system_id, species_id, name, version, rank, attrib
+      FROM coord_system
+     WHERE name = 'chromosome' AND version = 'Otter'
+SQL
+
+sub get_db_info {
+    my ($self) = @_;
+
+    my %results;
+
+    my $sth = $self->server->otter_dba()->dbc()->prepare($select_cs_sql);
+    $sth->execute;
+    my @cs_chromosome = $sth->fetchrow;
+
+    $results{'coord_system.chromosome'} = \@cs_chromosome;
+
+    return $self->serialise_db_info(\%results);
+}
+
+# Null serialiser, overridden in B:O:SA:TSV::LoutreDB
+sub serialise_db_info {
     my ($self, $results) = @_;
     return $results;
 }
