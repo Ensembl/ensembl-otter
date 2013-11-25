@@ -251,42 +251,36 @@ sub blixem_config {
 sub generate_blixem_bam_config {
     my ($self, $config) = @_;
 
-    my $ds_name = $self->name;
-    my $common_args =
-        '--gff_version=%g gff_feature_source=%S --chr=%r --start=%s --end=%e --file=%f';
+    $config->{'short-read'} = {
+        'link-features-by-name'     => 'false',
+        'bulk-fetch'                => 'bam-fetch',
+        'user-fetch'                => 'none',
+        'squash-linked-features'    => 'false',
+        'squash-identical-features' => 'true',
+    };
+
+    my $fetch_arg_list = join ' ', qw(
+        --gff_version=%g
+        --gff_feature_source=%S
+        --dataset=%(dataset)
+        --csver=%(csver)
+        --chr=%r --start=%s --end=%e
+        --file=%(file)
+        );
+
+    $config->{'bam-fetch'} = {
+        'fetch-mode'    => 'command',
+        'command'       => 'bam_get',
+        'args'          => $fetch_arg_list,
+        'output'        => 'gff',
+    };
+
     foreach my $bam (@{$self->bam_list}) {
-        # Add a bam fetch method to the config if we don't have one.
-        my $csver  = $bam->csver;
-        my $fetch_name = "bam-fetch-$csver";
-        $config->{$fetch_name} ||= {
-            'fetch-mode'    => 'command',
-            'command'       => 'bam_get',
-            'args'          => "--dataset=$ds_name --csver=$csver $common_args",
-            'output'        => 'gff',
-        };
-
-        ### Hack - need some way to allow out multiple BAM fetch-methods
-        if (my $other = $config->{'short-read'}{'bulk-fetch'}) {
-            if ($other ne $fetch_name) {
-                die
-                    "Cannot currently specify more than one bulk fetch method "
-                    . "for [short-read]\nHave both '$other' and '$fetch_name'";
-            }
-        }
-        else {
-            $config->{'short-read'} = {
-                'link-features-by-name'     => 'false',
-                'bulk-fetch'                => $fetch_name,
-                'user-fetch'                => 'none',
-                'squash-linked-features'    => 'false',
-                'squash-identical-features' => 'true',
-            };
-        }
-
-        # Add the bam source itself
         $config->{$bam->name} = {
             'description'   => $bam->description,
             'file'          => $bam->file,
+            'csver'         => $bam->csver,
+            'dataset'       => $self->name,
         };
     }
 
