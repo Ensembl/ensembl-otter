@@ -52,9 +52,8 @@ sub get_loutre_schema {
 }
 
 sub get_meta {
-    # FIXME: what about dataset?
-    my $self = shift;
-    my $response = $self->_meta_response;
+    my ($self, $dsname) = @_;
+    my $response = $self->_meta_response($dsname);
     return $self->Bio::Otter::Lace::Client::_build_meta_hash($response);
 }
 
@@ -64,11 +63,11 @@ sub get_db_info {
 }
 
 sub _meta_response {
-    my $self = shift;
+    my ($self, $dsname) = @_;
 
     my $tb = Test::Builder->new;
 
-    my $fn = $self->_meta_response_cache_fn;
+    my $fn = $self->_meta_response_cache_fn($dsname);
     my $cache_age = 1; # days
 
     if (-f $fn && (-M _) < $cache_age) {
@@ -77,7 +76,7 @@ sub _meta_response {
         return $response;
     } else {
         # probably need to fetch it
-        my ($error, $response) = $self->_get_meta_fresh($fn);
+        my ($error, $response) = $self->_get_meta_fresh($dsname, $fn);
         if ($error && -f $fn) {
             my $age = -M $fn;
             $tb->diag("Proceeding with $age-day stale $fn because cannot fetch fresh ($error)");
@@ -90,14 +89,14 @@ sub _meta_response {
 }
 
 sub _get_meta_fresh {
-    my ($self, $fn) = @_;
+    my ($self, $dsname, $fn) = @_;
 
     my ($error, $meta_tsv);
     try {
         my $tb = Test::Builder->new;
 
         my $local_server = Bio::Otter::Server::Support::Local->new;
-        $local_server->set_params(dataset => 'human'); # FIXME: hard-coded
+        $local_server->set_params(dataset => $dsname);
 
         my $ldb_tsv = Bio::Otter::ServerAction::TSV::LoutreDB->new($local_server);
         $meta_tsv = $ldb_tsv->get_meta;
@@ -115,11 +114,12 @@ sub _get_meta_fresh {
 }
 
 sub _meta_response_cache_fn {
+    my ($self, $dsname) = @_;
     my $fn = __FILE__; # this module
     my $pkgfn = __PACKAGE__;
     $pkgfn =~ s{::}{/}g;
     my $vsn = Bio::Otter::Version->version;
-    $fn =~ s{(/t/)lib/\Q$pkgfn.pm\E$}{$1.OTC.meta_response.$vsn.txt}
+    $fn =~ s{(/t/)lib/\Q$pkgfn.pm\E$}{$1.OTC.meta_response.$vsn.$dsname.txt}
       or die "Can't make filename from $fn";
     return $fn;
 }
