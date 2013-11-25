@@ -41,6 +41,7 @@ sub new_with_dataset_info {
     my $db = $pkg->new($client);
 
     my $test_dataset = Bio::Otter::Lace::DataSet->new;
+    $test_dataset->name($dataset_name);
     $test_dataset->Client($db->test_client);
     $db->load_dataset_info($test_dataset);
 
