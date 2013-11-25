@@ -53,21 +53,22 @@ sub get_loutre_schema {
 
 sub get_meta {
     my ($self, $dsname) = @_;
-    my $response = $self->_meta_response($dsname);
+    my $response = $self->_cached_response('get_meta', $dsname);
     return $self->Bio::Otter::Lace::Client::_build_meta_hash($response);
 }
 
 sub get_db_info {
-    # FIXME: what about dataset?
-    return { 'coord_system.chromosome' => [ 2, 1, 'chromosome', 'Otter', 2, 'default_version' ] };
+    my ($self, $dsname) = @_;
+    my $response = $self->_cached_response('get_db_info', $dsname);
+    return $self->Bio::Otter::Lace::Client::_build_db_info_hash($response);
 }
 
-sub _meta_response {
-    my ($self, $dsname) = @_;
+sub _cached_response {
+    my ($self, $what, $dsname) = @_;
 
     my $tb = Test::Builder->new;
 
-    my $fn = $self->_meta_response_cache_fn($dsname);
+    my $fn = $self->_response_cache_fn($what, $dsname);
     my $cache_age = 1; # days
 
     if (-f $fn && (-M _) < $cache_age) {
@@ -76,7 +77,7 @@ sub _meta_response {
         return $response;
     } else {
         # probably need to fetch it
-        my ($error, $response) = $self->_get_meta_fresh($dsname, $fn);
+        my ($error, $response) = $self->_get_fresh($what, $dsname, $fn);
         if ($error && -f $fn) {
             my $age = -M $fn;
             $tb->diag("Proceeding with $age-day stale $fn because cannot fetch fresh ($error)");
@@ -88,10 +89,10 @@ sub _meta_response {
     }
 }
 
-sub _get_meta_fresh {
-    my ($self, $dsname, $fn) = @_;
+sub _get_fresh {
+    my ($self, $what, $dsname, $fn) = @_;
 
-    my ($error, $meta_tsv);
+    my ($error, $tsv);
     try {
         my $tb = Test::Builder->new;
 
@@ -99,27 +100,27 @@ sub _get_meta_fresh {
         $local_server->set_params(dataset => $dsname);
 
         my $ldb_tsv = Bio::Otter::ServerAction::TSV::LoutreDB->new($local_server);
-        $meta_tsv = $ldb_tsv->get_meta;
-        $tb->note("OtterTest::Client::get_meta: fetched fresh copy");
+        $tsv = $ldb_tsv->$what;
+        $tb->note("OtterTest::Client::$what: fetched fresh copy");
 
-        write_file($fn, \$meta_tsv);
-        $tb->note("OtterTest::Client::get_meta: cached in '$fn'");
+        write_file($fn, \$tsv);
+        $tb->note("OtterTest::Client::$what: cached in '$fn'");
 
         1;
     }
     catch {
         $error = $_;
     };
-    return ($error, $meta_tsv);
+    return ($error, $tsv);
 }
 
-sub _meta_response_cache_fn {
-    my ($self, $dsname) = @_;
+sub _response_cache_fn {
+    my ($self, $what, $dsname) = @_;
     my $fn = __FILE__; # this module
     my $pkgfn = __PACKAGE__;
     $pkgfn =~ s{::}{/}g;
     my $vsn = Bio::Otter::Version->version;
-    $fn =~ s{(/t/)lib/\Q$pkgfn.pm\E$}{$1.OTC.meta_response.$vsn.$dsname.txt}
+    $fn =~ s{(/t/)lib/\Q${pkgfn}.pm\E$}{$1.OTC.${what}_response.${vsn}.${dsname}.txt}
       or die "Can't make filename from $fn";
     return $fn;
 }

@@ -895,6 +895,14 @@ sub get_db_info {
         },
     );
 
+    return $self->_build_db_info_hash($response);
+}
+
+# Factored out for use in OtterTest::Client
+#
+sub _build_db_info_hash {
+    my ($self, $response) = @_;
+
     my $db_info_hash = {};
     for my $line (split(/\n/,$response)) {
         my($key, @values) = split(/\t/,$line);
