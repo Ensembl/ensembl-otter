@@ -22,11 +22,11 @@ use Bio::Vega::Utils::GFF;
     sub gff_header {
         my ($self, %args) = @_;
 
-        my $gff_version = $args{gff_version};
-        my $name  = $args{gff_seqname} || $self->seq_region_name;
+        my $gff_version = $args{'gff_version'};
+        my $name  = $args{'gff_seqname'} || $self->seq_region_name;
         my $start = $self->start;
         my $end   = $self->end;
-        my $seq   = $args{include_dna} ? $self->seq : undef;
+        my $seq   = $args{'include_dna'} ? $self->seq : undef;
 
         return Bio::Vega::Utils::GFF::gff_header($gff_version, $name, $start, $end, $seq);
     }
@@ -44,19 +44,19 @@ use Bio::Vega::Utils::GFF;
         my ($self, %args) = @_;
 
         # if we're not given any analyses, search for features from all analyses
-        my $analyses = $args{analyses} || [''];
-        my $feature_types  = $args{feature_types};
-        my $verbose        = $args{verbose};
-        my $target_slice   = $args{target_slice} || $self;
-        my $common_slice   = $args{common_slice};
+        my $analyses = $args{'analyses'} || [''];
+        my $feature_types  = $args{'feature_types'};
+        my $verbose        = $args{'verbose'};
+        my $target_slice   = $args{'target_slice'} || $self;
+        my $common_slice   = $args{'common_slice'};
 
         my %gff_arg_hash = (
-            gff_format  => Bio::Vega::Utils::GFF::gff_format($args{gff_version}),
-            gff_source  => $args{gff_source},
-            gff_seqname => $args{gff_seqname},
+            gff_format  => Bio::Vega::Utils::GFF::gff_format($args{'gff_version'}),
+            gff_source  => $args{'gff_source'},
+            gff_seqname => $args{'gff_seqname'},
             );
 
-        my $sources_to_types = $args{sources_to_types};
+        my $sources_to_types = $args{'sources_to_types'};
 
         my $gff = '';
 
@@ -124,7 +124,7 @@ use Bio::Vega::Utils::GFF;
                             # features each analysis can create, fill in the hash for the caller. This is
                             # required by enzembl, but other users can just ignore this parameter.
 
-                            my $source = $feature->_gff_hash->{source};
+                            my $source = $feature->_gff_hash->{'source'};
 
                             if ($sources_to_types->{$source}) {
                                 unless ($sources_to_types->{$source} eq $feature_type) {
@@ -163,18 +163,18 @@ use Bio::Vega::Utils::GFF;
 
         # This parameter is assumed to be a hashref which includes extra attributes you'd
         # like to have appended onto the gff line for the feature
-        my $extra_attrs = $args{extra_attrs};
+        my $extra_attrs = $args{'extra_attrs'};
 
         my $gff = $self->_gff_hash(%args);
 
         if ($extra_attrs) {
 
             # combine the extra attributes with any existing ones (duplicate keys will get squashed!)
-            $gff->{attributes} = {} unless defined $gff->{attributes};
-            @{ $gff->{attributes} }{ keys %$extra_attrs } = values %$extra_attrs;
+            $gff->{'attributes'} = {} unless defined $gff->{'attributes'};
+            @{ $gff->{'attributes'} }{ keys %$extra_attrs } = values %$extra_attrs;
         }
 
-        my $gff_format = ${args}{gff_format};
+        my $gff_format = ${args}{'gff_format'};
         my $gff_str = $gff_format->gff_line(@{$gff}{
             qw( seqname source feature start end score strand frame attributes)});
 
@@ -184,8 +184,8 @@ use Bio::Vega::Utils::GFF;
     sub _gff_hash {
         my ($self, %args) = @_;
 
-        my $gff_seqname = $args{gff_seqname} || $self->slice->seq_region_name;
-        my $gff_source  = $args{gff_source} || $self->_gff_source;
+        my $gff_seqname = $args{'gff_seqname'} || $self->slice->seq_region_name;
+        my $gff_source  = $args{'gff_source'} || $self->_gff_source;
 
         my $gff = {
             seqname => $gff_seqname,
@@ -228,10 +228,10 @@ use Bio::Vega::Utils::GFF;
 
         my $gff = $self->SUPER::_gff_hash(@args);
 
-        $gff->{score}   = $self->score;
-        $gff->{feature} = 'misc_feature';
+        $gff->{'score'}   = $self->score;
+        $gff->{'feature'} = 'misc_feature';
 
-        $gff->{attributes}{Name} =
+        $gff->{'attributes'}{'Name'} =
             $self->display_label ||
             $self->analysis->logic_name;
 
@@ -283,7 +283,7 @@ use Bio::Vega::Utils::GFF;
         my ($self, @args) = @_;
 
         my $gff = $self->SUPER::_gff_hash(@args);
-        $gff->{attributes}{'Class'} = 'Protein';
+        $gff->{'attributes'}{'Class'} = 'Protein';
         return $gff;
     }
 }
@@ -444,7 +444,7 @@ use Bio::Vega::Utils::GFF;
         elsif (my $ana = $self->analysis) {
             $name = sprintf "%s.%d", $ana->logic_name, $tsct_numeric_id;
         }
-        $gff->{attributes}{Name} = $name;
+        $gff->{'attributes'}{'Name'} = $name;
         return $gff;
     }
 
@@ -505,9 +505,9 @@ use Bio::Vega::Utils::GFF;
                 Name  => $name,
             };
             if (my $stable = $tsl->stable_id) {
-                $attrib_hash->{Stable_ID} = $stable;
+                $attrib_hash->{'Stable_ID'} = $stable;
             }
-            my $gff_format = $args{gff_format};
+            my $gff_format = $args{'gff_format'};
             $gff .= $gff_format->gff_line(
                 $gff_hash->{'seqname'},
                 $gff_hash->{'source'},
@@ -627,8 +627,8 @@ use Bio::Vega::Utils::GFF;
     sub _gff_hash {
         my ($self, @args) = @_;
         my $gff = $self->SUPER::_gff_hash(@args);
-        $gff->{feature} = 'intron';
-        $gff->{attributes}{Class} = 'Sequence';
+        $gff->{'feature'} = 'intron';
+        $gff->{'attributes'}{'Class'} = 'Sequence';
         return $gff;
     }
 }
@@ -653,8 +653,8 @@ use Bio::Vega::Utils::GFF;
             @{$gff}{qw( start end )} = ($end, $start);
         }
 
-        $gff->{attributes}{Name} = "$name - $allele";
-        $gff->{attributes}{URL}  = $url;
+        $gff->{'attributes'}{'Name'} = "$name - $allele";
+        $gff->{'attributes'}{'URL'}  = $url;
 
         return $gff;
     }
@@ -676,27 +676,27 @@ use Bio::Vega::Utils::GFF;
             my $class = $self->repeat_consensus->repeat_class;
 
             if ($class =~ /LINE/) {
-                $gff->{source} .= '_LINE';
+                $gff->{'source'} .= '_LINE';
             }
             elsif ($class =~ /SINE/) {
-                $gff->{source} .= '_SINE';
+                $gff->{'source'} .= '_SINE';
             }
 
-            $gff->{feature} = 'similarity';
-            $gff->{score}   = $self->score;
+            $gff->{'feature'} = 'similarity';
+            $gff->{'score'}   = $self->score;
 
-            $gff->{attributes}{Class} = 'Motif';
-            $gff->{attributes}{Name}  = $self->repeat_consensus->name;
-            $gff->{attributes}{Align} =
+            $gff->{'attributes'}{'Class'} = 'Motif';
+            $gff->{'attributes'}{'Name'}  = $self->repeat_consensus->name;
+            $gff->{'attributes'}{'Align'} =
                 [ $self->hstart, $self->hend, $self->hstrand ];
         }
         elsif ($self->analysis->logic_name =~ /trf/i) {
-            $gff->{feature} = 'misc_feature';
-            $gff->{score}   = $self->score;
+            $gff->{'feature'} = 'misc_feature';
+            $gff->{'score'}   = $self->score;
             my $cons   = $self->repeat_consensus->repeat_consensus;
             my $len    = length($cons);
             my $copies = sprintf "%.1f", ($self->end - $self->start + 1) / $len;
-            $gff->{attributes}{Name} = "$copies copies $len mer $cons";
+            $gff->{'attributes'}{'Name'} = "$copies copies $len mer $cons";
         }
 
         return $gff;
@@ -813,7 +813,7 @@ use Bio::Vega::Utils::GFF;
         my $source = "funcgen_${feature_set}_${feature_type_abbrev}";
 
         my $gff = $self->SUPER::_gff_hash(@args);
-        $gff->{source} = $source;
+        $gff->{'source'} = $source;
 
         return $gff;
     }
