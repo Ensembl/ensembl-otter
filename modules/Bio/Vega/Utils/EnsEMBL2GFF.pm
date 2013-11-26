@@ -176,7 +176,7 @@ use Bio::Vega::Utils::GFF;
 
         my $gff_format = $args{'gff_format'};
         my $gff_str = $gff_format->gff_line(@{$gff}{
-            qw( seqname source feature start end score strand frame attributes)});
+            qw( seqname source feature start end score strand frame attributes )});
 
         return $gff_str;
     }
