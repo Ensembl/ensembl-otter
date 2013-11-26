@@ -231,7 +231,7 @@ use Bio::Vega::Utils::GFF;
         $gff->{score}   = $self->score;
         $gff->{feature} = 'misc_feature';
 
-        $gff->{attributes}->{Name} =
+        $gff->{attributes}{Name} =
             $self->display_label ||
             $self->analysis->logic_name;
 
@@ -270,7 +270,7 @@ use Bio::Vega::Utils::GFF;
         my ($self, %args) = @_;
 
         my $gff = $self->SUPER::_gff_hash(%args);
-        $gff->{'attributes'}->{'cigar_ensembl'} = $self->cigar_string;
+        $gff->{'attributes'}{'cigar_ensembl'} = $self->cigar_string;
         return $gff;
     }
 }
@@ -444,7 +444,7 @@ use Bio::Vega::Utils::GFF;
         elsif (my $ana = $self->analysis) {
             $name = sprintf "%s.%d", $ana->logic_name, $tsct_numeric_id;
         }
-        $gff->{attributes}->{Name} = $name;
+        $gff->{attributes}{Name} = $name;
         return $gff;
     }
 
@@ -628,7 +628,7 @@ use Bio::Vega::Utils::GFF;
         my ($self, @args) = @_;
         my $gff = $self->SUPER::_gff_hash(@args);
         $gff->{feature} = 'intron';
-        $gff->{attributes}->{Class} = 'Sequence';
+        $gff->{attributes}{Class} = 'Sequence';
         return $gff;
     }
 }
@@ -653,8 +653,8 @@ use Bio::Vega::Utils::GFF;
             @{$gff}{qw( start end )} = ($end, $start);
         }
 
-        $gff->{attributes}->{Name} = "$name - $allele";
-        $gff->{attributes}->{URL}  = $url;
+        $gff->{attributes}{Name} = "$name - $allele";
+        $gff->{attributes}{URL}  = $url;
 
         return $gff;
     }
@@ -685,9 +685,9 @@ use Bio::Vega::Utils::GFF;
             $gff->{feature} = 'similarity';
             $gff->{score}   = $self->score;
 
-            $gff->{attributes}->{Class} = 'Motif';
-            $gff->{attributes}->{Name}  = $self->repeat_consensus->name;
-            $gff->{attributes}->{Align} =
+            $gff->{attributes}{Class} = 'Motif';
+            $gff->{attributes}{Name}  = $self->repeat_consensus->name;
+            $gff->{attributes}{Align} =
                 [ $self->hstart, $self->hend, $self->hstrand ];
         }
         elsif ($self->analysis->logic_name =~ /trf/i) {
@@ -696,7 +696,7 @@ use Bio::Vega::Utils::GFF;
             my $cons   = $self->repeat_consensus->repeat_consensus;
             my $len    = length($cons);
             my $copies = sprintf "%.1f", ($self->end - $self->start + 1) / $len;
-            $gff->{attributes}->{Name} = "$copies copies $len mer $cons";
+            $gff->{attributes}{Name} = "$copies copies $len mer $cons";
         }
 
         return $gff;
