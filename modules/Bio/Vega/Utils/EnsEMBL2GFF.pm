@@ -9,8 +9,9 @@ use Try::Tiny;
 
 use Bio::EnsEMBL::Utils::Exception qw(verbose);
 
-# This module allows conversion of ensembl/otter objects to GFF by inserting
-# to_gff (and supporting _gff_hash) methods into the necessary feature classes
+# This module allows conversion of ensembl/otter objects to GFF by
+# inserting to_gff (and supporting _gff_hash) methods into the
+# necessary feature classes
 
 ## no critic (Modules::ProhibitMultiplePackages)
 
@@ -22,15 +23,17 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
 
         my ($self, %args) = @_;
 
-        # This parameter is assumed to be a hashref which includes extra attributes you'd
-        # like to have appended onto the gff line for the feature
+        # This parameter is assumed to be a hashref which includes
+        # extra attributes you'd like to have appended onto the gff
+        # line for the feature
         my $extra_attrs = $args{'extra_attrs'};
 
         my $gff = $self->_gff_hash(%args);
 
         if ($extra_attrs) {
 
-            # combine the extra attributes with any existing ones (duplicate keys will get squashed!)
+            # combine the extra attributes with any existing ones
+            # (duplicate keys will get squashed!)
             $gff->{'attributes'} = {} unless defined $gff->{'attributes'};
             @{ $gff->{'attributes'} }{ keys %$extra_attrs } = values %$extra_attrs;
         }
@@ -168,7 +171,8 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
             ? ( +{ map { $_ => 1 } split(/,/, $args{'translation_xref_dbs'}) } )
             : '';
 
-        # filter the transcripts according to the transcript_analyses & translation_xref_db params
+        # filter the transcripts according to the transcript_analyses
+        # & translation_xref_db params
 
         my @tsct_for_gff;
         for my $tsct (@{ $self->get_all_Transcripts }) {
@@ -334,10 +338,12 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
         # add gff lines for each of the exons
         foreach my $feat (@{ $self->get_all_Exons }) {
 
-            # exons don't have analyses attached, so temporarily give them the transcript's one
+            # exons don't have analyses attached, so temporarily give
+            # them the transcript's one
             $feat->analysis($self->analysis);
 
-            # and add the feature's gff line to our string, including the sequence name information as an attribute
+            # and add the feature's gff line to our string, including
+            # the sequence name information as an attribute
             $gff .= $feat->to_gff(%args, extra_attrs => { Name => $name });
 
             # to be on the safe side, get rid of the analysis we temporarily attached
@@ -347,8 +353,10 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
 
         if (my $tsl = $self->translation) {
 
-            # build up the CDS line - it's not really worth creating a Translation->to_gff method, as most
-            # of the fields are derived from the Transcript and Translation doesn't inherit from Feature
+            # build up the CDS line - it's not really worth creating a
+            # Translation->to_gff method, as most of the fields are
+            # derived from the Transcript and Translation doesn't
+            # inherit from Feature
 
             my $start = $self->coding_region_start + $self->slice->start - 1;
             my $end   = $self->coding_region_end   + $self->slice->start - 1;
@@ -505,7 +513,8 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
         }
         elsif ($self->ditag_side eq "L") {
 
-            # we only return some GFF for L side ditags, as the R side one will be included here
+            # we only return some GFF for L side ditags, as the R side
+            # one will be included here
 
             my ($df1, $df2);
             try {
@@ -530,24 +539,29 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
 
             my $insert = $df2->start - $df1->end - 1;
 
-            # XXX: gr5: this generates GFF slightly differently from the ace server for
-            # instances where the hit_end of df1 and the hit_start of df2 are the same
-            # e.g. 1-19, 19-37, which seems to occur fairly often. I don't really know
-            # what this means (do the pair share a base of the alignment?), but I do not
-            # cope with it here, and the GFF will show that such a pair have hit coords
-            # 1-19, 20-38. The coords on the genomic sequence will be correct though.
+            # XXX: gr5: this generates GFF slightly differently from
+            # the ace server for instances where the hit_end of df1
+            # and the hit_start of df2 are the same e.g. 1-19, 19-37,
+            # which seems to occur fairly often. I don't really know
+            # what this means (do the pair share a base of the
+            # alignment?), but I do not cope with it here, and the GFF
+            # will show that such a pair have hit coords 1-19,
+            # 20-38. The coords on the genomic sequence will be
+            # correct though.
 
             $cigar_string = $df1->cigar_line . $insert . 'I' . $df2->cigar_line;
 
         }
         else {
 
-            # we are the R side ditag feature and we don't generate anything
+            # we are the R side ditag feature and we don't generate
+            # anything
 
             return '';
         }
 
-        # fake up a DAF which we then convert to GFF as this is the format produced by acedb
+        # fake up a DAF which we then convert to GFF as this is the
+        # format produced by acedb
 
         my $daf = Bio::EnsEMBL::DnaDnaAlignFeature->new(
             -slice        => $self->slice,
@@ -572,7 +586,9 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
     package Bio::EnsEMBL::Funcgen::SegmentationFeature;
 
     # Not ideal to have the DB-side full names hard-coded here :-(
-    # Abbreviations defined at http://www.ensembl.org/info/genome/funcgen/regulatory_segmentation.html
+    # Abbreviations defined at
+    # http://www.ensembl.org/info/genome/funcgen/regulatory_segmentation.html
+
     my %feature_type_to_abbrev = (
         'CTCF enriched'                           => 'CTCF',
         'Predicted Weak Enhancer/Cis-reg element' => 'WE',
