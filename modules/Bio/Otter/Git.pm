@@ -25,8 +25,14 @@ our $CACHE = {
 
 sub _getcache {
     #  Attempt to load a cache.
-    return try { require Bio::Otter::Git::Cache; 1 }
-      catch {
+    return try {
+        require Bio::Otter::Git::Cache;
+        my $loaded = $INC{'Bio/Otter/Git/Cache.pm'};
+        if (dirname(dirname($loaded)) ne $dir) {
+            die "$dir loaded cache $loaded from wrong tree - suspected module shadowing";
+        }
+        1;
+    } catch {
         if (m(\A\QCan't locate Bio/Otter/Git/Cache.pm in \E)) {
             warn "No git cache: assuming a git checkout.\n";
             0;
