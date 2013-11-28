@@ -8,6 +8,7 @@ with 'MooseX::Log::Log4perl';
 use Readonly;
 
 use Bio::Otter::GappedAlignment;
+use Bio::Otter::Lace::DB::OTFRequest;
 use Bio::Otter::Lace::OnTheFly::ResultSet;
 use Bio::Otter::Vulgar;
 
@@ -78,7 +79,7 @@ sub query_type {
     return $self->is_protein ? 'protein' : 'dna';
 }
 
-sub run {
+sub prepare_run {
     my $self = shift;
 
     my $command = 'exonerate'; # see also Bio::Otter::Utils::About
@@ -103,7 +104,22 @@ sub run {
         '--softmasktarget' => $self->softmask_target ? 'yes' : 'no',
         );
 
-    my @command_line = $self->construct_command( $command, \%args );
+    my $request = Bio::Otter::Lace::DB::OTFRequest->new(
+        command     => $command,
+        logic_name  => $self->analysis_name,
+        args        => \%args,
+        );
+
+    return $request;
+}
+
+sub run {
+    my $self = shift;
+
+    my $request = $self->prepare_run;
+
+    my $command = $request->command;
+    my @command_line = $self->construct_command( $command, $request->args );
     $self->logger->info('Running: ', join ' ', @command_line);
     open my $raw_align, '-|', @command_line or $self->logger->logconfess("failed to run $command: $!");
 
