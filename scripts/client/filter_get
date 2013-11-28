@@ -31,12 +31,9 @@ sub show_version {
 my $LOG     = 1;
 
 my $helper = Bio::Otter::Utils::GetScript->new;
-my $args   = $helper->parse_uri_style_args;
+my $args   = $helper->args;
 
 show_version($helper) if exists $args->{'--version'}; # exits
-
-# test case
-die "failing as required" if $args->{'fail'};
 
 my $gff_source = $args->{gff_source};
 $helper->log_context($gff_source);
@@ -44,17 +41,13 @@ $helper->log_context($gff_source);
 
 # pull off arguments meant for us
 
-my     ($url_root, $server_script, $session_dir, $cookie_jar, $process_gff)
+my     ($url_root, $server_script, $cookie_jar, $process_gff)
     = $helper->read_delete_args(
-    qw ( url_root   server_script   session_dir   cookie_jar   process_gff_file )
+    qw ( url_root   server_script   cookie_jar   process_gff_file )
     );
 
-$helper->use_session_dir($session_dir);
-
-$helper->open_log('gff_log.txt');
+$helper->start_log('gff_log.txt');
 $helper->log_incs('After startup');
-$helper->log_message("starting");
-$helper->log_arguments;
 
 $args->{log} = 1 if $LOG; # enable logging on the server
 

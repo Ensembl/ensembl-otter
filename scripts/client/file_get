@@ -6,17 +6,14 @@ use warnings;
 use Bio::Otter::Utils::GetScript;
 
 my $helper = Bio::Otter::Utils::GetScript->new;
-my $args   = $helper->parse_uri_style_args;
+my $args   = $helper->args;
 
-my ($session_dir, $process_gff) = $helper->read_delete_args(qw( session_dir process_gff ));
-$helper->use_session_dir($session_dir);
+my ($process_gff) = $helper->read_delete_args(qw( process_gff ));
 
 my $path = $args->{file_path};
 $helper->log_context("FILE:$path");
 
-$helper->open_log('gff_log.txt');
-$helper->log_message("starting");
-$helper->log_arguments;
+$helper->start_log('gff_log.txt');
 
 $helper->do_requires;
 

@@ -17,29 +17,18 @@ sub show_version {
 }
 
 my $helper = Bio::Otter::Utils::GetScript->new;
+my $args   = $helper->args;
+
 $helper->do_requires;
-
-my $args   = $helper->parse_uri_style_args;
-
 show_version($helper) if exists $args->{'--version'}; # exits
-
-# test case
-die "failing as required" if $args->{'fail'};
 
 my $gff_source = $args->{gff_source};
 $helper->log_context($gff_source);
 
 # pull off arguments meant for us
-my     ($session_dir, $process_gff,    $gff_version)
-    = $helper->read_delete_args(
-    qw ( session_dir   process_gff_file gff_version)
-    );
+my ($process_gff, $gff_version) = $helper->read_delete_args(qw(process_gff_file gff_version));
 
-$helper->use_session_dir($session_dir);
-
-$helper->open_log('localdb_log.txt');
-$helper->log_message("starting");
-$helper->log_arguments;
+$helper->start_log('localdb_log.txt');
 
 # There is overlap with MFetcher, but probably not enough to share code?
 my              ($cs, $type, $start, $end, $csver,    $feature_kind, $analysis) =
