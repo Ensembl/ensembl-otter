@@ -46,11 +46,19 @@ my $getscript_local_db;
 my %getscript_args;
 
 sub new {
-    my ($pkg) = @_;
+    my ($pkg, %opts) = @_;
 
     die "GetScript object already instantiated" if $me;
     my $ref = "";
     $me = bless \$ref, $pkg;
+
+    my $args = $me->_parse_uri_style_args;
+
+    # test case
+    die "failing as required" if $args->{'fail'};
+
+    my $session_dir = $me->read_delete_args('session_dir');
+    $me->_use_session_dir($session_dir) if $session_dir;
 
     return $me;
 }
@@ -61,7 +69,7 @@ sub log_context {
     return $getscript_log_context;
 }
 
-sub parse_uri_style_args {
+sub _parse_uri_style_args {
     my ($self) = @_;
 
     foreach my $pair (@ARGV) {
@@ -86,7 +94,7 @@ sub log_arguments {
     return;
 }
 
-sub use_session_dir {
+sub _use_session_dir {
     my ($self, $sda) = @_;
     $getscript_session_dir = $sda;
     die "No session_dir argument" unless $getscript_session_dir;
@@ -143,6 +151,14 @@ sub mkdir_tested {
         print $log_file $chunk;
         return;
     }
+}
+
+sub start_log {
+    my ($self, $logfile) = @_;
+    $self->open_log($logfile);
+    $self->log_message("starting");
+    $self->log_arguments;
+    return;
 }
 
 sub time_diff_for {
