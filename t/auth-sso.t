@@ -184,17 +184,24 @@ sub auth_tt {
             skip "Can't get interpretation", 4;
         }
 
-        my $authen =
-          is($info->{_authenticated_user}, $user, '  Authenticated')
-            ? 'true' : 'false';
+        { # tmp block for TODO mark
+            local $TODO;
+            $TODO = 'Pagesmith authentication is not implemented'
+              if $MODE eq 'Pagesmith';
 
-        is($info->{_authorized_user}, $user, '  Authorised')
-          or diag("\nWhen listed in $users_fn_here (true),\n".
-                  "and authenticated ($authen),\n".
-                  "Could still be not authorised on server?  It reports config as\n".
-                  Dump({ conf_there => $conf_there,
-#                         full => $full,
-                       }));
+            my $authen = is($info->{_authenticated_user}, $user,
+                            "  Authenticated (pw=$password)")
+              ? 'true' : 'false';
+
+            is($info->{_authorized_user}, $user, '  Authorised')
+              or diag("\nWhen listed in $users_fn_here (true),\n".
+                      "and authenticated ($authen),\n".
+                      "Could still be not authorised on server?  It reports config as\n".
+                      Dump({ conf_there => $conf_there,
+                             full => '[elided]', # $full,
+                           }));
+        }
+
         is($info->{_internal_user}, 0, '  Not internal'); # unix login password stored in local file == FAIL
         is($info->{_local_user}, 1, '  Local (must be - we are seeing test data)');
     }
@@ -296,7 +303,7 @@ sub external_tt {
     plan tests => 1;
     my $ua = get_ua();
 
-    local $TODO = "We have no external proxy, so cannot view Otter Server from 'Outside'";
+    local $TODO = "We have no external proxy (RT#360994), so cannot view Otter Server from 'Outside'";
     fail('try it from outside');
 
     return;
