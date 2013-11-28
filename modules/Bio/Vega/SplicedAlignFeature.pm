@@ -257,7 +257,7 @@ sub _parse_features {
 
     # For testing
     my $ga = $self->gapped_alignment;
-    $ga->_verify_element_lengths($ga);
+    $ga->verify_element_lengths($ga);
 
     return $self;
 }
