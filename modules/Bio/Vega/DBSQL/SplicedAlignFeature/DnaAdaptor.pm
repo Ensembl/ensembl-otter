@@ -68,7 +68,7 @@ sub _tables {
 }
 
 
-sub _left_join{
+sub _left_join { ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines) called from superclass
     return (['external_db',"exdb.external_db_id = dsaf.external_db_id"]);
 }
 
@@ -85,7 +85,7 @@ sub _left_join{
 
 =cut
 
-sub _columns {
+sub _columns { ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines) called from superclass
   my $self = shift;
 
   #warning, implementation of _objs_from_sth method depends on order of list
@@ -256,7 +256,7 @@ FEATURE:
 
 =cut
 
-sub _objs_from_sth {   ## no critic (Subroutines::ProhibitExcessComplexity)
+sub _objs_from_sth {   ## no critic (Subroutines::ProhibitExcessComplexity Subroutines::ProhibitUnusedPrivateSubroutines) called from superclass
 
   my ( $self, $sth, $mapper, $dest_slice ) = @_;
 

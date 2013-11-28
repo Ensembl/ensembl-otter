@@ -20,7 +20,7 @@ sub hstrand {
     return $self->SUPER::hstrand(@args);
 }
 
-sub _verify_attribs {
+sub _verify_attribs {  ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines) called from superclass[0]
     my ($self) = @_;
     $self->SUPER::_verify_attribs;
 
