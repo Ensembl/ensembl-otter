@@ -682,7 +682,7 @@ sub _verify_intronified_lengths {
     return;
 }
 
-sub _verify_element_lengths {
+sub verify_element_lengths {
     my ($self) = @_;
     my ($q_len, $t_len) = (0, 0);
     foreach my $e ( @{$self->elements} ) {
