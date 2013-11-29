@@ -422,7 +422,7 @@ sub gff_feature {
     if ($feature) {
         $self->{'_gff_feature'} = $feature;
     }
-    return $self->{'_gff_feature'} || $self->name;
+    return $self->{'_gff_feature'};
 }
 
 sub script_name {
