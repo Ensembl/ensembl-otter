@@ -3,36 +3,54 @@
 use strict;
 use warnings;
 
-use Bio::Otter::Utils::GetScript;
+package Bio::Otter::GetScript::File;
 
-my $helper = Bio::Otter::Utils::GetScript->new;
-my $args   = $helper->args;
+use base 'Bio::Otter::Utils::GetScript';
 
-my ($process_gff) = $helper->read_delete_args(qw( process_gff ));
+use File::Spec;
 
-my $path = $args->{file_path};
-$helper->log_context("FILE:$path");
+sub version { return 'file_get 0.5'; }
+sub log_filename { return 'gff_log.txt'; }
+sub log_context  {
+    my ($self) = @_;
+    my $path = $self->require_arg('file_path');
+    my ($vol, $dirs, $file) = File::Spec->splitpath($path);
+    return "FILE:$file";
+}
 
-$helper->start_log('gff_log.txt');
+sub do_it {
+    my ($self) = @_;
 
-$helper->do_requires;
+    my $args   = $self->args;
 
-open my $file, '<', $path or die "Failed to open file '$path': $!";
-$helper->time_diff_for( 'relaying data', sub {
-    while (<$file>) { print; }
-} );
-close $file or die "Failed to close file '$path': $!";
+    my ($process_gff) = $self->read_delete_args(qw( process_gff ));
 
-# update the SQLite db
-$helper->update_local_db($args->{gff_source}, $path, $process_gff);
+    $self->do_requires;
 
-# zmap waits for STDOUT to be closed as an indication that all
-# data has been sent, so we close the handle now so that zmap
-# doesn't tell otterlace about the successful loading of the column
-# before we have the SQLite db updated.
-close STDOUT or die "Error writing to STDOUT; $!";
+    my $path = $args->{file_path};
+    open my $file, '<', $path or die "Failed to open file '$path': $!";
+    $self->time_diff_for( 'relaying data', sub {
+        while (<$file>) { print; }
+    } );
+    close $file or die "Failed to close file '$path': $!";
 
-$helper->log_message("finished");
+    # update the SQLite db
+    $self->update_local_db($args->{gff_source}, $path, $process_gff);
+
+    # zmap waits for STDOUT to be closed as an indication that all
+    # data has been sent, so we close the handle now so that zmap
+    # doesn't tell otterlace about the successful loading of the column
+    # before we have the SQLite db updated.
+    close STDOUT or die "Error writing to STDOUT; $!";
+
+    return;
+}
+
+## no critic (Modules::ProhibitMultiplePackages)
+
+package main;
+
+Bio::Otter::GetScript::File->new->run;
 
 exit;
 
