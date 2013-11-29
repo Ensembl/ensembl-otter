@@ -78,8 +78,9 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
     sub _gff_feature {
         my ($self) = @_;
 
-        return ($self->analysis && $self->analysis->gff_feature)
-            || 'misc_feature';
+        return
+            ($self->analysis && $self->analysis->gff_feature)
+            || 'sequence_feature';
     }
 }
 
@@ -93,7 +94,6 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
         my $gff = $self->SUPER::_gff_hash(@args);
 
         $gff->{'score'}   = $self->score;
-        $gff->{'feature'} = 'misc_feature';
 
         $gff->{'attributes'}{'Name'} =
             $self->display_label ||
@@ -113,8 +113,6 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
         my $gff = $self->SUPER::_gff_hash(%args);
 
         $gff->{'score'} = $self->score;
-        $gff->{'feature'} = ($self->analysis && $self->analysis->gff_feature) || 'similarity';
-
         my $align = [ $self->hstart, $self->hend, $self->hstrand ];
 
         $gff->{'attributes'}{'Class'}     = 'Sequence';
@@ -123,6 +121,15 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
         $gff->{'attributes'}{'percentID'} = $self->percent_id;
 
         return $gff;
+    }
+
+    sub _gff_feature {
+        my ($self) = @_;
+
+        my $feature =
+            ($self->analysis && $self->analysis->gff_feature)
+            || 'match';
+        return $feature;
     }
 }
 
@@ -149,6 +156,29 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
         my $gff = $self->SUPER::_gff_hash(@args);
         $gff->{'attributes'}{'Class'} = 'Protein';
         return $gff;
+    }
+
+    sub _gff_feature {
+        my $feature = 'protein_match';
+        return $feature;
+    }
+}
+
+{
+
+    package Bio::EnsEMBL::DnaDnaAlignFeature;
+
+    sub _gff_hash {
+        my ($self, @args) = @_;
+
+        my $gff = $self->SUPER::_gff_hash(@args);
+        $gff->{'attributes'}{'Class'} = 'DNA';
+        return $gff;
+    }
+
+    sub _gff_feature {
+        my $feature = 'nucleotide_match';
+        return $feature;
     }
 }
 
@@ -288,7 +318,6 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
 
         my $gff = $self->SUPER::_gff_hash(%args);
 
-        $gff->{'feature'} = 'Sequence';
         $gff->{'attributes'}{'Class'} = 'Sequence';
         if (my $stable = $self->stable_id) {
             $gff->{'attributes'}{'Stable_ID'} = $stable;
@@ -392,6 +421,11 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
 
         return $gff;
     }
+
+    sub _gff_feature {
+        my $feature = 'transcript';
+        return $feature;
+    }
 }
 
 {
@@ -401,12 +435,16 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
     sub _gff_hash {
         my ($self, @args) = @_;
         my $gff = $self->SUPER::_gff_hash(@args);
-        $gff->{'feature'} = 'exon';
         $gff->{'attributes'}{'Class'} = 'Sequence';
         if (my $stable = $self->stable_id) {
             $gff->{'attributes'}{'Stable_ID'} = $stable;
         }
         return $gff;
+    }
+
+    sub _gff_feature {
+        my $feature = 'exon';
+        return $feature;
     }
 }
 
@@ -417,9 +455,13 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
     sub _gff_hash {
         my ($self, @args) = @_;
         my $gff = $self->SUPER::_gff_hash(@args);
-        $gff->{'feature'} = 'intron';
         $gff->{'attributes'}{'Class'} = 'Sequence';
         return $gff;
+    }
+
+    sub _gff_feature {
+        my $feature = 'intron';
+        return $feature;
     }
 }
 
@@ -452,7 +494,8 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
     }
 
     sub _gff_feature {
-        return 'variation';
+        my $feature = 'sequence_alteration';
+        return $feature;
     }
 }
 
@@ -474,7 +517,6 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
                 $gff->{'source'} .= '_SINE';
             }
 
-            $gff->{'feature'} = 'similarity';
             $gff->{'score'}   = $self->score;
 
             $gff->{'attributes'}{'Class'} = 'Motif';
@@ -483,7 +525,6 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
                 [ $self->hstart, $self->hend, $self->hstrand ];
         }
         elsif ($self->analysis->logic_name =~ /trf/i) {
-            $gff->{'feature'} = 'misc_feature';
             $gff->{'score'}   = $self->score;
             my $cons   = $self->repeat_consensus->repeat_consensus;
             my $len    = length($cons);
@@ -492,6 +533,11 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
         }
 
         return $gff;
+    }
+
+    sub _gff_feature {
+        my $feature = 'repeat_region';
+        return $feature;
     }
 }
 
