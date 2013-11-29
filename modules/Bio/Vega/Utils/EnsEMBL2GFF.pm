@@ -50,11 +50,12 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
 
         my $gff_seqname = $args{'gff_seqname'} || $self->slice->seq_region_name;
         my $gff_source  = $args{'gff_source'} || $self->_gff_source;
+        my $gff_feature = $args{'gff_feature'} || $self->_gff_feature;
 
         my $gff = {
             seqname => $gff_seqname,
             source  => $gff_source,
-            feature => $self->_gff_feature,
+            feature => $gff_feature,
             start   => $self->seq_region_start,
             end     => $self->seq_region_end,
             strand  => $self->strand,
