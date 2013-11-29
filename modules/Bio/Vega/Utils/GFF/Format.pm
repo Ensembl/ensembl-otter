@@ -90,7 +90,7 @@ sub gff_line { ## no critic( Subroutines::ProhibitManyArgs )
         my $value = $attribute_hash->{$key};
         defined $value or next;
 
-        if ($key eq "Align") {
+        if ($key eq "align") {
             my ($align_start, $align_end, $align_strand) = @{$value};
             my @align_field_list = ( $align_start, $align_end );
             push @align_field_list

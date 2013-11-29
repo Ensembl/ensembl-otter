@@ -112,8 +112,8 @@ sub _print_feature {
 
     my $attribute_hash = {
         Name       => $feature->name,
-        Align      => \ @align_fields,
-        Length     => $feature->l_qseq,
+        align      => \ @align_fields,
+        length     => $feature->l_qseq,
         cigar_bam  => $feature->cigar_str,
         bam_flags  => $flags,
         Target     => \ @target_fields,
