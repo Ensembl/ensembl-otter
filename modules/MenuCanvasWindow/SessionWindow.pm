@@ -2131,12 +2131,18 @@ sub launch_exonerate {
     my $cllctn = $self->AceDatabase->ColumnCollection;
     my $col_aptr = $self->AceDatabase->DB->ColumnAdaptor;
 
+    my $request_adaptor = $self->AceDatabase->DB->OTFRequestAdaptor;
+
     for my $aligner ( $otf->aligners_for_each_type ) {
 
         my $type = $aligner->type;
         my $is_protein = $aligner->is_protein;
 
         warn "Running exonerate for sequence(s) of type: $type\n";
+
+        # Set up a request for the filter script
+        my $request = $aligner->prepare_run;
+        $request_adaptor->store($request);
 
         # The new way:
         my $result_set = $aligner->run;
