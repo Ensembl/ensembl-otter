@@ -117,7 +117,7 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
         my $align = [ $self->hstart, $self->hend, $self->hstrand ];
 
         $gff->{'attributes'}{'Name'}      = $self->hseqname;
-        $gff->{'attributes'}{'Align'}     = $align;
+        $gff->{'attributes'}{'align'}     = $align;
         $gff->{'attributes'}{'percentID'} = $self->percent_id;
 
         return $gff;
@@ -237,7 +237,7 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
         my $extra_attrs = {};
 
         if (my $stable = $self->stable_id) {
-            $extra_attrs->{'Locus_Stable_ID'} = $stable;
+            $extra_attrs->{'locus_stable_id'} = $stable;
         }
 
         if (my $url_fmt = $args{'url_string'}) {
@@ -251,22 +251,22 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
             else {
                 # Assume it is an ensembl gene
                 my $url = sprintf $url_fmt, $self->stable_id;
-                $extra_attrs->{'URL'} = $url;
+                $extra_attrs->{'url'} = $url;
             }
         }
 
-        unless ($extra_attrs->{'Locus'}) {
+        unless ($extra_attrs->{'locus'}) {
             if (my $xr = $self->display_xref) {
                 $extra_attrs->{'synthetic_gene_name'} = $xr->display_id;
                 my $name = sprintf "%s.%d", $xr->display_id, $gene_numeric_id;
-                $extra_attrs->{'Locus'} = $name;
+                $extra_attrs->{'locus'} = $name;
             }
             elsif (my $stable = $self->stable_id) {
-                $extra_attrs->{'Locus'} = $stable;
+                $extra_attrs->{'locus'} = $stable;
             }
             else {
                 my $disp = $self->display_id;
-                $extra_attrs->{'Locus'} = $disp;
+                $extra_attrs->{'locus'} = $disp;
             }
         }
 
@@ -281,8 +281,8 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
                 $out{'synthetic_gene_name'} = $xr->display_id;
                 my $name = sprintf "%s.%d", $xr->display_id, $gene_numeric_id;
                 my $url = sprintf $url_fmt, $xr->primary_id;
-                $out{'Locus'} = $name;
-                $out{'URL'}   = $url;
+                $out{'locus'} = $name;
+                $out{'url'}   = $url;
             }
         }
         unless (keys %out) {
@@ -303,7 +303,7 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
         my $gff = $self->SUPER::_gff_hash(%args);
 
         if (my $stable = $self->stable_id) {
-            $gff->{'attributes'}{'Stable_ID'} = $stable;
+            $gff->{'attributes'}{'stable_id'} = $stable;
         }
 
         my $tsct_numeric_id = $self->dbID || ++$tsct_count;
@@ -385,7 +385,7 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
                 Name  => $name,
             };
             if (my $stable = $tsl->stable_id) {
-                $attrib_hash->{'Stable_ID'} = $stable;
+                $attrib_hash->{'stable_id'} = $stable;
             }
             my $gff_format = $args{'gff_format'};
             $gff .= $gff_format->gff_line(
@@ -418,7 +418,7 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
         my ($self, @args) = @_;
         my $gff = $self->SUPER::_gff_hash(@args);
         if (my $stable = $self->stable_id) {
-            $gff->{'attributes'}{'Stable_ID'} = $stable;
+            $gff->{'attributes'}{'stable_id'} = $stable;
         }
         return $gff;
     }
@@ -461,7 +461,7 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
         $gff->{'attributes'}{'Name'} = "$name - $allele";
         if ($name =~ /^rs/) {
             my $url = sprintf $url_format, $name;
-            $gff->{'attributes'}{'URL'}  = $url;
+            $gff->{'attributes'}{'url'}  = $url;
         }
 
         return $gff;
@@ -494,7 +494,7 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
             $gff->{'score'}   = $self->score;
 
             $gff->{'attributes'}{'Name'}  = $self->repeat_consensus->name;
-            $gff->{'attributes'}{'Align'} =
+            $gff->{'attributes'}{'align'} =
                 [ $self->hstart, $self->hend, $self->hstrand ];
         }
         elsif ($self->analysis->logic_name =~ /trf/i) {
@@ -648,14 +648,14 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
         my $gff = $self->SUPER::_gff_hash(@args);
 
         my $hd = $self->get_HitDescription;
-        $gff->{'attributes'}{'Length'}   = $hd->hit_length;
-        $gff->{'attributes'}{'Taxon_ID'} = $hd->taxon_id;
+        $gff->{'attributes'}{'length'}   = $hd->hit_length;
+        $gff->{'attributes'}{'taxon_id'} = $hd->taxon_id;
         if (my $db_name = $hd->db_name) {
-            $gff->{'attributes'}{'DB_Name'} = $db_name;
+            $gff->{'attributes'}{'db_name'} = $db_name;
         }
         if (my $desc = $hd->description) {
             $desc =~ s/"/\\"/g;
-            $gff->{'attributes'}{'Description'} = $desc;
+            $gff->{'attributes'}{'description'} = $desc;
         }
         if (my $seq = $hd->get_and_unset_hit_sequence_string) {
             $gff->{'attributes'}{'sequence'} = $seq;
@@ -674,14 +674,14 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
         my $gff = $self->SUPER::_gff_hash(@args);
 
         my $hd = $self->get_HitDescription;
-        $gff->{'attributes'}{'Length'}   = $hd->hit_length;
-        $gff->{'attributes'}{'Taxon_ID'} = $hd->taxon_id;
+        $gff->{'attributes'}{'length'}   = $hd->hit_length;
+        $gff->{'attributes'}{'taxon_id'} = $hd->taxon_id;
         if (my $db_name = $hd->db_name) {
-            $gff->{'attributes'}{'DB_Name'} = $db_name;
+            $gff->{'attributes'}{'db_name'} = $db_name;
         }
         if (my $desc = $hd->description) {
             $desc =~ s/"/\\"/g;
-            $gff->{'attributes'}{'Description'} = $desc;
+            $gff->{'attributes'}{'description'} = $desc;
         }
 
         return $gff;
