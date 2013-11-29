@@ -111,7 +111,6 @@ sub _print_feature {
     my $flags = join ' ', $feature->get_tag_values('FLAGS');
 
     my $attribute_hash = {
-        Class      => 'Sequence',
         Name       => $feature->name,
         Align      => \ @align_fields,
         Length     => $feature->l_qseq,

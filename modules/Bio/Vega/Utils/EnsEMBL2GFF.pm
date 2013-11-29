@@ -116,7 +116,6 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
         $gff->{'score'} = $self->score;
         my $align = [ $self->hstart, $self->hend, $self->hstrand ];
 
-        $gff->{'attributes'}{'Class'}     = 'Sequence';
         $gff->{'attributes'}{'Name'}      = $self->hseqname;
         $gff->{'attributes'}{'Align'}     = $align;
         $gff->{'attributes'}{'percentID'} = $self->percent_id;
@@ -151,14 +150,6 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
 
     package Bio::EnsEMBL::DnaPepAlignFeature;
 
-    sub _gff_hash {
-        my ($self, @args) = @_;
-
-        my $gff = $self->SUPER::_gff_hash(@args);
-        $gff->{'attributes'}{'Class'} = 'Protein';
-        return $gff;
-    }
-
     sub _gff_feature {
         my $feature = 'protein_match';
         return $feature;
@@ -168,14 +159,6 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
 {
 
     package Bio::EnsEMBL::DnaDnaAlignFeature;
-
-    sub _gff_hash {
-        my ($self, @args) = @_;
-
-        my $gff = $self->SUPER::_gff_hash(@args);
-        $gff->{'attributes'}{'Class'} = 'DNA';
-        return $gff;
-    }
 
     sub _gff_feature {
         my $feature = 'nucleotide_match';
@@ -319,7 +302,6 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
 
         my $gff = $self->SUPER::_gff_hash(%args);
 
-        $gff->{'attributes'}{'Class'} = 'Sequence';
         if (my $stable = $self->stable_id) {
             $gff->{'attributes'}{'Stable_ID'} = $stable;
         }
@@ -400,7 +382,6 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
             }
 
             my $attrib_hash = {
-                Class => 'Sequence',
                 Name  => $name,
             };
             if (my $stable = $tsl->stable_id) {
@@ -436,7 +417,6 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
     sub _gff_hash {
         my ($self, @args) = @_;
         my $gff = $self->SUPER::_gff_hash(@args);
-        $gff->{'attributes'}{'Class'} = 'Sequence';
         if (my $stable = $self->stable_id) {
             $gff->{'attributes'}{'Stable_ID'} = $stable;
         }
@@ -452,13 +432,6 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
 {
 
     package Bio::EnsEMBL::Intron;
-
-    sub _gff_hash {
-        my ($self, @args) = @_;
-        my $gff = $self->SUPER::_gff_hash(@args);
-        $gff->{'attributes'}{'Class'} = 'Sequence';
-        return $gff;
-    }
 
     sub _gff_feature {
         my $feature = 'intron';
@@ -520,7 +493,6 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
 
             $gff->{'score'}   = $self->score;
 
-            $gff->{'attributes'}{'Class'} = 'Motif';
             $gff->{'attributes'}{'Name'}  = $self->repeat_consensus->name;
             $gff->{'attributes'}{'Align'} =
                 [ $self->hstart, $self->hend, $self->hstrand ];
