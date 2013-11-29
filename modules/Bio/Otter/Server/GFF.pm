@@ -11,6 +11,7 @@ use Bio::Vega::Utils::EnsEMBL2GFF;
 use base qw( Bio::Otter::Server::Support::Web );
 
 my @gff_keys = qw(
+    gff_feature
     gff_source
     gff_seqname
     );
