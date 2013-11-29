@@ -3,167 +3,166 @@
 use strict;
 use warnings;
 
+package Bio::Otter::GetScript::Filter;
+
 use Digest::MD5 qw(md5_hex);
 use URI::Escape qw(uri_escape);
 
-use Bio::Otter::Utils::GetScript;
+use base 'Bio::Otter::Utils::GetScript';
 
 sub do_requires {
-    my ($helper) = @_;
+    my ($self) = @_;
 
     require LWP::UserAgent;
     require HTTP::Request;
     require HTTP::Cookies::Netscape;
-    $helper->do_requires;
+    $self->SUPER::do_requires;
 
     return;
 }
 
-sub show_version {
-    # Check dependencies, report (arbitrary) version
-    my ($helper) = @_;
-    do_requires($helper);
-    my $dbh = DBI->connect("dbi:SQLite:dbname=:memory:","","");
-    print "filter_get 0.5\n";
-    exit 0;
-}
+sub version      { return 'filter_get 0.5'; }
+sub log_filename { return 'gff_log.txt'; }
 
-my $LOG     = 1;
+my $LOG = 1;
 
-my $helper = Bio::Otter::Utils::GetScript->new;
-my $args   = $helper->args;
+sub do_it {
+    my ($self) = @_;
 
-show_version($helper) if exists $args->{'--version'}; # exits
+    my $args = $self->args;
 
-my $gff_source = $args->{gff_source};
-$helper->log_context($gff_source);
-
-
-# pull off arguments meant for us
-
-my     ($url_root, $server_script, $cookie_jar, $process_gff)
-    = $helper->read_delete_args(
-    qw ( url_root   server_script   cookie_jar   process_gff_file )
-    );
-
-$helper->start_log('gff_log.txt');
-$helper->log_incs('After startup');
-
-$args->{log} = 1 if $LOG; # enable logging on the server
-
-# concatenate the rest of the arguments into a parameter string
-
-my $params = join '&', map {
-    uri_escape($_).'='.uri_escape($args->{$_});
-} sort keys %$args;
-
-my $gff_filename = sprintf '%s_%s.gff', $gff_source, md5_hex($params);
-
-my $top_dir = $helper->mkdir_tested('gff_cache');
-my $cache_file = $top_dir.'/'.$gff_filename;
-
-if (-e $cache_file) {
-    # cache hit
-    $helper->log_message("cache file: $gff_filename: cache hit");
-    open my $gff_file, '<', $cache_file or die "Failed to open cache file: $!\n";
-    while (<$gff_file>) { print; }
-    close $gff_file or die "Failed to close cache file: $!\n";
-    close STDOUT or die "Error writing to STDOUT; $!";
-    exit;
-}
-
-# cache miss
-
-# only require these packages now, so we don't take the import hit on a cache hit
-do_requires($helper);
-$helper->log_incs('After do_requires');
-
-$helper->log_message("cache file: $gff_filename: cache miss");
-
-my $request = HTTP::Request->new;
-
-$request->method('GET');
-
-#$request->accept_decodable(HTTP::Message::Decodable);
-
-my $url = $url_root . '/' . $server_script . '?' . $params;
-
-$helper->log_message("http: URL: $url");
-
-$request->uri($url);
-
-# create a user agent to send the request
-
-my $ua = LWP::UserAgent->new(
-    timeout             => 9000,
-    env_proxy           => 1,
-    agent               => $0,
-    cookie_jar          => HTTP::Cookies::Netscape->new(file => $cookie_jar),
-    protocols_allowed   => [qw(http https)],
-);
-
-# do the request
-my $response;
-$helper->time_diff_for( 'http', sub {
-    $response = $ua->request($request);
-    die "No response for $gff_source\n" unless $response;
-    $helper->log_message(sprintf("http: bytes: %d (decoded), %d (raw)  status: %s",
-                                 length($response->decoded_content),
-                                 length($response->content),
-                                 $response->status_line)
+    # pull off arguments meant for us
+    my     ($url_root, $server_script, $cookie_jar, $process_gff)
+        = $self->read_delete_args(
+        qw ( url_root   server_script   cookie_jar   process_gff_file )
         );
-} );
 
-if ($response->is_success) {
+    $args->{log} = 1 if $LOG; # enable logging on the server
 
-    my $gff = $response->decoded_content;
-    die "Unexpected response for $gff_source: $gff\n" unless $gff =~ /EnsEMBL2GFF/;
+    # concatenate the rest of the arguments into a parameter string
 
-    # cache the result
-    $helper->time_diff_for( 'caching', sub {
-        open my $cache_file_h, '>', $cache_file or die "Cannot write to cache file '$cache_file'; $!\n";
-        print $cache_file_h $gff;
-        close $cache_file_h or die "Error writing to '$cache_file'; $!";
-    } );
+    my $params = join '&', map {
+        uri_escape($_).'='.uri_escape($args->{$_});
+    } sort keys %$args;
 
-    # update the SQLite db
-    $helper->update_local_db($gff_source, $cache_file, $process_gff);
+    my $gff_source = $args->{gff_source};
+    my $gff_filename = sprintf '%s_%s.gff', $gff_source, md5_hex($params);
 
-    # if (rand() < 0.5) {
-    #     die "Horribly";
-    # }
+    my $top_dir = $self->mkdir_tested('gff_cache');
+    my $cache_file = $top_dir.'/'.$gff_filename;
 
-    # Send data to zmap on STDOUT
-    $helper->time_diff_for( 'sending data', sub {
-        print STDOUT $gff;
-    } );
-
-    # zmap waits for STDOUT to be closed as an indication that all
-    # data has been sent, so we close the handle now so that zmap
-    # doesn't tell otterlace about the successful loading of the column
-    # before we have the SQLite db updated and the cache file saved.
-    close STDOUT or die "Error writing to STDOUT; $!";
-}
-else {
-
-    my $res = $response->content;
-    $helper->log_chunk('http: error', $res);
-
-    my $err_msg;
-
-    if (my ($err) = $res =~ /ERROR:[[:space:]]*(.+)/s) {
-        $err =~ s/\A(^-+[[:blank:]]*EXCEPTION[[:blank:]]*-+\n)+//m; # remove boring initial lines
-        $err =~ s/\n.*//s; # keep only the first line
-        $err_msg = $err;
+    if (-e $cache_file) {
+        # cache hit
+        $self->log_message("cache file: $gff_filename: cache hit");
+        open my $gff_file, '<', $cache_file or die "Failed to open cache file: $!\n";
+        while (<$gff_file>) { print; }
+        close $gff_file or die "Failed to close cache file: $!\n";
+        close STDOUT or die "Error writing to STDOUT; $!";
+        return;
     }
-    elsif ($res =~ /The Sanger Institute Web service you requested is temporarily unavailable/) {
-        my $code = $response->code;
-        my $message = $response->message;
-        $err_msg = "This Sanger web service is temporarily unavailable: status = ${code} ${message}";
+
+    # cache miss
+
+    # only require these packages now, so we don't take the import hit on a cache hit
+    do_requires($self);
+    $self->log_incs('After do_requires');
+
+    $self->log_message("cache file: $gff_filename: cache miss");
+
+    my $request = HTTP::Request->new;
+
+    $request->method('GET');
+
+    #$request->accept_decodable(HTTP::Message::Decodable);
+
+    my $url = $url_root . '/' . $server_script . '?' . $params;
+
+    $self->log_message("http: URL: $url");
+
+    $request->uri($url);
+
+    # create a user agent to send the request
+
+    my $ua = LWP::UserAgent->new(
+        timeout             => 9000,
+        env_proxy           => 1,
+        agent               => $0,
+        cookie_jar          => HTTP::Cookies::Netscape->new(file => $cookie_jar),
+        protocols_allowed   => [qw(http https)],
+        );
+
+    # do the request
+    my $response;
+    $self->time_diff_for( 'http', sub {
+        $response = $ua->request($request);
+        die "No response for $gff_source\n" unless $response;
+        $self->log_message(sprintf("http: bytes: %d (decoded), %d (raw)  status: %s",
+                                     length($response->decoded_content),
+                                     length($response->content),
+                                     $response->status_line)
+            );
+                            } );
+
+    if ($response->is_success) {
+
+        my $gff = $response->decoded_content;
+        die "Unexpected response for $gff_source: $gff\n" unless $gff =~ /EnsEMBL2GFF/;
+
+        # cache the result
+        $self->time_diff_for( 'caching', sub {
+            open my $cache_file_h, '>', $cache_file or die "Cannot write to cache file '$cache_file'; $!\n";
+            print $cache_file_h $gff;
+            close $cache_file_h or die "Error writing to '$cache_file'; $!";
+                                } );
+
+        # update the SQLite db
+        $self->update_local_db($gff_source, $cache_file, $process_gff);
+
+        # if (rand() < 0.5) {
+        #     die "Horribly";
+        # }
+
+        # Send data to zmap on STDOUT
+        $self->time_diff_for( 'sending data', sub {
+            print STDOUT $gff;
+                                } );
+
+        # zmap waits for STDOUT to be closed as an indication that all
+        # data has been sent, so we close the handle now so that zmap
+        # doesn't tell otterlace about the successful loading of the column
+        # before we have the SQLite db updated and the cache file saved.
+        close STDOUT or die "Error writing to STDOUT; $!";
     }
     else {
-        $err_msg = $res;
-    }
 
-    die "Webserver error for $gff_source: $err_msg\n";
+        my $res = $response->content;
+        $self->log_chunk('http: error', $res);
+
+        my $err_msg;
+
+        if (my ($err) = $res =~ /ERROR:[[:space:]]*(.+)/s) {
+            $err =~ s/\A(^-+[[:blank:]]*EXCEPTION[[:blank:]]*-+\n)+//m; # remove boring initial lines
+            $err =~ s/\n.*//s; # keep only the first line
+            $err_msg = $err;
+        }
+        elsif ($res =~ /The Sanger Institute Web service you requested is temporarily unavailable/) {
+            my $code = $response->code;
+            my $message = $response->message;
+            $err_msg = "This Sanger web service is temporarily unavailable: status = ${code} ${message}";
+        }
+        else {
+            $err_msg = $res;
+        }
+
+        die "Webserver error for $gff_source: $err_msg\n";
+    }
+    return;
 }
+
+## no critic (Modules::ProhibitMultiplePackages)
+
+package main;
+
+Bio::Otter::GetScript::Filter->new->run;
+
+exit;
