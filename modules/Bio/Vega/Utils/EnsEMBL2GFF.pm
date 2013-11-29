@@ -13,6 +13,16 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
 # inserting to_gff (and supporting _gff_hash) methods into the
 # necessary feature classes
 
+my $_feature_id = 0;
+
+# an anonymous sub in a lexical variable is easy to call from other packages
+my $_new_feature_id_sub = sub {
+    my ($prefix) = @_;
+    $_feature_id++;
+    my $feature_id = sprintf "%s_%06d", $prefix, $_feature_id;
+    return $feature_id;
+};
+
 ## no critic (Modules::ProhibitMultiplePackages)
 
 {
