@@ -352,12 +352,21 @@ my $_new_feature_id_sub = sub {
             $self->analysis->gff_source('Otter_' . $self->biotype);
         }
 
-        my $gff = $self->SUPER::to_gff(%args);
+        $args{'extra_attrs'} ||= { };
+        my %args_super = ( %args );
+        my $id = $_new_feature_id_sub->('transcript');
+        $args_super{'extra_attrs'}->{'ID'} = $id;
+        my $gff = $self->SUPER::to_gff(%args_super);
         my $gff_hash = $self->_gff_hash(%args);
 
         my $name = $gff_hash->{'attributes'}{'Name'};
 
         # add gff lines for each of the exons
+        my %args_exon = ( %args );
+        $args_exon{'extra_attrs'} = { %{$args_exon{'extra_attrs'}} };
+        my $extra_attrs = $args_exon{'extra_attrs'};
+        delete @{$extra_attrs}{qw( ID locus url )};
+        @{$extra_attrs}{qw( Name Parent )} = ( $name, $id );
         foreach my $feat (@{ $self->get_all_Exons }) {
 
             # exons don't have analyses attached, so temporarily give
@@ -365,8 +374,8 @@ my $_new_feature_id_sub = sub {
             $feat->analysis($self->analysis);
 
             # and add the feature's gff line to our string, including
-            # the sequence name information as an attribute
-            $gff .= $feat->to_gff(%args, extra_attrs => { Name => $name });
+            # the sequence name and the parent
+            $gff .= $feat->to_gff(%args_exon);
 
             # to be on the safe side, get rid of the analysis we temporarily attached
             # (someone might rely on there not being one later)
@@ -393,6 +402,7 @@ my $_new_feature_id_sub = sub {
 
             my $attrib_hash = {
                 Name  => $name,
+                Parent => $id,
             };
             if (my $stable = $tsl->stable_id) {
                 $attrib_hash->{'stable_id'} = $stable;
