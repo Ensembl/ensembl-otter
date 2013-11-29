@@ -9,12 +9,14 @@ use Carp;
 use DBI;
 
 use Bio::Otter::Lace::DB::ColumnAdaptor;
+use Bio::Otter::Lace::DB::OTFRequestAdaptor;
 
 my(
     %dbh,
     %file,
     %vega_dba,
     %ColumnAdaptor,
+    %OTFRequestAdaptor,
     );
 
 sub DESTROY {
@@ -24,6 +26,7 @@ sub DESTROY {
     delete($file{$self});
     delete($vega_dba{$self});
     delete($ColumnAdaptor{$self});
+    delete($OTFRequestAdaptor{$self});
 
     return;
 }
@@ -57,6 +60,13 @@ sub ColumnAdaptor {
 
     return $ColumnAdaptor{$self} ||=
         Bio::Otter::Lace::DB::ColumnAdaptor->new($self->dbh);
+}
+
+sub OTFRequestAdaptor {
+    my ($self) = @_;
+
+    return $OTFRequestAdaptor{$self} ||=
+        Bio::Otter::Lace::DB::OTFRequestAdaptor->new($self->dbh);
 }
 
 sub file {
