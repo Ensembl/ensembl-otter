@@ -87,11 +87,8 @@ my $_new_feature_id_sub = sub {
     }
 
     sub _gff_feature {
-        my ($self) = @_;
-
-        return
-            ($self->analysis && $self->analysis->gff_feature)
-            || 'sequence_feature';
+        my $feature = 'sequence_feature';
+        return $feature;
     }
 }
 
@@ -134,11 +131,7 @@ my $_new_feature_id_sub = sub {
     }
 
     sub _gff_feature {
-        my ($self) = @_;
-
-        my $feature =
-            ($self->analysis && $self->analysis->gff_feature)
-            || 'match';
+        my $feature = 'match';
         return $feature;
     }
 }
