@@ -112,6 +112,11 @@ sub args {
     return \%getscript_args;
 }
 
+sub read_args {
+    my ($self, @wanted) = @_;
+    return @getscript_args{@wanted};
+}
+
 sub read_delete_args {
     my ($self, @wanted) = @_;
     return delete @getscript_args{@wanted};
@@ -120,6 +125,11 @@ sub read_delete_args {
 sub require_arg {
     my ($self, $key) = @_;
     die "No argument '$key'" unless exists $getscript_args{$key};
+    return $getscript_args{$key};
+}
+
+sub arg {
+    my ($self, $key) = @_;
     return $getscript_args{$key};
 }
 
