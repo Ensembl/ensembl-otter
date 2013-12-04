@@ -88,6 +88,7 @@ sub gff_line { ## no critic( Subroutines::ProhibitManyArgs )
     my @attribute_strings = ();
     for my $key (keys %{$attribute_hash}) {
         my $value = $attribute_hash->{$key};
+        defined $value or next;
 
         if ($key eq "Align") {
             my ($align_start, $align_end, $align_strand) = @{$value};
