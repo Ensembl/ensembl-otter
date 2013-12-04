@@ -121,10 +121,8 @@ my $_new_feature_id_sub = sub {
         my $gff = $self->SUPER::_gff_hash(%args);
 
         $gff->{'score'} = $self->score;
-        my $align = [ $self->hstart, $self->hend, $self->hstrand ];
-
-        $gff->{'attributes'}{'Name'}      = $self->hseqname;
-        $gff->{'attributes'}{'align'}     = $align;
+        my $target = [ $self->hseqname, $self->hstart, $self->hend, $self->hstrand ];
+        $gff->{'attributes'}{'Target'}    = $target;
         $gff->{'attributes'}{'percentID'} = $self->percent_id;
 
         return $gff;
@@ -506,9 +504,9 @@ my $_new_feature_id_sub = sub {
 
             $gff->{'score'}   = $self->score;
 
-            $gff->{'attributes'}{'Name'}  = $self->repeat_consensus->name;
-            $gff->{'attributes'}{'align'} =
-                [ $self->hstart, $self->hend, $self->hstrand ];
+            my $name = $self->repeat_consensus->name;
+            $gff->{'attributes'}{'Target'} =
+                [ $name, $self->hstart, $self->hend, $self->hstrand ];
         }
         elsif ($self->analysis->logic_name =~ /trf/i) {
             $gff->{'score'}   = $self->score;
