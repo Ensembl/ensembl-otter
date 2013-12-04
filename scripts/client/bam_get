@@ -105,14 +105,11 @@ sub _print_feature {
     my $query = $feature->query;
 
     my $strand = '+';
-    my @align_fields = ( $query->start, $query->end, $strand );
-    my @target_fields = ( $query->name, $query->start, $query->end, $strand );
+    my @target_fields = ( $feature->name, $query->start, $query->end, $strand );
 
     my $flags = join ' ', $feature->get_tag_values('FLAGS');
 
     my $attribute_hash = {
-        Name       => $feature->name,
-        align      => \ @align_fields,
         length     => $feature->l_qseq,
         cigar_bam  => $feature->cigar_str,
         bam_flags  => $flags,
