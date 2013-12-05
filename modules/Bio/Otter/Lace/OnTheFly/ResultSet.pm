@@ -31,11 +31,7 @@ has aligner => (
     is => 'ro',
     isa => 'Bio::Otter::Lace::OnTheFly::Aligner',
     required => 1,
-    handles => {
-        analysis_name => 'analysis_name',
-        is_protein    => 'is_protein',
-        query_seqs    => 'seqs',
-    }
+    handles => [ qw( analysis_name is_protein query_seqs ) ],
     );
 
 has query_seqs_by_name => ( is => 'ro', isa => 'HashRef[Hum::Sequence]',
