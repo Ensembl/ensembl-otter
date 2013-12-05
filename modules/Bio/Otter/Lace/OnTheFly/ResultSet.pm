@@ -35,7 +35,6 @@ has aligner => (
         analysis_name => 'analysis_name',
         is_protein    => 'is_protein',
         query_seqs    => 'seqs',
-        target        => 'target',
     }
     );
 
