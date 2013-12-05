@@ -107,9 +107,9 @@ sub run_otf_test {
     }
 
     my $aligner = new_ok( 'Bio::Otter::Lace::OnTheFly::Aligner::Genomic' => [{
-        type   => $test->{type},
-        seqs   => $test->{query_seqs},
-        target => $target,
+        type       => $test->{type},
+        query_seqs => $test->{query_seqs},
+        target     => $target,
                                                                              }]);
 
     my $result_set = $aligner->run;
