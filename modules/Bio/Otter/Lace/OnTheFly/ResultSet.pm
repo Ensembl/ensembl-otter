@@ -15,15 +15,15 @@ has raw => (
 
 # This is the main results structure
 #
-has _by_query_id => (
+has _hit_by_query_id => (
     traits   => [ 'Hash' ],
     isa      => 'HashRef[ArrayRef[Bio::Otter::GappedAlignment]]',
     default  => sub { {} },
     init_arg => undef,
     handles  => {
-        _set_by_query_id => 'set',
-        by_query_id      => 'get',
-        query_ids        => 'keys',
+        _set_hit_by_query_id => 'set',
+        hit_by_query_id      => 'get',
+        hit_query_ids        => 'keys',
     },
     );
 
@@ -44,13 +44,13 @@ has query_seqs_by_name => ( is => 'ro', isa => 'HashRef[Hum::Sequence]',
 
 with 'Bio::Otter::Lace::OnTheFly::Ace';
 
-sub add_by_query_id {
+sub add_hit_by_query_id {
     my ($self, $q_id, $ga) = @_;
-    my $by_query_id;
-    unless ($by_query_id = $self->by_query_id($q_id)) {
-        $by_query_id = $self->_set_by_query_id($q_id => []);
+    my $hit_by_query_id;
+    unless ($hit_by_query_id = $self->hit_by_query_id($q_id)) {
+        $hit_by_query_id = $self->_set_hit_by_query_id($q_id => []);
     }
-    push @$by_query_id, $ga;
+    push @$hit_by_query_id, $ga;
     return $ga;
 }
 

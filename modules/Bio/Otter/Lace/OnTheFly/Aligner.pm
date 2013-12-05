@@ -66,7 +66,7 @@ sub fasta_sequences {
     return @{$self->seqs};
 }
 
-with 'Bio::Otter::Lace::OnTheFly::FastaFile';
+with 'Bio::Otter::Lace::OnTheFly::FastaFile'; # provides fasta_file()
 
 sub is_protein {
     my $self = shift;
@@ -132,10 +132,10 @@ sub parse {
         my $q_id = $gapped_alignment->query_id;
         $self->logger->info("RESULT found for ${q_id}");
 
-        if ($result_set->by_query_id($q_id)) {
+        if ($result_set->hit_by_query_id($q_id)) {
             $self->log->warn("Already have result for '$q_id'");
         }
-        $result_set->add_by_query_id($q_id => $gapped_alignment);
+        $result_set->add_hit_by_query_id($q_id => $gapped_alignment);
     }
 
     return $result_set;

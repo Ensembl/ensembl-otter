@@ -11,8 +11,8 @@ with 'MooseX::Log::Log4perl';
 use Bio::Otter::Utils::FeatureSort qw( feature_sort );
 
 requires 'analysis_name';
-requires 'by_query_id';
-requires 'query_ids';
+requires 'hit_by_query_id';
+requires 'hit_query_ids';
 requires 'query_seq_by_name';
 requires 'target';
 requires 'type';
@@ -22,7 +22,7 @@ sub ace {
 
     my $contig_name = $self->target->name;
 
-    unless ($self->query_ids) {
+    unless ($self->hit_query_ids) {
         $self->logger->warn("No hits found on '$contig_name'");
         return;
     }
@@ -35,7 +35,7 @@ sub ace {
 
     my $ace = '';
 
-    foreach my $hname (sort $self->query_ids) {
+    foreach my $hname (sort $self->hit_query_ids) {
 
         my $prefix = $is_protein ? 'Protein' : 'Sequence';
 
@@ -47,7 +47,7 @@ sub ace {
                 $a->target_start <=> $b->target_start
                 ||
                 $a->query_start  <=> $b->query_start
-                        } @{ $self->by_query_id($hname) }) {
+                        } @{ $self->hit_by_query_id($hname) }) {
 
             foreach my $fp ( feature_sort $ga->ensembl_features ) {
 

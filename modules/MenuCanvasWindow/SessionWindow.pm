@@ -2110,7 +2110,7 @@ sub launch_exonerate {
         }
 
         # add hit sequences into ace text
-        my @names = sort $result_set->query_ids;
+        my @names = sort $result_set->hit_query_ids;
         $otf->record_hit(@names);
 
         # only add the sequence to acedb if they are not pfetchable (i.e. they are unknown)

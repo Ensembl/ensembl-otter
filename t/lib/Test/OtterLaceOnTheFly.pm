@@ -115,13 +115,13 @@ sub run_otf_test {
     my $result_set = $aligner->run;
     isa_ok($result_set, 'Bio::Otter::Lace::OnTheFly::ResultSet');
 
-    my @qids = sort $result_set->query_ids;
+    my @qids = sort $result_set->hit_query_ids;
     if ($test->{strict_hit_list}) {
         is(scalar(@qids), scalar(@{$test->{query_ids}}), 'n(query_ids)');
         is_deeply(\@qids, $test->{query_ids}, 'query_ids');
     }
 
-    my @gapped_alignments =  map { @{$result_set->by_query_id($_)} } @qids;
+    my @gapped_alignments =  map { @{$result_set->hit_by_query_id($_)} } @qids;
     my @new_features;
     foreach my $ga ( @gapped_alignments ) {
         push @new_features, $ga->ensembl_features;

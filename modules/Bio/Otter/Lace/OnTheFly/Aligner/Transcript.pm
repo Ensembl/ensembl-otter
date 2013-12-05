@@ -18,13 +18,13 @@ augment '_build_default_qt_options' => sub {
 around 'parse' => sub {
     my ($orig, $self, @args) = @_;
 
-    my $basic = $self->$orig(@args);
+    my $basic_rs = $self->$orig(@args);
 
-    foreach my $query ( $basic->query_ids ) {
-        my $split = $self->_split_alignment($basic->by_query_id($query));
+    foreach my $query ( $basic_rs->hit_query_ids ) {
+        my $split = $self->_split_alignment($basic_rs->hit_by_query_id($query));
     }
 
-    return $basic;              # temporary
+    return $basic_rs;              # temporary
 };
 
 sub _split_alignment {
