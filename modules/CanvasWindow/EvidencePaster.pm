@@ -439,7 +439,7 @@ sub align_to_transcript {
 
         my $result_set = $aligner->run;
 
-        $self->alignment_window($result_set);
+        $self->alignment_window($result_set, $aligner->type);
     }
 
     return;
@@ -454,9 +454,7 @@ sub dotter_to_transcript {
 }
 
 sub alignment_window {
-    my ($self, $result_set) = @_;
-
-    my $type = $result_set->type;
+    my ($self, $result_set, $type) = @_;
 
     $self->{_alignment_window} ||= {};
     my $window = $self->{_alignment_window}->{$type};
