@@ -2100,12 +2100,13 @@ sub launch_exonerate {
 
         # The new way:
         my $result_set = $aligner->run;
-        my $ace_output = $result_set->ace;
+        my $ace_output = $result_set->ace($aligner->target->name);
 
         if ($ace_output) {
             $db_edited = 1;
         }
         else {
+            warn "No hits found on '", $aligner->target->name, "'\n";
             next;
         }
 

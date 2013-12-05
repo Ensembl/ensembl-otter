@@ -15,12 +15,9 @@ requires 'hit_by_query_id';
 requires 'hit_query_ids';
 requires 'is_protein';
 requires 'query_seq_by_name';
-requires 'target';
 
 sub ace {
-    my $self = shift;
-
-    my $contig_name = $self->target->name;
+    my ($self, $contig_name) = @_;
 
     unless ($self->hit_query_ids) {
         $self->logger->warn("No hits found on '$contig_name'");
