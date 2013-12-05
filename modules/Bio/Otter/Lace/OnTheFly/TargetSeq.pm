@@ -20,9 +20,9 @@ has 'repeat_masker'   => ( is => 'ro', isa => 'CodeRef' );
 has 'softmasked_full_seq'   => ( is => 'ro', isa => 'Hum::Sequence',
                                  lazy => 1, builder => '_build_softmasked_full_seq', init_arg => undef );
 
-has 'fasta_description' => ( is => 'ro', isa => 'Str', default => 'target' );
+has 'description_for_fasta' => ( is => 'ro', isa => 'Str', default => 'target' );
 
-sub fasta_sequences {
+sub seqs_for_fasta {
     my $self = shift;
     return $self->target_seq;
 }
