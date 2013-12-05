@@ -2094,7 +2094,7 @@ sub launch_exonerate {
     for my $aligner ( $otf->aligners_for_each_type ) {
 
         my $type = $aligner->type;
-        my $is_protein = ($type =~ /protein/i);
+        my $is_protein = $aligner->is_protein;
 
         warn "Running exonerate for sequence(s) of type: $type\n";
 

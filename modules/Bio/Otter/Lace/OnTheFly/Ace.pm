@@ -13,9 +13,9 @@ use Bio::Otter::Utils::FeatureSort qw( feature_sort );
 requires 'analysis_name';
 requires 'hit_by_query_id';
 requires 'hit_query_ids';
+requires 'is_protein';
 requires 'query_seq_by_name';
 requires 'target';
-requires 'type';
 
 sub ace {
     my $self = shift;
@@ -27,7 +27,7 @@ sub ace {
         return;
     }
 
-    my $is_protein = ($self->type =~ /protein/i);
+    my $is_protein = $self->is_protein;
 
     my $method_tag  = $self->analysis_name;
     my $acedb_homol_tag = $method_tag . '_homol';
