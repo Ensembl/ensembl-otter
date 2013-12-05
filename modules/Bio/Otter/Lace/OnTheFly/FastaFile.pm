@@ -3,8 +3,8 @@ package Bio::Otter::Lace::OnTheFly::FastaFile;
 use namespace::autoclean;
 use Moose::Role;                # THIS IS A ROLE, not a class
 
-requires 'fasta_sequences';
-requires 'fasta_description';
+requires 'seqs_for_fasta';
+requires 'description_for_fasta';
 
 use File::Temp;
 use Hum::FastaFileIO;
@@ -15,7 +15,7 @@ has 'fasta_file'   => ( is => 'ro', isa => 'File::Temp',
 sub _build_fasta_file {         ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
     my $self = shift;
 
-    my $template = sprintf("otf_%s_%d_XXXXX", $self->fasta_description, $$);
+    my $template = sprintf("otf_%s_%d_XXXXX", $self->description_for_fasta, $$);
     my $file = File::Temp->new(
         TEMPLATE => $template,
         TMPDIR   => 1,
@@ -24,7 +24,7 @@ sub _build_fasta_file {         ## no critic (Subroutines::ProhibitUnusedPrivate
         );
 
     my $ts_out  = Hum::FastaFileIO->new("> $file");
-    $ts_out->write_sequences( $self->fasta_sequences );
+    $ts_out->write_sequences( $self->seqs_for_fasta );
     $ts_out = undef;            # flush
 
     return $file;

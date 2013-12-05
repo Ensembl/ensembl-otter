@@ -54,14 +54,14 @@ sub _build_default_qt_options { ## no critic (Subroutines::ProhibitUnusedPrivate
     return { map { $_ => { %{$defaults->{$_}}, %{$child_defaults->{$_}} } } qw( dna protein ) };
 }
 
-has fasta_description => ( is => 'ro', isa => 'Str', lazy => 1, builder => '_build_fasta_description' );
+has description_for_fasta => ( is => 'ro', isa => 'Str', lazy => 1, builder => '_build_description_for_fasta' );
 
-sub _build_fasta_description {  ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
+sub _build_description_for_fasta {  ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
     my $self = shift;
     return sprintf('query_%s', $self->type);
 }
 
-sub fasta_sequences {
+sub seqs_for_fasta {
     my $self = shift;
     return @{$self->seqs};
 }
