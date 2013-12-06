@@ -338,6 +338,43 @@ sub smart_slice {
     return $self->{'_smart_slice'};
 }
 
+# The seq_region in the local DB is created and stored lazily when first required.
+#
+sub db_slice {
+    my ($self) = @_;
+
+    my $db_slice = $self->{'_db_slice'};
+    return $db_slice if $db_slice;
+
+    my $ensembl_slice = $self->smart_slice->ensembl_slice;
+
+    # If this is a recovered session we will already have the seq_region in the local DB
+    my $slice_adaptor = $self->DB->vega_dba->get_SliceAdaptor;
+    my $db_seq_region = $slice_adaptor->fetch_by_region(
+        $ensembl_slice->coord_system->name,
+        $ensembl_slice->seq_region_name,
+        );
+
+    unless ($db_seq_region) {
+
+        # db_seq_region's coord_system needs to be the one already in the DB.
+        my $cs_adaptor = $self->DB->vega_dba->get_CoordSystemAdaptor;
+        my $cs = $cs_adaptor->fetch_by_name($ensembl_slice->coord_system->name, $ensembl_slice->coord_system->version);
+
+        # db_seq_region must start from 1
+        $db_seq_region = Bio::EnsEMBL::Slice->new_fast( { %$ensembl_slice,
+                                                          coord_system      => $cs,
+                                                          start             => 1,
+                                                          seq_region_length => $ensembl_slice->end,
+                                                        } );
+
+        $slice_adaptor->store($db_seq_region);
+    }
+
+    $db_slice = $db_seq_region->sub_Slice($ensembl_slice->start, $ensembl_slice->end);
+    return $self->{'_db_slice'} = $db_slice;
+}
+
 sub slice_name {
     my ($self) = @_;
 
