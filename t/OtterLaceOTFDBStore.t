@@ -37,8 +37,18 @@ foreach my $test ( fixed_tests() ) {
     my ($result_set) = run_otf_test($test, build_target($test));
     my $count = $result_set->db_store($slice);
     ok($count, $test->{name});
+
     note("Stored $count features");
+    my $gff = $result_set->gff_from_db($slice);
+    ok($gff, 'GFF');
+    note("GFF:\n$gff");
+
+    $result_set->clear_db($slice);
 }
+
+# print "SQLITE: ", $test_db->file, "\n";
+# print "Press enter:\n";
+# my $enter = <>;
 
 done_testing;
 
