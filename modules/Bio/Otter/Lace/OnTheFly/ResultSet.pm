@@ -3,6 +3,13 @@ package Bio::Otter::Lace::OnTheFly::ResultSet;
 use Moose;
 use namespace::autoclean;
 
+# Constructor must supply these:
+#
+has analysis_name => ( is => 'ro', isa => 'Str',   required => 1 );
+has is_protein    => ( is => 'ro', isa => 'Bool',  required => 1 );
+
+# Raw results store
+#
 has raw => (
     traits  => [ 'String' ],
     is      => 'rw',
@@ -31,7 +38,7 @@ has aligner => (
     is => 'ro',
     isa => 'Bio::Otter::Lace::OnTheFly::Aligner',
     required => 1,
-    handles => [ qw( analysis_name is_protein query_seqs ) ],
+    handles => [ qw( query_seqs ) ],
     );
 
 has query_seqs_by_name => ( is => 'ro', isa => 'HashRef[Hum::Sequence]',
