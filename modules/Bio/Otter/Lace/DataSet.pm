@@ -53,6 +53,12 @@ sub gff_version {
         $self->Client->config_value('gff_version');
 }
 
+sub acedb_version {
+    my ($self) = @_;
+    return $self->{'_acedb_version'} ||=
+        $self->Client->config_value('acedb_version');
+}
+
 sub zmap_config_global {
     my ($self) = @_;
     my $short_title = $self->Client->config_value('short_window_title_prefix');

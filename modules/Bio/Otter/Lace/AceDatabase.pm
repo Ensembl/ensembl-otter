@@ -469,6 +469,7 @@ sub ace_config {
     my ($self) = @_;
 
     my $slice_name = $self->slice_name;
+    my $acedb_version = $self->DataSet->acedb_version;
 
     my $ace_server = $self->ace_server;
     my $url = sprintf 'acedb://%s:%s@%s:%d'
@@ -490,6 +491,7 @@ sub ace_config {
             group       => 'always',
             featuresets => $featuresets,
             stylesfile  => $self->stylesfile,
+            version     => $acedb_version,
         },
 
     };
