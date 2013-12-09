@@ -469,11 +469,13 @@ sub ace_config {
     my ($self) = @_;
 
     my $slice_name = $self->slice_name;
+    my $gff_version = 2;
     my $acedb_version = $self->DataSet->acedb_version;
 
     my $ace_server = $self->ace_server;
-    my $url = sprintf 'acedb://%s:%s@%s:%d'
-        , $ace_server->user, $ace_server->pass, $ace_server->host, $ace_server->port;
+    my $url = sprintf 'acedb://%s:%s@%s:%d?gff_version=%d'
+        , $ace_server->user, $ace_server->pass, $ace_server->host, $ace_server->port
+        , $gff_version;
 
     my @methods = $self->MethodCollection->get_all_top_level_Methods;
     my $featuresets = [ map { $_->name } @methods ];
