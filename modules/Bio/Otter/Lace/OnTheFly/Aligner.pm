@@ -71,7 +71,8 @@ with 'Bio::Otter::Lace::OnTheFly::FastaFile'; # provides fasta_file()
 
 sub is_protein {
     my $self = shift;
-    return $self->type =~ /protein/i;
+    my $is_protein = ($self->type =~ /protein/i);
+    return $is_protein;
 }
 
 sub query_type {
