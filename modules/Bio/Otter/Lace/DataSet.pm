@@ -202,7 +202,7 @@ sub _add_zmap_bam_config {
                 file   => $file,
                 strand => $strand,
                 gff_feature_source => $featureset,
-                gff_version => 2,
+                gff_version => $self->gff_version,
             };
             my $query_string = _query_string($query);
             my $url = sprintf "pipe:///%s?%s", 'bigwig_get', $query_string;
