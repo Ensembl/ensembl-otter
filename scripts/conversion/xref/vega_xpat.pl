@@ -29,8 +29,8 @@ General options:
 
 Specific options:
 
-    --genbank=FILE                      ZFIN genbank file (from http://zfin.org/downloads/genbank.txt)
-    --xpat=FILE                         ZFIN xpat file (from http://zfin.org/downloads/xpat.txt)
+    --genbank_file=FILE                 ZFIN genbank file (from http://zfin.org/downloads/genbank.txt)
+    --xpat_file=FILE                    ZFIN xpat file (from http://zfin.org/downloads/xpat.txt)
     --outputdir=PATH                    Directory where script should write its output files (defaults to log dir)
 
 =head1 DESCRIPTION
@@ -67,7 +67,7 @@ use FindBin qw($Bin);
 use vars qw($SERVERROOT);
 
 BEGIN {
-  $SERVERROOT = "$Bin/../../..";
+  $SERVERROOT = "$Bin/../../../..";
   unshift(@INC, "$SERVERROOT/ensembl/modules");
   unshift(@INC, "$SERVERROOT/bioperl-live");
   unshift(@INC, "$SERVERROOT/ensembl-otter/modules");
@@ -81,14 +81,14 @@ my $support = new Bio::EnsEMBL::Utils::VegaCuration::Gene($SERVERROOT);
 
 $support->parse_common_options(@_);
 $support->parse_extra_options(
-  'genbank=s',
-  'xpat=s',
+  'genbank_file=s',
+  'xpat_file=s',
   'prune',
 );
 $support->allowed_params(
   $support->get_common_params,
-  'genbank',
-  'xpat',
+  'genbank_file',
+  'xpat_file',
   'prune',
 );
 
@@ -100,8 +100,8 @@ if ($support->param('help') or $support->error) {
 my $min_perc_ident = 97;
 my $min_hit_length = 150;
 
-$support->check_required_params('genbank');
-$support->check_required_params('xpat');
+$support->check_required_params('genbank_file');
+$support->check_required_params('xpat_file');
 $support->confirm_params;
 $support->init_log;
 
@@ -134,9 +134,9 @@ if ($page) {
   $support->log("Genbank file downloaded from ZFIN\n");
 }
 else {
-  $support->log("Unable to download Genbank file from ZFIN, trying to read from disc: ".$support->param('genbank')."\n",1);
-  open (NOM, '<', $support->param('genbank')) or $support->throw(
-    "Couldn't open ".$support->param('genbank')." for reading: $!\n");
+  $support->log("Unable to download Genbank file from ZFIN, trying to read from disc: ".$support->param('genbank_file')."\n",1);
+  open (NOM, '<', $support->param('genbank_file')) or $support->throw(
+    "Couldn't open ".$support->param('genbank_file')." for reading: $!\n");
   $page = do { local $/; <NOM> };
 }
 my @recs = split "\n", $page;
@@ -154,9 +154,9 @@ if ($page) {
   $support->log("xpat file downloaded from ZFIN\n");
 }
 else {
-  $support->log("Unable to download xpat file from ZFIN, trying to read from disc: ".$support->param('xpat')."\n",1);
-  open (NOM, '<', $support->param('xpat')) or $support->throw(
-    "Couldn't open ".$support->param('xpat')." for reading: $!\n");
+  $support->log("Unable to download xpat file from ZFIN, trying to read from disc: ".$support->param('xpat_file')."\n",1);
+  open (NOM, '<', $support->param('xpat_file')) or $support->throw(
+    "Couldn't open ".$support->param('xpat_file')." for reading: $!\n");
   $page = do { local $/; <NOM> };
 }
 @recs = split "\n", $page;
