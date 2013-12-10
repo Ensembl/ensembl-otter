@@ -132,9 +132,9 @@ sub parse {
     my ($self, $fh) = @_;
 
     my $result_set = Bio::Otter::Lace::OnTheFly::ResultSet->new(
-        aligner => $self,
         analysis_name => $self->analysis_name,
         is_protein    => $self->is_protein,
+        query_seqs    => $self->query_seqs,
         );
 
     while (my $line = <$fh>) {
