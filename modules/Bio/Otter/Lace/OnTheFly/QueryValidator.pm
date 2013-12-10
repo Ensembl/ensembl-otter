@@ -5,6 +5,9 @@ use Moose;
 
 use Carp;
 
+use Bio::Otter::Lace::OnTheFly::Utils::SeqList;
+use Bio::Otter::Lace::OnTheFly::Utils::Types;
+
 use Bio::Vega::Evidence::Types qw{ new_evidence_type_valid };
 use Hum::Pfetch;
 
@@ -20,17 +23,17 @@ has long_query_cb        => ( is => 'ro', isa => 'CodeRef', required => 1 );
 
 has max_query_length     => ( is => 'ro', isa => 'Int', default => 10000 );
 
-has confirmed_seqs       => ( is => 'ro', isa => 'ArrayRef[Hum::Sequence]',
-                              lazy => 1, builder => '_build_confirmed_seqs', init_arg => undef );
+has confirmed_seqs       => (
+    is       => 'ro',
+    isa      => 'SeqListClass',
+    lazy     => 1,
+    builder  => '_build_confirmed_seqs',
+    init_arg => undef,
+    handles  => [qw( seqs_by_name seq_by_name )],
+    );
 
 has seqs_by_type         => ( is => 'ro', isa => 'HashRef[ArrayRef[Hum::Sequence]]',
                               lazy => 1, builder => '_build_seqs_by_type', init_arg => undef );
-
-has seqs_by_name         => ( is => 'ro', isa => 'HashRef[Hum::Sequence]',
-                              lazy => 1, builder => '_build_seqs_by_name', init_arg => undef );
-
-# has query_fasta_file     => ( is => 'ro', isa => 'File::Temp',
-#                               lazy => 1, builder => '_build_query_fasta_file', init_arg => undef );
 
 # Internal attributes
 #
@@ -57,7 +60,7 @@ sub _build_confirmed_seqs {     ## no critic (Subroutines::ProhibitUnusedPrivate
 
         # We work on the union of the supplied sequences and supplied accession ids
         my @accessions = ( @seq_accs, @supplied_accs );
-        return [] unless @accessions; # nothing to do
+        return Bio::Otter::Lace::OnTheFly::Utils::SeqList->new( seqs => [] ) unless @accessions; # nothing to do
 
         # identify the types of all the accessions supplied
         my $cache = $self->accession_type_cache;
@@ -108,14 +111,14 @@ sub _build_confirmed_seqs {     ## no critic (Subroutines::ProhibitUnusedPrivate
         }
     }
 
-    return \@confirmed_seqs;
+    return Bio::Otter::Lace::OnTheFly::Utils::SeqList->new( seqs => \@confirmed_seqs );
 }
 
 sub _build_seqs_by_type {       ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
     my $self = shift;
 
     my %seqs_by_type;
-    foreach my $seq (@{$self->confirmed_seqs}) {
+    foreach my $seq (@{$self->confirmed_seqs->seqs}) {
         if ($seq->type && new_evidence_type_valid($seq->type))
         {
             push @{ $seqs_by_type{ $seq->type } }, $seq;
@@ -139,22 +142,6 @@ sub seq_types {
 sub seqs_for_type {
     my ($self, $type) = @_;
     return $self->seqs_by_type->{$type};
-}
-
-sub _build_seqs_by_name {       ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
-    my $self = shift;
-
-    my %name_seq;
-    for my $seq (@{$self->confirmed_seqs}) {
-        $name_seq{ $seq->name } = $seq;
-    }
-
-    return \%name_seq;
-}
-
-sub seq_by_name {
-    my ($self, $name) = @_;
-    return $self->seqs_by_name->{$name};
 }
 
 # add type and full accession information to the supplied sequences
@@ -273,7 +260,7 @@ sub record_hit {
 sub names_not_hit {
     my $self = shift;
     my @no_hit;
-    foreach my $seq (@{$self->confirmed_seqs}) {
+    foreach my $seq (@{$self->confirmed_seqs->seqs}) {
         my $name = $seq->name;
         next if $self->_seq_hits->{$name};
         push @no_hit, $name;
