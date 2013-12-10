@@ -498,7 +498,8 @@ sub launch_exonerate {
         return;
     }
 
-    my $seqs = $otf->confirmed_seqs();
+    my $seq_list = $otf->confirmed_seqs();
+    my $seqs = $seq_list->seqs;
 
     $self->logger->warn("Found ", scalar(@$seqs), " sequences");
 
