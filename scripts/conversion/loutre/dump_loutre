@@ -246,7 +246,7 @@ $support->comma_to_list('filter_prefix');
 
 #define gene types to ignore
 if (! $support->param('filter_biotype')) {
-  $support->param('filter_biotype','artifact,obsolete');
+  $support->param('filter_biotype','obsolete');
 }
 $support->comma_to_list('filter_biotype');
 
