@@ -40,6 +40,7 @@ Specific options:
     --prune                             delete results from previous runs of
                                         this script first
     --logic_names=LIST                  restrict transfer to gene logic_names
+    --for_web                           remove TEC / artifact genes and transcripts
     --keep_overlap_evi                  keep supporting evidence alignments that
                                         overlap the edge of the seq_region (ie PATCH)
                                         optional, default is to delete them
@@ -366,7 +367,7 @@ foreach my $V_chr (@chrs) {
 	next GENE;
       }
     }
-    if ($gene->biotype =~ /artifact|TEC/) {
+    if ( $support->param('for_web') && ( $gene->biotype =~ /artifact|TEC/) ) {
 	$support->log("Gene: ".$gene->stable_id." skipping because of its biotype (".$gene->biotype . ")\n", 2);
 	next GENE;
       }
@@ -385,7 +386,7 @@ foreach my $V_chr (@chrs) {
   TRANS:
     foreach my $transcript (@{ $transcripts }) {
       my $tsi = $transcript->stable_id;
-      if ($transcript->biotype =~ /artifact|TEC/) {
+      if ( $support->param('for_web') && ($transcript->biotype =~ /artifact|TEC/) ) {
         $support->log("Transcript: $tsi skipping because of its biotype (" . $transcript->biotype. ")\n", 2);
         $failed_transcripts->{$tsi}{'biotype'} = $transcript->biotype;
         push @{$failed_transcripts->{$tsi}{'details'}}, {'reason' => 'disallowed biotype'};
