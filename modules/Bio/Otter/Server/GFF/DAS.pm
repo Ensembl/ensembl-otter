@@ -250,7 +250,13 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS {
             $feature->end(
                 $das_feature->{'end'}   > $chr_end
                 ? $chr_end : $das_feature->{'end'}   - $chr_start + 1 );
-            $feature->strand( $das_feature->{'orientation'} =~ /^-/ ? -1 : 1 );
+            my $orientation = $das_feature->{'orientation'};
+            my $strand =
+                defined $orientation ? (
+                    $orientation =~ /^\+/ ?  1 :
+                    $orientation =~ /^-/  ? -1 :
+                    0) : 0;
+            $feature->strand($strand);
             if($feature->can('score')) {
                     ## should we fake the value when it is not available? :
                 my $score = $das_feature->{'score'} || '-';
