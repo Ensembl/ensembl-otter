@@ -759,6 +759,10 @@ sub ace_server {
         my $home = $self->home;
         $sgif = Hum::Ace::LocalServer->new($home);
         $sgif->server_executable('sgifaceserver');
+
+        $sgif->timeout_string('0:30:100:0');
+        # client_timeout:server_timeout:max_req_sizeKB:auto_save_interval
+
         my $gff_version = $self->DataSet->gff_version;
         my $serverconfig = [ [ 'GFF_VERSION' => $gff_version ] ];
         $sgif->start_server( 'serverconfig' => $serverconfig )
