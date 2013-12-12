@@ -165,7 +165,7 @@ sub update_local_db {
             # require more complex retrying when database is busy.
             my $rv = $db_filter_adaptor->update_for_filter_get
               ($column_name, # WHERE: name
-               $cache_file, # SET: gff_file, status = 'Visible'
+               $cache_file, # SET: gff_file, status = 'Loading'
                $process_gff || 0); # SET: process_gff flag
             die "Changed $rv rows" unless 1 == $rv;
             1;
