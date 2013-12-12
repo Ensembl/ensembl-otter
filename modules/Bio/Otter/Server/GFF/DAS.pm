@@ -170,6 +170,9 @@ sub Bio::EnsEMBL::Slice::get_all_features_via_DAS {
             # (eg: exons in transcript which does overlap)
             # but flag that we have done so in the parent object (if any) 
 
+            (defined $das_feature->{'start'} && defined $das_feature->{'end'})
+                or next FEATURE;
+
             if ($das_feature->{'end'} < $chr_start) {
                 $truncated_5_prime = 1;
             }
