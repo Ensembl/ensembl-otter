@@ -615,7 +615,7 @@ sub load_filters {
     if ($self->SessionWindow) {
         if (@to_fetch) {
             $self->AceDatabase->Client->reauthorize_if_cookie_will_expire_soon;
-            $self->SessionWindow->zmap->load_features(map { $_->Filter->name } @to_fetch);
+            $self->SessionWindow->RequestQueuer->request_features(map { $_->Filter->name } @to_fetch);
         }
         else {
             $top->messageBox(
