@@ -514,7 +514,7 @@ sub get_current_Gene_by_slice {
       grep { $_->stable_id eq $gene_stable_id }
       @{ $self->fetch_all_by_Slice_constraint($gene_slice, 'g.is_current = 1 ') };
     if ($#out > 1) {
-        die "there are more than one gene retrived\n";
+        die "there are more than one gene retrieved\n";
     }
     my $db_gene = $out[0];
     if ($db_gene) {
