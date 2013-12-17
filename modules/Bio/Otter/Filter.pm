@@ -409,7 +409,7 @@ sub script_arguments {
 
 sub gff_source {
     my ($self, $source) = @_;
-    
+
     if ($source) {
         $self->{'_gff_source'} = $source;
     }
@@ -418,7 +418,7 @@ sub gff_source {
 
 sub gff_feature {
     my ($self, $feature) = @_;
-    
+
     if ($feature) {
         $self->{'_gff_feature'} = $feature;
     }
