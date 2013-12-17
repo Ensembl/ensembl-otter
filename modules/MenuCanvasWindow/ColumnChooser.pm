@@ -385,7 +385,7 @@ sub draw_Item {
     my $x = $row_height * $item->indent;
     my $y = $row * ($row_height + $pad);
 
-    # Brackets have an arrow to expand or contract thier contents
+    # Brackets have an arrow to expand or contract their contents
     if ($item->is_Bracket) {
         $self->draw_arrow($item, $x, $y);
         $self->current_Bracket($item);
