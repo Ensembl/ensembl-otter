@@ -185,9 +185,10 @@ sub auth_tt {
         }
 
         { # tmp block for TODO mark
-            local $TODO;
-            $TODO = 'Pagesmith authentication is not implemented'
-              if $MODE eq 'Pagesmith';
+            local $TODO =
+                $MODE eq 'Pagesmith'
+                ? 'Pagesmith authentication is not implemented'
+                : undef;
 
             my $authen = is($info->{_authenticated_user}, $user,
                             "  Authenticated (pw=$password)")
