@@ -105,8 +105,8 @@ sub _columns { ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines) call
              psaf.score
              psaf.external_db_id
              psaf.hcoverage
-	     exdb.db_name
-	     exdb.db_display_name);
+             exdb.db_name
+             exdb.db_display_name);
 }
 
 =head2 store
@@ -356,21 +356,21 @@ sub _objs_from_sth { ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines
     #
     if($mapper) {
 
-	if (defined $dest_slice && $mapper->isa('Bio::EnsEMBL::ChainedAssemblyMapper')  ) {
-	    ( $seq_region_id,  $seq_region_start,
-	      $seq_region_end, $seq_region_strand )
-		=
-		$mapper->map( $sr_name, $seq_region_start, $seq_region_end,
+        if (defined $dest_slice && $mapper->isa('Bio::EnsEMBL::ChainedAssemblyMapper')  ) {
+            ( $seq_region_id,  $seq_region_start,
+              $seq_region_end, $seq_region_strand )
+                =
+                $mapper->map( $sr_name, $seq_region_start, $seq_region_end,
                           $seq_region_strand, $sr_cs, 1, $dest_slice);
 
-	} else {
+        } else {
 
-	    ( $seq_region_id,  $seq_region_start,
-	      $seq_region_end, $seq_region_strand )
-		=
-		$mapper->fastmap( $sr_name, $seq_region_start, $seq_region_end,
+            ( $seq_region_id,  $seq_region_start,
+              $seq_region_end, $seq_region_strand )
+                =
+                $mapper->fastmap( $sr_name, $seq_region_start, $seq_region_end,
                           $seq_region_strand, $sr_cs );
-	}
+        }
 
       #skip features that map to gaps or coord system boundaries
       next FEATURE if(!defined($seq_region_id));
@@ -405,8 +405,8 @@ sub _objs_from_sth { ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines
 
       #throw away features off the end of the requested slice
       if($seq_region_end < 1 || $seq_region_start > $dest_slice_length ||
-	( $dest_slice_sr_id ne $seq_region_id )) {
-	next FEATURE;
+        ( $dest_slice_sr_id ne $seq_region_id )) {
+        next FEATURE;
       }
       $slice = $dest_slice;
     }
@@ -435,8 +435,8 @@ sub _objs_from_sth { ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines
           'dbID'             => $protein_spliced_align_feature_id,
           'external_db_id'   => $external_db_id,
           'hcoverage'        => $hcoverage,
-	  'dbname'           => $external_db_name,
-	  'db_display_name'  => $external_display_db_name
+          'dbname'           => $external_db_name,
+          'db_display_name'  => $external_display_db_name
         } ) );
 
   }

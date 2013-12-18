@@ -106,10 +106,10 @@ sub _columns { ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines) call
             dsaf.score
             dsaf.external_db_id
             dsaf.hcoverage
-	    dsaf.external_data
-	    dsaf.pair_dna_align_feature_id
-	    exdb.db_name
-	    exdb.db_display_name);
+            dsaf.external_data
+            dsaf.pair_dna_align_feature_id
+            exdb.db_name
+            exdb.db_display_name);
 }
 
 
@@ -381,21 +381,21 @@ FEATURE:
     # if a mapper was provided.
     if ( defined($mapper) ) {
 
-	if (defined $dest_slice && $mapper->isa('Bio::EnsEMBL::ChainedAssemblyMapper')  ) {
-	    ( $seq_region_id,  $seq_region_start,
-	      $seq_region_end, $seq_region_strand )
-		=
-		$mapper->map( $sr_name, $seq_region_start, $seq_region_end,
+        if (defined $dest_slice && $mapper->isa('Bio::EnsEMBL::ChainedAssemblyMapper')  ) {
+            ( $seq_region_id,  $seq_region_start,
+              $seq_region_end, $seq_region_strand )
+                =
+                $mapper->map( $sr_name, $seq_region_start, $seq_region_end,
                           $seq_region_strand, $sr_cs, 1, $dest_slice);
 
-	} else {
+        } else {
 
-	    ( $seq_region_id,  $seq_region_start,
-	      $seq_region_end, $seq_region_strand )
-		=
-		$mapper->fastmap( $sr_name, $seq_region_start, $seq_region_end,
+            ( $seq_region_id,  $seq_region_start,
+              $seq_region_end, $seq_region_strand )
+                =
+                $mapper->fastmap( $sr_name, $seq_region_start, $seq_region_end,
                           $seq_region_strand, $sr_cs );
-	}
+        }
 
       # Skip features that map to gaps or coord system boundaries.
       if ( !defined($seq_region_id) ) { next FEATURE }
