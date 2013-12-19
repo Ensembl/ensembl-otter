@@ -2539,13 +2539,11 @@ sub _zmap_view_new {
 }
 
 sub zircon_zmap_view_features_loaded {
-    my ($self, $status, $message, @featuresets) = @_;
+    my ($self, $status, $message, $feature_count, @featuresets) = @_;
 
     my $cllctn = $self->AceDatabase->ColumnCollection;
     my $col_aptr = $self->AceDatabase->DB->ColumnAdaptor;
     my $state_changed = 0;
-
-    my ($feature_count) = $message =~ /(\d+)\sfeatures\sloaded/;
 
     my @columns_to_process = ();
     foreach my $set_name (@featuresets) {
