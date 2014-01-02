@@ -22,12 +22,22 @@ sub new {
     return bless $self, $pkg;
 }
 
-sub request_features {
+sub queue_features {
     my ($self, @feature_list) = @_;
-
     push @{$self->_queue}, @feature_list;
     $self->_logger->debug('request_features: queued ', scalar(@feature_list));
+    return;
+}
 
+sub request_features {
+    my ($self, @feature_list) = @_;
+    $self->queue_features(@feature_list);
+    $self->send_queued_requests;
+    return;
+}
+
+sub send_queued_requests {
+    my ($self) = @_;
     $self->_load_next if $self->idle;
     return;
 }

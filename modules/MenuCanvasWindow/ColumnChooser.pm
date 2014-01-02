@@ -582,7 +582,7 @@ sub update_item_select_state {
 }
 
 sub load_filters {
-    my ($self) = @_;
+    my ($self, $is_recover) = @_;
 
     my $top = $self->top_window;
     $top->Busy(-recurse => 1);
@@ -593,9 +593,14 @@ sub load_filters {
     $cllctn->save_Columns_selected_flag_to_Filter_wanted;
     $self->AceDatabase->save_filter_state;
 
-    my @to_fetch = $cllctn->list_Columns_with_status('Selected');
+    my @statuses =  qw( Selected );
+    push @statuses, qw( Loading Visible ) if $is_recover;
+
+    my @to_fetch = $cllctn->list_Columns_with_status(@statuses);
+    my @to_fetch_names;
     foreach my $col (@to_fetch) {
         $col->status('Loading');
+        push @to_fetch_names, $col->Filter->name;
     }
 
     if ($self->init_flag) {
@@ -613,11 +618,7 @@ sub load_filters {
     }
 
     if ($self->SessionWindow) {
-        if (@to_fetch) {
-            $self->AceDatabase->Client->reauthorize_if_cookie_will_expire_soon;
-            $self->SessionWindow->RequestQueuer->request_features(map { $_->Filter->name } @to_fetch);
-        }
-        else {
+        unless (@to_fetch) {
             $top->messageBox(
                 -title      => $Bio::Otter::Lace::Client::PFX.'Nothing to fetch',
                 -icon       => 'warning',
@@ -641,6 +642,11 @@ sub load_filters {
         $SessionWindow->SequenceNotes($self->SequenceNotes);
         $SessionWindow->ColumnChooser($self);
         $SessionWindow->initialize;
+    }
+
+    if (@to_fetch) {
+        $self->AceDatabase->Client->reauthorize_if_cookie_will_expire_soon;
+        $self->SessionWindow->RequestQueuer->request_features(@to_fetch_names);
     }
 
     $top->Unbusy;
