@@ -989,23 +989,6 @@ sub save_filter_state {
     return;
 }
 
-sub delayed {
-    my ($self, $source) = @_;
-
-    my $column = $self->ColumnCollection->get_Item_by_name($source->name)
-        or return 1;
-    if ($column->status eq 'Visible') {
-        return 0;
-    }
-    elsif ($column->status eq 'Selected') {
-        return 0;
-    }
-    elsif ($column->status eq 'Loading') {
-        return 0;
-    }
-    return 1;
-}
-
 sub ColumnCollection {
     my ($self) = @_;
 
