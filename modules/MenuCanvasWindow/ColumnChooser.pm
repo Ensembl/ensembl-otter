@@ -646,7 +646,7 @@ sub load_filters {
 
     if (@to_fetch) {
         $self->AceDatabase->Client->reauthorize_if_cookie_will_expire_soon;
-        $self->SessionWindow->RequestQueuer->request_features(@to_fetch_names);
+        $self->SessionWindow->RequestQueuer->request_features(@to_fetch_names); # FIXME: just queue if initial load?
     }
 
     $top->Unbusy;
