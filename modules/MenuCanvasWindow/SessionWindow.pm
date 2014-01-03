@@ -2600,9 +2600,7 @@ sub zircon_zmap_view_features_loaded {
 
     # This will get called within Zircon once the request has finished
     return sub {
-        foreach my $set_name (@featuresets) {
-            $self->RequestQueuer->features_loaded_callback($set_name);
-        }
+        $self->RequestQueuer->features_loaded_callback(@featuresets);
         return;
     };
 }
