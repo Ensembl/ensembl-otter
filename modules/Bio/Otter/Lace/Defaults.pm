@@ -184,24 +184,62 @@ sub testmode_redirect_reset {
 # Public function to return name of config file in ~/ to enable
 # transition.  There should be only one config file, else previous
 # versions will see something different.
-#
-# When all supported releases have this trick (late 2013?), we can
-# rename the config cleanly and safely.
 sub user_config_filename {
     my $user_home = (getpwuid($<))[7];
-    my @fn = ("$user_home/.otter_config",  # since always
-              "$user_home/.otter/config.ini"); # newfangled and tidy
+    my @fn = ("$user_home/.otter/config.ini", # tidy, since v79
+              "$user_home/.otter_config");    # since (always .. 2013-01 v78)
 
     my ($fn, $spare) = grep { -f $_ } @fn; # take first that exists
     if (defined $spare) {
         warn "Ignoring spare user config file $spare, taking $fn\n";
+        # Possible if a file is created in old location after rename,
+        # causing configuration split at the ...v78/v79... transition.
     } elsif (!defined $fn) {
         $fn = $fn[0];
         warn "No user config present yet (expected at $fn)\n";
+        # New user gets config at new filename
+    } elsif ($fn eq $fn[1] && ! -l $fn[1] && -d "$user_home/.otter" && -w _) {
+        # Present at old filename, we should rename it.
+        #
+        # An already-running older otterlace could then find the name
+        # has changed, but set_and_save is not called by any (v79 or
+        # earlier) otterlace when a config file was already present.
+        $fn = __rename_user_config($fn[1], $fn[0], $user_home);
     } # else we have it
 
     return $_USERCFG_FN if defined $_USERCFG_FN; # for testing
     return $fn;
+}
+
+sub __rename_user_config {
+    my ($old, $new, $user_home) = @_;
+    my $what = "user config file from $old to $new";
+    if (!defined try { Bio::Otter::LogFile->current_logfile }) {
+        warn "Postponed renaming $what until logfile started\n";
+        return $old;
+    } elsif (rename $old, $new) {
+        warn "Renamed $what\n";
+        # One attempt to also rename backup or variant files
+        if (opendir my $dh, $user_home) {
+            foreach my $leaf (readdir $dh) {
+                next unless $leaf =~ m{^\.otter_config(.+)$};
+                my $sfx = $1;
+                my ($a, $b) = ("$user_home/.otter_config$sfx",
+                               "$user_home/.otter/config.ini$sfx");
+                my $err = (-l $a || !-f $a || -e $b) ? 'skip' : 'ok';
+                if ($err eq 'ok') {
+                    $err = $! unless rename $a, $b;
+                }
+                warn "Rename spare config file from $a to $b: $err\n";
+            }
+        } else {
+            warn "Renaming spare config files skipped: $!";
+        }
+        return $new;
+    } else {
+        warn "Failed to rename $what: $!";
+        return $old;
+    }
 }
 
 sub __parse_available_config_files {
