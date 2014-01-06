@@ -461,7 +461,6 @@ my $_new_feature_id_sub = sub {
         my ($self, @args) = @_;
 
         my $name   = $self->variation->name;
-        my $allele = $self->allele_string;
 
         my $gff = $self->SUPER::_gff_hash(@args);
         my ($start, $end) = @{$gff}{qw( start end )};
@@ -469,7 +468,8 @@ my $_new_feature_id_sub = sub {
             @{$gff}{qw( start end )} = ($end, $start);
         }
 
-        $gff->{'attributes'}{'Name'} = "$name - $allele";
+        $gff->{'attributes'}{'Name'} = $name;
+        $gff->{'attributes'}{'ensembl_variation'} = $self->allele_string;
         if ($name =~ /^rs/) {
             my $url = sprintf $url_format, $name;
             $gff->{'attributes'}{'url'}  = $url;
