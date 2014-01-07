@@ -435,7 +435,6 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
 
         my $name   = $self->variation->name;
         my $allele = $self->allele_string;
-        my $url    = sprintf $url_format, $name;
 
         my $gff = $self->SUPER::_gff_hash(@args);
         my ($start, $end) = @{$gff}{qw( start end )};
@@ -444,7 +443,10 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
         }
 
         $gff->{'attributes'}{'Name'} = "$name - $allele";
-        $gff->{'attributes'}{'URL'}  = $url;
+        if ($name =~ /^rs/) {
+            my $url = sprintf $url_format, $name;
+            $gff->{'attributes'}{'URL'}  = $url;
+        }
 
         return $gff;
     }
