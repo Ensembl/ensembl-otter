@@ -52,6 +52,7 @@ my     ($url_root, $server_script, $session_dir, $cookie_jar, $process_gff)
 $helper->use_session_dir($session_dir);
 
 $helper->open_log('gff_log.txt');
+$helper->log_incs('After startup');
 $helper->log_message("starting");
 $helper->log_arguments;
 
@@ -82,6 +83,7 @@ if (-e $cache_file) {
 
 # only require these packages now, so we don't take the import hit on a cache hit
 do_requires($helper);
+$helper->log_incs('After do_requires');
 
 $helper->log_message("cache file: $gff_filename: cache miss");
 
