@@ -451,7 +451,7 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
         return $gff;
     }
 
-    sub _gff_source {
+    sub _gff_feature {
         return 'variation';
     }
 }
