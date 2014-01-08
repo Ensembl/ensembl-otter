@@ -8,9 +8,10 @@ use warnings;
 
 use Log::Log4perl;
 use Readonly;
-use Scalar::Util 'weaken';
+use Scalar::Util qw{ weaken };
 
-Readonly my $MAX_REQUESTS => 4;
+Readonly my $MAX_CONCURRENT_REQUESTS => 5;
+Readonly my $REQUEST_MIN_BATCH_SIZE  => 3;
 
 sub new {
     my ($pkg, $session) = @_;
@@ -42,6 +43,13 @@ sub _queue_features {
 sub _send_queued_requests {
     my ($self) = @_;
     my $queue = $self->_queue;
+
+    my $slots = $self->_slots_available;
+    if ($slots < $REQUEST_MIN_BATCH_SIZE) {
+        # This is only really required to avoid excessive interleaving in Zircon :-(
+        $self->_logger->debug("_send_queued_requests: min batch size not reached");
+        return;
+    }
 
     my @to_send;
     while ($self->_slots_available and $self->_queue_not_empty) {
@@ -81,7 +89,7 @@ sub features_loaded_callback {
 sub _slots_available {
     my ($self) = @_;
     my $n_current = scalar keys %{$self->{_current_requests}};
-    my $available = $MAX_REQUESTS - $n_current;
+    my $available = $MAX_CONCURRENT_REQUESTS - $n_current;
     $available = 0 if $available < 0;
     return $available;
 }
