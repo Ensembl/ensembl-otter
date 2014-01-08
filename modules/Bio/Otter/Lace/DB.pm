@@ -9,7 +9,6 @@ use Carp;
 use DBI;
 
 use Bio::Otter::Lace::DB::ColumnAdaptor;
-use Bio::Vega::DBSQL::DBAdaptor;
 
 my(
     %dbh,
@@ -72,6 +71,9 @@ sub file {
 sub vega_dba {
     my ($self) = @_;
     return $vega_dba{$self} if $vega_dba{$self};
+
+    # This pulls in EnsEMBL, so we only do it if required, to reduce the footprint of filter_get &co.
+    require Bio::Vega::DBSQL::DBAdaptor;
 
     confess "Cannot create Vega adaptor until dataset info is loaded" unless $self->_is_loaded('dataset_info');
     my $dbc = Bio::Vega::DBSQL::DBAdaptor->new(
