@@ -8,6 +8,7 @@ use warnings;
 use Try::Tiny;
 
 use Bio::EnsEMBL::Utils::Exception qw(verbose);
+use Bio::EnsEMBL::Variation::Utils::Sequence qw( SO_variation_class );
 
 # This module allows conversion of ensembl/otter objects to GFF by
 # inserting to_gff (and supporting _gff_hash) methods into the
@@ -479,7 +480,10 @@ my $_new_feature_id_sub = sub {
     }
 
     sub _gff_feature {
-        my $feature = 'sequence_alteration';
+        my ($self) = @_;
+        my $feature =
+            SO_variation_class($self->allele_string)
+            || 'sequence_alteration';
         return $feature;
     }
 }
