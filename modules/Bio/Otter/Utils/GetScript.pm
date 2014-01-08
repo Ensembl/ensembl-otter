@@ -9,6 +9,21 @@ use IO::Handle;
 use Time::HiRes qw(time);
 use URI::Escape qw(uri_unescape);
 
+use constant _DEBUG_INCS => $ENV{OTTER_DEBUG_INCS};
+
+BEGIN {
+    require Data::Dumper if _DEBUG_INCS;
+}
+
+sub log_incs {
+    my ($helper, $header) = @_;
+    if (_DEBUG_INCS) {
+        my $dump = Data::Dumper->Dump([\%INC], [qw(*INC)]);
+        $helper->log_message("${header} ${dump}");
+    }
+    return;
+}
+
 # Deferred until needed on cache miss
 #
 sub do_requires {
