@@ -9,7 +9,7 @@ use IO::Handle;
 use Time::HiRes qw(time);
 use URI::Escape qw(uri_unescape);
 
-use constant _DEBUG_INCS => $ENV{OTTER_DEBUG_INCS};
+use constant _DEBUG_INCS => $ENV{OTTER_DEBUG_INCS}; ## no critic(ValuesAndExpressions::ProhibitConstantPragma)
 
 BEGIN {
     require Data::Dumper if _DEBUG_INCS;
