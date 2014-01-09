@@ -244,7 +244,7 @@ $support->log_stamped("Done.\n\n");
 $support->log_stamped("Loading schema...\n");
 my $schema_file = $SERVERROOT.'/ensembl/sql/table.sql';
 $support->log_error("Cannot open $schema_file.\n") unless (-e $schema_file);
-my $cmd = "/usr/bin/mysql".
+my $cmd = "mysql".
   " -u "  .$support->param('evegauser').
   " -p"   .$support->param('evegapass').
   " -h "  .$support->param('evegahost').
