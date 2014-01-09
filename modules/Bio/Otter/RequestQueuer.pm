@@ -9,6 +9,7 @@ use warnings;
 use Log::Log4perl;
 use Readonly;
 use Scalar::Util qw{ weaken };
+use Try::Tiny;
 
 Readonly my $MAX_CONCURRENT_REQUESTS => 5;
 Readonly my $REQUEST_MIN_BATCH_SIZE  => 3;
@@ -60,10 +61,27 @@ sub _send_queued_requests {
     }
 
     if (@to_send) {
-        $self->_logger->debug("_send_queued_requests: loading '", join(',', @to_send), "', ", scalar(@$queue), " remaining");
-        $self->session->zmap->load_features(@to_send);
+        my $to_send_debug = join(',', @to_send);
+        $self->_logger->debug("_send_queued_requests: requesting '${to_send_debug}', ", scalar(@$queue), " remaining");
+
+        try {
+            $self->session->zmap->load_features(@to_send);
+        }
+        catch {
+            my $err = $_;
+            if ($err =~ /Zircon: busy connection/) {
+                $self->_logger->warn(
+                    "_send_queued_requests: load_features Zircon request failed, requeuing '${to_send_debug}'");
+                $self->_clear_request($_) foreach @to_send;
+                unshift @$queue, @to_send;
+            } else {
+                die $err;
+            }
+        };
+
     } else {
-        $self->_logger->debug("_send_queued_requests: nothing to send, ", scalar(@$queue) ? 'no slots' : 'queue empty');
+        $self->_logger->debug("_send_queued_requests: nothing to send, ",
+                              scalar(@$queue) ? 'no slots' : 'queue empty');
     }
 
     return;
