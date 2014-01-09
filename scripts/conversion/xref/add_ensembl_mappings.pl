@@ -97,10 +97,11 @@ our $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
 
 # parse options
 $support->parse_common_options(@_);
-$support->parse_extra_options(qw(chromosomes|chr=s@ prune assembly=s dbtype=s ensemblhost=s ensemblport=s ensembluser=s ensemblpass=s ensembldbname=s));
-if ($support->param('dbtype') eq 'ensembl-vega') {
-  $support->parse_extra_options(qw(alt_assembly=s evegadbname=s evegahost=s evegaport=s evegauser=s evegapass=s));
+my @extra_options = qw(chromosomes|chr=s@ prune assembly=s dbtype=s ensemblhost=s ensemblport=s ensembluser=s ensemblpass=s ensembldbname=s); 
+if ($support->param('dbtype') eq 'ensembl-vega' or 1) { # or 1 because param test doesn't work here: it really should be changed so it does
+  push @extra_options,qw(alt_assembly=s evegadbname=s evegahost=s evegaport=s evegauser=s evegapass=s);
 }
+$support->parse_extra_options(@extra_options);
 my @allowed_params = ($support->get_common_params, qw(chromosomes prune assembly dbtype ensemblhost ensemblport ensembluser ensemblpass ensembldbname));
 if ($support->param('dbtype') eq 'ensembl-vega') {
   push @allowed_params, qw(alt_assembly evegadbname evegahost evegaport evegauser evegapass);
@@ -133,6 +134,7 @@ if($support->param('dbtype') eq 'ensembl-vega') {
 my $dbh = $dba->dbc->db_handle;
 my $ta = $dba->get_TranscriptAdaptor();
 my $ga = $dba->get_GeneAdaptor();
+my $pa = $dba->get_TranslationAdaptor();
 my $ea = $dba->get_DBEntryAdaptor();
 my $sa = $dba->get_SliceAdaptor();
 
@@ -169,7 +171,6 @@ elsif ($support->param('prune')){
 }
 	
 #links xrefs and the biotypes they link to (reported just for info)
-my (%assigned_txrefs, %assigned_gxrefs) = ({},{});
 
 #retrieve mappings from disc or parse database
 my $ens_ids = {};
@@ -196,7 +197,6 @@ if (! %$ens_ids) {
 	my $vname = $x->primary_id;
 	next GXREF unless ($x->type =~ /ALT/);
 	next GXREF unless ($vname =~ /OTT/);
-	$assigned_gxrefs{$dbname}->{$g->biotype}++;
 	$ens_ids->{'genes'}{$vname}{$gsi}{$dbname}++;
       }
       foreach my $t (@{$g->get_all_Transcripts}) {
@@ -208,9 +208,20 @@ if (! %$ens_ids) {
 	  my $vname = $x->primary_id;
 	  next TXREF unless ($x->type =~ /ALT/);
 	  next TXREF unless ($vname =~ /OTT/);
-	  $assigned_txrefs{$dbname}->{$t->biotype}++;
 	  $ens_ids->{'transcripts'}{$vname}{$tsi}{$dbname}++;
 	}
+  my $p = $t->translation();
+  if($p) {
+    my $psi = $p->stable_id;
+    PXREF: foreach my $x (@{$p->get_all_DBEntries}) {
+      my $dbname = $x->dbname;
+      my $vname = $x->primary_id;
+      next PXREF unless($x->type =~ /MISC/);
+      next PXREF unless($vname =~ /OTT/);
+      next PXREF unless($dbname =~ /OTTP/);
+      $ens_ids->{'translations'}{$vname}{$psi}{$dbname}++;   
+    }
+  }
       }
     }
   }
@@ -220,19 +231,27 @@ if (! %$ens_ids) {
 
 #this defines which external_db they match in Vega
 my %vega_xref_names = (
+# Don't exist in 75, probably won't after, either
  'shares_CDS_and_UTR_with_OTTT' => 'ENST_ident',
  'shares_CDS_with_OTTT'         => 'ENST_CDS',
  'OTTT'                         => 'ENST_ident',
  'OTTG'                         => 'ENSG',
+ 'OTTP'                         => 'ENSP_ident',
+);
+
+my %types = (
+  genes        => { adaptor => $ga, type => 'gene' },
+  transcripts  => { adaptor => $ta, type => 'transcript' },
+  translations => { adaptor => $pa, type => 'translation' },
 );
 
 $support->log("Setting xrefs in Vega\n");
 
 #add xrefs to each E! object
-foreach my $type (qw(genes transcripts)) {
+foreach my $type (qw(genes transcripts translations)) {
   my $ids = $ens_ids->{$type};
   foreach my $v_id (keys %$ids) {
-    my $adaptor = $type eq 'genes' ? $ga : $ta;
+    my $adaptor = $types{$type}->{'adaptor'};
     my $object = $adaptor->fetch_by_stable_id($v_id);
     unless ($object) {
       $support->log_warning("Can't retrieve object $v_id from Vega\n");
@@ -248,6 +267,7 @@ foreach my $type (qw(genes transcripts)) {
           next XREF;
         }
         my $vdb = $vega_xref_names{$dbtype};
+        warn "dbtype=$dbtype vdb=$vdb\n";
         my $dbentry = Bio::EnsEMBL::DBEntry->new(
           -primary_id => $e_id,
           -display_id => $e_id,
@@ -255,13 +275,12 @@ foreach my $type (qw(genes transcripts)) {
           -release    => 1,
           -dbname     => $vdb,
         );
-        $type eq 'genes' ? $assigned_gxrefs{$vdb}->{$object->biotype}++ : $assigned_txrefs{$vdb}->{$object->biotype}++;
         $object->add_DBEntry($dbentry);
         if ($support->param('dry_run')) {
           $support->log_verbose("Would store $vdb xref $e_id for $v_id.\n", 1);
         }
         else {
-          my $dbID = $ea->store($dbentry, $object->dbID, $type eq 'genes' ? 'gene' : 'transcript',1);
+          my $dbID = $ea->store($dbentry, $object->dbID,$types{$type}->{'type'},1);
           if (! $dbID) {
             # apparently, this xref had been stored already, so get xref_id from db
             my $sql = qq(
