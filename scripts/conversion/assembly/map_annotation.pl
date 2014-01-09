@@ -154,6 +154,7 @@ $support->parse_extra_options(
   'logic_names=s@',
   'prune',
   'keep_overlap_evi',
+  'for_web',
 );
 $support->allowed_params(
   $support->get_common_params,
@@ -168,6 +169,7 @@ $support->allowed_params(
   'logic_names',
   'prune',
   'keep_overlap_evi',
+  'for_web',
 );
 
 if ($support->param('help') or $support->error) {
