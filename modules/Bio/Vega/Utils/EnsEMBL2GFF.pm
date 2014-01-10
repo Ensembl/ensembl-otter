@@ -226,7 +226,9 @@ my $_new_feature_id_sub = sub {
             foreach my $tsct (@tsct_for_gff) {
                 $gff_string .= $tsct->to_gff(%args, extra_attrs => $extra_attrs);
             }
+            $gff_string .= "###\n";
         }
+
         return $gff_string;
     }
 
