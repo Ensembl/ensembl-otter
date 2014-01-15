@@ -69,9 +69,12 @@ sub _send_queued_requests {
         }
         catch {
             my $err = $_;
-            if ($err =~ /Zircon: busy connection/) {
+            my $requeue;
+            $requeue = 'busy connection' if $err =~ /Zircon: busy connection/;
+            $requeue = 'send_command_and_xml timeout' if $err =~ /send_command_and_xml: timeout/;
+            if ($requeue) {
                 $self->_logger->warn(
-                    "_send_queued_requests: load_features Zircon request failed, requeuing '${to_send_debug}'");
+                    "_send_queued_requests: load_features Zircon request failed [$requeue], requeuing '${to_send_debug}'");
                 $self->_clear_request($_) foreach @to_send;
                 unshift @$queue, @to_send;
             } else {
