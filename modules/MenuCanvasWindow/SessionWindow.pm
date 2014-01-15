@@ -2598,11 +2598,10 @@ sub zircon_zmap_view_features_loaded {
         $self->AceDatabase->zmap_config_update;
     }
 
-    # This will get called within Zircon once the request has finished
-    return sub {
-        $self->RequestQueuer->features_loaded_callback(@featuresets);
-        return;
-    };
+    # This will get called by Tk event loop when idle
+    $self->top_window->afterIdle(sub{ return $self->RequestQueuer->features_loaded_callback(@featuresets); });
+
+    return;
 }
 
 
