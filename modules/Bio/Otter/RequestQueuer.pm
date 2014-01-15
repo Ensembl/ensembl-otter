@@ -11,8 +11,9 @@ use Readonly;
 use Scalar::Util qw{ weaken };
 use Try::Tiny;
 
-Readonly my $MAX_CONCURRENT_REQUESTS => 10;
-Readonly my $REQUEST_MIN_BATCH_SIZE  => 4;
+Readonly my $MAX_CONCURRENT_REQUESTS => 12;
+Readonly my $REQUEST_MIN_BATCH_SIZE  =>  4;
+Readonly my $SEND_QUEUED_REQUESTS_CALLBACK_TIMEOUT_MILLISECS => 500;
 
 sub new {
     my ($pkg, $session) = @_;
@@ -43,7 +44,11 @@ sub _queue_features {
 
 sub _send_queued_requests {
     my ($self) = @_;
-    my $queue = $self->_queue;
+
+    if (my $id = $self->_sender_timeout_id) {
+        $id->cancel;
+        $self->_sender_timeout_id(undef);
+    }
 
     my $slots = $self->_slots_available;
     if ($slots < $REQUEST_MIN_BATCH_SIZE) {
@@ -52,6 +57,7 @@ sub _send_queued_requests {
         return;
     }
 
+    my $queue = $self->_queue;
     my @to_send;
     while ($self->_slots_available and $self->_queue_not_empty) {
         my $current = shift @$queue;
@@ -74,9 +80,18 @@ sub _send_queued_requests {
             $requeue = 'send_command_and_xml timeout' if $err =~ /send_command_and_xml: timeout/;
             if ($requeue) {
                 $self->_logger->warn(
-                    "_send_queued_requests: load_features Zircon request failed [$requeue], requeuing '${to_send_debug}'");
+                  "_send_queued_requests: load_features Zircon request failed [$requeue], requeuing '${to_send_debug}'"
+                  );
                 $self->_clear_request($_) foreach @to_send;
                 unshift @$queue, @to_send;
+                # Set a timeout in case we're not called before
+                my $id = $self->session->top_window->after(
+                    $SEND_QUEUED_REQUESTS_CALLBACK_TIMEOUT_MILLISECS,
+                    sub {
+                        $self->_logger->debug('_send_queued_requests: timeout callback');
+                        return $self->_send_queued_requests;
+                    });
+                $self->_sender_timeout_id($id);
             } else {
                 die $err;
             }
@@ -88,6 +103,13 @@ sub _send_queued_requests {
     }
 
     return;
+}
+
+sub _sender_timeout_id {
+    my ($self, @args) = @_;
+    ($self->{'_sender_timeout_id'}) = @args if @args;
+    my $_sender_timeout_id = $self->{'_sender_timeout_id'};
+    return $_sender_timeout_id;
 }
 
 sub features_loaded_callback {
