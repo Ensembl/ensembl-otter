@@ -11,8 +11,8 @@ use Readonly;
 use Scalar::Util qw{ weaken };
 use Try::Tiny;
 
-Readonly my $MAX_CONCURRENT_REQUESTS => 5;
-Readonly my $REQUEST_MIN_BATCH_SIZE  => 3;
+Readonly my $MAX_CONCURRENT_REQUESTS => 10;
+Readonly my $REQUEST_MIN_BATCH_SIZE  => 4;
 
 sub new {
     my ($pkg, $session) = @_;
