@@ -131,7 +131,7 @@ sub _add_zmap_source_config {
         $config->{$source->name} = {
             url         => $source->url($session),
             featuresets => $source->featuresets,
-            delayed     => $session->delayed($source) ? 'true' : 'false',
+            delayed     => 'true',
             stylesfile  => $stylesfile,
             group       => 'always',
         };

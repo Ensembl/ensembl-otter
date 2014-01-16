@@ -33,6 +33,7 @@ use Zircon::Tk::Context;
 use Zircon::ZMap;
 
 use Bio::Otter::Lace::Client;
+use Bio::Otter::RequestQueuer;
 use Bio::Otter::ZMap::XML;
 use Bio::Vega::Transform::Otter::Ace;
 
@@ -86,6 +87,14 @@ sub SequenceNotes {
     return $self->{'_sequence_notes'} ;
 }
 
+
+sub RequestQueuer {
+    my ($self, @args) = @_;
+    ($self->{'_RequestQueuer'}) = @args if @args;
+    my $RequestQueuer = $self->{'_RequestQueuer'};
+    return $RequestQueuer;
+}
+
 sub initialize {
     my ($self) = @_;
 
@@ -112,6 +121,8 @@ sub initialize {
     $self->AceDatabase->zmap_dir_init;
     $self->_zmap_view_new($self->{'_zmap'});
     delete $self->{'_zmap'};
+
+    $self->RequestQueuer(Bio::Otter::RequestQueuer->new($self));
 
     return;
 }
@@ -2148,7 +2159,7 @@ sub launch_exonerate {
 
     $self->save_ace($ace_text);
 
-    $self->zmap->load_features(@method_names) if $db_edited;
+    $self->RequestQueuer->request_features(@method_names) if $db_edited;
 
     return $db_edited;
 }
@@ -2586,6 +2597,9 @@ sub zircon_zmap_view_features_loaded {
         # and update the delayed flags in the zmap config file
         $self->AceDatabase->zmap_config_update;
     }
+
+    # This will get called by Tk event loop when idle
+    $self->top_window->afterIdle(sub{ return $self->RequestQueuer->features_loaded_callback(@featuresets); });
 
     return;
 }
