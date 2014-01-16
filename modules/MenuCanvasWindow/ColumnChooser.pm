@@ -594,12 +594,12 @@ sub load_filters {
     $self->AceDatabase->save_filter_state;
 
     my @statuses =  qw( Selected );
-    push @statuses, qw( Loading Visible ) if $is_recover;
+    push @statuses, qw( Queued Loading Visible ) if $is_recover;
 
     my @to_fetch = $cllctn->list_Columns_with_status(@statuses);
     my @to_fetch_names;
     foreach my $col (@to_fetch) {
-        $col->status('Loading');
+        $col->status('Queued');
         push @to_fetch_names, $col->Filter->name;
     }
 
@@ -646,7 +646,7 @@ sub load_filters {
 
     if (@to_fetch) {
         $self->AceDatabase->Client->reauthorize_if_cookie_will_expire_soon;
-        $self->SessionWindow->RequestQueuer->request_features(@to_fetch_names); # FIXME: just queue if initial load?
+        $self->SessionWindow->RequestQueuer->request_features(@to_fetch_names);
     }
 
     $top->Unbusy;
@@ -675,6 +675,16 @@ sub calcualte_text_column_sizes {
         $self->name_max_x($bkt, $name_max_x);
     }
 
+    return;
+}
+
+sub update_statuses_by_name {
+    my ($self, $status, @names) = @_;
+    my $cllctn = $self->SearchHistory->root_Collection;
+
+    foreach my $name (@names) {
+        $cllctn->get_Item_by_name($name)->status($status);
+    }
     return;
 }
 

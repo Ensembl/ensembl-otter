@@ -63,7 +63,6 @@ sub _send_queued_requests {
         my $current = shift @$queue;
         push @to_send, $current;
         $self->_current_request($current, $current);
-        # TODO: column status
     }
 
     if (@to_send) {
@@ -72,6 +71,7 @@ sub _send_queued_requests {
 
         try {
             $self->session->zmap->load_features(@to_send);
+            $self->session->ColumnChooser->update_statuses_by_name('Loading', @to_send);
         }
         catch {
             my $err = $_;
