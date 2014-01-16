@@ -45,7 +45,10 @@ use CanvasWindow;
     
     
     my $font = ['Helvetica', $size, 'normal'];
+    my $bold = ['Helvetica', $size, 'bold'];
+    my $deselect = sub{ $canvas->itemconfigure('Colour Name', -font => $font); };
     my $i = 0;
+    my $sn = '#';
     while (<RGB_TXT>) {
         s/^\s+//;
         chomp;
@@ -91,14 +94,23 @@ use CanvasWindow;
             -text       => $ace ? "$name ($ace)" : $name,
             -anchor     => 'nw',
             -font       => $font,
-            -tags       => $tags,
+            -tags       => ['Colour Name', @$tags],
             );
 
         $canvas->bind($name, '<Button-1>', sub{
+            $deselect->();
             print STDERR "$hex\t$name\n";
-            set_selection($hex_on_clip ? $hex : $name);
-            $canvas->SelectionOwn;
+            my $str = $hex_on_clip ? $hex : $name;
+            set_selection($str);
+            $canvas->clipboardClear;
+            $canvas->clipboardAppend($str);
+            $canvas->itemconfigure($txt, -font => $bold);
+            $canvas->SelectionOwn(-command => sub{
+                # my $time = $Tk::event->t;
+                # print STDERR "time = $time\n";
+                $deselect->();
             });
+        });
 
         $i++;
     }
@@ -118,10 +130,12 @@ use CanvasWindow;
         return unless $clip;
 
         my $str = substr($clip, $offset, $max_bytes);
+        return $str;
     }
 
     sub set_selection {
         $clip = shift;
+        warn "Selection set to '$clip'";
     }
 }
 
