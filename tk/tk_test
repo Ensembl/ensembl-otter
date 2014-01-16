@@ -86,6 +86,7 @@ $draw->pack(
 my $del_selected = $frame->Button(
     -text   => 'Delete selected',
     );
+$del_selected->bind('<ButtonPress-1>', [sub{ my ($widget, @stuff) = @_; print STDERR "[@stuff]\n" }, Tk::Ev('#'), Tk::Ev('t')]);
 $del_selected->configure(
     -command    => sub {
         $canvas->delete('selected');
