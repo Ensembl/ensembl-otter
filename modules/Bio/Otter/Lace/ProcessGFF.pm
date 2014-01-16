@@ -6,7 +6,7 @@ package Bio::Otter::Lace::ProcessGFF;
 use strict;
 use warnings;
 use Carp;
-use Text::ParseWords qw{ quotewords };
+
 use Hum::Ace::SubSeq;
 use Hum::Ace::Method;
 use Hum::Ace::Locus;
@@ -204,15 +204,17 @@ sub parse_gff_line {
     chomp($line);
     my ($seq_name, $source, $feat_type, $start, $end, $score, $strand, $frame, $group)
         = split(/\t/, $line, 9);
-    my $attrib = {};
-    # The "1" argument to quotewords tells it to keep the quotes
-    # so that we preserve the fields for the next level of parsing
-    foreach my $tag_val (quotewords('\s*;\s*', 1, $group)) {
-        # The "0" argument means that we now discard the quotes
-        my ($tag, @values) = quotewords('\s+', 0, $tag_val);
-        $attrib->{$tag} = "@values";
-    }
+    my $attrib = { map { _parse_tag_value() } split(/;/, $group) };
     return ($seq_name, $source, $feat_type, $start, $end, $score, $strand, $frame, $attrib);
+}
+
+sub _parse_tag_value {
+    return map { _gff3_unescape() } split(/=/, $_, 2);
+}
+
+sub _gff3_unescape {
+    s/%([[:xdigit:]]{2})/chr(hex($1))/eg;
+    return $_;
 }
 
 # $gff->{seqname}, $gff->{source}, $gff->{feature}, $gff->{start},
