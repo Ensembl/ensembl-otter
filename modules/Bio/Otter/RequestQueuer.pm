@@ -175,7 +175,7 @@ sub _logger {
 
 __END__
 
-=head1 NAME - Bio::Otter::Lace::Source::Collection
+=head1 NAME - Bio::Otter::RequestQueuer
 
 =head1 AUTHOR
 
