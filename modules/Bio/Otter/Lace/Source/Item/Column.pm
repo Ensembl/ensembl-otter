@@ -16,6 +16,7 @@ my (@valid_status, %status_color);
     my @_status_color_ini = qw{
         Available   #cccccc         #f0f0f0
         Selected    #ffe249         #fff4b6
+        Queued      #e8cba4         #fbebd5
         Loading     #ffbf49         #ffe5b6
         Visible     #a6dd33         #ccf37c
         Hidden      #d4f68d         #effed1

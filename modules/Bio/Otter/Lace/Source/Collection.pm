@@ -150,10 +150,16 @@ sub list_Columns {
 }
 
 sub list_Columns_with_status {
-    my ($self, $status) = @_;
+    my ($self, @statuses) = @_;
 
-    Bio::Otter::Lace::Source::Item::Column->confess_if_not_valid_status($status);
-    return grep { $_->status eq $status } $self->list_Columns;
+    my @all_columns = $self->list_Columns;
+    my @columns;
+
+    foreach my $status (@statuses) {
+        Bio::Otter::Lace::Source::Item::Column->confess_if_not_valid_status($status);
+        push @columns, grep { $_->status eq $status } @all_columns;
+    }
+    return @columns;
 }
 
 sub save_Columns_selected_flag_to_Filter_wanted {
