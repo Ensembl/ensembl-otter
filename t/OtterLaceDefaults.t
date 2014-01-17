@@ -61,7 +61,8 @@ sub correct_cfg_tt {
     plan tests => 2;
 
     my $orig_ucfg_fn = Bio::Otter::Lace::Defaults::user_config_filename();
-    like($orig_ucfg_fn, qr{^/.*/\.otter[/_]config$}, "real user config filename");
+    like($orig_ucfg_fn, qr{^/.*/\.otter(_config|/config\.ini)$},
+         "real user config filename: $orig_ucfg_fn");
 
     test_config('tmpcfg');
 
