@@ -414,6 +414,16 @@ sub select_none {
     return;
 }
 
+sub select_by_status {
+    my ($self, $status) = @_;
+
+    foreach my $col ($self->list_Columns_with_status($status)) {
+        $col->selected(1, { force => 1 });
+    }
+
+    return;
+}
+
 sub set_search_entry {
     my ($self, $string) = @_;
 

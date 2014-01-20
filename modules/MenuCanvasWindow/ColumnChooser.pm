@@ -174,6 +174,30 @@ sub initialize {
         -command    => sub{ $self->change_selection('select_none') },
         );
 
+    my $status_menu = $select_menu->Menu(-tearoff => 0);
+    $select_menu->add('cascade',
+                      -menu      => $status_menu,
+                      -label     => 'By status',
+                      -underline => 0,
+        );
+
+    $status_menu->add('command',
+        -label      => 'Queued',
+        -command    => sub{ $self->select_by_status('Queued') },
+        );
+    $status_menu->add('command',
+        -label      => 'Loading',
+        -command    => sub{ $self->select_by_status('Loading') },
+        );
+    $status_menu->add('command',
+        -label      => 'Empty',
+        -command    => sub{ $self->select_by_status('Empty') },
+        );
+    $status_menu->add('command',
+        -label      => 'Error',
+        -command    => sub{ $self->select_by_status('Error') },
+        );
+
     my $bottom_frame = $self->bottom_frame;
 
     # The user can press the Cancel button either before the AceDatabase is made
@@ -282,6 +306,15 @@ sub change_selection {
     my ($self, $method) = @_;
 
     $self->current_Collection->$method();
+    $self->redraw;
+
+    return;
+}
+
+sub select_by_status {
+    my ($self, $status) = @_;
+
+    $self->current_Collection->select_by_status($status);
     $self->redraw;
 
     return;
@@ -646,7 +679,9 @@ sub load_filters {
 
     if (@to_fetch) {
         $self->AceDatabase->Client->reauthorize_if_cookie_will_expire_soon;
-        $self->SessionWindow->RequestQueuer->request_features(@to_fetch_names);
+        my $rq = $self->SessionWindow->RequestQueuer;
+        $rq->flush_current_requests; # in case of Zircon message loss
+        $rq->request_features(@to_fetch_names);
     }
 
     $top->Unbusy;

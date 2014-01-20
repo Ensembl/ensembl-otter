@@ -129,6 +129,12 @@ sub features_loaded_callback {
     return;
 }
 
+sub flush_current_requests {
+    my ($self) = @_;
+    $self->{'_current_requests'} = {};
+    return;
+}
+
 sub _slots_available {
     my ($self) = @_;
     my $n_current = scalar keys %{$self->{_current_requests}};
