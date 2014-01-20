@@ -68,7 +68,7 @@ sub confess_if_not_valid_status {
 }
 
 sub selected {
-    my($self, $flag) = @_;
+    my($self, $flag, $options) = @_;
 
     if (defined $flag) {
         $self->{'_selected'} = $flag ? 1 : 0;
@@ -83,6 +83,9 @@ sub selected {
             elsif ($status eq 'Hidden') {
                 ### Need to do stuff
                 $self->status('Visible');
+            }
+            elsif ($options and $options->{force}) { # for user-requested reload
+                $self->status('Selected');
             }
         }
         else {
