@@ -58,11 +58,11 @@ sub store_hit_data_from_gff {
         }
         $accession_type_cache->save_accession_info(
             $attrib->{'Name'},
-            $attrib->{'Taxon_ID'},
+            $attrib->{'taxon_id'},
             $evi_type,
-            $attrib->{'Description'},
-            $attrib->{'DB_Name'},
-            $attrib->{'Length'},
+            $attrib->{'description'},
+            $attrib->{'db_name'},
+            $attrib->{'length'},
             );
     }
     close $gff_fh or confess "Error reading GFF file '$gff_file'; $!";
@@ -149,18 +149,18 @@ sub make_ace_transcripts_from_gff_fh {
             $tsct->{$name} = $sub;
         }
 
-        if ($feat_type eq 'Sequence') {
+        if ($feat_type eq 'transcript') {
             $sub->strand($strand eq '-' ? -1 : 1);
-            if (my $stable = $attrib->{'Stable_ID'}) {
+            if (my $stable = $attrib->{'stable_id'}) {
                 $sub->otter_id($stable);
             }
-            if (my $loc_name = $attrib->{'Locus'}) {
+            if (my $loc_name = $attrib->{'locus'}) {
                 my $locus = $locus_by_name{$loc_name};
                 unless ($locus) {
                     $locus = $locus_by_name{$loc_name}
                         = Hum::Ace::Locus->new;
                     $locus->name($loc_name);
-                    if (my $stable = $attrib->{'Locus_Stable_ID'}) {
+                    if (my $stable = $attrib->{'locus_stable_id'}) {
                         $locus->otter_id($stable);
                     }
                 }
@@ -178,7 +178,7 @@ sub make_ace_transcripts_from_gff_fh {
             my $exon = $sub->new_Exon;
             $exon->start($start);
             $exon->end($end);
-            if (my $stable = $attrib->{'Stable_ID'}) {
+            if (my $stable = $attrib->{'stable_id'}) {
                 $exon->otter_id($stable);
             }
         }
@@ -189,7 +189,7 @@ sub make_ace_transcripts_from_gff_fh {
 
             $sub->translation_region($start, $end);
             $sub->GeneMethod($coding_gene_method);
-            if (my $stable = $attrib->{'Stable_ID'}) {
+            if (my $stable = $attrib->{'stable_id'}) {
                 $sub->translation_otter_id($stable);
             }
         }
