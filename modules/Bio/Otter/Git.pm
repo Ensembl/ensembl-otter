@@ -67,7 +67,7 @@ sub _init {
 }
 
 
-sub dump {
+sub dump { # for the benefit of logfiles
     my ($pkg) = @_;
     warn sprintf "git HEAD: %s\n", $pkg->param('head');
     return;
@@ -108,7 +108,15 @@ CACHE_TEMPLATE
     return $txt;
 }
 
-sub _create_cache { ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
+sub create_cache { # to be called from otterlace_build script as a oneliner
+    # Use this after support for v79 is gone.
+    # otterlace_build (as of otter/79 tag) calls _create_cache
+    # instead.
+    my $pkg = shift;
+    return $pkg->_create_cache(@_);
+}
+
+sub _create_cache { # called from otterlace_build script as a oneliner
     my ($pkg, $module_dir) = @_;
 
     my $cache_contents = join '', map {
@@ -122,7 +130,8 @@ sub _create_cache { ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
     my $cache_path = "${git_dir}/Cache.pm";
     open my $cache_h, '>', $cache_path
         or die "failed to open the git cache '${cache_path}': $!";
-    printf $cache_h $pkg->_cache_template(), $cache_contents;
+    printf {$cache_h} $pkg->_cache_template(), $cache_contents
+        or die "failed to print to the git cache '${cache_path}': $!";
     close $cache_h
         or die "failed to close the git cache '${cache_path}': $!";
 
