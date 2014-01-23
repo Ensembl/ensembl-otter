@@ -44,12 +44,12 @@ sub features {
                 $start + ( $index * ( $end + 1 - $start ) ) / $bin_count;
             my $feature_end = 
                 ( $start + ( ( $index + 1 ) * ( $end + 1 - $start ) ) / $bin_count ) - 1;
-            my $feature = {
+            my $feature = Bio::Otter::Fetch::BigWig::Feature->new(
                 start  => $feature_start,
                 end    => $feature_end,
                 score  => $score,
-            };
-            push @{$features}, bless $feature, "Bio::Otter::Fetch::BigWig::Feature";
+                );
+            push @{$features}, $feature;
         }
         $index++;
     }
@@ -81,6 +81,13 @@ sub bigwig {
 }
 
 package Bio::Otter::Fetch::BigWig::Feature; ## no critic (Modules::ProhibitMultiplePackages)
+
+sub new {
+    my ($pkg, %args) = @_;
+    my $new = \ %args;
+    bless $new, $pkg;
+    return $new;
+}
 
 sub start  { return shift->{start};  }
 sub end    { return shift->{end};    }
