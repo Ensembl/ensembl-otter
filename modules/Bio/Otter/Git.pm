@@ -14,20 +14,17 @@ use warnings;
 use Try::Tiny;
 use File::Basename;
 
-my $dir = dirname __FILE__;
-
-my $commands = {
-    head => q(git describe --tags --match 'humpub-release-*' HEAD),
-};
-
 our $CACHE = {
+# during _init, populated from Bio::Otter::Git::Cache if installed
 };
 
 sub _getcache {
+    my ($pkg) = @_;
     #  Attempt to load a cache.
     return try {
         require Bio::Otter::Git::Cache;
         my $loaded = $INC{'Bio/Otter/Git/Cache.pm'};
+        my $dir = $pkg->_dir;
         if (dirname(dirname($loaded)) ne $dir) {
             die "$dir loaded cache $loaded from wrong tree - suspected module shadowing";
         }
@@ -44,8 +41,10 @@ sub _getcache {
 }
 
 sub _try_git {
+    my ($pkg) = @_;
     return try {
         my $command = q(git tag);
+        my $dir = $pkg->_dir;
         my $ok = system(qq(cd '$dir' && $command > /dev/null)) == 0;
         warn "'$command' failed: something is wrong with your git checkout"
           unless $ok;
@@ -60,8 +59,13 @@ sub _try_git {
     };
 }
 
-_getcache() || _try_git();
-# Or we dev checkout and can't run Git.  ->param will return undef.
+sub _init {
+    my ($pkg) = @_;
+    my $ok = $pkg->_getcache() || $pkg->_try_git();
+    # Or we dev checkout and can't run Git.  ->param will return undef.
+    return 0;
+}
+
 
 sub dump {
     my ($pkg) = @_;
@@ -78,32 +82,38 @@ sub as_text {
 }
 
 
-my $cache_template = <<'CACHE_TEMPLATE'
+sub _cache_template {
+    my $txt = <<'CACHE_TEMPLATE';
+ package Bio::Otter::Git::Cache;
 
-package Bio::Otter::Git::Cache;
+ use strict;
+ use warnings;
 
-use strict;
-use warnings;
+ $Bio::Otter::Git::CACHE = {
+ %s};
 
-$Bio::Otter::Git::CACHE = {
-%s};
+ 1;
 
-1;
+ =head1 DESCRIPTION
 
-=head1 AUTHOR
+ This module file is auto-generated at build time by L<Bio::Otter::Git>.
 
-Ana Code B<email> anacode@sanger.ac.uk
+ =head1 AUTHOR
 
-=cut
+ Ana Code B<email> anacode@sanger.ac.uk
+
+ =cut
 CACHE_TEMPLATE
-    ;
+    $txt =~ s/^ //mg; # indentation is to prevent POD being seen
+    return $txt;
+}
 
 sub _create_cache { ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
     my ($pkg, $module_dir) = @_;
 
     my $cache_contents = join '', map {
         sprintf "    %s => q(%s),\n", $_, $pkg->param($_);
-    } keys %{$commands};
+    } $pkg->_param_list;
 
     require File::Path;
     my $git_dir = "${module_dir}/Bio/Otter/Git";
@@ -112,7 +122,7 @@ sub _create_cache { ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
     my $cache_path = "${git_dir}/Cache.pm";
     open my $cache_h, '>', $cache_path
         or die "failed to open the git cache '${cache_path}': $!";
-    printf $cache_h $cache_template, $cache_contents;
+    printf $cache_h $pkg->_cache_template(), $cache_contents;
     close $cache_h
         or die "failed to close the git cache '${cache_path}': $!";
 
@@ -129,9 +139,8 @@ sub param {
 
 sub _param {
     my ($pkg, $key) = @_;
-    my $command = $commands->{$key};
-    die qq(invalid git parameter key "${key}") unless $command;
-    my $shell_command = sprintf q( cd '%s' && %s ), $dir, $command;
+    my $command = $pkg->_param_cmd($key);
+    my $shell_command = sprintf q( cd '%s' && %s ), $pkg->_dir, $command;
     my $value = qx( $shell_command ); ## no critic (InputOutput::ProhibitBacktickOperators)
     chomp $value;
     unless ($? == 0) {
@@ -140,6 +149,30 @@ sub _param {
     }
     return $value;
 }
+
+{
+    my %commands =
+      (head => q(git describe --tags --match 'humpub-release-*' HEAD),
+      );
+
+    sub _param_list {
+        return keys %commands;
+    }
+
+    sub _param_cmd {
+        my ($pkg, $key) = @_;
+        my $command = $commands{$key};
+        die qq(invalid git parameter key "${key}") unless $command;
+        return $command;
+    }
+}
+
+{
+    my $dir = dirname __FILE__;
+    sub _dir { return $dir }
+}
+
+__PACKAGE__->_init;
 
 1;
 
