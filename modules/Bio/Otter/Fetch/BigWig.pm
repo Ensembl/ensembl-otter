@@ -8,6 +8,8 @@ use warnings;
 
 use Carp;
 
+use Bio::DB::BigWig qw( binMean );
+
 my $bin_size = 40;
 
 sub new {
@@ -37,7 +39,7 @@ sub features {
     my $index = 0;
     for my $bin ( @{$summary->statistical_summary($bin_count)} ) {
         if ($bin->{validCount} > 0) {
-            my $score = $bin->{sumData};
+            my $score = binMean($bin);
             my $feature_start =
                 $start + ( $index * ( $end + 1 - $start ) ) / $bin_count;
             my $feature_end = 
