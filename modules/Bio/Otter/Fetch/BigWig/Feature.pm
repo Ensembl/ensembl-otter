@@ -13,9 +13,25 @@ sub new {
     return $new;
 }
 
-sub start  { return shift->{start};  }
-sub end    { return shift->{end};    }
-sub score  { return shift->{score};  }
+# attributes
+
+sub start {
+    my ($self) = @_;
+    my $start = $self->{'start'};
+    return $start;
+}
+
+sub end {
+    my ($self) = @_;
+    my $end = $self->{'end'};
+    return $end;
+}
+
+sub score {
+    my ($self) = @_;
+    my $score = $self->{'score'};
+    return $score;
+}
 
 1;
 
