@@ -10,6 +10,8 @@ use Carp;
 
 use Bio::DB::BigWig qw( binMean );
 
+use Bio::Otter::Fetch::BigWig::Feature;
+
 my $bin_size = 40;
 
 sub new {
@@ -79,19 +81,6 @@ sub bigwig {
     my $bigwig = $self->{'-bigwig'};
     return $bigwig;
 }
-
-package Bio::Otter::Fetch::BigWig::Feature; ## no critic (Modules::ProhibitMultiplePackages)
-
-sub new {
-    my ($pkg, %args) = @_;
-    my $new = \ %args;
-    bless $new, $pkg;
-    return $new;
-}
-
-sub start  { return shift->{start};  }
-sub end    { return shift->{end};    }
-sub score  { return shift->{score};  }
 
 1;
 
