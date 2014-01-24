@@ -121,8 +121,8 @@ sub create_cache { # to be called from otterlace_build script as a oneliner
     # Use this after support for v79 is gone.
     # otterlace_build (as of otter/79 tag) calls _create_cache
     # instead.
-    my $pkg = shift;
-    return $pkg->_create_cache(@_);
+    my ($pkg, @arg) = @_;
+    return $pkg->_create_cache(@arg);
 }
 
 sub _create_cache { # called from otterlace_build script as a oneliner
@@ -163,9 +163,9 @@ sub _param {
     return $pkg->$method(@arg);
 }
 
+# called via %commands
 sub _shell_param {
     my ($pkg, $command) = @_;
-    die "@_" unless 2 == @_;
     my $shell_command = sprintf q( cd '%s' && %s ), $pkg->_dir, $command;
     my $value = qx( $shell_command ); ## no critic (InputOutput::ProhibitBacktickOperators)
     chomp $value;
@@ -176,9 +176,9 @@ sub _shell_param {
     return $value;
 }
 
-sub _dist_conf {
+# called via %commands
+sub _dist_conf { ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
     my ($pkg) = @_;
-    die "@_" unless 1 == @_;
 
     my $projdir = $pkg->_projdir;
     my $dcdir = "$projdir/dist/conf";
@@ -197,7 +197,8 @@ sub _dist_conf {
     return \%dist_conf;
 }
 
-sub _feature_branch {
+# called via %commands
+sub _feature_branch { ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
     my ($pkg) = @_;
     my $head = $pkg->_shell_param(q( git symbolic-ref -q HEAD ));
     if (!defined $head) {
