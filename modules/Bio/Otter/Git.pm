@@ -20,6 +20,22 @@ use File::Basename;
 # require File::Path;
 
 
+=head1 NAME
+
+Bio::Otter::Git - information from version control
+
+=head1 DESCRIPTION
+
+Obtains and installs information from Git, so code can know where it
+came from and what it needs.
+
+=head1 CLASS METHODS
+
+There are no objects here.
+
+=cut
+
+
 our $CACHE = {
 # during _init, populated from Bio::Otter::Git::Cache if installed
 };
@@ -73,7 +89,14 @@ sub _init {
 }
 
 
-sub dump { # for the benefit of logfiles
+=head2 dump()
+
+Generates a warning identifying the code, for the benefit of logfiles.
+Returns nothing.
+
+=cut
+
+sub dump {
     my ($pkg) = @_;
     my $feat = $pkg->param('feature');
     warn sprintf "git HEAD: %s%s\n", $pkg->param('head'),
@@ -81,7 +104,13 @@ sub dump { # for the benefit of logfiles
     return;
 }
 
-# Show something more user friendly for released versions
+
+=head2 as_text()
+
+Return user friendly text describing released versions.
+
+=cut
+
 sub as_text {
     my ($called) = @_;
     my $head = $called->param('head');
@@ -117,7 +146,15 @@ CACHE_TEMPLATE
     return $txt;
 }
 
-sub create_cache { # to be called from otterlace_build script as a oneliner
+
+=head2 create_cache()
+
+To be called from otterlace_build script as a oneliner, for the
+side-effect of writing a .pm file.
+
+=cut
+
+sub create_cache {
     # Use this after support for v79 is gone.
     # otterlace_build (as of otter/79 tag) calls _create_cache
     # instead.
@@ -148,7 +185,16 @@ sub _create_cache { # called from otterlace_build script as a oneliner
     return;
 }
 
-# may error or return undef when data is not available
+
+=head2 param($key)
+
+Fetch some information, either from the cache (when installed) or by
+calling private methods.  Returns various strings and refs.
+
+May error or return undef when data is not available.
+
+=cut
+
 sub param {
     my ($pkg, $key) = @_;
     $CACHE->{$key} = $pkg->_param($key)
@@ -210,6 +256,17 @@ sub _feature_branch { ## no critic (Subroutines::ProhibitUnusedPrivateSubroutine
         return '';
     }
 }
+
+
+=head2 dist_conf($key)
+
+Return string from the C<dist/conf/$key> file, directly or as
+recording during install.  Empty strings indicate "not set".
+
+Dies if the key is invalid.  The set of available keys tends to grow
+with major version number.
+
+=cut
 
 sub dist_conf {
     my ($pkg, $key) = @_;
