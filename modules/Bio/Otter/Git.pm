@@ -14,6 +14,12 @@ use warnings;
 use Try::Tiny;
 use File::Basename;
 
+### sometimes
+#
+# require Data::Dumper;
+# require File::Path;
+
+
 our $CACHE = {
 # during _init, populated from Bio::Otter::Git::Cache if installed
 };
@@ -89,8 +95,7 @@ sub _cache_template {
  use strict;
  use warnings;
 
- $Bio::Otter::Git::CACHE = {
- %s};
+ %s
 
  1;
 
@@ -119,9 +124,10 @@ sub create_cache { # to be called from otterlace_build script as a oneliner
 sub _create_cache { # called from otterlace_build script as a oneliner
     my ($pkg, $module_dir) = @_;
 
-    my $cache_contents = join '', map {
-        sprintf "    %s => q(%s),\n", $_, $pkg->param($_);
-    } $pkg->_param_list;
+    require Data::Dumper;
+    my %cache = map {( $_ => $pkg->param($_) )} $pkg->_param_list;
+    my $dd = Data::Dumper->new([ \%cache ], [ "${pkg}::CACHE" ]);
+    my $cache_contents = $dd->Purity(1)->Useqq(1)->Sortkeys(1)->Dump;
 
     require File::Path;
     my $git_dir = "${module_dir}/Bio/Otter/Git";
@@ -149,6 +155,13 @@ sub param {
 sub _param {
     my ($pkg, $key) = @_;
     my $command = $pkg->_param_cmd($key);
+    my ($method, @arg) = @$command;
+    return $pkg->$method(@arg);
+}
+
+sub _shell_param {
+    my ($pkg, $command) = @_;
+    die "@_" unless 2 == @_;
     my $shell_command = sprintf q( cd '%s' && %s ), $pkg->_dir, $command;
     my $value = qx( $shell_command ); ## no critic (InputOutput::ProhibitBacktickOperators)
     chomp $value;
@@ -159,9 +172,46 @@ sub _param {
     return $value;
 }
 
+sub _dist_conf {
+    my ($pkg) = @_;
+    die "@_" unless 1 == @_;
+
+    my $projdir = $pkg->_projdir;
+    my $dcdir = "$projdir/dist/conf";
+    opendir my $dh, $dcdir or die "opendir $dcdir: $!";
+
+    my %dist_conf; # key = leaf, value = value
+    foreach my $leaf (grep { $_ !~ /^\.\.?$/ } readdir $dh) {
+        my $fn = "$dcdir/$leaf";
+        open my $fh, '<', $fn or die "open $fn: $!";
+        my $val = <$fh>;
+        chomp $val;
+#        my $comment = do { local $/; <$fh> };
+#        $comment =~ s{\A\n+}{};
+        $dist_conf{$leaf} = $val;
+    }
+    return \%dist_conf;
+}
+
+sub dist_conf {
+    my ($pkg, $key) = @_;
+    my $conf = $pkg->param('dist_conf');
+
+    if (defined $key) {
+        # Like team_tools' config_get function
+        die "Requested dist/conf/$key is absent"
+          unless exists $conf->{$key};
+        return $conf->{$key};
+    } else {
+        my @k = sort keys %$conf;
+        return @k;
+    }
+}
+
 {
     my %commands =
-      (head => q(git describe --tags --match 'humpub-release-*' HEAD),
+      (head => [ _shell_param => q(git describe --tags --match 'humpub-release-*' HEAD) ],
+       dist_conf => [ '_dist_conf' ],
       );
 
     sub _param_list {
@@ -179,6 +229,17 @@ sub _param {
 {
     my $dir = dirname __FILE__;
     sub _dir { return $dir }
+}
+
+sub _projdir {
+    my ($pkg) = @_;
+    my $dir = $pkg->_dir; # of this module file
+    my $tail = __PACKAGE__;
+    $tail =~ s{::[^:]+$}{};
+    $tail =~ s{::}{/};
+    $dir =~ s{(^|/)(lib|modules)/\Q$tail\E$}{}
+      or die "Cannot make projdir from $dir with tail $tail";
+    return $dir;
 }
 
 __PACKAGE__->_init;
