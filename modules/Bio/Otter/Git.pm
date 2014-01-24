@@ -75,7 +75,9 @@ sub _init {
 
 sub dump { # for the benefit of logfiles
     my ($pkg) = @_;
-    warn sprintf "git HEAD: %s\n", $pkg->param('head');
+    my $feat = $pkg->param('feature');
+    warn sprintf "git HEAD: %s%s\n", $pkg->param('head'),
+      $feat ? " (feature $feat)" : '';
     return;
 }
 
@@ -83,7 +85,9 @@ sub dump { # for the benefit of logfiles
 sub as_text {
     my ($called) = @_;
     my $head = $called->param('head');
-    return "v$1.$2" if $head =~ m{^humpub-release-(\d+)-(\d+)$};
+    my $feat = $called->param('feature');
+    return "v$1.$2" if !$feat && $head =~ m{^humpub-release-(\d+)-(\d+)$};
+    return "$head (feature $feat)" if $feat;
     return $head;
 }
 
@@ -193,6 +197,19 @@ sub _dist_conf {
     return \%dist_conf;
 }
 
+sub _feature_branch {
+    my ($pkg) = @_;
+    my $head = $pkg->_shell_param(q( git symbolic-ref -q HEAD ));
+    if (!defined $head) {
+        return 'DETACHED-HEAD'; # command fail warning already given
+    } elsif ($head =~ m{^refs/heads/feature/(.*)$}) {
+        return $1;
+    } else {
+        # some other branch or tag
+        return '';
+    }
+}
+
 sub dist_conf {
     my ($pkg, $key) = @_;
     my $conf = $pkg->param('dist_conf');
@@ -212,6 +229,7 @@ sub dist_conf {
     my %commands =
       (head => [ _shell_param => q(git describe --tags --match 'humpub-release-*' HEAD) ],
        dist_conf => [ '_dist_conf' ],
+       feature => [ '_feature_branch' ],
       );
 
     sub _param_list {
