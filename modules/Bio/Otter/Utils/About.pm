@@ -20,7 +20,8 @@ Obtain user-friendly information about the tools' versions.
 
 =head2 about_text()
 
-Return multi-line text containing version number(s) and URL(s).
+Return multi-line text containing version number(s), source
+configuration info and URL(s).
 
 =cut
 
@@ -32,12 +33,19 @@ sub about_text {
       try { $pkg->tools_versions() }
         catch { "some parts broken: $_" };
 
+    my ($vsn_zircon, $vsn_perlmod, $vsn_cliens) = map
+      { Bio::Otter::Git->dist_conf($_) }
+        qw( zircon PerlModules client_ensembl_version );
+
     return <<"TEXT";
 This is Otterlace version $vsn
-with
-$anno\n
+
 Otterlace web page
   http://www.sanger.ac.uk/resources/software/otterlace/
+
+Contains\n${anno}Client Ensembl from $vsn_cliens
+PerlModules from $vsn_perlmod
+Zircon from $vsn_zircon
 TEXT
 }
 
