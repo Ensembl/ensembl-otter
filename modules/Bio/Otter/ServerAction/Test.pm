@@ -155,6 +155,7 @@ sub generate {
     $out{version} =
       { major => Bio::Otter::Version->version,
         '$^X' => $^X, '$]' => $],
+        CACHE => $Bio::Otter::Git::CACHE,
         ensembl_api => Bio::EnsEMBL::ApiVersion::software_version(),
         ensembl_from => $INC{'Bio/EnsEMBL/ApiVersion.pm'},
         otter_from => __FILE__,
