@@ -23,6 +23,7 @@ use XML::Simple;
 use Bio::Vega::Author;
 use Bio::Vega::ContigLock;
 
+use Bio::Otter::Git; # for feature branch detection
 use Bio::Otter::Debug;
 use Bio::Otter::Version;
 use Bio::Otter::Lace::Defaults;
@@ -605,9 +606,11 @@ sub url_root {
 sub _url_root {
     my ($self) = @_;
 
-    my $url = sprintf '%s/%s'
+    my $feat = Bio::Otter::Git->param('feature');
+    my $url = sprintf '%s/%s%s'
         , $self->config_value('url')
         , Bio::Otter::Version->version
+        , ($feat ? "_$feat" : '')
         ;
 
     return $url;
