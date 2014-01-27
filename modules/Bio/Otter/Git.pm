@@ -18,6 +18,8 @@ use File::Basename;
 #
 # require Data::Dumper;
 # require File::Path;
+#
+# require Otter::Paths
 
 
 =head1 NAME
@@ -282,6 +284,49 @@ sub dist_conf {
         return @k;
     }
 }
+
+
+sub _server_ensembl {
+    my ($pkg) = @_;
+    my $evsn = $pkg->dist_conf('server_ensembl_version');
+    return "ensembl$evsn";
+}
+
+
+=head2 import(...)
+
+The following tags may be provided, to ask L<Otter::Paths> to find the
+appropriate library on C<@INC>.
+
+=over 4
+
+=item :server_ensembl
+
+Provide the necessary server ensembl API, using L</dist_conf>.
+
+=back
+
+=cut
+
+sub import {
+    my ($pkg, @key) = @_;
+    return unless @key;
+
+    my @import;
+    foreach my $key (@key) {
+        if ($key eq ':server_ensembl') {
+            push @import, $pkg->_server_ensembl;
+        } else {
+            die "Unknown import key '$key'";
+        }
+    }
+    if (@import) {
+        require Otter::Paths;
+        Otter::Paths->import(@import);
+    }
+    return;
+}
+
 
 {
     my %commands =
