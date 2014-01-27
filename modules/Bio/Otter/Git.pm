@@ -31,6 +31,18 @@ Bio::Otter::Git - information from version control
 Obtains and installs information from Git, so code can know where it
 came from and what it needs.
 
+From this, it has L</import> tags to
+
+=over 4
+
+=item * ask for the necessary server-side Ensembl version
+
+=item * check that major version and feature branch expected by the
+script are actually supplied
+
+=back
+
+
 =head1 CLASS METHODS
 
 There are no objects here.
@@ -41,6 +53,9 @@ There are no objects here.
 our $CACHE = {
 # during _init, populated from Bio::Otter::Git::Cache if installed
 };
+
+our $WANT_MAJ_FEAT; # from Otter::Paths
+
 
 sub _getcache {
     my ($pkg) = @_;
@@ -286,6 +301,28 @@ sub dist_conf {
 }
 
 
+=head2 assert_match()
+
+Check the Otter version wanted, written by L<Otter::Paths> to
+C<$Bio::Otter::Git::WANT_MAJ_FEAT>, matches the actual value.
+
+Dies if C<WANT_MAJ_FEAT> is not set or doesn't match.
+
+=cut
+
+sub assert_match {
+    my ($pkg) = @_;
+    my $got = $pkg->dist_conf('version_major');
+    my $feat = $pkg->param('feature');
+    $got .= "_$feat" if $feat ne '';
+
+    die "Cannot check (major version, feature branch) match"
+      unless defined $WANT_MAJ_FEAT;
+    die "$pkg\->assert_match: wanted $WANT_MAJ_FEAT, got $got"
+      unless $WANT_MAJ_FEAT eq $got;
+    return;
+}
+
 sub _server_ensembl {
     my ($pkg) = @_;
     my $evsn = $pkg->dist_conf('server_ensembl_version');
@@ -304,6 +341,14 @@ appropriate library on C<@INC>.
 
 Provide the necessary server ensembl API, using L</dist_conf>.
 
+=item :match
+
+Calls L</assert_match> for the side effect of C<die>ing when the
+(major version, feature branch) expected by L<Otter::Path> do not
+match our actual version.
+
+This is mediated by C<$Bio::Otter::Git::WANT_MAJ_FEAT>.
+
 =back
 
 =cut
@@ -316,6 +361,8 @@ sub import {
     foreach my $key (@key) {
         if ($key eq ':server_ensembl') {
             push @import, $pkg->_server_ensembl;
+        } elsif ($key eq ':match') {
+            $pkg->assert_match;
         } else {
             die "Unknown import key '$key'";
         }
