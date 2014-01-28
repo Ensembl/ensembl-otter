@@ -19,6 +19,7 @@ use File::Basename;
 # require Data::Dumper;
 # require File::Path;
 #
+# require Cwd;
 # require Otter::Paths
 
 
@@ -56,6 +57,12 @@ our $CACHE = {
 
 our $WANT_MAJ_FEAT; # from Otter::Paths
 
+sub _hardwired_PATH {
+    # this ugly bodge is needed for the symlinked-dev corner case
+    return join ':', qw( /bin /usr/bin ), # standard
+      grep { -d $_ }
+        qw( /usr/local/git/bin /opt/local/bin ); # for local laptops
+}
 
 sub _getcache {
     my ($pkg) = @_;
@@ -81,21 +88,11 @@ sub _getcache {
 
 sub _try_git {
     my ($pkg) = @_;
-    return try {
-        my $command = q(git tag);
-        my $dir = $pkg->_dir;
-        my $ok = system(qq(cd '$dir' && $command > /dev/null)) == 0;
-        warn "'$command' failed: something is wrong with your git checkout"
-          unless $ok;
-        $ok;
-    } catch {
-        if (m(Insecure .* while running with -T switch)) {
-            warn "Dev checkout under Apache? Cannot run git: $_";
-            0;
-        } else {
-            die "unexpected error with Git: $_";
-        }
-    };
+    my $command = q(git tag);
+    my $ok = $pkg->_shell_param($command);
+    warn "'$command' failed: something is wrong with your git checkout"
+      unless $ok;
+    return $ok;
 }
 
 sub _init {
@@ -230,7 +227,21 @@ sub _param {
 sub _shell_param {
     my ($pkg, $command) = @_;
     my $shell_command = sprintf q( cd '%s' && %s ), $pkg->_dir, $command;
-    my $value = qx( $shell_command ); ## no critic (InputOutput::ProhibitBacktickOperators)
+
+    ## no critic (InputOutput::ProhibitBacktickOperators)
+    my $value = try {
+        qx( $shell_command );
+    } catch {
+        if (m(Insecure .* while running with -T switch)) {
+            warn "[w] Symlinked-dev checkout under Apache?";
+            $pkg->_reset_PATH;
+            # then try again
+            qx( $shell_command );
+        } else {
+            die "unexpected error with Git: $_";
+        }
+    };
+
     chomp $value;
     unless ($? == 0) {
         warn qq("$shell_command" failed);
@@ -405,9 +416,29 @@ sub _projdir {
     my $tail = __PACKAGE__;
     $tail =~ s{::[^:]+$}{};
     $tail =~ s{::}{/};
-    $dir =~ s{(^|/)(lib|modules)/\Q$tail\E$}{}
-      or die "Cannot make projdir from $dir with tail $tail";
-    return $dir;
+    my $pat = qr{(^|/)(lib|modules)/\Q$tail\E$};
+    # $2 alternation in case of a rename to more Perl-ish layout
+
+    if ($dir =~ s{$pat}{}) {
+        # a plain checkout.
+        return $dir;
+    } # else probably symlinked from a webvm.git checkout
+
+    require Cwd;
+    $dir = Cwd::abs_path($dir);
+    if ($dir =~ s{$pat}{}) {
+        # fixed by resolving symlink
+        return $dir;
+    }
+    die "Cannot make projdir from $dir with tail $tail";
+}
+
+sub _reset_PATH {
+    my ($pkg) = @_;
+    my $new_path = $pkg->_hardwired_PATH;
+    warn "Resetting \$ENV{PATH}\n  old PATH=$ENV{PATH}\n  new PATH=$new_path\n";
+    $ENV{PATH} = $new_path;
+    return;
 }
 
 __PACKAGE__->_init;

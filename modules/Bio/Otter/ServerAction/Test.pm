@@ -161,10 +161,7 @@ sub generate {
         otter_from => __FILE__,
         otter_origin => $INC{'Bio/Otter/Git/Cache.pm'} ? 'build' : 'clone',
       };
-    $out{version}{code} = try {
-        local $ENV{PATH} = '/bin:/usr/bin';
-        Bio::Otter::Git->as_text;
-    } catch { "FAIL: $_" };
+    $out{version}{code} = try { Bio::Otter::Git->as_text } catch { "FAIL: $_" };
 
     my $dbh = DBI->connect
       ("DBI:mysql:database=pipe_human;host=otp1slave;port=3322",
