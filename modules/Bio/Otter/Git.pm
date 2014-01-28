@@ -19,6 +19,7 @@ use File::Basename;
 # require Data::Dumper;
 # require File::Path;
 #
+# require Cwd;
 # require Otter::Paths
 
 
@@ -405,9 +406,21 @@ sub _projdir {
     my $tail = __PACKAGE__;
     $tail =~ s{::[^:]+$}{};
     $tail =~ s{::}{/};
-    $dir =~ s{(^|/)(lib|modules)/\Q$tail\E$}{}
-      or die "Cannot make projdir from $dir with tail $tail";
-    return $dir;
+    my $pat = qr{(^|/)(lib|modules)/\Q$tail\E$};
+    # $2 alternation in case of a rename to more Perl-ish layout
+
+    if ($dir =~ s{$pat}{}) {
+        # a plain checkout.
+        return $dir;
+    } # else probably symlinked from a webvm.git checkout
+
+    require Cwd;
+    $dir = Cwd::abs_path($dir);
+    if ($dir =~ s{$pat}{}) {
+        # fixed by resolving symlink
+        return $dir;
+    }
+    die "Cannot make projdir from $dir with tail $tail";
 }
 
 __PACKAGE__->_init;
