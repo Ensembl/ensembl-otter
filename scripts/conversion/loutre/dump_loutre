@@ -722,7 +722,7 @@ foreach my $name (@{$chr_names_wanted}) {
         }
       }
       #filter out genes on non-anotated clones and without fsv tags
-      if ($support->param('dbname') =~ /danio/) {
+      if ($support->param('dbname') =~ /danio|zebrafish/) {
         my $annotated_clone = 0;
         my $fsv_gene        = 0;
 
