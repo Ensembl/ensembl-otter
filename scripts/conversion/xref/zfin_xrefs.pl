@@ -226,8 +226,8 @@ foreach (@recs) {
   if (exists $zfin{$zfinid}) {
     $zfin{$zfinid}->{desc} = $desc;
   }
-  foreach my $aliai (keys %{$aliases{$zfinid}}) {
-    $zfin{$zfinid}->{'aliases'}{$aliai}++;
+  foreach my $alias (keys %{$aliases{$zfinid}}) {
+    $zfin{$zfinid}->{'aliases'}{$alias}++;
   }
 
   #get any other names from description file
@@ -296,8 +296,9 @@ foreach my $chr (@chr_sorted) {
 
     if ($zfinid) {
       $zfin_xref_added1++;
+      my $new_name = $zfin{$zfinid}->{'name'};
       #excellent, update gene details
-      &update_gene_details($gene,$zfinid,$desc,$vega_g_desc);
+      &update_gene_details($gene,$zfinid,$new_name,$desc,$vega_g_desc);
     }
     else {
       $support->log_verbose("No Zfin name for $gsi ($gene_name) found, trying to match $gene_name with names in the zfin_genes.txt file\n",2);
@@ -343,7 +344,7 @@ foreach my $chr (@chr_sorted) {
         #great, we can match this gene after all
         $zfin_xref_added2++;
         $support->log_warning("Matched vega record against zfin_genes.txt rather than vega_transcript.txt; have a word with Zfin\n",2);
-        &update_gene_details($gene,$crossrefs{$newname}->{'zfinid'},$crossrefs{$newname}->{'desc'},$vega_g_desc);
+        &update_gene_details($gene,$crossrefs{$newname}->{'zfinid'},$gene_name,$crossrefs{$newname}->{'desc'},$vega_g_desc);
       }
       else {
         #no match :-(
@@ -367,10 +368,9 @@ if ($zfin_xref_missing) {
 $support->finish_log;
 
 sub update_gene_details {
-  my ($gene,$zfinid,$desc,$vega_g_desc) = @_;
+  my ($gene,$zfinid,$zfin_name,$desc,$vega_g_desc) = @_;
   my $gsi       = $gene->stable_id;
   my $gene_name = $gene->display_xref->display_id;
-  my $zfin_name = $zfin{$zfinid}->{'name'};
   my $dbentry = Bio::EnsEMBL::DBEntry->new(-primary_id => $zfinid,
                                            -display_id => $zfin_name,
                                            -version    => 1,
