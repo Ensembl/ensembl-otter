@@ -774,7 +774,8 @@ foreach my $name (@{$chr_names_wanted}) {
           $fsv++;
         }
         else {
-          $support->log("Skipping gene $gname ($lgsi) because no annotation flag present\n",1); 
+          my $gene_loc = $lgene->seq_region_name.':'.$lgene->seq_region_start.'-'.$lgene->seq_region_end;
+          $support->log("Skipping gene $gname ($lgsi;$gene_loc) because no annotation flag present\n",1); 
           $non_fsv++;
           next GENE;
         }
