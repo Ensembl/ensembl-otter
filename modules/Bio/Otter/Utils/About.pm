@@ -37,9 +37,15 @@ sub about_text {
       { Bio::Otter::Git->dist_conf($_) }
         qw( zircon PerlModules client_ensembl_version );
 
+    my $dev_server =
+      (Bio::Otter::Lace::Client->the->url_root_is_default
+       ? ''
+       : sprintf("  *** Non-standard URL root *** %s ***\n",
+                 Bio::Otter::Lace::Client->the->url_root));
+
     return <<"TEXT";
 This is Otterlace version $vsn
-
+$dev_server
 Otterlace web page
   http://www.sanger.ac.uk/resources/software/otterlace/
 
