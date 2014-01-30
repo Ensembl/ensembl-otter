@@ -415,6 +415,12 @@ sub config_value {
     return $value;
 }
 
+sub default_config_value {
+    my ($section, $key) = @_;
+    __ready();
+    return $CONFIG_INIFILES->[0]->val($section, $key);
+}
+
 sub config_value_list {
     my ($key1, $key2, $name) = @_;
     __ready();

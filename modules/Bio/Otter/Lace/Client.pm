@@ -616,6 +616,17 @@ sub _url_root {
     return $url;
 }
 
+sub url_root_is_default {
+    my ($self) = @_;
+
+    my $default = Bio::Otter::Lace::Defaults::default_config_value
+      (qw( client url ));
+    my $cfgd = $self->config_value('url');
+    my $feat = Bio::Otter::Git->param('feature');
+
+    return $cfgd eq $default && !$feat;
+}
+
 sub pfetch_url {
     my ($self) = @_;
 
