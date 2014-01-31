@@ -5,6 +5,7 @@ use warnings;
 use Bio::Vega::ContigLock;
 use Bio::EnsEMBL::Utils::Exception qw ( throw warning );
 use Bio::EnsEMBL::Utils::Argument qw ( rearrange );
+use Try::Tiny;
 
 sub new {
     my ($class, @args) = @_;
@@ -102,6 +103,38 @@ sub lock_by_object {
 
     return $self->lock_clones_by_slice($obj->feature_Slice, $author, $obj->adaptor->db);
 }
+
+# During migration to Chromosome Range locks (RT#274099), find out
+# what still works
+sub supported {
+    my ($called, $dataset) = @_;
+
+    my $db_thing = $dataset->isa('DBI::db') ? $dataset
+      : ($dataset->can('get_cached_DBAdaptor')
+         ? $dataset->get_cached_DBAdaptor->dbc # B:O:Lace:D
+         : $dataset->otter_dba->dbc # B:O:SpeciesDat:D
+        );
+
+    return try {
+        local $SIG{__WARN__} = sub {
+            my ($msg) = @_;
+            warn $msg unless $msg =~ /execute failed:/;
+            return;
+        };
+        my $sth = $db_thing->prepare(q{ SELECT * FROM contig_lock LIMIT 1 });
+        my $rv = $sth->execute();
+        return 0 unless defined $rv; # when RaiseError=0
+        my @junk = $sth->fetchrow_array;
+        1;
+    } catch {
+        if (m{(?:^|: )Table '[^']+' doesn't exist($| )}) {
+            0;
+        } else {
+            throw("Unexpected error in supported check: $_");
+        }
+    };
+}
+
 
 sub lock_clones_by_slice {
     my ($self, $slice, $author, $db) = @_;
