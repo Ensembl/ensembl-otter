@@ -638,11 +638,14 @@ sub setup_pfetch_env {
 
     # Need to use pfetch via HTTP proxy if we are outside Sanger
     my $hostname = hostfqdn();
+    my $old_PW = defined $ENV{'PFETCH_WWW'} ? "'$ENV{'PFETCH_WWW'}'" : "undef";
     if ($hostname =~ /\.sanger\.ac\.uk$/) {
         delete($ENV{'PFETCH_WWW'});
     } else {
         $ENV{'PFETCH_WWW'} = $self->pfetch_url;
     }
+    my $new_PW = defined $ENV{'PFETCH_WWW'} ? "'$ENV{'PFETCH_WWW'}'" : "undef";
+    warn "setup_pfetch_env: hostname=$hostname; PFETCH_WWW was $old_PW, now $new_PW\n";
 
     return;
 }
