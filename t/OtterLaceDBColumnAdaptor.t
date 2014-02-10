@@ -44,7 +44,7 @@ foreach my $i ( 0..$#exp ) {
 my @sub_exp = @exp[ 0..($#exp - 1) ];
 
 my $collection = setup_collection( map { $_->{name} } @sub_exp );
-ok($ca->fetch_ColumnCollection_state($collection), 'fetch_ColumnCollection_state');
+is($ca->fetch_ColumnCollection_state($collection), 2, 'fetch_ColumnCollection_state');
 
 test_collection($collection, \@sub_exp, 'fetched Collection');
 
@@ -53,17 +53,17 @@ $f_col[1]->selected(   $sub_exp[1]->{selected} = 1);
 $f_col[1]->gff_file(   $sub_exp[1]->{gff_file} = '/my/test/file');
 $f_col[1]->process_gff($sub_exp[1]->{process_gff} = 1);
 
-ok($ca->store_ColumnCollection_state($collection), 'store_ColumnCollection_state');
+is($ca->store_ColumnCollection_state($collection), 2, 'store_ColumnCollection_state');
 
 my $collection2 = setup_collection( map { $_->{name} } @sub_exp );
-ok($ca->fetch_ColumnCollection_state($collection2), 'fetch_ColumnCollection_state again');
+is($ca->fetch_ColumnCollection_state($collection2), 2, 'fetch_ColumnCollection_state again');
 test_collection($collection2, \@sub_exp, 'fetched Collection again');
 
 ok($ca->update_for_filter_get($f_col[0]->name,
                               $sub_exp[0]->{gff_file} = '/file/updated',
                               $sub_exp[0]->{process_gff} = 0             ), 'update_for_filter_get');
 $collection2 = setup_collection( map { $_->{name} } @sub_exp );
-ok($ca->fetch_ColumnCollection_state($collection2), 'fetch_ColumnCollection_state post-update');
+is($ca->fetch_ColumnCollection_state($collection2), 2, 'fetch_ColumnCollection_state post-update');
 
 test_collection($collection2, \@sub_exp, 'fetched Collection post-update');
 
@@ -75,10 +75,14 @@ splice(@super_exp, 1, 0, (
        ) );
 my $collection3 = setup_collection(  map { $_->{name} } @super_exp );
 $collection3->get_Item_by_name('Test_inserted_after_store_1')->selected(1);
-ok($ca->fetch_ColumnCollection_state($collection3), 'fetch_ColumnCollection_state pre-store RT380721');
+
+is($ca->fetch_ColumnCollection_state($collection3), 3, 'fetch_ColumnCollection_state pre-store RT380721');
+ok(not($collection3->get_Item_by_name('Test_inserted_after_store_1')->is_stored), 'new col not stored yet');
+ok($collection3->get_Item_by_name('Test_col_two')->is_stored, 'old col stored already');
 test_collection($collection3, \@super_exp, 'fetched Collection pre-store RT380721');
-ok($ca->store_ColumnCollection_state($collection3), 'store_ColumnCollection_state RT380721');
-ok($ca->fetch_ColumnCollection_state($collection3), 'fetch_ColumnCollection_state post-store RT380721');
+
+is($ca->store_ColumnCollection_state($collection3), 5, 'store_ColumnCollection_state RT380721');
+is($ca->fetch_ColumnCollection_state($collection3), 5, 'fetch_ColumnCollection_state post-store RT380721');
 test_collection($collection3, \@super_exp, 'fetched Collection post-store RT380721');
 
 done_testing;
