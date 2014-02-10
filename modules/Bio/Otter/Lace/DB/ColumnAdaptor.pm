@@ -51,30 +51,30 @@ sub update_for_filter_get {
 sub fetch_ColumnCollection_state {
     my ($self, $clltn) = @_;
 
-    my $result = 1;
+    my $fetched;
     foreach my $col ($clltn->list_Columns) {
-        $result &&= $self->fetch_state($col);
+        $self->fetch_state($col) and ++$fetched;
     }
 
-    return $result;
+    return $fetched;
 }
 
 sub store_ColumnCollection_state {
     my ($self, $clltn) = @_;
 
-    my $result = 1;
+    my $saved;
     $self->begin_work;
     foreach my $col ($clltn->list_Columns) {
         if ($col->is_stored) {
-            $result &&= $self->update($col);
+            $self->update($col) and ++$saved;
         }
         else {
-            $result &&= $self->store($col);
+            $self->store($col)  and ++$saved;
         }
     }
     $self->commit;
 
-    return $result;
+    return $saved;
 }
 
 sub store_Column_state {
