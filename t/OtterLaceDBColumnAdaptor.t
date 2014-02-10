@@ -67,6 +67,20 @@ ok($ca->fetch_ColumnCollection_state($collection2), 'fetch_ColumnCollection_stat
 
 test_collection($collection2, \@sub_exp, 'fetched Collection post-update');
 
+# RT380721
+my @super_exp = @exp;
+splice(@super_exp, 1, 0, (
+           { name => 'Test_inserted_after_store_1', selected => 1 },
+           { name => 'Test_inserted_after_store_2', selected => undef },
+       ) );
+my $collection3 = setup_collection(  map { $_->{name} } @super_exp );
+$collection3->get_Item_by_name('Test_inserted_after_store_1')->selected(1);
+ok($ca->fetch_ColumnCollection_state($collection3), 'fetch_ColumnCollection_state pre-store RT380721');
+test_collection($collection3, \@super_exp, 'fetched Collection pre-store RT380721');
+ok($ca->store_ColumnCollection_state($collection3), 'store_ColumnCollection_state RT380721');
+ok($ca->fetch_ColumnCollection_state($collection3), 'fetch_ColumnCollection_state post-store RT380721');
+test_collection($collection3, \@super_exp, 'fetched Collection post-store RT380721');
+
 done_testing;
 
 sub setup_collection {
