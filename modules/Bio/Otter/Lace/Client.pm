@@ -649,8 +649,13 @@ sub setup_pfetch_env {
     } else {
         $ENV{'PFETCH_WWW'} = $self->pfetch_url;
     }
+
+    # Report the result to log.  RT#379752
+    # Hardwired blixem config can affect some pfetches.
     my $new_PW = defined $ENV{'PFETCH_WWW'} ? "'$ENV{'PFETCH_WWW'}'" : "undef";
-    warn "setup_pfetch_env: hostname=$hostname; PFETCH_WWW was $old_PW, now $new_PW\n";
+    my $blix_cfg = __user_home()."/.blixemrc";
+    my $blix_cfg_exist = -f $blix_cfg ? "exists" : "not present";
+    warn "setup_pfetch_env: hostname=$hostname; PFETCH_WWW was $old_PW, now $new_PW; $blix_cfg $blix_cfg_exist\n";
 
     return;
 }
