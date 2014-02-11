@@ -80,7 +80,7 @@ sub new {
     my ($script) = $0 =~ m{([^/]+)$};
     my $client_name = $script || 'otterlace';
 
-    $ENV{'OTTERLACE_COOKIE_JAR'} ||= "$ENV{HOME}/.otter/ns_cookie_jar";
+    $ENV{'OTTERLACE_COOKIE_JAR'} ||= __user_home()."/.otter/ns_cookie_jar";
 
     my $new = bless {
         _client_name     => $client_name,
@@ -93,6 +93,11 @@ sub new {
     $new->setup_pfetch_env;
 
     return $new;
+}
+
+sub __user_home {
+    my $home = (getpwuid($<))[7];
+    return $home;
 }
 
 sub write_access {
@@ -167,7 +172,7 @@ sub config_path_default_rel_home {
     # Make $path into absolute file path
     # It is assumed to be relative to the home directory if not
     # already absolute or beginning with "~/".
-    my $home = (getpwuid($<))[7];
+    my $home = __user_home();
     $path =~ s{^~/}{$home/};
     unless ($path =~ m{^/}) {
         $path = "$home/$path";
@@ -179,7 +184,7 @@ sub config_path_default_rel_home {
 
 sub get_log_dir {
     my ($self) = @_;
-    my $home = (getpwuid($<))[7];
+    my $home = __user_home();
     my $log_dir = "$home/.otter";
     if (mkdir($log_dir)) {
         warn "Made logging directory '$log_dir'\n"; # logging not set up, so this must use 'warn'
