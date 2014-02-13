@@ -35,8 +35,6 @@ my $call_args = {
         ['ditypes', undef, qr/,/],
         ['analysis' => undef],
     ],
-    VariationFeature => [
-    ],
 
     # Vega
     DnaDnaAlignFeature => [
@@ -89,31 +87,15 @@ sub get_requested_features {
     my $map = $self->make_map;
     my @feature_list = ();
 
+    my $metakey = $self->param('metakey');
     foreach my $analysis_name (@analysis_names) {
         foreach my $feature_kind (@feature_kinds) {
-            my $param_descs = $call_args->{$feature_kind};
             my $getter_method = "get_all_${feature_kind}s";
-
-            my @param_list = ();
-            foreach my $param_desc (@$param_descs) {
-                my ($param_name, $param_def_value, $param_separator) = @$param_desc;
-
-                my $param_value = (scalar(@$param_desc)==1)
-                    ? $self->require_argument($param_name)
-                    : defined($self->param($param_name))
-                    ? $self->param($param_name)
-                    : $param_def_value;
-                if($param_value && $param_separator) {
-                    $param_value = [split(/$param_separator/,$param_value)];
-                }
-                $param_value = $analysis_name
-                    if $param_value && $param_value =~ /$analysis_name/;
-                push @param_list, $param_value;
-            }
-
-            my $metakey = $self->param('metakey');
-            my $features = $self->fetch_mapped_features_ensembl($getter_method, \@param_list, $map, $metakey);
-
+            my $param_list =
+                $feature_kind eq 'VariationFeature'
+                ? [ undef, undef, undef, "${metakey}_variation" ]
+                : $self->_param_list($analysis_name, $feature_kind);
+            my $features = $self->fetch_mapped_features_ensembl($getter_method, $param_list, $map, $metakey);
             push @feature_list, @$features;
         }
     }
@@ -156,6 +138,31 @@ sub get_requested_features {
     }
 
     return \@feature_list;
+}
+
+sub _param_list {
+    my ($self, $analysis_name, $feature_kind) = @_;
+
+    my $param_descs = $call_args->{$feature_kind};
+    my @param_list = ( );
+
+    foreach my $param_desc (@$param_descs) {
+        my ($param_name, $param_def_value, $param_separator) = @$param_desc;
+
+        my $param_value = (scalar(@$param_desc)==1)
+            ? $self->require_argument($param_name)
+            : defined($self->param($param_name))
+            ? $self->param($param_name)
+            : $param_def_value;
+        if($param_value && $param_separator) {
+            $param_value = [split(/$param_separator/,$param_value)];
+        }
+        $param_value = $analysis_name
+            if $param_value && $param_value =~ /$analysis_name/;
+        push @param_list, $param_value;
+    }
+
+    return \ @param_list;
 }
 
 sub gff_header {
