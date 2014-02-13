@@ -61,7 +61,7 @@ eval {
             Timeout  => 10,
             );
     }
-    die "Connect to pfetch server failed" unless $socket;
+    die "Connect to pfetch server failed: $!" unless $socket;
 
     print $socket $req, "\n";
 };
