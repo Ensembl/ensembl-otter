@@ -164,18 +164,18 @@ sub password_attempts {
     return $self->{'_password_attempts'} || 3;
 }
 
-sub config_path_default_rel_home {
+sub config_path_default_rel_dot_otter {
     my ($self, $key) = @_;
 
     my $path = $self->config_value($key) or return;
 
     # Make $path into absolute file path
-    # It is assumed to be relative to the home directory if not
-    # already absolute or beginning with "~/".
+    # It is assumed to be relative to the ~/.otter directory
+    # if not already absolute or beginning with "~/".
     my $home = __user_home();
     $path =~ s{^~/}{$home/};
     unless ($path =~ m{^/}) {
-        $path = "$home/$path";
+        $path = "$home/.otter/$path";
     }
 
     return $path;
@@ -195,7 +195,7 @@ sub get_log_dir {
 sub get_log_config_file {
     my ($self) = @_;
 
-    my $config_file = $self->config_path_default_rel_home('log_config') or return;
+    my $config_file = $self->config_path_default_rel_dot_otter('log_config') or return;
 
     unless ( -f -r $config_file ) {
         warn "log_config file '$config_file' not readable, will use defaults";
