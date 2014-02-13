@@ -80,7 +80,7 @@ sub new {
     my ($script) = $0 =~ m{([^/]+)$};
     my $client_name = $script || 'otterlace';
 
-    $ENV{'OTTERLACE_COOKIE_JAR'} ||= "$ENV{HOME}/.otter/ns_cookie_jar";
+    $ENV{'OTTERLACE_COOKIE_JAR'} ||= __user_home()."/.otter/ns_cookie_jar";
 
     my $new = bless {
         _client_name     => $client_name,
@@ -93,6 +93,11 @@ sub new {
     $new->setup_pfetch_env;
 
     return $new;
+}
+
+sub __user_home {
+    my $home = (getpwuid($<))[7];
+    return $home;
 }
 
 sub write_access {
@@ -159,18 +164,18 @@ sub password_attempts {
     return $self->{'_password_attempts'} || 3;
 }
 
-sub config_path_default_rel_home {
+sub config_path_default_rel_dot_otter {
     my ($self, $key) = @_;
 
     my $path = $self->config_value($key) or return;
 
     # Make $path into absolute file path
-    # It is assumed to be relative to the home directory if not
-    # already absolute or beginning with "~/".
-    my $home = (getpwuid($<))[7];
+    # It is assumed to be relative to the ~/.otter directory
+    # if not already absolute or beginning with "~/".
+    my $home = __user_home();
     $path =~ s{^~/}{$home/};
     unless ($path =~ m{^/}) {
-        $path = "$home/$path";
+        $path = "$home/.otter/$path";
     }
 
     return $path;
@@ -179,7 +184,7 @@ sub config_path_default_rel_home {
 
 sub get_log_dir {
     my ($self) = @_;
-    my $home = (getpwuid($<))[7];
+    my $home = __user_home();
     my $log_dir = "$home/.otter";
     if (mkdir($log_dir)) {
         warn "Made logging directory '$log_dir'\n"; # logging not set up, so this must use 'warn'
@@ -190,7 +195,7 @@ sub get_log_dir {
 sub get_log_config_file {
     my ($self) = @_;
 
-    my $config_file = $self->config_path_default_rel_home('log_config') or return;
+    my $config_file = $self->config_path_default_rel_dot_otter('log_config') or return;
 
     unless ( -f -r $config_file ) {
         warn "log_config file '$config_file' not readable, will use defaults";
@@ -644,8 +649,13 @@ sub setup_pfetch_env {
     } else {
         $ENV{'PFETCH_WWW'} = $self->pfetch_url;
     }
+
+    # Report the result to log.  RT#379752
+    # Hardwired blixem config can affect some pfetches.
     my $new_PW = defined $ENV{'PFETCH_WWW'} ? "'$ENV{'PFETCH_WWW'}'" : "undef";
-    warn "setup_pfetch_env: hostname=$hostname; PFETCH_WWW was $old_PW, now $new_PW\n";
+    my $blix_cfg = __user_home()."/.blixemrc";
+    my $blix_cfg_exist = -f $blix_cfg ? "exists" : "not present";
+    warn "setup_pfetch_env: hostname=$hostname; PFETCH_WWW was $old_PW, now $new_PW; $blix_cfg $blix_cfg_exist\n";
 
     return;
 }
