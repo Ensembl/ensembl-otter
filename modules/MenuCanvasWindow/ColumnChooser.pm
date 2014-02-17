@@ -85,6 +85,11 @@ sub bottom_frame {
     return $self->{'_bottom_frame'};
 }
 
+sub balloon { # see also EditWindow.pm, which we are not one of
+    my ($self) = @_;
+    return $self->{_balloon} ||= $self->top_window->Balloon();
+}
+
 
 sub row_height {
     my ($self) = @_;
@@ -204,7 +209,7 @@ sub initialize {
     # (in which case we destroy ourselves) or during an edit session (in which
     # case we just withdraw the window).
     my $wod_cmd = sub { $self->withdraw_or_destroy };
-    $bottom_frame->Button(
+    my $wod_btn = $bottom_frame->Button(
         -text => 'Cancel',
         -command => $wod_cmd,
         )->pack(@button_pack);
@@ -215,9 +220,10 @@ sub initialize {
         -command => sub { $self->zmap_select_window },
         )->pack(@button_pack);
 
-    $bottom_frame->Button(
+    my $load_cmd = sub { $self->load_filters };
+    my $load_btn = $bottom_frame->Button(
         -text => 'Load',
-        -command => sub { $self->load_filters },
+        -command => $load_cmd,
         )->pack(@button_pack);
 
     $top->bind('<Return>', $filter);
@@ -227,6 +233,13 @@ sub initialize {
     $top->bind('<Control-Left>', $collapse_all);
     $top->bind('<Control-Right>', $expand_all);
     $top->bind('<Destroy>', sub{ $self = undef });
+
+    $self->balloon->attach($wod_btn, -initwait=>0, -balloonmsg => 'Ctrl+w');
+    $top->bind('<Control-w>', $wod_cmd); # cancel
+    $top->bind('<Control-W>', $wod_cmd);
+
+    $self->balloon->attach($load_btn, -initwait=>0, -balloonmsg => 'Ctrl+Return');
+    $top->bind('<Control-Return>', $load_cmd);
 
 
     $self->calcualte_text_column_sizes;
