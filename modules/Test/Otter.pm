@@ -50,7 +50,7 @@ our @EXPORT_OK = qw( db_or_skipall
                      data_dir_or_skipall
                      farm_or_skipall
                      OtterClient
-                     get_BOLDatasets
+                     get_BOLDatasets get_BOSDatasets
                      diagdump
                      excused );
 
@@ -346,24 +346,27 @@ sub check_data_dir {
 Caches and returns a L<Bio::Otter::Lace::Client> made with no extra
 parameters.
 
-=head2 get_BOLDatasets(@name)
+=head2 get_BOLDatasets(@name), get_BOSDatasets(@name)
 
-This wraps up L<Bio::Otter::Lace::Defaults/make_Client> to return a
-list of datasets.
+These wrap up L<Bio::Otter::Lace::Defaults/make_Client> and
+L<Bio::Otter::Server::Config/SpeciesDat> to return a list of datasets.
 
-The requested L<Bio::Otter::Lace::DataSet> object is returned for each
-element of C<@name>. Methods C<get_cached_DBAdaptor> and
+The requested dataset object is returned C<foreach @name>.
+
+For C<get_BOLDatasets>, the methods C<get_cached_DBAdaptor> and
 C<get_pipeline_DBAdaptor> give the loutre and pipe databases.
 
-If C<"@name" eq "ALL"> then all published species are used.  This
-won't include C<human_dev> etc..
+For C<get_BOSDatasets>, the methods C<otter_dba> and C<pipeline_dba>
+do it.  There is also C<satellite_dba>.
 
-Defining C<get_BOSDatasets> for L<Bio::Otter::SpeciesDat::DataSet> may
-be better but is not yet implemented.  Equivalent methods are named
-C<otter_dba> and C<pipeline_dba>, there is also C<satellite_dba>.
+If C<"@name" eq "ALL"> then all available species are used.  The
+server mode does no filtering, but the client mode may hide
+C<human_dev> etc. depending which user you seem to be.
 
 Further tags like C<ALL_UNLISTED> would be useful, allowing for
 restricted and unlisted datasets.
+
+See also F<t/obtain-db.t>
 
 =cut
 
@@ -383,8 +386,19 @@ sub get_BOLDatasets {
     my @name = @_;
     my $cl = OtterClient();
     warn "No datasets requested" unless @name;
+    die "wantarray" unless wantarray;
     return $cl->get_all_DataSets if "@name" eq 'ALL';
     return map { $cl->get_DataSet_by_name($_) } @name;
+}
+
+sub get_BOSDatasets {
+    my @name = @_;
+    require Bio::Otter::Server::Config;
+    my $bosc_sd = Bio::Otter::Server::Config->SpeciesDat;
+    warn "No datasets requested" unless @name;
+    die "wantarray" unless wantarray;
+    return @{ $bosc_sd->datasets } if "@name" eq 'ALL';
+    return map { $bosc_sd->dataset($_) or die "No such dataset '$_'" } @name;
 }
 
 
