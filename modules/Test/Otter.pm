@@ -384,6 +384,7 @@ See also F<t/obtain-db.t>
 
 sub get_BOLDatasets {
     my @name = @_;
+    local $SIG{__WARN__} = \&__BOLC_warn_filter; # hide client startup noise
     my $cl = OtterClient();
     warn "No datasets requested" unless @name;
     die "wantarray" unless wantarray;
@@ -400,6 +401,15 @@ sub get_BOSDatasets {
     return @{ $bosc_sd->datasets } if "@name" eq 'ALL';
     return map { $bosc_sd->dataset($_) or die "No such dataset '$_'" } @name;
 }
+
+sub __BOLC_warn_filter { # a "temporary" solution
+    my ($msg) = @_;
+    return if $msg eq "No git cache: assuming a git checkout.\n";
+    return if $msg =~ m{^DEBUG: (CLIENT|ZIRCON|XREMOTE) = 1\n\z};
+    return if $msg =~ m{^GET  http.*/get_datasets\?|^get_datasets - client received \d+ bytes from server};
+    warn $msg;
+}
+
 
 
 =head2 diagdump(%info)
