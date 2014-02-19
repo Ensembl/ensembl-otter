@@ -159,6 +159,12 @@ JOIN taxonomy    t ON i.parent_entry_id = t.entry_id };
     my $with_sv_iso_sql = sprintf( $common_sql, $join_iso_sql, ' = ?' );
     my $like_sv_iso_sql = sprintf( $common_sql, $join_iso_sql, ' LIKE ?' );
 
+    my %class_to_source_db = (
+        STD => 'Swissprot',
+        PRE => 'TrEMBL',
+        ISO => 'Swissprot',  # we don't think TrEMBL can have isoforms
+        );
+
     sub get_accession_types {
         my ($self, $accs) = @_;
 
@@ -180,60 +186,60 @@ JOIN taxonomy    t ON i.parent_entry_id = t.entry_id };
             foreach my $name (keys %acc_hash) {
 
                 my $sth;
-                if ($is_uniprot_archive and $name =~ /-\d+\.\d+$/) {
-                    $with_sv_iso_sth->execute($name);
-                    $sth = $with_sv_iso_sth;
-                }
-                elsif ($is_uniprot_archive and $name =~ /-\d+$/) {
-                    $like_sv_iso_sth->execute("$name.%");
-                    $sth = $like_sv_iso_sth;
-                }
-                elsif ($name =~ /\.\d+$/) {
-                    $with_sv_sth->execute($name);
-                    $sth = $with_sv_sth;
-                }
-                else {
-                    $like_sv_sth->execute("$name.%");
-                    $sth = $like_sv_sth;
-                }
+              SWITCH: for ($name) {
+                  if ($is_uniprot_archive and $name =~ /-\d+\.\d+$/) {
+                      $with_sv_iso_sth->execute($name);
+                      $sth = $with_sv_iso_sth;
+                      last SWITCH;
+                  }
+                  if ($is_uniprot_archive and $name =~ /-\d+$/) {
+                      $like_sv_iso_sth->execute("$name.%");
+                      $sth = $like_sv_iso_sth;
+                      last SWITCH;
+                  }
+                  if ($name =~ /\.\d+$/) {
+                      $with_sv_sth->execute($name);
+                      $sth = $with_sv_sth;
+                      last SWITCH;
+                  }
+                  # default
+                  $like_sv_sth->execute("$name.%");
+                  $sth = $like_sv_sth;
+                  last SWITCH;
+              }
 
-                while (my ($type, $class, $acc_sv, @extra_info) = $sth->fetchrow) {
-                    if ($class eq 'EST') {
-                        $results->{$name} = [ 'EST', $acc_sv, 'EMBL', @extra_info ];
-                    }
-                    elsif ($type eq 'mRNA') {
-                        # Here we return cDNA, which is more technically correct since
-                        # both ESTs and cDNAs are mRNAs.
-                        $results->{$name} = [ 'cDNA', $acc_sv, 'EMBL', @extra_info ];
-                    }
-                    elsif ($type eq 'protein') {
+              RESULT: while (my ($type, $class, $acc_sv, @extra_info) = $sth->fetchrow) {
+                  if ($class eq 'EST') {
+                      $results->{$name} = [ 'EST', $acc_sv, 'EMBL', @extra_info ];
+                      next RESULT;
+                  }
+                  if ($type eq 'mRNA') {
+                      # Here we return cDNA, which is more technically correct since
+                      # both ESTs and cDNAs are mRNAs.
+                      $results->{$name} = [ 'cDNA', $acc_sv, 'EMBL', @extra_info ];
+                      next RESULT;
+                  }
+                  if ($type eq 'protein') {
 
-                        my $source_db;
+                      my $source_db = $class_to_source_db{$class};
+                      die "Unexpected data class for uniprot entry: $class" unless $source_db;
 
-                        if ($class eq 'STD') {
-                            $source_db = "Swissprot"
-                        }
-                        elsif ($class eq 'PRE') {
-                            $source_db = 'TrEMBL';
-                        }
-                        elsif ($class eq 'ISO') {    # we don't think TrEMBL can have isoforms
-                            $source_db = 'Swissprot';
-                        }
-                        else {
-                            die "Unexpected data class for uniprot entry: $class";
-                        }
+                      $results->{$name} = [ 'Protein', $acc_sv, $source_db, @extra_info ];
+                      next RESULT;
+                  }
+                  if ($type eq 'other RNA' or $type eq 'transcribed RNA') {
+                      $results->{$name} = [ 'ncRNA', $acc_sv, 'EMBL', @extra_info ];
+                      next RESULT;
+                  }
 
-                        $results->{$name} = [ 'Protein', $acc_sv, $source_db, @extra_info ];
-                    }
-                    elsif ($type eq 'other RNA' or $type eq 'transcribed RNA') {
-                        $results->{$name} = [ 'ncRNA', $acc_sv, 'EMBL', @extra_info ];
-                    }
+                  warn "Cannot classify '$name': type '$type', class '$class'\n";
 
-                    delete $acc_hash{$name};
-                }
+              } continue { # RESULT
+                  delete $acc_hash{$name};
+              }
             }
 
-            # We don't need to search any further databases if 
+            # We don't need to search any further databases if we've found everything
             last unless keys %acc_hash;
         }
 
