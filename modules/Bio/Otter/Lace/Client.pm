@@ -427,7 +427,9 @@ sub reauthorize_if_cookie_will_expire_soon {
 
     # Soon is if cookie expires less than half an hour from now
     my $soon = time + (30 * 60);
-    if ($self->cookie_expiry_time < $soon) {
+    my $expiry = $self->cookie_expiry_time;
+    if ($expiry < $soon) {
+        warn sprintf("reauthorize_if_cookie_will_expire_soon: expiry expected at %s\n", scalar localtime($expiry));
         my $password_attempts = $self->password_attempts;
         while ($password_attempts) {
             return 1 if $self->authorize;
