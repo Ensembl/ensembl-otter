@@ -41,17 +41,18 @@ Readonly my %CLASS_TO_SOURCE_DB => (
     ISO => 'Swissprot',  # we don't think TrEMBL can have isoforms
     );
 
-Readonly my %CONNECTION_DEFAULTS => (
+Readonly my %DEFAULT_OPTIONS => (
     host => 'cbi5d',
     port => 3306,
     user => 'genero',
     name => 'mm_ini',
+    db_categories => [ @DEFAULT_DB_CATEGORIES ],
     );
 
 sub new {
     my ($class, @args) = @_;
 
-    my %options = ( %CONNECTION_DEFAULTS, @args );
+    my %options = ( %DEFAULT_OPTIONS, @args );
 
     my $self = bless \%options, $class;
     $self->_build_sql;
@@ -214,7 +215,7 @@ sub get_accession_types {
     my %acc_hash = map { $_ => 1 } @$accs;
     my $results = {};
 
-    for my $db_name (@DEFAULT_DB_CATEGORIES) {
+    for my $db_name (@{$self->db_categories}) {
 
         my $is_uniprot_archive = ($db_name eq 'uniprot_archive');
 
@@ -246,6 +247,11 @@ sub get_accession_types {
             $sth->execute($search_term);
 
           RESULT: while (my ($type, $class, $acc_sv, @extra_info) = $sth->fetchrow) {
+
+              if ($self->debug) {
+                  print "MM result: ", join(',', $name, $acc_sv, $db_name, $type, $class, @extra_info), "\n";
+              }
+
               if ($class eq 'EST') {
                   $results->{$name} = [ 'EST', $acc_sv, 'EMBL', @extra_info ];
                   next RESULT;
@@ -305,6 +311,18 @@ sub user {
     my ($self, $user) = @_;
     $self->{user} = $user if $user;
     return $self->{user};
+}
+
+sub db_categories {
+    my ($self, $db_categories) = @_;
+    $self->{db_categories} = $db_categories if $db_categories;
+    return $self->{db_categories};
+}
+
+sub debug {
+    my ($self, $debug) = @_;
+    $self->{debug} = $debug if $debug;
+    return $self->{debug};
 }
 
 1;
