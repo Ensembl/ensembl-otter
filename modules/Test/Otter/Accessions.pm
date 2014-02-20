@@ -78,6 +78,8 @@ P51124.2        P51124.2        uniprot         Protein         Swissprot
 Q8IN94.1        Q8IN94.1        uniprot         Protein         Swissprot
 P35613.2        P35613.2        uniprot         Protein         Swissprot
 A6NC57-2.3      A6NC57-2.3      uniprot_archive Protein         Swissprot
+Q5JPF3-2        Q5JPF3-2.3      uniprot_archive Protein         Swissprot
+Q5JPF3-2.3      Q5JPF3-2.3      uniprot_archive Protein         Swissprot
 Q5JPF3-2.2      Q5JPF3-2.2      uniprot_archive Protein         Swissprot
 
 # TrEMBL
