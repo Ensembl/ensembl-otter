@@ -46,6 +46,7 @@ sub store_hit_data_from_gff {
 
     my %fail;
     while (<$gff_fh>) {
+        last if /^\s*##\bFASTA\b/;
         next if /^\s*#/;
         my ($seq_name, $source, $feat_type, $start, $end, $score, $strand, $frame, $attrib)
             = parse_gff_line($_);
@@ -109,6 +110,7 @@ sub make_ace_transcripts_from_gff_fh {
 
     $seq_region_found = 0;
     while (<$gff_fh>) {
+        last if /^\s*##\bFASTA\b/;
         if (/^\s*#/) {
             if (/^\s*##sequence-region /) {
                 if (($seq_region_start, $seq_region_end) =
