@@ -7,6 +7,7 @@ use strict;
 use warnings;
 
 use DBI;
+use Readonly;
 
 =pod
 
@@ -18,26 +19,42 @@ All cells in the entry.accession columns match
 =cut
 
 # NB: databases will be searched in the order in which they appear in this list
-my @DB_CATEGORIES = (
-    'emblnew',
-    'emblrelease',
-    'uniprot',
-    'uniprot_archive',
 
-    #'refseq'
+Readonly my @ALL_DB_CATEGORIES => qw(
+    emblnew
+    emblrelease
+    uniprot
+    uniprot_archive
+    refseq
 );
+
+Readonly my @DEFAULT_DB_CATEGORIES => qw(
+    emblnew
+    emblrelease
+    uniprot
+    uniprot_archive
+);
+
+Readonly my %CLASS_TO_SOURCE_DB => (
+    STD => 'Swissprot',
+    PRE => 'TrEMBL',
+    ISO => 'Swissprot',  # we don't think TrEMBL can have isoforms
+    );
+
+Readonly my %CONNECTION_DEFAULTS => (
+    host => 'cbi5d',
+    port => 3306,
+    user => 'genero',
+    name => 'mm_ini',
+    );
 
 sub new {
     my ($class, @args) = @_;
 
-    my $self = bless {}, $class;
+    my %options = ( %CONNECTION_DEFAULTS, @args );
 
-    my ($host, $port, $user, $name) = @args;
-
-    $self->host($host || 'cbi5d');
-    $self->port($port || 3306);
-    $self->user($user || 'genero');
-    $self->name($name || 'mm_ini');
+    my $self = bless \%options, $class;
+    $self->_build_sql;
 
     return $self;
 }
@@ -82,7 +99,7 @@ sub _get_connection {
         # look for the current and available table for this category from the ini table
 
         my $ini_sth = $dbh_mm_ini->prepare(qq{
-            SELECT database_name 
+            SELECT database_name
             FROM ini
             WHERE database_category = ?
             AND current = 'yes'
@@ -110,7 +127,7 @@ sub dbh {
     die "DB category required" unless $category;
 
     die "Invalid DB category: $category"
-      unless grep { /^$category$/ } @DB_CATEGORIES;
+      unless grep { /^$category$/ } @ALL_DB_CATEGORIES;
 
     if ($dbh) {
         die "Not a valid DB handle: " . (ref $dbh) unless ref $dbh && $dbh->isa('DBI::db');
@@ -124,7 +141,11 @@ sub dbh {
     return $self->{_dbhs}->{$category};
 }
 
-{
+# We construct a matrix of queries: (plain, with-iso) x (with[exact], like)
+#
+sub _build_sql {
+    my ($self) = @_;
+
     # May be dangerous to assume that the most recent entries in uniprot_archive
     # will have the biggest entry_id
 
@@ -159,118 +180,131 @@ JOIN taxonomy    t ON i.parent_entry_id = t.entry_id };
     my $with_sv_iso_sql = sprintf( $common_sql, $join_iso_sql, ' = ?' );
     my $like_sv_iso_sql = sprintf( $common_sql, $join_iso_sql, ' LIKE ?' );
 
-    my %class_to_source_db = (
-        STD => 'Swissprot',
-        PRE => 'TrEMBL',
-        ISO => 'Swissprot',  # we don't think TrEMBL can have isoforms
-        );
+    $self->{_sql} = {
+        plain => {
+            with => $with_sv_sql,
+            like => $like_sv_sql,
+        },
+        iso => {
+            with => $with_sv_iso_sql,
+            like => $like_sv_iso_sql,
+        },
+    };
+    return;
+}
 
-    sub get_accession_types {
-        my ($self, $accs) = @_;
+# Return and cache the statement handle based on db_name, iso-ness and search type
+#
+sub _sth_for {
+    my ($self, $db_name, $iso_key, $search_key) = @_;
 
-        my %acc_hash = map { $_ => 1 } @$accs;
-        my $results = {};
+    my $dbh = $self->dbh($db_name);
 
-        for my $db_name (@DB_CATEGORIES) {
-            my $dbh = $self->dbh($db_name);
-            my $with_sv_sth = $dbh->prepare($with_sv_sql);
-            my $like_sv_sth = $dbh->prepare($like_sv_sql);
+    my $sth = $self->{_sth}->{$dbh}->{$iso_key}->{$search_key};
+    return $sth if $sth;
 
-            my $is_uniprot_archive = ($db_name eq 'uniprot_archive');
-            my ($with_sv_iso_sth, $like_sv_iso_sth);
-            if ($is_uniprot_archive) {
-                $with_sv_iso_sth = $dbh->prepare($with_sv_iso_sql);
-                $like_sv_iso_sth = $dbh->prepare($like_sv_iso_sql);
-            }
+    my $sql = $self->{_sql}->{$iso_key}->{$search_key};
+    $sth = $dbh->prepare($sql);
+    return $self->{_sth}->{$dbh}->{$iso_key}->{$search_key} = $sth;
+}
 
-            foreach my $name (keys %acc_hash) {
+sub get_accession_types {
+    my ($self, $accs) = @_;
 
-                my $sth;
-              SWITCH: for ($name) {
-                  if ($is_uniprot_archive and $name =~ /-\d+\.\d+$/) {
-                      $with_sv_iso_sth->execute($name);
-                      $sth = $with_sv_iso_sth;
-                      last SWITCH;
-                  }
-                  if ($is_uniprot_archive and $name =~ /-\d+$/) {
-                      $like_sv_iso_sth->execute("$name.%");
-                      $sth = $like_sv_iso_sth;
-                      last SWITCH;
-                  }
-                  if ($name =~ /\.\d+$/) {
-                      $with_sv_sth->execute($name);
-                      $sth = $with_sv_sth;
-                      last SWITCH;
-                  }
-                  # default
-                  $like_sv_sth->execute("$name.%");
-                  $sth = $like_sv_sth;
+    my %acc_hash = map { $_ => 1 } @$accs;
+    my $results = {};
+
+    for my $db_name (@DEFAULT_DB_CATEGORIES) {
+
+        my $is_uniprot_archive = ($db_name eq 'uniprot_archive');
+
+        foreach my $name (keys %acc_hash) {
+
+            my ($sth, $search_term);
+          SWITCH: for ($name) {
+              if ($is_uniprot_archive and $name =~ /-\d+\.\d+$/) {
+                  $sth = $self->_sth_for($db_name, 'iso', 'with');
+                  $search_term = $name;
                   last SWITCH;
               }
-
-              RESULT: while (my ($type, $class, $acc_sv, @extra_info) = $sth->fetchrow) {
-                  if ($class eq 'EST') {
-                      $results->{$name} = [ 'EST', $acc_sv, 'EMBL', @extra_info ];
-                      next RESULT;
-                  }
-                  if ($type eq 'mRNA') {
-                      # Here we return cDNA, which is more technically correct since
-                      # both ESTs and cDNAs are mRNAs.
-                      $results->{$name} = [ 'cDNA', $acc_sv, 'EMBL', @extra_info ];
-                      next RESULT;
-                  }
-                  if ($type eq 'protein') {
-
-                      my $source_db = $class_to_source_db{$class};
-                      die "Unexpected data class for uniprot entry: $class" unless $source_db;
-
-                      $results->{$name} = [ 'Protein', $acc_sv, $source_db, @extra_info ];
-                      next RESULT;
-                  }
-                  if ($type eq 'other RNA' or $type eq 'transcribed RNA') {
-                      $results->{$name} = [ 'ncRNA', $acc_sv, 'EMBL', @extra_info ];
-                      next RESULT;
-                  }
-
-                  warn "Cannot classify '$name': type '$type', class '$class'\n";
-
-              } continue { # RESULT
-                  delete $acc_hash{$name};
+              if ($is_uniprot_archive and $name =~ /-\d+$/) {
+                  $sth = $self->_sth_for($db_name, 'iso', 'like');
+                  $search_term = "$name.%";
+                  last SWITCH;
               }
-            }
+              if ($name =~ /\.\d+$/) {
+                  $sth = $self->_sth_for($db_name, 'plain', 'with');
+                  $search_term = $name;
+                  last SWITCH;
+              }
+              # default
+              $sth = $self->_sth_for($db_name, 'plain', 'like');
+              $search_term = "$name.%";
+              last SWITCH;
+          }
 
-            # We don't need to search any further databases if we've found everything
-            last unless keys %acc_hash;
+            $sth->execute($search_term);
+
+          RESULT: while (my ($type, $class, $acc_sv, @extra_info) = $sth->fetchrow) {
+              if ($class eq 'EST') {
+                  $results->{$name} = [ 'EST', $acc_sv, 'EMBL', @extra_info ];
+                  next RESULT;
+              }
+              if ($type eq 'mRNA') {
+                  # Here we return cDNA, which is more technically correct since
+                  # both ESTs and cDNAs are mRNAs.
+                  $results->{$name} = [ 'cDNA', $acc_sv, 'EMBL', @extra_info ];
+                  next RESULT;
+              }
+              if ($type eq 'protein') {
+
+                  my $source_db = $CLASS_TO_SOURCE_DB{$class};
+                  die "Unexpected data class for uniprot entry: $class" unless $source_db;
+
+                  $results->{$name} = [ 'Protein', $acc_sv, $source_db, @extra_info ];
+                  next RESULT;
+              }
+              if ($type eq 'other RNA' or $type eq 'transcribed RNA') {
+                  $results->{$name} = [ 'ncRNA', $acc_sv, 'EMBL', @extra_info ];
+                  next RESULT;
+              }
+
+              warn "Cannot classify '$name': type '$type', class '$class'\n";
+
+          } continue { # RESULT
+              delete $acc_hash{$name};
+          }
         }
 
-        return $results;
+        # We don't need to search any further databases if we've found everything
+        last unless keys %acc_hash;
     }
 
-
+    return $results;
 }
 
 sub name {
     my ($self, $name) = @_;
-    $self->{_name} = $name if $name;
-    return $self->{_name};
+    $self->{name} = $name if $name;
+    return $self->{name};
 }
 
 sub host {
     my ($self, $host) = @_;
-    $self->{_host} = $host if $host;
-    return $self->{_host};
+    $self->{host} = $host if $host;
+    return $self->{host};
 }
 
 sub port {
     my ($self, $port) = @_;
-    $self->{_port} = $port if $port;
-    return $self->{_port};
+    $self->{port} = $port if $port;
+    return $self->{port};
 }
 
 sub user {
     my ($self, $user) = @_;
-    $self->{_user} = $user if $user;
-    return $self->{_user};
+    $self->{user} = $user if $user;
+    return $self->{user};
 }
 
 1;
