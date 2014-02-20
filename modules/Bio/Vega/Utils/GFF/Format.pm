@@ -69,6 +69,8 @@ sub gff_line { ## no critic( Subroutines::ProhibitManyArgs )
         $extra_hash,
         ) = @_;
 
+    my $target_hash = $extra_hash && $extra_hash->{'target_hash'};
+
     _gff_escape_seqid for $seqid;
     _gff_escape_source for $source;
 
@@ -93,6 +95,7 @@ sub gff_line { ## no critic( Subroutines::ProhibitManyArgs )
 
         if ($key eq "Target") {
             my ($target_id, $target_start, $target_end, $target_strand) = @{$value};
+            $target_hash->{$target_id}++ if $target_hash;
             if ($attribute_escape) {
                 _gff_escape_target_attribute for $target_id;
             }
