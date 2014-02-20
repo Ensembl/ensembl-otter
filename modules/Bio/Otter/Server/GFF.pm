@@ -68,8 +68,19 @@ sub send_requested_features {
         sub {
             my ($self) = @_;
             my $features = $self->get_requested_features;
-            my $features_gff = $self->_features_gff($features);
+            my $sequence_db = $self->param('sequence_db');
+            my $target_hash = $sequence_db ? { } : undef;
+            my $features_gff = $self->_features_gff($features, $target_hash);
             my $gff = $self->gff_header . $features_gff;
+            if ($target_hash && keys %{$target_hash}) {
+                require Bio::Otter::Utils::MM;
+                my @sequence_db = split /\s*,\s*/, $sequence_db;
+                my $mm = Bio::Otter::Utils::MM->new('db_categories' => \@sequence_db);
+                my $accession_info = $mm->get_accession_info([keys %{$target_hash}]);
+                if (keys %{$accession_info}) {
+                    $gff .= ("##FASTA\n" . _fasta($accession_info));
+                }
+            }
             return $gff;
         });
 
@@ -179,10 +190,11 @@ sub gff_header {
 }
 
 sub _features_gff {
-    my ($self, $features) = @_;
+    my ($self, $features, $target_hash) = @_;
 
     my %gff_args = ();
     $gff_args{$_} = $self->param($_) for $self->_gff_keys;
+    $gff_args{'target_hash'} = $target_hash;
     my $gff_version = $self->param('gff_version');
     $gff_args{'gff_format'} = Bio::Vega::Utils::GFF::gff_format($gff_version);
     my $features_gff = join '', map { $_->to_gff(%gff_args) || '' } @{$features};
@@ -210,6 +222,47 @@ sub Bio::EnsEMBL::Slice::get_all_ExonSupportingFeatures {
           map { @{$_->get_all_Exons} }
           @{$self->get_all_Transcripts($load_exons, $logic_name, $dbtype)}
           ];
+}
+
+sub _fasta {
+    my ($accession_info) = @_;
+    return join '', map {
+        _fasta_item($accession_info->{$_});
+    } sort keys %{$accession_info};
+}
+
+my @accession_key_list = qw(
+    evi_type
+    accession_sv
+    source_db
+    length
+    taxon_list
+    description
+    );
+
+my @fasta_key_list = qw(
+    accession_sv
+    taxon_id
+    evi_type
+    description
+    source_db
+    length
+    );
+
+sub _fasta_item {
+    my ($accession_info) = @_;
+    my $sequence = pop @{$accession_info};
+    # permute the columns from accession info order to FASTA header order
+    my $info_hash = { };
+    $info_hash->{$_} = shift @{$accession_info} for @accession_key_list;
+    my @taxon_list = split /,/, $info_hash->{'taxon_list'};
+    @taxon_list == 1 or return; # we only handle single taxon IDs
+    ($info_hash->{'taxon_id'}) = @taxon_list;
+    my $fasta_list = [ @{$info_hash}{@fasta_key_list} ];
+    $sequence =~ s/(.{70})/$1\n/g;
+    chomp $sequence;
+    my $item = sprintf ">%s\n%s\n", (join '|', @{$fasta_list}), $sequence;
+    return $item;
 }
 
 1;
