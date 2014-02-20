@@ -68,7 +68,8 @@ sub do_search {
     }
     $self->found_elements([]);
 
-    my $qnames = [ split(/[\s,]+/, ${$self->search_field()} ) ];
+    my $qnames = [ grep { /\S/ } # remove blank term, due to leading space
+                   split(/[\s,]+/, ${$self->search_field()} ) ];
 
     my $result_list =
         $self->Client->find_clones($self->DataSet->name, $qnames);
