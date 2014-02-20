@@ -50,8 +50,10 @@ my $_new_feature_id_sub = sub {
         }
 
         my $gff_format = $args{'gff_format'};
-        my $gff_str = $gff_format->gff_line(@{$gff}{
-            qw( seqname source feature start end score strand frame attributes )});
+        my $gff_str =
+            $gff_format->gff_line(
+                @{$gff}{qw( seqname source feature start end score strand frame attributes )},
+                \%args);
 
         return $gff_str;
     }
