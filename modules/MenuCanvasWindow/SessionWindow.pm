@@ -1138,6 +1138,11 @@ sub _do_search {
         };
     }
 
+    my $query_str_stripped = $query_str; # for RT#379216
+    $query_str_stripped =~ s{[\x00-\x1F\x7F-\xFF]+}{ }g; # remove non-printing
+    $query_str_stripped =~ s{^\s+|\s+$}{}g; # remove leading & trailing space
+    $query_str_stripped =~ s{ +}{ }g; # collapse remaining space
+
     if (@matching_sub_names) {
         # highlight the hits
         $self->highlight_by_name(@matching_sub_names);
@@ -1149,6 +1154,11 @@ sub _do_search {
     elsif (@ace_fail_names) {
         # highlight the errors
         $self->highlight_by_name(@ace_fail_names);
+    }
+    elsif ($query_str ne $query_str_stripped) {
+        $self->message("Can't find '$query_str'\nStripped non-printing characters from\nsearch term, please try again");
+        $search_box->delete(0, 'end');
+        $search_box->insert(0, $query_str_stripped);
     }
     else {
         $self->message("Can't find '$query_str'");
