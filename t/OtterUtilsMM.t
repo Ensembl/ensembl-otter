@@ -18,11 +18,10 @@ BEGIN {
 
 critic_module_ok($module);
 
-my $mm = $module->new;
-isa_ok($mm, $module);
+my $mm = new_ok($module);
 
 my @valid_accs = qw(AK122591.2 AK122591);
-my @invalid_accs = qw(AK122591.1 XYZ123456 ERS000123 NM_001142769.1); # one old SV, one nonsense, one SRA, one ?
+my @invalid_accs = qw(AK122591.1 XYZ123456 ERS000123 NM_001142769.1); # one old SV, one nonsense, one SRA, one refseq
 
 my $results = $mm->get_accession_types([@valid_accs, @invalid_accs]);
 is(ref($results), 'HASH', 'results hash');
