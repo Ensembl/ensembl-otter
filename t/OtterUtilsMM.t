@@ -45,6 +45,12 @@ my $s_results = $mm->get_accession_types([$acc]);
 is(ref($s_results), 'HASH', 's_results hash');
 ok($s_results->{$acc}, 'result is for singleton acc');
 
+my $s_acc = $valid_accs[0];
+my $seq_results = $mm->get_accession_info([$s_acc]);
+is(ref($seq_results), 'HASH', 'seq_results hash');
+ok($seq_results->{$s_acc}, 'result is for singleton acc');
+note('seq_result: ', join(',', @{$seq_results->{$s_acc}}));
+
 # Empty
 my $e_results = $mm->get_accession_types([]);
 is(ref($e_results), 'HASH', 'e_results hash');
@@ -66,6 +72,35 @@ foreach my $ta_acc_spec (@$ta_acc_specs) {
             is($acc_sv,    $ta_acc_spec->{acc_sv},    'acc_sv');
             is($evi_type,  $ta_acc_spec->{evi_type},  'evi_type');
             is($source_db, $ta_acc_spec->{source_db}, 'source_db');
+        } else {
+            is($result, undef, 'no result');
+        }
+        done_testing;
+    };
+}
+
+# New interface
+$mm->db_categories([qw(
+    emblnew
+    emblrelease
+    uniprot
+    uniprot_archive
+    refseq
+)]);
+diag "Expect some warnings about bad query / sv_search is off";
+my $info_results = $mm->get_accession_info(\@ta_accs);
+is(ref($info_results), 'HASH', 'info_results hash');
+foreach my $ta_acc_spec (@$ta_acc_specs) {
+    my $query = $ta_acc_spec->{query};
+    subtest $query => sub {
+        my $result = $info_results->{$query};
+        if ($ta_acc_spec->{mm_db} and $query !~ /-\d+$/) {
+            $result ||= [];
+            my ($evi_type, $acc_sv, $source_db, $seq_length, $taxon_list, $desc, $seq) = @$result;
+            is($acc_sv,    $ta_acc_spec->{acc_sv},    'acc_sv');
+            is($evi_type,  $ta_acc_spec->{evi_type},  'evi_type')  if $ta_acc_spec->{evi_type};
+            is($source_db, $ta_acc_spec->{source_db}, 'source_db') if $ta_acc_spec->{source_db};
+            is(length($seq), $seq_length, 'seq_length');
         } else {
             is($result, undef, 'no result');
         }

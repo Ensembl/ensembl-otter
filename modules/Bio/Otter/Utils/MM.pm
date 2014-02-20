@@ -151,7 +151,8 @@ sub _build_sql {
     # will have the biggest entry_id
 
     my $common_sql = q{
-SELECT e.molecule_type
+SELECT e.entry_id
+  , e.molecule_type
   , e.data_class
   , e.accession_version
   , e.sequence_length
@@ -209,84 +210,184 @@ sub _sth_for {
     return $self->{_sth}->{$dbh}->{$iso_key}->{$search_key} = $sth;
 }
 
+sub _seq_sth_for {
+    my ($self, $db_name) = @_;
+
+    my $dbh = $self->dbh($db_name);
+    my $sth = $self->{_seq_sth}->{$dbh};
+    return $sth if $sth;
+
+    my $sql = q{
+SELECT   sequence
+FROM     sequence
+WHERE    entry_id = ?
+ORDER BY split_counter ASC
+    };
+
+    $sth = $dbh->prepare($sql);
+    return $self->{_seq_sth}->{$dbh} = $sth;
+}
+
 sub get_accession_types {
     my ($self, $accs) = @_;
+    return $self->_get_accessions(
+        acc_list      => $accs,
+        db_categories => [ @DEFAULT_DB_CATEGORIES ],
+        sv_search     => 1,
+        );
+}
 
-    my %acc_hash = map { $_ => 1 } @$accs;
+sub get_accession_info {
+    my ($self, $accs) = @_;
+    return $self->_get_accessions(
+        acc_list      => $accs,
+        db_categories => $self->db_categories,
+        );
+}
+
+sub _get_accessions {
+    my ($self, %opts) = @_;
+
+    my %acc_hash = map { $_ => 1 } @{$opts{acc_list}};
     my $results = {};
 
-    for my $db_name (@{$self->db_categories}) {
+  DB_NAME: for my $db_name (@{$opts{db_categories}}) {
 
-        my $is_uniprot_archive = ($db_name eq 'uniprot_archive');
+    NAME: foreach my $name (keys %acc_hash) {
 
-        foreach my $name (keys %acc_hash) {
+        my ($sth, $search_term) = $self->_classify_search($db_name, $name, $opts{sv_search});
+        next NAME unless $sth;
 
-            my ($sth, $search_term);
-          SWITCH: for ($name) {
-              if ($is_uniprot_archive and $name =~ /-\d+\.\d+$/) {
-                  $sth = $self->_sth_for($db_name, 'iso', 'with');
-                  $search_term = $name;
-                  last SWITCH;
-              }
-              if ($is_uniprot_archive and $name =~ /-\d+$/) {
-                  $sth = $self->_sth_for($db_name, 'iso', 'like');
-                  $search_term = "$name.%";
-                  last SWITCH;
-              }
-              if ($name =~ /\.\d+$/) {
-                  $sth = $self->_sth_for($db_name, 'plain', 'with');
-                  $search_term = $name;
-                  last SWITCH;
-              }
-              # default
-              $sth = $self->_sth_for($db_name, 'plain', 'like');
-              $search_term = "$name.%";
-              last SWITCH;
+        $sth->execute($search_term);
+
+      RESULT: while (my $row = $sth->fetchrow_hashref) {
+
+          $row->{name} = $name;
+          $self->_debug_result($db_name, $row) if $self->debug;
+
+          if (my $result = $self->_classify_result($name, $row)) {
+              $results->{$name} = $result;
+              my $seq = $self->_get_sequence($db_name, $row);
+              push @$result, $seq if ($seq);
           }
 
-            $sth->execute($search_term);
+          delete $acc_hash{$name};
 
-          RESULT: while (my ($type, $class, $acc_sv, @extra_info) = $sth->fetchrow) {
-
-              if ($self->debug) {
-                  print "MM result: ", join(',', $name, $acc_sv, $db_name, $type, $class, @extra_info), "\n";
-              }
-
-              if ($class eq 'EST') {
-                  $results->{$name} = [ 'EST', $acc_sv, 'EMBL', @extra_info ];
-                  next RESULT;
-              }
-              if ($type eq 'mRNA') {
-                  # Here we return cDNA, which is more technically correct since
-                  # both ESTs and cDNAs are mRNAs.
-                  $results->{$name} = [ 'cDNA', $acc_sv, 'EMBL', @extra_info ];
-                  next RESULT;
-              }
-              if ($type eq 'protein') {
-
-                  my $source_db = $CLASS_TO_SOURCE_DB{$class};
-                  die "Unexpected data class for uniprot entry: $class" unless $source_db;
-
-                  $results->{$name} = [ 'Protein', $acc_sv, $source_db, @extra_info ];
-                  next RESULT;
-              }
-              if ($type eq 'other RNA' or $type eq 'transcribed RNA') {
-                  $results->{$name} = [ 'ncRNA', $acc_sv, 'EMBL', @extra_info ];
-                  next RESULT;
-              }
-
-              warn "Cannot classify '$name': type '$type', class '$class'\n";
-
-          } continue { # RESULT
-              delete $acc_hash{$name};
-          }
-        }
+      } # RESULT
 
         # We don't need to search any further databases if we've found everything
         last unless keys %acc_hash;
-    }
+
+    } # NAME
+
+  } # DB_NAME
 
     return $results;
+}
+
+sub _classify_search {
+    my ($self, $db_name, $name, $sv_search) = @_;
+
+    my $is_uniprot_archive = ($db_name eq 'uniprot_archive');
+    my ($sth, $search_term);
+
+  SWITCH: for ($name) {
+      if ($is_uniprot_archive and $name =~ /-\d+\.\d+$/) {
+          $sth = $self->_sth_for($db_name, 'iso', 'with');
+          $search_term = $name;
+          last SWITCH;
+      }
+      if ($is_uniprot_archive and $name =~ /-\d+$/ and $sv_search) {
+          $sth = $self->_sth_for($db_name, 'iso', 'like');
+          $search_term = "$name.%";
+          last SWITCH;
+      }
+      if ($name =~ /\.\d+$/) {
+          $sth = $self->_sth_for($db_name, 'plain', 'with');
+          $search_term = $name;
+          last SWITCH;
+      }
+      if ($sv_search) {
+          $sth = $self->_sth_for($db_name, 'plain', 'like');
+          $search_term = "$name.%";
+          last SWITCH;
+      }
+      # default
+      warn "Bad query: '$name' (sv_search is off)";
+      last SWITCH;
+  }
+    return ($sth, $search_term);
+}
+
+sub _classify_result {
+    my ($self, $name, $row) = @_;
+
+    my (        $entry_id,$type,        $class,    $acc_sv,          @extra_info) =
+        @$row{qw(entry_id molecule_type data_class accession_version sequence_length taxon_list description)};
+
+    my $result;
+
+  SWITCH: for (1) {
+
+      if ($class eq 'EST') {
+          $result = [ 'EST', $acc_sv, 'EMBL', @extra_info ];
+          last SWITCH;
+      }
+      if ($type eq 'mRNA') {
+          # Here we return cDNA, which is more technically correct since
+          # both ESTs and cDNAs are mRNAs.
+          $result = [ 'cDNA', $acc_sv, 'EMBL', @extra_info ];
+          last SWITCH;
+      }
+      if ($type eq 'protein') {
+          my $source_db = $CLASS_TO_SOURCE_DB{$class};
+          die "Unexpected data class for uniprot entry: $class" unless $source_db;
+
+          $result = [ 'Protein', $acc_sv, $source_db, @extra_info ];
+          last SWITCH;
+      }
+      if ($type eq 'other RNA' or $type eq 'transcribed RNA') {
+          $result = [ 'ncRNA', $acc_sv, 'EMBL', @extra_info ];
+          last SWITCH;
+      }
+
+      warn "Cannot classify '$name': type '$type', class '$class'\n";
+      last SWITCH;
+
+  } # SWITCH
+
+    return $result;
+}
+
+sub _debug_result {
+    my ($self, $db_name, $row) = @_;
+    my (        $name, $type,        $class,    $acc_sv,          @extra_info) =
+        @$row{qw(name  molecule_type data_class accession_version sequence_length taxon_list description)};
+    print "MM result: ", join(',', $name, $acc_sv, $db_name, $type, $class, @extra_info), "\n";
+    return;
+}
+
+sub _get_sequence {
+    my ($self, $db_name, $row) = @_;
+
+    my $sth = $self->_seq_sth_for($db_name);
+    $sth->execute($row->{entry_id});
+
+    my $seq;
+    while (my ($chunk) = $sth->fetchrow) {
+        $seq .= $chunk;
+    }
+
+    my $name = $row->{name};
+    unless ($seq) {
+        warn "No sequence for '$name'\n";
+        return;
+    }
+    unless (length($seq) == $row->{sequence_length}) {
+        warn("Seq length mismatch for '$name': db = ", $row->{sequence_length}, ", actual=", length($seq), "\n");
+        return;
+    }
+    return $seq;
 }
 
 sub name {
