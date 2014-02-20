@@ -66,6 +66,7 @@ sub gff_line { ## no critic( Subroutines::ProhibitManyArgs )
         $strand,
         $phase,
         $attribute_hash,
+        $extra_hash,
         ) = @_;
 
     _gff_escape_seqid for $seqid;
