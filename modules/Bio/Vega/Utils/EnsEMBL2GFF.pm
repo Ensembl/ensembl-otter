@@ -122,7 +122,9 @@ my $_new_feature_id_sub = sub {
         my $gff = $self->SUPER::_gff_hash(%args);
 
         $gff->{'score'} = $self->score;
-        my $target = [ $self->hseqname, $self->hstart, $self->hend, $self->hstrand ];
+        my $name = $self->hseqname;
+        $gff->{'attributes'}{'Name'} = $name;
+        my $target = [ $name, $self->hstart, $self->hend, $self->hstrand ];
         $gff->{'attributes'}{'Target'}    = $target;
         $gff->{'attributes'}{'percentID'} = $self->percent_id;
 
@@ -511,6 +513,7 @@ my $_new_feature_id_sub = sub {
             $gff->{'score'}   = $self->score;
 
             my $name = $self->repeat_consensus->name;
+            $gff->{'attributes'}{'Name'} = $name;
             $gff->{'attributes'}{'Target'} =
                 [ $name, $self->hstart, $self->hend, $self->hstrand ];
         }
