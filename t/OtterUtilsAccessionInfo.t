@@ -10,13 +10,16 @@ use Test::Otter::Accessions;
 
 use Test::More;
 
-my $module;
+my ($module, $driver_module);
 BEGIN {
-    $module = 'Bio::Otter::Utils::MM';
+    $module        = 'Bio::Otter::Utils::AccessionInfo';
+    $driver_module = 'Bio::Otter::Utils::MM';
     use_ok($module);
+    use_ok($driver_module);
 }
 
 critic_module_ok($module);
+critic_module_ok($driver_module);
 
 my $mm = new_ok($module);
 

@@ -14,7 +14,7 @@ use Bio::Otter::Git qw{ :server_ensembl :match };
 use Try::Tiny;
 
 use Bio::Otter::Server::Support::Web;
-use Bio::Otter::Utils::MM;
+use Bio::Otter::Utils::AccessionInfo;
 use Bio::Otter::Utils::ENA;
 use Bio::Vega::Evidence::Types qw(evidence_is_sra_sample_accession);
 
@@ -25,24 +25,24 @@ Bio::Otter::Server::Support::Web->send_response(
         my $accs = $server->param('accessions');
         my @acc_list = split(/,/, $accs);
 
-        my @mm_acc_list;
+        my @ai_acc_list;
         my @sra_acc_list;
         foreach my $acc ( @acc_list ) {
             if (evidence_is_sra_sample_accession($acc)) {
                 push @sra_acc_list, $acc;
             } else {
-                push @mm_acc_list, $acc;
+                push @ai_acc_list, $acc;
             }
         }
 
-        my $mm_types;
+        my $ai_types;
         try {
-            my $mm = Bio::Otter::Utils::MM->new;
-            $mm_types = $mm->get_accession_types(\@mm_acc_list);
+            my $ai = Bio::Otter::Utils::AccessionInfo->new;
+            $ai_types = $ai->get_accession_types(\@ai_acc_list);
             1;
         }
         catch {
-            die "Failed to fetch MM accession type info: $_";
+            die "Failed to fetch AccessionInfo accession type info: $_";
         };
 
         my $ena_types;
@@ -56,8 +56,8 @@ Bio::Otter::Server::Support::Web->send_response(
         };
 
         my $response = '';
-        foreach my $acc (keys %$mm_types) {
-            $response .= join("\t", $acc, @{$mm_types->{$acc}}) . "\n";
+        foreach my $acc (keys %$ai_types) {
+            $response .= join("\t", $acc, @{$ai_types->{$acc}}) . "\n";
         }
         foreach my $acc (keys %$ena_types) {
             $response .= join("\t", $acc, @{$ena_types->{$acc}}) . "\n";

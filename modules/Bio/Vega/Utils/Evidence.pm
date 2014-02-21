@@ -11,19 +11,19 @@ our @EXPORT_OK = qw{
     reverse_seq
 };
 
-use Bio::Otter::Utils::MM;
+use Bio::Otter::Utils::AccessionInfo;
 
-# ---- MM based stuff ----
+# ---- AccessionInfo based stuff ----
 
 {
-    my $mm;
+    my $ai;
 
     sub get_accession_type {
         my $name = shift;
 
-        $mm ||= Bio::Otter::Utils::MM->new;
+        $ai ||= Bio::Otter::Utils::AccessionInfo->new;
 
-        my $accession_types = $mm->get_accession_types([$name]);
+        my $accession_types = $ai->get_accession_types([$name]);
         my $at = $accession_types->{$name};
         if ($at) {
             return @$at;
