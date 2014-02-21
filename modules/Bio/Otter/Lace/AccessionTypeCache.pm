@@ -86,7 +86,8 @@ sub populate {
     $dbh->begin_work;
     try {
         foreach my $line (split /\n/, $response) {
-            my ($name, $evi_type, $acc_sv, $source_db, $seq_length, $taxon_list, $description) = split /\t/, $line;
+            my ($name, $evi_type, $acc_sv, $source_db, $seq_length, $taxon_list, $description, $seq) =
+                split /\t/, $line;
             my ($tax_id, @other_tax);
             ($tax_id, @other_tax) = split /,/, $taxon_list if $taxon_list; # /; # emacs highlighting workaround
             if (@other_tax) {
@@ -98,7 +99,7 @@ sub populate {
             my ($have_full) = $check_full->fetchrow;
             unless ($have_full) {
                 # It is new, so save it
-                $self->save_accession_info($acc_sv, $tax_id, $evi_type, $description, $source_db, $seq_length);
+                $self->save_accession_info($acc_sv, $tax_id, $evi_type, $description, $source_db, $seq_length, $seq);
             }
             if ($name ne $acc_sv) {
                 $save_alias->execute($name, $acc_sv);
@@ -125,16 +126,17 @@ sub populate {
               , evi_type
               , description
               , source_db
-              , length)
-        VALUES (?,?,?,?,?,?)
+              , length
+              , sequence )
+        VALUES (?,?,?,?,?,?,?)
     };
 
     sub save_accession_info {
-        my ($self, $accession_sv, $taxon_id, $evi_type, $description, $source_db, $length) = @_;
+        my ($self, $accession_sv, $taxon_id, $evi_type, $description, $source_db, $length, $seq) = @_;
         my $sth = $save_acc_info_sth{$self} ||= $DB{$self}->dbh->prepare($save_acc_info_sql);
         confess "Cannot save without evi_type" unless defined $evi_type;
 
-        return $sth->execute($accession_sv, $taxon_id, $evi_type, $description, $source_db, $length);
+        return $sth->execute($accession_sv, $taxon_id, $evi_type, $description, $source_db, $length, $seq);
     }
 }
 

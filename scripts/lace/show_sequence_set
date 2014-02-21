@@ -63,69 +63,59 @@ use Hum::Sort 'ace_sort';
 }
 
 sub print_agp {
-    my( $ds, $sequence_set, $agp_cs_version ) = @_;
+    my( $ds, $chr_name, $agp_cs_version ) = @_;
 
     my $dba = $ds->get_cached_DBAdaptor;
-    my $sth = $dba->dbc->prepare(q{
-        SELECT chr_attrib.value
-          , a_chr.asm_start
-          , a_chr.asm_end
-          , a_chr.cmp_start
-          , a_chr.cmp_end
-          , a_chr.ori
-          , acc_attrib.value
-          , sv_attrib.value
-        FROM (seq_region chr
-              , seq_region contig
-              , seq_region clone
-              , assembly a_chr
-              , assembly a_clone
-              , coord_system cs)
-        JOIN seq_region_attrib chr_attrib
-          ON chr.seq_region_id = chr_attrib.seq_region_id
-          AND chr_attrib.attrib_type_id =
-        (SELECT attrib_type_id
-            FROM attrib_type
-            WHERE code = 'chr')
-        JOIN seq_region_attrib acc_attrib
-          ON clone.seq_region_id = acc_attrib.seq_region_id
-          AND acc_attrib.attrib_type_id =
-        (SELECT attrib_type_id
-            FROM attrib_type
-            WHERE code = 'embl_acc')
-        JOIN seq_region_attrib sv_attrib
-          ON clone.seq_region_id = sv_attrib.seq_region_id
-          AND sv_attrib.attrib_type_id =
-        (SELECT attrib_type_id
-            FROM attrib_type
-            WHERE code = 'embl_version')
-        WHERE chr.seq_region_id = a_chr.asm_seq_region_id
-          AND a_chr.cmp_seq_region_id = contig.seq_region_id
-          AND contig.seq_region_id = a_clone.cmp_seq_region_id
-          AND a_clone.asm_seq_region_id = clone.seq_region_id
-          AND chr.coord_system_id = cs.coord_system_id
-          AND cs.name = 'chromosome'
-          AND chr.name = ?
-          AND cs.version = ?
-        ORDER BY a_chr.asm_start
-    });
-    $sth->execute($sequence_set, $agp_cs_version);
     
-    my $row = 0;
+    my $chr_details = $dba->dbc->prepare(q{
+        SELECT seq_region_id, length
+        FROM seq_region
+        WHERE name = ?
+    });
+    $chr_details->execute($chr_name);
+    my ($chr_id, $chr_length) = $chr_details->fetchrow;
+    
+    my $sth = $dba->dbc->prepare(q{
+        SELECT asm.asm_start
+          , asm.asm_end
+          , asm.cmp_start
+          , asm.cmp_end
+          , asm.ori
+          , contig.name
+        FROM seq_region chr
+          , seq_region contig
+          , assembly asm
+          , coord_system cs
+        WHERE chr.seq_region_id = asm.asm_seq_region_id
+          AND asm.cmp_seq_region_id = contig.seq_region_id
+          AND contig.coord_system_id = cs.coord_system_id
+          AND cs.name = 'contig'
+          AND chr.seq_region_id = ?
+        ORDER BY asm.asm_start
+    });
+    $sth->execute($chr_id);
+    
     my $pos = 0;
-    while (my ($chr_name, $chr_start, $chr_end,
-               $contig_start, $contig_end, $strand,
-               $acc, $sv) = $sth->fetchrow)
+    my $row = 0;
+    while (my ($chr_start, $chr_end,
+               $ctg_start, $ctg_end, $ctg_ori, $ctg_name) = $sth->fetchrow)
     {
         $row++;
         if (my $gap = ($chr_start - ($pos + 1))) {
             print join("\t", $chr_name, $pos + 1, $pos + $gap, $row, 'N', $gap), "\n";
             $row++;
         }
+        if ($ctg_name =~ /^(.+)(\.\d+)(\.\d+)(\.\d+)$/) {
+            $ctg_name = $1 . $2;
+        }
         print join("\t", $chr_name, $chr_start, $chr_end, $row, 'F',
-            "$acc.$sv", $contig_start, $contig_end,
-            $strand eq '1' ? '+' : '-'), "\n";
+            $ctg_name, $ctg_start, $ctg_end,
+            $ctg_ori eq '1' ? '+' : '-'), "\n";
         $pos = $chr_end;
+    }
+    if (my $gap = $chr_length - $pos) {
+        ++$row;
+        print join("\t", $chr_name, $pos + 1, $pos + $gap, $row, 'N', $gap), "\n";
     }
 
     return;
