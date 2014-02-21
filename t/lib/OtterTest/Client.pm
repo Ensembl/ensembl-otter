@@ -6,7 +6,7 @@ use strict;
 use warnings;
 
 use Bio::Otter::Lace::Client;   # _build_meta_hash
-use Bio::Otter::Utils::MM;
+use Bio::Otter::Utils::AccessionInfo;
 use Bio::Otter::Server::Config;
 use Bio::Otter::Server::Support::Local;
 use Bio::Otter::ServerAction::TSV::LoutreDB;
@@ -23,7 +23,7 @@ sub new {
 
 sub get_accession_types {
     my ($self, @accessions) = @_;
-    my $types = $self->mm->get_accession_types(\@accessions);
+    my $types = $self->ai->get_accession_types(\@accessions);
     # FIXME: de-serialisation is in wrong place: shouldn't need to serialise here.
     # see apache/get_accession_types and AccessionTypeCache.
     my $response = '';
@@ -33,9 +33,9 @@ sub get_accession_types {
     return $response;
 }
 
-sub mm {
+sub ai {
     my $self = shift;
-    return $self->{_mm} ||= Bio::Otter::Utils::MM->new;
+    return $self->{_ai} ||= Bio::Otter::Utils::AccessionInfo->new;
 }
 
 # FIXME: scripts/apache/get_config needs reimplementing with a Bio::Otter::ServerAction:: class,
