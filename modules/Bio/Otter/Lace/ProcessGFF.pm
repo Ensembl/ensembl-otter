@@ -204,7 +204,10 @@ sub parse_gff_line {
     chomp($line);
     my ($seq_name, $source, $feat_type, $start, $end, $score, $strand, $frame, $group)
         = split(/\t/, $line, 9);
-    my $attrib = { map { _parse_tag_value() } split(/;/, $group) };
+    my $attrib =
+        defined $group
+        ? ( +{ map { _parse_tag_value() } split(/;/, $group) } )
+        : { };
     return ($seq_name, $source, $feat_type, $start, $end, $score, $strand, $frame, $attrib);
 }
 
