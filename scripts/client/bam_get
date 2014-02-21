@@ -110,6 +110,7 @@ sub _print_feature {
     my $flags = join ' ', $feature->get_tag_values('FLAGS');
 
     my $attribute_hash = {
+        Name       => $feature->name,
         length     => $feature->l_qseq,
         cigar_bam  => $feature->cigar_str,
         bam_flags  => $flags,
