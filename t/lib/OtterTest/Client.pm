@@ -63,6 +63,22 @@ sub get_db_info {
     return $self->Bio::Otter::Lace::Client::_build_db_info_hash($response);
 }
 
+{
+    my %_config_hash;
+
+    sub config_section_value {
+        my ($self, $section, $key) = @_;
+        return $_config_hash{$section}->{$key};
+    }
+
+    # NOT A METHOD
+    sub Set_Config {
+        my ($config) = @_;
+        %_config_hash = ( %$config );
+        return;
+    }
+}
+
 sub _cached_response {
     my ($self, $what, $dsname) = @_;
 
