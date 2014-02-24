@@ -7,6 +7,9 @@ with 'MooseX::Log::Log4perl';
 
 use Readonly;
 
+use Bio::Otter::Lace::OnTheFly::Utils::SeqList;
+use Bio::Otter::Lace::OnTheFly::Utils::Types;
+
 use Bio::Otter::GappedAlignment;
 use Bio::Otter::Lace::DB::OTFRequest;
 use Bio::Otter::Lace::OnTheFly::ResultSet;
@@ -25,7 +28,7 @@ Readonly our @RYO_ORDER => (
 );
 
 has type       => ( is => 'ro', isa => 'Str',                                   required => 1 );
-has query_seqs => ( is => 'ro', isa => 'ArrayRef[Hum::Sequence]',               required => 1 );
+has query_seqs => ( is => 'ro', isa => 'SeqListClass',                               required => 1, coerce => 1 );
 has target     => ( is => 'ro', isa => 'Bio::Otter::Lace::OnTheFly::TargetSeq', required => 1 );
 
 has softmask_target => ( is => 'ro', isa => 'Bool' );
@@ -64,7 +67,7 @@ sub _build_description_for_fasta {  ## no critic (Subroutines::ProhibitUnusedPri
 
 sub seqs_for_fasta {
     my $self = shift;
-    return @{$self->query_seqs};
+    return @{$self->query_seqs->seqs};
 }
 
 with 'Bio::Otter::Lace::OnTheFly::FastaFile'; # provides fasta_file()
