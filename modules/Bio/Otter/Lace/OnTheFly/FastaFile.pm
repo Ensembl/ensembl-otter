@@ -20,7 +20,7 @@ sub _build_fasta_file {         ## no critic (Subroutines::ProhibitUnusedPrivate
         TEMPLATE => $template,
         TMPDIR   => 1,
         SUFFIX   => '.fa',
-        UNLINK   => 1,
+        UNLINK   => 0,
         );
 
     my $ts_out  = Hum::FastaFileIO->new("> $file");
