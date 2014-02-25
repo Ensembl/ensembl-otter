@@ -1,19 +1,11 @@
-package Bio::Otter::Lace::OnTheFly::Aligner::Transcript;
+package Bio::Otter::Lace::OnTheFly::Runner::Transcript;
 
 use namespace::autoclean;
 use Moose;
 
-extends 'Bio::Otter::Lace::OnTheFly::Aligner';
+extends 'Bio::Otter::Lace::OnTheFly::Runner';
 
 has transcript => ( is => 'ro', isa => 'Hum::Ace::SubSeq', required => 1 );
-
-augment '_build_default_options'    => sub { return { } };
-augment '_build_default_qt_options' => sub {
-    return {
-        protein => { '--model' => 'protein2dna',  '--exhaustive' => undef },
-        dna     => { '--model' => 'affine:local', '--exhaustive' => undef },
-    };
-};
 
 around 'parse' => sub {
     my ($orig, $self, @args) = @_;

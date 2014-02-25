@@ -2133,28 +2133,29 @@ sub launch_exonerate {
 
     my $request_adaptor = $self->AceDatabase->DB->OTFRequestAdaptor;
 
-    for my $aligner ( $otf->aligners_for_each_type ) {
+    for my $builder ( $otf->builders_for_each_type ) {
 
-        my $type = $aligner->type;
-        my $is_protein = $aligner->is_protein;
+        my $type = $builder->type;
+        my $is_protein = $builder->is_protein;
 
         warn "Running exonerate for sequence(s) of type: $type\n";
 
         # Set up a request for the filter script
-        my $request = $aligner->prepare_run;
+        my $request = $builder->prepare_run;
         $request_adaptor->store($request);
 
         # The new way:
-        my $result_set = $aligner->run;
+        my $runner = $otf->build_runner(request => $request);
+        my $result_set = $runner->run;
 
-        my $ace_output = $result_set->ace($aligner->target->name);
+        my $ace_output = $result_set->ace($builder->target->name);
         my $db_count   = $result_set->db_store($db_slice);
 
         if ($ace_output or $db_count) {
             $db_edited = 1;
         }
         else {
-            warn "No hits found on '", $aligner->target->name, "'\n";
+            warn "No hits found on '", $builder->target->name, "'\n";
             next;
         }
 
