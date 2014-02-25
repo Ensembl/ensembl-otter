@@ -33,9 +33,9 @@ BEGIN {
 
     @modules = qw(
         Bio::Otter::Lace::OnTheFly
-        Bio::Otter::Lace::OnTheFly::Aligner
-        Bio::Otter::Lace::OnTheFly::Aligner::Genomic
-        Bio::Otter::Lace::OnTheFly::Aligner::Transcript
+        Bio::Otter::Lace::OnTheFly::Builder
+        Bio::Otter::Lace::OnTheFly::Builder::Genomic
+        Bio::Otter::Lace::OnTheFly::Builder::Transcript
         Bio::Otter::Lace::OnTheFly::DBStore
         Bio::Otter::Lace::OnTheFly::FastaFile
         Bio::Otter::Lace::OnTheFly::Format::Ace
@@ -43,6 +43,8 @@ BEGIN {
         Bio::Otter::Lace::OnTheFly::Genomic
         Bio::Otter::Lace::OnTheFly::QueryValidator
         Bio::Otter::Lace::OnTheFly::ResultSet
+        Bio::Otter::Lace::OnTheFly::Runner
+        Bio::Otter::Lace::OnTheFly::Runner::Transcript
         Bio::Otter::Lace::OnTheFly::TargetSeq
         Bio::Otter::Lace::OnTheFly::Transcript
         Bio::Otter::Lace::OnTheFly::Utils::ExonerateFormat

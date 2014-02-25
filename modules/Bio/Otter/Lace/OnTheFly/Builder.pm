@@ -1,4 +1,4 @@
-package Bio::Otter::Lace::OnTheFly::Aligner;
+package Bio::Otter::Lace::OnTheFly::Builder;
 
 use namespace::autoclean;
 use Moose;
@@ -7,17 +7,15 @@ with 'MooseX::Log::Log4perl';
 
 use Readonly;
 
-use Bio::Otter::Lace::OnTheFly::Utils::ExonerateFormat qw( ryo_format ryo_order sugar_order );
+use Bio::Otter::Lace::OnTheFly::Utils::ExonerateFormat qw( ryo_format );
 use Bio::Otter::Lace::OnTheFly::Utils::SeqList;
 use Bio::Otter::Lace::OnTheFly::Utils::Types;
 
-use Bio::Otter::GappedAlignment;
 use Bio::Otter::Lace::DB::OTFRequest;
-use Bio::Otter::Lace::OnTheFly::ResultSet;
 
-has type       => ( is => 'ro', isa => 'Str',                                   required => 1 );
+has type       => ( is => 'ro', isa => 'Str',                                        required => 1 );
 has query_seqs => ( is => 'ro', isa => 'SeqListClass',                               required => 1, coerce => 1 );
-has target     => ( is => 'ro', isa => 'Bio::Otter::Lace::OnTheFly::TargetSeq', required => 1 );
+has target     => ( is => 'ro', isa => 'Bio::Otter::Lace::OnTheFly::TargetSeq',      required => 1 );
 
 has softmask_target => ( is => 'ro', isa => 'Bool' );
 
@@ -100,73 +98,11 @@ sub prepare_run {
         command     => $command,
 #        logic_name  => $self->analysis_name,
         logic_name  => $self->analysis_name . '_gff', # temp for testing; FIXME dups OTF:Format::GFF->gff_method_tag()
+        target_start=> $self->target->start,
         args        => \%args,
         );
 
     return $request;
-}
-
-sub run {
-    my $self = shift;
-
-    my $request = $self->prepare_run;
-
-    my $command = $request->command;
-    my @command_line = $self->construct_command( $command, $request->args );
-    $self->logger->info('Running: ', join ' ', @command_line);
-    open my $raw_align, '-|', @command_line or $self->logger->logconfess("failed to run $command: $!");
-
-    return $self->parse($raw_align);
-}
-
-sub parse {
-    my ($self, $fh) = @_;
-
-    my $result_set = Bio::Otter::Lace::OnTheFly::ResultSet->new(
-        analysis_name => $self->analysis_name,
-        is_protein    => $self->is_protein,
-        query_seqs    => $self->query_seqs,
-        );
-
-    while (my $line = <$fh>) {
-        $result_set->add_raw_line($line);
-
-        # We only parse our RYO lines
-        next unless $line =~ /^RESULT:/;
-        my @line_parts = split(' ',$line);
-        my (%ryo_result, @vulgar_comps);
-        (@ryo_result{ryo_order()}, @vulgar_comps) = @line_parts;
-
-        my $gapped_alignment = $self->_parse_vulgar(\%ryo_result, \@vulgar_comps);
-
-        my $target_start = $self->target->start;
-        $gapped_alignment->apply_target_offset($target_start - 1) if $target_start > 1;
-
-        my $q_id = $gapped_alignment->query_id;
-        $self->logger->info("RESULT found for ${q_id}");
-
-        if ($result_set->hit_by_query_id($q_id)) {
-            $self->log->warn("Already have result for '$q_id'");
-        }
-        $result_set->add_hit_by_query_id($q_id => $gapped_alignment);
-    }
-
-    return $result_set;
-}
-
-sub _parse_vulgar {
-    my ($self, $ryo_result, $vulgar_comps) = @_;
-
-    my $vulgar_string = join(' ', @{$ryo_result}{sugar_order()}, @$vulgar_comps);
-
-    my $ga = Bio::Otter::GappedAlignment->from_vulgar($vulgar_string);
-
-    $ga->percent_id($ryo_result->{_perc_id});
-    $ga->gene_orientation($ryo_result->{_gene_orientation});
-
-    $ga = $ga->reverse_alignment if $ga->gene_orientation eq '-';
-
-    return $ga;
 }
 
 sub analysis_name {
@@ -176,21 +112,6 @@ sub analysis_name {
     if    ($type =~ /^Unknown/) { return $type;       }
     elsif ($type eq 'cDNA')     { return "OTF_mRNA";  }
     else                        { return "OTF_$type"; }
-}
-
-# FIXME: doesn't really belong here: more general
-#
-sub construct_command {
-    my ($self, $command, $args) = @_;
-    my @command_line = ( $command );
-    foreach my $key ( keys %{$args} ) {
-        if (defined (my $val = $args->{$key})) {
-            push @command_line, $key, $val;
-        } else {
-            push @command_line, $key;
-        }
-    }
-    return @command_line;
 }
 
 1;

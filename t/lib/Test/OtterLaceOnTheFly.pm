@@ -9,7 +9,8 @@ use Exporter qw(import);
 use FindBin qw($Bin);
 use Test::More;
 
-use Bio::Otter::Lace::OnTheFly::Aligner::Genomic;
+use Bio::Otter::Lace::OnTheFly::Builder::Genomic;
+use Bio::Otter::Lace::OnTheFly::Runner;
 use Bio::Otter::Lace::OnTheFly::TargetSeq;
 use Bio::Otter::Utils::FeatureSort qw( feature_sort );
 use Hum::FastaFileIO;
@@ -106,13 +107,17 @@ sub run_otf_test {
         $test->{query_seqs} = [ Hum::FastaFileIO->new_DNA_IO($test->{query_path})->read_all_sequences ];
     }
 
-    my $aligner = new_ok( 'Bio::Otter::Lace::OnTheFly::Aligner::Genomic' => [{
+    my $builder = new_ok( 'Bio::Otter::Lace::OnTheFly::Builder::Genomic' => [{
         type       => $test->{type},
         query_seqs => $test->{query_seqs},
         target     => $target,
                                                                              }]);
+    my $request = $builder->prepare_run;
 
-    my $result_set = $aligner->run;
+    my $runner = new_ok( 'Bio::Otter::Lace::OnTheFly::Runner' => [
+                             request => $request,
+                                                                  ]);
+    my $result_set = $runner->run;
     isa_ok($result_set, 'Bio::Otter::Lace::OnTheFly::ResultSet');
 
     my @qids = sort $result_set->hit_query_ids;

@@ -41,16 +41,17 @@ sub do_it {
 sub do_requires {
     my ($self) = @_;
     $self->SUPER::do_requires;
-    require Bio::Otter::Lace::OnTheFly::Aligner::Genomic;
+    require Bio::Otter::Lace::OnTheFly::Runner;
 }
 
 sub run_request {
     my ($self, $request) = @_;
     $self->log_message('got a request');
     $self->do_requires;         # in full this time
-#    my $aligner = Bio::Otter::Lace::OnTheFly::Aligner::Genomic->new(
-#
-#        );
+    my $runner = Bio::Otter::Lace::OnTheFly::Runner->new(
+        request => $request,
+        );
+    my $result_set = $runner->run;
     return;
 }
 

@@ -4,9 +4,10 @@ use namespace::autoclean;
 use Moose::Role;
 
 requires 'build_target_seq';
-requires 'build_aligner';
+requires 'build_builder';
 
 use Bio::Otter::Lace::OnTheFly::QueryValidator;
+use Bio::Otter::Lace::OnTheFly::Runner;
 use Bio::Otter::Lace::OnTheFly::TargetSeq;
 
 has 'query_validator' => (
@@ -68,12 +69,12 @@ sub BUILD {
     return;
 }
 
-sub aligners_for_each_type {
+sub builders_for_each_type {
     my $self = shift;
 
-    my @aligners;
+    my @builders;
     foreach my $type ( $self->seq_types ) {
-        push @aligners, $self->build_aligner(
+        push @builders, $self->build_builder(
             type               => $type,
             query_seqs         => $self->seqs_for_type($type),
             target             => $self->target_seq_obj,
@@ -82,7 +83,14 @@ sub aligners_for_each_type {
             query_type_options => $self->aligner_query_type_options,
             );
     }
-    return @aligners;
+    return @builders;
+}
+
+# Default runner is a plain one
+#
+sub build_runner {
+    my ($self, @params) = @_;
+    return Bio::Otter::Lace::OnTheFly::Runner->new(@params);
 }
 
 1;
