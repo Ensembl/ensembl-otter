@@ -66,11 +66,40 @@ sub store_hit_data_from_gff {
             );
     }
 
-    $accession_type_cache->commit;
-
     foreach my $prob (sort values %fail) {
         warn $prob; # warn because it is only a cache save fail
     }
+
+    # Now we are at the start of the FASTA data (or EOF if there is
+    # none).
+
+    my ($header, $sequence, $taxon_id_hash);
+    $taxon_id_hash = { };
+    my $save_sub = sub {
+        if (defined $header) {
+            my @value_list = split /\|/, $header;
+            $accession_type_cache->save_accession_info(@value_list, $sequence);
+            my $taxon_id = $value_list[1];
+            $taxon_id_hash->{$taxon_id}++;
+        }
+    };
+
+    $sequence = '';
+    while (<$gff_fh>) {
+        chomp;
+        if (/^>/) { # FASTA header
+            $save_sub->();
+            ($header) = /^>(.*)$/;
+            $sequence = '';
+        }
+        else { # sequence
+            $sequence .= $_;
+        }
+    }
+    $save_sub->();
+
+    $accession_type_cache->commit;
+    $accession_type_cache->populate_taxonomy([keys %{$taxon_id_hash}]);
 
     return;
 }
