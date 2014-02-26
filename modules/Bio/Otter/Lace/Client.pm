@@ -736,7 +736,7 @@ sub general_http_dialog {
             # 410 = Gone.  Not coming back; probably concise.  RT#234724
             # Actually, maybe not so concise.  RT#382740 returns "410 Gone" plus large HTML.
             warn __truncdent_for_log($response->decoded_content, 10240, '* ');
-            die sprintf "Otter Server v%s is gone, please update to a new one.\n",
+            die sprintf "Otter Server v%s is gone, please download an up-to-date Otterlace.\n",
               Bio::Otter::Version->version;
         } else {
             print STDERR "\nGot error $code\n";
