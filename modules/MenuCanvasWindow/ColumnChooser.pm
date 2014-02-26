@@ -628,7 +628,9 @@ sub update_item_select_state {
 }
 
 sub load_filters {
-    my ($self, $is_recover) = @_;
+    my ($self, %options) = @_;
+
+    my $is_recover = $options{is_recover};
 
     my $top = $self->top_window;
     $top->Busy(-recurse => 1);
