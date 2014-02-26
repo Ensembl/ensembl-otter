@@ -1,0 +1,33 @@
+#!/usr/bin/perl -Tw
+
+# Author:        jh13
+# Group:         anacode
+# Maintainer:    jh13
+
+use strict;
+use warnings;
+
+BEGIN { use lib ($ENV{OTTER_PERL_INC} || q{}) =~ m{([^:]+)}g }
+use SangerPaths qw{ core bioperl123 otter };
+use Bio::Otter::Git qw{ :server_ensembl :match };
+
+use Try::Tiny;
+
+use Bio::Otter::Server::Support::Web;
+use Bio::Otter::Utils::MM;
+
+my @info_key_list = qw(
+    id
+    name
+    );
+
+Bio::Otter::Server::Support::Web->send_response(
+    sub {
+        my ($server) = @_;
+        my $id = $server->require_argument('id');
+        my @id_list = split /,/, $id;
+        my $info = Bio::Otter::Utils::MM->new->get_taxonomy_info(\@id_list);
+        my $header = sprintf "# %s\n", join "\t", @info_key_list;
+        my $response = join '', $header, map { sprintf "%s\n", join "\t", @{$_}{@info_key_list} } @{$info};
+        return $response;
+    });
