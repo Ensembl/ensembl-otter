@@ -45,6 +45,7 @@ BEGIN {
         Bio::Otter::Lace::OnTheFly::ResultSet
         Bio::Otter::Lace::OnTheFly::TargetSeq
         Bio::Otter::Lace::OnTheFly::Transcript
+        Bio::Otter::Lace::OnTheFly::Utils::ExonerateFormat
         Bio::Otter::Lace::OnTheFly::Utils::SeqList
         Bio::Otter::Lace::OnTheFly::Utils::Types
     );

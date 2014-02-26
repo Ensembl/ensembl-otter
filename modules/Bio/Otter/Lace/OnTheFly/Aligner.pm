@@ -7,25 +7,13 @@ with 'MooseX::Log::Log4perl';
 
 use Readonly;
 
+use Bio::Otter::Lace::OnTheFly::Utils::ExonerateFormat qw( ryo_format ryo_order sugar_order );
 use Bio::Otter::Lace::OnTheFly::Utils::SeqList;
 use Bio::Otter::Lace::OnTheFly::Utils::Types;
 
 use Bio::Otter::GappedAlignment;
 use Bio::Otter::Lace::DB::OTFRequest;
 use Bio::Otter::Lace::OnTheFly::ResultSet;
-use Bio::Otter::Vulgar;
-
-Readonly our $RYO_FORMAT => 'RESULT: %S %pi %ql %tl %g %V\n';
-Readonly our @RYO_ORDER => (
-    '_tag',
-    @Bio::Otter::Vulgar::SUGAR_ORDER,
-    qw(
-        _perc_id
-        _query_length
-        _target_length
-        _gene_orientation
-      ),
-);
 
 has type       => ( is => 'ro', isa => 'Str',                                   required => 1 );
 has query_seqs => ( is => 'ro', isa => 'SeqListClass',                               required => 1, coerce => 1 );
@@ -97,7 +85,7 @@ sub prepare_run {
         '--target'     => $target_file,
         '--querytype'  => $query_type,
         '--query'      => $query_file,
-        '--ryo'        => $RYO_FORMAT,
+        '--ryo'        => ryo_format(),
         '--showvulgar' => 'false',
         '--showsugar'  => 'false',
         '--showcigar'  => 'false',
@@ -147,7 +135,7 @@ sub parse {
         next unless $line =~ /^RESULT:/;
         my @line_parts = split(' ',$line);
         my (%ryo_result, @vulgar_comps);
-        (@ryo_result{@RYO_ORDER}, @vulgar_comps) = @line_parts;
+        (@ryo_result{ryo_order()}, @vulgar_comps) = @line_parts;
 
         my $gapped_alignment = $self->_parse_vulgar(\%ryo_result, \@vulgar_comps);
 
@@ -169,7 +157,7 @@ sub parse {
 sub _parse_vulgar {
     my ($self, $ryo_result, $vulgar_comps) = @_;
 
-    my $vulgar_string = join(' ', @{$ryo_result}{@Bio::Otter::Vulgar::SUGAR_ORDER}, @$vulgar_comps);
+    my $vulgar_string = join(' ', @{$ryo_result}{sugar_order()}, @$vulgar_comps);
 
     my $ga = Bio::Otter::GappedAlignment->from_vulgar($vulgar_string);
 
