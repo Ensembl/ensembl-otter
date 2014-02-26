@@ -26,6 +26,7 @@ Readonly my @ALL_DB_CATEGORIES => qw(
     uniprot
     uniprot_archive
     refseq
+    mushroom
 );
 
 Readonly my @DEFAULT_DB_CATEGORIES => qw(
