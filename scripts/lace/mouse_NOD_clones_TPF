@@ -9,14 +9,23 @@ use warnings;
 ###                       It queries the Oracle Trackings database and generates info on the fly, however
 ###                       caching is implemented
 
-use SangerPaths qw(core badger humpub);
-use SangerWeb;
-use Hum::Submission ('prepare_statement');
-use Hum::Tracking ('prepare_track_statement');
-use Hum::Sort ('ace_sort');
-use Tie::IxHash;
+# use SangerPaths qw(core badger humpub);
+# use SangerWeb;
+# use Hum::Submission ('prepare_statement');
+# use Hum::Tracking ('prepare_track_statement');
+# use Hum::Sort ('ace_sort');
+# use Tie::IxHash;
+
 use CGI;
 use CGI::Carp qw(warningsToBrowser fatalsToBrowser);
+
+die <<"EOM"
+This script "$0" is obsolete.  It used the now unsupported SangerPaths tags
+"badger" and "humpub".
+EOM
+    ;
+
+__END__
 
 {
 
