@@ -3,98 +3,89 @@
 use strict;
 use warnings;
 
-use Bio::Otter::Utils::GetScript;
+package Bio::Otter::GetScript::LocalDB;
+
 use Bio::Vega::Enrich::SliceGetSplicedAlignFeatures;
 use Bio::Vega::Utils::GFF;
 use Bio::Vega::Utils::EnsEMBL2GFF;
 
-sub show_version {
-    # Check dependencies, report (arbitrary) version
-    my ($helper) = @_;
-    my $dbh = DBI->connect("dbi:SQLite:dbname=:memory:","","");
-    print "localdb_get 0.5\n";
-    exit 0;
+use base 'Bio::Otter::Utils::GetScript';
+
+sub version { return 'localdb_get 0.5'; };
+sub log_filename { return 'localdb_log.txt'; }
+
+sub do_it {
+    my ($self) = @_;
+
+    my $args = $self->args;
+
+    $self->do_requires;
+
+    # pull off arguments meant for us
+    my ($process_gff, $gff_version) = $self->read_delete_args(qw(process_gff_file gff_version));
+
+    # There is overlap with MFetcher, but probably not enough to share code?
+    my              ($cs, $type, $start, $end, $csver,    $feature_kind, $analysis) =
+        @{$args}{ qw( cs   type   start   end   csver_orig feature_kind   analysis  ) };
+
+    my $slice;
+    $self->time_diff_for( 'setup', sub {
+        my $dba = $self->local_db->vega_dba;
+        $slice = $dba->get_SliceAdaptor()->fetch_by_region(
+            $cs,
+            $type,
+            $start,
+            $end,
+            1,      # somehow strand parameter is needed
+            $csver,
+            );
+                          });
+
+    my $features;
+    my $getter_method = "get_all_${feature_kind}s";
+    $self->time_diff_for( 'get features', sub {
+        $features = $slice->$getter_method($analysis);
+        my $n_features = scalar(@$features);
+        $self->log_message("get features: got $n_features");
+                          });
+
+    my $gff_source = $args->{gff_source};
+    my %gff_args = (
+        gff_format        => Bio::Vega::Utils::GFF::gff_format($gff_version),
+        gff_source        => $gff_source,
+        use_cigar_exonerate => 1,                   # TEMP for testing
+        );
+    my $gff;
+
+    $self->time_diff_for( 'write GFF', sub {
+        $gff = Bio::Vega::Utils::GFF::gff_header($gff_version, $type, $start, $end);
+        foreach my $f (@$features) {
+            $gff .= $f->to_gff(%gff_args);
+        }
+                          });
+
+    # update the SQLite db
+    $self->update_local_db($gff_source, 'from_localdb', $process_gff);
+
+    # Send data to zmap on STDOUT
+    $self->time_diff_for( 'sending data', sub {
+        print STDOUT $gff;
+                          } );
+
+    # zmap waits for STDOUT to be closed as an indication that all
+    # data has been sent, so we close the handle now so that zmap
+    # doesn't tell otterlace about the successful loading of the column
+    # before we have the SQLite db updated and the cache file saved.
+    close STDOUT or die "Error writing to STDOUT; $!";
+
+    return;
 }
 
-my $helper = Bio::Otter::Utils::GetScript->new;
-$helper->do_requires;
+## no critic (Modules::ProhibitMultiplePackages)
 
-my $args   = $helper->parse_uri_style_args;
+package main;
 
-show_version($helper) if exists $args->{'--version'}; # exits
-
-# test case
-die "failing as required" if $args->{'fail'};
-
-my $gff_source = $args->{gff_source};
-$helper->log_context($gff_source);
-
-# pull off arguments meant for us
-my     ($session_dir, $process_gff,    $gff_version)
-    = $helper->read_delete_args(
-    qw ( session_dir   process_gff_file gff_version)
-    );
-
-$helper->use_session_dir($session_dir);
-
-$helper->open_log('localdb_log.txt');
-$helper->log_message("starting");
-$helper->log_arguments;
-
-# There is overlap with MFetcher, but probably not enough to share code?
-my              ($cs, $type, $start, $end, $csver,    $feature_kind, $analysis) =
-    @{$args}{ qw( cs   type   start   end   csver_orig feature_kind   analysis  ) };
-
-my $slice;
-$helper->time_diff_for( 'setup', sub {
-    my $dba = $helper->local_db->vega_dba;
-    $slice = $dba->get_SliceAdaptor()->fetch_by_region(
-        $cs,
-        $type,
-        $start,
-        $end,
-        1,      # somehow strand parameter is needed
-        $csver,
-    );
-                        });
-
-my $features;
-my $getter_method = "get_all_${feature_kind}s";
-$helper->time_diff_for( 'get features', sub {
-    $features = $slice->$getter_method($analysis);
-    my $n_features = scalar(@$features);
-    $helper->log_message("get features: got $n_features");
-                        });
-
-my %gff_args = (
-    gff_format        => Bio::Vega::Utils::GFF::gff_format($gff_version),
-    gff_source        => $gff_source,
-    use_cigar_exonerate => 1,                   # TEMP for testing
-    );
-my $gff;
-
-$helper->time_diff_for( 'write GFF', sub {
-    $gff = Bio::Vega::Utils::GFF::gff_header($gff_version, $type, $start, $end);
-    foreach my $f (@$features) {
-        $gff .= $f->to_gff(%gff_args);
-    }
-                        });
-
-# update the SQLite db
-$helper->update_local_db($gff_source, 'from_localdb', $process_gff);
-
-# Send data to zmap on STDOUT
-$helper->time_diff_for( 'sending data', sub {
-    print STDOUT $gff;
-                        } );
-
-# zmap waits for STDOUT to be closed as an indication that all
-# data has been sent, so we close the handle now so that zmap
-# doesn't tell otterlace about the successful loading of the column
-# before we have the SQLite db updated and the cache file saved.
-close STDOUT or die "Error writing to STDOUT; $!";
-
-$helper->log_message("finished");
+Bio::Otter::GetScript::LocalDB->new->run;
 
 exit;
 
