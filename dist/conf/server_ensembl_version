@@ -1,6 +1,3 @@
 74
 
-# This is the version of EnsEMBL that the Otterlace server uses.  It
-# determines the ensembl tag that appears in the "use SangerPaths
-# ...:" declarations in scripts/apache/*.  It does not affect the
-# install script.
+# This is the version of EnsEMBL that the Otterlace server uses.

@@ -600,7 +600,7 @@ sub populate_menus {
     );
 
     # launch in ZMap
-    my $relaunch_zmap = sub { $self->_zmap_view_new($self->zmap_select) };
+    my $relaunch_zmap = sub { return $self->_zmap_relaunch };
     $tools_menu->add
       ('command',
        -label          => 'Relaunch ZMap',
@@ -2559,6 +2559,19 @@ sub _zmap_view_new {
     return;
 }
 
+sub _zmap_relaunch {
+    my ($self) = @_;
+
+    # NB: (from jh13 via IRC 26/02/2014)
+    # Unreferencing the old view object causes it to be destroyed,
+    # which removes the last reference to the ZMap object, causing it
+    # to be destroyed, which sends a shutdown to the ZMap process.
+
+    $self->_zmap_view_new($self->zmap_select);
+    $self->ColumnChooser->load_filters(is_recover => 1);
+    return;
+}
+
 sub zircon_zmap_view_features_loaded {
     my ($self, $status, $message, $feature_count, @featuresets) = @_;
 
@@ -2603,10 +2616,13 @@ sub zircon_zmap_view_features_loaded {
         $self->AceDatabase->process_gff_for_Columns(@columns_to_process);
     $self->update_from_process_result($process_result);
 
-    if ($state_changed) {
-        # and update the delayed flags in the zmap config file
-        $self->AceDatabase->zmap_config_update;
-    }
+    # FIXME 26/02/2014: assuming that commenting this out doesn't cause other problems,
+    # it should be removed along with AceDatabase->zmap_config_update().
+
+    # if ($state_changed) {
+    #     # and update the delayed flags in the zmap config file
+    #     $self->AceDatabase->zmap_config_update;
+    # }
 
     # This will get called by Tk event loop when idle
     $self->top_window->afterIdle(sub{ return $self->RequestQueuer->features_loaded_callback(@featuresets); });

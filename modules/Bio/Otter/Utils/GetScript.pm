@@ -24,7 +24,8 @@ sub log_incs {
     return;
 }
 
-# Deferred until needed on cache miss
+# Deferred until needed on cache miss.
+# Augment in child if necessary.
 #
 sub do_requires {
     require DBI;
@@ -32,6 +33,10 @@ sub do_requires {
     require Bio::Otter::Lace::DB::ColumnAdaptor;
     return;
 }
+
+# Override in child if necessary.
+#
+sub log_context  { return shift->require_arg('gff_source'); }
 
 # NB GetScript is a singleton...
 
@@ -46,7 +51,7 @@ my $getscript_local_db;
 my %getscript_args;
 
 sub new {
-    my ($pkg) = @_;
+    my ($pkg, %opts) = @_;
 
     die "GetScript object already instantiated" if $me;
     my $ref = "";
@@ -55,13 +60,45 @@ sub new {
     return $me;
 }
 
-sub log_context {
-    my ($self, @args) = @_;
-    ($getscript_log_context) = @args if @args;
-    return $getscript_log_context;
+sub run {
+    my ($self) = @_;
+
+    my $args = $self->_parse_uri_style_args;
+
+    $self->show_version if exists $args->{'--version'}; # exits
+    die "failing as required" if $args->{'fail'};       # test case
+
+    $self->_use_session_dir($self->read_delete_args('session_dir'));
+
+    $self->_set_log_context($self->log_context);
+    $self->_open_log($self->log_filename);
+    $self->log_message("starting");
+    $self->log_incs('After startup');
+    $self->_log_arguments;
+
+    $self->do_it;
+
+    $self->log_message("finished");
+    return;
 }
 
-sub parse_uri_style_args {
+sub show_version {
+    my ($self) = @_;
+
+    # Ensure dependencies are all met
+    $self->do_requires;
+    my $dbh = DBI->connect("dbi:SQLite:dbname=:memory:","","");
+
+    print $self->version, "\n";
+    exit 0;
+}
+
+sub _set_log_context {
+    my ($self, $context) = @_;
+    return $getscript_log_context = $context;
+}
+
+sub _parse_uri_style_args {
     my ($self) = @_;
 
     foreach my $pair (@ARGV) {
@@ -75,18 +112,34 @@ sub args {
     return \%getscript_args;
 }
 
+sub read_args {
+    my ($self, @wanted) = @_;
+    return @getscript_args{@wanted};
+}
+
 sub read_delete_args {
     my ($self, @wanted) = @_;
     return delete @getscript_args{@wanted};
 }
 
-sub log_arguments {
+sub require_arg {
+    my ($self, $key) = @_;
+    die "No argument '$key'" unless exists $getscript_args{$key};
+    return $getscript_args{$key};
+}
+
+sub arg {
+    my ($self, $key) = @_;
+    return $getscript_args{$key};
+}
+
+sub _log_arguments {
     my ($self) = @_;
     $self->log_message(sprintf "argument: %s: %s", $_, $getscript_args{$_}) for sort keys %getscript_args;
     return;
 }
 
-sub use_session_dir {
+sub _use_session_dir {
     my ($self, $sda) = @_;
     $getscript_session_dir = $sda;
     die "No session_dir argument" unless $getscript_session_dir;
@@ -110,7 +163,7 @@ sub mkdir_tested {
 {
     my $log_file;
 
-    sub open_log {
+    sub _open_log {
         my ($self, $log_path) = @_;
         open $log_file, '>>', $log_path
             or die "failed to open the log file '${log_path}'";

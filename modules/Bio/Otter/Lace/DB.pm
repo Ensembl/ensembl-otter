@@ -171,7 +171,8 @@ sub load_dataset_info {
 
     my $cs_sth = $dbh->prepare(q{ INSERT INTO coord_system (coord_system_id, species_id, name, version, rank, attrib)
                                                     VALUES (?, ?, ?, ?, ?, ?) });
-    my ($cs_id, $species_id, $cs_name, $cs_version, $rank) = @{$dataset->get_db_info_item('coord_system.chromosome')};
+    my ($cs_id, $species_id, $cs_name, $cs_version, $rank, $attrib) =
+        @{$dataset->get_db_info_item('coord_system.chromosome')};
 
     $dbh->begin_work;
 
@@ -184,7 +185,7 @@ sub load_dataset_info {
         }
     }
 
-    $cs_sth->execute($cs_id, $species_id, $cs_name, $cs_version, $rank, 'default_version,sequence_level');
+    $cs_sth->execute($cs_id, $species_id, $cs_name, $cs_version, $rank, $attrib);
 
     $dbh->commit;
 
