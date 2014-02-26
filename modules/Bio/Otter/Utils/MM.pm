@@ -391,6 +391,24 @@ sub _get_sequence {
     return $seq;
 }
 
+my $taxonomy_info_select_sql_template = '
+    select tax.ncbi_tax_id as id
+         , tax_name.name   as name
+    from       taxonomy      tax
+    inner join taxonomy_name tax_name using ( ncbi_tax_id )
+    where tax.ncbi_tax_id in ( %s )
+    and   name_type = "scientific name"
+    ';
+
+sub get_taxonomy_info {
+    my ($self, $id_list) = @_;
+    my $dbh = $self->dbh('mushroom');
+    my $sql_template = $taxonomy_info_select_sql_template;
+    my $sql = sprintf $sql_template, join ' , ', qw(?) x @{$id_list};
+    my $info = $dbh->selectall_arrayref($sql, { 'Slice' => { } }, @{$id_list});
+    return $info;
+}
+
 sub name {
     my ($self, $name) = @_;
     $self->{name} = $name if $name;
