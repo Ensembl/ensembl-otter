@@ -395,7 +395,7 @@ sub recover_some_sessions {
                     $cc->AceDatabase($adb);
                     $cc->SpeciesListWindow($self);
                     $cc->initialize;
-                    $cc->load_filters(1);
+                    $cc->load_filters(is_recover => 1);
                     $top->withdraw;
                 }
             }
