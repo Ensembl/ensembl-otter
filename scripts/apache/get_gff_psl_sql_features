@@ -1,9 +1,5 @@
 #!/usr/bin/perl -Tw
 
-# Author:        mg13
-# Group:         anacode
-# Maintainer:    mg13
-
 use strict;
 use warnings;
 
