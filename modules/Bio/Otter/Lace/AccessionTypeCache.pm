@@ -140,6 +140,63 @@ sub populate {
     }
 }
 
+sub populate_taxonomy {
+    my ($self, $id_list) = @_;
+
+    my $dbh = $DB{$self}->dbh;
+
+    # filter out those we already have
+    my $id_list_fetched = $dbh->selectcol_arrayref(q{ SELECT taxon_id FROM otter_species_info });
+    my $id_list_fetched_hash = { map { $_ => 1 } @{$id_list_fetched} };
+    my @id_list_fetch = grep { ! $id_list_fetched_hash->{$_} } @{$id_list};
+    @id_list_fetch or return;
+
+    # Query the webserver (mole database) for the information.
+    my $response = $self->Client->get_taxonomy_info(@id_list_fetch);
+    my ($header, $body) = split /\n/, $response, 2;
+    my ($key_list) = ($header =~ /^#[[:blank:]]*(.*)$/)
+        or die sprintf "invalid taxonomy header: '%s'", $header;
+    my @key_list = split /\t/, $key_list;
+
+    $dbh->begin_work;
+    try {
+        while ($body =~ /^(.*)$/mg) {
+            my @value_list = split /\t/, $1;
+            my $info = { };
+            $info->{$_} = shift @value_list for @key_list;
+            $self->save_taxonomy_info($info);
+        }
+    }
+    catch {
+        $dbh->rollback;
+        die "Error saving taxon info: $_";
+    };
+
+    $dbh->commit;
+
+    return;
+}
+
+{
+    my %save_tax_info_sth;
+
+    my $save_tax_info_sql = q{
+        INSERT OR REPLACE INTO otter_species_info (
+                taxon_id
+              , scientific_name
+              , common_name
+              )
+        VALUES (?,?,?)
+    };
+
+    sub save_taxonomy_info {
+        my ($self, $info) = @_;
+        my $sth = $save_tax_info_sth{$self} ||= $DB{$self}->dbh->prepare($save_tax_info_sql);
+
+        return $sth->execute(@{$info}{qw( id scientific_name common_name )});
+    }
+}
+
 sub type_and_name_from_accession {
     my ($self, $acc) = @_;
 
