@@ -6,6 +6,7 @@ use strict;
 use warnings;
 
 use IO::Handle;
+use Scalar::Util qw(weaken);
 use Time::HiRes qw( time gettimeofday );
 use URI::Escape qw(uri_unescape);
 
@@ -57,6 +58,7 @@ sub new {
     my $ref = "";
     $me = bless \$ref, $pkg;
 
+    weaken $me;                 # else will not be DESTROYed until program exit
     return $me;
 }
 
@@ -246,6 +248,19 @@ sub update_local_db {
         }
         $dbh->disconnect;
     } );
+    return;
+}
+
+# Primarily for the benefit of tests
+sub DESTROY {
+    undef $me;
+
+    undef $getscript_session_dir;
+    undef $getscript_local_db;
+
+    $getscript_log_context = 'not-set';
+    %getscript_args = ();
+
     return;
 }
 
