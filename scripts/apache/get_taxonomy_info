@@ -12,7 +12,8 @@ use Bio::Otter::Utils::MM;
 
 my @info_key_list = qw(
     id
-    name
+    scientific_name
+    common_name
     );
 
 sub _response_line {
