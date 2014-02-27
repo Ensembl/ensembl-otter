@@ -1356,6 +1356,17 @@ sub get_accession_types {
     return $response;
 }
 
+sub get_taxonomy_info {
+    my ($self, @ids) = @_;
+
+    my $response = $self->http_response_content(
+        'POST',
+        'get_taxonomy_info',
+        {id => join ',', @ids},
+        );
+    return $response;
+}
+
 sub save_otter_xml {
     my ($self, $xml, $dsname) = @_;
 
