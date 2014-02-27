@@ -470,6 +470,8 @@ sub launch_exonerate {
         bestn           => $bestn,
         maxintron       => $maxintron,
 
+        clear_existing  => $self->{_clear_existing},
+
         lowercase_poly_a_t_tails => 1, # to avoid spurious exons
 
         problem_report_cb => sub { $self->top->Tk::Utils::OnTheFly::problem_box('Accessions Supplied', @_) },
@@ -519,13 +521,7 @@ sub launch_exonerate {
     $top->withdraw;
 
     if ($self->{'_clear_existing'}) {
-        $SessionWindow->delete_featuresets(qw{
-Unknown_DNA
-Unknown_Protein
-OTF_EST
-OTF_ncRNA
-OTF_mRNA
-OTF_Protein });
+        $SessionWindow->delete_featuresets($otf->logic_names);
     }
 
     my $db_edited = $SessionWindow->launch_exonerate($otf);
