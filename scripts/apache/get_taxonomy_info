@@ -12,8 +12,18 @@ use Bio::Otter::Utils::MM;
 
 my @info_key_list = qw(
     id
-    name
+    scientific_name
+    common_name
     );
+
+sub _response_line {
+    # $_ is the info hashref
+    my @value_list = @{$_}{@info_key_list};
+    # change undef to '' to avoid warnings
+    for (@value_list) { defined $_ or $_ = '' }
+    my $response_line = sprintf "%s\n", join "\t", @value_list;
+    return $response_line;
+}
 
 Bio::Otter::Server::Support::Web->send_response(
     sub {
@@ -22,6 +32,6 @@ Bio::Otter::Server::Support::Web->send_response(
         my @id_list = split /,/, $id;
         my $info = Bio::Otter::Utils::MM->new->get_taxonomy_info(\@id_list);
         my $header = sprintf "# %s\n", join "\t", @info_key_list;
-        my $response = join '', $header, map { sprintf "%s\n", join "\t", @{$_}{@info_key_list} } @{$info};
+        my $response = join '', $header, map { _response_line } @{$info};
         return $response;
     });
