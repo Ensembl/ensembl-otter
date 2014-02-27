@@ -1,9 +1,5 @@
 #!/usr/bin/perl -Tw
 
-# Author:        gr5
-# Group:         anacode
-# Maintainer:    gr5
-
 use strict;
 use warnings;
 
