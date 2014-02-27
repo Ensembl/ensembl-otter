@@ -391,21 +391,48 @@ sub _get_sequence {
     return $seq;
 }
 
+my @tax_type_list = (
+    q(scientific name),
+    q(common name),
+    );
+
+my $type_key_hash = { };
+for my $type (@tax_type_list) {
+    my $key = $type;
+    $key =~ s/ /_/g;
+    $type_key_hash->{$type} = $key;
+}
+
 my $taxonomy_info_select_sql_template = '
-    select tax.ncbi_tax_id as id
-         , tax_name.name   as name
+    select tax.ncbi_tax_id     as id
+         , tax_name.name_type  as type
+         , tax_name.name       as name
     from       taxonomy      tax
     inner join taxonomy_name tax_name using ( ncbi_tax_id )
     where tax.ncbi_tax_id in ( %s )
-    and   name_type = "scientific name"
+    and   name_type       in ( %s )
     ';
 
 sub get_taxonomy_info {
     my ($self, $id_list) = @_;
+
     my $dbh = $self->dbh('mushroom');
-    my $sql_template = $taxonomy_info_select_sql_template;
-    my $sql = sprintf $sql_template, join ' , ', qw(?) x @{$id_list};
-    my $info = $dbh->selectall_arrayref($sql, { 'Slice' => { } }, @{$id_list});
+    my $sql = sprintf
+        $taxonomy_info_select_sql_template
+        , (join ' , ', qw(?) x @{$id_list})
+        , (join ' , ', qw(?) x @tax_type_list)
+        ;
+    my $row_list = $dbh->selectall_arrayref($sql, { 'Slice' => { } }, @{$id_list}, @tax_type_list);
+
+    my $id_info_hash = { };
+    for (@{$row_list}) {
+        my ($id, $type, $name) = @{$_}{qw( id type name )};
+        my $key = $type_key_hash->{$type};
+        $id_info_hash->{$id}{'id'} = $id;
+        $id_info_hash->{$id}{$key} = $name;
+    }
+    my $info = [ values %{$id_info_hash} ];
+
     return $info;
 }
 
