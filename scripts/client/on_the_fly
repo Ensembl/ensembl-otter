@@ -5,11 +5,7 @@ use warnings;
 
 package Bio::Otter::GetScript::OnTheFly;
 
-use Bio::Vega::Enrich::SliceGetSplicedAlignFeatures;
-use Bio::Vega::Utils::GFF;
-use Bio::Vega::Utils::EnsEMBL2GFF;
-
-use base 'Bio::Otter::Utils::GetScript';
+use base 'Bio::Otter::Utils::GetScript::LocalDB';
 
 sub version { return 'on_the_fly 0.5'; };
 sub log_filename { return 'otf_log.txt'; }
@@ -21,19 +17,24 @@ sub do_it {
 
     $self->SUPER::do_requires;  # just the basics for now
 
-    my $request;
+    my ($request_adaptor, $request);
     $self->time_diff_for( 'retrieve_request', sub {
-        my $request_adaptor = $self->local_db->OTFRequestAdaptor;
-        $request = $request_adaptor->fetch_by_logic_name($self->arg('gff_source'), 0);
+        $request_adaptor = $self->local_db->OTFRequestAdaptor;
+        $request = $request_adaptor->fetch_by_logic_name_status($self->arg('gff_source'), 'new');
                           });
 
     if ($request) {
-        $self->run_request($request);
+        $self->time_diff_for( 'run_request', sub {
+            $self->run_request($request);
+                              });
+        $request->status('completed');
+        $request_adaptor->update($request);
     } else {
         $self->log_message('no new OTF request');
     }
 
-    $self->send_gff;
+    my $features = $self->get_features;
+    $self->send_feature_gff($features);
 
     return;
 }
@@ -42,6 +43,7 @@ sub do_requires {
     my ($self) = @_;
     $self->SUPER::do_requires;
     require Bio::Otter::Lace::OnTheFly::Runner;
+    return;
 }
 
 sub run_request {
@@ -52,66 +54,7 @@ sub run_request {
         request => $request,
         );
     my $result_set = $runner->run;
-    return;
-}
-
-sub send_gff {
-    my ($self) = @_;
-
-    # pull off arguments meant for us
-    my (  $gff_source, $process_gff,    $gff_version ) = $self->read_args(
-        qw(gff_source   process_gff_file gff_version));
-
-    # There is overlap with MFetcher, but probably not enough to share code?
-    my (  $cs, $type, $start, $end, $csver,    $feature_kind, $analysis ) = $self->read_args(
-        qw(cs   type   start   end   csver_orig feature_kind   analysis  ) );
-
-    my $slice;
-    $self->time_diff_for( 'setup', sub {
-        $slice = $self->local_db->vega_dba->get_SliceAdaptor()->fetch_by_region(
-            $cs,
-            $type,
-            $start,
-            $end,
-            1,      # somehow strand parameter is needed
-            $csver,
-            );
-                          });
-
-    my $features;
-    my $getter_method = "get_all_${feature_kind}s";
-    $self->time_diff_for( 'get features', sub {
-        $features = $slice->$getter_method($analysis);
-        my $n_features = scalar(@$features);
-        $self->log_message("get features: got $n_features");
-                          });
-
-    my %gff_args = (
-        gff_format        => Bio::Vega::Utils::GFF::gff_format($gff_version),
-        gff_source        => $gff_source,
-        );
-    my $gff;
-
-    $self->time_diff_for( 'write GFF', sub {
-        $gff = Bio::Vega::Utils::GFF::gff_header($gff_version, $type, $start, $end);
-        foreach my $f (@$features) {
-            $gff .= $f->to_gff(%gff_args);
-        }
-                          });
-
-    # update the SQLite db
-    $self->update_local_db($gff_source, 'from_localdb', $process_gff);
-
-    # Send data to zmap on STDOUT
-    $self->time_diff_for( 'sending data', sub {
-        print STDOUT $gff;
-                          } );
-
-    # zmap waits for STDOUT to be closed as an indication that all
-    # data has been sent, so we close the handle now so that zmap
-    # doesn't tell otterlace about the successful loading of the column
-    # before we have the SQLite db updated and the cache file saved.
-    close STDOUT or die "Error writing to STDOUT; $!";
+    $result_set->db_store($self->vega_slice);
 
     return;
 }
