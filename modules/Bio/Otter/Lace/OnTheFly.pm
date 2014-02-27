@@ -31,6 +31,7 @@ has 'target_seq_obj'  => (
     );
 
 has 'softmask_target' => ( is => 'ro', isa => 'Bool' );
+has 'clear_existing'  => ( is => 'ro', isa => 'Bool' );
 
 has 'aligner_options' => (
     traits => [ 'Hash' ],
@@ -67,6 +68,38 @@ sub BUILD {
     $self->_set_target_seq_obj( $self->build_target_seq($params) );
 
     return;
+}
+
+sub pre_launch_setup {
+    my ($self, %opts) = @_;
+
+    if ($self->clear_existing) {
+
+        my $slice = $opts{slice};
+        my $vega_dba = $slice->adaptor->db;
+        my $analysis_a = $vega_dba->get_AnalysisAdaptor;
+        my $dna_saf_a  = $vega_dba->get_DnaSplicedAlignFeatureAdaptor;
+        my $pro_saf_a  = $vega_dba->get_ProteinSplicedAlignFeatureAdaptor;
+
+        foreach my $logic_name ($self->logic_names) {
+            if (my $analysis = $analysis_a->fetch_by_logic_name($logic_name)) {
+                my $saf_a = $logic_name =~ /protein/i ? $pro_saf_a : $dna_saf_a;
+                $saf_a->remove_by_analysis_id($analysis->dbID);
+            }
+        }
+    }
+    return;
+}
+
+sub logic_names {
+    return qw(
+        Unknown_DNA
+        Unknown_Protein
+        OTF_EST
+        OTF_ncRNA
+        OTF_mRNA
+        OTF_Protein
+        );
 }
 
 sub builders_for_each_type {

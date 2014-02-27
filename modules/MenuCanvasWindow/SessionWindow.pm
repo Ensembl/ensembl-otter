@@ -1944,12 +1944,16 @@ sub empty_Assembly_cache {
 sub delete_featuresets {
     my ($self, @types) = @_;
 
+    my @gff_types = map { $_ . '_gff' } @types; # TEMP for testing
+
     my $name = $self->Assembly->Sequence->name;
     my $ace = sprintf qq{\nSequence : "%s"\n}, $name;
 
     foreach my $type ( @types ) {
         $ace .= qq{-D Homol ${type}_homol\n};
+    }
 
+    foreach my $type ( @types, @gff_types ) {
         # we delete types seperately because zmap errors out without
         # deleting anything if any featureset does not currently exist
         # in the zmap window
@@ -2121,6 +2125,9 @@ sub launch_exonerate {
     my $ace_text = '';
 
     my $db_slice = $self->AceDatabase->db_slice;
+
+    # Clear columns if requested
+    $otf->pre_launch_setup(slice => $db_slice);
 
     # Setup for ACE method stuff below
     # (Looks as if $coll & $coll_zmap are often the same object)
