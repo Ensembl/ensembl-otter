@@ -2149,9 +2149,9 @@ sub launch_exonerate {
         my $result_set = $runner->run;
 
         my $ace_output = $result_set->ace($builder->target->name);
-        my $db_count   = $result_set->db_store($db_slice);
+        my $hit_count   = scalar($result_set->hit_query_ids);
 
-        if ($ace_output or $db_count) {
+        if ($ace_output or $hit_count) {
             $db_edited = 1;
         }
         else {
