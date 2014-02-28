@@ -63,6 +63,7 @@ sub db_store {
 # Doesn't really belong here - currently only used in t/OtterLaceOTFDBStore.t
 #
 use Bio::Vega::Utils::GFF;
+use Bio::Otter::Utils::FeatureSort qw( feature_sort );
 
 sub gff_from_db {
     my ($self, $slice) = @_;
@@ -93,7 +94,7 @@ sub gff_from_db {
                                                 $slice->start,
                                                 $slice->end);
 
-    foreach my $saf (@$features) {
+    foreach my $saf ( feature_sort @$features) {
         $gff .= $saf->to_gff(%gff_args);
     }
 
