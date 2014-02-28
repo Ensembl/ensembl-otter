@@ -93,15 +93,17 @@ sub do_it {
 
     # do the request
     my $response;
-    $self->time_diff_for( 'http', sub {
-        $response = $ua->request($request);
-        die "No response for $gff_source\n" unless $response;
-        $self->log_message(sprintf("http: bytes: %d (decoded), %d (raw)  status: %s",
-                                     length($response->decoded_content),
-                                     length($response->content),
-                                     $response->status_line)
-            );
-                            } );
+    $self->time_diff_for(
+        'http', sub {
+            $response = $ua->request($request);
+            die "No response for $gff_source\n" unless $response;
+            $self->log_message(
+                sprintf("http: bytes: %d (decoded), %d (raw)  status: %s",
+                        length($response->decoded_content),
+                        length($response->content),
+                        $response->status_line)
+                );
+        });
 
     if ($response->is_success) {
 
@@ -109,11 +111,14 @@ sub do_it {
         die "Unexpected response for $gff_source: $gff\n" unless $gff =~ /EnsEMBL2GFF/;
 
         # cache the result
-        $self->time_diff_for( 'caching', sub {
-            open my $cache_file_h, '>', $cache_file or die "Cannot write to cache file '$cache_file'; $!\n";
-            print $cache_file_h $gff;
-            close $cache_file_h or die "Error writing to '$cache_file'; $!";
-                                } );
+        $self->time_diff_for(
+            'caching', sub {
+                open my $cache_file_h, '>', $cache_file
+                    or die "Cannot write to cache file '$cache_file'; $!\n";
+                print $cache_file_h $gff;
+                close $cache_file_h
+                    or die "Error writing to '$cache_file'; $!";
+            });
 
         # update the SQLite db
         $self->update_local_db($gff_source, $cache_file, $process_gff);
@@ -123,9 +128,7 @@ sub do_it {
         # }
 
         # Send data to zmap on STDOUT
-        $self->time_diff_for( 'sending data', sub {
-            print STDOUT $gff;
-                                } );
+        $self->time_diff_for('sending data', sub { print STDOUT $gff; });
 
         # zmap waits for STDOUT to be closed as an indication that all
         # data has been sent, so we close the handle now so that zmap
