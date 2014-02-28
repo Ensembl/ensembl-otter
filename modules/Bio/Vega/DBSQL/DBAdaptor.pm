@@ -192,6 +192,8 @@ sub _adaptor_tag_list {
         VegaTranscript
         AssemblyTag
         ContigLock
+        VegaSplicedAlignFeatureDNA
+        VegaSplicedAlignFeatureProtein
         VegaMetaContainer
         AnnotationBroker
     };
