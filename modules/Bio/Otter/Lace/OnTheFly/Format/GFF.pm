@@ -27,7 +27,6 @@ sub gff {
         gff_format        => Bio::Vega::Utils::GFF::gff_format($gff_version),
 #       gff_source        => $self->analysis_name,
         gff_source        => $self->gff_method_tag, # TEMP for testing
-        use_ensembl_cigar => 1,
         );
 
     my $gff = Bio::Vega::Utils::GFF::gff_header($gff_version,

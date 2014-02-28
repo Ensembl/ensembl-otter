@@ -19,6 +19,7 @@ use Bio::EnsEMBL::Utils::Exception qw(throw);
 
 use Bio::Otter::GappedAlignment;
 use Bio::Otter::Utils::Constants qw(intron_minimum_length);
+use Bio::Otter::Utils::FeatureSort qw( feature_sort );
 use Bio::Otter::Vulgar;
 
 use base 'Bio::EnsEMBL::BaseAlignFeature';
@@ -638,7 +639,7 @@ sub to_gff {
     # This will change if we send vulgar strings.
     #
     my $gff = '';
-    foreach my $af ($self->as_AlignFeatures) {
+    foreach my $af ( feature_sort $self->as_AlignFeatures) {
         $gff .= $af->to_gff(%args);
     }
     return $gff;

@@ -39,9 +39,14 @@ foreach my $test ( fixed_tests() ) {
     ok($count, $test->{name});
 
     note("Stored $count features");
-    my $gff = $result_set->gff_from_db($slice);
-    ok($gff, 'GFF');
-    note("GFF:\n$gff");
+    my $db_gff = $result_set->gff_from_db($slice);
+    ok($db_gff, 'GFF from DB');
+
+    my $rs_gff = $result_set->gff($slice);
+    $rs_gff =~ s/(percentID \d+\.\d)0;/$1;/g; # strip trailing 0's on percentID
+    $rs_gff =~ s/(percentID \d+)\.0;/$1;/g;    # strip trailing 00's on percentID
+    ok($rs_gff, 'GFF from result_set');
+    is($db_gff, $rs_gff, 'GFF identical');
 
     $result_set->clear_db($slice);
 }
