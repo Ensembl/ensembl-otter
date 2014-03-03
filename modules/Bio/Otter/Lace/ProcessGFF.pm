@@ -40,12 +40,11 @@ use Try::Tiny;
 }
 
 sub store_hit_data_from_gff {
-    my ($accession_type_cache, $gff_file) = @_;
+    my ($accession_type_cache, $gff_fh) = @_;
 
     $accession_type_cache->begin_work;
 
     my %fail;
-    open my $gff_fh, '<', $gff_file or confess "Can't read GFF file '$gff_file'; $!";
     while (<$gff_fh>) {
         next if /^\s*#/;
         my ($seq_name, $source, $feat_type, $start, $end, $score, $strand, $frame, $attrib)
@@ -53,7 +52,7 @@ sub store_hit_data_from_gff {
         next unless $attrib->{'Name'};
         my $evi_type = __source2type($source);
         if (!$evi_type) {
-            $fail{$source} ||= "Cannot convert source=$source to an evidence type\nFirst is $gff_file:$.:$_";
+            $fail{$source} ||= "Cannot convert source=$source to an evidence type:$.:$_";
             next;
         }
         $accession_type_cache->save_accession_info(
@@ -65,7 +64,6 @@ sub store_hit_data_from_gff {
             $attrib->{'length'},
             );
     }
-    close $gff_fh or confess "Error reading GFF file '$gff_file'; $!";
 
     $accession_type_cache->commit;
 
@@ -78,12 +76,10 @@ sub store_hit_data_from_gff {
 
 
 sub make_ace_transcripts_from_gff {
-    my ($gff_file) = @_;
+    my ($gff_fh) = @_;
 
     my %tsct;
-    open my $gff_fh, '<', $gff_file or confess "Can't read GFF file '$gff_file'; $!";
     make_ace_transcripts_from_gff_fh($gff_fh, \%tsct);
-    close $gff_fh or confess "Can't close GFF file '$gff_file'; $!";
 
     my (@ok_tsct);
     while (my ($name, $sub) = each %tsct) {
