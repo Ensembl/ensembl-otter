@@ -8,10 +8,21 @@ use warnings;
 use Try::Tiny;
 
 use Bio::EnsEMBL::Utils::Exception qw(verbose);
+use Bio::EnsEMBL::Variation::Utils::Sequence qw( SO_variation_class );
 
 # This module allows conversion of ensembl/otter objects to GFF by
 # inserting to_gff (and supporting _gff_hash) methods into the
 # necessary feature classes
+
+my $_feature_id = 0;
+
+# an anonymous sub in a lexical variable is easy to call from other packages
+my $_new_feature_id_sub = sub {
+    my ($prefix) = @_;
+    $_feature_id++;
+    my $feature_id = sprintf "%s_%06d", $prefix, $_feature_id;
+    return $feature_id;
+};
 
 ## no critic (Modules::ProhibitMultiplePackages)
 
@@ -50,11 +61,12 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
 
         my $gff_seqname = $args{'gff_seqname'} || $self->slice->seq_region_name;
         my $gff_source  = $args{'gff_source'} || $self->_gff_source;
+        my $gff_feature = $args{'gff_feature'} || $self->_gff_feature;
 
         my $gff = {
             seqname => $gff_seqname,
             source  => $gff_source,
-            feature => $self->_gff_feature,
+            feature => $gff_feature,
             start   => $self->seq_region_start,
             end     => $self->seq_region_end,
             strand  => $self->strand,
@@ -76,10 +88,8 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
     }
 
     sub _gff_feature {
-        my ($self) = @_;
-
-        return ($self->analysis && $self->analysis->gff_feature)
-            || 'misc_feature';
+        my $feature = 'sequence_feature';
+        return $feature;
     }
 }
 
@@ -93,7 +103,6 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
         my $gff = $self->SUPER::_gff_hash(@args);
 
         $gff->{'score'}   = $self->score;
-        $gff->{'feature'} = 'misc_feature';
 
         $gff->{'attributes'}{'Name'} =
             $self->display_label ||
@@ -113,16 +122,18 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
         my $gff = $self->SUPER::_gff_hash(%args);
 
         $gff->{'score'} = $self->score;
-        $gff->{'feature'} = ($self->analysis && $self->analysis->gff_feature) || 'similarity';
-
-        my $align = [ $self->hstart, $self->hend, $self->hstrand ];
-
-        $gff->{'attributes'}{'Class'}     = 'Sequence';
-        $gff->{'attributes'}{'Name'}      = $self->hseqname;
-        $gff->{'attributes'}{'Align'}     = $align;
+        my $name = $self->hseqname;
+        $gff->{'attributes'}{'Name'} = $name;
+        my $target = [ $name, $self->hstart, $self->hend, $self->hstrand ];
+        $gff->{'attributes'}{'Target'}    = $target;
         $gff->{'attributes'}{'percentID'} = $self->percent_id;
 
         return $gff;
+    }
+
+    sub _gff_feature {
+        my $feature = 'match';
+        return $feature;
     }
 }
 
@@ -143,12 +154,19 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
 
     package Bio::EnsEMBL::DnaPepAlignFeature;
 
-    sub _gff_hash {
-        my ($self, @args) = @_;
+    sub _gff_feature {
+        my $feature = 'protein_match';
+        return $feature;
+    }
+}
 
-        my $gff = $self->SUPER::_gff_hash(@args);
-        $gff->{'attributes'}{'Class'} = 'Protein';
-        return $gff;
+{
+
+    package Bio::EnsEMBL::DnaDnaAlignFeature;
+
+    sub _gff_feature {
+        my $feature = 'nucleotide_match';
+        return $feature;
     }
 }
 
@@ -210,7 +228,9 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
             foreach my $tsct (@tsct_for_gff) {
                 $gff_string .= $tsct->to_gff(%args, extra_attrs => $extra_attrs);
             }
+            $gff_string .= "###\n";
         }
+
         return $gff_string;
     }
 
@@ -223,7 +243,7 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
         my $extra_attrs = {};
 
         if (my $stable = $self->stable_id) {
-            $extra_attrs->{'Locus_Stable_ID'} = $stable;
+            $extra_attrs->{'locus_stable_id'} = $stable;
         }
 
         if (my $url_fmt = $args{'url_string'}) {
@@ -237,22 +257,22 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
             else {
                 # Assume it is an ensembl gene
                 my $url = sprintf $url_fmt, $self->stable_id;
-                $extra_attrs->{'URL'} = $url;
+                $extra_attrs->{'url'} = $url;
             }
         }
 
-        unless ($extra_attrs->{'Locus'}) {
+        unless ($extra_attrs->{'locus'}) {
             if (my $xr = $self->display_xref) {
                 $extra_attrs->{'synthetic_gene_name'} = $xr->display_id;
                 my $name = sprintf "%s.%d", $xr->display_id, $gene_numeric_id;
-                $extra_attrs->{'Locus'} = $name;
+                $extra_attrs->{'locus'} = $name;
             }
             elsif (my $stable = $self->stable_id) {
-                $extra_attrs->{'Locus'} = $stable;
+                $extra_attrs->{'locus'} = $stable;
             }
             else {
                 my $disp = $self->display_id;
-                $extra_attrs->{'Locus'} = $disp;
+                $extra_attrs->{'locus'} = $disp;
             }
         }
 
@@ -267,8 +287,8 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
                 $out{'synthetic_gene_name'} = $xr->display_id;
                 my $name = sprintf "%s.%d", $xr->display_id, $gene_numeric_id;
                 my $url = sprintf $url_fmt, $xr->primary_id;
-                $out{'Locus'} = $name;
-                $out{'URL'}   = $url;
+                $out{'locus'} = $name;
+                $out{'url'}   = $url;
             }
         }
         unless (keys %out) {
@@ -288,10 +308,8 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
 
         my $gff = $self->SUPER::_gff_hash(%args);
 
-        $gff->{'feature'} = 'Sequence';
-        $gff->{'attributes'}{'Class'} = 'Sequence';
         if (my $stable = $self->stable_id) {
-            $gff->{'attributes'}{'Stable_ID'} = $stable;
+            $gff->{'attributes'}{'stable_id'} = $stable;
         }
 
         my $tsct_numeric_id = $self->dbID || ++$tsct_count;
@@ -330,12 +348,21 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
             $self->analysis->gff_source('Otter_' . $self->biotype);
         }
 
-        my $gff = $self->SUPER::to_gff(%args);
+        $args{'extra_attrs'} ||= { };
+        my %args_super = ( %args );
+        my $id = $_new_feature_id_sub->('transcript');
+        $args_super{'extra_attrs'}->{'ID'} = $id;
+        my $gff = $self->SUPER::to_gff(%args_super);
         my $gff_hash = $self->_gff_hash(%args);
 
         my $name = $gff_hash->{'attributes'}{'Name'};
 
         # add gff lines for each of the exons
+        my %args_exon = ( %args );
+        $args_exon{'extra_attrs'} = { %{$args_exon{'extra_attrs'}} };
+        my $extra_attrs = $args_exon{'extra_attrs'};
+        delete @{$extra_attrs}{qw( ID locus url )};
+        @{$extra_attrs}{qw( Name Parent )} = ( $name, $id );
         foreach my $feat (@{ $self->get_all_Exons }) {
 
             # exons don't have analyses attached, so temporarily give
@@ -343,8 +370,8 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
             $feat->analysis($self->analysis);
 
             # and add the feature's gff line to our string, including
-            # the sequence name information as an attribute
-            $gff .= $feat->to_gff(%args, extra_attrs => { Name => $name });
+            # the sequence name and the parent
+            $gff .= $feat->to_gff(%args_exon);
 
             # to be on the safe side, get rid of the analysis we temporarily attached
             # (someone might rely on there not being one later)
@@ -370,11 +397,11 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
             }
 
             my $attrib_hash = {
-                Class => 'Sequence',
                 Name  => $name,
+                Parent => $id,
             };
             if (my $stable = $tsl->stable_id) {
-                $attrib_hash->{'Stable_ID'} = $stable;
+                $attrib_hash->{'stable_id'} = $stable;
             }
             my $gff_format = $args{'gff_format'};
             $gff .= $gff_format->gff_line(
@@ -392,6 +419,11 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
 
         return $gff;
     }
+
+    sub _gff_feature {
+        my $feature = 'transcript';
+        return $feature;
+    }
 }
 
 {
@@ -401,12 +433,15 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
     sub _gff_hash {
         my ($self, @args) = @_;
         my $gff = $self->SUPER::_gff_hash(@args);
-        $gff->{'feature'} = 'exon';
-        $gff->{'attributes'}{'Class'} = 'Sequence';
         if (my $stable = $self->stable_id) {
-            $gff->{'attributes'}{'Stable_ID'} = $stable;
+            $gff->{'attributes'}{'stable_id'} = $stable;
         }
         return $gff;
+    }
+
+    sub _gff_feature {
+        my $feature = 'exon';
+        return $feature;
     }
 }
 
@@ -414,12 +449,9 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
 
     package Bio::EnsEMBL::Intron;
 
-    sub _gff_hash {
-        my ($self, @args) = @_;
-        my $gff = $self->SUPER::_gff_hash(@args);
-        $gff->{'feature'} = 'intron';
-        $gff->{'attributes'}{'Class'} = 'Sequence';
-        return $gff;
+    sub _gff_feature {
+        my $feature = 'intron';
+        return $feature;
     }
 }
 
@@ -434,7 +466,6 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
         my ($self, @args) = @_;
 
         my $name   = $self->variation->name;
-        my $allele = $self->allele_string;
 
         my $gff = $self->SUPER::_gff_hash(@args);
         my ($start, $end) = @{$gff}{qw( start end )};
@@ -442,17 +473,22 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
             @{$gff}{qw( start end )} = ($end, $start);
         }
 
-        $gff->{'attributes'}{'Name'} = "$name - $allele";
+        $gff->{'attributes'}{'Name'} = $name;
+        $gff->{'attributes'}{'ensembl_variation'} = $self->allele_string;
         if ($name =~ /^rs/) {
             my $url = sprintf $url_format, $name;
-            $gff->{'attributes'}{'URL'}  = $url;
+            $gff->{'attributes'}{'url'}  = $url;
         }
 
         return $gff;
     }
 
     sub _gff_feature {
-        return 'variation';
+        my ($self) = @_;
+        my $feature =
+            SO_variation_class($self->allele_string)
+            || 'sequence_alteration';
+        return $feature;
     }
 }
 
@@ -474,16 +510,14 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
                 $gff->{'source'} .= '_SINE';
             }
 
-            $gff->{'feature'} = 'similarity';
             $gff->{'score'}   = $self->score;
 
-            $gff->{'attributes'}{'Class'} = 'Motif';
-            $gff->{'attributes'}{'Name'}  = $self->repeat_consensus->name;
-            $gff->{'attributes'}{'Align'} =
-                [ $self->hstart, $self->hend, $self->hstrand ];
+            my $name = $self->repeat_consensus->name;
+            $gff->{'attributes'}{'Name'} = $name;
+            $gff->{'attributes'}{'Target'} =
+                [ $name, $self->hstart, $self->hend, $self->hstrand ];
         }
         elsif ($self->analysis->logic_name =~ /trf/i) {
-            $gff->{'feature'} = 'misc_feature';
             $gff->{'score'}   = $self->score;
             my $cons   = $self->repeat_consensus->repeat_consensus;
             my $len    = length($cons);
@@ -492,6 +526,11 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
         }
 
         return $gff;
+    }
+
+    sub _gff_feature {
+        my $feature = 'repeat_region';
+        return $feature;
     }
 }
 
@@ -629,14 +668,14 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
         my $gff = $self->SUPER::_gff_hash(@args);
 
         my $hd = $self->get_HitDescription;
-        $gff->{'attributes'}{'Length'}   = $hd->hit_length;
-        $gff->{'attributes'}{'Taxon_ID'} = $hd->taxon_id;
+        $gff->{'attributes'}{'length'}   = $hd->hit_length;
+        $gff->{'attributes'}{'taxon_id'} = $hd->taxon_id;
         if (my $db_name = $hd->db_name) {
-            $gff->{'attributes'}{'DB_Name'} = $db_name;
+            $gff->{'attributes'}{'db_name'} = $db_name;
         }
         if (my $desc = $hd->description) {
             $desc =~ s/"/\\"/g;
-            $gff->{'attributes'}{'Description'} = $desc;
+            $gff->{'attributes'}{'description'} = $desc;
         }
         if (my $seq = $hd->get_and_unset_hit_sequence_string) {
             $gff->{'attributes'}{'sequence'} = $seq;
@@ -655,14 +694,14 @@ use Bio::EnsEMBL::Utils::Exception qw(verbose);
         my $gff = $self->SUPER::_gff_hash(@args);
 
         my $hd = $self->get_HitDescription;
-        $gff->{'attributes'}{'Length'}   = $hd->hit_length;
-        $gff->{'attributes'}{'Taxon_ID'} = $hd->taxon_id;
+        $gff->{'attributes'}{'length'}   = $hd->hit_length;
+        $gff->{'attributes'}{'taxon_id'} = $hd->taxon_id;
         if (my $db_name = $hd->db_name) {
-            $gff->{'attributes'}{'DB_Name'} = $db_name;
+            $gff->{'attributes'}{'db_name'} = $db_name;
         }
         if (my $desc = $hd->description) {
             $desc =~ s/"/\\"/g;
-            $gff->{'attributes'}{'Description'} = $desc;
+            $gff->{'attributes'}{'description'} = $desc;
         }
 
         return $gff;
