@@ -6,7 +6,7 @@ use strict;
 use warnings;
 
 use IO::Handle;
-use Time::HiRes qw(time);
+use Time::HiRes qw( time gettimeofday );
 use URI::Escape qw(uri_unescape);
 
 use constant _DEBUG_INCS => $ENV{OTTER_DEBUG_INCS}; ## no critic(ValuesAndExpressions::ProhibitConstantPragma)
@@ -173,10 +173,11 @@ sub mkdir_tested {
 
     # Not a method
     sub _log_prefix {
-        my @t = localtime;
+        my ($sec, $micro) = gettimeofday();
+        my @t = localtime($sec);
         my @date = ( 1900+$t[5], $t[4]+1, @t[3,2,1,0] );
-        return sprintf "%4d-%02d-%02d %02d:%02d:%02d: %6d: %-35s "
-            , @date, $$, $getscript_log_context;
+        return sprintf "%4d-%02d-%02d %02d:%02d:%02d,%04.0f: %6d: %-35s ",
+          @date, $micro / 100, $$, $getscript_log_context;
     }
 
     sub log_message {
