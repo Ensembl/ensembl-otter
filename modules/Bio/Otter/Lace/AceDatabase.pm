@@ -1066,21 +1066,46 @@ sub process_gff_file_from_Column {
     # SimpleFeature
     # VariationFeature
 
+    my @transcripts = ( );
+    my $close_error;
+    open my $gff_fh, '<', $full_gff_file or confess "Can't read GFF file '$full_gff_file'; $!";
+
+    try {
+        @transcripts = $self->_process_gff_fh($column, $gff_fh);
+    }
+    catch { die sprintf "%s: %s: $_", $filter_name, $full_gff_file; }
+    finally {
+        # want to &confess here but that would hide any errors from
+        # the try block so we save the error for later
+        close $gff_fh
+            or $close_error = "Error closing GFF file '$full_gff_file'; $!";
+    };
+
+    confess $close_error if $close_error;
+
+    return @transcripts;
+}
+
+sub _process_gff_fh {
+    my ($self, $column, $gff_fh) = @_;
+
+    my $filter = $column->Filter;
+
     if ($filter->server_script eq 'get_gff_genes'
         or $filter->feature_kind eq 'PredictionExon'
         or $filter->feature_kind eq 'PredictionTranscript'
-    ) {
-        return Bio::Otter::Lace::ProcessGFF::make_ace_transcripts_from_gff($full_gff_file);
+        ) {
+        return Bio::Otter::Lace::ProcessGFF::make_ace_transcripts_from_gff($gff_fh);
     }
     elsif ($filter->feature_kind =~ /AlignFeature/) {
-        Bio::Otter::Lace::ProcessGFF::store_hit_data_from_gff($self->AccessionTypeCache, $full_gff_file);
+        Bio::Otter::Lace::ProcessGFF::store_hit_data_from_gff($self->AccessionTypeCache, $gff_fh);
         # Unset flag so that we don't reprocess this file if we recover the session.
         $column->process_gff(0);
         $self->DB->ColumnAdaptor->store_Column_state($column);
         return;
     }
     else {
-        confess "Don't know how to process '$filter_name' GFF file '$gff_file'\n";
+        confess "Don't know how to process GFF file\n";
     }
 }
 
