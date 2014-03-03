@@ -7,59 +7,48 @@ use warnings;
 
 use base 'Bio::Otter::Utils::GetScript';
 
-use Bio::Vega::Enrich::SliceGetSplicedAlignFeatures;
-use Bio::Vega::Utils::GFF;
-use Bio::Vega::Utils::EnsEMBL2GFF;
+use Bio::Otter::Utils::SliceFeaturesGFF;
 
 # new() provided by parent
 
 # NB GetScript::LocalDB is a singleton,
 # hence these class members are simple variables.
 
-my $getscript_vega_slice;
+my $getscript_sfg;
 
-# In vega_slice and get_feature, there is overlap with MFetcher, but probably not enough to share code?
+sub _sfg {
+    my ($self) = @_;
+    return $getscript_sfg if $getscript_sfg;
+
+    # FIXME: require_args
+    my %opts;
+    @opts{qw(cs name start end csver      feature_kind logic_name gff_source gff_version)} = $self->read_args(
+          qw(cs type start end csver_orig feature_kind analysis   gff_source gff_version) );
+
+    my $sfg = Bio::Otter::Utils::SliceFeaturesGFF->new(
+        dba          => $self->local_db->vega_dba,
+        %opts,
+        );
+
+    # Time pre-load of slice
+    $self->time_diff_for('vega_slice', sub { return $sfg->slice } );
+
+    return $getscript_sfg = $sfg;
+}
 
 sub vega_slice {
     my ($self) = @_;
-    return $getscript_vega_slice if $getscript_vega_slice;
-
-    my (  $cs, $type, $start, $end, $csver      ) = $self->read_args(
-        qw(cs   type   start   end   csver_orig ) );
-
-    my $slice;
-    $self->time_diff_for( 'vega_slice', sub {
-        $slice = $self->local_db->vega_dba->get_SliceAdaptor()->fetch_by_region(
-            $cs,
-            $type,
-            $start,
-            $end,
-            1,      # somehow strand parameter is needed
-            $csver,
-            );
-                          });
-
-    return $getscript_vega_slice = $slice;
+    return $self->_sfg->slice;
 }
 
 sub get_features {
     my ($self) = @_;
 
-    my (  $feature_kind, $analysis) = $self->read_args(
-        qw(feature_kind   analysis));
-
-    my $slice = $self->vega_slice;
-
     my $features;
-    my $getter_method = "get_all_${feature_kind}s";
-    $self->time_diff_for(
-        'get features',
-        sub {
-            $features = $slice->$getter_method($analysis);
-            my $n_features = scalar(@$features);
-            $self->log_message("get features: got ${n_features}");
-        }
-        );
+    $self->time_diff_for('get features', sub { return $features = $self->_sfg->features_from_slice } );
+
+    my $n_features = scalar(@$features);
+    $self->log_message("get features: got ${n_features}");
 
     return $features;
 }
@@ -67,27 +56,17 @@ sub get_features {
 sub send_feature_gff {
     my ($self, $features) = @_;
 
-    # FIXME: require_args
-    my (  $gff_source,    $gff_version, $type, $start, $end) = $self->read_args(
-        qw(gff_source      gff_version   type   start   end));
+    # # Example of passing extra gff args:
+    # #
+    # $self->_sfg->extra_gff_args({
+    #     use_cigar_exonerate => 1, # TEMP for testing
+    #                             });
 
-    my %gff_args = (
-        gff_format        => Bio::Vega::Utils::GFF::gff_format($gff_version),
-        gff_source        => $gff_source,
-        );
     my $gff;
-
-    $self->time_diff_for(
-        'write GFF',
-        sub {
-            $gff = Bio::Vega::Utils::GFF::gff_header($gff_version, $type, $start, $end);
-            foreach my $f (@$features) {
-                $gff .= $f->to_gff(%gff_args);
-            }
-        });
+    $self->time_diff_for('write GFF', sub { return $gff = $self->_sfg->gff_for_features($features) } );
 
     # update the SQLite db
-    $self->update_local_db($gff_source, 'from_localdb');
+    $self->update_local_db($self->arg('gff_source'), 'from_localdb');
 
     # Send data to zmap on STDOUT
     $self->time_diff_for(
@@ -106,7 +85,7 @@ sub send_feature_gff {
 
 # Primarily for the benefit of tests
 sub DESTROY {
-    undef $getscript_vega_slice;
+    undef $getscript_sfg;
     return;
 }
 

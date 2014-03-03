@@ -60,62 +60,6 @@ sub db_store {
     return $count;
 }
 
-# Doesn't really belong here - currently only used in t/OtterLaceOTFDBStore.t
-#
-use Bio::Vega::Utils::GFF;
-use Bio::Otter::Utils::FeatureSort qw( feature_sort );
-
-sub gff_from_db {
-    my ($self, $slice) = @_;
-
-    my $vega_dba = $slice->adaptor->db;
-
-    my $saf_a;
-    if ($self->is_protein) {
-        $saf_a = $vega_dba->get_ProteinSplicedAlignFeatureAdaptor;
-    } else {
-        $saf_a = $vega_dba->get_DnaSplicedAlignFeatureAdaptor;
-    }
-
-    my $logic_name = $self->analysis_name;
-    my $features = $saf_a->fetch_all_by_logic_name($logic_name);
-
-    my $gff_version = 2;        # FIXME!! is this correct? (see other uses, from DataSet)
-
-    my %gff_args = (
-        gff_format        => Bio::Vega::Utils::GFF::gff_format($gff_version),
-#       gff_source        => $self->analysis_name,
-        gff_source        => $self->gff_method_tag, # TEMP for testing
-        use_ensembl_cigar => 1,
-        );
-
-    my $gff = Bio::Vega::Utils::GFF::gff_header($gff_version,
-                                                $slice->seq_region_name,
-                                                $slice->start,
-                                                $slice->end);
-
-    foreach my $saf ( feature_sort @$features) {
-        $gff .= $saf->to_gff(%gff_args);
-    }
-
-    return $gff;
-}
-
-# This doesn't belong here either, really? - currently only used in t/OtterLaceOTFDBStore.t
-#
-sub clear_db {
-    my ($self, $slice) = @_;
-
-    my $vega_dba = $slice->adaptor->db;
-    my $d_saf_a = $vega_dba->get_DnaSplicedAlignFeatureAdaptor;
-    my $p_saf_a = $vega_dba->get_ProteinSplicedAlignFeatureAdaptor;
-
-    $d_saf_a->remove_by_Slice($slice);
-    $p_saf_a->remove_by_Slice($slice);
-
-    return;
-}
-
 1;
 
 __END__
