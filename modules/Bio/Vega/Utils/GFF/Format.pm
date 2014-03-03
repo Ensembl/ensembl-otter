@@ -90,15 +90,6 @@ sub gff_line { ## no critic( Subroutines::ProhibitManyArgs )
         my $value = $attribute_hash->{$key};
         defined $value or next;
 
-        if ($key eq "Align") {
-            my ($align_start, $align_end, $align_strand) = @{$value};
-            my @align_field_list = ( $align_start, $align_end );
-            push @align_field_list
-                , $strand_hash->{$align_strand} || $align_strand
-                if $align_strand;
-            $value = join ' ', @align_field_list;
-        }
-
         if ($key eq "Target") {
             my ($target_id, $target_start, $target_end, $target_strand) = @{$value};
             if ($attribute_escape) {

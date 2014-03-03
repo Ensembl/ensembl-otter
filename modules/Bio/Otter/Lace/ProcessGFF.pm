@@ -6,7 +6,7 @@ package Bio::Otter::Lace::ProcessGFF;
 use strict;
 use warnings;
 use Carp;
-use Text::ParseWords qw{ quotewords };
+
 use Hum::Ace::SubSeq;
 use Hum::Ace::Method;
 use Hum::Ace::Locus;
@@ -58,11 +58,11 @@ sub store_hit_data_from_gff {
         }
         $accession_type_cache->save_accession_info(
             $attrib->{'Name'},
-            $attrib->{'Taxon_ID'},
+            $attrib->{'taxon_id'},
             $evi_type,
-            $attrib->{'Description'},
-            $attrib->{'DB_Name'},
-            $attrib->{'Length'},
+            $attrib->{'description'},
+            $attrib->{'db_name'},
+            $attrib->{'length'},
             );
     }
     close $gff_fh or confess "Error reading GFF file '$gff_file'; $!";
@@ -149,18 +149,18 @@ sub make_ace_transcripts_from_gff_fh {
             $tsct->{$name} = $sub;
         }
 
-        if ($feat_type eq 'Sequence') {
+        if ($feat_type eq 'transcript') {
             $sub->strand($strand eq '-' ? -1 : 1);
-            if (my $stable = $attrib->{'Stable_ID'}) {
+            if (my $stable = $attrib->{'stable_id'}) {
                 $sub->otter_id($stable);
             }
-            if (my $loc_name = $attrib->{'Locus'}) {
+            if (my $loc_name = $attrib->{'locus'}) {
                 my $locus = $locus_by_name{$loc_name};
                 unless ($locus) {
                     $locus = $locus_by_name{$loc_name}
                         = Hum::Ace::Locus->new;
                     $locus->name($loc_name);
-                    if (my $stable = $attrib->{'Locus_Stable_ID'}) {
+                    if (my $stable = $attrib->{'locus_stable_id'}) {
                         $locus->otter_id($stable);
                     }
                 }
@@ -178,7 +178,7 @@ sub make_ace_transcripts_from_gff_fh {
             my $exon = $sub->new_Exon;
             $exon->start($start);
             $exon->end($end);
-            if (my $stable = $attrib->{'Stable_ID'}) {
+            if (my $stable = $attrib->{'stable_id'}) {
                 $exon->otter_id($stable);
             }
         }
@@ -189,7 +189,7 @@ sub make_ace_transcripts_from_gff_fh {
 
             $sub->translation_region($start, $end);
             $sub->GeneMethod($coding_gene_method);
-            if (my $stable = $attrib->{'Stable_ID'}) {
+            if (my $stable = $attrib->{'stable_id'}) {
                 $sub->translation_otter_id($stable);
             }
         }
@@ -204,15 +204,20 @@ sub parse_gff_line {
     chomp($line);
     my ($seq_name, $source, $feat_type, $start, $end, $score, $strand, $frame, $group)
         = split(/\t/, $line, 9);
-    my $attrib = {};
-    # The "1" argument to quotewords tells it to keep the quotes
-    # so that we preserve the fields for the next level of parsing
-    foreach my $tag_val (quotewords('\s*;\s*', 1, $group)) {
-        # The "0" argument means that we now discard the quotes
-        my ($tag, @values) = quotewords('\s+', 0, $tag_val);
-        $attrib->{$tag} = "@values";
-    }
+    my $attrib =
+        defined $group
+        ? ( +{ map { _parse_tag_value() } split(/;/, $group) } )
+        : { };
     return ($seq_name, $source, $feat_type, $start, $end, $score, $strand, $frame, $attrib);
+}
+
+sub _parse_tag_value {
+    return map { _gff3_unescape() } split(/=/, $_, 2);
+}
+
+sub _gff3_unescape {
+    s/%([[:xdigit:]]{2})/chr(hex($1))/eg;
+    return $_;
 }
 
 # $gff->{seqname}, $gff->{source}, $gff->{feature}, $gff->{start},

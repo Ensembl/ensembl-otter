@@ -469,10 +469,13 @@ sub ace_config {
     my ($self) = @_;
 
     my $slice_name = $self->slice_name;
+    my $gff_version = 2;
+    my $acedb_version = $self->DataSet->acedb_version;
 
     my $ace_server = $self->ace_server;
-    my $url = sprintf 'acedb://%s:%s@%s:%d'
-        , $ace_server->user, $ace_server->pass, $ace_server->host, $ace_server->port;
+    my $url = sprintf 'acedb://%s:%s@%s:%d?gff_version=%d'
+        , $ace_server->user, $ace_server->pass, $ace_server->host, $ace_server->port
+        , $gff_version;
 
     my @methods = $self->MethodCollection->get_all_top_level_Methods;
     my $featuresets = [ map { $_->name } @methods ];
@@ -490,6 +493,7 @@ sub ace_config {
             group       => 'always',
             featuresets => $featuresets,
             stylesfile  => $self->stylesfile,
+            version     => $acedb_version,
         },
 
     };
@@ -763,10 +767,7 @@ sub ace_server {
         $sgif->timeout_string('0:30:100:0');
         # client_timeout:server_timeout:max_req_sizeKB:auto_save_interval
 
-        my $gff_version = $self->DataSet->gff_version;
-        my $serverconfig = [ [ 'GFF_VERSION' => $gff_version ] ];
-        $sgif->start_server( 'serverconfig' => $serverconfig )
-            or return 0; # this only check the fork was successful
+        $sgif->start_server() or return 0; # this only check the fork was successful
         my $pid = $sgif->server_pid;
         $sgif->ace_handle(1)  or return 0; # this checks it can connect
         warn "sgifaceserver on $home running, pid $pid\n";

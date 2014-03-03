@@ -641,7 +641,8 @@ __DATA__
 [client]
 url=http://otter.sanger.ac.uk/cgi-bin/otter
 write_access=0
-gff_version=2
+gff_version=3
+acedb_version=4.9.61
 debug=Client,Zircon,XRemote
 log_level=INFO
 short_window_title_prefix=1
