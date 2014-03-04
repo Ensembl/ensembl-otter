@@ -33,12 +33,12 @@ my @tests = (
         dataset => 'human',
         queries => {
             OTTHUMT00000039641 =>
-                "OTTHUMT00000039641\tOtter:transcript_stable_id\tAL139092.12\tchr6-18\n",
+                "OTTHUMT00000039641\tOtter:transcript_stable_id\tAL139092.12\tchr6-38\n",
 
             'OTTHUMG00000014126,OTTHUMP00000015944,RP11-420G6.2' => <<"__EO_RESULT__",
-OTTHUMG00000014126\tOtter:gene_stable_id\tAL139092.12\tchr6-18
-OTTHUMP00000015944\tOtter:translation_stable_id\tAL139092.12\tchr6-18
-RP11-420G6.2\tgene_synonym\tAL139092.12\tchr6-18
+OTTHUMG00000014126\tOtter:gene_stable_id\tAL139092.12\tchr6-38
+OTTHUMP00000015944\tOtter:translation_stable_id\tAL139092.12\tchr6-38
+RP11-420G6.2\tgene_synonym\tAL139092.12\tchr6-38
 __EO_RESULT__
 
             'ENST00000380773,ENSG00000124535' => <<"__EO_RESULT__",
@@ -47,7 +47,7 @@ ENST00000380773\tCCDS_db:Ens_Hs_transcript:\tAL139092.12\tchr6-18
 ENST00000380773\tEnsEMBL:ensembl_havana_transcript:transcript_stable_id\tAL139092.12\tchr6-18
 __EO_RESULT__
                     'ACOT4' =>
-"ACOT4\tgene_name\tAC005225.2\tchr14-04\n",
+"ACOT4\tgene_name\tAC005225.2\tchr14-38\n",
         },
     },
     {
@@ -99,7 +99,7 @@ sub tt_raw {
         my ($got, $t_took) = do_find_raw(dataset => 'human', qnames => 'OTTHUMT00000039641');
         is_deeply($got,
                   { OTTHUMT00000039641 => {
-                      'chr6-18' => {
+                      'chr6-38' => {
                           'Otter:transcript_stable_id' => { 'AL139092.12' => 1 },
                       }
                     }
