@@ -1,5 +1,9 @@
 #! /bin/sh
 
+# 1.  amend previous commit, under certain circumstances
+# 2.  go to web sandbox and rebuild some branches' Otter Servers
+
+
 bail() {
     echo "$@" >&2
     exit 2
@@ -29,11 +33,20 @@ last_minute_ci
 ssh web-ottersand-01 "cd $PWD && BUILD_VSNS=\"$*\" /www/$USER/www-dev/otter_server_build.sh"
 retcode=$?
 
-if [ "$retcode" = "0" ]; then
-    notify-send -i /usr/share/icons/oxygen/64x64/actions/weather-clear.png \
-        Built "Built OK"
+if [ "$( lsb_release -is )" = 'Ubuntu' ]; then
+    do_notify_Ubuntu
 else
-    notify-send -i /usr/share/icons/oxygen/64x64/status/weather-storm.png \
-        "BUILD FAIL" "Return code $retcode"
+    printf "\n\n\n*** No notify mechanism here.  retcode=%s\n\n\n" $retcode
 fi
 exit $retcode
+
+
+do_notify_Ubuntu() {
+    if [ "$retcode" = "0" ]; then
+        notify-send -i /usr/share/icons/oxygen/64x64/actions/weather-clear.png \
+            Built "Built OK"
+    else
+        notify-send -i /usr/share/icons/oxygen/64x64/status/weather-storm.png \
+            "BUILD FAIL" "Return code $retcode"
+    fi
+}
