@@ -1,0 +1,39 @@
+#! /bin/sh
+
+bail() {
+    echo "$@" >&2
+    exit 2
+}
+
+last_minute_ci() {
+    if git diff --cached --quiet --exit-code && git diff --quiet --exit-code; then
+        echo '(no last-minute changes)'
+    else
+        AUTH_LAST=$( git log -1 --format=%ae )
+        if [ "$AUTH_LAST" != "$( git config user.email )" ]; then
+            bail "*** There are last-minute changes, but
+  previous author $AUTH_LAST is not me.  Abort."
+        elif [[ "$( git log -1 --format=%s )" =~ ^! ]]; then
+            echo === Rewrite last commit for last-minute changes ===
+            git ci --amend -CHEAD -a
+        else
+            bail "*** There are last-minute changes, but
+  previous commit doesn't want to be modified (comment !~ ^!).  Abort."
+        fi
+    fi
+}
+
+last_minute_ci
+
+# this is good only for sandbox.  dev & staging boxes have no NFS!
+ssh web-ottersand-01 "cd $PWD && BUILD_VSNS=\"$*\" /www/$USER/www-dev/otter_server_build.sh"
+retcode=$?
+
+if [ "$retcode" = "0" ]; then
+    notify-send -i /usr/share/icons/oxygen/64x64/actions/weather-clear.png \
+        Built "Built OK"
+else
+    notify-send -i /usr/share/icons/oxygen/64x64/status/weather-storm.png \
+        "BUILD FAIL" "Return code $retcode"
+fi
+exit $retcode
