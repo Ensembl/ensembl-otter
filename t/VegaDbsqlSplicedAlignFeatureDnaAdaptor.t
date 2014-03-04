@@ -49,7 +49,6 @@ my $evalue     = 23.2;
 my $cigar_string = '100M';
 my $hcoverage  = 99.5;
 my $external_db_id = 2200;
-my $pair_dna_align_feature_id = 10;
 
 my $feat = Bio::Vega::SplicedAlignFeature::DNA->new
   (-start  => $start,
@@ -66,8 +65,7 @@ my $feat = Bio::Vega::SplicedAlignFeature::DNA->new
    -p_value => $evalue,
    -analysis => $analysis,
    -hcoverage => $hcoverage,
-   -external_db_id => $external_db_id,
-   -pair_dna_align_feature_id => $pair_dna_align_feature_id );
+   -external_db_id => $external_db_id );
 
 ok(not($feat->is_stored($vega_dba)), 'not stored yet');
 
@@ -94,7 +92,6 @@ is($r_feat->p_value, $evalue, "p_value");
 is($r_feat->analysis->logic_name, $analysis->logic_name, "analysis->logic_name");
 is($r_feat->external_db_id, $external_db_id, "external_db_id");
 is($r_feat->hcoverage, $hcoverage, "hcoverage");
-is($r_feat->pair_dna_align_feature_id, $pair_dna_align_feature_id, "pair_dna_align_feature_id");
 
 
 done_testing;

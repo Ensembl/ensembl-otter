@@ -191,7 +191,6 @@ $safd->p_value(1.33e-07);
 # $safd->analysis(445); # FIXME: need Analysis object
 $safd->external_db_id(10023);
 $safd->extra_data('Answer_42');
-$safd->pair_dna_align_feature_id(22001);
 
 $safd->slice($ctg_slice);
 my @r_exons = $safd->get_all_exon_alignments;
