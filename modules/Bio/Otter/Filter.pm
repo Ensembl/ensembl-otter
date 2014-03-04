@@ -59,6 +59,11 @@ my @server_params = (
     translation_xref_dbs
     ),
 
+    # Alignment
+    qw(
+    sequence_db
+    ),
+
     # file_get
     qw(
     file_path
@@ -350,6 +355,12 @@ sub translation_xref_dbs {
     my ($self, $translation_xref_dbs) = @_;
     $self->{_translation_xref_dbs} = $translation_xref_dbs if $translation_xref_dbs;
     return $self->{_translation_xref_dbs};
+}
+
+sub sequence_db {
+    my ($self, $sequence_db) = @_;
+    $self->{_sequence_db} = $sequence_db if $sequence_db;
+    return $self->{_sequence_db};
 }
 
 sub file_path {
