@@ -31,7 +31,7 @@ my @server_params = (
     gff_feature
     ),
 
-    # GFF
+    # Ditag
     qw(
     ditypes
     ),
