@@ -22,7 +22,6 @@ CREATE TABLE dna_spliced_align_feature (
   external_db_id                INTEGER UNSIGNED,
   hcoverage                     DOUBLE,
   external_data                 TEXT,
-  pair_dna_align_feature_id     INT(10) UNSIGNED,
 
   PRIMARY KEY (dna_spliced_align_feature_id),
   KEY seq_region_idx (seq_region_id, analysis_id, seq_region_start, score),
@@ -30,7 +29,6 @@ CREATE TABLE dna_spliced_align_feature (
   KEY hit_idx (hit_name),
   KEY analysis_idx (analysis_id),
   KEY external_db_idx (external_db_id),
-  KEY pair_idx (pair_dna_align_feature_id)
 
 ) TYPE=InnoDB;
 

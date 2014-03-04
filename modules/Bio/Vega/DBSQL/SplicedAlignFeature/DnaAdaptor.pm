@@ -107,7 +107,6 @@ sub _columns { ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines) call
             dsaf.external_db_id
             dsaf.hcoverage
             dsaf.external_data
-            dsaf.pair_dna_align_feature_id
             exdb.db_name
             exdb.db_display_name);
 }
@@ -160,9 +159,8 @@ sub store {
                              evalue,
                              perc_ident,
                              external_db_id,
-                             hcoverage,
-                             pair_dna_align_feature_id)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                             hcoverage)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
     }        # 17 arguments
   );
 
@@ -225,8 +223,6 @@ FEATURE:
     $sth->bind_param( 14, $feat->percent_id,     SQL_FLOAT );
     $sth->bind_param( 15, $feat->external_db_id, SQL_INTEGER );
     $sth->bind_param( 16, $feat->hcoverage,      SQL_DOUBLE );
-    $sth->bind_param( 17, $feat->pair_dna_align_feature_id,
-      SQL_INTEGER );
 
     $sth->execute();
 
@@ -297,7 +293,6 @@ sub _objs_from_sth {   ## no critic (Subroutines::ProhibitExcessComplexity Subro
        $external_db_id,
        $hcoverage,
        $extra_data,
-       $pair_dna_align_feature_id,
        $external_db_name,
        $external_display_db_name );
 
@@ -319,7 +314,6 @@ sub _objs_from_sth {   ## no critic (Subroutines::ProhibitExcessComplexity Subro
                          $external_db_id,
                          $hcoverage,
                          $extra_data,
-                         $pair_dna_align_feature_id,
                          $external_db_name,
                          $external_display_db_name )
   );
@@ -464,8 +458,7 @@ FEATURE:
                'hcoverage'        => $hcoverage,
                'extra_data'       => $evalled_extra_data,
                'dbname'                    => $external_db_name,
-               'db_display_name'           => $external_display_db_name,
-               'pair_dna_align_feature_id' => $pair_dna_align_feature_id
+               'db_display_name'           => $external_display_db_name
              } ) );
 
   } ## end while ( $sth->fetch() )
