@@ -104,7 +104,7 @@ sub strand_is {
 
 sub gff_args {
     return (
-        gff_format => Bio::Vega::Utils::GFF::gff_format(2),
+        gff_format => Bio::Vega::Utils::GFF::gff_format(3),
         gff_source => 'VSAF_test',
         );
 }
