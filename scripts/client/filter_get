@@ -58,6 +58,9 @@ sub do_it {
         while (<$gff_file>) { print; }
         close $gff_file or die "Failed to close cache file: $!\n";
         close STDOUT or die "Error writing to STDOUT; $!";
+        # update the SQLite db - to ensure gff processing if appropriate
+        $self->SUPER::do_requires;
+        $self->update_local_db($gff_source, $cache_file, $process_gff);
         return;
     }
 
