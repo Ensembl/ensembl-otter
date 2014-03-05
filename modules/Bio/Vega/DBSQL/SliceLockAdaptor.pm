@@ -147,6 +147,20 @@ sub store {
       my $slice_lock_id = $self->last_insert_id('slice_lock_id', undef, 'slice_lock')
         or throw('Failed to get new autoincremented ID for lock');
       $slice_lock->dbID($slice_lock_id);
+
+      # database engine will have set timestamps, fetch them to keep
+      # object up-to-date
+      my @ts = $self->dbc->db_handle->selectrow_array(q{
+        SELECT
+           UNIX_TIMESTAMP(ts_begin),
+           UNIX_TIMESTAMP(ts_activity),
+           UNIX_TIMESTAMP(ts_free)
+        FROM slice_lock
+        WHERE slice_lock_id=? }, {}, $slice_lock_id);
+      local $slice_lock->{_mutable} = 'store';
+      $slice_lock->ts_begin($ts[0]);
+      $slice_lock->ts_activity($ts[1]);
+      $slice_lock->ts_free($ts[2]);
   }
 
   return 1;

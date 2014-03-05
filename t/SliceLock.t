@@ -124,9 +124,6 @@ sub exercise_tt {
         my ($found) = @found;
         ok($found->is_stored($SLdba->dbc), '  find: is stored');
         is($found->dbID, $stored->dbID, '  find: is same lock row');
-
-        # result is the same, except that database engine has set timestamps
-        $stored->{$_} = $found->{$_} foreach (qw( ts_activity ts_begin ));
         is_deeply($found, $stored, '  find: is deeply same');
     }
 
