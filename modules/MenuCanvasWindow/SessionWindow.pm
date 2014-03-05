@@ -1512,7 +1512,14 @@ sub add_external_SubSeqs {
 sub fetch_external_SubSeqs {
     my ($self) = @_;
 
-    my $process_result = $self->AceDatabase->process_gff_Visible_Columns;
+    my $AceDatabase = $self->AceDatabase;
+
+    my $process_result =
+        $AceDatabase->process_gff_for_Columns(
+            grep { $_->process_gff && $_->status eq 'Visible' }
+            $AceDatabase->ColumnCollection->list_Columns
+        );
+
     $self->update_from_process_result($process_result);
     return;
 }
