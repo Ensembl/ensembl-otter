@@ -70,7 +70,7 @@ sub _tidy_database {
 
 sub exercise_tt {
     my ($ds) = @_;
-    plan tests => 13;
+    plan tests => 18;
 
     # Collect props
     my $SLdba = $ds->get_cached_DBAdaptor->get_SliceLockAdaptor;
@@ -92,13 +92,29 @@ sub exercise_tt {
 
     my $BVSL = 'Bio::Vega::SliceLock';
 
-    # Instantiation fails
-    my $no_dbID = try_err { $BVSL->new(-ADAPTOR => $SLdba, %prop) };
-    like($no_dbID, qr{Cannot instantiate SliceLock},
-         "reject new with only -ADAPTOR");
-    my $no_adap = try_err { $BVSL->new(-DBID => 51463, %prop) };
-    like($no_adap, qr{Cannot instantiate SliceLock},
-         "reject new with only -DBID");
+    # Instantiation failures expected
+    my @inst_fail =
+      ([ adaptor__no_dbID => qr{Cannot instantiate SliceLock},
+         [ -ADAPTOR => $SLdba ] ],
+       [ dbID__no_adaptor => qr{Cannot instantiate SliceLock},
+         [ -DBID => 51463 ] ],
+       [ non_fresh => qr{Fresh SliceLock must have active=pre},
+         [ -ACTIVE => 'held' ] ],
+       [ pre__freed      => qr{Fresh SliceLock must not be freed},
+         [ -FREED => 'finished' ] ],
+       [ pre__ts_freed   => qr{Fresh SliceLock must not be freed},
+         [ -TS_FREE => time() ] ],
+       [ pre__freed_auth => qr{Fresh SliceLock must not be freed},
+         [ -FREED_AUTHOR => $author[0] ] ],
+       [ ts_set => qr{Fresh SliceLock must have null timestamps},
+         [ -TS_BEGIN => time() ] ],
+      );
+    foreach my $case (@inst_fail) {
+        my ($label, $fail_like, $add_prop) = @$case;
+        my %p = (%prop, @$add_prop);
+        my $made = try_err { $BVSL->new(%p) };
+        like($made, $fail_like, "reject new: testcase $label");
+    }
 
     # Make & store
     my $stored = $BVSL->new(%prop);
@@ -107,7 +123,7 @@ sub exercise_tt {
     $SLdba->store($stored);
     ok(   $stored->is_stored($SLdba->dbc), 'stored: it is now');
 
-    # Find by unsaved author
+    # Find by unsaved author.  Author is saved, nothing is found.
     is($author[1]->dbID, undef, 'Bob: no dbID');
     my $unfind = try_err { $SLdba->fetch_by_author($author[1]) };
     isnt($author[1]->dbID, undef, 'Bob: dbID now');

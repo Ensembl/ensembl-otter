@@ -59,8 +59,10 @@ sub _check_fresh {
 
     # Timestamps are set by the adaptor.
     my @ts = ($self->ts_begin, $self->ts_activity, $self->ts_free);
-    throw("Fresh SliceLock must have null timestamps, this has [@ts]")
-      if grep {defined} @ts;
+    if (grep {defined} @ts) {
+        my @show_ts = map { defined($_) ? $_ : 'null' } @ts;
+        throw("Fresh SliceLock must have null timestamps, this has [@show_ts]");
+    }
 
     return;
 }
