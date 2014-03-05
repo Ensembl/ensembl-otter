@@ -9,6 +9,7 @@ use Carp;
 
 use Fcntl qw{ O_WRONLY O_CREAT };
 use Config::IniFiles;
+use Log::Log4perl;
 use Try::Tiny;
 
 use Bio::Vega::Region;
@@ -1024,6 +1025,7 @@ sub process_gff_Visible_Columns {
 sub process_gff_for_Columns {
     my ($self, @columns) = @_;
 
+    $self->logger->debug("process_gff_for_Columns: '", join(',', map { $_->name } @columns), "'\n");
     my $transcripts = [ ];
     my $failed      = [ ];
     foreach my $col (@columns) {
@@ -1184,6 +1186,10 @@ sub kill_ace_server {
     $ace_server->forget_port;
     $ace_server->server_pid(undef);
     return;
+}
+
+sub logger {
+    return Log::Log4perl->get_logger;
 }
 
 1;
