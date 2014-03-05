@@ -1516,7 +1516,7 @@ sub fetch_external_SubSeqs {
 
     my $process_result =
         $AceDatabase->process_gff_for_Columns(
-            grep { $_->process_gff && $_->status eq 'Visible' }
+            grep { $_->status eq 'Visible' }
             $AceDatabase->ColumnCollection->list_Columns
         );
 
@@ -2605,9 +2605,7 @@ sub zircon_zmap_view_features_loaded {
                 if ($column->status ne 'Visible' && $feature_count) {
                     $state_changed = 1;
                     $column->status('Visible');
-                    if ($column->process_gff) {
-                        push @columns_to_process, $column;
-                    }
+                    push @columns_to_process, $column;
                 }
                 elsif ($column->status ne 'Empty' && $feature_count == 0) {
                     $state_changed = 1;
