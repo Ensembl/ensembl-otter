@@ -2579,12 +2579,16 @@ sub zircon_zmap_view_features_loaded {
     my $col_aptr = $self->AceDatabase->DB->ColumnAdaptor;
     my $state_changed = 0;
 
+    $self->logger->debug("zzvfl: status '$status', message '$message', feature_count '$feature_count'");
+
     my @columns_to_process = ();
     foreach my $set_name (@featuresets) {
         if (my $column = $cllctn->get_Item_by_name($set_name)) {
             # filter_get will have updated gff_file field in SQLite db
             # so we need to fetch it from the database:
             $col_aptr->fetch_state($column);
+            $self->logger->debug(sprintf("zzvfl: column '%s', status, '%s', process_gff %d",
+                                         $column->name, $column->status, $column->process_gff));
             if ($status == 0 && $column->status ne 'Error') {
                 $state_changed = 1;
                 $column->status('Error');
