@@ -2596,22 +2596,20 @@ sub zircon_zmap_view_features_loaded {
             $col_aptr->fetch_state($column);
             $self->logger->debug(sprintf("zzvfl: column '%s', status, '%s', process_gff %d",
                                          $column->name, $column->status, $column->process_gff));
-            if ($status == 0 && $column->status ne 'Error') {
+
+            my $column_status =
+                (! $status)    ? 'Error'   :
+                $feature_count ? 'Visible' :
+                1              ? 'Empty'   :
+                die 'this code should be unreachable';
+
+            if ($column->status ne $column_status) {
                 $state_changed = 1;
-                $column->status('Error');
+                $column->status($column_status);
+                push @columns_to_process, $column
+                    if $status && $feature_count;
             }
-            elsif ($status == 1) {
-                # Column loaded OK, but does it have anything in it?
-                if ($column->status ne 'Visible' && $feature_count) {
-                    $state_changed = 1;
-                    $column->status('Visible');
-                    push @columns_to_process, $column;
-                }
-                elsif ($column->status ne 'Empty' && $feature_count == 0) {
-                    $state_changed = 1;
-                    $column->status('Empty');
-                }
-            }
+
             $column->status_detail($message);
             $col_aptr->store_Column_state($column);
         }
