@@ -377,7 +377,17 @@ See also F<t/obtain-db.t>
             local @ARGV = ();
             require Bio::Otter::Lace::Defaults;
             Bio::Otter::Lace::Defaults::do_getopt();
-            Bio::Otter::Lace::Defaults::make_Client();
+            my $cl = Bio::Otter::Lace::Defaults::make_Client();
+
+            # Test scripts shall not request user password
+            my $no_pass = sub {
+                my ($self) = @_;
+                warn "$self: wanted your password.  Run live otterlace to get a cookie!\n";
+                return;
+            };
+            $cl->password_prompt($no_pass);
+
+            $cl; # no 'return' from 'do'
         };
     }
 }
