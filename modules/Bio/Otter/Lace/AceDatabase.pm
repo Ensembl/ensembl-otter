@@ -1020,6 +1020,7 @@ sub process_gff_for_Columns {
     my $transcripts = [ ];
     my $failed      = [ ];
     foreach my $col (@columns) {
+        $col->process_gff or next;
         try {
             my @filter_transcripts = $self->process_gff_file_from_Column($col);
             push @$transcripts, @filter_transcripts;
