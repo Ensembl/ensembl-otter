@@ -2485,6 +2485,40 @@ sub run_exonerate {
     return 1;
 }
 
+sub exonerate_done_callback {
+    my ($self, @feature_sets) = @_;
+
+    $self->logger->debug('exonerate_done_callback: [', join(',', @feature_sets), ']');
+
+    my $request_adaptor = $self->AceDatabase->DB->OTFRequestAdaptor;
+    my (@requests, @requests_with_feedback);
+    foreach my $set (@feature_sets) {
+        my $request = $request_adaptor->fetch_by_logic_name_status($set, 'completed');
+        next unless $request;
+        push @requests, $request;
+        push @requests_with_feedback, $request if ($request->n_hits == 0 or $request->missed_hits);
+    }
+
+    if (@requests_with_feedback) {
+        my $ew = $self->{'_exonerate_window'};
+        if ($ew) {
+            foreach my $request (@requests_with_feedback) {
+                $ew->display_request_feedback($request);
+            }
+        } else {
+            $self->logger->error('OTF results but no exonerate window');
+        }
+    }
+
+    if (@requests) {
+        foreach my $request (@requests) {
+            $request->status('reported');
+            $request_adaptor->update_status($request);
+        }
+    }
+    return;
+}
+
 sub get_mark_in_slice_coords {
     my ($self) = @_;
     my @mark = $self->zmap->get_mark;
@@ -2643,6 +2677,7 @@ sub zircon_zmap_view_features_loaded {
     $self->logger->debug("zzvfl: status '$status', message '$message', feature_count '$feature_count'");
 
     my @columns_to_process = ();
+    my @otf_loaded;
     foreach my $set_name (@featuresets) {
         if (my $column = $cllctn->get_Item_by_name($set_name)) {
             # filter_get will have updated gff_file field in SQLite db
@@ -2666,6 +2701,8 @@ sub zircon_zmap_view_features_loaded {
 
             $column->status_detail($message);
             $col_aptr->store_Column_state($column);
+
+            push @otf_loaded, $set_name if $column->classification_matches('OnTheFly');
         }
         # else {
         #     # We see a warning for each acedb featureset
@@ -2676,6 +2713,8 @@ sub zircon_zmap_view_features_loaded {
     my $process_result =
         $self->AceDatabase->process_Columns(@columns_to_process);
     $self->update_from_process_result($process_result);
+
+    $self->exonerate_done_callback(@otf_loaded) if @otf_loaded;
 
     # FIXME 26/02/2014: assuming that commenting this out doesn't cause other problems,
     # it should be removed along with AceDatabase->zmap_config_update().
