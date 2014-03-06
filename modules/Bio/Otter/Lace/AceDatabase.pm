@@ -1013,10 +1013,10 @@ sub DataSet {
     return $self->Client->get_DataSet_by_name($self->smart_slice->dsname);
 }
 
-sub process_gff_for_Columns {
+sub process_Columns {
     my ($self, @columns) = @_;
 
-    $self->logger->debug("process_gff_for_Columns: '", join(',', map { $_->name } @columns), "'\n");
+    $self->logger->debug("process_Columns: '", join(',', map { $_->name } @columns), "'\n");
     my $transcripts = [ ];
     my $failed      = [ ];
     foreach my $col (@columns) {

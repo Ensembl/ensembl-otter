@@ -1515,7 +1515,7 @@ sub fetch_external_SubSeqs {
     my $AceDatabase = $self->AceDatabase;
 
     my $process_result =
-        $AceDatabase->process_gff_for_Columns(
+        $AceDatabase->process_Columns(
             grep { $_->status eq 'Visible' }
             $AceDatabase->ColumnCollection->list_Columns
         );
@@ -2620,7 +2620,7 @@ sub zircon_zmap_view_features_loaded {
     }
 
     my $process_result =
-        $self->AceDatabase->process_gff_for_Columns(@columns_to_process);
+        $self->AceDatabase->process_Columns(@columns_to_process);
     $self->update_from_process_result($process_result);
 
     # FIXME 26/02/2014: assuming that commenting this out doesn't cause other problems,
