@@ -41,4 +41,9 @@ then
     exit 1
 fi
 
-exec perl "$OTTER_HOME/ensembl-otter/tk/otterlace" "$@"
+if [ "$1" = '-S' ]; then
+    export debian_chroot='otterlace_dev'
+    exec bash -i
+else
+    exec perl "$ensembl_otter_home/tk/otterlace" "$@"
+fi
