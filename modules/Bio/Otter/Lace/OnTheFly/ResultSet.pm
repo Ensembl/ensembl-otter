@@ -62,6 +62,11 @@ sub add_hit_by_query_id {
     return $ga;
 }
 
+sub query_ids_not_hit {
+    my ($self) = @_;
+    return grep { not $self->hit_by_query_id($_) } keys %{$self->query_seqs_by_name};
+}
+
 1;
 
 __END__

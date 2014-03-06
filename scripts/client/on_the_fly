@@ -27,7 +27,6 @@ sub do_it {
         $self->time_diff_for( 'run_request', sub {
             $self->run_request($request);
                               });
-        $request->status('completed');
         $request_adaptor->update($request);
         unlink $request->target_file;
         unlink $request->query_file;
@@ -57,6 +56,14 @@ sub run_request {
         );
     my $result_set = $runner->run;
     $result_set->db_store($self->vega_slice);
+
+    my $n_hits = scalar($result_set->hit_query_ids);
+    $request->status('completed');
+    $request->n_hits($n_hits);
+
+    my @missed_hits = $result_set->query_ids_not_hit;
+    $self->log_message(sprintf('missed: [%s]', join(',', @missed_hits)));
+    $request->missed_hits(\@missed_hits);
 
     return;
 }
