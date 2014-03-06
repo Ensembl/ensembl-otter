@@ -25,6 +25,13 @@ then
     exit 1
 fi
 
+# Placeholder for something better, possibly ( built on | similar to )
+# otterlace/release/scripts/anacode_source_repo
+otter_server_perl5lib="\
+/nfs/anacode/WEBVM_docs.dev/apps/webvm-deps/ensembl-branch-74/ensembl-variation/modules\
+"
+
+
 osname="$( uname -s )"
 case "$osname" in
     Darwin)
@@ -54,6 +61,8 @@ case "$osname" in
         anasoft="/software/anacode"
         if [ -z "$OTTER_HOME" ]; then
             OTTER_HOME="$anasoft/otter/otter_dev"
+            # nb. scripts/client/otterlace chases the symlink, we don't bother.
+            # otter_dev doesn't leave the previous version around like otter_test
             if ! grep -q otterlace_installed=true $OTTER_HOME/bin/otterlace; then
                 echo $OTTER_HOME is broken.
                 OTTER_HOME="$anasoft/otter/otter_live"
@@ -70,3 +79,7 @@ export ENSEMBL_OTTER_DEV
 printf '  OTTER_HOME=%s\n' "$OTTER_HOME"
 
 source "${ENSEMBL_OTTER_DEV}/scripts/client/_otterlace_env_core.sh"
+
+# Libs which are needed to run tests for Otter Server, but provided or
+# requred for otterlace client
+PERL5LIB="$PERL5LIB:$otter_server_perl5lib"
