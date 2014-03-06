@@ -180,7 +180,7 @@ export PATH="$otterbin${PATH:+:$PATH}"
 
 export PERL5LIB
 
-unset ensembl_otter_home
+export ensembl_otter_home
 unset ensembl_otter_path
 unset otterbin
 unset ensembl_home
