@@ -27,6 +27,17 @@ last_minute_ci() {
     fi
 }
 
+do_notify_Ubuntu() {
+    if [ "$retcode" = "0" ]; then
+        notify-send -i /usr/share/icons/oxygen/64x64/actions/weather-clear.png \
+            Built "Built OK"
+    else
+        notify-send -i /usr/share/icons/oxygen/64x64/status/weather-storm.png \
+            "BUILD FAIL" "Return code $retcode"
+    fi
+}
+
+
 last_minute_ci
 
 # this is good only for sandbox.  dev & staging boxes have no NFS!
@@ -39,14 +50,3 @@ else
     printf "\n\n\n*** No notify mechanism here.  retcode=%s\n\n\n" $retcode
 fi
 exit $retcode
-
-
-do_notify_Ubuntu() {
-    if [ "$retcode" = "0" ]; then
-        notify-send -i /usr/share/icons/oxygen/64x64/actions/weather-clear.png \
-            Built "Built OK"
-    else
-        notify-send -i /usr/share/icons/oxygen/64x64/status/weather-storm.png \
-            "BUILD FAIL" "Return code $retcode"
-    fi
-}
