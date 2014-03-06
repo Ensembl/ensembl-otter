@@ -76,6 +76,18 @@ sub missed_hits {
     return $missed_hits;
 }
 
+# These two are exonerate-specific
+#
+sub query_file {
+    my ($self) = @_;
+    return $self->args->{'--query'};
+}
+
+sub target_file {
+    my ($self) = @_;
+    return $self->args->{'--target'};
+}
+
 1;
 
 __END__

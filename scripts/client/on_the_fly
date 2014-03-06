@@ -29,6 +29,8 @@ sub do_it {
                               });
         $request->status('completed');
         $request_adaptor->update($request);
+        unlink $request->target_file;
+        unlink $request->query_file;
     } else {
         $self->log_message('no new OTF request');
     }

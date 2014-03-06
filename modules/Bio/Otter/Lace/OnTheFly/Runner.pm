@@ -39,7 +39,7 @@ has query_seqs => ( is       => 'ro',
 sub _fetch_query_seqs {
     my ($self) = @_;
 
-    my $fasta_file = $self->request->args->{'--query'};
+    my $fasta_file = $self->request->query_file;
 
     my $qf_in = Hum::FastaFileIO->new("< ${fasta_file}");
     $qf_in->sequence_class($self->is_protein ? 'Hum::Sequence::Peptide' : 'Hum::Sequence::DNA');
