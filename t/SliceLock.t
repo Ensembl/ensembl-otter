@@ -10,6 +10,8 @@ use Bio::Vega::ContigLockBroker;
 use Bio::Vega::SliceLockBroker;
 use Bio::Vega::Author;
 
+my $TESTHOST = 'test.nowhere'; # an invalid hostname
+
 sub try_err(&) {
     my ($code) = @_;
     return try { $code->() } catch { "ERR:$_" };
@@ -62,22 +64,22 @@ sub supported_tt {
 sub _tidy_database {
     my ($dba) = @_;
     my $dbh = $dba->dbc->db_handle;
-    $dbh->do(q{delete from slice_lock where hostname          = 'test.nowhere'});
-    $dbh->do(q{delete from author     where author_email like '%@test.nowhere'});
+    $dbh->do(qq{delete from slice_lock where hostname           = '$TESTHOST'});
+    $dbh->do(qq{delete from author     where author_email like '%\@$TESTHOST'});
     return;
 }
 
 
 sub exercise_tt {
     my ($ds) = @_;
-    plan tests => 18;
+    plan tests => 40;
 
     # Collect props
     my $SLdba = $ds->get_cached_DBAdaptor->get_SliceLockAdaptor;
     _tidy_database($SLdba);
 
     my @author = map {
-        Bio::Vega::Author->new(-EMAIL => "\l$_\@test.nowhere",
+        Bio::Vega::Author->new(-EMAIL => "\l$_\@$TESTHOST",
                                -NAME => "$_ the Tester");
     } qw( Alice Bob );
 
@@ -88,7 +90,7 @@ sub exercise_tt {
        -AUTHOR => $author[0], # to be created on store
        -ACTIVE => 'pre',
        -INTENT => 'testing',
-       -HOSTNAME => 'test.nowhere');
+       -HOSTNAME => $TESTHOST);
 
     my $BVSL = 'Bio::Vega::SliceLock';
 
@@ -142,6 +144,47 @@ sub exercise_tt {
         is($found->dbID, $stored->dbID, '  find: is same lock row');
         is_deeply($found, $stored, '  find: is deeply same');
     }
+
+    # Find other ways
+    my $fbID = $SLdba->fetch_by_dbID($stored->dbID);
+    is_deeply($fbID, $stored, 'fetch_by_dbID same');
+
+    my $fbsr = $SLdba->fetch_by_seq_region_id($stored->seq_region_id);
+    $fbsr = [ grep { $_->hostname eq $TESTHOST } @$fbsr ]; # exclude non-test locks
+    is_deeply($fbsr, [ $stored ], 'fetch_by_seq_region_id');
+
+    my $feba = $SLdba->fetch_by_author($author[0], 1);
+    is_deeply($feba, [ $stored ], 'fetch_by_author(+extant)');
+
+    # Poke ye not
+    foreach my $field (qw( dbID adaptor )) {
+        like(try_err { $stored->$field("new junk value") },
+             qr{^MSG: $field is immutable}m, "$field: immutable");
+    }
+    foreach my $field (qw( seq_region_id seq_region_start seq_region_end author ts_begin ts_activity active freed freed_author intent hostname ts_free )) {
+        like(try_err { $stored->$field("new junk value") },
+             qr{^MSG: $field is frozen}m, "$field: frozen");
+    }
+
+    # How not to free it
+    my @unlock_fail =
+      ([ same_expire => qr{'expired' inappropriate for same-author unlock},
+         $author[0], 'expired' ],
+       [ diff_fin => qr{'finished' inappropriate for bob@.* acting on alice@.* lock},
+         $author[1], 'finished' ],
+       [ diff_dflt => qr{'finished' inappropriate for bob.*alice}, $author[1] ]);
+    foreach my $case (@unlock_fail) {
+        my ($label, $fail_like, @arg) = @$case;
+        my $unlocked = try_err { $SLdba->unlock($stored, @arg) };
+        like($unlocked, $fail_like, "unlock fail: case $label");
+    }
+
+    # Free it
+    $SLdba->unlock($stored, $author[0]);
+    my $fba   = $SLdba->fetch_by_author($author[0]);
+    my $feba2 = $SLdba->fetch_by_author($author[0], 1);
+    is_deeply($fba, [ $stored ], 'unlocked.  fetch_by_author again');
+    is_deeply($feba, [ ], 'fetch_by_author(+extant): none');
 
     _tidy_database($SLdba);
     return;

@@ -82,20 +82,26 @@ sub fetch_by_dbID {
 }
 
 sub fetch_by_seq_region_id {
-  my ($self, $id) = @_;
+  my ($self, $id, $extant) = @_;
   throw("Slice seq_region_id must be entered to fetch a SliceLock object")
       unless $id;
-  my ($obj) = $self->_generic_sql_fetch("where seq_region_id = ? ", $id);
-  return $obj->[0];
+  throw("extant=0 not implemented") if defined $extant && !$extant;
+  my $q = "where seq_region_id = ?";
+  $q .= " and active <> 'free' and freed is null" if $extant;
+  my $slicelocks = $self->_generic_sql_fetch($q, $id);
+  return $slicelocks;
 }
 
 
 sub fetch_by_author {
-  my ($self, $auth) = @_;
+  my ($self, $auth, $extant) = @_;
   throw("Author must be entered to fetch a SliceLock object")
       unless $auth;
+  throw("extant=0 not implemented") if defined $extant && !$extant;
   my $authid = $self->_author_dbID(fetch_by => $auth);
-  my $slicelocks = $self->_generic_sql_fetch("where author_id = ? ", $authid);
+  my $q = "where author_id = ?";
+  $q .= " and active <> 'free' and freed is null" if $extant;
+  my $slicelocks = $self->_generic_sql_fetch($q, $authid);
   return $slicelocks;
 }
 
@@ -165,5 +171,32 @@ sub store {
 
   return 1;
 }
+
+sub unlock {
+  my ($self, $slice_lock, $unlock_author, $freed) = @_;
+  $freed = 'finished' if !defined $freed;
+
+  my $author_id = $self->_author_dbID(author => $slice_lock->author);
+  my $freed_author_id = $self->_author_dbID(freed_author => $unlock_author)
+    or throw "unlock must be done by some author";
+
+  # the freed type is constrained, depending on freed_author
+  if ($freed_author_id == $author_id) {
+      # Original author frees her own lock
+      throw "unlock type '$freed' inappropriate for same-author unlock"
+        unless $freed eq 'finished';
+  } else {
+      # Somebody else frees her lock (presumably with good reason)
+      my $a_email = $slice_lock->author->email;
+      my $f_email = $unlock_author->email;
+      throw "unlock type '$freed' inappropriate for $f_email acting on $a_email lock"
+        unless grep { $_ eq $freed } qw( expired interrupted );
+  }
+
+die "not implemented";
+
+  return 1;
+}
+
 
 1;
