@@ -41,6 +41,10 @@ $HOME/gitwk-ensembl/ensembl-pipeline/modules:\
 "
 
 
+if [ -n "$OTTER_HOME" ]; then
+    printf "[w]   Called with OTTER_HOME=%s - risk of shadowing from environment already set up?\n\n" "$OTTER_HOME" >&2
+fi
+
 osname="$( uname -s )"
 case "$osname" in
     Darwin)
@@ -84,7 +88,7 @@ esac
 
 printf '  OTTER_HOME=%s\n' "$OTTER_HOME"
 
-source "${ENSEMBL_OTTER_DEV}/scripts/client/_otterlace_env_core.sh"
+source "${ENSEMBL_OTTER_DEV}/scripts/client/_otterlace_env_core.sh" || exit 5
 
 # Libs which are needed to run tests for Otter Server, but provided or
 # requred for otterlace client
