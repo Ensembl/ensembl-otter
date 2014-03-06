@@ -415,6 +415,7 @@ sub get_BOSDatasets {
 sub __BOLC_warn_filter { # a "temporary" solution
     my ($msg) = @_;
     return if $msg eq "No git cache: assuming a git checkout.\n";
+    return if $msg =~ m{^setup_pfetch_env: hostname=};
     return if $msg =~ m{^DEBUG: (CLIENT|ZIRCON|XREMOTE) = 1\n\z};
     return if $msg =~ m{^GET  http.*/get_datasets\?|^get_datasets - client received \d+ bytes from server};
     warn $msg;
