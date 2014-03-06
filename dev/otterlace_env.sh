@@ -28,6 +28,7 @@ fi
 # Placeholder for something better, possibly ( built on | similar to )
 # otterlace/release/scripts/anacode_source_repo
 otter_server_perl5lib="\
+$HOME/gitwk-ensembl/ensembl-pipeline/modules:\
 /nfs/anacode/WEBVM_docs.dev/apps/webvm-deps/ensembl-branch-74/ensembl-variation/modules\
 "
 
