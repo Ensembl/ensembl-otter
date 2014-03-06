@@ -115,9 +115,7 @@ fi
 PERL5LIB="\
 $anacode_perl_modules:\
 $ensembl_otter_home/modules:\
-$ensembl_home/ensembl-analysis/modules:\
 $ensembl_home/ensembl/modules:\
-$ensembl_home/ensembl-variation/modules:\
 $OTTER_HOME/lib/perl5:\
 $ensembl_otter_home/tk\
 "
