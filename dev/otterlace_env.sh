@@ -32,9 +32,9 @@ case "$osname" in
         if [ -n "$OTTER_HOME" ]; then
             if [ -z "$OTTER_SWAC" ]; then
                 OTTER_SWAC="$( cd -P "${OTTER_HOME}/../.."; pwd )"
-            else
-                : ${OTTER_SWAC:=/Applications/otterlace.app/Contents/Resources}
             fi
+        else
+            : ${OTTER_SWAC:=/Applications/otterlace.app/Contents/Resources}
         fi
         printf '  OTTER_SWAC=%s\n' "$OTTER_SWAC"
         export OTTER_SWAC
