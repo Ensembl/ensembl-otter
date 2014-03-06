@@ -12,8 +12,10 @@ Bio::Vega::SliceLock - a lock on part of a seq_region
 
 =head1 DESCRIPTION
 
-This behaves like a read-only feature.  Changes are made through its
-broker.
+This behaves like a mostly read-only feature.
+
+Changes are made to its fields during
+L<Bio::Vega::DBSQL::SliceLockAdaptor/store> and through its broker.
 
 =cut
 
@@ -118,7 +120,7 @@ sub _init {
             if (@_ > 1) { # qw( freed freed_author ts_free ) are nullable
                 # some fields would be safe to mutate and save,
                 # but currently we only allow write during new
-                throw("$field is immutable") if !$self->{_mutable};
+                throw("$field is frozen") if !$self->{_mutable};
                 throw("Argument [$newval] is not a Bio::Vega::Author")
                   if $author{$field} && defined $newval &&
                     !eval { $newval->isa("Bio::Vega::Author") };
