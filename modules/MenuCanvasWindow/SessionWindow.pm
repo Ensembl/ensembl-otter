@@ -2594,8 +2594,8 @@ sub zircon_zmap_view_features_loaded {
             # filter_get will have updated gff_file field in SQLite db
             # so we need to fetch it from the database:
             $col_aptr->fetch_state($column);
-            $self->logger->debug(sprintf("zzvfl: column '%s', status, '%s', process_gff %d",
-                                         $column->name, $column->status, $column->process_gff));
+            $self->logger->debug(
+                sprintf "zzvfl: column '%s', status, '%s',", $column->name, $column->status);
 
             my $column_status =
                 (! $status)    ? 'Error'   :
