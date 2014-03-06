@@ -19,9 +19,16 @@ L<Bio::Vega::DBSQL::SliceLockAdaptor/store> and through its broker.
 
 =cut
 
-my @FIELD = qw( seq_region_id seq_region_start seq_region_end
-                author ts_begin ts_activity active freed freed_author
-                intent hostname ts_free );
+sub FIELDS() {
+    return
+      (qw( seq_region_id seq_region_start seq_region_end ),
+       qw( ts_begin ts_activity ts_free ), # unixtimes
+       qw( active freed ),        # enums.  database will check
+       qw( author freed_author ), # objects
+       qw( intent hostname ));    # text
+# qw(dbID adaptor) are supplied by base class
+}
+
 
 sub new {
     my ($class, @args) = @_;
@@ -29,7 +36,7 @@ sub new {
     my $self = $class->SUPER::new(@args);
 
     my %val;
-    @val{@FIELD} = rearrange([ map { uc($_) } @FIELD ], @args);
+    @val{FIELDS()} = rearrange([ map { uc($_) } FIELDS() ], @args);
 
     local $self->{_mutable} = 'new';
     while (my ($field, $val) = each %val) {
@@ -110,11 +117,7 @@ sub _init {
     my %author = (author => 1, freed_author => 1);
 
     # Simple r/w accessors
-    foreach my $field (qw( seq_region_id seq_region_start seq_region_end ),
-                       qw( ts_begin ts_activity ts_free ), # unixtimes
-                       qw( active freed ),        # enums.  database will check
-                       qw( author freed_author ), # objects
-                       qw( intent hostname )) {   # text
+    foreach my $field (FIELDS()) {
         $new_method{$field} = sub {
             my ($self, $newval) = @_;
             if (@_ > 1) { # qw( freed freed_author ts_free ) are nullable
