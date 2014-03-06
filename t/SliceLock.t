@@ -69,19 +69,25 @@ sub _tidy_database {
     return;
 }
 
+sub _test_author {
+    my @fname = @_;
+    return map {
+        Bio::Vega::Author->new(-EMAIL => "\l$_\@$TESTHOST",
+                               -NAME => "$_ the Tester");
+    } @fname;
+}
 
+
+# Basic create-store-fetch-unlock cycle
 sub exercise_tt {
     my ($ds) = @_;
-    plan tests => 40;
+    plan tests => 41;
 
     # Collect props
     my $SLdba = $ds->get_cached_DBAdaptor->get_SliceLockAdaptor;
     _tidy_database($SLdba);
 
-    my @author = map {
-        Bio::Vega::Author->new(-EMAIL => "\l$_\@$TESTHOST",
-                               -NAME => "$_ the Tester");
-    } qw( Alice Bob );
+    my @author = _test_author(qw( Alice Bob ));
 
     my %prop =
       (-SEQ_REGION_ID => int(rand(10000)), # may not exist
@@ -126,10 +132,12 @@ sub exercise_tt {
     ok(   $stored->is_stored($SLdba->dbc), 'stored: it is now');
 
     # Find by unsaved author.  Author is saved, nothing is found.
-    is($author[1]->dbID, undef, 'Bob: no dbID');
-    my $unfind = try_err { $SLdba->fetch_by_author($author[1]) };
-    isnt($author[1]->dbID, undef, 'Bob: dbID now');
-    is_deeply($unfind, [], 'Bob: nothing found');
+    {
+        is($author[1]->dbID, undef, 'Bob: no dbID');
+        my $unfind = try_err { $SLdba->fetch_by_author($author[1]) };
+        isnt($author[1]->dbID, undef, 'Bob: dbID now');
+        is_deeply($unfind, [], 'Bob: nothing found');
+    }
 
     # Find & compare
     my @found = try_err { @{ $SLdba->fetch_by_author($author[0]) } };
@@ -146,15 +154,18 @@ sub exercise_tt {
     }
 
     # Find other ways
-    my $fbID = $SLdba->fetch_by_dbID($stored->dbID);
-    is_deeply($fbID, $stored, 'fetch_by_dbID same');
+    {
+        my $fbID = $SLdba->fetch_by_dbID($stored->dbID);
+        is_deeply($fbID, $stored, 'fetch_by_dbID same');
 
-    my $fbsr = $SLdba->fetch_by_seq_region_id($stored->seq_region_id);
-    $fbsr = [ grep { $_->hostname eq $TESTHOST } @$fbsr ]; # exclude non-test locks
-    is_deeply($fbsr, [ $stored ], 'fetch_by_seq_region_id');
+        my $fbsr = $SLdba->fetch_by_seq_region_id($stored->seq_region_id);
+        $fbsr = # exclude non-test locks
+          [ grep { $_->hostname eq $TESTHOST } @$fbsr ];
+        is_deeply($fbsr, [ $stored ], 'fetch_by_seq_region_id');
 
-    my $feba = $SLdba->fetch_by_author($author[0], 1);
-    is_deeply($feba, [ $stored ], 'fetch_by_author(+extant)');
+        my $feba = $SLdba->fetch_by_author($author[0], 1);
+        is_deeply($feba, [ $stored ], 'fetch_by_author(+extant)');
+    }
 
     # Poke ye not
     foreach my $field (qw( dbID adaptor )) {
@@ -181,10 +192,19 @@ sub exercise_tt {
 
     # Free it
     $SLdba->unlock($stored, $author[0]);
-    my $fba   = $SLdba->fetch_by_author($author[0]);
-    my $feba2 = $SLdba->fetch_by_author($author[0], 1);
-    is_deeply($fba, [ $stored ], 'unlocked.  fetch_by_author again');
-    is_deeply($feba, [ ], 'fetch_by_author(+extant): none');
+    {
+        my $fba   = $SLdba->fetch_by_author($author[0]);
+        my $feba2 = $SLdba->fetch_by_author($author[0], 1);
+        is_deeply($fba, [ $stored ], 'unlocked.  fetch_by_author again');
+        is_deeply($feba2, [ ], 'fetch_by_author(+extant): none')
+          or diag explain $feba2;
+    }
+
+    # Can't double-free
+    {
+        my $free2 = try_err { $SLdba->unlock($stored, $author[0]) };
+        like($free2, qr{SliceLock dbID=\d+ is already free}, 'no double-free');
+    }
 
     _tidy_database($SLdba);
     return;

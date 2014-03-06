@@ -154,31 +154,43 @@ sub store {
         or throw('Failed to get new autoincremented ID for lock');
       $slice_lock->dbID($slice_lock_id);
 
-      # database engine will have set timestamps, fetch them to keep
-      # object up-to-date
-      my @ts = $self->dbc->db_handle->selectrow_array(q{
-        SELECT
-           UNIX_TIMESTAMP(ts_begin),
-           UNIX_TIMESTAMP(ts_activity),
-           UNIX_TIMESTAMP(ts_free)
-        FROM slice_lock
-        WHERE slice_lock_id=? }, {}, $slice_lock_id);
-      local $slice_lock->{_mutable} = 'store';
-      $slice_lock->ts_begin($ts[0]);
-      $slice_lock->ts_activity($ts[1]);
-      $slice_lock->ts_free($ts[2]);
+      $self->freshen($slice_lock);
   }
 
   return 1;
 }
 
+# After database engine has set timestamps or other fields,
+# fetch them to keep object up-to-date
+sub freshen {
+    my ($self, $stale) = @_;
+    my $dbID = $stale->dbID;
+    throw("Cannot freshen an un-stored SliceLock") unless $dbID;
+    my $fresh = $self->fetch_by_dbID($dbID);
+    local $stale->{_mutable} = 'freshen';
+    foreach my $field ($stale->FIELDS()) {
+        my ($stV, $frV) = ($stale->$field, $fresh->$field);
+        if (ref($stV) && ref($frV) &&
+            $stV->dbID == $frV->dbID) {
+            # object, with matching dbID --> no change
+        } else {
+            $stale->$field($frV);
+        }
+    }
+    return;
+}
+
+
 sub unlock {
   my ($self, $slice_lock, $unlock_author, $freed) = @_;
   $freed = 'finished' if !defined $freed;
+  my $dbID = $slice_lock->dbID;
 
   my $author_id = $self->_author_dbID(author => $slice_lock->author);
   my $freed_author_id = $self->_author_dbID(freed_author => $unlock_author)
     or throw "unlock must be done by some author";
+  throw "SliceLock dbID=$dbID is already free"
+    unless $slice_lock->is_held || $slice_lock->active eq 'pre';
 
   # the freed type is constrained, depending on freed_author
   if ($freed_author_id == $author_id) {
@@ -193,7 +205,16 @@ sub unlock {
         unless grep { $_ eq $freed } qw( expired interrupted );
   }
 
-die "not implemented";
+  my $sth = $self->prepare(q{
+    UPDATE slice_lock
+    SET active='free', freed=?, freed_author_id=?, ts_free=now()
+    WHERE slice_lock_id = ?
+  });
+  my $rv = $sth->execute($freed, $freed_author_id, $dbID);
+  throw "UPDATE slice_lock SET active=free...: failed, rv=$rv"
+    unless $rv == 1;
+
+  $self->freshen($slice_lock);
 
   return 1;
 }
