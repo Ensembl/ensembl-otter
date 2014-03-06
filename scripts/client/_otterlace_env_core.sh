@@ -153,7 +153,7 @@ $anasoft/lib/site_perl\
 esac
 
 ensembl_otter_path="${ensembl_otter_path:+$ensembl_otter_path:}\
-$OTTER_HOME/bin:\
+$OTTER_HOME/bin\
 "
 
 otterbin="\
