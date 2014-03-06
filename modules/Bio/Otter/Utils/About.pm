@@ -43,6 +43,8 @@ sub about_text {
        : sprintf("  *** Non-standard URL root *** %s ***\n",
                  Bio::Otter::Lace::Client->the->url_root));
 
+    # Extra info (beyond $anno) below can be found from log output or
+    # the ensembl-otter commitid, so we only need to show it in GUI
     return <<"TEXT";
 This is Otterlace version $vsn
 $dev_server
@@ -99,6 +101,8 @@ sub tools_versions {
         chomp ($txt, $which);
         push @v, "$txt from $which";
     }
+
+    push @v, sprintf('ensembl-otter from %s', $INC{'Bio/Otter/Version.pm'});
 
     push @v, sprintf('Client EnsEMBL %s from %s',
                      Bio::EnsEMBL::ApiVersion::software_version(),
