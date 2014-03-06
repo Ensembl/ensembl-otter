@@ -1022,7 +1022,7 @@ sub process_Columns {
     foreach my $col (@columns) {
         $col->process_gff or next;
         try {
-            my @filter_transcripts = $self->process_gff_file_from_Column($col);
+            my @filter_transcripts = $self->_process_Column($col);
             push @$transcripts, @filter_transcripts;
         }
         catch { warn $_; push @$failed, $col; };        
@@ -1036,7 +1036,7 @@ sub process_Columns {
     return $result;
 }
 
-sub process_gff_file_from_Column {
+sub _process_Column {
     my ($self, $column) = @_;
 
     my $filter = $column->Filter;
@@ -1065,7 +1065,7 @@ sub process_gff_file_from_Column {
     open my $gff_fh, '<', $full_gff_file or confess "Can't read GFF file '$full_gff_file'; $!";
 
     try {
-        @transcripts = $self->_process_gff_fh($column, $gff_fh);
+        @transcripts = $self->_process_fh($column, $gff_fh);
     }
     catch { die sprintf "%s: %s: $_", $filter_name, $full_gff_file; }
     finally {
@@ -1080,7 +1080,7 @@ sub process_gff_file_from_Column {
     return @transcripts;
 }
 
-sub _process_gff_fh {
+sub _process_fh {
     my ($self, $column, $gff_fh) = @_;
 
     my $filter = $column->Filter;
