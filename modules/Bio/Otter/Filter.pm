@@ -381,6 +381,13 @@ sub feature_type {
     return $self->{_feature_type};
 }
 
+sub internal {
+    my ($self, @args) = @_;
+    ($self->{_internal}) = @args if @args;
+    my $internal = $self->{_internal};
+    return $internal;
+}
+
 # session handling
 
 sub url {

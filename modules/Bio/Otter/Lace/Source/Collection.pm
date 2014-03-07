@@ -35,9 +35,11 @@ sub new_from_Filter_list {
         $col->name($filter->name);
         $col->Filter($filter);
         $col->selected($filter->wanted);
-        my @new_bkt = __maintain_Bracket_array($bkt_path, [ $filter->classification ]);
-        foreach my $bkt (@new_bkt) {
-            $self->add_Item($bkt);
+        unless ($filter->internal) {
+            my @new_bkt = __maintain_Bracket_array($bkt_path, [ $filter->classification ]);
+            foreach my $bkt (@new_bkt) {
+                $self->add_Item($bkt);
+            }
         }
         $col->indent(@$bkt_path || 0);
         $self->add_Item($col);
@@ -189,6 +191,7 @@ sub list_visible_Items {
     my @all = $self->list_Items;
     my @visible;
     while (my $item = shift @all) {
+        next if (not $item->is_Bracket and $item->Filter->internal);
         push @visible, $item;
         if ($self->is_collapsed($item)) {
             my $level = $item->indent;
