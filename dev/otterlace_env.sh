@@ -9,29 +9,7 @@ export ENSEMBL_OTTER_DEV
 
 source "${ANACODE_TEAM_TOOLS}/otterlace/release/scripts/_otterlace.sh" || exit 1
 
-version=$(
-    cd $ENSEMBL_OTTER_DEV
-    config_get version_major
-    config_get version_minor
-
-    # FIXME: duplication with otterlace_build
-    if [ -n "$version_minor" ]
-    then
-    # (already tagged by otterlace_release_tag)
-        version="${version_major}.${version_minor}"
-    else
-    # (ensembl-otter dev branch)
-        version="$version_major"
-    fi
-
-    # sanity check
-    if [ -z "$version" ]
-    then
-        echo "error: the otterlace version is not set" >&2
-        exit 1
-    fi
-    echo $version
-)
+version="dev-from-checkout" # required to be set, but not used?
 
 # Placeholder for something better, possibly ( built on | similar to )
 # otterlace/release/scripts/anacode_source_repo
