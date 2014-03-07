@@ -42,8 +42,10 @@ then
 fi
 
 if [ "$1" = '-S' ]; then
-    export debian_chroot='otterlace_dev'
-    exec bash -i
+    # Start a subshell - for dev or debug.
+    # Tell the prompt what was used to construct its %ENVironment.
+    source "$ensembl_otter_home/dev/subshell.sh"
+    # calls exec, does not return
 else
     exec perl "$ensembl_otter_home/tk/otterlace" "$@"
 fi
