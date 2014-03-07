@@ -24,6 +24,7 @@ __otter_find_installed() {
     local leafname
     leafname="$1"
     if ! OTTER_HOME=$(
+            local_client_only=1 # to muffle warning, $nfswub: not a directory
             if [ -n "$leafname" ]; then
                 # construct path to some designated release
                 # scripts/client/otterlace chases the symlink, but we don't bother.
