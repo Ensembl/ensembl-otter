@@ -130,6 +130,12 @@ sub script_name {
     return "bam_get";
 }
 
+# FIXME: Bodge. See RT387038.
+#
+sub internal {
+    return;
+}
+
 # GFF methods 
 
 sub gff_feature_source {
