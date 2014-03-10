@@ -15,6 +15,7 @@ use Bio::Otter::Utils::SliceFeaturesGFF;
 # hence these class members are simple variables.
 
 my $getscript_sfg;
+my $getscript_atc;
 
 sub _sfg {
     my ($self) = @_;
@@ -50,6 +51,54 @@ sub get_features {
     my $n_features = scalar(@$features);
     $self->log_message("get features: got ${n_features}");
 
+    return $features;
+}
+
+sub _accession_type_cache {
+    my ($self) = @_;
+    return $getscript_atc if $getscript_atc;
+
+    require Bio::Otter::Lace::AccessionTypeCache; # only if needed
+
+    my $atc = Bio::Otter::Lace::AccessionTypeCache->new;
+    $atc->DB($self->local_db);
+
+    return $getscript_atc = $atc;
+}
+
+{
+    my $hit_description_loaded;
+
+    sub _build_HitDescription {
+        my ($self, @args) = @_;
+
+        unless ($hit_description_loaded) {
+            require Bio::Vega::HitDescription; # only if needed
+            $hit_description_loaded = 1;
+        }
+
+        return Bio::Vega::HitDescription->new(@args);
+    }
+}
+
+sub augment_feature_info {
+    my ($self, $features) = @_;
+
+    my $atc = $self->_accession_type_cache;
+    foreach my $feature (@$features) {
+        my $info = $atc->feature_accession_info($feature->hseqname);
+        if ($info) {
+            my $hd = $self->_build_HitDescription(
+                -hit_name            => $feature->hseqname,
+                -hit_length          => $info->{length},
+                -hit_sequence_string => $info->{sequence},
+                -description         => $info->{description},
+                -taxon_id            => $info->{taxon_id},
+                -db_name             => $info->{source_db},
+                );
+            $feature->{'_hit_description'} = $hd;
+        }
+    }
     return $features;
 }
 
