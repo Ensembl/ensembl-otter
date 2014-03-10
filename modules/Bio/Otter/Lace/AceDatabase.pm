@@ -502,6 +502,17 @@ sub ace_config {
     return $config;
 }
 
+my $sqlite_fetch_query = "
+SELECT  oai.accession_sv     AS  'Name'
+     ,  oai.sequence         AS  'Sequence'
+     ,  oai.description      AS  'Description'
+     ,  osi.scientific_name  AS  'Organism'
+FROM             otter_accession_info  oai
+LEFT OUTER JOIN  otter_species_info    osi  USING  ( taxon_id )
+WHERE  oai.accession_sv  IN  ( '%m' )
+";
+$sqlite_fetch_query =~ s/[[:space:]]+/ /g; # collapse into one line for the blixem config file
+
 sub blixem_config {
     my ($self) = @_;
 
@@ -643,6 +654,14 @@ sub blixem_config {
             'request'   => 'request=-q %m',
             'output'    => 'raw',
         },
+
+        'sqlite-fetch' => {
+            'fetch-mode' => 'sqlite',
+            'location'   => $self->DB->file,
+            'query'      => $sqlite_fetch_query,
+            'output'     => 'list',
+        },
+
     };
 
     # Merge in dataset specific blixem config (BAM sources)
