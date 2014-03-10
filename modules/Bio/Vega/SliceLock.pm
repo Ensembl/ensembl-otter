@@ -4,6 +4,7 @@ use strict;
 use warnings;
 use Bio::EnsEMBL::Utils::Exception qw ( throw warning );
 use Bio::EnsEMBL::Utils::Argument qw ( rearrange );
+use Bio::EnsEMBL::Slice;
 use base qw(Bio::EnsEMBL::Storable);
 
 =head1 NAME
@@ -35,8 +36,21 @@ sub new {
 
     my $self = $class->SUPER::new(@args);
 
-    my %val;
-    @val{FIELDS()} = rearrange([ map { uc($_) } FIELDS() ], @args);
+    my ($slice, %val);
+    ($slice, @val{FIELDS()}) =
+      rearrange([ 'SLICE', map { uc($_) } FIELDS() ], @args);
+
+    # defaults
+    $val{active} = 'pre' if !defined $val{active};
+    if (defined $slice) {
+        my @overspec = grep { defined $val{$_} }
+          qw( seq_region_id seq_region_start seq_region_end );
+        throw "Cannot instantiate SliceLock with -SLICE and \U(@overspec)"
+          if @overspec;
+        $val{seq_region_id} = $slice->adaptor->get_seq_region_id($slice);
+        $val{seq_region_start} = $slice->start;
+        $val{seq_region_end} = $slice->end;
+    }
 
     local $self->{_mutable} = 'new';
     while (my ($field, $val) = each %val) {
@@ -106,9 +120,54 @@ sub adaptor {
 }
 
 
+=head2 is_held()
+
+Return true iff the lock is currently (according to what is in memory)
+excluding others from the slice.
+
+=cut
+
 sub is_held {
     my ($self) = @_;
     return $self->active eq 'held' && !$self->freed;
+}
+
+
+=head2 is_held_sync()
+
+Return true iff the lock is currently excluding others from the slice,
+after L<Bio::Vega::DBSQL::SliceLockAdaptor/freshen> has updated the
+in-memory properties.
+
+This is a convenience wrapper around C<freshen> and L</is_held>.
+
+=cut
+
+sub is_held_sync {
+    my ($self) = @_;
+    $self->adaptor->freshen($self);
+    return $self->is_held;
+}
+
+
+=head2 slice()
+
+Convenience method to create and return a L<Bio::EnsEMBL::Slice> for
+the locked region.  The slice must be valid.
+
+=cut
+
+sub slice {
+    my ($self) = @_;
+    my $SLdba = $self->adaptor;
+    throw "$self cannot make slice without adaptor" unless $SLdba;
+    my @pos =
+      ($self->seq_region_id,
+       $self->seq_region_start,
+       $self->seq_region_end);
+    my $sl = $SLdba->db->get_SliceAdaptor->fetch_by_seq_region_id(@pos)
+      or throw "invalid slice (@pos)";
+    return $sl;
 }
 
 sub _init {
