@@ -487,7 +487,7 @@ sub as_AlignFeatures {
 
     $self->_verify_attribs;
     my $gapped_alignment = $self->gapped_alignment;
-    my @afs = $gapped_alignment->ensembl_features;
+    my @afs = $gapped_alignment->vega_features;
 
     $self->_augment([ $self->_common_extra_attribs, $self->_extra_attribs ], @afs);
     return @afs;
@@ -499,6 +499,7 @@ sub _augment {
         foreach my $attrib ( @$attribs ) {
             $item->$attrib($self->$attrib());
         }
+        $item->{_hit_description} = $self->{_hit_description}; # should really be proper attrib
     }
     return @items;
 }
