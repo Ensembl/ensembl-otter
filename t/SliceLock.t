@@ -18,7 +18,7 @@ sub try_err(&) {
 }
 
 sub main {
-    plan tests => 3;
+    plan tests => 7;
 
     # Test supportedness with B:O:L:Dataset + raw $dbh
     #
@@ -32,10 +32,17 @@ sub main {
     };
 
     # Exercise it
-    subtest exercise_dev => sub {
-        my ($ds) = get_BOLDatasets('human_dev');
-        exercise_tt($ds);
-    };
+    my ($ds) = get_BOLDatasets('human_dev');
+    _tidy_database($ds);
+    subtest exercise_dev  => sub { exercise_tt($ds) };
+    subtest pre_unlock_tt => sub { pre_unlock_tt($ds) };
+    subtest cycle_dev     => sub { cycle_tt($ds) };
+
+    _tidy_database($ds) if Test::Builder->new->is_passing; # leave evidence of fail
+
+local $TODO = 'not tested';
+fail('untested cycle: lock. interrupted from elsewhere. unlock => exception, but freshened.');
+fail('untested: do_lock, unlock, store: non-SliceLock refs');
 
     return 0;
 }
@@ -62,10 +69,11 @@ sub supported_tt {
 
 
 sub _tidy_database {
-    my ($dba) = @_;
-    my $dbh = $dba->dbc->db_handle;
+    my ($dataset) = @_;
+    my $dbh = $dataset->get_cached_DBAdaptor->dbc->db_handle;
     $dbh->do(qq{delete from slice_lock where hostname           = '$TESTHOST'});
     $dbh->do(qq{delete from author     where author_email like '%\@$TESTHOST'});
+    diag "purged test rows from ".($dataset->name);
     return;
 }
 
@@ -78,14 +86,13 @@ sub _test_author {
 }
 
 
-# Basic create-store-fetch-unlock cycle
+# Basic create-store-fetch-lock-unlock cycle
 sub exercise_tt {
     my ($ds) = @_;
-    plan tests => 41;
+    plan tests => 55;
 
     # Collect props
     my $SLdba = $ds->get_cached_DBAdaptor->get_SliceLockAdaptor;
-    _tidy_database($SLdba);
 
     my @author = _test_author(qw( Alice Bob ));
 
@@ -116,6 +123,8 @@ sub exercise_tt {
          [ -FREED_AUTHOR => $author[0] ] ],
        [ ts_set => qr{Fresh SliceLock must have null timestamps},
          [ -TS_BEGIN => time() ] ],
+       [ sr_dup => qr{with -SLICE and \(SEQ_REGION_},
+         [ -SLICE => Bio::EnsEMBL::Slice->new_fast({ junk => 'invalid' }) ] ],
       );
     foreach my $case (@inst_fail) {
         my ($label, $fail_like, $add_prop) = @$case;
@@ -130,6 +139,12 @@ sub exercise_tt {
     ok( ! $stored->is_stored($SLdba->dbc), 'stored: not yet');
     $SLdba->store($stored);
     ok(   $stored->is_stored($SLdba->dbc), 'stored: it is now');
+
+    # Find by duff PK
+    {
+        my $bad_dbID = $stored->dbID + 1000; # assumption: monotonic, DB not very busy
+        is($SLdba->fetch_by_dbID($bad_dbID), undef, 'fetch_by_dbID(badPK)');
+    }
 
     # Find by unsaved author.  Author is saved, nothing is found.
     {
@@ -181,6 +196,7 @@ sub exercise_tt {
     my @unlock_fail =
       ([ same_expire => qr{'expired' inappropriate for same-author unlock},
          $author[0], 'expired' ],
+       [ toolate_int => qr{'too_late' inappropriate}, $author[1], 'too_late' ],
        [ diff_fin => qr{'finished' inappropriate for bob@.* acting on alice@.* lock},
          $author[1], 'finished' ],
        [ diff_dflt => qr{'finished' inappropriate for bob.*alice}, $author[1] ]);
@@ -190,8 +206,19 @@ sub exercise_tt {
         like($unlocked, $fail_like, "unlock fail: case $label");
     }
 
+    # Lock it.  active=pre --> active=held
+    my $stored_copy = $SLdba->fetch_by_dbID($stored->dbID);
+    ok($SLdba->do_lock($stored), 'locked!');
+    ok($stored->is_held, '...confirmed by state');
+
+    # Check test assumptions - independent objects from fetch_by_dbID
+    ok(!$stored_copy->is_held, 'stored_copy: do_lock does not affect a copy');
+    ok($stored_copy->is_held_sync, 'stored_copy: lock held, seen after freshen');
+    my $stored_obliv = $SLdba->fetch_by_dbID($stored->dbID);
+
     # Free it
-    $SLdba->unlock($stored, $author[0]);
+    ok($SLdba->unlock($stored, $author[0]), 'unlock');
+    ok(!$stored->is_held, 'unlock freshens');
     {
         my $fba   = $SLdba->fetch_by_author($author[0]);
         my $feba2 = $SLdba->fetch_by_author($author[0], 1);
@@ -199,16 +226,111 @@ sub exercise_tt {
         is_deeply($feba2, [ ], 'fetch_by_author(+extant): none')
           or diag explain $feba2;
     }
+    ok($stored_copy->is_held, 'copy before unlock: not freshened');
 
     # Can't double-free
     {
+        # $stored is already free, and the in-memory copy knows that
         my $free2 = try_err { $SLdba->unlock($stored, $author[0]) };
-        like($free2, qr{SliceLock dbID=\d+ is already free}, 'no double-free');
+        like($free2, qr{SliceLock dbID=\d+ is already free}, 'no wilful double-free');
+    }
+    {
+        # $stored_copy is already free, but doesn't find out until the UPDATE
+        my $free3 = try_err { $SLdba->unlock($stored_copy, $author[0]) };
+        like($free3, qr{SliceLock dbID=\d+ was already free}, 'no async double-free');
+        ok(!$stored_copy->is_held, 'async lock break is freshened');
     }
 
-    _tidy_database($SLdba);
+    ok($stored_obliv->is_held, 'async lock-break: in-memory copy is oblivious')
+      or diag explain $stored_obliv;
+    ok(!$stored_obliv->is_held_sync, 'async lock-break: is_held_sync notices');
+
     return;
 }
+
+# Store(active=pre),unlock - it can be done
+sub pre_unlock_tt {
+    my ($ds) = @_;
+    plan tests => 3;
+
+    my $SLdba = $ds->get_cached_DBAdaptor->get_SliceLockAdaptor;
+    my ($auth) = _test_author(qw( Percy ));
+    my %prop = (-SEQ_REGION_ID => 1, -SEQ_REGION_START => 1, -SEQ_REGION_END => 1000,
+                -AUTHOR => $auth,
+                -INTENT => 'unlock again',
+                -HOSTNAME => $TESTHOST);
+
+    my $pre = Bio::Vega::SliceLock->new(%prop);
+    $SLdba->store($pre);
+    is($pre->active, 'pre', 'active=pre');
+    $SLdba->unlock($pre, $auth);
+    is($pre->active, 'free', 'freed');
+    is($pre->freed, 'finished', 'freed type');
+
+    return;
+}
+
+
+# Store,lock,unlock - interaction with another SliceLock
+sub cycle_tt {
+    my ($ds) = @_;
+    plan tests => 6;
+
+    # Collect props
+    my $SLdba = $ds->get_cached_DBAdaptor->get_SliceLockAdaptor;
+    my @author = _test_author(qw( Xavier Yuel Zebby ));
+    my $BVSL = 'Bio::Vega::SliceLock';
+
+    my @L_pos = (int(rand(10000)), # may not exist
+                 10_000 + int(rand(200000)), 100_000 + int(rand(150000)));
+    my $lock_left = $BVSL->new
+      (-SEQ_REGION_ID => $L_pos[0],
+       -SEQ_REGION_START => $L_pos[1],
+       -SEQ_REGION_END   => $L_pos[2],
+       -AUTHOR => $author[0],
+       -ACTIVE => 'pre',
+       -INTENT => 'testing: will gain',
+       -HOSTNAME => $TESTHOST);
+
+    like(try_err { $lock_left->slice }, qr{cannot make slice without adaptor},
+         "too early to get slice");
+
+    # slice from lock...
+    $SLdba->store($lock_left);
+
+    my $sl_left = $lock_left->slice;
+    is_deeply({ id => $sl_left->adaptor->get_seq_region_id($sl_left),
+                start => $sl_left->start, end => $sl_left->end },
+              { id => $L_pos[0], start => $L_pos[1], end => $L_pos[2] },
+              'slice matches lock_left')
+      or diag explain { sl => $sl_left, lock_left => $lock_left };
+
+    my @R_pos = ($L_pos[0], $L_pos[1] + 50_000, $L_pos[2] + 50_000);
+    my $sl_right = $SLdba->db->get_SliceAdaptor->fetch_by_seq_region_id(@R_pos);
+
+    # ...lock from slice
+    my $lock_right = $BVSL->new
+      (-SLICE => $sl_right,
+       -AUTHOR => $author[2],
+       # -ACTIVE : implicit
+       -INTENT => 'testing: boinged off',
+       -HOSTNAME => $TESTHOST);
+
+    is_deeply({ id => $sl_right->adaptor->get_seq_region_id($sl_right),
+                start => $sl_right->start, end => $sl_right->end },
+              { id => $R_pos[0], start => $R_pos[1], end => $R_pos[2] },
+              'slice matches lock_right')
+      or diag explain { sl => $sl_right, lock_right => $lock_right };
+
+    $SLdba->store($lock_right);
+
+    is(try_err { $SLdba->do_lock($lock_left) && 'ok' }, 'ok', 'Did lock left');
+    is($lock_left->active, 'held', 'left: active=held');
+    ok($lock_left->is_held, 'left: is_held');
+
+    return;
+}
+
 
 sub _support_which {
     my ($thing) = @_;
