@@ -2697,9 +2697,9 @@ sub _feature_details_xml {
 sub _feature_accession_info_xml {
     my ($self, $feat_name) = @_;
 
-    my $row = $self->AceDatabase->AccessionTypeCache->feature_accession_info($feat_name);
-    return unless $row;
-    my ($source_db, $taxon_id, $desc) = @{$row};
+    my $info = $self->AceDatabase->AccessionTypeCache->feature_accession_info($feat_name);
+    return unless $info;
+    my ($source_db, $taxon_id, $desc) = @{$info}{qw(source_db taxon_id description)};
 
     # Put this on the "Details" page which already exists.
     my $xml = Hum::XmlWriter->new(5);
