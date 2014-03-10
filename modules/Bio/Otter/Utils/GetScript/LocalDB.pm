@@ -74,7 +74,6 @@ sub send_feature_gff {
     my %gff_args = (
         gff_format        => Bio::Vega::Utils::GFF::gff_format($gff_version),
         gff_source        => $gff_source,
-        use_cigar_exonerate => 1,                   # TEMP for testing
         );
     my $gff;
 
