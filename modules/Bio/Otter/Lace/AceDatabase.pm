@@ -573,8 +573,9 @@ sub blixem_config {
 
         'dna-match' => {
             'link-features-by-name' => 'true',
-            'bulk-fetch'            => [$embl_fetch, $raw_fetch],
+            'bulk-fetch'            => 'sqlite-fetch',
             'user-fetch'            => [$embl_fetch, $fasta_fetch, 'internal'],
+            'optional-fetch'        => $embl_fetch,
         },
 
         'dna-match-pfetch' => {
@@ -585,8 +586,9 @@ sub blixem_config {
 
         'protein-match' => {
             'link-features-by-name' => 'true',
-            'bulk-fetch'            => $raw_fetch,
+            'bulk-fetch'            => 'sqlite-fetch',
             'user-fetch'            => [$embl_fetch, $fasta_fetch, 'internal'],
+            'optional-fetch'        => $embl_fetch,
         },
 
         'protein-match-pfetch' => {
