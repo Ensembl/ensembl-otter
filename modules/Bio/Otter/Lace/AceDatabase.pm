@@ -566,7 +566,19 @@ sub blixem_config {
             'user-fetch'            => [$embl_fetch, $fasta_fetch, 'internal'],
         },
 
+        'dna-match-pfetch' => {
+            'link-features-by-name' => 'true',
+            'bulk-fetch'            => [$embl_fetch, $raw_fetch],
+            'user-fetch'            => [$embl_fetch, $fasta_fetch, 'internal'],
+        },
+
         'protein-match' => {
+            'link-features-by-name' => 'true',
+            'bulk-fetch'            => $raw_fetch,
+            'user-fetch'            => [$embl_fetch, $fasta_fetch, 'internal'],
+        },
+
+        'protein-match-pfetch' => {
             'link-features-by-name' => 'true',
             'bulk-fetch'            => $raw_fetch,
             'user-fetch'            => [$embl_fetch, $fasta_fetch, 'internal'],
