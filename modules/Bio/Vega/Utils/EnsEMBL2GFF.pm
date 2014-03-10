@@ -675,17 +675,23 @@ my $_new_feature_id_sub = sub {
         my $gff = $self->SUPER::_gff_hash(@args);
 
         my $hd = $self->get_HitDescription;
-        $gff->{'attributes'}{'length'}   = $hd->hit_length;
-        $gff->{'attributes'}{'taxon_id'} = $hd->taxon_id;
-        if (my $db_name = $hd->db_name) {
-            $gff->{'attributes'}{'db_name'} = $db_name;
-        }
-        if (my $desc = $hd->description) {
-            $desc =~ s/"/\\"/g;
-            $gff->{'attributes'}{'description'} = $desc;
-        }
-        if (my $seq = $hd->get_and_unset_hit_sequence_string) {
-            $gff->{'attributes'}{'sequence'} = $seq;
+        if ($hd) {
+            if (my $hit_length = $hd->hit_length) {
+                $gff->{'attributes'}{'length'} = $hit_length;
+            }
+            if (my $taxon_id = $hd->taxon_id) {
+                $gff->{'attributes'}{'taxon_id'} = $taxon_id;
+            }
+            if (my $db_name = $hd->db_name) {
+                $gff->{'attributes'}{'db_name'} = $db_name;
+            }
+            if (my $desc = $hd->description) {
+                $desc =~ s/"/\\"/g;
+                $gff->{'attributes'}{'description'} = $desc;
+            }
+            if (my $seq = $hd->get_and_unset_hit_sequence_string) {
+                $gff->{'attributes'}{'sequence'} = $seq;
+            }
         }
 
         return $gff;
@@ -701,14 +707,20 @@ my $_new_feature_id_sub = sub {
         my $gff = $self->SUPER::_gff_hash(@args);
 
         my $hd = $self->get_HitDescription;
-        $gff->{'attributes'}{'length'}   = $hd->hit_length;
-        $gff->{'attributes'}{'taxon_id'} = $hd->taxon_id;
-        if (my $db_name = $hd->db_name) {
-            $gff->{'attributes'}{'db_name'} = $db_name;
-        }
-        if (my $desc = $hd->description) {
-            $desc =~ s/"/\\"/g;
-            $gff->{'attributes'}{'description'} = $desc;
+        if ($hd) {
+            if (my $hit_length = $hd->hit_length) {
+                $gff->{'attributes'}{'length'} = $hit_length;
+            }
+            if (my $taxon_id = $hd->taxon_id) {
+                $gff->{'attributes'}{'taxon_id'} = $taxon_id;
+            }
+            if (my $db_name = $hd->db_name) {
+                $gff->{'attributes'}{'db_name'} = $db_name;
+            }
+            if (my $desc = $hd->description) {
+                $desc =~ s/"/\\"/g;
+                $gff->{'attributes'}{'description'} = $desc;
+            }
         }
 
         return $gff;
