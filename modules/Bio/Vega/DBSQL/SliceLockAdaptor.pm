@@ -43,7 +43,7 @@ The workflow is
 
 Check the return value.  Maybe someone else got the lock.
 
-=item 3. COMMIT
+=item 3. L<Bio::Vega::SliceLock/bump_activity>; COMMIT
 
 =item 4. Update rows as necessary.
 
@@ -51,7 +51,7 @@ Check the return value.  Maybe someone else got the lock.
 
 If the lock was broken from outside, roll back.
 
-=item 6. COMMIT
+=item 6. L<Bio::Vega::SliceLock/bump_activity>; COMMIT
 
 Repeat as necessary.
 
@@ -256,15 +256,22 @@ sub freshen {
     throw("Cannot freshen an un-stored SliceLock") unless $dbID;
     my $fresh = $self->fetch_by_dbID($dbID);
     local $stale->{_mutable} = 'freshen';
+    my @change = ("$stale->freshen($dbID)");
     foreach my $field ($stale->FIELDS()) {
         my ($stV, $frV) = ($stale->$field, $fresh->$field);
         if (ref($stV) && ref($frV) &&
             $stV->dbID == $frV->dbID) {
             # object, with matching dbID --> no change
         } else {
+            my $old = $stale->$field;
             $stale->$field($frV);
+            $old='undef' unless defined $old;
+            $frV='undef' unless defined $frV;
+            push @change, "[$field, old=$old new=$frV]"
+              if ref($frV) || ref($old) || $old ne $frV;
         }
     }
+    # warn "@change\n";
     return;
 }
 
@@ -283,7 +290,7 @@ Exceptions may be raised if $lock was in some unexpected state.
 =cut
 
 sub do_lock {
-    my ($self, $lock) = @_;
+    my ($self, $lock, $debug) = @_;
     throw "do_lock($lock ...): not a SliceLock object"
       unless eval { $lock->isa('Bio::Vega::SliceLock') };
 
@@ -358,8 +365,7 @@ sub do_lock {
         , freed           = if(slice_lock_id = ?, null, 'too_late')
         , ts_free         = if(slice_lock_id = ?, null, now())
         , freed_author_id = if(slice_lock_id = ?, null, ?)
-      WHERE slice_lock_id = ?
-        AND active='pre'
+      WHERE active='pre'
         AND seq_region_id = ?
         AND seq_region_end >= ?
         AND seq_region_start <= ?
@@ -367,12 +373,16 @@ sub do_lock {
         my $rv = $sth_activate->execute
           ($lock_id, $lock_id, $lock_id, $lock_id, $lock_id,
            $author_id,
-           $lock_id, $srID, $sr_start, $sr_end);
+           $srID, $sr_start, $sr_end);
         push @too_late, # for debug only
-          $rv ? "race looks won? (rv=$rv)" : "beaten in race? (rv=$rv)";
+          $rv > 0 ? "race looks won? (rv=$rv)" : "beaten in race? (rv=$rv)";
     }
 
+    push @$debug, @too_late if defined $debug;
+    # push @$debug, [ adaptor => $lock->adaptor ], [ old => { %$lock } ];
     $self->freshen($lock);
+    # push @$debug, [ freshened => { %$lock } ];
+
     $active = $lock->active;
     if ($active eq 'free') {
         return 0;

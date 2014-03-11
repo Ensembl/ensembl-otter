@@ -18,7 +18,7 @@ sub try_err(&) {
 }
 
 sub main {
-    plan tests => 6;
+    plan tests => 7;
 
     # Test supportedness with B:O:L:Dataset + raw $dbh
     #
@@ -42,6 +42,7 @@ sub main {
 
 local $TODO = 'not tested';
 fail('untested cycle: lock. interrupted from elsewhere. unlock => exception, but freshened.');
+fail('bump ts_activity');
 
     return 0;
 }
@@ -207,7 +208,9 @@ sub exercise_tt {
 
     # Lock it.  active=pre --> active=held
     my $stored_copy = $SLdba->fetch_by_dbID($stored->dbID);
-    ok($SLdba->do_lock($stored), 'locked!');
+    my @debug;
+    is(try_err { $SLdba->do_lock($stored, \@debug) && 'ok' }, 'ok', 'locked!')
+      or diag explain { debug => \@debug };
     ok($stored->is_held, '...confirmed by state');
 
     # Check test assumptions - independent objects from fetch_by_dbID
@@ -332,9 +335,15 @@ sub cycle_tt {
 
     $SLdba->store($lock_right);
 
-    is(try_err { $SLdba->do_lock($lock_left) && 'ok' }, 'ok', 'Did lock left');
-    is($lock_left->active, 'held', 'left: active=held');
-    ok($lock_left->is_held, 'left: is_held');
+    my %debug;
+
+    is(try_err { $SLdba->do_lock($lock_left, ($debug{do_lock_left} = [])) && 'ok' },
+       'ok', 'Did lock left') or $debug{show}=1;
+
+    is($lock_left->active, 'held', 'left: active=held') or $debug{show}=1;
+    ok($lock_left->is_held, 'left: is_held') or $debug{show}=1;
+
+    diag explain { debug => \%debug } if $debug{show};
 
     return;
 }
