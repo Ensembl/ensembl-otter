@@ -18,7 +18,7 @@ sub try_err(&) {
 }
 
 sub main {
-    plan tests => 7;
+    plan tests => 6;
 
     # Test supportedness with B:O:L:Dataset + raw $dbh
     #
@@ -42,7 +42,6 @@ sub main {
 
 local $TODO = 'not tested';
 fail('untested cycle: lock. interrupted from elsewhere. unlock => exception, but freshened.');
-fail('untested: do_lock, unlock, store: non-SliceLock refs');
 
     return 0;
 }
@@ -89,7 +88,7 @@ sub _test_author {
 # Basic create-store-fetch-lock-unlock cycle
 sub exercise_tt {
     my ($ds) = @_;
-    plan tests => 55;
+    plan tests => 59;
 
     # Collect props
     my $SLdba = $ds->get_cached_DBAdaptor->get_SliceLockAdaptor;
@@ -241,9 +240,18 @@ sub exercise_tt {
         ok(!$stored_copy->is_held, 'async lock break is freshened');
     }
 
+    # See is_held_sync do the freshen
     ok($stored_obliv->is_held, 'async lock-break: in-memory copy is oblivious')
       or diag explain $stored_obliv;
     ok(!$stored_obliv->is_held_sync, 'async lock-break: is_held_sync notices');
+
+    # Rejection of junk objects
+    my $junk = bless {}, 'Heffalump';
+    foreach my $method (qw( store freshen do_lock unlock )) {
+        like(try_err { $SLdba->$method($junk) },
+             qr{MSG: $method\(.*: not a SliceLock object},
+             "SLdba->$method: reject junk");
+    }
 
     return;
 }

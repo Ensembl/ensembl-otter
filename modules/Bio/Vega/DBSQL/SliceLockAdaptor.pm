@@ -192,8 +192,9 @@ sub fetch_by_author {
 
 sub store {
   my ($self, $slice_lock) = @_;
-  throw("Must provide a SliceLock object to the store method")
-      unless $slice_lock;
+  throw("store($slice_lock): not a SliceLock object")
+      unless eval { $slice_lock->isa('Bio::Vega::SliceLock') };
+
   throw("Argument must be a SliceLock object to the store method.  Currently is [$slice_lock]")
       unless $slice_lock->isa("Bio::Vega::SliceLock");
 
@@ -248,6 +249,9 @@ sub store {
 # fetch them to keep object up-to-date
 sub freshen {
     my ($self, $stale) = @_;
+    throw "freshen($stale): not a SliceLock object"
+      unless eval { $stale->isa('Bio::Vega::SliceLock') };
+
     my $dbID = $stale->dbID;
     throw("Cannot freshen an un-stored SliceLock") unless $dbID;
     my $fresh = $self->fetch_by_dbID($dbID);
@@ -280,6 +284,8 @@ Exceptions may be raised if $lock was in some unexpected state.
 
 sub do_lock {
     my ($self, $lock) = @_;
+    throw "do_lock($lock ...): not a SliceLock object"
+      unless eval { $lock->isa('Bio::Vega::SliceLock') };
 
     # relevant properties
     my ($lock_id, $active, $srID, $sr_start, $sr_end) =
@@ -398,8 +404,10 @@ Then returns true.
 sub unlock {
   my ($self, $slice_lock, $unlock_author, $freed) = @_;
   $freed = 'finished' if !defined $freed;
-  my $dbID = $slice_lock->dbID;
+  throw "unlock($slice_lock ...): not a SliceLock object"
+    unless eval { $slice_lock->isa('Bio::Vega::SliceLock') };
 
+  my $dbID = $slice_lock->dbID;
   my $author_id = $self->_author_dbID(author => $slice_lock->author);
   my $freed_author_id = $self->_author_dbID(freed_author => $unlock_author)
     or throw "unlock must be done by some author";
