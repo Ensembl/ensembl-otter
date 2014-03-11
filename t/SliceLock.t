@@ -89,7 +89,7 @@ sub _test_author {
 # Basic create-store-fetch-lock-unlock cycle
 sub exercise_tt {
     my ($ds) = @_;
-    plan tests => 60;
+    plan tests => 64;
 
     # Collect props
     my $SLdba = $ds->get_cached_DBAdaptor->get_SliceLockAdaptor;
@@ -98,14 +98,27 @@ sub exercise_tt {
 
     my %prop =
       (-SEQ_REGION_ID => int(rand(10000)), # may not exist
-       -SEQ_REGION_START =>  10000 + int(rand(200000)),
-       -SEQ_REGION_END   => 100000 + int(rand(150000)),
+       -SEQ_REGION_START =>  10_000 + int(rand(200_000)),
+       -SEQ_REGION_END   => 210_000 + int(rand(150_000)),
        -AUTHOR => $author[0], # to be created on store
        -ACTIVE => 'pre',
        -INTENT => 'testing',
        -HOSTNAME => $TESTHOST);
 
     my $BVSL = 'Bio::Vega::SliceLock';
+
+    # Make & store
+    my $stored = $BVSL->new(%prop);
+    isa_ok($stored, $BVSL, 'instantiate');
+    ok( ! $stored->is_stored($SLdba->dbc), 'stored: not yet');
+    $SLdba->store($stored);
+    ok(   $stored->is_stored($SLdba->dbc), 'stored: it is now');
+
+    my $slice = $stored->slice;
+    cmp_ok($slice->start, '<', $slice->end, 'slice is forwards');
+    my $weird = Bio::EnsEMBL::Slice->new_fast
+      ({ %$slice, strand => 0, start => 1000, end => 999 });
+    cmp_ok($weird->start, '>', $weird->end, 'weird slice is backwards');
 
     # Instantiation failures expected
     my @inst_fail =
@@ -125,6 +138,11 @@ sub exercise_tt {
          [ -TS_BEGIN => time() ] ],
        [ sr_dup => qr{with -SLICE and \(SEQ_REGION_},
          [ -SLICE => Bio::EnsEMBL::Slice->new_fast({ junk => 'invalid' }) ] ],
+       [ sr_rev => qr{Slice \(start 1000 > end 999\)},
+         [ -SEQ_REGION_START => 1000, -SEQ_REGION_END => 999 ] ],
+       [ sr_rev_slice => qr{Slice \(start 1000 > end 999\)},
+         [ -SLICE => $weird, -SEQ_REGION_ID => undef,
+           -SEQ_REGION_START => undef, -SEQ_REGION_END => undef ] ],
       );
     foreach my $case (@inst_fail) {
         my ($label, $fail_like, $add_prop) = @$case;
@@ -132,13 +150,6 @@ sub exercise_tt {
         my $made = try_err { $BVSL->new(%p) };
         like($made, $fail_like, "reject new: testcase $label");
     }
-
-    # Make & store
-    my $stored = $BVSL->new(%prop);
-    isa_ok($stored, $BVSL, 'instantiate');
-    ok( ! $stored->is_stored($SLdba->dbc), 'stored: not yet');
-    $SLdba->store($stored);
-    ok(   $stored->is_stored($SLdba->dbc), 'stored: it is now');
 
     # Find by duff PK
     {
@@ -325,7 +336,7 @@ sub cycle_tt {
     my $BVSL = 'Bio::Vega::SliceLock';
 
     my @L_pos = (int(rand(10000)), # may not exist
-                 10_000 + int(rand(200000)), 100_000 + int(rand(150000)));
+                 10_000 + int(rand(200_000)), 210_000 + int(rand(150_000)));
     my $lock_left = $BVSL->new
       (-SEQ_REGION_ID => $L_pos[0],
        -SEQ_REGION_START => $L_pos[1],
