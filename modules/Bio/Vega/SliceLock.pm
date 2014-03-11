@@ -59,7 +59,8 @@ sub new {
 
     # When not loaded from DB, there are extra constraints
     my $sla = $self->adaptor;
-    $self->_check_fresh unless $sla && $self->dbID && $self->is_stored($sla->db);
+    $self->_check_new_lock
+      unless $sla && $self->dbID && $self->is_stored($sla->db);
 
     # We don't migrate these between databases.  (Store and stay)
     throw("Cannot instantiate SliceLock with (SliceLockAdaptor xor dbID)")
@@ -68,7 +69,7 @@ sub new {
     return $self;
 }
 
-sub _check_fresh {
+sub _check_new_lock {
     my ($self) = @_;
 
     # Freshly made lock must be a "pre" lock, not "held".
