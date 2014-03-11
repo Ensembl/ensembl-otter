@@ -91,7 +91,9 @@ sub mid_url_args {
         # test & debug purposes.
         #
         # Maybe pick up developer config when present?
-    } elsif ($ENV{REQUEST_URI} =~ m{^/cgi-bin/otter([^/]*)/\d+/}) {
+    } elsif ($ENV{REQUEST_URI} =~ m{^/cgi-bin/otter([^/]*)/\d+(_[^/]+)?/}) {
+        # cf. webvm.git apps/50otter.conf ScriptAliasMatch
+        # ^/cgi-bin/otter([^/]+)/(\d+(?:_[^/]+)?)/([^/]+)$
         my $mu = $1;
         foreach my $arg (split /;/, $mu) {
             if ($arg =~ m{^~([-a-z0-9]{1,16})$}) {
