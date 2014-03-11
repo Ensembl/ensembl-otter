@@ -52,6 +52,10 @@ sub new {
         $val{seq_region_end} = $slice->end;
     }
 
+    my ($start, $end) = @val{qw{ seq_region_start seq_region_end }};
+    throw "Cannot instantiate SliceLock with backwards Slice (start $start > end $end)"
+      if $start > $end;
+
     local $self->{_mutable} = 'new';
     while (my ($field, $val) = each %val) {
         $self->$field($val);
