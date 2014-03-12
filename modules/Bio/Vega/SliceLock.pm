@@ -26,7 +26,7 @@ sub FIELDS() {
        qw( ts_begin ts_activity ts_free ), # unixtimes
        qw( active freed ),        # enums.  database will check
        qw( author freed_author ), # objects
-       qw( intent hostname ));    # text
+       qw( intent hostname otter_version ));    # text
 # qw(dbID adaptor) are supplied by base class
 }
 
@@ -180,7 +180,7 @@ sub _init {
     foreach my $field (FIELDS()) {
         $new_method{$field} = sub {
             my ($self, $newval) = @_;
-            if (@_ > 1) { # qw( freed freed_author ts_free ) are nullable
+            if (@_ > 1) { # qw( freed freed_author ts_free otter_version ) are nullable
                 # some fields would be safe to mutate and save,
                 # but currently we only allow write during new
                 throw("$field is frozen") if !$self->{_mutable};

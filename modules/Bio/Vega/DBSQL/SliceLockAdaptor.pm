@@ -95,6 +95,7 @@ sub _generic_sql_fetch {
           , freed_author_id
           , intent
           , hostname
+          , otter_version
           , UNIX_TIMESTAMP(ts_free)
         FROM slice_lock
         } . $where_clause);
@@ -116,7 +117,8 @@ sub _generic_sql_fetch {
          -FREED_AUTHOR => $self->_author_find($row->[9]),
          -INTENT       => $row->[10],
          -HOSTNAME     => $row->[11],
-         -TS_FREE      => $row->[12],
+         -OTTER_VERSION => $row->[12],
+         -TS_FREE      => $row->[13],
         );
       push(@$slicelocks, $slicelock);
   }
@@ -223,8 +225,9 @@ sub store {
           , freed_author_id
           , intent
           , hostname
+          , otter_version
           , ts_free)
-        VALUES (NULL, ?,?,?, ?, NOW(), NOW(), ?, ?, ?, ?, ?, NULL)
+        VALUES (NULL, ?,?,?, ?, NOW(), NOW(), ?, ?, ?, ?, ?, ?, NULL)
         });
       $sth->execute
         ($slice_lock->seq_region_id,
@@ -232,7 +235,7 @@ sub store {
          $slice_lock->seq_region_end,
          $author_id,
          $slice_lock->active, $slice_lock->freed, $freed_author_id,
-         $slice_lock->intent, $slice_lock->hostname);
+         $slice_lock->intent, $slice_lock->hostname, $slice_lock->otter_version);
 
       $slice_lock->adaptor($self);
       my $slice_lock_id = $self->last_insert_id('slice_lock_id', undef, 'slice_lock')
