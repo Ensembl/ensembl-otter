@@ -397,6 +397,36 @@ sub do_lock {
 }
 
 
+=head2 bump_activity($lock)
+
+UPDATE the ts_activity field to now.  On return the object will have
+been L</freshen>ed to match the database.
+
+Returns nothing.  Exception raised if $lock was not updated.
+
+=cut
+
+sub bump_activity {
+    my ($self, $lock) = @_;
+    throw "bump_activity($lock): not a SliceLock object"
+      unless eval { $lock->isa('Bio::Vega::SliceLock') };
+
+    my $dbID = $lock->dbID;
+    my $sth = $self->prepare(q{
+      UPDATE slice_lock
+      SET ts_activity = now()
+      WHERE slice_lock_id = ?
+    });
+    my $rv = $sth->execute($dbID);
+    $self->freshen($lock);
+    if ($rv == 1) {
+        return;
+    } else {
+        throw "bump_activity($lock): failed, rv=$rv dbID=$dbID";
+    }
+}
+
+
 =head2 unlock($slice_lock, $unlock_author, $freed)
 
 $freed defaults to C<finished>, which is the expected value when

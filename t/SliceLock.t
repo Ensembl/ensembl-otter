@@ -393,8 +393,113 @@ sub cycle_tt {
 
 
 sub timestamps_tt {
-    fail('untested');
-    fail('bump ts_activity');
+    my ($ds) = @_;
+    plan tests => 9;
+
+    # Interlocking cases run to minimise test-time wallclock duration
+    my @actions =
+      (# label => [ ...steps... ], { field => expect }
+       [ A => [qw[ create wait create ]], { ts_begin => 'incr' }
+         # i.e. Timestamp increased when second active=pre is made
+       ],
+       [ B => [qw[ create wait lock ]], { ts_begin => 'same', ts_activity => 'incr' },
+         # In do_lock, retain the ts_begin but bump ts_activity.
+         # Generally "pre" phase is short.
+       ],
+       [ C => [qw[ create lock wait bump ]],
+         { ts_begin => 'same', ts_activity => 'incr' },
+         # The bump operation, recommended for use with COMMIT, moves
+         # ts_begin only.
+       ],
+       [ D => [qw[ create lock wait unlock ]],
+         { ts_begin => 'same',
+           ts_free => 'huge', # "before" was undef so delta is huge
+           ts_activity => 'same' }
+       ]);
+
+    my $SLdba = $ds->get_cached_DBAdaptor->get_SliceLockAdaptor;
+    my ($auth) = _test_author(qw( Terry ));
+    my %step =
+      (create => sub {
+           my ($label, $lock_stack, $when) = @_;
+           my $objnum = @$lock_stack;
+           my $lock = Bio::Vega::SliceLock->new
+             (-SEQ_REGION_ID => 1E6 + ord($label),
+              -SEQ_REGION_START => 1000,
+              -SEQ_REGION_END   => 2000,
+              -AUTHOR => $auth,
+              -INTENT => "timestamps_tt($label) $objnum",
+              -HOSTNAME => $TESTHOST);
+           $SLdba->store($lock);
+           push @$lock_stack, $lock;
+           return;
+       }, lock => sub {
+           my ($label, $lock_stack, $when) = @_;
+           my $lock = $lock_stack->[-1];
+           $SLdba->do_lock($lock);
+           return;
+       }, bump => sub {
+           my ($label, $lock_stack, $when) = @_;
+           my $lock = $lock_stack->[-1];
+           $lock->bump_activity;
+           return;
+       }, unlock => sub {
+           my ($label, $lock_stack, $when) = @_;
+           my $lock = $lock_stack->[-1];
+           $SLdba->unlock($lock, $auth);
+           return;
+       });
+
+    my %product; # key = label, value = [ $before_times, $after_times ]
+    # %$each_times are key = fieldname, value = timestamp; taken before+after "wait"
+
+    # Do the actions, consuming all steps in the process
+    foreach my $when (0, 1) { # 0 = before, 1 = after
+        foreach my $case (@actions) {
+            push @$case, [] unless $when;
+            my ($label, $steps, $fieldset, $lock_stack) = @$case;
+            while (@$steps) {
+                my $step = shift @$steps;
+                last if $step eq 'wait'; # next time
+                my $code = $step{$step}
+                  or die "Bad step name '$step' in label=$label";
+                $code->($label, $lock_stack, $when);
+            }
+            fail("More 'wait' than \$when in label=$label") if @$steps && $when;
+            foreach my $field (keys %$fieldset) {
+                my $lock = $lock_stack->[-1];
+                $product{$label}->[$when]->{$field} = $lock->$field;
+            }
+        }
+        sleep 1 unless $when;
+    }
+
+    my %ts_diff; # key = label, value = { $fieldname => $seconds_delta }
+    foreach my $case (@actions) {
+        my ($label, $steps, $fieldset, $lock_stack) = @$case;
+        my $info = $product{$label};
+        foreach my $fieldname (keys %$fieldset) {
+            my $got_num = $ts_diff{$label}->{$fieldname} =
+              $info->[1]->{$fieldname} - ($info->[0]->{$fieldname} || 0);
+
+            my $want = $fieldset->{$fieldname};
+            my $got_txt;
+            if    ($got_num  < 0) { $got_txt = 'decr' } # weird
+            elsif ($got_num == 0) { $got_txt = 'same' }
+            elsif ($got_num < 60) { $got_txt = 'incr' }
+            elsif ($got_num > 1300_000_000) { $got_txt = 'huge' }
+            else { $got_txt = 'weird' }
+
+            is($got_txt, $want, "case $label: ts_diff($fieldname)=$got_num");
+        }
+    }
+
+    # during unlock, ts_free is set and ts_activity is not bumped
+    my $free_diff = $product{'D'}[1]{'ts_free'} - $product{'D'}[1]{'ts_activity'};
+    cmp_ok($free_diff, '>', 0, 'D: ts_free > ts_activity');
+
+#    diag explain { actions => \@actions, product => \%product, ts_diff => \%ts_diff };
+    return;
 }
 
 

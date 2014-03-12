@@ -158,7 +158,9 @@ sub is_held_sync {
 =head2 slice()
 
 Convenience method to create and return a L<Bio::EnsEMBL::Slice> for
-the locked region.  The slice must be valid.
+the locked region.
+
+The lock must have been stored and the slice must be valid.
 
 =cut
 
@@ -174,6 +176,25 @@ sub slice {
       or throw "invalid slice (@pos)";
     return $sl;
 }
+
+
+=head2 bump_activity()
+
+Convenience method to UPDATE the ts_activity field to now and freshen
+the lock, returning nothing.
+
+The lock must have been stored.
+
+=cut
+
+sub bump_activity {
+    my ($self) = @_;
+    my $SLdba = $self->adaptor;
+    throw "$self cannot make slice without adaptor" unless $SLdba;
+    $SLdba->bump_activity($self);
+    return;
+}
+
 
 sub _init {
     my ($pkg) = @_;
