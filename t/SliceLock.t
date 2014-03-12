@@ -34,15 +34,15 @@ sub main {
     # Exercise it
     my ($ds) = get_BOLDatasets('human_dev');
     _tidy_database($ds);
-    subtest exercise_dev  => sub { exercise_tt($ds) };
-    subtest pre_unlock_tt => sub { pre_unlock_tt($ds) };
-    subtest cycle_dev     => sub { cycle_tt($ds) };
+    foreach my $sub (qw( exercise_tt pre_unlock_tt cycle_tt timestamps_tt )) {
+        my $code = __PACKAGE__->can($sub) or die "can't find \&$sub";
+        subtest $sub  => sub { $code->($ds) };
+    }
 
     _tidy_database($ds) if Test::Builder->new->is_passing; # leave evidence of fail
 
 local $TODO = 'not tested';
 fail('untested cycle: lock. interrupted from elsewhere. unlock => exception, but freshened.');
-fail('bump ts_activity');
 
     return 0;
 }
@@ -89,7 +89,7 @@ sub _test_author {
 # Basic create-store-fetch-lock-unlock cycle
 sub exercise_tt {
     my ($ds) = @_;
-    plan tests => 59;
+    plan tests => 60;
 
     # Collect props
     my $SLdba = $ds->get_cached_DBAdaptor->get_SliceLockAdaptor;
@@ -187,7 +187,7 @@ sub exercise_tt {
         like(try_err { $stored->$field("new junk value") },
              qr{^MSG: $field is immutable}m, "$field: immutable");
     }
-    foreach my $field (qw( seq_region_id seq_region_start seq_region_end author ts_begin ts_activity active freed freed_author intent hostname ts_free )) {
+    foreach my $field ($stored->FIELDS) {
         like(try_err { $stored->$field("new junk value") },
              qr{^MSG: $field is frozen}m, "$field: frozen");
     }
@@ -262,21 +262,53 @@ sub exercise_tt {
 # Store(active=pre),unlock - it can be done
 sub pre_unlock_tt {
     my ($ds) = @_;
-    plan tests => 3;
+    plan tests => 17;
 
     my $SLdba = $ds->get_cached_DBAdaptor->get_SliceLockAdaptor;
     my ($auth) = _test_author(qw( Percy ));
     my %prop = (-SEQ_REGION_ID => 1, -SEQ_REGION_START => 1, -SEQ_REGION_END => 1000,
                 -AUTHOR => $auth,
                 -INTENT => 'unlock again',
-                -HOSTNAME => $TESTHOST);
+                -HOSTNAME => $TESTHOST,
+                -OTTER_VERSION => '81_slice_lock');
 
     my $pre = Bio::Vega::SliceLock->new(%prop);
     $SLdba->store($pre);
     is($pre->active, 'pre', 'active=pre');
+    my $load = $SLdba->fetch_by_dbID($pre->dbID);
+
     $SLdba->unlock($pre, $auth);
     is($pre->active, 'free', 'freed');
     is($pre->freed, 'finished', 'freed type');
+
+    # Field re-load (from before unlock)
+    my @case = ([ dbID => $pre->dbID ],
+                [ adaptor => $SLdba ],
+                [ seq_region_id => 1 ],
+                [ seq_region_start => 1 ],
+                [ seq_region_end => 1000 ],
+                [ author => $auth->dbID, 'dbID' ],
+                [ intent => 'unlock again' ],
+                [ active => 'pre' ],
+                [ freed => undef ],
+                [ freed_author => undef ],
+                [ ts_free => undef ],
+                [ hostname => $TESTHOST ],
+                [ otter_version => '81_slice_lock' ]);
+
+    foreach my $case (@case) {
+        my ($field, $want_val, $refmethod) = @$case;
+        my $got_val = $load->$field;
+        $got_val = $got_val->$refmethod if $refmethod;
+        is($got_val, $want_val, "field: $field");
+    }
+
+    my %untested;
+    @untested{(qw( dbID adaptor ), $pre->FIELDS )} = ();
+    delete @untested{( map { $_->[0] } @case )};
+    my @untested = sort keys %untested;
+    is("@untested", "ts_activity ts_begin", 'untested field reload');
+    # timestamps are tested time timestamps_tt
 
     return;
 }
@@ -346,6 +378,12 @@ sub cycle_tt {
     diag explain { debug => \%debug } if $debug{show};
 
     return;
+}
+
+
+sub timestamps_tt {
+    fail('untested');
+    fail('bump ts_activity');
 }
 
 

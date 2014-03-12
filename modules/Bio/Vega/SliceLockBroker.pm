@@ -60,6 +60,7 @@ create table slice_lock (
  -- FYI fields
  intent		  varchar(32) not null, -- human readable, some conventions or defaults?
  hostname         varchar(100) not null, -- machine readable
+ otter_version    varchar(16),       -- machine readable, where relevant
  ts_free          datetime,          -- when freed was set
 
  primary key            (slice_lock_id),
