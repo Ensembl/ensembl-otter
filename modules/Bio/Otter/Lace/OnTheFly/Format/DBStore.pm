@@ -1,4 +1,4 @@
-package Bio::Otter::Lace::OnTheFly::DBStore;
+package Bio::Otter::Lace::OnTheFly::Format::DBStore;
 
 use namespace::autoclean;
 

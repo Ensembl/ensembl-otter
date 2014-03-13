@@ -21,7 +21,7 @@ use Test::SetupLog4perl;
 
 my $module;
 BEGIN {
-    $module = 'Bio::Otter::Lace::OnTheFly::DBStore';
+    $module = 'Bio::Otter::Lace::OnTheFly::Format::DBStore';
     use_ok($module);
 }
 critic_module_ok($module);

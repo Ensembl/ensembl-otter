@@ -50,7 +50,7 @@ has _hit_by_query_id => (
 
 with 'Bio::Otter::Lace::OnTheFly::Format::Ace';
 with 'Bio::Otter::Lace::OnTheFly::Format::GFF';
-with 'Bio::Otter::Lace::OnTheFly::DBStore';
+with 'Bio::Otter::Lace::OnTheFly::Format::DBStore';
 
 sub add_hit_by_query_id {
     my ($self, $q_id, $ga) = @_;
