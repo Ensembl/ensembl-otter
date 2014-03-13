@@ -115,7 +115,8 @@ sub run_otf_test {
     my $request = $builder->prepare_run;
 
     my $runner = new_ok( 'Bio::Otter::Lace::OnTheFly::Runner' => [
-                             request => $request,
+                             request         => $request,
+                             resultset_class => 'Bio::Otter::Lace::OnTheFly::ResultSet::Test',
                                                                   ]);
     my $result_set = $runner->run;
     isa_ok($result_set, 'Bio::Otter::Lace::OnTheFly::ResultSet');

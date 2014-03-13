@@ -53,7 +53,8 @@ sub run_request {
     $self->log_message('got a request');
     $self->do_requires;         # in full this time
     my $runner = Bio::Otter::Lace::OnTheFly::Runner->new(
-        request => $request,
+        request         => $request,
+        resultset_class => 'Bio::Otter::Lace::OnTheFly::ResultSet::GetScript',
         );
     my $result_set = $runner->run;
     $result_set->db_store($self->vega_slice);
