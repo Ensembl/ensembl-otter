@@ -54,7 +54,7 @@ sub gtk_arg {
 sub _probe_screens {
     my ($class, $mw) = @_;
     my $current = $mw->screen;
-    my ($display, $screen) = $current =~ m{^(:\d+)\.(\d+)$};
+    my ($display, $screen) = $current =~ m{^(.*:\d+)\.(\d+)$};
 
     if (!defined $display) {
         warn "Failed to parse screen name '$current', assuming one screen";
