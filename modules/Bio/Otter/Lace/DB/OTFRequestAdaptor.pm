@@ -12,7 +12,7 @@ use Bio::Otter::Lace::DB::OTFRequest;
 
 use base 'Bio::Otter::Lace::DB::Adaptor';
 
-sub columns { return qw( id logic_name target_start command completed n_hits ); }
+sub columns { return qw( id logic_name target_start command status n_hits ); }
 
 sub key_column_name       { return 'id'; }
 sub key_is_auto_increment { return 1;    }
@@ -31,15 +31,16 @@ sub SQL {
                                  , logic_name   = ?
                                  , target_start = ?
                                  , command      = ?
-                                 , completed    = ?
+                                 , status       = ?
                                  , n_hits       = ?
                              WHERE id = ?
                           },
+    update_status =>     q{ UPDATE otter_otf_request SET status = ? WHERE id = ? },
     delete =>            q{ DELETE FROM otter_otf_request WHERE id = ?
                           },
     fetch_by_key =>     qq{ SELECT ${all_columns} FROM otter_otf_request WHERE id = ?
                           },
-    fetch_by_logic_name => qq{ SELECT ${all_columns} FROM otter_otf_request WHERE logic_name = ? AND completed = ?
+    fetch_by_logic_name_status => qq{ SELECT ${all_columns} FROM otter_otf_request WHERE logic_name = ? AND status = ?
                              },
     store_arg =>         q{ INSERT INTO otter_otf_args ( request_id, key, value ) VALUES ( ?, ?, ? )
                           },
@@ -97,12 +98,11 @@ sub _store_missed_hit {
 
 sub _store_missed_hit_sth { return shift->_prepare_canned('store_missed_hit') };
 
-sub fetch_by_logic_name {
-    my ($self, $logic_name, $completed) = @_;
-    $completed //= 0;
+sub fetch_by_logic_name_status {
+    my ($self, $logic_name, $status) = @_;
 
-    my $sth = $self->_fetch_by_logic_name_sth;
-    $sth->execute($logic_name, $completed);
+    my $sth = $self->_fetch_by_logic_name_status_sth;
+    $sth->execute($logic_name, $status);
     my $attribs = $sth->fetchrow_hashref;
     return unless $attribs;
 
@@ -110,7 +110,7 @@ sub fetch_by_logic_name {
     $object->is_stored(1);
 
     if ($sth->fetchrow_hashref) {
-        carp "multiple requests for {logic name:'$logic_name', completed:'$completed'}";
+        carp "multiple requests for {logic name:'$logic_name', status:'$status'}";
     }
 
     $self->_fetch_args($object);
@@ -119,7 +119,7 @@ sub fetch_by_logic_name {
     return $object;
 }
 
-sub _fetch_by_logic_name_sth { return shift->_prepare_canned('fetch_by_logic_name'); }
+sub _fetch_by_logic_name_status_sth { return shift->_prepare_canned('fetch_by_logic_name_status'); }
 
 sub _fetch_args {
     my ($self, $object) = @_;
@@ -166,6 +166,13 @@ sub update {
 
     return $result;
 }
+
+sub update_status {
+    my ($self, $object) = @_;
+    return $self->_update_status_sth->execute($object->status, $object->id);
+}
+
+sub _update_status_sth { return shift->_prepare_canned('update_status') };
 
 sub _delete_missed_hits {
     my ($self, $id) = @_;

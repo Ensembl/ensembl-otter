@@ -46,19 +46,26 @@ foreach my $i ( 0..1 ) {
     note("id for $i is ", $req[$i]->id);
 }
 
-my $rbln = $ra->fetch_by_logic_name('OTFRequestAdaptorTest_Protein');
-isa_ok($rbln, $obj_class, 'fetch_by_logic_name (exists)');
-request_ok($rbln, $req[1], 'fetch_by_logic_name (matches)');
+my $rbln = $ra->fetch_by_logic_name_status('OTFRequestAdaptorTest_Protein', 'new');
+isa_ok($rbln, $obj_class, 'fetch_by_logic_name_status (exists)');
+request_ok($rbln, $req[1], 'fetch_by_logic_name_status (matches)');
 
 $req[0]->n_hits(3);
-$req[0]->completed(1);
+$req[0]->status('completed');
 $req[0]->missed_hits(['AB1234.5', 'CDEFG.6']);
 
 ok($ra->update($req[0]), "update");
 
-$rbln = $ra->fetch_by_logic_name('OTFRequestAdaptorTest_EST', 1);
+$rbln = $ra->fetch_by_logic_name_status('OTFRequestAdaptorTest_EST', 'completed');
 isa_ok($rbln, $obj_class, 'after_update (exists)');
 request_ok($rbln, $req[0], 'after_update (matches)');
+
+$req[0]->status('reported');
+ok($ra->update_status($req[0]), "update_status");
+
+$rbln = $ra->fetch_by_logic_name_status('OTFRequestAdaptorTest_EST', 'reported');
+isa_ok($rbln, $obj_class, 'after_update_status (exists)');
+request_ok($rbln, $req[0], 'after_update_status (matches)');
 
 done_testing;
 
