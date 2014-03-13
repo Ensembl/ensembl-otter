@@ -69,6 +69,7 @@ sub _probe_screens {
                   # still here - success
                   $dpy[$i] = $class->_new($name, $i);
                   $tl->destroy;
+                  1;
               } catch {
                   warn "Unexpected error in _probe_screens: $_"
                     unless m{couldn't connect to display|bad screen number};
