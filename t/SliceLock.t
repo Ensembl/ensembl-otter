@@ -328,16 +328,17 @@ sub pre_unlock_tt {
 # Store,lock,unlock - interaction with another SliceLock
 sub cycle_tt {
     my ($ds) = @_;
-    plan tests => 6;
+    plan tests => 11;
 
     # Collect props
     my $SLdba = $ds->get_cached_DBAdaptor->get_SliceLockAdaptor;
     my @author = _test_author(qw( Xavier Yuel Zebby ));
     my $BVSL = 'Bio::Vega::SliceLock';
-
     my @L_pos = (int(rand(10000)), # may not exist
                  10_000 + int(rand(200_000)), 210_000 + int(rand(150_000)));
-    my $lock_left = $BVSL->new
+    my @R_pos = ($L_pos[0], $L_pos[1] + 50_000, $L_pos[2] + 50_000);
+
+    my $L_lock = $BVSL->new
       (-SEQ_REGION_ID => $L_pos[0],
        -SEQ_REGION_START => $L_pos[1],
        -SEQ_REGION_END   => $L_pos[2],
@@ -346,45 +347,56 @@ sub cycle_tt {
        -INTENT => 'testing: will gain',
        -HOSTNAME => $TESTHOST);
 
-    like(try_err { $lock_left->slice }, qr{cannot make slice without adaptor},
+    like(try_err { $L_lock->slice }, qr{cannot make slice without adaptor},
          "too early to get slice");
 
     # slice from lock...
-    $SLdba->store($lock_left);
+    $SLdba->store($L_lock);
 
-    my $sl_left = $lock_left->slice;
-    is_deeply({ id => $sl_left->adaptor->get_seq_region_id($sl_left),
-                start => $sl_left->start, end => $sl_left->end },
+    my $L_slice = $L_lock->slice;
+    is_deeply({ id => $L_slice->adaptor->get_seq_region_id($L_slice),
+                start => $L_slice->start, end => $L_slice->end },
               { id => $L_pos[0], start => $L_pos[1], end => $L_pos[2] },
-              'slice matches lock_left')
-      or diag explain { sl => $sl_left, lock_left => $lock_left };
+              'slice matches L_lock')
+      or diag explain { sl => $L_slice, L_lock => $L_lock };
 
-    my @R_pos = ($L_pos[0], $L_pos[1] + 50_000, $L_pos[2] + 50_000);
-    my $sl_right = $SLdba->db->get_SliceAdaptor->fetch_by_seq_region_id(@R_pos);
+    my $R_slice = $SLdba->db->get_SliceAdaptor->fetch_by_seq_region_id(@R_pos);
 
     # ...lock from slice
-    my $lock_right = $BVSL->new
-      (-SLICE => $sl_right,
+    my $R_lock = $BVSL->new
+      (-SLICE => $R_slice,
        -AUTHOR => $author[2],
        # -ACTIVE : implicit
        -INTENT => 'testing: boinged off',
        -HOSTNAME => $TESTHOST);
 
-    is_deeply({ id => $sl_right->adaptor->get_seq_region_id($sl_right),
-                start => $sl_right->start, end => $sl_right->end },
+    is_deeply({ id => $R_slice->adaptor->get_seq_region_id($R_slice),
+                start => $R_slice->start, end => $R_slice->end },
               { id => $R_pos[0], start => $R_pos[1], end => $R_pos[2] },
-              'slice matches lock_right')
-      or diag explain { sl => $sl_right, lock_right => $lock_right };
+              'slice matches R_lock')
+      or diag explain { sl => $R_slice, R_lock => $R_lock };
 
-    $SLdba->store($lock_right);
+    $SLdba->store($R_lock);
+    my $R_lock_copy = $SLdba->fetch_by_dbID($R_lock->dbID);
 
     my %debug;
 
-    is(try_err { $SLdba->do_lock($lock_left, ($debug{do_lock_left} = [])) && 'ok' },
+    # make L_lock "held"
+    is(try_err { $SLdba->do_lock($L_lock, ($debug{L_do_lock} = [])) && 'ok' },
        'ok', 'Did lock left') or $debug{show}=1;
+    is($L_lock->active, 'held', 'left: active=held') or $debug{show}=1;
+    ok($L_lock->is_held, 'left: is_held') or $debug{show}=1;
 
-    is($lock_left->active, 'held', 'left: active=held') or $debug{show}=1;
-    ok($lock_left->is_held, 'left: is_held') or $debug{show}=1;
+    # check effect on overlapping R_lock
+    $SLdba->freshen($R_lock_copy);
+    is($R_lock->active, 'pre', 'right: not yet told') or $debug{show}=1;
+    is($R_lock_copy->active, 'free', 'right: freed async') or $debug{show}=1;
+
+    # try R_lock anyway
+    is(try_err { $SLdba->do_lock($R_lock, ($debug{R_do_lock} = [])) || 'ok' },
+       'ok', 'Did not lock right') or $debug{show} = 1;
+    is($R_lock->active, 'free', 'right: active=free') or $debug{show} = 1;
+    is($R_lock->freed, 'too_late', 'right: freed(too_late)') or $debug{show} = 1;
 
     diag explain { debug => \%debug } if $debug{show};
 

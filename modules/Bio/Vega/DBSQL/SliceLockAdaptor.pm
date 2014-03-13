@@ -298,8 +298,8 @@ sub do_lock {
       unless eval { $lock->isa('Bio::Vega::SliceLock') };
 
     # relevant properties
-    my ($lock_id, $active, $srID, $sr_start, $sr_end) =
-      ($lock->dbID, $lock->active,
+    my ($lock_id, $active, $ts_begin, $srID, $sr_start, $sr_end) =
+      ($lock->dbID, $lock->active, $lock->ts_begin,
        $lock->seq_region_id, $lock->seq_region_start, $lock->seq_region_end);
     my $author_id = $self->_author_dbID(author => $lock->author);
 
@@ -311,29 +311,39 @@ sub do_lock {
     my $sth_check = $self->prepare(q{
       SELECT slice_lock_id, active, freed
       FROM slice_lock
-      WHERE active in ('pre', 'held')
+      WHERE (active in ('pre', 'held') -- could affect us, or be us
+             or ts_free >= ?)          -- could be us (limit to recent)
         AND seq_region_id = ?
         AND seq_region_start = ?
         AND seq_region_end = ?
     });
-    $sth_check->execute($srID, $sr_start, $sr_end);
+    $sth_check->execute($ts_begin, $srID, $sr_start, $sr_end);
     while (my $row = $sth_check->fetch) {
         my ($ch_slid, $ch_act, $ch_freed) = @$row;
         if ($ch_slid == $lock_id) {
-            # us
-            if ($ch_act eq $active) {
+            # our lock
+            if ($ch_act eq 'pre') {
                 $seen_self ++;
             } elsif ($ch_act eq 'free' && $ch_freed eq 'too_late') {
                 $seen_self ++;
                 push @too_late, "before stale do_lock, by slid=$ch_slid";
             } else {
-                throw "do_lock($ch_slid) failed: input not fresh - active=$ch_act";
+                # Shouldn't happen when following the Workflow
+                $ch_freed = '' if !defined $ch_freed;
+                throw "do_lock($ch_slid) failed: input not fresh - active='$ch_act' freed='$ch_freed'";
+                # Someone else *could* set free(interrupted) or
+                # free(expired) on our pre-lock, but they should not.
             }
         } else {
-            # them
+            # a potentially competing lock, overlapping in space && time
             if ($ch_act eq 'pre') {
                 # Potential race: either they will free(too_late) us,
                 # we will free(too_late) them in our next query.
+            } elsif ($ch_act eq 'free') {
+                # Some lock which was already freed.  Relevant only
+                # for debug - it may have locked (freeing us) and gone
+                push @$debug, "saw slid=$ch_slid $ch_act($ch_freed)"
+                  if defined $debug;
             } else {
                 # Either our 'pre' was added after their 'held'
                 # existed, so they didn't UPDATE us to free(too_late);
