@@ -18,6 +18,23 @@ This behaves like a mostly read-only feature.
 Changes are made to its fields during
 L<Bio::Vega::DBSQL::SliceLockAdaptor/store> and through its broker.
 
+=head2 Not actually a Feature
+
+It is a Storable, not a Feature because
+
+ All features in Ensembl inherit from the Bio::EnsEMBL::Feature class
+ and have the following location defining attributes: start, end,
+ strand, slice.
+
+ All features also have the methods transform(), transfer(), and
+ project() which are described in detail in the Transform, Transfer
+ and Project sections of this tutorial.
+
+Locks have no strand.
+
+They must not be moved onto a different slice for any reason without
+creating a new lock at the new location.
+
 =cut
 
 sub FIELDS() {
