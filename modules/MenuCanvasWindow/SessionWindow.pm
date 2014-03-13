@@ -37,6 +37,7 @@ use Bio::Otter::RequestQueuer;
 use Bio::Otter::ZMap::XML;
 use Bio::Vega::Transform::Otter::Ace;
 
+use Tk::Screens;
 use Bio::Vega::Utils::MacProxyConfig qw{ mac_os_x_set_proxy_vars };
 
 use Log::Log4perl;
@@ -2533,6 +2534,7 @@ sub zmap_new {
     my $arg_list = [
         '--conf_dir' => $config_dir,
         @{$DataSet->zmap_arg_list},
+        (Tk::Screens->nxt( $self->top_window )->gtk_arg ),
         ];
     my $client = $self->AceDatabase->Client;
     my $zmap =
