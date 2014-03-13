@@ -8,6 +8,7 @@ use warnings;
 
 sub new {
     my ($pkg, %args ) = @_;
+    $args{'status'} //= 'new';
     my $self = bless { %args }, $pkg;
     return $self;
 }
@@ -40,16 +41,11 @@ sub command {
     return $command;
 }
 
-sub completed {
+sub status {
     my ($self, @args) = @_;
-    my $completed;
-    if (@args) {
-        ($completed) = @args;
-        $completed //= 0;
-        $self->{'completed'} = $completed;
-    }
-    $completed = $self->{'completed'} // 0;
-    return $completed;
+    ($self->{'status'}) = @args if @args;
+    my $status = $self->{'status'};
+    return $status;
 }
 
 sub n_hits {
