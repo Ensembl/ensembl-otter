@@ -48,9 +48,12 @@ has _hit_by_query_id => (
     },
     );
 
-with 'Bio::Otter::Lace::OnTheFly::Format::Ace';
-with 'Bio::Otter::Lace::OnTheFly::Format::GFF';
-with 'Bio::Otter::Lace::OnTheFly::Format::DBStore';
+# ResultSet on its own is not too useful.
+# It needs to be subclassed and extended to mix in one or more of the following:
+#
+# with 'Bio::Otter::Lace::OnTheFly::Format::Ace';
+# with 'Bio::Otter::Lace::OnTheFly::Format::GFF';
+# with 'Bio::Otter::Lace::OnTheFly::Format::DBStore';
 
 sub add_hit_by_query_id {
     my ($self, $q_id, $ga) = @_;

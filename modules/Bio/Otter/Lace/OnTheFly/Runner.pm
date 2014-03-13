@@ -12,7 +12,6 @@ use Bio::Otter::Lace::OnTheFly::Utils::SeqList;
 use Bio::Otter::Lace::OnTheFly::Utils::Types;
 
 use Bio::Otter::GappedAlignment;
-use Bio::Otter::Lace::OnTheFly::ResultSet;
 
 use Hum::FastaFileIO;
 
@@ -22,6 +21,23 @@ has request    => ( is       => 'ro',
                     # temp need for wrapper...
                     # handles  => { analysis_name => 'logic_name' },
     );
+
+has resultset_class => ( is => 'ro', isa => 'Str', default => 'Bio::Otter::Lace::OnTheFly::ResultSet' );
+
+has _loaded_resultset_class => ( is       => 'ro',
+                                 isa      => 'Str',
+                                 lazy     => 1,
+                                 builder  => '_require_resultset_class',
+                                 init_arg => undef,
+    );
+
+sub _require_resultset_class {
+    my $self = shift;
+    my $class = $self->resultset_class;
+    eval "require $class" ## no critic (BuiltinFunctions::ProhibitStringyEval,Anacode::ProhibitEval)
+        or die "Failed to 'require' module '$class': $@";
+    return $class;
+}
 
 # ...to strip _gff
 sub analysis_name {
@@ -73,7 +89,8 @@ sub run {
 sub parse {
     my ($self, $fh) = @_;
 
-    my $result_set = Bio::Otter::Lace::OnTheFly::ResultSet->new(
+    my $rs_class = $self->_loaded_resultset_class;
+    my $result_set = $rs_class->new(
         analysis_name => $self->analysis_name,
         is_protein    => $self->is_protein,
         query_seqs    => $self->query_seqs,

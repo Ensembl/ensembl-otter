@@ -2152,7 +2152,8 @@ sub launch_exonerate {
         $request_adaptor->store($request);
 
         # The new way:
-        my $runner = $otf->build_runner(request => $request);
+        my $runner = $otf->build_runner(request         => $request,
+                                        resultset_class => 'Bio::Otter::Lace::OnTheFly::ResultSet::Session');
         my $result_set = $runner->run;
 
         my $ace_output = $result_set->ace($builder->target->name);
