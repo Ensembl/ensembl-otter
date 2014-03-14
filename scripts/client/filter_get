@@ -32,9 +32,9 @@ sub do_it {
     my $args = $self->args;
 
     # pull off arguments meant for us
-    my     ($url_root, $server_script, $cookie_jar, $process_gff)
+    my     ($url_root, $server_script, $cookie_jar)
         = $self->read_delete_args(
-        qw ( url_root   server_script   cookie_jar   process_gff_file )
+        qw ( url_root   server_script   cookie_jar )
         );
 
     $args->{log} = 1 if $LOG; # enable logging on the server
@@ -60,7 +60,7 @@ sub do_it {
         close STDOUT or die "Error writing to STDOUT; $!";
         # update the SQLite db - to ensure gff processing if appropriate
         $self->SUPER::do_requires;
-        $self->update_local_db($gff_source, $cache_file, $process_gff);
+        $self->update_local_db($gff_source, $cache_file);
         return;
     }
 
@@ -124,7 +124,7 @@ sub do_it {
             });
 
         # update the SQLite db
-        $self->update_local_db($gff_source, $cache_file, $process_gff);
+        $self->update_local_db($gff_source, $cache_file);
 
         # if (rand() < 0.5) {
         #     die "Horribly";

@@ -15,7 +15,6 @@ my @server_params = (
     # session
     qw(
     server_script
-    process_gff_file
     ),
 
     # common
@@ -282,13 +281,10 @@ sub ditypes {
     return $self->{'_ditypes'};
 }
 
-sub process_gff_file {
-    my ($self, $flag) = @_;
-
-    if (defined $flag) {
-        $self->{'_process_gff_file'} = $flag ? 1 : 0;
-    }
-    return $self->{'_process_gff_file'};
+sub content_type {
+    my ($self, $content_type) = @_;
+    $self->{'_content_type'} = $content_type if $content_type;
+    return $self->{'_content_type'};
 }
 
 sub grouplabel {

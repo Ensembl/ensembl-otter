@@ -1020,7 +1020,7 @@ sub process_Columns {
     my $transcripts = [ ];
     my $failed      = [ ];
     foreach my $col (@columns) {
-        $col->process_gff or next;
+        $col->Filter->content_type or next;
         try {
             my @filter_transcripts = $self->_process_Column($col);
             push @$transcripts, @filter_transcripts;
@@ -1085,13 +1085,10 @@ sub _process_fh {
 
     my $filter = $column->Filter;
 
-    if ($filter->server_script eq 'get_gff_genes'
-        or $filter->feature_kind eq 'PredictionExon'
-        or $filter->feature_kind eq 'PredictionTranscript'
-        ) {
+    if ($filter->content_type eq 'transcript') {
         return Bio::Otter::Lace::ProcessGFF::make_ace_transcripts_from_gff($gff_fh);
     }
-    elsif ($filter->feature_kind =~ /AlignFeature/) {
+    elsif ($filter->content_type eq 'alignment_feature') {
         Bio::Otter::Lace::ProcessGFF::store_hit_data_from_gff($self->AccessionTypeCache, $gff_fh);
         # Unset flag so that we don't reprocess this file if we recover the session.
         $column->process_gff(0);

@@ -23,8 +23,6 @@ sub do_it {
 
     my $args   = $self->args;
 
-    my ($process_gff) = $self->read_delete_args(qw( process_gff ));
-
     $self->do_requires;
 
     my $path = $args->{file_path};
@@ -35,7 +33,7 @@ sub do_it {
     close $file or die "Failed to close file '$path': $!";
 
     # update the SQLite db
-    $self->update_local_db($args->{gff_source}, $path, $process_gff);
+    $self->update_local_db($args->{gff_source}, $path);
 
     # zmap waits for STDOUT to be closed as an indication that all
     # data has been sent, so we close the handle now so that zmap
