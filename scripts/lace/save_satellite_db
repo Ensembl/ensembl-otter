@@ -42,7 +42,7 @@ use Bio::Otter::Lace::Defaults;
     $sat_opts->{'-HOST'}   = $sathost   if $sathost;
     $sat_opts->{'-PORT'}   = $satport   if $satport;
     $sat_opts->{'-USER'}   = $satuser   if $satuser;
-    $sat_opts->{'-PASS'}   = $satpass   if $satpass;
+    $sat_opts->{'-PASS'}   = $satpass   if defined $satpass;
     $sat_opts->{'-DBNAME'} = $satdbname if $satdbname;
 
     # so we can use undefined password
