@@ -118,7 +118,7 @@ sub featuresets {
 sub zmap_column { return; }
 sub zmap_style  { return 'short-read'; }
 
-sub process_gff_file { return 0; }
+sub content_type { return; }
 
 sub url {
     my ($self, $session) = @_;

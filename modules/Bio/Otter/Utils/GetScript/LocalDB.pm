@@ -68,8 +68,8 @@ sub send_feature_gff {
     my ($self, $features) = @_;
 
     # FIXME: require_args
-    my (  $gff_source, $process_gff,    $gff_version, $type, $start, $end) = $self->read_args(
-        qw(gff_source   process_gff_file gff_version   type   start   end));
+    my (  $gff_source,    $gff_version, $type, $start, $end) = $self->read_args(
+        qw(gff_source      gff_version   type   start   end));
 
     my %gff_args = (
         gff_format        => Bio::Vega::Utils::GFF::gff_format($gff_version),
@@ -87,7 +87,7 @@ sub send_feature_gff {
         });
 
     # update the SQLite db
-    $self->update_local_db($gff_source, 'from_localdb', $process_gff);
+    $self->update_local_db($gff_source, 'from_localdb');
 
     # Send data to zmap on STDOUT
     $self->time_diff_for(
