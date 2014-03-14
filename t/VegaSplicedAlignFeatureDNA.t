@@ -166,6 +166,15 @@ compare_saf_ok($rebuilt, $safd, 'new from features (fwd)', [ qw(hend vulgar_comp
 is($rebuilt->hend, $safd->hend - 3, 'rebuilt hend');
 is($rebuilt->vulgar_comps_string, substr($safd->vulgar_comps_string, 0, -6), 'rebuilt vulgar comps');
 
+$safd->strand(1);
+$safd->hstrand(1);
+$safd->reverse_complement;
+is($safd->cigar_string, '3D3M42IMIM44I4M3D2M43I3M', 'cigar_string (rev_comp)');
+is($safd->vulgar_comps_string, 'G 3 0 M 3 3 I 0 42 M 1 1 G 0 1 M 1 1 I 0 44 M 4 4 G 3 0 M 2 2 I 0 43 M 3 3',
+   'vulgar_comps_string (rev_comp)');
+is ($safd->strand,  -1, 'strand  (rev_comp)');
+is ($safd->hstrand, -1, 'hstrand (rev_comp)');
+
 # Copied from OtterGappedAlignment.t
 # not sure about target strand!
 my $vulgar = 'BG212959.1 928 0 - RP1-90J20.6-002 91513 84135 - 3570 M 9 9 G 0 1 M 3 3 G 0 3 M 6 6 G 0 4 I 0 814 M 11 11 G 0 2 M 6 6 G 0 3 M 4 4 G 0 1 M 1 1 G 0 1 M 4 4 G 0 1 M 1 1 G 0 1 M 2 2 G 0 1 M 10 10 G 0 1 M 3 3 G 0 1 M 5 5 G 0 1 M 2 2 G 0 1 M 4 4 G 0 1 M 3 3 G 0 1 M 6 6 G 0 2 M 6 6 G 0 1 M 6 6 G 0 1 M 10 10 G 0 1 M 5 5 G 0 1 M 3 3 G 0 1 M 3 3 I 0 1405 M 7 7 G 0 2 M 20 20 G 0 1 M 3 3 G 0 1 M 9 9 G 0 1 M 6 6 G 0 1 M 10 10 G 0 1 M 7 7 G 1 0 M 4 4 G 0 1 M 57 57 G 0 1 M 11 11 I 0 3974 M 9 9 G 0 1 M 17 17 G 0 1 M 9 9 G 0 1 M 7 7 G 0 1 M 8 8 G 1 0 M 15 15 G 0 1 M 86 86 I 0 214 M 528 528';

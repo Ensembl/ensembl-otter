@@ -603,6 +603,24 @@ sub end_phase {
     return $gapped_alignment->end_phase;
 }
 
+# As does this
+#
+sub reverse_complement {
+    my ($self) = @_;
+
+    # reverse strand in both sequences
+    $self->strand( ($self->strand  // 1) * -1);
+    $self->hstrand(($self->hstrand // 1) * -1) unless $self->_hstrand_or_protein eq '.';
+
+    $self->strands_reversed(not($self->strands_reversed));
+
+    # reverse vulgar_comps_string as consequence
+    my $reversed_alignment = $self->gapped_alignment->reverse_alignment;
+    $self->vulgar_comps_string($reversed_alignment->vulgar_comps_string);
+
+    return;
+}
+
 # Implemented in Protein subclass
 sub looks_like_frameshift {
     return;

@@ -150,7 +150,18 @@ $vcs =~ s/S 0 1 I 0 3913 S 1 2/I 0 3916 G 1 0/; # fix up 2nd split codon
 $vcs =~ s/S 0 1 I 0 762 S 1 2/I 0 765 G 1 0/;   # fix up 3rd split codon
 is($rebuilt->vulgar_comps_string, $vcs, 'rebuilt vulgar comps');
 
-$vcs = $safd->vulgar_comps_string;
+$vcs = $safd->vulgar_comps_string; # save for new() below
+
+$safd->reverse_complement;
+is($safd->cigar_string,
+   '273M603I80M763I155M3914I229M8903I108M3DI54M1312I3M75D156MI33M2246I822M',
+   'cigar_string (rev_comp)');
+is($safd->vulgar_comps_string,
+   'M 91 273 I 0 603 M 26 78 S 1 2 I 0 762 S 0 1 M 51 153 S 1 2 I 0 3913 S 0 1 M 76 228 S 1 1 I 0 8901 S 0 2 M 36 108 G 1 0 F 0 1 M 18 54 I 0 1312 M 1 3 G 25 0 M 52 156 F 0 1 M 11 33 I 0 2246 M 274 822',
+   'vulgar_comps_string (rev_comp)');
+is ($safd->strand,  -1, 'strand  (rev_comp)');
+is ($safd->hstrand,  1, 'hstrand (rev_comp)');
+
 $safd = new_ok($saf_protein_module => [ -vulgar_comps_string => $vcs ], 'new from vulgar_comps_string');
 $safd->seqname('TRev');
 $safd->start(35467);
