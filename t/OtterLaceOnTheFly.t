@@ -44,7 +44,6 @@ BEGIN {
         Bio::Otter::Lace::OnTheFly::QueryValidator
         Bio::Otter::Lace::OnTheFly::ResultSet
         Bio::Otter::Lace::OnTheFly::ResultSet::GetScript
-        Bio::Otter::Lace::OnTheFly::ResultSet::Session
         Bio::Otter::Lace::OnTheFly::ResultSet::Test
         Bio::Otter::Lace::OnTheFly::Runner
         Bio::Otter::Lace::OnTheFly::Runner::Transcript
