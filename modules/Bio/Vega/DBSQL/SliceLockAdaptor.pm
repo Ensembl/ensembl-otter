@@ -192,6 +192,35 @@ sub fetch_by_author {
 }
 
 
+sub _sane_db {
+    my ($self) = @_;
+    my $dbh = $self->dbc->db_handle;
+
+    # Things to check
+    my %info = (RaiseError => $dbh->{'RaiseError'});
+    my $row = $dbh->selectall_arrayref(q{
+      SELECT @@tx_isolation, engine
+      FROM information_schema.tables
+      WHERE table_schema=database() and table_name='slice_lock'
+    });
+
+    throw("_sane_db expected one row, got ".@$row) unless 1 == @$row;
+    @info{qw{ tx_isolation engine }} = @{ $row->[0] };
+
+    if ($info{engine} eq 'InnoDB' &&
+        $info{RaiseError} &&
+        # READ-UNCOMMITTED READ-COMMITTED can't be tested with our
+        # slave setup and we don't need them - reject
+        (grep { $_ eq $info{tx_isolation} }
+         qw{ REPEATABLE-READ SERIALIZABLE })) {
+        return 1;
+    } else {
+        my @info = map {"$_=$info{$_}"} sort keys %info;
+        throw("_sane_db: cannot run with (@info)");
+    }
+}
+
+
 sub store {
   my ($self, $slice_lock) = @_;
   throw("store($slice_lock): not a SliceLock object")
@@ -208,6 +237,7 @@ sub store {
   my $freed_author_id = defined $slice_lock->freed_author
     ? $self->_author_dbID(freed_author => $slice_lock->freed_author) : undef;
 
+  $self->_sane_db;
   if ($slice_lock->adaptor) {
 #      $slice_lock->is_stored($slice_lock->adaptor->db)) {
       die "UPDATE or database move $slice_lock: not implemented";
@@ -257,6 +287,7 @@ sub freshen {
 
     my $dbID = $stale->dbID;
     throw("Cannot freshen an un-stored SliceLock") unless $dbID;
+    $self->_sane_db;
     my $fresh = $self->fetch_by_dbID($dbID);
     local $stale->{_mutable} = 'freshen';
     my @change = ("$stale->freshen($dbID)");
@@ -305,6 +336,7 @@ sub do_lock {
 
     throw("do_lock($lock_id) failed: expected active=pre, got active=$active")
       unless $active eq 'pre';
+    $self->_sane_db;
 
     # Check for non-free locks on our slice
     my ($seen_self, @too_late) = (0);
@@ -344,12 +376,14 @@ sub do_lock {
                 # for debug - it may have locked (freeing us) and gone
                 push @$debug, "saw slid=$ch_slid $ch_act($ch_freed)"
                   if defined $debug;
-            } else {
+            } elsif ($ch_act eq 'held') {
                 # Either our 'pre' was added after their 'held'
                 # existed, so they didn't UPDATE us to free(too_late);
                 # or we have been UPDATEd to free(too_late) already.
                 push @too_late,
                   "early do_lock / before insert, by slid=$ch_slid";
+            } else {
+                throw "impossible - ch_act=$ch_act";
             }
         }
     }
@@ -357,7 +391,8 @@ sub do_lock {
       unless $seen_self;
 
     if (@too_late) {
-        # "Early" too_late detection above, tidy up
+        # "Early" too_late detection above.  This tidy up is required
+        # for the pre-exising-"held" case.
         my $sth_free = $self->prepare(q{
       UPDATE slice_lock
       SET active='free'
@@ -369,8 +404,9 @@ sub do_lock {
         });
         my $rv = $sth_free->execute($lock_id);
         push @too_late, "(tidy rv=$rv)"; # for debug only
+
     } else {
-        # Have a chance for the lock, do atomic update for exclusion
+        # Have a chance for the lock.  Do atomic update for exclusion
         my $sth_activate = $self->prepare(q{
       UPDATE slice_lock
       SET active          = if(slice_lock_id = ?, 'held', 'free')
@@ -402,7 +438,8 @@ sub do_lock {
     } elsif ($active eq 'held') {
         return 1;
     } else {
-        throw "do_lock($lock_id) confused, active=$active";
+        my $info = $debug ? (join "\n    ", ' @$debug=', @$debug) : "";
+        throw "do_lock($lock_id) confused, active=$active$info";
     }
 }
 
@@ -422,6 +459,7 @@ sub bump_activity {
       unless eval { $lock->isa('Bio::Vega::SliceLock') };
 
     my $dbID = $lock->dbID;
+    $self->_sane_db;
     my $sth = $self->prepare(q{
       UPDATE slice_lock
       SET ts_activity = now()
@@ -480,6 +518,7 @@ sub unlock {
         unless grep { $_ eq $freed } qw( expired interrupted );
   }
 
+  $self->_sane_db;
   my $sth = $self->prepare(q{
     UPDATE slice_lock
     SET active='free', freed=?, freed_author_id=?, ts_free=now()

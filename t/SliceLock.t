@@ -12,13 +12,18 @@ use Bio::Vega::Author;
 
 my $TESTHOST = 'test.nowhere'; # an invalid hostname
 
+my @TX_ISO =
+my ($ISO_UNCO,          $ISO_COMM,   $ISO_REPEAT,       $ISO_SERI) = # to avoid typos
+  ('READ-UNCOMMITTED', 'READ-COMMITTED', 'REPEATABLE-READ', 'SERIALIZABLE');
+
+
 sub try_err(&) {
     my ($code) = @_;
     return try { $code->() } catch { "ERR:$_" };
 }
 
 sub main {
-    plan tests => 7;
+    plan tests => 24;
 
     # Test supportedness with B:O:L:Dataset + raw $dbh
     #
@@ -33,19 +38,58 @@ sub main {
 
     # Exercise it
     my ($ds) = get_BOLDatasets('human_dev');
+    my $dbh = $ds->get_cached_DBAdaptor->dbc->db_handle;
+    _late_commit_register($dbh);
     _tidy_database($ds);
-    foreach my $sub (qw( exercise_tt pre_unlock_tt cycle_tt timestamps_tt )) {
-        my $code = __PACKAGE__->can($sub) or die "can't find \&$sub";
-        subtest $sub  => sub { $code->($ds) };
+
+    foreach my $iso ($ISO_UNCO, $ISO_COMM) {
+        subtest "bad_isolation_tt($iso)" => sub { bad_isolation_tt($ds, $iso) };
+    }
+
+    my @tt = qw( exercise_tt pre_unlock_tt cycle_tt timestamps_tt two_conn_tt );
+    foreach my $iso ($ISO_REPEAT, $ISO_SERI) {
+        _iso_level($dbh, $iso); # commit!
+
+        foreach my $sub (@tt) {
+            my $code = __PACKAGE__->can($sub) or die "can't find \&$sub";
+            is(_iso_level($dbh), $iso, "next test: $iso !")
+              or die "hopeless - authors will collide";
+            subtest "$sub(\L$iso)" => sub { $code->($ds) };
+        }
     }
 
     _tidy_database($ds) if Test::Builder->new->is_passing; # leave evidence of fail
 
-local $TODO = 'not tested';
-fail('untested cycle: lock. interrupted from elsewhere. unlock => exception, but freshened.');
-
     return 0;
 }
+
+
+END {
+    # If the test is aborting with an error, COMMIT the evidence
+    _late_commit_do();
+}
+{
+    my %dbh;
+    sub _late_commit_register {
+        my ($dbh) = @_;
+        $dbh{$dbh} = $dbh;
+    }
+
+    sub _late_commit_do {
+        while (my ($k, $dbh) = each %dbh) {
+            if ($dbh && $dbh->ping) {
+                diag "_late_commit_do: $dbh->commit";
+                $dbh->commit;
+            } else {
+                diag "_late_commit_do: $dbh: gone";
+            }
+        }
+    }
+}
+# Useful query for dumping locks
+#
+# select l.slice_lock_id slid, l.seq_region_id srid, l.seq_region_start st, l.seq_region_end end, intent,hostname,otter_version, ts_begin,ts_activity,ts_free,active,freed,freed_author_id,author_id, a.author_name from slice_lock l join author a using (author_id);
+
 
 sub supported_tt {
     my ($dataset_name, $expect) = @_;
@@ -78,11 +122,47 @@ sub _tidy_database {
 }
 
 sub _test_author {
-    my @fname = @_;
+    my ($dba, @fname) = @_;
+
+    my $uniqify = do {
+        my $dbh = $dba->dbc->db_handle;
+        my $tx_iso = _iso_level($dbh);
+        $tx_iso =~ s{([A-Z])[A-Z]+(-|$)}{$1}g;
+        my ($ptid) = $dbh->selectrow_array
+          ('SELECT @@pseudo_thread_id'); # "This variable is for internal server use."
+        "ptid=$ptid,pid=$$,iso=$tx_iso";
+    };
+
     return map {
-        Bio::Vega::Author->new(-EMAIL => "\l$_\@$TESTHOST",
-                               -NAME => "$_ the Tester");
+        Bio::Vega::Author->new(-EMAIL => "$uniqify,\l$_\@$TESTHOST", # varchar(50)
+                               -NAME => "$_ the Tester ($uniqify)"); # varchar(50)
     } @fname;
+}
+
+# Pick a seq_region_id which is not locked, either valid OR somewhat
+# far past anything locked so far, leaving room for those we can't see
+# (not COMMITted elsewhere) etc.
+sub _notlocked_seq_region_id {
+    my ($dba, $need_valid) = @_;
+    my $dbh = $dba->dbc->db_handle;
+    my $val;
+
+    if ($need_valid) {
+        my $q = q{
+      SELECT seq_region_id FROM seq_region r
+      WHERE r.seq_region_id not in (select seq_region_id from slice_lock)
+        };
+        my @valid = @{ $dbh->selectcol_arrayref($q) };
+        $val = $valid[ int(rand( scalar @valid )) ];
+    } else {
+        my ($max) = $dbh->selectrow_array
+          (q{ SELECT max(seq_region_id) FROM slice_lock });
+        my $chunk = 1_000_000;
+        $val = $chunk * (1 + int($max / $chunk)); # round up
+        $val += int(rand(10_000)) * 100;
+    }
+
+    return $val;
 }
 
 
@@ -94,10 +174,10 @@ sub exercise_tt {
     # Collect props
     my $SLdba = $ds->get_cached_DBAdaptor->get_SliceLockAdaptor;
 
-    my @author = _test_author(qw( Alice Bob ));
+    my @author = _test_author($SLdba, qw( Alice Bob ));
 
     my %prop =
-      (-SEQ_REGION_ID => int(rand(10000)), # may not exist
+      (-SEQ_REGION_ID => _notlocked_seq_region_id($SLdba, 1), # may not exist
        -SEQ_REGION_START =>  10_000 + int(rand(200_000)),
        -SEQ_REGION_END   => 210_000 + int(rand(150_000)),
        -AUTHOR => $author[0], # to be created on store
@@ -166,6 +246,7 @@ sub exercise_tt {
     }
 
     # Find & compare
+    diag 'author[0]="'.($author[0]->name).'" <'.($author[0]->email).'>';
     my @found = try_err { @{ $SLdba->fetch_by_author($author[0]) } };
   SKIP: {
         unless (isa_ok($found[0], $BVSL, "find by author")) {
@@ -208,9 +289,10 @@ sub exercise_tt {
       ([ same_expire => qr{'expired' inappropriate for same-author unlock},
          $author[0], 'expired' ],
        [ toolate_int => qr{'too_late' inappropriate}, $author[1], 'too_late' ],
-       [ diff_fin => qr{'finished' inappropriate for bob@.* acting on alice@.* lock},
+       [ diff_fin =>
+         qr{'finished' inappropriate for .*,bob@.* acting on .*,alice@.* lock},
          $author[1], 'finished' ],
-       [ diff_dflt => qr{'finished' inappropriate for bob.*alice}, $author[1] ]);
+       [ diff_dflt => qr{'finished' inappropriate for .*,bob.*alice}, $author[1] ]);
     foreach my $case (@unlock_fail) {
         my ($label, $fail_like, @arg) = @$case;
         my $unlocked = try_err { $SLdba->unlock($stored, @arg) };
@@ -276,7 +358,7 @@ sub pre_unlock_tt {
     plan tests => 17;
 
     my $SLdba = $ds->get_cached_DBAdaptor->get_SliceLockAdaptor;
-    my ($auth) = _test_author(qw( Percy ));
+    my ($auth) = _test_author($SLdba, qw( Percy ));
     my %prop = (-SEQ_REGION_ID => 1, -SEQ_REGION_START => 1, -SEQ_REGION_END => 1000,
                 -AUTHOR => $auth,
                 -INTENT => 'unlock again',
@@ -325,16 +407,17 @@ sub pre_unlock_tt {
 }
 
 
-# Store,lock,unlock - interaction with another SliceLock
+# Store,lock,unlock - interaction with another SliceLock,
+# (unrealistically but conveniently) from inside the same transaction
 sub cycle_tt {
     my ($ds) = @_;
     plan tests => 11;
 
     # Collect props
     my $SLdba = $ds->get_cached_DBAdaptor->get_SliceLockAdaptor;
-    my @author = _test_author(qw( Xavier Yuel Zebby ));
+    my @author = _test_author($SLdba, qw( Xavier Yuel Zebby ));
     my $BVSL = 'Bio::Vega::SliceLock';
-    my @L_pos = (int(rand(10000)), # may not exist
+    my @L_pos = (_notlocked_seq_region_id($SLdba, 1), # may not exist
                  10_000 + int(rand(200_000)), 210_000 + int(rand(150_000)));
     my @R_pos = ($L_pos[0], $L_pos[1] + 50_000, $L_pos[2] + 50_000);
 
@@ -404,6 +487,90 @@ sub cycle_tt {
 }
 
 
+sub _iso_level {
+    my ($dbh, $set_iso) = @_;
+
+    if (defined $set_iso) {
+        $set_iso =~ s{-}{ }g;
+        $dbh->begin_work if $dbh->{AutoCommit}; # avoid warning
+        $dbh->commit; # avoid failure inside transaction
+        $dbh->do("SET SESSION TRANSACTION ISOLATION LEVEL $set_iso");
+        $dbh->begin_work; # make it take effect
+    }
+
+    my ($got_iso) = $dbh->selectrow_array('SELECT @@tx_isolation');
+    fail("Unexpected isolation '$got_iso'") unless grep { $_ eq $got_iso } @TX_ISO;
+    return $got_iso;
+}
+
+sub bad_isolation_tt {
+    my ($ds, $iso) = @_;
+    plan tests => 9;
+
+    my $SLdba = $ds->get_cached_DBAdaptor->get_SliceLockAdaptor;
+    my $dbh = $SLdba->dbc->db_handle;
+    my ($auth) = _test_author($SLdba, qw( Unco ));
+
+    my $lock1 = Bio::Vega::SliceLock->new
+      (-SEQ_REGION_ID => 1,
+       -SEQ_REGION_START => 1,
+       -SEQ_REGION_END   => 10,
+       -AUTHOR => $auth,
+       -ACTIVE => 'pre',
+       -INTENT => "bad_isolation_tt($iso)",
+       -HOSTNAME => $TESTHOST);
+    $SLdba->store($lock1);
+
+    my $lock2 = Bio::Vega::SliceLock->new
+      (-SEQ_REGION_ID => 2,
+       -SEQ_REGION_START => 1,
+       -SEQ_REGION_END   => 10,
+       -AUTHOR => $auth,
+       -ACTIVE => 'pre',
+       -INTENT => "bad_isolation_tt($iso)",
+       -HOSTNAME => $TESTHOST);
+
+    # Enter a mode we don't support
+    my $old_iso = _iso_level($dbh);
+    isnt($old_iso, $iso, "start: not $iso");
+    _iso_level($dbh, $iso); # commit!
+    is(_iso_level($dbh), $iso, "middle: $iso !");
+
+    my $lock1_copy = $SLdba->fetch_by_dbID($lock1->dbID);
+    is($lock1_copy->author->dbID, $auth->dbID,
+       'can fetch'); # no reason yet to prevent it
+
+    my @op = ([ store => $lock2 ],
+              [ do_lock => $lock1 ],
+              [ unlock => $lock1, $auth ],
+              [ bump_activity => $lock1 ],
+              [ freshen => $lock1 ]);
+    foreach my $op (@op) {
+        my ($method, @arg) = @$op;
+        like(try_err { $SLdba->$method(@arg) },
+             qr{cannot run with .* tx_isolation=READ-},
+             "reject insane $method");
+    }
+
+    _iso_level($dbh, $old_iso);
+    is(_iso_level($dbh), $old_iso, "end: restore $old_iso");
+    return;
+}
+
+sub two_conn_tt {
+    my ($ds) = @_;
+    plan tests => 2;
+
+    my $SL1dba = $ds->get_cached_DBAdaptor->get_SliceLockAdaptor;
+
+#    my $SL2dba = $ds->
+
+local $TODO = 'not tested';
+fail('check (dbh2 interrupts/expires the lock) with (dbh1 transaction using it), because dbh1 will otherwise not see the change');
+fail('untested cycle: lock. interrupted from elsewhere. unlock => exception, but freshened.');
+
+}
+
 sub timestamps_tt {
     my ($ds) = @_;
     plan tests => 9;
@@ -430,13 +597,14 @@ sub timestamps_tt {
        ]);
 
     my $SLdba = $ds->get_cached_DBAdaptor->get_SliceLockAdaptor;
-    my ($auth) = _test_author(qw( Terry ));
+    my $base_srid = _notlocked_seq_region_id($SLdba);
+    my ($auth) = _test_author($SLdba, qw( Terry ));
     my %step =
       (create => sub {
            my ($label, $lock_stack, $when) = @_;
            my $objnum = @$lock_stack;
            my $lock = Bio::Vega::SliceLock->new
-             (-SEQ_REGION_ID => 1E6 + ord($label),
+             (-SEQ_REGION_ID => $base_srid + ord($label),
               -SEQ_REGION_START => 1000,
               -SEQ_REGION_END   => 2000,
               -AUTHOR => $auth,
@@ -448,7 +616,8 @@ sub timestamps_tt {
        }, lock => sub {
            my ($label, $lock_stack, $when) = @_;
            my $lock = $lock_stack->[-1];
-           $SLdba->do_lock($lock);
+           my $debug = []; # for the "confused, active=pre" message (if any)
+           $SLdba->do_lock($lock, $debug);
            return;
        }, bump => sub {
            my ($label, $lock_stack, $when) = @_;
