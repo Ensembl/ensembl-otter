@@ -509,57 +509,23 @@ sub launch_exonerate {
         $self->top->messageBox(
             -title   => $Bio::Otter::Lace::Client::PFX.'No Sequence',
             -icon    => 'warning',
-            -message => 'Did not get any sequence data',
+            -message => 'Did not get any query sequence data',
             -type    => 'OK',
         );
         return;
     }
 
-    # OTF should not influence unsaved changes state of the session
-    $SessionWindow->flag_db_edits(0);
-    my $top = $self->top;
-    $top->withdraw;
+    $self->top->withdraw;
 
     if ($self->{'_clear_existing'}) {
         $SessionWindow->delete_featuresets($otf->logic_names);
     }
 
-    my $db_edited = $SessionWindow->launch_exonerate($otf);
+    $SessionWindow->launch_exonerate($otf);
 
-    $SessionWindow->flag_db_edits(1);
-
-    if ($db_edited) {
-        my @misses = $otf->names_not_hit;
-        if (@misses) {
-            $top->deiconify;
-            $top->raise;
-            $self->top->messageBox(
-                -title   => $Bio::Otter::Lace::Client::PFX.'Missing Matches',
-                -icon    => 'warning',
-                -message => join("\n",
-                                 'Exonerate did not find matches for:',
-                                 sort @misses,
-                                ),
-                -type    => 'OK',
-                );
-        }
-        return 1;
-    }
-    else {
-        $top->deiconify;
-        $top->raise;
-        $self->top->messageBox(
-            -title   => $Bio::Otter::Lace::Client::PFX.'No Matches',
-            -icon    => 'warning',
-            -message => 'Exonerate did not find any matches on genomic sequence',
-            -type    => 'OK',
-        );
-        return 0;
-    }
+    return 1;
 }
 
-# FIXME: duplication from above will be removed (above) in due course
-#
 sub display_request_feedback {
     my ($self, $request) = @_;
 

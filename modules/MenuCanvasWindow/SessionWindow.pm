@@ -1941,19 +1941,14 @@ sub empty_Assembly_cache {
     return;
 }
 
+# Used by OTF
+#
 sub delete_featuresets {
     my ($self, @types) = @_;
 
     my @gff_types = map { $_ . '_gff' } @types; # TEMP for testing
 
-    my $name = $self->Assembly->Sequence->name;
-    my $ace = sprintf qq{\nSequence : "%s"\n}, $name;
-
-    foreach my $type ( @types ) {
-        $ace .= qq{-D Homol ${type}_homol\n};
-    }
-
-    foreach my $type ( @types, @gff_types ) {
+    foreach my $type ( @gff_types ) {
         # we delete types seperately because zmap errors out without
         # deleting anything if any featureset does not currently exist
         # in the zmap window
@@ -1964,8 +1959,6 @@ sub delete_featuresets {
             warn $_;
         };
     }
-
-    $self->save_ace($ace);
 
     return;
 }
@@ -2120,19 +2113,9 @@ sub update_SubSeq_locus_level_errors {
 sub launch_exonerate {
     my ($self, $otf) = @_;
 
-    my $db_edited = 0;
-    my @method_names;
-    my $ace_text = '';
-
-    my $db_slice = $self->AceDatabase->db_slice;
-
     # Clear columns if requested
+    my $db_slice = $self->AceDatabase->db_slice;
     $otf->pre_launch_setup(slice => $db_slice);
-
-    # Setup for ACE method stuff below
-    # (Looks as if $coll & $coll_zmap are often the same object)
-    my $coll      = $self->AceDatabase->MethodCollection;
-    my $coll_zmap = $self->Assembly->MethodCollection;
 
     # Setup for GFF column control below
     my $cllctn = $self->AceDatabase->ColumnCollection;
@@ -2140,99 +2123,35 @@ sub launch_exonerate {
 
     my $request_adaptor = $self->AceDatabase->DB->OTFRequestAdaptor;
 
+    my @method_names;
+
     for my $builder ( $otf->builders_for_each_type ) {
 
         my $type = $builder->type;
         my $is_protein = $builder->is_protein;
 
-        warn "Running exonerate for sequence(s) of type: $type\n";
+        $self->logger->info("Running exonerate for sequence(s) of type: $type");
 
         # Set up a request for the filter script
         my $request = $builder->prepare_run;
         $request_adaptor->store($request);
 
-        # The new way:
-        my $runner = $otf->build_runner(request         => $request,
-                                        resultset_class => 'Bio::Otter::Lace::OnTheFly::ResultSet::Session');
-        my $result_set = $runner->run;
+        # This will be $result_set->analysis_name once we remove the '_gff' suffices
+        my $tag = $builder->analysis_name . '_gff';
+        push @method_names, $tag;
 
-        my $ace_output = $result_set->ace($builder->target->name);
-        my $hit_count   = scalar($result_set->hit_query_ids);
-
-        if ($ace_output or $hit_count) {
-            $db_edited = 1;
+        # Ensure new-style columns are selected if used
+        my $column = $cllctn->get_Item_by_name($tag);
+        if ($column and not $column->selected) {
+            $column->selected(1);
+            $col_aptr->store_Column_state($column);
         }
-        else {
-            warn "No hits found on '", $builder->target->name, "'\n";
-            next;
-        }
-
-        # add hit sequences into ace text
-        my @names = sort $result_set->hit_query_ids;
-        $otf->record_hit(@names);
-
-        # only add the sequence to acedb if they are not pfetchable (i.e. they are unknown)
-        if ($type =~ /^Unknown/) {
-            foreach my $hit_name (@names) {
-                my $seq = $otf->seq_by_name($hit_name);
-
-                if ($is_protein) {
-                    $ace_output .= $self->ace_PEPTIDE($hit_name, $seq);
-                }
-                else {
-                    $ace_output .= $self->ace_DNA($hit_name, $seq);
-                }
-            }
-        }
-
-        $ace_text .= $ace_output;
-
-        # TEMP for testing: both ace and local_db/gff
-
-        {
-            # ACE first
-
-            # Need to add new method to collection if we don't have it already
-
-            my $tag = $result_set->analysis_name;
-            push @method_names, $tag;
-
-            my $method = Hum::Ace::Method->new;
-            $method->name($tag);
-
-            my $new_methods;
-            foreach my $c ($coll, $coll_zmap) {
-                unless ($c->get_Method_by_name($tag)) {
-                    $c->add_Method($method);
-                    $new_methods++;
-                }
-            }
-            $self->save_ace($coll->ace_string()) if $new_methods;
-        }
-
-        {
-            # Now Local DB / GFF
-
-            # This will be $result_set->analysis_name once we remove ACE
-            my $tag = $result_set->gff_method_tag;
-            push @method_names, $tag;
-
-            # Ensure new-style columns are selected if used
-            my $column = $cllctn->get_Item_by_name($tag);
-            if ($column and not $column->selected) {
-                $column->selected(1);
-                $col_aptr->store_Column_state($column);
-            }
-        }
-
 
     }
 
-    $self->save_ace($ace_text);
+    $self->RequestQueuer->request_features(@method_names) if @method_names;
 
-    $self->RequestQueuer->request_features(@method_names) if $db_edited;
-
-    return $db_edited;
+    return;
 }
 
 sub ace_DNA {
