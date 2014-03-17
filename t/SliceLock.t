@@ -78,8 +78,12 @@ END {
     sub _late_commit_do {
         while (my ($k, $dbh) = each %dbh) {
             if ($dbh && $dbh->ping) {
-                diag "_late_commit_do: $dbh->commit";
-                $dbh->commit;
+                if ($dbh->{AutoCommit}) {
+                    diag "_late_commit_do: $dbh has no outstanding transaction";
+                } else {
+                    diag "_late_commit_do: $dbh->commit";
+                    $dbh->commit;
+                }
             } else {
                 diag "_late_commit_do: $dbh: gone";
             }
@@ -169,7 +173,7 @@ sub _notlocked_seq_region_id {
 # Basic create-store-fetch-lock-unlock cycle
 sub exercise_tt {
     my ($ds) = @_;
-    plan tests => 64;
+    plan tests => 65;
 
     # Collect props
     my $SLdba = $ds->get_cached_DBAdaptor->get_SliceLockAdaptor;
@@ -191,8 +195,10 @@ sub exercise_tt {
     my $stored = $BVSL->new(%prop);
     isa_ok($stored, $BVSL, 'instantiate');
     ok( ! $stored->is_stored($SLdba->dbc), 'stored: not yet');
+    like(try_err { $SLdba->do_lock($stored) },
+         qr{MSG: do_lock: .* has not been stored}, 'stored:  cannot lock until it is');
     $SLdba->store($stored);
-    ok(   $stored->is_stored($SLdba->dbc), 'stored: it is now');
+    ok(   $stored->is_stored($SLdba->dbc), 'stored:   it is now');
 
     my $slice = $stored->slice;
     cmp_ok($slice->start, '<', $slice->end, 'slice is forwards');
@@ -557,13 +563,113 @@ sub bad_isolation_tt {
     return;
 }
 
+
+sub _get_DBAdaptor_pair { # + 4 tests, to ensure private-poking worked
+    my ($BOLDataset) = @_;
+
+    # Get the cached one as normal
+    my $cached = $BOLDataset->get_cached_DBAdaptor;
+
+    # Futz around to defeat every layer of caching
+    my $uncached;
+    my $key = '_dba_cache';
+    my $old = $BOLDataset->{$key};
+    {
+        local $BOLDataset->{$key} = undef;
+        local $cached->dbc->{_host} = 'some.where.else';
+        local $SIG{__WARN__} = sub { # muffle one specific warning
+            my ($msg) = @_;
+            warn "[during uncache block] $msg" unless
+              $msg =~ /^WARN: Species .* and group .* same for two seperate databases/;
+        };
+#       local $cached->dnadb->dbc->{_host} = 'different.place.else';
+        # dnadb can be shared
+        $uncached = $BOLDataset->get_cached_DBAdaptor;
+    }
+
+    # Check that we really got a separate connection
+    my @dbh = map { $_->dbc->db_handle } ($cached, $uncached);
+    my @ptid = map { $_->selectrow_array('SELECT @@pseudo_thread_id') } @dbh;
+    is($cached, $old,                'uncached DBAd: $key gives right member');
+    cmp_ok($cached, '!=', $uncached, 'uncached DBAd:     DBAdaptors are different');
+    cmp_ok($dbh[0], '!=', $dbh[1],   'uncached DBAd:     dbh are different');
+    isnt($ptid[0], $ptid[1],         'uncached DBAd:     MySQL-ptid are different');
+
+    # Minor housekeeping upon the connections
+    foreach my $dbh (@dbh) {
+        _late_commit_register($dbh);
+        $dbh->do('SET SESSION lock_wait_timeout = 2');
+        $dbh->do('SET SESSION innodb_lock_wait_timeout = 2');
+        $dbh->{PrintWarn} = 0;
+    }
+
+    # Return the pair
+    return ($cached, $uncached);
+}
+
 sub two_conn_tt {
     my ($ds) = @_;
-    plan tests => 2;
+    plan tests => 17;
 
-    my $SL1dba = $ds->get_cached_DBAdaptor->get_SliceLockAdaptor;
+    my $BVSL = 'Bio::Vega::SliceLock';
+    my @SLdba = map { $_->get_SliceLockAdaptor } _get_DBAdaptor_pair($ds);
+    my @dbh = map { $_->dbc->db_handle } @SLdba;
 
-#    my $SL2dba = $ds->
+    my ($auth) = _test_author($SLdba[0], qw( Tango ));
+    my ($i, $base_srid) = (0, _notlocked_seq_region_id($SLdba[0]));
+
+    my $begin = sub {
+        foreach my $dbh (@dbh) {
+            $dbh->commit unless $dbh->{AutoCommit};
+            $dbh->begin_work;
+        }
+        return;
+    };
+    my $get_pair = sub {
+        my ($skip_commit) = @_;
+        my @L;
+        $L[0] = $BVSL->new
+          (-SEQ_REGION_ID => $base_srid + $i,
+           -SEQ_REGION_START =>  10_000 + int(rand(200_000)),
+           -SEQ_REGION_END   => 210_000 + int(rand(150_000)),
+           -AUTHOR => $auth,
+           -INTENT => 'two_conn_tt($i)',
+           -HOSTNAME => $TESTHOST);
+        $SLdba[0]->store($L[0]);
+        $dbh[0]->commit unless $skip_commit;
+        $L[1] = $SLdba[1]->fetch_by_dbID($L[0]->dbID);
+        $i ++;
+        # two copies of same SliceLock, via different $dbh
+        return @L;
+    };
+
+    # Show that transactions are isolated
+    $begin->();
+    {
+        my @p0 = $get_pair->(1);
+        isa_ok($p0[0], $BVSL, 'pair0: have a lock');
+        ok($p0[0]->is_stored($SLdba[0]->db), 'pair0.0:   stored');
+        ok($p0[0]->is_stored($SLdba[1]->db), 'pair0.0:   not stored on other db');
+        is($p0[1], undef, # dbh[0] did not commit -> not seen at dbh[1]
+           'pair0.1:   undef');
+    }
+
+    # See that rows can be seen both sides (default)
+    $begin->();
+    {
+        my @p1 = $get_pair->(); # $dbh[0] commit
+        is($p1[0]->seq_region_id, $p1[1]->seq_region_id, 'pair1: same seq_region_id');
+        isnt($p1[0]->adaptor, $p1[1]->adaptor, 'pair1:   different adaptors');
+
+        # SLdba will not interfere with other instances' objects
+        foreach my $method (qw( store freshen do_lock bump_activity unlock )) {
+            my @arg = ($p1[0]);
+            push @arg, $auth if $method eq 'unlock';
+            like(try_err { $SLdba[1]->$method(@arg) },
+                 qr{^MSG:.*stored with different adaptor}m,
+                 "$method: refuses to operate across adaptors");
+        }
+    }
 
 local $TODO = 'not tested';
 fail('check (dbh2 interrupts/expires the lock) with (dbh1 transaction using it), because dbh1 will otherwise not see the change');
@@ -571,35 +677,12 @@ fail('untested cycle: lock. interrupted from elsewhere. unlock => exception, but
 
 }
 
-sub timestamps_tt {
-    my ($ds) = @_;
-    plan tests => 9;
 
-    # Interlocking cases run to minimise test-time wallclock duration
-    my @actions =
-      (# label => [ ...steps... ], { field => expect }
-       [ A => [qw[ create wait create ]], { ts_begin => 'incr' }
-         # i.e. Timestamp increased when second active=pre is made
-       ],
-       [ B => [qw[ create wait lock ]], { ts_begin => 'same', ts_activity => 'incr' },
-         # In do_lock, retain the ts_begin but bump ts_activity.
-         # Generally "pre" phase is short.
-       ],
-       [ C => [qw[ create lock wait bump ]],
-         { ts_begin => 'same', ts_activity => 'incr' },
-         # The bump operation, recommended for use with COMMIT, moves
-         # ts_begin only.
-       ],
-       [ D => [qw[ create lock wait unlock ]],
-         { ts_begin => 'same',
-           ts_free => 'huge', # "before" was undef so delta is huge
-           ts_activity => 'same' }
-       ]);
-
-    my $SLdba = $ds->get_cached_DBAdaptor->get_SliceLockAdaptor;
+sub _make_test_ops {
+    my ($SLdba, $auth) = @_;
     my $base_srid = _notlocked_seq_region_id($SLdba);
-    my ($auth) = _test_author($SLdba, qw( Terry ));
-    my %step =
+
+    return
       (create => sub {
            my ($label, $lock_stack, $when) = @_;
            my $objnum = @$lock_stack;
@@ -630,6 +713,36 @@ sub timestamps_tt {
            $SLdba->unlock($lock, $auth);
            return;
        });
+}
+
+sub timestamps_tt {
+    my ($ds) = @_;
+    plan tests => 9;
+
+    my $SLdba = $ds->get_cached_DBAdaptor->get_SliceLockAdaptor;
+    my ($auth) = _test_author($SLdba, qw( Terry ));
+    my %step = _make_test_ops($SLdba, $auth);
+
+    # Interlocking cases run to minimise test-time wallclock duration
+    my @actions =
+      (# label => [ ...steps... ], { field => expect }
+       [ A => [qw[ create wait create ]], { ts_begin => 'incr' }
+         # i.e. Timestamp increased when second active=pre is made
+       ],
+       [ B => [qw[ create wait lock ]], { ts_begin => 'same', ts_activity => 'incr' },
+         # In do_lock, retain the ts_begin but bump ts_activity.
+         # Generally "pre" phase is short.
+       ],
+       [ C => [qw[ create lock wait bump ]],
+         { ts_begin => 'same', ts_activity => 'incr' },
+         # The bump operation, recommended for use with COMMIT, moves
+         # ts_begin only.
+       ],
+       [ D => [qw[ create lock wait unlock ]],
+         { ts_begin => 'same',
+           ts_free => 'huge', # "before" was undef so delta is huge
+           ts_activity => 'same' }
+       ]);
 
     my %product; # key = label, value = [ $before_times, $after_times ]
     # %$each_times are key = fieldname, value = timestamp; taken before+after "wait"

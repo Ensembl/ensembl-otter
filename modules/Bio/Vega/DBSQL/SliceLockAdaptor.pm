@@ -220,6 +220,16 @@ sub _sane_db {
     }
 }
 
+sub _is_our_lock {
+    my ($self, $lock) = @_;
+    my $adap = $lock->adaptor;
+    if (defined $adap && $adap != $self) {
+        my $dbID = $lock->dbID;
+        throw("$self: Lock $lock (dbID=$dbID) was fetched/stored with different adaptor $adap");
+    }
+    return;
+}
+
 
 sub store {
   my ($self, $slice_lock) = @_;
@@ -240,6 +250,7 @@ sub store {
   $self->_sane_db;
   if ($slice_lock->adaptor) {
 #      $slice_lock->is_stored($slice_lock->adaptor->db)) {
+      $self->_is_our_lock($slice_lock);
       die "UPDATE or database move $slice_lock: not implemented";
   } else {
       my $sth = $self->prepare(q{
@@ -287,8 +298,11 @@ sub freshen {
 
     my $dbID = $stale->dbID;
     throw("Cannot freshen an un-stored SliceLock") unless $dbID;
+    $self->_is_our_lock($stale);
     $self->_sane_db;
     my $fresh = $self->fetch_by_dbID($dbID);
+    throw("Freshen(dbID=$dbID) failed, row not found")
+      unless $fresh; # should not happen
     local $stale->{_mutable} = 'freshen';
     my @change = ("$stale->freshen($dbID)");
     foreach my $field ($stale->FIELDS()) {
@@ -334,9 +348,11 @@ sub do_lock {
        $lock->seq_region_id, $lock->seq_region_start, $lock->seq_region_end);
     my $author_id = $self->_author_dbID(author => $lock->author);
 
+    throw("do_lock: $lock has not been stored") unless $lock_id;
     throw("do_lock($lock_id) failed: expected active=pre, got active=$active")
       unless $active eq 'pre';
     $self->_sane_db;
+    $self->_is_our_lock($lock);
 
     # Check for non-free locks on our slice
     my ($seen_self, @too_late) = (0);
@@ -460,6 +476,7 @@ sub bump_activity {
 
     my $dbID = $lock->dbID;
     $self->_sane_db;
+    $self->_is_our_lock($lock);
     my $sth = $self->prepare(q{
       UPDATE slice_lock
       SET ts_activity = now()
@@ -519,6 +536,7 @@ sub unlock {
   }
 
   $self->_sane_db;
+  $self->_is_our_lock($slice_lock);
   my $sth = $self->prepare(q{
     UPDATE slice_lock
     SET active='free', freed=?, freed_author_id=?, ts_free=now()
