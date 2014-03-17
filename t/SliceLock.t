@@ -603,6 +603,10 @@ sub _get_DBAdaptor_pair { # + 4 tests, to ensure private-poking worked
         $dbh->{PrintWarn} = 0;
     }
 
+    # Mark them, for debug
+    $cached->{__get_DBAdaptor_pair} = 'cached';
+    $uncached->{__get_DBAdaptor_pair} = 'uncached_alt';
+
     # Return the pair
     return ($cached, $uncached);
 }
@@ -614,9 +618,8 @@ sub two_conn_tt {
     my $BVSL = 'Bio::Vega::SliceLock';
     my @SLdba = map { $_->get_SliceLockAdaptor } _get_DBAdaptor_pair($ds);
     my @dbh = map { $_->dbc->db_handle } @SLdba;
-
     my ($auth) = _test_author($SLdba[0], qw( Tango ));
-    my ($i, $base_srid) = (0, _notlocked_seq_region_id($SLdba[0]));
+    my %op = _make_test_ops($auth, @SLdba);
 
     my $begin = sub {
         foreach my $dbh (@dbh) {
@@ -625,39 +628,27 @@ sub two_conn_tt {
         }
         return;
     };
-    my $get_pair = sub {
-        my ($skip_commit) = @_;
-        my @L;
-        $L[0] = $BVSL->new
-          (-SEQ_REGION_ID => $base_srid + $i,
-           -SEQ_REGION_START =>  10_000 + int(rand(200_000)),
-           -SEQ_REGION_END   => 210_000 + int(rand(150_000)),
-           -AUTHOR => $auth,
-           -INTENT => 'two_conn_tt($i)',
-           -HOSTNAME => $TESTHOST);
-        $SLdba[0]->store($L[0]);
-        $dbh[0]->commit unless $skip_commit;
-        $L[1] = $SLdba[1]->fetch_by_dbID($L[0]->dbID);
-        $i ++;
-        # two copies of same SliceLock, via different $dbh
-        return @L;
+    my $run_steps = sub {
+        my ($label, @step) = @_;
+        my @locks;
+        $begin->();
+        _action_do_steps([ $label, \@step, \@locks ], \%op, 'raise');
+        return @locks;
     };
 
     # Show that transactions are isolated
-    $begin->();
     {
-        my @p0 = $get_pair->(1);
+        my @p0 = $run_steps->(qw( get_pair-commit  create        fetch_other ));
         isa_ok($p0[0], $BVSL, 'pair0: have a lock');
-        ok($p0[0]->is_stored($SLdba[0]->db), 'pair0.0:   stored');
-        ok($p0[0]->is_stored($SLdba[1]->db), 'pair0.0:   not stored on other db');
+        ok($p0[0]->is_stored($SLdba[0]->db), 'pair0.0:   is_stored');
+        ok($p0[0]->is_stored($SLdba[1]->db), 'pair0.0:   !is_stored on other db');
         is($p0[1], undef, # dbh[0] did not commit -> not seen at dbh[1]
            'pair0.1:   undef');
     }
 
     # See that rows can be seen both sides (default)
-    $begin->();
     {
-        my @p1 = $get_pair->(); # $dbh[0] commit
+        my @p1 = $run_steps->(qw( get_pair+commit  create commit fetch_other ));
         is($p1[0]->seq_region_id, $p1[1]->seq_region_id, 'pair1: same seq_region_id');
         isnt($p1[0]->adaptor, $p1[1]->adaptor, 'pair1:   different adaptors');
 
@@ -675,44 +666,90 @@ local $TODO = 'not tested';
 fail('check (dbh2 interrupts/expires the lock) with (dbh1 transaction using it), because dbh1 will otherwise not see the change');
 fail('untested cycle: lock. interrupted from elsewhere. unlock => exception, but freshened.');
 
+    $begin->();
+    return;
 }
 
 
 sub _make_test_ops {
-    my ($SLdba, $auth) = @_;
-    my $base_srid = _notlocked_seq_region_id($SLdba);
+    my ($auth, $SLdba,
+        $alt_SLdba) # needed only for fetch_other
+      = @_;
+    my $next_srid = _notlocked_seq_region_id($SLdba);
 
     return
       (create => sub {
-           my ($label, $lock_stack, $when) = @_;
+           my ($label, $lock_stack) = @_;
            my $objnum = @$lock_stack;
            my $lock = Bio::Vega::SliceLock->new
-             (-SEQ_REGION_ID => $base_srid + ord($label),
+             (-SEQ_REGION_ID => $next_srid,
               -SEQ_REGION_START => 1000,
               -SEQ_REGION_END   => 2000,
               -AUTHOR => $auth,
               -INTENT => "timestamps_tt($label) $objnum",
               -HOSTNAME => $TESTHOST);
-           $SLdba->store($lock);
+           $lock->{__origin} = 'create'; # mark it, for debug
+           $next_srid ++;
+           return try_err {
+               $SLdba->store($lock);
+               push @$lock_stack, $lock;
+               $lock;
+           };
+       }, fetch_other => sub {
+           my ($label, $lock_stack) = @_;
+           my $dbid = $lock_stack->[-1]->dbID;
+           my $lock = $alt_SLdba->fetch_by_dbID($dbid);
+           $lock->{__origin} = 'fetch_other' if $lock; # mark it, for debug
            push @$lock_stack, $lock;
-           return;
+           $lock;
+       }, commit => sub {
+           my ($label, $lock_stack) = @_;
+           my $lock = $lock_stack->[-1];
+           my $dbh = $lock->adaptor->dbc->db_handle;
+           $dbh->begin_work if $dbh->{AutoCommit}; # avoid warning
+           $dbh->commit;
+           $dbh->begin_work;
+           return 'commit';
        }, lock => sub {
-           my ($label, $lock_stack, $when) = @_;
+           my ($label, $lock_stack) = @_;
            my $lock = $lock_stack->[-1];
-           my $debug = []; # for the "confused, active=pre" message (if any)
-           $SLdba->do_lock($lock, $debug);
-           return;
+           return try_err {
+               my $debug = []; # for the "confused, active=pre" message (if any)
+               my $rv = $lock->adaptor->do_lock($lock, $debug);
+               push @$debug, "RV=$rv";
+               $debug;
+           };
        }, bump => sub {
-           my ($label, $lock_stack, $when) = @_;
+           my ($label, $lock_stack) = @_;
            my $lock = $lock_stack->[-1];
-           $lock->bump_activity;
-           return;
+           return try_err { $lock->bump_activity; 'bump' };
        }, unlock => sub {
-           my ($label, $lock_stack, $when) = @_;
+           my ($label, $lock_stack) = @_;
            my $lock = $lock_stack->[-1];
-           $SLdba->unlock($lock, $auth);
-           return;
+           return try_err { $lock->adaptor->unlock($lock, $auth) };
+       }, unlock_int => sub {
+           my ($label, $lock_stack) = @_;
+           my $lock = $lock_stack->[-1];
+           my ($auth) = _test_author($lock->adaptor, qw( Ian ));
+           return try_err { $lock->adaptor->unlock($lock, $auth, 'interrupted') };
        });
+}
+
+sub _action_do_steps {
+    my ($case, $ops, $on_error) = @_;
+    my ($label, $steps, $lock_stack) = @$case;
+    my @done;
+    while (@$steps) {
+        my $step = shift @$steps;
+        last if $step eq 'wait'; # next time
+        my $code = $ops->{$step}
+          or die "Bad step name '$step' in label=$label";
+        my $ret = $code->($label, $lock_stack);
+        push @done, [ $step, $ret ];
+        die "failed:$label (op: $step, remaining: @$steps) -> $ret"
+          if $on_error && defined $ret && $ret =~ m{^ERR:};
+    }
+    return @done;
 }
 
 sub timestamps_tt {
@@ -721,24 +758,26 @@ sub timestamps_tt {
 
     my $SLdba = $ds->get_cached_DBAdaptor->get_SliceLockAdaptor;
     my ($auth) = _test_author($SLdba, qw( Terry ));
-    my %step = _make_test_ops($SLdba, $auth);
+    my %op = _make_test_ops($auth, $SLdba);
 
     # Interlocking cases run to minimise test-time wallclock duration
     my @actions =
-      (# label => [ ...steps... ], { field => expect }
-       [ A => [qw[ create wait create ]], { ts_begin => 'incr' }
+      (# label => [ ...steps... ], \@lock_stack, { field => expect }
+       [ A => [qw[ create wait create ]], [],
+         { ts_begin => 'incr' }
          # i.e. Timestamp increased when second active=pre is made
        ],
-       [ B => [qw[ create wait lock ]], { ts_begin => 'same', ts_activity => 'incr' },
+       [ B => [qw[ create wait lock ]], [],
+         { ts_begin => 'same', ts_activity => 'incr' },
          # In do_lock, retain the ts_begin but bump ts_activity.
          # Generally "pre" phase is short.
        ],
-       [ C => [qw[ create lock wait bump ]],
+       [ C => [qw[ create lock wait bump ]], [],
          { ts_begin => 'same', ts_activity => 'incr' },
          # The bump operation, recommended for use with COMMIT, moves
          # ts_begin only.
        ],
-       [ D => [qw[ create lock wait unlock ]],
+       [ D => [qw[ create lock wait unlock ]], [],
          { ts_begin => 'same',
            ts_free => 'huge', # "before" was undef so delta is huge
            ts_activity => 'same' }
@@ -750,16 +789,9 @@ sub timestamps_tt {
     # Do the actions, consuming all steps in the process
     foreach my $when (0, 1) { # 0 = before, 1 = after
         foreach my $case (@actions) {
-            push @$case, [] unless $when;
-            my ($label, $steps, $fieldset, $lock_stack) = @$case;
-            while (@$steps) {
-                my $step = shift @$steps;
-                last if $step eq 'wait'; # next time
-                my $code = $step{$step}
-                  or die "Bad step name '$step' in label=$label";
-                $code->($label, $lock_stack, $when);
-            }
-            fail("More 'wait' than \$when in label=$label") if @$steps && $when;
+            _action_do_steps($case, \%op, 1);
+            my ($label, $steps_left, $lock_stack, $fieldset) = @$case;
+            fail("More 'wait' than \$when in label=$label") if @$steps_left && $when;
             foreach my $field (keys %$fieldset) {
                 my $lock = $lock_stack->[-1];
                 $product{$label}->[$when]->{$field} = $lock->$field;
@@ -770,7 +802,7 @@ sub timestamps_tt {
 
     my %ts_diff; # key = label, value = { $fieldname => $seconds_delta }
     foreach my $case (@actions) {
-        my ($label, $steps, $fieldset, $lock_stack) = @$case;
+        my ($label, $steps, $lock_stack, $fieldset) = @$case;
         my $info = $product{$label};
         foreach my $fieldname (keys %$fieldset) {
             my $got_num = $ts_diff{$label}->{$fieldname} =
@@ -781,7 +813,7 @@ sub timestamps_tt {
             if    ($got_num  < 0) { $got_txt = 'decr' } # weird
             elsif ($got_num == 0) { $got_txt = 'same' }
             elsif ($got_num < 60) { $got_txt = 'incr' }
-            elsif ($got_num > 1300_000_000) { $got_txt = 'huge' }
+            elsif ($got_num > 1300_000_000) { $got_txt = 'huge' } # unixtime
             else { $got_txt = 'weird' }
 
             is($got_txt, $want, "case $label: ts_diff($fieldname)=$got_num");
