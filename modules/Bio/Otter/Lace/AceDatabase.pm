@@ -1020,7 +1020,9 @@ sub process_Columns {
     my $transcripts = [ ];
     my $failed      = [ ];
     foreach my $col (@columns) {
-        $col->Filter->content_type or next;
+        (    $col->Filter->content_type
+          && $col->process_gff )
+            or next;
         try {
             my @filter_transcripts = $self->_process_Column($col);
             push @$transcripts, @filter_transcripts;
