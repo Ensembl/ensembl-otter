@@ -40,8 +40,6 @@ has seqs_by_type         => ( is => 'ro', isa => 'HashRef[ArrayRef[Hum::Sequence
 has _acc_type_full_cache => ( is => 'ro', isa => 'HashRef[ArrayRef[Str]]',
                               default => sub{ {} }, init_arg => undef );
 
-has _seq_hits            => ( is => 'ro', isa => 'HashRef', default => sub{ {} }, init_arg => undef );
-
 has _warnings            => ( is => 'ro', isa => 'HashRef', default => sub{ {} }, init_arg => undef );
 
 sub BUILD {
@@ -244,28 +242,6 @@ sub _acc_type_full {
     my $new_entry;
     $new_entry = [ $type, $full ] if ($type and $full);
     return $local_cache->{$acc} = $new_entry;
-}
-
-# keeping track of hits
-
-sub record_hit {
-    my ($self, @hit_names) = @_;
-    foreach my $name (@hit_names) {
-        croak "Don't know about '$name'" unless $self->seq_by_name($name);
-        $self->_seq_hits->{$name} = 1;
-    }
-    return;
-}
-
-sub names_not_hit {
-    my $self = shift;
-    my @no_hit;
-    foreach my $seq (@{$self->confirmed_seqs->seqs}) {
-        my $name = $seq->name;
-        next if $self->_seq_hits->{$name};
-        push @no_hit, $name;
-    }
-    return @no_hit;
 }
 
 # warnings
