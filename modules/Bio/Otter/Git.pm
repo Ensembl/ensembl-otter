@@ -276,6 +276,7 @@ sub _feature_branch { ## no critic (Subroutines::ProhibitUnusedPrivateSubroutine
     my ($pkg) = @_;
     my $head = $pkg->_shell_param(q( git symbolic-ref -q HEAD ));
     if (!defined $head) {
+        warn "See RT#387736";
         return 'DETACHED-HEAD'; # command fail warning already given
     } elsif ($head =~ m{^refs/heads/feature/(.*)$}) {
         return $1;
