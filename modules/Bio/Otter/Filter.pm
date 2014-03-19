@@ -73,6 +73,13 @@ my @server_params = (
     feature_set
     feature_type
     ),
+
+    # bigwig
+    qw(
+    file
+    strand
+    ),
+
     );
 
 sub from_config {
@@ -448,6 +455,24 @@ sub gff_feature {
         $self->{'_gff_feature'} = $feature;
     }
     return $self->{'_gff_feature'};
+}
+
+sub file {
+    my ($self, $feature) = @_;
+
+    if ($feature) {
+        $self->{'_file'} = $feature;
+    }
+    return $self->{'_file'};
+}
+
+sub strand {
+    my ($self, $feature) = @_;
+
+    if ($feature) {
+        $self->{'_strand'} = $feature;
+    }
+    return $self->{'_strand'};
 }
 
 sub script_name {
