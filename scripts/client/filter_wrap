@@ -1,0 +1,65 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+
+=pod
+
+This a shim to wrap a filter_get API around something that expects a
+{bam,bigwig}_get API.  It will eventually disappear when we have
+uniform handling of filter/Bam/BigWig sources.
+
+The steps are:
+    * un-URI-encode values
+    * remap keys
+    * filter out unwanted keys
+
+=cut
+
+
+use URI::Escape qw( uri_unescape );
+
+# warn sprintf "%s\n", join ' ', $0, map { "'$_'" } @ARGV;
+
+my ($key_map, $key_list, $exe) = splice @ARGV, 0, 3;
+
+sub list_split {
+    my ($list) = @_;
+    $list =~ /\A[[:space:]]+/;
+    $list =~ /[[:space:]]+\z/;
+    my @list = split /[[:space:]]+/, $list;
+    return @list;
+}
+
+my %key_map  = map { split /=>/ } list_split $key_map;
+my %key_hash = map { $_  =>  1  } list_split $key_list;
+
+sub arg_convert {
+    my ($key, $value) = split /=/, $_;
+
+    $key =~ s/^-+//;
+
+    if (my $key_mapped = $key_map{$key}) {
+        # warn sprintf "key: mapped: '%s' => '%s'\n", $key, $key_mapped;
+        $key = $key_mapped;
+    }
+    elsif ($key_hash{$key}) {
+        # warn sprintf "key: unmapped: '%s'\n", $key;
+        # intentionally left blank
+    }
+    else {
+        # warn sprintf "key: skipped: '%s'\n", $key;
+        return;
+    }
+
+    my $arg =
+        defined $value
+        ? (sprintf '--%s=%s', $key, (uri_unescape $value))
+        : (sprintf '--%s', $key);
+
+    return $arg;
+}
+
+my @arg_list = map { arg_convert } @ARGV;
+exec $exe, @arg_list;
