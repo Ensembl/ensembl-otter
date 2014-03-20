@@ -1,4 +1,4 @@
-package Bio::Otter::Lace::OnTheFly::Aligner;
+package Bio::Otter::Lace::OnTheFly::Builder;
 
 use namespace::autoclean;
 use Moose;
@@ -7,25 +7,15 @@ with 'MooseX::Log::Log4perl';
 
 use Readonly;
 
-use Bio::Otter::GappedAlignment;
-use Bio::Otter::Lace::OnTheFly::ResultSet;
-use Bio::Otter::Vulgar;
+use Bio::Otter::Lace::OnTheFly::Utils::ExonerateFormat qw( ryo_format );
+use Bio::Otter::Lace::OnTheFly::Utils::SeqList;
+use Bio::Otter::Lace::OnTheFly::Utils::Types;
 
-Readonly our $RYO_FORMAT => 'RESULT: %S %pi %ql %tl %g %V\n';
-Readonly our @RYO_ORDER => (
-    '_tag',
-    @Bio::Otter::Vulgar::SUGAR_ORDER,
-    qw(
-        _perc_id
-        _query_length
-        _target_length
-        _gene_orientation
-      ),
-);
+use Bio::Otter::Lace::DB::OTFRequest;
 
-has type       => ( is => 'ro', isa => 'Str',                                   required => 1 );
-has query_seqs => ( is => 'ro', isa => 'ArrayRef[Hum::Sequence]',               required => 1 );
-has target     => ( is => 'ro', isa => 'Bio::Otter::Lace::OnTheFly::TargetSeq', required => 1 );
+has type       => ( is => 'ro', isa => 'Str',                                        required => 1 );
+has query_seqs => ( is => 'ro', isa => 'SeqListClass',                               required => 1, coerce => 1 );
+has target     => ( is => 'ro', isa => 'Bio::Otter::Lace::OnTheFly::TargetSeq',      required => 1 );
 
 has softmask_target => ( is => 'ro', isa => 'Bool' );
 
@@ -63,14 +53,15 @@ sub _build_description_for_fasta {  ## no critic (Subroutines::ProhibitUnusedPri
 
 sub seqs_for_fasta {
     my $self = shift;
-    return @{$self->query_seqs};
+    return @{$self->query_seqs->seqs};
 }
 
 with 'Bio::Otter::Lace::OnTheFly::FastaFile'; # provides fasta_file()
 
 sub is_protein {
     my $self = shift;
-    return $self->type =~ /protein/i;
+    my $is_protein = ($self->type =~ /protein/i);
+    return $is_protein;
 }
 
 sub query_type {
@@ -78,7 +69,7 @@ sub query_type {
     return $self->is_protein ? 'protein' : 'dna';
 }
 
-sub run {
+sub prepare_run {
     my $self = shift;
 
     my $command = 'exonerate'; # see also Bio::Otter::Utils::About
@@ -92,7 +83,7 @@ sub run {
         '--target'     => $target_file,
         '--querytype'  => $query_type,
         '--query'      => $query_file,
-        '--ryo'        => $RYO_FORMAT,
+        '--ryo'        => ryo_format(),
         '--showvulgar' => 'false',
         '--showsugar'  => 'false',
         '--showcigar'  => 'false',
@@ -103,57 +94,14 @@ sub run {
         '--softmasktarget' => $self->softmask_target ? 'yes' : 'no',
         );
 
-    my @command_line = $self->construct_command( $command, \%args );
-    $self->logger->info('Running: ', join ' ', @command_line);
-    open my $raw_align, '-|', @command_line or $self->logger->logconfess("failed to run $command: $!");
+    my $request = Bio::Otter::Lace::DB::OTFRequest->new(
+        command     => $command,
+        logic_name  => $self->analysis_name,
+        target_start=> $self->target->start,
+        args        => \%args,
+        );
 
-    return $self->parse($raw_align);
-}
-
-sub parse {
-    my ($self, $fh) = @_;
-
-    my $result_set = Bio::Otter::Lace::OnTheFly::ResultSet->new(aligner => $self);
-
-    while (my $line = <$fh>) {
-        $result_set->add_raw_line($line);
-
-        # We only parse our RYO lines
-        next unless $line =~ /^RESULT:/;
-        my @line_parts = split(' ',$line);
-        my (%ryo_result, @vulgar_comps);
-        (@ryo_result{@RYO_ORDER}, @vulgar_comps) = @line_parts;
-
-        my $gapped_alignment = $self->_parse_vulgar(\%ryo_result, \@vulgar_comps);
-
-        my $target_start = $self->target->start;
-        $gapped_alignment->apply_target_offset($target_start - 1) if $target_start > 1;
-
-        my $q_id = $gapped_alignment->query_id;
-        $self->logger->info("RESULT found for ${q_id}");
-
-        if ($result_set->hit_by_query_id($q_id)) {
-            $self->log->warn("Already have result for '$q_id'");
-        }
-        $result_set->add_hit_by_query_id($q_id => $gapped_alignment);
-    }
-
-    return $result_set;
-}
-
-sub _parse_vulgar {
-    my ($self, $ryo_result, $vulgar_comps) = @_;
-
-    my $vulgar_string = join(' ', @{$ryo_result}{@Bio::Otter::Vulgar::SUGAR_ORDER}, @$vulgar_comps);
-
-    my $ga = Bio::Otter::GappedAlignment->from_vulgar($vulgar_string);
-
-    $ga->percent_id($ryo_result->{_perc_id});
-    $ga->gene_orientation($ryo_result->{_gene_orientation});
-
-    $ga = $ga->reverse_alignment if $ga->gene_orientation eq '-';
-
-    return $ga;
+    return $request;
 }
 
 sub analysis_name {
@@ -163,21 +111,6 @@ sub analysis_name {
     if    ($type =~ /^Unknown/) { return $type;       }
     elsif ($type eq 'cDNA')     { return "OTF_mRNA";  }
     else                        { return "OTF_$type"; }
-}
-
-# FIXME: doesn't really belong here: more general
-#
-sub construct_command {
-    my ($self, $command, $args) = @_;
-    my @command_line = ( $command );
-    foreach my $key ( keys %{$args} ) {
-        if (defined (my $val = $args->{$key})) {
-            push @command_line, $key, $val;
-        } else {
-            push @command_line, $key;
-        }
-    }
-    return @command_line;
 }
 
 1;

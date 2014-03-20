@@ -179,6 +179,21 @@ sub Filter {
     return $self->{'_Filter'};
 }
 
+sub classification_matches {
+    my ($self, $to_match) = @_;
+
+    my $filter = $self->Filter;
+    return unless $filter;
+
+    my @classification = $filter->classification;
+    return unless @classification;
+
+    foreach my $c (@classification) {
+        return 1 if $c eq $to_match;
+    }
+
+    return; # not found
+}
 
 1;
 

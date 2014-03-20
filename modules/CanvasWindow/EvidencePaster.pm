@@ -425,21 +425,23 @@ sub align_to_transcript {
         });
 
     my $logger = $self->logger;
-    $logger->info("Found ", scalar( @{$otf->confirmed_seqs} ), " sequences");
+    $logger->info("Found ", scalar( @{$otf->confirmed_seqs->seqs} ), " sequences");
 
     my $ts_file = $otf->target_fasta_file;
     $logger->info("Wrote transcript sequence to ${ts_file}");
 
-    foreach my $aligner ( $otf->aligners_for_each_type ) {
+    foreach my $builder ( $otf->builders_for_each_type ) {
 
-        $logger->info("Running exonerate for sequence(s) of type: ", $aligner->type);
+        $logger->info("Running exonerate for sequence(s) of type: ", $builder->type);
 
-        my $seq_file = $aligner->fasta_file;
+        my $seq_file = $builder->fasta_file;
         $logger->info("Wrote sequences to ${seq_file}");
 
-        my $result_set = $aligner->run;
+        my $request = $builder->prepare_run;
+        my $runner = $otf->build_runner(request => $request);
+        my $result_set = $runner->run;
 
-        $self->alignment_window($result_set, $aligner->type);
+        $self->alignment_window($result_set, $builder->type);
     }
 
     return;

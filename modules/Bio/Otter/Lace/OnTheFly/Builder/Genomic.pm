@@ -1,9 +1,9 @@
-package Bio::Otter::Lace::OnTheFly::Aligner::Genomic;
+package Bio::Otter::Lace::OnTheFly::Builder::Genomic;
 
 use namespace::autoclean;
 use Moose;
 
-extends 'Bio::Otter::Lace::OnTheFly::Aligner';
+extends 'Bio::Otter::Lace::OnTheFly::Builder';
 
 augment '_build_default_options'    => sub {
     my $default_options = {
