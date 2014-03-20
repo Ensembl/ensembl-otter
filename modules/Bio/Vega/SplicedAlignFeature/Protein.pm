@@ -8,7 +8,7 @@ use warnings;
 
 use base qw(
             Bio::Vega::SplicedAlignFeature
-            Bio::EnsEMBL::DnaPepAlignFeature
+            Bio::Vega::DnaPepAlignFeature
            );
 
 sub hstrand {
@@ -36,7 +36,7 @@ sub _verify_attribs {  ## no critic (Subroutines::ProhibitUnusedPrivateSubroutin
 #
 sub my_SUPER_new {
     my ($caller, @args) = @_;
-    return $caller->Bio::EnsEMBL::DnaPepAlignFeature::new(@args);
+    return $caller->Bio::Vega::DnaPepAlignFeature::new(@args);
 }
 
 sub looks_like_frameshift {
@@ -53,15 +53,15 @@ sub looks_like_split_codon {
 
 {
     ## no critic (Subroutines::ProtectPrivateSubs,Subroutines::ProhibitUnusedPrivateSubroutines)
-    sub _hit_unit   { my ($self, @args) = @_; return $self->Bio::EnsEMBL::DnaPepAlignFeature::_hit_unit(@args); }
-    sub _query_unit { my ($self, @args) = @_; return $self->Bio::EnsEMBL::DnaPepAlignFeature::_query_unit(@args); }
+    sub _hit_unit   { my ($self, @args) = @_; return $self->Bio::Vega::DnaPepAlignFeature::_hit_unit(@args); }
+    sub _query_unit { my ($self, @args) = @_; return $self->Bio::Vega::DnaPepAlignFeature::_query_unit(@args); }
 
     sub _hstrand_or_protein {
         my $self = shift;
         return '.';
     }
 
-    sub _align_feature_class { return 'Bio::EnsEMBL::DnaPepAlignFeature'; }
+    sub _align_feature_class { return 'Bio::Vega::DnaPepAlignFeature'; }
     sub _extra_attribs       { return; }
 }
 

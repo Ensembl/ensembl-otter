@@ -12,7 +12,7 @@ use Test::Otter;
 use OtterTest::ContigSlice;
 use Test::VegaSplicedAlignFeature qw(test_exons test_introns compare_saf_ok gff_args);
 
-use Bio::EnsEMBL::DnaDnaAlignFeature;
+use Bio::Vega::DnaDnaAlignFeature;
 use Bio::EnsEMBL::FeaturePair;
 
 my $saf_dna_module;
@@ -53,7 +53,7 @@ push @fp_feats, Bio::EnsEMBL::FeaturePair->new
    -hstrand => 1,
    -hseqname => 'dummy-hid');
 
-my $ddaf = new_ok('Bio::EnsEMBL::DnaDnaAlignFeature' => [ -features => \@fp_feats ]);
+my $ddaf = new_ok('Bio::Vega::DnaDnaAlignFeature' => [ -features => \@fp_feats ]);
 
 my @dd_feats;
 push @dd_feats, $ddaf;
@@ -79,7 +79,7 @@ __EO_GFF__
 
 my @afs = $dnaf->as_AlignFeatures;
 is(scalar(@afs), 1, 'one align_feature');
-isa_ok($afs[0], 'Bio::EnsEMBL::DnaDnaAlignFeature');
+isa_ok($afs[0], 'Bio::Vega::DnaDnaAlignFeature');
 # FIXME: more tests here
 
 $dnaf->seqname('ugf_test');

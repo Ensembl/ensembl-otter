@@ -51,7 +51,7 @@ push @fp_feats, Bio::EnsEMBL::FeaturePair->new
    -hstrand => 1,
    -hseqname => 'dummy-hid');
 
-my $ddpaf = new_ok('Bio::EnsEMBL::DnaPepAlignFeature' => [ -features => \@fp_feats ]);
+my $ddpaf = new_ok('Bio::Vega::DnaPepAlignFeature' => [ -features => \@fp_feats ]);
 
 my @dp_feats;
 push @dp_feats, $ddpaf;
@@ -62,7 +62,7 @@ is($dpaf->cigar_string, '3M3I6M', 'dpaf cigar_string');
 
 my @afs = $dpaf->as_AlignFeatures;
 is(scalar(@afs), 1, 'one align_feature');
-isa_ok($afs[0], 'Bio::EnsEMBL::DnaPepAlignFeature');
+isa_ok($afs[0], 'Bio::Vega::DnaPepAlignFeature');
 # FIXME: more tests here
 
 $dpaf->seqname('ugf_test');

@@ -19,6 +19,7 @@ use Bio::EnsEMBL::Utils::Exception qw(throw);
 
 use Bio::Otter::GappedAlignment;
 use Bio::Otter::Utils::Constants qw(intron_minimum_length);
+use Bio::Otter::Utils::FeatureSort qw( feature_sort );
 use Bio::Otter::Vulgar;
 
 use base 'Bio::EnsEMBL::BaseAlignFeature';
@@ -486,7 +487,7 @@ sub as_AlignFeatures {
 
     $self->_verify_attribs;
     my $gapped_alignment = $self->gapped_alignment;
-    my @afs = $gapped_alignment->ensembl_features;
+    my @afs = $gapped_alignment->vega_features;
 
     $self->_augment([ $self->_common_extra_attribs, $self->_extra_attribs ], @afs);
     return @afs;
@@ -498,6 +499,7 @@ sub _augment {
         foreach my $attrib ( @$attribs ) {
             $item->$attrib($self->$attrib());
         }
+        $item->{_hit_description} = $self->{_hit_description}; # should really be proper attrib
     }
     return @items;
 }
@@ -638,7 +640,7 @@ sub to_gff {
     # This will change if we send vulgar strings.
     #
     my $gff = '';
-    foreach my $af ($self->as_AlignFeatures) {
+    foreach my $af ( feature_sort $self->as_AlignFeatures) {
         $gff .= $af->to_gff(%args);
     }
     return $gff;

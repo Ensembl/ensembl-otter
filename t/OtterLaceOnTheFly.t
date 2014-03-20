@@ -15,6 +15,8 @@ use Test::OtterLaceOnTheFly qw( fixed_tests build_target run_otf_test );
 use OtterTest::AccessionTypeCache;
 use OtterTest::Exonerate;
 
+use Bio::EnsEMBL::CoordSystem;
+use Bio::EnsEMBL::Slice;
 use Bio::Otter::Server::Support::Local;
 use Bio::Otter::ServerAction::Region;
 use Bio::Otter::Utils::FeatureSort qw( feature_sort );
@@ -31,16 +33,25 @@ BEGIN {
 
     @modules = qw(
         Bio::Otter::Lace::OnTheFly
-        Bio::Otter::Lace::OnTheFly::Ace
-        Bio::Otter::Lace::OnTheFly::Aligner
-        Bio::Otter::Lace::OnTheFly::Aligner::Genomic
-        Bio::Otter::Lace::OnTheFly::Aligner::Transcript
+        Bio::Otter::Lace::OnTheFly::Builder
+        Bio::Otter::Lace::OnTheFly::Builder::Genomic
+        Bio::Otter::Lace::OnTheFly::Builder::Transcript
         Bio::Otter::Lace::OnTheFly::FastaFile
+        Bio::Otter::Lace::OnTheFly::Format::Ace
+        Bio::Otter::Lace::OnTheFly::Format::DBStore
+        Bio::Otter::Lace::OnTheFly::Format::GFF
         Bio::Otter::Lace::OnTheFly::Genomic
         Bio::Otter::Lace::OnTheFly::QueryValidator
         Bio::Otter::Lace::OnTheFly::ResultSet
+        Bio::Otter::Lace::OnTheFly::ResultSet::GetScript
+        Bio::Otter::Lace::OnTheFly::ResultSet::Test
+        Bio::Otter::Lace::OnTheFly::Runner
+        Bio::Otter::Lace::OnTheFly::Runner::Transcript
         Bio::Otter::Lace::OnTheFly::TargetSeq
         Bio::Otter::Lace::OnTheFly::Transcript
+        Bio::Otter::Lace::OnTheFly::Utils::ExonerateFormat
+        Bio::Otter::Lace::OnTheFly::Utils::SeqList
+        Bio::Otter::Lace::OnTheFly::Utils::Types
     );
 
     foreach my $module ( @modules ) {
@@ -205,6 +216,25 @@ sub run_test {
     my $old_ace = $exonerate->format_ace_output($target_seq->name, $output);
     my $new_ace = $result_set->ace($target->name) || ''; # $old_ace will be empty string rather than undef
     is($new_ace, $old_ace, 'Ace');
+
+    my $cs    = Bio::EnsEMBL::CoordSystem->new(
+        '-name' => 'OTF Test Coords',
+        '-rank' => 1,
+        );
+    my $slice = Bio::EnsEMBL::Slice->new(
+        '-seq_region_name' => 'OTF Test Slice',
+        '-start'           => 10_000_000,
+        '-end'             => 20_000_000,
+        '-coord_system'    => $cs,
+        );
+    my $new_gff = $result_set->gff($slice);
+    # there is no old_gff
+    if (@output_features) {
+        ok($new_gff, 'GFF');
+    } else {
+        is($new_gff, undef, 'No GFF if no features');
+    }
+
     return;
 }
 

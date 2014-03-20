@@ -470,6 +470,8 @@ sub launch_exonerate {
         bestn           => $bestn,
         maxintron       => $maxintron,
 
+        clear_existing  => $self->{_clear_existing},
+
         lowercase_poly_a_t_tails => 1, # to avoid spurious exons
 
         problem_report_cb => sub { $self->top->Tk::Utils::OnTheFly::problem_box('Accessions Supplied', @_) },
@@ -498,7 +500,8 @@ sub launch_exonerate {
         return;
     }
 
-    my $seqs = $otf->confirmed_seqs();
+    my $seq_list = $otf->confirmed_seqs();
+    my $seqs = $seq_list->seqs;
 
     $self->logger->warn("Found ", scalar(@$seqs), " sequences");
 
@@ -506,59 +509,51 @@ sub launch_exonerate {
         $self->top->messageBox(
             -title   => $Bio::Otter::Lace::Client::PFX.'No Sequence',
             -icon    => 'warning',
-            -message => 'Did not get any sequence data',
+            -message => 'Did not get any query sequence data',
             -type    => 'OK',
         );
         return;
     }
 
-    # OTF should not influence unsaved changes state of the session
-    $SessionWindow->flag_db_edits(0);
-    my $top = $self->top;
-    $top->withdraw;
+    $self->top->withdraw;
 
     if ($self->{'_clear_existing'}) {
-        $SessionWindow->delete_featuresets(qw{
-Unknown_DNA
-Unknown_Protein
-OTF_EST
-OTF_ncRNA
-OTF_mRNA
-OTF_Protein });
+        $SessionWindow->delete_featuresets($otf->logic_names);
     }
 
-    my $db_edited = $SessionWindow->launch_exonerate($otf);
+    $SessionWindow->launch_exonerate($otf);
 
-    $SessionWindow->flag_db_edits(1);
+    return 1;
+}
 
-    if ($db_edited) {
-        my @misses = $otf->names_not_hit;
-        if (@misses) {
-            $top->deiconify;
-            $top->raise;
-            $self->top->messageBox(
-                -title   => $Bio::Otter::Lace::Client::PFX.'Missing Matches',
-                -icon    => 'warning',
-                -message => join("\n",
-                                 'Exonerate did not find matches for:',
-                                 sort @misses,
-                                ),
-                -type    => 'OK',
-                );
-        }
-        return 1;
-    }
-    else {
-        $top->deiconify;
-        $top->raise;
-        $self->top->messageBox(
+sub display_request_feedback {
+    my ($self, $request) = @_;
+
+    my $top = $self->top;
+    $top->deiconify;
+    $top->raise;
+
+    my $name = $request->logic_name;
+    unless ($request->n_hits) {
+        $top->messageBox(
             -title   => $Bio::Otter::Lace::Client::PFX.'No Matches',
             -icon    => 'warning',
-            -message => 'Exonerate did not find any matches on genomic sequence',
+            -message => "Exonerate did not find any '$name' matches on genomic sequence",
             -type    => 'OK',
-        );
-        return 0;
+            );
+        return;
     }
+
+    $top->messageBox(
+        -title   => $Bio::Otter::Lace::Client::PFX.'Missing Matches',
+        -icon    => 'warning',
+        -message => join("\n",
+                         "Exonerate did not find '$name' matches for:",
+                         sort @{$request->missed_hits},
+        ),
+        -type    => 'OK',
+        );
+    return;
 }
 
 my $seq_tag = 1;

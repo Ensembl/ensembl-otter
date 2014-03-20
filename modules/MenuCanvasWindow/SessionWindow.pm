@@ -1941,15 +1941,12 @@ sub empty_Assembly_cache {
     return;
 }
 
+# Used by OTF
+#
 sub delete_featuresets {
     my ($self, @types) = @_;
 
-    my $name = $self->Assembly->Sequence->name;
-    my $ace = sprintf qq{\nSequence : "%s"\n}, $name;
-
     foreach my $type ( @types ) {
-        $ace .= qq{-D Homol ${type}_homol\n};
-
         # we delete types seperately because zmap errors out without
         # deleting anything if any featureset does not currently exist
         # in the zmap window
@@ -1960,8 +1957,6 @@ sub delete_featuresets {
             warn $_;
         };
     }
-
-    $self->save_ace($ace);
 
     return;
 }
@@ -2116,70 +2111,44 @@ sub update_SubSeq_locus_level_errors {
 sub launch_exonerate {
     my ($self, $otf) = @_;
 
-    my $db_edited = 0;
+    # Clear columns if requested
+    my $db_slice = $self->AceDatabase->db_slice;
+    $otf->pre_launch_setup(slice => $db_slice);
+
+    # Setup for GFF column control below
+    my $cllctn = $self->AceDatabase->ColumnCollection;
+    my $col_aptr = $self->AceDatabase->DB->ColumnAdaptor;
+
+    my $request_adaptor = $self->AceDatabase->DB->OTFRequestAdaptor;
+
     my @method_names;
-    my $ace_text = '';
 
-    for my $aligner ( $otf->aligners_for_each_type ) {
+    for my $builder ( $otf->builders_for_each_type ) {
 
-        my $type = $aligner->type;
-        my $is_protein = $aligner->is_protein;
+        my $type = $builder->type;
+        my $is_protein = $builder->is_protein;
 
-        warn "Running exonerate for sequence(s) of type: $type\n";
+        $self->logger->info("Running exonerate for sequence(s) of type: $type");
 
-        # The new way:
-        my $result_set = $aligner->run;
-        my $ace_output = $result_set->ace($aligner->target->name);
+        # Set up a request for the filter script
+        my $request = $builder->prepare_run;
+        $request_adaptor->store($request);
 
-        if ($ace_output) {
-            $db_edited = 1;
-        }
-        else {
-            warn "No hits found on '", $aligner->target->name, "'\n";
-            next;
-        }
+        my $analysis_name = $builder->analysis_name;
+        push @method_names, $builder->analysis_name;
 
-        # add hit sequences into ace text
-        my @names = sort $result_set->hit_query_ids;
-        $otf->record_hit(@names);
-
-        # only add the sequence to acedb if they are not pfetchable (i.e. they are unknown)
-        if ($type =~ /^Unknown/) {
-            foreach my $hit_name (@names) {
-                my $seq = $otf->seq_by_name($hit_name);
-
-                if ($is_protein) {
-                    $ace_output .= $self->ace_PEPTIDE($hit_name, $seq);
-                }
-                else {
-                    $ace_output .= $self->ace_DNA($hit_name, $seq);
-                }
-            }
+        # Ensure new-style columns are selected if used
+        my $column = $cllctn->get_Item_by_name($analysis_name);
+        if ($column and not $column->selected) {
+            $column->selected(1);
+            $col_aptr->store_Column_state($column);
         }
 
-        # Need to add new method to collection if we don't have it already
-        my $coll      = $self->AceDatabase->MethodCollection;
-        my $coll_zmap = $self->Assembly->MethodCollection;
-
-        my $method    = Hum::Ace::Method->new;
-        $method->name($result_set->analysis_name);
-
-        push @method_names, $method->name;
-        unless ($coll->get_Method_by_name($method->name)
-                || $coll_zmap->get_Method_by_name($method->name))
-        {
-            $coll->add_Method($method);
-            $coll_zmap->add_Method($method);
-            $self->save_ace($coll->ace_string());
-        }
-        $ace_text .= $ace_output;
     }
 
-    $self->save_ace($ace_text);
+    $self->RequestQueuer->request_features(@method_names) if @method_names;
 
-    $self->RequestQueuer->request_features(@method_names) if $db_edited;
-
-    return $db_edited;
+    return;
 }
 
 sub ace_DNA {
@@ -2433,6 +2402,40 @@ sub run_exonerate {
     return 1;
 }
 
+sub exonerate_done_callback {
+    my ($self, @feature_sets) = @_;
+
+    $self->logger->debug('exonerate_done_callback: [', join(',', @feature_sets), ']');
+
+    my $request_adaptor = $self->AceDatabase->DB->OTFRequestAdaptor;
+    my (@requests, @requests_with_feedback);
+    foreach my $set (@feature_sets) {
+        my $request = $request_adaptor->fetch_by_logic_name_status($set, 'completed');
+        next unless $request;
+        push @requests, $request;
+        push @requests_with_feedback, $request if ($request->n_hits == 0 or $request->missed_hits);
+    }
+
+    if (@requests_with_feedback) {
+        my $ew = $self->{'_exonerate_window'};
+        if ($ew) {
+            foreach my $request (@requests_with_feedback) {
+                $ew->display_request_feedback($request);
+            }
+        } else {
+            $self->logger->error('OTF results but no exonerate window');
+        }
+    }
+
+    if (@requests) {
+        foreach my $request (@requests) {
+            $request->status('reported');
+            $request_adaptor->update_status($request);
+        }
+    }
+    return;
+}
+
 sub get_mark_in_slice_coords {
     my ($self) = @_;
     my @mark = $self->zmap->get_mark;
@@ -2591,6 +2594,7 @@ sub zircon_zmap_view_features_loaded {
     $self->logger->debug("zzvfl: status '$status', message '$message', feature_count '$feature_count'");
 
     my @columns_to_process = ();
+    my @otf_loaded;
     foreach my $set_name (@featuresets) {
         if (my $column = $cllctn->get_Item_by_name($set_name)) {
             # filter_get will have updated gff_file field in SQLite db
@@ -2614,6 +2618,8 @@ sub zircon_zmap_view_features_loaded {
 
             $column->status_detail($message);
             $col_aptr->store_Column_state($column);
+
+            push @otf_loaded, $set_name if $column->classification_matches('OnTheFly');
         }
         # else {
         #     # We see a warning for each acedb featureset
@@ -2624,6 +2630,8 @@ sub zircon_zmap_view_features_loaded {
     my $process_result =
         $self->AceDatabase->process_Columns(@columns_to_process);
     $self->update_from_process_result($process_result);
+
+    $self->exonerate_done_callback(@otf_loaded) if @otf_loaded;
 
     # FIXME 26/02/2014: assuming that commenting this out doesn't cause other problems,
     # it should be removed along with AceDatabase->zmap_config_update().
