@@ -646,14 +646,8 @@ sub blixem_config {
             'user-fetch'            => 'variation-fetch',
         },
 
-        # Hard coded links for OTF data types.  (Would rather not have these)
+        # Hard coded links for OTF data types - no longer required
         'source-data-types' => {
-            'Unknown_DNA'       => 'linked-local',
-            'Unknown_Protein'   => 'linked-local',
-            'OTF_EST'           => 'dna-match',
-            'OTF_ncRNA'         => 'dna-match',
-            'OTF_mRNA'          => 'dna-match',
-            'OTF_Protein'       => 'protein-match',
         },
 
         # Fetch methods

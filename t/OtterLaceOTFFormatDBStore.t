@@ -58,7 +58,7 @@ foreach my $test ( fixed_tests() ) {
 
     $sfg->logic_name($result_set->analysis_name);
     $sfg->feature_kind($result_set->is_protein ? 'ProteinSplicedAlignFeature' : 'DnaSplicedAlignFeature');
-    $sfg->gff_source($result_set->gff_method_tag); # TEMP for testing - should be analysis_name
+    $sfg->gff_source($result_set->analysis_name);
     my $features = $sfg->features_from_slice;
     my $db_gff = $sfg->gff_for_features($features);
     ok($db_gff, 'GFF from DB');
