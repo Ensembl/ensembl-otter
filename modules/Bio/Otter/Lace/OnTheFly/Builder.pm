@@ -96,8 +96,7 @@ sub prepare_run {
 
     my $request = Bio::Otter::Lace::DB::OTFRequest->new(
         command     => $command,
-#        logic_name  => $self->analysis_name,
-        logic_name  => $self->analysis_name . '_gff', # temp for testing; FIXME dups OTF:Format::GFF->gff_method_tag()
+        logic_name  => $self->analysis_name,
         target_start=> $self->target->start,
         args        => \%args,
         );

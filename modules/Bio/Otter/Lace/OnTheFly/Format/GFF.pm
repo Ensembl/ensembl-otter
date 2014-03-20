@@ -25,8 +25,7 @@ sub gff {
 
     my %gff_args = (
         gff_format        => Bio::Vega::Utils::GFF::gff_format($gff_version),
-#       gff_source        => $self->analysis_name,
-        gff_source        => $self->gff_method_tag, # TEMP for testing
+        gff_source        => $self->analysis_name,
         );
 
     my $gff = Bio::Vega::Utils::GFF::gff_header($gff_version,
@@ -52,12 +51,6 @@ sub gff {
     }
 
     return $gff;
-}
-
-# TEMP for testing
-sub gff_method_tag {
-    my ($self) = @_;
-    return $self->analysis_name . '_gff';
 }
 
 1;

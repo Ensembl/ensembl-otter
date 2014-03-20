@@ -1946,9 +1946,7 @@ sub empty_Assembly_cache {
 sub delete_featuresets {
     my ($self, @types) = @_;
 
-    my @gff_types = map { $_ . '_gff' } @types; # TEMP for testing
-
-    foreach my $type ( @gff_types ) {
+    foreach my $type ( @types ) {
         # we delete types seperately because zmap errors out without
         # deleting anything if any featureset does not currently exist
         # in the zmap window
@@ -2136,12 +2134,11 @@ sub launch_exonerate {
         my $request = $builder->prepare_run;
         $request_adaptor->store($request);
 
-        # This will be $result_set->analysis_name once we remove the '_gff' suffices
-        my $tag = $builder->analysis_name . '_gff';
-        push @method_names, $tag;
+        my $analysis_name = $builder->analysis_name;
+        push @method_names, $builder->analysis_name;
 
         # Ensure new-style columns are selected if used
-        my $column = $cllctn->get_Item_by_name($tag);
+        my $column = $cllctn->get_Item_by_name($analysis_name);
         if ($column and not $column->selected) {
             $column->selected(1);
             $col_aptr->store_Column_state($column);

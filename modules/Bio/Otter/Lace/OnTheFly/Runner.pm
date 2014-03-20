@@ -18,8 +18,7 @@ use Hum::FastaFileIO;
 has request    => ( is       => 'ro',
                     isa      => 'Bio::Otter::Lace::DB::OTFRequest',
                     required => 1,
-                    # temp need for wrapper...
-                    # handles  => { analysis_name => 'logic_name' },
+                    handles  => { analysis_name => 'logic_name' },
     );
 
 has resultset_class => ( is => 'ro', isa => 'Str', default => 'Bio::Otter::Lace::OnTheFly::ResultSet' );
@@ -37,14 +36,6 @@ sub _require_resultset_class {
     eval "require $class" ## no critic (BuiltinFunctions::ProhibitStringyEval,Anacode::ProhibitEval)
         or die "Failed to 'require' module '$class': $@";
     return $class;
-}
-
-# ...to strip _gff
-sub analysis_name {
-    my $self = shift;
-    my $analysis_name = $self->request->logic_name;
-    $analysis_name =~ s/_gff$//;
-    return $analysis_name;
 }
 
 has query_seqs => ( is       => 'ro',

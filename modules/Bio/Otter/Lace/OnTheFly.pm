@@ -91,6 +91,8 @@ sub pre_launch_setup {
     return;
 }
 
+# FIXME: it would be good to get these from the config.
+#
 sub logic_names {
     return qw(
         Unknown_DNA
