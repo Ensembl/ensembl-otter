@@ -179,20 +179,16 @@ sub Filter {
     return $self->{'_Filter'};
 }
 
-sub classification_matches {
-    my ($self, $to_match) = @_;
+sub internal_type_is {
+    my ($self, $required) = @_;
 
     my $filter = $self->Filter;
     return unless $filter;
 
-    my @classification = $filter->classification;
-    return unless @classification;
+    my $internal = $filter->internal;
+    return unless $internal;
 
-    foreach my $c (@classification) {
-        return 1 if $c eq $to_match;
-    }
-
-    return; # not found
+    return ($internal eq $required);
 }
 
 1;
