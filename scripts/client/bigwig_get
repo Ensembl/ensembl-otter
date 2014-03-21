@@ -121,13 +121,13 @@ GFF
 }
 
 sub _print_feature {
-    my ($feature, $start, $end) = @_;
+    my ($feature, $fstart, $fend) = @_;
 
     my @fields =
         (
          'region',
-         (sprintf "%d", $start),
-         (sprintf "%d", $end),
+         (sprintf "%d", $fstart),
+         (sprintf "%d", $fend),
          abs($feature->score),
          $strand_field,
          '.', # phase, undefined
