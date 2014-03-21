@@ -362,11 +362,13 @@ sub db_slice {
         my $cs = $cs_adaptor->fetch_by_name($ensembl_slice->coord_system->name, $ensembl_slice->coord_system->version);
 
         # db_seq_region must start from 1
-        $db_seq_region = Bio::EnsEMBL::Slice->new_fast( { %$ensembl_slice,
-                                                          coord_system      => $cs,
-                                                          start             => 1,
-                                                          seq_region_length => $ensembl_slice->end,
-                                                        } );
+        my $db_seq_region_parameters = {
+            %$ensembl_slice,
+            coord_system      => $cs,
+            start             => 1,
+            seq_region_length => $ensembl_slice->end,
+        };
+        $db_seq_region = Bio::EnsEMBL::Slice->new_fast($db_seq_region_parameters);
 
         $slice_adaptor->store($db_seq_region);
     }
