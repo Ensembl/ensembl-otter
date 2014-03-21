@@ -361,9 +361,9 @@ sub do_lock {
       FROM slice_lock
       WHERE (active in ('pre', 'held') -- could affect us, or be us
              or ts_free >= ?)          -- could be us (limit to recent)
-        AND seq_region_id = ?
-        AND seq_region_start = ?
-        AND seq_region_end = ?
+        AND seq_region_id = ?          -- overlapping slice
+        AND seq_region_end >= ?
+        AND seq_region_start <= ?
     });
     $sth_check->execute($ts_begin, $srID, $sr_start, $sr_end);
     while (my $row = $sth_check->fetch) {
@@ -416,7 +416,6 @@ sub do_lock {
         , ts_free=now()
       WHERE slice_lock_id = ?
         AND active <> 'free'
-        AND freed <> 'too_late'
         });
         my $rv = $sth_free->execute($lock_id);
         push @too_late, "(tidy rv=$rv)"; # for debug only
