@@ -181,7 +181,7 @@ sub _notlocked_seq_region_id {
 # Basic create-store-fetch-lock-unlock cycle
 sub exercise_tt {
     my ($ds) = @_;
-    plan tests => 65;
+    plan tests => 69;
 
     # Collect props
     my $SLdba = $ds->get_cached_DBAdaptor->get_SliceLockAdaptor;
@@ -313,12 +313,19 @@ sub exercise_tt {
         like($unlocked, $fail_like, "unlock fail: case $label");
     }
 
+    like(try_err { $stored->bump_activity },
+         qr{ failed, rv=0E0 dbID=\d+ active=pre\b},
+         'bump_activity(pre): fails');
+
     # Lock it.  active=pre --> active=held
     my $stored_copy = $SLdba->fetch_by_dbID($stored->dbID);
     my @debug;
     is(try_err { $SLdba->do_lock($stored, \@debug) && 'ok' }, 'ok', 'locked!')
       or diag explain { debug => \@debug };
     ok($stored->is_held, '...confirmed by state');
+    is($stored->adaptor->bump_activity($stored), 1, 'bump_activity returncode');
+    is($stored->bump_activity, 1, 'bump_activity returncode (convenience method)');
+    # bump_activity effect is tested in timestamps_tt
 
     # Check test assumptions - independent objects from fetch_by_dbID
     ok(!$stored_copy->is_held, 'stored_copy: do_lock does not affect a copy');
@@ -336,6 +343,9 @@ sub exercise_tt {
           or diag explain $feba2;
     }
     ok($stored_copy->is_held, 'copy before unlock: not freshened');
+    like(try_err { $stored->bump_activity },
+         qr{ failed, rv=0E0 dbID=\d+ active=free\b},
+         'bump_activity(free): fails');
 
     # Can't double-free
     {

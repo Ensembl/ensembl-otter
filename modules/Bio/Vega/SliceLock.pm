@@ -219,7 +219,7 @@ sub slice {
 =head2 bump_activity()
 
 Convenience method to UPDATE the ts_activity field to now and freshen
-the lock, returning nothing.
+the lock, returning true.
 
 The lock must have been stored.
 
@@ -229,8 +229,7 @@ sub bump_activity {
     my ($self) = @_;
     my $SLdba = $self->adaptor;
     throw "$self cannot make slice without adaptor" unless $SLdba;
-    $SLdba->bump_activity($self);
-    return;
+    return $SLdba->bump_activity($self);
 }
 
 
