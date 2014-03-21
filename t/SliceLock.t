@@ -623,9 +623,13 @@ sub _get_DBAdaptor_pair { # + 4 tests, to ensure private-poking worked
 
 sub two_conn_tt {
     my ($ds) = @_;
-    plan tests => 25;
+    plan tests => 51;
 
     my $BVSL = 'Bio::Vega::SliceLock';
+    my $WANT_LOCK = [ lock => # from do_lock(,$debug)
+                      [ 'race looks won? (rv=1)', # SQL UPDATE rows affected
+                        'do_lock=1' ] ]; # do_lock returnvalue
+
     my @SLdba = map { $_->get_SliceLockAdaptor } _get_DBAdaptor_pair($ds);
     my @dbh = map { $_->dbc->db_handle } @SLdba;
     my ($auth) = _test_author($SLdba[0], qw( Tango ));
@@ -644,27 +648,31 @@ sub two_conn_tt {
         my ($label, @step) = @_;
         my @locks;
         $begin->();
-        _action_do_steps([ $label, \@step, \@locks ], \%op, 'raise');
-        return @locks;
+        my @result = _action_do_steps([ $label, \@step, \@locks ], \%op);
+        my @is_lock = map { defined $_ ? ref($_) : '~' } @locks;
+        like("@is_lock", qr{^$BVSL (~|$BVSL)$}, # second may be a failure to fetch a lock (pair0)
+           "run_tests($label): (dbh dbh) --> (@is_lock)");
+        isnt($locks[0]->adaptor, $locks[1] ? $locks[1]->adaptor : undef,
+             "$label:   locks not from same adaptor");
+        return (@locks, \@result);
     };
 
-    # Show that transactions are isolated
+    # Show that transactions are isolated.  (We really have @dbh==2)
     {
-        my @p0 = $run_steps->(qw( get_pair-commit  create        fetch_other ));
-        isa_ok($p0[0], $BVSL, 'pair0: have a lock');
+        my @p0 = $run_steps->(qw( get_pair-commit create        fetch_other no_err ));
         ok($p0[0]->is_stored($SLdba[0]->db), 'pair0.0:   is_stored');
         ok($p0[0]->is_stored($SLdba[1]->db), 'pair0.0:   !is_stored on other db');
         is($p0[1], undef, # dbh[0] did not commit -> not seen at dbh[1]
            'pair0.1:   undef');
     }
 
-    # See that rows can be seen both sides (default)
+    # Show that rows can be seen both sides.  (Normal; like pair0 with commit)
     {
-        my @p1 = $run_steps->(qw( get_pair+commit  create commit fetch_other ));
-        is($p1[0]->seq_region_id, $p1[1]->seq_region_id, 'pair1: same seq_region_id');
+        my @p1 = $run_steps->(qw( get_pair+commit create commit fetch_other no_err ));
+        is($p1[0]->seq_region_id, $p1[1]->seq_region_id, 'pair1:   same seq_region_id');
         isnt($p1[0]->adaptor, $p1[1]->adaptor, 'pair1:   different adaptors');
 
-        # SLdba will not interfere with other instances' objects
+        # $SLdba[1] will not interfere with $SLdba[0]'s object
         foreach my $method (qw( store freshen do_lock bump_activity unlock )) {
             my @arg = ($p1[0]);
             push @arg, $auth if $method eq 'unlock';
@@ -678,8 +686,8 @@ sub two_conn_tt {
     {
         my ($p2_0, $p2_1) = $run_steps->
           (qw( interrupt create lock bump commit ), # dbh[0]
-           qw( fetch_other unlock_int )); # dbh[1] - no commit
-        is($p2_0->dbID, $p2_1->dbID, 'pair2: got a pair');
+           qw( fetch_other unlock_int no_err )); # dbh[1] - no commit
+        is($p2_0->dbID, $p2_1->dbID, 'pair2:   got a pair');
         ok($p2_0->is_held,            'pair2.0:   is_held');
         ok(!$p2_1->is_held,           'pair2.1:   !is_held');
         if ($tx_iso0 eq $ISO_REPEAT) {
@@ -706,14 +714,86 @@ sub two_conn_tt {
 
     # Interrupted-from-elsewhere prevents explicit unlock
     {
-        my ($p3_0, $p3_1) = $run_steps->
+        my ($p3_0, $p3_1, $res) = $run_steps->
           (qw( int_unlock create lock bump commit ), # dbh[0]
-           qw( fetch_other unlock_int commit )); # dbh[1]
-        ok($p3_0->is_held, 'pair3.0: is_held (stale)');
+           qw(  fetch_other unlock_int commit no_err )); # dbh[1]
+        ok($p3_0->is_held, 'pair3.0:   is_held (stale)');
         like(try_err { $p3_0->adaptor->unlock($p3_0, $auth) },
              qr{SliceLock .* was already free .*SET active=free.* failed},
              'pair3.0:   unlock fail (already free)');
         ok(!$p3_0->is_held, 'pair3.0:   !is_held (was freshened)');
+        is_deeply($res,
+                  [ [create => $p3_0], $WANT_LOCK, [bump => 1], [commit => 1],
+                    [fetch_other => $p3_1], [unlock_int => 1], [commit => 1] ],
+                  'pair3:   results list')
+          or diag explain { adap => \@SLdba, res => $res };
+    }
+
+    # In-transaction bump_activity prevents interrupt
+    {
+        my ($p4_0, $p4_1, $res) = $run_steps->
+          (qw( bump_holds create lock commit bump ),
+           qw(  fetch_other unlock_int commit ));
+        $begin->();
+        is($p4_0->is_held_sync, 1, 'pair4.0:   is_held_sync'); # interrupt failed
+        my $err = $res->[5][1]; # << error from that which must not succeed
+        like($err, qr{\AERR:.*execute failed: Lock wait timeout exceeded}s,
+             'pair4.1:   unlock(interrupt) failed');
+        is_deeply($res,
+                  [ [create => $p4_0], $WANT_LOCK, [commit => 1], [bump => 1],
+                    [fetch_other => $p4_1], [unlock_int => $err], [commit=>1] ],
+                  'pair4:   result info')
+          or diag explain { adap => \@SLdba, res => $res };
+    }
+
+    # Standard workflow, overlapping locks
+    # (check create_overlap works)
+    {
+        my ($p5_0, $p5_1, $res) = $run_steps->
+          (qw( overlap_fail create commit lock commit ),
+           qw(  create_overlap commit lock commit no_err ));
+        is($p5_0->is_held_sync, 1, 'pair5.0:   held');
+        is((join ' ', $p5_1->active, $p5_1->freed), 'free too_late',
+           'pair5.1:   freed(too_late)');
+        my $R_dolock = $res->[6];
+        my $L_slid = $p5_0->dbID;
+        is_deeply($R_dolock,
+                  [ lock => [ "early do_lock / before insert, by slid=$L_slid",
+                              '(tidy rv=1)', # the UPDATE did set R_lock free
+                              'do_lock=0' ] ], # do_lock returned a fail
+                  'create_overlap: second lock freed')
+          or diag explain $R_dolock;
+    }
+
+    # Can insert two SliceLocks on one seq_region without COMMIT,
+    # unless one of them is do_lock'd to active=held, because the
+    # UPDATE takes a Next-Key Lock.
+    #
+    # We are safe even if people forget to commit their pre-locks.
+    # http://dev.mysql.com/doc/refman/5.5/en/innodb-locks-set.html
+    {
+        my @p6 = $run_steps->(qw( dbl_ins create create_overlap no_err ));
+        # gets two locks; run_steps checks them
+
+        my @p7_lock0 = $run_steps->
+          (qw( ins_lock_ins create lock ),
+           qw( create_overlap ), # timeout
+           # next is: push @$lock_stack, (finds nothing);
+           qw( fetch_other )); # keep run_steps' @is_lock happy
+
+        my @p8_lock1 = $run_steps->
+          (qw( ins_ins_lock create create_overlap ),
+           qw( lock )); # timeout
+
+        my $err7 = $p7_lock0[-1][2][1];
+        my $err8 = $p8_lock1[-1][2][1];
+        like($err7, qr{\AERR:.*execute failed: Lock wait timeout exceeded}s,
+             'pair7:   second INSERT - lock time out') &&
+        like($err8, qr{\AERR:.*execute failed: Lock wait timeout exceeded}s,
+             'pair8:   UPDATE second - lock time out') #  && 0 # wow it really does!
+          or diag explain({ adap => \@SLdba, no_lock => \@p6,
+                            with_lock0 => \@p7_lock0,
+                            with_lock1 => \@p8_lock1 });
     }
 
     $begin->();
@@ -746,6 +826,25 @@ sub _make_test_ops {
                push @$lock_stack, $lock;
                $lock;
            };
+       }, create_overlap => sub {
+           my ($label, $lock_stack) = @_;
+           my $objnum = @$lock_stack;
+           my $L_lock = $lock_stack->[-1];
+           my $adap = ($L_lock->adaptor == $SLdba ? $alt_SLdba : $SLdba); # the other one
+           my ($auth) = _test_author($adap, qw( Olive ));
+           my $R_lock = Bio::Vega::SliceLock->new
+             (-SEQ_REGION_ID => $L_lock->seq_region_id,
+              -SEQ_REGION_START => $L_lock->seq_region_start + 250,
+              -SEQ_REGION_END   => $L_lock->seq_region_end + 250,
+              -AUTHOR => $auth,
+              -INTENT => "timestamps_tt($label) $objnum overlap",
+              -HOSTNAME => $TESTHOST);
+           $R_lock->{__origin} = 'create_overlap'; # mark it, for debug
+           return try_err {
+               $adap->store($R_lock);
+               push @$lock_stack, $R_lock;
+               $R_lock;
+           };
        }, fetch_other => sub {
            my ($label, $lock_stack) = @_;
            my $dbid = $lock_stack->[-1]->dbID;
@@ -760,20 +859,20 @@ sub _make_test_ops {
            $dbh->begin_work if $dbh->{AutoCommit}; # avoid warning
            $dbh->commit;
            $dbh->begin_work;
-           return 'commit';
+           return 1;
        }, lock => sub {
            my ($label, $lock_stack) = @_;
            my $lock = $lock_stack->[-1];
            return try_err {
                my $debug = []; # for the "confused, active=pre" message (if any)
                my $rv = $lock->adaptor->do_lock($lock, $debug);
-               push @$debug, "RV=$rv";
+               push @$debug, "do_lock=$rv";
                $debug;
            };
        }, bump => sub {
            my ($label, $lock_stack) = @_;
            my $lock = $lock_stack->[-1];
-           return try_err { $lock->bump_activity; 'bump' };
+           return try_err { $lock->bump_activity };
        }, unlock => sub {
            my ($label, $lock_stack) = @_;
            my $lock = $lock_stack->[-1];
@@ -790,6 +889,7 @@ sub _action_do_steps {
     my ($case, $ops, $on_error) = @_;
     my ($label, $steps, $lock_stack) = @$case;
     my @done;
+    $on_error = pop @$steps if $steps->[-1] eq 'no_err';
     while (@$steps) {
         my $step = shift @$steps;
         last if $step eq 'wait'; # next time
