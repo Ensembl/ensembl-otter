@@ -37,32 +37,49 @@ The workflow is
 
 =over 4
 
-=item 1. Create lock in state C<active='pre'>
+=item 1. Create lock in state C<active='pre'>; store it.
 
-=item 2. Call L</do_lock> to reach state C<active='held'>
+It has not yet left your transaction.
+
+=item 2. COMMIT; Call L</do_lock> to reach state C<active='held'>
+
+Your SliceLock becomes visible to other database sessions, and you can
+see recent SliceLocks from elsewhere.
 
 Check the return value.  Maybe someone else got the lock.
 
-=item 3. L<Bio::Vega::SliceLock/bump_activity>; COMMIT
+=item 3. COMMIT; Check L<Bio::Vega::SliceLock/is_held_sync>
 
-=item 4. Update rows as necessary.
+If the lock was broken from outside, you find out without having to
+catch an exception.
 
-=item 5. Check L<Bio::Vega::SliceLock/is_held_sync>
+=item 4. L<Bio::Vega::SliceLock/bump_activity>
 
-If the lock was broken from outside, roll back.
+The region is now exclusively yours.
 
-=item 6. L<Bio::Vega::SliceLock/bump_activity>; COMMIT
+=item 5. Update rows as necessary; COMMIT
 
-Repeat as necessary.
+The SliceLock remains valid, but could now be C<interrupted> by
+another user or used by another action by the same user.
 
-=item 7. L</unlock>
+=item 6. Repeat 3 .. 5 as necessary.
+
+Updates may be made within the region over a longer period of time.
+Other users can see (by ts_activity) whether there was recent
+activity.
+
+=item 7. L</unlock>; COMMIT
 
 As with C<is_held_sync>, this can fail, so be prepared to roll back.
 
+XXX: no, it must not if we checked is_held_sync already!  it would be too late to roll back
+
+XXX: presumably if the lock is in use elsewhere (then not if you didn't commit after work), or something else freed it already - this should return not fail.
+
 =back
 
-This workflow can be broken between runtime instances, because the
-lock object persists in the database.
+This workflow can be broken (at the COMMIT points) between runtime
+instances, because the lock object persists in the database.
 
 
 =head2 Other possible operations - dibs
@@ -461,10 +478,15 @@ sub do_lock {
 
 =head2 bump_activity($lock)
 
-UPDATE the ts_activity field to now.  On return the object will have
-been L</freshen>ed to match the database.
+Attempt to UPDATE the ts_activity field to now, then attempt to
+L</freshen> the lock to match the database.
 
-Returns nothing.  Exception raised if $lock was not updated.
+Exception raised if $lock was not updated.  This may be due to a lock
+timeout (something else using this SliceLock) or asynchronous
+SliceLock removal.
+
+Otherwise returns true, and you have exclusive use of this valid
+SliceLock until you C<commit> or C<rollback>.
 
 =cut
 
@@ -480,13 +502,15 @@ sub bump_activity {
       UPDATE slice_lock
       SET ts_activity = now()
       WHERE slice_lock_id = ?
+        AND active='held'
     });
     my $rv = $sth->execute($dbID);
     $self->freshen($lock);
     if ($rv == 1) {
-        return;
+        return 1;
     } else {
-        throw "bump_activity($lock): failed, rv=$rv dbID=$dbID";
+        my $act = $lock->active;
+        throw "bump_activity($lock): failed, rv=$rv dbID=$dbID active=$act";
     }
 }
 
@@ -499,12 +523,14 @@ C<interrupted> or C<expired>, and be able to justify doing this.
 
 Throws an exception if the lock was already free in-memory.
 
-$slice_lock is freed and its properties are updated from the database.
+Attempts to free $slice_lock and L</freshen> its properties from the
+database.
 
 Throws an exception if the lock was freed asynchronously in the
-database (e.g. to the C<freed(interrupted)> state).
+database (e.g. to the C<freed(interrupted)> state), or row locks time
+out during the attempt.
 
-Then returns true.
+Otherwise, returns true.
 
 =cut
 
@@ -546,10 +572,11 @@ sub unlock {
 
   $self->freshen($slice_lock);
 
-  throw "SliceLock dbID=$dbID was already free (async lock-break?).  UPDATE...SET active=free... failed, rv=$rv"
-    unless $rv == 1;
-
-  return 1;
+  if ($rv == 1) {
+      return 1;
+  } else {
+      throw "SliceLock dbID=$dbID was already free (async lock-break?).  UPDATE...SET active=free... failed, rv=$rv";
+  }
 }
 
 
