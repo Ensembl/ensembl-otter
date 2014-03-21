@@ -97,7 +97,7 @@ GFF
 }
 
 sub _print_feature {
-    my ($feature, $start, $end) = @_;
+    my ($feature, $fstart, $fend) = @_;
 
     # the -gff_feature_source flag overrides the source from the BAM file
     my $source = $gff_feature_source || $feature->source_tag;
@@ -122,7 +122,7 @@ sub _print_feature {
 
     print $gff_format->gff_line(
         $chr, $source, 'read',
-        $start, $end, $score, $strand, $phase,
+        $fstart, $fend, $score, $strand, $phase,
         $attribute_hash);
 
     return;

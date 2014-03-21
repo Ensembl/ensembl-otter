@@ -97,11 +97,11 @@ GFF
 }
 
 sub _print_feature {
-    my ($feature, $start, $end) = @_;
+    my ($feature, $fstart, $fend) = @_;
     # the -gff_feature_source flag overrides the source from the GFF file
     my $source = $gff_feature_source || $feature->source;
     printf "%s\n", join "\t"
-        , $chr_field, $source, $feature->type, $start, $end, @{$feature->rest};
+        , $chr_field, $source, $feature->type, $fstart, $fend, @{$feature->rest};
 
     return;
 }
