@@ -22,6 +22,14 @@ sub try_err(&) {
     return try { $code->() } catch { "ERR:$_" };
 }
 
+sub noise {
+    my @arg = @_;
+    diag @arg if
+      (!$ENV{HARNESS_ACTIVE} ||   # stand-alone test
+       $ENV{HARNESS_IS_VERBOSE}); # under "prove -v"
+}
+
+
 sub main {
     plan tests => 24;
 
@@ -79,13 +87,13 @@ END {
         while (my ($k, $dbh) = each %dbh) {
             if ($dbh && $dbh->ping) {
                 if ($dbh->{AutoCommit}) {
-                    diag "_late_commit_do: $dbh has no outstanding transaction";
+                    noise "_late_commit_do: $dbh has no outstanding transaction";
                 } else {
-                    diag "_late_commit_do: $dbh->commit";
+                    noise "_late_commit_do: $dbh->commit";
                     $dbh->commit;
                 }
             } else {
-                diag "_late_commit_do: $dbh: gone";
+                noise "_late_commit_do: $dbh: gone";
             }
         }
     }
@@ -121,7 +129,7 @@ sub _tidy_database {
     my $dbh = $dataset->get_cached_DBAdaptor->dbc->db_handle;
     $dbh->do(qq{delete from slice_lock where hostname           = '$TESTHOST'});
     $dbh->do(qq{delete from author     where author_email like '%\@$TESTHOST'});
-    diag "purged test rows from ".($dataset->name);
+    noise "purged test rows from ".($dataset->name);
     return;
 }
 
@@ -252,7 +260,7 @@ sub exercise_tt {
     }
 
     # Find & compare
-    diag 'author[0]="'.($author[0]->name).'" <'.($author[0]->email).'>';
+    noise 'author[0]="'.($author[0]->name).'" <'.($author[0]->email).'>';
     my @found = try_err { @{ $SLdba->fetch_by_author($author[0]) } };
   SKIP: {
         unless (isa_ok($found[0], $BVSL, "find by author")) {
@@ -424,8 +432,10 @@ sub cycle_tt {
     my @author = _test_author($SLdba, qw( Xavier Yuel Zebby ));
     my $BVSL = 'Bio::Vega::SliceLock';
     my @L_pos = (_notlocked_seq_region_id($SLdba, 1), # may not exist
-                 10_000 + int(rand(200_000)), 210_000 + int(rand(150_000)));
-    my @R_pos = ($L_pos[0], $L_pos[1] + 50_000, $L_pos[2] + 50_000);
+                 10_000 + int(rand(200_000)), 250_000 + int(rand(150_000)));
+    my @R_pos = ($L_pos[0],
+                 int( ($L_pos[1] + $L_pos[2]) / 2), # mid
+                 $L_pos[2] + 50_000);
 
     my $L_lock = $BVSL->new
       (-SEQ_REGION_ID => $L_pos[0],
@@ -598,9 +608,9 @@ sub _get_DBAdaptor_pair { # + 4 tests, to ensure private-poking worked
     # Minor housekeeping upon the connections
     foreach my $dbh (@dbh) {
         _late_commit_register($dbh);
-        $dbh->do('SET SESSION lock_wait_timeout = 2');
-        $dbh->do('SET SESSION innodb_lock_wait_timeout = 2');
-        $dbh->{PrintWarn} = 0;
+        $dbh->do('SET SESSION lock_wait_timeout = 1');
+        $dbh->do('SET SESSION innodb_lock_wait_timeout = 1');
+        $dbh->{PrintError} = 0;
     }
 
     # Mark them, for debug
@@ -613,13 +623,15 @@ sub _get_DBAdaptor_pair { # + 4 tests, to ensure private-poking worked
 
 sub two_conn_tt {
     my ($ds) = @_;
-    plan tests => 17;
+    plan tests => 25;
 
     my $BVSL = 'Bio::Vega::SliceLock';
     my @SLdba = map { $_->get_SliceLockAdaptor } _get_DBAdaptor_pair($ds);
     my @dbh = map { $_->dbc->db_handle } @SLdba;
     my ($auth) = _test_author($SLdba[0], qw( Tango ));
     my %op = _make_test_ops($auth, @SLdba);
+
+    my $tx_iso0 = _iso_level($dbh[0]);
 
     my $begin = sub {
         foreach my $dbh (@dbh) {
@@ -658,15 +670,54 @@ sub two_conn_tt {
             push @arg, $auth if $method eq 'unlock';
             like(try_err { $SLdba[1]->$method(@arg) },
                  qr{^MSG:.*stored with different adaptor}m,
-                 "$method: refuses to operate across adaptors");
+                 "refuse to operate across adaptors: $method");
         }
     }
 
-local $TODO = 'not tested';
-fail('check (dbh2 interrupts/expires the lock) with (dbh1 transaction using it), because dbh1 will otherwise not see the change');
-fail('untested cycle: lock. interrupted from elsewhere. unlock => exception, but freshened.');
+    # See (eventually) an interruption from the other dbh
+    {
+        my ($p2_0, $p2_1) = $run_steps->
+          (qw( interrupt create lock bump commit ), # dbh[0]
+           qw( fetch_other unlock_int )); # dbh[1] - no commit
+        is($p2_0->dbID, $p2_1->dbID, 'pair2: got a pair');
+        ok($p2_0->is_held,            'pair2.0:   is_held');
+        ok(!$p2_1->is_held,           'pair2.1:   !is_held');
+        if ($tx_iso0 eq $ISO_REPEAT) {
+            is($p2_0->is_held_sync, 1,
+               "pair2.0:   is_held_sync (pre-commit there, $tx_iso0 here)");
+            $dbh[1]->commit;
+            is($p2_0->is_held_sync, 1,
+               "pair2.0:   is_held_sync (committed there, $tx_iso0 here)");
+            $dbh[0]->commit;
+        } else {
+            # The freshen will SELECT...LOCK IN SHARE MODE
+            like(try_err { $p2_0->is_held_sync },
+                 qr{Lock wait timeout exceeded},
+                 "pair2.0:   is_held_sync: lock timeout ($ISO_SERI)");
+            $dbh[0]->commit; # back to AutoCommit, else we cannot SELECT it
+            is($p2_0->is_held_sync, 1,
+               'pair2.0:   is_held_sync (pre-commit there, AutoCommit here)');
+            $dbh[1]->commit;
+        }
+        # transactions finished both sides, now we will see it
+        is($p2_0->is_held_sync, 0,    'pair2.0:   !is_held_sync (committed both)');
+        is($p2_0->freed, 'interrupted', 'pair2.0:   freed=interrupted');
+    }
+
+    # Interrupted-from-elsewhere prevents explicit unlock
+    {
+        my ($p3_0, $p3_1) = $run_steps->
+          (qw( int_unlock create lock bump commit ), # dbh[0]
+           qw( fetch_other unlock_int commit )); # dbh[1]
+        ok($p3_0->is_held, 'pair3.0: is_held (stale)');
+        like(try_err { $p3_0->adaptor->unlock($p3_0, $auth) },
+             qr{SliceLock .* was already free .*SET active=free.* failed},
+             'pair3.0:   unlock fail (already free)');
+        ok(!$p3_0->is_held, 'pair3.0:   !is_held (was freshened)');
+    }
 
     $begin->();
+    $dbh[1]->disconnect;
     return;
 }
 

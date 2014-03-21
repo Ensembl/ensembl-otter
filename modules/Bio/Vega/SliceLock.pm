@@ -151,17 +151,38 @@ excluding others from the slice.
 
 sub is_held {
     my ($self) = @_;
-    return $self->active eq 'held' && !$self->freed;
+    return ($self->active eq 'held' && !$self->freed) ? 1 : 0;
 }
 
 
 =head2 is_held_sync()
 
-Return true iff the lock is currently excluding others from the slice,
-after L<Bio::Vega::DBSQL::SliceLockAdaptor/freshen> has updated the
+Return true iff the lock is currently (according to database as seen
+from this connection) excluding others from the slice, after
+L<Bio::Vega::DBSQL::SliceLockAdaptor/freshen> has updated the
 in-memory properties.
 
-This is a convenience wrapper around C<freshen> and L</is_held>.
+This is a convenience wrapper around C<freshen> and L</is_held>.  It
+synchronises, but does not obtain explicit database row locks.
+B<Caveats apply when two connections have overlapping transactions!>
+
+=over 4
+
+=item * REPEATABLE-READ (the default)
+
+B<This call would not prevent the SliceLock becoming free
+(e.g. C<interrupted>) while you are using it>.  To do that for the
+duration of a database transaction, use L</bump_activity> without a
+C<commit>.
+
+=item * SERIALIZABLE isolation
+
+When a transaction has been opened, the C<freshen> call causes a
+C<SELECT ... LOCK IN SHARE MODE> and so may wait for lock timeout.
+L</bump_activity> is still needed to get an exclusive lock before
+writing.
+
+=back
 
 =cut
 
