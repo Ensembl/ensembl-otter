@@ -60,7 +60,7 @@ sub do_it {
         close STDOUT or die "Error writing to STDOUT; $!";
         # update the SQLite db - to ensure gff processing if appropriate
         $self->SUPER::do_requires;
-        $self->update_local_db($gff_source, $cache_file);
+        $self->update_local_db($gff_source, $cache_file, 1);
         return;
     }
 
@@ -124,7 +124,7 @@ sub do_it {
             });
 
         # update the SQLite db
-        $self->update_local_db($gff_source, $cache_file);
+        $self->update_local_db($gff_source, $cache_file, 1);
 
         # if (rand() < 0.5) {
         #     die "Horribly";

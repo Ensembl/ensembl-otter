@@ -242,7 +242,7 @@ sub local_db {
 }
 
 sub update_local_db {
-    my ($self, $column_name, $cache_file) = @_;
+    my ($self, $column_name, $cache_file, $process_gff) = @_;
 
     $self->time_diff_for('SQLite update', sub {
         my $dbh = $self->local_db->dbh;
@@ -251,10 +251,12 @@ sub update_local_db {
         unless (eval {
             # No transaction!  Make only one statement.  Transactions
             # require more complex retrying when database is busy.
-            my $rv = $db_filter_adaptor->update_for_filter_get(
-               $column_name, # WHERE: name
-               $cache_file, # SET: gff_file, status = 'Loading'
-              );
+            my $rv = $db_filter_adaptor->update_for_filter_script(
+                $column_name, # WHERE: name
+                $cache_file,  # SET: gff_file,
+                $process_gff, #      process_gff,
+                              #      status = 'Loading'
+                );
             die "Changed $rv rows" unless 1 == $rv;
             1;
              } ) {

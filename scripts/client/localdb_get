@@ -16,7 +16,7 @@ sub do_it {
     $self->do_requires;
 
     my $features = $self->get_features;
-    $self->send_feature_gff($features);
+    $self->send_feature_gff($features, 1); # 1 = process_gff
 
     return;
 }

@@ -59,9 +59,9 @@ my $collection2 = setup_collection( map { $_->{name} } @sub_exp );
 is($ca->fetch_ColumnCollection_state($collection2), 2, 'fetch_ColumnCollection_state again');
 test_collection($collection2, \@sub_exp, 'fetched Collection again');
 
-ok($ca->update_for_filter_get($f_col[0]->name,
-                              $sub_exp[0]->{gff_file} = '/file/updated',
-                              $sub_exp[0]->{process_gff} = 1             ), 'update_for_filter_get');
+ok($ca->update_for_filter_script($f_col[0]->name,
+                                 $sub_exp[0]->{gff_file} = '/file/updated',
+                                 $sub_exp[0]->{process_gff} = 1             ), 'update_for_filter_script');
 $collection2 = setup_collection( map { $_->{name} } @sub_exp );
 is($ca->fetch_ColumnCollection_state($collection2), 2, 'fetch_ColumnCollection_state post-update');
 

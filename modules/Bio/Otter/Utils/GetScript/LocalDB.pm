@@ -103,7 +103,7 @@ sub augment_feature_info {
 }
 
 sub send_feature_gff {
-    my ($self, $features) = @_;
+    my ($self, $features, $process_gff) = @_;
 
     # # Example of passing extra gff args:
     # #
@@ -115,7 +115,7 @@ sub send_feature_gff {
     $self->time_diff_for('write GFF', sub { return $gff = $self->_sfg->gff_for_features($features) } );
 
     # update the SQLite db
-    $self->update_local_db($self->arg('gff_source'), 'from_localdb');
+    $self->update_local_db($self->arg('gff_source'), '-no-gff-cache-file-for-localdb-', $process_gff);
 
     # Send data to zmap on STDOUT
     $self->time_diff_for(

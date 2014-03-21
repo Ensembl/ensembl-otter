@@ -33,7 +33,7 @@ sub do_it {
     close $file or die "Failed to close file '$path': $!";
 
     # update the SQLite db
-    $self->update_local_db($args->{gff_source}, $path);
+    $self->update_local_db($args->{gff_source}, $path, 1); # process_gff = 1 - check if this script is used in anger.
 
     # zmap waits for STDOUT to be closed as an indication that all
     # data has been sent, so we close the handle now so that zmap
