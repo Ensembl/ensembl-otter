@@ -1029,7 +1029,7 @@ sub save_data {
         $self->save_ace($ace_data);
         $self->flag_db_edits(1);
         $self->resync_with_db;
-        $self->update_window_title_unsaved_flag(0);
+        $self->set_window_title;
         return 1;
     }
     catch { $self->exception_message($_, 'Error saving to otter'); return 0; }
@@ -1219,7 +1219,7 @@ sub save_ace {
 
     if ($self->flag_db_edits) {
         $self->AceDatabase->unsaved_changes(1);
-        $self->update_window_title_unsaved_flag(1);            
+        $self->set_window_title;            
     }
 
     return $val;
@@ -2471,18 +2471,6 @@ sub set_window_title {
     $self->top_window->title
       (sprintf('%s%sSession %s',
                $unsaved_str, $Bio::Otter::Lace::Client::PFX, $name));
-
-    return;
-}
-
-sub update_window_title_unsaved_flag {
-    my ($self, $flag) = @_;
-
-    my $top = $self->top_window;
-    my $title = $top->title;
-    $title =~ s/^\* //;
-    my $unsaved_str = $flag ? '* ' : '';
-    $top->title("${unsaved_str}$title");
 
     return;
 }
