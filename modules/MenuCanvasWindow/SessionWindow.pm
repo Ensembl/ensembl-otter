@@ -1554,7 +1554,7 @@ sub update_from_process_result {
     }
     if (@{$failed}) {
         my $message = sprintf
-            'Failed to load any transcripts from column(s): %s'
+            'Failed to load any transcripts or alignment features from column(s): %s'
             , join ', ', sort map { $_->name } @{$failed};
         $self->message($message);
     }
