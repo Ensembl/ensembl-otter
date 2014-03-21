@@ -63,3 +63,10 @@ sub arg_convert {
 
 my @arg_list = map { arg_convert } @ARGV;
 exec $exe, @arg_list;
+
+__END__
+
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
+

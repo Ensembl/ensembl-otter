@@ -143,3 +143,10 @@ my $mapping = Bio::Otter::Mapping->new_from_xml($mapping_xml);
 # map and print the features
 _print_header;
 $mapping->do_features($bam_fetch, $start, $end, \&_print_feature);
+
+__END__
+
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
+
