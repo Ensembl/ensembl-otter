@@ -144,6 +144,8 @@ my $mapping = Bio::Otter::Mapping->new_from_xml($mapping_xml);
 _print_header;
 $mapping->do_features($bam_fetch, $start, $end, \&_print_feature);
 
+exit;
+
 __END__
 
 =head1 AUTHOR
