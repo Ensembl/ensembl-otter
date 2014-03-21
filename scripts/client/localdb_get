@@ -29,4 +29,9 @@ Bio::Otter::GetScript::LocalDBGet->new->run;
 
 exit;
 
-# EOF
+__END__
+
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
+
