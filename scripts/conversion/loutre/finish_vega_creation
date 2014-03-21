@@ -961,7 +961,7 @@ my ($rem_at) = $sth->fetchrow_array;
 $sth = $vdbh->prepare(qq(SELECT attrib_type_id from attrib_type where code = \'hidden_remark\'));
 $sth->execute;
 my ($hidden_rem_at) = $sth->fetchrow_array;
-my @hidden_gene_attribs = ('not for VEGA','confirm experimentally','annotation in progress','EnsEMBL merge exception','EnsEMBL merge exception');
+my @hidden_gene_attribs = ('not for VEGA','confirm experimentally','annotation in progress','EnsEMBL merge exception','EnsEMBL merge exception','overlapping locus');
 push @hidden_gene_attribs, 'fragmented mixed strand locus'; #this is not a CV term but we don't want to show it
 $sth = $vdbh->prepare(qq(SELECT value from gene_attrib where value like 'ASB\\_%' group by value));
 $sth->execute;
@@ -978,7 +978,7 @@ push @sql_fixes, "UPDATE transcript_attrib set attrib_type_id = $hidden_rem_at w
 $sth = $vdbh->prepare(qq(SELECT attrib_type_id from attrib_type where code = \'havana_cv\'));
 $sth->execute;
 my ($havana_cv) = $sth->fetchrow_array || 0;
-my @cv_gene_attribs = ('semi-processed','retrogene','reference genome error','overlapping locus','orphan','ncRNA_host','fragmented locus');
+my @cv_gene_attribs = ('semi-processed','retrogene','reference genome error','orphan','ncRNA_host','fragmented locus');
 $string = join ",",(map { $vdbh->quote($_) } @cv_gene_attribs);
 #push @sql_fixes, "UPDATE gene_attrib set attrib_type_id = $havana_cv where attrib_type_id = $rem_at and value in ($string);\n";
 push @sql_fixes, "UPDATE gene_attrib set attrib_type_id = $havana_cv where attrib_type_id in (\'$rem_at\',\'$hidden_rem_at') and value in ($string);\n";
