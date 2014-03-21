@@ -2638,7 +2638,7 @@ sub zircon_zmap_view_features_loaded {
             $column->status_detail($message);
             $col_aptr->store_Column_state($column);
 
-            push @otf_loaded, $set_name if $column->classification_matches('OnTheFly');
+            push @otf_loaded, $set_name if $column->internal_type_is('on_the_fly');
         }
         # else {
         #     # We see a warning for each acedb featureset
