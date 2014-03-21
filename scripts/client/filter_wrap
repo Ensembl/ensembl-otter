@@ -64,6 +64,8 @@ sub arg_convert {
 my @arg_list = map { arg_convert } @ARGV;
 exec $exe, @arg_list;
 
+exit;
+
 __END__
 
 =head1 AUTHOR
