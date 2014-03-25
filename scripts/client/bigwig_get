@@ -125,7 +125,7 @@ sub _print_feature {
 
     my @fields =
         (
-         'coverage_graph',
+         'score',
          (sprintf "%d", $fstart),
          (sprintf "%d", $fend),
          abs($feature->score),
