@@ -2544,9 +2544,14 @@ sub zmap_new {
     my $arg_list = [
         '--conf_dir' => $config_dir,
         @{$DataSet->zmap_arg_list},
-        (Tk::Screens->nxt( $self->top_window )->gtk_arg ),
         ];
     my $client = $self->AceDatabase->Client;
+    if (my $screen = $client->config_value('zmap_screen')) { # RT#390512
+        warn "Using logical screen override (zmap_screen=$screen)";
+        push @$arg_list, $screen if $screen;
+    } else { # RT#387856
+        push @$arg_list, Tk::Screens->nxt( $self->top_window )->gtk_arg;
+    }
     my $zmap =
         Zircon::ZMap->new(
             '-app_id'     => $self->zircon_app_id,
