@@ -5,6 +5,7 @@ use warnings;
 use Bio::EnsEMBL::Utils::Exception qw ( throw warning );
 use Bio::EnsEMBL::Utils::Argument qw ( rearrange );
 use Bio::EnsEMBL::Slice;
+use Date::Format 'time2str';
 use base qw(Bio::EnsEMBL::Storable);
 
 =head1 NAME
@@ -271,6 +272,47 @@ sub _init {
     }
 
     return;
+}
+
+sub __iso8601 {
+    my ($t) = @_;
+    return time2str('%Y-%m-%d %T %Z', $t, 'GMT');
+}
+
+
+=head2 describe()
+
+Returns a string explaining the current state of the object.
+
+=cut
+
+sub describe {
+    my ($self) = @_;
+    my $act = $self->active;
+    my ($state, $detail);
+    if ($act eq 'free') {
+        my $freed = $self->freed;
+        my $by = '';
+        $by = ' by '.$self->freed_author->email
+          if $self->freed_author && $self->freed_author->dbID != $self->author->dbID;
+        $state = sprintf("'free(%s)'%s since %s",
+                         $freed, $by, $self->iso8601_ts_free);
+        $detail = { finished => 'The region was closed',
+                    too_late => 'Lost the race to lock the region',
+                    interrupted => 'The lock was broken',
+                    expired => 'The lock was broken' }->{$freed} || 'WEIRD';
+    } else {
+        $state = "'$act'";
+        $detail = { pre => 'The region is not yet locked',
+                    held => 'The region is locked' }->{$act} || 'WEIRD';
+    }
+    return sprintf
+      ('SliceLock(dbID=%s) on %s was created %s '.
+       'by %s on host %s to "%s", '.
+       "last active %s and now %s\n  %s.",
+       $self->dbID, $self->slice->display_id, $self->iso8601_ts_begin,
+       $self->author->email, $self->hostname, $self->intent,
+       $self->iso8601_ts_activity, $state, $detail);
 }
 
 __PACKAGE__->_init;
