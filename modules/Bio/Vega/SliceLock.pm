@@ -5,8 +5,12 @@ use warnings;
 use Bio::EnsEMBL::Utils::Exception qw ( throw warning );
 use Bio::EnsEMBL::Utils::Argument qw ( rearrange );
 use Bio::EnsEMBL::Slice;
+
 use Date::Format 'time2str';
+use Try::Tiny;
+
 use base qw(Bio::EnsEMBL::Storable);
+
 
 =head1 NAME
 
@@ -234,6 +238,166 @@ sub bump_activity {
 }
 
 
+=head2 exclusive_work($code, $unlock)
+
+Will call C<COMMIT> multiple times, via L</adaptor>.
+
+Convenience method for L<Bio::Vega::DBSQL::SliceLockAdaptor/Workflow>,
+which takes on a SliceLock in any of these states
+
+=over 4
+
+=item * pre
+
+The call to L<Bio::Vega::DBSQL::SliceLockAdaptor/store> has been made,
+so there is an L</adaptor> and L</dbID>.
+
+This method calls L<Bio::Vega::DBSQL::SliceLockAdaptor/do_lock> for
+you.
+
+=item * held
+
+Ready to begin an exclusive chunk of work
+
+=back
+
+and will proceed with the workflow, assuming no errors happen:
+
+=over 4
+
+=item 1. C<COMMIT>
+
+=item 2. reach C<active='held'>
+
+=item 3. C<COMMIT>
+
+=item 4. C<bump_activity>
+
+=item 5. Call $code
+
+Currently with no arguments, ignoring the return value.
+
+Rollback is called for you if something goes wrong.
+
+=item 6. C<COMMIT>
+
+=item 7. If $unlock, then C<unlock> and C<COMMIT> again
+
+=back
+
+or produce some meaningful error messages in the common cases where
+things can go wrong.
+
+Returns nothing if everything was done.  Returns the error message (as
+a true value, also sent as a warning) if just the unlock failed.
+Other errors may be raised.
+
+=cut
+
+sub exclusive_work {
+    my ($self, $code, $unlock) = @_;
+
+    # 1.  Storing the lock has been done already.
+    my $adap = $self->adaptor;
+    throw "Cannot proceed without an adaptor"
+      unless $adap && $self->dbID && $self->is_stored($adap->db);
+    my $dbh = $adap->dbc->db_handle;
+
+    my $rollback = sub {
+        my ($err_ref) = @_;
+        chomp $$err_ref;
+        try {
+            $dbh->rollback;
+        } catch {
+            $$err_ref .= "; then rollback failed: $_";
+            chomp $$err_ref;
+        };
+        return;
+    };
+
+    my $commit = sub {
+        my ($want_txn) = @_;
+        $dbh->begin_work if $dbh->{AutoCommit}; # avoid warning
+        $dbh->commit;
+        $dbh->begin_work if $want_txn;
+        return;
+    };
+
+    # 2.
+    if ($self->active eq 'pre') {
+        $commit->(1); # as up-to-date as we can get
+        try {
+            $adap->do_lock($self) or die "lost the race";
+        } catch {
+            my $err = $_;
+            chomp $err;
+            my $what = $self->describe;
+            $commit->(1);
+            throw "Cannot proceed, do_lock failed <$err> leaving $what";
+        };
+    } # else active=held and we're OK,
+    # or active=free and 3. will make the error.
+
+    # 3.
+    $commit->(1);
+    if (!$self->is_held_sync) {
+        my $what = $self->describe;
+        throw "Cannot proceed, not holding the lock $what";
+    }
+
+    # 4.
+    try {
+        $adap->bump_activity($self);
+    } catch {
+        my $err = $_;
+        $rollback->(\$err);
+        my $what = $self->describe('rollback');
+        throw "Cannot proceed, lock busy?  error=<$err> on $what";
+    };
+
+    ### Got here - we have the region exclusively
+    try {
+        # 5.
+        $code->();
+        # 6.
+        $commit->(0);
+    } catch {
+        my $err = $_;
+        $rollback->(\$err);
+        my $what = $self->describe('rollback');
+        throw "SliceLock held but work failed.  error=<$err> on $what";
+    };
+
+    # 7.
+    if ($unlock) {
+        # Unlock could fail, but that is probably less serious
+        my $err = try {
+            $adap->unlock($self, $self->author);
+            $commit->(0);
+            '';
+        } catch {
+            $_ || "Failed: $_";
+        };
+        chomp $err if $err;
+
+        my $what = $self->describe;
+        if ($self->is_held) {
+            # unlock failed
+            warn "Work completed but unlock failed.  error=<$err> on $what";
+            return $err;
+        } else {
+            # success, but maybe not how we planned it
+            warn "Work completed, but during unlock there was an error=<$err> on $what"
+              if $err;
+            return ();
+        }
+    } else {
+        # success
+        return ();
+    }
+}
+
+
 sub _init {
     my ($pkg) = @_;
     my %new_method;
@@ -262,7 +426,7 @@ sub _init {
             my ($self) = @_;
             throw("$field is read-only") if @_ > 1;
             my $unixtime = $self->$field;
-            return __iso8601($unixtime);
+            return defined $unixtime ? __iso8601($unixtime) : 'Tundef';
         };
     }
 
@@ -280,17 +444,32 @@ sub __iso8601 {
 }
 
 
-=head2 describe()
+=head2 describe($was_rolled_back)
 
-Returns a string explaining the current state of the object.
+Returns a string explaining the current state of the object, catching
+any exceptions and providing alternative text.
+
+If the optional C<$was_rolled_back> is true, the explanation is marked
+as showing the state B<before a rollback>.
+
+XXX: Tells nothing about the species or dataset name.  Wider context
+should cover this.
 
 =cut
 
 sub describe {
-    my ($self) = @_;
+    my ($self, $rolledback) = @_;
+
+    # should make no reference to ->adaptor, because we may want to
+    # run it on a serialised-to-client copy
+
     my $act = $self->active;
+    my $dbID = $self->dbID;
     my ($state, $detail);
-    if ($act eq 'free') {
+    if (!$dbID && $act eq 'pre') {
+        $state = "'pre(new)'";
+        $detail = 'Not yet saved to database';
+    } elsif ($act eq 'free') {
         my $freed = $self->freed;
         my $by = '';
         $by = ' by '.$self->freed_author->email
@@ -306,12 +485,26 @@ sub describe {
         $detail = { pre => 'The region is not yet locked',
                     held => 'The region is locked' }->{$act} || 'WEIRD';
     }
+
+    my $slice = try {
+        $self->slice->display_id;
+    } catch {
+        # most likely the slice is invalid
+        sprintf("BAD:srID=%s:start=%s:end=%s",
+                $self->seq_region_id,
+                $self->seq_region_start,
+                $self->seq_region_end);
+    };
+
+    my $auth = try { $self->author->email } catch { "<???>" };
+
     return sprintf
-      ('SliceLock(dbID=%s) on %s was created %s '.
-       'by %s on host %s to "%s", '.
+      ('SliceLock(%s%s) on %s '.
+       'was created %s by %s on host %s to "%s"%s '.
        "last active %s and now %s\n  %s.",
-       $self->dbID, $self->slice->display_id, $self->iso8601_ts_begin,
-       $self->author->email, $self->hostname, $self->intent,
+       $dbID ? ('dbID=', $dbID) : ('', 'not stored'), $slice,
+       $self->iso8601_ts_begin, $auth, $self->hostname, $self->intent,
+       ($rolledback ? ".  Before $rolledback, it was" : ','),
        $self->iso8601_ts_activity, $state, $detail);
 }
 

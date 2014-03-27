@@ -68,6 +68,9 @@ Updates may be made within the region over a longer period of time.
 Other users can see (by ts_activity) whether there was recent
 activity.
 
+See also the convenience method L<Bio::Vega::SliceLock/exclusive_work>
+for these steps.
+
 =item 7. L</unlock>; COMMIT
 
 As with C<is_held_sync>, this can fail, so be prepared to roll back.

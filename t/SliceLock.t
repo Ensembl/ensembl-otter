@@ -33,7 +33,7 @@ sub noise {
 
 
 sub main {
-    plan tests => 28;
+    plan tests => 32;
 
     # Test supportedness with B:O:L:Dataset + raw $dbh
     #
@@ -56,7 +56,8 @@ sub main {
         subtest "bad_isolation_tt($iso)" => sub { bad_isolation_tt($ds, $iso) };
     }
 
-    my @tt = qw( exercise_tt pre_unlock_tt cycle_tt timestamps_tt two_conn_tt describe_tt );
+    my @tt = qw( exercise_tt pre_unlock_tt cycle_tt timestamps_tt two_conn_tt
+                 describe_tt exclwork_tt );
     foreach my $iso ($ISO_REPEAT, $ISO_SERI) {
         _iso_level($dbh, $iso); # commit!
 
@@ -381,9 +382,10 @@ sub exercise_tt {
 
 sub describe_tt {
     my ($ds) = @_;
-    plan tests => 8;
+    plan tests => 11;
 
     my $SLdba = $ds->get_cached_DBAdaptor->get_SliceLockAdaptor;
+    my $dbh = $SLdba->dbc->db_handle;
     my ($auth_des, $auth_bob) = _test_author($SLdba, qw( Desmond Bob ));
     my $slice_re = qr{chromosome:Otter(?:Archive)?:chr1-14:30000:230000:1};
     my $slice = $ds->get_cached_DBAdaptor->get_SliceAdaptor->fetch_by_region
@@ -400,7 +402,7 @@ sub describe_tt {
         $SLdba->store($l);
 
         # Pokery makes regular data with times in summer & winter
-        $SLdba->dbc->db_handle->do
+        $dbh->do
           (q{ UPDATE slice_lock SET
                 ts_begin=from_unixtime(1218182888),
                 ts_activity=from_unixtime(1321009871)
@@ -441,6 +443,14 @@ sub describe_tt {
          qr{$BASE 'free\(finished\)' since ($now_re)\n  The region was closed\.\Z},
          'free');
 
+    like($L->describe('rollBACK'),
+         qr{\Qto "demonstrate describe method(0)".  Before\E
+            \Q rollBACK, it was last active \E}x,
+         'free before rollback');
+    $dbh->commit;
+    is(try { $SLdba->freshen($L); 'present' }, 'present',
+       'not actually rolled back');
+
     like($L_late->describe,
          qr{$BASE 'free\(too_late\)' since ($now_re)\n  Lost the race to lock the region\.\Z},
          'free(too_late)');
@@ -450,6 +460,85 @@ sub describe_tt {
     like($L_int->describe,
          qr{$BASE 'free\(interrupted\)' by \S*bob$MAILDOM_RE since ($now_re)\n  The lock was broken\.\Z},
          'free(interrupted)');
+
+    # Test with non-stored, and bad slice
+    my $bad = Bio::Vega::SliceLock->new
+      (-SEQ_REGION_ID => _notlocked_seq_region_id($SLdba),
+       -SEQ_REGION_START => 10,
+       -SEQ_REGION_END => 100,
+       -AUTHOR => $auth_des,
+       -INTENT => "weird describe",
+       -HOSTNAME => $TESTHOST);
+    like(try_err { $bad->describe },
+         qr{\A\QSliceLock(not stored) on \EBAD:srID=\d+:start=10:end=100
+            \Q was created Tundef by \E\S*desmond$MAILDOM_RE
+            \Q on host $TESTHOST to "weird describe", last active Tundef\E
+            \Q and now 'pre(new)'}x, 'unsaved, bad slice');
+
+    return;
+}
+
+
+sub exclwork_tt {
+    my ($ds) = @_;
+    plan tests => 10;
+
+    local $SIG{__WARN__} = sub { fail("warning seen: @_") };
+
+    my $SLdba = $ds->get_cached_DBAdaptor->get_SliceLockAdaptor;
+    my $dbh = $SLdba->dbc->db_handle;
+    my ($auth) = _test_author($SLdba, qw( Florence ));
+    my $srid = _notlocked_seq_region_id($SLdba);
+
+    my @L;
+    foreach my $i (0, 1) {
+        push @L, Bio::Vega::SliceLock->new
+          (-SEQ_REGION_ID => $srid,
+           -SEQ_REGION_START => 10_000,
+           -SEQ_REGION_END => 20_000,
+           -AUTHOR => $auth,
+           -INTENT => "workflow convenience method($i)",
+           -HOSTNAME => $TESTHOST);
+    }
+    my ($L, $L_late) = @L; # two pre locks, same region
+    $SLdba->store($L_late);
+
+    my $fail_work = sub { fail("the work - should not happen yet") };
+    my $pass_work = sub { ok(1, 'work is done') }; # part of the plan
+    my $work_dies = sub { die "this work doesn't\n" };
+    {
+        like(try_err { $L->exclusive_work($fail_work) },
+             qr{Cannot proceed without an adaptor}, 'unstored');
+
+        $SLdba->store($L);
+        is(try_err { $L->exclusive_work($pass_work) }, undef,
+           'run with a pass');
+        $dbh->begin_work if $dbh->{AutoCommit}; # avoid warning
+        $dbh->rollback; # no effect due to earlier COMMITs
+        is($L->is_held_sync, 1, 'lock still held');
+    } # 4 tests
+
+    like(try_err { $L_late->exclusive_work($fail_work) },
+         qr{\QCannot proceed, do_lock failed <lost the race\E.*
+            \Q> leaving SliceLock\E\(dbID=\d+\).*
+            \Qand now 'free(too_late)'}x,
+         'cannot: lock attempt found to be too late');
+    like(try_err { $L_late->exclusive_work($fail_work) },
+         qr{Cannot proceed, not holding the lock SliceLock\(dbID=\d+\)},
+         'cannot: not locked');
+
+    # work fails, requested unlock doesn't happen
+    like(try_err { $L->exclusive_work($work_dies, 1) },
+         qr{\QSliceLock held but work failed.  error=<this work doesn't>\E
+            \Q on SliceLock(dbID=\E\d+\).*\Q and now 'held'}x,
+         'run with error');
+
+    # work and unlock
+    {
+        is(try_err { $L->exclusive_work($pass_work, 1) }, undef,
+           'run and unlock');
+        is($L->is_held_sync, 0, 'did unlock');
+    } # 3 tests
 
     return;
 }
