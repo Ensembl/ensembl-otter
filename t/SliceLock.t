@@ -4,6 +4,8 @@ use strict;
 use warnings;
 use Test::More;
 use Try::Tiny;
+use List::MoreUtils 'uniq';
+use Date::Format 'time2str';
 
 use Test::Otter qw( ^db_or_skipall get_BOLDatasets get_BOSDatasets );
 use Bio::Vega::ContigLockBroker;
@@ -31,7 +33,7 @@ sub noise {
 
 
 sub main {
-    plan tests => 24;
+    plan tests => 28;
 
     # Test supportedness with B:O:L:Dataset + raw $dbh
     #
@@ -54,7 +56,7 @@ sub main {
         subtest "bad_isolation_tt($iso)" => sub { bad_isolation_tt($ds, $iso) };
     }
 
-    my @tt = qw( exercise_tt pre_unlock_tt cycle_tt timestamps_tt two_conn_tt );
+    my @tt = qw( exercise_tt pre_unlock_tt cycle_tt timestamps_tt two_conn_tt describe_tt );
     foreach my $iso ($ISO_REPEAT, $ISO_SERI) {
         _iso_level($dbh, $iso); # commit!
 
@@ -375,6 +377,83 @@ sub exercise_tt {
 
     return;
 }
+
+
+sub describe_tt {
+    my ($ds) = @_;
+    plan tests => 8;
+
+    my $SLdba = $ds->get_cached_DBAdaptor->get_SliceLockAdaptor;
+    my ($auth_des, $auth_bob) = _test_author($SLdba, qw( Desmond Bob ));
+    my $slice_re = qr{chromosome:Otter(?:Archive)?:chr1-14:30000:230000:1};
+    my $slice = $ds->get_cached_DBAdaptor->get_SliceAdaptor->fetch_by_region
+      (chromosome => 'chr1-14', 30_000, 230_000) # arbitrary
+        or die "Can't get slice";
+
+    my @L;
+    foreach my $i (0..3) {
+        my $l = Bio::Vega::SliceLock->new
+          (-SLICE => $slice,
+           -AUTHOR => $auth_des,
+           -INTENT => "demonstrate describe method($i)",
+           -HOSTNAME => $TESTHOST);
+        $SLdba->store($l);
+
+        # Pokery makes regular data with times in summer & winter
+        $SLdba->dbc->db_handle->do
+          (q{ UPDATE slice_lock SET
+                ts_begin=from_unixtime(1218182888),
+                ts_activity=from_unixtime(1321009871)
+              WHERE slice_lock_id=? }, {}, $l->dbID);
+        $SLdba->freshen($l);
+
+        push @L, $l;
+    }
+    my ($L, $L_late, $L_expire, $L_int) = @L;
+
+    my $ANYTIME_RE = qr{\b([-: 0-9]{19}) GMT\b};
+    my $MAILDOM_RE = qr{\x40\Q$TESTHOST\E};
+    my $BASE =
+      qr{\ASliceLock\(dbID=\d+\)\ on\ $slice_re
+         \Q was created 2008-08-08 08:08:08 GMT by\E
+         \ \S*desmond$MAILDOM_RE\Q on host $TESTHOST to\E
+         \Q "demonstrate describe method(\E\d+\Q)", last active \E$ANYTIME_RE
+         \Q and now}x;
+    my $LAST_ACT_2011_RE = qr{last active 2011-11-11 11:11:11 };
+
+    like($L->describe, qr{$BASE 'pre'\n  The region is not yet locked\.\Z}, 'pre');
+    like($L->describe, $LAST_ACT_2011_RE, 'pre ts_activity');
+
+    $SLdba->unlock($L_expire, $auth_bob, 'expired');
+    $SLdba->unlock($L_int,    $auth_bob, 'interrupted');
+    $SLdba->do_lock($L);
+    $SLdba->freshen($L_late);
+    like($L->describe, qr{$BASE 'held'\n  The region is locked\.\Z}, 'held');
+    unlike($L->describe, $LAST_ACT_2011_RE, 'held ts_activity bumped');
+
+    $SLdba->unlock($L, $auth_des);
+    my $now = time();
+    my @now = map { time2str(' %R:', $_, 'GMT') }
+      ($now-15, $now, $now+15); # " HH:MM:"
+    my $now_re = join '|', uniq @now;
+    $now_re = qr{\S+(?:$now_re)\d{2} GMT\b};
+    like($L->describe,
+         qr{$BASE 'free\(finished\)' since ($now_re)\n  The region was closed\.\Z},
+         'free');
+
+    like($L_late->describe,
+         qr{$BASE 'free\(too_late\)' since ($now_re)\n  Lost the race to lock the region\.\Z},
+         'free(too_late)');
+    like($L_expire->describe,
+         qr{$BASE 'free\(expired\)' by \S*bob$MAILDOM_RE since ($now_re)\n  The lock was broken\.\Z},
+         'free(expired)');
+    like($L_int->describe,
+         qr{$BASE 'free\(interrupted\)' by \S*bob$MAILDOM_RE since ($now_re)\n  The lock was broken\.\Z},
+         'free(interrupted)');
+
+    return;
+}
+
 
 # Store(active=pre),unlock - it can be done
 sub pre_unlock_tt {
