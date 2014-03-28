@@ -145,7 +145,7 @@ sub _test_author {
         $tx_iso =~ s{([A-Z])[A-Z]+(-|$)}{$1}g;
         my ($ptid) = $dbh->selectrow_array
           ('SELECT @@pseudo_thread_id'); # "This variable is for internal server use."
-        "ptid=$ptid,pid=$$,iso=$tx_iso";
+        "pt${ptid}p${$}i$tx_iso";
     };
 
     return map {
