@@ -33,7 +33,7 @@ sub noise {
 
 
 sub main {
-    plan tests => 32;
+    plan tests => 36;
 
     # Test supportedness with B:O:L:Dataset + raw $dbh
     #
@@ -57,7 +57,7 @@ sub main {
     }
 
     my @tt = qw( exercise_tt pre_unlock_tt cycle_tt timestamps_tt two_conn_tt
-                 describe_tt exclwork_tt );
+                 describe_tt exclwork_tt contains_tt );
     foreach my $iso ($ISO_REPEAT, $ISO_SERI) {
         _iso_level($dbh, $iso); # commit!
 
@@ -539,6 +539,58 @@ sub exclwork_tt {
            'run and unlock');
         is($L->is_held_sync, 0, 'did unlock');
     } # 3 tests
+
+    return;
+}
+
+
+sub contains_tt {
+    my ($ds) = @_;
+
+    my %slice = # key => [ want_contains, start, end, (seq_region_id incr)
+      (in    => [ 1, 11_000, 19_000 ],
+       same  => [ 1, 10_000, 20_000 ],
+       diff  => [ 0,  1_000, 90_000, 1 ],
+       pokel => [ 0,  9_999, 15_000 ],
+       poker => [ 0, 15_000, 20_001 ],
+       edgel => [ 0,  9_000, 10_000 ],
+       edger => [ 0, 20_000, 25_000 ],
+       outer => [ 0,  1_000, 90_000 ],
+       left  => [ 0,  5_000,  9_000 ],
+       right => [ 0, 21_000, 25_000 ]);
+
+    plan tests => 1 + 4 * keys %slice;
+
+    my $SLdba = $ds->get_cached_DBAdaptor->get_SliceLockAdaptor;
+    my $S_dba = $ds->get_cached_DBAdaptor->get_SliceAdaptor;
+
+    my $srid = _notlocked_seq_region_id($SLdba, 1);
+    my $L = Bio::Vega::SliceLock->new
+          (-SEQ_REGION_ID => $srid,
+           -SEQ_REGION_START => 10_000,
+           -SEQ_REGION_END => 20_000,
+           -AUTHOR => _test_author($SLdba, qw( Ubert )),
+           -INTENT => 'contains_tt',
+           -HOSTNAME => $TESTHOST);
+
+    foreach my $stored (0, 1) {
+        foreach my $k (sort keys %slice) {
+            my ($want_contains, $start, $end, $srid_add) = @{$slice{$k}};
+            my $slice = $S_dba->fetch_by_seq_region_id
+              ($srid + ($srid_add || 0), $start, $end);
+            is($L->contains_slice($slice), $want_contains && $stored,
+               "stored=($stored,1): contains_slice($k)");
+            $slice->adaptor(undef);
+            is($L->contains_slice($slice), 0,
+               "stored=($stored,0): contains_slice($k)");
+        }
+        $SLdba->store($L) unless $stored;
+    }
+
+    my $circ = Bio::EnsEMBL::CircularSlice->new_fast({ circular => 1 }); # junk!
+    like(try_err { $L->contains_slice($circ) },
+         qr{^ERR:.*CircularSlice is not supported}s,
+         'no circular');
 
     return;
 }

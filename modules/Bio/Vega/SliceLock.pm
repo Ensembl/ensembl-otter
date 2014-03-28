@@ -69,9 +69,8 @@ sub new {
           qw( seq_region_id seq_region_start seq_region_end );
         throw "Cannot instantiate SliceLock with -SLICE and \U(@overspec)"
           if @overspec;
-        $val{seq_region_id} = $slice->adaptor->get_seq_region_id($slice);
-        $val{seq_region_start} = $slice->start;
-        $val{seq_region_end} = $slice->end;
+        @val{qw{ seq_region_id seq_region_start seq_region_end }} =
+          __slice_props($slice);
     }
 
     my ($start, $end) = @val{qw{ seq_region_start seq_region_end }};
@@ -93,6 +92,12 @@ sub new {
       if $sla xor $self->dbID;
 
     return $self;
+}
+
+sub __slice_props {
+    my ($slice) = @_;
+    return ($slice->adaptor->get_seq_region_id($slice),
+            $slice->start, $slice->end);
 }
 
 sub _check_new_lock {
@@ -216,7 +221,7 @@ sub slice {
        $self->seq_region_start,
        $self->seq_region_end);
     my $sl = $SLdba->db->get_SliceAdaptor->fetch_by_seq_region_id(@pos)
-      or throw "invalid slice (@pos)";
+      or throw "$self invalid slice (@pos)";
     return $sl;
 }
 
@@ -506,6 +511,58 @@ sub describe {
        $self->iso8601_ts_begin, $auth, $self->hostname, $self->intent,
        ($rolledback ? ".  Before $rolledback, it was" : ','),
        $self->iso8601_ts_activity, $state, $detail);
+}
+
+
+=head2 contains_slice($cmp_slice, $why_not)
+
+Returns true iff C<$cmp_slice> is directly (i.e. without any
+projection or mapping) and entirely within the slice covered by this
+lock.
+
+If the optional C<$why_not> is given, it must be an ARRAY ref.
+Reasons why the slice is not contained will be pushed onto it.
+
+This checks only the seq_region properties and is independent of
+L</is_held>.  Both slices must be stored in the same database.
+
+L<Bio::EnsEMBL::CircularSlice> is not supported and will raise an
+error.
+
+=cut
+
+sub contains_slice {
+    my ($self, $cmp_slice, $why_not) = @_;
+    throw "CircularSlice is not supported" # just because yagni
+      if $cmp_slice->is_circular;
+    $why_not = [] unless ref($why_not) eq 'ARRAY';
+
+    my $lock_slice = try {
+        $self->slice;
+    } catch {
+        push @$why_not, $_;
+        0;
+    };
+
+    my $cmp_adap = $cmp_slice->adaptor || 0;
+    my $cmp_dbc = $cmp_adap && $cmp_adap->dbc;
+    my $lock_dbc = $lock_slice && $lock_slice->adaptor->dbc;
+
+    if ($cmp_dbc && $lock_dbc && $cmp_dbc == $lock_dbc) {
+        # stored in same database
+        my ($L_srid, $L_start, $L_end) = __slice_props($lock_slice);
+        my ($C_srid, $C_start, $C_end) = __slice_props($cmp_slice);
+        if ($L_srid == $C_srid) {
+            push @$why_not, "not contained, lock($L_start,$L_end) cmp($C_start,$C_end)"
+              unless $C_start >= $L_start && $C_end <= $L_end;
+        } else {
+            push @$why_not, "seq_region_id mismatch, lock $L_srid, cmp $C_srid";
+        }
+    } else {
+        push @$why_not, "dbc mismatch, lock on $lock_dbc, cmp on $cmp_dbc";
+    }
+#warn join "\n  ", @$why_not if @$why_not;
+    return 0 == @$why_not ? 1 : 0;
 }
 
 __PACKAGE__->_init;
