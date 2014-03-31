@@ -114,7 +114,6 @@ sub _print_header {
     print
         <<"GFF",
 ##gff-version $gff_version
-##sequence-region $chr $start $end
 GFF
 ;
     return;

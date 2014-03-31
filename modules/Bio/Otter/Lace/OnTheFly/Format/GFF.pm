@@ -28,10 +28,7 @@ sub gff {
         gff_source        => $self->analysis_name,
         );
 
-    my $gff = Bio::Vega::Utils::GFF::gff_header($gff_version,
-                                                $ensembl_slice->seq_region_name,
-                                                $ensembl_slice->start,
-                                                $ensembl_slice->end);
+    my $gff = Bio::Vega::Utils::GFF::gff_header($gff_version);
 
     foreach my $hname (sort $self->hit_query_ids) {
 
