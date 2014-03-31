@@ -10,7 +10,7 @@ use Carp;
 use Bio::Vega::Utils::GFF::Format;
 
 sub gff_header {
-    my ($gff_version, $name, $start, $end, $dna) = @_;
+    my ($gff_version, $dna) = @_;
 
     # build up a date string in the format specified by the GFF spec
 
@@ -23,7 +23,7 @@ sub gff_header {
         "##gff-version $gff_version\n"
       . "##source-version EnsEMBL2GFF 1.0\n"
       . "##date $date\n"
-      . "##sequence-region $name $start $end\n";
+      ;
 
     $hdr .= "##DNA\n##$dna\n##end-DNA\n" if $dna;
 
