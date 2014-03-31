@@ -100,6 +100,7 @@ sub initialize {
     my ($self) = @_;
 
     $self->set_window_title;
+    $self->_colour_init;
 
 
     unless ($self->AceDatabase->write_access) {
@@ -125,6 +126,32 @@ sub initialize {
 
     $self->RequestQueuer(Bio::Otter::RequestQueuer->new($self));
 
+    return;
+}
+
+sub session_colour {
+    my ($self) = @_;
+    return $self->AceDatabase->colour || '#d9d9d9';
+    # The non-coloured default would be '#d9d9d9'.  Using undef causes
+    # non-drawing.  For a complete no-op, don't set any borderwidth
+}
+
+sub _colour_init {
+    my ($self) = @_;
+    return $self->colour_init($self->top_window, 'search_frame', 'search_frame.filler');
+}
+
+# called by various windows, to set their widgets to our session_colour
+sub colour_init {
+    my ($self, $top, @widg) = @_;
+    my $colour = $self->session_colour;
+    my $tpath = $top->PathName;
+    $top->configure(-borderwidth => 3, -background => $colour);
+    foreach my $widg (@widg) {
+        $widg = $top->Widget("$tpath.$widg") unless ref($widg);
+        next unless $widg; # TranscriptWindow has some PathName parts
+        $widg->configure(-background => $colour);
+    }
     return;
 }
 
@@ -1082,7 +1109,8 @@ sub make_search_panel {
     my ($self) = @_;
 
     my $top = $self->top_window();
-    my $search_frame = $top->Frame();
+    my $search_frame = $top->Frame(Name => 'search_frame');
+
     $search_frame->pack(-side => 'top');
 
     my $search_box = $search_frame->Entry(
@@ -1090,7 +1118,7 @@ sub make_search_panel {
         );
     $search_box->pack(-side => 'left');
 
-    $search_frame->Frame(-width => 6)->pack(-side => 'left');
+    $search_frame->Frame(Name => 'filler', -width => 6)->pack(-side => 'left');
 
     # Is hunting in CanvasWindow?
     my $hunter = sub{
@@ -2390,8 +2418,8 @@ sub run_dotter {
         my $top = $parent->Toplevel(-title => $Bio::Otter::Lace::Client::PFX.'Run Dotter');
         $top->transient($parent);
         $dw = EditWindow::Dotter->new($top);
-        $dw->initialise;
         $dw->SessionWindow($self);
+        $dw->initialise;
         $self->{'_dotter_window'} = $dw;
         weaken($self->{'_dotter_window'});
     }

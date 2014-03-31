@@ -678,6 +678,7 @@ sub initialize {
     );
     $self->canvas->configure(-background => $self->{_metaframe}->cget('-background') );
 
+    $self->_colour_init;
     $self->load_genomic_features();
 
 
@@ -688,6 +689,11 @@ sub initialize {
     $self->canvas->Tk::bind('<Destroy>', sub{ $self = undef });
 
     return;
+}
+
+sub _colour_init {
+    my ($self) = @_;
+    return $self->SessionWindow->colour_init($self->top_window);
 }
 
 1;

@@ -66,9 +66,9 @@ sub initialise {
     $button_frame->Button(-text => 'Cancel', -command => $cancel)->pack(-side => 'right');
     $top->bind('<Escape>', $cancel);
 
-
-
     $top->bind('<Destroy>', sub{ $self = undef; });
+
+    $self->colour_init;
 
     return;
 }

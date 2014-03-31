@@ -82,6 +82,18 @@ sub balloon {
     return $self->{'_balloon'};
 }
 
+sub colour_init {
+    my ($self, @widg) = @_;
+    my $sw = $self->can('SessionWindow') && $self->SessionWindow;
+    if ($sw) {
+        $sw->colour_init($self->top, @widg);
+    } else {
+        # some just don't, but they should not call
+        die "$self uncoloured, no SessionWindow (yet?)";
+    }
+    return;
+}
+
 sub set_minsize {
     my ($self) = @_;
 

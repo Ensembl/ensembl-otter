@@ -47,6 +47,7 @@ sub initialise {
 
     ### Query frame
     my $query_frame = $top->LabFrame(
+        Name       => 'query',
         -label     => 'Query sequences',
         -border    => 3,
     )->pack(@frame_expand);
@@ -162,7 +163,7 @@ sub initialise {
     );
 
     ### Input
-    my $input_frame = $top->Frame->pack(@frame_pack);
+    my $input_frame = $top->Frame(Name => 'input')->pack(@frame_pack);
 
     my $input_widgets = [
         [ '_region_target', $REGION_TARGET_DEFAULT, 'Region',
@@ -182,6 +183,7 @@ sub initialise {
         $self->{$key} = $default;
         my $button_list_frame =
             $input_frame->LabFrame(
+                Name    => $key,
                 -label  => $name,
                 -border => 3,
             )->pack(-side => 'left', -expand => 1, -fill => 'x');
@@ -198,6 +200,7 @@ sub initialise {
 
     ### Parameters
     my $param_frame = $top->LabFrame(
+        Name       => 'param',
         -label     => 'Alignment parameters',
         -border    => 3,
     )->pack(@frame_pack);
@@ -239,7 +242,7 @@ sub initialise {
     )->pack(-side => 'top');
 
     ### Commands
-    my $button_frame = $top->Frame->pack(@frame_pack);
+    my $button_frame = $top->Frame(Name => 'button')->pack(@frame_pack);
     my $doing_launch = 0;       # captured by closure...
     my $launch       = sub {
         if ($doing_launch) {
@@ -280,6 +283,8 @@ sub initialise {
     $top->protocol('WM_DELETE_WINDOW', $close_window);
     $top->bind('<Destroy>', sub { $self = undef; });
     $self->set_minsize;
+
+    $self->colour_init(qw( button query.border param.border input._region_target.border input._mask_target.border ));
 
     return;
 }
