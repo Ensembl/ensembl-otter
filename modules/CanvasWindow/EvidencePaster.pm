@@ -52,7 +52,7 @@ sub initialise {
         )->pack(-side => 'left');
     $self->dotter_button($dotter_button);
 
-    my $button_frame = $top->Frame->pack(
+    my $button_frame = $top->Frame(Name => 'button_frame')->pack(
         -side => 'top',
         -fill => 'x',
         );
@@ -105,6 +105,7 @@ sub initialise {
     $canvas->Tk::bind('<Destroy>', sub{ $self = undef });
 
 
+    $self->_colour_init;
     $self->evidence_hash($evidence_hash);
     $self->draw_evidence;
 
@@ -119,6 +120,11 @@ sub TranscriptWindow {
         weaken($self->{'_TranscriptWindow'});
     }
     return $self->{'_TranscriptWindow'};
+}
+
+sub SessionWindow { # method used by Bio::Otter::UI::TextWindow
+    my ($self) = @_;
+    return $self->TranscriptWindow->SessionWindow;
 }
 
 sub align_button {
@@ -137,6 +143,12 @@ sub dotter_button {
         $self->{'_dotter_button'} = $dotter_button;
     }
     return $self->{'_dotter_button'};
+}
+
+sub _colour_init {
+    my ($self) = @_;
+    my $top = $self->canvas->toplevel;
+    return $self->SessionWindow->colour_init($top, 'button_frame');
 }
 
 sub align_enable {
@@ -314,7 +326,7 @@ sub paste_type_and_name {
 sub add_evidence_from_text {
     my ($self, $text) = @_;
 
-    my $cache = $self->TranscriptWindow->SessionWindow->AceDatabase->AccessionTypeCache;
+    my $cache = $self->SessionWindow->AceDatabase->AccessionTypeCache;
 
     my $acc_list = $cache->accession_list_from_text($text);
     $cache->populate($acc_list);
@@ -421,7 +433,7 @@ sub align_to_transcript {
         problem_report_cb => sub { $top->Tk::Utils::OnTheFly::problem_box('Evidence Selected', @_) },
         long_query_cb     => sub { $top->Tk::Utils::OnTheFly::long_query_confirm(@_)  },
 
-        accession_type_cache => $self->TranscriptWindow->SessionWindow->AceDatabase->AccessionTypeCache,
+        accession_type_cache => $self->SessionWindow->AceDatabase->AccessionTypeCache,
         });
 
     my $logger = $self->logger;

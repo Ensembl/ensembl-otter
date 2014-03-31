@@ -46,6 +46,7 @@ sub initialise {
         );
 
     my $clone_frame = $top->LabFrame(
+        Name        => 'clone',
         -label      => 'Clone',
         -border     => 3,
         )->pack(@frame_pack);
@@ -67,6 +68,7 @@ sub initialise {
     $self->make_entry($length_frame, 'End: ',       'golden_end',       7);
 
     my $assembly_frame = $top->LabFrame(
+        Name        => 'assembly',
         -label      => 'Assembly',
         -border     => 3,
         )->pack(@frame_pack);
@@ -77,6 +79,7 @@ sub initialise {
     $self->make_entry($assembly_frame, 'Strand: ',  'display_assembly_strand',  5);
 
     my $edit_frame = $top->LabFrame(
+        Name        => 'edit',
         -label      => 'Properties',
         -border     => 3,
         )->pack(@frame_pack, -expand => 1, -fill => 'both' );
@@ -112,7 +115,7 @@ sub initialise {
             -fill => 'x')
         );
 
-    my $button_frame = $top->Frame->pack(@frame_pack);
+    my $button_frame = $top->Frame(Name => 'button')->pack(@frame_pack);
 
     my $save = sub { $self->save };
     $button_frame->Button(
@@ -133,6 +136,7 @@ sub initialise {
 
     $top->bind('<Destroy>', sub{ my $self = undef });
 
+    $self->colour_init(qw( button clone.border assembly.border edit.border ));
     $self->fill_Entries;
     $self->fill_Properties;
     $self->set_minsize;

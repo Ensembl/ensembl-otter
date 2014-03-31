@@ -317,6 +317,7 @@ sub initialize {
         });
 
         my $frame = $canvas->toplevel->LabFrame(
+            Name => 'transcript',
             -label => 'Transcript',
             -border => 3,
             )->pack(
@@ -364,6 +365,7 @@ sub initialize {
 
         # Widget for changing locus properties
         my $locus_frame = $canvas->toplevel->LabFrame(
+            Name => 'locus',
             -label => 'Locus',
             -border => 3,
             )->pack(
@@ -394,6 +396,7 @@ sub initialize {
 
     $canvas->Tk::bind('<Destroy>', sub{ $self = undef });
 
+    $self->_colour_init;
     $top->update;
     $self->fix_window_min_max_sizes;
     return;
@@ -432,7 +435,7 @@ sub current_SubSeq {
     }
 }
 
-sub SessionWindow {
+sub SessionWindow { # method used by Bio::Otter::UI::TextWindow
     my ($self, $SessionWindow) = @_;
 
     if ($SessionWindow) {
@@ -464,6 +467,12 @@ sub add_subseq_exons {
     $self->remove_spurious_splice_sites;
 
     return;
+}
+
+sub _colour_init {
+    my ($self) = @_;
+    return $self->SessionWindow->colour_init
+      ($self->canvas->toplevel, qw( transcript.border locus.border ));
 }
 
 {

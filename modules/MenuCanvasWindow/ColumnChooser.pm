@@ -23,7 +23,7 @@ sub new {
 
     # Need to make both frames which appear above the canvas...
     my $menu_frame = $pkg->make_menu_widget($tk);
-    my $top_frame = $tk->Frame->pack(
+    my $top_frame = $tk->Frame(Name => 'top_frame')->pack(
         -side => 'top',
         -fill => 'x',
         );
@@ -242,9 +242,21 @@ sub initialize {
     $top->bind('<Control-Return>', $load_cmd);
 
 
+    $self->colour_init;
     $self->calcualte_text_column_sizes;
     $self->fix_window_min_max_sizes;
     $self->redraw;
+    return;
+}
+
+sub colour_init {
+    my ($self) = @_;
+    my $top = $self->top_window;
+    my $colour = $self->AceDatabase->colour;
+    my $tpath = $top->PathName;
+
+    $top->configure(-borderwidth => 3, -background => $colour);
+    $self->bottom_frame->configure(-background => $colour);
     return;
 }
 
