@@ -111,6 +111,31 @@ foreach my $ta_acc_spec (@$ta_acc_specs) {
     };
 }
 
+my %taxon_info = (
+         9606 => { scientific_name => 'Homo sapiens', common_name => 'man' },
+        10090 => { scientific_name => 'Mus musculus', common_name => 'mouse' },
+        90988 => { scientific_name => 'Pimephales promelas' },
+    123456789 => undef,
+    );
+
+my $ti = $ai->get_taxonomy_info([keys %taxon_info]);
+is(ref($ti), 'ARRAY', 'get_taxonomy_info returns arrayref');
+my %ti_results = map { $_->{id} => $_ } @$ti;
+foreach my $tid (keys %taxon_info) {
+    subtest "Taxon id '$tid'" => sub {
+        my $result = $ti_results{$tid};
+        if (my $exp = $taxon_info{$tid}) {
+            $exp->{id} = $tid;
+            foreach my $key (qw(id scientific_name common_name)) {
+                is($result->{$key}, $exp->{$key}, "$key");
+            }
+        } else {
+            is($result, undef, 'no_result');
+        }
+        done_testing;
+    };
+}
+
 done_testing;
 
 1;
