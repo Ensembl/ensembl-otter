@@ -2173,7 +2173,6 @@ sub launch_exonerate {
     for my $builder ( $otf->builders_for_each_type ) {
 
         my $type = $builder->type;
-        my $is_protein = $builder->is_protein;
 
         $self->logger->info("Running exonerate for sequence(s) of type: $type");
 
