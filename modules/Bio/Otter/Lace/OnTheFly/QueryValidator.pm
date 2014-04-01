@@ -117,16 +117,13 @@ sub _build_seqs_by_type {       ## no critic (Subroutines::ProhibitUnusedPrivate
 
     my %seqs_by_type;
     foreach my $seq (@{$self->confirmed_seqs->seqs}) {
-        if ($seq->type && new_evidence_type_valid($seq->type))
+        my $type = $seq->type;
+        unless ($type && new_evidence_type_valid($type))
         {
-            push @{ $seqs_by_type{ $seq->type } }, $seq;
+            $type = $seq->sequence_string =~ /[^acgtrymkswhbvdnACGTRYMKSWHBVDN]/
+                ? 'OTF_AdHoc_Protein' : 'OTF_AdHoc_DNA';
         }
-        elsif ($seq->sequence_string =~ /[^acgtrymkswhbvdnACGTRYMKSWHBVDN]/) {
-            push @{ $seqs_by_type{'OTF_AdHoc_Protein'} }, $seq;
-        }
-        else {
-            push @{ $seqs_by_type{'OTF_AdHoc_DNA'} }, $seq;
-        }
+        push @{ $seqs_by_type{ $type } }, $seq;
     }
 
     return \%seqs_by_type;
