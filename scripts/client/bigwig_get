@@ -25,7 +25,7 @@ my @options_specs = qw(
     start=i
     end=i
     strand=s
-    gff_feature_source=s
+    gff_source=s
     gff_seqname=s
     version
     );
@@ -38,7 +38,7 @@ my @options_required = qw(
     start
     end
     strand
-    gff_feature_source
+    gff_source
     );
 
 sub _key {
@@ -76,7 +76,7 @@ my (
     $start,
     $end,
     $strand,
-    $gff_feature_source,
+    $gff_source,
     $gff_seqname
     ) = @{$options}{@keys};
 
@@ -107,7 +107,7 @@ sub gff_escape_source {
 
 my $chr_field = $chr;
 gff_escape_seqid for $chr_field;
-my $source = $gff_feature_source;
+my $source = $gff_source;
 gff_escape_source for $source;
 
 sub _print_header {

@@ -23,7 +23,7 @@ my @options_specs = qw(
     chr=s
     start=i
     end=i
-    gff_feature_source=s
+    gff_source=s
     gff_seqname=s
     version
     );
@@ -71,7 +71,7 @@ my (
     $chr,
     $start,
     $end,
-    $gff_feature_source,
+    $gff_source,
     $gff_seqname
     ) = @{$options}{@keys};
 
@@ -98,8 +98,8 @@ GFF
 
 sub _print_feature {
     my ($feature, $fstart, $fend) = @_;
-    # the -gff_feature_source flag overrides the source from the GFF file
-    my $source = $gff_feature_source || $feature->source;
+    # the -gff_source flag overrides the source from the GFF file
+    my $source = $gff_source || $feature->source;
     printf "%s\n", join "\t"
         , $chr_field, $source, $feature->type, $fstart, $fend, @{$feature->rest};
 
