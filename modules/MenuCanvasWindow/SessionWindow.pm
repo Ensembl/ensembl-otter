@@ -1069,8 +1069,6 @@ sub edit_double_clicked {
 
     return unless $self->list_selected;
 
-    my $canvas = $self->canvas;
-    my $busy = Tk::ScopedBusy->new($canvas);
     $self->edit_selected_subsequences;
 
     return;
@@ -1321,6 +1319,7 @@ sub edit_selected_subsequences {
 sub edit_subsequences {
     my ($self, @sub_names) = @_;
 
+    my $busy = Tk::ScopedBusy->new($self->canvas);
     my $retval = 1;
 
     foreach my $sub_name (@sub_names) {
