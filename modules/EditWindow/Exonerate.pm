@@ -582,6 +582,14 @@ sub entered_seqs {
         $file_name =~ s/^\s+|\s+$//g;
         push @seqs, Hum::FastaFileIO->new($file_name)->read_all_sequences;
     }
+    # Make sure entered seqs are distinct from seqs fetched by accession.
+    # (We could try to lookup and compare, as a future feature.)
+    foreach my $seq (@seqs) {
+        my $name = $seq->name;
+        unless ($name =~ /^otf[_:]/) {
+            $seq->name('OTF:' . $name);
+        }
+    }
     return \@seqs;
 }
 
