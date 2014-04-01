@@ -21,12 +21,12 @@ BEGIN {
 critic_module_ok($module);
 critic_module_ok($driver_module);
 
-my $mm = new_ok($module);
+my $ai = new_ok($module);
 
 my @valid_accs = qw(AK122591.2 AK122591);
 my @invalid_accs = qw(AK122591.1 XYZ123456 ERS000123 NM_001142769.1); # one old SV, one nonsense, one SRA, one refseq
 
-my $results = $mm->get_accession_types([@valid_accs, @invalid_accs]);
+my $results = $ai->get_accession_types([@valid_accs, @invalid_accs]);
 is(ref($results), 'HASH', 'results hash');
 
 foreach my $valid ( @valid_accs ) {
@@ -44,18 +44,18 @@ foreach my $invalid ( @invalid_accs ) {
 
 # Singleton
 my $acc = $valid_accs[1];
-my $s_results = $mm->get_accession_types([$acc]);
+my $s_results = $ai->get_accession_types([$acc]);
 is(ref($s_results), 'HASH', 's_results hash');
 ok($s_results->{$acc}, 'result is for singleton acc');
 
 my $s_acc = $valid_accs[0];
-my $seq_results = $mm->get_accession_info([$s_acc]);
+my $seq_results = $ai->get_accession_info([$s_acc]);
 is(ref($seq_results), 'HASH', 'seq_results hash');
 ok($seq_results->{$s_acc}, 'result is for singleton acc');
 note('seq_result: ', join(',', @{$seq_results->{$s_acc}}));
 
 # Empty
-my $e_results = $mm->get_accession_types([]);
+my $e_results = $ai->get_accession_types([]);
 is(ref($e_results), 'HASH', 'e_results hash');
 ok(not(%$e_results), 'result is empty');
 
@@ -63,7 +63,7 @@ ok(not(%$e_results), 'result is empty');
 my $ta_factory = Test::Otter::Accessions->new;
 my $ta_acc_specs = $ta_factory->accessions;
 my @ta_accs = map { $_->{query} } @$ta_acc_specs;
-my $ta_results = $mm->get_accession_types(\@ta_accs);
+my $ta_results = $ai->get_accession_types(\@ta_accs);
 is(ref($ta_results), 'HASH', 'ta_results hash');
 
 foreach my $ta_acc_spec (@$ta_acc_specs) {
@@ -83,7 +83,7 @@ foreach my $ta_acc_spec (@$ta_acc_specs) {
 }
 
 # New interface
-$mm->db_categories([qw(
+$ai->db_categories([qw(
     emblnew
     emblrelease
     uniprot
@@ -91,7 +91,7 @@ $mm->db_categories([qw(
     refseq
 )]);
 diag "Expect some warnings about bad query / sv_search is off";
-my $info_results = $mm->get_accession_info(\@ta_accs);
+my $info_results = $ai->get_accession_info(\@ta_accs);
 is(ref($info_results), 'HASH', 'info_results hash');
 foreach my $ta_acc_spec (@$ta_acc_specs) {
     my $query = $ta_acc_spec->{query};
