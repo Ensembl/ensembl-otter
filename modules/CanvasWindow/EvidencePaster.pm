@@ -315,7 +315,6 @@ sub draw_evidence {
 sub paste_type_and_name {
     my ($self) = @_;
 
-    my $busy = Tk::ScopedBusy->new($self->top_window); # Because it may involve a HTTP request
     if (my $clip = $self->get_clipboard_text) {
         $self->add_evidence_from_text($clip);
     }
@@ -325,6 +324,8 @@ sub paste_type_and_name {
 
 sub add_evidence_from_text {
     my ($self, $text) = @_;
+
+    my $busy = Tk::ScopedBusy->new($self->top_window); # Because it may involve a HTTP request
 
     my $cache = $self->SessionWindow->AceDatabase->AccessionTypeCache;
 
