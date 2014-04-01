@@ -207,7 +207,7 @@ sub _add_zmap_bam_config {
                 csver => $bam->csver,
                 file   => $file,
                 strand => $strand,
-                gff_feature_source => $featureset,
+                gff_source  => $featureset,
                 gff_version => $self->gff_version,
             };
             my $query_string = _query_string($query);
@@ -267,7 +267,7 @@ sub generate_blixem_bam_config {
 
     my $fetch_arg_list = join ' ', qw(
         --gff_version=%g
-        --gff_feature_source=%S
+        --gff_source=%S
         --dataset=%(dataset)
         --csver=%(csver)
         --chr=%r --start=%s --end=%e

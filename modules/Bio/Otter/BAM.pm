@@ -138,7 +138,7 @@ sub internal {
 
 # GFF methods 
 
-sub gff_feature_source {
+sub gff_source {
     my ($self) = @_;
     return $self->name;
 }
@@ -146,7 +146,7 @@ sub gff_feature_source {
 my $bam_parameters = [ qw(
     file
     csver
-    gff_feature_source
+    gff_source
     ) ];
 
 sub bam_parameters {

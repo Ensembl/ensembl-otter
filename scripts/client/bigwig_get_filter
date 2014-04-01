@@ -2,7 +2,6 @@
 
 bigwig_get_key_map='
     csver_remote=>csver
-    gff_source=>gff_feature_source
     type=>chr
     '
 
@@ -11,6 +10,7 @@ bigwig_get_key_list='
     end
     file
     gff_seqname
+    gff_source
     gff_version
     start
     strand
