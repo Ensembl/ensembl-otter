@@ -1437,7 +1437,9 @@ sub sessions_needing_recovery {
     my ($self) = @_;
 
     my $proc_table = Proc::ProcessTable->new;
-    my @otterlace_procs = grep {$_->cmndline =~ /otterlace/} @{$proc_table->table};
+    my @otterlace_procs =
+      grep { defined $_->cmndline && $_->cmndline =~ /otterlace/ }
+        @{$proc_table->table};
     my %existing_pid = map {$_->pid, 1} @otterlace_procs;
 
     my $to_recover = [];
@@ -1528,10 +1530,12 @@ sub kill_old_sgifaceserver {
     # Kill any sgifaceservers from crashed otterlace
     my $proc_list = Proc::ProcessTable->new;
     foreach my $proc (@{$proc_list->table}) {
+        next unless defined $proc->cmndline;
         my ($cmnd, @args) = split /\s+/, $proc->cmndline;
         next unless $cmnd eq 'sgifaceserver';
         next unless $args[0] eq $dir;
-        warn sprintf "Killing old sgifaceserver '%s'\n", $proc->cmndline;
+        warn sprintf "Killing old sgifaceserver '%s', pid %s\n",
+          $proc->cmndline, $proc->pid;
         kill 9, $proc->pid;
     }
 
