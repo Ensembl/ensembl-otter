@@ -17,7 +17,7 @@ use base 'Bio::Otter::Server::Support';
 # new() provided by Bio::Otter::Server::Support
 
 sub get_slice {
-    my ($self, $dba, $cs, $name, $type, $start, $end, $csver) = @_;
+    my ($self, $dba, $cs, $name, $chr, $start, $end, $csver) = @_;
 
     $cs ||= 'chromosome'; # can't make a slice without cs
 
@@ -30,7 +30,7 @@ sub get_slice {
     # only for Otter chromosomes.
     # EnsEMBL chromosomes will have simple names.
     my ($segment_attr, $segment_name) = (($cs eq 'chromosome') && ($csver eq 'Otter'))
-        ? ('type', $type)
+        ? ('chr',  $chr)
         : ('name', $name);
 
     die "$cs '$segment_attr' attribute not set" unless $segment_name;
@@ -98,11 +98,11 @@ sub otter_assembly_equiv_hash { # $self->{_aeh}{NCBI36}{11} = 'chr11-02';
     # fetch things from Otter chromosome and map them to another assembly
 sub fetch_and_export {
     my ($self, $fetching_method, $call_parms,
-        $cs, $name, $type, $start, $end, $csver_orig, $csver_target,
+        $cs, $name, $chr, $start, $end, $csver_orig, $csver_target,
     ) = @_;
 
     my $odba = $self->otter_dba();
-    my $slice = $self->get_slice($odba, $cs, $name, $type, $start, $end, $csver_orig);
+    my $slice = $self->get_slice($odba, $cs, $name, $chr, $start, $end, $csver_orig);
 
     my $orig_features = $slice->$fetching_method(@$call_parms);
 
@@ -110,7 +110,7 @@ sub fetch_and_export {
         die "Fetching failed";
     }
 
-    if ($self->otter_assembly_equiv_hash()->{$csver_target}{$name} eq $type) {
+    if ($self->otter_assembly_equiv_hash()->{$csver_target}{$name} eq $chr) {
         # no transformation is needed:
 
         return $orig_features;
@@ -217,8 +217,8 @@ sub ensembl_adaptor_class {
 sub fetch_mapped_features_ensembl {
     my ($self, $fetching_method, $call_parms, $map, $metakey) = @_;
 
-    my ($cs, $name, $type, $start, $end, $csver_orig, $csver_remote) =
-        @{$map}{qw( cs name type start end csver csver_remote )};
+    my ($cs, $name, $chr, $start, $end, $csver_orig, $csver_remote) =
+        @{$map}{qw( cs name chr start end csver csver_remote )};
 
     confess "invalid coordinate system: '${cs}'"
         unless $cs eq 'chromosome';
@@ -237,20 +237,20 @@ sub fetch_mapped_features_ensembl {
 
     if(!$metakey) { # fetch from the pipeline
         my $pdba = $self->dataset->pipeline_dba;
-        my $slice = $self->get_slice($pdba, $cs, $name, $type, $start, $end, $csver_orig);
+        my $slice = $self->get_slice($pdba, $cs, $name, $chr, $start, $end, $csver_orig);
         $features = $slice->$fetching_method(@$call_parms);
     }
-    elsif( ($self->otter_assembly_equiv_hash()->{$csver_remote}{$name} || '') eq $type) {
+    elsif( ($self->otter_assembly_equiv_hash()->{$csver_remote}{$name} || '') eq $chr) {
         # no mapping, just (cross)-fetching:
         warn "Assuming the mappings to be identical, just fetching from {$metakey}$cs:$csver_remote\n";
         my $sdba = $self->dataset->satellite_dba( $metakey, $adaptor_class );
-        my $original_slice = $self->get_slice($sdba, $cs, $name, $type, $start, $end, $csver_remote);
+        my $original_slice = $self->get_slice($sdba, $cs, $name, $chr, $start, $end, $csver_remote);
         $features = $original_slice->$fetching_method(@$call_parms);
     } else { # let's try to do the mapping:
         warn "Proceeding with mapping code\n";
 
         my $odba = $self->otter_dba;
-        my $original_slice_2 = $self->get_slice($odba, $cs, $name, $type, $start, $end, $csver_orig);
+        my $original_slice_2 = $self->get_slice($odba, $cs, $name, $chr, $start, $end, $csver_orig);
         my $proj_slices_2 = $self->fetch_mapped_slices($original_slice_2, $map);
 
         my $sdba = $self->dataset->satellite_dba( $metakey, $adaptor_class );
@@ -314,25 +314,25 @@ sub fetch_mapped_features_ensembl {
 sub fetch_mapped_features_das {
     my ($self, $fetching_method, $call_parms, $map) = @_;
 
-    my ($cs, $name, $type, $start, $end, $csver_orig, $csver_remote) =
-        @{$map}{qw( cs name type start end csver csver_remote )};
+    my ($cs, $name, $chr, $start, $end, $csver_orig, $csver_remote) =
+        @{$map}{qw( cs name chr start end csver csver_remote )};
 
     confess "invalid coordinate system: '${cs}'"
         unless $cs eq 'chromosome';
     confess "invalid coordinate system version: '${csver_orig}'"
         unless $csver_orig eq 'Otter';
 
-    if( ($self->otter_assembly_equiv_hash()->{$csver_remote}{$name} || '') eq $type) {
+    if( ($self->otter_assembly_equiv_hash()->{$csver_remote}{$name} || '') eq $chr) {
         warn "fetch_mapped_features_das(): no mapping\n";
         my $odba = $self->otter_dba;
-        my $slice = $self->get_slice($odba, $cs, $name, $type, $start, $end, $csver_orig);
+        my $slice = $self->get_slice($odba, $cs, $name, $chr, $start, $end, $csver_orig);
         return $slice->$fetching_method(@$call_parms);
     }
     else { # let's try to do the mapping:
         warn "fetch_mapped_features_das(): mapping\n";
 
         my $odba = $self->otter_dba;
-        my $slice = $self->get_slice($odba, $cs, $name, $type, $start, $end, $csver_orig);
+        my $slice = $self->get_slice($odba, $cs, $name, $chr, $start, $end, $csver_orig);
         my $proj_slices_2 = $self->fetch_mapped_slices($slice, $map);
 
         # Features are put directly on the mapper target slice and then mapped back.

@@ -59,7 +59,7 @@ SQL
 sub get_locks {
     my ($server) = @_;
 
-    my $asm_type = $server->require_argument('type');
+    my $asm_type = $server->require_argument('chr');
     my $sth = $server->otter_dba()->dbc()->prepare($select_locks_sql);
     $sth->execute($asm_type);
     my $output_string = '';

@@ -2,10 +2,10 @@
 
 bigwig_get_key_map='
     csver_remote=>csver
-    type=>chr
     '
 
 bigwig_get_key_list='
+    chr
     dataset
     end
     file
