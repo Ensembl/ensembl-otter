@@ -670,6 +670,7 @@ sub load_filters {
             $self->SequenceNotes->exception_message($_, "Error initialising database");
             $self->AceDatabase->error_flag(0);
             $top->Unbusy;
+            $self->zmap_select_destroy;
             $top->destroy;
             return 0;
         }
