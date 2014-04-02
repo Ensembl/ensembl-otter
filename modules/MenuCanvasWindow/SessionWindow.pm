@@ -38,6 +38,7 @@ use Bio::Otter::ZMap::XML;
 use Bio::Vega::Transform::Otter::Ace;
 
 use Tk::Screens;
+use Tk::ScopedBusy;
 use Bio::Vega::Utils::MacProxyConfig qw{ mac_os_x_set_proxy_vars };
 
 use Log::Log4perl;
@@ -1069,9 +1070,8 @@ sub edit_double_clicked {
     return unless $self->list_selected;
 
     my $canvas = $self->canvas;
-    $canvas->Busy;
+    my $busy = Tk::ScopedBusy->new($canvas);
     $self->edit_selected_subsequences;
-    $canvas->Unbusy;
 
     return;
 }
@@ -1122,9 +1122,8 @@ sub make_search_panel {
 
     # Is hunting in CanvasWindow?
     my $hunter = sub{
-        $top->Busy;
+        my $busy = Tk::ScopedBusy->new($top);
         $self->_do_search($search_box);
-        $top->Unbusy;
     };
     my $button = $search_frame->Button(
          -text      => 'Find',
@@ -1271,9 +1270,7 @@ sub resync_with_db {
         return;
     }
 
-    $self->canvas->Busy(
-        -recurse => 0,
-        );
+    my $busy = Tk::ScopedBusy->new($self->canvas, -recurse => 0);
 
     $self->empty_Assembly_cache;
     $self->empty_SubSeq_cache;
@@ -1281,8 +1278,6 @@ sub resync_with_db {
 
     # Refetch transcripts from GFF cache
     $self->fetch_external_SubSeqs;
-
-    $self->canvas->Unbusy;
 
     return;
 }
@@ -1888,9 +1883,7 @@ sub Assembly {
 
     unless ($self->{'_assembly'}) {
         my $before = time();
-        $canvas->Busy(
-            -recurse => 0,
-            );
+        my $busy = Tk::ScopedBusy->new($canvas, -recurse => 0);
 
         my( $assembly );
         try {
@@ -1921,7 +1914,6 @@ sub Assembly {
         $self->set_known_GeneMethods;
 
         my $after  = time();
-        $canvas->Unbusy;
         printf
             "Express fetch for '%s' took %d second(s)\n",
             $self->slice_name, $after - $before;

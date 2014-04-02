@@ -14,6 +14,7 @@ use Bio::Otter::Lace::OnTheFly::Transcript;
 use Bio::Otter::UI::TextWindow::TranscriptAlign;
 use Bio::Vega::Evidence::Types qw(evidence_is_sra_sample_accession);
 use Tk::Utils::OnTheFly;
+use Tk::ScopedBusy;
 
 use base 'CanvasWindow';
 
@@ -314,11 +315,10 @@ sub draw_evidence {
 sub paste_type_and_name {
     my ($self) = @_;
 
-    $self->top_window->Busy;    # Because it may involve a HTTP request
+    my $busy = Tk::ScopedBusy->new($self->top_window); # Because it may involve a HTTP request
     if (my $clip = $self->get_clipboard_text) {
         $self->add_evidence_from_text($clip);
     }
-    $self->top_window->Unbusy;
 
     return;
 }

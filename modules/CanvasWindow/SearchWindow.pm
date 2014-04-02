@@ -7,6 +7,7 @@ use warnings;
 use Carp;
 use base 'CanvasWindow';
 use Hum::Sort 'ace_sort';
+use Tk::ScopedBusy;
 
 sub Client {
     my ($self, $Client) = @_;
@@ -61,7 +62,7 @@ sub search_field {
 sub do_search {
     my ($self) = @_;
 
-    $self->top_window->Busy;
+    my $busy = Tk::ScopedBusy->new($self->top_window);
 
     foreach my $oldresult (@{$self->found_elements}) {
         $oldresult->packForget();
@@ -107,7 +108,6 @@ sub do_search {
     }
 
     $self->fix_window_min_max_sizes;
-    $self->top_window->Unbusy;
 
     return;
 }
