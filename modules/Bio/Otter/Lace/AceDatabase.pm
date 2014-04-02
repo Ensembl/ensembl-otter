@@ -301,7 +301,7 @@ sub read_file {
     return $content;
 }
 
-sub recover_smart_slice_from_region_xml {
+sub recover_slice_from_region_xml {
     my ($self) = @_;
 
     my $client = $self->Client or die "No Client attached";
@@ -313,31 +313,31 @@ sub recover_smart_slice_from_region_xml {
 
     my $parser = Bio::Vega::Transform::Otter->new;
     $parser->parse($xml);
-    my $slice = $parser->get_ChromosomeSlice;
+    my $chr_slice = $parser->get_ChromosomeSlice;
 
-    my $smart_slice = Bio::Otter::Lace::Slice->new(
+    my $slice = Bio::Otter::Lace::Slice->new(
         $client,
         $parser->species,
-        $slice->seq_region_name,
-        $slice->coord_system->name,
-        $slice->coord_system->version,
+        $chr_slice->seq_region_name,
+        $chr_slice->coord_system->name,
+        $chr_slice->coord_system->version,
         $parser->chromosome_name,
-        $slice->start,
-        $slice->end,
+        $chr_slice->start,
+        $chr_slice->end,
         );
-    $self->smart_slice($smart_slice);
+    $self->slice($slice);
 
     return;
 }
 
-sub smart_slice {
-    my ($self, $smart_slice) = @_;
+sub slice {
+    my ($self, $slice) = @_;
 
-    if ($smart_slice) {
+    if ($slice) {
         $self->{'_offset'} = undef;
-        $self->{'_smart_slice'} = $smart_slice;
+        $self->{'_slice'} = $slice;
     }
-    return $self->{'_smart_slice'};
+    return $self->{'_slice'};
 }
 
 # The seq_region in the local DB is created and stored lazily when first required.
@@ -348,7 +348,7 @@ sub db_slice {
     my $db_slice = $self->{'_db_slice'};
     return $db_slice if $db_slice;
 
-    my $ensembl_slice = $self->smart_slice->ensembl_slice;
+    my $ensembl_slice = $self->slice->ensembl_slice;
 
     # If this is a recovered session we will already have the seq_region in the local DB
     my $slice_adaptor = $self->DB->vega_dba->get_SliceAdaptor;
@@ -525,7 +525,7 @@ sub _zmap_config {
             'xremote-debug'   => $xremote_debug ? 'true' : 'false',
             'stylesfile'      => $self->stylesfile,
             ($self->colour ? ('session-colour'  => $self->colour) : ()),
-            %{$self->smart_slice->zmap_config_stanza},
+            %{$self->slice->zmap_config_stanza},
         },
 
         'glyphs' => {
@@ -820,8 +820,8 @@ sub offset {
 
     my $offset = $self->{'_offset'};
     unless (defined $offset) {
-        my $slice = $self->smart_slice
-            or confess "No smart_slice (Bio::Otter::Lace::Slice) attached";
+        my $slice = $self->slice
+            or confess "No slice (Bio::Otter::Lace::Slice) attached";
         $offset = $self->{'_offset'} = $slice->start - 1;
     }
     return $offset;
@@ -836,12 +836,12 @@ sub generate_XML_from_acedb {
     my $converter = Bio::Vega::AceConverter->new;
     $converter->ace_handle($self->aceperl_db_handle);
     $converter->feature_types($feature_types);
-    $converter->otter_slice($self->smart_slice);
+    $converter->otter_slice($self->slice);
     $converter->generate_vega_objects;
 
     # Pass the Ensembl objects to the XML formatter
     my $region = Bio::Vega::Region->new;
-    $region->species($self->smart_slice->dsname);
+    $region->species($self->slice->dsname);
     $region->slice(           $converter->ensembl_slice           );
     $region->clone_sequences( @{$converter->clone_seq_list || []} );
     $region->genes(           @{$converter->genes          || []} );
@@ -855,9 +855,9 @@ sub generate_XML_from_acedb {
 sub unlock_otter_slice {
     my ($self) = @_;
 
-    my $smart_slice = $self->smart_slice();
-    my $slice_name  = $smart_slice->name();
-    my $dsname      = $smart_slice->dsname();
+    my $slice = $self->slice();
+    my $slice_name  = $slice->name();
+    my $dsname      = $slice->dsname();
 
     warn "Unlocking $dsname:$slice_name\n";
 
@@ -1080,7 +1080,7 @@ sub dna_ace_data {
 
     }
 
-    my $name = $self->smart_slice->name;
+    my $name = $self->slice->name;
     my $ace = join ''
         , qq{\nSequence "$name"\n}, @feature_ace , @ctg_ace
         , qq{\nSequence : "$name"\nDNA "$name"\n\nDNA : "$name"\n$dna\n}
@@ -1126,7 +1126,7 @@ sub _bam_is_filter {
 sub DataSet {
     my ($self) = @_;
 
-    return $self->Client->get_DataSet_by_name($self->smart_slice->dsname);
+    return $self->Client->get_DataSet_by_name($self->slice->dsname);
 }
 
 sub process_Columns {
@@ -1205,7 +1205,7 @@ sub _process_fh {
 
     if ($filter->content_type eq 'transcript') {
         return Bio::Otter::Lace::ProcessGFF::make_ace_transcripts_from_gff(
-            $gff_fh, $self->smart_slice->start, $self->smart_slice->end);
+            $gff_fh, $self->slice->start, $self->slice->end);
     }
     elsif ($filter->content_type eq 'alignment_feature') {
         Bio::Otter::Lace::ProcessGFF::store_hit_data_from_gff($self->AccessionTypeCache, $gff_fh);
@@ -1224,7 +1224,7 @@ sub script_arguments {
 
     my $arguments = {
         client => 'otterlace',
-        %{$self->smart_slice->toHash},
+        %{$self->slice->toHash},
         gff_version => $self->DataSet->gff_version,
         session_dir => $self->home,
         url_root    => $self->Client->url_root,
@@ -1237,7 +1237,7 @@ sub script_arguments {
 sub http_response_content {
     my ($self, $command, $script, $args) = @_;
 
-    my $query = $self->smart_slice->toHash;
+    my $query = $self->slice->toHash;
     $query = { %{$query}, %{$args} } if $args;
 
     my $response = $self->Client->http_response_content(
