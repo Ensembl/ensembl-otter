@@ -1253,7 +1253,7 @@ sub query_hash {
 
     my $hash = {
             'dataset' => $slice->dsname(),
-            'type'    => $slice->ssname(),
+            'chr'     => $slice->ssname(),
 
             'cs'      => $slice->csname(),
             'csver'   => $slice->csver(),

@@ -37,7 +37,7 @@ SQL
 sub get_sequence_notes {
     my ($server) = @_;
 
-    my $asm_type = $server->require_argument('type');
+    my $asm_type = $server->require_argument('chr');
     my $sth = $server->otter_dba()->dbc()->prepare($select_sequence_notes_sql);
     $sth->execute($asm_type);
 

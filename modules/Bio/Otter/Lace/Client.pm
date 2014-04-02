@@ -811,7 +811,7 @@ sub status_refresh_for_DataSet_SequenceSet{
         'get_analyses_status',
         {
             'dataset'  => $ds->name(),
-            'type'     => $ss->name(),
+            'chr'      => $ss->name(),
         },
     );
 
@@ -951,7 +951,7 @@ sub lock_refresh_for_DataSet_SequenceSet {
         'get_locks',
         {
             'dataset'  => $ds->name(),
-            'type'     => $ss->name(),
+            'chr'      => $ss->name(),
         },
     );
 
@@ -995,7 +995,7 @@ sub fetch_all_SequenceNotes_for_DataSet_SequenceSet {
         'GET',
         'get_sequence_notes',
         {
-            'type'     => $ss->name(),
+            'chr'      => $ss->name(),
             'dataset'  => $ds->name(),
         },
     );

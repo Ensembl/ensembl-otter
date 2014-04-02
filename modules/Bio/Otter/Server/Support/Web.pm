@@ -101,7 +101,7 @@ sub make_map {
     return {
         map {
             $_ => $self->make_map_value($_);
-        } qw( cs name type start end csver csver_remote ),
+        } qw( cs name chr start end csver csver_remote ),
     };
 }
 

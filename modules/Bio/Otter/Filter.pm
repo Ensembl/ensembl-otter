@@ -427,7 +427,7 @@ sub script_arguments {
         %{ $session->script_arguments },
         ( map { $_ => $self->$_ } @server_params ),
     };
-    $params->{gff_seqname} = $params->{type};
+    $params->{gff_seqname} = $params->{'chr'};
 
     my $arguments = [ ];
     for my $key (sort keys %{$params}) {
