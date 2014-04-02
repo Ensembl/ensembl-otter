@@ -4,6 +4,7 @@ use namespace::autoclean;
 use Moose;
 
 use Carp;
+use List::MoreUtils qw{ uniq };
 
 use Bio::Otter::Lace::OnTheFly::Utils::SeqList;
 use Bio::Otter::Lace::OnTheFly::Utils::Types;
@@ -190,6 +191,7 @@ sub _fetch_sequences {
 
     my %seqs_fetched;
     if (@to_fetch) {
+        @to_fetch = uniq @to_fetch;
         foreach my $seq (Hum::Pfetch::get_Sequences(@to_fetch)) {
             $seqs_fetched{$seq->name} = $seq if $seq;
         }
