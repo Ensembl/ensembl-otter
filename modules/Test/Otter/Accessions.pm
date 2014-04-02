@@ -40,6 +40,12 @@ sub accessions {
     return $self->{accessions} ||= $self->_init_accessions;
 }
 
+sub accession_names {
+    my ($self) = @_;
+    my @names = map { $_->{query} } @{$self->accessions};
+    return @names;
+}
+
 1;
 
 __DATA__
@@ -69,6 +75,7 @@ AA928768.1      AA928768.1      emblrelease     EST             EMBL
 AI990682.1      AI990682.1      emblrelease     EST             EMBL
 BM704540.1      BM704540.1      emblrelease     EST             EMBL
 AL577183.3      AL577183.3      emblrelease     EST             EMBL
+AL577183        AL577183.3      emblrelease     EST             EMBL
 
 # SwissProt
 Q6ZTW0.2        Q6ZTW0.2        uniprot         Protein         Swissprot       d613b255d2ff717b4848f2451400c529d12cd358
@@ -90,3 +97,6 @@ A5P378.1        A5P378.1        uniprot_archive Protein         TrEMBL
 
 # refseq
 NM_001142769.1  NM_001142769.1  refseq          -               -               54a8e190de3507a19b981f9f86880c1440df29ea
+
+# SRA (should be ignored by AccessionInfo)
+ERS000123

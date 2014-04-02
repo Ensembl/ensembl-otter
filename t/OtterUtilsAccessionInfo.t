@@ -62,7 +62,7 @@ ok(not(%$e_results), 'result is empty');
 # New central list
 my $ta_factory = Test::Otter::Accessions->new;
 my $ta_acc_specs = $ta_factory->accessions;
-my @ta_accs = map { $_->{query} } @$ta_acc_specs;
+my @ta_accs      = $ta_factory->accession_names;
 my $ta_results = $ai->get_accession_types(\@ta_accs);
 is(ref($ta_results), 'HASH', 'ta_results hash');
 
@@ -97,7 +97,7 @@ foreach my $ta_acc_spec (@$ta_acc_specs) {
     my $query = $ta_acc_spec->{query};
     subtest $query => sub {
         my $result = $info_results->{$query};
-        if ($ta_acc_spec->{mm_db} and $query !~ /-\d+$/) {
+        if ($ta_acc_spec->{mm_db} and $query =~ /\.\d+$/) {
             $result ||= [];
             my ($evi_type, $acc_sv, $source_db, $seq_length, $taxon_list, $desc, $seq) = @$result;
             is($acc_sv,    $ta_acc_spec->{acc_sv},    'acc_sv');
