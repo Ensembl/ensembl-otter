@@ -145,11 +145,12 @@ sub seqs_for_type {
 #
 sub _augment_supplied_sequences {
     my $self = shift;
-    my $cache = $self->accession_type_cache;
 
     for my $seq (@{$self->seqs}) {
         my $name = $seq->name;
-        if (my ($type, $full_acc) = $cache->type_and_name_from_accession($name)) {
+        my $entry = $self->_acc_type_full($name);
+        if ($entry) {
+            my ($type, $full_acc) = @$entry;
             ### Might want to be paranoid and check that the sequence of
             ### supplied sequences matches the pfetched sequence where the
             ### names of sequences are public accessions.
@@ -166,7 +167,6 @@ sub _augment_supplied_sequences {
 sub _check_augment_supplied_accessions {
     my $self = shift;
 
-    my $cache = $self->accession_type_cache;
     my $supplied_accs = $self->accessions;
 
     my @to_fetch;
