@@ -1509,7 +1509,7 @@ sub recover_session {
     rename($dir, $home) or die "Cannot move '$dir' to '$home'; $!";
 
     unless ($adb->db_initialized) {
-        try { $adb->recover_smart_slice_from_region_xml; }
+        try { $adb->recover_slice_from_region_xml; }
         catch { warn $_; };
         return $adb;
     }
@@ -1517,7 +1517,7 @@ sub recover_session {
     # All the info we need about the genomic region
     # in the lace database is saved in the region XML
     # dot file.
-    $adb->recover_smart_slice_from_region_xml;
+    $adb->recover_slice_from_region_xml;
     $adb->DataSet->load_client_config;
     $adb->reload_filter_state;
 

@@ -164,7 +164,7 @@ sub _add_zmap_bam_config {
     # already handled by _add_zmap_source_config().
 
     my $stylesfile = $session->stylesfile;
-    my $slice      = $session->smart_slice;
+    my $slice      = $session->slice;
 
     # must be careful here because different BAM objects may have the
     # same parent_column or parent_featureset

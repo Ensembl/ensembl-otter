@@ -2496,7 +2496,7 @@ sub set_window_title {
 sub zmap_view_arg_hash {
     my ($self) = @_;
     my $config_file = sprintf "%s/ZMap", $self->AceDatabase->zmap_dir;
-    my $slice = $self->AceDatabase->smart_slice;
+    my $slice = $self->AceDatabase->slice;
     my $name  = $slice->ssname;
     my $start = $slice->start;
     my $end   = $slice->end;

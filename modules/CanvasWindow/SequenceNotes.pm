@@ -719,7 +719,7 @@ sub _open_SequenceSet {
 
         # using Lace::Slice instead of Lace::SequenceSet is encouraged wherever possible
     my ($dsname, $ssname, $chr_name, $chr_start, $chr_end) = $ss->selected_CloneSequences_parameters;
-    my $smart_slice = Bio::Otter::Lace::Slice->new($cl, $dsname, $ssname,
+    my $slice = Bio::Otter::Lace::Slice->new($cl, $dsname, $ssname,
         'chromosome', 'Otter', $chr_name, $chr_start, $chr_end);
 
 
@@ -729,7 +729,7 @@ sub _open_SequenceSet {
     $adb->make_database_directory;
     $adb->write_access($adb_write_access);
     $adb->name($name);
-    $adb->smart_slice($smart_slice);
+    $adb->slice($slice);
     $adb->load_dataset_info;
 
     if ($adb_write_access) {

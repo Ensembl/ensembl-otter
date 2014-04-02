@@ -155,7 +155,7 @@ sub bam_parameters {
 
 sub url_query {
     my ($self, $session) = @_;
-    my $slice = $session->smart_slice;
+    my $slice = $session->slice;
     my $DataSet = $session->DataSet;
     my $query = {
         -chr   => $slice->ssname,
