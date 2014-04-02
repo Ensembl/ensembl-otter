@@ -69,8 +69,8 @@ sub _build_confirmed_seqs {     ## no critic (Subroutines::ProhibitUnusedPrivate
     }
 
     $self->_augment_supplied_sequences;
-    my @to_pfetch = $self->_check_augment_supplied_accessions;
-    $self->_pfetch_sequences(@to_pfetch);
+    my @to_fetch = $self->_check_augment_supplied_accessions;
+    $self->_fetch_sequences(@to_fetch);
 
     # tell the user about any missing sequences or remapped accessions
 
@@ -168,34 +168,34 @@ sub _check_augment_supplied_accessions {
     my $cache = $self->accession_type_cache;
     my $supplied_accs = $self->accessions;
 
-    my @to_pfetch;
+    my @to_fetch;
     foreach my $acc ( @$supplied_accs ) {
         my $entry = $self->_acc_type_full($acc);
         if ($entry) {
             my ($type, $full) = @$entry;
-            push(@to_pfetch, $full);
+            push(@to_fetch, $full);
         }
         else {
-            # No point trying to pfetch invalid accessions
+            # No point trying to fetch invalid accessions
             $self->_add_missing_warning($acc, "unknown accession");
         }
     }
-    return @to_pfetch;
+    return @to_fetch;
 }
 
 # Adds sequences to $self->seqs
 #
-sub _pfetch_sequences {
-    my ($self, @to_pfetch) = @_;
+sub _fetch_sequences {
+    my ($self, @to_fetch) = @_;
 
     my %seqs_fetched;
-    if (@to_pfetch) {
-        foreach my $seq (Hum::Pfetch::get_Sequences(@to_pfetch)) {
+    if (@to_fetch) {
+        foreach my $seq (Hum::Pfetch::get_Sequences(@to_fetch)) {
             $seqs_fetched{$seq->name} = $seq if $seq;
         }
     }
 
-    foreach my $acc (@to_pfetch) {
+    foreach my $acc (@to_fetch) {
         my ($type, $full) = @{$self->_acc_type_full($acc)};
 
         # Delete from the hash so that we can check for
@@ -205,7 +205,7 @@ sub _pfetch_sequences {
             $seq->type($type);
         }
         else {
-            $self->_add_missing_warning("$acc ($full)" => "could not pfetch");
+            $self->_add_missing_warning("$acc ($full)" => "could not fetch");
             next;
         }
 
