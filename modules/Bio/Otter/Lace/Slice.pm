@@ -117,24 +117,6 @@ sub name {
         $self->end;
 }
 
-
-sub toHash {
-    my ($self) = @_;
-
-    my $hash = {
-            'dataset' => $self->dsname(),
-            'type'    => $self->ssname(),
-
-            'cs'      => $self->csname(),
-            'csver'   => $self->csver(),
-            'name'    => $self->seqname(),
-            'start'   => $self->start(),
-            'end'     => $self->end(),
-    };
-
-    return $hash;
-}
-
 sub zmap_config_stanza {
     my ($self) = @_;
 
