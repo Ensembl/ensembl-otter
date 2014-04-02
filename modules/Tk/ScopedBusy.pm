@@ -15,6 +15,16 @@ Tk::ScopedBusy - Busy out a widget until object is dropped
  ...
  return; # $busy is forgotten, and the Unbusy happens
 
+=head1 DESCRIPTION
+
+In addition to exception-safe Busy handling, this module will report
+various unexpected transitions in the (implicit) state machine for
+Busy.
+
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
+
 =cut
 
 
@@ -46,6 +56,8 @@ sub new {
 our $_during_DESTROY = 0;
 sub DESTROY {
     my ($self) = @_;
+    local $@; # protect against $@ trashing (by Tk::Widget::AUTOLOAD ?)
+
     my $widget = $self->{widget} || '(GONE)';
     my $caller = $self->{caller} || '(lost)';
     warn "[w] ineffective Busy in $self is cancelled\n" if $self->{bad_Busy};
@@ -73,6 +85,8 @@ sub DESTROY {
 # This DESTROY informs you if something else does the $widget->Unbusy
 sub Tk::ScopedBusy::BusyFellOff::DESTROY {
     my ($self) = @_;
+    local $@; # protect against $@ trashing
+
     cluck "Busy fell off not during our DESTROY"
       unless $Tk::ScopedBusy::_during_DESTROY;
     return;
