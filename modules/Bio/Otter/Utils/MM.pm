@@ -29,6 +29,8 @@ Readonly my @ALL_DB_CATEGORIES => qw(
     mushroom
 );
 
+Readonly my $UNIPARC => 'uniprot_archive';
+
 Readonly my @DEFAULT_DB_CATEGORIES => qw(
     emblnew
     emblrelease
@@ -74,7 +76,7 @@ sub _get_connection {
 
     my $dbh_mm_ini = DBI->connect($dsn_mm_ini, $self->user, '', { 'RaiseError' => 1 });
 
-    if ($category eq 'uniprot_archive') {
+    if ($category eq $UNIPARC) {
 
         # find the correct host and db to connect to from the connections table
 
@@ -87,7 +89,7 @@ sub _get_connection {
 
         $arch_sth->execute or die "Couldn't execute statement: " . $arch_sth->errstr;
 
-        my $db_details = $arch_sth->fetchrow_hashref or die "Failed to find active uniprot_archive";
+        my $db_details = $arch_sth->fetchrow_hashref or die "Failed to find active $UNIPARC";
 
         my $dsn = "DBI:mysql:".
             "database=".$db_details->{'db_name'}.
@@ -259,11 +261,12 @@ sub _get_accessions {
         my ($sth, $search_term) = $self->_classify_search($db_name, $name, $opts{sv_search});
         next NAME unless $sth;
 
-        $sth->execute($search_term);
+        my @search_results = $self->_do_query($sth, $search_term);
 
-      RESULT: while (my $row = $sth->fetchrow_hashref) {
+      RESULT: foreach my $row (@search_results) {
 
           $row->{name} = $name;
+          $self->_set_currency($db_name, $row);
           $self->_debug_result($db_name, $row) if $self->debug;
 
           if (my $result = $self->_classify_result($name, $row)) {
@@ -286,24 +289,36 @@ sub _get_accessions {
     return $results;
 }
 
+sub _do_query {
+    my ($self, $sth, $search_term) = @_;
+
+    my @results;
+    $sth->execute($search_term);
+    while (my $row = $sth->fetchrow_hashref) {
+        push @results, $row;
+    }
+    return @results;
+}
+
 sub _classify_search {
     my ($self, $db_name, $name, $sv_search) = @_;
 
-    my $is_uniprot_archive = ($db_name eq 'uniprot_archive');
+    my $is_uniprot_archive = ($db_name eq $UNIPARC);
     my ($sth, $search_term);
 
-  SWITCH: for ($name) {
-      if ($is_uniprot_archive and $name =~ /-\d+\.\d+$/) {
+      my ($stem, $iso, $sv) = $self->_parse_accession($name);
+  SWITCH: {
+      if ($is_uniprot_archive and $iso and $sv) {
           $sth = $self->_sth_for($db_name, 'iso', 'with');
           $search_term = $name;
           last SWITCH;
       }
-      if ($is_uniprot_archive and $name =~ /-\d+$/ and $sv_search) {
+      if ($is_uniprot_archive and $iso and $sv_search) {
           $sth = $self->_sth_for($db_name, 'iso', 'like');
           $search_term = "$name.%";
           last SWITCH;
       }
-      if ($name =~ /\.\d+$/) {
+      if ($sv) {
           $sth = $self->_sth_for($db_name, 'plain', 'with');
           $search_term = $name;
           last SWITCH;
@@ -324,7 +339,7 @@ sub _classify_result {
     my ($self, $name, $row) = @_;
 
     my (        $entry_id,$type,        $class,    $acc_sv,          @extra_info) =
-        @$row{qw(entry_id molecule_type data_class accession_version sequence_length taxon_list description)};
+        @$row{qw(entry_id molecule_type data_class accession_version sequence_length taxon_list description currency)};
 
     my $result;
 
@@ -360,10 +375,41 @@ sub _classify_result {
     return $result;
 }
 
+sub _set_currency {
+    my ($self, $db_name, $row) = @_;
+
+    my $currency;
+  SWITCH: {
+
+      # only an issue for uniprot_archive
+      do { $currency = 'current';  last SWITCH } unless $db_name eq $UNIPARC;
+
+      my ($name, $iso, $sv) = $self->_parse_accession($row->{accession_version});
+
+      # current non-isoforms would have been found in uniprot
+      do { $currency = 'archived'; last SWITCH } unless $iso;
+
+      # Okay, we need to check whether the parent is in uniprot
+      my $parent = "$name.$sv";
+      my $sth = $self->_sth_for('uniprot', 'plain', 'with');
+      my @results = $self->_do_query($sth, $parent);
+
+      $currency = @results ? 'current' : 'archived';
+    }
+
+    return $row->{currency} = $currency;
+}
+
+sub _parse_accession {
+    my ($self, $accession) = @_;
+    my ($name, $iso, $sv) = $accession =~ m/^(\S+?)(?:-(\d+))?(?:\.(\d+))?$/;
+    return ($name, $iso, $sv);
+}
+
 sub _debug_result {
     my ($self, $db_name, $row) = @_;
     my (        $name, $type,        $class,    $acc_sv,          @extra_info) =
-        @$row{qw(name  molecule_type data_class accession_version sequence_length taxon_list description)};
+        @$row{qw(name  molecule_type data_class accession_version sequence_length taxon_list description currency)};
     print "MM result: ", join(',', $name, $acc_sv, $db_name, $type, $class, @extra_info), "\n";
     return;
 }

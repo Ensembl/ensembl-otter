@@ -99,11 +99,12 @@ foreach my $ta_acc_spec (@$ta_acc_specs) {
         my $result = $info_results->{$query};
         if ($ta_acc_spec->{mm_db} and $query =~ /\.\d+$/) {
             $result ||= [];
-            my ($evi_type, $acc_sv, $source_db, $seq_length, $taxon_list, $desc, $seq) = @$result;
+            my ($evi_type, $acc_sv, $source_db, $seq_length, $taxon_list, $desc, $currency, $seq) = @$result;
             is($acc_sv,    $ta_acc_spec->{acc_sv},    'acc_sv');
             is($evi_type,  $ta_acc_spec->{evi_type},  'evi_type')  if $ta_acc_spec->{evi_type};
             is($source_db, $ta_acc_spec->{source_db}, 'source_db') if $ta_acc_spec->{source_db};
             is(length($seq), $seq_length, 'seq_length');
+            is($currency,  $ta_acc_spec->{currency},  'currency');
         } else {
             is($result, undef, 'no result');
         }
