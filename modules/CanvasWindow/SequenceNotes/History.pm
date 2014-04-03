@@ -6,9 +6,9 @@ package CanvasWindow::SequenceNotes::History;
 use strict;
 use warnings;
 use Carp;
-use Data::Dumper;
 use Scalar::Util 'weaken';
 use base 'CanvasWindow::SequenceNotes';
+use Tk::ScopedBusy;
 
 ### Lots of duplicated code with CanvasWindow::SequenceNotes::Status
 sub clone_index {
@@ -367,7 +367,7 @@ sub update_db_comment {
     }
     unless ($self->selected_CloneSequence_indices) {
         $self->message('you need to select a note to update');
-        $self->top_window->Unbusy;
+        $self->top_window->Unbusy; # yes, this can have effect via re-entrance (below)
         return;
     }
 
@@ -379,7 +379,7 @@ sub update_db_comment {
 "ok we have these rows selected @extra_indices \nsomething wrong there! should only be able to select 1";
     }
 
-    $self->top_window->Busy;
+    my $busy = Tk::ScopedBusy->new($self->top_window);
     my $clone_sequence   = $self->current_clone;
     my $current_seq_note = $clone_sequence->get_all_SequenceNotes->[$index];
 
@@ -408,6 +408,9 @@ sub update_db_comment {
         );
 
         $self->SequenceNotes->draw;
+        # During the above, user can click "Set note" button again and
+        # re-enter (despite $busy apparently remaining in force)
+
         $self->draw;
     }
     else {
@@ -418,7 +421,6 @@ sub update_db_comment {
             -type => 'OK'
         );
     }
-    $self->top_window->Unbusy;
 
     return;
 }

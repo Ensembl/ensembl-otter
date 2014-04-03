@@ -16,6 +16,7 @@ use Zircon::Tk::Context;
 use Bio::Otter::Utils::About;
 use Bio::Otter::Lace::Client;
 use Bio::Vega::Utils::URI qw( open_uri );
+use Tk::ScopedBusy;
 
 use MenuCanvasWindow::ColumnChooser;
 use EditWindow::Preferences;
@@ -260,7 +261,7 @@ sub open_dataset {
     return 0 unless $obj;
 
     my $canvas = $self->canvas;
-    $canvas->Busy;
+    my $busy = Tk::ScopedBusy->new($canvas);
     foreach my $tag ($canvas->gettags($obj)) {
         if ($tag =~ /^DataSet=(.+)/) {
             my $name = $1;
@@ -285,11 +286,9 @@ sub open_dataset {
 
                 $self->{'_sequence_set_chooser'}{$name} = $top;
             }
-            $canvas->Unbusy;
             return 1;
         }
     }
-    $canvas->Unbusy;
 
     return 0;
 }

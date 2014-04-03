@@ -38,6 +38,7 @@ use Bio::Otter::ZMap::XML;
 use Bio::Vega::Transform::Otter::Ace;
 
 use Tk::Screens;
+use Tk::ScopedBusy;
 use Bio::Vega::Utils::MacProxyConfig qw{ mac_os_x_set_proxy_vars };
 
 use Log::Log4perl;
@@ -100,6 +101,7 @@ sub initialize {
     my ($self) = @_;
 
     $self->set_window_title;
+    $self->_colour_init;
 
 
     unless ($self->AceDatabase->write_access) {
@@ -125,6 +127,32 @@ sub initialize {
 
     $self->RequestQueuer(Bio::Otter::RequestQueuer->new($self));
 
+    return;
+}
+
+sub session_colour {
+    my ($self) = @_;
+    return $self->AceDatabase->colour || '#d9d9d9';
+    # The non-coloured default would be '#d9d9d9'.  Using undef causes
+    # non-drawing.  For a complete no-op, don't set any borderwidth
+}
+
+sub _colour_init {
+    my ($self) = @_;
+    return $self->colour_init($self->top_window, 'search_frame', 'search_frame.filler');
+}
+
+# called by various windows, to set their widgets to our session_colour
+sub colour_init {
+    my ($self, $top, @widg) = @_;
+    my $colour = $self->session_colour;
+    my $tpath = $top->PathName;
+    $top->configure(-borderwidth => 3, -background => $colour);
+    foreach my $widg (@widg) {
+        $widg = $top->Widget("$tpath.$widg") unless ref($widg);
+        next unless $widg; # TranscriptWindow has some PathName parts
+        $widg->configure(-background => $colour);
+    }
     return;
 }
 
@@ -1029,7 +1057,7 @@ sub save_data {
         $self->save_ace($ace_data);
         $self->flag_db_edits(1);
         $self->resync_with_db;
-        $self->update_window_title_unsaved_flag(0);
+        $self->set_window_title;
         return 1;
     }
     catch { $self->exception_message($_, 'Error saving to otter'); return 0; }
@@ -1041,10 +1069,7 @@ sub edit_double_clicked {
 
     return unless $self->list_selected;
 
-    my $canvas = $self->canvas;
-    $canvas->Busy;
     $self->edit_selected_subsequences;
-    $canvas->Unbusy;
 
     return;
 }
@@ -1082,7 +1107,8 @@ sub make_search_panel {
     my ($self) = @_;
 
     my $top = $self->top_window();
-    my $search_frame = $top->Frame();
+    my $search_frame = $top->Frame(Name => 'search_frame');
+
     $search_frame->pack(-side => 'top');
 
     my $search_box = $search_frame->Entry(
@@ -1090,13 +1116,12 @@ sub make_search_panel {
         );
     $search_box->pack(-side => 'left');
 
-    $search_frame->Frame(-width => 6)->pack(-side => 'left');
+    $search_frame->Frame(Name => 'filler', -width => 6)->pack(-side => 'left');
 
     # Is hunting in CanvasWindow?
     my $hunter = sub{
-        $top->Busy;
+        my $busy = Tk::ScopedBusy->new($top);
         $self->_do_search($search_box);
-        $top->Unbusy;
     };
     my $button = $search_frame->Button(
          -text      => 'Find',
@@ -1219,7 +1244,7 @@ sub save_ace {
 
     if ($self->flag_db_edits) {
         $self->AceDatabase->unsaved_changes(1);
-        $self->update_window_title_unsaved_flag(1);            
+        $self->set_window_title;            
     }
 
     return $val;
@@ -1243,9 +1268,7 @@ sub resync_with_db {
         return;
     }
 
-    $self->canvas->Busy(
-        -recurse => 0,
-        );
+    my $busy = Tk::ScopedBusy->new($self->canvas, -recurse => 0);
 
     $self->empty_Assembly_cache;
     $self->empty_SubSeq_cache;
@@ -1253,8 +1276,6 @@ sub resync_with_db {
 
     # Refetch transcripts from GFF cache
     $self->fetch_external_SubSeqs;
-
-    $self->canvas->Unbusy;
 
     return;
 }
@@ -1298,6 +1319,7 @@ sub edit_selected_subsequences {
 sub edit_subsequences {
     my ($self, @sub_names) = @_;
 
+    my $busy = Tk::ScopedBusy->new($self->canvas);
     my $retval = 1;
 
     foreach my $sub_name (@sub_names) {
@@ -1860,9 +1882,7 @@ sub Assembly {
 
     unless ($self->{'_assembly'}) {
         my $before = time();
-        $canvas->Busy(
-            -recurse => 0,
-            );
+        my $busy = Tk::ScopedBusy->new($canvas, -recurse => 0);
 
         my( $assembly );
         try {
@@ -1893,7 +1913,6 @@ sub Assembly {
         $self->set_known_GeneMethods;
 
         my $after  = time();
-        $canvas->Unbusy;
         printf
             "Express fetch for '%s' took %d second(s)\n",
             $self->slice_name, $after - $before;
@@ -2145,7 +2164,6 @@ sub launch_exonerate {
     for my $builder ( $otf->builders_for_each_type ) {
 
         my $type = $builder->type;
-        my $is_protein = $builder->is_protein;
 
         $self->logger->info("Running exonerate for sequence(s) of type: $type");
 
@@ -2390,8 +2408,8 @@ sub run_dotter {
         my $top = $parent->Toplevel(-title => $Bio::Otter::Lace::Client::PFX.'Run Dotter');
         $top->transient($parent);
         $dw = EditWindow::Dotter->new($top);
-        $dw->initialise;
         $dw->SessionWindow($self);
+        $dw->initialise;
         $self->{'_dotter_window'} = $dw;
         weaken($self->{'_dotter_window'});
     }
@@ -2475,18 +2493,6 @@ sub set_window_title {
     return;
 }
 
-sub update_window_title_unsaved_flag {
-    my ($self, $flag) = @_;
-
-    my $top = $self->top_window;
-    my $title = $top->title;
-    $title =~ s/^\* //;
-    my $unsaved_str = $flag ? '* ' : '';
-    $top->title("${unsaved_str}$title");
-
-    return;
-}
-
 sub zmap_view_arg_hash {
     my ($self) = @_;
     my $config_file = sprintf "%s/ZMap", $self->AceDatabase->zmap_dir;
@@ -2556,9 +2562,14 @@ sub zmap_new {
     my $arg_list = [
         '--conf_dir' => $config_dir,
         @{$DataSet->zmap_arg_list},
-        (Tk::Screens->nxt( $self->top_window )->gtk_arg ),
         ];
     my $client = $self->AceDatabase->Client;
+    if (my $screen = $client->config_value('zmap_screen')) { # RT#390512
+        warn "Using logical screen override (zmap_screen=$screen)";
+        push @$arg_list, $screen if $screen;
+    } else { # RT#387856
+        push @$arg_list, Tk::Screens->nxt( $self->top_window )->gtk_arg;
+    }
     my $zmap =
         Zircon::ZMap->new(
             '-app_id'     => $self->zircon_app_id,

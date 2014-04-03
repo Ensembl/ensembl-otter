@@ -46,6 +46,16 @@ sub zmap_select_window {
         -fill => 'both',
         );
 
+    # _colour_init
+    my $sw;
+    $sw = $self->SessionWindow if $self->can('SessionWindow');
+    $sw = $self if $self->isa('MenuCanvasWindow::SessionWindow');
+    if ($sw) {
+        $sw->colour_init($window);
+    } else {
+        warn "$self uncoloured, cannot SessionWindow";
+    }
+
     return;
 }
 

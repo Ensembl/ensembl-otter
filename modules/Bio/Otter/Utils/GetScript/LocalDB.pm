@@ -91,7 +91,6 @@ sub augment_feature_info {
             my $hd = $self->_build_HitDescription(
                 -hit_name            => $feature->hseqname,
                 -hit_length          => $info->{length},
-                -hit_sequence_string => $info->{sequence},
                 -description         => $info->{description},
                 -taxon_id            => $info->{taxon_id},
                 -db_name             => $info->{source_db},
