@@ -42,7 +42,7 @@ $seq->sequence_string('GATTACCAAA');
 my @exp_names =
     uniq
     map  { $_->{acc_sv} }
-    grep { my $m = $_->{mm_db}; $m and $m ne 'refseq' and $m !~ /archive$/ }
+    grep { my $m = $_->{mm_db}; $m and $m ne 'refseq' and $_->{currency} eq 'current' }
     @$ta_acc_specs;
 
 push @exp_names, 'TESTSEQ';
