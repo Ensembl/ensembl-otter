@@ -163,28 +163,21 @@ my $aa = $dba->get_AttributeAdaptor();
 #get chromosomes without a hidden attribute
 my $chroms = $support->fetch_non_hidden_slices($aa,$sa);
 
-
 my $patch_regions_wanted_details;
 #each release check with jon if there are any new ones, and if these are still to be ignored
-my @not_yet_wanted_patches = '';#map {$_.'_PATCH'} qw(HG1007 HG280); #fix patches
-#push @not_yet_wanted_patches, qw(HSCHR2_2_CTG12 HSCHR9_1_CTG35 HSCHR10_1_CTG2); #novel patches
-#push @not_yet_wanted_patches, qw(HG1000_2_PATCH HG506_HG1000_1_PATCH HG142_HG150_HG151_PATCH HG681_PATCH); # vega52 - patches that are out of date with what e! have so exclude them (even though the annotation is OK)
-#push @not_yet_wanted_patches, qw(HSCHR19LRC_COX1_CTG1 HSCHR19LRC_COX2_CTG1 HSCHR19LRC_LRC_I_CTG1 HSCHR19LRC_LRC_J_CTG1 HSCHR19LRC_LRC_S_CTG1 HSCHR19LRC_LRC_T_CTG1 HSCHR19LRC_PGF1_CTG1 HSCHR19LRC_PGF2_CTG1); #LRC patches
-# HAP-HSCHR17_1-01 and HAP-HSCHR4_1-01 are old patches but cannot be used yet (they are haplotypes in e!) - no need to explicitly exclude them since this is done by line 183 below 
-
-
-
+my @not_yet_wanted_patches  = map {'HSCHR6_MHC_'.$_.'_CTG1'}   qw(APD COX DBB MANN MCF QBL SSTO); #MHC regions
+push @not_yet_wanted_patches, map {'HSCHR19LRC_'.$_.'_CTG3_1'} qw(COX1 COX2 LRC_I LRC_J LRC_S LRC_T PGF1 PGF2); #LRC regions
 my @wanted_patches;
 my @found_patches;
+
 my $c = 0;
 foreach my $chrom (@$chroms) {
-  next;
   my $chrom_name = $chrom->seq_region_name;
-  next unless $chrom_name =~ /^PATCH/;
+  next unless $support->is_patch($chrom);
   $support->log("\nChecking attribs on Patch Chrom $chrom_name\n");
-  my @required_attribs = qw(chr embl_acc embl_version description);
+  my @required_attribs = qw(chr description equiv_asm);
   my %found_attribs;
-  my $vega_and_ensembl_name;
+  my $vega_name;
   foreach my $attrib (@{$aa->fetch_all_by_Slice($chrom)}) {
     $found_attribs{$attrib->code} = $attrib->value;
   }
@@ -194,46 +187,42 @@ foreach my $chrom (@$chroms) {
       $support->log_warning("$chrom_name is missing an attribute for \'$at\'\n",1);
     }
     if ($at eq 'chr') {
-      $vega_and_ensembl_name = $found_attribs{$at};
+      $vega_name = $found_attribs{$at};
     }
   }
 
-  if (! $vega_and_ensembl_name) {
+  if (! $vega_name) {
     $support->log_warning("No name attribute for $chrom_name, investigate\n");
   }
 
-  if (! grep { $found_attribs{$_} } qw(patch_fix patch_novel)) {
-    $support->log_warning("No patch_fix or patch_novel attribute for $chrom_name, investigate\n",1);
-    #could grab these from the description and add, but need to know the format (#312132)
-  }
-
-  if (grep {$vega_and_ensembl_name eq $_ } @not_yet_wanted_patches) {
-    $support->log("Ignoring Chromosome $chrom_name (ensembl name = $vega_and_ensembl_name) since I've been told to!\n",1);
+  if (grep {$vega_name eq $_ } @not_yet_wanted_patches) {
+    $support->log("Ignoring Chromosome $chrom_name (vega_name = $vega_name) since I've been told to!\n",1);
   }
   else {
-    push @found_patches, $vega_and_ensembl_name;
+    push @found_patches, $vega_name;
+    my $ensembl_name = 'CHR_'.$vega_name;
     $c++;
     $patch_regions_wanted_details->{$chrom_name} = {
-      vega_name        => $vega_and_ensembl_name,
-      name             => "Chromosome $vega_and_ensembl_name",
+      vega_name        => $vega_name,
+      name             => "Chromosome $vega_name",
       vega_export_mod  => $rel_type,
       vega_release     => $support->param('vega_release'),
-      ensembl_name     => $vega_and_ensembl_name,
+      ensembl_name     => $ensembl_name,
+      patch            => 'haplotype',
     };
-    $support->log("$c. Adding Chromosome $chrom_name (ensembl name = $vega_and_ensembl_name) to list to be dumped\n",1);
-#    }
-#    else {
-#      $support->log("Chromosome $chrom_name (ensembl name = $vega_and_ensembl_name) found but not in Jon's list\n");
-#    }
+    $support->log("$c. Adding Chromosome $chrom_name (ensembl name = $ensembl_name) to list to be dumped\n",1);
   }
 }
+#warn Data::Dumper::Dumper($patch_regions_wanted_details);
+
 
 #get all chromosomes
 my $all_chromosomes = $sa->fetch_all('Chromosome','Otter');
 
 # see which of the non hidden chromosomes best match to what we want
+my $regions_wanted = { %$regions_wanted_details, %$patch_regions_wanted_details } ;
 SLICE:
-foreach my $k (keys(%$regions_wanted_details), keys(%$patch_regions_wanted_details)) {
+foreach my $k (keys(%$regions_wanted)) {
   my $sr_name_to_use;
   my $saved_extra = '';
   my %possibles;
@@ -250,7 +239,7 @@ foreach my $k (keys(%$regions_wanted_details), keys(%$patch_regions_wanted_detai
     }
   }
   else {
-    my $poss_sr = ($k =~ /^PATCH/) ? $k : "$k-";
+    my $poss_sr = ($regions_wanted->{$k}{'patch'} eq 'haplotype') ? $k : "$k-";
     %possibles = map {$_->seq_region_name => $_} grep { $_->seq_region_name =~ /^$poss_sr/ } @$chroms;
     if (! %possibles) {
       #try the seq_region without any numerical extension
@@ -348,6 +337,7 @@ foreach my $k (keys(%$regions_wanted_details), keys(%$patch_regions_wanted_detai
 
   #sort out the rest of the attributes
   while (my ($code,$value) = each %$attribs_wanted) {
+    next if ($code eq 'patch'); #these are just for use within this script
     #add another 'vega_release' attribute if the value is new (ie don't replace old values)
     if ($code eq 'vega_release') {
       my $existings =  $support->get_attrib_values($attribs_present,$code,$value);
