@@ -11,6 +11,7 @@ use Fcntl qw{ O_WRONLY O_CREAT };
 use Config::IniFiles;
 use Log::Log4perl;
 use Try::Tiny;
+use Scalar::Util 'weaken';
 
 use Bio::Vega::Region;
 use Bio::Vega::Transform::Otter::Ace;
@@ -47,6 +48,7 @@ sub Client {
 
     if ($client) {
         $self->{'_Client'} = $client;
+        $self->colour( $self->next_session_colour );
     }
     return $self->{'_Client'};
 }
@@ -392,6 +394,53 @@ sub slice_name {
     return $slice_name;
 }
 
+sub session_colourset {
+    my ($self) = @_;
+    my $colours = $self->Client->config_value('session_colourset')
+      || 'red green blue';
+    return split / /, $colours;
+}
+
+# Get as a plain string.
+# Set as SCALARref, held also below (but weakened)
+sub colour {
+    my ($self, $set) = @_;
+    $self->{'_colour'} = $set if defined $set;
+    return $self->{'_colour'} ? ${ $self->{'_colour'} } : ();
+}
+
+{
+    my %colour_in_use; # key = colour, value = list of weakened SCALARref
+    sub next_session_colour {
+        my ($self) = @_;
+        my @col = $self->session_colourset;
+        my %prio; # key=colour, value=priority
+        @prio{@col} = reverse(1 .. scalar @col);
+
+        # Remove no-longer-used
+        while (my ($col, $use) = each %colour_in_use) {
+            if (@$use) {
+                # colour in use, now or recently
+                my @use = grep { defined } @$use;
+                for (my $i=0; $i<@use; $i++) { weaken($use[$i]) }
+                $colour_in_use{$col} = \@use;
+                $prio{$col} = -@use # set negative or zero priority
+                  +($prio{$col} / 1000); # collision buster
+            } else {
+                # colour became unused last time, forget it
+                delete $colour_in_use{$col};
+            }
+        }
+
+        # Choose the next & remember
+        my ($next) = sort { $prio{$b} <=> $prio{$a} } keys %prio;
+        my $colref = \$next;
+        push @{ $colour_in_use{$next} }, $colref;
+        weaken($colour_in_use{$next}->[-1]);
+        return $colref;
+    }
+}
+
 my $gtkrc = <<'GTKRC'
 
 style "zmap-focus-view-frame" {
@@ -475,6 +524,7 @@ sub _zmap_config {
             'pfetch'          => ( $pfetch_www ? $pfetch_url : 'pfetch' ),
             'xremote-debug'   => $xremote_debug ? 'true' : 'false',
             'stylesfile'      => $self->stylesfile,
+            ($self->colour ? ('session-colour'  => $self->colour) : ()),
             %{$self->smart_slice->zmap_config_stanza},
         },
 

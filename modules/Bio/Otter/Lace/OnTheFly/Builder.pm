@@ -108,9 +108,9 @@ sub analysis_name {
     my $self = shift;
 
     my $type = $self->type;
-    if    ($type =~ /^Unknown/) { return $type;       }
-    elsif ($type eq 'cDNA')     { return "OTF_mRNA";  }
-    else                        { return "OTF_$type"; }
+    if    ($type =~ /^OTF_AdHoc_/) { return $type;       }
+    elsif ($type eq 'cDNA')        { return "OTF_mRNA";  }
+    else                           { return "OTF_$type"; }
 }
 
 1;

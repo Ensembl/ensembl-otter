@@ -15,6 +15,7 @@ use Bio::Otter::ServerAction::Script::Region;
 
 Readonly my $ADDITIONAL_COLUMNS_OFFSET => 4;
 
+# For RT391148 I had to set these to 130 & 120 - should be command-line options!!
 Readonly my $EXTENSION_HEADROOM => 100;
 Readonly my $MAX_DELTA          =>  20;
 

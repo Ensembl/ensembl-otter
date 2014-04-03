@@ -4,6 +4,7 @@ use namespace::autoclean;
 use Moose;
 
 use Carp;
+use List::MoreUtils qw{ uniq };
 
 use Bio::Otter::Lace::OnTheFly::Utils::SeqList;
 use Bio::Otter::Lace::OnTheFly::Utils::Types;
@@ -69,8 +70,8 @@ sub _build_confirmed_seqs {     ## no critic (Subroutines::ProhibitUnusedPrivate
     }
 
     $self->_augment_supplied_sequences;
-    my @to_pfetch = $self->_check_augment_supplied_accessions;
-    $self->_pfetch_sequences(@to_pfetch);
+    my @to_fetch = $self->_check_augment_supplied_accessions;
+    $self->_fetch_sequences(@to_fetch);
 
     # tell the user about any missing sequences or remapped accessions
 
@@ -117,16 +118,13 @@ sub _build_seqs_by_type {       ## no critic (Subroutines::ProhibitUnusedPrivate
 
     my %seqs_by_type;
     foreach my $seq (@{$self->confirmed_seqs->seqs}) {
-        if ($seq->type && new_evidence_type_valid($seq->type))
+        my $type = $seq->type;
+        unless ($type && new_evidence_type_valid($type))
         {
-            push @{ $seqs_by_type{ $seq->type } }, $seq;
+            $type = $seq->sequence_string =~ /[^acgtrymkswhbvdnACGTRYMKSWHBVDN]/
+                ? 'OTF_AdHoc_Protein' : 'OTF_AdHoc_DNA';
         }
-        elsif ($seq->sequence_string =~ /[^acgtrymkswhbvdnACGTRYMKSWHBVDN]/) {
-            push @{ $seqs_by_type{'Unknown_Protein'} }, $seq;
-        }
-        else {
-            push @{ $seqs_by_type{'Unknown_DNA'} }, $seq;
-        }
+        push @{ $seqs_by_type{ $type } }, $seq;
     }
 
     return \%seqs_by_type;
@@ -147,11 +145,12 @@ sub seqs_for_type {
 #
 sub _augment_supplied_sequences {
     my $self = shift;
-    my $cache = $self->accession_type_cache;
 
     for my $seq (@{$self->seqs}) {
         my $name = $seq->name;
-        if (my ($type, $full_acc) = $cache->type_and_name_from_accession($name)) {
+        my $entry = $self->_acc_type_full($name);
+        if ($entry) {
+            my ($type, $full_acc) = @$entry;
             ### Might want to be paranoid and check that the sequence of
             ### supplied sequences matches the pfetched sequence where the
             ### names of sequences are public accessions.
@@ -168,37 +167,37 @@ sub _augment_supplied_sequences {
 sub _check_augment_supplied_accessions {
     my $self = shift;
 
-    my $cache = $self->accession_type_cache;
     my $supplied_accs = $self->accessions;
 
-    my @to_pfetch;
+    my @to_fetch;
     foreach my $acc ( @$supplied_accs ) {
         my $entry = $self->_acc_type_full($acc);
         if ($entry) {
             my ($type, $full) = @$entry;
-            push(@to_pfetch, $full);
+            push(@to_fetch, $full);
         }
         else {
-            # No point trying to pfetch invalid accessions
+            # No point trying to fetch invalid accessions
             $self->_add_missing_warning($acc, "unknown accession");
         }
     }
-    return @to_pfetch;
+    return @to_fetch;
 }
 
 # Adds sequences to $self->seqs
 #
-sub _pfetch_sequences {
-    my ($self, @to_pfetch) = @_;
+sub _fetch_sequences {
+    my ($self, @to_fetch) = @_;
 
     my %seqs_fetched;
-    if (@to_pfetch) {
-        foreach my $seq (Hum::Pfetch::get_Sequences(@to_pfetch)) {
+    if (@to_fetch) {
+        @to_fetch = uniq @to_fetch;
+        foreach my $seq (Hum::Pfetch::get_Sequences(@to_fetch)) {
             $seqs_fetched{$seq->name} = $seq if $seq;
         }
     }
 
-    foreach my $acc (@to_pfetch) {
+    foreach my $acc (@to_fetch) {
         my ($type, $full) = @{$self->_acc_type_full($acc)};
 
         # Delete from the hash so that we can check for
@@ -208,7 +207,7 @@ sub _pfetch_sequences {
             $seq->type($type);
         }
         else {
-            $self->_add_missing_warning("$acc ($full)" => "could not pfetch");
+            $self->_add_missing_warning("$acc ($full)" => "could not fetch");
             next;
         }
 
