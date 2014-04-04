@@ -93,7 +93,7 @@ sub augment_feature_info {
                 -hit_length          => $info->{length},
                 -description         => $info->{description},
                 -taxon_id            => $info->{taxon_id},
-                -db_name             => $info->{source_db},
+                -db_name             => $info->{source},
                 );
             $feature->{'_hit_description'} = $hd;
         }

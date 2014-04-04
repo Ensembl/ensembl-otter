@@ -6,7 +6,7 @@ use warnings;
 use Readonly;
 
 use base qw( Exporter );
-our @EXPORT_OK = qw( accession_info_column_order );
+our @EXPORT_OK = qw( accession_info_column_order fasta_header_column_order );
 
 =head1 NAME
 
@@ -27,6 +27,19 @@ Readonly my @ACCESSION_INFO_COLUMN_ORDER => qw(
 );
 
 sub accession_info_column_order { return @ACCESSION_INFO_COLUMN_ORDER; }
+
+
+Readonly my @FASTA_HEADER_COLUMN_ORDER => qw(
+    acc_sv
+    taxon_id
+    evi_type
+    description
+    source
+    sequence_length
+);
+
+sub fasta_header_column_order { return @FASTA_HEADER_COLUMN_ORDER; }
+
 
 =head1 AUTHOR
 
