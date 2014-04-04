@@ -7,57 +7,14 @@ BEGIN { use lib ($ENV{OTTER_PERL_INC} || q{}) =~ m{([^:]+)}g }
 use SangerPaths qw{ core bioperl123 otter };
 use Bio::Otter::Git qw{ :server_ensembl :match };
 
-use Try::Tiny;
-
 use Bio::Otter::Server::Support::Web;
-use Bio::Otter::Utils::AccessionInfo;
-use Bio::Otter::Utils::ENA;
-use Bio::Vega::Evidence::Types qw(evidence_is_sra_sample_accession);
+use Bio::Otter::ServerAction::TSV::AccessionInfo;
 
 Bio::Otter::Server::Support::Web->send_response(
     sub {
         my ($server) = @_;
-
-        my $accs = $server->param('accessions');
-        my @acc_list = split(/,/, $accs);
-
-        my @ai_acc_list;
-        my @sra_acc_list;
-        foreach my $acc ( @acc_list ) {
-            if (evidence_is_sra_sample_accession($acc)) {
-                push @sra_acc_list, $acc;
-            } else {
-                push @ai_acc_list, $acc;
-            }
-        }
-
-        my $ai_types;
-        try {
-            my $ai = Bio::Otter::Utils::AccessionInfo->new;
-            $ai_types = $ai->get_accession_types(\@ai_acc_list);
-            1;
-        }
-        catch {
-            die "Failed to fetch AccessionInfo accession type info: $_";
-        };
-
-        my $ena_types;
-        try {
-            my $ena = Bio::Otter::Utils::ENA->new;
-            $ena_types = $ena->get_sample_accession_types(@sra_acc_list);
-            1;
-        }
-        catch {
-            die "Failed to fetch ENA accession type info: $_";
-        };
-
-        my $response = '';
-        foreach my $acc (keys %$ai_types) {
-            $response .= join("\t", $acc, @{$ai_types->{$acc}}) . "\n";
-        }
-        foreach my $acc (keys %$ena_types) {
-            $response .= join("\t", $acc, @{$ena_types->{$acc}}) . "\n";
-        }
-
-        return $response;
+        my $tsv = Bio::Otter::ServerAction::TSV::AccessionInfo->new($server)->get_accession_types;
+        return $tsv;
     });
+
+__END__
