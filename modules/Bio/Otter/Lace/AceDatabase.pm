@@ -1204,7 +1204,8 @@ sub _process_fh {
     my $filter = $column->Filter;
 
     if ($filter->content_type eq 'transcript') {
-        return Bio::Otter::Lace::ProcessGFF::make_ace_transcripts_from_gff($gff_fh);
+        return Bio::Otter::Lace::ProcessGFF::make_ace_transcripts_from_gff(
+            $gff_fh, $self->smart_slice->start, $self->smart_slice->end);
     }
     elsif ($filter->content_type eq 'alignment_feature') {
         Bio::Otter::Lace::ProcessGFF::store_hit_data_from_gff($self->AccessionTypeCache, $gff_fh);

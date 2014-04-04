@@ -106,10 +106,10 @@ sub store_hit_data_from_gff {
 
 
 sub make_ace_transcripts_from_gff {
-    my ($gff_fh) = @_;
+    my ($gff_fh, $start, $end) = @_;
 
     my %tsct;
-    make_ace_transcripts_from_gff_fh($gff_fh, \%tsct);
+    make_ace_transcripts_from_gff_fh($gff_fh, $start, $end, \%tsct);
 
     my (@ok_tsct);
     while (my ($name, $sub) = each %tsct) {
@@ -127,34 +127,17 @@ sub make_ace_transcripts_from_gff {
 }
 
 sub make_ace_transcripts_from_gff_fh {
-    my ($gff_fh, $tsct) = @_;
+    my ($gff_fh, $seq_region_start, $seq_region_end, $tsct) = @_;
+
+    my $seq_region_offset = $seq_region_start - 1;
+    my $seq_region_length = $seq_region_end - $seq_region_offset;
 
     my (%locus_by_name, $gene_method, $coding_gene_method);
 
-    my ($seq_region_found,
-        $seq_region_start,
-        $seq_region_end,
-        $seq_region_offset,
-        $seq_region_length);
-
-    $seq_region_found = 0;
     while (<$gff_fh>) {
         last if /^\s*##\bFASTA\b/;
-        if (/^\s*#/) {
-            if (/^\s*##sequence-region /) {
-                if (($seq_region_start, $seq_region_end) =
-                    /^##sequence-region \S+ (\d+) (\d+)/) {
-                    $seq_region_found = 1;
-                    $seq_region_offset = $seq_region_start - 1;
-                    $seq_region_length = $seq_region_end - $seq_region_offset;
-                }
-                else {
-                    confess "invalid sequence region header in GFF file"
-                }
-            }
-            next;
-        }
-        confess "no sequence region header in GFF file" unless $seq_region_found;
+        next if /^\s*#/;
+
         my ($seq_name, $source, $feat_type, $start, $end, $score, $strand, $frame, $attrib)
             = parse_gff_line($_);
         $start -= $seq_region_offset;
