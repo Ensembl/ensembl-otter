@@ -2,11 +2,11 @@
 
 =head1 NAME
 
-add-assembnlies_and_mappings - script to tweak newly created vega database for attaching to a website
+add_assemblies_and_mappings - script to tweak newly created vega database for attaching to a website
 
 =head1 SYNOPSIS
 
-finish_vega_creation [options]
+add_assemblies_and_mappings [options]
 
 Options:
 
@@ -24,7 +24,7 @@ Options:
     --ensembluser=USER                  use Ensmebl database user USER
     --ensemblpass=PASS                  use Ensembl database pass PASS
     --ensembldbname=DBNAME              use Ensembl database DBNAME
-    --ensemblassembly=STRING            Ensembl assembly to map to
+    --ensemblassembly=NAME              Ensembl assembly to map to
 
     --secondassembly=NAME               Another assembly that you wish to transfer from Vega
 
@@ -44,34 +44,24 @@ Options:
 
 =head1 DESCRIPTION
 
-This script does a number of jobs:
-- updates gene.analysis_id and transcript.analysis_id depending on gene.source
-- adds attributes for gene / transcript author and author_email according to source (hard coded)
-- deletes transcript synonym attrib types
-- sets seq_region.name for chromosomes to that defined by the seq_region_attrib 'vega_name'
-- tidies up coord_system setting the default assembly version to 'VEGA$ver' from 'Otter'
-- tidies up meta table
+This script
+- adds seq_region_synonyms for INSDC accessions
 - adds assembly mappings for ensembl chromosomes using either a loutre or an ensembl database:
     for identical assemblies the seq_region details are taken from ensembl and a 1:1 mapping added;
-    for non-identical assemblies assembly mapping details are taken from loutre
+    for human patches the mappings are taken from Ensembl, but work is needed
+    for non-identical assemblies assembly mapping details are taken from loutre.
     - both ensembl and vega databases must be on the same MySQL server and have INSERT privilages
+    - The is only written for human where adjustment of the loutre mappings is needed
+     *Will need fixing for mouse where it's more straightforward
+- takes mappings for a second assembly from loutre
+- tidies up coord_system setting the default assembly version to 'VEGA$ver' from 'Otter'
+- tidies up meta table
 - takes mappings for a second assembly from loutre
 - patches coord_system.version for contigs to NULL
-- synchronises attribute table with ensembl/misc-scripts/attribute_types/attrib_types.txt
-- synchronises external_db table with ensembl/misc-scripts/external_db/external_dbs.txt
-- populates exon_stable_id_pool with max value (might be needed for removing duplicate stable IDS)
-- patches some biotypes, both due to differences in loutre and setting by annotators (ASB_*)
-- adds a meta key entry (genome.assembly_type) if this species has a full genome
-- makes sure CV terms are either hidden_remarks and havana_cv attributes (note if there are any new terms
-then we won't know about them unless we are told about them
 
 The first time it is run it creates backup copies of the original tables; then when run
 subsequently with the -prune 1 option it restores these tables to their original state. Can
-therefore completely reset the database using a combination of -prune 1 -dry-run 1 options
-
-Does a number of data checks which can be seen by running in -dry_run mode and looking for 'WARNING'
-in the log file. The script will prompt you to run in dry_run mode if this is the first time it's
-been run on a particular database.
+therefore completely reset the database using a combination of -prune 1 -dry-run 1 options.
 
 =head1 LICENCE
 
@@ -310,7 +300,7 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
   }
   else {
     $support->log_verbose("Adding seq_region_synonym of value $insdc for loutre chromosome $v_name\n",2);
-#    $chrom_dets{$v_name}{'insdc'} = $insdc;
+    $chrom_dets{$v_name}{'insdc'} = $insdc;
     if (! $support->param('dry_run')) {
       $vdbh->do(qq(INSERT into seq_region_synonym
                  VALUES ('',$v_sr_id,'$insdc',$insdc_edb)));
@@ -323,13 +313,14 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
 ##############################
 
 #The method by which we generate the mappings varies depending on the type of seq_region
-#....
-#first, loop through all chromsomes and make a note of those that do have an ensembl_name
+#So first of all loop through all chromsomes and make a note of which method to use for which
 foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
   my $v_name  = $chrom->seq_region_name;
   my $v_sr_id = $chrom->get_seq_region_id;
   my $l_chrom = $lsa->fetch_by_region('chromosome',$v_name);
+  my $e_sr_id;
   $support->log("Looking at Vega chromosome $v_name for which seq_region to use for e! mappings\n",1);
+
   # only even consider doing mappings if we have an ensembl_name attribute
   my $e_attribs = $chrom->get_all_Attributes('ensembl_name');
   my $e_name;
@@ -345,34 +336,21 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
     next;
   }
 
-  #Regions with an equiv_asm attribute can be either PATCHES or chromosomes; how they are dealt with differs.
-  #They will get their mappings by importing seq_regions from Ensembl
-  my $e_sr_id;
-
   #GRC patches will get their mappings from Ensembl. The complication is that the Ensembl names we have are not the same as e! uses
   if ($support->is_patch($chrom)) {
-    if ($e_name =~ s/CHR_(.+)$/$1/) {
-#      warn $e_name; exit;
-      if ($e_sr_id = $esa->fetch_by_region('scaffold',$e_name,'','','',$alt_assembly)->get_seq_region_id) {
- #       $chrom_dets{$v_name}{'do_mapping_using'} = { ename => $e_name, esr_id => $e_sr_id, type => 'ensembl_scaffold_patch', vsr_id => $v_sr_id};
-      }
-      else {
-        $support->log("Can't find ensembl name $e_name in Ensembl, no mappings will be added\n",2);
-      }
+    if ($e_sr_id = $esa->fetch_by_region('chromosome',$e_name,'','','',$alt_assembly)->get_seq_region_id) {
+      $chrom_dets{$v_name}{'do_mapping_using'} = { ename => $e_name, esr_id => $e_sr_id, type => 'ensembl_patch', vsr_id => $v_sr_id};
     }
     else {
-      $support->log_warning("Can't find ensembl name $e_name in Ensembl, no mappings will be added\n",2);
+      $support->log("Can't find ensembl name $e_name in Ensembl, no mappings will be added\n",2);
       next;
     }
-
-    &check_insdc_versions;
-    ###check versions as a pre-warning for e-vega !
-
+    #check versions as a pre-warning for e-vega !
+    &check_insdc_versions($v_name,$chrom_dets{$v_name});
     next;
   }
 
-  #Regions with an equiv_asm attribute can be either PATCHES or chromosomes; the former are excluded from this by the order.
-  #They will get their mappings by importing seq_regions from Ensembl
+  #Other regions with an equiv_asm attribute get their mappings by importing seq_regions from Ensembl
   if (grep { $_->value eq $alt_assembly } @{$l_chrom->get_all_Attributes('equiv_asm')}) {
     if ($e_sr_id = $esa->fetch_by_region('chromosome',$e_name,'','','',$alt_assembly)->get_seq_region_id) {
       $chrom_dets{$v_name}{'do_mapping_using'} = { ename => $e_name, esr_id => $e_sr_id, type => 'ensembl_chromosome_equiv_asm', vsr_id => $v_sr_id };
@@ -385,25 +363,20 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
 
   #Other regions will be MHC / LRC. These have mappings in loutre but like PATCHES they are to the wrong seq_region so will need adjusting
   if ($v_name =~ /[LHC|MHC]/) {
-    my $ename_loutre = $e_name;
-    if ($e_name =~ s/CHR_(.+)$/$1/) {
-      if ($e_sr_id = $esa->fetch_by_region('scaffold',$e_name,'','','',$alt_assembly)->get_seq_region_id) {
-#        $chrom_dets{$v_name}{'do_mapping_using'} = { ename => $e_name, esr_id => $e_sr_id, type => 'ensembl_chrom_adjust',  vsr_id => $v_sr_id, lname =>  $ename_loutre };
-      }
-      else {
-        $support->log("Can't find ensembl name $e_name in Ensembl, no mappings will be added\n",2);
-      }
+    my ($name_loutre) = $e_name =~ /CHR_(.+)$/;
+    if ($e_sr_id = $esa->fetch_by_region('chromosome',$e_name,'','','',$alt_assembly)->get_seq_region_id) {
+      $chrom_dets{$v_name}{'do_mapping_using'} = { ename => $e_name, esr_id => $e_sr_id, type => 'loutre_mapping_adjust', vsr_id => $v_sr_id, loutre_mapping_name => $name_loutre };
     }
     else {
-      $support->log_warning("Can't find ensembl name $e_name in Ensembl, no mappings will be added\n",2);
+      $support->log("Can't find ensembl name $e_name in Ensembl, no mappings will be added\n",2);
     }
     next;
   }
-  $support->log_warning("Didn't expect to get here!\n");
+
+  $support->log_warning("Didn't expect to get here but I guess this is where mouse will end up!\n");
 }
 
-
-warn Data::Dumper::Dumper(\%chrom_dets);
+#warn Data::Dumper::Dumper(\%chrom_dets); exit;
 
 
 ####################################
@@ -416,23 +389,100 @@ my $ass_ins_sth = $vdbh->prepare(qq(INSERT into assembly VALUES (?,?,?,?,?,?,?))
 foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
   my $v_name  = $chrom->seq_region_name;
   next unless my $dets = $chrom_dets{$v_name}{'do_mapping_using'};
-  $support->log("Adding mappings wanted for chromosome $v_name\n",1);
+  $support->log("Adding assembly mappings for chromosome $v_name\n",1);
   if ($second_assembly) {
     $support->log("Adding second assembly ($second_assembly) for chromosome $v_name\n",2);
     &add_second_assembly($v_name,$dets);
   }
-  my $l_chrom = $lsa->fetch_by_region('chromosome',$v_name);
   if ($dets->{'type'} eq 'ensembl_chromosome_equiv_asm') {
     $support->log("Looking at Vega chromosome $v_name for which seq_region to use for e! mappings\n",2);
-    &patch_equiv_chr($v_name,$dets);
+    &add_equiv_chr($v_name,$dets);
+  }
+  if ($dets->{'type'} eq 'ensembl_patch') {
+    $support->log("Retrieving PATCH details from e! mappings\n",2);
+    &add_equiv_patch($v_name,$dets);
+  }
+  if ($dets->{'type'} eq 'loutre_mapping_adjust') {
+    $support->log("Retrieving mappings from loutre in order to adjust them\n",2);
+    &munge_loutre_mappings($v_name,$dets);
   }
 }
 
+########################
+# do some other tweaks #
+########################
 
-#&misc_fixes();
+&misc_fixes();
 $support->finish_log;
 
-sub patch_equiv_chr {
+
+sub munge_loutre_mappings {
+  my ($v_name,$dets) = @_;
+  $support->log("Going back to e! to get coordinates of the mappings for this PATCH\n",2);
+  my $e_sr_id = $dets->{'esr_id'};
+  my $v_sr_id = $dets->{'vsr_id'};
+  my $loutre_name = $dets->{'loutre_mapping_name'};
+
+  #copy seq_regions from e!
+  my ($seq_region_id,$name,$length) = $edbh->selectrow_array(qq(SELECT seq_region_id, name, length FROM seq_region WHERE seq_region_id = $e_sr_id));
+  if (! $support->param('dry_run')) {
+    my $c =  $sr_ins_sth->execute($seq_region_id+$alt_offset,$name,$alt_coord_system_id,$length);
+    $support->log("Inserted $c seq_region table_entries\n",3);
+  }
+
+  #offset is used to alter the mapping we get from loutre so that they relate to the chromosome not the scaffold
+  my ($offset) = $edbh->selectrow_array(qq(
+      SELECT asm_start - cmp_start + 1
+        FROM assembly a, seq_region sr, coord_system cs
+       WHERE a.cmp_seq_region_id = sr.seq_region_id
+         AND sr.coord_system_id = cs.coord_system_id
+         AND cs.version = '$alt_assembly'
+         AND asm_seq_region_id = $e_sr_id));
+
+  #get mappings from loutre
+  my $lsr_id = $lsa->fetch_by_region('chromosome',$loutre_name,'','','',$alt_assembly,)->get_seq_region_id;
+  my $sql = qq(SELECT asm_start, asm_end, cmp_start, cmp_end, ori
+              FROM assembly
+             WHERE cmp_seq_region_id = $lsr_id);
+  my $sth = $ldbh->prepare($sql);
+  $sth->execute;
+  my $c = 0;
+  while (my ($asm_start,$asm_end,$cmp_start,$cmp_end,$ori) = $sth->fetchrow_array) {
+    $ass_ins_sth->execute($v_sr_id,$seq_region_id+$alt_offset,$asm_start,$asm_end,$cmp_start+$offset,$cmp_end+$offset,$ori);
+    $c++;
+  }
+  $support->log("Inserted $c assembly table_entries\n",3);
+}
+
+sub add_equiv_patch {
+  my ($v_name,$dets) = @_;
+  $support->log("Going back to e! to get coordinates of the mappings for this PATCH\n",2);
+  my $e_sr_id = $dets->{'esr_id'};
+  my $v_sr_id = $dets->{'vsr_id'};
+
+  #copy seq_regions from e!
+  my ($seq_region_id,$name,$length) = $edbh->selectrow_array(qq(SELECT seq_region_id, name, length FROM seq_region WHERE seq_region_id = $e_sr_id));
+  if (! $support->param('dry_run')) {
+    my $c =  $sr_ins_sth->execute($seq_region_id+$alt_offset,$name,$alt_coord_system_id,$length);
+    $support->log("Inserted $c seq_region table_entries\n",3);
+  }
+
+  #copy assemblies from e! (reversing them)
+  my $sql = qq(
+         SELECT asm_start,asm_end,cmp_start,cmp_end
+           FROM assembly a, seq_region sr, coord_system cs
+          WHERE a.cmp_seq_region_id = sr.seq_region_id
+            AND sr.coord_system_id = cs.coord_system_id
+            AND cs.version = '$alt_assembly'
+            AND asm_seq_region_id = $e_sr_id);
+  if (! $support->param('dry_run')) {
+    my ($target_asm_start,$target_asm_end,$source_asm_start,$source_asm_end) = $edbh->selectrow_array($sql);
+    my $c = $ass_ins_sth->execute($v_sr_id,$e_sr_id+$alt_offset,$source_asm_start,$source_asm_end,$target_asm_start,$target_asm_end,1);
+    $support->log("Inserted $c assembly table_entries\n",3);
+  }
+}
+
+sub add_equiv_chr {
   my ($v_name,$dets) = @_;
   $support->log("Chromosome $v_name is configured as being the same for VEGA and $alt_assembly; checking lengths to see if we can adding seq_regions and mappings from Ensembl...\n",3);
   my $e_sr_id = $dets->{'esr_id'};
@@ -475,7 +525,6 @@ sub patch_equiv_chr {
 
 sub add_second_assembly {
   my ($v_name,$dets) = @_;
- 
   my $v_sr_id = $dets->{'vsr_id'};
 
   #get mappings to second assembly from loutre
@@ -502,7 +551,7 @@ sub add_second_assembly {
           AND sr.name = '$v_name' and cs2.version = '$second_assembly');
       my $sth = $ldbh->prepare($sql);
       $sth->execute;
-      my $c = 0;
+      $c = 0;
       while (my ($asm_start,$asm_end,$cmp_start,$cmp_end,$ori) = $sth->fetchrow_array) {
         $ass_ins_sth->execute($v_sr_id,$sec_seqid+$sec_offset,$asm_start,$asm_end,$cmp_start,$cmp_end,$ori);
         $c++;
@@ -512,13 +561,39 @@ sub add_second_assembly {
   }
 }
 
+#compare accessions for PATCHES from Ensembl and Vega and warn if they're different
+sub check_insdc_versions {
+  my ($v_name,$dets) = @_;
+  my $ename = $dets->{'do_mapping_using'}{'ename'};
+  my ($e_srs_name) = $ename =~ /CHR_(.+)$/;
+  my $e_sr_id = $dets->{'do_mapping_using'}{'esr_id'};
+  my $insdc   = $dets->{'insdc'};
+  if (! $insdc && (! $support->param('live_update')) ) {
+    $support->log_warning("No accession for PATCH $v_name in Vega so we don't know if e! and Vega are using the same PATCH!\n",2);
+    return;
+  }
+  my @e_patch_names  = $edbh->selectrow_array(qq(
+                SELECT srs.synonym
+                  FROM seq_region_synonym srs, seq_region sr
+                 WHERE srs.seq_region_id = sr.seq_region_id
+                   AND sr.name = '$e_srs_name'
+                   AND srs.external_db_id = '$insdc_edb'));
+  if (scalar(@e_patch_names > 1) && (! $support->param('live_update')) ) {
+    $support->log_warning("More than one e! seq_region_synonym found for $v_name, need to alter the code below\n",2);
+  }
+  elsif ( (! @e_patch_names) && (! $support->param('live_update')) ) {
+    $support->log_warning("No accession for PATCH $v_name in Ensembl so we don't know if e! and Vega are using the same PATCH!\n",2);
+  }
+  elsif ( ($e_patch_names[0] ne $insdc) && (! $support->param('live_update')) ) {
+    $support->log_warning("Accession for PATCH $v_name differs between e! (".$e_patch_names[0].") and Vega ($insdc). This annotation will not be projected into ensembl-vega when you do this step\n",2);
+  }
+  else {
+    $support->log_verbose("Ensembl and Vega accessions match ($insdc)\n",2);
+  }
+}
 
+#misc fixes to coord_system and meta table
 sub misc_fixes {
-
-  ##############
-  # misc fixes #
-  ##############
-
   my @sql_fixes;
   my $release_no = $support->param('vega_release');
 
@@ -560,12 +635,8 @@ sub misc_fixes {
         }
       };
       if ($@) {
-        $support->log_warning("Failed fix: $fix $@"); 
+        $support->log_warning("Failed fix: $fix $@");
       }
     }
   }
-}
-
-sub check_insdc_versions {
-  $support->log("Write something to do this\n");
 }
