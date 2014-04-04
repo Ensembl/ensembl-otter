@@ -11,6 +11,7 @@ use lib "${ENV{ANACODE_TEAM_TOOLS}}/t/tlib";
 use Test::CriticModule;
 use Test::Otter qw( ^db_or_skipall );
 use Test::Otter::Accessions;
+use Test::SetupLog4perl;
 use OtterTest::AccessionTypeCache;
 
 use Hum::Sequence;

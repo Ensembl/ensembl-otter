@@ -3,6 +3,8 @@ package Bio::Otter::Lace::OnTheFly::QueryValidator;
 use namespace::autoclean;
 use Moose;
 
+with 'MooseX::Log::Log4perl';
+
 use Carp;
 use List::MoreUtils qw{ uniq };
 
@@ -60,6 +62,8 @@ sub _build_confirmed_seqs {     ## no critic (Subroutines::ProhibitUnusedPrivate
         # We work on the union of the supplied sequences and supplied accession ids
         my @accessions = ( @seq_accs, @supplied_accs );
         return Bio::Otter::Lace::OnTheFly::Utils::SeqList->new( seqs => [] ) unless @accessions; # nothing to do
+
+        $self->logger->debug('n(accessions) = ', scalar @accessions);
 
         # identify the types of all the accessions supplied
         my $cache = $self->accession_type_cache;
@@ -171,15 +175,27 @@ sub _check_augment_supplied_accessions {
 
     my @to_fetch;
     foreach my $acc ( @$supplied_accs ) {
+
         my $entry = $self->_acc_type_full($acc);
-        if ($entry) {
-            my ($type, $full) = @$entry;
-            push(@to_fetch, $full);
-        }
-        else {
+
+        unless ($entry) {
             # No point trying to fetch invalid accessions
-            $self->_add_missing_warning($acc, "unknown accession");
+            $self->_add_missing_warning($acc, "unknown accession or illegal evidence type");
+            next;
         }
+
+        my ($type, $full) = @$entry;
+        if ($type eq 'SRA') {
+            $self->_add_missing_warning($acc, 'illegal evidence type: SRA');
+            next;
+        }
+
+        push(@to_fetch, $full);
+
+        if ($acc ne $full) {
+            $self->_add_remap_warning( $acc => $full );
+        }
+
     }
     return @to_fetch;
 }
@@ -189,38 +205,48 @@ sub _check_augment_supplied_accessions {
 sub _fetch_sequences {
     my ($self, @to_fetch) = @_;
 
-    my %seqs_fetched;
-    if (@to_fetch) {
-        @to_fetch = uniq @to_fetch;
-        foreach my $seq (Hum::Pfetch::get_Sequences(@to_fetch)) {
-            $seqs_fetched{$seq->name} = $seq if $seq;
-        }
-    }
+    my $cache = $self->accession_type_cache;
+
+    @to_fetch = uniq @to_fetch;
+    $self->logger->debug('Need seq for: ', join(',', @to_fetch) || '<none>');
 
     foreach my $acc (@to_fetch) {
-        my ($type, $full) = @{$self->_acc_type_full($acc)};
 
-        # Delete from the hash so that we can check for
-        # unclaimed sequences.
-        my $seq = delete($seqs_fetched{$full});
-        if ($seq) {
-            $seq->type($type);
-        }
-        else {
-            $self->_add_missing_warning("$acc ($full)" => "could not fetch");
+        my ($type, $full) = @{$self->_acc_type_full($acc)};
+        unless ($type) {
+            $self->_add_missing_warning($acc => 'illegal evidence type');
             next;
         }
 
+        my $info = $cache->feature_accession_info($acc);
+        unless ($info) {
+            $self->logger->error("No info for '$acc' - this should not happen");
+            $self->_add_missing_warning($acc => 'internal error');
+            next;
+        }
+
+        unless ($info->{currency} and $info->{currency} eq 'current') {
+            $self->_add_missing_warning($acc => 'obsolete SV');
+            next;
+        }
+
+        unless ($info->{sequence}) {
+            $self->_add_missing_warning($acc => 'no sequence');
+            next;
+        }
+
+        my $seq = Hum::Sequence->new;
+        $seq->name($full);
+        $seq->type($type);
+        $seq->sequence_string($info->{sequence});
+
+        # Will this ever get hit?
         if ($full ne $acc) {
+            $self->logger->error("_fetch_sequences called with partial acc.sv for '$acc','$full'");
             $self->_add_remap_warning($acc => $full);
         }
 
         push(@{$self->seqs}, $seq);
-    }
-
-    # anything not claimed should be reported
-    foreach my $unclaimed ( keys %seqs_fetched ) {
-        $self->_add_unclaimed_warning($unclaimed);
     }
 
     return;
