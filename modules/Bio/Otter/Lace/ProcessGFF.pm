@@ -7,6 +7,8 @@ use strict;
 use warnings;
 use Carp;
 
+use Bio::Otter::ServerAction::TSV::AccessionInfo::ColumnOrder qw( fasta_header_column_order );
+
 use Hum::Ace::SubSeq;
 use Hum::Ace::Method;
 use Hum::Ace::Locus;
@@ -56,14 +58,14 @@ sub store_hit_data_from_gff {
             $fail{$source} ||= "Cannot convert source=$source to an evidence type:$.:$_";
             next;
         }
-        $accession_type_cache->save_accession_info(
-            $attrib->{'Name'},
-            $attrib->{'taxon_id'},
-            $evi_type,
-            $attrib->{'description'},
-            $attrib->{'db_name'},
-            $attrib->{'length'},
-            );
+        $accession_type_cache->save_accession_info( {
+            acc_sv          => $attrib->{'Name'},
+            taxon_id        => $attrib->{'taxon_id'},
+            evi_type        => $evi_type,
+            description     => $attrib->{'description'},
+            source          => $attrib->{'db_name'},
+            sequence_length => $attrib->{'length'},
+            } );
     }
 
     foreach my $prob (sort values %fail) {
@@ -78,8 +80,11 @@ sub store_hit_data_from_gff {
     my $save_sub = sub {
         if (defined $header) {
             my @value_list = split /\|/, $header;
-            $accession_type_cache->save_accession_info(@value_list, $sequence);
-            my $taxon_id = $value_list[1];
+            my %acc_info;
+            @acc_info{fasta_header_column_order()} = @value_list;
+            $acc_info{sequence} = $sequence;
+            $accession_type_cache->save_accession_info(\%acc_info);
+            my $taxon_id = $acc_info{taxon_id};
             $taxon_id_hash->{$taxon_id}++;
         }
     };

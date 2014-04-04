@@ -4,6 +4,7 @@ package Bio::Otter::Server::GFF;
 use strict;
 use warnings;
 
+use Bio::Otter::ServerAction::TSV::AccessionInfo::ColumnOrder qw( fasta_header_column_order );
 use Bio::Vega::Enrich::SliceGetAllAlignFeatures;
 use Bio::Vega::Utils::GFF;
 use Bio::Vega::Utils::EnsEMBL2GFF;
@@ -228,22 +229,13 @@ sub _fasta {
     } sort keys %{$accession_info};
 }
 
-my @fasta_key_list = qw(
-    acc_sv
-    taxon_id
-    evi_type
-    description
-    source
-    sequence_length
-    );
-
 sub _fasta_item {
     my ($accession_info) = @_;
     my $sequence = $accession_info->{sequence};
     my @taxon_list = split /,/, $accession_info->{'taxon_list'};
     @taxon_list == 1 or return; # we only handle single taxon IDs
     ($accession_info->{'taxon_id'}) = @taxon_list; # has side-effect of adding to $accession_info, but we don't mind.
-    my $fasta_list = [ @{$accession_info}{@fasta_key_list} ];
+    my $fasta_list = [ @{$accession_info}{fasta_header_column_order()} ];
     $sequence =~ s/(.{70})/$1\n/g;
     chomp $sequence;
     my $item = sprintf ">%s\n%s\n", (join '|', @{$fasta_list}), $sequence;
