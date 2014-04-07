@@ -2,10 +2,13 @@ package Bio::Otter::Server::Config;
 use strict;
 use warnings;
 
-use Bio::Otter::SpeciesDat;
-use Bio::Otter::Version;
 use Try::Tiny;
 use List::MoreUtils 'uniq';
+# require YAML::Any; # sometimes (below), but it is a little slow
+
+use Bio::Otter::SpeciesDat;
+use Bio::Otter::SpeciesDat::Database;
+use Bio::Otter::Version;
 
 
 =head1 NAME
@@ -212,6 +215,25 @@ sub __git_head {
         die "branch name '$branch' does not tell me (major version|root)";
     }
     return ($vsn, $branch);
+}
+
+
+=head2 databases()
+
+Return a reference to the hash of C<database_key> to
+L<Bio::Otter::SpeciesDat::Database> objects from the Otter Server
+config directory (since v81).
+
+=cut
+
+sub databases {
+    my ($pkg) = @_;
+    require YAML::Any;
+    my $fn = $pkg->data_filename('/databases.yaml');
+    my ($h) = YAML::Any::LoadFile($fn);
+    my $dbs = $h->{dbspec};
+    die "No dbspec in $fn" unless $dbs;
+    return Bio::Otter::SpeciesDat::Database->new_many_from_dbspec($dbs);
 }
 
 
