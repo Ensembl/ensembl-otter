@@ -228,34 +228,22 @@ sub _fasta {
     } sort keys %{$accession_info};
 }
 
-my @accession_key_list = qw(
-    evi_type
-    accession_sv
-    source_db
-    length
-    taxon_list
-    description
-    );
-
 my @fasta_key_list = qw(
-    accession_sv
+    acc_sv
     taxon_id
     evi_type
     description
-    source_db
-    length
+    source
+    sequence_length
     );
 
 sub _fasta_item {
     my ($accession_info) = @_;
-    my $sequence = pop @{$accession_info};
-    # permute the columns from accession info order to FASTA header order
-    my $info_hash = { };
-    $info_hash->{$_} = shift @{$accession_info} for @accession_key_list;
-    my @taxon_list = split /,/, $info_hash->{'taxon_list'};
+    my $sequence = $accession_info->{sequence};
+    my @taxon_list = split /,/, $accession_info->{'taxon_list'};
     @taxon_list == 1 or return; # we only handle single taxon IDs
-    ($info_hash->{'taxon_id'}) = @taxon_list;
-    my $fasta_list = [ @{$info_hash}{@fasta_key_list} ];
+    ($accession_info->{'taxon_id'}) = @taxon_list; # has side-effect of adding to $accession_info, but we don't mind.
+    my $fasta_list = [ @{$accession_info}{@fasta_key_list} ];
     $sequence =~ s/(.{70})/$1\n/g;
     chomp $sequence;
     my $item = sprintf ">%s\n%s\n", (join '|', @{$fasta_list}), $sequence;

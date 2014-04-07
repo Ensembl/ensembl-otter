@@ -38,7 +38,7 @@ Readonly my @DEFAULT_DB_CATEGORIES => qw(
     uniprot_archive
 );
 
-Readonly my %CLASS_TO_SOURCE_DB => (
+Readonly my %CLASS_TO_SOURCE => (
     STD => 'Swissprot',
     PRE => 'TrEMBL',
     ISO => 'Swissprot',  # we don't think TrEMBL can have isoforms
@@ -157,7 +157,7 @@ sub _build_sql {
 SELECT e.entry_id
   , e.molecule_type
   , e.data_class
-  , e.accession_version
+  , e.accession_version AS acc_sv
   , e.sequence_length
   , GROUP_CONCAT(t.ncbi_tax_id) as taxon_list
   , d.description
@@ -254,7 +254,7 @@ sub _get_accessions {
     my %acc_hash = map { $_ => 1 } @{$opts{acc_list}};
     my $results = {};
 
-  DB_NAME: for my $db_name (@{$opts{db_categories}}) {
+  DB: for my $db_name (@{$opts{db_categories}}) {
 
     NAME: foreach my $name (keys %acc_hash) {
 
@@ -269,13 +269,12 @@ sub _get_accessions {
           $self->_set_currency($db_name, $row);
           $self->_debug_result($db_name, $row) if $self->debug;
 
-          if (my $result = $self->_classify_result($name, $row)) {
-              $results->{$name} = $result;
-              my $seq = $self->_get_sequence($db_name, $row);
-              push @$result, $seq if ($seq);
+          if ($self->_classify_result($row)) {
+              $results->{$name} = $row;
+              $self->_get_sequence($db_name, $row);
           }
 
-          delete $acc_hash{$name};
+          delete $acc_hash{$name}; # so we don't search for it in next DB if we already have it
 
       } # RESULT
 
@@ -284,7 +283,7 @@ sub _get_accessions {
 
     } # NAME
 
-  } # DB_NAME
+  } # DB
 
     return $results;
 }
@@ -336,34 +335,35 @@ sub _classify_search {
 }
 
 sub _classify_result {
-    my ($self, $name, $row) = @_;
+    my ($self, $row) = @_;
 
-    my (        $entry_id,$type,        $class,    $acc_sv,          @extra_info) =
-        @$row{qw(entry_id molecule_type data_class accession_version sequence_length taxon_list description currency)};
+    my ($name, $type, $class) = @$row{qw(name molecule_type data_class)};
 
-    my $result;
-
-  SWITCH: for (1) {
+  SWITCH: {
 
       if ($class eq 'EST') {
-          $result = [ 'EST', $acc_sv, 'EMBL', @extra_info ];
+          $row->{evi_type} = 'EST';
+          $row->{source}   = 'EMBL';
           last SWITCH;
       }
       if ($type eq 'mRNA') {
           # Here we return cDNA, which is more technically correct since
           # both ESTs and cDNAs are mRNAs.
-          $result = [ 'cDNA', $acc_sv, 'EMBL', @extra_info ];
+          $row->{evi_type} = 'cDNA';
+          $row->{source}   = 'EMBL';
           last SWITCH;
       }
       if ($type eq 'protein') {
-          my $source_db = $CLASS_TO_SOURCE_DB{$class};
-          die "Unexpected data class for uniprot entry: $class" unless $source_db;
+          my $source = $CLASS_TO_SOURCE{$class};
+          die "Unexpected data class for uniprot entry: $class" unless $source;
 
-          $result = [ 'Protein', $acc_sv, $source_db, @extra_info ];
+          $row->{evi_type} = 'Protein';
+          $row->{source}   = $source;
           last SWITCH;
       }
       if ($type eq 'other RNA' or $type eq 'transcribed RNA') {
-          $result = [ 'ncRNA', $acc_sv, 'EMBL', @extra_info ];
+          $row->{evi_type} = 'ncRNA';
+          $row->{source}   = 'EMBL';
           last SWITCH;
       }
 
@@ -372,7 +372,7 @@ sub _classify_result {
 
   } # SWITCH
 
-    return $result;
+    return $row;
 }
 
 sub _set_currency {
@@ -384,7 +384,7 @@ sub _set_currency {
       # only an issue for uniprot_archive
       do { $currency = 'current';  last SWITCH } unless $db_name eq $UNIPARC;
 
-      my ($name, $iso, $sv) = $self->_parse_accession($row->{accession_version});
+      my ($name, $iso, $sv) = $self->_parse_accession($row->{acc_sv});
 
       # current non-isoforms would have been found in uniprot
       do { $currency = 'archived'; last SWITCH } unless $iso;
@@ -408,8 +408,8 @@ sub _parse_accession {
 
 sub _debug_result {
     my ($self, $db_name, $row) = @_;
-    my (        $name, $type,        $class,    $acc_sv,          @extra_info) =
-        @$row{qw(name  molecule_type data_class accession_version sequence_length taxon_list description currency)};
+    my (        $name, $type,        $class,    $acc_sv, @extra_info) =
+        @$row{qw(name  molecule_type data_class  acc_sv  sequence_length taxon_list description currency)};
     print "MM result: ", join(',', $name, $acc_sv, $db_name, $type, $class, @extra_info), "\n";
     return;
 }
@@ -434,7 +434,7 @@ sub _get_sequence {
         warn("Seq length mismatch for '$name': db = ", $row->{sequence_length}, ", actual=", length($seq), "\n");
         return;
     }
-    return $seq;
+    return $row->{sequence} = $seq;
 }
 
 my @tax_type_list = (

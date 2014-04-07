@@ -3,6 +3,8 @@
 use strict;
 use warnings;
 
+use Bio::Otter::ServerAction::TSV::AccessionInfo::ColumnOrder qw(accession_info_column_order);
+
 use lib "${ENV{ANACODE_TEAM_TOOLS}}/t/tlib";
 use Test::CriticModule;
 
@@ -32,9 +34,9 @@ is(ref($results), 'HASH', 'results hash');
 foreach my $valid ( @valid_accs ) {
     my $at = $results->{$valid};
     ok($at, "$valid: have result");
-    ok($at->[4], "$valid: has taxon_id");
-    note("\ttaxon_id:\t", $at->[4]);
-    note("\ttitle:\t\t", $at->[5]);
+    ok($at->{taxon_list}, "$valid: has taxon_list");
+    note("\ttaxon_list:\t", $at->{taxon_list});
+    note("\tdescription:\t\t", $at->{description});
 }
 
 foreach my $invalid ( @invalid_accs ) {
@@ -52,7 +54,7 @@ my $s_acc = $valid_accs[0];
 my $seq_results = $ai->get_accession_info([$s_acc]);
 is(ref($seq_results), 'HASH', 'seq_results hash');
 ok($seq_results->{$s_acc}, 'result is for singleton acc');
-note('seq_result: ', join(',', @{$seq_results->{$s_acc}}));
+note('seq_result: ', join(',', @{$seq_results->{$s_acc}}{accession_info_column_order()}));
 
 # Empty
 my $e_results = $ai->get_accession_types([]);
@@ -71,10 +73,9 @@ foreach my $ta_acc_spec (@$ta_acc_specs) {
     subtest $query => sub {
         my $result = $ta_results->{$query};
         if ($ta_acc_spec->{evi_type}) {
-            my ($evi_type, $acc_sv, $source_db) = @$result;
-            is($acc_sv,    $ta_acc_spec->{acc_sv},    'acc_sv');
-            is($evi_type,  $ta_acc_spec->{evi_type},  'evi_type');
-            is($source_db, $ta_acc_spec->{source_db}, 'source_db');
+            foreach my $key (qw{ acc_sv evi_type source }) {
+                is($result->{$key}, $ta_acc_spec->{$key}, "$key");
+            }
         } else {
             is($result, undef, 'no result');
         }
@@ -98,13 +99,11 @@ foreach my $ta_acc_spec (@$ta_acc_specs) {
     subtest $query => sub {
         my $result = $info_results->{$query};
         if ($ta_acc_spec->{mm_db} and $query =~ /\.\d+$/) {
-            $result ||= [];
-            my ($evi_type, $acc_sv, $source_db, $seq_length, $taxon_list, $desc, $currency, $seq) = @$result;
-            is($acc_sv,    $ta_acc_spec->{acc_sv},    'acc_sv');
-            is($evi_type,  $ta_acc_spec->{evi_type},  'evi_type')  if $ta_acc_spec->{evi_type};
-            is($source_db, $ta_acc_spec->{source_db}, 'source_db') if $ta_acc_spec->{source_db};
-            is(length($seq), $seq_length, 'seq_length');
-            is($currency,  $ta_acc_spec->{currency},  'currency');
+            $result ||= {};
+            foreach my $key (qw{ acc_sv evi_type source currency }) {
+                is($result->{$key}, $ta_acc_spec->{$key}, "$key") if $ta_acc_spec->{$key};
+            }
+            is(length($result->{sequence}), $result->{sequence_length}, 'seq_length');
         } else {
             is($result, undef, 'no result');
         }

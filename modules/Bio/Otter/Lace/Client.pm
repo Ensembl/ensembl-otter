@@ -1353,7 +1353,20 @@ sub get_accession_types {
         'get_accession_types',
         {accessions => join ',', @accessions},
         );
-    return $response;
+
+    return unless $response;
+
+    my %results;
+    foreach my $line (split /\n/, $response) {
+        my @row = split /\t/, $line;
+        my %entry;
+        @entry{accession_info_column_order()} = @row;
+        my $name = $entry{name};
+        warn "Duplicate result for '$name'" if $results{$name};
+        $results{$name} = \%entry;
+    }
+
+    return \%results;
 }
 
 sub get_taxonomy_info {
