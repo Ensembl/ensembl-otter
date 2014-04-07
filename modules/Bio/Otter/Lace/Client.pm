@@ -806,14 +806,9 @@ sub do_http_request {
 sub status_refresh_for_DataSet_SequenceSet{
     my ($self, $ds, $ss) = @_;
 
-    my $response = $self->otter_response_content(
-        'GET',
-        'get_analyses_status',
-        {
-            'dataset'  => $ds->name(),
-            'chr'      => $ss->name(),
-        },
-    );
+    my $response =
+        $self->_DataSet_SequenceSet_response_content(
+            $ds, $ss, 'GET', 'get_analyses_status');
 
     my %status_hash = ();
     for my $line (split(/\n/,$response)) {
@@ -946,14 +941,9 @@ sub _build_db_info_hash {
 sub lock_refresh_for_DataSet_SequenceSet {
     my ($self, $ds, $ss) = @_;
 
-    my $response = $self->otter_response_content(
-        'GET',
-        'get_locks',
-        {
-            'dataset'  => $ds->name(),
-            'chr'      => $ss->name(),
-        },
-    );
+   my $response =
+       $self->_DataSet_SequenceSet_response_content(
+           $ds, $ss, 'GET', 'get_locks');
 
     my %lock_hash = ();
     my %author_hash = ();
@@ -991,14 +981,9 @@ sub fetch_all_SequenceNotes_for_DataSet_SequenceSet {
     $ss ||= $ds->selected_SequenceSet
         || die "no selected_SequenceSet attached to DataSet";
 
-    my $response = $self->otter_response_content(
-        'GET',
-        'get_sequence_notes',
-        {
-            'chr'      => $ss->name(),
-            'dataset'  => $ds->name(),
-        },
-    );
+    my $response =
+        $self->_DataSet_SequenceSet_response_content(
+            $ds, $ss, 'GET', 'get_sequence_notes');
 
     my %ctgname2notes = ();
 
@@ -1409,6 +1394,20 @@ sub unlock_otter_xml {
         }
     );
     return 1;
+}
+
+sub _DataSet_SequenceSet_response_content {
+    my ($self, $ds, $ss, $method, $script) = @_;
+
+    my $query = {
+        'dataset'  => $ds->name,
+        'chr'      => $ss->name,
+    };
+
+    my $content =
+        $self->otter_response_content($method, $script, $query);
+
+    return $content;
 }
 
 # configuration
