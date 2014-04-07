@@ -3,6 +3,8 @@ package Bio::Otter::ServerAction::TSV::AccessionInfo;
 use strict;
 use warnings;
 
+use Bio::Otter::ServerAction::TSV::AccessionInfo::ColumnOrder qw(accession_info_column_order);
+
 use base 'Bio::Otter::ServerAction::AccessionInfo';
 
 =head1 NAME
@@ -17,7 +19,7 @@ sub serialise_accession_types {
     my $tsv_string = '';
 
     foreach my $acc (keys %$results) {
-        $tsv_string .= join("\t", $acc, @{$results->{$acc}}) . "\n";
+        $tsv_string .= join("\t", @{$results->{$acc}}{accession_info_column_order()}) . "\n";
     }
 
     return $tsv_string;

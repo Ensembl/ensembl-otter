@@ -26,9 +26,9 @@ use Bio::Otter::Utils::AccessionInfo;
         my $accession_types = $ai->get_accession_types([$name]);
         my $at = $accession_types->{$name};
         if ($at) {
-            return @$at;
+            return ($at->{evi_type}, $at->{acc_sv});
         } else {
-            return ( (undef) x 6 );
+            return ( (undef) x 2 );
         }
     }
 }

@@ -77,7 +77,7 @@ sub populate {
     return unless @to_fetch;
 
     # Query the webserver (mole database) for the information.
-    my $response = $self->Client->get_accession_types(@to_fetch);
+    my $results = $self->Client->get_accession_types(@to_fetch);
 
     my $save_alias = $dbh->prepare(q{
         INSERT INTO otter_full_accession(name, accession_sv) VALUES (?,?)
@@ -85,9 +85,8 @@ sub populate {
 
     $dbh->begin_work;
     try {
-        foreach my $line (split /\n/, $response) {
-            my ($name, $evi_type, $acc_sv, $source_db, $seq_length, $taxon_list, $description, $seq) =
-                split /\t/, $line;
+        foreach my $entry (values %$results) {
+            my ($name, $acc_sv, $taxon_list) = @$entry{qw( name acc_sv taxon_list )};
             my ($tax_id, @other_tax);
             ($tax_id, @other_tax) = split /,/, $taxon_list if $taxon_list; # /; # emacs highlighting workaround
             if (@other_tax) {
@@ -99,7 +98,8 @@ sub populate {
             my ($have_full) = $check_full->fetchrow;
             unless ($have_full) {
                 # It is new, so save it
-                $self->save_accession_info($acc_sv, $tax_id, $evi_type, $description, $source_db, $seq_length, $seq);
+                $self->save_accession_info($acc_sv, $tax_id,
+                                           @$entry{qw( evi_type description source sequence_length sequence)});
             }
             if ($name ne $acc_sv) {
                 $save_alias->execute($name, $acc_sv);

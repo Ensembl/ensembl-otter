@@ -8,7 +8,7 @@ use warnings;
 use Bio::Otter::Lace::Client;   # _build_meta_hash
 use Bio::Otter::Server::Config;
 use Bio::Otter::Server::Support::Local;
-use Bio::Otter::ServerAction::TSV::AccessionInfo;
+use Bio::Otter::ServerAction::AccessionInfo;
 use Bio::Otter::ServerAction::TSV::LoutreDB;
 use Bio::Otter::Version;
 
@@ -28,17 +28,14 @@ sub local_server {
 
 sub get_accession_types {
     my ($self, @accessions) = @_;
-    $self->local_server->set_params(accessions => join(',', @accessions));
-    # FIXME: de-serialisation is still in wrong place (in users of this method),
-    #        but at least serialisation is now encapsulated.
-    #        see apache/get_accession_types and AccessionTypeCache.
-    my $response = $self->sa_ai_tsv->get_accession_types;
+    $self->local_server->set_params(accessions => \@accessions);
+    my $response = $self->sa_accession_info->get_accession_types;
     return $response;
 }
 
-sub sa_ai_tsv {
+sub sa_accession_info {
     my $self = shift;
-    return $self->{_sa_ai_tsv} ||= Bio::Otter::ServerAction::TSV::AccessionInfo->new($self->local_server);
+    return $self->{_sa_accession_info} ||= Bio::Otter::ServerAction::AccessionInfo->new($self->local_server);
 }
 
 # FIXME: scripts/apache/get_config needs reimplementing with a Bio::Otter::ServerAction:: class,

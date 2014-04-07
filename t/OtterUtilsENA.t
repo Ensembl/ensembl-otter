@@ -41,9 +41,9 @@ is(ref($at_results), 'HASH', 'at_results hash');
 foreach my $valid ( @valid_accs ) {
     my $at = $at_results->{$valid};
     ok($at, "$valid: have at_result");
-    ok($at->[4], "$valid: has taxon_id");
-    note("\ttaxon_id:\t", $at->[4]);
-    note("\ttitle:\t\t", $at->[5]);
+    ok($at->{taxon_list}, "$valid: has taxon_list");
+    note("\ttaxon_id:\t", $at->{taxon_list});
+    note("\ttitle:\t\t", $at->{description});
 }
 
 foreach my $invalid ( @invalid_accs ) {

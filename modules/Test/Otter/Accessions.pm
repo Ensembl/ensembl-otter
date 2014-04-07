@@ -53,7 +53,7 @@ __DATA__
 # Whitespace-separated values
 # Fields:
 
-query           acc_sv          mm_db           evi_type        source_db       currency        pfetch_sha1
+query           acc_sv          mm_db           evi_type        source          currency        pfetch_sha1
 
 # ensembl_cDNA
 NM_033513.2     NM_033513.2     refseq          -               -               current
