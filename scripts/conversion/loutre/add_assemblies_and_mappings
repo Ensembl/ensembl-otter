@@ -361,7 +361,7 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
     next;
   }
 
-  #Other regions will be MHC / LRC. These have mappings in loutre but like PATCHES they are to the wrong seq_region so will need adjusting
+  # MHC / LRC (from human) have mappings in loutre but like PATCHES they are to the wrong seq_region so will need adjusting
   if ($v_name =~ /[LHC|MHC]/) {
     my ($name_loutre) = $e_name =~ /CHR_(.+)$/;
     if ($e_sr_id = $esa->fetch_by_region('chromosome',$e_name,'','','',$alt_assembly)->get_seq_region_id) {
@@ -372,8 +372,19 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
     }
     next;
   }
-
-  $support->log_warning("Didn't expect to get here but I guess this is where mouse will end up!\n");
+  else {
+    #Take mappings from loutre
+    my $l_sr_id  = $l_chrom->get_seq_region_id;
+    my $e_sr_id  = $esa->fetch_by_region('chromosome',$e_name,'','','',$alt_assembly)->get_seq_region_id;
+    my $el_sr_id = $lsa->fetch_by_region('chromosome',$v_name,'','','',$alt_assembly)->get_seq_region_id;
+    if ($e_sr_id && $el_sr_id) {
+      $chrom_dets{$v_name}{'do_mapping_using'} = { ename => $e_name, esr_id => $e_sr_id, type => 'loutre_mapping', vsr_id => $v_sr_id, 'lsr_id' => $l_sr_id, 'lesr_id' => $el_sr_id };
+    }
+    else {
+      $support->log("Can't find ensembl name $e_name in Ensembl, or alternative mapping in loutre, no mappings will be added\n",2);
+    }
+    next;
+  }
 }
 
 #warn Data::Dumper::Dumper(\%chrom_dets); exit;
@@ -406,6 +417,10 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
     $support->log("Retrieving mappings from loutre in order to adjust them\n",2);
     &munge_loutre_mappings($v_name,$dets);
   }
+  if ($dets->{'type'} eq 'loutre_mapping') {
+    $support->log("Retrieving mappings from loutre\n",2);
+    &add_loutre_mappings($v_name,$dets);
+  }
 }
 
 ########################
@@ -415,6 +430,35 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
 &misc_fixes();
 $support->finish_log;
 
+sub add_loutre_mappings {
+  my ($v_name,$dets) = @_;
+  $support->log("Getting mappings from Loutre\n",2);
+  my $e_sr_id  = $dets->{'esr_id'};
+  my $v_sr_id  = $dets->{'vsr_id'};
+  my $l_sr_id  = $dets->{'lsr_id'};
+  my $le_sr_id = $dets->{'lesr_id'};
+
+  #copy seq_regions from e!
+  my ($seq_region_id,$name,$length) = $edbh->selectrow_array(qq(SELECT seq_region_id, name, length FROM seq_region WHERE seq_region_id = $e_sr_id));
+  if (! $support->param('dry_run')) {
+    my $c =  $sr_ins_sth->execute($seq_region_id+$alt_offset,$name,$alt_coord_system_id,$length);
+    $support->log("Inserted $c seq_region table_entries\n",3);
+  }
+
+  #get mappings from loutre
+  my $sql = qq(SELECT asm_start, asm_end, cmp_start, cmp_end, ori
+                 FROM assembly
+                WHERE cmp_seq_region_id = $le_sr_id
+                  AND asm_seq_region_id = $l_sr_id);
+  my $sth = $ldbh->prepare($sql);
+  $sth->execute;
+  my $c = 0;
+  while (my ($asm_start,$asm_end,$cmp_start,$cmp_end,$ori) = $sth->fetchrow_array) {
+    $ass_ins_sth->execute($v_sr_id,$seq_region_id+$alt_offset,$asm_start,$asm_end,$cmp_start,$cmp_end,$ori);
+    $c++;
+  }
+  $support->log("Inserted $c assembly table_entries\n",3);
+}
 
 sub munge_loutre_mappings {
   my ($v_name,$dets) = @_;
@@ -440,10 +484,10 @@ sub munge_loutre_mappings {
          AND asm_seq_region_id = $e_sr_id));
 
   #get mappings from loutre
-  my $lsr_id = $lsa->fetch_by_region('chromosome',$loutre_name,'','','',$alt_assembly,)->get_seq_region_id;
+  my $lesr_id = $lsa->fetch_by_region('chromosome',$loutre_name,'','','',$alt_assembly,)->get_seq_region_id;
   my $sql = qq(SELECT asm_start, asm_end, cmp_start, cmp_end, ori
               FROM assembly
-             WHERE cmp_seq_region_id = $lsr_id);
+             WHERE cmp_seq_region_id = $lesr_id);
   my $sth = $ldbh->prepare($sql);
   $sth->execute;
   my $c = 0;
@@ -607,10 +651,10 @@ sub misc_fixes {
 
   #add entries for assembly mappings
   if ($alt_assembly) {
-    push @sql_fixes, "INSERT into meta (meta_key,meta_value) VALUES (\'assembly.mapping\',\'chromosome:VEGA$release_no#chromosome:$alt_assembly\');\n";
+    push @sql_fixes, "INSERT into meta (species,meta_key,meta_value) VALUES (1,\'assembly.mapping\',\'chromosome:VEGA$release_no#chromosome:$alt_assembly\');\n";
   }
   if ($second_assembly) {
-    push @sql_fixes, "INSERT into meta (meta_key,meta_value) VALUES (\'assembly.mapping\',\'chromosome:VEGA$release_no#chromosome:$second_assembly\');\n";
+    push @sql_fixes, "INSERT into meta (species,meta_key,meta_value) VALUES (1,\'assembly.mapping\',\'chromosome:VEGA$release_no#chromosome:$second_assembly\');\n";
   }
 
   #zfish fixes
