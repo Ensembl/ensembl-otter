@@ -36,6 +36,7 @@ Readonly my @FASTA_HEADER_COLUMN_ORDER => qw(
     description
     source
     sequence_length
+    currency
 );
 
 sub fasta_header_column_order { return @FASTA_HEADER_COLUMN_ORDER; }
