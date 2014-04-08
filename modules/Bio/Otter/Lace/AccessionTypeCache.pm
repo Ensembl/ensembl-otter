@@ -126,9 +126,10 @@ sub populate {
               , evi_type
               , description
               , source
+              , currency
               , length
               , sequence )
-        VALUES (?,?,?,?,?,?,?)
+        VALUES (?,?,?,?,?,?,?,?)
     };
 
     sub save_accession_info {
@@ -138,7 +139,7 @@ sub populate {
         confess "Cannot save without evi_type" unless defined $entry->{evi_type};
 
         return $sth->execute(
-            @$entry{qw(acc_sv taxon_id evi_type description source sequence_length sequence)}
+            @$entry{qw(acc_sv taxon_id evi_type description source currency sequence_length sequence)}
             );
     }
 }
@@ -296,7 +297,7 @@ sub evidence_type_and_name_from_accession_list {
 }
 
 {
-    my @fai_cols = qw( taxon_id evi_type description source length sequence );
+    my @fai_cols = qw( taxon_id evi_type description source currency length sequence );
     my $cols_spec = join(', ', @fai_cols);
     my $feature_accession_info_sql = qq{
         SELECT $cols_spec FROM otter_accession_info WHERE accession_sv = ?
