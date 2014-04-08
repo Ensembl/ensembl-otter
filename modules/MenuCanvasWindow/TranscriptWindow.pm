@@ -2908,7 +2908,7 @@ sub launch_dotter {
     $dotter->query_type('d');
     $dotter->subject_name($hit_name);
 
-    return $dotter->fork_dotter;
+    return $dotter->fork_dotter($self->SessionWindow->session_colour);
 }
 
 sub max_exon_number {
