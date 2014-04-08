@@ -111,7 +111,6 @@ sub do_it {
     if ($response->is_success) {
 
         my $gff = $response->decoded_content;
-        die "Unexpected response for $gff_source: $gff\n" unless $gff =~ /EnsEMBL2GFF/;
 
         # cache the result
         $self->time_diff_for(
