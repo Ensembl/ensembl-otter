@@ -21,7 +21,6 @@ sub gff_header {
 
     my $hdr =
         "##gff-version $gff_version\n"
-      . "##source-version EnsEMBL2GFF 1.0\n"
       . "##date $date\n"
       ;
 
