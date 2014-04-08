@@ -397,8 +397,24 @@ sub slice_name {
 sub session_colourset {
     my ($self) = @_;
     my $colours = $self->Client->config_value('session_colourset')
-      || 'red green blue';
-    return split / /, $colours;
+      || '';
+    my (@col, @bad, $M);
+    try {
+        $M = try { MainWindow->new }; # optional, to avoid hard dependency
+        foreach my $col (split / /, $colours) {
+            if (try { $M->configure(-background => $col); 1 } # colour is valid
+                || !$M) { # assume colour is valid
+                push @col, $col;
+            } else {
+                push @bad, $col;
+            }
+        }
+    } finally {
+        $M->destroy if $M && Tk::Exists($M);
+    };
+    warn "Ignored invalid [client]session_colourset values (@bad).  RGB may be given like '#fab' or '#ffaabb'" if @bad;
+    push @col, qw( red green blue ) if @col < 3;
+    return @col;
 }
 
 # Get as a plain string.
