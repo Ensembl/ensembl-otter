@@ -24,7 +24,7 @@ sub _sfg {
     # FIXME: require_args
     my %opts;
     @opts{qw(cs name start end csver      feature_kind logic_name gff_source gff_version)} = $self->read_args(
-          qw(cs type start end csver_orig feature_kind analysis   gff_source gff_version) );
+          qw(cs chr  start end csver_orig feature_kind analysis   gff_source gff_version) );
 
     my $sfg = Bio::Otter::Utils::SliceFeaturesGFF->new(
         dba          => $self->local_db->vega_dba,
