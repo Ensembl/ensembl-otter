@@ -1,11 +1,11 @@
 #!/bin/sh
 
 bigwig_get_key_map='
-    csver_remote=>csver
     '
 
 bigwig_get_key_list='
     chr
+    csver
     dataset
     end
     file
