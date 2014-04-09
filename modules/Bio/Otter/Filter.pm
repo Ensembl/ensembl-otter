@@ -21,7 +21,6 @@ my @server_params = (
     qw(
     analysis
     feature_kind
-    csver_remote
     metakey
     filter_module
     swap_strands
@@ -29,6 +28,8 @@ my @server_params = (
     gff_source
     gff_feature
     ),
+    [ qw( csver csver_remote ) ],
+    ,
 
     # Ditag
     qw(
@@ -213,13 +214,13 @@ sub metakey {
     return $self->{_metakey};
 }
 
-sub csver_remote {
-    my ($self, $csver_remote) = @_;
+sub csver {
+    my ($self, $csver) = @_;
 
-    if($csver_remote) {
-        $self->{_csver_remote} = $csver_remote;
+    if($csver) {
+        $self->{_csver} = $csver;
     }
-    return $self->{_csver_remote};
+    return $self->{_csver};
 }
 
 sub feature_kind {
@@ -425,7 +426,7 @@ sub script_arguments {
 
     my $params = {
         %{ $session->script_arguments },
-        ( map { $_ => $self->$_ } @server_params ),
+        ( map { $self->_param_value($_) } @server_params ),
     };
     $params->{gff_seqname} = $params->{'chr'};
 
@@ -437,6 +438,14 @@ sub script_arguments {
     }
 
     return $arguments;
+}
+
+sub _param_value {
+    my ($self, $param) = @_;
+    my ($method, $key) =
+        ref $param ? @{$param} : ($param, $param);
+    my @argument = ( $key => $self->$method );
+    return @argument;
 }
 
 sub gff_source {
