@@ -63,8 +63,6 @@ use Bio::Vega::Author;
 
     $usage->() unless ($dataset_name and @ids and $author);
 
-    local $0 = 'otterlace';     # for access to test_human
-
     # Client communicates with otter HTTP server
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
     
