@@ -36,17 +36,16 @@ use Bio::Otter::Lace::Defaults;
     my $otter_dbc = $ds->get_cached_DBAdaptor->dbc;
     
     my $get_db_id = $otter_dbc->prepare(q{
-        SELECT t.transcript_id
-        FROM transcript t
-          , transcript_stable_id tsid
-        WHERE t.transcript_id = tsid.transcript_id
-          AND t.is_current = 1
-          AND tsid.stable_id = ?
+        SELECT transcript_id
+        FROM transcript
+        WHERE t.is_current = 1
+          AND t.stable_id = ?
     });
     my $count_attrib = $otter_dbc->prepare(qq{
         SELECT count(*)
         FROM transcript_attrib ta
-        JOIN attrib_type       at USING (attrib_type_id)
+        JOIN attrib_type       at
+        USING (attrib_type_id)
         WHERE ta.transcript_id = ?
           AND at.code          = ?
           AND ta.value         = ?
