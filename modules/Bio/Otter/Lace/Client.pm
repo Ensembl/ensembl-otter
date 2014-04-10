@@ -36,6 +36,7 @@ use Bio::Otter::Lace::AceDatabase;
 use Bio::Otter::Lace::DB;
 use Bio::Otter::LogFile;
 use Bio::Otter::Auth::SSO;
+use Bio::Otter::ServerAction::TSV::AccessionInfo::ColumnOrder qw( accession_info_column_order );
 
 use 5.009001; # for stacked -f -r which returns false under 5.8.8
 
