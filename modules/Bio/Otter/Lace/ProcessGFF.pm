@@ -7,7 +7,7 @@ use strict;
 use warnings;
 use Carp;
 
-use Bio::Otter::ServerAction::TSV::AccessionInfo::ColumnOrder qw( fasta_header_column_order );
+use Bio::Otter::ServerAction::TSV::AccessionInfo::ColumnOrder qw(fasta_header_column_order unescape_fasta_description);
 
 use Hum::Ace::SubSeq;
 use Hum::Ace::Method;
@@ -82,6 +82,7 @@ sub store_hit_data_from_gff {
             my @value_list = split /\|/, $header;
             my %acc_info;
             @acc_info{fasta_header_column_order()} = @value_list;
+            $acc_info{description} = unescape_fasta_description($acc_info{description});
             $acc_info{sequence} = $sequence;
             $accession_type_cache->save_accession_info(\%acc_info);
             my $taxon_id = $acc_info{taxon_id};
