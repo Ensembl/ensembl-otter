@@ -6,7 +6,12 @@ use warnings;
 use Readonly;
 
 use base qw( Exporter );
-our @EXPORT_OK = qw( accession_info_column_order fasta_header_column_order );
+our @EXPORT_OK = qw(
+    accession_info_column_order
+    fasta_header_column_order
+    escape_fasta_description
+    unescape_fasta_description
+);
 
 =head1 NAME
 
@@ -40,6 +45,27 @@ Readonly my @FASTA_HEADER_COLUMN_ORDER => qw(
 );
 
 sub fasta_header_column_order { return @FASTA_HEADER_COLUMN_ORDER; }
+
+{
+    my %esc = (
+        '|' => '~p',
+        '~' => '~t',
+        );
+
+    my %unesc = map { $esc{$_} => $_ } keys %esc;
+
+    sub escape_fasta_description {
+        my ($description) = @_;
+        $description =~ s/([|~])/$esc{$1}/g;
+        return $description;
+    }
+
+    sub unescape_fasta_description {
+        my ($description) = @_;
+        $description =~ s/(~[pt])/$unesc{$1}/g;
+        return $description;
+    }
+}
 
 
 =head1 AUTHOR

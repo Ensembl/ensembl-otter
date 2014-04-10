@@ -4,7 +4,7 @@ package Bio::Otter::Server::GFF;
 use strict;
 use warnings;
 
-use Bio::Otter::ServerAction::TSV::AccessionInfo::ColumnOrder qw( fasta_header_column_order );
+use Bio::Otter::ServerAction::TSV::AccessionInfo::ColumnOrder qw( fasta_header_column_order escape_fasta_description );
 use Bio::Vega::Enrich::SliceGetAllAlignFeatures;
 use Bio::Vega::Utils::GFF;
 use Bio::Vega::Utils::EnsEMBL2GFF;
@@ -235,6 +235,7 @@ sub _fasta_item {
     my @taxon_list = split /,/, $accession_info->{'taxon_list'};
     @taxon_list == 1 or return; # we only handle single taxon IDs
     ($accession_info->{'taxon_id'}) = @taxon_list; # has side-effect of adding to $accession_info, but we don't mind.
+    $accession_info->{'description'} = escape_fasta_description($accession_info->{'description'}); # ---"---
     my $fasta_list = [ @{$accession_info}{fasta_header_column_order()} ];
     $sequence =~ s/(.{70})/$1\n/g;
     chomp $sequence;
