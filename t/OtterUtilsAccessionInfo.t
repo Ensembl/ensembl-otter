@@ -91,8 +91,10 @@ $ai->db_categories([qw(
     uniprot_archive
     refseq
 )]);
-diag "Expect some warnings about bad query / sv_search is off";
-my $info_results = $ai->get_accession_info(\@ta_accs);
+my $info_results = do {
+    local $SIG{__WARN__} = \&__muffle_badquery;
+    $ai->get_accession_info(\@ta_accs);
+};
 is(ref($info_results), 'HASH', 'info_results hash');
 foreach my $ta_acc_spec (@$ta_acc_specs) {
     my $query = $ta_acc_spec->{query};
@@ -110,6 +112,13 @@ foreach my $ta_acc_spec (@$ta_acc_specs) {
         done_testing;
     };
 }
+
+sub __muffle_badquery {
+    my ($msg) = @_;
+    warn "$msg" unless $msg =~ /^Bad query: '\S+' \(sv_search is off\) at /;
+    return;
+}
+
 
 my %taxon_info = (
          9606 => { scientific_name => 'Homo sapiens', common_name => 'man' },
