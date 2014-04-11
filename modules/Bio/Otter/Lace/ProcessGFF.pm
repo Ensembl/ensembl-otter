@@ -7,7 +7,7 @@ use strict;
 use warnings;
 use Carp;
 
-use Bio::Otter::ServerAction::TSV::AccessionInfo::ColumnOrder qw(fasta_header_column_order unescape_fasta_description);
+use Bio::Otter::Utils::AccessionInfo::Serialise qw(fasta_header_column_order unescape_fasta_description);
 
 use Hum::Ace::SubSeq;
 use Hum::Ace::Method;

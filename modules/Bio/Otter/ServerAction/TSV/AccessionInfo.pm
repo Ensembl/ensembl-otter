@@ -3,7 +3,7 @@ package Bio::Otter::ServerAction::TSV::AccessionInfo;
 use strict;
 use warnings;
 
-use Bio::Otter::ServerAction::TSV::AccessionInfo::ColumnOrder qw(accession_info_column_order);
+use Bio::Otter::Utils::AccessionInfo::Serialise qw(accession_info_column_order);
 
 use base 'Bio::Otter::ServerAction::AccessionInfo';
 

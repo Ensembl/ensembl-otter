@@ -3,7 +3,7 @@
 use strict;
 use warnings;
 
-use Bio::Otter::ServerAction::TSV::AccessionInfo::ColumnOrder qw(accession_info_column_order);
+use Bio::Otter::Utils::AccessionInfo::Serialise qw(accession_info_column_order);
 
 use lib "${ENV{ANACODE_TEAM_TOOLS}}/t/tlib";
 use Test::CriticModule;

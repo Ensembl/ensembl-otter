@@ -8,7 +8,7 @@ package Bio::Otter::GetScript::Filter;
 use Digest::MD5 qw(md5_hex);
 use URI::Escape qw(uri_escape);
 
-use Bio::Otter::ServerAction::TSV::AccessionInfo::ColumnOrder qw(unescape_fasta_description);
+use Bio::Otter::Utils::AccessionInfo::Serialise qw(unescape_fasta_description);
 
 use base 'Bio::Otter::Utils::GetScript';
 

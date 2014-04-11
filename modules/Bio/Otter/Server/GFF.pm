@@ -4,7 +4,7 @@ package Bio::Otter::Server::GFF;
 use strict;
 use warnings;
 
-use Bio::Otter::ServerAction::TSV::AccessionInfo::ColumnOrder qw( fasta_header_column_order escape_fasta_description );
+use Bio::Otter::Utils::AccessionInfo::Serialise qw( fasta_header_column_order escape_fasta_description );
 use Bio::Vega::Enrich::SliceGetAllAlignFeatures;
 use Bio::Vega::Utils::GFF;
 use Bio::Vega::Utils::EnsEMBL2GFF;
