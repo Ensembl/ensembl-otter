@@ -1,4 +1,4 @@
-package Bio::Otter::ServerAction::TSV::AccessionInfo::ColumnOrder;
+package Bio::Otter::Utils::AccessionInfo::Serialise;
 
 use strict;
 use warnings;
@@ -15,7 +15,7 @@ our @EXPORT_OK = qw(
 
 =head1 NAME
 
-Bio::Otter::ServerAction::TSV::AccessionInfo::ColumnOrder - define TSV column order
+Bio::Otter::Utils::AccessionInfo::Serialise - definitions and subroutines for serialising AccessionInfo results
 
 =cut
 
