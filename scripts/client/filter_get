@@ -8,6 +8,8 @@ package Bio::Otter::GetScript::Filter;
 use Digest::MD5 qw(md5_hex);
 use URI::Escape qw(uri_escape);
 
+use Bio::Otter::ServerAction::TSV::AccessionInfo::ColumnOrder qw(unescape_fasta_description);
+
 use base 'Bio::Otter::Utils::GetScript';
 
 sub do_requires {
@@ -55,9 +57,8 @@ sub do_it {
         # cache hit
         $self->log_message("cache file: $gff_filename: cache hit");
         open my $gff_file, '<', $cache_file or die "Failed to open cache file: $!\n";
-        while (<$gff_file>) { print; }
+        $self->_spool_gff($gff_file);
         close $gff_file or die "Failed to close cache file: $!\n";
-        close STDOUT or die "Error writing to STDOUT; $!";
         # update the SQLite db - to ensure gff processing if appropriate
         $self->SUPER::do_requires;
         $self->update_local_db($gff_source, $cache_file, 1);
@@ -130,13 +131,8 @@ sub do_it {
         # }
 
         # Send data to zmap on STDOUT
-        $self->time_diff_for('sending data', sub { print STDOUT $gff; });
-
-        # zmap waits for STDOUT to be closed as an indication that all
-        # data has been sent, so we close the handle now so that zmap
-        # doesn't tell otterlace about the successful loading of the column
-        # before we have the SQLite db updated and the cache file saved.
-        close STDOUT or die "Error writing to STDOUT; $!";
+        open my $gff_string_fh, '<', \$gff or die "Failed to open GFF string as file handle: $!\n";
+        $self->_spool_gff($gff_string_fh);
     }
     else {
 
@@ -161,6 +157,31 @@ sub do_it {
 
         die "Webserver error for $gff_source: $err_msg\n";
     }
+    return;
+}
+
+# Side-effect: closes STDOUT
+#
+sub _spool_gff {
+    my ($self, $fh) = @_;
+
+    $self->time_diff_for('sending data', sub {
+        while (my $line = <$fh>) {
+            if ($line =~ /^>/) {
+                # FASTA header
+                print unescape_fasta_description($line);
+            } else {
+                print $line;
+            }
+        }
+                         });
+
+    # zmap waits for STDOUT to be closed as an indication that all
+    # data has been sent, so we close the handle now so that zmap
+    # doesn't tell otterlace about the successful loading of the column
+    # before we have the SQLite db updated and the cache file saved.
+    close STDOUT or die "Error writing to STDOUT; $!";
+
     return;
 }
 
