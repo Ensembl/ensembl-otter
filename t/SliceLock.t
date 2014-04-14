@@ -33,7 +33,7 @@ sub noise {
 
 
 sub main {
-    plan tests => 36;
+    plan tests => 37;
 
     # Test supportedness with B:O:L:Dataset + raw $dbh
     #
@@ -68,6 +68,8 @@ sub main {
             subtest "$sub(\L$iso)" => sub { $code->($ds) };
         }
     }
+
+    subtest fetch_by => sub { fetchby_tt($ds) };
 
     _tidy_database($ds) if Test::Builder->new->is_passing; # leave evidence of fail
 
@@ -382,7 +384,7 @@ sub exercise_tt {
 
 sub describe_tt {
     my ($ds) = @_;
-    plan tests => 11;
+    plan tests => 13;
 
     my $SLdba = $ds->get_cached_DBAdaptor->get_SliceLockAdaptor;
     my $dbh = $SLdba->dbc->db_handle;
@@ -425,6 +427,8 @@ sub describe_tt {
 
     like($L->describe, qr{$BASE 'pre'\n  The region is not yet locked\.\Z}, 'pre');
     like($L->describe, $LAST_ACT_2011_RE, 'pre ts_activity');
+    like($L->describe_slice, $slice_re, 'pre describe_slice');
+    like($L->describe_author, qr{^\S*desmond$MAILDOM_RE$}, 'pre describe_author');
 
     $SLdba->unlock($L_expire, $auth_bob, 'expired');
     $SLdba->unlock($L_int,    $auth_bob, 'interrupted');
@@ -655,7 +659,7 @@ sub pre_unlock_tt {
 # (unrealistically but conveniently) from inside the same transaction
 sub cycle_tt {
     my ($ds) = @_;
-    plan tests => 11;
+    plan tests => 12;
 
     # Collect props
     my $SLdba = $ds->get_cached_DBAdaptor->get_SliceLockAdaptor;
@@ -688,6 +692,9 @@ sub cycle_tt {
               { id => $L_pos[0], start => $L_pos[1], end => $L_pos[2] },
               'slice matches L_lock')
       or diag explain { sl => $L_slice, L_lock => $L_lock };
+    like($L_lock->describe_slice,
+         qr{^[a-z]+:[^:]*:[A-Z]+[.0-9]+:\d+:\d+:1$},
+         'slice description');
 
     my $R_slice = $SLdba->db->get_SliceAdaptor->fetch_by_seq_region_id(@R_pos);
 
@@ -1230,6 +1237,50 @@ sub timestamps_tt {
     cmp_ok($free_diff, '>', 0, 'D: ts_free > ts_activity');
 
 #    diag explain { actions => \@actions, product => \%product, ts_diff => \%ts_diff };
+    return;
+}
+
+
+sub fetchby_tt {
+    my ($ds) = @_;
+    plan tests => 7;
+
+    my $SLdba = $ds->get_cached_DBAdaptor->get_SliceLockAdaptor;
+    # db should contain a motley assortment of locks under $TESTHOST
+    # but the exact collection will be a little unstable as tests change
+
+    my (%act, %n);
+    my $get_act = sub {
+        %act = (def  => $SLdba->fetch_by_active(),
+                held => $SLdba->fetch_by_active('held'),
+                pre  => $SLdba->fetch_by_active('pre'),
+                free => $SLdba->fetch_by_active('free'));
+        foreach my $list (values %act) {
+            @$list = grep { $_->hostname eq $TESTHOST } @$list;
+        }
+        @n{keys %act} = map { scalar @$_ } values %act;
+        return;
+    };
+    $get_act->();
+
+    # Need some locks left over from previous tests, else we are sunk
+    foreach my $key (qw( pre held free )) {
+        cmp_ok($n{$key}, '>=', 2, "fetch_by_active: have some $key");
+    }
+
+    is($n{def}, $n{held}, 'fetch_by_active: default=held');
+
+    my @to_free = ($act{held}[0], $act{held}[1], $act{pre}[0]);
+    foreach my $L (@to_free) {
+        $SLdba->unlock($L, $L->author);
+    }
+
+    my %old_n = %n;
+    $get_act->();
+    is($n{held} + 2, $old_n{held}, 'freed: two held');
+    is($n{pre}  + 1, $old_n{pre}, 'freed: one pre');
+    is($n{free} - 3, $old_n{free}, 'freed: three more');
+
     return;
 }
 

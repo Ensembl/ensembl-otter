@@ -491,17 +491,8 @@ sub describe {
                     held => 'The region is locked' }->{$act} || 'WEIRD';
     }
 
-    my $slice = try {
-        $self->slice->display_id;
-    } catch {
-        # most likely the slice is invalid
-        sprintf("BAD:srID=%s:start=%s:end=%s",
-                $self->seq_region_id,
-                $self->seq_region_start,
-                $self->seq_region_end);
-    };
-
-    my $auth = try { $self->author->email } catch { "<???>" };
+    my $slice = $self->describe_slice;
+    my $auth = $self->describe_author;
 
     return sprintf
       ('SliceLock(%s%s) on %s '.
@@ -511,6 +502,40 @@ sub describe {
        $self->iso8601_ts_begin, $auth, $self->hostname, $self->intent,
        ($rolledback ? ".  Before $rolledback, it was" : ','),
        $self->iso8601_ts_activity, $state, $detail);
+}
+
+
+=head2 describe_slice()
+
+Like C<< $obj->slice->display_id >> but returns text for invalid
+slices instead of throwing.
+
+=cut
+
+sub describe_slice {
+    my ($self) = @_;
+    return try {
+        $self->slice->display_id;
+    } catch {
+        # most likely the slice is invalid
+        sprintf("BAD:srID=%s:start=%s:end=%s",
+                $self->seq_region_id,
+                $self->seq_region_start,
+                $self->seq_region_end);
+    };
+}
+
+
+=head2 describe_author()
+
+Like C<< $obj->author->email >> but returns text for invalid authors
+instead of throwing.
+
+=cut
+
+sub describe_author {
+    my ($self) = @_;
+    return try { $self->author->email } catch { "<???>" };
 }
 
 
