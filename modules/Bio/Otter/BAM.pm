@@ -143,11 +143,13 @@ sub gff_source {
     return $self->name;
 }
 
-my $bam_parameters = [ qw(
-    file
-    csver
-    gff_source
-    ) ];
+my $bam_parameters = [
+    qw(
+        file
+        gff_source
+        ),
+    [ qw( csver csver_remote ) ],
+    ];
 
 sub bam_parameters {
     return $bam_parameters;
@@ -162,10 +164,18 @@ sub url_query {
         -start => $slice->start,
         -end   => $slice->end,
         -dataset => $DataSet->name,
-        ( map { ( "-$_" => $self->$_ ) } @{$bam_parameters} ),
+        ( map { $self->_param_value($_) } @{$bam_parameters} ),
         -gff_version => $DataSet->gff_version,
     };
     return $query;
+}
+
+sub _param_value {
+    my ($self, $param) = @_;
+    my ($method, $key) =
+        ref $param ? @{$param} : ($param, $param);
+    my @argument = ( "-${key}" => $self->$method );
+    return @argument;
 }
 
 # NB: the following subroutines are *not* methods

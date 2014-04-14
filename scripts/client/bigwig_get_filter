@@ -5,7 +5,7 @@ bigwig_get_key_map='
 
 bigwig_get_key_list='
     chr
-    csver
+    csver_remote
     dataset
     end
     file

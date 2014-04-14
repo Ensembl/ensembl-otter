@@ -204,7 +204,7 @@ sub _add_zmap_bam_config {
                 chr   => $slice->ssname,
                 start => $slice->start,
                 end   => $slice->end,
-                csver => $bam->csver,
+                csver_remote => $bam->csver,
                 file   => $file,
                 strand => $strand,
                 gff_source  => $featureset,
