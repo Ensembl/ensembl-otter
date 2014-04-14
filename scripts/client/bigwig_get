@@ -19,7 +19,7 @@ my $options = {
 my @options_specs = qw(
     gff_version=s
     file=s
-    csver=s
+    csver_remote=s
     dataset=s
     chr=s
     start=i
@@ -32,7 +32,7 @@ my @options_specs = qw(
 
 my @options_required = qw(
     file
-    csver
+    csver_remote
     dataset
     chr
     start
@@ -70,7 +70,7 @@ $options->{$_} = uri_unescape($options->{$_}) for keys %{$options};
 my (
     $gff_version,
     $file,
-    $csver,
+    $csver_remote,
     $dataset,
     $chr,
     $start,
@@ -144,7 +144,7 @@ my $client = Bio::Otter::Lace::Defaults::make_Client();
 my $mapping_xml = $client->otter_response_content(
     'GET', 'get_mapping', {
         dataset => $dataset,
-        cs      => $csver,
+        cs      => $csver_remote,
         chr     => $chr,
         start   => $start,
         end     => $end,
