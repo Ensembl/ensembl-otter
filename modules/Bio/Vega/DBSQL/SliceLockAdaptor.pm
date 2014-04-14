@@ -176,6 +176,12 @@ If provided, $extant must be true.  Then freed locks are ignored.
 
 Returns arrayref of SliceLock.
 
+=head2 fetch_by_active($active)
+
+$active defaults to C<held>.
+
+Returns arrayref of SliceLock.
+
 =cut
 
 sub fetch_by_dbID {
@@ -209,6 +215,15 @@ sub fetch_by_author {
   $q .= " and active <> 'free' and freed is null" if $extant;
   my $slicelocks = $self->_generic_sql_fetch($q, $authid);
   return $slicelocks;
+}
+
+
+sub fetch_by_active {
+    my ($self, $active) = @_;
+    $active ||= 'held';
+    my $q = "where active = ?";
+    my $slicelocks = $self->_generic_sql_fetch($q, $active);
+    return $slicelocks;
 }
 
 
