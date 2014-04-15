@@ -17,11 +17,11 @@ our @EXPORT_OK = qw( check_xml extra_gene  add_extra_gene_xml region_is %test_re
 our %test_region_params = (   ## no critic (Variables::ProhibitPackageVars)
     dataset => 'human_test',
     name    => '6',
-    chr     => 'chr6-18',
+    chr     => 'chr6-38',
     cs      => 'chromosome',
     csver   => 'Otter',
-    start   => 2_558_000,
-    end     => 2_648_000,
+    start   => 2_557_766,
+    end     => 2_647_766,
     );
 
 sub local_server {
@@ -200,15 +200,15 @@ sub local_xml_copy {
  <otter>
    <species>human_test</species>
    <sequence_set>
-     <assembly_type>chr6-18</assembly_type>
+     <assembly_type>chr6-38</assembly_type>
      <sequence_fragment>
        <id>AL359852.20.1.120512</id>
        <chromosome>6</chromosome>
        <accession>AL359852</accession>
        <version>20</version>
        <clone_name>RP11-299J5</clone_name>
-       <assembly_start>2558000</assembly_start>
-       <assembly_end>2588535</assembly_end>
+       <assembly_start>2557766</assembly_start>
+       <assembly_end>2588301</assembly_end>
        <fragment_ori>1</fragment_ori>
        <fragment_offset>89977</fragment_offset>
        <clone_length>120512</clone_length>
@@ -220,8 +220,8 @@ sub local_xml_copy {
        <accession>AL138876</accession>
        <version>23</version>
        <clone_name>RP11-145H9</clone_name>
-       <assembly_start>2588536</assembly_start>
-       <assembly_end>2648000</assembly_end>
+       <assembly_start>2588302</assembly_start>
+       <assembly_end>2647766</assembly_end>
        <fragment_ori>1</fragment_ori>
        <fragment_offset>101</fragment_offset>
        <clone_length>107888</clone_length>
@@ -254,8 +254,8 @@ sub local_xml_copy {
          <exon_set>
            <exon>
              <stable_id>OTTHUME00002169081</stable_id>
-             <start>2562181</start>
-             <end>2564377</end>
+             <start>2561947</start>
+             <end>2564143</end>
              <strand>1</strand>
              <phase>-1</phase>
              <end_phase>-1</end_phase>
@@ -281,8 +281,8 @@ sub local_xml_copy {
          <remark>novel protein (FLJ31934)</remark>
          <transcript_class>Known_CDS</transcript_class>
          <name>RP11-145H9.2-001</name>
-         <translation_start>2624056</translation_start>
-         <translation_end>2623673</translation_end>
+         <translation_start>2623822</translation_start>
+         <translation_end>2623439</translation_end>
          <translation_stable_id>OTTHUMP00000015942</translation_stable_id>
          <evidence_set>
            <evidence>
@@ -297,24 +297,24 @@ sub local_xml_copy {
          <exon_set>
            <exon>
              <stable_id>OTTHUME00000175047</stable_id>
-             <start>2634799</start>
-             <end>2634837</end>
+             <start>2634565</start>
+             <end>2634603</end>
              <strand>-1</strand>
              <phase>-1</phase>
              <end_phase>-1</end_phase>
            </exon>
            <exon>
              <stable_id>OTTHUME00000175046</stable_id>
-             <start>2633839</start>
-             <end>2634026</end>
+             <start>2633605</start>
+             <end>2633792</end>
              <strand>-1</strand>
              <phase>-1</phase>
              <end_phase>-1</end_phase>
            </exon>
            <exon>
              <stable_id>OTTHUME00000175048</stable_id>
-             <start>2622147</start>
-             <end>2624353</end>
+             <start>2621913</start>
+             <end>2624119</end>
              <strand>-1</strand>
              <phase>-1</phase>
              <end_phase>-1</end_phase>
@@ -348,16 +348,16 @@ sub local_xml_copy {
          <exon_set>
            <exon>
              <stable_id>OTTHUME00000175050</stable_id>
-             <start>2637170</start>
-             <end>2637689</end>
+             <start>2636936</start>
+             <end>2637455</end>
              <strand>1</strand>
              <phase>-1</phase>
              <end_phase>-1</end_phase>
            </exon>
            <exon>
              <stable_id>OTTHUME00000175049</stable_id>
-             <start>2639922</start>
-             <end>2640235</end>
+             <start>2639688</start>
+             <end>2640001</end>
              <strand>1</strand>
              <phase>-1</phase>
              <end_phase>-1</end_phase>
