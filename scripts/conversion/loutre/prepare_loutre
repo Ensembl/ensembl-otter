@@ -163,7 +163,7 @@ my $aa = $dba->get_AttributeAdaptor();
 #get chromosomes without a hidden attribute
 my $chroms = $support->fetch_non_hidden_slices($aa,$sa);
 
-my $patch_regions_wanted_details;
+my $patch_regions_wanted_details = {};
 #each release check with jon if there are any new ones, and if these are still to be ignored
 my @not_yet_wanted_patches  = map {'HSCHR6_MHC_'.$_.'_CTG1'}   qw(APD COX DBB MANN MCF QBL SSTO); #MHC regions
 push @not_yet_wanted_patches, map {'HSCHR19LRC_'.$_.'_CTG3_1'} qw(COX1 COX2 LRC_I LRC_J LRC_S LRC_T PGF1 PGF2); #LRC regions
