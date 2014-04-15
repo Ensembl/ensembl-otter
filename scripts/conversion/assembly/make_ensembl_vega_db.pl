@@ -290,15 +290,16 @@ unless ($c > 1) {
 ### transfer seq_regions from Ensembl db
 $support->log_stamped("Transfering Ensembl seq_regions...\n");
 
-# determine max(seq_region_id) and max(coord_system_id) in Vega and use to offset the Ensembl seq_regions so they don't clash
-$sql = qq(SELECT MAX(seq_region_id) FROM seq_region);
-$sth = $dbh->{'vega'}->prepare($sql);
-$sth->execute;
-my ($sri_adjust) = $sth->fetchrow_array;
+# retrieve adjustment factors for Ensembl seq_region_ids (used when making Vega)
+$sql = qq(
+    SELECT meta_value
+    FROM meta
+    WHERE meta_key = 'sri_adjust'
+);
+my ($sri_adjust) = $dbh->{'vega'}->selectrow_array($sql);
 
-$sri_adjust = 100000; #above fails when mapping *_align_features so use this value for now
-
-$support->log("Using adjustment factor of $sri_adjust for seq_region_ids...\n",1);
+$support->log("Retrieved adjustment factor of $sri_adjust for seq_region_ids...\n",1);
+# determine max(coord_system_id) in Vega and use to offset the Ensembl seq_regions so they don't clash
 $sth = $dbh->{'evega'}->prepare("SELECT MAX(coord_system_id) FROM seq_region");
 $sth->execute;
 my ($max_csi) = $sth->fetchrow_array;
@@ -564,10 +565,28 @@ $sql = qq(
       FROM assembly a, seq_region sr, coord_system cs
      WHERE a.cmp_seq_region_id = sr.seq_region_id
        AND sr.coord_system_id = cs.coord_system_id
-       AND cs.version = \'$ensembl_assembly\'
-);
+       AND cs.version = \'$ensembl_assembly\');
+
 $c = $dbh->{'vega'}->do($sql) unless ($support->param('dry_run'));
 $support->log_stamped("Done inserting $c assembly mapping entries.\n");
+
+#had problems for GRCh38 so now check that the entries added above actually link up with the seq_region table
+$sql = qq(SELECT count(*)
+            FROM $evega_db.coord_system cs, $evega_db.seq_region sr, $evega_db.assembly a, $evega_db.seq_region sr2, $evega_db.coord_system cs2
+           WHERE cs.coord_system_id = sr.coord_system_id
+             AND sr.seq_region_id = a.asm_seq_region_id
+             AND a.cmp_seq_region_id = sr2.seq_region_id
+             AND sr2.coord_system_id = cs2.coord_system_id
+             AND cs.name = 'chromosome'
+             AND cs2.name = 'chromosome'
+             AND cs2.version = \'$ensembl_assembly\');
+unless ($support->param('dry_run')) {
+  my $check = $dbh->{'vega'}->do($sql) unless ($support->param('dry_run'));
+  if ($check != $c) {
+    $support->log_warning("There were $c inserted assembly mapping entries but only $check can be retrieved after linking to the seq_region table.\n");
+  }
+}
+
 
 #update external_db and attrib_type on ensembl_vega
 if (! $support->param('dry_run') ) {
