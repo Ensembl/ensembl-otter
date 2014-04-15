@@ -50,13 +50,13 @@ sub show_version {
     exit 0;
 }
 
+print STDERR "$0", ( map { " '$_'" } @ARGV ), "\n";
+
 my @keys    = map { _key()    } @options_specs;
 my @options = map { _option() } @options_specs;
 
-my @old_ARGV = @ARGV;
 Bio::Otter::Lace::Defaults::do_getopt(@options);
 show_version() if $options->{version};
-print STDERR "$0", ( map { " '$_'" } @old_ARGV ), "\n";
 
 my @options_missing = grep { ! defined $options->{$_} } @options_required;
 die sprintf "missing options: %s\n",
