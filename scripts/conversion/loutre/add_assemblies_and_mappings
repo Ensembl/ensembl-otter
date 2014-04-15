@@ -246,12 +246,17 @@ if ($alt_assembly) {
   $support->log("Adding coord_system for alternative assembly ($alt_assembly)\n");
   my $sql = qq(SELECT max(seq_region_id) FROM seq_region);
   ($alt_offset) = $vdbh->selectrow_array($sql); #offset e! seq_region ids to ensure no overlap with vega seq_region_ids
+  $support->log("Using offset of $alt_offset for $alt_assembly seq_region_ids\n");
   $sql = qq(SELECT max(coord_system_id) FROM coord_system);
   ($alt_coord_system_id) = $vdbh->selectrow_array($sql);
   $alt_coord_system_id += 100;
   unless ($support->param('dry_run')) {
     $cs_rank_sth->execute;
     $cs_update_sth->execute($alt_coord_system_id,$alt_assembly);
+    #store offset used for Ensembl seq|_regions IDs in the DB so that is can be called upon
+    #when making ensembl-vega
+    $sql = qq(INSERT into meta values ('','','sri_adjust',$alt_offset));
+    $dbh->{'evega'}->do($sql) unless ($support->param('dry_run'));
   }
 }
 
@@ -476,7 +481,7 @@ sub munge_loutre_mappings {
 
   #offset is used to alter the mapping we get from loutre so that they relate to the chromosome not the scaffold
   my ($offset) = $edbh->selectrow_array(qq(
-      SELECT asm_start - cmp_start + 1
+      SELECT asm_start - cmp_start
         FROM assembly a, seq_region sr, coord_system cs
        WHERE a.cmp_seq_region_id = sr.seq_region_id
          AND sr.coord_system_id = cs.coord_system_id
@@ -513,15 +518,15 @@ sub add_equiv_patch {
 
   #copy assemblies from e! (reversing them)
   my $sql = qq(
-         SELECT asm_start,asm_end,cmp_start,cmp_end
+         SELECT asm_start,asm_end,cmp_start,cmp_end,ori
            FROM assembly a, seq_region sr, coord_system cs
           WHERE a.cmp_seq_region_id = sr.seq_region_id
             AND sr.coord_system_id = cs.coord_system_id
             AND cs.version = '$alt_assembly'
             AND asm_seq_region_id = $e_sr_id);
   if (! $support->param('dry_run')) {
-    my ($target_asm_start,$target_asm_end,$source_asm_start,$source_asm_end) = $edbh->selectrow_array($sql);
-    my $c = $ass_ins_sth->execute($v_sr_id,$e_sr_id+$alt_offset,$source_asm_start,$source_asm_end,$target_asm_start,$target_asm_end,1);
+    my ($target_asm_start,$target_asm_end,$source_asm_start,$source_asm_end,$ori) = $edbh->selectrow_array($sql);
+    my $c = $ass_ins_sth->execute($v_sr_id,$e_sr_id+$alt_offset,$source_asm_start,$source_asm_end,$target_asm_start,$target_asm_end,$ori);
     $support->log("Inserted $c assembly table_entries\n",3);
   }
 }
