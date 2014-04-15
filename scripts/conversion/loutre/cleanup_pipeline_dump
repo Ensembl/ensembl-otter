@@ -124,11 +124,13 @@ my %lns_to_go = map {$_,1}
      trf_new
      vertrna
      Uniprot_TR
+     Uniprot_TR_old
      Est2genome_human
      Est2genome_mouse
      Est2genome_fish
      Est2genome_pig
      Uniprot_SW
+     Uniprot_SW_old
      Est2genome_other
      Halfwise
      CRG_RACE_primer
