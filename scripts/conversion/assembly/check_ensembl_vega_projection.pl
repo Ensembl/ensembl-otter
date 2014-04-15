@@ -85,6 +85,7 @@ $support->parse_extra_options(
   'ensembluser=s',
   'ensemblpass=s',
   'ensembldbname=s',
+  'ensemblassembly=s',
   'emboss_path=s',
   'wise2_path=s',
 );
@@ -101,6 +102,7 @@ $support->allowed_params($support->get_common_params,
 			 'ensembluser',
 			 'ensemblpass',
 			 'ensembldbname',
+                         'ensemblassembly',
 			 'emboss_path',
 			 'wise2_path',
 		       );
@@ -135,7 +137,7 @@ if ($support->param('chromosomes')) {
   }
 }
 else {
-  @ev_top_slices = sort { $a->seq_region_name() cmp $b->seq_region_name()} @{$ev_sa->fetch_all("toplevel")};
+  @ev_top_slices = sort { $a->seq_region_name() cmp $b->seq_region_name()} @{$ev_sa->fetch_all('chromosome',$support->param('ensemblassembly'),1,1)};
 }
 
 my @ev_names = map { $_->seq_region_name } @ev_top_slices;
@@ -145,8 +147,12 @@ my @ev_names = map { $_->seq_region_name } @ev_top_slices;
 my $c=1;
 foreach my $chrom_name (@ev_names) {
   my $ev_slice = $ev_sa->fetch_by_region(undef,$chrom_name);
-  $support->log_stamped("\n\nExamining chromosome $chrom_name in ensembl-vega database\n");
- GENE: foreach my $ev_gene ( @{$ev_slice->get_all_Genes()} ) {
+
+#  next unless ($chrom_name =~ /X|Y|CHR_/);
+  $support->log_stamped("\nExamining chromosome $chrom_name in ensembl-vega database\n");
+
+  my ($ev_genes) = $support->get_unique_genes($ev_slice,$ev_dba);
+  foreach my $ev_gene (@$ev_genes) {
     my $gsi = $ev_gene->stable_id;
     my $v_gene = $v_ga->fetch_by_stable_id($gsi);
     next GENE unless $v_gene;
@@ -155,33 +161,39 @@ foreach my $chrom_name (@ev_names) {
     my %trans = map {$_->stable_id, $_ } @{$v_gene->get_all_Transcripts()};
   TRANS:
     foreach my $ev_trans (  @{$ev_gene->get_all_Transcripts()} ) {
+      my $tsi = $ev_trans->stable_id;
       my $v_trans = $trans{$ev_trans->stable_id};
       next TRANS unless $v_trans;
+      $support->log_verbose("Examining transcript $tsi\n",1);
       my $ev_seq = $ev_trans->seq->seq;
       my $v_seq  = $v_trans->seq->seq;
       if ($ev_seq ne $v_seq) {
-	$support->log("\n$c. Transcript sequence for ".$v_trans->stable_id." (gene $name) varies between Vega and Ensembl-vega:\n");
-	my $cdna_alignment = $support->get_alignment(">Vega\n".$v_seq, ">Ens.\n".$ev_seq, 'DNA');
-	$support->log($cdna_alignment);
+	$support->log_warning("$c. Transcript sequence for ".$v_trans->stable_id." (gene $name) varies between Vega and Ensembl-vega:\n",2);
+        if ($support->param('verbose')) {
+          my $cdna_alignment = $support->get_alignment(">Vega\n".$v_seq, ">Ens.\n".$ev_seq, 'DNA');
+          $support->log($cdna_alignment,3);
+        }
 	my $ev_transl = $ev_trans->translation;
 	my $v_transl = $v_trans->translation;
 	if ( $ev_transl && $v_transl ) {
 	  my $ev_transl_seq = $ev_trans->translation->seq;
 	  my $v_transl_seq = $v_trans->translation->seq;
 	  if ($ev_transl_seq ne $v_transl_seq) {
-	    $support->log("$c. Translations for ".$v_trans->stable_id." also vary between Vega and Ensembl-vega:\n");
-	    my $aa_alignment = $support->get_alignment(">Vega\n".$v_transl_seq, ">Ens.\n".$ev_transl_seq, 'PEP');
-	    $support->log($aa_alignment);
+	    $support->log_warning("$c. Translations for ".$v_trans->stable_id." also vary between Vega and Ensembl-vega:\n",2);
+            if ($support->param('verbose')) {
+              my $aa_alignment = $support->get_alignment(">Vega\n".$v_transl_seq, ">Ens.\n".$ev_transl_seq, 'PEP');
+              $support->log($aa_alignment,3);
+            }
 	  }
 	  else {
-	    $support->log("$c. Translations for ".$v_trans->stable_id." do not differ\n");
+	    $support->log_verbose("$c. Translations for ".$v_trans->stable_id." do not differ\n");
 	  }
 	}
 	elsif ( $ev_transl || $v_transl ) {
 	  $support->log_warning("Only one of the transcripts for ".$v_trans->stable_id." translates, this is really really bad!\n");
 	}
 	else {
-	  $support->log("$c. Transcript ".$v_trans->stable_id." is not protein coding\n");
+	  $support->log_verbose("$c. Transcript ".$v_trans->stable_id." is not protein coding\n",2);
 	}
 	$c++;
       }
