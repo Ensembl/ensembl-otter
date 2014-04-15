@@ -151,10 +151,6 @@ my $bam_parameters = [
     [ qw( csver csver_remote ) ],
     ];
 
-sub bam_parameters {
-    return $bam_parameters;
-}
-
 sub url_query {
     my ($self, $session) = @_;
     my $slice = $session->slice;
