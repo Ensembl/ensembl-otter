@@ -646,6 +646,7 @@ acedb_version=4.9.61
 debug=Client,Zircon,XRemote
 log_level=INFO
 short_window_title_prefix=1
+session_colourset = cadetblue firebrick goldenrod #f80 #ff00ff chartreuse2
 
 [Peer]
 timeout-ms=2000
