@@ -1274,7 +1274,8 @@ sub resync_with_db {
     $self->empty_SubSeq_cache;
     $self->empty_Locus_cache;
 
-    # Refetch transcripts from GFF cache
+    # Refetch transcripts
+    $self->Assembly;
     $self->fetch_external_SubSeqs;
 
     return;
