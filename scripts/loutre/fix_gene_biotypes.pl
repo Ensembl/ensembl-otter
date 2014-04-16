@@ -151,14 +151,13 @@ sub fix_biotypes {
           , g.stable_id
           , t.biotype
           , t.status
-        FROM (gene g
-              , transcript t)
+        FROM gene g
+        JOIN transcript t ON g.gene_id = t.gene_id
         LEFT JOIN transcript_attrib ta
           ON t.transcript_id = ta.transcript_id
           AND ta.attrib_type_id = 54
           AND ta.value = 'not for VEGA'
-        WHERE g.gene_id = t.gene_id
-          AND g.is_current = 1
+        WHERE g.is_current = 1
           AND ta.transcript_id IS NULL
           AND t.biotype != 'artifact'
     }
@@ -209,8 +208,11 @@ sub fix_biotypes {
     
     my %gene_asb;
     while (my ($gene_id, $asb) = $fetch_asb->fetchrow) {
-        my $gene_data = $gene_tsct_biotypes{$gene_id}
-            or die "No gene data for gene_id = '$gene_id'";
+        my $gene_data = $gene_tsct_biotypes{$gene_id};
+        unless ($gene_data) {
+            warn "No gene data for gene_id = '$gene_id'";
+            next;
+        }
         $asb =~ s/^ASB_//;
         $gene_data->{'annotator_set_biotype'} = $asb;
     }
