@@ -30,7 +30,7 @@ has _loaded_resultset_class => ( is       => 'ro',
                                  init_arg => undef,
     );
 
-sub _require_resultset_class {
+sub _require_resultset_class {     ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
     my $self = shift;
     my $class = $self->resultset_class;
     eval "require $class" ## no critic (BuiltinFunctions::ProhibitStringyEval,Anacode::ProhibitEval)
@@ -43,7 +43,7 @@ has query_seqs => ( is       => 'ro',
                     builder  => '_fetch_query_seqs',
     );
 
-sub _fetch_query_seqs {
+sub _fetch_query_seqs {     ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
     my ($self) = @_;
 
     my $fasta_file = $self->request->query_file;
