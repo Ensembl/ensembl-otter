@@ -291,11 +291,13 @@ sub _add_missing_warning {
     return;
 }
 
-sub _add_unclaimed_warning {
-    my ($self, $acc) = @_;
-    $self->_add_warning( unclaimed => $acc );
-    return;
-}
+# FIXME: remove, and related 'unclaimed' warning handling
+#
+# sub _add_unclaimed_warning {
+#     my ($self, $acc) = @_;
+#     $self->_add_warning( unclaimed => $acc );
+#     return;
+# }
 
 sub _format_warnings {
     my $self = shift;
