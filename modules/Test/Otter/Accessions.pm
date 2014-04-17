@@ -100,3 +100,8 @@ NM_001142769.1  NM_001142769.1  refseq          -               -               
 
 # SRA (should be ignored by AccessionInfo)
 ERS000123
+
+## strange cases
+#
+# "pfetch -F" fails, RT#282709; Genoscope cDNA
+CR590337.1      -               emblrelease     -               -               -               a7af0f725cd46f4a236187b86683b3a3e9570a1f
