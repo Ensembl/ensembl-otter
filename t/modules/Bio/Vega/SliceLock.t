@@ -10,7 +10,7 @@ use List::MoreUtils 'uniq';
 use Time::HiRes qw( gettimeofday tv_interval usleep );
 use Date::Format 'time2str';
 
-use Test::Otter qw( ^db_or_skipall get_BOLDatasets get_BOSDatasets );
+use Test::Otter qw( ^db_or_skipall get_BOLDatasets get_BOSDatasets try_err );
 use Bio::Vega::ContigLockBroker;
 use Bio::Vega::SliceLockBroker;
 use Bio::Vega::Author;
@@ -22,11 +22,6 @@ my @TX_ISO =
 my ($ISO_UNCO,          $ISO_COMM,   $ISO_REPEAT,       $ISO_SERI) = # to avoid typos
   ('READ-UNCOMMITTED', 'READ-COMMITTED', 'REPEATABLE-READ', 'SERIALIZABLE');
 
-
-sub try_err(&) {
-    my ($code) = @_;
-    return try { $code->() } catch { "ERR:$_" };
-}
 
 sub noise {
     my @arg = @_;
