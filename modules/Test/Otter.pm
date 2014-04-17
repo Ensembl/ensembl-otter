@@ -51,7 +51,7 @@ our @EXPORT_OK = qw( db_or_skipall
                      farm_or_skipall
                      OtterClient
                      get_BOLDatasets get_BOSDatasets
-                     diagdump
+                     diagdump try_err
                      excused );
 
 
@@ -436,6 +436,23 @@ sub diagdump {
     my %info = @_;
     require YAML;
     return main::diag YAML::Dump(\%info);
+}
+
+
+=head2 try_err { ... }
+
+Shortcut for
+
+ try { ... } catch { "ERR:$_" };
+
+which is a useful fit with the C<like> assertion.
+
+=cut
+
+# XXX:DUP same as zircon.git lib/TestShared.pm
+sub try_err(&) {
+    my ($code) = @_;
+    return try { $code->() } catch { "ERR:$_" };
 }
 
 
