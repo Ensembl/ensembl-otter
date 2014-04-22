@@ -11,6 +11,7 @@ use Test::Otter qw( ^db_or_skipall get_BOLDatasets get_BOSDatasets );
 use Bio::Vega::ContigLockBroker;
 use Bio::Vega::SliceLockBroker;
 use Bio::Vega::Author;
+use Bio::Otter::Version;
 
 my $TESTHOST = 'test.nowhere'; # an invalid hostname
 
@@ -33,7 +34,7 @@ sub noise {
 
 
 sub main {
-    plan tests => 37;
+    plan tests => 38;
 
     # Test supportedness with B:O:L:Dataset + raw $dbh
     #
@@ -68,6 +69,8 @@ sub main {
             subtest "$sub(\L$iso)" => sub { $code->($ds) };
         }
     }
+
+    subtest broker_tt => \&broker_tt;
 
     subtest fetch_by => sub { fetchby_tt($ds) };
 
@@ -824,11 +827,9 @@ sub _get_DBAdaptor_pair { # + 4 tests, to ensure private-poking worked
     {
         local $BOLDataset->{$key} = undef;
         local $cached->dbc->{_host} = 'some.where.else';
-        local $SIG{__WARN__} = sub { # muffle one specific warning
-            my ($msg) = @_;
-            warn "[during uncache block] $msg" unless
-              $msg =~ /^WARN: Species .* and group .* same for two seperate databases/;
-        };
+        local $SIG{__WARN__} = __muffle
+          ('uncache block',
+           qr{^WARN: Species .* and group .* same for two seperate databases});
 #       local $cached->dnadb->dbc->{_host} = 'different.place.else';
         # dnadb can be shared
         $uncached = $BOLDataset->get_cached_DBAdaptor;
@@ -856,6 +857,15 @@ sub _get_DBAdaptor_pair { # + 4 tests, to ensure private-poking worked
 
     # Return the pair
     return ($cached, $uncached);
+}
+
+sub __muffle {
+    my ($during, $ignore_re) = @_;
+    return sub { # muffle one specific warning
+        my ($msg) = @_;
+        warn "[during $during] $msg" unless
+          $msg =~ $ignore_re;
+    };
 }
 
 sub two_conn_tt {
@@ -1282,6 +1292,182 @@ sub fetchby_tt {
     is($n{free} - 3, $old_n{free}, 'freed: three more');
 
     return;
+}
+
+
+sub broker_tt {
+    plan tests => 6;
+    my ($species, $species_alt) = qw( human_dev human_test );
+    my ($ds, $ds_alt) = get_BOLDatasets($species, $species_alt);
+    my ($dbname, $dbname_alt) = qw( jgrg_human_dev jgrg_human_test );
+
+    my $BVSLB = 'Bio::Vega::SliceLockBroker';
+    my $BV_SLA = 'Bio::Vega::DBSQL::SliceLockAdaptor';
+    my $SLdba = $ds->get_cached_DBAdaptor->get_SliceLockAdaptor;
+    my @author = _test_author($SLdba, qw( Sledge Jemmy Reckon ));
+
+    my $dba_alt = $ds_alt->get_cached_DBAdaptor;
+    isnt($ds->name, $ds_alt->name, 'have two datasets');
+
+    like(Bio::Vega::SliceLockBroker::__dbc_str($SLdba->dbc),
+         qr{-PASS='redact'}, 'password redaction');
+
+    subtest adaptor_types => sub {
+        plan tests => 8;
+        like(try_err { $BVSLB->new(-adaptor => 'Bob') },
+             qr{^ERR:.*MSG: Cannot get_SliceLockAdaptor from Bob: Can't locate object method}s, 'txt');
+
+        my $edba = $ds->make_EnsEMBL_DBAdaptor;
+        isa_ok($edba,    'Bio::EnsEMBL::DBSQL::DBAdaptor', 'edba type');
+        isa_ok($dba_alt, 'Bio::Vega::DBSQL::DBAdaptor', 'dba_alt type');
+        isa_ok($BVSLB->new(-adaptor => $dba_alt)->adaptor,
+               $BV_SLA, 'dba_alt to SLdba');
+        is($BVSLB->new(-adaptor => $SLdba)->adaptor, $SLdba, 'SLdba passthrough');
+        isa_ok($BVSLB->new(-adaptor => $dba_alt->get_SliceAdaptor)->adaptor,
+               $BV_SLA, 'SliceAdaptor to SLdba');
+
+        my $fail_re = # has %s values: type species group
+          qr{Could not (get adaptor SliceLock|find SliceLock adaptor in the registry) for $species otter:Bio::EnsEMBL::DBSQL::DBAdaptor};
+        local $SIG{__WARN__} = __muffle(__dba_to_sldba => $fail_re);
+        like(try_err { $BVSLB->new(-adaptor => $edba) },
+             qr{^ERR:.*MSG: $fail_re}s, 'edba does not know how');
+        like(try_err { $BVSLB->new(-adaptor => $edba->get_SliceAdaptor) },
+             qr{^ERR:.*MSG: $fail_re}s, 'edba SliceAdaptor does not know how');
+    };
+
+    subtest props => sub {
+        plan tests => 24;
+        my $br = $BVSLB->new;
+        foreach my $method (qw( hostname author adaptor )) {
+            like(try_err { $br->$method },
+                 qr{^ERR:.*MSG: $method not yet available}s, "empty->$method");
+        }
+        is_deeply([ $br->locks ], [], "empty->locks");
+
+        is($br->have_db, 0, '!have_db');
+        like(try_err { $br->author($author[0]) },
+             qr{^ERR:.*MSG: author must be stored.*adaptor is not yet set}s,
+             'unsaved author before adaptor');
+        is($author[0]->dbID,    undef, 'author[0] is unsaved [dbID]');
+        is($author[0]->adaptor, undef, 'author[0] is unsaved [adaptor]');
+
+        # Set, with no locks
+        $br->hostname($TESTHOST);
+        $br->adaptor($SLdba);
+        $br->author($author[0]);
+        is($br->hostname, $TESTHOST,  'hostname set');
+        is($br->adaptor,  $SLdba,     'adaptor set');
+        is($br->author,   $author[0], 'author set');
+
+        is($br->have_db, 1, 'have_db');
+        isnt($author[0]->dbID,    undef, 'author[0] was saved [dbID]');
+        isnt($author[0]->adaptor, undef, 'author[0] was saved [adaptor]');
+        is($author[1]->adaptor, undef, 'author[1] is unsaved [adaptor]');
+        $dba_alt->get_AuthorAdaptor->store($author[2]);
+
+        # Try to change
+        my @change =
+          ([ hostname => 'elsewhere.local',
+             qr{.*have test\.nowhere, tried to set elsewhere\.local} ],
+           [ adaptor => $dba_alt->get_SliceLockAdaptor,
+             qr{dbc mismatch: have \S+::SliceLockAdaptor=\S+ \(-DBNAME='$dbname'[^)]+\), tried to set \S+::SliceLockAdaptor=\S+ \(-DBNAME='$dbname_alt'[^)]+\)} ],
+           [ author => $author[1],
+             qr{author mismatch: have #\d+, tried to set #\d+} ],
+           [ author => $author[2],
+             qr{dbc mismatch: have .*'$dbname'.*tried to set.*'$dbname_alt'} ],
+           [ hostname => undef, qr{Cannot unset hostname} ],
+           [ author => undef,   qr{Cannot unset author} ],
+           [ adaptor => undef,    qr{Cannot unset adaptor} ]);
+        foreach my $pair (@change) {
+            my ($method, $val, $err_re) = @$pair;
+            like(try_err { $br->$method($val) },
+                 qr{^ERR:.*MSG: $err_re}s,
+                 "filled->$method(diff)");
+        }
+
+        # author got saved but we didn't use it.  Then in real code
+        # presumably a ROLLBACK, and one autoincr value is wasted.
+        isnt($author[1]->adaptor, undef, 'author[1] was saved [adaptor]');
+
+        like(try_err { $BVSLB->new(-author => $author[1], -adaptor => $dba_alt) },
+             qr{dbc mismatch: have .*'$dbname_alt'.*tried to set.*'$dbname'},
+             'new can fail, dba is set before author');
+    };
+
+    subtest props_from_lock => sub {
+        plan tests => 2;
+        my $br = $BVSLB->new;
+        my ($auth) = _test_author($SLdba, qw( Luke ));
+        my $l = Bio::Vega::SliceLock->new
+          (-SEQ_REGION_ID => _notlocked_seq_region_id($SLdba),
+           -SEQ_REGION_START => 500, -SEQ_REGION_END => 1000,
+           -HOSTNAME => $TESTHOST, -AUTHOR => $auth);
+        like(try_err { $br->locks($l) },
+             qr{MSG: adaptor not yet available}, 'no database linkage');
+        $SLdba->db->get_AuthorAdaptor->store($auth);
+        # $SLdba->store($l);
+        #    we already know this store would first store $auth,
+        #    so we learn nothing by also testing that case
+        $br->locks($l);
+        is(scalar $br->locks, 1, 'stored and listed');
+    };
+
+    subtest locks_create => sub {
+        plan tests => 15;
+        my $br = $BVSLB->new(-hostname => $TESTHOST, -author => $author[1]);
+        is(scalar $br->locks, 0, 'made with no locks');
+        my $srid = _notlocked_seq_region_id($SLdba);
+        my $l = $br->lock_create_for_Slice # it has $SLdba via -author
+          (-seq_region_id => $srid,
+           -seq_region_start => 1000,
+           -seq_region_end => 9000);
+        is(try_err { $l->active }, 'pre', 'create leaves active=pre');
+        ok($l->is_stored($SLdba->dbc), 'create did store');
+        is(scalar $br->locks, 1, 'lock is added');
+        is($l->intent, 'via SliceLock.t', 'inferred intent');
+        is($l->hostname, $TESTHOST, 'copied hostname');
+        is($l->otter_version, Bio::Otter::Version->version, 'implicit otter_version');
+
+        my $dbh = $l->adaptor->dbc->db_handle;
+        $dbh->begin_work if $dbh->{AutoCommit}; # avoid warning
+        $dbh->commit;
+        $dbh->begin_work;
+
+        my $l2 = $br->lock_create_for_Slice
+          (-seq_region_id => $srid,
+           -seq_region_start => 20000,
+           -seq_region_end => 25000);
+        is_deeply([ sort __by_dbID $br->locks ], # order is not guaranteed
+                  [ sort __by_dbID ($l, $l2) ],
+                  'multiple locks in collection');
+        $dbh->rollback;
+
+        is($l->is_held_sync, 0, 'l still exists(pre) [commit]');
+        like(try_err { $l2->is_held_sync }, qr{Freshen.* failed, row not found},
+             'l2 is gone [rollback]');
+
+        my $br2 = $BVSLB->new(-locks => [ $l2, $l ]); # re-use invalid lock!
+        is_deeply([ sort __by_dbID $br2->locks ], # order is not guaranteed
+                  [ sort __by_dbID ($l, $l2) ],
+                  'reconstruct with multiple locks');
+
+        my @argset =
+          ([ -locks  => [ $l ]       ],
+           [ -locks  =>   $l         ],
+           [ -lockid => [ $l->dbID ], -adaptor => $SLdba ],
+           [ -lockid =>   $l->dbID  , -adaptor => $SLdba ]);
+        for (my $i=0; $i<@argset; $i++) {
+            my @arg = @{ $argset[$i] };
+            is_deeply([ $BVSLB->new(@arg)->locks ], [ $l ],
+                      "reconstruct with one lock i=$i");
+        }
+    };
+
+    return;
+}
+
+sub __by_dbID {
+    return $a->dbID <=> $b->dbID;
 }
 
 
