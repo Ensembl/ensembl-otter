@@ -47,6 +47,7 @@ sub _generic_sql_fetch {
         $author->dbID($ref->{author_id});
         $author->email($ref->{author_email});
         $author->name($ref->{author_name});
+        $author->adaptor($self);
 
         # Give it a group if it has one
         if (my $gid = $ref->{group_id}) {
@@ -200,6 +201,7 @@ sub store {
 
     my $db_id = $sth->{'mysql_insertid'} || throw('Failed to get autoincremented ID from statement handle');
     $author->dbID($db_id);
+    $author->adaptor($self);
 
     return;
 }

@@ -155,7 +155,8 @@ sub _author_find {
     }
 }
 
-sub _author_dbID {
+# Not particularly public, but used by SliceLockBroker
+sub author_dbID {
     my ($self, $what, $author) = @_;
     throw("$what not set on SliceLock object") unless $author;
     unless ($author->dbID) {
@@ -210,7 +211,7 @@ sub fetch_by_author {
   throw("Author must be entered to fetch a SliceLock object")
       unless $auth;
   throw("extant=0 not implemented") if defined $extant && !$extant;
-  my $authid = $self->_author_dbID(fetch_by => $auth);
+  my $authid = $self->author_dbID(fetch_by => $auth);
   my $q = "where author_id = ?";
   $q .= " and active <> 'free' and freed is null" if $extant;
   my $slicelocks = $self->_generic_sql_fetch($q, $authid);
@@ -278,9 +279,9 @@ sub store {
   my $seq_region_id = $slice_lock->seq_region_id
     or $self->throw('seq_region_id not set on SliceLock object');
 
-  my $author_id = $self->_author_dbID(author => $slice_lock->author);
+  my $author_id = $self->author_dbID(author => $slice_lock->author);
   my $freed_author_id = defined $slice_lock->freed_author
-    ? $self->_author_dbID(freed_author => $slice_lock->freed_author) : undef;
+    ? $self->author_dbID(freed_author => $slice_lock->freed_author) : undef;
 
   $self->_sane_db;
   if ($slice_lock->adaptor) {
@@ -381,7 +382,7 @@ sub do_lock {
     my ($lock_id, $active, $ts_begin, $srID, $sr_start, $sr_end) =
       ($lock->dbID, $lock->active, $lock->ts_begin,
        $lock->seq_region_id, $lock->seq_region_start, $lock->seq_region_end);
-    my $author_id = $self->_author_dbID(author => $lock->author);
+    my $author_id = $self->author_dbID(author => $lock->author);
 
     throw("do_lock: $lock has not been stored") unless $lock_id;
     throw("do_lock($lock_id) failed: expected active=pre, got active=$active")
@@ -559,8 +560,8 @@ sub unlock {
     unless eval { $slice_lock->isa('Bio::Vega::SliceLock') };
 
   my $dbID = $slice_lock->dbID;
-  my $author_id = $self->_author_dbID(author => $slice_lock->author);
-  my $freed_author_id = $self->_author_dbID(freed_author => $unlock_author)
+  my $author_id = $self->author_dbID(author => $slice_lock->author);
+  my $freed_author_id = $self->author_dbID(freed_author => $unlock_author)
     or throw "unlock must be done by some author";
   throw "SliceLock dbID=$dbID is already free (in-memory)"
     unless $slice_lock->is_held || $slice_lock->active eq 'pre';
