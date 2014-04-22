@@ -523,7 +523,7 @@ sub create_UserAgent {
     return $ua;
 }
 
-sub ua_tell_proxies {
+sub ua_tell_hostinfo {
     my ($self) = @_;
     my $ua = $self->get_UserAgent;
     my %info;
@@ -541,6 +541,7 @@ sub ua_tell_proxies {
           map {( $_, uc($_) )}
             qw( http_proxy https_proxy no_proxy );
 
+    warn 'Hostname: '.hostfqdn()."\n";
     warn 'Proxy: '.(join ' ', map {"$_=$info{$_}"} sort keys %info)."\n";
     return;
 }
