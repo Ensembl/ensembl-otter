@@ -5,8 +5,9 @@ package Test::OtterLaceOnTheFly;
 use strict;
 use warnings;
 
+use Cwd qw(abs_path);
 use Exporter qw(import);
-use FindBin qw($Bin);
+use File::Basename;
 use Test::More;
 
 use Bio::Otter::Lace::OnTheFly::Builder::Genomic;
@@ -17,7 +18,9 @@ use Hum::FastaFileIO;
 
 our @EXPORT_OK = qw( fixed_tests build_target run_otf_test );
 
-my $path = "$Bin/etc/align";
+# .../t/lib/Test/
+# need to go up two levels to get into .../t/
+my $path = abs_path(dirname(__FILE__) . "/../../etc/align");
 
 my @tests = (
     {
