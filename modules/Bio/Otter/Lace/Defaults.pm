@@ -44,7 +44,7 @@ my @CLIENT_OPTIONS = qw(
     email=s
     write_access!
     gene_type_prefix=s
-    debug=i
+    debug=s
     ); # a "constant"
 
 # @CLIENT_OPTIONS is Getopt::GetOptions() keys which will be included in the
