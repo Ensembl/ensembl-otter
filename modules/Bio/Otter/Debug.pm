@@ -50,6 +50,12 @@ sub _debug {
 sub set {
     my ($pkg, $keys) = @_;
     my @keys = $keys =~ /[^,;[:space:]]+/g;
+    if (scalar(@keys) == 1 and $keys[0] =~ m/^(false|none|off)$/i) {
+        # special-case no debug
+        $DEBUG = { };
+        warn "DEBUG: all keys set to 0 (off)\n";
+        return;
+    }
     _verify_keys(@keys);
     $pkg->_debug($_, 1) for @keys;
     return;
