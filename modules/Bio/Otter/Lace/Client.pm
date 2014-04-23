@@ -107,7 +107,7 @@ sub __user_home {
 sub write_access {
     my ($self, $write_access) = @_;
 
-    warn "Set using the Config file please.\n" if $write_access;
+    $self->logger->error('Set using the Config file please.') if $write_access;
 
     return $self->config_value('write_access') || 0;
 }
@@ -115,7 +115,7 @@ sub write_access {
 sub author {
     my ($self, $author) = @_;
 
-    warn "Set using the Config file please.\n" if $author;
+    $self->logger->error('Set using the Config file please.') if $author;
 
     return $self->config_value('author') || (getpwuid($<))[0];
 }
@@ -123,7 +123,7 @@ sub author {
 sub email {
     my ($self, $email) = @_;
 
-    warn "Set using the Config file please.\n" if $email;
+    $self->logger->error('Set using the Config file please.') if $email;
 
     return $self->config_value('email') || (getpwuid($<))[0];
 }
@@ -246,15 +246,15 @@ sub cleanup_log_dir {
 
     my $log_dir = $self->get_log_dir or return;
 
-    opendir my $LOG, $log_dir or confess "Can't open directory '$log_dir': $!";
+    opendir my $LOG, $log_dir or $self->logger->logconfess("Can't open directory '$log_dir': $!");
     foreach my $file (grep { /^$file_root\./ } readdir $LOG) {
         my $full = "$log_dir/$file"; #" comment solely for eclipses buggy parsing!
         if (-M $full > $days) {
             unlink $full
-                or warn "Couldn't delete file '$full' : $!";
+                or $self->logger->warn("Couldn't delete file '$full' : $!");
         }
     }
-    closedir $LOG or confess "Error reading directory '$log_dir' : $!";
+    closedir $LOG or $self->logger->logconfess("Error reading directory '$log_dir' : $!");
     return;
 }
 
@@ -269,7 +269,7 @@ sub cleanup_sessions {
         next unless /\.done$/;
         if ( -M > $session_dir_expire_days ) {
             remove_tree($_)
-                or warn "Error removing expired session directory '$_'";
+                or $self->logger->error("Error removing expired session directory '$_'");
         }
     }
 
@@ -344,7 +344,7 @@ sub new_AceDatabase {
 sub lock {
     my ($self, @args) = @_;
 
-    confess "lock takes no arguments" if @args;
+    $self->logger->logconfess("lock takes no arguments") if @args;
 
     return $self->write_access ? 'true' : 'false';
 }
@@ -382,7 +382,7 @@ sub get_DataSet_by_name {
             return $ds;
         }
     }
-    confess "No such DataSet '$name'";
+    $self->logger->logconfess("No such DataSet '$name'");
 }
 
 sub password_prompt{
@@ -396,7 +396,7 @@ sub password_prompt{
             my ($self) = @_;
 
             unless (-t STDIN) { ## no critic (InputOutput::ProhibitInteractiveTest)
-                warn "Cannot prompt for password - not attached to terminal\n";
+                $self->logger->error("Cannot prompt for password - not attached to terminal");
                 return;
             }
 
@@ -421,8 +421,8 @@ sub password_problem{
     $callback = $self->{'_password_problem_callback'} ||=
       sub {
           my ($self, $message) = @_;
-          $message =~ s{\n*\z}{\n};
-          warn $message;
+          $message =~ s{\n*\z}{};
+          $self->logger->warn($message);
       };
     return $callback;
 }
@@ -434,7 +434,8 @@ sub reauthorize_if_cookie_will_expire_soon {
     my $soon = time + (30 * 60);
     my $expiry = $self->cookie_expiry_time;
     if ($expiry < $soon) {
-        warn sprintf("reauthorize_if_cookie_will_expire_soon: expiry expected at %s\n", scalar localtime($expiry));
+        $self->logger->warn(
+            sprintf("reauthorize_if_cookie_will_expire_soon: expiry expected at %s", scalar localtime($expiry)));
         my $password_attempts = $self->password_attempts;
         while ($password_attempts) {
             return 1 if $self->authorize;
@@ -454,7 +455,7 @@ sub config_set {
     # Be conservative.  Most code still assumes the config is static
     # after initialisation.
     my $target = qq{[$section]$param};
-    die "Runtime setting of preference $target is not yet implemented"
+    $self->logger->logdie("Runtime setting of preference $target is not yet implemented")
       unless grep { $_ eq $target }
         qw{ [client]author [client]write_access };
 
@@ -465,14 +466,14 @@ sub config_set {
         try {
             $self->ensure_authorised;
         } catch {
-            warn "After config_set $target, auth failed: $_";
+            $self->logger->warn("After config_set $target, auth failed: $_");
             # we now have no valid authorisation
         };
     } # else no update needed
 
     # app is built on the assumption that these don't change, which we
     # will initially avoid by only showing prefs when auth fails
-    warn "XXX: $target=$value changed; need to invalidate several windows";
+    $self->logger->warn("XXX: $target=$value changed; need to invalidate several windows");
 
     return ();
 }
@@ -482,20 +483,18 @@ sub authorize {
 
     my $user = $self->author;
     my $password = $self->password_prompt()->($self)
-      or die "No password given";
+      or $self->logger->logdie("No password given");
 
     my ($status, $failed, $detail) =
       Bio::Otter::Auth::SSO->login($self->get_UserAgent, $user, $password);
 
     if (!$failed) {
         # Cookie will have been given to UserAgent
-        warn sprintf("Authenticated as %s: %s\n",
-                     $self->author, $status);
+        $self->logger->info(sprintf("Authenticated as %s: %s\n", $self->author, $status));
         $self->save_CookieJar;
         return 1;
     } else {
-        warn sprintf("Authentication as %s failed: %s (((%s)))\n",
-                     $self->author, $status, $detail);
+        $self->logger->warn(sprintf("Authentication as %s failed: %s (((%s)))\n", $self->author, $status, $detail));
         $self->password_problem()->($self, $failed);
         return 0;
     }
@@ -545,8 +544,8 @@ sub ua_tell_hostinfo {
           map {( $_, uc($_) )}
             qw( http_proxy https_proxy no_proxy );
 
-    warn 'Hostname: '.hostfqdn()."\n";
-    warn 'Proxy: '.(join ' ', map {"$_=$info{$_}"} sort keys %info)."\n";
+    $self->logger->info('Hostname: ', hostfqdn());
+    $self->logger->info('Proxy: ', (join ' ', map {"$_=$info{$_}"} sort keys %info));
     return;
 }
 
@@ -572,21 +571,21 @@ sub save_CookieJar {
         my $mode_required = oct(600);
         if ($mode != $mode_required) {
             chmod($mode_required, $jar)
-                or confess sprintf "chmod(0%o, '$jar') failed; $!", $mode_required;
+                or $self->logger->logconfess(sprintf "chmod(0%o, '$jar') failed; $!", $mode_required);
         }
     } else {
         # Create file with mode 600
         my $save_mask = umask;
         umask(066);
         open my $fh, '>', $jar
-            or confess "Can't create '$jar'; $!";
+            or $self->logger->logconfess("Can't create '$jar'; $!");
         close $fh
-            or confess "Can't close '$jar'; $!";
+            or $self->logger->logconfess("Can't close '$jar'; $!");
         umask($save_mask);
     }
 
     $self->get_CookieJar->save
-        or confess "Failed to save cookie";
+        or $self->logger->logconfess("Failed to save cookie");
 
     return;
 }
@@ -605,7 +604,7 @@ sub cookie_expiry_time {
         return;
     });
 
-    # warn "Cookie expiry time is ", scalar localtime($expiry_time), "\n";
+    # $self->logger->debug("Cookie expiry time is ", scalar localtime($expiry_time));
 
     return $expiry_time;
 }
@@ -663,6 +662,7 @@ sub setup_pfetch_env {
     my $new_PW = defined $ENV{'PFETCH_WWW'} ? "'$ENV{'PFETCH_WWW'}'" : "undef";
     my $blix_cfg = __user_home()."/.blixemrc";
     my $blix_cfg_exist = -f $blix_cfg ? "exists" : "not present";
+    # Called before logger is set up
     warn "setup_pfetch_env: hostname=$hostname; PFETCH_WWW was $old_PW, now $new_PW; $blix_cfg $blix_cfg_exist\n";
 
     return;
@@ -682,7 +682,7 @@ sub otter_response_content {
         $cl->debug($self->response_info($scriptname, $params, length($content))) if $cl->is_debug;
         return $content;
     } else {
-        confess "No <otter> tags in response content: [$xml]";
+        $self->logger->logconfess("No <otter> tags in response content: [$xml]");
     }
 }
 
@@ -693,7 +693,7 @@ sub http_response_content {
     my $response = $self->general_http_dialog($method, $scriptname, $params);
 
     my $xml = $response->content();
-    #warn $xml;
+    # $self->logger->debug($xml);
 
     my $cl = $self->client_logger;
     $cl->debug($self->response_info($scriptname, $params, length($xml))) if $cl->is_debug;
@@ -735,22 +735,22 @@ sub general_http_dialog {
                     next REQUEST;
                 }
             }
-            die "Authorization failed";
+            $self->logger->logdie("Authorization failed");
         } elsif ($code == 410) {
             # 410 = Gone.  Not coming back; probably concise.  RT#234724
             # Actually, maybe not so concise.  RT#382740 returns "410 Gone" plus large HTML.
-            warn __truncdent_for_log($response->decoded_content, 10240, '* ');
-            die sprintf "Otter Server v%s is gone, please download an up-to-date Otterlace.\n",
-              Bio::Otter::Version->version;
+            $self->logger->warn(__truncdent_for_log($response->decoded_content, 10240, '* '));
+            $self->logger->logdie(sprintf("Otter Server v%s is gone, please download an up-to-date Otterlace.",
+                                  Bio::Otter::Version->version));
         } else {
-            print STDERR "\nGot error $code\n";
-            print STDERR __truncdent_for_log($response->decoded_content, 10240, '| ');
-            die sprintf "%d (%s)", $response->code, $response->decoded_content;
+            $self->logger->error("Got error $code");
+            $self->logger->error(__truncdent_for_log($response->decoded_content, 10240, '| '));
+            $self->logger->logdie(sprintf "%d (%s)", $response->code, $response->decoded_content);
         }
     }
 
     if ($response->content =~ /The Sanger Institute Web service you requested is temporarily unavailable/) {
-        die "Problem with the web server\n";
+        $self->logger->logdie("Problem with the web server");
     }
 
     return $response;
@@ -795,7 +795,7 @@ sub do_http_request {
         # $self->client_logger->debug("paramstring: $paramstring");
     }
     else {
-        confess "method '$method' is not supported";
+        $self->logger->logconfess("method '$method' is not supported");
     }
 
     return $self->request($request);
@@ -833,7 +833,7 @@ sub status_refresh_for_DataSet_SequenceSet{
         my $status_subhash = $status_hash{$contig_name} || $names_subhash;
 
         if($status_subhash == $names_subhash) {
-            warn "had to assign an empty subhash to contig '$contig_name'";
+            $self->logger->warn("had to assign an empty subhash to contig '$contig_name'");
         }
 
         while(my ($ana_name, $values) = each %$status_subhash) {
@@ -979,7 +979,7 @@ sub fetch_all_SequenceNotes_for_DataSet_SequenceSet {
     my ($self, $ds, $ss) = @_;
 
     $ss ||= $ds->selected_SequenceSet
-        || die "no selected_SequenceSet attached to DataSet";
+        || $self->logger->logdie("no selected_SequenceSet attached to DataSet");
 
     my $response =
         $self->_DataSet_SequenceSet_response_content(
@@ -1125,13 +1125,13 @@ sub ensure_authorised {
     my $who_am_i = $self->do_authentication;
     if ($who_am_i ne $self->author) {
         my $a = $self->author;
-        warn "Clearing existing cookie for author='$who_am_i'.  Configuration is for author='$a'\n";
+        $self->logger->warn("Clearing existing cookie for author='$who_am_i'.  Configuration is for author='$a'");
         $self->get_CookieJar->clear;
         $who_am_i = $self->do_authentication;
     }
 
     # This shows authentication AND authorization
-    warn "Authorised as $who_am_i\n";
+    $self->logger->info("Authorised as $who_am_i");
     return ();
 }
 
@@ -1347,7 +1347,7 @@ sub get_accession_types {
         my %entry;
         @entry{accession_info_column_order()} = @row;
         my $name = $entry{name};
-        warn "Duplicate result for '$name'" if $results{$name};
+        $self->logger->warn("Duplicate result for '$name'") if $results{$name};
         $results{$name} = \%entry;
     }
 
@@ -1368,7 +1368,7 @@ sub get_taxonomy_info {
 sub save_otter_xml {
     my ($self, $xml, $dsname) = @_;
 
-    confess "Don't have write access" unless $self->write_access;
+    $self->logger->logconfess("Don't have write access") unless $self->write_access;
 
     my $content = $self->http_response_content(
         'POST',
@@ -1467,7 +1467,7 @@ sub sessions_needing_recovery {
             }
             else {
                 my $done = $self->move_to_done($lace_dir);
-                die "Session with uninitialised or corrupted SQLite DB renamed to '$done'";
+                $self->logger->logdie("Session with uninitialised or corrupted SQLite DB renamed to '$done'");
             }
         } else {
             try {
@@ -1477,14 +1477,14 @@ sub sessions_needing_recovery {
                 $lace_dir = $adb->home;
                 if ($adb->write_access) {
                     $adb->unlock_otter_slice;
-                    warn "\nRemoved lock from uninitialised database in '$lace_dir'\n";
+                    $self->logger->warn("Removed lock from uninitialised database in '$lace_dir'");
                 }
             }
-            catch { warn "error while recoving session '$lace_dir': $_"; };
+            catch { $self->logger->error("error while recoving session '$lace_dir': $_"); };
             if (-d $lace_dir) {
                 # Belt and braces - if the session was unrecoverable we want it to be deleted.
                 my $done = $self->move_to_done($lace_dir);
-                die "\nNo such file: '$lace_dir/database/ACEDB.wrm'\nDatabase moved to '$done'\n";
+                $self->logger->logdie("No such file: '$lace_dir/database/ACEDB.wrm'\nDatabase moved to '$done'");
             }
         }
     }
@@ -1499,7 +1499,7 @@ sub move_to_done {
     my ($self, $lace_dir) = @_;
 
     my $done = "$lace_dir.done";
-    rename($lace_dir, $done) or die "Error renaming '$lace_dir' to '$done'; $!";
+    rename($lace_dir, $done) or $self->logger->logdie("Error renaming '$lace_dir' to '$done'; $!");
     return $done;
 }
 
@@ -1518,11 +1518,11 @@ sub recover_session {
     my $adb = $self->new_AceDatabase;
     $adb->error_flag(1);
     my $home = $adb->home;
-    rename($dir, $home) or die "Cannot move '$dir' to '$home'; $!";
+    rename($dir, $home) or $self->logger->logdie("Cannot move '$dir' to '$home'; $!");
 
     unless ($adb->db_initialized) {
         try { $adb->recover_slice_from_region_xml; }
-        catch { warn $_; };
+        catch { $self->logger->warn($_); };
         return $adb;
     }
 
@@ -1546,8 +1546,7 @@ sub kill_old_sgifaceserver {
         my ($cmnd, @args) = split /\s+/, $proc->cmndline;
         next unless $cmnd eq 'sgifaceserver';
         next unless $args[0] eq $dir;
-        warn sprintf "Killing old sgifaceserver '%s', pid %s\n",
-          $proc->cmndline, $proc->pid;
+        $self->logger->info(sprintf "Killing old sgifaceserver '%s', pid %s", $proc->cmndline, $proc->pid);
         kill 9, $proc->pid;
     }
 
@@ -1555,6 +1554,10 @@ sub kill_old_sgifaceserver {
 }
 
 ############## Session recovery methods end here ############################
+
+sub logger {
+    return Log::Log4perl->get_logger;
+}
 
 # This is under the control of $self->debug_client() and should match the corresponding
 # log4perl.logger.client in Bio::Otter::LogFile::make_log().
