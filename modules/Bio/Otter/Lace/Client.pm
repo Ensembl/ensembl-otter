@@ -13,6 +13,7 @@ use Net::Domain qw{ hostname hostfqdn };
 use Proc::ProcessTable;
 
 use List::MoreUtils qw( uniq );
+use Log::Log4perl::Level;
 use LWP;
 use URI::Escape qw{ uri_escape };
 use HTTP::Cookies::Netscape;
@@ -231,6 +232,7 @@ sub make_log_file {
         }
     }
     Bio::Otter::LogFile::make_log($log_file, $log_level, $config_file);
+    $self->client_logger->level($DEBUG) if $self->debug_client;
     return;
 }
 
@@ -676,9 +678,7 @@ sub otter_response_content {
     my $xml = $response->content();
 
     if (my ($content) = $xml =~ m{<otter[^\>]*\>\s*(.*)</otter>}s) {
-        if ($self->debug_client) {
-            warn $self->response_info($scriptname, $params, length($content));
-        }
+        $self->client_logger->debug($self->response_info($scriptname, $params, length($content)));
         return $content;
     } else {
         confess "No <otter> tags in response content: [$xml]";
@@ -694,9 +694,7 @@ sub http_response_content {
     my $xml = $response->content();
     #warn $xml;
 
-    if ($self->debug_client) {
-        warn $self->response_info($scriptname, $params, length($xml));
-    }
+    $self->client_logger->debug($self->response_info($scriptname, $params, length($xml)));
     return $xml;
 }
 
@@ -785,18 +783,14 @@ sub do_http_request {
         my $get = $url . ($paramstring ? "?$paramstring" : '');
         $request->uri($get);
 
-        if($self->debug_client) {
-            warn "GET  $get\n";
-        }
+        $self->client_logger->debug("GET  $get");
     }
     elsif ($method eq 'POST') {
         $request->uri($url);
         $request->content($paramstring);
 
-        if($self->debug_client) {
-            warn "POST  $url\n";
-        }
-        #warn "paramstring: $paramstring";
+        $self->client_logger->debug("POST  $url");
+        # $self->client_logger->debug("paramstring: $paramstring");
     }
     else {
         confess "method '$method' is not supported";
@@ -1559,6 +1553,13 @@ sub kill_old_sgifaceserver {
 }
 
 ############## Session recovery methods end here ############################
+
+# This is under the control of $self->debug_client() and should match the corresponding
+# log4perl.logger.client in Bio::Otter::LogFile::make_log().
+#
+sub client_logger {
+    return Log::Log4perl->get_logger('otter.client');
+}
 
 1;
 

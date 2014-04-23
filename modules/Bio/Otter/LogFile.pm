@@ -32,6 +32,10 @@ sub make_log {
       log4perl.appender.Logfile.layout                   = Bio::Otter::Log::Layout::UseSrcTimestamp
       log4perl.appender.Logfile.layout.ConversionPattern = %d{yyyy-MM-dd HH:mm:ss,SSSS} %c %p: %m%n
       log4perl.appender.Logfile.layout.Debug             = 0
+
+      # used by Bio::Otter::Client->debug_client, defaults to fatal-only
+      log4perl.logger.otter.client     = FATAL, SafeScreen, Logfile
+      log4perl.additivity.otter.client = 0
     );
 
     $config ||= \$default_conf;
