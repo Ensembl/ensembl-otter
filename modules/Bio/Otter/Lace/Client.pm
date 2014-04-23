@@ -89,6 +89,8 @@ sub new {
     }, $pkg;
 
     my $debug = $new->config_value('debug');
+    my $debug_show = defined $debug ? "'$debug'" : '<undefined>';
+    warn "Debug from config: $debug_show\n";
     Bio::Otter::Debug->set($debug) if defined $debug;
 
     $new->setup_pfetch_env;

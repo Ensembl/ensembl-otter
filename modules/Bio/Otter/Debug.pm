@@ -5,12 +5,20 @@ use strict;
 use warnings;
 
 my $DEBUG = { };
+my $INIT;
 
 sub _init {
     my ($pkg) = @_;
-    my $debug = $ENV{'OTTER_DEBUG'};
-    $pkg->set($debug) if defined $debug;
-    return ();
+    $INIT = 'INITIALISING';
+    if (exists $ENV{'OTTER_DEBUG'}) {
+        my $debug = $ENV{'OTTER_DEBUG'} || '';
+        warn "Debug from OTTER_DEBUG: '$debug'\n";
+        $pkg->set($debug) if $debug;
+        $INIT = 'OTTER_DEBUG';
+    } else {
+        $INIT = 'INTIALISED';
+    }
+    return;
 }
 
 sub debug {
@@ -22,11 +30,18 @@ sub debug {
 
 sub _debug {
     my ($pkg, $key, @args) = @_;
+
+    $pkg->_init unless $INIT;
+
     if (@args) {
         my ($value) = @args;
-        $value = $value ? 1 : 0;
-        $DEBUG->{$key} = $value;
-        warn sprintf "DEBUG: %s = %d\n", $key, $value;
+        if ($INIT and $INIT eq 'OTTER_DEBUG') {
+            warn "Debug already initialised via OTTER_DEBUG, ignoring request to set '$key'\n";
+        } else {
+            $value = $value ? 1 : 0;
+            $DEBUG->{$key} = $value;
+            warn sprintf "DEBUG: %s = %d\n", $key, $value;
+        }
     }
     my $debug = $DEBUG->{$key} ? 1 : 0;
     return $debug;
@@ -58,8 +73,6 @@ sub _verify_keys { ## no critic (Subroutines::RequireArgUnpacking)
     $_ = uc $_ for @_;
     return;
 }
-
-__PACKAGE__->_init;
 
 1;
 
