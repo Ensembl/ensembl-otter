@@ -111,10 +111,14 @@ Returns nothing.
 =cut
 
 sub dump {
-    my ($pkg) = @_;
+    my ($pkg, $logger) = @_;
     my $feat = $pkg->param('feature');
-    warn sprintf "git HEAD: %s%s\n", $pkg->param('head'),
-      $feat ? " (feature $feat)" : '';
+    my $msg = sprintf "git HEAD: %s%s\n", $pkg->param('head'), $feat ? " (feature $feat)" : '';
+    if ($logger) {
+        $logger->info($msg);
+    } else {
+        warn $msg;
+    }
     return;
 }
 

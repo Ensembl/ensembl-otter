@@ -7,6 +7,7 @@ use strict;
 use warnings;
 
 use Carp;
+use Log::Log4perl;
 use Try::Tiny;
 use Tk::DialogBox;
 
@@ -137,13 +138,13 @@ sub ensure_tools {
     my @v = try {
         Bio::Otter::Utils::About->tools_versions;
     } catch {
-        warn "_ensure_tools: $_";
+        $self->logger->error("_ensure_tools: $_");
         ();
     };
 
     if (@v) {
         local $" = "\n  ";
-        warn "Tools are @v\n";
+        $self->logger->info("Tools are\n  @v");
     } else {
         $self->message("Some parts of Otterlace are not working\n".
                        "See Help > About... for info");
@@ -438,6 +439,10 @@ sub zircon_delete {
         ${$ref} = 'zircon_delete';
     }
     return;
+}
+
+sub logger {
+    return Log::Log4perl->get_logger;
 }
 
 1;
