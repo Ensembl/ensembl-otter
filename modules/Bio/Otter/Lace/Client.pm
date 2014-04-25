@@ -678,7 +678,8 @@ sub otter_response_content {
     my $xml = $response->content();
 
     if (my ($content) = $xml =~ m{<otter[^\>]*\>\s*(.*)</otter>}s) {
-        $self->client_logger->debug($self->response_info($scriptname, $params, length($content)));
+        my $cl = $self->client_logger;
+        $cl->debug($self->response_info($scriptname, $params, length($content))) if $cl->is_debug;
         return $content;
     } else {
         confess "No <otter> tags in response content: [$xml]";
@@ -694,7 +695,8 @@ sub http_response_content {
     my $xml = $response->content();
     #warn $xml;
 
-    $self->client_logger->debug($self->response_info($scriptname, $params, length($xml)));
+    my $cl = $self->client_logger;
+    $cl->debug($self->response_info($scriptname, $params, length($xml))) if $cl->is_debug;
     return $xml;
 }
 
