@@ -11,6 +11,8 @@ use Test::More;
 use File::Slurp;
 use File::Temp;
 use FindBin qw($Script);
+use Time::HiRes qw( gettimeofday tv_interval );
+
 use Log::Log4perl;
 
 my @modules;
@@ -26,7 +28,7 @@ BEGIN {
 }
 critic_module_ok($_) foreach (@modules);
 
-my $fh = File::Temp->new(TEMPLATE => "${Script}.XXXXXX");
+my $fh = File::Temp->new(TEMPLATE => "${Script}.XXXXXX", TMPDIR => 1);
 my $fname = $fh->filename;
 
 my $pid = Bio::Otter::LogFile::make_log($fname, 'DEBUG');
@@ -37,10 +39,19 @@ isa_ok($logger, 'Log::Log4perl::Logger');
 
 ok($logger->info('Stand by for an information broadcast'), 'info');
 
+my $n = 1000;
+my $t0 = [ gettimeofday() ];
+foreach my $i ( 1 .. $n ) {
+    $logger->debug("Debug message #$i");
+}
+my $interval = tv_interval($t0);
+
 my $log = read_file($fh);
 ok($log, 'slurp logfile');
 
 like($log, qr/LogFileT INFO: Stand by for an information broadcast/, 'info logged');
+
+note "Logged $n messages in $interval seconds.";
 
 done_testing;
 
