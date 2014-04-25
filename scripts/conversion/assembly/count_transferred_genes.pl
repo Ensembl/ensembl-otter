@@ -122,11 +122,13 @@ foreach my $t (qw(gene transcript)) {
 
 foreach my $t (qw(gene transcript)) {
   $old->{$t}       = { map { @$_ } @{$old_dbh->selectall_arrayref( "select sr.name, count(*) from  analysis a, $t t, seq_region sr where a.analysis_id = t.analysis_id and t.seq_region_id = sr.seq_region_id group by sr.name" )} };
+
+#this will work when comparing against a vega database
+#  $old->{$t}       = { map { @$_ } @{$old_dbh->selectall_arrayref( "select sra.value, count(*) from  analysis a, $t t, seq_region sr, seq_region_attrib sra, attrib_type at  where a.analysis_id = t.analysis_id and t.seq_region_id = sr.seq_region_id and sr.seq_region_id = sra.seq_region_id and sra.attrib_type_id = at.attrib_type_id and at.code = 'ensembl_name' group by sra.value" )} };
 }
 
 my %all_chroms = map {$_ => 1} (keys %{$new->{'gene'}}, keys %{$old->{'gene'}});
-
-my $fmt = "%-20s%-20s%-20s%-25s%-25s\n";
+my $fmt = "%-40s%-20s%-20s%-25s%-25s\n";
 $support->log("\nGene numbers:\n");
 $support->log(sprintf($fmt, 'Chromosome','New gene count','Old gene count','Difference'));
 foreach my $sr (sort keys %all_chroms ) {
