@@ -579,14 +579,14 @@ $sql = qq(SELECT count(*)
              AND sr2.coord_system_id = cs2.coord_system_id
              AND cs.name = 'chromosome'
              AND cs2.name = 'chromosome'
+             AND cs.version = \'$vega_assembly\'
              AND cs2.version = \'$ensembl_assembly\');
 unless ($support->param('dry_run')) {
-  my $check = $dbh->{'vega'}->do($sql) unless ($support->param('dry_run'));
+  my ($check) = $dbh->{'vega'}->selectrow_array($sql) unless ($support->param('dry_run'));
   if ($check != $c) {
     $support->log_warning("There were $c inserted assembly mapping entries but only $check can be retrieved after linking to the seq_region table.\n");
   }
 }
-
 
 #update external_db and attrib_type on ensembl_vega
 if (! $support->param('dry_run') ) {
