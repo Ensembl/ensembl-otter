@@ -8,8 +8,8 @@ use warnings;
 use Carp;
 
 use Fcntl qw{ O_WRONLY O_CREAT };
+use File::Basename;
 use Config::IniFiles;
-use Log::Log4perl;
 use Try::Tiny;
 use Scalar::Util 'weaken';
 
@@ -24,6 +24,7 @@ use Bio::Otter::Lace::Chooser::Collection;
 use Bio::Otter::Lace::DB;
 use Bio::Otter::Lace::Slice; # a new kind of Slice that knows how to get pipeline data
 use Bio::Otter::Lace::ProcessGFF;
+use Bio::Otter::Log::WithContext;
 use Bio::Otter::Utils::Config::Ini qw( config_ini_format );
 
 use Hum::Ace::LocalServer;
@@ -905,7 +906,7 @@ sub ace_server {
         $sgif->start_server() or return 0; # this only check the fork was successful
         my $pid = $sgif->server_pid;
         $sgif->ace_handle(1)  or return 0; # this checks it can connect
-        warn "sgifaceserver on $home running, pid $pid\n";
+        $self->logger->info("sgifaceserver on $home running, pid $pid");
         $self->{'_ace_server'} = $sgif;
     }
     return $sgif;
@@ -1334,7 +1335,16 @@ sub kill_ace_server {
 }
 
 sub logger {
-    return Log::Log4perl->get_logger;
+    my ($self, $category) = @_;
+    $category = scalar caller unless defined $category;
+    return Bio::Otter::Log::WithContext->get_logger($category, name => $self->log_name);
+}
+
+sub log_name {
+    my ($self) = @_;
+    return $self->name if $self->{_sqlite_database};
+    return basename($self->home) if $self->home;
+    return '-AceDB unnamed-';
 }
 
 1;
