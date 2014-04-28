@@ -33,6 +33,7 @@ use Zircon::Tk::Context;
 use Zircon::ZMap;
 
 use Bio::Otter::Lace::Client;
+use Bio::Otter::Log::WithContext;
 use Bio::Otter::RequestQueuer;
 use Bio::Otter::ZMap::XML;
 use Bio::Vega::Transform::Otter::Ace;
@@ -40,8 +41,6 @@ use Bio::Vega::Transform::Otter::Ace;
 use Tk::Screens;
 use Tk::ScopedBusy;
 use Bio::Vega::Utils::MacProxyConfig qw{ mac_os_x_set_proxy_vars };
-
-use Log::Log4perl;
 
 use base qw{
     MenuCanvasWindow
@@ -157,7 +156,13 @@ sub colour_init {
 }
 
 sub logger {
-    return Log::Log4perl->get_logger;
+    my ($self, $category) = @_;
+    $category = scalar caller unless defined $category;
+
+    my $acedb = $self->AceDatabase;
+    return Bio::Otter::Log::WithContext->get_logger($category, '-no-acedb-') unless $acedb;
+
+    return $acedb->logger($category);
 }
 
 sub clone_menu {
