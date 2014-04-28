@@ -1296,7 +1296,7 @@ sub fetchby_tt {
 
 
 sub broker_tt {
-    plan tests => 6;
+    plan tests => 7;
     my ($species, $species_alt) = qw( human_dev human_test );
     my ($ds, $ds_alt) = get_BOLDatasets($species, $species_alt);
     my ($dbname, $dbname_alt) = qw( jgrg_human_dev jgrg_human_test );
@@ -1461,6 +1461,17 @@ sub broker_tt {
             is_deeply([ $BVSLB->new(@arg)->locks ], [ $l ],
                       "reconstruct with one lock i=$i");
         }
+    };
+
+    subtest author_for_uid => sub {
+        plan tests => 2;
+        my @a_arg = (-author => 'for_uid');
+        like(try_err { $BVSLB->new(@a_arg) },
+             qr{^MSG: author must be stored .* broker adaptor is not yet set$}m,
+             'needs adaptor');
+        like(try_err { $BVSLB->new(-adaptor => $SLdba, @a_arg)->author->email },
+             qr{^\w+$}, # a "staff" email, as Bio::Vega::Author->new_for_uid
+             "convenient @a_arg");
     };
 
     return;
