@@ -26,9 +26,10 @@ sub new {
     weaken($self->{_session});
     bless $self, $pkg;
 
-    $self->_logger->debug('_cfg_concurrent: ', $self->_cfg_concurrent                      || '<unset>');
-    $self->_logger->debug('_cfg_min_batch:  ', $self->_cfg_min_batch                       || '<unset>');
-    $self->_logger->debug('_cfg_sqcbto_ms:  ', $self->_cfg_send_queued_callback_timeout_ms || '<unset>');
+    my $logger = $self->_logger;
+    $logger->debug('_cfg_concurrent: ', $self->_cfg_concurrent                      || '<unset>');
+    $logger->debug('_cfg_min_batch:  ', $self->_cfg_min_batch                       || '<unset>');
+    $logger->debug('_cfg_sqcbto_ms:  ', $self->_cfg_send_queued_callback_timeout_ms || '<unset>');
 
     return $self;
 }
@@ -50,6 +51,8 @@ sub _queue_features {
 sub _send_queued_requests {
     my ($self) = @_;
 
+    my $logger = $self->_logger;
+
     if (my $id = $self->_sender_timeout_id) {
         $id->cancel;
         $self->_sender_timeout_id(undef);
@@ -58,7 +61,7 @@ sub _send_queued_requests {
     my $slots = $self->_slots_available;
     if ($slots < $self->_cfg_min_batch) {
         # This is only really required to avoid excessive interleaving in Zircon :-(
-        $self->_logger->debug("_send_queued_requests: min batch size not reached");
+        $logger->debug("_send_queued_requests: min batch size not reached");
         return;
     }
 
@@ -72,7 +75,7 @@ sub _send_queued_requests {
 
     if (@to_send) {
         my $to_send_debug = join(',', @to_send);
-        $self->_logger->debug("_send_queued_requests: requesting '${to_send_debug}', ", scalar(@$queue), " remaining");
+        $logger->debug("_send_queued_requests: requesting '${to_send_debug}', ", scalar(@$queue), " remaining");
 
         try {
             $self->session->zmap->load_features(@to_send);
@@ -84,7 +87,7 @@ sub _send_queued_requests {
             $requeue = 'busy connection' if $err =~ /Zircon: busy connection/;
             $requeue = 'send_command_and_xml timeout' if $err =~ /send_command_and_xml: timeout/;
             if ($requeue) {
-                $self->_logger->warn(
+                $logger->warn(
                   "_send_queued_requests: load_features Zircon request failed [$requeue], requeuing '${to_send_debug}'"
                   );
                 $self->_clear_request($_) foreach @to_send;
@@ -93,7 +96,7 @@ sub _send_queued_requests {
                 my $id = $self->session->top_window->after(
                     $self->_cfg_send_queued_callback_timeout_ms,
                     sub {
-                        $self->_logger->debug('_send_queued_requests: timeout callback');
+                        $logger->debug('_send_queued_requests: timeout callback');
                         return $self->_send_queued_requests;
                     });
                 $self->_sender_timeout_id($id);
@@ -103,7 +106,7 @@ sub _send_queued_requests {
         };
 
     } else {
-        $self->_logger->debug("_send_queued_requests: nothing to send, ",
+        $logger->debug("_send_queued_requests: nothing to send, ",
                               scalar(@$queue) ? 'no slots' : 'queue empty');
     }
 
@@ -200,7 +203,9 @@ sub _cfg_send_queued_callback_timeout_ms {
 }
 
 sub _logger {
-    return Log::Log4perl->get_logger;
+    my ($self, $category) = @_;
+    $category = scalar caller unless defined $category;
+    return $self->session->logger($category);
 }
 
 1;
