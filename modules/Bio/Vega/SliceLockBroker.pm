@@ -97,6 +97,10 @@ Acessor for L<Bio::Vega::Author> object.
 Error on setting a mismatched one, or trying to fetch it before it is
 known.
 
+For convenience, this may be set as the string C<for_uid> to infer the
+author from the process UID.  The L</adaptor> must have been set
+already.
+
 =cut
 
 sub client_hostname { # synonym, as in ContigLockBroker
@@ -192,6 +196,7 @@ sub author {
         my ($author) = @set;
         throw "Cannot unset author" unless defined $author;
         throw "Cannot set multiple author" if @set > 1;
+        $author = Bio::Vega::Author->new_for_uid() if $author eq 'for_uid';
         # We need the author to have been saved.
         # If we are tied to a database we can do it for the caller.
         if ($author->adaptor) {
