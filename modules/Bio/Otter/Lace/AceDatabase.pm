@@ -263,9 +263,9 @@ sub write_otter_acefile {
 
     # Storing ace_text in a file
     my $ace_filename = $self->home . '/rawdata/otter.ace';
-    open my $ace_fh, '>', $ace_filename or die "Can't write to '$ace_filename'";
+    open my $ace_fh, '>', $ace_filename or $self->logger->logdie("Can't write to '$ace_filename'");
     print $ace_fh $parser->make_ace;
-    close $ace_fh or confess "Error writing to '$ace_filename' : $!";
+    close $ace_fh or $self->logger->logconfess("Error writing to '$ace_filename' : $!");
     $self->add_acefile($ace_filename);
 
     return;
@@ -285,9 +285,9 @@ sub write_file {
     my ($self, $file_name, $content) = @_;
 
     my $full_file = join('/', $self->home, $file_name);
-    open my $LF, '>', $full_file or die "Can't write to '$full_file'; $!";
+    open my $LF, '>', $full_file or $self->logger->logdie("Can't write to '$full_file'; $!");
     print $LF $content;
-    close $LF or die "Error writing to '$full_file'; $!";
+    close $LF or $self->logger->logdie("Error writing to '$full_file'; $!");
 
     return;
 }
@@ -297,20 +297,20 @@ sub read_file {
 
     local $/ = undef;
     my $full_file = join('/', $self->home, $file_name);
-    open my $RF, '<', $full_file or die "Can't read '$full_file'; $!";
+    open my $RF, '<', $full_file or $self->logger->logdie("Can't read '$full_file'; $!");
     my $content = <$RF>;
-    close $RF or die "Error reading '$full_file'; $!";
+    close $RF or $self->logger->logdie("Error reading '$full_file'; $!");
     return $content;
 }
 
 sub recover_slice_from_region_xml {
     my ($self) = @_;
 
-    my $client = $self->Client or die "No Client attached";
+    my $client = $self->Client or $self->logger->logdie("No Client attached");
 
     my $xml = $self->fetch_region_xml || $self->fetch_lock_region_xml;
     unless ($xml) {
-        confess "Could not fetch XML from SQLite DB to create smart slice";
+        $self->logger->logconfess("Could not fetch XML from SQLite DB to create smart slice");
     }
 
     my $parser = Bio::Vega::Transform::Otter->new;
@@ -388,8 +388,7 @@ sub slice_name {
     unless ($slice_name = $self->{'_slice_name'}) {
         my @slice_list = $self->aceperl_db_handle->fetch(Assembly => '*');
         my @slice_names = map { $_->name } @slice_list;
-        die "Error: more than 1 assembly in database: @slice_names"
-            if @slice_names > 1;
+        $self->logger->logdie("Error: more than 1 assembly in database: @slice_names") if @slice_names > 1;
         $slice_name = $self->{'_slice_name'} = $slice_names[0];
     }
 
@@ -414,7 +413,7 @@ sub session_colourset {
     } finally {
         $M->destroy if $M && Tk::Exists($M);
     };
-    warn "Ignored invalid [client]session_colourset values (@bad).  RGB may be given like '#fab' or '#ffaabb'" if @bad;
+    $self->logger->error("Ignored invalid [client]session_colourset values (@bad).  RGB may be given like '#fab' or '#ffaabb'") if @bad;
     push @col, qw( red green blue ) if @col < 3;
     return @col;
 }
@@ -490,7 +489,7 @@ sub zmap_dir_init {
 
     my $dir = $self->zmap_dir;
     unless (-d $dir) {
-        mkdir $dir or confess "failed to create the directory '$dir': $!\n";
+        mkdir $dir or $self->logger->logconfess("failed to create the directory '$dir': $!");
     }
 
     $self->MethodCollection->ZMapStyleCollection->write_to_file($self->stylesfile);
@@ -507,10 +506,10 @@ sub zmap_config_write {
 
     my $path = sprintf "%s/%s", $self->zmap_dir, $file;
     open my $fh, '>', $path
-        or confess "Can't write to '$path'; $!";
+        or $self->logger->logconfess("Can't write to '$path'; $!");
     print $fh $config;
     close $fh
-      or confess "Error writing to '$path'; $!";
+      or $self->logger->logconfess("Error writing to '$path'; $!");
 
     return;
 }
@@ -840,7 +839,7 @@ sub offset {
     my $offset = $self->{'_offset'};
     unless (defined $offset) {
         my $slice = $self->slice
-            or confess "No slice (Bio::Otter::Lace::Slice) attached";
+            or $self->logger->logconfess("No slice (Bio::Otter::Lace::Slice) attached");
         $offset = $self->{'_offset'} = $slice->start - 1;
     }
     return $offset;
@@ -878,9 +877,9 @@ sub unlock_otter_slice {
     my $slice_name  = $slice->name();
     my $dsname      = $slice->dsname();
 
-    warn "Unlocking $dsname:$slice_name\n";
+    $self->logger->info("Unlocking $dsname:$slice_name");
 
-    my $client   = $self->Client or confess "No Client attached";
+    my $client   = $self->Client or $self->logger->logconfess("No Client attached");
 
     my $xml_text = $self->fetch_lock_region_xml;
 
@@ -927,10 +926,11 @@ sub aceperl_db_handle {
 sub make_database_directory {
     my ($self) = @_;
 
-    my $home = $self->home;
-    my $tar  = $self->Client->get_lace_acedb_tar
-        or confess "Client did not return tar file for local acedb database directory structure";
-    mkdir($home, 0777) or die "Can't mkdir('$home') : $!\n";
+    my $logger = $self->logger;
+    my $home   = $self->home;
+    my $tar    = $self->Client->get_lace_acedb_tar
+        or $logger->logconfess("Client did not return tar file for local acedb database directory structure");
+    mkdir($home, 0777) or $logger->logdie("Can't mkdir('$home') : $!");
 
     my $tar_command = "cd '$home' && tar xzf -";
     try {
@@ -940,14 +940,14 @@ sub make_database_directory {
     }
     catch {
         $self->error_flag(1);
-        confess $_;
+        $logger->logconfess($_);
     };
 
     # rawdata used to be in tar file, but no longer because
     # it doesn't (yet) contain any files.
     my $rawdata = "$home/rawdata";
     mkdir($rawdata, 0777);
-    die "Can't mkdir('$rawdata') : $!\n" unless -d $rawdata;
+    $logger->logdie("Can't mkdir('$rawdata') : $!") unless -d $rawdata;
 
     $self->make_passwd_wrm;
 
@@ -975,7 +975,7 @@ sub make_passwd_wrm {
 
     my $fh;
     sysopen($fh, $passWrm, O_CREAT | O_WRONLY, 0644)
-        or confess "Can't write to '$passWrm' : $!";
+        or $self->logger->logconfess("Can't write to '$passWrm' : $!");
     print $fh "// PASSWD.wrm generated by $prog\n\n";
 
     # acedb looks at the real user ID, but some
@@ -995,22 +995,23 @@ sub make_passwd_wrm {
 sub initialize_database {
     my ($self) = @_;
 
-    my $home = $self->home;
-    my $tace = $self->tace;
+    my $logger = $self->logger;
+    my $home   = $self->home;
+    my $tace   = $self->tace;
 
     my $parse_log = "$home/init_parse.log";
     my $pipe = "'$tace' '$home' >> '$parse_log'";
 
     open my $pipe_fh, '|-', $pipe
-        or die "Can't open pipe '$pipe' : $!";
+        or $logger->logdie("Can't open pipe '$pipe' : $!");
     # Say "yes" to "initalize database?" question.
     print $pipe_fh "y\n" unless $self->db_initialized;
     foreach my $file ($self->list_all_acefiles) {
         print $pipe_fh "parse $file\n";
     }
-    close $pipe_fh or die "Error initializing database exit($?)\n";
+    close $pipe_fh or $logger->logdie("Error initializing database exit($?)");
 
-    open my $fh, '<', $parse_log or die "Can't open '$parse_log' : $!";
+    open my $fh, '<', $parse_log or $logger->logdie("Can't open '$parse_log' : $!");
     my $file_log = '';
     my $in_parse = 0;
     my $errors = 0;
@@ -1022,12 +1023,12 @@ sub initialize_database {
 
         if (/(\d+) (errors|parse failed)/i) {
             if ($1) {
-                warn "\nParse error detected:\n$file_log  $_\n";
+                $logger->error("Parse error detected:\n$file_log  $_");
                 $errors++;
             }
         }
         elsif (/Sorry/) {
-            warn "Apology detected:\n$file_log  $_\n";
+            $logger->warn("Apology detected:\n$file_log  $_");
             $errors++;
         }
         elsif ($in_parse) {
@@ -1036,7 +1037,7 @@ sub initialize_database {
     }
     close $fh;
 
-    confess "Error initializing database\n" if $errors;
+    $logger->confess("Error initializing database") if $errors;
     $self->empty_acefile_list;
     return 1;
 }
@@ -1055,7 +1056,7 @@ sub write_dna_data {
     my $ace_filename = $self->home . '/rawdata/dna.ace';
     $self->add_acefile($ace_filename);
     open my $ace_fh, '>', $ace_filename
-        or confess "Can't write to '$ace_filename' : $!";
+        or $self->logger->logconfess("Can't write to '$ace_filename' : $!");
     print $ace_fh $self->dna_ace_data;
     close $ace_fh;
 
@@ -1162,7 +1163,7 @@ sub process_Columns {
             my @filter_transcripts = $self->_process_Column($col);
             push @$transcripts, @filter_transcripts;
         }
-        catch { warn $_; push @$failed, $col; };        
+        catch { $self->logger->error($_); push @$failed, $col; };
     }
 
     my $result = {
@@ -1176,11 +1177,13 @@ sub process_Columns {
 sub _process_Column {
     my ($self, $column) = @_;
 
+    my $logger = $self->logger;
+
     my $filter = $column->Filter;
     my $filter_name = $filter->name;
     my $gff_file = $column->gff_file;
     unless ($gff_file) {
-        confess "gff_file column not set for '$filter_name' in otter_filter table in SQLite DB";
+        $logger->logconfess("gff_file column not set for '$filter_name' in otter_filter table in SQLite DB");
     }
 
     my $full_gff_file = $self->home . "/$gff_file";
@@ -1199,12 +1202,12 @@ sub _process_Column {
 
     my @transcripts = ( );
     my $close_error;
-    open my $gff_fh, '<', $full_gff_file or confess "Can't read GFF file '$full_gff_file'; $!";
+    open my $gff_fh, '<', $full_gff_file or $logger->logconfess("Can't read GFF file '$full_gff_file'; $!");
 
     try {
         @transcripts = $self->_process_fh($column, $gff_fh);
     }
-    catch { die sprintf "%s: %s: $_", $filter_name, $full_gff_file; }
+    catch { $logger->logdie(sprintf "%s: %s: $_", $filter_name, $full_gff_file); }
     finally {
         # want to &confess here but that would hide any errors from
         # the try block so we save the error for later
@@ -1212,7 +1215,7 @@ sub _process_Column {
             or $close_error = "Error closing GFF file '$full_gff_file'; $!";
     };
 
-    confess $close_error if $close_error;
+    $logger->logconfess($close_error) if $close_error;
 
     return @transcripts;
 }
@@ -1234,7 +1237,7 @@ sub _process_fh {
         return;
     }
     else {
-        confess "Don't know how to process GFF file\n";
+        $self->logger->logconfess("Don't know how to process GFF file");
     }
 }
 
@@ -1250,7 +1253,7 @@ sub script_arguments {
         cookie_jar  => $ENV{'OTTERLACE_COOKIE_JAR'},
     };
 
-    return $arguments; 
+    return $arguments;
 }
 
 sub http_response_content {
@@ -1288,13 +1291,14 @@ sub query_hash {
 sub DESTROY {
     my ($self) = @_;
 
-    #warn "Debug - leaving database intact"; return;
+    my $logger = $self->logger;
+    # $logger->debug("Debug - leaving database intact"); return;
 
     my $home = $self->home;
     my $callback = $self->post_exit_callback;
-    warn "DESTROY has been called for AceDatabase.pm with home $home\n";
+    $logger->info("DESTROY has been called for AceDatabase.pm with home $home");
     if ($self->error_flag) {
-        warn "Not cleaning up '$home' because error flag is set\n";
+        $logger->info("Not cleaning up '$home' because error flag is set");
         return;
     }
     my $client = $self->Client;
@@ -1307,10 +1311,10 @@ sub DESTROY {
             $self->unlock_otter_slice() if $self->write_access;
         }
     }
-    catch { warn "Error in AceDatabase::DESTROY : $_"; };
+    catch { $logger->error("Error in AceDatabase::DESTROY : $_"); };
 
     rename($home, "${home}.done")
-        or die "Error renaming the session directory; $!";
+        or $logger->logdie("Error renaming the session directory; $!");
 
     if ($callback) {
         $callback->();
