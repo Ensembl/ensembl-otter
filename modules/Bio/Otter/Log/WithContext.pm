@@ -63,6 +63,7 @@ BEGIN {
 
     sub _new {
         my ($pkg, $category, $key, $value) = @_;
+        $value =~ s/:/../g;     # avoid : to keep logparser code happy
         my $logger = Log::Log4perl->get_logger($category);
         my $self = bless { logger => $logger, key => $key, value => $value }, $pkg;
         return $CONTEXT_LOGGER{$category}->{$key}->{$value} = $self;

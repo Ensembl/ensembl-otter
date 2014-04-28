@@ -50,7 +50,7 @@ foreach my $i ( 1 .. $n ) {
 my $interval = tv_interval($t0);
 
 my $p_dog = Test::LogFile::Session->new('dog');
-my $p_cat = Test::LogFile::Session->new('cat');
+my $p_cat = Test::LogFile::Session->new('cat:tom');
 
 $logger->info('still core');
 $p_cat->run;
@@ -65,12 +65,12 @@ like($log, qr/Test.LogFile \[-\] INFO: Stand by for an information broadcast/, '
 
 like($log, qr/
     \QTest.LogFile.Session [dog] DEBUG: New\E .+
-    \QTest.LogFile.Session [cat] DEBUG: New\E .+
+    \QTest.LogFile.Session [cat..tom] DEBUG: New\E .+
     \QTest.LogFile [-] INFO: still core\E .+
-    \QTest.LogFile.Session [cat] DEBUG: from cat\E .+
+    \QTest.LogFile.Session [cat..tom] DEBUG: from cat\E .+
     \QTest.LogFile.Session [dog] DEBUG: from dog\E .+
     \QTest.LogFile [-] INFO: even now, still core\E .+
-    \Qmain [cat] ERROR: cat error from main\E
+    \Qmain [cat..tom] ERROR: cat error from main\E
   /sx, 'context logged');
 
 note "Logged $n messages in $interval seconds.";
