@@ -26,9 +26,9 @@ sub new {
     weaken($self->{_session});
     bless $self, $pkg;
 
-    $self->_logger->debug('_cfg_concurrent: ', $self->_cfg_concurrent);
-    $self->_logger->debug('_cfg_min_batch:  ', $self->_cfg_min_batch);
-    $self->_logger->debug('_cfg_sqcbto_ms:  ', $self->_cfg_send_queued_callback_timeout_ms);
+    $self->_logger->debug('_cfg_concurrent: ', $self->_cfg_concurrent                      || '<unset>');
+    $self->_logger->debug('_cfg_min_batch:  ', $self->_cfg_min_batch                       || '<unset>');
+    $self->_logger->debug('_cfg_sqcbto_ms:  ', $self->_cfg_send_queued_callback_timeout_ms || '<unset>');
 
     return $self;
 }
