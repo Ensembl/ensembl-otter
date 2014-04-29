@@ -200,7 +200,7 @@ sub get_GeneMethod {
 
     my( $meth );
     unless ($meth = $self->{'_gene_methods'}{$name}) {
-        confess "No such Method '$name'";
+        $self->logger->logconfess("No such Method '$name'");
     }
     return $meth;
 }
@@ -982,7 +982,7 @@ sub exit_save_data {
             }
 
             try { $self->save_ace($ace); return 1; }
-            catch  { warn "Aborting lace session exit:\n$_"; return 0; }
+            catch  { $self->logger->error("Aborting lace session exit:\n$_"); return 0; }
             or return;
 
             if ($self->save_data) {
@@ -1043,7 +1043,7 @@ sub save_data {
     my $adb = $self->AceDatabase;
 
     unless ($adb->write_access) {
-        warn "Read only session - not saving\n";
+        $self->log->info("Read only session - not saving");
         return 1;   # Can't save - but is OK
     }
     my $top = $self->top_window();
@@ -1181,7 +1181,7 @@ sub _do_search {
         }
         catch {
             # Data outside our control may break Hum::Ace::SubSeq  RT:188195, 189606
-            warn sprintf "%s::_do_search(): $name: $_", __PACKAGE__;
+            $self->logger->warn(sprintf "%s::_do_search(): $name: $_", __PACKAGE__);
             push @ace_fail_names, $name;
             # It could be a real error, not just some broken data.
             # We'll mention that if there are no results.
@@ -1244,12 +1244,12 @@ sub save_ace {
     try { $val = $adb->ace_server->save_ace(@args); }
     catch {
         $self->exception_message($_, "Error saving to acedb");
-        confess "Error saving to acedb: $_";
+        $self->logger->logconfess("Error saving to acedb: $_");
     };
 
     if ($self->flag_db_edits) {
         $self->AceDatabase->unsaved_changes(1);
-        $self->set_window_title;            
+        $self->set_window_title;
     }
 
     return $val;
@@ -1342,7 +1342,7 @@ sub edit_subsequences {
 
             $self->make_transcript_window($edit);
         } else {
-            warn "Failed to get_SubSeq($sub_name)";
+            $self->logger->warn("Failed to get_SubSeq($sub_name)");
             $retval = 0;
         }
     }
@@ -1373,7 +1373,7 @@ sub edit_new_subsequence {
         $new = Hum::Ace::SubSeq->new_from_subseq_list(@subseq);
     }
     else {
-        # warn "CLIPBOARD: $clip\n";
+        # $self->logger->warn("CLIPBOARD: $clip");
         $new = Hum::Ace::SubSeq->new_from_clipboard_text($clip);
         unless ($new) {
             $self->message("Need a highlighted transcript or a coordinate on the clipboard to make SubSeq");
@@ -1400,7 +1400,7 @@ sub edit_new_subsequence {
 
     $new->name($seq_name);
     $new->Locus($locus);
-    my $gm = $self->get_default_mutable_GeneMethod or confess "No default mutable GeneMethod";
+    my $gm = $self->get_default_mutable_GeneMethod or $self->logger->logconfess("No default mutable GeneMethod");
     $new->GeneMethod($gm);
     # Need to initialise translation region for coding transcripts
     if ($gm->coding) {
@@ -1425,7 +1425,7 @@ sub region_name_and_next_locus_number {
     my $region_name = $most_3prime
         ? $assembly->clone_name_overlapping($most_3prime)
         : $assembly->name;
-    warn "Looking for clone overlapping '$most_3prime' found '$region_name'\n";
+    $self->logger->info("Looking for clone overlapping '$most_3prime' found '$region_name'");
 
     # Trim sequence version from accession if clone_name ends .SV
     $region_name =~ s/\.\d+$//;
@@ -1453,7 +1453,7 @@ sub make_variant_subsequence {
         @sub_names = $self->list_was_selected_subseq_names;
     }
 
-    # warn "Got subseq names: (@sub_names)";
+    # $self->logger->info("Got subseq names: (@sub_names)");
     unless (@sub_names) {
         $self->message("No subsequence selected");
         return;
@@ -1545,8 +1545,9 @@ sub add_external_SubSeqs {
                 next;
             }
             else {
-                confess sprintf "External transcript '%s' from '%s' has same name as transcript from '%s'\n",
-                    $sub->name, $sub->GeneMethod->name, $ext->GeneMethod->name;
+                $self->logger->logconfess(
+                    sprintf("External transcript '%s' from '%s' has same name as transcript from '%s'\n",
+                            $sub->name, $sub->GeneMethod->name, $ext->GeneMethod->name));
             }
         }
         $sub->clone_Sequence($dna);
@@ -1706,7 +1707,7 @@ sub make_transcript_window {
 sub raise_transcript_window {
     my ($self, $name) = @_;
 
-    confess "no name given" unless $name;
+    $self->logger->logconfess("no name given") unless $name;
 
     if (my $transcript_window = $self->get_transcript_window($name)) {
         my $top = $transcript_window->canvas->toplevel;
@@ -1973,7 +1974,7 @@ sub save_Assembly {
         # Yellow note goes on the session window, somewhat invisible
         $self->exception_message($err, $msg);
         # Exception box goes to Bio::Otter::Error / Tk::Error
-        die "$msg\n";
+        $self->logger->logdie($msg);
     }
 }
 
@@ -1998,7 +1999,7 @@ sub delete_featuresets {
             $self->zmap->delete_featuresets($type);
         }
         catch {
-            warn $_;
+            $self->logger->warn($_);
         };
     }
 
@@ -2043,7 +2044,7 @@ sub replace_SubSeq {
 
         my $locus = $new->Locus;
         if (my $prev_name = $locus->drop_previous_name) {
-            warn "Unsetting otter_id for locus '$prev_name'\n";
+            $self->logger->info("Unsetting otter_id for locus '$prev_name'");
             $self->get_Locus($prev_name)->drop_otter_id;
         }
         $self->set_Locus($locus);
@@ -2071,7 +2072,7 @@ sub add_SubSeq {
 
     my $name = $sub->name;
     if ($self->{'_subsequence_cache'}{$name}) {
-        confess "already have SubSeq '$name'";
+        $self->logger->logconfess("already have SubSeq '$name'");
     } else {
         $self->{'_subsequence_cache'}{$name} = $sub;
     }
@@ -2096,7 +2097,7 @@ sub delete_SubSeq {
 sub get_SubSeq {
     my ($self, $name) = @_;
 
-    confess "no name given" unless $name;
+    $self->logger->logconfess("no name given") unless $name;
     return $self->{'_subsequence_cache'}{$name};
 }
 
@@ -2382,7 +2383,7 @@ sub list_was_selected_subseq_names {
 sub rename_locus {
     my ($self, $locus_name) = @_;
 
-    warn "Renaming locus";
+    $self->logger->info("Renaming locus '$locus_name'");
 
     unless ($self->close_all_transcript_windows) {
         $self->message('Must close all clone editing windows before renaming locus');
@@ -2521,18 +2522,15 @@ sub _make_config {
     my ($self, $config_dir, $config) = @_;
     my $config_file = sprintf "%s/ZMap", $config_dir;
     open my $config_file_h, '>', $config_file
-        or die sprintf
-        "failed to open the configuration file '%s': $!"
-        , $config_file;
+        or $self->logger->logdie(sprintf "failed to open the configuration file '%s': $!", $config_file);
     print $config_file_h $config if defined $config;
     close $config_file_h
-        or die sprintf
-        "failed to close the configuration file '%s': $!"
-        , $config_file;
+        or $self->logger->logdie(sprintf "failed to close the configuration file '%s': $!", $config_file);
     return;
 }
 
 sub _make_zmap_config_dir {
+    my ($self) = @_;
     my $config_dir = q(/var/tmp);
     my $user = getpwuid($<);
     my $dir_name = "otter_${user}";
@@ -2541,7 +2539,7 @@ sub _make_zmap_config_dir {
         $config_dir .= "/$_";
         -d $config_dir
             or mkdir $config_dir
-            or die sprintf "mkdir('%s') failed: $!", $config_dir;
+            or $self->logger->logdie(sprintf "mkdir('%s') failed: $!", $config_dir);
     }
     return $config_dir;
 }
@@ -2571,7 +2569,7 @@ sub zmap_new {
         ];
     my $client = $self->AceDatabase->Client;
     if (my $screen = $client->config_value('zmap_screen')) { # RT#390512
-        warn "Using logical screen override (zmap_screen=$screen)";
+        $self->logger->info("Using logical screen override (zmap_screen=$screen)");
         push @$arg_list, $screen if $screen;
     } else { # RT#387856
         push @$arg_list, Tk::Screens->nxt( $self->top_window )->gtk_arg;
@@ -2643,7 +2641,7 @@ sub zircon_zmap_view_features_loaded {
                 (! $status)    ? 'Error'   :
                 $feature_count ? 'Visible' :
                 1              ? 'Empty'   :
-                die 'this code should be unreachable';
+                $self->logger->logdie('this code should be unreachable');
 
             if ($column->status ne $column_status) {
                 $state_changed = 1;
@@ -2659,7 +2657,7 @@ sub zircon_zmap_view_features_loaded {
         }
         # else {
         #     # We see a warning for each acedb featureset
-        #     warn "Ignoring featureset '$set_name'";
+        #     $self->logger->warn("Ignoring featureset '$set_name'");
         # }
     }
 
@@ -2696,7 +2694,7 @@ sub zircon_zmap_view_edit {
 
     if ($style && lc($style) eq 'genomic_canonical') {
         my ($accession_version) = $name =~ $name_pattern
-            or confess "invalid name for a genomic_canonical feature: ${name}";
+            or $self->logger->logconfess("invalid name for a genomic_canonical feature: ${name}");
         my $clone = $self->Assembly->get_Clone_by_accession_version($accession_version);
         $self->edit_Clone($clone);
         return 1;
@@ -2704,7 +2702,7 @@ sub zircon_zmap_view_edit {
     else {
         $sub_list or return 0;
         ref $sub_list eq 'ARRAY'
-            or confess "Unexpected feature format for ${name}";
+            or $self->logger->logconfess("Unexpected feature format for ${name}");
         for my $s (@$sub_list) {
             if ($s->{'ontology'} eq 'exon') {
                 return $self->edit_subsequences($name);
@@ -2775,7 +2773,7 @@ sub _feature_evidence_xml {
     my $used_subseq_names = [];
   SUBSEQ: foreach my $subseq (@$subseq_list) {
 
-        #warn "Looking at: ", $subseq->name;
+        #$self->logger->debug("Looking at: ", $subseq->name);
         my $evi_hash = $subseq->evidence_hash();
 
         # evidence_hash looks like this
@@ -2876,7 +2874,7 @@ sub zmap {
 sub DESTROY {
     my ($self) = @_;
 
-    warn "Destroying SessionWindow for ", $self->ace_path, "\n";
+    $self->logger->info("Destroying SessionWindow for ", $self->ace_path);
 
     $self->zmap_select_destroy;
 
