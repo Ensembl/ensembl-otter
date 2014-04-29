@@ -2176,7 +2176,7 @@ sub launch_exonerate {
         push @method_names, $builder->analysis_name;
 
         # Ensure new-style columns are selected if used
-        my $column = $cllctn->get_Item_by_name($analysis_name);
+        my $column = $cllctn->get_Column_by_name($analysis_name);
         if ($column and not $column->selected) {
             $column->selected(1);
             $col_aptr->store_Column_state($column);
@@ -2627,7 +2627,7 @@ sub zircon_zmap_view_features_loaded {
     my @columns_to_process = ();
     my @otf_loaded;
     foreach my $set_name (@featuresets) {
-        if (my $column = $cllctn->get_Item_by_name($set_name)) {
+        if (my $column = $cllctn->get_Column_by_name($set_name)) {
             # filter_get will have updated gff_file field in SQLite db
             # so we need to fetch it from the database:
             $col_aptr->fetch_state($column);
