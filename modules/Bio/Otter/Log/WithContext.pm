@@ -34,10 +34,11 @@ BEGIN {
             $new_carplevel = $new_carplevel + $LOG_LEVEL_ADJUSTMENT if $is_carp{$level};
             local $Carp::CarpLevel = $new_carplevel;
 
-            my $save = Log::Log4perl::MDC->get($self->{key});
+            $self->{save} = Log::Log4perl::MDC->get($self->{key});
             Log::Log4perl::MDC->put($self->{key} => $self->{value});
             $self->{logger}->$level(@message);
-            Log::Log4perl::MDC->put($self->{key} => $save);
+            Log::Log4perl::MDC->put($self->{key} => $self->{save});
+            delete $self->{save};
 
             return 1;
         };
@@ -58,28 +59,31 @@ BEGIN {
 
 }
 
-{
-    my %CONTEXT_LOGGER;
+sub _new {
+    my ($pkg, $category, $key, $value) = @_;
+    $value =~ s/:/../g;     # avoid : to keep logparser code happy
+    my $logger = Log::Log4perl->get_logger($category);
+    my $self = bless { logger => $logger, key => $key, value => $value }, $pkg;
+    return $self;
+}
 
-    sub _new {
-        my ($pkg, $category, $key, $value) = @_;
-        $value =~ s/:/../g;     # avoid : to keep logparser code happy
-        my $logger = Log::Log4perl->get_logger($category);
-        my $self = bless { logger => $logger, key => $key, value => $value }, $pkg;
-        return $CONTEXT_LOGGER{$category}->{$key}->{$value} = $self;
+sub get_logger {
+    my ($pkg, $category, $key, $value) = @_;
+
+    $category = scalar caller(1) unless $category;
+    $key   = 'name'      unless defined $key;
+    $value = '-default-' unless defined $value;
+
+    return $pkg->_new($category, $key, $value);
+}
+
+sub DESTROY {
+    my ($self) = @_;
+    if ($self->{save}) {
+        Log::Log4perl::MDC->put($self->{key} => $self->{save});
+        delete $self->{save};
     }
-
-    sub get_logger {
-        my ($pkg, $category, $key, $value) = @_;
-
-        $category = scalar caller(1) unless $category;
-        $key   = 'core' unless defined $key;
-        $value = 1      unless defined $value;
-
-        my $logger = $CONTEXT_LOGGER{$category}->{$key}->{$value};
-        return $logger if $logger;
-        return $pkg->_new($category, $key, $value);
-    }
+    return;
 }
 
 1;
