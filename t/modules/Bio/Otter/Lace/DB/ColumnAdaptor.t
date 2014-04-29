@@ -74,11 +74,11 @@ splice(@super_exp, 1, 0, (
            { name => 'Test_inserted_after_store_2', selected => undef },
        ) );
 my $collection3 = setup_collection(  map { $_->{name} } @super_exp );
-$collection3->get_Item_by_name('Test_inserted_after_store_1')->selected(1);
+$collection3->get_Column_by_name('Test_inserted_after_store_1')->selected(1);
 
 is($ca->fetch_ColumnCollection_state($collection3), 3, 'fetch_ColumnCollection_state pre-store RT380721');
-ok(not($collection3->get_Item_by_name('Test_inserted_after_store_1')->is_stored), 'new col not stored yet');
-ok($collection3->get_Item_by_name('Test_col_two')->is_stored, 'old col stored already');
+ok(not($collection3->get_Column_by_name('Test_inserted_after_store_1')->is_stored), 'new col not stored yet');
+ok($collection3->get_Column_by_name('Test_col_two')->is_stored, 'old col stored already');
 test_collection($collection3, \@super_exp, 'fetched Collection pre-store RT380721');
 
 is($ca->store_ColumnCollection_state($collection3), 5, 'store_ColumnCollection_state RT380721');

@@ -114,7 +114,10 @@ sub add_Item {
     my ($self, $item) = @_;
 
     my $name = $item->name or confess "No name in item";
-    $self->{'_items_by_name'}{$name} = $item;
+    if (not $item->is_Bracket) { # Column
+        $self->get_Column_by_name($name) and confess "Already have column named '$name'";
+        $self->{'_columns_by_name'}{$name} = $item;
+    }
 
     my $i_ref = $self->{'_item_list'};
     push @$i_ref, $item;
@@ -122,10 +125,10 @@ sub add_Item {
     return;
 }
 
-sub get_Item_by_name {
+sub get_Column_by_name {
     my ($self, $name) = @_;
 
-    return $self->{'_items_by_name'}{$name};
+    return $self->{'_columns_by_name'}{$name};
 }
 
 sub list_Items {
@@ -178,7 +181,7 @@ sub clear_Items {
     my ($self) = @_;
 
     $self->{'_item_list'} = [];
-    $self->{'_items_by_name'} = {};
+    $self->{'_columns_by_name'} = {};
     $self->{'_is_matched'} = {};
     $self->{'_is_collapsed'} = {};
     return;

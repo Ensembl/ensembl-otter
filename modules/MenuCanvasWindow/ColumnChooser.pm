@@ -747,7 +747,7 @@ sub update_statuses_by_name {
     my $cllctn = $self->SearchHistory->root_Collection;
 
     foreach my $name (@names) {
-        my $item = $cllctn->get_Item_by_name($name);
+        my $item = $cllctn->get_Column_by_name($name);
         $item->status($status) if $item;
     }
     return;
