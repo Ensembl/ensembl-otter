@@ -1,13 +1,13 @@
 
-### Bio::Otter::Lace::Source::SearchHistory
+### Bio::Otter::Lace::Chooser::SearchHistory
 
-package Bio::Otter::Lace::Source::SearchHistory;
+package Bio::Otter::Lace::Chooser::SearchHistory;
 
 use strict;
 use warnings;
 use Carp;
 
-use Bio::Otter::Lace::Source::Collection;
+use Bio::Otter::Lace::Chooser::Collection;
 
 sub new {
     my ($pkg, $cllctn) = @_;
@@ -94,7 +94,7 @@ sub reset_search {
 
 __END__
 
-=head1 NAME - Bio::Otter::Lace::Source::SearchHistory
+=head1 NAME - Bio::Otter::Lace::Chooser::SearchHistory
 
 =head1 AUTHOR
 

@@ -20,6 +20,7 @@ use Bio::Vega::Transform::XML;
 
 use Bio::Otter::Debug;
 use Bio::Otter::Lace::AccessionTypeCache;
+use Bio::Otter::Lace::Chooser::Collection;
 use Bio::Otter::Lace::DB;
 use Bio::Otter::Lace::Slice; # a new kind of Slice that knows how to get pipeline data
 use Bio::Otter::Lace::ProcessGFF;
@@ -1128,7 +1129,7 @@ sub ColumnCollection {
     my ($self) = @_;
 
     return $self->{'_ColumnCollection'} ||=
-      Bio::Otter::Lace::Source::Collection->new_from_Filter_list(
+      Bio::Otter::Lace::Chooser::Collection->new_from_Filter_list(
           @{ $self->DataSet->filters },
           (grep { _bam_is_filter($_) } @{ $self->DataSet->bam_list }));
 }

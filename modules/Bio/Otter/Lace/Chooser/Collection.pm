@@ -1,15 +1,15 @@
 
-### Bio::Otter::Lace::Source::Collection
+### Bio::Otter::Lace::Chooser::Collection
 
-package Bio::Otter::Lace::Source::Collection;
+package Bio::Otter::Lace::Chooser::Collection;
 
 use strict;
 use warnings;
 use Carp;
 use Text::ParseWords qw{ quotewords };
 use Hum::Sort qw{ ace_sort array_ace_sort };
-use Bio::Otter::Lace::Source::Item::Bracket;
-use Bio::Otter::Lace::Source::Item::Column;
+use Bio::Otter::Lace::Chooser::Item::Bracket;
+use Bio::Otter::Lace::Chooser::Item::Column;
 
 sub new {
     my ($pkg) = @_;
@@ -28,10 +28,10 @@ sub new_from_Filter_list {
     @list = sort { array_ace_sort([$a->classification], [$b->classification])
                    || ace_sort($a->name, $b->name) } @list;
 
-    my $self = Bio::Otter::Lace::Source::Collection->new;
+    my $self = Bio::Otter::Lace::Chooser::Collection->new;
     my $bkt_path = [];
     foreach my $filter (@list) {
-        my $col = Bio::Otter::Lace::Source::Item::Column->new;
+        my $col = Bio::Otter::Lace::Chooser::Item::Column->new;
         $col->name($filter->name);
         $col->Filter($filter);
         $col->selected($filter->wanted);
@@ -61,7 +61,7 @@ sub __maintain_Bracket_array {
         # if the classification list is shorter than the array of
         # Brackets, since it must contain a new name.
         unless (($bkt && defined($name)) && lc($bkt->name) eq lc($name)) {
-            $bkt = Bio::Otter::Lace::Source::Item::Bracket->new;
+            $bkt = Bio::Otter::Lace::Chooser::Item::Bracket->new;
             $bkt->name($name);  # We use the capitalisation of the fist occurrence of this name
             $bkt->indent($i);
             # Clip array at this postion and replace with new Bracket
@@ -161,7 +161,7 @@ sub list_Columns_with_status {
     my @columns;
 
     foreach my $status (@statuses) {
-        Bio::Otter::Lace::Source::Item::Column->confess_if_not_valid_status($status);
+        Bio::Otter::Lace::Chooser::Item::Column->confess_if_not_valid_status($status);
         push @columns, grep { $_->status eq $status } @all_columns;
     }
     return @columns;
@@ -444,7 +444,7 @@ sub set_search_entry {
 
 __END__
 
-=head1 NAME - Bio::Otter::Lace::Source::Collection
+=head1 NAME - Bio::Otter::Lace::Chooser::Collection
 
 =head1 AUTHOR
 

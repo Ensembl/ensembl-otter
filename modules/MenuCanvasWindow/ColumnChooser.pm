@@ -7,8 +7,8 @@ use strict;
 use warnings;
 use Try::Tiny;
 use Scalar::Util qw{ weaken };
-use Bio::Otter::Lace::Source::Collection;
-use Bio::Otter::Lace::Source::SearchHistory;
+use Bio::Otter::Lace::Chooser::Collection;
+use Bio::Otter::Lace::Chooser::SearchHistory;
 use MenuCanvasWindow::SessionWindow;
 use Tk::Utils::CanvasXPMs;
 use Tk::ScopedBusy;
@@ -109,7 +109,7 @@ sub initialize {
     my @button_pack = qw{ -side left -padx 4 };
 
     my $cllctn = $self->AceDatabase->ColumnCollection;
-    my $hist = Bio::Otter::Lace::Source::SearchHistory->new($cllctn);
+    my $hist = Bio::Otter::Lace::Chooser::SearchHistory->new($cllctn);
     $self->SearchHistory($hist);
 
     my $top = $self->top_window;
@@ -519,7 +519,7 @@ sub draw_status_indicator {
 # sub next_status {
 #     my ($self, $item) = @_;
 # 
-#     my @status = Bio::Otter::Lace::Source::Item::Column::VALID_STATUS_LIST();
+#     my @status = Bio::Otter::Lace::Chooser::Item::Column::VALID_STATUS_LIST();
 #     my $this = $item->status;
 #     for (my $i = 0; $i < @status; $i++) {
 #         if ($status[$i] eq $this) {
@@ -726,7 +726,7 @@ sub calculate_text_column_sizes {
     my $font = $self->normal_font;
     my $cllctn = $self->current_Collection;
 
-    my @status = Bio::Otter::Lace::Source::Item::Column::VALID_STATUS_LIST();
+    my @status = Bio::Otter::Lace::Chooser::Item::Column::VALID_STATUS_LIST();
     my ($status_max_x, $max_y) = $self->max_x_y_of_text_array($font, @status);
     $self->{'_status_max_x'} = 4 + $status_max_x;
     $self->{'_max_y'} = $max_y;

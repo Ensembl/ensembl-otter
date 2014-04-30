@@ -1,13 +1,13 @@
 
-### Bio::Otter::Lace::Source::Item::Column
+### Bio::Otter::Lace::Chooser::Item::Column
 
-package Bio::Otter::Lace::Source::Item::Column;
+package Bio::Otter::Lace::Chooser::Item::Column;
 
 use strict;
 use warnings;
 use Carp;
 use Scalar::Util 'weaken';
-use base 'Bio::Otter::Lace::Source::Item';
+use base 'Bio::Otter::Lace::Chooser::Item';
 
 my (@valid_status, %status_color);
 
@@ -195,7 +195,7 @@ sub internal_type_is {
 
 __END__
 
-=head1 NAME - Bio::Otter::Lace::Source::Item::Column
+=head1 NAME - Bio::Otter::Lace::Chooser::Item::Column
 
 =head1 DESCRIPTION
 
