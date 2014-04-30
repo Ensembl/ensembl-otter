@@ -215,11 +215,13 @@ sub Bio::EnsEMBL::Slice::get_all_ExonSupportingFeatures {
         return [];
     }
 
-    return
+    my $ExonSupportingFeatures =
         [ map { @{$_->get_all_supporting_features} }
           map { @{$_->get_all_Exons} }
           @{$self->get_all_Transcripts($load_exons, $logic_name, $dbtype)}
           ];
+
+    return $ExonSupportingFeatures;
 }
 
 sub _fasta {
