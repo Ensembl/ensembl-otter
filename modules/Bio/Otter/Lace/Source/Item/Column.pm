@@ -199,9 +199,9 @@ __END__
 
 =head1 DESCRIPTION
 
-This object represents a leaf on the tree in the ColumnChooser window. It
-contains a reference to a C<Bio::Otter::Filter> plus its current status
-in the otter session.
+This object represents a leaf on the tree in the ColumnChooser
+window. It contains a reference to a C<Bio::Otter::Source::Filter>
+plus its current status in the otter session.
 
 =head1 AUTHOR
 

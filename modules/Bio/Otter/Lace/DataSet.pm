@@ -11,8 +11,8 @@ use URI::Escape qw( uri_escape );
 use Try::Tiny;
 
 use Bio::Otter::Debug;
-use Bio::Otter::Filter;
-use Bio::Otter::BAM;
+use Bio::Otter::Source::Filter;
+use Bio::Otter::Source::BAM;
 
 sub new {
     my ($pkg) = @_;
@@ -313,7 +313,7 @@ sub _bam_load {
     for my $name ( @{$self->config_keys("bam")} ) {
         my $config = $self->config_section("bam.${name}");
         try {
-            my $bam = Bio::Otter::BAM->new($name, $config);
+            my $bam = Bio::Otter::Source::BAM->new($name, $config);
             $bam->wanted(1);
             $bam_by_name->{$name} = $bam;
         }
@@ -345,7 +345,7 @@ sub _filter_load {
     for my $name ( @{$self->config_keys("filter")} ) {
         my $config = $self->config_section("filter.${name}");
         try {
-            my $filter= Bio::Otter::Filter->from_config($config);
+            my $filter= Bio::Otter::Source::Filter->from_config($config);
             $filter->name($name);
             $filter_by_name->{$name} = $filter;
         }

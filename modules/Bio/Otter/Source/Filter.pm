@@ -1,14 +1,15 @@
 
-### Bio::Otter::Filter
+### Bio::Otter::Source::Filter
 
-package Bio::Otter::Filter;
+package Bio::Otter::Source::Filter;
 
 use strict;
 use warnings;
 
 use Carp;
-
 use URI::Escape qw( uri_escape );
+
+use base 'Bio::Otter::Source';
 
 my @server_params = (
 
@@ -110,7 +111,7 @@ sub from_config {
 sub new {
     my ($obj_or_class, @args) = @_;
 
-    confess "No arguments to new" if @args;
+    confess "new() does not permit arguments" if @args;
 
     return bless {}, ref($obj_or_class) || $obj_or_class;
 }
@@ -121,55 +122,6 @@ sub server_script {
     return $self->{_server_script};
 }
 
-sub wanted { # it's a flag showing whether the user wants this filter to be loaded
-             # ( initialized from ['species'.use_filters] section of otter_config )
-    my ($self, $wanted) = @_;
-
-    if (defined($wanted)) {
-        $self->{'_wanted'} = $wanted ? 1 : 0;
-        unless (defined $self->{'_wanted_default'}) {
-            $self->{'_wanted_default'} = $self->{'_wanted'};
-        }
-    }
-    return $self->{'_wanted'};
-}
-
-sub wanted_default {
-    my ($self, @args) = @_;
-
-    if (@args) {
-        confess "wanted_default is a read-only method";
-    }
-    elsif (! defined $self->{'_wanted_default'}) {
-        confess "Error: wanted must be set before wanted_default is called";
-    }
-    else {
-        return $self->{'_wanted_default'};
-    }
-}
-
-sub name {
-    # the canonical name for this filter
-    my ($self, $name) = @_;
-    $self->{'_name'} = $name if $name;
-    return $self->{'_name'};
-}
-
-sub classification {
-    my ($self, $class) = @_;
-
-    if ($class) {
-        $self->{'_classification'} = [split /\s*>\s*/, $class];
-    }
-
-    if (my $c_ref = $self->{'_classification'}) {
-        return @$c_ref;
-    }
-    else {
-        return 'misc';
-    }
-}
-
 sub url_string {
     my ($self, $url_string) = @_;
 
@@ -177,15 +129,6 @@ sub url_string {
         $self->{_url_string} = $url_string;
     }
     return $self->{_url_string};
-}
-
-sub description {
-    my ($self, $description) = @_;
-
-    if($description) {
-        $self->{_description} = $description;
-    }
-    return $self->{_description};
 }
 
 sub analysis_name {
@@ -212,15 +155,6 @@ sub metakey {
         $self->{_metakey} = $metakey;
     }
     return $self->{_metakey};
-}
-
-sub csver {
-    my ($self, $csver) = @_;
-
-    if($csver) {
-        $self->{_csver} = $csver;
-    }
-    return $self->{_csver};
 }
 
 sub feature_kind {
@@ -262,24 +196,6 @@ sub blixem_data_type {
     return $self->{'_blixem_data_type'};
 }
 
-sub zmap_column {
-    my ($self, $zmap_column) = @_;
-
-    if ($zmap_column) {
-        $self->{'_zmap_column'} = $zmap_column;
-    }
-    return $self->{'_zmap_column'};
-}
-
-sub zmap_style {
-    my ($self, $zmap_style) = @_;
-
-    if ($zmap_style) {
-        $self->{'_zmap_style'} = $zmap_style;
-    }
-    return $self->{'_zmap_style'};
-}
-
 sub ditypes {
     my ($self, $ditypes) = @_;
 
@@ -287,12 +203,6 @@ sub ditypes {
         $self->{'_ditypes'} = $ditypes;
     }
     return $self->{'_ditypes'};
-}
-
-sub content_type {
-    my ($self, $content_type) = @_;
-    $self->{'_content_type'} = $content_type if $content_type;
-    return $self->{'_content_type'};
 }
 
 sub grouplabel {
@@ -385,21 +295,11 @@ sub feature_type {
     return $self->{_feature_type};
 }
 
-sub internal {
-    my ($self, @args) = @_;
-    ($self->{_internal}) = @args if @args;
-    my $internal = $self->{_internal};
-    return $internal;
-}
-
 # session handling
 
-sub url {
+sub _url_query_string {
     my ($self, $session) = @_;
-    my $script = $self->script_name;
-    my $param_string =
-        join '&', @{$self->script_arguments($session)};
-    return sprintf "pipe:///%s?%s", $script, $param_string,
+    return join '&', @{$self->script_arguments($session)};
 }
 
 sub call_with_session_data_handle {
@@ -440,23 +340,6 @@ sub script_arguments {
     return $arguments;
 }
 
-sub _param_value {
-    my ($self, $param) = @_;
-    my ($method, $key) =
-        ref $param ? @{$param} : ($param, $param);
-    my @argument = ( $key => $self->$method );
-    return @argument;
-}
-
-sub gff_source {
-    my ($self, $source) = @_;
-
-    if ($source) {
-        $self->{'_gff_source'} = $source;
-    }
-    return $self->{'_gff_source'} || $self->name;
-}
-
 sub gff_feature {
     my ($self, $feature) = @_;
 
@@ -464,15 +347,6 @@ sub gff_feature {
         $self->{'_gff_feature'} = $feature;
     }
     return $self->{'_gff_feature'};
-}
-
-sub file {
-    my ($self, $feature) = @_;
-
-    if ($feature) {
-        $self->{'_file'} = $feature;
-    }
-    return $self->{'_file'};
 }
 
 sub strand {
@@ -497,7 +371,7 @@ sub script_name {
 
 __END__
 
-=head1 NAME - Bio::Otter::Filter
+=head1 NAME - Bio::Otter::Source::Filter
 
 =head1 AUTHOR
 
