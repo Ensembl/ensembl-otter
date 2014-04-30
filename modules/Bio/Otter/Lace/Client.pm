@@ -374,7 +374,8 @@ sub chr_start_end_from_contig {
     return($chr_name, $start, $end);
 }
 
-sub get_DataSet_by_name {
+# "perlcritic --stern" refuses to learn that $logger->logconfess is fatal
+sub get_DataSet_by_name { ## no critic (Subroutines::RequireFinalReturn)
     my ($self, $name) = @_;
 
     foreach my $ds ($self->get_all_DataSets) {
@@ -670,7 +671,8 @@ sub setup_pfetch_env {
 
 # Returns the content string from the http response object
 # with the <otter> tags removed.
-sub otter_response_content {
+# "perlcritic --stern" refuses to learn that $logger->logconfess is fatal
+sub otter_response_content { ## no critic (Subroutines::RequireFinalReturn)
     my ($self, $method, $scriptname, $params) = @_;
 
     my $response = $self->general_http_dialog($method, $scriptname, $params);

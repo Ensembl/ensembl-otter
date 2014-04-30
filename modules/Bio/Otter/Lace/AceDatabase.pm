@@ -1220,7 +1220,8 @@ sub _process_Column {
     return @transcripts;
 }
 
-sub _process_fh {
+# "perlcritic --stern" refuses to learn that $logger->logconfess is fatal
+sub _process_fh { ## no critic (Subroutines::RequireFinalReturn)
     my ($self, $column, $gff_fh) = @_;
 
     my $filter = $column->Filter;

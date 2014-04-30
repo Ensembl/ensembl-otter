@@ -1927,7 +1927,9 @@ sub Assembly {
     return $self->{'_assembly'};
 }
 
-sub save_Assembly {
+
+# "perlcritic --stern" refuses to learn that $logger->logdie is fatal
+sub save_Assembly { ## no critic (Subroutines::RequireFinalReturn)
     my ($self, $new) = @_;
 
     my ($delete_xml, $create_xml) = Bio::Otter::ZMap::XML::update_SimpleFeatures_xml(
