@@ -30,16 +30,21 @@ sub make_log {
       log4perl.appender.Logfile                          = Log::Log4perl::Appender::File
       log4perl.appender.Logfile.filename                 = $logfile
       log4perl.appender.Logfile.layout                   = Bio::Otter::Log::Layout::UseSrcTimestamp
-      log4perl.appender.Logfile.layout.ConversionPattern = %d{yyyy-MM-dd HH:mm:ss,SSSS} %c %p: %m%n
+      log4perl.appender.Logfile.layout.ConversionPattern = %d{yyyy-MM-dd HH:mm:ss,SSSS} %c [%X{name}] %p: %m%n
       log4perl.appender.Logfile.layout.Debug             = 0
 
       # used by Bio::Otter::Client->debug_client, defaults to fatal-only
       log4perl.logger.otter.client     = FATAL, SafeScreen, Logfile
       log4perl.additivity.otter.client = 0
+
+      # quench screen output of test output
+      log4perl.logger.Test.LogFile = TRACE, Logfile
+      log4perl.additivity.Test.LogFile = 0
     );
 
     $config ||= \$default_conf;
     # TODO: Use Log::Log4perl::Config::PropertyConfigurator here, then set filename as necessary.
+    Log::Log4perl::MDC->put('name' => '-'); # default for %X{name}, set by B:O:Log::WithContext->get_logger().
     Log::Log4perl->init($config);
 
     my $logger = Log::Log4perl->get_logger;
