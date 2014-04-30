@@ -5,6 +5,7 @@ use warnings;
 use Test::More;
 use Try::Tiny;
 use List::MoreUtils 'uniq';
+use Time::HiRes qw( gettimeofday tv_interval usleep );
 use Date::Format 'time2str';
 
 use Test::Otter qw( ^db_or_skipall get_BOLDatasets get_BOSDatasets );
@@ -488,14 +489,15 @@ sub describe_tt {
 
 sub exclwork_tt {
     my ($ds) = @_;
-    plan tests => 10;
+    plan tests => 6;
 
     local $SIG{__WARN__} = sub { fail("warning seen: @_") };
 
+    my $BVSLB = 'Bio::Vega::SliceLockBroker';
     my $SLdba = $ds->get_cached_DBAdaptor->get_SliceLockAdaptor;
     my $dbh = $SLdba->dbc->db_handle;
     my ($auth) = _test_author($SLdba, qw( Florence ));
-    my $srid = _notlocked_seq_region_id($SLdba);
+    my $srid = _notlocked_seq_region_id($SLdba, 1);
 
     my @L;
     foreach my $i (0, 1) {
@@ -508,44 +510,153 @@ sub exclwork_tt {
            -HOSTNAME => $TESTHOST);
     }
     my ($L, $L_late) = @L; # two pre locks, same region
-    $SLdba->store($L_late);
+    my $L_time;
 
     my $fail_work = sub { fail("the work - should not happen yet") };
     my $pass_work = sub { ok(1, 'work is done') }; # part of the plan
-    my $work_dies = sub { die "this work doesn't\n" };
-    {
-        like(try_err { $L->exclusive_work($fail_work) },
-             qr{Cannot proceed without an adaptor}, 'unstored');
+    subtest adaptor_check => sub {
+        plan tests => 6;
+        is($L->adaptor, undef, 'L not stored');
+        is($auth->adaptor, undef, 'author not stored');
+        like(try_err { $BVSLB->new(-locks => $L)->exclusive_work($fail_work) },
+             qr{MSG: adaptor not yet available}, 'unstored');
 
         $SLdba->store($L);
-        is(try_err { $L->exclusive_work($pass_work) }, undef,
-           'run with a pass');
+        $L_time = [ gettimeofday() ];
+        is(try_err { $BVSLB->new(-locks => $L)->exclusive_work($pass_work) },
+           undef, 'run with a pass');
         $dbh->begin_work if $dbh->{AutoCommit}; # avoid warning
         $dbh->rollback; # no effect due to earlier COMMITs
         is($L->is_held_sync, 1, 'lock still held');
-    } # 4 tests
+    };
 
-    like(try_err { $L_late->exclusive_work($fail_work) },
-         qr{\QCannot proceed, do_lock failed <lost the race\E.*
-            \Q> leaving SliceLock\E\(dbID=\d+\).*
-            \Qand now 'free(too_late)'}x,
-         'cannot: lock attempt found to be too late');
-    like(try_err { $L_late->exclusive_work($fail_work) },
-         qr{Cannot proceed, not holding the lock SliceLock\(dbID=\d+\)},
-         'cannot: not locked');
+    is($L->can('exclusive_work'), undef,
+       "locks don't exclusive_work"); # they did in early API
 
-    # work fails, requested unlock doesn't happen
-    like(try_err { $L->exclusive_work($work_dies, 1) },
-         qr{\QSliceLock held but work failed.  error=<this work doesn't>\E
-            \Q on SliceLock(dbID=\E\d+\).*\Q and now 'held'}x,
-         'run with error');
+    subtest work_fail => sub {
+        plan tests => 7;
 
-    # work and unlock
-    {
-        is(try_err { $L->exclusive_work($pass_work, 1) }, undef,
-           'run and unlock');
+        $SLdba->store($L_late);
+        like(try_err { $BVSLB->new(-locks => $L_late)->exclusive_work($fail_work) },
+             qr{\QCannot proceed, do_lock failed <lost the race\E.*
+                \Q> leaving SliceLock\E\(dbID=\d+\).*
+                \Qand now 'free(too_late)'}x,
+             'cannot: lock attempt found to be too late');
+        is($L_late->active, 'pre', 'L_late:pre (rolled back)');
+
+        $SLdba->unlock($L_late, $auth);
+        like(try_err { $BVSLB->new(-locks => $L_late)->exclusive_work($fail_work) },
+             qr{Cannot proceed, not holding the lock SliceLock\(dbID=\d+\)},
+             'cannot: not locked');
+
+        # a feature which will be cached across the rollback
+        my $SFdba = $SLdba->db->get_SimpleFeatureAdaptor;
+        my ($any_ana) = @{ $SLdba->db->get_AnalysisAdaptor->fetch_all };
+        my $sf = Bio::EnsEMBL::SimpleFeature->new
+          (-start => 5, -end => 10, -strand => 1,
+           -slice => $L->slice, -analysis => $any_ana,
+           -score => 1.5E9, -display_label => 'SliceLock.t');
+
+        my $slice_fetch = sub { # potentially cached
+            my $fetch = $SFdba->fetch_all_by_Slice_and_score($L->slice, 1.0E9);
+            my ($it) = grep { $_->dbID == $sf->dbID } @$fetch;
+            return $it;
+        };
+
+        my $work_dies = sub {
+            $SFdba->store($sf); # INSERT by SFdba
+            my $sf_warmup = $slice_fetch->(); # warm up the cache in BaseFeatureAdaptor
+            is(try_err { $sf_warmup->dbID }, $sf->dbID, 'fetcher does cache');
+            isnt($sf->dbID, undef, 'SimpleFeature was stored');
+            die "this work doesn't\n";
+            # ROLLBACK by broker
+        };
+
+        # work fails, requested unlock doesn't happen
+        like(try_err { $BVSLB->new(-locks => $L)->exclusive_work($work_dies, 1) },
+             qr{^\QMSG: << SliceLock\E\(dbID=\d+\).*\Q and now 'held'\E.*
+                \Q >> was held, but work failed <this work doesn't>\E}xms,
+             'run with error');
+
+        my $post_rollback_sf = $slice_fetch->();
+        is_deeply($post_rollback_sf, undef, 'post-rollback clear_caches');
+    };
+
+    subtest no_exclusive_recurse => sub {
+        plan tests => 2;
+        my $br = $BVSLB->new(-locks => $L);
+        my $bad_work = sub {
+            ok(1, "bad_work started");
+            # surely you wouldn't...?  but we are
+            $br->exclusive_work(sub { fail("it did let me recurse") } );
+        };
+        like(try_err { $br->exclusive_work($bad_work); 'done' },
+             qr{^ERR:.*MSG: exclusive_work recursion}s, 'recursion prevented');
+    };
+
+    subtest assert_bumped => sub {
+        plan tests => 9;
+        my $br = $BVSLB->new(-locks => $L);
+        my $Sdba = $SLdba->db->get_SliceAdaptor;
+        my @r = map { $Sdba->fetch_by_seq_region_id(@$_) || die "? (@$_)" }
+          ( [ $srid, 15_000, 16_000 ],
+            [ $srid, 16_000, 17_000 ],
+            [ $srid, 23_000, 25_000 ],
+            [ $srid, 10_000, 25_000 ] );
+
+        like(try_err { $br->assert_bumped($r[0]) },
+             qr{^ERR:.* only permitted during exclusive_work}s,
+             'no assert_bumped outside exclusive_work');
+
+        # nap until the next second (the SQL-remote second must tick)
+        my $old_act = $L->iso8601_ts_activity;
+        my $L_age = tv_interval($L_time) * 1E6;
+        usleep(1E6 - $L_age) if $L_age < 1E6;
+
+        my $ok_work = sub {
+            cmp_ok($L->iso8601_ts_activity, 'gt', $old_act, 'bumped');
+            is( $br->assert_bumped(@r[0, 1]), 1, '[0,1] => true');
+            is( $br->assert_bumped(),         0, '[]    => false');
+            like(try_err { $br->assert_bumped($r[2]) },
+                 qr{^ERR:.* not \S* covered by any of my locks}s, '[2] => err');
+
+            # adding another lock during work (not recommended)
+            # does not include it in assert_bumped, in this call
+            push @L, $br->lock_create_for_Slice
+              (-seq_region_id => $srid,
+               -seq_region_start => 20_001,
+               -seq_region_end => 25_000,
+               -intent => 'added in ok_work');
+            like(try_err { $br->assert_bumped($r[2]) },
+                 qr{^ERR:.* not \S* covered by any of my locks}s,
+                 '[2] => err (after lock)');
+        };
+        $br->exclusive_work($ok_work);
+
+        like(try_err { $br->assert_bumped($r[0]) },
+             qr{^ERR:.* only permitted during exclusive_work}s,
+             'no assert_bumped outside exclusive_work (after)');
+
+        my $ok2_work = sub {
+            is( $br->assert_bumped($r[2]), 1, '[2] => true (next work)');
+            my $contiguous = try_err { $br->assert_bumped($r[3]) };
+            local $TODO = 'YAGNI';
+            $contiguous =~ s{.*^(MSG:.*?)\n.*}{$1}ms;
+            like($contiguous, qr{^1$}s,
+                 '[3] => true, contiguous region emulation');
+        };
+        $br->exclusive_work($ok2_work);
+    };
+
+    subtest work_and_unlock => sub {
+        plan tests => 5;
+        my $br = $BVSLB->new(-locks => [ @L[0,2] ]);
+        is(try_err { $br->exclusive_work($pass_work, 1) },
+           undef, 'run and unlock');
         is($L->is_held_sync, 0, 'did unlock');
-    } # 3 tests
+        is($L[2]->active, 'free', 'also unlocked L2');
+        is($L[2]->intent, 'added in ok_work', 'the right L2');
+    };
 
     return;
 }

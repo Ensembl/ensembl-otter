@@ -225,13 +225,14 @@ Error if the new locks have mismatched adaptor, hostname or author.
 Otherwise adds the new locks.
 
 Returns list (or count, in scalar context) of the broker's locks.
-There may be none, or the ones returned may be in an inconsistent
-state - no checking is done in this method.
+These locks will have been C<store>d, but no checking is done for the
+read phase of this method: there may be no locks, or the ones returned
+may no longer be in the database.
 
 =head2 locks_add_by_dbID(@more_lockid)
 
 Calls L<Bio::Vega::DBSQL::SliceLockAdaptor/fetch_by_dbID> for each id,
-then continues as for L</locks>.  Requires to know the L</adaptor>.
+then continues as for L</locks>.  Requires L</adaptor> be set.
 
 =cut
 
@@ -293,6 +294,238 @@ sub lock_create_for_Slice {
     my $new = Bio::Vega::SliceLock->new(%arg);
     $self->locks($new); # will store if necessary, or fail
     return $new;
+}
+
+
+=head2 exclusive_work($code, $unlock)
+
+Implementation of L<Bio::Vega::DBSQL::SliceLockAdaptor/Workflow>
+wrapped up in to operate on the L</locks> given to the broker object.
+
+Will call C<COMMIT> multiple times, via L</adaptor>.
+
+In the case of error it will call C<ROLLBACK>.  Then it will also
+L<Bio::EnsEMBL::DBSQL::DBAdaptor/clear_caches>, and attempt to
+L<Bio::Vega::DBSQL::SliceLockAdaptor/freshen> each lock to avoid
+leaving them in an inconsistent state.  Any part of this tidy-up can
+fail.
+
+Will take SliceLocks in the states
+
+=over 4
+
+=item * pre
+
+The call to L<Bio::Vega::DBSQL::SliceLockAdaptor/store> has been made,
+so there is an L</adaptor> and L</dbID> - as will be the case for any
+lock added to the broker object.
+
+This method calls L<Bio::Vega::DBSQL::SliceLockAdaptor/do_lock> for
+you.
+
+Any lock successfully added to the broker will have been stored.
+
+=item * held
+
+Ready to begin an exclusive chunk of work.
+
+=back
+
+and will proceed with the workflow, assuming no errors happen:
+
+=over 4
+
+=item 1. C<COMMIT>
+
+=item 2. all locks reach C<active='held'>
+
+If any cannot be locked, C<ROLLBACK> and error.
+
+=item 3. C<COMMIT>
+
+=item 4. C<bump_activity> on all locks
+
+Also, remember these locks for comparison in L</assert_bumped>.
+
+=item 5. Call $code
+
+Currently with no arguments, ignoring the return value.
+
+This code must not try to modify the state of the locks.
+
+Also the code must not C<COMMIT>.  Instead, call L</exclusive_work>
+again.
+
+Rollback is called for you if there is an error.
+
+=item 6. C<COMMIT>
+
+=item 7. If $unlock, then C<unlock> and C<COMMIT> again
+
+=back
+
+Returns nothing if everything was done.  Returns the error message (as
+a true value, also sent as a warning) if just the unlock failed.  All
+other errors are raised.
+
+=cut
+
+sub exclusive_work {
+    my ($self, $code, $unlock) = @_;
+
+    # 1.  Storing the lock has been done already.
+    my $adap = $self->adaptor;
+    my $dbh = $adap->dbc->db_handle;
+    my @lock = $self->locks;
+    throw "exclusive_work requires locks" unless @lock;
+
+    my $rollback = sub {
+        my ($err_ref) = @_;
+        chomp $$err_ref;
+        try {
+            $dbh->rollback;
+            $adap->db->clear_caches;
+        } catch {
+            $$err_ref .= "; then rollback failed: $_";
+            chomp $$err_ref;
+        };
+        foreach my $lock (@lock) {
+            try { $adap->freshen($lock) }; # (best effort)
+        }
+        return;
+    };
+
+    my $commit = sub {
+        my ($want_txn) = @_;
+        $dbh->begin_work if $dbh->{AutoCommit}; # avoid warning
+        $dbh->commit;
+        $dbh->begin_work if $want_txn;
+        return;
+    };
+
+    # 2.
+    $commit->(1); # as up-to-date as we can get
+    $adap->freshen($_) foreach @lock;
+    my @need_lock = grep { $_->active eq 'pre' } @lock;
+    # else active=held and we're OK,
+    # or active=free and 3. will make the error.
+    foreach my $lock (@need_lock) {
+        try {
+            $adap->do_lock($lock) or die "lost the race";
+        } catch {
+            my $err = $_;
+            my $what = $lock->describe;
+            $rollback->(\$err);
+            throw "Cannot proceed, do_lock failed <$err> leaving $what";
+        };
+    }
+
+    # 3.
+    $commit->(1)
+      if @need_lock; # else nothing done since last commit
+    foreach my $lock (@lock) {
+        if (!$lock->is_held_sync) {
+            my $what = $lock->describe;
+            throw "Cannot proceed, not holding the lock $what";
+        }
+    }
+
+    # 4.
+    throw "exclusive_work recursion would break transaction control"
+      if $self->{_did_bump};
+    my $did_bump = local $self->{_did_bump} = [];
+    foreach my $lock (@lock) {
+        try {
+            $adap->bump_activity($lock);
+            push @$did_bump, $lock;
+        } catch {
+            my $err = $_;
+            $rollback->(\$err);
+            my $what = $lock->describe('rollback');
+            throw "Cannot proceed, lock busy?  error=<$err> on $what";
+        };
+    }
+
+    ### Got here - we have the region exclusively
+    try {
+        # 5.
+        $code->();
+        # 6.
+        undef $self->{_did_bump}; # undef now; delete at end of local's scope
+        $commit->(0);
+    } catch {
+        my $err = $_;
+        $rollback->(\$err);
+        my $what = join " || ", map { $_->describe('rollback') } @$did_bump;
+        throw "<< $what >> was held, but work failed <$err>";
+    };
+
+    # 7.
+    if ($unlock) {
+        # Unlock could fail, but that is probably less serious
+        my $what;
+        my $err = try {
+            foreach my $lock (@lock) {
+                $what = $lock->describe;
+                $adap->unlock($lock, $self->author);
+            }
+            '';
+        } catch {
+            $_ || "Failed: $_";
+        } finally {
+            try { $commit->(0) };
+        };
+        chomp $err if $err;
+
+        if (grep { $_->is_held } @lock) {
+            # unlock failed
+            warn "Work completed but unlock failed/incomplete.  error=<$err> on $what";
+            return $err;
+        } else {
+            # success, but maybe not how we planned it
+            warn "Work completed, but during unlock there was an error=<$err> on $what"
+              if $err;
+            return ();
+        }
+    } else {
+        # success
+        return ();
+    }
+}
+
+
+=head2 assert_bumped(@slice)
+
+Returns true iff the given slice(s) are all exclusively available to
+us.
+
+Error if any of @slice are not contained in a lock which was bumped
+during L</exclusive_work>.
+
+Error if called outside L</exclusive_work>.  This method should be
+used from the code callback taken by that method.
+
+Caveat: this method will incorrectly return false for any slice which
+is covered by adjacent locks.  This could be fixed, but YAGNI.
+
+=cut
+
+sub assert_bumped {
+    my ($self, @slice) = @_;
+    my $elocks = $self->{_did_bump};
+    throw "assert_bumped is only permitted during exclusive_work"
+      unless $elocks;
+    # @$elocks is independent of $self->locks , so we will not
+    # erroneously notice locks added after the bump_activity step
+    foreach my $slice (@slice) {
+        if (grep { $_->contains_slice($slice) } @$elocks) {
+            # ok
+        } else {
+            my $descr = try { $slice->display_id } catch {"(some slice)"};
+            throw "$descr is not (entirely) covered by any of my locks";
+        }
+    }
+    return @slice ? 1 : 0;
 }
 
 
