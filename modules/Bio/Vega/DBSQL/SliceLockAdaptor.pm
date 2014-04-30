@@ -33,7 +33,9 @@ It does not affect other slices which map to the same sequence.
 
 =head2 Workflow
 
-The workflow is
+The safe workflow is wrapped up in the convenience method
+L<Bio::Vega::SliceLockBroker/exclusive_work> but you can use the parts
+directly:
 
 =over 4
 
@@ -67,9 +69,6 @@ another user or used by another action by the same user.
 Updates may be made within the region over a longer period of time.
 Other users can see (by ts_activity) whether there was recent
 activity.
-
-See also the convenience method L<Bio::Vega::SliceLock/exclusive_work>
-for these steps.
 
 =item 7. L</unlock>; COMMIT
 
