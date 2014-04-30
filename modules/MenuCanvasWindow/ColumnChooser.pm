@@ -244,7 +244,7 @@ sub initialize {
 
 
     $self->colour_init;
-    $self->calcualte_text_column_sizes;
+    $self->calculate_text_column_sizes;
     $self->fix_window_min_max_sizes;
     $self->redraw;
     return;
@@ -720,7 +720,7 @@ sub load_filters {
     return;
 }
 
-sub calcualte_text_column_sizes {
+sub calculate_text_column_sizes {
     my ($self) = @_;
 
     my $font = $self->normal_font;
