@@ -136,7 +136,7 @@ sub __need_tools {
        # EditWindow::PfamWindow
        # [ belvu => '--version' ], # part of Seqtools
 
-       [ filter_get => '--version' ], # Bio::Otter::Filter
+       [ filter_get => '--version' ], # Bio::Otter::Source::Filter
 
        [ gff_get => '--version' ],
        [ bam_get => '--version' ],
