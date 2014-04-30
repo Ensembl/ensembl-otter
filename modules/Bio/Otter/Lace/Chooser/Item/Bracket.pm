@@ -1,11 +1,11 @@
 
-### Bio::Otter::Lace::Source::Item::Bracket
+### Bio::Otter::Lace::Chooser::Item::Bracket
 
-package Bio::Otter::Lace::Source::Item::Bracket;
+package Bio::Otter::Lace::Chooser::Item::Bracket;
 
 use strict;
 use warnings;
-use base 'Bio::Otter::Lace::Source::Item';
+use base 'Bio::Otter::Lace::Chooser::Item';
 
 sub is_Bracket {
     return 1;
@@ -21,7 +21,7 @@ sub string {
 
 __END__
 
-=head1 NAME - Bio::Otter::Lace::Source::Item::Bracket
+=head1 NAME - Bio::Otter::Lace::Chooser::Item::Bracket
 
 =head1 AUTHOR
 

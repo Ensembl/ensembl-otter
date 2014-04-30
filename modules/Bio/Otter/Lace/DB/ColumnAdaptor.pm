@@ -7,11 +7,13 @@ use strict;
 use warnings;
 use Carp;
 
+use Bio::Otter::Lace::Chooser::Item::Column;
+
 use base 'Bio::Otter::Lace::DB::Adaptor';
 
 sub columns         { return qw( selected status status_detail gff_file process_gff name ); }
 sub key_column_name { return 'name'; }
-sub object_class    { return 'Bio::Otter::Lace::Source::Item::Column'; }
+sub object_class    { return 'Bio::Otter::Lace::Chooser::Item::Column'; }
 
 my $all_columns = __PACKAGE__->all_columns;
 

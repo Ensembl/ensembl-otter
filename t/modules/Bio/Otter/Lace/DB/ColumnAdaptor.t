@@ -5,8 +5,8 @@ use warnings;
 
 use Test::More;
 
-use Bio::Otter::Lace::Source::Collection;
-use Bio::Otter::Lace::Source::Item::Column;
+use Bio::Otter::Lace::Chooser::Collection;
+use Bio::Otter::Lace::Chooser::Item::Column;
 
 use Test::Otter qw( ^data_dir_or_skipall ); # also finds test libraries
 use OtterTest::DB;
@@ -33,7 +33,7 @@ my @exp = (
     );
 
 foreach my $i ( 0..$#exp ) {
-    $col[$i] = Bio::Otter::Lace::Source::Item::Column->new;
+    $col[$i] = Bio::Otter::Lace::Chooser::Item::Column->new;
     $col[$i]->name(    $exp[$i]->{name});
     $col[$i]->selected($exp[$i]->{selected});
 
@@ -89,9 +89,9 @@ done_testing;
 
 sub setup_collection {
     my (@names) = @_;
-    my $coll = Bio::Otter::Lace::Source::Collection->new;
+    my $coll = Bio::Otter::Lace::Chooser::Collection->new;
     foreach my $n (@names) {
-        my $col = Bio::Otter::Lace::Source::Item::Column->new;
+        my $col = Bio::Otter::Lace::Chooser::Item::Column->new;
         $col->name($n);
         $coll->add_Item($col);
     }

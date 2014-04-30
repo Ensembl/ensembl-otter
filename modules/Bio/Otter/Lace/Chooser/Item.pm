@@ -1,7 +1,7 @@
 
-### Bio::Otter::Lace::Source::Item
+### Bio::Otter::Lace::Chooser::Item
 
-package Bio::Otter::Lace::Source::Item;
+package Bio::Otter::Lace::Chooser::Item;
 
 use strict;
 use warnings;
@@ -53,7 +53,7 @@ sub selected {
 
 __END__
 
-=head1 NAME - Bio::Otter::Lace::Source::Item
+=head1 NAME - Bio::Otter::Lace::Chooser::Item
 
 =head1 DESCRIPTION
 
