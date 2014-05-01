@@ -20,13 +20,13 @@ my $strand_hash = {
 
 sub _gff_escape_seqid {
     # escapes everything except a restricted set of characters
-    s/([^-a-zA-Z0-9.:^*$@!+_?|])/sprintf "%%%02X", ord($1)/eg;
+    s/([^-a-zA-Z0-9.:^*\$\@!+_?|])/sprintf "%%%02X", ord($1)/eg;
     return;
 }
 
 sub _gff_escape_source {
     # escapes everything except a restricted set of characters
-    s/([^-a-zA-Z0-9.:^*$@!+_? ])/sprintf "%%%02X", ord($1)/eg;
+    s/([^-a-zA-Z0-9.:^*\$\@!+_? ])/sprintf "%%%02X", ord($1)/eg;
     return;
 }
 
