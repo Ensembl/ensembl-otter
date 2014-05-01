@@ -15,7 +15,7 @@ use IO::Compress::Gzip qw(gzip);
 use CGI;
 use SangerWeb;
 
-use base ('Bio::Otter::MFetcher');
+use base ('Bio::Otter::MappingFetcher');
 
 
 BEGIN {

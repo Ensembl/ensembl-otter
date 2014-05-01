@@ -33,7 +33,7 @@ sub slice {
     return $self->{'slice'} = $self->_build_slice;
 }
 
-# In _build_slice and features_from_slice, there is overlap with MFetcher & Server::GFF,
+# In _build_slice and features_from_slice, there is overlap with MappingFetcher & Server::GFF,
 # but probably not enough to share code?
 
 sub _build_slice {
