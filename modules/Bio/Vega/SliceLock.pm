@@ -45,7 +45,7 @@ which is a complexity to avoid mixing with locks.
 
 =cut
 
-sub FIELDS() {
+sub FIELDS {
     return
       (qw( seq_region_id seq_region_start seq_region_end ),
        qw( ts_begin ts_activity ts_free ), # unixtimes
@@ -127,10 +127,10 @@ sub _check_new_lock {
 
 
 sub dbID {
-    my $self = shift;
-    if (@_) {
+    my ($self, @set) = @_;
+    if (@set) {
         # write
-        my $newId = shift;
+        my ($newId) = @set;
         my $oldId = $self->SUPER::dbID();
         throw("dbID is immutable") if defined $oldId;
         return $self->SUPER::dbID($newId);
@@ -141,10 +141,10 @@ sub dbID {
 }
 
 sub adaptor {
-    my $self = shift;
-    if (@_) {
+    my ($self, @set) = @_;
+    if (@set) {
         # write
-        my $newAdap = shift;
+        my ($newAdap) = @set;
         my $oldAdap = $self->SUPER::adaptor();
         throw("adaptor is immutable") if defined $oldAdap;
         return $self->SUPER::adaptor($newAdap);
@@ -261,7 +261,7 @@ sub _init {
                 throw("$field is frozen") if !$self->{_mutable};
                 throw("Argument [$newval] is not a Bio::Vega::Author")
                   if $author{$field} && defined $newval &&
-                    !eval { $newval->isa("Bio::Vega::Author") };
+                    !try { $newval->isa("Bio::Vega::Author") };
                 $self->{$field} = $newval;
             }
             return $self->{$field};
@@ -279,7 +279,7 @@ sub _init {
     }
 
     while (my ($field, $code) = each %new_method) {
-        no strict 'refs';
+        no strict 'refs'; ## no critic (TestingAndDebugging::ProhibitNoStrict)
         *{"$pkg\::$field"} = $code;
     }
 

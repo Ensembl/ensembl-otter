@@ -2,10 +2,13 @@ package Bio::Vega::DBSQL::SliceLockAdaptor;
 
 use strict;
 use warnings;
+use Try::Tiny;
+
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::EnsEMBL::DBSQL::BaseAdaptor;
 use Bio::Vega::DBSQL::AuthorAdaptor;
 use Bio::Vega::SliceLock;
+
 use base qw ( Bio::EnsEMBL::DBSQL::BaseAdaptor);
 
 
@@ -150,7 +153,8 @@ sub _author_find {
         my $aad = $self->db->get_AuthorAdaptor;
         return $aad->fetch_by_dbID($author_id);
     } else {
-        return undef;
+        return undef; ## no critic (Subroutines::ProhibitExplicitReturnUndef)
+        # ...to put one element 'undef' in the caller's arglist
     }
 }
 
@@ -269,7 +273,7 @@ sub _is_our_lock {
 sub store {
   my ($self, $slice_lock) = @_;
   throw("store($slice_lock): not a SliceLock object")
-      unless eval { $slice_lock->isa('Bio::Vega::SliceLock') };
+      unless try { $slice_lock->isa('Bio::Vega::SliceLock') };
 
   throw("Argument must be a SliceLock object to the store method.  Currently is [$slice_lock]")
       unless $slice_lock->isa("Bio::Vega::SliceLock");
@@ -329,7 +333,7 @@ sub store {
 sub freshen {
     my ($self, $stale) = @_;
     throw "freshen($stale): not a SliceLock object"
-      unless eval { $stale->isa('Bio::Vega::SliceLock') };
+      unless try { $stale->isa('Bio::Vega::SliceLock') };
 
     my $dbID = $stale->dbID;
     throw("Cannot freshen an un-stored SliceLock") unless $dbID;
@@ -375,7 +379,7 @@ Exceptions may be raised if $lock was in some unexpected state.
 sub do_lock {
     my ($self, $lock, $debug) = @_;
     throw "do_lock($lock ...): not a SliceLock object"
-      unless eval { $lock->isa('Bio::Vega::SliceLock') };
+      unless try { $lock->isa('Bio::Vega::SliceLock') };
 
     # relevant properties
     my ($lock_id, $active, $ts_begin, $srID, $sr_start, $sr_end) =
@@ -511,7 +515,7 @@ SliceLock until you C<commit> or C<rollback>.
 sub bump_activity {
     my ($self, $lock) = @_;
     throw "bump_activity($lock): not a SliceLock object"
-      unless eval { $lock->isa('Bio::Vega::SliceLock') };
+      unless try { $lock->isa('Bio::Vega::SliceLock') };
 
     my $dbID = $lock->dbID;
     $self->_sane_db;
@@ -556,7 +560,7 @@ sub unlock {
   my ($self, $slice_lock, $unlock_author, $freed) = @_;
   $freed = 'finished' if !defined $freed;
   throw "unlock($slice_lock ...): not a SliceLock object"
-    unless eval { $slice_lock->isa('Bio::Vega::SliceLock') };
+    unless try { $slice_lock->isa('Bio::Vega::SliceLock') };
 
   my $dbID = $slice_lock->dbID;
   my $author_id = $self->author_dbID(author => $slice_lock->author);
@@ -597,5 +601,11 @@ sub unlock {
   }
 }
 
+
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
+
+=cut
 
 1;

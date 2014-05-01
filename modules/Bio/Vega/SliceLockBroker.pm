@@ -482,21 +482,10 @@ other errors are raised.
 
 =cut
 
-our $_pkg_no_recurse; ## no critic (Variables::ProhibitPackageVars)
-sub exclusive_work {
-    my ($self, $code, $unlock) = @_;
-
-    # Recursion prevention actually needs to be done per $dbh, but
-    # global is probably good enough.
-    throw "exclusive_work recursion would break transaction control"
-      if $_pkg_no_recurse;
-    local $_pkg_no_recurse = 1;
-
-    # 1.  Storing the lock has been done already.
+sub _txn_control {
+    my ($self, @lock) = @_;
     my $adap = $self->adaptor;
     my $dbh = $adap->dbc->db_handle;
-    my @lock = $self->locks;
-    throw "exclusive_work requires locks" unless @lock;
 
     my $rollback = sub {
         my ($err_ref) = @_;
@@ -521,6 +510,26 @@ sub exclusive_work {
         $dbh->begin_work if $want_txn;
         return;
     };
+
+    return ($commit, $rollback);
+}
+
+our $_pkg_no_recurse; ## no critic (Variables::ProhibitPackageVars)
+sub exclusive_work {
+    my ($self, $code, $unlock) = @_;
+
+    # Recursion prevention actually needs to be done per $dbh, but
+    # global is probably good enough.
+    throw "exclusive_work recursion would break transaction control"
+      if $_pkg_no_recurse;
+    local $_pkg_no_recurse = 1;
+
+    # 1.  Storing the lock has been done already.
+    my $adap = $self->adaptor;
+    my @lock = $self->locks;
+    throw "exclusive_work requires locks" unless @lock;
+
+    my ($commit, $rollback) = $self->_txn_control(@lock);
 
     # 2.
     $commit->(1); # as up-to-date as we can get
