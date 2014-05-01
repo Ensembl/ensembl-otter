@@ -3,7 +3,7 @@ package Bio::Otter::Server::Support::Local;
 use strict;
 use warnings;
 
-use base 'Bio::Otter::MFetcher';
+use base 'Bio::Otter::MappingFetcher';
 
 sub new {
     my ($pkg, %options) = @_;

@@ -1,5 +1,5 @@
 
-package Bio::Otter::MFetcher;
+package Bio::Otter::MappingFetcher;
 
 # Previously a part of Bio::Otter::Server::Support::Web,
 # this module only deals with data layer:
@@ -268,7 +268,7 @@ sub fetch_mapped_features_ensembl {
               );
 
           unless($target_slice_on_target) {
-              warn "MFetcher: cannot create the slice ["
+              warn "MappingFetcher: cannot create the slice ["
                   .$projected_slice_2->coord_system()->name()
                   .':'
                   .$projected_slice_2->seq_region_name()
