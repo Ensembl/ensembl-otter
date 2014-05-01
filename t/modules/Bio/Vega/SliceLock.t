@@ -31,6 +31,7 @@ sub noise {
     diag @arg if
       (!$ENV{HARNESS_ACTIVE} ||   # stand-alone test
        $ENV{HARNESS_IS_VERBOSE}); # under "prove -v"
+    return;
 }
 
 
@@ -90,6 +91,7 @@ END {
     sub _late_commit_register {
         my ($dbh) = @_;
         $dbh{$dbh} = $dbh;
+        return;
     }
 
     sub _late_commit_do {
@@ -105,6 +107,7 @@ END {
                 noise "_late_commit_do: $dbh: gone";
             }
         }
+        return;
     }
 }
 # Useful query for dumping locks
@@ -513,7 +516,7 @@ sub exclwork_tt {
            -HOSTNAME => $TESTHOST);
     }
     my ($L, $L_late) = @L; # two pre locks, same region
-    my $L_time;
+    my $L_time; # latest expected activity time for $L (local clock)
 
     my $fail_work = sub { fail("the work - should not happen yet") };
     my $pass_work = sub { ok(1, 'work is done') }; # part of the plan
@@ -525,7 +528,6 @@ sub exclwork_tt {
              qr{MSG: adaptor not yet available}, 'unstored');
 
         $SLdba->store($L);
-        $L_time = [ gettimeofday() ];
         is(try_err { $BVSLB->new(-locks => $L)->exclusive_work($pass_work) },
            undef, 'run with a pass');
         $dbh->begin_work if $dbh->{AutoCommit}; # avoid warning
@@ -580,6 +582,7 @@ sub exclwork_tt {
              qr{^\QMSG: << SliceLock\E\(dbID=\d+\).*\Q and now 'held'\E.*
                 \Q >> was held, but work failed <this work doesn't>\E}xms,
              'run with error');
+        $L_time = [ gettimeofday() ];
 
         my $post_rollback_sf = $slice_fetch->();
         is_deeply($post_rollback_sf, undef, 'post-rollback clear_caches');
@@ -1268,8 +1271,8 @@ sub _make_test_ops {
        }, unlock_int => sub {
            my ($label, $lock_stack) = @_;
            my $lock = $lock_stack->[-1];
-           my ($auth) = _test_author($lock->adaptor, qw( Ian ));
-           return try_err { $lock->adaptor->unlock($lock, $auth, 'interrupted') };
+           my ($auth_i) = _test_author($lock->adaptor, qw( Ian ));
+           return try_err { $lock->adaptor->unlock($lock, $auth_i, 'interrupted') };
        });
 }
 
