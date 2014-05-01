@@ -190,7 +190,7 @@ sub _notlocked_seq_region_id {
 # Basic create-store-fetch-lock-unlock cycle
 sub exercise_tt {
     my ($ds) = @_;
-    plan tests => 69;
+    plan tests => 70;
 
     # Collect props
     my $SLdba = $ds->get_cached_DBAdaptor->get_SliceLockAdaptor;
@@ -246,11 +246,14 @@ sub exercise_tt {
        [ sr_rev_slice => qr{Slice \(start 1000 > end 999\)},
          [ -SLICE => $weird, -SEQ_REGION_ID => undef,
            -SEQ_REGION_START => undef, -SEQ_REGION_END => undef ] ],
+       [ sr_floats => qr{MSG: seq_region_id not set.*\n.*SliceLockAdaptor::store},
+         [ -SEQ_REGION_ID => undef, # the failure happens in ->store
+           -SEQ_REGION_START => 100, -SEQ_REGION_END => 200 ] ],
       );
     foreach my $case (@inst_fail) {
         my ($label, $fail_like, $add_prop) = @$case;
         my %p = (%prop, @$add_prop);
-        my $made = try_err { $BVSL->new(%p) };
+        my $made = try_err { my $L = $BVSL->new(%p); $SLdba->store($L); 'STORED' };
         like($made, $fail_like, "reject new: testcase $label");
     }
 
@@ -583,15 +586,20 @@ sub exclwork_tt {
     };
 
     subtest no_exclusive_recurse => sub {
-        plan tests => 2;
+        plan tests => 3;
         my $br = $BVSLB->new(-locks => $L);
+        my $br_empty = $BVSLB->new();
+        my $fail_recurse_work = sub { fail("it did let me recurse") };
+        my $err_re = qr{^ERR:.*MSG: exclusive_work recursion}s;
         my $bad_work = sub {
             ok(1, "bad_work started");
             # surely you wouldn't...?  but we are
-            $br->exclusive_work(sub { fail("it did let me recurse") } );
+            like(try_err { $br_empty->exclusive_work($fail_recurse_work) },
+                 $err_re, 'recursion prevented (different object)');
+            $br->exclusive_work($fail_recurse_work);
         };
         like(try_err { $br->exclusive_work($bad_work); 'done' },
-             qr{^ERR:.*MSG: exclusive_work recursion}s, 'recursion prevented');
+             $err_re, 'recursion prevented (same object)');
     };
 
     subtest assert_bumped => sub {
@@ -801,7 +809,7 @@ sub cycle_tt {
     $SLdba->store($L_lock);
 
     my $L_slice = $L_lock->slice;
-    is_deeply({ id => $L_slice->adaptor->get_seq_region_id($L_slice),
+    is_deeply({ id => $L_slice->get_seq_region_id,
                 start => $L_slice->start, end => $L_slice->end },
               { id => $L_pos[0], start => $L_pos[1], end => $L_pos[2] },
               'slice matches L_lock')
@@ -820,7 +828,7 @@ sub cycle_tt {
        -INTENT => 'testing: boinged off',
        -HOSTNAME => $TESTHOST);
 
-    is_deeply({ id => $R_slice->adaptor->get_seq_region_id($R_slice),
+    is_deeply({ id => $R_slice->get_seq_region_id,
                 start => $R_slice->start, end => $R_slice->end },
               { id => $R_pos[0], start => $R_pos[1], end => $R_pos[2] },
               'slice matches R_lock')

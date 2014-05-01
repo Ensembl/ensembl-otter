@@ -99,7 +99,7 @@ sub new {
 
 sub __slice_props {
     my ($slice) = @_;
-    return ($slice->adaptor->get_seq_region_id($slice),
+    return ($slice->get_seq_region_id,
             $slice->start, $slice->end);
 }
 

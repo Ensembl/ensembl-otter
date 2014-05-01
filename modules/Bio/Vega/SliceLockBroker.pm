@@ -9,6 +9,7 @@ use Try::Tiny;
 use Bio::Vega::DBSQL::SliceLockAdaptor;
 use Bio::EnsEMBL::Utils::Exception qw ( throw );
 use Bio::Otter::Version;
+use List::Util qw( min max );
 
 
 =head1 NAME
@@ -36,6 +37,58 @@ SliceLocks must be created and locked, and then during the transaction
 must also be C<bump_activity>d.  It is not enough to just have a
 "locked" one sitting in the table while storing other objects, as it
 was with L<Bio::Vega::ContigLock>s.
+
+=head2 Comparison with ContigLockBroker
+
+SliceLocks can cover an arbitrary range of any seq_region (normally a
+chromosome).  They are persistent after they have been used and
+unlocked, leaving an foreign-key-able indication that "something
+happened" in that region.
+
+The mapping from ContigLockBroker methods is
+
+=over 4
+
+=item new
+
+SliceLockBroker must be construct or configured with something that
+tells the database.  It also has one author and hostname.
+
+=item check_locks_exist_by_slice, check_slice_argument
+
+During L</exclusive_work>, use L</assert_bumped> to ensure that the
+region you will operate upon is actually locked.
+
+=item check_no_locks_exist_by_slice
+
+Not implemented; nothing calls it.
+
+=item lock_clones_by_slice
+
+L</lock_create_for_Slice> and then use L</exclusive_work> to wrap the
+work+commit.
+
+=item lock_by_object
+
+Pass all the objects at once to L</lock_create_for_objects>, then
+continue as for C<lock_clones_by_slice>.
+
+=item remove_by_object, remove_by_slice
+
+Locks created may be unlocked individually via the adaptor.
+
+If you want to unlock everything put into the broker,
+L</exclusive_work> can do that as it finishes.
+
+=back
+
+Unlike the ContigLock, it is not enough to have the SliceLock in the
+database.  We want to be assured that no other process is operating
+under the cover of that same row in the C<slice_lock> table!
+
+The L<Bio::Vega::DBSQL::SliceLockAdaptor/bump_activity> method does
+this, and is wrapped up with error catching, COMMIT and ROLLBACK in
+the L</exclusive_work> method.
 
 
 =head1 METHODS
@@ -292,8 +345,67 @@ sub lock_create_for_Slice {
     $arg{'-intent'} = "via $prog"
       unless defined $arg{'-intent'};
     my $new = Bio::Vega::SliceLock->new(%arg);
-    $self->locks($new); # will store if necessary, or fail
+    $self->locks($new); # will store
     return $new;
+}
+
+
+=head2 lock_create_for_objects($intent, @obj)
+
+Creates locks to cover all the objects.  Currently it makes one per
+seq_region, spanning all given objects on it, without consideration
+for any other locks.  I<There is room for improvement in a
+backwards-compatible way.>
+
+Returns the new locks made, stored and added to broker.
+
+Every C<@obj> must provide the C<feature_Slice> method, the resulting
+slice must have a C<seq_region_id> and all must be in the same
+database.
+
+I<If you need to commit to two databases at once, SliceLockBroker will
+need teaching to understand which COMMIT operates where and how to
+approximate a two-phase commit.>
+
+For a convenient interface, this method gives no control over the
+C<otter_version> of the created locks.
+
+=cut
+
+sub lock_create_for_objects {
+    my ($self, $intent, @obj) = @_;
+    throw "expected string for intent" if ref($intent) || $intent !~ /\S/;
+
+    my %arg =
+      (-author => $self->author,
+       -hostname => $self->hostname,
+       -otter_version => Bio::Otter::Version->version,
+       -intent => $intent);
+
+    # Collect the regions
+    my %slice; # key=seq_region_id, value=\@obj_slice
+    foreach my $obj (@obj) {
+        $self->adaptor($obj->adaptor); # set / assert equivalent
+        my $sl = $obj->feature_Slice;
+        my $srid = $sl->get_seq_region_id;
+        push @{ $slice{$srid} }, $sl;
+    }
+
+    # Merge patches of lock, currently in a simplistic way.
+    my @out;
+    while (my ($srid, $locks) = each %slice) {
+        my $min = min(map { $_->start } @$locks);
+        my $max = max(map { $_->end   } @$locks);
+        my $L = Bio::Vega::SliceLock->new
+          (%arg,
+           -seq_region_id => $srid,
+           -seq_region_start => $min,
+           -seq_region_end => $max);
+        push @out, $L;
+    }
+
+    $self->locks(@out); # will store
+    return @out;
 }
 
 
@@ -370,8 +482,15 @@ other errors are raised.
 
 =cut
 
+our $_pkg_no_recurse; ## no critic (Variables::ProhibitPackageVars)
 sub exclusive_work {
     my ($self, $code, $unlock) = @_;
+
+    # Recursion prevention actually needs to be done per $dbh, but
+    # global is probably good enough.
+    throw "exclusive_work recursion would break transaction control"
+      if $_pkg_no_recurse;
+    local $_pkg_no_recurse = 1;
 
     # 1.  Storing the lock has been done already.
     my $adap = $self->adaptor;
@@ -431,8 +550,6 @@ sub exclusive_work {
     }
 
     # 4.
-    throw "exclusive_work recursion would break transaction control"
-      if $self->{_did_bump};
     my $did_bump = local $self->{_did_bump} = [];
     foreach my $lock (@lock) {
         try {
@@ -526,6 +643,40 @@ sub assert_bumped {
         }
     }
     return @slice ? 1 : 0;
+}
+
+
+=head2 foreach_object($code, @obj)
+
+Run C<< $code->($obj) foreach @obj >> inside L</exclusive_work> and
+with an L</assert_bumped> check before each one.
+
+Can perform the L</exclusive_work> call for you, and passes on the
+return value.
+
+May also be called inside L</exclusive_work>, in which case it returns
+nothing.  This form makes bulk unlocking easier.
+
+C<@obj> are presumably the same objects that were given to
+L</lock_create_for_objects> earlier.
+
+=cut
+
+sub foreach_object {
+    my ($self, $code, @obj) = @_;
+
+    my $do_each = sub {
+        foreach my $obj (@obj) {
+            $self->assert_bumped($obj->feature_Slice);
+            $code->($obj);
+        }
+    };
+
+    if ($self->{_did_bump}) {
+        return $do_each->();
+    } else {
+        return $self->exclusive_work($do_each);
+    }
 }
 
 
