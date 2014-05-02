@@ -4,6 +4,7 @@ use strict;
 use warnings;
 use Test::More;
 use Try::Tiny;
+use List::Util 'shuffle';
 use List::MoreUtils 'uniq';
 use Time::HiRes qw( gettimeofday tv_interval usleep );
 use Date::Format 'time2str';
@@ -54,6 +55,9 @@ sub main {
     my $dbh = $ds->get_cached_DBAdaptor->dbc->db_handle;
     _late_commit_register($dbh);
     _tidy_database($ds);
+
+    my $junk # warm the cache before tests start
+      = _notlocked_seq_region_id($ds->get_cached_DBAdaptor);
 
     foreach my $iso ($ISO_UNCO, $ISO_COMM) {
         subtest "bad_isolation_tt($iso)" => sub { bad_isolation_tt($ds, $iso) };
@@ -166,26 +170,32 @@ sub _test_author {
 # Pick a seq_region_id which is not locked, either valid OR somewhat
 # far past anything locked so far, leaving room for those we can't see
 # (not COMMITted elsewhere) etc.
+#
+# Beware that in SERIALIZABLE mode, SELECT will place Next-Key Locks.
+# On slice_lock this can make spurious & confusing test failure.
+#
+# Therefore, list some nice ones at start of test and hand out each
+# one once.
+my %_notlocked_seq_region_id; # key = schema-name@hostname, value = \@shuffled
 sub _notlocked_seq_region_id {
-    my ($dba, $need_valid) = @_;
+    my ($dba) = @_;
     my $dbh = $dba->dbc->db_handle;
-    my $val;
+    my ($db_name) = $dbh->selectrow_array(q{ SELECT database() });
+    my $db_host = $dba->dbc->host;
+    my $dbkey = "$db_name\@$db_host";
 
-    if ($need_valid) {
+    my $srid_list = $_notlocked_seq_region_id{$dbkey};
+    if (!defined $srid_list) {
         my $q = q{
       SELECT seq_region_id FROM seq_region r
       WHERE r.seq_region_id not in (select seq_region_id from slice_lock)
         };
-        my @valid = @{ $dbh->selectcol_arrayref($q) };
-        $val = $valid[ int(rand( scalar @valid )) ];
-    } else {
-        my ($max) = $dbh->selectrow_array
-          (q{ SELECT max(seq_region_id) FROM slice_lock });
-        my $chunk = 1_000_000;
-        $val = $chunk * (1 + int($max / $chunk)); # round up
-        $val += int(rand(10_000)) * 100;
+        $srid_list = $_notlocked_seq_region_id{$dbkey} = [];
+        @$srid_list = shuffle @{ $dbh->selectcol_arrayref($q) };
     }
 
+    my $val = pop @$srid_list;
+    die "ran out of valid seq_region_id on dbkey=$dbkey" unless $val;
     return $val;
 }
 
@@ -201,7 +211,7 @@ sub exercise_tt {
     my @author = _test_author($SLdba, qw( Alice Bob ));
 
     my %prop =
-      (-SEQ_REGION_ID => _notlocked_seq_region_id($SLdba, 1), # may not exist
+      (-SEQ_REGION_ID => _notlocked_seq_region_id($SLdba),
        -SEQ_REGION_START =>  10_000 + int(rand(200_000)),
        -SEQ_REGION_END   => 210_000 + int(rand(150_000)),
        -AUTHOR => $author[0], # to be created on store
@@ -503,7 +513,7 @@ sub exclwork_tt {
     my $SLdba = $ds->get_cached_DBAdaptor->get_SliceLockAdaptor;
     my $dbh = $SLdba->dbc->db_handle;
     my ($auth) = _test_author($SLdba, qw( Florence ));
-    my $srid = _notlocked_seq_region_id($SLdba, 1);
+    my $srid = _notlocked_seq_region_id($SLdba);
 
     my @L;
     foreach my $i (0, 1) {
@@ -693,7 +703,7 @@ sub contains_tt {
     my $SLdba = $ds->get_cached_DBAdaptor->get_SliceLockAdaptor;
     my $S_dba = $ds->get_cached_DBAdaptor->get_SliceAdaptor;
 
-    my $srid = _notlocked_seq_region_id($SLdba, 1);
+    my $srid = _notlocked_seq_region_id($SLdba);
     my $L = Bio::Vega::SliceLock->new
           (-SEQ_REGION_ID => $srid,
            -SEQ_REGION_START => 10_000,
@@ -790,7 +800,7 @@ sub cycle_tt {
     my $SLdba = $ds->get_cached_DBAdaptor->get_SliceLockAdaptor;
     my @author = _test_author($SLdba, qw( Xavier Yuel Zebby ));
     my $BVSL = 'Bio::Vega::SliceLock';
-    my @L_pos = (_notlocked_seq_region_id($SLdba, 1), # may not exist
+    my @L_pos = (_notlocked_seq_region_id($SLdba),
                  10_000 + int(rand(200_000)), 250_000 + int(rand(150_000)));
     my @R_pos = ($L_pos[0],
                  int( ($L_pos[1] + $L_pos[2]) / 2), # mid
@@ -818,7 +828,7 @@ sub cycle_tt {
               'slice matches L_lock')
       or diag explain { sl => $L_slice, L_lock => $L_lock };
     like($L_lock->describe_slice,
-         qr{^[a-z]+:[^:]*:[A-Z]+[.0-9]+:\d+:\d+:1$},
+         qr{^[a-z]+:[^:]*:[a-zA-Z]+[^:]*[0-9]+:\d+:\d+:1$},
          'slice description');
 
     my $R_slice = $SLdba->db->get_SliceAdaptor->fetch_by_seq_region_id(@R_pos);
@@ -1022,7 +1032,7 @@ sub two_conn_tt {
         my @is_lock = map { defined $_ ? ref($_) : '~' } @locks;
         like("@is_lock", qr{^$BVSL (~|$BVSL)$}, # second may be a failure to fetch a lock (pair0)
            "run_tests($label): (dbh dbh) --> (@is_lock)")
-          or diag explain adap => \@SLdba, locks => \@locks, result => \@result;
+          or diag explain { adap => \@SLdba, locks => \@locks, result => \@result };
         isnt($locks[0]->adaptor, $locks[1] ? $locks[1]->adaptor : undef,
              "$label:   locks not from same adaptor");
         return (@locks, \@result);
@@ -1169,16 +1179,24 @@ sub two_conn_tt {
                             with_lock1 => \@p8_lock1 });
     }
 
-    # The Next-Key Lock prevents INSERT to any seq_region - more than
-    # we need, but not a problem for code that follows the workflow.
+    # The Next-Key Lock prevents INSERT to regions nearby until
+    # commit.
+    #
+    # This definition of nearby includes seq_region_id in the adjacent
+    # gaps, which is more than we need, but not a problem for code
+    # that follows the workflow.
+    #
     # Just check this doesn't change.
     {
-        my ($p9_0, $p9_1, $res) = $run_steps->
+        my $which_srid = 0; # 0 : same as $p9_0,  undef : next or random
+        my @out = $run_steps->
           (qw( seq_region_indep create lock ), # dbh[0]
-           [ create  => 3000, 4000, undef, 1 ], # dbh[1], fails
+           [ create  => 3000, 4000, $which_srid, 1 ], # dbh[1], fails
            # then because last create made no lock,
            qw( commit fetch_other )); # to please run_steps
-        is($p9_1->is_held_sync, 1, 'pair9.1:   held');
+        my $res = pop @out;
+        my ($p9_0, $p9_1) = @out;
+        is($p9_1->is_held_sync, 1, 'pair9.1:   held'); # p9_1 should be fetch_other
         my $err2 = $res->[2][1];
         like($err2, $RE_LOCKWAIT, 'pair9:   second unrelated create blocked');
         is_deeply($res,
@@ -1199,7 +1217,6 @@ sub _make_test_ops {
     my ($auth, $SLdba,
         $alt_SLdba) # needed only for fetch_other
       = @_;
-    my $next_srid = _notlocked_seq_region_id($SLdba);
 
     return
       (create => sub {
@@ -1212,7 +1229,7 @@ sub _make_test_ops {
                $adap = $lock_stack->[$old_lock_idx]->adaptor;
                $srid = $lock_stack->[$old_lock_idx]->seq_region_id;
            } else {
-               $srid = $next_srid++;
+               $srid = _notlocked_seq_region_id($SLdba);
            }
            $adap = ($SLdba, $alt_SLdba)[ $dbh_n || 0]
              if !defined $adap || defined $dbh_n;
