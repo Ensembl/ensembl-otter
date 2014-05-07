@@ -585,27 +585,54 @@ sub ace_config {
         , $gff_version;
 
     my @methods = $self->MethodCollection->get_all_top_level_Methods;
-    my $featuresets = [ map { $_->name } @methods ];
+    my @method_names = map { $_->name } @methods;
+
+    # extract DNA source into a separate initial stanza for pre-loading
+    #
+    my $dna         = [ grep { $_ eq 'DNA' } @method_names ];
+    my $featuresets = [ grep { $_ ne 'DNA' } @method_names ];
+
+    my @sources = $slice_name;
+    my $dna_slice_name;
+    if (@$dna) {
+        $dna_slice_name = sprintf '%s-DNA', $slice_name;
+        unshift @sources, $dna_slice_name;
+    }
 
     my $config = {
 
         'ZMap' => {
-            sources => [ $slice_name ],
+            sources => \@sources,
         },
 
-        $slice_name => {
+        $slice_name => $self->_ace_slice_config(
             url         => $url,
-            writeback   => 'false',
-            sequence    => 'true',
-            group       => 'always',
             featuresets => $featuresets,
-            stylesfile  => $self->stylesfile,
             version     => $acedb_version,
-        },
+        ),
 
     };
 
+    if ($dna_slice_name) {
+        $config->{$dna_slice_name} = $self->_ace_slice_config(
+            url         => $url,
+            featuresets => $dna,
+            version     => $acedb_version,
+            );
+    }
+
     return $config;
+}
+
+sub _ace_slice_config {
+    my ($self, @args) = @_;
+    return {
+        writeback   => 'false',
+        sequence    => 'true',
+        group       => 'always',
+        stylesfile  => $self->stylesfile,
+        @args,
+    }
 }
 
 my $sqlite_fetch_query = "
