@@ -117,6 +117,8 @@ END {
 # Useful query for dumping locks
 #
 # select l.slice_lock_id slid, l.seq_region_id srid, l.seq_region_start st, l.seq_region_end end, intent,hostname,otter_version, ts_begin,ts_activity,ts_free,active,freed,freed_author_id,author_id, a.author_name from slice_lock l join author a using (author_id);
+#
+# select cl.contig_lock_id CLid, cl.seq_region_id srid, sr.name, cl.hostname, cl.timestamp, cl.author_id, a.author_name, sl.slice_lock_id slid, sl.active, sl.freed, slr.name, slc.name from contig_lock cl natural join seq_region sr left join author a using (author_id) left join slice_lock sl on concat('SliceLock.', sl.slice_lock_id) = cl.hostname left join seq_region slr on slr.seq_region_id = sl.seq_region_id left join coord_system slc on slr.coord_system_id = slc.coord_system_id where cl.hostname like 'SliceLock%';
 
 
 sub supported_tt {
@@ -145,6 +147,11 @@ sub _tidy_database {
     my $dbh = $dataset->get_cached_DBAdaptor->dbc->db_handle;
     $dbh->do(qq{delete from slice_lock where hostname           = '$TESTHOST'});
     $dbh->do(qq{delete from author     where author_email like '%\@$TESTHOST'});
+    try {
+        $dataset->get_cached_DBAdaptor->get_ContigLockAdaptor->clean_lost_legacy;
+    } catch {
+        warn "[Time to delete unused code?]  $_";
+    };
     noise "purged test rows from ".($dataset->name);
     return;
 }
@@ -187,8 +194,10 @@ sub _notlocked_seq_region_id {
     my $srid_list = $_notlocked_seq_region_id{$dbkey};
     if (!defined $srid_list) {
         my $q = q{
-      SELECT seq_region_id FROM seq_region r
+      SELECT seq_region_id
+      FROM seq_region r JOIN coord_system cs using (coord_system_id)
       WHERE r.seq_region_id not in (select seq_region_id from slice_lock)
+        AND cs.name not in ('clone') -- they crowd the legacy contig_locks
         };
         $srid_list = $_notlocked_seq_region_id{$dbkey} = [];
         @$srid_list = shuffle @{ $dbh->selectcol_arrayref($q) };
@@ -617,6 +626,7 @@ sub exclwork_tt {
 
     subtest assert_bumped => sub {
         plan tests => 9;
+        local $SLdba->{_TESTCODE_no_legacy} = 1; # because we have adjacent slicelocks
         my $br = $BVSLB->new(-locks => $L);
         my $Sdba = $SLdba->db->get_SliceAdaptor;
         my @r = map { $Sdba->fetch_by_seq_region_id(@$_) || die "? (@$_)" }
