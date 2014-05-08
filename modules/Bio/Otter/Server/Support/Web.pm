@@ -53,7 +53,7 @@ sub new {
     );
 
     my $self = $pkg->SUPER::new();
-    $self->cgi(CGI->new);
+    $self->cgi;                 # will create a new one or adopt the singleton
     $self->compression($options{-compression});
     $self->content_type($options{-content_type});
 
@@ -65,11 +65,35 @@ sub new {
     return $self;
 }
 
-sub cgi {
-    my ($self, @args) = @_;
-    ($self->{'cgi'}) = @args if @args;
-    my $cgi = $self->{'cgi'};
-    return $cgi;
+{
+    # Allows a package-wide CGI object to be set up before an object is instantiated,
+    # which in turn allows CGI methods such as path_info() to be used to control object subtype.
+    #
+    my $cgi_singleton;
+
+    sub cgi {
+        my ($self, @args) = @_;
+
+        unless (ref $self) {
+            # We've been called as a class method
+            return $cgi_singleton ||= CGI->new;
+        }
+
+        # Traditional accessor
+        ($self->{'cgi'}) = @args if @args;
+        my $cgi = $self->{'cgi'};
+        return $cgi if $cgi;
+
+        if ($cgi_singleton) {
+            # Adopt the singleton, then unset it to avoid any mod_perl issues down the line...
+            $cgi = $self->{'cgi'} = $cgi_singleton;
+            $cgi_singleton = undef;
+            return $cgi;
+        }
+
+        # Backstop is to create a new one
+        return $self->{'cgi'} = CGI->new;
+    }
 }
 
 sub compression {

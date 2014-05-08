@@ -61,7 +61,38 @@ my $call_args = {
 
 };
 
+my $SUBCLASS = {
+    features         => '',          # no subclass
+
+    das_features     => 'DAS',
+    funcgen_features => 'FuncGen',
+    genes            => 'Genes',
+    patch_features   => 'Patches',
+    psl_sql_features => 'PslSql',
+};
+
 sub send_requested_features {
+    my ($pkg) = @_;
+
+    my $specific_pkg = $pkg;
+
+    if (my $path_info = $pkg->path_info) {
+
+        my ($key) = $path_info =~ m{^/(\w+)$};
+        die "Subclass key not found in '$path_info'\n" unless $key;
+
+        my $subclass = $SUBCLASS->{$key};
+        die "Subclass for '$key' not known\n" unless defined $subclass;
+
+        $specific_pkg = join '::', __PACKAGE__, $subclass if $subclass;
+        ## no critic (BuiltinFunctions::ProhibitStringyEval,Anacode::ProhibitEval)
+        eval "require $specific_pkg" or die "Couldn't load '$specific_pkg': '$@'\n";
+    }
+
+    return $specific_pkg->do_send_features;
+}
+
+sub do_send_features {
     my ($pkg) = @_;
 
     $pkg->send_response(
