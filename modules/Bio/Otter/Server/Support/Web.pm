@@ -96,6 +96,11 @@ sub param {
     return $self->cgi->param(@args);
 }
 
+sub path_info {
+    my ($self) = @_;
+    return $self->cgi->path_info();
+}
+
 sub make_map {
     my ($self) = @_;
     return {

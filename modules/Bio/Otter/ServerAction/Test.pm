@@ -122,6 +122,8 @@ sub generate {
         $out{CGI_param} .= sprintf "%24s  %s\n", $var, $server->param($var);
     }
 
+    $out{Path_info} = $server->path_info;
+
     # avoiding exposing internals (private or verbose)
     my $cgi = $web->cgi;
     $out{SangerWeb} = { cgi => "$cgi",
