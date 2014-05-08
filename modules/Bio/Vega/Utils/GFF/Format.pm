@@ -6,6 +6,7 @@ use strict;
 use warnings;
 
 use Carp;
+use Scalar::Util qw(looks_like_number);
 
 sub new {
     my ($pkg, $hash) = @_;
@@ -79,7 +80,7 @@ sub gff_line { ## no critic( Subroutines::ProhibitManyArgs )
          $type,
          (sprintf "%d", $start),
          (sprintf "%d", $end),
-         (defined $score ? (sprintf "%f", $score) : '.'),
+         ((defined $score and looks_like_number $score) ? (sprintf "%f", $score) : '.'),
          $strand_hash->{$strand} || $strand || '.',
          defined $phase ? $phase : '.',
         );
