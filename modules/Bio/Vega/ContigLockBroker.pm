@@ -163,7 +163,8 @@ sub lock_clones_by_slice {
         };
 
         if ($@) {
-            $lock_error_str .= sprintf "Failed to lock contig '%s'", $contig_name;
+            $lock_error_str .= sprintf "Failed to lock contig '%s' for '%s' on '%s'",
+              $contig_name, $author->name, $self->client_hostname;
             if (my $dblock = $db->get_ContigLockAdaptor->fetch_by_contig_id($contig_id)) {
                 $lock_error_str .= sprintf " already locked by '%s' on '%s' since %s\n",
                 $dblock->author->name,
