@@ -9,7 +9,6 @@ use Data::Dumper;
 use Sys::Hostname;
 
 $Data::Dumper::Terse = 1;
-# $0 = 'otterlace';     # Needed to access restricted test datasets
 
 use Bio::Otter::Lace::Defaults;
 use Bio::Vega::ContigLockBroker;
@@ -33,6 +32,7 @@ use Bio::Vega::ContigLockBroker;
     $usage->() unless $dataset;
 
     # Client communicates with otter HTTP server
+    # $0 = 'otterlace';     # Needed to access restricted test datasets
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
 
     # DataSet interacts directly with an otter database

@@ -11,9 +11,7 @@ use Bio::Otter::Lace::PipelineDB;
 $| = 1;
 
 {
-    
     my $usage     = sub { exec('perldoc', $0) };
-    $0 = 'otterlace';
     my $dataset_name = undef;
     my $author    = undef;
     my $assembly  = undef;
@@ -41,6 +39,7 @@ $| = 1;
         ) or $usage->();
     $usage->() unless $dataset_name;
 
+    $0 = 'otterlace';
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
     my $ds = $cl->get_DataSet_by_name($dataset_name);
     my $otter_db = $ds->make_EnsEMBL_DBAdaptor;
