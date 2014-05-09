@@ -115,6 +115,32 @@ my $_new_feature_id_sub = sub {
 
 {
 
+    package Bio::EnsEMBL::MiscFeature;
+
+    sub _gff_hash {
+        my ($self, @args) = @_;
+
+        my $gff = $self->SUPER::_gff_hash(@args);
+
+        # display_id() looks for a 'name' attribute
+        #
+        $gff->{'attributes'}{'Name'} =
+            $self->display_id ||
+            $self->analysis->logic_name;
+
+        # This relies on us setting a description attribute
+        #
+        my $descs = $self->get_all_attribute_values('description');
+        if ($descs and @$descs) {
+            $gff->{'attributes'}{'description'} = join ',', @$descs;
+        }
+
+        return $gff;
+    }
+}
+
+{
+
     package Bio::EnsEMBL::FeaturePair;
 
     sub _gff_hash {

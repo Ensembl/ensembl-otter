@@ -67,6 +67,7 @@ my $SUBCLASS = {
     das_features     => 'DAS',
     funcgen_features => 'FuncGen',
     genes            => 'Genes',
+    grc_issues       => 'GRCIssues',
     patch_features   => 'Patches',
     psl_sql_features => 'PslSql',
 };
