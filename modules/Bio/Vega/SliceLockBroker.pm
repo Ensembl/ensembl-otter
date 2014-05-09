@@ -91,6 +91,34 @@ this, and is wrapped up with error catching, COMMIT and ROLLBACK in
 the L</exclusive_work> method.
 
 
+=head1 CAVEATS
+
+=over 4
+
+=item One database
+
+If you need to commit to two databases at once, SliceLockBroker will
+need teaching to understand which COMMIT operates where and how to
+approximate a two-phase commit.
+
+=item Objects fetched before locks start
+
+SliceLockBroker currently offers no method to refresh or reload the
+objects; L</lock_create_for_objects> locks created are not yet "held"
+but still "pre"; L</foreach_object> is cast in terms of objects
+already loaded.
+
+It is possible for these objects to change between the "load" and lock
+acquisition.  It would also be possible for callers of SliceLockBroker
+to prevent this, but most (so far) do not bother.
+
+Scripts performing bulk updates on objects loaded before locking are
+protected from long-duration locks held by the GUI, but there remains
+a (vanishingly small) possibility of edit collisions between scripts.
+
+=back
+
+
 =head1 METHODS
 
 =head2 new(-hostname => $h, -author => $a, -adaptor => $dba, -locks => $bvsl, -lockid => $bvsl_id)
@@ -357,15 +385,11 @@ seq_region, spanning all given objects on it, without consideration
 for any other locks.  I<There is room for improvement in a
 backwards-compatible way.>
 
-Returns the new locks made, stored and added to broker.
+Returns a list of the new locks made, stored and added to broker.
 
 Every C<@obj> must provide the C<feature_Slice> method, the resulting
 slice must have a C<seq_region_id> and all must be in the same
 database.
-
-I<If you need to commit to two databases at once, SliceLockBroker will
-need teaching to understand which COMMIT operates where and how to
-approximate a two-phase commit.>
 
 For a convenient interface, this method gives no control over the
 C<otter_version> of the created locks.
@@ -686,6 +710,48 @@ sub foreach_object {
     } else {
         return $self->exclusive_work($do_each);
     }
+}
+
+
+=head2 unlock_all()
+
+Ensure every locks in the broker is C<free>d if possible, then
+C<COMMIT> if possible.
+
+It catches all errors, because it is expected to be useful in a "try /
+finally" block.  Emits a warning for each error, and returns (purely
+FYI) a list of C<[$error, $lock] or [$error]> failure tuples.
+
+Returns nothing for success.
+
+=cut
+
+sub unlock_all {
+    my ($self) = @_;
+    my @out;
+    try {
+        my $adap = $self->adaptor;
+        my $auth = $self->author;
+        my @lock = $self->locks;
+        my ($commit, $rollback) = $self->_txn_control(@lock);
+
+        foreach my $lock (@lock) {
+            my $dbID = $lock->dbID;
+            try {
+                $adap->freshen($lock);
+                $adap->unlock($lock, $auth)
+                  unless $lock->active eq 'free';
+            } catch {
+                warn "Unlock slice_lock_id=$dbID failed, SliceLock litter remains: $_";
+                push @out, [ $_, $lock ];
+            };
+        }
+
+        $commit->(0);
+    } catch {
+        push @out, [ $_ ];
+    };
+    return @out;
 }
 
 
