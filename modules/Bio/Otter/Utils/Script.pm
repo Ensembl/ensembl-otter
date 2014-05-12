@@ -7,6 +7,7 @@ use 5.010;
 use Carp;
 
 use Bio::Otter::Server::Config;
+use Bio::Otter::Utils::RequireModule qw(require_module);
 
 use parent 'App::Cmd::Simple';
 
@@ -233,11 +234,8 @@ sub execute {
     $self->setup_data($self->setup($opt, $args));
 
     my $dataset_class = $self->_option('dataset_class');
-    {
-        ## no critic (BuiltinFunctions::ProhibitStringyEval,Anacode::ProhibitEval)
-        eval "require $dataset_class" or 1;
-        # if that failed, we assume that the dataset class is provided in the script file
-    }
+    require_module($dataset_class, no_die => 1);
+    # if that failed, we assume that the dataset class is provided in the script file
 
     my $species_dat = Bio::Otter::Server::Config->SpeciesDat;
 

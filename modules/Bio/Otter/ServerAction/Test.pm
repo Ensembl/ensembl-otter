@@ -15,6 +15,7 @@ use Bio::Otter::Version;
 use Bio::Otter::Git;
 use Bio::Otter::Auth::Pagesmith;
 use Bio::Otter::Auth::SSO;
+use Bio::Otter::Utils::RequireModule qw(require_module);
 
 use Bio::EnsEMBL::ApiVersion ();
 
@@ -69,10 +70,10 @@ sub _require_all {
 
     my %out;
     foreach my $mod (@mods) {
-        if (eval "require $mod;") { ## no critic (BuiltinFunctions::ProhibitStringyEval,Anacode::ProhibitEval)
+        my $err;
+        if (require_module($mod, error_ref => \$err)) {
             push @{ $out{loaded} }, $mod;
         } else {
-            my $err = $@;
             $err =~ s{ \(\@INC contains: [^()]+\) at }{... at };
             $out{error}->{$mod} = $err;
         }
