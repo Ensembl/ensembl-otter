@@ -5,6 +5,7 @@ use strict;
 use warnings;
 
 use Bio::Otter::Utils::AccessionInfo::Serialise qw( fasta_header_column_order escape_fasta_description );
+use Bio::Otter::Utils::RequireModule qw(require_module);
 use Bio::Vega::Enrich::SliceGetAllAlignFeatures;
 use Bio::Vega::Utils::GFF;
 use Bio::Vega::Utils::EnsEMBL2GFF;
@@ -86,8 +87,7 @@ sub send_requested_features {
         die "Subclass for '$key' not known\n" unless defined $subclass;
 
         $specific_pkg = join '::', __PACKAGE__, $subclass if $subclass;
-        ## no critic (BuiltinFunctions::ProhibitStringyEval,Anacode::ProhibitEval)
-        eval "require $specific_pkg" or die "Couldn't load '$specific_pkg': '$@'\n";
+        require_module($specific_pkg);
     }
 
     return $specific_pkg->do_send_features;
@@ -155,8 +155,7 @@ sub get_requested_features {
 
         if ($module_name =~ /^Bio::Vega::ServerAnalysis::\w+$/) {
 
-            eval "require $module_name" ## no critic (BuiltinFunctions::ProhibitStringyEval,Anacode::ProhibitEval)
-                or die "Failed to 'require' module $module_name: $@";
+            require_module($module_name);
 
             my $filter = $module_name->new;
 

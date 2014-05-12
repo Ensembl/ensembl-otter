@@ -7,6 +7,8 @@ use Carp;
 
 use Try::Tiny;
 
+use Bio::Otter::Utils::RequireModule qw(require_module);
+
 sub new {
     my ($pkg, $name, $params) = @_;
     my $new = {
@@ -162,11 +164,7 @@ sub _satellite_dba_make {
         $uppercased_options{uc($k)} = $v;
     }
 
-    {
-        ## no critic (BuiltinFunctions::ProhibitStringyEval,Anacode::ProhibitEval)
-        eval "require $adaptor_class"
-            or die "'require $adaptor_class' failed";
-    }
+    require_module($adaptor_class);
     my $dba = $adaptor_class->new(%uppercased_options);
     die "Couldn't connect to '$metakey' satellite db"
         unless $dba;

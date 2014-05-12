@@ -12,6 +12,7 @@ use Bio::Otter::Lace::OnTheFly::Utils::SeqList;
 use Bio::Otter::Lace::OnTheFly::Utils::Types;
 
 use Bio::Otter::GappedAlignment;
+use Bio::Otter::Utils::RequireModule qw(require_module);
 
 use Hum::FastaFileIO;
 
@@ -33,8 +34,7 @@ has _loaded_resultset_class => ( is       => 'ro',
 sub _require_resultset_class {     ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
     my $self = shift;
     my $class = $self->resultset_class;
-    eval "require $class" ## no critic (BuiltinFunctions::ProhibitStringyEval,Anacode::ProhibitEval)
-        or die "Failed to 'require' module '$class': $@";
+    require_module($class);
     return $class;
 }
 
