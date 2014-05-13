@@ -76,6 +76,8 @@ sub try_require {
         }
         done_testing;
     };
+
+    return;
 }
 
 1;
