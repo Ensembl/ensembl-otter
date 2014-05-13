@@ -50,7 +50,7 @@ my @todo_tests = (
 
 my %species_tests = (
     human => [
-        { title => 'AL133351.34', chr => 'chr6-18', start => 2864371, end => 3037940, },
+        { title => 'AL133351.34', chr => 'chr6-38', start => 2864137, end => 3037706, },
     ],
     mouse => [
         { title => 'AC144852+5k', chr => 'chr10-38', start => 127162862, end => 127313035, },
