@@ -50,16 +50,16 @@ my @todo_tests = (
 
 my %species_tests = (
     human => [
-        { title => 'AL133351.34', type => 'chr6-18', start => 2864371, end => 3037940, },
+        { title => 'AL133351.34', chr => 'chr6-18', start => 2864371, end => 3037940, },
     ],
     mouse => [
-        { title => 'AC144852+5k', type => 'chr10-38', start => 127162862, end => 127313035, },
+        { title => 'AC144852+5k', chr => 'chr10-38', start => 127162862, end => 127313035, },
     ],
     zebrafish => [
-        { title => 'CR753817.13', type => 'chr6_20110419', start => 35489955, end => 35724691, },
+        { title => 'CR753817.13', chr => 'chr6_20110419', start => 35489955, end => 35724691, },
     ],
     tas_devil => [
-        { title => 'With_gap', type => 'MHC-06', start => 139316, end => 424882, },
+        { title => 'With_gap', chr => 'MHC-06', start => 139316, end => 424882, },
     ],
     );
 
