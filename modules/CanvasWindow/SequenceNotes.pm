@@ -764,7 +764,7 @@ sub _open_SequenceSet {
 
     my $top = $self->canvas->Toplevel
       (-title  => $Bio::Otter::Lace::Client::PFX.'Select column data to load');
-    my $cc = MenuCanvasWindow::ColumnChooser->new($top, 600, 400);
+    my $cc = MenuCanvasWindow::ColumnChooser->new($top);
     $cc->init_flag(1);
     $cc->AceDatabase($adb);
     $cc->SequenceNotes($self);

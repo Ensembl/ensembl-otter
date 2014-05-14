@@ -20,7 +20,7 @@ use base qw{
 
 
 sub new {
-    my ($pkg, $tk, @rest) = @_;
+    my ($pkg, $tk) = @_;
 
     # Need to make both frames which appear above the canvas...
     my $menu_frame = $pkg->make_menu_widget($tk);
@@ -29,8 +29,12 @@ sub new {
         -fill => 'x',
         );
 
+    my $w = $tk->screenwidth;
+    $w = 800 if $w > 800;
+    my $h = $tk->screenheight; # RT#355409
+
     # ... before we make the canvas
-    my $self = CanvasWindow->new($tk, @rest);
+    my $self = CanvasWindow->new($tk, $w, $h, 'ose');
     bless($self, $pkg);
 
     my $bottom_frame = $tk->Frame->pack(
@@ -247,6 +251,17 @@ sub initialize {
     $self->calculate_text_column_sizes;
     $self->fix_window_min_max_sizes;
     $self->redraw;
+
+    # Window is already full screen height. Set y=0.  RT#355409
+    my $x = $top->x;
+    my $w = $top->width;
+    my $new_x = $top->screenwidth - $w;
+    $new_x = $x if $x < $new_x;
+    $x = 0 if $x < 0;
+    $top->withdraw;
+    $top->geometry("+$x+0");
+    $self->deiconify_and_raise;
+
     return;
 }
 

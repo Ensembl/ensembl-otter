@@ -391,7 +391,7 @@ sub recover_some_sessions {
                       (-title  => $Bio::Otter::Lace::Client::PFX.
                        'Select Column Data to Load');
 
-                    my $cc = MenuCanvasWindow::ColumnChooser->new($top, 600, 400);
+                    my $cc = MenuCanvasWindow::ColumnChooser->new($top);
                     $cc->AceDatabase($adb);
                     $cc->SpeciesListWindow($self);
                     $cc->initialize;
