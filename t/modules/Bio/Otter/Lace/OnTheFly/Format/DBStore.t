@@ -11,7 +11,7 @@ use Test::MockObject;
 use Test::Requires qw( Bio::EnsEMBL::DBSQL::Driver::SQLite );
 
 use Test::Otter qw( ^data_dir_or_skipall );
-use Test::OtterLaceOnTheFly qw( fixed_tests build_target run_otf_test );
+use Test::OtterLaceOnTheFly qw( fixed_genomic_tests build_target run_otf_genomic_test );
 
 use OtterTest::DB;
 
@@ -48,10 +48,10 @@ $otf->set_true('clear_existing');
 $otf->mock('pre_launch_setup', sub { return shift->Bio::Otter::Lace::OnTheFly::pre_launch_setup(@_); });
 $otf->mock('logic_names',      sub { return qw( OTF_Test_EST OTF_Test_Protein ); });
 
-foreach my $test ( fixed_tests() ) {
+foreach my $test ( fixed_genomic_tests() ) {
 
     $test->{type} ||= 'Test_EST';
-    my ($result_set) = run_otf_test($test, build_target($test));
+    my ($result_set) = run_otf_genomic_test($test, build_target($test));
     my $count = $result_set->db_store($sfg->slice);
     ok($count, $test->{name});
     note("Stored $count features");

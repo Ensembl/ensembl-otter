@@ -16,13 +16,13 @@ use Bio::Otter::Lace::OnTheFly::TargetSeq;
 use Bio::Otter::Utils::FeatureSort qw( feature_sort );
 use Hum::FastaFileIO;
 
-our @EXPORT_OK = qw( fixed_tests build_target run_otf_test );
+our @EXPORT_OK = qw( fixed_genomic_tests build_target run_otf_genomic_test );
 
 # .../t/lib/Test/
 # need to go up two levels to get into .../t/
 my $path = abs_path(dirname(__FILE__) . "/../../etc/align");
 
-my @tests = (
+my @genomic_tests = (
     {
         name        => 'test_clone vs. test_query',
         target_path => "${path}/test_clone.fa",
@@ -84,8 +84,8 @@ my @tests = (
     },
     );
 
-sub fixed_tests {
-    return @tests;
+sub fixed_genomic_tests {
+    return @genomic_tests;
 }
 
 sub build_target {
@@ -101,7 +101,7 @@ sub build_target {
     return $target;
 }
 
-sub run_otf_test {
+sub run_otf_genomic_test {
     my ($test, $target) = @_;
 
     note 'Test: ', $test->{name};
