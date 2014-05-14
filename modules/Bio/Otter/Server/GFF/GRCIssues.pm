@@ -32,10 +32,20 @@ sub Bio::EnsEMBL::Slice::get_all_GRC_issues {
         $fp->end(        $issue->{end}   - $chr_start + 1 );
         $fp->strand(     1 );
 
-        $fp->add_Attribute(_make_attrib('name', $issue->{jira_id}));
+        if (0) {
 
-        my $description = sprintf '%s: %s (%s)', @{$issue}{ qw( category description status ) };
-        $fp->add_Attribute(_make_attrib('description', $description));
+            # ZMap does not take the description from the GFF, so this isn't helpful...
+            my $description = sprintf '%s: %s (%s)', @{$issue}{ qw( category description status ) };
+            $fp->add_Attribute(_make_attrib('name', $issue->{jira_id}));
+            $fp->add_Attribute(_make_attrib('description', $description));
+
+        } else {
+
+            # ...instead we put it all in the name.
+            my $name = sprintf '%s: %s - %s (%s)', @{$issue}{ qw( jira_id category description status ) };
+            $fp->add_Attribute(_make_attrib('name', $name));
+
+        }
 
         push @feature_coll, $fp;
     }
