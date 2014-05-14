@@ -34,7 +34,20 @@ also L</data_filename> which does.
 sub data_dir {
     my ($pkg) = @_;
 
-    my ($root, $src) = ($ENV{'DOCUMENT_ROOT'}, '%ENV');
+    my ($root, $src, $webtree) =
+      ($ENV{'DOCUMENT_ROOT'}, '$DOCUMENT_ROOT', 1); # has first priority
+
+    if (!defined $root) {
+        # Let client scripts be given explicit config.  RT#398147
+        #
+        # It must contain the full tree (dev or live branch)
+        # not just a root- or version- branch.
+        ($root, $src, $webtree) =
+          ($ENV{'ANACODE_SERVER_CONFIG'}, '$ANACODE_SERVER_CONFIG', 0);
+    } else {
+        warn '$ANACODE_SERVER_CONFIG ignored because $DOCUMENT_ROOT was set'
+          if defined $ENV{'ANACODE_SERVER_CONFIG'};
+    }
 
     if (!defined $root) {
         # For internal non-web machines, provide the central copy to
@@ -42,22 +55,25 @@ sub data_dir {
         #
         # Web machines shouldn't have a fallback, too magical.
         # (They don't have /software/ )
-        ($root, $src) =
+        ($root, $src, $webtree) =
           ("/nfs/anacode/WEBVM_docs.live/htdocs", # DUP also in team_tools pubweblish
-           'fallback')
+           'fallback', 1)
           if -d '/software/anacode';
     }
 
-    die "Cannot find data_dir via DOCUMENT_ROOT or fallback" # need another way?
+    die "Cannot find data_dir via DOCUMENT_ROOT, ANACODE_SERVER_CONFIG or fallback"
       unless defined $root;
 
-    # Trim off the trailing /dir (usually htdocs)
     my $data = $root;
-    $data =~ s{/[^/]+$}{}
-      or die "Unexpected DOCUMENT_ROOT format '$root' from $src";
-    $data = join('/', $data, 'data', 'otter');
+    if ($webtree) {
+        # Trim off the trailing /dir (usually htdocs)
+        $data =~ s{/[^/]+$}{}
+          or die "Unexpected DOCUMENT_ROOT format '$root' from $src";
+        $data = join('/', $data, 'data', 'otter');
+        $src .= " near root '$root'";
+    }
 
-    die "data_dir $data (near root '$root' from $src): not found"
+    die "data_dir $data (from $src): not found"
       unless -d $data;
 
     my $vsn = Bio::Otter::Version->version;
@@ -93,7 +109,7 @@ sub mid_url_args {
         # Running outside the normal CGI environment, probably for
         # test & debug purposes.
         #
-        # Maybe pick up developer config when present?
+        # $ANACODE_SERVER_CONFIG could point at config
     } elsif ($ENV{REQUEST_URI} =~ m{^/cgi-bin/otter([^/]*)/\d+(_[^/]+)?/}) {
         # cf. webvm.git apps/50otter.conf ScriptAliasMatch
         # ^/cgi-bin/otter([^/]+)/(\d+(?:_[^/]+)?)/([^/]+)$
