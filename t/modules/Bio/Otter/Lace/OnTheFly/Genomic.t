@@ -10,7 +10,7 @@ use Test::SetupLog4perl;
 use Test::More;
 
 use Test::Otter qw( db_or_skipall );
-use Test::OtterLaceOnTheFly qw( fixed_tests build_target run_otf_test );
+use Test::OtterLaceOnTheFly qw( fixed_genomic_tests build_target run_otf_genomic_test );
 
 use OtterTest::AccessionTypeCache;
 use OtterTest::Exonerate;
@@ -68,7 +68,7 @@ done_testing;
 
 sub main_tests {
 
-    foreach my $test ( fixed_tests() ) {
+    foreach my $test ( fixed_genomic_tests() ) {
         run_fixed_test($test);
     }
 
@@ -119,7 +119,7 @@ sub run_test {
     my $type = $test->{type} ||= 'Test_EST';
 
     my $target = build_target($test);
-    my ($result_set, @new_features) = run_otf_test($test, $target);
+    my ($result_set, @new_features) = run_otf_genomic_test($test, $target);
 
     # Do it the old way, for comparison
 
