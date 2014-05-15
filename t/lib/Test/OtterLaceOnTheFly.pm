@@ -16,7 +16,7 @@ use Bio::Otter::Lace::OnTheFly::TargetSeq;
 use Bio::Otter::Utils::FeatureSort qw( feature_sort );
 use Hum::FastaFileIO;
 
-our @EXPORT_OK = qw( fixed_genomic_tests build_target run_otf_genomic_test );
+our @EXPORT_OK = qw( fixed_genomic_tests fixed_transcript_tests build_target run_otf_genomic_test run_otf_test );
 
 # .../t/lib/Test/
 # need to go up two levels to get into .../t/
@@ -88,6 +88,20 @@ sub fixed_genomic_tests {
     return @genomic_tests;
 }
 
+my @transcript_tests = (
+    {
+        name        => 'test_ts vs. test_query',
+        target_path => "${path}/test_ts.fa",
+        query_path  => "${path}/test_query.fa",
+        query_ids   => [qw(BC018923.fwd BC018923.rev)],
+        ts_spec     => "${path}/exons.fwd.txt",
+    },
+    );
+
+sub fixed_transcript_tests {
+    return @transcript_tests;
+}
+
 sub build_target {
     my $test = shift;
 
@@ -103,23 +117,32 @@ sub build_target {
 
 sub run_otf_genomic_test {
     my ($test, $target) = @_;
+    $test->{builder_class} = 'Bio::Otter::Lace::OnTheFly::Builder::Genomic';
+    return run_otf_test($test, $target);
+}
+
+sub run_otf_test {
+    my ($test, $target) = @_;
 
     note 'Test: ', $test->{name};
+
+    $test->{runner_class} ||= 'Bio::Otter::Lace::OnTheFly::Runner';
 
     if ($test->{query_path}) {
         $test->{query_seqs} = [ Hum::FastaFileIO->new_DNA_IO($test->{query_path})->read_all_sequences ];
     }
 
-    my $builder = new_ok( 'Bio::Otter::Lace::OnTheFly::Builder::Genomic' => [{
+    my $builder = new_ok( $test->{builder_class} => [{
         type       => $test->{type},
         query_seqs => $test->{query_seqs},
         target     => $target,
                                                                              }]);
     my $request = $builder->prepare_run;
 
-    my $runner = new_ok( 'Bio::Otter::Lace::OnTheFly::Runner' => [
+    my $runner = new_ok( $test->{runner_class} => [
                              request         => $request,
                              resultset_class => 'Bio::Otter::Lace::OnTheFly::ResultSet::Test',
+                             %{ $test->{runner_args} || {} },
                                                                   ]);
     my $result_set = $runner->run;
     isa_ok($result_set, 'Bio::Otter::Lace::OnTheFly::ResultSet');
