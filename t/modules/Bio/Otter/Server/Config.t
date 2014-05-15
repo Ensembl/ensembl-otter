@@ -21,7 +21,7 @@ use Bio::Otter::Server::Config;
 #   get meaningful error messages on breakage
 
 
-sub try_err(&) {
+sub try_err(&) { ## no critic (Subroutines::ProhibitSubroutinePrototypes)
     my ($code) = @_;
     return try { $code->() } catch { "ERR:$_" };
 }
