@@ -128,11 +128,11 @@ my $_new_feature_id_sub = sub {
             $self->display_id ||
             $self->analysis->logic_name;
 
-        # This relies on us setting a description attribute
+        # This relies on us setting a note attribute
         #
-        my $descs = $self->get_all_attribute_values('description');
+        my $descs = $self->get_all_attribute_values('note');
         if ($descs and @$descs) {
-            $gff->{'attributes'}{'description'} = join ',', @$descs;
+            $gff->{'attributes'}{'Note'} = join ',', @$descs;
         }
 
         return $gff;
@@ -713,7 +713,7 @@ my $_new_feature_id_sub = sub {
             }
             if (my $desc = $hd->description) {
                 $desc =~ s/"/\\"/g;
-                $gff->{'attributes'}{'description'} = $desc;
+                $gff->{'attributes'}{'Note'} = $desc;
             }
             if (my $seq = $hd->get_and_unset_hit_sequence_string) {
                 $gff->{'attributes'}{'sequence'} = $seq;
@@ -745,7 +745,7 @@ my $_new_feature_id_sub = sub {
             }
             if (my $desc = $hd->description) {
                 $desc =~ s/"/\\"/g;
-                $gff->{'attributes'}{'description'} = $desc;
+                $gff->{'attributes'}{'Note'} = $desc;
             }
         }
 

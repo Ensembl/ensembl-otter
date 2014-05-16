@@ -50,7 +50,7 @@ sub _gff_escape_target_attribute {
 }
 
 my @attribute_quotable = qw(
-    Name Description Class Target Gaps Gap
+    Name Description Class Target Gaps Gap Note
     Stable_ID Locus Locus_Stable_ID DB_Name URL
     cigar_ensembl cigar_exonerate cigar_bam
     );
