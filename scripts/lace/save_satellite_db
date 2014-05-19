@@ -4,9 +4,10 @@
 
 use strict;
 use warnings;
-use Getopt::Long;
+
 use Bio::Otter::Lace::SatelliteDB;
 use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Server::Config;
 
 {
     my (
@@ -29,14 +30,13 @@ use Bio::Otter::Lace::Defaults;
     usage() if $help;
     die "Key not given" unless $key;
 
-    my $cl       = Bio::Otter::Lace::Defaults::make_Client();
-    my $ds       = $cl->get_DataSet_by_name($dataset_name);
-    my $otter_db = $ds->get_cached_DBAdaptor;
+    my $ds       = Bio::Otter::Server::Config->SpeciesDat->dataset($dataset_name);
+    my $otter_db = $ds->otter_dba;
 
     my $current =
       Bio::Otter::Lace::SatelliteDB::get_options_for_key($otter_db, $key);
     if ($view) {
-        print STDERR show_current($current, "$dataset_name $key");
+        print STDERR show_current($current, "original $dataset_name $key");
     }
     my $sat_opts = $current || {};
     $sat_opts->{'-HOST'}   = $sathost   if $sathost;
@@ -62,7 +62,7 @@ use Bio::Otter::Lace::Defaults;
     };
     if ($@) {
         die "Test it: Couldn't connect to SatelliteDB selected:\n"
-          . show_current($sat_opts, 'SatelliteDB')
+          . show_current($sat_opts, "new $dataset_name $key")
           . $@;
     } else {
         print "\t\tTest it: OK\n" if $view;
@@ -86,6 +86,7 @@ sub show_current {
     foreach my $key (sort keys %$settings) {
         $ret .= sprintf "%12s = %s\n", $key, $settings->{$key};
     }
+    $ret .= "  (nothing)\n" unless keys %$settings;
     return $ret;
 }
 

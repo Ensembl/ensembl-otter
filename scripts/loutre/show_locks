@@ -4,9 +4,8 @@
 
 use strict;
 
-use Getopt::Long 'GetOptions';
 use Bio::Otter::Lace::Defaults;
-use Bio::Otter::Lace::PipelineDB;
+use Bio::Otter::Server::Config;
 
 $| = 1;
 
@@ -39,10 +38,8 @@ $| = 1;
         ) or $usage->();
     $usage->() unless $dataset_name;
 
-    $0 = 'otterlace';
-    my $cl = Bio::Otter::Lace::Defaults::make_Client();
-    my $ds = $cl->get_DataSet_by_name($dataset_name);
-    my $otter_db = $ds->make_EnsEMBL_DBAdaptor;
+    my $ds = Bio::Otter::Server::Config->SpeciesDat->dataset($dataset_name);
+    my $otter_db = $ds->otter_dba;
 
     my $sql = q{
         SELECT l.contig_lock_id
