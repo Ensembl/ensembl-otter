@@ -201,6 +201,8 @@ my $_new_feature_id_sub = sub {
 
     package Bio::EnsEMBL::Gene;
 
+    use Bio::Vega::Utils::Detaint qw( detaint_pfam_url_fmt );
+
     sub to_gff {
         my ($self, %args) = @_;
 
@@ -273,10 +275,9 @@ my $_new_feature_id_sub = sub {
             $extra_attrs->{'locus_stable_id'} = $stable;
         }
 
-        if (my $url_fmt = $args{'url_string'}) {
-            die "Cannot detaint url_string=$url_fmt"
-                unless $url_fmt =~ m{^(http[-=_:?/\\.=_a-zA-Z0-9]+\%(?:s|\{pfam\})[-=_:?/\\.a-zA-Z0-9]*)$};
-            $url_fmt = $1;
+        if (my $url_string = $args{'url_string'}) {
+            my $url_fmt = detaint_pfam_url_fmt($url_string);
+            die "Cannot detaint url_string='$url_string'" unless $url_fmt;
             if ($url_fmt =~ s{%\{pfam\}}{%s}) {
                 my $kv = $self->_urlsubst_pfam($url_fmt, $gene_numeric_id);
                 @{$extra_attrs}{ keys %$kv } = values %$kv;
