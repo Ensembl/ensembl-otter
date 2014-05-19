@@ -135,6 +135,11 @@ my $_new_feature_id_sub = sub {
             $gff->{'attributes'}{'Note'} = join ',', @$descs;
         }
 
+        my $url = $self->get_all_attribute_values('url');
+        if ($url and $url->[0]) {
+            $gff->{'attributes'}{'url'} = $url->[0];
+        }
+
         return $gff;
     }
 }
