@@ -7,6 +7,7 @@ use warnings;
 use List::MoreUtils 'uniq'; # CPAN
 
 use Bio::Otter::Lace::Defaults;
+use Bio::Otter::Server::Config;
 
 
 # "Which database?" can now be answered by checking the port number.
@@ -48,12 +49,10 @@ $PORTS_RE = qr{\b($PORTS_RE)\b};
         ) or $usage->();
     $usage->() unless $switch;
 
-    # Client communicates with otter HTTP server
-    my $cl = Bio::Otter::Lace::Defaults::make_Client();
-
-    foreach my $ds ($cl->get_all_DataSets) {
+    my $ds_list = Bio::Otter::Server::Config->SpeciesDat->datasets;
+    foreach my $ds (sort { $a->name cmp $b->name } @$ds_list) {
         my $name = $ds->name;
-        my $dba = $ds->make_Vega_DBAdaptor;
+        my $dba = $ds->otter_dba;
         my $meta = $dba->get_MetaContainer;
         my ($connect) = @{$meta->list_value_by_key($meta_key)};
         unless ($connect) {
