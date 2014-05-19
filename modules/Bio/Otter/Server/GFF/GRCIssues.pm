@@ -8,6 +8,7 @@ use base qw( Bio::Otter::Server::GFF Bio::Otter::Server::GFF::Utils );
 
 use Bio::EnsEMBL::Attribute;
 use Bio::EnsEMBL::MiscFeature;
+use Bio::Vega::Utils::Detaint qw( detaint_url_fmt );
 
 sub Bio::EnsEMBL::Slice::get_all_GRC_issues {
     my ($slice, $server, $sth, $chr_name) = @_;
@@ -21,6 +22,13 @@ sub Bio::EnsEMBL::Slice::get_all_GRC_issues {
 
     my $rows = 0;
 
+    my $url_string = $server->param('url_string');
+    my $url_base;
+    if ($url_string) {
+        $url_base = detaint_url_fmt($url_string);
+        die "Cannot detaint url_string='$url_string'" unless $url_base;
+    }
+
     while (my $issue = $sth->fetchrow_hashref) {
 
         ++$rows;
@@ -32,9 +40,15 @@ sub Bio::EnsEMBL::Slice::get_all_GRC_issues {
         $fp->end(        $issue->{end}   - $chr_start + 1 );
         $fp->strand(     1 );
 
+        my $name = $issue->{jira_id};
         my $note = sprintf '%s: %s (%s)', @{$issue}{ qw( category description status ) };
-        $fp->add_Attribute(_make_attrib('name', $issue->{jira_id}));
+        $fp->add_Attribute(_make_attrib('name', $name));
         $fp->add_Attribute(_make_attrib('note', $note));
+
+        if ($url_base) {
+            my $url = sprintf("$url_base", $name);
+            $fp->add_Attribute(_make_attrib('url', $url));
+        }
 
         push @feature_coll, $fp;
     }
