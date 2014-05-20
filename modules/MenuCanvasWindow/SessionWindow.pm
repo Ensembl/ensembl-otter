@@ -29,7 +29,7 @@ use MenuCanvasWindow::TranscriptWindow;
 use MenuCanvasWindow::GenomicFeaturesWindow;
 use Text::Wrap qw{ wrap };
 
-use Zircon::Tk::Context;
+use Zircon::TkZMQ::Context;
 use Zircon::ZMap;
 
 use Bio::Otter::Lace::Client;
@@ -2553,7 +2553,7 @@ sub zircon_context {
     my ($self) = @_;
     my $zircon_context =
         $self->{'_zircon_context'} ||=
-        Zircon::Tk::Context->new(
+        Zircon::TkZMQ::Context->new(
             '-widget' => $self->menu_bar);
     return $zircon_context;
 }
