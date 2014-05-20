@@ -5,13 +5,16 @@
 use strict;
 use warnings;
 use Net::Domain qw{ hostname };
+use Try::Tiny;
 
 use Bio::Otter::Lace::Defaults;
 use Bio::Vega::DBSQL::DBAdaptor;
-use Bio::Vega::ContigLockBroker;
+use Bio::Vega::SliceLockBroker;
 use Bio::Vega::Utils::XML qw{ freeze_thaw_gene };
 
 use Bio::SeqIO;
+
+die "SELECT ... FROM gene_stable_id ... v65";
 
 my $pep_out = Bio::SeqIO->new(
     -FORMAT => 'fasta',
@@ -78,21 +81,10 @@ my $time_now = time();
         ORDER BY gsid.modified_date DESC limit 1
     });
 
-    my $details = { dryrun => $dryrun };
-    unless ($dryrun) {
-        $details->{locker} = Bio::Vega::ContigLockBroker->new(
-            -HOSTNAME   => hostname(),
-            );
-        $details->{author} = Bio::Vega::Author->new(
-            -NAME       => $cl->author,
-            -EMAIL      => $cl->email,
-            );
-    }
-
     my $recovered = 0;
     my $not_recov = 0;
     while (my ($g_dbID) = $list_nmd->fetchrow) {
-        if (my $count = recover_coding_region($g_dbID, $dba, $latest_with_translation, $details)) {
+        if (my $count = recover_coding_region($g_dbID, $dba, $latest_with_translation, $dryrun)) {
             $recovered += $count;
         } else {
             $not_recov++;
@@ -104,7 +96,7 @@ my $time_now = time();
 }
 
 sub recover_coding_region {
-    my ($g_dbID, $dba, $latest_with_translation, $details) = @_;
+    my ($g_dbID, $dba, $latest_with_translation, $dryrun) = @_;
     my $gene_aptr  = $dba->get_GeneAdaptor;
     my $tsct_aptr  = $dba->get_TranscriptAdaptor;
 
@@ -217,25 +209,26 @@ sub recover_coding_region {
         }
     }
 
-    return $found_tsl + $already_tsl if $details->{dryrun};
+    my $locked_ok = 0;
+    my $work = sub {
+        $locked_ok = 1;
+        $gene_aptr->store($gene, $time_now);
+    };
 
-    if ($found_tsl) {
-        $dba->begin_work;
-        eval {
-            $details->{locker}->lock_by_object($gene, $details->{author});
-            $gene_aptr->store($gene, $time_now);
-            $details->{locker}->remove_by_object($gene, $details->{author});
+    if ( $found_tsl && ! $dryrun ) {
+        my $broker = Bio::Vega::SliceLockBroker->new
+          (-hostname => hostname(), -author => 'for_uid', -adaptor => $gene_aptr);
+        try {
+            $broker->lock_create_for_objects(patch_nmd_genes => $gene);
+            $broker->exclusive_work($work, 1);
+        } catch {
+            my $err = $_;
+            print STDERR "Store failed for g_dbID=$g_dbID, locked=$locked_ok: $err\n";
+        } finally {
+            $broker->unlock_all;
         };
-        if ($@) {
-            my $err = $@;
-            $dba->rollback;
-            print STDERR "LOCK: $err\n";
-        } else {
-            $dba->commit;
-        }    
     }
-    
-    
+
     return $found_tsl + $already_tsl;
 }
 

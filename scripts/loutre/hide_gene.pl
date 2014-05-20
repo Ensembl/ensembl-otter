@@ -38,10 +38,11 @@ use strict;
 use warnings;
 
 use Sys::Hostname;
+use Try::Tiny;
 
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::Otter::Lace::Defaults;
-use Bio::Vega::ContigLockBroker;
+use Bio::Vega::SliceLockBroker;
 use Bio::Vega::Author;
 
 {
@@ -78,7 +79,6 @@ use Bio::Vega::Author;
 
     my $gene_adaptor = $dba->get_GeneAdaptor;
 
-    my $contig_broker = Bio::Vega::ContigLockBroker->new(-hostname => hostname);
     my $author_obj    = Bio::Vega::Author->new(-name => $author, -email => $author);
 
     my @sids;
@@ -108,34 +108,29 @@ use Bio::Vega::Author;
 #       }
 
       if ($force || &proceed() =~ /^y$|^yes$/x ) {
+          my $broker = Bio::Vega::SliceLockBroker->new
+            (-hostname => hostname, -author => $author_obj, -adaptor => $dba);
 
-          my $lock_ok = eval { 
-              $contig_broker->lock_by_object($gene, $author_obj);
-              1;
-          };
-          unless ($lock_ok) {
-              warning("Cannot lock for $id\n$@\n");
-              next GSI;
-          }
-
-          my $ok = eval {
+          my $lock_ok;
+          my $work = sub {
+              $lock_ok = 1;
               $gene_adaptor->hide_db_gene($gene);
-              1;
-          };
-
-          if ($ok) {
               print STDOUT "gene_stable_id $id is now hidden\n";
-          } else {
-              warning("Cannot hide $id\n$@\n");
-          }
-
-          my $unlock_ok = eval {
-              $contig_broker->remove_by_object($gene, $author_obj);
-              1;
+              return;
           };
-          unless ($unlock_ok) {
-              warning("Cannot unlock for $id\n$@\n");
-          }
+
+          try {
+              $broker->lock_create_for_objects("hide_gene.pl" => $gene);
+              $broker->exclusive_work($work, 1);
+          } catch {
+              if ($lock_ok) {
+                  warning("Cannot hide $id\n$_\n");
+              } else {
+                  warning("Cannot lock for $id\n$_\n");
+              }
+          } finally {
+              $broker->unlock_all;
+          };
       }
   } # GSI
 

@@ -5,8 +5,10 @@
 use strict;
 use warnings;
 use Sys::Hostname;
+use Try::Tiny;
+
 use Bio::Vega::Author;
-use Bio::Vega::ContigLockBroker;
+use Bio::Vega::SliceLockBroker;
 use Bio::Otter::Lace::Defaults;
 use Bio::EnsEMBL::Utils::Exception qw(warning);
 
@@ -34,7 +36,7 @@ use Bio::EnsEMBL::Utils::Exception qw(warning);
 
     my $loutre_dbc = $ds->get_cached_DBAdaptor->dbc();
 
-    foreach my $component ('gene', 'transcript') {
+    foreach my $component ('gene', 'transcript') { # would be neater to do them together, per gene, to fit under one slice_lock row
 
         print "------- $component ---------\n";
 
@@ -104,8 +106,6 @@ use Bio::EnsEMBL::Utils::Exception qw(warning);
                     };
 
                     if ($change) {
-
-                        my $cb = Bio::Vega::ContigLockBroker->new(-hostname => hostname);
                         my $author_obj = Bio::Vega::Author->new(-name => $cl->author, -email => $cl->email);
                         my $object_ad =
                             $component eq 'gene'
@@ -113,25 +113,35 @@ use Bio::EnsEMBL::Utils::Exception qw(warning);
                           : $ds->get_cached_DBAdaptor->get_TranscriptAdaptor();
                         my $object = $object_ad->fetch_by_stable_id($stable_id);
 
-                        eval {
-                            print "Locking $component $stable_id\n";
-                            $cb->lock_by_object($object, $author_obj);
+                        my $broker = Bio::Vega::SliceLockBroker->new
+                          (-hostname => hostname,
+                           -author => $author_obj,
+                           -adaptor => $object_ad);
 
+                        my $locked_ok = 0;
+                        my $work = sub {
+                            $locked_ok = 1;
                             print "EXECUTING: $change_sql\n";
                             my $change_sth = $loutre_dbc->prepare($change_sql);
                             $change_sth->execute();
+                            return;
                         };
-                        if ($@) {
+
+                        my $ok = try {
+                            print "Locking $component $stable_id\n";
+                            $broker->lock_create_for_objects('repair_duplicate_names' => $object);
+                            $broker->exclusive_work($work, 1);
+                            1;
+                        } catch {
                             warning(
-"Cannot rename $component $stable_id to $change_to_this because the object is locked\n$@\n"
+"Cannot rename $component $stable_id to $change_to_this (locked_ok=$locked_ok)\n$_\n"
                             );
 
-                            # remove the stored locks on the reference slice in case alt slice locking fails
-
-                            next VECTOR;
-                        }
-                        print "Unlocking $component $stable_id\n";
-                        $cb->remove_by_object($object, $author_obj);
+                            0;
+                        } finally {
+                            $broker->unlock_all;
+                        };
+                        next VECTOR unless $ok;
                     }
                     else {
                         print "PRETENDING TO EXECUTE: $change_sql\n";
