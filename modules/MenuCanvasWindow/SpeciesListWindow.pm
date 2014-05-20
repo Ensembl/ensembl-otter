@@ -12,7 +12,7 @@ use Try::Tiny;
 use Tk::DialogBox;
 
 use Zircon::ZMap;
-use Zircon::Tk::Context;
+use Zircon::TkZMQ::Context;
 
 use Bio::Otter::Utils::About;
 use Bio::Otter::Lace::Client;
@@ -422,7 +422,7 @@ sub zircon_context {
     my ($self) = @_;
     my $zircon_context =
         $self->{'_zircon_context'} ||=
-        Zircon::Tk::Context->new(
+        Zircon::TkZMQ::Context->new(
             '-widget' => $self->menu_bar);
     return $zircon_context;
 }
