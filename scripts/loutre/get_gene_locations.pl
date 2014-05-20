@@ -50,7 +50,6 @@ use Sys::Hostname;
 use Net::Netrc;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::Vega::DBSQL::DBAdaptor;
-use Bio::Vega::ContigLockBroker;
 use Bio::Vega::Utils::Comparator qw(compare);
 use Bio::Otter::Lace::Defaults;
 use Getopt::Long;

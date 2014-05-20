@@ -8,7 +8,7 @@ use Try::Tiny;
 use YAML 'Dump';
 
 use Bio::Otter::Lace::Defaults;
-use Bio::Vega::ContigLockBroker;
+use Bio::Vega::SliceLockBroker;
 use Bio::Vega::Author;
 
 sub main {
@@ -42,7 +42,6 @@ sub main {
     my $otter_dba = $ds->get_cached_DBAdaptor;
 
     my $gene_adaptor  = $otter_dba->get_GeneAdaptor;
-    my $contig_broker = Bio::Vega::ContigLockBroker->new(-hostname => hostname);
     my $author_obj    = Bio::Vega::Author->new(-name => $cl->author, -email => $cl->email);
 
     $limit = digest_limit($limit) if defined $limit;
@@ -78,8 +77,7 @@ sub main {
           AND t.gene_id = ?
         }
     );
-    
-    $otter_dba->begin_work;
+
 
     my %count;
     $gene_sth->execute($old_re);
@@ -104,55 +102,73 @@ sub main {
             next GENE;
         }
 
-        my $next_GENE;
-        try {
-            $contig_broker->lock_by_object($gene, $author_obj) unless $dry;
-        } catch {
-            warn "Skip - Cannot lock for gene $gene_id: $_\n";
-            print "\t!! lock busy\n";
-            $count{skip_because_locked} ++;
-            $next_GENE = 1;
-        };
-        next GENE if $next_GENE;
+        my $did_lock;
+        my $do_fix = sub {
+            $did_lock = 1; # if !$dry, we have the lock
 
-        printf "\t=> %s\n", $new_gene_name;
+            printf "\t=> %s\n", $new_gene_name;
 
-        if ($dry) {
-            $count{dry_gene}++;
-        } else {
-            $update_gene->execute($gene_id);
-            $update_gene_name->execute($new_gene_name, $gene_id);
-            $count{renamed_gene} ++;
-        }
-
-        $tsct_sth->execute($gene_id);
-        while (my ($tsct_id, $tsct_name) = $tsct_sth->fetchrow) {
-            print "  TSTC: $tsct_id\t$tsct_name\n";
-            my $new_tsct_name = $tsct_name;
-            unless ($new_tsct_name =~ s/$old_re/$re_subst/) {
-                die "Unexpected name format: '$tsct_name'" if $tsct_insist;
-                $count{skipped_transcript} ++;
-                next;
-            }
             if ($dry) {
-                $count{dry_transcript}++;
+                $count{dry_gene}++;
             } else {
-                $update_tsct_name->execute($new_tsct_name, $tsct_id);
-                $count{renamed_transcript} ++;
+                $update_gene->execute($gene_id);
+                $update_gene_name->execute($new_gene_name, $gene_id);
+                $count{renamed_gene} ++;
             }
-        }
 
+            $tsct_sth->execute($gene_id);
+            while (my ($tsct_id, $tsct_name) = $tsct_sth->fetchrow) {
+                print "  TSTC: $tsct_id\t$tsct_name\n";
+                my $new_tsct_name = $tsct_name;
+                unless ($new_tsct_name =~ s/$old_re/$re_subst/) {
+                    die "Unexpected name format: '$tsct_name'" if $tsct_insist;
+                    $count{skipped_transcript} ++;
+                    next;
+                }
+                if ($dry) {
+                    $count{dry_transcript}++;
+                } else {
+                    $update_tsct_name->execute($new_tsct_name, $tsct_id);
+                    $count{renamed_transcript} ++;
+                }
+            }
+            return;
+        };
+
+        my $broker;
         try {
-            $contig_broker->remove_by_object($gene, $author_obj) unless $dry;
+            if ($dry) {
+                $do_fix->();
+            } else {
+                $broker = Bio::Vega::SliceLockBroker->new
+                  (-hostname => hostname,
+                   -author => $author_obj,
+                   -adaptor => $otter_dba);
+                $broker->lock_create_for_objects
+                  ("fix_rename_genes s{$old_re}{$re_subst}", $gene);
+                $broker->exclusive_work($do_fix, 1);
+                # it is unlocked and committed
+            }
         } catch {
-            $count{unlock_fail}++;
-            warn "Unlock failed!  $_\n".
-              "  Switching to dry-run mode, to ease the cleanup";
-            $dry = 1;
-        }
+            if ($did_lock) {
+                warn "Failed! $_\n";
+                print "\t!! FAILED\n";
+                warn "  Switching to dry-run mode, to ease the cleanup"
+                  unless $dry;
+                $dry = 1;
+                $count{failed}++;
+            } else {
+                warn "Skip - Cannot lock for gene $gene_id: $_\n";
+                print "\t!! lock busy\n";
+                $count{skip_because_locked} ++;
+            }
+        } finally {
+            if ($broker) {
+                my @fail = $broker->unlock_all;
+                $count{unlock_fail} += @fail; # could overcount if COMMIT fails
+            }
+        };
     }
-
-    $otter_dba->commit;
 
     print Dump({ counts => \%count });
 
