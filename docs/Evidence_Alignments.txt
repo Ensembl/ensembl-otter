@@ -8,8 +8,9 @@ Pre-requisite steps
 * Re-visit OTF of evidence against spliced transcript, and invoke the
   splitting of alignment into exons according to transcript structure.
 
-  The split alignments to be stored in SQLite (as for revised
-  OTF-vs-genome system) and passed to ZMap for display.
+  The split alignments to be stored in SQLite (as for the revised
+  OTF-vs-genome system) and passed to ZMap (or straight to blixem)
+  for display.
 
 * A link will need to be made from the AceDB transcripts to the SQLite
   spliced alignment tables. This may imply a dependency on moving out
