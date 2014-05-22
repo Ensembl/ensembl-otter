@@ -2576,14 +2576,15 @@ sub zmap_new {
     } else { # RT#387856
         push @$arg_list, Tk::Screens->nxt( $self->top_window )->gtk_arg;
     }
+    my $to_list_config = $client->config_section_value(Peer => 'timeout-list');
+    chomp $to_list_config;
+    my @to_list = split(' ', $to_list_config);
     my $zmap =
         Zircon::ZMap->new(
             '-app_id'     => $self->zircon_app_id,
             '-context'    => $self->zircon_context,
             '-arg_list'   => $arg_list,
-            '-timeout_ms'      => $client->config_section_value(Peer => 'timeout-ms'),
-            '-timeout_retries' => $client->config_section_value(Peer => 'timeout-retries'),
-            '-rolechange_wait' => $client->config_section_value(Peer => 'rolechange-wait'), # XXX: temporary, awaiting RT#324544
+            '-timeout_list' => \@to_list,
         );
     return $zmap;
 }

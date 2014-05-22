@@ -65,8 +65,10 @@ sub zmap_config_global {
     my $st = $short_title ? 'true' : 'false';
     my $xremote_debug = Bio::Otter::Debug->debug('XRemote');
     my $xrd = $xremote_debug ? 'true' : 'false';
-    my $to_ms = $self->Client->config_section_value(Peer => 'timeout-ms');
-    my $to_rt = $self->Client->config_section_value(Peer => 'timeout-retries');
+    my $to_ms   = $self->Client->config_section_value(Peer => 'timeout-ms');
+    my $to_rt   = $self->Client->config_section_value(Peer => 'timeout-retries');
+    my $to_list = $self->Client->config_section_value(Peer => 'timeout-list');
+    $to_list .= "\n" unless $to_list =~ /\n$/;
     return <<"CONF";
 
 [ZMap]
@@ -80,6 +82,8 @@ show-time = true
 [Peer]
 timeout-ms = $to_ms
 timeout-retries = $to_rt
+timeout-list = << TIMEOUT_LIST
+${to_list}TIMEOUT_LIST
 CONF
 }
 
