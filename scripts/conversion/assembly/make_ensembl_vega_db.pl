@@ -43,6 +43,7 @@ Specific options:
                                         the insert statements of the
                                         entries of the external_db table
     --attribtypefile=FILE               read attribute type definition from FILE
+    --for_web                           transfer Ensembl repeats, calculate %GC
 
 =head1 DESCRIPTION
 
@@ -126,7 +127,7 @@ $support->parse_extra_options(
   'evegapass=s',
   'evegadbname=s',
   'assembly=s',
-  'no_web',
+  'for_web',
 );
 $support->allowed_params(
   $support->get_common_params,
@@ -142,7 +143,7 @@ $support->allowed_params(
   'evegapass',
   'evegadbname',
   'assembly',
-  'no_web',
+  'for_web',
 );
 
 if ($support->param('help') or $support->error) {
@@ -185,7 +186,7 @@ my $params = {
       'evegauser',
       'evegapass',
       'evegadbname',
-      'no_web',
+      'for_web',
       'assembly',
     ],
     'replace' => {
@@ -385,7 +386,7 @@ $sql = qq(
 $c = $dbh->{'ensembl'}->do($sql) unless ($support->param('dry_run'));
 $support->log_stamped("Done transfering $c dna entries.\n\n");
 
-unless ($support->param('no_web')) {
+if ($support->param('for_web')) {
   # transfer repeat_consensus and repeat_feature from Ensembl db
   $support->log_stamped("Transfering Ensembl repeat_consensus...\n");
   $sql = qq(
@@ -582,7 +583,7 @@ $sql = qq(SELECT count(*)
              AND cs.version = \'$vega_assembly\'
              AND cs2.version = \'$ensembl_assembly\');
 unless ($support->param('dry_run')) {
-  my ($check) = $dbh->{'vega'}->selectrow_array($sql) unless ($support->param('dry_run'));
+  my ($check) = $dbh->{'vega'}->selectrow_array($sql);
   if ($check != $c) {
     $support->log_warning("There were $c inserted assembly mapping entries but only $check can be retrieved after linking to the seq_region table.\n");
   }
@@ -601,11 +602,11 @@ if (! $support->param('dry_run') ) {
     $support->log_stamped("Done.\n\n");
   };
 
-  unless ($support->param('no_web')) {
+  if ($support->param('for_web')) {
     # run percent gc calc.pl
     $params->{'replace'}{'logfile'} = 'make_ensembl_vega_percent_gc_calc.pl.log';
     $options = $support->create_commandline_options($params);
-    $support->log_stamped("\nCalculating %GC for ".$support->param('evegadbname')."...\n");
+    $support->log_stamped("Calculating %GC for ".$support->param('evegadbname')."...\n");
     eval {
       system("../../../../sanger-plugins/vega/utils/vega_percent_gc_calc.pl $options") == 0
         or $support->warning("Error running vega_percent_gc_calc.pl: $!");
