@@ -68,7 +68,6 @@ sub zmap_config_global {
     my $to_ms   = $self->Client->config_section_value(Peer => 'timeout-ms');
     my $to_rt   = $self->Client->config_section_value(Peer => 'timeout-retries');
     my $to_list = $self->Client->config_section_value(Peer => 'timeout-list');
-    $to_list .= "\n" unless $to_list =~ /\n$/;
     return <<"CONF";
 
 [ZMap]
@@ -82,8 +81,7 @@ show-time = true
 [Peer]
 timeout-ms = $to_ms
 timeout-retries = $to_rt
-timeout-list = << TIMEOUT_LIST
-${to_list}TIMEOUT_LIST
+timeout-list = $to_list
 CONF
 }
 
