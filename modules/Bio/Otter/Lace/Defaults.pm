@@ -37,6 +37,7 @@ my $_USERCFG_FN;     # for testing
     }
 }
 __init();
+__fast_ini();
 
 my @CLIENT_OPTIONS = qw(
     url=s
@@ -252,8 +253,7 @@ sub __parse_available_config_files {
 
     foreach my $file (@conf_files) {
         $UCFG_POS = @{$CONFIG_INIFILES} if $file eq $ucfg_fn;
-        next unless -e $file;
-        if (my $file_opts = __options_from_file($file)) {
+        if (my $file_opts = __options_from_file($file, 1)) {
             push @$CONFIG_INIFILES, $file_opts;
         }
     }
@@ -263,18 +263,40 @@ sub __parse_available_config_files {
 }
 
 sub __options_from_file {
-    my ($file) = @_;
+    my ($file, $allowempty) = @_;
+    $allowempty ||= 0;
 
     return unless -e $file;
 
     warn "Trying $file\n" if $DEBUG_CONFIG;
-    my $ini = Config::IniFiles->new( -file => $file );
+    my $ini = Config::IniFiles->new( -file => $file, -allowempty => $allowempty);
     confess "Errors found in configuration $file: @Config::IniFiles::errors"
       unless defined $ini;
+
+    # Is it actually empty?
+    my @sec = $ini->Sections;
+    if (!@sec) {
+        warn "Config file $file is empty - ignoring\n";
+        unlink($file) and warn "Removed empty config file $file";
+        return;
+    }
 
     return $ini;
 }
 
+
+sub __fast_ini {
+    # a heuristic to detect O(n^2) versions of Config::IniFiles and
+    # warn, to insulate against build regression
+    my $civ = Config::IniFiles->VERSION;
+    if ($civ =~ m{^\d+\.\d+$} && $civ < 2.84) {
+        warn "***\n*** Suspect we have the slow Config::IniFiles v$civ"
+          unless Config::IniFiles->can('_cache_purge');
+    } else {
+        warn "Config::IniFiles v$civ: unknown, is it a slow one?";
+    }
+    return;
+}
 
 
 ################################################
