@@ -2577,8 +2577,7 @@ sub zmap_new {
         push @$arg_list, Tk::Screens->nxt( $self->top_window )->gtk_arg;
     }
     my $to_list_config = $client->config_section_value(Peer => 'timeout-list');
-    chomp $to_list_config;
-    my @to_list = split(' ', $to_list_config);
+    my @to_list = split(',', $to_list_config);
     my $zmap =
         Zircon::ZMap->new(
             '-app_id'     => $self->zircon_app_id,

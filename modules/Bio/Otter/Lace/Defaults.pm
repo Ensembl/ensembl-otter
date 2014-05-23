@@ -675,12 +675,7 @@ session_colourset = cadetblue firebrick goldenrod #f80 #ff00ff chartreuse2
 timeout-ms=2000
 timeout-retries=10
 # what we pass to Zircon-0MQ
-timeout-list=<<TIMEOUT_LIST
- 333
-1000
-3000
-9000
-TIMEOUT_LIST
+timeout-list=333,1000,3000,9000
 
 [RequestQueue]
 # just send everything for now
