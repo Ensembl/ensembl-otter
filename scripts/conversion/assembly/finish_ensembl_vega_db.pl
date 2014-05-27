@@ -559,7 +559,7 @@ $c = $dbh->{'evega'}->do(qq(UPDATE xref SET version = 0 WHERE version = ''));
 $support->log("Updated versions of $c xrefs\n\n");
 #tidy up xrefs with info_type (HC noise)
 $support->log_stamped("Setting correct default info_type for xrefs.\n");
-$c = $dbh->{'evega'}->do(qq(UPDATE xref SET info_type = 'NONE' WHERE version = ''));
+$c = $dbh->{'evega'}->do(qq(UPDATE xref SET info_type = 'NONE' WHERE info_type = ''));
 $support->log("Updated info_type of $c xrefs\n");
 
 # finish logfile
