@@ -90,11 +90,26 @@ sub fixed_genomic_tests {
 
 my @transcript_tests = (
     {
-        name        => 'test_ts vs. test_query',
+        name        => 'test_ts vs. test_query, fwd exons',
         target_path => "${path}/test_ts.fa",
-        query_path  => "${path}/test_query.fa",
-        query_ids   => [qw(BC018923.fwd BC018923.rev)],
+        query_path  => "${path}/BC018923.fwd.fa",
+        query_ids   => [qw(BC018923.fwd)],
         ts_spec     => "${path}/exons.fwd.txt",
+        ts_strand   => 1,
+        vulgar      => {
+            'BC018923.fwd' => 'BC018923.fwd 0 2538 + EMBOSS_001 120388 140662 + 12574 M 974 974 5 0 2 I 0 2242 3 0 2 M 33 33 G 0 1 M 159 159 5 0 2 I 0 1308 3 0 2 M 55 55 G 2 0 M 110 110 5 0 2 I 0 8897 3 0 2 M 230 230 5 0 2 I 0 3909 3 0 2 M 156 156 5 0 2 I 0 758 3 0 2 M 80 80 5 0 2 I 0 599 3 0 2 M 739 739',
+        },
+    },
+    {
+        name        => 'test_ts vs. test_query, rev exons',
+        target_path => "${path}/test_ts.fa",
+        query_path  => "${path}/BC018923.fwd.fa",
+        query_ids   => [qw(BC018923.fwd)],
+        ts_spec     => "${path}/exons.rev.txt",
+        ts_strand   => -1,
+        vulgar      => {
+            'BC018923.fwd' => 'BC018923.fwd 0 2538 + EMBOSS_001 55274 35000 - 12574 M 974 974 5 0 2 I 0 2242 3 0 2 M 33 33 G 0 1 M 159 159 5 0 2 I 0 1308 3 0 2 M 55 55 G 2 0 M 110 110 5 0 2 I 0 8897 3 0 2 M 230 230 5 0 2 I 0 3909 3 0 2 M 156 156 5 0 2 I 0 758 3 0 2 M 80 80 5 0 2 I 0 599 3 0 2 M 739 739',
+        },
     },
     );
 

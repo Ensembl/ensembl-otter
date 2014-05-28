@@ -51,10 +51,20 @@ sub main_tests {
 sub run_test {
     my $test = shift;
 
+    $test->{strict_hit_list} = 1;
     my $type = $test->{type} ||= 'Test_EST';
 
     my $target = build_target($test);
     my ($result_set, @features) = run_otf_transcript_test($test, $target);
+
+    foreach my $q (keys %{$test->{vulgar}}) {
+        my $rs_ga  = $result_set->hit_by_query_id($q)->[0];
+        my $exp_ga = Bio::Otter::GappedAlignment
+            ->from_vulgar($test->{vulgar}->{$q})
+            ->consolidate_introns;
+        $exp_ga->score($rs_ga->score);
+        is($rs_ga->vulgar_string, $exp_ga->vulgar_string, "vulgar for '$q'");
+    }
 
     my $cs    = Bio::EnsEMBL::CoordSystem->new(
         '-name' => 'OTF Test Coords',
@@ -82,18 +92,18 @@ sub run_otf_transcript_test {
 
     $test->{builder_class} = 'Bio::Otter::Lace::OnTheFly::Builder::Transcript';
     $test->{runner_class}  = 'Bio::Otter::Lace::OnTheFly::Runner::Transcript';
-    $test->{runner_args}   = { transcript => build_transcript($test->{ts_spec}) };
+    $test->{runner_args}   = { transcript => build_transcript($test->{ts_spec}, $test->{ts_strand}) };
 
     return run_otf_test($test, $target);
 }
 
 sub build_transcript {
-    my ($spec_fn) = @_;
+    my ($spec_fn, $strand) = @_;
 
     open my $spec_fh, '<', $spec_fn or die "failed to open ${spec_fn}: $!";
 
     my $ts = Hum::Ace::SubSeq->new;
-    $ts->strand(1);             # FIXME!!
+    $ts->strand($strand);
 
     while (my $line = <$spec_fh>) {
         chomp $line;
