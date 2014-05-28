@@ -47,10 +47,11 @@ sub main {
         ) or die "Bad options";
     die "No dataset name given" unless $dataset_name;
     die "Did not understand extra argv (@ARGV)" if @ARGV;
-    die "Can only perform on of < -delete | -expire | -interrupt >"
+    die "Can only perform one of < -delete | -expire | -interrupt >"
       if (!!$do_delete + !!$do_expire + !!$do_interrupt) > 1;
 
     my $ds = Bio::Otter::Server::Config->SpeciesDat->dataset($dataset_name);
+    die "Unknown dataset '$dataset_name'" unless $ds;
     my $otter_db = $ds->otter_dba;
 
     my $exit = 0;
