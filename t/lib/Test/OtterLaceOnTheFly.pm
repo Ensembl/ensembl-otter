@@ -123,6 +123,18 @@ my @transcript_tests = (
         },
         type        => 'Test_Protein',
     },
+    {
+        name        => 'test_ts vs. protein Q96S55, rev exons',
+        target_path => "${path}/test_ts_b.fa",
+        query_path  => "${path}/Q96S55.fasta",
+        query_ids   => [qw(sp|Q96S55|WRIP1_HUMAN)],
+        ts_spec     => "${path}/exons_b.rev.txt",
+        ts_strand   => -1,
+        vulgar      => {
+            'sp|Q96S55|WRIP1_HUMAN' => 'sp|Q96S55|WRIP1_HUMAN 0 665 . EMBOSS_001 55122 35466 - 3329 M 274 822 5 0 2 I 0 2242 3 0 2 M 11 33 F 0 1 M 53 159 5 0 2 I 0 1233 3 0 2 M 43 129 F 0 1 G 1 0 M 36 108 S 0 2 5 0 2 I 0 8897 3 0 2 S 1 1 M 76 228 S 0 1 5 0 2 I 0 3909 3 0 2 S 1 2 M 51 153 S 0 1 5 0 2 I 0 758 3 0 2 S 1 2 M 26 78 5 0 2 I 0 599 3 0 2 M 91 273',
+        },
+        type        => 'Test_Protein',
+    },
     );
 
 sub fixed_transcript_tests {
