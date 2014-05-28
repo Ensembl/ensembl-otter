@@ -8,9 +8,10 @@ use warnings;
 use Carp;
 
 use Fcntl qw{ O_WRONLY O_CREAT };
+use File::Basename;
 use Config::IniFiles;
-use Log::Log4perl;
 use Try::Tiny;
+use Scalar::Util 'weaken';
 
 use Bio::Vega::Region;
 use Bio::Vega::Transform::Otter::Ace;
@@ -19,9 +20,11 @@ use Bio::Vega::Transform::XML;
 
 use Bio::Otter::Debug;
 use Bio::Otter::Lace::AccessionTypeCache;
+use Bio::Otter::Lace::Chooser::Collection;
 use Bio::Otter::Lace::DB;
 use Bio::Otter::Lace::Slice; # a new kind of Slice that knows how to get pipeline data
 use Bio::Otter::Lace::ProcessGFF;
+use Bio::Otter::Log::WithContext;
 use Bio::Otter::Utils::Config::Ini qw( config_ini_format );
 
 use Hum::Ace::LocalServer;
@@ -47,6 +50,7 @@ sub Client {
 
     if ($client) {
         $self->{'_Client'} = $client;
+        $self->colour( $self->next_session_colour );
     }
     return $self->{'_Client'};
 }
@@ -259,9 +263,9 @@ sub write_otter_acefile {
 
     # Storing ace_text in a file
     my $ace_filename = $self->home . '/rawdata/otter.ace';
-    open my $ace_fh, '>', $ace_filename or die "Can't write to '$ace_filename'";
+    open my $ace_fh, '>', $ace_filename or $self->logger->logdie("Can't write to '$ace_filename'");
     print $ace_fh $parser->make_ace;
-    close $ace_fh or confess "Error writing to '$ace_filename' : $!";
+    close $ace_fh or $self->logger->logconfess("Error writing to '$ace_filename' : $!");
     $self->add_acefile($ace_filename);
 
     return;
@@ -281,9 +285,9 @@ sub write_file {
     my ($self, $file_name, $content) = @_;
 
     my $full_file = join('/', $self->home, $file_name);
-    open my $LF, '>', $full_file or die "Can't write to '$full_file'; $!";
+    open my $LF, '>', $full_file or $self->logger->logdie("Can't write to '$full_file'; $!");
     print $LF $content;
-    close $LF or die "Error writing to '$full_file'; $!";
+    close $LF or $self->logger->logdie("Error writing to '$full_file'; $!");
 
     return;
 }
@@ -293,49 +297,88 @@ sub read_file {
 
     local $/ = undef;
     my $full_file = join('/', $self->home, $file_name);
-    open my $RF, '<', $full_file or die "Can't read '$full_file'; $!";
+    open my $RF, '<', $full_file or $self->logger->logdie("Can't read '$full_file'; $!");
     my $content = <$RF>;
-    close $RF or die "Error reading '$full_file'; $!";
+    close $RF or $self->logger->logdie("Error reading '$full_file'; $!");
     return $content;
 }
 
-sub recover_smart_slice_from_region_xml {
+sub recover_slice_from_region_xml {
     my ($self) = @_;
 
-    my $client = $self->Client or die "No Client attached";
+    my $client = $self->Client or $self->logger->logdie("No Client attached");
 
     my $xml = $self->fetch_region_xml || $self->fetch_lock_region_xml;
     unless ($xml) {
-        confess "Could not fetch XML from SQLite DB to create smart slice";
+        $self->logger->logconfess("Could not fetch XML from SQLite DB to create smart slice");
     }
 
     my $parser = Bio::Vega::Transform::Otter->new;
     $parser->parse($xml);
-    my $slice = $parser->get_ChromosomeSlice;
+    my $chr_slice = $parser->get_ChromosomeSlice;
 
-    my $smart_slice = Bio::Otter::Lace::Slice->new(
+    my $slice = Bio::Otter::Lace::Slice->new(
         $client,
         $parser->species,
-        $slice->seq_region_name,
-        $slice->coord_system->name,
-        $slice->coord_system->version,
+        $chr_slice->seq_region_name,
+        $chr_slice->coord_system->name,
+        $chr_slice->coord_system->version,
         $parser->chromosome_name,
-        $slice->start,
-        $slice->end,
+        $chr_slice->start,
+        $chr_slice->end,
         );
-    $self->smart_slice($smart_slice);
+    $self->slice($slice);
 
     return;
 }
 
-sub smart_slice {
-    my ($self, $smart_slice) = @_;
+sub slice {
+    my ($self, $slice) = @_;
 
-    if ($smart_slice) {
+    if ($slice) {
         $self->{'_offset'} = undef;
-        $self->{'_smart_slice'} = $smart_slice;
+        $self->{'_slice'} = $slice;
     }
-    return $self->{'_smart_slice'};
+    return $self->{'_slice'};
+}
+
+# The seq_region in the local DB is created and stored lazily when first required.
+#
+sub db_slice {
+    my ($self) = @_;
+
+    my $db_slice = $self->{'_db_slice'};
+    return $db_slice if $db_slice;
+
+    my $ensembl_slice = $self->slice->ensembl_slice;
+
+    # If this is a recovered session we will already have the seq_region in the local DB
+    my $slice_adaptor = $self->DB->vega_dba->get_SliceAdaptor;
+    my $db_seq_region = $slice_adaptor->fetch_by_region(
+        $ensembl_slice->coord_system->name,
+        $ensembl_slice->seq_region_name,
+        );
+
+    unless ($db_seq_region) {
+
+        # db_seq_region's coord_system needs to be the one already in the DB.
+        my $cs_adaptor = $self->DB->vega_dba->get_CoordSystemAdaptor;
+        my $cs = $cs_adaptor->fetch_by_name($ensembl_slice->coord_system->name, $ensembl_slice->coord_system->version);
+
+        # db_seq_region must start from 1
+        my $db_seq_region_parameters = {
+            %$ensembl_slice,
+            coord_system      => $cs,
+            start             => 1,
+            seq_region_length => $ensembl_slice->end,
+        };
+        $db_seq_region = Bio::EnsEMBL::Slice->new_fast($db_seq_region_parameters);
+
+        $slice_adaptor->store($db_seq_region);
+    }
+
+    $db_slice = $db_seq_region->sub_Slice($ensembl_slice->start, $ensembl_slice->end);
+    return $self->{'_db_slice'} = $db_slice;
 }
 
 sub slice_name {
@@ -345,12 +388,74 @@ sub slice_name {
     unless ($slice_name = $self->{'_slice_name'}) {
         my @slice_list = $self->aceperl_db_handle->fetch(Assembly => '*');
         my @slice_names = map { $_->name } @slice_list;
-        die "Error: more than 1 assembly in database: @slice_names"
-            if @slice_names > 1;
+        $self->logger->logdie("Error: more than 1 assembly in database: @slice_names") if @slice_names > 1;
         $slice_name = $self->{'_slice_name'} = $slice_names[0];
     }
 
     return $slice_name;
+}
+
+sub session_colourset {
+    my ($self) = @_;
+    my $colours = $self->Client->config_value('session_colourset')
+      || '';
+    my (@col, @bad, $M);
+    try {
+        $M = try { MainWindow->new }; # optional, to avoid hard dependency
+        foreach my $col (split / /, $colours) {
+            if (try { $M->configure(-background => $col); 1 } # colour is valid
+                || !$M) { # assume colour is valid
+                push @col, $col;
+            } else {
+                push @bad, $col;
+            }
+        }
+    } finally {
+        $M->destroy if $M && Tk::Exists($M);
+    };
+    $self->logger->error("Ignored invalid [client]session_colourset values (@bad).  RGB may be given like '#fab' or '#ffaabb'") if @bad;
+    push @col, qw( red green blue ) if @col < 3;
+    return @col;
+}
+
+# Get as a plain string.
+# Set as SCALARref, held also below (but weakened)
+sub colour {
+    my ($self, $set) = @_;
+    $self->{'_colour'} = $set if defined $set;
+    return $self->{'_colour'} ? ${ $self->{'_colour'} } : ();
+}
+
+{
+    my %colour_in_use; # key = colour, value = list of weakened SCALARref
+    sub next_session_colour {
+        my ($self) = @_;
+        my @col = $self->session_colourset;
+        my %prio; # key=colour, value=priority
+        @prio{@col} = reverse(1 .. scalar @col);
+
+        # Remove no-longer-used
+        while (my ($col, $use) = each %colour_in_use) {
+            if (@$use) {
+                # colour in use, now or recently
+                my @use = grep { defined } @$use;
+                for (my $i=0; $i<@use; $i++) { weaken($use[$i]) }
+                $colour_in_use{$col} = \@use;
+                $prio{$col} = -@use # set negative or zero priority
+                  +($prio{$col} / 1000); # collision buster
+            } else {
+                # colour became unused last time, forget it
+                delete $colour_in_use{$col};
+            }
+        }
+
+        # Choose the next & remember
+        my ($next) = sort { $prio{$b} <=> $prio{$a} } keys %prio;
+        my $colref = \$next;
+        push @{ $colour_in_use{$next} }, $colref;
+        weaken($colour_in_use{$next}->[-1]);
+        return $colref;
+    }
 }
 
 my $gtkrc = <<'GTKRC'
@@ -384,7 +489,7 @@ sub zmap_dir_init {
 
     my $dir = $self->zmap_dir;
     unless (-d $dir) {
-        mkdir $dir or confess "failed to create the directory '$dir': $!\n";
+        mkdir $dir or $self->logger->logconfess("failed to create the directory '$dir': $!");
     }
 
     $self->MethodCollection->ZMapStyleCollection->write_to_file($self->stylesfile);
@@ -401,10 +506,10 @@ sub zmap_config_write {
 
     my $path = sprintf "%s/%s", $self->zmap_dir, $file;
     open my $fh, '>', $path
-        or confess "Can't write to '$path'; $!";
+        or $self->logger->logconfess("Can't write to '$path'; $!");
     print $fh $config;
     close $fh
-      or confess "Error writing to '$path'; $!";
+      or $self->logger->logconfess("Error writing to '$path'; $!");
 
     return;
 }
@@ -436,7 +541,8 @@ sub _zmap_config {
             'pfetch'          => ( $pfetch_www ? $pfetch_url : 'pfetch' ),
             'xremote-debug'   => $xremote_debug ? 'true' : 'false',
             'stylesfile'      => $self->stylesfile,
-            %{$self->smart_slice->zmap_config_stanza},
+            ($self->colour ? ('session-colour'  => $self->colour) : ()),
+            %{$self->slice->zmap_config_stanza},
         },
 
         'glyphs' => {
@@ -479,28 +585,69 @@ sub ace_config {
         , $gff_version;
 
     my @methods = $self->MethodCollection->get_all_top_level_Methods;
-    my $featuresets = [ map { $_->name } @methods ];
+    my @method_names = map { $_->name } @methods;
+
+    # extract DNA source into a separate initial stanza for pre-loading
+    #
+    my $dna         = [ grep { $_ eq 'DNA' } @method_names ];
+    my $featuresets = [ grep { $_ ne 'DNA' } @method_names ];
+
+    my @sources = $slice_name;
+    my $dna_slice_name;
+    if (@$dna) {
+        $dna_slice_name = sprintf '%s-DNA', $slice_name;
+        unshift @sources, $dna_slice_name;
+
+        # RT400142: we also put 'DNA' back in as the first item in the main stanza
+        unshift @$featuresets, @$dna;
+    }
 
     my $config = {
 
         'ZMap' => {
-            sources => [ $slice_name ],
+            sources => \@sources,
         },
 
-        $slice_name => {
+        $slice_name => $self->_ace_slice_config(
             url         => $url,
-            writeback   => 'false',
-            sequence    => 'true',
-            group       => 'always',
             featuresets => $featuresets,
-            stylesfile  => $self->stylesfile,
             version     => $acedb_version,
-        },
+        ),
 
     };
 
+    if ($dna_slice_name) {
+        $config->{$dna_slice_name} = $self->_ace_slice_config(
+            url         => $url,
+            featuresets => $dna,
+            version     => $acedb_version,
+            );
+    }
+
     return $config;
 }
+
+sub _ace_slice_config {
+    my ($self, @args) = @_;
+    return {
+        writeback   => 'false',
+        sequence    => 'true',
+        group       => 'always',
+        stylesfile  => $self->stylesfile,
+        @args,
+    }
+}
+
+my $sqlite_fetch_query = "
+SELECT  oai.accession_sv     AS  'Name'
+     ,  oai.sequence         AS  'Sequence'
+     ,  oai.description      AS  'Description'
+     ,  osi.scientific_name  AS  'Organism'
+FROM             otter_accession_info  oai
+LEFT OUTER JOIN  otter_species_info    osi  USING  ( taxon_id )
+WHERE  oai.accession_sv  IN  ( '%m' )
+";
+$sqlite_fetch_query =~ s/[[:space:]]+/ /g; # collapse into one line for the blixem config file
 
 sub blixem_config {
     my ($self) = @_;
@@ -541,6 +688,7 @@ sub blixem_config {
             'user-fetch'            => 'internal',
             # ZMap stylesfile is used to pick up colours for transcripts
             'stylesfile'            => $self->stylesfile,
+            ($self->colour ? ('session-colour'  => $self->colour) : ()),
         },
 
 
@@ -562,11 +710,25 @@ sub blixem_config {
 
         'dna-match' => {
             'link-features-by-name' => 'true',
+            'bulk-fetch'            => 'sqlite-fetch',
+            'user-fetch'            => [$embl_fetch, $fasta_fetch, 'internal'],
+            'optional-fetch'        => $embl_fetch,
+        },
+
+        'dna-match-pfetch' => {
+            'link-features-by-name' => 'true',
             'bulk-fetch'            => [$embl_fetch, $raw_fetch],
             'user-fetch'            => [$embl_fetch, $fasta_fetch, 'internal'],
         },
 
         'protein-match' => {
+            'link-features-by-name' => 'true',
+            'bulk-fetch'            => 'sqlite-fetch',
+            'user-fetch'            => [$embl_fetch, $fasta_fetch, 'internal'],
+            'optional-fetch'        => $embl_fetch,
+        },
+
+        'protein-match-pfetch' => {
             'link-features-by-name' => 'true',
             'bulk-fetch'            => $raw_fetch,
             'user-fetch'            => [$embl_fetch, $fasta_fetch, 'internal'],
@@ -584,14 +746,8 @@ sub blixem_config {
             'user-fetch'            => 'variation-fetch',
         },
 
-        # Hard coded links for OTF data types.  (Would rather not have these)
+        # Hard coded links for OTF data types - no longer required
         'source-data-types' => {
-            'Unknown_DNA'       => 'linked-local',
-            'Unknown_Protein'   => 'linked-local',
-            'OTF_EST'           => 'dna-match',
-            'OTF_ncRNA'         => 'dna-match',
-            'OTF_mRNA'          => 'dna-match',
-            'OTF_Protein'       => 'protein-match',
         },
 
         # Fetch methods
@@ -631,6 +787,14 @@ sub blixem_config {
             'request'   => 'request=-q %m',
             'output'    => 'raw',
         },
+
+        'sqlite-fetch' => {
+            'fetch-mode' => 'sqlite',
+            'location'   => $self->DB->file,
+            'query'      => $sqlite_fetch_query,
+            'output'     => 'list',
+        },
+
     };
 
     # Merge in dataset specific blixem config (BAM sources)
@@ -704,8 +868,8 @@ sub offset {
 
     my $offset = $self->{'_offset'};
     unless (defined $offset) {
-        my $slice = $self->smart_slice
-            or confess "No smart_slice (Bio::Otter::Lace::Slice) attached";
+        my $slice = $self->slice
+            or $self->logger->logconfess("No slice (Bio::Otter::Lace::Slice) attached");
         $offset = $self->{'_offset'} = $slice->start - 1;
     }
     return $offset;
@@ -720,12 +884,12 @@ sub generate_XML_from_acedb {
     my $converter = Bio::Vega::AceConverter->new;
     $converter->ace_handle($self->aceperl_db_handle);
     $converter->feature_types($feature_types);
-    $converter->otter_slice($self->smart_slice);
+    $converter->otter_slice($self->slice);
     $converter->generate_vega_objects;
 
     # Pass the Ensembl objects to the XML formatter
     my $region = Bio::Vega::Region->new;
-    $region->species($self->smart_slice->dsname);
+    $region->species($self->slice->dsname);
     $region->slice(           $converter->ensembl_slice           );
     $region->clone_sequences( @{$converter->clone_seq_list || []} );
     $region->genes(           @{$converter->genes          || []} );
@@ -739,13 +903,13 @@ sub generate_XML_from_acedb {
 sub unlock_otter_slice {
     my ($self) = @_;
 
-    my $smart_slice = $self->smart_slice();
-    my $slice_name  = $smart_slice->name();
-    my $dsname      = $smart_slice->dsname();
+    my $slice = $self->slice();
+    my $slice_name  = $slice->name();
+    my $dsname      = $slice->dsname();
 
-    warn "Unlocking $dsname:$slice_name\n";
+    $self->logger->info("Unlocking $dsname:$slice_name");
 
-    my $client   = $self->Client or confess "No Client attached";
+    my $client   = $self->Client or $self->logger->logconfess("No Client attached");
 
     my $xml_text = $self->fetch_lock_region_xml;
 
@@ -771,7 +935,7 @@ sub ace_server {
         $sgif->start_server() or return 0; # this only check the fork was successful
         my $pid = $sgif->server_pid;
         $sgif->ace_handle(1)  or return 0; # this checks it can connect
-        warn "sgifaceserver on $home running, pid $pid\n";
+        $self->logger->info("sgifaceserver on $home running, pid $pid");
         $self->{'_ace_server'} = $sgif;
     }
     return $sgif;
@@ -792,10 +956,11 @@ sub aceperl_db_handle {
 sub make_database_directory {
     my ($self) = @_;
 
-    my $home = $self->home;
-    my $tar  = $self->Client->get_lace_acedb_tar
-        or confess "Client did not return tar file for local acedb database directory structure";
-    mkdir($home, 0777) or die "Can't mkdir('$home') : $!\n";
+    my $logger = $self->logger;
+    my $home   = $self->home;
+    my $tar    = $self->Client->get_lace_acedb_tar
+        or $logger->logconfess("Client did not return tar file for local acedb database directory structure");
+    mkdir($home, 0777) or $logger->logdie("Can't mkdir('$home') : $!");
 
     my $tar_command = "cd '$home' && tar xzf -";
     try {
@@ -805,14 +970,14 @@ sub make_database_directory {
     }
     catch {
         $self->error_flag(1);
-        confess $_;
+        $logger->logconfess($_);
     };
 
     # rawdata used to be in tar file, but no longer because
     # it doesn't (yet) contain any files.
     my $rawdata = "$home/rawdata";
     mkdir($rawdata, 0777);
-    die "Can't mkdir('$rawdata') : $!\n" unless -d $rawdata;
+    $logger->logdie("Can't mkdir('$rawdata') : $!") unless -d $rawdata;
 
     $self->make_passwd_wrm;
 
@@ -840,7 +1005,7 @@ sub make_passwd_wrm {
 
     my $fh;
     sysopen($fh, $passWrm, O_CREAT | O_WRONLY, 0644)
-        or confess "Can't write to '$passWrm' : $!";
+        or $self->logger->logconfess("Can't write to '$passWrm' : $!");
     print $fh "// PASSWD.wrm generated by $prog\n\n";
 
     # acedb looks at the real user ID, but some
@@ -860,22 +1025,23 @@ sub make_passwd_wrm {
 sub initialize_database {
     my ($self) = @_;
 
-    my $home = $self->home;
-    my $tace = $self->tace;
+    my $logger = $self->logger;
+    my $home   = $self->home;
+    my $tace   = $self->tace;
 
     my $parse_log = "$home/init_parse.log";
     my $pipe = "'$tace' '$home' >> '$parse_log'";
 
     open my $pipe_fh, '|-', $pipe
-        or die "Can't open pipe '$pipe' : $!";
+        or $logger->logdie("Can't open pipe '$pipe' : $!");
     # Say "yes" to "initalize database?" question.
     print $pipe_fh "y\n" unless $self->db_initialized;
     foreach my $file ($self->list_all_acefiles) {
         print $pipe_fh "parse $file\n";
     }
-    close $pipe_fh or die "Error initializing database exit($?)\n";
+    close $pipe_fh or $logger->logdie("Error initializing database exit($?)");
 
-    open my $fh, '<', $parse_log or die "Can't open '$parse_log' : $!";
+    open my $fh, '<', $parse_log or $logger->logdie("Can't open '$parse_log' : $!");
     my $file_log = '';
     my $in_parse = 0;
     my $errors = 0;
@@ -887,12 +1053,12 @@ sub initialize_database {
 
         if (/(\d+) (errors|parse failed)/i) {
             if ($1) {
-                warn "\nParse error detected:\n$file_log  $_\n";
+                $logger->error("Parse error detected:\n$file_log  $_");
                 $errors++;
             }
         }
         elsif (/Sorry/) {
-            warn "Apology detected:\n$file_log  $_\n";
+            $logger->warn("Apology detected:\n$file_log  $_");
             $errors++;
         }
         elsif ($in_parse) {
@@ -901,7 +1067,7 @@ sub initialize_database {
     }
     close $fh;
 
-    confess "Error initializing database\n" if $errors;
+    $logger->confess("Error initializing database") if $errors;
     $self->empty_acefile_list;
     return 1;
 }
@@ -920,7 +1086,7 @@ sub write_dna_data {
     my $ace_filename = $self->home . '/rawdata/dna.ace';
     $self->add_acefile($ace_filename);
     open my $ace_fh, '>', $ace_filename
-        or confess "Can't write to '$ace_filename' : $!";
+        or $self->logger->logconfess("Can't write to '$ace_filename' : $!");
     print $ace_fh $self->dna_ace_data;
     close $ace_fh;
 
@@ -964,7 +1130,7 @@ sub dna_ace_data {
 
     }
 
-    my $name = $self->smart_slice->name;
+    my $name = $self->slice->name;
     my $ace = join ''
         , qq{\nSequence "$name"\n}, @feature_ace , @ctg_ace
         , qq{\nSequence : "$name"\nDNA "$name"\n\nDNA : "$name"\n$dna\n}
@@ -995,7 +1161,7 @@ sub ColumnCollection {
     my ($self) = @_;
 
     return $self->{'_ColumnCollection'} ||=
-      Bio::Otter::Lace::Source::Collection->new_from_Filter_list(
+      Bio::Otter::Lace::Chooser::Collection->new_from_Filter_list(
           @{ $self->DataSet->filters },
           (grep { _bam_is_filter($_) } @{ $self->DataSet->bam_list }));
 }
@@ -1010,7 +1176,7 @@ sub _bam_is_filter {
 sub DataSet {
     my ($self) = @_;
 
-    return $self->Client->get_DataSet_by_name($self->smart_slice->dsname);
+    return $self->Client->get_DataSet_by_name($self->slice->dsname);
 }
 
 sub process_Columns {
@@ -1020,12 +1186,14 @@ sub process_Columns {
     my $transcripts = [ ];
     my $failed      = [ ];
     foreach my $col (@columns) {
-        $col->process_gff or next;
+        (    $col->Filter->content_type
+          && $col->process_gff )
+            or next;
         try {
             my @filter_transcripts = $self->_process_Column($col);
             push @$transcripts, @filter_transcripts;
         }
-        catch { warn $_; push @$failed, $col; };        
+        catch { $self->logger->error($_); push @$failed, $col; };
     }
 
     my $result = {
@@ -1039,11 +1207,13 @@ sub process_Columns {
 sub _process_Column {
     my ($self, $column) = @_;
 
+    my $logger = $self->logger;
+
     my $filter = $column->Filter;
     my $filter_name = $filter->name;
     my $gff_file = $column->gff_file;
     unless ($gff_file) {
-        confess "gff_file column not set for '$filter_name' in otter_filter table in SQLite DB";
+        $logger->logconfess("gff_file column not set for '$filter_name' in otter_filter table in SQLite DB");
     }
 
     my $full_gff_file = $self->home . "/$gff_file";
@@ -1062,12 +1232,12 @@ sub _process_Column {
 
     my @transcripts = ( );
     my $close_error;
-    open my $gff_fh, '<', $full_gff_file or confess "Can't read GFF file '$full_gff_file'; $!";
+    open my $gff_fh, '<', $full_gff_file or $logger->logconfess("Can't read GFF file '$full_gff_file'; $!");
 
     try {
         @transcripts = $self->_process_fh($column, $gff_fh);
     }
-    catch { die sprintf "%s: %s: $_", $filter_name, $full_gff_file; }
+    catch { $logger->logdie(sprintf "%s: %s: $_", $filter_name, $full_gff_file); }
     finally {
         # want to &confess here but that would hide any errors from
         # the try block so we save the error for later
@@ -1075,23 +1245,22 @@ sub _process_Column {
             or $close_error = "Error closing GFF file '$full_gff_file'; $!";
     };
 
-    confess $close_error if $close_error;
+    $logger->logconfess($close_error) if $close_error;
 
     return @transcripts;
 }
 
-sub _process_fh {
+# "perlcritic --stern" refuses to learn that $logger->logconfess is fatal
+sub _process_fh { ## no critic (Subroutines::RequireFinalReturn)
     my ($self, $column, $gff_fh) = @_;
 
     my $filter = $column->Filter;
 
-    if ($filter->server_script eq 'get_gff_genes'
-        or $filter->feature_kind eq 'PredictionExon'
-        or $filter->feature_kind eq 'PredictionTranscript'
-        ) {
-        return Bio::Otter::Lace::ProcessGFF::make_ace_transcripts_from_gff($gff_fh);
+    if ($filter->content_type eq 'transcript') {
+        return Bio::Otter::Lace::ProcessGFF::make_ace_transcripts_from_gff(
+            $gff_fh, $self->slice->start, $self->slice->end);
     }
-    elsif ($filter->feature_kind =~ /AlignFeature/) {
+    elsif ($filter->content_type eq 'alignment_feature') {
         Bio::Otter::Lace::ProcessGFF::store_hit_data_from_gff($self->AccessionTypeCache, $gff_fh);
         # Unset flag so that we don't reprocess this file if we recover the session.
         $column->process_gff(0);
@@ -1099,7 +1268,7 @@ sub _process_fh {
         return;
     }
     else {
-        confess "Don't know how to process GFF file\n";
+        $self->logger->logconfess("Don't know how to process GFF file");
     }
 }
 
@@ -1108,20 +1277,20 @@ sub script_arguments {
 
     my $arguments = {
         client => 'otterlace',
-        %{$self->smart_slice->toHash},
+        %{$self->query_hash},
         gff_version => $self->DataSet->gff_version,
         session_dir => $self->home,
         url_root    => $self->Client->url_root,
         cookie_jar  => $ENV{'OTTERLACE_COOKIE_JAR'},
     };
 
-    return $arguments; 
+    return $arguments;
 }
 
 sub http_response_content {
     my ($self, $command, $script, $args) = @_;
 
-    my $query = $self->smart_slice->toHash;
+    my $query = $self->query_hash;
     $query = { %{$query}, %{$args} } if $args;
 
     my $response = $self->Client->http_response_content(
@@ -1130,17 +1299,37 @@ sub http_response_content {
     return $response;
 }
 
+sub query_hash {
+    my ($self) = @_;
+
+    my $slice = $self->slice;
+
+    my $hash = {
+            'dataset' => $slice->dsname(),
+            'chr'     => $slice->ssname(),
+
+            'cs'      => $slice->csname(),
+            'csver'   => $slice->csver(),
+            'name'    => $slice->seqname(),
+            'start'   => $slice->start(),
+            'end'     => $slice->end(),
+    };
+
+    return $hash;
+}
+
 
 sub DESTROY {
     my ($self) = @_;
 
-    #warn "Debug - leaving database intact"; return;
+    my $logger = $self->logger;
+    # $logger->debug("Debug - leaving database intact"); return;
 
     my $home = $self->home;
     my $callback = $self->post_exit_callback;
-    warn "DESTROY has been called for AceDatabase.pm with home $home\n";
+    $logger->info("DESTROY has been called for AceDatabase.pm with home $home");
     if ($self->error_flag) {
-        warn "Not cleaning up '$home' because error flag is set\n";
+        $logger->info("Not cleaning up '$home' because error flag is set");
         return;
     }
     my $client = $self->Client;
@@ -1153,10 +1342,10 @@ sub DESTROY {
             $self->unlock_otter_slice() if $self->write_access;
         }
     }
-    catch { warn "Error in AceDatabase::DESTROY : $_"; };
+    catch { $logger->error("Error in AceDatabase::DESTROY : $_"); };
 
     rename($home, "${home}.done")
-        or die "Error renaming the session directory; $!";
+        or $logger->logdie("Error renaming the session directory; $!");
 
     if ($callback) {
         $callback->();
@@ -1181,7 +1370,16 @@ sub kill_ace_server {
 }
 
 sub logger {
-    return Log::Log4perl->get_logger;
+    my ($self, $category) = @_;
+    $category = scalar caller unless defined $category;
+    return Bio::Otter::Log::WithContext->get_logger($category, name => $self->log_name);
+}
+
+sub log_name {
+    my ($self) = @_;
+    return $self->name if $self->{_sqlite_database};
+    return basename($self->home) if $self->home;
+    return '-AceDB unnamed-';
 }
 
 1;

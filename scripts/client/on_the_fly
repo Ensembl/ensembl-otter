@@ -1,0 +1,90 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+package Bio::Otter::GetScript::OnTheFly;
+
+use base 'Bio::Otter::Utils::GetScript::LocalDB';
+
+sub version { return 'on_the_fly 0.5'; };
+sub log_filename { return 'otf_log.txt'; }
+
+sub do_it {
+    my ($self) = @_;
+
+    my $args = $self->args;
+
+    $self->SUPER::do_requires;  # just the basics for now
+
+    my ($request_adaptor, $request);
+    $self->time_diff_for( 'retrieve_request', sub {
+        $request_adaptor = $self->local_db->OTFRequestAdaptor;
+        $request = $request_adaptor->fetch_by_logic_name_status($self->arg('gff_source'), 'new');
+                          });
+
+    if ($request) {
+        $self->time_diff_for( 'run_request', sub {
+            $self->run_request($request);
+                              });
+        $request_adaptor->update($request);
+        unlink $request->target_file;
+        unlink $request->query_file;
+    } else {
+        $self->log_message('no new OTF request');
+    }
+
+    my $features = $self->get_features;
+    $self->augment_feature_info($features);
+    $self->send_feature_gff($features, 0); # don't set process_gff
+
+    return;
+}
+
+sub do_requires {
+    my ($self) = @_;
+    $self->SUPER::do_requires;
+    require Bio::Otter::Lace::OnTheFly::Runner;
+    return;
+}
+
+sub run_request {
+    my ($self, $request) = @_;
+    $self->log_message('got a request');
+    $self->do_requires;         # in full this time
+    my $runner = Bio::Otter::Lace::OnTheFly::Runner->new(
+        request         => $request,
+        resultset_class => 'Bio::Otter::Lace::OnTheFly::ResultSet::GetScript',
+        );
+    my $result_set = $runner->run;
+    $result_set->db_store($self->vega_slice);
+
+    my $n_hits = scalar($result_set->hit_query_ids);
+    $request->status('completed');
+    $request->n_hits($n_hits);
+
+    my @missed_hits = $result_set->query_ids_not_hit;
+    $self->log_message(sprintf('missed: [%s]', join(',', @missed_hits)));
+    $request->missed_hits(\@missed_hits);
+
+    return;
+}
+
+## no critic (Modules::ProhibitMultiplePackages)
+
+package main;
+
+use Log::Log4perl::Level;
+
+Bio::Otter::GetScript::OnTheFly
+    ->new(log4perl => $DEBUG)
+    ->run;
+
+exit;
+
+__END__
+
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
+

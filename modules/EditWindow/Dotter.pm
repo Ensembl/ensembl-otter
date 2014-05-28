@@ -55,6 +55,7 @@ sub initialise {
 
     # Labelled frame around all the Genomic stuff
     my $lab_frame = $top->LabFrame(
+        Name    => 'genomic',
         -border => 3,
         -label  => 'Genomic sequence',
         )->pack(
@@ -99,7 +100,7 @@ sub initialise {
         for 0..1;
     $self->{_use_mark} = 1;
 
-    my $button_frame = $top->Frame->pack(
+    my $button_frame = $top->Frame(Name => 'button')->pack(
         -side   => 'top',
         -fill   => 'x',
         );
@@ -140,6 +141,8 @@ sub initialise {
     $top->protocol('WM_DELETE_WINDOW',  $close_window);
 
     $top->bind('<Destroy>', sub{ $self = undef });
+
+    $self->colour_init(qw( button genomic.border ));
 
     return;
 }
@@ -279,7 +282,7 @@ sub launch_dotter {
     $dotter->subject_name($match_name);
     $dotter->revcomp_subject($$revcomp);
 
-    return $dotter->fork_dotter;
+    return $dotter->fork_dotter($self->SessionWindow->session_colour);
 }
 
 sub DESTROY {

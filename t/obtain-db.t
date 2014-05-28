@@ -299,12 +299,11 @@ sub guess_schema {
  limit 1');
     push @type, 'loutre' if field_exist(author_name => $ga);
 
-    my $iia = rowhash
-      ($dbh, 'select * from job j
- join input_id_analysis iia using (input_id, analysis_id)
- join analysis a using (analysis_id)
- limit 1');
-    push @type, 'pipe' if field_exist(runhost => $iia);
+    my $rcga = rowhash
+      ($dbh, 'select a.logic_name,rg.rule_id,rc.rule_condition
+ from rule_conditions rc,rule_goal rg, analysis a
+ where a.analysis_id = rg.goal and rg.rule_id = rc.rule_id');
+    push @type, 'pipe' if field_exist(logic_name => $rcga);
 
     my $proj_acc = rowhash
       ($dbh, 'select * from sequence

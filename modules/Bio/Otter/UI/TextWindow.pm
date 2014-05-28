@@ -54,6 +54,7 @@ sub new {
 
         $top->protocol('WM_DELETE_WINDOW', $close_command);
     }
+    $self->colour_init;
 
     return $self;
 }
@@ -97,6 +98,14 @@ sub window {
         $self->{'_window'} = $window;
     }
     return $self->{'_window'};
+}
+
+sub colour_init {
+    my ($self) = @_;
+    my $P = $self->parent;
+    $P->SessionWindow->colour_init( $self->window->toplevel )
+      if $P->can('SessionWindow');
+    return;
 }
 
 1;

@@ -4,6 +4,8 @@ package Bio::Otter::Server::GFF;
 use strict;
 use warnings;
 
+use Bio::Otter::Utils::AccessionInfo::Serialise qw( fasta_header_column_order escape_fasta_description );
+use Bio::Otter::Utils::RequireModule qw(require_module);
 use Bio::Vega::Enrich::SliceGetAllAlignFeatures;
 use Bio::Vega::Utils::GFF;
 use Bio::Vega::Utils::EnsEMBL2GFF;
@@ -60,7 +62,38 @@ my $call_args = {
 
 };
 
+my $SUBCLASS = {
+    features         => '',          # no subclass
+
+    das_features     => 'DAS',
+    funcgen_features => 'FuncGen',
+    genes            => 'Genes',
+    grc_issues       => 'GRCIssues',
+    patch_features   => 'Patches',
+    psl_sql_features => 'PslSql',
+};
+
 sub send_requested_features {
+    my ($pkg) = @_;
+
+    my $specific_pkg = $pkg;
+
+    if (my $path_info = $pkg->path_info) {
+
+        my ($key) = $path_info =~ m{^/(\w+)$};
+        die "Subclass key not found in '$path_info'\n" unless $key;
+
+        my $subclass = $SUBCLASS->{$key};
+        die "Subclass for '$key' not known\n" unless defined $subclass;
+
+        $specific_pkg = join '::', __PACKAGE__, $subclass if $subclass;
+        require_module($specific_pkg);
+    }
+
+    return $specific_pkg->do_send_features;
+}
+
+sub do_send_features {
     my ($pkg) = @_;
 
     $pkg->send_response(
@@ -73,9 +106,9 @@ sub send_requested_features {
             my $features_gff = $self->_features_gff($features, $target_hash);
             my $gff = $self->gff_header . $features_gff;
             if ($target_hash && keys %{$target_hash}) {
-                require Bio::Otter::Utils::MM;
+                require Bio::Otter::Utils::AccessionInfo;
                 my @sequence_db = split /\s*,\s*/, $sequence_db;
-                my $mm = Bio::Otter::Utils::MM->new('db_categories' => \@sequence_db);
+                my $mm = Bio::Otter::Utils::AccessionInfo->new('db_categories' => \@sequence_db);
                 my $accession_info = $mm->get_accession_info([keys %{$target_hash}]);
                 if (keys %{$accession_info}) {
                     $gff .= ("##FASTA\n" . _fasta($accession_info));
@@ -122,8 +155,7 @@ sub get_requested_features {
 
         if ($module_name =~ /^Bio::Vega::ServerAnalysis::\w+$/) {
 
-            eval "require $module_name" ## no critic (BuiltinFunctions::ProhibitStringyEval,Anacode::ProhibitEval)
-                or die "Failed to 'require' module $module_name: $@";
+            require_module($module_name);
 
             my $filter = $module_name->new;
 
@@ -182,11 +214,8 @@ sub gff_header {
     my ($self) = @_;
 
     my $gff_version = $self->param('gff_version');
-    my $name    = $self->param('type');
-    my $start   = $self->param('start');
-    my $end     = $self->param('end');
 
-    return Bio::Vega::Utils::GFF::gff_header($gff_version, $name, $start, $end);
+    return Bio::Vega::Utils::GFF::gff_header($gff_version);
 }
 
 sub _features_gff {
@@ -217,11 +246,13 @@ sub Bio::EnsEMBL::Slice::get_all_ExonSupportingFeatures {
         return [];
     }
 
-    return
+    my $ExonSupportingFeatures =
         [ map { @{$_->get_all_supporting_features} }
           map { @{$_->get_all_Exons} }
           @{$self->get_all_Transcripts($load_exons, $logic_name, $dbtype)}
           ];
+
+    return $ExonSupportingFeatures;
 }
 
 sub _fasta {
@@ -231,34 +262,14 @@ sub _fasta {
     } sort keys %{$accession_info};
 }
 
-my @accession_key_list = qw(
-    evi_type
-    accession_sv
-    source_db
-    length
-    taxon_list
-    description
-    );
-
-my @fasta_key_list = qw(
-    accession_sv
-    taxon_id
-    evi_type
-    description
-    source_db
-    length
-    );
-
 sub _fasta_item {
     my ($accession_info) = @_;
-    my $sequence = pop @{$accession_info};
-    # permute the columns from accession info order to FASTA header order
-    my $info_hash = { };
-    $info_hash->{$_} = shift @{$accession_info} for @accession_key_list;
-    my @taxon_list = split /,/, $info_hash->{'taxon_list'};
+    my $sequence = $accession_info->{sequence};
+    my @taxon_list = split /,/, $accession_info->{'taxon_list'};
     @taxon_list == 1 or return; # we only handle single taxon IDs
-    ($info_hash->{'taxon_id'}) = @taxon_list;
-    my $fasta_list = [ @{$info_hash}{@fasta_key_list} ];
+    ($accession_info->{'taxon_id'}) = @taxon_list; # has side-effect of adding to $accession_info, but we don't mind.
+    $accession_info->{'description'} = escape_fasta_description($accession_info->{'description'}); # ---"---
+    my $fasta_list = [ @{$accession_info}{fasta_header_column_order()} ];
     $sequence =~ s/(.{70})/$1\n/g;
     chomp $sequence;
     my $item = sprintf ">%s\n%s\n", (join '|', @{$fasta_list}), $sequence;

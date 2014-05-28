@@ -7,10 +7,11 @@ use strict;
 use warnings;
 use Try::Tiny;
 use Scalar::Util qw{ weaken };
-use Bio::Otter::Lace::Source::Collection;
-use Bio::Otter::Lace::Source::SearchHistory;
+use Bio::Otter::Lace::Chooser::Collection;
+use Bio::Otter::Lace::Chooser::SearchHistory;
 use MenuCanvasWindow::SessionWindow;
 use Tk::Utils::CanvasXPMs;
+use Tk::ScopedBusy;
 
 use base qw{
     MenuCanvasWindow
@@ -19,17 +20,17 @@ use base qw{
 
 
 sub new {
-    my ($pkg, $tk, @rest) = @_;
+    my ($pkg, $tk) = @_;
 
     # Need to make both frames which appear above the canvas...
     my $menu_frame = $pkg->make_menu_widget($tk);
-    my $top_frame = $tk->Frame->pack(
+    my $top_frame = $tk->Frame(Name => 'top_frame')->pack(
         -side => 'top',
         -fill => 'x',
         );
 
     # ... before we make the canvas
-    my $self = CanvasWindow->new($tk, @rest);
+    my $self = CanvasWindow->new($tk, 800, 400, 'ose');
     bless($self, $pkg);
 
     my $bottom_frame = $tk->Frame->pack(
@@ -108,7 +109,7 @@ sub initialize {
     my @button_pack = qw{ -side left -padx 4 };
 
     my $cllctn = $self->AceDatabase->ColumnCollection;
-    my $hist = Bio::Otter::Lace::Source::SearchHistory->new($cllctn);
+    my $hist = Bio::Otter::Lace::Chooser::SearchHistory->new($cllctn);
     $self->SearchHistory($hist);
 
     my $top = $self->top_window;
@@ -242,9 +243,35 @@ sub initialize {
     $top->bind('<Control-Return>', $load_cmd);
 
 
-    $self->calcualte_text_column_sizes;
+    $self->colour_init;
+    $self->calculate_text_column_sizes;
     $self->fix_window_min_max_sizes;
-    $self->redraw;
+    $self->redraw; # calls update via set_scroll_region_and_maxsize
+
+    # Set window to full screen height, y=0.  RT#355409
+    my $w = $top->screenwidth;
+    $w = 800 if $w > 800;
+    my $h = $top->screenheight;
+
+    my $x = $top->x;
+    my $new_x = $top->screenwidth - $w;
+    $new_x = $x if $x < $new_x;
+    $x = 0 if $x < 0;
+    $top->withdraw;
+    $top->geometry("${w}x$h+$x+0");
+    $self->deiconify_and_raise;
+
+    return;
+}
+
+sub colour_init {
+    my ($self) = @_;
+    my $top = $self->top_window;
+    my $colour = $self->AceDatabase->colour;
+    my $tpath = $top->PathName;
+
+    $top->configure(-borderwidth => 3, -background => $colour);
+    $self->bottom_frame->configure(-background => $colour);
     return;
 }
 
@@ -506,7 +533,7 @@ sub draw_status_indicator {
 # sub next_status {
 #     my ($self, $item) = @_;
 # 
-#     my @status = Bio::Otter::Lace::Source::Item::Column::VALID_STATUS_LIST();
+#     my @status = Bio::Otter::Lace::Chooser::Item::Column::VALID_STATUS_LIST();
 #     my $this = $item->status;
 #     for (my $i = 0; $i < @status; $i++) {
 #         if ($status[$i] eq $this) {
@@ -633,7 +660,7 @@ sub load_filters {
     my $is_recover = $options{is_recover};
 
     my $top = $self->top_window;
-    $top->Busy(-recurse => 1);
+    my $busy = Tk::ScopedBusy->new($top, -recurse => 1);
 
     my $cllctn = $self->SearchHistory->root_Collection;
 
@@ -657,7 +684,8 @@ sub load_filters {
         catch {
             $self->SequenceNotes->exception_message($_, "Error initialising database");
             $self->AceDatabase->error_flag(0);
-            $top->Unbusy;
+            undef $busy; # i.e. Unbusy
+            $self->zmap_select_destroy;
             $top->destroy;
             return 0;
         }
@@ -699,20 +727,20 @@ sub load_filters {
         $rq->request_features(@to_fetch_names);
     }
 
-    $top->Unbusy;
+    undef $busy; # i.e. Unbusy
     # $top->withdraw;
     $self->zmap_select_destroy;
 
     return;
 }
 
-sub calcualte_text_column_sizes {
+sub calculate_text_column_sizes {
     my ($self) = @_;
 
     my $font = $self->normal_font;
     my $cllctn = $self->current_Collection;
 
-    my @status = Bio::Otter::Lace::Source::Item::Column::VALID_STATUS_LIST();
+    my @status = Bio::Otter::Lace::Chooser::Item::Column::VALID_STATUS_LIST();
     my ($status_max_x, $max_y) = $self->max_x_y_of_text_array($font, @status);
     $self->{'_status_max_x'} = 4 + $status_max_x;
     $self->{'_max_y'} = $max_y;
@@ -733,7 +761,7 @@ sub update_statuses_by_name {
     my $cllctn = $self->SearchHistory->root_Collection;
 
     foreach my $name (@names) {
-        my $item = $cllctn->get_Item_by_name($name);
+        my $item = $cllctn->get_Column_by_name($name);
         $item->status($status) if $item;
     }
     return;

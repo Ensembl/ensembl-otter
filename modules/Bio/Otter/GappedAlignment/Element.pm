@@ -7,6 +7,7 @@ use strict;
 use warnings;
 
 use Readonly;
+use Bio::Otter::Utils::RequireModule qw(require_module);
 
 use Bio::Otter::GappedAlignment::ElementTypes;
 
@@ -33,8 +34,7 @@ sub _module_name {
 #
 foreach my $class (keys %TYPE_CLASS) {
     my $module = __PACKAGE__->_module_name($class);
-    ## no critic (BuiltinFunctions::ProhibitStringyEval,Anacode::ProhibitEval)
-    eval "require $module" or die "Couldn't load $module: '$@'";
+    require_module($module);
 }
 
 sub new {

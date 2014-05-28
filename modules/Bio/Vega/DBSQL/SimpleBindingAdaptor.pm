@@ -5,6 +5,8 @@ use warnings;
 
 use DBI;
 
+use Bio::Otter::Utils::RequireModule qw(require_module);
+
 sub new {
     my ($pkg, $dbc) = @_;
 
@@ -21,8 +23,7 @@ sub new {
 sub fetch_into_hash {
     my ($self, $table_name, $field_name, $field_hp, $class, $thehash) = @_;
 
-    die "'require $class' failed"
-        unless eval "require $class"; ## no critic (BuiltinFunctions::ProhibitStringyEval,Anacode::ProhibitEval)
+    require_module($class);
 
     if(%$thehash) {
         my $sql_statement =

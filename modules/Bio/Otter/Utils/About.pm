@@ -127,7 +127,7 @@ sub __need_tools {
 
        # EditWindow::Preferences uses 'open -e' on Mac
 
-       [ exonerate => '--version', # Bio::Otter::Lace::OnTheFly::Aligner
+       [ exonerate => '--version', # Bio::Otter::Lace::OnTheFly::Runner
          qr{(exonerate version .*)} ],
 
        [ hmmalign => '-h', # Bio::Otter::Lace::Pfam
@@ -136,7 +136,7 @@ sub __need_tools {
        # EditWindow::PfamWindow
        # [ belvu => '--version' ], # part of Seqtools
 
-       [ filter_get => '--version' ], # Bio::Otter::Filter
+       [ filter_get => '--version' ], # Bio::Otter::Source::Filter
 
        [ gff_get => '--version' ],
        [ bam_get => '--version' ],

@@ -282,6 +282,8 @@ my @chrs = $support->sort_chromosomes($V_chrlength);
 CHROM:
 foreach my $V_chr (@chrs) {
 
+#  next unless ($V_chr =~ /HSCHR5_2_CTG1_1|HSCHR6_1_CTG2/);
+
   $support->log_stamped("Chromosome $V_chr...\n");
 
   # skip non-ensembl chromosomes
@@ -309,44 +311,44 @@ foreach my $V_chr (@chrs) {
   }
 
   if ($support->is_patch($V_slice)) {
-
+    my ($v_patch_name,$e_patch_name);
     my $v_sr_id = $V_slice->get_seq_region_id;
 
-    #compare accessions for PATCHES from Ensembl and Vega and warn if they're different
-    my @e_patch_names  = $E_dbh->selectrow_array(qq(
+    my ($insdc_edb) = $V_dbh->selectrow_array(qq(SELECT external_db_id FROM external_db WHERE db_name = 'INSDC'));
+
+    my $sql = qq(
            SELECT srs.synonym
              FROM seq_region_synonym srs, seq_region sr
             WHERE srs.seq_region_id = sr.seq_region_id
-              AND sr.name = '$E_chr'));
+              AND srs.external_db_id = $insdc_edb
+              AND sr.name = );
+    (my $echr_name) = $E_chr =~ /CHR_(.+)$/; #INSDC seq_region synonyms are attached to the scaffold not the chromosome in Ensembl
+
+    #compare accessions for PATCHES from Ensembl and Vega and warn if they're different
+    my @e_patch_names  = $E_dbh->selectrow_array("$sql '$echr_name'");
     if (scalar(@e_patch_names > 1)) {
       $support->log_warning("More than one e! seq_region_synonym found for $V_chr, need to alter the code below\n");
     }
     elsif (! @e_patch_names ) {
-      $support->log_warning("No accession for PATCH $V_chr in Ensembl so we don't know if e! and Vega are using the same PATCH. Will attempt to transfer annotation but you should check how it's worked\n");
+      $support->log_warning("No accession for PATCH $V_chr in Ensembl so we can't assess if e! and Vega are using the same PATCH. Will attempt to transfer annotation but you should check how it's worked\n");
+    }
+    my @v_patch_names  = $V_dbh->selectrow_array("$sql  '$V_chr'");
+    if (scalar(@v_patch_names > 1)) {
+      $support->log_warning("More than one Vega seq_region_synonym found for $V_chr, need to alter the code below\n");
+    }
+    elsif (! @v_patch_names ) {
+      $support->log_warning("No accession for PATCH $V_chr in Vega so we can't assess if e! and Vega are using the same PATCH. Will attempt to transfer annotation but you should check how it's worked\n");
+    }
+
+    $v_patch_name = $v_patch_names[0];
+    $e_patch_name = $e_patch_names[0];
+
+    if ($e_patch_name ne $v_patch_name) {
+      $support->log_warning("Accession for PATCH $V_chr differs between e! ($e_patch_name) and Vega ($v_patch_name). No annotation being transferred\n");
+      next CHROM;
     }
     else {
-      my ($v_patch_name) = $V_dbh->selectrow_array(qq(
-           SELECT concat(sra1.value,'.',sra2.value)
-             FROM seq_region sr, seq_region_attrib sra1, attrib_type at1, seq_region_attrib sra2, attrib_type at2
-            WHERE sr.seq_region_id    = sra1.seq_region_id
-              AND sra1.attrib_type_id = at1.attrib_type_id
-              AND at1.code            = 'embl_acc'
-              AND sr.seq_region_id    = sra2.seq_region_id
-              AND sra2.attrib_type_id = at2.attrib_type_id
-              AND at2.code            = 'embl_version'
-              AND sr.seq_region_id    = $v_sr_id));
-      if (! $v_patch_name) {
-        $support->log_warning("No accession for PATCH $V_chr in Vega so we don't know if e! and Vega are using the same PATCH. Will attempt to transfer annotation but you should check how it's worked\n");
-      }
-      elsif ($e_patch_names[0] ne $v_patch_name) {
-        #we used to transfer annotation on different patches, but this does cause problems so don't
-#        $support->log_warning("Accession for PATCH $V_chr differs between e! (".$e_patch_names[0].") and Vega ($v_patch_name). Will attempt to transfer annotation but you should check how it's worked\n");
-        $support->log_warning("Accession for PATCH $V_chr differs between e! (".$e_patch_names[0].") and Vega ($v_patch_name). No annotation being transferred\n");
-        next CHROM;
-      }
-      else {
-        $support->log("Accessions match: $v_patch_name and ".$e_patch_names[0]."\n",1);
-      }
+      $support->log_verbose("Accessions match: $v_patch_name and ".$e_patch_names[0]."\n",1);
     }
   }
 
@@ -375,11 +377,14 @@ foreach my $V_chr (@chrs) {
       }
     $support->log("Gene $gsi/$name (logic_name $ln)\n", 1);
 
+    #commented out this whole chunk so all genes are mapped in the same way, Patch or No Patch
+    #leave the call in though in case things change
+
     #PATCH genes are identified as being on non-reference slices...
-    if ( ! $V_slice->is_reference() and ! $support->is_haplotype($V_slice,$V_dba) ) {
-      &transfer_vega_patch_gene($gene,$V_chr);
-      next GENE;
-    }
+#    if ( ! $V_slice->is_reference() and ! $support->is_haplotype($V_slice,$V_dba) ) {
+#      &transfer_vega_patch_gene($gene,$V_chr);
+#      next GENE;
+#    }
 
     #All other genes
     my $transcripts = $gene->get_all_Transcripts;
@@ -531,7 +536,7 @@ sub transfer_vega_patch_gene {
   my $c = 0;
  TRANS:
   foreach my $transcript (@transcripts){
-    if ($transcript->biotype =~ /artifact|TEC/) {
+    if ( $support->param('for_web') && $transcript->biotype =~ /artifact|TEC/) {
       $support->log("Transcript: ".$transcript->stable_id." skipped because of its biotype (" . $transcript->biotype .")\n", 2);
       $needs_updating = 1;
       $artifact_ids{$transcript->stable_id} = 1;

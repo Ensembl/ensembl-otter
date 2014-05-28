@@ -7,6 +7,7 @@ use strict;
 use warnings;
 
 use Carp;
+use Log::Log4perl;
 use Try::Tiny;
 use Tk::DialogBox;
 
@@ -16,6 +17,7 @@ use Zircon::Tk::Context;
 use Bio::Otter::Utils::About;
 use Bio::Otter::Lace::Client;
 use Bio::Vega::Utils::URI qw( open_uri );
+use Tk::ScopedBusy;
 
 use MenuCanvasWindow::ColumnChooser;
 use EditWindow::Preferences;
@@ -136,13 +138,13 @@ sub ensure_tools {
     my @v = try {
         Bio::Otter::Utils::About->tools_versions;
     } catch {
-        warn "_ensure_tools: $_";
+        $self->logger->error("_ensure_tools: $_");
         ();
     };
 
     if (@v) {
         local $" = "\n  ";
-        warn "Tools are @v\n";
+        $self->logger->info("Tools are\n  @v");
     } else {
         $self->message("Some parts of Otterlace are not working\n".
                        "See Help > About... for info");
@@ -260,7 +262,7 @@ sub open_dataset {
     return 0 unless $obj;
 
     my $canvas = $self->canvas;
-    $canvas->Busy;
+    my $busy = Tk::ScopedBusy->new($canvas);
     foreach my $tag ($canvas->gettags($obj)) {
         if ($tag =~ /^DataSet=(.+)/) {
             my $name = $1;
@@ -285,11 +287,9 @@ sub open_dataset {
 
                 $self->{'_sequence_set_chooser'}{$name} = $top;
             }
-            $canvas->Unbusy;
             return 1;
         }
     }
-    $canvas->Unbusy;
 
     return 0;
 }
@@ -391,7 +391,7 @@ sub recover_some_sessions {
                       (-title  => $Bio::Otter::Lace::Client::PFX.
                        'Select Column Data to Load');
 
-                    my $cc = MenuCanvasWindow::ColumnChooser->new($top, 600, 400);
+                    my $cc = MenuCanvasWindow::ColumnChooser->new($top);
                     $cc->AceDatabase($adb);
                     $cc->SpeciesListWindow($self);
                     $cc->initialize;
@@ -439,6 +439,10 @@ sub zircon_delete {
         ${$ref} = 'zircon_delete';
     }
     return;
+}
+
+sub logger {
+    return Log::Log4perl->get_logger;
 }
 
 1;

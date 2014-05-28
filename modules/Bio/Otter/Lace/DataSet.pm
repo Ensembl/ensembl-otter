@@ -11,8 +11,8 @@ use URI::Escape qw( uri_escape );
 use Try::Tiny;
 
 use Bio::Otter::Debug;
-use Bio::Otter::Filter;
-use Bio::Otter::BAM;
+use Bio::Otter::Source::Filter;
+use Bio::Otter::Source::BAM;
 
 sub new {
     my ($pkg) = @_;
@@ -164,7 +164,7 @@ sub _add_zmap_bam_config {
     # already handled by _add_zmap_source_config().
 
     my $stylesfile = $session->stylesfile;
-    my $slice      = $session->smart_slice;
+    my $slice      = $session->slice;
 
     # must be careful here because different BAM objects may have the
     # same parent_column or parent_featureset
@@ -204,10 +204,10 @@ sub _add_zmap_bam_config {
                 chr   => $slice->ssname,
                 start => $slice->start,
                 end   => $slice->end,
-                csver => $bam->csver,
+                csver_remote => $bam->csver,
                 file   => $file,
                 strand => $strand,
-                gff_feature_source => $featureset,
+                gff_source  => $featureset,
                 gff_version => $self->gff_version,
             };
             my $query_string = _query_string($query);
@@ -267,7 +267,7 @@ sub generate_blixem_bam_config {
 
     my $fetch_arg_list = join ' ', qw(
         --gff_version=%g
-        --gff_feature_source=%S
+        --gff_source=%S
         --dataset=%(dataset)
         --csver=%(csver)
         --chr=%r --start=%s --end=%e
@@ -313,7 +313,7 @@ sub _bam_load {
     for my $name ( @{$self->config_keys("bam")} ) {
         my $config = $self->config_section("bam.${name}");
         try {
-            my $bam = Bio::Otter::BAM->new($name, $config);
+            my $bam = Bio::Otter::Source::BAM->new($name, $config);
             $bam->wanted(1);
             $bam_by_name->{$name} = $bam;
         }
@@ -345,7 +345,7 @@ sub _filter_load {
     for my $name ( @{$self->config_keys("filter")} ) {
         my $config = $self->config_section("filter.${name}");
         try {
-            my $filter= Bio::Otter::Filter->from_config($config);
+            my $filter= Bio::Otter::Source::Filter->from_config($config);
             $filter->name($name);
             $filter_by_name->{$name} = $filter;
         }

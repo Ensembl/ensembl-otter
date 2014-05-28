@@ -111,10 +111,14 @@ Returns nothing.
 =cut
 
 sub dump {
-    my ($pkg) = @_;
+    my ($pkg, $logger) = @_;
     my $feat = $pkg->param('feature');
-    warn sprintf "git HEAD: %s%s\n", $pkg->param('head'),
-      $feat ? " (feature $feat)" : '';
+    my $msg = sprintf "git HEAD: %s%s\n", $pkg->param('head'), $feat ? " (feature $feat)" : '';
+    if ($logger) {
+        $logger->info($msg);
+    } else {
+        warn $msg;
+    }
     return;
 }
 
@@ -276,6 +280,7 @@ sub _feature_branch { ## no critic (Subroutines::ProhibitUnusedPrivateSubroutine
     my ($pkg) = @_;
     my $head = $pkg->_shell_param(q( git symbolic-ref -q HEAD ));
     if (!defined $head) {
+        warn "See RT#387736";
         return 'DETACHED-HEAD'; # command fail warning already given
     } elsif ($head =~ m{^refs/heads/feature/(.*)$}) {
         return $1;

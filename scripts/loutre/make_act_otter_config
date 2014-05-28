@@ -88,7 +88,7 @@ metakey=act10_${annot}_db
 nameprefix=${annot}:
 gene_type_prefix=$prefix
 analysis_name=otter
-csver_remote=Otter
+csver=Otter
 description=ACT $annot
 };
 

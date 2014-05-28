@@ -23,4 +23,9 @@ sub AceDatabase {
     return $AceDatabase;
 }
 
+sub logger {
+    my ($self, $category) = @_;
+    return $self->AceDatabase->logger($category);
+}
+
 1;

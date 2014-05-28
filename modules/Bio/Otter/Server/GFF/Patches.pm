@@ -13,9 +13,9 @@ sub get_requested_features {
     my ($self) = @_;
 
     my $map = $self->make_map;
-    my ($cs, $name, $type, $start, $end, $csver) = @{$map}{qw( cs name type start end csver )};
+    my ($cs, $name, $chr, $start, $end, $csver) = @{$map}{qw( cs name chr start end csver )};
 
-    my $chr_slice = $self->get_slice($self->otter_dba, $cs, $name, $type, $start, $end, $csver);
+    my $chr_slice = $self->get_slice($self->otter_dba, $cs, $name, $chr, $start, $end, $csver);
     my $patch_mapper = Bio::Vega::PatchMapper->new($chr_slice);
     my $features = $patch_mapper->all_features;
 

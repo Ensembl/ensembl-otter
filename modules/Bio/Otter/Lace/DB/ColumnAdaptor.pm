@@ -7,11 +7,13 @@ use strict;
 use warnings;
 use Carp;
 
+use Bio::Otter::Lace::Chooser::Item::Column;
+
 use base 'Bio::Otter::Lace::DB::Adaptor';
 
 sub columns         { return qw( selected status status_detail gff_file process_gff name ); }
 sub key_column_name { return 'name'; }
-sub object_class    { return 'Bio::Otter::Lace::Source::Item::Column'; }
+sub object_class    { return 'Bio::Otter::Lace::Chooser::Item::Column'; }
 
 my $all_columns = __PACKAGE__->all_columns;
 
@@ -33,18 +35,18 @@ sub SQL {
                           },
     fetch_by_key  =>    qq{ SELECT ${all_columns} FROM otter_column WHERE name = ?
                           },
-    update_for_filter_get => qq{ UPDATE otter_column
-                                    SET status = 'Loading', gff_file = ?, process_gff = ?
-                                  WHERE name = ?
+    update_for_filter_script => qq{ UPDATE otter_column
+                                      SET status = 'Loading', gff_file = ?, process_gff = ?
+                                    WHERE name = ?
                                },
     };
 }
 
 # Special atomic update for filter_get script.
 #
-sub update_for_filter_get {
+sub update_for_filter_script {
     my ($self, $name, $gff_file, $process_gff) = @_;
-    my $sth = $self->dbh->prepare($self->SQL->{update_for_filter_get});
+    my $sth = $self->dbh->prepare($self->SQL->{update_for_filter_script});
     return $sth->execute($gff_file, $process_gff, $name);
 }
 

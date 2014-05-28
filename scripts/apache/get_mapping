@@ -117,7 +117,7 @@ SQL
 sub get_mapping {
     my ($server) = @_;
 
-    my $dbh   = $server->otter_dba->db_handle;
+    my $dbh   = $server->otter_dba->dbc->db_handle;
     my $chr   = $server->require_argument('chr');
     my $cs    = $server->require_argument('cs');
     my $start = $server->require_argument('start');

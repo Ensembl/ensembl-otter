@@ -8,6 +8,8 @@ package Bio::Otter::GetScript::Filter;
 use Digest::MD5 qw(md5_hex);
 use URI::Escape qw(uri_escape);
 
+use Bio::Otter::Utils::AccessionInfo::Serialise qw(unescape_fasta_description);
+
 use base 'Bio::Otter::Utils::GetScript';
 
 sub do_requires {
@@ -32,9 +34,9 @@ sub do_it {
     my $args = $self->args;
 
     # pull off arguments meant for us
-    my     ($url_root, $server_script, $cookie_jar, $process_gff)
+    my     ($url_root, $server_script, $cookie_jar)
         = $self->read_delete_args(
-        qw ( url_root   server_script   cookie_jar   process_gff_file )
+        qw ( url_root   server_script   cookie_jar )
         );
 
     $args->{log} = 1 if $LOG; # enable logging on the server
@@ -55,12 +57,11 @@ sub do_it {
         # cache hit
         $self->log_message("cache file: $gff_filename: cache hit");
         open my $gff_file, '<', $cache_file or die "Failed to open cache file: $!\n";
-        while (<$gff_file>) { print; }
+        $self->_spool_gff($gff_file);
         close $gff_file or die "Failed to close cache file: $!\n";
-        close STDOUT or die "Error writing to STDOUT; $!";
         # update the SQLite db - to ensure gff processing if appropriate
         $self->SUPER::do_requires;
-        $self->update_local_db($gff_source, $cache_file, $process_gff);
+        $self->update_local_db($gff_source, $cache_file, 1);
         return;
     }
 
@@ -111,7 +112,6 @@ sub do_it {
     if ($response->is_success) {
 
         my $gff = $response->decoded_content;
-        die "Unexpected response for $gff_source: $gff\n" unless $gff =~ /EnsEMBL2GFF/;
 
         # cache the result
         $self->time_diff_for(
@@ -124,20 +124,15 @@ sub do_it {
             });
 
         # update the SQLite db
-        $self->update_local_db($gff_source, $cache_file, $process_gff);
+        $self->update_local_db($gff_source, $cache_file, 1);
 
         # if (rand() < 0.5) {
         #     die "Horribly";
         # }
 
         # Send data to zmap on STDOUT
-        $self->time_diff_for('sending data', sub { print STDOUT $gff; });
-
-        # zmap waits for STDOUT to be closed as an indication that all
-        # data has been sent, so we close the handle now so that zmap
-        # doesn't tell otterlace about the successful loading of the column
-        # before we have the SQLite db updated and the cache file saved.
-        close STDOUT or die "Error writing to STDOUT; $!";
+        open my $gff_string_fh, '<', \$gff or die "Failed to open GFF string as file handle: $!\n";
+        $self->_spool_gff($gff_string_fh);
     }
     else {
 
@@ -165,6 +160,31 @@ sub do_it {
     return;
 }
 
+# Side-effect: closes STDOUT
+#
+sub _spool_gff {
+    my ($self, $fh) = @_;
+
+    $self->time_diff_for('sending data', sub {
+        while (my $line = <$fh>) {
+            if ($line =~ /^>/) {
+                # FASTA header
+                print unescape_fasta_description($line);
+            } else {
+                print $line;
+            }
+        }
+                         });
+
+    # zmap waits for STDOUT to be closed as an indication that all
+    # data has been sent, so we close the handle now so that zmap
+    # doesn't tell otterlace about the successful loading of the column
+    # before we have the SQLite db updated and the cache file saved.
+    close STDOUT or die "Error writing to STDOUT; $!";
+
+    return;
+}
+
 ## no critic (Modules::ProhibitMultiplePackages)
 
 package main;
@@ -172,3 +192,10 @@ package main;
 Bio::Otter::GetScript::Filter->new->run;
 
 exit;
+
+__END__
+
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
+

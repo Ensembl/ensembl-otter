@@ -3,7 +3,13 @@ package Bio::Otter::Lace::OnTheFly::QueryValidator;
 use namespace::autoclean;
 use Moose;
 
+with 'MooseX::Log::Log4perl';
+
 use Carp;
+use List::MoreUtils qw{ uniq };
+
+use Bio::Otter::Lace::OnTheFly::Utils::SeqList;
+use Bio::Otter::Lace::OnTheFly::Utils::Types;
 
 use Bio::Vega::Evidence::Types qw{ new_evidence_type_valid };
 use Hum::Pfetch;
@@ -20,24 +26,22 @@ has long_query_cb        => ( is => 'ro', isa => 'CodeRef', required => 1 );
 
 has max_query_length     => ( is => 'ro', isa => 'Int', default => 10000 );
 
-has confirmed_seqs       => ( is => 'ro', isa => 'ArrayRef[Hum::Sequence]',
-                              lazy => 1, builder => '_build_confirmed_seqs', init_arg => undef );
+has confirmed_seqs       => (
+    is       => 'ro',
+    isa      => 'SeqListClass',
+    lazy     => 1,
+    builder  => '_build_confirmed_seqs',
+    init_arg => undef,
+    handles  => [qw( seqs_by_name seq_by_name )],
+    );
 
 has seqs_by_type         => ( is => 'ro', isa => 'HashRef[ArrayRef[Hum::Sequence]]',
                               lazy => 1, builder => '_build_seqs_by_type', init_arg => undef );
-
-has seqs_by_name         => ( is => 'ro', isa => 'HashRef[Hum::Sequence]',
-                              lazy => 1, builder => '_build_seqs_by_name', init_arg => undef );
-
-# has query_fasta_file     => ( is => 'ro', isa => 'File::Temp',
-#                               lazy => 1, builder => '_build_query_fasta_file', init_arg => undef );
 
 # Internal attributes
 #
 has _acc_type_full_cache => ( is => 'ro', isa => 'HashRef[ArrayRef[Str]]',
                               default => sub{ {} }, init_arg => undef );
-
-has _seq_hits            => ( is => 'ro', isa => 'HashRef', default => sub{ {} }, init_arg => undef );
 
 has _warnings            => ( is => 'ro', isa => 'HashRef', default => sub{ {} }, init_arg => undef );
 
@@ -57,7 +61,9 @@ sub _build_confirmed_seqs {     ## no critic (Subroutines::ProhibitUnusedPrivate
 
         # We work on the union of the supplied sequences and supplied accession ids
         my @accessions = ( @seq_accs, @supplied_accs );
-        return [] unless @accessions; # nothing to do
+        return Bio::Otter::Lace::OnTheFly::Utils::SeqList->new( seqs => [] ) unless @accessions; # nothing to do
+
+        $self->logger->debug('n(accessions) = ', scalar @accessions);
 
         # identify the types of all the accessions supplied
         my $cache = $self->accession_type_cache;
@@ -68,8 +74,8 @@ sub _build_confirmed_seqs {     ## no critic (Subroutines::ProhibitUnusedPrivate
     }
 
     $self->_augment_supplied_sequences;
-    my @to_pfetch = $self->_check_augment_supplied_accessions;
-    $self->_pfetch_sequences(@to_pfetch);
+    my @to_fetch = $self->_check_augment_supplied_accessions;
+    $self->_fetch_sequences(@to_fetch);
 
     # tell the user about any missing sequences or remapped accessions
 
@@ -108,24 +114,21 @@ sub _build_confirmed_seqs {     ## no critic (Subroutines::ProhibitUnusedPrivate
         }
     }
 
-    return \@confirmed_seqs;
+    return Bio::Otter::Lace::OnTheFly::Utils::SeqList->new( seqs => \@confirmed_seqs );
 }
 
 sub _build_seqs_by_type {       ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
     my $self = shift;
 
     my %seqs_by_type;
-    foreach my $seq (@{$self->confirmed_seqs}) {
-        if ($seq->type && new_evidence_type_valid($seq->type))
+    foreach my $seq (@{$self->confirmed_seqs->seqs}) {
+        my $type = $seq->type;
+        unless ($type && new_evidence_type_valid($type))
         {
-            push @{ $seqs_by_type{ $seq->type } }, $seq;
+            $type = $seq->sequence_string =~ /[^acgtrymkswhbvdnACGTRYMKSWHBVDN]/
+                ? 'OTF_AdHoc_Protein' : 'OTF_AdHoc_DNA';
         }
-        elsif ($seq->sequence_string =~ /[^acgtrymkswhbvdnACGTRYMKSWHBVDN]/) {
-            push @{ $seqs_by_type{'Unknown_Protein'} }, $seq;
-        }
-        else {
-            push @{ $seqs_by_type{'Unknown_DNA'} }, $seq;
-        }
+        push @{ $seqs_by_type{ $type } }, $seq;
     }
 
     return \%seqs_by_type;
@@ -141,32 +144,17 @@ sub seqs_for_type {
     return $self->seqs_by_type->{$type};
 }
 
-sub _build_seqs_by_name {       ## no critic (Subroutines::ProhibitUnusedPrivateSubroutines)
-    my $self = shift;
-
-    my %name_seq;
-    for my $seq (@{$self->confirmed_seqs}) {
-        $name_seq{ $seq->name } = $seq;
-    }
-
-    return \%name_seq;
-}
-
-sub seq_by_name {
-    my ($self, $name) = @_;
-    return $self->seqs_by_name->{$name};
-}
-
 # add type and full accession information to the supplied sequences
 # modifies sequences in $self->seqs
 #
 sub _augment_supplied_sequences {
     my $self = shift;
-    my $cache = $self->accession_type_cache;
 
     for my $seq (@{$self->seqs}) {
         my $name = $seq->name;
-        if (my ($type, $full_acc) = $cache->type_and_name_from_accession($name)) {
+        my $entry = $self->_acc_type_full($name);
+        if ($entry) {
+            my ($type, $full_acc) = @$entry;
             ### Might want to be paranoid and check that the sequence of
             ### supplied sequences matches the pfetched sequence where the
             ### names of sequences are public accessions.
@@ -183,60 +171,82 @@ sub _augment_supplied_sequences {
 sub _check_augment_supplied_accessions {
     my $self = shift;
 
-    my $cache = $self->accession_type_cache;
     my $supplied_accs = $self->accessions;
 
-    my @to_pfetch;
+    my @to_fetch;
     foreach my $acc ( @$supplied_accs ) {
+
         my $entry = $self->_acc_type_full($acc);
-        if ($entry) {
-            my ($type, $full) = @$entry;
-            push(@to_pfetch, $full);
+
+        unless ($entry) {
+            # No point trying to fetch invalid accessions
+            $self->_add_missing_warning($acc, "unknown accession or illegal evidence type");
+            next;
         }
-        else {
-            # No point trying to pfetch invalid accessions
-            $self->_add_missing_warning($acc, "unknown accession");
+
+        my ($type, $full) = @$entry;
+        if ($type eq 'SRA') {
+            $self->_add_missing_warning($acc, 'illegal evidence type: SRA');
+            next;
         }
+
+        push(@to_fetch, $full);
+
+        if ($acc ne $full) {
+            $self->_add_remap_warning( $acc => $full );
+        }
+
     }
-    return @to_pfetch;
+    return @to_fetch;
 }
 
 # Adds sequences to $self->seqs
 #
-sub _pfetch_sequences {
-    my ($self, @to_pfetch) = @_;
+sub _fetch_sequences {
+    my ($self, @to_fetch) = @_;
 
-    my %seqs_fetched;
-    if (@to_pfetch) {
-        foreach my $seq (Hum::Pfetch::get_Sequences(@to_pfetch)) {
-            $seqs_fetched{$seq->name} = $seq if $seq;
-        }
-    }
+    my $cache = $self->accession_type_cache;
 
-    foreach my $acc (@to_pfetch) {
+    @to_fetch = uniq @to_fetch;
+    $self->logger->debug('Need seq for: ', join(',', @to_fetch) || '<none>');
+
+    foreach my $acc (@to_fetch) {
+
         my ($type, $full) = @{$self->_acc_type_full($acc)};
-
-        # Delete from the hash so that we can check for
-        # unclaimed sequences.
-        my $seq = delete($seqs_fetched{$full});
-        if ($seq) {
-            $seq->type($type);
-        }
-        else {
-            $self->_add_missing_warning("$acc ($full)" => "could not pfetch");
+        unless ($type) {
+            $self->_add_missing_warning($acc => 'illegal evidence type');
             next;
         }
 
+        my $info = $cache->feature_accession_info($acc);
+        unless ($info) {
+            $self->logger->error("No info for '$acc' - this should not happen");
+            $self->_add_missing_warning($acc => 'internal error');
+            next;
+        }
+
+        unless ($info->{currency} and $info->{currency} eq 'current') {
+            $self->_add_missing_warning($acc => 'obsolete SV');
+            next;
+        }
+
+        unless ($info->{sequence}) {
+            $self->_add_missing_warning($acc => 'no sequence');
+            next;
+        }
+
+        my $seq = Hum::Sequence->new;
+        $seq->name($full);
+        $seq->type($type);
+        $seq->sequence_string($info->{sequence});
+
+        # Will this ever get hit?
         if ($full ne $acc) {
+            $self->logger->error("_fetch_sequences called with partial acc.sv for '$acc','$full'");
             $self->_add_remap_warning($acc => $full);
         }
 
         push(@{$self->seqs}, $seq);
-    }
-
-    # anything not claimed should be reported
-    foreach my $unclaimed ( keys %seqs_fetched ) {
-        $self->_add_unclaimed_warning($unclaimed);
     }
 
     return;
@@ -257,28 +267,6 @@ sub _acc_type_full {
     my $new_entry;
     $new_entry = [ $type, $full ] if ($type and $full);
     return $local_cache->{$acc} = $new_entry;
-}
-
-# keeping track of hits
-
-sub record_hit {
-    my ($self, @hit_names) = @_;
-    foreach my $name (@hit_names) {
-        croak "Don't know about '$name'" unless $self->seq_by_name($name);
-        $self->_seq_hits->{$name} = 1;
-    }
-    return;
-}
-
-sub names_not_hit {
-    my $self = shift;
-    my @no_hit;
-    foreach my $seq (@{$self->confirmed_seqs}) {
-        my $name = $seq->name;
-        next if $self->_seq_hits->{$name};
-        push @no_hit, $name;
-    }
-    return @no_hit;
 }
 
 # warnings
@@ -303,11 +291,13 @@ sub _add_missing_warning {
     return;
 }
 
-sub _add_unclaimed_warning {
-    my ($self, $acc) = @_;
-    $self->_add_warning( unclaimed => $acc );
-    return;
-}
+# FIXME: remove, and related 'unclaimed' warning handling
+#
+# sub _add_unclaimed_warning {
+#     my ($self, $acc) = @_;
+#     $self->_add_warning( unclaimed => $acc );
+#     return;
+# }
 
 sub _format_warnings {
     my $self = shift;

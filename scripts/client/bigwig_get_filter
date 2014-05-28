@@ -1,0 +1,19 @@
+#!/bin/sh
+
+bigwig_get_key_list='
+    chr
+    csver_remote
+    dataset
+    end
+    file
+    gff_seqname
+    gff_source
+    gff_version
+    start
+    strand
+    version
+    '
+
+exec filter_wrap \
+    "$bigwig_get_key_list"  \
+    bigwig_get "$@"
