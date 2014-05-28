@@ -233,7 +233,7 @@ $support->comma_to_list('ignore_QCreports');
 #set gene prefixes to ignore for transfer if they are not already defined by the user
 if (! $support->param('filter_prefix')) {
   if ($support->param('loutredbname') =~ /human/) {
-    $support->param('filter_prefix','OLD_MIT,HMIT,Em,ERI,GT,GH,API,DG,CCDS,MGC,MPI,SK,WU');
+    $support->param('filter_prefix','OLD_MIT,HMIT,Em,ERI,GT,GH,API,DG,CCDS,MGC,MPI,SK,WU,PATCH');
   }
   elsif ($support->param('loutredbname') =~ /mouse/) {
     $support->param('filter_prefix','INT');
