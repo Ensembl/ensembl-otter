@@ -1,10 +1,11 @@
 all: test.clone.full test.clone.vulgar test.ts.full test.ts.vulgar test.ts.rev.vulgar
 all: test.exons.fwd.full test.exons.fwd.vulgar test.exons.rev.full test.exons.rev.vulgar
 all: protein.clone.full protein.clone.vulgar protein.ts.full protein.ts.vulgar
+all: BC018923.fwd.fa BC018923.rev.fa
 all: Q5SV42.full
 
 INTERMEDIATES  = random.fa insert.fa region.insert.fa region.indel.fa region.indel.rev.fa tmp_clone.fa
-INTERMEDIATES += BC018923.rev.fa BC018923.rev.int.fa BC018923.fwd.fa
+INTERMEDIATES += BC018923.rev.int.fa
 
 clean:
 	rm $(INTERMEDIATES)
