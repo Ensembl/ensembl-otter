@@ -811,7 +811,7 @@ if ( ! $support->param('dry_run')) {
     }
   });
   $support->log("\nUpdating attrib_type table for ".$support->param('dbname')."...\n");
-    system("../update_attributes.pl $options") == 0
+    system("$Bin/../update_attributes.pl $options") == 0
     or $support->log_warning("Error running update_attributes.pl: $!");
 
 
@@ -825,7 +825,7 @@ if ( ! $support->param('dry_run')) {
     }
   });
   $support->log("\nUpdating external_db table on ".$support->param('dbname')."...\n");
-    system("../xref/update_external_dbs.pl $options") == 0
+    system("$Bin/../xref/update_external_dbs.pl $options") == 0
     or $support->log_warning("Error running update_external_dbs.pl: $!");
 
 }
