@@ -14,8 +14,6 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
 # use Bio::Otter::Lace::PipelineDB;
 
 {
-
-    # $0 = 'otterlace';   # For testing, to see restricted dataset.
     # my $dataset_name = 'human_test';
 
     my $usage = sub { exec('perldoc', $0) };
@@ -32,6 +30,7 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
 
     # if (0) {
     #     # Client communicates with otter HTTP server
+    #     $0 = 'otterlace';   # For testing, to see restricted dataset.
     #     my $cl = Bio::Otter::Lace::Defaults::make_Client();
     #
     #     # DataSet interacts directly with an otter database

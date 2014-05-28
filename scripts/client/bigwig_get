@@ -19,26 +19,26 @@ my $options = {
 my @options_specs = qw(
     gff_version=s
     file=s
-    csver=s
+    csver_remote=s
     dataset=s
     chr=s
     start=i
     end=i
     strand=s
-    gff_feature_source=s
+    gff_source=s
     gff_seqname=s
     version
     );
 
 my @options_required = qw(
     file
-    csver
+    csver_remote
     dataset
     chr
     start
     end
     strand
-    gff_feature_source
+    gff_source
     );
 
 sub _key {
@@ -54,13 +54,13 @@ sub show_version {
     exit 0;
 }
 
+print STDERR "$0", ( map { " '$_'" } @ARGV ), "\n";
+
 my @keys    = map { _key()    } @options_specs;
 my @options = map { _option() } @options_specs;
 
-my @old_ARGV = @ARGV;
 Bio::Otter::Lace::Defaults::do_getopt(@options);
 show_version() if $options->{version};
-print STDERR "$0", ( map { " '$_'" } @old_ARGV ), "\n";
 
 my @options_missing = grep { ! defined $options->{$_} } @options_required;
 die sprintf "missing options: %s\n",
@@ -70,13 +70,13 @@ $options->{$_} = uri_unescape($options->{$_}) for keys %{$options};
 my (
     $gff_version,
     $file,
-    $csver,
+    $csver_remote,
     $dataset,
     $chr,
     $start,
     $end,
     $strand,
-    $gff_feature_source,
+    $gff_source,
     $gff_seqname
     ) = @{$options}{@keys};
 
@@ -95,39 +95,38 @@ sub gff_escape {
 
 sub gff_escape_seqid {
     # escapes everything except a restricted set of characters
-    s/([^-a-zA-Z0-9.:^*$@!+_?|])/sprintf "%%%02X", ord($1)/eg;
+    s/([^-a-zA-Z0-9.:^*\$\@!+_?|])/sprintf "%%%02X", ord($1)/eg;
     return;
 }
 
 sub gff_escape_source {
     # escapes everything except a restricted set of characters
-    s/([^-a-zA-Z0-9.:^*$@!+_? ])/sprintf "%%%02X", ord($1)/eg;
+    s/([^-a-zA-Z0-9.:^*\$\@!+_? ])/sprintf "%%%02X", ord($1)/eg;
     return;
 }
 
 my $chr_field = $chr;
 gff_escape_seqid for $chr_field;
-my $source = $gff_feature_source;
+my $source = $gff_source;
 gff_escape_source for $source;
 
 sub _print_header {
     print
         <<"GFF",
 ##gff-version $gff_version
-##sequence-region $chr $start $end
 GFF
 ;
     return;
 }
 
 sub _print_feature {
-    my ($feature, $start, $end) = @_;
+    my ($feature, $fstart, $fend) = @_;
 
     my @fields =
         (
-         'region',
-         (sprintf "%d", $start),
-         (sprintf "%d", $end),
+         'score',
+         (sprintf "%d", $fstart),
+         (sprintf "%d", $fend),
          abs($feature->score),
          $strand_field,
          '.', # phase, undefined
@@ -145,7 +144,7 @@ my $client = Bio::Otter::Lace::Defaults::make_Client();
 my $mapping_xml = $client->otter_response_content(
     'GET', 'get_mapping', {
         dataset => $dataset,
-        cs      => $csver,
+        cs      => $csver_remote,
         chr     => $chr,
         start   => $start,
         end     => $end,
@@ -155,3 +154,12 @@ my $mapping = Bio::Otter::Mapping->new_from_xml($mapping_xml);
 # map and print the features
 _print_header;
 $mapping->do_features($bigwig_fetch, $start, $end, \&_print_feature);
+
+exit;
+
+__END__
+
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
+

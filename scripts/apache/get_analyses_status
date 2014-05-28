@@ -77,7 +77,7 @@ SQL
 sub get_analyses_status {
     my ($server) = @_;
 
-my $assembly = $server->require_argument('type');
+my $assembly = $server->require_argument('chr');
 my $component_cs = $server->param('component_cs') || 'contig';
 
 my $pdbc = $server->dataset->pipeline_dba()->dbc();  # pipeline dbc

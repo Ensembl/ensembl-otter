@@ -115,6 +115,37 @@ my $_new_feature_id_sub = sub {
 
 {
 
+    package Bio::EnsEMBL::MiscFeature;
+
+    sub _gff_hash {
+        my ($self, @args) = @_;
+
+        my $gff = $self->SUPER::_gff_hash(@args);
+
+        # display_id() looks for a 'name' attribute
+        #
+        $gff->{'attributes'}{'Name'} =
+            $self->display_id ||
+            $self->analysis->logic_name;
+
+        # This relies on us setting a note attribute
+        #
+        my $descs = $self->get_all_attribute_values('note');
+        if ($descs and @$descs) {
+            $gff->{'attributes'}{'Note'} = join ',', @$descs;
+        }
+
+        my $url = $self->get_all_attribute_values('url');
+        if ($url and $url->[0]) {
+            $gff->{'attributes'}{'url'} = $url->[0];
+        }
+
+        return $gff;
+    }
+}
+
+{
+
     package Bio::EnsEMBL::FeaturePair;
 
     sub _gff_hash {
@@ -174,6 +205,8 @@ my $_new_feature_id_sub = sub {
 {
 
     package Bio::EnsEMBL::Gene;
+
+    use Bio::Vega::Utils::Detaint qw( detaint_pfam_url_fmt );
 
     sub to_gff {
         my ($self, %args) = @_;
@@ -247,10 +280,9 @@ my $_new_feature_id_sub = sub {
             $extra_attrs->{'locus_stable_id'} = $stable;
         }
 
-        if (my $url_fmt = $args{'url_string'}) {
-            die "Cannot detaint url_string=$url_fmt"
-                unless $url_fmt =~ m{^(http[-=_:?/\\.=_a-zA-Z0-9]+\%(?:s|\{pfam\})[-=_:?/\\.a-zA-Z0-9]*)$};
-            $url_fmt = $1;
+        if (my $url_string = $args{'url_string'}) {
+            my $url_fmt = detaint_pfam_url_fmt($url_string);
+            die "Cannot detaint url_string='$url_string'" unless $url_fmt;
             if ($url_fmt =~ s{%\{pfam\}}{%s}) {
                 my $kv = $self->_urlsubst_pfam($url_fmt, $gene_numeric_id);
                 @{$extra_attrs}{ keys %$kv } = values %$kv;
@@ -675,17 +707,23 @@ my $_new_feature_id_sub = sub {
         my $gff = $self->SUPER::_gff_hash(@args);
 
         my $hd = $self->get_HitDescription;
-        $gff->{'attributes'}{'length'}   = $hd->hit_length;
-        $gff->{'attributes'}{'taxon_id'} = $hd->taxon_id;
-        if (my $db_name = $hd->db_name) {
-            $gff->{'attributes'}{'db_name'} = $db_name;
-        }
-        if (my $desc = $hd->description) {
-            $desc =~ s/"/\\"/g;
-            $gff->{'attributes'}{'description'} = $desc;
-        }
-        if (my $seq = $hd->get_and_unset_hit_sequence_string) {
-            $gff->{'attributes'}{'sequence'} = $seq;
+        if ($hd) {
+            if (my $hit_length = $hd->hit_length) {
+                $gff->{'attributes'}{'length'} = $hit_length;
+            }
+            if (my $taxon_id = $hd->taxon_id) {
+                $gff->{'attributes'}{'taxon_id'} = $taxon_id;
+            }
+            if (my $db_name = $hd->db_name) {
+                $gff->{'attributes'}{'db_name'} = $db_name;
+            }
+            if (my $desc = $hd->description) {
+                $desc =~ s/"/\\"/g;
+                $gff->{'attributes'}{'Note'} = $desc;
+            }
+            if (my $seq = $hd->get_and_unset_hit_sequence_string) {
+                $gff->{'attributes'}{'sequence'} = $seq;
+            }
         }
 
         return $gff;
@@ -701,14 +739,20 @@ my $_new_feature_id_sub = sub {
         my $gff = $self->SUPER::_gff_hash(@args);
 
         my $hd = $self->get_HitDescription;
-        $gff->{'attributes'}{'length'}   = $hd->hit_length;
-        $gff->{'attributes'}{'taxon_id'} = $hd->taxon_id;
-        if (my $db_name = $hd->db_name) {
-            $gff->{'attributes'}{'db_name'} = $db_name;
-        }
-        if (my $desc = $hd->description) {
-            $desc =~ s/"/\\"/g;
-            $gff->{'attributes'}{'description'} = $desc;
+        if ($hd) {
+            if (my $hit_length = $hd->hit_length) {
+                $gff->{'attributes'}{'length'} = $hit_length;
+            }
+            if (my $taxon_id = $hd->taxon_id) {
+                $gff->{'attributes'}{'taxon_id'} = $taxon_id;
+            }
+            if (my $db_name = $hd->db_name) {
+                $gff->{'attributes'}{'db_name'} = $db_name;
+            }
+            if (my $desc = $hd->description) {
+                $desc =~ s/"/\\"/g;
+                $gff->{'attributes'}{'Note'} = $desc;
+            }
         }
 
         return $gff;

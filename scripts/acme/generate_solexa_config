@@ -55,7 +55,7 @@ use Bio::Otter::Lace::SatelliteDB;
 [zebrafish.filter.%s]
 server_script=get_gff_genes
 metakey=ensembl_solexagene_mar2010_db_head
-csver_remote=Zv9
+csver=Zv9
 analysis=%s
 description=RNAseq Solexa genes from ensembl (%s / March 2010)
 process_gff_file=1
@@ -136,7 +136,7 @@ server_script=get_gff_features
 filter_module=Bio::Vega::ServerAnalysis::SolexaDepthBins
 analysis=%s
 metakey=solexa_raw_reads
-csver_remote=Zv9
+csver=Zv9
 description=Coverage plot of RNAseq reads (%s)
 feature_kind=DnaDnaAlignFeature
 zmap_column=solexa_coverage

@@ -17,6 +17,7 @@ use TransientWindow::OpenSlice;
 use MenuCanvasWindow::ColumnChooser;
 use POSIX qw(ceil);
 use Tk::Checkbutton;
+use Tk::ScopedBusy;
 
 sub name {
     my ($self, $name) = @_;
@@ -107,10 +108,9 @@ sub refresh_lock_columns {
     my ($self) = @_;
 
     my $top = $self->canvas->toplevel;
-    $top->Busy;
+    my $busy = Tk::ScopedBusy->new($top);
     $self->refresh_column(7);   # Padlock icon column
     $self->refresh_column(8);   # Lock author name column
-    $top->Unbusy;
 
     return;
 }
@@ -390,17 +390,15 @@ sub initialise {
 
     ### Is hunting in CanvasWindow?
     my $hunter = sub{
-        $top->Busy;
+        my $busy = Tk::ScopedBusy->new($top);
         $self->hunt_for_selection;
-        $top->Unbusy;
     };
 
     if( @{$self->get_CloneSequence_list()} > $self->max_per_page() ){
         $self->_allow_paging(1);
         my $open_range = sub{
-            $top->Busy;
+            my $busy = Tk::ScopedBusy->new($top);
             $self->draw_range();
-            $top->Unbusy;
         };
         $self->make_button($button_frame_cmds, 'Show Range [F7]', $open_range);
         $top->bind('<F7>', $open_range);
@@ -421,11 +419,10 @@ sub initialise {
     $top->bind('<F5>',        $refresh_locks);
 
     my $refresh_all = sub {
-        $top->Busy;
+        my $busy = Tk::ScopedBusy->new($top);
         # we want this to refresh all columns
         $self->_refresh_SequenceSet();
         $self->draw();
-        $top->Unbusy;
     };
     $self->make_button($button_frame_cmds, 'Refresh Ana. Status', $refresh_all, 8);
     $top->bind('<Control-a>', $refresh_all);
@@ -438,9 +435,8 @@ sub initialise {
     $self->make_button($button_frame_cmds, 'Open from chr coords', $run_lace_on_slice);
 
     my $run_lace = sub{
-        $top->Busy;
+        my $busy = Tk::ScopedBusy->new($top);
         $self->run_lace;
-        $top->Unbusy;
     };
     $self->make_button($button_frame_cmds, 'Run lace', $run_lace, 4);
     $top->bind('<Control-l>', $run_lace);
@@ -723,7 +719,7 @@ sub _open_SequenceSet {
 
         # using Lace::Slice instead of Lace::SequenceSet is encouraged wherever possible
     my ($dsname, $ssname, $chr_name, $chr_start, $chr_end) = $ss->selected_CloneSequences_parameters;
-    my $smart_slice = Bio::Otter::Lace::Slice->new($cl, $dsname, $ssname,
+    my $slice = Bio::Otter::Lace::Slice->new($cl, $dsname, $ssname,
         'chromosome', 'Otter', $chr_name, $chr_start, $chr_end);
 
 
@@ -733,7 +729,7 @@ sub _open_SequenceSet {
     $adb->make_database_directory;
     $adb->write_access($adb_write_access);
     $adb->name($name);
-    $adb->smart_slice($smart_slice);
+    $adb->slice($slice);
     $adb->load_dataset_info;
 
     if ($adb_write_access) {
@@ -768,7 +764,7 @@ sub _open_SequenceSet {
 
     my $top = $self->canvas->Toplevel
       (-title  => $Bio::Otter::Lace::Client::PFX.'Select column data to load');
-    my $cc = MenuCanvasWindow::ColumnChooser->new($top, 600, 400);
+    my $cc = MenuCanvasWindow::ColumnChooser->new($top);
     $cc->init_flag(1);
     $cc->AceDatabase($adb);
     $cc->SequenceNotes($self);

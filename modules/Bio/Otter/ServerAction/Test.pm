@@ -15,6 +15,7 @@ use Bio::Otter::Version;
 use Bio::Otter::Git;
 use Bio::Otter::Auth::Pagesmith;
 use Bio::Otter::Auth::SSO;
+use Bio::Otter::Utils::RequireModule qw(require_module);
 
 use Bio::EnsEMBL::ApiVersion ();
 
@@ -69,10 +70,10 @@ sub _require_all {
 
     my %out;
     foreach my $mod (@mods) {
-        if (eval "require $mod;") { ## no critic (BuiltinFunctions::ProhibitStringyEval,Anacode::ProhibitEval)
+        my $err;
+        if (require_module($mod, error_ref => \$err)) {
             push @{ $out{loaded} }, $mod;
         } else {
-            my $err = $@;
             $err =~ s{ \(\@INC contains: [^()]+\) at }{... at };
             $out{error}->{$mod} = $err;
         }
@@ -121,6 +122,8 @@ sub generate {
     foreach my $var ($server->param) {
         $out{CGI_param} .= sprintf "%24s  %s\n", $var, $server->param($var);
     }
+
+    $out{Path_info} = $server->path_info;
 
     # avoiding exposing internals (private or verbose)
     my $cgi = $web->cgi;

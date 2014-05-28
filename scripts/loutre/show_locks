@@ -4,12 +4,11 @@
 
 use strict;
 
-use Getopt::Long 'GetOptions';
 use List::Util 'max';
 use Try::Tiny;
 
 use Bio::Otter::Lace::Defaults;
-use Bio::Otter::Lace::PipelineDB;
+use Bio::Otter::Server::Config;
 
 use Bio::Vega::ContigLockBroker;
 use Bio::Vega::SliceLockBroker;
@@ -17,7 +16,6 @@ use Bio::Vega::SliceLockBroker;
 $| = 1;
 
 sub main {
-    $0 = 'otterlace';
     my $dataset_name = undef;
     my $author    = undef;
     my $assembly  = undef;
@@ -52,9 +50,8 @@ sub main {
     die "Can only perform on of < -delete | -expire | -interrupt >"
       if (!!$do_delete + !!$do_expire + !!$do_interrupt) > 1;
 
-    my $cl = Bio::Otter::Lace::Defaults::make_Client();
-    my $ds = $cl->get_DataSet_by_name($dataset_name);
-    my $otter_db = $ds->get_cached_DBAdaptor;
+    my $ds = Bio::Otter::Server::Config->SpeciesDat->dataset($dataset_name);
+    my $otter_db = $ds->otter_dba;
 
     my $exit = 0;
 

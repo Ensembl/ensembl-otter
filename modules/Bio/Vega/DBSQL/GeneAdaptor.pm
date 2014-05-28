@@ -9,7 +9,7 @@ use Bio::Vega::Transcript;
 use Bio::EnsEMBL::Utils::Exception qw(throw warning);
 use Bio::Vega::Utils::Comparator qw(compare);
 use Bio::Vega::AnnotationBroker;
-use Bio::Otter::MFetcher;
+use Bio::Otter::MappingFetcher;
 
 use base 'Bio::EnsEMBL::DBSQL::GeneAdaptor';
 
@@ -885,7 +885,7 @@ sub fetch_all_genes_on_reference_slice {
     #  ncbi_chr, eg '22';        (num or x, y)
     #  otter_chr, eg, 'chr22-07' (sset name)
 
-    my $mfetcher = Bio::Otter::MFetcher->new();
+    my $mfetcher = Bio::Otter::MappingFetcher->new();
 
     $mfetcher->otter_dba($self->db);
 

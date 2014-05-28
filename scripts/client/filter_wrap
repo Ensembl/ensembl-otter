@@ -1,0 +1,60 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+
+
+=pod
+
+This a shim to wrap a filter_get API around something that expects a
+{bam,bigwig}_get API.  It will eventually disappear when we have
+uniform handling of filter/Bam/BigWig sources.
+
+The steps are:
+    * un-URI-encode values
+    * filter out unwanted keys
+
+=cut
+
+
+use URI::Escape qw( uri_unescape );
+
+# warn sprintf "%s\n", join ' ', $0, map { "'$_'" } @ARGV;
+
+my ($key_list, $exe) = splice @ARGV, 0, 2;
+
+sub list_split {
+    my ($list) = @_;
+    $list =~ /\A[[:space:]]+/;
+    $list =~ /[[:space:]]+\z/;
+    my @list = split /[[:space:]]+/, $list;
+    return @list;
+}
+
+my %key_hash = map { $_  =>  1  } list_split $key_list;
+
+sub arg_convert {
+    my ($key, $value) = split /=/, $_;
+
+    $key =~ s/^-+//;
+    $key_hash{$key} or return;
+
+    my $arg =
+        defined $value
+        ? (sprintf '--%s=%s', $key, (uri_unescape $value))
+        : (sprintf '--%s', $key);
+
+    return $arg;
+}
+
+my @arg_list = map { arg_convert } @ARGV;
+exec $exe, @arg_list;
+
+exit;
+
+__END__
+
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
+

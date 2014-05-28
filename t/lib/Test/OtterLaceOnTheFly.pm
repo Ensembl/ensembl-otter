@@ -5,18 +5,22 @@ package Test::OtterLaceOnTheFly;
 use strict;
 use warnings;
 
+use Cwd qw(abs_path);
 use Exporter qw(import);
-use FindBin qw($Bin);
+use File::Basename;
 use Test::More;
 
-use Bio::Otter::Lace::OnTheFly::Aligner::Genomic;
+use Bio::Otter::Lace::OnTheFly::Builder::Genomic;
+use Bio::Otter::Lace::OnTheFly::Runner;
 use Bio::Otter::Lace::OnTheFly::TargetSeq;
 use Bio::Otter::Utils::FeatureSort qw( feature_sort );
 use Hum::FastaFileIO;
 
 our @EXPORT_OK = qw( fixed_tests build_target run_otf_test );
 
-my $path = "$Bin/etc/align";
+# .../t/lib/Test/
+# need to go up two levels to get into .../t/
+my $path = abs_path(dirname(__FILE__) . "/../../etc/align");
 
 my @tests = (
     {
@@ -106,13 +110,18 @@ sub run_otf_test {
         $test->{query_seqs} = [ Hum::FastaFileIO->new_DNA_IO($test->{query_path})->read_all_sequences ];
     }
 
-    my $aligner = new_ok( 'Bio::Otter::Lace::OnTheFly::Aligner::Genomic' => [{
+    my $builder = new_ok( 'Bio::Otter::Lace::OnTheFly::Builder::Genomic' => [{
         type       => $test->{type},
         query_seqs => $test->{query_seqs},
         target     => $target,
                                                                              }]);
+    my $request = $builder->prepare_run;
 
-    my $result_set = $aligner->run;
+    my $runner = new_ok( 'Bio::Otter::Lace::OnTheFly::Runner' => [
+                             request         => $request,
+                             resultset_class => 'Bio::Otter::Lace::OnTheFly::ResultSet::Test',
+                                                                  ]);
+    my $result_set = $runner->run;
     isa_ok($result_set, 'Bio::Otter::Lace::OnTheFly::ResultSet');
 
     my @qids = sort $result_set->hit_query_ids;

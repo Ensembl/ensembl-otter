@@ -14,8 +14,6 @@ use Bio::Otter::Lace::Slice;
     my $end_i;
     my $rand_test = 0;
 
-    $0 = 'otterlace';   # In order to see restricted datasets
-
     my $usage = sub { exec('perldoc', $0) };
     # This do_getopt() call is needed to parse the otter config files
     # even if you aren't giving any arguments on the command line.
@@ -35,6 +33,7 @@ use Bio::Otter::Lace::Slice;
     $end_i ||= $start_i;
     
     # Client communicates with otter HTTP server
+    $0 = 'otterlace';   # In order to see restricted datasets
     my $cl = Bio::Otter::Lace::Defaults::make_Client();
     $cl->get_server_otter_config;
     

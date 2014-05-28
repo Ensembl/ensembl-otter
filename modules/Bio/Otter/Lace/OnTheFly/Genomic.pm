@@ -4,7 +4,7 @@ use namespace::autoclean;
 use Moose;
 
 use Bio::Otter::Lace::OnTheFly::TargetSeq;
-use Bio::Otter::Lace::OnTheFly::Aligner::Genomic;
+use Bio::Otter::Lace::OnTheFly::Builder::Genomic;
 
 with 'Bio::Otter::Lace::OnTheFly';
 
@@ -20,9 +20,9 @@ sub build_target_seq {
         );
 }
 
-sub build_aligner {
+sub build_builder {
     my ($self, @params) = @_;
-    return Bio::Otter::Lace::OnTheFly::Aligner::Genomic->new(
+    return Bio::Otter::Lace::OnTheFly::Builder::Genomic->new(
         @params,
         );
 }

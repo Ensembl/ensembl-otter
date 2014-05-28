@@ -86,7 +86,7 @@ sub revcomp_subject {
 }
 
 sub fork_dotter {
-    my( $self ) = @_;
+    my ($self, $colour) = @_;
 
     my $start           = $self->query_start    or confess "query_start not set";
     my $end             = $self->query_end      or confess "query_end not set";
@@ -137,13 +137,14 @@ sub fork_dotter {
     $options{'-q'} = $offset;
     $options{'--horizontal-type'} = $self->query_type   if defined $self->query_type;
     $options{'--vertical-type'}   = $self->subject_type if defined $self->subject_type;
+    $options{'--session_colour'} = quotemeta($colour)   if defined $colour;
     my $dotter_opts = join(' ', %options);
 
     my $dotter_command =
         "dotter $dotter_opts $query_file $subject_file ; rm $query_file $subject_file ; echo 'Dotter finished'";
-    warn "RUNNING: $dotter_command\n";
 
     if (my $pid = fork) {
+        warn "$dotter_command running, pid $pid\n";
         return 1;
     }
     elsif (defined $pid) {

@@ -6,9 +6,9 @@ use strict;
 use warnings;
 
 use Bio::Otter::Lace::Client;   # _build_meta_hash
-use Bio::Otter::Utils::AccessionInfo;
 use Bio::Otter::Server::Config;
 use Bio::Otter::Server::Support::Local;
+use Bio::Otter::ServerAction::AccessionInfo;
 use Bio::Otter::ServerAction::TSV::LoutreDB;
 use Bio::Otter::Version;
 
@@ -21,21 +21,21 @@ sub new {
     return bless {}, $pkg;
 }
 
+sub local_server {
+    my $self = shift;
+    return $self->{_local_server} ||= Bio::Otter::Server::Support::Local->new;
+}
+
 sub get_accession_types {
     my ($self, @accessions) = @_;
-    my $types = $self->ai->get_accession_types(\@accessions);
-    # FIXME: de-serialisation is in wrong place: shouldn't need to serialise here.
-    # see apache/get_accession_types and AccessionTypeCache.
-    my $response = '';
-    foreach my $acc (keys %$types) {
-        $response .= join("\t", $acc, @{$types->{$acc}}) . "\n";
-    }
+    $self->local_server->set_params(accessions => \@accessions);
+    my $response = $self->sa_accession_info->get_accession_types;
     return $response;
 }
 
-sub ai {
+sub sa_accession_info {
     my $self = shift;
-    return $self->{_ai} ||= Bio::Otter::Utils::AccessionInfo->new;
+    return $self->{_sa_accession_info} ||= Bio::Otter::ServerAction::AccessionInfo->new($self->local_server);
 }
 
 # FIXME: scripts/apache/get_config needs reimplementing with a Bio::Otter::ServerAction:: class,
@@ -112,7 +112,7 @@ sub _get_fresh {
     try {
         my $tb = Test::Builder->new;
 
-        my $local_server = Bio::Otter::Server::Support::Local->new;
+        my $local_server = $self->local_server;
         $local_server->set_params(dataset => $dsname);
 
         my $ldb_tsv = Bio::Otter::ServerAction::TSV::LoutreDB->new($local_server);

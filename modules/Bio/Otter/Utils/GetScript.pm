@@ -6,8 +6,9 @@ use strict;
 use warnings;
 
 use IO::Handle;
+use Scalar::Util qw(weaken);
 use Time::HiRes qw( time gettimeofday );
-use URI::Escape qw(uri_unescape);
+use URI::Escape  qw(uri_unescape);
 
 use constant _DEBUG_INCS => $ENV{OTTER_DEBUG_INCS}; ## no critic(ValuesAndExpressions::ProhibitConstantPragma)
 
@@ -47,6 +48,7 @@ my $me;
 my $getscript_log_context = 'not-set';
 my $getscript_session_dir;
 my $getscript_local_db;
+my $getscript_log4perl_level;
 
 my %getscript_args;
 
@@ -57,6 +59,9 @@ sub new {
     my $ref = "";
     $me = bless \$ref, $pkg;
 
+    $getscript_log4perl_level = $opts{log4perl};
+
+    weaken $me;                 # else will not be DESTROYed until program exit
     return $me;
 }
 
@@ -72,6 +77,20 @@ sub run {
 
     $self->_set_log_context($self->log_context);
     $self->_open_log($self->log_filename);
+
+    if ($getscript_log4perl_level) {
+        require Log::Log4perl;
+        require Log::Log4perl::Layout::NoopLayout;
+
+        my $appender = Log::Log4perl::Appender->new('Bio::Otter::Utils::GetScript::Log4perlAppender');
+        $appender->layout(Log::Log4perl::Layout::NoopLayout->new());
+
+        my $log = Log::Log4perl->get_logger(''); # must specify '' for root logger
+        $log->add_appender($appender);
+        $log->level($getscript_log4perl_level);
+        $log->debug('Log4perl ready');
+    }
+
     $self->log_message("starting");
     $self->log_incs('After startup');
     $self->_log_arguments;
@@ -232,10 +251,12 @@ sub update_local_db {
         unless (eval {
             # No transaction!  Make only one statement.  Transactions
             # require more complex retrying when database is busy.
-            my $rv = $db_filter_adaptor->update_for_filter_get
-              ($column_name, # WHERE: name
-               $cache_file, # SET: gff_file, status = 'Loading'
-               $process_gff || 0); # SET: process_gff flag
+            my $rv = $db_filter_adaptor->update_for_filter_script(
+                $column_name, # WHERE: name
+                $cache_file,  # SET: gff_file,
+                $process_gff, #      process_gff,
+                              #      status = 'Loading'
+                );
             die "Changed $rv rows" unless 1 == $rv;
             1;
              } ) {
@@ -246,6 +267,20 @@ sub update_local_db {
         }
         $dbh->disconnect;
     } );
+    return;
+}
+
+# Primarily for the benefit of tests
+sub DESTROY {
+    undef $me;
+
+    undef $getscript_session_dir;
+    undef $getscript_local_db;
+    undef $getscript_log4perl_level;
+
+    $getscript_log_context = 'not-set';
+    %getscript_args = ();
+
     return;
 }
 

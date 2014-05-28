@@ -77,7 +77,7 @@ sub populate {
     return unless @to_fetch;
 
     # Query the webserver (mole database) for the information.
-    my $response = $self->Client->get_accession_types(@to_fetch);
+    my $results = $self->Client->get_accession_types(@to_fetch);
 
     my $save_alias = $dbh->prepare(q{
         INSERT INTO otter_full_accession(name, accession_sv) VALUES (?,?)
@@ -85,21 +85,21 @@ sub populate {
 
     $dbh->begin_work;
     try {
-        foreach my $line (split /\n/, $response) {
-            my ($name, $evi_type, $acc_sv, $source_db, $seq_length, $taxon_list, $description, $seq) =
-                split /\t/, $line;
+        foreach my $entry (values %$results) {
+            my ($name, $acc_sv, $taxon_list) = @$entry{qw( name acc_sv taxon_list )};
             my ($tax_id, @other_tax);
             ($tax_id, @other_tax) = split /,/, $taxon_list if $taxon_list; # /; # emacs highlighting workaround
             if (@other_tax) {
                 # Some SwissProt entries contain the same protein and multiple species.
                 warn "Discarding taxon info from '$taxon_list' for '$acc_sv'; keeping only '$tax_id'";
+                $entry->{taxon_id} = $tax_id;
             }
             # Don't overwrite existing info
             $check_full->execute($acc_sv);
             my ($have_full) = $check_full->fetchrow;
             unless ($have_full) {
                 # It is new, so save it
-                $self->save_accession_info($acc_sv, $tax_id, $evi_type, $description, $source_db, $seq_length, $seq);
+                $self->save_accession_info($entry);
             }
             if ($name ne $acc_sv) {
                 $save_alias->execute($name, $acc_sv);
@@ -125,18 +125,22 @@ sub populate {
               , taxon_id
               , evi_type
               , description
-              , source_db
+              , source
+              , currency
               , length
               , sequence )
-        VALUES (?,?,?,?,?,?,?)
+        VALUES (?,?,?,?,?,?,?,?)
     };
 
     sub save_accession_info {
-        my ($self, $accession_sv, $taxon_id, $evi_type, $description, $source_db, $length, $seq) = @_;
-        my $sth = $save_acc_info_sth{$self} ||= $DB{$self}->dbh->prepare($save_acc_info_sql);
-        confess "Cannot save without evi_type" unless defined $evi_type;
+        my ($self, $entry) = @_;
 
-        return $sth->execute($accession_sv, $taxon_id, $evi_type, $description, $source_db, $length, $seq);
+        my $sth = $save_acc_info_sth{$self} ||= $DB{$self}->dbh->prepare($save_acc_info_sql);
+        confess "Cannot save without evi_type" unless defined $entry->{evi_type};
+
+        return $sth->execute(
+            @$entry{qw(acc_sv taxon_id evi_type description source currency sequence_length sequence)}
+            );
     }
 }
 
@@ -241,14 +245,14 @@ sub evidence_type_and_name_from_accession_list {
     my $full_fetch = $dbh->prepare(q{
         SELECT evi_type
           , accession_sv
-          , source_db
+          , source
         FROM otter_accession_info
         WHERE accession_sv = ?
         });
     my $alias_fetch = $dbh->prepare(q{
         SELECT ai.evi_type
           , ai.accession_sv
-          , ai.source_db
+          , ai.source
         FROM otter_accession_info ai
           , otter_full_accession f
         WHERE ai.accession_sv = f.accession_sv
@@ -257,7 +261,7 @@ sub evidence_type_and_name_from_accession_list {
     my $part_fetch = $dbh->prepare(q{
         SELECT evi_type
           , accession_sv
-          , source_db
+          , source
         FROM otter_accession_info
         WHERE accession_sv LIKE ?
         });
@@ -266,23 +270,23 @@ sub evidence_type_and_name_from_accession_list {
     my $type_name = {};
     foreach my $acc (@$acc_list) {
         $full_fetch->execute($acc);
-        my ($type, $full_name, $source_db) = $full_fetch->fetchrow;
+        my ($type, $full_name, $source) = $full_fetch->fetchrow;
         unless ($type) {
             # If the SV was left off, try the otter_full_accession table first to
             # ensure that the most recent version is returned, if cached.
             $alias_fetch->execute($acc);
-            ($type, $full_name, $source_db) = $alias_fetch->fetchrow;
+            ($type, $full_name, $source) = $alias_fetch->fetchrow;
         }
         unless ($type) {
             # Last, try a LIKE query, assuming the SV was missed off
             $part_fetch->execute("$acc.%");
-            ($type, $full_name, $source_db) = $part_fetch->fetchrow;
+            ($type, $full_name, $source) = $part_fetch->fetchrow;
         }
         unless ($type and $full_name) {
             next;
         }
-        if ($source_db) {
-            my $prefix = ucfirst lc substr($source_db, 0, 2);
+        if ($source) {
+            my $prefix = ucfirst lc substr($source, 0, 2);
             $full_name = "$prefix:$full_name";
         }
         my $name_list = $type_name->{$type} ||= [];
@@ -293,14 +297,19 @@ sub evidence_type_and_name_from_accession_list {
 }
 
 {
-    my $feature_accession_info_sql = q{
-        SELECT source_db, taxon_id, description FROM otter_accession_info WHERE accession_sv = ?
+    my @fai_cols = qw( taxon_id evi_type description source currency length sequence );
+    my $cols_spec = join(', ', @fai_cols);
+    my $feature_accession_info_sql = qq{
+        SELECT $cols_spec FROM otter_accession_info WHERE accession_sv = ?
     };
 
     sub feature_accession_info {
         my ($self, $feature_name) = @_;
         my $row = $DB{$self}->dbh->selectrow_arrayref($feature_accession_info_sql, {}, $feature_name);
-        return $row;
+        return unless $row;
+        my %result;
+        @result{@fai_cols} = @$row;
+        return \%result;
     }
 }
 

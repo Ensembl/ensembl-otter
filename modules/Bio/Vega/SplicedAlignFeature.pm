@@ -19,6 +19,7 @@ use Bio::EnsEMBL::Utils::Exception qw(throw);
 
 use Bio::Otter::GappedAlignment;
 use Bio::Otter::Utils::Constants qw(intron_minimum_length);
+use Bio::Otter::Utils::FeatureSort qw( feature_sort );
 use Bio::Otter::Vulgar;
 
 use base 'Bio::EnsEMBL::BaseAlignFeature';
@@ -486,7 +487,7 @@ sub as_AlignFeatures {
 
     $self->_verify_attribs;
     my $gapped_alignment = $self->gapped_alignment;
-    my @afs = $gapped_alignment->ensembl_features;
+    my @afs = $gapped_alignment->vega_features;
 
     $self->_augment([ $self->_common_extra_attribs, $self->_extra_attribs ], @afs);
     return @afs;
@@ -498,6 +499,7 @@ sub _augment {
         foreach my $attrib ( @$attribs ) {
             $item->$attrib($self->$attrib());
         }
+        $item->{_hit_description} = $self->{_hit_description}; # should really be proper attrib
     }
     return @items;
 }
@@ -603,6 +605,24 @@ sub end_phase {
     return $gapped_alignment->end_phase;
 }
 
+# As does this
+#
+sub reverse_complement {
+    my ($self) = @_;
+
+    # reverse strand in both sequences
+    $self->strand( ($self->strand  // 1) * -1);
+    $self->hstrand(($self->hstrand // 1) * -1) unless $self->_hstrand_or_protein eq '.';
+
+    $self->strands_reversed(not($self->strands_reversed));
+
+    # reverse vulgar_comps_string as consequence
+    my $reversed_alignment = $self->gapped_alignment->reverse_alignment;
+    $self->vulgar_comps_string($reversed_alignment->vulgar_comps_string);
+
+    return;
+}
+
 # Implemented in Protein subclass
 sub looks_like_frameshift {
     return;
@@ -620,7 +640,7 @@ sub to_gff {
     # This will change if we send vulgar strings.
     #
     my $gff = '';
-    foreach my $af ($self->as_AlignFeatures) {
+    foreach my $af ( feature_sort $self->as_AlignFeatures) {
         $gff .= $af->to_gff(%args);
     }
     return $gff;

@@ -145,30 +145,6 @@ my $vega_db     = $support->param('dbname');
 my $ensemblassembly = $support->param('ensemblassembly');
 my $vegaassembly    = $support->param('assembly');
 
-# hacky code to adjust align_features used to support transcripts on HSCHR17_1_CTG1
-$sql = qq(
-  SELECT cs.version, sr.seq_region_id
-    FROM seq_region sr, coord_system cs
-   WHERE sr.coord_system_id = cs.coord_system_id
-     AND sr.name = 'HSCHR17_1_CTG1'
-     AND cs.name = 'chromosome');
-$sth = $dbh->{'evega'}->prepare($sql);
-$sth->execute;
-my %sr_ids;
-while (my ($cs, $sr) = $sth->fetchrow_array) {
-  $sr_ids{$cs} = $sr;
-}
-if (%sr_ids) {
-  foreach my $t (qw(protein dna)) {
-    $sql = qq(
-      UPDATE ${t}_align_feature
-         SET seq_region_id = $sr_ids{$ensemblassembly}
-       WHERE seq_region_id = $sr_ids{$vegaassembly});
-    my $c = $dbh->{'evega'}->do($sql);
-    $support->log("Adjusted $c seq_region_ids for table ${t}_align_feature (chromosome HSCHR17_1_CTG1)\n\n");
-  }
-}
-
 # retrieve adjustment factors for Ensembl seq_region_ids and coord_system_ids
 $sql = qq(
     SELECT meta_key, meta_value
@@ -454,29 +430,6 @@ $sql = qq(
 $c = $dbh->{'evega'}->do($sql);
 $support->log_stamped("Transferred $c translation_attrib entries.\n\n");
 
-# alt alleles
-$support->log_stamped("Transfering Vega alt alleles...\n");
-my $alt_alleles = {};
-$sth = $dbh->{'evega'}->prepare(qq(
-   SELECT aa.alt_allele_id, g.stable_id, g2.gene_id
-     FROM $vega_db.alt_allele aa, $vega_db.gene g, gene g2
-    WHERE aa.gene_id = g.gene_id
-      AND g.stable_id = g2.stable_id));
-$sth->execute;
-while (my ($id, $gsi, $gid) = $sth->fetchrow_array) {
-  push @{$alt_alleles->{$id}}, $gid ;
-}
-my $allele_count;
-$sth = $dbh->{'evega'}->prepare(qq(INSERT INTO alt_allele (alt_allele_id, gene_id) values (?, ?)));
-foreach my $allele_id (keys %$alt_alleles) {
-  $allele_count++;
-  next if (scalar @{$alt_alleles->{$allele_id}} < 2);
-  foreach my $gene_id (@{$alt_alleles->{$allele_id}}) {
-    $sth->execute($allele_id,$gene_id);
-  }
-}
-$support->log_stamped("Transferred $allele_count alt_allele allele_ids.\n\n");
-
 #delete redundant xrefs - these are just to the internal IDs of the vega translations and have to be ignored by the webcode
 $support->log_stamped("Deleting redundant Vega translation xrefs...\n");
 $sql = qq(DELETE x
@@ -606,7 +559,7 @@ $c = $dbh->{'evega'}->do(qq(UPDATE xref SET version = 0 WHERE version = ''));
 $support->log("Updated versions of $c xrefs\n\n");
 #tidy up xrefs with info_type (HC noise)
 $support->log_stamped("Setting correct default info_type for xrefs.\n");
-$c = $dbh->{'evega'}->do(qq(UPDATE xref SET info_type = 'NONE' WHERE version = ''));
+$c = $dbh->{'evega'}->do(qq(UPDATE xref SET info_type = 'NONE' WHERE info_type = ''));
 $support->log("Updated info_type of $c xrefs\n");
 
 # finish logfile

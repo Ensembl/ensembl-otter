@@ -7,6 +7,8 @@ use strict;
 use warnings;
 use Carp;
 
+use Bio::Otter::Utils::AccessionInfo::Serialise qw(fasta_header_column_order unescape_fasta_description);
+
 use Hum::Ace::SubSeq;
 use Hum::Ace::Method;
 use Hum::Ace::Locus;
@@ -56,31 +58,64 @@ sub store_hit_data_from_gff {
             $fail{$source} ||= "Cannot convert source=$source to an evidence type:$.:$_";
             next;
         }
-        $accession_type_cache->save_accession_info(
-            $attrib->{'Name'},
-            $attrib->{'taxon_id'},
-            $evi_type,
-            $attrib->{'description'},
-            $attrib->{'db_name'},
-            $attrib->{'length'},
-            );
+        $accession_type_cache->save_accession_info( {
+            acc_sv          => $attrib->{'Name'},
+            taxon_id        => $attrib->{'taxon_id'},
+            evi_type        => $evi_type,
+            description     => $attrib->{'description'},
+            source          => $attrib->{'db_name'},
+            sequence_length => $attrib->{'length'},
+            } );
     }
-
-    $accession_type_cache->commit;
 
     foreach my $prob (sort values %fail) {
         warn $prob; # warn because it is only a cache save fail
     }
+
+    # Now we are at the start of the FASTA data (or EOF if there is
+    # none).
+
+    my ($header, $sequence, $taxon_id_hash);
+    $taxon_id_hash = { };
+    my $save_sub = sub {
+        if (defined $header) {
+            my @value_list = split /\|/, $header;
+            my %acc_info;
+            @acc_info{fasta_header_column_order()} = @value_list;
+            $acc_info{description} = unescape_fasta_description($acc_info{description});
+            $acc_info{sequence} = $sequence;
+            $accession_type_cache->save_accession_info(\%acc_info);
+            my $taxon_id = $acc_info{taxon_id};
+            $taxon_id_hash->{$taxon_id}++;
+        }
+    };
+
+    $sequence = '';
+    while (<$gff_fh>) {
+        chomp;
+        if (/^>/) { # FASTA header
+            $save_sub->();
+            ($header) = /^>(.*)$/;
+            $sequence = '';
+        }
+        else { # sequence
+            $sequence .= $_;
+        }
+    }
+    $save_sub->();
+
+    $accession_type_cache->commit;
+    $accession_type_cache->populate_taxonomy([keys %{$taxon_id_hash}]);
 
     return;
 }
 
 
 sub make_ace_transcripts_from_gff {
-    my ($gff_fh) = @_;
+    my ($gff_fh, $start, $end) = @_;
 
     my %tsct;
-    make_ace_transcripts_from_gff_fh($gff_fh, \%tsct);
+    make_ace_transcripts_from_gff_fh($gff_fh, $start, $end, \%tsct);
 
     my (@ok_tsct);
     while (my ($name, $sub) = each %tsct) {
@@ -98,34 +133,17 @@ sub make_ace_transcripts_from_gff {
 }
 
 sub make_ace_transcripts_from_gff_fh {
-    my ($gff_fh, $tsct) = @_;
+    my ($gff_fh, $seq_region_start, $seq_region_end, $tsct) = @_;
+
+    my $seq_region_offset = $seq_region_start - 1;
+    my $seq_region_length = $seq_region_end - $seq_region_offset;
 
     my (%locus_by_name, $gene_method, $coding_gene_method);
 
-    my ($seq_region_found,
-        $seq_region_start,
-        $seq_region_end,
-        $seq_region_offset,
-        $seq_region_length);
-
-    $seq_region_found = 0;
     while (<$gff_fh>) {
         last if /^\s*##\bFASTA\b/;
-        if (/^\s*#/) {
-            if (/^\s*##sequence-region /) {
-                if (($seq_region_start, $seq_region_end) =
-                    /^##sequence-region \S+ (\d+) (\d+)/) {
-                    $seq_region_found = 1;
-                    $seq_region_offset = $seq_region_start - 1;
-                    $seq_region_length = $seq_region_end - $seq_region_offset;
-                }
-                else {
-                    confess "invalid sequence region header in GFF file"
-                }
-            }
-            next;
-        }
-        confess "no sequence region header in GFF file" unless $seq_region_found;
+        next if /^\s*#/;
+
         my ($seq_name, $source, $feat_type, $start, $end, $score, $strand, $frame, $attrib)
             = parse_gff_line($_);
         $start -= $seq_region_offset;

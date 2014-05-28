@@ -25,7 +25,7 @@ Readonly my @SLICE_REQUIRED_PARAMS => qw(
     dataset
     cs
     csver
-    type
+    chr
     start
     end
 );
@@ -52,7 +52,7 @@ sub _get_requested_slice {
 
     return $self->server->otter_dba->get_SliceAdaptor->fetch_by_region(
         $params->{cs},
-        $params->{type},
+        $params->{chr},
         $params->{start},
         $params->{end},
         $strand,

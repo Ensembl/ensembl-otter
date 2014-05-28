@@ -15,25 +15,26 @@ use IO::Compress::Gzip qw(gzip);
 use CGI;
 use SangerWeb;
 
-use base ('Bio::Otter::MFetcher');
+use base ('Bio::Otter::MappingFetcher');
 
 
 BEGIN {
-    my $csn;
-    ($csn) = $ENV{'SCRIPT_NAME'} =~ m{([^/]+)$} if defined $ENV{'SCRIPT_NAME'};
     $SIG{__WARN__} = sub { ## no critic (Variables::RequireLocalizedPunctuationVars)
         my ($line) = @_;
-        $line = sprintf "[%s] %s", $csn, $line if defined $csn;
-        warn $line;
+        warn "pid $$: $line";
+        # pid is sufficient to re-thread lines on one host,
+        # and the script name is given once by a BEGIN block
         return;
     };
 }
 
+# Under webvm.git, Otter::LoadReport gives more info and is probably
+# loaded by the CGI script stub.
 BEGIN {
-    warn "otter_srv script start: $0\n";
+    warn "otter_srv script start: $0\n" unless Otter::LoadReport->can('show');
 }
 END {
-    warn "otter_srv script end: $0\n";
+    warn "otter_srv script end: $0\n" unless Otter::LoadReport->can('show');
 }
 
 our $ERROR_WRAPPING_ENABLED;
@@ -52,7 +53,7 @@ sub new {
     );
 
     my $self = $pkg->SUPER::new();
-    $self->cgi(CGI->new);
+    $self->cgi;                 # will create a new one or adopt the singleton
     $self->compression($options{-compression});
     $self->content_type($options{-content_type});
 
@@ -64,11 +65,35 @@ sub new {
     return $self;
 }
 
-sub cgi {
-    my ($self, @args) = @_;
-    ($self->{'cgi'}) = @args if @args;
-    my $cgi = $self->{'cgi'};
-    return $cgi;
+{
+    # Allows a package-wide CGI object to be set up before an object is instantiated,
+    # which in turn allows CGI methods such as path_info() to be used to control object subtype.
+    #
+    my $cgi_singleton;
+
+    sub cgi {
+        my ($self, @args) = @_;
+
+        unless (ref $self) {
+            # We've been called as a class method
+            return $cgi_singleton ||= CGI->new;
+        }
+
+        # Traditional accessor
+        ($self->{'cgi'}) = @args if @args;
+        my $cgi = $self->{'cgi'};
+        return $cgi if $cgi;
+
+        if ($cgi_singleton) {
+            # Adopt the singleton, then unset it to avoid any mod_perl issues down the line...
+            $cgi = $self->{'cgi'} = $cgi_singleton;
+            $cgi_singleton = undef;
+            return $cgi;
+        }
+
+        # Backstop is to create a new one
+        return $self->{'cgi'} = CGI->new;
+    }
 }
 
 sub compression {
@@ -95,12 +120,17 @@ sub param {
     return $self->cgi->param(@args);
 }
 
+sub path_info {
+    my ($self) = @_;
+    return $self->cgi->path_info();
+}
+
 sub make_map {
     my ($self) = @_;
     return {
         map {
             $_ => $self->make_map_value($_);
-        } qw( cs name type start end csver csver_remote ),
+        } qw( cs name chr start end csver csver_remote ),
     };
 }
 

@@ -3,6 +3,7 @@
 use strict;
 use warnings;
 
+use Log::Log4perl qw(:easy);
 use URI::Escape qw(uri_unescape);
 
 use Bio::DB::Sam;
@@ -20,19 +21,19 @@ my $options = {
 my @options_specs = qw(
     gff_version=s
     file=s
-    csver=s
+    csver_remote=s
     dataset=s
     chr=s
     start=i
     end=i
-    gff_feature_source=s
+    gff_source=s
     gff_seqname=s
     version
     );
 
 my @options_required = qw(
     file
-    csver
+    csver_remote
     dataset
     chr
     start
@@ -52,13 +53,17 @@ sub show_version {
     exit 0;
 }
 
+print STDERR "$0", ( map { " '$_'" } @ARGV ), "\n";
+
 my @keys    = map { _key()    } @options_specs;
 my @options = map { _option() } @options_specs;
 
-my @old_ARGV = @ARGV;
 Bio::Otter::Lace::Defaults::do_getopt(@options);
 show_version() if $options->{version};
-print STDERR "$0", ( map { " '$_'" } @old_ARGV ), "\n";
+
+Log::Log4perl->easy_init({ level => $DEBUG,
+                           layout => 'bam_get.%c %p: %m%n'
+                         });
 
 my @options_missing = grep { ! defined $options->{$_} } @options_required;
 die sprintf "missing options: %s\n",
@@ -68,12 +73,12 @@ $options->{$_} = uri_unescape($options->{$_}) for keys %{$options};
 my (
     $gff_version,
     $file,
-    $csver,
+    $csver_remote,
     $dataset,
     $chr,
     $start,
     $end,
-    $gff_feature_source,
+    $gff_source,
     $gff_seqname
     ) = @{$options}{@keys};
 
@@ -90,17 +95,16 @@ sub _print_header {
     print
         <<"GFF",
 ##gff-version $gff_version
-##sequence-region $chr $start $end
 GFF
 ;
     return;
 }
 
 sub _print_feature {
-    my ($feature, $start, $end) = @_;
+    my ($feature, $fstart, $fend) = @_;
 
-    # the -gff_feature_source flag overrides the source from the BAM file
-    my $source = $gff_feature_source || $feature->source_tag;
+    # the -gff_source flag overrides the source from the BAM file
+    my $source = $gff_source || $feature->source_tag;
     my ($score) = $feature->get_tag_values('AS');
     my $query = $feature->query;
 
@@ -122,7 +126,7 @@ sub _print_feature {
 
     print $gff_format->gff_line(
         $chr, $source, 'read',
-        $start, $end, $score, $strand, $phase,
+        $fstart, $fend, $score, $strand, $phase,
         $attribute_hash);
 
     return;
@@ -133,7 +137,7 @@ my $client = Bio::Otter::Lace::Defaults::make_Client();
 my $mapping_xml = $client->otter_response_content(
     'GET', 'get_mapping', {
         dataset => $dataset,
-        cs      => $csver,
+        cs      => $csver_remote,
         chr     => $chr,
         start   => $start,
         end     => $end,
@@ -143,3 +147,12 @@ my $mapping = Bio::Otter::Mapping->new_from_xml($mapping_xml);
 # map and print the features
 _print_header;
 $mapping->do_features($bam_fetch, $start, $end, \&_print_feature);
+
+exit;
+
+__END__
+
+=head1 AUTHOR
+
+Ana Code B<email> anacode@sanger.ac.uk
+

@@ -13,17 +13,19 @@ use Bio::EnsEMBL::Utils::Argument  qw( rearrange );
 sub new {
     my ($caller, @args) = @_;
 
-    my ($hit_name, $hit_length, $description, $taxon_id, $db_name) = rearrange(
+    my ($hit_name, $hit_length, $hit_sequence_string,
+        $description, $taxon_id, $db_name) = rearrange(
       [ 'HIT_NAME', 'HIT_LENGTH', 'HIT_SEQUENCE_STRING',
         'DESCRIPTION', 'TAXON_ID', 'DB_NAME' ],
         @args);
     my $class = ref($caller) || $caller;
     return bless {
-        _hit_name       => $hit_name,
-        _hit_length     => $hit_length,
-        _description    => $description,
-        _taxon_id       => $taxon_id,
-        _db_name        => $db_name,
+        _hit_name            => $hit_name,
+        _hit_length          => $hit_length,
+        _hit_sequence_string => $hit_sequence_string,
+        _description         => $description,
+        _taxon_id            => $taxon_id,
+        _db_name             => $db_name,
     }, $class;
 }
 

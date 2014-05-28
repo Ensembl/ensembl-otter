@@ -40,9 +40,9 @@ use EditWindow::Password;
     $client->cleanup_sessions;
     $client->cleanup_log_dir('otterlace');
 
-    Bio::Otter::Git->dump;
+    Bio::Otter::Git->dump($logger);
 
-    $client->ua_tell_proxies;
+    $client->ua_tell_hostinfo;
 
     my $main_window = CanvasWindow::MainWindow->new
       ($Bio::Otter::Lace::Client::PFX."Species List");
@@ -83,7 +83,7 @@ use EditWindow::Password;
     };
     my $passwarn_sub = sub {
         my ($self, $msg) = @_;
-        warn "passwarn: $msg";
+        $logger->warn("passwarn: $msg");
         my $dialog = $main_window->DialogBox
           (-title => $Bio::Otter::Lace::Client::PFX.'Problem logging in',
            -buttons => ['Ok'],);

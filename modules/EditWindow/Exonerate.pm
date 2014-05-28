@@ -47,6 +47,7 @@ sub initialise {
 
     ### Query frame
     my $query_frame = $top->LabFrame(
+        Name       => 'query',
         -label     => 'Query sequences',
         -border    => 3,
     )->pack(@frame_expand);
@@ -162,7 +163,7 @@ sub initialise {
     );
 
     ### Input
-    my $input_frame = $top->Frame->pack(@frame_pack);
+    my $input_frame = $top->Frame(Name => 'input')->pack(@frame_pack);
 
     my $input_widgets = [
         [ '_region_target', $REGION_TARGET_DEFAULT, 'Region',
@@ -182,6 +183,7 @@ sub initialise {
         $self->{$key} = $default;
         my $button_list_frame =
             $input_frame->LabFrame(
+                Name    => $key,
                 -label  => $name,
                 -border => 3,
             )->pack(-side => 'left', -expand => 1, -fill => 'x');
@@ -198,6 +200,7 @@ sub initialise {
 
     ### Parameters
     my $param_frame = $top->LabFrame(
+        Name       => 'param',
         -label     => 'Alignment parameters',
         -border    => 3,
     )->pack(@frame_pack);
@@ -239,7 +242,7 @@ sub initialise {
     )->pack(-side => 'top');
 
     ### Commands
-    my $button_frame = $top->Frame->pack(@frame_pack);
+    my $button_frame = $top->Frame(Name => 'button')->pack(@frame_pack);
     my $doing_launch = 0;       # captured by closure...
     my $launch       = sub {
         if ($doing_launch) {
@@ -280,6 +283,8 @@ sub initialise {
     $top->protocol('WM_DELETE_WINDOW', $close_window);
     $top->bind('<Destroy>', sub { $self = undef; });
     $self->set_minsize;
+
+    $self->colour_init(qw( button query.border param.border input._region_target.border input._mask_target.border ));
 
     return;
 }
@@ -470,6 +475,8 @@ sub launch_exonerate {
         bestn           => $bestn,
         maxintron       => $maxintron,
 
+        clear_existing  => $self->{_clear_existing},
+
         lowercase_poly_a_t_tails => 1, # to avoid spurious exons
 
         problem_report_cb => sub { $self->top->Tk::Utils::OnTheFly::problem_box('Accessions Supplied', @_) },
@@ -498,7 +505,8 @@ sub launch_exonerate {
         return;
     }
 
-    my $seqs = $otf->confirmed_seqs();
+    my $seq_list = $otf->confirmed_seqs();
+    my $seqs = $seq_list->seqs;
 
     $self->logger->warn("Found ", scalar(@$seqs), " sequences");
 
@@ -506,59 +514,51 @@ sub launch_exonerate {
         $self->top->messageBox(
             -title   => $Bio::Otter::Lace::Client::PFX.'No Sequence',
             -icon    => 'warning',
-            -message => 'Did not get any sequence data',
+            -message => 'Did not get any query sequence data',
             -type    => 'OK',
         );
         return;
     }
 
-    # OTF should not influence unsaved changes state of the session
-    $SessionWindow->flag_db_edits(0);
-    my $top = $self->top;
-    $top->withdraw;
+    $self->top->withdraw;
 
     if ($self->{'_clear_existing'}) {
-        $SessionWindow->delete_featuresets(qw{
-Unknown_DNA
-Unknown_Protein
-OTF_EST
-OTF_ncRNA
-OTF_mRNA
-OTF_Protein });
+        $SessionWindow->delete_featuresets($otf->logic_names);
     }
 
-    my $db_edited = $SessionWindow->launch_exonerate($otf);
+    $SessionWindow->launch_exonerate($otf);
 
-    $SessionWindow->flag_db_edits(1);
+    return 1;
+}
 
-    if ($db_edited) {
-        my @misses = $otf->names_not_hit;
-        if (@misses) {
-            $top->deiconify;
-            $top->raise;
-            $self->top->messageBox(
-                -title   => $Bio::Otter::Lace::Client::PFX.'Missing Matches',
-                -icon    => 'warning',
-                -message => join("\n",
-                                 'Exonerate did not find matches for:',
-                                 sort @misses,
-                                ),
-                -type    => 'OK',
-                );
-        }
-        return 1;
-    }
-    else {
-        $top->deiconify;
-        $top->raise;
-        $self->top->messageBox(
+sub display_request_feedback {
+    my ($self, $request) = @_;
+
+    my $top = $self->top;
+    $top->deiconify;
+    $top->raise;
+
+    my $name = $request->logic_name;
+    unless ($request->n_hits) {
+        $top->messageBox(
             -title   => $Bio::Otter::Lace::Client::PFX.'No Matches',
             -icon    => 'warning',
-            -message => 'Exonerate did not find any matches on genomic sequence',
+            -message => "Exonerate did not find any '$name' matches on genomic sequence",
             -type    => 'OK',
-        );
-        return 0;
+            );
+        return;
     }
+
+    $top->messageBox(
+        -title   => $Bio::Otter::Lace::Client::PFX.'Missing Matches',
+        -icon    => 'warning',
+        -message => join("\n",
+                         "Exonerate did not find '$name' matches for:",
+                         sort @{$request->missed_hits},
+        ),
+        -type    => 'OK',
+        );
+    return;
 }
 
 my $seq_tag = 1;
@@ -581,6 +581,14 @@ sub entered_seqs {
         # Trim trailing or leading whitespace from file name
         $file_name =~ s/^\s+|\s+$//g;
         push @seqs, Hum::FastaFileIO->new($file_name)->read_all_sequences;
+    }
+    # Make sure entered seqs are distinct from seqs fetched by accession.
+    # (We could try to lookup and compare, as a future feature.)
+    foreach my $seq (@seqs) {
+        my $name = $seq->name;
+        unless ($name =~ /^otf[_:]/) {
+            $seq->name('OTF:' . $name);
+        }
     }
     return \@seqs;
 }

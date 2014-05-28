@@ -1,0 +1,40 @@
+Roadmap for storing evidence alignments
+=======================================
+
+
+Pre-requisite steps
+-------------------
+
+* Re-visit OTF of evidence against spliced transcript, and invoke the
+  splitting of alignment into exons according to transcript structure.
+
+  The split alignments to be stored in SQLite (as for revised
+  OTF-vs-genome system) and passed to ZMap for display.
+
+* A link will need to be made from the AceDB transcripts to the SQLite
+  spliced alignment tables. This may imply a dependency on moving out
+  of AceDB. (See also next point.)
+
+* Design extension to loutre schema for linking transcripts to
+  evidence alignments. This will need to take account of the existing
+  evidence table.
+
+* Ensure that the necessary tables are in place in our loutre
+  databases.
+
+* Design an extension to our XML schema for get_/write_region to
+  accommodate evidence alignments.
+
+
+Issues
+------
+
+* What happens when transcripts are mapped onto a new assembly? The
+  evidence alignments will need to re-generated or mapped.
+
+* Will the OTF of new evidence against the spliced transcript be a
+  required part of the annotator's workflow, or will there be some
+  automation?
+
+* Evidence alignments will need to be invalidated (and recreated) if
+  the annotator edits the transcript structure.

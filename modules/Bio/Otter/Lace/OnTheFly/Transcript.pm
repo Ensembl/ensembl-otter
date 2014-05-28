@@ -4,7 +4,8 @@ use namespace::autoclean;
 use Moose;
 
 use Bio::Otter::Lace::OnTheFly::TargetSeq;
-use Bio::Otter::Lace::OnTheFly::Aligner::Transcript;
+use Bio::Otter::Lace::OnTheFly::Builder::Transcript;
+use Bio::Otter::Lace::OnTheFly::Runner::Transcript;
 
 with 'Bio::Otter::Lace::OnTheFly';
 
@@ -17,9 +18,14 @@ sub build_target_seq {
         );
 }
 
-sub build_aligner {
+sub build_builder {
     my ($self, @params) = @_;
-    return Bio::Otter::Lace::OnTheFly::Aligner::Transcript->new(
+    return Bio::Otter::Lace::OnTheFly::Builder::Transcript->new(@params);
+}
+
+sub build_runner {
+    my ($self, @params) = @_;
+    return Bio::Otter::Lace::OnTheFly::Runner::Transcript->new(
         @params,
         transcript => $self->transcript,
         );

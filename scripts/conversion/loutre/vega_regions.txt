@@ -65,46 +65,46 @@ chrY	Y-WTSI	Chromosome Y-WTSI
 --end--
 
 --human--
-chr1	1	Chromosome 1	1
-chr2	2	Chromosome 2	2
-chr3	3	Chromosome 3	3
-chr4	4	Chromosome 4	4
-chr5	5	Chromosome 5	5
-chr6	6	Chromosome 6	6
-chr7	7	Chromosome 7	7
-chr8	8	Chromosome 8	8
-chr9	9	Chromosome 9	9
-chr10	10	Chromosome 10	10
-chr11	11	Chromosome 11	11
-chr12	12	Chromosome 12	12
-chr13	13	Chromosome 13	13
-chr14	14	Chromosome 14	14
-chr15	15	Chromosome 15	15
-chr16	16	Chromosome 16	16
-chr17	17	Chromosome 17	17
-chr18	18	Chromosome 18	18
-chr19	19	Chromosome 19	19
-chr20	20	Chromosome 20	20
-chr21	21	Chromosome 21	21
-chr22	22	Chromosome 22	22
-chrX	X	Chromosome X	X
-chrY	Y	Chromosome Y	Y
-MHC_COX	6-COX	Chromosome 6-COX	HSCHR6_MHC_COX
-MHC_QBL	6-QBL	Chromosome 6-QBL	HSCHR6_MHC_QBL
-MHC_APD	6-APD	Chromosome 6-APD	HSCHR6_MHC_APD
-MHC_DBB	6-DBB	Chromosome 6-DBB	HSCHR6_MHC_DBB
-MHC_MANN	6-MANN	Chromosome 6-MANN	HSCHR6_MHC_MANN
-MHC_MCF	6-MCF	Chromosome 6-MCF	HSCHR6_MHC_MCF
-MHC_SSTO	6-SSTO	Chromosome 6-SSTO	HSCHR6_MHC_SSTO
-LRC_COX_1	19-COX_1	Chromosome 19-COX_1
-LRC_COX_2	19-COX_2	Chromosome 19-COX_2
-LRC_PGF_1	19-PGF_1	Chromosome 19-PGF_1
-LRC_PGF_2	19-PGF_2	Chromosome 19-PGF_2
-LRC_DM1A	19-DM1A	Chromosome 19-DM1A
-LRC_DM1B	19-DM1B	Chromosome 19-DM1B
-LRC_MC1A	19-MC1A	Chromosome 19-MC1A
-LRC_MC1B	19-MC1B	Chromosome 19-MC1B
-HSCHRUN_RANDOM_CTG11	GL000220.1	GL000220.1	GL000220.1
+chr1-38	1	Chromosome 1	1
+chr2-38	2	Chromosome 2	2
+chr3-38	3	Chromosome 3	3
+chr4-38	4	Chromosome 4	4
+chr5-38	5	Chromosome 5	5
+chr6-38	6	Chromosome 6	6
+chr7-38	7	Chromosome 7	7
+chr8-38	8	Chromosome 8	8
+chr9-38	9	Chromosome 9	9
+chr10-38	10	Chromosome 10	10
+chr11-38	11	Chromosome 11	11
+chr12-38	12	Chromosome 12	12
+chr13-38	13	Chromosome 13	13
+chr14-38	14	Chromosome 14	14
+chr15-38	15	Chromosome 15	15
+chr16-38	16	Chromosome 16	16
+chr17-38	17	Chromosome 17	17
+chr18-38	18	Chromosome 18	18
+chr19-38	19	Chromosome 19	19
+chr20-38	20	Chromosome 20	20
+chr21-38	21	Chromosome 21	21
+chr22-38	22	Chromosome 22	22
+chrX-38	X	Chromosome X	X
+chrY-38	Y	Chromosome Y	Y
+MHC_COX	6-COX	Chromosome 6-COX	CHR_HSCHR6_MHC_COX_CTG1
+MHC_QBL	6-QBL	Chromosome 6-QBL	CHR_HSCHR6_MHC_QBL_CTG1
+MHC_APD	6-APD	Chromosome 6-APD	CHR_HSCHR6_MHC_APD_CTG1
+MHC_DBB	6-DBB	Chromosome 6-DBB	CHR_HSCHR6_MHC_DBB_CTG1
+MHC_MANN	6-MANN	Chromosome 6-MANN	CHR_HSCHR6_MHC_MANN_CTG1
+MHC_MCF	6-MCF	Chromosome 6-MCF	CHR_HSCHR6_MHC_MCF_CTG1
+MHC_SSTO	6-SSTO	Chromosome 6-SSTO	CHR_HSCHR6_MHC_SSTO_CTG1
+LRC_COX_1	19-COX_1	Chromosome 19-COX_1	CHR_HSCHR19LRC_COX1_CTG3_1
+LRC_COX_2	19-COX_2	Chromosome 19-COX_2	CHR_HSCHR19LRC_COX2_CTG3_1
+LRC_PGF_1	19-PGF_1	Chromosome 19-PGF_1	CHR_HSCHR19LRC_PGF1_CTG3_1
+LRC_PGF_2	19-PGF_2	Chromosome 19-PGF_2	CHR_HSCHR19LRC_PGF2_CTG3_1
+LRC_DM1A	19-DM1A	Chromosome 19-DM1A (LRC_T)	CHR_HSCHR19LRC_LRC_T_CTG3_1
+LRC_DM1B	19-DM1B	Chromosome 19-DM1B (LRC_S)	CHR_HSCHR19LRC_LRC_S_CTG3_1
+LRC_MC1A	19-MC1A	Chromosome 19-MC1A (LRC_J)	CHR_HSCHR19LRC_LRC_J_CTG3_1
+LRC_MC1B	19-MC1B	Chromosome 19-MC1B (LRC_I)	CHR_HSCHR19LRC_LRC_I_CTG3_1
+;HSCHRUN_RANDOM_CTG11	GL000220.1	GL000220.1	GL000220.1
 --end--
 
 --mouse--

@@ -373,8 +373,18 @@ sub exonerate_cigar_string {
 
 # Should these ensembl_* methods be mixed in via a separate module, rather than embedded?
 #
+sub vega_features {
+    my $self = shift;
+    return $self->_ensembl_like_features('vega_feature');
+}
+
 sub ensembl_features {
     my $self = shift;
+    return $self->_ensembl_like_features('ensembl_feature');
+}
+
+sub _ensembl_like_features {
+    my ($self, $method) = @_;
     return unless $self->n_elements;
 
     my @egas = $self->exon_gapped_alignments;
@@ -385,20 +395,30 @@ sub ensembl_features {
     my @ensembl_features;
     foreach my $ega (@egas) {
         next unless $ega;
-        push @ensembl_features, $ega->_strip_for_ensembl->ensembl_feature;
+        push @ensembl_features, $ega->_strip_for_ensembl->$method();
     }
 
     return @ensembl_features;
 }
 
+sub vega_feature {
+    my $self = shift;
+    my $af_type = $self->query_is_protein ? 'Bio::Vega::DnaPepAlignFeature' : 'Bio::Vega::DnaDnaAlignFeature';
+    return $self->_ensembl_like_feature($af_type);
+}
+
 sub ensembl_feature {
     my $self = shift;
+    my $af_type = $self->query_is_protein ? 'Bio::EnsEMBL::DnaPepAlignFeature' : 'Bio::EnsEMBL::DnaDnaAlignFeature';
+    return $self->_ensembl_like_feature($af_type);
+}
+
+sub _ensembl_like_feature {
+    my ($self, $af_type) = @_;
     return unless $self->n_elements;
 
     my ($t_start, $t_end, $t_strand) = $self->target_ensembl_coords;
     my ($q_start, $q_end, $q_strand) = $self->query_ensembl_coords;
-
-    my $af_type = $self->query_is_protein ? 'Bio::EnsEMBL::DnaPepAlignFeature' : 'Bio::EnsEMBL::DnaDnaAlignFeature';
 
     return $af_type->new(
         -seqname      => $self->target_id,

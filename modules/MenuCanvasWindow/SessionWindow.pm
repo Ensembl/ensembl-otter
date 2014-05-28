@@ -33,13 +33,14 @@ use Zircon::Tk::Context;
 use Zircon::ZMap;
 
 use Bio::Otter::Lace::Client;
+use Bio::Otter::Log::WithContext;
 use Bio::Otter::RequestQueuer;
 use Bio::Otter::ZMap::XML;
 use Bio::Vega::Transform::Otter::Ace;
 
+use Tk::Screens;
+use Tk::ScopedBusy;
 use Bio::Vega::Utils::MacProxyConfig qw{ mac_os_x_set_proxy_vars };
-
-use Log::Log4perl;
 
 use base qw{
     MenuCanvasWindow
@@ -99,6 +100,7 @@ sub initialize {
     my ($self) = @_;
 
     $self->set_window_title;
+    $self->_colour_init;
 
 
     unless ($self->AceDatabase->write_access) {
@@ -127,8 +129,40 @@ sub initialize {
     return;
 }
 
+sub session_colour {
+    my ($self) = @_;
+    return $self->AceDatabase->colour || '#d9d9d9';
+    # The non-coloured default would be '#d9d9d9'.  Using undef causes
+    # non-drawing.  For a complete no-op, don't set any borderwidth
+}
+
+sub _colour_init {
+    my ($self) = @_;
+    return $self->colour_init($self->top_window, 'search_frame', 'search_frame.filler');
+}
+
+# called by various windows, to set their widgets to our session_colour
+sub colour_init {
+    my ($self, $top, @widg) = @_;
+    my $colour = $self->session_colour;
+    my $tpath = $top->PathName;
+    $top->configure(-borderwidth => 3, -background => $colour);
+    foreach my $widg (@widg) {
+        $widg = $top->Widget("$tpath.$widg") unless ref($widg);
+        next unless $widg; # TranscriptWindow has some PathName parts
+        $widg->configure(-background => $colour);
+    }
+    return;
+}
+
 sub logger {
-    return Log::Log4perl->get_logger;
+    my ($self, $category) = @_;
+    $category = scalar caller unless defined $category;
+
+    my $acedb = $self->AceDatabase;
+    return Bio::Otter::Log::WithContext->get_logger($category, '-no-acedb-') unless $acedb;
+
+    return $acedb->logger($category);
 }
 
 sub clone_menu {
@@ -166,7 +200,7 @@ sub get_GeneMethod {
 
     my( $meth );
     unless ($meth = $self->{'_gene_methods'}{$name}) {
-        confess "No such Method '$name'";
+        $self->logger->logconfess("No such Method '$name'");
     }
     return $meth;
 }
@@ -820,17 +854,17 @@ sub close_GenomicFeaturesWindow {
         my $finder = Hum::Analysis::Factory::ExonLocator->new;
         $finder->genomic_Sequence($assembly->Sequence);
 
-        my( @msg, @new_subseq, $i );
+        my (@msg, @new_subseq);
         foreach my $sub (@holding_pen) {
             my $name = $sub->name;
             my ($new_exons, $strand) = @{_new_exons_strand($finder, $sub)};
             if (@{$new_exons}) {
                 my $new = $sub->clone;
-                my( $temp_name );
-                do {
-                    $temp_name = sprintf "TEMP-%03d", ++$i;
-                } while ($self->get_SubSeq($temp_name));
-                #my $temp_name = sprintf "TEMP-%03d", ++$i;
+                my $temp_name;
+                for (my $i=0; !defined $temp_name || $self->get_SubSeq($temp_name); $i++) {
+                    $temp_name = $sub->name;
+                    $temp_name .= "_$i" if $i; # invalid-dup suffix when needed
+                }
                 $new->name($temp_name);
                 $new->strand($strand);
                 $new->replace_all_Exons(@{$new_exons});
@@ -845,11 +879,11 @@ sub close_GenomicFeaturesWindow {
                         $new->translation_region($new->start, $new->end);
                     };
                 }
-                $new->Locus($self->get_Locus($sub->Locus->name));
-                ### set locus gene_type_prefix() here ?
+                my $paste_locus = $self->_paste_locus($sub->Locus);
+                $new->Locus($paste_locus);
                 $self->add_SubSeq($new);
                 push(@new_subseq, $new);
-                print STDERR $new->ace_string;
+                print STDERR "Internal paste result:\n", $new->ace_string;
             } else {
                 $self->message("Got zero exons from realigning '$name'");
             }
@@ -882,6 +916,25 @@ sub _new_exons_strand {
     }
     return [ \@new_exons, $strand ];
 }
+
+sub _paste_locus {
+    my ($self, $source_locus) = @_;
+    # similar to (Hum::Ace::Locus)->new_from_Locus
+    my $dup_locus = Hum::Ace::Locus->new;
+    $dup_locus->set_aliases( $source_locus->list_aliases );
+    $dup_locus->set_remarks( $source_locus->list_remarks );
+    $dup_locus->set_annotation_remarks( $source_locus->list_annotation_remarks );
+    # we don't copy otter_id (this is copy-paste, not cut-paste) or
+    # author_name (will be replaced)
+    foreach my $method (qw( name description gene_type_prefix known )) {
+        $dup_locus->$method( $source_locus->$method );
+    }
+    $dup_locus->set_annotation_in_progress;
+    # return either the locus we already have with the same name, or
+    # put $dup_locus in the cache and use that
+    return $self->get_Locus($dup_locus);
+}
+
 
 sub exit_save_data {
     my ($self) = @_;
@@ -929,7 +982,7 @@ sub exit_save_data {
             }
 
             try { $self->save_ace($ace); return 1; }
-            catch  { warn "Aborting lace session exit:\n$_"; return 0; }
+            catch  { $self->logger->error("Aborting lace session exit:\n$_"); return 0; }
             or return;
 
             if ($self->save_data) {
@@ -990,7 +1043,7 @@ sub save_data {
     my $adb = $self->AceDatabase;
 
     unless ($adb->write_access) {
-        warn "Read only session - not saving\n";
+        $self->log->info("Read only session - not saving");
         return 1;   # Can't save - but is OK
     }
     my $top = $self->top_window();
@@ -1009,7 +1062,7 @@ sub save_data {
         $self->save_ace($ace_data);
         $self->flag_db_edits(1);
         $self->resync_with_db;
-        $self->update_window_title_unsaved_flag(0);
+        $self->set_window_title;
         return 1;
     }
     catch { $self->exception_message($_, 'Error saving to otter'); return 0; }
@@ -1021,10 +1074,7 @@ sub edit_double_clicked {
 
     return unless $self->list_selected;
 
-    my $canvas = $self->canvas;
-    $canvas->Busy;
     $self->edit_selected_subsequences;
-    $canvas->Unbusy;
 
     return;
 }
@@ -1062,7 +1112,8 @@ sub make_search_panel {
     my ($self) = @_;
 
     my $top = $self->top_window();
-    my $search_frame = $top->Frame();
+    my $search_frame = $top->Frame(Name => 'search_frame');
+
     $search_frame->pack(-side => 'top');
 
     my $search_box = $search_frame->Entry(
@@ -1070,13 +1121,12 @@ sub make_search_panel {
         );
     $search_box->pack(-side => 'left');
 
-    $search_frame->Frame(-width => 6)->pack(-side => 'left');
+    $search_frame->Frame(Name => 'filler', -width => 6)->pack(-side => 'left');
 
     # Is hunting in CanvasWindow?
     my $hunter = sub{
-        $top->Busy;
+        my $busy = Tk::ScopedBusy->new($top);
         $self->_do_search($search_box);
-        $top->Unbusy;
     };
     my $button = $search_frame->Button(
          -text      => 'Find',
@@ -1131,7 +1181,7 @@ sub _do_search {
         }
         catch {
             # Data outside our control may break Hum::Ace::SubSeq  RT:188195, 189606
-            warn sprintf "%s::_do_search(): $name: $_", __PACKAGE__;
+            $self->logger->warn(sprintf "%s::_do_search(): $name: $_", __PACKAGE__);
             push @ace_fail_names, $name;
             # It could be a real error, not just some broken data.
             # We'll mention that if there are no results.
@@ -1194,12 +1244,12 @@ sub save_ace {
     try { $val = $adb->ace_server->save_ace(@args); }
     catch {
         $self->exception_message($_, "Error saving to acedb");
-        confess "Error saving to acedb: $_";
+        $self->logger->logconfess("Error saving to acedb: $_");
     };
 
     if ($self->flag_db_edits) {
         $self->AceDatabase->unsaved_changes(1);
-        $self->update_window_title_unsaved_flag(1);            
+        $self->set_window_title;
     }
 
     return $val;
@@ -1223,18 +1273,15 @@ sub resync_with_db {
         return;
     }
 
-    $self->canvas->Busy(
-        -recurse => 0,
-        );
+    my $busy = Tk::ScopedBusy->new($self->canvas, -recurse => 0);
 
     $self->empty_Assembly_cache;
     $self->empty_SubSeq_cache;
     $self->empty_Locus_cache;
 
-    # Refetch transcripts from GFF cache
+    # Refetch transcripts
+    $self->Assembly;
     $self->fetch_external_SubSeqs;
-
-    $self->canvas->Unbusy;
 
     return;
 }
@@ -1278,6 +1325,7 @@ sub edit_selected_subsequences {
 sub edit_subsequences {
     my ($self, @sub_names) = @_;
 
+    my $busy = Tk::ScopedBusy->new($self->canvas);
     my $retval = 1;
 
     foreach my $sub_name (@sub_names) {
@@ -1294,7 +1342,7 @@ sub edit_subsequences {
 
             $self->make_transcript_window($edit);
         } else {
-            warn "Failed to get_SubSeq($sub_name)";
+            $self->logger->warn("Failed to get_SubSeq($sub_name)");
             $retval = 0;
         }
     }
@@ -1325,7 +1373,7 @@ sub edit_new_subsequence {
         $new = Hum::Ace::SubSeq->new_from_subseq_list(@subseq);
     }
     else {
-        # warn "CLIPBOARD: $clip\n";
+        # $self->logger->warn("CLIPBOARD: $clip");
         $new = Hum::Ace::SubSeq->new_from_clipboard_text($clip);
         unless ($new) {
             $self->message("Need a highlighted transcript or a coordinate on the clipboard to make SubSeq");
@@ -1352,7 +1400,7 @@ sub edit_new_subsequence {
 
     $new->name($seq_name);
     $new->Locus($locus);
-    my $gm = $self->get_default_mutable_GeneMethod or confess "No default mutable GeneMethod";
+    my $gm = $self->get_default_mutable_GeneMethod or $self->logger->logconfess("No default mutable GeneMethod");
     $new->GeneMethod($gm);
     # Need to initialise translation region for coding transcripts
     if ($gm->coding) {
@@ -1377,7 +1425,7 @@ sub region_name_and_next_locus_number {
     my $region_name = $most_3prime
         ? $assembly->clone_name_overlapping($most_3prime)
         : $assembly->name;
-    warn "Looking for clone overlapping '$most_3prime' found '$region_name'\n";
+    $self->logger->info("Looking for clone overlapping '$most_3prime' found '$region_name'");
 
     # Trim sequence version from accession if clone_name ends .SV
     $region_name =~ s/\.\d+$//;
@@ -1405,7 +1453,7 @@ sub make_variant_subsequence {
         @sub_names = $self->list_was_selected_subseq_names;
     }
 
-    # warn "Got subseq names: (@sub_names)";
+    # $self->logger->info("Got subseq names: (@sub_names)");
     unless (@sub_names) {
         $self->message("No subsequence selected");
         return;
@@ -1497,8 +1545,9 @@ sub add_external_SubSeqs {
                 next;
             }
             else {
-                confess sprintf "External transcript '%s' from '%s' has same name as transcript from '%s'\n",
-                    $sub->name, $sub->GeneMethod->name, $ext->GeneMethod->name;
+                $self->logger->logconfess(
+                    sprintf("External transcript '%s' from '%s' has same name as transcript from '%s'\n",
+                            $sub->name, $sub->GeneMethod->name, $ext->GeneMethod->name));
             }
         }
         $sub->clone_Sequence($dna);
@@ -1534,7 +1583,7 @@ sub update_from_process_result {
     }
     if (@{$failed}) {
         my $message = sprintf
-            'Failed to load any transcripts from column(s): %s'
+            'Failed to load any transcripts or alignment features from column(s): %s'
             , join ', ', sort map { $_->name } @{$failed};
         $self->message($message);
     }
@@ -1658,7 +1707,7 @@ sub make_transcript_window {
 sub raise_transcript_window {
     my ($self, $name) = @_;
 
-    confess "no name given" unless $name;
+    $self->logger->logconfess("no name given") unless $name;
 
     if (my $transcript_window = $self->get_transcript_window($name)) {
         my $top = $transcript_window->canvas->toplevel;
@@ -1840,9 +1889,7 @@ sub Assembly {
 
     unless ($self->{'_assembly'}) {
         my $before = time();
-        $canvas->Busy(
-            -recurse => 0,
-            );
+        my $busy = Tk::ScopedBusy->new($canvas, -recurse => 0);
 
         my( $assembly );
         try {
@@ -1873,7 +1920,6 @@ sub Assembly {
         $self->set_known_GeneMethods;
 
         my $after  = time();
-        $canvas->Unbusy;
         printf
             "Express fetch for '%s' took %d second(s)\n",
             $self->slice_name, $after - $before;
@@ -1881,7 +1927,9 @@ sub Assembly {
     return $self->{'_assembly'};
 }
 
-sub save_Assembly {
+
+# "perlcritic --stern" refuses to learn that $logger->logdie is fatal
+sub save_Assembly { ## no critic (Subroutines::RequireFinalReturn)
     my ($self, $new) = @_;
 
     my ($delete_xml, $create_xml) = Bio::Otter::ZMap::XML::update_SimpleFeatures_xml(
@@ -1928,7 +1976,7 @@ sub save_Assembly {
         # Yellow note goes on the session window, somewhat invisible
         $self->exception_message($err, $msg);
         # Exception box goes to Bio::Otter::Error / Tk::Error
-        die "$msg\n";
+        $self->logger->logdie($msg);
     }
 }
 
@@ -1940,15 +1988,12 @@ sub empty_Assembly_cache {
     return;
 }
 
+# Used by OTF
+#
 sub delete_featuresets {
     my ($self, @types) = @_;
 
-    my $name = $self->Assembly->Sequence->name;
-    my $ace = sprintf qq{\nSequence : "%s"\n}, $name;
-
     foreach my $type ( @types ) {
-        $ace .= qq{-D Homol ${type}_homol\n};
-
         # we delete types seperately because zmap errors out without
         # deleting anything if any featureset does not currently exist
         # in the zmap window
@@ -1956,11 +2001,9 @@ sub delete_featuresets {
             $self->zmap->delete_featuresets($type);
         }
         catch {
-            warn $_;
+            $self->logger->warn($_);
         };
     }
-
-    $self->save_ace($ace);
 
     return;
 }
@@ -2003,7 +2046,7 @@ sub replace_SubSeq {
 
         my $locus = $new->Locus;
         if (my $prev_name = $locus->drop_previous_name) {
-            warn "Unsetting otter_id for locus '$prev_name'\n";
+            $self->logger->info("Unsetting otter_id for locus '$prev_name'");
             $self->get_Locus($prev_name)->drop_otter_id;
         }
         $self->set_Locus($locus);
@@ -2031,7 +2074,7 @@ sub add_SubSeq {
 
     my $name = $sub->name;
     if ($self->{'_subsequence_cache'}{$name}) {
-        confess "already have SubSeq '$name'";
+        $self->logger->logconfess("already have SubSeq '$name'");
     } else {
         $self->{'_subsequence_cache'}{$name} = $sub;
     }
@@ -2056,7 +2099,7 @@ sub delete_SubSeq {
 sub get_SubSeq {
     my ($self, $name) = @_;
 
-    confess "no name given" unless $name;
+    $self->logger->logconfess("no name given") unless $name;
     return $self->{'_subsequence_cache'}{$name};
 }
 
@@ -2115,70 +2158,43 @@ sub update_SubSeq_locus_level_errors {
 sub launch_exonerate {
     my ($self, $otf) = @_;
 
-    my $db_edited = 0;
+    # Clear columns if requested
+    my $db_slice = $self->AceDatabase->db_slice;
+    $otf->pre_launch_setup(slice => $db_slice);
+
+    # Setup for GFF column control below
+    my $cllctn = $self->AceDatabase->ColumnCollection;
+    my $col_aptr = $self->AceDatabase->DB->ColumnAdaptor;
+
+    my $request_adaptor = $self->AceDatabase->DB->OTFRequestAdaptor;
+
     my @method_names;
-    my $ace_text = '';
 
-    for my $aligner ( $otf->aligners_for_each_type ) {
+    for my $builder ( $otf->builders_for_each_type ) {
 
-        my $type = $aligner->type;
-        my $is_protein = $aligner->is_protein;
+        my $type = $builder->type;
 
-        warn "Running exonerate for sequence(s) of type: $type\n";
+        $self->logger->info("Running exonerate for sequence(s) of type: $type");
 
-        # The new way:
-        my $result_set = $aligner->run;
-        my $ace_output = $result_set->ace($aligner->target->name);
+        # Set up a request for the filter script
+        my $request = $builder->prepare_run;
+        $request_adaptor->store($request);
 
-        if ($ace_output) {
-            $db_edited = 1;
-        }
-        else {
-            warn "No hits found on '", $aligner->target->name, "'\n";
-            next;
-        }
+        my $analysis_name = $builder->analysis_name;
+        push @method_names, $builder->analysis_name;
 
-        # add hit sequences into ace text
-        my @names = sort $result_set->hit_query_ids;
-        $otf->record_hit(@names);
-
-        # only add the sequence to acedb if they are not pfetchable (i.e. they are unknown)
-        if ($type =~ /^Unknown/) {
-            foreach my $hit_name (@names) {
-                my $seq = $otf->seq_by_name($hit_name);
-
-                if ($is_protein) {
-                    $ace_output .= $self->ace_PEPTIDE($hit_name, $seq);
-                }
-                else {
-                    $ace_output .= $self->ace_DNA($hit_name, $seq);
-                }
-            }
+        # Ensure new-style columns are selected if used
+        my $column = $cllctn->get_Column_by_name($analysis_name);
+        if ($column and not $column->selected) {
+            $column->selected(1);
+            $col_aptr->store_Column_state($column);
         }
 
-        # Need to add new method to collection if we don't have it already
-        my $coll      = $self->AceDatabase->MethodCollection;
-        my $coll_zmap = $self->Assembly->MethodCollection;
-
-        my $method    = Hum::Ace::Method->new;
-        $method->name($result_set->analysis_name);
-
-        push @method_names, $method->name;
-        unless ($coll->get_Method_by_name($method->name)
-                || $coll_zmap->get_Method_by_name($method->name))
-        {
-            $coll->add_Method($method);
-            $coll_zmap->add_Method($method);
-            $self->save_ace($coll->ace_string());
-        }
-        $ace_text .= $ace_output;
     }
 
-    $self->save_ace($ace_text);
+    $self->RequestQueuer->request_features(@method_names) if @method_names;
 
-    $self->RequestQueuer->request_features(@method_names) if $db_edited;
-
-    return $db_edited;
+    return;
 }
 
 sub ace_DNA {
@@ -2369,7 +2385,7 @@ sub list_was_selected_subseq_names {
 sub rename_locus {
     my ($self, $locus_name) = @_;
 
-    warn "Renaming locus";
+    $self->logger->info("Renaming locus '$locus_name'");
 
     unless ($self->close_all_transcript_windows) {
         $self->message('Must close all clone editing windows before renaming locus');
@@ -2401,8 +2417,8 @@ sub run_dotter {
         my $top = $parent->Toplevel(-title => $Bio::Otter::Lace::Client::PFX.'Run Dotter');
         $top->transient($parent);
         $dw = EditWindow::Dotter->new($top);
-        $dw->initialise;
         $dw->SessionWindow($self);
+        $dw->initialise;
         $self->{'_dotter_window'} = $dw;
         weaken($self->{'_dotter_window'});
     }
@@ -2432,6 +2448,40 @@ sub run_exonerate {
     return 1;
 }
 
+sub exonerate_done_callback {
+    my ($self, @feature_sets) = @_;
+
+    $self->logger->debug('exonerate_done_callback: [', join(',', @feature_sets), ']');
+
+    my $request_adaptor = $self->AceDatabase->DB->OTFRequestAdaptor;
+    my (@requests, @requests_with_feedback);
+    foreach my $set (@feature_sets) {
+        my $request = $request_adaptor->fetch_by_logic_name_status($set, 'completed');
+        next unless $request;
+        push @requests, $request;
+        push @requests_with_feedback, $request if ($request->n_hits == 0 or $request->missed_hits);
+    }
+
+    if (@requests_with_feedback) {
+        my $ew = $self->{'_exonerate_window'};
+        if ($ew) {
+            foreach my $request (@requests_with_feedback) {
+                $ew->display_request_feedback($request);
+            }
+        } else {
+            $self->logger->error('OTF results but no exonerate window');
+        }
+    }
+
+    if (@requests) {
+        foreach my $request (@requests) {
+            $request->status('reported');
+            $request_adaptor->update_status($request);
+        }
+    }
+    return;
+}
+
 sub get_mark_in_slice_coords {
     my ($self) = @_;
     my @mark = $self->zmap->get_mark;
@@ -2452,22 +2502,10 @@ sub set_window_title {
     return;
 }
 
-sub update_window_title_unsaved_flag {
-    my ($self, $flag) = @_;
-
-    my $top = $self->top_window;
-    my $title = $top->title;
-    $title =~ s/^\* //;
-    my $unsaved_str = $flag ? '* ' : '';
-    $top->title("${unsaved_str}$title");
-
-    return;
-}
-
 sub zmap_view_arg_hash {
     my ($self) = @_;
     my $config_file = sprintf "%s/ZMap", $self->AceDatabase->zmap_dir;
-    my $slice = $self->AceDatabase->smart_slice;
+    my $slice = $self->AceDatabase->slice;
     my $name  = $slice->ssname;
     my $start = $slice->start;
     my $end   = $slice->end;
@@ -2486,18 +2524,15 @@ sub _make_config {
     my ($self, $config_dir, $config) = @_;
     my $config_file = sprintf "%s/ZMap", $config_dir;
     open my $config_file_h, '>', $config_file
-        or die sprintf
-        "failed to open the configuration file '%s': $!"
-        , $config_file;
+        or $self->logger->logdie(sprintf "failed to open the configuration file '%s': $!", $config_file);
     print $config_file_h $config if defined $config;
     close $config_file_h
-        or die sprintf
-        "failed to close the configuration file '%s': $!"
-        , $config_file;
+        or $self->logger->logdie(sprintf "failed to close the configuration file '%s': $!", $config_file);
     return;
 }
 
 sub _make_zmap_config_dir {
+    my ($self) = @_;
     my $config_dir = q(/var/tmp);
     my $user = getpwuid($<);
     my $dir_name = "otter_${user}";
@@ -2506,7 +2541,7 @@ sub _make_zmap_config_dir {
         $config_dir .= "/$_";
         -d $config_dir
             or mkdir $config_dir
-            or die sprintf "mkdir('%s') failed: $!", $config_dir;
+            or $self->logger->logdie(sprintf "mkdir('%s') failed: $!", $config_dir);
     }
     return $config_dir;
 }
@@ -2535,6 +2570,12 @@ sub zmap_new {
         @{$DataSet->zmap_arg_list},
         ];
     my $client = $self->AceDatabase->Client;
+    if (my $screen = $client->config_value('zmap_screen')) { # RT#390512
+        $self->logger->info("Using logical screen override (zmap_screen=$screen)");
+        push @$arg_list, $screen if $screen;
+    } else { # RT#387856
+        push @$arg_list, Tk::Screens->nxt( $self->top_window )->gtk_arg;
+    }
     my $zmap =
         Zircon::ZMap->new(
             '-app_id'     => $self->zircon_app_id,
@@ -2563,6 +2604,7 @@ sub _zmap_view_new {
             %{$self->zmap_view_arg_hash},
             '-handler' => $self,
         );
+    $self->deiconify_and_raise;
     return;
 }
 
@@ -2589,8 +2631,9 @@ sub zircon_zmap_view_features_loaded {
     $self->logger->debug("zzvfl: status '$status', message '$message', feature_count '$feature_count'");
 
     my @columns_to_process = ();
+    my @otf_loaded;
     foreach my $set_name (@featuresets) {
-        if (my $column = $cllctn->get_Item_by_name($set_name)) {
+        if (my $column = $cllctn->get_Column_by_name($set_name)) {
             # filter_get will have updated gff_file field in SQLite db
             # so we need to fetch it from the database:
             $col_aptr->fetch_state($column);
@@ -2601,7 +2644,7 @@ sub zircon_zmap_view_features_loaded {
                 (! $status)    ? 'Error'   :
                 $feature_count ? 'Visible' :
                 1              ? 'Empty'   :
-                die 'this code should be unreachable';
+                $self->logger->logdie('this code should be unreachable');
 
             if ($column->status ne $column_status) {
                 $state_changed = 1;
@@ -2612,16 +2655,20 @@ sub zircon_zmap_view_features_loaded {
 
             $column->status_detail($message);
             $col_aptr->store_Column_state($column);
+
+            push @otf_loaded, $set_name if $column->internal_type_is('on_the_fly');
         }
         # else {
         #     # We see a warning for each acedb featureset
-        #     warn "Ignoring featureset '$set_name'";
+        #     $self->logger->warn("Ignoring featureset '$set_name'");
         # }
     }
 
     my $process_result =
         $self->AceDatabase->process_Columns(@columns_to_process);
     $self->update_from_process_result($process_result);
+
+    $self->exonerate_done_callback(@otf_loaded) if @otf_loaded;
 
     # FIXME 26/02/2014: assuming that commenting this out doesn't cause other problems,
     # it should be removed along with AceDatabase->zmap_config_update().
@@ -2650,7 +2697,7 @@ sub zircon_zmap_view_edit {
 
     if ($style && lc($style) eq 'genomic_canonical') {
         my ($accession_version) = $name =~ $name_pattern
-            or confess "invalid name for a genomic_canonical feature: ${name}";
+            or $self->logger->logconfess("invalid name for a genomic_canonical feature: ${name}");
         my $clone = $self->Assembly->get_Clone_by_accession_version($accession_version);
         $self->edit_Clone($clone);
         return 1;
@@ -2658,7 +2705,7 @@ sub zircon_zmap_view_edit {
     else {
         $sub_list or return 0;
         ref $sub_list eq 'ARRAY'
-            or confess "Unexpected feature format for ${name}";
+            or $self->logger->logconfess("Unexpected feature format for ${name}");
         for my $s (@$sub_list) {
             if ($s->{'ontology'} eq 'exon') {
                 return $self->edit_subsequences($name);
@@ -2697,16 +2744,16 @@ sub _feature_details_xml {
 sub _feature_accession_info_xml {
     my ($self, $feat_name) = @_;
 
-    my $row = $self->AceDatabase->AccessionTypeCache->feature_accession_info($feat_name);
-    return unless $row;
-    my ($source_db, $taxon_id, $desc) = @{$row};
+    my $info = $self->AceDatabase->AccessionTypeCache->feature_accession_info($feat_name);
+    return unless $info;
+    my ($source, $taxon_id, $desc) = @{$info}{qw(source taxon_id description)};
 
     # Put this on the "Details" page which already exists.
     my $xml = Hum::XmlWriter->new(5);
     $xml->open_tag('page',       { name => 'Details' });
     $xml->open_tag('subsection', { name => 'Feature' });
     $xml->open_tag('paragraph',  { type => 'tagvalue_table' });
-    $xml->full_tag('tagvalue', { name => 'Source database', type => 'simple' }, $source_db);
+    $xml->full_tag('tagvalue', { name => 'Source database', type => 'simple' }, $source);
     $xml->full_tag('tagvalue', { name => 'Taxon ID',        type => 'simple' }, $taxon_id);
     $xml->full_tag('tagvalue', { name => 'Description', type => 'scrolled_text' }, $desc);
     $xml->close_all_open_tags;
@@ -2729,7 +2776,7 @@ sub _feature_evidence_xml {
     my $used_subseq_names = [];
   SUBSEQ: foreach my $subseq (@$subseq_list) {
 
-        #warn "Looking at: ", $subseq->name;
+        #$self->logger->debug("Looking at: ", $subseq->name);
         my $evi_hash = $subseq->evidence_hash();
 
         # evidence_hash looks like this
@@ -2830,7 +2877,7 @@ sub zmap {
 sub DESTROY {
     my ($self) = @_;
 
-    warn "Destroying SessionWindow for ", $self->ace_path, "\n";
+    $self->logger->info("Destroying SessionWindow for ", $self->ace_path);
 
     $self->zmap_select_destroy;
 

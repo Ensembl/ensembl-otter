@@ -6,6 +6,7 @@ use strict;
 use warnings;
 
 use Carp;
+use Scalar::Util qw(looks_like_number);
 
 sub new {
     my ($pkg, $hash) = @_;
@@ -20,13 +21,13 @@ my $strand_hash = {
 
 sub _gff_escape_seqid {
     # escapes everything except a restricted set of characters
-    s/([^-a-zA-Z0-9.:^*$@!+_?|])/sprintf "%%%02X", ord($1)/eg;
+    s/([^-a-zA-Z0-9.:^*\$\@!+_?|])/sprintf "%%%02X", ord($1)/eg;
     return;
 }
 
 sub _gff_escape_source {
     # escapes everything except a restricted set of characters
-    s/([^-a-zA-Z0-9.:^*$@!+_? ])/sprintf "%%%02X", ord($1)/eg;
+    s/([^-a-zA-Z0-9.:^*\$\@!+_? ])/sprintf "%%%02X", ord($1)/eg;
     return;
 }
 
@@ -49,7 +50,7 @@ sub _gff_escape_target_attribute {
 }
 
 my @attribute_quotable = qw(
-    Name Description Class Target Gaps Gap
+    Name Description Class Target Gaps Gap Note
     Stable_ID Locus Locus_Stable_ID DB_Name URL
     cigar_ensembl cigar_exonerate cigar_bam
     );
@@ -79,7 +80,7 @@ sub gff_line { ## no critic( Subroutines::ProhibitManyArgs )
          $type,
          (sprintf "%d", $start),
          (sprintf "%d", $end),
-         (defined $score ? (sprintf "%f", $score) : '.'),
+         ((defined $score and looks_like_number $score) ? (sprintf "%f", $score) : '.'),
          $strand_hash->{$strand} || $strand || '.',
          defined $phase ? $phase : '.',
         );

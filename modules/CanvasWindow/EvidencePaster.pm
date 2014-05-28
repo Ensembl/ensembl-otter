@@ -14,6 +14,7 @@ use Bio::Otter::Lace::OnTheFly::Transcript;
 use Bio::Otter::UI::TextWindow::TranscriptAlign;
 use Bio::Vega::Evidence::Types qw(evidence_is_sra_sample_accession);
 use Tk::Utils::OnTheFly;
+use Tk::ScopedBusy;
 
 use base 'CanvasWindow';
 
@@ -52,7 +53,7 @@ sub initialise {
         )->pack(-side => 'left');
     $self->dotter_button($dotter_button);
 
-    my $button_frame = $top->Frame->pack(
+    my $button_frame = $top->Frame(Name => 'button_frame')->pack(
         -side => 'top',
         -fill => 'x',
         );
@@ -105,6 +106,7 @@ sub initialise {
     $canvas->Tk::bind('<Destroy>', sub{ $self = undef });
 
 
+    $self->_colour_init;
     $self->evidence_hash($evidence_hash);
     $self->draw_evidence;
 
@@ -119,6 +121,11 @@ sub TranscriptWindow {
         weaken($self->{'_TranscriptWindow'});
     }
     return $self->{'_TranscriptWindow'};
+}
+
+sub SessionWindow { # method used by Bio::Otter::UI::TextWindow
+    my ($self) = @_;
+    return $self->TranscriptWindow->SessionWindow;
 }
 
 sub align_button {
@@ -137,6 +144,12 @@ sub dotter_button {
         $self->{'_dotter_button'} = $dotter_button;
     }
     return $self->{'_dotter_button'};
+}
+
+sub _colour_init {
+    my ($self) = @_;
+    my $top = $self->canvas->toplevel;
+    return $self->SessionWindow->colour_init($top, 'button_frame');
 }
 
 sub align_enable {
@@ -302,11 +315,9 @@ sub draw_evidence {
 sub paste_type_and_name {
     my ($self) = @_;
 
-    $self->top_window->Busy;    # Because it may involve a HTTP request
     if (my $clip = $self->get_clipboard_text) {
         $self->add_evidence_from_text($clip);
     }
-    $self->top_window->Unbusy;
 
     return;
 }
@@ -314,7 +325,9 @@ sub paste_type_and_name {
 sub add_evidence_from_text {
     my ($self, $text) = @_;
 
-    my $cache = $self->TranscriptWindow->SessionWindow->AceDatabase->AccessionTypeCache;
+    my $busy = Tk::ScopedBusy->new($self->top_window); # Because it may involve a HTTP request
+
+    my $cache = $self->SessionWindow->AceDatabase->AccessionTypeCache;
 
     my $acc_list = $cache->accession_list_from_text($text);
     $cache->populate($acc_list);
@@ -421,25 +434,27 @@ sub align_to_transcript {
         problem_report_cb => sub { $top->Tk::Utils::OnTheFly::problem_box('Evidence Selected', @_) },
         long_query_cb     => sub { $top->Tk::Utils::OnTheFly::long_query_confirm(@_)  },
 
-        accession_type_cache => $self->TranscriptWindow->SessionWindow->AceDatabase->AccessionTypeCache,
+        accession_type_cache => $self->SessionWindow->AceDatabase->AccessionTypeCache,
         });
 
     my $logger = $self->logger;
-    $logger->info("Found ", scalar( @{$otf->confirmed_seqs} ), " sequences");
+    $logger->info("Found ", scalar( @{$otf->confirmed_seqs->seqs} ), " sequences");
 
     my $ts_file = $otf->target_fasta_file;
     $logger->info("Wrote transcript sequence to ${ts_file}");
 
-    foreach my $aligner ( $otf->aligners_for_each_type ) {
+    foreach my $builder ( $otf->builders_for_each_type ) {
 
-        $logger->info("Running exonerate for sequence(s) of type: ", $aligner->type);
+        $logger->info("Running exonerate for sequence(s) of type: ", $builder->type);
 
-        my $seq_file = $aligner->fasta_file;
+        my $seq_file = $builder->fasta_file;
         $logger->info("Wrote sequences to ${seq_file}");
 
-        my $result_set = $aligner->run;
+        my $request = $builder->prepare_run;
+        my $runner = $otf->build_runner(request => $request);
+        my $result_set = $runner->run;
 
-        $self->alignment_window($result_set, $aligner->type);
+        $self->alignment_window($result_set, $builder->type);
     }
 
     return;

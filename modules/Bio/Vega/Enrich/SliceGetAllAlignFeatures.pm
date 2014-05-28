@@ -6,6 +6,7 @@ use strict;
 use warnings;
 
 use Bio::EnsEMBL::Slice;
+use Bio::Otter::Utils::RequireModule qw(require_module);
 use Bio::Vega::DBSQL::SimpleBindingAdaptor;
 
 # Code in this module was originally embedded in Bio::Otter::Server::Support::Web
@@ -13,8 +14,7 @@ use Bio::Vega::DBSQL::SimpleBindingAdaptor;
 sub enrich {
     my ($afs, $enriched_class) = @_;
 
-    die "'require $enriched_class' failed"
-        unless eval "require $enriched_class"; ## no critic (BuiltinFunctions::ProhibitStringyEval,Anacode::ProhibitEval)
+    require_module($enriched_class);
 
     # Put the names into the hit_description hash:
     my %hd_hash = ();
