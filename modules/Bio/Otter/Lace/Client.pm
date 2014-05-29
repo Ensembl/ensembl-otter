@@ -503,11 +503,6 @@ sub authorize {
 
 # ---- HTTP protocol related routines:
 
-sub request {
-    my ($self, $req) = @_;
-    return $self->get_UserAgent->request($req);
-}
-
 sub get_UserAgent {
     my ($self) = @_;
 
@@ -800,7 +795,7 @@ sub do_http_request {
         $self->logger->logconfess("method '$method' is not supported");
     }
 
-    return $self->request($request);
+    return $self->get_UserAgent->request($request);
 }
 
 # ---- specific HTTP-requests:
