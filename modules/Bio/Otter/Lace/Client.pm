@@ -672,7 +672,7 @@ sub otter_response_content { ## no critic (Subroutines::RequireFinalReturn)
 
     my $response = $self->general_http_dialog($method, $scriptname, $params);
 
-    my $xml = $response->content();
+    my $xml = $response->decoded_content();
 
     if (my ($content) = $xml =~ m{<otter[^\>]*\>\s*(.*)</otter>}s) {
         my $cl = $self->client_logger;
@@ -689,12 +689,12 @@ sub http_response_content {
 
     my $response = $self->general_http_dialog($method, $scriptname, $params);
 
-    my $xml = $response->content();
-    # $self->logger->debug($xml);
+    my $txt = $response->decoded_content();
+    # $self->logger->debug($txt);
 
     my $cl = $self->client_logger;
-    $cl->debug($self->response_info($scriptname, $params, length($xml))) if $cl->is_debug;
-    return $xml;
+    $cl->debug($self->response_info($scriptname, $params, length($txt))) if $cl->is_debug;
+    return $txt;
 }
 
 sub response_info {
@@ -713,10 +713,11 @@ sub general_http_dialog {
     $params->{'client'} = $self->client_name;
 
     my $password_attempts = $self->password_attempts;
-    my $response;
+    my ($response, $content);
 
     REQUEST: while (1) {
         $response = $self->do_http_request($method, $scriptname, $params);
+        $content = $response->decoded_content;
         if ($response->is_success) {
             last REQUEST;
         }
@@ -736,17 +737,17 @@ sub general_http_dialog {
         } elsif ($code == 410) {
             # 410 = Gone.  Not coming back; probably concise.  RT#234724
             # Actually, maybe not so concise.  RT#382740 returns "410 Gone" plus large HTML.
-            $self->logger->warn(__truncdent_for_log($response->decoded_content, 10240, '* '));
+            $self->logger->warn(__truncdent_for_log($content, 10240, '* '));
             $self->logger->logdie(sprintf("Otter Server v%s is gone, please download an up-to-date Otterlace.",
                                   Bio::Otter::Version->version));
         } else {
             $self->logger->error("Got error $code");
-            $self->logger->error(__truncdent_for_log($response->decoded_content, 10240, '| '));
-            $self->logger->logdie(sprintf "%d (%s)", $response->code, $response->decoded_content);
+            $self->logger->error(__truncdent_for_log($content, 10240, '| '));
+            $self->logger->logdie(sprintf "%d (%s)", $response->code, $content);
         }
     }
 
-    if ($response->content =~ /The Sanger Institute Web service you requested is temporarily unavailable/) {
+    if ($content =~ /The Sanger Institute Web service you requested is temporarily unavailable/) {
         $self->logger->logdie("Problem with the web server");
     }
 
