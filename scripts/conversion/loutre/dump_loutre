@@ -240,6 +240,8 @@ if (! $support->param('filter_prefix')) {
     if ($support->param('live_update')){
       $support->param('filter_prefix','INT,KO');
     }
+  } elsif ($support->param('loutredbname') =~ /zebrafish/) {
+    $support->param('filter_prefix','wu');
   }
 }
 $support->comma_to_list('filter_prefix');
@@ -1025,7 +1027,11 @@ sub transfer_sra {
   my $vslice  = shift;
   my $types   = shift;
   my $attribs;
-  my $c = 0;
+  my ($c,$d) = (0,0);
+
+  my $attrs = $vata->fetch_all_by_Slice($vslice);
+  my %already_present;
+  $already_present{$_->code} = $_->value for(@$attrs);
 
   foreach my $type (@{$types}) {
     my $l_attributes = $lslice->get_all_Attributes($type);
@@ -1033,6 +1039,10 @@ sub transfer_sra {
     #create a new attribute if necc; add attributes to feature
     #(actually could do the same as contig_attribs and reuse the one coming from loutre)
     foreach my $l_attribute (@{$l_attributes}) {
+      if($already_present{$l_attribute->code} eq $l_attribute->value) {
+        $d++;
+        next;
+      }
       $c++;
       my $v_attribute = Bio::EnsEMBL::Attribute->new(
 	-NAME        => $l_attribute->name,
@@ -1046,6 +1056,7 @@ sub transfer_sra {
   #store all features on this slice
   $vata->store_on_Slice($vslice,$attribs);
   $support->log("Transferred $c seq_region_attributes for chromosome ".$lslice->seq_region_name."\n");	
+  $support->log("Didn't transfer $d seq_region_attributes to chromosome ".$lslice->seq_region_name.", as they were duplicates.\n");
 }
 
 
