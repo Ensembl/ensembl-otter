@@ -304,7 +304,7 @@ $sth->execute;
 while (my ($source) = $sth->fetchrow_array) {
   if (! exists($all_logic_names{$source})) {
 #    unless ($source eq 'ensembl') { #uncomment for halfwise
-    $support->log_error("You haven't defined the analysis.logic_name to use with genes of source $source, please fix.\n");
+    $support->log_warning("You haven't defined the analysis.logic_name to use with genes of source $source, please fix.\n");
 #    }
   }
   else {
