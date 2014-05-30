@@ -414,7 +414,7 @@ foreach my $chrom (@{$vsa->fetch_all('chromosome','Otter')}) {
     #Take mappings from loutre
     my $l_sr_id  = $l_chrom->get_seq_region_id;
     my $e_sr_id  = $esa->fetch_by_region('chromosome',$e_name,'','','',$alt_assembly)->get_seq_region_id;
-    my $el_sr_id = $lsa->fetch_by_region('chromosome',$v_name,'','','',$alt_assembly)->get_seq_region_id;
+    my $el_sr_id = $lsa->fetch_by_region('chromosome',$v_name,'','','','')->get_seq_region_id;
     if ($e_sr_id && $el_sr_id) {
       $chrom_dets{$v_name}{'do_mapping_using'} = { ename => $e_name, esr_id => $e_sr_id, type => 'loutre_mapping', vsr_id => $v_sr_id, 'lsr_id' => $l_sr_id, 'lesr_id' => $el_sr_id };
     }
