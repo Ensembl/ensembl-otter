@@ -27,6 +27,19 @@ sub build_builder {
         );
 }
 
+# FIXME: it would be good to get these from the config.
+#
+sub logic_names {
+    return qw(
+        OTF_AdHoc_DNA
+        OTF_AdHoc_Protein
+        OTF_EST
+        OTF_ncRNA
+        OTF_mRNA
+        OTF_Protein
+        );
+}
+
 1;
 
 __END__
