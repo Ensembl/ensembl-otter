@@ -91,17 +91,10 @@ sub pre_launch_setup {
     return;
 }
 
-# FIXME: it would be good to get these from the config.
+# Override in subclasses
 #
 sub logic_names {
-    return qw(
-        OTF_AdHoc_DNA
-        OTF_AdHoc_Protein
-        OTF_EST
-        OTF_ncRNA
-        OTF_mRNA
-        OTF_Protein
-        );
+    return;
 }
 
 sub builders_for_each_type {
