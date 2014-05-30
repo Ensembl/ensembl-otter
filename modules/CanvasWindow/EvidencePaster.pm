@@ -33,20 +33,46 @@ sub initialise {
         -fill => 'x',
         );
 
+    my $otf_frame = $action_frame->LabFrame(
+            Name => 'otf',
+            -label => 'OTF',
+            -border => 3,
+            )->pack(
+                -side => 'top',
+                -fill => 'x',
+                );
+
     my $align = sub { $self->align_to_transcript; };
     $top->bind('<Control-t>', $align);
     $top->bind('<Control-T>', $align);
-    my $align_button = $action_frame->Button(
+    my $align_button = $otf_frame->Button(
         -text =>    'Align to transcript',
         -command => $align,
         -state   => 'disabled',
-        )->pack(-side => 'left');
+        )->pack(-side => 'top', -anchor => 'w');
     $self->align_button($align_button);
+
+    my $clear_otf = $otf_frame->Checkbutton(
+        -variable => \$self->{_clear_existing},
+        -text     => 'Clear existing OTF alignments',
+        -anchor   => 'w',
+        -state    => 'disabled',
+    )->pack(-side => 'top', -anchor => 'w');
+    $self->clear_otf_checkbutton($clear_otf);
+
+    my $dotter_frame = $action_frame->LabFrame(
+            Name => 'dotter',
+            -label => 'Dotter',
+            -border => 3,
+            )->pack(
+                -side => 'top',
+                -fill => 'x',
+                );
 
     my $dotter = sub { $self->dotter_to_transcript; };
     $top->bind('<Control-period>',  $dotter);
     $top->bind('<Control-greater>', $dotter);
-    my $dotter_button = $action_frame->Button(
+    my $dotter_button = $dotter_frame->Button(
         -text =>    'Dotter',
         -command => $dotter,
         -state   => 'disabled',
@@ -137,6 +163,20 @@ sub align_button {
     return $self->{'_align_button'};
 }
 
+sub clear_existing {
+    my ($self) = @_;
+    return $self->{'_clear_existing'};
+}
+
+sub clear_otf_checkbutton {
+    my ($self, $clear_otf_checkbutton) = @_;
+
+    if ($clear_otf_checkbutton) {
+        $self->{'_clear_otf_checkbutton'} = $clear_otf_checkbutton;
+    }
+    return $self->{'_clear_otf_checkbutton'};
+}
+
 sub dotter_button {
     my ($self, $dotter_button) = @_;
 
@@ -156,6 +196,7 @@ sub align_enable {
     my ($self, $enable) = @_;
     my $state = $enable ? 'normal' : 'disabled';
     $self->align_button->configure( -state => $state );
+    $self->clear_otf_checkbutton->configure( -state => $state );
     return;
 }
 
@@ -437,6 +478,7 @@ sub align_to_transcript {
         accession_type_cache => $self->SessionWindow->AceDatabase->AccessionTypeCache,
 
         logic_names          => $self->SessionWindow->OTF_Transcript_columns,
+        clear_existing       => $self->clear_existing,
         });
 
     my $logger = $self->logger;
@@ -448,6 +490,11 @@ sub align_to_transcript {
     # FIXME: code duplication with SessionWindow
     my $ace_db = $self->SessionWindow->AceDatabase;
     my $db_slice = $ace_db->DB->session_slice;
+    $otf->pre_launch_setup(slice => $db_slice);
+
+    if ($self->clear_existing) {
+        $self->SessionWindow->delete_featuresets(@{$otf->logic_names});
+    }
 
     my @method_names;
 
