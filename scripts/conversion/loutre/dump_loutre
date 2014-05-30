@@ -851,7 +851,6 @@ else {
 
 $support->finish_log;
 
-
 =head2 transfer_gene
 
   Arg[1]      : Bio::Vega::Gene - Loutre source gene
@@ -906,36 +905,58 @@ sub transfer_gene {
     return 0;
   }
   my $found_trans = 0;
-  my $needs_updating = 0;
   my @transcripts = @{$lgene->get_all_Transcripts};
 
   my $lof = ($lgene->source eq 'LOF');
   $support->log("Ignoring not for Vega on LOF gene\n") if($lof);
 
- TRANS:
+  my %rejected_transcripts;
+ 
+  # Which transcripts should be rejected out-of-hand
   foreach my $transcript (@transcripts){
-    my $skip =0;
     my $ltsi = $transcript->stable_id;
 
     #see if they are not for Vega or have outstanding QC
     if ( grep { $_->value eq 'not for VEGA' } @{$transcript->get_all_Attributes('remark')} and not $lof  ) {
       $support->log("Didn't transfer 'not for Vega' transcript $ltsi\n",2);
-      $needs_updating = 1;
-      $skip = 1;
+      $rejected_transcripts{$ltsi} = 1;
     }
     elsif (my $vqc = $annotrack_genes->{'Trans'}{$ltsi}{'not_allowed'}) {
       $support->log("Skipping transcript $ltsi because of outstanding QC ($vqc)\n",2);
-      $needs_updating = 1;
-      $skip = 1;
+      $rejected_transcripts{$ltsi} = 1;
 #      $skipped_obj{'Trans'}++;
     }
     #report on Transcripts with outstanding QC that we've let through
     if (my $vqc = $annotrack_genes->{'Trans'}{$ltsi}{'allowed'}) {
       $support->log("Transcript $ltsi with outstanding QC ($vqc) allowed since we've explicitly asked for this\n",2);
     }
+  }
+  
+  # Which of remaining transcripts are on the same strand as the longest?
+  my $longest;
+  foreach my $transcript (@transcripts){
+    my $ltsi = $transcript->stable_id;
+    next if $rejected_transcripts{$ltsi};
 
-    #remove transcript
-    if ($skip) {
+    if(!defined $longest or $longest->length < $transcript->length) {
+      $longest = $transcript;
+    }
+  }
+  foreach my $transcript (@transcripts){
+    my $ltsi = $transcript->stable_id;
+    next if $rejected_transcripts{$ltsi};
+    if($transcript->strand != $longest->strand) {
+      my $long_id = $longest->stable_id;
+      $support->log("Transcript $ltsi not on same strand as longest ($long_id). Skipping.\n");
+      $rejected_transcripts{$ltsi} = 1;
+    }
+  }
+
+  # Actually transfer or skip
+  foreach my $transcript (@transcripts){
+    my $ltsi = $transcript->stable_id;
+    if ($rejected_transcripts{$ltsi}) {
+      # skip
       my $i=0;
       while ($i< scalar @{$lgene->{'_transcript_array'}} ){
         if($lgene->{'_transcript_array'}->[$i]->stable_id eq $ltsi){
@@ -944,8 +965,8 @@ sub transfer_gene {
           $i++;
         }
       }
-    }
-    else{
+    } else {
+      # transfer 
       $support->log("Will transfer ".$transcript->stable_id."\n",2);
       $found_trans = 1;
       $transcript->slice($v_gene_slice);
@@ -963,7 +984,7 @@ sub transfer_gene {
       }
     }
   }
-  if ($needs_updating){ #if we deleted a transcript the biotype * start/stop need updating
+  if (scalar keys %rejected_transcripts){ #if we deleted a transcript the biotype * start/stop need updating
     my $old_biotype = $lgene->biotype;
     $lgene->set_biotype_status_from_transcripts;# update biotype;
     my $new_biotype = $lgene->biotype;
