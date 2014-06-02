@@ -11,6 +11,8 @@ use Readonly;
 use Scalar::Util qw(reftype);
 use Test::More;
 
+use Bio::EnsEMBL::Exon;
+use Bio::EnsEMBL::Transcript;
 use Hum::Ace::SubSeq;
 
 Readonly my %ele_expected => {
@@ -912,17 +914,52 @@ foreach my $test (@split_expected) {
     is($ga->exonerate_cigar_string, $test->{cigar_exonerate}, 'cigar_exonerate') if $test->{cigar_exonerate};
     is($ga->ensembl_cigar_string,   $test->{cigar_ensembl},   'cigar_ensembl')   if $test->{cigar_ensembl};
 
-    my $ts = Hum::Ace::SubSeq->new();
+    my $ss = Hum::Ace::SubSeq->new();
+    $ss->strand($test->{ts_strand});
+
+    my $ts = Bio::EnsEMBL::Transcript->new();
     $ts->strand($test->{ts_strand});
+
     my $offset = $test->{clone_contig_offset} || 0;
     foreach my $exon (@{$test->{exons}}) {
-        my $e = Hum::Ace::Exon->new();
-        $e->start($exon->[0] + $offset);
-        $e->end(  $exon->[1] + $offset);
-        $ts->add_Exon($e);
+        my $se = Hum::Ace::Exon->new();
+        $se->start($exon->[0] + $offset);
+        $se->end(  $exon->[1] + $offset);
+        $ss->add_Exon($se);
+
+        my $te = Bio::EnsEMBL::Exon->new();
+        $te->start($exon->[0] + $offset);
+        $te->end(  $exon->[1] + $offset);
+        $te->strand($test->{ts_strand});
+        $ts->add_Exon($te);
     }
 
+    intronify_tests($test, $ga, $ss, 'Hum::Ace::SubSeq');
+    intronify_tests($test, $ga, $ts, 'Bio::EnsEMBL::Transcript');
+}
+
+TODO: {
+    local $TODO = 'Tests not written yet.';
+    fail 'Must test phase and end_phase.';
+}
+
+my $v_header = 'BC018923.fwd 0 2538 + EMBOSS_001 55274 35000 - 12574';
+my $with_5_3 = "$v_header M 974 974 5 0 2 I 0 2242 3 0 2 M 33 33 G 0 1 M 159 159 5 0 2 I 0 1308 3 0 2 M 55 55 G 2 0 M 110 110 5 0 2 I 0 8897 3 0 2 M 230 230 5 0 2 I 0 3909 3 0 2 M 156 156 5 0 2 I 0 758 3 0 2 M 80 80 5 0 2 I 0 599 3 0 2 M 739 739";
+my $cons_exp = "$v_header M 974 974 I 0 2246 M 33 33 G 0 1 M 159 159 I 0 1312 M 55 55 G 2 0 M 110 110 I 0 8901 M 230 230 I 0 3913 M 156 156 I 0 762 M 80 80 I 0 603 M 739 739";
+my $with_5_3_ga = $ga_module->from_vulgar($with_5_3);
+my $consolidated = $with_5_3_ga->consolidate_introns;
+isa_ok($consolidated, $ga_module, 'consolidate_introns produces GappedAlignment');
+is($consolidated->vulgar_string, $cons_exp, 'consolidate_introns');
+
+done_testing;
+
+sub intronify_tests {
+    my ($test, $ga, $ts, $ts_type) = @_;
+
+    note("Intronify tests for '$ts_type'");
+
     my $intron_ga = $ga->intronify_by_transcript_exons($ts);
+
     isa_ok($intron_ga, 'Bio::Otter::GappedAlignment');
     note("Intronified vulgar: ", $intron_ga->vulgar_string);
     is ($intron_ga->vulgar_comps_string, $test->{intron_vulgar}, 'intronify');
@@ -977,22 +1014,8 @@ foreach my $test (@split_expected) {
             is ($ensembl_features[$n]->cigar_string, $exp_features[$n]->{cigar},  "feature $n: cigar_string");
         }
     }
+    return;
 }
-
-TODO: {
-    local $TODO = 'Tests not written yet.';
-    fail 'Must test phase and end_phase.';
-}
-
-my $v_header = 'BC018923.fwd 0 2538 + EMBOSS_001 55274 35000 - 12574';
-my $with_5_3 = "$v_header M 974 974 5 0 2 I 0 2242 3 0 2 M 33 33 G 0 1 M 159 159 5 0 2 I 0 1308 3 0 2 M 55 55 G 2 0 M 110 110 5 0 2 I 0 8897 3 0 2 M 230 230 5 0 2 I 0 3909 3 0 2 M 156 156 5 0 2 I 0 758 3 0 2 M 80 80 5 0 2 I 0 599 3 0 2 M 739 739";
-my $cons_exp = "$v_header M 974 974 I 0 2246 M 33 33 G 0 1 M 159 159 I 0 1312 M 55 55 G 2 0 M 110 110 I 0 8901 M 230 230 I 0 3913 M 156 156 I 0 762 M 80 80 I 0 603 M 739 739";
-my $with_5_3_ga = $ga_module->from_vulgar($with_5_3);
-my $consolidated = $with_5_3_ga->consolidate_introns;
-isa_ok($consolidated, $ga_module, 'consolidate_introns produces GappedAlignment');
-is($consolidated->vulgar_string, $cons_exp, 'consolidate_introns');
-
-done_testing;
 
 sub adjust_start_coords {
     my ($coords, $offset) = @_;
