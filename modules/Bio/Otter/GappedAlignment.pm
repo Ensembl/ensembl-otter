@@ -93,17 +93,51 @@ sub intronify_by_transcript_exons {
     return $intron_ga;
 }
 
+# Switcher
+#
 sub _do_intronify {
     my ($self, $transcript) = @_;
 
+    my $class = ref($transcript);
+    $self->logger->logcroak('$transcript must be an object') unless $class;
+
+    return $self->_do_intronify_from_HumAceSubSeq($transcript)      if $transcript->isa('Hum::Ace::SubSeq');
+    return $self->_do_intronify_from_EnsEMBLTranscript($transcript) if $transcript->isa('Bio::EnsEMBL::Transcript');
+
+    $self->logger->logcroak("Unknown transcript object type '$class'");
+    return;
+}
+
+sub _do_intronify_from_HumAceSubSeq {
+    my ($self, $subseq) = @_;
+
+    my $ts_start  = $subseq->start;
+    my $ts_end    = $subseq->end;
+    my $ts_strand = $subseq->strand;
+
+    my $exons = [ $subseq->get_all_Exons_in_transcript_order ];
+
+    return $self->_really_do_intronify($ts_start, $ts_end, $ts_strand, $exons);
+}
+
+sub _do_intronify_from_EnsEMBLTranscript {
+    my ($self, $transcript) = @_;
+
+    my $ts_start  = $transcript->start;
+    my $ts_end    = $transcript->end;
     my $ts_strand = $transcript->strand;
 
-    $self->logger->debug("Considering transcript ", $transcript->start, " - ", $transcript->end,
-                         " (", $ts_strand, ")\t[", ref($transcript), "]");
+    my $exons = $transcript->get_all_Exons;
+
+    return $self->_really_do_intronify($ts_start, $ts_end, $ts_strand, $exons);
+}
+
+sub _really_do_intronify {
+    my ($self, $ts_start, $ts_end, $ts_strand, $exons) = @_;
+
+    $self->logger->debug("Considering transcript ", $ts_start, " - ", $ts_end, " (", $ts_strand, ")");
     $self->logger->debug("            alignment  ", $self->target_start+1, " - ", $self->target_end,
                          " (", $self->target_strand, ")");
-
-    my @exons = $transcript->get_all_Exons_in_transcript_order;
 
     my %data;
     my $intron_ga;
@@ -117,9 +151,9 @@ sub _do_intronify {
 
     if ($ts_strand == 1) {
         $data{fwd} = 1;
-        $data{offset} = $transcript->start - 1; # transcript is base 1
+        $data{offset} = $ts_start - 1; # transcript is base 1
     } elsif ($ts_strand == -1) {
-        $data{offset} = $transcript->end + 1;
+        $data{offset} = $ts_end + 1;
         $intron_ga->swap_target_strand;
     } else {
         $self->logger->logcroak("Illegal transcript strand value '$ts_strand'");
@@ -127,7 +161,7 @@ sub _do_intronify {
 
     $data{t_splice_pos} = $self->target_start+1; # current spliced target pos, base 1
 
-    $self->_walk_exons(\@exons, \&_intronify_do_exon, \&_intronify_do_intron, \%data);
+    $self->_walk_exons($exons, \&_intronify_do_exon, \&_intronify_do_intron, \%data);
 
     $self->logger->debug("Done (offset $data{offset})");
 
