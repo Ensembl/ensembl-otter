@@ -42,7 +42,7 @@ has _hit_by_query_id => (
     default  => sub { {} },
     init_arg => undef,
     handles  => {
-        _set_hit_by_query_id => 'set',
+        set_hit_by_query_id  => 'set',
         hit_by_query_id      => 'get',
         hit_query_ids        => 'keys',
     },
@@ -59,7 +59,7 @@ sub add_hit_by_query_id {
     my ($self, $q_id, $ga) = @_;
     my $hit_by_query_id;
     unless ($hit_by_query_id = $self->hit_by_query_id($q_id)) {
-        $hit_by_query_id = $self->_set_hit_by_query_id($q_id => []);
+        $hit_by_query_id = $self->set_hit_by_query_id($q_id => []);
     }
     push @$hit_by_query_id, $ga;
     return $ga;

@@ -503,11 +503,6 @@ sub authorize {
 
 # ---- HTTP protocol related routines:
 
-sub request {
-    my ($self, $req) = @_;
-    return $self->get_UserAgent->request($req);
-}
-
 sub get_UserAgent {
     my ($self) = @_;
 
@@ -677,11 +672,11 @@ sub otter_response_content { ## no critic (Subroutines::RequireFinalReturn)
 
     my $response = $self->general_http_dialog($method, $scriptname, $params);
 
-    my $xml = $response->content();
+    my $xml = $response->decoded_content();
 
     if (my ($content) = $xml =~ m{<otter[^\>]*\>\s*(.*)</otter>}s) {
         my $cl = $self->client_logger;
-        $cl->debug($self->response_info($scriptname, $params, length($content))) if $cl->is_debug;
+        $cl->debug($self->response_info($scriptname, $params, length($content).' (unwrapped)')) if $cl->is_debug;
         return $content;
     } else {
         $self->logger->logconfess("No <otter> tags in response content: [$xml]");
@@ -694,12 +689,12 @@ sub http_response_content {
 
     my $response = $self->general_http_dialog($method, $scriptname, $params);
 
-    my $xml = $response->content();
-    # $self->logger->debug($xml);
+    my $txt = $response->decoded_content();
+    # $self->logger->debug($txt);
 
     my $cl = $self->client_logger;
-    $cl->debug($self->response_info($scriptname, $params, length($xml))) if $cl->is_debug;
-    return $xml;
+    $cl->debug($self->response_info($scriptname, $params, length($txt))) if $cl->is_debug;
+    return $txt;
 }
 
 sub response_info {
@@ -718,10 +713,11 @@ sub general_http_dialog {
     $params->{'client'} = $self->client_name;
 
     my $password_attempts = $self->password_attempts;
-    my $response;
+    my ($response, $content);
 
     REQUEST: while (1) {
         $response = $self->do_http_request($method, $scriptname, $params);
+        $content = $response->decoded_content;
         if ($response->is_success) {
             last REQUEST;
         }
@@ -741,19 +737,33 @@ sub general_http_dialog {
         } elsif ($code == 410) {
             # 410 = Gone.  Not coming back; probably concise.  RT#234724
             # Actually, maybe not so concise.  RT#382740 returns "410 Gone" plus large HTML.
-            $self->logger->warn(__truncdent_for_log($response->decoded_content, 10240, '* '));
+            $self->logger->warn(__truncdent_for_log($content, 10240, '* '));
             $self->logger->logdie(sprintf("Otter Server v%s is gone, please download an up-to-date Otterlace.",
                                   Bio::Otter::Version->version));
         } else {
             $self->logger->error("Got error $code");
-            $self->logger->error(__truncdent_for_log($response->decoded_content, 10240, '| '));
-            $self->logger->logdie(sprintf "%d (%s)", $response->code, $response->decoded_content);
+            $self->logger->error(__truncdent_for_log($content, 10240, '| '));
+            $self->logger->logdie(sprintf "%d (%s)", $response->code, $content);
         }
     }
 
-    if ($response->content =~ /The Sanger Institute Web service you requested is temporarily unavailable/) {
+    if ($content =~ /The Sanger Institute Web service you requested is temporarily unavailable/) {
         $self->logger->logdie("Problem with the web server");
     }
+
+    # for RT#401537 HTTP response truncation
+    my $cl = $self->client_logger;
+    $cl->debug(join "\n", $response->status_line, $response->headers_as_string)
+      if $cl->is_debug;
+
+    # Check (possibly gzipped) lengths.  LWP truncates any excess
+    # bytes, but does nothing if there are too few.
+    my $got_len = length(${ $response->content_ref });
+    my $exp_len = $response->content_length; # from headers
+    $self->logger->logdie
+      ("Content length mismatch (before content-decode, if any).\n  Got $got_len bytes, headers promised $exp_len")
+      if defined $exp_len # it was not provided, until recently
+        && $exp_len != $got_len;
 
     return $response;
 }
@@ -800,7 +810,7 @@ sub do_http_request {
         $self->logger->logconfess("method '$method' is not supported");
     }
 
-    return $self->request($request);
+    return $self->get_UserAgent->request($request);
 }
 
 # ---- specific HTTP-requests:
