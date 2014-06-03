@@ -18,7 +18,6 @@ BEGIN {
     @modules = qw(
         Bio::Otter::Lace::OnTheFly
         Bio::Otter::Lace::OnTheFly::Builder
-        Bio::Otter::Lace::OnTheFly::Builder::Transcript
         Bio::Otter::Lace::OnTheFly::FastaFile
         Bio::Otter::Lace::OnTheFly::Format::Ace
         Bio::Otter::Lace::OnTheFly::Format::GFF
@@ -26,9 +25,7 @@ BEGIN {
         Bio::Otter::Lace::OnTheFly::ResultSet::GetScript
         Bio::Otter::Lace::OnTheFly::ResultSet::Test
         Bio::Otter::Lace::OnTheFly::Runner
-        Bio::Otter::Lace::OnTheFly::Runner::Transcript
         Bio::Otter::Lace::OnTheFly::TargetSeq
-        Bio::Otter::Lace::OnTheFly::Transcript
         Bio::Otter::Lace::OnTheFly::Utils::ExonerateFormat
         Bio::Otter::Lace::OnTheFly::Utils::SeqList
         Bio::Otter::Lace::OnTheFly::Utils::Types

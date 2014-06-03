@@ -1,10 +1,12 @@
 all: test.clone.full test.clone.vulgar test.ts.full test.ts.vulgar test.ts.rev.vulgar
 all: test.exons.fwd.full test.exons.fwd.vulgar test.exons.rev.full test.exons.rev.vulgar
 all: protein.clone.full protein.clone.vulgar protein.ts.full protein.ts.vulgar
+all: BC018923.fwd.fa BC018923.rev.fa
 all: Q5SV42.full
+all: test_ts_b.fa
 
 INTERMEDIATES  = random.fa insert.fa region.insert.fa region.indel.fa region.indel.rev.fa tmp_clone.fa
-INTERMEDIATES += BC018923.rev.fa BC018923.rev.int.fa BC018923.fwd.fa
+INTERMEDIATES += BC018923.rev.int.fa
 
 clean:
 	rm $(INTERMEDIATES)
@@ -66,6 +68,9 @@ exons.fwd.fa:	$(FWD_EXONS)
 exons.rev.fa:	$(REV_EXONS)
 	cat $(REV_EXONS) > $@
 
+test_ts_b.fa: test_clone.fa Q96S55.fasta exons_b.fwd.txt
+	./extract_exons.pl --clone test_clone.fa --transcript test_ts_b.fa --spec exons_b.fwd.txt
+
 ## Exonerate to get results
 #
 EXONERATE_PARAMS  = --bestn 1 -M 500 --maxintron 200000 --score 100
@@ -85,7 +90,7 @@ EXONERATE_FWD_EXON_SEQS = --target test_clone.fa --query exons.fwd.fa
 EXONERATE_REV_EXON_SEQS = --target test_clone.fa --query exons.rev.fa
 
 EXONERATE_CLONE_PROTEIN_SEQS = --target test_clone.fa --query Q96S55.fasta
-EXONERATE_TS_PROTEIN_SEQS    = --target test_ts.fa    --query Q96S55.fasta
+EXONERATE_TS_PROTEIN_SEQS    = --target test_ts_b.fa  --query Q96S55.fasta
 
 test.clone.full: test_clone.fa test_query.fa
 	exonerate $(EXONERATE_CLONE_DNA_SEQS) $(EXONERATE_DNA_PARAMS) > $@
@@ -120,10 +125,10 @@ protein.clone.full: test_clone.fa Q96S55.fasta
 protein.clone.vulgar: test_clone.fa Q96S55.fasta
 	exonerate $(EXONERATE_CLONE_PROTEIN_SEQS) $(EXONERATE_PROTEIN_CLONE_PARAMS) --showalignment false > $@
 
-protein.ts.full:	test_ts.fa Q96S55.fasta
+protein.ts.full:	test_ts_b.fa Q96S55.fasta
 	exonerate $(EXONERATE_TS_PROTEIN_SEQS) $(EXONERATE_PROTEIN_TS_PARAMS) > $@
 
-protein.ts.vulgar: test_ts.fa Q96S55.fasta
+protein.ts.vulgar: test_ts_b.fa Q96S55.fasta
 	exonerate $(EXONERATE_TS_PROTEIN_SEQS) $(EXONERATE_PROTEIN_TS_PARAMS) --showalignment false > $@
 
 Q5SV42.full: Q5SV42.fasta AL139092.12.fasta

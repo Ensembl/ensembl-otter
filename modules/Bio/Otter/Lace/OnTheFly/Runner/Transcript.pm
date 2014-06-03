@@ -10,13 +10,14 @@ has transcript => ( is => 'ro', isa => 'Hum::Ace::SubSeq', required => 1 );
 around 'parse' => sub {
     my ($orig, $self, @args) = @_;
 
-    my $basic_rs = $self->$orig(@args);
+    my $result_set = $self->$orig(@args);
 
-    foreach my $query ( $basic_rs->hit_query_ids ) {
-        my $split = $self->_split_alignment($basic_rs->hit_by_query_id($query));
+    foreach my $query ( $result_set->hit_query_ids ) {
+        my $split = $self->_split_alignment($result_set->hit_by_query_id($query));
+        $result_set->set_hit_by_query_id($query => [ $split ]);
     }
 
-    return $basic_rs;              # temporary
+    return $result_set;
 };
 
 sub _split_alignment {
@@ -27,7 +28,7 @@ sub _split_alignment {
         $self->log->warn(sprintf("More than one gapped alignment for '%s', using first.", $ga->query_id));
     }
 
-    return $ga->intronify_by_transcript_exons($self->transcript)->exon_gapped_alignments;
+    return $ga->intronify_by_transcript_exons($self->transcript);
 }
 
 1;
