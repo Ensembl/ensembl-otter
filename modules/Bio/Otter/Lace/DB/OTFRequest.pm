@@ -76,6 +76,13 @@ sub missed_hits {
     return $missed_hits;
 }
 
+sub transcript_id {
+    my ($self, @args) = @_;
+    ($self->{'transcript_id'}) = @args if @args;
+    my $transcript_id = $self->{'transcript_id'};
+    return $transcript_id;
+}
+
 # These two are exonerate-specific
 #
 sub query_file {
