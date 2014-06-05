@@ -122,7 +122,8 @@ sub store {
         );
 
 
-        my $contig_info_id = $sth->{'mysql_insertid'} or $self->throw("No insert id");
+        my $contig_info_id = $self->last_insert_id('contig_info_id', undef, 'contig_info')
+            or $self->throw("No insert id");
         $contig_info->dbID($contig_info_id);
 
             # created_date is only set for contig_info objects that either come directly

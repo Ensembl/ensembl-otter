@@ -198,7 +198,8 @@ sub store {
         $sth->execute($author_email, $author_name);
     }
 
-    my $db_id = $sth->{'mysql_insertid'} || throw('Failed to get autoincremented ID from statement handle');
+    my $db_id = $self->last_insert_id('author_id', undef, 'author')
+        || throw('Failed to get autoincremented ID from statement handle');
     $author->dbID($db_id);
 
     return;
