@@ -251,7 +251,7 @@ sub initialize {
     # Set window to full screen height, y=0.  RT#355409
     my $w = $top->screenwidth;
     $w = 800 if $w > 800;
-    my $h = $top->screenheight;
+    my $h = $top->screenheight * 0.85; # hack off a bit for MacOS dock (RT#402139)
 
     my $x = $top->x;
     my $new_x = $top->screenwidth - $w;
