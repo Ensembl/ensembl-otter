@@ -1,7 +1,7 @@
 
 ## no critic (Modules::RequireFilenameMatchesPackage)
 
-package Hum::Ace::SubSeq;
+package Hum::Ace::SubSeq; # mix-in!
 
 use strict;
 use warnings;

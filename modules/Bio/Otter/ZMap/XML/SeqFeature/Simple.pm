@@ -1,7 +1,7 @@
 
 ## no critic (Modules::RequireFilenameMatchesPackage)
 
-package Hum::Ace::SeqFeature::Simple;
+package Hum::Ace::SeqFeature::Simple; # mix-in!
 
 use strict;
 use warnings;
