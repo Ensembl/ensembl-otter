@@ -252,6 +252,9 @@ sub initialize {
     my $w = $top->screenwidth;
     $w = 800 if $w > 800;
     my $h = int($top->screenheight * 0.85); # hack off a bit for MacOS dock (RT#402139)
+    $h = 700 if $h > 700; # arbitrary capping
+    # Xinerama may stack multiple screens vertically, but Tk doesn't
+    # understand them
 
     my $x = $top->x;
     my $new_x = $top->screenwidth - $w;
