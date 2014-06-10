@@ -8,10 +8,22 @@ use warnings;
 
 use POSIX 'ceil';
 use Hum::Analysis::Factory::CrossMatch;
+use Hum::Analysis::Factory::Lastz;
 use Hum::Pfetch;
 use CanvasWindow;
+use Getopt::Long qw{ GetOptions };
 
 {
+    my $algorithm = 'crossmatch';
+    my $help = sub { exec('perldoc', $0) };
+    my $chain_flag = 0;
+    GetOptions(
+        'h|help!'       => \$help,
+        'lastz!'        => sub{ $algorithm = 'lastz' },
+        'crossmatch!'   => sub{ $algorithm = 'crossmatch' },
+        'chain!'        => \$chain_flag,
+        ) or $help->();
+
     my @seqs;
     if (-e $ARGV[0]) {
         my $ffin  = Hum::FastaFileIO->new_DNA_IO(\*ARGV);
@@ -21,11 +33,20 @@ use CanvasWindow;
     }
     my $query = shift(@seqs)
       or die "No sequence found";
-    my $factory = Hum::Analysis::Factory::CrossMatch->new;
-    $factory->show_alignments(1);
-    $factory->show_all_matches(1);
-
-    #$factory->min_match_length(10);
+    my $factory;
+    if ($algorithm eq 'crossmatch') {
+        $factory = Hum::Analysis::Factory::CrossMatch->new;
+        $factory->show_alignments(1);
+        $factory->show_all_matches(1);
+        #$factory->min_match_length(10);        
+    }
+    elsif ($algorithm eq 'lastz') {
+        $factory = Hum::Analysis::Factory::Lastz->new;
+        $factory->chain($chain_flag);
+    }
+    else {
+        die "Unimplemented algorithm '$algorithm'";
+    }
 
     while (my $subject = shift @seqs) {
         cross_dotter($factory, $query, $subject);
@@ -52,7 +73,7 @@ sub cross_dotter {
     my $canvas = $cw->canvas;
     $canvas->configure(-closeenough => 2);
     $canvas->createRectangle(
-        0, 0, $query_length / $scale, $subject_length / $scale,
+        0, 0, $query_length * $scale, $subject_length * $scale,
         -fill    => undef,
         -outline => 'lightGrey',
     );
@@ -70,16 +91,22 @@ sub cross_dotter {
         my $subject_end   = $feat->hit_end;
         my $match_str     =
             $feat->pretty_header
-          . $feat->pretty_string
-          . $feat->pretty_alignment_string;
+          . $feat->pretty_string;
+        if ($feat->can('pretty_alignment_string')) {
+            $match_str .= $feat->pretty_alignment_string;
+        }
 
         $feat_str->[$match_i] = $match_str;
 
+        $query_start--;
+        $subject_start--;
         if ($feat->hit_strand == -1) {
             ($subject_start, $subject_end) = ($subject_end, $subject_start);
         }
-        my @pos = map $_ / $scale,
-          ($query_start - 1, $subject_start - 1, $query_end, $subject_end,);
+        my @pos = map { $_ * $scale } (
+            $query_start, $subject_start,
+            $query_end, $subject_end,
+            );
 
       #print "coord ($query_start, $subject_start, $query_end, $subject_end)\n",
       #      "  pos (@pos)\n";
@@ -100,7 +127,7 @@ sub cross_dotter {
     $biggest ||= 'No matches found';
 
     my $font_size = $cw->font_size;
-    my $text_x    = 2 * $font_size + ($query_length / $scale);
+    my $text_x    = 2 * $font_size + ($query_length * $scale);
     my $text      = $canvas->createText(
         $text_x, 0,
         -text   => $biggest,
@@ -170,14 +197,13 @@ sub choose_scale {
     my ($mw, $query, $subject) = @_;
 
     my $border = 200;    # Leave at least this number of pixels around window
-    my ($display_max_x, $display_max_y) = map $_ - $border, $mw->maxsize;
+    my ($display_max_x, $display_max_y) = map { $_ - $border } $mw->maxsize;
+    my $display_max = $display_max_x < $display_max_y ? $display_max_x : $display_max_y;
 
-    my $max_x_scale = $query->sequence_length / $display_max_x;
-    my $max_y_scale = $subject->sequence_length / $display_max_y;
+    my $max_x_scale = $display_max /   $query->sequence_length;
+    my $max_y_scale = $display_max / $subject->sequence_length;
 
-    my $max_scale = $max_x_scale > $max_y_scale ? $max_x_scale : $max_y_scale;
-    my $round = 10;                                     # Round scale to nearest
-    my $scale = $round * (ceil($max_scale / $round));
+    my $scale = $max_x_scale < $max_y_scale ? $max_x_scale : $max_y_scale;
 
     printf STDERR "max_x=%.2f  max_y=%.2f scale=%d\n", $max_y_scale,
       $max_x_scale, $scale;
