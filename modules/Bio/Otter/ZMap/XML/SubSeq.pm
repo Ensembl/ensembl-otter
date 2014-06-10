@@ -104,8 +104,8 @@ sub zmap_xml_feature_tag {
     my $snf = $self->start_not_found;
     $xml->open_tag('feature', {
             name            => $self->name,
-            start           => $offset + $self->start,
-            end             => $offset + $self->end,
+            start           => $offset + $self->start_untruncated,
+            end             => $offset + $self->end_untruncated,
             strand          => $self->strand == -1 ? '-' : '+',
             #style           => $style, # XXX: we shouldn't need the style as this can be established from the featureset name
             start_not_found => $snf ? $snf : 'false',
