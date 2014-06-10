@@ -98,6 +98,8 @@ $| = 1;
 
 my $support = new Bio::EnsEMBL::Utils::ConversionSupport($SERVERROOT);
 
+### PARALLEL # $support ###
+
 # parse options
 $support->parse_common_options(@_);
 $support->parse_extra_options(
@@ -147,8 +149,11 @@ $support->confirm_params;
 # get log filehandle and print heading and parameters to logfile
 $support->init_log;
 
+my ($file,%mysql_commands,$create_db,$dbtype);
+### PRE # $file %mysql_commands $create_db $dbtype # ###
+
 #are we going to create the database and populate it from the sql dump
-my $create_db = 0;
+$create_db = 0;
 if ($support->user_proceed("Do you want to automatically create and populate the vega database from the sql dump?\n")) {
   $create_db = 1;
 }
@@ -160,11 +165,10 @@ my $no_feature = $support->param('no_feature') || '';
 my $character_set='latin1';
 
 #database type
-my $dbtype='MyISAM';
+$dbtype='MyISAM';
 
 #open file to dump the sql into
-my $file = $support->param('sql_dump_location') . '/' . $support->param('file_name');
-open(OUT,">$file") || die "cannot open $file";
+$file = $support->param('sql_dump_location') . '/' . $support->param('file_name');
 
 # connect to pipeline database and get adaptors
 my $pdba = $support->get_database('core','pipe');
@@ -180,7 +184,7 @@ $gtn->execute();
 while (my ($analysis_id,$logic_name) = $gtn->fetchrow){
   #exclude for align_features
   next if ($logic_name=~/\_raw|_new$/);
-  foreach my $t qw(analysis protein_align_feature dna_align_feature) {
+  foreach my $t (qw(analysis protein_align_feature dna_align_feature)) {
     push @{$analysis_ids{$t}{'analysis_id'}}, $analysis_id;
   }
 }
@@ -318,20 +322,21 @@ my $port   = $support->param('pipeport');
 my $mcom   = "mysqldump --opt --skip-lock-tables $sei $cs --single-transaction -q -u $user -P $port -h $host $dbname";
 
 #create statements
-my @mysql_commands;
 while (my ($table,$condition) = each (%table_constraints) ) {
+  $mysql_commands{$table} = [];
   next if ($condition eq 'i');
   if ($condition eq 's') {
-    push @mysql_commands, "$mcom -d $table";
+    push @{$mysql_commands{$table}},"$mcom -d $table";
   }
   elsif ($condition eq 'd') {
-    push @mysql_commands, "$mcom $table";
+    push @{$mysql_commands{$table}},"$mcom $table";
   }
   elsif (ref($table_constraints{$table}) eq 'HASH') {
     foreach my $cons (keys %{$table_constraints{$table}}) {
-      my $ids = join ',',@{$table_constraints{$table}{$cons}};
-      my $extra = qq( --where "$cons in ($ids)");
-      push @mysql_commands, "$mcom $extra $table";
+      foreach my $id (@{$table_constraints{$table}{$cons}}) {
+        my $extra = qq( --where "$cons = $id" );
+        push @{$mysql_commands{$table}},"$mcom $extra $table";
+      }
     }
   }
 }
@@ -341,38 +346,8 @@ while (my ($table,$condition) = each (%table_constraints) ) {
 ##################
 	
 #warn Dumper(\@mysql_commands);
-	
-if (!$support->param('dry_run')) {
-  foreach my $command (@mysql_commands) {
-    open(MYSQL,"$command |") || die "cannot open mysql";
-    my $enable;
-    my $flag_disable;
-    while (<MYSQL>) {
-      s/(TYPE|ENGINE)=(\w+)/$1=$dbtype/;
-      if (/ALTER\sTABLE\s\S+\sENABLE\sKEYS/){
-	$enable=$_;
-      }
-      elsif (/ALTER\sTABLE\s\S+\sDISABLE\sKEYS/){
-	if(!$flag_disable){
-	  # only write once
-	  $flag_disable=1;
-	  print OUT;
-	}
-      }
-      else {
-	print OUT;
-      }
-    }
-    print OUT $enable if ($enable);
-    close(MYSQL);
-  }
-  $support->log("SQL for dumped to $file\n");
-}
-else {
-  $support->log("\nNo SQL dumped since this is a dry run\n");
-}
 
-close(OUT);
+my @mysql_tables = keys %mysql_commands;
 
 #create and populate vega db
 if ($create_db && (!$support->param('dry_run'))) {
@@ -385,10 +360,58 @@ if ($create_db && (!$support->param('dry_run'))) {
   $support->log("Creating new Vega database $dbname on $host\n");
   my $mysql = "mysql -u $user -P $port -p$pass -h $host -e 'create database $dbname'";
   `$mysql`;
-  $support->log("Populating $dbname\n");
-  $mysql = "mysql -u $user -P $port -p$pass -h $host $dbname < $file";
-  `$mysql`;
 }
+ 
+### RUN # @mysql_tables ###
+
+foreach my $table (@mysql_tables) {
+  my $filename = "$file-$table";
+  open(OUT,">$filename") || die "cannot open $filename";
+  if (!$support->param('dry_run')) {
+    foreach my $command (@{$mysql_commands{$table}}) {
+      warn "command: $command\n";
+      open(MYSQL,"$command |") || die "cannot open mysql";
+      my $enable;
+      my $flag_disable;
+      while (<MYSQL>) {
+        s/(TYPE|ENGINE)=(\w+)/$1=$dbtype/;
+        if (/ALTER\sTABLE\s\S+\sENABLE\sKEYS/){
+    $enable=$_;
+        }
+        elsif (/ALTER\sTABLE\s\S+\sDISABLE\sKEYS/){
+    if(!$flag_disable){
+      # only write once
+      $flag_disable=1;
+      print OUT;
+    }
+        }
+        else {
+    print OUT;
+        }
+      }
+      print OUT $enable if ($enable);
+      close(MYSQL);
+    }
+    $support->log("SQL for $table dumped to $filename\n");
+  } else {
+    $support->log("\nNo SQL dumped since this is a dry run\n");
+  }
+  close OUT;
+  
+  if ($create_db && (!$support->param('dry_run'))) {
+    $support->log("Populating $dbname\n");
+    my $user   = $support->param('user');
+    my $dbname = $support->param('dbname');
+    my $host   = $support->param('host');
+    my $port   = $support->param('port');
+    my $pass   = $support->param('pass');
+    my $mysql = "mysql -u $user -P $port -p$pass -h $host $dbname < $filename";
+    `$mysql`;
+  }
+}
+
+### POST ###
+### END ###
 
 $support->finish_log;
 
