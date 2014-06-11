@@ -90,7 +90,9 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
     # my @args = qw( -dbname vega_mus_musculus_20130722_72_GRCm38 -host ensdb-web-17 -port 5317 );
     # my @args = qw( -dbname vega_sus_scrofa_20130722_72 -host ensdb-web-17 -port 5317 );
     # my @args = qw( -dbname vega_rattus_norvegicus_20130610_72_5a -host ensdb-web-17 -port 5317 );
-    my %args = qw( -dbname vega_sarcophilus_harrisii_20130909_72 -host ensdb-web-17 );
+    # my %args = qw( -dbname vega_sarcophilus_harrisii_20130909_72 -host ensdb-web-17 );
+    # my %args = qw( -dbname vega_homo_sapiens_20140402_74_GRCh38 -host ensdb-web-17 );
+    my %args = qw( -dbname vega_mus_musculus_20140415_75_GRCm38 -host ensdb-web-17 );
 
     printf "%s fix_gene_biotypes.pl on (%s)\n", scalar(localtime), join(" ", %args);
 
@@ -106,19 +108,19 @@ use Bio::EnsEMBL::DBSQL::DBAdaptor;
     my $species = $dba->get_MetaContainer->get_common_name; # meta_key = 'species.common_name'
 
     my $ott_ncRNA_host;
-    if ($species eq 'human') {
-        my $progdir = $0;
-        $progdir =~ s{/[^/]+$}{};
-        open my $nc_fh, '-|', "$progdir/detect_ncRNA_host_genes"
-          or die "Can't open pipe from detect_ncRNA_host_genes; $!";
-        while (defined(my $ott = <$nc_fh>)) {
-            chomp($ott);
-            $ott_ncRNA_host->{$ott} = 1;
-        }
-        close $nc_fh or die "Error running detect_ncRNA_host_genes; exit $?";
-        my $n = keys %$ott_ncRNA_host;
-        warn "Found $n ncRNA_host genes\n";
-    }
+    # if ($species eq 'human') {
+    #     my $progdir = $0;
+    #     $progdir =~ s{/[^/]+$}{};
+    #     open my $nc_fh, '-|', "$progdir/detect_ncRNA_host_genes"
+    #       or die "Can't open pipe from detect_ncRNA_host_genes; $!";
+    #     while (defined(my $ott = <$nc_fh>)) {
+    #         chomp($ott);
+    #         $ott_ncRNA_host->{$ott} = 1;
+    #     }
+    #     close $nc_fh or die "Error running detect_ncRNA_host_genes; exit $?";
+    #     my $n = keys %$ott_ncRNA_host;
+    #     warn "Found $n ncRNA_host genes\n";
+    # }
 
     # my $dba = DBI->connect($dsn, 'ensadmin', '*******', { RaiseError => 1 });
     my $dbh = $dba->dbc->db_handle;
@@ -150,14 +152,13 @@ sub fix_biotypes {
           , g.stable_id
           , t.biotype
           , t.status
-        FROM (gene g
-              , transcript t)
+        FROM gene g
+        JOIN transcript t ON g.gene_id = t.gene_id
         LEFT JOIN transcript_attrib ta
           ON t.transcript_id = ta.transcript_id
           AND ta.attrib_type_id = 54
           AND ta.value = 'not for VEGA'
-        WHERE g.gene_id = t.gene_id
-          AND g.is_current = 1
+        WHERE g.is_current = 1
           AND ta.transcript_id IS NULL
           AND t.biotype != 'artifact'
     }
@@ -208,8 +209,11 @@ sub fix_biotypes {
     
     my %gene_asb;
     while (my ($gene_id, $asb) = $fetch_asb->fetchrow) {
-        my $gene_data = $gene_tsct_biotypes{$gene_id}
-            or die "No gene data for gene_id = '$gene_id'";
+        my $gene_data = $gene_tsct_biotypes{$gene_id};
+        unless ($gene_data) {
+            warn "No gene data for gene_id = '$gene_id'";
+            next;
+        }
         $asb =~ s/^ASB_//;
         $gene_data->{'annotator_set_biotype'} = $asb;
     }

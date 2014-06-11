@@ -41,7 +41,8 @@ sub store {
         INSERT INTO author_group(group_name, group_email) VALUES (?,?)
         });
    $sth->execute($group->name, $group->email);
-   my $id = $sth->{'mysql_insertid'} or $self->throw('Failed to get autoincremented ID from statement handle');
+   my $id = $self->last_insert_id('group_id', undef, 'author_group')
+       or $self->throw('Failed to get autoincremented ID from statement handle');
    $group->dbID($id);
 
    return $id;
