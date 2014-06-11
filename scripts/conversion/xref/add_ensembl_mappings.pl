@@ -267,7 +267,6 @@ foreach my $type (qw(genes transcripts translations)) {
           next XREF;
         }
         my $vdb = $vega_xref_names{$dbtype};
-        warn "dbtype=$dbtype vdb=$vdb\n";
         my $dbentry = Bio::EnsEMBL::DBEntry->new(
           -primary_id => $e_id,
           -display_id => $e_id,
