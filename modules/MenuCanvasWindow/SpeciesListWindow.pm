@@ -38,6 +38,7 @@ sub new {
     # on, we won't need the south.
 
     my $self = $pkg->SUPER::new(@args);
+    my $top = $self->top_window;
 
     my $canvas = $self->canvas;
     $canvas->Tk::bind('<Button-1>', sub{
@@ -57,24 +58,21 @@ sub new {
     $canvas->Tk::bind('<Escape>', sub{ $self->deselect_all });
 
     my $recover_command = sub{ $self->recover_some_sessions; };
-    $canvas->Tk::bind('<Control-r>',    $recover_command);
-    $canvas->Tk::bind('<Control-R>',    $recover_command);
+    $top->Tk::bind('<Control-r>',    $recover_command);
+    $top->Tk::bind('<Control-R>',    $recover_command);
 
     my $prefs_command = [ $self, 'show_preferences' ];
-    $canvas->Tk::bind('<Control-p>', $prefs_command);
-    $canvas->Tk::bind('<Control-P>', $prefs_command);
+    $top->Tk::bind('<Control-p>', $prefs_command);
+    $top->Tk::bind('<Control-P>', $prefs_command);
 
     my $quit_command = sub{
         $self->zircon_delete; # we *must* do this explicitly before the next line
         $self->canvas->toplevel->destroy;
         $self = undef;  # $self gets nicely DESTROY'd with this
     };
-    $canvas->Tk::bind('<Control-q>',    $quit_command);
-    $canvas->Tk::bind('<Control-Q>',    $quit_command);
-    $canvas->toplevel
-        ->protocol('WM_DELETE_WINDOW',  $quit_command);
-
-    my $top = $canvas->toplevel;
+    $top->Tk::bind('<Control-q>',    $quit_command);
+    $top->Tk::bind('<Control-Q>',    $quit_command);
+    $top->protocol('WM_DELETE_WINDOW',  $quit_command);
 
 
     # FILE MENU
