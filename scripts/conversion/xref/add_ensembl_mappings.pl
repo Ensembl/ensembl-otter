@@ -175,7 +175,7 @@ elsif ($support->param('prune')){
 #retrieve mappings from disc or parse database
 my $ens_ids = {};
 my $xref_file    = $support->param('logpath').'/'.$support->param('ensembldbname')."-ensembl-mappings.file";
-if (-e $xref_file) {
+if (-e $xref_file && $support->param('interactive')) {
   if ($support->user_proceed("Read xref records from a previously saved file ?\n")) {
     $ens_ids = retrieve($xref_file);
   }
