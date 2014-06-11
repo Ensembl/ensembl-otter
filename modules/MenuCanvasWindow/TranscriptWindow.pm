@@ -878,43 +878,49 @@ sub search_pfam {
         return;
     }
 
-    my $ok =
-        try { $sub->validate; return 1; }
+    return unless
+      try { $sub->validate; return 1; }
         catch { $self->exception_message($_, 'Invalid transcript'); return 0; };
 
-    if ($ok) {
-        my $pep = $sub->translator->translate($sub->translatable_Sequence);
-        my $name = $pep->name;
-        my $str = $pep->sequence_string;
-        my $pfam;
+    # We will run the query
 
-        if($self->{'_pfam'} && Tk::Exists($self->{'_pfam'}->top)) {
-            $pfam = $self->{'_pfam'};
-            if($pfam->query() ne $str) {
-                $pfam->top->destroy;
-                $pfam = $self->_new_window($name);
-            } else {
-                $pfam->top->deiconify;
-                $pfam->top->raise;
-                $pfam->top->focus;
+    my $pep = $sub->translator->translate($sub->translatable_Sequence);
+    my $name = $pep->name;
+    my $str = $pep->sequence_string;
+    my $pfam;
 
-                return 1;
-            }
-        } elsif($self->{'_pfam'} && !Tk::Exists($self->{'_pfam'}->top)) {
-            $pfam = $self->{'_pfam'};
-            my $result_url = $pfam->result_url;
-            my $prev_query = $pfam->query();
+    if($self->{'_pfam'} && Tk::Exists($self->{'_pfam'}->top)) {
+        $pfam = $self->{'_pfam'};
+        if($pfam->query() ne $str) {
+            $pfam->top->destroy;
             $pfam = $self->_new_window($name);
-            $pfam->result_url($result_url) unless $prev_query ne $str;
         } else {
-            $pfam = $self->_new_window($name);
-        }
+            $pfam->top->deiconify;
+            $pfam->top->raise;
+            $pfam->top->focus;
 
-        $pfam->query($str);
-        $pfam->name($name);
-        $self->{'_pfam'} = $pfam;
-        $pfam->initialize();
+            return 1;
+        }
+    } elsif($self->{'_pfam'} && !Tk::Exists($self->{'_pfam'}->top)) {
+        $pfam = $self->{'_pfam'};
+        my $result_url = $pfam->result_url;
+        my $prev_query = $pfam->query();
+        $pfam = $self->_new_window($name);
+        $pfam->result_url($result_url) unless $prev_query ne $str;
+    } else {
+        $pfam = $self->_new_window($name);
     }
+
+    $pfam->query($str);
+    $pfam->name($name);
+    $self->{'_pfam'} = $pfam;
+    try {
+        $pfam->initialize();
+    } catch {
+        my $err = $_;
+        $self->exception_message($_, "Failed to request Pfam search");
+        $pfam->top->destroy;
+    };
 
     return;
 }
