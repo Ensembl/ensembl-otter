@@ -184,7 +184,7 @@ sub make_ace_transcripts_from_gff_fh {
             }
             if ($start < 1 || $end > $seq_region_length) {
                 # any part of the transcript protrudes beyond our region.  RT#403236
-                $sub->truncated_from($start, $end);
+                $sub->truncated_from([ $start, $end ]);
             }
         }
         ### HACK: Should truncate to Slice on server
