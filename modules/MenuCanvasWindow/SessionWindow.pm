@@ -2558,6 +2558,12 @@ sub zircon_context {
     return $zircon_context;
 }
 
+sub _clear_zircon_context {
+    my ($self) = @_;
+    $self->{'_zircon_context'} = undef;
+    return;
+}
+
 sub zmap_new {
     my ($self) = @_;
     mac_os_x_set_proxy_vars(\%ENV) if $^O eq 'darwin';
@@ -2616,6 +2622,7 @@ sub _zmap_relaunch {
     # which removes the last reference to the ZMap object, causing it
     # to be destroyed, which sends a shutdown to the ZMap process.
 
+    $self->_clear_zircon_context;
     $self->_zmap_view_new($self->zmap_select);
     $self->ColumnChooser->load_filters(is_recover => 1);
     return;
