@@ -17,6 +17,7 @@ use LWP::UserAgent;
 use HTTP::Request;
 use XML::LibXML;
 use XML::LibXML::XPathContext;
+use Bio::Otter::Version;
 
 my $SEARCH_URL = 'http://pfam.xfam.org/search/sequence';
 my $HMM_URL    = 'http://pfam.xfam.org/family/hmm';
@@ -38,15 +39,20 @@ sub _ua_request {
     my $ua = $self->_user_agent;
     my $res = $ua->request($req);
     $L->info("Response: ", $res->status_line, "; ", $res->content_length, " bytes");
-    unless ($res->is_success) {
-        $L->debug(join "\n> ", "Request was",
-                  $res->request->as_string) if $L->is_debug;
-        $L->debug(join "\n< ", "Response was",
-                  $res->status_line,
-                  $res->headers_as_string,
-                  $res->decoded_content) if $L->is_debug;
-        die "$description failed ".$res->status_line;
-    }
+
+    my $show;
+    $show = 'debug' if $L->is_debug;
+    $show = 'info'  unless $res->is_success;
+
+    $L->$show(join "\n", "Request was",
+              $res->request->as_string) if $show;
+    $L->$show(join "\n", "Response was",
+              $res->status_line,
+              $res->headers_as_string,
+              $res->decoded_content) if $show;
+
+    die "$description failed ".$res->status_line unless $res->is_success;
+
     return $res;
 }
 
@@ -58,6 +64,9 @@ sub _user_agent { # create and cache a user agent
     my ($self) = @_;
     return $self->{'_user_agent'} ||= do {
         my $ua = LWP::UserAgent->new;
+        my $v = Bio::Otter::Version->version;
+        $ua->agent("Otterlace/$v ");
+        push @{ $ua->requests_redirectable }, 'POST'; # seeds and models return through a redirect
         $ua->env_proxy;
         $ua;
     };
@@ -126,6 +135,9 @@ sub poll_results {
     my $req = HTTP::Request->new( GET => $result_url );
 
     my $res = $self->_ua_request(poll => $req);
+    # at first,  202 (Accepted) with "PEND" or "RUN",
+    # then later 200 (OK) with XML
+
     return $res->decoded_content;
 }
 
