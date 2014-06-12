@@ -57,7 +57,7 @@ sub new {
     $canvas->Tk::bind('<Control-O>',        $open_command);
     $canvas->Tk::bind('<Escape>', sub{ $self->deselect_all });
 
-    my $recover_command = sub{ $self->recover_some_sessions; };
+    my $recover_command = sub{ $self->recover_some_sessions('explicit'); };
     $top->Tk::bind('<Control-r>',    $recover_command);
     $top->Tk::bind('<Control-R>',    $recover_command);
 
@@ -254,7 +254,7 @@ sub select_dataset {
 sub open_dataset {
     my ($self) = @_;
 
-    return 1 if $self->recover_some_sessions;
+    return 1 if $self->recover_some_sessions('implicit');
 
     my ($obj) = $self->list_selected;
     return 0 unless $obj;
@@ -324,10 +324,12 @@ sub draw {
 }
 
 sub recover_some_sessions {
-    my ($self) = @_;
+    my ($self, $cause) = @_;
 
     my $client = $self->Client();
     my $recoverable_sessions = $client->sessions_needing_recovery();
+    my $n = @$recoverable_sessions;
+    $self->logger->info("recover_some_sessions($cause), $n available");
 
     if (@$recoverable_sessions) {
         my %session_wanted = map { $_->[0] => 1 } @$recoverable_sessions;
@@ -371,7 +373,8 @@ sub recover_some_sessions {
             )->pack(-side=>'top', -fill=>'x', -expand=>1);
         }
 
-        my $answer = $rss_dialog->Show();
+        # Shortcut the dialog if we're running due to @ARGV
+        my $answer = ($cause eq 'no_wait') ? 'recover' : $rss_dialog->Show();
 
         my @selected_recs = grep { $session_wanted{$_->[0]} } @$recoverable_sessions;
 
