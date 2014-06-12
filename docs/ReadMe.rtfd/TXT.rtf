@@ -1,8 +1,8 @@
-{\rtf1\ansi\ansicpg1252\cocoartf949\cocoasubrtf540
+{\rtf1\ansi\ansicpg1252\cocoartf1038\cocoasubrtf360
 {\fonttbl\f0\fnil\fcharset0 LucidaGrande;\f1\fnil\fcharset0 Monaco;\f2\fswiss\fcharset0 Helvetica;
 }
 {\colortbl;\red255\green255\blue255;}
-\paperw11900\paperh16840\margl1440\margr1440\vieww15900\viewh18940\viewkind0
+\paperw11900\paperh16840\vieww15900\viewh18940\viewkind0
 \pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\qc\pardirnatural
 
 \f0\b\fs36 \cf0 \
@@ -14,7 +14,7 @@ Mac OS X otterlace client installation\
 \b\fs28 System Requirements\
 
 \b0\fs24 \
-This version of otterlace will only work on Mac OS X version 10.5 and later, and only on Intel CPU machines.\
+This version of otterlace will only work on Mac OS X version 10.6 and later, and only on Intel CPU machines.\
 \
 
 \b\fs28 Installation
@@ -22,26 +22,7 @@ This version of otterlace will only work on Mac OS X version 10.5 and later, and
 \
 To install the otterlace client, drag the "otterlace" application from the installation disk to the Applications folder (or any other folder) on your Mac's hard disk.\
 \
-You will need to create a file "~/.otter_config" (ie: in your home directory). A reliable way to do this is to type the following two commands into a terminal:\
-\
-\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\fi560\ql\qnatural\pardirnatural
-
-\f1 \cf0 touch ~/.otter_config\
-open -a TextEdit ~/.otter_config
-\f0 \
-\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\ql\qnatural\pardirnatural
-\cf0 \
-Save the following text into the file:\
-\
-\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\fi560\ql\qnatural\pardirnatural
-
-\f1 \cf0 [client]\
-author=your@email.address\
-write_access=1\
-\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\ql\qnatural\pardirnatural
-
-\f0 \cf0 \
-Leave off the "write_access" line if you don't need to make changes to the annotation.\
+If you do not have a preferences file, otterlace will set one up for you when you first run it.\
 \
 
 \b\fs28 Sanger Authentication
@@ -61,11 +42,13 @@ When you have done this, send the email address you signed up with to {\field{\*
 \b\fs28 Running otterlace\
 
 \b0\fs24 \
+If you have XQuartz X11 running, please quit any X applications and then quit X11 before running a new version of otterlace for the first time.\
+\
 To run otterlace double-click on the otterlace icon. It should start X11 if you don't already have it open. The first time it is run, you will be shown a password dialog box. If, after entering your Sanger UNIX or Single Sign-On password, the dataset chooser window:\
 \
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\qc\pardirnatural
 
-\f2 \cf0 {{\NeXTGraphic species_list.png \width6020 \height11718
+\f2 \cf0 {{\NeXTGraphic species_chooser.png \width5420 \height11500 \noorient
 }¬}\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\qc\pardirnatural
 
 \f0 \cf0 \
@@ -88,25 +71,49 @@ To get "focus follows mouse" behaviour in X11, so that you don't have to click i
 in a terminal.\
 \
 
-\b\fs28 Mac OS 10.5 (Leopard)
+\b\fs28 Mouse buttons and copy / paste
 \b0\fs24 \
 \
-This distribution works on Mac OS 10.5 Leopard (tested on 10.5.8), but you should install the latest version of {\field{\*\fldinst{HYPERLINK "http://xquartz.macosforge.org/trac/wiki"}}{\fldrslt XQuartz}} (currently version 2.6.1 released on the 17th March 2011).\
-\
+The otterlace applications require the use of the middle and right mouse buttons. In order to use them on a Mac, you either need a three button mouse, or you must ensure that "Emulate three button mouse" is selected in the X11 "Input" preferences and use the Mac's single mouse button or trackpad in combination with the Option (\uc0\u8997 ) and Command (\u8984 ) keys:\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\qc\pardirnatural
 
-\b\fs28 Mac OS 10.6 (Snow Leopard)
+\f2 \cf0 {{\NeXTGraphic X11_prefs_input.png \width11280 \height8200 \noorient
+}¬}\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\qc\pardirnatural
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural\pardirnatural
+
+\f0 \cf0 For copy / pasting between X11 (otterlace) and Mac applications, ensure that the X11 "Pasteboard" preferences are set as shown here:\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\qc\pardirnatural
+
+\f2 \cf0 {{\NeXTGraphic X11_prefs_pasteboard.png \width11280 \height8200 \noorient
+}¬}\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\qc\pardirnatural
+
+\f0 \cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural\pardirnatural
+\cf0 \
+To paste in X11 you use the middle mouse button (or ctrl-V). X11 Just highlighting text in X11 is usually all you need to do to copy. To copy in X11, such that you can paste in a Mac application, use the Edit > Copy menu item, or its \uc0\u8984 C keyboard shortcut.\
+\
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\ql\qnatural\pardirnatural
+
+\b\fs28 \cf0 Mac OS 10.6 (Snow Leopard)
 \b0\fs24 \
 \
-This distribution works on Snow Leopard. It is probably worth installing the latest version of of {\field{\*\fldinst{HYPERLINK "http://xquartz.macosforge.org/trac/wiki"}}{\fldrslt XQuartz}} (currently version 2.6.2 released on the 30th April 2011).\
+This distribution works on Snow Leopard. It is probably worth installing the latest version of of {\field{\*\fldinst{HYPERLINK "http://xquartz.macosforge.org/"}}{\fldrslt XQuartz}}.\
 \
 
 \b\fs28 Mac OS 10.7 (Lion)
 \b0\fs24 \
 \
-This distribution has not yet been tested on Lion. Let us know if you try it!\
+This distribution works on Lion.\
 \
 
-\b\fs28 Mac OS software updates
+\b\fs28 Mac OS 10.8 (Mountain Lion)
+\b0\fs24 \
+\
+This distribution works on Mountain Lion, but Mountain Lion does not come with X11 installed, so you must download and install {\field{\*\fldinst{HYPERLINK "http://xquartz.macosforge.org/"}}{\fldrslt XQuartz}}. Mountain Lion also has a default setting where only applications signed by Apple and developers will run. This is a good setting for security, so rather than change it, we recommend that you right click the otterlace app and choose "Open" to run it the first time. You'll then be presented with a dialog to confirm that you want to make a permanent exception to allow otterlace to run.\
+
+\b\fs28 \
+Mac OS software updates
 \b0\fs24 \
 \
 If you have installed XQuartz, as recommended above, you will need to re-install it after running any Mac OS software updates, so keep a copy of the DMG file ready.\
@@ -120,5 +127,7 @@ Copy-pasting transcripts doesn't work because it uses
 \f0  to find non-identical exons. Due to licence restrictions, we are not allowed to distribute 
 \f1 cross_match
 \f0  with the application.\
+\
+Fetching BAM data doesn't work if you connect to the internet through a proxy server. The next release will address this by reading the system proxy information before launching zmap.\
 \
 }
