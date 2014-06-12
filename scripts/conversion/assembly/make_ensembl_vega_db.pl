@@ -654,7 +654,7 @@ sub delete_mappings{
     if ($assembly->{'version'} ne $assembly_version) {
       my $version_to_delete = $assembly->{'version'};
       my $id_to_delete = $assembly->{'coord_system_id'};
-      if ($support->user_proceed("Remove $version_to_delete assembly mappings from this copy of the $db_type database?")) {
+      if (!$support->param('interactive') and $support->user_proceed("Remove $version_to_delete assembly mappings from this copy of the $db_type database?")) {
 	$support->log("Removing $version_to_delete assembly mappings from $db_type database\n");
 	
 	# delete old seq_regions and assemblies that contain them
