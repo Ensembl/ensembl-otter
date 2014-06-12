@@ -26,21 +26,47 @@ my $HMMALIGN = 'hmmalign'; # see also Bio::Otter::Utils::About
 
 sub new {
     my ($self) = @_;
+    $self->logger->debug('new');
     return bless {}, $self;
 }
+
+sub _ua_request {
+    my ($self, $description, $req) = @_;
+    my $L = $self->logger;
+    $L->info($description, " to ", $req->uri);
+    my $ua = $self->_user_agent;
+    my $res = $ua->request($req);
+    $L->info("Response: ", $res->status_line, "; ", $res->content_length, " bytes");
+    unless ($res->is_success) {
+        $L->debug(join "\n> ", "Request was",
+                  $res->request->as_string) if $L->is_debug;
+        $L->debug(join "\n< ", "Response was",
+                  $res->status_line,
+                  $res->headers_as_string,
+                  $res->decoded_content) if $L->is_debug;
+        die "$description failed ".$res->status_line;
+    }
+    return $res;
+}
+
+sub logger {
+    return Log::Log4perl->get_logger('otter.pfam');
+}
+
+sub _user_agent { # create and cache a user agent
+    my ($self) = @_;
+    return $self->{'_user_agent'} ||= do {
+        my $ua = LWP::UserAgent->new;
+        $ua->env_proxy;
+        $ua;
+    };
+}
+
 
 # submits the sequence search and returns the XML that comes back from the
 # server
 sub submit_search {
     my ($self, $seq) = @_;
-
-    # create a user agent
-    my $ua = LWP::UserAgent->new;
-    $ua->env_proxy;
-
-    # set up the request
-    my $req = HTTP::Request->new( POST => $SEARCH_URL );
-    $req->content_type('application/x-www-form-urlencoded');
 
     # build the query parameters. Use URI to format them nicely for LWP...
     my $uri = URI->new;
@@ -51,16 +77,16 @@ sub submit_search {
             output  => 'xml'
     );
     $uri->query_form( %param );
+
+    # set up the request
+    my $req = HTTP::Request->new( POST => $SEARCH_URL );
+    $req->content_type('application/x-www-form-urlencoded');
     $req->content( $uri->query );
 
-    # submit the request
-    my $res = $ua->request($req);
-
-    # see if it was successful
-    warn 'submission failed: ' . $res->status_line
-      unless $res->is_success;
-    return $res->content;
+    my $res = $self->_ua_request(submission => $req);
+    return $res->decoded_content;
 }
+
 
 # parses the submission XML and returns the URL for retrieving results and the
 # estimated job runtime
@@ -98,13 +124,8 @@ sub poll_results {
     # this is the request that we'll submit repeatedly
     my $req = HTTP::Request->new( GET => $result_url );
 
-    # create a user agent
-    my $ua = LWP::UserAgent->new;
-    $ua->env_proxy;
-
-    # submit the request...
-    my $res = $ua->request($req);
-    return $res->content;
+    my $res = $self->_ua_request(poll => $req);
+    return $res->decoded_content;
 }
 
 # parses the results XML and return a hash containing the hits and locations
@@ -167,12 +188,7 @@ sub parse_results {
 sub retrieve_pfam_hmm {
   my ($self, $domains) = @_;
 
-  # create a user agent
-  my $ua = LWP::UserAgent->new;
-  $ua->env_proxy;
-
   my %data;
-
   foreach my $domain (@$domains) {
 
     #----------------------------------------
@@ -190,13 +206,12 @@ sub retrieve_pfam_hmm {
                       entry => $domain );
     $req->content( $uri->query );
 
-    # submit the request
-    my $res = $ua->request( $req );
-
-    warn "$domain: HMM model retrieval failed: ". $res->status_line
-      unless $res->is_success;
-
-    $data{$domain} = $res->content;
+    try {
+        my $res = $self->_ua_request("Domain $domain hmm", $req);
+        $data{$domain} = $res->decoded_content;
+    } catch {
+        warn "$domain: HMM model retrieval failed: $_";
+    };
   } # end of "foreach domain"
 
   return \%data;
@@ -206,12 +221,7 @@ sub retrieve_pfam_hmm {
 sub retrieve_pfam_seed {
   my ($self, $domains) = @_;
 
-  # create a user agent
-  my $ua = LWP::UserAgent->new;
-  $ua->env_proxy;
-
   my %data;
-
   foreach my $domain (@$domains) {
 
     #----------------------------------------
@@ -230,20 +240,20 @@ sub retrieve_pfam_seed {
                       entry    => $domain );
     $req->content( $uri->query );
 
-    # submit the request
-    my $res = $ua->request( $req );
+    try {
+        my $res = $self->_ua_request("Domain $domain seed", $req);
 
-    warn "$domain: seed alignment retrieval failed: ". $res->status_line
-      unless $res->is_success;
+        $data{$domain} = $res->content;
+        # (need to strip out secondary structure and consensus lines,
+        # otherwise hmmalign seg faults...)
+        $data{$domain} =~ s/^\#=G[CR].*?\n//mg;
 
-    $data{$domain} = $res->content;
-    # (need to strip out secondary structure and consensus lines,
-    # otherwise hmmalign seg faults...)
-    $data{$domain} =~ s/^\#=G[CR].*?\n//mg;
+    } catch {
+        warn "$domain: seed alignment retrieval failed: $_";
+    };
   } # end of "foreach domain"
 
   return \%data;
-
 }
 
 sub get_seq_snippets {
