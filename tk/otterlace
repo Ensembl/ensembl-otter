@@ -22,7 +22,8 @@ use EditWindow::Password;
     # Become leader of process group so that "kill -$$" at end works
     setpgrp();
 
-    Bio::Otter::Lace::Defaults::do_getopt();
+    my $do_recover;
+    Bio::Otter::Lace::Defaults::do_getopt('recover!' => \$do_recover);
     if (@ARGV) {
         my $name = $ENV{OTTERLACE_RAN_AS};
         if (defined $name) {
@@ -32,6 +33,7 @@ use EditWindow::Password;
         }
         die "$name: options (@ARGV) were not understood"; # RT#334602
     }
+
     my $client = Bio::Otter::Lace::Defaults::make_Client();
     $client->make_log_file('otterlace');
     # After this, we are writing logfile
@@ -112,6 +114,9 @@ use EditWindow::Password;
 
     # postpone slow checks, for improved responsiveness
     $main_window->after(750, [ $SpeciesListWindow, 'ensure_tools' ]);
+
+    $main_window->afterIdle([ $SpeciesListWindow, 'recover_some_sessions', 'no_wait'])
+      if $do_recover;
 
     Tk::MainLoop();
 
