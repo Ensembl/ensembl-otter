@@ -1163,7 +1163,13 @@ sub ColumnCollection {
     return $self->{'_ColumnCollection'} ||=
       Bio::Otter::Lace::Chooser::Collection->new_from_Filter_list(
           @{ $self->DataSet->filters },
-          (grep { _bam_is_filter($_) } @{ $self->DataSet->bam_list }));
+          (map { _bam_filter_list($_) } @{ $self->DataSet->bam_list }));
+}
+
+sub _bam_filter_list {
+    my ($bam) = @_;
+    my @filter_list = _bam_is_filter($bam) ? ( $bam ) : ( );
+    return @filter_list;
 }
 
 sub _bam_is_filter {
