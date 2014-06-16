@@ -48,6 +48,8 @@ Specific options:
                                         add_vega_xrefs.pl)
     --verbose                           dump data structure from parsing of input file
 
+    --namefixesfile=FILENAME            also write namefixes to given file
+
 =head1 DESCRIPTION
 
 This script parses input files from various sources - HGNC, MGI, TCAG (human chr 7 annotation),
@@ -131,6 +133,7 @@ $support->parse_extra_options(
   'mgifile_entrez=s',
   'rgdfile=s',
   'imgt_hlafile=s',
+  'namefixesfile=s',
   'rgdfile=s',
   'onlydb=s',
   'mismatch',
@@ -147,6 +150,7 @@ $support->allowed_params(
   'mgifile_entrez',
   'rgdfile',
   'imgt_hlafile',
+  'namefixesfile',
   'rgdfile',
   'onlydb',
   'mismatch',
@@ -168,6 +172,10 @@ $support->confirm_params;
 
 # get log filehandle and print heading and parameters to logfile
 $support->init_log;
+
+if($support->param('namefixesfile')) {  
+  open(NAMEFIX,">",$support->param('namefixesfile')) or die "Cannot create ".$support->param('namefixesfile')."\n";
+}
 
 # connect to database and get adaptors
 my $dba = $support->get_database('ensembl');
@@ -386,6 +394,9 @@ foreach my $chr (@chr_sorted) {
 	if (my $n = $lcmap->{$lc_name}->[0]) {
 	  my $new_name =  $prefix ? $prefix.':'.$n : $n;
 	  $support->log_warning("Gene $gsi has a name of $gene_name but should be $new_name\n",1);
+    if($support->param('namefixesfile')) {
+      print NAMEFIX "Gene $gsi has a name of $gene_name but should be $new_name\n";
+    }
 	  if (! $support->param('dry_run')) {
 	    #update gene_name and display_xref
 	    $support->log("Fixing case mismatch $gene_name to $new_name...\n", 1);
@@ -609,6 +620,10 @@ $support->log("\nSummary of errors
 -------------------------\n\n");	
 foreach my $cat (keys %report_w) {
   $support->log("$cat - $report_w{$cat}\n",1);
+}
+
+if($support->param('namefixesfile')) {
+  close NAMEFIX;
 }
 
 # finish log
