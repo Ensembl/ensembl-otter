@@ -17,9 +17,9 @@ use HTTP::Request;
 use XML::LibXML;
 use XML::LibXML::XPathContext;
 
-my $SEARCH_URL = 'http://pfam.sanger.ac.uk/search/sequence';
-my $HMM_URL    = 'http://pfam.sanger.ac.uk/family/hmm';
-my $SEED_URL   = 'http://pfam.sanger.ac.uk/family/alignment/download/format';
+my $SEARCH_URL = 'http://pfam.xfam.org/search/sequence';
+my $HMM_URL    = 'http://pfam.xfam.org/family/hmm';
+my $SEED_URL   = 'http://pfam.xfam.org/family/alignment/download/format';
 
 # full path for hmmalign
 my $HMMALIGN = 'hmmalign'; # see also Bio::Otter::Utils::About
@@ -105,7 +105,7 @@ sub check_submission {
 
     # set up to use XPaths
     my $xc = XML::LibXML::XPathContext->new($root);
-    $xc->registerNs( 'p', 'http://pfam.sanger.ac.uk/' );
+    $xc->registerNs( 'p', 'http://pfam.xfam.org/' );
 
     # we're only running a single Pfam-A search, so there will be only one "job"
     # tag, so we know that these XPaths will each give us only a single node
@@ -141,7 +141,7 @@ sub parse_results {
     # set up the XPath stuff for this document
     my $root = $dom->documentElement();
     my $xc   = XML::LibXML::XPathContext->new($root);
-    $xc->registerNs( 'p', 'http://pfam.sanger.ac.uk/' );
+    $xc->registerNs( 'p', 'http://pfam.xfam.org/' );
 
     # get all of the matches, that is the list of Pfam-A families that are found
     # on the sequence
