@@ -27,9 +27,18 @@ my $SEED_URL   = 'http://pfam.xfam.org/family/alignment/download/format';
 my $HMMALIGN = 'hmmalign'; # see also Bio::Otter::Utils::About
 
 sub new {
+    my ($self, $tmpdir) = @_;
+    $self->logger->debug("new($tmpdir)");
+    unless (-d $tmpdir) {
+        mkdir $tmpdir, 0755
+          or die "Cannot mkdir $tmpdir: $!";
+    }
+    return bless { _tmpdir => $tmpdir }, $self;
+}
+
+sub _tmpdir { # under the session directory, so it will be cleared away for us
     my ($self) = @_;
-    $self->logger->debug('new');
-    return bless {}, $self;
+    return $self->{_tmpdir};
 }
 
 sub _ua_request {
@@ -297,61 +306,44 @@ sub get_seq_snippets {
 # the resulting alignments to the working directory
 
 sub align_to_seed {
-  my ($self, $seq, $domain, $hmm, $seed) = @_;
+    my ($self, $seq, $domain, $hmm, $seed) = @_;
 
-  # the sequence that we'll be aligning
-  my $seq_file = $self->create_filename($domain,"seq");
-  open(my $seq_fh, '>', $seq_file)
-            || die "Error creating '$seq_file' : $!";
-
-  print $seq_fh $seq; close $seq_fh;
-
+    # the sequence that we'll be aligning
+    my $seq_file = $self->write_file($domain,"seq", $seq);
 
     # the seed alignment
-    my $seed_file = $self->create_filename($domain,"seed");
-    open(my $seed_fh, '>', $seed_file)
-            || die "Error creating '$seed_file' : $!";
-
-    print $seed_fh $seed; close $seed_fh;
+    my $seed_file = $self->write_file($domain, "seed", $seed);
 
     # the HMM
-    my $hmm_file = $self->create_filename($domain,"ls");
-    open(my $hmm_fh, '>', $hmm_file)
-            || die "Error creating '$hmm_file' : $!";
-
-    print $hmm_fh $hmm; close $hmm_fh;
+    my $hmm_file = $self->write_file($domain, "ls", $hmm);
 
     # the hmmalign output
     my $output_filename = $self->create_filename($domain,"aln");
 
-
     # build the hmmalign command
-    my $cmd = $HMMALIGN . ' --mapali ' . $seed_file .
-                          ' -q '        . $hmm_file .
-                          ' '           . $seq_file .
-                          ' > '         . $output_filename;
+    my @cmd = ($HMMALIGN,
+               '--mapali' => $seed_file,
+               '-o' => $output_filename,
+               $hmm_file, $seq_file);
 
-    print STDOUT "$domain: aligning\n";
+    $self->logger->debug("$domain: aligning with (@cmd)");
 
-    system( $cmd ) == 0
-      or warn "$domain: couldn't run hmmalign '$cmd' [$!]\n";
-
-    # delete tmp files
-    unlink $seed_file ,  $hmm_file , $seq_file;
-    $self->output_files($output_filename);
-
-    return $output_filename;
-
+    my $ret = system @cmd;
+    if ($ret) {
+        $self->logger->warn("$domain: hmmalign '@cmd' failed [$ret]");
+        return;
+    } else {
+        # delete tmp files
+        unlink $seed_file, $hmm_file, $seq_file;
+        return $output_filename;
+    }
 }
 
 sub create_filename{
-  my ($self, $stem, $ext, $dir) = @_;
-  if(!$dir){
-    $dir = '/var/tmp';
-  }
+  my ($self, $stem, $ext) = @_;
+  my $dir = $self->_tmpdir;
   $stem = '' if(!$stem);
   $ext = '' if(!$ext);
-  die $dir." doesn't exist Runnable:create_filename" unless(-d $dir);
   my $num = int(rand(100000));
   my $file = $dir."/".$stem.".".$$.".".$num.".".$ext;
   while(-e $file){
@@ -361,21 +353,16 @@ sub create_filename{
   return $file;
 }
 
-sub output_files {
-    my ($self, $file) = @_;
-    if ($file) {
-        push @{$self->{_result_files}} , $file;
-    }
-    return $self->{_result_files};
-}
-
-sub DESTROY {
-    my ($self) = @_;
-    return unless $self->output_files;
-    foreach (@{$self->output_files}) {
-        unlink $_;
-    }
-        return;
+sub write_file {
+    my ($self, $stem, $ext, $content) = @_;
+    my $fn = $self->create_filename($stem, $ext);
+    open my $fh, '>', $fn
+      or die "Error creating $ext at $fn: $!";
+    print {$fh} $content
+      or die "Error writing to $fn: $!";
+    close $fh
+      or die "Error closing $fn: $!";
+    return $fn;
 }
 
 
