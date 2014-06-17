@@ -7,6 +7,8 @@ use Carp;
 use POSIX ();
 use URI;
 use Try::Tiny;
+use Log::Log4perl;
+
 use Tk::ProgressBar;
 use Bio::Otter::Lace::Pfam;
 use Bio::Vega::Utils::URI qw{ open_uri };
@@ -57,6 +59,7 @@ sub status {
     my ($self, $s) = @_;
     if ($s) {
         $self->{_status} = $s;
+        $self->logger->info("status: $s");
     }
     return $self->{_status};
 }
@@ -353,9 +356,13 @@ sub open_url {
     $uri->query_form({});
     $url = $uri->as_string;
 
-    warn "Pfam search result for " . $self->name . "\n$url\n";
+    $self->logger->info("Pfam search result for ", $self->name, "\n$url");
     open_uri($url);
     return;
+}
+
+sub logger {
+    return Log::Log4perl->get_logger('otter.pfam'); # shared with Bio::Otter::Lace::Pfam
 }
 
 sub DESTROY {

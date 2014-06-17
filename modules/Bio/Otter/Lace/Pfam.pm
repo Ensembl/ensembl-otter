@@ -11,6 +11,7 @@ package Bio::Otter::Lace::Pfam;
 use strict;
 use warnings;
 use Try::Tiny;
+use Log::Log4perl;
 use LWP;
 use LWP::UserAgent;
 use HTTP::Request;
@@ -97,7 +98,7 @@ sub check_submission {
     my $parser = XML::LibXML->new();
     my $dom;
     try { $dom = $parser->parse_string($xml); }
-    catch { warn "couldn't parse XML response for submission: $_" };
+    catch { $self->logger->warn("couldn't parse XML response for submission: $_") };
     return unless $dom;
 
     # the root element is "jobs"
@@ -131,11 +132,12 @@ sub poll_results {
 # parses the results XML and return a hash containing the hits and locations
 sub parse_results {
     my ($self, $results_xml) = @_;
-    print STDOUT "parsing XML search results\n";
+    $self->logger->info("parsing XML search results");
+
     my $parser = XML::LibXML->new();
     my $dom;
     try { $dom = $parser->parse_string($results_xml); }
-    catch { warn "couldn't parse XML response for results: $_" };
+    catch { $self->logger->warn("couldn't parse XML response for results: $_") };
     return unless $dom;
 
     # set up the XPath stuff for this document
@@ -210,7 +212,7 @@ sub retrieve_pfam_hmm {
         my $res = $self->_ua_request("Domain $domain hmm", $req);
         $data{$domain} = $res->decoded_content;
     } catch {
-        warn "$domain: HMM model retrieval failed: $_";
+        $self->logger->warn("$domain: HMM model retrieval failed: $_");
 # Need UI feedback
     };
   } # end of "foreach domain"
@@ -250,7 +252,7 @@ sub retrieve_pfam_seed {
         $data{$domain} =~ s/^\#=G[CR].*?\n//mg;
 
     } catch {
-        warn "$domain: seed alignment retrieval failed: $_";
+        $self->logger->warn("$domain: seed alignment retrieval failed: $_");
 # Need UI feedback
     };
   } # end of "foreach domain"
