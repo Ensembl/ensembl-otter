@@ -308,22 +308,7 @@ sub have_result {
             -column => 2,
           );
 
-        my $launch_belvu = sub {
-            if (my $pid = fork) {
-                return 1;
-            } elsif (defined $pid) {
-                my @command = ("belvu", $alignments->{$domain});
-                # DUP: Bio::Otter::ZMap::_launchZMap()
-                { exec(@command) };
-                warn "Failed to exec '@command': $!";
-                close STDERR; # _exit does not flush
-                close STDOUT;
-                POSIX::_exit(127); # avoid triggering DESTROY
-            } else {
-                warn "fork for belvu failed: $!";
-            }
-        };
-
+        my $alignment = $alignments->{$domain}; # undef = failed
         $result_frame_widget->Button(
             -anchor             => 's',
             -borderwidth        => 1,
@@ -333,7 +318,8 @@ sub have_result {
             -pady               => '0m',
             -text               => 'in Belvu',
             -width              => 9,
-            -command            => \$launch_belvu,
+            -state => defined $alignment ? 'normal' : 'disabled',
+            -command            => [ $self, '_launch_belvu', $alignment ],
           )->grid(
             -row    => $row,
             -column => 3,
@@ -414,6 +400,25 @@ sub fill_progressBar {
     }
 
     return;
+}
+
+sub _launch_belvu {
+    my ($self, $alignment) = @_;
+    if (my $pid = fork) {
+        # parent
+        $self->logger->info("launch belvu on $alignment, pid $pid");
+        return 1;
+    } elsif (defined $pid) {
+        my @command = ("belvu", $alignment);
+        # DUP: Bio::Otter::ZMap::_launchZMap()
+        { exec(@command) };
+        warn "Failed to exec '@command': $!";
+        close STDERR; # _exit does not flush
+        close STDOUT;
+        POSIX::_exit(127); # avoid triggering DESTROY
+    } else {
+        $self->logger->warn("fork for belvu failed: $!");
+    }
 }
 
 sub open_url {
