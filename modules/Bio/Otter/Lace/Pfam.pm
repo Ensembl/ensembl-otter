@@ -211,6 +211,7 @@ sub retrieve_pfam_hmm {
         $data{$domain} = $res->decoded_content;
     } catch {
         warn "$domain: HMM model retrieval failed: $_";
+# Need UI feedback
     };
   } # end of "foreach domain"
 
@@ -250,6 +251,7 @@ sub retrieve_pfam_seed {
 
     } catch {
         warn "$domain: seed alignment retrieval failed: $_";
+# Need UI feedback
     };
   } # end of "foreach domain"
 
