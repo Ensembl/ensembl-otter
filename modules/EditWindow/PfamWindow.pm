@@ -82,9 +82,9 @@ sub widg {
 }
 
 sub initialize {
-    my ($self) = @_;
+    my ($self, $tmpdir) = @_;
 
-    my $pfam = Bio::Otter::Lace::Pfam->new();
+    my $pfam = Bio::Otter::Lace::Pfam->new($tmpdir);
     $self->pfam($pfam);
 
     my $top = $self->top;
@@ -223,7 +223,7 @@ sub have_result {
 
             $self->status("$domain: aligning");
             my $alignment_file = $pfam->align_to_seed($sub_seq, $domain, $hmm, $seed);
-            $alignments->{$domain} = $alignment_file;
+            $alignments->{$domain} = $alignment_file; # may be undef = failed
             $self->progress($progress_per_domain + $self->progress);
         }
     }

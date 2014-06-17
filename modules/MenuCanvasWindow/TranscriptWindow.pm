@@ -910,7 +910,8 @@ sub search_pfam {
     $pfam->name($name);
     $self->{'_pfam'} = $pfam;
     try {
-        $pfam->initialize();
+        my $session_dir = $self->SessionWindow->AceDatabase->home;
+        $pfam->initialize("$session_dir/pfam");
     } catch {
         my $err = $_;
         $self->exception_message($_, "Failed to request Pfam search");
