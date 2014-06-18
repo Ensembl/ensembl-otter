@@ -317,6 +317,16 @@ sub get_seq_snippets {
 sub align_to_seed {
     my ($self, $seq, $domain, $hmm, $seed) = @_;
 
+    my $have_no = (!defined $seed ? "seed" :
+                   (!defined $hmm ? "hmm" : ""));
+    if ($have_no) {
+        # Failure probably carried from retrieve_pfam_seed or
+        # retrieve_pfam_hmm
+        my $err = "have no $have_no, cannot run hmmalign";
+        $self->logger->warn("$domain: $err");
+        return (fail => $err);
+    }
+
     # the sequence that we'll be aligning
     my $seq_file = $self->write_file($domain,"seq", $seq);
 
@@ -339,12 +349,13 @@ sub align_to_seed {
 
     my $ret = system @cmd;
     if ($ret) {
-        $self->logger->warn("$domain: hmmalign '@cmd' failed [$ret]");
-        return;
+        my $err = "hmmalign '@cmd' failed [$ret]";
+        $self->logger->warn("$domain: $err");
+        return (fail => $err);
     } else {
         # delete tmp files
         unlink $seed_file, $hmm_file, $seq_file;
-        return $output_filename;
+        return (ok => $output_filename);
     }
 }
 

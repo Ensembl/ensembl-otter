@@ -201,6 +201,7 @@ sub have_result {
     return if !Tk::Exists($top); # cancelled
 
     my $alignments = {};
+    my $err = {};
 
     $self->status("parsing pfam result");
     $top->toplevel->update;
@@ -222,8 +223,14 @@ sub have_result {
             my $hmm = $h->{$domain};
 
             $self->status("$domain: aligning");
-            my $alignment_file = $pfam->align_to_seed($sub_seq, $domain, $hmm, $seed);
-            $alignments->{$domain} = $alignment_file; # may be undef = failed
+            my ($status, $output) =
+              $pfam->align_to_seed($sub_seq, $domain, $hmm, $seed);
+            if ($status eq 'ok') {
+                $alignments->{$domain} = $output; # filename
+            } else {
+                $alignments->{$domain} = undef; # filename
+                $err->{$domain} = $output; # error message
+            }
             $self->progress($progress_per_domain + $self->progress);
         }
     }
@@ -309,7 +316,7 @@ sub have_result {
           );
 
         my $alignment = $alignments->{$domain}; # undef = failed
-        $result_frame_widget->Button(
+        my $launch = $result_frame_widget->Button(
             -anchor             => 's',
             -borderwidth        => 1,
             -highlightthickness => 2,
@@ -324,11 +331,19 @@ sub have_result {
             -row    => $row,
             -column => 3,
           );
+        $self->balloon->attach($launch, -balloonmsg => $err->{$domain})
+          if $err->{$domain};
+
         $row++;
     }
 
     $self->open_url();
     return $self->mark_completed;
+}
+
+sub balloon {
+    my ($self) = @_;
+    return $self->{_balloon} ||= $self->top->Balloon;
 }
 
 sub mark_completed {
