@@ -247,7 +247,7 @@ sub have_result {
         $result_frame_widget->Label(
             -text  => 'Pfam',
             -width => 10,
-        )->grid(-column => 0, -row => 0);
+        )->grid(-column => 0, -row => 0, -sticky => 'ew');
 
         $result_frame_widget->Label(
             -text  => 'ID & Class',
@@ -255,6 +255,7 @@ sub have_result {
           )->grid(
             -row    => 0,
             -column => 1,
+            -sticky => 'ew',
           );
 
         $result_frame_widget->Label(
@@ -263,6 +264,7 @@ sub have_result {
           )->grid(
             -row    => 0,
             -column => 2,
+            -sticky => 'ew',
           );
 
         $result_frame_widget->Label(
@@ -279,8 +281,12 @@ sub have_result {
     foreach my $domain (sort { ace_sort($a, $b) } keys %$alignments) {
         my $locations = "";
         my $m         = scalar @{ $matches->{$domain}->{locations} };
+        my ($locs_h, $locs_w) = (0, 0);
         for my $location (sort { $a->{start} <=> $b->{start} } @{ $matches->{$domain}->{locations} }) {
-            $locations .= $location->{start} . "->" . $location->{end} . " ";
+            my $loc = $location->{start} . "->" . $location->{end};
+            $locations .= "$loc\n";
+            $locs_w = length($loc) if length($loc) > $locs_w;
+            $locs_h ++;
         }
 
         $result_frame_widget->Entry(
@@ -292,6 +298,7 @@ sub have_result {
           )->grid(
             -row    => $row,
             -column => 0,
+            -sticky => 'new',
           );
 
         $result_frame_widget->Entry(
@@ -303,17 +310,19 @@ sub have_result {
           )->grid(
             -row    => $row,
             -column => 1,
+            -sticky => 'nsew',
           );
 
-        $result_frame_widget->Entry(
+        my $loc_widget = $result_frame_widget->ROText(
             -highlightthickness => 0,
-            -state              => 'readonly',
-            -width              => 10,
-            -text               => $locations,
+            -height => $locs_h,
+            -width => $locs_w + 2,
           )->grid(
             -row    => $row,
             -column => 2,
+            -sticky => 'ew',
           );
+        $loc_widget->Contents($locations);
 
         my $alignment = $alignments->{$domain}; # undef = failed
         my $launch = $result_frame_widget->Button(
@@ -333,6 +342,9 @@ sub have_result {
           );
         $self->balloon->attach($launch, -balloonmsg => $err->{$domain})
           if $err->{$domain};
+
+        $result_frame_widget->gridColumnconfigure($_, -weight => 1)
+          foreach (0,1,2);
 
         $row++;
     }
