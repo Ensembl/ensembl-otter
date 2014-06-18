@@ -120,10 +120,11 @@ sub check_submission {
     # we're only running a single Pfam-A search, so there will be only one "job"
     # tag, so we know that these XPaths will each give us only a single node
     my $result_url     = $xc->findvalue('/p:jobs/p:job/p:result_url');
-    my $estimated_time = $xc->findvalue('/p:jobs/p:job/p:estimated_time');
+#    my $estimated_time = $xc->findvalue('/p:jobs/p:job/p:estimated_time'); # no longer present
+    die "Cannot recover result_url from XML\n$xml" unless $result_url;
     $result_url     =~ s/\s//g;
-    $estimated_time =~ s/\s//g;
-    return ( $result_url, $estimated_time );
+
+    return $result_url;
 }
 
 # polls the result URL as often as necessary (up to a hard limit) and returns
