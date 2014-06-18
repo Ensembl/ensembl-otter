@@ -103,7 +103,16 @@ sub submit_search {
     $req->content( $uri->query );
 
     my $res = $self->_ua_request(submission => $req);
-    return $res->decoded_content;
+    my $txt = $res->decoded_content;
+
+    if ($txt =~ m{<div class="error">(.*?)</div>}s) { # ugh
+        my $err = $1;
+        $err =~ s{<h2>\s*Error\s*</h2>}{};
+        $err =~ s{\A\s*|\s*\Z}{}g;
+        die "Pfam website error: $err\n";
+    }
+
+    return $txt;
 }
 
 
