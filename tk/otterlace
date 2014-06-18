@@ -63,6 +63,9 @@ use EditWindow::Password;
         }
     );
 
+    $main_window->repeat(8 * 3600 * 1000, # 8 hours; RT#317950
+                         [ $logger, 'warn', 'Logfile keepalive (8h)' ]);
+
     # When we wake up late, log it
     my $rvw_ticker = Bio::Otter::Utils::RipVanWinkle->new($main_window, 1000, 3);
 
