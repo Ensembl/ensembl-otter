@@ -436,6 +436,7 @@ sub _launch_belvu {
         $self->logger->info("launch belvu on $alignment, pid $pid");
         return 1;
     } elsif (defined $pid) {
+        $ENV{BELVU_FETCH} = 'pfetch'; # will be on PATH, won't work outside firewall
         my @command = ("belvu", $alignment);
         # DUP: Bio::Otter::ZMap::_launchZMap()
         { exec(@command) };
