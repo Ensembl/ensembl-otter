@@ -115,8 +115,10 @@ use EditWindow::Password;
     # postpone slow checks, for improved responsiveness
     $main_window->after(750, [ $SpeciesListWindow, 'ensure_tools' ]);
 
-    $main_window->afterIdle([ $SpeciesListWindow, 'recover_some_sessions', 'no_wait'])
-      if $do_recover;
+    if ($do_recover) { # otterlace --recover
+        $main_window->iconify;
+        $main_window->afterIdle([ $SpeciesListWindow, 'recover_some_sessions', 'no_wait']);
+    }
 
     Tk::MainLoop();
 
