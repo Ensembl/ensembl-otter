@@ -12,7 +12,6 @@ use Try::Tiny;
 use Tk::DialogBox;
 
 use Zircon::ZMap;
-use Zircon::TkZMQ::Context;
 
 use Bio::Otter::Utils::About;
 use Bio::Otter::Lace::Client;
@@ -419,25 +418,12 @@ sub recover_some_sessions {
 
 # Zircon interface
 
-sub zircon_context {
-    my ($self) = @_;
-    my $zircon_context =
-        $self->{'_zircon_context'} ||=
-        Zircon::TkZMQ::Context->new(
-            '-widget' => $self->menu_bar);
-    return $zircon_context;
-}
-
 sub zircon_delete {
     my ($self) = @_;
     for my $zmap (@{Zircon::ZMap->list}) {
         for my $view (@{$zmap->view_list}) {
-            delete $view->handler->{'_zmap_view'};
+            $view->handler->delete_zmap_view;
         }
-    }
-    for my $ref (values %{$self->zircon_context->waitVariable_hash}) {
-        defined $ref or next;
-        ${$ref} = 'zircon_delete';
     }
     return;
 }

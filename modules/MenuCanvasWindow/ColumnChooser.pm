@@ -708,12 +708,10 @@ sub load_filters {
     } else {
         # we need to set up and show a SessionWindow
         my $zmap = $self->zmap_select;
-        my $zircon_context = $self->SpeciesListWindow->zircon_context;
         my $SessionWindow =
             MenuCanvasWindow::SessionWindow->new(
                 $self->top_window->Toplevel,
                 '-zmap'           => $zmap,
-                '-zircon_context' => $zircon_context,
             );
 
         $self->SessionWindow($SessionWindow);
