@@ -64,8 +64,7 @@ sub new {
     $self->minimum_scroll_bbox(0,0, 380,200);
     $self->flag_db_edits(1);
 
-    @{$self}{qw( _zmap _zircon_context )} =
-        @arg_hash{qw( -zmap -zircon_context )};
+    $self->{_zmap} = $arg_hash{-zmap};
 
     return $self;
 }
@@ -2558,9 +2557,9 @@ sub zircon_context {
     return $zircon_context;
 }
 
-sub _clear_zircon_context {
+sub _delete_zircon_context {
     my ($self) = @_;
-    $self->{'_zircon_context'} = undef;
+    delete $self->{'_zircon_context'};
     return;
 }
 
@@ -2606,7 +2605,7 @@ sub zircon_app_id {
 sub _zmap_view_new {
     my ($self, $zmap) = @_;
     $zmap ||= $self->zmap_new;
-    delete $self->{'_zmap_view'};
+    $self->_delete_zmap_view;
     $self->{'_zmap_view'} =
         $zmap->new_view(
             %{$self->zmap_view_arg_hash},
@@ -2624,9 +2623,24 @@ sub _zmap_relaunch {
     # which removes the last reference to the ZMap object, causing it
     # to be destroyed, which sends a shutdown to the ZMap process.
 
-    $self->_clear_zircon_context;
+    $self->_delete_zircon_context;
     $self->_zmap_view_new($self->zmap_select);
     $self->ColumnChooser->load_filters(is_recover => 1);
+    return;
+}
+
+# Called during shutdown by SpeciesListWindow
+#
+sub delete_zmap_view {
+    my ($self) = @_;
+    $self->_delete_zmap_view;
+    $self->_delete_zircon_context;
+    return;
+}
+
+sub _delete_zmap_view {
+    my ($self) = @_;
+    delete $self->{'_zmap_view'};
     return;
 }
 
@@ -2890,7 +2904,7 @@ sub DESTROY {
 
     $self->zmap_select_destroy;
 
-    delete $self->{'_zmap_view'};
+    $self->_delete_zmap_view;
     delete $self->{'_AceDatabase'};
 
     return;
