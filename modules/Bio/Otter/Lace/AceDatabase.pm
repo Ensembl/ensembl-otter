@@ -1163,7 +1163,25 @@ sub ColumnCollection {
     return $self->{'_ColumnCollection'} ||=
       Bio::Otter::Lace::Chooser::Collection->new_from_Filter_list(
           @{ $self->DataSet->filters },
-          (grep { _bam_is_filter($_) } @{ $self->DataSet->bam_list }));
+          (map { $self->_bam_filter_list($_) } @{ $self->DataSet->bam_list }));
+}
+
+my @coverage_param_list = (
+    [ 'coverage_plus',  '+ve coverage' ],
+    [ 'coverage_minus', '-ve coverage' ],
+    );
+
+sub _bam_filter_list {
+    my ($self, $bam) = @_;
+    my @filter_list = _bam_is_filter($bam) ? ( $bam ) : ( );
+    for (@coverage_param_list) {
+        try {
+            my $coverage_filter = _bam_coverage_filter($bam, @{$_});
+            push @filter_list, $coverage_filter if $coverage_filter;
+        }
+        catch { $self->logger->logwarn("error creating BAM coverage filter: $_"); };
+    }
+    return @filter_list;
 }
 
 sub _bam_is_filter {
@@ -1171,6 +1189,26 @@ sub _bam_is_filter {
     my $bam_is_filter =
         ! ( $bam->coverage_plus || $bam->coverage_minus );
     return $bam_is_filter;
+}
+
+sub _bam_coverage_filter {
+    my ($bam, $method, $comment) = @_;
+
+    $bam->$method or return;
+    my $name = sprintf '%s_%s', $bam->name, $method;
+    my $description = sprintf '%s (%s)', $bam->description, $comment;
+
+    # the real ZMap config is handled elsewhere - here we just need
+    # enough to make the column chooser work
+    my $config = {
+        'description'    => $description,
+        'featuresets'    => $name,
+        'classification' => (join ' > ', $bam->classification),
+    };
+    my $filter = Bio::Otter::Source::Filter->from_config($config);
+    $filter->name($name);
+
+    return $filter;
 }
 
 sub DataSet {

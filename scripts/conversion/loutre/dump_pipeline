@@ -333,10 +333,9 @@ while (my ($table,$condition) = each (%table_constraints) ) {
   }
   elsif (ref($table_constraints{$table}) eq 'HASH') {
     foreach my $cons (keys %{$table_constraints{$table}}) {
-      foreach my $id (@{$table_constraints{$table}{$cons}}) {
-        my $extra = qq( --where "$cons = $id" );
-        push @{$mysql_commands{$table}},"$mcom $extra $table";
-      }
+      my $ids = join ',',@{$table_constraints{$table}{$cons}};
+      my $extra = qq( --where "$cons in ($ids)" );
+      push @{$mysql_commands{$table}},"$mcom $extra $table";
     }
   }
 }

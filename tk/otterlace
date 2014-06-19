@@ -63,6 +63,9 @@ use EditWindow::Password;
         }
     );
 
+    $main_window->repeat(8 * 3600 * 1000, # 8 hours; RT#317950
+                         [ $logger, 'warn', 'Logfile keepalive (8h)' ]);
+
     # When we wake up late, log it
     my $rvw_ticker = Bio::Otter::Utils::RipVanWinkle->new($main_window, 1000, 3);
 
@@ -80,6 +83,9 @@ use EditWindow::Password;
         $pass_win->prompt_string("Enter web password for '$user'");
         $pass_win->passref(\$pass);
         $pass_win->initialise;
+        $toplevel->deiconify;
+        $toplevel->raise;
+        $toplevel->focus;
         $pass_win->get_password;
         return $pass;
     };
@@ -115,8 +121,10 @@ use EditWindow::Password;
     # postpone slow checks, for improved responsiveness
     $main_window->after(750, [ $SpeciesListWindow, 'ensure_tools' ]);
 
-    $main_window->afterIdle([ $SpeciesListWindow, 'recover_some_sessions', 'no_wait'])
-      if $do_recover;
+    if ($do_recover) { # otterlace --recover
+        $main_window->iconify;
+        $main_window->afterIdle([ $SpeciesListWindow, 'recover_some_sessions', 'no_wait']);
+    }
 
     Tk::MainLoop();
 
