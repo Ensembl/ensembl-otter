@@ -123,7 +123,11 @@ unless (grep {$_ eq $species} qw(human mouse dog pig zebrafish gorilla wallaby c
 
 #identify input file
 my $rel_type = $support->param('release_type');
-my $IN = $support->filehandle('<', $support->param('definition_file'));
+my $def_file = $support->param('definition_file');
+die "definition_file missing" unless $def_file;
+$def_file = "$Bin/$def_file" unless $def_file =~ m!/!;
+my $IN = $support->filehandle('<',$def_file);
+die "Cannot open $def_file" unless $IN;
 
 my $active_record = 0;
 my $regions_wanted_details;

@@ -203,7 +203,7 @@ if ( (! $support->param('dry_run'))
   my $options = $support->create_commandline_options($params);
   $support->log_stamped("Updating attrib_type table for ".$support->param('dbname')."...\n");
   eval {
-    system("../update_attributes.pl $options") == 0
+    system("$Bin/../update_attributes.pl $options") == 0
       or $support->throw("Error running update_attributes.pl: $!");
     $support->log_stamped("Done.\n\n");
   };
@@ -214,7 +214,7 @@ if ( (! $support->param('dry_run'))
   $options = $support->create_commandline_options($params);
   $support->log_stamped("Updating attrib_type table for ".$support->param('ensembldbname')."...\n");
   eval {
-    system("../update_attributes.pl $options") == 0
+    system("$Bin/../update_attributes.pl $options") == 0
       or $support->throw("Error running update_attributes.pl: $!");
     $support->log_stamped("Done.\n\n");
   };
