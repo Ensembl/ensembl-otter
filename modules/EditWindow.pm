@@ -8,6 +8,10 @@ use warnings;
 
 use Try::Tiny;
 use Scalar::Util 'weaken';
+use Carp;
+
+use Bio::Otter::Lace::Client;
+
 
 sub new {
     my ($pkg, $tk) = @_;
@@ -17,51 +21,65 @@ sub new {
     return $self;
 }
 
-sub show_for_parent {
-    my ($pkg, $obj_ref, %opt) = @_;
-    my $wait_close = delete $opt{wait};
+# Create a Toplevel, call our ->new for it, initialise;
+# or if $$reuse_ref, return the existing one.
+sub in_Toplevel {
+    my ($pkg, @arg) = @_;
+    croak "Method needs ->(%tk_args, { %local_args })" unless @arg % 2;
+    my $eo_opt_hash = pop @arg;
 
-    if (!$$obj_ref) {
-        $$obj_ref = $pkg->_create_for_parent(%opt);
-        weaken($$obj_ref);
+    # Options for Tk
+    my %tk_opt = @arg;
+    $tk_opt{-title} = $pkg unless defined $tk_opt{-title};
+    $tk_opt{-title} = $Bio::Otter::Lace::Client::PFX.$tk_opt{-title};
+
+    # Options for this code
+    my $parent     = delete $eo_opt_hash->{from};   # from which new Toplevel is made
+    my $reuse_ref  = delete $eo_opt_hash->{reuse_ref};
+    my $raise      = delete $eo_opt_hash->{raise};  # should we raise?
+    my $init       = delete $eo_opt_hash->{init};   # link and call initialise?
+    my $wait_close = delete $eo_opt_hash->{wait};
+    my $transient  = delete $eo_opt_hash->{transient};
+
+    my @eo_unk = sort keys %$eo_opt_hash;
+    croak "Unknown tail-hash option keys (@eo_unk)" if @eo_unk;
+
+    # Obtain or create
+    my $self;
+    $self = $$reuse_ref if $reuse_ref; # a scalar ref, in which we are cached
+    if ($self && !Tk::Exists($self->top)) {
+        warn "Something held onto old (destroyed but not DESTROYed) $self";
+        $self = undef;
     }
-    my $self = $$obj_ref;
-    $self->top->deiconify;
-    $self->top->raise;
+    if (!$self) {
+        my $top = $parent->Toplevel(%tk_opt);
+        $top->transient($parent) if $transient;
+        $self = $pkg->new($top);
+        $self->_link_and_init(%$init) if $init;
+        if ($reuse_ref) {
+            $$reuse_ref = $self;
+            weaken($$reuse_ref);
+        }
+    }
 
-    $self->top->waitWindow if $wait_close;
+    my $top = $self->top;
+    if ($raise) {
+        $top->deiconify;
+        $top->raise;
+    }
+    $top->waitWindow if $wait_close;
 
     return $self;
 }
 
-sub _create_for_parent {
-    my ($pkg, %opt) = @_;
+sub _link_and_init {
+    my ($self, %link) = @_;
 
-    my $title = delete $opt{title};
-    $title = $pkg unless defined $title;
-    $title = $Bio::Otter::Lace::Client::PFX.$title;
-
-    my $parent = delete $opt{from};
-    my $top = $parent->Toplevel(-title => $title);
-    $top->transient($parent) if delete $opt{transient};
-
-    my $self = $pkg->new($top);
-
-    # set linkages
-    while (my ($method, $val) = each %{ delete $opt{linkage} || {} }) {
+    while (my ($method, $val) = each %link) {
         $self->$method($val);
     }
 
-    # escape hatch!
-    (delete $opt{pre_init})->($self) if ref($opt{pre_init});
-
-    $self->initialise;
-
-    my @left = sort keys %opt;
-    warn "Unrecognised options (@left) left after $pkg->_create_for_parent"
-      if @left;
-
-    return $self;
+    return $self->initialise;
 }
 
 sub top {

@@ -198,12 +198,14 @@ sub show_about {
 
 sub show_preferences {
     my ($self, %opt) = @_;
-    EditWindow::Preferences->show_for_parent
-        (\$self->{_prefs_win},
-         from => $self->top_window,
-         linkage => { Client => $self->Client },
-         title => 'Preferences',
-         %opt);
+
+    EditWindow::Preferences->in_Toplevel
+        (-title => 'Preferences',
+         { reuse_ref => \$self->{_prefs_win},
+           from => $self->top_window,
+           init => { Client => $self->Client },
+           raise => 1,
+           %opt });
     return ();
 }
 
