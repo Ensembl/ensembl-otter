@@ -39,8 +39,7 @@ use EditWindow::Password;
     # After this, we are writing logfile
     my $logger = Log::Log4perl->get_logger('otter.main');
 
-    $client->cleanup_sessions;
-    $client->cleanup_log_dir('otterlace');
+    $client->cleanup;
 
     Bio::Otter::Git->dump($logger);
 
