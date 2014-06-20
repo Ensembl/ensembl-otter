@@ -246,11 +246,13 @@ sub cleanup_log_dir {
     my $log_dir = $self->get_log_dir or return;
 
     opendir my $LOG, $log_dir or $self->logger->logconfess("Can't open directory '$log_dir': $!");
-    foreach my $file (grep { /^$file_root\./ } readdir $LOG) {
-        my $full = "$log_dir/$file"; #" comment solely for eclipses buggy parsing!
-        if (-M $full > $days) {
-            unlink $full
-                or $self->logger->warn("Couldn't delete file '$full' : $!");
+    foreach my $file (grep { /^$file_root\..*\.log$/ } readdir $LOG) {
+        my $full = "$log_dir/$file";
+        next unless (-M $full > $days);
+        if (unlink $full) {
+            $self->logger->info("Deleted old logfile '$full'");
+        } else {
+            $self->logger->warn("Couldn't delete file '$full' : $!");
         }
     }
     closedir $LOG or $self->logger->logconfess("Error reading directory '$log_dir' : $!");
