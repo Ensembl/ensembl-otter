@@ -8,7 +8,6 @@ use Carp;
 
 use Try::Tiny;
 
-use File::Path qw{ remove_tree };
 use Net::Domain qw{ hostname hostfqdn };
 use Proc::ProcessTable;
 
@@ -52,8 +51,6 @@ Bio::Otter::Debug->add_keys(qw(
 # Is a global for ease of interpolation.  Don't expect existing
 # windows to update when it changes.
 our $PFX = 'otter: ';
-
-our $DELETE_AFTER_DAYS = 14; # Delete sessions, logfiles older than /days
 
 sub _pkginit {
     my ($pkg) = @_;
@@ -194,6 +191,7 @@ sub get_log_dir {
     my $log_dir = "$home/.otter";
     if (mkdir($log_dir)) {
         warn "Made logging directory '$log_dir'\n"; # logging not set up, so this must use 'warn'
+        return;
     }
     return $log_dir;
 }
@@ -238,43 +236,11 @@ sub make_log_file {
     return;
 }
 
-sub cleanup_log_dir {
-    my ($self, $file_root, $days) = @_;
-    $days ||= $DELETE_AFTER_DAYS;
-    $file_root ||= 'client';
-
-    my $log_dir = $self->get_log_dir or return;
-
-    opendir my $LOG, $log_dir or $self->logger->logconfess("Can't open directory '$log_dir': $!");
-    foreach my $file (grep { /^$file_root\..*\.log$/ } readdir $LOG) {
-        my $full = "$log_dir/$file";
-        next unless (-M $full > $days);
-        if (unlink $full) {
-            $self->logger->info("Deleted old logfile '$full'");
-        } else {
-            $self->logger->warn("Couldn't delete file '$full' : $!");
-        }
-    }
-    closedir $LOG or $self->logger->logconfess("Error reading directory '$log_dir' : $!");
-    return;
-}
-
-sub cleanup_sessions {
+sub cleanup {
     my ($self) = @_;
-
-    foreach ( $self->all_session_dirs('*') ) {
-        next unless /\.done$/;
-        my $d = int( -M );
-        next unless $d > $DELETE_AFTER_DAYS;
-
-        if (remove_tree($_)) {
-            $self->logger->info("cleanup_sessions removed $_, $d days old");
-        } else {
-            $self->logger->error("cleanup_sessions FAILED to remove $_");
-        }
-    }
-
-    return;
+    require Bio::Otter::Utils::Cleanup;
+    my $cleaner = Bio::Otter::Utils::Cleanup->new($self);
+    return $cleaner->clean;
 }
 
 {
