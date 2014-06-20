@@ -925,7 +925,7 @@ sub _new_window {
     my ($self, $name) = @_;
     return EditWindow::PfamWindow->in_Toplevel
       (-title => "Pfam $name",
-       { from => $self->canvas->Toplevel });
+       { from => $self->top_window });
 }
 
 sub update_translation {

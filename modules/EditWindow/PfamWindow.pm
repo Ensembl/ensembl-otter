@@ -353,11 +353,6 @@ sub have_result {
     return $self->mark_completed;
 }
 
-sub balloon {
-    my ($self) = @_;
-    return $self->{_balloon} ||= $self->top->Balloon;
-}
-
 sub mark_completed {
     my ($self) = @_;
     my $top = $self->top;
