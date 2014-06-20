@@ -66,6 +66,24 @@ sub cleanup_sessions {
     return;
 }
 
+sub cleanup_zmap_configs {
+    my ($self) = @_;
+    my $zconfsdir = MenuCanvasWindow::SessionWindow->zmap_configs_dir;
+    foreach my $leaf ($self->_read_dir($zconfsdir)) {
+        my $dir = "$zconfsdir/$leaf";
+        my $age = int(-M $dir);
+        my $zlog = "$dir/zmap.log";
+        $age = int(-M $zlog) if -f $zlog; # probably a bit newer
+        next unless $age > $DELETE_AFTER_DAYS;
+
+        if (remove_tree($dir)) {
+            $self->logger->info("cleanup_zmap_configs removed $dir, $age days old");
+        } else {
+            $self->logger->error("cleanup_zmap_configs FAILED to remove $dir, $age days old");
+        }
+    }
+}
+
 
 sub _read_dir { # want File::Slurp
     my ($self, $dir) = @_;
