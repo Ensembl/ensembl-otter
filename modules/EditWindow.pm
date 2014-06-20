@@ -32,6 +32,7 @@ sub in_Toplevel {
     my %tk_opt = @arg;
     $tk_opt{-title} = $pkg unless defined $tk_opt{-title};
     $tk_opt{-title} = $Bio::Otter::Lace::Client::PFX.$tk_opt{-title};
+    $tk_opt{Name} = $pkg->_toplevel_name;
 
     # Options for this code
     my $parent     = delete $eo_opt_hash->{from};   # from which new Toplevel is made
@@ -70,6 +71,16 @@ sub in_Toplevel {
     $top->waitWindow if $wait_close;
 
     return $self;
+}
+
+sub _toplevel_name {
+    my ($called) = @_;
+    my $name = ref($called) || $called;
+    for ($name) {
+        s/::/_/g;
+        s/EditWindow/edwin/;
+    }
+    return lc($name);
 }
 
 sub _link_and_init {
