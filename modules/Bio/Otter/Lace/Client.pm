@@ -53,6 +53,8 @@ Bio::Otter::Debug->add_keys(qw(
 # windows to update when it changes.
 our $PFX = 'otter: ';
 
+our $DELETE_AFTER_DAYS = 14; # Delete sessions, logfiles older than /days
+
 sub _pkginit {
     my ($pkg) = @_;
     # needs do_getopt to have happened
@@ -238,10 +240,7 @@ sub make_log_file {
 
 sub cleanup_log_dir {
     my ($self, $file_root, $days) = @_;
-
-    # Files older than this number of days are deleted.
-    $days ||= 14;
-
+    $days ||= $DELETE_AFTER_DAYS;
     $file_root ||= 'client';
 
     my $log_dir = $self->get_log_dir or return;
@@ -258,16 +257,12 @@ sub cleanup_log_dir {
     return;
 }
 
-my $session_root = '/var/tmp/lace';
-my $session_number = 0;
-my $session_dir_expire_days = 14;
-
 sub cleanup_sessions {
     my ($self) = @_;
 
     foreach ( $self->all_session_dirs ) {
         next unless /\.done$/;
-        if ( -M > $session_dir_expire_days ) {
+        if ( -M > $DELETE_AFTER_DAYS ) {
             remove_tree($_)
                 or $self->logger->error("Error removing expired session directory '$_'");
         }
@@ -276,19 +271,23 @@ sub cleanup_sessions {
     return;
 }
 
-sub new_session {
-    my ($self) = @_;
-    return ++$session_number;
+{
+    my $session_number = 0;
+    sub _new_session_path {
+        my ($self) = @_;
+
+        my $user = (getpwuid($<))[0];
+
+        ++$session_number;
+        return sprintf("%s.%s.%d.%d",
+                       $self->_session_root, $user, $$, $session_number);
+    }
 }
 
-sub session_path {
-    my ($self) = @_;
-
-    my $user = (getpwuid($<))[0];
-
-    return
-        sprintf "%s_%d.%s.%d.%d",
-        $session_root, Bio::Otter::Version->version, $user, $$, $session_number;
+sub _session_root {
+    my ($called) = @_;
+    my $version = Bio::Otter::Version->version;
+    return '/var/tmp/lace_'.$version;
 }
 
 sub all_sessions {
@@ -320,8 +319,7 @@ sub _session_from_dir {
 sub all_session_dirs {
     my ($self) = @_;
 
-    my $session_dir_pattern =
-        sprintf "%s_%s.*", $session_root, Bio::Otter::Version->version;
+    my $session_dir_pattern = $self->_session_root . ".*";
     my @session_dirs = glob($session_dir_pattern);
     return @session_dirs;
 }
@@ -332,11 +330,9 @@ sub all_session_dirs {
 sub new_AceDatabase {
     my ($self) = @_;
 
-    $self->new_session;
-
     my $adb = Bio::Otter::Lace::AceDatabase->new;
     $adb->Client($self);
-    $adb->home($self->session_path);
+    $adb->home($self->_new_session_path);
 
     return $adb;
 }
