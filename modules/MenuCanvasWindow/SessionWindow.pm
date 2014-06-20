@@ -1847,22 +1847,13 @@ sub edit_Clone {
     my $name = $clone->name;
 
     # show Clone EditWindow
-    my $cew;
-    unless ($cew = $self->{'_clone_edit_window'}{$name}) {
-        $cew = EditWindow::Clone->new($self->top_window->Toplevel(
-            -title => sprintf('%sClone %s',
-                              $Bio::Otter::Lace::Client::PFX,
-                              $clone->clone_name),
-            ));
-        $cew->SessionWindow($self);
-        $cew->Clone($clone);
-        $cew->initialise;
-        $self->{'_clone_edit_window'}{$name} = $cew;
-        weaken($self->{'_clone_edit_window'}{$name});
-    }
-    my $top = $cew->top;
-    $top->deiconify;
-    $top->raise;
+    my $cew = EditWindow::Clone->in_Toplevel
+      (-title => "Clone ".$clone->clone_name,
+       { from => $self->top_window,
+         reuse_ref => \$self->{'_clone_edit_window'}{$name},
+         init => { SessionWindow => $self,
+                   Clone => $clone },
+         raise => 1 });
 
     return;
 }
@@ -2395,15 +2386,16 @@ sub rename_locus {
     if (my $ren_window = $self->{'_locus_rename_window'}) {
         $ren_window->top->destroy;
     }
-    my $parent = $self->top_window;
-    my $top = $parent->Toplevel(-title => $Bio::Otter::Lace::Client::PFX.'Rename Locus');
-    $top->transient($parent);
-    my $lr = EditWindow::LocusName->new($top);
-    $lr->SessionWindow($self);
-    $lr->locus_name_arg($locus_name);
-    $lr->initialise;
-    $self->{'_locus_rename_window'} = $lr;
-    weaken($self->{'_locus_rename_window'});
+
+    my $lr = EditWindow::LocusName->in_Toplevel
+      (-title => 'Rename Locus',
+       {
+        reuse_ref => \$self->{'_locus_rename_window'},
+        # actually we don't re-use it, but destroy the old one
+        transient => 1,
+        init => { SessionWindow => $self,
+                  locus_name_arg => $locus_name },
+        from => $self->top_window });
 
     return 1;
 }
@@ -2411,17 +2403,13 @@ sub rename_locus {
 sub run_dotter {
     my ($self) = @_;
 
-    my $dw = $self->{'_dotter_window'};
-    unless ($dw) {
-        my $parent = $self->top_window();
-        my $top = $parent->Toplevel(-title => $Bio::Otter::Lace::Client::PFX.'Run Dotter');
-        $top->transient($parent);
-        $dw = EditWindow::Dotter->new($top);
-        $dw->SessionWindow($self);
-        $dw->initialise;
-        $self->{'_dotter_window'} = $dw;
-        weaken($self->{'_dotter_window'});
-    }
+    my $dw = EditWindow::Dotter->in_Toplevel
+      (-title => 'Run Dotter',
+       { reuse_ref => \$self->{'_dotter_window'},
+         transient => 1,
+         init => { SessionWindow => $self },
+         from => $self->top_window });
+
     $dw->update_from_SessionWindow($self);
 
     return 1;
@@ -2430,19 +2418,13 @@ sub run_dotter {
 sub run_exonerate {
     my ($self) = @_;
 
-    my $ew = $self->{'_exonerate_window'};
-    unless ($ew) {
-        my $parent = $self->top_window();
-        my $top = $parent->Toplevel
-          (-title => $Bio::Otter::Lace::Client::PFX.
-           'On The Fly (OTF) Alignment');
-        $top->transient($parent);
-        $ew = EditWindow::Exonerate->new($top);
-        $ew->SessionWindow($self);
-        $ew->initialise();
-        $self->{'_exonerate_window'} = $ew;
-        weaken($self->{'_exonerate_window'});
-    }
+    my $ew = EditWindow::Exonerate->in_Toplevel
+      (-title => 'On The Fly (OTF) Alignment',
+       { reuse_ref => \$self->{'_exonerate_window'},
+         transient => 1,
+         init => { SessionWindow => $self },
+         from => $self->top_window });
+
     $ew->update_from_SessionWindow;
 
     return 1;

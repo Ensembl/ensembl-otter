@@ -923,9 +923,9 @@ sub search_pfam {
 
 sub _new_window {
     my ($self, $name) = @_;
-    my $tl = $self->canvas->Toplevel
-      (-title => $Bio::Otter::Lace::Client::PFX."Pfam $name");
-    return EditWindow::PfamWindow->new($tl);
+    return EditWindow::PfamWindow->in_Toplevel
+      (-title => "Pfam $name",
+       { from => $self->canvas->Toplevel });
 }
 
 sub update_translation {
