@@ -77,9 +77,9 @@ use EditWindow::Password;
         my $user = $self->author;
 
         my $pass = '';
-        my $toplevel = $main_window->Toplevel
-          (-title => $Bio::Otter::Lace::Client::PFX.'Enter Password');
-        my $pass_win = EditWindow::Password->new($toplevel);
+        my $pass_win = EditWindow::Password->in_Toplevel
+          (-title => 'Enter Password',
+           { from => $main_window });
         $pass_win->prompt_string("Enter web password for '$user'");
         $pass_win->passref(\$pass);
         $pass_win->initialise;
