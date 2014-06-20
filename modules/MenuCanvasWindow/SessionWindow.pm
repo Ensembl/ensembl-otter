@@ -2553,7 +2553,9 @@ sub zircon_context {
     my $zircon_context =
         $self->{'_zircon_context'} ||=
         Zircon::TkZMQ::Context->new(
-            '-widget' => $self->menu_bar);
+            '-widget'       => $self->menu_bar,
+            '-trace_prefix' => sprintf('SW=[%s]', $self->AceDatabase->name),
+        );
     return $zircon_context;
 }
 
