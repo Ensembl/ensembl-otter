@@ -8,6 +8,7 @@ use Carp;
 use Scalar::Util 'weaken';
 
 use Try::Tiny;
+use File::Path (); # for make_path;
 
 require Tk::Dialog;
 require Tk::Balloon;
@@ -2515,19 +2516,30 @@ sub _make_config {
 
 sub _make_zmap_config_dir {
     my ($self) = @_;
-    my $config_dir = q(/var/tmp);
-    my $user = getpwuid($<);
-    my $dir_name = "otter_${user}";
-    my $key = sprintf "%09d", int(rand(1_000_000_000));
-    for ($dir_name, 'ZMap', $key) {
-        $config_dir .= "/$_";
-        -d $config_dir
-            or mkdir $config_dir
-            or $self->logger->logdie(sprintf "mkdir('%s') failed: $!", $config_dir);
-    }
+
+    my $config_dir = $self->zmap_configs_dir;
+    my $key;
+    do {
+        $key = sprintf "%09d", int(rand(1_000_000_000));
+    } while (-d "$config_dir/$key");
+    $config_dir = "$config_dir/$key";
+
+    my $err;
+    File::Path::make_path($config_dir, { error => \$err });
+    $self->logger->logdie
+      (join "\n  ",
+       "make_path for zmap_config_dir $config_dir failed",
+       map {( (%$_)[0] || '(general error)' ).': '.(%$_)[1] } @$err)
+        if @$err;
+
     return $config_dir;
 }
 
+sub zmap_configs_dir {
+    my ($called) = @_;
+    my $user = getpwuid($<);
+    return "/var/tmp/otter_${user}/ZMap";
+}
 
 ### BEGIN: ZMap control interface
 
