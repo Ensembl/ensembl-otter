@@ -260,11 +260,15 @@ sub cleanup_log_dir {
 sub cleanup_sessions {
     my ($self) = @_;
 
-    foreach ( $self->all_session_dirs ) {
+    foreach ( $self->all_session_dirs('*') ) {
         next unless /\.done$/;
-        if ( -M > $DELETE_AFTER_DAYS ) {
-            remove_tree($_)
-                or $self->logger->error("Error removing expired session directory '$_'");
+        my $d = int( -M );
+        next unless $d > $DELETE_AFTER_DAYS;
+
+        if (remove_tree($_)) {
+            $self->logger->info("cleanup_sessions removed $_, $d days old");
+        } else {
+            $self->logger->error("cleanup_sessions FAILED to remove $_");
         }
     }
 
@@ -285,8 +289,8 @@ sub cleanup_sessions {
 }
 
 sub _session_root {
-    my ($called) = @_;
-    my $version = Bio::Otter::Version->version;
+    my ($called, $version) = @_;
+    $version ||= Bio::Otter::Version->version;
     return '/var/tmp/lace_'.$version;
 }
 
@@ -309,18 +313,20 @@ sub _session_from_dir {
     my ($pid) = $dir =~ m{lace[^/]+\.(\d+)\.\d+$};
     return unless $pid;
 
-    # Skip if directory is not ours
-    my ($owner, $mtime) = (stat($dir))[4,9];
-    return unless $< == $owner;
-
+    my $mtime = (stat($dir))[9];
     return [ $dir, $pid, $mtime ];
 }
 
 sub all_session_dirs {
-    my ($self) = @_;
+    my ($self, $version_glob) = @_;
 
-    my $session_dir_pattern = $self->_session_root . ".*";
+    my $session_dir_pattern = $self->_session_root($version_glob) . ".*";
     my @session_dirs = glob($session_dir_pattern);
+
+    # Skip if directory is not ours
+    my $uid = $<;
+    @session_dirs = grep { (stat($_))[4] == $uid } @session_dirs;
+
     return @session_dirs;
 }
 
