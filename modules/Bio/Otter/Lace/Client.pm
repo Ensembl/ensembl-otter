@@ -237,10 +237,10 @@ sub make_log_file {
 }
 
 sub cleanup {
-    my ($self) = @_;
+    my ($self, $delayed) = @_;
     require Bio::Otter::Utils::Cleanup;
     my $cleaner = Bio::Otter::Utils::Cleanup->new($self);
-    return $cleaner->clean;
+    return $delayed ? $cleaner->fork_and_clean($delayed) : $cleaner->clean;
 }
 
 {
