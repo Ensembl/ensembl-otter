@@ -40,8 +40,8 @@ sub fork_and_clean {
         return;
     } else {
         # child
-        sleep $delay;
         $0 = 'otterlace_cleanup';
+        sleep $delay;
         $self->clean;
         $self->logger->info("Cleanup finished, pid $$\n");
         close STDERR; # _exit does not flush
