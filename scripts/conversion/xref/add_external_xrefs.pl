@@ -38,7 +38,7 @@ Specific options:
     --mgi=FILE                          read MGI data from FILE
     --tcagfile=FILE                     read TCAG input from FILE
     --imgt_hlafile=FILE                 read IMGT_HLA input from FILE
-    --rgdfile=FILE                          read RGT input from file
+    --rgdfile=FILE                      read RGT input from file
     --refseqfile=FILE                   read Refseq input from FILE
     --mismatch                          correct case mismatches in the db
                                           overrides dry-run, doesn't add xrefs
