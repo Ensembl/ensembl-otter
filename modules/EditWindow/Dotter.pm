@@ -282,7 +282,7 @@ sub launch_dotter {
     $dotter->subject_name($match_name);
     $dotter->revcomp_subject($$revcomp);
 
-    return $dotter->fork_dotter($self->SessionWindow->session_colour);
+    return $dotter->fork_dotter($self->SessionWindow);
 }
 
 sub DESTROY {

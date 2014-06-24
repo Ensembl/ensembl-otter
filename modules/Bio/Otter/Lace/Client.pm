@@ -8,7 +8,6 @@ use Carp;
 
 use Try::Tiny;
 
-use File::Path qw{ remove_tree };
 use Net::Domain qw{ hostname hostfqdn };
 use Proc::ProcessTable;
 
@@ -192,6 +191,7 @@ sub get_log_dir {
     my $log_dir = "$home/.otter";
     if (mkdir($log_dir)) {
         warn "Made logging directory '$log_dir'\n"; # logging not set up, so this must use 'warn'
+        return;
     }
     return $log_dir;
 }
@@ -236,59 +236,30 @@ sub make_log_file {
     return;
 }
 
-sub cleanup_log_dir {
-    my ($self, $file_root, $days) = @_;
+sub cleanup {
+    my ($self, $delayed) = @_;
+    require Bio::Otter::Utils::Cleanup;
+    my $cleaner = Bio::Otter::Utils::Cleanup->new($self);
+    return $delayed ? $cleaner->fork_and_clean($delayed) : $cleaner->clean;
+}
 
-    # Files older than this number of days are deleted.
-    $days ||= 14;
+{
+    my $session_number = 0;
+    sub _new_session_path {
+        my ($self) = @_;
 
-    $file_root ||= 'client';
+        my $user = (getpwuid($<))[0];
 
-    my $log_dir = $self->get_log_dir or return;
-
-    opendir my $LOG, $log_dir or $self->logger->logconfess("Can't open directory '$log_dir': $!");
-    foreach my $file (grep { /^$file_root\./ } readdir $LOG) {
-        my $full = "$log_dir/$file"; #" comment solely for eclipses buggy parsing!
-        if (-M $full > $days) {
-            unlink $full
-                or $self->logger->warn("Couldn't delete file '$full' : $!");
-        }
+        ++$session_number;
+        return sprintf("%s.%s.%d.%d",
+                       $self->_session_root, $user, $$, $session_number);
     }
-    closedir $LOG or $self->logger->logconfess("Error reading directory '$log_dir' : $!");
-    return;
 }
 
-my $session_root = '/var/tmp/lace';
-my $session_number = 0;
-my $session_dir_expire_days = 14;
-
-sub cleanup_sessions {
-    my ($self) = @_;
-
-    foreach ( $self->all_session_dirs ) {
-        next unless /\.done$/;
-        if ( -M > $session_dir_expire_days ) {
-            remove_tree($_)
-                or $self->logger->error("Error removing expired session directory '$_'");
-        }
-    }
-
-    return;
-}
-
-sub new_session {
-    my ($self) = @_;
-    return ++$session_number;
-}
-
-sub session_path {
-    my ($self) = @_;
-
-    my $user = (getpwuid($<))[0];
-
-    return
-        sprintf "%s_%d.%s.%d.%d",
-        $session_root, Bio::Otter::Version->version, $user, $$, $session_number;
+sub _session_root {
+    my ($called, $version) = @_;
+    $version ||= Bio::Otter::Version->version;
+    return '/var/tmp/lace_'.$version;
 }
 
 sub all_sessions {
@@ -310,19 +281,20 @@ sub _session_from_dir {
     my ($pid) = $dir =~ m{lace[^/]+\.(\d+)\.\d+$};
     return unless $pid;
 
-    # Skip if directory is not ours
-    my ($owner, $mtime) = (stat($dir))[4,9];
-    return unless $< == $owner;
-
+    my $mtime = (stat($dir))[9];
     return [ $dir, $pid, $mtime ];
 }
 
 sub all_session_dirs {
-    my ($self) = @_;
+    my ($self, $version_glob) = @_;
 
-    my $session_dir_pattern =
-        sprintf "%s_%s.*", $session_root, Bio::Otter::Version->version;
+    my $session_dir_pattern = $self->_session_root($version_glob) . ".*";
     my @session_dirs = glob($session_dir_pattern);
+
+    # Skip if directory is not ours
+    my $uid = $<;
+    @session_dirs = grep { (stat($_))[4] == $uid } @session_dirs;
+
     return @session_dirs;
 }
 
@@ -332,11 +304,9 @@ sub all_session_dirs {
 sub new_AceDatabase {
     my ($self) = @_;
 
-    $self->new_session;
-
     my $adb = Bio::Otter::Lace::AceDatabase->new;
     $adb->Client($self);
-    $adb->home($self->session_path);
+    $adb->home($self->_new_session_path);
 
     return $adb;
 }
