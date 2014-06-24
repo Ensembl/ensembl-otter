@@ -39,12 +39,11 @@ use EditWindow::Password;
     # After this, we are writing logfile
     my $logger = Log::Log4perl->get_logger('otter.main');
 
-    $client->cleanup_sessions;
-    $client->cleanup_log_dir('otterlace');
-
     Bio::Otter::Git->dump($logger);
 
     $client->ua_tell_hostinfo;
+
+    $client->cleanup(20); # do it soon, and in a child process, so we don't block
 
     my $main_window = CanvasWindow::MainWindow->new
       ($Bio::Otter::Lace::Client::PFX."Species List");
