@@ -178,6 +178,7 @@ my $c = 0;
 foreach my $chrom (@$chroms) {
   my $chrom_name = $chrom->seq_region_name;
   next unless $support->is_patch($chrom);
+  next if $chrom_name =~ /PATCH/;
   $support->log("\nChecking attribs on Patch Chrom $chrom_name\n");
   my @required_attribs = qw(chr description equiv_asm);
   my %found_attribs;
