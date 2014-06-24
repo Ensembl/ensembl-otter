@@ -322,10 +322,8 @@ foreach my $V_chr (@chrs) {
             WHERE srs.seq_region_id = sr.seq_region_id
               AND srs.external_db_id = $insdc_edb
               AND sr.name = );
-    (my $echr_name) = $E_chr =~ /CHR_(.+)$/; #INSDC seq_region synonyms are attached to the scaffold not the chromosome in Ensembl
-
     #compare accessions for PATCHES from Ensembl and Vega and warn if they're different
-    my @e_patch_names  = $E_dbh->selectrow_array("$sql '$echr_name'");
+    my @e_patch_names  = $E_dbh->selectrow_array("$sql '$E_chr'");
     if (scalar(@e_patch_names > 1)) {
       $support->log_warning("More than one e! seq_region_synonym found for $V_chr, need to alter the code below\n");
     }
