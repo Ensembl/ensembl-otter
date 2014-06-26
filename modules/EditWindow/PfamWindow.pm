@@ -81,7 +81,7 @@ sub widg {
     return $self->{_widg}->{$name} or die "No widg($name)";
 }
 
-sub initialize {
+sub initialise {
     my ($self, $tmpdir) = @_;
 
     my $pfam = Bio::Otter::Lace::Pfam->new($tmpdir);

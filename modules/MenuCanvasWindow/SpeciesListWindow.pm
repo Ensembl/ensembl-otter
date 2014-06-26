@@ -397,7 +397,7 @@ sub recover_some_sessions {
                     my $cc = MenuCanvasWindow::ColumnChooser->new($top);
                     $cc->AceDatabase($adb);
                     $cc->SpeciesListWindow($self);
-                    $cc->initialize;
+                    $cc->initialise;
                     $cc->load_filters(is_recover => 1);
                     $top->withdraw;
                 }

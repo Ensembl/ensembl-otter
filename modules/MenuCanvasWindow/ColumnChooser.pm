@@ -98,7 +98,7 @@ sub row_height {
     return int 1.5 * $self->font_size;
 }
 
-sub initialize {
+sub initialise {
     my ($self) = @_;
 
     my $search_menu = $self->make_menu('Search');
@@ -720,7 +720,7 @@ sub load_filters {
         $SessionWindow->AceDatabase($self->AceDatabase);
         $SessionWindow->SequenceNotes($self->SequenceNotes);
         $SessionWindow->ColumnChooser($self);
-        $SessionWindow->initialize;
+        $SessionWindow->initialise;
     }
 
     if (@to_fetch) {
