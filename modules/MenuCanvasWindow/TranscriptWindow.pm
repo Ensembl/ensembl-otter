@@ -27,7 +27,7 @@ use base qw( MenuCanvasWindow );
 
 # "new" is in MenuCanvasWindow
 
-sub initialize {
+sub initialise {
     my ($self) = @_;
 
     my $canvas = $self->canvas;
@@ -911,7 +911,7 @@ sub search_pfam {
     $self->{'_pfam'} = $pfam;
     try {
         my $session_dir = $self->SessionWindow->AceDatabase->home;
-        $pfam->initialize("$session_dir/pfam");
+        $pfam->initialise("$session_dir/pfam");
     } catch {
         my $err = $_;
         $self->exception_message($_, "Failed to request Pfam search");

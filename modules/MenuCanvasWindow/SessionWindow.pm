@@ -97,7 +97,7 @@ sub RequestQueuer {
     return $RequestQueuer;
 }
 
-sub initialize {
+sub initialise {
     my ($self) = @_;
 
     $self->set_window_title;
@@ -797,7 +797,7 @@ sub launch_GenomicFeaturesWindow {
             $gfs = MenuCanvasWindow::GenomicFeaturesWindow->new($gfw);
             $self->GenomicFeaturesWindow($gfs);
             $gfs->SessionWindow($self);
-            $gfs->initialize;
+            $gfs->initialise;
         }
     }
     catch {
@@ -1693,12 +1693,12 @@ sub make_transcript_window {
     # Make a new window
     my $top = $canvas->Toplevel;
 
-    # Make new MenuCanvasWindow::TranscriptWindow object and initialize
+    # Make new MenuCanvasWindow::TranscriptWindow object and initialise
     my $transcript_window = MenuCanvasWindow::TranscriptWindow->new($top, 345, 50);
     $transcript_window->name($sub_name);
     $transcript_window->SessionWindow($self);
     $transcript_window->SubSeq($sub);
-    $transcript_window->initialize;
+    $transcript_window->initialise;
 
     $self->save_transcript_window($sub_name, $transcript_window);
 

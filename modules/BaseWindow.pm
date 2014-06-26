@@ -83,4 +83,11 @@ sub _link_and_init {
     return $self->initialise;
 }
 
+sub initialize { # deprecated
+    my ($self, @arg) = @_;
+    carp "$self->initialize: deprecated, use initialise";
+    return $self->initialise(@arg);
+}
+
+
 1;

@@ -769,7 +769,7 @@ sub _open_SequenceSet {
     $cc->AceDatabase($adb);
     $cc->SequenceNotes($self);
     $cc->SpeciesListWindow($self->SequenceSetChooser->SpeciesListWindow);
-    $cc->initialize;
+    $cc->initialise;
 
     return;
 }
