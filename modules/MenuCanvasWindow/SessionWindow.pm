@@ -53,7 +53,7 @@ my $DNA_SCORE  = 100;
 my $DNAHSP     = 120;
 
 sub new {
-    my ($pkg, $tk, %arg_hash) = @_;
+    my ($pkg, $tk) = @_;
 
     my $self = $pkg->SUPER::new($tk);
 
@@ -65,10 +65,15 @@ sub new {
     $self->minimum_scroll_bbox(0,0, 380,200);
     $self->flag_db_edits(1);
 
-    @{$self}{qw( _zmap _zircon_context )} =
-        @arg_hash{qw( -zmap -zircon_context )};
-
     return $self;
+}
+
+# Populated from ColumnChooser before initialise,
+# avoiding method name zmap_select (which is mixed in)
+sub existing_zmap_select {
+    my ($self, $zmap_select) = @_;
+    $self->{_zmap} = $zmap_select;
+    return;
 }
 
 sub AceDatabase {
@@ -2544,7 +2549,8 @@ sub zmap_configs_dir {
 ### BEGIN: ZMap control interface
 
 sub zircon_context {
-    my ($self) = @_;
+    my ($self, @arg) = @_;
+    ($self->{'_zircon_context'}) = @arg if @arg;
     my $zircon_context =
         $self->{'_zircon_context'} ||=
         Zircon::Tk::Context->new(

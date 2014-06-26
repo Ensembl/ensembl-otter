@@ -712,9 +712,9 @@ sub load_filters {
         my $SessionWindow =
             MenuCanvasWindow::SessionWindow->new(
                 $self->top_window->Toplevel,
-                '-zmap'           => $zmap,
-                '-zircon_context' => $zircon_context,
             );
+        $SessionWindow->existing_zmap_select($zmap);
+        $SessionWindow->zircon_context($zircon_context);
 
         $self->SessionWindow($SessionWindow);
         $SessionWindow->AceDatabase($self->AceDatabase);
