@@ -779,31 +779,19 @@ sub highlight {
 }
 
 sub GenomicFeaturesWindow {
-    my ($self, $gfs) = @_;
-
-    if(defined($gfs)){
-        $self->{'_gfs'} = $gfs;
-        weaken($self->{'_gfs'});
-    }
-    return $self->{'_gfs'};
+    my ($self) = @_;
+    return $self->{'_gfs'}; # set in launch_GenomicFeaturesWindow
 }
 
 sub launch_GenomicFeaturesWindow {
     my ($self) = @_;
     try {
-        if(my $gfs = $self->GenomicFeaturesWindow()) {
-
-            my $gfw = $gfs->top_window();
-            $gfw->deiconify;
-            $gfw->raise;
-        } else {
-            my $gfw = $self->canvas->Toplevel;
-
-            $gfs = MenuCanvasWindow::GenomicFeaturesWindow->new($gfw);
-            $self->GenomicFeaturesWindow($gfs);
-            $gfs->SessionWindow($self);
-            $gfs->initialise;
-        }
+        my $gfs = MenuCanvasWindow::GenomicFeaturesWindow->in_Toplevel
+          (# -title is set during initialise
+           { reuse_ref => \$self->{'_gfs'},
+             raise => 1,
+             init => { SessionWindow => $self },
+             from => $self->canvas });
     }
     catch {
         my $msg = 'Error creating Genomic Features window';

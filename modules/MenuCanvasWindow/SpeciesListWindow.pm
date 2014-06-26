@@ -390,16 +390,14 @@ sub recover_some_sessions {
                     # Bring up GUI
                     my $adb = $client->recover_session($session_dir);
 
-                    my $top = $canvas->Toplevel
-                      (-title  => $Bio::Otter::Lace::Client::PFX.
-                       'Select Column Data to Load');
+                    my $cc = MenuCanvasWindow::ColumnChooser->in_Toplevel
+                      (-title  => 'Select Column Data to Load',
+                       { init => { AceDatabase => $adb,
+                                   SpeciesListWindow => $self },
+                         from => $canvas });
 
-                    my $cc = MenuCanvasWindow::ColumnChooser->new($top);
-                    $cc->AceDatabase($adb);
-                    $cc->SpeciesListWindow($self);
-                    $cc->initialise;
                     $cc->load_filters(is_recover => 1);
-                    $top->withdraw;
+                    $cc->top_window->withdraw;
                 }
             }
             catch {
