@@ -439,8 +439,10 @@ sub _launch_belvu {
         close STDERR; # _exit does not flush
         close STDOUT;
         POSIX::_exit(127); # avoid triggering DESTROY
+        return 0; # quieten perlcritic
     } else {
         $self->logger->warn("fork for belvu failed: $!");
+        return 0;
     }
 }
 
