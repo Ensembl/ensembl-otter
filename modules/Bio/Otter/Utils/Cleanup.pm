@@ -47,6 +47,7 @@ sub fork_and_clean {
         close STDERR; # _exit does not flush
         close STDOUT;
         POSIX::_exit(0); # avoid triggering DESTROY
+        return; # quieten perlcritic
     }
 }
 
@@ -104,6 +105,7 @@ sub cleanup_zmap_configs {
             $self->logger->error("cleanup_zmap_configs FAILED to remove $dir, $age days old");
         }
     }
+    return;
 }
 
 
