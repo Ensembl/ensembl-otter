@@ -387,6 +387,10 @@ sub recover_some_sessions {
                 foreach my $rec (@selected_recs) {
                     my ($session_dir, $date, $title) = @$rec;
 
+                    # We carry an extra event loop on the stack until
+                    # recovery is complete, to queue actions after it.
+                    local $Zircon::Tk::Context::TANGLE_ACK{'MCW:SLW:recover_some_sessions'} = 1;
+
                     # Bring up GUI
                     my $adb = $client->recover_session($session_dir);
 
