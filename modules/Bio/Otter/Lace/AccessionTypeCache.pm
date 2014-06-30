@@ -298,9 +298,13 @@ sub evidence_type_and_name_from_accession_list {
 
 {
     my @fai_cols = qw( taxon_id evi_type description source currency length sequence );
-    my $cols_spec = join(', ', @fai_cols);
+    my $cols_spec = join(', ', map { "oai.$_" } @fai_cols);
     my $feature_accession_info_sql = qq{
-        SELECT $cols_spec FROM otter_accession_info WHERE accession_sv = ?
+        SELECT $cols_spec, osi.scientific_name, osi.common_name
+        FROM otter_accession_info oai
+        INNER JOIN otter_species_info osi
+        USING ( taxon_id )
+        WHERE oai.accession_sv = ?
     };
 
     sub feature_accession_info {
@@ -308,7 +312,7 @@ sub evidence_type_and_name_from_accession_list {
         my $row = $DB{$self}->dbh->selectrow_arrayref($feature_accession_info_sql, {}, $feature_name);
         return unless $row;
         my %result;
-        @result{@fai_cols} = @$row;
+        @result{@fai_cols, qw( taxon_scientific_name taxon_common_name)} = @$row;
         return \%result;
     }
 }
