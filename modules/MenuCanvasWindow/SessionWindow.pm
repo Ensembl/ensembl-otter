@@ -2734,7 +2734,10 @@ sub _feature_accession_info_xml {
 
     my $info = $self->AceDatabase->AccessionTypeCache->feature_accession_info($feat_name);
     return unless $info;
-    my ($source, $taxon_id, $desc) = @{$info}{qw(source taxon_id description)};
+    my ($source, $taxon_id, $desc, $common_name, $scientific_name) =
+        @{$info}{qw(source taxon_id description taxon_scientific_name taxon_common_name)};
+    my $taxon_name = join ', ', grep { $_ } $common_name, $scientific_name;
+    my $taxon = sprintf '%s (Taxon ID = %d)', $taxon_name, $taxon_id;
 
     # Put this on the "Details" page which already exists.
     my $xml = Hum::XmlWriter->new(5);
@@ -2742,7 +2745,7 @@ sub _feature_accession_info_xml {
     $xml->open_tag('subsection', { name => 'Feature' });
     $xml->open_tag('paragraph',  { type => 'tagvalue_table' });
     $xml->full_tag('tagvalue', { name => 'Source database', type => 'simple' }, $source);
-    $xml->full_tag('tagvalue', { name => 'Taxon ID',        type => 'simple' }, $taxon_id);
+    $xml->full_tag('tagvalue', { name => 'Taxon',           type => 'simple' }, $taxon);
     $xml->full_tag('tagvalue', { name => 'Description', type => 'scrolled_text' }, $desc);
     $xml->close_all_open_tags;
 
