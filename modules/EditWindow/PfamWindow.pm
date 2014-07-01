@@ -433,11 +433,13 @@ sub _launch_belvu {
     } elsif (defined $pid) {
         $ENV{BELVU_FETCH} = 'pfetch'; # will be on PATH, won't work outside firewall
         my @command = ("belvu", $alignment);
-        # DUP: Bio::Otter::ZMap::_launchZMap()
+        # DUP: Zircon::ZMap::Core::launch_zmap()
         { exec(@command) };
-        warn "Failed to exec '@command': $!";
-        close STDERR; # _exit does not flush
-        close STDOUT;
+        try {
+            warn "Failed to exec '@command': $!";
+            close STDERR; # _exit does not flush
+            close STDOUT;
+        }; # no catch, just be sure to _exit
         POSIX::_exit(127); # avoid triggering DESTROY
         return 0; # quieten perlcritic
     } else {

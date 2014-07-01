@@ -167,13 +167,15 @@ sub fork_dotter {
         return 1;
     }
     elsif (defined $pid) {
-        exec($dotter_command) or warn "Failed to exec '$dotter_command' : $!";
-        # Exec'ing rm here, which replaces the perl process
-        # with rm, ensures that the perl DESTROY methods
-        # don't get called by this child.
-        unlink $query_file, $subject_file
-            or warn "Some input file(s) not tidied up: $!\n";
-        warn "dotter launch aborted\n";
+        { exec($dotter_command) }
+        try {
+            warn "Failed to exec '$dotter_command': $!";
+            unlink $query_file, $subject_file
+              or warn "Some input file(s) not tidied up: $!\n";
+            warn "dotter launch aborted\n";
+            close STDERR;
+            close STDOUT;
+        }; # no catch, just be sure to _exit
         POSIX::_exit(127); # avoid triggering DESTROY
     }
     else {
