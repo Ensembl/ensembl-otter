@@ -30,30 +30,9 @@ my $_new_feature_id_sub = sub {
     package Bio::EnsEMBL::Feature;
 
     sub to_gff {
-
         my ($self, %args) = @_;
-
-        # This parameter is assumed to be a hashref which includes
-        # extra attributes you'd like to have appended onto the gff
-        # line for the feature
-        my $extra_attrs = $args{'extra_attrs'};
-
         my $gff = $self->_gff_hash(%args);
-
-        if ($extra_attrs) {
-
-            # combine the extra attributes with any existing ones
-            # (duplicate keys will get squashed!)
-            $gff->{'attributes'} = {} unless defined $gff->{'attributes'};
-            @{ $gff->{'attributes'} }{ keys %$extra_attrs } = values %$extra_attrs;
-        }
-
-        my $gff_format = $args{'gff_format'};
-        my $gff_str =
-            $gff_format->gff_line(
-                @{$gff}{qw( seqname source feature start end score strand phase attributes )},
-                \%args);
-
+        my $gff_str = $self->_gff_hash_to_gff($gff, \%args);
         return $gff_str;
     }
 
@@ -74,6 +53,23 @@ my $_new_feature_id_sub = sub {
         };
 
         return $gff;
+    }
+
+    sub _gff_hash_to_gff {
+        my ($self, $gff, $args) = @_;
+
+        if (my $extra_attrs = $args->{'extra_attrs'}) {
+            $gff->{'attributes'} = {} unless defined $gff->{'attributes'};
+            @{ $gff->{'attributes'} }{ keys %$extra_attrs } = values %$extra_attrs;
+        }
+
+        my $gff_format = $args->{'gff_format'};
+        my $gff_str =
+            $gff_format->gff_line(
+                @{$gff}{qw( seqname source feature start end score strand phase attributes )},
+                $args);
+
+        return $gff_str;
     }
 
     sub _gff_source {
