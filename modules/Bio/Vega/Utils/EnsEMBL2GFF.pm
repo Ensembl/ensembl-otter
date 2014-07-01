@@ -769,9 +769,7 @@ __END__
 
 Inserts to_gff (and supporting _gff_hash) methods into various EnsEMBL
 and Otter classes, allowing them to be converted to GFF by calling
-C<$object->to_gff>. You can also get the GFF for an entire slice by
-calling C<$slice->to_gff>, passing in lists of the analyses and
-feature types you're interested in.
+C<$object->to_gff>.
 
 =head1 AUTHOR
 
