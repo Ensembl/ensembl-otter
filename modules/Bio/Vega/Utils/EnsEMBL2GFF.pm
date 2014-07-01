@@ -51,7 +51,7 @@ my $_new_feature_id_sub = sub {
         my $gff_format = $args{'gff_format'};
         my $gff_str =
             $gff_format->gff_line(
-                @{$gff}{qw( seqname source feature start end score strand frame attributes )},
+                @{$gff}{qw( seqname source feature start end score strand phase attributes )},
                 \%args);
 
         return $gff_str;
@@ -364,7 +364,7 @@ my $_new_feature_id_sub = sub {
         return $gff;
     }
 
-    my %ens_phase_to_gff_frame = (
+    my %ens_phase_to_gff_phase = (
         0  => 0,
         1  => 2,
         2  => 1,
@@ -421,13 +421,9 @@ my $_new_feature_id_sub = sub {
             my $start = $self->coding_region_start + $self->slice->start - 1;
             my $end   = $self->coding_region_end   + $self->slice->start - 1;
 
-            my $frame;
-            if (defined(my $phase = $tsl->start_Exon->phase)) {
-                $frame = $ens_phase_to_gff_frame{$phase};
-            }
-            else {
-                $frame = 0;
-            }
+            my $ens_phase = $tsl->start_Exon->phase;
+            my $gff_phase =
+                defined $ens_phase ? $ens_phase_to_gff_phase{$ens_phase} : 0;
 
             my $attrib_hash = {
                 Name  => $name,
@@ -445,7 +441,7 @@ my $_new_feature_id_sub = sub {
                 $end,
                 '.',      # score
                 $gff_hash->{'strand'},
-                $frame,
+                $gff_phase,
                 $attrib_hash,
                 );
         }
