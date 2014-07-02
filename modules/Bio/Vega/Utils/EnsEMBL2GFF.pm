@@ -210,43 +210,14 @@ my $_new_feature_id_sub = sub {
         # Get URL parameter
         # Choose ensembl or Pfam style naming and URL filling
 
-        my $allowed_transcript_analyses_hash =
-            ($args{'transcript_analyses'})
-            ? ( +{ map { $_ => 1 } split(/,/, $args{'transcript_analyses'}) } )
-            : '';
-        my $allowed_translation_xref_db_hash =
-            ($args{'translation_xref_dbs'})
-            ? ( +{ map { $_ => 1 } split(/,/, $args{'translation_xref_dbs'}) } )
-            : '';
-
         # filter the transcripts according to the transcript_analyses
-        # & translation_xref_db params
-
-        my @tsct_for_gff;
-        for my $tsct (@{ $self->get_all_Transcripts }) {
-
-            if (  !$allowed_transcript_analyses_hash
-                  || $allowed_transcript_analyses_hash->{ $tsct->analysis->logic_name })
-            {
-
-                my $allowed = !$allowed_translation_xref_db_hash;
-
-                unless ($allowed) {
-                    if (my $trl = $tsct->translation) {
-                        foreach my $xr (@{ $trl->get_all_DBEntries }) {
-                            if ($allowed_translation_xref_db_hash->{ $xr->dbname }) {
-                                $allowed = 1;
-                                last;
-                            }
-                        }
-                    }
-                }
-
-                if ($allowed) {
-                    push(@tsct_for_gff, $tsct);
-                }
-            }
-        }
+        # param
+        my @tsct_all = @{$self->get_all_Transcripts};
+        my $transcript_analyses = $args{'transcript_analyses'};
+        my @tsct_for_gff =
+            $transcript_analyses
+            ? ( _tsct_filter($transcript_analyses, @tsct_all) )
+            : (@tsct_all);
 
         # my $gff_string = $self->SUPER::to_gff(%args);
         my $gff_string = '';
@@ -262,6 +233,13 @@ my $_new_feature_id_sub = sub {
         }
 
         return $gff_string;
+    }
+
+    sub _tsct_filter {
+        my ($analyses, @tsct_all) = @_;
+        my $analyses_hash = { map { $_ => 1 } split(/,/, $analyses) };
+        my @tsct = grep { $analyses_hash->{$_->analysis->logic_name} } @tsct_all;
+        return @tsct;
     }
 
     my $gene_count = 0;
