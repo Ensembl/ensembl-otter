@@ -11,7 +11,6 @@ my @gff_keys = qw(
     gff_seqname
     url_string
     transcript_analyses
-    translation_xref_dbs
     );
 
 sub get_requested_features {
