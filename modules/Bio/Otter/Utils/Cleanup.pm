@@ -40,12 +40,14 @@ sub fork_and_clean {
         return;
     } else {
         # child
-        $0 = 'otterlace_cleanup';
-        sleep $delay;
-        $self->clean;
-        $self->logger->info("Cleanup finished, pid $$\n");
-        close STDERR; # _exit does not flush
-        close STDOUT;
+        try {
+            $0 = 'otterlace_cleanup';
+            sleep $delay;
+            $self->clean;
+            $self->logger->info("Cleanup finished, pid $$\n");
+            close STDERR; # _exit does not flush
+            close STDOUT;
+        }; # no catch, just be sure to _exit
         POSIX::_exit(0); # avoid triggering DESTROY
         return; # quieten perlcritic
     }
