@@ -639,7 +639,7 @@ sub setup_pfetch_env {
 }
 
 # Returns the content string from the http response object
-# with the <otter> tags removed.
+# with the <otter> tags or JSON encoding removed.
 # "perlcritic --stern" refuses to learn that $logger->logconfess is fatal
 sub otter_response_content { ## no critic (Subroutines::RequireFinalReturn)
     my ($self, $method, $scriptname, $params) = @_;
@@ -662,7 +662,6 @@ sub otter_response_content { ## no critic (Subroutines::RequireFinalReturn)
 
 sub _json_content {
     my ($self, $response) = @_;
-    require JSON;
     return JSON->new->decode($response->decoded_content);
 }
 
@@ -1196,6 +1195,25 @@ sub get_loutre_schema {
 sub get_server_ensembl_version {
     my ($self) = @_;
     return $self->_get_cache_config_file('ensembl_version');
+}
+
+# same as Bio::Otter::Server::Config->designations (fresh every time)
+sub get_designations {
+    my ($self) = @_;
+    my $hashref = $self->otter_response_content(GET => 'get_config', { key => 'designations' });
+    return $hashref;
+}
+
+# Return (designation_of_this_major, latest_this_major, live_major_minor)
+sub designate_this {
+    my ($self) = @_;
+    my $desig = $self->get_designations;
+    my $major = Bio::Otter::Version->version;
+    my $major_re = qr{^$major(\.|$|_)};
+    my ($key) = grep { $desig->{$_} =~ $major_re } keys %$desig;
+    my $live = $desig->{live};
+    my $exact = $desig->{$key};
+    return ($key, $exact, $live);
 }
 
 sub do_authentication {
