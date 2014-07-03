@@ -72,6 +72,11 @@ sub version_diagnosis {
 
     my $vsn = Bio::Otter::Git->as_text;
     my ($desig, $desig_latest, $live) = Bio::Otter::Lace::Client->the->designate_this;
+
+    # Ugly trick to direct tickets, for dev/otterlace_this and testers on MacOS
+    $ENV{OTTERLACE_RAN_AS} = "inferred/otterlace_$desig"
+      unless defined $ENV{OTTERLACE_RAN_AS};
+
     my $colour = { live => 'white',
                    test => '#a1e3c9', # slightly minty
                    dev => '#f4cb9f',
