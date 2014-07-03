@@ -17,6 +17,7 @@ my %PERMITTED = (
     otter_config   => { filename => 'otter_config'     },
     otter_schema   => { filename => 'otter_schema.sql' },
     otter_styles   => { filename => 'otter_styles.ini' },
+    designations   => { code => \&_designations, content_type => 'application/json' },
     ensembl_version => { code => \&_ens_version },
 );
 
@@ -42,6 +43,11 @@ sub get_config {
 sub _ens_version {
     require Bio::EnsEMBL::ApiVersion;
     return Bio::EnsEMBL::ApiVersion::software_version()."\n";
+}
+
+sub _designations { # a poor duplicate of send_json_response, migrate?
+    require JSON;
+    return JSON::encode_json( Bio::Otter::Server::Config->designations );
 }
 
 Bio::Otter::Server::Support::Web->send_response(\&get_config);
