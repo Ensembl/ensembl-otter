@@ -1210,7 +1210,10 @@ sub designate_this {
     my $desig = $self->get_designations;
     my $major = Bio::Otter::Version->version;
     my $major_re = qr{^$major(\.|$|_)};
-    my ($key) = grep { $desig->{$_} =~ $major_re } keys %$desig;
+    my ($key) =
+      # There would have been multiple hits for v75, but now we have
+      # feature branches.  Sort just in case.
+      sort grep { $desig->{$_} =~ $major_re } keys %$desig;
     my $live = $desig->{live};
     my $exact = $desig->{$key};
     return ($key, $exact, $live);
