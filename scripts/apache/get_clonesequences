@@ -36,10 +36,6 @@ my $sql = <<'SQL'
       , chr2ctg.cmp_start
       , chr2ctg.cmp_end
       , chr2ctg.ori
-      , l.contig_lock_id
-      , l.hostname
-      , aut.author_name
-      , aut.author_email
     FROM (assembly chr2ctg
           , assembly cl2ctg
           , seq_region chr
@@ -47,10 +43,6 @@ my $sql = <<'SQL'
           , seq_region_attrib embl_acc
           , seq_region_attrib embl_version
           , seq_region_attrib chr_name)
-    LEFT JOIN contig_lock l
-      ON l.seq_region_id = ctg.seq_region_id
-    LEFT JOIN author aut
-      ON aut.author_id = l.author_id
       , seq_region cl
     LEFT JOIN seq_region_attrib intl_clone_name
       ON intl_clone_name.seq_region_id = cl.seq_region_id
@@ -102,7 +94,7 @@ while (
     my (
         $cl_name,    $intl_name,     $acc,       $sv,          $ctg_name,  $ctg_length,
         $chr_name,   $chr_length,    $chr_start, $chr_end,     $ctg_start, $ctg_end,
-        $ctg_strand, $clone_lock_id, $host_name, $author_name, $author_email
+        $ctg_strand
     )
     = $sth->fetchrow
   )
@@ -125,14 +117,6 @@ while (
         contig_end    => $ctg_end,
         contig_strand => $ctg_strand,
     };
-    if ($clone_lock_id) {
-        $cs->{'lock'} = {
-            lock_id     => $clone_lock_id,
-            author_name => $author_name,
-            email       => $author_email,
-            host_name   => $host_name,
-        };
-    }
 
     if (my $prev = $cs_list[-1]) {
         # Merge adjacent segments of the same contig together.
@@ -160,7 +144,7 @@ foreach my $cs (@cs_list) {
     foreach my $tag (
         qw{ clone_name accession sv contig_name length
         chr chr_start chr_end
-        contig_start contig_end contig_strand lock }
+        contig_start contig_end contig_strand }
       )
     {
         my $value = $cs->{$tag};

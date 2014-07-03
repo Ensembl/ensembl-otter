@@ -1270,7 +1270,7 @@ sub _make_SequenceSet {
     return $sequenceset;
 }
 
-sub get_all_CloneSequences_for_DataSet_SequenceSet {
+sub get_all_CloneSequences_for_DataSet_SequenceSet { # without any lock info
   my ($self, $ds, $ss) = @_;
   return [] unless $ss ;
   my $csl = $ss->CloneSequence_list;
@@ -1322,24 +1322,6 @@ sub _make_CloneSequence {
     while (my ($key, $value) = each %{$params}) {
         if ($key eq 'chr') {
             $clonesequence->chromosome($value->{name});
-        }
-        elsif ($key eq 'lock') {
-
-            my ($author_name, $author_email, $host_name, $lock_id) =
-                @{$value}{qw( author_name email host_name lock_id )};
-
-            my $author = Bio::Vega::Author->new(
-                -name  => $author_name,
-                -email => $author_email,
-                );
-
-            my $clone_lock = Bio::Vega::ContigLock->new(
-                -author   => $author,
-                -hostname => $host_name,
-                -dbID     => $lock_id,
-                );
-
-            $clonesequence->set_lock_status($clone_lock);
         }
         elsif ($clonesequence->can($key)) {
             $clonesequence->$key($value);
