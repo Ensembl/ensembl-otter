@@ -140,6 +140,9 @@ sub ensure_tools {
         ();
     };
 
+    # Check we are running a sensible Otterlace version
+    $self->uptodate_check;
+
     if (@v) {
         local $" = "\n  ";
         $self->logger->info("Tools are\n  @v");
@@ -149,6 +152,25 @@ sub ensure_tools {
     }
 
     return ();
+}
+
+sub uptodate_check {
+    my ($self) = @_;
+
+    my ($do_warn, $colour, $description) = try {
+        Bio::Otter::Utils::About->version_diagnosis;
+    } catch {
+        $self->logger->error("_ensure_tools: $_");
+        (1, 'grey', 'broken in some way');
+    };
+
+    $self->canvas->configure(-background => $colour);
+    if ($do_warn) {
+        $self->message("This is $description");
+    } else {
+        $self->logger->info("This is $description");
+    }
+    return;
 }
 
 sub show_about {
