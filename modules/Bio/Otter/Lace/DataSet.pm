@@ -542,7 +542,7 @@ sub selected_SequenceSet {
     return $self->{'_selected_SequenceSet'};
 }
 
-sub fetch_all_CloneSequences_for_selected_SequenceSet {
+sub fetch_all_CloneSequences_for_selected_SequenceSet { # without any lock info
     my ($self) = @_;
 
     my $ss = $self->selected_SequenceSet
@@ -550,7 +550,7 @@ sub fetch_all_CloneSequences_for_selected_SequenceSet {
     return $self->fetch_all_CloneSequences_for_SequenceSet($ss);
 }
 
-sub fetch_all_CloneSequences_for_SequenceSet {
+sub fetch_all_CloneSequences_for_SequenceSet { # without any lock info
     my ($self, $ss) = @_;
     confess "Missing SequenceSet argument" unless $ss;
     my $client = $self->Client;
