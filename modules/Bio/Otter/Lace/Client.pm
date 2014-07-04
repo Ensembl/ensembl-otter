@@ -645,6 +645,9 @@ sub otter_response_content { ## no critic (Subroutines::RequireFinalReturn)
 
     my $response = $self->general_http_dialog($method, $scriptname, $params);
 
+    return $self->_json_content($response)
+      if $response->content_type eq 'application/json';
+
     my $xml = $response->decoded_content();
 
     if (my ($content) = $xml =~ m{<otter[^\>]*\>\s*(.*)</otter>}s) {
@@ -654,6 +657,12 @@ sub otter_response_content { ## no critic (Subroutines::RequireFinalReturn)
     } else {
         $self->logger->logconfess("No <otter> tags in response content: [$xml]");
     }
+}
+
+sub _json_content {
+    my ($self, $response) = @_;
+    require JSON;
+    return JSON->new->decode($response->decoded_content);
 }
 
 # Returns the full content string from the http response object
