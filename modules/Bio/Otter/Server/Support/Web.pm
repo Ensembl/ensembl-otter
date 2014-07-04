@@ -258,6 +258,29 @@ sub show_restricted_datasets {
 
 ############## I/O: ################################
 
+sub send_json_response {
+    my ($called, @args) = @_;
+    require JSON;
+
+    my $sub = pop @args;
+    my $self = $called->new(@args); # may send a text/plain 403 Unauthorised
+    $self->content_type('application/json');
+    try {
+        my $obj = $sub->($self);
+        my $out = JSON->new->pretty->encode($obj);
+        $self->_send_response($out);
+    } catch {
+        my $error = $_;
+        die $error unless $ERROR_WRAPPING_ENABLED;
+        chomp $error;
+        warn "ERROR: $error\n";
+        print $self->header(-status => 417, -type => $self->content_type);
+        print JSON->new->pretty->encode({ error => $error });
+    };
+    return;
+}
+
+
 sub send_response {
     my ($self, @args) = @_;
 
