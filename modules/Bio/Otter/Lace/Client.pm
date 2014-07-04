@@ -19,6 +19,7 @@ use HTTP::Cookies::Netscape;
 use Term::ReadKey qw{ ReadMode ReadLine };
 
 use XML::Simple;
+use JSON;
 
 use Bio::Vega::Author;
 use Bio::Vega::ContigLock;
@@ -646,7 +647,7 @@ sub otter_response_content { ## no critic (Subroutines::RequireFinalReturn)
     my $response = $self->general_http_dialog($method, $scriptname, $params);
 
     return $self->_json_content($response)
-      if $response->content_type eq 'application/json';
+      if $response->content_type =~ m{^application/json($|;)}; # charset ignored
 
     my $xml = $response->decoded_content();
 
@@ -724,9 +725,34 @@ sub general_http_dialog {
             $clogger->logdie(sprintf("Otter Server v%s is gone, please download an up-to-date Otterlace.",
                                      Bio::Otter::Version->version));
         } else {
-            $self->logger->error("Got error $code");
-            $self->logger->error(__truncdent_for_log($content, 10240, '| '));
-            $self->logger->logdie(sprintf "%d (%s)", $response->code, $content);
+            # Some error.  Content-length: protection is not yet applied,
+            # just hope the error is informative.
+            my $json_error = try {
+                ($response->content_type =~ m{^application/json($|;)}) &&
+                  JSON->new->decode($content); # charset ignored
+            };
+            if ($json_error && defined(my $error = $json_error->{error})) {
+                # clear JSON-encoded error
+                $clogger->info($content) if keys %$json_error > 1;
+                $clogger->logdie("Server returned error $code: $error");
+            } else {
+                $clogger->info(join "\n", $response->status_line, $response->headers_as_string,
+                               __truncdent_for_log($content, 10240));
+
+                my $err;
+                if ($content =~ m{<title>500 Internal Server Error</title>.*The server encountered an internal error or\s+misconfiguration and was unable to complete\s+your request}s) {
+                    # standard Apache, uninformative
+                    $err = 'details are in server error_log';
+                } elsif ($content =~m{\A<\?xml.*\?>\n\s*<otter>\s*<response>\s*ERROR: (.*?)\s+</response>\s*</otter>\s*\z}s) {
+                    # otter_wrap_response error
+                    $err = $1;
+                    $err =~ s{[.\n]*\z}{,}; # "... at /www/.../foo line 30,"
+                } else {
+                    # else some raw and probably large failure, hide it
+                    $err = 'error text not recognised, details in Otterlace log';
+                }
+                $clogger->logdie(sprintf "Error %d: %s", $response->code, $err);
+            }
         }
     }
 
@@ -754,7 +780,7 @@ sub __truncdent_for_log {
     my ($txt, $maxlen, $dent) = @_;
     my $len = length($txt);
     substr($txt, $maxlen, $len, "[...truncated from $len bytes]\n") if $len > $maxlen;
-    $txt =~ s/^/$dent/mg;
+    $txt =~ s/^/$dent/mg if defined $dent;
     $txt =~ s/\n*\z/\n/;
     return $txt;
 }
