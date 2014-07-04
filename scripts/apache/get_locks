@@ -56,18 +56,30 @@ ORDER BY l.timestamp
 SQL
     ;
 
-sub get_locks {
+sub get_CloneLocks {
     my ($server) = @_;
 
     my $asm_type = $server->require_argument('chr');
     my $sth = $server->otter_dba()->dbc()->prepare($select_locks_sql);
     $sth->execute($asm_type);
-    my $output_string = '';
+    my @out;
     while (my (@columns) = $sth->fetchrow()) {
-        $output_string .= join("\t", @columns)."\n";
+        my %field;
+        @field{qw{ acc_sv name hostname timestamp author_name author_email }}
+          = @columns;
+        push @out, \%field;
     }
-
-    return $server->otter_wrap_response($output_string);
+    return \@out;
 }
 
-Bio::Otter::Server::Support::Web->send_response(\&get_locks);
+sub get_locks {
+    my ($server) = @_;
+    my $ds = $server->dataset;
+    my %out;
+
+    $out{CloneLock} = get_CloneLocks($server);
+
+    return \%out;
+}
+
+Bio::Otter::Server::Support::Web->send_json_response(\&get_locks);
