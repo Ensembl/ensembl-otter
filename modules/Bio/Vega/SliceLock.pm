@@ -406,6 +406,75 @@ sub _freed_author_id { # internal shortcut
 }
 
 
+sub TO_JSON { # for JSON->new->convert_blessed->encode or direct call
+    my ($self) = @_;
+    die "TO_JSON of unstored objects is not supported"
+      unless (defined $self->dbID &&
+              defined $self->_author_id &&
+              (!$self->freed_author || defined $self->_freed_author_id));
+
+    my %out;
+    my @prop = (# Reconstruction fields
+                qw( dbID ),
+                qw( seq_region_id seq_region_start seq_region_end ),
+                qw( ts_begin ts_activity ts_free ), # unixtimes
+                qw( active freed ),                 # enums
+                qw( intent hostname otter_version ), # text
+                [ author_id => '_author_id' ],
+                [ freed_author_id => '_freed_author_id' ],
+                # FYI fields
+                qw( iso8601_ts_begin iso8601_ts_activity iso8601_ts_free ),
+                [ author_email => 'describe_author' ],
+                [ freed_author_email => 'describe_freed_author' ]);
+    foreach my $prop (@prop) {
+        my ($key, $method) = ref($prop) ? @$prop : ($prop, $prop);
+        $out{$key} = $self->$method;
+    }
+    return \%out;
+}
+
+# The JSON probably came over plain HTTP, so untrusted
+sub new_from_json {
+    my ($pkg, @info) = @_;
+    my %info = (1 == @info ? %{$info[0]} : @info);
+    my %obj;
+
+    my @nonscalar = grep { ref($info{$_}) } keys %info;
+    die "Non-scalar incoming properties (@nonscalar)" if @nonscalar;
+
+    delete @info{qw{ iso8601_ts_begin iso8601_ts_activity iso8601_ts_free }};
+
+    # Make approximate author objects
+    foreach my $atype (qw( author freed_author )) {
+        my $id = delete $info{"${atype}_id"};
+        my $email = delete $info{"${atype}_email"};
+        if (defined $id) {
+            my %auth = (dbID => $id,
+                        name => $email,
+                        email => $email);
+            $info{$atype} = Bio::Vega::Author->new_fast(\%auth);
+        }
+    }
+
+    my @prop = (qw( dbID ),
+                qw( seq_region_id seq_region_start seq_region_end ),
+                qw( ts_begin ts_activity ts_free ), # unixtimes
+                qw( active freed ),                 # enums
+                qw( intent hostname otter_version ), # text
+                qw( author freed_author ));
+    @obj{@prop} = delete @info{@prop};
+
+    $obj{_unweaken_adaptor} = # 'adaptor' will be weakened, take an extra ref
+      $obj{adaptor} = ['BOGUS'];
+
+    my @bad = sort keys %info;
+    die "Unrecognised incoming properties (@bad)" if @bad;
+    my $self = $pkg->new_fast(\%obj);
+
+    return $self;
+}
+
+
 =head2 contains_slice($cmp_slice, $why_not)
 
 Returns true iff C<$cmp_slice> is directly (i.e. without any
